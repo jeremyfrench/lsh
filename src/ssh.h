@@ -85,6 +85,65 @@
 
 #define SSH_EXTENDED_DATA_STDERR 1
 
+/* pty op.codes */
+#define SSH_TTY_OP_END     0
+#define SSH_VINTR          1
+#define SSH_VQUIT          2
+#define SSH_VERASE         3
+#define SSH_VKILL          4
+#define SSH_VEOF           5
+#define SSH_VEOL           6
+#define SSH_VEOL2          7
+#define SSH_VSTART         8
+#define SSH_VSTOP          9
+#define SSH_VSUSP          10
+#define SSH_VDSUSP         11
+#define SSH_VREPRINT       12
+#define SSH_VWERASE        13
+#define SSH_VLNEXT         14
+#define SSH_VFLUSH         15
+#define SSH_VSWTCH         16
+#define SSH_VSTATUS        17
+#define SSH_VDISCARD       18
+#define SSH_IGNPAR         30
+#define SSH_PARMRK         31
+#define SSH_INPCK          32
+#define SSH_ISTRIP         33
+#define SSH_INLCR          34
+#define SSH_IGNCR          35
+#define SSH_ICRNL          36
+#define SSH_IUCLC          37
+#define SSH_IXON           38
+#define SSH_IXANY          39
+#define SSH_IXOFF          40
+#define SSH_IMAXBEL        41
+#define SSH_ISIG           50
+#define SSH_ICANON         51
+#define SSH_XCASE          52
+#define SSH_ECHO           53
+#define SSH_ECHOE          54
+#define SSH_ECHOK          55
+#define SSH_ECHONL         56
+#define SSH_NOFLSH         57
+#define SSH_TOSTOP         58
+#define SSH_IEXTEN         59
+#define SSH_ECHOCTL        60
+#define SSH_ECHOKE         61
+#define SSH_PENDIN         62
+#define SSH_OPOST          70
+#define SSH_OLCUC          71
+#define SSH_ONLCR          72
+#define SSH_OCRNL          73
+#define SSH_ONOCR          74
+#define SSH_ONLRET         75
+#define SSH_CS7            90
+#define SSH_CS8            91
+#define SSH_PARENB         92
+#define SSH_PARODD         93
+#define SSH_TTY_OP_ISPEED  128
+#define SSH_TTY_OP_OSPEED  129
+#define SSH_TTY_OP_RESERVED 160
+
 /* Limits */
 
 /* Default max length of packet payload */
