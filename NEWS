@@ -1,3 +1,10 @@
+News for the lsh-0.1.10 release
+
+	Fixed bug in sexp parser and lsh_writekey.
+
+	Merged more of bazsis patches.
+	
+
 News for the lsh-0.1.9 release
 
 	Lot's of bug fixes. This version actually seems to work.

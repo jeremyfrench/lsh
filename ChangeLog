@@ -1,5 +1,10 @@
 Wed Sep 22 00:30:47 1999  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/channel.c (channel_close_callback): Check the
+ 	CHANNEL_SENT_CLOSE flag before calling channel_close().
+
+	* configure.in: Bumped version to 0.1.10.
+
 	* src/server_publickey.c (do_authenticate): Initialize
 	signature_start. 
 

@@ -29,6 +29,9 @@
 
 #include "alist.h"
 
+/* For uid_t and gid_t */
+#include <unistd.h>
+
 #define GABA_DECLARE
 #include "server_userauth.h.x"
 #undef GABA_DECLARE

@@ -13,7 +13,6 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
-#include <unistd.h>
 
 #if HAVE_CRYPT_H
 # include <crypt.h>
@@ -411,9 +410,9 @@ static void do_userauth(struct command *s,
   auth->services = self->services;
   /* auth->attempts = AUTH_ATTEMPTS; */
   
-  auth->c = make_once_continution(NULL,
-				  make_userauth_continuation(connection,
-							     c, e));
+  auth->c = make_once_continuation(NULL,
+				   make_userauth_continuation(connection,
+							      c, e));
   auth->e = make_exc_userauth_handler(connection,
 				      self->advertised_methods,
 				      AUTH_ATTEMPTS, e);
