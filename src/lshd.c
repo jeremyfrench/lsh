@@ -27,6 +27,7 @@
 #include "alist.h"
 #include "atoms.h"
 #include "channel.h"
+#include "channel_commands.h"
 #include "charset.h"
 #include "connection_commands.h"
 #include "crypto.h"
@@ -41,12 +42,14 @@
 #include "server_keyexchange.h"
 #include "sexp.h"
 #include "ssh.h"
+#include "tcpforward_commands.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 #include "compress.h"
 #include "server_pty.h"
 #include "tcpforward.h"
+#include "tcpforward_commands.h"
 
 #include "getopt.h"
 
@@ -240,17 +243,6 @@ static int read_host_key(const char *name,
     }
 }
 
-/* Invoked when the client requests the userauth service. */
-/* GABA:
-   (expr
-     (name lshd_services)
-     (params 
-       (userauth object command) )
-     (expr
-       (lambda (connection)
-         ((userauth connection) connection))))
-*/
-
 /* GABA:
    (expr
      (name lshd_listen)
@@ -262,6 +254,31 @@ static int read_host_key(const char *name,
        (services object command) )
      (expr (lambda (port)
              (services (handshake (log (listen port)))))))
+*/
+
+/* Invoked when the client requests the userauth service. */
+/* GABA:
+   (expr
+     (name lshd_services)
+     (params 
+       (userauth object command))
+     (expr
+       (lambda (connection)
+         ((userauth connection) connection))))
+*/
+
+/* Invoked when starting the ssh-connection service */
+/* GABA:
+   (expr
+     (name lshd_connection_service)
+     (globals
+       (progn "&progn_command.super.super"))
+     (params
+       (login object command)     
+       (hooks object object_list))
+     (expr
+       (lambda (user connection)
+         ((progn hooks) (login user connection)))))
 */
 
 int main(int argc, char **argv)
@@ -449,17 +466,21 @@ int main(int argc, char **argv)
 			  make_int_list(0, -1));
   
   {
-    struct alist *global_requests;
+    /* Commands to be invoked on the connection */
+    struct object_list *connection_hooks;
 
 #if WITH_TCP_FORWARD
     if (forward_flag)
-      global_requests = make_alist(2,
-				   ATOM_TCPIP_FORWARD, make_tcpip_forward_request(backend),
-				   ATOM_CANCEL_TCPIP_FORWARD, make_cancel_tcpip_forward_request(),
-				   -1);
+      connection_hooks = make_object_list
+	(3,
+	 tcpip_forward_hook(backend),
+	 make_install_fix_global_request_handler
+	 (ATOM_CANCEL_TCPIP_FORWARD, &tcpip_cancel_forward),
+	 make_direct_tcpip_hook(backend),
+	 -1);
     else
 #endif
-      global_requests = make_alist(0, -1);
+      connection_hooks = make_object_list(0, -1);
     {
       struct lsh_object *o = lshd_listen
 	(make_simple_listen(backend, NULL),
@@ -481,18 +502,19 @@ int main(int argc, char **argv)
 			  make_alist(1, ATOM_PASSWORD,
 				     &unix_userauth.super, -1),
 			  make_alist(1, ATOM_SSH_CONNECTION,
-				     make_server_connection_service
-				     (global_requests,
-				      make_alist
-				      (1
+				     lshd_connection_service
+				     (make_server_connection_service
+				      (make_alist
+				       (1
 #if WITH_PTY_SUPPORT
-				       +1, ATOM_PTY_REQ, make_pty_handler()
+					+1, ATOM_PTY_REQ, make_pty_handler()
 #endif /* WITH_PTY_SUPPORT */
-				       , ATOM_SHELL,
-				       make_shell_handler(backend,
-							  reaper),
-				       -1),
-				      backend),
+					, ATOM_SHELL,
+					make_shell_handler(backend,
+							   reaper),
+					-1),
+				       backend),
+				      connection_hooks),
 				     -1))),
 	   -1)));
     
