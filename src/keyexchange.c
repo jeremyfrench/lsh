@@ -464,12 +464,12 @@ static struct kexinit *do_make_kexinit(struct make_kexinit *c)
   struct test_kexinit *closure = (struct test_kexinit *) c;
   struct kexinit *res = xalloc(sizeof(struct kexinit));
 
-  static int kex_algorithms[] = { ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, 0 };
-  static int server_hostkey_algorithms[] = { ATOM_SSH_DSS, 0 };
-  static int crypto_algorithms[] = { ATOM_ARCFOUR, ATOM_NONE, 0 };
-  static int mac_algorithms[] = { ATOM_HMAC_SHA1, 0 };
-  static int compression_algorithms[] = { ATOM_NONE, 0 };
-  static int languages[] = { 0 };
+  static int kex_algorithms[] = { ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1 };
+  static int server_hostkey_algorithms[] = { ATOM_SSH_DSS, -1 };
+  static int crypto_algorithms[] = { ATOM_ARCFOUR, ATOM_NONE, -1 };
+  static int mac_algorithms[] = { ATOM_HMAC_SHA1, -1 };
+  static int compression_algorithms[] = { ATOM_NONE, -1 };
+  static int languages[] = { -1 };
 
   MDEBUG(closure);
   
