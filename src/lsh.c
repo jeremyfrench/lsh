@@ -579,6 +579,9 @@ do_lsh_login(struct command *s,
   CAST(options_command, self, s);
   CAST_SUBTYPE(object_list, keys, a);
 
+  struct client_userauth_method *password
+    = make_client_password_auth(self->options->tty);
+  
   COMMAND_RETURN(c,
 		 make_client_userauth(ssh_format("%lz", self->options->user),
 				      ATOM_SSH_CONNECTION,
@@ -586,10 +589,9 @@ do_lsh_login(struct command *s,
 				       ? make_object_list
 				         (2, 
 					  make_client_publickey_auth(keys),
-					  make_client_password_auth(), 
+					  password,
 					  -1)
-				       : make_object_list(1, make_client_password_auth(), 
-							  -1))));
+				       : make_object_list(1, password, -1))));
 }
 
 /* (login options public-keys connection) */
@@ -1207,6 +1209,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      ALIST_SET(self->super.algorithms,
 			ATOM_SRP_RING1_SHA1_LOCAL,
 			make_srp_client(make_srp1(&self->random->super),
+					self->tty,
 					ssh_format("%lz", self->user)));
 	    }
 #endif /* WITH_SRP */
