@@ -97,6 +97,29 @@ spki_string_dup(struct spki_string *s)
   return s;
 }
 
+static int
+string_equal(struct spki_string *a, struct spki_string *b)
+{
+  if (a == b)
+    return 1;
+
+  if (!a || !b)
+    return 0;
+
+  return a->length == b->length
+    && !memcmp(a->data, b->data, a->length);
+}
+
+/* Returns 1 if s starts with prefix */
+static int
+string_prefix(struct spki_string *prefix, struct spki_string *s)
+{
+  assert(prefix);
+  assert(s);
+
+  return prefix->length <= s->length
+    && !memcmp(prefix->data, s->data, prefix->length);
+}
 
 /* Lists */
 struct spki_cons
@@ -186,6 +209,15 @@ struct spki_tag_list
   struct spki_cons *children;
 };
 
+static struct spki_tag_list *
+tag_list(struct spki_tag *tag)
+{
+  assert(tag->type == SPKI_TAG_LIST
+	 || tag->type == SPKI_TAG_SET);
+
+  return (struct spki_tag_list *) tag;
+}
+
 /* For SPKI_TAG_ATOM and SPKI_TAG_PREFIX */
 struct spki_tag_atom
 {
@@ -193,6 +225,15 @@ struct spki_tag_atom
   struct spki_string *display;
   struct spki_string *atom;
 };
+
+static struct spki_tag_atom *
+tag_atom(struct spki_tag *tag)
+{
+  assert(tag->type == SPKI_TAG_ATOM
+	 || tag->type == SPKI_TAG_PREFIX);
+
+  return (struct spki_tag_atom *) tag;
+}
 
 enum spki_range_type
   {
@@ -216,6 +257,14 @@ struct spki_tag_range
   struct spki_string *lower;
   struct spki_string *upper;
 };
+
+static struct spki_tag_range *
+tag_range(struct spki_tag *tag)
+{
+  assert(tag->type == SPKI_TAG_RANGE);
+
+  return (struct spki_tag_range *) tag;
+}
 
 static void
 spki_tag_init(struct spki_tag *tag,
@@ -345,7 +394,7 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
     case SPKI_TAG_ATOM:
     case SPKI_TAG_PREFIX:
       {
-	struct spki_tag_atom *self = (struct spki_tag_atom *) tag;
+	struct spki_tag_atom *self = tag_atom(tag);
 
 	spki_string_release(ctx, realloc, self->display);
 	spki_string_release(ctx, realloc, self->atom);
@@ -355,14 +404,15 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
     case SPKI_TAG_LIST:
     case SPKI_TAG_SET:
       {
-	struct spki_tag_list *self = (struct spki_tag_list *) tag;
+	struct spki_tag_list *self = tag_list(tag);
 	spki_cons_release(ctx, realloc, self->children);
 
 	break;
       }
     case SPKI_TAG_RANGE:
       {
-	struct spki_tag_range *self = (struct spki_tag_range *) tag;
+	struct spki_tag_range *self = tag_range(tag);
+	
 	spki_string_release(ctx, realloc, self->lower);
 	spki_string_release(ctx, realloc, self->upper);
       }
@@ -373,9 +423,11 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
   FREE(ctx, realloc, tag);
 }
 
-/* Normalizes set expressions so that we always get
+/* Normalizes set expressions,
  *
- * (* set a b) rather than (* set (* set a) b)
+ * (* set (* set a b) c) --> (* set a b c)
+ *
+ * (* set a)             --> a
  *
  * Requires that the children elements passet in are already
  * normalized.
@@ -388,6 +440,9 @@ spki_tag_set_new(void *ctx, nettle_realloc_func *realloc,
 {
   struct spki_cons *subsets = NULL;
   struct spki_tag *tag;
+
+  if (c && !c->cdr)
+    return spki_tag_dup(c->car);
   
   for (; c; c = c->cdr)
     {
@@ -399,8 +454,9 @@ spki_tag_set_new(void *ctx, nettle_realloc_func *realloc,
 	}
       else
 	{
-	  struct spki_tag_list *set = (struct spki_tag_list *) c->car;
+	  struct spki_tag_list *set = tag_list(c->car);
 	  struct spki_cons *p;
+	  
 	  for (p = set->children; p; p = p->cdr)
 	    {
 	      /* Inner sets must be normalized. */
@@ -526,7 +582,7 @@ spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
 	  = spki_tag_compile_list(ctx, realloc, i);
 	
 	tag = spki_tag_list_alloc(ctx, realloc, type,
-				  children);
+				  spki_cons_nreverse(children));
 
 	if (tag)
 	  return tag;
@@ -595,139 +651,133 @@ spki_tag_compile_list(void *ctx, nettle_realloc_func *realloc,
   return c;
 }
 
+struct spki_tag *
+spki_tag_from_sexp(void *ctx, nettle_realloc_func *realloc,
+		   unsigned length,
+		   const uint8_t *expr)
+{
+  struct sexp_iterator i;
+  struct spki_tag *tag;
+  
+  if (!sexp_iterator_first(&i, length, expr))
+    return NULL;
+
+  if ((tag = spki_tag_compile(ctx, realloc, &i))
+      && i.type == SEXP_END)
+    return tag;
+
+  spki_tag_release(ctx, realloc, tag);
+  return NULL;
+}
+
 
 /* Tag operations */
 
 static int
-display_equal(struct sexp_iterator *a, struct sexp_iterator *b)
+atom_prefix(struct spki_tag_atom *a, struct spki_tag_atom *b)
 {
-  assert(a->type == SEXP_ATOM);
-  assert(b->type == SEXP_ATOM);
+  assert(a->super.type == SPKI_TAG_ATOM);
+  assert(b->super.type == SPKI_TAG_ATOM);
 
-  if (!a->display && !b->display)
-    return 1;
-  if (!a->display || !b->display)
-    return 0;
-
-  return (a->display_length == b->display_length
-	  && !memcmp(a->display, b->display, a->display_length));
+  return string_equal(a->display, b->display)
+    && string_prefix(a->atom, b->atom);
 }
 
 static int
-atom_equal(struct sexp_iterator *a, struct sexp_iterator *b)
+atom_equal(struct spki_tag_atom *a, struct spki_tag_atom *b)
 {
-  assert(a->type == SEXP_ATOM);
-  assert(b->type == SEXP_ATOM);
+  assert(a->super.type == SPKI_TAG_ATOM);
+  assert(b->super.type == SPKI_TAG_ATOM);
 
-  return (a->atom_length == b->atom_length
-	  && display_equal(a,b)
-	  && !memcmp(a->atom, b->atom, a->atom_length));
+  return string_equal(a->display, b->display)
+    && string_equal(a->atom, b->atom);
 }
 
 static int
-set_includes(struct sexp_iterator *delegated,
-	     struct sexp_iterator *request)
+set_includes(struct spki_cons *set,
+	     struct spki_tag *request)
 {
   /* The request is included if it's including in any of
    * the delegations in the set. */
-  unsigned level = delegated->level;
 
-  while (delegated->type != SEXP_END)
+  if (request->type == SPKI_TAG_SET)
     {
-      struct sexp_iterator work = *request;
-      unsigned start = delegated->start;
-      
-      if (spki_tag_includes(delegated, &work))
+      /* Check that each of the subsets is included in some of the
+       * delegated subsets. This a reasonable approximation, but will
+       * result in some false negatives.  */
+      struct spki_cons *c;
+
+      for (c = tag_list(request)->children; c; c = c->cdr)
 	{
-	  if (!sexp_iterator_exit_list(delegated))
-	    abort();
-	  *request = work;
-	  return 1;
+	  if (!set_includes(set, c->car))
+	    return 0;
 	}
-      /* It's a little tricky to recover. When trying to match the
-       * tag, matching may have given up with the iterator pointing
-       * anywhere inside it. We first need to skip out of some lists,
-       * and then make sure that we have made some advance, to cover
-       * the case that the previous sub expression was a string. */
-      /* FIXME: Make some iterator abstraction for this. */
-      assert(delegated->level >= level);
 
-      while (delegated->level > level)
-	if (!sexp_iterator_exit_list(delegated))
-	  abort();
-
-      if (delegated->start == start &&
-	  !sexp_iterator_next(delegated))
-	abort();
+      return 1;
     }
+
+  for (; set; set = set->cdr)
+    if (spki_tag_includes(set->car, request))
+      return 1;
+
   return 0;
 }
 
 static int
-list_includes(struct sexp_iterator *delegated,
-	      struct sexp_iterator *request)
+list_includes(struct spki_cons *list,
+	      struct spki_tag *request)
 {
   /* There may be fewer elements in the request list than in the
    * delegation list. A delegation list implicitly includes any number
    * of (*) forms at the end needed to match all elements in the
    * request form. */
 
-  while (request->type != SEXP_END)
+  struct spki_cons *c;
+  if (request->type != SPKI_TAG_LIST)
+    return 0;
+  
+  for (c = tag_list(request)->children;
+       c && list;
+       list = list->cdr, c = c->cdr)
     {
-      if (delegated->type == SEXP_END)
-	break;
-
-      if (!spki_tag_includes(delegated, request))
+      if (!spki_tag_includes(list->car, c->car))
 	return 0;
     }
-  
-  if (delegated->type != SEXP_END)
-    return 0;
 
-  /* Success */
-  if (!sexp_iterator_exit_list(delegated))
-    abort();
-
-  return sexp_iterator_exit_list(request);
+  /* If we haven't matched all elements, return failure */
+  return (list == NULL);
 }
 
 /* Returns true if the requested authorization is included in the
- * delegated one. For now, star forms are recognized only in the
- * delegation, not in the request.
- *
- * Compares only the first element on each list and, on success,
- * advances the corresponding iterator past it.
- */
-/* FIXME: It's a problem that both syntax errors and matching failures
- * are reported in the same way. */
+ * delegated one. */
 int
-spki_tag_includes(struct sexp_iterator *delegated,
-		  struct sexp_iterator *request)
+spki_tag_includes(struct spki_tag *delegated,
+		  struct spki_tag *request)
 {
-  switch (spki_tag_classify(delegated))
+  switch (delegated->type)
     {
     default:
       return 0;
 
     case SPKI_TAG_ATOM:
-      if (request->type == SEXP_ATOM
-	  && atom_equal(delegated, request))
-	{
-	  if (!sexp_iterator_next(delegated))
-	    abort();
-	  return sexp_iterator_next(request);
-	}
-      return 0;
+      return request->type == SPKI_TAG_ATOM
+	&& atom_equal(tag_atom(delegated), tag_atom(request));
 
+    case SPKI_TAG_PREFIX:
+      /* Request must have the same display type, and include
+       * the delagation as a prefix. */
+      return (request->type == SPKI_TAG_ATOM
+	      || request->type == SPKI_TAG_PREFIX)
+	&& atom_prefix(tag_atom(delegated), tag_atom(request));	
+	  
     case SPKI_TAG_LIST:
-      return sexp_iterator_enter_list(request)
-	&& list_includes(delegated, request);
+      return list_includes(tag_list(delegated)->children, request);
       
     case SPKI_TAG_ANY:
-      return sexp_iterator_next(request);
+      return 1;
 
     case SPKI_TAG_SET:
-      return set_includes(delegated, request);
+      return set_includes(tag_list(delegated)->children, request);
 
       /* Other star forms not yet implemented. */
     }

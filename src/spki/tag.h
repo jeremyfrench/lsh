@@ -35,6 +35,11 @@ struct spki_tag *
 spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
 		 struct sexp_iterator *i);
 
+struct spki_tag *
+spki_tag_from_sexp(void *ctx, nettle_realloc_func *realloc,
+		   unsigned length,
+		   const uint8_t *expr);
+
 void
 spki_tag_release(void *ctx, nettle_realloc_func *realloc,
 		 struct spki_tag *tag);
@@ -43,8 +48,8 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
  * delegated one. For now, star forms are recognized only in the
  * delegation, not in the request. */
 int
-spki_tag_includes(struct sexp_iterator *delegated,
-		  struct sexp_iterator *request);
+spki_tag_includes(struct spki_tag *delegated,
+		  struct spki_tag *request);
 
 #endif /* LIBSPKI_TAG_H_INCLUDED */
 
