@@ -44,6 +44,8 @@
 #define __argp_state_help argp_state_help
 #undef __argp_usage
 #define __argp_usage argp_usage
+#undef __arg_basename
+#define __argp_basename _argp_basename
 
 /* argp-fmtstream functions */
 #undef __argp_make_fmtstream
