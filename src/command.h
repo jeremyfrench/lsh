@@ -283,15 +283,6 @@ collect_Cp_3(struct collect_info_3 *info,
   (make_collect_state_2(&collect_info_Cp_2, (c), (f)))
 #define GABA_APPLY_Cp_3(c, f, y) (collect_Cp_3(NULL, (c), (f), (y)))
      
-     
-#if 0
-extern struct command_simple command_B;
-
-struct command *make_listen_command(struct io_backend *backend,
-				    struct lsh_string *interface,
-				    UINT32 port);
-#endif
-
 #if 0
 /* (lambda (x) (f (g x))) */
 struct command *command_compose(struct command *f, struct command *g);
