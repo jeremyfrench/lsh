@@ -1,5 +1,5 @@
 /* Hierarchial argument parsing help output
-   Copyright (C) 1995, 1996, 1997, 1998, 1999 Free Software Foundation, Inc.
+   Copyright (C) 1995,1996,1997,1998,1999,2000 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Written by Miles Bader <miles@gnu.ai.mit.edu>.
 
@@ -45,12 +45,6 @@ char *alloca ();
 # endif
 #endif
 
-#if __GNUC__ && HAVE_GCC_ATTRIBUTE
-# define UNUSED __attribute__ ((__unused__))
-#else
-# define UNUSED
-#endif
-
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,24 +53,50 @@ char *alloca ();
 #include <malloc.h>
 #include <ctype.h>
 
+
 #ifndef _
 /* This is for other GNU distributions with internationalized messages.  */
-# ifdef HAVE_LIBINTL_H
+# if defined HAVE_LIBINTL_H || defined _LIBC
 #  include <libintl.h>
+#  ifdef _LIBC
+#   undef dgettext
+#   define dgettext(domain, msgid) __dcgettext (domain, msgid, LC_MESSAGES)
+#  endif
 # else
-#  define dgettext(domain, msgid) (((void) (domain), (msgid)))
+#  define dgettext(domain, msgid) (msgid)
 # endif
-#endif
-
-#ifdef USE_IN_LIBIO
-# define flockfile(s) _IO_flockfile (s)
-# define funlockfile(s) _IO_funlockfile (s)
 #endif
 
 #include "argp.h"
 #include "argp-fmtstream.h"
 #include "argp-namefrob.h"
 
+
+#ifndef UNUSED
+# if __GNUC__ >= 2
+#  define UNUSED __attribute__ ((__unused__))
+# else
+#  define UNUSED
+# endif
+#endif
+
+#ifndef _LIBC
+# ifndef __strchrnul
+#  define __strchrnul strchrnul
+# endif
+/* FIXME: __strndup is a macro expanding to a call of the function
+ * __strndup which is not declared properly. */
+# ifndef __strndup
+#  define __strndup strndup
+# endif
+# ifndef __flockfile
+#  define __flockfile flockfile
+# endif
+# ifndef __funlockfile
+#  define __funlockfile funlockfile
+# endif
+#endif
+
 #if !_LIBC
 # if !HAVE_STRNDUP
 
@@ -105,9 +125,25 @@ static void *mempcpy (void *to, const void *from, size_t size)
   memcpy(to, from, size);
   return (char *) to + size;
 }
-# define __mempcpy mempcpy
 # endif /* !HAVE_MEMPCPY */
-#endif /* !_LIBC - 0 */
+# if !HAVE_STRCHRNUL
+
+/* FIXME: What is this function supposed to do? My guess is that it is
+ * like strchr, but returns a pointer to the NUL character, not a NULL
+ * pointer, if the character isn't found. */
+
+static char *strchrnul(const char *s, int c)
+{
+  const char *p = s;
+  while (*p && (*p != c))
+    p++;
+
+  return (char *) p;
+}
+
+# endif /* !HAVE_STRCHRNUL */
+#endif /* !_LIBC */
+
 
 /* User-selectable (using an environment variable) formatting parameters.
 
@@ -189,7 +225,7 @@ static const struct uparam_name uparam_names[] =
 static void
 fill_in_uparams (const struct argp_state *state)
 {
-  const unsigned char *var = getenv ("ARGP_HELP_FMT");
+  const char *var = getenv ("ARGP_HELP_FMT");
 
 #define SKIPWS(p) do { while (isspace (*p)) p++; } while (0);
 
@@ -204,7 +240,7 @@ fill_in_uparams (const struct argp_state *state)
 	    size_t var_len;
 	    const struct uparam_name *un;
 	    int unspec = 0, val = 0;
-	    const unsigned char *arg = var;
+	    const char *arg = var;
 
 	    while (isalnum (*arg) || *arg == '-' || *arg == '_')
 	      arg++;
@@ -400,7 +436,7 @@ struct hol_cluster
   const char *header;
 
   /* Used to order clusters within the same group with the same parent,
-     according to the order in which they occured in the parent argp's child
+     according to the order in which they occurred in the parent argp's child
      list.  */
   int index;
 
@@ -728,12 +764,12 @@ canon_doc_option (const char **name)
 {
   int non_opt;
   /* Skip initial whitespace.  */
-  while (isspace ( (unsigned char) **name))
+  while (isspace (**name))
     (*name)++;
   /* Decide whether this looks like an option (leading `-') or not.  */
   non_opt = (**name != '-');
   /* Skip until part of name used for sorting.  */
-  while (**name && !isalnum ( (unsigned char) **name))
+  while (**name && !isalnum (**name))
     (*name)++;
   return non_opt;
 }
@@ -795,8 +831,8 @@ hol_entry_cmp (const struct hol_entry *entry1,
 	   first, but as they're not displayed, it doesn't matter where
 	   they are.  */
 	{
-	  unsigned char first1 = short1 ? short1 : long1 ? *long1 : 0;
-	  unsigned char first2 = short2 ? short2 : long2 ? *long2 : 0;
+	  char first1 = short1 ? short1 : long1 ? *long1 : 0;
+	  char first2 = short2 ? short2 : long2 ? *long2 : 0;
 #ifdef _tolower
 	  int lower_cmp = _tolower (first1) - _tolower (first2);
 #else
@@ -946,7 +982,7 @@ space (argp_fmtstream_t stream, size_t ensure)
    optional argument.  */
 static void
 arg (const struct argp_option *real, const char *req_fmt, const char *opt_fmt,
-     const char *domain, argp_fmtstream_t stream)
+     const char *domain UNUSED, argp_fmtstream_t stream)
 {
   if (real->arg)
     {
@@ -1093,18 +1129,8 @@ hol_entry_help (struct hol_entry *entry, const struct argp_state *state,
   int old_wm = __argp_fmtstream_wmargin (stream);
   /* PEST is a state block holding some of our variables that we'd like to
      share with helper functions.  */
-#ifdef __GNUC__
   struct pentry_state pest = { entry, stream, hhstate, 1, state };
-#else /* !__GNUC__ */
-  /* Decent initializers is a GNU extension */
-  struct pentry_state pest;
-  pest.entry = entry;
-  pest.stream = stream;
-  pest.hhstate = hhstate;
-  pest.first = 1;
-  pest.state = state;
-#endif /* !__GNUC__ */
-  
+
   if (! odoc (real))
     for (opt = real, num = entry->num; num > 0; opt++, num--)
       if (opt->name && ovisible (opt))
@@ -1268,7 +1294,7 @@ add_argless_short_opt (const struct argp_option *opt,
 static int
 usage_argful_short_opt (const struct argp_option *opt,
 			const struct argp_option *real,
-			const char *domain, void *cookie)
+			const char *domain UNUSED, void *cookie)
 {
   argp_fmtstream_t stream = cookie;
   const char *arg = opt->arg;
@@ -1424,19 +1450,17 @@ argp_args_usage (const struct argp *argp, const struct argp_state *state,
   if (fdoc)
     {
       const char *cp = fdoc;
-      nl = strchr (cp, '\n');
-      if (nl)
+      nl = __strchrnul (cp, '\n');
+      if (*nl != '\0')
 	/* This is a `multi-level' args doc; advance to the correct position
 	   as determined by our state in LEVELS, and update LEVELS.  */
 	{
 	  int i;
 	  multiple = 1;
 	  for (i = 0; i < *our_level; i++)
-	    cp = nl + 1, nl = strchr (cp, '\n');
+	    cp = nl + 1, nl = __strchrnul (cp, '\n');
 	  (*levels)++;
 	}
-      if (! nl)
-	nl = cp + strlen (cp);
 
       /* Manually do line wrapping so that it (probably) won't get wrapped at
 	 any embedded spaces.  */
@@ -1474,7 +1498,7 @@ argp_args_usage (const struct argp *argp, const struct argp_state *state,
    following the `\v' character (nothing for strings without).  Each separate
    bit of documentation is separated a blank line, and if PRE_BLANK is true,
    then the first is as well.  If FIRST_ONLY is true, only the first
-   occurance is output.  Returns true if anything was output.  */
+   occurrence is output.  Returns true if anything was output.  */
 static int
 argp_doc (const struct argp *argp, const struct argp_state *state,
 	  int post, int pre_blank, int first_only,
@@ -1502,7 +1526,7 @@ argp_doc (const struct argp *argp, const struct argp_state *state,
     {
       if (inp_text_limit)
 	/* Copy INP_TEXT so that it's nul-terminated.  */
-	inp_text = strndup (inp_text, inp_text_limit);
+	inp_text = __strndup (inp_text, inp_text_limit);
       input = __argp_input (argp, state);
       text =
 	(*argp->help_filter) (post
@@ -1576,7 +1600,7 @@ _help (const struct argp *argp, const struct argp_state *state, FILE *stream,
   if (! stream)
     return;
 
-  FLOCKFILE (stream);
+  __flockfile (stream);
 
   if (! uparams.valid)
     fill_in_uparams (state);
@@ -1584,7 +1608,7 @@ _help (const struct argp *argp, const struct argp_state *state, FILE *stream,
   fs = __argp_make_fmtstream (stream, 0, uparams.rmargin, 0);
   if (! fs)
     {
-      FUNLOCKFILE (stream);
+      __funlockfile (stream);
       return;
     }
 
@@ -1692,7 +1716,7 @@ Try `%s --help' or `%s --usage' for more information.\n"),
       anything = 1;
     }
 
-  FUNLOCKFILE (stream);
+  __funlockfile (stream);
 
   if (hol)
     hol_free (hol);
@@ -1751,22 +1775,22 @@ __argp_error (const struct argp_state *state, const char *fmt, ...)
 	{
 	  va_list ap;
 
-	  FLOCKFILE (stream);
+	  __flockfile (stream);
 
-	  FPUTS_UNLOCKED (state ? state->name : program_invocation_short_name,
+	  fputs_unlocked (state ? state->name : program_invocation_short_name,
 			  stream);
-	  PUTC_UNLOCKED (':', stream);
-	  PUTC_UNLOCKED (' ', stream);
+	  putc_unlocked (':', stream);
+	  putc_unlocked (' ', stream);
 
 	  va_start (ap, fmt);
 	  vfprintf (stream, fmt, ap);
 	  va_end (ap);
 
-	  PUTC_UNLOCKED ('\n', stream);
+	  putc_unlocked ('\n', stream);
 
 	  __argp_state_help (state, stream, ARGP_HELP_STD_ERR);
 
-	  FUNLOCKFILE (stream);
+	  __funlockfile (stream);
 	}
     }
 }
@@ -1792,17 +1816,17 @@ __argp_failure (const struct argp_state *state, int status, int errnum,
 
       if (stream)
 	{
-	  FLOCKFILE (stream);
+	  __flockfile (stream);
 
-	  FPUTS_UNLOCKED (state ? state->name : program_invocation_short_name,
+	  fputs_unlocked (state ? state->name : program_invocation_short_name,
 			  stream);
 
 	  if (fmt)
 	    {
 	      va_list ap;
 
-	      PUTC_UNLOCKED (':', stream);
-	      PUTC_UNLOCKED (' ', stream);
+	      putc_unlocked (':', stream);
+	      putc_unlocked (' ', stream);
 
 	      va_start (ap, fmt);
 	      vfprintf (stream, fmt, ap);
@@ -1811,14 +1835,14 @@ __argp_failure (const struct argp_state *state, int status, int errnum,
 
 	  if (errnum)
 	    {
-	      PUTC_UNLOCKED (':', stream);
-	      PUTC_UNLOCKED (' ', stream);
+	      putc_unlocked (':', stream);
+	      putc_unlocked (' ', stream);
 	      fputs (strerror (errnum), stream);
 	    }
 
-	  PUTC_UNLOCKED ('\n', stream);
+	  putc_unlocked ('\n', stream);
 
-	  FUNLOCKFILE (stream);
+	  __funlockfile (stream);
 
 	  if (status && (!state || !(state->flags & ARGP_NO_EXIT)))
 	    exit (status);

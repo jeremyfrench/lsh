@@ -18,6 +18,10 @@
    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
    Boston, MA 02111-1307, USA.  */
 
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE	1
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -25,7 +29,46 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <argp.h>
+#include <stdio.h>
+
+#include "argp.h"
+
+#ifndef UNUSED
+# if __GNUC__ >= 2
+#  define UNUSED __attribute__ ((__unused__))
+# else
+#  define UNUSED
+# endif
+#endif
+
+#if !HAVE_ASPRINTF
+int asprintf (char **result, const char *format, ...)
+{
+  size_t size = 200;
+  char *p = NULL;
+
+  do {
+    va_list args;
+    int written;
+    
+    p = realloc(p, size + 1);
+    if (!p)
+    {
+      fprintf(stderr, "Virtual memory exhausted.\n");
+      abort();
+    }
+
+    p[size] = '\0';
+    
+    va_start(args, format);
+    written = vsnprintf(format, size, args);
+    va_end(args);
+
+  } while (written < 0);
+
+  *result = p;
+}
+#endif /* !HAVE_ASPRINTF */
 
 const char *argp_program_version = "argp-test 1.0";
 
@@ -46,7 +89,7 @@ static const char sub_args_doc[] = "STRING...\n-";
 static const char sub_doc[] = "\vThis is the doc string from the sub-arg-parser.";
 
 static error_t
-sub_parse_opt (int key, char *arg, struct argp_state *state)
+sub_parse_opt (int key, char *arg, struct argp_state *state UNUSED)
 {
   switch (key)
     {
@@ -68,7 +111,7 @@ sub_parse_opt (int key, char *arg, struct argp_state *state)
 }
 
 static char *
-sub_help_filter (int key, const char *text, void *input)
+sub_help_filter (int key, const char *text, void *input UNUSED)
 {
   if (key == ARGP_KEY_HELP_EXTRA)
     return strdup ("This is some extra text from the sub parser (note that it \

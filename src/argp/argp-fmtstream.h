@@ -34,24 +34,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "argp.h"
-
-#if (_LIBC || \
-  (defined (HAVE_FLOCKFILE) && defined(HAVE_PUTC_UNLOCKED) \
-    && defined (HAVE_FPUTS_UNLOCKED) && defined (HAVE_FWRITE_UNLOCKED) ))
-# define FLOCKFILE(f) flockfile(f) 
-# define FUNLOCKFILE(f) funlockfile(f)
-# define PUTC_UNLOCKED(c, f) putc_unlocked(c, f)
-# define FPUTS_UNLOCKED(s, f) fputs_unlocked(s, f)
-# define FWRITE_UNLOCKED(b, s, n, f) fwrite_unlocked(b, s, n, f)
-#else /* Don't use stdio locking */
-# define FLOCKFILE(f)
-# define FUNLOCKFILE(f)
-# define PUTC_UNLOCKED(c, f) putc((c), (f))
-# define FPUTS_UNLOCKED(s, f) fputs((s), (f))
-# define FWRITE_UNLOCKED(b, s, n, f) fwrite((b), (s), (n), (f))
-#endif /* No thread safe i/o */
-
 #if    (_LIBC - 0 && !defined (USE_IN_LIBIO)) \
     || (defined (__GNU_LIBRARY__) && defined (HAVE_LINEWRAP_H))
 /* line_wrap_stream is available, so use that.  */
@@ -144,10 +126,10 @@ extern void argp_fmtstream_free (argp_fmtstream_t __fs);
 
 extern ssize_t __argp_fmtstream_printf (argp_fmtstream_t __fs,
 				       __const char *__fmt, ...)
-     PRINTF_STYLE(2, 3);
+     __attribute__ ((__format__ (printf, 2, 3)));
 extern ssize_t argp_fmtstream_printf (argp_fmtstream_t __fs,
 				      __const char *__fmt, ...)
-     PRINTF_STYLE(2, 3);
+     __attribute__ ((__format__ (printf, 2, 3)));
 
 extern int __argp_fmtstream_putc (argp_fmtstream_t __fs, int __ch);
 extern int argp_fmtstream_putc (argp_fmtstream_t __fs, int __ch);

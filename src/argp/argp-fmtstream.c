@@ -1,5 +1,5 @@
 /* Word-wrapping and line-truncating streams
-   Copyright (C) 1997, 1998 Free Software Foundation, Inc.
+   Copyright (C) 1997, 1998, 1999 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Written by Miles Bader <miles@gnu.ai.mit.edu>.
 
@@ -94,7 +94,7 @@ __argp_fmtstream_free (argp_fmtstream_t fs)
 {
   __argp_fmtstream_update (fs);
   if (fs->p > fs->buf)
-    FWRITE_UNLOCKED (fs->buf, 1, fs->p - fs->buf, fs->stream);
+    fwrite_unlocked (fs->buf, 1, fs->p - fs->buf, fs->stream);
   free (fs->buf);
   free (fs);
 }
@@ -134,7 +134,7 @@ __argp_fmtstream_update (argp_fmtstream_t fs)
 	      /* No buffer space for spaces.  Must flush.  */
 	      size_t i;
 	      for (i = 0; i < pad; i++)
-		PUTC_UNLOCKED (' ', fs->stream);
+		putc_unlocked (' ', fs->stream);
 	    }
 	  fs->point_col = pad;
 	}
@@ -268,8 +268,8 @@ __argp_fmtstream_update (argp_fmtstream_t fs)
 		/* Output the first line so we can use the space.  */
 		{
 		  if (nl > fs->buf)
-		    FWRITE_UNLOCKED (fs->buf, 1, nl - fs->buf, fs->stream);
-		  PUTC_UNLOCKED ('\n', fs->stream);
+		    fwrite_unlocked (fs->buf, 1, nl - fs->buf, fs->stream);
+		  putc_unlocked ('\n', fs->stream);
 		  len += buf - fs->buf;
 		  nl = buf = fs->buf;
 		}
@@ -286,7 +286,7 @@ __argp_fmtstream_update (argp_fmtstream_t fs)
 	      *nl++ = ' ';
 	  else
 	    for (i = 0; i < fs->wmargin; ++i)
-	      PUTC_UNLOCKED (' ', fs->stream);
+	      putc_unlocked (' ', fs->stream);
 
 	  /* Copy the tail of the original buffer into the current buffer
 	     position.  */
@@ -323,7 +323,7 @@ __argp_fmtstream_ensure (struct argp_fmtstream *fs, size_t amount)
       /* Flush FS's buffer.  */
       __argp_fmtstream_update (fs);
 
-      wrote = FWRITE_UNLOCKED (fs->buf, 1, fs->p - fs->buf, fs->stream);
+      wrote = fwrite_unlocked (fs->buf, 1, fs->p - fs->buf, fs->stream);
       if (wrote == fs->p - fs->buf)
 	{
 	  fs->p = fs->buf;
@@ -361,7 +361,8 @@ __argp_fmtstream_ensure (struct argp_fmtstream *fs, size_t amount)
 ssize_t
 __argp_fmtstream_printf (struct argp_fmtstream *fs, const char *fmt, ...)
 {
-  int out;
+  size_t out;
+  size_t avail;
   size_t size_guess = PRINTF_SIZE_GUESS; /* How much space to reserve. */
 
   do
@@ -370,13 +371,15 @@ __argp_fmtstream_printf (struct argp_fmtstream *fs, const char *fmt, ...)
 
       if (! __argp_fmtstream_ensure (fs, size_guess))
 	return -1;
-      size_guess += size_guess;
 
       va_start (args, fmt);
-      out = __vsnprintf (fs->p, fs->end - fs->p, fmt, args);
+      avail = fs->end - fs->p;
+      out = __vsnprintf (fs->p, avail, fmt, args);
       va_end (args);
+      if (out >= avail)
+	size_guess = out + 1;
     }
-  while (out == -1);
+  while (out >= avail);
 
   fs->p += out;
 
@@ -387,85 +390,3 @@ weak_alias (__argp_fmtstream_printf, argp_fmtstream_printf)
 #endif
 
 #endif /* !ARGP_FMTSTREAM_USE_LINEWRAP */
-
-size_t
-__argp_fmtstream_write (argp_fmtstream_t __fs,
-			__const char *__str, size_t __len)
-{
-  if (__fs->p + __len <= __fs->end || __argp_fmtstream_ensure (__fs, __len))
-    {
-      memcpy (__fs->p, __str, __len);
-      __fs->p += __len;
-      return __len;
-    }
-  else
-    return 0;
-}
-
-int
-__argp_fmtstream_puts (argp_fmtstream_t __fs, __const char *__str)
-{
-  size_t __len = strlen (__str);
-  if (__len)
-    {
-      size_t __wrote = __argp_fmtstream_write (__fs, __str, __len);
-      return __wrote == __len ? 0 : -1;
-    }
-  else
-    return 0;
-}
-
-int
-__argp_fmtstream_putc (argp_fmtstream_t __fs, int __ch)
-{
-  if (__fs->p < __fs->end || __argp_fmtstream_ensure (__fs, 1))
-    return *__fs->p++ = __ch;
-  else
-    return EOF;
-}
-
-/* Set __FS's left margin to __LMARGIN and return the old value.  */
-size_t
-__argp_fmtstream_set_lmargin (argp_fmtstream_t __fs, size_t __lmargin)
-{
-  size_t __old;
-  if ((size_t) (__fs->p - __fs->buf) > __fs->point_offs)
-    __argp_fmtstream_update (__fs);
-  __old = __fs->lmargin;
-  __fs->lmargin = __lmargin;
-  return __old;
-}
-
-/* Set __FS's right margin to __RMARGIN and return the old value.  */
-size_t
-__argp_fmtstream_set_rmargin (argp_fmtstream_t __fs, size_t __rmargin)
-{
-  size_t __old;
-  if ((size_t) (__fs->p - __fs->buf) > __fs->point_offs)
-    __argp_fmtstream_update (__fs);
-  __old = __fs->rmargin;
-  __fs->rmargin = __rmargin;
-  return __old;
-}
-
-/* Set FS's wrap margin to __WMARGIN and return the old value.  */
-size_t
-__argp_fmtstream_set_wmargin (argp_fmtstream_t __fs, size_t __wmargin)
-{
-  size_t __old;
-  if ((size_t) (__fs->p - __fs->buf) > __fs->point_offs)
-    __argp_fmtstream_update (__fs);
-  __old = __fs->wmargin;
-  __fs->wmargin = __wmargin;
-  return __old;
-}
-
-/* Return the column number of the current output point in __FS.  */
-size_t
-__argp_fmtstream_point (argp_fmtstream_t __fs)
-{
-  if ((size_t) (__fs->p - __fs->buf) > __fs->point_offs)
-    __argp_fmtstream_update (__fs);
-  return __fs->point_col >= 0 ? __fs->point_col : 0;
-}
-  

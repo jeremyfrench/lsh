@@ -1,4 +1,4 @@
-# From glibc-2.1
+# From glibc
 
 # Copyright (C) 1997 Free Software Foundation, Inc.
 # This file is part of the GNU C Library.
@@ -21,15 +21,16 @@
 AUTOMAKE_OPTIONS = foreign
 
 noinst_LIBRARIES = libargp.a
-noinst_HEADERS = argp.h argp-fmtstream.h argp-namefrob.h argp-comp.h
+noinst_PROGRAMS = argp-test
+noinst_HEADERS = argp.h argp-fmtstream.h argp-namefrob.h # argp-comp.h
 
 all: libargp.a
 
-EXTRA_DIST = argp-fmtstream.h argp-namefrob.h
+# EXTRA_DIST = argp-fmtstream.h argp-namefrob.h
 
 # Leaves out argp-fs-xinl.c and argp-xinl.c 
-libargp_a_SOURCES = argp-ba.c argp-fmtstream.c \
-		    argp-help.c argp-parse.c argp-pin.c argp-pv.c \
+libargp_a_SOURCES = argp-ba.c argp-eexst.c argp-fmtstream.c \
+		    argp-help.c argp-parse.c argp-pv.c \
 		    argp-pvh.c  argp-eexst.c
 
-
+argp_test_LIBS = libargp.a

@@ -1,5 +1,5 @@
 /* Hierarchial argument parsing, layered over getopt
-   Copyright (C) 1995, 1996, 1997, 1998 Free Software Foundation, Inc.
+   Copyright (C) 1995, 96, 97, 98, 99, 2000 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Written by Miles Bader <miles@gnu.ai.mit.edu>.
 
@@ -22,47 +22,36 @@
 #include <config.h>
 #endif
 
-#ifndef alloca
-# ifdef __GNUC__
-#  define alloca __builtin_alloca
-#  define HAVE_ALLOCA 1
-# else
-#  if defined HAVE_ALLOCA_H || defined _LIBC
-#   include <alloca.h>
-#  else
-#   ifdef _AIX
- #pragma alloca
-#   else
-#    ifndef alloca
-char *alloca ();
-#    endif
-#   endif
-#  endif
-# endif
-#endif
-
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
 #include <getopt.h>
 
+#ifndef UNUSED
+# if __GNUC__ >= 2
+#  define UNUSED __attribute__ ((__unused__))
+# else
+#  define UNUSED
+# endif
+#endif
+
 #ifndef _
 /* This is for other GNU distributions with internationalized messages.
    When compiling libc, the _ macro is predefined.  */
-#ifdef HAVE_LIBINTL_H
-# include <libintl.h>
-#else
-# define dgettext(domain, msgid) (((void) (domain), (msgid)))
-# define gettext(msgid) (((void) (domain), (msgid)))
+# if defined HAVE_LIBINTL_H || defined _LIBC
+#  include <libintl.h>
+#  ifdef _LIBC
+#   undef dgettext
+#   define dgettext(domain, msgid) __dcgettext (domain, msgid, LC_MESSAGES)
+#  endif
+# else
+#  define dgettext(domain, msgid) (msgid)
+#  define gettext(msgid) (msgid)
+# endif
 #endif
-#define N_(msgid) (msgid)
-#endif
-
-#if __GNUC__ && HAVE_GCC_ATTRIBUTE
-# define UNUSED __attribute__ ((__unused__))
-#else
-# define UNUSED
+#ifndef N_
+# define N_(msgid) (msgid)
 #endif
 
 #if _LIBC - 0
@@ -72,6 +61,15 @@ char *alloca ();
 #include <cthreads.h>
 #endif
 #endif /* _LIBC */
+
+/* FIXME: Where are these defined??? /nisse */
+#if HAVE_PROGRAM_INVOCATION_NAME 
+extern const char *program_invocation_name;
+#endif 
+
+#if HAVE_PROGRAM_INVOCATION_SHORT_NAME
+extern const char *program_short_name;
+#endif
 
 #include "argp.h"
 #include "argp-namefrob.h"
@@ -101,7 +99,7 @@ char *alloca ();
    for one second intervals, decrementing _ARGP_HANG until it's zero.  Thus
    you can force the program to continue by attaching a debugger and setting
    it to 0 yourself.  */
-volatile int _argp_hang = 0;
+volatile int _argp_hang;
 
 #define OPT_PROGNAME	-2
 #define OPT_USAGE	-3
@@ -131,24 +129,28 @@ argp_default_parser (int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_PROGNAME:		/* Set the program name.  */
+#if HAVE_PROGRAM_INVOCATION_NAME
       program_invocation_name = arg;
-
+#endif
       /* [Note that some systems only have PROGRAM_INVOCATION_SHORT_NAME (aka
 	 __PROGNAME), in which case, PROGRAM_INVOCATION_NAME is just defined
 	 to be that, so we have to be a bit careful here.]  */
-      arg = strrchr (arg, '/');
-      if (arg)
-	program_invocation_short_name = arg + 1;
-      else
-	program_invocation_short_name = program_invocation_name;
 
       /* Update what we use for messages.  */
-      state->name = program_invocation_short_name;
+
+      {
+	char *short_name = strrchr (arg, '/');
+	state->name = short_name ? short_name + 1 : arg;
+      }
+      
+#if HAVE_PROGRAM_INVOCATION_SHORT_NAME
+      program_invocation_short_name = state->name;
+#endif
 
       if ((state->flags & (ARGP_PARSE_ARGV0 | ARGP_NO_ERRS))
 	  == ARGP_PARSE_ARGV0)
 	/* Update what getopt uses too.  */
-	state->argv[0] = program_invocation_name;
+	state->argv[0] = arg;
 
       break;
 
@@ -165,7 +167,7 @@ argp_default_parser (int key, char *arg, struct argp_state *state)
 }
 
 static const struct argp argp_default_argp =
-  {argp_default_options, &argp_default_parser};
+  {argp_default_options, &argp_default_parser, NULL, NULL, NULL, NULL, "libc"};
 
 
 static const struct argp_option argp_version_options[] =
@@ -197,7 +199,7 @@ argp_version_parser (int key, char *arg UNUSED, struct argp_state *state)
 }
 
 static const struct argp argp_version_argp =
-  {argp_version_options, &argp_version_parser};
+  {argp_version_options, &argp_version_parser, NULL, NULL, NULL, NULL, "libc"};
 
 /* Returns the offset into the getopt long options array LONG_OPTIONS of a
    long option with called NAME, or -1 if none is found.  Passing NULL as
@@ -539,7 +541,7 @@ parser_init (struct parser *parser, const struct argp *argp,
 #define LLEN ((szs.long_len + 1) * sizeof (struct option))
 #define SLEN (szs.short_len + 1)
 #define STORAGE(offset) ((void *) (((char *) parser->storage) + (offset)))
-  
+
   parser->storage = malloc (GLEN + CLEN + LLEN + SLEN);
   if (! parser->storage)
     return ENOMEM;
@@ -612,8 +614,17 @@ parser_init (struct parser *parser, const struct argp *argp,
       parser->state.name = short_name ? short_name + 1 : argv[0];
     }
   else
+  {
+#if HAVE_PROGRAM_INVOCATION_SHORT_NAME
     parser->state.name = program_invocation_short_name;
-
+#elif HAVE_PROGRAM_INVOCATION_NAME
+    char *short_name = strrchr (program_invocation_name, '/');
+    parser->state.name = short_name ? short_name + 1 : program_invocation_name;
+#else
+    /* FIXME: What to do now? */
+    parser->state.name = "";
+#endif
+  }
   return 0;
 }
 
@@ -641,9 +652,9 @@ parser_finalize (struct parser *parser,
 	       group++)
 	    if (group->args_processed == 0)
 	      err = group_parse (group, &parser->state, ARGP_KEY_NO_ARGS, 0);
-	  for (group = parser->groups;
-	       group < parser->egroup && (!err || err==EBADKEY);
-	       group++)
+	  for (group = parser->egroup - 1;
+	       group >= parser->groups && (!err || err==EBADKEY);
+	       group--)
 	    err = group_parse (group, &parser->state, ARGP_KEY_END, 0);
 
 	  if (err == EBADKEY)
@@ -984,29 +995,3 @@ __argp_input (const struct argp *argp, const struct argp_state *state)
 #ifdef weak_alias
 weak_alias (__argp_input, _argp_input)
 #endif
-
-/* Defined here, in case a user is not inlining the definitions in
- * argp.h */
-void
-__argp_usage (__const struct argp_state *__state) __THROW
-{
-  __argp_state_help (__state, stderr, ARGP_HELP_STD_USAGE);
-}
-
-int
-__option_is_short (__const struct argp_option *__opt) __THROW
-{
-  if (__opt->flags & OPTION_DOC)
-    return 0;
-  else
-    {
-      int __key = __opt->key;
-      return __key > 0 && isprint (__key);
-    }
-}
-
-int
-__option_is_end (__const struct argp_option *__opt) __THROW
-{
-  return !__opt->key && !__opt->name && !__opt->doc && !__opt->group;
-}
