@@ -241,14 +241,17 @@ static void do_exc_finish_channel_handler(struct exception_handler *s,
 static struct exception_handler *
 make_exc_finish_channel_handler(struct channel_table *table,
 				UINT32 channel_number,
-				struct exception_handler *e)
+				struct exception_handler *e,
+				const char *context)
 {
   NEW(exc_finish_channel_handler, self);
-  self->table = table;
-  self->channel_number = channel_number;
   self->super.parent = e;
   self->super.raise = do_exc_finish_channel_handler;
+  self->super.context = context;
 
+  self->table = table;
+  self->channel_number = channel_number;
+  
   return &self->super;
 }
 				
@@ -361,7 +364,8 @@ register_channel(struct ssh_connection *connection,
   /* FIXME: Is this the right place to install this exception handler? */
   channel->e = make_exc_finish_channel_handler(table,
 					       local_channel_number,
-					       connection->e);
+					       connection->e,
+					       HANDLER_CONTEXT);
 
   REMEMBER_RESOURCE(connection->resources, &channel->resources->super);
 }
@@ -1724,11 +1728,14 @@ do_channel_io_exception_handler(struct exception_handler *s,
 struct exception_handler *
 make_channel_io_exception_handler(struct ssh_channel *channel,
 				  const char *prefix,
-				  struct exception_handler *parent)
+				  struct exception_handler *parent,
+				  const char *context)
 {
   NEW(channel_io_exception_handler, self);
   self->super.raise = do_channel_io_exception_handler;
   self->super.parent = parent;
+  self->super.context = context;
+  
   self->channel = channel;
   self->prefix = prefix;
 
