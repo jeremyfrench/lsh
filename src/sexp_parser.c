@@ -21,7 +21,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "sexp_parser.h"
+/* This parser reads an sexp from a buffer in memory, and supports
+ * *only* the canonical syntax. */
+
+#include "sexp.h"
 
 #include "digits.h"
 #include "format.h"
@@ -35,9 +38,9 @@
 /* Automatically generated files. */
 #include "sexp_table.h"
 
-
-/* Returns the length of the segmant of characters of a class */
-static UINT32 sexp_scan_class(struct simple_buffer *buffer, int class)
+/* Returns the length of the segment of characters of a class */
+static UINT32
+sexp_scan_class(struct simple_buffer *buffer, int class)
 {
   UINT32 i;
 
@@ -48,15 +51,11 @@ static UINT32 sexp_scan_class(struct simple_buffer *buffer, int class)
   return i;
 }
 
-static void sexp_skip_space(struct simple_buffer *buffer)
-{
-  ADVANCE(sexp_scan_class(buffer, CHAR_space));
-}
-
-/* Skip the following input character on input stream struct
- * simple_buffer *buffer, if it is equal to a given character. Return 1
- * on success, 0 on error. */
-static int sexp_skip_char(struct simple_buffer *buffer, UINT8 expect)
+/* Skip the next input character on input stream struct simple_buffer
+ * *buffer, if it is equal to a given character. Return 1 on success,
+ * 0 on error. */
+static int
+sexp_skip_char(struct simple_buffer *buffer, UINT8 expect)
 {
   UINT8 c;
   
@@ -76,36 +75,17 @@ static int sexp_skip_char(struct simple_buffer *buffer, UINT8 expect)
   return 1;
 }
 
-/* Parse one or more characters into a simple string as a token. */
-static struct lsh_string *sexp_parse_token(struct simple_buffer *buffer)
-{
-  UINT32 length;
-  struct lsh_string *token;
-  
-  assert(LEFT);
-  assert(sexp_char_classes[*HERE] & CHAR_token_start);
-  
-  length = sexp_scan_class(buffer, CHAR_token);
-
-  if (!length)
-    {
-      werror("sexp: Invalid token.\n");
-      return NULL;
-    }
-
-  token = ssh_format("%ls", length, HERE);
-  ADVANCE(length);
-
-  return token;
-}
+#define MAX_DIGITS 8
 
 /* Parse a decimal number */
-static int sexp_parse_decimal(struct simple_buffer *buffer, UINT32 *value)
+static int
+sexp_parse_decimal(struct simple_buffer *buffer, UINT32 *value)
 {
   unsigned length = sexp_scan_class(buffer, CHAR_digit);
   unsigned i;
-  
-  assert(length);
+
+  if (!length)
+    return 0;
   
   if ((*HERE == '0') && (length != 1))
     {
@@ -113,7 +93,7 @@ static int sexp_parse_decimal(struct simple_buffer *buffer, UINT32 *value)
       werror("sexp: Unexpected leading zeroes\n");
       return 0;
     }
-  if (length > 8)
+  if (length > MAX_DIGITS)
     {
       werror("sexp: Decimal number too long (%i digits, max is 8).\n",
 	     length);
@@ -144,6 +124,160 @@ sexp_parse_literal(struct simple_buffer *buffer, UINT32 length)
   return res;
 }
 
+/* Reads and returns a simple string from the input stream, using the
+ * canonical encoding. */
+static struct lsh_string *
+sexp_parse_string_canonical(struct simple_buffer *buffer)
+{
+  UINT32 length;
+      
+  if (sexp_parse_decimal(buffer, &length)
+      && sexp_skip_char(buffer, ':'))
+    return sexp_parse_literal(buffer, length);
+
+  return NULL;
+}
+
+/* Called when the leading '[' is already consumed */
+static struct sexp *
+sexp_parse_display_canonical(struct simple_buffer *buffer)
+{
+  struct lsh_string *display;
+
+  display = sexp_parse_string_canonical(buffer);
+
+  if (display)
+    {
+      if (sexp_skip_char(buffer, ']'))
+	{
+	  struct lsh_string *contents;
+	  
+	  contents = sexp_parse_string_canonical(buffer);
+
+	  if (contents)
+	    return make_sexp_string(display, contents);
+	}
+      lsh_string_free(display);
+    }
+
+  return NULL;
+}
+
+static struct sexp *
+sexp_parse_list_canonical(struct simple_buffer *buffer)
+{
+  struct object_queue p;
+  object_queue_init(&p);
+
+  while (LEFT)
+    {
+      struct sexp *e;
+      
+      if (*HERE == ')')
+	{
+	  struct object_list *l = queue_to_list(&p);
+	  object_queue_kill(&p);
+
+	  return sexp_v(l);
+	}
+
+      e = sexp_parse_canonical(buffer);
+      if (!e)
+	{
+	  object_queue_kill(&p);
+	  return NULL;
+	}
+      object_queue_add_tail(&p, &e->super);
+    }
+  werror("sexp: Unexpected EOF (missing ')')\n");
+  
+  object_queue_kill(&p);
+  return NULL;
+}
+
+struct sexp *
+sexp_parse_canonical(struct simple_buffer *buffer)
+{
+  if (!LEFT)
+    {
+      werror("sexp: Unexpected EOF.\n");
+      return NULL;
+    }
+  
+  switch(GET())
+    {
+    case '(':
+      return sexp_parse_list_canonical(buffer);
+    case '[':
+      return sexp_parse_display_canonical(buffer);
+    default:
+      {
+	struct lsh_string *s = sexp_parse_string_canonical(buffer);
+	return s ? make_sexp_string(NULL, s) : NULL;
+      }
+    }
+}
+
+struct sexp *
+string_to_sexp(struct lsh_string *src, int free)
+{
+  struct simple_buffer buffer;
+  struct sexp *e = NULL;;
+  
+  simple_buffer_init(&buffer, src->length, src->data);
+
+  if ( (e = sexp_parse_canonical(&buffer))
+       && parse_eod(&buffer))
+    {
+      if (free)
+	lsh_string_free(src);
+
+      return e;
+    }
+  if (free)
+    lsh_string_free(src);
+
+  return NULL;
+}
+
+
+/* Old obsoleted code follows */
+
+#if 0
+static void sexp_skip_space(struct simple_buffer *buffer)
+{
+  ADVANCE(sexp_scan_class(buffer, CHAR_space));
+}
+#endif
+
+
+#if 0
+/* Parse one or more characters into a simple string as a token. */
+static struct lsh_string *sexp_parse_token(struct simple_buffer *buffer)
+{
+  UINT32 length;
+  struct lsh_string *token;
+  
+  assert(LEFT);
+  assert(sexp_char_classes[*HERE] & CHAR_token_start);
+  
+  length = sexp_scan_class(buffer, CHAR_token);
+
+  if (!length)
+    {
+      werror("sexp: Invalid token.\n");
+      return NULL;
+    }
+
+  token = ssh_format("%ls", length, HERE);
+  ADVANCE(length);
+
+  return token;
+}
+#endif
+
+
+#if 0
 #define QUOTE_END -1
 #define QUOTE_INVALID -2
 
@@ -563,21 +697,10 @@ sexp_parse_base64(struct simple_buffer *buffer, UINT8 delimiter)
 
   return res;
 }
-  
-/* Reads and returns a simple string from the input stream, using the
- * canonical encoding. */
-static struct lsh_string *
-sexp_parse_string_canonical(struct simple_buffer *buffer)
-{
-  UINT32 length;
-      
-  if (sexp_parse_decimal(buffer, &length)
-      && sexp_skip_char(buffer, ':'))
-    return sexp_parse_literal(buffer, length);
+#endif
 
-  return NULL;
-}
 
+#if 0
 static struct lsh_string *
 sexp_parse_string_advanced(struct simple_buffer *buffer)
 {
@@ -625,7 +748,9 @@ sexp_parse_string_advanced(struct simple_buffer *buffer)
       return NULL;
     }
 }
+#endif
 
+#if 0
 static struct sexp *
 sexp_parse_display_canonical(struct simple_buffer *buffer)
 {
@@ -637,12 +762,12 @@ sexp_parse_display_canonical(struct simple_buffer *buffer)
 
   if (display)
     {
-      sexp_skip_space(buffer);
+      /* sexp_skip_space(buffer); */
       if (sexp_skip_char(buffer, ']'))
 	{
 	  struct lsh_string *contents;
 	  
-	  sexp_skip_space(buffer);
+	  /* sexp_skip_space(buffer); */
 	  contents = sexp_parse_string_canonical(buffer);
 
 	  if (contents)
@@ -653,7 +778,9 @@ sexp_parse_display_canonical(struct simple_buffer *buffer)
 
   return NULL;
 }
+#endif
 
+#if 0
 static struct sexp *
 sexp_parse_display_advanced(struct simple_buffer *buffer)
 {
@@ -672,7 +799,9 @@ sexp_parse_display_advanced(struct simple_buffer *buffer)
   
   return NULL;
 }
+#endif
 
+#if 0
 struct parse_node
 {
   struct parse_node *prev;
@@ -735,32 +864,10 @@ static void parse_list_add(struct parse_list *p, struct sexp *e)
 
   p->count++;
 }
+#endif
 
-static struct sexp *sexp_parse_list_canonical(struct simple_buffer *buffer)
-{
-  struct parse_list p = PARSE_LIST_INIT;
 
-  while (LEFT)
-    {
-      struct sexp *e;
-      
-      if (*HERE == ')')
-	return build_parse_vector(&p);
-
-      e = sexp_parse_canonical(buffer);
-      if (!e)
-	{
-	  parse_list_free(&p);
-	  return NULL;
-	}
-      parse_list_add(&p, e);
-    }
-  werror("sexp: Unexpected EOF (missing ')')\n");
-  
-  parse_list_free(&p);
-  return NULL;
-}
-
+#if 0
 static struct sexp *sexp_parse_list_advanced(struct simple_buffer *buffer)
 {
   struct parse_list p = PARSE_LIST_INIT;
@@ -787,33 +894,10 @@ static struct sexp *sexp_parse_list_advanced(struct simple_buffer *buffer)
   parse_list_free(&p);
   return NULL;
 }
+#endif
 
-struct sexp *sexp_parse_canonical(struct simple_buffer *buffer)
-{
-  if (!LEFT)
-    {
-      werror("sexp: Unexpected EOF.\n");
-      return NULL;
-    }
 
-  if (sexp_char_classes[*HERE] & CHAR_digit)
-    {
-      struct lsh_string *s = sexp_parse_string_canonical(buffer);
-      return s ? make_sexp_string(NULL, s) : NULL;
-    }
-  
-  switch(GET())
-    {
-    case '(':
-      return sexp_parse_list_canonical(buffer);
-    case '[':
-      return sexp_parse_display_canonical(buffer);
-    default:
-      werror("sexp: Syntax error.\n");
-      return NULL;
-    }
-}
-
+#if 0
 static struct sexp *sexp_decode_transport(struct simple_buffer *buffer)
 {
   struct lsh_string *s = sexp_parse_base64(buffer, '}');
@@ -878,3 +962,4 @@ struct sexp *sexp_parse_advanced(struct simple_buffer *buffer)
     }
 }
 
+#endif
