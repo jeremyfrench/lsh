@@ -116,10 +116,10 @@ char *alloca ();
 
 /* Reads a 32-bit integer, in network byte order */
 #define READ_UINT32(p)				\
-((((UINT32) (p)[0]) << 24)			\
+(  (((UINT32) (p)[0]) << 24)			\
  | (((UINT32) (p)[1]) << 16)			\
  | (((UINT32) (p)[2]) << 8)			\
- | ((UINT32) (p)[3]))
+ |  ((UINT32) (p)[3]))
 
 #define WRITE_UINT32(p, i)			\
 do {						\
@@ -131,14 +131,14 @@ do {						\
 
 /* Same, for 24-bit quantities */
 #define READ_UINT24(p)				\
-((((UINT32) (p)[0]) << 24)			\
+(  (((UINT32) (p)[0]) << 24)			\
  | (((UINT32) (p)[1]) << 16)			\
- | ((UINT32) (p)[2]))
+ |  ((UINT32) (p)[2]))
 
 /* Same, for 16-bit quantities */
 #define READ_UINT16(p)				\
-((((UINT32) (p)[0]) << 16)			\
- | ((UINT32) (p)[1]))
+(  (((UINT32) (p)[0]) << 16)			\
+ |  ((UINT32) (p)[1]))
 
 #define WRITE_UINT16(p, i)			\
 do {						\
