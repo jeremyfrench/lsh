@@ -29,10 +29,14 @@ struct ssh_channel
   UINT32 send_window_size;
   UINT32 send_max_packet;
 
+  struct alist *request_types;
+
+#if 0
   int recieved_close;
   int sent_close;
   int recieved_eof;
   int sent_eof;
+#endif
   
   /* Type is CHANNEL_DATA or CHANNEL_STDERR_DATA */
   int (*recieve)(struct ssh_channel *self, struct abstract_write *write,
