@@ -1,3 +1,11 @@
+2001-09-18  Niels Möller  <nisse@ehand.com>
+
+	* src/io.c (lsh_oop_cancel_signal): New function.
+	(do_write_callback): Call FD_PREPARE.
+	(close_fd): Call lsh_oop_cancel_fd.
+	(close_fd_nicely): Likewise.
+	(close_fd_read): Likewise.
+
 2001-09-18  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (lsh_oop_glue): New class.
