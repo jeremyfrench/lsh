@@ -63,13 +63,4 @@
 struct compress_algorithm *make_zlib_algorithm(int level);
 struct compress_algorithm *make_zlib(void);
 
-struct abstract_write *make_packet_codec(struct abstract_write *next,
-					 struct ssh_connection *connection,
-					 int mode);
-
-#define make_packet_deflate(next, connection) \
- make_packet_codec(next, connection, COMPRESS_DEFLATE)
-#define make_packet_inflate(next, connection) \
- make_packet_codec(next, connection, COMPRESS_INFLATE)
-
 #endif /* LSH_COMPRESS_H_INCLUDED */

@@ -23,90 +23,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* FIXME: The deflate functions aren't used anymore */
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include <assert.h>
-
 #include "compress.h"
-
-#include "abstract_io.h"
-#include "connection.h"
-#include "ssh.h"
-#include "xalloc.h"
 
 #define GABA_DEFINE
 #include "compress.h.x"
 #undef GABA_DEFINE
 
-#include "compress.c.x"
-
-/* GABA:
-   (class
-     (name packet_compressor)
-     (super abstract_write_pipe)
-     (vars
-       (compressor object compress_instance)
-       (connection object ssh_connection)))
-*/
-
-static void
-do_packet_deflate(struct abstract_write *closure,
-		  struct lsh_string *packet)
-{
-  CAST(packet_compressor, self, closure);
-
-  if (self->connection->send_compress)
-    {
-      packet = CODEC(self->connection->send_compress, packet, 1);
-      assert(packet);
-    }
-  
-  A_WRITE(self->super.next, packet);
-}
-
-static void
-do_packet_inflate(struct abstract_write *closure,
-		  struct lsh_string *packet)
-{
-  CAST(packet_compressor, self, closure);
-
-  if (self->connection->rec_compress)
-    {
-      uint32_t sequence_number = packet->sequence_number;
-      packet = CODEC(self->connection->rec_compress, packet, 1);
-      if (!packet)
-	{
-	  /* FIXME: It would be nice to pass the error message from zlib on
-	   * to the exception handler. */
-	  EXCEPTION_RAISE
-	    (self->connection->e,
-	     make_protocol_exception(SSH_DISCONNECT_COMPRESSION_ERROR,
-				     "Inflating compressed data failed."));
-	  return;
-	}
-      /* Keep sequence number */
-      packet->sequence_number = sequence_number;
-    }
-  A_WRITE(self->super.next, packet);
-}
-
-struct abstract_write *
-make_packet_codec(struct abstract_write *next,
-		  struct ssh_connection *connection,
-		  int mode)
-{
-  NEW(packet_compressor, res);
-	
-  res->super.super.write = (mode == COMPRESS_INFLATE)
-    ? do_packet_inflate
-    : do_packet_deflate;
-  
-  res->super.next = next;
-  res->connection = connection;
-
-  return &res->super.super;
-}
