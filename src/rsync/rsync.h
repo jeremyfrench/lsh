@@ -159,6 +159,10 @@ struct rsync_read_table_state
   /* Public fields */
   struct rsync_table *table;
 
+  /* Limits */
+  UINT32 max_count;
+  UINT32 max_block_size;
+    
   UINT32 count; /* Block count */
   UINT32 block_size;
   UINT32 remainder;
@@ -181,18 +185,27 @@ struct rsync_send_state
   UINT8 *next_out;
   UINT32 avail_out;
 
-  /* Limits */
-  UINT32 max_count;
-  UINT32 max_block_size;
-  
   struct rsync_table *table;
-
+  
   /* Internal state */
   int state;
-  
+
+  /* The next block that we expect */
+  struct rsync_node *guess;
+
+  /* General buffer pointer */
+  UINT32 i;
+
+  /* Input buffer */
   UINT32 buf_size;
   UINT8 *buf;
-  UINT32 pos;
+  UINT32 size;
+
+  /* Length of literal to output. */
+  UINT32 literal;
+
+  UINT8 token_buf[4];
+  UINT32 token_length;
   
   unsigned sum_a;
   unsigned sum_b;
