@@ -142,7 +142,7 @@ make_rsa_algorithm(struct hash_algorithm *hash,
 #define GROUP_POWER(group, res, g, e) \
 ((group)->power((group), (res), (g), (e)))
 #define GROUP_SMALL_POWER(group, res, g, e) \
-((group)->power((group), (res), (g), (e)))
+((group)->small_power((group), (res), (g), (e)))
 
 /* Groups */
 /* GABA:
@@ -156,11 +156,17 @@ make_rsa_algorithm(struct hash_algorithm *hash,
 struct group_zn *
 make_zn(mpz_t p, mpz_t g, mpz_t order);
 
+void
+zn_ring_add(struct abstract_group *s,
+	    mpz_t res, mpz_t a, mpz_t b);
+void
+zn_ring_subtract(struct abstract_group *s,
+		 mpz_t res, mpz_t a, mpz_t b);
 
 /* DH key exchange, with authentication */
 /* GABA:
    (class
-     (name diffie_hellman_method)
+     (name dh_method)
      (vars
        (G object abstract_group)
        (H object hash_algorithm)
@@ -169,11 +175,12 @@ make_zn(mpz_t p, mpz_t g, mpz_t order);
 
 /* GABA:
    (struct
-     (name diffie_hellman_instance)
+     (name dh_instance)
      (vars
-       (method object diffie_hellman_method)
+       (method object dh_method)
        (e bignum)       ; Client value
-       (f bignum)       ; Server value 
+       (f bignum)       ; Server value
+       ;; FIXME: Move these somewhere else?
        (server_key string)
        (signature string)
        (secret bignum)  ; This side's secret exponent
@@ -184,51 +191,50 @@ make_zn(mpz_t p, mpz_t g, mpz_t order);
 
 /* Creates client message */
 struct lsh_string *
-dh_make_client_msg(struct diffie_hellman_instance *self);
+dh_make_client_msg(struct dh_instance *self);
 
 /* Receives client message */
 int
-dh_process_client_msg(struct diffie_hellman_instance *self,
+dh_process_client_msg(struct dh_instance *self,
 		      struct lsh_string *packet);
 
-#if 0
-/* Should be called with the kex_init messages, client's first */
-void dh_hash_update(struct diffie_hellman_instance *self,
-		    struct lsh_string *packet);
-#endif
+/* Includes more data to the exchange hash. */
+void
+dh_hash_update(struct dh_instance *self,
+	       struct lsh_string *s, int free);
 
 /* Generates server's secret exponent */
 void
-dh_make_server_secret(struct diffie_hellman_instance *self);
+dh_make_server_secret(struct dh_instance *self);
 
 /* Creates server message */
 struct lsh_string *
-dh_make_server_msg(struct diffie_hellman_instance *self,
+dh_make_server_msg(struct dh_instance *self,
 		   struct signer *s);
 
 /* Decodes server message, but does not verify its signature */
 int
-dh_process_server_msg(struct diffie_hellman_instance *self,
+dh_process_server_msg(struct dh_instance *self,
 		      struct lsh_string *packet);
 
 /* Verifies server's signature */
 int
-dh_verify_server_msg(struct diffie_hellman_instance *self,
+dh_verify_server_msg(struct dh_instance *self,
 		     struct verifier *v);
 
 void
-dh_generate_secret(struct diffie_hellman_method *self,
+dh_generate_secret(struct dh_method *self,
 		   mpz_t r, mpz_t v);
 
 void
-dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest);
+dh_hash_digest(struct dh_instance *self);
 
-struct diffie_hellman_method *
+struct dh_method *
 make_dh1(struct randomness *r);
 
 void
-init_diffie_hellman_instance(struct diffie_hellman_method *m,
-			     struct diffie_hellman_instance *self,
-			     struct ssh_connection *c);
+init_dh_instance(struct dh_method *m,
+		 struct dh_instance *self,
+		 struct ssh_connection *c);
 
 #endif /* LSH_PUBLICKEY_CRYPTO_H_INCLUDED */
