@@ -39,7 +39,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	bignum.c blocking_write.c blowfish.c \
 	cascade.c cbc.c channel.c charset.c \
 	client.c client_keyexchange.c client_password.c client_userauth.c \
-	compress.c connection.c crypto.c \
+	compress.c connection.c \
 	debug.c des.c disconnect.c  dsa_keygen.c encrypt.c \
 	format.c gc.c hmac.c io.c keyexchange.c \
 	list.c md5.c \
