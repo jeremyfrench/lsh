@@ -1,3 +1,41 @@
+1999-06-15  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/tcpforward.c: Made forwarded_port a super class for
+	local_port and remote_port. 
+	(do_channel_open_direct_tcpip): Free dest_host on failure.
+	(make_forward_listen): Added backend parameter.
+	(remote_port): New class.
+	(make_remote_port): New function.
+	(remote_port_install_continuation): New class.
+	(make_remote_port_install_continuation): New function.
+	(request_tcpip_forward_command): New class.
+	(make_request_tcpip_forward_command): New function.
+	(remote_listen_value): New class.
+	(make_remote_listen_value): New function.
+	(start_forwarded_client_io): New command.
+	(make_start_forwarded_client_io) New function.
+	(make_forward_remote_port): New expression.
+	(forward_remote_port): New function.
+
+	* src/lsh.c (main): Pass backend to forward_local_port(). 
+
+	* src/io_commands.c (collect_listen): Use CAST_SUBTYPE rather than
+	CAST. 
+
+	* src/connection.h (ssh_connection): Removed forwarded_pots
+	attribute (moved to channel_table). 
+
+	* src/command.h (STATIC_COLLECT_1_FINAL): New macro.
+
+	* src/channel_commands.c (do_channel_global_command): New
+	function. 
+
+	* src/channel.h (channel_table): Moved information about forwarded
+	ports here.
+
+	* src/channel.c (make_channel_table): Initialize queues for
+	handling global requests.
+
 1999-06-14  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Added option -with-tcp-forward.
