@@ -108,10 +108,8 @@ escape_dispatch(struct escape_info *info,
   if (f)
     LSH_CALLBACK(f);
   else
-    /* FIXME: This message could be improved. werror needs a flag to
-     * output a single pretty-printed character. */
-    werror("<escape> %x not defined.\n", c);
-
+    werror("<escape> `%pc' not defined.\n", c);
+  
   return 0;
 }
 
