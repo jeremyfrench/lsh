@@ -1,3 +1,19 @@
+2002-03-23  Pontus Sköld  <pont@it.uu.se>
+
+	* configure.ac (termcap): Added check for libtermcap. This should
+	help systems with a dynamically linked libreadline that depends on
+	libtermcap.
+
+2002-03-21  Pontus Sköld  <pont@soua.net>
+
+	* configure.ac: Almost completely rewrote the checks for readline
+	and history, now actually uses the results of the library checks.
+
+	* rl.c: Use WITH_READLINE and WITH_HISTORY instead of header
+	existence.
+	
+	* rl.h: Use <readline.h> and <history.h> if available.
+
 2002-03-19  Pontus Sköld  <pont@it.uu.se>
 
 	* Makefile.am: sftp-server should go to sbin (or should it go to
