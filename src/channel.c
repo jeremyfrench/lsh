@@ -43,8 +43,22 @@
 struct exception *make_channel_open_exception(UINT32 error_code, char *msg)
 {
   NEW(channel_open_exception, self);
+
+#define MAX_ERROR 4
+  static const char *msgs[MAX_ERROR + 1] = {
+    "",
+    "Administratively prohibited",
+    "Connect failed",
+    "Unknown channel type",
+    "Resource shortage"
+  };
+
+  assert(error_code > 0);
+  assert(error_code <= MAX_ERROR);
+#undef MAX_ERROR
+  
   self->super.type = EXC_CHANNEL_OPEN;
-  self->super.msg = msg;
+  self->super.msg = msg ? msg : msgs[error_code];
   self->error_code = error_code;
 
   return &self->super;
@@ -461,6 +475,7 @@ static struct global_request_status *make_global_request_status(void)
   return self;
 }
 
+/* FIXME: Split into a continuation and an exception handler */
 /* GABA:
    (class
      (name global_request_response)

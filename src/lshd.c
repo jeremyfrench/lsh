@@ -37,6 +37,7 @@
 #include "server_password.h"
 #include "server_session.h"
 #include "randomness.h"
+#include "read_scan.h"
 #include "reaper.h"
 #include "server.h"
 #include "server_keyexchange.h"
@@ -116,7 +117,8 @@ static int do_read_key(struct sexp_handler *h, struct sexp *private)
   struct sexp_iterator *i;
   struct sexp *e;
   mpz_t p, q, g, y, x;
-
+  int res;
+  
   if (!sexp_check_type(private, "private-key", &i))
     {
       werror("lshd: Host key file does not contain a private key.");
@@ -226,17 +228,11 @@ static int read_host_key(const char *name,
       handler->keys = keys;
       
       res = blocking_read(fd, make_read_sexp(&handler->super,
-					     2000, SEXP_TRANSPORT, 0));
+					     SEXP_TRANSPORT, 0));
       close(fd);
 
       KILL(handler);
       
-      if (LSH_FAILUREP(res))
-	{
-	  werror("lshd: Invalid host key.\n");
-	  return 0;
-	}
-
       return 1;
     }
 }

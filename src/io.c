@@ -662,33 +662,79 @@ static void init_file(struct io_backend *b, struct lsh_fd *f, int fd,
   b->files = f;
 }
 
-/* FIXME: How to do this when mocing from return codes to exceptions? */
-#if 0
+
 /* Blocking read from a file descriptor (i.e. don't use the backend).
  * The fd should *not* be in non-blocking mode. */
 
-int blocking_read(int fd, struct read_handler *handler)
+/* FIXME: How to do this when moving from return codes to exceptions? */
+
+/* FIXME: The entire blocking_read mechanism should be replaced by
+ * ordinary commands and non-blocking i/o command. Right now, it is
+ * used to read key-files, so that change probably has to wait until
+ * the parser is rewritten. */
+
+#if 0
+/* ;; GABA:
+   (class
+     (name blocking_read_exception_handler)
+     (super exception_handler)
+     (vars
+       (flag . int)))
+*/
+
+static void
+do_blocking_read_handler(struct exception_handler *s,
+			 const struct exception *e UNUSED)
 {
-  struct fd_read r =
-  { { STACK_HEADER, do_read }, fd };
-
-  for (;;)
-    {
-      int res = READ_HANDLER(handler,
-			     &r.super);
-
-      assert(!(res & (LSH_HOLD | LSH_KILL_OTHERS)));
-
-      if (res & (LSH_CLOSE | LSH_DIE))
-	{
-	  close(fd);
-	  return res;
-	}
-      if (res & LSH_FAIL)
-	werror("blocking_read: Ignoring error %i\n", res);
-    }
+  CAST(blocking_read_exception_handler, self, s);
+  self->flag = 1;
 }
 #endif
+
+#define BLOCKING_READ_SIZE 4096
+
+int blocking_read(int fd, struct read_handler *handler)
+{
+#if 0
+  struct blocking_read_exception_handler exc_handler =
+  {
+    { STACK_HEADER, do_blocking_read_handler },
+    0
+  };
+#endif
+  
+  char *buffer = alloca(BLOCKING_READ_SIZE);
+  
+  for (;;)
+    {
+      int res = read(fd, buffer, BLOCKING_READ_SIZE);
+      if (res < 0)
+	switch(errno)
+	  {
+	  case EINTR:
+	    break;
+	  case EWOULDBLOCK:
+	    fatal("blocking_read: Unexpected EWOULDBLOCK! fd in non-blocking mode?\n");
+	  default:
+	    werror("blocking_read: read() failed (errno = %i): %z\n",
+		   errno, strerror(errno));
+	    return 0;
+	  }
+      else if (!res)
+	return 1;
+      else
+	{
+	  UINT32 got = res;
+	  UINT32 done = 0;
+
+	  while (handler
+		 && (done < got))
+	    done += READ_HANDLER(handler, got - done, buffer + done);
+	}
+    }
+  close(fd);
+  return !handler;
+}
 
 /* Converts a string port number or service name to a port number.
  * Returns the port number in _host_ byte order, or -1 of the port
@@ -920,18 +966,17 @@ void write_raw(int fd, UINT32 length, UINT8 *data,
 	    continue;
 	  default:
 	    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_BLOCKING_WRITE,
-						 NULL, errno));
+						 NULL, errno, NULL));
 	    return;
 	  }
       
       length -= written;
       data += written;
     }
-  return 1;
 }
 
 void write_raw_with_poll(int fd, UINT32 length, UINT8 *data,
-			 struct exception_handler *e */)
+			 struct exception_handler *e)
 {
   while(length)
     {
@@ -952,7 +997,7 @@ void write_raw_with_poll(int fd, UINT32 length, UINT8 *data,
 	    continue;
 	  default:
 	    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_BLOCKING_WRITE,
-						 NULL, errno));
+						 NULL, errno, NULL));
 	  }
       
       written = write(fd, data, length);
@@ -965,13 +1010,12 @@ void write_raw_with_poll(int fd, UINT32 length, UINT8 *data,
 	    continue;
 	  default:
 	    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_BLOCKING_WRITE,
-						 NULL, errno));
+						 NULL, errno, NULL));
 	  }
       
       length -= written;
       data += written;
     }
-  return 1;
 }
 
 void io_set_nonblocking(int fd)
@@ -1092,7 +1136,7 @@ static void really_close(struct lsh_fd *fd)
 {
   CAST(io_fd, self, fd);
 
-  assert(self->buffer);
+  assert(self->write_buffer);
 
   write_buffer_close(self->write_buffer);
 }
@@ -1207,8 +1251,8 @@ void close_fd_nicely(struct lsh_fd *fd, int reason)
   /* Don't attempt to read any further. */
   /* FIXME: Is it safe to free the handler here? */
 
-  self->want_read = 0;
-  self->read = NULL;
+  fd->want_read = 0;
+  fd->read = NULL;
   
   if (fd->really_close)
     /* Mark the write_buffer as closed */
@@ -1234,7 +1278,7 @@ void close_fd_nicely(struct lsh_fd *fd, int reason)
 
 static void
 do_exc_finish_read_handler(struct exception_handler *s,
-			   struct exception *e)
+			   const struct exception *e)
 {
   CAST(exc_finish_read_handler, self, s);
   switch(e->type)

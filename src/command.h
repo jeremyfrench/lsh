@@ -88,6 +88,8 @@ extern struct command_simple progn_command;
 
 extern struct command_continuation discard_continuation;
 
+#define CONTINUATION_USED_P(c) ((c) != &discard_continuation)
+
 /* GABA:
    (class
      (name command_frame)
@@ -241,7 +243,7 @@ struct delayed_apply *
 make_delayed_apply(struct command *f,
 		   struct lsh_object *a);
 
-#define FORCE_APPLY(d, c, e) COMMAND_CALL((d)->f, (d)->o, (c), (e))
+#define FORCE_APPLY(d, c, e) COMMAND_CALL((d)->f, (d)->a, (c), (e))
 
 struct command_continuation *
 make_delay_continuation(struct command *f,

@@ -77,9 +77,10 @@ struct lsh_string *format_userauth_success(void)
 /* NOTE: This implementation does not use any partial successes. As
  * soon as one authentication request is successful, the
  * entire authentication process succeeds. */
-static int do_handle_userauth(struct packet_handler *c,
-			      struct ssh_connection *connection,
-			      struct lsh_string *packet)
+static void
+do_handle_userauth(struct packet_handler *c,
+		   struct ssh_connection *connection,
+		   struct lsh_string *packet)
 {
   CAST(userauth_handler,  closure, c);
   struct simple_buffer buffer;
@@ -97,15 +98,13 @@ static int do_handle_userauth(struct packet_handler *c,
       && parse_atom(&buffer, &requested_service)
       && parse_atom(&buffer, &method))
     {
-      struct lsh_object *auth_info = NULL;
-      
       CAST_SUBTYPE(userauth, auth, ALIST_GET(closure->methods, method));
       CAST_SUBTYPE(command, service,
 		   ALIST_GET(closure->services, requested_service));
       
       if (!(auth && service))
 	{
-	  static const exception userauth_failed
+	  static const struct exception userauth_failed
 	    = STATIC_EXCEPTION(EXC_USERAUTH,
 			       "Unknown auth method or service.");
 	  
@@ -113,9 +112,9 @@ static int do_handle_userauth(struct packet_handler *c,
 	  return;
 	}
 
-      AUTHENTICATE(auth, user, &buffer, &auth_info,
-		   make_delay_continuation(service, self->c),
-		   self->e);
+      AUTHENTICATE(auth, user, &buffer,
+		   make_delay_continuation(service, closure->c),
+		   closure->e);
     }
   else
     EXCEPTION_RAISE(connection->e,
@@ -166,8 +165,8 @@ do_userauth_continuation(struct command_continuation *s,
   C_WRITE(self->connection, format_userauth_success());
 
   /* Ignore any further userauth messages. */
-  connection->dispatch[SSH_MSG_USERAUTH_REQUEST]
-    = connection->ignore;
+  self->connection->dispatch[SSH_MSG_USERAUTH_REQUEST]
+    = self->connection->ignore;
 
   FORCE_APPLY(action, self->super.up, self->super.e); 
 }
@@ -183,7 +182,7 @@ make_userauth_continuation(struct ssh_connection *connection,
   self->super.e = e;
   
   self->connection = connection;
-  return &self->super;
+  return &self->super.super;
 }
       
 
@@ -203,7 +202,7 @@ make_userauth_continuation(struct ssh_connection *connection,
 
 static void
 do_exc_userauth_handler(struct exception_handler *s,
-			struct exception *e)
+			const struct exception *e)
 {
   CAST(exc_userauth_handler, self, s);
 
@@ -213,9 +212,9 @@ do_exc_userauth_handler(struct exception_handler *s,
       EXCEPTION_RAISE(self->super.parent, e);
       break;
     case EXC_USERAUTH:
-      if (closure->attempts)
+      if (self->attempts)
 	{
-	  closure->attempts--;
+	  self->attempts--;
 	  C_WRITE(self->connection,
 		  format_userauth_failure(self->advertised_methods, 0));
 	}
@@ -236,6 +235,8 @@ make_exc_userauth_handler(struct ssh_connection *connection,
 {
   NEW(exc_userauth_handler, self);
   self->super.raise = do_exc_userauth_handler;
+  self->super.parent = parent;
+  
   self->connection = connection;
   self->advertised_methods = advertised_methods;
   self->attempts = attempts;
@@ -261,9 +262,9 @@ static void do_userauth(struct command *s,
   
   auth->c = make_once_continution(NULL,
 				  make_userauth_continuation(connection,
-							     c, e);
+							     c, e));
   auth->e = make_exc_userauth_handler(connection,
-				      advertised_methods,
+				      self->advertised_methods,
 				      AUTH_ATTEMPTS, e);
   
   connection->dispatch[SSH_MSG_USERAUTH_REQUEST] = &auth->super;

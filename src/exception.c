@@ -25,45 +25,55 @@
 
 #include "io.h"
 #include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#include <assert.h>
+
+#define GABA_DEFINE
+#include "exception.h.x"
+#undef GABA_DEFINE
 
 static void
 do_default_handler(struct exception_handler *ignored UNUSED,
-		   struct exception *e)
+		   const struct exception *e)
 {
 #if 0
   if (e->type & EXC_IO)
     {
       CAST_SUBTYPE(io_exception, io, e);
-      werror("i/o error (errno = %i): %z\n", io->error, e->name);
+      werror("i/o error (errno = %i): %z\n", io->error, e->msg);
       
       if (io->fd)
 	kill_fd(io->fd);
     }
   else
 #endif
-    fatal("Unhandled exception of type: %z\n", e->type, e->name);
+    fatal("Unhandled exception of type: %z\n", e->type, e->msg);
 }
 
 struct exception_handler default_exception_handler =
 { STATIC_HEADER, do_default_handler };
 
 struct exception dummy_exception =
-{ STATIC_HEADER, LSH_DUMMY, "dummy" };
+{ STATIC_HEADER, EXC_DUMMY, "dummy" };
 
 static void
 do_ignore_exception_handler(struct exception_handler *self UNUSED,
-			    struct exception *e UNUSED)
+			    const struct exception *e UNUSED)
 {}
 
 struct exception_handler ignore_exception_handler =
 { STATIC_HEADER, do_ignore_exception_handler };
 
 
-struct exception *make_simple_exception(UNIT32 type, const char *name)
+struct exception *make_simple_exception(UINT32 type, const char *msg)
 {
   NEW(exception, e);
   e->type = type;
-  e->name = name;
+  e->msg = msg;
+
+  return e;
 }
 
 struct exception *
@@ -82,13 +92,13 @@ make_protocol_exception(UINT32 reason, const char *msg)
     "Connection lost", "By application"
   };
     
-  assert(reason >= 0);
+  assert(reason > 0);
   assert(reason <= MAX_REASON);
 
 #undef MAX_REASON
 
   self->super.type = EXC_PROTOCOL;
-  self->super.name = msg ? msg : messages[reason];
+  self->super.msg = msg ? msg : messages[reason];
 
   self->reason = reason;
 

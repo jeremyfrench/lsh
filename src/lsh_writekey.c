@@ -54,7 +54,7 @@ do_lsh_writekey_handler(struct exception_handler *s UNUSED,
   exit(EXIT_FAILURE);
 }
 
-static struct exception_handler handler =
+static struct exception_handler exc_handler =
 STATIC_EXCEPTION_HANDLER(do_lsh_writekey_handler, NULL);
 
 /* FIXME: Should support encryption of the private key. */
@@ -158,13 +158,15 @@ do_write_key(struct sexp_handler *h, struct sexp *private)
 
   A_WRITE(make_blocking_write(public_fd, 0),
 	  sexp_format(public, SEXP_TRANSPORT, 0),
-	  &handler);
+	  &exc_handler);
 
   A_WRITE(make_blocking_write(private_fd, 0),
 	  sexp_format(private, SEXP_CANONICAL, 0),
-	  &handler);
+	  &exc_handler);
   
   *closure->status = EXIT_SUCCESS;
+
+  return LSH_OK | LSH_CLOSE;
 }
 
 #define BLOCK_SIZE 2000
@@ -236,8 +238,9 @@ int main(int argc UNUSED, char **argv UNUSED)
   handler->public_file = public;
   handler->private_file = private;
   
-  io_read(make_io_fd(backend, STDIN_FILENO),
-	  make_read_sexp(&handler->super, BLOCK_SIZE, SEXP_TRANSPORT, 0),
+  io_read(make_io_fd(backend, STDIN_FILENO, &exc_handler),
+	  make_buffered_read(BLOCK_SIZE,
+			     make_read_sexp(&handler->super, SEXP_TRANSPORT, 0)),
 	  NULL);
 
   io_run(backend);

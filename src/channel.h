@@ -112,7 +112,7 @@
 
        ; Called when eof is received on the channel (or when it is
        ; closed, whatever happens first).
-       (eof method int)
+       (eof method void)
   
        ; Reply from SSH_MSG_CHANNEL_OPEN_REQUEST
        ;; (open_confirm method int)
@@ -210,15 +210,15 @@
 */
 
 #define GLOBAL_REQUEST_CALLBACK(c, s) \
-((c) ? ((c)->response((c), (s))) : LSH_OK | LSH_GOON)
+((c)->response((c), (s)))
 
 /* GABA:
    (class
      (name global_request)
      (vars
-       (handler method int "struct ssh_connection *connection"
-                           "struct simple_buffer *args"
-			   "struct global_request_callback *response")))
+       (handler method void "struct ssh_connection *connection"
+                            "struct simple_buffer *args"
+			    "struct global_request_callback *response")))
 */
 
 #define GLOBAL_REQUEST(r, c, a, n) ((r)->handler((r), (c), (a), (n)))

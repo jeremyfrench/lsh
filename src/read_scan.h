@@ -46,6 +46,7 @@
 #define LSH_FAIL 1
 #define LSH_CLOSE 2
 #define LSH_SYNTAX 4
+#define LSH_DIE 8
 
 #define TOKEN_EOF -1
 #define TOKEN_EOS -2

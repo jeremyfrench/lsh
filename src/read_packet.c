@@ -127,12 +127,12 @@ static const struct io_exception read_eof =
 STATIC_IO_EXCEPTION(EXC_IO_EOF, "read_packet: Read EOF");
 #endif
 
-#define READ(n, dst) do {			\
-  memcpy((dst) + closure->pos, data, (n));	\
-  closure->pos += (n);				\
-  data += (n);					\
-  total += (n);					\
-  available -= (n);				\
+#define READ(n, dst) do {				\
+  memcpy((dst)->data + closure->pos, data, (n));	\
+  closure->pos += (n);					\
+  data += (n);						\
+  total += (n);						\
+  available -= (n);					\
 } while (0)
 
 static UINT32

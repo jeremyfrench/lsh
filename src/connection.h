@@ -122,7 +122,7 @@ struct ssh_connection;
 struct ssh_connection *make_ssh_connection(struct command_continuation *c);
 
 struct exception_handler *
-make_exc_protocol_handler(struct connection *connection,
+make_exc_protocol_handler(struct ssh_connection *connection,
 			  struct exception_handler *parent);
 
 void connection_init_io(struct ssh_connection *connection,

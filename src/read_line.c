@@ -99,9 +99,9 @@ do_read_line(struct read_handler **h,
   if (length && (data[length-1] == 0xd))
     length--;
 
-  /* NOTE: This call can modify both self->handler and *r. */
-  PROCESS_LINE(self->handler, h, length, self->buffer);
-
+  /* NOTE: This call can modify both self->handler and *h. */
+  PROCESS_LINE(self->handler, h, length, self->buffer, self->e);
+		    
   /* Reset */
   self->pos = 0;
 

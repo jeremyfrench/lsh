@@ -88,7 +88,8 @@ static void
 do_line(struct line_handler **h,
 	struct read_handler **r,
 	UINT32 length,
-	UINT8 *line)
+	UINT8 *line,
+	struct exception_handler *e)
 {
   CAST(connection_line_handler, closure, *h);
   
@@ -153,7 +154,8 @@ do_line(struct line_handler **h,
 	  *h = NULL;
 	  SSH1_FALLBACK(closure->fallback,
 			closure->fd,
-			length, line);
+			length, line,
+			e);
 
 	  return;
 	}

@@ -282,16 +282,14 @@ struct ssh_channel *make_server_session(struct unix_user *user,
 
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
 
-static int do_open_session(struct channel_open *s,
-                           struct ssh_connection *connection UNUSED,
-                           struct simple_buffer *args,
-			   struct command_continuation *c,
-			   struct exception_handler *e)
+static void
+do_open_session(struct channel_open *s,
+		struct ssh_connection *connection UNUSED,
+		struct simple_buffer *args,
+		struct command_continuation *c,
+		struct exception_handler *e)
 {
   CAST(open_session, closure, s);
-  struct ssh_channel *session = NULL;
-  UINT32 error;
-  char *error_msg;
 
   debug("server.c: do_open_session()\n");
 
@@ -937,11 +935,12 @@ struct channel_request *make_shell_handler(struct io_backend *backend,
 
 #if WITH_PTY_SUPPORT
 /* pty_handler */
-static int do_alloc_pty(struct channel_request *c UNUSED,
-                        struct ssh_channel *channel,
-                        struct ssh_connection *connection UNUSED,
-                        int want_reply,
-                        struct simple_buffer *args)
+static void
+do_alloc_pty(struct channel_request *c UNUSED,
+	     struct ssh_channel *channel,
+	     struct ssh_connection *connection UNUSED,
+	     int want_reply,
+	     struct simple_buffer *args)
 {
   UINT32 width, height, width_p, height_p;
   UINT8 *mode;
@@ -1007,6 +1006,7 @@ static int do_alloc_pty(struct channel_request *c UNUSED,
 
   verbose(" failed.\n");
   lsh_string_free(term);
+
   if (want_reply)
     A_WRITE(channel->write, format_channel_failure(channel->channel_number),
 	    channel->e);

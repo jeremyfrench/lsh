@@ -45,11 +45,12 @@
      (name line_handler)
      (vars
        (handler indirect-method void "struct read_handler **r"
-		"UINT32 length" "UINT8 *line")))
+		"UINT32 length" "UINT8 *line"
+		"struct exception_handler *e")))
 */
 
-#define PROCESS_LINE(h, r, length, line) \
-((h)->handler(&(h), (r), (length), (line)))
+#define PROCESS_LINE(h, r, length, line, e) \
+((h)->handler(&(h), (r), (length), (line), (e)))
 
 struct read_handler *make_read_line(struct line_handler *handler,
 				    struct exception_handler *e);

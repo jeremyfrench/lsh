@@ -318,7 +318,7 @@ do_format_request_tcpip_forward(struct global_request_command *s,
 
   debug("tcpforward_commands.c: do_format_request_tcpip_forward()\n");
 
-  if (c)
+  if (CONTINUATION_USED_P(*c))
     {
       port = make_remote_port(self->port, NULL);
       *c = make_remote_port_install_continuation(port, self->callback, *c);

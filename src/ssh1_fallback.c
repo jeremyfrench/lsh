@@ -23,6 +23,7 @@
 
 #include "ssh1_fallback.h"
 
+#include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -45,8 +46,9 @@
        (sshd1 . "char *")))
 */
 
-static int fall_back_to_ssh1(struct ssh1_fallback *c,
-			     int fd, UINT32 length, const UINT8 *line)
+static void fall_back_to_ssh1(struct ssh1_fallback *c,
+			      int fd, UINT32 length, const UINT8 *line,
+			      struct exception_handler *e)
 {
   CAST(sshd1, closure, c);
   
@@ -58,7 +60,9 @@ static int fall_back_to_ssh1(struct ssh1_fallback *c,
     {
       werror("Forking to start fallback sshd1 failed with %z\n",
 	     STRERROR(errno));
-      return LSH_FAIL | LSH_DIE;
+
+      EXCEPTION_RAISE(e, make_protocol_exception(SSH_DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED,
+						 "Falling back to ssh1 failed."));
     }
   else if (pid == 0)
     {
@@ -96,14 +100,16 @@ static int fall_back_to_ssh1(struct ssh1_fallback *c,
       werror("lshd: fall_back_to_ssh1: execl failed (errno = %i): %z\n",
 	     errno, STRERROR(errno));
       _exit(EXIT_FAILURE);
-      /* To make gcc happy, if _exit is not declared as NORETURN */
-      return 0; 
     }
   else
     { /* pid > 0 */
       /* Parent */
+      static const struct exception delegate
+	= STATIC_EXCEPTION(EXC_FINISH_IO,
+			   "Forked an ssh1 process to handle the connection.");
+      
       /* This tells the backend to close our socket. */
-      return LSH_OK | LSH_DIE;
+      EXCEPTION_RAISE(e, &delegate);
     }
 }
 

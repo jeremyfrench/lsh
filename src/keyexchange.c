@@ -309,8 +309,9 @@ do_handle_kexinit(struct packet_handler *c,
   {
     CAST_SUBTYPE(keyexchange_algorithm, kex_algorithm,
 		 ALIST_GET(closure->algorithms, kex_algorithm_atom));
-    CAST_SUBTYPE(hostkey_algorithm, ALIST_GET(closure->algorithms,
-					      hostkey_algorithm_atom));
+    CAST_SUBTYPE(signature_algorithm, hostkey_algorithm,
+		 ALIST_GET(closure->algorithms,
+			   hostkey_algorithm_atom));
     KEYEXCHANGE_INIT( kex_algorithm,
 		      connection,
 		      hostkey_algorithm_atom,

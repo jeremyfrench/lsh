@@ -26,7 +26,9 @@
 
 #include "lsh.h"
 
+#define GABA_DECLARE
 #include "exception.h.x"
+#undef GABA_DECLARE
 
 /* GABA:
    (class
@@ -118,7 +120,7 @@ extern struct exception dummy_exception;
 */
 
 struct exception *
-make_simple_exception(UINT32 type, int name);
+make_simple_exception(UINT32 type, const char *msg);
 
 /* A protocol exception, that normally terminates the connection */
 /* GABA:

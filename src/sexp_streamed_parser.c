@@ -852,7 +852,6 @@ static int do_loop(struct scanner **s, int token)
 }
 
 struct read_handler *make_read_sexp(struct sexp_handler *handler,
-				    UINT32 block_size,
 				    int style, int goon)
 {
   struct scanner *scanner;
@@ -885,5 +884,5 @@ struct read_handler *make_read_sexp(struct sexp_handler *handler,
       next->next = scanner;
     }
   
-  return make_read_scan(block_size, scanner);
+  return make_read_scan(scanner);
 }

@@ -24,7 +24,7 @@
 #ifndef LSH_SSH1_FALLBACK_H_INCLUDED
 #define LSH_SSH1_FALLBACK_H_INCLUDED
 
-#include "lsh.h"
+#include "exception.h"
 
 #define GABA_DECLARE
 #include "ssh1_fallback.h.x"
@@ -34,11 +34,13 @@
    (class
      (name ssh1_fallback)
      (vars
-       (fallback method int "int fd" "UINT32 length" "const UINT8 *line")))
+       (fallback method void
+                 "int fd" "UINT32 length" "const UINT8 *line"
+		 "struct exception_handler *e")))
 */
 
-#define SSH1_FALLBACK(f, fd, length, line) \
-((f)->fallback((f), (fd), (length), (line)))
+#define SSH1_FALLBACK(f, fd, length, line, e) \
+((f)->fallback((f), (fd), (length), (line), (e)))
      
 struct ssh1_fallback *make_ssh1_fallback(char *sshd1);
 

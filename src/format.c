@@ -301,7 +301,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 		  goto end_options;
 		}
 	    }
-end_options:
+	end_options:
 		  
 	  if (literal && decimal)
 	    fatal("Internal error!\n");

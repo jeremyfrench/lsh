@@ -72,7 +72,7 @@ void do_channel_request_command(struct command *s,
   struct lsh_string *request
     = FORMAT_CHANNEL_REQUEST(self, channel, &c);
 
-  if (c)
+  if (CONTINUATION_USED_P(c))
     object_queue_add_tail(&channel->pending_requests,
 			  &make_command_context(c, e)->super);
   
@@ -90,7 +90,7 @@ void do_channel_global_command(struct command *s,
   struct lsh_string *request
     = FORMAT_GLOBAL_REQUEST(self, connection, &c);
 
-  if (c)
+  if (CONTINUATION_USED_P(c))
     object_queue_add_tail(&connection->table->pending_global_requests,
 			  &make_command_context(c, e)->super);
 

@@ -239,7 +239,7 @@ do_lsh_default_handler(struct exception_handler *s,
       werror("lsh: Service denied: %z\n", e->msg);
       break;
     default:
-      EXCEPTION_RAISE(self->parent, e);
+      EXCEPTION_RAISE(self->super.parent, e);
     }
   *self->status = EXIT_FAILURE;
 }

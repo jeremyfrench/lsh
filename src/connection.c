@@ -28,6 +28,7 @@
 #include "exception.h"
 #include "format.h"
 #include "disconnect.h"
+#include "io.h"
 #include "keyexchange.h"
 #include "compress.h"
 #include "packet_ignore.h"
@@ -179,7 +180,7 @@ struct packet_handler *make_unimplemented_handler(void)
 
 static void
 do_exc_protocol_handler(struct exception_handler *s,
-			struct exception *e)
+			const struct exception *e)
 {
   CAST(exc_protocol_handler, self, s);
 
@@ -191,7 +192,7 @@ do_exc_protocol_handler(struct exception_handler *s,
 	if (exc->reason)
 	  C_WRITE(self->connection, format_disconnect(exc->reason, exc->super.msg, ""));
 	
-	EXCEPTION_RAISE(self->super.parent, &exception_finish_read);
+	EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
       }
       break;
     default:

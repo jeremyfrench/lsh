@@ -38,7 +38,7 @@
 
 static void
 do_sexp_test_handler(struct exception_handler *s UNUSED,
-		     struct exception *e)
+		     const struct exception *e)
 {
   werror("sexp_test: %z\n", e->msg);
 
@@ -102,8 +102,8 @@ int main(int argc UNUSED, char **argv UNUSED)
   
   init_backend(backend);
 
-  write = io_write(make_io_fd(backend, STDOUT_FILENO),
-		   BLOCK_SIZE, NULL)->buffer;
+  write = io_write(make_io_fd(backend, STDOUT_FILENO, &handler),
+		   BLOCK_SIZE, NULL)->write_buffer;
 
   out->super.handler = do_output_sexp;
   out->write = &write->super;
@@ -113,8 +113,9 @@ int main(int argc UNUSED, char **argv UNUSED)
   close->output = write;
   close->status = &status;
   
-  io_read(make_io_fd(backend, STDIN_FILENO),
-	  make_read_sexp(&out->super, BLOCK_SIZE, SEXP_TRANSPORT, 1),
+  io_read(make_io_fd(backend, STDIN_FILENO, &handler),
+	  make_buffered_read(BLOCK_SIZE,
+			     make_read_sexp(&out->super, SEXP_TRANSPORT, 1)),
 	  &close->super);
 
   io_run(backend);
