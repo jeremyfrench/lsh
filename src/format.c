@@ -375,7 +375,10 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	    case 'S':
 	      {
 		struct lsh_string *s = va_arg(args, struct lsh_string *);
-		UINT32 length = hex ? (2*size) : size;
+		UINT32 length = s->length;
+
+		if (hex)
+		  length *= 2;
 
 		if (decimal)
 		  buffer += write_decimal_length(buffer, length);
