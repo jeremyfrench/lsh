@@ -1,3 +1,10 @@
+2002-04-02  Pontus Sköld  <pont@soua.net>
+
+	* sftp-server.c (sftp_process_readdir): Include up to
+	MAX_DIRENTS_PER_REQUEST files in response to a single
+	SSH_FXP_READDIR. Should (and seems to) speed up directory 
+	traversal dramatically.
+	
 2002-03-27  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* werror.c (_fatal): New function.
@@ -35,6 +42,10 @@
 	function in werror.c instead.
 
 2002-03-26  Pontus Sköld  <pont@soua.net>
+
+	* sftp-server.c (MAX_DIRENTS_PER_REQUEST): New constant, the
+	maximum number of directory entries to include in response to one
+	SSH_FXP_READDIR.
 
 	* buffer.c (sftp_read_packet): Cosmetic fixes and a bugfix (if
 	sftp_get_data returns -1, it's not ok).
