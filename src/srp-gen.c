@@ -142,26 +142,21 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
 
       {
-	struct lsh_fd *fd;
-	
 	if (self->file)
 	  {
 	    const char *cfile = lsh_get_cstring(self->file);
-	    fd = io_write_file(cfile,
-			       O_CREAT | O_EXCL | O_WRONLY,
-			       0600, BLOCK_SIZE,
-			       NULL, self->e);
-	    if (!fd)
+
+	    self->dest = io_write_file(cfile,
+				       O_CREAT | O_EXCL | O_WRONLY,
+				       0600, self->e);
+	    if (!self->dest)
 	      argp_failure(state, EXIT_FAILURE, errno,
 			   "Could not open '%s'.", cfile);
 	  }
 	else
 	  {
-	    fd = io_write(make_lsh_fd(STDOUT_FILENO, IO_STDIO, "stdout",
-				      self->e),
-			  BLOCK_SIZE, NULL);
+	    self->dest = make_io_write_file(STDOUT_FILENO, self->e);
 	  }
-	self->dest = &fd->write_buffer->super;
       }
       
       while (!self->passwd)
