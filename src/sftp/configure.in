@@ -1,3 +1,8 @@
+-dnl -*- mode: shell-script; sh-indentation: 2; -*-
+-dnl $Id$
+-
+-dnl Process this file with autoconf to produce a configure script.
+-
 AC_INIT(sftp-server.c)
 
 AM_INIT_AUTOMAKE(lsh-sftp, 1.0)
@@ -29,7 +34,9 @@ AC_HEADER_TIME
 AC_CHECK_SIZEOF(short, 2)
 AC_CHECK_SIZEOF(int, 4)
 AC_CHECK_SIZEOF(long, 4)
-AC_CHECK_SIZEOF(off_t, 8)
+AC_CHECK_SIZEOF(off_t, 8,
+[#include <stdio.h>
+ #include <unistd.h>])
 
 dnl Check for gcc's __attribute__ construction
 AC_CACHE_CHECK(for __attribute__,
