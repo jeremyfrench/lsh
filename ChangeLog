@@ -1,10 +1,51 @@
+2002-03-18  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/server_userauth.c (do_handle_userauth): Free username on
+	failure. 
+
+	* src/server_publickey.c (do_authenticate): Free username and
+	keyblob on failure. 
+
+	* src/lshd.c (lshd_options): New field resources, that keeps track
+	of resources to be killed at sighup or program exit.
+	(make_lshd_options): Create the resource list, and register it
+	with the gc.
+	(pid_file_resource): New class.
+	(sighup_close_callback): New class.
+	(do_sighup_close_callback): New SIGHUP handler.
+	(make_sighup_close_callback): New function.
+	(close_on_sighup): New command.
+	(make_lshd_listen): Close listen socket on SIGHUP.
+	(do_terminate_callback): Always catch SIGTERM.
+	(install_signal_handlers): Renamed the function
+	install_terminate_handler. Now installs handlers for both SIGHUP
+	and SIGTERM.
+	(main): Arrange for the pidfile to be deleted at exit or SIGHUP.
+
+	* src/io.c (nfiles): New global variable.
+	(lsh_oop_stop_callback): New function.
+	(lsh_oop_stop): New function.
+	(lsh_oop_cancel_stop): New function.
+	(io_nfiles): New function.
+	(close_fd): Decrement nfiles, and call lsh_oop_stop when no files
+	are left. 
+	(make_lsh_fd): Increment nfiles.
+
+	* src/format.c (ssh_format): Use the format string as the
+	debugging "clue" for the string.
+
+	* configure.in (CFLAGS): Don't use -ggdb3, as it seems to be
+	broken on sparc.
+
+	* src/unix_process.c: Unified utmp/utmpx code.
+
 2002-03-18  Pontus Sköld  <pont@it.uu.se>
 
 	* configure.in: Can't check for structs with AC_CHECK_MEMBER,
 	check for a sub member instead.
 
 	* src/unix_process.c (do_utmp_cleanup): Rewrote to use utmpx if
-	both utmpx and utmp is avaialable. Also, don't search for an
+	both utmpx and utmp is available. Also, don't search for an
 	existing entry but construct a new one and putut{,x}line it.
 	Don't clear fields explicitly (the memset).
 	
@@ -16,6 +57,42 @@
 
 	* configure.in: Check for utmpx symmetrically to utmp. Check for
 	more members of struct utmp. Check for members of struct utmpx.
+
+2002-03-18  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh-keygen.c (main): Updated to use the rewritten
+	rsa_generate_key. 
+
+2002-03-17  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/rsa_keygen.c (rsa_generate_key): Rewrote to use nettle's RSA
+	key generation. Deleted the argument E.
+
+	* src/lsh-writekey.c (main_argp_parser): Initialize a randomness
+	generator only if needed (i.e. if the key is going to be
+	encrypted), and let the --server determine which seed-file is
+	used. 
+
+	* src/lsh-writekey.c (main): New option --server, that writes the
+	output files where the server expects its host key.
+
+	* src/lsh-writekey.c (main): Check that files doesn't exist before
+	reading the key, but don't create the files until they are
+	actually written to.
+	(file_exists): New fucntion.
+	(check_file): New function.
+	(open_file): New function.
+	(open_private_file): Deleted function.
+	(open_public_file): Deleted function.
+
+	* src/lsh-keygen.c (do_lsh_keygen_handler): Deleted obsolete
+	function.
+
+	* src/lsh-keygen.c (main): New option --server, that uses the
+	server's seed-file.
+
+	* src/unix_user.c (safe_close): New function.
+	(do_spawn): Avoid close(-1).
 
 2002-03-17  Pontus  <pont@it.uu.se>
 
