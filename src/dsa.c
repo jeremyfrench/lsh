@@ -239,13 +239,12 @@ do_dsa_sign_spki(struct signer *c,
 struct sexp *
 make_dsa_public_key(struct dsa_public *dsa)
 {
-  return sexp_l(2, SA(PUBLIC_KEY),
-		sexp_l(5, SA(DSA),
-		       sexp_l(2, SA(P), sexp_un(dsa->p), -1),
-		       sexp_l(2, SA(Q), sexp_un(dsa->q), -1),
-		       sexp_l(2, SA(G), sexp_un(dsa->g), -1),
-		       sexp_l(2, SA(Y), sexp_un(dsa->y), -1),
-		       -1), -1);
+  return sexp_l(5, SA(DSA),
+		sexp_l(2, SA(P), sexp_un(dsa->p), -1),
+		sexp_l(2, SA(Q), sexp_un(dsa->q), -1),
+		sexp_l(2, SA(G), sexp_un(dsa->g), -1),
+		sexp_l(2, SA(Y), sexp_un(dsa->y), -1),
+		-1);
 }
   
 static struct sexp *
