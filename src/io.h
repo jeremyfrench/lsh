@@ -194,7 +194,7 @@ make_listen_value(struct lsh_fd *fd,
      (vars
        (next object sockaddr_list)
        (length . socklen_t)
-       (addr space "struct sockaddr")))
+       (address space "struct sockaddr")))
 */
 
 /* Copies the sockaddr */
@@ -312,12 +312,20 @@ make_exc_finish_read_handler(struct lsh_fd *fd,
 			     struct exception_handler *parent,
 			     const char *context);
 
+struct resource *
+io_connect_list(struct sockaddr_list *remote,
+		struct command_continuation *c,
+		struct exception_handler *e);
+
 /* FIXME: Reorder arguments to put length first, for consistency? */
 struct lsh_fd *
 io_connect(struct sockaddr *remote,
 	   socklen_t remote_length,
-	   struct command_continuation *c,
+	   struct io_callback *c,
 	   struct exception_handler *e);
+
+struct io_callback *
+make_connect_callback(struct command_continuation *c);
 
 struct lsh_fd *
 io_bind_sockaddr(struct sockaddr *local,
