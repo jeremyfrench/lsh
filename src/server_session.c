@@ -74,9 +74,12 @@
        ; X11 forwarding.
        (x11 object server_x11_info)
        
-       ; value of the TERM environment variable
+       ; Value of the TERM environment variable
        (term string)
 
+       ; Value for the SSH_CLIENT environment variable.
+       (client string)
+       
        ; Child process's stdio 
        (in object lsh_fd)
        (out object lsh_fd)
@@ -166,6 +169,7 @@ make_server_session(UINT32 initial_window,
 
   self->pty = NULL;
   self->term = NULL;
+  self->client = NULL;
   
   self->in = NULL;
   self->out = NULL;
@@ -541,19 +545,22 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
 
   if (info->peer)
     {
-      env[i].name ="SSH_CLIENT";
-      
+      /* Save string in the session object, so that it can be garbage
+       * collected properly. */
+      assert(!session->client);
       if (session->super.connection->local)
-	env[i].value = ssh_format("%lS %di %di", 
-				  info->peer->ip,
-				  info->peer->port,
-				  session->super.connection->local->port
-				  );
+	session->client = ssh_format("%lS %di %di", 
+				      info->peer->ip,
+				      info->peer->port,
+				      session->super.connection->local->port);
       else
-	env[i].value = ssh_format("%lS %di UNKNOWN", 
-				  info->peer->ip,
-				  info->peer->port
-				  );	
+	session->client = ssh_format("%lS %di UNKNOWN", 
+				     info->peer->ip,
+				     info->peer->port
+				     );
+      env[i].name ="SSH_CLIENT";
+      env[i].value = session->client;
+
       i++;
     }
 
