@@ -1,3 +1,8 @@
+2004-11-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* vsnprintf.c: Moved in the CVS tree. It's now a link to
+	misc/vsnprintf.c in the lsh tree.
+
 2004-10-08  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/Makefile.am: Use noinst_PROGRAMS instead of
