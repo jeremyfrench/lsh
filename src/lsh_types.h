@@ -129,6 +129,12 @@ do {						\
   (p)[3] = (i) & 0xff;				\
 } while(0)
 
+/* Same, for 24-bit quantities */
+#define READ_UINT24(p)				\
+((((UINT32) (p)[0]) << 24)			\
+ | (((UINT32) (p)[1]) << 16)			\
+ | ((UINT32) (p)[2]))
+
 /* Same, for 16-bit quantities */
 #define READ_UINT16(p)				\
 ((((UINT32) (p)[0]) << 16)			\
