@@ -34,9 +34,9 @@
 #include "service.h.x"
 #undef GABA_DEFINE
 
-#include "service.c.x"
+/* #include "service.c.x" */
 
-/* GABA:
+/* ;;GABA:
    (class
      (name service_handler)
      (super packet_handler)
@@ -54,63 +54,14 @@ struct lsh_string *format_service_accept(int name)
   return ssh_format("%c%a", SSH_MSG_SERVICE_ACCEPT, name);
 }
 
-static int do_service(struct packet_handler *c,
-		      struct ssh_connection *connection,
-		      struct lsh_string *packet)
-{
-  CAST(service_handler, closure, c);
-
-  struct simple_buffer buffer;
-  unsigned msg_number;
-  int name;
-  
-  simple_buffer_init(&buffer, packet->length, packet->data);
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_SERVICE_REQUEST)
-      && parse_atom(&buffer, &name)
-      && parse_eod(&buffer))
-    {
-      struct ssh_service *service;
-
-      lsh_string_free(packet);
-      
-      if (!name
-	  || !(service = ALIST_GET(closure->services, name))
-	  || !SERVICE_INIT(service, connection))
-	{
-	  return (LSH_FAIL | LSH_CLOSE)
-	    | A_WRITE(connection->write,
-		      format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
-					"Service not available.", ""));
-	}
-      /* Don't accept any further service requests */
-      connection->dispatch[SSH_MSG_SERVICE_REQUEST]
-	= connection->fail;
-      
-      return A_WRITE(connection->write, format_service_accept(name));
-    }
-  return LSH_FAIL | LSH_DIE;
-}
-      
-struct packet_handler *make_service_handler(struct alist *services)
-{
-  NEW(service_handler, self);
-
-  self->super.handler = do_service;
-  self->services = services;
-
-  return &self->super;
-}
-
-/* GABA:
+/* ;;GABA:
    (class
      (name meta_service)
      (super ssh_service)
      (vars
        (service_handler object packet_handler)))
 */
-
+#if 0
 static int init_meta_service(struct ssh_service *c,
 			     struct ssh_connection *connection)
 {
@@ -130,3 +81,4 @@ struct ssh_service *make_meta_service(struct alist *services)
 
   return &self->super;
 }
+#endif

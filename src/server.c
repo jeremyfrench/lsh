@@ -28,6 +28,7 @@
 #include "compress.h"
 #include "connection.h"
 #include "debug.h"
+#include "disconnect.h"
 #include "format.h"
 #include "keyexchange.h"
 #include "read_line.h"
@@ -61,13 +62,6 @@
 #include <pwd.h>
 #include <sys/types.h>
 
-/* Datafellows workaround.
- *
- * It seems that Datafellows' ssh2 client says it want to use protocol
- * version 1.99 in its greeting to the server. This behaviour is not
- * allowed by the specification. Define this to support it anyway. */
-
-#define DATAFELLOWS_SSH2_GREETING_WORKAROUND 1
 
 /* Socket workround */
 #ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
@@ -125,6 +119,108 @@
 #endif
 
 #include "server.c.x"
+
+/* GABA:
+   (class
+     (name service_handler)
+     (super packet_handler)
+     (vars
+       (services object alist)
+       (c object command_continuation)))
+*/
+
+     
+static int do_service_request(struct packet_handler *c,
+			      struct ssh_connection *connection,
+			      struct lsh_string *packet)
+{
+  CAST(service_handler, closure, c);
+
+  struct simple_buffer buffer;
+  unsigned msg_number;
+  int name;
+  
+  simple_buffer_init(&buffer, packet->length, packet->data);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_SERVICE_REQUEST)
+      && parse_atom(&buffer, &name)
+      && parse_eod(&buffer))
+    {
+      lsh_string_free(packet);
+      
+      if (name)
+	{
+	  CAST_SUBTYPE(command, service, ALIST_GET(closure->services, name));
+	  if (service)
+	    {
+	      int res;
+	      
+	      /* Don't accept any further service requests */
+	      connection->dispatch[SSH_MSG_SERVICE_REQUEST]
+		= connection->fail;
+
+	      /* Start service */
+	      res = A_WRITE(connection->write, format_service_accept(name));
+	      if (LSH_CLOSEDP(res))
+		return res;
+	      return res | COMMAND_CALL(service, connection, closure->c);
+	    }
+	}
+      return (LSH_FAIL | LSH_CLOSE)
+	| A_WRITE(connection->write,
+		  format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+				    "Service not available.", ""));
+    }
+
+  lsh_string_free(packet);
+  return LSH_FAIL | LSH_DIE;
+}
+      
+struct packet_handler *
+make_service_request_handler(struct alist *services,
+			     struct command_continuation *c)
+{
+  NEW(service_handler, self);
+
+  self->super.handler = do_service_request;
+  self->services = services;
+  self->c = c;
+
+  return &self->super;
+}
+
+     
+/* GABA:
+   (class
+     (name offer_service)
+     (super command)
+     (vars
+       (services object alist)))
+*/
+
+static int do_offer_service(struct command *s,
+			    struct lsh_object *x,
+			    struct command_continuation *c)
+{
+  CAST(offer_service, self, s);
+  CAST(ssh_connection, connection, x);
+
+  connection->dispatch[SSH_MSG_SERVICE_REQUEST]
+    = make_service_request_handler(self->services, c);
+
+  return LSH_OK | LSH_GOON;
+}
+
+struct command *make_offer_service(struct alist *services)
+{
+  NEW(offer_service, self);
+
+  self->super.call = do_offer_service;
+  self->services = services;
+
+  return &self->super;
+}
 
 /* GABA:
    (class
