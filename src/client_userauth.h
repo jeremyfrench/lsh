@@ -40,6 +40,7 @@ format_userauth_password(struct lsh_string *name,
 			 int free);
 
 
+/* Consumes the username */
 struct command *make_client_userauth(struct lsh_string *username,
 				     int service_name,
 				     struct object_list *methods);

@@ -39,6 +39,7 @@ struct client_userauth;
 
 #include "client_userauth.c.x"
 
+/* The last parameters says whether or not to free the password. */
 struct lsh_string *
 format_userauth_password(struct lsh_string *name,
 			 int service,
@@ -126,6 +127,7 @@ format_userauth_publickey(struct lsh_string *name,
      (name client_userauth)
      (super command)
      (vars
+       ; The name should already be converted to utf8
        (username string)            ; Remote user name to authenticate as.
        (service_name . int)         ; Service we want to access.
        (methods object object_list) ; Authentication methods, in order.
@@ -484,7 +486,7 @@ make_client_userauth(struct lsh_string *username,
   NEW(client_userauth, self);
 
   self->super.call = do_client_userauth;
-  self->username = username;
+  self->username = local_to_utf8(username, 1);
   self->service_name = service_name;
   self->methods = methods;
 
@@ -532,7 +534,7 @@ send_password(struct client_password_state *state)
 	}
 
       C_WRITE(state->connection,
-	      format_userauth_password(local_to_utf8(state->userauth->username, 0),
+	      format_userauth_password(state->userauth->username,
 				       state->userauth->service_name,
 				       local_to_utf8(passwd, 1),
 				       1));
@@ -777,19 +779,20 @@ do_userauth_pk_ok(struct packet_handler *s,
 	{
 	  struct lsh_string *request;
 	  struct lsh_string *signed_data;
-    
+
 #if DATAFELLOWS_WORKAROUNDS
 	  if (connection->peer_flags & PEER_USERAUTH_REQUEST_KLUDGE)
-	    request = format_userauth_publickey(local_to_utf8(self->state->userauth->username, 0),
+	    request = format_userauth_publickey(self->state->userauth->username,
 						ATOM_SSH_USERAUTH,
 						key->type,
 						key->public);
 	  else
 #endif /* DATAFELLOWS_WORKAROUNDS */ 
-	    request = format_userauth_publickey(local_to_utf8(self->state->userauth->username, 0),
+	    request = format_userauth_publickey(self->state->userauth->username,
 						self->state->userauth->service_name,
 						key->type,
 						key->public);
+
 	  signed_data = ssh_format("%S%lS", connection->session_id, request);
 	  request = ssh_format("%flS%fS", 
 			       request, 
@@ -842,7 +845,7 @@ do_publickey_login(struct client_userauth_method *s,
 	CAST(keypair, key, LIST(self->keys)[i]);
 
 	C_WRITE(connection, 
-		format_userauth_publickey_query(local_to_utf8(userauth->username, 0),
+		format_userauth_publickey_query(userauth->username,
 						userauth->service_name,
 						key->type, key->public));
       }
