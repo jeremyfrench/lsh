@@ -563,7 +563,9 @@ init_client_options(struct client_options *self,
 
   self->inhibit_actions = 0;
 
-  object_queue_init(&self->actions);  
+  object_queue_init(&self->actions);
+  
+  self->resources = make_resource_list();
 }
 
 static const struct argp_option
@@ -1034,7 +1036,7 @@ make_client_session(struct client_options *options)
     err = open(options->stderr_file, O_WRONLY | O_CREAT, 0666);
   else
     {
-      err_type = IO_STDIO;
+      err_type = IO_STDERR;
       err = STDERR_FILENO;
     }
   if (err < 0) 
@@ -1069,11 +1071,11 @@ make_client_session(struct client_options *options)
       options->detach_end = 0;
     }
 
-  /* The channel won't get registered in any other resource_list
-   * until later, so we must register it here to avoid a "garbage
-   * collecting a live resource!" crashes if the connection fails
-   * early. */
-  gc_global(&session->resources->super);
+  /* The channel won't get registered in any other resource_list until
+   * later, so we must register it here to be able to clean up
+   * properly if the connection fails early. */
+  remember_resource(options->resources, &session->resources->super);
+  
   return session;
 }
 
