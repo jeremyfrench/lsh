@@ -1,3 +1,8 @@
+2003-05-12  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* configure.ac: Updated AC_CONFIG_SRCDIR, as lsh_types.h no longer
+	exists. 
+
 2003-05-12  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Don't AC_REPLACE_FUNCS(memxor), just use the
