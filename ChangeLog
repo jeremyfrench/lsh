@@ -1,3 +1,13 @@
+2001-10-05  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/crypto.c: New file, with glue to Nettle.
+
+	* src/algorithms.c (all_symmetric_algorithms): Replaced references
+	to rijndael_algorithm with aes256_cbc_algorithm.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added crypto.c. Deleted
+	arcfour.c and rijndael.c.
+
 2001-10-03  Niels Möller  <nisse@ehand.com>
 
 	* src/Makefile.am.in (liblsh_a_SOURCES): Deleted sexp_commands.c
