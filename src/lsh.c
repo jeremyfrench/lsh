@@ -179,17 +179,17 @@ int main(int argc, char **argv)
   /* Dup stdio file descriptors, so that they can be closed without
    * confusing the c library. */
   
-  if ( (in = dup(STDIN_FILENO) < 0))
+  if ( (in = dup(STDIN_FILENO)) < 0)
     {
       werror("Can't dup stdin: %s\n", strerror(errno));
       return EXIT_FAILURE;
     }
-  if ( (out = dup(STDOUT_FILENO) < 0))
+  if ( (out = dup(STDOUT_FILENO)) < 0)
     {
       werror("Can't dup stdout: %s\n", strerror(errno));
       return EXIT_FAILURE;
     }
-  if ( (err = dup(STDERR_FILENO) < 0))
+  if ( (err = dup(STDERR_FILENO)) < 0)
     {
       werror("Can't dup stderr: %s\n", strerror(errno));
       return EXIT_FAILURE;
