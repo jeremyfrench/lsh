@@ -24,7 +24,7 @@ Makefile.am: Makefile.am.in
 
 bin_PROGRAMS = lsh lsh_keygen lsh_writekey
 sbin_PROGRAMS = lshd
-noinst_PROGRAMS = prime_table digit_table sexp_test
+noinst_PROGRAMS = prime_table digit_table sexp_conv
 noinst_LIBRARIES = liblsh.a
 # noinst_HEADERS = $(dist_x_files) $(cvs_headers)
 
@@ -51,7 +51,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	read_scan.c read_data.c read_line.c read_packet.c reaper.c resource.c \
 	server.c server_keyexchange.c server_password.c \
 	server_pty.c server_session.c server_userauth.c \
-	sexp.c sexp_parser.c sexp_streamed_parser.c \
+	sexp.c sexp_commands.c sexp_parser.c sexp_streamed_parser.c \
 	sha.c service.c ssh1_fallback.c \
 	string_buffer.c tcpforward.c tcpforward_commands.c \
 	translate_signal.c tty.c twofish.c unpad.c userauth.c \
