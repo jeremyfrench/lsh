@@ -29,8 +29,15 @@
 #include "compress.h"
 #include "crypto.h"
 #include "publickey_crypto.h"
+#include "xalloc.h"
+
+#include "lsh_argp.h"
 
 #include <stdarg.h>
+
+#define GABA_DEFINE
+#include "algorithms.h.x"
+#undef GABA_DEFINE
 
 struct alist *many_algorithms(unsigned n, ...)
 {
@@ -186,4 +193,87 @@ struct int_list *default_compression_algorithms(void)
   return make_int_list(1, ATOM_NONE, -1);
 #endif
 }
-    
+
+static const struct argp_option
+algorithms_options[] =
+{
+  /* Name, key, arg-name, flags, doc, group */
+  { NULL, 0, NULL, 0, "Algorithm selection:", 0},
+  { "crypto", 'c', "Algorithm", 0, "" },
+  { "compression", 'z', "Algorithm",
+    OPTION_ARG_OPTIONAL, "Default is zlib.", 0 },
+  { "mac", 'm', "Algorithm", 0, "", 0 },
+  { NULL, 0, NULL, 0, NULL, 0 }  
+};
+
+void init_algorithms_options(struct algorithms_options *self,
+			     struct alist *algorithms)
+{
+  self->algorithms = algorithms;
+
+  self->crypto_algorithms = NULL;
+  self->mac_algorithms = NULL;
+  self->compression_algorithms = NULL;
+}
+
+static error_t
+algorithms_argp_parser(int key, char *arg, struct argp_state *state)
+{
+  CAST_SUBTYPE(algorithms_options, self, state->input);
+  
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_END:
+      if (!self->crypto_algorithms)
+	self->crypto_algorithms = default_crypto_algorithms();
+      if (!self->mac_algorithms)
+	self->mac_algorithms = default_mac_algorithms();
+      if (!self->compression_algorithms)
+	self->compression_algorithms = default_compression_algorithms();
+      break;
+    case 'c':
+      {
+	int crypto = lookup_crypto(self->algorithms, arg);
+	if (crypto)
+	  self->crypto_algorithms = make_int_list(1, crypto, -1);
+	else
+	  argp_error(state, "Unknown crypto algorithm '%s'.", arg);
+
+	break;
+      }
+    case 'm':
+      {
+	int mac = lookup_mac(self->algorithms, arg);
+	if (mac)
+	  self->mac_algorithms = make_int_list(1, mac, -1);
+	else
+	  argp_error(state, "Unknown message authentication algorithm '%s'.", arg);
+	
+	break;
+      }
+    case 'z':
+      {
+	int compression;
+	if (!arg)
+	  arg = "zlib";
+	
+	compression = lookup_compression(self->algorithms, arg);
+	if (compression)
+	  self->compression_algorithms = make_int_list(1, compression, -1);
+	else
+	  argp_error(state, "Unknown compression algorithm '%s'.", arg);
+
+	break;
+      }      
+    }
+  return 0;
+}
+
+const struct argp algorithms_argp =
+{
+  algorithms_options,
+  algorithms_argp_parser,
+  NULL, NULL, NULL, NULL
+};
