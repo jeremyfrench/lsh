@@ -32,19 +32,26 @@
 #include <stdarg.h>
 #include <string.h>
 
+#include <unistd.h>
 #include <pwd.h>
+#include <grp.h>
+
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #include "nettle/macros.h"
 
 #include "charset.h"
+#include "crypto.h"
 #include "environ.h"
 #include "list.h"
 #include "lsh_string.h"
 #include "format.h"
 #include "parse.h"
+#include "publickey_crypto.h"
 #include "ssh.h"
 #include "werror.h"
+#include "xalloc.h"
 
 #define HEADER_SIZE 8
 
@@ -180,6 +187,18 @@ protocol_error(const char *msg)
   die("Protocol error: %z.\n", msg);
 }
 
+static void
+service_error(const char *msg) NORETURN;
+
+static void
+service_error(const char *msg)
+{
+  write_packet(format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+				 msg, ""));
+  die("Service not available: %z.\n", msg);
+  exit(EXIT_FAILURE);  
+}
+
 /* Some or all of these pointers are returned by getpwnam, and hence
    destroyed after the next lookup. Can we trust the libc to never
    call getpwnam and friends behind our back? */
@@ -281,11 +300,47 @@ lookup_user(struct lshd_user *user, uint32_t name_length,
   return 1;
 }
 
+#define AUTHORIZATION_DIR "authorized_keys_sha1"
+
 static struct verifier *
 get_verifier(struct lshd_user *user, int algorithm,
 	     uint32_t key_length, const uint8_t *key)
 {
-  return NULL;
+  struct verifier *v;
+  struct lsh_string *file;
+  const char *s;
+  struct stat sbuf;
+  
+  switch(algorithm)
+    {
+    case ATOM_SSH_DSS:
+      v = make_ssh_dss_verifier(key_length, key);
+      break;
+    case ATOM_SSH_RSA:
+      v = make_ssh_rsa_verifier(key_length, key);
+      break;
+    default:
+      werror("Unknown publickey algorithm %a\n", algorithm);
+      return NULL;
+    }
+  if (!v)
+    return NULL;
+
+  /* FIXME: We should have proper spki support */
+  file = ssh_format("%z/.lsh/" AUTHORIZATION_DIR "/%lxfS",
+		    user->home,
+		    hash_string(&crypto_sha1_algorithm,
+				PUBLIC_SPKI_KEY(v, 0),
+				1));
+  s = lsh_get_cstring(file);
+  assert(s);
+
+  /* FIXME: Use seteuid around the stat call. */
+  if (stat(s, &sbuf) < 0)
+    v = NULL;
+  
+  lsh_string_free(file);
+  return v;
 }
 
 /* Returns 1 on success, 0 on failure, and -1 if we have sent an
@@ -326,8 +381,11 @@ handle_publickey(struct simple_buffer *buffer, struct lshd_user *user)
       write_packet(format_userauth_pk_ok(algorithm, key_length, key));
       return -1;
     }
+
+  /* FIXME: Verify signature. Top do that, we need the session id from
+     the transport layer. */
+  KILL(v);
   
-  /* FIXME: Verify signature. */
   return 0;	
 }
 
@@ -406,6 +464,70 @@ handle_userauth(struct lshd_user *user)
   return 0;  
 }
 
+static const char *
+format_env_pair(const char *name, const char *value)
+{
+  return lsh_get_cstring(ssh_format("%lz=%lz", name, value));
+}
+
+/* Change persona, set up new environment, and exec
+   the service process. */
+static void
+start_service(struct lshd_user *user, int argc, char **argv)
+{
+  /* We need place for SHELL, HOME, USER, LOGNAME, TZ, PATH and a
+     terminating NULL */
+  
+#define ENV_MAX 6
+
+  const char *env[ENV_MAX + 1];
+  const char *tz = getenv(ENV_TZ);
+  const char *cname = lsh_get_cstring(user->name);
+  assert(cname);
+  
+  env[0] = format_env_pair(ENV_SHELL, user->shell);
+  env[1] = format_env_pair(ENV_HOME, user->home);
+  env[2] = format_env_pair(ENV_USER, cname);
+  env[3] = format_env_pair(ENV_LOGNAME, cname);
+  env[4] = ENV_PATH "=/bin:/usr/bin";
+  env[5] = tz ? format_env_pair(ENV_TZ, tz) : NULL;
+  env[6] = NULL;
+
+  /* To allow for a relative path, even when we cd to $HOME. */
+  argv[0] = canonicalize_file_name(argv[0]);
+  if (!argv[0])
+    service_error("Failed to start service process");
+  
+  if (user->uid != getuid())
+    {
+      if (initgroups(cname, user->gid) < 0)
+	{
+	  werror("start_service: initgroups failed: %e\n", errno);
+	  service_error("Failed to start service process");
+	}
+      if (setgid(user->gid) < 0)
+	{
+	  werror("start_service: setgid failed: %e\n", errno);
+	  service_error("Failed to start service process");
+	}
+
+      /* FIXME: On obscure systems, notably UNICOS, it's not enough to
+	 change our uid, we must also explicitly lower our
+	 privileges. */
+
+      if (setuid(user->uid) < 0)
+	{
+	  werror("start_service: setuid failed: %e", errno);
+	  service_error("Failed to start service process");
+	}
+    }
+  assert(user->uid == getuid());
+
+  execve(argv[0], (char **) argv, (char **) env);
+
+  werror("start_service: exec failed: %e", errno);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -421,8 +543,10 @@ main(int argc, char **argv)
       exit(EXIT_FAILURE);      
     }
 
-  /* FIXME: Change persona, set up new environment, and exec
-     lshd-connection. */
-  
-  return EXIT_FAILURE;  
+  {
+    char *args[3] = { "lshd-connection", "lshd-connection", NULL };
+    start_service(&user, 2, args);
+    
+    service_error("Failed to start service process");
+  }
 }
