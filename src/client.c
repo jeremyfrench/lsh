@@ -48,7 +48,6 @@
 #include "format.h"
 #include "interact.h"
 #include "io.h"
-#include "pad.h"
 #include "parse.h"
 #include "ssh.h"
 #include "suspend.h"
