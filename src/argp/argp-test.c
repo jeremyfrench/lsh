@@ -33,14 +33,6 @@
 
 #include "argp.h"
 
-#ifndef UNUSED
-# if __GNUC__ >= 2
-#  define UNUSED __attribute__ ((__unused__))
-# else
-#  define UNUSED
-# endif
-#endif
-
 #if !HAVE_ASPRINTF
 #include <stdarg.h>
 

@@ -72,16 +72,6 @@ char *alloca ();
 #include "argp-namefrob.h"
 
 
-/* FIXME: We could use a configure test to check for __attribute__,
- * just like lsh does. */
-#ifndef UNUSED
-# if __GNUC__ >= 2
-#  define UNUSED __attribute__ ((__unused__))
-# else
-#  define UNUSED
-# endif
-#endif
-
 #ifndef _LIBC
 # ifndef __strchrnul
 #  define __strchrnul strchrnul

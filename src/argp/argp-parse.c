@@ -32,14 +32,6 @@
 #include <limits.h>
 #include <assert.h>
 
-#ifndef UNUSED
-# if __GNUC__ >= 2
-#  define UNUSED __attribute__ ((__unused__))
-# else
-#  define UNUSED
-# endif
-#endif
-
 #ifndef _
 /* This is for other GNU distributions with internationalized messages.
    When compiling libc, the _ macro is predefined.  */
