@@ -25,7 +25,6 @@
 
 #include "server_authorization.h"
 
-#include "dsa.h"
 #include "format.h"
 #include "publickey_crypto.h"
 #include "server_userauth.h"
@@ -90,8 +89,7 @@ do_key_lookup(struct lookup_verifier *c,
   filename = ssh_format(".lsh/%lS/%lxfS", 
 			closure->index_name,
 			hash_string(closure->hashalgo,
-				    sexp_format(spki_make_public_key(v),
-						SEXP_CANONICAL, 0),
+				    PUBLIC_SPKI_KEY(v, 0),
 				    1));
   
   if (USER_FILE_EXISTS(keyholder, filename, 1))
