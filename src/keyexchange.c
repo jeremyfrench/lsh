@@ -727,17 +727,21 @@ install_keys(struct object_list *algorithms,
 static struct hash_instance *
 kex_build_secret(struct hash_algorithm *H,
 		 struct lsh_string *exchange_hash,
-		 struct lsh_string *secret)
+		 struct lsh_string *K)
 {
-  struct hash_instance *hash = MAKE_HASH(H);
-
-  HASH_UPDATE(hash, secret->length, secret->data);
+  /* We include a length field for the key, but not for the exchange
+   * hash. */
   
-  HASH_UPDATE(hash, exchange_hash->length, exchange_hash->data);
+  struct hash_instance *hash = MAKE_HASH(H);
+  struct lsh_string *s = ssh_format("%S%lS", K, exchange_hash);
 
+  HASH_UPDATE(hash, s->length, s->data);
+  lsh_string_free(s);
+  
   return hash;
 }
 
+/* NOTE: Consumes both the xchange_hash and K */
 void
 keyexchange_finish(struct ssh_connection *connection,
 		   struct object_list *algorithms,
