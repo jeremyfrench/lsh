@@ -31,7 +31,7 @@
 #include "lsh.h"
 #include "lsh_argp.h"
 #include "sexp_commands.h"
-#include "spki.h"
+#include "spki_commands.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
