@@ -89,7 +89,7 @@ filter_algorithms_l(struct alist *algorithms, unsigned n, ...);
 
 /* Includes only reasonably old algorithms and well studied
  * algorithms. */
-static struct int_list *
+struct int_list *
 default_crypto_algorithms(struct alist *algorithms)
 {
   return filter_algorithms_l(algorithms, 4,
@@ -115,16 +115,23 @@ all_crypto_algorithms(struct alist *algorithms)
 			     ATOM_ARCFOUR, -1);
 }
 
-static struct int_list *
+struct int_list *
 default_mac_algorithms(struct alist *algorithms)
 {
   return filter_algorithms_l(algorithms, 2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1);
 }
 
-static struct int_list *
+struct int_list *
 default_compression_algorithms(struct alist *algorithms)
 {
   return filter_algorithms_l(algorithms, 2, ATOM_NONE, ATOM_ZLIB, -1);
+}
+
+/* NOTE: Unfiltered */
+struct int_list *
+default_hostkey_algorithms(void)
+{
+  return make_int_list(2, ATOM_SSH_RSA, ATOM_SSH_DSS, -1);
 }
 
 static struct int_list *
@@ -472,8 +479,7 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
       if (!self->compression_algorithms)
 	self->compression_algorithms = default_compression_algorithms(self->algorithms);
       if (!self->hostkey_algorithms)
-	self->hostkey_algorithms = make_int_list(4, ATOM_SSH_RSA, ATOM_SSH_DSS,
-						 ATOM_SPKI_SIGN_RSA, ATOM_SPKI_SIGN_DSS, -1);
+	self->hostkey_algorithms = default_hostkey_algorithms();
       break;
     case 'c':
       {
