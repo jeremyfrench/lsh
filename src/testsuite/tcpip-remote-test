@@ -1,0 +1,23 @@
+#! /bin/sh
+
+# Tests connecting with lsh. In order to use this, you must already
+# have lsh set up so that you can login without password.
+
+# This restriction can be fixed if we add an option to lshd to use a
+# custom passwd-file.
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+SERVERPORT=`expr $PORT + 1`
+PROXYPORT=`expr $PORT + 2`
+
+at_connect $SERVERPORT 1 'echo foo' \
+    && spawn_lshd \
+    && spawn_lsh -R $PROXYPORT:localhost:$SERVERPORT \
+    && sleep 30; tcpconnect -r </dev/null localhost $PROXYPORT
+
+
