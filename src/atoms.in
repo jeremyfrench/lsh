@@ -11,8 +11,8 @@ zlib
 3des-cbc         REQUIRED          three-key 3DES in CBC mode
 blowfish-cbc     RECOMMENDED       Blowfish in CBC mode
 twofish-cbc      RECOMMENDED       TwoFish cipher in CBC mode
-rijndael-cbc     EXPERIMENTAL      Rijndael cipher in CBC mode
-serpent-cbc      EXPERIMENTAL      Serpent cipher in CBC mode
+rijndael-cbc@lysator.liu.se     EXPERIMENTAL      Rijndael cipher in CBC mode
+serpent-cbc@lysator.liu.se      EXPERIMENTAL      Serpent cipher in CBC mode
 arcfour          OPTIONAL          the ARCFOUR stream cipher
 idea-cbc         OPTIONAL          IDEA in CBC mode
 cast128-cbc      OPTIONAL          CAST-128 in CBC mode
@@ -66,6 +66,7 @@ diffie-hellman-group1-sha1       REQUIRED
 ssh-dss              REQUIRED     sign      Simple DSS
 x509v3               RECOMMENDED  sign      X.509 certificates
 spki                 OPTIONAL     sign      SPKI certificates
+# spki-rsa@lysator.liu.se             OPTIONAL     sign      SPKI certificates
 pgp                  OPTIONAL     sign      OpenPGP certificates
 
 # Services
@@ -120,6 +121,7 @@ s
 # spki rsa keys p, q already defined above
 # rsa-pkcs1
 rsa-pkcs1-sha1
+rsa-pkcs1-sha1@lysator.liu.se
 rsa-pkcs1-md5
 n
 e
@@ -142,6 +144,7 @@ data
 iv
 
 # Certificates and ACL:s
+sequence
 certificate
 signature
 name
@@ -155,6 +158,6 @@ set
 *
 
 # SRP related
-srp-ring1-sha1
+srp-ring1-sha1@lysator.liu.se
 srp-verifier
 ssh-ring1
