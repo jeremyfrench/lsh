@@ -78,7 +78,7 @@ do_authenticate(struct userauth *s,
   int algorithm;
   int check_key;
 
-  username = utf8_to_local(username, 1, 1);
+  username = utf8_to_local(username, utf8_paranoid, 1);
   if (!username)
     {
       PROTOCOL_ERROR(e, "Invalid utf8 in username.");

@@ -58,7 +58,7 @@ do_authenticate(struct userauth *s,
   
   int change_passwd;
   
-  username = utf8_to_local(username, 1, 1);
+  username = utf8_to_local(username, utf8_paranoid, 1);
   if (!username)
     {
       PROTOCOL_ERROR(e, "Invalid utf8 in username.");
@@ -85,7 +85,7 @@ do_authenticate(struct userauth *s,
 	{
 	  struct lsh_user *user;
 
-	  password = utf8_to_local(password, 1, 1);
+	  password = utf8_to_local(password, 0, 1);
 
 	  if (!password)
 	    {

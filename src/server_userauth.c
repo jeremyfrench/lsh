@@ -372,7 +372,7 @@ do_none_preauth(struct userauth *s UNUSED,
 		struct command_continuation *c,
 		struct exception_handler *e)
 {
-  username = utf8_to_local(username, 1, 1);
+  username = utf8_to_local(username, utf8_paranoid, 1);
   if (!username)
     {
       PROTOCOL_ERROR(e, "Invalid utf8 in username.");
