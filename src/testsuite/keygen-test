@@ -8,5 +8,7 @@ if [ -z "$srcdir" ] ; then
   srcdir=`pwd`
 fi
 
+. $srcdir/functions.sh
+
 rm -f foo foo.pub
-../lsh-writekey -o foo < $srcdir/key-1.private
+../lsh-writekey -o foo < $srcdir/key-1.private && test_success

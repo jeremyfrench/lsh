@@ -8,5 +8,7 @@ if [ -z "$srcdir" ] ; then
   srcdir=`pwd`
 fi
 
+. $srcdir/functions.sh
+
 rm -rf temphome && mkdir temphome
-HOME="`pwd`/temphome" ../lsh-writekey < $srcdir/key-1.private
+HOME="`pwd`/temphome" ../lsh-writekey < $srcdir/key-1.private && test_success

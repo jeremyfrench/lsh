@@ -14,5 +14,9 @@ fi
 
 . $srcdir/functions.sh
 
-spawn_lshd && exec_lsh "cat `pwd`/../lshd" | diff - ../lshd
+spawn_lshd && exec_lsh "cat `pwd`/../lshd" > test.out1
+cat ../lshd > test.out2
+
+compare_output "lsh-cat-test"
+
 
