@@ -25,6 +25,7 @@
 #define LSH_CONNECTION_H_INCLUDED
 
 #include "abstract_io.h"
+#include "resource.h"
 #include "randomness.h"
 
 /* Forward declaration */
@@ -57,12 +58,15 @@ struct ssh_connection;
      (name ssh_connection)
      (super abstract_write)
      (vars
-       ; Sent and recieved version strings
+       ; Sent and received version strings
        (client_version string)
        (server_version string)
        (session_id string)
 
-       ; Recieveing
+       ; Cleanup
+       (resources object resource_list)
+       
+       ; Receiving
        (rec_max_packet simple UINT32)
        (rec_mac    object mac_instance)
        (rec_crypto object crypto_instance)

@@ -46,13 +46,13 @@ static int handle_connection(struct abstract_write *w,
 
   if (!packet->length)
     {
-      werror("connection.c: Recieved empty packet!\n");
+      werror("connection.c: Received empty packet!\n");
       return LSH_FAIL | LSH_DIE;
     }
 
   msg = packet->data[0];
 
-  debug("handle_connection: Recieved packet of type %d\n", msg);
+  debug("handle_connection: Received packet of type %d\n", msg);
 
   switch(closure->kex_state)
     {
@@ -88,7 +88,7 @@ static int handle_connection(struct abstract_write *w,
       if ( (msg != SSH_MSG_NEWKEYS)
 	   && (msg != SSH_MSG_DISCONNECT) )
 	{
-	  werror("Expected NEWKEYS message, but recieved message %d!\n",
+	  werror("Expected NEWKEYS message, but received message %d!\n",
 		 msg);
 	  lsh_string_free(packet);
 	  return LSH_FAIL | LSH_DIE;
@@ -130,7 +130,7 @@ static int do_unimplemented(struct packet_handler *closure,
 		 ssh_format("%c%i",
 			    SSH_MSG_UNIMPLEMENTED,
 			    packet->sequence_number));
-  verbose("Recieved packet of unimplemented type %d.\n",
+  verbose("Received packet of unimplemented type %d.\n",
 	  packet->data[0]);
   
   lsh_string_free(packet);
@@ -159,6 +159,8 @@ struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
     = connection->server_version
     = connection->session_id = NULL;
 
+  connection->resources = empty_resource_list();
+  
   connection->rec_max_packet = 0x8000;
   connection->rec_mac = NULL;
   connection->rec_crypto = NULL;
