@@ -2,3 +2,4 @@
 /Makefile
 /Makefile.in
 /spki-check-signature
+/spki-make-signature
