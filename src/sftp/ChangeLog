@@ -1,6 +1,6 @@
 2004-11-17  Niels Möller  <nisse@lysator.liu.se>
 
-	* commands.c (com_chown): Always us uncigned char with isdigit.
+	* commands.c (com_chown): Always us unsigned char with isdigit.
 	(com_chgrp): Likewise.
 
 	* Makefile.am (LDADD): All programs need linking with $(LIBOBJS),
