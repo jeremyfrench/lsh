@@ -39,8 +39,9 @@
    (class
      (name keypair)
      (vars
-       ; atom identifying algorithm type
-       (type . UINT32)
+       ; Atom identifying algorithm type. Needed mostly to know when to invoke the
+       ; ssh2 ssh-dss bug-compatibility kludge. 
+       (type . int)
        (public string)
        (private object signer)))
 */
@@ -59,7 +60,7 @@ struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
 #if DATAFELLOWS_WORKAROUNDS
 struct signer *make_dsa_signer_kludge(struct signer *dsa);
 struct verifier *make_dsa_verifier_kludge(struct verifier *v);
-struct signature_algorithm *make_dsa_kludge_algorithm(struct randomness *random);
+/* struct signature_algorithm *make_dsa_kludge_algorithm(struct randomness *random); */
 #endif
 
 struct signer *make_dsa_signer_classic(struct signer *s);
