@@ -95,8 +95,8 @@ struct lsh_class
   struct lsh_class *super_class;
   size_t size;
   
-  struct lsh_object *(*mark_instance)(struct lsh_object *instance,
-				      void (*mark)(struct lsh_object *o));
+  void (*mark_instance)(struct lsh_object *instance,
+			void (*mark)(struct lsh_object *o));
   void (*free_instance)(struct lsh_object *instance);
 
   /* Particular classes may add their own methods here */
@@ -104,6 +104,8 @@ struct lsh_class
 
 #define MARK_INSTANCE(c, i, f) ((c)->mark_instance((i), (f)))
 #define FREE_INSTANCE(c, i) ((c)->free_instance((i)))
+
+#define CLASS(c) (c##_class)
 
 #ifdef DEBUG_ALLOC
 
