@@ -70,7 +70,7 @@ int parse_utf8(struct simple_buffer *buffer, UINT32 *result);
 
 int parse_boolean(struct simple_buffer *buffer, int *result);
 
-int parse_bignum(struct simple_buffer *buffer, mpz_t result);
+int parse_bignum(struct simple_buffer *buffer, mpz_t result, UINT32 limit);
 
 int parse_atom(struct simple_buffer *buffer, int *result);
 

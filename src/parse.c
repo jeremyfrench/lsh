@@ -196,7 +196,7 @@ parse_boolean(struct simple_buffer *buffer, int *result)
 }
 
 int
-parse_bignum(struct simple_buffer *buffer, mpz_t result)
+parse_bignum(struct simple_buffer *buffer, mpz_t result, UINT32 limit)
 {
   UINT32 length;
   const UINT8 *digits;
@@ -204,6 +204,9 @@ parse_bignum(struct simple_buffer *buffer, mpz_t result)
   if (!parse_string(buffer, &length, &digits))
     return 0;
 
+  if (limit && (length > limit))
+    return 0;
+  
   bignum_parse_s(result, length, digits);
 
   return 1;
