@@ -292,7 +292,7 @@ make_ssh_connection(UINT32 flags,
   connection->peer_flags = 0;
   connection->user = NULL;
   
-  connection->resources = empty_resource_list();
+  connection->resources = make_resource_list();
   
   connection->rec_max_packet = SSH_MAX_PACKET;
 

@@ -228,7 +228,7 @@ void
 gc_global(struct resource *o)
 {
   if (!root_set)
-    root_set = empty_resource_list();
+    root_set = make_resource_list();
   
   assert(root_set->super.alive);
 

@@ -63,7 +63,7 @@
        (auth string)))
 */
 
-/* FIXME: Perhaps merge auth_info directly into this struct */
+/* FIXME: Perhaps merge auth_info directly into this struct. */
 /* GABA:
    (class
      (name client_x11_display)

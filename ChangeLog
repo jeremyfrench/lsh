@@ -1,3 +1,28 @@
+2001-09-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/resource.c (make_resource_list): Renamed functions, was
+	empty_resource_list. Updated all callers.
+	(dont_free_live_resource): #if:ed out check of gc_final_p.
+
+	* src/io_commands.c: Deleted old function do_io_read_file.
+
+	* src/io.c: Deleted old backend code.
+	(io_run): Check for OOP_ERROR. #if:ed out for now, as it is not
+	defined in liboop-0.7. 
+
+	* src/client.c (accept_service_handler): Deleted exception_handler
+	attribute.
+	(do_accept_service): Use the connection's exception handler for
+	raising protocol error.
+	(make_accept_service_handler): Deleted exception_handler argument. 
+
+	* src/channel.c (send_channel_request_responses): Deleted
+	connection argument. 
+	(make_channel_request_response): Likewise.
+	(channel_request_exception_handler): Deleted connection attribute. 
+	(make_channel_request_exception_handler): Deleted connection
+	argument. 
+
 2001-09-26  Niels Möller  <nisse@ehand.com>
 
 	* src/server_session.c (shell_request_handler,

@@ -68,8 +68,8 @@ do_channel_open_command(struct command *s,
     }
   else
     {
-      /* FIXME: Set up channel->write here? If we do that, perhaps we
-       * need not pass the connection to NEW_CHANNEL. */
+      /* FIXME: Set up channel->connection here? If we do that,
+       * perhaps we need not pass the connection to NEW_CHANNEL. */
       channel->open_continuation = c;
       channel->e = e;
       register_channel(index, channel, 0);

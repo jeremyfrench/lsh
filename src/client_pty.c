@@ -127,11 +127,7 @@ make_client_winch_handler(struct ssh_channel *channel)
        (req object pty_request)))
 */
 
-/* FIXME: !!! failed requests show up as an exception. /Bazsi
- *
- * I think that is normal. It's up to the caller to do something reasonable
- * about the exception. /nisse
- */
+/* NOTE: Failed requests show up as exceptions. */
 static void
 do_pty_continuation(struct command_continuation *s,
 		    struct lsh_object *x)

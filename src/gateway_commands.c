@@ -49,7 +49,7 @@
  *   uint32     packet_length
  *   byte[n]    payload; n = packet_length
  *
- * But then we can reuse the plain read_packet class. */
+ * But then we can't reuse the plain read_packet class. */
 
 static void
 do_gateway_pad(struct abstract_write *w,

@@ -126,7 +126,6 @@ do_send_adjust(struct ssh_channel *s,
     }
 }
 
-/* FIXME: Perhaps unify with client_session.c:do_client_session_eof */
 static void
 do_eof(struct ssh_channel *channel)
 {

@@ -55,7 +55,6 @@
 
 /* Callback used when the server sends us eof */
 
-/* FIXME: Perhaps unify with server_session.c:do_eof */
 static void
 do_client_session_eof(struct ssh_channel *c)
 {
@@ -136,10 +135,10 @@ do_client_io(struct command *s UNUSED,
   
   channel->receive = do_receive;
 
-  /* FIXME: It seems a little kludgy to modify
-   * exception handlers here; it would be better to create the
-   * fd-objects at a point where the right exception handlers can be
-   * installed from the start. */
+  /* FIXME: It seems a little kludgy to modify exception handlers
+   * here; it would be better to create the fd-objects at a point
+   * where the right exception handlers can be installed from the
+   * start. */
   session->out->e
     = make_channel_io_exception_handler(channel,
 					"lsh: I/O error on stdout",

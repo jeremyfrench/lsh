@@ -731,7 +731,6 @@ main_argp =
 */
 
 #if WITH_GCOV
-/* FIXME: Perhaps move to daemon.c? */
 /* Catch SIGTERM and call exit(). That way, profiling info is written
  * properly when the process is terminated. */
 
@@ -888,10 +887,6 @@ int main(int argc, char **argv)
       connection_hooks
 	= make_object_list (1, session_setup, -1);
     {
-      /* FIXME: We should check that we have at least one host key. We
-       * should also extract the host-key algorithms for which we have
-       * keys, instead of hardcoding ssh-dss below. */
-
       CAST_SUBTYPE(command, connection_service,
 		   make_lshd_connection_service(connection_hooks));
       CAST_SUBTYPE(command, server_listen, 		   

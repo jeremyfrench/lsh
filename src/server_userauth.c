@@ -110,6 +110,11 @@ format_userauth_success(void)
  * is rather stupid. And will crash if a userauth method returns to
  * the main loop while the connection is still locked. */
 
+/* FIXME: I don't think the about is true anymore. Locking should
+ * work, packets queued up properly while a connection is locked, etc.
+ * This is needed for password userauthentication using a password
+ * helper process. */
+
 /* GABA:
    (class
      (name userauth_continuation)

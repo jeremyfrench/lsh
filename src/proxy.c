@@ -68,11 +68,8 @@ do_exc_chain_connections_handler(struct exception_handler *c,
 	    self->connection->chain->chain = NULL;
 	    self->connection->chain = NULL; /* prevent raising this exception again */
 
-	    /* FIXME: is it possible to pass the same exception to two handlers?
-	     *
-	     * It should be. /nisse
-	     */
-	    
+	    /* NOTE: It's fine to pass the same exception to several
+	     * handlers. */
 	    EXCEPTION_RAISE(chain->e, e);
 	  }
       }
