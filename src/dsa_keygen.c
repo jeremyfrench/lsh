@@ -65,13 +65,9 @@ dsa_generate_key(struct randomness *r, unsigned level)
 			   NULL, progress,
 			   512 + 64 * level))
     {
-      key = lsh_sexp_format(0, "(%0s(%0s(%0s%b)(%0s%b)(%0s%b)(%0s%b)(%0s%b)))",
-			    "private-key", "dsa",
-			    "p", public.p,
-			    "q", public.q,
-			    "g", public.g,
-			    "y", public.y,
-			    "x", private.x);
+      key = lsh_sexp_format(0, "(private-key(dsa(p%b)(q%b)(g%b)(y%b)(x%b)))",
+			    public.p, public.q, public.g, public.y,
+			    private.x);
     }
 
   dsa_public_key_clear(&public);

@@ -338,8 +338,8 @@ do_dsa_sign(struct signer *c,
     case ATOM_SPKI_SIGN_DSS:
     case ATOM_SPKI:
       /* Format: "((1:r20:<r>)(1:s20:<s>))". */
-      signature = lsh_sexp_format(0, "((%0s%b)(%0s%b))",
-				  "r", sv.r, "s", sv.s);
+      signature = lsh_sexp_format(0, "((r%b)(s%b))",
+				  sv.r, sv.s);
 	
       break;
     default:
