@@ -75,7 +75,7 @@ int io_iter(struct io_backend *b)
   nfds = 0;
   
   {
-    /* Prepare fd:s. This fase calls the prepare-methods, also closes
+    /* Prepare fd:s. This phase calls the prepare-methods, also closes
      * and unlinks any fd:s that should be closed, and also counts how
      * many fd:s there are. */
     
@@ -331,6 +331,7 @@ static void do_buffered_read(struct io_read_callback *s,
       assert(fd->want_read);
       assert(self->handler);
 
+      close_fd_nicely(fd, 0);
       READ_HANDLER(self->handler, 0, NULL);
     }
 	
@@ -386,8 +387,15 @@ static void do_consuming_read(struct io_read_callback *c,
 	  A_WRITE(self->consumer, s);
 	}
       else
-	/* FIXME: Perhaps pass NULL to the consumer instead? */
-	EXCEPTION_RAISE(fd->e, make_io_exception(EXC_IO_EOF, fd, 0, "EOF")) ;
+	{
+	  /* FIXME: Perhaps pass NULL to the consumer instead? */
+#if 0
+	  EXCEPTION_RAISE(fd->e, make_io_exception(EXC_IO_EOF, fd, 0, "EOF")) ;
+#endif
+	  close_fd_nicely(fd, 0);
+	  A_WRITE(self->consumer, NULL);
+	}
+      
     }
 }
 
@@ -540,9 +548,11 @@ do_exc_io_handler(struct exception_handler *self,
 
       switch(x->type)
 	{
+#if 0
 	case EXC_IO_EOF:
 	  close_fd_nicely(e->fd, 0);
 	  break;
+#endif
 	default:
 	  if (e->fd)
 	    close_fd(e->fd, 0);
