@@ -23,9 +23,25 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/* Test output:
+[nisse@cuckoo src]$ ./lsh-export-key < testkey.pub 
+---- BEGIN SSH2 PUBLIC KEY ----
+Comment: "768-bit dsa"
+AAAAB3NzaC1kc3MAAABhAJw3J7CMyAKiX8F1Mz1dNguVQi7VZQQrLl8DeWNQaSkqmIPjsc
+zSn4Cjv9BOt8FM46AZbw+aSou0jpiFPJJiQjpT5U1ArPLoMqRpopqcZqcVubRKALTzytgw
+vvXyoHb84wAAABUAmm14nnnHQtwx5ZUgRrjv98iv4KcAAABgENZmq1qm4jdJJB7IAC5Ecr
+vcjhlACNcPD4UQ0Bgk66/MJOxvrwf0V+ZtTfb8ZaQlKdu84vB2VxVcB8zo0ds01I6eLG2f
+/nDENvwp0TkNKf1uyEWPjNQGI/ImAqukiSWjAAAAYDe6o/C8faYCpuduLPQrl8Co6z7HgC
+yIaRCzBjD8bY6L5qZp4G//8PVJVhxXh3vAS6LbgDCFoa2HZ1/vxHpML+gl3FPjAOxZPs27
+B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
+---- END SSH2 PUBLIC KEY ----
+*/
+
+#if 0
 #if macintosh
 #include "lshprefix.h"
 #include "lsh_context.h"
+#endif
 #endif
 
 #include "algorithms.h"
@@ -68,6 +84,17 @@ int exit_code = EXIT_SUCCESS;
        (dest object abstract_write)))
 */
 
+/* GABA:
+   (class
+     (name ssh2_print_command)
+     (super command_simple)
+     (vars
+       (format . int)
+       (subject . "char *")
+       (comment . "char *")))
+*/
+
+#if 0
 #ifndef GABA_DEFINE
 struct ssh2_print_command
 {
@@ -87,8 +114,9 @@ struct lsh_class ssh2_print_command_class =
   NULL
 };
 #endif /* !GABA_DECLARE */
+#endif
 
-
+#if 0
 static struct lsh_string *
 insert_newlines(struct lsh_string *input, unsigned width, int free)
 {
@@ -108,6 +136,7 @@ insert_newlines(struct lsh_string *input, unsigned width, int free)
     lsh_string_free(input);
   return output;
 }
+#endif
 
 
 static void
@@ -119,6 +148,30 @@ do_ssh2_print(struct command *s,
   CAST(ssh2_print_to, self, s);
   CAST_SUBTYPE(sexp, o, a);
 
+  struct sexp_iterator *i;
+  struct verifier *v;
+  struct lsh_string *packet;
+  
+  if (!spki_check_type(o, ATOM_PUBLICKEY, &i))
+    {
+      EXCEPTION_RAISE
+	(e, make_simple_exception
+	 (EXC_APP,
+	  "Only conversion of public keys implemented."));
+      return;
+    }
+  
+  v = spki_make_verifier(self->algorithms, e);
+  if (!v)
+    {
+      EXCEPTION_RAISE
+	(e, make_simple_exception
+	 (EXC_APP,
+	  "Unsupported algorithm."));
+    }
+
+  packet = PUBLIC_KEY(v);
+#if 0  
   struct lsh_string *packet = sexp_format(o, self->format, 0);
   unsigned i, state, found, key, len;
   char *p[4];
@@ -219,6 +272,7 @@ do_ssh2_print(struct command *s,
 				     subject, comment, ssh2_key));
     }
   COMMAND_RETURN(c, a);
+#endif
 }
 
 static struct command *
