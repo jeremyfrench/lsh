@@ -207,22 +207,26 @@ read_known_hosts(struct lsh_options *options)
       tmp = ssh_format("%lz/.lsh/host-acls", options->home);
       s = lsh_get_cstring(tmp);
       fd = open(s, O_RDONLY);
+      
+      if (fd < 0)
+	{
+	  struct stat sbuf;
+      
+	  lsh_string_free(tmp);
+	  tmp = ssh_format("%lz/.lsh/known_hosts", options->home);
+
+	  if (stat(lsh_get_cstring(tmp), &sbuf) == 0)
+	    {
+	      werror("You have an old known-hosts file `%S'.\n"
+		     "To work with lsh-2.0, run the lsh-upgrade script,\n"
+		     "which will convert that to a new host-acls file.\n");
+	    }
+	}
     }
 
   if (fd < 0)
     {
-      struct stat sbuf;
-      
       werror("Failed to open `%z' for reading %e\n", s, errno);
-      lsh_string_free(tmp);
-
-      tmp = ssh_format("%lz/.lsh/known_hosts", options->home);
-      if (stat(lsh_get_cstring(tmp), &sbuf) == 0)
-	{
-	  werror("You have an old known-hosts file `%S'.\n"
-		 "To work with lsh-2.0, run the lsh-upgrade script,\n"
-		 "which will convert that to a new host-acls file.\n");
-	}
       lsh_string_free(tmp);
 
       return context;
@@ -237,7 +241,7 @@ read_known_hosts(struct lsh_options *options)
   
   if (!contents)
   {
-    werror("Failed to read known_hosts file %e\n", errno);
+    werror("Failed to read host-acls file %e\n", errno);
     close(fd);
     return context;
   }
@@ -756,7 +760,7 @@ main_options[] =
     "Try publickey user authentication (default).", 0 },
   { "no-publickey", OPT_PUBLICKEY | ARG_NOT, NULL, 0,
     "Don't try publickey user authentication.", 0 },
-  { "host-db", OPT_HOST_DB, "Filename", 0, "By default, ~/.lsh/known_hosts", 0},
+  { "host-db", OPT_HOST_DB, "Filename", 0, "By default, ~/.lsh/host-acls", 0},
   { "sloppy-host-authentication", OPT_SLOPPY, NULL, 0,
     "Allow untrusted hostkeys.", 0 },
   { "strict-host-authentication", OPT_STRICT, NULL, 0,
