@@ -83,55 +83,8 @@ DEFINE_COMMAND(spki_verifier2public)
   COMMAND_RETURN(c, spki_make_public_key(v));
 }
 
-/* Create an SPKI hash from an s-expression. */
-/* GABA:
-   (class
-     (name spki_hash)
-     (super command)
-     (vars
-       (name . int)
-       (algorithm object hash_algorithm)))
-*/
-
-static void
-do_spki_hash(struct command *s,
-	     struct lsh_object *a,
-	     struct command_continuation *c,
-	     struct exception_handler *e UNUSED)
-{
-  CAST(spki_hash, self, s);
-  CAST_SUBTYPE(sexp, o, a);
-
-  struct lsh_string *tmp = hash_string(self->algorithm,
-				       sexp_format(o, SEXP_CANONICAL, 0),
-				       1);
-  struct sexp *hash = spki_hash_data(self->algorithm, self->name, 
-				     tmp->length, tmp->data);
-  lsh_string_free(tmp);
-  
-  COMMAND_RETURN(c, hash);
-}
-
-struct command *
-make_spki_hash(int name, struct hash_algorithm *algorithm)
-{
-  NEW(spki_hash, self);
-  self->super.call = do_spki_hash;
-  self->name = name;
-  self->algorithm = algorithm;
-
-  return &self->super;
-}
-
-const struct spki_hash spki_hash_md5 =
-{ STATIC_COMMAND(do_spki_hash), ATOM_MD5, &md5_algorithm };
-
-const struct spki_hash spki_hash_sha1 =
-{ STATIC_COMMAND(do_spki_hash), ATOM_SHA1, &sha1_algorithm };
-
 
 /* Reading keys */
-
 
 /* (sexp2signed algorithms sexp) -> signer */
 DEFINE_COMMAND2(spki_sexp2signer_command)
