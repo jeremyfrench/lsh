@@ -23,14 +23,14 @@
  */
 
 #include "server_pty.h"
-#include "xalloc.h"
 
-#include "parse.h"
-#include "connection.h"
 #include "channel.h"
-#include "werror.h"
-
+#include "connection.h"
+#include "format.h"
+#include "parse.h"
 #include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
 
 #include <fcntl.h>
 #include <sys/ioctl.h>
@@ -75,6 +75,7 @@ struct pty_info *make_pty_info(void)
   pty->super.alive = 0;
   pty->super.kill = do_kill_pty_info;
 
+  /* pty->tty_name = NULL; */ /* Cleared by NEW() */
   return pty;
 }
 
@@ -82,7 +83,7 @@ int pty_allocate(struct pty_info *pty)
 {
 #if UNIX98_PTYS
   char *name;
-  if ((pty->master = open("/dev/ptmx", O_RDWR)) < 0)
+  if ((pty->master = open("/dev/ptmx", O_RDWR | O_NOCTTY)) < 0)
     {
       return 0;
     }
@@ -96,7 +97,7 @@ int pty_allocate(struct pty_info *pty)
   if (name == NULL)
     goto close_master;
 
-  pty->slave = open(name, O_RDWR);
+  pty->slave = open(name, O_RDWR | O_NOCTTY);
   if (pty->slave == -1)
     goto close_master;
 
@@ -109,14 +110,15 @@ int pty_allocate(struct pty_info *pty)
     }
 #  endif /* HAVE_STROPTS_H */
 
-  return 0;
+  pty->tty_name = format_cstring(name);
+  return 1;
 
 close_slave:
   close (pty->slave);
 
 close_master:
   close (pty->master);
-  return 1;
+  return 0;
 
 #elif HAVE_OPENPTY
 
@@ -144,9 +146,6 @@ close_master:
 	  if (pty->master != -1) 
 	    {
 	      /* master succesfully opened */
-#if 0
-              snprintf(pty->tty_name, MAX_TTY_NAME, master);
-#endif
 	      snprintf(slave, sizeof(slave),
 		       PTY_BSD_SCHEME_SLAVE, first[i], second[j]);
 				
@@ -159,7 +158,7 @@ close_master:
 		  errno = saved_errno;
 		  return 0;
 	        }
-	      
+	      pty->tty_name = format_cstring(slave);
               return 1;
 	    }
         }
@@ -175,6 +174,7 @@ close_master:
  * leader. */
 int tty_setctty(struct pty_info *pty)
 {
+  debug("tty_setctty\n");
   if (setsid() < 0)
     {
       werror("tty_setctty: setsid() failed, already process group leader?\n"
@@ -185,15 +185,35 @@ int tty_setctty(struct pty_info *pty)
   {
     int fd;
 
+    /* FIXME: For some reason, it doesn't work to call grantpt() again
+     * here. Hopefully, there is some other way to do things right. */
+#if 0
     /* Set up permissions with our new uid. */
-    if (grantpt(pty->master) < 0 || unlockpt(pty->master) < 0)
-      return 0;
-
+    if (grantpt(pty->master) < 0)
+      {
+	werror("tty_setctty: grantpt() failed,\n"
+	       "   (errno = %i): %z\n", errno, strerror(errno));
+	return 0;
+      }
+    if (unlockpt(pty->master) < 0)
+      {
+	werror("tty_setctty: unlockpt() failed,\n"
+	       "   (errno = %i): %z\n", errno, strerror(errno));
+	return 0;
+      }
+#endif
+    
     /* Open the slave, to make it our controlling tty */
-    fd = open(pty->tty_name, O_RDWR);
+    /* FIXME: According to carson@tla.org, there's a cleaner POSIX way
+     * to make a tty the process's controlling tty. */
+    debug("setctty: Attempting open\n");
+    fd = open(pty->tty_name->data, O_RDWR);
     if (fd < 0)
-      return 0;
-
+      {
+	werror("tty_setctty: unlockpt() failed,\n"
+	       "   (errno = %i): %z\n", errno, strerror(errno));
+	return 0;
+      }
     close(fd);
 
     return 1;
