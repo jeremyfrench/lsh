@@ -3,22 +3,27 @@
   #include "config_parse.h"
 
   #include "string_buffer.h"
-
+  #include "xalloc.h"
   #include <ctype.h>
   
 #define GABA_DEFINE
 #include "config_parse.h.x"
-#endif /* GABA_DEFINE */
+#undef GABA_DEFINE
   
   struct parse_state
   {
     FILE *f;
     struct config_rule *value;
   };
+
 #define YYPARSE_PARAM state
 #define STATE ((struct parse_state *) state)
-  
-}%
+
+  static void yyerror(const char *s);
+  static int
+    yylex(YYSTYPE *val, void *state);
+
+%}
 /* Declarations */
 %pure_parser
 

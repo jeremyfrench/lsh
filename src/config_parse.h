@@ -6,9 +6,11 @@
 
 #include <stdio.h>
 
+enum config_type { RULE_DEFAULT, RULE_NET, RULE_HOST };
+
 #define GABA_DECLARE
 #include "config_parse.h.x"
-#endif /* GABA_DECLARE */
+#undef GABA_DECLARE
 
 /* GABA:
    (class
@@ -21,8 +23,6 @@
 
 static struct config_pair *
 make_config_pair(struct lsh_string *name, struct lsh_string *value);
-
-enum config_type { RULE_DEFAULT, RULE_NET, RULE_HOST };
 
 /* GABA:
    (class
