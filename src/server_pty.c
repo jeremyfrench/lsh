@@ -153,7 +153,7 @@ pty_grantpt_uid(int master, uid_t user)
       if (grantpt(master) < 0)
 	return NULL;
 
-      return format_cstring(ptsname(master));
+      return make_string(ptsname(master));
     }
   else
     { /* Set up permissions for user */
@@ -161,7 +161,7 @@ pty_grantpt_uid(int master, uid_t user)
       /* Pointer to static area */
       char *name = ptsname(master);
       return (pty_check_permissions(name, user)
-	      ? format_cstring(name)
+	      ? make_string(name)
 	      : NULL);
       
     }
@@ -259,7 +259,7 @@ close_master:
 	       * permissions as well? */
 	      if (pty_check_permissions(slave, user))
 		{
-		  pty->tty_name = format_cstring(slave);
+		  pty->tty_name = make_string(slave);
 		  return 1;
 		}
 	      saved_errno = errno;

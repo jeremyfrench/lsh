@@ -215,7 +215,7 @@ make_pty_request(struct interact *tty)
   req->super.super.call = do_channel_request_command;
   
   req->tty = tty;
-  req->term = term ? format_cstring(term) : ssh_format("");
+  req->term = term ? make_string(term) : ssh_format("");
 
   return &req->super.super;
 }
