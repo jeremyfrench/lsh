@@ -45,10 +45,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+/* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
-
-/* Global variable */
-struct io_backend backend;
 
 void usage(void) NORETURN;
 
@@ -126,6 +124,9 @@ int main(int argc, char **argv)
 
   struct sockaddr_in local;
 
+  /* STATIC, because the object exists at gc time */
+  struct io_backend backend = { STATIC_HEADER };
+
   struct lsh_string *random_seed;
   struct randomness *r;
   struct diffie_hellman_method *dh;
@@ -172,6 +173,8 @@ int main(int argc, char **argv)
       exit(1);
     }
 
+  init_backend(&backend);
+  
   random_seed = ssh_format("%z", "foobar");
 
   r = make_poor_random(&sha_algorithm, random_seed);
@@ -206,7 +209,7 @@ int main(int argc, char **argv)
   if (!io_listen(&backend, &local, 
 	    make_server_callback(&backend,
 				 "lsh - a free ssh",
-				 BLOCK_SIZE,
+				 SSH_MAX_PACKET,
 				 r, make_kexinit,
 				 kexinit_handler)))
     {
