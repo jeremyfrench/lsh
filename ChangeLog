@@ -1,3 +1,29 @@
+1999-06-23  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* channel_commands.c, combinators.c, connection_commands.c,
+	io_commands.c, tcpforward.c, tcpforward_commands.c: In collect_*
+	functions, don't assert that info == NULL. It's info->next that
+	should be NULL.
+	
+	* src/channel_commands.h (STATIC_INSTALL_GLOBAL_HANDLER): Bug fix,
+	use STATIC_COLLECT_2_FINAL.
+	(STATIC_INSTALL_OPEN_HANDLER): -"-
+
+	* doc/TODO: Updated the section on the control language.
+
+	* src/lshd.c (lshd_connection_service): Call connection_service to
+	initialize the connection, before logging in. 
+
+	* src/lsh.c (make_client_connect): Take advantage of
+	connection_service being a constant.
+
+	* src/make_class (process-expr): Generate a call to trace().
+
+1999-06-22  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/command.h: Never pass a NULL as the first argument of a
+	collect_* function.
+
 Mon Jun 21 19:11:57 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_session.c (make_server_connection_service):
