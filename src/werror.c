@@ -422,7 +422,7 @@ werror_vformat(const char *f, va_list args)
 	      (do_hex ? werror_hex : werror_decimal)(va_arg(args, UINT32));
 	      break;
 	    case 'c':
-	      werror_putc(va_arg(args, int));
+	      (do_paranoia ? werror_paranoia_putc : werror_putc)(va_arg(args, int));
 	      break;
 	    case 'n':
 	      werror_bignum(va_arg(args, MP_INT *), do_hex ? 16 : 10);
