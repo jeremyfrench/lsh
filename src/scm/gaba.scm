@@ -115,13 +115,15 @@
 ;;
 ;; a list, whose elements are displayed indented one more level.
 ;;
+;; #f, which is ignored
+;;
 ;; It would be cleaner to let indent be a dynamically bound variable.
 
 (define (out level . args)
   (for-each (lambda (o)
 	      (cond ((procedure? o) (o level))
 		    ((list? o) (apply out (+ 1 level) o))
-		    (else (display o))))
+		    (o (display o))))
 	    args))
 
 ; This isn't very optimal
@@ -443,6 +445,7 @@
 
 (define (process-class attributes)
   (let* ((name (get 'name attributes cadr))
+	 (condition (get 'condition attributes cadr))
 	 (super (get 'super attributes cadr))
 	 (vars (preprocess-vars name (get 'vars attributes cdr)))
 	 (meta (get 'meta attributes cadr))
@@ -453,6 +456,7 @@
 	  (free-function (make-free-function name vars)))
 					; (werror "baar\n")
       (c-append (class-annotate name super meta)
+		(and condition (c-append "#if " condition "\n"))
 		"#ifndef GABA_DEFINE\n"	
 		(make-instance-struct name super vars)
 		(if meta
@@ -467,7 +471,8 @@
 		(or free-function "")
 		(make-class name super mark-function free-function
 			    meta methods)
-		"#endif /* !GABA_DECLARE */\n\n"))))
+		"#endif /* !GABA_DECLARE */\n\n"
+		(and condition (c-append "#endif /* " condition " */\n")) ))))
 
 (define (process-meta attributes)
   (let ((name (get 'name attributes cadr))
