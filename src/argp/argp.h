@@ -40,6 +40,10 @@
 # ifndef __THROW
 #  define __THROW
 # endif
+/* FIXME: We should really use a configure test for __restrict */
+# ifndef __restrict
+#  define __restrict
+# endif
 #else /* !LSH */
 # include <getopt.h>
 #endif /* !LSH */
