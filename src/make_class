@@ -333,6 +333,8 @@
     ; (werror "gazonk\n")
     (list (declare-struct-mark-function name)
 	  "\n{\n"
+	  ; To avoid warnings for unused parameters
+	  "  (void) mark; (void) i;\n"
 	  (map (lambda (x) (list "  " x))
 	       markers)
 	  "}\n\n")))
@@ -352,6 +354,8 @@
 
     (list (declare-struct-free-function name)
 	  "\n{\n"
+	  ; To avoid warnings for unused parameters
+	  "  (void) i;\n"
 	  (map (lambda (x) (list "  " x))
 	       freers)
 	  "}\n\n")))
