@@ -18,7 +18,7 @@ static UINT32
 sftp_client_new_id(void)
 { return 17; }
 
-struct client_handle *
+static struct client_handle *
 client_get_handle(struct sftp_input *i)
 {
   UINT32 length;
@@ -36,7 +36,7 @@ client_get_handle(struct sftp_input *i)
   return handle;
 }
 
-UINT8
+static UINT8
 client_get_msg(struct client_ctx *ctx, UINT32 expected)
 {
   UINT8 msg;
@@ -51,7 +51,7 @@ client_get_msg(struct client_ctx *ctx, UINT32 expected)
     fatal("Protocol error, client_get_msg");
 }
 
-UINT32
+static UINT32
 client_get_status(struct client_ctx *ctx, UINT32 id)
 {
   UINT32 status;
@@ -64,7 +64,7 @@ client_get_status(struct client_ctx *ctx, UINT32 id)
     fatal("Protocol error, client_get_status");
 }
 
-void
+static void
 client_put_handle(struct client_ctx *ctx, struct client_handle *handle)
 {
   sftp_put_string(ctx->o, handle->length, handle->data);
@@ -113,9 +113,6 @@ int
 sftp_close(struct client_ctx *ctx,
 	   struct client_handle *handle)
 {
-  UINT8 msg;
-  UINT32 status;
-  
   UINT32 id = sftp_client_new_id();
 
   sftp_set_msg(ctx->o, SSH_FXP_CLOSE); /* Send a close message */
