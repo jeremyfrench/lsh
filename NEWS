@@ -1,3 +1,25 @@
+News for the 1.3.0 release:
+
+	Bugfixes (same as in 1.2.2).
+
+	constness fixes.
+
+	Deleted the complex streamed sexp-parser.
+
+	Verbose messages at KEXINIT and NEWKEYS.
+
+	Tolerate empty atoms (like in "3des-cbs,,aes256-cbc,").
+
+	If compiled with --debug-alloc, all strings are counted and
+	leaks detected. Fixed some minor leaks.
+
+	Changed conventions for packet handlers, all packets are freed
+	by connection_handle_packet, so individual packet handlers
+	shouldn't do that.
+
+	Handle the TSTP signal. Backgrounding still doesn't work quite
+	right, though.
+	
 News for the 1.2.0 release:
 
 	Added the lcp copying script to the distribution (although it
