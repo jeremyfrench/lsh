@@ -260,6 +260,10 @@ static int io_iter(struct io_backend *b)
 	      /* NOTE: These flags are not mutually exclusive. All
 	       * combination must be handled correctly. */
 
+	      /* NOTE: (i) If LSH_DIE is set, LSH_CLOSE is ignored.
+	       * (ii) If the fd is read_only, LSH_CLOSE is the same as LSH_DIE.
+	       */
+#if 0
 	      if ( (res & (LSH_CLOSE | LSH_DIE)) == (LSH_CLOSE | LSH_DIE) )
 		{
 		  debug("return code %x, both LSH_CLOSE and LSH_DIE set.\n",
@@ -270,14 +274,7 @@ static int io_iter(struct io_backend *b)
 		  /* FIXME: Perhaps we should always set LSH_FAIL in
 		   * this case? */
 		}
-	      
-	      if (res & LSH_CLOSE)
-		{
-		  if (fd->buffer)
-		    write_buffer_close(fd->buffer);
-		  fd->close_reason
-		    = LSH_FAILUREP(res) ? CLOSE_PROTOCOL_FAILURE : CLOSE_EOF;
-		}
+#endif      
 	      if (res & LSH_DIE)
 		{
 		  if (fd->buffer)
@@ -286,6 +283,16 @@ static int io_iter(struct io_backend *b)
 		  fd->close_reason = LSH_FAILUREP(res)
 		    ? CLOSE_PROTOCOL_FAILURE : 0;
 		  fd->close_now = 1;
+		}
+	      else if (res & LSH_CLOSE)
+		{
+		  if (fd->buffer)
+		    write_buffer_close(fd->buffer);
+		  else
+		    fd->close_now = 1;
+		  
+		  fd->close_reason
+		    = LSH_FAILUREP(res) ? CLOSE_PROTOCOL_FAILURE : CLOSE_EOF;
 		}
 	      if (res & LSH_KILL_OTHERS)
 		{
