@@ -154,7 +154,11 @@ extern int sexp_char_classes[];
 */
 
 #define HANDLE_SEXP(h, s) ((h)->handler((h), (s)))
-     
+
+struct read_handler *make_read_sexp(struct sexp_handler *handler,
+				    UINT32 block_size,
+				    int style, int goon);
+
 #endif /* LSH_SEXP_H_INCLUDED */
 
  
