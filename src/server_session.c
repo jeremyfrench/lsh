@@ -639,7 +639,7 @@ do_spawn_shell(struct channel_request *c,
       { /* Child */
 #define MAX_ENV 1
 	/* No args, end the USER_EXEC method fills in argv[0]. */
-	char *argv[] = { NULL, NULL };
+	const char *argv[] = { NULL, NULL };
 	
 	struct env_value env[MAX_ENV];
 	int env_length = 0;
@@ -755,7 +755,7 @@ do_spawn_exec(struct channel_request *c,
 	     * not ANSI-C, and at least HPUX' compiler can't handle
 	     * it. */
 	    
-	    char *argv[4];
+	    const char *argv[4];
 	    argv[0] = NULL;
 	    argv[1] = "-c";
 	    argv[2] = lsh_get_cstring(command_line);
