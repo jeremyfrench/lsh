@@ -77,11 +77,11 @@ do_key_lookup(struct lookup_verifier *c,
       /* FIXME: Perhaps this is the right place to choose to apply the
        * PEER_SSH_DSS_KLUDGE? */
       
-      v = make_ssh_dss_verifier(key->length, key->data);
+      v = make_ssh_dss_verifier(key);
       break;
 
     case ATOM_SSH_RSA:
-      v = make_ssh_rsa_verifier(key->length, key->data);
+      v = make_ssh_rsa_verifier(key);
       break;
     }
 
