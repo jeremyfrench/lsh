@@ -4,10 +4,9 @@ static void
 read_cert(struct spki_acl_db *db, struct spki_5_tuple *cert,
 	  unsigned length, const uint8_t *data)
 {
-  struct sexp_iterator i;
+  struct spki_iterator i;
 
-  ASSERT(sexp_iterator_first(&i, length, data));
-  ASSERT(spki_parse_type(&i) == SPKI_TYPE_CERT);
+  ASSERT(spki_iterator_first(&i, length, data) == SPKI_TYPE_CERT);
   ASSERT(spki_parse_cert(db, &i, cert));
 }
 
