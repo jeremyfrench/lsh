@@ -22,6 +22,8 @@
  *
  * %s  Insert a string, given by a length and a pointer.
  *
+ * %S  Insert a string, given as a struct lsh_string pointer.
+ *
  * %a  Insert a string containing one atom.
  *
  * %A  Insert a string containing a list of atoms. The corresponding

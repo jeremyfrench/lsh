@@ -74,6 +74,14 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 		  length += 4;
 	      }
 	      break;
+	    case 'S':
+	      length += va_arg(args, struct lsh_string *)->length;
+	      f++;
+
+	      if (!literal)
+		length += 4;
+	      
+	      break;
 	    case 'a':
 	      {
 		int atom = va_arg(args, int);
@@ -177,6 +185,21 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		f++;
 	      }
 	    break;
+	    case 'S':
+	      {
+		struct lsh_string *s = va_arg(args, struct lsh_string *);
+
+		if (!literal)
+		  {
+		    WRITE_UINT32(buffer, s->length);
+		    buffer += 4;
+		  }
+
+		memcpy(buffer, s->data, s->length);
+		buffer += s->length;
+		f++;
+	      }
+		
 	    case 'a':
 	      {
 		UINT32 length;
