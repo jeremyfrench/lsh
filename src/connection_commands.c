@@ -310,3 +310,44 @@ make_handshake_command(int mode,
   self->super.call = do_connection;
   return &self->super;
 }
+
+/* GABA:
+   (class
+     (name connection_remember_command)
+     (super command)
+     (vars
+       (connection object ssh_connection)))
+*/
+
+static int do_connection_remember(struct command *s,
+				  struct lsh_object *x,
+				  struct command_continuation *c)
+{
+  CAST(connection_remember_command, self, s);
+  CAST_SUBTYPE(resource, resource, x);
+
+  if (resource)
+    REMEMBER_RESOURCE(self->connection->resources, resource);
+
+  return COMMAND_RETURN(c, resource);
+}
+
+static struct lsh_object *
+collect_connection_remember(struct collect_info_1 *info,
+			     struct lsh_object *x)
+{
+  CAST(ssh_connection, connection, x);
+  NEW(connection_remember_command, self);
+
+  assert(!info);
+
+  self->super.call = do_connection_remember;
+  self->connection = connection;
+
+  return &self->super.super;
+}
+
+struct collect_info_1 connection_remember_command =
+STATIC_COLLECT_1_FINAL(collect_connection_remember);
+
+  

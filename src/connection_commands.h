@@ -41,4 +41,8 @@ make_handshake_command(int mode,
 		       struct make_kexinit *init,
 		       struct ssh1_fallback *fallback);
 
+extern struct collect_info_1 connection_remember_command;
+
+#define CONNECTION_REMEMBER (&connection_remember_command.super)
+
 #endif /* LSH_CONNECTION_COMMANDS_H_INCLUDED */
