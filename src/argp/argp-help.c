@@ -47,8 +47,10 @@ char *alloca ();
 #include <assert.h>
 #include <stdarg.h>
 #include <ctype.h>
-/* Does any system still need malloc.h? If so, we'd need a configure
-   test. */
+#if HAVE_MALLOC_H
+/* Needed, for alloca on windows */
+# include <malloc.h>
+#endif
 
 #ifndef _
 /* This is for other GNU distributions with internationalized messages.  */

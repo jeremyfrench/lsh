@@ -49,6 +49,11 @@ char *alloca ();
 #include <limits.h>
 #include <assert.h>
 
+#if HAVE_MALLOC_H
+/* Needed, for alloca on windows */
+# include <malloc.h>
+#endif
+
 #ifndef _
 /* This is for other GNU distributions with internationalized messages.
    When compiling libc, the _ macro is predefined.  */
