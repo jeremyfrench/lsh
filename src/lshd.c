@@ -864,7 +864,7 @@ int main(int argc, char **argv)
         ALIST_SET(supported_channel_requests,
                   ATOM_PTY_REQ, &pty_request_handler.super);
         ALIST_SET(supported_channel_requests,
-                  ATOM_WINDOW_CHANGE, &window_change_request_handler);
+                  ATOM_WINDOW_CHANGE, &window_change_request_handler.super);
       }
 #endif /* WITH_PTY_SUPPORT */
 

@@ -1,3 +1,25 @@
+2001-09-28  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/server_session.c (do_eof): Use close_fd_nicely instead of
+	write_buffer_close. 
+	* src/sexp_test.c (do_close): Likewise.
+
+	* src/io.c (do_write_close): Deleted function.
+	(close_fd): Set the flag write_buffer->closed directly, instead of
+	calling FD_WRITE_CLOSE.
+	(close_fd_nicely): Don't use FD_WRITE_CLOSE, instead, set the
+	write_buffer->closed flag, and close the fd if the write_buffer is
+	empty. 
+
+	* src/io.h (FD_WRITE_CLOSE): Deleted method.
+
+	* src/write_buffer.c (write_buffer_close): Deleted. The closed
+	flag is now set by close_fd and close_fd_nicely. Everybody else
+	should be using those functions.
+
+	* src/tcpforward_commands.c (install_forwarded_tcpip_handler):
+	Static command deleted, not used anywhere.
+
 2001-09-28  Niels Möller  <nisse@ehand.com>
 
 	* src/tty.c (tty_setwinsize): Rows and columns were mixed up.
