@@ -79,6 +79,8 @@ static void zlib_free(void *opaque UNUSED, void *address)
 
 static void do_free_zstream(z_stream *z)
 {
+  /* FIXME: Let opaque be a pointer to a struct, as it is not portable
+   * to cast between void * and a function pointer. */
   /* Call deflateEnd() or inflateEnd(). But which? We use the opague
    * pointer, as we don't use that for anything else. */
 
