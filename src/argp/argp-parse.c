@@ -43,7 +43,9 @@ char *alloca ();
 
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#if HAVE_UNISTD_H
+# include <unistd.h>
+#endif
 #include <limits.h>
 #include <assert.h>
 
@@ -95,7 +97,9 @@ volatile int _argp_hang;
 
 #define OPT_PROGNAME	-2
 #define OPT_USAGE	-3
+#if HAVE_SLEEP && HAVE_GETPID
 #define OPT_HANG	-4
+#endif
 
 static const struct argp_option argp_default_options[] =
 {
@@ -103,8 +107,10 @@ static const struct argp_option argp_default_options[] =
   {"usage",	  OPT_USAGE,	0, 0,  N_("Give a short usage message"), 0 },
   {"program-name",OPT_PROGNAME,"NAME", OPTION_HIDDEN,
      N_("Set the program name"), 0},
+#if OPT_HANG
   {"HANG",	  OPT_HANG,    "SECS", OPTION_ARG_OPTIONAL | OPTION_HIDDEN,
      N_("Hang for SECS seconds (default 3600)"), 0 },
+#endif
   {0, 0, 0, 0, 0, 0}
 };
 
@@ -143,7 +149,8 @@ argp_default_parser (int key, char *arg, struct argp_state *state)
 	state->argv[0] = arg;
 
       break;
-
+      
+#if OPT_HANG
     case OPT_HANG:
       _argp_hang = atoi (arg ? arg : "3600");
       fprintf(state->err_stream, "%s: pid = %ld\n",
@@ -151,7 +158,8 @@ argp_default_parser (int key, char *arg, struct argp_state *state)
       while (_argp_hang-- > 0)
 	__sleep (1);
       break;
-
+#endif
+      
     default:
       return EBADKEY;
     }
