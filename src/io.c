@@ -702,6 +702,8 @@ make_listen_value(struct lsh_fd *fd,
      (super io_callback)
      (vars
        (c object command)
+       ;; FIXME: Is this needed? We could just inherit
+       ;; the listening fd's exception handler.
        (e object exception_handler)))
 */
 
