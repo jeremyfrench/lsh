@@ -66,9 +66,6 @@
 #include <unistd.h>
 #endif
 
-/* FIXME: Add configure and runtime options instead */
-#define WITH_TCPFORWARD_SUPPORT 1
-
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
 
@@ -85,6 +82,9 @@ void usage(void)
 	 " -z,  --compression[=ALGORITHM]\n"
 	 "      --mac=ALGORITHM\n"
 	 " -q,  --quiet\n"
+#if WITH_TCP_FORWARD
+	 "      --no-forward\n"
+#endif
 #if WITH_SSH1_FALLBACK
          "      --ssh1-fallback=SSHD\n"
 #endif
@@ -274,6 +274,9 @@ int main(int argc, char **argv)
 #if WITH_SSH1_FALLBACK
   char *sshd1 = NULL;
 #endif
+#if WITH_TCP_FORWARD
+  int forward_flag = 1;
+#endif
   
   struct alist *keys;
   
@@ -310,7 +313,7 @@ int main(int argc, char **argv)
 
   for (;;)
     {
-      static struct option options[] =
+      struct option options[] =
       {
 	{ "verbose", no_argument, NULL, 'v' },
 	{ "quiet", no_argument, NULL, 'q' },
@@ -320,6 +323,9 @@ int main(int argc, char **argv)
 	{ "compression", optional_argument, NULL, 'z'},
 	{ "mac", required_argument, NULL, 'm' },
 	{ "hostkey", required_argument, NULL, 'h' },
+#if WITH_TCP_FORWARD
+	{ "no-forward", no_argument, &forward_flag, 0 },
+#endif
 #if WITH_SSH1_FALLBACK
 	{ "ssh1-fallback", optional_argument, NULL, OPT_SSH1_FALLBACK},
 #endif
@@ -443,60 +449,66 @@ int main(int argc, char **argv)
 			  make_int_list(0, -1));
   
   {
-    struct lsh_object *o = lshd_listen
-      (make_simple_listen(backend, NULL),
-       make_handshake_command(CONNECTION_SERVER,
-			      "lsh - a free ssh",
-			      SSH_MAX_PACKET,
-			      r,
-			      algorithms,
-			      make_kexinit,
+    struct alist *global_requests;
+
+#if WITH_TCP_FORWARD
+    if (forward_flag)
+      global_requests = make_alist(2,
+				   ATOM_TCPIP_FORWARD, make_tcpip_forward_request(backend),
+				   ATOM_CANCEL_TCPIP_FORWARD, make_cancel_tcpip_forward_request(),
+				   -1);
+    else
+#endif
+      global_requests = make_alist(0, -1);
+    {
+      struct lsh_object *o = lshd_listen
+	(make_simple_listen(backend, NULL),
+	 make_handshake_command(CONNECTION_SERVER,
+				"lsh - a free ssh",
+				SSH_MAX_PACKET,
+				r,
+				algorithms,
+				make_kexinit,
 #if WITH_SSH1_FALLBACK
-			      sshd1 ? make_ssh1_fallback (sshd1) :
+				sshd1 ? make_ssh1_fallback (sshd1) :
 #endif /* WITH_SSH1_FALLBACK */
-			      NULL),
-       make_offer_service
-       (make_alist
-	(1, ATOM_SSH_USERAUTH,
-	 lshd_services(make_userauth_service
-		       (make_int_list(1, ATOM_PASSWORD, -1),
-			make_alist(1, ATOM_PASSWORD,
-				   &unix_userauth.super, -1),
-			make_alist(1, ATOM_SSH_CONNECTION,
-				   make_server_connection_service
-				   (make_alist
-				    (0
-#if WITH_TCPFORWARD_SUPPORT
-				     +2,
-				     ATOM_TCPIP_FORWARD, make_tcpip_forward_request(backend),
-				     ATOM_CANCEL_TCPIP_FORWARD, make_cancel_tcpip_forward_request()
-#endif /* WITH_TCPFORWARD_SUPPORT */
-				     ,-1),
-				    make_alist
-				    (1
+				NULL),
+	 make_offer_service
+	 (make_alist
+	  (1, ATOM_SSH_USERAUTH,
+	   lshd_services(make_userauth_service
+			 (make_int_list(1, ATOM_PASSWORD, -1),
+			  make_alist(1, ATOM_PASSWORD,
+				     &unix_userauth.super, -1),
+			  make_alist(1, ATOM_SSH_CONNECTION,
+				     make_server_connection_service
+				     (global_requests,
+				      make_alist
+				      (1
 #if WITH_PTY_SUPPORT
-				     +1, ATOM_PTY_REQ, make_pty_handler()
+				       +1, ATOM_PTY_REQ, make_pty_handler()
 #endif /* WITH_PTY_SUPPORT */
-				     , ATOM_SHELL,
-				     make_shell_handler(backend,
-							reaper),
-				     -1),
-				    backend),
-				   -1))),
-	 -1)));
+				       , ATOM_SHELL,
+				       make_shell_handler(backend,
+							  reaper),
+				       -1),
+				      backend),
+				     -1))),
+	   -1)));
     
-    CAST_SUBTYPE(command, server_listen, o);
+      CAST_SUBTYPE(command, server_listen, o);
     
-    int res = COMMAND_CALL(server_listen, local, NULL);
-    if (res)
-      {
-	if (res & LSH_COMMAND_FAILED)
-	    werror("lshd: Failed to bind port. (errno = %d) %z\n",
+      int res = COMMAND_CALL(server_listen, local, NULL);
+      if (res)
+	{
+	  if (res & LSH_COMMAND_FAILED)
+	    werror("lshd: Failed to bind port. (errno = %i) %z\n",
 		   errno, STRERROR(errno));
-	else
-	  werror("lshd: Unexpected failure from listen: %d\n", res);
-	return EXIT_FAILURE;
-      }
+	  else
+	    werror("lshd: Unexpected failure from listen: %i\n", res);
+	  return EXIT_FAILURE;
+	}
+    }
   }
   
   reaper_run(reaper, backend);
