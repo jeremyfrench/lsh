@@ -105,5 +105,6 @@ make_simple_listen(struct io_backend *backend,
 		   struct resource_list *resources);
 
 extern struct command_simple io_log_peer_command;
+#define LOG_PEER (&io_log_peer_command.super.super)
 
 #endif /* LSH_IO_COMMANDS_H_INCLUDED */
