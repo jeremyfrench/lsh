@@ -74,6 +74,28 @@
 
 #define FATAL(x) do { fputs("sftp-server: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
 
+#define WITH_DEBUG 1
+
+#if WITH_DEBUG
+static int debug_flag = 0;
+
+static void
+debug(const char *format, ...)
+{
+  if (debug_flag)
+    {
+      va_list args;
+  
+      va_start(args, format);
+      vfprintf(stderr, format, args);
+      va_end(args);
+    }
+}
+# define DEBUG(x) debug x
+#else /* !WITH_DEBUG */
+# define DEBUG(x)
+#endif /* !WITH_DEBUG */
+
 static void
 sftp_attrib_from_stat(struct stat *st, struct sftp_attrib* a)
 {
@@ -188,17 +210,28 @@ sftp_get_name(struct sftp_input *i)
   UINT8 *name;
   UINT32 length;
   
-  name = sftp_get_string(i, &length);
+  name = sftp_get_string_auto(i, &length);
   if (!length)
-    return ".";
+    name = ".";
 
-  if (memchr(name, 0, length))
-    return NULL;
+  else if (memchr(name, 0, length))
+    name = NULL;
+
+  DEBUG (("sftp_get_name: %s\n", name ? (char *) name : "<INVALID>"));
+
   return name;
 }
 
 #define SFTP_MAX_HANDLES 200
 
+/* We need to keep the name of directories around, in order to stat
+ * entries. */
+struct sftp_dir
+{
+  DIR *dir;
+  char *name;
+};
+  
 struct sftp_handle
 {
   enum sftp_handle_type
@@ -207,7 +240,7 @@ struct sftp_handle
   union
   {
     int fd;
-    DIR *dir;
+    struct sftp_dir dir;
   } u;
 };
 
@@ -265,10 +298,14 @@ sftp_new_handle(struct sftp_ctx *ctx,
   for (i = 0; i<SFTP_MAX_HANDLES; i++)
     if (HANDLE_TYPE(ctx, i) == HANDLE_UNUSED)
       {
+	DEBUG (("sftp_new_handle: %d, type %d\n", i, type));
+
 	HANDLE_TYPE(ctx, i) = type;
 	*handle = i;
 	return 1;
       }
+
+  DEBUG (("sftp_new_handle: ran out of handles\n"));
   
   return 0;
 }
@@ -291,14 +328,14 @@ sftp_get_handle(struct sftp_ctx *ctx, handle_t *handle)
 }
 
 static int
-sftp_get_handle_dir(struct sftp_ctx *ctx, DIR **value)
+sftp_get_handle_dir(struct sftp_ctx *ctx, struct sftp_dir **value)
 {
   handle_t handle;
 
   if (sftp_get_handle(ctx, &handle)
       && (HANDLE_TYPE(ctx, handle) == HANDLE_DIRECTORY))
     {
-      *value = HANDLE_DIR(ctx, handle);
+      *value = &HANDLE_DIR(ctx, handle);
       return 1;
     }
   else
@@ -340,17 +377,20 @@ sftp_send_handle(struct sftp_ctx *ctx, UINT32 handle)
 static int
 sftp_send_status(struct sftp_ctx *ctx, UINT32 status)
 {
+  DEBUG (("sftp_send_status: %d\n", status));
+  
   sftp_set_msg(ctx->o, SSH_FXP_STATUS);
   sftp_put_uint32(ctx->o, status);
   return 1;
 }
 
 static int
-sftp_send_errno(struct sftp_ctx *ctx)
+sftp_send_errno(struct sftp_ctx *ctx, int e)
 {
   UINT32 status;
   
-  switch(errno)
+  DEBUG (("sftp_send_errno: %d, %s\n", e, strerror(e)));
+  switch(e)
     {
     case ENOENT:
       status = SSH_FX_NO_SUCH_FILE;
@@ -386,6 +426,8 @@ sftp_process_opendir(struct sftp_ctx *ctx)
   const UINT8 *name;
   DIR* dir;
   handle_t handle;
+
+  DEBUG (("sftp_process_opendir\n"));
   
   if ( ! (name = sftp_get_name(ctx->i)))
     return sftp_bad_message(ctx);
@@ -395,45 +437,60 @@ sftp_process_opendir(struct sftp_ctx *ctx)
 
   dir=opendir(name);
 
-  if ( !dir )
-    return sftp_send_errno(ctx);
+  if (!dir)
+    return sftp_send_errno(ctx, errno);
 
   /* Open successful */
 
   if (!sftp_new_handle(ctx, HANDLE_DIRECTORY, &handle))
-    {
-      HANDLE_DIR(ctx, handle) = dir;
-      return sftp_send_handle(ctx, handle);
-    }
-  else
     return sftp_send_status(ctx, SSH_FX_FAILURE);
+  
+  HANDLE_DIR(ctx, handle).dir = dir;
+  HANDLE_DIR(ctx, handle).name = strdup(name);
+  return sftp_send_handle(ctx, handle);
+}
+
+/* FIXME: Creative use of dirfd and fchdir would be more robust. */
+static int
+sftp_lstat_in_dir(const char *dir, const char *file,
+		  struct stat *sb)
+{
+  unsigned dir_length = strlen(dir);
+  unsigned file_length = strlen(file);
+  char *s = alloca(dir_length + file_length + 2);
+
+  memcpy(s, dir, dir_length);
+  s[dir_length] = '/';
+  memcpy(s + dir_length + 1, file, file_length);
+  s[dir_length + file_length + 1] = '\0';
+
+  return lstat(s, sb);
 }
 
 static int
 sftp_process_readdir(struct sftp_ctx *ctx)
 {
-  DIR *dir;
+  struct sftp_dir *dir;
   struct dirent* entry; 
   struct stat st;
   
   if (!sftp_get_handle_dir(ctx, &dir))
     return sftp_bad_message(ctx);
 
-  entry=readdir(dir);
+  entry=readdir(dir->dir);
 
   if (!entry)
-    return (errno ? sftp_send_errno(ctx)
+    return (errno ? sftp_send_errno(ctx, errno)
 	    : sftp_send_status(ctx, SSH_FX_EOF)); 
 
-  /* FIXME: concat name, or chdir temporarily. */
-
-  if( lstat(entry->d_name, &st) )
-    return sftp_send_errno(ctx);
+  if (sftp_lstat_in_dir(dir->name, entry->d_name, &st) )
+    /* FIXME: Would it be better to just skip this entry, or send an
+     * SSH_FXP_NAME with no file attributes? */
+    return sftp_send_errno(ctx, errno);
 
   /* FIXME: we don't have to, but maybe we should be nice and pass
-     several at once? It might improve performance quite a lot (or it
-     might not)
-     */
+   * several at once? It might improve performance quite a lot (or it
+   * might not) */
 
   /* Use count == 1 for now. */
   sftp_put_uint32(ctx->o, 1);
@@ -443,7 +500,6 @@ sftp_process_readdir(struct sftp_ctx *ctx)
   sftp_set_msg(ctx->o, SSH_FXP_NAME );
   return 1;
 }
-
 
 static int
 sftp_process_stat(struct sftp_ctx *ctx)
@@ -457,7 +513,7 @@ sftp_process_stat(struct sftp_ctx *ctx)
     return sftp_bad_message(ctx);
 
   if (stat(name, &st ) < 0)
-    return sftp_send_errno(ctx);
+    return sftp_send_errno(ctx, errno);
 
   sftp_attrib_from_stat( &st, &a);
 
@@ -479,7 +535,7 @@ sftp_process_lstat(struct sftp_ctx *ctx)
     return sftp_bad_message(ctx);
 
   if (lstat(name, &st) < 0)
-    return sftp_send_errno(ctx);
+    return sftp_send_errno(ctx, errno);
 
   sftp_attrib_from_stat( &st, &a );
   sftp_set_msg( ctx->o, SSH_FXP_ATTRS );
@@ -501,7 +557,7 @@ sftp_process_fstat(struct sftp_ctx *ctx)
 
   
   if (fstat(fd, &st ) < 0 )
-    return sftp_send_errno(ctx);
+    return sftp_send_errno(ctx, errno);
 	  
   sftp_attrib_from_stat(&st,&a);
   sftp_set_msg( ctx->o, SSH_FXP_ATTRS );
@@ -523,15 +579,15 @@ sftp_process_fsetstat(struct sftp_ctx *ctx)
 	  
       if ( a.flags & SSH_FILEXFER_ATTR_UIDGID )
 	if (fchown(fd, a.uid, a.gid ) < 0 )
-	  return sftp_send_errno(ctx);
+	  return sftp_send_errno(ctx, errno);
   
       if ( a.flags & SSH_FILEXFER_ATTR_SIZE )
 	if( ftruncate(fd, a.size ) < 0)
-	  return sftp_send_errno(ctx);
+	  return sftp_send_errno(ctx, errno);
   
       if ( a.flags & SSH_FILEXFER_ATTR_PERMISSIONS )
 	if( fchmod(fd, a.permissions ) < 0 ) 
-	  return sftp_send_errno(ctx);
+	  return sftp_send_errno(ctx, errno);
   
       if ( a.flags & (SSH_FILEXFER_ATTR_EXTENDED | SSH_FILEXFER_ATTR_ACMODTIME ))
 	/* FIXME: how do we? */
@@ -557,15 +613,15 @@ sftp_process_setstat(struct sftp_ctx *ctx)
     {
       if ( a.flags & SSH_FILEXFER_ATTR_UIDGID )
 	if ( chown(name, a.uid, a.gid ) )
-	  return sftp_send_errno(ctx);
+	  return sftp_send_errno(ctx, errno);
 
       if ( a.flags & SSH_FILEXFER_ATTR_SIZE )
 	if( truncate(name, a.size ) )
-	  return sftp_send_errno(ctx);
+	  return sftp_send_errno(ctx, errno);
 
       if ( a.flags & SSH_FILEXFER_ATTR_PERMISSIONS )
 	if( chmod(name, a.permissions ) )
-	  return sftp_send_errno(ctx);
+	  return sftp_send_errno(ctx, errno);
       
       if ( a.flags & (SSH_FILEXFER_ATTR_EXTENDED | SSH_FILEXFER_ATTR_ACMODTIME))
 	  /* FIXME: how do we? */
@@ -584,7 +640,7 @@ sftp_process_remove(struct sftp_ctx *ctx)
     return sftp_bad_message(ctx);
 
   if (unlink(name) < 0)
-    return sftp_send_errno(ctx);
+    return sftp_send_errno(ctx, errno);
   else
     return sftp_send_status(ctx, SSH_FX_OK);   
 }
@@ -600,7 +656,7 @@ sftp_process_mkdir(struct sftp_ctx *ctx)
 
   /* FIXME: default permissions ? */   
   if(mkdir(name, 0755) < 0 )
-    return sftp_send_errno(ctx);
+    return sftp_send_errno(ctx, errno);
   else
     return sftp_send_status(ctx, SSH_FX_OK);   
 }
@@ -614,7 +670,7 @@ sftp_process_rmdir(struct sftp_ctx *ctx)
     return sftp_bad_message(ctx);
 
   if(rmdir(name) < 0)
-    return sftp_send_errno(ctx);
+    return sftp_send_errno(ctx, errno);
   else
     return sftp_send_status(ctx, SSH_FX_OK);   
 }
@@ -643,7 +699,7 @@ sftp_process_realpath(struct sftp_ctx *ctx)
   resolved = realpath(name, alloca(path_max));
 
   if (!resolved)
-    return sftp_send_errno(ctx);
+    return sftp_send_errno(ctx, errno);
 
   sftp_put_uint32(ctx->o, 1); /* Count */  
   
@@ -680,7 +736,7 @@ sftp_process_rename(struct sftp_ctx *ctx)
     return sftp_bad_message(ctx);
   
   if (rename(src, dst) < 0)
-    return sftp_send_errno(ctx);
+    return sftp_send_errno(ctx, errno);
   else
     return sftp_send_status(ctx, SSH_FX_OK);   
 }
@@ -689,12 +745,11 @@ sftp_process_rename(struct sftp_ctx *ctx)
 static int
 sftp_process_open(struct sftp_ctx *ctx)
 {
-  UINT32 length;
-  UINT8 *name;
+  const UINT8 *name;
   UINT32 pflags;
   struct sftp_attrib a;
 
-  if (!((name = sftp_get_string(ctx->i, &length))
+  if (!((name = sftp_get_name(ctx->i))
 	&& sftp_get_uint32(ctx->i, &pflags)
 	&& sftp_get_attrib(ctx->i, &a)))
     return sftp_bad_message(ctx);
@@ -750,18 +805,18 @@ sftp_process_open(struct sftp_ctx *ctx)
 	fd = open(name, mode, 0666);
 
       if (fd < 0)
-	return sftp_send_errno(ctx);
+	return sftp_send_errno(ctx, errno);
 
 #if 0
       if (a.flags & SSH_FILEXFER_ATTR_UIDGID)
 	if ( fchown(fd, a.uid, a.gid) )
-	  return sftp_send_errno(ctx);
+	  return sftp_send_errno(ctx, errno);
 #endif    
 
       if (fstat(fd, &sb) < 0)
 	{
 	  close(fd);
-	  return sftp_send_errno(ctx);
+	  return sftp_send_errno(ctx, errno);
 	}
 
       if (S_ISDIR(sb.st_mode))
@@ -772,7 +827,8 @@ sftp_process_open(struct sftp_ctx *ctx)
 
       if (!sftp_new_handle(ctx, HANDLE_FILE, &handle))
 	return sftp_send_status(ctx, SSH_FX_FAILURE);
-	  
+
+      HANDLE_FD(ctx, handle) = fd;
       sftp_send_handle(ctx, handle);
       return 1;
     }
@@ -791,15 +847,17 @@ sftp_process_close(struct sftp_ctx *ctx)
 	case HANDLE_FILE:
 	  if (close(HANDLE_FD(ctx, handle)) < 0)
 	    /* FIXME: Should we do something on error ? */
-	    return sftp_send_errno(ctx); 
+	    return sftp_send_errno(ctx, errno); 
 
 	  break;
 
 	case HANDLE_DIRECTORY:
-	  if (closedir(HANDLE_DIR(ctx, handle)) < 0)
+	  if (closedir(HANDLE_DIR(ctx, handle).dir) < 0)
 	    /* FIXME: Should we do something on error ? */
-	    return sftp_send_errno(ctx); 
+	    return sftp_send_errno(ctx, errno); 
 
+	  free(HANDLE_DIR(ctx, handle).name);
+	  
 	  break;
 
 	default:
@@ -838,53 +896,59 @@ sftp_process_read(struct sftp_ctx *ctx)
 {
   int fd;
   off_t offset;
-  UINT32 len;
+  UINT32 length;
 
   if ( !(sftp_get_handle_fd(ctx, &fd) && 
 	 sftp_get_uint64(ctx->i, &offset) &&
-	 sftp_get_uint32(ctx->i, &len)))
+	 sftp_get_uint32(ctx->i, &length)))
     return sftp_bad_message(ctx);
   
   /* FIXME: Should we separate cases bad message
      and illegal handle and return failure 
      for one and bad_message for the other?
   */
-
-  if (len)                              /* Check so we are to read at all */
+  
+  /* Check so we are to read at all */
+  if (length)
     {
       size_t done = 0;
       int res;
       UINT32 index;
 
+      DEBUG (("sftp_process_read: fd = %d\n"));
+      
       /* FIXME: Should we really sanity check the length? */
-      if (len > SFTP_MAX_SIZE)
-	len = SFTP_MAX_SIZE;
+      if (length > SFTP_MAX_SIZE)
+	length = SFTP_MAX_SIZE;
       
       index = sftp_put_reserve_length(ctx->o);
 
-      while (len)
+      while (length)
 	{
 	  UINT8 buf[BUFFER_SIZE];
 	  do
-	    res = pread(fd, buf, offset, len);
+	    res = pread(fd, buf, length, offset);
 	  while ( (res < 0) && (errno == EINTR) );
-	  
+
+	  DEBUG (("sftp_process_read: read => %d\n", res));
 	  if (res < 0)
 	    {
 	      sftp_put_reset(ctx->o, index);
-	      return sftp_send_errno(ctx);
+	      return sftp_send_errno(ctx, errno);
 	    }
 	  else if (res > 0)
 	    {
 	      sftp_put_data(ctx->o, res, buf);
 	      done += res;
 	      offset += res;
-	      len -= res;
+	      length -= res;
 	    }
 	  else
 	    break;
 	}
 
+      DEBUG (("sftp_process_read: After read loop, done = %d, left = %d\n",
+	      done, length));
       if (!done)
 	{
 	  sftp_put_reset(ctx->o, index);
@@ -924,11 +988,10 @@ sftp_process_write(struct sftp_ctx *ctx)
   
   UINT8 *data;
   UINT32 length;
-
   
   if ( !(sftp_get_handle_fd(ctx, &fd)
 	 && sftp_get_uint64(ctx->i, &offset)
-	 && (data = sftp_get_string(ctx->i, &length))))
+	 && (data = sftp_get_string_auto(ctx->i, &length))))
     return sftp_bad_message(ctx);
 
   /* FIXME: Should we separate cases bad message
@@ -944,11 +1007,11 @@ sftp_process_write(struct sftp_ctx *ctx)
     {
       int res;
       do
-	res = pwrite(fd, data + done, offset, length);
+	res = pwrite(fd, data + done, length, offset);
       while ( (res < 0) && (errno == EINTR));
 
       if (res <= 0)
-	return sftp_send_errno(ctx);
+	return sftp_send_errno(ctx, errno);
 
       else if (res > 0)
 	{
@@ -1008,14 +1071,20 @@ sftp_handshake(struct sftp_ctx *ctx)
 {
   UINT8 msg;
   UINT32 version;
+
+  DEBUG (("sftp_handshake\n"));
   
   if (sftp_read_packet(ctx->i) <= 0)
     return 0;
 
+  DEBUG (("sftp_handshake, read packet\n"));
+  
   if (sftp_get_uint8(ctx->i, &msg)
       && (msg == SSH_FXP_INIT)
       && sftp_get_uint32(ctx->i, &version))
     {
+      DEBUG (("sftp_handshake, got version packet\n"));
+      
       while (!sftp_get_eod(ctx->i))
 	if (!sftp_skip_extension(ctx->i))
 	  return 0;
@@ -1034,14 +1103,40 @@ sftp_handshake(struct sftp_ctx *ctx)
   return 0;
 }
 
+static int
+parse_options(int argc, char **argv)
+{
+  int i;
+
+  for (i = 1; i<argc; i++)
+    {
+      if (argv[i][0] != '-')
+	return 0;
+      switch (argv[i][1])
+	{
+#if WITH_DEBUG
+	case 'd':
+	  debug_flag = 1;
+	  break;
+#endif
+	default:
+	  return 0;
+	}
+    }
+  return 1;
+}
+
 int
-main(int argc UNUSED, char **argv UNUSED)
+main(int argc, char **argv)
 {
   unsigned i;
   
   struct sftp_ctx ctx;
   sftp_process_func *dispatch[0x100];
 
+  if (!parse_options(argc, argv))
+    return EXIT_FAILURE;
+  
   sftp_init(&ctx, stdin, stdout);
 
   if (!sftp_handshake(&ctx))
