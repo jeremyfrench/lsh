@@ -65,31 +65,47 @@ static void do_free_zstream(z_stream *z);
        (level . int)))
 */
 
+/* Stored in the opaque pointer. */
+struct zlib_type
+{
+  int (*free_func)(z_stream *z);
+  const char *operation;
+};
+
+#define ZLIB_TYPE(z) ((struct zlib_type *)((z)->opaque))
+
+static const struct zlib_type
+zlib_inflate = {  inflateEnd, "inflate" };
+
+static const struct zlib_type
+zlib_deflate = {  inflateEnd, "deflate" };
 
 /* zlib memory functions */
-static void *zlib_alloc(void *opaque UNUSED, unsigned int items, unsigned int size)
+static void *
+zlib_alloc(void *opaque UNUSED, unsigned int items, unsigned int size)
 {
   return lsh_space_alloc(items * size);
 }
 
-static void zlib_free(void *opaque UNUSED, void *address)
+static void
+zlib_free(void *opaque UNUSED, void *address)
 {
   lsh_space_free(address);
 }
 
-static void do_free_zstream(z_stream *z)
+static void
+do_free_zstream(z_stream *z)
 {
-  /* FIXME: Let opaque be a pointer to a struct, as it is not portable
-   * to cast between void * and a function pointer. */
-  /* Call deflateEnd() or inflateEnd(). But which? We use the opague
-   * pointer, as we don't use that for anything else. */
+  /* We use the opaque pointer, as there's nothing else to help us
+   * figure if we should be calling inflateEnd or deflateEnd. */
 
-  int (*free)(z_stream *z) = z->opaque;
-  int res = free(z);
+  const struct zlib_type *type = ZLIB_TYPE(z);
+  
+  int res = type->free_func(z);
 
   if (res != Z_OK)
-    debug("do_free_zstream: Freeing failed: %z\n",
-	  z->msg ? z->msg : "No error");
+    debug("do_free_zstream (%z): Freeing failed: %z\n",
+	  type->operation, z->msg ? z->msg : "No error");
 }
 
 /* Estimates of the resulting packet sizes. We use fixnum arithmetic,
@@ -138,9 +154,10 @@ static UINT32 estimate_update(UINT32 rate, UINT32 input, UINT32 output)
 }
 
 /* Compress incoming data */
-static struct lsh_string *do_zlib(struct compress_instance *c,
-				  struct lsh_string *packet,
-				  int free)
+static struct lsh_string *
+do_zlib(struct compress_instance *c,
+	struct lsh_string *packet,
+	int free)
 {
   CAST(zlib_instance, self, c);
   struct string_buffer buffer;
@@ -152,16 +169,20 @@ static struct lsh_string *do_zlib(struct compress_instance *c,
 
   UINT32 estimate;
   
-  debug("do_zlib: length in: %i\n", packet->length);
+  debug("do_zlib (%z): length in: %i\n",
+	ZLIB_TYPE(&self->z)->operation, packet->length);
   
   if (!packet->length)
     {
-      werror("do_zlib_deflate: Compressing empty packet.\n");
+      werror("do_zlib (%z): Compressing empty packet.\n",
+	     ZLIB_TYPE(&self->z)->operation);
       return free ? packet : lsh_string_dup(packet);
     }
 
   estimate = estimate_size(self->rate, packet->length, limit);
-  debug("do_zlib: estimate:  %i\n", estimate);
+  debug("do_zlib (%z): estimate:  %i\n",
+	ZLIB_TYPE(&self->z)->operation,
+	estimate);
 
   string_buffer_init(&buffer, estimate);
 
@@ -184,14 +205,16 @@ static struct lsh_string *do_zlib(struct compress_instance *c,
       switch (rc)
 	{
 	case Z_BUF_ERROR:
-	  werror("zlib.c: Z_BUF_ERROR (probably harmless),\n"
+	  werror("do_zlib (%z): Z_BUF_ERROR (probably harmless),\n"
 		 "  avail_in = %i, avail_out = %i\n",
+		 ZLIB_TYPE(&self->z)->operation,
 		 self->z.avail_in, self->z.avail_out);
 	  /* Fall through */
 	case Z_OK:
 	  break;
 	default:
-	  werror("do_zlib: deflate() or inflate() failed: %z\n",
+	  werror("do_zlib: %z() failed: %z\n",
+		 ZLIB_TYPE(&self->z)->operation,
 		 self->z.msg ? self->z.msg : "No error(?)");
 	  if (free)
 	    lsh_string_free(packet);
@@ -206,13 +229,16 @@ static struct lsh_string *do_zlib(struct compress_instance *c,
        * space. */
 	 
       if (!self->z.avail_in && !self->z.avail_out)
-	verbose("do_zlib: Both avail_in and avail_out are zero.\n");
+	verbose("do_zlib (%z): Both avail_in and avail_out are zero.\n",
+		ZLIB_TYPE(&self->z)->operation);
       
       if (!self->z.avail_out)
 	{ /* All output space consumed */  
 	  if (!limit)
 	    {
-	      werror("do_zlib_deflate: Packet grew too large!\n");
+	      werror("do_zlib (%z): Packet grew too large!\n",
+		     ZLIB_TYPE(&self->z)->operation);
+	      
 	      if (free)
 		lsh_string_free(packet);
 
@@ -236,10 +262,13 @@ static struct lsh_string *do_zlib(struct compress_instance *c,
 
 	  assert(packet->length <= self->max);
 
-	  debug("do_zlib: length out: %i\n", packet->length);
+	  debug("do_zlib (%z): length out: %i\n",
+		ZLIB_TYPE(&self->z)->operation,
+		packet->length);
 
 	  if (packet->length > estimate)
-	    verbose("do_zlib: Estimated size exceeded: input = %i, estimate = %i, output = %i\n",
+	    verbose("do_zlib (%z): Estimated size exceeded: input = %i, estimate = %i, output = %i\n",
+		    ZLIB_TYPE(&self->z)->operation,
 		    input, estimate, packet->length);
 	  
 	  self->rate = estimate_update(self->rate, input, packet->length);
@@ -261,7 +290,7 @@ make_zlib_instance(struct compress_algorithm *c, int mode)
   switch (mode)
     {
       case COMPRESS_DEFLATE:
-	res->z.opaque = deflateEnd;
+	res->z.opaque = (void *) &zlib_deflate;
 	res->f = deflate;
         res->super.codec = do_zlib;
 
@@ -278,7 +307,7 @@ make_zlib_instance(struct compress_algorithm *c, int mode)
         break;
 
     case COMPRESS_INFLATE:
-	res->z.opaque = inflateEnd;
+	res->z.opaque = (void *) &zlib_inflate;
 	res->f = inflate;
         res->super.codec = do_zlib;
 
