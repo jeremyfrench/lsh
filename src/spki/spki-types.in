@@ -2,6 +2,7 @@ acl
 cert 
 comment
 display
+do
 entry
 hash
 issuer
@@ -12,7 +13,9 @@ not-after
 not-before
 propagate
 public-key
+sequence
 sha1
+signature
 subject
 subject-info
 tag
