@@ -62,6 +62,14 @@ test_main(void)
   p = lsh_get_cstring(s);
 
   ASSERT(p && !strcmp(p, "xigak-nyryk-humil-bosek-sonax")) ;
+
+  /* This should at least strigger one typo I made in the bubble babble routine */ 
+
+  s = S("\xb8\x4e\xce\x86\x7b\x92\x8e\xf2\xda\x8e\xee\x15\xc2\x5d\xac\xd6\xe8\x6c\xb3\x43");
+  s = lsh_string_bubblebabble(s, 1);
+  p = lsh_get_cstring(s);	
            
+  ASSERT(p && !strcmp(p, "xovag-vafim-kivun-dafez-dykim-veryc-habeh-turyt-kopyk-sasug-fixax")) ;
+
   SUCCESS();
 }
