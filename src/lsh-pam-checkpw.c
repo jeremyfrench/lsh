@@ -7,7 +7,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 2001 Pontus Sköld
+ * Copyright (C) 2001, 2002 Pontus Sköld, Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -33,12 +33,11 @@
 #define PWD_MAXLEN 1024
 #define SERVICE_NAME "other"
 
-int conv(
-	 int num_msg,
-	 const struct pam_message** msg,
-	 struct pam_response** resp,
-	 void* appdata_ptr
-	 )
+static int
+conv(int num_msg,
+     const struct pam_message** msg,
+     struct pam_response** resp,
+     void* appdata_ptr)
 {
   int i;
   struct pam_response* reply;
@@ -46,7 +45,8 @@ int conv(
   if (num_msg <= 0)
     return PAM_CONV_ERR;
 
-  reply = calloc( num_msg, sizeof( struct pam_response ) ); /* Get memory for response array */
+  /* Get memory for response array */  
+  reply = calloc( num_msg, sizeof( struct pam_response ) );
 
   if( !reply ) /* Got no memory? */
     return PAM_CONV_ERR;
@@ -55,7 +55,7 @@ int conv(
    * would that be better? (the upside would be that we would have a
    * higher hitrate, the downside would be that we might risk that
    * some module logs the password. For the moment, I think responding
-   * to the questions with echo if sufficient and safe enough.
+   * to the questions with echo off is sufficient and safe enough.
    */
 
   for( i = 0; i < num_msg; i++ )
@@ -84,14 +84,8 @@ int conv(
   return PAM_SUCCESS;
 }
 
-
-
-
-
-
-
-
-int main( int argc, char** argv )
+int
+main(int argc, char** argv)
 {
   struct pam_conv pconv;
   pam_handle_t* pamh;
@@ -139,12 +133,19 @@ int main( int argc, char** argv )
 			     PAM_DISALLOW_NULL_AUTHTOK | PAM_SILENT 
 			     );
 
-  if( 
-     PAM_SUCCESS != retval && 
-     PAM_USER_UNKNOWN != retval &&
-     PAM_AUTH_ERR != retval
-     )
-    { 
+  switch (retval)
+    {
+    case PAM_SUCCESS:
+      /* User successfully authenticated? */
+      authenticated = 1;
+      break;
+      
+    case PAM_USER_UNKNOWN:
+    case PAM_AUTH_ERR:
+      authenticated = 0;
+      break;
+      
+    default:
       fprintf( stderr,
 	       "%s (error number was %d)\n",
 	       pam_strerror( pamh, retval ),
@@ -153,16 +154,10 @@ int main( int argc, char** argv )
       return EX_OSERR;
     }
 
-  authenticated = 0;
-
-  if( PAM_SUCCESS == retval )  /* User successfully authenticated? */
-    authenticated = 1;
-  
-
   /* Say goodbye */
 
-  retval = pam_end( pamh, status ); /* FIXME: Second parameter to pam_end should be? */
-
+  /* FIXME: Second parameter to pam_end should be? */  
+  retval = pam_end( pamh, status );
 
   if( PAM_SUCCESS != retval )
     { 
