@@ -62,8 +62,6 @@ static void do_free_zstream(z_stream *z);
        (level . int)))
 */
 
-/* I'm reworking the zlib stuff a little. So it doesn't work at all now.
- * /nisse */
 
 #if WITH_ZLIB
 
