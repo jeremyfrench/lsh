@@ -72,7 +72,7 @@ case $1 in
 	header
 	printf "%s" '{ { "UNKNOWN", 7 },'
 	while getatom; do
-	    printf '  {"%s", %s},\n' "$atom" "`expr $atom : '.*'`"
+	    printf '  {"%s", %s},\n' "$atom" "`expr "$atom" : '.*'`"
 	done
 	echo ' }'
 	;;
