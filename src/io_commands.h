@@ -56,11 +56,6 @@ extern struct command_2 listen_command;
 extern struct command bind_address_command;
 #define BIND (&bind_address_command.super)
 
-struct command *
-make_listen_with_callback(struct command *callback);
-
-extern struct command_2 listen_with_callback;
-#define LISTEN_CALLBACK (&listen_with_callback.super.super)
 
 struct command *
 make_connect_port(struct address_info *target);

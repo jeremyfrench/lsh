@@ -148,61 +148,6 @@ DEFINE_COMMAND(bind_address_command)
     COMMAND_RETURN(c, fd);
 }
 
-/* FIXME: Use a single listen variant that takes an bound fd as
- * argument. */
-/* Used by do_listen_callback and any other listen variants. Currently
- * doesn't perform any dns lookups. */
-static void
-do_listen(struct address_info *a,
-	  /* Callback when connections are accepted. */
-	  struct command *callback,
-	  struct command_continuation *c,
-	  struct exception_handler *e)
-{
-  struct sockaddr *addr;
-  socklen_t addr_length;
-  
-  struct lsh_fd *fd;
-
-  addr = address_info2sockaddr(&addr_length, a, NULL, 0);
-  if (!addr)
-    {
-      EXCEPTION_RAISE(e, &resolve_exception);
-      return;
-    }
-
-  fd = io_listen(io_bind_sockaddr(addr, addr_length, e),
-		 make_listen_callback(callback, e));
-  lsh_space_free(addr);
-  
-  if (!fd)
-    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
-					 NULL, errno, NULL));
-  else
-    COMMAND_RETURN(c, fd);
-}
-
-/* A listen function taking two arguments:
- * (listen callback port).
- *
- * Suitable for handling forwarding requests. NOTE: The calling
- * function has to do all remembering of the fd:s. */
-/* FIXME: We should not need this function. */
-DEFINE_COMMAND2(listen_with_callback)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e)
-{
-  CAST_SUBTYPE(command, callback, a1);
-  CAST(address_info, address, a2);
-
-  /* No dns lookups */
-  do_listen(address,
-	    callback, c, e);
-}
-
 
 /* GABA:
    (class
@@ -365,6 +310,7 @@ do_listen_local(struct command *s,
     COMMAND_RETURN(c, fd);
 }
 
+/* FIXME: Replace with a bind_local command. */
 struct command *
 make_listen_local(struct local_info *info)
 {
