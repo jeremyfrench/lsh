@@ -299,14 +299,12 @@ main_options[] =
   { "no-root-login", OPT_NO_ROOT_LOGIN, NULL, 0,
     "Don't allow root to login (default).", 0 },
 
-#if WITH_KERBEROS
   { "kerberos-passwords", OPT_KERBEROS_PASSWD, "Program", OPTION_ARG_OPTIONAL,
     "Recognize kerberos passwords. The optional argument is the path to the "
     "helper program, by default \"" KERBEROS_HELPER "\". This option is "
     "experimental.", 0 },
   { "no-kerberos-passwords", OPT_NO_KERBEROS_PASSWD, NULL, 0,
     "Don't recognize kerberos passwords (default behaviour)." },
-#endif
 
   { NULL, 0, NULL, 0, "Offered services:", 0 },
 

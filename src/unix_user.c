@@ -243,7 +243,6 @@ make_process_resource(pid_t pid, int signal)
        (shell string))) */
 
 
-#if WITH_KERBEROS
 static int
 kerberos_check_pw(const char *helper, struct unix_user *user, struct lsh_string *pw)
 {
@@ -330,7 +329,6 @@ kerberos_check_pw(const char *helper, struct unix_user *user, struct lsh_string 
       }
     }
 }
-#endif
 
 /* NOTE: Calls functions using the *ugly* convention of returning
  * pointers to static buffers. */
@@ -342,7 +340,6 @@ do_verify_password(struct lsh_user *s,
   CAST(unix_user, user, s);
   char *salt;
     
-#if WITH_KERBEROS
   if (user->pw_helper && kerberos_check_pw(user->pw_helper, user, password))
     {
       if (free)
@@ -350,7 +347,6 @@ do_verify_password(struct lsh_user *s,
       
       return 1;
     }
-#endif /* WITH_KERBEROS */
 
   /* NOTE: We don't allow login to accounts with empty passwords. */
   if (!user->passwd || (user->passwd->length < 2) )
