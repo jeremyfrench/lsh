@@ -37,7 +37,11 @@
 struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
 #if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
 struct signer *make_dsa_signer_kludge(struct signer *dsa);
+struct verifier *make_dsa_verifier_kludge(struct verifier *v);
 #endif
+
+struct signer *make_dsa_signer_classic(struct signer *s);
+struct verifier *make_dsa_verifier_classic(struct verifier *v);
 
 /* FIXME: Groups could use "non-virtual" methods */
 
