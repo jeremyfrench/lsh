@@ -1,6 +1,7 @@
 /* serpent.c
  *
  * $Id$ */
+
 /* lsh, an implementation of the ssh protocol
  *
  * Copyright (C) 1999, 2000 Niels Möller, Rafael R. Sevilla
@@ -19,12 +20,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
 #include "crypto.h"
 
+#include "serpent.h"
 #include "werror.h"
 #include "xalloc.h"
-#include "serpent.h"
+
 #include <assert.h>
+
 #include "serpent.c.x"
 
 /* Serpent */
@@ -36,8 +40,9 @@
        (ctx . "SERPENT_context")))
 */
 
-static void do_serpent_encrypt(struct crypto_instance *s,
-			       UINT32 length, const UINT8 *src, UINT8 *dst)
+static void
+do_serpent_encrypt(struct crypto_instance *s,
+		   UINT32 length, const UINT8 *src, UINT8 *dst)
 {
   CAST(serpent_instance, self, s);
 
@@ -45,8 +50,9 @@ static void do_serpent_encrypt(struct crypto_instance *s,
     serpent_encrypt(&self->ctx, src, dst);
 }
 
-static void do_serpent_decrypt(struct crypto_instance *s,
-			       UINT32 length, const UINT8 *src, UINT8 *dst)
+static void
+do_serpent_decrypt(struct crypto_instance *s,
+		   UINT32 length, const UINT8 *src, UINT8 *dst)
 {
   CAST(serpent_instance, self, s);
 
@@ -65,15 +71,17 @@ make_serpent_instance(struct crypto_algorithm *algorithm, int mode,
 			? do_serpent_encrypt
 			: do_serpent_decrypt);
 
-  /* We don't have to deal with weak keys - as a second round AES candidate,
-     Serpent doesn't have any, but it can only use 256 bit keys so we do
-     an assertion check. */
+  /* We don't have to deal with weak keys - as a second round AES
+   * candidate, Serpent doesn't have any, but it can only use 256 bit
+   * keys so we do an assertion check. */
   assert(algorithm->key_size == SERPENT_KEYSIZE);
   serpent_setup(&self->ctx, key);
 
   return(&self->super);
 }
 
+/* FIXME: This function seems a little redundant, when we don't
+ * support variable key size for serpent. */
 struct crypto_algorithm *
 make_serpent_algorithm(UINT32 key_size)
 {
@@ -89,7 +97,8 @@ make_serpent_algorithm(UINT32 key_size)
   return algorithm;
 }
 
-struct crypto_algorithm *make_serpent(void)
+struct crypto_algorithm *
+make_serpent(void)
 {
   return(make_serpent_algorithm(SERPENT_KEYSIZE));
 }

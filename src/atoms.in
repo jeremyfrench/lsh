@@ -11,12 +11,12 @@ zlib
 3des-cbc         REQUIRED          three-key 3DES in CBC mode
 blowfish-cbc     RECOMMENDED       Blowfish in CBC mode
 twofish-cbc      RECOMMENDED       TwoFish cipher in CBC mode
-rijndael-cbc     RECOMMENDED       Rijndael cipher in CBC mode
-serpent-cbc      RECOMMENDED       Serpent cipher in CBC mode
+rijndael-cbc     EXPERIMENTAL      Rijndael cipher in CBC mode
+serpent-cbc      EXPERIMENTAL      Serpent cipher in CBC mode
 arcfour          OPTIONAL          the ARCFOUR stream cipher
 idea-cbc         OPTIONAL          IDEA in CBC mode
 cast128-cbc      OPTIONAL          CAST-128 in CBC mode
-# none             OPTIONAL          no encryption; NOT RECOMMENDED
+# none           OPTIONAL          no encryption; NOT RECOMMENDED
 
 ## The following are not in the current secsh draft, but are in SSH 2.0.11;
 ## some of them will probably be included in an updated secsh draft. 

@@ -41,8 +41,9 @@
        (ctx . "BLOWFISH_context")))
 */
 
-static void do_blowfish_encrypt(struct crypto_instance *s,
-				UINT32 length, const UINT8 *src, UINT8 *dst)
+static void
+do_blowfish_encrypt(struct crypto_instance *s,
+		    UINT32 length, const UINT8 *src, UINT8 *dst)
 {
   CAST(blowfish_instance, self, s);
 
@@ -50,8 +51,9 @@ static void do_blowfish_encrypt(struct crypto_instance *s,
     bf_encrypt_block(&self->ctx, dst, src);
 }
 
-static void do_blowfish_decrypt(struct crypto_instance *s,
-				UINT32 length, const UINT8 *src, UINT8 *dst)
+static void
+do_blowfish_decrypt(struct crypto_instance *s,
+		    UINT32 length, const UINT8 *src, UINT8 *dst)
 {
   CAST(blowfish_instance, self, s);
 
@@ -81,7 +83,8 @@ make_blowfish_instance(struct crypto_algorithm *algorithm, int mode,
     }
 }
 
-struct crypto_algorithm *make_blowfish_algorithm(UINT32 key_size)
+struct crypto_algorithm *
+make_blowfish_algorithm(UINT32 key_size)
 {
   NEW(crypto_algorithm, algorithm);
 
@@ -96,7 +99,8 @@ struct crypto_algorithm *make_blowfish_algorithm(UINT32 key_size)
   return algorithm;
 }
 
-struct crypto_algorithm *make_blowfish(void)
+struct crypto_algorithm *
+make_blowfish(void)
 {
   return make_blowfish_algorithm(BLOWFISH_KEYSIZE);
 }

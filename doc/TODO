@@ -234,3 +234,11 @@ and sexp_get_un().
 There are dsa-specific details in many places, lsh.c
 server_publickey.c, server_authorization.c, server_keyexchange.c. Try
 to write more generic functions that can deal with both dsa and rsa.
+
+Review the default algorithm preference list in
+algorithms.c:default_crypto_algorithms(). Perhaps make the list more
+conservative, and add a "pseudo-algorithm" all to include all
+supported algorithms in the list?
+
+Use static objects for crypto algorithms with fixed key sizes and
+other parameters.

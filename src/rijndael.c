@@ -22,10 +22,12 @@
  */
 #include "crypto.h"
 
+#include "rijndael.h"
 #include "werror.h"
 #include "xalloc.h"
-#include "rijndael.h"
+
 #include <assert.h>
+
 #include "rijndael.c.x"
 
 /* Rijndael */
@@ -38,8 +40,9 @@
        (ctx . "RIJNDAEL_context")))
 */
 
-static void do_rijndael_encrypt(struct crypto_instance *s,
-				UINT32 length, const UINT8 *src, UINT8 *dst)
+static void
+do_rijndael_encrypt(struct crypto_instance *s,
+		    UINT32 length, const UINT8 *src, UINT8 *dst)
 {
   CAST(rijndael_instance, self, s);
 
@@ -47,8 +50,9 @@ static void do_rijndael_encrypt(struct crypto_instance *s,
     rijndael_encrypt(&self->ctx, src, dst);
 }
 
-static void do_rijndael_decrypt(struct crypto_instance *s,
-				UINT32 length, const UINT8 *src, UINT8 *dst)
+static void
+do_rijndael_decrypt(struct crypto_instance *s,
+		    UINT32 length, const UINT8 *src, UINT8 *dst)
 {
   CAST(rijndael_instance, self, s);
 
@@ -67,8 +71,8 @@ make_rijndael_instance(struct crypto_algorithm *algorithm, int mode,
 			? do_rijndael_encrypt
 			: do_rijndael_decrypt);
 
-  /* We don't have to deal with weak keys - as a second round AES candidate,
-     Rijndael doesn't have any. */
+  /* We don't have to deal with weak keys - as a second round AES
+   * candidate, Rijndael doesn't have any. */
   rijndael_setup(&self->ctx, algorithm->key_size, key);
 
   return(&self->super);
@@ -90,7 +94,8 @@ make_rijndael_algorithm(UINT32 key_size)
   return algorithm;
 }
 
-struct crypto_algorithm *make_rijndael(void)
+struct crypto_algorithm *
+make_rijndael(void)
 {
   return(make_rijndael_algorithm(RIJNDAEL_KEYSIZE));
 }

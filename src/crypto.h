@@ -69,4 +69,4 @@ pkcs5_derive_key(struct mac_algorithm *prf,
 		 UINT32 iterations,
 		 UINT32 key_length, UINT8 *key);
 
-#endif
+#endif /* LSH_CRYPTO_H_INCLUDED */

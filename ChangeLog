@@ -1,3 +1,27 @@
+2000-09-11  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/symmetric/rijndael.c: Use static const for all lookup
+	tables. 
+
+	* src/parse.c (parse_bignum): Fixed off-by-one error when sanity
+	checking string length.
+
+	* src/symmetric/serpent.c: Replaced the AES "All rights reserved"
+	copyright blurb with the vanilla GPL blurb, after confirming with
+	the authors that the code really is GPL:ed.
+	* src/symmetric/serpentsboxes.h: Likewise.
+	
+	* src/symmetric/serpentsboxes.h: Replaced unsigned long with
+	UINT32.
+
+	* src/symmetric/serpent.c (serpent_setup): Don't use array syntax
+	for function argument types.
+	
+2000-09-10  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* doc/lsh.texinfo (Algorithm options): Updated the default
+	algorithm list.
+
 2000-09-05  Rafael R. Sevilla  <dido@pacific.net.ph>
 
 	* src/symmetric/rijndael.c, src/symmetric/include/rijndael.h: New. 

@@ -248,7 +248,9 @@ lookup_hash(struct alist *algorithms, const char *name,
   }
 }
 
-struct int_list *default_crypto_algorithms(void)
+/* FIXME: Review the default list. */
+struct int_list *
+default_crypto_algorithms(void)
 {
   return make_int_list(7
 #if WITH_IDEA
@@ -265,12 +267,14 @@ struct int_list *default_crypto_algorithms(void)
 		       ATOM_TWOFISH_CBC, ATOM_ARCFOUR, -1);
 }
 
-struct int_list *default_mac_algorithms(void)
+struct int_list *
+default_mac_algorithms(void)
 {
   return make_int_list(2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1);
 }
 
-struct int_list *default_compression_algorithms(void)
+struct int_list *
+default_compression_algorithms(void)
 {
 #if WITH_ZLIB
   return make_int_list(2, ATOM_NONE, ATOM_ZLIB, -1);
