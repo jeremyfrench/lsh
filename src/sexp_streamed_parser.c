@@ -521,7 +521,7 @@ static struct sexp *build_parsed_vector(struct handle_element *self)
   unsigned i;
 
   for (i = 0; i < self->count; i++)
-    LIST(l)[i++] = object_queue_remove_head(&self->l);
+    LIST(l)[i] = object_queue_remove_head(&self->l);
   
   assert(object_queue_is_empty(&self->l));
   
@@ -642,6 +642,166 @@ MAKE_PARSE_VALUE(canonical_sexp)
     }
 }
 
+static UINT32 do_expect_eof(struct read_handler **s,
+			    UINT32 available,
+			    UINT8 *data UNUSED)
+{
+  CAST(parser, self, *s);
+  if (available)
+    {
+      SEXP_ERROR(self->e, "Expected EOF");
+    }
+  *s = NULL;
+  return 0;
+}
+
+static struct read_handler *make_expect_eof(struct exception_handler *e)
+{
+  NEW(parser, self);
+  self->super.handler = do_expect_eof;
+  self->e = e;
+  self->next = NULL;
+
+  return &self->super;
+}
+
+
+/* GABA:
+   (class
+     (name parse_base64)
+     (super parser)
+     (vars
+       (state simple "struct base64_state")
+       (inner object read_handler)))
+*/
+
+static UINT32
+do_parse_base64(struct read_handler **s,
+		UINT32 available,
+		UINT8 *data)
+{
+  CAST(parse_base64, self, *s);
+  UINT32 done;
+
+  /* FIXME: Decoding one character at a time seems a little
+   * inefficient. But it's the simplest way to ensure that we don't go
+   * on after errors. To do something better, we would let
+   * make_parse_transport() and similar functions install a proper
+   * exception handler. */
+
+  if (!available)
+    {
+      SEXP_ERROR(self->super.e, "Unexpected EOF in base 64 string.");
+      return 0;
+    }
+
+  for (done = 0; done < available; done++)
+    {
+      int digit;
+      switch ( (digit = base64_decode(&self->state, data[done])) )
+	{
+	case BASE64_INVALID:
+	  SEXP_ERROR(self->super.e, "Invalid base64 data.");
+	  return done;
+	case BASE64_END:
+	  /* Pass EOF to the inner parser */
+	  READ_HANDLER(self->inner, 0, NULL);
+	  *s = self->super.next;
+	  return done;
+	case BASE64_SPACE:
+	  /* Is space always ok? */
+	case BASE64_PARTIAL:
+	  continue;
+	default:
+	  {
+	    UINT8 buffer;
+	    
+	    assert(digit >= 0);
+	    buffer = digit;
+
+	    /* Loop until the character is consumed. */
+	    while (!READ_HANDLER(self->inner, 1, &buffer))
+	      ;
+	    return done;
+	  }
+	}
+    }
+  return done;
+}
+  
+static struct read_handler *
+make_parse_base64(UINT8 terminator,
+		  struct read_handler *inner,
+		  struct exception_handler *e,
+		  struct read_handler *next)
+{
+  NEW(parse_base64, self);
+  self->super.super.handler = do_parse_base64;
+  self->super.e = e;
+  self->super.next = next;
+  self->inner = inner;
+
+  base64_init(&self->state, terminator);
+
+  return &self->super.super;
+}
+
+static struct read_handler *
+make_parse_transport(struct read_handler * (*make)(struct command_continuation *c,
+						   struct exception_handler *e,
+						   struct read_handler *next),
+		     struct command_continuation *c,
+		     struct exception_handler *e,
+		     struct read_handler *next)
+{
+  return
+    make_parse_base64('}',
+		      make(c, e, 
+			   make_expect_eof(e)),
+		      e,
+		      next);
+}
+
+MAKE_PARSE_VALUE(transport_sexp)
+{
+  CAST(parse_value, self, *s);
+
+  if (!available)
+    {
+      SEXP_EOF(self->super.e, "No more sexps.");
+      *s = NULL;
+      return 0;
+    }
+
+  switch(data[0])
+    {
+    case '[':
+      *s = make_parse_display(make_parse_literal, self->c,
+			      self->super.e, self->super.next);
+      return 1;
+
+    case '(':
+      *s = make_parse_list(0, make_parse_canonical_sexp,
+			   self->c, self->super.e, self->super.next);
+      return 1;
+
+    case '0': case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8': case '9':
+      *s = make_parse_length(data[0], make_return_string(self->c),
+			     self->super.e, self->super.next);
+      return 1;
+
+    case '{':
+      *s = make_parse_transport(make_parse_canonical_sexp,
+				self->c, self->super.e, self->super.next);
+      return 1;
+    default:
+      SEXP_ERROR(self->super.e, "Invalid canonical expression");
+      *s = NULL;
+      return 0;
+    }
+}
+
 static UINT32
 do_parse_loop(struct read_handler **s,
 	      UINT32 available,
@@ -683,11 +843,9 @@ make_read_sexp(int style, int goon,
     case SEXP_CANONICAL:
       reader = make_parse_canonical_sexp(c, e, &loop->super);
       break;
-#if 0
     case SEXP_TRANSPORT:
       reader = make_parse_transport_sexp(c, e, &loop->super);
       break;
-#endif
     case SEXP_ADVANCED:
     case SEXP_INTERNATIONAL:
       fatal("Not implemented!\n");
