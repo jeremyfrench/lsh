@@ -1,3 +1,23 @@
+2002-01-09  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/dsa.c (dsa_hash): Don't call sha1_final.
+	* src/dsa_keygen.c (hash): Likewise.
+
+	* src/lsh.h (struct lsh_string_header): Empty structs are not
+	allowed by ANSI-C, so don't declare this one unless debugging is
+	enabled. 
+
+	* src/lsh_proxy.c: Don't use randomness_with_poll.
+
+	* src/lshd.c (main): Pass the correct type to make_simple_kexinit.
+
+	* src/md5.c (do_md5_digest): Don't call md5_final and md5_init. 
+
+	* src/sha.c (do_sha_digest): Don't call sha1_final and sha1_init. 
+
+	* src/rsync/generate.c, src/rsync/receive.c, src/rsync/send.c:
+	Removed calls of md5_final.
+
 2001-12-16  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.3.6.
