@@ -704,6 +704,7 @@ struct install_keys *make_install_new_keys(int is_server,
   return &self->super;
 }
 
+#if 0
 struct keypair_info *make_keypair_info(struct lsh_string *public,
 				       struct signer *private)
 {
@@ -713,6 +714,7 @@ struct keypair_info *make_keypair_info(struct lsh_string *public,
   self->private = private;
   return self;
 }
+#endif
 
 /* Returns a hash instance for generating various session keys. NOTE:
  * This mechanism changed in the transport-05 draft. Before this, the
