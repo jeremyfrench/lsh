@@ -4,10 +4,11 @@
 
 #include "connection.h"
 
+#include "encrypt.h"
 #include "format.h"
-#include "packet_disconnect.h"
+#include "disconnect.h"
 #include "packet_ignore.h"
-
+#include "pad.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -32,6 +33,12 @@ static int handle_connection(struct abstract_write **w,
       lsh_string_free(packet);
       return WRITE_OK;
     }
+
+  /* If we are expecting a NEWKEYS message, don't accept anything else. */
+  
+  if (closure->dispatch[SSH_MSG_NEWKEYS]
+      && (msg != SSH_MSG_NEWKEYS))
+    return WRITE_CLOSED;
   
   return HANDLE_PACKET(closure->dispatch[msg], closure, packet);
 }
@@ -64,7 +71,7 @@ static int do_unimplemented(struct packet_handler *closure,
   return res;
 }
 
-struct packet_handler * make_unimplemented_handler()
+struct packet_handler *make_unimplemented_handler()
 {
   struct packet_handler *res =  xalloc(sizeof(struct packet_handler));
 
@@ -77,10 +84,10 @@ struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
 {
   struct ssh_connection *connection = xalloc(sizeof(struct ssh_connection));
   int i;
-  
-  connection->super.write = handle_connection;
-  connection->max_packet = 0x8000;
 
+  connection->super.write = handle_connection;
+  
+  /* Initialize dispatch */
   connection->ignore = make_ignore_handler();
   connection->unimplemented = make_unimplemented_handler();
   connection->fail = make_fail_handler();
@@ -127,4 +134,21 @@ struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
   connection->dispatch[SSH_MSG_CHANNEL_FAILURE] = connection->fail;
   
   return connection;
+}
+
+void connection_init_io(struct ssh_connection *connection,
+			struct abstract_write *raw,
+			struct randomness *r)
+{
+  /* Initialize i/o hooks */
+  connection->raw = raw;
+  connection->write = make_packet_pad(make_packet_encrypt(raw,
+							  connection),
+				      connection,
+				      r);
+
+  connection->send_crypto = connection->rec_crypto = NULL;
+  connection->send_mac = connection->rec_mac = NULL;
+  
+  connection->rec_max_packet = 0x8000;
 }
