@@ -1,3 +1,10 @@
+2001-04-02  Niels Möller  <nisse@ehand.com>
+
+	* src/sftp/sftp-server.c (sftp_process_read): Fixed size passed to
+	pread. 
+	(debug): Added a prototype saying that it takes printf-style
+	arguments. 
+
 2001-04-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/sftp/sftp-server.c (sftp_process_realpath): Fixed invocation
@@ -93,6 +100,24 @@
 	* src/sftp/acconfig.h: Added HAVE_GCC_ATTRIBUTE.
 
 	* src/sftp/.bootstrap: New file.
+
+2001-03-30  Niels Möller  <nisse@ehand.com>
+
+	* src/sftp/sftp-test-client.c (do_ls): Print the long name.
+
+	* src/sftp/sftp-server.c (sftp_get_name): New function.
+	(HANDLE_TYPE, HANDLE_DIR, HANDLE_FD): New macros.
+	Fixed handles. Simplified, deleting all sftp_free_string calls.
+	Use pread and pwrite, where available.
+
+	* src/sftp/buffer.c (struct sftp_input): Added array of strings,
+	so that callers don't have to free them explicitly.
+	(sftp_put_reset): New funtion.
+	(sftp_get_uint64): Use off_t, conditionalized on its size.
+	(sftp_put_uint64): Likewise.
+
+	* src/sftp/Makefile.am: Use AUTOMAKE_OPTIONS = foreign, added
+	sftp-test-client. 
 
 2001-03-28  Niels Möller  <nisse@ehand.com>
 
