@@ -1198,7 +1198,7 @@ address_info2sockaddr(socklen_t *length,
 
     if (err)
       {
-	debug("address_info2sockaddr: getaddrinfo failed (err = %d): %z\n",
+	debug("address_info2sockaddr: getaddrinfo failed (err = %i): %z\n",
 	      err, gai_strerror(err));
 	return NULL;
       }
