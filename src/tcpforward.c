@@ -159,15 +159,29 @@ static int do_tcpip_eof(struct ssh_channel *c)
   else
     return LSH_OK | LSH_GOON;
 }
-                      
-struct ssh_channel *make_tcpip_channel(struct io_fd *socket)
+
+static int do_tcpip_channel_die(struct ssh_channel *c)
+{
+  CAST(tcpip_channel, channel, c);
+
+  if (channel->socket)
+    kill_fd(&channel->socket->super);
+
+  return 17;
+}
+
+struct ssh_channel *make_tcpip_channel(struct io_fd *socket, UINT32 max_window)
 {
   NEW(tcpip_channel, self);
   assert(socket);
   
   init_channel(&self->super);
-  self->socket = socket;
 
+  self->super.close = do_tcpip_channel_die;
+  self->super.max_window = max_window;
+
+  self->socket = socket;
+  
   return &self->super;
 }
 
@@ -186,6 +200,9 @@ void tcpip_channel_start_io(struct ssh_channel *c)
 		SSH_MAX_PACKET * 10, /* self->block_size, */
 		make_channel_close(&channel->super));
 
+  /* Start receiving */
+  channel_start_receive(&channel->super);
+  
   /* Flow control */
   channel->socket->buffer->report = &channel->super.super;
 }
@@ -281,11 +298,17 @@ do_open_forwarded_tcpip_continuation(struct command_continuation *s,
   CAST(open_forwarded_tcpip_continuation, self, s);
   CAST_SUBTYPE(ssh_channel, channel, x);
 
-  return (channel
-	  ? CHANNEL_OPEN_CALLBACK(self->response, channel, 0, NULL, NULL)
-	  : CHANNEL_OPEN_CALLBACK(self->response, NULL,
-				  SSH_OPEN_CONNECT_FAILED,
-				  "Connection failed.", NULL));
+  if (channel)
+    {
+      channel->write = self->response->connection->write;
+      tcpip_channel_start_io(channel);
+      
+      return CHANNEL_OPEN_CALLBACK(self->response, channel, 0, NULL, NULL);
+    }
+  else
+    return CHANNEL_OPEN_CALLBACK(self->response, NULL,
+				 SSH_OPEN_CONNECT_FAILED,
+				 "Connection failed.", NULL);
 }
 
 static struct command_continuation *
