@@ -477,22 +477,39 @@ dnl generated as a side effect of compilation. Dependency files
 dnl themselves are not treated as targets.
 
 AC_DEFUN([LSH_DEPENDENCY_TRACKING],
-[DEP_FLAGS=''
+[AC_ARG_ENABLE(dependency_tracking,
+  AC_HELP_STRING([--disable-dependency-tracking],
+    [Disable dependency tracking. Dependency tracking doesn't work with BSD make]),,
+  [enable_dependency_tracking=yes])
+
+DEP_FLAGS=''
 DEP_PROCESS='true'
-if test x$GCC = xyes; then
-  gcc_version=`gcc --version | head -1`
-  case "$gcc_version" in
-    2.*|*[[!0-9.]]2.*)
-      AC_MSG_WARN([Dependency tracking disabled, gcc-3.x is needed])
-    ;;
-    *)
-      DEP_FLAGS='-MT $[]@ -MD -MP -MF $[]@.d'
-      DEP_PROCESS='true'
-    ;;
-  esac
+if test x$enable_dependency_tracking = xyes ; then
+  if test x$GCC = xyes ; then
+    gcc_version=`gcc --version | head -1`
+    case "$gcc_version" in
+      2.*|*[[!0-9.]]2.*)
+        enable_dependency_tracking=no
+        AC_MSG_WARN([Dependency tracking disabled, gcc-3.x is needed])
+      ;;
+      *)
+        DEP_FLAGS='-MT $[]@ -MD -MP -MF $[]@.d'
+        DEP_PROCESS='true'
+      ;;
+    esac
+  else
+    enable_dependency_tracking=no
+    AC_MSG_WARN([Dependency tracking disabled])
+  fi
+fi
+
+if test x$enable_dependency_tracking = xyes ; then
+  DEP_INCLUDE='include '
 else
-  AC_MSG_WARN([Dependency tracking disabled])
-fi 
+  DEP_INCLUDE='# '
+fi
+
+AC_SUBST([DEP_INCLUDE])
 AC_SUBST([DEP_FLAGS])
 AC_SUBST([DEP_PROCESS])])
 

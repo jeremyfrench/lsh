@@ -1,5 +1,8 @@
 2004-11-23  Niels Möller  <nisse@lysator.liu.se>
 
+	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): New configure flag
+	--disable-dependency-tracking. New substitution DEP_INCLUDE.
+
 	* src/lshg.c (make_lshg_connect): New argument, resource.
 	(main): Pass options->super.resources to make_lshg_connect.
 
