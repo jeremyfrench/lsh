@@ -8,10 +8,6 @@ connection->e handler at all?
   
 S-EXPRESSIONS
 
-Add newlines and pretty printing to the sexp formatter.
-Rewrite the sexp parser so that the scanner class inherits
-read_handler.
-
 
 USERS
 
