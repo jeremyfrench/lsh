@@ -358,6 +358,10 @@ char *alloca ();
 #   endif
 #  endif
 # endif
+#else /* defined __GNUC__ */
+# if HAVE_ALLOCA_H
+#  include <alloca.h>
+# endif
 #endif
 ])])
 

@@ -1,3 +1,8 @@
+2004-02-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* acinclude.m4 (LSH_FUNC_ALLOCA): Include <alloca.h>, if
+	available, also when compiling with gcc.
+
 2004-01-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/rsync/rsync.h: Don't include inttypes.h, just let
