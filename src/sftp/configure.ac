@@ -153,30 +153,7 @@ AC_CHECK_SIZEOF(off_t, 8,
 case $target_os in                                                                                                                             *cygwin* ) using_cygwin=yes; AC_DEFINE_UNQUOTED(USING_CYGWIN, 1, Are we using CygWin?) ;;                                                    * ) using_cygwin=no;;
 esac
 
-
-
-dnl Check for gcc's __attribute__ construction
-AC_CACHE_CHECK(for __attribute__,
-	       lsh_cv_c_attribute,
-[ AC_TRY_COMPILE([
-#include <stdlib.h>
-],
-[
-static void foo(void) __attribute__ ((noreturn));
-
-static void __attribute__ ((noreturn))
-foo(void)
-{
-  exit(1);
-}
-],
-lsh_cv_c_attribute=yes,
-lsh_cv_c_attribute=no)])
-
-if test "x$lsh_cv_c_attribute" = "xyes"; then
-  AC_DEFINE([HAVE_GCC_ATTRIBUTE], 1,
-	    [Define if the compiler understands __attribute__.])
-fi
+LSH_GCC_ATTRIBUTES
 
 dnl Checks for library functions.
 AC_CHECK_FUNCS(pread pwrite)
