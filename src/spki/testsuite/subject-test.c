@@ -8,15 +8,15 @@ int
 main(int argc, char **argv)
 {
   struct spki_acl_db db;
-  struct spki_subject *s;
+  struct spki_principal *s;
   
   spki_acl_init(&db);
   
-  s = spki_subject_add_key(&db, 5, "3:foo");
+  s = spki_principal_add_key(&db, 5, "3:foo");
   ASSERT(s);
 
-  ASSERT(spki_subject_by_key(&db, 5, "3:foo") == s);
-  ASSERT(spki_subject_by_key(&db, 5, "3:bar") == NULL);
+  ASSERT(spki_principal_by_key(&db, 5, "3:foo") == s);
+  ASSERT(spki_principal_by_key(&db, 5, "3:bar") == NULL);
 
   return 0;
 }

@@ -23,7 +23,7 @@ void
 spki_acl_init(struct spki_acl_db *db)
 {
   db->realloc = spki_realloc;
-  db->first_subject = NULL;
+  db->first_principal = NULL;
   db->first_acl = NULL;
 }
 
@@ -39,34 +39,34 @@ spki_dup(struct spki_acl_db *db,
   return n;
 }
 
-struct spki_subject *
-spki_subject_add_key(struct spki_acl_db *db,
+struct spki_principal *
+spki_principal_add_key(struct spki_acl_db *db,
 		     unsigned key_length,  const uint8_t *key)
 {
-  NEW (db, struct spki_subject, subject);
-  if (!subject)
+  NEW (db, struct spki_principal, principal);
+  if (!principal)
     return NULL;
 
-  if (!(subject->key = spki_dup(db, key_length, key)))
+  if (!(principal->key = spki_dup(db, key_length, key)))
     {
-      FREE(db, subject);
+      FREE(db, principal);
       return NULL;
     }
 
-  subject->key_length = key_length;
+  principal->key_length = key_length;
 
-  if (!(subject->md5 = MALLOC(db, MD5_DIGEST_SIZE)))
+  if (!(principal->md5 = MALLOC(db, MD5_DIGEST_SIZE)))
     {
-      FREE(db, subject->key);
-      FREE(db, subject);
+      FREE(db, principal->key);
+      FREE(db, principal);
       return NULL;
     }
   
-  if (!(subject->sha1 = MALLOC(db, SHA1_DIGEST_SIZE)))
+  if (!(principal->sha1 = MALLOC(db, SHA1_DIGEST_SIZE)))
     {
-      FREE(db, subject->md5);
-      FREE(db, subject->key);
-      FREE(db, subject);
+      FREE(db, principal->md5);
+      FREE(db, principal->key);
+      FREE(db, principal);
       return NULL;
     }
 
@@ -74,35 +74,33 @@ spki_subject_add_key(struct spki_acl_db *db,
     struct sha1_ctx ctx;
     sha1_init(&ctx);
     sha1_update(&ctx, key_length, key);
-    sha1_digest(&ctx, SHA1_DIGEST_SIZE, subject->sha1);
+    sha1_digest(&ctx, SHA1_DIGEST_SIZE, principal->sha1);
   }
 
   {
     struct md5_ctx ctx;
     md5_init(&ctx);
     md5_update(&ctx, key_length, key);
-    md5_digest(&ctx, MD5_DIGEST_SIZE, subject->md5);
+    md5_digest(&ctx, MD5_DIGEST_SIZE, principal->md5);
   }
 
-  subject->next = db->first_subject;
-  db->first_subject = subject;
+  principal->next = db->first_principal;
+  db->first_principal = principal;
   
-  return subject;
+  return principal;
 }
 
-struct spki_subject *
-spki_subject_by_key(struct spki_acl_db *db,
+struct spki_principal *
+spki_principal_by_key(struct spki_acl_db *db,
 		    unsigned key_length, const uint8_t *key)
 {
   /* FIXME: Doesn't check hashes. */
-  struct spki_subject *s;
+  struct spki_principal *s;
 
-  for (s = db->first_subject; s; s = s->next)
+  for (s = db->first_principal; s; s = s->next)
     if (s->key_length == key_length
 	&& !memcmp(s->key, key, key_length))
       return s;
   
   return NULL;
 }
-
-

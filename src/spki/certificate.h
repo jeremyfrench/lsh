@@ -4,11 +4,10 @@
 
 #include <time.h>
 
-/* FIXME: Terminology: Should this be a "subject" or a "principal"? */
-struct spki_subject
+struct spki_principal
 {
-  /* Subjects linked into a list. */
-  struct spki_subject *next;
+  /* Principals linked into a list. */
+  struct spki_principal *next;
   
   /* An s-expression */
   unsigned key_length;
@@ -51,8 +50,10 @@ struct spki_acl
 {
   /* ACL:s are linked into a list. */
   struct spki_acl *next;
-  
-  struct spki_subject *principal;
+
+  /* For now, support only subjects that are principals (i.e. no
+   * names) */
+  struct spki_principal *subject;
   enum spki_flags flags;
 
   /* Checked if the correspondign flag is set. */
@@ -70,30 +71,30 @@ struct spki_acl_db
   /* For custom memory allocation. */
   void *(*realloc)(struct spki_acl_db *, void *, unsigned);
 
-  struct spki_subject *first_subject;
+  struct spki_principal *first_principal;
   struct spki_acl *first_acl;
 };
 
 void
 spki_acl_init(struct spki_acl_db *db);
 
-/* Internal functions for looking up a subject. */
+/* Internal functions for looking up a principal. */
 
-struct spki_subject *
-spki_subject_add_key(struct spki_acl_db *db,
-		     unsigned key_length,  const uint8_t *key);
+struct spki_principal *
+spki_principal_add_key(struct spki_acl_db *db,
+		       unsigned key_length,  const uint8_t *key);
 
-struct spki_subject *
-spki_subject_by_key(struct spki_acl_db *db,
-		    unsigned key_length, const uint8_t *key);
+struct spki_principal *
+spki_principal_by_key(struct spki_acl_db *db,
+		      unsigned key_length, const uint8_t *key);
 
-struct spki_subject *
-spki_subject_by_md5(struct spki_acl_db *db,
-		    unsigned key_length, const uint8_t *key);
+struct spki_principal *
+spki_principal_by_md5(struct spki_acl_db *db,
+		      unsigned key_length, const uint8_t *key);
 
-struct spki_subject *
-spki_subject_by_sha1(struct spki_acl_db *db,
-		     unsigned key_length, const uint8_t *key);
+struct spki_principal *
+spki_principal_by_sha1(struct spki_acl_db *db,
+		       unsigned key_length, const uint8_t *key);
 
 
 /* Handling the acl database */
