@@ -166,7 +166,8 @@ do_decode_key(struct abstract_write *s,
 		  return;
 		}
 
-	      COMMAND_RETURN(self->c, make_dsa_public_key(&dsa));
+	      COMMAND_RETURN(self->c, sexp_l(2, sexp_a(ATOM_PUBLIC_KEY),
+					     make_dsa_public_key(&dsa), -1));
 	      dsa_public_free(&dsa);
 	      break;
 	    }
