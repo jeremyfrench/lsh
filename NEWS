@@ -1,3 +1,23 @@
+News for the 1.5.4 release
+
+	Added logging of tcpip-forward requests.
+
+	Includes nettle-1.9, which have had some portability fixes and
+	optimizations. In particular, arcfour on x86 should be much
+	faster.
+	
+	Implemented flow control on the raw ssh connection. Enforce
+	limits on the amount of buffered data waiting to be written to
+	the socket.
+
+	Moved all destructive string operations to a separate file
+	lsh_string.c, which has exclusive rights of accessing string
+	internals. Should make the code more robust, as buffer size
+	and index calculations elsewhere in the code should hit an
+	assert in lsh_string.c before doing damage.
+
+	Some general simplification and cleanup of the code.
+
 News for the 1.5.3 release
 
 	Fixed heap buffer overrun with potential remote root
