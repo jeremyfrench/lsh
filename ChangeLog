@@ -1,3 +1,27 @@
+2000-11-27  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/argp/argp.h: Dummy definition of __THROW.
+
+	* src/argp/argp-test.c: Fixed asprintf implementation.
+
+	* src/argp/argp-parse.c (__argp_usage, __option_is_short,
+	__option_is_end): Define these function, in case the user isn't
+	inlining them.
+
+	* src/argp/argp-help.c: #define __mempcpy if needed. Use unsigned
+	arguments to the ctype macros. Handle systems where
+	program_invocation_name and program_invocation_short_name doesn't
+	exist.
+	* src/argp/argp-help.c (short_program_name): New function.
+
+	* src/argp/Makefile.am: Use @LIBOBJS@ when building test program. 
+
+	* src/argp/configure.in: Check for getopt_long. Substitute
+	LIBOBJS. Add -I$srcdir to CPPFLAGS.
+
+	* src/argp: Added getopt.h, getopt.c and getopt1.c, which are
+	needed for separate compilation of argp.
+
 2000-11-27  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* Updated argp from glibc-2.2.
