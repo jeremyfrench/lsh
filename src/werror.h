@@ -21,6 +21,8 @@ void werror_safe(UINT32 length, UINT8 *msg);
 void debug_safe(UINT32 length, UINT8 *msg);
 void verbose_safe(UINT32 length, UINT8 *msg);
 
+void werror_safe_utf8(UINT32 length, UINT8 *msg);
+
 void fatal(char *format, ...) PRINTF_STYLE(1,2) NORETURN;
 
 #endif /* LSH_ERROR_H_INCLUDED */
