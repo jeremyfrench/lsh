@@ -40,7 +40,43 @@ void lsftp_welcome()
 
 void help_option()
 {
-  printf("Usage:\n");
+  printf( "Usage: lsftp [ <transport options> ] \n" );
+  printf( "or:    lsftp [ <transport options> ] -- [ COMMAND ] [ COMMAND ] \n" );
+  
+  printf( "For information on the commands of lsftp, you may try the built in help\n" );
+  printf( "by running lsftp -- help (please note the space between -- and help).\n" );
+  printf( "\n");
+  printf( "INTERACTIVE MODE:\n" );
+  printf( "\n");
+  printf( "To enter interactive mode, just start lsftp. A command prompt will appear.\n");
+  printf( "To try the built in help system, type help (or ?) followed by return.\n");
+  printf( "\n");
+  printf( "NON-INTERACTIVE MODE:\n" );
+  printf( "\n");
+  printf( "Non interactive mode can be accessed by having -- anywhere in front of\n" );
+  printf( "the last token of the commandline (you need to have something after it)\n");
+
+  printf( "\n");
+  printf( "In order NOT to pass into non interactive mode (e.g. if you want to pass -- \n");
+  printf( "to your secsh-client), put -- with nothing following last on the command line.\n");
+  printf( "\n");
+  printf( "For noninteractive usage, each token is handled as a complete line, so to \n");
+  printf( "go to the directory bar and put the file foo, you'd write something like\n");
+  printf( "\n");
+  printf( "lsftp host -- 'cd bar' 'put foo' \n");
+  printf( "\n");
+  printf( "TROUBLESHOOTING CONNECTIONS:\n" );
+  printf( "\n");
+  printf( "All lsftp really cares about is to find something to speak sftp with,\n");
+  printf( "normally, it does with by requesting a subsystem on a remote host, but it\n");
+  printf( "may as well start a local program or request the start of a sftp-server\n");
+  printf( "remotely with a shell request\n");
+  printf( "\n");
+  printf( "The command actually executed is\n" );
+  printf( "\n");
+  printf( "$LSFTP_RSH $LSFTP_BEFORE_ARGS <anything on the command line> $LSFTP_AFTER_ARGS\n");
+  printf( "\n");
+
   exit(0); /* Exit successfully */
 }
 
