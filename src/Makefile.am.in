@@ -25,6 +25,7 @@ Makefile.am: Makefile.am.in
 bin_PROGRAMS = lsh lshd lsh_keygen lsh_writekey
 noinst_PROGRAMS = prime_table digit_table sexp_test
 noinst_LIBRARIES = liblsh.a
+# noinst_HEADERS = $(dist_x_files) $(cvs_headers)
 
 # Don't use BUILT_SOURCES, as all these files are #included, and can't be
 # compiled or dependency checked independently.
@@ -42,7 +43,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	randomness.c \
 	read_scan.c read_data.c read_line.c read_packet.c resource.c \
 	sexp.c sexp_parser.c sexp_streamed_parser.c \
-	sha.c service.c \
+	sha.c service.c ssh1_fallback.c \
 	translate_signal.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c zlib.c
 
@@ -148,7 +149,9 @@ ctags: ctags-recursive $(HEADERS) $(SOURCES) $(CONFIG_HEADER) $(TAGS_DEPENDENCIE
 	  awk '    { files[$$0] = 1; } \
 	       END { for (i in files) print i; }'`; \
 	test -z "$(CTAGS_ARGS)$(CONFIG_HEADER)$$unique$(LISP)$$tags" \
-	  || (cd $(srcdir) && ctags -o $$here/tags $(CTAGS_ARGS) $$tags $(CONFIG_HEADER) $$unique $(LISP))
+	  || (cd $(srcdir) && ctags --langmap=c:.c.x -o $$here/tags $(CTAGS_ARGS) $$tags $(CONFIG_HEADER) $$unique $(LISP))
+# This treats .h.x files as C files rather than headers, but we can't
+# distinguish them from .c.x files with ctags.
 
 # Override the standard distclean-tags target, as this doesn't support `tags'
 distclean-tags:

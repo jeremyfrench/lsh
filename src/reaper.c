@@ -151,7 +151,7 @@ struct reap *make_reaper(void)
   return &closure->super;
 }
 
-/* FIXME: Prehaps this function should return a suitable exit code? */
+/* FIXME: Perhaps this function should return a suitable exit code? */
 void reaper_run(struct reap *r, struct io_backend *b)
 {
   CAST(reaper, self, r);

@@ -67,7 +67,7 @@ static char foo_deflate[] = "deflate";
 
 static void do_free_zstream(z_stream *z)
 {
-  /* Call deflteEnd() or inflateEnd(). But which? We use the opague
+  /* Call deflateEnd() or inflateEnd(). But which? We use the opague
    * pointer, as we don't use that for anything else. */
 
   int res;

@@ -67,8 +67,10 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AM_PROG_CC_STDC
-AC_CHECK_PROG(SCHEME, scsh,, scsh)
-AC_CHECK_PROG(BASH, bash,, bash)
+
+AC_PATH_PROG(SCHEME, scsh,, /usr/local/bin/scsh)
+AC_PATH_PROG(BASH, bash,, /bin/bash)
+AC_PATH_PROG(GROFF, groff,, /usr/bin/groff)
 
 if test x$am_cv_prog_cc_stdc = xno ; then
   AC_ERROR([the C compiler doesn't handle ANSI-C])

@@ -5,11 +5,28 @@ BODY:
 
 AUTOMAKE_OPTIONS = foreign
 
+# We must run make the .dist_classes and various .dist_headers after
+# recompiling, but before making a dist, as they uses dependency information to
+# figure out which header files should be included in the dist.
+
+DOTDISTS = src/.dist_classes src/.dist_headers \
+	src/symmetric/.dist_headers src/symmetric/include/.dist_headers
+
+MAKEFILESAM = Makefile.am doc/Makefile.am src/Makefile.am \
+	src/symmetric/Makefile.am src/symmetric/include/MAkefile.am
+
 # FIXME: Use the BASH variable to execute the script. The problem is
 # that the script attempts to start itselt with "$0 args".
+$(MAKEFILESAM): $(addsuffix .in,$(MAKEFILESAM))
+	./make_am --rethink
 
-Makefile.am: Makefile.am.in
-	./make_am
+$(DOTDISTS): depend
+	./make_am --rethink
+
+# FIXME: Have to figure out how to create dependency files recursively.
+# dist-hook: $(DOTDISTS)
+
+MAINTAINERCLEANFILES += $(DOTDISTS) $(MAKEFILESAM)
 
 # Is this rule needed?
 all-recursive check-recursive: config.h

@@ -264,7 +264,7 @@ static void read_callback(struct lsh_fd *fd)
   res = READ_HANDLER(self->handler,
 		     &r.super);
 
-  /* NOTE: These flags are not mutually exclusive. All combination
+  /* NOTE: These flags are not mutually exclusive. All combinations
    * must be handled correctly. */
   
   /* NOTE: (i) If LSH_DIE is set, LSH_CLOSE is ignored. (ii) If the fd
