@@ -226,8 +226,8 @@ struct lsh_string *
 format_exit_signal(struct ssh_channel *channel,
 		   int core, int signal)
 {
-  struct lsh_string *msg = ssh_format("Process killed by %lz.\n",
-				      STRSIGNAL(signal));
+  struct lsh_string *msg
+    = ssh_format("%lz.\n", STRSIGNAL(signal));
   
   return format_channel_request(ATOM_EXIT_SIGNAL,
 				channel,
@@ -415,6 +415,94 @@ static int make_pty(struct pty_info *pty UNUSED,
 { return 0; }
 #endif /* !WITH_PTY_SUPPORT */
 
+static int
+spawn_process(struct server_session *session,
+	      struct lsh_user *user,
+	      /* All information but the fd:s should be fileld in
+	       * already */
+	      struct spawn_info *info)
+{
+  struct exception_handler *io_exception_handler;
+  struct lsh_callback *read_close_callback;
+  
+  assert(!session->process);
+
+  if (session->pty && !make_pty(session->pty,
+				info->in, info->out, info->err))
+    {
+      KILL_RESOURCE(&session->pty->super);
+      KILL(session->pty);
+      session->pty = NULL;
+    }
+
+  if (!session->pty && !make_pipes(info->in, info->out, info->err))
+    return 0;
+
+  session->process = USER_SPAWN(user, info, make_exit_shell(session));
+
+  if (!session->process)
+    return 0;
+  
+  /* Exception handlers */
+  io_exception_handler
+    = make_channel_io_exception_handler(&session->super,
+					"lshd: Child stdio: ",
+					&default_exception_handler,
+					HANDLER_CONTEXT);
+
+  /* Close callback for stderr and stdout */
+  read_close_callback
+    = make_channel_read_close_callback(&session->super);
+  
+  session->in
+    = io_write(make_lsh_fd(info->in[1], "child stdin",
+			   io_exception_handler),
+	       SSH_MAX_PACKET, NULL);
+	  
+  /* Flow control */
+  session->in->write_buffer->report = &session->super.super;
+  
+  /* FIXME: Should we really use the same exception handler,
+   * which will close the channel on read errors, or is it
+   * better to just send EOF on read errors? */
+  session->out
+    = io_read(make_lsh_fd(info->out[0], "child stdout",
+			  io_exception_handler),
+	      make_channel_read_data(&session->super),
+	      read_close_callback);
+  session->err 
+    = ( (info->err[0] != -1)
+	? io_read(make_lsh_fd(info->err[0], "child stderr",
+			      io_exception_handler),
+		  make_channel_read_stderr(&session->super),
+		  read_close_callback)
+	: NULL);
+
+  session->super.receive = do_receive;
+  session->super.send_adjust = do_send_adjust;
+  session->super.eof = do_eof;
+	  
+  /* Make sure that the process and it's stdio is
+   * cleaned up if the channel or connection dies. */
+  remember_resource(session->super.resources, &session->process->super);
+
+  /* FIXME: How to do this properly if in and out may use the
+   * same fd? */
+  remember_resource(session->super.resources, &session->in->super);
+  remember_resource(session->super.resources, &session->out->super);
+  if (session->err)
+    remember_resource(session->super.resources, &session->err->super);
+
+  /* Don't close channel immediately at EOF, as we want to
+   * get a chance to send exit-status or exit-signal. */
+  session->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
+
+  channel_start_receive(&session->super, session->initial_window);
+  
+  return 1;
+}
+
+#if 0
 /* Returns -1 on failure, 0 for child and +1 for parent */
 static int
 spawn_process(struct server_session *session,
@@ -644,6 +732,35 @@ spawn_process(struct server_session *session,
 
   return -1;
 }
+#endif
+
+static void
+init_spawn_info(struct spawn_info *info, struct server_session *session,
+		unsigned argc, const char **argv,
+		unsigned env_length, struct env_value *env)
+{
+  unsigned i = 0;
+  
+  memset(info, 0, sizeof(*info));
+  info->peer = session->super.connection->peer;
+  info->pty = session->pty;
+
+  info->argc = argc;
+  info->argv = argv;
+  
+  assert(env_length >= 1);
+
+  /* FIXME: Set SSH_TTY, SSH_CLIENT and SSH_ORIGINAL_COMMAND */
+  if (session->term)
+    {
+      env[i].name ="TERM";
+      env[i].value = session->term;
+      i++;
+    }
+  assert(i <= env_length);
+  info->env_length = i;
+  info->env = env;
+}
 
 DEFINE_CHANNEL_REQUEST(shell_request_handler)
      (struct channel_request *s UNUSED,
@@ -654,8 +771,10 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
       struct exception_handler *e)
 {
   CAST(server_session, session, channel);
-
-  static struct exception shell_request_failed =
+  struct spawn_info spawn;
+  struct env_value env;
+  
+  static const struct exception shell_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
 
   if (!parse_eod(args))
@@ -668,6 +787,18 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
     /* Already spawned a shell or command */
     goto fail;
 
+  init_spawn_info(&spawn, session, 0, NULL, 1, &env);
+  spawn.login = 1;
+    
+  if (spawn_process(session, channel->connection->user, &spawn))
+    /* NOTE: The return value is not used. */
+    COMMAND_RETURN(c, channel);
+  else
+    {
+    fail:
+      EXCEPTION_RAISE(e, &shell_request_failed);
+    }
+#if 0
   switch (spawn_process(session, channel->connection->user,
 			channel->connection->peer))
     {
@@ -725,6 +856,7 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
   }
  fail:
   EXCEPTION_RAISE(e, &shell_request_failed);
+#endif
 }
 
 DEFINE_CHANNEL_REQUEST(exec_request_handler)
@@ -737,7 +869,7 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
 {
   CAST(server_session, session, channel);
 
-  static struct exception exec_request_failed =
+  static const struct exception exec_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Exec request failed");
   
   UINT32 command_len;
@@ -758,8 +890,26 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
     EXCEPTION_RAISE(e, &exec_request_failed);
   else
     {
-      struct lsh_string *command_line = ssh_format("%ls", command_len, command);
+      struct spawn_info spawn;
+      const char *args[2];
+      struct env_value env;
+
+      struct lsh_string *s = ssh_format("%ls", command_len, command);
       
+      init_spawn_info(&spawn, session, 2, args, 1, &env);
+      spawn.login = 0;
+      
+      args[0] = "-c";
+      args[1] = lsh_get_cstring(s);
+
+      if (spawn_process(session, channel->connection->user, &spawn))
+	/* NOTE: The return value is not used. */
+	COMMAND_RETURN(c, channel);
+      else
+	EXCEPTION_RAISE(e, &exec_request_failed);
+
+      lsh_string_free(s);
+#if 0
       switch (spawn_process(session, channel->connection->user,
 			    channel->connection->peer))
 	{
@@ -819,6 +969,7 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
 	default:
 	  fatal("Internal error!");
 	}
+#endif
     }
 }
 
@@ -889,13 +1040,29 @@ do_spawn_subsystem(struct channel_request *s,
   
   if (!session->process && program)
     {
+      struct spawn_info spawn;
+      const char *args[2];
+      struct env_value env;
+
       /* Don't use any pty */
       if (session->pty)
 	{
 	  KILL_RESOURCE(&session->pty->super);
 	  session->pty = NULL;
 	}
+
+      args[0] = "-c"; args[1] = program;
       
+      init_spawn_info(&spawn, session, 2, args, 1, &env);
+      spawn.login = 0;
+
+      if (spawn_process(session, channel->connection->user, &spawn))
+	{
+	  COMMAND_RETURN(c, channel);
+	  return;
+	}
+      
+#if 0	
       switch (spawn_process(session, channel->connection->user,
 			    channel->connection->peer))
 	{
@@ -924,6 +1091,7 @@ do_spawn_subsystem(struct channel_request *s,
 	default:
 	  fatal("Internal error!");
 	}
+#endif
     }
   EXCEPTION_RAISE(e, &subsystem_request_failed);
 }
