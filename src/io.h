@@ -223,6 +223,36 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg);
 extern const struct exception finish_read_exception;
 extern const struct exception finish_io_exception;
 
+void
+io_init(void);
+
+void
+io_finish(void);
+
+#if 0
+void
+lsh_oop_register_signal(struct lsh_signal_handler *handler);
+
+void
+lsh_oop_cancel_signal(struct lsh_signal_handler *handler);
+#endif
+
+void
+lsh_oop_register_read_fd(struct lsh_fd *fd);
+
+void
+lsh_oop_cancel_read_fd(struct lsh_fd *fd);
+
+void
+lsh_oop_register_write_fd(struct lsh_fd *fd);
+
+void
+lsh_oop_cancel_write_fd(struct lsh_fd *fd);
+
+
+
+
+
 struct io_backend *
 make_io_backend(void);
 
@@ -234,7 +264,7 @@ io_final(struct io_backend *b);
 
 struct resource *
 io_signal_handler(struct io_backend *b,
-		  volatile sig_atomic_t *flag,
+		  int signum,
 		  struct lsh_callback *action);
 
 struct resource *
