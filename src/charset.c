@@ -154,27 +154,32 @@ local_to_utf8(struct lsh_string *s, int free)
     }
 }
 
-int local_is_utf8(void) { return (local_charset == CHARSET_UTF8); }
+static int
+ucs4_is_control(uint32_t c)
+{
+  return (c < 0x20) || (c >= 0x7f && c < 0xa0);
+}
 
 struct lsh_string *
-low_utf8_to_local(uint32_t length, const uint8_t *s, int strict)
+low_utf8_to_local(uint32_t length, const uint8_t *s, enum utf8_flag flags)
 {
   uint32_t i;
   struct lsh_string *res;
   struct simple_buffer buffer;
   
-  assert(!local_is_utf8());
-
   /* The string can't grow when converted to local charset */
   res = lsh_string_alloc(length);
 
   simple_buffer_init(&buffer, length, s);
 
-  for (i = 0; 1; i++)
+  i = 0;
+  
+  for (;;)
     {
       uint32_t ucs4;
-
-      switch(parse_utf8(&buffer, &ucs4))
+      unsigned utf8_length;
+      
+      switch(parse_utf8(&buffer, &ucs4, &utf8_length))
 	{
 	case -1:
 	  assert(i<=length);
@@ -185,22 +190,37 @@ low_utf8_to_local(uint32_t length, const uint8_t *s, int strict)
 
 	case 1:
 	  {
-	    int local = ucs4_to_local(ucs4);
+	    if ((flags & utf8_paranoid) && ucs4_is_control(ucs4))
+	      {
+		if (flags & utf8_replace)
+		  lsh_string_putc(res, i++, '?');
+		else
+		  goto fail;
+	      }
+	    else if (local_charset == CHARSET_UTF8)
+	      {
+		lsh_string_write(res, i, utf8_length,
+				 buffer.data + buffer.pos - utf8_length);
+		i += utf8_length;
+	      }
+	    else
+	      {
+		int local = ucs4_to_local(ucs4);
+		if (local < 0)
+		  {
+		    if (flags & utf8_replace)
+		      /* Replace unknown characters. */
+		      local = '?';
+		    else
+		      goto fail;
+		  }
 
-	    if (local >= 0)
-	      {
-		lsh_string_putc(res, i, local);
-		break;
+		lsh_string_putc(res, i++, local);
 	      }
-	    else if (!strict)
-	      {
-		/* Replace unknown characters. */
-		lsh_string_putc(res, i, '?');
-		break;
-	      }
-	    /* Fall through */
+	    break;
 	  }
 	case 0: /* Error */
+	fail:
 	  lsh_string_free(res);
 
 	  return NULL;
@@ -213,14 +233,12 @@ low_utf8_to_local(uint32_t length, const uint8_t *s, int strict)
 }
 
 struct lsh_string *
-utf8_to_local(struct lsh_string *s, int strict, int free)
+utf8_to_local(struct lsh_string *s, enum utf8_flag flags, int free)
 {
   struct lsh_string *res;
-  
-  if (local_is_utf8())
-    return free ? s : lsh_string_dup(s);
 
-  res = low_utf8_to_local(STRING_LD(s), strict);
+  /* NOTE: Makes a copy of the string even if the target charset is utf8. */
+  res = low_utf8_to_local(STRING_LD(s), flags);
 
   if (free)
     lsh_string_free(s);

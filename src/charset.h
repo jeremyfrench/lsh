@@ -39,14 +39,23 @@ void set_local_charset(int charset);
 uint32_t local_to_ucs4(int c);
 int ucs4_to_local(uint32_t c);
 
+enum utf8_flag
+  {
+    /* If set, characters that can not be represented in
+       the local charset are replaced by '?' */
+    utf8_replace = 1,
+    
+    /* If set, control characters are treated as never existing in any
+       local character set */
+    utf8_paranoid = 2,
+  };
+
 struct lsh_string *local_to_utf8(struct lsh_string *s, int free);
 
-/* Returns NULL if the UTF-8 encoding is invalid. If STRICT, it
- * returns NULL also if the UTF-8 is valid but not representable in
- * the local charset. If not STRICT, non-representably charecters are
- * replaced with '?'. */
-struct lsh_string *utf8_to_local(struct lsh_string *s, int strict, int free);
-struct lsh_string *low_utf8_to_local(uint32_t length, const uint8_t *s, int strict);
-int local_is_utf8(void);
+/* Returns NULL if the UTF-8 encoding is invalid, or not
+   representatble in the local charset (also depending on the given
+   flags). */
+struct lsh_string *utf8_to_local(struct lsh_string *s, enum utf8_flag flags, int free);
+struct lsh_string *low_utf8_to_local(uint32_t length, const uint8_t *s, enum utf8_flag flags);
 
 #endif /* LSH_CHARSET_H_INCLUDED */
