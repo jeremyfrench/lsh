@@ -542,7 +542,6 @@ DEFINE_COMMAND2(lsh_login_command)
    (expr
      (name make_lsh_connect)
      (params
-       (connect object command)
        (handshake object handshake_info)
        (init object make_kexinit))
      (expr (lambda (options)
@@ -559,7 +558,7 @@ DEFINE_COMMAND2(lsh_login_command)
 		       (options2verifier options
 				         (options2known_hosts options))
  		       ; Connect using tcp
-		       (connect (options2remote options)))))))))
+		       (connect_simple (options2remote options)))))))))
 */
 
 
@@ -953,7 +952,6 @@ int main(int argc, char **argv)
   {
     struct lsh_object *o =
       make_lsh_connect(
-	make_simple_connect(NULL),
 	make_handshake_info(CONNECTION_CLIENT,
 			    "lsh - a free ssh", NULL,
 			    SSH_MAX_PACKET,

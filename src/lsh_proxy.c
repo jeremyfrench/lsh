@@ -514,7 +514,6 @@ DEFINE_COMMAND2(proxy_destination)
    (expr
      (name lsh_proxy_handshake_server)
      (params
-       (connect object command)
        (verifier object lookup_verifier)
        (handshake object handshake_info)
        (init object make_kexinit))
@@ -524,7 +523,7 @@ DEFINE_COMMAND2(proxy_destination)
 	   (connection_handshake 
              handshake init
              verifier 
-             (connect (proxy_destination options client_addr)))))))
+             (connect_simple (proxy_destination options client_addr)))))))
 */
 
 /* Invoked when the client requests the userauth service. */
@@ -776,8 +775,7 @@ int main(int argc, char **argv)
 		      -1)),
 
 	 /* callback to call when client<->proxy handshake finished */
-	 (struct command *)lsh_proxy_handshake_server(make_simple_connect(NULL),
-						      make_fake_host_db(),
+	 (struct command *)lsh_proxy_handshake_server(make_fake_host_db(),
 						      make_handshake_info
 						      (CONNECTION_CLIENT,
 						       "lsh_proxy_client - a free ssh",

@@ -294,74 +294,31 @@ make_connect_port(struct address_info *target)
   return &self->super;
 }
 
-/* GABA:
-   (class
-     (name simple_io_command)
-     (super command)
-     (vars
-       (resources object resource_list)))
-*/
-
-/* Simple connect function taking port only as argument. Also used for
- * listen.
- *
- * (connect address) */
-
-/* FIXME: The resources are never used. So replace with a simple DEFINE_COMMAND */
-
-static void
-do_simple_connect(struct command *s,
-		  struct lsh_object *a,
-		  struct command_continuation *c,
-		  struct exception_handler *e)
+/* (connect address) */
+DEFINE_COMMAND(connect_simple_command)
+     (struct command *self UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  CAST(simple_io_command, self, s);
   CAST(address_info, address, a);
 
-  do_connect(address, self->resources, c, e);
-}
-
-struct command *
-make_simple_connect(struct resource_list *resources)
-{
-  NEW(simple_io_command, self);
-  self->resources = resources;
-  
-  self->super.call = do_simple_connect;
-
-  return &self->super;
+  do_connect(address, NULL, c, e);
 }
 
 
-/* (connect port) */
-/* ;; GABA:
-   (class
-     (name connect_connection)
-     (super command)
-     (vars
-       (backend object io_backend)))
-*/
-
-static void
-do_connect_connection(struct command *self,
-		      struct lsh_object *x,
-		      struct command_continuation *c,
-		      struct exception_handler *e UNUSED)
+/* (connect_connection connection port) */
+DEFINE_COMMAND2(connect_connection_command)
+     (struct command_2 *self UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
-  CAST(ssh_connection, connection, x);
+  CAST(ssh_connection, connection, a1);
+  CAST(address_info, address, a2);
 
-  COMMAND_RETURN(c,
-		 make_simple_connect(connection->resources));
-}
-
-/* FIXME: Use DEFINE_COMMAND */
-struct command *
-make_connect_connection(void)
-{
-  NEW(command, self);
-  self->call = do_connect_connection;
-
-  return self;
+  do_connect(address, connection->resources, c, e);
 }
 
 

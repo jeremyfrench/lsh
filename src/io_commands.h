@@ -81,11 +81,12 @@ extern struct command_2 listen_with_callback;
 
 struct command *
 make_connect_port(struct address_info *target);
-struct command *
-make_connect_connection(void);
 
-struct command *
-make_simple_connect(struct resource_list *resources);
+extern struct command_2 connect_connection_command;
+#define CONNECT_CONNECTION (&connect_connection_command.super.super)
+
+extern struct command connect_simple_command;
+#define CONNECT_SIMPLE (&connect_simple_command.super)
 
 struct command *
 make_listen_local(struct local_info *info);

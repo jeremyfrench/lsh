@@ -461,21 +461,19 @@ STATIC_INSTALL_OPEN_HANDLER(ATOM_FORWARDED_TCPIP);
 /* GABA:
    (expr
      (name direct_tcpip_hook)
-     (params
-       (connect object command))
      (expr
        (lambda (connection)
          (install_direct_tcpip connection
 	   (direct_tcpip_handler (lambda (port)
-	     (tcpip_connect_io (connect connection port))))))))
+	     (tcpip_connect_io (connect_connection connection port))))))))
 */
 
 struct command *
 make_direct_tcpip_hook(void)
 {
   CAST_SUBTYPE(command, res,
-	       direct_tcpip_hook(make_connect_connection()));
-
+	       direct_tcpip_hook());
+  
   debug("tcpforward_commands.c: make_direct_tcpip_hook\n");
 
   return res;
