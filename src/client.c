@@ -303,7 +303,7 @@ do_exit_status(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
       
-      COMMAND_RETURN(s, NULL);
+      COMMAND_RETURN(s, channel);
     }
   else
     /* Invalid request */
@@ -348,7 +348,7 @@ do_exit_signal(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
-      COMMAND_RETURN(s, NULL);
+      COMMAND_RETURN(s, channel);
     }
   else
     /* Invalid request */
