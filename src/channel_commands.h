@@ -22,6 +22,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef LSH_CHANNEL_COMMANDS_H_INCLUDED
+#define LSH_CHANNEL_COMMANDS_H_INCLUDED
+
 #include "channel.h"
 
 #define GABA_DECLARE
@@ -71,3 +74,4 @@ int do_channel_request_command(struct command *s,
 			       struct lsh_object *x,
 			       struct command_continuation *c);
      
+#endif /* LSH_CHANNEL_COMMANDS_H_INCLUDED */
