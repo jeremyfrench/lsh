@@ -49,9 +49,10 @@
 #endif
 
 #define BLOCK_SIZE 2000
+#define MAX_SEXP_SIZE 5000
 
 static struct read_sexp_command read_sexp
-= STATIC_READ_SEXP(SEXP_TRANSPORT, 0);
+= STATIC_READ_SEXP(SEXP_TRANSPORT, 0, MAX_SEXP_SIZE);
 
 #define READ_SEXP (&read_sexp.super.super)
 
