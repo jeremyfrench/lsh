@@ -177,7 +177,7 @@ struct command *make_request_service(int service)
 */
 
 /* Callback used when the server sends us eof */
-static int close_client_session(struct ssh_channel *c)
+static int do_client_session_eof(struct ssh_channel *c)
 {
   CAST(client_session, session, c);
   
@@ -187,10 +187,13 @@ static int close_client_session(struct ssh_channel *c)
   close_fd(&session->err->super, 0);
 #endif
 
-  /* The LSH_CHANNEL_PENDING_CLOSE should action should be invoked
-   * immediately when the channel is opened. */
-  return LSH_OK /* | LSH_CHANNEL_PENDING_CLOSE */;
+  return LSH_OK;
 }  
+
+static int do_client_session_close(struct ssh_channel *c UNUSED)
+{
+  return LSH_CHANNEL_PENDING_CLOSE;
+}
 
 #if 0
 static int client_session_die(struct ssh_channel *c)
@@ -382,8 +385,8 @@ static int do_client_io(struct command *s UNUSED,
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
 		make_handle_exit_signal(session->exit_status));
 
-      channel->eof = close_client_session;
-
+      channel->eof = do_client_session_eof;
+      
       return COMMAND_RETURN(c, channel);
     }
 }
@@ -493,6 +496,10 @@ struct ssh_channel *make_client_session(struct io_fd *in,
 
   init_channel(&self->super);
 
+  /* Makes sure the pending_close bit is set whenever this session
+   * dies, no matter when or how. */
+  self->super.close = do_client_session_close;
+  
   self->super.max_window = max_window;
   self->super.rec_window_size = max_window;
 
