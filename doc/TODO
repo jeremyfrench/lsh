@@ -465,3 +465,6 @@ warnings by lsh:
 To fix this, we must put some resources on the lsh's
 gateway-connection's resource list, that closes the chained
 connections. 
+
+According to rms, lsh is significantly slower than ssh when logging in
+over a slow connection. Figure out why.
