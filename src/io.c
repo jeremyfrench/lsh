@@ -23,6 +23,11 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "io.h"
+#include "werror.h"
+#include "write_buffer.h"
+#include "xalloc.h"
+
 #include <assert.h>
 #include <string.h>
 
@@ -31,7 +36,7 @@
 #ifdef HAVE_POLL
 #include <poll.h>
 #else
-#include "poll.h"
+#include "jpoll.h"
 #endif
 
 #include <errno.h>
@@ -40,11 +45,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <signal.h>
-
-#include "io.h"
-#include "werror.h"
-#include "write_buffer.h"
-#include "xalloc.h"
 
 #define CLASS_DEFINE
 #include "io.h.x"
@@ -479,8 +479,21 @@ get_inaddr(struct sockaddr_in	* addr,
   else
     {
       /* First check for numerical ip-number */
+#if 1
+      /* FIXME: How portable is inet_aton? */
+      if (!inet_aton(host, addr))
+#else
+	/* TODO: It is wrong to work with ((unsigned long int) -1)
+	 * directly, as this breaks Linux/Alpha systems. But
+	 * INADDR_NONE isn't portable. The clean solution is to use
+	 * inet_aton rather than inet_addr; see the GNU libc
+	 * documentation. */
+#ifndef INADDR_NONE
+#define INADDR_NONE ((unsigned long int) -1)
+#endif
       addr->sin_addr.s_addr = inet_addr(host);
       if (addr->sin_addr.s_addr == INADDR_NONE)
+#endif
 	{
 	  struct hostent * hp;
 	  
