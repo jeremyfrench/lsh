@@ -136,8 +136,8 @@ do_init_server_dh(struct keyexchange_algorithm *c,
 		  struct object_list *algorithms)
 {
   CAST(dh_server_exchange, closure, c);
-  CAST(keypair_info, keypair, ALIST_GET(closure->keys,
-					hostkey_algorithm_atom));
+  CAST(keypair, keypair, ALIST_GET(closure->keys,
+				   hostkey_algorithm_atom));
   NEW(dh_server, dh);
 
   CHECK_TYPE(ssh_connection, connection);
