@@ -55,9 +55,10 @@
 */
 
 /* For advanced format */
-static struct lsh_string *do_format_simple_string(struct lsh_string *s,
-						  int style,
-						  unsigned indent)
+static struct lsh_string *
+do_format_simple_string(struct lsh_string *s,
+			int style,
+			unsigned indent)
 {
   int quote_friendly = ( (~CHAR_control & ~CHAR_international)
 			 | CHAR_escapable);
@@ -150,8 +151,9 @@ static struct lsh_string *do_format_simple_string(struct lsh_string *s,
     }
 }
   
-static struct lsh_string *do_format_sexp_string(struct sexp *s,
-						int style, unsigned indent)
+static struct lsh_string *
+do_format_sexp_string(struct sexp *s,
+		      int style, unsigned indent)
 {
   CAST(sexp_string, self, s);
 
@@ -175,10 +177,12 @@ static struct lsh_string *do_format_sexp_string(struct sexp *s,
 }
 
 /* Consumes its args (display may be NULL) */
-struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c)
+struct sexp *
+sexp_s(struct lsh_string *d, struct lsh_string *c)
 {
   NEW(sexp_string, s);
-
+  assert(c);
+  
   s->super.format = do_format_sexp_string;
   s->super.iter = NULL;
   
@@ -188,13 +192,15 @@ struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c)
   return &s->super;
 }
 
-struct lsh_string *sexp_contents(const struct sexp *e)
+struct lsh_string *
+sexp_contents(const struct sexp *e)
 {
   CAST(sexp_string, self, e);
   return self->contents;
 }
 
-struct lsh_string *sexp_display(const struct sexp *e)
+struct lsh_string *
+sexp_display(const struct sexp *e)
 {
   CAST(sexp_string, self, e);
   return self->display;
@@ -229,7 +235,8 @@ sexp_check_type(struct sexp *e, UINT32 length,
 }
 
 /* Forward declaration */
-static struct sexp_iterator *make_iter_cons(struct sexp *s);
+static struct sexp_iterator *
+make_iter_cons(struct sexp *s);
 
 struct sexp_cons sexp_nil =
 { { STATIC_HEADER, make_iter_cons, do_format_sexp_nil },
@@ -245,13 +252,15 @@ struct sexp_cons sexp_nil =
        (p object sexp_cons)))
 */
 
-static struct sexp *do_cons_get(struct sexp_iterator *c)
+static struct sexp *
+do_cons_get(struct sexp_iterator *c)
 {
   CAST(sexp_iter_cons, i, c);
   return (i->p == &sexp_nil) ? NULL : i->p->car;
 }
 
-static void do_cons_set(struct sexp_iterator *c, struct sexp *e)
+static void
+do_cons_set(struct sexp_iterator *c, struct sexp *e)
 {
   CAST(sexp_iter_cons, i, c);
   assert (i->p != &sexp_nil);
@@ -280,7 +289,8 @@ do_cons_assoc(struct sexp_iterator *s, UINT32 length,
   return NULL;
 }
 
-static unsigned do_cons_left(struct sexp_iterator *i)
+static unsigned
+do_cons_left(struct sexp_iterator *i)
 {
   CAST(sexp_iter_cons, self, i);
   struct sexp_cons *p;
@@ -292,13 +302,15 @@ static unsigned do_cons_left(struct sexp_iterator *i)
   return k;
 }
 
-static void do_cons_next(struct sexp_iterator *c)
+static void
+do_cons_next(struct sexp_iterator *c)
 {
   CAST(sexp_iter_cons, i, c);
   i->p = i->p->cdr;
 }
 
-static struct sexp_iterator *make_iter_cons(struct sexp *s)
+static struct sexp_iterator *
+make_iter_cons(struct sexp *s)
 {
   CAST(sexp_cons, c, s);
   NEW(sexp_iter_cons, iter);
@@ -313,8 +325,9 @@ static struct sexp_iterator *make_iter_cons(struct sexp *s)
   return &iter->super;
 }
 
-static struct lsh_string *do_format_sexp_tail(struct sexp_cons *c,
-					      int style, unsigned indent)
+static struct lsh_string *
+do_format_sexp_tail(struct sexp_cons *c,
+		    int style, unsigned indent)
 {
   int use_space = 0;
   
@@ -339,15 +352,17 @@ static struct lsh_string *do_format_sexp_tail(struct sexp_cons *c,
 }
 
 #if 0
-static int is_short(struct lsh_string *s)
+static int
+is_short(struct lsh_string *s)
 {
   return ( (s->length < 15)
 	   && !memchr(s->data, '\n', s->length); )
 }
 #endif
 
-static struct lsh_string *do_format_sexp_cons(struct sexp *s,
-					      int style, unsigned indent)
+static struct lsh_string *
+do_format_sexp_cons(struct sexp *s,
+		    int style, unsigned indent)
 {
   CAST(sexp_cons, self, s);
 
@@ -378,7 +393,8 @@ static struct lsh_string *do_format_sexp_cons(struct sexp *s,
     }
 }
 
-struct sexp *sexp_c(struct sexp *car, struct sexp_cons *cdr)
+struct sexp *
+sexp_c(struct sexp *car, struct sexp_cons *cdr)
 {
   NEW(sexp_cons, c);
 
@@ -410,7 +426,8 @@ struct sexp *sexp_c(struct sexp *car, struct sexp_cons *cdr)
        (i . unsigned)))
 */
 
-static struct sexp *do_vector_get(struct sexp_iterator *c)
+static struct sexp *
+do_vector_get(struct sexp_iterator *c)
 {
   CAST(sexp_iter_vector, i, c);
   if (i->i < LIST_LENGTH(i->l))
@@ -421,7 +438,8 @@ static struct sexp *do_vector_get(struct sexp_iterator *c)
   return NULL;
 }
 
-static void do_vector_set(struct sexp_iterator *c, struct sexp *e)
+static void
+do_vector_set(struct sexp_iterator *c, struct sexp *e)
 {
   CAST(sexp_iter_vector, i, c);
   assert(i->i < LIST_LENGTH(i->l));
@@ -452,20 +470,23 @@ do_vector_assoc(struct sexp_iterator *s, UINT32 length,
   return NULL;
 }
 
-static unsigned do_vector_left(struct sexp_iterator *s)
+static unsigned
+do_vector_left(struct sexp_iterator *s)
 {
   CAST(sexp_iter_vector, i, s);
   return LIST_LENGTH(i->l) - i->i;
 }
 
-static void do_vector_next(struct sexp_iterator *c)
+static void
+do_vector_next(struct sexp_iterator *c)
 {
   CAST(sexp_iter_vector, i, c);
   if (i->i < LIST_LENGTH(i->l))
     i->i++;
 }
 
-static struct sexp_iterator *make_iter_vector(struct sexp *s)
+static struct sexp_iterator *
+make_iter_vector(struct sexp *s)
 {
   CAST(sexp_vector, v, s);
   NEW(sexp_iter_vector, iter);
@@ -482,8 +503,9 @@ static struct sexp_iterator *make_iter_vector(struct sexp *s)
   return &iter->super;
 }
 
-static struct lsh_string *do_format_sexp_vector(struct sexp *e,
-						int style, unsigned indent)
+static struct lsh_string *
+do_format_sexp_vector(struct sexp *e,
+		      int style, unsigned indent)
 {
   CAST(sexp_vector, v, e);
 
@@ -544,7 +566,8 @@ static struct lsh_string *do_format_sexp_vector(struct sexp *e,
     }
 }
 
-struct sexp *sexp_v(struct object_list *l)
+struct sexp *
+sexp_v(struct object_list *l)
 {
   if (LIST_LENGTH(l))
     {
@@ -561,7 +584,8 @@ struct sexp *sexp_v(struct object_list *l)
     return SEXP_NIL;
 }
 
-struct sexp *sexp_l(unsigned n, ...)
+struct sexp *
+sexp_l(unsigned n, ...)
 {
   va_list args;
 
@@ -583,18 +607,21 @@ struct sexp *sexp_l(unsigned n, ...)
     }
 }
 
-struct sexp *sexp_a(const int a)
+struct sexp *
+sexp_a(const int a)
 {
-  return make_sexp_string(NULL, ssh_format("%la", a));
+  return sexp_s(NULL, ssh_format("%la", a));
 }
 
-struct sexp *sexp_z(const char *s)
+struct sexp *
+sexp_z(const char *s)
 {
-  return make_sexp_string(NULL, ssh_format("%lz", s));
+  return sexp_s(NULL, ssh_format("%lz", s));
 }
 
 /* mpz->atom */
-struct sexp *sexp_un(const mpz_t n)
+struct sexp *
+sexp_un(const mpz_t n)
 {
   struct lsh_string *s;
   UINT32 l = bignum_format_u_length(n);
@@ -604,10 +631,11 @@ struct sexp *sexp_un(const mpz_t n)
 
   assert(!l);
   
-  return make_sexp_string(NULL, s);
+  return sexp_s(NULL, s);
 }
 
-struct sexp *sexp_sn(const mpz_t n)
+struct sexp *
+sexp_sn(const mpz_t n)
 {
   struct lsh_string *s;
   UINT32 l = bignum_format_s_length(n);
@@ -617,10 +645,11 @@ struct sexp *sexp_sn(const mpz_t n)
 
   assert(!l);
   
-  return make_sexp_string(NULL, s);
+  return sexp_s(NULL, s);
 }
     
-struct lsh_string *sexp_format(struct sexp *e, int style, unsigned indent)
+struct lsh_string *
+sexp_format(struct sexp *e, int style, unsigned indent)
 {
   switch(style)
     {
@@ -636,7 +665,8 @@ struct lsh_string *sexp_format(struct sexp *e, int style, unsigned indent)
     }
 }
 
-static void encode_base64_group(UINT32 n, UINT8 *dest)
+static void
+encode_base64_group(UINT32 n, UINT8 *dest)
 {
   static const UINT8 digits[64] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef"
@@ -650,7 +680,8 @@ static void encode_base64_group(UINT32 n, UINT8 *dest)
     }
 }
 
-struct lsh_string *encode_base64(struct lsh_string *s,
+struct lsh_string *
+encode_base64(struct lsh_string *s,
 				 const char *delimiters,
 				 unsigned indent UNUSED,
 				 int free)				 
@@ -707,12 +738,14 @@ struct lsh_string *encode_base64(struct lsh_string *s,
   return res;
 }
 
-int sexp_nullp(const struct sexp *e)
+int
+sexp_nullp(const struct sexp *e)
 {
   return (e == SEXP_NIL);
 }
 
-int sexp_atomp(const struct sexp *e)
+int
+sexp_atomp(const struct sexp *e)
 {
   return !e->iter;
 }
@@ -733,7 +766,8 @@ sexp2atom(struct sexp *e)
   return s ? lookup_atom(s->length, s->data) : 0;
 }
 
-int sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name)
+int
+sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name)
 {
   struct lsh_string *c = sexp2string(e);
 
@@ -741,7 +775,8 @@ int sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name)
 }
 
 /* Assumes that both expressions are atoms */
-int sexp_atom_eq(struct sexp *a, struct sexp *b)
+int
+sexp_atom_eq(struct sexp *a, struct sexp *b)
 {
   struct lsh_string *ac = sexp_contents(a);
   struct lsh_string *ad = sexp_display(a);
@@ -754,7 +789,8 @@ int sexp_atom_eq(struct sexp *a, struct sexp *b)
 }
 
 #if 0
-int sexp_eqz(const struct sexp *e, const char *s)
+int
+sexp_eqz(const struct sexp *e, const char *s)
 {
   struct lsh_string *c;
 
@@ -766,7 +802,8 @@ int sexp_eqz(const struct sexp *e, const char *s)
   return !strncmp(s, c->data, c->length);
 }
 
-int sexp_check_type(struct sexp *e, const char *type,
+int
+sexp_check_type(struct sexp *e, const char *type,
 		    struct sexp_iterator **res)
 {
   struct sexp_iterator *i;
@@ -791,7 +828,8 @@ int sexp_check_type(struct sexp *e, const char *type,
 }
 
 /* Check that the next element is a pair (name value), and return value */
-struct sexp *sexp_assz(struct sexp_iterator *i, const char *name)
+struct sexp *
+sexp_assz(struct sexp_iterator *i, const char *name)
 {
   struct sexp *l = SEXP_GET(i);
   struct sexp_iterator *inner;
@@ -816,7 +854,8 @@ struct sexp *sexp_assz(struct sexp_iterator *i, const char *name)
 }
 #endif
 
-struct sexp *sexp_assq(struct sexp_iterator *i, int atom)
+struct sexp *
+sexp_assq(struct sexp_iterator *i, int atom)
 {
   struct sexp_iterator *inner;
   if (SEXP_ASSOC(i, get_atom_length(atom), get_atom_name(atom), &inner)
@@ -832,7 +871,8 @@ struct sexp *sexp_assq(struct sexp_iterator *i, int atom)
     return NULL;
 }
 
-int sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n)
+int
+sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n)
 {
   struct lsh_string *s = sexp2string(sexp_assq(i, atom));
 
@@ -850,7 +890,9 @@ struct sexp_format
   int id;
 };
 
-static const struct sexp_format sexp_formats[] = {
+static const struct sexp_format
+sexp_formats[] =
+{
   { "transport", SEXP_TRANSPORT },
   { "canonical", SEXP_CANONICAL },
   { "advanced", SEXP_ADVANCED },
@@ -859,7 +901,8 @@ static const struct sexp_format sexp_formats[] = {
 };
 
 #if 0
-static void list_formats(void)
+static void
+list_formats(void)
 {
   int i;
 
@@ -869,7 +912,8 @@ static void list_formats(void)
 }
 #endif
 
-static int lookup_sexp_format(const char *name)
+static int
+lookup_sexp_format(const char *name)
 {
   int i;
 
@@ -923,14 +967,16 @@ sexp_argp_parser(int key, char *arg, struct argp_state *state)
   return 0;
 }
 
-const struct argp sexp_input_argp =
+const struct argp
+sexp_input_argp =
 {
   sexp_input_options,
   sexp_argp_parser,
   NULL, NULL, NULL, NULL, NULL
 };
 
-const struct argp sexp_output_argp =
+const struct argp
+sexp_output_argp =
 {
   sexp_output_options,
   sexp_argp_parser,

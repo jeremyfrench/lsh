@@ -111,9 +111,8 @@ struct lsh_string *encode_base64(struct lsh_string *s,
 
 /* Creating sexps */
 
-/* FIXME: Rename this to sexp_s(d, c)? */
 /* Consumes its args (display may be NULL) */
-struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c);
+struct sexp *sexp_s(struct lsh_string *d, struct lsh_string *c);
 
 /* atom->sexp */
 struct sexp *sexp_a(const int a);
