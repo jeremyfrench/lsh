@@ -252,7 +252,7 @@ static int io_iter(struct io_backend *b)
 	      int res;
 	      
 	      struct fd_read r =
-	      { { STATIC_HEADER do_read }, fd->fd };
+	      { { STACK_HEADER do_read }, fd->fd };
 
 	      /* The handler function may install a new handler */
 	      res = READ_HANDLER(fd->handler,

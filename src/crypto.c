@@ -147,7 +147,7 @@ static struct hash_instance *make_sha_instance(struct hash_algorithm *ignored)
 }
 
 struct hash_algorithm sha_algorithm =
-{ STATIC_HEADER
+{ STATIC_HEADER,
   SHA_DATASIZE, SHA_DIGESTSIZE, make_sha_instance };
 
 /* HMAC (rfc-2104) */

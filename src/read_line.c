@@ -125,7 +125,7 @@ static int do_read_line(struct read_handler **h,
 	      int res;
 	      
 	      struct string_read read =
-	      { { STATIC_HEADER do_string_read },
+	      { { STACK_HEADER, do_string_read },
 		closure,
 		0 };
 	      while(next && (read.index < closure->pos))

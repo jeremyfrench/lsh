@@ -104,8 +104,8 @@ struct lsh_string_header
   int magic;
 };
 
-#define STATIC_HEADER { 0, LSH_ALLOC_STATIC, 0 },
-#define STACK_HEADER { 0, LSH_ALLOC_STACK, 0 },
+#define STATIC_HEADER { 0, LSH_ALLOC_STATIC, 0 }
+#define STACK_HEADER { 0, LSH_ALLOC_STACK, 0 }
 
 #else   /* !DEBUG_ALLOC */
 struct lsh_object
@@ -116,8 +116,8 @@ struct lsh_object
 
 struct lsh_string_header {};
 
-#define STATIC_HEADER { LSH_ALLOC_STATIC, 0 },
-#define STACK_HEADER { LSH_ALLOC_STACK, 0 },
+#define STATIC_HEADER { LSH_ALLOC_STATIC, 0 }
+#define STACK_HEADER { LSH_ALLOC_STACK, 0 }
 
 #endif  /* !DEBUG_ALLOC */
 
