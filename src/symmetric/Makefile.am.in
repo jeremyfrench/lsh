@@ -1,4 +1,6 @@
-## Process this file with automake to produce Makefile.in
+## Process this file with make_am to produce Makefile.am
+CVS_HEADERS: EXTRA_DIST
+BODY:
 
 AUTOMAKE_OPTIONS = foreign
 

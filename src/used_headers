@@ -1,0 +1,15 @@
+#! /bin/bash
+
+# Extracts the names of all header files mentioned in the dependency
+# files. Headers with absolute paths are ignored, leading directories
+# of relative file names are deleted.
+
+(for d in "$@"; do
+    if [ -d $d/.deps ]; then
+	cat $d/.deps/*.P
+    fi
+done) | tr ' ' '\n' \
+      | grep '^[^/].*\.h$' \
+      | sed 's%^.*/\([^/]\+\)$%\1%' \
+      | sort | uniq
+      

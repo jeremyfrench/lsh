@@ -1,7 +1,18 @@
-## Process this file with automake to produce Makefile.in
+## Process this file with make_am to produce Makefile.am
+SUBDIRS: lib include
+CVS_HEADERS: cvs_headers
+BODY:
 
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = lib
+SUBDIRS = lib include
+
+# To remake all Makefile.am-files, run
+#
+# 	./used_headers . $(SUBDIRS) | ./make_am
+#
+# You should run this after recompiling, but before making a dist, as
+# it uses dependency information to figure out which header files
+# should be included in th dist. How to tell this to make?
 
 bin_PROGRAMS = lsh lshd
 
@@ -17,7 +28,7 @@ common_sources = alist.c atoms.c bignum.c channel.c \
 	randomness.c \
 	read_data.c read_line.c read_packet.c service.c \
 	translate_signal.c unpad.c \
-	werror.c write_buffer.c xalloc.c
+	werror.c write_buffer.c xalloc.c 
 
 lsh_SOURCES = $(common_sources) lsh.c client.c client_keyexchange.c \
 	client_password.c client_userauth.c
@@ -44,5 +55,6 @@ lshd_DEPENDENCIES = @LIBOBJS@ symmetric
 symmetric:
 	(cd lib && $(MAKE) libsymmetric.a)
 
-EXTRA_DIST = atoms.in process_atoms $(generated_sources) HACKING
+EXTRA_DIST = atoms.in process_atoms $(generated_sources) HACKING \
+	$(cvs_headers)
 
