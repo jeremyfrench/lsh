@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 1.1.3)
+AM_INIT_AUTOMAKE(lsh, 1.1.4)
 
 AM_CONFIG_HEADER(config.h)
 
@@ -283,17 +283,6 @@ dnl question is not defined in sys/types.h.
 
 AC_TYPE_SOCKLEN_T
 
-dnl  AC_CACHE_CHECK([for socklen_t in sys/socket.h],
-dnl    lsh_cv_type_socklen_t,
-dnl    [ AC_EGREP_HEADER(socklen_t, sys/socket.h,
-dnl  			 lsh_cv_type_socklen_t=yes,
-dnl  			 lsh_cv_type_socklen_t=no]))
-
-dnl if test x$lsh_cv_type_socklen_t = xno ; then
-dnl   AC_DEFINE(socklen_t, int)
-dnl fi
-
-
 dnl Find the SSH1 daemon; try 'sshd1' first; if it fails, look for 'sshd'
 dnl ## if test x$with_sshd1 = xyes ; then
 dnl ## 	 AC_DEFINE(SSH1_FALLBACK)
@@ -335,12 +324,6 @@ dnl ## 	 fi
 dnl ## 	 AC_DEFINE_UNQUOTED(SSHD1,"$SSHD1BIN")
 dnl ## fi
 
-
-dnl Checks for libraries.
-dnl  AC_CHECK_LIBGMP(gmp,,
-dnl  dnl Some debian systems have both gmp1 and gmp2.
-dnl  	 [AC_CHECK_LIBGMP(gmp2,,
-dnl  	     AC_ERROR([GMP is missing (ftp://ftp.gnu.org/pub/gnu/gmp/gmp-2.0.2.tar.gz)]))])
 
 AC_SEARCH_LIBGMP(gmp gmp2,
   LSH_RPATH_FIX,
@@ -432,13 +415,13 @@ if test x$lsh_cv_sys_ai_numerichost = xyes ; then
   AC_DEFINE(HAVE_AI_NUMERICHOST)
 fi
 
-dnl Needed by argp
-AC_CHECK_FUNCS(mempcpy strndup)
-AC_CHECK_FUNCS(flockfile putc_unlocked)
-AC_CHECK_FUNCS(fputs_unlocked fwrite_unlocked)
-
-AC_CHECK_VAR(program_invocation_name, [#include <errno.h>])
-AC_CHECK_VAR(program_invocation_short_name, [#include <errno.h>])
+dnl  dnl Needed by argp
+dnl  AC_CHECK_FUNCS(mempcpy strndup)
+dnl  AC_CHECK_FUNCS(flockfile putc_unlocked)
+dnl  AC_CHECK_FUNCS(fputs_unlocked fwrite_unlocked)
+dnl  
+dnl  AC_CHECK_VAR(program_invocation_name, [char *])
+dnl  AC_CHECK_VAR(program_invocation_short_name, [char *])
 
 AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
 
@@ -446,25 +429,23 @@ dnl This macro is mentioned in the automake manual, but where is it
 dnl supposed to be defined?
 dnl AC_REPLACE_GNU_GETOPT
 
-dnl AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o $LIBOBJS"])
-AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
+dnl dnl AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o $LIBOBJS"])
+dnl AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
 
-# Use system argp only if we can actually link with it.
+# Test if the libc includes a good enough argp.
 if test x$with_system_argp = xyes ; then
 dnl  AC_CHECK_FUNCS(argp_parse,, with_system_argp=no)
   AC_LIB_ARGP(,with_system_argp=no)
 fi
 
-# FIXME: If the system already has argp, it's unnecessary to build our own.
-# As we want to load the objects into liblsh.a, we list all the objects
-# rather than libargp.a.
-##  LIBOBJS="$LIBOBJS argp/libargp.a"
-
+# We don't use LIBOBJS for this, as the LIBOBJS are added to
+# liblsh.a, and we can't add an archive to an archive.
+LIBARGP=""
 if test x$with_system_argp = xno ; then
-  LIBOBJS="$LIBOBJS argp/argp-ba.o argp/argp-fmtstream.o \
-		    argp/argp-help.o argp/argp-parse.o argp/argp-pin.o argp/argp-pv.o \
-		    argp/argp-pvh.o argp/argp-eexst.o"
+  LIBARGP="argp/libargp.a"
 fi
+
+AC_SUBST(LIBARGP)
 
 dnl Check for broken shutdown
 AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
@@ -708,6 +689,8 @@ if test x$enable_ipv6 = xyes ; then
   AC_DEFINE(WITH_IPV6)
 fi
 
+AC_CONFIG_SUBDIRS(src/argp)
+
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then
     CFLAGS="$CFLAGS -ggdb3 -Wall -W \
@@ -721,7 +704,7 @@ if test x$GCC = xyes ; then
 fi
 
 AC_OUTPUT(Makefile doc/Makefile misc/Makefile
-	  src/Makefile src/argp/Makefile src/scm/Makefile
+	  src/Makefile src/scm/Makefile
 	  src/testsuite/Makefile src/rsync/Makefile
 	  src/symmetric/Makefile src/symmetric/include/Makefile
 	  contrib/Makefile contrib/lsh.spec)

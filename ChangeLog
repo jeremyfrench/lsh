@@ -1,3 +1,62 @@
+2000-11-30  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/argp/argp-parse.c (match_option): Better abbreviations.
+	Replaced try_getopt with args_only, changed calling convention for
+	parser_parse_arg. 
+
+	* src/argp/configure.in: Don't check for getopt.
+
+	* src/argp/argp.h: Don't include getopt.h.
+
+	* src/argp/argp-parse.c (calc_sizes): Updated comment.
+
+2000-11-29  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/argp/configure.in: Use AC_REPLACE_FUNCS for mempcpy, strndup
+	and strchrnul.
+	(AC_CHECK_VAR): Changed second argument to take the type of the
+	variable. 
+
+	* src/argp/argp-parse.c (struct parser): New fields
+	posixly_correct and ordering.
+	(parser_init): Choose ordering.
+	(enum arg_type): New value ARG_LONG_ONLY.
+	(parser_parse_next): Added error messages similar to getopt's. 
+
+	* src/argp/argp-help.c (STRNDUP): New macro to refer to strndup
+	or __strndup, as appropriate.
+	(STRERROR): Define this macro as a wrapper for strerror or
+	sys_errlist. 
+	(__argp_basename): New function.
+
+	* src/argp/argp-namefrob.h (__argp_basename): Added
+	__argp_basename. 
+
+	* src/argp/Makefile.am (libargp_a_LIBADD): Include LIBOBJS in
+	libargp.a. 
+
+	* src/argp/argp.h: Added prototype for _argp_basename and
+	__argp_basename. 
+
+	* src/argp/strndup.c, src/argp/strchrnul.c src/argp/mempcpy.c:
+	Moved replacement functions to separate files.
+
+2000-11-28  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/argp/argp-parse.c: Deleted getopt-related code.
+	(struct parser): New field nextchar. Deleted fields try_getotp and long_opts.
+	(find_short_option): New function.
+	(match_option): New function.
+	(find_long_option): New function.
+	(struct parser_convert_state): Deleted field long_end.
+	(convert_options): Don't build getopt_long-style option array. 
+	(parser_convert): Deleted FLAGS arument.
+	(struct parser_sizes): Deleted field long_len.
+	(parser_init): Set short_opts to NULL, unless ARGP_LONG_ONLY is
+	used. 
+	(classify_arg): New function.
+	(parser_parse_next): Don't use getopt_long().
+
 2000-11-27  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Use AC_LIB_ARGP.
