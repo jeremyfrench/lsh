@@ -28,6 +28,7 @@
 
 #include "abstract_io.h"
 #include "channel.h"
+#include "channel_commands.h"
 #include "connection.h"
 #include "crypto.h"
 #include "debug.h"
@@ -35,8 +36,6 @@
 #include "format.h"
 #include "pad.h"
 #include "parse.h"
-#include "read_line.h"
-#include "read_packet.h"
 #include "service.h"
 #include "ssh.h"
 #include "translate_signal.h"
@@ -52,8 +51,9 @@
 
 #include "client.c.x"
 
+#if 0
 /* Handle connection and initial handshaking. */
-/* GABA:
+/* ;; GABA:
    (class
      (name client_callback)
      (super fd_callback)
@@ -101,7 +101,7 @@ static int client_initiate(struct fd_callback **c,
 				    NULL);
 }
 
-/* GABA:
+/* ;; GABA:
    (class
      (name client_line_handler)
      (super line_handler)
@@ -223,6 +223,8 @@ struct close_callback *make_client_close_handler(void)
 
   return c;
 }
+
+#endif
 
 /* Start a service that the server has accepted (for instance ssh-userauth). */
 /* GABA:
@@ -675,7 +677,7 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
      (vars
        ; This command can only be executed once,
        ; so we can allocate the session object in advance.
-       (session object client_session)))
+       (session object ssh_channel)))
 */
 
 static struct ssh_channel *
@@ -690,7 +692,7 @@ new_session(struct channel_open_command *s,
   if (!*request)
     return NULL;
   
-  res = &self->session->super;
+  res = self->session;
 
   /* Make sure this command can not be invoked again */
   self->session = NULL;
@@ -698,15 +700,18 @@ new_session(struct channel_open_command *s,
   return res;
 }
 
-struct command *make_open_session_command(struct client_session *session)
+struct command *make_open_session_command(struct ssh_channel *session)
 {
   NEW(session_open_command, self);
   self->super.super.call = do_channel_open_command;
   self->super.new_channel = new_session;
   self->session = session;
+
+  return &self->super.super;
 }
 
-/* GABA:
+#if 0
+/* ;; GABA:
    (class
      (name client_startup)
      (super connection_startup)
@@ -765,6 +770,7 @@ struct connection_startup *make_client_startup(struct io_fd *in,
 
   return &closure->super;
 }
+#endif
 
 /* FIXME: This should probably move to client_pty */
 /* GABA:
