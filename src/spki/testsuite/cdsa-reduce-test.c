@@ -23,7 +23,9 @@ read_file(const char *srcdir,
     sprintf(fname, "%s%d%s", prefix, i, suffix);
 
   f = fopen(fname, "rb");
-
+  if (!f)
+    return NULL;
+  
   for (;;)
     {
       assert(alloc == done);
