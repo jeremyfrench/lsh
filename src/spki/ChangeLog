@@ -1,3 +1,21 @@
+2003-03-09  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* testsuite/Makefile.am (TS_SH): Added make-signature-test.
+
+	* testsuite/key-1, testsuite/key-1.pub: Key used by testsuite.
+
+	* testsuite/make-signature-test: New testcase.
+
+	* tools/Makefile.am (spki_make_signature_SOURCES): Need to link
+	with sign.o.
+
+	* tools/spki-make-signature.c (main): Code moved to sign.c. Use
+	the new function spki_sign_digest.
+
+	* tools/sign.c, tools/sign.h: New files.
+
+	* names.c (spki_type_names): Use const for spki_type_names.
+
 2003-02-24  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (EXTRA_DIST): Use dist_cdsa, and include

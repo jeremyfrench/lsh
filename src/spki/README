@@ -84,3 +84,37 @@ directory, for users it would be located in files ad directories under
      delegations. Not strictly necessary, but it seems desirable to
      keep a log of created certificates. The log file can be rotated
      if it gets large.
+
+
+TOOLS
+
+Plain signatures can be created and verified with
+
+  spki-make-signature PRIVATE-KEY-FILE <message
+
+and verified with
+
+  spki-check-signature {SIGNATURE} < data
+
+where `{SIGNATURE}' is the transport encoded spki signature.
+Certificates are created with
+
+  spki-delegate --issuer={ISSUER} --subject={SUBJECT} \
+                --tag={RESOURCE} --chain={CERTIFICATE} \
+	        [--key-file=PRIVATE] [--propagate] \
+		[--no-signature]
+		
+where --subject specifies an spki principal (currently a public key or
+hash), --tag specifies the resource to which access is delegated. If
+--chain is used, a certificate chain is created by adding the
+certificate at the end of the given certificate chain, otherwise, if
+--issuer is given, a certificate chain with a single certificate is
+created. --key-file specifies the private key to use (by default, it
+is looked up in ~/.spki/sha1-keys). --propgate creates a delegation
+that can be delegated further.
+
+FIXME: Change terminology, with could talk of the source of the
+delegation (--issuer or --chain).
+
+
+  
