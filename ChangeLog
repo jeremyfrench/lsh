@@ -1,3 +1,30 @@
+2000-04-23  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/testsuite/Makefile.am (TS_PROGS): Added twofish-test.
+
+	* Constness improvements.
+	
+	* src/pkcs5.c: New file.
+
+	* src/keyexchange.c (kex_make_mac): Pass key length to MAKE_MAC. 
+
+	* src/io.c (safe_popd): New function.
+	(safe_pushd): New function.
+
+	* src/hmac.c (make_hmac_instance): Added key length argument, and
+	implemented variable size keys.
+
+	* src/gc.c (gc_kill): Implemented early deallocation.
+
+	* src/crypto.h (pkcs5_key_derivation): Added prototype.
+
+	* src/abstract_crypto.h (MAKE_MAC): Added key length argument. 
+	Const-ness fixes.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added pkcs5.c. 
+
+	* acinclude.m4 (AC_CHECK_MEMBER): Bug fix. 
+
 2000-04-22  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/unix_user.c (lsh_make_utmp): Check HAVE_UT_HOST.

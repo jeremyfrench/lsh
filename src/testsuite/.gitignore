@@ -7,3 +7,5 @@
 /foo.pub
 /spki-tag-test
 /spki-tag-test.c
+/twofish-test
+/twofish-test.c
