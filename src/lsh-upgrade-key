@@ -47,13 +47,16 @@ for p in $@; do
       werror "Key is encrypted and must be decrypted."
 
       # Encrypted key
-      (("$LSH_DECRYPT_KEY" --in="$p" || \
-	 die "Decryption failed for $p, aborting.") && \
-       werror "Key will be reencrypted using aes256-cbc") | \
+      if "$LSH_DECRYPT_KEY" --in="$p"; then \
+        werror "Key will be reencrypted using aes256-cbc"; \
+      else \
+	werror "Decryption failed for $p, aborting."; \
+        die "(errors from lsh-writekey may be ignored)."; \
+      fi | \
       "$SEXP_CONV" -s hex  \
         | sed -e 's,(\(.\) #\([89a-fA-F]\),(\1 #00\2,' \
         | "$SEXP_CONV" -s transport \
-        | "$LSH_WRITEKEY" -c aes256-cbc -o "$p.new"
+	| "$LSH_WRITEKEY" -c aes256-cbc -o "$p.new"     
     else
      # Not encrypted
      "$SEXP_CONV" -s hex <"$p" \
