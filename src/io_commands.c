@@ -127,7 +127,8 @@ struct io_read_fd io_read_stdin
      (super fd_listen_callback)
      (vars
        (backend object io_backend)
-       (c object command_continuation)))
+       (c object command_continuation)
+       (e object exception_handler)))
 */
 
 static void
@@ -137,8 +138,7 @@ do_listen_continue(struct fd_listen_callback *s, int fd,
   CAST(listen_command_callback, self, s);
   NEW(listen_value, res);
 
-  /* FIXME: What exception handler should be used? */
-  res->fd = make_io_fd(self->backend, fd, &default_exception_handler);
+  res->fd = make_io_fd(self->backend, fd, self->e);
   res->peer = peer;
 
   COMMAND_RETURN(self->c, res);
@@ -146,11 +146,13 @@ do_listen_continue(struct fd_listen_callback *s, int fd,
 
 static struct fd_listen_callback *
 make_listen_command_callback(struct io_backend *backend,
-			     struct command_continuation *c)
+			     struct command_continuation *c,
+			     struct exception_handler *e)
 {
   NEW(listen_command_callback, closure);
   closure->backend = backend;
   closure->c = c;
+  closure->e = e;
   closure->super.f = do_listen_continue;
   
   return &closure->super;
@@ -177,7 +179,8 @@ do_listen(struct io_backend *backend,
     }
   
   fd = io_listen(backend, &sin,
-		 make_listen_command_callback(backend, c));
+		 make_listen_command_callback(backend, c, e),
+		 e);
 
   if (!fd)
     {
@@ -230,7 +233,7 @@ do_listen_connection(struct command *s,
 		  make_listen_command_callback
 		  (self->backend,
 		   make_apply(self->callback,
-			      &discard_continuation, e))));
+			      &discard_continuation, e), e), e));
 }
 
 struct command *make_listen_command(struct command *callback,
@@ -282,7 +285,6 @@ do_connect_continue(struct fd_callback **s, int fd)
 
   assert(fd >= 0);
 
-  /* FIXME: What exception handler to use? */
   COMMAND_RETURN(self->c, make_io_fd(self->backend, fd, self->e));
 }
 
