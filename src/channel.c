@@ -105,6 +105,12 @@ struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
   SSH_MSG_CHANNEL_OPEN_CONFIRMATION, channel->channel_number, \
   channel_number, channel->rec_window_size, channel->rec_max_packet
     
+  debug("format_open_confirmation: rec_window_size = %i,\n"
+	"                          rec_max_packet = %i,\n"
+	"                          max_window = %i\n",
+       channel->rec_window_size,
+       channel->rec_max_packet,
+       channel->max_window);
   l1 = ssh_format_length(CONFIRM_FORMAT, CONFIRM_ARGS);
 
   va_start(args, format);
@@ -678,6 +684,28 @@ do_global_request_failure(struct packet_handler *s UNUSED,
   END(packet);
 }
 
+#if 0
+static void 
+do_connection_sent(struct ssh_connection *connection,
+		   UINT32 length UNUSED)
+{
+  UINT32 i;
+  
+  for (i = 0; i < connection->table->used_channels; i++)
+    {
+      if (connection->table->in_use[i] == CHANNEL_IN_USE)
+        {
+          struct ssh_channel *channel = connection->table->channels[i];
+          
+          if (! (channel->flags & (CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF)))
+	    {
+	      if (channel->send_window_size && channel->send)
+		CHANNEL_SEND(channel, connection);
+	    }
+        }
+    }
+}
+#endif
 
 /* FIXME: Don't store the channel here, instead have it passed as the
  * argument of the continuation. This might also allow some
@@ -1045,7 +1073,12 @@ static void do_channel_open(struct packet_handler *c UNUSED,
 
 	  
 	  
-	  CHANNEL_OPEN(open, connection, type, &buffer,
+	  CHANNEL_OPEN(open, connection,
+		       type,
+		       /* We don't support larger packets than the
+			* default, SSH_MAX_PACKET */
+		       MIN(max_packet, SSH_MAX_PACKET),
+		       &buffer,
 		       make_channel_open_continuation(connection,
 						      local_number,
 						      remote_channel_number,
@@ -1094,8 +1127,11 @@ do_window_adjust(struct packet_handler *closure UNUSED,
 	  if (! (channel->flags & (CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF)))
 	    {
 	      channel->send_window_size += size;
-	      if (channel->send_window_size && channel->send)
-		CHANNEL_SEND(channel, connection);
+	      if (channel->send_window_size && channel->send_adjust)
+		{
+		  assert(channel->send_window_size);
+		  CHANNEL_SEND_ADJUST(channel, size);
+		}
 	    }
 	}
       else
@@ -1149,10 +1185,19 @@ do_channel_data(struct packet_handler *closure UNUSED,
 	    }
 	  else
 	    {
+              if (data->length > channel->rec_max_packet)
+                {
+                  werror("Channel data larger than rec_max_packet. Extra data ignored.\n");
+                  data->length = channel->rec_max_packet;
+                }
+
 	      if (data->length > channel->rec_window_size)
 		{
 		  /* Truncate data to fit window */
-		  werror("Channel data overflow. Extra data ignored.\n"); 
+		  werror("Channel data overflow. Extra data ignored.\n");
+		  debug("   (data->length=%i, rec_window_size=%i).\n", 
+			data->length, channel->rec_window_size);
+		  
 		  data->length = channel->rec_window_size;
 		}
 
@@ -1218,11 +1263,19 @@ do_channel_extended_data(struct packet_handler *closure UNUSED,
 	    }
 	  else
 	    {
+              if (data->length > channel->rec_max_packet)
+                {
+                  werror("Channel data larger than rec_max_packet. Extra data ignored.\n");
+                  data->length = channel->rec_max_packet;
+                }
+
 	      if (data->length > channel->rec_window_size)
 		{
 		  /* Truncate data to fit window */
 		  werror("Channel extended data overflow. "
 			 "Extra data ignored.\n");
+		  debug("   (data->length=%i, rec_window_size=%i).\n", 
+			data->length, channel->rec_window_size);
 		  data->length = channel->rec_window_size;
 		}
 	      
@@ -1726,7 +1779,7 @@ void init_channel(struct ssh_channel *channel)
   
   channel->request_types = NULL;
   channel->receive = NULL;
-  channel->send = NULL;
+  channel->send_adjust = NULL;
 
   channel->close = NULL;
   channel->eof = NULL;
