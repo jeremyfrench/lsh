@@ -27,9 +27,7 @@ while [ $# -ge 1 ]; do
     shift
 done
 
-if type "$SSH_CONV" >/dev/null 2>&1; then
-    true
-else
+if type "$SSH_CONV" >/dev/null 2>&1; then : ; else
     echo "ssh-conv: Can't find the program \`$SSH_CONV'."
     exit 1
 fi
