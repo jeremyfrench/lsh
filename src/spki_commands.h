@@ -42,4 +42,7 @@ extern struct command_simple spki_read_hostkeys_command;
 extern struct command_simple spki_read_userkeys_command;
 #define SPKI_READ_USERKEYS (&spki_read_userkeys_command.super.super)
 
+struct command *
+make_spki_read_userkeys(struct alist *algorithms);
+
 #endif /* LSH_SPKI_COMMANDS_H_INCLUDED */

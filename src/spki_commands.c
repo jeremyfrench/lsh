@@ -39,8 +39,12 @@ struct command_simple spki_return_hostkeys;
 struct command_simple spki_add_hostkey_command;
 #define SPKI_ADD_HOSTKEY (&spki_add_hostkey_command.super.super)
 
+struct command_simple spki_return_userkeys;
+#define RETURN_USERKEYS (&spki_return_userkeys.super.super)
+
 struct command_simple spki_add_userkey_command;
 #define SPKI_ADD_USERKEY (&spki_add_userkey_command.super.super)
+
 
 #include "spki_commands.c.x"
 
@@ -200,7 +204,9 @@ COMMAND_SIMPLE(spki_return_hostkeys)
      (expr
        (lambda (file)
          (let ((add (spki_add_hostkey file)))
-           (for_sexp (lambda (e) (return_hostkeys add))
+           (for_sexp (lambda (e)
+	   		;; Delay return until we actually get an exception
+			(return_hostkeys (prog1 add e)))
 	             (lambda (key)
 		       (add (spki_parse_private_key
 		               algorithms key)))
@@ -273,21 +279,29 @@ COMMAND_SIMPLE(spki_return_userkeys)
      (expr
        (lambda (file)
          (let ((ctx (spki_add_userkey file)))
-           (for_sexp (lambda (e) (return_hostkeys ctx))
+           (for_sexp (lambda (e)
+	   		;; Delay return until we actually get an exception
+			(return_userkeys (prog1 ctx e)))
 	             (lambda (key)
 		       (ctx (spki_parse_private_key
 		               algorithms key)))
 		     file)))))
 */
 
+struct command *
+make_spki_read_userkeys(struct alist *algorithms)
+{
+  CAST_SUBTYPE(command, res, spki_read_userkeys(algorithms));
+  trace("make_spki_read_userkeys\n");
+
+  return res;
+}
+
 COMMAND_SIMPLE(spki_read_userkeys_command)
 {
   CAST_SUBTYPE(alist, algorithms, a);
-  CAST_SUBTYPE(command, res, spki_read_userkeys(algorithms));
-
-  trace("spki_read_userkeys_command\n");
   
-  return &res->super;
+  return &make_spki_read_userkeys(algorithms)->super;
 }
 
 #if 0
