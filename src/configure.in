@@ -33,23 +33,23 @@ CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
 
 dnl Check options
 AC_ARG_WITH(debug_alloc,
-  [--with-debug-alloc    sanity check memory allocation and casts],
-  [], [with_debug_alloc=yes])
+  [--with-debug-alloc    sanity check memory allocation and casts],,
+  [with_debug_alloc=yes])
 
 if test x$with_debug_alloc = xyes ; then
   AC_DEFINE(DEBUG_ALLOC)
 fi
 
 AC_ARG_WITH(zlib,
-  [--with-zlib    use zlib compression],
-  [], [with_zlib=yes])
+  [--with-zlib    use zlib compression],,
+  [with_zlib=yes])
 
 dnl Checking this variable is delayed until we have checked if zlib is
 dnl actually available.
 
 AC_ARG_WITH(idea,
-  [--with-idea    support the patent-encumbered IDEA algorithm],
-  [], [with_idea=no])
+  [--with-idea    support the patent-encumbered IDEA algorithm],,
+  [with_idea=no])
 
 if test x$with_idea = xyes ; then
   AC_DEFINE(WITH_IDEA)
@@ -66,12 +66,12 @@ if test x$am_cv_prog_cc_stdc = xno ; then
 fi
 
 dnl Checks for libraries.
-AC_CHECK_LIB(gmp, mpz_set_d, [],
+AC_CHECK_LIB(gmp, mpz_set_d,,
 dnl Some debian systems have both gmp1 and gmp2.
-    [AC_CHECK_LIB(gmp2, mpz_set_d, [],
+    [AC_CHECK_LIB(gmp2, mpz_set_d,,
 	AC_ERROR([GMP is missing (ftp://ftp.gnu.org/pub/gnu/gmp-2.0.2.tar.gz)]))])
 
-AC_CHECK_LIB(z, inflate, [], [with_zlib=no])
+AC_CHECK_LIB(z, inflate,, [with_zlib=no])
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
 AC_CHECK_LIB(nsl, gethostbyname)
@@ -88,7 +88,7 @@ AC_CHECK_HEADERS(gmp.h gmp2.h, [break],
   
 AC_CHECK_HEADERS(fcntl.h strings.h sys/time.h unistd.h)
 AC_CHECK_HEADERS(shadow.h)
-AC_CHECK_HEADERS(zlib.h, [], [with_zlib=no])
+AC_CHECK_HEADERS(zlib.h,, [with_zlib=no])
 
 dnl Should we use zlib?
 
@@ -115,6 +115,12 @@ AC_CHECK_FUNCS(select socket strerror strtol)
 AC_CHECK_FUNCS(getspnam)
 
 AC_CHECK_FUNCS(poll,,[LIBOBJS = jpoll.c $LIBOBJS])
+
+dnl This macro is mentioned in the automake manual, but where is it
+dnl supposed to be defined?
+dnl AC_REPLACE_GNU_GETOPT
+
+AC_CHECK_FUNCS(getopt_long,,[LIBOBJS = getopt.c getopt1.c $LIBOBJS])
 
 dnl Check for broken shutdown
 AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
@@ -194,6 +200,28 @@ int main(int argc, char **argv)
 
 if test x$lsh_cv_func_shutdown_works_on_unix_sockets = xyes ; then
     AC_DEFINE(SHUTDOWN_WORKS_WITH_UNIX_SOCKETS)
+fi
+
+dnl Check for gcc's __attribute__ construction
+AC_CACHE_CHECK(for __attribute__,
+	       lsh_cv_c_attribute,
+[ AC_TRY_COMPILE([
+#include <stdlib.h>
+],
+[
+static void foo(void) __attribute__ ((noreturn));
+
+static void __attribute__ ((noreturn))
+foo(void)
+{
+  exit(1);
+}
+],
+lsh_cv_c_attribute=yes,
+lsh_cv_c_attribute=no)])
+
+if test "$lsh_cv_c_attribute" = "yes"; then
+  AC_DEFINE(HAVE_ATTRIBUTE)
 fi
 
 # Set these flags *last*, or else the test programs won't compile
