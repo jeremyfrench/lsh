@@ -295,7 +295,9 @@ static int do_recieve(struct ssh_channel *c,
 		      int type, struct lsh_string *data)
 {
   CAST(server_session, closure, c);
-  
+
+  /* FIXME: Examine the size of the write buffer, to decide if the
+   * recieve window should be adjusted. */
   switch(type)
     {
     case CHANNEL_DATA:
@@ -325,6 +327,15 @@ static int do_send(struct ssh_channel *c)
   return LSH_OK | LSH_GOON;
 }
 
+static int do_eof(struct ssh_channel *c)
+{
+  CAST(server_session, closure, c);
+
+  write_buffer_close(closure->in->buffer);
+
+  return LSH_OK | LSH_GOON;
+}
+
 struct ssh_channel *make_server_session(struct unix_user *user,
 					UINT32 max_window,
 					struct alist *request_types)
@@ -334,7 +345,9 @@ struct ssh_channel *make_server_session(struct unix_user *user,
   init_channel(&self->super);
 
   self->super.max_window = max_window;
-  self->super.rec_window_size = max_window;
+  /* We don't want to recieve any data before we have forked some
+   * process to recieve it. */
+  self->super.rec_window_size = 0;
 
   /* FIXME: Make maximum packet size configurable. */
   self->super.rec_max_packet = SSH_MAX_PACKET;
@@ -761,13 +774,15 @@ static int do_spawn_shell(struct channel_request *c,
 
 		  channel->recieve = do_recieve;
 		  channel->send = do_send;
+		  channel->eof = do_eof;
 		  
 		  session->running = 1;
-		  return want_reply
-		    ? A_WRITE(channel->write,
-			      format_channel_success(channel->channel_number))
-		    : LSH_OK | LSH_GOON;
-		  
+
+		  return (want_reply
+			  ? A_WRITE(channel->write,
+				    format_channel_success(channel
+							   ->channel_number))
+			  : 0) | LSH_CHANNEL_READY_REC;
 		}
 	      close(err[0]);
 	      close(err[1]);
