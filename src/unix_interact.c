@@ -167,16 +167,16 @@ unix_read_password(struct interact *s UNUSED,
   prompt = make_cstring(prompt, free);
 
   if (!prompt)
-    return 0;
+    return NULL;
 
   /* NOTE: This function uses a static buffer. */
   password = getpass(prompt->data);
 
   lsh_string_free(prompt);
-  
-  if (!password)
-    return 0;
 
+  if (!password)
+    return NULL;
+  
   return format_cstring(password);
 }
 
@@ -376,7 +376,7 @@ make_unix_interact(struct io_backend *backend)
   self->tty_fd = open("/dev/tty", O_RDWR);
 #endif
 
-  if (self->tty_fd >= 0)
+  if (backend && (self->tty_fd >= 0))
     {
       /* Track window changes. */
       struct sigaction winch;
