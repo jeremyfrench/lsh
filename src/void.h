@@ -23,6 +23,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#warning void.h is obsolete
+
 #ifndef LSH_VOID_H_INCLUDED
 #define LSH_VOID_H_INCLUDED
 

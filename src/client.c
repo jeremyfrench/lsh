@@ -38,7 +38,6 @@
 #include "read_packet.h"
 #include "unpad.h"
 #include "version.h"
-#include "void.h"
 #include "werror.h"
 #include "xalloc.h"
 
