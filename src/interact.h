@@ -73,6 +73,7 @@ struct terminal_dimensions
      (vars
        (is_tty method int)
        ; (read_line method int "UINT32 size" "UINT8 *buffer")
+       ;; FIXME: Do we really need the FREE parameter?
        (read_password method (string)
                   "UINT32 max_length"
                   "struct lsh_string *prompt"
