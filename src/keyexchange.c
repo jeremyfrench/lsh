@@ -25,7 +25,9 @@
 
 #include "abstract_io.h"
 #include "alist.h"
+#include "command.h"
 #include "connection.h"
+#include "debug.h"
 #include "disconnect.h"
 #include "format.h"
 #include "parse.h"
@@ -734,20 +736,69 @@ make_install_new_keys(int is_server,
 /* Returns a hash instance for generating various session keys. NOTE:
  * This mechanism changed in the transport-05 draft. Before this, the
  * exchange hash was not included at this point. */
-struct hash_instance *
+static struct hash_instance *
 kex_build_secret(struct hash_algorithm *H,
 		 struct lsh_string *exchange_hash,
-		 mpz_t K)
+		 struct lsh_string *secret)
 {
   struct hash_instance *hash = MAKE_HASH(H);
-  struct lsh_string *s = ssh_format("%n", K);
 
-  HASH_UPDATE(hash, s->length, s->data);
-  lsh_string_free(s);
+  HASH_UPDATE(hash, secret->length, secret->data);
   
   HASH_UPDATE(hash, exchange_hash->length, exchange_hash->data);
 
   return hash;
 }
 
+void
+keyexchange_finish(struct ssh_connection *connection,
+		   struct install_keys *install,
+		   struct hash_algorithm *H,
+		   struct lsh_string *exchange_hash,
+		   struct lsh_string *K)
+{
+  struct hash_instance *hash;
+  
+  /* Send a newkeys message, and install a handler for receiving the
+   * newkeys message. */
 
+  C_WRITE(connection, ssh_format("%c", SSH_MSG_NEWKEYS));
+
+  /* A hash instance initialized with the key, to be used for key
+   * generation */
+  hash = kex_build_secret(H, exchange_hash, K);
+  lsh_string_free(K);
+  
+  /* Record session id */
+  if (!connection->session_id)
+    connection->session_id = exchange_hash;
+  else
+    lsh_string_free(exchange_hash);
+  
+  if (!INSTALL_KEYS(install, connection, hash))
+    {
+      werror("Installing new keys failed. Hanging up.\n");
+      KILL(hash);
+
+      PROTOCOL_ERROR(connection->e, "Refusing to use weak key.");
+
+      return;
+    }
+
+  KILL(hash);
+
+  connection->kex_state = KEX_STATE_NEWKEYS;
+
+#if DATAFELLOWS_WORKAROUNDS
+  if (! (connection->peer_flags & PEER_SEND_NO_DEBUG))
+#endif
+    send_verbose(connection->write, "Key exchange successful!", 0);
+
+  if (connection->established)
+    {
+      struct command_continuation *c = connection->established;
+      connection->established = NULL;
+  
+      COMMAND_RETURN(c, connection);
+    }
+}
