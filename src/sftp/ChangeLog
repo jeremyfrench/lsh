@@ -1,3 +1,18 @@
+2002-05-15  Pontus Sköld  <pont@soua.net>
+
+	* commands.c (com_longhelp): New function (almost identical to the
+	old help function, just ignore the visible bit). Cosmetic fix at
+	the same time (an empty line inserted before the help for a
+	command).
+	(com_help): Rewrote to just display all available commands in
+	short form (if called without arguments). If arguments are given,
+	leave it to longhelp.
+
+	* commands.h: New function com_longhelp.
+
+	* commands.c: Added longhelp entry to available commands, changed
+	text for help.
+
 2002-05-06  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac (CFLAGS): Don't enable -Waggregate-return.
