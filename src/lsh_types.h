@@ -48,16 +48,6 @@
 
 #include <stdlib.h>
 
-#ifdef __GNUC__
-#define NORETURN __attribute__ ((noreturn))
-#define PRINTF_STYLE(f, a) __attribute__ ((format(printf, f, a)))
-#define UNUSED __attribute__ ((unused))
-#else
-#define NORETURN
-#define PRINTF_STYLE(f, a)
-#define UNUSED
-#endif
-
 /* Some macros */
 
 /* Reads a 32-bit integer, in network byte order */
