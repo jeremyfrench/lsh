@@ -1,3 +1,12 @@
+2003-03-24  Pontus Sköld  <pont@soua.net>
+
+	* contrib/solpkg.sh.in: Added my script to create Solaris
+	packages.
+
+	* contrib/Makefile.am: Include script in EXTRA_DIST
+
+	* configure.ac: Added hooks for Solaris package script. 
+
 2003-03-14  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (handle_nonblock_error): New function, ignoring ENODEV
