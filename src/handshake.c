@@ -332,13 +332,16 @@ DEFINE_COMMAND4(handshake_command)
 {
   CAST(handshake_info, info, a1);
   CAST_SUBTYPE(make_kexinit, init, a2);
+  /* NOTE: For lsh, the lv from connect is mostly bogus, lv->peer is
+   * NULL */
   CAST(listen_value, lv, a4);
   
   struct lsh_string *version;
   struct ssh_connection *connection;
   int mode = info->flags & CONNECTION_MODE;
-  
-  verbose("Initiating handshake with %S\n", lv->peer->ip);
+
+  if (lv->peer)
+    verbose("Initiating handshake with %S\n", lv->peer->ip);
   
   switch (mode)
     {
