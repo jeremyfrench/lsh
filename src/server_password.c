@@ -102,20 +102,7 @@ do_authenticate(struct userauth *s,
 	      return;
 	    }
 
-	  if (USER_VERIFY_PASSWORD(user, password, 1))
-	    {
-	      COMMAND_RETURN(c, user);
-	      return;
-	    }
-	  else
-	    {
-	      static const struct exception bad_passwd
-		= STATIC_EXCEPTION(EXC_USERAUTH, "Wrong password");
-
-	      KILL(user);
-	      EXCEPTION_RAISE(e, &bad_passwd);
-	      return;
-	    }
+	  USER_VERIFY_PASSWORD(user, password, c, e);
 	}
     }
   
