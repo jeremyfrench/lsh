@@ -1441,7 +1441,7 @@ int com_chown(const char *arg, const char *command)
     {
       if( !gotuid ) 
 	{
-	  if( isdigit( tmp[0] ) ) /* Numeric GID? FIXME: Better check? */
+	  if( isdigit( (unsigned char) tmp[0] ) ) /* Numeric GID? FIXME: Better check? */
 	    newuid = atol( tmp );
 	  else
 	    {
@@ -1523,7 +1523,7 @@ int com_chgrp(const char *arg, const char *command)
     {
       if( !gotgid )  /* First time? */
 	{
-	  if( isdigit( tmp[0] ) ) /* Numeric GID? FIXME: Better check? */
+	  if( isdigit( (unsigned char) tmp[0] ) ) /* Numeric GID? FIXME: Better check? */
 	    newgid = atol( tmp );
 	  else
 	    {
