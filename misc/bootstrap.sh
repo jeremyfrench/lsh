@@ -19,7 +19,7 @@ autoconf
 (cd src/nettle && ./.bootstrap)
 (cd src/sftp && ./.bootstrap)
 
-automake -a Makefile src/Makefile
+automake -a
 
 (cd src/argp && automake -a)
 (cd src/nettle && automake -a)
