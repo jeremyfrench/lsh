@@ -296,13 +296,6 @@ make_exit_shell(struct server_session *session)
   return &self->super;
 }
 
-/* FIXME: Delete class */
-/* GABA:
-   (class
-     (name shell_request)
-     (super channel_request)
-     (vars ))
-*/
 
 static int
 make_pipes(int *in, int *out, int *err)
@@ -598,15 +591,14 @@ spawn_process(struct server_session *session,
   return -1;
 }
 
-static void
-do_spawn_shell(struct channel_request *s,
-	       struct ssh_channel *channel,
-	       struct channel_request_info *info UNUSED,
-	       struct simple_buffer *args,
-	       struct command_continuation *c,
-	       struct exception_handler *e)
+DEFINE_CHANNEL_REQUEST(shell_request_handler)
+     (struct channel_request *s UNUSED,
+      struct ssh_channel *channel,
+      struct channel_request_info *info UNUSED,
+      struct simple_buffer *args,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  CAST(shell_request, closure, s);
   CAST(server_session, session, channel);
 
   static struct exception shell_request_failed =
@@ -681,26 +673,14 @@ do_spawn_shell(struct channel_request *s,
   EXCEPTION_RAISE(e, &shell_request_failed);
 }
 
-struct channel_request *
-make_shell_handler(void)
+DEFINE_CHANNEL_REQUEST(exec_request_handler)
+     (struct channel_request *s UNUSED,
+      struct ssh_channel *channel,
+      struct channel_request_info *info UNUSED,
+      struct simple_buffer *args,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  NEW(shell_request, closure);
-
-  closure->super.handler = do_spawn_shell;
-  
-  return &closure->super;
-}
-
-
-static void
-do_spawn_exec(struct channel_request *s,
-	      struct ssh_channel *channel,
-	      struct channel_request_info *info UNUSED,
-	      struct simple_buffer *args,
-	      struct command_continuation *c,
-	      struct exception_handler *e)
-{
-  CAST(shell_request, closure, s);
   CAST(server_session, session, channel);
 
   static struct exception exec_request_failed =
@@ -787,23 +767,13 @@ do_spawn_exec(struct channel_request *s,
     }
 }
 
-struct channel_request *
-make_exec_handler(void)
-{
-  NEW(shell_request, closure);
-
-  closure->super.handler = do_spawn_exec;
-  
-  return &closure->super;
-}
-
 /* For simplicity, represent a subsystem simply as a name of the
  * executable. */
 
 /* GABA:
    (class
      (name subsystem_request)
-     (super shell_request)
+     (super channel_request)
      (vars
        ;(subsystems object alist)
        ; A list { name, program, name, program, NULL }
@@ -908,10 +878,10 @@ make_subsystem_handler(const char **subsystems)
 {
   NEW(subsystem_request, self);
 
-  self->super.super.handler = do_spawn_subsystem;
+  self->super.handler = do_spawn_subsystem;
   self->subsystems = subsystems;
   
-  return &self->super.super;
+  return &self->super;
 }
 
 

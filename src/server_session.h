@@ -39,12 +39,11 @@ make_server_session(UINT32 initial_window,
 struct channel_open *
 make_open_session(struct alist *session_requests);
 
-/* FIXME: Use static object? */
-struct channel_request *
-make_shell_handler(void);
+extern struct channel_request
+shell_request_handler;
 
-struct channel_request *
-make_exec_handler(void);
+extern struct channel_request 
+exec_request_handler;
 
 struct channel_request *
 make_subsystem_handler(const char **subsystems);
