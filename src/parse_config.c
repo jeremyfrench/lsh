@@ -34,7 +34,7 @@
 #include <string.h>
 
 #ifndef DEBUG_PARSE_CONFIG
-#define DEBUG_PARSE_CONFIG 1
+#define DEBUG_PARSE_CONFIG 0
 #endif
 
 #if DEBUG_PARSE_CONFIG
@@ -173,8 +173,7 @@ parse_error(struct tokenizer *self, const char *msg)
 	 msg, self->lineno);
 }
 
-#define PARSE_ERROR(msg) \
-do { parse_error(self, (msg)); return NULL; } while(0)
+#define PARSE_ERROR(msg) parse_error(self, (msg))
 
 /* Can only be called if self->type == TOK_STRING */
 static int
@@ -197,57 +196,53 @@ parse_word(struct tokenizer *self)
 {
   struct lsh_string *s;
   if (self->type != TOK_STRING)
-    PARSE_ERROR("expected word");
+    { PARSE_ERROR("expected word"); return NULL; }
 
   s = ssh_format("%ls", self->token_length, self->token);
   next_token(self);
   return s;
 }
 
-static struct config_setting *
-parse_setting(struct tokenizer *self, struct config_setting *settings)
+static int
+parse_setting(struct tokenizer *self, struct config_setting **settings)
 {
   struct lsh_string *s;
   enum config_type type;
 
-  for (;;)
+  if (self->type != TOK_STRING)
+    { PARSE_ERROR("syntax error"); return 0; }
+  
+  if (looking_at(self, "address"))
+    type = CONFIG_ADDRESS;
+  else if (looking_at(self, "user"))
+    type = CONFIG_USER;
+  else
     {
-      if (self->type != TOK_STRING)
-	PARSE_ERROR("syntax error");
-  
-      if (looking_at(self, "address"))
-	type = CONFIG_ADDRESS;
-      else if (looking_at(self, "user"))
-	type = CONFIG_USER;
-      else
-	{
-	  /* FIXME: Fails if this is the last keyword/value pair */
-	  werror("Unknown keyword `%s'\n", self->token_length, self->token);
-	  next_token(self);
+      werror("Unknown keyword `%s'\n", self->token_length, self->token);
+      next_token(self);
       
-	  if (self->type == TOK_STRING)
-	    next_token(self);
+      if (self->type == TOK_STRING)
+	next_token(self);
 
-	  continue;
-	}
-  
-      s = parse_word(self);
-      if (!s)
-	return NULL;
-  
-      {
-	/* Push new object on the list */
-	NEW(config_setting, n);
-	n->next = settings;
-	settings = n;
-      }
-  
-      settings->type = type;
-      settings->value = s;
-
-      return settings;
+      return 1;
     }
+  
+  s = parse_word(self);
+  if (!s)
+    return 0;
+  
+  {
+    /* Push new object on the list */
+    NEW(config_setting, n);
+    n->next = *settings;
+    *settings = n;
+  
+    n->type = type;
+    n->value = s;
+  }
+  return 1;
 }
+
 
 static struct config_setting *
 parse_host_settings(struct tokenizer *self)
@@ -256,8 +251,7 @@ parse_host_settings(struct tokenizer *self)
 
   while (self->type == TOK_STRING)
     {
-      settings = parse_setting(self, settings);
-      if (!settings)
+      if (!parse_setting(self, &settings))
 	return NULL;
     }
   return settings;
@@ -272,31 +266,32 @@ parse_token(struct tokenizer *self, enum token_type type)
       return 1;
     }
   else
-    { parse_error(self, "syntax error"); return 0; }
+    { PARSE_ERROR("syntax error"); return 0; }
 }
 
-static struct config_host *
-parse_hosts(struct tokenizer *self, struct config_host *hosts)
+static int
+parse_hosts(struct tokenizer *self, struct config_host **hosts)
 {
   while (self->type == TOK_STRING)
     {
       {
 	/* Push new object on the list */
 	NEW(config_host, n);
-	n->next = hosts;
-	hosts = n;
+	n->next = *hosts;
+	*hosts = n;
+	
+	n->name = parse_word(self);
+	assert(n->name);
+	if (self->type == TOK_BEGIN_GROUP)
+	  {
+	    next_token(self);
+	    n->settings = parse_host_settings(self);
+	    if (!parse_token(self, TOK_END_GROUP))
+	      return 0;
+	  }
       }
-      hosts->name = parse_word(self);
-      assert(hosts->name);
-      if (self->type == TOK_BEGIN_GROUP)
-	{
-	  next_token(self);
-	  hosts->settings = parse_host_settings(self);
-	  if (!parse_token(self, TOK_END_GROUP))
-	    return NULL;
-	}
     }
-  return hosts;
+  return 1;
 }
 
 static struct config_group *
@@ -323,20 +318,17 @@ parse_groups(struct tokenizer *self)
 	{
 	  if (looking_at(self, "hosts"))
 	    {
-	      werror("HOSTS\n");
 	      if (!parse_token(self, TOK_BEGIN_GROUP))
 		return NULL;
 
-	      groups->hosts = parse_hosts(self, groups->hosts);
-	      if (!groups->hosts)
+	      if (!parse_hosts(self, &groups->hosts))
 		return NULL;
 	      if (!parse_token(self, TOK_END_GROUP))
 		return NULL;
 	    }
 	  else
 	    {
-	      groups->settings = parse_setting(self, groups->settings);
-	      if (!groups->settings)
+	      if (!parse_setting(self, &groups->settings))
 		return NULL;
 	    }
 	}
