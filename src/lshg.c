@@ -219,8 +219,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_NO_ARGS:
       argp_usage(state);
       break;
-#endif
-#if 0
+
     case ARGP_KEY_ARG:
       if (!state->arg_num)
 	{
@@ -249,12 +248,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 					   self->super.user,
 					   self->super.remote);
 
+#if 0
       if (object_queue_is_empty(&self->super.actions))
 	{
 	  argp_error(state, "No actions given.");
 	    break;
 	}
-      
+#endif 
       break;
 #if 0
     case 'E':
