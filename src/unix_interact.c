@@ -134,16 +134,40 @@ read_line(int fd, UINT32 size, UINT8 *buffer)
      (name window_subscriber)
      (super resource)
      (vars
+       (interact object unix_interact)
        (next object window_subscriber)
        (callback object window_change_callback)))
 */
+
+static void
+do_kill_window_subscriber(struct resource *s)
+{
+  CAST(window_subscriber, self, s);
+
+  if (self->super.alive)
+    {
+      self->super.alive = 0;
+      assert(self->interact->nsubscribers);
+      assert(self->interact->winch_handler);
+      
+      if (!--self->interact->nsubscribers)
+        {
+          KILL_RESOURCE(self->interact->winch_handler);
+          self->interact->winch_handler = NULL;
+        }
+    }
+}
 
 /* GABA:
    (class
      (name unix_interact)
      (super interact)
      (vars
+       (backend object io_backend)
        (tty_fd . int)
+       ; Signal handler
+       (winch_handler object resource)
+       (nsubscribers . unsigned)
        (subscribers object window_subscriber)))
 */
 
@@ -298,22 +322,6 @@ unix_window_size(struct interact *s,
     && tty_getwinsize(self->tty_fd, d);
 }
 
-static struct resource *
-unix_window_change_subscribe(struct interact *s,
-			     struct window_change_callback *callback)
-{
-  CAST(unix_interact, self, s);
-
-  NEW(window_subscriber, subscriber);
-  init_resource(&subscriber->super, NULL);
-
-  subscriber->next = self->subscribers;
-  subscriber->callback = callback;
-
-  self->subscribers = subscriber;
-
-  return &subscriber->super;
-}
 
 /* GABA:
    (class
@@ -328,13 +336,16 @@ do_winch_handler(struct lsh_callback *s)
 {
   CAST(winch_handler, self, s);
   struct unix_interact *i = self->interact;
+
+  assert(!!i->nsubscribers == !!i->winch_handler);
   
   if (i->subscribers)
     {
       struct window_subscriber *s;
       struct window_subscriber **s_p;
+      unsigned alive;
 
-      for (s_p = &i->subscribers; (s = *s_p) ;)
+      for (alive = 0, s_p = &i->subscribers; (s = *s_p) ;)
 	{
 	  if (!s->super.alive)
 	    *s_p = s->next;
@@ -342,8 +353,11 @@ do_winch_handler(struct lsh_callback *s)
 	    {
 	      WINDOW_CHANGE_CALLBACK(s->callback, &i->super);
 	      s_p = &s->next;
+              alive++;
 	    }
 	}
+
+      assert(alive == i->nsubscribers);
     }
 }
 
@@ -355,6 +369,36 @@ make_winch_handler(struct unix_interact *i)
   self->interact = i;
 
   return &self->super;
+}
+
+static struct resource *
+unix_window_change_subscribe(struct interact *s,
+			     struct window_change_callback *callback)
+{
+  CAST(unix_interact, self, s);
+
+  NEW(window_subscriber, subscriber);
+
+  assert(self->backend);
+  
+  init_resource(&subscriber->super, do_kill_window_subscriber);
+
+  subscriber->interact = self;
+  subscriber->next = self->subscribers;
+  subscriber->callback = callback;
+
+  self->subscribers = subscriber;
+  self->nsubscribers++;
+  
+  if (!self->winch_handler)
+    {
+      /* This is the first subscriber */
+      self->winch_handler
+        = io_signal_handler(self->backend, SIGWINCH,
+                            make_winch_handler(self));
+    }
+  
+  return &subscriber->super;
 }
 
 struct interact *
@@ -399,10 +443,10 @@ make_unix_interact(struct io_backend *backend)
 	       errno, STRERROR(errno));
 #endif
       
-      io_signal_handler(backend, SIGWINCH,
-			make_winch_handler(self));
-
       suspend_handle_tty(self->tty_fd);
     }
+
+  self->backend = backend;
+  
   return &self->super;
 }
