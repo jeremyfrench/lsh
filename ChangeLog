@@ -70,6 +70,27 @@
 	write_raw, without using any commands or io_run.
 	* src/lsh-decode-key.c: Likewise.
 
+2001-10-03  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh-export-key.c: No longer needs to include
+	sexp_commands.h. 
+
+	* src/server_keyexchange.c (server_srp_read_verifier): Renamed
+	class (was srp_init_continuation) and changed super class to
+	abstract_write.  
+	(do_server_srp_read_verifier): Work with new USER_READ_FILE
+	conventions. 
+	(do_handle_srp_init): Likewise.
+
+	* src/lsh.h: Forward declare abstract_write.
+
+	* src/unix_user.c (exc_read_user_file_handler): New class.
+	(do_read_file): Updated for new USER_READ_FILE conventions. 
+
+	* src/userauth.h (lsh_user): Changed the arguments to
+	USER_READ_FILE, now takes an abstract_write that will receive the
+	file contents, not command_continuation.
+
 2001-10-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/spki.c (spki_hash_sexp): New function.
