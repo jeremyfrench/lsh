@@ -659,6 +659,7 @@ if test x$enable_ipv6 = xyes ; then
 fi
 
 AC_CONFIG_SUBDIRS(src/argp)
+AC_CONFIG_SUBDIRS(src/nettle)
 
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then
