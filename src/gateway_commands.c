@@ -199,18 +199,3 @@ make_gateway_setup(struct local_info *local)
 
   return res;
 }
-
-#if 0
-DEFINE_COMMAND(gateway_setup_command)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(local, local_info, a);
-  CAST_SUBTYPE(command, res,
-	       gateway_setup(local));
-
-  COMMAND_RETURN(c, res);
-}
-#endif
