@@ -72,7 +72,9 @@ static int do_disconnect(struct packet_handler *closure,
 
 struct packet_handler *make_disconnect_handler(void)
 {
-  struct packet_handler *res =  xalloc(sizeof(struct packet_handler));
+  struct packet_handler *res;
+
+  NEW(res);
 
   res->handler = do_disconnect;
   return res;

@@ -72,7 +72,9 @@ static void do_crypt_rc4(struct crypto_instance *s,
 static struct crypto_instance *
 make_rc4_instance(struct crypto_algorithm *ignored, int mode, UINT8 *key)
 {
-  struct rc4_instance *self = xalloc(sizeof(struct rc4_instance));
+  struct rc4_instance *self;
+
+  NEW(self);
 
   self->super.block_size = 8;
   self->super.crypt = do_crypt_rc4;
@@ -118,9 +120,11 @@ static void do_sha_digest(struct hash_instance *s,
 static struct hash_instance *do_sha_copy(struct hash_instance *s)
 {
   struct sha_instance *self = (struct sha_instance *) s;
-  struct sha_instance *new = xalloc(sizeof(struct sha_instance));
+  struct sha_instance *new;
 
   MDEBUG(self);
+
+  NEW(new);
 
   memcpy(new, self, sizeof(*self));
   return &new->super;
@@ -128,7 +132,9 @@ static struct hash_instance *do_sha_copy(struct hash_instance *s)
 
 static struct hash_instance *make_sha_instance(struct hash_algorithm *ignored)
 {
-  struct sha_instance *res = xalloc(sizeof(struct sha_instance));
+  struct sha_instance *res;
+
+  NEW(res);
 
   res->super.hash_size = 20;
   res->super.update = do_sha_update;
@@ -194,9 +200,11 @@ static void do_hmac_digest(struct mac_instance *s,
 static struct mac_instance *do_hmac_copy(struct mac_instance *s)
 {
   struct hmac_instance *self = (struct hmac_instance *) s;
-  struct hmac_instance *new = xalloc(sizeof(struct hmac_instance));
+  struct hmac_instance *new;
 
   MDEBUG(self);
+
+  NEW(new);
   
   memcpy(&new->super, &self->super, sizeof(self->super));
 
@@ -215,11 +223,13 @@ static struct mac_instance *make_hmac_instance(struct mac_algorithm *s,
 					       UINT8 *key)
 {
   struct hmac_algorithm *self = (struct hmac_algorithm *) s;
-  struct hmac_instance *instance = xalloc(sizeof(struct hmac_instance));
+  struct hmac_instance *instance;
   UINT8 *pad = alloca(self->hash->block_size);
   int i;
 
   MDEBUG(self);
+
+  NEW(instance);
   
   instance->super.hash_size = self->super.hash_size;
   instance->super.update = do_hmac_update;
@@ -249,7 +259,9 @@ static struct mac_instance *make_hmac_instance(struct mac_algorithm *s,
   
 struct mac_algorithm *make_hmac_algorithm(struct hash_algorithm *h)
 {
-  struct hmac_algorithm *self = xalloc(sizeof(struct hmac_algorithm));
+  struct hmac_algorithm *self;
+
+  NEW(self);
 
   self->super.hash_size = h->hash_size;
   /* Recommended in RFC-2104 */

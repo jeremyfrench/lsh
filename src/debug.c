@@ -56,7 +56,9 @@ static int do_debug(struct abstract_write **w,
 struct abstract_write *
 make_packet_debug(struct abstract_write *continuation, char *prefix)
 {
-  struct packet_debug *closure = xalloc(sizeof(struct packet_debug));
+  struct packet_debug *closure;
+
+  NEW(closure);
 
   closure->super.super.write = do_debug;
   closure->super.next = continuation;
@@ -133,7 +135,9 @@ static int do_rec_debug(struct packet_handler *self,
 
 struct packet_handler *make_rec_debug_handler(void)
 {
-  struct packet_handler *self = xalloc(sizeof(struct packet_handler));
+  struct packet_handler *self;
+
+  NEW(self);
 
   self->handler = do_rec_debug;
 

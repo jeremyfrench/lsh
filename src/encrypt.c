@@ -75,7 +75,9 @@ struct abstract_write *
 make_packet_encrypt(struct abstract_write *continuation,
 		    struct ssh_connection *connection)
 {
-  struct packet_encrypt *closure = xalloc(sizeof(struct packet_encrypt));
+  struct packet_encrypt *closure;
+
+  NEW(closure);
 
   closure->super.super.write = do_encrypt;
   closure->super.next = continuation;

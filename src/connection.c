@@ -90,7 +90,9 @@ static int do_fail(struct packet_handler *closure,
 
 struct packet_handler *make_fail_handler(void)
 {
-  struct packet_handler *res =  xalloc(sizeof(struct packet_handler));
+  struct packet_handler *res;
+
+  NEW(res);
 
   res->handler = do_fail;
   return res;
@@ -117,7 +119,9 @@ static int do_unimplemented(struct packet_handler *closure,
 
 struct packet_handler *make_unimplemented_handler(void)
 {
-  struct packet_handler *res =  xalloc(sizeof(struct packet_handler));
+  struct packet_handler *res;
+
+  NEW(res);
 
   res->handler = do_unimplemented;
   return res;
@@ -126,9 +130,10 @@ struct packet_handler *make_unimplemented_handler(void)
 
 struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
 {
-  struct ssh_connection *connection = xalloc(sizeof(struct ssh_connection));
+  struct ssh_connection *connection;
   int i;
 
+  NEW(connection);
   connection->super.write = handle_connection;
 
   /* Initialize instance variables */
