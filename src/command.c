@@ -358,17 +358,6 @@ do_command_4(struct command *s,
 }
 
 
-void
-do_call_simple_command(struct command *s,
-		       struct lsh_object *arg,
-		       struct command_continuation *c,
-		       struct exception_handler *e UNUSED)
-{
-  CAST_SUBTYPE(command_simple, self, s);
-  COMMAND_RETURN(c, COMMAND_SIMPLE_CALL(self, arg));
-}
-
-
 /* Tracing */
 
 #if DEBUG_TRACE
@@ -625,42 +614,45 @@ make_catch_apply(struct catch_handler_info *info,
 /* GABA:
    (class
      (name catch_collect_body)
-     (super command_simple)
+     (super command)
      (vars
        (info object catch_handler_info)))
 */
 
-static struct lsh_object *
-do_catch_collect_body(struct command_simple *s,
-		      struct lsh_object *a)
+static void
+do_catch_collect_body(struct command *s,
+		      struct lsh_object *a,
+		      struct command_continuation *c,
+		      struct exception_handler *e UNUSED)
 {
   CAST(catch_collect_body, self, s);
   CAST_SUBTYPE(command, body, a);
 
-  return &make_catch_apply(self->info, body)->super;
+  COMMAND_RETURN(c, make_catch_apply(self->info, body));
 }
 
 static struct command *
 make_catch_collect_body(struct catch_handler_info *info)
 {
   NEW(catch_collect_body, self);
-  self->super.super.call = do_call_simple_command;
-  self->super.call_simple = do_catch_collect_body;
+  self->super.call = do_catch_collect_body;
   self->info = info;
 
-  return &self->super.super;
+  return &self->super;
 }
 
-struct lsh_object *
-do_catch_simple(struct command_simple *s,
-		struct lsh_object *a)
+void
+do_catch_simple(struct command *s,
+		struct lsh_object *a,
+		struct command_continuation *c,
+		struct exception_handler *e UNUSED)
 {
   CAST(catch_command, self, s);
   CAST_SUBTYPE(command, f, a);
-
-  return &(make_catch_collect_body(make_catch_handler_info(self->mask,
-							   self->value, self->ignore_value, f))
-	   ->super);
+  COMMAND_RETURN(c,
+		 make_catch_collect_body
+		 (make_catch_handler_info(self->mask,
+					  self->value, self->ignore_value, f)));
 }
 
 
@@ -702,12 +694,15 @@ make_catch_report_apply(struct report_exception_info *info,
   return &self->super;
 }
 
-struct lsh_object *
-do_catch_report_collect(struct command_simple *s,
-			struct lsh_object *a)
+void
+do_catch_report_collect(struct command *s,
+			struct lsh_object *a,
+			struct command_continuation *c,
+			struct exception_handler *e UNUSED)
 {
   CAST(catch_report_collect, self, s);
   CAST_SUBTYPE(command, body, a);
 
-  return &make_catch_report_apply(self->info, body)->super;
+  COMMAND_RETURN(c,
+		 make_catch_report_apply(self->info, body));
 }
