@@ -62,6 +62,7 @@
 #include "gateway_commands.h"
 #include "handshake.h"
 #include "lookup_verifier.h"
+#include "lsh_string.h"
 #include "publickey_crypto.h"
 #include "randomness.h"
 #include "sexp.h"
@@ -229,7 +230,7 @@ read_known_hosts(struct lsh_options *options)
 
   /* We could use transport syntax instead. That would have the
    * advantage that we can read and process one entry at a time. */
-  if (!spki_iterator_first(&i, contents->length, contents->data))
+  if (!spki_iterator_first(&i, STRING_LD(contents)))
     werror("read_known_hosts: S-expression syntax error.\n");
     
   else
@@ -400,7 +401,7 @@ do_lsh_lookup(struct lookup_verifier *c,
     case ATOM_SSH_DSS:
       {	
 	struct lsh_string *spki_key;
-	struct verifier *v = make_ssh_dss_verifier(key->length, key->data);
+	struct verifier *v = make_ssh_dss_verifier(key);
 
 	if (!v)
 	  {
@@ -411,7 +412,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 	/* FIXME: It seems like a waste to pick apart the sexp again */
 	spki_key = PUBLIC_SPKI_KEY(v, 0);
 
-	subject = spki_lookup(self->db, spki_key->length, spki_key->data, v);
+	subject = spki_lookup(self->db, STRING_LD(spki_key), v);
 	assert(subject);
 	assert(subject->verifier);
 
@@ -421,7 +422,7 @@ do_lsh_lookup(struct lookup_verifier *c,
     case ATOM_SSH_RSA:
       {
 	struct lsh_string *spki_key;
-	struct verifier *v = make_ssh_rsa_verifier(key->length, key->data);
+	struct verifier *v = make_ssh_rsa_verifier(key);
 
 	if (!v)
 	  {
@@ -431,7 +432,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 
 	/* FIXME: It seems like a waste to pick apart the sexp again */
 	spki_key = PUBLIC_SPKI_KEY(v, 0);
-	subject = spki_lookup(self->db, spki_key->length, spki_key->data, v);
+	subject = spki_lookup(self->db, STRING_LD(spki_key), v);
 	assert(subject);
 	assert(subject->verifier);
 
@@ -443,7 +444,7 @@ do_lsh_lookup(struct lookup_verifier *c,
     case ATOM_SPKI_SIGN_RSA:
     case ATOM_SPKI_SIGN_DSS:
       {
-	subject = spki_lookup(self->db, key->length, key->data, NULL);
+	subject = spki_lookup(self->db, STRING_LD(key), NULL);
 	if (!subject)
 	  {
 	    werror("do_lsh_lookup: Invalid spki key.\n");
@@ -522,12 +523,12 @@ do_lsh_lookup(struct lookup_verifier *c,
 	    return NULL;
 	}
 
-      acl = lsh_sexp_format(0, "(acl(entry(subject%l)%l))",
-			    subject->key_length, subject->key,
-			    self->access->length, self->access->data);
+      acl = lsh_string_format_sexp(0, "(acl(entry(subject%l)%l))",
+				   subject->key_length, subject->key,
+				   STRING_LD(self->access));
       
       /* FIXME: Seems awkward to pick the acl apart again. */
-      if (!spki_iterator_first(&i, acl->length, acl->data))
+      if (!spki_iterator_first(&i, STRING_LD(acl)))
 	fatal("Internal error.\n");
       
       /* Remember this key. We don't want to ask again for key re-exchange */
@@ -538,7 +539,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 	{
 	  A_WRITE(self->file, ssh_format("\n; ACL for host %lz\n", self->host));
 	  A_WRITE(self->file,
-		  lsh_sexp_format(1, "%l", acl->length, acl->data));
+		  lsh_string_format_sexp(1, "%l", STRING_LD(acl)));
 	  lsh_string_free(acl);
 	  
 	  A_WRITE(self->file, ssh_format("\n"));
