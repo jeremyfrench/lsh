@@ -156,10 +156,10 @@ main_options[] =
 
   { NULL, 0, NULL, 0, "Daemonic behaviour", 0 },
   { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, redirect stdio to /dev/null, and chdir to /.", 0 },
-  { "no-deamonic", OPT_NO_DAEMONIC, NULL, 0, "Run in the foreground, with messages to stderr (default).", 0 },
+  { "no-daemonic", OPT_NO_DAEMONIC, NULL, 0, "Run in the foreground, with messages to stderr (default).", 0 },
   { "pid-file", OPT_PIDFILE, "file name", 0, "Create a pid file. When running in daemonic mode, "
     "the default is /var/run/lshd.pid.", 0 },
-  { "no-pid-file", OPT_NO_PIDFILE, NULL, 0, "Don't use any pid file. Default in non-demonic mode.", 0 },
+  { "no-pid-file", OPT_NO_PIDFILE, NULL, 0, "Don't use any pid file. Default in non-daemonic mode.", 0 },
   { "enable-core", OPT_CORE, NULL, 0, "Dump core on fatal errors (disabled by default).", 0 },
     
   { NULL, 0, NULL, 0, NULL, 0 }
@@ -488,12 +488,6 @@ int main(int argc, char **argv)
 #endif /* !HAVE_SYSLOG */
     }
 
-  if (options->use_pid_file && !daemon_pidfile(options->pid_file))
-    {
-      werror("lshd seems to be running already.\n");
-      return EXIT_FAILURE;
-    }
-
   if (options->daemonic)
     switch (daemon_init())
       {
@@ -509,6 +503,12 @@ int main(int argc, char **argv)
       default:
 	fatal("Internal error\n");
       }
+  
+  if (options->use_pid_file && !daemon_pidfile(options->pid_file))
+    {
+      werror("lshd seems to be running already.\n");
+      return EXIT_FAILURE;
+    }
       
   /* Read the hostkey */
   keys = make_alist(0, -1);
