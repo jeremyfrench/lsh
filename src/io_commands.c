@@ -125,6 +125,7 @@ do_listen_connection(struct command *s,
   if (!address_info2sockaddr_in(&sin, address))
     return COMMAND_RETURN(c, NULL);
 
+  /* FIXME: Asyncronous dns lookups should go here */
   return COMMAND_RETURN(c, io_listen
 			(self->backend, &sin,
 			 make_listen_command_callback
@@ -150,7 +151,7 @@ collect_listen(struct collect_info_2 *info,
 	       struct lsh_object *b,
 	       struct lsh_object *c)
 {
-  CAST(command, callback, c);
+  CAST_SUBTYPE(command, callback, c);
   CAST(io_backend, backend, b);
   assert(!info);
 
