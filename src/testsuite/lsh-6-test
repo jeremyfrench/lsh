@@ -12,8 +12,6 @@ OLD_FLAGS="$LSH_FLAGS"
 
 ALGORITHMS="arcfour twofish blowfish 3des aes rijndael cast128 all"
 
-test_success
-
 LSHD_FLAGS="$LSHD_FLAGS -c all"
 
 spawn_lshd && for c in $ALGORITHMS ; do 
@@ -24,3 +22,6 @@ spawn_lshd && for c in $ALGORITHMS ; do
 	echo "   Fail"; test_fail
     fi
 done
+
+test_success
+
