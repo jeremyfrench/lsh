@@ -29,10 +29,6 @@
 #include "lsh_types.h"
 #include <stdlib.h>
 
-#if 0
-void *xalloc(size_t size);
-#endif
-
 /* Allocation */
 
 /* The memory allocation model (for strings) is as follows:

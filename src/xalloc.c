@@ -116,6 +116,30 @@ void lsh_string_free(struct lsh_string *s)
   lsh_free(s);
 }
 
+struct lsh_object *lsh_object_alloc(struct lsh_class *class)
+{
+  struct lsh_object *self = xalloc(class->size);
+  self->class = class;
+  self->alloc_method = LSH_ALLOC_HEAP;
+
+  gc_register(o);
+
+  return o;
+}
+
+/* Should be called *only* by the gc */
+void lsh_object_free(struct lsh_object *o)
+{
+  if (o->alloc_method != LSH_ALLOC_HEAP)
+    fatal("lsh_object_free: Object not allocated on the heap!\n");
+
+  if (o->isa->free_instance)
+    o->isa->free_instance(o);
+  
+  lsh_free(o);
+};
+
+#if 0
 void *lsh_object_alloc(size_t size)
 {
   struct lsh_object *self = xalloc(size);
@@ -133,43 +157,38 @@ void lsh_object_free(void *p)
     fatal("lsh_object_free: Object not allocated on the heap!\n");
   lsh_free(p);
 };
+#endif
 
 #ifdef DEBUG_ALLOC
-void lsh_object_check(void *p, size_t size)
+void lsh_object_check(struct lsh_object *instance, struct lsh_class *class)
 {
-  struct lsh_object *self = (struct lsh_object *) p;
+  if (instance->marked)
+    fatal("lsh_object_check: Unexpected marked object!\n");
 
-  switch(self->alloc_method)
-    {
-    case LSH_ALLOC_HEAP:
-      if (self->size != size)
-	fatal("Type error!\n");
-      break;
-    case LSH_ALLOC_STATIC:
-    case LSH_ALLOC_STACK:
-      break;
-    default:
-      fatal("Type error!\n");
-    }
+  if (instance->dead)
+    fatal("lsh_object_check: Reference to dead object!\n");
+
+  if (instance->class != class)
+    fatal("lsh_object_check: Type error!\n");
 }
 
-void lsh_object_check_subtype(void *p, size_t size)
+void lsh_object_check_subtype(struct lsh_object *instance,
+			      struct lsh_class *class)
 {
-  struct lsh_object *self = (struct lsh_object *) p;
-  switch(self->alloc_method)
-    {
-    case LSH_ALLOC_HEAP:
-      if (self->size < size)
-	fatal("Type error!\n");
-      break;
-    case LSH_ALLOC_STATIC:
-    case LSH_ALLOC_STACK:
-      break;
-    default:
-      fatal("Type error!\n");
-    }
-}
+  struct lsh_class *type;
+  
+  if (instance->marked)
+    fatal("lsh_object_check: Unexpected marked object!\n");
 
+  if (instance->dead)
+    fatal("lsh_object_check: Reference to dead object!\n");
+
+  for (type = instance->class; type; type=type->super_class)
+    if (type == class)
+      return;
+
+  fatal("lsh_object_check_subtype: Unexpected marked object!\n");
+}
 #endif /* DEBUG_ALLOC */
 
 #ifdef DEBUG_ALLOC

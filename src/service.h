@@ -31,12 +31,23 @@
  * in a SSH_MSG_SERVICE_REQUEST or SSH_MSG_USERAUTH_REQUEST) and for
  * any other stuff that needs initialization at some later time. */
 
+#include "service.h.x"
+
+#if 0
 struct ssh_service
 {
   struct lsh_object header;
   
   int (*init)(struct ssh_service *self, struct ssh_connection *c);
 };
+#endif
+
+/* CLASS:
+   ((name ssh_service)
+    (vars
+       (method
+         int "(*init)(struct ssh_service *self, struct ssh_connection *c)")))
+*/
 
 #define SERVICE_INIT(s, c) ((s)->init((s), (c)))
 

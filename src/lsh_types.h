@@ -66,14 +66,41 @@ do {						\
 #define LSH_ALLOC_STATIC 1
 #define LSH_ALLOC_STACK 2
      
+struct lsh_class;
+
+struct lsh_object
+{
+  /* Objects are chained together, for the sweep phase of the gc. */
+  struct lsh_object *next; 
+  struct lsh_class *isa;
+  
+  char alloc_method;
+  char marked;
+};
+
+struct lsh_class
+{
+  struct lsh_object *super;
+  struct lsh_class *super_class;
+  size_t size;
+  
+  struct lsh_object *(*mark_instance)(struct lsh_object *instance,
+				      void (*mark)(struct lsh_object *o));
+  void (*free_instance)(struct lsh_object *instance);
+
+  /* Particular classes may add their own methods here */
+};
+
 #ifdef DEBUG_ALLOC
-     
+
+#if 0
 struct lsh_object
 {
   int size;  /* Zero for objects that are not allocated on the heap. */
   char alloc_method;
   char marked;
 };
+#endif
 
 struct lsh_string_header
 {

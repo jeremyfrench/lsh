@@ -61,10 +61,10 @@ int io_iter(struct io_backend *b)
      * and unlinks any fd:s that should be closed, and also counts how
      * many fd:s there are. */
     
-    struct lsh_fd **_fd;
+    struct lsh_fd **fd_p;
     struct lsh_fd *fd;
     
-    for(_fd = &b->files; (fd = *_fd); )
+    for(fd_p = &b->files; (fd = *fd_p); )
       {
 	if (!fd->close_now && fd->prepare)
 	  PREPARE_FD(fd);
@@ -91,11 +91,11 @@ int io_iter(struct io_backend *b)
 		close(fd->fd);
 	      }
 	    /* Unlink this fd */
-	    *_fd = fd->next;
+	    *fd_p = fd->next;
 	    continue;
 	  }
 	nfds++;
-	_fd = &fd->next;
+	fd_p = &fd->next;
       }
 	
   }
