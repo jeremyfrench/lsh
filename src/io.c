@@ -1545,7 +1545,7 @@ io_read_file(struct io_backend *backend,
 }
 
 static const struct exception *
-check_user_permissions(struct stat *sbuf, char *fname,
+check_user_permissions(struct stat *sbuf, const char *fname,
 		       uid_t uid, int secret)
 {
   mode_t bad = secret ? (S_IRWXG | S_IRWXO) : (S_IWGRP | S_IWOTH);
@@ -1608,7 +1608,7 @@ io_read_user_file(struct io_backend *backend,
       return NULL;
     }
 
-  if (stat(fd, &sbuf) < 0)
+  if (fstat(fd, &sbuf) < 0)
     {
       werror("io_read_user_file: Failed to stat %z (errno = %i): %z\n",
 	     fname, errno, STRERROR(errno));
