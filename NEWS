@@ -1,6 +1,10 @@
-NEWS for the 1999-01--5 snapshot:
+NEWS for the 1999-01-08 snapshot:
 
-	Command lien options to select which algorithms to use.
+	New program lsh_writekey.
+
+NEWS for the 1999-01-05 snapshot:
+
+	Command line options to select which algorithms to use.
 
 	Various bug fixes. The 3des and blowfish support seems do work
 	now. 

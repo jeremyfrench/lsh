@@ -1,11 +1,32 @@
+Fri Jan  8 09:44:12 1999    <nisse@puck>
+
+	* sexp_streamed_parser.c (base64_decode): Fixed test for leftover
+	bits. 
+
+	* configure.in (CPPFLAGS): Add -I$srcdir (needed for lsh_types.h
+ 	to be found, when compiling in subdirectories, with VPATH).
+
+	* sexp.c (sexp_contents): New function.
+	(sexp_display): New function.
+	(do_vector_get): Use CAST_SUBTYPE.
+	(sexp_eqz): New function.
+	(sexp_check_type): New function.
+
+	* read_scan.c (do_read_scan): Check if the current scanner is NULL
+ 	_after_ scanning each character.
+
+	* bignum.h: Fix tests for gmp2/gmp.h (patches from Kalle Olavi
+ 	Niemitalo <tosi@ees2.oulu.fi>).
+
 Thu Jan  7 16:25:50 1999    <nisse@puck>
 
 	* sexp_streamed_parser.c: Added base 64 decoder.
 
 	* sexp.c (encode_base64): Bug fix (don't use several ++ in an
-	expression without sequence points).
+ 	expression without sequence points).
 
-	* read_scan.h (TOKEN_NONE): New constant (used by the base64 decoder).
+	* read_scan.h (TOKEN_NONE): New constant (used by the base64
+ 	decoder).
 
 Tue Jan  5 05:54:34 1999    <nisse@puck>
 
