@@ -69,7 +69,7 @@ struct diffie_hellman_instance
   struct lsh_string *server_key;
   struct lsh_string *signature;
   mpz_t secret; 		/* This side's secret exponent */
-  struct lsh_string *K;
+  mpz_t lsh_string *K;
   struct hash_instance *hash;
 };
 
