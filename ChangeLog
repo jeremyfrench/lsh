@@ -1,3 +1,45 @@
+2000-07-28  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/list.h (LIST_LENGTH): Avoid casting.
+
+	* src/jpoll.c (poll): Pass a correct timeout argument to select
+	(reported by Jean-Pierre Stierlin).
+
+2000-07-27  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/werror.c (write_syslog): Avoid using snprintf.
+
+	* src/server_pty.c (CONST_STRLEN): New macro. Used instead of
+	sizeof() to get the length of constant strings.
+
+	* src/io.c (address_info2sockaddr): Use ssh_cformat().
+	* src/lsh.c (do_options2known_hosts): Likewise.
+	(do_options2identities): Likewise.
+	(main_argp_parser): Likewise.
+	* src/lsh_writekey.c (main_argp_parser): Likewise.
+	(lsh_writekey_options2public_file): Likewise.
+	* src/unix_user.c (do_file_exists): Likewise.
+	(do_read_file): Likewise.
+	(format_env_pair): Likewise.
+	(format_env_pair_c): Likewise.
+	* src/server_authorization.c (do_key_lookup): Likewise.
+	* src/server_session.c (do_spawn_exec): Likewise.
+
+	* src/lsh_writekey.c (do_lsh_writekey_handler): Display a
+	friendlier message for EEXIST errors.
+
+	* src/connection_commands.h: Added missing extern declarations (reported
+	by Jean-Pierre Stierlin).
+	* src/exception.h: Likewise.	
+
+	* src/client_userauth.c (do_client_exc_userauth): Bugfix (reported
+	by Jean-Pierre Stierlin).
+
+	* src/format.c (ssh_cformat): New function.
+	* src/format.c (format_cstring, make_cstring_l, make_cstring):
+	Replaced with macros. 
+
+
 2000-07-14  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* lsh-1.0.1 release.
