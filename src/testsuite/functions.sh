@@ -64,7 +64,7 @@ spawn_lshd () {
     # the cwd, uses syslog, etc.
     
     ../lshd -h $HOSTKEY --interface=$INTERFACE -p $PORT $LSHD_FLAGS \
-	--pid-file $PIDFILE --daemon --log-file="`pwd`/lshd.log" "$@"
+	--pid-file $PIDFILE --daemon --no-syslog "$@"
 
     # lshd may catch the ordinary TERM signal, leading to timing
     # problems when the next lshd process tries to bind the port.
