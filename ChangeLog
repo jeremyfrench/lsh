@@ -1,3 +1,19 @@
+2003-09-19  Niels Möller  <niels@s3.kth.se>
+
+	* src/client_keyexchange.c (do_handle_srp_reply): Fixed missing
+	returns after disconnect_kex_failed and PROTOCOL_ERROR.
+
+	* src/client_userauth.c (do_exc_userauth_disconnect): Clarified
+	comment. 
+
+	* src/channel_commands.c (do_channel_open_command): Added missing
+	return EXCEPTION_RAISE. Fixed also in 1.4.3.
+
+	* src/testsuite/Makefile.am (TS_SH): Fixed syntax error.
+
+	* src/testsuite/lshd-random-input-test: New test case that
+	connects to lshd and sends some random data.
+
 2003-09-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* distribution-key.gpg: Updated key, new signatures and new expire
