@@ -44,6 +44,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	format.c gc.c hmac.c io.c keyexchange.c \
 	list.c md5.c \
 	packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
+	queue.c \
 	randomness.c \
 	read_scan.c read_data.c read_line.c read_packet.c reaper.c resource.c \
 	server.c server_keyexchange.c server_password.c \
