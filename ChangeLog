@@ -1,3 +1,8 @@
+2000-10-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am.in: Don't prepend $(srcdir) to $@, as it seems
+	not to do the right thing.
+
 2000-10-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.in: Check for endianness (needed by memcmp.c).
