@@ -649,14 +649,22 @@ do_write_callback(struct io_callback *s UNUSED,
 	    break;
 	  case EPIPE:
 	    debug("io.c: Broken pipe.\n");
-	
+
 	    /* Fall through */
 	  default:
+#if 0
+	    /* Don't complain if it was writing the final ^D
+	     * character that failed. */
+	    if ( (fd->type == IO_PTY_CLOSED)
+		 && (fd->write_buffer->length == 1) )
+	      debug("io.c: ignoring write error, on the final ^D character\n");
+#endif
 	    werror("io.c: write failed, %z\n", STRERROR(errno));
 	    EXCEPTION_RAISE(fd->e,
-			    make_io_exception(EXC_IO_WRITE, fd, errno, NULL));
+			    make_io_exception(EXC_IO_WRITE,
+					      fd, errno, NULL));
 	    close_fd(fd);
-	
+	    
 	    break;
 	  }
       else
