@@ -16,14 +16,27 @@ fi
 set -e
 
 PORT=11147
-ATEXIT="res=$? ; set +e"
+ATEXIT='set +e'
 
-trap 'eval "$ATEXIT ; exit \$res"' 0
+# Starting with EXIT_FAILURE and changing it to EXIT_SUCCESS on
+# success is right, as long as each test script only performs one
+# test. If there are several tests, it would be better to set it to
+# EXIT_SUCCESS and change it as soon as one test fails.
+
+test_result=1
+
+test_fail () {
+    test_result=1
+}
+
+test_success () {
+    test_result=0
+}
+
+trap 'eval "$ATEXIT ; exit \$test_result"' 0
 
 at_exit () {
-  res=$?
   ATEXIT="$ATEXIT ; $1"
-  return $res
 }
 
 spawn_lshd () {
@@ -72,4 +85,14 @@ spawn_lsh () {
 at_connect () {
     mini-inetd -m $2 localhost:$1 -- /bin/sh sh -c "$3" &
     at_exit "kill $!"
+}
+
+compare_output() {
+    if cmp test.out1 test.out2; then
+	echo "$1: Ok, files match."
+	test_success
+    else
+	echo "$1: Error, files are different."
+	test_fail
+    fi
 }
