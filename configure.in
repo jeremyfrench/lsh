@@ -105,8 +105,9 @@ AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
 AC_CHECK_LIB(nsl, gethostbyname)
 AC_CHECK_LIB(socket, setsockopt)
-AC_CHECK_LIB(openpty, util)
-AC_SEARCH_LIBS(syslog, bsd socket inet)
+AC_CHECK_LIB(util, openpty)
+dnl This macro is new in autoconf-2.13
+AC_SEARCH_LIBS(syslog, bsd socket inet, AC_DEFINE(HAVE_SYSLOG))
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -130,11 +131,23 @@ AC_CHECK_HEADERS(crypt.h)
 AC_CHECK_HEADERS(pty.h)
 AC_CHECK_HEADERS(stropts.h)
 
+dnl FIXME: Define a new macro for checking if structure members are
+dnl available.
+
+dnl AC_DEFUN(AC_CHECK_MEMBER,
+dnl   [AC_TRY_COMPILE($2,
+dnl 	[ int foo() { ]$3[ x; x.]$4[=0; return 0; }],
+dnl 	$1=yes, $1=no)])
+
+    
 AC_CHECK_HEADERS(utmp.h, [have_utmp_h=yes], [have_utmp_h=no])
 if test x$have_utmp_h = xyes; then
   AC_CACHE_CHECK(
     [if struct utmp has a ut_host member],
     lsh_cv_decl_utmp_have_ut_host,
+dnl AC_CHECK_MEMBER(lsh_cv_decl_utmp_have_ut_host,
+dnl		    [#include <utmp.h>],
+dnl		    struct utmp, [ut_host[0]])
     AC_TRY_COMPILE([#include <utmp.h>],
       [ int foo() { struct utmp u; u.ut_host[0] = 'X'; return 0; } ],
       lsh_cv_decl_utmp_have_ut_host=yes,
@@ -154,7 +167,20 @@ if test x$have_utmp_h = xyes; then
   if test x$lsh_cv_decl_utmp_have_ut_addr = xyes; then
     AC_DEFINE(HAVE_UT_ADDR)
   fi
+  AC_CACHE_CHECK(
+    [if struct utmp has a ut_addr_v6 member],
+    lsh_cv_decl_utmp_have_ut_addr_v6,
+    AC_TRY_COMPILE([#include <utmp.h>],
+      [ int foo() { struct utmp u; u.ut_addr_v6[0] = 'X'; return 0; } ],
+      lsh_cv_decl_utmp_have_ut_addr_v6=yes,
+      lsh_cv_decl_utmp_have_ut_addr_v6=no))
+
+  if test x$lsh_cv_decl_utmp_have_ut_addr_v6 = xyes; then
+    AC_DEFINE(HAVE_UT_ADDR_V6)
+  fi
 fi
+
+AC_CHECK_HEADERS(utmpx.h)
 
 dnl Should we use zlib?
 
