@@ -77,12 +77,12 @@
 /* These are "public" functions */
 
 void lsftp_rl_init_get_line(char* prompt);
-char* lsftp_rl_get_line();
-void lsftp_rl_check_input();
+char* lsftp_rl_get_line(void );
+void lsftp_rl_check_input(void);
 void lsftp_rl_unuse_line(char* line);
-void lsftp_rl_init();
-void lsftp_rl_exit();
-char* lsftp_rl_history_fname();
+void lsftp_rl_init(void);
+void lsftp_rl_exit(void);
+char* lsftp_rl_history_fname(void);
 
 /* "Private" functions below */
 

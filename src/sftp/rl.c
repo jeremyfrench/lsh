@@ -496,12 +496,14 @@ char* lsftp_rl_history_fname()
 
 /* Readline not found */
 
-inline void lsftp_rl_init_get_line(char* prompt)
+inline void
+lsftp_rl_init_get_line(char* prompt UNUSED)
 {
   /* Do nothing */
 }
 
-char* lsftp_rl_get_line()
+char *
+lsftp_rl_get_line(void )
 {
      /*
 
@@ -509,24 +511,30 @@ char* lsftp_rl_get_line()
   return 0;
 }
 
-void lsftp_rl_check_input()
+void
+lsftp_rl_check_input(void)
 {
 }
-void lsftp_rl_unuse_line(char* line)
+
+void
+lsftp_rl_unuse_line(char* line)
 {
   free(line);
 }
 
-void lsftp_rl_init()
+void
+lsftp_rl_init(void)
 {
   interactive=0;
 }
 
-void lsftp_rl_exit()
+void
+lsftp_rl_exit(void)
 {
 }
 
-char* lsftp_rl_history_fname()
+char*
+lsftp_rl_history_fname(void)
 {
   return 0;
 }
