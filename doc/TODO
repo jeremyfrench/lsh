@@ -8,6 +8,11 @@ connection->e handler at all?
   
 S-EXPRESSIONS
 
+Change the format used for encrypted private key to include the public
+key as well. This way, the private key can be decrypted on-demand.
+This seems cleaner than having the client read both identity and
+identity.pub.
+
 
 USERS
 
@@ -127,6 +132,7 @@ USER INTERTFACE ISSUES
 
 Hack do_spki_decrypt() in spki_commands.c to ask again if the provided
 password is incorrect.
+
 
 MISC
 
