@@ -60,10 +60,6 @@ extern struct crypto_algorithm serpent128_algorithm;
 extern struct crypto_algorithm serpent192_algorithm;
 extern struct crypto_algorithm serpent256_algorithm;
 
-#ifdef WITH_IDEA
-extern struct crypto_algorithm idea_algorithm;
-#endif
-
 extern struct hash_algorithm sha1_algorithm;
 extern struct hash_algorithm md5_algorithm;
 

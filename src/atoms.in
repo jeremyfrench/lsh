@@ -26,7 +26,6 @@ rijndael-cbc@lysator.liu.se     EXPERIMENTAL      Rijndael cipher in CBC mode
 serpent-cbc@lysator.liu.se      EXPERIMENTAL      Serpent cipher in CBC mode
 
 arcfour          OPTIONAL          the ARCFOUR stream cipher
-idea-cbc         OPTIONAL          IDEA in CBC mode
 cast128-cbc      OPTIONAL          CAST-128 in CBC mode
 # none           OPTIONAL          no encryption; NOT RECOMMENDED
 

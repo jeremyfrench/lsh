@@ -59,9 +59,6 @@ all_symmetric_algorithms()
 		    ATOM_SERPENT_CBC_LOCAL, crypto_cbc(&serpent256_algorithm),
 		    ATOM_3DES_CBC, crypto_cbc(make_des3()),
 		    ATOM_CAST128_CBC, crypto_cbc(&cast128_algorithm),
-#if WITH_IDEA
-		    ATOM_IDEA_CBC, crypto_cbc(&idea_algorithm),
-#endif
 		    ATOM_HMAC_SHA1, make_hmac_algorithm(&sha1_algorithm),
 		    ATOM_HMAC_MD5, make_hmac_algorithm(&md5_algorithm),
 #if WITH_ZLIB
@@ -108,7 +105,6 @@ all_crypto_algorithms(struct alist *algorithms)
 			     ATOM_SERPENT_CBC_LOCAL,
                              ATOM_AES256_CBC,
 			     ATOM_RIJNDAEL_CBC_LOCAL,
-			     ATOM_IDEA_CBC,
 			     ATOM_BLOWFISH_CBC,
 			     ATOM_ARCFOUR, -1);
 }
@@ -181,8 +177,6 @@ lookup_crypto(struct alist *algorithms, const char *name, struct crypto_algorith
   else if (strcasecmp_list(name, "serpent-cbc@lysator.liu.se",
 			   "serpent-cbc", "serpent", NULL))
     atom = ATOM_SERPENT_CBC_LOCAL;
-  else if (strcasecmp_list(name, "idea-cbc", "idea", NULL))
-    atom = ATOM_IDEA_CBC;
   else if (strcasecmp_list(name, "cast128-cbc", "cast",
 		       "cast-cbc", "cast128", NULL))
     atom = ATOM_CAST128_CBC;
