@@ -248,7 +248,8 @@ make_exc_protocol_handler(struct ssh_connection *connection,
 }
 
 struct ssh_connection *
-make_ssh_connection(const char *debug_comment,
+make_ssh_connection(struct address_info *peer,
+		    const char *debug_comment,
 		    struct command_continuation *c,
 		    struct exception_handler *e)
 {
@@ -256,8 +257,7 @@ make_ssh_connection(const char *debug_comment,
 
   NEW(ssh_connection, connection);
 
-  /* FIXME: Should install an address_info here */
-  connection->peer = NULL;
+  connection->peer = peer;
   
   connection->debug_comment = debug_comment;
   connection->super.write = handle_connection;

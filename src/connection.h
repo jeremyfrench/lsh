@@ -146,7 +146,8 @@
 #define C_WRITE(c, s) A_WRITE((c)->write, (s) )
 
 struct ssh_connection *
-make_ssh_connection(const char *id_comment,
+make_ssh_connection(struct address_info *peer,
+		    const char *id_comment,
 		    struct command_continuation *c,
 		    struct exception_handler *e);
 
