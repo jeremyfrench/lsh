@@ -224,7 +224,10 @@ static void do_exc_finish_channel_handler(struct exception_handler *s,
 	dealloc_channel(self->table, self->channel_number);
 
 	if (self->table->pending_close && !self->table->next_channel)
-	  EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
+	  {
+	    /* FIXME: Send a SSH_DISCONNECT_BY_APPLICATION message? */
+	    EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
+	  }
       }
       break;
     default:
@@ -340,10 +343,13 @@ void dealloc_channel(struct channel_table *table, int i)
     table->next_channel = i;
 }
 
-void register_channel(struct channel_table *table,
-		      UINT32 local_channel_number,
-		      struct ssh_channel *channel)
+void
+register_channel(struct ssh_connection *connection,
+		 UINT32 local_channel_number,
+		 struct ssh_channel *channel)
 {
+  struct channel_table *table = connection->table;
+  
   assert(table->in_use[local_channel_number]);
   assert(!table->channels[local_channel_number]);
   
@@ -352,7 +358,7 @@ void register_channel(struct channel_table *table,
   /* FIXME: Is this the right place to install this exception handler? */
   channel->e = make_exc_finish_channel_handler(table,
 					       local_channel_number,
-					       channel->e);
+					       connection->e);
 }
 
 struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i)
@@ -662,7 +668,7 @@ static int do_channel_open_response(struct channel_open_callback *c,
    * so that we can't fail at this point.
    */
   if ( (local_channel_number
-            = register_channel(closure->super.connection->channels,
+            = register_channel(closure->super.connection,
 			       channel)) < 0)
     {
       werror("Could not allocate a channel number for opened channel!\n");
@@ -740,7 +746,7 @@ do_channel_open_continue(struct command_continuation *c,
   /* FIXME: Is the channel->write field really needed? */
   channel->write = self->connection->write;
 
-  register_channel(self->connection->table,
+  register_channel(self->connection,
 		   self->local_channel_number, channel);
 
   /* FIXME: Doesn't support sending extra arguments with the
@@ -979,7 +985,7 @@ do_window_adjust(struct packet_handler *closure UNUSED,
 	    {
 	      channel->send_window_size += size;
 	      if (channel->send_window_size && channel->send)
-		CHANNEL_SEND(channel);
+		CHANNEL_SEND(channel, connection);
 	    }
 	}
       else
@@ -1727,7 +1733,8 @@ struct io_read_callback *make_channel_read_stderr(struct ssh_channel *channel)
 */
 
 /* Close callback for files we are writing to. */
-static int channel_close_callback(struct close_callback *c, int reason)
+static void
+channel_close_callback(struct close_callback *c, int reason)
 {
   CAST(channel_close_callback, closure, c);
 
@@ -1748,8 +1755,6 @@ static int channel_close_callback(struct close_callback *c, int reason)
       channel_close(closure->channel);
       break;
     }
-  /* FIXME: So far, the returned value is ignored. */
-  return 17;
 }
 
 struct close_callback *make_channel_close(struct ssh_channel *channel)
@@ -1762,9 +1767,10 @@ struct close_callback *make_channel_close(struct ssh_channel *channel)
   return &closure->super;
 }
 
-struct lsh_string *prepare_channel_open(struct channel_table *table,
-					int type, struct ssh_channel *channel,
-					const char *format, ...)
+struct lsh_string *
+prepare_channel_open(struct ssh_connection *connection,
+		     int type, struct ssh_channel *channel,
+		     const char *format, ...)
 {
   int index;
     
@@ -1783,12 +1789,12 @@ struct lsh_string *prepare_channel_open(struct channel_table *table,
 	channel->rec_max_packet,
 	channel->max_window);
   
-  index = alloc_channel(table);
+  index = alloc_channel(connection->table);
 
   if (index < 0)
     return 0;
 
-  register_channel(table, index, channel);
+  register_channel(connection, index, channel);
 
   l1 = ssh_format_length(OPEN_FORMAT, OPEN_ARGS);
   

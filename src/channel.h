@@ -104,7 +104,7 @@
        (receive method void "int type" "struct lsh_string *data")
 
        ; Called when we are allowed to send data on the channel. 
-       (send method void)
+       (send method void "struct ssh_connection *connection")
 
        ; Called when the channel is closed
        ; FIXME: Is this needed for anything?
@@ -130,7 +130,7 @@
 #define CHANNEL_RECEIVE(s, t, d) \
 ((s)->receive((s), (t), (d)))
 
-#define CHANNEL_SEND(s) ((s)->send((s)))
+#define CHANNEL_SEND(s, c) ((s)->send((s), (c)))
      
 #define CHANNEL_CLOSE(s) \
 ((s)->close((s)))
@@ -197,7 +197,9 @@
        ))
 */
 
+#if 0
 #define CHANNEL_EXC_HANDLER(c) (&((c)->table.super))
+#endif
 
 /* SSH_MSG_GLOBAL_REQUEST */
 
@@ -302,7 +304,7 @@ struct channel_table *make_channel_table(void);
 int alloc_channel(struct channel_table *table);
 void dealloc_channel(struct channel_table *table, int i);
 
-void register_channel(struct channel_table *table,
+void register_channel(struct ssh_connection *connection,
 		      UINT32 local_channel_number,
 		      struct ssh_channel *channel);
 
@@ -332,7 +334,7 @@ struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 
 void channel_start_receive(struct ssh_channel *channel);
 
-struct lsh_string *prepare_channel_open(struct channel_table *table,
+struct lsh_string *prepare_channel_open(struct ssh_connection *connection,
 					int type,
 					struct ssh_channel *channel,
 					const char *format, ...);
