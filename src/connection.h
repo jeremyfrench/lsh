@@ -102,9 +102,6 @@ struct ssh_connection;
        ; Table of all opened channels
        (channels object channel_table)
        
-       ; Forwarded TCP connections
-       (forwarded_ports struct object_queue)
-              
        ; Shared handlers 
        (ignore object packet_handler)
        (unimplemented object packet_handler)
