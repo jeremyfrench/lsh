@@ -475,7 +475,7 @@ extern struct command_3 command_C;
 #define GABA_APPLY_C_2(f, g) \
 ((struct lsh_object *) make_command_3_invoke_2(&command_C, (f), (g)))
 
-#if 0
+#if 1
 extern struct command_4 command_Cp;
 
 #define GABA_VALUE_Cp (&command_Cp.super.super)
@@ -485,7 +485,7 @@ extern struct command_4 command_Cp;
 ((struct lsh_object *) make_command_4_invoke_2(&command_Cp, (c), (f)))
 #define GABA_APPLY_Cp_3(c, f, g) \
 ((struct lsh_object *) make_command_4_invoke_3(&command_Cp, (c), (f), (g)))
-#endif
+#else
 
 extern struct collect_info_1 command_Cp;
 extern struct collect_info_2 collect_info_Cp_2;
@@ -506,5 +506,7 @@ collect_Cp_3(struct collect_info_3 *info,
 #define GABA_APPLY_Cp_2(c, f) \
   (make_collect_state_2(&collect_info_Cp_2, (c), (f)))
 #define GABA_APPLY_Cp_3(c, f, y) (collect_Cp_3(&collect_info_Cp_3, (c), (f), (y)))
+
+#endif
 
 #endif /* LSH_COMMAND_H_INCLUDED */ 

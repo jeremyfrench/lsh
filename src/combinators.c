@@ -233,13 +233,26 @@ DEFINE_COMMAND3(command_C)
 	       e);
 }
 
-#if 0
+/* FIXME: Move this function somewhere else. It should also be used by
+ * do_trace_continuation. */
+static const char *
+describe_object(struct lsh_object *x)
+{
+  if (!x)
+    return "<NULL>";
+  if (!x->isa)
+    return "<STATIC>";
+
+  return x->isa->name;
+}
+
+#if 1
 /* C' k f y x == k (f x) y */
 DEFINE_COMMAND4(command_Cp)
      (struct lsh_object *k,
       struct lsh_object *f,
-      struct lsh_object *x,
       struct lsh_object *y,
+      struct lsh_object *x,
       struct command_continuation *c,
       struct exception_handler *e)
 {
@@ -247,13 +260,18 @@ DEFINE_COMMAND4(command_Cp)
   CAST_SUBTYPE(command, cf, f);
 
   trace("command_Cp\n");
+  werror("command_Cp: k: %z, f: %z, y: %z, x: %z\n",
+	 describe_object(k),
+	 describe_object(f),
+	 describe_object(y),
+	 describe_object(x));
   
   COMMAND_CALL(cf, x,
 	       make_apply(ck,
 			  make_command_C_continuation(y, c, e), e),
 	       e);
 }
-#endif
+#else
 
 /* C' c f y x == c (f x) y */
 
@@ -275,6 +293,12 @@ do_command_Cp_3(struct command *s,
 		struct exception_handler *e)
 {
   CAST(command_Cp_3, self, s);
+
+  werror("do_command_Cp_3: k: %z, f: %z, y: %z, x: %z\n",
+	 describe_object(&self->c->super),
+	 describe_object(&self->f->super),
+	 describe_object(self->y),
+	 describe_object(x));
   
   COMMAND_CALL(self->f, x,
 	       make_apply(self->c,
@@ -329,3 +353,4 @@ STATIC_COLLECT_2(&collect_info_Cp_3);
 struct collect_info_1 command_Cp =
 STATIC_COLLECT_1(&collect_info_Cp_2);
 
+#endif
