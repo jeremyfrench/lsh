@@ -716,6 +716,14 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
   _exit(EXIT_FAILURE);
 }
 
+static void
+safe_close(int fd)
+{
+  if (fd != -1 && close(fd) < 0)
+    werror("close failed (errno = %i): %z\n",
+	   errno, STRERROR(errno));
+}
+
 static struct lsh_process *
 do_spawn(struct lsh_user *u,
 	 struct spawn_info *info,
@@ -736,11 +744,11 @@ do_spawn(struct lsh_user *u,
   if (child < 0)
     {
       werror("fork failed: %z\n", STRERROR(errno));
-      close(sync[0]); close(sync[1]);
+      safe_close(sync[0]); safe_close(sync[1]);
 
-      close(info->in[0]);  close(info->in[1]);
-      close(info->out[0]); close(info->out[1]);
-      close(info->err[0]); close(info->err[1]);
+      safe_close(info->in[0]);  safe_close(info->in[1]);
+      safe_close(info->out[0]); safe_close(info->out[1]);
+      safe_close(info->err[0]); safe_close(info->err[1]);
 
       return NULL;
     }
@@ -753,12 +761,12 @@ do_spawn(struct lsh_user *u,
       
       trace("do_spawn: parent process\n");
 
-      /* Close the child's fd:s (and don't care about close(-1) ) */
-      close(info->in[0]);
-      close(info->out[1]);
-      close(info->err[1]);
+      /* Close the child's fd:s, except ones that are -1 */
+      safe_close(info->in[0]);
+      safe_close(info->out[1]);
+      safe_close(info->err[1]);
 
-      close(sync[1]);
+      safe_close(sync[1]);
 
       /* On Solaris, reading the master side of the pty before the
        * child has opened the slave side of it results in EINVAL. We
@@ -773,7 +781,7 @@ do_spawn(struct lsh_user *u,
 	res = read(sync[0], &dummy, 1);
       while (res < 0 && errno == EINTR);
 
-      close(sync[0]);
+      safe_close(sync[0]);
 
       trace("do_spawn: parent after sync\n");
       
@@ -817,7 +825,7 @@ do_spawn(struct lsh_user *u,
       /* Now any tty processing is done, so notify our parent by
        * closing the syncronization pipe. */
       
-      close(sync[0]); close(sync[1]);
+      safe_close(sync[0]); safe_close(sync[1]);
 
 #define DUP_FD_OR_TTY(src, dst) dup2((src) >= 0 ? (src) : tty, dst)
 
@@ -849,15 +857,14 @@ do_spawn(struct lsh_user *u,
       
       trace("do_spawn: child after stderr dup\n");
 
-      /* Unconditionally close all the fd:s, no matter if some
-       * of them are -1. */
-      close(info->in[0]);
-      close(info->in[1]);
-      close(info->out[0]);
-      close(info->out[1]);
-      close(info->err[0]);
-      close(info->err[1]);
-      close(tty);
+      /* Close all the fd:s, except ones that are -1 */
+      safe_close(info->in[0]);
+      safe_close(info->in[1]);
+      safe_close(info->out[0]);
+      safe_close(info->out[1]);
+      safe_close(info->err[0]);
+      safe_close(info->err[1]);
+      safe_close(tty);
       
       exec_shell(user, info);
       _exit(EXIT_FAILURE);
