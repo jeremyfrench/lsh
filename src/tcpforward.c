@@ -347,7 +347,6 @@ make_channel_open_direct_tcpip(struct command *callback)
        (c object command_continuation)))
 */
 
-/* FIXME: Split off an exception handler */
 static void
 do_tcpip_forward_request_continuation(struct command_continuation *c,
 				      struct lsh_object *x)
@@ -394,6 +393,37 @@ make_tcpip_forward_request_continuation(struct ssh_connection *connection,
   return &self->super;
 }
 
+
+static void
+do_tcpip_forward_request_exc(struct exception_handler *self,
+			     const struct exception *e)
+{
+  switch(e->type)
+    {
+    case EXC_IO_LISTEN:
+    case EXC_RESOLVE:
+      EXCEPTION_RAISE(self->parent,
+		      make_simple_exception(EXC_GLOBAL_REQUEST,
+					    e->msg));
+      break;
+    default:
+      if (e->type & EXC_IO)
+	{
+	  werror("I/O error on forwarded connection: %z\n",
+		 e->msg);
+	}
+      else
+	EXCEPTION_RAISE(self->parent, e);
+    }
+}
+
+static struct exception_handler *
+make_tcpip_forward_request_exc(struct exception_handler *parent,
+			       const char *context)
+{
+  return make_exception_handler(do_tcpip_forward_request_exc,
+				parent, context);
+}
 
 /* GABA:
    (class
@@ -452,12 +482,8 @@ do_tcpip_forward_request(struct global_request *s,
 		     a,
 		     make_tcpip_forward_request_continuation
 		     (connection, forward, c),
-		     /* FIXME: Use a better exception handler.
-		      * We should handle EXC_RESOLVE and EXC_LISTEN, and
-		      * report or ignore i/o-errors. */
-		     &default_exception_handler
-		     /* make_tcpip_forward_request_raise
-			(connection, forward) */ );
+		     make_tcpip_forward_request_exc(e, HANDLER_CONTEXT));
+	
 	return;
       }
     }
