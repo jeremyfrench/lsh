@@ -66,6 +66,7 @@ compat[] =
     { "2.1.0", (PEER_SSH_DSS_KLUDGE
 		| PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG) },
     { "3.0", PEER_SEND_NO_DEBUG },
+    { "Sun_SSH_1.0", PEER_KEXINIT_LANGUAGE_KLUDGE },
     { NULL, 0 }
   };
     
