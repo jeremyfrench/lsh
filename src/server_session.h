@@ -48,6 +48,10 @@ struct channel_request *
 make_shell_handler(struct io_backend *backend,
 		   struct reap *reap);
 
+struct channel_request *
+make_exec_handler(struct io_backend *backend,
+		  struct reap *reap);
+
 struct lsh_string *
 format_exit_signal(struct ssh_channel *channel,
 		   int core, int signal);

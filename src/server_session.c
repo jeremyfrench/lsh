@@ -609,41 +609,21 @@ static int make_pty(struct pty_info *pty UNUSED,
 { return 0; }
 #endif /* !WITH_PTY_SUPPORT */
 
-#define USE_LOGIN_DASH_CONVENTION 1
-
-static struct exception shell_request_failed =
-STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
-
-static void
-do_spawn_shell(struct channel_request *c,
-	       struct ssh_channel *channel,
-	       struct ssh_connection *connection UNUSED,
-	       UINT32 type UNUSED,
-	       int want_reply UNUSED,
-	       struct simple_buffer *args,
-	       struct command_continuation *s,
-	       struct exception_handler *e)
+/* Returns -1 on failure, 0 for child and +1 for parent */
+static int
+spawn_process(struct server_session *session,
+	      struct io_backend *backend,
+	      struct reap *reap)
 {
-  CAST(shell_request, closure, c);
-  struct server_session *session = (struct server_session *) channel;
-
   int in[2];
   int out[2];
   int err[2];
 
   int using_pty = 0;
   
-  CHECK_TYPE(server_session, session);
-
-  if (!parse_eod(args))
-    {
-      PROTOCOL_ERROR(e, "Invalid shell CHANNEL_REQUEST message.");
-      return;
-    }
-    
   if (session->process)
     /* Already spawned a shell or command */
-    goto fail;
+    return -1;
   
   /* {in|out|err}[0] is for reading,
    * {in|out|err}[1] for writing. */
@@ -652,7 +632,7 @@ do_spawn_shell(struct channel_request *c,
     using_pty = 1;
 
   else if (!make_pipes(in, out, err))
-    goto fail;
+    return -1;
   {
     pid_t child;
 
@@ -660,8 +640,10 @@ do_spawn_shell(struct channel_request *c,
       {
 	if (child)
 	  { /* Parent */
+	    struct ssh_channel *channel = &session->super;
+	    
 	    debug("Parent process\n");
-	    REAP(closure->reap, child, make_exit_shell(session));
+	    REAP(reap, child, make_exit_shell(session));
 	  
 	    /* Close the child's fd:s */
 	    close(in[0]);
@@ -681,7 +663,7 @@ do_spawn_shell(struct channel_request *c,
 		= make_channel_read_close_callback(channel);
 
 	      session->in
-		= io_write(make_lsh_fd(closure->backend, in[1],
+		= io_write(make_lsh_fd(backend, in[1],
 				       io_exception_handler),
 			   SSH_MAX_PACKET, NULL);
 	  
@@ -692,12 +674,12 @@ do_spawn_shell(struct channel_request *c,
 	       * which will close the channel on read errors, or is it
 	       * better to just send EOF on read errors? */
 	      session->out
-		= io_read(make_lsh_fd(closure->backend, out[0], io_exception_handler),
+		= io_read(make_lsh_fd(backend, out[0], io_exception_handler),
 			  make_channel_read_data(channel),
 			  read_close_callback);
 	      session->err 
 		= ( (err[0] != -1)
-		    ? io_read(make_lsh_fd(closure->backend, err[0], io_exception_handler),
+		    ? io_read(make_lsh_fd(backend, err[0], io_exception_handler),
 			      make_channel_read_stderr(channel),
 			      read_close_callback)
 		    : NULL);
@@ -724,22 +706,11 @@ do_spawn_shell(struct channel_request *c,
 	      REMEMBER_RESOURCE
 		(channel->resources, &session->err->super);
 
-	    /* NOTE: The return value is not used. */
-	    COMMAND_RETURN(s, channel);
-
-	    channel_start_receive(channel);
-	    return;
+	    return 1;
 	  }
 	else
 	  { /* Child */
-#define MAX_ENV 1
-	    /* No args, end the USER_EXEC method fills in argv[0]. */
-	    char *argv[] = { NULL, NULL };
-	    
-	    struct env_value env[MAX_ENV];
-	    int env_length = 0;
-
-	    debug("do_spawn_shell: Child process\n");
+	    debug("spawn_process: Child process\n");
 	    assert(getuid() == session->user->uid);
 	    
 	    if (!USER_CHDIR_HOME(session->user))
@@ -748,19 +719,6 @@ do_spawn_shell(struct channel_request *c,
 		_exit(EXIT_FAILURE);
 	      }
 	    
-	    if (session->term)
-	      {
-		env[env_length].name ="TERM";
-		env[env_length].value = session->term;
-		env_length++;
-	      }
-	    assert(env_length <= MAX_ENV);
-#undef MAX_ENV
-
-	    /* We do this before closing fd:s, because the sysv version
-	     * of tty_setctty depends on the master pty fd still open.
-	     * It would be cleaner if we could pass the slave fd only
-	     * (i.e. STDIN_FILENO) to tty_setctty(). */
 #if WITH_PTY_SUPPORT
 	    if (using_pty)
 	      {
@@ -812,24 +770,7 @@ do_spawn_shell(struct channel_request *c,
 	    close(err[0]);
 	    close(err[1]);
 
-#if 1
-	    USER_EXEC(session->user, 1, argv, env_length, env);
-
-	    /* exec failed! */
-	    verbose("server_session: exec() failed (errno = %i): %z\n",
-		    errno, STRERROR(errno));
-	    _exit(EXIT_FAILURE);
-
-#else
-# define GREETING "Hello world!\n"
-	    if (write(STDOUT_FILENO, GREETING, strlen(GREETING)) < 0)
-	      _exit(errno);
-	    kill(getuid(), SIGSTOP);
-	    if (write(STDOUT_FILENO, shell, strlen(shell)) < 0)
-	      _exit(125);
-	    _exit(126);
-# undef GREETING
-#endif
+	    return 0;
 	  }
       }
     /* fork() failed */
@@ -842,11 +783,12 @@ do_spawn_shell(struct channel_request *c,
     close(in[0]);
     close(in[1]);
   }
- fail:
-  EXCEPTION_RAISE(e, &shell_request_failed);
+  return -1;
 }
 
-#if 0
+static struct exception shell_request_failed =
+STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
+
 static void
 do_spawn_shell(struct channel_request *c,
 	       struct ssh_channel *channel,
@@ -858,15 +800,7 @@ do_spawn_shell(struct channel_request *c,
 	       struct exception_handler *e)
 {
   CAST(shell_request, closure, c);
-  struct server_session *session = (struct server_session *) channel;
-
-  int in[2];
-  int out[2];
-  int err[2];
-
-  int using_pty = 0;
-  
-  CHECK_TYPE(server_session, session);
+  CAST(server_session, session, channel);
 
   if (!parse_eod(args))
     {
@@ -874,280 +808,67 @@ do_spawn_shell(struct channel_request *c,
       return;
     }
     
-
   if (session->process)
     /* Already spawned a shell or command */
     goto fail;
-  
-  /* {in|out|err}[0] is for reading,
-   * {in|out|err}[1] for writing. */
 
-  if (make_pty(session->pty, in, out, err))
-    using_pty = 1;
-
-  else if (!make_pipes(in, out, err))
-    goto fail;
-  {
-    pid_t child;
-      
-    switch(child = fork())
-      {
-      case -1:
-	werror("fork() failed: %z\n", STRERROR(errno));
-	/* Close and return channel_failure */
-	break; 
-      case 0:
-	{ /* Child */
-	  char *shell;
-#define MAX_ENV 8
-	  char *env[MAX_ENV];
-	  char *tz = getenv("TZ");
-	  int i = 0;
-
-	  int old_stderr;
-	    
-	  debug("do_spawn_shell: Child process\n");
-	  if (!session->user->shell)
-	    {
-	      werror("No login shell!\n");
-	      exit(EXIT_FAILURE);
-	    }
-
-	  shell = session->user->shell->data;
-	    
-	  if (getuid() != session->user->uid)
-	    if (!change_uid(session->user))
-	      {
-		werror("Changing uid failed!\n");
-		exit(EXIT_FAILURE);
-	      }
-	    
-	  assert(getuid() == session->user->uid);
-	    
-	  if (!change_dir(session->user))
-	    {
-	      werror("Could not change to home (or root) directory!\n");
-	      exit(EXIT_FAILURE);
-	    }
-
-	  debug("Child: Setting up environment.\n");
-	    
-	  env[i++] = make_env_pair("LOGNAME", session->user->super.name);
-	  env[i++] = make_env_pair("USER", session->user->super.name);
-	  env[i++] = make_env_pair("SHELL", session->user->shell);
-	  if (session->term)
-	    env[i++] = make_env_pair("TERM", session->term);
-	  if (session->user->home)
-	    env[i++] = make_env_pair("HOME", session->user->home);
-	  if (tz)
-	    env[i++] = make_env_pair_c("TZ", tz);
-
-	  /* FIXME: The value of $PATH should not be hard-coded */
-	  env[i++] = "PATH=/bin:/usr/bin";
-	  env[i++] = NULL;
-	    
-	  assert(i <= MAX_ENV);
-#undef MAX_ENV
-
-	  debug("Child: Environment:\n");
-	  for (i=0; env[i]; i++)
-	    debug("Child:   '%z'\n", env[i]);
-
-	  /* We do this before closing fd:s, because the sysv version
-	   * of tty_setctty depends on the master pty fd still open.
-	   * It would be cleaner if we could pass the slave fd only
-	   * (i.e. STDIN_FILENO) to tty_setctty(). */
-#if WITH_PTY_SUPPORT
-	  if (using_pty)
-	    {
-	      debug("lshd: server.c: Setting controlling tty...\n");
-	      if (!tty_setctty(session->pty))
-		{
-		  debug("lshd: server.c: "
-			"Setting controlling tty... Failed!\n");
-		  werror("lshd: Can't set controlling tty for child!\n");
-		  exit(EXIT_FAILURE);
-		}
-	      else
-		debug("lshd: server.c: Setting controlling tty... Ok.\n");
-	    }
-#endif /* WITH_PTY_SUPPORT */
-	  
-	  /* Close all descriptors but those used for
-	   * communicationg with parent. We rely on the
-	   * close-on-exec flag for all fd:s handled by the
-	   * backend. */
-	    
-	  if (dup2(in[0], STDIN_FILENO) < 0)
-	    {
-	      werror("Can't dup stdin!\n");
-	      exit(EXIT_FAILURE);
-	    }
-	  close(in[0]);
-	  close(in[1]);
-	    
-	  if (dup2(out[1], STDOUT_FILENO) < 0)
-	    {
-	      werror("Can't dup stdout!\n");
-	      exit(EXIT_FAILURE);
-	    }
-	  close(out[0]);
-	  close(out[1]);
-
-	  if ((old_stderr = dup(STDERR_FILENO)) < 0)
-	    {
-	      werror("Couldn't save old file_no.\n");
-	      set_error_ignore();
-	    }
-	  else
-	    {
-	      io_set_close_on_exec(old_stderr);
-	      set_error_stream(old_stderr, 1);
-	    }
-	  /* debug("Child: Duping stderr (bye).\n"); */
-	  
-	  if (dup2(err[1], STDERR_FILENO) < 0)
-	    {
-	      werror("Can't dup stderr!\n");
-	      exit(EXIT_FAILURE);
-	    }
-	  close(err[0]);
-	  close(err[1]);
-	  
-#if 1
-#if USE_LOGIN_DASH_CONVENTION
-	  {
-	    char *argv0 = alloca(session->user->shell->length + 2);
-	    char *p;
-
-	    debug("lshd: server.c: fixing up name of shell...\n");
-	    /* Make sure that the shell's name begins with a -. */
-	    p = strrchr (shell, '/');
-	    if (!p)
-	      p = shell;
-	    else
-	      p ++;
-	      
-	    argv0[0] = '-';
-	    strncpy (argv0 + 1, p, session->user->shell->length);
-	    debug("lshd: server.c: fixing up name of shell... done.\n");
-
-	    execle(shell, argv0, NULL, env);
-	  }
-#else /* !USE_LOGIN_DASH_CONVENTION */
-	  execle(shell, shell, NULL, env);
-#endif /* !USE_LOGIN_DASH_CONVENTION */
-#else
-#define GREETING "Hello world!\n"
-	  if (write(STDOUT_FILENO, GREETING, strlen(GREETING)) < 0)
-	    _exit(errno);
-	  kill(getuid(), SIGSTOP);
-	  if (write(STDOUT_FILENO, shell, strlen(shell)) < 0)
-	    _exit(125);
-	  _exit(126);
-#undef GREETING
-#endif
-	  /* exec failed! */
-	  {
-	    int exec_errno = errno;
-
-	    if (dup2(old_stderr, STDERR_FILENO) < 0)
-	      {
-		/* This is really bad... We can't restore stderr
-		 * to report our problems. */
-		char msg[] = "child: execle() failed!\n";
-		write(old_stderr, msg, sizeof(msg));
-	      }
-	    else
-	      debug("Child: execle() failed (errno = %i): %z\n",
-		    exec_errno, STRERROR(exec_errno));
-	    _exit(EXIT_FAILURE);
-	  }
-#undef MAX_ENV
-	}
-      default:
-	/* Parent */
-
-	debug("Parent process\n");
-	REAP(closure->reap, child, make_exit_shell(session));
-	  
-	/* Close the child's fd:s */
-	close(in[0]);
-	close(out[1]);
-	close(err[1]);
-
-	{
-	  /* Exception handlers */
-	  struct exception_handler *io_exception_handler
-	    = make_channel_io_exception_handler(channel,
-						"lshd: Child stdio: ",
-						&default_exception_handler,
-						HANDLER_CONTEXT);
-
-	  /* Close callback for stderr and stdout */
-	  struct close_callback *read_close_callback
-	    = make_channel_read_close_callback(channel);
-
-	  session->in
-	    = io_write(make_lsh_fd(closure->backend, in[1],
-				  io_exception_handler),
-		       SSH_MAX_PACKET, NULL);
-	  
-	  /* Flow control */
-	  session->in->write_buffer->report = &session->super.super;
-
-	  /* FIXME: Should we really use the same exception handler,
-	   * which will close the channel on read errors, or is it
-	   * better to just send EOF on read errors? */
-	  session->out
-	    = io_read(make_lsh_fd(closure->backend, out[0], io_exception_handler),
-		      make_channel_read_data(channel),
-		      read_close_callback);
-	  session->err 
-	    = ( (err[0] != -1)
-		? io_read(make_lsh_fd(closure->backend, err[0], io_exception_handler),
-			  make_channel_read_stderr(channel),
-			  read_close_callback)
-		: NULL);
-	}
+  switch (spawn_process(session, closure->backend, closure->reap))
+    {
+    case 1: /* Parent */
+      /* NOTE: The return value is not used. */
+      COMMAND_RETURN(s, channel);
+      channel_start_receive(channel);
+      return;
+    case 0:
+      { /* Child */
+#define MAX_ENV 1
+	/* No args, end the USER_EXEC method fills in argv[0]. */
+	char *argv[] = { NULL, NULL };
 	
-	channel->receive = do_receive;
-	channel->send = do_send;
-	channel->eof = do_eof;
-	  
-	session->process
-	  = make_process_resource(child, SIGHUP);
+	struct env_value env[MAX_ENV];
+	int env_length = 0;
+	
+	debug("do_spawn_shell: Child process\n");
+	assert(getuid() == session->user->uid);
+	    	    
+	if (session->term)
+	  {
+	    env[env_length].name ="TERM";
+	    env[env_length].value = session->term;
+	    env_length++;
+	  }
+	assert(env_length <= MAX_ENV);
+#undef MAX_ENV
 
-	/* Make sure that the process and it's stdio is
-	 * cleaned up if the channel or connection dies. */
-	REMEMBER_RESOURCE
-	  (channel->resources, session->process);
-	/* FIXME: How to do this properly if in and out may use the
-	 * same fd? */
-	REMEMBER_RESOURCE
-	  (channel->resources, &session->in->super);
-	REMEMBER_RESOURCE
-	  (channel->resources, &session->out->super);
-	if (session->err)
-	  REMEMBER_RESOURCE
-	    (channel->resources, &session->err->super);
+#if 1
+	USER_EXEC(session->user, 1, argv, env_length, env);
+	
+	/* exec failed! */
+	verbose("server_session: exec() failed (errno = %i): %z\n",
+		errno, STRERROR(errno));
+	_exit(EXIT_FAILURE);
 
-	COMMAND_RETURN(s, NULL);
-
-	channel_start_receive(channel);
-	return;
+#else
+# define GREETING "Hello world!\n"
+	if (write(STDOUT_FILENO, GREETING, strlen(GREETING)) < 0)
+	  _exit(errno);
+	kill(getuid(), SIGSTOP);
+	if (write(STDOUT_FILENO, shell, strlen(shell)) < 0)
+	  _exit(125);
+	_exit(126);
+# undef GREETING
+#endif
       }
-    close(err[0]);
-    close(err[1]);
-    close(out[0]);
-    close(out[1]);
-    close(in[0]);
-    close(in[1]);
+    case -1:
+      /* fork() failed */
+
+      break;
+    default:
+      fatal("Internal error!");
   }
  fail:
   EXCEPTION_RAISE(e, &shell_request_failed);
 }
-#endif
 
 struct channel_request *
 make_shell_handler(struct io_backend *backend,
@@ -1156,6 +877,104 @@ make_shell_handler(struct io_backend *backend,
   NEW(shell_request, closure);
 
   closure->super.handler = do_spawn_shell;
+  closure->backend = backend;
+  closure->reap = reap;
+  
+  return &closure->super;
+}
+
+static struct exception exec_request_failed =
+STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Exec request failed");
+
+static void
+do_spawn_exec(struct channel_request *c,
+	      struct ssh_channel *channel,
+	      struct ssh_connection *connection UNUSED,
+	      UINT32 type UNUSED,
+	      int want_reply UNUSED,
+	      struct simple_buffer *args,
+	      struct command_continuation *s,
+	      struct exception_handler *e)
+{
+  CAST(shell_request, closure, c);
+  CAST(server_session, session, channel);
+
+  UINT32 command_len;
+  UINT8 *command;
+
+  struct lsh_string *command_line;
+  
+  if (!(parse_string(args, &command_len, &command)
+	&& parse_eod(args)))
+    {
+      PROTOCOL_ERROR(e, "Invalid exec CHANNEL_REQUEST message.");
+      return;
+    }
+    
+  if (session->process)
+    /* Already spawned a shell or command */
+    goto fail;
+
+  command_line = make_cstring_l(command_len, command);
+  if (!command_line)
+    EXCEPTION_RAISE(e, &exec_request_failed);
+  else
+    switch (spawn_process(session, closure->backend, closure->reap))
+    {
+    case 1: /* Parent */
+      lsh_string_free(command_line);
+
+      /* NOTE: The return value is not used. */
+      COMMAND_RETURN(s, channel);
+      channel_start_receive(channel);
+      return;
+    case 0:
+      { /* Child */
+#define MAX_ENV 1
+	/* No args, end the USER_EXEC method fills in argv[0]. */
+	char *argv[] = { NULL, "-c", command_line->data, NULL };
+	
+	struct env_value env[MAX_ENV];
+	int env_length = 0;
+	
+	debug("do_spawn_shell: Child process\n");
+	assert(getuid() == session->user->uid);
+	    	    
+	if (session->term)
+	  {
+	    env[env_length].name ="TERM";
+	    env[env_length].value = session->term;
+	    env_length++;
+	  }
+	assert(env_length <= MAX_ENV);
+#undef MAX_ENV
+
+	USER_EXEC(session->user, 3, argv, env_length, env);
+	
+	/* exec failed! */
+	verbose("server_session: exec() failed (errno = %i): %z\n",
+		errno, STRERROR(errno));
+	_exit(EXIT_FAILURE);
+      }
+    case -1:
+      /* fork() failed */
+      lsh_string_free(command_line);
+
+      break;
+    default:
+      fatal("Internal error!");
+  }
+ fail:
+  EXCEPTION_RAISE(e, &shell_request_failed);
+}
+
+struct channel_request *
+make_exec_handler(struct io_backend *backend,
+		  struct reap *reap)
+{
+  NEW(shell_request, closure);
+
+  closure->super.handler = do_spawn_exec;
   closure->backend = backend;
   closure->reap = reap;
   
