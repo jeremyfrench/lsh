@@ -264,7 +264,6 @@ cp $BASE/src/spki/config.h r/spkiconfig-h.txt
 cp $BASE/config.h r/config-h.txt
 
 cp $LIBOOPBASE/config.cache r/oopconfigcache.txt
-cp $LIBOOPBASE/config.h r/oopconfig-h.txt
 cp $LIBOOPBASE/config.log r/oopconfiglog.txt
 
 find $BASE -name core -print > r/corefiles.txt
