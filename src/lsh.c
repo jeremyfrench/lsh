@@ -1048,7 +1048,7 @@ int main(int argc, char **argv, const char** envp)
   lsh_connect =
     make_lsh_connect(
       make_handshake_info(CONNECTION_CLIENT,
-			  "lsh - a free ssh", NULL,
+			  SOFTWARE_SLOGAN, NULL,
 			  SSH_MAX_PACKET,
 			  options->super.random,
 			  options->algorithms->algorithms,

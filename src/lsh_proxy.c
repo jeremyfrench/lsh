@@ -776,7 +776,7 @@ int main(int argc, char **argv)
 	 (struct command *)lsh_proxy_handshake_server(make_fake_host_db(),
 						      make_handshake_info
 						      (CONNECTION_CLIENT,
-						       "lsh_proxy_client - a free ssh",
+						       "lsh_proxy_client",
 						       "proxy client",
 						       SSH_MAX_PACKET,
 						       r,
@@ -785,7 +785,7 @@ int main(int argc, char **argv)
 						      make_kexinit),
 	 (struct command *)lsh_proxy_handshake_client(make_handshake_info
 						      (CONNECTION_SERVER,
-						       "lsh_proxy_server - a free ssh",
+						       "lsh_proxy_server",
 						       "proxy server",
 						       SSH_MAX_PACKET,
 						       r,

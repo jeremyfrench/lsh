@@ -1117,7 +1117,7 @@ make_lshd_listen_callback(struct lshd_options *options,
     CAST_SUBTYPE(command, server_callback,
 		 lshd_listen_callback
 		   (make_handshake_info(CONNECTION_SERVER,
-					"lsh - a free ssh",
+					SOFTWARE_SLOGAN,
 					NULL,
 					SSH_MAX_PACKET,
 					options->random,
