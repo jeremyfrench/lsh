@@ -43,7 +43,8 @@
        (scanner object scanner)))
 */
 
-
+/* FIXME: Keep track of lines and characters processed, do provide
+ * decent error messages. */
 static int do_read_scan(struct read_handler **h,
 			struct abstract_read *read)
 {
@@ -72,7 +73,7 @@ static int do_read_scan(struct read_handler **h,
 
       res = SCAN(closure->scanner, buffer[i]);
       if (LSH_FAILUREP(res))
-	return res;
+	return res | LSH_DIE;
     }
 
   return LSH_OK | LSH_GOON;
