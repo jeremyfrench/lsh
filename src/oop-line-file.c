@@ -23,20 +23,21 @@
 #include "config.h"
 #endif
 
+#include "oop-line.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
 
 #include <unistd.h>
 
-#include "oop-line.h"
-
 int _oop_line_done;
 
 #define MAGIC 0x74d2
 
-struct oop_line_file {
-  struct oop_line oop;
+struct oop_line_file
+{
+  oop_line oop;
   int magic;
 
   oop_source *source;
@@ -60,9 +61,10 @@ verify_line(oop_line *self)
 }
 
 static void *
-line_read(oop_source *source, int fd, oop_event event, void *self)
+line_read(oop_source *source, int fd, oop_event event, void *state)
 {
-  oop_line_file *line = verify_line(self);
+  oop_line_file *line = verify_line(state);
+  
   void *value = OOP_CONTINUE;
 
   size_t to_read;
@@ -106,7 +108,9 @@ line_read(oop_source *source, int fd, oop_event event, void *self)
       else
 	{
 	  line->pos += res;
-	  if (line->pos >= line->alloc)
+	  assert(line->pos <= line->alloc);
+
+	  if (line->pos == line->alloc)
 	    {
 	      value = line->call(&line->oop, OOP_LINE_TOO_LONG,
 				 line->alloc, line->buf, line->state);
@@ -124,7 +128,7 @@ line_read(oop_source *source, int fd, oop_event event, void *self)
 }
 
 static void
-file_on_line(oop_line *self, oop_call_line *call, void *state)
+file_on_line(oop_line *self, oop_call_line call, void *state)
 {
   oop_line_file *line = verify_line(self);
 
@@ -141,7 +145,7 @@ file_cancel_line(oop_line *self)
 
   line->call = NULL;
   line->state = NULL;
-  
+
   line->source->cancel_fd(line->source, line->fd, OOP_READ);
 }
 
@@ -151,7 +155,7 @@ oop_line_file_new(oop_source *source, int fd, size_t max)
   oop_line_file *line;
 
   assert(max > 0);
-  line = malloc(sizeof(*line) + max - 1);
+  line = malloc(sizeof(*line) - 1 + max);
   if (!line)
     return NULL;
 
@@ -185,5 +189,3 @@ oop_file_line(oop_line_file *line)
 {
   return &line->oop;
 }
-
-
