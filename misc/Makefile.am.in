@@ -4,7 +4,7 @@ BODY:
 
 AUTOMAKE_OPTIONS = foreign
 
-EXTRA_DIST = ctags.mk
+EXTRA_DIST = ctags.mk libgcc2.c-patch bootstrap.sh make-dist
 
 all:
 	true
