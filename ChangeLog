@@ -1,3 +1,11 @@
+2003-01-19  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* misc/xenofarm.sh (timeecho): Set LC_ALL=C before calling date.
+
+	* src/testsuite/functions.sh (need_tcputils): New function. Use it
+	in the testcases that depend on tcputils: tcpip-local-test,
+	tcpip-remote-test, lshg-tcpip-test and ssh1-fallback-test.
+
 2003-01-17  Niels Möller  <niels@s3.kth.se>
 
 	* src/Makefile.am.in: Added explicit dependencies for objects
@@ -14,6 +22,11 @@
 	four arguments. 
 	(dotask): Don't create $task.pass, they're not used anymore.
 
+2003-01-15  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* misc/xenofarm.sh: Updated to use new format for reporting the
+	result. 
+
 2003-01-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/.dist_classes: sexp.h.x has disappeared.
@@ -23,6 +36,9 @@
 
 2003-01-14  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* misc/xenofarm.sh: New file.
+	Added build instructions, following the lyskom-server example. 
+	
 	* src/.dist_classes: hmac.c.x, md5.c.x and sha.c.x have
 	disappeared. 
 
