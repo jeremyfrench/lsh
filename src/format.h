@@ -109,4 +109,7 @@ int lsh_string_prefixp(const struct lsh_string *prefix,
 struct lsh_string*
 lsh_string_colonize(struct lsh_string *s, int every, int freeflag);
 
+struct lsh_string*
+lsh_string_bubblebabble(struct lsh_string *s, int freeflag);
+
 #endif /* LSH_FORMAT_H_INCLUDED */
