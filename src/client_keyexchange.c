@@ -163,7 +163,6 @@ static void
 do_init_client_dh(struct keyexchange_algorithm *c,
 		  struct ssh_connection *connection,
 		  int hostkey_algorithm_atom,
-		  /* struct signature_algorithm *ignored,*/
 		  struct lsh_object *extra,
 		  struct object_list *algorithms)
 {
@@ -173,9 +172,6 @@ do_init_client_dh(struct keyexchange_algorithm *c,
   NEW(dh_client, dh);
 
   CHECK_SUBTYPE(ssh_connection, connection);
-#if 0
-  CHECK_SUBTYPE(signature_algorithm, ignored);
-#endif
 
   assert(verifier);
   
