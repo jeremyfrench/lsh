@@ -73,7 +73,7 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
       || (msg_number != SSH_MSG_KEXINIT) )
     return 0;
 
-  res = xalloc(sizeof(struct kexinit));
+  NEW(res);
 
   if (!parse_octets(&buffer, 16, res->cookie))
     {
@@ -270,7 +270,7 @@ static int do_handle_kexinit(struct packet_handler *c,
 	}
     }
   
-  algorithms = xalloc(KEX_PARAMETERS*sizeof(void *));
+  algorithms = lsh_space_alloc(KEX_PARAMETERS*sizeof(void *));
   
   for (i = 0; i<KEX_PARAMETERS; i++)
     algorithms[i] = ALIST_GET(closure->algorithms, parameters[i]);
@@ -290,7 +290,9 @@ struct packet_handler *make_kexinit_handler(int type,
 					    struct alist *algorithms,
 					    struct ssh_service *finished)
 {
-  struct kexinit_handler *self = xalloc(sizeof(struct kexinit_handler));
+  struct kexinit_handler *self;
+
+  NEW(self);
 
   self->super.handler = do_handle_kexinit;
 
@@ -447,7 +449,9 @@ struct packet_handler *
 make_newkeys_handler(struct crypto_instance *crypto,
 		     struct mac_instance *mac)
 {
-  struct newkeys_handler *self = xalloc(sizeof(struct newkeys_handler));
+  struct newkeys_handler *self;
+
+  NEW(self);
 
   self->super.handler = do_handle_newkeys;
   self->crypto = crypto;
@@ -465,7 +469,7 @@ struct test_kexinit
 static struct kexinit *do_make_kexinit(struct make_kexinit *c)
 {
   struct test_kexinit *closure = (struct test_kexinit *) c;
-  struct kexinit *res = xalloc(sizeof(struct kexinit));
+  struct kexinit *res;
 
   static int kex_algorithms[] = { ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1 };
   static int server_hostkey_algorithms[] = { ATOM_SSH_DSS, -1 };
@@ -475,6 +479,8 @@ static struct kexinit *do_make_kexinit(struct make_kexinit *c)
   static int languages[] = { -1 };
 
   MDEBUG(closure);
+
+  NEW(res);
   
   RANDOM(closure->r, 16, res->cookie);
   res->kex_algorithms = kex_algorithms;
@@ -494,7 +500,9 @@ static struct kexinit *do_make_kexinit(struct make_kexinit *c)
 
 struct make_kexinit *make_test_kexinit(struct randomness *r)
 {
-  struct test_kexinit *res = xalloc(sizeof(struct test_kexinit));
+  struct test_kexinit *res;
+
+  NEW(res);
 
   res->super.make = do_make_kexinit;
   res->r = r;
