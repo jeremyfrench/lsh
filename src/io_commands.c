@@ -79,6 +79,18 @@ do_io_write_file(struct command *s,
     EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_WRITE, NULL, errno, NULL));
 }
 
+COMMAND_SIMPLE(io_write_file_command)
+{
+  CAST(io_backend, backend, a);
+
+  NEW(backend_command, self);
+  self->super.call = do_io_write_file;
+  self->backend = backend;
+
+  return &self->super.super;
+}
+
+#if 0
 static struct lsh_object *
 do_io_write_file_collect(struct command_simple *s UNUSED,
 			 struct lsh_object *a)
@@ -94,6 +106,7 @@ do_io_write_file_collect(struct command_simple *s UNUSED,
 
 struct command_simple io_write_file_command
 = STATIC_COMMAND_SIMPLE(do_io_write_file_collect);
+#endif
 
 struct io_write_file_info *
 make_io_write_file_info(const char *name, int flags, int mode, UINT32 block_size)
@@ -498,6 +511,17 @@ make_simple_listen(struct io_backend *backend,
 /* Takes a listen_value as argument, logs the peer address, and
  * returns the fd object. */
 
+COMMAND_SIMPLE(io_log_peer_command)
+{
+  CAST(listen_value, lv, a);
+
+  verbose("Accepting connection from %S, port %i\n",
+	  lv->peer->ip, lv->peer->port);
+
+  return &lv->fd->super.super.super;
+}
+
+#if 0
 static struct lsh_object *
 do_simple_log_peer(struct command_simple *s UNUSED,
 		   struct lsh_object *x)
@@ -512,7 +536,8 @@ do_simple_log_peer(struct command_simple *s UNUSED,
 
 struct command_simple io_log_peer_command =
 STATIC_COMMAND_SIMPLE(do_simple_log_peer);
-  
+#endif
+
 /* ***
  *
  * (lambda (backend connection port)
