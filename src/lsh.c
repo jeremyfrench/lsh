@@ -77,7 +77,9 @@ static struct verifier *do_host_lookup(struct lookup_verifier *c,
 
 static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
 {
-  struct fake_host_db *res = xalloc(sizeof(struct fake_host_db));
+  struct fake_host_db *res;
+
+  NEW(res);
 
   res->super.lookup = do_host_lookup;
   res->algorithm = a;
@@ -165,7 +167,7 @@ int main(int argc, char **argv)
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
   make_kexinit = make_test_kexinit(r);
 
-  service = make_session_service
+  service = make_connection_service
     (make_alist(0, -1),
      make_alist(0, -1));
   
@@ -174,6 +176,7 @@ int main(int argc, char **argv)
      make_kexinit, algorithms,
      /* FIXME: make_service_handler is wrong function: It's for
       * the server side. */
+     
      make_service_handler(make_alist
 			  (1, ATOM_SSH_USERAUTH, 
 			   make_client_userauth(ssh_format("%lz", user),
