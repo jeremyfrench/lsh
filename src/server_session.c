@@ -547,7 +547,7 @@ spawn_process(struct server_session *session,
 						    HANDLER_CONTEXT);
 
 	      /* Close callback for stderr and stdout */
-	      struct close_callback *read_close_callback
+	      struct lsh_callback *read_close_callback
 		= make_channel_read_close_callback(channel);
 
 	      session->in

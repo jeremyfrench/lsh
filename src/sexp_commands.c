@@ -208,7 +208,7 @@ do_read_sexp_continue(struct command_continuation *s,
 		      struct lsh_object *a)
 {
   CAST(read_sexp_continuation, self, s);
-  close_fd_nicely(self->fd, 0);
+  close_fd_nicely(self->fd);
 
   trace("do_read_sexp_continue\n");
   
@@ -243,7 +243,7 @@ do_read_sexp_exception_handler(struct exception_handler *s,
 {
   CAST(read_sexp_exception_handler, self, s);
   if (x->type & EXC_SEXP)
-    close_fd_nicely(self->fd, 0);
+    close_fd_nicely(self->fd);
 
   EXCEPTION_RAISE(self->super.parent, x);
 }

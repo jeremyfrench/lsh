@@ -49,24 +49,23 @@
 /* GABA:
    (class
      (name connection_close_handler)
-     (super close_callback)
+     (super lsh_callback)
      (vars
        (connection object ssh_connection)))
 */
 
 static void
-connection_die(struct close_callback *c, int reason)
+connection_die(struct lsh_callback *c)
 {
   CAST(connection_close_handler, closure, c);
   
-  verbose("Connection died, for reason %i.\n", reason);
-  if (reason != CLOSE_EOF)
-    werror("Connection died.\n");
-
+  verbose("Connection died.\n");
+  
   KILL_RESOURCE_LIST(closure->connection->resources);
 }
 
-struct close_callback *make_connection_close_handler(struct ssh_connection *c)
+struct lsh_callback *
+make_connection_close_handler(struct ssh_connection *c)
 {
   NEW(connection_close_handler, closure);
 

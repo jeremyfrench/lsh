@@ -551,7 +551,7 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
 	  assert(port->socket);
 	  verbose("Cancelling a requested tcpip-forward.\n");
 
-	  close_fd(port->socket, 0);
+	  close_fd(port->socket);
 	  port->socket = NULL;
 
 	  COMMAND_RETURN(c, NULL);

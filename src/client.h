@@ -43,7 +43,7 @@ make_client_callback(struct io_backend *b,
 		     struct packet_handler *kexinit_handler);
 
 struct read_handler *make_client_read_line(struct ssh_connection *c);
-struct close_callback *make_client_close_handler(void);
+struct lsh_callback *make_client_close_handler(void);
 
 struct packet_handler *
 make_accept_service_handler(UINT32 service,

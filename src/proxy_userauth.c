@@ -294,6 +294,8 @@ do_proxy_userauth_continuation(struct command_continuation *c,
     self->connection->dispatch[i] = self->connection->ignore;
   
   FORCE_APPLY(action, self->super.up, self->super.e);
+
+  /* FIXME: Possibly call connection_handle_pending(). */
 }
 
 static struct command_continuation *

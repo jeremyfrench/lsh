@@ -57,7 +57,8 @@ STATIC_EXCEPTION_HANDLER(do_sexp_test_handler, NULL);
        (style . int)))
 */
 
-static int do_output_sexp(struct sexp_handler *h, struct sexp *e)
+static int
+do_output_sexp(struct sexp_handler *h, struct sexp *e)
 {
   CAST(output_sexp, closure, h);
   A_WRITE(closure->write, sexp_format(e, closure->style, 0) );
@@ -70,21 +71,18 @@ static int do_output_sexp(struct sexp_handler *h, struct sexp *e)
 /* GABA:
    (class
      (name input_closed)
-     (super close_callback)
+     (super lsh_callback)
      (vars
-       (status . "int *")
+       ;; (status . "int *")
        (output object write_buffer)))
 */
 
-static int do_close(struct close_callback *c, int reason)
+static void
+do_close(struct lsh_callback *c)
 {
   CAST(input_closed, closure, c);
 
   write_buffer_close(closure->output);  
-
-  *closure->status = (reason == CLOSE_EOF) ? EXIT_SUCCESS : EXIT_FAILURE;
-
-  return 4711;
 }
 
 #define BLOCK_SIZE 2000
@@ -109,8 +107,7 @@ int main(int argc UNUSED, char **argv UNUSED)
   
   close->super.f = do_close;
   close->output = write;
-  close->status = &status;
-  
+    
   io_read(make_lsh_fd(backend, STDIN_FILENO, &handler),
 	  make_buffered_read(BLOCK_SIZE,
 			     make_read_sexp(&out->super, SEXP_TRANSPORT, 1)),

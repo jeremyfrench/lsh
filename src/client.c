@@ -191,7 +191,7 @@ do_client_session_eof(struct ssh_channel *c)
 {
   CAST(client_session, session, c);
   
-  close_fd(session->in, 0);
+  close_fd(session->in);
 }  
 
 static void

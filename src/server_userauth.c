@@ -142,6 +142,14 @@ do_userauth_continuation(struct command_continuation *s,
     self->connection->dispatch[i] = self->connection->ignore;
 
   COMMAND_RETURN(self->up, self->connection);
+
+  /* NOTE: It would be better to use a callout, so that we return back
+   * to the backend loop before starting to process new packets. It's
+   * not obvious that calling connection_handle_pending() here is
+   * safe.
+   *
+   * connection_handle_pending(self->connection);
+   */
 }
 
 static struct command_continuation *
@@ -275,6 +283,8 @@ do_exc_userauth_handler(struct exception_handler *s,
 			    make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
 						    "Access denied"));
 	  }
+
+	/* FIXME: Possibly call connection_handle_pending(). */
 	break;
       }
     case EXC_USERAUTH_SPECIAL:
@@ -288,6 +298,7 @@ do_exc_userauth_handler(struct exception_handler *s,
 	 * So we have to dup it, to make the gc happy. */
 	C_WRITE(self->connection, lsh_string_dup(e->reply));
 
+	/* FIXME: Possibly call connection_handle_pending(). */	
 	break;
       }
     }
