@@ -169,14 +169,13 @@ make_lshd_options(struct io_backend *backend)
 {
   NEW(lshd_options, self);
 
-  init_algorithms_options(&self->super, many_algorithms(0, -1));
+  init_algorithms_options(&self->super, all_symmetric_algorithms());
 
   self->backend = backend;
   self->random = make_reasonably_random();
-  
-  self->signature_algorithms
-    = make_alist(1,
-		 ATOM_DSA, make_dsa_algorithm(self->random), -1);
+
+  /* FIXME: We don't support rsa yet in the rest of the code! */
+  self->signature_algorithms = all_signature_algorithms(self->random);
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
 
@@ -359,23 +358,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    if (self->with_srp_keyexchange)
 	      {
 		assert(db);
-		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1;
+		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
 		ALIST_SET(self->super.algorithms,
-			  ATOM_SRP_RING1_SHA1,
+			  ATOM_SRP_RING1_SHA1_LOCAL,
 			  make_srp_server(make_srp1(self->random), db));
 	      }
 #endif /* WITH_SRP */
-	    
-#if 0
-	    self->kexinit
-	      = make_simple_kexinit(self->random,
-				    kex_algorithms,
-				    make_int_list(1, ATOM_SSH_DSS, -1),
-				    self->super.crypto_algorithms,
-				    self->super.mac_algorithms,
-				    self->super.compression_algorithms,
-				    make_int_list(0, -1));
-#endif
 	  }
 	else
 	  argp_error(state, "All keyexchange algorithms disabled.");
@@ -537,24 +525,32 @@ main_argp =
 
 /* GABA:
    (expr
-     (name lshd_listen)
+     (name make_lshd_listen)
      (params
-       (listen object command)
+       (backend object io_backend)
        (handshake object handshake_info)
+       (init object make_kexinit)
        (services object command) )
      (expr (lambda (options)
-             (services (connection_handshake
-	                    handshake
-			    (spki_read_hostkeys (options2signature_algorithms options)
-			                        (options2keyfile options))
-			    (log_peer (listen (options2local options))))))))
+             (let ((keys 
+		    (spki_read_hostkeys (options2signature_algorithms options)
+			                (options2keyfile options))))
+	       (listen_callback
+	         (lambda (lv)
+    		   (services (connection_handshake
+    				  handshake
+    				  (kexinit_filter init keys)
+    				  keys 
+    				  (log_peer lv))))
+		 backend
+		 (options2local options))))))
 */
 
 
 /* Invoked when starting the ssh-connection service */
 /* GABA:
    (expr
-     (name lshd_connection_service)
+     (name make_lshd_connection_service)
      (params
        (hooks object object_list))
      (expr
@@ -688,25 +684,26 @@ int main(int argc, char **argv)
        * should also extract the host-key algorithms for which we have
        * keys, instead of hardcoding ssh-dss below. */
 
-      CAST_SUBTYPE(command, connection_service, lshd_connection_service(connection_hooks));
+      CAST_SUBTYPE(command, connection_service,
+		   make_lshd_connection_service(connection_hooks));
       CAST_SUBTYPE(command, server_listen, 		   
-		   lshd_listen
-		   (make_simple_listen(backend, NULL),
+		   make_lshd_listen
+		   (backend,
 		    make_handshake_info(CONNECTION_SERVER,
 					"lsh - a free ssh",
 					NULL,
 					SSH_MAX_PACKET,
 					options->random,
 					options->super.algorithms,
-					make_simple_kexinit
-					(options->random,
-					 options->kex_algorithms,
-					 make_int_list(1, ATOM_SSH_DSS, -1),
-					 options->super.crypto_algorithms,
-					 options->super.mac_algorithms,
-					 options->super.compression_algorithms,
-					 make_int_list(0, -1)),
 					options->sshd1),
+		    make_simple_kexinit
+		    (options->random,
+		     options->kex_algorithms,
+		     options->super.hostkey_algorithms,
+		     options->super.crypto_algorithms,
+		     options->super.mac_algorithms,
+		     options->super.compression_algorithms,
+		     make_int_list(0, -1)),
 		    make_offer_service
 		    (make_alist
 		     (2, ATOM_SSH_CONNECTION, connection_service,
