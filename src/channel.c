@@ -269,6 +269,13 @@ static void adjust_rec_window(struct flow_controlled *f, UINT32 written)
 	   "  (res = %i)\n", res);
 }
 
+int channel_start_receive(struct ssh_channel *channel)
+{
+  return A_WRITE(channel->write,
+		 prepare_window_adjust
+		 (channel, channel->max_window - channel->rec_window_size));
+}
+
 /* Process channel-related status codes. Used by the packet handlers,
  * before returning. */
 static int channel_process_status(struct channel_table *table,
@@ -295,9 +302,7 @@ static int channel_process_status(struct channel_table *table,
       else if (status & LSH_CHANNEL_READY_REC)
 	{
 	  status &= ~ LSH_CHANNEL_READY_REC;
-	  status |= A_WRITE(c->write,
-			    prepare_window_adjust
-			    (c, c->max_window - c->rec_window_size));
+	  status |= channel_start_receive(c);
 	}
       else
 	break;
@@ -1040,6 +1045,9 @@ static int do_channel_open_confirm(struct packet_handler *closure UNUSED,
 
       if (channel && channel->open_continuation)
 	{
+	  struct command_continuation *c = channel->open_continuation;
+	  channel->open_continuation = NULL;
+	  
 	  channel->channel_number = remote_channel_number;
 	  channel->send_window_size = window_size;
 	  channel->send_max_packet = max_packet;
@@ -1047,7 +1055,7 @@ static int do_channel_open_confirm(struct packet_handler *closure UNUSED,
 	  return channel_process_status
 	    (connection->channels,
 	     local_channel_number,
-	     COMMAND_RETURN(channel->open_continuation, channel));
+	     COMMAND_RETURN(c, channel));
 	}
       werror("Unexpected SSH_MSG_CHANNEL_OPEN_CONFIRMATION on channel %i\n",
 	     local_channel_number);
@@ -1085,20 +1093,18 @@ static int do_channel_open_failure(struct packet_handler *closure UNUSED,
       struct ssh_channel *channel = lookup_channel(connection->channels,
 						   channel_number);
 
-      /* lsh_string_free(packet); */
+      lsh_string_free(packet); 
 
       if (channel && channel->open_continuation)
 	{
-	  int res = COMMAND_RETURN(channel->open_continuation, NULL);
-
-	  lsh_string_free(packet);
-
+	  struct command_continuation *c = channel->open_continuation;
+	  channel->open_continuation = NULL;
+	  
 	  return channel_process_status(connection->channels, channel_number,
-					res | LSH_CHANNEL_FINISHED);
+					COMMAND_RETURN(c, NULL) | LSH_CHANNEL_FINISHED);
 	}
       werror("Unexpected SSH_MSG_CHANNEL_OPEN_FAILURE on channel %i\n",
 	     channel_number);
-      lsh_string_free(packet);
       
       return LSH_FAIL | LSH_DIE;
     }
@@ -1465,18 +1471,21 @@ static int channel_close_callback(struct close_callback *c, int reason)
       /* Expected close: Do nothing */
       debug("channel_close_callback: Closing after EOF.\n");
       break;
+
+    default:
+      if (closure->channel->flags & CHANNEL_SENT_CLOSE)
+	/* Do nothing */
+	break;
+      /* Fall through to send CHANNEL_CLOSE message */
     case CLOSE_WRITE_FAILED:
     case CLOSE_BROKEN_PIPE:
       channel_close(closure->channel);
       break;
-    default:
-      fatal("channel_close_callback: Unexpected close reason %i!\n",
-	    reason);
     }
   /* FIXME: So far, the returned value is ignored. */
   return 17;
 }
-  
+
 struct close_callback *make_channel_close(struct ssh_channel *channel)
 {
   NEW(channel_close_callback, closure);
