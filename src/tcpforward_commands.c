@@ -374,8 +374,6 @@ STATIC_COLLECT_1(&collect_info_remote_listen_2);
 /* GABA:
    (expr
      (name forward_local_port)
-     (globals
-       (listen LISTEN_COMMAND))
      (params
        (backend object io_backend)
        (local object address_info)
@@ -383,12 +381,13 @@ STATIC_COLLECT_1(&collect_info_remote_listen_2);
      (expr
        (lambda (connection)
          (connection_remember connection
-           (listen (lambda (peer)
-	             (tcpip_start_io
-		       (catch_channel_open 
-		         (open_direct_tcpip target peer) connection)))
-		   backend
-	           local)))))
+           (listen_callback
+	     (lambda (peer)
+	       (tcpip_start_io
+	         (catch_channel_open 
+		   (open_direct_tcpip target peer) connection)))
+	     backend
+	     local)))))
 */
 
 struct command *
@@ -526,8 +525,7 @@ STATIC_COLLECT_1(&install_tcpip_forward_info_2.super);
      (name tcpip_forward_hook)
      (globals
        (install "&install_tcpip_forward_handler.super.super.super")
-       (handler "&make_tcpip_forward_handler.super")
-       (listen LISTEN_COMMAND))
+       (handler "&make_tcpip_forward_handler.super"))
      (params
        (backend object io_backend))
      (expr
@@ -536,15 +534,16 @@ STATIC_COLLECT_1(&install_tcpip_forward_info_2.super);
          (install connection
 	   (handler (lambda (port)
 	     ;; Called when the client requests remote forwarding.
+	     ;; It should return the fd associated with the port.
 	     ;; NOTE: The caller, do_tcpip_forward_request, is responsible
-	     ;; for handling I/O exceptions.
-             (listen (lambda (peer)
-  		       ;; Called when someone connects to the
-  		       ;; forwarded port.
-  		       (tcpip_start_io
-			 (catch_channel_open 
-			   (open_forwarded_tcpip port peer) connection)))
-	             backend port)))))))
+	     ;; for handling I/O exceptions. and for remembering the port.
+	     (listen_callback (lambda (peer)
+  		  		;; Called when someone connects to the
+		  		;; forwarded port.
+		  		(tcpip_start_io
+		  		  (catch_channel_open 
+		  		    (open_forwarded_tcpip port peer) connection)))
+		  	      backend port))))))))
 */
 
 struct command *
