@@ -80,7 +80,7 @@ void tcpip_channel_start_io(struct ssh_channel *c);
 struct channel_open *
 make_channel_open_direct_tcpip(struct command *callback);
 
-struct channel_open channel_open_forwarded_tcpip;
+extern struct channel_open channel_open_forwarded_tcpip;
 
 struct global_request *make_tcpip_forward_request(struct command *callback);
 
