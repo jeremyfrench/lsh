@@ -1,5 +1,8 @@
 SUBDIRS = . testsuite
 
+# Needed for finding nettle-types.h in the build tree.
+AM_CPPFLAGS = -I..
+
 AUTOMAKE_OPTIONS = foreign
 
 bin_PROGRAMS = lsftp
