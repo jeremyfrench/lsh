@@ -1,3 +1,27 @@
+2003-05-12  Niels Möller  <niels@s3.kth.se>
+
+	* configure.ac: Don't AC_REPLACE_FUNCS(memxor), just use the
+	memxor function in nettle.
+
+	* doc/HACKING: Documented current include file ordering rules.
+
+	* src/lsh.h (MAX, MIN, SQR, STRING_LINE): Moved miscellaneous
+	macros here. Used to be in lsh_types.h.
+
+	* Reordered includes in most or all .c-files. All should now
+	include config.h.
+
+	* src/lsh_types.h: Deleted file.
+	* src/.dist_deps: Deleted file.
+	* src/memxor.h, src/memxor.c: Deleted files.
+
+	* src/Makefile.am (BUILT_SOURCES): Use BUILT_SOURCES to get
+	environ.h built. .dist_deps no longer needed.
+
+	* acinclude.m4 (LSH_GCC_FUNCTION_NAME, LSH_FUNC_ALLOCA) 
+	(LSH_FUNC_STRERROR, LSH_FUNC_STRSIGNAL): New macros.
+	* configure.ac: Use them.
+
 2003-05-12  Pontus Sköld  <pont@soua.net>
 
 	* src/lsh-upgrade: Upgrade any authorized public keys and
