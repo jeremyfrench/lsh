@@ -1,3 +1,9 @@
+News for the 0.9.15 release
+
+	Portability fixes. Fixed 32-bit bug in the memory allocation
+	that appeared on alpha-linux. Fixes for HPUX compiler. Fixed
+	make distclean, which failed when cleaning in src/symmetric.
+
 News for the 0.9.14 release
 
 	Added --stdin, --stdout and --stderr options to lsh.
