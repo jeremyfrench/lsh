@@ -158,7 +158,7 @@ static int do_read_line(struct read_handler **h,
   /* Partial line */
   if (closure->pos == MAX_LINE)
     {
-      werror("Received too long a line\n");
+      wwrite("Received too long a line\n");
       return LSH_FAIL | LSH_DIE;
     }
   return LSH_OK | LSH_GOON;
