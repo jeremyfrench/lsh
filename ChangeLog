@@ -1,3 +1,7 @@
+2004-07-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (do_background_process): Fixed C99-ism.
+
 2004-06-22  Niels Möller  <niels@s3.kth.se>
 
 	* src/parse.c (parse_utf8): Use unsigned variables.
