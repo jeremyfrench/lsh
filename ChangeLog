@@ -1,3 +1,12 @@
+2000-02-09  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* acinclude.m4: New file.
+
+	* src/io.c (do_listen_callback): Use socklen_t.
+	(do_connect_callback): Use socklen_t.
+
+	* doc/lsh.texinfo: Wrote secions on invoking lsh and lshd. 
+
 2000-02-07  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/tcpforward_commands.c (forward_local_port): Use
