@@ -29,6 +29,10 @@ int main(int argc, char **argv)
   int option;
 
   struct sockaddr_in remote;
+
+  /* For filtering messages. Could perhaps also be used when converting
+   * strings to and from UTF8. */
+  setlocale(LC_CTYPE, "");
   
   while((option = getopt(argc, argv, "dp:q")) != -1)
     switch(option)
