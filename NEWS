@@ -1,6 +1,12 @@
+News for the 1.1.3 release:
+
+	Support for encrypted private keys (not tested).
+
+	The lshg gateway client works.
+	
 News for the 1.1.2 release:
 
-	New experimental option to lsh: --cvs-workaround Using this
+	New experimental option to lsh: --cvs-workaround. Using this
 	option causes lsh to fork off a few extra processes to handle
 	its stdio file descriptors, and avoid setting them in
 	nonblocking mode. One can also use for instance
