@@ -159,6 +159,61 @@ But most parsing extracts integers from the buffer, in various ways,
 and do not need to do any extra copying.
 
 
+CLIENT SIDE OF USER AUTHENTICATION
+
+About publickey authentication, one way to organize this as follows:
+
+First, lsh.c parses its options and collects all -i keyfile options
+into a list. By default, the list contains ~/.lsh/identity. There
+should also be some way to specify an empty list, i.e. to disable
+public key authentication.
+
+Later on, we iterate through this list, and collect any private keys
+we find into a list of keypairs. A file can contain zero or more keys,
+and i/o and parse errors are not fatal errors. dss keys may split into
+two keypair structures; one for "ssh-dss" and another for "spki" (this
+splitting could be moved to later on, but I think that will require
+some more information than the keypair struct to be kept around). The
+list is passed on to the userauth mechanism, perhaps using something
+like
+
+  (publickey-login (map-append read-private-key-file file-list)
+                   (userauth_service (handshake (connect port))))
+
+When we have an agent, we will also ask the agent for additional keys
+(a keypair from an agent will contain a public key and a "proxy
+signer" object, which will create signatures by communicating with the
+agent).
+
+When getting into the userauth proper, we try all available keys, by
+sending USERAUTH_REQUEST messages for all of the public key, and
+whatching for USERAUTH_PK_OK replies. When we get one, we create a new
+signature and send a new USERAUTH request. If all keys fail, we fall
+back to password authentication.
+
+At first, we'll support only one keyfile at a time, but we can still
+have several keys.
+
+Also the lshd server currently can't deal with multiple userauth
+requests in parallell.
+
+On a higher level, we may have several userauth methods that we want
+to try, say first public key, then agent public keys, and last
+password authentication.
+
+I think the best way to keep track of this is to let the userauth
+mechanism get a list of methods. It tries the first method; when it
+failes, we should continue with the next useful method. To do this, we
+advance one element on the methods list, and we also look at the list
+of useful methods according to the latest USERAUTH_FAILURE message
+from the server. Then we try the next useful method.
+
+Perhaps each userauth method could be represented as a command? I
+think it is better to handle the SETUP and CLEANUP done internally by
+the method. Each userauth method should probably request the same
+username and service.
+
+
 PTY REFERENCES (from Keresztg)
 
 the code of tnlited
