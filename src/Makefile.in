@@ -35,10 +35,10 @@ LOADLIBES = $(LIBS) lib/algorithms.a
 
 COMMON_SRCS = atoms.c bignum.c connection.c crypto.c \
 	debug.c encrypt.c format.c getopt.c io.c keyexchange.c \
-	packet_dispatch.c pad.c parse.c publickey_crypto.c \
+	packet_disconnect.c packet_ignore.c pad.c parse.c publickey_crypto.c \
 	randomness.c \
 	read_data.c read_line.c read_packet.c \
-	server_keyexchange.c unpad.c void.c \
+	server_keyexchange.c unpad.c \
 	werror.c write_buffer.c xalloc.c
 
 CLIENT_SRCS = lsh.c client.c 
