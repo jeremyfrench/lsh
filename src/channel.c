@@ -176,10 +176,6 @@ do_exc_finish_channel_handler(struct exception_handler *s,
        * code in a live channel is supposed to raise
        * EXC_FINISH_PENDING. The typical caller is a channel's
        * CHANNEL_CLOSE callback that is called below. */
-#if 0
-      if (!self->connection->table->channel_count)
-	EXCEPTION_RAISE(self->connection->e, &finish_read_exception);
-#endif
       break;
       
     case EXC_FINISH_CHANNEL:
@@ -1409,13 +1405,6 @@ DEFINE_PACKET_HANDLER(static, channel_close_handler,
 		  werror("Unexpected channel CLOSE.\n");
 		}
 
-#if 0
-	      /* FIXME: Which eof-handlers rely on being called in
-	       * this case? */
-	      if (! (channel->flags & (CHANNEL_RECEIVED_EOF))
-		  && channel->eof)
-		CHANNEL_EOF(channel);
-#endif
 	      if (channel->flags & CHANNEL_SENT_CLOSE)
 		{
 		  static const struct exception finish_exception
