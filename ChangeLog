@@ -1,3 +1,10 @@
+2005-02-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added oop-line-file.c.
+
+	* src/oop-line.h: Line reading interface, based on liboop.
+	* src/oop-line-file.c: Implementation of the interface.
+
 2004-12-22  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh-make-seed.c (get_system): Fixed handling of error from
