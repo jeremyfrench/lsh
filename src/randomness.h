@@ -30,6 +30,26 @@
 
 #include "exception.h"
 
+enum random_source_type
+  {
+    /* Trivial data such as timing info and pids. */
+    RANDOM_SOURCE_TRIVIA,
+    /* Remote end padding. */
+    RANDOM_SOURCE_REMOTE,
+    /* Data occasionally read from /dev/random or similar. */
+    RANDOM_SOURCE_DEVICE,
+    /* Data that is secret but not terribly random, such as user
+     * passwords or private keys. */
+    RANDOM_SOURCE_SECRET,
+    /* For reread seed files. */
+    RANDOM_SOURCE_NEW_SEED,
+    RANDOM_NSOURCES
+  };
+
+/* Randomness that is for "pad only" should be used only for iv:s and
+ * random padding. */
+enum randomness_quality { RANDOM_GOOD, RANDOM_PAD_ONLY };
+
 #define GABA_DECLARE
 #include "randomness.h.x"
 #undef GABA_DECLARE
@@ -38,60 +58,30 @@
    (class
      (name randomness)
      (vars
-       (quality . int)
-       (random method void "UINT32 length" "UINT8 *dst")))
+       (quality . "enum randomness_quality")
+       (random method void "UINT32 length" "UINT8 *dst")
+       ; To be used only for SOURCE_REMOTE and SOURCE_SECRET
+       (add method void "enum random_source_type"
+                        "UINT32 length" "const UINT8 *data")))
 */
 
-#define RANDOM(r, length, dst) ((r)->random((r), length, dst))
+#define RANDOM(r, length, dst) ((r)->random((r), (length), (dst)))
+#define RANDOM_ADD(r, t, length, data) ((r)->add((r), (t), (length), (dst)))
 
-/* A class polling the environment for randomness. Following Peter
- * Gutmann's ideas, there are two methods for a slow more thorough
- * poll done at startup, and a faster poll performed from time to time
- * as a generator is used. */
+/* This is not really a constructor, as the randomness collector uses
+ * global state. */
+struct randomness *
+random_init(struct lsh_string *seed_file_name);
 
-/* GABA:
-   (class
-     (name random_poll)
-     (vars
-       ; Both functions return an entropy estimate, and adds the
-       ; randomness to the given hash instance.
-       (slow method unsigned "struct hash_instance *")
-       (fast method unsigned "struct hash_instance *")
-       (background method void)))
-*/
+/* Creates a more efficient but less secure generator by buffering
+ * another generator. */
+struct randomness *
+make_buffered_random(struct randomness *);
 
-#define RANDOM_POLL_SLOW(p, h) ((p)->slow((p), (h)))
-#define RANDOM_POLL_FAST(p, h) ((p)->fast((p), (h)))
-#define RANDOM_POLL_BACKGROUND(p) ((p)->background((p)))
+struct randomness *
+make_user_random(const char *home);
 
-/* GABA:
-   (class
-     (name randomness_with_poll)
-     (super randomness)
-     (vars
-       ; Object that gets randomness from the environment
-       (poller object random_poll)))
-*/
-
-/* Consumes the init string (which may be NULL). */
-struct randomness *make_poor_random(struct hash_algorithm *hash,
-				    struct lsh_string *init);
-
-struct randomness *make_bad_random(void);
-
-struct randomness *make_device_random(const char *device);
-struct randomness *make_reasonably_random(void);
-
-struct randomness_with_poll *
-make_arcfour_random(struct random_poll *poller,
-		    struct hash_algorithm *hash,
-		    struct exception_handler *e);
-
-struct randomness_with_poll *
-make_default_random(struct reap *reaper,
-		    struct exception_handler *e);
-
-struct random_poll *
-make_unix_random(struct reap *reaper);
+struct randomness *
+make_system_random(void);
 
 #endif /* LSH_RANDOMNESS_H_INCLUDED */
