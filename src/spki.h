@@ -6,7 +6,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1999 Balázs Scheidler
+ * Copyright (C) 2002, Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,8 +27,6 @@
 #define LSH_SPKI_H_INCLUDED
 
 #include "alist.h"
-#include "dsa.h"
-#include "exception.h"
 #include "publickey_crypto.h"
 
 #include <time.h>
@@ -49,48 +47,30 @@ struct spki_5_tuple;
 #include "spki.h.x"
 #undef GABA_DECLARE
 
-/* GABA:
-   (class
-     (name spki_exception)
-     (super exception)
-     (vars
-       (expr object sexp)))
-*/
 
-struct exception *
-make_spki_exception(UINT32 type, const char *msg, struct sexp *expr);
+int spki_get_type(struct sexp_iterator *i);
 
-int spki_get_type(struct sexp *e, struct sexp_iterator **res);
-
-struct sexp *
+struct lsh_string *
 make_ssh_hostkey_tag(struct address_info *host);
 
 struct verifier *
 spki_make_verifier(struct alist *algorithms,
-		   struct sexp *e);
-
-struct signer *
-spki_make_signer(struct alist *algorithms,
-		 struct sexp *e,
-		 int *type);
+		   struct sexp_iterator *i);
 
 struct signer *
 spki_sexp_to_signer(struct alist *algorithms,
-                    struct sexp *key,
-                    int *algorithm_name);
+		    struct sexp_iterator *e,
+		    int *type);
 
-struct sexp *
-spki_make_public_key(struct verifier *verifier);
+struct signer *
+spki_make_signer(struct alist *algorithms,
+		 const struct lsh_string *key,
+		 int *algorithm_name);
 
-struct sexp *
+struct lsh_string *
 spki_hash_data(const struct hash_algorithm *algorithm,
 	       int algorithm_name,
 	       UINT32 length, UINT8 *data);
-
-struct sexp *
-spki_hash_sexp(const struct hash_algorithm *algorithm,
-	       int name,
-	       struct sexp *expr);
 
 /* At a point in time, not all fields are known; fields may be added
  * later, or computed as needed. This information is not automatically
@@ -102,19 +82,19 @@ spki_hash_sexp(const struct hash_algorithm *algorithm,
      (name spki_subject)
      (vars
        ; (public-key ...) expression.
-       (key object sexp)
+       (key string)
 
        ; Verifier
        (verifier object verifier)
-       (sha1 string)
-       (md5 string)))
+       (sha1 const string)
+       (md5 const string)))
 */
 
 struct spki_subject *
-make_spki_subject(struct sexp *key,
+make_spki_subject(struct sexp_iterator *key,
 		  struct verifier *verifier,
-		  struct lsh_string *sha1,
-		  struct lsh_string *md5);
+		  const struct lsh_string *sha1,
+		  const struct lsh_string *md5);
 
 /* Keeps track of spki_subjects and their keys.
  *
@@ -132,7 +112,7 @@ make_spki_subject(struct sexp *key,
      (vars
        ; Looks up a public-key or hash.
        (lookup method (object spki_subject)
-                      "struct sexp *e"
+                      "struct sexp_iterator *i"
 		      ; If non-NULL, use this verifier for
 		      ; the subject. Useful for non-SPKI keys.
 		      "struct verifier *v")
@@ -140,14 +120,14 @@ make_spki_subject(struct sexp *key,
                   "struct spki_5_tuple *tuple")
        (authorize method int
                          "struct spki_subject *subject"
-			 "struct sexp *access")))
+			 "const struct lsh_string *access")))
        ;; (clone method (object spki_context))))
 */
 
 #define SPKI_LOOKUP(c, e, v) ((c)->lookup((c), (e), (v)))
 #define SPKI_ADD_TUPLE(c, t) ((c)->add_tuple((c), ((t))))
 #define SPKI_AUTHORIZE(c, s, a) ((c)->authorize((c), (s), (a)))
-#define SPKI_CLONE(c) ((c)->clone((c)))
+
 
 struct spki_context *
 make_spki_context(struct alist *algorithms);
@@ -169,7 +149,7 @@ make_spki_context(struct alist *algorithms);
        (type . int)
        ; Returns true iff the resources described by the tag
        ; include the resource described by the sexp.
-       (match method int "struct sexp *")))
+       (match method int "struct sexp_iterator *")))
 */
 
 #define SPKI_TAG_TYPE(t) ((t)->type)
@@ -207,7 +187,7 @@ make_spki_5_tuple(struct spki_subject *issuer,
 
 
 struct spki_tag *
-spki_sexp_to_tag(struct sexp *e,
+spki_sexp_to_tag(struct sexp_iterator *i,
 		 /* Some limit on the recursion */
 		 unsigned limit);
 
@@ -217,10 +197,10 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
 
 int
 spki_add_acl(struct spki_context *ctx,
-	     struct sexp *e);
+	     struct sexp_iterator *i);
 
 
-struct sexp *
+struct lsh_string *
 spki_pkcs5_encrypt(struct randomness *r,
                    struct lsh_string *label,
 		   UINT32 prf_name,
@@ -232,10 +212,10 @@ spki_pkcs5_encrypt(struct randomness *r,
 		   UINT32 iterations,
                    struct lsh_string *data);
 
-struct sexp *
+struct lsh_string *
 spki_pkcs5_decrypt(struct alist *mac_algorithms,
                    struct alist *crypto_algorithms,
                    struct interact *interact,
-                   struct sexp *expr);
+                   struct lsh_string *expr);
 
 #endif /* LSH_SPKI_H_INCLUDED */
