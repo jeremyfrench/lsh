@@ -57,7 +57,8 @@ characters properly. Probably needs a complete rewrite.
 
 CONFIGURATION
 
-Read configuration files. Better command line options. 
+Read configuration files. Better command line options. In particular
+lsh.c needs a cleanup of argument parsing, probably using argp.
 
 
 LOGGING
@@ -152,6 +153,16 @@ To do this, we need a few queues for outstanding requests, which would
 be in the channel (channel requests) and the channel_table objects
 (global requests). Perhaps, this is also the right time to fix callout
 support.
+
+
+FORWARDING
+
+Perhaps split tcpforward.c into two files, tcpforward.c and
+tcpforward_commands.c. Implement other types of forwarding; X,
+ssh-agent, UDP, etc.
+
+Review the naming of functions in tcpforward.c; it appears a little
+inconsistent. 
 
 
 MISC
