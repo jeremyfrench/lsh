@@ -1,3 +1,8 @@
+2002-02-12  Pontus  <pont@it.uu.se>
+
+	* commands.c (com_mv): Didn't properly check for error in return value of
+	lsftp_dc_r_isdir.
+
 2002-02-11  Pontus  <pont@it.uu.se>
 
 	* sftp-server.c (sftp_process_realpath): Added deugging message.
