@@ -28,9 +28,9 @@ EXTRA_PROGRAMS = lsh-krb-checkpw srp-gen
 
 bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey \
 	       lsh-decode-key lsh-export-key lsh-make-seed \
-	       sexp-conv @SRP_PROGRAM@ @KRB_PROGRAM@
+	       sexp-conv @SRP_PROGRAM@
 
-sbin_PROGRAMS = lshd lsh_proxy
+sbin_PROGRAMS = lshd lsh_proxy lsh-execuv @KRB_PROGRAM@
 bin_SCRIPTS = lsh-authorize ssh-conv
 noinst_PROGRAMS = prime_table digit_table pkcs5-test
 noinst_SCRIPTS = lcp
