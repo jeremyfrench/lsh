@@ -15,7 +15,7 @@ else
     SERVER=sftp-server
 fi
 
-function client () {
+client () {
     (cd $TESTHOME && "$PROGRAMDIR"/sftp-test-client "$PROGRAMDIR"/"$SERVER" "$@")
 }
     

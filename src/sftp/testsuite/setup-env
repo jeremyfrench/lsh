@@ -1,6 +1,6 @@
 #! /bin/sh
 
-. common.sh
+. ./common.sh
 
 # Clean up first.
 rm -rf $TESTHOME

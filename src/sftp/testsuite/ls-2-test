@@ -1,6 +1,6 @@
 #! /bin/sh
 
-. common.sh
+. ./common.sh
 
 # Match the d directory
 client ls "d" | grep -q ' x3$'

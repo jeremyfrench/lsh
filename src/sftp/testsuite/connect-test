@@ -1,5 +1,5 @@
 #! /bin/sh
 
-. common.sh
+. ./common.sh
 
 client

@@ -1,6 +1,6 @@
 #! /bin/sh
 
-. common.sh
+. ./common.sh
 
 client get "x1" | grep -q foo
 
