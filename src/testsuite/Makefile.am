@@ -1,6 +1,8 @@
 # Testsuite
 
-AM_CFLAGS = -O0
+# -O0 is not recogniced on AIX
+# AM_CFLAGS = -O0
+
 AM_CPPFLAGS = -I$(srcdir)/..
 
 TS_PROGS = arcfour-test aes-test blowfish-test cast128-test \
