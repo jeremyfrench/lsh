@@ -1,3 +1,82 @@
+2000-10-31  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/sexp_streamed_parser.c: Less trace messages.
+
+	* src/unix_random.c: Hacked and debugged. Seems to work now.
+
+	* src/randomness.h (RANDOM_POLL_BACKGROUND): New method.
+
+	* src/randomness.c (make_poor_random): #if:ed out.
+	Improved arcfour_random.
+
+	* src/packet_ignore.h: Marked as obsolete.
+
+	* src/lshd.c (do_exc_lshd_handler): Handle
+	EXC_RANDOMNESS_LOW_ENTROPY.  
+	(make_lshd_options): Use make_arcfour_random and make_unix_random. 
+	(main): Call RANDOM_POLL_BACKGROUND.
+
+	* src/gc.c (gc_kill): Less debug output.
+
+	* src/gateway_commands.c: Hacked some more. Compiles now.
+
+	* src/exception.h (EXC_RANDOMNESS, EXC_RANDOMNESS_LOW_ENTROPY):
+	New exception types.
+
+	* src/debug.c (do_rec_debug): Replace with a definition that uses
+	DEFINE_PACKET_HANDLER.
+
+	* src/connection.h (DEFINE_PACKET_HANDLER): New macro.
+	(ssh_connection): Deleted the "share handler" attributes ignore,
+	unimplemented, fail.
+	Declare corresponding static handlers.
+
+	* src/client.c: Refer to the static packet handlers instead of
+	connection->fail and friends. 
+	* src/client_userauth.c: Likewise
+	* src/client_keyexchange.c: Likewise.
+	* src/proxy.c: Likewise.
+	* src/proxy_userauth.c: Likewise.
+	* src/server_userauth.c: Likewise.
+	* src/server_keyexchange.c: Likewise.
+	* src/server.c: Likewise.
+	
+	* src/connection.c (connection_init_io): Don't initialize the
+	encryption state here, that is already done by
+	make_ssh_connection. 
+	(do_fail): Replace with a definition that uses
+	DEFINE_PACKET_HANDLER.
+	(do_unimplemented): Likewise.
+	(connection_ignore_handler): Moved handler from packet_ignore.c,
+	and made it static.
+	(connection_forward_handler): New handler.
+	(make_ssh_connection): Updated initialization to use static
+	handlers. 
+
+	* src/channel.c (do_exc_finish_channel_handler): Renamed
+	do_finish_channel_handler.
+	(do_exc_channel_request_handler): Renamed
+	do_channel_request_handler.
+	(do_global_request_success): Replace with a definition that uses
+	DEFINE_PACKET_HANDLER.
+	(do_global_request_failure): Likewise.
+	(do_channel_request): Likewise.
+	(do_channel_open): Likewise.
+	(do_window_adjust): Likewise.
+	(do_channel_data): Likewise.
+	(do_channel_extended_data): Likewise.
+	(do_channel_eof): Likewise.
+	(do_channel_close): Likewise.
+	(do_channel_open_confirm): Likewise.
+	(do_channel_open_failure): Likewise.
+	(do_channel_success): Likewise.
+	(do_channel_failure): Likewise.
+	(init_connection_service): New function. Most of the code in
+	connection_service_command moved here.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added gateway.c,
+	gateway_commands.c and unix_random.c. Removed packet_ignore.c.
+
 2000-10-22  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/exception.h (EXC_IO_BLOCKING_READ): New exception type.
