@@ -1,3 +1,8 @@
+2004-02-25  Niels Möller  <nisse@lysator.liu.se>
+
+	* misc/xenofarm.sh (cfgwarn, makewarn, ckprgwarn): Renamed
+	variables log, warn and fail. 
+
 2004-02-24  Niels Möller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh (dotask): Fixed handling of $var.
