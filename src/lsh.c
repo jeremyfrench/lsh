@@ -82,9 +82,20 @@ struct command_simple lsh_login_command;
 static struct command options2known_hosts;
 #define OPTIONS2KNOWN_HOSTS (&options2known_hosts.super)
 
+struct command_simple options2service;
+#define OPTIONS2SERVICE (&options2service.super.super)
+
 static struct command options2identities;
 #define OPTIONS2IDENTITIES (&options2identities.super)
-		    
+
+static struct request_service request_userauth_service =
+STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
+#define REQUEST_USERAUTH_SERVICE (&request_userauth_service.super.super)
+
+static struct request_service request_connection_service =
+STATIC_REQUEST_SERVICE(ATOM_SSH_CONNECTION);
+#define REQUEST_CONNECTION_SERVICE (&request_connection_service.super.super)
+
 #include "lsh.c.x"
 
 /* Block size for stdout and stderr buffers */
@@ -123,6 +134,12 @@ static struct command options2identities;
        (with_srp_keyexchange . int)
        (with_dh_keyexchange . int)
 
+       ; Ask for the userauth service
+       (with_userauth . int)
+
+       ; Command to invoke to start ssh-connection service)
+       (service object command)
+       
        ;; (kexinit object make_kexinit)
        (kex_algorithms object int_list)
        
@@ -203,6 +220,8 @@ make_options(struct io_backend *backend,
 
   /* By default, enable only one of dh and srp. */
   self->with_dh_keyexchange = -1;
+
+  self->with_userauth = -1;
   
   self->kex_algorithms = NULL;
   
@@ -215,6 +234,13 @@ COMMAND_SIMPLE(options2remote)
 {
   CAST(lsh_options, options, a);
   return &options->remote->super;
+}
+
+/* Request ssh-userauth or ssh-connection service, as appropriate. */
+COMMAND_SIMPLE(options2service)
+{
+  CAST(lsh_options, options, a);
+  return &options->service->super;
 }
 
 /* Open hostkey database. By default, "~/.lsh/known_hosts". */
@@ -501,10 +527,11 @@ COMMAND_SIMPLE(lsh_verifier_command)
 }
 
 /* list-of-public-keys -> login-command */
-static void do_lsh_login(struct command *s,
-			 struct lsh_object *a,
-			 struct command_continuation *c,
-			 struct exception_handler *e UNUSED)
+static void
+do_lsh_login(struct command *s,
+	     struct lsh_object *a,
+	     struct command_continuation *c,
+	     struct exception_handler *e UNUSED)
 {
   CAST(options_command, self, s);
   CAST_SUBTYPE(object_list, keys, a);
@@ -532,31 +559,41 @@ COMMAND_SIMPLE(lsh_login_command)
 			   do_lsh_login)->super;
 }
 
+/* Requests the userauth service, log in, and request connection service. */
+/* GABA:
+   (expr
+     (name make_lsh_userauth)
+     (params
+       (options object lsh_options))
+     (expr
+       (lambda (connection)
+         (lsh_login options (options2identities options)
+	   ; Request the userauth service
+	   (request_userauth_service connection)))))
+*/
+
 /* GABA:
    (expr
      (name make_lsh_connect)
      (params
        (connect object command)
        (handshake object handshake_info)
-       (userauth_service object command)
        (requests object object_list))
      (expr (lambda (options)
-              ; What to do with the service
-	     ((progn requests)
-	       ; Initialize service
-	       (init_connection_service
-	         ; Perform the userauth protocol to login and request
-		 ; the ssh-connection service.
-		 (lsh_login options (options2identities options)
-		   ; Request the userauth service
-		   (userauth_service
+               ; What to do with the service
+	       ((progn requests)
+	         ; Initialize service
+		 (init_connection_service
+		   ; Either requests ssh-connection service,
+		   ; or requests and uses the ssh-userauth service.
+		   (options2service options
 		     ; Start the ssh transport protocol
 	             (connection_handshake
 		       handshake
 		       (options2verifier options
 				         (options2known_hosts options))
  		       ; Connect using tcp
-		       (connect (options2remote options))))))))))
+		       (connect (options2remote options)))))))))
 */
 
 /* GABA:
@@ -663,7 +700,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define ARG_NOT 0x400
 
-#define OPT_NO_PUBLICKEY 0x201
+#define OPT_PUBLICKEY 0x201
 
 #define OPT_SLOPPY 0x202
 #define OPT_STRICT 0x203
@@ -673,6 +710,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define OPT_DH 0x206
 #define OPT_SRP 0x207
+#define OPT_USERAUTH 0x208
 
 static const struct argp_option
 main_options[] =
@@ -681,7 +719,9 @@ main_options[] =
   { "port", 'p', "Port", 0, "Connect to this port.", 0 },
   { "user", 'l', "User name", 0, "Login as this user.", 0 },
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
-  { "no-publickey", OPT_NO_PUBLICKEY, NULL, 0,
+  { "publickey", OPT_PUBLICKEY, NULL, 0,
+    "Try publickey user authentication (default).", 0 },
+  { "no-publickey", OPT_PUBLICKEY | ARG_NOT, NULL, 0,
     "Don't try publickey user authentication.", 0 },
   { "host-db", OPT_HOST_DB, "Filename", 0, "By default, ~/.lsh/known_hosts", 0},
   { "sloppy-host-authentication", OPT_SLOPPY, NULL, 0,
@@ -696,9 +736,16 @@ main_options[] =
   { "no-srp-keyexchange", OPT_SRP | ARG_NOT, NULL, 0, "Disable experimental SRP support (default).", 0 },
 #endif /* WITH_SRP */
 
-  { "dh-keyexchange", OPT_DH, NULL, 0, "Enable DH support (default).", 0 },
+  { "dh-keyexchange", OPT_DH, NULL, 0,
+    "Enable DH support (default, unless SRP is being used).", 0 },
+
   { "no-dh-keyexchange", OPT_DH | ARG_NOT, NULL, 0, "Disable DH support.", 0 },
 
+  { "userauth", OPT_USERAUTH, NULL, 0,
+    "Request the ssh-userauth service (default, unless SRP is being used).", 0 },
+  { "no-userauth", OPT_USERAUTH | ARG_NOT, NULL, 0,
+    "Request the ssh-userauth service (default if SRP is used).", 0 },
+  
   { NULL, 0, NULL, 0, "Actions:", 0 },
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
@@ -922,6 +969,20 @@ rebuild_command_line(unsigned argc, char **argv)
   return r;
 }
 
+#define CASE_FLAG(opt, flag)			\
+  case opt:					\
+    if (self->not)				\
+      {						\
+        self->not = 0;				\
+						\
+      case opt | ARG_NOT:			\
+        self->flag = 0;				\
+        break;					\
+      }						\
+      						\
+      self->flag = 1;				\
+      break
+
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
 {
@@ -1007,6 +1068,43 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	else
 	  argp_error(state, "All keyexchange algorithms disabled.");
 
+	if (self->with_userauth < 0)
+	  {
+	    /* Make the decision  early, if possible. */
+	    if (!self->with_srp_keyexchange)
+	      /* We're not using SRP, so we request the
+	       * ssh-userauth-service */
+	      self->with_userauth = 1;
+	    else if (!self->with_dh_keyexchange)
+	      /* We're using SRP, and should not need any extra
+	       * user authentication. */
+	      self->with_userauth = 0;
+	  }
+	switch (self->with_userauth)
+	  {
+	  case 0:
+	    self->service = &request_connection_service.super;
+	    break;
+	  case 1:
+	    {
+	      CAST(command, perform_userauth, make_lsh_userauth(self));
+	      self->service = perform_userauth;
+	      break;
+	    }
+	  case -1:
+	    {
+	      /* Examine the CONNECTION_SRP flag, later. */
+	      CAST(command, perform_userauth, make_lsh_userauth(self));
+
+	      self->service
+		= make_connection_if_srp(&request_connection_service.super,
+					 perform_userauth);
+	      break;
+	    }
+	  default:
+	    fatal("Internal error.\n");
+	  }
+	      
 	{
 	  struct lsh_string *tmp = NULL;
 	  const char *s = NULL;
@@ -1072,9 +1170,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->identity = optarg;
       break;
 
-    case OPT_NO_PUBLICKEY:
-      self->with_publickey = 0;
-      break;
+    CASE_FLAG(OPT_PUBLICKEY, with_publickey);
 
     case OPT_HOST_DB:
       self->known_hosts = optarg;
@@ -1092,32 +1188,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->capture = arg;
       break;
 
-    case OPT_DH:
-      if (self->not)
-	{
-	  self->not = 0;
+    CASE_FLAG(OPT_DH, with_dh_keyexchange);
+    CASE_FLAG(OPT_SRP, with_srp_keyexchange);
 
-	case OPT_DH | ARG_NOT:
-	  self->with_dh_keyexchange = 0;
-	  break;
-	}
-      
-      self->with_dh_keyexchange = 1;
-      break;
-      
-    case OPT_SRP:
-      if (self->not)
-	{
-	  self->not = 0;
+    CASE_FLAG(OPT_USERAUTH, with_userauth);
 
-	case OPT_SRP | ARG_NOT:
-	  self->with_srp_keyexchange = 0;
-	  break;
-	}
-      
-      self->with_srp_keyexchange = 1;
-      break;
-      
     case 'E':
       lsh_add_action(self, lsh_command_session(self, ssh_format("%lz", arg)));
       break;
@@ -1169,30 +1244,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->start_shell = 0;
       break;
 
-    case 'g':
-      if (self->not)
-	{
-	  self->not = 0;
+    CASE_FLAG('g', with_remote_peers);
 
-	case 'g' | ARG_NOT:
-	  self->with_remote_peers = 0;
-	  break;
-	}
-      
-      self->with_remote_peers = 1;
-      break;
 #if WITH_PTY_SUPPORT
-    case 't':
-      if (self->not)
-	{
-	  self->not = 0;
-
-	case 't' | ARG_NOT:
-	  self->with_pty = 0;
-	  break;
-	}
-      self->with_pty = 1;
-      break;
+    CASE_FLAG('t', with_pty);
 #endif /* WITH_PTY_SUPPORT */
 
     case 'n':
@@ -1319,7 +1374,6 @@ int main(int argc, char **argv)
 			      options->super.compression_algorithms,
 			      make_int_list(0, -1)),
 			    NULL),
-	make_request_service(ATOM_SSH_USERAUTH),
 	queue_to_list(&options->actions));
     
     CAST_SUBTYPE(command, lsh_connect, o);
