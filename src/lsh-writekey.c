@@ -199,13 +199,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	{
 	  if (!self->label)
 	    {
-	      const char *name;
-	      USER_NAME_FROM_ENV(name);
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 300
 #endif
 	      char host[MAXHOSTNAMELEN];
+	      const char *name;
 	  
+	      USER_NAME_FROM_ENV(name);
+
 	      if (!name)
 		{
 		  argp_failure(state, EXIT_FAILURE, 0,
