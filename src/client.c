@@ -383,10 +383,13 @@ make_client_session(struct client_options *options);
 void
 init_client_options(struct client_options *self,
 		    struct io_backend *backend,
+		    struct randomness_with_poll *random,
 		    struct exception_handler *handler,
 		    int *exit_code)			 
 {
   self->backend = backend;
+  self->random = random;
+  
   self->tty = make_unix_interact(backend);
   self->escape = -1;
   
@@ -573,21 +576,12 @@ client_maybe_x11(struct client_options *options,
   if (options->with_x11)
     {
       char *display = getenv("DISPLAY");
-      
+
+      assert(options->random);
       if (display)
 	{
-	  const char cookie[16] = { 0x24, 0x51, 0x5f, 0x50, 0x69, 0x81, 0x6d, 0xeb,
-				    0xcc, 0x6e, 0x38, 0xb5, 0x42, 0x95, 0x06, 0x0d };
-	  struct command *request;
+	  struct command *request = make_forward_x11(display, &options->random->super);
 	  
-	  /* FIXME: Get a random cookie. Unfortunataly, this means that
-	   * a lot more gets linked into lshg. */
-
-	  werror("WARNING: Good X11 cookie generation not implemented!\n");
-
-	  request = make_forward_x11(display,
-				     ssh_format("%ls", sizeof(cookie), cookie));
-
 	  if (request)
 	    {
 	      object_queue_add_tail(q, &request->super);

@@ -106,7 +106,8 @@ struct channel_open *
 make_channel_open_x11(struct io_backend *backend);
 
 struct command *
-make_forward_x11(const char *display, struct lsh_string *fake);
+make_forward_x11(const char *display_string,
+		 struct randomness *random);
 
 struct client_x11_display *
 make_client_x11_display(const char *display, struct lsh_string *fake);
@@ -116,6 +117,9 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
      (name client_options)
      (vars
        (backend object io_backend)
+
+       ;; Used only by lsh, NULL for lshg.
+       (random object randomness_with_poll)
 
        (tty object interact)
 
@@ -165,6 +169,7 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
 void
 init_client_options(struct client_options *options,
 		    struct io_backend *backend,
+		    struct randomness_with_poll *random,
 		    struct exception_handler *handler,
 		    int *exit_code);
 
