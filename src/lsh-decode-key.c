@@ -169,6 +169,23 @@ do_decode_key(struct abstract_write *s,
 	      COMMAND_RETURN(self->c, spki_make_public_key(v));
 	      break;
 	    }
+	  case ATOM_SSH_RSA:
+	    {
+	      struct verifier *v;
+	    
+	      werror("Reading key of type ssh-rsa...\n");
+
+	      if (! ( (v = parse_ssh_rsa_public(&buffer)) ))
+		{
+		  EXCEPTION_RAISE(self->e,
+				  make_simple_exception(EXC_APP_BAD_KEY,
+							"Invalid rsa key.\n"));
+		  return;
+		}
+
+	      COMMAND_RETURN(self->c, spki_make_public_key(v));
+	      break;
+	    }	    
 	  default:
 	    EXCEPTION_RAISE(self->e,
 			    make_simple_exception(EXC_APP_BAD_KEY,
