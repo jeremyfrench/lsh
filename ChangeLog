@@ -1,4 +1,12 @@
 2000-11-20  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/algorithms.h, src/client.h, src/client_keyexchange.c,
+	src/client_userauth.c, src/connection.c, src/format.h,
+	src/interact.c, src/interact.h, src/io.c, src/io.h,
+	src/lsh-writekey.c, src/lsh.c, src/lshd.c, src/reaper.c,
+	src/reaper.h, src/server_session.c, src/spki.c,
+	src/spki_commands.c, src/srp-gen.c, src/tty.c, src/tty.h: Removed
+	old #if:ed out code.
+
 	* ChangeLog: Rotated ChangeLog, creating ChangeLog.2. 
 
