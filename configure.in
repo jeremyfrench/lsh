@@ -56,6 +56,11 @@ if test x$enable_debug_trace = xyes ; then
   AC_DEFINE(DEBUG_TRACE)
 fi
 
+AC_ARG_ENABLE(gcov,
+  [--enable-gcov          Instrument for gcov (requires a modern gcc)],,
+  [enable_gcov=no])
+
+
 AC_ARG_WITH(zlib,
   [--without-zlib    Don't use zlib compression],,
   [with_zlib=yes])
@@ -370,6 +375,14 @@ fi
 
 AC_SUBST(KRB_LIBS)
 AC_SUBST(KRB_PROGRAM)
+
+echo "enable_gcov = $enable_gcov"
+echo "CFLAGS = $CFLAGS"
+if test "x$enable_gcov" = "xyes"; then
+  CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
+  # AC_DEFINE(AVOID_ABORTS)
+fi
+echo "CFLAGS = $CFLAGS"
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
