@@ -43,7 +43,9 @@ init_dh_instance(struct dh_method *m,
   mpz_init(self->e);
   mpz_init(self->f);
   mpz_init(self->secret);
+#if 0
   mpz_init(self->K);
+#endif
   
   self->method = m;
   self->hash = MAKE_HASH(m->H);
@@ -120,6 +122,7 @@ dh_process_client_msg(struct dh_instance *self,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
+  mpz_t tmp;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -131,7 +134,13 @@ dh_process_client_msg(struct dh_instance *self,
 	 && parse_eod(&buffer) ))
     return 0;
 
-  GROUP_POWER(self->method->G, self->K, self->e, self->secret);
+  mpz_init(tmp);
+  
+  GROUP_POWER(self->method->G, tmp, self->e, self->secret);
+  self->K = ssh_format("%ln", tmp);
+
+  mpz_clear(tmp);
+  
   return 1;
 }
 
@@ -150,7 +159,7 @@ dh_hash_update(struct dh_instance *self,
 void
 dh_hash_digest(struct dh_instance *self)
 {
-  dh_hash_update(self, ssh_format("%n%n%n",
+  dh_hash_update(self, ssh_format("%n%n%S",
 				  self->e, self->f,
 				  self->K), 1);
   self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
@@ -167,44 +176,64 @@ dh_make_server_secret(struct dh_instance *self)
 
 struct lsh_string *
 dh_make_server_msg(struct dh_instance *self,
+		   struct lsh_string *server_key,
 		   struct signer *s)
 {
-  dh_hash_update(self, ssh_format("%S", self->server_key), 1);
+  dh_hash_update(self, ssh_format("%S", server_key), 1);
   dh_hash_digest(self);
 
   return ssh_format("%c%S%n%fS",
 		    SSH_MSG_KEXDH_REPLY,
-		    self->server_key,
+		    server_key,
 		    self->f, SIGN(s,
 				  self->exchange_hash->length,
 				  self->exchange_hash->data));
 }
 
-int
+/* Returns the host key. */
+struct lsh_string *
 dh_process_server_msg(struct dh_instance *self,
+		      struct lsh_string **signature,
 		      struct lsh_string *packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;
+  mpz_t tmp;
+
+  struct lsh_string *key = NULL;
+  struct lsh_string *s = NULL;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (!(parse_uint8(&buffer, &msg_number)
 	&& (msg_number == SSH_MSG_KEXDH_REPLY)
-	&& (self->server_key = parse_string_copy(&buffer))
+	&& (key = parse_string_copy(&buffer))
 	&& (parse_bignum(&buffer, self->f))
 	&& (mpz_cmp_ui(self->f, 1) > 0)
 	&& GROUP_RANGE(self->method->G, self->f)
-	&& (self->signature = parse_string_copy(&buffer))
+	&& (s = parse_string_copy(&buffer))
 	&& parse_eod(&buffer)))
-    return 0;
+    {
+      lsh_string_free(key);
+      lsh_string_free(s);
+      return NULL;
+    }
 
-  dh_hash_update(self, ssh_format("%S", self->server_key), 1);
+  mpz_init(tmp);
   
-  GROUP_POWER(self->method->G, self->K, self->f, self->secret);
-  return 1;
+  GROUP_POWER(self->method->G, tmp, self->f, self->secret);
+  self->K = ssh_format("%ln", tmp);
+
+  mpz_clear(tmp);
+
+  dh_hash_update(self, ssh_format("%S", key), 1);
+  dh_hash_digest(self);
+    
+  *signature = s;
+  return key;
 }
-	  
+
+#if 0
 int
 dh_verify_server_msg(struct dh_instance *self,
 		     struct verifier *v)
@@ -215,4 +244,5 @@ dh_verify_server_msg(struct dh_instance *self,
 		self->hash->hash_size, self->exchange_hash->data,
 		self->signature->length, self->signature->data);
 }
+#endif
 
