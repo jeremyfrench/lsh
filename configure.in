@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 1.0.3)
+AM_INIT_AUTOMAKE(lsh, 1.0.4)
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
