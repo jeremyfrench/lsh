@@ -47,6 +47,11 @@ AC_CHECK_FUNCS(fputs_unlocked fwrite_unlocked)
 dnl Used only by argp-test.c, so don't use AC_REPLACE_FUNCS.
 AC_CHECK_FUNCS(strdup asprintf)
 
+AH_TEMPLATE([HAVE_PROGRAM_INVOCATION_NAME],
+	    [Define if the variable exists (usually provided by the linker).])
+AH_TEMPLATE([HAVE_PROGRAM_INVOCATION_SHORT_NAME],
+	    [Define if the variable exists (usually provided by the linker).])
+
 ARGP_CHECK_VAR(program_invocation_name, [#include <errno.h>])
 ARGP_CHECK_VAR(program_invocation_short_name, [#include <errno.h>])
 
