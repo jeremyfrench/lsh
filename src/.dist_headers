@@ -18,7 +18,6 @@ dist_headers = \
     crypto.h \
     daemon.h \
     debug.h \
-    encrypt.h \
     exception.h \
     format.h \
     gateway.h \
@@ -35,7 +34,6 @@ dist_headers = \
     lookup_verifier.h \
     lsh.h \
     lsh_argp.h \
-    pad.h \
     parse.h \
     parse_config.h \
     parse_macros.h \
