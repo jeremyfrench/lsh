@@ -1,228 +1,88 @@
 /* idcache.c -- map user and group IDs, cached for speed
-   Copyright (C) 1985, 1988, 1989, 1990, 1997, 1998 Free Software Foundation, Inc.
+ *
+ */
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
-   any later version.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.  */
-
-#if HAVE_CONFIG_H
-# include <config.h>
-#endif
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 2001 Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
 #include "idcache.h"
 
-#include <stdio.h>
-#include <pwd.h>
-#include <grp.h>
+#include "xmalloc.h"
 
-#if STDC_HEADERS || HAVE_STRING_H
-# include <string.h>
-#else
-# include <strings.h>
-#endif
-
-#if HAVE_UNISTD_H
-# include <unistd.h>
-#endif
-
-#if 0
-#ifndef _POSIX_VERSION
-struct passwd *getpwuid ();
-struct passwd *getpwnam ();
-struct group *getgrgid ();
-struct group *getgrnam ();
-#endif
-
-char *xmalloc ();
-char *xstrdup ();
-#endif
-
-#ifdef __DJGPP__
-static char digits[] = "0123456789";
-#endif
-
-struct userid
+/* For cached user and group info */
+struct sftp_user_info
 {
-  union
-    {
-      uid_t u;
-      gid_t g;
-    } id;
-  char *name;
-  struct userid *next;
+  int id;
+  const char *name;
+  struct sftp_user_info *next;
 };
 
-static struct userid *user_alist;
 
-#if 0
-/* The members of this list have names not in the local passwd file.  */
-static struct userid *nouser_alist;
-#endif
-
-/* Translate UID to a login name, with cache, or NULL if unresolved.  */
-
-char *
-getuser (uid_t uid)
+#if 1
+int
+sftp_cache_assoc(struct sftp_user_info **cache,
+		 int id,
+		 const char **name)
 {
-  register struct userid *tail;
-  struct passwd *pwent;
-
-  for (tail = user_alist; tail; tail = tail->next)
-    if (tail->id.u == uid)
-      return tail->name;
-
-  pwent = getpwuid (uid);
-  tail = (struct userid *) malloc (sizeof (struct userid));
-  if (!tail)
-    return NULL;
-  tail->id.u = uid;
-  tail->name = pwent ? strdup (pwent->pw_name) : NULL;
-
-  /* Add to the head of the list, so most recently used is first.  */
-  tail->next = user_alist;
-  user_alist = tail;
-  return tail->name;
+  struct sftp_user_info *p;
+  for (p = *cache ; p; p = p->next)
+    if (p->id == id)
+      {
+	*name = p->name;
+	return 1;
+      }
+  return 0;
 }
 
-#if 0
-/* Translate USER to a UID, with cache.
-   Return NULL if there is no such user.
-   (We also cache which user names have no passwd entry,
-   so we don't keep looking them up.)  */
+#else
 
-uid_t *
-getuidbyname (const char *user)
+int
+sftp_cache_assoc(struct sftp_user_info **cache,
+		 int id,
+		 const char **name)
 {
-  register struct userid *tail;
-  struct passwd *pwent;
+  struct sftp_user_info **p;
+  struct sftp_user_info *p;
 
-  for (tail = user_alist; tail; tail = tail->next)
-    /* Avoid a function call for the most common case.  */
-    if (*tail->name == *user && !strcmp (tail->name, user))
-      return &tail->id.u;
+  for (pp = cache; (p = *pp); pp = &(p->next))
+    if (p->id == id)
+      {
+	/* Reorder, putting the found element first. */
+	*pp = p->next;
+	p->next = *cache;
+	*cache = p;
 
-  for (tail = nouser_alist; tail; tail = tail->next)
-    /* Avoid a function call for the most common case.  */
-    if (*tail->name == *user && !strcmp (tail->name, user))
-      return 0;
-
-  pwent = getpwnam (user);
-#ifdef __DJGPP__
-  /* We need to pretend to be the user USER, to make
-     pwd functions know about an arbitrary user name.  */
-  if (!pwent && strspn (user, digits) < strlen (user))
-    {
-      setenv ("USER", user, 1);
-      pwent = getpwnam (user);	/* now it will succeed */
-    }
-#endif
-
-  tail = (struct userid *) xmalloc (sizeof (struct userid));
-  tail->name = xstrdup (user);
-
-  /* Add to the head of the list, so most recently used is first.  */
-  if (pwent)
-    {
-      tail->id.u = pwent->pw_uid;
-      tail->next = user_alist;
-      user_alist = tail;
-      return &tail->id.u;
-    }
-
-  tail->next = nouser_alist;
-  nouser_alist = tail;
+	*name = p->name;
+	return 1;
+      }
   return 0;
 }
 #endif
 
-/* Use the same struct as for userids.  */
-static struct userid *group_alist;
-#if 0
-static struct userid *nogroup_alist;
-#endif
-
-/* Translate GID to a group name, with cache, or NULL if unresolved.  */
-
-char *
-getgroup (gid_t gid)
+const char *
+sftp_cache_push(struct sftp_user_info **cache,
+		int id, const char *name)
 {
-  register struct userid *tail;
-  struct group *grent;
+  struct sftp_user_info *p = xmalloc(sizeof(struct sftp_user_info));
+  p->id = id;
+  p->name = name;
+  p->next = *cache;
+  *cache = p;
 
-  for (tail = group_alist; tail; tail = tail->next)
-    if (tail->id.g == gid)
-      return tail->name;
-
-  grent = getgrgid (gid);
-  tail = (struct userid *) malloc (sizeof (struct userid));
-  if (!tail)
-    return NULL;
-  tail->id.g = gid;
-  tail->name = grent ? strdup (grent->gr_name) : NULL;
-
-  /* Add to the head of the list, so most recently used is first.  */
-  tail->next = group_alist;
-  group_alist = tail;
-  return tail->name;
+  return name;
 }
-
-#if 0
-/* Translate GROUP to a GID, with cache.
-   Return NULL if there is no such group.
-   (We also cache which group names have no group entry,
-   so we don't keep looking them up.)  */
-
-gid_t *
-getgidbyname (const char *group)
-{
-  register struct userid *tail;
-  struct group *grent;
-
-  for (tail = group_alist; tail; tail = tail->next)
-    /* Avoid a function call for the most common case.  */
-    if (*tail->name == *group && !strcmp (tail->name, group))
-      return &tail->id.g;
-
-  for (tail = nogroup_alist; tail; tail = tail->next)
-    /* Avoid a function call for the most common case.  */
-    if (*tail->name == *group && !strcmp (tail->name, group))
-      return 0;
-
-  grent = getgrnam (group);
-#ifdef __DJGPP__
-  /* We need to pretend to belong to group GROUP, to make
-     grp functions know about any arbitrary group name.  */
-  if (!grent && strspn (group, digits) < strlen (group))
-    {
-      setenv ("GROUP", group, 1);
-      grent = getgrnam (group);	/* now it will succeed */
-    }
-#endif
-
-  tail = (struct userid *) xmalloc (sizeof (struct userid));
-  tail->name = xstrdup (group);
-
-  /* Add to the head of the list, so most recently used is first.  */
-  if (grent)
-    {
-      tail->id.g = grent->gr_gid;
-      tail->next = group_alist;
-      group_alist = tail;
-      return &tail->id.g;
-    }
-
-  tail->next = nogroup_alist;
-  nogroup_alist = tail;
-  return 0;
-}
-#endif
