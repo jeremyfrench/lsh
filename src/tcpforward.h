@@ -30,26 +30,13 @@
 #include "resource.h"
 #include "xalloc.h"
 
+#if 0
 #define GABA_DECLARE
 #include "tcpforward.h.x"
 #undef GABA_DECLARE
+#endif
 
-/* this class encapsulates tcpip_forward global requests currently
- * opened by the client. */
-
-/* GABA:
-   (class
-   (name forwarded_port)
-     (vars
-       ; this could store the type of this forward
-       ; tcp, udp etc. Or we could invent relevant methods
-       ; and subclasses.
-       ; (type simple UINT32)
-
-       ; socket == NULL means that we are setting up a forward for this port,
-       ; but are not done yet.
-       (listen object address_info)))
-*/
+struct ssh_channel *make_tcpip_channel(struct io_fd *socket);
 
 struct channel_open *make_channel_open_direct_tcpip(struct io_backend *backend);
 struct channel_open channel_open_forwarded_tcpip;
