@@ -1,5 +1,8 @@
 2003-05-12  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/.dist_headers (dist_headers): Deleted memxor.h and
+	lsh_types.h. 
+
 	* configure.ac: Updated AC_CONFIG_SRCDIR, as lsh_types.h no longer
 	exists. 
 
