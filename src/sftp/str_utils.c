@@ -143,7 +143,6 @@ lsftp_s_strtok(const char* s, const char* sep,
 {
   /* TODO: should we do this different to support char-types with more than eight bits? */
 
-  int copychars;
   char* tend;
   char* scopy;
 
@@ -162,7 +161,7 @@ lsftp_s_strtok(const char* s, const char* sep,
 
   tend = lsftp_s_skipn( s, sep );    /* Find the first separator in our new s (or it's end) */
  
-  scopy = strdup(s ); /* Put the token in store */
+  scopy = strdup( s ); /* Put the token in store */
 
   if( !scopy )
     return NULL;
