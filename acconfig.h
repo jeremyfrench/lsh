@@ -31,7 +31,10 @@
 #undef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
 
 /* Define if the compiler understands __attribute__ */
-#undef HAVE_ATTRIBUTE
+#undef HAVE_GCC_ATTRIBUTE
+
+/* Define if the compiler understands __FUNCTION__ */
+#undef HAVE_GCC_FUNCTION
 
 /* Define if a we have working UNIX98 pty handling */
 #undef HAVE_UNIX98_PTYS
