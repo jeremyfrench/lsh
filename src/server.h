@@ -40,7 +40,7 @@ make_server_callback(struct io_backend *b,
 		     struct packet_handler *kexinit_handler);
 
 struct read_handler *make_server_read_line(struct ssh_connection *c);
-struct close_callback *make_server_close_handler(void);
+struct close_callback *make_server_close_handler(struct ssh_connection *c);
 
 struct ssh_channel *make_server_session(struct unix_user *user,
 					UINT32 max_window,
@@ -58,5 +58,7 @@ struct channel_request *make_shell_handler(struct io_backend *backend,
 struct lsh_string *format_exit_signal(struct ssh_channel *channel,
 				      int core, int signal);
 struct lsh_string *format_exit(struct ssh_channel *channel, int value);
+
+struct resource *make_process_resource(pid_t pid, int signal);
 
 #endif /* LSH_SERVER_H_INCLUDED */
