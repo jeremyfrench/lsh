@@ -1,3 +1,9 @@
+2001-10-29  Niels Möller  <nisse@ehand.com>
+
+	* src/testsuite/Makefile.am (TS_MORE_SH): Added lshg-1-test.
+
+	* src/server_session.c (do_eof): Signal EOF on the process' stdin. 
+
 2001-10-26  Niels Möller  <nisse@ehand.com>
 
 	* src/sftp/sftp-server.c (sftp_process_read): Use the same type

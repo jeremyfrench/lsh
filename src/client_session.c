@@ -156,12 +156,14 @@ do_client_io(struct command *s UNUSED,
 
   /* Setup escape char handler, if appropriate. */
   session->in->read = client_read_stdin(session);
-  
+
   /* FIXME: Perhaps there is some way to arrange that channel.c calls
    * the CHANNEL_SEND_ADJUST method instead? */
   if (session->super.send_window_size)
     lsh_oop_register_read_fd(session->in);
-  
+
+  /* FIXME: We should also arrange so that the tty is reset before we
+   * close it. */
   session->in->close_callback
     = make_channel_read_close_callback(channel);
 

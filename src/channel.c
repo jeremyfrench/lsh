@@ -1906,8 +1906,9 @@ channel_read_close_callback(struct lsh_callback *c)
   trace("channel_read_close_callback: File closed.\n");
 
   assert(closure->channel->sources);
-  
-  if (!--closure->channel->sources)
+
+  closure->channel->sources--;
+  if (!closure->channel->sources)
     {
       /* Send eof, unless already done. */
       channel_eof(closure->channel);
