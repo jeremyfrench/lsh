@@ -1,3 +1,20 @@
+1999-11-21  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/spki.c (spki_sexp_to_tag): New function.
+	Added classes for representing authorizations or (tag ...)
+	expressions, for certificates and acl:s.
+
+	* src/spki.h (spki_tag): New class.
+
+	* src/sexp.c (sexp_atom_eq): New function.
+
+	* src/process_atoms: Handle atoms with "*" in. Quote better, and
+	output C symbols with sed 's/*/STAR/'. 
+
+	* src/format.c (lsh_string_prefixp): New function.
+
+	* src/atoms.in: Added symbols for ACL:s and certificates. 
+
 1999-11-18  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in (SCHEME_PROGRAM): Use AC_PATH_PROGS, not

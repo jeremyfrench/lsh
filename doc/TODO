@@ -281,4 +281,8 @@ and do the right thing.
 
 The supplied argp is compiled even if it isn't used.
 
-Make lshd switch into deamon mode.
+Move miscellaneous lsh_string-functions from format.c to a separate
+file.
+
+Consider moving SPKI tuple-related functions to a separate file.
+
