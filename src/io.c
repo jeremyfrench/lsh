@@ -1655,8 +1655,11 @@ make_exc_finish_read_handler(struct lsh_fd *fd,
   return &self->super;
 }
 
-struct exception finish_read_exception =
-STATIC_EXCEPTION(EXC_FINISH_READ, "Finish i/o");
+const struct exception finish_read_exception =
+STATIC_EXCEPTION(EXC_FINISH_READ, "Stop reading");
+
+const struct exception finish_io_exception =
+STATIC_EXCEPTION(EXC_FINISH_IO, "Stop i/o");
 
 struct exception *
 make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)

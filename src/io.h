@@ -233,7 +233,8 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg);
 #define STATIC_IO_EXCEPTION(type, name) \
 { { STATIC_HEADER, (type), (name) }, NULL, 0}
 
-extern struct exception finish_read_exception;
+extern const struct exception finish_read_exception;
+extern const struct exception finish_io_exception;
 
 void init_backend(struct io_backend *b);
 
@@ -325,8 +326,8 @@ struct lsh_fd *io_read(struct lsh_fd *fd,
 		       struct close_callback *close_callback);
 
 struct lsh_fd *io_write(struct lsh_fd *fd,
-		       UINT32 block_size,
-		       struct close_callback *close_callback);
+			UINT32 block_size,
+			struct close_callback *close_callback);
 
 /* Marks a file for close, without touching the close_reason field. */
 void kill_fd(struct lsh_fd *fd);
