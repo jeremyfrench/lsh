@@ -196,6 +196,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       assert(self->super.user);
       assert(self->super.remote);
       
+      if (object_queue_is_empty(&self->super.actions))
+	{
+	  argp_error(state, "No actions given.");
+	  break;
+	}
+
       self->gateway = make_gateway_address(self->super.local_user,
 					   self->super.user,
 					   self->super.remote);

@@ -832,6 +832,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	lsh_string_free(tmp);
       }
 
+      /* We can't add the gateway action immediately when the -G
+       * option is encountered, as we need the name and port of the
+       * remote machine (self->super.remote) first. */
       if (self->start_gateway)
 	{
 	  struct local_info *gateway;
@@ -857,6 +860,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 			    (make_listen_local(self->super.backend, gateway)));
 	}
 
+      if (object_queue_is_empty(&self->super.actions))
+	{
+	  argp_error(state, "No actions given.");
+	  break;
+	}
+      
       /* Start background poll */
       RANDOM_POLL_BACKGROUND(self->random->poller);
       
