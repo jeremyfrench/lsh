@@ -28,10 +28,10 @@
 #include "format.h"
 #include "xalloc.h"
 
-static int do_unpad(struct abstract_write **w,
+static int do_unpad(struct abstract_write *w,
 		    struct lsh_string *packet)
 {
-  struct abstract_write_pipe *closure = (struct abstract_write_pipe *) *w;
+  struct abstract_write_pipe *closure = (struct abstract_write_pipe *) w;
   
   UINT8 padding_length;
   UINT32 payload_length;

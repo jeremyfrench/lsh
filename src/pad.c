@@ -39,11 +39,11 @@ struct packet_pad
   struct randomness *random;
 };
 
-static int do_pad(struct abstract_write **w,
+static int do_pad(struct abstract_write *w,
 		  struct lsh_string *packet)
 {
   struct packet_pad *closure
-    = (struct packet_pad *) *w;
+    = (struct packet_pad *) w;
   struct ssh_connection *connection = closure->connection;
 
   struct lsh_string *new;
@@ -87,8 +87,6 @@ make_packet_pad(struct abstract_write *continuation,
 {
   struct packet_pad *closure;
 
-  MDEBUG(closure);
-  
   NEW(closure);
 
   closure->super.super.write = do_pad;

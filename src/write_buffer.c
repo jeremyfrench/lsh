@@ -29,10 +29,10 @@
 
 #include <assert.h>
 
-static int do_write(struct abstract_write **w,
+static int do_write(struct abstract_write *w,
 		    struct lsh_string *packet)
 {
-  struct write_buffer *closure = (struct write_buffer *) *w;
+  struct write_buffer *closure = (struct write_buffer *) w;
   struct buffer_node *new;
   
   MDEBUG(closure);

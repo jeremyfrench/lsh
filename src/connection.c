@@ -15,10 +15,10 @@
 #include "werror.h"
 #include "xalloc.h"
 
-static int handle_connection(struct abstract_write **w,
+static int handle_connection(struct abstract_write *w,
 			     struct lsh_string *packet)
 {
-  struct ssh_connection *closure = (struct ssh_connection *) *w;
+  struct ssh_connection *closure = (struct ssh_connection *) w;
   UINT8 msg;
 
   if (!packet->length)

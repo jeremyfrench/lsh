@@ -36,10 +36,10 @@ struct packet_encrypt
   struct ssh_connection *connection;
 };
 
-static int do_encrypt(struct abstract_write **w,
+static int do_encrypt(struct abstract_write *w,
 		      struct lsh_string *packet)
 {
-  struct packet_encrypt *closure = (struct packet_encrypt *) *w;
+  struct packet_encrypt *closure = (struct packet_encrypt *) w;
   struct ssh_connection *connection = closure->connection;
   struct lsh_string *new;
   UINT8 *mac;

@@ -38,11 +38,11 @@ struct packet_debug
   char *prefix;
 };
 
-static int do_debug(struct abstract_write **w,
+static int do_debug(struct abstract_write *w,
 		    struct lsh_string *packet)
 {
   struct packet_debug *closure
-    = (struct packet_debug *) *w;
+    = (struct packet_debug *) w;
   
   MDEBUG(closure);
 

@@ -8,11 +8,11 @@
 
 #warning blocking_write.c is obsolete
 
-static int do_write(struct abstract_write **w,
+static int do_write(struct abstract_write *w,
 		    struct lsh_string *packet)
 {
   struct packet_blocking_write *closure
-    = (struct packet_blocking_write *) *w;
+    = (struct packet_blocking_write *) w;
   
   UINT32 left = packet->length;
   UINT8 *p = packet->data;
