@@ -37,10 +37,10 @@ remote system, I lose. There may be some option to choose between
 utf-8 and iso-8859-x, but I've never seen any user-level options for
 choosing between different canonicalization conventions for utf-8.
 
-A simpel way to solve the problem is to require a particular
+A simple way to solve the problem is to require a particular
 unicode/utf-8 canonicalization when usernames are sent across the
 wire. I expect the WG for internationilized domain names to have
-similar considerations. (important)
+similar considerations.
 
 : 4.1.  Encoding of Network Addresses
 : 
