@@ -1,3 +1,11 @@
+1999-11-18  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/xalloc.c (number_of_strings): Global variable to keep track
+	of the number of allocated strings.
+
+	* src/blocking_write.c (do_blocking_write): Handle exceptions
+	differently.
+
 1999-11-16  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* Changed "Balazs" to "Balázs" in many files.
