@@ -329,7 +329,7 @@ make_unix_user(struct lsh_string *name,
 {
   NEW(unix_user, user);
   
-  assert(name && !name->data[name->length]);
+  assert(name && NUL_TERMINATED(name));
 
   user->super.name = name;
   user->super.verify_password = do_verify_password;
