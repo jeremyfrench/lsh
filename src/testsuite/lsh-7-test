@@ -9,5 +9,9 @@ fi
 
 . $srcdir/functions.sh
 
-spawn_lshd && ! ../lsh -nt --host-db=/dev/null $LSH_FLAGS -p $PORT localhost true \
-	   && test_success
+spawn_lshd && \
+  if ../lsh -nt --host-db=/dev/null $LSH_FLAGS -p $PORT localhost true ; then
+    test_fail
+  else
+    test_success
+  fi
