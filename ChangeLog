@@ -1,3 +1,16 @@
+2001-08-29  Niels Möller  <nisse@ehand.com>
+
+	* src/sftp/buffer.c, src/sftp/client.c: Include string.h.
+
+	* src/algorithms.c (all_symmetric_algorithms): Use aes256-cbc as
+	an alias for rijndael. 
+	(lookup_crypto): Recognize aes256-cbc, aes-cbc and aes.
+
+2001-08-23  Niels Möller  <nisse@ehand.com>
+
+	* src/connection.c (do_exc_connection_handler): Display exception
+	message. Suggested by Jonas Bofjäll. XXX: Fix in 1.2 branch.
+
 2001-08-28  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/sftp/testsuite/run-tests: Use srcdir when starting scripts.
