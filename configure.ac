@@ -441,10 +441,13 @@ fi
 
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
-AC_CHECK_LIB(nsl, gethostbyname)
 AC_CHECK_LIB(socket, setsockopt)
 # logwtmp is also in libutil
 AC_CHECK_LIB(util, openpty)
+
+# glibc has a nis-library "libnsl", which we don't need. So use
+# AC_SEARCH_LIBS rather than AC_CHECK_LIB.
+AC_SEARCH_LIBS(gethostbyname, nsl)
 
 # This macro is new in autoconf-2.13
 AC_SEARCH_LIBS(syslog, bsd socket inet, [AC_DEFINE(HAVE_SYSLOG)])
