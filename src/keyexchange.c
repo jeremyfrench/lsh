@@ -80,7 +80,7 @@
 #define KEXINIT_MAX_ALGORITMS 500
 
 static struct kexinit *
-parse_kexinit(struct lsh_string *packet, enum peer_flag peer_flags)
+parse_kexinit(struct lsh_string *packet)
 {
   NEW(kexinit, res);
   struct simple_buffer buffer;
@@ -242,7 +242,7 @@ do_handle_kexinit(struct packet_handler *c,
   struct object_list *algorithms;
 
   int mode = connection->flags & CONNECTION_MODE;
-  struct kexinit *msg = parse_kexinit(packet, connection->peer_flags);
+  struct kexinit *msg = parse_kexinit(packet);
 
   int i;
 
