@@ -72,6 +72,8 @@ char *alloca ();
 #include "argp-namefrob.h"
 
 
+/* FIXME: We could use a configure test to check for __attribute__,
+ * just like lsh does. */
 #ifndef UNUSED
 # if __GNUC__ >= 2
 #  define UNUSED __attribute__ ((__unused__))
@@ -811,15 +813,18 @@ hol_entry_cmp (const struct hol_entry *entry1,
 	   first, but as they're not displayed, it doesn't matter where
 	   they are.  */
 	{
-	  char first1 = short1 ? short1 : long1 ? *long1 : 0;
-	  char first2 = short2 ? short2 : long2 ? *long2 : 0;
+	  unsigned char first1 = short1 ? short1 : long1 ? *long1 : 0;
+	  unsigned char first2 = short2 ? short2 : long2 ? *long2 : 0;
 #ifdef _tolower
-	  int lower_cmp = _tolower ( (unsigned char) first1) - _tolower ( (unsigned char) first2);
+	  int lower_cmp = _tolower (first1) - _tolower (first2);
 #else
-	  int lower_cmp = tolower ( (unsigned char) first1) - tolower ( (unsigned char) first2);
+	  int lower_cmp = tolower (first1) - tolower (first2);
 #endif
 	  /* Compare ignoring case, except when the options are both the
 	     same letter, in which case lower-case always comes first.  */
+	  /* NOTE: The subtraction below does the right thing
+	     even with eight-bit chars: first1 and first2 are
+	     converted to int *before* the subtraction. */
 	  return lower_cmp ? lower_cmp : first2 - first1;
 	}
     }
@@ -1109,7 +1114,17 @@ hol_entry_help (struct hol_entry *entry, const struct argp_state *state,
   int old_wm = __argp_fmtstream_wmargin (stream);
   /* PEST is a state block holding some of our variables that we'd like to
      share with helper functions.  */
+#ifdef __GNUC__
   struct pentry_state pest = { entry, stream, hhstate, 1, state };
+#else /* !__GNUC__ */
+  /* Decent initializers are a GNU extension */
+  struct pentry_state pest;
+  pest.entry = entry;
+  pest.stream = stream;
+  pest.hhstate = hhstate;
+  pest.first = 1;
+  pest.state = state;
+#endif /* !__GNUC__ */
 
   if (! odoc (real))
     for (opt = real, num = entry->num; num > 0; opt++, num--)
@@ -1722,8 +1737,8 @@ char *__argp_basename(char *name)
   return short_name ? short_name + 1 : name;
 }
 
-static const char *
-short_program_name(const struct argp_state *state)
+char *
+__argp_short_program_name(const struct argp_state *state)
 {
   if (state)
     return state->name;
@@ -1731,12 +1746,15 @@ short_program_name(const struct argp_state *state)
   return program_invocation_short_name;
 #elif HAVE_PROGRAM_INVOCATION_NAME
   return __argp_basename(program_invocation_name);
-#else
+#else /* !HAVE_PROGRAM_INVOCATION_NAME */
   /* FIXME: What now? Miles suggests that it is better to use NULL,
      but currently the value is passed on directly to fputs_unlocked,
      so that requires more changes. */
+# if __GNUC__
+#  warning No reasonable value to return
   return "";
-#endif
+# endif /* __GNUC__ */
+#endif /* !HAVE_PROGRAM_INVOCATION_NAME */
 }
 
 /* Output, if appropriate, a usage message for STATE to STREAM.  FLAGS are
@@ -1750,7 +1768,7 @@ __argp_state_help (const struct argp_state *state, FILE *stream, unsigned flags)
 	flags |= ARGP_HELP_LONG_ONLY;
 
       _help (state ? state->root_argp : 0, state, stream, flags,
-	     short_program_name(state));
+	     __argp_short_program_name(state));
 
       if (!state || ! (state->flags & ARGP_NO_EXIT))
 	{
@@ -1781,7 +1799,7 @@ __argp_error (const struct argp_state *state, const char *fmt, ...)
 
 	  __flockfile (stream);
 
-	  fputs_unlocked (short_program_name(state),
+	  fputs_unlocked (__argp_short_program_name(state),
 			  stream);
 	  putc_unlocked (':', stream);
 	  putc_unlocked (' ', stream);
@@ -1822,7 +1840,7 @@ __argp_failure (const struct argp_state *state, int status, int errnum,
 	{
 	  __flockfile (stream);
 
-	  fputs_unlocked (short_program_name(state),
+	  fputs_unlocked (__argp_short_program_name(state),
 			  stream);
 
 	  if (fmt)
