@@ -69,7 +69,7 @@ do_reap(struct reap *c,
 {
   CAST(reaper, closure, c);
 
-  ALIST_SET(closure->children, pid, callback);
+  ALIST_SET(closure->children, pid, &callback->super);
 }
 
 /* GABA:
@@ -117,7 +117,10 @@ do_reaper_callback(struct lsh_callback *s)
 	  else
 	    fatal("Child died, but neither WIFEXITED or WIFSIGNALED is true.\n");
 
-	  callback = ALIST_GET(r->children, pid);
+	  {
+	    CAST_SUBTYPE(exit_callback, c, ALIST_GET(r->children, pid));
+	    callback = c;
+	  }
 	  
 	  if (callback)
 	    {
