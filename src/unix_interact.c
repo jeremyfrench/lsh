@@ -28,6 +28,7 @@
 #include "format.h"
 #include "io.h"
 #include "resource.h"
+#include "suspend.h"
 #include "tty.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -57,47 +58,6 @@ static void winch_handler(int signum)
   window_changed = 1;
 }
 
-static struct termios original_mode;
-
-static int tty_fd = -1;
-
-static void
-stop_handler(int signum)
-{
-  struct termios mine;
-  int need_reset;
-  
-  assert(signum == SIGTSTP);
-
-  need_reset = tty_getattr(tty_fd, &mine);
-  tty_setattr(tty_fd, &original_mode);
-
-  kill(getpid(), SIGSTOP);
-
-  if (need_reset)
-    tty_setattr(tty_fd, &mine);
-}
-
-static void
-install_suspend_handler(int fd)
-{
-  struct sigaction stop;
-
-  memset(&stop, 0, sizeof(stop));
-  stop.sa_handler = stop_handler;
-  sigemptyset(&stop.sa_mask);
-  stop.sa_flags = 0;
-
-  tty_fd = fd;
-
-  if (!tty_getattr(fd, &original_mode))
-    werror("install_suspend_handler: tty_getattr failed (errno = %i): %z\n",
-	   errno, STRERROR(errno));
-  
-  else if (sigaction(SIGTSTP, &stop, NULL) < 0)
-    werror("Failed to install SIGTSTP handler (errno = %i): %z\n",
-	   errno, STRERROR(errno));
-}
 
 /* Depends on the tty being line buffered */
 static int
@@ -437,7 +397,7 @@ make_unix_interact(struct io_backend *backend)
       io_signal_handler(backend, &window_changed,
 			make_winch_handler(self));
 
-      install_suspend_handler(self->tty_fd);
+      suspend_handle_tty(self->tty_fd);
     }
   return &self->super;
 }
