@@ -469,7 +469,7 @@ DEFINE_COMMAND2(proxy_destination)
      (expr 
        (lambda (options)
          ; accept a connection
-	 (listen_callback
+	 (listen
 	   (lambda (client_addr)
 	     ; address of accepted connection
 	     (services
@@ -478,7 +478,7 @@ DEFINE_COMMAND2(proxy_destination)
 	         (handshake_server options)   ; callback to perform server side handshake
 		 (handshake_client options)   ; callback to perform client side handshake
 		 client_addr)))
-	   (options2local options)))) )
+	   (bind (options2local options)) ))))
 
 	     
 */
