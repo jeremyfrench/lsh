@@ -120,6 +120,8 @@ label
 
 # Certificates and ACL:s
 certificate
+signature
+name
 acl
 version
 entry
