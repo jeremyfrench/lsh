@@ -173,7 +173,7 @@ static void werror_hex(UINT32 n)
   unsigned left = 8;
   
   while ( (left > 1)
-	  && (n & 0xf0000000UL))
+	  && !(n & 0xf0000000UL))
     {
       left --;
       n <<= 4;
@@ -433,7 +433,7 @@ static unsigned format_size_in_hex(UINT32 n)
 
 #define SIZE (sizeof(powers) / sizeof(powers[0])) 
 
-  /* Determine the smallest e such that n < 10^e */
+  /* Determine the smallest e such that n < 16^e */
   for (i = SIZE - 1 , e = 0; i >= 0; i--)
     {
       if (n >= powers[i])
