@@ -50,11 +50,9 @@ struct command_2 remote_listen_command;
 struct command_2 open_forwarded_tcpip;
 #define OPEN_FORWARDED_TCPIP (&open_forwarded_tcpip.super.super)
 
-static struct command tcpip_start_io;
-#define TCPIP_START_IO (&tcpip_start_io.super)
 
-static struct command tcpip_connect_io;
-#define TCPIP_CONNECT_IO (&tcpip_connect_io.super)
+struct command tcpip_connect_io_command;
+#define TCPIP_CONNECT_IO (&tcpip_connect_io_command.super)
 
 static struct install_info install_direct_tcpip_handler;
 #define INSTALL_DIRECT_TCPIP (&install_direct_tcpip_handler.super.super.super)
@@ -89,11 +87,11 @@ static struct catch_report_collect catch_channel_open
 #define TCPIP_WINDOW_SIZE 10000
 
 /* NOTE: make_channel_forward adds the fd to the channel's resource list. */
-static void
-do_tcpip_connect_io(struct command *ignored UNUSED,
-		    struct lsh_object *x,
-		    struct command_continuation *c,
-		    struct exception_handler *e UNUSED)
+DEFINE_COMMAND(tcpip_connect_io_command)
+     (struct command *ignored UNUSED,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(listen_value, lv, x);
 
@@ -102,31 +100,6 @@ do_tcpip_connect_io(struct command *ignored UNUSED,
   
   COMMAND_RETURN(c, make_channel_forward(lv->fd, TCPIP_WINDOW_SIZE));
 }
-
-static struct command tcpip_connect_io = STATIC_COMMAND(do_tcpip_connect_io);
-
-/* Used by the party requesting tcp forwarding, i.e. when a socket is
- * already open, and we have asked the other end to forward it. Takes
- * a channel as argument, and connects it to the socket. Returns the
- * channel. */
-
-static void
-do_tcpip_start_io(struct command *s UNUSED, 
-		  struct lsh_object *x,
-		  struct command_continuation *c,
-		  struct exception_handler *e UNUSED)
-{
-  CAST(channel_forward, channel, x);
-
-  assert(channel);
-  
-  channel_forward_start_io(channel);
-
-  COMMAND_RETURN(c, channel);
-}
-
-static struct command tcpip_start_io =
-{ STATIC_HEADER, do_tcpip_start_io };
 
 
 /* Requesting the opening of a forwarded tcpip channel. */
@@ -143,7 +116,8 @@ static struct command tcpip_start_io =
        ; ATOM_FORWARDED_TCPIP or ATOM_DIRECT_TCPIP
        (type . int)
 
-       (initial_window . UINT32)
+       ;; Appearantly not used for anything.
+       ;; (initial_window . UINT32)
 
        ; For forwarded-tcpip, port is the port listened to.
        ; For direct-tcpip, port is the port to connect to.
@@ -180,7 +154,7 @@ new_tcpip_channel(struct channel_open_command *c,
 }
 
 static struct command *
-make_open_tcpip_command(int type, UINT32 initial_window,
+make_open_tcpip_command(int type,
 			struct address_info *port,
 			struct listen_value *peer)
 {
@@ -192,7 +166,6 @@ make_open_tcpip_command(int type, UINT32 initial_window,
   self->super.new_channel = new_tcpip_channel;
 
   self->type = type;
-  self->initial_window = initial_window;
   
   self->port = port;
   self->peer = peer;
@@ -212,7 +185,6 @@ DEFINE_COMMAND2(open_forwarded_tcpip)
   
   COMMAND_RETURN(c,
 		 make_open_tcpip_command(ATOM_FORWARDED_TCPIP,
-					 TCPIP_WINDOW_SIZE,
 					 local, peer));
 }
 
@@ -228,7 +200,6 @@ DEFINE_COMMAND2(open_direct_tcpip)
   
   COMMAND_RETURN(c,
 		 make_open_tcpip_command(ATOM_DIRECT_TCPIP,
-					 TCPIP_WINDOW_SIZE,
 					 local, peer));
 }
 
@@ -370,14 +341,14 @@ DEFINE_COMMAND2(remote_listen_command)
      (expr
        (lambda (connection)
          (connection_remember connection
-           (listen_callback
+           (listen
 	     (lambda (peer)
 	       ;; Remembering is done by open_direct_tcpip
 	       ;; and new_tcpip_channel.
-	       (tcpip_start_io
+	       (start_io
 	         (catch_channel_open 
 		   (open_direct_tcpip target peer) connection)))
-	     local)))))
+	     (bind local))))))
 */
 
 struct command *
@@ -499,15 +470,15 @@ STATIC_INSTALL_GLOBAL_HANDLER(ATOM_TCPIP_FORWARD);
 	     ;; It should return the fd associated with the port.
 	     ;; NOTE: The caller, do_tcpip_forward_request, is responsible
 	     ;; for handling I/O exceptions, and for remembering the port.
-	     (listen_callback (lambda (peer)
-  		  		;; Called when someone connects to the
-		  		;; forwarded port.
-				;; Remembering is done by open_direct_tcpip
-				;; and new_tcpip_channel.
-				(tcpip_start_io
-		  		  (catch_channel_open 
-		  		    (open_forwarded_tcpip port peer) connection)))
-		  	      port))))))))
+	     (listen (lambda (peer)
+  		  	;; Called when someone connects to the
+		  	;; forwarded port.
+			;; Remembering is done by open_direct_tcpip
+			;; and new_tcpip_channel.
+			(start_io
+		  	  (catch_channel_open 
+		  	    (open_forwarded_tcpip port peer) connection)))
+		     (bind port) ))))))))
 */
 
 struct command *
