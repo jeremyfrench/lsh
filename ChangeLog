@@ -1,3 +1,8 @@
+2001-09-03  Niels Möller  <nisse@ehand.com>
+
+	* src/suspend.h: Declare suspend_callback as extern. Noticed by
+	Jean-Pierre. 
+
 2001-09-03  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/client_x11.c: Added comment about observed X11 packets (that
