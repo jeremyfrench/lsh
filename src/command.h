@@ -159,9 +159,11 @@ make_collect_state_3(struct collect_info_3 *info,
 { { { STATIC_HEADER, do_call_simple_command }, do_collect_1}, \
   make_collect_state_1, next }
 
+#if 0
 #define STATIC_COLLECT_1_FINAL(f) \
 { { { STATIC_HEADER, do_call_simple_command }, do_collect_1}, \
   f, NULL }
+#endif
 
 #define STATIC_COLLECT_2(next) \
 { STATIC_HEADER, make_collect_state_2, next }
