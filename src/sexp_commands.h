@@ -26,7 +26,7 @@
 #ifndef SEXP_COMMANDS_H_INCLUDED
 #define SEXP_COMMANDS_H_INCLUDED
 
-#warning sexp_commands.h is soon to be obsolete
+#warning sexp_commands.h is obsolete
 
 #include "abstract_crypto.h"
 #include "abstract_io.h"

@@ -25,6 +25,8 @@
 
 #include "sexp_commands.h"
 
+#warning sexp_commands.c is obsolete
+
 #include "format.h"
 #include "io.h"
 #include "read_file.h"
@@ -41,7 +43,7 @@ static struct catch_command catch_sexp_exceptions;
 static struct read_sexp_command read_sexp;
 #define READ_SEXP (&read_sexp.super.super)
 
-
+#if 0
 #define GABA_DEFINE
 #include "sexp_commands.h.x"
 #undef GABA_DEFINE
@@ -202,3 +204,4 @@ DEFINE_COMMAND(for_sexp_command)
   CAST_SUBTYPE(command, handler, a);
   COMMAND_RETURN(c, for_sexp(handler));
 }
+#endif

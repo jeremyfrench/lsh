@@ -24,18 +24,11 @@
 #ifndef LSH_SPKI_COMMANDS_H_INCLUDED
 #define LSH_SPKI_COMMANDS_H_INCLUDED
 
+#warning spki_commands.h is obsolete
 #include "command.h"
 #include "interact.h"
 #include "spki.h"
 
-extern struct command spki_signer2verifier;
-#define SIGNER2VERIFIER (&spki_signer2verifier.super)
-
-extern struct command spki_verifier2public;
-#define VERIFIER2PUBLIC (&spki_verifier2public.super)
-
-extern struct command_2 spki_sexp2signer_command;
-#define SEXP2SIGNER (&spki_sexp2signer_command.super.super)
 
 extern struct command_2 spki_sexp2keypair_command;
 #define SEXP2KEYPAIR (&spki_sexp2keypair_command.super.super)
@@ -47,28 +40,12 @@ extern struct command spki_read_hostkeys_command;
 #define SPKI_READ_HOSTKEYS (&spki_read_hostkeys_command.super)
 
 struct command *
-make_spki_hash(int name, struct hash_algorithm *algorithm);
-
-struct command *
-make_spki_read_acls(struct alist *algorithms);
-
-struct command *
 make_spki_read_userkeys(struct alist *algorithms,
 			struct alist *signature_algorithms,
 			struct interact *tty);
 			
 
 /* Encryption of private data. */
-struct command *
-make_pkcs5_encrypt(struct randomness *r,
-		   struct lsh_string *label,
-		   UINT32 prf_name,
-		   struct mac_algorithm *prf,
-		   int crypto_name,
-		   struct crypto_algorithm *crypto,
-		   UINT32 salt_length,
-		   struct lsh_string *password,
-		   UINT32 iterations);
 
 struct command *
 make_pkcs5_decrypt(struct alist *mac_algorithms,

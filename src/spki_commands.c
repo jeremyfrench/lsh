@@ -24,6 +24,7 @@
  */
 
 #include "spki_commands.h"
+#warning spki_commands.h is obsolete
 
 #include "atoms.h"
 #include "crypto.h"
@@ -53,14 +54,13 @@ struct command spki_add_userkey_command;
 #define SPKI_ADD_USERKEY (&spki_add_userkey_command.super)
 
 
-#include "spki_commands.c.x"
 
 #define SA(x) sexp_a(ATOM_##x)
 
 #define SPKI_ERROR(e, msg, expr) \
 EXCEPTION_RAISE((e), make_spki_exception(EXC_SPKI_TYPE, (msg), (expr)))
 
-
+#if 0
 /* Reading keys */
 
 /* FIXME: Used only by sexp2keypair, move code there? */
@@ -159,6 +159,7 @@ DEFINE_COMMAND2(spki_sexp2keypair_command)
 
 /* Reading of ACL:s
  * ****************/
+#endif
 
 DEFINE_COMMAND(spki_make_context_command)
      (struct command *s UNUSED,
@@ -183,7 +184,7 @@ DEFINE_COMMAND(spki_make_context_command)
      (vars
        (keys object alist)))
 */
-
+#if 0
 static void
 do_spki_add_hostkey(struct command *s,
 		    struct lsh_object *a,
@@ -231,7 +232,7 @@ DEFINE_COMMAND(spki_return_hostkeys)
   COMMAND_RETURN(c, self->keys);
 }
 
-/* GABA:
+/* ;;GABA:
    (expr
      (name spki_read_hostkeys)
      (params
@@ -261,4 +262,5 @@ DEFINE_COMMAND(spki_read_hostkeys_command)
   
   COMMAND_RETURN(c, res);
 }
+#endif
 

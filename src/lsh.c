@@ -370,6 +370,8 @@ read_user_keys(struct lsh_options *options)
     }
 }
 
+/* FIXME: Call read_user_key directly from main instead. */
+
 /* Read user's private keys. By default, "~/.lsh/identity". */
 static void
 do_options2identities(struct command *ignored UNUSED,
