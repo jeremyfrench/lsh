@@ -34,7 +34,7 @@ bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey lsh-decrypt-key \
 	       @SRP_PROGRAM@
 
 sbin_PROGRAMS = lshd lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
-bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade
+bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key
 noinst_PROGRAMS = pkcs5-test
 noinst_SCRIPTS = lcp
 noinst_LIBRARIES = liblsh.a
