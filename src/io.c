@@ -698,6 +698,7 @@ make_listen_value(struct lsh_fd *fd,
      (name io_listen_callback)
      (super io_callback)
      (vars
+       ;; FIXME: Take a command directly instead.
        (c object command_continuation)
        (e object exception_handler)))
 */
@@ -1437,8 +1438,8 @@ io_bind_sockaddr(struct sockaddr *local,
 
 /* FIXME: Rename to io_listen. */
 struct lsh_fd *
-io_listen_fd(struct lsh_fd *fd,
-	     struct io_callback *callback)
+io_listen(struct lsh_fd *fd,
+	  struct io_callback *callback)
 {
   /* For convenience in nested function calls. */
   if (!fd)
@@ -1457,17 +1458,6 @@ io_listen_fd(struct lsh_fd *fd,
   lsh_oop_register_read_fd(fd);
 
   return fd;
-}
-
-/* FIXME: Rename to io_listen_sockaddr. */
-
-struct lsh_fd *
-io_listen(struct sockaddr *local,
-	  socklen_t length,
-	  struct io_callback *callback,
-	  struct exception_handler *e)
-{
-  return io_listen_fd(io_bind_sockaddr(local, length, e), callback);
 }
 
 
@@ -1647,9 +1637,8 @@ lsh_pushd(const char *directory,
 
 
 struct lsh_fd *
-io_listen_local(struct local_info *info,
-		struct io_callback *callback,
-		struct exception_handler *e)
+io_bind_local(struct local_info *info,
+	      struct exception_handler *e)
 {
   int old_cd;
 
@@ -1700,7 +1689,8 @@ io_listen_local(struct local_info *info,
   old_umask = umask(0077);
 
   /* Bind and listen */
-  fd = io_listen( (struct sockaddr *) local, local_length, callback, e);
+  fd = io_bind_sockaddr((struct sockaddr *) local,
+			local_length, e);
   
   /* Ok, now we restore umask and cwd */
   umask(old_umask);

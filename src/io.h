@@ -310,19 +310,12 @@ io_bind_sockaddr(struct sockaddr *local,
 		 struct exception_handler *e);
 
 struct lsh_fd *
-io_listen_fd(struct lsh_fd *fd,
-	     struct io_callback *callback);
+io_listen(struct lsh_fd *fd,
+	  struct io_callback *callback);
 
 struct lsh_fd *
-io_listen(struct sockaddr *local,
-	  socklen_t length,
-	  struct io_callback *callback,
-	  struct exception_handler *e);
-
-struct lsh_fd *
-io_listen_local(struct local_info *info,
-		struct io_callback *callback,
-		struct exception_handler *e);
+io_bind_local(struct local_info *info,
+	      struct exception_handler *e);
 
 struct lsh_fd *
 io_connect_local(struct local_info *info,
