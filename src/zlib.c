@@ -234,8 +234,8 @@ do_zlib(struct compress_instance *c,
        * space. */
 	 
       if (!self->z.avail_in && !self->z.avail_out)
-	verbose("do_zlib (%z): Both avail_in and avail_out are zero.\n",
-		ZLIB_TYPE(&self->z)->operation);
+	debug("do_zlib (%z): Both avail_in and avail_out are zero.\n",
+	      ZLIB_TYPE(&self->z)->operation);
       
       if (!self->z.avail_out)
 	{ /* All output space consumed */  
@@ -272,9 +272,9 @@ do_zlib(struct compress_instance *c,
 		packet->length);
 
 	  if (packet->length > estimate)
-	    verbose("do_zlib (%z): Estimated size exceeded: input = %i, estimate = %i, output = %i\n",
-		    ZLIB_TYPE(&self->z)->operation,
-		    input, estimate, packet->length);
+	    debug("do_zlib (%z): Estimated size exceeded: input = %i, estimate = %i, output = %i\n",
+		  ZLIB_TYPE(&self->z)->operation,
+		  input, estimate, packet->length);
 	  
 	  self->rate = estimate_update(self->rate, input, packet->length);
 
