@@ -277,7 +277,7 @@ AC_CHECK_MEMBERS([struct stat.st_rdev])
 
 
 # Checks for library functions.
-AC_FUNC_ALLOCA
+LSH_FUNC_ALLOCA
 AC_FUNC_ERROR_AT_LINE
 
 AC_FUNC_MALLOC
