@@ -227,7 +227,7 @@ do_client_session_close(struct ssh_channel *c)
 static void
 do_exit_status(struct channel_request *c,
 	       struct ssh_channel *channel,
-	       struct ssh_connection *connection UNUSED,
+	       struct ssh_connection *connection,
 	       int want_reply,
 	       struct simple_buffer *args)
 {
@@ -251,13 +251,13 @@ do_exit_status(struct channel_request *c,
     }
   else
     /* Invalid request */
-    PROTOCOL_ERROR(channel->e, "Invalid exit-status message");
+    PROTOCOL_ERROR(connection->e, "Invalid exit-status message");
 }
 
 static void
 do_exit_signal(struct channel_request *c,
 	       struct ssh_channel *channel,
-	       struct ssh_connection *connection UNUSED,
+	       struct ssh_connection *connection,
 	       int want_reply,
 	       struct simple_buffer *args)
 {
@@ -302,7 +302,7 @@ do_exit_signal(struct channel_request *c,
     }
   else
     /* Invalid request */
-    PROTOCOL_ERROR(channel->e, "Invalid exit-signal message");
+    PROTOCOL_ERROR(connection->e, "Invalid exit-signal message");
 }
 
 struct channel_request *make_handle_exit_status(int *exit_status)
@@ -472,6 +472,7 @@ struct ssh_channel *make_client_session(struct lsh_fd *in,
 static struct ssh_channel *
 new_session(struct channel_open_command *s,
 	    struct ssh_connection *connection,
+	    UINT32 local_channel_number,
 	    struct lsh_string **request)
 {
   CAST(session_open_command, self, s);
@@ -479,10 +480,9 @@ new_session(struct channel_open_command *s,
 
   self->session->write = connection->write;
   
-  *request = prepare_channel_open(connection, ATOM_SESSION,
-				  self->session, "");
-  if (!*request)
-    return NULL;
+  *request = format_channel_open(ATOM_SESSION,
+				 local_channel_number,
+				 self->session, "");
   
   res = self->session;
 
