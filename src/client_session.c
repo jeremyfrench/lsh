@@ -203,6 +203,13 @@ make_client_session_channel(struct lsh_fd *in,
    * dies, no matter when or how. */
   self->super.close = do_client_session_close;
 
+  /* We could miss the server's exit-status or exit-signal message if
+   * we close the channel directly at EOF. So don't do that.
+   *
+   * FIXME: Perhaps we need to set this bit again in do_exit_status
+   * and do_exit_signal. */
+  self->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
+  
   /* FIXME: We make rec_window_size non-zero here, but we don't setup
    * the receive pointer until later, in do_client_io. That's bad. Do
    * something similar to server_session.c: Add an inital_window
