@@ -208,6 +208,7 @@ EXTRA_DIST = lsh-authorize ssh-conv lcp \
 	$(cvs_headers) $(dist_x_files) Makefile.am.in
 
 CLEANFILES = *.hT *.cT *.xT
+DISTCLEANFILES = environ.h
 MAINTAINERCLEANFILES = $(dist_x_files) $(DEP_FILES)
 
 # Class files
