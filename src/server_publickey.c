@@ -100,7 +100,7 @@ do_authenticate(struct userauth *s,
 	  EXCEPTION_RAISE(e, &unsupported_publickey_algorithm);
 	  return;
 	}
-      v = LOOKUP_VERIFIER(lookup, username, keyblob);
+      v = LOOKUP_VERIFIER(lookup, algorithm, username, keyblob);
 
 #if DATAFELLOWS_WORKAROUNDS
       if ( v && (algorithm == ATOM_SSH_DSS)
