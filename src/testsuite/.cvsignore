@@ -16,6 +16,7 @@ foo
 foo.pub
 large-dir
 md5-test
+parse-config-test
 rijndael-test
 rsa-test
 serpent-test
