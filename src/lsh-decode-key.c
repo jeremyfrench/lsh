@@ -5,7 +5,9 @@
  * $Id$
  */
 
+#include "digits.h"
 #include "dsa.h"
+#include "format.h"
 #include "io.h"
 #include "lsh_argp.h"
 #include "publickey_crypto.h"
@@ -16,6 +18,8 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include <string.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -34,7 +38,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (name lsh_decode_key_options)
      (vars
        ; Output filename
-       (file . "char *")
+       (file string)
 
        ; Assume input is base64
        (base64 . int)
@@ -93,7 +97,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case 'o':
-      self->file = arg;
+      self->file = ssh_format("%lz", arg);
       break;
     }
   return 0;
@@ -110,7 +114,7 @@ main_argp =
 };
 
 
-struct verifier *
+static struct sexp *
 lsh_decode_key(struct lsh_string *contents)
 {
   struct simple_buffer buffer;
