@@ -43,9 +43,13 @@
        (vars
          (master simple int)
 	 (slave simple int)
+	 ; Name of slave tty.
 	 ; Needed for SysV pty-handling (where opening the tty
-	 ; makes it the controlling terminal).
-	 (tty_name array (simple char) MAX_TTY_NAME)
+	 ; makes it the controlling terminal). Perhaps handy also for
+	 ; writing accurate utmp-entries.
+	 ; This string should be NUL-terminated
+	 (tty_name string)
+	 ; (tty_name array (simple char) MAX_TTY_NAME)
 	 ;; (saved_ios simple "struct termios")
 	 ));
 */
