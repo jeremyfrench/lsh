@@ -84,9 +84,9 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AM_PROG_CC_STDC
 
-AC_PATH_PROG(SCHEME, scsh, true, $PATH)
-AC_PATH_PROG(BASH, bash, [], $PATH)
-AC_PATH_PROG(GROFF, groff, [], $PATH)
+AC_PATH_PROG(SCHEME, scsh,, $PATH)
+AC_PATH_PROG(BASH, bash,, $PATH)
+AC_PATH_PROG(GROFF, groff,, $PATH)
 
 if test x$am_cv_prog_cc_stdc = xno ; then
   AC_ERROR([the C compiler doesn't handle ANSI-C])
@@ -98,12 +98,15 @@ dnl Some debian systems have both gmp1 and gmp2.
     [AC_CHECK_LIB(gmp2, mpz_set_d,,
 	AC_ERROR([GMP is missing (ftp://ftp.gnu.org/pub/gnu/gmp-2.0.2.tar.gz)]))])
 
-AC_CHECK_LIB(z, inflate,, [with_zlib=no])
+if test x$with_zlib = xyes; then
+  AC_CHECK_LIB(z, inflate,, [with_zlib=no])
+fi
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
 AC_CHECK_LIB(nsl, gethostbyname)
 AC_CHECK_LIB(socket, setsockopt)
 AC_CHECK_LIB(openpty, util)
+AC_SEARCH_LIBS(syslog, bsd socket inet)
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -119,10 +122,39 @@ fi
   
 AC_CHECK_HEADERS(fcntl.h strings.h sys/time.h unistd.h)
 AC_CHECK_HEADERS(shadow.h)
-dnl AC_CHECK_HEADER(zlib.h,, [with_zlib=no])
-AC_CHECK_HEADERS(zlib.h)
+if test x$with_zlib = xyes; then
+  AC_CHECK_HEADERS(zlib.h,, [with_zlib=no])
+fi
 AC_CHECK_HEADERS(poll.h sys/poll.h)
 AC_CHECK_HEADERS(crypt.h)
+AC_CHECK_HEADERS(pty.h)
+AC_CHECK_HEADERS(stropts.h)
+
+AC_CHECK_HEADERS(utmp.h, [have_utmp_h=yes], [have_utmp_h=no])
+if test x$have_utmp_h = xyes; then
+  AC_CACHE_CHECK(
+    [if struct utmp has a ut_host member],
+    lsh_cv_decl_utmp_have_ut_host,
+    AC_TRY_COMPILE(utmp.h,
+      [ int foo() { struct utmp u; u.ut_host[0] = 'X'; return 0; } ],
+      lsh_cv_decl_utmp_have_ut_host=yes,
+      lsh_cv_decl_utmp_have_ut_host=no))
+      
+  if test x$lsh_cv_decl_utmp_have_ut_host = xyes; then
+    AC_DEFINE(HAVE_UT_HOST)
+  fi
+  AC_CACHE_CHECK(
+    [if struct utmp has a ut_addr member],
+    lsh_cv_decl_utmp_have_ut_addr,
+    AC_TRY_COMPILE(utmp.h,
+      [ int foo() { struct utmp u; u.ut_addr[0] = 'X'; return 0; } ],
+      lsh_cv_decl_utmp_have_ut_addr=yes,
+      lsh_cv_decl_utmp_have_ut_addr=no))
+
+  if test x$lsh_cv_decl_utmp_have_ut_addr = xyes; then
+    AC_DEFINE(HAVE_UT_ADDR)
+  fi
+fi
 
 dnl Should we use zlib?
 
@@ -191,6 +223,9 @@ AC_CHECK_FUNCS(getspnam)
 AC_CHECK_FUNCS(vsnprintf inet_aton)
 AC_CHECK_FUNCS(openpty)
 AC_CHECK_FUNCS(cfmakeraw)
+AC_FUNC_GETPGRP
+AC_CHECK_FUNCS(syslog)
+AC_REPLACE_FUNCS(memxor)
 
 AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
 
@@ -280,6 +315,71 @@ if test x$lsh_cv_func_shutdown_works_on_unix_sockets = xyes ; then
     AC_DEFINE(SHUTDOWN_WORKS_WITH_UNIX_SOCKETS)
 fi
 
+AC_CACHE_CHECK(
+  [for working UNIX98 ptys],
+  lsh_cv_sys_unix98_ptys,
+  AC_TRY_RUN([
+  /* Try to obtain a working UNIX98-style pty master and slave */
+  /* Based on example code from the GNU C library documentation */
+  #include <stdlib.h>	/* EXIT_FAILURE, EXIT_SUCCESS, ptsname */
+  #include <unistd.h>	/* close(2) */
+  
+  #include <sys/types.h>	/* open(2) */
+  #include <sys/stat.h>	/* - " -   */
+  #ifdef HAVE_FCNTL_H
+  #  include <fcntl.h>	/* - " -   */
+  #endif
+  #ifdef HAVE_STROPTS_H
+  #  include <stropts.h>	/* isastream() */
+  #endif
+  
+  int main(int argc, char* argv[]) {
+    int master, slave;
+    char *name;
+  
+    master = open("/dev/ptmx", O_RDWR); /* PTY master multiplex */
+    if (master < 0) {
+  	  exit(EXIT_FAILURE);
+    }
+  
+    if (grantpt(master) < 0 || unlockpt(master) < 0)
+      goto close_master;
+    name = ptsname(master);
+    if (name == NULL)
+      goto close_master;
+  
+    slave = open(name, O_RDWR);
+    if (slave == -1)
+      goto close_master;
+  
+  #ifdef HAVE_STROPTS_H
+    if (isastream(slave))
+      {
+  	if (ioctl(slave, I_PUSH, "ptem") < 0
+  	    || ioctl(slave, I_PUSH, "ldterm") < 0)
+  	  goto close_slave;
+      }
+  #endif
+  
+    exit(0);
+  
+  close_slave:
+    close (slave);
+  
+  close_master:
+    close (master);
+    exit(1);
+  }
+  ],
+  [lsh_cv_sys_unix98_ptys=yes],
+  [lsh_cv_sys_unix98_ptys=no],
+  dnl FIXME: Pessimistic default for cross compilation.
+  [lsh_cv_sys_unix98_ptys=no]))
+
+if test x$lsh_cv_sys_unix98_ptys = xyes; then
+  AC_DEFINE(HAVE_UNIX98_PTYS)
+fi
+  
 dnl Check for gcc's __attribute__ construction
 AC_CACHE_CHECK(for __attribute__,
 	       lsh_cv_c_attribute,
@@ -305,6 +405,8 @@ fi
 AC_MSG_CHECKING(for BSD pty names)
 AC_DEFINE_UNQUOTED(PTY_BSD_SCHEME_FIRST_CHARS, "`ls /dev/pty* | cut -c 9-9 | uniq | tr -d '\n'`")
 AC_DEFINE_UNQUOTED(PTY_BSD_SCHEME_SECOND_CHARS, "`ls /dev/pty* | cut -c 10-10 | sort | uniq | tr -d '\n'`")
+
+dnl FIXME: How can we test if the bsd scheme is likely to work?
 AC_DEFINE(PTY_BSD_SCHEME)
 AC_MSG_RESULT([done])
 
