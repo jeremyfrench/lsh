@@ -98,6 +98,8 @@ const char *argp_program_version
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
+#define KERBEROS_HELPER PREFIX "lsh-krb-checkpw"
+
 #define OPT_NO 0x400
 #define OPT_SSH1_FALLBACK 0x200
 #define OPT_INTERFACE 0x201
@@ -126,6 +128,9 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_ROOT_LOGIN 0x222
 #define OPT_NO_ROOT_LOGIN (OPT_ROOT_LOGIN | OPT_NO)
 
+#define OPT_KERBEROS_PASSWD 0x223
+#define OPT_NO_KERBEROS_PASSWD (OPT_KERBEROS_PASSWD | OPT_NO)
+
 /* GABA:
    (class
      (name lshd_options)
@@ -149,7 +154,8 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (with_publickey . int)
        (with_password . int)
        (allow_root . int)
-
+       (pw_helper . "const char *")
+       
        (with_tcpip_forward . int)
        (with_pty . int)
        
@@ -197,6 +203,7 @@ make_lshd_options(struct io_backend *backend)
   self->with_tcpip_forward = 1;
   self->with_pty = 1;
   self->allow_root = 0;
+  self->pw_helper = NULL;
   
   self->userauth_methods = NULL;
   self->userauth_algorithms = NULL;
@@ -258,10 +265,15 @@ main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { "interface", OPT_INTERFACE, "interface", 0,
-    "Listen on this network interface", 0 }, 
+    "Listen on this network interface.", 0 }, 
   { "port", 'p', "Port", 0, "Listen on this port.", 0 },
   { "host-key", 'h', "Key file", 0, "Location of the server's private key.", 0},
+#if WITH_SSH1_FALLBACK
+  { "ssh1-fallback", OPT_SSH1_FALLBACK, "File name", OPTION_ARG_OPTIONAL,
+    "Location of the sshd1 program, for falling back to version 1 of the Secure Shell protocol.", 0 },
+#endif /* WITH_SSH1_FALLBACK */
 
+  { NULL, 0, NULL, 0, "Keyexchange options:", 0 },
 #if WITH_SRP
   { "srp-keyexchange", OPT_SRP, NULL, 0, "Enable experimental SRP support.", 0 },
   { "no-srp-keyexchange", OPT_NO_SRP, NULL, 0, "Disable experimental SRP support (default).", 0 },
@@ -270,10 +282,7 @@ main_options[] =
   { "dh-keyexchange", OPT_DH, NULL, 0, "Enable DH support (default).", 0 },
   { "no-dh-keyexchange", OPT_NO_DH, NULL, 0, "Disable DH support.", 0 },
   
-#if WITH_SSH1_FALLBACK
-  { "ssh1-fallback", OPT_SSH1_FALLBACK, "File name", OPTION_ARG_OPTIONAL,
-    "Location of the sshd1 program, for falling back to version 1 of the Secure Shell protocol.", 0 },
-#endif /* WITH_SSH1_FALLBACK */
+  { NULL, 0, NULL, 0, "User authentication options:", 0 },
 
   { "password", OPT_PASSWORD, NULL, 0,
     "Enable password user authentication (default).", 0},
@@ -289,11 +298,17 @@ main_options[] =
     "Allow root to login.", 0 },
   { "no-root-login", OPT_NO_ROOT_LOGIN, NULL, 0,
     "Don't allow root to login (default).", 0 },
-  
-#if WITH_TCP_FORWARD
-  { "tcp-forward", OPT_TCPIP_FORWARD, NULL, 0, "Enable tcpip forwarding (default).", 0 },
-  { "no-tcp-forward", OPT_NO_TCPIP_FORWARD, NULL, 0, "Disable tcpip forwarding.", 0 },
-#endif /* WITH_TCP_FORWARD */
+
+#if WITH_KERBEROS
+  { "kerberos-passwords", OPT_KERBEROS_PASSWD, "Program", OPTION_ARG_OPTIONAL,
+    "Recognize kerberos passwords. The optional argument is the path to the "
+    "helper program, by default \"" KERBEROS_HELPER "\". This option is "
+    "experimental.", 0 },
+  { "no-kerberos-passwords", OPT_NO_KERBEROS_PASSWD, NULL, 0,
+    "Don't recognize kerberos passwords (default behaviour)." },
+#endif
+
+  { NULL, 0, NULL, 0, "Offered services:", 0 },
 
 #if WITH_PTY_SUPPORT
   { "pty-support", OPT_PTY, NULL, 0, "Enable pty allocation (default).", 0 },
@@ -339,7 +354,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	struct user_db *db = NULL;
 	
 	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
-	  db = make_unix_user_db(self->backend, self->allow_root);
+	  db = make_unix_user_db(self->backend, self->pw_helper, self->allow_root);
 	  
 	if (self->with_dh_keyexchange || self->with_srp_keyexchange)
 	  {
@@ -468,6 +483,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case OPT_ROOT_LOGIN:
       self->allow_root = 1;
+      break;
+
+    case OPT_KERBEROS_PASSWD:
+      self->pw_helper = arg ? arg : KERBEROS_HELPER;
+      break;
+
+    case OPT_NO_KERBEROS_PASSWD:
+      self->pw_helper = NULL;
       break;
       
 #if WITH_TCP_FORWARD
