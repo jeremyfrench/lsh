@@ -42,6 +42,7 @@
 #include "werror.h"
 #include "xalloc.h"
 #include "compress.h"
+#include "server_pty.h"
 
 #include "getopt.h"
 
@@ -66,15 +67,20 @@
 
 void usage(void) NORETURN;
 
+#define OPT_SSH1_FALLBACK -2
+
 void usage(void)
 {
   wwrite("lshd [options]\n"
 	 " -p,  --port=PORT\n"
 	 " -h,  --hostkey=KEYFILE\n"
 	 " -c,  --crypto=ALGORITHM\n"
-	 " -z,  --compression=ALGORITHM\n"
+	 " -z,  --compression[=ALGORITHM]\n"
 	 "      --mac=ALGORITHM\n"
 	 " -q,  --quiet\n"
+#if WITH_SSH1_FALLBACK
+         "      --ssh1-fallback=SSHD\n"
+#endif
 	 " -v,  --verbose\n"
 	 "      --debug\n");
   exit(1);
@@ -291,6 +297,10 @@ int main(int argc, char **argv)
   char *port = "ssh";
   char *hostkey = "/etc/lsh_host_key";
 
+#if WITH_SSH1_FALLBACK
+  char *sshd1 = NULL;
+#endif
+  
   struct lsh_string *public_key = NULL; 
   struct signer *secret_key = NULL;
   
@@ -326,7 +336,7 @@ int main(int argc, char **argv)
 			       ATOM_SSH_DSS, make_dsa_algorithm(r),
 			       -1);
 
-  while(1)
+  for (;;)
     {
       static struct option options[] =
       {
@@ -338,6 +348,9 @@ int main(int argc, char **argv)
 	{ "compression", optional_argument, NULL, 'z'},
 	{ "mac", required_argument, NULL, 'm' },
 	{ "hostkey", required_argument, NULL, 'h' },
+#if WITH_SSH1_FALLBACK
+	{ "ssh1-fallback", optional_argument, NULL, OPT_SSH1_FALLBACK},
+#endif
 	{ NULL }
       };
       
@@ -348,6 +361,11 @@ int main(int argc, char **argv)
 	  goto options_done;
 	case 0:
 	  break;
+#if WITH_SSH1_FALLBACK
+	case OPT_SSH1_FALLBACK:
+	  sshd1 = optarg ? optarg : SSHD1;
+	  break;
+#endif
 	case 'p':
 	  port = optarg;
 	  break;
@@ -445,9 +463,9 @@ int main(int argc, char **argv)
 			       ATOM_SSH_CONNECTION,
 			       make_server_session_service
 			       (make_alist(0, -1),
-				make_alist(1, ATOM_SHELL,
-					   make_shell_handler(backend,
-							      reaper),
+				make_alist(2, 
+					   ATOM_SHELL, make_shell_handler(backend, reaper),
+					   ATOM_PTY_REQ, make_pty_handler(),
 					   -1)),
 			       -1)),
 		   -1)),
@@ -456,6 +474,9 @@ int main(int argc, char **argv)
   if (!io_listen(backend, &local, 
 	    make_server_callback(backend,
 				 "lsh - a free ssh",
+#if WITH_SSH1_FALLBACK
+				 sshd1 ? make_ssh1_fallback (sshd1) :
+#endif /* WITH_SSH1_FALLBACK */
 				 NULL,
 				 SSH_MAX_PACKET,
 				 r, make_kexinit,
