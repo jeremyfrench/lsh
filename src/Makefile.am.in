@@ -52,7 +52,8 @@ bootstrap: $(generated_sources)
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	algorithms.c alist.c arcfour.c atoms.c \
 	bignum.c blowfish.c \
-	cascade.c cast.c cbc.c channel.c channel_commands.c charset.c \
+	cascade.c cast.c cbc.c channel.c channel_commands.c channel_forward.c \
+	charset.c \
 	client.c client_escape.c client_keyexchange.c \
 	client_pty.c client_session.c client_userauth.c \
 	combinators.c command.c compress.c connection.c connection_commands.c \
