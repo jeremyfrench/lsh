@@ -348,6 +348,10 @@ do_userauth_banner(struct packet_handler *self UNUSED,
   lsh_string_free(packet);
 }
 
+static struct packet_handler userauth_banner_handler =
+{ STATIC_HEADER, do_userauth_banner };
+
+#if 0
 /* FIXME: Could use a static object instead. */
 static struct packet_handler *
 make_banner_handler(void)
@@ -358,6 +362,7 @@ make_banner_handler(void)
   
   return self;
 }
+#endif
 
 /* GABA:
    (class
@@ -421,7 +426,7 @@ do_client_userauth(struct command *s,
   connection->dispatch[SSH_MSG_USERAUTH_FAILURE]
     = make_failure_handler(state);
   connection->dispatch[SSH_MSG_USERAUTH_BANNER]
-    = make_banner_handler();
+    = &userauth_banner_handler;
 
   assert(LIST_LENGTH(self->methods));
   {
