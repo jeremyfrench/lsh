@@ -1,5 +1,4 @@
 dist_headers = \
-    abstract_compress.h \
     abstract_crypto.h \
     abstract_io.h \
     algorithms.h \
