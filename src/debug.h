@@ -38,6 +38,6 @@ void send_debug_message(struct abstract_write *write, const char *msg, int alway
 void send_debug(struct abstract_write *write, const char *msg, int always_display);
 void send_verbose(struct abstract_write *write, const char *msg, int always_display);
 
-struct packet_handler *make_rec_debug_handler(void);
+extern struct packet_handler connection_debug_handler;
 
 #endif /* LSH_DEBUG_H_INCLUDED */

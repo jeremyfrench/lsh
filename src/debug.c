@@ -77,7 +77,9 @@ make_packet_debug(struct abstract_write *next,
   return &closure->super.super;
 }
 
-static struct lsh_string *make_debug_packet(const char *msg, int always_display)
+
+static struct lsh_string *
+make_debug_packet(const char *msg, int always_display)
 {
   return ssh_format("%c%c%z%z",
 		    SSH_MSG_DEBUG,
@@ -88,27 +90,27 @@ static struct lsh_string *make_debug_packet(const char *msg, int always_display)
 }
 
 /* Send a debug message to the other end. */
-void send_debug_message(struct abstract_write *write, const char *msg, int always_display)
+void
+send_debug_message(struct abstract_write *write, const char *msg, int always_display)
 {
   A_WRITE(write, make_debug_packet(msg, always_display));
 }
 
-void send_debug(struct abstract_write *write, const char *msg, int always_display)
+void
+send_debug(struct abstract_write *write, const char *msg, int always_display)
 {
   if (debug_flag)
     send_debug_message(write, msg, always_display);
 }
 
-void send_verbose(struct abstract_write *write, const char *msg, int always_display)
+void
+send_verbose(struct abstract_write *write, const char *msg, int always_display)
 {
   if (verbose_flag)
     send_debug_message(write, msg, always_display);
 }
 
-static void
-do_rec_debug(struct packet_handler *self UNUSED,
-	     struct ssh_connection *connection UNUSED,
-	     struct lsh_string *packet)
+DEFINE_PACKET_HANDLER(, connection_debug_handler, connection UNUSED, packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;
@@ -139,13 +141,4 @@ do_rec_debug(struct packet_handler *self UNUSED,
       
       lsh_string_free(packet);
     }
-}
-
-struct packet_handler *make_rec_debug_handler(void)
-{
-  NEW(packet_handler, self);
-
-  self->handler = do_rec_debug;
-
-  return self;
 }
