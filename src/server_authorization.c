@@ -30,6 +30,8 @@
 #include "format.h"
 #include "server_userauth.h"
 
+#include <assert.h>
+
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -51,24 +53,18 @@
 static struct verifier *
 do_key_lookup(struct lookup_verifier *c,
 	      int method,
-	      struct lsh_string *keyholder,
+	      struct user *keyholder,
 	      struct lsh_string *key)
 {
   CAST(authorization_db, closure, c);
+  CAST(unix_user, user, keyholder);
   struct lsh_string *filename;
 
   struct stat st;
-  struct unix_user *user;
   struct dsa_verifier *v;
 
-  /* FIXME: Hmm. User lookup is done twice, both here and higher up in
-   * server_publickey.c: do_authenticate. It might make more sense to
-   * pass this data instead of the keyholder username. */
+  assert(user);
   
-  user = lookup_user(keyholder, 0);
-  if (!user)
-    return NULL;
-
   if (method != ATOM_SSH_DSS)
     return NULL;
 
