@@ -1,0 +1,37 @@
+#! /bin/sh
+
+if [ -s hostkey ] ; then : ; else
+    echo 1>&2 Generating key
+    lsh-keygen -a rsa -l 1000 | lsh-writekey -o hostkey
+fi
+
+LSH_YARROW_SEED_FILE=yarrow-seed-file
+
+if [ -s "$LSH_YARROW_SEED_FILE" ] ; then : ; else
+    echo 1>&2 Generating seed
+    lsh-make-seed -o "$LSH_YARROW_SEED_FILE" --sloppy
+fi
+
+export LSH_YARROW_SEED_FILE
+
+if lshd -h hostkey --interface=127.0.0.1 -p 5555 --pid-file=lshd-pid \
+      --daemon --no-syslog ; then : ; else
+    echo 1>&2 Starting lshd failed
+    exit 1
+fi
+
+sleep 2
+
+for f in rapid7-ssh-pdu/*.pdu ; do
+    echo 1>&2 "Testing $f"
+    tcpconnect 127.0.0.1 5555 < "$f" > /dev/null
+    if kill -0 `cat lshd-pid` ; then : ; else
+	echo 1>&2 "Server died"
+	exit 1
+    fi
+done
+
+echo 1>&2 Done
+kill -HUP "`cat lshd-pid`"
+
+exit 0
