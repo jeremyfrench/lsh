@@ -24,6 +24,8 @@ if [ -z "$PIDFILE" ] ; then
     PIDFILE=`pwd`/lshd.$$.pid
 fi
 
+INTERFACE=127.0.0.1
+
 # if [ -z "$USERKEY" ] ; then
 #     USERKEY=$srcdir/key-1.private
 # fi
@@ -63,7 +65,7 @@ spawn_lshd () {
     # Note that --daemon not only forks into the background, it also changes
     # the cwd, uses syslog, etc.
     
-    ../lshd -h $HOSTKEY --interface=localhost \
+    ../lshd -h $HOSTKEY --interface=$INTERFACE \
 	-p $PORT $LSHD_FLAGS --pid-file $PIDFILE --daemon "$@"
 
     # lshd may catch the ordinary TERM signal, leading to timing
