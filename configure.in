@@ -320,10 +320,11 @@ AC_FUNC_GETPGRP
 AC_CHECK_FUNCS(syslog)
 AC_REPLACE_FUNCS(memxor)
 
+AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
+
 dnl Needed by argp
 AC_REPLACE_FUNCS(mempcpy strndup)
-
-AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
+AC_CHECK_FUNCS(fwrite_unlocked fputs_unlocked)
 
 dnl This macro is mentioned in the automake manual, but where is it
 dnl supposed to be defined?
