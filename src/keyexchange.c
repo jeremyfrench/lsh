@@ -224,9 +224,11 @@ do_handle_kexinit(struct packet_handler *c,
 
   int mode = connection->flags & CONNECTION_MODE;
   struct kexinit *msg = parse_kexinit(packet);
-  
+
   int i;
 
+  verbose("Received KEXINIT message. Key exchange initated.\n");
+  
   if (connection->kex_state != KEX_STATE_INIT)
     {
       PROTOCOL_ERROR(connection->e, "Unexpected KEXINIT message.");
@@ -586,6 +588,8 @@ do_handle_newkeys(struct packet_handler *c,
 
   simple_buffer_init(&buffer, packet->length, packet->data);
 
+  verbose("Received NEWKEYS. Key exchange finished.\n");
+  
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_NEWKEYS)
       && (parse_eod(&buffer)))
