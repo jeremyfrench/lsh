@@ -27,6 +27,8 @@
 #include "server_userauth.h"
 
 #include "format.h"
+#include "io.h"
+#include "reaper.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -36,7 +38,10 @@
 #include <time.h>
 
 #include <sys/stat.h>
+#if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+#include <signal.h>
 
 #if HAVE_CRYPT_H
 # include <crypt.h>
@@ -49,17 +54,154 @@
 #endif
 
 #if WITH_UTMP
-#if HAVE_UTMP_H
-#include <utmp.h>
-#endif
+# if HAVE_UTMP_H
+#  include <utmp.h>
+# endif
 
-#if HAVE_UTMPX_H
-#include <utmpx.h>
+# if HAVE_UTMPX_H
+#  include <utmpx.h>
+# endif
+#else /* !WITH_UTMP */
+# struct utmp;
 #endif
-#endif /* WITH_UTMP */
 
 #include "unix_user.c.x"
 
+
+/* GABA:
+   (class
+     (name logout_cleanup)
+     (super exit_callback)
+     (vars
+       (process object resource)
+       (log space "struct utmp")
+       (c object exit_callback)))
+*/
+
+static void
+do_logout_cleanup(struct exit_callback *s,
+		  int signaled, int core, int value)
+{
+  CAST(logout_cleanup, self, s);
+
+  /* No need to signal the process. */
+  self->process->alive = 0;
+
+#if WITH_UTMP && HAVE_LOGWTMP
+  if (self->log)
+    logwtmp(self->log->ut_line,
+	    "",
+	    self->log->ut_host);
+#endif /* WITH_UTMP && HAVE_LOGWTMP */
+  EXIT_CALLBACK(self->c, signaled, core, value);
+}
+
+static struct exit_callback *
+make_logout_cleanup(struct resource *process,
+		    struct utmp *log,
+		    struct exit_callback *c)
+{
+  NEW(logout_cleanup, self);
+  self->super.exit = do_logout_cleanup;
+
+  self->process = process;
+  self->log = log;
+  self->c = c;
+
+  return &self->super;
+}
+
+
+#if WITH_UTMP
+static void
+lsh_strncpy(char *dst, unsigned n, struct lsh_string *s)
+{
+  unsigned length = MIN(n - 1, s->length);
+  memcpy(dst, s->data, length);
+  dst[length] = '\0';
+}
+
+/* Strips the leading "/dev/" part of s. */
+static void
+lsh_strncpy_tty(char *dst, unsigned n, struct lsh_string *s)
+{
+  /* "/dev/" is 5 characters */
+  if (s->length <= 5)
+    lsh_strncpy(dst, n, s);
+  {
+    unsigned length = MIN(n - 1, s->length - 5);
+    memcpy(dst, s->data + 5, length);
+    dst[length] = '\0';
+  }
+}
+
+#define CP(dst, src) lsh_strncpy(dst, sizeof(dst), src);
+#define CP_TTY(dst, src) lsh_strncpy_tty(dst, sizeof(dst), src);
+
+static struct utmp *
+lsh_make_utmp(struct lsh_user *user,
+	      struct address_info *peer,
+	      struct lsh_string *ttyname)
+{
+  struct utmp *log;
+  NEW_SPACE(log);
+
+  CP(log->ut_name, user->name);
+  CP_TTY(log->ut_line, ttyname);
+  CP(log->ut_host, peer->ip);
+
+  return log;
+}
+#undef CP
+#undef CP_TTY
+
+#endif /* WITH_UTMP */
+
+
+/* GABA:
+   (class
+     (name process_resource)
+     (super resource)
+     (vars
+       (pid . pid_t)
+       ; Signal used for killing the process.
+       (signal . int)))
+*/
+
+static void
+do_kill_process(struct resource *r)
+{
+  CAST(process_resource, self, r);
+
+  if (self->super.alive)
+    {
+      self->super.alive = 0;
+      /* NOTE: This function only makes one attempt at killing the
+       * process. An improvement would be to install a callout handler
+       * which will kill -9 the process after a delay, if it hasn't died
+       * voluntarily. */
+
+      if (kill(self->pid, self->signal) < 0)
+	{
+	  werror("do_kill_process: kill() failed (errno = %i): %z\n",
+		 errno, STRERROR(errno));
+	}
+    }
+}
+
+static struct resource *
+make_process_resource(pid_t pid, int signal)
+{
+  NEW(process_resource, self);
+  self->super.alive = 1;
+
+  self->pid = pid;
+  self->signal = signal;
+
+  self->super.kill = do_kill_process;
+
+  return &self->super;
+}
 
 /* GABA:
    (class
@@ -75,6 +217,7 @@
        (passwd string)  ; Crypted passwd
        (home string)
        (shell string))) */
+
 
 /* NOTE: Calls functions using the *ugly* convention of returning
  * pointers to static buffers. */
@@ -201,14 +344,24 @@ change_uid(struct unix_user *user)
 }
 
 static int
-do_fork_process(struct lsh_user *u, pid_t *pid, const char *tty)
+do_fork_process(struct lsh_user *u,
+		struct resource **process,
+		struct reap *reaper, struct exit_callback *c,
+		struct address_info *peer, struct lsh_string *tty)
 {
   CAST(unix_user, user, u);
   pid_t child;
+
+  struct utmp *log = NULL;
   
   /* Don't start any processes unless the user has a login shell. */
   if (!user->shell)
     return 0;
+
+#if WITH_UTMP
+  if (tty)
+    log = lsh_make_utmp(u, peer, tty);
+#endif
   
   child = fork();
 
@@ -221,8 +374,10 @@ do_fork_process(struct lsh_user *u, pid_t *pid, const char *tty)
     case 0: /* Child */
       /* FIXME: Create utmp entry as well. */
 #if WITH_UTMP && HAVE_LOGWTMP
-      if (tty)
-	logwtmp(tty, user->super.name->data, "foo-host");
+      if (log)
+	  /* FIXME: It should be safe to perform a blocking reverse dns lookup here,
+	   * as we have forked. */
+	  logwtmp(log->ut_line, log->ut_user, log->ut_host);
 #endif /* WITH_UTMP && HAVE_LOGWTMP */
       
       if (getuid() != user->super.uid)
@@ -232,11 +387,13 @@ do_fork_process(struct lsh_user *u, pid_t *pid, const char *tty)
 	    _exit(EXIT_FAILURE);
 	  }
       
-      *pid = 0;
+      *process = NULL;
       return 1;
       
     default: /* Parent */
-      *pid = child;
+      *process = make_process_resource(child, SIGHUP);
+      REAP(reaper, child, make_logout_cleanup(*process, log, c));
+      
       return 1;
     }
 }

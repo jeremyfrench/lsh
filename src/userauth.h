@@ -27,8 +27,9 @@
 
 #include "lsh.h"
 #include "exception.h"
+#include "resource.h"
 
-/* For pid_t and uid_t */
+/* For uid_t */
 #include <unistd.h>
 
 /* Forward declaration */
@@ -84,7 +85,9 @@ make_userauth_special_exception(struct lsh_string *reply,
        ; other info.
 
        ; The tty argument is for utmp/wtmp logging
-       (fork_process method int "pid_t *" "const char *tty")
+       (fork_process method int "struct resource **child"
+                     "struct reap *reaper" "struct exit_callback *c"
+                     "struct address_info * peer" "struct lsh_string *tty")
 
        ; This modifies the argv vector, in particular its first
        ; element. So the vector must have at least two elements,
@@ -99,7 +102,8 @@ make_userauth_special_exception(struct lsh_string *reply,
 #define USER_VERIFY_PASSWORD(u, p, f) ((u)->verify_password((u), (p), (f)))
 #define USER_FILE_EXISTS(u, n, f) ((u)->file_exists((u), (n), (f)))
 #define USER_CHDIR_HOME(u) ((u)->chdir_home((u)))
-#define USER_FORK(u, c, t) ((u)->fork_process((u), (c), (t)))
+#define USER_FORK(u, c, r, e, p, t) \
+  ((u)->fork_process((u), (c), (r), (e), (p), (t)))
 #define USER_EXEC(u, m, a, l, e) ((u)->exec_shell((u), (m), (a), (l), (e)))
 
 #endif /* LSH_USERAUTH_H_INCLUDED */
