@@ -1,4 +1,48 @@
+2002-11-18  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* testsuite/Makefile.am (TS_PROGS): Added date-test.
+
+	* testsuite/testutils.h: Include string.h.
+
+	* testsuite/read-cert-test.c (test_main): Check the validity
+	information. 
+
+	* testsuite/date-test.c: New file, testing spki_date functions.
+
+	* spki-types.in: Added not-before and not-after.
+
+	* certificate.h (struct spki_struct): New struct, containing a
+	date string. 
+	(struct spki_5_tuple): Use struct spki_date instead of time_t.
+
+	* certificate.c (parse_valid): Deleted placeholder functiom.
+	(parse_version): Deleted function, moved to parse.c.
+	(parse_acl_entry): Use spki_parse_valid and spki_parse_version.
+	(spki_cert_parse_body): Likewise.
+
+	* parse.c (spki_parse_date): New function.
+	(spki_parse_valid): New function.
+	(spki_parse_version): New function.
+
+	* certificate.c (spki_date_from_time_t): New function.
+	(spki_date_cmp_time_t): New function.
+
 2002-11-17  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* configure.ac: Removed RCS id line.
+
+	* certificate.c (spki_dup): Made function non-static.
+	(parse_tag_body): Deleted function.
+	(parse_acl_entry): Follow new parser function conventions. Use
+	spki_parse_tag, spki_parse_skip and spki_parse_end.
+	(spki_acl_parse): Adapt to new conventions.
+	(parse_skip_optional): Deleted function.
+	(spki_cert_parse_body): Use spki_parse_tag.
+
+	* parse.c (spki_parse_skip): New function, replacing
+	certificate.c:parse_skip_optional. 
+	(spki_parse_tag): New function, replacing
+	certificate.c:parse_tag_body. 
 
 	* Makefile.am (libspki_a_SOURCES): Added parse.c.
 

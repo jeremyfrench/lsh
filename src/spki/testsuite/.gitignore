@@ -1,6 +1,7 @@
 /.deps
 /Makefile
 /Makefile.in
+/date-test
 /principal-test
 /read-acl-test
 /read-cert-test
