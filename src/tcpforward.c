@@ -43,7 +43,6 @@
 
 /* Structures used to keep track of forwarded ports */
 
-
 static struct local_port *
 make_local_port(struct address_info *address, struct lsh_fd *socket)
 {
@@ -167,8 +166,13 @@ struct ssh_channel *make_tcpip_channel(struct io_fd *socket, UINT32 max_window)
   init_channel(&self->super);
 
   self->super.close = do_tcpip_channel_die;
-  self->super.max_window = max_window;
 
+  self->super.max_window = max_window;
+  self->super.rec_window_size = max_window;
+
+  /* FIXME: Make maximum packet size configurable. */
+  self->super.rec_max_packet = SSH_MAX_PACKET;
+  
   self->socket = socket;
   
   return &self->super;
@@ -292,6 +296,8 @@ make_channel_open_direct_tcpip(struct command *callback)
 }
 
 
+/* Global requests for forwarding */
+
 /* GABA:
    (class
      (name tcpip_forward_request_continuation)
@@ -348,8 +354,6 @@ make_tcpip_forward_request_continuation(struct ssh_connection *connection,
   return &self->super;
 }
 
-
-/* Global requests for forwarding */
 
 /* GABA:
    (class
