@@ -50,15 +50,17 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
    
-#include "buffer.h"
+#include "io.h"
 #include "sftp.h"
 
 #include "filemode.h"
 #include "idcache.h"
 #include "xmalloc.h"
+#include "werror.h"
 
 #include <assert.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -73,9 +75,9 @@
 #include <grp.h>
 #include <time.h>
 
-#define SFTP_VERSION 3
+const char *werror_program_name = "sftp-server";
 
-#define FATAL(x) do { fputs("sftp-server: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
+#define SFTP_VERSION 3
 
 #define WITH_DEBUG 1
 
@@ -449,11 +451,11 @@ sftp_send_status(struct sftp_ctx *ctx, UINT32 status)
 #if 0
     case SSH_FX_NO_CONNECTION:
       /* We must never send this */
-      FATAL( "Status SSH_FX_NO_CONNECTION" );
+      fatal( "Status SSH_FX_NO_CONNECTION" );
       break;
     case SSH_FX_CONNECTION_LOST:
       /* We must never send this */
-      FATAL( "Status SSH_FX_CONNECTION_LOST" );
+      fatal( "Status SSH_FX_CONNECTION_LOST" );
       break;
 #endif
     case SSH_FX_OP_UNSUPPORTED:    
@@ -1262,17 +1264,17 @@ sftp_process(sftp_process_func **dispatch,
   
   /* All packets start with a msg byte and a 32-bit id. */
   if (!sftp_get_uint8(ctx->i, &msg))
-    FATAL("Invalid packet.");
+    fatal("Invalid packet.");
 
   if (!sftp_get_uint32(ctx->i, &id))
-    FATAL("Invalid packet.");
+    fatal("Invalid packet.");
 
   DEBUG (("sftp_process: msg: %d, id: %d\n", msg, id));
 
   /* Every reply starts with the id, so copy it through */
   sftp_set_id(ctx->o, id);
     
-  /* Calls FATAL on protocol errors. */
+  /* Calls fatal on protocol errors. */
   ok = dispatch[msg](ctx);
     
   /* Every handler should result in at least one message */
