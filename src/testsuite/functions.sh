@@ -20,6 +20,10 @@ if [ -z "$HOSTKEY" ] ; then
     HOSTKEY=$srcdir/key-1.private
 fi
 
+if [ -z "$PIDFILE" ] ; then
+    PIDFILE=`pwd`/lshd.$$.pid
+fi
+
 # if [ -z "$USERKEY" ] ; then
 #     USERKEY=$srcdir/key-1.private
 # fi
@@ -55,19 +59,22 @@ spawn_lshd () {
 
     # local is not available in /bin/sh
     # local delay
+
+    # Note that --daemon not only forks into the background, it also changes
+    # the cwd, uses syslog, etc.
     
     ../lshd -h $HOSTKEY --interface=localhost \
-	-p $PORT $LSHD_FLAGS --pid-file lshd.$$.pid --daemon "$@"
+	-p $PORT $LSHD_FLAGS --pid-file $PIDFILE --daemon "$@"
 
     # lshd may catch the ordinary TERM signal, leading to timing
     # problems when the next lshd process tries to bind the port.
     # So we kill it harder.
 
-    at_exit 'kill -9 `cat lshd.$$.pid`; rm -f lshd.$$.pid'
+    at_exit 'kill -9 `cat $PIDFILE`; rm -f $PIDFILE'
 
     # Wait a little for lshd to start
     for delay in 1 1 1 1 1 5 5 5 20 20 60 60; do
-	if [ -s lshd.$$.pid ]; then
+	if [ -s $PIDFILE ]; then
 	    # And a little more for it to open its port
 	    sleep 5
 	    return
