@@ -25,6 +25,7 @@
 
 #include "server_authorization.h"
 
+#include "dsa.h"
 #include "format.h"
 #include "server_userauth.h"
 #include "sexp.h"

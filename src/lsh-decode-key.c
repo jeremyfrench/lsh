@@ -5,6 +5,7 @@
  * $Id$
  */
 
+#include "dsa.h"
 #include "io.h"
 #include "lsh_argp.h"
 #include "publickey_crypto.h"

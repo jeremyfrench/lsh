@@ -26,6 +26,7 @@
 #include "atoms.h"
 #include "command.h"
 #include "debug.h"
+#include "dsa.h"
 #include "format.h"
 #include "sexp_commands.h"
 #include "srp.h"

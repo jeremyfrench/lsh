@@ -22,16 +22,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "server_userauth.h"
-#include "xalloc.h"
-#include "connection.h"
-#include "parse.h"
-#include "werror.h"
-#include "format.h"
 #include "charset.h"
-#include "ssh.h"
+#include "connection.h"
+#include "dsa.h"
+#include "format.h"
 #include "lookup_verifier.h"
+#include "parse.h"
 #include "publickey_crypto.h"
+#include "server_userauth.h"
+#include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
 
 #include <assert.h>
 

@@ -35,6 +35,7 @@
 #include "compress.h"
 #include "connection_commands.h"
 #include "crypto.h"
+#include "dsa.h"
 #include "format.h"
 #include "interact.h"
 #include "io.h"

@@ -26,9 +26,10 @@
 #ifndef LSH_SPKI_H_INCLUDED
 #define LSH_SPKI_H_INCLUDED
 
-#include "publickey_crypto.h"
-#include "exception.h"
 #include "alist.h"
+#include "dsa.h"
+#include "exception.h"
+#include "publickey_crypto.h"
 
 #include <time.h>
 

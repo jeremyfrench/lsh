@@ -33,6 +33,7 @@
 #include "connection_commands.h"
 #include "crypto.h"
 #include "daemon.h"
+#include "dsa.h"
 #include "format.h"
 #include "io.h"
 #include "io_commands.h"

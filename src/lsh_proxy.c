@@ -34,6 +34,7 @@
 #include "connection_commands.h"
 #include "crypto.h"
 #include "daemon.h"
+#include "dsa.h"
 #include "format.h"
 #include "gateway_channel.h"
 #include "io.h"

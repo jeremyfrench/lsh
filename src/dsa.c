@@ -22,10 +22,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "publickey_crypto.h"
+#include "dsa.h"
 
 #include "atoms.h"
-#include "bignum.h"
 #include "crypto.h"
 #include "format.h"
 #include "parse.h"
@@ -36,6 +35,10 @@
 #include "xalloc.h"
 
 #include <assert.h>
+
+#define GABA_DEFINE
+#include "dsa.h.x"
+#undef GABA_DEFINE
 
 #include "dsa.c.x"
 

@@ -26,14 +26,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "dsa_keygen.h"
-#include "rsa.h"
-
 #include "blocking_write.h"
 #include "crypto.h"
+#include "dsa.h"
 #include "format.h"
 #include "publickey_crypto.h"
 #include "randomness.h"
+#include "rsa.h"
 #include "sexp.h"
 #include "version.h"
 #include "werror.h"
