@@ -72,7 +72,7 @@ do_channel_open_command(struct command *s,
        * need not pass the connection to NEW_CHANNEL. */
       channel->open_continuation = c;
       channel->e = e;
-      register_channel(connection, index, channel, 0);
+      register_channel(index, channel, 0);
 
       C_WRITE(connection, request);
     }
@@ -94,7 +94,7 @@ do_channel_request_command(struct command *s,
     object_queue_add_tail(&channel->pending_requests,
 			  &make_command_context(c, e)->super);
   
-  A_WRITE(channel->write, request);
+  C_WRITE(channel->connection, request);
 }
 
 void

@@ -266,7 +266,7 @@ do_exit_shell(struct exit_callback *c, int signaled,
 	      signaled ? ATOM_EXIT_SIGNAL : ATOM_EXIT_STATUS,
 	      channel->channel_number);
       
-      A_WRITE(channel->write,
+      C_WRITE(channel->connection,
 	      (signaled
 	       ? format_exit_signal(channel, core, value)
 	       : format_exit(channel, value)) );
@@ -603,7 +603,6 @@ spawn_process(struct server_session *session,
 static void
 do_spawn_shell(struct channel_request *s,
 	       struct ssh_channel *channel,
-	       struct ssh_connection *connection,
 	       struct channel_request_info *info UNUSED,
 	       struct simple_buffer *args,
 	       struct command_continuation *c,
@@ -625,8 +624,8 @@ do_spawn_shell(struct channel_request *s,
     /* Already spawned a shell or command */
     goto fail;
 
-  switch (spawn_process(session, connection->user,
-			connection->peer,
+  switch (spawn_process(session, channel->connection->user,
+			channel->connection->peer,
 			closure->backend))
     {
     case 1: /* Parent */
@@ -644,7 +643,7 @@ do_spawn_shell(struct channel_request *s,
 	int env_length = 0;
 	
 	debug("do_spawn_shell: Child process\n");
-	assert(getuid() == connection->user->uid);
+	assert(getuid() == channel->connection->user->uid);
 	    	    
 	if (session->term)
 	  {
@@ -656,7 +655,7 @@ do_spawn_shell(struct channel_request *s,
 #undef MAX_ENV
 
 #if 1
-	USER_EXEC(connection->user, 1, argv, env_length, env);
+	USER_EXEC(channel->connection->user, 1, argv, env_length, env);
 	
 	/* exec failed! */
 	verbose("server_session: exec failed (errno = %i): %z\n",
@@ -700,7 +699,6 @@ make_shell_handler(struct io_backend *backend)
 static void
 do_spawn_exec(struct channel_request *s,
 	      struct ssh_channel *channel,
-	      struct ssh_connection *connection,
 	      struct channel_request_info *info UNUSED,
 	      struct simple_buffer *args,
 	      struct command_continuation *c,
@@ -732,8 +730,8 @@ do_spawn_exec(struct channel_request *s,
     {
       struct lsh_string *command_line = ssh_format("%ls", command_len, command);
       
-      switch (spawn_process(session, connection->user,
-			    connection->peer,
+      switch (spawn_process(session, channel->connection->user,
+			    channel->connection->peer,
 			    closure->backend))
 	{
 	case 1: /* Parent */
@@ -763,7 +761,7 @@ do_spawn_exec(struct channel_request *s,
 	
 	    debug("do_spawn_shell: Child process\n");
 
-	    assert(getuid() == connection->user->uid);
+	    assert(getuid() == channel->connection->user->uid);
 	    assert(argv[2]);
 	    
 	    if (session->term)
@@ -775,7 +773,7 @@ do_spawn_exec(struct channel_request *s,
 	    assert(env_length <= MAX_ENV);
 #undef MAX_ENV
 
-	    USER_EXEC(connection->user, 0, argv, env_length, env);
+	    USER_EXEC(channel->connection->user, 0, argv, env_length, env);
 	
 	    /* exec failed! */
 	    verbose("server_session: exec failed (errno = %i): %z\n",
@@ -846,7 +844,6 @@ lookup_subsystem(struct subsystem_request *self,
 static void
 do_spawn_subsystem(struct channel_request *s,
 		   struct ssh_channel *channel,
-		   struct ssh_connection *connection,
 		   struct channel_request_info *info UNUSED,
 		   struct simple_buffer *args,
 		   struct command_continuation *c,
@@ -880,8 +877,8 @@ do_spawn_subsystem(struct channel_request *s,
 	  session->pty = NULL;
 	}
       
-      switch (spawn_process(session, connection->user,
-			    connection->peer,
+      switch (spawn_process(session, channel->connection->user,
+			    channel->connection->peer,
 			    self->super.backend))
 	{
 	case 1: /* Parent */
@@ -897,7 +894,7 @@ do_spawn_subsystem(struct channel_request *s,
 
 	    debug("do_spawn_subsystem: Child process\n");
 	  
-	    USER_EXEC(connection->user, 1, argv, 0, NULL);
+	    USER_EXEC(channel->connection->user, 1, argv, 0, NULL);
 
 	    werror("server_session: subsystem exec failed (errno = %i): %z\n",
 		   errno, STRERROR(errno));
@@ -933,7 +930,6 @@ make_subsystem_handler(struct io_backend *backend,
 static void
 do_alloc_pty(struct channel_request *c UNUSED,
 	     struct ssh_channel *channel,
-	     struct ssh_connection *connection,
 	     struct channel_request_info *info UNUSED,
 	     struct simple_buffer *args,
 	     struct command_continuation *s,
@@ -969,7 +965,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	{
 	  struct pty_info *pty = make_pty_info();
       
-	  if (pty_allocate(pty, connection->user->uid))
+	  if (pty_allocate(pty, channel->connection->user->uid))
 	    {
 	      struct termios ios;
 	      
@@ -1025,7 +1021,6 @@ pty_request_handler =
 static void
 do_window_change_request(struct channel_request *c UNUSED,
 			 struct ssh_channel *channel,
-			 struct ssh_connection *connection UNUSED,
 			 struct channel_request_info *info UNUSED,
 			 struct simple_buffer *args,
 			 struct command_continuation *s,

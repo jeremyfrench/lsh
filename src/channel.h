@@ -119,12 +119,8 @@ struct channel_request_info
        (send_window_size . UINT32)
        (send_max_packet . UINT32)
 
-       ; FIXME: Perhaps this should be moved to the channel_table, and
-       ; a pointer to that table be stored here instead?
-       ; Now that we pass the connection pointer to most functions,
-       ; is this field needed at all?
-       (write object abstract_write)
-  
+       (connection object ssh_connection)
+       
        (request_types object alist)
 
        ; If non-NULL, invoked for unknown channel requests.
@@ -308,16 +304,14 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
      (vars
        (handler method void
 		"struct ssh_channel *channel"
-		;; FIXME: Delete connection argument
-		"struct ssh_connection *connection"
 		"struct channel_request_info *info"
 		"struct simple_buffer *args"
 		"struct command_continuation *c"
 		"struct exception_handler *e")))
 */
 
-#define CHANNEL_REQUEST(s, c, conn, i, a, n, e) \
-((s)->handler((s), (c), (conn), (i), (a), (n), (e)))
+#define CHANNEL_REQUEST(s, c, i, a, n, e) \
+((s)->handler((s), (c), (i), (a), (n), (e)))
 
 
 void init_channel(struct ssh_channel *channel);
@@ -331,9 +325,7 @@ use_channel(struct ssh_connection *connection,
 	    UINT32 local_channel_number);
 
 void
-register_channel(/* FIXME: Delete connection argument */
-		 struct ssh_connection *connection,
-		 UINT32 local_channel_number,
+register_channel(UINT32 local_channel_number,
 		 struct ssh_channel *channel,
 		 int take_into_use);
 

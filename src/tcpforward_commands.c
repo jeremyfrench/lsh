@@ -160,7 +160,7 @@ new_tcpip_channel(struct channel_open_command *c,
   debug("tcpforward_commands.c: new_tcpip_channel\n");
 
   channel = &make_channel_forward(self->peer->fd, TCPIP_WINDOW_SIZE)->super;
-  channel->write = connection->write;
+  channel->connection = connection;
 
   *request = format_channel_open(self->type, local_channel_number,
 				 channel, 

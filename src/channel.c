@@ -369,12 +369,11 @@ use_channel(struct ssh_connection *connection,
 
 /* FIXME: Delete connection argument */
 void
-register_channel(struct ssh_connection *connection,
-		 UINT32 local_channel_number,
+register_channel(UINT32 local_channel_number,
 		 struct ssh_channel *channel,
 		 int take_into_use)
 {
-  struct channel_table *table = connection->table;
+  struct channel_table *table = channel->connection->table;
   
   assert(table->in_use[local_channel_number] == CHANNEL_RESERVED);
   assert(!table->channels[local_channel_number]);
@@ -384,17 +383,19 @@ register_channel(struct ssh_connection *connection,
   
   /* NOTE: Is this the right place to install this exception handler? */
   channel->e =
-    make_exc_finish_channel_handler(connection,
+    make_exc_finish_channel_handler(channel->connection,
 				    local_channel_number,
-				    channel->e ? channel->e : connection->e,
+				    (channel->e ? channel->e
+				     : channel->connection->e),
 				    HANDLER_CONTEXT);
 
   table->channels[local_channel_number] = channel;
 
   if (take_into_use)
-    use_channel(connection, local_channel_number);
+    use_channel(channel->connection, local_channel_number);
   
-  REMEMBER_RESOURCE(connection->resources, &channel->resources->super);
+  REMEMBER_RESOURCE(channel->connection->resources,
+		    &channel->resources->super);
 }
 
 struct ssh_channel *
@@ -432,7 +433,7 @@ adjust_rec_window(struct flow_controlled *f, UINT32 written)
    * may live longer than the actual channel. */
   if (! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE
 			   | CHANNEL_SENT_CLOSE)))
-    A_WRITE(channel->write,
+    C_WRITE(channel->connection,
 	    prepare_window_adjust(channel, written));
 }
 
@@ -441,7 +442,7 @@ channel_start_receive(struct ssh_channel *channel,
 		      UINT32 initial_window_size)
 {
   if (channel->rec_window_size < initial_window_size)
-    A_WRITE(channel->write,
+    C_WRITE(channel->connection,
 	    prepare_window_adjust
 	    (channel, initial_window_size - channel->rec_window_size));
 }
@@ -874,7 +875,7 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
 						    e, HANDLER_CONTEXT);
 		}
 	      
-	      CHANNEL_REQUEST(req, channel, connection, &info, &buffer, c, e);
+	      CHANNEL_REQUEST(req, channel, &info, &buffer, c, e);
 	    }
 	  else
 	    {
@@ -922,11 +923,10 @@ do_channel_open_continue(struct command_continuation *c,
   channel->send_max_packet = self->send_max_packet;
   channel->channel_number = self->remote_channel_number;
 
-  /* FIXME: Is the channel->write field really needed? */
-  channel->write = self->connection->write;
-
-  register_channel(self->connection,
-		   self->local_channel_number, channel,
+  channel->connection = self->connection;
+  
+  register_channel(self->local_channel_number,
+		   channel,
 		   1);
 
   /* FIXME: Doesn't support sending extra arguments with the
@@ -1679,7 +1679,7 @@ channel_close(struct ssh_channel *channel)
 
       channel->flags |= CHANNEL_SENT_CLOSE;
       
-      A_WRITE(channel->write, format_channel_close(channel) );
+      C_WRITE(channel->connection, format_channel_close(channel) );
 
       if (channel->flags & CHANNEL_RECEIVED_CLOSE)
 	EXCEPTION_RAISE(channel->e, &finish_exception);
@@ -1703,7 +1703,7 @@ channel_eof(struct ssh_channel *channel)
       verbose("Sending EOF on channel %i\n", channel->channel_number);
 
       channel->flags |= CHANNEL_SENT_EOF;
-      A_WRITE(channel->write, format_channel_eof(channel) );
+      C_WRITE(channel->connection, format_channel_eof(channel) );
 
       if ( (channel->flags & CHANNEL_CLOSE_AT_EOF)
 	   && (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_NO_WAIT_FOR_EOF)) )
@@ -1718,7 +1718,11 @@ void
 init_channel(struct ssh_channel *channel)
 {
   /* channel->super.handler = do_read_channel; */
+#if 0
   channel->write = NULL;
+#endif
+  channel->connection = NULL;
+  
   channel->super.report = adjust_rec_window;
   
   channel->flags = CHANNEL_CLOSE_AT_EOF;
@@ -1820,7 +1824,7 @@ do_channel_write(struct abstract_write *w,
 	channel_eof(closure->channel);
     }
   else
-    A_WRITE(closure->channel->write,
+    C_WRITE(closure->channel->connection,
 	    channel_transmit_data(closure->channel, packet) );
 }
 
@@ -1838,7 +1842,7 @@ do_channel_write_extended(struct abstract_write *w,
 	channel_eof(closure->super.channel);
     }
   else
-    A_WRITE(closure->super.channel->write,
+    C_WRITE(closure->super.channel->connection,
 	    channel_transmit_extended(closure->super.channel,
 				      closure->type,
 				      packet));
