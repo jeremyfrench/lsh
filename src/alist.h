@@ -47,7 +47,7 @@
      (name alist)
      (meta alist)
      (vars
-       (simple unsigned size))
+       (size simple unsigned))
      ; Only subclasses has methods 
      (methods NULL NULL))
 */
@@ -68,7 +68,7 @@ struct alist
 };
 #endif
 
-#define ALIST_CLASS(l) ((struct alist_class_extended *) (l))
+#define ALIST_CLASS(l) ((struct alist_meta *) (l))
 
 #define ALIST_GET(alist, atom) \
      (ALIST_CLASS(alist)->get((alist), (atom)))
