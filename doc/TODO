@@ -51,6 +51,10 @@ Non-trivial handlers to write:
 * The channel-exception handler, which should take care of channel
   close events, instead of the channel_process_status function.
 
+Perhaps io.c should install its own exception handler on the fd:s, to
+make sure that they are closed automaticalle on i/o errors? That would
+simplify programs like sexp_conv.
+
   
 KEYS
 
@@ -114,6 +118,10 @@ CHANNELS
 Create some generic methods for connecting a channel to one or more
 files. The data shuffling and error handling should be very similar
 for most channel types.
+
+Fix the handling of EOF on fd:s associated with channels. Related
+stuff functions: make_channel_read_data,
+make_exc_read_eof_channel_handler, consuming_read.
 
 Consider which errors can occur in the channel callback functions;
 they are probably somewhat different from errors in higher levels. For
@@ -281,3 +289,14 @@ through channel_process_status().
 
 Let init_channel take enough arguments to initialize the window- and
 packet-size fields properly. It's too easy to forget them.
+
+Remove the EXC_IO_EOF exception, and let the read handler get a NULL
+argument instead. This is already done for buffered_read, should we do
+it for consuming_read as well?
+
+Add const to arguments of type struct exception_handler *?
+
+Do something reasonable in do_buffered_read() when self->handler is
+NULL?
+
+
