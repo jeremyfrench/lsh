@@ -54,6 +54,7 @@
 #include "sftp.h"
 
 #include "filemode.h"
+#include "idcache.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -123,6 +124,7 @@ sftp_put_longname_mode(struct sftp_output *o, struct stat *st)
   sftp_put_data(o, sizeof(modes), modes);
 }
 
+#if 0
 /* FIXME: Replace these dummy functions with the functions from
  * fileutil's lib/idcache.c. */
 static const char *
@@ -132,6 +134,7 @@ getuser(uid_t uid UNUSED)
 static const char *
 getgroup(gid_t gid UNUSED)
 { return NULL; }
+#endif
 
 static void
 sftp_put_longname(struct sftp_output *o,
