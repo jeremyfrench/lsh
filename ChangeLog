@@ -1,3 +1,7 @@
+2001-03-26  Niels Möller  <nisse@ehand.com>
+
+	* src/argp/configure.in (CPPFLAGS): Added -D_GNU_SOURCE.
+
 2001-03-25  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/functions.sh (spawn_lshd): Use kill -9 to stop
@@ -76,6 +80,17 @@
 
 	* src/lsh_proxy.c (main): Use listen_callback instead of
 	simple_listen. 
+
+2001-03-22  Niels Möller  <nisse@ehand.com>
+
+	* src/alist.c (alist_add): #if:ed out unused function.
+
+2001-03-21  Niels Möller  <nisse@ehand.com>
+
+	* src/client_password.c: Deleted.
+	
+	* src/lshd.c (install_terminate_handler): Catch SIGTERM and
+	arrange for exit(0) to be called on termination.
 
 2001-03-20  Niels Möller  <nisse@ehand.com>
 
