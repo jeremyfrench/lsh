@@ -26,6 +26,7 @@
 
 #include "string_buffer.h"
 
+#include "format.h"
 #include "xalloc.h"
 
 #include <assert.h>
@@ -131,7 +132,7 @@ string_buffer_final_write(struct string_buffer *buffer,
       if (length)
 	memcpy(buffer->current, s, length);
 
-      buffer->partial->length = final
+      lsh_string_trunc(buffer->partial, final);
       return buffer->partial;
     }
   else
@@ -181,7 +182,7 @@ string_buffer_final(struct string_buffer *buffer,
     {
       /* This should be the usual case. */
 
-      buffer->partial->length = final;
+      lsh_string_trunc(buffer->partial, final);
       return buffer->partial;
     }
   else
