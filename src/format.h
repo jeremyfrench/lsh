@@ -87,8 +87,14 @@ void ssh_vformat_write(const char *format, UINT32 length, UINT8 *buffer, va_list
 /* Short cut */
 #define lsh_string_dup(s) (ssh_format("%lS", (s)))
 
-struct lsh_string *format_cstring(const char *s);
-struct lsh_string *make_cstring(struct lsh_string *s, int free);
+struct lsh_string *
+format_cstring(const char *s);
+
+struct lsh_string *
+make_cstring_l(UINT32 length, UINT8 *data);
+
+struct lsh_string *
+make_cstring(struct lsh_string *s, int free);
 
 unsigned format_size_in_decimal(UINT32 n);
 void format_decimal(unsigned length, UINT8 *buffer, UINT32 n);
