@@ -19,7 +19,7 @@ done
 if cmp test-seed-1 test-seed-2 ; then
   test_fail
 else
-  if [ $? == 1 ] ; then
+  if [ $? -eq 1 ] ; then
     test_success
   else
     test_fail
