@@ -50,6 +50,7 @@
 
 #include "gc.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "parse.h"
 #include "xalloc.h"
 
@@ -309,11 +310,20 @@ static void
 werror_decimal(uint32_t n)
 {
   unsigned length = format_size_in_decimal(n);
-  uint8_t *buffer = alloca(length);
+  uint32_t e = 1;
+  unsigned i;
 
-  format_decimal(length, buffer, n);
-
-  werror_write(length, buffer);
+  /* An inefficient way of computing e = 10^(length - 1) */
+  for (i = 1; i<length; i++)
+    e *= 10;
+  
+  for (; e; e /= 10)
+    {
+      uint32_t digit = n / e;
+      n = n % e;
+      assert(digit < 10);
+      werror_putc("0123456789"[digit]);
+    }
 }
 
 static unsigned format_size_in_hex(uint32_t n);
@@ -351,7 +361,7 @@ werror_hex(uint32_t n)
 }
 
 static void
-werror_hexdump(uint32_t length, uint8_t *data)
+werror_hexdump(uint32_t length, const uint8_t *data)
 {
   uint32_t i = 0;
   
@@ -478,7 +488,7 @@ werror_vformat(const char *f, va_list args)
 	    case 's':
 	      {
 		uint32_t length = va_arg(args, uint32_t);
-		uint8_t *s = va_arg(args, uint8_t *);
+		const uint8_t *s = va_arg(args, const uint8_t *);
 
 		struct lsh_string *u = NULL; 
 
@@ -490,8 +500,8 @@ werror_vformat(const char *f, va_list args)
 			werror_cstring("<Invalid utf-8 string>");
 			break;
 		      }
-		    length = u->length;
-		    s = u->data;
+		    length = lsh_string_length(u);
+		    s = lsh_string_data(u);
 		  }
 		if (do_hex)
 		  {
@@ -528,16 +538,19 @@ werror_vformat(const char *f, va_list args)
 		if (do_hex)
 		  {
 		    assert(!do_paranoia);
-		    werror_hexdump(s->length, s->data);
+		    werror_hexdump(STRING_LD(s));
 		  }
 		else if (do_paranoia)
 		  {
+		    uint32_t length = lsh_string_length(s);
+		    const uint8_t *data = lsh_string_data(s);
 		    uint32_t i;
-		    for (i=0; i<s->length; i++)
-		      werror_paranoia_putc(s->data[i]);
+
+		    for (i=0; i<length; i++)
+		      werror_paranoia_putc(data[i]);
 		  }
 		else
-		  werror_write(s->length, s->data);
+		  werror_write(STRING_LD(s));
 
 		if (do_free)
 		  lsh_string_free(s);
