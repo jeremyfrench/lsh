@@ -354,17 +354,13 @@ fi
 # AC_CHECK_TYPE doesn't work, probably because the type in
 # question is not defined in sys/types.h.
 
-AC_TYPE_SOCKLEN_T
+LSH_TYPE_SOCKLEN_T
 
 # Checks for libraries
 
 AC_CHECK_LIB(gmp, __gmpz_getlimbn,,
     [AC_MSG_ERROR(
     [GNU MP not found, or not 3.1 or up, see http://www.swox.com/gmp.])])
-
-# AC_SEARCH_LIBGMP(gmp gmp2,
-#   [LSH_RPATH_FIX],
-#   [AC_MSG_ERROR([GMP is missing. Get gmp-2.0.2 or better from ftp://ftp.gnu.org/pub/gnu/gmp]) ])
 
 LSH_RPATH_FIX
 
@@ -463,11 +459,11 @@ fi
 # ordinary $LIBS.
 
 if test x$enable_kerberos = xyes; then
-  AC_CHECK_KRB_LIB(roken, strlcpy)
-  AC_CHECK_KRB_LIB(resolv, dn_expand)
-  AC_CHECK_KRB_LIB(des, des_cbc_encrypt)
-  AC_CHECK_KRB_LIB(asn1, der_get_octet_string)
-  AC_CHECK_KRB_LIB(krb5, krb5_cc_gen_new,, [enable_kerberos=no])
+  LSH_CHECK_KRB_LIB(roken, strlcpy)
+  LSH_CHECK_KRB_LIB(resolv, dn_expand)
+  LSH_CHECK_KRB_LIB(des, des_cbc_encrypt)
+  LSH_CHECK_KRB_LIB(asn1, der_get_octet_string)
+  LSH_CHECK_KRB_LIB(krb5, krb5_cc_gen_new,, [enable_kerberos=no])
 fi
 
 AH_TEMPLATE([WITH_KERBEROS], [For kerberos])
@@ -553,7 +549,7 @@ AC_CHECK_FUNCS(poll,,[AC_LIBOBJ([jpoll])])
 
 # Test if the libc includes a good enough argp.
 if test x$with_system_argp = xyes ; then
-  AC_LIB_ARGP(,with_system_argp=no)
+  LSH_LIB_ARGP(,with_system_argp=no)
 fi
 
 # We don't use LIBOBJS for this, as the LIBOBJS are added to

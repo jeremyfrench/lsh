@@ -1,8 +1,7 @@
-AH_TEMPLATE([socklen_t], [Length type used by getsockopt])
-
 # Try to detect the type of the third arg to getsockname() et al
-AC_DEFUN([AC_TYPE_SOCKLEN_T],
-[AC_CACHE_CHECK([for socklen_t in sys/socket.h], ac_cv_type_socklen_t,
+AC_DEFUN([LSH_TYPE_SOCKLEN_T],
+[AH_TEMPLATE([socklen_t], [Length type used by getsockopt])
+AC_CACHE_CHECK([for socklen_t in sys/socket.h], ac_cv_type_socklen_t,
 [AC_EGREP_HEADER(socklen_t, sys/socket.h,
   [ac_cv_type_socklen_t=yes], [ac_cv_type_socklen_t=no])])
 if test $ac_cv_type_socklen_t = no; then
@@ -18,70 +17,6 @@ AC_DEFINE(socklen_t, size_t)
 AC_MSG_RESULT(no)
 AC_DEFINE(socklen_t, int)
 ])
-fi
-])
-
-# checks for gmp version 2 or later. 
-# AC_CHECK_LIBGMP(library, [, if-found [, if-not-found]])
-AC_DEFUN([AC_CHECK_LIBGMP],
-[AC_CACHE_CHECK([for mpz_get_d in -l$1], ac_cv_lib_$1_mpz_get_d,
-[ac_save_libs="$LIBS"
-LIBS="-l$1 $LIBS"
-AC_TRY_LINK(dnl
-[#if HAVE_GMP_H
-#include <gmp.h>
-#elif HAVE_GMP2_GMP_H
-#include <gmp2/gmp.h>
-#endif
-],
-[mpz_get_d(0);],
-ac_cv_lib_$1_mpz_get_d=yes,
-ac_cv_lib_$1_mpz_get_d=no)
-LIBS="$ac_save_LIBS"
-])
-if test x$ac_cv_lib_$1_mpz_get_d = xyes ; then
-ifelse([$2], ,
-[AC_DEFINE(HAVE_LIBGMP)
-LIBS="-l$1 $LIBS"
-], [$2])
-ifelse([$3], , ,
-[else
-$3
-])dnl
-fi
-])
-
-# checks for gmp version 2 or later. 
-# AC_SEARCH_LIBGMP(libraries, [, if-found [, if-not-found]])
-AC_DEFUN([AC_SEARCH_LIBGMP],
-[AC_CACHE_CHECK([for library containing mpz_get_d], ac_cv_search_mpz_get_d,
-[ac_search_save_LIBS="$LIBS"
-ac_cv_search_mpz_get_d="no"
-for i in $1; do
-LIBS="-l$i $ac_search_save_LIBS"
-AC_TRY_LINK(dnl
-[#if HAVE_GMP_H
-#include <gmp.h>
-#elif HAVE_GMP2_GMP_H
-#include <gmp2/gmp.h>
-#endif
-],
-[mpz_get_d(0);],
-[ac_cv_search_mpz_get_d=-l$i
-break
-])
-done
-LIBS="$ac_search_save_LIBS"
-])
-if test "x$ac_cv_search_mpz_get_d" != xno ; then
-  LIBS="$ac_cv_search_mpz_get_d $LIBS"
-ifelse([$2], ,
-[AC_DEFINE(HAVE_LIBGMP)
-], [$2])
-ifelse([$3], , ,
-[else
-$3
-])dnl
 fi
 ])
 
@@ -202,10 +137,10 @@ fi
 ])
 
 # Like AC_CHECK_LIB, but uses $KRB_LIBS rather than $LIBS.
-# AC_CHECK_KRB_LIB(LIBRARY, FUNCTION, [, ACTION-IF-FOUND [,
+# LSH_CHECK_KRB_LIB(LIBRARY, FUNCTION, [, ACTION-IF-FOUND [,
 #                  ACTION-IF-NOT-FOUND [, OTHER-LIBRARIES]]])
 
-AC_DEFUN([AC_CHECK_KRB_LIB],
+AC_DEFUN([LSH_CHECK_KRB_LIB],
 [AC_CHECK_LIB([$1], [$2],
   ifelse([$3], ,
       [[ac_tr_lib=HAVE_LIB`echo $1 | sed -e 's/[^a-zA-Z0-9_]/_/g' \
@@ -218,8 +153,8 @@ AC_DEFUN([AC_CHECK_KRB_LIB],
 , [$5 $KRB_LIBS])
 ])
 
-# AC_LIB_ARGP(ACTION-IF-OK, ACTION-IF-BAD)
-AC_DEFUN([AC_LIB_ARGP],
+# LSH_LIB_ARGP(ACTION-IF-OK, ACTION-IF-BAD)
+AC_DEFUN([LSH_LIB_ARGP],
 [ ac_argp_save_LIBS="$LIBS"
   ac_argp_save_LDFLAGS="$LDFLAGS"
   ac_argp_ok=no
