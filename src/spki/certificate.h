@@ -74,7 +74,7 @@ struct spki_principal
    * details are up to the application. */
   void *verifier;
 };
-  
+
 enum spki_5_tuple_flags
 {
   SPKI_PROPAGATE = 1,
