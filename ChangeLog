@@ -1,3 +1,9 @@
+2004-12-07  Pontus Freyhult  <pont@soua.net>
+
+	* doc/lsh.texinfo (Action options): Added --detach option.
+	(Features): Added section about gateway mode.
+	(Invoking lshg): New node.
+
 2004-12-06  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version to 2.0.

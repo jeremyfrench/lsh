@@ -111,6 +111,7 @@ This manual explains how to use and hack @command{lsh}; it corresponds to
 * Installation::                
 * Getting started::             
 * Invoking lsh::                
+* Invoking lshg::                
 * Invoking lshd::               
 * Files and environment variables::  
 * Terminology::                 
@@ -300,6 +301,11 @@ section is expected to grow with time, as more features from the
 wish-list are added to lsh. One goal for @command{lsh} is to make it
 reasonable easy to extend it, without messing with the core security
 functionality.
+
+@command{lsh} can also be used in something called gateway mode, in
+which you can authenticate once and set up a connection that can
+later be used for quickly setting up new sessions with @command{lshg} 
+(@pxref{Invoking lshg}).
 
 @command{lsh} can be configured to allow login based on a personal
 key-pair consisting of a private and a public key, so that you can
@@ -980,7 +986,7 @@ fingerprint of the server public key.
 There are currently no tools for converting private keys.
 
 
-@node Invoking lsh, Invoking lshd, Getting started, Top
+@node Invoking lsh, Invoking lshg, Getting started, Top
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @command{lsh}
 @anchor{lsh-usage}
@@ -1190,7 +1196,9 @@ connects to the remote hosts, the server will inform the local
 Requests SOCKS-style forwarding. It takes one optional argument, the
 port number to use for the SOCKS proxy (default is 1080). Other
 applications can then use socks version 4 or version 5, to open
-outgoing connections which are forwarded via the SSH connection.
+outgoing connections which are forwarded via the SSH connection. Note
+that for short options the port number must be in the same argument if given
+(i.e. @samp{-D1080} is correct, @samp{-D 1080} is not).
  
 @item -E
 This option takes one mandatory argument, which is a command line to be
@@ -1241,8 +1249,8 @@ applies to actions that create remote processes, i.e. @option{-E} and
 Currently, this option is ignored if there is no local terminal.
 
 @item -x
-Request @acronym{X} forwarding. Applies to the @acronym{-E} and
-@option{S} and the default actions.
+Request @acronym{X} forwarding. Applies to the @option{-E} and
+@option{-S} and the default actions.
 
 @item --stdin
 Redirect the stdin of a remote process from a given, local, file.
@@ -1260,6 +1268,20 @@ after it is used.
 @item --stderr
 Redirect the stdout of a remote process to a given, local, file.
 Analogous to the @option{--stdout} option.
+
+@item --detach
+Detach from terminal at session end.
+
+@item --write-pid
+Applies to @option{-E}. Write PID of backgrounded process to stdout.
+
+
+
+@item -e
+Set the escape character (use ``none'') to disable. Default is ``~''
+if a tty is allocated and ``none'' otherwise.
+
+
 
 @item -g
 Remote peers, aka global forwarding. This option applies to the
@@ -1309,7 +1331,107 @@ Note that all these options are orthogonal. If you use @option{--trace},
 you usually want to add @option{-v} as well; @option{--trace} does not
 do that automatically.
 
-@node Invoking lshd, Files and environment variables, Invoking lsh, Top
+@node Invoking lshg, Invoking lshd, Invoking lsh, Top
+@comment  node-name,  next,  previous,  up
+@chapter Invoking @command{lshg}
+@anchor{lshg-usage}
+
+You use @command{lshg} to login to a remote machine to which you have
+previously used @command{lsh} to set up a gateway (@pxref{Action
+options}). Its usage is very similar to that of @command{lsh}
+(@pxref{Invoking lsh}), except that some options are not available.
+
+Basic usage is
+
+@samp{lshg [-l @var{username}] @var{host}}
+
+which attempts to connect to the gateway that should previously have
+been established by running @samp{lsh [-l @var{username}] -G @var{host}})
+
+The @var{username} and @var{host} are used to locate the gateway. The
+default value for @var{username} is determined in the same way as for
+@command{lsh} (@pxref{Invoking lsh}).
+
+As @command{lshg} uses almost the same options as @command{lsh}
+(@pxref{Invoking lsh}), only options that are not available or have
+a different meaning in @command{lshg} are listed here.
+
+The algorithm options (@pxref{Algorithm options}) as well as most of
+the userauth (@pxref{Userauth options}) and hostauth (@pxref{Hostauth
+options}) are not available in @command{lshg} as they are only used by
+session setup, which is already handled by @command{lsh}.
+
+Due to technical reasons, @acronym{X11}-forwarding cannot be performed by
+@command{lshg}, thus the @option{--x11-forward} option (@pxref{Action options}) is not
+available.
+
+To summarize, these are the options that are new, not available or
+that have different meanings:
+
+@table @option
+@item -G
+For @command{lsh} @option{-G} requests a gateway to be set up. For
+@command{lshg} it means that if no usable gateway is found
+@command{lsh} should be launched with the same arguments instead. 
+
+@item --send-debug
+Not available in @command{lsh}. Sends a @samp{debug} message to the remote machine.
+
+@item --send-ignore
+Not available in @command{lsh}.  Sends a @samp{ignore} message to the remote machine.
+
+@item -x
+(@option{--x11-forward}) Not available in @command{lshg}.
+
+@item -c
+(@option{--crypto}) Not available in @command{lshg}.
+
+@item -z
+(@option{--compression}) Not available in @command{lshg}.
+
+@item -m
+(@option{--mac}) Not available in @command{lshg}.
+
+@item --hostkey-algorithm
+Not available in @command{lshg}.
+
+@item --capture-to
+Not available in @command{lshg}.
+
+@item --strict-host-authentication
+Not available in @command{lshg}.
+
+@item --sloppy-host-authentication
+Not available in @command{lshg}.
+
+@item --host-db
+Not available in @command{lshg}.
+
+@item --publickey
+Not available in @command{lshg}.
+
+@item --no-publickey
+Not available in @command{lshg}.
+
+@item --dh-keyexchange
+Not available in @command{lshg}.
+
+@item --no-dh-keyexchange
+Not available in @command{lshg}.
+
+@item --srp-keyexchange
+Not available in @command{lshg}.
+
+@item --no-srp-keyexchange
+Not available in @command{lshg}.
+
+@item -i
+@option{--identity} Not available in @command{lshg}.
+
+
+@end table
+
+@node Invoking lshd, Files and environment variables, Invoking lshg, Top
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @command{lshd}
 @anchor{lshd-usage}
