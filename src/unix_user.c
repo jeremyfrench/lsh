@@ -75,6 +75,9 @@
 # include <libutil.h>
 #endif
 
+/* Forward declaration */
+struct unix_user_db;
+
 #include "unix_user.c.x"
 
 
@@ -228,11 +231,9 @@ make_process_resource(pid_t pid, int signal)
      (super lsh_user)
      (vars
        (gid . gid_t)
-       ; Needed for the USER_READ_FILE method
-       (backend object io_backend)
-       
-       ; Helper program for checking passwords. Primarily used for Kerberos.
-       (pw_helper . "const char *")
+
+       ; Context needed for some methods.
+       (ctx object unix_user_db)
        
        ; These strings include a terminating NUL-character, for 
        ; compatibility with library and system calls. This applies also
@@ -242,19 +243,66 @@ make_process_resource(pid_t pid, int signal)
        (home string)
        (shell string))) */
 
+/* GABA:
+   (class
+     (name pwhelper_callback)
+     (super exit_callback)
+     (vars
+       (user object unix_user)
+       (c object command_continuation)
+       (e object exception_handler)))
+*/
 
+static void
+do_pwhelper_callback(struct exit_callback *s,
+		     int signaled, int core UNUSED, int value)
+{
+  CAST(pwhelper_callback, self, s);
+
+  if (signaled || value)
+    {
+      static const struct exception invalid_password
+	= STATIC_EXCEPTION(EXC_USERAUTH, "Invalid password according to helper program.");
+      EXCEPTION_RAISE(self->e, &invalid_password);
+    }
+  else
+    COMMAND_RETURN(self->c, self->user);
+}
+
+static struct exit_callback *
+make_pwhelper_callback(struct unix_user *user,
+		       struct command_continuation *c,
+		       struct exception_handler *e)
+{
+  NEW(pwhelper_callback, self);
+  self->super.exit = do_pwhelper_callback;
+  self->user = user;
+  self->c = c;
+  self->e = e;
+
+  return &self->super;
+}
+
+/* NOTE: Consumes the pw string if successful. */
 static int
-kerberos_check_pw(const char *helper, struct unix_user *user, struct lsh_string *pw)
+kerberos_check_pw(struct unix_user *user, struct lsh_string *pw,
+		  struct command_continuation *c,
+		  struct exception_handler *e)
 {
   /* Because kerberos is big and complex, we fork a separate process
-   * to do the work.
-   *
-   * NOTE: This function can block if communication with the kdc
-   * hangs. To get it right, the the USER_VERIFY_PASSWORD method has
-   * to take a continuation argument. */
+   * to do the work. */
 
   int in[2];
   pid_t child;
+
+  /* First look if the helper program seems to exist. */
+  if (access(user->ctx->pw_helper, X_OK) < 0)
+    {
+      /* No help available */
+      werror("Password helper program '%z' not available (errno = %d): %z\n",
+	     user->ctx->pw_helper, errno, STRERROR(errno));
+      return 0;
+    }
   
   if (!lsh_make_pipe(in))
     {
@@ -300,80 +348,106 @@ kerberos_check_pw(const char *helper, struct unix_user *user, struct lsh_string 
 	close(in[1]);
 	close(null_fd);
 
-	execl(helper, helper, user->super.name->data, NULL);
+	execl(user->ctx->pw_helper, user->ctx->pw_helper, user->super.name->data, NULL);
 	_exit(EXIT_FAILURE);
       }
     default:
       {
 	/* Parent */
-	const struct exception *e;
-	int status;
-	
+	struct lsh_fd *fd;
+
 	close(in[0]);
 
-	e = write_raw(in[1], pw->length, pw->data);
-	close(in[1]);
+	fd = io_write(make_lsh_fd(user->ctx->backend, in[1], e),
+		      pw->length, NULL);
 
-	if (e)
-	  werror("kerberos_check_pw: writing password failed: %z.\n",
-		 e->msg);
+	A_WRITE(&fd->write_buffer->super, pw);
 
-	if (waitpid(child, &status, 0) > 0)
-	  return !e && WIFEXITED(status)
-	    && (WEXITSTATUS(status) == EXIT_SUCCESS);
+	REAP(user->ctx->reaper, child, make_pwhelper_callback(user, c, e));
 
-	werror("kerberos_check_pw: waitpid failed (%i): %z.\n",
-	       errno, STRERROR(errno));
-
-	return 0;
+	return 1;
       }
     }
 }
 
-/* NOTE: Calls functions using the *ugly* convention of returning
- * pointers to static buffers. */
-static int
+/* FIXME: This could be generalized to support some kind of list of
+ * password databases. The current code first checks for unix
+ * passwords, and if that fails, it optionally invokes a helper
+ * program to verify the password, typically used for kerberos. */
+static void
 do_verify_password(struct lsh_user *s,
 		   struct lsh_string *password,
-		   int free)
+		   struct command_continuation *c,
+		   struct exception_handler *e)
 {
   CAST(unix_user, user, s);
-  char *salt;
-    
-  if (user->pw_helper && kerberos_check_pw(user->pw_helper, user, password))
-    {
-      if (free)
-	lsh_string_free(password);
-      
-      return 1;
-    }
+  const struct exception *x = NULL;
 
-  /* NOTE: We don't allow login to accounts with empty passwords. */
+  /* Convert password to a NUL-terminated string; no supported
+   * password verification methods allows passwords containing NUL. */
+
+  password = make_cstring(password, 1);
+  
+  if (!password)
+    {
+      static const struct exception invalid_passwd
+	= STATIC_EXCEPTION(EXC_USERAUTH, "NUL character in password.");
+
+      EXCEPTION_RAISE(e, &invalid_passwd);
+      return;
+    }
+  
+  /* NOTE: Check for accounts with empty passwords. */
   if (!user->passwd || (user->passwd->length < 2) )
     {
-      if (free)
-	lsh_string_free(password);
+      static const struct exception no_passwd
+	= STATIC_EXCEPTION(EXC_USERAUTH, "No password in passwd db.");
 
-      return 0;
+      x = &no_passwd;
+
+      /* NOTE: We attempt using kerberos passwords even if the
+       * passwd entry is totally bogus. */
+      goto try_helper;
     }
 
-  /* Convert password to a NULL-terminated string */
-  password = make_cstring(password, free);
+  /* Try password authentication against the ordinary unix database. */
+  {
+    char *salt = user->passwd->data;
 
-  if (!password)
-    return 0;
+    /* NOTE: crypt() uses the *ugly* convention of returning pointers
+     * to static buffers. */
+
+    if (strcmp(crypt(password->data, salt), user->passwd->data))
+      {
+	/* Passwd doesn't match */
+	static const struct exception invalid_passwd
+	  = STATIC_EXCEPTION(EXC_USERAUTH, "Incorrect password.");
+	
+	x = &invalid_passwd;
+
+	goto try_helper;
+      }
+    /* Unix style password authentication succeded. */
+    lsh_string_free(password);
+    COMMAND_RETURN(c, user);
+    return;
+  }
   
-  salt = user->passwd->data;
+ try_helper:
 
-  if (strcmp(crypt(password->data, salt), user->passwd->data))
+  /* We get here if checks against the ordinary passwd database failed. */
+  assert(x);
+  
+  if (user->ctx->pw_helper && kerberos_check_pw(user, password, c, e))
+    /* The helper program takes responsibility for password
+     * verification, and it also consumed the password string so that
+     * we don't need to free it here. */
+    ;
+  else
     {
-      /* Passwd doesn't match */
       lsh_string_free(password);
-      return 0;
+      EXCEPTION_RAISE(e, x);
     }
-
-  lsh_string_free(password);
-  return 1;
 }
 
 /* NOTE: No arbitrary file names are passed to this function, so we don't have
@@ -429,7 +503,7 @@ do_read_file(struct lsh_user *u,
   
   f = ssh_cformat("%lS/.lsh/%lz", user->home, name);
 
-  fd = io_read_user_file(user->backend, f->data, user->super.uid, secret, &x, e);
+  fd = io_read_user_file(user->ctx->backend, f->data, user->super.uid, secret, &x, e);
   lsh_string_free(f);
 
   if (fd)
@@ -496,7 +570,7 @@ change_uid(struct unix_user *user)
 static int
 do_fork_process(struct lsh_user *u,
 		struct resource **process,
-		struct reap *reaper, struct exit_callback *c,
+		struct exit_callback *c,
 		struct address_info *peer, struct lsh_string *tty)
 {
   CAST(unix_user, user, u);
@@ -547,7 +621,7 @@ do_fork_process(struct lsh_user *u,
       
     default: /* Parent */
       *process = make_process_resource(child, SIGHUP);
-      REAP(reaper, child, make_logout_cleanup(*process, log, c));
+      REAP(user->ctx->reaper, child, make_logout_cleanup(*process, log, c));
       
       return 1;
     }
@@ -651,8 +725,7 @@ do_exec_shell(struct lsh_user *u, int login,
 static struct lsh_user *
 make_unix_user(struct lsh_string *name,
 	       uid_t uid, gid_t gid,
-	       struct io_backend *backend,
-	       const char *pw_helper,
+	       struct unix_user_db *ctx,
 	       const char *passwd,
 	       const char *home,
 	       const char *shell)
@@ -672,8 +745,7 @@ make_unix_user(struct lsh_string *name,
   user->super.uid = uid;
   user->gid = gid;
 
-  user->backend = backend;
-  user->pw_helper = pw_helper;
+  user->ctx = ctx;
   
   /* Treat empty strings as NULL. */
 
@@ -692,6 +764,7 @@ make_unix_user(struct lsh_string *name,
      (super user_db)
      (vars
        (backend object io_backend)
+       (reaper object reap)
        (pw_helper . "const char *")
        (allow_root . int)))
 */
@@ -796,8 +869,7 @@ do_lookup_user(struct user_db *s,
       
       return make_unix_user(name, 
 			    passwd->pw_uid, passwd->pw_gid,
-			    self->backend,
-			    self->pw_helper,
+			    self,
 			    crypted,
 			    home, passwd->pw_shell);
     }
@@ -810,13 +882,15 @@ do_lookup_user(struct user_db *s,
 }
 
 struct user_db *
-make_unix_user_db(struct io_backend *backend, const char *pw_helper,
+make_unix_user_db(struct io_backend *backend, struct reap *reaper,
+		  const char *pw_helper,
 		  int allow_root)
 {
   NEW(unix_user_db, self);
 
   self->super.lookup = do_lookup_user;
   self->backend = backend;
+  self->reaper = reaper;
   self->pw_helper = pw_helper;
   self->allow_root = allow_root;
 
