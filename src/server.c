@@ -110,21 +110,21 @@
      (vars
        (backend object io_backend)
 
-        (secret object signer) ; Secret key
-	(host_key string)      ; Public key 
+       (secret object signer) ; Secret key
+       (host_key string)      ; Public key 
 
-	(block_size simple UINT32)
-	(id_comment simple "const char *")
+       (block_size simple UINT32)
+       (id_comment simple "const char *")
 
-	(random object randomness)
-	(init object make_kexinit)
-	(kexinit_handler object packet_handler)))
+       (random object randomness)
+       (init object make_kexinit)
+       (kexinit_handler object packet_handler)))
 */
 
 static int server_initiate(struct fd_callback **c,
 			   int fd)
 {
-  struct server_callback *closure = (struct server_callback *) *c;
+  CAST(server_callback, closure, *c);
   
   struct ssh_connection *connection
     = make_ssh_connection(closure->kexinit_handler);
@@ -137,7 +137,7 @@ static int server_initiate(struct fd_callback **c,
 		     io_read_write(closure->backend, fd,
 				   make_server_read_line(connection),
 				   closure->block_size,
-				   make_server_close_handler()),
+				   make_server_close_handler(connection)),
 		     closure->random);
 
   
@@ -179,7 +179,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  struct read_handler *new = make_read_packet
 	    (make_packet_unpad
 	     (make_packet_debug(&closure->connection->super,
-				"recieved")),
+				"received")),
 	     closure->connection);
 	  
 	  closure->connection->client_version
@@ -250,23 +250,78 @@ make_server_callback(struct io_backend *b,
   return &connected->super;
 }
 
-static int server_die(struct close_callback *closure, int reason)
+/* CLASS:
+   (class
+     (name server_cleanup)
+     (super close_callback)
+     (vars
+       (connection object ssh_connection)))
+*/
+
+static int server_die(struct close_callback *c, int reason)
 {
-  /* FIXME: If any processes are running, they should be killed now. */
+  CAST(server_cleanup, closure, c);
+  
   verbose("Connection died, for reason %d.\n", reason);
   if (reason != CLOSE_EOF)
     werror("Connection died.\n");
 
+  KILL_RESOURCE_LIST(closure->connection->resources);
+  
   return 0;  /* Ignored */
 }
 
-struct close_callback *make_server_close_handler(void)
+struct close_callback *make_server_close_handler(struct ssh_connection *c)
 {
-  NEW(close_callback, c);
+  NEW(server_cleanup, closure);
 
-  c->f = server_die;
+  closure->connection = c;  
+  closure->super.f = server_die;
 
-  return c;
+  return &closure->super;
+}
+
+
+/* CLASS:
+   (class
+     (name process_resource)
+     (super resource)
+     (vars
+       (pid . pid_t)
+       (signal . int)))
+*/
+
+static void do_kill_process(struct resource *r)
+{
+  CAST(process_resource, self, r);
+
+  if (!self->super.alive)
+    return;
+
+  self->super.alive = 0;
+  /* NOTE: This function only makes one attempt at killing the
+   * process. An improvement would be to install a callout handler
+   * which will kill -9 the process after a delay, if it hasn't died
+   * voluntarily. */
+  
+  if (kill(self->pid, self->signal) < 0)
+    {
+      werror("do_kill_process: kill() failed (errno = %d): %s\n",
+	     errno, strerror(errno));
+    }
+}
+          
+struct resource *make_process_resource(pid_t pid, int signal)
+{
+  NEW(process_resource, self);
+  self->super.alive = 1;
+
+  self->pid = pid;
+  self->signal = signal;
+
+  self->super.kill = do_kill_process;
+
+  return &self->super;
 }
 
 /* Session */
@@ -279,23 +334,25 @@ struct close_callback *make_server_close_handler(void)
        (user object unix_user)
 
        ; Non-zero if a shell or command has been started. 
-       (running simple int)
-       ; FIXME: We need the pid as well, to be able to kill
-       ; the process if the channel or connection is closed.
+       ;; (running simple int)
+
+       ; Resource to kill when the channel is closed. 
+       (process object resource)
+
        ; Child process's stdio 
        (in object io_fd)
        (out object io_fd)
        (err object io_fd)))
 */
 
-/* Recieve channel data */
-static int do_recieve(struct ssh_channel *c,
+/* Receive channel data */
+static int do_receive(struct ssh_channel *c,
 		      int type, struct lsh_string *data)
 {
   CAST(server_session, closure, c);
 
   /* FIXME: Examine the size of the write buffer, to decide if the
-   * recieve window should be adjusted. */
+   * receive window should be adjusted. */
   switch(type)
     {
     case CHANNEL_DATA:
@@ -312,26 +369,34 @@ static int do_recieve(struct ssh_channel *c,
 /* We may send more data */
 static int do_send(struct ssh_channel *c)
 {
-  CAST(server_session, closure, c);
+  CAST(server_session, session, c);
 
-  assert(closure->out->super.read);
-  assert(closure->out->handler);
-  assert(closure->err->super.read);
-  assert(closure->err->handler);
+  assert(session->out->super.read);
+  assert(session->out->handler);
+  assert(session->err->super.read);
+  assert(session->err->handler);
   
-  closure->out->super.want_read = 1;
-  closure->err->super.want_read = 1;
+  session->out->super.want_read = 1;
+  session->err->super.want_read = 1;
   
   return LSH_OK | LSH_GOON;
 }
 
 static int do_eof(struct ssh_channel *c)
 {
-  CAST(server_session, closure, c);
+  CAST(server_session, session, c);
 
-  write_buffer_close(closure->in->buffer);
+  write_buffer_close(session->in->buffer);
 
   return LSH_OK | LSH_GOON;
+}
+
+static void do_close(struct ssh_channel *c)
+{
+  CAST(server_session, session, c);
+
+  if (session->process)
+    KILL_RESOURCE(session->process);
 }
 
 struct ssh_channel *make_server_session(struct unix_user *user,
@@ -343,18 +408,24 @@ struct ssh_channel *make_server_session(struct unix_user *user,
   init_channel(&self->super);
 
   self->super.max_window = max_window;
-  /* We don't want to recieve any data before we have forked some
-   * process to recieve it. */
+  /* We don't want to receive any data before we have forked some
+   * process to receive it. */
   self->super.rec_window_size = 0;
 
   /* FIXME: Make maximum packet size configurable. */
   self->super.rec_max_packet = SSH_MAX_PACKET;
 
   self->super.request_types = request_types;
+
+  self->super.close = do_close;
+  
   self->user = user;
 
+#if 0
   self->running = 0;
-
+#endif
+  self->process = NULL;
+  
   self->in = NULL;
   self->out = NULL;
   self->err = NULL;
@@ -373,11 +444,13 @@ struct ssh_channel *make_server_session(struct unix_user *user,
 
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
 
-static struct ssh_channel *do_open_session(struct channel_open *c,
-					   struct simple_buffer *args,
-					   UINT32 *error,
-					   char **error_msg,
-					   struct lsh_string **data)
+static struct ssh_channel *
+do_open_session(struct channel_open *c,
+		struct ssh_connection *connection UNUSED,
+		struct simple_buffer *args,
+		UINT32 *error,
+		char **error_msg,
+		struct lsh_string **data)
 {
   CAST(open_session, closure, c);
   
@@ -486,9 +559,24 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
   
   CHECK_TYPE(server_session, session);
 
-  /* FIXME: Should we explicitly mark these files for closing?
-   * The io-backend should notice EOF anyway. */
+  if (! session->process->alive)
+    {
+      /* The process was killed by a the resource callback (most
+       * likely because the connection died. Keep silent. */
+      debug("do_exit_shell: Process already flagged as dead.\n");
+      return;
+    }
+  
+  /* No need to kill the process. */
+  session->process->alive = 0;
+  
+  /* FIXME: Should we explicitly mark these files for closing? The
+   * io-backend should notice EOF anyway. And the client should send
+   * EOF when it receives news of the process's death, unless it
+   * really wants to talk to any live children processes. */
+#if 0
   close_fd(&session->in->super, 0);
+#endif
 #if 0
   close_fd(session->out);
   close_fd(session->err);
@@ -507,7 +595,7 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
     }
 #endif
 
-  /* FIXME: We shouldn't close until we have both sent and recieved eof. */
+  /* We close when we have both sent and received eof. */
   channel->flags |= CHANNEL_CLOSE_AT_EOF;
   
   if (!(channel->flags & CHANNEL_SENT_CLOSE))
@@ -518,7 +606,8 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
 		    : format_exit(channel, value));
 
       if (!LSH_CLOSEDP(res)
-	  && (channel->flags & CHANNEL_SENT_EOF))
+	  && (channel->flags & CHANNEL_SENT_EOF)
+	  && (channel->flags & CHANNEL_RECEIVED_EOF))
 	{
 	  /* We have sent EOF already, so initiate close */
 	  res |= channel_close(channel);
@@ -589,6 +678,7 @@ static char *make_env_pair_c(const char *name, char *value)
 
 static int do_spawn_shell(struct channel_request *c,
 			  struct ssh_channel *channel,
+			  struct ssh_connection *connection,
 			  int want_reply,
 			  struct simple_buffer *args)
 {
@@ -604,7 +694,7 @@ static int do_spawn_shell(struct channel_request *c,
   if (!parse_eod(args))
     return LSH_FAIL | LSH_DIE;
 
-  if (session->running)
+  if (session->process)
     /* Already spawned a shell or command */
     goto fail;
   
@@ -749,7 +839,6 @@ static int do_spawn_shell(struct channel_request *c,
 		  /* Parent */
 
 		  debug("Parent process\n");
-
 		  REAP(closure->reap, child, make_exit_shell(session));
 		  
 		  /* Close the child's fd:s */
@@ -759,9 +848,9 @@ static int do_spawn_shell(struct channel_request *c,
 
 		  session->in
 		    = io_write(closure->backend, in[1],
-				SSH_MAX_PACKET,
-				/* FIXME: Use a proper close callback */
-				make_channel_close(channel));
+			       SSH_MAX_PACKET,
+			       /* FIXME: Use a proper close callback */
+			       make_channel_close(channel));
 		  session->out
 		    = io_read(closure->backend, out[0],
 			      make_channel_read_data(channel),
@@ -771,11 +860,26 @@ static int do_spawn_shell(struct channel_request *c,
 			      make_channel_read_stderr(channel),
 			      NULL);
 
-		  channel->recieve = do_recieve;
+		  channel->receive = do_receive;
 		  channel->send = do_send;
 		  channel->eof = do_eof;
 		  
+#if 0
 		  session->running = 1;
+#endif
+		  session->process
+		    = make_process_resource(child, SIGHUP);
+
+		  /* Make sure that the process and it's stdio is
+		   * cleaned up if the connection dies. */
+		  REMEMBER_RESOURCE
+		    (connection->resources, session->process);
+		  REMEMBER_RESOURCE
+		    (connection->resources, &session->in->super.super);
+		  REMEMBER_RESOURCE
+		    (connection->resources, &session->out->super.super);
+		  REMEMBER_RESOURCE
+		    (connection->resources, &session->err->super.super);
 
 		  return (want_reply
 			  ? A_WRITE(channel->write,
