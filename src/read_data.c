@@ -54,7 +54,8 @@ static UINT32 do_read_data_query(struct io_consuming_read *s)
   CAST(read_data, self, s);
   
   assert(self->channel->sources);
-  
+  assert(self->overhead < self->channel->send_max_packet);
+    
   if (self->channel->flags &
       (CHANNEL_RECEIVED_CLOSE | CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
     {
@@ -79,8 +80,6 @@ make_read_data(struct ssh_channel *channel,
   self->super.query = do_read_data_query;
   self->super.consumer = write;
 
-  assert(overhead < channel->send_max_packet);
-  
   self->overhead = overhead;
   self->channel = channel;
 
