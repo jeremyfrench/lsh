@@ -1,4 +1,5 @@
-noinst_PROGRAMS = spki-check-signature spki-make-signature spki-delegate
+noinst_PROGRAMS = spki-check-signature spki-make-signature \
+	spki-delegate spki-reduce
 
 # FIXME: Create a link to nettle directory instead?
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/..
