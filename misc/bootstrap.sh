@@ -1,9 +1,14 @@
 #! /bin/sh
 
+set -e
 bash make_am
 aclocal
 autoheader
 autoconf
+(cd src/argp && aclocal)
+(cd src/argp && autoconf)
+(cd src/argp && autoheader)
+
 automake -a
 ./configure
 (cd src && for f in *.h *.c; do make $f.x; done)
