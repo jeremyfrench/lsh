@@ -25,8 +25,8 @@
 
 #include <assert.h>
 
-#include "nettle/macros.h"
 #include "connection.h"
+#include "crypto.h"
 #include "format.h"
 #include "lsh_string.h"
 #include "werror.h"
@@ -50,62 +50,10 @@ do_write_packet(struct abstract_write *s,
 {
   CAST(write_packet, self, s);
   struct ssh_connection *connection = self->connection;
-  uint32_t block_size;
-  uint32_t new_size;
-  uint8_t padding_length;
-  uint32_t padding;
-
-  uint32_t mac_length;
-  uint32_t mac;
-
-  uint32_t length = lsh_string_length(packet);
-  assert(length);
-  
-  /* Deflate, pad, mac, encrypt. */
-  if (connection->send_compress)
-    {
-      packet = CODEC(connection->send_compress, packet, 1);
-      assert(packet);
-      length = lsh_string_length(packet);      
-    }
-
-  block_size = connection->send_crypto
-    ? connection->send_crypto->block_size : 8;
-  mac_length = connection->send_mac
-    ? connection->send_mac->mac_size : 0;
-  
-  /* new_size is (length + 9) rounded up to a multiple of
-   * block_size */
-  new_size = block_size * (1 + (8 + length) / block_size);
-  
-  padding_length = new_size - length - 5;
-  assert(padding_length >= 4);
-
-  packet = ssh_format("%i%c%lfS%lr%lr",
-		      length + padding_length + 1,
-		      padding_length,
-		      packet,
-		      padding_length, &padding,
-		      mac_length, &mac);
-
-  assert(new_size + mac_length == lsh_string_length(packet));
-
-  lsh_string_write_random(packet, padding, self->random, padding_length);
-
-  if (connection->send_mac)
-    {
-      uint8_t s[4];
-      assert(new_size == mac);      
-
-      WRITE_UINT32(s, self->sequence_number);
-      MAC_UPDATE(connection->send_mac, 4, s);
-      MAC_UPDATE(connection->send_mac, new_size, lsh_string_data(packet));
-      MAC_DIGEST(connection->send_mac, packet, mac);
-    }
-  if (connection->send_crypto)
-    CRYPT(connection->send_crypto, new_size, packet, 0, packet, 0);
-
-  self->sequence_number++;
+  packet = encrypt_packet(packet,
+			  connection->send_compress, connection->send_crypto,
+			  connection->send_mac, self->random,
+			  self->sequence_number++);
   A_WRITE(self->super.next, packet);
 }
 
