@@ -1,3 +1,23 @@
+2002-07-03  Pontus Sköld  <pont@soua.net>
+
+	* src/lshg.c: Include <unistd.h> to get execvp declaration, define
+	LSH_FILENAME if not defined.
+	(lshg_options): New attribute fallback_lsh.
+	(make_options): Initialize fallback_lsh.
+	(main_options): New option -G to handle fallback.
+	(main_argp_parser): Handle new option.
+	(main_argp): Added missing space in message.
+	(lshg_exception_handler): New class.
+	(do_exc_lshg_handler): If the exception was because there was no
+	usable gateway and fallback is enabled, launch lsh instead.
+	(make_lshg_exception_handler): No longer call
+	make_exception_handler but construct the object ourself.
+	(main): make_lshg_exception_handler takes more arguments to handle
+	the lsh fallback.
+
+	* src/io_commands.c (connect_local_command): Check if the
+	connection was successfull and raise an exception otherwise.
+
 2002-07-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/unix_user.c (do_spawn): Allow err[1] and out[1] to be the
