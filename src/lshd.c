@@ -183,7 +183,7 @@ int main(int argc, char **argv)
   init_host_key(r); /* Initializes public_key and secret_key */
   kex = make_dh_server(dh, public_key, secret_key);
   algorithms = make_alist(7,
-			  ATOM_ARCFOUR, &crypto_rc4_algorithm,
+			  ATOM_ARCFOUR, &crypto_arcfour_algorithm,
 			  ATOM_BLOWFISH_CBC, crypto_cbc(make_blowfish()),
 			  ATOM_3DES_CBC, crypto_cbc(make_des3()),
 			  ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
