@@ -311,6 +311,46 @@ make_exc_connection_handler(struct ssh_connection *connection,
   return &self->super;
 }
 
+/* About three max size packets */
+#define WRITE_BUFFER_MAX    100000
+/* Should be enough for a reasonable number of keyexchange packets or
+ * keepalive packets */
+#define WRITE_BUFFER_MARGIN  10000
+
+/* GABA:
+   (class
+     (name connection_flow_controlled)
+     (super flow_controlled)
+     (vars
+       (connection object ssh_connection)))
+*/
+
+static void
+do_connection_flow_controlled(struct flow_controlled *s,
+			      uint32_t written UNUSED)
+{
+  CAST(connection_flow_controlled, self, s);
+  struct ssh_connection *connection = self->connection;
+  uint32_t length = connection->socket->write_buffer->length;
+  
+  if (connection->hard_limit
+      && length + WRITE_BUFFER_MARGIN < connection->soft_limit)
+    {
+      connection->hard_limit = 0;
+      if (connection->wakeup)
+	COMMAND_RETURN(connection->wakeup, connection);
+    }
+}
+
+static struct flow_controlled *
+make_connection_flow_controlled(struct ssh_connection *connection)
+{
+  NEW(connection_flow_controlled, self);
+  self->super.report = do_connection_flow_controlled;
+  self->connection = connection;
+  return &self->super;
+}
+
 struct ssh_connection *
 make_ssh_connection(enum connection_flag flags,
 		    struct address_info *peer,
@@ -334,9 +374,8 @@ make_ssh_connection(enum connection_flag flags,
   connection->e = make_exc_connection_handler(connection, e, HANDLER_CONTEXT);
 
   connection->keyexchange_done = NULL;
+  connection->wakeup = NULL;
   
-  /* Initialize instance variables */
-
   connection->versions[CONNECTION_SERVER]
     = connection->versions[CONNECTION_CLIENT]
     = connection->session_id = NULL;
@@ -367,6 +406,8 @@ make_ssh_connection(enum connection_flag flags,
 
   connection->send_kex_only = 0;
   string_queue_init(&connection->send_queue);
+  connection->soft_limit = WRITE_BUFFER_MAX;
+  connection->hard_limit = 0;
   
   connection->kexinits[CONNECTION_CLIENT]
     = connection->kexinits[CONNECTION_SERVER] = NULL;
@@ -419,16 +460,18 @@ make_ssh_connection(enum connection_flag flags,
 
 void
 connection_init_io(struct ssh_connection *connection,
-		   struct abstract_write *raw,
+		   struct lsh_fd *socket,
 		   struct randomness *r)
 {
   /* Initialize i/o hooks */
-  connection->raw = raw;
+  connection->socket = socket;
   connection->write_packet =
-    make_packet_debug(make_write_packet(connection, r, raw),
+    make_packet_debug(make_write_packet(connection, r, &socket->write_buffer->super),
 		      (connection->debug_comment
 		       ? ssh_format("%lz sent", connection->debug_comment)
 		       : ssh_format("Sent")));
+
+  connection->socket->write_buffer->report = make_connection_flow_controlled(connection);
 }
 
 void
@@ -437,6 +480,14 @@ connection_after_keyexchange(struct ssh_connection *self,
 {
   assert(!self->keyexchange_done);
   self->keyexchange_done = c;
+}
+
+void
+connection_wakeup(struct ssh_connection *self,
+		  struct command_continuation *c)
+{
+  assert(!self->wakeup);
+  self->wakeup = c;
 }
 
 /* GABA:
@@ -473,7 +524,22 @@ void
 connection_send_kex(struct ssh_connection *self,
 		    struct lsh_string *message)
 {
+  uint32_t length;
+  
   A_WRITE(self->write_packet, message);
+
+  length = self->socket->write_buffer->length;
+  if (self->hard_limit)
+    {
+      if (length > self->hard_limit)
+	{
+	  static struct protocol_exception disconnect =
+	    STATIC_PROTOCOL_EXCEPTION(0, "Write buffer full, peer not responding.");
+	  EXCEPTION_RAISE(self->e, &disconnect.super);
+	}
+    }
+  else if (length > self->soft_limit)
+    self->hard_limit = length + WRITE_BUFFER_MARGIN;
 }
 
 /* Sends one ordinary (non keyexchange) packet */
@@ -517,6 +583,8 @@ connection_send_kex_end(struct ssh_connection *self)
   
       COMMAND_RETURN(c, self);
     }
+  if (self->wakeup)
+    COMMAND_RETURN(self->wakeup, self);
 }
 
 /* Serialization. */

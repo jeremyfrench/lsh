@@ -181,7 +181,13 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        (rec_compress object compress_instance)
 
        ; Sending 
-       (raw   object abstract_write)  ; Socket connected to the other end 
+       (socket object lsh_fd)    ; Socket connected to the other end 
+       ; When crossing the soft_limit we stop reading data on user
+       ; channels, and set hard_limit to the current size plus some
+       ; margin. When crossing the hard_limit, the connection is closed.
+       (soft_limit . uint32_t)
+       (hard_limit . uint32_t)
+
        (write_packet object abstract_write)  ; Where to send packets
        					     ; through the pipeline
 
@@ -211,7 +217,10 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        ; Automatically reset to zero after each invocation.
        ; Gets the connection as argument.
        (keyexchange_done object command_continuation)
-              
+       ; Called when key(re)exchange is finished, and when our
+       ; write buffer shrinks anough to allow more channel data.
+       (wakeup object command_continuation)
+       
        (kexinits array (object kexinit) 2)
        (literal_kexinits array (string) 2)
 
@@ -233,14 +242,18 @@ make_ssh_connection(enum connection_flag flags,
 		    const char *id_comment,
 		    struct exception_handler *e);
 
-void connection_init_io(struct ssh_connection *connection,
-			struct abstract_write *raw,
-			struct randomness *r);
-
+void
+connection_init_io(struct ssh_connection *connection,
+		   struct lsh_fd *socket,
+		   struct randomness *r);
 
 void
 connection_after_keyexchange(struct ssh_connection *self,
 			     struct command_continuation *c);
+
+void
+connection_wakeup(struct ssh_connection *self,
+		  struct command_continuation *c);
 
 struct lsh_callback *
 make_connection_close_handler(struct ssh_connection *c);
