@@ -1,3 +1,7 @@
+2002-03-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/sexp-conv.c (main): Add newline at end of --raw-hash output.
+
 2002-03-20  Pontus Sköld  <pont@r3>
 
 	* src/testsuite/lsh-1-test: Run "exec 0" instead of "exec" in case
