@@ -25,16 +25,16 @@
 
 #include "algorithms.h"
 #include "crypto.h"
-#include "dsa.h"
 #include "format.h"
 #include "io_commands.h"
 #include "interact.h"
 #include "publickey_crypto.h"
-#include "sexp.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include "nettle/sexp.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -71,7 +71,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (tty object interact)
        
        (label string)
-       (style . sexp_argp_state)
        (passphrase string)
 
        (crypto_algorithms object alist)
@@ -96,7 +95,6 @@ make_lsh_writekey_options(void)
   self->tty = make_unix_interact();
     
   self->label = NULL;
-  self->style = -1;
 
   self->passphrase = NULL;
   self->iterations = 1500;
@@ -133,7 +131,6 @@ main_options[] =
 static const struct argp_child
 main_argp_children[] =
 {
-  { &sexp_output_argp, 0, NULL, 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -150,8 +147,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
 
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = &self->style;
-      state->child_inputs[1] = NULL;
+      state->child_inputs[0] = NULL;
       break;
 
     case ARGP_KEY_END:
@@ -346,42 +342,38 @@ open_file(const struct lsh_string *file)
 }
 
 static struct lsh_string *
-process_private(struct sexp *key,
+process_private(struct lsh_string *key,
                 struct lsh_writekey_options *options)
 {
-  struct sexp *expr = key;
-
   if (options->crypto)
     {
       CAST_SUBTYPE(mac_algorithm, hmac,
                    ALIST_GET(options->crypto_algorithms, ATOM_HMAC_SHA1));
       assert(hmac);
       
-      expr = spki_pkcs5_encrypt(options->r,
-                                options->label,
-                                ATOM_HMAC_SHA1,
-                                hmac,
-                                options->crypto_name,
-                                options->crypto,
-                                10, /* Salt length */
-                                options->passphrase,
-                                options->iterations,
-                                sexp_format(key, SEXP_CANONICAL, 0));
+      key = spki_pkcs5_encrypt(options->r,
+			       options->label,
+			       ATOM_HMAC_SHA1,
+			       hmac,
+			       options->crypto_name,
+			       options->crypto,
+			       10, /* Salt length */
+			       options->passphrase,
+			       options->iterations,
+			       key);
     }
-  return sexp_format(expr,
-                     (options->style > 0) ? options->style : SEXP_CANONICAL,
-                     0);
+
+  return key;
 }
 
 static struct lsh_string *
-process_public(struct sexp *key,
+process_public(struct lsh_string *key,
                struct lsh_writekey_options *options)
 {
   struct signer *s;
   struct verifier *v;
   
-  s = spki_sexp_to_signer(options->signature_algorithms,
-                          key, NULL);
+  s = spki_make_signer(options->signature_algorithms, key, NULL);
   
   if (!s)
     return NULL;
@@ -389,9 +381,7 @@ process_public(struct sexp *key,
   v = SIGNER_GET_VERIFIER(s);
   assert(v);
 
-  return sexp_format(spki_make_public_key(v),
-                     (options->style > 0) ? options->style : SEXP_TRANSPORT,
-                     0);
+  return PUBLIC_SPKI_KEY(v, 1);
 }
 
 int
@@ -402,7 +392,6 @@ main(int argc, char **argv)
   int public_fd;
   struct lsh_string *input;
   struct lsh_string *output;
-  struct sexp *key;
   const struct exception *e;
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
@@ -419,15 +408,7 @@ main(int argc, char **argv)
       return EXIT_FAILURE;
     }
   
-  key = string_to_sexp(SEXP_TRANSPORT, input, 1);
-
-  if (!key)
-    {
-      werror("S-expression syntax error.\n");
-      return EXIT_FAILURE;
-    }
-
-  output = process_private(key, options);
+  output = process_private(input, options);
   if (!output)
     return EXIT_FAILURE;
 
@@ -445,7 +426,7 @@ main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  output = process_public(key, options);
+  output = process_public(input, options);
   if (!output)
     return EXIT_FAILURE;
 
