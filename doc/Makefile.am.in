@@ -1,0 +1,4 @@
+## Process this file with make_am to produce Makefile.am
+BODY:
+
+EXTRA_DIST = configuration.txt

@@ -1,3 +1,17 @@
+Sun Jan 10 21:56:37 1999    <nisse@puck>
+
+	* lshd.c (usage): Improved message.
+	(read_host_key): New function.
+	(main): Read host key from a file.
+
+	* sexp.c (sexp_n, sexp_un): Renamed and fixed this functiom
+	(doesn't use ssh_format anymore).
+	(sexp_sn): Implemented.
+	(sexp_assz): New function.
+	(sexp_get_un): New function.
+
+	* io.c (blocking_read): New function.
+
 Fri Jan  8 09:44:12 1999    <nisse@puck>
 
 	* sexp_streamed_parser.c (base64_decode): Fixed test for leftover

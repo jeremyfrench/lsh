@@ -288,6 +288,4 @@ if test x$GCC = xyes ; then
 
 fi
 
-AC_OUTPUT(Makefile lib/Makefile include/Makefile)
-
-dnl syscmd([cd lib && autoconf])
+AC_OUTPUT(Makefile lib/Makefile include/Makefile doc/Makefile)
