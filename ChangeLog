@@ -1,3 +1,10 @@
+2002-08-28  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* doc/lsh.texinfo (Top): Use @ififo around the @top directive, to
+	get rid of the empty menu item inthe html output.
+
+	* configure.ac: Bumped version to 1.5.
+
 2002-08-28  Niels Möller  <niels@s3.kth.se>
 
 	* doc/index.html: New file.
