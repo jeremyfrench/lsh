@@ -39,7 +39,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	list.c md5.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
 	randomness.c \
 	read_data.c read_line.c read_packet.c resource.c \
-	sexp.c sha.c service.c \
+	sexp.c sexp_parser.c sha.c service.c \
 	translate_signal.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c zlib.c
 
@@ -66,8 +66,8 @@ PRIME_LIMIT = 1024
 prime_table.h: prime_table
 	./prime_table $(PRIME_LIMIT) >$@
 
-sexp_table.h: sexp_chars.in
-	./make_char_classes <$< >$@
+sexp_table.h: sexp_chars.in $(srcdir)/make_char_classes
+	$(srcdir)/make_char_classes <$< >$@
 
 lsh_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
 lshd_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
