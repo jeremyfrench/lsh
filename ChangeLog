@@ -1,3 +1,9 @@
+2003-01-10  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh.c (read_known_hosts): Display upgrade message only if
+	the --host-db option wasn't used.
+	Changed user messages to say "host-acls" instead of "known_hosts". 
+
 2003-01-10  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh-upgrade: New shell script.
@@ -27,6 +33,12 @@
 	* src/Makefile.am.in (LDADD): Add libspki.a.
 
 2003-01-09  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh.c (read_known_hosts): Display a message if an old
+	known_hosts file is used.
+
+	* src/daemon.c (daemon_init): Fork once more, to lose process
+	session leadership.
 
 	* src/spki.c: Deleted old spki implementation.
 	(spki_lookup, spki_authorize): New functions.
