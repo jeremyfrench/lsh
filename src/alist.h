@@ -75,7 +75,7 @@ struct alist
 };
 #endif
 
-#define ALIST_CLASS(l) ((struct alist_meta *) (l))
+#define ALIST_CLASS(l) ((struct alist_meta *) ((l)->super.isa))
 
 #define ALIST_GET(alist, atom) \
      (ALIST_CLASS(alist)->get((alist), (atom)))
