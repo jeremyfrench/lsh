@@ -794,6 +794,9 @@ Disable the "password" user authentication mechanism.
 @item --no-publickey
 Disable the "publickey" user authentication mechanism.
 
+@item --root-login
+Enable root login. By default, root can not log in using @code{lshd}.
+
 @item --no-pty-support
 Disable support for pseudo terminals.
 
