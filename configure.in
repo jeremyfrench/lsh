@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 1.1.6)
+AM_INIT_AUTOMAKE(lsh, 1.1.7)
 
 AM_CONFIG_HEADER(config.h)
 
