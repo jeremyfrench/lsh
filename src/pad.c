@@ -47,5 +47,5 @@ struct packet_processor *make_pad_processor(packet_processor *continuation,
   closure->random = random;
   closure->state = state;
 
-  return (packet_processor) closure;
+  return (struct packet_processor *) closure;
 }

@@ -27,5 +27,5 @@ struct packet_processor *make_zlib_processor(packet_processor *continuation,
   closure->c->next = continuation;
   /* inititialize closure->zstream */
 
-  return (packet_processor) closure;
+  return (struct packet_processor *) closure;
 }

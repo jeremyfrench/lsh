@@ -32,7 +32,7 @@ struct packet_processor *make_debug_processor(FILE *output,
   closure->c->next = continuation;
   closure->output = output;
 
-  return (packet_processor) closure;
+  return (struct packet_processor *) closure;
 }
 
 

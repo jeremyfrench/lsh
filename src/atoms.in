@@ -1,0 +1,40 @@
+# Atoms known by this ssh-implementation
+# Lines beginning with # are comments. Empty lines are ignored. The
+# first word on each line is the name of an atom.
+
+# Compression
+none
+zlib
+
+# Bulk encryption
+
+3des-cbc         REQUIRED          three-key 3DES in CBC mode
+blowfish-cbc     RECOMMENDED       Blowfish in CBC mode
+arcfour          OPTIONAL          the ARCFOUR stream cipher
+idea-cbc         OPTIONAL          IDEA in CBC mode
+cast128-cbc      OPTIONAL          CAST-128 in CBC mode
+# none             OPTIONAL          no encryption; NOT RECOMMENDED
+
+# MAC algorithms
+
+hmac-sha1   REQUIRED         HMAC-SHA1 (length = 20)
+hmac-sha-96 RECOMMENDED      first 96 bits of HMAC-SHA1 (length = 12)
+hmac-md5    OPTIONAL         HMAC-MD5 (length = 16)
+hmac-md5-96 OPTIONAL         first 96 bits of HMAC-MD5 (length = 12)
+# none        OPTIONAL         no MAC; NOT RECOMMENDED
+
+# Key exchange methods
+
+diffie-hellman-group1-sha1       REQUIRED
+
+# Key and certificate types
+
+ssh-dss              REQUIRED     sign      Simple DSS
+x509v3               RECOMMENDED  sign      X.509 certificates
+spki                 OPTIONAL     sign      SPKI certificates
+pgp                  OPTIONAL     sign      OpenPGP certificates
+
+# Services
+
+ssh-userauth
+ssh-connection

@@ -69,11 +69,13 @@ UINT32 simple_buffer_avail(struct simple_buffer *buffer);
  * such as the process parameters, next processor, output socket, etc.
  * */
 
+/* This function returns 0 if there's some fatal protocol error
+ * (implying immediate shutdown of (this direction of) a connection.
+ * Otherwise returns 1. */
 typedef int (*raw_processor_function)(struct packet_processor *context,
 				      struct simple_packet *packet);
 struct packet_processor
 {
-  /* Returns some (so far unspecified) return code */
   raw_processor_function f;
 };
 
@@ -86,5 +88,14 @@ struct chained_processor
   struct packet_processor p;
   struct *packet_processor *next;
 };
+
+
+/* error codes, returned from packet processors. zero means ok,
+ * negative means a fatal protocol failure, and positive values are
+ * errors that should be reported to the otrher end. */
+
+#define LSH_ERR_TOO_LARGE_PACKET -1
+#define LSH_ERR_BAD_LENGTH -2
+#define LSH_ERR_BAD_MAC -3
 
 #endif /* LSH_TRANSPORT_H_INCLUDED */
