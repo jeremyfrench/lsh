@@ -522,11 +522,11 @@ struct lsh_string *encode_base64(struct lsh_string *s,
       unsigned i;
       
       /* Loop over all but the last group. */
-      for (i=0; i<full_groups; dst += 4, i++)
+      for (i=0; i<full_groups; dst += 4, src += 3, i++)
 	{
-	  encode_base64_group( ( (*src++) << 16)
-			       | ( (*src++) << 8)
-			       | (*src++), dst);
+	  encode_base64_group( (src[0] << 16)
+			       | (src[1] << 8)
+			       | src[2], dst);
 	}
     }
   switch(last)
@@ -535,14 +535,14 @@ struct lsh_string *encode_base64(struct lsh_string *s,
       /* Finished */
       break;
     case 1:
-      encode_base64_group( (*src++) << 16, dst);
+      encode_base64_group( src[0] << 16, dst);
       dst += 2;
       *dst++ = '=';
       *dst++ = '=';
       break;
     case 2:
-      encode_base64_group( ( (*src++) << 16)
-			   | ( (*src++) << 8), dst);
+      encode_base64_group( (src[0] << 16)
+			   | (src[1] << 8), dst);
       dst += 3;
       *dst++ = '=';
       break;
