@@ -89,12 +89,13 @@ void exception_raise(struct exception_handler *e,
 #define EXC_IO 0x2000
 #define EXC_IO_CONNECT 0x2001
 #define EXC_IO_BLOCKING_WRITE 0x2003
-#define EXC_IO_READ 0x2004
-#define EXC_IO_WRITE 0x2005
-#define EXC_IO_OPEN_WRITE 0x2006
-#define EXC_IO_OPEN_READ 0x2007
-#define EXC_IO_LISTEN 0x2008
-#define EXC_IO_CLOSE 0x2009
+#define EXC_IO_BLOCKING_READ 0x2004
+#define EXC_IO_READ 0x2005
+#define EXC_IO_WRITE 0x2006
+#define EXC_IO_OPEN_WRITE 0x2007
+#define EXC_IO_OPEN_READ 0x2008
+#define EXC_IO_LISTEN 0x2009
+#define EXC_IO_CLOSE 0x200A
 
 /* Authorization errors */
 #define EXC_AUTH 0x4000
