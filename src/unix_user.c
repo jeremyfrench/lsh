@@ -289,7 +289,7 @@ do_exec_shell(struct lsh_user *u, int login,
 
   debug("do_exec_shell: Environment:\n");
   for (i=0; envp[i]; i++)
-    debug("    '%z'\n", env[i]);
+    debug("    '%z'\n", envp[i]);
 
 #if USE_LOGIN_DASH_CONVENTION
   if (login)
