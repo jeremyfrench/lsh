@@ -44,6 +44,17 @@
 #include "io_commands.h.x"
 #undef GABA_DEFINE
 
+#if WITH_TCPWRAPPERS
+#include <tcpd.h> 
+
+/* This seems to be neccesary on some systems */
+#include <syslog.h>
+
+int allow_severity = LOG_INFO;
+int deny_severity = LOG_INFO;
+
+#endif /* WITH_TCPWRAPPERS */
+
 #include "io_commands.c.x"
 
 /* Used only by lsh-writekey */
@@ -386,6 +397,85 @@ DEFINE_COMMAND(io_log_peer_command)
   COMMAND_RETURN(c, lv);
 }
 
+
+
+
+
+
+/* GABA:
+   (class
+     (name tcp_wrapper)
+     (super command)
+     (vars
+       (name string)
+       (msg string)))
+*/
+
+
+/* TCP wrapper function, replaces io_log_peer if used */
+
+static void
+do_tcp_wrapper(struct command *s UNUSED,
+	       struct lsh_object *a,
+	       struct command_continuation *c,
+	       struct exception_handler *e UNUSED)
+{
+  CAST(listen_value, lv, a);
+
+#if WITH_TCPWRAPPERS  
+
+  CAST(tcp_wrapper, self, s);
+
+  struct request_info res;
+
+  request_init(&res,
+	       RQ_DAEMON, lsh_get_cstring(self->name), /* Service name */
+	       RQ_FILE, lv->fd->fd,   /* connection fd */
+	       0);                /* No more arguments */
+  
+  fromhost(&res); /* Lookup information before */
+  
+  if (!hosts_access(&res)) /* Connection OK? */
+    { 
+      /* FIXME: Should we say anything to the other side? */
+
+      verbose("Denying access for %z@%z (%z)\n",
+	      eval_user(&res),
+	      eval_hostname(res.client),
+	      eval_hostaddr(res.client)
+	      );
+
+
+      
+      io_write(lv->fd, 1024, NULL);
+      A_WRITE(&lv->fd->write_buffer->super, 
+	      self->msg);
+
+      close_fd_nicely(lv->fd);
+
+      return;
+    }
+
+#endif /* WITH_TCPWRAPPERS */
+  
+  verbose("Accepting connection from %S, port %i\n",
+	  lv->peer->ip, lv->peer->port);
+  
+  COMMAND_RETURN(c, lv);
+}
+
+
+
+struct command *
+make_tcp_wrapper(struct lsh_string *name, struct lsh_string *msg )
+{
+  NEW(tcp_wrapper, self);
+  self->super.call = do_tcp_wrapper;
+  self->name = name;
+  self->msg = msg;
+
+  return &self->super;
+}
 
 /* ***
  *
