@@ -1089,6 +1089,12 @@ executed on the remote machine.
 @item -S
 Start an interactive shell on the remote machine. 
 
+@item -G
+Open a gateway on the local machine. A gateway is a local socket,
+located under /tmp, that can be used for controlling and using the ssh
+connection. It is protected using the ordinary file permissions. This
+feature is experimental.
+
 @item -N
 This is a no-operation action. It inhibits the default action, which is
 to start an interactive shell on the remote machine. It is useful if you
