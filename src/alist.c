@@ -136,21 +136,6 @@ struct alist *make_linear_alist(unsigned n, ...)
 
   va_start(args, n);
 
-#if 0
-  for (i=0; i<n; i++)
-    {
-      int atom = va_arg(args, int);
-      struct lsh_object *value = va_arg(args, struct lsh_object *);
-
-      if (!value)
-	res->super.size++;
-
-      res->table[atom] = value;
-    }
-
-  assert(va_arg(args, int) == -1);
-#endif
-
   alist_addv(&res->super, n, args);
   va_end(args);
   
@@ -263,20 +248,6 @@ struct alist *make_linked_alist(unsigned n, ...)
   self->head = NULL;
 
   va_start(args, n);
-
-#if 0
-  for (i=0; i<n; i++)
-    {
-      int atom = va_arg(args, int);
-      struct lsh_object *value = va_arg(args, struct lsh_object *);
-
-      if (atom < 0)
-	fatal("Internal error!\n");
-      do_linked_set(res, atom, value);
-    }
-
-  assert(va_arg(args, int) == -1);
-#endif
 
   alist_addv(res, n, args);
   va_end(args);
