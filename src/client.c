@@ -227,9 +227,12 @@ do_client_session_close(struct ssh_channel *c)
 static void
 do_exit_status(struct channel_request *c,
 	       struct ssh_channel *channel,
-	       struct ssh_connection *connection,
+	       struct ssh_connection *connection UNUSED,
+	       UINT32 type UNUSED,
 	       int want_reply,
-	       struct simple_buffer *args)
+	       struct simple_buffer *args,
+	       struct command_continuation *s,
+	       struct exception_handler *e)
 {
   CAST(exit_handler, closure, c);
   UINT32 status;
@@ -248,18 +251,22 @@ do_exit_status(struct channel_request *c,
        * child process alive that we could talk to. */
 
       channel_eof(channel);
+      COMMAND_RETURN(s, NULL);
     }
   else
     /* Invalid request */
-    PROTOCOL_ERROR(connection->e, "Invalid exit-status message");
+    PROTOCOL_ERROR(e, "Invalid exit-status message");
 }
 
 static void
 do_exit_signal(struct channel_request *c,
 	       struct ssh_channel *channel,
-	       struct ssh_connection *connection,
-	       int want_reply,
-	       struct simple_buffer *args)
+	       struct ssh_connection *connection UNUSED,
+	       UINT32 type UNUSED,
+ 	       int want_reply,
+	       struct simple_buffer *args,
+	       struct command_continuation *s,
+	       struct exception_handler *e)
 {
   CAST(exit_handler, closure, c);
 
@@ -299,10 +306,11 @@ do_exit_signal(struct channel_request *c,
        * child process alive that we could talk to. */
 
       channel_eof(channel);
+      COMMAND_RETURN(s, NULL);
     }
   else
     /* Invalid request */
-    PROTOCOL_ERROR(connection->e, "Invalid exit-signal message");
+    PROTOCOL_ERROR(e, "Invalid exit-signal message");
 }
 
 struct channel_request *make_handle_exit_status(int *exit_status)
