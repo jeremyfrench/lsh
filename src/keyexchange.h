@@ -74,13 +74,16 @@
 	     "struct ssh_connection *connection"
 	     ;; "struct ssh_service *finished"
 	     "int hostkey_algorithm_atom"
-	     ;; FIXME: The algorithm object seems unnecessary.
-	     "struct signature_algorithm *hostkey_algorithm"
+	     ;; "struct signature_algorithm *hostkey_algorithm"
+
+	     "struct lsh_object *extra"
+	     ; Secret key (if applicable and available).
+	     ;;"struct keypair *key"
 	     "struct object_list *algorithms")))
 */
 
-#define KEYEXCHANGE_INIT(kex, connection, ha, h, a) \
-((kex)->init((kex), (connection), (ha), (h), (a)))
+#define KEYEXCHANGE_INIT(kex, connection, ha, e, a) \
+((kex)->init((kex), (connection), (ha), (e), (a)))
 
 /* GABA:
    (class
@@ -178,9 +181,11 @@ struct make_kexinit *make_test_kexinit(struct randomness *r);
 void initiate_keyexchange(struct ssh_connection *connection,
 			 int type);
 
-struct packet_handler *make_kexinit_handler(int type,
-					    struct make_kexinit *init,
-					    struct alist *algorithms);
+struct packet_handler *
+make_kexinit_handler(int type,
+		     struct make_kexinit *init,
+		     struct lsh_object *extra,
+		     struct alist *algorithms);
 
 struct packet_handler *
 make_newkeys_handler(struct crypto_instance *crypto,

@@ -51,6 +51,9 @@
        (type simple int)
        (init object make_kexinit)
 
+       ; Extra rgument for the KEYEXCHANGE_INIT call.
+       (extra object lsh_object)
+       
        ; Maps names to algorithms. It's dangerous to lookup random atoms
        ; in this table, as not all objects have the same type. This
        ; mapping is used only on atoms that have appeared in *both* the
@@ -269,6 +272,12 @@ do_handle_kexinit(struct packet_handler *c,
     = select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
 		       connection->kexinits[1]->server_hostkey_algorithms);
 
+  if (!hostkey_algorithm_atom)
+    {
+      disconnect_kex_failed(connection, "No common hostkey algorithm.\r\n");
+      return;
+    }
+  
 #if 0
 #if DATAFELLOWS_WORKAROUNDS
   if ( (hostkey_algorithm_atom == ATOM_SSH_DSS)
@@ -300,20 +309,25 @@ do_handle_kexinit(struct packet_handler *c,
   {
     CAST_SUBTYPE(keyexchange_algorithm, kex_algorithm,
 		 ALIST_GET(closure->algorithms, kex_algorithm_atom));
+
+#if 0
     CAST_SUBTYPE(signature_algorithm, hostkey_algorithm,
 		 ALIST_GET(closure->algorithms,
 			   hostkey_algorithm_atom));
+#endif
     KEYEXCHANGE_INIT( kex_algorithm,
 		      connection,
 		      hostkey_algorithm_atom,
-		      hostkey_algorithm,
+		      closure->extra, /* hostkey_algorithm, */
 		      algorithms);
   }
 }
 
-struct packet_handler *make_kexinit_handler(int type,
-					    struct make_kexinit *init,
-					    struct alist *algorithms)
+struct packet_handler *
+make_kexinit_handler(int type,
+		     struct make_kexinit *init,
+		     struct lsh_object *extra,
+		     struct alist *algorithms)
 {
   NEW(kexinit_handler, self);
 
@@ -321,6 +335,7 @@ struct packet_handler *make_kexinit_handler(int type,
 
   self->type = type;
   self->init = init;
+  self->extra = extra;
   self->algorithms = algorithms;
   
   return &self->super;
