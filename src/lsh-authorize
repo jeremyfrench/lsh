@@ -40,6 +40,7 @@ create_dir () {
 create_dir $HOME/.lsh 0700
 create_dir $HOME/.lsh/authorized_keys_sha1 0700
 
+# FIXME: This test seems to not work properly with Solaris' /bin/sh.
 if type sexp-conv &>/dev/null ; then
     SEXP_CONV=sexp-conv
 else
