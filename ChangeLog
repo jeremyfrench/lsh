@@ -1,3 +1,61 @@
+2004-10-02  Niels Möller  <nisse@lysator.liu.se>
+
+	Implemented client-side "keyboard-interactive".
+	* src/unix_interact.c (unix_read_password): Split off...
+	(read_password): New function, reads password and doesn't free
+	prompt. 
+	(unix_dialog): New function.
+
+	* src/ssh.h (SSH_MSG_USERAUTH_INFO_REQUEST) 
+	(SSH_MSG_USERAUTH_INFO_RESPONSE): New constants.
+
+	* src/server_password.c (do_authenticate): Disallow control
+	characters in user names.
+	* src/server_userauth.c (do_none_preauth): Likewise.
+	* src/server_publickey.c (do_authenticate): Likewise.
+
+	* src/parse.c (parse_utf8): New argument *utf8_length. Treat
+	overlong sequences surrigates and the non-characters 0xfffe and
+	0xffff as errors.
+
+	* src/lsh.c (make_lsh_login): Use keyboard-interactive, if the
+	other methods fail.
+
+	* src/interact.h (interact_dialog): New class. 
+	(INTERACT_DIALOG): New method.
+
+	* src/interact.c (make_interact_dialog): New function.
+
+	* src/debug.c (do_debug): Censor packets of type
+	SSH_MSG_USERAUTH_INFO_RESPONSE. 
+
+	* src/client_userauth.c (client_password_method): Renamed class
+	to...
+	(client_userauth_interactive_method): ... Used for both "password"
+	and "keyboard-interactive".
+	(format_userauth_kbdinteract, format_userauth_info_response): New
+	functions.
+	(client_kbdinteract_state, userauth_info_request_handler): New
+	classes.
+	(do_userauth_info_request, make_userauth_info_request_handler)
+	(do_kbdinteract_failure, make_client_kbdinteract_state)
+	(do_kbdinteract_login, make_client_kbdinteract_auth): New
+	functions.
+
+	* src/atoms.in: Added "keyboard-interactive". 
+
+	Changes to utf8 decoding.
+	* src/charset.h (enum utf8_flag): New enum.
+
+	* src/charset.c (utf8_to_local, low_utf8_to_local): Implemented
+	control character fitlering. Replaced STRICT argument with two
+	flags utf8_replace and utf8_paranoid.
+	(ucs4_is_control): New function.
+	(local_is_utf8): Deleted function.
+
+	* src/werror.c (werror_vformat): Improved utf8 handling. Always
+	convert with utf8_replace, and add utf8_paranoid in paranoia mode.
+	
 2004-09-22  Niels Möller  <niels@s3.kth.se>
 
 	* acinclude.m4 (LSH_CCPIC): Don't use -fpic on cygwin.
