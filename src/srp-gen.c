@@ -30,7 +30,6 @@
 #include "interact.h"
 #include "io.h"
 #include "randomness.h"
-#include "sexp.h"
 #include "srp.h"
 #include "version.h"
 #include "werror.h"
@@ -72,8 +71,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (file string)
        (dest object abstract_write)
 
-       (style . sexp_argp_state)
-
        (name . "const char *")
        (passwd string)
        (r object randomness)))
@@ -93,8 +90,6 @@ make_srp_gen_options(struct exception_handler *e)
   self->H = &crypto_sha1_algorithm;
   self->file = NULL;
   self->dest = NULL;
-
-  self->style = -1;
 
   self->name = getenv("LOGNAME");
   self->passwd = NULL;
@@ -118,7 +113,6 @@ main_options[] =
 static const struct argp_child
 main_argp_children[] =
 {
-  { &sexp_output_argp, 0, NULL, 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -134,8 +128,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
 
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = &self->style;
-      state->child_inputs[1] = NULL;
+      state->child_inputs[0] = NULL;
       break;
 
     case ARGP_KEY_END:
@@ -185,8 +178,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
 	  lsh_string_free(again);
 	}
-      if (self->style < 0)
-	self->style = self->file ? SEXP_CANONICAL : SEXP_TRANSPORT;
       
       break;
 
@@ -210,12 +201,12 @@ main_argp =
   NULL, NULL
 };
 
-static struct sexp *
+static struct lsh_string *
 srp_gen(struct srp_gen_options *options)
 {
   struct lsh_string *salt;
   struct lsh_string *name;
-  struct sexp *e;
+  struct lsh_string *res;
 
   /* NOTE: Allows random to be of bad quality */
   salt = lsh_string_alloc(SALT_SIZE);
@@ -223,11 +214,12 @@ srp_gen(struct srp_gen_options *options)
   RANDOM(options->r, salt->length, salt->data);
   name = ssh_format("%lz", options->name);
 
-  e = srp_make_verifier(options->G, options->H,
-			salt, name, options->passwd);
+  /* FIXME: Leaks some strings. */
+  res = srp_make_verifier(options->G, options->H,
+			  salt, name, options->passwd);
   lsh_string_free(name);
 
-  return e;
+  return res;
 }
 
 static void
@@ -251,9 +243,9 @@ int main(int argc, char **argv)
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
-  A_WRITE(options->dest,
-	  sexp_format(srp_gen(options), options->style, 0));
-
+  /* FIXME: Use write_raw instead. */
+  A_WRITE(options->dest, srp_gen(options));
+  
   io_run();
   io_final();
   

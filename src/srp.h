@@ -43,10 +43,11 @@
 
 /* Copies the name, rather than consuming it. */
 struct srp_entry *
-make_srp_entry(struct lsh_string *name, struct sexp *e);
+make_srp_entry(const struct lsh_string *name,
+	       const struct lsh_string *expr);
 
 /* Consumes the salt */
-struct sexp *
+struct lsh_string *
 srp_make_verifier(struct abstract_group *G,
 		  const struct hash_algorithm *H,
 		  struct lsh_string *salt,
