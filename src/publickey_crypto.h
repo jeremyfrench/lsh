@@ -202,4 +202,18 @@ init_dh_instance(struct dh_method *m,
 		 struct dh_instance *self,
 		 struct ssh_connection *c);
 
+/* RSA support */
+extern struct signature_algorithm rsa_sha1_algorithm;
+
+/* Non spki keys */
+struct verifier *
+parse_ssh_rsa_public(struct simple_buffer *buffer);
+
+struct verifier *
+make_ssh_rsa_verifier(UINT32 public_length,
+		      const UINT8 *public);
+
+struct sexp *
+rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits);
+
 #endif /* LSH_PUBLICKEY_CRYPTO_H_INCLUDED */
