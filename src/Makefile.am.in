@@ -30,9 +30,10 @@ noinst_LIBRARIES = liblsh.a
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 	prime_table.h sexp_table.h
 
-liblsh_a_SOURCES = abstract_io.c abstract_crypto.c alist.c arcfour.c atoms.c \
+liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
+	alist.c arcfour.c atoms.c \
 	bignum.c blocking_write.c blowfish.c \
-	cascade.c cbc.c channel.c charset.c connection.c crypto.c \
+	cascade.c cbc.c channel.c charset.c compress.c connection.c crypto.c \
 	debug.c des.c disconnect.c  dss_keygen.c encrypt.c \
 	format.c gc.c getopt.c hmac.c io.c keyexchange.c \
 	list.c md5.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
@@ -40,7 +41,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c alist.c arcfour.c atoms.c \
 	read_data.c read_line.c read_packet.c resource.c \
 	sexp.c sha.c service.c \
 	translate_signal.c unpad.c userauth.c \
-	werror.c write_buffer.c xalloc.c 
+	werror.c write_buffer.c xalloc.c zlib.c
 
 lsh_SOURCES = lsh.c client.c client_keyexchange.c \
 	client_password.c client_userauth.c
