@@ -90,12 +90,14 @@ format_userauth_failure(struct int_list *methods,
 struct lsh_string *
 format_userauth_success(void);
 
-struct packet_handler *
+#if 0
+static struct packet_handler *
 make_userauth_handler(struct alist *methods,
                       struct alist *services,
                       struct command_continuation *c,
-                      struct exception_handler *e);
-
+                      struct exception_handler *service_e,
+		      struct exception_handler *auth_e);
+#endif
 
 /* authentication methods */
 

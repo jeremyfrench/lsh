@@ -42,7 +42,7 @@
 
 struct lsh_string *
 format_userauth_failure(struct int_list *methods,
-					   int partial)
+			int partial)
 {
   return ssh_format("%c%A%c", SSH_MSG_USERAUTH_FAILURE, methods, partial);
 }
@@ -71,96 +71,21 @@ format_userauth_success(void)
      (name userauth_handler)
      (super packet_handler)
      (vars
-       ; Attempts left 
-       ;; (attempts simple int)
-
-       ; What to do after successful authentication
+       ; What to do after successful authentication.
        (c object command_continuation)
-       ; or failed.
-       (e object exception_handler)
-       
-       ; Methods advertised in failure messages
-       ;; (advertised_methods object int_list)
 
-       ; Maps authentication methods to userath objects
+       ; Handler to use when starting a new service.
+       (service_e object exception_handler)
+
+       ; Handler to use when invoking an authentication method.
+       (auth_e object exception_handler)
+       
+       ; Maps authentication methods to userauth objects
        (methods object alist)
 
        ; Maps services to commands
        (services object alist)))
 */
-
-/* FIXME: Perhaps this should use a two-dimensional lookup, and call
- * an authentication object depending on both service and method? */
-
-/* NOTE: This implementation does not use any partial successes. As
- * soon as one authentication request is successful, the
- * entire authentication process succeeds. */
-static void
-do_handle_userauth(struct packet_handler *c,
-		   struct ssh_connection *connection,
-		   struct lsh_string *packet)
-{
-  CAST(userauth_handler,  closure, c);
-  struct simple_buffer buffer;
-
-  unsigned msg_number;
-  struct lsh_string *user;
-  int requested_service;
-  int method;
-  
-  simple_buffer_init(&buffer, packet->length, packet->data);
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_USERAUTH_REQUEST)
-      && ( (user = parse_string_copy(&buffer)) )
-      && parse_atom(&buffer, &requested_service)
-      && parse_atom(&buffer, &method))
-    {
-      CAST_SUBTYPE(userauth, auth, ALIST_GET(closure->methods, method));
-      CAST_SUBTYPE(command, service,
-		   ALIST_GET(closure->services, requested_service));
-
-      /* Serialize handling of userauth requests */
-      connection_lock(connection);
-      
-      if (!(auth && service))
-	{
-	  static const struct exception userauth_failed
-	    = STATIC_EXCEPTION(EXC_USERAUTH,
-			       "Unknown auth method or service.");
-	  
-	  EXCEPTION_RAISE(closure->e, &userauth_failed);
-	  return;
-	}
-
-      /* FIXME: Do the user_db lookup here? */
-      AUTHENTICATE(auth, connection, user, requested_service, &buffer,
-		   make_delay_continuation(service, closure->c),
-		   closure->e);
-    }
-  else
-    PROTOCOL_ERROR(connection->e, "Invalid USERAUTH message.");
-
-  lsh_string_free(packet);
-}
-
-struct packet_handler *
-make_userauth_handler(struct alist *methods,
-                      struct alist *services,
-                      struct command_continuation *c,
-                      struct exception_handler *e)
-{
-  NEW(userauth_handler, auth);
-
-  auth->super.handler = do_handle_userauth;
-  auth->methods = methods;
-  auth->services = services;
-  auth->c = c;
-  auth->e = e;
-
-  return &auth->super;
-}
-
 
 /* FIXME: This code doesn't handle authentication methods where the
  * result (continuation or exception) is not invoked immediately.
@@ -185,6 +110,132 @@ make_userauth_handler(struct alist *methods,
  * the main loop while the connection is still locked. */
 
 /* GABA:
+   (class
+     (name userauth_continuation)
+     (super command_continuation)
+     (vars
+       (up object command_continuation)
+       (connection object ssh_connection)))
+*/
+
+static void
+do_userauth_continuation(struct command_continuation *s,
+			 struct lsh_object *a)
+{
+  CAST(userauth_continuation, self, s);
+  CAST_SUBTYPE(lsh_user, user, a);
+
+  unsigned i;
+
+  /* Access granted. */
+
+  assert(user);
+  self->connection->user = user;
+  
+  /* Unlock connection */
+  connection_unlock(self->connection);
+  
+  C_WRITE(self->connection, format_userauth_success());
+  
+  /* Ignore any further userauth messages. */
+  for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
+    self->connection->dispatch[i] = self->connection->ignore;
+
+  COMMAND_RETURN(self->up, self->connection);
+}
+
+static struct command_continuation *
+make_userauth_continuation(struct ssh_connection *connection,
+			   struct command_continuation *c)
+{
+  NEW(userauth_continuation, self);
+  self->super.c = do_userauth_continuation;
+  self->up = c;
+  
+  self->connection = connection;
+
+  return &self->super;
+}
+
+/* FIXME: Perhaps this should use a two-dimensional lookup, and call
+ * an authentication object depending on both service and method? */
+
+/* NOTE: This implementation does not use any partial successes. As
+ * soon as one authentication request is successful, the
+ * entire authentication process succeeds. */
+static void
+do_handle_userauth(struct packet_handler *s,
+		   struct ssh_connection *connection,
+		   struct lsh_string *packet)
+{
+  CAST(userauth_handler,  self, s);
+  struct simple_buffer buffer;
+
+  unsigned msg_number;
+  struct lsh_string *user;
+  int requested_service;
+  int method;
+  
+  simple_buffer_init(&buffer, packet->length, packet->data);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_USERAUTH_REQUEST)
+      && ( (user = parse_string_copy(&buffer)) )
+      && parse_atom(&buffer, &requested_service)
+      && parse_atom(&buffer, &method))
+    {
+      CAST_SUBTYPE(userauth, auth, ALIST_GET(self->methods, method));
+      CAST_SUBTYPE(command, service,
+		   ALIST_GET(self->services, requested_service));
+
+      /* Serialize handling of userauth requests */
+      connection_lock(connection);
+      
+      if (!(auth && service))
+	{
+	  static const struct exception userauth_failed
+	    = STATIC_EXCEPTION(EXC_USERAUTH,
+			       "Unknown auth method or service.");
+	  
+	  EXCEPTION_RAISE(self->auth_e, &userauth_failed);
+	  return;
+	}
+
+      /* FIXME: Do the user_db lookup here? */
+      AUTHENTICATE(auth, connection, user, requested_service, &buffer,
+		   make_userauth_continuation(connection,
+					      make_apply(service, self->c, self->service_e)),
+		   self->auth_e);
+    }
+  else
+    PROTOCOL_ERROR(connection->e, "Invalid USERAUTH message.");
+
+  lsh_string_free(packet);
+}
+
+static struct packet_handler *
+make_userauth_handler(struct alist *methods,
+                      struct alist *services,
+                      struct command_continuation *c,
+                      struct exception_handler *service_e,
+		      struct exception_handler *auth_e)
+{
+  NEW(userauth_handler, auth);
+
+  auth->super.handler = do_handle_userauth;
+  auth->methods = methods;
+  auth->services = services;
+  auth->c = c;
+  auth->service_e = service_e;
+  auth->auth_e = auth_e;
+
+  return &auth->super;
+}
+
+
+#if 0
+
+/* ;; GABA:
    (class
      (name userauth_continuation)
      (super command_frame)
@@ -230,6 +281,7 @@ make_userauth_continuation(struct ssh_connection *connection,
   self->connection = connection;
   return &self->super.super;
 }
+#endif
       
 
 /* GABA:
@@ -312,17 +364,25 @@ make_exc_userauth_handler(struct ssh_connection *connection,
 }
 
 	  
-static void do_userauth(struct command *s, 
-			struct lsh_object *x,
-			struct command_continuation *c,
-			struct exception_handler *e)
+static void
+do_userauth(struct command *s, 
+	    struct lsh_object *x,
+	    struct command_continuation *c,
+	    struct exception_handler *e)
 {
   CAST(userauth_service, self, s);
   CAST(ssh_connection, connection, x);
 
+  if (connection->user)
+    {
+      werror("do_userauth: Dropping previous authentication for user '%pS'.\n",
+	     connection->user->name);
+      connection->user = NULL;
+    }
+
   connection->dispatch[SSH_MSG_USERAUTH_REQUEST] =
     make_userauth_handler(self->methods, self->services,
-			  make_userauth_continuation(connection, c, e),
+			  c, e,
                           make_exc_userauth_handler(connection,
                                                     self->advertised_methods,
                                                     AUTH_ATTEMPTS, e,
