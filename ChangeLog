@@ -1,3 +1,37 @@
+Thu Feb 18 03:35:45 1999    <nisse@idonex.se>
+
+	* src/zlib.c: Reorganized. Now uses string_buffer for allocation.
+
+	* src/xalloc.c (debug_malloc, debug_free): Allocate memory in
+	units of long. Hopefully, this should solve the alpha alignment
+	problems. 
+
+	* src/werror.c: Initial syslog support.
+	(write_syslog): New function (Ray).
+	(set_error_syslog): New function.
+
+	* src/tty.c (tty_encode_term_mode): New implementation, by
+	Keresztg.
+
+	* src/string_buffer.c, src/string_buffer.h: New files. Handling of
+	strings whose lengths are not known in advance. Currently used
+	only by zlib.c.
+
+	* src/server_pty.c (pty_allocate): Added Ray's UNIX98-style pty
+	allocation. 
+	(tty_setctty): Moved from tty.c, and adapted to SysV/UNIX98.
+
+	* src/memcmp.c: Copied implementation from GNU textutils.
+
+	* src/abstract_crypto.c (memxor): Moved this function into a
+	separate file.
+
+	* make_am: Use a less efficient, but appearantly more rubust
+	method to generate the .dist_headers files.
+
+	* configure.in: Added tests for syslog, utmp, unix98/sysv ptys,
+	and fixed zlib configuration.
+
 Tue Feb 16 23:32:51 1999    <nisse@idonex.se>
 
 	* src/tty.h, src/tty.c: Fallback macro for the cfmakeraw function.

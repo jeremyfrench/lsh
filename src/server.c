@@ -49,6 +49,13 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#ifdef HAVE_UTMP_H
+#include <utmp.h>
+#endif
+
+#include <pwd.h>
+#include <sys/types.h>
+
 /* Datafellows workaround.
  *
  * It seems that Datafellows' ssh2 client says it want to use protocol
@@ -106,6 +113,10 @@
 #include <signal.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+
+#ifndef UT_NAMESIZE
+#  define UT_NAMESIZE 8		/* FIXME: sane default value */
 #endif
 
 #include "server.c.x"
@@ -730,7 +741,7 @@ static struct exit_callback *make_exit_shell(struct server_session *session)
        (reap object reap)))
 */
 
-/* Creates a one-way socket connection. Returns 1 on successm 0 on
+/* Creates a one-way socket connection. Returns 1 on success, 0 on
  * failure. fds[0] is for reading, fds[1] for writing (like for the
  * pipe() system call). */
 static int make_pipe(int *fds)
@@ -861,7 +872,7 @@ static int make_pty(struct pty_info *pty UNUSED,
 { return 0; }
 #endif /* !WITH_PTY_SUPPORT */
 
-#define USE_LOGIN_DASH_CONNVENTION 1
+#define USE_LOGIN_DASH_CONVENTION 1
 
 static int do_spawn_shell(struct channel_request *c,
 			  struct ssh_channel *channel,
@@ -1003,7 +1014,7 @@ static int do_spawn_shell(struct channel_request *c,
 #endif /* WITH_PTY_SUPPORT */
 	  
 #if 1
-#if USE_LOGIN_DASH_CONNVENTION
+#if USE_LOGIN_DASH_CONVENTION
 	  {
 	    char *argv0 = alloca(session->user->shell->length + 2);
 	    char *p;
@@ -1024,9 +1035,9 @@ static int do_spawn_shell(struct channel_request *c,
 #endif	      
 	    execle(shell, argv0, NULL, env);
 	  }
-#else /* !USE_LOGIN_DASH_CONNVENTION */
+#else /* !USE_LOGIN_DASH_CONVENTION */
 	  execle(shell, shell, NULL, env);
-#endif /* !USE_LOGIN_DASH_CONNVENTION */
+#endif /* !USE_LOGIN_DASH_CONVENTION */
 #else
 #define GREETING "Hello world!\n"
 	  if (write(STDOUT_FILENO, GREETING, strlen(GREETING)) < 0)

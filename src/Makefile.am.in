@@ -20,7 +20,7 @@ AUTOMAKE_OPTIONS = foreign
 # that the script attempts to start itself with "$0 args".
 
 Makefile.am: Makefile.am.in
-	(cd $(top_srcdir); ./make_am)
+	(cd $(top_srcdir) && $(MAKE) src/Makefile.am)
 
 bin_PROGRAMS = lsh lsh_keygen lsh_writekey
 sbin_PROGRAMS = lshd
@@ -32,7 +32,7 @@ noinst_LIBRARIES = liblsh.a
 # compiled or dependency checked independently.
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
-	prime_table.h sexp_table.h digit_table.h
+	prime_table.h sexp_table.h digit_table.h typdescr.h
 
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	algorithms.c alist.c arcfour.c atoms.c \
@@ -50,6 +50,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	server_pty.c server_userauth.c \
 	sexp.c sexp_parser.c sexp_streamed_parser.c \
 	sha.c service.c ssh1_fallback.c \
+	string_buffer.c \
 	translate_signal.c tty.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c zlib.c
 
@@ -83,6 +84,10 @@ digit_table_LDADD =
 digit_table.h: digit_table
 	./digit_table >$@T
 	test -s $@T && mv -f $@T $@
+
+typedescr.h: ssh.h $(top_srcdir)/misc/mk-reverse-table
+	$(PERL) $(top_srcdir)/misc/mk-reverse-table ssh.h >$@T
+	if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
 
 LDADD = @LIBOBJS@ liblsh.a symmetric/libsymmetric.a 
 

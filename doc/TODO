@@ -139,10 +139,12 @@ It might be safer to remove patent-encumbered code like IDEA code from the
 regular lsh distribution, and make it available separately (this approach is
 taken with GnuPG).
 
-scsh is not free software. Ask Olin Shivers and the other scsh
-copyright owners to fix that, or rewrite the Scheme scripts so that
-they are as portable between Scheme implementations as possible, or
-switch to a free Scheme implementation, like Guile.
+scsh is not free software. Olin Shivers (one of the scsh copyright owners)
+has indicated he is willing to free it, but currently he has no time to
+handle the paperwork. We need scsh to be freed, or we need to rewrite the
+Scheme scripts so that they are as portable between Scheme implementations
+as possible, or switch to a free Scheme implementation, like Guile. This is
+not urgent however.
 
 CAST is probably not patent encumbered (Schneier doesn't mention patents);
 check what RFC 2144 (CAST-128) says on this subject.
@@ -202,3 +204,11 @@ Fix so that lsh compiles in the absense of zlib.
 Fix the cvs_headers not to use the construction "sed -f -", as that
 doesn't work with Solaris sed.
 
+It is a nice idea to generate a typedescr.h table to aid debugging.
+
+Make separate object files for most generated files, instead if
+#including them. Particularly important for digit_table.h, which is
+used in several places.
+
+Fix configure script to add appropriate -R options when linking.
+Currently, using a shared libz.so doesn't work.

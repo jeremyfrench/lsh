@@ -18,7 +18,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include "connection.h"
@@ -53,8 +53,13 @@ static int handle_connection(struct abstract_write *w,
 
   msg = packet->data[0];
 
+#if 0
+  debug("handle_connection: Received packet of type %i (%z)\n",
+	msg, typedescr[msg]);
+#else
   debug("handle_connection: Received packet of type %i\n", msg);
-
+#endif
+  
   switch(closure->kex_state)
     {
     case KEX_STATE_INIT:
@@ -68,7 +73,7 @@ static int handle_connection(struct abstract_write *w,
     case KEX_STATE_IGNORE:
       debug("handle_connection: Ignoring packet %i\n", msg);
 
-      /* It's concievable with key exchange methods for which one
+      /* It's conceivable with key exchange methods for which one
        * wants to switch to the NEWKEYS state immediately. But for
        * now, we always switch to the IN_PROGRESS state, to wait for a
        * KEXDH_INIT or KEXDH_REPLY message. */

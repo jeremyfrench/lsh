@@ -790,6 +790,7 @@ struct connection_startup *make_client_startup(struct io_fd *in,
        (modes string)))
 */
 
+#if WITH_PTY_SUPPORT
 static struct lsh_string *do_pty_format(struct request_info *r,
 					struct ssh_channel *channel)
 {
@@ -804,7 +805,6 @@ static struct lsh_string *do_pty_format(struct request_info *r,
 				req->modes);
 }
 
-#if WITH_PTY_SUPPORT
 static int do_pty_result(struct request_info *r,
 			 struct ssh_channel *ignored UNUSED,
 			 int res)

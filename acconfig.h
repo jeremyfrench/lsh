@@ -9,13 +9,16 @@
 /* Define if zlib should be used */
 #undef WITH_ZLIB
 
+/* Define if zlib.h is present */
+#undef HAVE_ZLIB_H
+
 /* Define to enable pty support */
 #undef WITH_PTY_SUPPORT
 
 /* Define to enable fallback to SSH1 */
 #undef WITH_SSH1_FALLBACK
 
-/* Location of the SSH1 daemon*/
+/* Location of the SSH1 daemon */
 #undef SSHD1
 
 /* Define if IDEA should be used */
@@ -27,8 +30,23 @@
 /* Define if the compiler understands __attribute__ */
 #undef HAVE_ATTRIBUTE
 
+/* Define if a we have working UNIX98 pty handling */
+#undef HAVE_UNIX98_PTYS
+
+/* openpty() available? */
+#undef HAVE_OPENPTY
+
 /* For BSD-style pty allocation */
 #undef PTY_BSD_SCHEME_FIRST_CHARS
 #undef PTY_BSD_SCHEME_SECOND_CHARS
 
 #undef PTY_BSD_SCHEME
+
+/* syslog() available? */
+#undef HAVE_SYSLOG
+
+/* struct utmp has a ut_host member */
+#undef HAVE_UT_HOST
+
+/* struct utmp has a ut_addr member */
+#undef HAVE_UT_ADDR
