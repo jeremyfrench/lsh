@@ -50,7 +50,7 @@ UINT32 bignum_format_s_length(const mpz_t n);
 UINT32 bignum_format_u(const mpz_t n, UINT8 *data);
 UINT32 bignum_format_u_length(const mpz_t n);
 
-void bignum_write(mpz_t n, unsigned length, UINT8 *data);
+void bignum_write(const mpz_t n, unsigned length, UINT8 *data);
 
 /* Generates a random number in the interval 0 <= x < n */
 void bignum_random(mpz_t x, struct randomness *random, mpz_t n);

@@ -195,7 +195,7 @@ bignum_format_u_length(const mpz_t n)
 }
 
 void
-bignum_write(mpz_t n, unsigned length, UINT8 *data)
+bignum_write(const mpz_t n, unsigned length, UINT8 *data)
 {
   limbs_to_octets(n, length, 0, data);
 }
