@@ -32,6 +32,7 @@
 
 #include "alist.h"
 #include "atoms.h"
+#include "charset.h"
 #include "client.h"
 #include "client_keyexchange.h"
 #include "crypto.h"
@@ -96,10 +97,12 @@ int main(int argc, char **argv)
   struct make_kexinit *make_kexinit;
   struct packet_handler *kexinit_handler;
   struct lookup_verifier *lookup;
-  
+
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
   setlocale(LC_CTYPE, "");
+  /* FIXME: Choose character set depending on the locale */
+  set_local_charset(CHARSET_LATIN1);
   
   while((option = getopt(argc, argv, "dp:qv")) != -1)
     switch(option)
@@ -138,7 +141,9 @@ int main(int argc, char **argv)
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
   make_kexinit = make_test_kexinit(r);
   kexinit_handler = make_kexinit_handler(CONNECTION_CLIENT,
-					 make_kexinit, algorithms);
+					 make_kexinit, algorithms
+					 /* FIXME: Initialize some service */
+					 );
 
   if (!get_inaddr(&remote, host, port, "tcp"))
     {
