@@ -31,10 +31,13 @@
  *
  * %n  Insert a string containing a bignum.
  *
- * There is one valid modifier, "l" (as in literal). It is applicable
- * to the s, a, A and n specifiers, and outputs strings *without* a
- * length field.
- */
+ * %r  Reserves space in the string, and stores a pointer to this space
+ * into the given UINT8 ** argument.
+ *
+ * There is one valid modifier:
+ *
+ * "l" (as in literal). It is applicable to the s, a, A, n and r
+ * specifiers, and outputs strings *without* a length field. */
 
 UINT32 ssh_vformat_length(char *format, va_list args);
 void ssh_vformat(char *format, UINT8 *buffer, va_list args);
