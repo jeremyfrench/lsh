@@ -7,7 +7,8 @@ TS_PROGS = arcfour-test aes-test blowfish-test cast128-test \
 	   des-test \
 	   serpent-test twofish-test \
            md5-test sha1-test rsa-test dsa-test spki-tag-test \
-           string-test
+           string-test parse-config-test
+
 TS_SH = conv-1-test conv-2-test conv-3-test \
 	export-1-test keygen-1-test keygen-2-test \
 	write-key-1-test write-key-2-test seed-test
