@@ -196,6 +196,15 @@ int disconnect_kex_failed(struct ssh_connection *connection, const char *msg)
 				   msg, ""));
 }
 
+#if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
+static int invoke_ssh2_dsa_kludge_p(struct lsh_string *s)
+{
+  /* FIXME: Improve the version string test. */
+  return( (s->length >= 15)
+	  && !memcmp(s, "SSH-1.99-2.0.11", 15));
+}
+#endif DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
+
 static int do_handle_kexinit(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
@@ -268,6 +277,14 @@ static int do_handle_kexinit(struct packet_handler *c,
   hostkey_algorithm
     = select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
 		       connection->kexinits[1]->server_hostkey_algorithms);
+
+#if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
+  if ( (hostkey_algorithm == ATOM_SSH_DSS)
+       && invoke_ssh2_dsa_kludge_p(connection->versions[!closure->type]))
+    {
+      hostkey_algorithm = ATOM_SSH_DSS_KLUDGE;
+    }
+#endif
 
   for(i = 0; i<KEX_PARAMETERS; i++)
     {
@@ -709,3 +726,14 @@ struct install_keys *make_install_new_keys(int is_server,
 
   return &self->super;
 }
+
+struct keypair_info *make_keypair_info(struct lsh_string *public,
+				       struct signer *private)
+{
+  NEW(keypair_info, self);
+  
+  self->public = public;
+  self->private = private;
+  return self;
+}
+
