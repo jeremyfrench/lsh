@@ -187,7 +187,7 @@ static void werror_cstring(char *s) { werror_write(strlen(s), s); }
 
 static void werror_bignum(mpz_t n, int base)
 {
-  UINT8 *s = alloca(mpz_sizeinbase(n, base) + 2);
+  char *s = alloca(mpz_sizeinbase(n, base) + 2);
   mpz_get_str(s, 16, n);
 
   werror_cstring(s);
@@ -196,7 +196,7 @@ static void werror_bignum(mpz_t n, int base)
 static void werror_decimal(UINT32 n)
 {
   unsigned length = format_size_in_decimal(n);
-  char *buffer = alloca(length);
+  UINT8 *buffer = alloca(length);
 
   format_decimal(length, buffer, n);
 

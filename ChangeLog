@@ -1,3 +1,33 @@
+2000-02-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/functions.sh, src/testsuite/lsh-1-test,
+	src/testsuite/lsh-2-test, src/testsuite/lsh-3-test,
+	src/testsuite/tcpip-local-test: Fixed bash-isms. 
+
+	* src/argp/argp-fmtstream.c: Define the functions that are defined
+	as extern inline in argp_fmtstream.h. Needed for compilers that
+	don't have inline.
+
+	* src/argp/argp-help.c (hol_entry_help): Don't use non-constant
+	initializers (which is a GNUC extension). 
+
+	* src/argp/argp-parse.c: Declare alloca properly.
+
+	* src/tty.c, src/tty.h: Signedness fixes.
+
+	* src/parse.c, src/parse.h: Signedness fixes.
+
+	* src/keyexchange.c (kex_make_key): Signedness fix.
+
+	* src/io_commands.c (do_connect_continue): Added a FIXME. 
+
+	* src/client.c: Signedness fixes.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Removed password.c.
+
+	* configure.in: Added check for inline.
+	Bumped version to 0.2.7.
+
 2000-02-01  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Fixed messages for --without-* flags.

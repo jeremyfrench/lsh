@@ -41,6 +41,7 @@
        (length simple unsigned)))
 */
 
+/* FIXME: Should this be a list of unsigned ints? */
 /* GABA:
    (class
      (name int_list)

@@ -615,7 +615,7 @@ static void init_file(struct io_backend *b, struct lsh_fd *f, int fd,
 
 int blocking_read(int fd, struct read_handler *handler)
 {  
-  char *buffer = alloca(BLOCKING_READ_SIZE);
+  UINT8 *buffer = alloca(BLOCKING_READ_SIZE);
   
   for (;;)
     {
@@ -644,6 +644,7 @@ int blocking_read(int fd, struct read_handler *handler)
 	    done += READ_HANDLER(handler, got - done, buffer + done);
 	}
     }
+  /* FIXME: Not reached. Hmm. */
   close(fd);
   return !handler;
 }

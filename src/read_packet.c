@@ -351,6 +351,7 @@ do_read_packet(struct read_handler **h,
       default:
 	fatal("Internal error\n");
     }
+  /* FIXME: Not reached. */
   return total;
 }
 

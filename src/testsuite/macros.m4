@@ -105,7 +105,8 @@ TS_DEFINE(»TS_TAG_DENY«,
 
 m4_divert(1)
   return 0;
-} m4_divert
+}
+m4_divert
 
 m4_dnl C code
 #include "lsh.h"

@@ -73,6 +73,12 @@
 #define COMMAND_SIMPLE_CALL(f, a) \
   ((f)->call_simple((f), (struct lsh_object *)(a)))
 
+#define STATIC_COMMAND(f) { STATIC_HEADER, f }
+
+#define STATIC_COMMAND_SIMPLE(f) \
+{ STATIC_COMMAND(do_call_simple_command), f}
+
+
 #define COMMAND_SIMPLE(cname)				\
 static struct lsh_object *				\
 do_simple_##cname(struct command_simple *s UNUSED,	\
@@ -89,11 +95,6 @@ void do_call_simple_command(struct command *s,
 			    struct lsh_object *arg,
 			    struct command_continuation *c,
 			    struct exception_handler *e);
-
-#define STATIC_COMMAND_SIMPLE(f) \
-{ { STATIC_HEADER, do_call_simple_command }, f}
-
-#define STATIC_COMMAND(f) { STATIC_HEADER, f }
 
 struct command *make_parallell_progn(struct object_list *body);
 extern struct command_simple progn_command;

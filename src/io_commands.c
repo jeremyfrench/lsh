@@ -273,6 +273,9 @@ STATIC_COLLECT_1(&collect_info_listen_2);
        (e object exception_handler)))
 */
 
+/* FIXME: The new fd object should be added to the same resource list
+ * as the old one. Perhaps the conenction code in io.c should reuse
+ * the fd object in some way? */
 static void
 do_connect_continue(struct fd_callback **s, int fd)
 {
