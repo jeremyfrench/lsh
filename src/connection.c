@@ -381,6 +381,37 @@ connection_init_io(struct ssh_connection *connection,
        : ssh_format("Sent")));
 }
 
+
+/* GABA:
+   (class
+     (name connection_close_handler)
+     (super lsh_callback)
+     (vars
+       (connection object ssh_connection)))
+*/
+
+static void
+connection_die(struct lsh_callback *c)
+{
+  CAST(connection_close_handler, closure, c);
+  
+  verbose("Connection died.\n");
+  
+  KILL_RESOURCE_LIST(closure->connection->resources);
+}
+
+struct lsh_callback *
+make_connection_close_handler(struct ssh_connection *c)
+{
+  NEW(connection_close_handler, closure);
+
+  closure->connection = c;  
+  closure->super.f = connection_die;
+
+  return &closure->super;
+}
+
+
 /* Serialization. */
 
 void connection_lock(struct ssh_connection *self)

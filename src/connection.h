@@ -209,6 +209,9 @@ void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,
 			struct randomness *r);
 
+struct lsh_callback *
+make_connection_close_handler(struct ssh_connection *c);
+
 /* Serialization */
 void connection_lock(struct ssh_connection *self);
 void connection_unlock(struct ssh_connection *self);
