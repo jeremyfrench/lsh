@@ -1,5 +1,17 @@
 2002-04-03  Pontus Sköld  <pont@soua.net>
 
+	* src/lsh.c (do_lsh_lookup): Output the fingerprint of the remote
+	host according to draft-ietf-secsh-fingerprint-00.txt (and keep
+	the old way of outputing).
+
+	* src/format.c (lsh_string_colonize): New function to insert
+	colons in a lsh_string.
+
+	* src/format.h (lsh_string_colonize): Likewise
+	
+	* src/testsuite/string-test.c (test_main): Added tests for
+	lsh_string_colonize.
+
 	* src/client.c (client_options): Bugfix: OPT_SUBSYSTEM shouldn't
 	be inside char quotes.
 
