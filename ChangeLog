@@ -1,3 +1,19 @@
+2003-06-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/lsh-encrypted-key-test: The lsh-authorize script
+	is located in the source directory.
+
+	* src/unix_interact.c (unix_read_password): Added trace messages.
+	(unix_set_askpass): Added trace message. Assert that askpass is
+	non-NULL.
+
+	* src/spki.c (spki_pkcs5_decrypt): Cosmetic fix of warning message.
+
+	* src/lsh.c (read_user_keys): Cosmetic fix of trace message.
+
+	* src/client.c (client_argp_parser): Fixed --askpass option. The
+	argp parser should never use optarg.
+
 2003-06-05  Niels Möller  <niels@s3.kth.se>
 
 	* src/unix_interact.c (unix_read_password): Prompt for password
