@@ -1127,7 +1127,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 	  return NULL;
 	}
 
-      if (crypto->block_size && (data->length & crypto->block_size))
+      if (crypto->block_size && (data->length % crypto->block_size))
 	{
 	  werror("Payload data doesn't match block size for pkcs5v2.\n");
 	  return NULL;
@@ -1183,7 +1183,9 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 
 	  {
 	    struct lsh_string *password
-	      = INTERACT_READ_PASSWORD(interact, 500, label, 0);
+	      = INTERACT_READ_PASSWORD(interact, 500,
+				       ssh_format("Passphrase for key `%lS': ",
+						  label), 1);
 	    struct lsh_string *clear;
 	    struct sexp *res;
 	    UINT8 *key;
