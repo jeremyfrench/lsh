@@ -133,9 +133,14 @@ r
 s
 
 # spki rsa keys p, q already defined above
-# rsa-pkcs1
+
+# For use in spki keys
+rsa-pkcs1
+
+# These two should be obsoleted
 rsa-pkcs1-sha1
 rsa-pkcs1-md5
+
 n
 e
 d
