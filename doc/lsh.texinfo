@@ -1385,6 +1385,10 @@ remote systems. Set by @command{lshd} when starting new processes.
 If set, it points out the location of the seed-file for the randomness
 generator. Recognized both by @command{lshd} and the client programs.
 
+@item SEXP_CONV
+The location of the @command{sexp-conv} program. If not set, the default
+@file{$prefix/bin/sexp-conv} is used.
+
 @item SHELL
 User's login shell. When @command{lshd} starts a user process, it sets
 @env{SHELL} to the value in @file{/etc/passwd}, unless overridden by
