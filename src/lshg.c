@@ -279,6 +279,9 @@ main(int argc, char **argv)
 
   io_run(backend);
 
+  /* Close all files and other resources associated with the backend. */
+  io_final(backend);
+
   gc_final();
   
   return exit_code;

@@ -685,6 +685,9 @@ do_chdir_home(struct lsh_user *u)
   return 1;  
 }
 
+/* FIXME: initgroups in glibc (and possibly on other systems as well)
+ * is broken, and can't handle more than 32 groups. We need a
+ * workaround for that. */
 static int
 change_uid(struct unix_user *user)
 {

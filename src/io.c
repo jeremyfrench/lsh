@@ -747,8 +747,8 @@ do_write_callback(struct io_callback *s UNUSED,
 	break;
       case EPIPE:
 	debug("io.c: Broken pipe.\n");
-	close_fd(fd);
-	break;
+	
+	/* Fall through */
       default:
 	werror("io.c: write failed, %z\n", STRERROR(errno));
 	EXCEPTION_RAISE(fd->e,
@@ -1799,6 +1799,9 @@ void close_fd_nicely(struct lsh_fd *fd)
 {
   /* Don't attempt to read any further. */
 
+  trace("io.c: close_fd_nicely called on fd %i: %z\n",
+	fd->fd, fd->label);
+  
   fd->want_read = 0;
   fd->read = NULL;
   

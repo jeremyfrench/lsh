@@ -75,6 +75,16 @@ even deleted.
 The CHANNEL_CLOSE_AT_EOF should be enabled by default. It is the
 correct behaviour for all channels except the server side of sessions.
 
+The following bug should be eliminated: I use lshg to get a large
+file,
+
+  src/lshg -v --trace --debug >lsh-test.log.gz sture.lysator.liu.se
+  cat 'incoming/lsh-test.log.gz' 2>lshg.log
+
+The file is 0x614ef9 bytes, but only 0x610000 bytes gets through.
+Looking at the lshg log, the final SSH_MSG_DATA packet(s) is missing,
+so the data is lost either in lsh, or in the remote opensshd.
+
 
 FREENESS
 
