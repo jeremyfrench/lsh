@@ -72,7 +72,7 @@ static void dss_hash(mpz_t h, UINT32 length, UINT8 *msg)
   debug_mpz(h);
   debug("\n");
   
-  lsh_free(hash);
+  lsh_object_free(hash);
 }
 
 static struct lsh_string *do_dss_sign(struct signer *c,
@@ -328,7 +328,7 @@ static struct signer *make_dss_signer(struct signature_algorithm *c,
       mpz_clear(res->public.g);
       mpz_clear(res->public.y);
       mpz_clear(res->a);
-      lsh_free(res);
+      lsh_object_free(res);
       return NULL;
     }
   
@@ -365,7 +365,7 @@ static struct verifier *make_dss_verifier(struct signature_algorithm *closure,
       mpz_clear(res->public.q);
       mpz_clear(res->public.g);
       mpz_clear(res->public.y);
-          lsh_free(res);
+      lsh_object_free(res);
       return NULL;
     }
 
@@ -499,7 +499,7 @@ struct diffie_hellman_method *make_dh1(struct randomness *r)
   mpz_t p;
   
   NEW(res);
-
+  
   mpz_init_set_str(p,
 		   "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
 		   "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
