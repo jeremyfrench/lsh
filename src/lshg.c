@@ -63,7 +63,7 @@ make_options(struct io_backend *backend,
 	     int *exit_code) 
 {
   NEW(lshg_options, self);
-  init_client_options(&self->super, backend, handler, exit_code);
+  init_client_options(&self->super, backend, NULL, handler, exit_code);
 
   self->gateway = NULL;
 
