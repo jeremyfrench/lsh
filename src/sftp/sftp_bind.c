@@ -34,8 +34,8 @@ static FILE* from_transport;
 
 static int transport_pid = 0;
 
-static int sftp_callbacks = 256;
-static int lsftp_callbacks = 256;
+static int sftp_callbacks = 0;
+static int lsftp_callbacks = 0;
 
 static int fd_to_transport = -1;
 static int fd_from_transport = -1;
@@ -481,9 +481,6 @@ lsftp_handle_packet(void)
     printf( "Bad read!\n" );
 
 
-/*         printf( "Id: %d\n", id );    */
-/*       printf( "Msg: %d\n", msg ); */
-
   for( i = 0; i < sftp_callbacks; i++ )
     if( 
        id &&                         /* We never send the id zero */ 
@@ -499,20 +496,19 @@ lsftp_handle_packet(void)
 	sftp_cbs[i].nextfun(&state, msg, id, in, out, &sftp_cbs[i]);
 	sftp_cbs[i] = state; /* Replace old callback with the new one */
 
-/*  	printf( "Returned from packet nextfun\n "); */
-
 	if( ! state.id ) /* No next callback? */
 	  {
 	    int op_id = state.op_id;
+
+	    sftp_null_state( &sftp_cbs[i] ); /* Clean out old state */
 	      
 	    for( j = 0; j < lsftp_callbacks; j++ )
 	      if( lsftp_cbs[j].op_id == op_id )
 		{
-		  int i;
+		  int r;
 
-/*  		  printf( "Doing lsftp callback\n "); */
 		  /* Do callback */
-		  i = lsftp_cbs[j].nextfun(&state, &lsftp_cbs[j]); 
+		  r = lsftp_cbs[j].nextfun(&state, &lsftp_cbs[j]); 
 
 		  /* Free any memory used */
 		  if( lsftp_cbs[j].a )
@@ -526,23 +522,16 @@ lsftp_handle_packet(void)
 
 		  if( lsftp_cbs[j].command )
 		    free( (void *) lsftp_cbs[j].command );
-		    		    
-		  lsftp_cbs[j].op_id = 0; /* Remove id so it can be reused */
-		  lsftp_cbs[j].st = 0;
-		  lsftp_cbs[j].a = 0;
-		  lsftp_cbs[j].local = 0;
-		  lsftp_cbs[j].remote = 0;
-		  lsftp_cbs[j].command = 0;
-		  lsftp_cbs[j].memory = 0;
-		  lsftp_cbs[j].opt1 = 0;
-		  lsftp_cbs[j].opt2 = 0;
 
-		  return i;
+		  lsftp_nullcb( &lsftp_cbs[j] ); /* Clean out struct */
+
+		  return r;
 		}
+
+	    
 	  }
       }
   
-/*    printf( "Returning from packet handler\n "); */
   return 0; /* No callback found, ignored */
 }
 
@@ -926,18 +915,11 @@ lsftp_install_lsftp_cb(lsftp_callback_func nextfun)
   struct lsftp_callback lcb;
   
   i = lsftp_free_lsftp_cb();
-  
-  lcb.a = 0;
-  lcb.st = 0;
-  lcb.local = 0;
-  lcb.command = 0;
-  lcb.remote = 0;
-  lcb.op_id = id;
-  lcb.opt1 = 0;
-  lcb.opt2 = 0;
+
+  lsftp_nullcb( &lcb ); /* Nullify callback */
 
   lcb.nextfun = nextfun;
-
+  lcb.op_id = id;
   if( i == -1 )
     return 0;
 
@@ -985,24 +967,26 @@ int lsftp_await_command( int id )
 
 
 
-
+void lsftp_nullcb(  struct lsftp_callback* nullcb )
+{
+  nullcb->nextfun = 0;
+  nullcb->op_id = 0;
+  nullcb->local = 0;
+  nullcb->remote = 0;
+  nullcb->command = 0;
+  nullcb->st = 0;
+  nullcb->a = 0;
+  nullcb->memory = 0;
+  nullcb->opt1 = 0;
+  nullcb->opt2 = 0;
+  nullcb->opt3 = 0;
+}
 
 
 int lsftp_lsftp_cb_init( int new_lsftp_callbacks )
 {
   int i = 0;
   void* newmem;
-  struct lsftp_callback nullcb;
-
-  nullcb.nextfun = 0;
-  nullcb.op_id = 0;
-  nullcb.local = 0;
-  nullcb.remote = 0;
-  nullcb.command = 0;
-  nullcb.st = 0;
-  nullcb.a = 0;
-  nullcb.memory = 0;
-
 
   if( lsftp_cbs )
     i = lsftp_compact_lsftp_cbs();
@@ -1010,7 +994,7 @@ int lsftp_lsftp_cb_init( int new_lsftp_callbacks )
   if( i > new_lsftp_callbacks ) /* Too few callbacks to fit existing */
     return -1;
 
-  newmem = realloc( sftp_cbs, sizeof( struct sftp_callback ) * new_lsftp_callbacks );
+  newmem = realloc( lsftp_cbs, sizeof( struct sftp_callback ) * new_lsftp_callbacks );
 
   if( !newmem ) /* realloc failed? */
     {
@@ -1022,7 +1006,7 @@ int lsftp_lsftp_cb_init( int new_lsftp_callbacks )
   lsftp_callbacks = new_lsftp_callbacks;
 
   for( ; i < lsftp_callbacks; i++ )
-    lsftp_cbs[i] = nullcb;
+    lsftp_nullcb( &lsftp_cbs[i] );
 
   return 0;
 }
@@ -1058,10 +1042,12 @@ int lsftp_compact_lsftp_cbs()
 	)
 	{
 	  if( index > used )                /* That should be moved? */
-	    lsftp_cbs[used++] =  lsftp_cbs[index];
+	    {
+	      lsftp_cbs[used++] =  lsftp_cbs[index]; /* Copy closer to base */
+	      lsftp_nullcb( &lsftp_cbs[index] ); /* Clean it out */
+	    }
 	  else
-	    /* FIXME: What's intended here? */
-	    used;                           /* Don't move, just count */
+	    used++;                           /* Don't move, just count */
 	}
       index++;
     }
@@ -1085,7 +1071,9 @@ int lsftp_sftp_cb_init( int new_sftp_callbacks )
   if( i > new_sftp_callbacks ) /* Too few callbacks to fit existing */
     return -1;
 
-  newmem = realloc( sftp_cbs, sizeof( struct sftp_callback ) * new_sftp_callbacks );
+  newmem = realloc( sftp_cbs, 
+		    sizeof( struct sftp_callback ) * new_sftp_callbacks 
+		    );
 
   if( !newmem ) /* realloc failed? */
     {
@@ -1096,7 +1084,7 @@ int lsftp_sftp_cb_init( int new_sftp_callbacks )
   sftp_callbacks = new_sftp_callbacks;
   sftp_cbs = newmem;
 
-  for( ; i < sftp_callbacks; i++ )
+  for( ; i < sftp_callbacks; i++ )   /* Clear any newly allocated slots */
     sftp_null_state(&sftp_cbs[i]);
 
 
@@ -1138,10 +1126,12 @@ int lsftp_compact_sftp_cbs()
 	)
 	{
 	  if( index > used )            /* That should be moved? */
-	    sftp_cbs[used++] =  sftp_cbs[index];
+	    {
+	      sftp_cbs[used++] =  sftp_cbs[index]; /* Copy closer to base */ 
+	      sftp_null_state( &sftp_cbs[index] ); /* Clean it out */
+	    }
 	  else
-	    /* FIXME: What's intended here? */
-	    used;                        /* Don't move, just count */
+	    used++;                        /* Don't move it, just count */
 	}
       index++;
     }
@@ -1160,7 +1150,7 @@ lsftp_install_sftp_cb(struct sftp_callback *s)
 
   i = lsftp_free_sftp_cb();
 
-  if( i == -1 )
+  if( i == -1 ) /* Failed to find any free slot */
     return 0;
 
   sftp_cbs[i] = *s;
@@ -1179,7 +1169,7 @@ lsftp_remove_sftp_cb(UINT32 id)
   for( j = 0; j < sftp_callbacks; j++ )
     if( sftp_cbs[j].id == id  ) /* Callback is free? */
       {
-	sftp_cbs[j].id = 0;
+	sftp_null_state( sftp_cbs[j].id );
 	flag++;
       }
 
@@ -1196,7 +1186,7 @@ lsftp_remove_lsftp_cb(int id)
   for( j = 0, flag = 0; j < lsftp_callbacks; j++ )
     if( lsftp_cbs[j].op_id == id  ) /* Callback is free? */
       {
-	lsftp_cbs[j].op_id = 0;
+	lsftp_nullcb( &lsftp_cbs[j] );
       	flag++;
       }
 
@@ -1232,7 +1222,7 @@ lsftp_do_cd(const char *dir)
     {
       /* Here we only go if we have a curpath and the new path is relative */
 
-      char* tmp;
+      char* tmp = 0;
 
       if( !dir[0] )        /* Empty path? Special case, reset path */
 	{
@@ -1245,11 +1235,7 @@ lsftp_do_cd(const char *dir)
 	{
 	  /* Two strings with a / to separate them */
 
-	  char* tmp1;
-
-	  tmp = 0;
-
-	  tmp1 = lsftp_concat( curpath, "/" );    /* curpath/ */
+	  char* tmp1 = lsftp_concat( curpath, "/" );    /* curpath/ */
 	  
 	  if( tmp1 )
 	    tmp = lsftp_concat( tmp1, dir );       /* Add new path */
@@ -1261,6 +1247,7 @@ lsftp_do_cd(const char *dir)
 	}
       
       free( (void *) curpath );
+
       curpath = tmp;
       
     }
@@ -1386,8 +1373,8 @@ lsftp_do_put(const char *local, const char *remote,
 	  tmp = remote;
 	}
 
-      lsftp_cbs[index].local = strdup( local ); 
-      lsftp_cbs[index].remote = strdup( tmp ); 
+      lsftp_cbs[index].local = strdup( local ); /* These are not critical, so*/
+      lsftp_cbs[index].remote = strdup( tmp );  /* we ignore if they succeed*/
       lsftp_cbs[index].command = strdup( command );
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
@@ -1400,9 +1387,9 @@ lsftp_do_put(const char *local, const char *remote,
       if( freeflag )
 	free( (void *) tmp );
 
-      if( s.nextfun )
+      if( s.nextfun )                     /* We should have a callback */
 	lsftp_install_sftp_cb( &s );
-      else
+      else                                /* Lack of callback means error */
 	{
 	  lsftp_perror( local, s.localerrno );
 	  lsftp_remove_lsftp_cb( id );
@@ -2214,10 +2201,7 @@ lsftp_handle_realpath(struct sftp_callback *s,
       UINT32 longnamelen;
       void* attrib;
       UINT32 attriblen;
-      /* FIXME: Not used? */
-      struct sftp_attrib *a;
       char** destptr;
-
 
       lenptr = sftp_retrieve( &s->mem, 4, &slen); /* Get string length */ 
       
@@ -2649,8 +2633,6 @@ lsftp_do_rmdir(const char *dir, const char *command)
       
   const char* tmp;
   struct sftp_callback s;
-  /* FIXME: Unsued? */
-  struct sftp_attrib* attrib;
   
   id = lsftp_install_lsftp_cb( lsftp_handle_alldir );
   index = lsftp_cb_index( id );
@@ -2700,7 +2682,6 @@ lsftp_do_rm(const char *path, const char *command )
       
   const char* tmp;
   struct sftp_callback s;
-  struct sftp_attrib* attrib;
   
   id = lsftp_install_lsftp_cb( lsftp_handle_alldir );
   index = lsftp_cb_index( id );

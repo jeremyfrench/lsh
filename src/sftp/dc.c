@@ -26,7 +26,7 @@
 
 #include "dc.h"
 
-static int dc_entries = 1024;
+static int dc_entries = 0;
 static struct lsftp_dc_s* lsftp_dircache = 0;
 
 int lsftp_dc_init( int new_dc_entries )
@@ -41,6 +41,9 @@ int lsftp_dc_init( int new_dc_entries )
   dc_entries = new_dc_entries;
 
   lsftp_dircache = malloc( sizeof( struct lsftp_dc_s ) * dc_entries );
+
+  if( !lsftp_dircache ) /* malloc failed? */
+    return -1;
 
   for( i = 0; i < dc_entries; i++ )
     {

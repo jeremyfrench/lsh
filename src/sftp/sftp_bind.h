@@ -55,7 +55,6 @@
 #define DEFAULT_AFTER_ARGS TRANSPORT_AFTER_OPTS
 #endif /* TRANSPORT_AFTER_OPTS */
 
-
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -159,6 +158,7 @@ int lsftp_handle_alldir(struct sftp_callback *s,
 int lsftp_install_lsftp_cb(lsftp_callback_func nextfun);
 int lsftp_install_sftp_cb(struct sftp_callback *s);
 
+void lsftp_nullcb(  struct lsftp_callback* nullcb );
 
 int lsftp_sftp_cb_init( int new_sftp_callbacks );
 void lsftp_sftp_cb_uninit(void);

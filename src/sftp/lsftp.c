@@ -149,7 +149,7 @@ lsftp_noninteractive_mainloop(int startat, char **argv)
   while( !done && !fail )
     {
       while( !fail && lsftp_active_cbs() )
-	if( -1 == lsftp_callback() )                /* Checks itself with select */
+	if( -1 == lsftp_callback() )            /* Checks itself with select */
 	  {
 	    printf( "Failure!\n");
 	    fail++;
@@ -181,16 +181,17 @@ int main(int argc, char** argv, char** envp)
   if( interactive )
     lsftp_welcome();
 
+  lsftp_sftp_init();
 
   if( 1 < argc - i ) /* Only connect if given arguments */
   {
     lsftp_open_connection( argv, argc - i );
     lsftp_handshake();
-    lsftp_sftp_init();
+
     lsftp_do_cd( "" );                   /* Change to our home directory */
   }
 
-  lsftp_dc_init( 1024 );
+  lsftp_dc_init( 1024 );                 /* Set up the directory cache */
 
   if( interactive )
     lsftp_interactive_mainloop();

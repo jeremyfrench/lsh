@@ -1,3 +1,40 @@
+2002-02-25  Pontus  <pont@it.uu.se>
+
+	* sftp_bind.c (lsftp_lsftp_cb_init): Fixed a bug using the same
+	memory both for sftp_cbs and lsftp_cbs, mumble!
+
+2002-02-24  Pontus  <pont@it.uu.se>
+
+	* sftp_bind.c (lsftp_remove_lsftp_cb): Use lsftp_nullcb to clean
+	out callback.
+	(lsftp_handle_packet): Changed variable i (used twice) to r.
+
+	* sftp_bind.h: New function lsftp_nullcb.
+
+	* sftp_bind.c (lsftp_compact_sftp_cbs): Fixed a bug that would
+	loose callbacks before a hole if there were any more.
+	(lsftp_compact_lsftp_cbs): Fixed the same bug for struct
+	lsftp_callbacks.
+	(lsftp_handle_packet): Clean out old state after callbacks, should
+	hopefully make things more robust.
+
+	(lsftp_nullcb): New function to clean a struct lsftp_callback.
+
+	* dc.c (lsftp_dc_init): Check that malloc succeeded before using
+	the memory (duh!).
+	
+	* sftp_bind.c: Removed obsolete default callback array sizes.
+
+	* dc.c: Removed obsolete default dircache size.
+
+	* lsftp.c (main): Always init the callbacks.
+
+	* sftp_bind.c (lsftp_lsftp_cb_init): Also clear option flags.
+
+	* lsftp.c (main): Added some comments.
+
+	* sftp_bind.c (lsftp_do_put): Added some comments.
+
 2002-02-22  Pontus  <pont@it.uu.se>
 
 	* configure.ac (lsh_cv_c_attribute): Removed obsolete checks for
