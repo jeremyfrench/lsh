@@ -34,15 +34,19 @@
 
 /* Ix == x */
 
+COMMAND_SIMPLE(command_I) { return a; }
+
+#if 0
 static struct lsh_object *
 do_simple_command_I(struct command_simple *ignored UNUSED,
 		    struct lsh_object *arg)
 {
-  return arg;
+  return a;
 }
 
 struct command_simple command_I =
 STATIC_COMMAND_SIMPLE(do_simple_command_I);
+#endif
 
 /* ((K x) y) == x */
 
@@ -73,6 +77,10 @@ struct command *make_command_K_1(struct lsh_object *x)
   return &res->super.super;
 }
 
+COMMAND_SIMPLE(command_K)
+{ return &make_command_K_1(a)->super; }
+
+#if 0
 static struct lsh_object *
 do_simple_command_K(struct command_simple *ignored UNUSED,
 		    struct lsh_object *a)
@@ -81,6 +89,7 @@ do_simple_command_K(struct command_simple *ignored UNUSED,
 }
 
 struct command_simple command_K = STATIC_COMMAND_SIMPLE(do_simple_command_K);
+#endif
 
 /* ((S f) g)x == (f x)(g x) */
 
@@ -151,9 +160,9 @@ do_simple_command_S_2(struct command_simple *s,
   CAST(command_S_2, self, s);
   CAST_SUBTYPE(command_simple, fs, self->f);
   CAST_SUBTYPE(command_simple, gs, self->g);
-  CAST_SUBTYPE(command_simple, op, COMMAND_SIMPLE(fs, x));
+  CAST_SUBTYPE(command_simple, op, COMMAND_SIMPLE_CALL(fs, x));
   
-  return COMMAND_SIMPLE(op, COMMAND_SIMPLE(gs, x));
+  return COMMAND_SIMPLE_CALL(op, COMMAND_SIMPLE_CALL(gs, x));
 }
 
 struct command *make_command_S_2(struct command *f,
@@ -221,8 +230,8 @@ do_simple_command_Sp_3(struct command_simple *s,
   CAST_SUBTYPE(command_simple, cs, self->c);
   CAST_SUBTYPE(command_simple, fs, self->f);
   CAST_SUBTYPE(command_simple, gs, self->g);
-  CAST_SUBTYPE(command_simple, op, COMMAND_SIMPLE(cs, COMMAND_SIMPLE(fs, x)));
-  return COMMAND_SIMPLE(op, COMMAND_SIMPLE(gs, x));
+  CAST_SUBTYPE(command_simple, op, COMMAND_SIMPLE_CALL(cs, COMMAND_SIMPLE_CALL(fs, x)));
+  return COMMAND_SIMPLE_CALL(op, COMMAND_SIMPLE_CALL(gs, x));
 }
 
 struct command *make_command_Sp_3(struct command *c,
@@ -292,7 +301,7 @@ do_simple_command_B_2(struct command_simple *s,
   CAST(command_B_2, self, s);
   CAST_SUBTYPE(command_simple, fs, self->f);
   CAST_SUBTYPE(command_simple, gs, self->g);
-  return COMMAND_SIMPLE(fs, COMMAND_SIMPLE(gs, x));
+  return COMMAND_SIMPLE_CALL(fs, COMMAND_SIMPLE_CALL(gs, x));
 }
 
 struct command *
@@ -360,7 +369,7 @@ do_simple_command_Bp_3(struct command_simple *s,
   CAST_SUBTYPE(command_simple, cs, self->c);
   CAST_SUBTYPE(command_simple, fs, self->f);
   CAST_SUBTYPE(command_simple, gs, self->g);
-  return COMMAND_SIMPLE(cs, COMMAND_SIMPLE(fs, COMMAND_SIMPLE(gs, x)));
+  return COMMAND_SIMPLE_CALL(cs, COMMAND_SIMPLE_CALL(fs, COMMAND_SIMPLE_CALL(gs, x)));
 }
 
 struct command *
@@ -463,8 +472,8 @@ static struct lsh_object *do_simple_command_C_2(struct command_simple *s,
 {
   CAST(command_C_2, self, s);
   CAST_SUBTYPE(command_simple, f, self->f);
-  CAST_SUBTYPE(command_simple, v, COMMAND_SIMPLE(f, x));
-  return COMMAND_SIMPLE(v, self->y);
+  CAST_SUBTYPE(command_simple, v, COMMAND_SIMPLE_CALL(f, x));
+  return COMMAND_SIMPLE_CALL(v, self->y);
 }
 
 struct command *
@@ -530,8 +539,8 @@ do_simple_command_Cp_3(struct command_simple *s,
   CAST(command_Cp_3, self, s);
   CAST_SUBTYPE(command_simple, cs, self->c);
   CAST_SUBTYPE(command_simple, fs, self->f);
-  CAST_SUBTYPE(command_simple, op, COMMAND_SIMPLE(cs, COMMAND_SIMPLE(fs, x)));
-  return COMMAND_SIMPLE(op, self->y);
+  CAST_SUBTYPE(command_simple, op, COMMAND_SIMPLE_CALL(cs, COMMAND_SIMPLE_CALL(fs, x)));
+  return COMMAND_SIMPLE_CALL(op, self->y);
 }
 
 struct command *
