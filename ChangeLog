@@ -1,3 +1,9 @@
+2004-11-25  Niels Möller  <nisse@lysator.liu.se>
+
+	* misc/xenofarm.sh: Don't insist on using GNU make. If we're not
+	using GNU make, disable dependency tracking, since it wont' work
+	with nettle.
+
 2004-11-23  Niels Möller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): New configure flag

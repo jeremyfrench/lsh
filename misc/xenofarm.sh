@@ -48,14 +48,6 @@ cfgargs="-C --with-include-path=/usr/local/include:$pfx/include --with-lib-path=
 
 # Fix PATH for system where the default environment is broken
 
-# FIXME: Should we really insist on using GNU make?
-# We may need /usr/local/bin to get GNU make
-if make --version 2>/dev/null | grep GNU >/dev/null ; then : ; else
-    if /usr/local/bin/make --version 2>/dev/null | grep GNU >/dev/null ; then
-	PATH="/usr/local/bin:$PATH"
-    fi
-fi
-
 # We may need /usr/ccs/bin for ar
 if type ar >/dev/null ; then : ; else
     if [ -x /usr/ccs/bin/ar ] ; then
@@ -65,6 +57,13 @@ fi
 
 # Export new value
 export PATH
+
+# Are we using GNU make? If so, nettle's dependency tracking won't work.
+cfgdepargs=''
+
+if make --version 2>/dev/null | grep GNU >/dev/null ; then : ; else
+    cfgdepargs='--disable-dependency-tracking'
+fi
 
 rm -rf r
 mkdir r
@@ -213,7 +212,7 @@ dotask 1 "oopinstall" "makewarn" "cd $LIBOOPBASE && $MAKE install" liboopstatus
 dotask 1 "unzip" "" "gzip -d $BASE.tar.gz"
 dotask 1 "unpack" "" "tar xf $BASE.tar"
 dotask 1 "cfg" "cfgwarn" \
-    "cd $BASE && ./configure $cfgargs"
+    "cd $BASE && ./configure $cfgargs $cfgdepargs"
 dotask 1 "make" "makewarn" "cd $BASE && $MAKE $makeargs"
 
 #
@@ -242,7 +241,7 @@ dotask 1 "argpcfg" "cfgwarn" "cd $BASE/src/argp && ./configure $cfgargs" argpsta
 dotask 1 "argpmake" "makewarn" "cd $BASE/src/argp && $MAKE $makeargs" argpstatus
 dotask 1 "ckargp" "" "cd $BASE/src/argp && $MAKE check" argpstatus
 
-dotask 1 "nettlecfg" "cfgwarn" "cd $BASE/src/nettle && ./configure $cfgargs" nettlestatus
+dotask 1 "nettlecfg" "cfgwarn" "cd $BASE/src/nettle && ./configure $cfgargs $cfgdepargs" nettlestatus
 dotask 1 "nettlemake" "makewarn" "cd $BASE/src/nettle && $MAKE $makeargs" nettlestatus
 dotask 1 "cknettle" "" "cd $BASE/src/nettle && $MAKE check" nettlestatus
 
