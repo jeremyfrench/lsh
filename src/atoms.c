@@ -25,7 +25,7 @@
 
 #include "atoms.h"
 
-#include <strings.h>
+#include <string.h>
 
 struct atom_rassoc
 {
