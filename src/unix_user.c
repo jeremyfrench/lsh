@@ -37,10 +37,15 @@
 #include <string.h>
 #include <time.h>
 
+#include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
+#include <sys/wait.h>
 
 #include <signal.h>
 
@@ -216,6 +221,7 @@ make_process_resource(pid_t pid, int signal)
   return &self->super;
 }
 
+
 /* GABA:
    (class
      (name unix_user)
@@ -224,6 +230,9 @@ make_process_resource(pid_t pid, int signal)
        (gid . gid_t)
        ; Needed for the USER_READ_FILE method
        (backend object io_backend)
+       
+       ; Helper program for checking passwords. Primarily used for Kerberos.
+       (pw_helper . "const char *")
        
        ; These strings include a terminating NUL-character, for 
        ; compatibility with library and system calls. This applies also
@@ -234,6 +243,95 @@ make_process_resource(pid_t pid, int signal)
        (shell string))) */
 
 
+#if WITH_KERBEROS
+static int
+kerberos_check_pw(const char *helper, struct unix_user *user, struct lsh_string *pw)
+{
+  /* Because kerberos is big and complex, we fork a separate process
+   * to do the work.
+   *
+   * NOTE: This function can block if communication with the kdc
+   * hangs. To get it right, the the USER_VERIFY_PASSWORD method has
+   * to take a continuation argument. */
+
+  int in[2];
+  pid_t child;
+  
+  if (!lsh_make_pipe(in))
+    {
+      werror("kerberos_check_pw: Failed to create pipe.\n");
+      return 0;
+    }
+  
+  child = fork();
+  
+  switch (child)
+    {
+    case -1:
+      werror("kerberos_check_pw: fork() failed: %z\n", STRERROR(errno));
+      return 0;
+
+    case 0:
+      {  /* Child */
+	int null_fd;
+      
+	null_fd = open("/dev/null", O_RDWR);
+	if (null_fd < 0)
+	  {
+	    werror("kerberos_check_pw: Failed to open /dev/null.\n");
+	    _exit(EXIT_FAILURE);
+	  }
+	if (dup2(in[0], STDIN_FILENO) < 0)
+	  {
+	    werror("kerberos_check_pw: Can't dup stdin!\n");
+	    _exit(EXIT_FAILURE);
+	  }
+
+	if (dup2(null_fd, STDOUT_FILENO) < 0)
+	  {
+	    werror("kerberos_check_pw: Can't dup stdout!\n");
+	    _exit(EXIT_FAILURE);
+	  }
+
+	if (dup2(null_fd, STDERR_FILENO) < 0)
+	  {
+	    _exit(EXIT_FAILURE);
+	  }
+      
+	close(in[1]);
+	close(null_fd);
+
+	execl(helper, helper, user->super.name->data);
+	_exit(EXIT_FAILURE);
+      }
+    default:
+      {
+	/* Parent */
+	const struct exception *e;
+	int status;
+	
+	close(in[0]);
+
+	e = write_raw(in[1], pw->length, pw->data);
+	close(in[1]);
+
+	if (e)
+	  werror("kerberos_check_pw: writing password failed: %z.\n",
+		 e->msg);
+
+	if (waitpid(child, &status, 0) > 0)
+	  return !e && WIFEXITED(status)
+	    && (WEXITSTATUS(status) == EXIT_SUCCESS);
+
+	werror("kerberos_check_pw: waitpid failed (%i): %z.\n",
+	       errno, STRERROR(errno));
+
+	return 0;
+      }
+    }
+}
+#endif
+
 /* NOTE: Calls functions using the *ugly* convention of returning
  * pointers to static buffers. */
 static int
@@ -243,7 +341,17 @@ do_verify_password(struct lsh_user *s,
 {
   CAST(unix_user, user, s);
   char *salt;
-  
+    
+#if WITH_KERBEROS
+  if (user->pw_helper && kerberos_check_pw(user->pw_helper, user, password))
+    {
+      if (free)
+	lsh_string_free(password);
+      
+      return 1;
+    }
+#endif /* WITH_KERBEROS */
+
   /* NOTE: We don't allow login to accounts with empty passwords. */
   if (!user->passwd || (user->passwd->length < 2) )
     {
@@ -548,6 +656,7 @@ static struct lsh_user *
 make_unix_user(struct lsh_string *name,
 	       uid_t uid, gid_t gid,
 	       struct io_backend *backend,
+	       const char *pw_helper,
 	       const char *passwd,
 	       const char *home,
 	       const char *shell)
@@ -568,6 +677,7 @@ make_unix_user(struct lsh_string *name,
   user->gid = gid;
 
   user->backend = backend;
+  user->pw_helper = pw_helper;
   
   /* Treat empty strings as NULL. */
 
@@ -586,6 +696,7 @@ make_unix_user(struct lsh_string *name,
      (super user_db)
      (vars
        (backend object io_backend)
+       (pw_helper . "const char *")
        (allow_root . int)))
 */
 
@@ -678,20 +789,19 @@ do_lookup_user(struct user_db *s,
 #endif /* HAVE_GETSPNAM */
 	crypted = passwd->pw_passwd;
 
-      /* FIXME: If we are running as the uid of the user, it seems
+      /* NOTE: If we are running as the uid of the user, it seems
        * like a good idea to let the HOME environment variable
        * override the passwd-database. */
 
-#if 1
       if (! (passwd->pw_uid
 	     && (passwd->pw_uid == getuid())
 	     && (home = getenv("HOME"))))
-#endif
 	home = passwd->pw_dir;
       
-      return make_unix_user(name,
+      return make_unix_user(name, 
 			    passwd->pw_uid, passwd->pw_gid,
 			    self->backend,
+			    self->pw_helper,
 			    crypted,
 			    home, passwd->pw_shell);
     }
@@ -704,12 +814,14 @@ do_lookup_user(struct user_db *s,
 }
 
 struct user_db *
-make_unix_user_db(struct io_backend *backend, int allow_root)
+make_unix_user_db(struct io_backend *backend, const char *pw_helper,
+		  int allow_root)
 {
   NEW(unix_user_db, self);
 
   self->super.lookup = do_lookup_user;
   self->backend = backend;
+  self->pw_helper = pw_helper;
   self->allow_root = allow_root;
 
   return &self->super;
