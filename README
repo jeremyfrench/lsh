@@ -15,6 +15,7 @@ with
 
    ./configure
    make
+   make install
 
 You need GNU make. Some shells have had bugs preventing them from
 executing the configure script; if you experience problems, try
@@ -27,10 +28,9 @@ version 2.52), automake (at least version 1.6.1), bash, gcc, gperf (at
 least version 2.7) and a scheme implementation. The currently
 supported schemes are guile and scsh (at least version 0.5.2). All but
 scsh can be found at your local GNU mirror site. scsh, Olin Shiver's
-Scheme Shell, can be downloaded from <URL:
-ftp://ftp-swiss.ai.mit.edu/pub/su/scsh/scsh.tar.gz>. If you use guile,
-you also need the slib library, which is usually distributed
-separately. It's also available at the GNU mirrors.
+Scheme Shell, can be downloaded from <URL: http://www.scsh.net>. If
+you use guile, you also need the slib library, which is usually
+distributed separately. It's also available at the GNU mirrors.
 
 If you have checked out lsh from CVS, things are more complicated. You
 must first generate Makefile.am files from the corresponding
@@ -71,19 +71,25 @@ as root.
 
 Some examples...
 
-Create a new DSS key pair, and save it in NEW_KEY and NEW_KEY.pub:
+Create a new DSS key pair, and save it in ~/.lsh/identity and
+~/.lsh/identity.pub: 
 
-  ./lsh-keygen  -l 8 | ./lsh-writekey -o NEW_KEY
+  lsh-keygen -l 8 | lsh-writekey
 
-Start an lshd server on port 4711, using the key created above as the
-server host key:
+To create a key for the server, using the server's seed-file and
+storing the result as /etc/lsh_host_key and /etc/lsh_host_key.pub, run
 
-  ./lshd -p 4711 -h NEW_KEY
+  lsh-keygen -l 8 --server | lsh-writekey --server
+
+Start an lshd server in the background, on the default port, using the
+key at /etc/lsh_host_key, created above:
+
+  lshd --daemonic
 
 Connect to an lshd server running on port 4711 on HOST, and attempt to
 log in as USER:
 
-  ./lsh -p 4711 -l USER HOST
+  lsh -p 4711 -l USER HOST
 
 
 MORE INFORMATION
