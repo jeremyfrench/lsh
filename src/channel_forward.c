@@ -105,9 +105,9 @@ do_channel_forward_eof(struct ssh_channel *s)
 {
   CAST(channel_forward, self, s);
 
-  if (shutdown (self->socket->fd, SHUT_WR) < 0)
-    werror("do_channel_forward_eof, shutdown failed, (errno = %i): %z\n",
-	   errno, STRERROR(errno));
+  /* We won't write any more. io.c should make sure that shutdown is called
+   * once the write_buffer is empty. */
+  close_fd_write(self->socket);
 }
 
 
