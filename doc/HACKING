@@ -260,6 +260,16 @@ SOME-STRUCT) is not a valid type). The vars-clause is just like the
 corresponding clause in a class-expression.
 
 
+CAVEATS
+
+The method-like macros (COMMAND_CALL, A_WRITE, SIGN, etc) all evaluate
+their first argument twice.
+
+A good command for finding potential problems is
+
+  grep -n -e '[A-Z]([^),]*(' *.c
+
+
 MEMORY ALLOCATION
 
 As always when writing C programs, memory allocation is the most
