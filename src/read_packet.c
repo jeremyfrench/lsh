@@ -251,6 +251,9 @@ static int do_read_packet(struct read_handler **h,
 		  return 0;
 	      }
 
+	      /* FIXME: Don't fail until the entire MAC has been read.
+	       * Otherwise we will leak information about partially
+	       * correct MAC:s. */
 	      if (!memcmp(mac,
 			  closure->computed_mac + closure->pos,
 			  n))
