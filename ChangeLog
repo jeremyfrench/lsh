@@ -1,3 +1,7 @@
+2004-12-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Bumped version to 2.0.
+
 2004-12-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshg.c (do_exc_lshg_handler): Exit only for EXC_IO_CONNECT
