@@ -23,27 +23,15 @@
 #include "certificate.h"
 #include "parse.h"
 
-#include "io.h"
+#include "misc.h"
 
 #include <nettle/rsa.h>
-
-#include <stdarg.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "getopt.h"
-
-static void
-die(const char *format, ...)
-{
-  va_list args;
-  va_start(args, format);
-  vfprintf(stderr, format, args);
-  va_end(args);
-  exit(EXIT_FAILURE);
-}
 
 static void
 usage(void)
@@ -78,13 +66,14 @@ parse_options(struct sign_options *o,
 	  /* Name, args, flag, val */
 	  { "digest", no_argument, NULL, 'd' },
 	  { "seed-file", required_argument, NULL, 's' },
+	  { "version", no_argument, NULL, 'V' },
+	  { "help", no_argument, NULL, '?' },
 	  { NULL, 0, NULL, 0 }
 	};
 
       int c;
-      int option_index = 0;
      
-      c = getopt_long(argc, argv, "V?s:w:", options, &option_index);
+      c = getopt_long(argc, argv, "V?s:w:", options, NULL);
     
       switch (c)
 	{
@@ -101,6 +90,9 @@ parse_options(struct sign_options *o,
 
 	  return;
 
+	case 'V':
+	  die("spki-make-signature --version not implemented\n");
+	  
 	case 's':
 	  o->seed_file = optarg;
 	  break;
@@ -113,15 +105,6 @@ parse_options(struct sign_options *o,
 	  usage();
 	}
     }
-}
-
-static void *
-xalloc(size_t size)
-{
-  void *p = malloc(size);
-  if (!p)
-    die("Virtual memory exhausted.\n");
-  return p;
 }
 
 int
@@ -183,12 +166,10 @@ main(int argc, char **argv)
      }
    else
      {
-       void *ctx = xalloc(hash_algorithm->context_size);
-       digest = xalloc(hash_algorithm->digest_size);
+       digest = hash_file(hash_algorithm, stdin);
 
-       hash_algorithm->init(ctx);
-       hash_file(hash_algorithm, ctx, stdin);
-       hash_algorithm->digest(ctx, hash_algorithm->digest_size, digest);
+       if (!digest)
+	 die("Reading stdin failed.\n");
      }
 
    mpz_init(s);
