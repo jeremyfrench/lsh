@@ -86,7 +86,7 @@ make_report_exception_info(UINT32 mask, UINT32 value,
      (name report_exception_handler)
      (super exception_handler)
      (vars
-       (info object report_exception_info)))
+       (info const object report_exception_info)))
 */
 
 static void
@@ -94,7 +94,7 @@ do_report_exception_handler(struct exception_handler *s,
 			    const struct exception *x)
 {
   CAST(report_exception_handler, self, s);
-  struct report_exception_info *info = self->info;
+  const struct report_exception_info *info = self->info;
   
   if ( (x->type & info->mask) == info->value)
     werror("%z exception: %z\n", info->prefix, x->msg);
@@ -103,7 +103,7 @@ do_report_exception_handler(struct exception_handler *s,
 }
 
 struct exception_handler *
-make_report_exception_handler(struct report_exception_info *info,
+make_report_exception_handler(const struct report_exception_info *info,
 			      struct exception_handler *parent,
 			      const char *context)
 {

@@ -174,7 +174,7 @@ make_report_exception_info(UINT32 mask, UINT32 value,
 { STATIC_HEADER, m, v, p }
 
 struct exception_handler *
-make_report_exception_handler(struct report_exception_info *info,
+make_report_exception_handler(const struct report_exception_info *info,
 			      struct exception_handler *parent,
 			      const char *context);
 
