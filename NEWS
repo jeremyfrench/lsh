@@ -1,3 +1,10 @@
+NEWS for the 1999-01-01 snapshot:
+
+	ZLIB support. (Baszi)
+	Long key support (needed for 3DES) (Baszi).
+	Fixed configure test for shutdown().
+	Various bug fixes (Ray).
+
 NEWS for the 1998-12-26 snapshot:
 
 	New lsh_keygen program.

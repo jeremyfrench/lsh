@@ -294,7 +294,7 @@ Sat Dec 12 11:11:23 1998    <ray@zensunni>
 Tue Dec  8 10:29:50 1998    <nisse@puck>
 
 	* server_password.c (lookup_user): Integrated support for shadow
- 	passwords, by Keresztfalvi Gabor Agoston <kg230@hszk.bme.hu>.
+ 	passwords, by Keresztg <kg230@hszk.bme.hu>.
 
 	* server.c (do_exit_shell): Close channel, if we have already sent
 	EOF. 
@@ -325,7 +325,7 @@ Fri Dec  4 02:30:28 1998    <nisse@puck>
 Sun Nov 22 00:57:16 1998    <nisse@puck>
 
 	* lsh.c (main): Bug fix (pass *address* of crypto_rc4_algorithm).
- 	Thanks to Keresztfalvi Gabor Agoston <kg230@hszk.bme.hu>.
+ 	Thanks to Keresztg <kg230@hszk.bme.hu>.
 
 	* lshd.c (main): -"-
 
