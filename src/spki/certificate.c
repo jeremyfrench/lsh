@@ -10,6 +10,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Automatically generated files */
+
+/* FIXME: Is there any way to get gperf to declare this function
+ * static? */
+const struct spki_assoc *
+spki_gperf (const char *str, unsigned int len);
+
+#include "spki-gperf.h"
+#include "spki-type-names.h"
+
 static void *
 spki_realloc(struct spki_acl_db *db, void *p, unsigned size)
 {
@@ -109,19 +119,166 @@ spki_principal_by_key(struct spki_acl_db *db,
 
 
 
+enum spki_type
+spki_intern(struct sexp_iterator *i)
+{  
+  if (i->type == SEXP_ATOM
+      && !i->display)
+    {
+      const struct spki_assoc *assoc = spki_gperf(i->atom, i->atom_length);
+
+      if (assoc && sexp_iterator_next(i))
+	return assoc->id;
+    }
+  
+  return 0;
+}
+
+enum spki_type
+spki_get_type(struct sexp_iterator *i)
+{
+  return sexp_iterator_enter_list(i) ? spki_intern(i) : 0;
+}
+
+/* If the type doesn't match, don't move the iterator. */
+/* FIXME: static because enum spki_type isn't defined in the header
+ * file. */
+static int
+spki_check_type(struct sexp_iterator *i, enum spki_type type)
+{
+  struct sexp_iterator before = *i;
+  
+  if (sexp_iterator_enter_list(i)
+      && i->type == SEXP_ATOM
+      && !i->display
+      && i->atom_length == spki_type_names[type].length
+      && !memcmp(i->atom,
+		 spki_type_names[type].name,
+		 spki_type_names[type].length))
+    return 1;
+
+  *i = before;
+  return 0;    
+}
+
+
 /* ACL database */
-struct spki_acl *
+
+static struct spki_principal *
+parse_principal(struct spki_acl_db *db, struct sexp_iterator *i)
+{
+  /* Not implemented */
+  abort();
+}
+
+static struct spki_5_tuple *
+parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i)
+{
+  if (!spki_check_type(i, SPKI_TYPE_ENTRY))
+    return NULL;
+  else
+    {
+      NEW(db, struct spki_5_tuple, acl);
+
+      if (!acl)
+	return NULL;
+
+      acl->issuer = NULL;
+      acl->subject = NULL;
+      acl->flags = 0;
+      acl->tag = NULL;
+
+      while (i->type != SEXP_END)
+	{
+	  enum spki_type type = spki_get_type(i);
+
+	  switch(type)
+	    {
+	    default:
+	      goto fail;
+	      
+	    case SPKI_TYPE_SUBJECT:
+	      if (acl->subject)
+		goto fail;
+	      acl->subject = parse_principal(db, i);
+	      if (!acl->subject)
+		goto fail;
+
+	      
+	      break;
+
+	    case SPKI_TYPE_PROPAGATE:
+	      if (i->type != SEXP_END
+		  || (acl->flags & SPKI_PROPAGATE)
+		  || !sexp_iterator_exit_list(i))
+		goto fail;
+
+	      acl->flags |= SPKI_PROPAGATE;
+	      break;
+
+	    case SPKI_TYPE_TAG:
+	      {
+		const uint8_t *tag;
+		if (acl->tag)
+		  goto fail;
+		
+		tag = sexp_iterator_subexpr(i, &acl->tag_length);
+		if (!tag || i->type != SEXP_END)
+		  goto fail;
+		
+		tag = spki_dup(db, acl->tag_length, tag);
+		if (!tag)
+		  goto fail;
+		break;
+	      }
+	    }
+	}
+      if (!sexp_iterator_exit_list(i))
+	{
+	fail:
+	  if (acl->tag)
+	    FREE(db, acl->tag);
+	  FREE(db, acl);
+	  return NULL;
+	}
+      return acl;
+    }      
+}
+
+int
 spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
 {
-  NEW(db, struct spki_acl, acl);
+  if (!spki_check_type(i, SPKI_TYPE_ACL))
+    return 0;
 
-  /* FIXME: How about detailed error reporting? */
-  if (!acl)
-    return NULL;
+  if (i->type == SEXP_END)
+    /* An empty acl is ok */
+    return 1;
+  
+  if (spki_check_type(i, SPKI_TYPE_VERSION))
+    {
+      uint32_t version;
+      if (sexp_iterator_get_uint32(i, &version)
+	  && i->type != SEXP_END
+	  && sexp_iterator_exit_list(i)
+	  && !version)
+	{
+	  if (i->type == SEXP_END)
+	    /* Empty acl */
+	    return 1;
+	}
+      return 0;
+    }
+  
+  while (i->type != SEXP_END)
+    {
+      struct spki_5_tuple *acl = parse_acl_entry(db, i);
+      if (!acl)
+	return 0;
 
-  if (!sexp_iterator_check_type(i, "acl"))
-    return NULL;
+      acl->next = db->first_acl;
+      db->first_acl = acl;
+    }
 
-  /* XXX */
-  return NULL;  
+  return 1;
 }
