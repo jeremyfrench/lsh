@@ -81,9 +81,6 @@
 struct command_2 lsh_login_command;
 #define LSH_LOGIN (&lsh_login_command.super.super)
 
-struct command options2service;
-#define OPTIONS2SERVICE (&options2service.super)
-
 static struct request_service request_userauth_service =
 STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
 #define REQUEST_USERAUTH_SERVICE (&request_userauth_service.super.super)
@@ -115,9 +112,6 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
        (with_srp_keyexchange . int)
        (with_dh_keyexchange . int)
 
-       ; Command to invoke to start ssh-connection service)
-       (service object command)
-       
        (kex_algorithms object int_list)
        
        (sloppy . int)
@@ -168,18 +162,6 @@ make_options(struct exception_handler *handler,
   return self;
 }
 
-
-/* Request ssh-userauth or ssh-connection service, as appropriate,
- * and pass the options as a first argument. */
-DEFINE_COMMAND(options2service)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(lsh_options, options, a);
-  COMMAND_RETURN(c, options->service);
-}
 
 /* Open hostkey database. By default, "~/.lsh/host-acls". */
 
@@ -666,7 +648,7 @@ DEFINE_COMMAND2(lsh_login_command)
 
 /* Requests the ssh-userauth service, log in, and request connection
  * service. */
-/* GABA:
+/* ;; GABA:
    (expr
      (name make_lsh_userauth)
      (params
@@ -687,21 +669,21 @@ DEFINE_COMMAND2(lsh_login_command)
        (init object make_kexinit)
        (db object lookup_verifier)
        (actions object object_list)
+       (keys object object_list)
        (options object lsh_options))
      (expr (lambda (remote)
                ; What to do with the service
 	       ((progn actions)
-	         ; Initialize service
 		 (init_connection_service
-		   ; Either requests ssh-connection service,
-		   ; or requests and uses the ssh-userauth service.
-		   (options2service options
-		     ; Start the ssh transport protocol
-	             (connection_handshake
-		       handshake init
-		       db
- 		       ; Connect using tcp
-		       (connect_list remote))))))))
+		   (lsh_login options
+		     keys
+		     (request_userauth_service
+		       ; Start the ssh transport protocol
+		       (connection_handshake
+			 handshake init
+			 db
+			 ; Connect using tcp
+			 (connect_list remote)))))))))
 */
 
 
@@ -1110,14 +1092,10 @@ int main(int argc, char **argv, const char** envp)
       werror("Could not resolv address `%z'\n", options->super.target);
       return EXIT_FAILURE;
     }
+  
   spki = read_known_hosts(options);
   keys = read_user_keys(options);
-
-  {
-    CAST_SUBTYPE(command, o, make_lsh_userauth(options, keys));
-    options->service = o;
-  }
-
+  
   {
     struct lsh_object *o =
       make_lsh_connect(
@@ -1140,6 +1118,7 @@ int main(int argc, char **argv, const char** envp)
                          options->sloppy,
                          options->capture_file),
 	queue_to_list(&options->super.actions),
+	keys,
 	options);
     
     CAST_SUBTYPE(command, lsh_connect, o);
