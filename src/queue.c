@@ -1,4 +1,4 @@
-/* queue.c
+/* queue.c 
  *
  * $Id$
  *
@@ -148,6 +148,16 @@ struct lsh_queue_node *lsh_queue_remove_tail(struct lsh_queue *q)
   return n;
 }
 
+struct lsh_queue_node *lsh_queue_peek_head(struct lsh_queue *q)
+{
+  return EMPTYP(q) ? NULL : q->head;
+}
+
+struct lsh_queue_node *lsh_queue_peek_tail(struct lsh_queue *q)
+{
+  return EMPTYP(q) ? NULL : q->tailprev;
+}
+
 static struct object_queue_node *
 make_object_queue_node(struct lsh_object *o)
 {
@@ -170,24 +180,40 @@ void object_queue_add_tail(struct object_queue *q, struct lsh_object *o)
 }
 
 static struct lsh_object *
-object_queue_get_contents(struct object_queue_node *n)
+object_queue_get_contents(struct lsh_queue_node *l)
 {
+  struct object_queue_node *n = (struct object_queue_node *) l;
+  
   struct lsh_object *res = n->o;
   lsh_space_free(n);
 
   return res;
 }
 
+static struct lsh_object *
+object_queue_peek(struct lsh_queue_node *n)
+{
+  return ( (struct object_queue_node *) n)->o;
+}
+
 struct lsh_object *object_queue_remove_head(struct object_queue *q)
 {
-  return object_queue_get_contents((struct object_queue_node *)
-				   lsh_queue_remove_head(&q->q));
+  return object_queue_get_contents(lsh_queue_remove_head(&q->q));
 }
 
 struct lsh_object *object_queue_remove_tail(struct object_queue *q)
 {
-  return object_queue_get_contents((struct object_queue_node *)
-				   lsh_queue_remove_tail(&q->q));
+  return object_queue_get_contents(lsh_queue_remove_tail(&q->q));
+}
+
+struct lsh_object *object_queue_peek_head(struct object_queue *q)
+{
+  return EMPTYP(&q->q) ? NULL : object_queue_peek(q->q.head);
+}
+
+struct lsh_object *object_queue_peek_tail(struct object_queue *q)
+{
+  return EMPTYP(&q->q) ? NULL : object_queue_peek(q->q.tailprev);
 }
 
 /* For gc */

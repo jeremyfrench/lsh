@@ -66,6 +66,9 @@ void lsh_queue_remove(struct lsh_queue_node *n);
 struct lsh_queue_node *lsh_queue_remove_head(struct lsh_queue *q);
 struct lsh_queue_node *lsh_queue_remove_tail(struct lsh_queue *q);
 
+struct lsh_queue_node *lsh_queue_peek_head(struct lsh_queue *q);
+struct lsh_queue_node *lsh_queue_peek_tail(struct lsh_queue *q);
+
 #define GABA_DECLARE
 #include "queue.h.x"
 #undef GABA_DECLARE
@@ -92,6 +95,9 @@ void object_queue_add_head(struct object_queue *q, struct lsh_object *o);
 void object_queue_add_tail(struct object_queue *q, struct lsh_object *o);
 struct lsh_object *object_queue_remove_head(struct object_queue *q);
 struct lsh_object *object_queue_remove_tail(struct object_queue *q);
+
+struct lsh_object *object_queue_peek_head(struct object_queue *q);
+struct lsh_object *object_queue_peek_tail(struct object_queue *q);
 
 #define FOR_OBJECT_QUEUE(oq, n)				\
   struct lsh_queue_node *n##_this, *n##_next;			\
