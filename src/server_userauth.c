@@ -86,8 +86,12 @@ static int do_handle_user_auth(struct packet_handler *c,
 	{
 	  if (service
 	      && SERVICE_INIT(service, connection))
-	    /* Access granted */
-	    return A_WRITE(connection->write, format_userauth_success());
+	    { /* Access granted */
+	      /* Ignore any further userauth messages. */
+	      connection->dispatch[SSH_MSG_USERAUTH_REQUEST]
+		= connection->ignore;
+	      return A_WRITE(connection->write, format_userauth_success());
+	    }
 	  else
 	    return attempts
 	      ? A_WRITE(connection->write,
