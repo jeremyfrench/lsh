@@ -20,7 +20,7 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 	lsh-cat-test lshg-1-test lshg-cat-test lshg-cat-2-test \
 	tcpip-local-test tcpip-local-in-use-test tcpip-remote-test \
 	lshg-tcpip-local-test ssh1-fallback-test \
-	rapid7-lsh-test rapid7-lshd-test login-auth-test
+	rapid7-lsh-test rapid7-lshd-test login-auth-test lshd-no-auth-test
 
 TS_ALL = $(TS_PROGS) $(TS_SH)
 
