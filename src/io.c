@@ -953,8 +953,11 @@ address_info2sockaddr(socklen_t *length,
     }
   else
     host = NULL;
-  
-#if HAVE_GETADDRINFO
+
+/* Some systems have getaddrinfo(), but still doesn't implement all of
+ * RFC 2553 */
+#if defined(HAVE_GETADDRINFO) && \
+    defined(HAVE_GAI_STRERROR) && defined(HAVE_AI_NUMERICHOST)
   {
     struct addrinfo hints;
     struct addrinfo *list;
@@ -1006,10 +1009,12 @@ address_info2sockaddr(socklen_t *length,
 
     return res;
   }
-#else /* !HAVE_GETADDRINFO */
+#else
+/* !(defined(HAVE_GETADDRINFO) &&
+     defined(HAVE_GAI_STRERROR) && defined(HAVE_AI_NUMERICHOST) */ 
 
 #if WITH_IPV6
-#warning IPv6 enabled, but getaddrinfo() was not found. 
+#error IPv6 enabled, but getaddrinfo() and friends were not found. 
 #endif
 
   if (a->ip && memchr(a->ip->data, ':', a->ip->length))
