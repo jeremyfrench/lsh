@@ -35,6 +35,7 @@
 #include "daemon.h"
 #include "dsa.h"
 #include "format.h"
+#include "handshake.h"
 #include "io.h"
 #include "io_commands.h"
 #include "lookup_verifier.h"
@@ -210,7 +211,7 @@ make_lshd_options(struct io_backend *backend)
   self->backend = backend;
   self->e = make_lshd_exception_handler(&default_exception_handler,
 					HANDLER_CONTEXT);
-  self->reaper = make_reaper();
+  self->reaper = make_reaper(backend);
   self->random = make_default_random(self->reaper, self->e);
 
   self->signature_algorithms = all_signature_algorithms(&self->random->super);
@@ -631,9 +632,8 @@ main_argp =
 int main(int argc, char **argv)
 {
   struct lshd_options *options;
-    
-  NEW(io_backend, backend);
-  init_backend(backend);
+
+  struct io_backend *backend = make_io_backend();
 
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -762,7 +762,7 @@ int main(int argc, char **argv)
     }
   }
   
-  reaper_run(options->reaper, backend);
+  io_run(backend);
 
   return 0;
 }

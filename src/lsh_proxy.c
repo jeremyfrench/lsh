@@ -37,6 +37,7 @@
 #include "dsa.h"
 #include "format.h"
 #include "gateway_channel.h"
+#include "handshake.h"
 #include "io.h"
 #include "io_commands.h"
 #include "lookup_verifier.h"
@@ -593,9 +594,10 @@ int main(int argc, char **argv)
   
   struct make_kexinit *make_kexinit;
   struct exception_handler *handler;
-  
-  NEW(io_backend, backend);
-  init_backend(backend);
+
+  struct io_backend *backend;
+
+  backend = make_io_backend();
 
 #if WITH_ALF
   proxy_alf_init();
@@ -613,7 +615,7 @@ int main(int argc, char **argv)
     (make_report_exception_info(EXC_IO, EXC_IO, "lsh_proxy: "),
      &default_exception_handler,
      HANDLER_CONTEXT);
-  reaper = make_reaper();  
+  reaper = make_reaper(backend); 
   r = make_default_random(reaper, handler);
 
   algorithms_server = all_symmetric_algorithms();
@@ -832,7 +834,7 @@ int main(int argc, char **argv)
     }
   }
   
-  reaper_run(reaper, backend);
+  io_run(backend);
 
   return 0;
 }
