@@ -10,7 +10,7 @@ TS_DEFINE(»TS_WRITE«, »fputs("$1", stderr);«)
 TS_DEFINE(»TS_MESSAGE«, »TS_WRITE($1 ... )«)
 TS_DEFINE(»TS_OK«, »TS_WRITE(ok.\n)«)
 TS_DEFINE(»TS_FAIL«, »{ TS_WRITE(failed.\n); exit(1); }«)
-
+TS_DEFINE(»TS_CHECK«, »if ($1) TS_OK else TS_FAIL«)
 TS_DEFINE(»TS_STRING«,
 »m4_ifelse(m4_index(»$1«, »"«), 0,
   »ssh_format("%lz", »$1«)«, »simple_decode_hex("m4_translit(»$1«, »0-9a-zA-Z
