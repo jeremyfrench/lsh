@@ -22,7 +22,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "server_publickey.h"
+#include "server_userauth.h"
+#include "userauth.h"
 #include "xalloc.h"
 #include "connection.h"
 #include "parse.h"
@@ -31,7 +32,6 @@
 #include "charset.h"
 #include "ssh.h"
 #include "lookup_verifier.h"
-#include "server_password.h"
 
 #include "server_publickey.c.x"
 
@@ -64,7 +64,7 @@ do_authenticate(struct userauth *s,
   struct verifier *v;
   UINT8 *signature_blob;
   UINT32 signature_length;
-  UINT32 signature_start;
+  UINT32 signature_start = 0;
   UINT32 algorithm;
   int check_key;
 
@@ -79,6 +79,8 @@ do_authenticate(struct userauth *s,
       parse_atom(args, &algorithm) &&
       (keyblob = parse_string_copy(args)) &&
       /* FIXME: Hmm. This code seems somewhat obscure. Hope it works. /nisse */
+      /* FIXME: it does :) It could be replaced by an embedded if
+       * statement /bazsi */
       ((check_key && 
 	(signature_start = args->pos) && 
 	(parse_string(args, &signature_length, &signature_blob)) &&
