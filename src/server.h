@@ -26,10 +26,9 @@
 
 #include "io.h"
 #include "keyexchange.h"
-#include "password.h"
-#include "reaper.h"
 #include "ssh1_fallback.h"
 
+#if 0
 struct fd_listen_callback *
 make_server_callback(struct io_backend *b,
 		     const char *comment,
@@ -44,28 +43,8 @@ struct read_handler *make_server_read_line(struct ssh_connection *c,
 					   int fd,
 					   struct ssh1_fallback *fallback);
 struct close_callback *make_server_close_handler(struct ssh_connection *c);
+#endif
 
-struct ssh_channel *make_server_session(struct unix_user *user,
-					UINT32 max_window,
-					struct alist *request_types);
-
-struct unix_service *
-make_server_connection_service(struct alist *global_requests,
-			       struct alist *session_requests,
-			       struct io_backend *backend);
-
-struct channel_open *make_open_session(struct unix_user *user,
-				       struct alist *session_requests);
-
-struct channel_request *make_shell_handler(struct io_backend *backend,
-					   struct reap *reap);
-
-struct lsh_string *format_exit_signal(struct ssh_channel *channel,
-				      int core, int signal);
-struct lsh_string *format_exit(struct ssh_channel *channel, int value);
-
-struct resource *make_process_resource(pid_t pid, int signal);
-
-struct channel_request *make_pty_handler(void);
+struct command *make_offer_service(struct alist *services);
 
 #endif /* LSH_SERVER_H_INCLUDED */
