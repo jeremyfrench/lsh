@@ -135,11 +135,6 @@ init_client_options(struct client_options *options,
 		    struct exception_handler *handler,
 		    int *exit_code);
 
-struct client_options *
-make_client_options(struct io_backend *backend,
-		    struct exception_handler *handler,
-		    int *exit_code);
-
 struct command *
 client_add_action(struct client_options *options,
 		  struct command *action);

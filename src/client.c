@@ -440,17 +440,6 @@ init_client_options(struct client_options *self,
   object_queue_init(&self->actions);  
 }
 
-struct client_options *
-make_client_options(struct io_backend *backend,
-		    struct exception_handler *handler,
-		    int *exit_code)
-{
-  NEW(client_options, self);
-
-  init_client_options(self, backend, handler, exit_code);
-  return self;
-}
-
 /* Host to connect to */
 DEFINE_COMMAND_SIMPLE(client_options2remote, a)
 {
