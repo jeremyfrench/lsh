@@ -41,7 +41,7 @@ noinst_LIBRARIES = liblsh.a
 # compiled or dependency checked independently.
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
-	packet_types.h environ.h
+	packet_types.h
 
 # BUILT_SOURCES = config_parse.c
 
