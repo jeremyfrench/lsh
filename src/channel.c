@@ -158,6 +158,8 @@ struct channel_table *make_channel_table(void)
   table->used_channels = 0;
   table->max_channels = MAX_CHANNELS;
 
+  table->pending_close = 0;
+  
   return table;
 };
 
@@ -220,8 +222,29 @@ struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i)
     ? table->channels[i] : NULL;
 }
 
-/* Channel related messages */
+static int channel_process_status(struct channel_table *table,
+				  int channel,
+				  int status)
+{
+  if (status & LSH_CHANNEL_PENDING_CLOSE)
+    table->pending_close = 1;
+  
+  if (status & LSH_CHANNEL_FINISHED)
+    {
+      /* Clear this bit */
+      status &= ~LSH_CHANNEL_FINISHED;
+      
+      dealloc_channel(table, channel);
 
+      /* If this was the last channel, close connection */
+      if (table->pending_close && !table->next_channel)
+	status |= LSH_CLOSE;
+    }
+
+  return status;
+}
+
+/* Channel related messages */
 static int do_global_request(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
@@ -290,6 +313,13 @@ static int do_channel_open(struct packet_handler *c,
       int local_channel_number;
       
       lsh_string_free(packet);
+
+      if (closure->super.table->pending_close)
+	/* We are waiting for channels to close. Don't open any new ones. */
+	return A_WRITE(connection->write,
+		       format_open_failure(remote_channel_number,
+					   SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
+					   "Waiting for channels to close.", ""));
       
       if (!type || !(open = ALIST_GET(closure->channel_types, type)))
 	return A_WRITE(connection->write,
@@ -330,7 +360,8 @@ static int do_channel_open(struct packet_handler *c,
 		     args
 		     ? format_open_confirmation(channel, local_channel_number,
 						"%lfS", args)
-		     : format_open_confirmation(channel, local_channel_number, ""));
+		     : format_open_confirmation(channel, local_channel_number,
+						""));
     }
   lsh_string_free(packet);
 
@@ -370,7 +401,9 @@ static int do_channel_request(struct packet_handler *c,
 
 	  if (type && channel->request_types 
 	      && ( (req = ALIST_GET(channel->request_types, type)) ))
-	    return CHANNEL_REQUEST(req, channel, want_reply, &buffer);
+	    return channel_process_status
+	      (closure->table, channel_number,
+	       CHANNEL_REQUEST(req, channel, want_reply, &buffer));
 	  else
 	    return want_reply
 	      ? A_WRITE(connection->write,
@@ -420,7 +453,9 @@ static int do_window_adjust(struct packet_handler *c,
 	    {
 	      channel->send_window_size += size;
 	      if (channel->send_window_size && channel->send)
-		CHANNEL_SEND(channel);
+		return channel_process_status(closure->table,
+					      channel_number,
+					      CHANNEL_SEND(channel));
 	    }
 	  return LSH_OK | LSH_GOON;
 	}
@@ -490,8 +525,10 @@ static int do_channel_data(struct packet_handler *c,
 		    return res;
 		}
 
-	      return res | CHANNEL_RECIEVE(channel, 
-					   CHANNEL_DATA, data);
+	      return channel_process_status(
+		closure->table, channel_number,
+		res | CHANNEL_RECIEVE(channel, 
+				      CHANNEL_DATA, data));
 	    }
 	  return LSH_OK | LSH_GOON;
 	}
@@ -568,8 +605,10 @@ static int do_channel_extended_data(struct packet_handler *c,
 	      switch(type)
 		{
 		case SSH_EXTENDED_DATA_STDERR:
-		  return res | CHANNEL_RECIEVE(channel, 
-					       CHANNEL_STDERR_DATA, data);
+		  return channel_process_status(
+		    closure->table, channel_number,
+		    res | CHANNEL_RECIEVE(channel, 
+					  CHANNEL_STDERR_DATA, data));
 		default:
 		  werror("Unknown type %d of extended data.\n",
 			 type);
@@ -631,9 +670,12 @@ static int do_channel_eof(struct packet_handler *c,
 	      /* Both parties have sent EOF. Initiate close, if we
 	       * havn't done that already. */
 
-	      return (channel->flags & CHANNEL_SENT_CLOSE)
-		? LSH_OK | LSH_GOON
-		: channel_close(channel);
+	      if (channel->flags & CHANNEL_SENT_CLOSE)
+		return LSH_OK | LSH_GOON;
+	      else
+		return channel_process_status(
+		  closure->table, channel_number,
+		  channel_close(channel));
 	    }
 	  return LSH_OK | LSH_GOON;
 	}
@@ -680,14 +722,16 @@ static int do_channel_close(struct packet_handler *c,
 
 	  channel->flags |= CHANNEL_RECIEVED_CLOSE;
 	  
-	  if (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_SENT_EOF))
+	  if (! (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_SENT_EOF)))
 	    {
 	      werror("Unexpected channel CLOSE.\n");
 	    }
 	  
-	  return (channel->flags & (CHANNEL_SENT_CLOSE))
-	    ? LSH_OK | LSH_CHANNEL_FINISHED
-	    : LSH_OK | LSH_GOON;
+	  return channel_process_status(
+	    closure->table, channel_number,
+	    ( (channel->flags & (CHANNEL_SENT_CLOSE))
+	      ? LSH_OK | LSH_CHANNEL_FINISHED
+	      : channel_close(channel)));
 	}
       werror("CLOSE on non-existant channel %d\n",
 	     channel_number);
@@ -734,7 +778,8 @@ static int do_channel_open_confirm(struct packet_handler *c,
 	  channel->send_window_size = window_size;
 	  channel->send_max_packet = max_packet;
 
-	  return CHANNEL_OPEN_CONFIRM(channel);
+	  return channel_process_status(closure->table, local_channel_number,
+					CHANNEL_OPEN_CONFIRM(channel));
 	}
       werror("Unexpected SSH_MSG_CHANNEL_OPEN_CONFIRMATION on channel %d\n",
 	     local_channel_number);
@@ -783,9 +828,9 @@ static int do_channel_open_failure(struct packet_handler *c,
 	  int res = CHANNEL_OPEN_FAILURE(channel);
 
 	  lsh_string_free(packet);
-	  dealloc_channel(closure->table, channel_number);
-	  
-	  return res;
+
+	  return channel_process_status(closure->table, channel_number,
+					res | LSH_CHANNEL_FINISHED);
 	}
       werror("Unexpected SSH_MSG_CHANNEL_OPEN_FAILURE on channel %d\n",
 	     channel_number);
@@ -822,8 +867,8 @@ static int do_channel_success(struct packet_handler *c,
       lsh_string_free(packet);
       
       if (channel && channel->channel_success)
-	return CHANNEL_SUCCESS(channel);
-      
+	return channel_process_status(closure->table, channel_number,
+				      CHANNEL_SUCCESS(channel));
     }
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
@@ -854,8 +899,8 @@ static int do_channel_failure(struct packet_handler *c,
       lsh_string_free(packet);
       
       if (channel && channel->channel_failure)
-	return CHANNEL_FAILURE(channel);
-      
+	return channel_process_status(closure->table, channel_number,
+				      CHANNEL_FAILURE(channel));
     }
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;

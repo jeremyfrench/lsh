@@ -116,6 +116,7 @@ struct channel_table
    * better to store this in the connection struct */
   uid_t user;  /* Authenticated user */
 #endif
+
   /* Channels are indexed by local number */
   struct ssh_channel **channels;
 
@@ -127,6 +128,12 @@ struct channel_table
   UINT32 next_channel;
   UINT32 used_channels;
   UINT32 max_channels; /* Max number of channels allowed */
+
+  /* If non-zero, close connection after all active channels have died. */
+  int pending_close;
+
+  /* FIXME: Perhaps we should use an flag to indicate whether or not
+   * new channels can be opened? */
 };
 
 /* SSH_MSG_GLOBAL_REQUEST */
