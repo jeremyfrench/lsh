@@ -7,6 +7,6 @@
 
 #include "abstract_crypto.h"
 
-struct crypto_instance crypto_none_instance;
+extern struct crypto_instance crypto_none_instance;
 
 #endif

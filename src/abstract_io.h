@@ -42,7 +42,7 @@ typedef struct read_handler * (*read_handler_f)(struct read_handler *closure,
 struct read_handler
 {
   int (*handler)(struct read_handler **h,
-				  struct abstract_read *read);
+		 struct abstract_read *read);
 };
 
 #define READ_HANDLER(h, read) ((h)->handler(&(h), (read)))
