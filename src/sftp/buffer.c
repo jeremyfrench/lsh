@@ -6,7 +6,11 @@
  */
 
 #include "buffer.h"
+
+#include "sftp.h"
+
 #include <assert.h>
+#include <stdarg.h>
 
 #define FATAL(x) do { fputs("sftp-server: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
 
@@ -242,17 +246,85 @@ sftp_put_string(struct sftp_output *o, UINT32 length, UINT8 *data)
   sftp_put_data(o, length, data);
 }
 
-UINT8 *
-sftp_put_reserve(struct sftp_output *o, UINT32 length)
+UINT32
+sftp_put_reserve_length(struct sftp_output *o)
 {
-  UINT8 *result;
+  UINT32 index;
+  sftp_check_output(o, 4);
+
+  index = o->i;
+  o->i += 4;
+
+  return index;
+}
+
+void
+sftp_put_length(struct sftp_output *o,
+		UINT32 index,
+		UINT32 length)
+{
+  assert( (index + 4) < o->i);
+  WRITE_UINT32(o->data + index, length);
+}
+
+void
+sftp_put_final_length(struct sftp_output *o,
+		      UINT32 index)
+{
+  sftp_put_length(o, index, o->i - index);
+}
+
+UINT32
+sftp_put_printf(struct sftp_output *o, const char *format, ...)
+{
+  /* Initial buffer space */
+  size_t needed;
+  int length;
   
-  sftp_check_output(o, length);
+  for (needed = 100;; needed *= 2)
+    {
+      va_list args;
+      
+      va_start(args, format);
 
-  result = o->data + o->i;
+      sftp_check_output(o, needed);
+      length = vsnprintf(o->data + o->i, needed, format, args);
+      
+      va_end(args);
+
+      if ( (length >= 0) && (length < needed))
+	break;
+    }
   o->i += length;
+  
+  return length;
+}
 
-  return result;
+/* If SIZE > 0 it is the desired field length, and
+ * smaller output is padded with blanks. */
+UINT32
+sftp_put_strftime(struct sftp_output *o, UINT32 size, const char *format,
+		  const struct tm *tm)
+{
+  /* Initial buffer space */
+  size_t needed;
+  int length;
+  
+  for (needed = size ? size : 100;; needed *= 2)
+    {
+      sftp_check_output(o, needed);
+      length = strftime(o->data + o->i, needed, format, tm);
+
+      if ( (length >= 0) && (length < needed))
+	break;
+    }
+
+  while ( (unsigned) length < size)
+    o->data[o->i + length++] = ' ';
+
+  o->i += length;
+  
+  return length;
 }
 
 /* The first part of the buffer is always
@@ -315,3 +387,113 @@ sftp_write_packet(struct sftp_output *o)
 #endif /* LSH */
 
 /* General functions */
+
+void
+sftp_clear_attrib(struct sftp_attrib *a)
+{
+  a->flags = 0;
+  a->size = 0;
+  a->uid = 0;
+  a->gid = 0;
+  a->permissions = 0;
+  a->atime = 0;
+  a->mtime = 0;
+};
+
+int
+sftp_skip_extension(struct sftp_input *i)
+{
+  UINT32 length;
+  UINT8 *data;
+  unsigned j;
+  
+  /* Skip name and value*/
+  for (j = 0; j<2; j++)
+    {
+      if (!(data = sftp_get_string(i, &length)))
+	return 0;
+      
+      sftp_free_string(data);
+    }
+  return 1;
+}
+
+int
+sftp_get_attrib(struct sftp_input *i, struct sftp_attrib *a)
+{
+  sftp_clear_attrib(a);
+  
+  if (!sftp_get_uint32(i, &a->flags))
+    return 0;
+
+  if (a->flags & SSH_FILEXFER_ATTR_SIZE)
+    {
+      if (!sftp_get_uint64(i, &a->size))
+	return 0;
+    }
+
+  if (a->flags & SSH_FILEXFER_ATTR_UIDGID)
+    {
+      if (!sftp_get_uint32(i, &a->uid))
+	return 0;
+
+      if (!sftp_get_uint32(i, &a->gid))
+	return 0;
+    }
+
+  if (a->flags & SSH_FILEXFER_ATTR_PERMISSIONS)
+    {
+      if (!sftp_get_uint32(i, &a->permissions))
+	return 0;
+    }
+
+  if (a->flags & SSH_FILEXFER_ATTR_ACMODTIME)
+    {
+      if (!sftp_get_uint32(i, &a->atime))
+	return 0;
+
+      if (!sftp_get_uint32(i, &a->mtime))
+	return 0;
+    }
+
+  if (a->flags & SSH_FILEXFER_ATTR_EXTENDED)
+    {
+      UINT32 count;
+      UINT32 n;
+
+      if (!sftp_get_uint32(i, &count))
+	return 0;
+
+      /* Just skip the extensions */
+      for (n = 0; n < count; n++)
+	if (!sftp_skip_extension(i))
+	  return 0;
+    }
+  return 1;
+}
+
+void
+sftp_put_attrib(struct sftp_output *o, const struct sftp_attrib *a)
+{
+  assert(!a->flags & SSH_FILEXFER_ATTR_EXTENDED);
+  
+  sftp_put_uint32(o, a->flags);
+
+  if (a->flags & SSH_FILEXFER_ATTR_SIZE)
+    sftp_put_uint64(o, a->size);
+
+  if (a->flags & SSH_FILEXFER_ATTR_UIDGID)
+    {
+      sftp_put_uint32(o, a->uid);
+      sftp_put_uint32(o, a->gid);
+    }
+
+  if (a->flags & SSH_FILEXFER_ATTR_PERMISSIONS)
+    sftp_put_uint32(o, a->permissions);
+
+  if (a->flags & SSH_FILEXFER_ATTR_ACMODTIME)
+    {
+      sftp_put_uint32(o, a->atime);
+      sftp_put_uint32(o, a->mtime);
+    }
+}
