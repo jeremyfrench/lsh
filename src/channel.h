@@ -32,6 +32,7 @@
 #include "connection.h"
 #include "parse.h"
 #include "server_pty.h"
+#include "write_buffer.h"
 
 #define GABA_DECLARE
 #include "channel.h.x"
@@ -298,8 +299,8 @@ struct abstract_write *make_channel_write(struct ssh_channel *channel);
 struct abstract_write *make_channel_write_extended(struct ssh_channel *channel,
 						   UINT32 type);
 
-struct io_read_callback *make_channel_read_data(struct ssh_channel *channel);
-struct io_read_callback *make_channel_read_stderr(struct ssh_channel *channel);
+struct io_callback *make_channel_read_data(struct ssh_channel *channel);
+struct io_callback *make_channel_read_stderr(struct ssh_channel *channel);
 
 struct lsh_string *format_global_failure(void);
 struct lsh_string *format_global_success(void);

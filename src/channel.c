@@ -1240,7 +1240,7 @@ do_channel_open_failure(struct packet_handler *closure UNUSED,
 
 	  /* FIXME: It would be nice to pass the message on. */
 	  EXCEPTION_RAISE(channel->e,
-			  make_channel_open_exception(reason, "Refused by server"));
+			  make_channel_open_exception(reason, "Refused by peer"));
 	  EXCEPTION_RAISE(channel->e, &finish_exception);
 	}
       else
@@ -1610,13 +1610,13 @@ make_channel_write_extended(struct ssh_channel *channel,
   return &closure->super.super;
 }
 
-struct io_read_callback *
+struct io_callback *
 make_channel_read_data(struct ssh_channel *channel)
 {
   return make_read_data(channel, make_channel_write(channel));
 }
 
-struct io_read_callback *
+struct io_callback *
 make_channel_read_stderr(struct ssh_channel *channel)
 {
   return make_read_data(channel,
