@@ -91,8 +91,9 @@ make_ssh_hostkey_tag(struct address_info *host)
 	}
     }
 
-  tag = lsh_sexp_format(0, "(%0s%s)",
-			"ssh-hostkey", reversed->length, reversed->data);
+  tag = lsh_sexp_format(0, "(%0s(%0s%s))",
+			"tag", "ssh-hostkey",
+			reversed->length, reversed->data);
   lsh_string_free(reversed);
 
   return tag;
@@ -218,6 +219,16 @@ do_spki_acl_db_free(struct spki_acl_db *db)
   spki_acl_clear(db);
 }
 
+/* FIXME: This functions seems a little redundant. Perhaps change it
+ * to take a string argument, and let it loop over an acl list? Then
+ * lsh.c need no longer include spki/parse.h. */
+int
+spki_add_acl(struct spki_context *ctx,
+             struct spki_iterator *i)
+{
+  return spki_acl_parse(&ctx->db, i);
+}
+
 struct spki_principal *
 spki_lookup(struct spki_context *self,
 	    unsigned length,
@@ -231,7 +242,7 @@ spki_lookup(struct spki_context *self,
 
   if (!sexp_iterator_first(&sexp, length, key)
       || !spki_iterator_first_sexp(&i, &sexp)
-      || !spki_parse_principal(&self->db, i, &principal))
+      || !spki_parse_principal(&self->db, &i, &principal))
     {
       werror("do_spki_lookup: Invalid expression.\n");
       return NULL;
@@ -242,7 +253,7 @@ spki_lookup(struct spki_context *self,
       if (v)
 	principal->verifier = v;
       else
-	principal->verifier = spki_make_verifier(self->algorithms);
+	principal->verifier = spki_make_verifier(self->algorithms, &sexp);
     }
   
   return principal;
@@ -250,12 +261,21 @@ spki_lookup(struct spki_context *self,
 
 int
 spki_authorize(struct spki_context *self,
-	       struct spki_principal *user,
+	       const struct spki_principal *user,
 	       time_t t,
 	       const struct lsh_string *access)
 {
-  struct spki_5_tuple *acl;
+  const struct spki_5_tuple *acl;
   struct spki_date date;
+  struct spki_tag *tag;
+  struct spki_iterator i;
+
+  if (!spki_iterator_first(&i, access->length, access->data)
+      || !spki_parse_tag(&self->db, &i, &tag))
+    {
+      werror("spki_authorize: Invalid tag.\n");
+      return 0;
+    }
 
   spki_date_from_time_t(&date, t);
   
@@ -263,11 +283,15 @@ spki_authorize(struct spki_context *self,
        acl;
        acl = spki_acl_by_subject_next(&self->db, acl, user))
     {
-      if (spki_tag_includes(acl->tag, access)
-	  && SPKI_DATE_CMP(acl->not_before, &now) <= 0
-	  && SPKI_DATE_CMP(acl->not_after, &now) >= 0)
-	return 1;
+      if (spki_tag_includes(acl->tag, tag)
+	  && SPKI_DATE_CMP(acl->not_before, date) <= 0
+	  && SPKI_DATE_CMP(acl->not_after, date) >= 0)
+	{
+	  spki_tag_free(&self->db, tag);
+	  return 1;
+	}
     }
+  spki_tag_free(&self->db, tag);
 
   return 0;
 }

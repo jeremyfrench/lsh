@@ -97,17 +97,17 @@ spki_lookup(struct spki_context *self,
 
 int
 spki_authorize(struct spki_context *self,
-	       struct spki_principal *subject,
+	       const struct spki_principal *subject,
 	       time_t t,
 	       /* A tag expression */
-	       struct lsh_string *access);
+	       const struct lsh_string *access);
 
 struct spki_context *
 make_spki_context(struct alist *algorithms);
 
 int
 spki_add_acl(struct spki_context *ctx,
-	     struct sexp_iterator *i);
+	     struct spki_iterator *i);
 
 
 struct lsh_string *
