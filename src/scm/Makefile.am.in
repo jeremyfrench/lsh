@@ -5,4 +5,4 @@ BODY:
 AUTOMAKE_OPTIONS = foreign
 
 EXTRA_DIST = compiler.scm gaba.scm make-char-classes.scm  \
-	guile-compat.scm scsh-compat.scm
+	guile-compat.scm scsh-compat.scm Makefile.am.in
