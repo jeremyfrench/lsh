@@ -1,3 +1,13 @@
+News for the lsh-0.1.12 release
+
+	Tried to fix bugs related to channel close. In the process,
+	improved the resource mechanism, and let each channel
+	have it's own list of resources.
+
+	Fixed configure.in to handle systems with neither scsh or
+	guile installed.
+	
+
 News for the lsh-0.1.11 release
 
 	Support for other scheme implementations in the build process,

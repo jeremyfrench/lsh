@@ -1,3 +1,79 @@
+1999-10-02  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/Makefile.am.in (EXTRA_DIST): Removed make_class,
+	make_char_classes and compiler.scm (which now live in the scm
+	subdirectory). 
+
+	* src/tcpforward_commands.c (new_tcpip_channel): Register the fd
+	on the channel's resources list.
+
+	* configure.in: Bumped version to 0.1.12.
+
+	* src/tcpforward.c (tcpip_channel_start_io): Use
+	make_channel_read_close_callback rather than
+	make_channel_close_callback. I haven't looked into exception
+	handling for i/o errors yet.
+
+	* src/server_session.c (do_alloc_pty): Put the pty on the
+	channel's resources list rather than the connection's.
+
+	* src/client.c (do_send_first): Removed this function.
+	(do_client_io): Fixed setup of fd:s, and their close-callbacks and
+	exception handlers. Also register the fd:s on the channel's
+	resources list.
+
+	* src/server_session.c (do_spawn_shell): Fixed close-callbacks and
+	exception handlers for stdio. Also registers the fd:s on the
+	channel's rather than the connection's resources list.
+
+	* src/read_data.c: Removed all EOF-handling. Perhaps the rest of
+	the code should be moved to channel.c?
+
+	* src/channel.c (do_exc_finish_channel_handler): Kill the channel's
+	resources when it is closed.
+	(register_channel): Register the channel's resources list as an
+	item on the connection's.
+	(init_channel): Initialize resources list.
+	(make_channel_read_close_callback): Renamed from
+	make_channel_close_callback, for the same reason.
+	(channel_io_exception_handler): Exception handler to close the
+	channel on i/o errors. Primarily useful for fd:s the channel
+	writes to.
+	(make_channel_io_exception_handler): New function.
+
+	* src/channel.c (channel_read_close_callback): Renamed from
+	channel_close_callback. The previous behaviour, which used the
+	callback for fd:s the channel writes to, was completely bogus.
+
+	* src/channel.c (channel_close): Do nothing if we have already
+	sent CHANNEL_CLOSE. 
+	(channel_eof): Do nothing if we have already sent CHANNEL_EOF, or
+	either sent or received CHANNEL_CLOSE.
+
+	* src/channel.h (ssh_channel): Added a resources attribute.  
+
+	* src/scm/gaba.scm: Renamed the struct-special type to
+	indirect-special, as it is useful for non-structs.
+
+	* src/debug.c (send_debug_message): New function, to
+	unconditionally send a DEBUG message.
+	(send_debug, send_verbose): Change argument type from struct
+	ssh_connection to struct abstract_write.
+
+	* src/resource.h: Made resource_list inherit
+	resource. This means that KILL_RESOURCE_LIST is now more or less
+	an alias for KILL_RESOURCE. Also made the resource-list behave a
+	little like a weak list.
+
+	* src/resource.c: Dead resources are unlinked from the list
+	automatically while garbage collecting. This means that references
+	from a resource list won't keep a dead resource from being garbage
+	collected.
+
+1999-09-30  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: If no SCHEME_PROGRAM is found, use false.
+
 1999-09-27  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/Makefile.am.in (SUBDIRS): Added scm subdirectory.
