@@ -672,6 +672,110 @@ spki_parse_sequence_no_signatures(struct spki_acl_db *db,
     }
 }
 
+#if 0
+typedef int
+spki_verify_function(void *ctx,
+		     struct spki_principal *issuer,
+		     /* Points at signature */
+		     struct spki_iterator *i,
+		     unsigned length,
+		     const uint8_t *data);
+
+/* Each certificate should be followed by a signature, of the form
+ *
+ * (signature <hash> <principal> <sig-val>)
+ *
+ * To verify it, we need to check three things:
+ *
+ *   1. That the <hash> matches the cetificate expression.
+ *   2. That the <principal> equals the issuer of the certificate.
+ *   3. That the <hash>, <principal> and <sig-val> forms a valid signature.
+ *
+ * Step 3 is the only cryptographic application, and we invoke a callback
+ * to perform that operation.
+ */
+
+struct spki_5_tuple_list *
+spki_parse_sequence(struct spki_acl_db *db,
+		    struct spki_iterator *i,
+		    struct spki_principal **subject,
+		    spki_verify_function *verify)
+{
+  struct spki_5_tuple_list *list = NULL;
+
+  /* When we process a certificate, we store the information needed
+   * to verify the signature that follows it. If NULL, we have no data
+   * that need verification. */
+  const uint8_t *cert_to_verify = NULL;
+  unsigned cert_length;
+  struct spki_principal *issuer = NULL;
+  
+  *subject = NULL;
+  
+  if (!spki_check_type(i, SPKI_TYPE_SEQUENCE))
+    return NULL;
+  
+  for (;;)
+    {
+      switch (i->type)
+	{
+	case SPKI_TYPE_END_OF_EXPR:
+	  if (spki_parse_end(i) && *subject && !cert_to_verify)
+	    return list;
+	  
+	  /* Fall through */
+	default:
+	fail:
+	  spki_5_tuple_list_release(db, list);
+	  *subject = NULL;
+	  return NULL;
+	  
+	case SPKI_TYPE_CERT:
+	  if (cert_to_verify)
+	    /* Previous cert not yet verified. */
+	    goto fail;
+	  {
+	    struct spki_5_tuple *cert = spki_5_tuple_cons_new(db, &list);
+	    
+	    if (!cert)
+	      goto fail;
+
+	    if (!spki_parse_cert(db, i, cert))
+	      goto fail;
+
+	    assert(cert->subject);
+	    *subject = cert->subject;
+	    
+	    break;
+	  }
+	case SPKI_TYPE_PUBLIC_KEY:
+	  {
+	    /* Just remember key. */
+	    unsigned start = i->start;
+
+	    unsigned key_length;
+	    const uint8_t *key;
+
+	    if (spki_parse_skip(i))
+	      {
+		key = spki_parse_prevexpr(i, start, &key_length);
+		assert(key);
+		*subject = spki_principal_by_key(db, key_length, key);
+		if (!*subject)
+		  goto fail;
+	      }
+	    break;
+	  }
+	case SPKI_TYPE_SIGNATURE:
+	case SPKI_TYPE_DO:
+	  /* Ignore */
+	  spki_parse_skip(i);
+	  break;
+	}
+    }
+}
+#endif
+
 
 
 /* Dates */
