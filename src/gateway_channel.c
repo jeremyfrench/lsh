@@ -83,7 +83,8 @@ do_send_adjust(struct ssh_channel *s,
 	       UINT32 i)
 {
   CAST(gateway_channel, self, s);
-  FLOW_CONTROL_REPORT(&self->chain->super.super, i);
+  if (i)
+    FLOW_CONTROL_REPORT(&self->chain->super.super, i);
 }
 
 static void
@@ -109,7 +110,8 @@ gateway_init_io(struct gateway_channel *channel)
   channel->super.close = do_close;
 }
 
-/* NOTE: We don't initialize the rec_window_size and rec_max_packet fields here.
+/* NOTE: We don't initialize the rec_window_size and rec_max_packet
+ * fields here.
  *
  * The origin's rec_window_size and rec_max_packet are filled in
  * later, by do_gateway_channel_open_continuation. The target's
