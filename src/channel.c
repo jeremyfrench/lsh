@@ -48,12 +48,12 @@
        ; Supported global requests 
        (global_requests object alist)
 
-       (channel_types object alist)
+       (channel_types object alist) ))
 
        ; Initialize connection (for instance, request channels to be 
        ; opened or services to be forwarded).
 
-       (start object connection_startup)))
+       ; (start object connection_startup)))
 */
 
 /* GABA:
@@ -345,6 +345,7 @@ static int do_global_request(struct packet_handler *c,
   END (packet);
 }
 
+#if 1
 /* Callback given to the CHANNEL_OPEN method */
 static int do_channel_open_response(struct channel_open_callback *c,
                                     struct ssh_channel *channel,
@@ -411,8 +412,28 @@ make_channel_open_response(struct ssh_connection* connection,
 
   return closure;
 }
+#endif
 
+#if 0
+/* ;;GABA:
+   (class
+     (name channel_open_continuation)
+     (super command_continuation)
+     (vars
+       (connection object ssh_connection)
+       (remote_channel_number simple UINT32)
+       (window_size simple UINT32)
+       (max_packet simple UINT32)))
+*/
 
+static int do_channel_open_continue(struct command_continuation *c,
+				    struct lsh_object *result)
+{
+  CAST(channel_open_continuation, self, c);
+  CAST_SUBTYPE(channel);
+}
+#endif
+				    
 static int do_channel_open(struct packet_handler *c,
 			   struct ssh_connection *connection,
 			   struct lsh_string *packet)
@@ -558,8 +579,8 @@ static int do_window_adjust(struct packet_handler *closure UNUSED,
 	}
       /* FIXME: What to do now? Should unknown channel numbers be
        * ignored silently? */
-      werror("SSH_MSG_CHANNEL_WINDOW_ADJUST on nonexistant or closed channel %i\n",
-	     channel_number);
+      werror("SSH_MSG_CHANNEL_WINDOW_ADJUST on nonexistant or closed "
+	     "channel %i\n", channel_number);
       return LSH_FAIL | LSH_DIE;
     }
   lsh_string_free(packet);
@@ -590,7 +611,8 @@ static int do_channel_data(struct packet_handler *closure UNUSED,
       lsh_string_free(packet);
       
       if (channel && channel->receive
-	  && !(channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE)))
+	  && !(channel->flags & (CHANNEL_RECEIVED_EOF
+				 | CHANNEL_RECEIVED_CLOSE)))
 	{
 	  if (channel->flags & CHANNEL_SENT_CLOSE)
 	    {
@@ -671,7 +693,8 @@ static int do_channel_extended_data(struct packet_handler *closure UNUSED,
       lsh_string_free(packet);
       
       if (channel && channel->receive
-	  && !(channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE)))
+	  && !(channel->flags & (CHANNEL_RECEIVED_EOF
+				 | CHANNEL_RECEIVED_CLOSE)))
 	{
 	  if (channel->flags & CHANNEL_SENT_CLOSE)
 	    {
@@ -696,7 +719,8 @@ static int do_channel_extended_data(struct packet_handler *closure UNUSED,
 		{
 		  res = A_WRITE(channel->write, prepare_window_adjust
 				(channel,
-				 channel->max_window - channel->rec_window_size));
+				 channel->max_window
+				 - channel->rec_window_size));
 		  if (LSH_CLOSEDP(res))
 		    return res;
 		}
@@ -1072,22 +1096,18 @@ static int do_connection_service(struct command *s,
 
   channel_failure->handler = do_channel_failure;
   connection->dispatch[SSH_MSG_CHANNEL_FAILURE] = channel_failure;
-    
-  return self->start
-    ? CONNECTION_START(self->start, connection)
-    : LSH_OK | LSH_GOON;
+
+  return COMMAND_RETURN(c, connection);
 }
 
 struct command *make_connection_service(struct alist *global_requests,
-					struct alist *channel_types,
-					struct connection_startup *start)
+					struct alist *channel_types)
 {
   NEW(connection_service, self);
 
   self->super.call = do_connection_service;
   self->global_requests = global_requests;
   self->channel_types = channel_types;
-  self->start = start;
   
   return &self->super;
 }
@@ -1334,9 +1354,10 @@ struct lsh_string *prepare_channel_open(struct channel_table *table,
 #undef OPEN_ARGS
 }
 		   
-struct lsh_string *format_channel_request(int type, struct ssh_channel *channel,
-					  int want_reply, const char *format, 
-					  ...)
+struct lsh_string *
+format_channel_request(int type, struct ssh_channel *channel,
+		       int want_reply, const char *format, 
+		       ...)
 {
   va_list args;
   UINT32 l1, l2;
