@@ -21,5 +21,6 @@ lsh_keygen
 lshd
 prime_table
 prime_table.h
+sexp_table.h
 stamp-h
 stamp-h.in
