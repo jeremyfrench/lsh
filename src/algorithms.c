@@ -89,7 +89,8 @@ filter_algorithms_l(struct alist *algorithms, unsigned n, ...);
 static struct int_list *
 default_crypto_algorithms(struct alist *algorithms)
 {
-  return filter_algorithms_l(algorithms, 3,
+  return filter_algorithms_l(algorithms, 4,
+			     ATOM_AES256_CBC,
 			     ATOM_3DES_CBC,
 			     ATOM_BLOWFISH_CBC,
 			     ATOM_ARCFOUR, -1);
@@ -101,11 +102,11 @@ static struct int_list *
 all_crypto_algorithms(struct alist *algorithms)
 {
   return filter_algorithms_l(algorithms, 8,
+                             ATOM_AES256_CBC,
 			     ATOM_3DES_CBC,
 			     ATOM_TWOFISH_CBC, 			   
 			     ATOM_CAST128_CBC,
 			     ATOM_SERPENT_CBC_LOCAL,
-                             ATOM_AES256_CBC,
 			     ATOM_RIJNDAEL_CBC_LOCAL,
 			     ATOM_BLOWFISH_CBC,
 			     ATOM_ARCFOUR, -1);
