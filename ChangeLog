@@ -1,5 +1,16 @@
 2003-02-10  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/dsa.c (do_dsa_sign): Use tokens in format string to
+	lsh_sexp_format. 
+	* src/dsa_keygen.c (dsa_generate_key): Likewise.
+	* src/lsh.c (do_lsh_lookup): Likewise.
+	* src/srp_exchange.c (srp_make_verifier): Likewise.
+	* src/rsa_keygen.c (rsa_generate_key): Likewise.
+	* src/rsa.c (do_rsa_public_spki_key): Likewise.
+
+	* src/sexp-conv.c, src/sexp_test.c: Deleted file, not used
+	anymore.
+
 	* misc/xenofarm.sh: Collect config.h files from subdirectories. 
 
 2003-02-09  Niels Möller  <nisse@cuckoo.hack.org>
