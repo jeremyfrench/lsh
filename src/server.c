@@ -245,6 +245,7 @@ read_host_key(const char *file,
               make_keypair(ATOM_SPKI_SIGN_DSS, spki_public, s));
       break;
 
+    case ATOM_RSA_PKCS1:
     case ATOM_RSA_PKCS1_SHA1:
       add_key(keys,
               make_keypair(ATOM_SSH_RSA, PUBLIC_KEY(v), s));
