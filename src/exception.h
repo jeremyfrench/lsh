@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998, 2002 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -127,16 +127,6 @@ void exception_raise(struct exception_handler *e,
 
 /* DNS errors */
 #define EXC_RESOLVE 0x20001
-
-/* SEXP parse errors */
-#define EXC_SEXP 0x40000
-#define EXC_SEXP_SYNTAX 0x40001
-#define EXC_SEXP_EOF 0x40002
-
-/* SPKI errors */
-#define EXC_SPKI 0x80000
-/* Unexpected or unsupported expression type */
-#define EXC_SPKI_TYPE 0x80001
 
 /* Pausing, used to temporarily stop reading packets on a connection. */
 #define EXC_PAUSE 0x100000
