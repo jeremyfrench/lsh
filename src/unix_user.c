@@ -182,7 +182,7 @@ lsh_make_utmp(struct lsh_user *user,
 /* GABA:
    (class
      (name process_resource)
-     (super resource)
+     (super lsh_process)
      (vars
        (pid . pid_t)
        ; Signal used for killing the process.
@@ -194,9 +194,9 @@ do_kill_process(struct resource *r)
 {
   CAST(process_resource, self, r);
 
-  if (self->super.alive)
+  if (self->super.super.alive)
     {
-      self->super.alive = 0;
+      self->super.super.alive = 0;
       /* NOTE: This function only makes one attempt at killing the
        * process. An improvement would be to install a callout handler
        * which will kill -9 the process after a delay, if it hasn't died
@@ -210,12 +210,23 @@ do_kill_process(struct resource *r)
     }
 }
 
-static struct resource *
+static int
+do_signal_process(struct lsh_process *s, int signal)
+{
+  CAST(process_resource, self, s);
+  
+  return self->super.super.alive
+    && (kill(self->pid, signal) == 0);
+}
+
+
+static struct lsh_process *
 make_process_resource(pid_t pid, int signal)
 {
   NEW(process_resource, self);
-  resource_init(&self->super, do_kill_process);
-
+  resource_init(&self->super.super, do_kill_process);
+  self->super.signal = do_signal_process;
+  
   self->pid = pid;
   self->signal = signal;
 
@@ -701,7 +712,7 @@ change_uid(struct unix_user *user)
 
 static int
 do_fork_process(struct lsh_user *u,
-		struct resource **process,
+		struct lsh_process **process,
 		struct exit_callback *c,
 		struct address_info *peer, struct lsh_string *tty)
 {
@@ -753,7 +764,7 @@ do_fork_process(struct lsh_user *u,
       
     default: /* Parent */
       *process = make_process_resource(child, SIGHUP);
-      REAP(user->ctx->reaper, child, make_logout_cleanup(*process, log, c));
+      REAP(user->ctx->reaper, child, make_logout_cleanup(&(*process)->super, log, c));
       
       return 1;
     }
