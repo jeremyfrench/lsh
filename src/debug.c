@@ -28,6 +28,7 @@
 #include "connection.h"
 #include "format.h"
 #include "parse.h"
+#include "lsh_string.h"
 #include "ssh.h"
 #include "xalloc.h"
 #include "werror.h"
@@ -48,11 +49,11 @@ do_debug(struct abstract_write *w,
 {
   CAST(packet_debug, closure, w);
 
-  if (!packet->length)
+  if (!lsh_string_length(packet))
     debug("DEBUG: %S empty packet\n", closure->prefix);
   else
     {
-      uint8_t type = packet->data[0];
+      uint8_t type = lsh_string_data(packet)[0];
       if (type == SSH_MSG_USERAUTH_REQUEST)
 	debug("DEBUG: %S %z *****\n",
 	      closure->prefix, packet_types[type]);
@@ -107,7 +108,7 @@ DEFINE_PACKET_HANDLER(, connection_debug_handler, connection UNUSED, packet)
   const uint8_t *msg;
   int language;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (!(parse_uint8(&buffer, &msg_number)
 	&& parse_uint8(&buffer, &always_display)
