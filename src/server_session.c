@@ -915,8 +915,8 @@ do_x11_req(struct channel_request *s UNUSED,
     }
   else
     {
-      werror("Invalid pty request.\n");
-      PROTOCOL_ERROR(e, "Invalid pty request.");
+      werror("Invalid x11 request.\n");
+      PROTOCOL_ERROR(e, "Invalid x11 request.");
     }
 }
 
