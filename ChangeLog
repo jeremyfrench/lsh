@@ -1,3 +1,9 @@
+Wed Mar 10 17:26:59 1999    <nisse@idonex.se>
+
+	* src/command.h (command_simple): New class. Like command, but can
+	return a value immediately, rather than using a continuation
+	function. 
+
 Tue Mar  9 22:18:40 1999    <nisse@idonex.se>
 
 	* src/command.c (make_apply): New function.
