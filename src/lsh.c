@@ -827,7 +827,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
       /* We can't add the gateway action immediately when the -G
        * option is encountered, as we need the name and port of the
-       * remote machine (self->super.remote) first. */
+       * remote machine (self->super.remote) first.
+       *
+       * This breaks the rule that actions should be performed in the
+       * order they are given on the command line. Since we usually
+       * want the gateway action first (e.g. when the testsuite runs
+       * lsh -G -B, and expects the gateway to be up by the time lsh
+       * goes into the background), we prepend it on the list of
+       * actions. */
       if (self->start_gateway)
 	{
 	  struct local_info *gateway;
@@ -848,8 +855,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      break;
 	    }
 	      
-	  client_add_action(&self->super,
-			    make_gateway_setup(gateway));
+	  client_prepend_action(&self->super,
+				make_gateway_setup(gateway));
 	}
 
       if (object_queue_is_empty(&self->super.actions))
