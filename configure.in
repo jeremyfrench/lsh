@@ -184,68 +184,83 @@ AC_CHECK_HEADERS(stropts.h)
 AC_CHECK_HEADERS(syslog.h)
 AC_CHECK_HEADERS(argp.h)
 
-dnl FIXME: Define a new macro for checking if structure members are
-dnl available.
 
-dnl AC_DEFUN(AC_CHECK_MEMBER,
-dnl   [AC_TRY_COMPILE($2,
-dnl 	[ int foo() { ]$3[ x; x.]$4[=0; return 0; }],
-dnl 	$1=yes, $1=no)])
+dnl AC_CHECK_MEMBER(includes, struct, field)
+AC_DEFUN(AC_CHECK_MEMBER,
+[ AC_CACHE_CHECK([if $2 has member $3],
+    lsh_cv_decl_struct_$2_$3,
+    [AC_TRY_COMPILE([$1],
+changequote(<{, }>)dnl
+      <{ struct $2 x; (void) &x.$3; }>,
+changequote([, ])dnl
+      [lsh_cv_decl_struct_$2_$3=yes],
+      [lsh_cv_decl_struct_$2_$3=no])])
+  if eval "test \"`echo '$lsh_cv_decl_struct_'$2`_'$3'\" = yes"; then
+    AC_DEFINE_UNQUOTED(`echo HAVE_$3 | tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'`)
+  fi
+])
 
-    
+
 AC_CHECK_HEADERS(utmp.h, [have_utmp_h=yes], [have_utmp_h=no])
+
 if test x$have_utmp_h = xyes; then
-  AC_CACHE_CHECK(
-    [if struct utmp has a ut_host member],
-    lsh_cv_decl_utmp_have_ut_host,
-dnl AC_CHECK_MEMBER(lsh_cv_decl_utmp_have_ut_host,
-dnl		    [#include <utmp.h>],
-dnl		    struct utmp, [ut_host[0]])
-
-dnl Are the changequote calls really necessary?
-    AC_TRY_COMPILE([#include <utmp.h>],
-      [ 
-changequote(<<, >>)dnl
-         int foo() { struct utmp u; u.ut_host[0] = 'X'; return 0; }
-changequote([, ])dnl
-      ],
-      lsh_cv_decl_utmp_have_ut_host=yes,
-      lsh_cv_decl_utmp_have_ut_host=no))
-      
-  if test x$lsh_cv_decl_utmp_have_ut_host = xyes; then
-    AC_DEFINE(HAVE_UT_HOST)
-  fi
-  AC_CACHE_CHECK(
-    [if struct utmp has a ut_addr member],
-    lsh_cv_decl_utmp_have_ut_addr,
-    AC_TRY_COMPILE([#include <utmp.h>],
-      [ 
-changequote(<<, >>)dnl
-         int foo() { struct utmp u; u.ut_addr[0] = 0; return 0; } 
-changequote([, ])dnl
-      ],
-      lsh_cv_decl_utmp_have_ut_addr=yes,
-      lsh_cv_decl_utmp_have_ut_addr=no))
-
-  if test x$lsh_cv_decl_utmp_have_ut_addr = xyes; then
-    AC_DEFINE(HAVE_UT_ADDR)
-  fi
-  AC_CACHE_CHECK(
-    [if struct utmp has a ut_addr_v6 member],
-    lsh_cv_decl_utmp_have_ut_addr_v6,
-    AC_TRY_COMPILE([#include <utmp.h>],
-      [ 
-changequote(<<, >>)dnl
-         int foo() { struct utmp u; u.ut_addr_v6[0] = 0; return 0; }
-changequote([, ])dnl
-      ],
-      lsh_cv_decl_utmp_have_ut_addr_v6=yes,
-      lsh_cv_decl_utmp_have_ut_addr_v6=no))
-
-  if test x$lsh_cv_decl_utmp_have_ut_addr_v6 = xyes; then
-    AC_DEFINE(HAVE_UT_ADDR_V6)
-  fi
+  AC_CHECK_MEMBER([#include <utmp.h>], [utmp], [ut_host])
+  AC_CHECK_MEMBER([#include <utmp.h>], [utmp], [ut_addr])
+  AC_CHECK_MEMBER([#include <utmp.h>], [utmp], [ut_addr_v6])
 fi
+
+dnl  if test x$have_utmp_h = xyes; then
+dnl    AC_CACHE_CHECK(
+dnl  	 [if struct utmp has a ut_host member],
+dnl  	 lsh_cv_decl_utmp_have_ut_host,
+dnl  dnl AC_CHECK_MEMBER(lsh_cv_decl_utmp_have_ut_host,
+dnl  dnl		    [#include <utmp.h>],
+dnl  dnl		    struct utmp, [ut_host[0]])
+dnl  
+dnl  dnl Are the changequote calls really necessary?
+dnl  	 AC_TRY_COMPILE([#include <utmp.h>],
+dnl  	   [ 
+dnl  changequote(<<, >>)dnl
+dnl  	      int foo() { struct utmp u; u.ut_host[0] = 'X'; return 0; }
+dnl  changequote([, ])dnl
+dnl  	   ],
+dnl  	   lsh_cv_decl_utmp_have_ut_host=yes,
+dnl  	   lsh_cv_decl_utmp_have_ut_host=no))
+dnl  	   
+dnl    if test x$lsh_cv_decl_utmp_have_ut_host = xyes; then
+dnl  	 AC_DEFINE(HAVE_UT_HOST)
+dnl    fi
+dnl    AC_CACHE_CHECK(
+dnl  	 [if struct utmp has a ut_addr member],
+dnl  	 lsh_cv_decl_utmp_have_ut_addr,
+dnl  	 AC_TRY_COMPILE([#include <utmp.h>],
+dnl  	   [ 
+dnl  changequote(<<, >>)dnl
+dnl  	      int foo() { struct utmp u; u.ut_addr[0] = 0; return 0; } 
+dnl  changequote([, ])dnl
+dnl  	   ],
+dnl  	   lsh_cv_decl_utmp_have_ut_addr=yes,
+dnl  	   lsh_cv_decl_utmp_have_ut_addr=no))
+dnl  
+dnl    if test x$lsh_cv_decl_utmp_have_ut_addr = xyes; then
+dnl  	 AC_DEFINE(HAVE_UT_ADDR)
+dnl    fi
+dnl    AC_CACHE_CHECK(
+dnl  	 [if struct utmp has a ut_addr_v6 member],
+dnl  	 lsh_cv_decl_utmp_have_ut_addr_v6,
+dnl  	 AC_TRY_COMPILE([#include <utmp.h>],
+dnl  	   [ 
+dnl  changequote(<<, >>)dnl
+dnl  	      int foo() { struct utmp u; u.ut_addr_v6[0] = 0; return 0; }
+dnl  changequote([, ])dnl
+dnl  	   ],
+dnl  	   lsh_cv_decl_utmp_have_ut_addr_v6=yes,
+dnl  	   lsh_cv_decl_utmp_have_ut_addr_v6=no))
+dnl  
+dnl    if test x$lsh_cv_decl_utmp_have_ut_addr_v6 = xyes; then
+dnl  	 AC_DEFINE(HAVE_UT_ADDR_V6)
+dnl    fi
+dnl  fi
 
 AC_CHECK_HEADERS(utmpx.h)
 
@@ -320,11 +335,28 @@ AC_FUNC_GETPGRP
 AC_CHECK_FUNCS(syslog)
 AC_REPLACE_FUNCS(memxor)
 
-AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
-
 dnl Needed by argp
-AC_REPLACE_FUNCS(mempcpy strndup)
-AC_CHECK_FUNCS(fwrite_unlocked fputs_unlocked)
+AC_CHECK_FUNCS(mempcpy strndup)
+AC_CHECK_FUNCS(flockfile putc_unlocked)
+AC_CHECK_FUNCS(fputs_unlocked fwrite_unlocked)
+
+dnl AC_CHECK_VAR(VAR, INCLUDES)
+AC_DEFUN(AC_CHECK_VAR,
+[ AC_CACHE_CHECK(
+    [for $1],
+    lsh_cv_var_$1,
+    AC_TRY_LINK([$2], [void *p = (void *) &$1;],
+		[lsh_cv_var_$1=yes],
+		[lsh_cv_var_$1=no]))
+  if eval "test \"`echo '$lsh_cv_var_'$1`\" = yes"; then
+    AC_DEFINE_UNQUOTED(HAVE_`echo $1 | tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'`)
+  fi
+])
+
+AC_CHECK_VAR(program_invocation_name, [#include <errno.h>])
+AC_CHECK_VAR(program_invocation_short_name, [#include <errno.h>])
+
+AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
 
 dnl This macro is mentioned in the automake manual, but where is it
 dnl supposed to be defined?
