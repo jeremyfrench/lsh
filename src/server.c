@@ -195,12 +195,12 @@ read_host_key(const char *file,
   
   int algorithm_name;
 
-    if (fd < 0)
+  if (fd < 0)
     {
       werror("Failed to open `%z' for reading %e\n", file, errno);
       return 0;
     }
-
+  
   contents = io_read_file_raw(fd, 5000);
   if (!contents)
     {
@@ -213,6 +213,8 @@ read_host_key(const char *file,
   s = spki_make_signer(signature_algorithms,
 		       contents,
 		       &algorithm_name);
+  lsh_string_free(contents);
+  
   if (!s)
     {
       werror("Invalid host key\n");
