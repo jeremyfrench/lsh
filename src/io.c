@@ -560,7 +560,9 @@ do_buffered_read(struct io_callback *s,
       assert(fd->want_read);
       assert(self->handler);
 
-      close_fd_nicely(fd);
+      /* NOTE: We don't close the fd here, it's up to the read handler
+       * to do that if appropriate. */
+      
       READ_HANDLER(self->handler, 0, NULL);
     }
 	
@@ -593,7 +595,6 @@ do_consuming_read(struct io_callback *c,
   else if (fd->hanged_up)
     {
       /* If hanged_up is set, pretend that read() returned 0 */
-      close_fd_nicely(fd);
       A_WRITE(self->consumer, NULL);
     }
   else
@@ -627,7 +628,9 @@ do_consuming_read(struct io_callback *c,
 	}
       else
 	{
-	  close_fd_nicely(fd);
+	  /* NOTE: We don't close the fd here, it's up to the read handler
+	   * to do that if appropriate. */
+      
 	  A_WRITE(self->consumer, NULL);
 	}
       
@@ -1127,6 +1130,10 @@ sockaddr2info(size_t addr_len UNUSED,
 	return info;
       }
 #endif
+    case AF_UNIX:
+      /* Silently return NULL. This happens when a gateway client
+       * connects. */
+      return NULL;
     default:
       werror("io.c: sockaddr2info(): Unsupported address family.\n");
       return NULL;
