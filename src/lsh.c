@@ -61,10 +61,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -846,13 +842,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case 'i':
-      self->identity = optarg;
+      self->identity = arg;
       break;
 
     CASE_FLAG(OPT_PUBLICKEY, with_publickey);
 
     case OPT_HOST_DB:
-      self->known_hosts = optarg;
+      self->known_hosts = arg;
       break;
       
     case OPT_SLOPPY:
