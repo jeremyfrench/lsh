@@ -85,7 +85,8 @@ DEFINE_COMMAND(io_write_file_command)
 }
 
 struct io_write_file_info *
-make_io_write_file_info(struct lsh_string *name, int flags, int mode, UINT32 block_size)
+make_io_write_file_info(struct lsh_string *name,
+			int flags, int mode, UINT32 block_size)
 {
   NEW(io_write_file_info, self);
   self->name = name;
@@ -100,6 +101,8 @@ make_io_write_file_info(struct lsh_string *name, int flags, int mode, UINT32 blo
 static struct exception resolve_exception =
 STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
 
+/* FIXME: Use a single listen variant that takes an bound fd as
+ * argument. */
 /* Used by do_listen_callback and any other listen variants. Currently
  * doesn't perform any dns lookups. */
 static void
@@ -122,9 +125,8 @@ do_listen(struct address_info *a,
       return;
     }
 
-  fd = io_listen(addr, addr_length,
-		 make_listen_callback(accept_c, e),
-		 e);
+  fd = io_listen(io_bind_sockaddr(addr, addr_length, e),
+		 make_listen_callback(accept_c, e));
   lsh_space_free(addr);
   
   if (!fd)
@@ -310,11 +312,10 @@ do_listen_local(struct command *s,
   CAST_SUBTYPE(command, callback, x);
   
   struct lsh_fd *fd
-    = io_listen_local(self->info,
-		      make_listen_callback(make_apply(callback,
-						      &discard_continuation, e),
-					   e),
-		      e);
+    = io_listen(io_bind_local(self->info, e),
+		make_listen_callback(make_apply(callback,
+						&discard_continuation, e),
+				     e));
   if (!fd)
     EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
 					 NULL, errno, NULL));
