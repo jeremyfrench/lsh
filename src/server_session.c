@@ -453,16 +453,14 @@ spawn_process(struct server_session *session,
   
   session->in
     = io_write(make_lsh_fd
-	       (info->in[1], "child stdin",
+	       (info->in[1], session->pty ? IO_PTY : IO_NORMAL,
+		"child stdin",
 		make_channel_io_exception_handler(&session->super,
 						  "Child stdin: ", 0,
 						  &default_exception_handler,
 						  HANDLER_CONTEXT)),
 	       SSH_MAX_PACKET, NULL);
 
-  if (session->pty)
-    io_set_type(session->in, IO_PTY);
-  
   /* Flow control */
   session->in->write_buffer->report = &session->super.super;
   
@@ -471,7 +469,7 @@ spawn_process(struct server_session *session,
    * better to just send EOF on read errors? */
   session->out
     = io_read(make_lsh_fd
-	      (info->out[0], "child stdout",
+	      (info->out[0], IO_NORMAL, "child stdout",
 	       make_channel_io_exception_handler(&session->super,
 						 "Child stdout: ", 1,
 						 &default_exception_handler,
@@ -481,7 +479,7 @@ spawn_process(struct server_session *session,
   session->err 
     = ( (info->err[0] != -1)
 	? io_read(make_lsh_fd
-		  (info->err[0], "child stderr",
+		  (info->err[0], IO_NORMAL, "child stderr",
 		   make_channel_io_exception_handler(&session->super,
 						     "Child stderr: ", 0,
 						     &default_exception_handler,
