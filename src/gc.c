@@ -170,15 +170,19 @@ void gc_kill(struct lsh_object *o)
 
   o->dead = 1;
 
+#if 0
   debug("gc_kill: Killing object of type %z.\n",
 	o->isa ? o->isa->name : "UNKNOWN");
+#endif
   
   if (o == all_objects)
     {
       struct lsh_class *class;
       
+#if 0
       debug("gc_kill:   Deallocating immediately.\n");
-
+#endif
+      
       for (class = o->isa; class; class = class->super_class)
 	if (class->free_instance)
 	  FREE_INSTANCE(class, o);
@@ -188,8 +192,12 @@ void gc_kill(struct lsh_object *o)
       lsh_object_free(o);
     }
   else
-    debug("gc_kill:   Deferring deallocation to gc_sweep()\n");
-
+    {
+#if 0
+      debug("gc_kill:   Deferring deallocation to gc_sweep()\n");
+#endif
+    }
+  
   sanity_check_object_list();
 }
 
