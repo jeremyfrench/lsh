@@ -24,6 +24,7 @@
  */
 
 #include "bignum.h"
+#include "randomness.h"
 #include "werror.h"
 
 #include <stdlib.h>

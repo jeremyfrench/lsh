@@ -26,8 +26,7 @@
 #ifndef LSH_BIGNUM_H_INCLUDED
 #define LSH_BIGNUM_H_INCLUDED
 
-#include "lsh_types.h"
-#include "randomness.h"
+#include "lsh.h"
 
 /* Needed for the declaration of mpz_out_str */
 #include <stdio.h>
