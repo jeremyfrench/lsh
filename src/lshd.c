@@ -135,6 +135,8 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define OPT_PASSWORD_HELPER 0x224
 
+#define OPT_LOGIN_SHELL 0x225
+
 /* GABA:
    (class
      (name lshd_options)
@@ -163,6 +165,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (with_password . int)
        (allow_root . int)
        (pw_helper . "const char *")
+       (login_shell . "const char *")
        
        (with_tcpip_forward . int)
        (with_pty . int)
@@ -237,6 +240,7 @@ make_lshd_options(struct io_backend *backend)
   self->with_pty = 1;
   self->allow_root = 0;
   self->pw_helper = NULL;
+  self->login_shell = NULL;
   
   self->userauth_methods = NULL;
   self->userauth_algorithms = NULL;
@@ -332,6 +336,10 @@ main_options[] =
   { "no-root-login", OPT_NO_ROOT_LOGIN, NULL, 0,
     "Don't allow root to login (default).", 0 },
 
+  { "login-shell", OPT_LOGIN_SHELL, "Program", 0,
+    "Use this program as the login shell for all users. "
+    "(Experimental)", 0 },
+  
   { "kerberos-passwords", OPT_KERBEROS_PASSWD, NULL, 0,
     "Recognize kerberos passwords, using the helper program "
     "\"" KERBEROS_HELPER "\". This option is experimental.", 0 },
@@ -340,7 +348,7 @@ main_options[] =
 
   { "password-helper", OPT_PASSWORD_HELPER, "Program", 0,
     "Use the named helper program for password verification. "
-    "(experimental).", 0 },
+    "(Experimental).", 0 },
   
   { NULL, 0, NULL, 0, "Offered services:", 0 },
 
@@ -389,7 +397,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	
 	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
 	  user_db = make_unix_user_db(self->backend, self->reaper,
-				      self->pw_helper, self->allow_root);
+				      self->pw_helper, self->login_shell,
+				      self->allow_root);
 	  
 	if (self->with_dh_keyexchange || self->with_srp_keyexchange)
 	  {
@@ -540,6 +549,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case OPT_PASSWORD_HELPER:
       self->pw_helper = arg;
+      break;
+
+    case OPT_LOGIN_SHELL:
+      self->login_shell = arg;
       break;
       
 #if WITH_TCP_FORWARD
