@@ -80,7 +80,7 @@ spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 
 enum spki_type
 spki_parse_tag(struct spki_acl_db *db, struct spki_iterator *i,
-	       struct spki_5_tuple *tuple);
+	       struct spki_tag **tag);
 
 enum spki_type
 spki_parse_date(struct spki_iterator *i,

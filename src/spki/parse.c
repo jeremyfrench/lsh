@@ -25,6 +25,8 @@
 #endif
 
 #include "parse.h"
+#include "tag.h"
+
 #include "nettle/sexp.h"
 
 #include <assert.h>
@@ -80,37 +82,6 @@ spki_parse_type(struct spki_iterator *i)
   return i->type;
 }
 
-#if 0
-/* FIXME: Get rid of this function. */
-
-/* Automatically generated table. */
-#include "spki-type-names.h"
-
-int
-spki_check_type(struct spki_iterator *i, enum spki_type type)
-{
-  struct sexp_iterator before = i->sexp;
-  unsigned start = i->sexp.start;
-
-  if (sexp_iterator_enter_list(&i->sexp)
-      && i->sexp.type == SEXP_ATOM
-      && !i->sexp.display
-      && i->sexp.atom_length == spki_type_names[type].length
-      && !memcmp(i->sexp.atom,
-		 spki_type_names[type].name,
-		 spki_type_names[type].length)
-      && sexp_iterator_next(&i->sexp))
-    {
-      i->type = type;
-      i->start = start;
-
-      return 1;
-    }
-  i->sexp = before;
-  return 0;
-}
-#endif
-
 enum spki_type
 spki_iterator_first(struct spki_iterator *i,
 		    unsigned length, const uint8_t *expr)
@@ -143,13 +114,6 @@ spki_parse_prevexpr(struct spki_iterator *i,
   assert(start < i->start);
   *length = i->start - start;
   return i->sexp.buffer + start;
-}
-
-static const uint8_t *
-spki_next_subexpr(struct spki_iterator *i,
-		  unsigned *length)
-{
-  return sexp_iterator_subexpr(&i->sexp, length);
 }
 
 static const uint8_t *
@@ -227,17 +191,15 @@ spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 
 enum spki_type
 spki_parse_tag(struct spki_acl_db *db, struct spki_iterator *i,
-	       struct spki_5_tuple *tuple)
+	       struct spki_tag **tag)
 {
-  const uint8_t *tag;
   enum spki_type next;
 
   assert(i->type == SPKI_TYPE_TAG);
   
-  return ((tag = spki_next_subexpr(i, &tuple->tag_length))
-	  && (next = spki_parse_end(i))
-	  && (tuple->tag = spki_dup(db, tuple->tag_length, tag)))
-    ? next : 0;
+  return ((*tag = spki_tag_compile(db->realloc_ctx, db->realloc,
+				   &i->sexp))
+	  && (next = spki_parse_end(i)));
 }
 
 enum spki_type
@@ -316,6 +278,7 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
   assert(i->type == SPKI_TYPE_ENTRY);
   
   acl->issuer = NULL;
+  acl->subject = NULL;
   acl->flags = 0;
   acl->tag = NULL;
 
@@ -330,7 +293,7 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
   if (i->type != SPKI_TYPE_TAG)
     return 0;
 
-  spki_parse_tag(db, i, acl);
+  spki_parse_tag(db, i, &acl->tag);
 
   if (i->type == SPKI_TYPE_COMMENT)
     spki_parse_skip(i);
@@ -338,16 +301,7 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
   if (i->type == SPKI_TYPE_VALID)
     spki_parse_valid(i, acl);
 
-  if (spki_parse_end(i))
-    return i->type;
-
-  else if (acl->tag)
-    {
-      SPKI_FREE(db, acl->tag);
-      acl->tag = NULL;
-    }
-  
-  return 0;
+  return spki_parse_end(i);
 }
 
 enum spki_type
@@ -356,7 +310,10 @@ spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
 {
   assert(i->type == SPKI_TYPE_CERT);
   
+  cert->issuer = NULL;
+  cert->subject = NULL;
   cert->flags = 0;
+  cert->tag = NULL;
 
   spki_parse_type(i);
   
@@ -392,7 +349,7 @@ spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
   if (i->type != SPKI_TYPE_TAG)
     return 0;
   
-  spki_parse_tag(db, i, cert);
+  spki_parse_tag(db, i, &cert->tag);
     
   if (i->type == SPKI_TYPE_VALID)
     spki_parse_valid(i, cert);
