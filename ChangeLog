@@ -43,6 +43,38 @@ Tue Sep 21 22:41:47 1999  Niels Möller  <nisse@lysator.liu.se>
 	* src/sexp_streamed_parser.c (make_parse_transport_sexp): Fixed
 	error message.
 
+1999-09-21  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/read_data.c: Removed the EXC_IO_EOF handler.
+
+1999-09-19  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/tcpforward_commands.c (forward_remote_port): Added a call to
+	prog1, to get things evaluated at the right time.
+
+	* src/server_session.c (do_spawn_shell): Simplified handling of
+	exceptions. In particular, removed all handling of EXC_IO_EOF.
+
+	* src/make_class (string-upcase): New function.
+	(make-output): Associate any otherwise undefined global with a C
+	symbol with the same name, but in uppercase.
+
+	* src/lsh_writekey.c (read_sexp): Use transport syntax.
+
+	* src/io.h (callback, callout): New classes. 
+
+	* src/io.c (do_buffered_read): Close fd on EOF.
+	(do_consuming_read): On EOF, pass NULL to the consumer, and close
+	fd. 
+
+	* src/exception.h (EXC_IO_EOF): Commented out this constant.
+
+	* src/channel.c (do_channel_write): Handle EOF here.
+	(do_channel_write_extended): -"-
+
+	* src/sexp_streamed_parser.c (do_parse_base64): Bugfix: Increase
+	done at the start of the loop.
+
 1999-09-09  Balazs Scheidler  <bazsi@balabit.hu>
 
 	* src/lsh.c, src/lshd.c, src/sexp_conv.c: added some uninitialized
