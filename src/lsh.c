@@ -275,7 +275,7 @@ read_user_keys(struct lsh_options *options)
   fd = open(name, O_RDONLY);
   if (fd < 0)
     {
-      werror("Failed to open `%z' for reading %e\n", name, errno);
+      verbose("Failed to open `%z' for reading %e\n", name, errno);
       lsh_string_free(tmp);
 
       return make_object_list(0, -1);
