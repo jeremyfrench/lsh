@@ -43,8 +43,8 @@
 #include "gateway_commands.h"
 #include "handshake.h"
 #include "lookup_verifier.h"
+#include "publickey_crypto.h"
 #include "randomness.h"
-#include "rsa.h"
 #include "sexp.h"
 #include "spki.h"
 #include "srp.h" 
@@ -359,6 +359,7 @@ read_user_keys(struct lsh_options *options)
                               -1);
       break;
 
+    case ATOM_RSA_PKCS1:
     case ATOM_RSA_PKCS1_SHA1:
       return make_object_list(2, 
                               make_keypair(ATOM_SSH_RSA,
