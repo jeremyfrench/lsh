@@ -1,0 +1,45 @@
+#! /bin/awk -f
+
+# Processes lines of the form
+#
+# CLASS:name:super-class[:meta-class]
+#
+# All lines not starting with CLASS are ignored.
+
+# The array classes[0..nclasses-1] lists all classes
+# The mapping super[class] maps each class to it's super class
+# The array nchildren[class] is the number of direct
+# child classes
+# The twodimensional array children[class,i], 0<=i<nchildren[class]
+# is the direct subclasses
+BEGIN { FS = ":" }
+
+$1 == "CLASS" {
+    classes[nclasses++] = $2
+    if ($3) {
+	super[$2] = $3
+	children[$3,nchildren[$3]++] = $2
+    }
+}
+
+END {
+    for (c = 0; c<nclasses; c++) {
+	class = classes[c];
+	printf "%s\n", class;
+	s = super[class];
+	if (s) {
+	    printf "  Inherits: %s", s;
+	    for (s = super[s]; s; s = super[s])
+		printf ", %s", s;
+	    printf "\n"
+	}
+	if (nchildren[class]) {
+	    printf "  Inherited by: %s", children[class,0]
+	    for (i = 1; i < nchildren[class]; i++) {
+		printf ", %s", children[class,i]
+	    }
+	    printf "\n"
+	}
+	printf "\n";
+    }
+}
