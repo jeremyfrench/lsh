@@ -1,3 +1,7 @@
+2002-05-23  Pontus Sköld  <pont@soua.net>
+
+	* sftp_bind.c (lsftp_do_ls): Bail out if globbing failed.
+
 2002-05-15  Pontus Sköld  <pont@soua.net>
 
 	* commands.c (get_file_or_folder): Removed debug message.
