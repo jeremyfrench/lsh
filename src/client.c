@@ -359,21 +359,6 @@ do_send(struct ssh_channel *s,
   self->in->super.want_read = 1;
 }
 
-#if 0
-/* Used for the first callback, to register stdin as a resource. */
-static void
-do_send_first(struct ssh_channel *s,
-	      struct ssh_connection *connection)
-{
-  CAST(client_session, self, s);
-
-  REMEMBER_RESOURCE(channel->resources, &self->in->super.super);
-  s->send = do_send;
-
-  do_send(s, connection);
-}
-#endif
-
 /* We have a remote shell */
 static void
 do_client_io(struct command *s UNUSED,
