@@ -48,7 +48,7 @@
  * ( (modulo <n>) (generator <g>) ) or something like that.
  */
 
-/* Copies the name,rather than consuming it. */
+/* Copies the name, rather than consuming it. */
 struct srp_entry *
 make_srp_entry(struct lsh_string *name, struct sexp *e)
 {
