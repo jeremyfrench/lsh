@@ -51,6 +51,8 @@
 */
 
 /* Callback used when the server sends us eof */
+
+/* FIXME: Perhaps unify with server_session.c:do_eof */
 static void
 do_client_session_eof(struct ssh_channel *c)
 {

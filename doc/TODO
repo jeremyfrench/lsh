@@ -65,6 +65,10 @@ CHANNELS
 
 Implement window-change requests on the server side.
 
+Look at client_session.c:do_client_session_eof() and
+server_session.c:do_eof() and see if they can be unified or perhaps
+even deleted.
+
 
 FREENESS
 
