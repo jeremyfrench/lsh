@@ -185,6 +185,13 @@ do_line(struct line_handler **h,
 		  |= (PEER_SSH_DSS_KLUDGE | PEER_SERVICE_ACCEPT_KLUDGE
 		      | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG);
 	      }
+	    else if ( (swver_len >= 5) && !memcmp(swver, "2.1.0", 5) )
+	      {
+		connection->peer_flags
+		  |= (PEER_SSH_DSS_KLUDGE
+		      | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG);
+		verbose("ssh.com 2.1.0\n");
+	      }
 #endif	    
 	    
 	    new = 
