@@ -1,3 +1,12 @@
+2000-11-27  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Use AC_LIB_ARGP.
+
+	* acinclude.m4 (AC_LIB_ARGP): New test.
+
+	* src/argp/argp-help.c (argp_doc): Use the name strndup, not
+	__strndup. That probably breaks glibc builds.
+
 2000-11-27  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/argp/argp-test.c (asprintf): Bug fix.
