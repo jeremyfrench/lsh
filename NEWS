@@ -1,3 +1,7 @@
+News for the 0.2.2 release
+
+	Bug fixes. Verbose messages on algorithm selection.
+
 News for the 000.2 release
 
 	Bugfixes. New --pty-support and --no-pty-support options for
