@@ -24,7 +24,7 @@ Makefile.am: Makefile.am.in
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
-EXTRA_PROGRAMS = lsh-krb-checkpw srp-gen
+EXTRA_PROGRAMS = lsh-krb-checkpw lsh-pam-checkpw srp-gen
 
 bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey \
 	       lsh-decode-key lsh-export-key lsh-make-seed \
