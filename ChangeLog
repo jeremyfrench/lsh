@@ -1,3 +1,8 @@
+2002-03-20  Pontus Sköld  <pont@r3>
+
+	* src/testsuite/lshg-1-test: grep -q changed to redirection to
+	/dev/null.
+
 2002-03-20  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/run-tests (test_program): Added missing single
