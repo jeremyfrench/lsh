@@ -51,6 +51,7 @@ void set_error_syslog(void);
  * %c  int, interpreted as a single character to output
  * %n  mpz_t
  * %z  NUL-terminated string
+ * %a  Insert a string containing one atom.
  * %s  UINT32 length, UINT8 *data
  * %S  lsh_string *s
  *

@@ -1,3 +1,54 @@
+1999-10-24  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/werror.c (werror_vformat): Added %a format specifier.
+
+	* src/tcpforward.c (do_channel_open_direct_tcpip): Use a better
+	exception handler.
+	(do_channel_open_forwarded_tcpip): -"-
+
+	* src/server_keyexchange.c (do_handle_dh_init): Use trace()
+	instead of verbose():
+
+	* src/read_line.c (make_read_line): Added assert().
+
+	* src/lshd.c (main): Handle i/o exceptions.
+
+	* src/io_commands.c (listen_command_callback): Added exception
+	handler. 
+	(do_listen_continue): Use the proper exception handler.
+	(make_listen_command_callback): Take an exception handler as
+	argument. 
+
+	* src/io.c (io_iter): Moved assert.
+	(do_buffered_read): Treat unexpected EPIPE as an ordinary I/O
+	error.
+	(io_listen): Take an exception handler as argument.
+
+	* src/format.c (ssh_vformat_write): Bug fix.
+
+	* src/exception.c (do_report_exception_handler): Add newline at
+	end of messages.
+	(exception_raise): Fixed format string.
+
+	* src/connection_commands.c (do_connection): Pass the right
+	exceptionhandler to the make_ssh_connection constructor, instead
+	of passing it to connection_init_io later on. This way,
+	make_connection_read_line picks up the right exception handler.
+
+	* src/connection.c (make_ssh_connection): Take an exception
+	handler argument. 
+	(connection_init_io): Don't install any exception handler here;
+	moved to make_ssh_connection instead.
+
+	* src/client_keyexchange.c (do_handle_dh_reply): Use trace() instead
+	of verbose():
+
+	* src/channel_commands.c (do_install_global_request_handler):
+	Friendlier trace messages.
+	(do_install_channel_open_handler): -"-
+	(do_install_fix_global_request_handler): -"-
+	(do_install_fix_channel_open_handler): -"-
+
 1999-10-19  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/mempcpy.c, src/mempcpy.h, src/strndup.c, src/strndup.h:

@@ -334,8 +334,19 @@ void werror_vformat(const char *f, va_list args)
 
 		while (*s)
 		  (do_paranoia ? werror_paranoia_putc : werror_putc)(*s++);
+
+		break;
 	      }
-	      break;
+	    case 'a':
+	      {
+		int atom = va_arg(args, int);
+		
+		assert(atom);
+
+		werror_write(get_atom_length(atom), get_atom_name(atom));
+		
+		break;
+	      }
 	    case 's':
 	      {
 		UINT32 length = va_arg(args, UINT32);
