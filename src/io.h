@@ -33,6 +33,8 @@
 
 #include <time.h>
 #include <netdb.h>
+/* For sig_atomic_t */
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -42,33 +44,10 @@
 #include "io.h.x"
 #undef GABA_DECLARE
 
-#if 0
-/* Close callbacks are called with a reason as argument. */
 
-/* End of file while reading.
- * Or when a closed write_buffer has been flushed successfully.
- * Or when poll() returns POLLHUP. */
-/* FIXME: Should we use separate codes for these two events? */
-#define CLOSE_EOF 1
-
-/* EPIPE when writing */
-#define CLOSE_BROKEN_PIPE 2
-
-#define CLOSE_WRITE_FAILED 3
-
-/* #define CLOSE_READ_FAILED 4 */
-
-#define CLOSE_PROTOCOL_FAILURE 5
-
-/* ;; GABA:
-   (class
-     (name close_callback)
-     (vars
-       (f method void "int reason")))
-*/
-
-#define CLOSE_CALLBACK(c, r) ((c)->f((c), (r)))
-#endif
+/* Declare the class object, so that io_commands.c can refer to it for
+ * type-checking. */
+extern struct lsh_class io_backend_class;
 
 /* GABA:
    (class
@@ -214,30 +193,6 @@ struct listen_value *
 make_listen_value(struct lsh_fd *fd,
 		  struct address_info *peer);
 
-/* Scheduled calls. FIXME: For now, no scheduling in time. */
-/* GABA:
-   (class
-     (name callout)
-     (vars
-       (next object callout)
-       (action object lsh_callback)))
-       ;; (when . time_t)
-*/
-
-/* GABA:
-   (class
-     (name io_backend)
-     (vars
-       ; Linked list of fds. 
-       (files object lsh_fd)
-
-       ; Stack of closed files
-       ;; (closed object lsh_fd)
-       
-       ; Callouts
-       (callouts object callout)))
-*/
-
 /* I/O exceptions */
 /* GABA:
    (class
@@ -261,10 +216,24 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg);
 extern const struct exception finish_read_exception;
 extern const struct exception finish_io_exception;
 
+struct io_backend *
+make_io_backend(void);
+#if 0
 void init_backend(struct io_backend *b);
+#endif
 
 int io_iter(struct io_backend *b);
 void io_run(struct io_backend *b);
+
+struct resource *
+io_signal_handler(struct io_backend *b,
+		  sig_atomic_t *flag,
+		  struct lsh_callback *action);
+
+struct resource *
+io_callout(struct io_backend *b,
+	   UINT32 delay,
+	   struct lsh_callback *action);
 
 int blocking_read(int fd, struct read_handler *r);
 
