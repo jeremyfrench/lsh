@@ -41,6 +41,8 @@ o  The lsh client no longer sets its stdio file descriptors into
    consequence, the --cvs-workaround command line option has been
    deleted.
 
+o  Includes x86 assembler code for arcfour and sha1.
+
 o  Deleted the --ssh1-fallback option for lshd. I hope ssh1 is dead by
    now; if it isn't, you have to run ssh1d and lshd on different
    ports.
@@ -85,9 +87,16 @@ the IETF secsh working group, and interoperates with other
 implementations, including SSH Inc's SSH2 products and OpenSSH. Note
 that LSH is *not* compatible with SSH1.
 
-LSH is reported to have worked at least once on GNU/Linux on Sparc,
-Intel, PPC and Alpha, FreeBSD, Solaris and IRIX. There may well be
-portability problems left, please report them to me.
+LSH is intended to be portable. LSH-2.0 compiles and works on at least
+
+  * GNU/Linux (x86, x86_64, ia64, alpha)
+  
+  * Solaris (sparc)
+
+  * Darwin/MacOS X (ppc)
+  
+The current version probably does not work out of the box on AIX and
+HPUX.
 
 
 QUALITY

@@ -1,5 +1,8 @@
 2004-11-14  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/io.c (handle_nonblock_error): Ignore errno ENOTTY. For some
+	unknown reason, this happens on FreeBSD 5.
+
 	* src/environ.h.in (USER_NAME_FROM_ENV): New macro, which consults
 	both $LOGNAME and $USER.
 	* src/client.c (init_client_options): Use it.
