@@ -28,7 +28,7 @@
 #include "debug.h"
 #include "dsa.h"
 #include "format.h"
-#include "sexp_commands.h"
+#include "sexp.h"
 #include "srp.h"
 #include "ssh.h"
 #include "werror.h"
@@ -241,38 +241,56 @@ do_exc_srp(struct exception_handler *e,
 /* Invoked after that we have read an sexp that represents a user's verifier */
 /* GABA:
    (class
-     (name srp_init_continuation)
-     (super command_continuation)
+     (name server_srp_read_verifier)
+     (super abstract_write)
      (vars
        (srp object srp_server_instance)
        (connection object ssh_connection)))
 */
 
 static void
-do_srp_init_continuation(struct command_continuation *s,
-			 struct lsh_object *a)
+do_server_srp_read_verifier(struct abstract_write *s,
+			      struct lsh_string *file)
 {
-  CAST(srp_init_continuation, self, s);
-  CAST_SUBTYPE(sexp, e, a);
+  CAST(server_srp_read_verifier, self, s);
 
-  self->srp->entry = make_srp_entry(self->srp->user->name, e);
-
-  if (!self->srp->entry)
+  if (!file)
+    /* Read error */
+    disconnect_kex_failed(self->connection,
+			  "Can't read verifier file");
+  
+  else
     {
-      disconnect_kex_failed(self->connection, "Invalid SRP verifier");
-      return;
-    }
+      struct sexp *expr = string_to_sexp(SEXP_CANONICAL, file, 1);
 
-  C_WRITE(self->connection, srp_make_reply_msg(&self->srp->dh, self->srp->entry));
-  self->connection->dispatch[SSH_MSG_KEXSRP_PROOF] = make_srp_server_proof_handler(self->srp);
+      if (!expr)
+	disconnect_kex_failed(self->connection,
+				"S-expression Syntax error in verifier file");
+      else
+	{
+	  self->srp->entry = make_srp_entry(self->srp->user->name, expr);
+	  
+	  if (!self->srp->entry)
+	    disconnect_kex_failed(self->connection, "Invalid SRP verifier");
+	  else
+	    {
+	      /* Success */
+
+	      C_WRITE(self->connection,
+		      srp_make_reply_msg(&self->srp->dh, self->srp->entry));
+	      self->connection->dispatch[SSH_MSG_KEXSRP_PROOF]
+		= make_srp_server_proof_handler(self->srp);
+	    }
+	}
+    }
 }
 
-static struct command_continuation *
-make_server_srp_continuation(struct srp_server_instance *srp,
+static struct abstract_write *
+make_server_srp_read_verifier(struct srp_server_instance *srp,
 			     struct ssh_connection *connection)
 {
-  NEW(srp_init_continuation, self);
-  self->super.c = do_srp_init_continuation;
+  NEW(server_srp_read_verifier, self);
+  self->super.write = do_server_srp_read_verifier;
   self->srp = srp;
   self->connection = connection;
 
@@ -309,11 +327,8 @@ do_handle_srp_init(struct packet_handler *s,
   /* Try opening the user's ~/.lsh/srp-verifier */
   e = make_exception_handler(do_exc_srp, connection->e, HANDLER_CONTEXT);
   
-  USER_READ_FILE(self->srp->user, "srp-verifier", 1,		 
-		 make_apply(make_read_sexp_command(SEXP_CANONICAL, 0, MAX_SRP_SIZE),
-			    make_server_srp_continuation(self->srp, connection),
-			    e),
-		 e);
+  USER_READ_FILE(self->srp->user, "srp-verifier", 1, MAX_SRP_SIZE,
+		 make_server_srp_read_verifier(self->srp, connection));
 }
 
 static struct packet_handler *
