@@ -447,16 +447,6 @@ channel_start_receive(struct ssh_channel *channel,
 	    (channel, initial_window_size - channel->rec_window_size));
 }
 
-
-/* Ugly macros to make it a little simpler to free the input packet at
- * the right time. */
-
-#define RETURN goto foo_finish
-#define END(s) do { foo_finish: \
-                    lsh_string_free((s)); \
-                    return; } while(0)
-
-
 /* Channel related messages */
 
 /* GABA:
@@ -608,8 +598,6 @@ DEFINE_PACKET_HANDLER(static, global_request_handler, connection, packet)
 	}
       if (!req)
 	{
-	  lsh_string_free(packet);
-
 	  C_WRITE(connection, format_global_failure());
 	  return;
 	}
@@ -639,10 +627,7 @@ DEFINE_PACKET_HANDLER(static, global_request_handler, connection, packet)
 	}
     }
   else
-    {
-      PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_GLOBAL_REQUEST message.");
-    }
-  lsh_string_free(packet);
+    PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_GLOBAL_REQUEST message.");
 }
 
 DEFINE_PACKET_HANDLER(static, global_success_handler,
@@ -651,7 +636,7 @@ DEFINE_PACKET_HANDLER(static, global_success_handler,
   if (packet->length != 1)
     {
       PROTOCOL_ERROR(connection->e, "Invalid GLOBAL_REQUEST_SUCCESS message.");
-      RETURN;
+      return;
     }
 
   assert(packet->data[0] == SSH_MSG_REQUEST_SUCCESS);
@@ -666,7 +651,6 @@ DEFINE_PACKET_HANDLER(static, global_success_handler,
 		 object_queue_remove_head(&connection->table->pending_global_requests));
     COMMAND_RETURN(ctx->c, connection);
   }
-  END(packet);
 }
 
 struct exception global_request_exception =
@@ -678,7 +662,7 @@ DEFINE_PACKET_HANDLER(static, global_failure_handler,
   if (packet->length != 1)
     {
       PROTOCOL_ERROR(connection->e, "Invalid GLOBAL_REQUEST_FAILURE message.");
-      RETURN;
+      return;
     }
 
   assert(packet->data[0] == SSH_MSG_REQUEST_FAILURE);
@@ -693,7 +677,6 @@ DEFINE_PACKET_HANDLER(static, global_failure_handler,
 		   object_queue_remove_head(&connection->table->pending_global_requests));
       EXCEPTION_RAISE(ctx->e, &global_request_exception);
     }
-  END(packet);
 }
 
 /* FIXME: Don't store the channel here, instead have it passed as the
@@ -904,8 +887,6 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
     }
   else
     PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_CHANNEL_REQUEST message.");
-  
-  lsh_string_free(packet);
 }
 
 
@@ -1135,8 +1116,6 @@ DEFINE_PACKET_HANDLER(static, channel_open_handler,
     }
   else
     PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_CHANNEL_OPEN message.");
-
-  lsh_string_free(packet);
 }     
 
 DEFINE_PACKET_HANDLER(static, window_adjust_handler,
@@ -1158,8 +1137,6 @@ DEFINE_PACKET_HANDLER(static, window_adjust_handler,
       struct ssh_channel *channel = lookup_channel(connection->table,
 						   channel_number);
 
-      lsh_string_free(packet);
-      
       if (channel
 	  && !(channel->flags & CHANNEL_RECEIVED_CLOSE))
 	{
@@ -1181,10 +1158,7 @@ DEFINE_PACKET_HANDLER(static, window_adjust_handler,
 	}
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_WINDOW_ADJUST message.");
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_WINDOW_ADJUST message.");
 }
 
 DEFINE_PACKET_HANDLER(static, channel_data_handler,
@@ -1206,8 +1180,6 @@ DEFINE_PACKET_HANDLER(static, channel_data_handler,
       struct ssh_channel *channel = lookup_channel(connection->table,
 						   channel_number);
 
-      lsh_string_free(packet);
-      
       if (channel && channel->receive
 	  && !(channel->flags & (CHANNEL_RECEIVED_EOF
 				 | CHANNEL_RECEIVED_CLOSE)))
@@ -1255,10 +1227,7 @@ DEFINE_PACKET_HANDLER(static, channel_data_handler,
 	}
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_DATA message.");
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_DATA message.");
 }
 
 DEFINE_PACKET_HANDLER(static, channel_extended_data_handler,
@@ -1282,8 +1251,6 @@ DEFINE_PACKET_HANDLER(static, channel_extended_data_handler,
       struct ssh_channel *channel = lookup_channel(connection->table,
 						   channel_number);
 
-      lsh_string_free(packet);
-      
       if (channel && channel->receive
 	  && !(channel->flags & (CHANNEL_RECEIVED_EOF
 				 | CHANNEL_RECEIVED_CLOSE)))
@@ -1341,10 +1308,7 @@ DEFINE_PACKET_HANDLER(static, channel_extended_data_handler,
 	}
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_EXTENDED_DATA message.");
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_EXTENDED_DATA message.");
 }
 
 DEFINE_PACKET_HANDLER(static, channel_eof_handler,
@@ -1363,8 +1327,6 @@ DEFINE_PACKET_HANDLER(static, channel_eof_handler,
     {
       struct ssh_channel *channel = lookup_channel(connection->table,
 						   channel_number);
-
-      lsh_string_free(packet);
 
       if (channel)
 	{
@@ -1407,10 +1369,7 @@ DEFINE_PACKET_HANDLER(static, channel_eof_handler,
 	}
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_EOF message");
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_EOF message");
 }
 
 DEFINE_PACKET_HANDLER(static, channel_close_handler,
@@ -1430,8 +1389,6 @@ DEFINE_PACKET_HANDLER(static, channel_close_handler,
       struct ssh_channel *channel = lookup_channel(connection->table,
 						   channel_number);
 
-      lsh_string_free(packet);
-      
       if (channel)
 	{
 	  verbose("Receiving CLOSE on channel %i (local %i)\n",
@@ -1479,10 +1436,7 @@ DEFINE_PACKET_HANDLER(static, channel_close_handler,
 	}
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_CLOSE message");
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_CLOSE message");
 }
 
 DEFINE_PACKET_HANDLER(static, channel_open_confirm_handler,
@@ -1509,8 +1463,6 @@ DEFINE_PACKET_HANDLER(static, channel_open_confirm_handler,
 	lookup_channel_reserved(connection->table,
 				local_channel_number);
 
-      lsh_string_free(packet);
-
       if (channel) 
 	{
 	  struct command_continuation *c = channel->open_continuation;
@@ -1535,10 +1487,7 @@ DEFINE_PACKET_HANDLER(static, channel_open_confirm_handler,
 	}
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_OPEN_CONFIRMATION message.");
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_OPEN_CONFIRMATION message.");
 }
 
 DEFINE_PACKET_HANDLER(static, channel_open_failure_handler,
@@ -1569,8 +1518,6 @@ DEFINE_PACKET_HANDLER(static, channel_open_failure_handler,
 	lookup_channel_reserved(connection->table,
 				channel_number);
 
-      lsh_string_free(packet); 
-
       if (channel)
 	{
 	  static const struct exception finish_exception
@@ -1588,10 +1535,7 @@ DEFINE_PACKET_HANDLER(static, channel_open_failure_handler,
 	       channel_number);
     }
   else
-    {
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_OPEN_FAILURE message.");
-      lsh_string_free(packet);
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_OPEN_FAILURE message.");
 }
 
 DEFINE_PACKET_HANDLER(static, channel_success_handler,
@@ -1610,8 +1554,6 @@ DEFINE_PACKET_HANDLER(static, channel_success_handler,
       && parse_eod(&buffer)
       && (channel = lookup_channel(connection->table, channel_number)))
     {
-      lsh_string_free(packet);
-
       if (object_queue_is_empty(&channel->pending_requests))
 	{
 	  werror("do_channel_success: Unexpected message. Ignoring.\n");
@@ -1625,10 +1567,7 @@ DEFINE_PACKET_HANDLER(static, channel_success_handler,
 	}
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_SUCCESS message");
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_SUCCESS message");
 }
 
 DEFINE_PACKET_HANDLER(static, channel_failure_handler,
@@ -1647,8 +1586,6 @@ DEFINE_PACKET_HANDLER(static, channel_failure_handler,
       && parse_eod(&buffer)
       && (channel = lookup_channel(connection->table, channel_number)))
     {
-      lsh_string_free(packet);
-      
       if (object_queue_is_empty(&channel->pending_requests))
 	{
 	  werror("do_channel_failure: No handler. Ignoring.\n");
@@ -1665,10 +1602,7 @@ DEFINE_PACKET_HANDLER(static, channel_failure_handler,
 	}
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_FAILURE message.");
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_FAILURE message.");
 }
 
 
