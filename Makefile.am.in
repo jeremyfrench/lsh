@@ -45,5 +45,3 @@ all-recursive check-recursive: config.h
 EXTRA_DIST = ANNOUNCE AUTHORS FAQ README COPYING ChangeLog ChangeLog.1 NEWS FAQ \
 	Makefile.am.in make_am distribution-key.gpg
 
-
-include $(top_srcdir)/misc/ctags.mk
