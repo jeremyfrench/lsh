@@ -52,6 +52,7 @@
 #include "tcpforward_commands.h"
 #include "tcpforward_commands.h"
 #include "server_userauth.h"
+#include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -90,6 +91,11 @@ struct command_simple options2signature_algorithms;
 
 /* Option parsing */
 
+const char *argp_program_version
+= "lshd-" VERSION ", secsh protocol version " SERVER_PROTOCOL_VERSION;
+
+const char *argp_program_bug_address = BUG_ADDRESS;
+
 #define OPT_NO 0x400
 #define OPT_SSH1_FALLBACK 0x200
 #define OPT_INTERFACE 0x201
@@ -110,6 +116,9 @@ struct command_simple options2signature_algorithms;
 #define OPT_PASSWORD 0x209
 #define OPT_NO_PASSWORD (OPT_PASSWORD | OPT_NO)
 
+#define OPT_ROOT_LOGIN 0x20A
+#define OPT_NO_ROOT_LOGIN (OPT_ROOT_LOGIN | OPT_NO)
+
 /* GABA:
    (class
      (name lshd_options)
@@ -125,9 +134,11 @@ struct command_simple options2signature_algorithms;
 
        (with_publickey . int)
        (with_password . int)
+       (allow_root . int)
+
        (with_tcpip_forward . int)
        (with_pty . int)
-
+       
        (userauth_methods object int_list)
        (userauth_algorithms object alist)
        
@@ -163,7 +174,8 @@ make_lshd_options(struct io_backend *backend,
   self->with_password = 1;
   self->with_tcpip_forward = 1;
   self->with_pty = 1;
-
+  self->allow_root = 0;
+  
   self->userauth_methods = NULL;
   self->userauth_algorithms = NULL;
   
@@ -242,6 +254,11 @@ main_options[] =
     "Enable publickey user authentication (default).", 0},
   { "no-publickey", OPT_NO_PUBLICKEY, NULL, 0,
     "Disable publickey user authentication.", 0},
+
+  { "root-login", OPT_ROOT_LOGIN, NULL, 0,
+    "Allow root to login.", 0 },
+  { "no-root-login", OPT_NO_ROOT_LOGIN, NULL, 0,
+    "Don't allow root to login (default).", 0 },
   
 #if WITH_TCP_FORWARD
   { "tcp-forward", OPT_TCPIP_FORWARD, NULL, 0, "Enable tcpip forwarding (default).", 0 },
@@ -304,6 +321,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       if (self->with_password || self->with_publickey)
 	{
 	  int i = 0;
+	  struct user_db *db = make_unix_user_db(self->allow_root);
+	  
 	  self->userauth_methods
 	    = alloc_int_list(self->with_password + self->with_publickey);
 	  self->userauth_algorithms = make_alist(0, -1);
@@ -312,7 +331,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    {
 	      LIST(self->userauth_methods)[i++] = ATOM_PASSWORD;
 	      ALIST_SET(self->userauth_algorithms,
-			ATOM_PASSWORD, &unix_userauth.super);
+			ATOM_PASSWORD, make_userauth_password(db));
 	    }
 	  if (self->with_publickey)
 	    {
@@ -321,7 +340,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      ALIST_SET(self->userauth_algorithms,
 			ATOM_PUBLICKEY,
 			make_userauth_publickey
-			(make_alist(1,
+			(db,
+			 make_alist(1,
 				    ATOM_SSH_DSS,
 				    make_authorization_db(ssh_format("authorized_keys_sha1"),
 							  &sha1_algorithm),
