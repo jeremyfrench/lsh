@@ -7,6 +7,7 @@ test_main(void)
   const struct spki_5_tuple *acl;
   struct spki_principal *k1;
   struct spki_principal *k2;
+  struct spki_principal *k3;
   struct spki_tag *tag;
   
   spki_acl_init(&db);
@@ -25,6 +26,21 @@ test_main(void)
 
   ASSERT(k1 != k2);
 
+  k3 = spki_principal_by_key(&db, LDATA("(10:public-key2:k3)"));
+  ASSERT(k2);
+  
+  acl = spki_acl_by_subject_first(&db, k1);
+  ASSERT(acl);
+  acl = spki_acl_by_subject_next(&db, acl, k1);
+  ASSERT(!acl);
+
+  acl = spki_acl_by_subject_first(&db, k2);
+  ASSERT(acl);
+  acl = spki_acl_by_subject_next(&db, acl, k2);
+  ASSERT(!acl);
+
+  ASSERT(!spki_acl_by_subject_first(&db, k3));
+	 
   tag = make_tag(LDATA("(4:http)"));
   acl = spki_acl_by_authorization_first(&db, tag);
   ASSERT(!acl);
