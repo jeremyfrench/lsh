@@ -1,0 +1,32 @@
+#! /bin/sh
+
+die () {
+    echo "Test failed:" "$@"
+    exit 1
+}
+
+check_sexp () {
+    file="$1"
+    shift
+    sexp-conv -s canonical | cmp "$file" - || die "$@"
+}
+    
+TAG1='(3:tag(1:*))'
+TAG2='(3:tag3:foo)'
+TAG3='(3:tag(1:*6:prefix1:f))'
+
+../tools/spki-delegate --tag="$TAG3" \
+		       --subject="`sexp-conv -s transport <key-1.pub`" \
+		       >testhome/.spki/acls
+
+check_sexp testhome/.spki/acls "ACLs differ" <<EOF
+(acl (entry (subject (public-key (rsa-pkcs1-sha1 (n |CijcTD4ZSRQtpqa9nLT
+                                                     2rVFtkPFIuDaxy8FShF
+                                                     h2LLQhSpONFObSR30MX
+                                                     mKFLgi8vn7RQyqn85bL
+                                                     bqbkRahR|)
+                                                 (e |J4NiEw==|))))
+            (tag (* prefix f))))
+EOF
+
+
