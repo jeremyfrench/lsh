@@ -1,3 +1,9 @@
+2004-03-01  Niels Möller  <niels@s3.kth.se>
+
+	* argp-eexst.c [!HAVE_SYSEXITS_H]: Hardcode EX_USAGE = 64.
+
+	* configure.ac: Check for sysexits.h.
+
 2004-02-23  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Bumped version to standalone-1.3.

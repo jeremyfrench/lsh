@@ -22,7 +22,11 @@
 #include <config.h>
 #endif
 
-#include <sysexits.h>
+#if HAVE_SYSEXITS_H
+# include <sysexits.h>
+#else
+# define EX_USAGE 64
+#endif
 
 #include "argp.h"
 
