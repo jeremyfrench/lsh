@@ -35,9 +35,6 @@ KEYS
 Code is needed to generate, store and read dss keys. Preferably in a
 SPKI/s-expression form.
 
-Fix the dss signature mess (obsolete draft format, new draft format,
-format actually used by ssh2).
-
 Fix compliance with the (next) SPKI draft. In particular, the order of
 fields and the encoding of numbers needs updating.
 
@@ -98,8 +95,6 @@ they are probably somewhat different from errors in higher levels. For
 instance, a writing to a file associated with a channel may fail. In
 that case, the channel should be closed, but the connection should not
 die. Handle the LSH_CHANNEL_FINISHED code properly.
-
-Fix the flow control (it's broken on the receiving end).
 
 
 CHANNEL CLOSE
@@ -179,8 +174,6 @@ crypto code.
 
 Use UNUSED where parameters are unused intentionally.
 
-Fix shadow passwd support.
-
 Make it cleaner wrt. more gcc warnings.
 
 Fix desTest.c to use proper declarations of its function pointers, and
@@ -212,8 +205,6 @@ Currently, using a shared libz.so doesn't work.
 
 Fix the src/symmetric/desTest program. It doesn't complain if the
 desCode is compiled with empty keymap.h, parity.h and rotors.h files.
-
-Integrate tcp-forward support.
 
 About POLLHUP:
 
@@ -253,5 +244,3 @@ write on a connection. When the limit is exceeded, the connection
 should be dropped. The problem: if a client connects and sends a lot
 of packets, without ever reading anything from its socket, the server
 will eventually run out of memory.
-
-Make sure tty modes are restored on exit.
