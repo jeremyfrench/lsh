@@ -1,3 +1,14 @@
+2003-04-21  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh.c (make_lsh_connect): Take actions as a parameter.
+	* src/lshg.c (make_lshg_connect): Likewise.
+
+	* src/gateway.c: Include string.h.
+
+	* src/client.c (client_options2actions): Deleted command.
+
+	* src/io.c (make_address_info_c): Deleted function.
+
 2003-04-20  Niels Möller  <niels@s3.kth.se>
 
 	* src/spki.c (make_ssh_hostkey_tag): USe a plain NUL-terminated
