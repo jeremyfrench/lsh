@@ -193,7 +193,8 @@ sexp_get_un.
 
 Extend the GABA: (expr ...) constructions with a single parameter
 could be used directly as a command_simple. Extend gaba.scm to do that
-automatically.
+automatically. Extend the (exp ...) construction to take a return
+type, and automatically cast the result to that type.
 
 Add -f, to fork and exit when userauthentication is done and any
 tunneling is set up.

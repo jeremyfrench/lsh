@@ -1,3 +1,15 @@
+2000-03-07  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh.c: Implemented rsh-style operation, and the -S and -E
+	action options. 
+
+	* src/client.c (make_exec_request): New function.
+
+2000-03-06  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/client_pty.c (do_format_pty_request): Free the terminal-mode
+	string. 
+
 2000-03-02  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/rsync/send.c: Improved the sending state machine. Still
