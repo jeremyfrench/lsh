@@ -58,7 +58,13 @@
        (e object exception_handler)))
 */
 
-     
+#if DATAFELLOWS_WORKAROUNDS	      
+struct lsh_string *format_service_accept_kludge(void)
+{
+  return ssh_format("%c", SSH_MSG_SERVICE_ACCEPT);
+}
+#endif DATAFELLOWS_WORKAROUNDS
+
 static void
 do_service_request(struct packet_handler *c,
 		   struct ssh_connection *connection,
@@ -89,7 +95,13 @@ do_service_request(struct packet_handler *c,
 		= connection->fail;
 
 	      /* Start service */
-	      C_WRITE(connection, format_service_accept(name));
+#if DATAFELLOWS_WORKAROUNDS
+	      if (connection->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE)
+		C_WRITE(connection, format_service_accept_kludge());
+	      else
+#endif /* DATAFELLOWS_WORKAROUNDS */
+		C_WRITE(connection, format_service_accept(name));
+	      
 	      COMMAND_CALL(service, connection,
 			   closure->c, closure->e);
 	      return;
