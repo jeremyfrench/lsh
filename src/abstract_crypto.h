@@ -86,6 +86,8 @@ struct signer
 			      UINT8 *data);
 };
 
+#define SIGN(signer, length, data) ((signer)->sign((signer), (length), (data)))
+
 struct verifier
 {
   int (*verify)(struct verifier *closure,
@@ -94,7 +96,10 @@ struct verifier
 		UINT32 signature_length,
 		UINT8 * signature_data);
 };
-		
+
+#define VERIFY(verifier, length, data, slength, sdata)\
+((verifier)->verify((verifier), (length), (data), (slength), (sdata)))
+  
 struct signature_algorithm
 {
   struct signer *
