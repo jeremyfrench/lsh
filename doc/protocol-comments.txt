@@ -1,0 +1,354 @@
+Comments on the protocol drafts. 2000-07-31
+
+draft-ietf-secsh-architecture-05.txt
+
+: 3.1.  Host Keys
+: 
+: Each server host MUST have a host key.  Hosts MAY have multiple host
+: keys using multiple different algorithms.  Multiple hosts MAY share the
+: same host key. Every host MUST have at least one key using each REQUIRED
+: public key algorithm (currently DSS [FIPS-186]).
+
+(minor) In some situations, it is desirable to authenticate the host
+using some secret shared between the host and a particular user.
+
+: 3.6.  Localization and Character Set Support
+: 
+: ...
+: 
+: The client and server user names are inherently constrained by what the
+: server is prepared to accept.  They might, however, occasionally be
+: displayed in logs, reports, etc.  They MUST be encoded using ISO 10646
+: UTF-8, but other encodings may be required in some cases.  It is up to
+: the server to decide how to map user names to accepted user names.
+: Straight bit-wise binary comparison is RECOMMENDED.
+
+(important, but not urgent) This is too sloppy. Implementations should
+be required to respect unicode character equivalence. Say I have an
+account on a system that allows non-ascii characters in user names.
+Assume I'm known to the system under the name "möller", which has at
+least two different but equivalent representations in unicode (and
+therefore also in utf-8).
+
+As a user, I usually have no control over which of the representations
+my local system and software uses, and if I have to configure my local
+system to use the same (most likely undocumented) conventions as the
+remote system, I lose. There may be some option to choose between
+utf-8 and iso-8859-x, but I've never seen any user-level options for
+choosing between different canonicalization conventions for utf-8.
+
+A simpel way to solve the problem is to require a particular
+unicode/utf-8 canonicalization when usernames are sent across the
+wire. I expect the WG for internationilized domain names to have
+similar considerations. (important)
+
+: 4.1.  Encoding of Network Addresses
+: 
+: Network addresses are encoded as strings. DNS names MUST NOT be used, as
+: DNS is an insecure protocol.
+
+(important) DNS names should not be ruled out. For instance, when
+setting up a TCP/IP tunnel, it might be useful (and perhaps even
+increase security) to pass a dns name and let the server resolve it to
+an IP-address.
+
+So I would prefer if support for DNS names was optional rather than
+disallowed.
+
+: If an address contains a colon (':', ascii 58), it is interpreted as an
+: IPv6 address. The encoding of IPv6 addresses is described in [RFC-1884].
+: IPv4 addresses are expressed in the standard dot-separated decimal
+: format (e.g. 127.0.0.1).
+
+"dot-separated decimal" is too vague. It will be interpreted as
+"anything that inet_addr() or inet_aton() accepts", which is not
+standardized. I would propose something like this:
+
+1. If an address contains a ':' character, it is interpreted as an
+   IPv6 address (it seems unnecessary to allow the shorthand ::-forms,
+   but that's a minor point).
+
+2. Otherwise, view it as a sequence of components separated by dots.
+   There must be at least one component, and no empty ones (and no
+   leading no trailing dots. Or do we want to allow a trailing dot?).
+
+3. If the rightmost component starts with a decimal digit, the address
+   is interpreted as an IPv4 address, and it must consist of exactly 4
+   components, each a number in the range 0-255, with no redundant
+   leading zeroes.
+
+4. Finally, if the rightmost, final component starts with a non-digit,
+   the address is a symbolic DNS name, to be resolved to a numeric
+   address when needed. If the name does not include a trailing dot,
+   the systems DNS search path may be used.
+
+
+draft-ietf-secsh-transport-07.txt
+
+: 3.3.1.  Old Client, New Server
+: 
+: Server implementations MAY support a configurable "compatibility" flag
+: that enables compatibility with old versions.  When this flag is on, the
+: server SHOULD identify its protocol version as "1.99".  Clients using
+: protocol 2.0 MUST be able to identify this as identical to "2.0".  In
+: this mode the server SHOULD NOT send carriage return character (ascii
+: 13) after the version identification string.
+
+(minor) Clients have been observed to *send* the protocol version
+number "1.99". I can't see any reason for this; if there is one, it
+should be mentioned here.
+
+: 4.1.  Maximum Packet Length
+: 
+: All implementations MUST be able to process packets with uncompressed
+: payload length of 32768 bytes or less and total packet size of 35000
+: bytes or less (including length, padding length, payload, padding, and
+: MAC).  Implementations SHOULD support longer packets, where they might
+: be needed e.g. if an implementation wants to send a very large number of
+: certificates.  Such packets MAY be sent if the version string indicates
+: that the other party is able to process them.  However, implementations
+: SHOULD check that the packet length is reasonable for the implementation
+: to avoid denial-of-service and/or buffer overflow attacks.
+
+(minor) Is there any rationale for the choice of the fudge factor
+35000 - 32768? E.g. I have tried to look for the worst case expansion
+when compressing a packet with zlib, but I haven't found any precise
+numbers (the zlib docs says that the worst case for an _entire_ file
+is 12 bytes + 0.1%, but it's not clear to my how to apply that to
+individual blocks compressed with partial (Z_SYNC_FLUSH) syncing).
+
+: 4.3.  Encryption
+
+  ...
+  
+: The "arcfour" is the Arcfour stream cipher with 128 bit keys.  The
+: Arcfour cipher is believed to be compatible with the RC4 cipher
+: [Schneier]. RC4 is a registered trademark of RSA Data Security Inc.
+
+(minor) I have heard cryptographers say that the first few bytes of
+the arcfour keystream are weak (correlated to the first bytes of the
+key or somesuch), and that one should always throw away the first few
+10-100 bytes output by arcfour. Is that something that should be done
+when using arcfour for ssh?
+
+: 4.6.  Public Key Algorithms
+: 
+: This protocol has been designed to be able to operate with almost any
+: public key format, encoding, and algorithm (signature and/or
+: encryption).
+: 
+: There are several aspects that define a public key type:
+: 
+: o  Key format: how is the key encoded and how are certificates
+:    represented.  The key blobs in this protocol MAY contain certificates
+:    in addition to keys.
+: 
+: o  Signature and/or encryption algorithms.  Some key types may not
+:    support both signing and encryption.  Key usage may also be
+:    restricted by policy statements in e.g. certificates.  In this case,
+:    different key types SHOULD be defined for the different policy
+:    alternatives.
+: 
+: o  Encoding of signatures and/or encrypted data. This includes but is
+:    not limited to padding, byte order, and data formats.
+
+(important) The way I want to read this, there is a unique mapping
+from key type to triples <key format, algorithm (including policy),
+signature format>. I.e. when I advertise a key type, I *know* which
+algorithms I have to support in order to live up to my advertising.
+However, that's not the case for the defined key types,
+
+: The following public key and/or certificate formats are currently
+: defined:
+: 
+: ssh-dss              REQUIRED     sign      Simple DSS
+: x509v3               RECOMMENDED  sign      X.509 certificates
+: spki                 OPTIONAL     sign      SPKI certificates
+: pgp                  OPTIONAL     sign      OpenPGP certificates
+
+Say that a server has a dss hostkey, that it can offer as either a
+ssh-dss key or as a x509 certificate chain. I'm running a client
+that supports x509 (but only the most common rsa-based certificates)
+and ssh-dss. If both programs lists x509 as their preferred public key
+algorithm, it will be chosen, but communication will fail, even though
+there is a ssh-dss hostkey that both parties can deal with.
+
+I don't know the right way to solve this. Perhaps one needs to define
+more keytypes, x509v3-dsa (implementation can deal with both rsa and
+dsa) and spki-rsa. Here, rsa is the usual algorithm for use with x509,
+while dsa is the usual one for spki.
+
+This is mostly a problem for hostkeys, where communication fails when
+the client can't deal with the hostkey. For user authentication, the
+client can just try another key or key type.
+
+: The resulting signature is encoded as:
+: 
+:   uint32    length
+:   string    "ssh-dss"
+:   string    dss_signature_blob
+
+The redundant length fields in this and other representations has
+already been discussed on the list. For the record, I would prefer
+that they are removed.
+
+: 5.1.  Algorithm Negotiation
+
+: ... Each side MAY guess which algorithm the other side is using,
+: and MAY send an initial key exchange packet according to the algorithm
+: if appropriate for the preferred method.  If all algorithms were guessed
+                                               ^^^
+: right, the optimistically sent packet MUST be handled as the first key
+: exchange packet. ...
+
+(important) I feel the description of the "guessing" mechanism is too
+vague. In particular, the meaning of "all" seems unclear.
+
+: Key exchange begins by each side sending the following packet:
+: 
+:   byte      SSH_MSG_KEXINIT
+:   byte[16]  cookie (random bytes)
+:   string    kex_algorithms
+:   string    server_host_key_algorithms
+
+...
+
+: The first algorithm in each list MUST be the preferred (guessed)
+: algorithm.  Each string MUST contain at least one algorithm name.
+: 
+:     cookie
+: 	The cookie MUST be a random value generated by the sender.  Its
+: 	purpose is to make it impossible for either side to fully
+: 	determine the keys and the session identifier.
+: 
+:     kex_algorithms
+: 	Key exchange algorithms were defined above.  The first algorithm
+: 	MUST be the preferred (and guessed) algorithm.  If both sides make
+: 	the same guess, that algorithm MUST used.  Otherwise, the
+: 	following algorithm MUST be used to choose a key exchange method:
+: 	iterate over client's kex algorithms, one at a time.  Choose the
+: 	first algorithm that satisfies the following conditions:
+
+This seems inadequate. Consider the preference lists (where "foo"
+stands for some key exchange method that requires an
+encryption-capable host key):
+
+  Server:
+    kex_algorithms:             "foo,diffie-hellman-group1-sha1"
+    server_host_key_algorithms: "ssh-dss,rsa-encrypt"
+
+  Client:
+    kex_algorithms              "foo,diffie-hellman-group1-sha1"
+    server_host_key_algorithms: "ssh-dss,elgamal-encrypt"
+    
+Here, the "guess" foo is correct, but it will cause communication to
+fail. Both parties preferences are reasonable, and they do have enough
+in common that they ought to figure out that they need to use
+diffie-hellman and ssh-dss.
+
+:     first_kex_packet_follows
+: 	Indicates whether a guessed key exchange packet follows.  If a
+: 	guessed packet will be sent, this MUST be true.  If no guessed
+: 	packet will be sent, this MUST be false.
+: 
+: 	After receiving the SSH_MSG_KEXINIT packet from the other side,
+: 	each party will know whether their guess was right.  If the other
+: 	party's guess was wrong, and this field was true, the next packet
+: 	MUST be silently ignored, and both sides MUST then act as
+: 	determined by the negotiated key exchange method.  If the guess
+: 	was right, key exchange MUST continue using the guessed packet.
+
+It needs to be clearly defined what it means that the guess was right.
+I can think of several interpretations:
+
+1. The first element of the server's kex_algorithms list equals the
+   first element of the client's kex_algorithms list. This has the
+   problem described above, and additional problems if the
+   first_kex_packet feature is used, and the contents of that packet
+   depends in any way on the host key algorithm.
+
+2. The first elements of the server's kex_algorithms and
+   server_host_key_algorithms lists equal the respective first
+   elements of the client's lists. This seems more reasonable, but it
+   still needs some extra conditions to deal with the example above.
+
+3. The first elements of "all" the server's lists equal the respective
+   first elements of the client's list. This is what the first
+   paragraph says, but it seems like a unneccessarily strict
+   criterion. I don't see much use to have the guessing mechanism
+   depend on a correct guess for the bulk encryption algorithms, and
+   even less use of it depending on a correct guess for the
+   compression algorithms.
+
+4. Interpret "all" algorithms to mean the kex_algorithms,
+   server_host_key_algorithms, encryption_algorithms and
+   mac_algorithms (but not compression_algorithms or languages).
+
+: 5.2.  Output from Key Exchange
+: 
+: The key exchange produces two values: a shared secret K, and an exchange
+: hash H.  Encryption and authentication keys are derived from these. The
+: exchange hash H from the first key exchange is additionally used as the
+: session identifier, which is a unique identifier for this connection.
+
+(minor) I would like a line or two specifying whether or not the
+exchange hash should be treated as secret information (when designing
+and analysing user authentication mechanisms, it helps to be able to
+assume one or the other).
+
+: If the key length in longer than the output of the HASH, the key is
+: extended by computing HASH of the concatenation of K and H and the
+: entire key so far, and appending the resulting bytes (as many as HASH
+: generates) to the key. This process is repeated until enough key
+: material is available; the key is taken from the beginning of this
+: value. In other words,
+: 
+:   K1 = HASH(K || H || X || session_id)   (X is e.g. "A")
+:   K2 = HASH(K || H || K1)
+:   K3 = HASH(K || H || K1 || K2)
+:   ...
+:   key = K1 || K2 || K3 || ...
+
+(minor) As was pointed out on the list and coderpunks recently, this
+key stretching mechanism loses entropy if the amount of entropy that
+enters the system (in the form of K) is larger than the internal state
+of HASH.
+
+: 8.  Service Request
+: 
+: After the key exchange, the client requests a service. The service is
+: identified by a name. The format of names and procedures for defining
+: new names are defined in [SSH-ARCH].
+: 
+: Currently, the following names have been reserved:
+: 
+:   ssh-userauth
+:   ssh-connection
+: 
+: Similar local naming policy is applied to the service names that is
+: applied to the algorithm names; a local service should use the
+: servicename@domain syntax.
+:   byte      SSH_MSG_SERVICE_REQUEST
+:   string    service name
+: 
+: If the server rejects the service request, it SHOULD send an appropriate
+: SSH_MSG_DISCONNECT message and MUST disconnect.
+: 
+: When the service starts, it may have access to the session identifier
+: generated during the key exchange.
+: 
+: If the server supports the service (and permits the client to use it),
+: it MUST respond with
+: 
+:   byte      SSH_MSG_SERVICE_ACCEPT
+:   string    service name
+
+(minor) The service name part of this message seems redundant. It
+would make sense (but still be redundant) if the client were expected
+to send more than one SSH_MSG_SERVICE_REQUEST, which the server
+responded to in turn (similar to the handling of
+SSH_MSG_USERAUTH_REQUEST messages). But the spec requires the server
+to reply with a SSH_MSG_SERVICE_ACCEPT at most once, and never give
+the client a second chance if a service request is rejected.
+
+
