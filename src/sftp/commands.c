@@ -51,8 +51,13 @@ command commands[] = {
   { "about", com_about, "Display information about lsftp", 
     "Displays some information about lsftp.", NOARG, 1, 1 },  
 
-  { "help", com_help, "Display this text", 
-    "help also displays more specific information for certain commands.", COMMAND, 1, 1 },
+  { "help", com_help, "List available commands or help for command", 
+    "help also displays more specific information for certain commands,\n"
+    "as you have likely already discovered.", COMMAND, 1, 1 },
+
+  { "longhelp", com_longhelp, "Give more help", 
+    "If given a command, this is equal to help (help actually uses longhelp for this).\n"
+    "used without arguments, longhelp displays short help texts for all commands.", COMMAND, 1, 2 },
 
   { "?", com_help, "Synonym for `help'", 
     "You can type help COMMAND, but you've already discovered that\n", 
@@ -189,8 +194,50 @@ com_connected(void)
   return -1;
 }
 
+
+int       
+com_help(const char *arg, const char *command UNUSED)
+{ 
+  const char *s;
+  
+  s = lsftp_s_skip(arg," \n\t\r"); /* Skip any initial whitespace */
+  
+  if( !s || ! (*s) ) /* End of string? */
+    {
+      int row = 0;
+      char* cmdname;
+      int i=0;
+      
+      /* No command given, show the short description */
+
+      while( ( cmdname = commands[i++].name) )
+	{
+          printf( "%-10s",      /* Print each command */
+		  cmdname
+		  );
+	  row++;
+
+	  if( 8 == row )
+	    {
+	      printf("\n");
+	      row = 0;
+	    }
+	}
+
+      if( row ) /* Anything printed on this line? */
+	printf("\n");
+
+      printf("\nFor more help, try longhelp or help <COMMAND>\n");
+      return 0;
+    }
+  else /* Command given, show long help */
+    return com_longhelp( arg, command );
+
+}
+
+
 int
-com_help(const char *arg, const char *command UNUSED) 
+com_longhelp(const char *arg, const char *command UNUSED) 
 {
   const char *s;
   char tmp[PATH_MAX];
@@ -203,12 +250,11 @@ com_help(const char *arg, const char *command UNUSED)
     {
       /* No command given, show the short description */
 
-      while( ( cmdname = commands[i].name) )
-	if( commands[i++].visible )   /* Allow for "hidden" commands */
-	  printf("%-10s -- %s\n",
-		 cmdname, 
-		 commands[i-1].doc
-		 ); 
+      while( ( cmdname = commands[i++].name) )
+	printf("%-10s -- %s\n",
+	       cmdname, 
+	       commands[i-1].doc
+	       ); 
       /* Print command name (10 columns) -- documentation */
         
       return 0;
@@ -232,7 +278,7 @@ com_help(const char *arg, const char *command UNUSED)
 	  {
 	    known=1;
 	    printf(
-		   "%-10s -- %s\n%s\n", 
+		   "%-10s -- %s\n\n%s\n", 
 		   commands[i-1].name, 
 		   commands[i-1].doc,
 		   commands[i-1].longdoc
@@ -1951,7 +1997,7 @@ handle_command(const unsigned char *s)
     return com_escape( s+1, entered_cmd );
 
   if( s && s[0] == '?' && isalnum( s[1] ) ) /* Commands is ?x... ? */
-    return com_help( s+1, entered_cmd );
+    return com_longhelp( s+1, entered_cmd );
 
   /* Get the first word from the line (the command) */
 
