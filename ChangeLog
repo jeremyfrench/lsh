@@ -1,5 +1,25 @@
 2004-06-08  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/client.c (client_options): New option --write-pid, to be
+	used together with -B.
+	(do_background_process): Optionally write the child pid to stdout.
+	(make_background_process): New function.
+	(client_argp_parser): When processing -B, pass the value of
+	write_pid to make_background_process.
+	(client_argp_parser): Handle --write-pid.
+
+	* src/client_userauth.c (do_userauth_pk_ok): Deleted handling of
+	PEER_USERAUTH_REQUEST_KLUDGE. 
+	* src/server_publickey.c (do_authenticate): Likewise.
+
+	* src/server.c (format_service_accept_kludge): Deleted function.
+	(do_service_request): Deleted handling of
+	PEER_SERVICE_ACCEPT_KLUDGE.
+
+	* src/client.c (do_accept_service): Deleted handling of
+	PEER_SERVICE_ACCEPT_KLUDGE. 
+	* src/proxy.c (do_proxy_accept_service): Likewise.
+
 	* src/dsa.c (do_dsa_verify, do_dsa_sign): Deleted handling of
 	ATOM_SSH_DSS_KLUDGE_LOCAL. 
 
