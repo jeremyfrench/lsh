@@ -27,6 +27,8 @@
 
 struct ssh_channel
 {
+  struct read_handler super;
+  
   UINT32 channel_number;  /* Remote channel number */
 
   UINT32 rec_window_size;
@@ -35,6 +37,10 @@ struct ssh_channel
   UINT32 send_window_size;
   UINT32 send_max_packet;
 
+  /* FIXME: Perhaps this should be moved to the channel_table,
+   * and a pointer to that table be stored here instead? */
+  struct abstract_write *write;
+  
   struct alist *request_types;
 
 #if 0
@@ -49,41 +55,48 @@ struct ssh_channel
    * channel broken message to the other end? */
 
   /* Type is CHANNEL_DATA or CHANNEL_STDERR_DATA */
-  int (*recieve)(struct ssh_channel *self, struct abstract_write *write,
+  int (*recieve)(struct ssh_channel *self, 
 		 int type, struct lsh_string *data);
 
-  int (*close)(struct ssh_channel *self, struct abstract_write *write);
-  int (*eof)(struct ssh_channel *self, struct abstract_write *write);
+  /* Called when we are allowed to send data on the channel. */
+  int (*send)(struct ssh_channel *self);
 
+#if 0
+  int (*close)(struct ssh_channel *self);
+  int (*eof)(struct ssh_channel *self);
+#endif
+  
   /* Reply from SSH_MSG_CHANNEL_OPEN_REQUEST */
-  int (*open_confirm)(struct ssh_channel *self, struct abstract_write *write);
-  int (*open_failure)(struct ssh_channel *self, struct abstract_write *write);
+  int (*open_confirm)(struct ssh_channel *self);
+  int (*open_failure)(struct ssh_channel *self);
 
   /* Reply from SSH_MSG_CHANNEL_REQUEST */
-  int (*channel_success)(struct ssh_channel *self, struct abstract_write *write);
-  int (*channel_failure)(struct ssh_channel *self, struct abstract_write *write);
+  int (*channel_success)(struct ssh_channel *self);
+  int (*channel_failure)(struct ssh_channel *self);
 };
 
-#define CHANNEL_RECIEVE(s, w, t, d) \
-((s)->recieve((s), (w), (t), (d)))
+#define CHANNEL_RECIEVE(s, t, d) \
+((s)->recieve((s), (t), (d)))
 
-#define CHANNEL_CLOSE(s, w) \
-((s)->close((s), (w)))
+#define CHANNEL_SEND(s) ((s)->send((s)))
+     
+#define CHANNEL_CLOSE(s) \
+((s)->close((s)))
 
-#define CHANNEL_EOF(s, w) \
-((s)->eof((s), (w)))
+#define CHANNEL_EOF(s) \
+((s)->eof((s)))
 
-#define CHANNEL_OPEN_CONFIRM(s, w) \
-((s)->open_confirm((s), (w)))
+#define CHANNEL_OPEN_CONFIRM(s) \
+((s)->open_confirm((s)))
 
-#define CHANNEL_OPEN_FAILURE(s, w) \
-((s)->open_failure((s), (w)))
+#define CHANNEL_OPEN_FAILURE(s) \
+((s)->open_failure((s)))
 
-#define CHANNEL_SUCCESS(s, w) \
-((s)->channel_success((s), (w)))
+#define CHANNEL_SUCCESS(s) \
+((s)->channel_success((s)))
 
-#define CHANNEL_FAILURE(s, w) \
-((s)->channel_failure((s), (w)))
+#define CHANNEL_FAILURE(s) \
+((s)->channel_failure((s)))
      
 /* FIXME: Perhaps, this information is better kept in the connection
  * object? */
