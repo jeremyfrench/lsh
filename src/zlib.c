@@ -160,11 +160,10 @@ static struct lsh_string *do_zlib(struct compress_instance *c,
       return free ? packet : lsh_string_dup(packet);
     }
 
-  estimate = estimate_size(self->rate, packet->length, self->max);
+  estimate = estimate_size(self->rate, packet->length, limit);
   debug("do_zlib: estimate:  %i\n", estimate);
 
-  string_buffer_init(&buffer, 
-		     estimate_size(self->rate, packet->length, self->max));
+  string_buffer_init(&buffer, estimate);
 
   limit -= buffer.partial->length;
 
@@ -178,18 +177,28 @@ static struct lsh_string *do_zlib(struct compress_instance *c,
       self->z.next_out = buffer.current;
       self->z.avail_out = buffer.left;
 
+      assert(self->z.avail_out);
+      
       rc = self->f(&self->z, Z_SYNC_FLUSH);
 
-      if (rc != Z_OK)
+      switch (rc)
 	{
+	case Z_BUF_ERROR:
+	  werror("zlib.c: Z_BUF_ERROR (probably harmless),\n"
+		 "  avail_in = %i, avail_out = %i\n",
+		 self->z.avail_in, self->z.avail_out);
+	  /* Fall through */
+	case Z_OK:
+	  break;
+	default:
 	  werror("do_zlib: deflate() or inflate() failed: %z\n",
 		 self->z.msg ? self->z.msg : "No error(?)");
 	  if (free)
 	    lsh_string_free(packet);
-
+	  
 	  return NULL;
 	}
-
+      
       /* NOTE: It's not enough to check that avail_in is zero to
        * determine that all data have been flushed. avail_in == 0 and
        * avail_out > 0 implies that all data has been flushed, but if
