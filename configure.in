@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 0.9)
+AM_INIT_AUTOMAKE(lsh, 0.9.1)
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
@@ -105,6 +105,23 @@ AC_ARG_WITH(tcp_forward,
 
 if test x$with_tcp_forward = xyes ; then
   AC_DEFINE(WITH_TCP_FORWARD)
+fi
+
+AC_ARG_WITH(x11_forward,
+  [--without-x11-forward        Support x11 forwarding (proxy only)],,
+  [with_x11_forward=yes])
+
+if test x$with_x11_forward = xyes ; then
+  AC_DEFINE(WITH_X11_FORWARD)
+fi
+
+AC_ARG_WITH(agent_forward,
+  [--without-agent-forward      Support auth-agent forwarding (proxy
+only)],,
+  [with_agent_forward=yes])
+
+if test x$with_agent_forward = xyes ; then
+  AC_DEFINE(WITH_AGENT_FORWARD)
 fi
 
 AC_ARG_WITH(scheme,
