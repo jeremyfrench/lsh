@@ -28,6 +28,7 @@
 
 #include "connection.h"
 
+#warning packet_disconnect.h is obsolete
 struct packet_handler *make_disconnect_handler();
 
 #endif /* LSH_PACKET_DISCONNECT_H_INCLUDED */
