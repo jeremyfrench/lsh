@@ -1,3 +1,12 @@
+2003-01-02  Pontus Sköld  <pont@soua.net>
+
+	* configure.ac: Check for alarm.
+
+	* src/lsh-pam-checkpw.c (main): Set an alarm to exit after TIMEOUT
+	(currently 600) seconds.
+
+	* src/lsh-krb-checkpw.c (main): Dito.
+
 2002-12-11  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh-writekey.c (process_private): If no encryption, dup the
