@@ -66,14 +66,14 @@ make_des_instance(struct crypto_algorithm *algorithm UNUSED, int mode,
   UINT8 pkey[DES_KEYSIZE];
   unsigned i;
 
-  /* Fix parity */
+  /* Fix odd parity */
   for (i=0; i<DES_KEYSIZE; i++)
     {
       UINT8 p = key[i];
       p ^= (p >> 4);
       p ^= (p >> 2);
       p ^= (p >> 1);
-      pkey[i] = key[i] ^ (p & 1);
+      pkey[i] = key[i] ^ (p & 1) ^ 1;
     }
 
   self->super.block_size = DES_BLOCKSIZE;
