@@ -365,7 +365,7 @@
 
 	* src/keyexchange.c (kexinit_filter): Deleted command.
 
-	* src/lshd.c (main): Reorganization, do more work before the work,
+	* src/lshd.c (main): Reorganization, do more work before io_run,
 	including reading host keys and binding sockets directly in main.
 	Moved the daemonization later, so that the forground process
 	doesn't exit until after the ports are bound.
@@ -394,7 +394,7 @@
 	(io_connect): Changed interface, to take an io_callback instead of
 	a continuation. The caller has to use make_connect_callback to get
 	the old functionality.
-	(io_connect_local): Adapted to new io_conenct interface, and call
+	(io_connect_local): Adapted to new io_connect interface, and call
 	make_connect_list_callback. 
 	* src/client_x11.c (channel_open_x11): Likewise.
 	* src/io_commands.c (do_connect): Likewise.
