@@ -1,3 +1,7 @@
+2000-02-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/zlib.c (do_zlib): Z_BUF_ERROR is normal.
+
 2000-02-15  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/unpad.c (do_unpad): Use SSH_MAX_PACKET_FUZZ, as inflating
