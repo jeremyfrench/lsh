@@ -135,8 +135,8 @@ do_dsa_verify(struct verifier *c, int algorithm,
 
 	buf_length /= 2;
   
-	bignum_parse_u(sv.r, buf_length, buf);
-	bignum_parse_u(sv.s, buf_length, buf + buf_length);
+	nettle_mpz_set_str_256_u(sv.r, buf_length, buf);
+	nettle_mpz_set_str_256_u(sv.s, buf_length, buf + buf_length);
 
 	break;
       }
@@ -154,8 +154,8 @@ do_dsa_verify(struct verifier *c, int algorithm,
 
 	buf_length = signature_length / 2;
 
-	bignum_parse_u(sv.r, buf_length, signature_data);
-	bignum_parse_u(sv.s, buf_length, signature_data + buf_length);
+	nettle_mpz_set_str_256_u(sv.r, buf_length, signature_data);
+	nettle_mpz_set_str_256_u(sv.s, buf_length, signature_data + buf_length);
 	break;
       }
 #endif
@@ -277,8 +277,8 @@ generic_dsa_sign(struct dsa_signer *self,
 static UINT32
 dsa_blob_length(const struct dsa_signature *signature)
 {
-  UINT32 r_length = bignum_format_u_length(signature->r);
-  UINT32 s_length = bignum_format_u_length(signature->s);
+  UINT32 r_length = nettle_mpz_sizeinbase_256_u(signature->r);
+  UINT32 s_length = nettle_mpz_sizeinbase_256_u(signature->s);
 
   return MAX(r_length, s_length);
 }
@@ -287,8 +287,8 @@ static void
 dsa_blob_write(const struct dsa_signature *signature,
 	       UINT32 length, UINT8 *buf)
 {
-  bignum_write(signature->r, length, buf);
-  bignum_write(signature->s, length, buf + length);
+  nettle_mpz_get_str_256(length, buf, signature->r);
+  nettle_mpz_get_str_256(length, buf + length, signature->s);
 }
 
 static struct lsh_string *
