@@ -120,7 +120,7 @@ spki_pkcs5_encrypt(struct randomness *r,
 		   uint32_t salt_length,
 		   struct lsh_string *password,
 		   uint32_t iterations,
-                   struct lsh_string *data);
+                   const struct lsh_string *data);
 
 struct lsh_string *
 spki_pkcs5_decrypt(struct alist *mac_algorithms,
