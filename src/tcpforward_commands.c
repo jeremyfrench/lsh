@@ -458,9 +458,6 @@ DEFINE_COMMAND(make_tcpip_forward_handler)
 static struct install_info install_direct_tcpip_handler =
 STATIC_INSTALL_OPEN_HANDLER(ATOM_DIRECT_TCPIP);
 
-static struct install_info install_forwarded_tcpip_handler =
-STATIC_INSTALL_OPEN_HANDLER(ATOM_FORWARDED_TCPIP);
-
 
 /* Server side callbacks */
 
