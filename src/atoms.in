@@ -76,6 +76,7 @@ ssh-connection
 publickey
 password
 hostbased
+gssapi
 
 # Channel related
 
