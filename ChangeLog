@@ -1,3 +1,14 @@
+2005-02-16  Niels Möller  <niels@s3.kth.se>
+
+	* src/handshake.c (init_connection_service): Moved function here,
+	from channel.h. It doesn't really belong here, though.
+
+	* src/connection.h (ssh_connection): Removed attributes that have
+	been moved to the kexinit_state class.
+
+	* src/channel.h, src/channel.c: Purged dependence on
+	ssh_connection. Updated all users.
+
 2005-02-15  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (sbin_PROGRAMS): Added lshd-connection.
