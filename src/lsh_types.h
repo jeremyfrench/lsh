@@ -179,6 +179,13 @@ struct callback
  * to the client to try again. */
 #define LSH_AUTH_FAILED 0x10
 
+/* Returned by a read handler when it is (temporarily) not able to
+ * read more data. Used for flow control. */
+#define LSH_HOLD 0x20
+
+/* Returned by channel callback functions when the channel is closed. */
+#define LSH_CHANNEL_FINISHED 0x40
+
 /* Non-zero if no messages can be sent over the connection. Used when
  * processing error codes from in the middle of the processing a
  * messages. If this is true, processing should stop, and most likely
@@ -186,7 +193,7 @@ struct callback
 #define LSH_CLOSEDP(x) (x & (LSH_FAIL | LSH_CLOSE | LSH_DIE) )
 
 /* If non-zero, return to main-loop is preferred */
-#define LSH_ACTIONP(x) (x)
+#define LSH_ACTIONP(x) ((x) & (LSH_FAIL | LSH_CLOSE | LSH_DIE | LSH_KILL_OTHERS) )
 
 /* Are return codes really needed here? */
 #if 0
