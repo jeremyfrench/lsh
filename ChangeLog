@@ -1,3 +1,9 @@
+2000-10-16  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/Makefile.am.in (bin_PROGRAMS): Added lsh-export-key.
+
+	* src/lsh-export-key.c: New program (contributed by jps).
+
 2000-10-15  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/server_session.c: Don't need to know about any reaper
