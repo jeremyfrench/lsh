@@ -1,3 +1,9 @@
+2000-06-28  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/xalloc.c (UNIT): Use unsigned long.
+	(debug_malloc): Address memory using UNIT *.
+	(debug_free): Likewise.
+
 2000-06-27  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* doc/lsh.texinfo: Bumped "updated-for" to 1.0.
