@@ -93,7 +93,7 @@ do_command_simple_unimplemented(struct command_simple *s UNUSED,
 struct command_simple command_unimplemented =
 { { STATIC_HEADER, do_command_unimplemented}, do_command_simple_unimplemented};
 
-static struct lsh_object *
+struct lsh_object *
 do_collect_1(struct command_simple *s, struct lsh_object *a)
 {
   CAST(collect_info_1, self, s);

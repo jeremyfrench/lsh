@@ -74,6 +74,9 @@ int do_call_simple_command(struct command *s,
 #define STATIC_COMMAND_SIMPLE(f) \
 { { STATIC_HEADER, do_call_simple_command }, f}
 
+struct lsh_object *
+do_collect_1(struct command_simple *s, struct lsh_object *a);
+
 #define STATIC_COLLECT_1(next) \
 { { { STATIC_HEADER, do_call_simple_command }, do_collect_1}, \
   make_collect_state_1, next }
