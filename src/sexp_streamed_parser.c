@@ -29,6 +29,7 @@
 
 #include "sexp_parser.h"
 
+#include "digits.h"
 #include "read_scan.h"
 #include "sexp.h"
 #include "werror.h"
@@ -36,8 +37,6 @@
 
 /* Automatically generated files. */
 #include "sexp_table.h"
-/* FIXME: This should be unified with sexp_parser.c */
-#include "digit_table.h"
 
 #include <assert.h>
 
@@ -47,7 +46,8 @@ static void do_mark_parse_node(struct parse_node *n,
 				 void (*mark)(struct lsh_object *o));
 static void do_free_parse_node(struct parse_node *n);
 
-/* FIXME: Copied from sexp_parser.c. beas63 decoding should be unified. */
+#if 0
+/* FIXME: Copied from sexp_parser.c. base64 decoding should be unified. */
 struct base64_state
 {
   /* Bits are shifted into the buffer from the right, 6 at a time */
@@ -57,6 +57,7 @@ struct base64_state
 
   UINT8 terminator;
 };
+#endif
 
 #include "sexp_streamed_parser.c.x"
 

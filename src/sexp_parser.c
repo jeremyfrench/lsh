@@ -23,6 +23,7 @@
 
 #include "sexp_parser.h"
 
+#include "digits.h"
 #include "format.h"
 #include "parse_macros.h"
 #include "werror.h"
@@ -33,7 +34,7 @@
 
 /* Automatically generated files. */
 #include "sexp_table.h"
-#include "digit_table.h"
+
 
 /* Returns the length of the segmant of characters of a class */
 static UINT32 sexp_scan_class(struct simple_buffer *buffer, int class)
@@ -436,6 +437,7 @@ sexp_parse_hex(struct simple_buffer *buffer)
   return res;
 }
 
+#if 0
 struct base64_state
 {
   /* Bits are shifted into the buffer from the right, 6 at a time */
@@ -445,8 +447,7 @@ struct base64_state
 
   UINT8 terminator;
 };
-
-#define BASE64_INIT(t) {0, 0, (t)}
+#endif
 
 /* Extracts one octet from the base64 encoded input. */
 static int sexp_decode_base64(struct simple_buffer *buffer,
