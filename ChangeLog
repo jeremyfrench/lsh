@@ -1,5 +1,14 @@
 2001-09-03  Niels Möller  <nisse@ehand.com>
 
+	* src/client_x11.c (client_x11_channel): New fields auth_length
+	and name_length, for recording the decoded lengths in the setup
+	message.  
+	(X11_SETUP_MAX_LENGTH): Defined as 48, which is the size of a message
+	with a 16 octet cookie.
+	Updated description of the X11 connection setup message.
+	(LE_READ_UINT16, LE_WRITE_UINT16): New macros. 
+	(do_client_channel_x11_receive): Bug fixes, seems to work now.
+
 	* src/suspend.h: Declare suspend_callback as extern. Noticed by
 	Jean-Pierre. 
 
