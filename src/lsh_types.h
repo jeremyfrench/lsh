@@ -28,6 +28,26 @@
 #define PRINTF_STYLE(f, a)
 #endif
 
+/* Some macros */
+
+/* Reads a 32-bit integer, in network byte order */
+#define READ_UINT32(p)				\
+((((UINT32) (p)[0]) << 24)			\
+ | (((UINT32) (p)[0]) << 16)			\
+ | (((UINT32) (p)[0]) << 8)			\
+ | ((UINT32) (p)[0]))
+
+#define WRITE_UINT32(p, i)			\
+do {						\
+  (p)[0] = ((i) >> 24) & 0xff;			\
+  (p)[0] = ((i) >> 16) & 0xff;			\
+  (p)[0] = ((i) >> 8) & 0xff;			\
+  (p)[0] = (i) & 0xff;				\
+} while(0)
+
+#define MIN(a, b) (((a)>(b)) ? (b) : (a))
+#define MAX(a, b) (((a)>(b)) ? (b) : (a))
+
 /* Generic packet */
 struct lsh_string
 {
