@@ -464,7 +464,7 @@ handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
       if (!lookup_user(user, user_length, user_utf8))
 	goto fail;
 
-      switch(handle_publickey(&buffer, user, session_id))
+      switch (handle_publickey(&buffer, user, session_id))
 	{
 	default:
 	  fatal("Internal error!\n");
@@ -488,7 +488,7 @@ format_env_pair(const char *name, const char *value)
   return lsh_get_cstring(ssh_format("%lz=%lz", name, value));
 }
 
-/* Change persona, set up new environment, and exec
+/* Change persona, set up new environment, change directory, and exec
    the service process. */
 static void
 start_service(struct lshd_user *user, char **argv)
@@ -544,6 +544,21 @@ start_service(struct lshd_user *user, char **argv)
     }
   assert(user->uid == getuid());
 
+  if (!user->home)
+    goto cd_root;
+
+  if (chdir(user->home) < 0)
+    {
+      werror("chdir to home directory `%z' failed %e\n", user->home, errno);
+
+    cd_root:
+      if (chdir("/") < 0)
+	{
+	  werror("chdir to `/' failed %e\n", errno);
+	  _exit(EXIT_FAILURE);
+	}
+    }
+    
   /* FIXME: We should use the user's login shell.
 
        $SHELL -c 'argv[0] "$@"' argv[0] argv[1] ...
