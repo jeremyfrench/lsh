@@ -20,20 +20,28 @@ with
    ./configure
    make
 
+You need GNU make. Some shells have had bugs preventing them from
+executing the configure script; if you experience problems, try
+running
+
+  bash configure
+
 If you want to hack lsh, you need some more tools: autoconf, automake,
-GNU-make, gcc, gperf (at least version 2.7) and scsh. All but scsh can
-be found at your local GNU mirror site. scsh, Olin Shiver's Scheme
-Shell, can be downloaded from <URL:
+gcc, gperf (at least version 2.7) and a scheme implementeation. The
+currently supported schemes are guile and scsh. All but scsh can be
+found at your local GNU mirror site. scsh, Olin Shiver's Scheme Shell,
+can be downloaded from <URL:
 ftp://ftp-swiss.ai.mit.edu/pub/su/scsh/scsh.tar.gz>.
 
 If you have checked out lsh from CVS, things are more complicated. You
 must first generate Makefile.am files from the corresponding
 Makefile.am.in files. Do this by running ./make_am in the top level
 directory. Next, you need to run aclocal, autoconf, autoheader and
-automake -a. This creates the configure script and a Makefile.in. Now you
-can try ./configure ; make. If the compiler complains that it can't
-find a file foo.h.x, try creating it with make foo.h.x or ./make_class
-<foo.h >foo.h.x, and similarly for missing foo.c.x files.
+automake -a. This creates the configure script and a Makefile.in. Now
+you can try ./configure ; make. If the compiler complains that it
+can't find a file foo.h.x, try creating it with make foo.h.x, and
+similarly for missing foo.c.x files. The misc/bootstrap.sh script
+tries to do all this.
 
 
 NEEDED LIBRARIES
