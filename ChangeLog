@@ -1,3 +1,31 @@
+2001-08-21  Niels Möller  <nisse@ehand.com>
+
+	* src/server_userauth.c (server_userauth_none): New authentication
+	method. 
+
+	* src/lshd.c (main_argp_parser): Install a handler for the "none"
+	authentication method. 
+	(main): Always require user authentication (used to allow clients
+	to start the ssh-connection service directly, under the same
+	restrictions as for "none" authentication).
+
+	* src/lsh.c (main_options): Deleted options --userauth and
+	--no-userauth. 
+	(lsh_login_command): Try the "none" authentication method.
+
+	* src/handshake.c (handshake_command): Use CAST_SUBTYPE.
+
+	* src/connection_commands.c (connection_if_srp): Deleted command.
+
+	* src/command.c (do_command_4): Use CAST_SUBTYPE, in case
+	command_4 is inherited.
+	(do_command_3): Use CAST_SUBTYPE, in case command_3 is inherited.
+	(do_command_2): Use CAST_SUBTYPE, command_2 is inherited by
+	sexp_print_command. 
+
+	* src/client_userauth.c (format_userauth_none): New function.
+	(make_client_none_auth): New function.
+
 2001-08-12  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/client.c (do_exit): New callback function.
