@@ -108,7 +108,7 @@ static void reap(struct reaper *r)
 	  
 	  if (callback)
 	    {
-	      ALIST_SET(r->children, pid, 0);
+	      ALIST_SET(r->children, pid, NULL);
 	      EXIT_CALLBACK(callback, signaled, core, value);
 	    }
 	  else
