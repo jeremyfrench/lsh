@@ -140,8 +140,9 @@ DEFINE_COMMAND(open_forwarded_x11)
 #define X11_MIN_DISPLAY 10
 #define X11_MAX_DISPLAY 1000
 
-/* FIXME: Figure out if and how we should use /tmp/.X17-lock.
- * Consider using display "unix:17" instead of just ":17".
+/* FIXME: Create the /tmp/.X11-unix directory, if needed. Figure out
+ * if and how we should use /tmp/.X17-lock. Consider using display
+ * "unix:17" instead of just ":17".
  */
 
 /* GABA:
@@ -368,9 +369,9 @@ do_xauth_exit(struct exit_callback *s, int signaled,
 	= STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "xauth failed");
       EXCEPTION_RAISE(self->e, &xauth_failed);
       if (signaled)
-	werror("xauth invocation failed: Signal %d\n", value);
+	werror("xauth invocation failed: Signal %i\n", value);
       else
-	werror("xauth invocation failed: exit code: %d\n", value);
+	werror("xauth invocation failed: exit code: %i\n", value);
     }
   else
     /* NOTE: Return value is ignored. */
