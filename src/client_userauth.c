@@ -24,6 +24,7 @@
 #include "userauth.h"
 
 #include "charset.h"
+#include "command.h"
 #include "format.h"
 #include "parse.h"
 #include "password.h"
@@ -46,7 +47,7 @@
  * the lock and turning it around).
  *
  * If none of the keys were recognized, or if no keys were available
- * from the start, we ask the user for a password and attempts to log
+ * from the start, we ask the user for a password and attempt to log
  * in using that. */
 
 static struct packet_handler *make_banner_handler(void);
@@ -56,12 +57,10 @@ static struct packet_handler *make_banner_handler(void);
 /* GABA:
    (class
      (name client_userauth)
-     (super ssh_service)
+     (super command)
      (vars
        (username string)            ; Remote user name to authenticate as.
-
        (service_name simple int)    ; Service we want to access .
-       (service object ssh_service)
   
        ; FIXME: Keys to try
        ))
@@ -72,7 +71,7 @@ static struct packet_handler *make_banner_handler(void);
      (name success_handler)
      (super packet_handler)
      (vars
-       (service object ssh_service)))
+       (c object command_continuation)))
 */
 
 /* GABA:
@@ -140,7 +139,7 @@ static int do_userauth_success(struct packet_handler *c,
       connection->dispatch[SSH_MSG_USERAUTH_FAILURE] = connection->fail;
       connection->dispatch[SSH_MSG_USERAUTH_BANNER] = connection->fail;
       
-      return SERVICE_INIT(closure->service, connection);
+      return COMMAND_RETURN(closure->c, connection);
     }
   
   lsh_string_free(packet);
@@ -233,12 +232,13 @@ static int do_userauth_banner(struct packet_handler *closure,
   return LSH_FAIL | LSH_DIE;
 }
 
-static struct packet_handler *make_success_handler(struct ssh_service *service)
+static struct packet_handler *
+make_success_handler(struct command_continuation *c)
 {
   NEW(success_handler, self);
 
   self->super.handler = do_userauth_success;
-  self->service = service;
+  self->c = c;
 
   return &self->super;
 }
@@ -263,31 +263,31 @@ static struct packet_handler *make_banner_handler(void)
   return self;
 }
 
-static int init_client_userauth(struct ssh_service *c,
-				struct ssh_connection *connection)
+static int do_client_userauth(struct command *s,
+			      struct lsh_object *x,
+			      struct command_continuation *c)
 {
-  CAST(client_userauth, closure, c);
-
+  CAST(client_userauth, self, s);
+  CAST(ssh_connection, connection, x);
+  
   connection->dispatch[SSH_MSG_USERAUTH_SUCCESS]
-    = make_success_handler(closure->service);
+    = make_success_handler(c);
   connection->dispatch[SSH_MSG_USERAUTH_FAILURE]
-    = make_failure_handler(closure);
+    = make_failure_handler(self);
   connection->dispatch[SSH_MSG_USERAUTH_BANNER]
     = make_banner_handler();
 
-  return send_passwd(closure, connection);
+  return send_passwd(self, connection);
 }
 
-struct ssh_service *make_client_userauth(struct lsh_string *username,
-					 int service_name,
-					 struct ssh_service *service)
+struct command *make_client_userauth(struct lsh_string *username,
+				     int service_name)
 {
-  NEW(client_userauth, closure);
+  NEW(client_userauth, self);
 
-  closure->super.init = init_client_userauth;
-  closure->username = username;
-  closure->service_name = service_name;
-  closure->service = service;
+  self->super.call = do_client_userauth;
+  self->username = username;
+  self->service_name = service_name;
 
-  return &closure->super;
+  return &self->super;
 }

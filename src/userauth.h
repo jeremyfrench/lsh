@@ -62,8 +62,7 @@ struct ssh_service *make_userauth_service(struct int_list *advertised_methods,
 					  struct alist *methods);
 
 /* Client functions */
-struct ssh_service *make_client_userauth(struct lsh_string *username,
-					 int service_name,
-					 struct ssh_service *service);
+struct command *make_client_userauth(struct lsh_string *username,
+				     int service_name);
 
 #endif /* LSH_USERAUTH_H_INCLUDED */
