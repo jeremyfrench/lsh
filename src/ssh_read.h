@@ -37,16 +37,6 @@ struct ssh_read_state;
 
 /* GABA:
    (class
-     (name header_callback)
-     (vars
-       (process method "struct lsh_string *"
-                       "struct ssh_read_state *" "uint32_t *done")))
-*/
-
-#define HEADER_CALLBACK(c, s, p) ((c)->process((c), (s), (p)))
-
-/* GABA:
-   (class
      (name error_callback)
      (vars
        (error method void "int error")))
@@ -72,11 +62,15 @@ struct ssh_read_state;
        ; The line or packet being read
        (data string)
 
-       ; Called when header is read. It has total responsibility for
-       ; setting up the next state.
-       (process object header_callback)
+       ; Called when header is read. If it returns non-NULL, the
+       ; reader goes into packet-reading mode. In this case, this
+       ; method is expected to also initialize self->pos properly.
+       (process method "struct lsh_string *")
+
        ; Called for each complete line or packet
        (handler object abstract_write)
+       ; FIXME: Make error a plainmethod of this class. Perhaps
+       ; do the same to handler?
        (error object error_callback)))
 */  
 
@@ -99,12 +93,17 @@ ssh_read_packet(struct ssh_read_state *self,
 void
 init_ssh_read_state(struct ssh_read_state *state,
 		    uint32_t max_header, uint32_t header_length,
-		    struct header_callback *process,
+		    struct lsh_string * (*process)
+		      (struct ssh_read_state *state),
 		    struct error_callback *error);
 
 struct ssh_read_state *
 make_ssh_read_state(uint32_t max_header, uint32_t header_length,
-		    struct header_callback *process,
+		    struct lsh_string * (*process)
+		      (struct ssh_read_state *state),
 		    struct error_callback *error_callback);
+
+struct lsh_string *
+service_process_header(struct ssh_read_state *state);
 
 #endif /* LSH_SSH_READ_H_INCLUDED */

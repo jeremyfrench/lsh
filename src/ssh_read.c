@@ -220,7 +220,7 @@ oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
       ssh_read_set_callback(self, source, fd, NULL);
       self->pos = 0;
       
-      packet = HEADER_CALLBACK(self->process, self, &self->pos);
+      packet = self->process(self);
       if (packet)
 	{
 	  assert(!self->data);
@@ -271,7 +271,8 @@ oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state)
 void
 init_ssh_read_state(struct ssh_read_state *self,
 		    uint32_t max_header, uint32_t header_length,
-		    struct header_callback *process,
+		    struct lsh_string * (*process)
+		      (struct ssh_read_state *state),
 		    struct error_callback *error)
 {
   self->state = NULL;
@@ -290,7 +291,8 @@ init_ssh_read_state(struct ssh_read_state *self,
 
 struct ssh_read_state *
 make_ssh_read_state(uint32_t max_header, uint32_t header_length,
-		    struct header_callback *process,
+		    struct lsh_string * (*process)
+		      (struct ssh_read_state *state),
 		    struct error_callback *error)
 {
   NEW(ssh_read_state, self);
