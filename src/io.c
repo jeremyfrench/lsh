@@ -773,7 +773,8 @@ do_connect_callback(struct io_callback *s,
     {
       trace("io.c: connect_callback: Connect on fd %i failed.\n", fd->fd);
       EXCEPTION_RAISE(fd->e,
-		      make_io_exception(EXC_IO_CONNECT, fd, 0, "connect failed."));
+		      make_io_exception(EXC_IO_CONNECT, fd,
+					0, "Connect failed."));
       close_fd(fd);
     }
   else
@@ -1629,7 +1630,7 @@ do_connect_list_callback(struct io_callback *s,
 	  /* All addresses failed */
 	  EXCEPTION_RAISE(self->e,
 			  make_io_exception(EXC_IO_CONNECT, NULL,
-					    errno, NULL));
+					    0, "Connect failed"));
 	  KILL_RESOURCE(&self->state->super);
 	  return;
 	}
