@@ -30,16 +30,16 @@
 struct command *
 make_spki_read_acls(struct alist *algorithms);
 
-struct command_simple spki_make_context_command;
+extern struct command_simple spki_make_context_command;
 #define SPKI_MAKE_CONTEXT (&spki_make_context_command.super.super)
 
-struct command_simple spki_read_acls_command;
+extern struct command_simple spki_read_acls_command;
 #define SPKI_READ_ACLS (&spki_read_acls_command.super.super.super)
 
-struct command_simple spki_read_hostkeys_command;
+extern struct command_simple spki_read_hostkeys_command;
 #define SPKI_READ_HOSTKEYS (&spki_read_hostkeys_command.super.super)
 
-struct command_simple spki_read_userkeys_command;
+extern struct command_simple spki_read_userkeys_command;
 #define SPKI_READ_USERKEYS (&spki_read_userkeys_command.super.super)
 
 #endif /* LSH_SPKI_COMMANDS_H_INCLUDED */

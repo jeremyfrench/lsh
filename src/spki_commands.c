@@ -74,6 +74,7 @@ do_spki_add_acl(struct command *s,
   CAST(spki_command, self, s);
   CAST_SUBTYPE(sexp, expr, a);
 
+  trace("do_spki_add_acl\n");
   spki_add_acl(self->ctx, expr);
 
   COMMAND_RETURN(c, self->ctx);
@@ -87,12 +88,16 @@ COMMAND_SIMPLE(spki_add_acl_command)
   self->super.call = do_spki_add_acl;
   self->ctx = ctx;
 
+  trace("spki_add_acl_command\n");
+
   return &self->super.super;
 }
 
 COMMAND_SIMPLE(spki_make_context_command)
 {
   CAST_SUBTYPE(alist, algorithms, a);
+  trace("spki_make_context_command\n");
+  
   return &make_spki_context(algorithms)->super;
 }
 
@@ -114,7 +119,8 @@ COMMAND_SIMPLE(spki_make_context_command)
 	     (lambda (e) ctx) ; Return ctx
   	     ;; Keep on reading until an SEXP_EOF or
 	     ;; SEXP_SYNTAX exception is raised. 
-	     (spki_add_acl ctx))))))
+	     (spki_add_acl ctx)
+	     file)))))
 */
 
 struct command *
@@ -154,6 +160,8 @@ do_spki_add_hostkey(struct command *s,
   CAST(spki_read_hostkey_context, self, s);
   CAST(keypair, key, a);
 
+  trace("do_spki_add_hostkey\n");
+  
   if (ALIST_GET(self->keys, key->type))
     werror("Multiple host keys of type %a.\n", key->type);
   else
@@ -166,6 +174,9 @@ do_spki_add_hostkey(struct command *s,
 COMMAND_SIMPLE(spki_add_hostkey_command)
 {
   NEW(spki_read_hostkey_context, self);
+
+  trace("spki_add_hostkey_command\n");
+
   (void) a;
   
   self->super.call = do_spki_add_hostkey;
@@ -177,6 +188,7 @@ COMMAND_SIMPLE(spki_add_hostkey_command)
 COMMAND_SIMPLE(spki_return_hostkeys)
 {
   CAST(spki_read_hostkey_context, self, a);
+  trace("spki_return_hostkeys\n");
   return &self->keys->super;
 }
 
@@ -191,7 +203,8 @@ COMMAND_SIMPLE(spki_return_hostkeys)
            (for_sexp (lambda (e) (return_hostkeys add))
 	             (lambda (key)
 		       (add (spki_parse_private_key
-		               algorithms key))))))))
+		               algorithms key)))
+		     file)))))
 */
 
 COMMAND_SIMPLE(spki_read_hostkeys_command)
@@ -199,6 +212,8 @@ COMMAND_SIMPLE(spki_read_hostkeys_command)
   CAST_SUBTYPE(alist, algorithms, a);
   CAST_SUBTYPE(command, res, spki_read_hostkeys(algorithms));
 
+  trace("spki_read_hostkeys_command\n");
+  
   return &res->super;
 }
 
@@ -222,6 +237,8 @@ do_spki_add_userkey(struct command *s,
   CAST(spki_read_userkey_context, self, s);
   CAST(keypair, key, a);
 
+  trace("do_spki_add_userkey\n");
+  
   object_queue_add_tail(&self->keys, &key->super);
 
   COMMAND_RETURN(c, s);
@@ -232,7 +249,8 @@ COMMAND_SIMPLE(spki_add_userkey_command)
 {
   NEW(spki_read_userkey_context, self);
   (void) a;
-  
+
+  trace("spki_add_userkey_command\n");
   self->super.call = do_spki_add_userkey;
   object_queue_init(&self->keys);
 
@@ -242,6 +260,8 @@ COMMAND_SIMPLE(spki_add_userkey_command)
 COMMAND_SIMPLE(spki_return_userkeys)
 {
   CAST(spki_read_userkey_context, self, a);
+  trace("spki_return_userkeys\n");
+  
   return &queue_to_list(&self->keys)->super.super;
 }
 
@@ -256,7 +276,8 @@ COMMAND_SIMPLE(spki_return_userkeys)
            (for_sexp (lambda (e) (return_hostkeys ctx))
 	             (lambda (key)
 		       (ctx (spki_parse_private_key
-		               algorithms key))))))))
+		               algorithms key)))
+		     file)))))
 */
 
 COMMAND_SIMPLE(spki_read_userkeys_command)
@@ -264,6 +285,8 @@ COMMAND_SIMPLE(spki_read_userkeys_command)
   CAST_SUBTYPE(alist, algorithms, a);
   CAST_SUBTYPE(command, res, spki_read_userkeys(algorithms));
 
+  trace("spki_read_userkeys_command\n");
+  
   return &res->super;
 }
 
