@@ -1,5 +1,4 @@
 #include "testutils.h"
-#include "certificate.h"
 
 void
 test_main(void)

@@ -1,3 +1,9 @@
+#include "certificate.h"
+#include "parse.h"
+#include "spki-types.h"
+
+#include "nettle/sexp.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

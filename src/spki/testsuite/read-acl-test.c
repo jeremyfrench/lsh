@@ -1,8 +1,5 @@
 #include "testutils.h"
 
-#include "certificate.h"
-#include "nettle/sexp.h"
-
 void
 test_main(void)
 {
