@@ -53,7 +53,7 @@ generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 bootstrap: $(generated_sources) $(dist_classes)
 	(cd spki && $(MAKE) bootstrap)
 
-liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
+liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	algorithms.c alist.c atoms.c \
 	bignum.c \
 	channel.c channel_commands.c channel_forward.c \
