@@ -33,7 +33,7 @@ all:
 M4FLAGS = -P #-s
 %.c: macros.m4 %.m4
 	$(M4) $(M4FLAGS) $^ > $@T
-	test -s $@T && mv -f $@T $@
+	test -s $@T && mv -f $@T $(srcdir)/$@
 
 
 .PHONY: check-some check-more
