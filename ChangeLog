@@ -1,5 +1,20 @@
 2003-10-22  Niels Möller  <niels@s3.kth.se>
 
+	* src/server_session.c (do_alloc_pty): Return channel in question.
+	(do_window_change_request): Likewise.
+	(do_spawn_subsystem): Likewise.
+
+	* src/gateway_channel.c (do_gateway_channel_request): Added FIXME
+	on returned value.
+	* src/server_x11.c (do_xauth_exit): Likewise.
+
+	* src/client.c (do_exit_status): Return the channel in question to
+	the continuation.
+	(do_exit_signal): Likewise.
+
+	* src/channel.c (channel_request_continuation): Expanded FIXME
+	comment. 
+
 	* src/parse.h: Include nettle/bignum.h instead of bignum.h.
 
 	* src/format.h: Don't include bignum.h.
