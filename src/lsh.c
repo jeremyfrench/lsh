@@ -72,8 +72,10 @@
 #include "lsh_argp.h"
 
 /* Forward declarations */
+#if 0
 struct command_simple options2remote;
 #define OPTIONS2REMOTE (&options2remote.super.super)
+#endif
 
 struct command_simple lsh_verifier_command;
 #define OPTIONS2VERIFIER (&lsh_verifier_command.super.super)
@@ -111,28 +113,29 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_CONNECTION);
 /* GABA:
    (class
      (name lsh_options)
-     (super algorithms_options)
+     (super client_options)
      (vars
-       (backend object io_backend)
+       (algorithms object algorithms_options)
+       ;; (backend object io_backend)
 
        (random object randomness_with_poll)
 
-       (tty object interact)
+       ;; (tty object interact)
        
        (signature_algorithms object alist)
        (home . "const char *")
        
        ; For i/o exceptions 
-       (handler object exception_handler)
+       ;; (handler object exception_handler)
 
-       (exit_code . "int *")
+       ;; (exit_code . "int *")
        
-       (not . int)
-       (port . "char *")
-       (remote object address_info)
+       ;; (not . int)
+       ;; (port . "char *")
+       ;; (remote object address_info)
 
-       (local_user . "char *")
-       (user . "char *")
+       ;; (local_user . "char *")
+       ;; (user . "char *")
        (identity . "char *")
        (with_publickey . int)
 
@@ -155,29 +158,29 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_CONNECTION);
        (known_hosts . "const char *")
        
        ; -1 means default behaviour
-       (with_pty . int)
+       ;; (with_pty . int)
 
-       (with_remote_peers . int)
+       ;; (with_remote_peers . int)
 
        ; Session modifiers
-       (stdin_file . "const char *")
-       (stdout_file . "const char *")
-       (stderr_file . "const char *")
+       ;; (stdin_file . "const char *")
+       ;; (stdout_file . "const char *")
+       ;; (stderr_file . "const char *")
 
        ; fork() extra processes for handling stdio file-descriptors,
        ; to avoid setting them in non-blocking mode.
-       (stdin_fork . int)
-       (stdout_fork . int)
-       (stderr_fork . int)
+       ;; (stdin_fork . int)
+       ;; (stdout_fork . int)
+       ;; (stderr_fork . int)
        
        ; True if the process's stdin or pty (respectively) has been used. 
-       (used_stdin . int)
-       (used_pty . int)
+       ;; (used_stdin . int)
+       ;; (used_pty . int)
        
-       (start_shell . int)
+       ;; (start_shell . int)
        (start_gateway . int)
-       (remote_forward . int)
-       (actions struct object_queue)))
+       (remote_forward . int)))
+       ;; (actions struct object_queue)))
 */
 
 
@@ -187,28 +190,36 @@ make_options(struct io_backend *backend,
 	     int *exit_code)
 {
   NEW(lsh_options, self);
+  init_client_options(&self->super, backend, handler, exit_code);
 
+  self->algorithms
+    = make_algorithms_options(all_symmetric_algorithms());
+#if 0
   init_algorithms_options(&self->super, all_symmetric_algorithms());
   
   self->backend = backend;
-  self->random = make_default_random(NULL, handler);
 
   self->tty = make_unix_interact(backend);
+#endif
+
+  self->random = make_default_random(NULL, handler);
   
   self->home = getenv("HOME");
   
   self->signature_algorithms = all_signature_algorithms(&self->random->super);
-  
+
+#if 0
   self->handler = handler;
   self->exit_code = exit_code;
   
   self->not = 0;
   self->remote = NULL;
   self->local_user = self->user = getenv("LOGNAME");
-
+  
   /* Default behaviour is to lookup the "ssh" service, and fall back
    * to port 22 if that fails. */
   self->port = NULL; 
+#endif
 
   self->sloppy = 0;
   self->capture = NULL;
@@ -217,6 +228,7 @@ make_options(struct io_backend *backend,
   self->known_hosts = NULL;
   /* self->known_hosts_file = NULL; */
 
+#if 0
   self->stdin_file = NULL;
   self->stdout_file = NULL;
   self->stderr_file = NULL;
@@ -229,10 +241,12 @@ make_options(struct io_backend *backend,
   self->with_pty = -1;
   self->start_shell = 1;
   self->with_remote_peers = 0;
-  self->start_gateway = 0;
+#endif
   
+  self->start_gateway = 0;
+#if 0  
   object_queue_init(&self->actions);
-
+#endif
   self->with_publickey = 1;
 
   self->with_srp_keyexchange = 0;
@@ -247,13 +261,14 @@ make_options(struct io_backend *backend,
   return self;
 }
 
-
+#if 0
 /* Host to connect to */
 DEFINE_COMMAND_SIMPLE(options2remote, a)
 {
   CAST(lsh_options, options, a);
   return &options->remote->super;
 }
+#endif
 
 /* Request ssh-userauth or ssh-connection service, as appropriate,
  * and pass the options as a first argument. */
@@ -285,7 +300,7 @@ do_options2known_hosts(struct command *ignored UNUSED,
       s = tmp->data;
     }
   
-  f = io_read_file(options->backend, s, e);
+  f = io_read_file(options->super.backend, s, e);
 
   if (!f)
     {
@@ -333,7 +348,7 @@ do_options2identities(struct command *ignored UNUSED,
       s = tmp->data;
     }
   
-  f = io_read_file(options->backend, s, e);
+  f = io_read_file(options->super.backend, s, e);
   
   if (!f)
     {
@@ -342,7 +357,8 @@ do_options2identities(struct command *ignored UNUSED,
       COMMAND_RETURN(c, make_object_list(0, -1));
     }
   else
-    COMMAND_CALL(make_spki_read_userkeys(options->signature_algorithms),
+    COMMAND_CALL(make_spki_read_userkeys(options->signature_algorithms,
+					 options->super.tty),
 		 f, c, e);
   
   lsh_string_free(tmp);
@@ -373,9 +389,7 @@ make_options_command(struct lsh_options *options,
   return &self->super;
 }
 
-/* Maps a host key to a (trusted) verifier object.
- *
- * NOTE: Handles only ssh-dss keys. */
+/* Maps a host key to a (trusted) verifier object. */
 
 /* GABA:
    (class
@@ -552,8 +566,8 @@ do_lsh_verifier(struct command *s,
   CAST(options_command, self, s);
   CAST_SUBTYPE(spki_context, db, a);
   COMMAND_RETURN(c, make_lsh_host_db(db,
-				     self->options->tty,
-				     self->options->remote,
+				     self->options->super.tty,
+				     self->options->super.remote,
 				     self->options->sloppy,
 				     self->options->capture_file));
 }
@@ -580,18 +594,19 @@ do_lsh_login(struct command *s,
   CAST_SUBTYPE(object_list, keys, a);
 
   struct client_userauth_method *password
-    = make_client_password_auth(self->options->tty);
+    = make_client_password_auth(self->options->super.tty);
   
   COMMAND_RETURN(c,
-		 make_client_userauth(ssh_format("%lz", self->options->user),
-				      ATOM_SSH_CONNECTION,
-				      (LIST_LENGTH(keys)
-				       ? make_object_list
-				         (2, 
-					  make_client_publickey_auth(keys),
-					  password,
-					  -1)
-				       : make_object_list(1, password, -1))));
+		 make_client_userauth
+		 (ssh_format("%lz", self->options->super.user),
+		  ATOM_SSH_CONNECTION,
+		  (LIST_LENGTH(keys)
+		   ? make_object_list
+		   (2, 
+		    make_client_publickey_auth(keys),
+		    password,
+		    -1)
+		   : make_object_list(1, password, -1))));
 }
 
 /* (login options public-keys connection) */
@@ -604,7 +619,7 @@ DEFINE_COMMAND_SIMPLE(lsh_login_command, a)
 			  do_lsh_login)->super;
 }
 
-/* NOTE: options2identities a command_simple, so it must not be
+/* NOTE: options2identities is a command_simple, so it must not be
  * invoked directly. */
 
 /* Requests the ssh-userauth service, log in, and request connection
@@ -631,11 +646,10 @@ DEFINE_COMMAND_SIMPLE(lsh_login_command, a)
      (params
        (connect object command)
        (handshake object handshake_info)
-       (init object make_kexinit)
-       (requests object object_list))
+       (init object make_kexinit))
      (expr (lambda (options)
                ; What to do with the service
-	       ((progn requests)
+	       ((progn (options2actions options))
 	         ; Initialize service
 		 (init_connection_service
 		   ; Either requests ssh-connection service,
@@ -650,7 +664,8 @@ DEFINE_COMMAND_SIMPLE(lsh_login_command, a)
 		       (connect (options2remote options)))))))))
 */
 
-/* GABA:
+#if 0
+/* ;;GABA:
    (expr
      (name make_start_session)
      (params
@@ -663,7 +678,7 @@ DEFINE_COMMAND_SIMPLE(lsh_login_command, a)
 */
 
 /* Requests a shell or command, and connects the channel to our stdio. */
-/* GABA:
+/* ;;GABA:
    (expr
      (name lsh_start_session)
      (params
@@ -718,7 +733,7 @@ parse_forward_arg(char *arg,
   
   return 1;
 }
-
+#endif
 
 /* Option parsing */
 
@@ -751,8 +766,10 @@ static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
+#if 0
   { "port", 'p', "Port", 0, "Connect to this port.", 0 },
   { "user", 'l', "User name", 0, "Login as this user.", 0 },
+#endif
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
   { "publickey", OPT_PUBLICKEY, NULL, 0,
     "Try publickey user authentication (default).", 0 },
@@ -781,14 +798,20 @@ main_options[] =
   { "no-userauth", OPT_USERAUTH | ARG_NOT, NULL, 0,
     "Request the ssh-userauth service (default if SRP is used).", 0 },
   
+#if 0
   { NULL, 0, NULL, 0, "Actions:", 0 },
-  { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
+#endif
+  { "forward-local-port", 'L', "local-port:target-host:target-port",
+    0, "", CLIENT_ARGP_ACTION_GROUP },
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
+#if 0
   { "nop", 'N', NULL, 0, "No operation (suppresses the default action, "
     "which is to spawn a remote shell)", 0 },
   { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },
   { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
+#endif
   { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 },
+#if 0
   { NULL, 0, NULL, 0, "Modifiers that apply to port forwarding:", 0 },
   { "remote-peers", 'g', NULL, 0, "Allow remote access to forwarded ports", 0 },
   { "no-remote-peers", 'g' | ARG_NOT, NULL, 0, 
@@ -811,6 +834,7 @@ main_options[] =
 #endif /* WITH_PTY_SUPPORT */
   { NULL, 0, NULL, 0, "Universal not:", 0 },
   { "no", 'n', NULL, 0, "Inverts the effect of the next modifier", 0 },
+#endif
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -818,11 +842,13 @@ main_options[] =
 static const struct argp_child
 main_argp_children[] =
 {
+  { &client_argp, 0, "", 0 },
   { &algorithms_argp, 0, "", 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
 
+#if 0
 /* FIXME: Moves to client.c */
 static int
 fork_input(int in)
@@ -951,7 +977,7 @@ make_lsh_session(struct lsh_options *self)
   /* Clear options */
   self->stdin_file = self->stdout_file = self->stderr_file = NULL;
   
-  return make_client_session
+  return make_client_session_channel
     (io_read(make_lsh_fd(self->backend, in, self->handler),
 	     NULL, NULL),
      io_write(make_lsh_fd(self->backend, out, self->handler),
@@ -1083,12 +1109,13 @@ rebuild_command_line(unsigned argc, char **argv)
 
   return r;
 }
+#endif
 
 #define CASE_ARG(opt, attr, none)		\
   case opt:					\
-    if (self->not)				\
+    if (self->super.not)			\
       {						\
-        self->not = 0;				\
+        self->super.not = 0;			\
 						\
       case opt | ARG_NOT:			\
         self->attr = none;			\
@@ -1100,9 +1127,9 @@ rebuild_command_line(unsigned argc, char **argv)
 
 #define CASE_FLAG(opt, flag)			\
   case opt:					\
-    if (self->not)				\
+    if (self->super.not)			\
       {						\
-        self->not = 0;				\
+        self->super.not = 0;			\
 						\
       case opt | ARG_NOT:			\
         self->flag = 0;				\
@@ -1123,11 +1150,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
       state->child_inputs[0] = &self->super;
-      state->child_inputs[1] = NULL;
+      state->child_inputs[1] = self->algorithms;
+      state->child_inputs[2] = NULL;
       break;
+#if 0
     case ARGP_KEY_NO_ARGS:
       argp_usage(state);
       break;
+
     case ARGP_KEY_ARG:
       if (!state->arg_num)
 	{
@@ -1153,20 +1183,21 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 							      state->argv + state->next)));
       self->start_shell = 0;
       break;
-
+#endif
+      
     case ARGP_KEY_END:
       if (!self->home)
 	{
 	  argp_error(state, "No home directory. Please set HOME in the environment.");
 	  break;
 	}
-	  
+#if 0	  
       if (!self->user)
 	{
 	  argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
 	  break;
 	}
-	    
+#endif    
       if (self->with_dh_keyexchange < 0)
 	self->with_dh_keyexchange = !self->with_srp_keyexchange;
       
@@ -1180,19 +1211,21 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  if (self->with_srp_keyexchange)
 	    {
 	      LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
-	      ALIST_SET(self->super.algorithms,
+	      ALIST_SET(self->algorithms->algorithms,
 			ATOM_SRP_RING1_SHA1_LOCAL,
-			make_srp_client(make_srp1(&self->random->super),
-					self->tty,
-					ssh_format("%lz", self->user)));
+			&make_srp_client(make_srp1(&self->random->super),
+					 self->super.tty,
+					 ssh_format("%lz", self->super.user))
+			->super);
 	    }
 #endif /* WITH_SRP */
 	  if (self->with_dh_keyexchange)
 	    {
 	      LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
-	      ALIST_SET(self->super.algorithms,
+	      ALIST_SET(self->algorithms->algorithms,
 			ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			make_dh_client(make_dh1(&self->random->super)));
+			&make_dh_client(make_dh1(&self->random->super))
+			->super);
 	    }
 	}
       else
@@ -1258,7 +1291,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	if (s)
 	  {
 	    struct lsh_fd *f
-	      = io_write_file(self->backend, s,
+	      = io_write_file(self->super.backend, s,
 			      O_CREAT | O_APPEND | O_WRONLY,
 			      0600, 500, NULL,
 			      make_report_exception_handler
@@ -1276,29 +1309,30 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  }
 	lsh_string_free(tmp);
       }
-	
+#if 0
 #if WITH_TCP_FORWARD
       if (self->remote_forward)
 	lsh_add_action(self,
 		       make_install_fix_channel_open_handler
 		       (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip));
 #endif /* WITH_TCP_FORWARD */
-      
+
       /* Add shell action */
       if (self->start_shell)
 	lsh_add_action(self, lsh_shell_session(self));
-
+#endif
       if (self->start_gateway)
 	{
 	  struct local_info *gateway;
-	  if (!self->local_user)
+	  if (!self->super.local_user)
 	    {
 	      argp_error(state, "You have to set LOGNAME in the environment, "
 			 " if you want to use the gateway feature.");
 	      break;
 	    }
-	  gateway = make_gateway_address(self->local_user, self->user,
-					 self->remote);
+	  gateway = make_gateway_address(self->super.local_user,
+					 self->super.user,
+					 self->super.remote);
 
 	  if (!gateway)
 	    {
@@ -1307,22 +1341,22 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      break;
 	    }
 	      
-	  lsh_add_action(self,
-			 make_gateway_setup
-			 (make_listen_local(self->backend, gateway)));
+	  client_add_action(&self->super,
+			    make_gateway_setup
+			    (make_listen_local(self->super.backend, gateway)));
 	}
-	
+#if 0
       if (object_queue_is_empty(&self->actions))
 	{
 	  argp_error(state, "No actions given.");
 	  break;
 	}
-
+#endif
       /* Start background poll */
       RANDOM_POLL_BACKGROUND(self->random->poller);
       
       break;
-
+#if 0
     case 'p':
       self->port = arg;
       break;
@@ -1330,12 +1364,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case 'l':
       self->user = arg;
       break;
-
+#endif
+      
     case 'i':
       self->identity = optarg;
       break;
 
-      CASE_FLAG(OPT_PUBLICKEY, with_publickey);
+    CASE_FLAG(OPT_PUBLICKEY, with_publickey);
 
     case OPT_HOST_DB:
       self->known_hosts = optarg;
@@ -1353,11 +1388,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->capture = arg;
       break;
 
-      CASE_FLAG(OPT_DH, with_dh_keyexchange);
-      CASE_FLAG(OPT_SRP, with_srp_keyexchange);
+    CASE_FLAG(OPT_DH, with_dh_keyexchange);
+    CASE_FLAG(OPT_SRP, with_srp_keyexchange);
 
-      CASE_FLAG(OPT_USERAUTH, with_userauth);
-
+    CASE_FLAG(OPT_USERAUTH, with_userauth);
+#if 0
     case 'E':
       lsh_add_action(self, lsh_command_session(self, ssh_format("%lz", arg)));
       break;
@@ -1365,22 +1400,22 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case 'S':
       lsh_add_action(self, lsh_shell_session(self));
       break;
-      
+#endif 
     case 'L':
       {
 	UINT32 listen_port;
 	struct address_info *target;
 
-	if (!parse_forward_arg(arg, &listen_port, &target))
+	if (!client_parse_forward_arg(arg, &listen_port, &target))
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
-	lsh_add_action(self, make_forward_local_port
-		       (self->backend,
-			make_address_info((self->with_remote_peers
-					   ? NULL
-					   : ssh_format("%lz", "127.0.0.1")),
-					  listen_port),
-			target));
+	client_add_action(&self->super, make_forward_local_port
+			  (self->super.backend,
+			   make_address_info((self->super.with_remote_peers
+					      ? NULL
+					      : ssh_format("%lz", "127.0.0.1")),
+					     listen_port),
+			   target));
 	break;
       }      
 
@@ -1389,34 +1424,36 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	UINT32 listen_port;
 	struct address_info *target;
 
-	if (!parse_forward_arg(arg, &listen_port, &target))
+	if (!client_parse_forward_arg(arg, &listen_port, &target))
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
-	lsh_add_action(self, make_forward_remote_port
-		       (self->backend,
-			make_address_info((self->with_remote_peers
-					   ? ssh_format("%lz", "0.0.0.0")
-					   : ssh_format("%lz", "127.0.0.1")),
-					  listen_port),
-			target));
+	client_add_action(&self->super, make_forward_remote_port
+			  (self->super.backend,
+			   make_address_info((self->super.with_remote_peers
+					      ? ssh_format("%lz", "0.0.0.0")
+					      : ssh_format("%lz", "127.0.0.1")),
+					     listen_port),
+			   target));
 	self->remote_forward = 1;
 	break;
       }      
-      
+#if 0
     case 'N':
       self->start_shell = 0;
       break;
-
-      CASE_FLAG('G', start_gateway);
-      CASE_FLAG('g', with_remote_peers);
+#endif
+      
+    CASE_FLAG('G', start_gateway);
+#if 0
+    CASE_FLAG('g', with_remote_peers);
 
 #if WITH_PTY_SUPPORT
-      CASE_FLAG('t', with_pty);
+    CASE_FLAG('t', with_pty);
 #endif /* WITH_PTY_SUPPORT */
 
-      CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
-      CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
-      CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
+    CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
+    CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
+    CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
 
     case OPT_FORK_STDIO:
       if (!arg)
@@ -1449,8 +1486,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case 'n':
       self->not = !self->not;
       break;
+#endif
     }
-  
+
   return 0;
 }
 
@@ -1557,16 +1595,15 @@ int main(int argc, char **argv)
 			    "lsh - a free ssh", NULL,
 			    SSH_MAX_PACKET,
 			    &options->random->super,
-			    options->super.algorithms,
+			    options->algorithms->algorithms,
 			    NULL),
 	make_simple_kexinit(&options->random->super,
 			    options->kex_algorithms,
-			    options->super.hostkey_algorithms,
-			    options->super.crypto_algorithms,
-			    options->super.mac_algorithms,
-			    options->super.compression_algorithms,
-			    make_int_list(0, -1)),
-	queue_to_list(&options->actions));
+			    options->algorithms->hostkey_algorithms,
+			    options->algorithms->crypto_algorithms,
+			    options->algorithms->mac_algorithms,
+			    options->algorithms->compression_algorithms,
+			    make_int_list(0, -1)));
     
     CAST_SUBTYPE(command, lsh_connect, o);
 
