@@ -92,8 +92,8 @@ int send_verbose(struct abstract_write *write, const char *msg, int always_displ
     : LSH_OK | LSH_GOON;
 }
 
-static int do_rec_debug(struct packet_handler *self,
-			struct ssh_connection *connection,
+static int do_rec_debug(struct packet_handler *self UNUSED,
+			struct ssh_connection *connection UNUSED,
 			struct lsh_string *packet)
 {
   struct simple_buffer buffer;
