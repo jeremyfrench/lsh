@@ -62,8 +62,13 @@ void exception_raise(struct exception_handler *e,
 #  define EXCEPTION_RAISE(h, e)  ((h)->raise((h), (e)))
 #endif /* !DEBUG_TRACE */
 
+/* NOTE: This is pretty useless, as it requires that the parent be
+ * static as well. Used only for the default_exception_handler and
+ * ignore_exception_handler, and perhaps some others with NULL parent.
+ * */
 #define STATIC_EXCEPTION_HANDLER(r, p) \
 { STATIC_HEADER, (r), (p), __FILE__ ":" STRING_LINE ": Static" }
+
 
 #define HANDLER_CONTEXT   (__FILE__ ":" STRING_LINE ": " FUNCTION_NAME)
 

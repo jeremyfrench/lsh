@@ -375,8 +375,6 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
   struct server_session *session = closure->session;
   struct ssh_channel *channel = &session->super;
   
-  CHECK_TYPE(server_session, session);
-
   trace("server_session.c: do_exit_shell()\n");
   
   /* NOTE: We don't close the child's stdio here. The io-backend

@@ -70,16 +70,13 @@
    (class
      (name keyexchange_algorithm)
      (vars
+       ;; FIXME: Add some method or attribute describing
+       ;; the requirements on the hostkey algorithm.
        ; Algorithms is an array indexed by the KEX_* values above
        (init method void
 	     "struct ssh_connection *connection"
-	     ;; "struct ssh_service *finished"
 	     "int hostkey_algorithm_atom"
-	     ;; "struct signature_algorithm *hostkey_algorithm"
-
 	     "struct lsh_object *extra"
-	     ; Secret key (if applicable and available).
-	     ;;"struct keypair *key"
 	     "struct object_list *algorithms")))
 */
 
@@ -115,6 +112,7 @@
 
 #define MAKE_KEXINIT(s) ((s)->make((s)))
 
+/* FIXME: We don't need this class. */
 /* Installs keys for use. */
 /* GABA:
    (class
@@ -186,10 +184,18 @@ struct install_keys *
 make_install_new_keys(int is_server,
 		      struct object_list *algorithms);
 
+#if 0
 struct hash_instance *
 kex_build_secret(struct hash_algorithm *H,
 		 struct lsh_string *exchange_hash,
 		 mpz_t K);
+#endif
 
+void
+keyexchange_finish(struct ssh_connection *connection,
+		   struct install_keys *install,
+		   struct hash_algorithm *H,
+		   struct lsh_string *exchange_hash,
+		   struct lsh_string *K);
 
 #endif /* LSH_KEYEXCHANGE_H_INCLUDED */

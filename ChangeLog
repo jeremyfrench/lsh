@@ -1,4 +1,63 @@
+2000-05-28  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/unix_user.c (do_read_file): Changed USER_READ_FILE to use
+	exceptions and continuations.
+
+	* src/ssh.h: Added message numbers for SRP key exchange and dh
+	group negotiation. 
+
+	* src/srp_exchange.c: Various bugfixes. At least compiles now.
+
+	* src/sexp.c (sexp_check_type_l): Renamed tthe sexp_check_type
+	function. 
+	(sexp_check_type): Moved and renamed the spki_check_type function.
+	(sexp2bignum_u): New function.
+	(sexp_atom_eq): New function.
+	(sexp_atoms_eq): Renamed the previos sexp_atom_eq function.
+	(sexp_get_un): Use sexp2bignum_u.
+
+	* src/publickey_crypto.h: Renamed all occurences of
+	"diffie_hellman" do "dh".
+
+	* src/publickey_crypto.c (zn_ring_add): New function.
+	(zn_ring_subtract): New function.
+
+	* src/keyexchange.c (kex_build_secret): Use a string rather than a
+	bignum for the third argument.
+	(keyexchange_finish): New function.
+
+	* src/io.c (check_user_permissions): Made fname argument const.
+	(io_read_user_file): Fixed call to fstat().
+
+	* src/invert-defs: Use -u flag to sort (is that a GNU:ism?)
+
+	* src/exception.c (make_protocol_exception): Updated with new
+	messages. 
+
+	* src/dh_exchange.c (dh_hash_update): New (or ersurrected)
+	function. 
+	(dh_hash_digest): Don't hash the host key here.
+	(dh_make_server_msg): Hash host key.
+	(dh_process_server_msg): Likewise.
+
+	* src/client_keyexchange.h (make_srp_client): New prototype.
+
+	* acconfig.h: Added WITH_SRP.
+
+	* configure.in: Include sys/types.h when checking for utmp
+	members.
+	Added --disable-srp option.
+
+	* src/client_keyexchange.c (do_handle_dh_reply): Use
+	keyexchange_finish().
+	First attempt at SRP support.
+	* src/server_keyexchange.c: Likewise
+	
+	* src/atoms.in: Added srp-group1-sha1, srp-verifier and ssh-group1.
+
 2000-05-27  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/testsuite/Makefile.am (TS_MORE_SH): Added lsh-4-test.
 
 	* src/publickey_crypto.h: Renamed the class group to abstract_group.
 	(GROUP_RANGE): Renamed from GROUP_MEMBER, as it actually doesn't

@@ -28,12 +28,14 @@
 
 #include "keyexchange.h"
 #include "publickey_crypto.h"
+#include "server_userauth.h"
 
 /* This function consumes the server key */
 struct keyexchange_algorithm *
-make_dh_server(struct diffie_hellman_method *dh);
-     /* struct alist *keys); */
+make_dh_server(struct dh_method *dh);
 
-struct install_keys *make_server_install_keys(struct object_list *algorithms);
+struct keyexchange_algorithm *
+make_srp_server(struct dh_method *dh,
+		struct user_db *db);
 
 #endif /* LSH_SERVER_KEYEXCHANGE_H_INCLUDED */
