@@ -42,6 +42,7 @@
 #include "interact.h.x"
 #undef GABA_DEFINE
 
+#if 0
 int tty_fd = -1;
 
 int lsh_open_tty(void)
@@ -159,4 +160,4 @@ int yes_or_no(struct lsh_string *s, int def, int free)
       return 0;
     }
 }
-  
+#endif  

@@ -29,7 +29,7 @@
 #include "lsh.h"
 
 /* Forward declaration */
-struct abstract_interact;
+struct interact;
 struct terminal_dimensions;
 
 #define GABA_DECLARE
@@ -49,16 +49,27 @@ struct terminal_dimensions
 
 /* GABA:
    (class
+     (name terminal_attributes)
+     (vars
+       (make_raw method (object terminal_attributes))
+       (encode method (string))))
+*/
+
+#define TERM_MAKE_RAW(t) ((t)->make_raw((t)))
+#define TERM_ENCODE(t) ((t)->encode((t)))
+
+/* GABA:
+   (class
      (name window_change_callback)
      (vars
-       (f method void "struct abstract_interact *i")))
+       (f method void "struct interact *i")))
 */
 
 #define WINDOW_CHANGE_CALLBACK(c, i) ((c)->f((c), (i)))
 
 /* GABA:
    (class
-     (name abstract_interact)
+     (name interact)
      (vars
        (is_tty method int)
        ; (read_line method int "UINT32 size" "UINT8 *buffer")
@@ -69,6 +80,10 @@ struct terminal_dimensions
        (yes_or_no method int
                   "struct lsh_string *prompt"
 		  "int def" "int free")
+
+       (get_attributes method (object terminal_attributes) )
+       (set_attributes method int "struct terminal_attributes *attr")
+       
        (window_size method int "struct terminal_dimensions *")
        (window_change_subscribe method (object resource)
 		  "struct window_change_callback *callback")))
@@ -80,15 +95,24 @@ struct terminal_dimensions
   ((i)->read_password((i), (l), (p), (f)))
 #define INTERACT_YES_OR_NO(i, p, d, f) \
   ((i)->yes_or_no((i), (p), (d), (f)))
+#define INTERACT_GET_ATTRIBUTES(i) \
+  ((i)->get_attributes((i)))
+#define INTERACT_SET_ATTRIBUTES(i, t) \
+  ((i)->set_attributes((i), (t)))
 #define INTERACT_WINDOW_SIZE(i, d) \
   ((i)->window_size((i), (d)))
 #define INTERACT_WINDOW_SUBSCRIBE(i, c) \
   ((i)->window_change_subscribe((i), (c)))
 
+#if 0
 extern int tty_fd;
 
 int lsh_open_tty(void);
 int tty_read_line(UINT32 size, UINT8 *buffer);
 int yes_or_no(struct lsh_string *s, int def, int free);
+#endif
+
+struct interact *
+make_unix_interact(struct io_backend *backend);
 
 #endif /* LSH_INTERACT_H_INCLUDED */
