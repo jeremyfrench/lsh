@@ -1,5 +1,11 @@
 2003-05-12  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/lsh-execuv.c: Don't include lsh_types.h.
+	* src/lsh-krb-checkpw.c: Likewise.
+
+	* src/lsh.c (do_lsh_lookup): Fix syntax of generated ACL entries
+	(bug 1030).
+
 	* misc/make-am (environ_deps): Deleted code for generating
 	.dist_deps. 
 
