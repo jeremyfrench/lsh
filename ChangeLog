@@ -1,3 +1,154 @@
+2003-11-16  Niels Möller  <nisse@harpo.hack.org>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added lsh_string.c.
+
+	* src/lsh_string.c, src/lsh_string.h: New files, with a private
+	string implementation. The point is that no other code should
+	write directly into strings or other buffers.
+
+	* src/gateway_commands.c (class read_gateway_packet): Use an
+	lsh_string for the header buffer, not a plain char array.
+	* src/read_line.c (class read_line): Likewise, for the line buffer.
+	* src/write_buffer.h, src/write_buffer.c (class write_buffer):
+	Likewise for the output buffer.
+
+	* src/pkcs5.c (pkcs5_derive_key): Take lsh_string arguments, and
+	return key as an lsh_string. Also use lsh_strings internally,
+	instead of plain char buffers.
+
+	* src/format.c (ssh_format_write, ssh_vformat_write)
+	(format_hex_string, format_decimal, write_decimal_length): Take a
+	lsh_string and position for the destination. Updated to use
+	functions from lsh_string.c. Moved some functions to lsh_string.c.
+	(lsh_string_colonize): Use const for input string. Use
+	lsh_string_putc.
+	(lsh_string_bubblebabble): Use lsh_string_putc. No need for
+	explicit NUL-termination. Use const for input string.
+	
+	* src/format.c (ssh_format): Changed definition of %r, now stores
+	the start position of the reserved area, not a pointer. Updated
+	all callers.
+
+	* src/lock_file.c, src/lsh-make-seed.c, src/server_session.c,
+	src/server_x11.c: #include lsh_string.h.
+
+	* src/spki.c (spki_hash_data): Rewritten to use hash_digest_string
+	instead of hash_digest.
+
+	* src/testsuite/testutils.c (decode_hex): Use const for input.
+	Also other updates for lsh_string changes.
+	
+	* src/zlib.c (do_zlib): Use lsh_string_zlib. Updated for
+	lsh_string changes.
+
+	* src/werror.c (werror_decimal): Rewrote to not use
+	format_decimal.
+	(werror_hexdump): Use const for input.
+	(werror_vformat): Updated for lsh_string changes.
+
+	* src/unix_user.c (kerberos_check_pw, do_verify_password): Updated
+	for lsh_string changes.
+
+	* src/unix_interact.c (unix_yes_or_no): Updated for lsh_string
+	changes.
+
+	* src/string_buffer.h (struct string_buffer): Replaced current
+	pointer with an integer position.
+	* src/string_buffer.c: Updated for lsh_string changes.
+
+	* src/spki.c (spki_pkcs5_encrypt): Use const for input argument.
+
+	* src/server_userauth.c (do_handle_userauth): Updated for
+	lsh_string changes.
+
+	* src/server_publickey.c (do_authenticate): Updated for lsh_string
+	changes. 
+
+	* src/server_pty.c (pty_open_slave): Updated for lsh_string changes.
+
+	* src/read_file.c (do_read_file): Updated for lsh_string changes.
+
+	* src/parse_config.c: #include lsh_string.h.
+
+	* src/lsh.h: Removed declarations for lsh_string. This is now
+	provate to lsh_string.c. Only kept a forward declaration of struct
+	lsh_string, and a declaration of lsh_string_free.
+
+	* src/lsh-export-key.c (encode_base64): Use lsh_string.c functions.
+
+	* src/lsh-decrypt-key.c (main): Updated for lsh_string changes.
+
+	* src/lsh-decode-key.c (main): Use lsh_string_base64_decode.
+
+	* src/io.c (do_consuming_read, io_read_file_raw): Use lsh_string_read.
+	(do_write_callback): Updated for lsh_string changes.
+	(sockaddr2info): Use lsh_string_ntop.
+
+	* src/handshake.c (compat_peer_flags, split_version_string) 
+	(do_line): Use const for input strings.
+
+	* src/read_line.h (class line_handler): Use a const for the
+	handler method.
+
+	* src/dsa.c (make_ssh_dss_verifier): Use a lsh_string for the
+	input. Updated for lsh_string changes.
+	* src/rsa.c (make_ssh_rsa_verifier): Likewise.
+	* src/publickey_crypto.h: Updated prototypes.
+
+	* src/sexp.c (lsh_sexp_format): Function renamed to
+	lsh_string_format_sexp, and moved to lsh_string.c. Updated
+	callers.
+
+	* src/daemon.c (daemon_pidfile): Updated for lsh_string changes.
+
+	* src/client_keyexchange.c (do_handle_dh_reply): Updated for
+	lsh_string changes. 
+
+	* src/client.c (rebuild_command_line): Use lsh_string_write.
+
+	* src/charset.c: Updated for lsh_string changes.
+	(low_utf8_to_local): Use const for input.
+
+	* src/xalloc.c: Removed string related functions. Moved to
+	lsh_string.c. 
+
+	* src/gc.c (gc): Use lsh_get_number_of_strings to access string
+	counter. 
+	(gc_final): Call lsh_string_final_check. 
+
+	* src/abstract_crypto.h (CRYPT): Changed method to take an
+	lsh_string and an index for source and destination. Also changed
+	the order of source and destination arguments.
+	(MAC_DIGEST): Take a lsh_string and index for the destination.
+
+	* src/crypto.c: Rewrote cipher classes to use functions in
+	lsh_string.c, instead of writing directly into the output string.
+	(hash_digest_string): New function.
+	(hash_digest): New function.
+	(do_hmac_digest): Use lsh_string_write_hmac.
+
+	* src/channel.c: Updated for lsh_string changes.
+	* src/client_escape.c: Likewise.
+	* src/client_userauth.c: Likewise.
+	* src/client_x11.c: Likewise.
+	* src/connection.c: Likewise.
+	* src/debug.c: Likewise.
+	* src/dh_exchange.c: Likewise.
+	* src/keyexchange.c: Likewise.
+	* src/lsh-writekey.c: Likewise.
+	* src/lsh.c: Likewise.
+	* src/read_packet.c: Likewise.
+	* src/server.c: Likewise.
+	* src/spki.c: Likewise.
+	* src/srp-gen.c: Likewise.
+	* src/srp_exchange.c: Likewise.
+	* src/tcpforward.c: Likewise.
+	* src/tty.c: Likewise.
+	* src/unix_process.c: Likewise.
+	* src/unix_random.c: Likewise.
+	* src/write_packet.c: Likewise.
+	* src/xauth.c: Likewise.
+
 2003-11-11  Niels Möller  <nisse@harpo.hack.org>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Deleted unpad.c.
