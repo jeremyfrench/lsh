@@ -85,7 +85,6 @@ do_key_lookup(struct lookup_verifier *c,
   if (USER_FILE_EXISTS(keyholder, filename, 1))
     return &v->super;
 
-  lsh_string_free(filename);
   return NULL;
 }
 
