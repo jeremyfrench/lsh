@@ -1,3 +1,39 @@
+2000-01-12  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/tcpforward.c (do_channel_open_direct_tcpip): Added type
+	argument (Bazsi).
+	(do_channel_open_forwarded_tcpip): D:o.
+
+	* src/server_userauth.c (do_handle_userauth): Call connection_lock().
+	(do_userauth_continuation): Call connection_unlock().
+	(do_exc_userauth_handler): D:o.
+	(make_exc_userauth_handler): Made non-static (Bazsi).
+	(do_userauth): Don't call make_once_continuation().
+
+	* src/server_session.c (do_open_session): Added type argument
+	(Bazsi). 
+
+	* src/lshd.c: Added options --password, --no-password, --publickey
+	and --no-publickey.
+
+	* src/io.c (io_iter): Improved comment on POLLHUP behaviour.
+
+	* src/connection.h (ssh_connection): Added busy attribute.
+
+	* src/connection.c (handle_connection): Disconnect if connections
+	is busy.
+	(connection_lock): New function.
+	(connection_unlock): New function.
+
+	* src/channel.h (CHANNEL_OPEN): Added type argument (Bazsi).
+
+	* src/channel.c: Change verbose messages to display remote channel
+	numbers, as well local numbers where they are easily available.
+
+	* src/lsh_proxy.c, src/proxy.c, src/proxy.h, src/proxy_session.c,
+	src/proxy_session.h, src/proxy_userauth.c, src/proxy_userauth.h:
+	Applied Bazsi's patches.
+
 2000-01-09  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/unpad.c (do_unpad): Check payload length.
