@@ -135,8 +135,10 @@ make_gateway_channel(struct alist *request_types)
      (name gateway_channel_open_command)
      (super channel_open_command)
      (vars
-       ; channel type
-       (type . int)
+       ; The channel type is represented as a string, as
+       ; we should be able to forward unknown channel
+       ; types (i.e. types not listen in atoms.in).
+       (type string)
        (rec_window_size . UINT32)
        (rec_max_packet . UINT32)
        (requests object alist)
@@ -157,21 +159,23 @@ do_gateway_channel_open(struct channel_open_command *c,
   target->super.rec_window_size = closure->rec_window_size;
   target->super.rec_max_packet = closure->rec_max_packet;
   target->super.write = connection->write;
-  
+
+  *request = format_channel_open_s(closure->type->length, closure->type->data,
+				   local_channel_number, &target->super,
+				   closure->args);
+#if 0
   if (closure->args)
     *request = format_channel_open(closure->type, local_channel_number,
 				   &target->super, "%lS", closure->args);
   else
     *request = format_channel_open(closure->type, local_channel_number,
 				   &target->super, "");
-  
+#endif
   return &target->super;
 }
 
 struct command *
-make_gateway_channel_open_command(int type,
-				  UINT32 rec_window_size,
-				  UINT32 rec_max_packet,
+make_gateway_channel_open_command(struct channel_open_info *info,
 				  struct lsh_string *args,
 				  struct alist *requests)
 {
@@ -179,9 +183,12 @@ make_gateway_channel_open_command(int type,
   
   self->super.new_channel = do_gateway_channel_open;
   self->super.super.call = do_channel_open_command;
-  self->type = type;
-  self->rec_window_size = rec_window_size;
-  self->rec_max_packet = rec_max_packet;
+
+  self->type = ssh_format("%ls", info->type_length,
+			  info->type_string);
+
+  self->rec_window_size = info->send_window_size;
+  self->rec_max_packet = info->send_max_packet;
   self->requests = requests;
   self->args = args;
 
@@ -327,7 +334,9 @@ do_gateway_channel_open_continuation(struct command_continuation *c,
 
   self->origin->super.rec_window_size = target->super.send_window_size;
   self->origin->super.rec_max_packet = target->super.send_max_packet;
-  
+
+  /* FIXME: Perhaps this is a good place to copy the origin's
+   * channel_request_fallback to the targets? */
   gateway_init_io(self->origin);
   gateway_init_io(target);
     
@@ -346,3 +355,27 @@ make_gateway_channel_open_continuation(struct command_continuation *up,
 
   return &self->super;
 }
+
+static void
+do_channel_open_forward(struct channel_open *s UNUSED,
+			struct ssh_connection *connection,
+			struct channel_open_info *info,
+			struct simple_buffer *args,
+			struct command_continuation *c,
+			struct exception_handler *e)
+{
+  struct gateway_channel *origin
+    = make_gateway_channel(NULL);
+
+  /* FIXME: Set up a channel_request_fallback. */
+  
+  COMMAND_CALL(make_gateway_channel_open_command
+	       (info, parse_rest(args), NULL),
+	       connection->chain,
+	       make_gateway_channel_open_continuation(c, origin),
+	       e);
+}
+
+struct channel_open gateway_channel_open_forward =
+{ STATIC_HEADER, do_channel_open_forward };
+

@@ -44,9 +44,7 @@ struct gateway_channel *
 make_gateway_channel(struct alist *request_types);
 
 struct command *
-make_gateway_channel_open_command(int type,
-				  UINT32 rec_window_size,
-				  UINT32 rec_max_packet,
+make_gateway_channel_open_command(struct channel_open_info *info,
 				  struct lsh_string *args,
 				  struct alist *requests);
 
@@ -56,6 +54,8 @@ make_gateway_channel_open_continuation(struct command_continuation *up,
 
 extern struct channel_request gateway_channel_request;
 extern struct global_request gateway_global_request;
+
+extern struct channel_open gateway_channel_open_forward;
 
 #endif /* LSH_GATEWAY_CHANNEL_H_INCLUDED */
 
