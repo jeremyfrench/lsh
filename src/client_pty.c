@@ -106,7 +106,7 @@ do_format_pty_request(struct channel_request_command *s,
   *c = make_pty_continuation(self, *c);
 
   return format_channel_request(ATOM_PTY_REQ, channel, 1,
-				"%S%i%i%i%i%S",
+				"%S%i%i%i%i%fS",
 				self->term,
 				self->width, self->height,
 				self->width_p, self->height_p,
