@@ -607,100 +607,45 @@ do_put(struct client_ctx *ctx,
        const char *name, 
        int fd)
 {
-  return 0;
-#if 0
-  
   UINT32 id;
   UINT32 status;
   UINT8* handle;
-  UINT32 hlength;
+  UINT32 handle_length;
   off_t curpos=0;
-  ssize_t rbytes;
 
-  struct stat st; 
   struct sftp_attrib a;
   
   UINT8 msg;
   int putloop=1;
-  int failure=0;
+  int ok = 1;
   
   sftp_clear_attrib(&a); 
   
   a.flags = 0;
   
-  id=sftp_client_new_id();
-
-  sftp_set_msg(ctx->o, SSH_FXP_OPEN); /* Send a OPEN message */
-  sftp_set_id(ctx->o, id);
-  sftp_put_string(ctx->o, strlen(name), name );
-  sftp_put_uint32(ctx->o, SSH_FXF_CREAT | SSH_FXF_WRITE );
-  sftp_put_attrib(ctx->o, &a);
-
-  if (!sftp_write_packet(ctx->o))
-    return 0;
-  
-  if (sftp_read_packet(ctx->i) <= 0)
+  if (! (handle = do_open(ctx, name, SSH_FXF_CREAT | SSH_FXF_WRITE, &a,
+			  &handle_length)))
     return 0;
 
-  /* None of these may fail */
-  if ( !(sftp_get_uint8(ctx->i, &msg)
-	 && msg==SSH_FXP_HANDLE
-	 && sftp_client_get_id(ctx->i, id)
-	 && (handle=sftp_get_string(ctx->i, &hlength)) ))
-    return 0;
-  
   /* OK, we now have a successfull call and file handle */
   
-  id=sftp_client_new_id();
-  sftp_set_msg(ctx->o, SSH_FXP_FSTAT); /* Send a FSTAT message */
-  sftp_set_id(ctx->o, id);
-  sftp_put_string(ctx->o, hlength, handle );
-  
-  if (!sftp_write_packet(ctx->o))
-    return 0;
-  
-  if (sftp_read_packet(ctx->i) <= 0)
-    return 0;
-  
-  if ( !(
-	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
-	 msg==SSH_FXP_ATTRS &&
-	 sftp_client_get_id(ctx->i, id) &&
-	 sftp_get_attrib(ctx->i, &a) 
-	 ))
-    {
-      putloop=0; /* fstat failed - skip the loop */
-      failure=1; /* failure (but we still need to close the file) */
-    }
-
-  
-  if ( !cont ) /* Continue an old transfer? */
-    curpos=0;
-  else
-    {
-      if ( contat )          /* Position to continue at given? */ 
-	curpos=contat;
-      else
-	{
-	  if ( a.flags & SSH_FILEXFER_ATTR_SIZE )
-	    curpos=a.size; 
-	  /* Continue at end of remote file */
-	}
-    }
-
   while ( putloop )
     {
-      if ( 
-	  (-1 == ( lseek(fd, curpos ,SEEK_SET) ) ) ||
-	  (-1 == (rbytes=read(fd, wdata, SFTP_XFER_BLOCKSIZE )) )
-	  )
+      UINT8 buf[SFTP_XFER_BLOCKSIZE];
+      int res;
+      
+      do
+	res = read(fd, buf, sizeof(buf));
+      while ( (res < 0) && (errno == EINTR) );
+
+      if (res < 0)
 	{
 	  putloop=0;
-	  failure=1;
+	  ok = 0;
 	  break;
 	}
       
-      if ( !rbytes )
+      if ( !res )
 	putloop=0;
       else
 	{
@@ -708,23 +653,20 @@ do_put(struct client_ctx *ctx,
 	  
 	  sftp_set_msg(ctx->o, SSH_FXP_WRITE); /* Send a read request */
 	  sftp_set_id(ctx->o, id);
-	  sftp_put_string(ctx->o, hlength, handle);
+	  sftp_put_string(ctx->o, handle_length, handle);
 	  sftp_put_uint64(ctx->o, curpos);
-	  sftp_put_string(ctx->o, rbytes, wdata);
+	  sftp_put_string(ctx->o, res, buf);
 	  
 	  if (!sftp_write_packet(ctx->o))
 	    return 0;
 	  
-	  curpos+=rbytes;
+	  curpos += res;
 	  
-	  if (sftp_read_packet(ctx->i) <= 0)
+	  if (!sftp_read_packet(ctx->i))
 	    return 0;
 	  
-	  
-	  if( !(
-		sftp_get_uint8(ctx->i, &msg) &&
-		sftp_client_get_id(ctx->i, id)
-		))
+	  if( !(sftp_get_uint8(ctx->i, &msg)
+		&& sftp_client_get_id(ctx->i, id)))
 	    return 0;
 	  
 	  if ( msg == SSH_FXP_STATUS )
@@ -733,43 +675,19 @@ do_put(struct client_ctx *ctx,
 	      putloop=0; /* End of loop - EOF or failue */
 	      
 	      if ( status != SSH_FX_OK )
-		failure=1;
+		ok = 0;
 	    }
 	}
     }
+
   /* Time to close */
-  
-  id=sftp_client_new_id();
-  
-  sftp_set_msg(ctx->o, SSH_FXP_CLOSE); /* Send a close message */
-  sftp_set_id(ctx->o, id);
-  sftp_put_string(ctx->o, hlength, handle);
+
+  if (!do_close(ctx, handle_length, handle))
+    ok = 0;
 
   sftp_free_string(handle);
-  
-  if (!sftp_write_packet(ctx->o)) 
-    return 0;
-  
-  if (sftp_read_packet(ctx->i) <= 0)
-    return 0;
 
-  if ( fd >= 0 && close(fd) )
-    failure=1;
-  
-  free(wdata);
-  
-  if ( !(
-	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
-	 msg==SSH_FXP_STATUS &&
-	 sftp_client_get_id(ctx->i, id) &&
-	 sftp_get_uint32(ctx->i, &status) &&
-	 status == SSH_FX_OK &&
-	 !failure
-	 ))
-    return 0;
-  
-  return 1;
-#endif  
+  return ok;
 }
 
 #if 0
