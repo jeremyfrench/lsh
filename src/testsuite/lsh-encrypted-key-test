@@ -26,6 +26,6 @@ echo 'printf bar' >> $fname
 chmod u+rx $fname
 
 ../lsh-keygen  | ../lsh-writekey -o $keyname -caes256-cbc -pbar || test_fail
-HOME=$TEST_HOME ../lsh-authorize $keyname.pub
+HOME=$TEST_HOME "$srcdir/../lsh-authorize" $keyname.pub
 
 HOME=$TEST_HOME spawn_lshd && run_lsh 'echo Hello world' && test_success
