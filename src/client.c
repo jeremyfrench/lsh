@@ -203,58 +203,56 @@ make_detach_resource(struct lsh_callback *c)
 
 
 static void 
-do_detach_cb_second(struct lsh_callback *c)
+do_detach_cb(struct lsh_callback *c)
 {
   CAST(detach_callback,self,c);
 
-  int pid;
+  trace("client.c: do_detach_cb\n");
   
-  trace("client.c: do_detach\n");
-  pid = fork();
-
-  /* Ignore any errors, what can we do? */
-
-  switch(pid)
+  if (!self->fd_flag) /* First time around? */
     {
-    case -1: /* Fork failed, this we can handle by doing nothing */
-      werror("Fork failed, not detaching.\n");
-      break;
+      self->fd_flag = 1; /* Note */
       
-    case 0:
-      /* Detach, lsh doesn't actually use these fds but dup(2)s them */
+    if (self->channel_flag && self->fd_flag)
+      /* If the fd is closed already, asked to be called from the main loop */ 
+      io_callout(c, 0);
 
-      close(STDIN_FILENO); 
-      close(STDOUT_FILENO); 
-      close(STDERR_FILENO); 
-      
-      /* Make sure they aren't used by any file lsh opens */
-
-      open("/dev/null", O_RDONLY);
-      open("/dev/null", O_RDONLY);
-      open("/dev/null", O_RDONLY);
-      break;
-
-    default:
-      /* It's a good idea to reset std* to blocking mode. */
-      io_set_blocking(STDIN_FILENO);
-      io_set_blocking(STDOUT_FILENO);
-      io_set_blocking(STDERR_FILENO);
-      
-      exit(*self->exit_status);
     }
-}
+  else
+    {
+      int pid = fork();
 
-static void
-do_detach_cb_first(struct lsh_callback *c)
-{
-  CAST(detach_callback,self,c);
-  trace("client.c: do_detach_cb_first\n");
-
-  self->super.f = do_detach_cb_second;
-  self->fd_flag = 1;
-
-  if (self->channel_flag && self->fd_flag)
-    io_callout(c, 0);
+      /* Ignore any errors, what can we do? */
+      
+      switch(pid)
+	{
+	case -1: /* Fork failed, this we can handle by doing nothing */
+	  werror("Fork failed, not detaching.\n");
+	  break;
+	  
+	case 0:
+	  /* Detach, lsh doesn't actually use these fds but dup(2)s them */
+	  
+	  close(STDIN_FILENO); 
+	  close(STDOUT_FILENO); 
+	  close(STDERR_FILENO); 
+	  
+	  /* Make sure they aren't used by any file lsh opens */
+	  
+	  open("/dev/null", O_RDONLY);
+	  open("/dev/null", O_RDONLY);
+	  open("/dev/null", O_RDONLY);
+	  break;
+	  
+	default:
+	  /* It's a good idea to reset std* to blocking mode. */
+	  io_set_blocking(STDIN_FILENO);
+	  io_set_blocking(STDOUT_FILENO);
+	  io_set_blocking(STDERR_FILENO);
+	  
+	  exit(*self->exit_status);
+	}
+    }
 }
 
 static struct lsh_callback* 
@@ -262,7 +260,7 @@ make_detach_callback(int *exit_status)
 {
    NEW(detach_callback, self);
 
-   self->super.f = do_detach_cb_first;
+   self->super.f = do_detach_cb;
    self->exit_status = exit_status;
    self->fd_flag = 0;
    self->channel_flag = 0;

@@ -1,3 +1,12 @@
+2002-10-23  Pontus Sköld  <pont@soua.net>
+
+	* src/client.c (do_detach_cb): New function replacing
+	do_detach_cb_first and do_detach_cb_second.
+	(do_detach_cb_first): Deleted.
+	(do_detach_cb_second): Deleted.
+	(make_detach_callback): Use new function stead of
+	do_detach_cb_first.
+
 2002-10-22  Pontus Sköld  <pont@soua.net>
 
 	* src/client.c: Include io.h.
