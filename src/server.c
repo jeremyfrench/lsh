@@ -92,6 +92,7 @@ do_service_request(struct packet_handler *c,
 	      C_WRITE(connection, format_service_accept(name));
 	      COMMAND_CALL(service, connection,
 			   closure->c, closure->e);
+	      return;
 	    }
 	}
       EXCEPTION_RAISE(connection->e,

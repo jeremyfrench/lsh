@@ -1,3 +1,14 @@
+News for the lsh-0.1.8 release
+
+	Reworked all the error handling to use exceptions. No new
+	features, but lots of new bugs.
+
+There are no official releases numbered 0.1.4 -- 0.1.7. However,
+these version numbers are used for Bazsi's unofficial releases during
+the summer. The unofficial releases feature public key user
+authentication and better compatibility with Datafellow's ssh2
+products. 
+
 News for the lsh-0.1.3 release
 
 	Local forwarding (-L) works. -R is slightly broken.

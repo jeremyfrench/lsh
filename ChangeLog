@@ -1,3 +1,22 @@
+1999-08-29  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/read_packet.c (do_read_packet): The MAC memcmp test was
+	inverted. A real old bug.
+
+	* src/io.c (do_consuming_read): Use CAST_SUBTYPE.
+	(do_buffered_read): Stop processing if fd->read is NULL. For
+	example, if an exception handler tried to close the file.
+
+	* src/exception.c (do_default_handler): Fixed format string.
+
+	* src/channel.c (alloc_channel): Update in_use table properly. .
+
+	* configure.in: Bumped version to 0.1.8.
+
+1999-08-28  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added esception.c.
+
 1999-07-04  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/command.c, src/command.h, src/lsh.c, src/lshd.c: Don't allow
