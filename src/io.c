@@ -361,7 +361,8 @@ static void listen_callback(struct lsh_fd *fd)
       werror("io.c: accept() failed, %z", strerror(errno));
       return;
     }
-  res = FD_CALLBACK(self->callback, conn);
+  res = FD_LISTEN_CALLBACK(self->callback, conn,
+			   addr_len, (struct sockaddr *) &peer);
   if (LSH_ACTIONP(res))
     {
       werror("Strange: Accepted a connection, "
@@ -564,6 +565,31 @@ get_inaddr(struct sockaddr_in	* addr,
   return 1;
 }
 
+/* FIXME: IPv6 support */
+/* FIXME: The host name lookup may block. We would need an asyncronous
+ * get_inaddr function. As a work around, we could let the client do
+ * all lookups, so that the server ned only deal with ip-numbers. And
+ * optionally refuse requests with dns names. */
+
+int tcp_addr(struct sockaddr_in *sin,
+	     UINT32 length,
+	     UINT8 *addr,
+	     UINT32 port)
+{
+  char *c = alloca(length + 1);
+  int res;
+  
+  memcpy(c, addr, length);
+  c[length] = '\0';
+
+  res = get_inaddr(sin, c, NULL, "tcp");
+  if (!res)
+    return 0;
+
+  sin->sin_port = htons(port);
+  return 1;
+}
+
 /* For fd:s in blocking mode. */
 int write_raw(int fd, UINT32 length, UINT8 *data)
 {
@@ -697,7 +723,7 @@ struct connect_fd *io_connect(struct io_backend *b,
 
 struct listen_fd *io_listen(struct io_backend *b,
 			    struct sockaddr_in *local,
-			    struct fd_callback *callback)
+			    struct fd_listen_callback *callback)
 {
   int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   

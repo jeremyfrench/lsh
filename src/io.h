@@ -33,6 +33,7 @@
 #include <time.h>
 #include <netdb.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <netinet/in.h>
 
 #define CLASS_DECLARE
@@ -119,13 +120,27 @@
 
 /* CLASS:
    (class
+     (name fd_listen_callback)
+     (vars
+       (f method int int "size_t" "struct sockaddr *")))
+*/
+#define FD_LISTEN_CALLBACK(c, fd, s, a) ((c)->f((c), (fd), (s), (a)))
+
+/* CLASS:
+   (class
      (name listen_fd)
+     (super lsh_fd)
+     (vars
+       (callback object fd_listen_callback)))
+*/
+
+/* CLASS:
+   (class
+     (name connect_fd)
      (super lsh_fd)
      (vars
        (callback object fd_callback)))
 */
-
-#define connect_fd listen_fd
 
 #if 0
 struct callout
@@ -161,6 +176,11 @@ int get_inaddr(struct sockaddr_in	* addr,
 	       const char		* service,
 	       const char		* protocol);
 
+int tcp_addr(struct sockaddr_in *sin,
+	     UINT32 length,
+	     UINT8 *addr,
+	     UINT32 port);
+
 int write_raw(int fd, UINT32 length, UINT8 *data);
 int write_raw_with_poll(int fd, UINT32 length, UINT8 *data);
 
@@ -175,7 +195,7 @@ struct connect_fd *io_connect(struct io_backend *b,
 
 struct listen_fd *io_listen(struct io_backend *b,
 			    struct sockaddr_in *local,
-			    struct fd_callback *callback);
+			    struct fd_listen_callback *callback);
 
 
 struct io_fd *io_read_write(struct io_backend *b,
