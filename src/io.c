@@ -614,16 +614,6 @@ do_write_prepare(struct lsh_fd *fd)
     close_fd(fd);
 }
 
-static void
-do_write_close(struct lsh_fd *fd)
-{
-  /* CAST(io_write_callback, self, s); */
-
-  assert(fd->write_buffer);
-
-  write_buffer_close(fd->write_buffer);
-}
-
 struct listen_value *
 make_listen_value(struct lsh_fd *fd,
 		  struct address_info *peer)
@@ -1219,7 +1209,6 @@ make_lsh_fd(int fd, const char *label,
 
   self->want_write = 0;
   self->write = NULL;
-  self->write_close = NULL;
 
   gc_global(&self->super);
   return self;
@@ -1551,7 +1540,6 @@ io_read_write(struct lsh_fd *fd,
   fd->write = &io_write_callback;
 
   fd->prepare = do_write_prepare;
-  fd->write_close = do_write_close;
   
   /* Closing */
   fd->close_callback = close_callback;
@@ -1588,7 +1576,6 @@ io_write(struct lsh_fd *fd,
   fd->write = &io_write_callback;
 
   fd->prepare = do_write_prepare;
-  fd->write_close = do_write_close;
 
   fd->close_callback = close_callback;
 
@@ -1620,7 +1607,8 @@ io_read_file(const char *fname,
   return make_lsh_fd(fd, "read-only file", e);
 }
 
-void close_fd(struct lsh_fd *fd)
+void
+close_fd(struct lsh_fd *fd)
 {
   trace("io.c: Closing fd %i: %z.\n",
 	fd->fd, fd->label);
@@ -1639,8 +1627,8 @@ void close_fd(struct lsh_fd *fd)
   
       /* Used by write fd:s to make sure that writing to its
        * buffer fails. */
-      if (fd->write_close)
-	FD_WRITE_CLOSE(fd);
+      if (fd->write_buffer)
+	fd->write_buffer->closed = 1;
   
       if (fd->close_callback)
 	LSH_CALLBACK(fd->close_callback);
@@ -1658,7 +1646,8 @@ void close_fd(struct lsh_fd *fd)
     werror("Closed already.\n");
 }
 
-void close_fd_nicely(struct lsh_fd *fd)
+void
+close_fd_nicely(struct lsh_fd *fd)
 {
   /* Don't attempt to read any further. */
 
@@ -1669,12 +1658,16 @@ void close_fd_nicely(struct lsh_fd *fd)
 
   lsh_oop_cancel_read_fd(fd);
   
-  if (fd->write_close)
-    /* Mark the write_buffer as closed */
-    FD_WRITE_CLOSE(fd);
-  else
-    /* There's no data buffered for write. */
-    close_fd(fd);
+  if (fd->write_buffer)
+    {
+      /* Mark the write_buffer as closed */
+      fd->write_buffer->closed = 1;
+      if (!fd->write_buffer->empty)
+	return;
+    }
+
+  /* There's no data buffered for write. */
+  close_fd(fd);
 }
 
 /* Stop reading, but if the fd has a write callback, keep it open. */
