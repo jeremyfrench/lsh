@@ -1,13 +1,7 @@
-## Process this file with make_am to produce Makefile.am
-BODY:
+# Process this file with automake to produce Makefile.in
 
-Makefile.am: Makefile.am.in
-	(cd $(top_srcdir); ./make_am)
-
-# FIXME: Make this less GNU-make specific
-
-man_MANS=DSA.5 SHA.5 SPKI.5 secsh.5 \
-	lsh.1 lsh_keygen.1 lsh_writekey.1 lshd.8
+# man_MANS=DSA.5 SHA.5 SPKI.5 secsh.5 \
+# 	lsh.1 lsh_keygen.1 lsh_writekey.1 lshd.8
 
 # MANPAGES = $(wildcard *.[1-9])
 info_TEXINFOS = lsh.texinfo
@@ -28,20 +22,18 @@ EXTRA_DIST = HACKING NOTES PORTS TASKLIST \
 
 all-local: srp-spec.txt lsh.html 
 
-%.dvi: %
-	$(GROFF) -Tdvi -mandoc $< > $@
-
-%.ps: %
-	$(GROFF) -Tps -mandoc $< > $@
-
-
-%.txt : %.nroff
-	$(GROFF) -ms -Tlatin1 $< | perl $(srcdir)/fixff.pl >$@T
-	test -s $@T && mv -f $@T $@
+# %.dvi: %
+# 	$(GROFF) -Tdvi -mandoc $< > $@
+# 
+# %.ps: %
+# 	$(GROFF) -Tps -mandoc $< > $@
+# 
+# 
+# %.txt : %.nroff
+# 	$(GROFF) -ms -Tlatin1 $< | perl $(srcdir)/fixff.pl >$@T
+# 	test -s $@T && mv -f $@T $@
 
 %.html : %.texinfo
 	(cd $(srcdir) \
 	 && $(MAKEINFO) --html --no-split --output $@T $(<F) \
 	 ; test -s $@T && mv -f $@T $@)
-
-DISTCLEANFILES = $(DVIS) $(PSS)

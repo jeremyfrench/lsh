@@ -1,26 +1,28 @@
-## Process this file with make_am to produce Makefile.am -*-makefile-*-
-SUBDIRS: argp rsync nettle scm sftp spki . testsuite
-CVS_HEADERS: cvs_headers
-CLASS_FILES: dist_x_files
-BODY:
+# Process this file with automake to produce Makefile.in
 
-AUTOMAKE_OPTIONS = foreign
+SUBDIRS = argp rsync nettle scm sftp spki . testsuite
 
-# To remake all Makefile.am-files, run
-#
-# 	./make_am
-#
-# You should run ./make_am --rethink after recompiling, but before
-# making a dist, as it uses dependency information to figure out which
-# header files should be included in th dist. How to tell this to
-# make? FIXME: These rules won't remake Makefile.am files in
-# subdrectries.
+include .dist_classes
+include .dist_headers
+include .dist_deps
 
-# FIXME: Use the BASH variable to execute the script. The problem is
-# that the script attempts to start itself with "$0 args".
+# AUTOMAKE_OPTIONS = foreign
 
-Makefile.am: Makefile.am.in
-	(cd $(top_srcdir) && $(MAKE) src/Makefile.am)
+# # To remake all Makefile.am-files, run
+# #
+# # 	./make_am
+# #
+# # You should run ./make_am --rethink after recompiling, but before
+# # making a dist, as it uses dependency information to figure out which
+# # header files should be included in th dist. How to tell this to
+# # make? FIXME: These rules won't remake Makefile.am files in
+# # subdrectries.
+# 
+# # FIXME: Use the BASH variable to execute the script. The problem is
+# # that the script attempts to start itself with "$0 args".
+# 
+# Makefile.am: Makefile.am.in
+# 	(cd $(top_srcdir) && $(MAKE) src/Makefile.am)
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
@@ -35,7 +37,6 @@ bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade
 noinst_PROGRAMS = pkcs5-test
 noinst_SCRIPTS = lcp
 noinst_LIBRARIES = liblsh.a
-# noinst_HEADERS = $(dist_x_files) $(cvs_headers)
 
 # Don't use BUILT_SOURCES, as all these files are #included, and can't be
 # compiled or dependency checked independently.
@@ -45,14 +46,10 @@ generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 
 # BUILT_SOURCES = config_parse.c
 
-POTENTIAL_X_FILES = $(addsuffix .x,$(wildcard $(srcdir)/*.[ch]))
-
 .PHONY: bootstrap
 
 # Not all potential .x files can be generated
-bootstrap: $(generated_sources)
-	-$(MAKE) -k $(POTENTIAL_X_FILES)
-	@rm -f $(addsuffix T,$(POTENTIAL_X_FILES))
+bootstrap: $(generated_sources) $(dist_classes)
 
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	algorithms.c alist.c atoms.c \
@@ -110,32 +107,32 @@ environ.h: environ.h.in Makefile
 	    -e 's,@''sysconfdir@,$(sysconfdir),' < $<) >$@T
 	test -s $@T && mv -f $@T $@
 
-# FIXME: Generate these dependencies in some other way.
-client.o: environ.h
-
-client_pty.o: environ.h
-
-gateway.o: environ.h
-
-lshd.o: environ.h
-
-lsh-keygen.o: environ.h
-
-lsh-make-seed.o: environ.h
-
-lsh.o: environ.h
-
-lsh-writekey.o: environ.h
-
-server_session.o: environ.h
-
-server_x11.o: environ.h
-
-srp-gen.o: environ.h
-
-unix_random: environ.h
-
-unix_user: environ.h
+# # FIXME: Generate these dependencies in some other way.
+# client.o: environ.h
+# 
+# client_pty.o: environ.h
+# 
+# gateway.o: environ.h
+# 
+# lshd.o: environ.h
+# 
+# lsh-keygen.o: environ.h
+# 
+# lsh-make-seed.o: environ.h
+# 
+# lsh.o: environ.h
+# 
+# lsh-writekey.o: environ.h
+# 
+# server_session.o: environ.h
+# 
+# server_x11.o: environ.h
+# 
+# srp-gen.o: environ.h
+# 
+# unix_random: environ.h
+# 
+# unix_user: environ.h
 
 atoms_defines.h: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms header <$< >$@T
