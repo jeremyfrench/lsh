@@ -203,7 +203,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       }
     case OPT_HASH:
       {
-	int hash = lookup_hash(self->algorithms, arg, 0);
+	int hash = lookup_hash(self->algorithms, arg, NULL, 0);
 	if (hash)
 	  self->hash = hash;
 	else

@@ -158,7 +158,7 @@ sexp_parse_display_canonical(struct simple_buffer *buffer)
 	  contents = sexp_parse_string_canonical(buffer);
 
 	  if (contents)
-	    return make_sexp_string(display, contents);
+	    return sexp_s(display, contents);
 	}
       lsh_string_free(display);
     }
@@ -215,7 +215,7 @@ sexp_parse_canonical(struct simple_buffer *buffer)
     default:
       {
 	struct lsh_string *s = sexp_parse_string_canonical(buffer);
-	return s ? make_sexp_string(NULL, s) : NULL;
+	return s ? sexp_s(NULL, s) : NULL;
       }
     }
 }

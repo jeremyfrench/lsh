@@ -367,7 +367,7 @@ do_return_string(struct string_handler *s,
 		 struct lsh_string *data)
 {
   CAST(return_string, self, s);
-  COMMAND_RETURN(self->c, make_sexp_string(NULL, data));
+  COMMAND_RETURN(self->c, sexp_s(NULL, data));
 }
 
 static struct string_handler *
@@ -464,7 +464,7 @@ do_handle_display(struct string_handler *s,
       trace("do_handle_display: Got data.\n");
       
       COMMAND_RETURN(self->c,
-		     make_sexp_string(display, data));
+		     sexp_s(display, data));
     }
 }
 
