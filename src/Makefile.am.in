@@ -32,7 +32,7 @@ common_sources = abstract_io.c abstract_crypto.c alist.c atoms.c \
 	debug.c disconnect.c encrypt.c format.c gc.c getopt.c io.c keyexchange.c \
 	list.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
 	randomness.c \
-	read_data.c read_line.c read_packet.c service.c \
+	read_data.c read_line.c read_packet.c resource.c service.c \
 	translate_signal.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c 
 
