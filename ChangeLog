@@ -1,4 +1,38 @@
+2002-03-05  Niels Möller  <nisse@cuckoo.hack.org>
+
+	Cleaned up the bug compatibility tests.
+	* src/handshake.c (compat_peer_flags): New function.
+	(do_line): Call compat_peer_flags.
+
+	* src/abstract_crypto.c (hash_string): Declare the input string as
+	const. 
+	(mac_string): Likewise.
+
+	* src/testsuite/testutils.c (test_hash): New function.
+	(test_mac): New function.
+	(test_sign): New function.
+	(do_bad_random): New function, stupid randomness source for the
+	test programs to use.
+	(test_spki_match, test_spki_grant, test_spki_deny): New functions.
+
+	* src/testsuite/run-tests: Improved testscript, copied from
+	nettle/testsuite. 
+
+	* src/testsuite/testutils.c: Utility functions used by test
+	programs. 
+
+	Don't use m4 to generate test programs. Added C files to CVS,
+	deleted m4 files. 
+	* src/testsuite/Makefile.am: Deleted m4 files and rules.
+
+2002-03-04  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/parse_config.c, src/parse_config.h: New files. A lexer and a
+	recursive-descent parser for config files.
+
 2002-02-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/config_parse.y: New file, for parsing config files.
 
 	* src/unix_interact.c (do_make_raw): Modify the terminal's VMIN
 	and VTIME values.
