@@ -139,10 +139,6 @@ struct reaper;
 /* resource.h */
 struct resource;
 
-/* sexp.h */
-struct sexp;
-struct sexp_iterator;
-
 /* userauth.h */
 struct lsh_user;
 
