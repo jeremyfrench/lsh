@@ -148,6 +148,8 @@ USER INTERFACE ISSUES
 Hack do_spki_decrypt() in spki_commands.c to ask again if the provided
 password is incorrect.
 
+Implement an escape char, like ~ with rsh.
+
 
 I/O ISSUES
 
