@@ -25,6 +25,7 @@
 
 #include "gc.h"
 
+#include "resource.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -34,7 +35,7 @@
 static struct lsh_object *all_objects = NULL;
 static unsigned number_of_objects = 0;
 static unsigned live_objects = 0;
-
+static struct resource_list *root_set = NULL;
 
 #if DEBUG_ALLOC
 static void sanity_check_object_list(void)
@@ -156,7 +157,7 @@ void gc_register(struct lsh_object *o)
 }
 
 /* NOTE: If the object is close to the start of the object list, it is
- * deallocated and forgotten immedietely. If the object is not found,
+ * deallocated and forgotten immediately. If the object is not found,
  * we don't search the entire list, but instead defer deallocation to
  * gc_sweep. */
 void gc_kill(struct lsh_object *o)
@@ -201,14 +202,25 @@ void gc_kill(struct lsh_object *o)
   sanity_check_object_list();
 }
 
-void gc(struct lsh_object *root)
+void
+gc_global(struct resource *o)
+{
+  if (!root_set)
+    root_set = empty_resource_list();
+  
+  assert(root_set->super.alive);
+
+  REMEMBER_RESOURCE(root_set, o);
+}
+
+void gc(void)
 {
   unsigned objects_before = number_of_objects;
 #if DEBUG_ALLOC
   unsigned strings_before = number_of_strings;
 #endif
 
-  gc_mark(root);  
+  gc_mark(&root_set->super.super);  
   gc_sweep();
   
   verbose("Objects alive: %i, garbage collected: %i\n",
@@ -219,14 +231,14 @@ void gc(struct lsh_object *root)
 #endif
 }
 
-void gc_maybe(struct lsh_object *root, int busy)
+void gc_maybe(int busy)
 {
   sanity_check_object_list();
 
   if (number_of_objects > (100 + live_objects*(2+busy)))
     {
       verbose("Garbage collecting while %z...\n", busy ? "busy" : "idle");
-      gc(root);
+      gc();
     }
 }
 
@@ -237,8 +249,11 @@ int gc_final_p = 0;
 
 void gc_final(void)
 {
-  gc_final_p = 1;
+  KILL_RESOURCE_LIST(root_set);
+  root_set = NULL;
   
+  gc_final_p = 1;
+
   gc_sweep();
   assert(!number_of_objects);
 
