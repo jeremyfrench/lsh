@@ -304,6 +304,8 @@ int alloc_channel(struct channel_table *table)
 	  assert(!table->channels[i]);
 	  table->in_use[i] = 1;
 	  table->next_channel = i+1;
+
+	  verbose("Allocated channel number %i\n", i);
 	  return i;
 	}
     }
@@ -334,6 +336,8 @@ int alloc_channel(struct channel_table *table)
   table->next_channel = table->used_channels = i+1;
 
   table->in_use[i] = 1;
+  verbose("Allocated channel number %i\n", i);
+
   return i;
 }
 
@@ -341,7 +345,8 @@ void dealloc_channel(struct channel_table *table, int i)
 {
   assert(i >= 0);
   assert( (unsigned) i < table->used_channels);
-  
+
+  verbose("Deallocating channel %i\n");
   table->channels[i] = NULL;
   table->in_use[i] = 0;
   
@@ -358,7 +363,8 @@ register_channel(struct ssh_connection *connection,
   
   assert(table->in_use[local_channel_number]);
   assert(!table->channels[local_channel_number]);
-  
+
+  verbose("Taking channel %i in use.\n", local_channel_number);
   table->channels[local_channel_number] = channel;
 
   /* FIXME: Is this the right place to install this exception handler? */
@@ -1056,6 +1062,8 @@ do_channel_eof(struct packet_handler *closure UNUSED,
 	    }
 	  else
 	    {
+	      verbose("Receiving EOF on channel %i\n", channel_number);
+	      
 	      channel->flags |= CHANNEL_RECEIVED_EOF;
 	      
 	      if (channel->eof)
@@ -1103,6 +1111,8 @@ do_channel_close(struct packet_handler *closure UNUSED,
       
       if (channel)
 	{
+	  verbose("Receiving CLOSE on channel %i\n", channel_number);
+	      
 	  if (channel->flags & CHANNEL_RECEIVED_CLOSE)
 	    {
 	      werror("Receiving multiple CLOSE on channel.\n");
@@ -1427,6 +1437,8 @@ void channel_close(struct ssh_channel *channel)
 
   if (! (channel->flags & CHANNEL_SENT_CLOSE))
     {
+      verbose("Sending CLOSE on channel %i\n", channel);
+
       channel->flags |= CHANNEL_SENT_CLOSE;
       
       A_WRITE(channel->write, format_channel_close(channel) );
@@ -1448,6 +1460,8 @@ void channel_eof(struct ssh_channel *channel)
   if (! (channel->flags &
 	 (CHANNEL_SENT_EOF | CHANNEL_SENT_CLOSE | CHANNEL_RECEIVED_CLOSE)))
     {
+      verbose("Sending EOF on channel %i\n", channel);
+
       channel->flags |= CHANNEL_SENT_EOF;
       A_WRITE(channel->write, format_channel_eof(channel) );
 
