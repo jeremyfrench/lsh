@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 0.9.9)
+AM_INIT_AUTOMAKE(lsh, 0.9.10)
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
@@ -312,7 +312,7 @@ dnl  	     AC_ERROR([GMP is missing (ftp://ftp.gnu.org/pub/gnu/gmp/gmp-2.0.2.tar
 
 AC_SEARCH_LIBGMP(gmp gmp2,
   LSH_RPATH_FIX,
-  [AC_ERROR([GMP is missing (ftp://ftp.gnu.org/pub/gnu/gmp/gmp-3.0.1.tar.gz)]) ])
+  [AC_ERROR([GMP is missing. Get gmp-2.0.2 or better from ftp://ftp.gnu.org/pub/gnu/gmp]) ])
 
 if test x$with_zlib = xyes; then
   AC_CHECK_LIB(z, inflate,, [with_zlib=no])
