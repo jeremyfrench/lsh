@@ -176,7 +176,11 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
 
        (start_shell . int)
        (remote_forward . int)
-       (actions struct object_queue)))
+       (actions struct object_queue)
+
+       ; Resources that are created during argument parsing. These should be adopted
+       ; by the connection once it is up and running.
+       (resources object resource_list)))
 */
 
 void
