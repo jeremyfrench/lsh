@@ -383,7 +383,10 @@ COMMAND_SIMPLE(lsh_writekey_options2private_file)
        (lambda (backend)
          (let ((key (read_sexp (stdin backend))))
            (prog1 (print_public options (open backend (options2public_file options))
-	                        (signer2public (sexp2signer (options2algorithms options) key)))
+	                        (verifier2public
+				  (signer2verifier
+				    (sexp2signer (options2algorithms options)
+				                 key))))
 	          (print_private options (open backend (options2private_file options))
 		                 (transform options key)))))))
 */
