@@ -27,6 +27,7 @@
 
 #include "format.h"
 #include "io.h"
+#include "read_file.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -179,75 +180,80 @@ make_sexp_print_raw_hash(struct hash_algorithm *algorithm)
   return print;
 }
 
-/* Make sure that the fd is closed properly. */
 /* GABA:
    (class
-     (name read_sexp_continuation)
-     (super command_continuation)
+     (name sexp_parser)
+     (super abstract_write)
      (vars
-       (fd object lsh_fd)
-       (up object command_continuation)))
+       (style . int)
+       (c object command_continuation)
+       (e object exception_handler)))
 */
 
-static void
-do_read_sexp_continue(struct command_continuation *s,
-		      struct lsh_object *a)
-{
-  CAST(read_sexp_continuation, self, s);
-  close_fd_nicely(self->fd);
+static const struct exception
+sexp_syntax_exception = STATIC_EXCEPTION(EXC_SEXP_SYNTAX,
+					 "Sexp syntax error");
 
-  trace("do_read_sexp_continue\n");
-  
-  COMMAND_RETURN(self->up, a);
-}
-
-static struct command_continuation*
-make_read_sexp_continuation(struct lsh_fd *fd,
-			    struct command_continuation *up)
-{
-  NEW(read_sexp_continuation, self);
-
-  trace("make_read_sexp_continuation\n");
-  self->super.c = do_read_sexp_continue;
-  self->fd = fd;
-  self->up = up;
-
-  return &self->super;
-}
-
-/* GABA:
-   (class
-     (name read_sexp_exception_handler)
-     (super exception_handler)
-     (vars
-       (fd object lsh_fd)))
-*/
+static const struct exception
+sexp_eof_exception = STATIC_EXCEPTION(EXC_SEXP_EOF, "All sexps read");
 
 static void
-do_read_sexp_exception_handler(struct exception_handler *s,
-			       const struct exception *x)
+do_sexp_parse_once(struct abstract_write *s, struct lsh_string *input)
 {
-  CAST(read_sexp_exception_handler, self, s);
-  if (x->type & EXC_SEXP)
-    close_fd_nicely(self->fd);
+  CAST(sexp_parser, self, s);
+  struct simple_buffer buffer;
+  struct sexp *expr;
+  
+  assert(input);
 
-  EXCEPTION_RAISE(self->super.parent, x);
+  simple_buffer_init(&buffer, input->length, input->data);
+
+  expr = sexp_parse(self->style, &buffer);
+  if (!expr)
+    EXCEPTION_RAISE(self->e, &sexp_syntax_exception);
+  else
+    COMMAND_RETURN(self->c, expr);
+
+  lsh_string_free(input);
 }
 
-static struct exception_handler *
-make_read_sexp_exception_handler(struct lsh_fd *fd,
-				 struct exception_handler *e,
-				 const char *context)
+static void
+do_sexp_parse_many(struct abstract_write *s, struct lsh_string *input)
 {
-  NEW(read_sexp_exception_handler, self);
+  CAST(sexp_parser, self, s);
+  struct simple_buffer buffer;
+  const struct exception *e = &sexp_eof_exception;
+    
+  assert(input);
 
-  trace("make_read_sexp_exception_handler\n");
+  simple_buffer_init(&buffer, input->length, input->data);
 
-  self->super.raise = do_read_sexp_exception_handler;
-  self->super.parent = e;
-  self->super.context = context;
-  
-  self->fd = fd;
+  while (!parse_eod(&buffer))
+    {
+      struct sexp *expr = sexp_parse(self->style, &buffer);
+      if (!expr)
+	{
+	  e = &sexp_syntax_exception;
+	  break;
+	}
+      else
+	COMMAND_RETURN(self->c, expr);
+    }
+
+  EXCEPTION_RAISE(self->e, e);
+  lsh_string_free(input);
+}
+
+static struct abstract_write *
+make_sexp_parser(int style, int goon,
+		 struct command_continuation *c,
+		 struct exception_handler *e)
+{
+  NEW(sexp_parser, self);
+  self->super.write = goon ? do_sexp_parse_many : do_sexp_parse_once;
+  self->style = style;
+  self->c = c;
+  self->e = e;
 
   return &self->super;
 }
@@ -266,20 +272,20 @@ do_read_sexp(struct command *s,
   trace("do_read_sexp\n");
     
   assert(fd);
-  
-  if (!self->goon)
-    c = make_read_sexp_continuation(fd, c);
-  
+
   io_read(fd,
-	  make_buffered_read(SEXP_BUFFER_SIZE,
- 	    make_read_sexp(self->format, self->goon, c,
-	      make_read_sexp_exception_handler(fd, e,
-					       HANDLER_CONTEXT))),
+	  make_buffered_read
+	  (SEXP_BUFFER_SIZE,
+	   make_read_file
+	   (make_sexp_parser(self->format,
+			     self->goon,
+			     c, e),
+	    self->max_size)),
 	  NULL);
 }
 
 struct command *
-make_read_sexp_command(int format, int goon)
+make_read_sexp_command(int format, int goon, UINT32 max_size)
 {
   NEW(read_sexp_command, self);
 
@@ -288,6 +294,7 @@ make_read_sexp_command(int format, int goon)
   self->super.call = do_read_sexp;
   self->format = format;
   self->goon = goon;
+  self->max_size = max_size;
 
   return &self->super;
 }
@@ -295,8 +302,11 @@ make_read_sexp_command(int format, int goon)
 static struct catch_command catch_sexp_exceptions
 = STATIC_CATCH_COMMAND(EXC_ALL, EXC_SEXP_EOF, 1);
 
+/* Arbitrary limit on file size. */
+#define MAX_SEXP_SIZE 10000
+
 static struct read_sexp_command read_sexp
-= STATIC_READ_SEXP(SEXP_ADVANCED, 1);
+= STATIC_READ_SEXP(SEXP_TRANSPORT, 1, MAX_SEXP_SIZE);
 
 /* GABA:
    (expr
