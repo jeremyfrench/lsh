@@ -207,7 +207,7 @@ spki_sexp_to_signer(struct alist *algorithms,
 	/* Test key here? */
 	;
       else
-	werror("sexp_to_signer: Invalid key.", expr);
+	werror("sexp_to_signer: Invalid key.\n", expr);
 
       return s;
     }
