@@ -84,6 +84,23 @@ enum spki_5_tuple_flags
   SPKI_NOT_AFTER = 4,
 };
 
+/* Dates are represented as 19-character strings of the form
+ * "1997-07-26_23:15:10". Note that dates can be compared by
+ * memcmp. */
+
+#define SPKI_DATE_SIZE 19
+
+struct spki_date {
+  uint8_t date[SPKI_DATE_SIZE];
+};
+
+void
+spki_date_from_time_t(struct spki_date *d, time_t t);
+
+/* Return value < 0, == 0 or > 0 if d < t, d == t or d > t */ 
+int
+spki_date_cmp_time_t(struct spki_date *d, time_t t);
+
 struct spki_5_tuple
 {
   /* ACL:s are linked into a list. */
@@ -98,8 +115,8 @@ struct spki_5_tuple
   enum spki_5_tuple_flags flags;
 
   /* Checked if the corresponding flag is set. */
-  time_t not_before;
-  time_t not_after;
+  struct spki_date not_before;
+  struct spki_date not_after;
 
   /* An s-expression */
   /* FIXME: Parse into some internal representation? */
