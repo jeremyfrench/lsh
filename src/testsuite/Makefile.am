@@ -1,8 +1,19 @@
 # Testsuite
 
+# Tests that can be used without any special setup
 TS_PROGS = des-test spki-tag-test
 TS_SH = keygen-test
-TESTS = $(TS_PROGS) $(TS_SH)
+
+TS_SOME = $(TS_PROGS) $(TS_SH)
+
+# Tests that require that lsh is set up for password-less login.
+TS_MORE_SH = lsh-1-test lsh-2-test lsh-3-test
+TS_MORE_PROGS =
+
+TS_ALL = $(TS_PROGS) $(TS_SH) $(TS_MORE_PROGS) $(TS_MORE_SH) 
+
+# Don't use automakes testsuite support
+# TESTS = $(TS_PROGS) $(TS_SH)
 
 # SUFFIXES = .c .o
 noinst_PROGRAMS = $(TS_PROGS)
@@ -17,4 +28,14 @@ all:
 M4FLAGS = -P #-s
 %.c: macros.m4 %.m4
 	$(M4) $(M4FLAGS) $^ > $@
+
+.PHONY: check-some check-more
+
+check: check-some
+
+check-some: $(TS_SOME)
+	srcdir=$(srcdir) $(srcdir)/runtests $^
+
+check-more: $(TS_ALL)
+	srcdir=$(srcdir) $(srcdir)/runtests $^
 
