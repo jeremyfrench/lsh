@@ -1,5 +1,10 @@
 2005-02-03  Niels Möller  <niels@s3.kth.se>
 
+	* src/resource.c (resource_list_is_empty): New function.
+
+	* src/io.c (io_init): Return the oop source. Also moved
+	the inclusion of oop.h from io.c to io.h.
+
 	* src/exception.h (PROTOCOL_ERROR): Use a static exception object.
 
 2005-02-02  Niels Möller  <nisse@lysator.liu.se>
