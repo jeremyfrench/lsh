@@ -113,6 +113,8 @@
  * Type                        Possible or typical values
  *
  * uint8_t  byte-order         'B' (big endian) or 'L' (little endian)
+ *                             According to Jean-Pierre, some servers
+ *                             use 'b' and 'l' instead.
  * uint8_t  pad                0
  * uint16_t major-version      Usually 11
  * uint16_t minor-version      Usually 0.
@@ -234,11 +236,13 @@ do_client_channel_x11_receive(struct ssh_channel *s,
             switch (self->buffer->data[0])
               {
               case 'B': /* Big endian */
+	      case 'b':
                 self->little_endian = 0;
                 self->name_length = READ_UINT16(self->buffer->data + 6);
                 self->auth_length = READ_UINT16(self->buffer->data + 8);
                 break;
               case 'L': /* Little endian */
+	      case 'l':
                 self->little_endian = 1;
                 self->name_length = LE_READ_UINT16(self->buffer->data + 6);
                 self->auth_length = LE_READ_UINT16(self->buffer->data + 8);
