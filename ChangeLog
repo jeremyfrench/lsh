@@ -1,3 +1,8 @@
+2001-01-15  Niels Möller  <nisse@ehand.com>
+
+	* Added Markus Friedl's sftp-server.c to contrib, for some random
+	hacking. 
+
 2001-01-10  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/pkcs5-test.c: Include stdlib.h instead of getopt.h. 
