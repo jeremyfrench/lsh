@@ -1,3 +1,25 @@
+Sun Apr 11 22:56:02 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server.c, src/server.h, src/server_session.c,
+	src/server_session.h: Moved session features (i.e. shell and pty
+	handling) into a separate file.
+
+	* src/password.h (unix_user): Moved definition to
+	server_password.h. 
+
+	* src/lshd.c (main): Added user authentication and connection
+	service, now using the command language.
+
+	* src/channel.h (make_connection_service): Removed START argument.
+	Now returns a struct command *. 
+
+	* src/channel.c (connection_service): Removed START attribute. 
+	(do_connection_service): Use the command's continuation rather than
+	the START attribute.
+
+	* src/io.c (tcp_addr): Added this function again.
+	(address_info2sockaddr_in): Use tcp_addr().
+
 Wed Apr  7 21:30:35 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/channel.c, src/server.c: Started adapting the functions to

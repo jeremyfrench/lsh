@@ -22,7 +22,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "password.h"
+#include "server_password.h"
 
 #include "charset.h"
 #include "format.h"
@@ -34,9 +34,6 @@
 #include <string.h>
 #include <errno.h>
 
-#if HAVE_UNISTD_H
-# include <unistd.h>
-#endif
 #if HAVE_CRYPT_H
 # include <crypt.h>
 #endif
@@ -47,7 +44,9 @@
 #include <shadow.h>
 #endif
 
-/* #include "server_password.c.x" */
+#define GABA_DEFINE
+#include "server_password.h.x" 
+#undef GABA_DEFINE
 
 /* NOTE: Calls functions using the disgusting convention of returning
  * pointers to static buffers. */
@@ -134,7 +133,7 @@ int verify_password(struct unix_user *user,
 }
 
 #if 0
-/* GABA:
+/* ;; GABA:
    (class
      (name unix_authentication)
      (super userauth)

@@ -227,7 +227,7 @@ struct channel_open *make_open_direct_tcpip(struct io_backend *backend)
 
 /* GABA:
    (expr
-     (name tcpforward_foo)
+     (name make_tcpforward)
      (globals
         (start-io COMMAND_UNIMPLEMENTED)
         (listen COMMAND_UNIMPLEMENTED)

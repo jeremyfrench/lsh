@@ -61,6 +61,8 @@ int pty_allocate(struct pty_info *pty);
  * leader. */
 int tty_setctty(struct pty_info *pty);
 
+#if 0
 void tty_interpret_term_modes(struct termios *ios, UINT32 t_len, UINT8 *t_modes);
+#endif
 
 #endif /* LSH_SERVER_PTY_H_INCLUDED */
