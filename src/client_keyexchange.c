@@ -27,13 +27,18 @@
 #include "command.h"
 #include "debug.h"
 #include "format.h"
+#include "lookup_verifier.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
+
+#if 0
 #define GABA_DEFINE
 #include "client_keyexchange.h.x"
 #undef GABA_DEFINE
+#endif
 
 #include "client_keyexchange.c.x"
 
@@ -43,7 +48,8 @@
      (super keyexchange_algorithm)
      (vars
        (dh object diffie_hellman_method)
-       (verifier object lookup_verifier)))
+       ; alist of signature-algorithm -> lookup_verifier
+       (verifiers object alist)))
 */
 
 /* Handler for the kex_dh_reply message */
@@ -74,7 +80,7 @@ do_handle_dh_reply(struct packet_handler *c,
       return;
     }
     
-  v = LOOKUP_VERIFIER(closure->verifier, closure->dh.server_key);
+  v = LOOKUP_VERIFIER(closure->verifier, NULL, closure->dh.server_key);
 
   if (!v)
     /* FIXME: Use a more appropriate error code? */
@@ -126,9 +132,12 @@ do_handle_dh_reply(struct packet_handler *c,
 
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = connection->fail;
   connection->kex_state = KEX_STATE_NEWKEYS;
-  
-  send_verbose(connection, "Key exchange successful!", 0);
 
+#if DATAFELLOWS_WORKAROUNDS
+  if (! (connection->peer_flags & PEER_SEND_NO_DEBUG))
+#endif
+    send_verbose(connection, "Key exchange successful!", 0);
+  
   if (connection->established)
     {
       struct command_continuation *c = connection->established;
@@ -152,14 +161,23 @@ do_init_client_dh(struct keyexchange_algorithm *c,
   CHECK_SUBTYPE(signature_algorithm, ignored);
 
   /* FIXME: Use this value to choose a verifier function */
-  if (hostkey_algorithm_atom != ATOM_SSH_DSS)
+  if ( (hostkey_algorithm_atom != ATOM_SSH_DSS )
+#if DATAFELLOWS_WORKAROUNDS
+       && (hostkey_algorithm_atom != ATOM_SSH_DSS_KLUDGE)
+#endif
+      )
     fatal("Internal error\n");
   
   /* Initialize */
   dh->super.handler = do_handle_dh_reply;
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
-  dh->verifier = closure->verifier;
+  {
+    CAST_SUBTYPE(lookup_verifier, v,
+		 ALIST_GET(closure->verifiers, hostkey_algorithm_atom));
+    assert(v);
+    dh->verifier = v;
+  }
   dh->install = make_install_new_keys(0, algorithms);
   
   /* Send client's message */
@@ -172,14 +190,9 @@ do_init_client_dh(struct keyexchange_algorithm *c,
 }
 
 
-/* FIXME: This assumes that there's only one hostkey-algorithm. To
- * fix, this constructor should take a mapping
- * algorithm->verifier-function. The init-method should use this
- * mapping to find an appropriate verifier function. */
-
 struct keyexchange_algorithm *
 make_dh_client(struct diffie_hellman_method *dh,
-	       struct lookup_verifier *verifier)
+	       struct alist *verifiers)
 {
   NEW(dh_client_exchange, self);
 
@@ -187,8 +200,8 @@ make_dh_client(struct diffie_hellman_method *dh,
   
   self->super.init = do_init_client_dh;
   self->dh = dh;
-  self->verifier = verifier;
-
+  self->verifiers = verifiers;
+  
   return &self->super;
 }
 

@@ -27,30 +27,12 @@
 #define LSH_CLIENT_KEYEXCHANGE_H_INCLUDED
 
 #include "keyexchange.h"
+/* #include "lookup_verifier.h" */
 #include "publickey_crypto.h"
-
-#define GABA_DECLARE
-#include "client_keyexchange.h.x"
-#undef GABA_DECLARE
-
-/* Maps a key blob to a signature verifier, using some signature
- * algorithm and some method to determine the authenticity of the key.
- * Returns NULL If the key is invalid or not trusted. */
-
-/* FIXME: This function needs the hostname we are connecting to. */
-
-/* GABA:
-   (class
-     (name lookup_verifier)
-     (vars
-       (lookup method (object verifier) "struct lsh_string *key")))
-*/
-
-#define LOOKUP_VERIFIER(l, key) ((l)->lookup((l), (key)))
 
 struct keyexchange_algorithm *
 make_dh_client(struct diffie_hellman_method *dh,
-	       struct lookup_verifier *verifier);
+	       struct alist *verifiers);
 
 struct install_keys *make_client_install_keys(struct object_list *algorithms);
 
