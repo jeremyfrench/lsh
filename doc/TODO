@@ -399,4 +399,5 @@ succeeds." Update: According to rms, --cvs-workaround=e works, and
 --cvs-workaround=o doesn't, so it seems that it's stderr that causes
 problems. So we need to avoid setting stderr into non-blocking mode.
 
-
+Add a keep-alive option, which sends SSH_MSG_IGNORE at regular
+intervals.
