@@ -362,7 +362,8 @@ int main(int argc, char **argv)
 
 	    object_queue_add_tail(&actions,
 				  &forward_local_port
-				  (make_address_info((forward_gateway
+				  (backend,
+				   make_address_info((forward_gateway
 						      ? NULL
 						      : ssh_format("%lz", "127.0.0.1")),
 						     listen_port),
