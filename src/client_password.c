@@ -22,6 +22,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning client_password.c is obsolete
+
 #include "password.h"
 
 #include "format.h"
@@ -39,6 +41,7 @@
 #include <termios.h>
 #include <pwd.h>
 
+#if 0
 /* FIXME: Expand the functionality of interact.c, so that we can use
  * that instead of getpass(). */
 struct lsh_string *
@@ -64,6 +67,7 @@ read_password(int max_length UNUSED,
 
   return format_cstring(password);
 }
+#endif
 
 #if 0
 static int echo_on(int fd)
