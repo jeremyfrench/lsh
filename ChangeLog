@@ -1,3 +1,8 @@
+2003-09-25  Niels Möller  <niels@s3.kth.se>
+
+	* src/io.c (do_connect_list_callback): Fixed error message. errno
+	is not valid here.
+
 2003-09-25  Pontus Sköld  <pont@soua.net>
 
 	* src/channel.c (login_service_command): Use
