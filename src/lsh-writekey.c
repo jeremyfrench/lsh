@@ -336,7 +336,7 @@ DEFINE_COMMAND_SIMPLE(lsh_writekey_options2transform, a)
 {
   CAST(lsh_writekey_options, options, a);
   if (!options->crypto)
-    return &command_I.super.super;
+    return &command_I.super;
   else
     {
       CAST_SUBTYPE(mac_algorithm, hmac,

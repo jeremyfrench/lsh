@@ -527,7 +527,7 @@ make_spki_read_userkeys(struct alist *algorithms,
       decrypt = make_pkcs5_decrypt(mac, crypto, tty);
     }
   else
-    decrypt = &command_I.super;
+    decrypt = &command_I;
 
   {
     CAST_SUBTYPE(command, res,
