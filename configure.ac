@@ -85,22 +85,6 @@ if test x$enable_pty = xyes ; then
   AC_DEFINE(WITH_PTY_SUPPORT)
 fi
 
-AC_ARG_WITH(sshd1,
-  AC_HELP_STRING([[--with-sshd1[=PROGRAM]]], [support fallback to SSH1 daemon]),,
-  [with_sshd1=yes])
-
-# Default sshd1 path
-if test x$with_sshd1 = xyes ; then
-  with_sshd1=/usr/local/sbin/sshd1
-fi
-
-AH_TEMPLATE([SSHD1], [Location of the SSH1 daemon])
-AH_TEMPLATE([WITH_SSH1_FALLBACK], [Define to enable fallback to SSH1])
-if test x$with_sshd1 != xno ; then
-  AC_DEFINE(WITH_SSH1_FALLBACK)
-  AC_DEFINE_UNQUOTED(SSHD1,"$with_sshd1")
-fi
-
 AC_ARG_ENABLE(srp,
   AC_HELP_STRING([--disable-srp], [Disable the (experimental) support for SRP]),,
   [enable_srp=yes])
