@@ -437,9 +437,10 @@ do_client_userauth(struct command *s,
 }
 
 
-struct command *make_client_userauth(struct lsh_string *username,
-				     int service_name,
-				     struct object_list *methods)
+struct command *
+make_client_userauth(struct lsh_string *username,
+		     int service_name,
+		     struct object_list *methods)
 {
   NEW(client_userauth, self);
 
@@ -451,7 +452,7 @@ struct command *make_client_userauth(struct lsh_string *username,
   return &self->super;
 }
 
-
+   
 /* Password authentication */
 
 #define MAX_PASSWD 100

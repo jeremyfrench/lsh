@@ -1,5 +1,70 @@
 1999-12-07  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* configure.in: Generate src/testsuite/Makefile.
+	Bumped version to 0.1.18.
+
+	* src/Makefile.am.in (SUBDIRS): Added testsuite.
+	(liblsh_a_SOURCES): Added spki_commands.c.
+	(liblsh_a_LIBADD): Add @LIBOBJS@ here.
+	(LDADD): Removed @LIBOBJS@.
+
+	* src/client_keyexchange.c (do_init_client_dh): Use EXTRA argument
+	as a hostkey lookup_verifier. Deleted the association
+	algorithm->lookup_verifier. 
+	(make_dh_client): Deleted VERIFIERS argument.
+
+	* src/spki_commands.h: Added extern keyword to declarations of
+	commands. 
+
+	* src/spki_commands.c: Use three arguments with for_sexp. Better
+	tracing. 
+
+	* src/spki.h (spki_context): New method add_tuple.
+
+	* src/spki.c (spki_private2public): New command, that replaces the
+	private2public command.
+	(parse_private_key): Use continuations and exceptions.
+	(do_spki_parse_key): Parse c and e on to parse_private_key.
+	(spki_parse_private_key_command): New command.
+	(spki_add_acl): New function. Replaces spki_read_acls.
+	(do_spki_add_tuple): New function.
+
+	* src/sexp_commands.c (for_sexp_command): New command.
+	Better trace output.
+
+	* src/server_keyexchange.c (do_init_server_dh): Use the EXTRA
+	argument as an alist algorithm->hostkey.
+	(make_dh_server): Deleted the KEYS argument.
+
+	* src/lshd.c: Adapted to new functions for reading keys and acls. 
+
+	* src/lsh_proxy.c: Some (possible broken) changes to get it to
+	compile. 
+
+	* src/lsh.c: Various bugfixes. Seems to work again now.
+
+	* src/keyexchange.c (do_handle_kexinit): Disconnect if there is no
+	common host key algorithm. Pass on "extra" to KEYEXCHANGE_INIT().
+
+	* src/keyexchange.h: Added argument "extra" to init-method.
+	(make_kexinit_handler): Added "extra" argument.
+
+	* src/io_commands.h (LOG_PEER): New macro.
+
+	* src/exception.h (EXC_ALL): New macro.
+
+	* src/dsa.c (do_dsa_public_key): New function.
+
+	* src/connection_commands.c (do_handshake): Pass "extra" argument
+	to make_kexinit_handler.
+	(handshake_info): New class.
+	(handshake_command): New static command.
+
+	* src/command.c (do_catch_apply): Bugfix for the ignore_value
+	feature. 
+	(do_catch_simple): Initialize the ignore_value flag properly.
+	(do_trace_continuation): Better tracing.
+
 	* src/scm/gaba.scm (process-class): Fixed output of meta classes;
 	mode #define to the declaration part of the output file.
 
