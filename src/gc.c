@@ -229,8 +229,14 @@ void gc_final(void)
 {
   gc_sweep();
   assert(!number_of_objects);
-  
+
   if (number_of_strings)
-    werror("gc_final: %i strings leaked!\n");
+    {
+      struct lsh_string *s;
+      werror("gc_final: %i strings leaked!\n", number_of_strings);
+      for (s = all_strings; s; s = s->header.next)
+	werror("  clue: %z\n", s->header.clue);
+      fatal("gc_final: Internal error!\n");
+    }
 }
 #endif /* DEBUG_ALLOC */
