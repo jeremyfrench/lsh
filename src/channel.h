@@ -99,11 +99,10 @@
 
        ; Called when the channel is closed
        ; FIXME: Is this needed for anything?
-       (close method void)
+       (close method int)
 
        ; Called when eof is received on the channel (or when it is
        ; closed, whatever happens first).
- 
        (eof method int)
   
        ; Reply from SSH_MSG_CHANNEL_OPEN_REQUEST

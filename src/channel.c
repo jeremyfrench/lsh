@@ -284,23 +284,23 @@ static int channel_process_status(struct channel_table *table,
 	break;
     }
 	
-  if (status & LSH_CHANNEL_PENDING_CLOSE)
-    table->pending_close = 1;
-  
   if (status & LSH_CHANNEL_FINISHED)
     {
       /* Clear this bit */
       status &= ~LSH_CHANNEL_FINISHED;
 
       if (c->close)
-	CHANNEL_CLOSE(c);
+	status |= CHANNEL_CLOSE(c);
       
       dealloc_channel(table, channel);
-
-      /* If this was the last channel, close connection */
-      if (table->pending_close && !table->next_channel)
-	status |= LSH_CLOSE;
     }
+
+  if (status & LSH_CHANNEL_PENDING_CLOSE)
+    table->pending_close = 1;
+  
+  /* If this was the last channel, close connection */
+  if (table->pending_close && !table->next_channel)
+    status |= LSH_CLOSE;
 
   return status;
 }
