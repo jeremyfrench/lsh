@@ -4,6 +4,7 @@
 
 #include "unpad.h"
 #include "xalloc.h"
+#include "format.h"
 
 static int do_unpad(struct abstract_write **w,
 		    struct lsh_string *packet)
@@ -25,10 +26,10 @@ static int do_unpad(struct abstract_write **w,
 
   payload_length = packet->length - 1 - padding_length;
   
-  /* FIXME: Use ssh_format() */
-  new = lsh_string_alloc(payload_length);
+  new = ssh_format("%ls", payload_length, packet->data + 1);
 
-  memcpy(new->data, packet->data + 1, payload_length);
+  /* Keep sequence number */
+  new->sequence_number = packet->sequence_number;
 
   lsh_string_free(packet);
 
