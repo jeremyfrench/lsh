@@ -666,3 +666,99 @@ lsh_string_colonize(struct lsh_string *s, int every, int freeflag)
 
   return packet;
 }
+
+static UINT8 
+lsh_string_bubblebabble_c( struct lsh_string *s, UINT32 i )
+{ 
+  /* Recursive, should only be used for small strings */
+
+  UINT8 c;
+  UINT32 j;
+  UINT32 k;
+
+  assert( 0 != i);
+
+  if (1==i)
+    return 1;
+
+  j = i*2-3-1;
+  k = i*2-2-1;
+
+  assert( j < s->length && k < s->length );
+
+  c = lsh_string_bubblebabble_c( s, i-1 );
+ 
+  return (5*c + (s->data[j]*7+s->data[k])) % 36;
+}
+
+struct lsh_string*
+lsh_string_bubblebabble(struct lsh_string *s, int freeflag)
+{
+  /* Implements the Bubble Babble Binary Data Encoding by Huima as
+   * posted to the secsh list in August 2001 by Lehtinen.*/
+ 
+  UINT32 i = 0;
+  UINT32 babblelen = 2 + 6*(s->length/2) + 3;
+  struct lsh_string *p = lsh_string_alloc( babblelen );
+
+  UINT8 *r = p->data;
+  UINT8 *q = s->data; 
+
+  UINT8 a;
+  UINT8 b;
+  UINT8 c;
+  UINT8 d;
+  UINT8 e;
+
+  char vowels[6] = { 'a', 'e', 'i', 'o', 'u', 'y' };
+
+  char cons[18] = { 'b', 'c', 'd', 'f', 'g', 'h', 'k',  'l', 'm',
+		    'n', 'p', 'r', 's', 't', 'v', 'w', 'x' }; 
+  
+  *r++ = 'x';
+  
+  while( i < s->length/2 )
+    {
+      assert( i*2+1 < s->length );
+
+      a = (((q[i*2] >> 6) & 3) + lsh_string_bubblebabble_c( s, i+1 )) % 6;
+      b = (q[i*2] >> 2) & 15;
+      c = ((q[i*2] & 3) + lsh_string_bubblebabble_c( s, i+1 )/6 ) % 6;
+      d = (q[i*2+1] >> 4) & 15; 
+      e = (q[i*2+1]) & 15;
+ 
+      *r++ = vowels[a];
+      *r++ = cons[b];
+      *r++ = vowels[c];
+      *r++ = cons[d];
+      *r++ = '-';
+      *r++ = cons[e];
+
+      i++;
+    }
+
+  if( s->length % 2 ) /* Odd length? */
+    {
+      a = (((q[s->length-1] >> 6) & 3) + lsh_string_bubblebabble_c( s, i+1 )) % 6;
+      b = (q[s->length-1] >> 2) & 15;
+      c = ((q[s->length-1] & 3) + lsh_string_bubblebabble_c( s, i+1 )/6 ) % 6;
+    }
+  else
+    {
+      a = lsh_string_bubblebabble_c( s, i+1 ) % 6;
+      b = 16;
+      c = lsh_string_bubblebabble_c( s, i+1 ) / 6;
+    }
+
+  *r++ = vowels[a];
+  *r++ = cons[b];
+  *r++ = vowels[c];
+  
+  *r++ = 'x';
+  *r++ = 0;
+
+  if( freeflag )
+    lsh_string_free( s );
+
+  return p;
+}
