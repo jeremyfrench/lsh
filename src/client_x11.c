@@ -90,6 +90,9 @@
      (vars
        (auth_info object client_x11_auth_info)
        (state . int)
+       (little_endian . int)
+       (name_length . unsigned)
+       (auth_length . unsigned)
        (i . UINT32)
        (buffer string)))
 */
@@ -103,25 +106,27 @@
  * Type                        Possible or typical values
  *
  * uint8_t  byte-order         'B' (big endian) or 'L' (little endian)
+ * uint8_t  pad                0
  * uint16_t major-version      Usually 11
- * uint16_t minor-version      Usually 5 or 6.
- * uint8_t  name_length        18
+ * uint16_t minor-version      Usually 0.
+ * uint16_t name_length        18
+ * uint16_t auth_length        16
+ * uint16_t pad                What's this?
  * uint8_t [name_length] name  "MIT-MAGIC-COOKIE-1"
- * uint8_t  auth_length
  * uint8_t [auth_length] auth  Authentication data
  *
- * As the lengths are maximum 255 octets, the max length of the
- * setup packet is  517 bytes.
+ * The last fields; name and auth, are padded to a multiple of four octets.
+ *
+ * The typical setup packet, with a 16-octet cookie, is 48 octets.
  */
 
-/* FIXME: Observed data:
+/* Observed data:
  *
  *  $10 = {0x42, 0x0, 0x0, 0xb, 0x0, 0x0, 0x0, 0x12, 0x0, 0x10, 0x0, 0xa4, 0x4d, 
  *  0x49, 0x54, 0x2d, 0x4d, 0x41, 0x47, 0x49, 0x43, 0x2d, 0x43, 0x4f, 0x4f, 
  *  0x4b, 0x49, 0x45, 0x2d, 0x31, 0xff, 0xf7, 0x8b, 0x1e, 0x2c, 0xa0, 0x98, 
  *  0x11, 0x27, 0x82, 0xa9, 0x0, 0x2d, 0xc4, 0x68, 0x7f, 0x66, 0x2b}
  *
- * I.e. no minor version, and name length at index 7.
  */
 
 /* From Pike's X.pmod:
@@ -137,36 +142,76 @@
 #define MIT_COOKIE_NAME_LENGTH 18
 #define MIT_COOKIE_LENGTH 16
 
-#define X11_SETUP_MAX_LENGTH 517
+#define X11_SETUP_VERSION_LENGTH 6
+#define X11_SETUP_HEADER_LENGTH 12
+
+/* The size of a connection setup message with a 16 octet
+ * MIT-MAGIC-COOKIE-1. Using such a low value leaks the information
+ * that we expect a 16-octet cookie, but I don't think that's areal
+ * problem. */
+#define X11_SETUP_MAX_LENGTH 48
 
 enum { CLIENT_X11_START,
-       CLIENT_X11_GOT_NAME_LENGTH,
-       CLIENT_X11_GOT_AUTH_LENGTH,
+       CLIENT_X11_GOT_LENGTHS,
        CLIENT_X11_OK,
        CLIENT_X11_DENIED
 };
 
+/* And the other, little-endian, byteorder */
+#define LE_READ_UINT16(p)			\
+(  (((uint32_t) (p)[1]) << 8)			\
+ |  ((uint32_t) (p)[0]))
+
+#define LE_WRITE_UINT16(p, i)			\
+do {						\
+  (p)[1] = ((i) >> 8) & 0xff;			\
+  (p)[0] = (i) & 0xff;				\
+} while(0)
+
+/* FIXME: This function is a little ugly. It would get cleaner if we
+ * just replaced the channel's receive function pointer with NULL on
+ * failure and do_channel_forward_receive on success. */
 static void
 do_client_channel_x11_receive(struct ssh_channel *s,
                               int type, struct lsh_string *data)
 {
   CAST(client_x11_channel, self, s);
 
-  switch (type)
+  if (type != CHANNEL_DATA)
     {
-    case CHANNEL_DATA:
+      werror("Ignoring unexpected stderr data.\n");
+      lsh_string_free(data);
+    }
+  else switch (self->state)
+    {
+    case CLIENT_X11_OK:
+      A_WRITE(&self->super.socket->write_buffer->super, data);
+      break;
+        
+    fail:
+      channel_close(&self->super.super);
+      self->state = CLIENT_X11_DENIED;
+        
+      break;
+        
+    case CLIENT_X11_DENIED:
+      /* Any data on the channel should be stopped before we get
+       * here; the CHANNEL_SENT_CLOSE should be set. */
+      fatal("Internal error!\n");
+
+    default:
       {
         /* Copy data to buffer */
         UINT32 left = self->buffer->length - self->i;
-
-	/* The small initial window size should ensure that we don't get
-	 * more data. */
-	assert(data->length <= left);
-
+          
+        /* The small initial window size should ensure that we don't get
+         * more data. */
+        assert(data->length <= left);
+          
         memcpy(self->buffer->data + self->i, data->data,
                data->length);
         self->i += data->length;
-	lsh_string_free(data);
+        lsh_string_free(data);
 	
         switch (self->state)
           {
@@ -174,94 +219,124 @@ do_client_channel_x11_receive(struct ssh_channel *s,
             /* We need byte-order, major, minor and name_length,
              * which is 6 octets */
                
-            if (self->i < 6)
+            if (self->i < X11_SETUP_HEADER_LENGTH)
               break;
 
-            /* Fall through */
-            self->state = CLIENT_X11_GOT_NAME_LENGTH;
+            self->state = CLIENT_X11_GOT_LENGTHS;
+
+            switch (self->buffer->data[0])
+              {
+              case 'B': /* Big endian */
+                self->little_endian = 0;
+                self->name_length = READ_UINT16(self->buffer->data + 6);
+                self->auth_length = READ_UINT16(self->buffer->data + 8);
+                break;
+              case 'L': /* Little endian */
+                self->little_endian = 1;
+                self->name_length = LE_READ_UINT16(self->buffer->data + 6);
+                self->auth_length = LE_READ_UINT16(self->buffer->data + 8);
+                break;
+              default:
+                werror("client_x11.c: Bad endian indicator.\n");
+                goto fail;
+              }
+            if ( (self->name_length > 20)
+                 || (self->auth_length > 16) )
+              {
+                werror("client_x11.c: Too long auth name or cookie\n");
+                goto fail;
+              }
             
-          case CLIENT_X11_GOT_NAME_LENGTH:
-            /* We want the above data, the name, and the auth_length */
-	    /* FIXME: Is 7U needed? */
-            if (self->i < (7U + self->buffer->data[5]))
-              break;
-
             /* Fall through */
-            self->state = CLIENT_X11_GOT_AUTH_LENGTH;
-
-          case CLIENT_X11_GOT_AUTH_LENGTH:
+            
+          case CLIENT_X11_GOT_LENGTHS:
             {
-              UINT32 name_length = self->buffer->data[5];
-              UINT32 auth_length = self->buffer->data[6 + name_length];
-              UINT32 length = 7 + name_length + auth_length;
+              const unsigned pad_length[4] = { 0, 3, 2, 1 };
+
+#define PAD(l) (pad_length[ (l) % 4])
               
-              /* We also want the auth data */
+              UINT32 auth_offset = X11_SETUP_HEADER_LENGTH
+                + self->name_length + PAD(self->name_length);
+
+              UINT32 length = auth_offset + self->auth_length
+                + pad_length[self->auth_length % 4]; 
+                
               if (self->i < length)
                 break;
 
-	      verbose("Received cookie: `%ps':`%xs'\n",
-		      name_length, self->buffer->data + 6,
-		      auth_length, self->buffer->data + 7 + name_length);
-	      
+              debug("Received cookie of type `%ps': %xs\n",
+                    self->name_length, self->buffer->data + X11_SETUP_HEADER_LENGTH,
+                    self->auth_length, self->buffer->data + auth_offset);
+
               /* Ok, now we have the connection setup message. Check if it's ok. */
-              if ( (name_length == MIT_COOKIE_NAME_LENGTH)
-                   && !memcpy(self->buffer->data + 6, MIT_COOKIE_NAME, MIT_COOKIE_NAME_LENGTH)
+              if ( (self->name_length == MIT_COOKIE_NAME_LENGTH)
+                   && !memcmp(self->buffer->data + X11_SETUP_HEADER_LENGTH,
+                              MIT_COOKIE_NAME, MIT_COOKIE_NAME_LENGTH)
                    && lsh_string_eq_l(self->auth_info->fake,
-                                      auth_length,
-                                      self->buffer->data + 7 + name_length))
+                                      self->auth_length,
+                                      self->buffer->data + auth_offset))
                 {
                   struct lsh_string *msg;
+                  UINT8 lengths[4];
+                  static const UINT8 pad[3] = { 0, 0, 0 };
                   
                   /* Cookies match! */
                   verbose("client_x11: Allowing X11 connection; cookies match.\n");
+                  
+                  if (self->little_endian)
+                    {
+                      LE_WRITE_UINT16(lengths, self->auth_info->name->length);
+                      LE_WRITE_UINT16(lengths + 2, self->auth_info->auth->length);
+                    }
+                  else
+                    {
+                      WRITE_UINT16(lengths, self->auth_info->name->length);
+                      WRITE_UINT16(lengths + 2, self->auth_info->auth->length);
+                    }
 
+                  /* FIXME: Perhaps it would be easier to build the message by hand than
+                   * using ssh_format? */
                   /* Construct the real setup message. */
-                  msg = ssh_format("%ls%c%ls%c%ls%ls",
-                                   5, self->buffer->data,
-                                   self->auth_info->name->length,
+                  msg = ssh_format("%ls%ls%c%c%ls%ls%ls%ls",
+                                   X11_SETUP_VERSION_LENGTH, self->buffer->data,
+                                   4, lengths,
+                                   0, 0,
                                    self->auth_info->name->length,
                                    self->auth_info->name->data,
-                                   self->auth_info->auth->length,
+                                   PAD(self->auth_info->name->length), pad,
                                    self->auth_info->auth->length,
                                    self->auth_info->auth->data,
                                    self->i - length,
                                    self->buffer + self->i);
 
-		  lsh_string_free(self->buffer);
-		  self->buffer = NULL;
+                  lsh_string_free(self->buffer);
+                  self->buffer = NULL;
 
-		  /* Bump window size */
-		  channel_start_receive(&self->super.super, X11_WINDOW_SIZE - msg->length);
+                  /* Bump window size */
+                  channel_start_receive(&self->super.super, X11_WINDOW_SIZE - msg->length);
 
-		  /* Send real x11 connection setup message. */
-		  A_WRITE(&self->super.socket->write_buffer->super, msg);
+                  debug("client_x11.c: Sending real X11 setup message: %xS\n",
+                        msg);
+                  
+                  /* Send real x11 connection setup message. */
+                  A_WRITE(&self->super.socket->write_buffer->super, msg);
 
-		  self->state = CLIENT_X11_OK;
+                  self->state = CLIENT_X11_OK;
                 }
               else
                 {
                   werror("client_x11: X11 connection denied; bad cookie.\n");
-		  channel_close(&self->super.super);
-		  self->state = CLIENT_X11_DENIED;
-		}
-	      break;
-	    }
-	  case CLIENT_X11_OK:
-	    A_WRITE(&self->super.socket->write_buffer->super, data);
-	    break;
-	  case CLIENT_X11_DENIED:
-	    /* Any data on the channel should be stopped before we get
-	     * here; the CHANNEL_SENT_CLOSE should be set. */
-	    fatal("Internal error!\n");
-	  }
-	break;
+                  goto fail;
+                }
+              break;
+#undef PAD
+            }
+          default:
+            fatal("Internal error. do_client_channel_x11_receive");
+            break;
+          }
       }
-    case CHANNEL_STDERR_DATA:
-      werror("Ignoring unexpected stderr data.\n");
-      lsh_string_free(data);
       break;
-    default:
-      fatal("Internal error. do_client_channel_x11_receive");
     }
 }
 
@@ -679,7 +754,7 @@ make_forward_x11(const char *display_string,
 
   RANDOM(random, fake->length, fake->data);
 
-  verbose("X11 fake cookie: `%xS'\n", fake);
+  debug("Generated X11 fake cookie %xS\n", fake);
   
   /* This deallocates fake if it fails. */
   display = make_client_x11_display(display_string, fake);
