@@ -115,7 +115,8 @@ struct ssh_connection;
        ))
 */
 
-struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler);
+struct ssh_connection *make_ssh_connection(struct command_continuation *c);
+
 void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,
 			struct randomness *r);
