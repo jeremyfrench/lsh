@@ -42,13 +42,21 @@
 
 #include <signal.h>
 
+/* FIXME: Should this be done in configure instead? Doesn't hurt though */
+
 #if WITH_UTMP
 # if HAVE_UTMP_H
 #  include <utmp.h>
+#  ifndef WTMP_FILE
+#   define WTMP_FILE "/var/adm/wtmp"
+#  endif
 # endif
 
 # if HAVE_UTMPX_H
 #  include <utmpx.h>
+#  ifndef WTMPX_FILE
+#   define WTMPX_FILE "/var/adm/wtmpx" 
+#  endif
 # endif
 #endif
 
@@ -62,6 +70,7 @@
 #if HAVE_UTMPX_H && HAVE_PUTUTXLINE
 # define USE_UTMPX 1
 # define PUTUTXLINE pututxline
+# define GETUTXID   getutxid 
 # define SETUTXENT setutxent 
 # define UTMPX utmpx
 # define UTMPX_UT_EXIT    HAVE_STRUCT_UTMPX_UT_EXIT
@@ -73,10 +82,15 @@
 # define UTMPX_UT_ADDR_V6 HAVE_STRUCT_UTMPX_UT_ADDR_V6
 # define UTMPX_UT_HOST    HAVE_STRUCT_UTMPX_UT_HOST
 # define UTMPX_UT_SYSLEN  HAVE_STRUCT_UTMPX_UT_SYSLEN
+# define WTMPX            WTMPX_FILE
+# if HAVE_UPDWTMPX
+#   define UPDWTMPX updwtmpx
+# endif
 #else
 # if HAVE_UTMP_H && HAVE_PUTUTLINE
 #  define USE_UTMPX 1
 #  define PUTUTXLINE pututline
+#  define GETUTXID   getutid 
 #  define SETUTXENT setutent 
 #  define UTMPX utmp
 #  define UTMPX_UT_EXIT    HAVE_STRUCT_UTMP_UT_EXIT
@@ -88,6 +102,10 @@
 #  define UTMPX_UT_ADDR_V6 HAVE_STRUCT_UTMP_UT_ADDR_V6
 #  define UTMPX_UT_HOST    HAVE_STRUCT_UTMP_UT_HOST
 #  define UTMPX_UT_SYSLEN  HAVE_STRUCT_UTMP_UT_SYSLEN
+#  define WTMPX            WTMP_FILE
+#  if HAVE_UPDWTMP
+#   define UPDWTMPX updwtmp
+#  endif
 # else
 #  define USE_UTMPX 0
 # endif
@@ -219,6 +237,10 @@ do_utmp_cleanup(struct exit_callback *s,
 
 #if USE_UTMPX
   struct UTMPX entry;
+#ifndef HAVE_LOGWTMP
+  struct UTMPX wc;
+  struct UTMPX *old;
+#endif
 
   trace("unix_process.c: do_utmp_cleanup (HAVE_UTMPX_H) \n");
 
@@ -239,16 +261,59 @@ do_utmp_cleanup(struct exit_callback *s,
   entry.ut_exit.e_exit = signaled ? 0 : value;
   entry.ut_exit.e_termination = signaled ? value : 0;
 #endif
+
+#ifndef HAVE_LOGWTMP
+
+  /* Mumble. For utmp{,x} we want as much as possible of the entry to
+   * be cleared, but for wtmp{,x} we want to retain as much
+   * information as possible, so we get the entry from utmp{,x}, put
+   * the cleared one to utmp{,x}.  */
+
+  trace("unix_process.c: do_utmp_cleanup without logwtmp, looking up old entry\n");
+  
+  old = GETUTXID( &entry );
+    
+  if( !old ) /* getut{,x}id failed? */
+    {
+      debug("unix_process.c: do_utmp_cleanup getut{,x}id failed\n");
+
+      wc = entry; /* Copy the entry we're going to write and fill it in as much as we can */
+      CP(wc.ut_line, self->line);
+    }
+  else
+    wc = *old; /* Copy the old entry (on Solaris, putut{,x}line invalidates *old) */
+  
+#endif /* HAVE_LOGWTMP */
       
   if (!PUTUTXLINE(&entry))
     werror("Updating utmpx for logout failed (errno = %i): %z\n",
 	   errno, STRERROR(errno));
 
-#endif /* USE_UTMPX */
+#ifndef HAVE_LOGWTMP
+
+  /* Calculate timestamp for wtmp */
+
+# if UTMPX_UT_TV
+  gettimeofday(&wc.ut_tv, NULL); /* Ignore the timezone */
+# else
+#  if UTMPX_UT_TIME
+  time(&wc.ut_time);
+#  endif /* UTMPX_UT_TIME */
+# endif /* UTMPX_UT_TV */
+
+  old->ut_type = DEAD_PROCESS; /* Mark as dead */
+
+#endif /* HAVE_LOGWTMP */
 
 #if HAVE_LOGWTMP
   logwtmp(lsh_get_cstring(self->line), "", "");
-#endif
+#else /* HAVE_LOGWTMP */
+# ifdef UPDWTMPX
+  UPDWTMPX(WTMPX, &wc); 
+# endif
+#endif /* HAVE_LOGWTMP */
+#endif /* USE_UTMPX */
+
   EXIT_CALLBACK(self->c, signaled, core, value);
 }
 
@@ -363,13 +428,17 @@ utmp_book_keeping(struct lsh_string *name,
 
   trace("unix_process.c: utmp_book_keeping, after pututline (HAVE_UTMPX_H)\n");
 
-#endif /* USE_UTMPX */
-
 #if HAVE_LOGWTMP
   logwtmp(lsh_get_cstring(cleanup->line),
 	  lsh_get_cstring(name),
 	  lsh_get_cstring(peer->ip));
+#else /* HAVE_LOGWTMP */
+# ifdef UPDWTMPX
+  UPDWTMPX(WTMPX, &entry); 
+# endif
 #endif /* HAVE_LOGWTMP */
+
+#endif /* USE_UTMPX */
 
   trace("unix_process.c: utmp_book_keeping, after logwtmp\n");
   
