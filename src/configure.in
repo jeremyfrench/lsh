@@ -23,7 +23,7 @@ If this does not work, please use an absolute path to the configure script. ])
 esac
 
 # We want to compile the crypto lib for use with lsh
-CPPFLAGS="$CPPFLAGS -I$srcdir/include -DLSH"
+CPPFLAGS="$CPPFLAGS -I$srcdir/include -I$srcdir -DLSH"
 
 # GNU libc defaults to supplying the ISO C library functions only. 
 # initgroups() and strsignal() are extensions; the _GNU_SOURCE define
