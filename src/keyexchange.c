@@ -575,6 +575,11 @@ do_handle_newkeys(struct packet_handler *c,
 
       connection->kex_state = KEX_STATE_INIT;
 
+      /* FIXME: Clear literal_kexinits here as well (currently that is
+       * done by init_dh_instance). */
+      connection->kexinits[CONNECTION_CLIENT]
+	= connection->kexinits[CONNECTION_SERVER] = NULL;
+
       connection->dispatch[SSH_MSG_NEWKEYS] = NULL;
 
       KILL(closure);
