@@ -38,7 +38,10 @@ done
 
 pfx=`pwd`/pfx
 
-oopcfgargs="-C --prefix=$pfx $cfgargs"
+# Disable the liboop shared libraries, to avoid libtool-related
+# problems on AIX.
+oopcfgargs="-C --prefix=$pfx --disable-shared $cfgargs"
+
 cfgargs="-C --with-include-path=/usr/local/include:$pfx/include --with-lib-path=/usr/local/lib:$pfx/lib --prefix=$pfx $cfgargs"
 
 # Fix PATH for system where the default environment is broken
