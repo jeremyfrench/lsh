@@ -27,8 +27,8 @@
 
 #include "xalloc.h"
 
-static int do_ignore(struct packet_handler *closure,
-		     struct ssh_connection *connection,
+static int do_ignore(struct packet_handler *closure UNUSED,
+		     struct ssh_connection *connection UNUSED,
 		     struct lsh_string *packet)
 {
   lsh_string_free(packet);
