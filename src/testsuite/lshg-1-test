@@ -1,11 +1,5 @@
 #! /bin/sh
 
-# Tests connecting with lsh. In order to use this, you must already
-# have lsh set up so that you can login without password.
-
-# This restriction can be fixed if we add an option to lshd to use a
-# custom passwd-file.
-
 echo lshg test 1
 
 if [ -z "$srcdir" ] ; then
