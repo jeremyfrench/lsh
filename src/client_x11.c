@@ -589,7 +589,7 @@ parse_display(struct client_x11_display *self, const char *display)
       self->address = (struct sockaddr *) sa;
     }
 
-  if (!xauth_lookup(self->address_length, self->address,
+  if (!xauth_lookup(self->address,
                     num_length, num,
                     &self->auth_name,
                     &self->auth_data))

@@ -23,19 +23,21 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "format.h"
 #include "xauth.h"
+
+#include "format.h"
+#include "werror.h"
 
 #if HAVE_X11_XAUTH_H
 #include <X11/Xauth.h>
 #endif
 
 #include <unistd.h>
+#include <netinet/in.h>
 
 #if HAVE_LIBXAU
 int
-xauth_lookup(socklen_t address_length,
-             struct sockaddr *address,
+xauth_lookup(struct sockaddr *sa,
              unsigned display_length,
              const char *display,
              struct lsh_string **name,
@@ -43,41 +45,73 @@ xauth_lookup(socklen_t address_length,
 {
   Xauth *xa = NULL;
   int res = 0;
+  unsigned family;
+
+  const char *address;
+  unsigned address_length;
+  
+  /* FIXME: Use xgethostbyname */
+#define HOST_MAX 200
+  char host[HOST_MAX];
   
   const char *filename = XauFileName();
   
   if (!filename)
     return 0;
 
+  switch(sa->sa_family)
+    {
+    case AF_UNIX:
+      if (gethostname(host, sizeof(host) - 1) < 0)
+	return 0;
+      address = host;
+      address_length = strlen(host);
+      family = FamilyLocal;
+      break;
+
+    case AF_INET:
+      {
+	struct sockaddr_in *s = (struct sockaddr_in *) sa;
+	
+	address = (char *) &s->sin_addr;
+	address_length = 4;
+	family = 0;
+	break;
+      }
+
+#if WITH_IPV6
+    case AF_INET6:
+      {
+	struct sockaddr_in6 *s = (struct sockaddr_in6 *) sa;
+	
+	address = (char *) s->sin6_addr;
+	address_length = 16;
+	family = 0;
+	break;
+      }
+#endif
+    default:
+      return 0;
+    }
+  
   /* 5 retries, 1 second each */
   if (XauLockAuth(filename, 5, 1, 0) != LOCK_SUCCESS)
     return 0;
 
-  switch (address->sa_family)
-    {
-    case AF_UNIX:
-      {
-        /* FIXME: Use xgethostbyname */
-#define HOST_MAX 200
-        const char *host[HOST_MAX];
-        if (gethostname(host, sizeof(host) - 1) == 0)
-          {
-            xa = XauGetAuthByAddr(FamilyLocal,
-                                  strlen(host), host,
-                                  display_length, display);
-          }
+  /* What's the right ptototype? The Solaris man-page includes only 5 arguments. */
+  xa = XauGetAuthByAddr(family,
+			address_length, address,
+			display_length, display,
+			18, "MIT-MAGIC-COOKIE-1");
         
-        break;
-      }
-    default:
-      xa = XauGetAuthByAddr(0,
-                            address_length, address,
-                            display_length, display);
-      break;
-    }
-
   if (xa)
     {
+      debug("xauth: family: %i\n", xa->family);
+      debug("       address: %ps\n", xa->address_length, xa->address);
+      debug("       display: %s\n", xa->number_length, xa->number);
+      debug("       name: %s\n", xa->name_length, xa->name);
+      debug("       data length: %i\n", xa->data_length);
+      
       res = 1;
       *name = ssh_format("%ls", xa->name_length, xa->name);
       *data = ssh_format("%ls", xa->data_length, xa->data);
@@ -91,8 +125,7 @@ xauth_lookup(socklen_t address_length,
 #else /* !HAVE_LIBXAU */
 
 int
-xauth_lookup(socklen_t address_length UNUSED,
-             struct sockaddr *address UNUSED,
+xauth_lookup(struct sockaddr *address UNUSED,
              unsigned display_length UNUSED,
              const char *display UNUSED,
              struct lsh_string **name UNUSED,
