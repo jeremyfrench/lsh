@@ -4,12 +4,16 @@ if [ -z "$srcdir" ] ; then
   srcdir=`pwd`
 fi
 
-if [ -z "$SERVERFLAGS" ] ; then
-    SERVERFLAGS='-q --enable-core'
+if [ -z "$LSHD_FLAGS" ] ; then
+    LSHD_FLAGS='-q --enable-core'
 fi
 
-if [ -z "$CLIENTFLAGS" ] ; then
-    CLIENTFLAGS=-q
+if [ -z "$LSH_FLAGS" ] ; then
+    LSH_FLAGS=-q
+fi
+
+if [ -z "$LSHG_FLAGS" ] ; then
+    LSHG_FLAGS=-q
 fi
 
 if [ -z "$HOSTKEY" ] ; then
@@ -53,7 +57,7 @@ spawn_lshd () {
     # local delay
     
     ../lshd -h $HOSTKEY --interface=localhost \
-	-p $PORT $SERVERFLAGS --pid-file lshd.$$.pid "$@" &
+	-p $PORT $LSHD_FLAGS --pid-file lshd.$$.pid "$@" &
 
     # lshd may catch the ordinary TERM signal, leading to timing
     # problems when the next lshd process tries to bind the port.
@@ -77,30 +81,30 @@ spawn_lshd () {
 run_lsh () {
     cmd="$1"
     shift
-    echo "$cmd" | ../lsh $CLIENTFLAGS -nt --sloppy-host-authentication \
+    echo "$cmd" | ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
 	--capture-to /dev/null -z -p $PORT "$@" localhost
 
 }
 
 exec_lsh () {
-    ../lsh $CLIENTFLAGS -nt --sloppy-host-authentication \
+    ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
 	--capture-to /dev/null -z -p $PORT localhost "$@"
 }
 
 spawn_lsh () {
     # echo spawn_lsh "$@"
-    ../lsh $CLIENTFLAGS -nt --sloppy-host-authentication \
+    ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
 	--capture-to /dev/null -z -p $PORT "$@" -N localhost &
     at_exit "kill $!"
 }
 
 exec_lshg () {
-    ../lshg $CLIENTFLAGS -nt -p $PORT localhost "$@"
+    ../lshg $LSHG_FLAGS -nt -p $PORT localhost "$@"
 }
 
 spawn_lshg () {
     # echo spawn_lshg "$@"
-    ../lshg $CLIENTFLAGS -p $PORT "$@" -N localhost &
+    ../lshg $LSHG_FLAGS -p $PORT "$@" -N localhost &
     at_exit "kill $!"
 }
 
