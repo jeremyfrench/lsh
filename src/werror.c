@@ -54,6 +54,8 @@ int quiet_flag = 0;
 int verbose_flag = 0;
 int syslog_flag = 0;
 
+static const char *program_name = NULL;
+
 #define WERROR_TRACE -1
 #define WERROR_DEBUG -2
 
@@ -69,12 +71,14 @@ werror_options[] =
 
 static error_t
 werror_argp_parser(int key, char *arg UNUSED,
-		   struct argp_state *state UNUSED)
+		   struct argp_state *state)
 {
   switch(key)
     {
     default:
       return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_END:
+      program_name = state->name;
     case 'q':
       quiet_flag = 1;
       break;
@@ -129,6 +133,7 @@ write_syslog(int fd UNUSED, UINT32 length, const UINT8 *data)
   return NULL;
 }
 
+/* FIXME: Delete argument and use program_name. */
 void
 set_error_syslog(const char *id)
 {
@@ -346,6 +351,12 @@ werror_paranoia_putc(UINT8 c)
 void
 werror_vformat(const char *f, va_list args)
 {
+  if (program_name)
+    {
+      werror_write(program_name, strlen(program_name));
+      werror_write(": ", 2);
+    }
+  
   while (*f)
     {
       if (*f == '%')
@@ -395,9 +406,12 @@ werror_vformat(const char *f, va_list args)
 		if (do_hex)
 		  werror_hexdump(strlen(s), s);
 
-		while (*s)
-		  (do_paranoia ? werror_paranoia_putc : werror_putc)(*s++);
-
+		else if (do_paranoia)
+		  while (*s)
+		    werror_paranoia_putc(*s++);
+		else
+		  werror_write(s, strlen(s));
+		
 		break;
 	      }
 	    case 'a':
