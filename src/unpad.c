@@ -72,7 +72,13 @@ do_unpad(struct abstract_write *w,
 
   payload_length = packet->length - 1 - padding_length;
 
-  if (payload_length > closure->connection->rec_max_packet)
+  /* FIXME: This check seems redundant; fuzzy length check is done in
+   * read_packet.c, and a stricter check is done in connection.c. Some
+   * additional checking, using the SSH_MAX_PACKET constant, is also
+   * done in zlib.c */
+  
+  if (payload_length > (closure->connection->rec_max_packet
+			+ SSH_MAX_PACKET_FUZZ))
     {
       lsh_string_free(packet);
       PROTOCOL_ERROR(closure->connection->e,
