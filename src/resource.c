@@ -138,7 +138,13 @@ do_remember_resource(struct resource_list *s,
   CAST(concrete_resource_list, self, s);
   struct resource_node *n;
 
-  assert(self->super.super.alive);
+  if (!self->super.super.alive)
+    {
+      werror("do_remember_resource: resource list is already dead.\n");
+      KILL(resource);
+      return;
+    }
+  
   NEW_SPACE(n);
 
   n->resource = resource;
