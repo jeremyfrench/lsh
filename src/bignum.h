@@ -32,8 +32,8 @@
 /* Needed for the declaration of mpz_out_str */
 #include <stdio.h>
 
-#ifdef HAVE_GMP2_H
-#include <gmp2.h>
+#ifdef HAVE_GMP2_GMP_H
+#include <gmp2/gmp.h>
 #else
 #ifdef HAVE_GMP_H
 #include <gmp.h>
@@ -41,8 +41,6 @@
 #error No gmp.h!
 #endif
 #endif
-
-#include <gmp.h>
 
 void bignum_parse_s(mpz_t n, UINT32 length, UINT8 *data);
 void bignum_parse_u(mpz_t n, UINT32 length, UINT8 *data);

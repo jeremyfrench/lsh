@@ -88,10 +88,13 @@ dnl Checks for header files.
 AC_HEADER_STDC
 
 dnl Some debian systems have both gmp and gmp2.
-dnl This will probably not not work right if both gmp.h and gmp2.h exists,
+dnl This will probably not work right if both gmp.h and gmp2/gmp.h exists,
 dnl and gmp.h is too old (i.e GMP-1.x).
-AC_CHECK_HEADERS(gmp.h gmp2.h, [break], 
-  [AC_ERROR([Neither gmp.h nor gmp2.h found])])
+gmp_header_found=no
+AC_CHECK_HEADERS(gmp.h gmp2/gmp.h, [gmp_header_found=yes; break])
+if test "$gmp_header_found" = no; then
+  AC_ERROR([Neither gmp.h nor gmp2/gmp.h found])
+fi
   
 AC_CHECK_HEADERS(fcntl.h strings.h sys/time.h unistd.h)
 AC_CHECK_HEADERS(shadow.h)
