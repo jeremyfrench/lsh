@@ -497,6 +497,16 @@ spki_acl_format(struct spki_5_tuple *acl,
 
 
 /* Certificates */
+
+/* FIXME: It's somewhat unfortunate to have both spki_tag_release and
+ * spki_tag_free. The first function is a lower leve one. */
+void
+spki_tag_free(struct spki_acl_db *db,
+	      struct spki_tag *tag)
+{
+  spki_tag_release(db->realloc_ctx, db->realloc, tag);
+}
+
 void
 spki_5_tuple_free_chain(struct spki_acl_db *db,
 			struct spki_5_tuple *chain)
@@ -504,7 +514,7 @@ spki_5_tuple_free_chain(struct spki_acl_db *db,
   while (chain)
     {
       struct spki_5_tuple *next = chain->next;
-      spki_tag_release(db->realloc_ctx, db->realloc, chain->tag);
+      spki_tag_free(db, chain->tag);
       
       SPKI_FREE(db, chain);
 

@@ -202,6 +202,10 @@ spki_acl_format(struct spki_5_tuple *acl,
 /* Certificates */
 
 void
+spki_tag_free(struct spki_acl_db *db,
+	      struct spki_tag *tag);
+
+void
 spki_5_tuple_free_chain(struct spki_acl_db *db,
 			struct spki_5_tuple *chain);
 
