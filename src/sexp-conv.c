@@ -384,11 +384,9 @@ int main(int argc, char **argv)
 {
   struct sexp_conv_options *options = make_options();
   struct exception_handler *e;
-  NEW(io_backend, backend);
+  struct io_backend *backend = make_io_backend();
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
-
-  init_backend(backend);
 
   /* Patch the parent pointer later */
   e = make_exception_handler(do_exc_sexp_conv_handler,

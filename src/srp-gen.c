@@ -238,11 +238,10 @@ STATIC_EXCEPTION_HANDLER(do_srp_gen_handler, NULL);
 
 int main(int argc, char **argv)
 {
-  NEW(io_backend, backend);
-  struct srp_gen_options *options;
-  init_backend(backend);
-  
-  options = make_srp_gen_options(backend, &exc_handler);
+  struct io_backend *backend = make_io_backend();
+  struct srp_gen_options *options
+    = make_srp_gen_options(backend, &exc_handler);
+
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   A_WRITE(options->dest,
