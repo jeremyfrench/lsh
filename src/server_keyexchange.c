@@ -30,6 +30,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
+
 #include "server_keyexchange.c.x"
 
 /* CLASS:
@@ -38,8 +40,7 @@
      (super keyexchange_algorithm)
      (vars
        (dh object diffie_hellman_method)
-       (server_key string)
-       (signer object signer)))
+       (keys object alist)))
 */
 
 /* Handler for the kex_dh_reply message */
@@ -120,30 +121,35 @@ static int do_handle_dh_init(struct packet_handler *c,
   return res | SERVICE_INIT(closure->finished, connection);
 }
 
-static int do_init_dh(struct keyexchange_algorithm *c,
-		      struct ssh_connection *connection,
-		      struct ssh_service *finished,
-		      int hostkey_algorithm_atom,
-		      struct signature_algorithm *ignored,
-		      struct object_list *algorithms)
+static int do_init_server_dh(struct keyexchange_algorithm *c,
+		             struct ssh_connection *connection,
+		             struct ssh_service *finished,
+		             int hostkey_algorithm_atom,
+		             struct signature_algorithm *ignored,
+		             struct object_list *algorithms)
 {
   CAST(dh_server_exchange, closure, c);
+  CAST(keypair_info, keypair, ALIST_GET(closure->keys,
+					hostkey_algorithm_atom));
   NEW(dh_server, dh);
 
   CHECK_TYPE(ssh_connection, connection);
   CHECK_SUBTYPE(ssh_service, finished);
   CHECK_SUBTYPE(signature_algorithm, ignored);
   
-  /* FIXME: Use this value to choose a signer function */
-  if (hostkey_algorithm_atom != ATOM_SSH_DSS)
-    fatal("Internal error\n");
+  
+  if (!keypair)
+    {
+      werror("Keypair for for selected signature-algorithm not found!\n");
+      return LSH_FAIL | LSH_CLOSE;
+    }
   
   /* Initialize */
   dh->super.handler = do_handle_dh_init;
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
-  dh->dh.server_key = lsh_string_dup(closure->server_key);
-  dh->signer = closure->signer;
+  dh->dh.server_key = lsh_string_dup(keypair->public);
+  dh->signer = keypair->private;
   dh->install = make_install_new_keys(1, algorithms);
   dh->finished = finished;
   
@@ -159,22 +165,15 @@ static int do_init_dh(struct keyexchange_algorithm *c,
 }
 
 
-/* FIXME: This assumes that there's only one hostkey-algorithm. To
- * fix, this constructor should take a mapping
- * algorithm->signer-function. The init-method should use this
- * mapping to find an appropriate signer function. */
-
 struct keyexchange_algorithm *
 make_dh_server(struct diffie_hellman_method *dh,
-	       struct lsh_string *server_key,
-	       struct signer *signer)
+	       struct alist *keys)
 {
   NEW(dh_server_exchange, self);
 
-  self->super.init = do_init_dh;
+  self->super.init = do_init_server_dh;
   self->dh = dh;
-  self->server_key = server_key;
-  self->signer = signer;
+  self->keys = keys;
 
   return &self->super;
 }
