@@ -337,6 +337,9 @@ make_pipes(int *in, int *out, int *err)
 
 #if WITH_PTY_SUPPORT
 
+/* Sets certain fd:s to -1, which means that the slave tty should be
+ * used (for the child), or that the stdout fd should be duplicated
+ * (for the parent). */
 static int
 make_pty(struct pty_info *pty, int *in, int *out, int *err)
 {
@@ -347,9 +350,8 @@ make_pty(struct pty_info *pty, int *in, int *out, int *err)
   debug("exists: \n"
         "  alive = %i\n"
         "  master = %i\n"
-        "  slave = %i\n"
         "... ",
-        pty->super.alive, pty->master, pty->slave);
+        pty->super.alive, pty->master);
   debug("\n");
   
   if (pty) 
@@ -358,9 +360,9 @@ make_pty(struct pty_info *pty, int *in, int *out, int *err)
       
       debug("make_pty: Using allocated pty.\n");
 
-      /* Ownership of the master fd:s is passed on to some file
-       * objects. We need an fd for window_change_request, but we have
-       * to use one of our regular fd:s to the master side, or we're
+      /* Ownership of the master fd is passed on to some file
+       * object. We need an fd for window_change_request, but we have
+       * to use our regular fd:s to the master side, or we're
        * disrupt EOF handling on either side. */
 
       pty->super.alive = 0;
@@ -369,57 +371,36 @@ make_pty(struct pty_info *pty, int *in, int *out, int *err)
        * could use a single lsh_fd object for the master side of the
        * pty. */
 
-      in[0] = pty->slave;
+      /* -1 means opening deferred to the child */
+      in[0] = -1;
       in[1] = pty->master;
-          
+      pty->master = -1;
+      
       if ((out[0] = dup(pty->master)) < 0)
         {
           werror("make_pty: duping master pty to stdout failed (errno = %i): %z\n",
                  errno, STRERROR(errno));
 
           close(in[0]);
-          close(in[1]);
 
           return 0;
         }
 
-      if ((out[1] = dup(pty->slave)) < 0)
-        {
-          werror("make_pty: duping slave pty to stdout failed (errno = %i): %z\n",
-                 errno, STRERROR(errno));
+      out[1] = -1;
 
-          close(in[0]);
-          close(in[1]);
-          close(out[0]);
-
-          return 0;
-        }
 #if BASH_WORKAROUND
       /* Don't use a separate stderr channel; just dup the
        * stdout pty to stderr. */
-      if ((err[1] = dup(pty->slave)) < 0)
-        {
-          werror("make_pty: duping slave pty to stdout failed (errno = %i): %z\n",
-                 errno, STRERROR(errno));
-
-          close(in[0]);
-          close(in[1]);
-          close(out[0]);
-          close(out[1]);
-
-          return 0;
-        }
-      
+            
       err[0] = -1;
+      err[1] = -1;
       
 #else /* !BASH_WORKAROUND */
       if (!lsh_make_pipe(err))
         {
-          close(in[0]);
           close(in[1]);
           close(out[0]);
-          close(out[1]);
-
+	  
           return 0;
         }
 #endif /* !BASH_WORKAROUND */
@@ -440,6 +421,8 @@ spawn_process(struct server_session *session,
 	      struct lsh_user *user,
 	      struct address_info *peer)
 {
+  struct lsh_process *child;
+    
   int in[2];
   int out[2];
   int err[2];
@@ -453,6 +436,7 @@ spawn_process(struct server_session *session,
 
   if (session->pty && !make_pty(session->pty, in, out, err))
     {
+      KILL_RESOURCE(&session->pty->super);
       KILL(session->pty);
       session->pty = NULL;
     }
@@ -460,169 +444,171 @@ spawn_process(struct server_session *session,
   if (!session->pty && !make_pipes(in, out, err))
     return -1;
 
-  {
-    struct lsh_process *child;
-    
-    if (USER_FORK(user, &child,
-		  make_exit_shell(session),
-		  peer, session->pty ? session->pty->tty_name : NULL))
-      {
-	if (child)
-	  { /* Parent */
-	    struct ssh_channel *channel = &session->super;
-	    trace("spawn_process: Parent process\n");
+  if (USER_FORK(user, &child,
+		make_exit_shell(session),
+		peer, session->pty ? session->pty->tty_name : NULL))
+    {
+      if (child)
+	{ /* Parent */
+	  struct ssh_channel *channel = &session->super;
+	  trace("spawn_process: Parent process\n");
 	    
-	    session->process = child;
+	  session->process = child;
 
-	    /* Close the child's fd:s */
-	    close(in[0]);
-	    close(out[1]);
-	    close(err[1]);
+	  /* Close the child's fd:s */
+	  close(in[0]);
+	  close(out[1]);
+	  close(err[1]);
 
-	    {
-	      /* Exception handlers */
-	      struct exception_handler *io_exception_handler
-		= make_channel_io_exception_handler(channel,
-						    "lshd: Child stdio: ",
-						    &default_exception_handler,
-						    HANDLER_CONTEXT);
+	  {
+	    /* Exception handlers */
+	    struct exception_handler *io_exception_handler
+	      = make_channel_io_exception_handler(channel,
+						  "lshd: Child stdio: ",
+						  &default_exception_handler,
+						  HANDLER_CONTEXT);
 
-	      /* Close callback for stderr and stdout */
-	      struct lsh_callback *read_close_callback
-		= make_channel_read_close_callback(channel);
+	    /* Close callback for stderr and stdout */
+	    struct lsh_callback *read_close_callback
+	      = make_channel_read_close_callback(channel);
 
-	      session->in
-		= io_write(make_lsh_fd(in[1], "child stdin",
-				       io_exception_handler),
-			   SSH_MAX_PACKET, NULL);
+	    session->in
+	      = io_write(make_lsh_fd(in[1], "child stdin",
+				     io_exception_handler),
+			 SSH_MAX_PACKET, NULL);
 	  
-	      /* Flow control */
-	      session->in->write_buffer->report = &session->super.super;
+	    /* Flow control */
+	    session->in->write_buffer->report = &session->super.super;
 
-	      /* FIXME: Should we really use the same exception handler,
-	       * which will close the channel on read errors, or is it
-	       * better to just send EOF on read errors? */
-	      session->out
-		= io_read(make_lsh_fd(out[0], "child stdout",
-				      io_exception_handler),
-			  make_channel_read_data(channel),
-			  read_close_callback);
-	      session->err 
-		= ( (err[0] != -1)
-		    ? io_read(make_lsh_fd(err[0], "child stderr",
-					  io_exception_handler),
-			      make_channel_read_stderr(channel),
-			      read_close_callback)
-		    : NULL);
-	    }
-	
-	    channel->receive = do_receive;
-	    channel->send_adjust = do_send_adjust;
-	    channel->eof = do_eof;
-	  
-	    /* Make sure that the process and it's stdio is
-	     * cleaned up if the channel or connection dies. */
-	    REMEMBER_RESOURCE
-	      (channel->resources, &child->super);
-
-	    /* FIXME: How to do this properly if in and out may use the
-	     * same fd? */
-	    REMEMBER_RESOURCE
-	      (channel->resources, &session->in->super);
-	    REMEMBER_RESOURCE
-	      (channel->resources, &session->out->super);
-	    if (session->err)
-	      REMEMBER_RESOURCE
-		(channel->resources, &session->err->super);
-
-	    /* Don't close channel immediately at EOF, as we want to
-	     * get a chance to send exit-status or exit-signal. */
-	    session->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
-	    return 1;
+	    /* FIXME: Should we really use the same exception handler,
+	     * which will close the channel on read errors, or is it
+	     * better to just send EOF on read errors? */
+	    session->out
+	      = io_read(make_lsh_fd(out[0], "child stdout",
+				    io_exception_handler),
+			make_channel_read_data(channel),
+			read_close_callback);
+	    session->err 
+	      = ( (err[0] != -1)
+		  ? io_read(make_lsh_fd(err[0], "child stderr",
+					io_exception_handler),
+			    make_channel_read_stderr(channel),
+			    read_close_callback)
+		  : NULL);
 	  }
-	else
-	  { /* Child */
-	    trace("spawn_process: Child process\n");
-	    assert(getuid() == user->uid);
+	
+	  channel->receive = do_receive;
+	  channel->send_adjust = do_send_adjust;
+	  channel->eof = do_eof;
+	  
+	  /* Make sure that the process and it's stdio is
+	   * cleaned up if the channel or connection dies. */
+	  REMEMBER_RESOURCE
+	    (channel->resources, &child->super);
+
+	  /* FIXME: How to do this properly if in and out may use the
+	   * same fd? */
+	  REMEMBER_RESOURCE
+	    (channel->resources, &session->in->super);
+	  REMEMBER_RESOURCE
+	    (channel->resources, &session->out->super);
+	  if (session->err)
+	    REMEMBER_RESOURCE
+	      (channel->resources, &session->err->super);
+
+	  /* Don't close channel immediately at EOF, as we want to
+	   * get a chance to send exit-status or exit-signal. */
+	  session->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
+	  return 1;
+	}
+      else
+	{ /* Child */
+	  int tty = -1;
+	  trace("spawn_process: Child process\n");
+	  assert(getuid() == user->uid);
 
 #if 0
-	    /* Debug timing problems */
-	    if (sleep(5))
-	      {
-		trace("server_session.c: sleep interrupted\n");
+	  /* Debug timing problems */
+	  if (sleep(5))
+	    {
+	      trace("server_session.c: sleep interrupted\n");
 
-		sleep(5);
-	      }
+	      sleep(5);
+	    }
 #endif    
-	    if (!USER_CHDIR_HOME(user))
-	      {
-		werror("Could not change to home (or root) directory!\n");
-		_exit(EXIT_FAILURE);
-	      }
+	  if (!USER_CHDIR_HOME(user))
+	    {
+	      werror("Could not change to home (or root) directory!\n");
+	      _exit(EXIT_FAILURE);
+	    }
 	    
 #if WITH_PTY_SUPPORT
-	    if (session->pty)
-	      {
-		debug("lshd: server.c: Setting controlling tty...\n");
-		if (!tty_setctty(session->pty))
-		  {
-		    debug("lshd: server.c: "
-			  "Setting controlling tty... Failed!\n");
-		    werror("lshd: Can't set controlling tty for child!\n");
-		    _exit(EXIT_FAILURE);
-		  }
-		else
-		  debug("lshd: server.c: Setting controlling tty... Ok.\n");
-	      }
+	  if (session->pty)
+	    {
+	      debug("lshd: server.c: Opening slave tty...\n");
+	      if ( (tty = pty_open_slave(session->pty)) < 0)
+		{
+		  debug("lshd: server.c: "
+			"Opening slave tty... Failed!\n");
+		  werror("lshd: Can't open controlling tty for child!\n");
+		  _exit(EXIT_FAILURE);
+		}
+	      else
+		debug("lshd: server.c: Opening slave tty... Ok.\n");
+	    }
 #endif /* WITH_PTY_SUPPORT */
 	  
-	    /* Close all descriptors but those used for communicationg
-	     * with parent. We rely on the close-on-exec flag for all
-	     * other fd:s. */
+	  /* Close all descriptors but those used for communicationg
+	   * with parent. We rely on the close-on-exec flag for all
+	   * other fd:s. */
+
+	  if (dup2(in[0] >= 0 ? in[0] : tty, STDIN_FILENO) < 0)
+	    {
+	      werror("Can't dup stdin!\n");
+	      _exit(EXIT_FAILURE);
+	    }
+
+	  if (dup2(out[1] >= 0 ? out[1] : tty, STDOUT_FILENO) < 0)
+	    {
+	      werror("Can't dup stdout!\n");
+	      _exit(EXIT_FAILURE);
+	    }
+
+	  if (!dup_error_stream())
+	    {
+	      werror("server_session: Failed to dup old stderr. Bye.\n");
+	      set_error_ignore();
+	    }
+
+	  if (dup2(err[1] >= 0 ? err[1] : tty, STDERR_FILENO) < 0)
+	    {
+	      werror("Can't dup stderr!\n");
+	      _exit(EXIT_FAILURE);
+	    }
+
+	  /* Unconditionally close all the fd:s, no matter if some
+	   * of them are -1. */
+	  close(in[0]);
+	  close(in[1]);
+	  close(out[0]);
+	  close(out[1]);
+	  close(err[0]);
+	  close(err[1]);
+	  close(tty);
 	    
-	    if (dup2(in[0], STDIN_FILENO) < 0)
-	      {
-		werror("Can't dup stdin!\n");
-		_exit(EXIT_FAILURE);
-	      }
-	    close(in[0]);
-	    close(in[1]);
-	    
-	    if (dup2(out[1], STDOUT_FILENO) < 0)
-	      {
-		werror("Can't dup stdout!\n");
-		_exit(EXIT_FAILURE);
-	      }
-	    close(out[0]);
-	    close(out[1]);
+	  return 0;
+	}
+    }
+  /* fork failed */
+  /* Close all fd:s */
 
-	    if (!dup_error_stream())
-	      {
-		werror("server_session: Failed to dup old stderr. Bye.\n");
-		set_error_ignore();
-	      }
+  close(err[0]);
+  close(err[1]);
+  close(out[0]);
+  close(out[1]);
+  close(in[0]);
+  close(in[1]);
 
-	    if (dup2(err[1], STDERR_FILENO) < 0)
-	      {
-		werror("Can't dup stderr!\n");
-		_exit(EXIT_FAILURE);
-	      }
-	    close(err[0]);
-	    close(err[1]);
-
-	    return 0;
-	  }
-      }
-    /* fork failed */
-    /* Close and return channel_failure */
-
-    close(err[0]);
-    close(err[1]);
-    close(out[0]);
-    close(out[1]);
-    close(in[0]);
-    close(in[1]);
-  }
   return -1;
 }
 
@@ -932,84 +918,57 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	     struct command_continuation *s,
 	     struct exception_handler *e)
 {
-  struct terminal_dimensions dims;
-  const UINT8 *mode;
-  UINT32 mode_length;
   struct lsh_string *term = NULL;
 
   static struct exception pty_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "pty request failed");
 
+  struct pty_info *pty = make_pty_info();
+  
   CAST(server_session, session, channel);
 
   verbose("Client requesting a tty...\n");
 
   if ((term = parse_string_copy(args))
-      && parse_uint32(args, &dims.char_width)
-      && parse_uint32(args, &dims.char_height)
-      && parse_uint32(args, &dims.pixel_width)
-      && parse_uint32(args, &dims.pixel_height)
-      && parse_string(args, &mode_length, &mode)
+      && parse_uint32(args, &pty->dims.char_width)
+      && parse_uint32(args, &pty->dims.char_height)
+      && parse_uint32(args, &pty->dims.pixel_width)
+      && parse_uint32(args, &pty->dims.pixel_height)
+      && (pty->mode = parse_string_copy(args))
       && parse_eod(args))
     {
       /* The client may only request one tty, and only before
        * starting a process. */
-      if (session->pty || session->process)
+      if (session->pty || session->process
+	  || !pty_open_master(pty, channel->connection->user->uid))
 	{
-	  lsh_string_free(term);
+	  verbose("Pty allocation failed.\n");
 	  EXCEPTION_RAISE(e, &pty_request_failed);
 	}
       else
 	{
-	  struct pty_info *pty = make_pty_info();
-      
-	  if (pty_allocate(pty, channel->connection->user->uid))
-	    {
-	      struct termios ios;
-	      
-	      if (tty_getattr(pty->slave, &ios))
-		{
-		  assert(pty->super.alive);
-		  session->pty = pty;
-		  
-		  /* Don't set TERM if the value is empty. */
-		  if (!term->length)
-		    {
-		      lsh_string_free(term);
-		      term = NULL;
-		    }
-	      
-		  session->term = term;
-		  tty_decode_term_mode(&ios, mode_length, mode); 
-	      
-		  if (tty_setattr(pty->slave, &ios) &&
-		      tty_setwinsize(pty->slave, &dims))
-		    {
-		      REMEMBER_RESOURCE(channel->resources, &pty->super);
+	  /* FIXME: Perhaps we can set the window dimensions directly
+	   * on the master pty? */
+	  session->term = term;
+	  REMEMBER_RESOURCE(channel->resources, &pty->super);
 
-		      verbose(" granted.\n");
-		      COMMAND_RETURN(s, NULL);
-		      
-		      return;
-		    }
-		}
-	    }
-	  
-	  /* Close fd:s and mark the pty-struct as dead */
-	  KILL_RESOURCE(&pty->super);
-	  KILL(pty);
+	  verbose(" granted.\n");
+	  COMMAND_RETURN(s, NULL);
+
+	  /* Success */
+	  return;
 	}
-      verbose("Pty allocation failed.\n");
-      lsh_string_free(term);
-      EXCEPTION_RAISE(e, &pty_request_failed);
+
     }
   else
     {
       werror("Invalid pty request.\n");
-      lsh_string_free(term);
-
       PROTOCOL_ERROR(e, "Invalid pty request.");
     }
+  /* Cleanup for failure cases. */
+  lsh_string_free(term);
+  KILL_RESOURCE(&pty->super);
+  KILL(pty);
 }
 
 struct channel_request
