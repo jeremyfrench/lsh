@@ -27,6 +27,7 @@
 #include "format.h"
 #include "parse.h"
 #include "ssh.h"
+#include "werror.h"
 #include "xalloc.h"
 
 struct lsh_string *format_disconnect(int code, char *msg)
@@ -42,21 +43,25 @@ static int do_disconnect(struct packet_handler *closure,
 			 struct lsh_string *packet)
 {
   struct simple_buffer buffer;
-  UINT8 msg;
+  UINT8 msg_number;
   UINT32 length;
   UINT32 reason;
-  UINT8 *start;
+  UINT8 *msg;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
-  if (parse_uint8(&buffer, &msg)
-      && (msg != SSH_MSG_DISCONNECT)
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_DISCONNECT)
       && (parse_uint32(&buffer, &reason))
-      && (parse_string(&buffer, &length, &start))
+      && (parse_string(&buffer, &length, &msg))
       /* FIXME: Language tag is ignored */ )
     {
-      /* FIXME: Display message */
+      /* FIXME: Display a better message */
+      werror("Disconnect for reason %d\n", reason);
+      werror_safe_utf8(length, msg);
     }
+  else
+    werror("Invalid disconnect message!\n");
   lsh_string_free(packet);
   
   /* FIXME: Mark the file as closed, somehow (probably a variable in
@@ -65,7 +70,7 @@ static int do_disconnect(struct packet_handler *closure,
   return WRITE_CLOSED;
 }
 
-struct packet_handler *make_disconnect_handler()
+struct packet_handler *make_disconnect_handler(void)
 {
   struct packet_handler *res =  xalloc(sizeof(struct packet_handler));
 
