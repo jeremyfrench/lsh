@@ -238,7 +238,8 @@
        (error_code . UINT32)))
 */
 
-struct exception *make_channel_open_exception(UINT32 error_code, char *msg);
+struct exception *
+make_channel_open_exception(UINT32 error_code, const char *msg);
 
 
 /* GABA:

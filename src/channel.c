@@ -40,7 +40,8 @@
 
 #include "channel.c.x"
 
-struct exception *make_channel_open_exception(UINT32 error_code, char *msg)
+struct exception *
+make_channel_open_exception(UINT32 error_code, const char *msg)
 {
   NEW(channel_open_exception, self);
 
@@ -681,11 +682,14 @@ static struct exception_handler *
 make_exc_channel_open_handler(struct ssh_connection *connection,
 			      UINT32 local_channel_number,
 			      UINT32 remote_channel_number,
-			      struct exception_handler *parent)
+			      struct exception_handler *parent,
+			      const char *context)
 {
   NEW(exc_channel_open_handler, self);
   self->super.parent = parent;
   self->super.raise = do_exc_channel_open_handler;
+  self->super.context = context;
+  
   self->connection = connection;
   self->local_channel_number = local_channel_number;
   self->remote_channel_number = remote_channel_number;
@@ -758,7 +762,8 @@ static void do_channel_open(struct packet_handler *c UNUSED,
 		       make_exc_channel_open_handler(connection,
 						     local_number,
 						     remote_channel_number,
-						     connection->e));
+						     connection->e,
+						     HANDLER_CONTEXT));
 	}
     }
   else
@@ -846,7 +851,7 @@ do_window_adjust(struct packet_handler *closure UNUSED,
 	  && !(channel->flags & (CHANNEL_RECEIVED_EOF
 				 | CHANNEL_RECEIVED_CLOSE)))
 	{
-	  if (! (channel->flags & CHANNEL_SENT_CLOSE))
+	  if (! (channel->flags & (CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF)))
 	    {
 	      channel->send_window_size += size;
 	      if (channel->send_window_size && channel->send)
@@ -1629,8 +1634,8 @@ channel_read_close_callback(struct close_callback *c, int reason)
   
   if (!--closure->channel->sources)
     {
-      /* Send eof, unless already done */
-      channel_eof(closure->channel);
+      /* Send close, unless already done. */
+      channel_close(closure->channel);
     }
 }
 
