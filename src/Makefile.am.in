@@ -25,7 +25,7 @@ Makefile.am: Makefile.am.in
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 bin_PROGRAMS = lsh lsh_keygen lsh_writekey sexp_conv
-sbin_PROGRAMS = lshd
+sbin_PROGRAMS = lshd lsh_proxy
 bin_SCRIPTS = lsh-authorize
 noinst_PROGRAMS = prime_table digit_table 
 noinst_LIBRARIES = liblsh.a
@@ -50,8 +50,9 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	format.c gc.c hmac.c idea.c interact.c io.c io_commands.c \
 	keyexchange.c \
 	list.c lookup_verifier.c md5.c \
-	packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
-	queue.c \
+	packet_ignore.c pad.c parse.c password.c \
+	proxy.c proxy_session.c proxy_userauth.c \
+	publickey_crypto.c queue.c \
 	randomness.c \
 	read_data.c read_line.c read_packet.c reaper.c resource.c \
 	server.c server_authorization.c server_keyexchange.c \
