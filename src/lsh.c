@@ -31,6 +31,7 @@
 #include "client.h"
 #include "client_keyexchange.h"
 #include "client_pty.h"
+#include "client_userauth.h"
 #include "compress.h"
 #include "connection_commands.h"
 #include "crypto.h"
@@ -46,7 +47,6 @@
 #include "ssh.h"
 #include "tcpforward_commands.h"
 #include "tty.h"
-#include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 
