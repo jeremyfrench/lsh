@@ -117,8 +117,11 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
      ;; (globals (connect connect_command))
      (params
        (connect object command)
-       (handshake object command))
-     (expr (lambda (port) (handshake (connect port)))))
+       (handshake object command)
+       (userauth object command)
+       (login object command))
+     (expr (lambda (port)
+             (login (userauth (handshake (connect port)))))))
 */
 
 
@@ -378,9 +381,13 @@ int main(int argc, char **argv)
 						 r,
 						 algorithms,
 						 make_kexinit,
-						 NULL) );
+						 NULL),
+			  make_request_service(ATOM_SSH_USERAUTH),
+			  make_client_userauth(ssh_format("%lz", user),
+					       ATOM_SSH_CONNECTION));
+    
     CAST_SUBTYPE(command, client_connect, o);
-    int res = COMMAND_CALL(client_connect, &remote->super, NULL);
+    int res = COMMAND_CALL(client_connect, remote, NULL);
     if (res)
       {
 	werror("foo: %d\n", res);
