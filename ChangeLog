@@ -1,5 +1,9 @@
 2005-03-16  Niels Möller  <nisse@lysator.liu.se>
 
+	* configure.ac: Bumped version to 2.0.2.
+
+	* Released 2.0.1.
+
 	* NEWS: Entry for 2.0.1.
 
 	* src/atoms.in: Deleted diffie-hellman-group2-sha1.
