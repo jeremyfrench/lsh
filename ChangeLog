@@ -1,5 +1,10 @@
 2003-04-16  Niels Möller  <niels@s3.kth.se>
 
+	* src/.dist_classes (dist_classes): Deleted io_commands.h.x.
+	* src/io_commands.h (io_write_file_info): Deleted class.
+	* src/io_commands.c (io_write_file_command) 
+	(make_io_write_file_info): Deleted unused functions.
+
 	* src/lshd.c (do_exc_lshd_handler, make_lshd_exception_handler):
 	Deleted functions.
 
@@ -15,9 +20,9 @@
 	* src/Makefile.am (gcov-list): New target for running gcov.
 
 	* src/io_commands.c (listen_list_command): Deleted command.
-	REplaced by the io_listen_list function.
+	Replaced by the io_listen_list function.
 
-	* src/lshd.c (options2local, options2keys, options2tcp_wrapper),
+	* src/lshd.c (options2local, options2keys, options2tcp_wrapper)
 	(close_on_sighup): Deleted commands.
 
 	* src/keyexchange.c (kexinit_filter): Deleted command.
