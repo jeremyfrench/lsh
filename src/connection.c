@@ -176,7 +176,7 @@ struct ssh_connection *make_ssh_connection(struct command_continuation *c)
   connection->send_mac = NULL;
   connection->send_crypto = NULL;
 
-  object_queue_init(connection->forwarded_ports);
+  object_queue_init(&connection->forwarded_ports);
   
   connection->kex_state = KEX_STATE_INIT;
 

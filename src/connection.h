@@ -103,7 +103,7 @@ struct ssh_connection;
        (channels object channel_table)
        
        ; Forwarded TCP connections
-       (forwarded_ports object object_queue)
+       (forwarded_ports struct object_queue)
               
        ; Shared handlers 
        (ignore object packet_handler)
