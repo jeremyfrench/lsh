@@ -11,4 +11,4 @@ fi
 . $srcdir/functions.sh
 
 rm -f foo foo.pub
-../lsh-writekey -o foo < $srcdir/key-1.private && test_success
+../lsh-writekey -o foo < $srcdir/key-1.private && [ -s foo -a -s foo.pub ] && test_success
