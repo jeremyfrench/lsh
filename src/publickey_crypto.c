@@ -420,8 +420,6 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
 
   c->literal_kexinits[CONNECTION_SERVER] = NULL;
   c->literal_kexinits[CONNECTION_CLIENT] = NULL;
-	      
-  return self;
 }
 
 struct diffie_hellman_instance *
@@ -526,13 +524,11 @@ void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
 struct lsh_string *dh_make_server_msg(struct diffie_hellman_instance *self,
 				      struct signer *s)
 {
-  struct lsh_string *msg;
-  
   dh_generate_secret(self, self->f);
 
   self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
   
-  dh_hash_digest(self, exchange_hash->data);
+  dh_hash_digest(self, self->exchange_hash->data);
 
   return ssh_format("%c%S%n%fS",
 		    SSH_MSG_KEXDH_REPLY,
