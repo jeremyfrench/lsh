@@ -47,6 +47,7 @@ struct env_value;
        (reply string)))
 */
 
+/* FIXME: Perhaps it's better to use a const char * for the value? */
 struct env_value
 {
   const char *name;

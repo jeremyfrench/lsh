@@ -1,8 +1,8 @@
-*.pid
 *.bb
 *.bbg
 *.da
 *.gcov
+*.pid
 .deps
 Makefile
 Makefile.in
@@ -27,6 +27,8 @@ sha1-test
 sha1-test.c
 spki-tag-test
 spki-tag-test.c
+string-test
+string-test.c
 temphome
 test.out1
 test.out2

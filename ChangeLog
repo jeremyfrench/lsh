@@ -1,3 +1,44 @@
+2001-04-08  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/Makefile.am (TS_PROGS): Added string-test.
+
+	* src/testsuite/macros.m4 (TS_CHECK): New macro.
+
+	* src/testsuite/string-test.m4: New tests for string related
+	functions, currently only lsh_get_cstring.
+
+	* src/format.c (ssh_cformat): Deleted. Replaced all uses with
+	ssh_format. 
+	(make_cstring_l): Deleted.
+	(make_cstring): Deleted.
+	(lsh_get_cstring): New function.
+
+	* src/werror.c (write_syslog): Don't use make_cstring_l.
+
+	* src/unix_user.c (do_verify_password): Use lsh_get_cstring.
+	(do_read_file): Likewise.
+	(do_read_file): Likewise.
+	(format_env_pair): Likewise.
+	(do_exec_shell): Likewise.
+	(make_unix_user): Likewise. 
+	(do_lookup_user): Likewise.
+
+	* src/unix_interact.c (unix_read_password): Use lsh_get_cstring.
+
+	* src/server_session.c (do_spawn_exec): Use lsh_get_cstring.
+
+	* src/lsh.h (NUL_TERMINATED): Deleted.
+
+	* src/format.h (format_cstring, make_string): Renamed function.
+	And made it a macro. Updated callers.
+
+	* src/adns.c (do_resolve): Use lsh_get_cstring. Don't use
+	NUL_TERMINATED. 
+	* src/io.c (address_info2sockaddr): Likewise.
+	(make_local_info): Likewise.
+	(io_listen_local): Likewise.
+	(io_connect_local): Likewise.
+
 2001-04-05  Niels Möller  <nisse@ehand.com>
 
 	* src/testsuite/functions.sh (run_lsh): Quote the command better.
@@ -17,7 +58,7 @@
 	strings leaked.
 
 	* src/client_session.c (do_client_session_eof): Use
-	close_fd_nicely. Otherwise we lose data. XXX Fix in 1.2 branch? 
+	close_fd_nicely. Otherwise we lose data. FIXED in 1.2 branch.
 
 	* src/Makefile.am.in (atoms_gperf.c): Massage gperf output to
 	reduce the number of compilation warnings.
@@ -49,7 +90,6 @@
 	src/proxy_x11forward.c, src/server.c, src/server_keyexchange.c,
 	src/server_userauth.c: Packet handlers should no longer free
 	packets.
-
 
 	* src/xalloc.c (number_of_strings): Define only if DEBUG_ALLOC. 
 	(lsh_string_alloc): NUL-terminate strings, for simplicity.
