@@ -67,7 +67,10 @@ char* lsftp_quote( const char* s )
   return news;
 }
 
-char* lsftp_unqoute( char* s )
+/* Not used anywhere */
+#if 0
+char *
+lsftp_unqoute( char* s )
 {
   char* news = strdup( s );
   int i = 0;
@@ -132,8 +135,11 @@ char* lsftp_unqoute( char* s )
   
   return news; 
 }
-  
-char* lsftp_s_strtok( char* s, char* sep, char* store, int storelen )
+#endif
+
+const char *
+lsftp_s_strtok(const char* s, const char* sep,
+	       char *store, int storelen )
 {
   /* TODO: should we do this different to support char-types with more than eight bits? */
 
@@ -166,7 +172,8 @@ char* lsftp_s_strtok( char* s, char* sep, char* store, int storelen )
     
 }
 
-char* lsftp_s_skip( char* s, char* sep )
+const char *
+lsftp_s_skip(const char *s, const char *sep)
 {
   /* Return a pointer into s, skipping by any charaters in sep */
 
@@ -200,9 +207,8 @@ char* lsftp_s_skip( char* s, char* sep )
   return NULL; /* We didn't find any non separator */
 }
 
-
-
-char* lsftp_s_skipn( char* s, char* sep )
+const char *
+lsftp_s_skipn(const char *s, const char *sep )
 {
   /* Negated version of lsftp_s_skip, 
    * skip by s until we find a charater 
@@ -251,6 +257,7 @@ char* lsftp_s_skipn( char* s, char* sep )
 	    break;
 	    
 	  default:
+	    ;
 	  }
       else
 	{
