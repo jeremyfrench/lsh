@@ -31,6 +31,10 @@
 #include "channel_commands.h.x"
 #undef GABA_DEFINE
 
+#include "channel_commands.c.x"
+
+#include <assert.h>
+
 int do_channel_open_command(struct command *s,
 			    struct lsh_object *x,
 			    struct command_continuation *c)
@@ -83,4 +87,114 @@ int do_channel_global_command(struct command *s,
 
   return A_WRITE(connection->write, request);
 }
-     
+
+struct lsh_object *
+do_install_global_request_handler(struct collect_info_2 *info,
+				  struct lsh_object *a,
+				  struct lsh_object *b)
+{
+  CAST(install_info, self, info);
+  CAST(ssh_connection, connection, a);
+  CAST_SUBTYPE(global_request, handler, b);
+
+  assert(!info);
+  ALIST_SET(connection->channels->global_requests,
+	    self->name,
+	    handler);
+
+  return a;
+}
+
+struct lsh_object *
+do_install_channel_open_handler(struct collect_info_2 *info,
+				struct lsh_object *a,
+				struct lsh_object *b)
+{
+  CAST(install_info, self, info);
+  CAST(ssh_connection, connection, a);
+  CAST_SUBTYPE(channel_open, handler, b);
+
+  assert(!info);
+  ALIST_SET(connection->channels->channel_types,
+	    self->name,
+	    handler);
+
+  return a;
+}
+
+/* Special cases, when the handler is known early */
+ 
+/* Takes a connection as argument, and installs a fix handler */
+/* GABA:
+   (class
+     (name install_global_request_handler)
+     (super command)
+     (vars
+       (name . UINT32)
+       (handler object global_request)))
+*/
+
+static int
+do_install_fix_global_request_handler(struct command *s,
+				      struct lsh_object *x,
+				      struct command_continuation *c)
+{
+  CAST(install_global_request_handler, self, s);
+  CAST(ssh_connection, connection, x);
+
+  ALIST_SET(connection->channels->global_requests,
+	    self->name,
+	    self->handler);
+
+  return COMMAND_RETURN(c, x);
+}
+
+struct command *
+make_install_fix_global_request_handler(UINT32 name,
+					struct global_request *handler)
+{
+  NEW(install_global_request_handler, self);
+  self->super.call = do_install_fix_global_request_handler;
+  self->name = name;
+  self->handler = handler;
+
+  return &self->super;
+}
+
+/* Takes a connection as argument, and installs a fix handler */
+/* GABA:
+   (class
+     (name install_channel_open_handler)
+     (super command)
+     (vars
+       (name . UINT32)
+       (handler object channel_open)))
+*/
+
+static int
+do_install_fix_channel_open_handler(struct command *s,
+				    struct lsh_object *x,
+				    struct command_continuation *c)
+{
+  CAST(install_channel_open_handler, self, s);
+  CAST(ssh_connection, connection, x);
+
+  ALIST_SET(connection->channels->channel_types,
+	    self->name,
+	    self->handler);
+
+  return COMMAND_RETURN(c, x);
+}
+
+struct command *
+make_install_fix_channel_open_handler(UINT32 name,
+				      struct channel_open *handler)
+{
+  NEW(install_channel_open_handler, self);
+  self->super.call = do_install_fix_channel_open_handler;
+  self->name = name;
+  self->handler = handler;
+
+  return &self->super;
+}
+

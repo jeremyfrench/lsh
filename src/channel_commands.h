@@ -91,4 +91,42 @@ int do_channel_global_command(struct command *s,
 			      struct lsh_object *x,
 			      struct command_continuation *c);
 
+struct command *
+make_install_global_request_handler(UINT32 name,
+				    struct global_request *handler);
+
+/* Takes a connection and a handler as arguments, and installs the
+ * handler. */
+/* GABA:
+   (class
+     (name install_info)
+     (super collect_info_2)
+     (vars
+       (name . UINT32)))
+*/
+
+struct lsh_object *
+do_install_global_request_handler(struct collect_info_2 *info,
+				  struct lsh_object *a,
+				  struct lsh_object *b);
+struct lsh_object *
+do_install_channel_open_handler(struct collect_info_2 *info,
+				struct lsh_object *a,
+				struct lsh_object *b);
+
+/* FIXME: This doesn't work */
+#define STATIC_INSTALL_GLOBAL_HANDLER(atom) \
+{ STATIC_COLLECT_2(do_install_global_request_handler),(atom) }
+
+#define STATIC_INSTALL_OPEN_HANDLER(atom) \
+{ STATIC_COLLECT_2(do_install_channel_open_handler),(atom) }
+
+struct command *
+make_install_fix_global_request_handler(UINT32 name,
+					struct global_request *handler);
+
+struct command *
+make_install_fix_channel_open_handler(UINT32 name,
+				      struct channel_open *handler);
+
 #endif /* LSH_CHANNEL_COMMANDS_H_INCLUDED */
