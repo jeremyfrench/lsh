@@ -296,6 +296,19 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
 #define CHANNEL_OPEN(o, c, i, d, r, e) \
 ((o)->handler((o), (c), (i), (d), (r), (e)))
 
+#define DEFINE_CHANNEL_OPEN(name)                       \
+static void do_##name(struct channel_open *s,           \
+		     struct ssh_connection *connection, \
+		     struct channel_open_info *info,    \
+		     struct simple_buffer *args,        \
+		     struct command_continuation *c,    \
+		     struct exception_handler *e);      \
+                                                        \
+struct channel_open name =                              \
+{ STATIC_HEADER, do_##name };                           \
+                                                        \
+static void do_##name
+
 /* SSH_MSG_CHANNEL_REQUEST */
 
 /* GABA:
@@ -313,6 +326,18 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
 #define CHANNEL_REQUEST(s, c, i, a, n, e) \
 ((s)->handler((s), (c), (i), (a), (n), (e)))
 
+#define DEFINE_CHANNEL_REQUEST(name)                            \
+static void do_##name(struct channel_request *s,                \
+		      struct ssh_channel *channel,              \
+                      struct channel_request_info *info,        \
+		      struct simple_buffer *args,               \
+		      struct command_continuation *c,           \
+		      struct exception_handler *e);             \
+                                                                \
+struct channel_request name =                                   \
+{ STATIC_HEADER, do_##name };                                   \
+                                                                \
+static void do_##name
 
 void init_channel(struct ssh_channel *channel);
 
