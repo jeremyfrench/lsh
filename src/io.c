@@ -33,9 +33,6 @@
 #include <unistd.h>
 #endif
 
-/* For the popen code */
-#include <wait.h>
-
 #ifdef HAVE_POLL
 # if HAVE_POLL_H
 #  include <poll.h>
@@ -52,6 +49,8 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
+/* For the popen code */
+#include <sys/wait.h>
 
 #include <arpa/inet.h>
 
