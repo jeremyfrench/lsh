@@ -26,7 +26,10 @@
 #ifndef LSH_SERVER_H_INCLUDED
 #define LSH_SERVER_H_INCLUDED
 
+#include "server.h"
+
 #include "io.h"
+#include "keyexchange.h"
 
 struct server_callback
 {
@@ -35,13 +38,16 @@ struct server_callback
 
   struct signer *secret;        /* secret key */
   struct lsh_string *host_key;  /* public key */
-  struct randomness *random;
   UINT32 block_size;
   char *id_comment;
+
+  struct packet_handler *kexinit_handler;
 };
 
-struct fd_callback *make_server_callback(struct io_backend *b,
-					 char *comment,
-					 UINT32 block_size);
+struct fd_callback *
+make_server_callback(struct io_backend *b,
+		     char *comment,
+		     UINT32 block_size,
+		     struct packet_handler *kexinit_handler);
 
 #endif /* LSH_SERVER_H_INCLUDED */

@@ -25,15 +25,15 @@
 
 #include "server.h"
 
-#include "version.h"
-#include "connection.h"
 #include "abstract_io.h"
-#include "read_line.h"
-#include "read_packet.h"
+#include "connection.h"
 #include "debug.h"
 #include "format.h"
+#include "keyexchange.h"
+#include "read_line.h"
+#include "read_packet.h"
+#include "version.h"
 #include "werror.h"
-#include "void.h"
 #include "xalloc.h"
 
 struct read_handler *make_server_read_line();
@@ -44,13 +44,15 @@ static int server_initiate(struct fd_callback **c,
 {
   struct server_callback *closure = (struct server_callback *) *c;
   
-  /* FIXME: Should pass a key exchange handler, not NULL! */
-  struct ssh_connection *connection = make_ssh_connection(NULL);
+  struct ssh_connection *connection
+    = make_ssh_connection(closure->kexinit_handler);
   struct abstract_write *write =
     io_read_write(closure->backend, fd,
 		  make_server_read_line(),
 		  closure->block_size,
 		  make_server_close_handler());
+
+  verbose("server_initiate()\n");
   
   connection->server_version
     = ssh_format("SSH-%lz-%lz %lz",
@@ -130,13 +132,11 @@ struct read_handler *make_server_read_line(struct ssh_connection *s)
   return make_read_line(&closure->super);
 }
 
-struct fd_callback *make_server_callback(struct io_backend *b,
-					 char *comment,
-					 UINT32 block_size,
-					 struct signer *secret,
-					 struct lsh_string *host_key,
-					 struct randomness *r)
-					 
+struct fd_callback *
+make_server_callback(struct io_backend *b,
+		     char *comment,
+		     UINT32 block_size,
+		     struct packet_handler *kexinit_handler)
 {
   struct server_callback *connected = xalloc(sizeof(struct server_callback));
 
@@ -144,9 +144,8 @@ struct fd_callback *make_server_callback(struct io_backend *b,
   connected->backend = b;
   connected->block_size = block_size;
   connected->id_comment = comment;
-  connected->secret = secret;
-  connected->host_key = host_key;
-  connected->random = r;
+
+  connected->kexinit_handler = kexinit_handler;
   
   return &connected->super;
 }
