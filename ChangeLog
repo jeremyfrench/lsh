@@ -1,3 +1,31 @@
+2000-06-10  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/ssh-conv: New script.
+
+	* src/sexp_streamed_parser.c (string_handler): Deleted this class,
+	after I noticed that it was equivalent to abstract_write.
+
+	* src/read_file.c (make_read_file): New function, for reading an
+	entire file.
+
+	* src/read_base64.c (make_read_base64): New function, for reading
+	an entire base64-encoded file.
+
+	* src/exception.h (EXC_APP): New constant.
+
+	* src/io.c (finish_io_exception): New static object.
+
+	* src/dsa.c (make_dsa_public_key): New function.
+	(do_dsa_public_key): Use make_dsa_public_key().
+
+	* src/Makefile.am.in (bin_PROGRAMS): Added lsh-decode-key.
+	(bin_SCRIPTS): Added ssh-conv.
+	(liblsh_a_SOURCES): Added read_file.c and read_base64.c.
+
+	* configure.in: Bumped version to 0.9.13.
+
+	* src/lsh-decode-key.c: New program.
+
 2000-06-04  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/srp_exchange.c (srp_format_proofs): New function. Replaces

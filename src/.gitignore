@@ -19,6 +19,7 @@
 /digit_table
 /digit_table.h
 /lsh
+/lsh-decode-key
 /lsh_keygen
 /lsh_proxy
 /lsh_writekey

@@ -1,3 +1,17 @@
+News for the 0.9.13 release
+
+	New program lsh-decode-key and script ssh-conf, for converting
+	OpenSSH/ssh2 keys to sexp format.
+
+	Updated SRP support to the draft doc/srp-spec.txt.
+	Made it possible to skip the userauth sub-protocol when using
+	SRP. The proxy program was probably broken in the process.
+	
+	Fixed lsh-authorize, to use the right options to sexp_conv.
+
+	Let $HOME override the home directory in the passwd database,
+	when running as non-root.
+	
 News for the 0.9.10 release
 
 	Fixed bug that caused buffered output to be lost at channel
