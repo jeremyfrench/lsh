@@ -62,6 +62,7 @@ static int do_pty_continuation(struct command_continuation *s,
   
   if (x)
     {
+      CFMAKERAW(&self->req->ios);
       if (!tty_setattr(self->req->tty, &self->req->ios))
 	{
 	  werror("do_pty_continuation: "
@@ -118,9 +119,6 @@ struct command *make_pty_request(int tty)
 		      &req->width_p, &req->height_p))
     req->width = req->height = req->width_p = req->height_p = 0;
 
-  /* The mode to use, if pty allocation is successful. */
-  CFMAKERAW(&req->ios);
-  
   req->super.format_request = do_format_pty_request;
   req->super.super.call = do_channel_request_command;
   
