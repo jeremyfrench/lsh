@@ -75,6 +75,7 @@
 #include "environ.h"
 #include "format.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "reaper.h"
 #include "server_pty.h"
 #include "werror.h"
@@ -209,7 +210,8 @@ kerberos_check_pw(struct unix_user *user, struct lsh_string *pw,
 	close(in[1]);
 	close(null_fd);
 
-	execl(user->ctx->pw_helper, user->ctx->pw_helper, user->super.name->data, NULL);
+	execl(user->ctx->pw_helper, user->ctx->pw_helper,
+	      lsh_get_cstring(user->super.name), NULL);
 	_exit(EXIT_FAILURE);
       }
     default:
@@ -221,7 +223,7 @@ kerberos_check_pw(struct unix_user *user, struct lsh_string *pw,
 
 	fd = io_write(make_lsh_fd(in[1], "password helper stdin",
 				  e),
-		      pw->length, NULL);
+		      lsh_string_length(pw), NULL);
 
 	A_WRITE(&fd->write_buffer->super, pw);
 
@@ -244,11 +246,13 @@ do_verify_password(struct lsh_user *s,
 {
   CAST(unix_user, user, s);
   const struct exception *x = NULL;
-
+  const uint8_t *cpasswd;
+  
   /* No supported password verification methods allows passwords
    * containing NUL, so check that here. */
 
-  if (!lsh_get_cstring(password))
+  cpasswd = lsh_get_cstring(password);
+  if (!cpasswd)
     {
       static const struct exception invalid_passwd
 	= STATIC_EXCEPTION(EXC_USERAUTH, "NUL character in password.");
@@ -259,7 +263,7 @@ do_verify_password(struct lsh_user *s,
   
   /* NOTE: Check for accounts with empty passwords, or generally short
    * passwd fields like "NP" or "x". */
-  if (!user->passwd || (user->passwd->length < 5) )
+  if (!user->passwd || (lsh_string_length(user->passwd) < 5) )
     {
       static const struct exception no_passwd
 	= STATIC_EXCEPTION(EXC_USERAUTH, "No password in passwd db.");
@@ -273,12 +277,13 @@ do_verify_password(struct lsh_user *s,
 
   /* Try password authentication against the ordinary unix database. */
   {
-    char *salt = user->passwd->data;
+    const char *salt = lsh_string_data(user->passwd);
 
     /* NOTE: crypt uses the *ugly* convention of returning pointers
      * to static buffers. */
 
-    if (strcmp(crypt(password->data, salt), user->passwd->data))
+    if (strcmp(crypt(cpasswd, salt),
+	       lsh_get_cstring(user->passwd)))
       {
 	/* Passwd doesn't match */
 	static const struct exception invalid_passwd
