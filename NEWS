@@ -1,3 +1,14 @@
+News for the 1.1.1 release:
+
+	First try for the gateway mode. New option -G for lsh, and a
+	new program lshg for talking to the gateway.
+
+	lshd forks of a new process and changes its uid for reading
+	user files. The only file read in this way, so far, is
+	~/.lsh/srp-verifier.
+
+	Improved randomness framework.
+	
 News for the 1.1.0 release:
 
 	First, note that the 1.1.x series should be considered

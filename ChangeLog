@@ -1,5 +1,35 @@
 2000-11-14  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/testsuite/macros.m4(TS_TEST_VERIFY): Use make_bad_random(). 
+	Use SIGNER_GET_PUBLIC().
+
+	* src/unix_random.c (do_unix_random_background): Check status
+	before starting background poll.
+
+	* src/srp-gen.c (make_srp_gen_options): Use make_bad_random().
+
+	* src/randomness.h (randomness_with_poll): New class.
+
+	* src/randomness.c (make_reasonably_random): #if:ed out.
+	(make_default_random): New function.
+
+	* src/lsh.c: Use make_default_random().
+	* src/lsh_proxy.c: Likewise.
+	* src/lshd.c: Likewise.
+
+	* src/lsh-writekey.c (make_lsh_writekey_options): Use
+	make_bad_random(). 
+
+	* src/lsh-keygen.c: Use make_default_random().
+
+	* src/gateway_commands.c (gateway_make_connection): Fixed call to
+	make_packet_unpad(). 
+
+	* src/randomness.c: Reintroduced make_poor_random, for programs
+	that only need salt, iv:s etc.
+
+	* Released lsh-1.1.1.
+	
 	* src/symmetric/arcfour.c (arcfour_update_key): #if:ed out this
 	nostandard function.
 	(arcfour_set_key): Use arcfour_init(). Made keyset loop less
