@@ -6,7 +6,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998, 1999, 2000, 2001 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -62,6 +62,20 @@ do_request_service(struct command *s,
 { STATIC_COMMAND(do_request_service), service } 
 
 struct command *make_request_service(int service);
+
+/* GABA:
+   (class
+     (name escape_info)
+     (vars
+       (escape . UINT8)
+       ; Handlers, indexed by character.
+       (dispatch array (object lsh_callback) "0x100")))
+*/
+
+struct escape_info *make_escape_info(UINT8 escape);
+struct abstract_write *
+make_handle_escape(struct escape_info *info, struct abstract_write *next);
+
 struct channel_request *make_handle_exit_status(int *exit_code);
 struct channel_request *make_handle_exit_signal(int *exit_code);
 
