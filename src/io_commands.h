@@ -25,6 +25,7 @@
 #ifndef LSH_IO_COMMANDS_H_INCLUDED
 #define LSH_IO_COMMANDS_H_INCLUDED
 
+#include "command.h"
 #include "connection.h"
 #include "io.h"
 

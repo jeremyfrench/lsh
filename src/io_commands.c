@@ -185,7 +185,7 @@ static int do_connect(struct io_backend *backend,
   struct connect_fd *fd;
 
   /* Address must specify a host */
-  assert(a->address);
+  assert(a->ip);
   
   if (!address_info2sockaddr_in(&sin, a))
     return COMMAND_RETURN(c, NULL);
@@ -274,7 +274,7 @@ do_simple_log_peer(struct command_simple *s UNUSED,
   CAST(listen_value, a, x);
 
   verbose("Accepting connection from %S, port %i\n",
-	  a->peer->address, a->peer->port);
+	  a->peer->ip, a->peer->port);
 
   return &a->fd->super.super.super;
 }
