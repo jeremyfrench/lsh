@@ -1,0 +1,7 @@
+#! /bin/sh
+
+# Tests the key generation programs
+
+echo Testing lsh_writekey
+rm -f foo foo.pub
+../lsh_writekey foo < key-1.private
