@@ -37,8 +37,9 @@ struct string_node
   struct lsh_string *s;
 };
 
-void string_buffer_init(struct string_buffer *buffer,
-			UINT32 guess)
+void
+string_buffer_init(struct string_buffer *buffer,
+                   UINT32 guess)
 {
   buffer->partial = lsh_string_alloc(guess);
   buffer->left = guess;
@@ -50,7 +51,8 @@ void string_buffer_init(struct string_buffer *buffer,
   buffer->total = 0;
 }
 
-void string_buffer_clear(struct string_buffer *buffer)
+void
+string_buffer_clear(struct string_buffer *buffer)
 {
   struct string_node *n;
 
@@ -66,7 +68,8 @@ void string_buffer_clear(struct string_buffer *buffer)
 }
 
 /* Assumes that the buffer->partial string is full */
-void string_buffer_grow(struct string_buffer *buffer, UINT32 increment)
+void
+string_buffer_grow(struct string_buffer *buffer, UINT32 increment)
 {
   struct string_node *n;
 
@@ -84,7 +87,8 @@ void string_buffer_grow(struct string_buffer *buffer, UINT32 increment)
 }
 
 #if 0
-void string_buffer_putc(struct string_buffer *buffer, UINT8 c)
+void
+string_buffer_putc(struct string_buffer *buffer, UINT8 c)
 {
   if (!buffer->left)
     string_buffer_grow(buffer, buffer->increment);
@@ -95,8 +99,9 @@ void string_buffer_putc(struct string_buffer *buffer, UINT8 c)
   buffer->left--;
 }
 
-void string_buffer_write(struct string_buffer *buffer,
-			UINT32 length, const UINT8 *s)
+void
+string_buffer_write(struct string_buffer *buffer,
+                    UINT32 length, const UINT8 *s)
 {
   if (length > buffer->left)
     {
@@ -113,8 +118,9 @@ void string_buffer_write(struct string_buffer *buffer,
   buffer->left -= length;
 }
 
-struct lsh_string *string_buffer_final_write(struct string_buffer *buffer,
-					     UINT32 length, const UINT8 *s)
+struct lsh_string *
+string_buffer_final_write(struct string_buffer *buffer,
+                          UINT32 length, const UINT8 *s)
 {
   UINT32 final = buffer->total + length;
   
@@ -163,8 +169,9 @@ struct lsh_string *string_buffer_final_write(struct string_buffer *buffer,
 }
 #endif
 
-struct lsh_string *string_buffer_final(struct string_buffer *buffer,
-				       UINT32 left_over)
+struct lsh_string *
+string_buffer_final(struct string_buffer *buffer,
+                    UINT32 left_over)
 {
   UINT32 length = buffer->partial->length - left_over;
   UINT32 final = buffer->total + length;
