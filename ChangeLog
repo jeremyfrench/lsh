@@ -1,4 +1,83 @@
+Thu Dec 31 00:06:43 1998    <nisse@puck>
+
+	* server.c (do_open_session): Mark arguments as UNUSED.
+
+	* read_packet.c (do_read_packet): Signedness fixes.
+
+	* publickey_crypto.c (make_dss_verifier): Mark closure algorithm
+	as UNUSED.
+
+	* packet_ignore.c (do_ignore): Mark arguments as UNUSED.
+
+	* make_class (do-struct-free-function, do-struct-mark-function):
+	Avoid warnings about unused parameters when the generated
+	functions are empty functions. 
+
+	* keyexchange.c (kex_make_key): Signedness fix.
+
+	* io.c (get_inaddr): Use the protocol argument.
+
+	* disconnect.c (do_disconnect): Mark arguments as UNUSED.
+
+	* des.c (make_des_instance): Mark arguments as UNUSED.
+
+	* debug.c (do_rec_debug): Mark arguments as UNUSED.
+
+	* connection.c (do_fail): Marked connection argument UNUSED.
+
+	* configure.in (CPPFLAGS): Add more warning flags. But *not*
+	-Wcast-align. 
+
+	* client_userauth.c (do_userauth_banner): Marked connection
+	argument UNUSED.
+
+	* client_password.c (read_password): Marked max_length argument
+	UNUSED. 
+
+	* client.c (client_close_die): Marked closure argument UNUSED.
+
+	* channel.c (do_window_adjust): Marked connection argument UNUSED.
+	(do_channel_data): -"-
+	(do_channel_extended_data): -"-
+	(do_channel_eof): -"-
+	(do_channel_close): -"-
+	(do_channel_open_confirm): -"-
+	(do_channel_open_failure): -"-
+	(do_channel_success): -"-
+	(do_channel_failure): -"-
+
+	* arcfour.c (make_arcfour_instance): Mark mode argument UNUSED. 
+
+	* io.c (get_inaddr): use symbolic constant to check inet_addr
+ 	result; fixes name resolving on Linux/Alpha.
+
+Wed Dec 30 11:57:28 1998    <ray@zensunni>
+
+	* atoms.in: added algorithms names used by SSH 2.0.11 (commented
+ 	out).
+
+	* configure.in: Enable a few more warnings. 
+
+	* lib/desTest.c (method, encode, decode): ANSIfied function
+	declarations.
+      
+	* include/des.h, desCode.h, desKerb.c, desQuick.c, desTest.c,
+ 	desUtil.c, desdata.c, desinfo.h: The DES code's copyright notice
+ 	is distributed in descore.README rather than plain README.
+
+	* abstract_crypto.c (gcd): Avoid unsigned underflow.
+
+	* sexp.c, sexp.h (sexp_nullp, sexp_c, sexp_a, sexp_z, sexp_n,
+ 	sexp_sn, sexp_format, encode_base64): Added const.
+
+	* TODO: removed obsolete entries; made a separate section for
+ 	freeness issues, and noted scsh's non-freeness.
+
+	* TASKLIST, TODO: Fixed typos.
+
 Wed Dec 30 01:14:28 1998    <nisse@puck>
+
+	* lsh_types.h (LSH_SYNTAX): New error code.
 
 	* lib/desTest.c (now): Disable use of rusage.
 
