@@ -794,6 +794,7 @@ fi
 
 AC_CONFIG_SUBDIRS(src/argp)
 AC_CONFIG_SUBDIRS(src/nettle)
+AC_CONFIG_SUBDIRS(src/spki)
 AC_CONFIG_SUBDIRS(src/sftp)
 
 # Set these flags *last*, or else the test programs won't compile
