@@ -214,6 +214,10 @@ make_client_session_channel(struct lsh_fd *in,
   self->out = out;
   self->err = err;
 
+  REMEMBER_RESOURCE(self->super.resources, &in->super);
+  REMEMBER_RESOURCE(self->super.resources, &out->super);
+  REMEMBER_RESOURCE(self->super.resources, &err->super);
+  
   /* Flow control */
   out->write_buffer->report = &self->super.super;
   err->write_buffer->report = &self->super.super;
