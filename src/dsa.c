@@ -161,11 +161,10 @@ do_dsa_sign(struct signer *c,
       
   /* Build signature */
   buf_length = dsa_blob_length(r, s);
-  signature = ssh_format("%i%a%r",
-			 /* NOTE: This outer length field is somewhat
-			  * redundant, but required by the spec. */
-			 get_atom_length(ATOM_SSH_DSS) + buf_length * 2 + 8,
-			 ATOM_SSH_DSS, buf_length * 2, &p);
+
+  /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
+   * length field, which should be removed in the next version. */
+  signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &p);
   dsa_blob_write(r, s, buf_length, p);
   
   mpz_clear(r);
@@ -347,17 +346,14 @@ do_dsa_verify(struct verifier *c,
   int atom;
   mpz_t r, s;
 
-  /* NOTE: The outer length field is somewhat redundant, but required
-   * by the spec. */
-  UINT32 outer_length;
+  /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
+   * length field, which should be removed in the next version. */
 
   UINT32 buf_length;
   const UINT8 *buf;
   
   simple_buffer_init(&buffer, signature_length, signature_data);
-  if (!(parse_uint32(&buffer, &outer_length)
-	&& (outer_length == signature_length - 4)
-	&& parse_atom(&buffer, &atom)
+  if (!(parse_atom(&buffer, &atom)
 	&& (atom == ATOM_SSH_DSS)
 	&& parse_string(&buffer, &buf_length, &buf)
 	&& !(buf_length % 2)) )
