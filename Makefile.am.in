@@ -9,12 +9,10 @@ AUTOMAKE_OPTIONS = foreign
 # recompiling, but before making a dist, as they uses dependency information to
 # figure out which header files should be included in the dist.
 
-DOTDISTS = src/.dist_classes src/.dist_headers \
-	src/symmetric/.dist_headers src/symmetric/include/.dist_headers
+DOTDISTS = src/.dist_classes src/.dist_headers
 
 MAKEFILESAM = Makefile.am doc/Makefile.am src/Makefile.am \
-	src/scm/Makefile.am \
-	src/symmetric/Makefile.am src/symmetric/include/Makefile.am
+	src/scm/Makefile.am
 
 # FIXME: Use the BASH variable to execute the script. The problem is
 # that the script attempts to start itselt with "$0 args".
