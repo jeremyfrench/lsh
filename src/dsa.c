@@ -30,6 +30,7 @@
 #include "parse.h"
 #include "sexp.h"
 #include "sha.h"
+#include "spki.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -40,11 +41,11 @@
 #include "dsa.h.x"
 #undef GABA_DEFINE
 
-#include "dsa.c.x"
+#include "dsa.c.x" 
 
 /* DSA signatures */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name dsa_signer_variant)
      (super signer)
@@ -52,7 +53,7 @@
        (dsa object dsa_signer)))
 */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name dsa_verifier_variant)
      (super verifier)
@@ -81,6 +82,29 @@ static void dsa_hash(mpz_t h, UINT32 length, const UINT8 *msg)
   debug("DSA hash: %xn\n", h);
   
   KILL(hash);
+}
+
+#define DSA_MAX_QSIZE SHA_DIGESTSIZE
+
+static struct sexp *
+encode_dsa_sig_val(mpz_t r, mpz_t s)
+{
+  return sexp_l(2, sexp_l(2, ATOM_R, sexp_un(r), -1),
+		sexp_l(2, ATOM_S, sexp_un(s), -1), -1);
+}
+
+static int
+decode_dsa_sig_val(struct sexp *e, mpz_t r, mpz_t s)
+{
+  if (sexp_atomp(e))
+    return 0;
+  else
+    {
+      struct sexp_iterator *i = SEXP_ITER(e);
+      return ( (SEXP_LEFT(i) == 2)
+	       && sexp_get_un(i, ATOM_R, r, DSA_MAX_QSIZE)
+	       && sexp_get_un(i, ATOM_S, s, DSA_MAX_QSIZE));
+    }
 }
 
 static void generic_dsa_sign(struct dsa_signer *closure,
@@ -150,26 +174,54 @@ dsa_blob_write(mpz_t r, mpz_t s, UINT32 length, UINT8 *buf)
 
 static struct lsh_string *
 do_dsa_sign(struct signer *c,
+	    int algorithm,
 	    UINT32 msg_length,
 	    const UINT8 *msg)
 {
-  CAST(dsa_signer, closure, c);
+  CAST(dsa_signer, self, c);
   mpz_t r, s;
   struct lsh_string *signature;
   UINT32 buf_length;
   UINT8 *p;
+
+  trace("do_dsa_sign: Signing according to %a\n", algorithm);
   
   mpz_init(r); mpz_init(s);
-  generic_dsa_sign(closure, msg_length, msg, r, s);
-      
+  generic_dsa_sign(self, msg_length, msg, r, s);
+
   /* Build signature */
   buf_length = dsa_blob_length(r, s);
 
-  /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
-   * length field, which should be removed in the next version. */
-  signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &p);
-  dsa_blob_write(r, s, buf_length, p);
-  
+  switch (algorithm)
+    {
+    case ATOM_SSH_DSS:
+      /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
+       * length field, which should be removed in the next version. */
+      signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &p);
+      dsa_blob_write(r, s, buf_length, p);
+
+      break;
+      
+#if DATAFELLOWS_WORKAROUNDS
+    case ATOM_SSH_DSS_KLUDGE_LOCAL:
+      
+      /* NOTE: This doesn't include any length field. Is that right? */
+      signature = ssh_format("%lr", buf_length * 2, &p);
+      dsa_blob_write(r, s, buf_length, p);
+
+      break;
+
+#endif
+    case ATOM_SPKI:
+      /* NOTE: Generates the <sig-val> only. */
+      signature
+	= sexp_format(encode_dsa_sig_val(r, s),
+		      SEXP_CANONICAL, 0);
+      
+      break;
+    default:
+      fatal("do_dsa_sign: Internal error.");
+    }
   mpz_clear(r);
   mpz_clear(s);
 
@@ -178,28 +230,26 @@ do_dsa_sign(struct signer *c,
 
 static struct sexp *
 do_dsa_sign_spki(struct signer *c,
-		 struct sexp *hash, struct sexp *principal,
+		 /* struct sexp *hash, struct sexp *principal, */
 		 UINT32 msg_length,
 		 const UINT8 *msg)
 {
-  CAST(dsa_signer, closure, c);
+  CAST(dsa_signer, self, c);
   mpz_t r, s;
   struct sexp *signature;
     
   mpz_init(r); mpz_init(s);
-  generic_dsa_sign(closure, msg_length, msg, r, s);
+  generic_dsa_sign(self, msg_length, msg, r, s);
       
   /* Build signature */
-  signature = sexp_l(5, sexp_a(ATOM_SIGNATURE), hash, principal,
-		     sexp_l(2, ATOM_R, sexp_un(r), -1),
-		     sexp_l(2, ATOM_S, sexp_un(s), -1), -1);
+  signature = encode_dsa_sig_val(r, s);
   
   mpz_clear(r);
   mpz_clear(s);
 
   return signature;
 }
-
+ 
 struct sexp *
 make_dsa_public_key(struct dsa_public *dsa)
 {
@@ -220,6 +270,7 @@ do_dsa_public_key(struct signer *s)
   return make_dsa_public_key(&self->public);
 }
 
+#if 0
 #if DATAFELLOWS_WORKAROUNDS
 
 static struct lsh_string *
@@ -261,13 +312,12 @@ make_dsa_signer_kludge(struct signer *s)
   self->dsa = dsa;
   return &self->super;
 }
+#endif
 
 #endif /* DATAFELLOWS_WORKAROUNDS */
 
 
 /* Verifying DSA signatures */
-
-#define DSA_MAX_QSIZE SHA_DIGESTSIZE
 
 /* The caller should make sure that r and s are non-negative, and not
  * extremely large. That they are less than q is checked here. */
@@ -343,44 +393,86 @@ generic_dsa_verify(struct dsa_public *key,
 }
 
 static int
-do_dsa_verify(struct verifier *c,
+do_dsa_verify(struct verifier *c, int algorithm,
 	      UINT32 length,
 	      const UINT8 *msg,
 	      UINT32 signature_length,
 	      const UINT8 *signature_data)
 {
-  CAST(dsa_verifier, closure, c);
+  CAST(dsa_verifier, self, c);
   struct simple_buffer buffer;
 
-  int res;
+  int res = 0;
   
   int atom;
   mpz_t r, s;
 
-  /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
-   * length field, which should be removed in the next version. */
-
-  UINT32 buf_length;
-  const UINT8 *buf;
+  trace("do_dsa_verify: Verifying %a signature\n", algorithm);
   
-  simple_buffer_init(&buffer, signature_length, signature_data);
-  if (!(parse_atom(&buffer, &atom)
-	&& (atom == ATOM_SSH_DSS)
-	&& parse_string(&buffer, &buf_length, &buf)
-	&& !(buf_length % 2)
-	&& (buf_length <= (2 * DSA_MAX_QSIZE)) ))
-    return 0;
-
   mpz_init(r);
   mpz_init(s);
+  
+  switch (algorithm)
+    {
+    case ATOM_SSH_DSS:
+      {
+	/* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
+	 * length field, which should be removed in the next version. */
+	
+	UINT32 buf_length;
+	const UINT8 *buf;
+      
+	simple_buffer_init(&buffer, signature_length, signature_data);
+	if (!(parse_atom(&buffer, &atom)
+	      && (atom == ATOM_SSH_DSS)
+	      && parse_string(&buffer, &buf_length, &buf)
+	      && !(buf_length % 2)
+	      && (buf_length <= (2 * DSA_MAX_QSIZE)) ))
+	  goto fail;
 
-  buf_length /= 2;
+	buf_length /= 2;
   
-  bignum_parse_u(r, buf_length, buf);
-  bignum_parse_u(s, buf_length, buf + buf_length);
-    
-  res = generic_dsa_verify(&closure->public, length, msg, r, s);
-  
+	bignum_parse_u(r, buf_length, buf);
+	bignum_parse_u(s, buf_length, buf + buf_length);
+
+	break;
+      }
+      
+    case ATOM_SSH_DSS_KLUDGE_LOCAL:
+      {
+	UINT32 buf_length;
+
+	/* NOTE: This doesn't include any length field. Is that right? */
+
+	if ( (signature_length % 2)
+	     || (signature_length > (2 * DSA_MAX_QSIZE)) )
+	  goto fail;
+
+	buf_length = signature_length / 2;
+
+	bignum_parse_u(s, buf_length, signature_data + buf_length);
+	bignum_parse_u(s, buf_length, signature_data + buf_length);
+	break;
+      }
+    case ATOM_SPKI:
+      {
+	struct simple_buffer buffer;
+	struct sexp *e;
+	
+	simple_buffer_init(&buffer, signature_length, signature_data);
+	
+	if (! ( (e = sexp_parse_canonical(&buffer))
+		&& parse_eod(&buffer)
+		&& decode_dsa_sig_val(e, r, s)) )
+	  goto fail;
+
+	break;
+      }
+    default:
+      fatal("do_dsa_verify: Internal error!\n");
+    }
+  res = generic_dsa_verify(&self->public, length, msg, r, s);
+ fail:
   mpz_clear(r);
   mpz_clear(s);
 
@@ -391,9 +483,9 @@ static int
 do_dsa_verify_spki(struct verifier *c,
 		   UINT32 length,
 		   const UINT8 *msg,
-		   struct sexp_iterator *i)
+		   struct sexp *e)
 {
-  CAST(dsa_verifier, closure, c);
+  CAST(dsa_verifier, self, c);
 
   int res;
   mpz_t r, s;
@@ -403,10 +495,8 @@ do_dsa_verify_spki(struct verifier *c,
 
   /* NOTE: With the current definition of sexp_get_un, there are no
    * requirements on the order in which r and s occur. */
-  res = (SEXP_LEFT(i) == 2)
-    && sexp_get_un(i, ATOM_R, r, DSA_MAX_QSIZE)
-    && sexp_get_un(i, ATOM_S, s, DSA_MAX_QSIZE)
-    && generic_dsa_verify(&closure->public, length, msg, r, s);
+  res = decode_dsa_sig_val(e, r, s)
+    && generic_dsa_verify(&self->public, length, msg, r, s);
 
   mpz_clear(r);
   mpz_clear(s);
@@ -414,6 +504,7 @@ do_dsa_verify_spki(struct verifier *c,
   return res;
 }
 
+#if 0
 #if DATAFELLOWS_WORKAROUNDS
 
 static int
@@ -465,7 +556,8 @@ make_dsa_verifier_kludge(struct verifier *v)
   return &self->super;
 }
 #endif /* DATAFELLOWS_WORKAROUNDS */
-     
+#endif
+
 
 /* FIXME: The allocator could do this kind of initialization
  * automatically. */
@@ -491,7 +583,7 @@ static struct signer *
 make_dsa_signer(struct signature_algorithm *c,
 		struct sexp_iterator *i)
 {
-  CAST(dsa_algorithm, closure, c);
+  CAST(dsa_algorithm, self, c);
   NEW(dsa_signer, res);
   init_dsa_public(&res->public);
   mpz_init(res->a);
@@ -506,7 +598,7 @@ make_dsa_signer(struct signature_algorithm *c,
        && spki_init_dsa_public(&res->public, i)
        && sexp_get_un(i, ATOM_X, res->a, DSA_MAX_QSIZE) )
     {
-      res->random = closure->random;
+      res->random = self->random;
       res->super.sign = do_dsa_sign;
       res->super.sign_spki = do_dsa_sign_spki;
       res->super.public_key = do_dsa_public_key;
