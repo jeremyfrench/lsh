@@ -42,17 +42,6 @@
 #include "io.h.x"
 #undef GABA_DECLARE
 
-#if 0
-/* A closed function with a file descriptor as argument */
-/* ;; GABA:
-   (class
-     (name fd_callback)
-     (vars
-       (f indirect-method void "int fd")))
-*/
-
-#define FD_CALLBACK(c, fd) ((c)->f(&(c), (fd)))
-#endif
 
 /* Close callbacks are called with a reason as argument. */
 
@@ -91,21 +80,6 @@
 */
 
 #define IO_CALLBACK(c, fd) ((c)->f((c), (fd)))
-#if 0
-/* ;; GABA:
-   (class
-     (name io_write_state)
-     (super io_callback)
-     (vars
-       ; Called before poll
-       (prepare method void "struct lsh_fd *fd")
-       ; Called when fd is closed for writing.
-       (close method void)))
-*/
-
-#define IO_WRITE_PREPARE(s, f) (((s)->prepare)((s), (f)))
-#define IO_WRITE_CLOSE(s) (((s)->close)((s)))
-#endif
 
 /* GABA:
    (class
@@ -150,17 +124,6 @@
 #define FD_WRITE(fd) IO_CALLBACK((fd)->write, (fd))
 #define FD_WRITE_CLOSE(fd) ((fd)->write_close(fd))
 
-/* ;; GABA:
-   (class
-     (name io_fd)
-     (super lsh_fd)
-     (vars
-       ; Reading 
-       ;;(read_buffer object read_buffer)
-       ;; (handler object read_handler)
-       ; Writing 
-       (write_buffer object write_buffer)))
-*/
 
 /* Used for read handlers like read_line and read_packet that
  * processes a little data at a time, possibly replacing the handler
@@ -222,44 +185,6 @@ void init_consuming_read(struct io_consuming_read *self,
 struct listen_value *
 make_listen_value(struct lsh_fd *fd,
 		  struct address_info *peer);
-
-#if 0
-/* ;; GABA:
-   (class
-     (name fd_listen_callback)
-     (vars
-       (f method void int "struct address_info *")))
-*/
-#define FD_LISTEN_CALLBACK(c, fd, a) ((c)->f((c), (fd), (a)))
-
-/* FIXME: Get rid of this class, and store the user callback inside
- * the io_read_callback. */
-
-/* ;; GABA:
-   (class
-     (name listen_fd)
-     (super lsh_fd)
-     (vars
-       (callback object fd_listen_callback)))
-*/
-
-/* ;; GABA:
-   (class
-     (name connect_fd)
-     (super lsh_fd)
-     (vars
-       (callback object fd_callback)))
-*/
-
-/* ;; GABA:
-   (class
-     (name callback)
-     (vars
-       (f method void)))
-*/
-
-#define CALLBACK(c) ((c)->f(c))
-#endif
 
 /* ;; GABA:
    (class

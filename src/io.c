@@ -64,6 +64,9 @@
 
 #include "io.c.x"
 
+
+/* Backend loop */
+
 /* If there's nothing to do for this amount of time (ms), do
  * spontaneous gc. */
 
@@ -172,14 +175,6 @@ int io_iter(struct io_backend *b)
       }
     assert(i == nfds);
     assert(all_events);
-#if 0
-    if (!all_events)
-      {
-	/* Nothing happens */
-	/* NOTE: There might be some callouts left, but we don't wait */
-	return 0;
-      }
-#endif
   }
 
   res = poll(fds, nfds, IDLE_TIME);
@@ -285,6 +280,34 @@ int io_iter(struct io_backend *b)
   return 1;
 }
 
+
+/* FIXME: Perhaps this function should return a suitable exit code? */
+void io_run(struct io_backend *b)
+{
+  struct sigaction pipe;
+  memset(&pipe, 0, sizeof(pipe));
+
+  pipe.sa_handler = SIG_IGN;
+  sigemptyset(&pipe.sa_mask);
+  pipe.sa_flags = 0;
+  
+  if (sigaction(SIGPIPE, &pipe, NULL) < 0)
+    fatal("Failed to ignore SIGPIPE.\n");
+  
+  while(io_iter(b))
+    ;
+}
+
+void init_backend(struct io_backend *b)
+{
+  b->files = NULL;
+#if 0
+  b->callouts = 0;
+#endif
+}
+
+
+/* Read-related callbacks */
 
 static void
 do_buffered_read(struct io_callback *s,
@@ -428,14 +451,8 @@ void init_consuming_read(struct io_consuming_read *self,
   self->consumer = consumer;
 }
 
-/* ;; GABA:
-   (class
-     (name io_write_callback)
-     (super io_write_state)
-     (vars
-       (buffer object write_buffer)))
-*/
 
+/* Write related callbacks */
 static void
 do_write_callback(struct io_callback *s UNUSED,
 		  struct lsh_fd *fd)
@@ -500,21 +517,6 @@ do_write_close(struct lsh_fd *fd)
   write_buffer_close(fd->write_buffer);
 }
 
-#if 0
-static struct io_write_state *
-make_io_write_callback(struct write_buffer *buffer)
-{
-  NEW(io_write_callback, self);
-
-  self->super.super.f = do_write_callback;
-  self->super.prepare = do_write_prepare;
-  self->super.close = do_write_close;
-  self->buffer = buffer;
-
-  return &self->super;
-}
-#endif
-
 struct listen_value *
 make_listen_value(struct lsh_fd *fd,
 		  struct address_info *peer)
@@ -526,6 +528,9 @@ make_listen_value(struct lsh_fd *fd,
 
   return self;
 }
+
+
+/* Listen callback */
 
 /* GABA:
    (class
@@ -574,6 +579,9 @@ make_listen_callback(struct io_backend *backend,
   return &self->super;
 }
 
+
+/* Connect callback */
+
 /* GABA:
    (class
      (name io_connect_callback)
@@ -614,41 +622,11 @@ make_connect_callback(struct command_continuation *c)
   NEW(io_connect_callback, self);
 
   self->super.f = do_connect_callback;
-
-#if 0
-  self->super.prepare = NULL;
-  self->super.close = NULL;
-#endif
-
   self->c = c;
 
   return &self->super;
 }
 
-/* FIXME: Perhaps this function should return a suitable exit code? */
-void io_run(struct io_backend *b)
-{
-  struct sigaction pipe;
-  memset(&pipe, 0, sizeof(pipe));
-
-  pipe.sa_handler = SIG_IGN;
-  sigemptyset(&pipe.sa_mask);
-  pipe.sa_flags = 0;
-  
-  if (sigaction(SIGPIPE, &pipe, NULL) < 0)
-    fatal("Failed to ignore SIGPIPE.\n");
-  
-  while(io_iter(b))
-    ;
-}
-
-void init_backend(struct io_backend *b)
-{
-  b->files = NULL;
-#if 0
-  b->callouts = 0;
-#endif
-}
 
 /* This function is called if a connection this file somehow depends
  * on disappears. For instance, the connection may have spawned a
@@ -759,6 +737,81 @@ int blocking_read(int fd, struct read_handler *handler)
   close(fd);
   return !handler;
 }
+
+
+/* These functions are used by werror() and friends */
+
+/* For fd:s in blocking mode. */
+const struct exception *
+write_raw(int fd, UINT32 length, const UINT8 *data)
+{
+  while(length)
+    {
+      int written = write(fd, data, length);
+
+      if (written < 0)
+	switch(errno)
+	  {
+	  case EINTR:
+	  case EAGAIN:
+	    continue;
+	  default:
+	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
+				     NULL, errno, NULL);
+	  }
+      
+      length -= written;
+      data += written;
+    }
+  return NULL;
+}
+
+const struct exception *
+write_raw_with_poll(int fd, UINT32 length, const UINT8 *data)
+{
+  while(length)
+    {
+      struct pollfd pfd;
+      int res;
+      int written;
+      
+      pfd.fd = fd;
+      pfd.events = POLLOUT;
+
+      res = poll(&pfd, 1, -1);
+
+      if (res < 0)
+	switch(errno)
+	  {
+	  case EINTR:
+	  case EAGAIN:
+	    continue;
+	  default:
+	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
+				     NULL, errno, NULL);
+	  }
+      
+      written = write(fd, data, length);
+
+      if (written < 0)
+	switch(errno)
+	  {
+	  case EINTR:
+	  case EAGAIN:
+	    continue;
+	  default:
+	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
+				     NULL, errno, NULL);
+	  }
+      
+      length -= written;
+      data += written;
+    }
+  return NULL;
+}
+
+
+/* Network utility functions */
 
 /* Converts a string port number or service name to a port number.
  * Returns the port number in _host_ byte order, or -1 of the port
@@ -972,76 +1025,7 @@ int address_info2sockaddr_in(struct sockaddr_in *sin,
     return tcp_addr(sin, 0, NULL, a->port);
 }
 
-/* These functions are used by werror() and friends */
 
-/* For fd:s in blocking mode. */
-const struct exception *
-write_raw(int fd, UINT32 length, const UINT8 *data)
-{
-  while(length)
-    {
-      int written = write(fd, data, length);
-
-      if (written < 0)
-	switch(errno)
-	  {
-	  case EINTR:
-	  case EAGAIN:
-	    continue;
-	  default:
-	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
-				     NULL, errno, NULL);
-	  }
-      
-      length -= written;
-      data += written;
-    }
-  return NULL;
-}
-
-const struct exception *
-write_raw_with_poll(int fd, UINT32 length, const UINT8 *data)
-{
-  while(length)
-    {
-      struct pollfd pfd;
-      int res;
-      int written;
-      
-      pfd.fd = fd;
-      pfd.events = POLLOUT;
-
-      res = poll(&pfd, 1, -1);
-
-      if (res < 0)
-	switch(errno)
-	  {
-	  case EINTR:
-	  case EAGAIN:
-	    continue;
-	  default:
-	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
-				     NULL, errno, NULL);
-	  }
-      
-      written = write(fd, data, length);
-
-      if (written < 0)
-	switch(errno)
-	  {
-	  case EINTR:
-	  case EAGAIN:
-	    continue;
-	  default:
-	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
-				     NULL, errno, NULL);
-	  }
-      
-      length -= written;
-      data += written;
-    }
-  return NULL;
-}
 
 void io_set_nonblocking(int fd)
 {
@@ -1068,6 +1052,7 @@ void io_set_close_on_exec(int fd)
     fatal("Can't set close-on-exec flag for fd %i: %z\n",
 	  fd, STRERROR(errno));
 }
+
 
 /* ALL file descripters handled by the backend should use non-blocking mode,
  * and have the close-on-exec flag set. */
@@ -1239,6 +1224,32 @@ io_write(struct lsh_fd *fd,
   return fd;
 }
 
+struct lsh_fd *
+io_write_file(struct io_backend *backend,
+	      const char *fname, int flags, int mode,
+	      UINT32 block_size,
+	      struct close_callback *c,
+	      struct exception_handler *e)
+{
+  int fd = open(fname, flags, mode);
+  if (fd < 0)
+    return NULL;
+
+  return io_write(make_lsh_fd(backend, fd, e), block_size, c);
+}
+
+struct lsh_fd *
+io_read_file(struct io_backend *backend,
+	     const char *fname, 
+	     struct exception_handler *e)
+{
+  int fd = open(fname, O_RDONLY);
+  if (fd < 0)
+    return NULL;
+
+  return make_lsh_fd(backend, fd, e);
+}
+
 void kill_fd(struct lsh_fd *fd)
 {
   fd->super.alive = 0;
@@ -1268,6 +1279,7 @@ void close_fd_nicely(struct lsh_fd *fd, int reason)
 
   fd->close_reason = reason;
 }
+
 
 /* Responsible for handling the EXC_FINISH_READ exception. It should
  * be a parent to the connection related exception handlers, as for
@@ -1336,30 +1348,4 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)
   self->fd = fd;
   
   return &self->super;
-}
-
-struct lsh_fd *
-io_write_file(struct io_backend *backend,
-	      const char *fname, int flags, int mode,
-	      UINT32 block_size,
-	      struct close_callback *c,
-	      struct exception_handler *e)
-{
-  int fd = open(fname, flags, mode);
-  if (fd < 0)
-    return NULL;
-
-  return io_write(make_lsh_fd(backend, fd, e), block_size, c);
-}
-
-struct lsh_fd *
-io_read_file(struct io_backend *backend,
-	     const char *fname, 
-	     struct exception_handler *e)
-{
-  int fd = open(fname, O_RDONLY);
-  if (fd < 0)
-    return NULL;
-
-  return make_lsh_fd(backend, fd, e);
 }
