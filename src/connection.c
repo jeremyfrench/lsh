@@ -305,18 +305,6 @@ make_ssh_connection(UINT32 flags,
 
   connection->literal_kexinits[CONNECTION_CLIENT]
     = connection->literal_kexinits[CONNECTION_SERVER] = NULL;
-
-#if 0
-  connection->newkeys = NULL;
-#endif
-
-#if 0
-  /* Initialize dispatch */
-  connection->ignore = &connection_ignore_handler;
-  connection->unimplemented = &unimplemented_handler;
-  connection->fail = &fail_handler;
-  connection->forward = &forward_handler;
-#endif
   
   for (i = 0; i < 0x100; i++)
     connection->dispatch[i] = &connection_unimplemented_handler;

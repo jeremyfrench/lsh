@@ -88,11 +88,6 @@ struct command_simple options2signature_algorithms;
 #include <unistd.h>
 #endif
 
-#if 0
-/* Block size for stdout and stderr buffers */
-#define BLOCK_SIZE 32768
-#endif
-
 /* Option parsing */
 
 const char *argp_program_version

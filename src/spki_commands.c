@@ -542,9 +542,6 @@ do_spki_encrypt(struct command *s,
   CAST_SUBTYPE(sexp, expr, a);
 
   struct lsh_string *iv = NULL;
-#if 0
-  UINT8 noiv[1] = { 0 };
-#endif
   
   if (self->algorithm->iv_size)
     {

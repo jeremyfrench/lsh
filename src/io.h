@@ -218,9 +218,6 @@ extern const struct exception finish_io_exception;
 
 struct io_backend *
 make_io_backend(void);
-#if 0
-void init_backend(struct io_backend *b);
-#endif
 
 int io_iter(struct io_backend *b);
 void io_run(struct io_backend *b);
@@ -350,15 +347,6 @@ struct lsh_fd *
 io_read_file(struct io_backend *backend,
 	     const char *fname, 
 	     struct exception_handler *e);
-
-#if 0
-struct lsh_fd *
-io_read_user_file(struct io_backend *backend,
-		  const char *fname,
-		  uid_t uid, int secret,
-		  const struct exception **x,
-		  struct exception_handler *e);
-#endif
 
 int
 lsh_make_pipe(int *fds);

@@ -306,44 +306,6 @@ make_exit_shell(struct server_session *session)
        (reaper object reap)))
 */
 
-#if 0
-/* Creates a one-way socket connection. Returns 1 on success, 0 on
- * failure. fds[0] is for reading, fds[1] for writing (like for the
- * pipe() system call). */
-static int
-make_pipe(int *fds)
-{
-  if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
-    {
-      werror("socketpair() failed: %z\n", STRERROR(errno));
-      return 0;
-    }
-  debug("Created socket pair. Using fd:s %i <-- %i\n", fds[0], fds[1]);
-
-  if (SHUTDOWN(fds[0], SHUT_WR) < 0)
-    {
-      werror("shutdown(%i, SEND) failed: %z\n", fds[0], STRERROR(errno));
-      goto fail;
-    }
-  if (SHUTDOWN(fds[1], SHUT_RD) < 0)
-    {
-      werror("shutdown(%i, REC) failed: %z\n", fds[0], STRERROR(errno));
-    fail:
-      {
-	int saved_errno = errno;
-
-	close(fds[0]);
-	close(fds[1]);
-
-	errno = saved_errno;
-	return 0;
-      }
-    }
-  
-  return 1;
-}
-#endif
-
 static int
 make_pipes(int *in, int *out, int *err)
 {

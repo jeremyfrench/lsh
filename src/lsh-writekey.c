@@ -29,10 +29,6 @@
 #include "format.h"
 #include "io_commands.h"
 #include "interact.h"
-#if 0
-/* For read_password() */
-#include "password.h"
-#endif
 #include "rsa.h"
 #include "sexp_commands.h"
 #include "spki_commands.h"

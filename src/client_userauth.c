@@ -27,9 +27,6 @@
 #include "command.h"
 #include "format.h"
 #include "parse.h"
-#if 0
-#include "password.h"
-#endif
 #include "publickey_crypto.h"
 #include "ssh.h"
 #include "werror.h"

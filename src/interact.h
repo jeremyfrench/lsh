@@ -104,14 +104,6 @@ struct terminal_dimensions
 #define INTERACT_WINDOW_SUBSCRIBE(i, c) \
   ((i)->window_change_subscribe((i), (c)))
 
-#if 0
-extern int tty_fd;
-
-int lsh_open_tty(void);
-int tty_read_line(UINT32 size, UINT8 *buffer);
-int yes_or_no(struct lsh_string *s, int def, int free);
-#endif
-
 struct interact *
 make_unix_interact(struct io_backend *backend);
 

@@ -53,28 +53,6 @@ int lookup_hash(struct alist *algorithms, const char *name,
 		struct hash_algorithm **ap,
 		int none_is_valid);
 
-#if 0
-struct int_list *default_crypto_algorithms(void);
-struct int_list *all_crypto_algorithms(void);
-struct int_list *default_mac_algorithms(void);
-struct int_list *default_compression_algorithms(void);
-struct int_list *prefer_compression_algorithms(void);
-#endif
-
-#if 0
-void
-vlist_algorithms(const struct argp_state *state,
-		 struct alist *algorithms,
-		 unsigned n,
-		 va_list args);
-
-void
-list_algorithms(const struct argp_state *state,
-		struct alist *algorithms,
-		char *prefix,
-		unsigned n, ...);
-#endif
-
 void
 list_crypto_algorithms(const struct argp_state *state,
 		       struct alist *algorithms);

@@ -31,10 +31,6 @@
 int tty_getattr(int fd, struct termios *ios);
 int tty_setattr(int fd, struct termios *ios);
 
-#if 0
-int tty_makeraw(int fd);
-#endif
-
 int tty_getwinsize(int fd, UINT32 *w, UINT32 *h, UINT32 *wp, UINT32 *hp);
 int tty_setwinsize(int fd, UINT32 w, UINT32 h, UINT32 wp, UINT32 hp);
 

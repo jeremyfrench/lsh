@@ -190,37 +190,3 @@ make_reaper(struct io_backend *b)
 
   return &self->super;
 }
-
-#if 0
-void
-reaper_run(struct reap *r, struct io_backend *b)
-{
-  CAST(reaper, self, r);
-  
-  struct sigaction pipe;
-  
-  struct sigaction chld;
-  memset(&pipe, 0, sizeof(pipe));
-  memset(&chld, 0, sizeof(chld));
-
-  pipe.sa_handler = SIG_IGN;
-  sigemptyset(&pipe.sa_mask);
-  pipe.sa_flags = 0;
-  
-  chld.sa_handler = child_handler;
-  sigemptyset(&chld.sa_mask);
-  chld.sa_flags = SA_NOCLDSTOP;
-  
-  halloween = 0;
-
-  if (sigaction(SIGPIPE, &pipe, NULL) < 0)
-    fatal("Failed to ignore SIGPIPE.\n");
-
-  if (sigaction(SIGCHLD, &chld, NULL) < 0)
-    fatal("Failed to install handler for SIGCHLD.\n");
-
-  while(io_iter(b))
-    if (halloween)
-      reap(self);
-}
-#endif

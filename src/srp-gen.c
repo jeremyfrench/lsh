@@ -29,10 +29,6 @@
 #include "format.h"
 #include "interact.h"
 #include "io.h"
-#if 0
-/* For read_password() */
-#include "password.h"
-#endif
 #include "randomness.h"
 #include "sexp.h"
 #include "srp.h"

@@ -719,32 +719,6 @@ parse_forward_arg(char *arg,
   return 1;
 }
 
-#if 0
-/* FIXME: Resetting the tty should really be done by the corresponding
- * channel. */
-
-#if WITH_PTY_SUPPORT
-/* Global variable, because we use atexit() rather than on_exit() */
-struct tty_state
-{
-  struct termios mode;
-  int fd;
-} old_tty;
-
-static void reset_tty(void)
-{
-  tty_setattr(old_tty.fd, &old_tty.mode);
-}
-
-static int remember_tty(int fd)
-{
-  old_tty.fd = fd;
-  return (tty_getattr(fd, &old_tty.mode)
-	  && !atexit(reset_tty));
-}
-#endif /* WITH_PTY_SUPPORT */
-#endif
-
 
 /* Option parsing */
 

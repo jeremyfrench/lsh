@@ -29,9 +29,6 @@
 #include "dsa.h"
 #include "format.h"
 #include "lookup_verifier.h"
-#if 0
-#include "password.h"
-#endif
 
 #include "srp.h"
 #include "ssh.h"

@@ -50,20 +50,6 @@ tty_setattr(int fd, struct termios *ios)
   return tcsetattr(fd, TCSADRAIN, ios) != -1 ? 1 : 0;
 }
 
-#if 0
-int tty_makeraw(int fd)
-{
-  struct termios ios;
-	
-  if (tty_getattr(fd, &ios))
-    {
-      CFMAKERAW(&ios);
-      return tty_setattr(fd, &ios);
-    }
-  return 0;
-}
-#endif
-
 int
 tty_getwinsize(int fd, UINT32 *w, UINT32 *h, UINT32 *wp, UINT32 *hp)
 {

@@ -40,14 +40,6 @@
 #include <assert.h>
 #include <string.h>
 
-#if 0
-#include <sys/types.h>
-#include <fcntl.h>
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-#endif
-
 #define GABA_DEFINE
 #include "spki.h.x"
 #undef GABA_DEFINE
