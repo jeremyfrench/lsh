@@ -1,5 +1,8 @@
 2001-10-05  Niels Möller  <nisse@ehand.com>
 
+	* src/arcfour.c, src/rijndael.c: Deleted files. Code moved to
+	crypto.c.
+
 	* src/testsuite/aes-test.m4: New testcase; NIST:s testcases for
 	aes256-cbc. 
 
