@@ -23,12 +23,15 @@ TS_ALL = $(TS_PROGS) $(TS_SH)
 
 noinst_PROGRAMS = $(TS_PROGS)
 
+# Workaround to get automake to keep dependencies for testutils.o
+EXTRA_PROGRAMS = testutils
+
 LDADD = testutils.o ../liblsh.a ../spki/libspki.a ../nettle/libnettle.a \
 	$(DOTDOT_LIBARGP)
 
 include .dist_rapid7
 
-EXTRA_DIST = testutils.c testutils.h $(TS_SH) \
+EXTRA_DIST = testutils.h $(TS_SH) \
 	functions.sh run-tests setup-env key-1.private key-2.private \
 	fake-sshd1 $(dist_rapid7)
 
