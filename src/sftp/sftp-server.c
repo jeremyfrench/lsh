@@ -79,6 +79,9 @@ const char *werror_program_name = "sftp-server";
 
 #define SFTP_VERSION 3
 
+
+#define MAX_DIRENTS_PER_REQUEST 100
+
 #define WITH_DEBUG 1
 
 #if WITH_DEBUG
@@ -559,36 +562,72 @@ static int
 sftp_process_readdir(struct sftp_ctx *ctx)
 {
   struct sftp_dir *dir;
-  struct dirent* entry; 
-  struct stat st;
-  
+  struct dirent *entry; 
+  char* filenames[MAX_DIRENTS_PER_REQUEST];
+  struct stat st[MAX_DIRENTS_PER_REQUEST];
+  int i;
+  int used_entries = 0;
+
   if (!sftp_get_handle_dir(ctx, &dir))
     return sftp_bad_message(ctx);
 
-  /* readdir doesn't modify errno on EOF, so we need to clear it
-   * first. */
-  errno = 0;
+  while (used_entries < MAX_DIRENTS_PER_REQUEST )
+    {
+      /* readdir doesn't modify errno on EOF, so we need to clear it
+       * first. */
+      errno = 0;
+      
+      entry = readdir(dir->dir);
+      
+      if (!entry) /* Something's wrong */
+	{
+	  /* errno == 0 => No more dirents, errno != 0 => Error */
+	 
+	  /* If we have already successfully read entries, ignore this
+	   * situation for the moment and trust it to repeat itself on
+	   * subsequent readdirs */
+
+	  if (!used_entries)   /* First time? */
+	    return (errno ? sftp_send_errno(ctx, errno)
+		    : sftp_send_status(ctx, SSH_FX_EOF)); 
+	  else
+	    break; /* We have data to send, so send it */
+	}
+      else /* Successfully read entry */
+	{
+	  if (sftp_lstat_in_dir(dir->name, entry->d_name, &st[used_entries]) )
+	    /* FIXME: Would it be better to just skip this entry, or send an
+	     * SSH_FXP_NAME with no file attributes? */
+	    {
+	      for(i=0; i<used_entries; i++)
+		free(filenames[i]);
+	      return sftp_send_errno(ctx, errno);
+	    }
+
+	  filenames[used_entries] = strdup(entry->d_name);
+
+	  if (!filenames[used_entries]) /* strdup failed? */
+	    {
+	      for(i=0; i<used_entries; i++)
+		free(filenames[i]);
+	      return sftp_send_errno(ctx, errno);
+	    }
+
+	  used_entries++; /* Everything OK, skip to next entry */
+	}
+    }
+
+  if (!used_entries) /* This should never happen */
+    return sftp_send_status(ctx, SSH_FX_EOF);
   
-  entry=readdir(dir->dir);
-
-  if (!entry)
-    return (errno ? sftp_send_errno(ctx, errno)
-	    : sftp_send_status(ctx, SSH_FX_EOF)); 
-
-  if (sftp_lstat_in_dir(dir->name, entry->d_name, &st) )
-    /* FIXME: Would it be better to just skip this entry, or send an
-     * SSH_FXP_NAME with no file attributes? */
-    return sftp_send_errno(ctx, errno);
-
-  /* FIXME: we don't have to, but maybe we should be nice and pass
-   * several at once? It might improve performance quite a lot (or it
-   * might not) */
-
-  /* Use count == 1 for now. */
-  sftp_put_uint32(ctx->o, 1);
-
-  sftp_put_filename(ctx, &st, entry->d_name);
-
+  sftp_put_uint32(ctx->o, used_entries);
+  
+  for (i=0; i<used_entries; i++)
+    {
+      sftp_put_filename(ctx, &st[i], filenames[i]);
+      free(filenames[i]);
+    }
+  
   sftp_set_msg(ctx->o, SSH_FXP_NAME );
   return 1;
 }
