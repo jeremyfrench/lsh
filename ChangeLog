@@ -1,11 +1,14 @@
 1999-12-25  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/argp/argp.h: Workaround for __restrict.
+
+	* src/testsuite/keygen-test: Use $srcdir to find input file.
+
 	* src/testsuite/keygen-test: New test script.
 
 	* src/spki_commands.c (spki_read_hostkeys, spki_read_userkeys):
 	Use sexp2keypair. Also deleted some old dead code.
 	
-
 	* src/spki.c (do_spki_sexp2signer): New function.
 	(spki_sexp2signer_command): New command. 
 	(spki_parse_private_key): Renamed to spki_sexp2keypair. 
