@@ -1,3 +1,16 @@
+2002-08-29  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/functions.sh (test_fail, test_result): Call exit.
+	(test_skip): New function.
+	(check_x11_support): New function.
+
+	* src/testsuite/Makefile.am (distclean-local): Delete files and
+	directories created by the test cases.
+	(EXTRA_DIST): Distribute key-2.private and fake-sshd1.
+
+	* src/lsh.c (main_options, main_argp_parser): Handle X11 options
+	only if WITH_X11_FORWARD is defined.
+
 2002-08-28  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* doc/lsh.texinfo (Top): Use @ififo around the @top directive, to
