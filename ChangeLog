@@ -1,3 +1,8 @@
+2001-03-20  Niels Möller  <nisse@ehand.com>
+
+	* src/Makefile.am.in (class-map): Let the shell find the awk
+	program. 
+
 2001-03-19  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/scm/gaba.scm (class-annotate): New function.
