@@ -2139,12 +2139,11 @@ close_fd(struct lsh_fd *fd)
       lsh_oop_cancel_write_fd(fd);
 
       fd->super.alive = 0;
-      /* FIXME: Is this still used? */
-      if (fd->fd < 0)
-	/* Unlink the file object, but don't close any
-	 * underlying file. */
-	return;
-  
+
+      /* fd->fd = -1 used to mean that we should unlink the file object,
+	 but not close the underlying file. We don't do that anymore. */
+      assert(fd->fd >= 0);
+        
       /* Used by write fd:s to make sure that writing to its
        * buffer fails. */
       if (fd->write_buffer)
