@@ -39,7 +39,7 @@ static int do_debug(struct abstract_write **w,
 
   for(i=0; i<packet->length; i++)
   {
-    if (! i%16)
+    if (! (i%16))
       fprintf(closure->output, "\n%08x: ", i);
     
     fprintf(closure->output, "%02x ", packet->data[i]);
