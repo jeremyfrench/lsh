@@ -155,26 +155,11 @@ do_authenticate(struct userauth *s,
 
 	  assert(v);
 	  
-#if DATAFELLOWS_WORKAROUNDS
-	  if (connection->peer_flags & PEER_USERAUTH_REQUEST_KLUDGE)
-	    {
-	      signed_data = ssh_format("%lS%c%S%a%a%c%a%S", 
-				       connection->session_id,
-				       SSH_MSG_USERAUTH_REQUEST,
-				       username, 
-				       ATOM_SSH_USERAUTH,
-				       ATOM_PUBLICKEY,
-				       1,
-				       algorithm,
-				       keyblob);
-	    }
-	  else
-#endif /* DATAFELLOWS_WORKAROUNDS */
-	    /* The signature is on the session id, followed by the
-	     * userauth request up to the actual signature. To avoid collisions,
-	     * the length field for the session id is included. */
-	    signed_data = ssh_format("%S%ls", connection->session_id, 
-				     signature_start, args->data);
+	  /* The signature is on the session id, followed by the
+	   * userauth request up to the actual signature. To avoid collisions,
+	   * the length field for the session id is included. */
+	  signed_data = ssh_format("%S%ls", connection->session_id, 
+				   signature_start, args->data);
 
 	  lsh_string_free(keyblob); 
 	  if (VERIFY(v, algorithm,
