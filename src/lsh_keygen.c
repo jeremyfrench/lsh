@@ -1,4 +1,4 @@
-/* lsh_keygen.c
+/* lsh-keygen.c
  *
  * Generic key-generation program. Writes a spki-packaged private key
  * on stdout. You would usually pipe this to some other program to
@@ -27,6 +27,7 @@
  */
 
 #include "dsa_keygen.h"
+#include "rsa.h"
 
 #include "blocking_write.h"
 #include "crypto.h"
@@ -42,6 +43,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -61,7 +63,8 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (name lsh_keygen_options)
      (vars
        (style . sexp_argp_state)
-       ; (algorithm . int)
+       ; 'd' means dsa, 'r' rsa
+       (algorithm . int)
        (level . int)))
 */
 
@@ -70,8 +73,8 @@ make_lsh_keygen_options(void)
 {
   NEW(lsh_keygen_options, self);
   self->style = SEXP_TRANSPORT;
-  self->level = 8;
-
+  self->level = -1;
+  self->algorithm = 'd';
   return self;
 }
 
@@ -79,9 +82,12 @@ static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
-  { "algorithm", 'a', "Algorithm", 0, "Default is to generate dsa keys", 0 },
-  { "nist-level", 'l', "Security level", 0, "Level 0 uses 512-bit primes, "
-    "level 8 uses 1024 bit primes. Default is 8.", 0 },
+  { "algorithm", 'a', "Algorithm", 0, "DSA or RSA. "
+    "Default is to generate DSA keys", 0 },
+  { "nist-level", 'l', "Security level", 0, "For DSA keys, this is the "
+    "NIST security level: Level 0 uses 512-bit primes, level 8 uses "
+    "1024 bit primes, and the default is 8. For RSA keys, it's the "
+    "bit length of the modulus, and the default is 2048 bits.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -106,6 +112,28 @@ main_argp_parser(int key, char *arg UNUSED, struct argp_state *state)
       state->child_inputs[0] = &self->style;
       state->child_inputs[1] = NULL;
       break;
+
+    case ARGP_KEY_END:
+      switch (self->algorithm)
+	{
+	case 'd':
+	  if (self->level < 0)
+	    self->level = 8;
+	  else if (self->level > 8)
+	    argp_error(state, "Security level for DSA should be in the range 0-8.");
+	  
+	  break;
+	case 'r':
+	  if (self->level < 0)
+	    self->level = 2048;
+	  else if (self->level < 512)
+	    argp_error(state, "RSA keys should be at least 512 bits.");
+	  break;
+	default:
+	  abort();
+	}
+      break;
+	  
     case 'l':
 	{
 	  char *end;
@@ -116,9 +144,9 @@ main_argp_parser(int key, char *arg UNUSED, struct argp_state *state)
 	      argp_error(state, "Invalid security level.");
 	      break;
 	    }
-	  if ( (l<0) || (l > 8))
+	  if (l<0) 
 	    {
-	      argp_error(state, "Security level should be in the range 0-8.");
+	      argp_error(state, "Security level can't be negative.");
 	      break;
 	    }
 	  self->level = l;
@@ -126,9 +154,14 @@ main_argp_parser(int key, char *arg UNUSED, struct argp_state *state)
 	}
 
     case 'a':
-      if (strcmp(arg, "dsa"))
-	argp_error(state, "Sorry, doesn't support any algorithm but dsa.");
-
+      if (!strcasecmp(arg, "dsa"))
+	self->algorithm = 'd';
+      else if (!strcasecmp(arg, "rsa"))
+	self->algorithm = 'r';
+      else
+	argp_error(state, "Unknown algorithm. The supported algorithms are "
+		   "RSA and DSA.");
+      
       break;
       
     }
@@ -147,7 +180,6 @@ main_argp =
   NULL, NULL
 };
 
-
 static void
 do_lsh_keygen_handler(struct exception_handler *s UNUSED,
 		      const struct exception *e)
@@ -164,79 +196,49 @@ int main(int argc, char **argv)
 {
   struct lsh_keygen_options * options
     = make_lsh_keygen_options();
-  
-  struct dsa_public public;
-  mpz_t x;
-  
-  mpz_t t;
+
+  struct sexp *key;
   struct randomness *r;
 
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
-  
-  mpz_init(public.p);
-  mpz_init(public.q);
-  mpz_init(public.g);
-  mpz_init(public.y);
-
-  mpz_init(x);
-  
-  mpz_init(t);
-
-  r = make_poor_random(&sha1_algorithm, NULL);
-  dsa_nist_gen(public.p, public.q, r, options->level);
-
-  debug("%xn\n"
-	"%xn\n", public.p, public.q);
-
-  /* Sanity check. */
-  if (!mpz_probab_prime_p(public.p, 10))
-    {
-      werror("p not a prime!\n");
-      return 1;
-    }
-
-  if (!mpz_probab_prime_p(public.q, 10))
-    {
-      werror("q not a prime!\n");
-      return 1;
-    }
-
-  mpz_fdiv_r(t, public.p, public.q);
-  if (mpz_cmp_ui(t, 1))
-    {
-      fatal("q doesn't divide p-1 !\n");
-      return 1;
-    }
-
-  dsa_find_generator(public.g, r, public.p, public.q);
 
   r = make_reasonably_random();
-  mpz_set(t, public.q);
-  mpz_sub_ui(t, t, 2);
-  bignum_random(x, r, t);
 
-  mpz_add_ui(x, x, 1);
+  switch (options->algorithm)
+    {
+    case 'd':
+      key = dsa_generate_key(r, options->level);
+      break;
+    case 'r':
+      {
+	mpz_t e;
+	mpz_init(e);
 
-  mpz_powm(public.y, public.g, x, public.p);
+	do
+	  {
+	    /* Use a reasonably small random e, and make sure that at
+	     * it is odd and has at most one more one bit. */
+	    bignum_random_size(e, r, 30);
+	    mpz_setbit(e, 0);
+	    mpz_setbit(e, 17);
+	    
+	    key = rsa_generate_key(e, r, options->level);
+	  }
+	while (!key);
+
+	mpz_clear(e);
+      }
+      break;
+    default:
+      abort();
+    }
+
+  /* Now, output a private key spki structure. */
+
+  A_WRITE(make_blocking_write(STDOUT_FILENO, 0, &handler),
+	  sexp_format(key, options->style, 0));
   
-  {
-    /* Now, output a private key spki structure. */
-    struct abstract_write *output = make_blocking_write(STDOUT_FILENO, 0, &handler);
-    
-    struct lsh_string *key = sexp_format
-      (sexp_l(2, sexp_z("private-key"),
-	      sexp_l(6, sexp_z("dsa"),
-		     sexp_l(2, sexp_z("p"), sexp_un(public.p), -1),
-		     sexp_l(2, sexp_z("q"), sexp_un(public.q), -1),
-		     sexp_l(2, sexp_z("g"), sexp_un(public.g), -1),
-		     sexp_l(2, sexp_z("y"), sexp_un(public.y), -1),
-		     sexp_l(2, sexp_z("x"), sexp_un(x), -1), -1), -1),
-       options->style, 0);
-
-    A_WRITE(output, key);
-
-    return EXIT_SUCCESS;
-  }
+  return EXIT_SUCCESS;
 }
 
   
