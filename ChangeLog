@@ -1,3 +1,30 @@
+2000-04-17  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Bumped version to 0.9.6.
+
+2000-04-16  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/io.c (io_listen): Take a sockaddr * rather than a
+	sockaddr_in *. 
+	(io_listen_local): Implemented local sockets. Currently #if:ed
+	out. 
+
+	* src/io_commands.c (do_listen): Pass a sockaddr * rather than a
+	sockaddr_in * to io_listen.
+	(do_listen_connection): Likewise.
+
+	* src/lsh_types.h (OFFSETOF): Define, if needed.
+
+	* src/lsh.h (NUL_TERMINATED): New macro.
+
+	* src/dsa.c (WITH_DSA_CLASSIC): Deleted this unused macro.
+
+	* configure.in (lsh_cv_c_offsetof): Check for offsetof.
+
+	* src/unix_user.c (make_unix_user): Use NUL_TERMINATED macro.
+
+	* acconfig.h (HAVE_C_OFFSETOF): New macro. 
+
 2000-04-13  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/unix_user.c (do_exec_shell): Fixed debug() call.
