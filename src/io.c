@@ -70,7 +70,7 @@ void io_run(struct io_backend *b)
     {
       struct pollfd *fds;
       int i;
-      nfds_t nfds;
+      unsigned long nfds; /* FIXME: Should be nfds_t if that type is defined */
       int timeout;
       int res;
 
