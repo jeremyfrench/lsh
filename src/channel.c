@@ -1709,6 +1709,8 @@ DEFINE_COMMAND(connection_service_command)
   COMMAND_RETURN(c, connection);
 }
 
+/* FIXME: Exactly what is the difference between this function and
+   init_connection_service. */
 void
 init_login_service(struct ssh_connection *connection)
 {
