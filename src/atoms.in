@@ -22,7 +22,6 @@ serpent192-cbc   OPTIONAL          Serpent with 192-bit key
 serpent128-cbc   OPTIONAL          Serpent with 128-bit key
 
 # Old lsh aliases
-rijndael-cbc@lysator.liu.se     EXPERIMENTAL      Rijndael cipher in CBC mode
 serpent-cbc@lysator.liu.se      EXPERIMENTAL      Serpent cipher in CBC mode
 
 arcfour          OPTIONAL          the ARCFOUR stream cipher
@@ -83,8 +82,8 @@ x11-req
 x11
 auth-agent-req
 auth-agent
-auth-ssh1-agent-req
-auth-ssh1-agent
+# auth-ssh1-agent-req
+# auth-ssh1-agent
 env
 shell
 exec
@@ -147,33 +146,8 @@ a
 b
 c
 
-# hashed spki keys
-hash
-md5
-sha1
-
 # spki password encrypted data
-password-encrypted
-# label
 Xpkcs5v2
-iterations
-salt
-data
-iv
-
-# Certificates and ACL:s
-sequence
-certificate
-signature
-name
-acl
-version
-entry
-propagate
-tag
-prefix
-set
-*
 
 # SRP related
 srp-ring1-sha1@lysator.liu.se
