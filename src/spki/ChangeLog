@@ -1,3 +1,11 @@
+2004-01-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* Makefile.am (AM_CPPFLAGS): Added -I../nettle. Needed to find the
+	nettle-types.h include file when building outside of the source
+	directory.
+	* testsuite/Makefile.am (AM_CPPFLAGS): Added -I../../nettle.
+	* tools/Makefile.am (AM_CPPFLAGS): Likewise.
+
 2003-05-18  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* Changed include file ordering, to follow the same conventions as

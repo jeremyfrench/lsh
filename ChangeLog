@@ -1,3 +1,13 @@
+2004-01-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/Makefile.am (AM_CPPFLAGS): Added -I./nettle. Needed to find
+	the nettle-types.h include file when building outside of the
+	source directory.
+	(packet_types.h): Changed rule to use $< to refer to the input
+	file. 
+	* src/testsuite/Makefile.am (AM_CPPFLAGS): Added -I../nettle.
+	* src/rsync/Makefile.am (AM_CPPFLAGS): Added -I../nettle.
+
 2004-01-08  Niels Möller  <niels@s3.kth.se>
 
 	* src/tcpforward.c (do_channel_open_direct_tcpip): Log
