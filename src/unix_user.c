@@ -28,6 +28,7 @@
 
 #include "format.h"
 #include "io.h"
+#include "read_file.h"
 #include "reaper.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -519,15 +520,60 @@ check_user_permissions(struct stat *sbuf, const char *fname,
   return NULL;
 }
 
+/* GABA:
+   (class
+     (name exc_read_user_file_handler)
+     (super exception_handler)
+     (vars
+       (c object abstract_write))))
+*/
+
+static void
+do_exc_read_user_file_handler(struct exception_handler *s,
+			       const struct exception *e)
+{
+  CAST(exc_read_user_file_handler, self, s);
+
+  verbose("reading user file failed: %z\n", e->msg);
+  
+  switch (e->type)
+    {
+    case EXC_IO_READ:
+      A_WRITE(self->c, NULL);
+      break;
+    default:
+      werror("reading user file failed: %z\n", e->msg);
+      EXCEPTION_RAISE(self->super.parent, e);
+    }
+}
+
+static struct exception_handler *
+make_exc_read_user_file_handler(struct abstract_write *c,
+				struct exception_handler *parent,
+				const char *context)
+{
+  NEW(exc_read_user_file_handler, self);
+
+  self->super.parent = parent;
+  self->super.raise = do_exc_read_user_file_handler;
+  self->super.context = context;
+  
+  self->c = c;
+
+  return &self->super;
+}
+
+#define USER_FILE_BUFFER_SIZE 1000
+
 /* NOTE: No arbitrary file names are passed to this method, so we
  * don't have to check for things like "../../some/secret/file",
  * or for filenames containing NUL. */
 
-static void 
+static const struct exception *
 do_read_file(struct lsh_user *u, 
 	     const char *name, int secret,
-	     struct command_continuation *c,
-	     struct exception_handler *e)
+	     UINT32 limit,
+	     struct abstract_write *c)
 {
   CAST(unix_user, user, u);
   struct lsh_string *f;
@@ -544,17 +590,11 @@ do_read_file(struct lsh_user *u,
    * root. */
 
   if (me && (me != user->super.uid) )
-    {
-      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, 0, "Access denied."));
-      return;
-    }
-    
+    return make_io_exception(EXC_IO_OPEN_READ, NULL, 0, "Access denied.");
+  
   if (!user->home)
-    {
-      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL,
-					   ENOENT, "No home directory"));
-      return;
-    }
+    return make_io_exception(EXC_IO_OPEN_READ, NULL,
+			     ENOENT, "No home directory");
 
   f = ssh_format("%lS/.lsh/%lz", user->home, name);
   
@@ -563,11 +603,10 @@ do_read_file(struct lsh_user *u,
       if (errno != ENOENT)
 	werror("io_read_user_file: Failed to stat %S (errno = %i): %z\n",
 	       f, errno, STRERROR(errno));
-
-      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
-
+ 
       lsh_string_free(f);
-      return;
+
+      return make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL);
     }
 
   /* Perform a preliminary permissions check before forking, as errors
@@ -576,16 +615,14 @@ do_read_file(struct lsh_user *u,
   x = check_user_permissions(&sbuf, lsh_get_cstring(f), user->super.uid, secret);
   if (x)
     {
-      EXCEPTION_RAISE(e, x);
       lsh_string_free(f);
-      return;
+      return x;
     }
   
   if (!lsh_make_pipe(out))
     {
-      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
       lsh_string_free(f);
-      return;
+      return make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL);
     }
   
   child = fork();
@@ -594,22 +631,29 @@ do_read_file(struct lsh_user *u,
     {
     case -1:
       /* Error */
-      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
 
       close(out[0]); close(out[1]);
       lsh_string_free(f);
-      return;
+      return make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL);
       
     default:
       /* Parent */
       close(out[1]);
 
+      lsh_string_free(f);
+
       /* NOTE: We could install an exit handler for the child process,
        * but there's nothing useful for that to do. */
-      COMMAND_RETURN(c, make_lsh_fd(out[0], "stdout, reading a user file", e));
+      io_read(make_lsh_fd
+	        (out[0], "stdout, reading a user file",
+		 make_exc_read_user_file_handler(c,
+						 &default_exception_handler,
+						 HANDLER_CONTEXT)),
+	      make_buffered_read(USER_FILE_BUFFER_SIZE,
+				 make_read_file(c, limit)),
+	      NULL);
 
-      lsh_string_free(f);
-      return;
+      return NULL;
 
     case 0:
       /* Child */
