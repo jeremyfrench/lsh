@@ -69,25 +69,11 @@ B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
 /* Global, for simplicity */
 int exit_code = EXIT_SUCCESS;
 
-/* (write out sexp)
- *
- * Prints the sexp to the abstract_write OUT. Returns the sexp. */
-
-/* GABA:
-   (class
-     (name ssh2_print_to)
-     (super command)
-     (vars
-       (algorithms object alist)
-       (subject . "const char *")
-       (comment . "const char *")
-       (dest object abstract_write)))
-*/
-
+/* (print out sexp) */
 /* GABA:
    (class
      (name ssh2_print_command)
-     (super command_simple)
+     (super command_2)
      (vars
        (algorithms object alist)
        (subject . "const char *")
@@ -103,14 +89,16 @@ make_header(const char *name, const char *value)
 }
 
 static void
-do_ssh2_print(struct command *s,
-	      struct lsh_object *a,
-	      struct command_continuation *c,
-	      struct exception_handler *e UNUSED)
+do_ssh2_print_command(struct command_2 *s,
+		      struct lsh_object *a1,
+		      struct lsh_object *x,
+		      struct command_continuation *c,
+		      struct exception_handler *e UNUSED)
 {
-  CAST(ssh2_print_to, self, s);
-  CAST_SUBTYPE(sexp, expr, a);
-
+  CAST(ssh2_print_command, self, s);
+  CAST_SUBTYPE(abstract_write, dest, a1);
+  CAST_SUBTYPE(sexp, expr, x);
+  
   struct sexp_iterator *i;
   struct verifier *v;
   
@@ -143,54 +131,28 @@ do_ssh2_print(struct command *s,
 	  "Unsupported algorithm."));
     }
 
-  A_WRITE(self->dest, ssh_format("---- BEGIN SSH2 PUBLIC KEY ----\n"
-				 "%lfS"
-				 "%lfS"
-				 "\n%lfS\n"
+  A_WRITE(dest, ssh_format("---- BEGIN SSH2 PUBLIC KEY ----\n"
+			   "%lfS"
+			   "%lfS"
+			   "\n%lfS\n"
 				 "---- END SSH2 PUBLIC KEY ----\n",
-				 make_header("Subject", self->subject),
-				 make_header("Comment", self->comment),
-				 encode_base64(PUBLIC_KEY(v), NULL, 1, 0, 1)));
-  COMMAND_RETURN(c, a);
+			   make_header("Subject", self->subject),
+			   make_header("Comment", self->comment),
+			   encode_base64(PUBLIC_KEY(v), NULL, 1, 0, 1)));
+  COMMAND_RETURN(c, x);
 }
 
 static struct command *
-make_ssh2_print_to(struct alist *algorithms,
-		   const char *s, const char *c,
-		   struct abstract_write *dest)
-{
-  NEW(ssh2_print_to, self);
-  self->super.call = do_ssh2_print;
-  self->algorithms = algorithms;
-  self->subject = s;
-  self->comment = c;
-  self->dest = dest;
-
-  return &self->super;
-}
-
-static struct lsh_object *
-do_ssh2_print_simple(struct command_simple *s,
-		     struct lsh_object *a)
-{
-  CAST(ssh2_print_command, self, s);
-  CAST_SUBTYPE(abstract_write, dest, a);
-
-  return &make_ssh2_print_to(self->algorithms,
-			     self->subject, self->comment, dest)->super;
-}
-
-static struct command_simple *
 make_ssh2_print_command(struct alist *algorithms,
 			const char *s, const char *c)
 {
   NEW(ssh2_print_command, self);
-  self->super.super.call = do_call_simple_command;
-  self->super.call_simple = do_ssh2_print_simple;
+  self->super.super.call = do_command_2;
+  self->super.invoke = do_ssh2_print_command;
   self->algorithms = algorithms;
   self->subject = s;
   self->comment = c;
-  return &self->super;
+  return &self->super.super;
 }
 
 
@@ -313,9 +275,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       state->child_inputs[1] = NULL;
       break;
     case ARGP_KEY_END:
-      self->print = &(make_ssh2_print_command(self->algorithms,
-                                              self->subject,
-                                              self->comment)->super);
+      self->print = make_ssh2_print_command(self->algorithms,
+					    self->subject,
+					    self->comment);
       break;
     case OPT_INFILE:
       self->infile = arg;
