@@ -702,9 +702,9 @@ encode_base64_group(UINT32 n, UINT8 *dest)
 
 struct lsh_string *
 encode_base64(struct lsh_string *s,
-				 const char *delimiters,
-				 unsigned indent UNUSED,
-				 int free)				 
+	      const char *delimiters,
+	      unsigned indent UNUSED,
+	      int free)				 
 {
   UINT32 full_groups = (s->length) / 3;
   unsigned last = (s->length) % 3;

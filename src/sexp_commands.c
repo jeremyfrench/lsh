@@ -124,7 +124,7 @@ do_print_raw_hash_to(struct command *s,
   CAST(sexp_print_raw_hash_to, self, s);
   CAST_SUBTYPE(sexp, o, a);
 
-  struct lsh_string *canonical = SEXP_FORMAT(o, SEXP_CANONICAL, 0);
+  struct lsh_string *canonical = sexp_format(o, SEXP_CANONICAL, 0);
   struct hash_instance *hash = MAKE_HASH(self->algorithm);
   struct lsh_string *digest = lsh_string_alloc(hash->hash_size);
 

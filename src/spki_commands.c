@@ -366,7 +366,7 @@ do_spki_encrypt(struct command *s,
 				      sexp_s(NULL, crypt_string_pad
 					     (MAKE_ENCRYPT(self->algorithm,
 							   self->key->data, iv ? iv->data : noiv),
-					      SEXP_FORMAT(expr, SEXP_CANONICAL, 0), 1)),
+					      sexp_format(expr, SEXP_CANONICAL, 0), 1)),
 				      -1),
 			       -1),
 			-1));
