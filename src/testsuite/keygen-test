@@ -2,11 +2,11 @@
 
 # Tests the key generation programs
 
-echo Testing lsh_writekey
+echo Testing lsh-writekey
 
 if [ -z "$srcdir" ] ; then
   srcdir=`pwd`
 fi
 
 rm -f foo foo.pub
-../lsh_writekey -o foo < $srcdir/key-1.private
+../lsh-writekey -o foo < $srcdir/key-1.private
