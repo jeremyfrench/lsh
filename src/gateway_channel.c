@@ -235,13 +235,14 @@ do_gateway_channel_request(struct channel_request *s UNUSED,
   CAST(gateway_channel, channel, ch);
   UINT32 args_length;
   const UINT8 *args_data;
-
+  struct command *command;
+  
   parse_rest(args, &args_length, &args_data);
 
-  COMMAND_CALL(make_general_channel_request_command
-	       (format_channel_request_i(info, &channel->chain->super,
-					 args_length, args_data)),
-	       channel->chain, c, e);
+  command = make_general_channel_request_command
+    (format_channel_request_i(info, &channel->chain->super,
+			      args_length, args_data));
+  COMMAND_CALL(command, channel->chain, c, e);
 }
 
 struct channel_request gateway_channel_request =
@@ -363,10 +364,12 @@ do_channel_open_forward(struct channel_open *s UNUSED,
   struct gateway_channel *origin
     = make_gateway_channel(NULL);
 
+  struct command *command
+    = make_gateway_channel_open_command(info, parse_rest_copy(args), NULL);
+  
   origin->super.request_fallback = &gateway_channel_request;
   
-  COMMAND_CALL(make_gateway_channel_open_command
-	         (info, parse_rest_copy(args), NULL),
+  COMMAND_CALL(command,
 	       connection->chain,
 	       make_gateway_channel_open_continuation
 	         (c, &gateway_channel_request, origin),
