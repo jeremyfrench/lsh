@@ -95,7 +95,7 @@ const char *argp_program_version
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
-#define KERBEROS_HELPER PREFIX "lsh-krb-checkpw"
+#define KERBEROS_HELPER PREFIX "/sbin/lsh-krb-checkpw"
 
 #define OPT_NO 0x400
 #define OPT_SSH1_FALLBACK 0x200
