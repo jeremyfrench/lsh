@@ -25,43 +25,59 @@
 #include "password.h"
 
 #include "charset.h"
+#include "format.h"
 #include "parse.h"
+#include "userauth.h"
+#include "werror.h"
 #include "xalloc.h"
+
+#include <string.h>
+#include <errno.h>
+
+#include <pwd.h>
+#include <grp.h>
 
 static struct lsh_string *format_cstring(char *s)
 {
   return s ? ssh_format("%lz", s) : NULL;
 }
 
-/* NOTE: Calls function using the *disgusting* convention of returning
- * pointers to static buffers. */
-struct unix_user *lookup_user(lsh_string *name)
+static struct lsh_string *make_cstring(struct lsh_string *s, int free)
 {
-  struct passwd *passwd;
-  char *u;
-
-  struct unix_user *res;
+  struct lsh_string *res;
   
-  /* Convert name to a NULL-terminated string */
-  u = alloca(name->length + 1);
-
-  memcpy(u, name->data, name->length);
-  u[name->length] = 0;
-
-  if (strlen(u) < user->length)
+  if (memchr(s->data, '\0', s->length))
     {
-      /* User name includes NULL-characters. */
+      if (free)
+	lsh_string_free(s);
       return 0;
     }
 
-  if (!(passwd = getpwnam(u);))
+  res = ssh_format("%lS", s);
+  if (free)
+    lsh_string_free(s);
+  return res;
+}
+    
+/* NOTE: Calls function using the *disgusting* convention of returning
+ * pointers to static buffers. */
+struct unix_user *lookup_user(struct lsh_string *name, int free)
+{
+  struct passwd *passwd;
+  struct unix_user *res;
+
+  name = make_cstring(name, free);
+
+  if (!name)
+    return 0;
+  
+  if (!(passwd = getpwnam(name->data)))
     return 0;
   
   NEW(res);
   res->uid = passwd->pw_uid;
-#if 0
-  res->username = ssh_format("%lz", passwd->name);
-#endif
+  res->gid = passwd->pw_gid;
+  res->username = name;
   res->passwd = format_cstring(passwd->pw_passwd);
   res->home = format_cstring(passwd->pw_dir);
 
@@ -71,38 +87,30 @@ struct unix_user *lookup_user(lsh_string *name)
 /* NOTE: Calls function using the *disgusting* convention of returning
  * pointers to static buffers. */
 int verify_password(struct unix_user *user,
-		    struct lsh_string *password)
+		    struct lsh_string *password, int free)
 {
-  char *p;
   char *salt;
-  char *crypted_passwd;
   
   /* Convert password to a NULL-terminated string */
-  p = alloca(password->length + 1);
+  password = make_cstring(password, free);
 
-  memcpy(p, password->data, password->length);
-  p[password->length] = 0;
-
-  if (strlen(p) < passwd->length)
+  if (!user->passwd || (user->passwd->length < 2) )
     {
-      /* Password includes NULL-characters. */
+      /* FIXME: How are accounts without passwords handled? */
+      lsh_string_free(password);
       return 0;
     }
-
-  if (!user->passwd)
-    {
-      /* How are accounts without passwords handled? */
-      return 0;
-    }
-  if (user->passwd->length < 2)
-    return 0;
 
   salt = user->passwd->data;
 
-  if (strcmp(crypt(p, salt), user->passwd))
-    /* Passwd doesn't match */
-    return 0;
+  if (strcmp(crypt(password->data, salt), user->passwd->data))
+    {
+      /* Passwd doesn't match */
+      lsh_string_free(password);
+      return 0;
+    }
 
+  lsh_string_free(password);
   return 1;
 }
 
@@ -110,6 +118,7 @@ struct unix_authentication
 {
   struct userauth super;
 
+  struct login_method *login;
   struct alist *services;  /* Services allowed */
 };
 
@@ -117,18 +126,17 @@ static int do_authenticate(struct userauth *c,
 			   struct lsh_string *username,
 			   int requested_service,
 			   struct simple_buffer *args,
-			   struct ssh_service **service)
+			   struct ssh_service **result)
 {
   struct unix_authentication *closure = (struct unix_authentication *) c;
   struct lsh_string * password = NULL;
-
-  struct unix_service *login;
-
+  struct ssh_service *service;
+  
   MDEBUG(closure);
 
-  if (!( (login = ALIST_GET(closure->services, requested_service))))
+  if (!( (service = ALIST_GET(closure->services, requested_service))))
     {
-      lsh_string_free(user);
+      lsh_string_free(username);
       return LSH_AUTH_FAILED;
     }
 
@@ -136,8 +144,8 @@ static int do_authenticate(struct userauth *c,
   if (!username)
     return 0;
   
-  if (parse_string_copy(&buffer, &password)
-      && parse_eod(&buffer))
+  if ( (password = parse_string_copy(args))
+       && parse_eod(args))
     {
       struct unix_user *user;
       int access;
@@ -150,8 +158,7 @@ static int do_authenticate(struct userauth *c,
 	  return LSH_AUTH_FAILED;
 	}
        
-      user = lookup_user(user_length, username);
-      lsh_string_free(user);
+      user = lookup_user(username, 1);
 
       if (!user)
 	{
@@ -159,60 +166,60 @@ static int do_authenticate(struct userauth *c,
 	  return LSH_AUTH_FAILED;
 	}
 
-      access = verify_password(user, password);
-
-      lsh_string_free(password);
+      access = verify_password(user, password, 1);
 
       if (access)
-	return LOGIN(login, user);
+	{
+	  *result = LOGIN(closure->login, user, service);
+	  return LSH_OK | LSH_GOON;
+	}
       else
 	{
-	  lsh_free(user);
+	  /* FIXME: Free user struct */
 	  return LSH_AUTH_FAILED;
 	}
     }
-  lsh_string_free(user);
+  lsh_string_free(username);
 
   if (password)
     lsh_string_free(password);
   return 0;
 }
   
-struct userauth *make_unix_userauth(struct alist *services)
+struct userauth *make_unix_userauth(struct login_method *login,
+				    struct alist *services)
 {
   struct unix_authentication *closure;
 
   NEW(closure);
   closure->super.authenticate = do_authenticate;
+  closure->login = login;
   closure->services = services;
 
   return &closure->super;
 }
 
-struct setuid_handler
+struct setuid_service
 {
-  struct unix_service super;
+  struct ssh_service super;
 
+  struct unix_user *user;
   /* Service to start once we have changed to the correct uid. */
   struct ssh_service *service;
 };
 
-static int do_setuid(struct unix_service *closure, struct user)
+static int do_setuid(struct ssh_service *c,
+		     struct ssh_connection *connection)
 {
-  uid_t servers_uid = get_uid();
+  struct setuid_service *closure  = (struct setuid_service *) c;  
+  uid_t server_uid = getuid();
   int res = 0;
-  struct *pw;
 
-  pw = getpwuid(user->uid);
-  if (!pw)
+  MDEBUG(closure);
+  
+  if (server_uid != closure->user->uid)
     {
-      werror("do_fork: User disappeared!\n");
-      return LSH_AUTH_FAILED;
-    }
-
-  if (servers_uid != user->uid)
-    {
-      if (servers_uid)
+      if (server_uid)
 	/* Not root */
 	return LSH_AUTH_FAILED;
 
@@ -229,17 +236,17 @@ static int do_setuid(struct unix_service *closure, struct user)
 	   * wrong, the server will think that the user is logged in
 	   * under his or her user id, while in fact the process is
 	   * still running as root. */
-	  if (initgroups(pw->pw_name, pw->pw_gid) < 0)
+	  if (initgroups(closure->user->username->data, closure->user->gid) < 0)
 	    {
 	      werror("initgroups failed: %s\n", strerror(errno));
 	      return LSH_FAIL | LSH_DIE | LSH_KILL_OTHERS;
 	    }
-	  if (setgid(pw->pw_gid) < 0)
+	  if (setgid(closure->user->gid) < 0)
 	    {
 	      werror("setgid failed: %s\n", strerror(errno));
 	      return LSH_FAIL | LSH_DIE | LSH_KILL_OTHERS;
 	    }
-	  if (setuid(pw->pw_uid) < 0)
+	  if (setuid(closure->user->uid) < 0)
 	    {
 	      werror("setuid failed: %s\n", strerror(errno));
 	      return LSH_FAIL | LSH_DIE | LSH_KILL_OTHERS;
@@ -255,32 +262,53 @@ static int do_setuid(struct unix_service *closure, struct user)
 
   /* Change to user's home directory. FIXME: If the server is running
    * as the same user, perhaps it's better to use $HOME? */
-  if (!pw->pw_dir)
+  if (!closure->user->home)
     {
       if (chdir("/") < 0)
-	fatal("Strange: pw->pw_dir is NULL, and chdir(\"/\") failed: %s\n",
+	fatal("Strange: home directory was NULL, and chdir(\"/\") failed: %s\n",
 	      strerror(errno));
     }
   else
-    if (chdir(pw->pw_dir) < 0)
+    if (chdir(closure->user->home->data) < 0)
       {
 	werror("chdir to %s failed (using / instead): %s\n",
-	       pw->pw_dir ? pw->pw_dir : "none", strerror(errno));
+	       closure->user->home ? (char *) closure->user->home->data : "none",
+	       strerror(errno));
 	if (chdir("/") < 0)
 	  fatal("chdir(\"/\") failed: %s\n", strerror(errno));
       }
-  	       
-  /* Initialize the service, somehow */
+
+  /* Initialize environment, somehow. In particular, the HOME and
+   * LOGNAME variables */
+
+  /* If closure->user is not needed anymore, deallocate it (and set
+   * the pointer to NULL, to tell gc about that). */
+
+  return res | SERVICE_INIT(closure->service, connection);
 }
 
-struct unix_service *make_setuid_handler(struct ssh_service *service)
+static struct ssh_service *do_login(struct login_method *closure,
+				    struct unix_user *user,
+				    struct ssh_service *service)
 {
-  struct setuid_handler *closure;
+  struct setuid_service *res;
 
-  NEW(closure);
+  MDEBUG(closure);
+  
+  NEW(res);
+  res->super.init = do_setuid;
+  res->user = user;
+  res->service = service;
 
-  closure->super.login = do_setuid;
-  closure->service = service;
+  return &res->super;
+}
 
-  return &closure->super;
+struct login_method *make_unix_login(void)
+{
+  struct login_method *self;
+
+  NEW(self);
+  self->login = do_login;
+
+  return self;
 }
