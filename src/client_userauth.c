@@ -606,7 +606,7 @@ send_password(struct client_password_state *state)
   struct lsh_string *passwd
     = INTERACT_READ_PASSWORD(state->tty, MAX_PASSWD,
 			     ssh_format("Password for %lS: ",
-					state->userauth->username), 1);
+					state->userauth->username));
 
   if (passwd)
     {

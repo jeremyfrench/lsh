@@ -339,7 +339,7 @@ process_private(struct lsh_string *key,
 	  struct lsh_string *again;
 	  
 	  pw = INTERACT_READ_PASSWORD(options->tty, 500,
-				      ssh_format("Enter new passphrase: "), 1);
+				      ssh_format("Enter new passphrase: "));
 	  if (!pw)
 	    {
 	      werror("Aborted.");
@@ -348,7 +348,7 @@ process_private(struct lsh_string *key,
 
 	  
 	  again = INTERACT_READ_PASSWORD(options->tty, 500,
-					 ssh_format("Again: "), 1);
+					 ssh_format("Again: "));
 	  if (!again)
 	    {
 	      werror("Aborted.");

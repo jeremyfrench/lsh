@@ -177,7 +177,7 @@ unix_is_tty(struct interact *s)
 static struct lsh_string *
 unix_read_password(struct interact *s,
 		   uint32_t max_length UNUSED,
-		   const struct lsh_string *prompt, int free)
+		   const struct lsh_string *prompt)
 {
   CAST(unix_interact, self, s);
   trace("unix_interact.c:unix_read_password\n");
@@ -192,8 +192,7 @@ unix_read_password(struct interact *s,
       if (null < 0)
 	{
 	  werror("Failed to open /dev/null!\n");
-	  if (free)
-	    lsh_string_free(prompt);
+	  lsh_string_free(prompt);
 	  
 	  return NULL;
 	}
@@ -203,8 +202,8 @@ unix_read_password(struct interact *s,
       if (!argv[1])
 	{
 	  close(null);
-	  if (free)
-	    lsh_string_free(prompt);
+	  lsh_string_free(prompt);
+
 	  return NULL;
 	}
       argv[2] = NULL;
@@ -214,8 +213,7 @@ unix_read_password(struct interact *s,
 
       password = lsh_popen_read(self->askpass, argv, null, 100);
 
-      if (free)
-	lsh_string_free(prompt);
+      lsh_string_free(prompt);
       
       return password;
     }
@@ -228,23 +226,20 @@ unix_read_password(struct interact *s,
 
       if (!IS_TTY(self) || quiet_flag)
 	{
-	  if (free)
-	    lsh_string_free(prompt);
+	  lsh_string_free(prompt);
 	  return NULL;
 	}
 
       cprompt = lsh_get_cstring(prompt);
       if (!cprompt)
 	{
-	  if (free)
-	    lsh_string_free(prompt);
+	  lsh_string_free(prompt);
 	  return NULL;
 	}
       /* NOTE: This function uses a static buffer. */
       password = getpass(cprompt);
   
-      if (free)
-	lsh_string_free(prompt);
+      lsh_string_free(prompt);
   
       if (!password)
 	return NULL;

@@ -167,12 +167,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  struct lsh_string *again;
 
 	  pw = INTERACT_READ_PASSWORD(self->tty, 500,
-				      ssh_format("Enter new SRP password: "), 1);
+				      ssh_format("Enter new SRP password: "));
 	  if (!pw)
 	    argp_failure(state, EXIT_FAILURE, 0, "Aborted.");
 
 	  again = INTERACT_READ_PASSWORD(self->tty, 500,
-					 ssh_format("Again: "), 1);
+					 ssh_format("Again: "));
 	  if (!again)
 	    argp_failure(state, EXIT_FAILURE, 0, "Aborted.");
 

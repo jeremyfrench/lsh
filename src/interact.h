@@ -64,12 +64,10 @@ struct terminal_dimensions;
      (name interact)
      (vars
        (is_tty method int)
-       ; (read_line method int "uint32_t size" "uint8_t *buffer")
-       ;; FIXME: Do we really need the FREE parameter?
+       ; Consumes the prompt
        (read_password method (string)
                   "uint32_t max_length"
-                  "const struct lsh_string *prompt"
-		  "int free")
+                 "const struct lsh_string *prompt")
        (set_askpass method void "const char *askpass")
        (yes_or_no method int
                   "const struct lsh_string *prompt"
@@ -85,8 +83,8 @@ struct terminal_dimensions;
 
 #define INTERACT_IS_TTY(i) \
   ((i)->is_tty((i)))
-#define INTERACT_READ_PASSWORD(i, l, p, f) \
-  ((i)->read_password((i), (l), (p), (f)))
+#define INTERACT_READ_PASSWORD(i, l, p) \
+  ((i)->read_password((i), (l), (p)))
 #define INTERACT_SET_ASKPASS(i, a) \
   ((i)->set_askpass((i), (a)))
 #define INTERACT_YES_OR_NO(i, p, d, f) \

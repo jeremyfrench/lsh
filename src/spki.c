@@ -524,7 +524,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 	struct lsh_string *password
 	  = INTERACT_READ_PASSWORD(interact, 500,
 				   ssh_format("Passphrase for key `%lS': ",
-					      label), 1);
+					      label));
 	struct lsh_string *clear;
 	uint8_t *key;
 	

@@ -266,7 +266,7 @@ do_handle_srp_reply(struct packet_handler *s,
   /* Ask for SRP password */
   passwd = INTERACT_READ_PASSWORD(self->srp->tty, MAX_PASSWD,
 				  ssh_format("SRP password for %lS: ",
-					     self->srp->name), 1);
+					     self->srp->name));
   if (!passwd)
     {
       lsh_string_free(salt);
