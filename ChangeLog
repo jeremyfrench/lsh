@@ -1,3 +1,25 @@
+2002-05-14  Pontus Sköld  <pont@soua.net>
+
+	* src/algorithms.c (list_algorithms): Added missing newline after
+	the list of algorithms.
+	(list_hostkey_algorithms): dito.
+
+2002-05-13  Pontus Sköld  <pont@soua.net>
+
+	* src/lsh.c (make_options): Don't fail totally if we can't create
+	a randomness source.
+	(main_argp_parser): Do argp_failure unless we have a valid
+	randomness object.
+
+	* src/lshd.c (main): Check for a correctly initialized random
+	object in options.
+	(make_lshd_options): Don't return failure if random creation
+	failed, just initialize signature_algorithms with a null random
+	source (this should enable users without a seed to do lsh --help
+	and normal users to do lshd --help).
+	(main_argp_parser): Do argp_failure unless we have a valid
+	randomness object.
+
 2002-05-06  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* README: Document requirement of autoconf-2.52 and
