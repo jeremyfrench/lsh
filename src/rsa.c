@@ -41,6 +41,7 @@
 
 #include "rsa.c.x"
 
+#define SA(x) sexp_a(ATOM_##x)
 
 static void
 pkcs1_encode(mpz_t m,
@@ -74,6 +75,8 @@ pkcs1_encode(mpz_t m,
   memset(em + 1, 0xff, i - 1);
   
   bignum_parse_u(m, length, em);
+
+  debug("pkcs1_encode: m = %xn\n", m);
 }
 
 /* GABA:
@@ -163,69 +166,76 @@ spki_init_rsa_public(struct rsa_public *key,
 */
 
 
-#define RSA_CRT 1
+#define RSA_CRT 0
 
 /* Compute x, the d:th root of m. Calling it with x == m is allowed. */
 static void
 rsa_compute_root(struct rsa_signer *self, mpz_t x, mpz_t m)
 {
+  debug("rsa_compute_root: n = %xn\n"
+	"                  e = %xn\n"
+	"                  m = %xn\n",
+	self->public.n, self->public.e, m);
+
 #if RSA_CRT
-  mpz_t xp; /* modulo p */
-  mpz_t xq; /* modulo q */
+  {
+    mpz_t xp; /* modulo p */
+    mpz_t xq; /* modulo q */
 
-  mpz_init(xp); mpz_init(xq);    
-  
-  /* Compute xq = m^d % q = (m%q)^b % q */
-  mpz_fdiv_r(xp, m, self->q);
-  mpz_powm(xq, xq, self->b, self->q);
+    mpz_init(xp); mpz_init(xq);    
 
-  /* Compute xp = m^d % p = (m%p)^a % p */
-  mpz_fdiv_r(xp, m, self->p);
-  mpz_powm(xp, xp, self->a, self->p);
+    /* Compute xq = m^d % q = (m%q)^b % q */
+    mpz_fdiv_r(xp, m, self->q);
+    mpz_powm(xq, xq, self->b, self->q);
 
-  /* Set xp' = (xp - xq) c % p. */
-  mpz_sub(xp, xp, xq);
-  mpz_mul(xp, xp, self->c);
-  mpz_fdiv_r(xp, xp, self->p);
+    /* Compute xp = m^d % p = (m%p)^a % p */
+    mpz_fdiv_r(xp, m, self->p);
+    mpz_powm(xp, xp, self->a, self->p);
 
-  /* Finally, compute x = xq + q xp'
-   *
-   * To prove that this works, note that
-   *
-   *   xp  = x + i p,
-   *   xq  = x + j q,
-   *   c q = 1 + k p
-   *
-   * for some integers i, j and k. Now, for some integer l,
-   *
-   *   xp' = (xp - xq) c + l p
-   *       = (x + i p - (x + j q)) c + l p
-   *       = (i p - j q) c + l p
-   *       = (i + l) p - j (c q)
-   *       = (i + l) p - j (1 + kp)
-   *       = (i + l - j k) p - j
-   *
-   * which shows that xp' = -j (mod p). We get
-   *
-   *   xq + q xp' = x + j q + (i + l - j k) p q - j q
-   *              = x + (i + l - j k) p q
-   *
-   * so that
-   *
-   *   xq + q xp' = x (mod pq)
-   *
-   * We also get 0 <= xq + q xp' < p q, because
-   *
-   *   0 <= xq < q and 0 <= * xp' < p.
-   */
-  mpz_mul(x, self->q, xp);
-  mpz_add(x, x, xq);
+    /* Set xp' = (xp - xq) c % p. */
+    mpz_sub(xp, xp, xq);
+    mpz_mul(xp, xp, self->c);
+    mpz_fdiv_r(xp, xp, self->p);
 
-  mpz_clear(xp); mpz_clear(xq);
-  
+    /* Finally, compute x = xq + q xp'
+     *
+     * To prove that this works, note that
+     *
+     *   xp  = x + i p,
+     *   xq  = x + j q,
+     *   c q = 1 + k p
+     *
+     * for some integers i, j and k. Now, for some integer l,
+     *
+     *   xp' = (xp - xq) c + l p
+     *       = (x + i p - (x + j q)) c + l p
+     *       = (i p - j q) c + l p
+     *       = (i + l) p - j (c q)
+     *       = (i + l) p - j (1 + kp)
+     *       = (i + l - j k) p - j
+     *
+     * which shows that xp' = -j (mod p). We get
+     *
+     *   xq + q xp' = x + j q + (i + l - j k) p q - j q
+     *              = x + (i + l - j k) p q
+     *
+     * so that
+     *
+     *   xq + q xp' = x (mod pq)
+     *
+     * We also get 0 <= xq + q xp' < p q, because
+     *
+     *   0 <= xq < q and 0 <= * xp' < p.
+     */
+    mpz_mul(x, self->q, xp);
+    mpz_add(x, x, xq);
+
+    mpz_clear(xp); mpz_clear(xq);
+  }  
 #else /* !RSA_CRT */
   mpz_powm(x, m, self->d, self->public.n);
 #endif /* !RSA_CRT */
+  debug("rsa_compute_root: x = %xn\n", x);
 }
 
 static struct lsh_string *
@@ -289,7 +299,7 @@ do_rsa_sign_spki(struct signer *s,
 
 #if 0
   /* Build signature */
-  signature = sexp_l(4, sexp_a(ATOM_SIGNATURE), hash, principal,
+  signature = sexp_l(4, SA(SIGNATURE), hash, principal,
 		     sexp_un(m), -1);
 #endif
   
@@ -302,10 +312,10 @@ do_rsa_public_key(struct signer *s)
 {
   CAST(rsa_signer, self, s);
 
-  return sexp_l(2, sexp_a(ATOM_PUBLIC_KEY),
+  return sexp_l(2, SA(PUBLIC_KEY),
 		sexp_l(3, sexp_a(self->public.params->name),
-		       sexp_l(2, sexp_a(ATOM_N), sexp_un(self->public.n), -1),
-		       sexp_l(2, sexp_a(ATOM_E), sexp_un(self->public.e), -1),
+		       sexp_l(2, SA(N), sexp_un(self->public.n), -1),
+		       sexp_l(2, SA(E), sexp_un(self->public.e), -1),
 		       -1), -1);
 }
 
@@ -324,9 +334,16 @@ rsa_pkcs1_verify(struct rsa_verifier *self,
 
   mpz_init(m);
   mpz_init(s);
-  
+
+  debug("rsa_pkcs1_verify: n = %xn\n"
+	"                  e = %xn\n"
+	"                  s = %xn\n",
+	self->public.n, self->public.e, signature);
+
   mpz_powm(s, signature, self->public.e, self->public.n);
 
+  debug("rsa_pkcs1_verify: m = %xn\n", s);
+  
   pkcs1_encode(m, self->public.params, self->public.size - 1,
 	       length, msg);
   
