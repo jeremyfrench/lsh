@@ -8,7 +8,7 @@ info_TEXINFOS = lsh.texinfo
 
 EXTRA_DIST = HACKING NOTES PORTS TASKLIST \
 	configuration.txt gateway-mode.txt \
-	Makefile.am.in lsh.html \
+	lsh.html \
 	srp-spec.nroff srp-spec.txt fixff.sh fixff.pl
 
 # DVIS = $(addsuffix .dvi, $(man_MANS))

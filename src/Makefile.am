@@ -203,7 +203,7 @@ EXTRA_DIST = lsh-authorize ssh-conv lsh-upgrade lcp \
 	$(generated_sources) \
 	sexp_chars.in \
 	jpoll.h jpoll.c \
-	$(dist_headers) $(dist_classes) Makefile.am.in
+	$(dist_headers) $(dist_classes)
 
 CLEANFILES = *.hT *.cT *.xT
 DISTCLEANFILES = environ.h
