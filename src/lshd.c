@@ -39,6 +39,7 @@
 #include "io.h"
 #include "password.h"
 #include "randomness.h"
+#include "reaper.h"
 #include "server.h"
 #include "server_keyexchange.h"
 #include "ssh.h"
@@ -128,6 +129,8 @@ int main(int argc, char **argv)
   /* STATIC, because the object exists at gc time */
   struct io_backend backend = { STATIC_HEADER };
 
+  struct reap *reaper;
+  
   struct lsh_string *random_seed;
   struct randomness *r;
   struct diffie_hellman_method *dh;
@@ -135,7 +138,7 @@ int main(int argc, char **argv)
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
   struct packet_handler *kexinit_handler;
-
+  
   int advertised_methods[] = { ATOM_PASSWORD, -1 };
   
   /* For filtering messages. Could perhaps also be used when converting
@@ -176,7 +179,7 @@ int main(int argc, char **argv)
     }
 
   init_backend(&backend);
-  
+  reaper = make_reaper();
   random_seed = ssh_format("%z", "foobar");
 
   r = make_poor_random(&sha_algorithm, random_seed);
@@ -205,7 +208,8 @@ int main(int argc, char **argv)
 			       make_server_session_service
 			       (make_alist(0, -1),
 				make_alist(1, ATOM_SHELL,
-					   make_shell_handler(&backend),
+					   make_shell_handler(&backend,
+							      reaper),
 					   -1)),
 			       -1)),
 		   -1)),
@@ -222,7 +226,7 @@ int main(int argc, char **argv)
       return 1;
     }
   
-  io_run(&backend);
+  reaper_run(reaper, &backend);
 
   return 0;
 }
