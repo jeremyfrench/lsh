@@ -44,7 +44,7 @@
    $LOGNAME (Sys V convention) and $USER (BSD convention). */
 
 #define USER_NAME_FROM_ENV(s) do {		\
-  (s) = getenv(ENV_LOGNAME);			\
+  (s) = getenv(ENV_USER);			\
   if (!(s))					\
-    (s) = getenv(ENV_USER);			\
+    (s) = getenv(ENV_LOGNAME);			\
 } while (0)
