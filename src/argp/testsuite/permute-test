@@ -18,7 +18,7 @@ die () {
 for args in "-v foo bar" \
             "-v -v foo bar" "-v foo -v bar" "-v foo bar -v" \
             "foo -v bar -v" "foo bar -v -v" "foo -v -v bar" ; do
-  ./ex3 $args | diff -q - test.out || die "Test failed with args $args"
+  ./ex3 $args | diff - test.out >/dev/null || die "Test failed with args $args"
 done
 
 exit 0
