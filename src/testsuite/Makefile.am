@@ -15,7 +15,7 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 	lsh-1-test lsh-2-test lsh-3-test lsh-4-test \
 	lsh-5-test lsh-6-test lsh-7-test lsh-8-test lsh-9-test \
 	lsh-cat-test lshg-1-test lshg-cat-test lshg-cat-2-test \
-	tcpip-local-test tcpip-remote-test \
+	tcpip-local-test tcpip-local-in-use-test tcpip-remote-test \
 	lshg-tcpip-local-test ssh1-fallback-test \
 	rapid7-lsh-test rapid7-lshd-test
 
