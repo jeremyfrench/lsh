@@ -178,6 +178,8 @@ do_eof(struct ssh_channel *channel)
 {
   CAST(server_session, session, channel);
 
+  trace("server_session.c: do_eof()\n");
+
   write_buffer_close(session->in->write_buffer);
 
   if ( (channel->flags & CHANNEL_SENT_EOF)
@@ -373,6 +375,8 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
   struct ssh_channel *channel = &session->super;
   
   CHECK_TYPE(server_session, session);
+
+  trace("server_session.c: do_exit_shell()\n");
   
   /* NOTE: We don't close the child's stdio here. The io-backend
    * should notice EOF anyway, and the client should send EOF when it
@@ -589,8 +593,8 @@ spawn_process(struct server_session *session,
 	if (child)
 	  { /* Parent */
 	    struct ssh_channel *channel = &session->super;
-	    debug("Parent process\n");
-
+	    trace("spawn_process: Parent process\n");
+	    
 	    session->process = child;
 
 	    /* Close the child's fd:s */
@@ -656,9 +660,18 @@ spawn_process(struct server_session *session,
 	  }
 	else
 	  { /* Child */
-	    debug("spawn_process: Child process\n");
+	    trace("spawn_process: Child process\n");
 	    assert(getuid() == session->user->uid);
-	    
+
+#if 0
+	    /* Debug timing problems */
+	    if (sleep(5))
+	      {
+		trace("server_session.c: sleep interrupted\n");
+
+		sleep(5);
+	      }
+#endif    
 	    if (!USER_CHDIR_HOME(session->user))
 	      {
 		werror("Could not change to home (or root) directory!\n");

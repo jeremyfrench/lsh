@@ -218,5 +218,9 @@ pointer in some other places as well.
 
 Exceptions from listen are handled badly in several places. 
 
-Rename the sexp-style caommand line option "-o" to something better.
--o should be used to specify the output file, where applicable.
+Occasionally,
+
+  lsh -p 4711 -v localhost echo hello
+
+exits without writing any "hello". Perhaps some race condition, as I
+can't reproduce it reliably.
