@@ -41,12 +41,16 @@ int tty_decode_term_mode(struct termios *ios, UINT32 t_len, UINT8 *t_modes);
 #if HAVE_CFMAKERAW
 #define CFMAKERAW cfmakeraw
 #else /* !HAVE_CFMAKERAW */
-/* This definition is probably from the linux cfmakeraw man page. */
+/* The flags part definition is probably from the linux cfmakeraw man
+ * page. We also set the MIN and TIME attributes (note that these use
+ * the same fields as VEOF and VEOL). */
+
 #define CFMAKERAW(ios) do {						   \
   (ios)->c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON); \
   (ios)->c_oflag &= ~OPOST;						   \
   (ios)->c_lflag &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);			   \
   (ios)->c_cflag &= ~(CSIZE|PARENB); (ios)->c_cflag |= CS8;		   \
+  (ios)->c_cc[VMIN] = 3; (ios)->c_cc[VTIME] = 2;			   \
 } while(0)
 #endif /* !HAVE_CFMAKERAW */
 
