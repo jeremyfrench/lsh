@@ -356,11 +356,11 @@ spki_tag_list_alloc(void *ctx, nettle_realloc_func *realloc,
 
   assert(type == SPKI_TAG_SET || type == SPKI_TAG_LIST);
   
-  if (tag)
-    {
-      spki_tag_init(&tag->super, type);
-      tag->children = children;
-    }
+  if (!tag)
+    return NULL;
+
+  spki_tag_init(&tag->super, type);
+  tag->children = children;
 
   return &tag->super;
 }
@@ -438,7 +438,7 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
  *
  * (* set a)             --> a
  *
- * Requires that the children elements passet in are already
+ * Requires that the children elements passed in are already
  * normalized.
  */
 
@@ -589,6 +589,9 @@ spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
 	
 	struct spki_cons *children
 	  = spki_tag_compile_list(ctx, realloc, i);
+
+	if (!children)
+	  return NULL;
 	
 	tag = spki_tag_list_alloc(ctx, realloc, type,
 				  spki_cons_nreverse(children));
@@ -736,10 +739,13 @@ static int
 list_includes(struct spki_cons *list,
 	      struct spki_tag *request)
 {
-  /* There may be fewer elements in the request list than in the
-   * delegation list. A delegation list implicitly includes any number
-   * of (*) forms at the end needed to match all elements in the
-   * request form. */
+  /* There may be fewer elements in the delegation list than in the
+   * request list. A delegation list implicitly includes any number of
+   * (*) forms at the end needed to match all elements in the request
+   * form.
+   *
+   * For example, the delegation (tag (ftp /home/nisse)) includes the
+   * request (tag (ftp /home/nisse write)) */
 
   struct spki_cons *c;
   if (request->type != SPKI_TAG_LIST)
@@ -753,7 +759,8 @@ list_includes(struct spki_cons *list,
 	return 0;
     }
 
-  /* If we haven't matched all elements, return failure */
+  /* If we have matched all elements in the delegation list, the
+   * request is granted. */
   return (list == NULL);
 }
 
@@ -774,7 +781,7 @@ spki_tag_includes(struct spki_tag *delegated,
 
     case SPKI_TAG_PREFIX:
       /* Request must have the same display type, and include
-       * the delagation as a prefix. */
+       * the delegation as a prefix. */
       return (request->type == SPKI_TAG_ATOM
 	      || request->type == SPKI_TAG_PREFIX)
 	&& atom_prefix(tag_atom(delegated), tag_atom(request));	
