@@ -35,7 +35,6 @@ gateway_channel.h.x
 gateway_commands.c.x
 handshake.c.x
 handshake.h.x
-hmac.c.x
 interact.h.x
 io.c.x
 io.h.x
@@ -56,7 +55,6 @@ lsh.c.x
 lsh_proxy.c.x
 lshd.c.x
 lshg.c.x
-md5.c.x
 pad.c.x
 parse_config.c.x
 proxy.c.x
@@ -90,7 +88,6 @@ server_x11.c.x
 server_x11.h.x
 sexp-conv.c.x
 sexp.h.x
-sha.c.x
 spki.h.x
 srp-gen.c.x
 srp.h.x
