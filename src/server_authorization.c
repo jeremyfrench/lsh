@@ -44,56 +44,57 @@
      (super lookup_verifier)
      (vars
        (index_name string)
-       (signalgo object signature_algorithm)
+       ;; (signalgo object signature_algorithm)
        (hashalgo object hash_algorithm)))
 */
 
-static struct verifier *do_key_lookup(struct lookup_verifier *c,
-				      int method,
-				      struct lsh_string *keyholder,
-				      struct lsh_string *key)
+static struct verifier *
+do_key_lookup(struct lookup_verifier *c,
+	      int method,
+	      struct lsh_string *keyholder,
+	      struct lsh_string *key)
 {
   CAST(authorization_db, closure, c);
-  struct sexp *pubkey_spki;
-  struct lsh_string *pubkey_spki_blob, *filename;
-  UINT8 *pubkey_spki_hash;
-  struct hash_instance *h;
+  struct lsh_string *filename;
+
   struct stat st;
   struct unix_user *user;
+  struct dsa_verifier *v;
 
+  /* FIXME: Hmm. User lookup is done twice, both here and higher up in
+   * server_publickey.c: do_authenticate. It might make more sense to
+   * pass this data instead of the keyholder username. */
+  
   user = lookup_user(keyholder, 0);
   if (!user)
     return NULL;
 
   if (method != ATOM_SSH_DSS)
     return NULL;
+
+  /* FIXME: Perhaps this is the right place to choose to apply the
+   * PEER_SSH_DSS_KLUDGE? */
   
-  pubkey_spki = keyblob2spki(key);
-  if (!pubkey_spki)
+  v = make_ssh_dss_verifier(key->length, key->data);
+
+  if (!v)
     return NULL;
-
-  pubkey_spki_blob = sexp_format(pubkey_spki, SEXP_CANONICAL, 0);
-  /* FIXME: spki acl reading should go here */
-  KILL(pubkey_spki);
-
-  h = MAKE_HASH(closure->hashalgo);
-  pubkey_spki_hash = alloca(closure->hashalgo->hash_size);
-  HASH_UPDATE(h, pubkey_spki_blob->length, pubkey_spki_blob->data);
-  HASH_DIGEST(h, pubkey_spki_hash);
-  KILL(h);
-  lsh_string_free(pubkey_spki_blob);
   
-  filename = ssh_format("%lS/.lsh/%lS/%lxs%c", 
+  /* FIXME: Proper spki acl reading should go here. */
+  
+  filename = ssh_format("%lS/.lsh/%lS/%lxfS%c", 
 			user->home,
 			closure->index_name,
-			closure->hashalgo->hash_size, pubkey_spki_hash,
+			hash_string(closure->hashalgo,
+				    sexp_format(dsa_to_spki_public_key(&v->public),
+						SEXP_CANONICAL, 0),
+				    1),				    
 			0);
 
   if (stat(filename->data, &st) == 0)
     {
       lsh_string_free(filename);
-      /* FIXME: maybe MAKE_VERIFIER() should get the key in SPKI form */
-      return MAKE_VERIFIER(closure->signalgo, key->length, key->data);
+      return &v->super;
     }
   lsh_string_free(filename);
   return NULL;
@@ -101,14 +102,14 @@ static struct verifier *do_key_lookup(struct lookup_verifier *c,
 
 struct lookup_verifier *
 make_authorization_db(struct lsh_string *index_name, 
-		      struct signature_algorithm *s,
+		      /* struct signature_algorithm *s, */
 		      struct hash_algorithm *h)
 {
   NEW(authorization_db, res);
 
   res->super.lookup = do_key_lookup;
   res->index_name = index_name;
-  res->signalgo = s;
+  /* res->signalgo = s; */
   res->hashalgo = h;
 
   return &res->super;
