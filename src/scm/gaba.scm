@@ -45,17 +45,11 @@
 			      (filter p (cdr list))))
 	(else (filter p (cdr list)))))
 
-(define (implode list separator)
-  (cond ((null? list) '())
-	((null? (cdr list)) list)
-	(else `(,(car list) ,separator ,@(implode (cdr list) separator)))))
-
 (define (list-prefix l n)
   (if (zero? n) '()
       (cons (car l) (list-prefix (cdr l) (- n 1)))))
 
 (define (atom? o) (not (list? o)))
-;; (define (atom? x) (or (symbol? x) (string? x)))
 
 (define-syntax when
   (syntax-rules ()
@@ -135,20 +129,12 @@
 (define (c-append . args)
   (lambda (i) (apply out i args)))
 
-(define (c-var name) name)
-
 (define (c-string name)
   ;; FIXME: Could do quoting better
   (c-append "\"" name "\""))
 
-(define (c-statement expr)
-  (c-append expr ";"))
-
 (define (c-address expr)
   (c-append "&(" expr ")"))
-
-(define (c-nl o)
-  (c-append o indent))
 
 (define (c-list separator list)
       (if (null? list) '()
@@ -156,8 +142,6 @@
 		(map (lambda (o)
 		       (c-append separator o))
 		     (cdr list)))))
-
-(define (c-list* separator . list) (c-list separator list))
 
 (define (c-block statements)
   (c-append "{" (map (lambda (s) (c-append indent s ";"))
@@ -177,7 +161,7 @@
   (c-append return indent name
 	    "("
 	    (if (null? args ) "void"
-		(c-list (c-nl ",") args))
+		(c-list (c-append "," indent) args))
 	    ")"))
 
 (define (c-prototype* return name . args)
@@ -229,24 +213,6 @@
 	    (c-block (map c-declare vars))
 	    ";" indent))
 
-
-#!
-(define (type->init type expr)
-  (if (atom? type)
-      (type->init `(simple ,type) expr)
-      (case (car type)
-	((object string space pointer) (list expr "= NULL;\n"))
-	((bignum) (list "mpz_init(" expr ");\n"))
-	((array)
-	 (let ((init-k (type->init (cadr type) (list "(" expr ")[k]"))))
-	   (and init-k
-		(list "{\n  unsigned k;\n"
-		      "  for (k=0; k<" (caddr type) "; k++)\n"
-		      "    " init-k
-		      "}\n"))))
-
-	(else (error "make_class: type->init: Invalid type" type)))))
-!#
 
 (define var-name car)
 (define var-type cdr)
@@ -524,11 +490,8 @@
 	      (struct-free-function name vars)
 	      "#endif /* !GABA_DECLARE */\n\n")))
 
+
 ;;;; Expression compiler
-
-;; Can't use load; it writes messages to stdout.
-;;(load 'compiler)
-
 
 ;; Constants is an alist of (name value call_1 call_2 ... call_n)
 ;; where value is a C expression representing the value. call_i is
@@ -679,5 +642,3 @@
 	(unless (eof-object? exp)
 		(out 0 (process-input exp))
 		(main))))))
-
-; (main)
