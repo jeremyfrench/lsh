@@ -148,11 +148,11 @@ struct command *make_listen_command(struct command *callback,
 
 static struct lsh_object *
 collect_listen(struct collect_info_2 *info,
-	       struct lsh_object *b,
-	       struct lsh_object *c)
+	       struct lsh_object *a,
+	       struct lsh_object *b)
 {
-  CAST_SUBTYPE(command, callback, c);
-  CAST(io_backend, backend, b);
+  CAST(io_backend, backend, a);
+  CAST_SUBTYPE(command, callback, b);
   assert(!info);
 
   return &make_listen_command(callback, backend)->super;
@@ -163,6 +163,8 @@ STATIC_COLLECT_2_FINAL(collect_listen);
 
 struct collect_info_1 listen_command =
 STATIC_COLLECT_1(&collect_info_listen_2);
+
+
 
 /* GABA:
    (class
@@ -223,10 +225,61 @@ static int do_connect(struct io_backend *backend,
   return LSH_OK | LSH_GOON;
 }
 
-/* Simple connect function taking port only as argument. Also used for
- * listen.
- *
- * (connect address) */
+
+/* Connect variant, taking a connection object as argument (used for
+ * rememembering the connected fd). */
+
+/* GABA:
+   (class
+     (name connect_connection)
+     (super command)
+     (vars
+       (backend object io_backend)
+       (target object address_info)))
+*/
+
+static int do_connect_connection(struct command *s,
+				 struct lsh_object *x,
+				 struct command_continuation *c)
+{
+  CAST(connect_connection, self, s);
+  CAST(ssh_connection, connection, x);
+  
+  return do_connect(self->backend, self->target, connection->resources, c);
+}
+
+
+struct command *make_connect_connection(struct io_backend *backend,
+					struct address_info *target)
+{
+  NEW(connect_connection, self);
+  self->super.call = do_connect_connection;
+  self->backend = backend;
+  self->target = target;
+
+  return &self->super;
+}
+
+static struct lsh_object *
+collect_connect_connection(struct collect_info_2 *info,
+			   struct lsh_object *a,
+			   struct lsh_object *b)
+{
+  CAST(io_backend, backend, a);
+  CAST(address_info, target, b);
+  assert(!info);
+  assert(backend);
+  assert(target);
+  
+  return &make_connect_connection(backend, target)->super;
+}
+
+static struct collect_info_2 collect_info_connect_2 =
+STATIC_COLLECT_2_FINAL(collect_connect_connection);
+
+struct collect_info_1 connect_with_connection =
+STATIC_COLLECT_1(&collect_info_connect_2);
+
 
 /* GABA:
    (class
@@ -236,6 +289,11 @@ static int do_connect(struct io_backend *backend,
        (backend object io_backend)
        (resources object resource_list)))
 */
+
+/* Simple connect function taking port only as argument. Also used for
+ * listen.
+ *
+ * (connect address) */
 
 static int do_simple_connect(struct command *s,
 			     struct lsh_object *a,
@@ -259,6 +317,7 @@ make_simple_connect(struct io_backend *backend,
 
   return &self->super;
 }
+
 
 static int do_simple_listen(struct command *s,
 			    struct lsh_object *a,
