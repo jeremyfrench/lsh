@@ -1042,7 +1042,7 @@ make_address_info(struct lsh_string *host, UINT32 port)
 }
 
 struct address_info *
-sockaddr2info(size_t addr_len UNUSED,
+sockaddr2info(size_t addr_len,
 	      struct sockaddr *addr)
 {
   NEW(address_info, info);
@@ -1050,42 +1050,40 @@ sockaddr2info(size_t addr_len UNUSED,
   switch(addr->sa_family)
     {
     case AF_INET:
+      assert(addr_len == sizeof(struct sockaddr_in));
       {
 	struct sockaddr_in *in = (struct sockaddr_in *) addr;
 	UINT32 ip = ntohl(in->sin_addr.s_addr);
+	
 	info->port = ntohs(in->sin_port);
 	info->ip = ssh_format("%di.%di.%di.%di",
 			      (ip >> 24) & 0xff,
 			      (ip >> 16) & 0xff,
 			      (ip >> 8) & 0xff,
 			      ip & 0xff);
-	return info;
       }
-      /* FIXME: This ssh_format call is broken, %xi is not a valid
-       * format specifier. So this code needs to be rewritten. */
-
+      return info;
+      
 #if WITH_IPV6
     case AF_INET6:
+      assert(addr_len == sizeof(struct sockaddr_in6));
       {
 	struct sockaddr_in6 *in = (struct sockaddr_in6 *) addr;
-	UINT8 *ip = in->sin6_addr.s6_addr;
+
 	info->port = ntohs(in->sin6_port);
-#if 0
-	info->ip = ssh_format("%xi:%xi:%xi:%xi:%xi:%xi:%xi:%xi",
-			      (ip[0]  << 8) | ip[1],
-			      (ip[2]  << 8) | ip[3],
-			      (ip[4]  << 8) | ip[5],
-			      (ip[6]  << 8) | ip[7],
-			      (ip[8]  << 8) | ip[9],
-			      (ip[10] << 8) | ip[11],
-			      (ip[12] << 8) | ip[13],
-			      (ip[14] << 8) | ip[15]);
-#else
-	info->ip = ssh_format("%lz", "Unknown IPv6 address");
-#endif
-	return info;
+	info->ip = lsh_string_alloc(INET6_ADDRSTRLEN + 1);
+
+	/* Does inet_ntop always use lower case letters? If not, we
+	 * should perhaps lowercase the result explicitly. */
+	if (!inet_ntop(addr->sa_family, &in->sin6_addr,
+		       info->ip->data, info->ip->length))
+	  fatal("inet_ntop failed for IPv4 address.\n");
+
+	lsh_string_trunc(info->ip, strlen(info->ip->data));
       }
+      return info;
 #endif /* WITH_IPV6 */
+
     case AF_UNIX:
       /* Silently return NULL. This happens when a gateway client
        * connects. */
