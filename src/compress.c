@@ -23,10 +23,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "lsh_types.h"
-#include "xalloc.h"
-
 #include "compress.h"
+
+#include "xalloc.h"
 
 #include "compress.c.x"
 

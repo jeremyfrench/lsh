@@ -26,7 +26,7 @@
 #ifndef LSH_LIST_H_INCLUDED
 #define LSH_LIST_H_INCLUDED
 
-#include "lsh_types.h"
+#include "lsh.h"
 
 #include <stdarg.h>
 

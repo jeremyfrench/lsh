@@ -26,7 +26,7 @@
 #ifndef LSH_ABSTRACT_COMPRESS_H_INCLUDED
 #define LSH_ABSTRACT_COMPRESS_H_INCLUDED
 
-#include "lsh_types.h"
+#include "lsh.h"
 
 #define CLASS_DECLARE
 #include "abstract_compress.h.x"

@@ -26,8 +26,6 @@
 #ifndef LSH_ABSTRACT_CRYPTO_H_INCLUDED
 #define LSH_ABSTRACT_CRYPTO_H_INCLUDED
 
-#include "lsh_types.h"
-
 #include "list.h"
 
 /* Use the same instance struct for both hash functions and macs. This

@@ -28,7 +28,7 @@
 #ifndef LSH_RESOURCE_H_INCLUDED
 #define LSH_RESOURCE_H_INCLUDED
 
-#include "lsh_types.h"
+#include "lsh.h"
 
 #define CLASS_DECLARE
 #include "resource.h.x"

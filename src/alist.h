@@ -26,7 +26,9 @@
 #ifndef LSH_ALIST_H_INCLUDED
 #define LSH_ALIST_H_INCLUDED
 
-#include "lsh_types.h"
+#include "lsh.h"
+
+#include <stdarg.h>
 
 /* Forward declaration */
 struct alist;
@@ -71,11 +73,14 @@ struct alist;
 #define ALIST_KEYS(alist) ((alist)->keys((alist)))
 #endif
 
+struct alist *alist_addv(struct alist *a, unsigned n, va_list args);
+struct alist *alist_add(struct alist *a, unsigned n, ...);
+
 /* n is the number of pairs. The argument list should be terminated
  * with -1, for sanity checks. */
-
-struct alist *make_linear_alist(int n, ...);
-struct alist *make_linked_alist(int n, ...);
+     
+struct alist *make_linear_alist(unsigned n, ...);
+struct alist *make_linked_alist(unsigned n, ...);
 
 #define make_alist make_linear_alist
 

@@ -27,7 +27,7 @@
 #ifndef LSH_PASSWORD_H_INCLUDED
 #define LSH_PASSWORD_H_INCLUDED
 
-#include "lsh_types.h"
+#include "lsh.h"
 
 #include "alist.h"
 
