@@ -192,10 +192,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (corefile . int)
        (pid_file . "const char *")
        ; -1 means use pid file iff we're in daemonic mode
-       (use_pid_file . int)
-       ; Resources that should be killed when SIGHUP is received,
-       ; or when the program exits.
-       (resources object resource_list)))
+       (use_pid_file . int)))
 */
 
 static void
@@ -276,11 +273,6 @@ make_lshd_options(void)
   self->use_pid_file = -1;
   self->corefile = 0;
 
-  self->resources = make_resource_list();
-  /* Not strictly needed for gc, but makes sure the
-   * resource list is killed properly by gc_final. */
-  gc_global(&self->resources->super);
-
   return self;
 }
 
@@ -358,7 +350,7 @@ make_pid_file_resource(const char *file)
      (name sighup_close_callback)
      (super lsh_callback)
      (vars
-       (resources object resource_list)))
+       (resource object resource)))
 */
 
 static void
@@ -368,7 +360,7 @@ do_sighup_close_callback(struct lsh_callback *s)
   unsigned nfiles;
   
   werror("SIGHUP received.\n");
-  KILL_RESOURCE_LIST(self->resources);
+  KILL_RESOURCE(self->resource);
   
   nfiles = io_nfiles();
 
@@ -378,15 +370,16 @@ do_sighup_close_callback(struct lsh_callback *s)
 }
 
 static struct lsh_callback *
-make_sighup_close_callback(struct lshd_options *options)
+make_sighup_close_callback(struct resource *resource)
 {
   NEW(sighup_close_callback, self);
   self->super.f = do_sighup_close_callback;
-  self->resources = options->resources;
+  self->resource = resource;
 
   return &self->super;
 }
 
+# if 0
 /* (close_on_sighup options file) */
 DEFINE_COMMAND2(close_on_sighup)
      (struct command_2 *ignored UNUSED,
@@ -426,7 +419,7 @@ DEFINE_COMMAND(options2tcp_wrapper)
 #endif /* WITH_TCPWRAPPERS */
     COMMAND_RETURN(c, &io_log_peer_command);
 }
-
+#endif
 
 static const struct argp_option
 main_options[] =
@@ -919,7 +912,7 @@ main_argp =
 };
 
 
-/* GABA:
+/* ;; GABA:
    (expr
      (name make_lshd_listen)
      (params
@@ -939,11 +932,28 @@ main_argp =
 	           (options2local options) ))))))
 */
 
+/* GABA:
+   (expr
+     (name lshd_listen_callback)
+     (params
+       (handshake object handshake_info)
+       (kexinit object make_kexinit)
+       (keys object alist)
+       (logger object command)
+       (services object command) )
+     (expr (lambda (lv)
+    	      (services (connection_handshake
+	                   handshake
+			   kexinit
+			   keys 
+			   (logger lv))))))
+*/
+
 
 /* Invoked when starting the ssh-connection service */
 /* GABA:
    (expr
-     (name make_lshd_connection_service)
+     (name lshd_connection_service)
      (params
        (hooks object object_list))
      (expr
@@ -973,11 +983,135 @@ static struct lsh_callback
 sigterm_handler = { STATIC_HEADER, do_terminate_callback };
 
 static void
-install_signal_handlers(struct lshd_options *options)
+install_signal_handlers(struct resource *resource)
 {
   io_signal_handler(SIGTERM, &sigterm_handler);
   io_signal_handler(SIGHUP,
-		    make_sighup_close_callback(options));
+		    make_sighup_close_callback(resource));
+}
+
+static struct command *
+make_lshd_connection_service(struct lshd_options *options)
+{
+  /* Commands to be invoked on the connection */
+  /* FIXME: Use a queue instead. */
+  struct object_list *connection_hooks;
+  struct command *session_setup;
+    
+  /* Supported channel requests */
+  struct alist *supported_channel_requests
+    = make_alist(2,
+		 ATOM_SHELL, &shell_request_handler,
+		 ATOM_EXEC, &exec_request_handler,
+		 -1);
+    
+#if WITH_PTY_SUPPORT
+  if (options->with_pty)
+    {
+      ALIST_SET(supported_channel_requests,
+		ATOM_PTY_REQ, &pty_request_handler.super);
+      ALIST_SET(supported_channel_requests,
+		ATOM_WINDOW_CHANGE, &window_change_request_handler.super);
+    }
+#endif /* WITH_PTY_SUPPORT */
+
+#if WITH_X11_FORWARD
+  if (options->with_x11_forward)
+    ALIST_SET(supported_channel_requests,
+	      ATOM_X11_REQ, &x11_req_handler.super);
+#endif /* WITH_X11_FORWARD */
+  
+  if (options->subsystems)
+    ALIST_SET(supported_channel_requests,
+	      ATOM_SUBSYSTEM,
+	      &make_subsystem_handler(options->subsystems)->super);
+  
+  session_setup = make_install_fix_channel_open_handler
+    (ATOM_SESSION, make_open_session(supported_channel_requests));
+  
+#if WITH_TCP_FORWARD
+  if (options->with_tcpip_forward)
+    connection_hooks = make_object_list
+      (4,
+       session_setup,
+       make_tcpip_forward_hook(),
+       make_install_fix_global_request_handler
+       (ATOM_CANCEL_TCPIP_FORWARD, &tcpip_cancel_forward),
+       make_direct_tcpip_hook(),
+       -1);
+  else
+#endif
+    connection_hooks
+      = make_object_list (1, session_setup, -1);
+
+  {
+    CAST_SUBTYPE(command, connection_service,
+		 lshd_connection_service(connection_hooks));
+    return connection_service;
+  }
+}
+
+static struct io_callback *
+make_lshd_listen_callback(struct lshd_options *options,
+			  struct alist *keys,
+			  struct command *service)
+{
+  struct int_list *hostkey_algorithms;
+  struct make_kexinit *kexinit;
+  struct command *logger;
+  
+  /* Include only hostkey algorithms that we have keys for. */
+  hostkey_algorithms
+    = filter_algorithms(keys,
+			options->super.hostkey_algorithms);
+  
+  if (!hostkey_algorithms)
+    {
+      werror("No hostkey algorithms advertised.\n");
+      hostkey_algorithms = make_int_list(1, ATOM_NONE, -1);
+    }
+  
+  kexinit = make_simple_kexinit(options->random,
+				options->kex_algorithms,
+				hostkey_algorithms,
+				options->super.crypto_algorithms,
+				options->super.mac_algorithms,
+				options->super.compression_algorithms,
+				make_int_list(0, -1));
+
+  if (options->tcp_wrapper_name)
+    logger = make_tcp_wrapper
+      (make_string(options->tcp_wrapper_name),
+       make_string(options->tcp_wrapper_message
+		   ? options->tcp_wrapper_message : ""));
+  else
+    logger = &io_log_peer_command;
+  
+  {
+    CAST_SUBTYPE(command, server_callback,
+		 lshd_listen_callback
+		 (make_handshake_info(CONNECTION_SERVER,
+					"lsh - a free ssh",
+					NULL,
+					SSH_MAX_PACKET,
+					options->random,
+					options->super.algorithms,
+					options->sshd1),
+		  kexinit,
+		  keys,
+		  logger,
+		  make_offer_service
+		  (make_alist
+		   (1,
+		    ATOM_SSH_USERAUTH,
+		    make_userauth_service(options->userauth_methods,
+					  options->userauth_algorithms,
+					  make_alist(1, ATOM_SSH_CONNECTION,
+						     service,-1)),
+		    -1))));
+
+    return make_listen_callback(server_callback, options->e);
+  }
 }
 
 int
@@ -985,6 +1119,15 @@ main(int argc, char **argv)
 {
   struct lshd_options *options;
 
+  /* Resources that should be killed when SIGHUP is received,
+   * or when the program exits. */
+  struct resource_list *resources = make_resource_list();
+
+  /* Hostkeys */
+  struct alist *keys = make_alist(0, -1);
+
+  struct resource *fds;
+  
 #if HAVE_SETRLIMIT && HAVE_SYS_RESOURCE_H
   /* Try to increase max number of open files, ignore any error */
 
@@ -996,6 +1139,10 @@ main(int argc, char **argv)
   setrlimit(RLIMIT_NOFILE, &r);
 #endif
 
+  /* Not strictly needed for gc, but makes sure the
+   * resource list is killed properly by gc_final. */
+  gc_global(&resources->super);
+  
   io_init();
   
   /* For filtering messages. Could perhaps also be used when converting
@@ -1005,18 +1152,26 @@ main(int argc, char **argv)
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
+  install_signal_handlers(&resources->super);
 
   options = make_lshd_options();
 
   if (!options)
     return EXIT_FAILURE;
-
-  install_signal_handlers(options);
   
   trace("Parsing options...\n");
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
   trace("Parsing options... done\n");  
 
+  if (options->daemonic && !options->no_syslog)
+    {
+#if HAVE_SYSLOG
+      set_error_syslog("lshd");
+#else /* !HAVE_SYSLOG */
+      werror("lshd: No syslog. Further messages will be directed to /dev/null.\n");
+#endif /* !HAVE_SYSLOG */
+    }
+  
   if (!options->corefile && !daemon_disable_core())
     {
       werror("Disabling of core dumps failed.\n");
@@ -1028,6 +1183,22 @@ main(int argc, char **argv)
       werror("Failed to initialize randomness generator.\n");
       return EXIT_FAILURE;
     }
+
+  if (!read_host_key(options->hostkey, options->signature_algorithms, keys))
+    return EXIT_FAILURE;
+
+  fds = io_listen_list(options->local,
+		       make_lshd_listen_callback
+		       (options, keys,
+			make_lshd_connection_service(options)),
+		       options->e);
+  if (!fds)
+    {
+      werror("Could not bind any address.\n");
+      return EXIT_FAILURE;
+    }
+
+  remember_resource(resources, fds);
   
   if (options->daemonic)
     {
@@ -1056,12 +1227,6 @@ main(int argc, char **argv)
         }
       else
         {
-#if HAVE_SYSLOG
-          set_error_syslog("lshd");
-#else /* !HAVE_SYSLOG */
-          werror("lshd: No syslog. Further messages will be directed to /dev/null.\n");
-#endif /* !HAVE_SYSLOG */
-
           switch (daemon_init())
             {
             case 0:
@@ -1082,7 +1247,7 @@ main(int argc, char **argv)
   if (options->use_pid_file)
     {
       if (daemon_pidfile(options->pid_file))
-	remember_resource(options->resources, 
+	remember_resource(resources, 
 			  make_pid_file_resource(options->pid_file));
       else
 	{
@@ -1090,100 +1255,6 @@ main(int argc, char **argv)
 	  return EXIT_FAILURE;
 	}
     }
-  {
-    /* Commands to be invoked on the connection */
-    /* FIXME: Use a queue instead. */
-    struct object_list *connection_hooks;
-    struct command *session_setup;
-    
-    /* Supported channel requests */
-    struct alist *supported_channel_requests
-      = make_alist(2,
-		   ATOM_SHELL, &shell_request_handler,
-		   ATOM_EXEC, &exec_request_handler,
-		   -1);
-    
-#if WITH_PTY_SUPPORT
-    if (options->with_pty)
-      {
-        ALIST_SET(supported_channel_requests,
-                  ATOM_PTY_REQ, &pty_request_handler.super);
-        ALIST_SET(supported_channel_requests,
-                  ATOM_WINDOW_CHANGE, &window_change_request_handler.super);
-      }
-#endif /* WITH_PTY_SUPPORT */
-
-#if WITH_X11_FORWARD
-      if (options->with_x11_forward)
-        ALIST_SET(supported_channel_requests,
-		  ATOM_X11_REQ, &x11_req_handler.super);
-#endif /* WITH_X11_FORWARD */
-
-    if (options->subsystems)
-      ALIST_SET(supported_channel_requests,
-		ATOM_SUBSYSTEM,
-		&make_subsystem_handler(options->subsystems)->super);
-		
-    session_setup = make_install_fix_channel_open_handler
-      (ATOM_SESSION, make_open_session(supported_channel_requests));
-    
-#if WITH_TCP_FORWARD
-    if (options->with_tcpip_forward)
-      connection_hooks = make_object_list
-	(4,
-	 session_setup,
-	 make_tcpip_forward_hook(),
-	 make_install_fix_global_request_handler
-	 (ATOM_CANCEL_TCPIP_FORWARD, &tcpip_cancel_forward),
-	 make_direct_tcpip_hook(),
-	 -1);
-    else
-#endif
-      connection_hooks
-	= make_object_list (1, session_setup, -1);
-    {
-      CAST_SUBTYPE(command, connection_service,
-		   make_lshd_connection_service(connection_hooks));
-      CAST_SUBTYPE(command, server_listen, 		   
-		   make_lshd_listen
-		   (make_handshake_info(CONNECTION_SERVER,
-					"lsh - a free ssh",
-					NULL,
-					SSH_MAX_PACKET,
-					options->random,
-					options->super.algorithms,
-					options->sshd1),
-		    make_simple_kexinit
-		    (options->random,
-		     options->kex_algorithms,
-		     options->super.hostkey_algorithms,
-		     options->super.crypto_algorithms,
-		     options->super.mac_algorithms,
-		     options->super.compression_algorithms,
-		     make_int_list(0, -1)),
-		    make_offer_service
-		    (make_alist
-		     (1,
-		      ATOM_SSH_USERAUTH,
-		      make_userauth_service(options->userauth_methods,
-					    options->userauth_algorithms,
-					    make_alist(1, ATOM_SSH_CONNECTION,
-						       connection_service,-1)),
-		      -1))));
-
-      static const struct report_exception_info report =
-	STATIC_REPORT_EXCEPTION_INFO(EXC_IO, EXC_IO,
-				     "lshd: ");
-	    
-      
-      COMMAND_CALL(server_listen, options,
-		   &discard_continuation,
-		   make_report_exception_handler
-		   (&report,
-		    options->e,
-		    HANDLER_CONTEXT));
-    }
-  }
   
   io_run();
 
