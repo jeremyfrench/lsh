@@ -44,8 +44,8 @@
  *
  * %z  Insert a string, using a null-terminated argument.
  *
- * %r  Reserves space in the string, and stores the start position
- *     into the given uint32_t * argument.
+ * %r  Reserves space in the string, first argument is the length, and
+ *     the start position is stored into the second argument, a uint32_t *.
  *
  * %a  Insert a string containing one atom.
  *
