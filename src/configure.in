@@ -46,6 +46,12 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
+case "$GCC" in
+    yes) CFLAGS="$CFLAGS -Wall -Wmissing-prototypes \
+                 -Wmissing-declarations -Werror"
+    ;;
+esac
+
 dnl Checks for libraries.
 AC_CHECK_LIB(gmp, mpz_set_d)
 dnl Some debian systems have both gmp1 and gmp2.
