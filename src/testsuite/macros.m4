@@ -7,7 +7,7 @@ m4_changecom(/*, */)
 m4_define(»TS_DEFINE«, m4_defn(»m4_define«))
 
 TS_DEFINE(»TS_WRITE«, »fputs("$1", stderr);«)
-TS_DEFINE(»TS_MESSAGE«, »TS_WRITE($1... )«)
+TS_DEFINE(»TS_MESSAGE«, »TS_WRITE($1 ... )«)
 TS_DEFINE(»TS_OK«, »TS_WRITE(ok.\n)«)
 TS_DEFINE(»TS_FAIL«, »{ TS_WRITE(failed.\n); exit(1); }«)
 
@@ -80,7 +80,83 @@ TS_DEFINE(»TS_TEST_CRYPTO«, »
   }
 «)    
 
-m4_dnl TS_TEST_SIGN(name, algorithm, key, msg, signature)
+m4_dnl TS_TEST_VERIFY(name, key, msg, signature)
+TS_DEFINE(»TS_TEST_VERIFY«,
+»
+{
+  struct alist *algorithms = all_signature_algorithms(make_reasonably_random());
+  struct sexp *key = TS_SEXP(»$2«);
+  struct lsh_string *msg = TS_STRING(»$3«);
+  struct sexp *sign = TS_SEXP(»$4«);
+  struct verifier *v = spki_make_verifier(algorithms, key);
+
+  TS_MESSAGE($1);
+  if (!v)
+    /* Invalid key. */
+    TS_FAIL; 
+
+  if (!VERIFY_SPKI(v, msg->length, msg->data, sign))
+    /* Unexpected verification failure. */
+    TS_FAIL;
+
+  /* Modify message slightly. */
+  assert(msg->length > 10);
+
+  msg->data[5] ^= 0x40;
+
+  if (VERIFY_SPKI(v, msg->length, msg->data, sign))
+    /* Unexpected verification success. */
+    TS_FAIL;
+
+  TS_OK;
+}«)
+
+m4_dnl TS_TEST_SIGN(name, key, msg [, signature])
+TS_DEFINE(»TS_TEST_SIGN«,
+»
+{
+  struct alist *algorithms = all_signature_algorithms(make_reasonably_random());
+  struct sexp *key = TS_SEXP(»$2«);
+  struct lsh_string *msg = TS_STRING(»$3«);
+  struct sexp *sign;
+  struct signer *s = spki_make_signer(algorithms, key, NULL);
+  struct verifier *v;
+
+  TS_MESSAGE($1);
+  if (!s)
+    /* Invalid key. */
+    TS_FAIL; 
+
+  sign = SIGN_SPKI(s, msg->length, msg->data);
+
+  m4_ifelse($4,,,
+  »
+  {
+    struct lsh_string *s2 = TS_STRING(»$4«);
+    if (!lsh_string_eq(s2, sexp_format(sign, SEXP_CANONICAL, 0)))
+      TS_FAIL
+  }
+  «)
+  v = spki_make_verifier(algorithms, SIGNER_PUBLIC(s));
+  if (!v)
+    /* Can't create verifier */
+    TS_FAIL
+
+  if (!VERIFY_SPKI(v, msg->length, msg->data, sign))
+    /* Unexpected verification failure. */
+    TS_FAIL;
+
+  /* Modify message slightly. */
+  assert(msg->length > 10);
+
+  msg->data[5] ^= 0x40;
+
+  if (VERIFY_SPKI(v, msg->length, msg->data, sign))
+    /* Unexpected verification success. */
+    TS_FAIL;
+
+  TS_OK
+}«)
 
 m4_dnl TS_TAG_GRANT(msg, tag-set, access)
 TS_DEFINE(»TS_TAG_GRANT«,
@@ -128,15 +204,19 @@ m4_divert
 m4_dnl C code
 #include "lsh.h"
 
+#include "algorithms.h"
 #include "crypto.h"
 #include "digits.h"
 #include "format.h"
+#include "randomness.h"
 #include "sexp.h"
 #include "spki.h"
+#include "werror.h"
 #include "xalloc.h"
 
 #include <assert.h>
 #include <stdio.h>
 
-int main(int argc UNUSED, char **argv UNUSED)
+int main(int argc, char **argv)
 {
+  argp_parse(&werror_argp, argc, argv, 0, NULL, NULL);
