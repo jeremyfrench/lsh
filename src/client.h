@@ -67,8 +67,6 @@ struct command *make_request_service(int service);
        (help . "const char *")))
 */
 
-/* FIXME: Use const? */
-
 #define DEFINE_ESCAPE(name, help) \
 static void do_##name(struct lsh_callback *self); \
 struct escape_callback \
