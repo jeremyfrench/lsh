@@ -17,7 +17,6 @@ dist_headers = \
     connection_commands.h \
     crypto.h \
     daemon.h \
-    debug.h \
     exception.h \
     format.h \
     gateway.h \
@@ -41,7 +40,6 @@ dist_headers = \
     queue.h \
     randomness.h \
     read_data.h \
-    read_file.h \
     read_line.h \
     read_packet.h \
     reaper.h \
