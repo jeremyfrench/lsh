@@ -1,5 +1,7 @@
 2003-02-16  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/debug.c (send_debug, send_verbose): Deleted unused funtions.
+
 	* .bootstrap: New file, to replace misc/bootstrap.sh.
 
 	* General cleanup. Use types uint32_t and friends instead of
