@@ -42,10 +42,6 @@
 /* Forward declarations */
 
 /* FIXME: Should be static */
-struct command_2 open_direct_tcpip;
-#define OPEN_DIRECT_TCPIP (&open_direct_tcpip.super.super)
-
-/* FIXME: Should be static */
 struct command_2 remote_listen_command;
 #define REMOTE_LISTEN (&remote_listen_command.super.super)
 

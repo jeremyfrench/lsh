@@ -40,4 +40,7 @@ make_direct_tcpip_hook(void);
 struct command *
 make_tcpip_forward_hook(void);
 
+struct command_2 open_direct_tcpip;
+#define OPEN_DIRECT_TCPIP (&open_direct_tcpip.super.super)
+
 #endif /* LSH_TCPFORWARD_COMMANDS_H_INCLUDED */
