@@ -40,23 +40,21 @@ create_dir () {
 create_dir $HOME/.lsh 0700
 create_dir $HOME/.lsh/authorized_keys_sha1 0700
 
-if type sexp-conv >/dev/null 2>&1 ; then
+if [ -z "$SEXP_CONV" ] ; then
     SEXP_CONV=sexp-conv
-else
-    SEXP_CONV=./sexp-conv
 fi
 
-if type $SEXP_CONV >/dev/null 2>&1 ; then : ; else
+if type "$SEXP_CONV" >/dev/null 2>&1 ; then : ; else
     echo "Can't find the sexp-conv program"
     exit 1
 fi
 
 while [ $# != 0 ]; do
-    hash=`$SEXP_CONV < $1 --once --hash sha1 --raw-hash`
+    hash=`"$SEXP_CONV" < $1 --once --hash sha1 --raw-hash`
     if [ -z $hash ] ; then
 	echo $0: File $1 not found.
     else
-        $SEXP_CONV < $1 -f canonical --once > $HOME/.lsh/authorized_keys_sha1/$hash
+        "$SEXP_CONV" < $1 -f canonical --once > "$HOME/.lsh/authorized_keys_sha1/$hash"
     fi
     shift
 done
