@@ -1,3 +1,19 @@
+1999-06-17  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/tcpforward.c, src/tcpforward_commands.c: Reorganization.
+	Keep low-level protocol stuff in tcpforward.c, and move higher
+	level functionality in tcpforward_commands.c.
+	
+	* src/io_commands.c (make_connect_connection): New function.
+
+	* src/connection_commands.c (connection_remember_command): New
+	command, currently not used.
+
+	* src/command.h (STATIC_COMMAND): New macro.
+
+	* src/tcpforward_commands.h: New file
+	* src/tcpforward_commands.c: New file	
+
 1999-06-15  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/tcpforward.c: Made forwarded_port a super class for
