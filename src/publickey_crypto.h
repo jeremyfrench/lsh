@@ -76,7 +76,7 @@ make_keypair(uint32_t type,
        (add method int "mpz_t res" "mpz_t a" "mpz_t b")
        (subtract method int "mpz_t res" "mpz_t a" "mpz_t b")
        
-       ; FIXME: Doesn't handle negative exponents
+       ; NOTE: Doesn't handle negative exponents
        (power method void "mpz_t res" "mpz_t g" "mpz_t e")
        (small_power method void "mpz_t res" "mpz_t g" "uint32_t e"))) */
 
