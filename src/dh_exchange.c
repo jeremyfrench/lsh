@@ -52,8 +52,8 @@ init_dh_instance(struct dh_method *m,
   debug("init_dh_instance()\n"
 	" V_C: %pS\n", c->versions[CONNECTION_CLIENT]);
   debug(" V_S: %pS\n", c->versions[CONNECTION_SERVER]);
-  debug(" I_C: %pS\n", c->literal_kexinits[CONNECTION_CLIENT]);
-  debug(" I_C: %pS\n", c->literal_kexinits[CONNECTION_SERVER]);
+  debug(" I_C: %xS\n", c->literal_kexinits[CONNECTION_CLIENT]);
+  debug(" I_S: %xS\n", c->literal_kexinits[CONNECTION_SERVER]);
 
   s = ssh_format("%S%S%S%S",
 		 c->versions[CONNECTION_CLIENT],
