@@ -176,7 +176,7 @@ dotask 1 "unzip" "" "gzip -d $BASE.tar.gz"
 dotask 1 "unpack" "" "tar xf $BASE.tar"
 dotask 1 "cfg" "cfgwarn" \
     "cd $BASE && ./configure -C --with-include-path=/usr/local/include --with-lib-path=/usr/local/lib --prefix=$pfx $cfgargs"
-dotask 1 "make" "makewarn" "cd $BASE && make -k $makeargs"
+dotask 1 "make" "makewarn" "cd $BASE && make $makeargs"
 
 #
 # "make check" requirements
