@@ -1,3 +1,11 @@
+2003-06-04  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/spki.c (spki_pkcs5_encrypt): The method identifier is
+	"Xpkcs5v2", not "xpkcs5v2".
+	(spki_pkcs5_decrypt): Rewrote function.
+	(parse_pkcs5, parse_pkcs5_payload): New helper functions for
+	spki_pkcs5_decrypt.
+
 2003-06-03  Pontus Sköld  <pont@soua.net>
 
 	* src/testsuite/Makefile.am (TS_SH): Added lsh-encrypted-key-test.
