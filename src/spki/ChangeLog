@@ -1,3 +1,26 @@
+2002-11-18  Niels Möller  <niels@s3.kth.se>
+
+	* certificate.c (spki_cert_parse_body): Deleted function (replaced
+	by code in parse.c).
+	(spki_5_tuple_free_chain): New function.
+	(spki_process_sequence_no_signatures): New function.
+
+	* parse.c (spki_parse_cert): New function.
+
+	* spki-types.in: Added do, sequence and signature.
+
+	* Makefile.am (spki-gperf.h, spki-type-names.h, spki-types.h):
+	Changed $(srcdir) handling again.
+
+	* parse.c (spki_parse_acl_entry): New function.
+
+	* certificate.c (parse_acl_entry): Deleted function (moved to
+	parse.c).
+	(spki_acl_parse): Rewrote to use spki_parse_acl_entry.
+
+	* certificate.h (SPKI_MALLOC, SPKI_FREE, SPKI_NEW): New macros,
+	moved from certificate.c.
+
 2002-11-18  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (TS_PROGS): Added date-test.
