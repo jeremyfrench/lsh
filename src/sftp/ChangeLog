@@ -1,3 +1,21 @@
+2003-02-26  Pontus Sköld  <pont@soua.net>
+
+	* sftp_bind.c (lsftp_handle_packet): Only free(a) if free_a is
+	set.
+	(lsftp_nullcb): Init free_a to false.
+	(lsftp_do_stat): Explicitly clear free_a.
+	(lsftp_do_chown): Set free_a.
+	(lsftp_do_chmod): dito.
+	(lsftp_handle_chall): Respect free_a.
+
+	* sftp_bind.h (struct lsftp_callback): New flag, free_a.
+
+	* buffer.h: If available, include <stdint.h> and <inttypes.h>.
+
+	* sftp_c.h: Dito.
+
+	* configure.ac: Also check for stdint.h.
+
 2003-02-24  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* rl.c (lsftp_rl_remotefile_generator): Use const char.

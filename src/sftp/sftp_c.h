@@ -37,11 +37,16 @@
 #include <config.h>
 #endif
 
+#include <sys/types.h>
+
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
 
-#include <sys/types.h>
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
+
 #include <netinet/in.h>
 #include <sys/stat.h>
 #include <unistd.h>

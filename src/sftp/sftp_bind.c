@@ -500,7 +500,7 @@ lsftp_handle_packet(void)
 		  r = lsftp_cbs[j].nextfun(&state, &lsftp_cbs[j]); 
 
 		  /* Free any memory used */
-		  if( lsftp_cbs[j].a )
+		  if( lsftp_cbs[j].free_a )
 		    free( lsftp_cbs[j].a );
  
 		  if( lsftp_cbs[j].local )
@@ -960,6 +960,7 @@ void lsftp_nullcb(  struct lsftp_callback* nullcb )
   nullcb->remote = 0;
   nullcb->command = 0;
   nullcb->a = 0;
+  nullcb->free_a = 0;
   nullcb->memory = 0;
   nullcb->opt1 = 0;
   nullcb->opt2 = 0;
@@ -2105,6 +2106,7 @@ lsftp_do_stat(const char *file, struct sftp_attrib *a)
 	}
       
       l->a = a; /* Fixup attrib */
+      l->free_a = 0;
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
@@ -2277,6 +2279,7 @@ lsftp_do_chown(const char *file, uint32_t uid, uint32_t gid, const char *command
       if( ! attrib ) /* Malloc failed? FIXME: Report? */
 	return -1;
       
+      l->free_a = 1;
       l->a = attrib; /* Fixup attrib */
       /* Leave informational message */
       l->remote = strdup( tmp );
@@ -2340,6 +2343,7 @@ lsftp_do_chmod(const char *file, mode_t mode, const char *command)
       if( ! attrib ) /* Malloc failed? FIXME: Report? */
 	return -1;
       
+      l->free_a = 1;
       l->a = attrib; /* Fixup attrib */
       
       /* Leave informational message */
@@ -2377,14 +2381,18 @@ lsftp_do_chmod(const char *file, mode_t mode, const char *command)
 int
 lsftp_handle_stat(struct sftp_callback *s,
 		  const struct lsftp_callback *l)
-{  
+{ 
+  void* f;
+
   if( s->localerr )
     lsftp_perror( l->local, s->localerrno );
 
   if( s->retval == SSH_FX_OK )  /* We should have an OK status */
     {
-      *l->a = s->attrib;
+      struct sftp_attrib* p = l->a;
+      *p = s->attrib;
     }
+
   return s->retval;
 }
 
@@ -2392,7 +2400,7 @@ int
 lsftp_handle_chall(struct sftp_callback *s,
 		   const struct lsftp_callback *l)
 {
-  if( l->a ) /* Memory for attribute? */
+  if( l->free_a ) /* Memory for attribute? */
     free( l->a ); /* Free it */
 
   if( s->retval != SSH_FX_OK )  /* We should have an OK status */

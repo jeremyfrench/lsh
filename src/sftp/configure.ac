@@ -160,7 +160,7 @@ AC_CHECK_FUNCS(pread pwrite)
 
 
 # Checks for header files.
-AC_CHECK_HEADERS([inttypes.h limits.h stdlib.h string.h sys/acl.h sys/file.h\
+AC_CHECK_HEADERS([inttypes.h limits.h stdint.h stdlib.h string.h sys/acl.h sys/file.h\
  sys/ioctl.h termios.h unistd.h glob.h memory.h errno.h fcntl.h \
  readline/readline.h readline/history.h readline.h history.h\
  netinet/in.h string.h sys/stat.h sys/types.h pwd.h grp.h])

@@ -80,7 +80,8 @@ struct lsftp_callback
   int op_id;
   lsftp_callback_func nextfun;
   struct sftp_attrib *a;
-  
+  int free_a;
+
   const char *local;
   const char *remote;
   const char *command;

@@ -30,10 +30,17 @@
 #include "config.h"
 #endif
 
-#include <inttypes.h>
-
 /* For off_t */
 #include <sys/types.h>
+
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
+
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
+#endif
+
 
 
 /* Abstract input and output functions */
