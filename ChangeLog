@@ -1,3 +1,10 @@
+2000-06-20  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/tcpforward_commands.c (new_tcpip_channel): Leave the
+	REMEMBER_RESOURCE call for make_tcpip_channel().
+
+	* src/tcpforward.c (make_tcpip_channel): Call REMEMBER_RESOURCE(). 
+
 2000-06-14  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/sexp-conv.c: Renamed from sexp_conv.c.
