@@ -57,6 +57,8 @@
        (start object connection_startup)))
 */
 
+/* FIXME: Perhaps the channel table should be installed in the
+ * connection object instead? */
 /* CLASS:
    (class
      (name channel_handler)
@@ -206,11 +208,11 @@ int alloc_channel(struct channel_table *table)
 void dealloc_channel(struct channel_table *table, int i)
 {
   assert(i >= 0);
-  assert(i < table->used_channels);
+  assert( (unsigned) i < table->used_channels);
   
   table->channels[i] = NULL;
 
-  if (i < table->next_channel)
+  if ( (unsigned) i < table->next_channel)
     table->next_channel = i;
 }
 
@@ -368,7 +370,8 @@ static int do_channel_open(struct packet_handler *c,
 					   SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
 					   "Unknown channel type", ""));
       
-      channel = CHANNEL_OPEN(open, connection, &buffer, &error, &error_msg, &args);
+      channel = CHANNEL_OPEN(open, connection, &buffer,
+			     &error, &error_msg, &args);
       
       if (!channel)
 	{
@@ -460,7 +463,7 @@ static int do_channel_request(struct packet_handler *c,
 }
       
 static int do_window_adjust(struct packet_handler *c,
-			    struct ssh_connection *connection,
+			    struct ssh_connection *connection UNUSED,
 			    struct lsh_string *packet)
 {
   CAST(channel_handler, closure, c);
@@ -484,7 +487,8 @@ static int do_window_adjust(struct packet_handler *c,
       lsh_string_free(packet);
       
       if (channel
-	  && !(channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE)))
+	  && !(channel->flags & (CHANNEL_RECEIVED_EOF
+				 | CHANNEL_RECEIVED_CLOSE)))
 	{
 	  if (! (channel->flags & CHANNEL_SENT_CLOSE))
 	    {
@@ -508,7 +512,7 @@ static int do_window_adjust(struct packet_handler *c,
 }
 
 static int do_channel_data(struct packet_handler *c,
-			   struct ssh_connection *connection,
+			   struct ssh_connection *connection UNUSED,
 			   struct lsh_string *packet)
 {
   CAST(channel_handler, closure, c);
@@ -589,7 +593,7 @@ static int do_channel_data(struct packet_handler *c,
 }
 
 static int do_channel_extended_data(struct packet_handler *c,
-				    struct ssh_connection *connection,
+				    struct ssh_connection *connection UNUSED,
 				    struct lsh_string *packet)
 {
   CAST(channel_handler, closure, c);
@@ -671,7 +675,7 @@ static int do_channel_extended_data(struct packet_handler *c,
 }
 
 static int do_channel_eof(struct packet_handler *c,
-			  struct ssh_connection *connection,
+			  struct ssh_connection *connection UNUSED,
 			  struct lsh_string *packet)
 {
   CAST(channel_handler, closure, c);
@@ -736,7 +740,7 @@ static int do_channel_eof(struct packet_handler *c,
 }
 
 static int do_channel_close(struct packet_handler *c,
-			    struct ssh_connection *connection,
+			    struct ssh_connection *connection UNUSED,
 			    struct lsh_string *packet)
 {
   CAST(channel_handler, closure, c);
@@ -795,7 +799,7 @@ static int do_channel_close(struct packet_handler *c,
 }
 
 static int do_channel_open_confirm(struct packet_handler *c,
-			      struct ssh_connection *connection,
+			      struct ssh_connection *connection UNUSED,
 			      struct lsh_string *packet)
 {
   CAST(channel_handler, closure, c);
@@ -840,7 +844,7 @@ static int do_channel_open_confirm(struct packet_handler *c,
 }
 
 static int do_channel_open_failure(struct packet_handler *c,
-			      struct ssh_connection *connection,
+			      struct ssh_connection *connection UNUSED,
 			      struct lsh_string *packet)
 {
   CAST(channel_handler, closure, c);
@@ -891,7 +895,7 @@ static int do_channel_open_failure(struct packet_handler *c,
 }
 
 static int do_channel_success(struct packet_handler *c,
-			      struct ssh_connection *connection,
+			      struct ssh_connection *connection UNUSED,
 			      struct lsh_string *packet)
 {
   CAST(channel_handler, closure, c);
@@ -921,7 +925,7 @@ static int do_channel_success(struct packet_handler *c,
 }
 
 static int do_channel_failure(struct packet_handler *c,
-			      struct ssh_connection *connection,
+			      struct ssh_connection *connection UNUSED,
 			      struct lsh_string *packet)
 {
   CAST(channel_handler, closure, c);
