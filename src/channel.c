@@ -270,6 +270,7 @@ make_channel_table(void)
   
   object_queue_init(&table->local_ports);
   object_queue_init(&table->remote_ports);
+  table->x11_display = NULL;
   
   object_queue_init(&table->active_global_requests);
   object_queue_init(&table->pending_global_requests);
@@ -365,7 +366,8 @@ use_channel(struct ssh_connection *connection,
   verbose("Taking channel %i in use, (local %i).\n",
 	  channel->channel_number, local_channel_number);
 }
-	    
+
+/* FIXME: Delete connection argument */
 void
 register_channel(struct ssh_connection *connection,
 		 UINT32 local_channel_number,
@@ -685,11 +687,13 @@ DEFINE_PACKET_HANDLER(static, global_failure_handler,
      (name channel_request_continuation)
      (super command_continuation)
      (vars
+       ;; FIXME: Delete connection argument 
        (connection object ssh_connection)
        (channel object ssh_channel)
        (active object request_status)))
 */
 
+/* FIXME: Delete connection argument */
 static void
 send_channel_request_responses(struct ssh_connection *connection,
 			       struct ssh_channel *channel,
@@ -725,6 +729,7 @@ do_channel_request_response(struct command_continuation *s,
   send_channel_request_responses(self->connection, self->channel, q);
 }
 
+/* FIXME: Delete connection argument */
 static struct command_continuation *
 make_channel_request_response(struct ssh_connection *connection,
 			      struct ssh_channel *channel,
@@ -745,6 +750,7 @@ make_channel_request_response(struct ssh_connection *connection,
      (name channel_request_exception_handler)
      (super exception_handler)
      (vars
+       ;; /* FIXME: Delete connection argument */
        (connection object ssh_connection)
        (channel object ssh_channel)
        (active object request_status)))
@@ -771,6 +777,7 @@ do_exc_channel_request_handler(struct exception_handler *c,
     EXCEPTION_RAISE(c->parent, e);
 }
 
+/* FIXME: Delete connection argument */
 static struct exception_handler *
 make_channel_request_exception_handler(struct ssh_connection *connection,
 				       struct ssh_channel *channel,

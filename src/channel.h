@@ -231,6 +231,12 @@ struct channel_request_info
        ; Forwarded TCP ports
        (local_ports struct object_queue)
        (remote_ports struct object_queue)
+
+       ; Used if we're currently forwarding X11
+       ; To support several screens at the same time,
+       ; this should be replaced with a list, analogous to
+       ; the remote_ports list above.
+       (x11_display object client_x11_display)
        
        ; Global requests that we have received, and should reply to
        ; in the right order
@@ -302,6 +308,7 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
      (vars
        (handler method void
 		"struct ssh_channel *channel"
+		;; FIXME: Delete connection argument
 		"struct ssh_connection *connection"
 		"struct channel_request_info *info"
 		"struct simple_buffer *args"
@@ -324,7 +331,8 @@ use_channel(struct ssh_connection *connection,
 	    UINT32 local_channel_number);
 
 void
-register_channel(struct ssh_connection *connection,
+register_channel(/* FIXME: Delete connection argument */
+		 struct ssh_connection *connection,
 		 UINT32 local_channel_number,
 		 struct ssh_channel *channel,
 		 int take_into_use);
