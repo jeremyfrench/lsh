@@ -4,6 +4,18 @@
 
 2002-03-18  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/testsuite/conv-3-test: New test program.
+
+	* contrib/lshd.debian.init: Check for existance of
+	/var/spool/lsh/yarrow-seed-file.
+	(restart): New target, which sends SIGHUP to the running lshd and
+	then starts a new one.
+
+	* src/testsuite/runtests: Old testscript removed.
+
+	* src/testsuite/Makefile.am (check-some, check-more): Use
+	run-tests, not runtests.
+
 	* src/io.c (io_run): Check for OOP_ERROR. This means we need at
 	least liboop-0.8. 
 
