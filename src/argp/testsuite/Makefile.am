@@ -1,12 +1,13 @@
-TS_SH = ex1-test permute-test
+AM_CPPFLAGS = -I$(top_srcdir)
+
+noinst_PROGRAMS = ex1 ex3 ex4
+
 TS_PROGS =
+TS_SH = ex1-test permute-test
 
 TS_ALL = $(TS_PROGS) $(TS_SH)
 
-check_PROGRAMS = $(TS_PROGS) ex1 ex3 ex4
-
 LDADD = ../libargp.a
-AM_CPPFLAGS = -I$(top_srcdir)
 
 EXTRA_DIST = $(TS_SH) run-tests
 CLEANFILES = test.out

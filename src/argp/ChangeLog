@@ -1,3 +1,9 @@
+2004-10-08  Niels Möller  <niels@s3.kth.se>
+
+	* testsuite/Makefile.am: Use noinst_PROGRAMS instead of
+	check_PROGRAMS, it seems check_PROGRAMS doesn't work with the
+	rntcl build.
+
 2004-03-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use AC_CONFIG_AUX_DIR([.]). Converted to new style
