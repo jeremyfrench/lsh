@@ -129,7 +129,7 @@ Wed Dec 30 01:14:28 1998    <nisse@puck>
 Mon Dec 28 14:14:57 1998    <nisse@puck>
 
 	* keyexchange.c (kex_make_key): Expand keys, when the required key
-	length is longer than tha hash output. (Baszi).
+	length is longer than tha hash output. (Bazsi).
 
 Sun Dec 27 06:37:40 1998    <nisse@puck>
 
@@ -149,7 +149,7 @@ Sun Dec 27 06:37:40 1998    <nisse@puck>
 	(do_install): -"-
 
 	* compress.h, compress.c, abstract_compress.c,
-	abstract_compress.h, zlib.h, zlib.c: New files (by Baszi).
+	abstract_compress.h, zlib.h, zlib.c: New files (by Bazsi).
 	
 	* connection.c (connection_init_io): Compression support.
 	* client.c (do_line): Compression support.
@@ -162,7 +162,7 @@ Sun Dec 27 06:37:40 1998    <nisse@puck>
 Sat Dec 26 02:37:18 1998    <nisse@puck>
 
 	* keyexchange.c (do_install): Bugfix: Look at closure->is_server
-	when generating MAC-keys (noted by Baszi).
+	when generating MAC-keys (noted by Bazsi).
 
 	* lsh_keygen.c (main): Added getopt support. New options for
 	algorithm and output style.

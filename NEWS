@@ -1,7 +1,7 @@
 NEWS for the 1999-01-01 snapshot:
 
-	ZLIB support. (Baszi)
-	Long key support (needed for 3DES) (Baszi).
+	ZLIB support. (Bazsi)
+	Long key support (needed for 3DES) (Bazsi).
 	Fixed configure test for shutdown().
 	Various bug fixes (Ray).
 
