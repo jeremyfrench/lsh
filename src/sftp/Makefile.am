@@ -2,7 +2,9 @@ SUBDIRS = . testsuite
 
 AUTOMAKE_OPTIONS = foreign
 
-bin_PROGRAMS = sftp-server lsftp
+bin_PROGRAMS = lsftp
+
+sbin_PROGRAMS = sftp-server
 
 noinst_PROGRAMS = sftp-test-client dump-hex
 
