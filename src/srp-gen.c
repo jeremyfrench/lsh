@@ -45,6 +45,7 @@
 #include "format.h"
 #include "interact.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "randomness.h"
 #include "srp.h"
 #include "version.h"
@@ -145,12 +146,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	
 	if (self->file)
 	  {
-	    fd = io_write_file(self->file->data,
+	    const char *cfile = lsh_get_cstring(self->file);
+	    fd = io_write_file(cfile,
 			       O_CREAT | O_EXCL | O_WRONLY,
 			       0600, BLOCK_SIZE,
 			       NULL, self->e);
 	    if (!fd)
-	      argp_failure(state, EXIT_FAILURE, errno, "Could not open '%s'.", self->file->data);
+	      argp_failure(state, EXIT_FAILURE, errno,
+			   "Could not open '%s'.", cfile);
 	  }
 	else
 	  {
@@ -214,9 +217,8 @@ srp_gen(struct srp_gen_options *options)
   struct lsh_string *res;
 
   /* NOTE: Allows random to be of bad quality */
-  salt = lsh_string_alloc(SALT_SIZE);
+  salt = lsh_string_random(options->r, SALT_SIZE);
 
-  RANDOM(options->r, salt->length, salt->data);
   name = ssh_format("%lz", options->name);
 
   /* FIXME: Leaks some strings. */
