@@ -58,6 +58,4 @@ cat >test.out2 <<EOF
                      pXOk+N0XAio=|)))
 EOF
 
-cat test.out1
-
-compare_output "conv.test"
+compare_output "conv-1-test"
