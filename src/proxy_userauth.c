@@ -74,6 +74,7 @@ do_forward_password_userauth(struct proxy_userauth *ignored UNUSED,
       (password = parse_string_copy(args)) &&
       parse_eod(args))
     {
+      /* FIXME: Should we really pass the last argument free=1 ? */
       C_WRITE(connection->chain, format_userauth_password(username, service, password, 1));
     }
 }

@@ -66,7 +66,8 @@ int ucs4_to_local(UINT32 c)
     };
 }
 
-struct lsh_string *local_to_utf8(struct lsh_string *s, int free)
+struct lsh_string *
+local_to_utf8(struct lsh_string *s, int free)
 {
   switch (local_charset)
     {
