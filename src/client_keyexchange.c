@@ -23,32 +23,51 @@
 
 #include "client_keyexchange.h"
 
-static void do_handle_dh_reply(struct packet_handler *c,
+#include "atoms.h"
+#include "format.h"
+#include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
+
+struct install_keys *make_client_install_keys(void **algorithms);
+
+static int do_handle_dh_reply(struct packet_handler *c,
 			       struct ssh_connection *connection,
-			       struct lsh_string *packet);
+			       struct lsh_string *packet)
 {
   struct dh_client *closure = (struct dh_client *) c;
   struct verifier *v;
-  struct hash_instance *hash;;
+  struct hash_instance *hash;
   struct lsh_string *s;
+  int res;
   
   if (!dh_process_server_msg(&closure->dh, packet))
-    return send_disconnect(connection, "Bad dh-reply\r\n");
-
-  v = LOOKUP_VERIFIER(closure->verifier, closure->dh.server_host_key);
+    {
+      disconnect_kex_failed(connection, "Bad dh-reply\r\n");
+      return WRITE_CLOSED;
+    }
+    
+  v = LOOKUP_VERIFIER(closure->verifier, closure->dh.server_key);
 
   if (!v)
     /* FIXME: Use a more appropriate error code. Should probably have
      * a separate file for sending and recieving various types of
      * disconnects. */
-    return send_disconnect(connection, "Bad server host key\r\n");
-
+    {
+      disconnect_kex_failed(connection, "Bad server host key\r\n");
+      return WRITE_CLOSED;
+    }
+  
   if (!dh_verify_server_msg(&closure->dh, v))
     /* FIXME: Same here */
-    return send_disconnect(connection, "Bad server host key\r\n");
+    return disconnect_kex_failed(connection, "Bad server host key\r\n");
     
   /* Key exchange successful! Send a newkeys message, and install a
    * handler for recieving the newkeys message. */
+
+  res = A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
+  if (res != WRITE_OK)
+    return res;
 
   /* Record session id */
   if (!connection->session_id)
@@ -59,34 +78,45 @@ static void do_handle_dh_reply(struct packet_handler *c,
   
   /* A hash instance initialized with the key, to be used for key generation */
   
-  hash = MAKE_HASH(closure->dh->method->hash);
-  s = ssh_format("%n", closure->dh->K);
+  hash = MAKE_HASH(closure->dh.method->H);
+  s = ssh_format("%n", closure->dh.K);
   HASH_UPDATE(hash, s->length, s->data);
   lsh_string_free(s);
+  
+  res = INSTALL_KEYS(closure->install, connection, hash);
 
-  /* FIXME: Must use some object which knows what algorithms to use */
-  res = prepare_keys(connection, hash);
   lsh_free(hash);
 
+  /* Reinstall keyexchange handler */
+  connection->dispatch[SSH_MSG_KEXINIT] = closure->saved_kexinit_handler;
+  
   return res;
 }
 
-static void do_init_dh(struct keyexchange_algorithm *c,
-		       struct ssh_connection *connection)
+static int do_init_dh(struct keyexchange_algorithm *c,
+		       struct ssh_connection *connection,
+		       int hostkey_algorithm_atom,
+		       struct signature_algorithm *ignored,
+		       void **algorithms)
 {
-  struct dh_algorithm_client *closure = (struct dh_algorithm_client *) c;
+  struct dh_client_exchange *closure = (struct dh_client_exchange *) c;
   struct dh_client *dh = xalloc(sizeof(struct dh_client));
-  struct lsh_string *msg;
 
+  /* FIXME: Use this value to choose a verifier function */
+  if (hostkey_algorithm_atom != ATOM_SSH_DSS)
+    fatal("Internal error\n");
+  
   /* Initialize */
   dh->super.handler = do_handle_dh_reply;
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
   dh->verifier = closure->verifier;
 
+  dh->install = make_client_install_keys(algorithms);
+  
   /* Send client's message */
   A_WRITE(connection->write, dh_make_client_msg(&dh->dh));
-
+  
   /* Install handler */
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = &dh->super;
 
@@ -97,25 +127,68 @@ static void do_init_dh(struct keyexchange_algorithm *c,
   return WRITE_OK;
 }
 
-int prepare_keys_client(struct hash_instance *secret,
-			struct ssh_connection *connection)
+
+/* FIXME: This assumes that there's only one hostkey-algorithm. To
+ * fix, this constructor should take a mapping
+ * algorithm->verifier-function. The init-method should use this
+ * mapping to find an appropriate verifier function. */
+
+struct keyexchange_algorithm *
+make_dh_client(struct diffie_hellman_method *dh,
+	       struct lookup_verifier *verifier)
+{
+  struct dh_client_exchange *self = xalloc(sizeof(struct dh_client_exchange));
+
+  self->super.init = do_init_dh;
+  self->dh = dh;
+  self->verifier = verifier;
+
+  return &self->super;
+}
+
+struct client_install_keys
+{
+  struct install_keys super;
+  void **algorithms;
+};
+
+static int do_install(struct install_keys *c,
+	       struct ssh_connection *connection,
+	       struct hash_instance *secret)
 {
   /* FIXME: For DES, instantiating a crypto may fail, if the key
    * happens to be weak. */
   /* FIXME: No IV:s */
 
-  struct crypto_instance *crypt_client_to_server
-    = kex_make_encrypt(secret, /* FIXME: algorithm */,
-		       KEX_ENCRYPTION_CLIENT_TO_SERVER, connection);
-  struct crypto_instance *crypt_server_to_client
-    = kex_make_decrypt(secret, KEX_ENCRYPTION_SERVER_TO_CLIENT, connection);
+  struct client_install_keys *closure = (struct client_install_keys *) c;
   
-  struct mac_instance *mac_client_to_server
-    = kex_make_mac(secret, KEX_MAC_CLIENT_TO_SERVER, connection);
-  struct mac_instance *mac_server_to_client
-    = kex_make_mac(secret, KEX_MAC_SERVER_TO_CLIENT, connection);
+  /* Keys for recieving */
+  connection->dispatch[SSH_MSG_NEWKEYS] = make_newkeys_handler
+    (kex_make_encrypt(secret, closure->algorithms,
+		      KEX_ENCRYPTION_SERVER_TO_CLIENT, connection),
+     kex_make_mac(secret, closure->algorithms,
+		  KEX_MAC_SERVER_TO_CLIENT, connection));
 
+  /* Keys for sending */
+  /* NOTE: The NEWKEYS-message should have been sent before this
+   * function is called */
+  connection->send_crypto 
+    = kex_make_decrypt(secret, closure->algorithms,
+		       KEX_ENCRYPTION_CLIENT_TO_SERVER, connection);
   
-  
-  
-  
+  connection->send_mac 
+    = kex_make_mac(secret, closure->algorithms,
+		   KEX_MAC_CLIENT_TO_SERVER, connection);
+
+  return 1;
+}
+
+struct install_keys *make_client_install_keys(void **algorithms)
+{
+  struct client_install_keys *self = xalloc(sizeof(struct client_install_keys));
+
+  self->super.install = do_install;
+  self->algorithms = algorithms;
+
+  return &self->super;
+}
