@@ -286,7 +286,8 @@ static int do_handle_kexinit(struct packet_handler *c,
 
 struct packet_handler *make_kexinit_handler(int type,
 					    struct make_kexinit *init,
-					    struct alist *algorithms)
+					    struct alist *algorithms,
+					    struct ssh_service *finished)
 {
   struct kexinit_handler *self = xalloc(sizeof(struct kexinit_handler));
 
@@ -295,7 +296,8 @@ struct packet_handler *make_kexinit_handler(int type,
   self->type = type;
   self->init = init;
   self->algorithms = algorithms;
-
+  self->finished = finished;
+  
   return &self->super;
 }
 

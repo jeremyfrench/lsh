@@ -168,7 +168,8 @@ int initiate_keyexchange(struct ssh_connection *connection,
 
 struct packet_handler *make_kexinit_handler(int type,
 					    struct make_kexinit *init,
-					    struct alist *algorithms);
+					    struct alist *algorithms,
+					    struct ssh_service *finished);
 
 struct packet_handler *
 make_newkeys_handler(struct crypto_instance *crypto,
