@@ -286,3 +286,19 @@ connection_handle_pending().
 Consider how much we really need to differentiate between
 rsa-pkcs1-sha1 / rsa-pkcs1-md5 and between spki-sign-rsa /
 spki-sign-dss.
+
+Building fails if srp support is disabled. The building of srp-gen
+must be conditionalized.
+
+lshg -L doesn't work. The lsh process dies on the first connection to
+the forwarded port.
+
+make_char_classes seems not to work with guile-1.3.4. Bug in guile?
+
+: ERROR: Two copies of (leaf #f (#\377)) (leaf #f (#\377))
+: make[1]: *** [sexp_table.h] Error 2
+
+or
+
+: ERROR: Stack overflow
+: make: *** [sexp_table.h] Error 2

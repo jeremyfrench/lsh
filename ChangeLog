@@ -1,3 +1,38 @@
+2001-02-19  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/testsuite/Makefile.am (TS_MORE_PROGS): Added
+	lshg-tcpip-local-test.
+
+2001-02-18  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/testsuite/tcpip-local-test: Don't pass -r to tcpconnect.
+	grep the output from tcpconnect.
+	* src/testsuite/tcpip-remote-test: Likewise.
+
+	* src/testsuite/lshg-tcpip-local-test: New test case.
+
+	* src/testsuite/functions.sh (spawn_lshg): New function.
+
+	* src/argp/argp-parse.c (argp_default_parser): Let OPT_HANG print
+	the process id to stderr.
+
+	* src/resource.c (do_remember_resource): If the resource list is
+	dead, immediately kill any resources added to it.
+
+	* src/lsh.c (main_argp_parser): Check if the action list is empty
+	at ARGP_KEY_END.
+	* src/lshg.c (main_argp_parser): Likewise.
+
+	* src/io.c (do_consuming_read): Don't close the fd on EOF.
+	(do_buffered_read): Likewise.
+	(sockaddr2info): Silently return NULL for AF_UNIX addresses. 
+
+	* src/client.c (client_argp_parser): Don't check that the length
+	of the action list is non-zero at ARGP_KEY_END. lsh.c may add a
+	gatewaying action later.
+
+	* configure.in: Bumped version to 1.1.7.
+
 2001-02-13  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/sftp/sftp-test-client.c: Added more code from Pontus Sköld. 
