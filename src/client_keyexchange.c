@@ -63,7 +63,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
   if (!dh_process_server_msg(&closure->dh, packet))
     {
       disconnect_kex_failed(connection, "Bad dh-reply\r\n");
-      return WRITE_CLOSED;
+      return LSH_FAILURE | LSH_CLOSE;
     }
     
   v = LOOKUP_VERIFIER(closure->verifier, closure->dh.server_key);
@@ -72,7 +72,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
     /* FIXME: Use a more appropriate error code? */
     {
       disconnect_kex_failed(connection, "Bad server host key\r\n");
-      return WRITE_CLOSED;
+      return LSH_FAILURE | LSH_CLOSE;
     }
   
   if (!dh_verify_server_msg(&closure->dh, v))
@@ -83,7 +83,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
    * handler for recieving the newkeys message. */
 
   res = A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
-  if (res != WRITE_OK)
+  if (LSH_PROBLEMP(res))
     return res;
 
   /* Record session id */
@@ -140,7 +140,7 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   /* Send client's message */
   res = A_WRITE(connection->write, dh_make_client_msg(&dh->dh));
 
-  if (res != WRITE_OK)
+  if (LSH_PROBLEMP(res))
     return res;
   
   /* Install handler */
@@ -148,7 +148,7 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   
   connection->kex_state = KEX_STATE_IN_PROGRESS;
   
-  return WRITE_OK;
+  return LSH_OK | LSH_GOON;
 }
 
 

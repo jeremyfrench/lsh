@@ -60,14 +60,14 @@ static int do_read_data(struct read_handler **h,
 	  /* Fall through */
 	case A_EOF:
 	  CALLBACK(closure->close_callback);
-	  return WRITE_CLOSED;
+	  return LSH_OK | LSH_CLOSE;
 	default:
 	  {
 	    int res;
 	    packet->length = n;
 	    /* FIXME: Use returned value */
 	    res = A_WRITE(closure->handler, packet);
-	    if (res != WRITE_OK)
+	    if (LSH_PROBLEMP(res))
 	      return res;
 	    break;
 	  }

@@ -148,7 +148,7 @@ int initiate_keyexchange(struct ssh_connection *connection,
 
   res = A_WRITE(connection->write, lsh_string_dup(s));
   
-  if ( (res == WRITE_OK) && first_packet)
+  if (!LSH_PROBLEMP(res) && first_packet)
     return A_WRITE(connection->write, first_packet);
   else
     return res;
@@ -217,7 +217,7 @@ static int do_handle_kexinit(struct packet_handler *c,
       connection->literal_kexinits[closure->type] = lsh_string_dup(packet); 
       
       res = A_WRITE(connection->write, packet);
-      if (res != WRITE_OK)
+      if (LSH_PROBLEMP(res))
 	return res;
     }
 
@@ -248,9 +248,7 @@ static int do_handle_kexinit(struct packet_handler *c,
 	  disconnect_kex_failed(connection,
 				"No common key exchange method.\r\n");
 	  
-	  /* FIXME: We want the disconnect message to be sent
-	   * before the socket is closed. How? */
-	  return WRITE_CLOSED;
+	  return LSH_FAIL | LSH_CLOSE;
 	}
     }
   hostkey_algorithm
@@ -266,7 +264,7 @@ static int do_handle_kexinit(struct packet_handler *c,
       if (!parameters[i])
 	{
 	  disconnect_kex_failed(connection, "");
-	  return WRITE_CLOSED;
+	  return LSH_FAIL | LSH_CLOSE;
 	}
     }
   
@@ -433,10 +431,10 @@ static int do_handle_newkeys(struct packet_handler *c,
       connection->dispatch[SSH_MSG_NEWKEYS] = NULL;
 
       lsh_free(closure);
-      return WRITE_OK;
+      return LSH_OK | LSH_GOON;
     }
   else
-    return WRITE_CLOSED;
+    return LSH_FAIL | LSH_DIE;
 }
 
 struct packet_handler *

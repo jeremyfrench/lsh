@@ -47,6 +47,29 @@ struct abstract_read
 
 #define A_READ(f, length, buffer) (f)->read(&(f), (length), (buffer))
 
+/* Return values for write- and readhandlers.
+ *
+ * Several components are OR:ed together */
+
+/* Success/fail indication */
+#define LSH_OK 0
+#define LSH_FAIL 1
+
+/* Actions */
+#define LSH_GOON 0
+#define LSH_CLOSE 2
+#define LSH_DIE  4
+#define LSH_GET_ACTION(x) ((x) & 6)
+
+/* Non-zero if there's any problem */
+#define LSH_PROBLEMP(x) (x)
+
+/* Are return codes really needed here? */
+#if 0
+#define LSH_EXIT(x) ((x) << 3)
+#define LSH_GET_EXIT(x) ((x) >> 3)
+#endif
+
 /* May store a new handler into *h. */
 struct read_handler
 {
@@ -57,21 +80,9 @@ struct read_handler
 
 #define READ_HANDLER(h, read) ((h)->handler(&(h), (read)))
 
-/* Return values for write callbacks
- *
- * FIXME: Perhaps some more values are needed? What if we want to
- * close a file, but not until all data has bee flushed? Perhaps it is
- * best not to put too much meaning into the return value, and use it
- * as a succes/fail indication only. */
 
-/* Everything is ok */
-#define WRITE_OK 1
-
-/* Write failed, and the packet could not be processed or delivered.
- * Most likely because of a protocol error */
-#define WRITE_CLOSED 0
-
-/* May store a new handler into *w. */
+/* May store a new handler into *w. FIXME: Is this indirection ever
+ * used? */
 struct abstract_write
 {
   struct lsh_object header;
@@ -81,7 +92,7 @@ struct abstract_write
 
 #define A_WRITE(f, packet) ((f)->write(&(f), (packet)))
 
-/* A processor that passes its result on to another processor */
+/* A handler that passes packets on to another processor */
 struct abstract_write_pipe
 {
   struct abstract_write super;

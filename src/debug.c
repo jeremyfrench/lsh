@@ -80,7 +80,7 @@ int send_debug(struct abstract_write *write, char *msg, int always_display)
 {
   return (debug_flag)
     ? A_WRITE(write, make_debug_packet(msg, always_display))
-    : WRITE_OK;
+    : LSH_OK | LSH_GOON;
   
 }
 
@@ -88,7 +88,7 @@ int send_verbose(struct abstract_write *write, char *msg, int always_display)
 {
   return (verbose_flag)
     ? A_WRITE(write, make_debug_packet(msg, always_display))
-    : WRITE_OK;
+    : LSH_OK | LSH_GOON;
 }
 
 static int do_rec_debug(struct packet_handler *self,
@@ -111,7 +111,7 @@ static int do_rec_debug(struct packet_handler *self,
 	&& parse_eod(&buffer)))
     {
       lsh_string_free(packet);
-      return WRITE_CLOSED;
+      return LSH_FAIL | LSH_DIE;
     }
 
   if (always_display)
@@ -128,7 +128,7 @@ static int do_rec_debug(struct packet_handler *self,
     }
 
   lsh_string_free(packet);
-  return WRITE_OK;
+  return LSH_OK | LSH_GOON;
 }
 
 struct packet_handler *make_rec_debug_handler(void)

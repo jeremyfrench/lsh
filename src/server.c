@@ -80,7 +80,7 @@ static int server_initiate(struct fd_callback **c,
 
   res = A_WRITE(connection->raw,
 		 ssh_format("%lS\r\n", connection->server_version));
-  if (res != WRITE_OK)
+  if (LSH_PROBLEMP(res))
     return res;
 
   return initiate_keyexchange(connection, CONNECTION_SERVER,

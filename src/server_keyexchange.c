@@ -64,21 +64,21 @@ static int do_handle_dh_init(struct packet_handler *c,
   if (!dh_process_client_msg(&closure->dh, packet))
     {
       disconnect_kex_failed(connection, "Bad dh-init\r\n");
-      return WRITE_CLOSED;
+      return LSH_FAIL | LSSH_CLOSE;
     }
   
   /* Send server's message, to complete key exchange */
   res = A_WRITE(connection->write, dh_make_server_msg(&closure->dh,
 						      closure->signer));
 
-  if (res != WRITE_OK)
+  if (LSH_PROBLEMP(res))
     return res;
   
   /* Send a newkeys message, and install a handler for recieving the
    * newkeys message. */
 
   res = A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
-  if (res != WRITE_OK)
+  if (LSH_PROBLEMP(res))
     return res;
   
   /* Record session id */
@@ -137,7 +137,7 @@ static int do_init_dh(struct keyexchange_algorithm *c,
 
   connection->kex_state = KEX_STATE_IN_PROGRESS;
 
-  return WRITE_OK;
+  return LSH_OK  | LSH_GOON;
 }
 
 

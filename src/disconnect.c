@@ -67,7 +67,7 @@ static int do_disconnect(struct packet_handler *closure,
   /* FIXME: Mark the file as closed, somehow (probably a variable in
    * the write buffer) */
 
-  return WRITE_CLOSED;
+  return LSH_CLOSE;
 }
 
 struct packet_handler *make_disconnect_handler(void)

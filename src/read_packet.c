@@ -77,7 +77,7 @@ lsh_string_realloc(struct lsh_string *s, UINT32 length)
   else
     return s;
 }
-    
+
 static int do_read_packet(struct read_handler **h,
 			  struct abstract_read *read)
 {
@@ -85,214 +85,202 @@ static int do_read_packet(struct read_handler **h,
 
   MDEBUG(closure);
   
-#if 0
-  while(1)
+  switch(closure->state)
     {
-#endif
-      switch(closure->state)
-	{
-	case WAIT_START:
-	  {
-	    UINT32 block_size = closure->connection->rec_crypto
-	      ? closure->connection->rec_crypto->block_size : 8;
+    case WAIT_START:
+      {
+	UINT32 block_size = closure->connection->rec_crypto
+	  ? closure->connection->rec_crypto->block_size : 8;
 
-	    closure->buffer = lsh_string_realloc(closure->buffer,
-						 block_size);
-	    closure->pos = 0;
+	closure->buffer = lsh_string_realloc(closure->buffer,
+					     block_size);
+	closure->pos = 0;
 
-	    closure->state = WAIT_HEADER;
-	    /* FALL THROUGH */
-	  }
-	case WAIT_HEADER:
-	  {
-	    UINT32 block_size = closure->connection->rec_crypto
-	      ? closure->connection->rec_crypto->block_size : 8;
-	    UINT32 left;
-	    int n;
+	closure->state = WAIT_HEADER;
+	/* FALL THROUGH */
+      }
+    case WAIT_HEADER:
+      {
+	UINT32 block_size = closure->connection->rec_crypto
+	  ? closure->connection->rec_crypto->block_size : 8;
+	UINT32 left;
+	int n;
 
-	    left = block_size - closure->pos;
+	left = block_size - closure->pos;
 	    
-	    n = A_READ(read, left, closure->buffer->data + closure->pos);
-	    switch(n)
-	      {
-	      case 0:
-		return 1;
-	      case A_FAIL:
-		/* Fall through */
-	      case A_EOF:
-		/* FIXME: Free associated resources! */
-		return 0;
-	      }
-	    closure->pos += n;
-
-	    /* Read a complete block? */
-	    if (n == left)
-	      {
-		UINT32 length;
-
-		if (closure->connection->rec_crypto)
-		  CRYPT(closure->connection->rec_crypto,
-			block_size,
-			closure->buffer->data,
-			closure->buffer->data);
-		
-		length = READ_UINT32(closure->buffer->data);
-		if (length > closure->connection->rec_max_packet)
-		  {
-		    werror("read_packet: Recieving too large packet.\n"
-			   "  %d octets, limit is %d\n",
-			   length, closure->connection->rec_max_packet);
-		    return 0;
-		  }
-
-		if ( (length < 12)
-		     || (length < (block_size - 4))
-		     || ( (length + 4) % block_size))
-		  {
-		    werror("read_packet: Bad packet length %d\n",
-			   length);
-		    return 0;
-		  }
-
-		/* Process this block before the length field is lost. */
-		if (closure->connection->rec_mac)
-		  {
-		    UINT8 s[4];
-		    WRITE_UINT32(s, closure->sequence_number);
-		    
-		    HASH_UPDATE(closure->connection->rec_mac, 4, s);
-		    HASH_UPDATE(closure->connection->rec_mac,
-				closure->buffer->length,
-				closure->buffer->data);
-		  }
-
-		/* Allocate full packet */
-		{
-		  int done = block_size - 4;
-		  
-		  closure->buffer
-		    = ssh_format("%ls%lr",
-				 done,
-				 closure->buffer->data + 4,
-				 length - done,
-				 &closure->crypt_pos);
-
-		  /* FIXME: Is this needed anywhere? */
-		  closure->buffer->sequence_number
-		    = closure->sequence_number++;
-
-		  closure->pos = done;
-		  closure->state = WAIT_CONTENTS;
-		}
-		/* Fall through */
-	      }
-	    else
-	      /* Try reading some more */
-	      break;
-	  }
-	case WAIT_CONTENTS:
+	n = A_READ(read, left, closure->buffer->data + closure->pos);
+	switch(n)
 	  {
-	    UINT32 left = closure->buffer->length - closure->pos;
-	    int n = A_READ(read, left, closure->buffer->data + closure->pos);
-
-	    switch(n)
-	      {
-	      case 0:
-		return 1;
-	      case A_FAIL:
-		werror("do_read_packet: read() failed, %s\n", strerror(errno));
-		/* Fall through */
-	      case A_EOF:
-		/* FIXME: Free associated resources! */
-		return 0;
-	      }
-	    closure->pos += n;
-
-	    /* Read a complete packet? */
-	    if (n == left)
-	      {
-		assert(left == ((closure->buffer->length
-				 + closure->buffer->data)
-				- closure->crypt_pos));
-		if (closure->connection->rec_crypto)
-		  CRYPT(closure->connection->rec_crypto,
-			left,
-			closure->crypt_pos,
-			closure->crypt_pos);		      
-		if (closure->connection->rec_mac)
-		  {
-		    closure->computed_mac = lsh_string_realloc
-		      (closure->computed_mac,
-		       closure->connection->rec_mac->hash_size);
-
-		    HASH_UPDATE(closure->connection->rec_mac,
-				left,
-				closure->crypt_pos);
-		    HASH_DIGEST(closure->connection->rec_mac,
-				closure->computed_mac->data);
-		  }
-		closure->state = WAIT_MAC;
-		closure->pos = 0;
-		/* Fall through */
-	      }
-	    else
-	      /* Try reading some more */
-	      break;
+	  case 0:
+	    return LSH_OK | LSH_GOON;
+	  case A_FAIL:
+	    return LSH_FAIL | LSH_DIE;
+	  case A_EOF:
+	    /* FIXME: Free associated resources! */
+	    return LSH_OK | LSH_CLOSE;
 	  }
-	case WAIT_MAC:
-	  if (closure->connection->rec_mac)
-	    {
-	      UINT32 left = (closure->connection->rec_mac->mac_size
-			     - closure->pos);
-	      UINT8 *mac = alloca(left);
+	closure->pos += n;
 
-	      int n = A_READ(read, left, mac);
+	/* Read a complete block? */
+	if (n == left)
+	  {
+	    UINT32 length;
 
-	      switch(n)
-		{
-		case 0:
-		  return 1;
-		case A_FAIL:
-		  werror("do_read_packet: read() failed, %s\n",
-			 strerror(errno));
-		  /* Fall through */
-		case A_EOF:
-		  /* FIXME: Free associated resources! */
-		  return 0;
+	    if (closure->connection->rec_crypto)
+	      CRYPT(closure->connection->rec_crypto,
+		    block_size,
+		    closure->buffer->data,
+		    closure->buffer->data);
+		
+	    length = READ_UINT32(closure->buffer->data);
+	    if (length > closure->connection->rec_max_packet)
+	      {
+		werror("read_packet: Recieving too large packet.\n"
+		       "  %d octets, limit is %d\n",
+		       length, closure->connection->rec_max_packet);
+		return LSH_FAIL | LSH_DIE;
 	      }
 
-	      /* FIXME: Don't fail until the entire MAC has been read.
-	       * Otherwise we will leak information about partially
-	       * correct MAC:s. */
-	      if (!memcmp(mac,
-			  closure->computed_mac + closure->pos,
-			  n))
-		/* FIXME: Free resources */
-		return 0;
+	    if ( (length < 12)
+		 || (length < (block_size - 4))
+		 || ( (length + 4) % block_size))
+	      {
+		werror("read_packet: Bad packet length %d\n",
+		       length);
+		return LSH_FAIL | LSH_DIE;
+	      }
 
-	      closure->pos += n;
+	    /* Process this block before the length field is lost. */
+	    if (closure->connection->rec_mac)
+	      {
+		UINT8 s[4];
+		WRITE_UINT32(s, closure->sequence_number);
+		    
+		HASH_UPDATE(closure->connection->rec_mac, 4, s);
+		HASH_UPDATE(closure->connection->rec_mac,
+			    closure->buffer->length,
+			    closure->buffer->data);
+	      }
 
-	      if (n < left)
-		/* Try reading more */
-		break;
+	    /* Allocate full packet */
+	    {
+	      int done = block_size - 4;
+		  
+	      closure->buffer
+		= ssh_format("%ls%lr",
+			     done,
+			     closure->buffer->data + 4,
+			     length - done,
+			     &closure->crypt_pos);
+
+	      /* FIXME: Is this needed anywhere? */
+	      closure->buffer->sequence_number
+		= closure->sequence_number++;
+
+	      closure->pos = done;
+	      closure->state = WAIT_CONTENTS;
 	    }
-	  /* MAC was ok, send packet on */
-	  if (A_WRITE(closure->handler, closure->buffer)
-	      != WRITE_OK)
-	    /* FIXME: What now? */
-	    return 0;
-	  
-	  closure->buffer = NULL;
-	  closure->state = WAIT_START;
+	    /* Fall through */
+	  }
+	else
+	  /* Try reading some more */
 	  break;
-	  
-	default:
-	  fatal("Internal error\n");
+      }
+    case WAIT_CONTENTS:
+      {
+	UINT32 left = closure->buffer->length - closure->pos;
+	int n = A_READ(read, left, closure->buffer->data + closure->pos);
+
+	switch(n)
+	  {
+	  case 0:
+	    RETURN LSH_OK | LSH_GOON;
+	  case A_FAIL:
+	    /* Fall through */
+	  case A_EOF:
+	    /* FIXME: Free associated resources! */
+	    return LSH_FAIL | LSH_DIE;
+	  }
+	closure->pos += n;
+
+	/* Read a complete packet? */
+	if (n == left)
+	  {
+	    assert(left == ((closure->buffer->length
+			     + closure->buffer->data)
+			    - closure->crypt_pos));
+	    if (closure->connection->rec_crypto)
+	      CRYPT(closure->connection->rec_crypto,
+		    left,
+		    closure->crypt_pos,
+		    closure->crypt_pos);		      
+	    if (closure->connection->rec_mac)
+	      {
+		closure->computed_mac = lsh_string_realloc
+		  (closure->computed_mac,
+		   closure->connection->rec_mac->hash_size);
+
+		HASH_UPDATE(closure->connection->rec_mac,
+			    left,
+			    closure->crypt_pos);
+		HASH_DIGEST(closure->connection->rec_mac,
+			    closure->computed_mac->data);
+	      }
+	    closure->state = WAIT_MAC;
+	    closure->pos = 0;
+	    /* Fall through */
+	  }
+	else
+	  /* Try reading some more */
+	  break;
+      }
+    case WAIT_MAC:
+      if (closure->connection->rec_mac)
+	{
+	  UINT32 left = (closure->connection->rec_mac->mac_size
+			 - closure->pos);
+	  UINT8 *mac = alloca(left);
+
+	  int n = A_READ(read, left, mac);
+
+	  switch(n)
+	    {
+	    case 0:
+	      return LSH_OK | LSH_GOON;
+	    case A_FAIL:
+	      /* Fall through */
+	    case A_EOF:
+	      /* FIXME: Free associated resources! */
+	      return LSH_FAIL | LSH_DIE;
+	    }
+
+	  /* FIXME: Don't fail until the entire MAC has been read.
+	   * Otherwise we will leak information about partially
+	   * correct MAC:s. */
+	  if (!memcmp(mac,
+		      closure->computed_mac + closure->pos,
+		      n))
+	    /* FIXME: Free resources */
+	    return 0;
+
+	  closure->pos += n;
+
+	  if (n < left)
+	    /* Try reading more */
+	    break;
 	}
-#if 0
+      /* MAC was ok, send packet on */
+      {
+	struct lsh_string *packet = closure->buffer;
+	closure->buffer = NULL;
+	closure->state = WAIT_START;
+
+	return A_WRITE(closure->handler, packet);
+      }
+    default:
+      fatal("Internal error\n");
     }
-#endif
-  return 1;
+  fatal("Internal error\n");
 }
 
 struct read_handler *make_read_packet(struct abstract_write *handler,

@@ -1,0 +1,11 @@
+Consider return values from handlers. A return value has seveal
+components:
+
+ x Success/failure indication
+ 
+ x Next action (continue, close immediately, flush buffers then close,
+   exit...)
+ 
+ x Process return value in case the proper action is to exit.
+
+It should be possible to encode all this information into a simple integer.

@@ -32,7 +32,7 @@ static int do_ignore(struct packet_handler *closure,
 		     struct lsh_string *packet)
 {
   lsh_string_free(packet);
-  return WRITE_OK;
+  return LSH_OK | LSH_GOON;
 }
 
 struct packet_handler *make_ignore_handler(void)
