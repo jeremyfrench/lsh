@@ -22,6 +22,6 @@
 
 #include "certificate.h"
 
-struct spki_type_name
+const struct spki_type_name
 spki_type_names[] =
 #include "spki-type-names.h"

@@ -40,7 +40,7 @@ struct spki_type_name
   const uint8_t *name;
 };
 
-extern struct spki_type_name
+extern const struct spki_type_name
 spki_type_names[];
 
 
