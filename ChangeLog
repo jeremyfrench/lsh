@@ -1,3 +1,10 @@
+2003-05-13  Niels Möller  <niels@s3.kth.se>
+
+	* acinclude.m4 (LSH_FUNC_STRSIGNAL): Use a dummy STRSIGNAL if none
+	of strsignal, sys_siglist or _sys_siglist exists.
+
+	* src/io.c (lsh_popen_read): Use STRSIGNAL macro.
+
 2003-05-12  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/crypto.h (FOR_BLOCKS): Deleted unused macro.
