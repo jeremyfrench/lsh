@@ -1,3 +1,15 @@
+2003-10-22  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh.h: Forward declaration of catch_report_collect.
+	* src/channel_forward.h: ... and deleted corresponding declaration
+	here. 
+
+	* src/abstract_compress.c, src/abstract_compress.h: Deleted files.
+	Moved contents to...
+	* src/compress.c, src/compress.h: ... here. Updated users.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed abstract_compress.
+
 2003-10-10  Niels Möller  <niels@s3.kth.se>
 
 	* src/unix_user.c (do_read_file_fail): Return the created
