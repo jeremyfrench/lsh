@@ -51,8 +51,6 @@ need valid isa-pointers in classes (as classes are statically
 allocated). If this is done properly, the meta feature could also be
 cleaned up a little.
 
-Fix gc_kill to deallocate objects immediately.
-
 Consider adding reference counts to strings.
 
 
@@ -180,8 +178,7 @@ packet-size fields properly. It's too easy to forget them.
 
 Add const to arguments of type struct exception_handler *?
 
-Do something reasonable in do_buffered_read() when self->handler is
-NULL?
+Do something reasonable in do_buffered_read() if want_read is cleared.
 
 The supplied argp is compiled even if it isn't used.
 
@@ -207,14 +204,6 @@ Without this, it is impossible to use non-constant messages, for
 instance messages supplied by the peer.
 
 See if we can do without the "reason" argument to close callbacks. 
-
-FIXME:
-static void do_free_zstream(z_stream *z)
-{
-  /* FIXME: Let opaque be a pointer to a struct, as it is not portable
-   * to cast between void * and a function pointer. */
-  /* Call deflateEnd() or inflateEnd(). But which? We use the opague
-   * pointer, as we don't use that for anything else. */
 
 Try to unify the handling of queued channel requests and global
 requests. 
