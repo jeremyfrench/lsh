@@ -1,8 +1,11 @@
 2002-11-11  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/Makefile.am.in (noinst_PROGRAMS): Don't build prime_table.  
+
 	* src/digit_table.c: Deleted file.
 	* src/prime_table.c: Deleted file.
 	* src/sexp_parser.c: Deleted file.
+	* src/digits.c: Deleted file.
 	
 	* src/bignum.c (bignum_small_factor): Deleted function.
 	(bignum_next_prime): Deleted function.
