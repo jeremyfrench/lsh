@@ -392,7 +392,9 @@ DEFINE_COMMAND_SIMPLE(lsh_writekey_options2private_file, a)
 				  (signer2verifier
 				    (sexp2signer (options2algorithms options)
 				                 key))))
-	          (print_private options (open backend (options2private_file options))
+	          (print_private options
+		  		 (io_write_file backend
+		  				(options2private_file options))
 		                 (transform options key)))))))
 */
 
