@@ -89,7 +89,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	tcpforward.c tcpforward_commands.c \
 	translate_signal.c tty.c \
 	unix_interact.c unix_process.c unix_random.c unix_user.c \
-	unpad.c userauth.c \
+	userauth.c \
 	werror.c write_buffer.c write_packet.c \
 	xalloc.c xauth.c zlib.c
 
