@@ -109,6 +109,23 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
   return &res->super;
 }
 
+/* GABA:
+   (expr
+     (name client)
+     (globals (request-userauth COMMAND_UNIMPLEMENTED)
+              (initiate-connection connection_command)
+	      (connect connect_command)
+              ;; (die-on-null command_die_on_null)
+	      )
+     ; (params)
+     (expr (start-stdio
+             (channel-requests requests
+	       (request-session 
+                 (request-connection (request-userauth name keys
+                   (initiate-connection (connect port)))))))))
+*/
+
+
 int main(int argc, char **argv)
 {
   char *host = NULL;
@@ -323,6 +340,7 @@ int main(int argc, char **argv)
   kexinit_handler = make_kexinit_handler
     (CONNECTION_CLIENT,
      make_kexinit, algorithms,
+     /* FIXME: Make request_service a command */
      request_service(ATOM_SSH_USERAUTH, 
 		     make_client_userauth(ssh_format("%lz", user),
 					  ATOM_SSH_CONNECTION,
