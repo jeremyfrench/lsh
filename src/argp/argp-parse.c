@@ -332,11 +332,13 @@ find_short_option(struct parser *parser, int key, struct group **p)
 
 enum match_result { MATCH_EXACT, MATCH_PARTIAL, MATCH_NO };
 
+/* If defined, allow complete.el-like abbreviations of long options. */
+#ifndef
+#define ARGP_COMPLETE 0
+#endif
+
 /* Matches an encountern long-option argument ARG against an option NAME.
- * ARG is terminated by NUL or '='.
- *
- * For partial matches, *QUALITY is set to the length of the common
- * prefix. */
+ * ARG is terminated by NUL or '='. */
 static enum match_result
 match_option(const char *arg, const char *name)
 {
@@ -348,11 +350,13 @@ match_option(const char *arg, const char *name)
 	case '\0':
 	case '=':
 	  return name[j] ? MATCH_PARTIAL : MATCH_EXACT;
+#if ARGP_COMPLETE
 	case '-':
 	  while (name[j] != '-')
 	    if (!name[j++])
 	      return MATCH_NO;
 	  break;
+#endif
 	default:
 	  if (arg[i] != name[j])
 	    return MATCH_NO;
