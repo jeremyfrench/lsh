@@ -81,8 +81,6 @@ struct pty_info *make_pty_info(void)
   return pty;
 }
 
-#if HAVE_UNIX98_PTYS
-
 /* FIXME: Maybe this name should be configurable? */
 #ifndef TTY_GROUP
 #define TTY_GROUP "tty"
@@ -95,6 +93,49 @@ struct pty_info *make_pty_info(void)
 /* Sets the permissions on the slave pty suitably for use by USER.
  * This function is derived from the grantpt function in
  * sysdeps/unix/grantpt.c in glibc-2.1. */
+
+static int pty_check_permissions(const char *name, uid_t user)
+{
+  struct stat st;
+  struct group *grp;
+  gid_t tty_gid;
+      
+  if (stat(name, &st) < 0)
+    return 0;
+
+  /* Make sure that the user owns the device. */
+  if ( (st.st_uid != user)
+       && (chown(name, user, st.st_gid) < 0) )
+    return 0;
+
+  /* Points to static area */
+  grp = getgrnam(TTY_GROUP);
+
+  if (grp)
+    tty_gid = grp->gr_gid;
+  else
+    {
+      /* If no tty group is found, use the server's gid */
+      werror("lshd: server_pty.c: No tty group found.\n");
+      tty_gid = getgid();
+    }
+
+  if ( (st.st_gid != tty_gid)
+       && (chown(name, user, tty_gid) < 0))
+    return 0;
+
+  /* Make sure the permission mode is set to readable and writable
+   * by the owner, and writable by the group. */
+
+  if ( ((st.st_mode & ACCESSPERMS) != (S_IRUSR | S_IWUSR | S_IWGRP))
+       && (chmod(name, S_IRUSR | S_IWUSR | S_IWGRP) < 0) )
+    return 0;
+
+  /* Everything is fine */
+  return 1;
+}
+
+#if HAVE_UNIX98_PTYS
 
 /* Returns the name of the slave tty, as a string with an extra
  * terminating NUL. */
@@ -115,46 +156,10 @@ static struct lsh_string *pty_grantpt_uid(int master, uid_t user)
 
       /* Pointer to static area */
       char *name = ptsname(master);
-      struct stat st;
-      struct group *grp;
-      gid_t tty_gid;
+      return (pty_check_permissions(name, user)
+	      ? format_cstring(name)
+	      : NULL);
       
-      if (!name)
-	return NULL;
-
-      if (stat(name, &st) < 0)
-	return NULL;
-
-      /* Make sure that the user owns the device. */
-      if ( (st.st_uid != user)
-	   && (chown(name, user, st.st_gid) < 0) )
-	return NULL;
-
-      /* Points to static area */
-      grp = getgrnam(TTY_GROUP);
-
-      if (grp)
-	tty_gid = grp->gr_gid;
-      else
-	{
-	  /* If no tty group is found, use the server's gid */
-	  werror("lshd: server_pty.c: No tty group found.\n");
-	  tty_gid = getgid();
-	}
-
-      if ( (st.st_gid != tty_gid)
-	   && (chown(name, user, tty_gid) < 0))
-	return NULL;
-
-      /* Make sure the permission mode is set to readable and writable
-       * by the owner, and writable by the group. */
-
-      if ( ((st.st_mode & ACCESSPERMS) != (S_IRUSR | S_IWUSR | S_IWGRP))
-	  && (chmod(name, S_IRUSR | S_IWUSR | S_IWGRP) < 0) )
-	return NULL;
-
-      /* Everything is fine */
-      return format_cstring(name);
     }
 }
 #endif HAVE_UNIX98_PTYS
@@ -204,12 +209,6 @@ close_master:
     lsh_string_free(name);
   return 0;
   
-#elif HAVE_OPENPTY
-  /* FIXME: openpty() may not work properly, when called with the
-   * wrong uid. */
-  return openpty(&pty->master, &pty->slave, NULL, NULL, NULL) == 0 ?
-         1 : 0;
-
 #elif PTY_BSD_SCHEME
 
 #define PTY_BSD_SCHEME_MASTER "/dev/pty%c%c"
@@ -243,13 +242,34 @@ close_master:
 		  errno = saved_errno;
 		  return 0;
 	        }
-	      pty->tty_name = format_cstring(slave);
-              return 1;
+	      /* NOTE: As there is no locking, setting the permissions
+	       * properly does not guarantee that nobody else has the
+	       * pty open, and can snoop the traffic on it. But it
+	       * should be a little better than nothing. */
+
+	      /* FIXME: Should we do something about the master
+	       * permissions as well? */
+	      if (pty_check_permissions(slave, user))
+		{
+		  pty->tty_name = format_cstring(slave);
+		  return 1;
+		}
+	      saved_errno = errno;
+	      close(pty->master);
+	      close(pty->slave);
+	      return 0;
 	    }
         }
     }
   return 0;
-#else /* !PTY_BSD_SCHEME */
+#elif HAVE_OPENPTY
+  /* FIXME: openpty() may not work properly, when called with the
+   * wrong uid. */
+#error The openpty() scheme is not currently supported.
+  return (openpty(&pty->master, &pty->slave, NULL, NULL, NULL) == 0)
+    && pty_check_permissions(ptsname..., user);
+
+#else /* !HAVE_OPENPTY */
   /* No pty:s */
   return 0;
 #endif
