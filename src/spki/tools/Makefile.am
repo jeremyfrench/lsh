@@ -8,6 +8,7 @@ AM_LDFLAGS = -L.. -L../../nettle/
 # programs depend on it. It seems there's no DEPENDENCIES variable
 # that affects all programs.
 
-LDADD = misc.o -lspki -lnettle ../libspki.a ../../nettle/libnettle.a
+LDADD = misc.o getopt.o getopt1.o \
+	-lspki -lnettle ../libspki.a ../../nettle/libnettle.a
 
-EXTRA_DIST = misc.c misc.h
+EXTRA_DIST = misc.c misc.h getopt.h
