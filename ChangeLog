@@ -1,3 +1,12 @@
+2003-03-05  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* configure.ac: Bumped version to 1.5.2.
+
+	* src/testsuite/Makefile.am (LDADD): Use DOTDOT_LIBARGP, instead
+	of the GNU make specific addprefix function.
+
+	* configure.ac (DOTDOT_LIBARGP): New substitution
+
 2003-03-04  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* misc/xenofarm.sh (make): Don't use -k flag, it seems to mask
