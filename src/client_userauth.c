@@ -1137,7 +1137,7 @@ do_userauth_info_request(struct packet_handler *s,
 	  if (!s)
 	    goto error;
 
-	  dialog->instruction = ssh_format("%lfS\n%lfS\n",
+	  dialog->instruction = ssh_format("%lfS\n\n%lfS\n",
 					   s, dialog->instruction);
 	}
       else
