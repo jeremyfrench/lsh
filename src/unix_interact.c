@@ -49,6 +49,7 @@
 
 #include "unix_interact.c.x"
 
+#if 0
 static volatile sig_atomic_t window_changed;
 
 static void winch_handler(int signum)
@@ -57,7 +58,7 @@ static void winch_handler(int signum)
 
   window_changed = 1;
 }
-
+#endif
 
 /* Depends on the tty being line buffered */
 static int
@@ -368,9 +369,11 @@ make_unix_interact(struct io_backend *backend)
   self->super.set_attributes = unix_set_attributes;
   self->super.window_size = unix_window_size;
   self->super.window_change_subscribe = unix_window_change_subscribe;
-  
-  window_changed = 0;
 
+#if 0
+  window_changed = 0;
+#endif
+  
   self->tty_fd = -1;
   
 #if HAVE_STDTTY_FILENO
@@ -383,6 +386,7 @@ make_unix_interact(struct io_backend *backend)
   if (backend && (self->tty_fd >= 0))
     {
       /* Track window changes. */
+#if 0
       struct sigaction winch;
 
       memset(&winch, 0, sizeof(winch));
@@ -393,8 +397,9 @@ make_unix_interact(struct io_backend *backend)
       if (sigaction(SIGWINCH, &winch, NULL) < 0)
 	werror("Failed to install SIGWINCH handler (errno = %i): %z\n",
 	       errno, STRERROR(errno));
-
-      io_signal_handler(backend, &window_changed,
+#endif
+      
+      io_signal_handler(backend, SIGWINCH,
 			make_winch_handler(self));
 
       suspend_handle_tty(self->tty_fd);
