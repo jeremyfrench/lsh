@@ -42,4 +42,16 @@ int tty_setwinsize(int fd, int w, int h, int wp, int hp);
 struct lsh_string *tty_encode_term_mode(struct termios *ios);
 int tty_decode_term_mode(struct termios *ios, UINT32 t_len, UINT8 *t_modes);
 
-#endif
+#if HAVE_CFMAKERAW
+#define CFMAKERAW cfmakeraw
+#else /* !HAVE_CFMAKERAW */
+/* This definition is probably from the linux cfmakeraw man page. */
+#define CFMAKERAW(ios) do {						   \
+  (ios)->c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON); \
+  (ios)->c_oflag &= ~OPOST;						   \
+  (ios)->c_lflag &= ~(ECHO|ECHONL|ICANON|ISIG|IEXTEN);			   \
+  (ios)->c_cflag &= ~(CSIZE|PARENB); (ios)->c_cflag |= CS8;		   \
+} while(0)
+#endif /* !HAVE_CFMAKERAW */
+
+#endif /* LSH_TTY_H_INCLUDED */
