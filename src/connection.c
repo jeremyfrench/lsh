@@ -151,7 +151,6 @@ struct packet_handler *make_unimplemented_handler(void)
   return res;
 }
 
-
 struct ssh_connection *make_ssh_connection(struct command_continuation *c)
 {
   int i;

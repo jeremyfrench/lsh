@@ -31,10 +31,12 @@
 #include "ssh1_fallback.h"
 
 struct close_callback *make_connection_close_handler(struct ssh_connection *c);
+
 struct command *
 make_handshake_command(int mode,
 		       const char *id,
 		       UINT32 block_size,
+		       struct randomness *r,
 		       struct alist *algorithms,
 		       struct make_kexinit *init,
 		       struct ssh1_fallback *fallback);

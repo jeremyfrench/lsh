@@ -99,7 +99,7 @@ struct command_simple command_unimplemented =
  * returns an LSH_FAIL status to the mainloop. */
 
 static int
-do_command_die_on_null(struct command *s,
+do_command_die_on_null(struct command *s UNUSED,
 		       struct lsh_object *x,
 		       struct command_continuation *c)
 {
