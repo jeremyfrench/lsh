@@ -4,7 +4,6 @@ srcdir = @srcdir@
 VPATH = $(srcdir)
 
 CC = @CC@
-SCHEME = @SCHEME@
 @SET_MAKE@
 
 # INSTALL = @INSTALL@
@@ -13,15 +12,13 @@ SCHEME = @SCHEME@
 # MAKEINFO = makeinfo
 # TEXI2DVI = texi2dvi
 
-DEFS = @DEFS@
+export DEFS = @DEFS@
 LIBS = @LIBS@
 
 CFLAGS = -g -Wall # -O2 -fomit-frame-pointer
 LDFLAGS = @LDFLAGS@
 
-LOADLIBES = $(LIBS)
-
-CPPFLAGS = -DDEBUG_ALLOC
+CPPFLAGS = -DDEBUG_ALLOC -DLSH -I$(srcdir) -I$(srcdir)/include
 
 prefix = @prefix@
 exec_prefix = $(prefix)
@@ -33,6 +30,8 @@ infodir = $(prefix)/info
 binprefix = 
 
 #### End of system configuration section. ####
+
+LOADLIBES = $(LIBS) lib/algorithms.a
 
 COMMON_SRCS = atoms.c bignum.c connection.c crypto.c \
 	debug.c encrypt.c format.c io.c packet_dispatch.c \
@@ -49,7 +48,7 @@ CLIENT_OBJS = $(CLIENT_SRCS:.c=.o)
 SERVER_OBJS = $(SERVER_SRCS:.c=.o)
 OBJS = $(SRCS:.c=.o)
 
-all: lsh lshd
+all: algorithms lsh lshd
 
 .PHONY: all
 
@@ -69,6 +68,12 @@ atoms_gperf.c: atoms.in process_atoms
 
 atoms_table.c: atoms.in process_atoms
 	bash process_atoms table <atoms.in >atoms_table.c
+
+algorithms:
+	cd lib; \
+        EXTRA_CPPFLAGS="-DLSH -I$(srcdir) -I$(srcdir)/include" \
+	EXTRA_VPATH="$(srcdir):$(srcdir)/include" \
+		$(MAKE) algorithms.a 
 
 clean:
 	rm -f *.o 
