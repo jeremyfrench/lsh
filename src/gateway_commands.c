@@ -196,6 +196,7 @@ make_read_gateway(struct abstract_write *handler,
 
 static struct ssh_connection *
 gateway_make_connection(struct listen_value *lv,
+			struct resource *resource,
 			struct exception_handler *e)
 {
   /* NOTE: lv->peer is usually NULL here. */
@@ -204,6 +205,10 @@ gateway_make_connection(struct listen_value *lv,
 			  lv->peer, lv->local, "gateway",
 			  make_exc_finish_read_handler(lv->fd, e, HANDLER_CONTEXT));
 
+  /* Adopt resources associated with the connection. */
+  if (resource)
+    remember_resource(connection->resources, resource);
+  
   connection_init_io
     (connection,
      io_read_write(lv->fd,
@@ -231,15 +236,17 @@ gateway_make_connection(struct listen_value *lv,
   return connection;
 }
 
-DEFINE_COMMAND(gateway_init)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
+DEFINE_COMMAND2(gateway_init)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e)
 {
-  CAST(listen_value, lv, a);
+  CAST_SUBTYPE(resource, resource, a1);
+  CAST(listen_value, lv, a2);
 
-  COMMAND_RETURN(c, gateway_make_connection(lv, e));
+  COMMAND_RETURN(c, gateway_make_connection(lv, resource, e));
 }
 
 
@@ -254,7 +261,7 @@ DEFINE_COMMAND2(gateway_accept)
   CAST(ssh_connection, connection, a1);
   CAST(listen_value, lv, a2);
 
-  struct ssh_connection *gateway = gateway_make_connection(lv, e);
+  struct ssh_connection *gateway = gateway_make_connection(lv, NULL, e);
   
   /* Kill gateway connection if the main connection goes down. */
   remember_resource(connection->resources, &lv->fd->super);

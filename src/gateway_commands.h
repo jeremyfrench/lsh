@@ -26,8 +26,8 @@
 
 #include "io.h"
 
-extern struct command gateway_init;
-#define GATEWAY_INIT (&gateway_init.super)
+extern struct command_2 gateway_init;
+#define GATEWAY_INIT (&gateway_init.super.super)
 
 extern struct command_2 gateway_accept;
 #define GATEWAY_ACCEPT (&gateway_accept.super.super)
