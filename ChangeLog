@@ -1,5 +1,8 @@
 2004-11-07  Niels Möller  <nisse@lysator.liu.se>
 
+	* doc/lsh.texinfo (Action options): Documented -D (socks
+	forwarding).
+
 	* misc/xenofarm.sh: If a liboop dist is included in the build
 	package, install it in $pfx before trying to build lsh.
 
