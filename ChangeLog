@@ -1,3 +1,16 @@
+2002-09-12  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* misc/make-dist: Deleted obsolete make check-more call.
+
+	* src/keyexchange.c (kex_make_encrypt, kex_make_decrypt): Changed
+	interface so that we can both support the "none" cipher, and
+	return failure for weak keys.
+	(install_keys): Updated to the new kex_make_encrypt and
+	kex_make_decrypt interface.
+
+	* configure.ac: Deleted the ipv6 test that tried to create an ipv6
+	socket. 
+
 2002-09-03  Pontus Sköld  <pont@soua.net>
 
 	* src/server_x11.c (XAUTH_PROGRAM): Use predefined value if
