@@ -97,7 +97,7 @@ static int do_listen(struct io_backend *backend,
 }
 
 /* A listen function taking three arguments:
- * (listen backend connection port).
+ * (listen callback backend port).
  *
  * Suitable for handling forwarding requests. */
 
@@ -106,8 +106,9 @@ static int do_listen(struct io_backend *backend,
      (name listen_connection)
      (super command)
      (vars
-       (backend object io_backend)
-       (connection object ssh_connection)))
+       (callback object command)
+       (backend object io_backend)))
+       ;; (connection object ssh_connection)))
 */
 
 static int
@@ -117,15 +118,27 @@ do_listen_connection(struct command *s,
 {
   CAST(listen_connection, self, s);
   CAST(address_info, address, x);
-  return do_listen(self->backend, address, self->connection->resources, c);
+
+  /* FIXME: Add ipv6 support somewhere */
+  struct sockaddr_in sin;
+  
+  if (!address_info2sockaddr_in(&sin, address))
+    return COMMAND_RETURN(c, NULL);
+
+  return COMMAND_RETURN(c, io_listen
+			(self->backend, &sin,
+			 make_listen_command_callback
+			 (self->backend,
+			  make_apply(self->callback, NULL))));
+		 
 }
 
-struct command *make_listen_connection(struct io_backend *backend,
-				       struct ssh_connection *connection)
+struct command *make_listen_command(struct command *callback,
+				    struct io_backend *backend)
 {
   NEW(listen_connection, self);
+  self->callback = callback;
   self->backend = backend;
-  self->connection = connection;
 
   self->super.call = do_listen_connection;
 
@@ -133,16 +146,22 @@ struct command *make_listen_connection(struct io_backend *backend,
 }
 
 static struct lsh_object *
-do_collect_listen_connection(struct collect_info_2 *info,
-			     struct lsh_object *b,
-			     struct lsh_object *c)
+collect_listen(struct collect_info_2 *info,
+	       struct lsh_object *b,
+	       struct lsh_object *c)
 {
+  CAST(command, callback, c);
   CAST(io_backend, backend, b);
-  CAST(ssh_connection, connection, c);
   assert(!info);
 
-  return &make_listen_connection(backend, connection)->super;
+  return &make_listen_command(callback, backend)->super;
 }
+
+static struct collect_info_2 collect_info_listen_2 =
+STATIC_COLLECT_2_FINAL(collect_listen);
+
+struct collect_info_1 listen_command =
+STATIC_COLLECT_1(&collect_info_listen_2);
 
 /* GABA:
    (class

@@ -42,8 +42,10 @@
        (peer object address_info)))
 */
 
-struct command *make_listen_connection(struct io_backend *backend,
-				       struct ssh_connection *connection);
+struct command *make_listen_command(struct command *callback,
+				    struct io_backend *backend);
+
+extern struct collect_info_1 listen_command;
 
 struct command *make_simple_connect(struct io_backend *backend,
 				    struct resource_list *resources);
