@@ -15,7 +15,6 @@
 
 #include "jpoll.h"
 
-#include <stdio.h>
 #include <sys/time.h>
 #include <sys/types.h>
 
@@ -62,8 +61,8 @@ int poll(struct pollfd *fdlist, nfds_t count, int timeoutInMS)
   for (i = 0; i < count; i++) {
     if (FD_ISSET(fdlist[i].fd, &readfdset)) fdlist[i].revents |= POLLIN;
     if (FD_ISSET(fdlist[i].fd, &writefdset)) fdlist[i].revents |= POLLOUT;
-    printf("Set FD %d = %d\n", i, fdlist[i].revents);
+    trace("jpoll.c: Set FD %i = %i\n", i, fdlist[i].revents);
   }
-  printf("Returning %d\n", ret);
+  trace("jpoll.c: Returning %i\n", ret);
   return(ret);
 }
