@@ -579,9 +579,9 @@ int main(int argc, char **argv)
 
     /* Supported channel requests */
     struct alist *supported_channel_requests
-      = make_alist(1,
-		   ATOM_SHELL, make_shell_handler(backend,
-						  reaper),
+      = make_alist(2,
+		   ATOM_SHELL, make_shell_handler(backend, reaper),
+		   ATOM_EXEC, make_exec_handler(backend, reaper),
 		   -1);
     
     
