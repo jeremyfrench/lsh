@@ -537,8 +537,8 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
       /* FIXME: Using null_ok == 0 is not quite right. If the
        * tcpip_forward_hook doesn't return immediately, and we receive
        * a cancel request before the forwarding is setup (which should
-       * be ok, if the forarding was requested with want_reply == 0),
-       * cancelling failes and the client has to try again later. */
+       * be ok, if the forwarding was requested with want_reply == 0),
+       * cancelling fails and the client has to try again later. */
 
       struct local_port *port
 	= remove_forward(&connection->table->local_ports, 0,

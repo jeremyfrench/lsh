@@ -116,7 +116,7 @@ make_spki_subject(struct sexp *key,
  * compared pointer-wise. I.e. if we get several (public-key ...) and
  * (hash ...) expressions representing the same principal, we merge
  * them into a single spki_subject object. However, there is one case
- * in which this failes: If we encounter several (hash ...)
+ * in which this fails: If we encounter several (hash ...)
  * expressions with different hash algorithms, before we encounter the
  * non-hashed (public-key ...) expression. */
 
