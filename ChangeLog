@@ -1,3 +1,25 @@
+2000-03-26  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/server_session.c (server_session): New attribute
+	initial_window. 
+
+	* src/client.c (make_client_session): Removed references to
+	max_window. 
+
+	* src/channel.c (channel_start_receive): Added argument
+	initial_window_size. Removed references to max_window.
+	(format_global_request): New function.
+
+	* src/channel.h (ssh_channel): Removed obsolete max_window
+	attribute.  
+	(channel_open): Added send_window_size argument.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added gateway_channel.c.
+	Removed proxy_channel.c.
+
+	* src/gateway_channel.c: New file. More or less copied from
+	proxy_channel.c. 
+
 2000-03-19  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/unix_user.c (do_lookup_user): Honor shadow-style password

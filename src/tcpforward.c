@@ -159,7 +159,7 @@ do_tcpip_channel_die(struct ssh_channel *c)
 }
 
 struct ssh_channel *
-make_tcpip_channel(struct lsh_fd *socket, UINT32 max_window)
+make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
 {
   NEW(tcpip_channel, self);
   assert(socket);
@@ -170,8 +170,7 @@ make_tcpip_channel(struct lsh_fd *socket, UINT32 max_window)
   
   self->super.close = do_tcpip_channel_die;
 
-  self->super.max_window = max_window;
-  self->super.rec_window_size = max_window;
+  self->super.rec_window_size = initial_window;
 
   /* FIXME: Make maximum packet size configurable. */
   self->super.rec_max_packet = SSH_MAX_PACKET;
@@ -287,7 +286,8 @@ static void
 do_channel_open_direct_tcpip(struct channel_open *s,
 			     struct ssh_connection *connection,
 			     UINT32 channel_type UNUSED,
-			     UINT32 max_packet UNUSED,
+			     UINT32 send_window_size UNUSED,
+			     UINT32 send_max_packet UNUSED,
 			     struct simple_buffer *args,
 			     struct command_continuation *c,
 			     struct exception_handler *e)
@@ -568,7 +568,8 @@ static void
 do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
 				struct ssh_connection *connection,
 				UINT32 channel_type UNUSED,
-				UINT32 max_packet UNUSED,
+				UINT32 send_window_size UNUSED,
+				UINT32 send_max_packet UNUSED,
 				struct simple_buffer *args,
 				struct command_continuation *c,
 				struct exception_handler *e)

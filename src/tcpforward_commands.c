@@ -129,7 +129,9 @@ struct command tcpip_start_io =
      (vars
        ; ATOM_FORWARDED_TCPIP or ATOM_DIRECT_TCPIP
        (type . int)
-       (max_window . UINT32)
+
+       (initial_window . UINT32)
+
        ; For forwarded-tcpip, port is the port listened to.
        ; For direct-tcpip, port is the port to connect to.
        ; In both cases, it's a port used on the server end.
@@ -166,7 +168,7 @@ new_tcpip_channel(struct channel_open_command *c,
 }
 
 static struct command *
-make_open_tcpip_command(int type, UINT32 max_window,
+make_open_tcpip_command(int type, UINT32 initial_window,
 			struct address_info *port,
 			struct listen_value *peer)
 {
@@ -178,7 +180,7 @@ make_open_tcpip_command(int type, UINT32 max_window,
   self->super.new_channel = new_tcpip_channel;
 
   self->type = type;
-  self->max_window = max_window;
+  self->initial_window = initial_window;
   
   self->port = port;
   self->peer = peer;
@@ -325,8 +327,8 @@ do_format_request_tcpip_forward(struct global_request_command *s,
   object_queue_add_tail(&connection->table->remote_ports,
 			&port->super.super);
   
-  return ssh_format("%c%a%c%S%i", SSH_MSG_GLOBAL_REQUEST, ATOM_TCPIP_FORWARD,
-		    want_reply, self->port->ip, self->port->port);
+  return format_global_request(ATOM_TCPIP_FORWARD, want_reply, "%S%i",
+			       self->port->ip, self->port->port);
 }
 		    
 static struct command *
