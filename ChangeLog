@@ -1,3 +1,10 @@
+2000-04-22  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/unix_user.c (lsh_make_utmp): Check HAVE_UT_HOST.
+
+	* src/io.c: include sys/stat.h
+	(io_listen_local, io_connect_local): Use AF_UNIX, not AF_LOCAL
+
 2000-04-22  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Bumped version.
