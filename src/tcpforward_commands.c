@@ -37,25 +37,28 @@
 
 /* Forward declarations */
 
-extern struct collect_info_1 open_direct_tcpip;
-extern struct collect_info_1 remote_listen_command;
-extern struct collect_info_1 open_forwarded_tcpip;
+extern struct command_2 open_direct_tcpip;
+extern struct command_2 remote_listen_command;
+extern struct command_2 open_forwarded_tcpip;
 extern struct command tcpip_start_io;
 extern struct command tcpip_connect_io;
 
 struct collect_info_1 install_direct_tcpip_handler;
 struct collect_info_1 install_forwared_tcpip_handler;
 
-static struct command make_direct_tcpip_handler;
+/* FIXME: Should be static? */
+struct command make_direct_tcpip_handler;
 
 struct collect_info_1 install_tcpip_forward_handler;
-static struct command make_tcpip_forward_handler;
 
-#define OPEN_DIRECT_TCPIP (&open_direct_tcpip.super.super.super)
-#define REMOTE_LISTEN (&remote_listen_command.super.super.super)
+/* FIXME: Should be static? */
+struct command make_tcpip_forward_handler;
+
+#define OPEN_DIRECT_TCPIP (&open_direct_tcpip.super.super)
+#define REMOTE_LISTEN (&remote_listen_command.super.super)
 #define TCPIP_START_IO (&tcpip_start_io.super)
 #define TCPIP_CONNECT_IO (&tcpip_connect_io.super)
-#define OPEN_FORWARDED_TCPIP (&open_forwarded_tcpip.super.super.super)
+#define OPEN_FORWARDED_TCPIP (&open_forwarded_tcpip.super.super)
 #define DIRECT_TCPIP_HANDLER (&make_direct_tcpip_handler.super)
 #define INSTALL_DIRECT_TCPIP (&install_direct_tcpip_handler.super.super.super)
 
@@ -188,45 +191,35 @@ make_open_tcpip_command(int type, UINT32 initial_window,
   return &self->super.super;
 }
 
-static struct lsh_object *
-collect_open_forwarded_tcpip(struct collect_info_2 *info,
-			     struct lsh_object *a,
-			     struct lsh_object *b)
+DEFINE_COMMAND2(open_forwarded_tcpip)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
-  CAST(address_info, local, a);
-  CAST(listen_value, peer, b);
-
-  assert(!info->next);
-
-  return &make_open_tcpip_command(ATOM_FORWARDED_TCPIP, TCPIP_WINDOW_SIZE,
-				  local, peer)->super;
+  CAST(address_info, local, a1);
+  CAST(listen_value, peer, a2);
+  
+  COMMAND_RETURN(c,
+		 make_open_tcpip_command(ATOM_FORWARDED_TCPIP,
+					 TCPIP_WINDOW_SIZE,
+					 local, peer));
 }
 
-static struct collect_info_2 collect_open_forwarded_tcpip_2 =
-STATIC_COLLECT_2_FINAL(collect_open_forwarded_tcpip);
-
-struct collect_info_1 open_forwarded_tcpip =
-STATIC_COLLECT_1(&collect_open_forwarded_tcpip_2);
-
-static struct lsh_object *
-collect_open_direct_tcpip(struct collect_info_2 *info,
-			  struct lsh_object *a,
-			  struct lsh_object *b)
+DEFINE_COMMAND2(open_direct_tcpip)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
-  CAST(address_info, local, a);
-  CAST(listen_value, peer, b);
-
-  assert(!info->next);
-
-  return &make_open_tcpip_command(ATOM_DIRECT_TCPIP, TCPIP_WINDOW_SIZE,
-				  local, peer)->super;
+  CAST(address_info, local, a1);
+  CAST(listen_value, peer, a2);
+  
+  COMMAND_RETURN(c,
+		 make_open_tcpip_command(ATOM_DIRECT_TCPIP,
+					 TCPIP_WINDOW_SIZE,
+					 local, peer));
 }
-
-static struct collect_info_2 collect_open_direct_tcpip_2 =
-STATIC_COLLECT_2_FINAL(collect_open_direct_tcpip);
-
-struct collect_info_1 open_direct_tcpip =
-STATIC_COLLECT_1(&collect_open_direct_tcpip_2);
 
 
 /* Requesting remote forwarding of a port */
@@ -324,40 +317,31 @@ do_format_request_tcpip_forward(struct global_request_command *s,
   return format_global_request(ATOM_TCPIP_FORWARD, want_reply, "%S%i",
 			       self->port->ip, self->port->port);
 }
-		    
-static struct command *
-make_request_tcpip_forward_command(struct command *callback,
-				   struct address_info *listen)
+
+
+DEFINE_COMMAND2(remote_listen_command)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
-  NEW(request_tcpip_forward_command, self);
+  trace("remote_listen_command\n");
 
-  debug("tcpforward_commands.c: make_request_tcpip_forward_command\n");
-  
-  self->super.super.call = do_channel_global_command;
-  self->super.format_request = do_format_request_tcpip_forward;
+  {
+    CAST_SUBTYPE(command, callback, a1);
+    CAST(address_info, port, a2);
+    
+    NEW(request_tcpip_forward_command, self);
+    
+    self->super.super.call = do_channel_global_command;
+    self->super.format_request = do_format_request_tcpip_forward;
 
-  self->callback = callback;
-  self->port = listen;
-  
-  return &self->super.super;
+    self->callback = callback;
+    self->port = port;
+    
+    COMMAND_RETURN(c, self);
+  }
 }
-
-static struct lsh_object *
-collect_remote_listen(struct collect_info_2 *info,
-		      struct lsh_object *a, struct lsh_object *b)
-{
-  CAST_SUBTYPE(command, callback, a);
-  CAST(address_info, port, b);
-  assert(!info->next);
-  
-  return &make_request_tcpip_forward_command(callback, port)->super;
-}
-
-static struct collect_info_2 collect_info_remote_listen_2 =
-STATIC_COLLECT_2_FINAL(collect_remote_listen);
-
-static struct collect_info_1 remote_listen_command =
-STATIC_COLLECT_1(&collect_info_remote_listen_2);
 
 
 /* Cancel a remotely forwarded port.
@@ -433,11 +417,11 @@ make_forward_remote_port(struct io_backend *backend,
 
 /* Takes a callback function and returns a channel_open
  * handler. */
-static void
-do_make_direct_tcpip_handler(struct command *s UNUSED,
-			     struct lsh_object *x,
-			     struct command_continuation *c,
-			     struct exception_handler *e UNUSED)
+DEFINE_COMMAND(make_direct_tcpip_handler)
+     (struct command *s UNUSED,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(command, callback,  x);
 
@@ -447,27 +431,26 @@ do_make_direct_tcpip_handler(struct command *s UNUSED,
 		 &make_channel_open_direct_tcpip(callback)->super);
 }
 
-static struct command
-make_direct_tcpip_handler = STATIC_COMMAND(do_make_direct_tcpip_handler);
-
 /* Takes a callback function and returns a global_request handler. */
-static void
-do_make_tcpip_forward_handler(struct command *s UNUSED,
-			      struct lsh_object *x,
-			      struct command_continuation *c,
-			      struct exception_handler *e UNUSED)
+DEFINE_COMMAND(make_tcpip_forward_handler)
+     (struct command *s UNUSED,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(command, callback,  x);
 
-  debug("tcpforward_commands.c: do_make_tcpip_forward_handler\n");
+  debug("tcpforward_commands.c: make_tcpip_forward_handler\n");
   
   COMMAND_RETURN(c,
 		 &make_tcpip_forward_request(callback)->super);
 }
 
+#if 0
 static struct command
 make_tcpip_forward_handler
 = STATIC_COMMAND(do_make_tcpip_forward_handler);
+#endif
 
 
 /* Commands to install handlers */
@@ -519,6 +502,7 @@ STATIC_COLLECT_1(&install_tcpip_forward_info_2.super);
 /* GABA:
    (expr
      (name tcpip_forward_hook)
+     ; FIXME: Don't use globals.
      (globals
        (install "&install_tcpip_forward_handler.super.super.super")
        (handler "&make_tcpip_forward_handler.super"))
