@@ -19,7 +19,9 @@ News for the 1.3.0 release:
 
 	Handle the TSTP signal. Backgrounding still doesn't work quite
 	right, though.
-	
+
+	Rewrote parts of the gaba.scm preprocessor.
+		
 News for the 1.2.0 release:
 
 	Added the lcp copying script to the distribution (although it
