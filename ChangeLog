@@ -1,3 +1,36 @@
+2002-05-30  Pontus Sköld  <pont@soua.net>
+
+	* src/server_session.c (init_spawn_info): Require more entries
+	available for environment variables. Set SSH_TTY if appropiate as
+	well as SSH_CLIENT.
+	(shell_request_handler): Reserve more environment variable
+	entries.
+	(exec_request_handler): Dito.
+	(do_spawn_subsystem): Dito.
+
+	* src/io_commands.c (do_connect_continuation): Derive local
+	address_info from fd and pass to make_listen_value.
+
+	* src/io.c (make_listen_value): Takes an extra struct
+	address_info* to initialize local with.
+	(do_listen_callback): Get a local address_info and pass to
+	make_listen_value.
+	(fd2info): New function.
+
+	* src/io.h: New variable local in listen_value. make_listen_value
+	takes an extra struct address_info*.
+	(fd2info): declaration of new function.
+
+	* src/gateway_commands.c (gateway_make_connection): Also pass
+	lv->local to make_ssh_connection.
+
+	* src/handshake.c (handshake_command): dito.
+	
+	* src/connection.h: New variable local in ssh_connection.
+	make_ssh_connection takes an extra struct address_info*.
+
+	* src/connection.c (make_ssh_connection): dito.
+	
 2002-05-24  Pontus Sköld  <pont@soua.net>
 
 	* src/io.c (io_final): Set stdin, stdout and stderr to blocking mode.

@@ -1,4 +1,6 @@
 News for the 1.4 release
+
+	lshd now sets SSH_CLIENT and SSH_TTY (if appropiate).
 	
 	TCP-wrapper support contributed by Pontus Sköld, pass
 	--with-tcpwrappers to configure to enable.
