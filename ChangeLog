@@ -1,3 +1,14 @@
+2001-09-24  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/xalloc.c (lsh_object_check): Better message on type error.
+	(lsh_object_check_subtype): Likewise.
+
+	* src/lsh-writekey.c (make_writekey): Chenged order of options and
+	stdin arguments. Delay call of read_sexp.
+
+	* src/command.c (gaba_apply): Assert that a value has been
+	returned.
+
 2001-09-24  Niels Möller  <nisse@ehand.com>
 
 	* src/scm/gaba.scm (process-expr): Handle empty parameter list.
