@@ -1,3 +1,15 @@
+2001-03-19  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/scm/gaba.scm (class-annotate): New function.
+
+	* src/make-class-map: Beautified output.
+
+	* src/lsh-keygen.c (main): Don't use blocking_write.
+
+	* src/blocking_write.h, src/blocking_write.c: Deleted.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Removed blocking_write.c.  
+
 2001-03-16  Niels Möller  <nisse@ehand.com>
 
 	* ANNOUNCE: Updated, preparing for lsh-1.2.
