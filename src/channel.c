@@ -1654,7 +1654,7 @@ void init_connection_service(struct ssh_connection *connection)
     = &global_failure_handler;
 }
  
-COMMAND_SIMPLE(connection_service_command)
+DEFINE_COMMAND_SIMPLE(connection_service_command, a)
 {
   CAST(ssh_connection, connection, a);
 
