@@ -59,7 +59,7 @@ static struct lsh_string *make_cstring(struct lsh_string *s, int free)
   return res;
 }
     
-/* NOTE: Calls function using the *disgusting* convention of returning
+/* NOTE: Calls functions using the *disgusting* convention of returning
  * pointers to static buffers. */
 struct unix_user *lookup_user(struct lsh_string *name, int free)
 {
@@ -77,14 +77,15 @@ struct unix_user *lookup_user(struct lsh_string *name, int free)
   NEW(res);
   res->uid = passwd->pw_uid;
   res->gid = passwd->pw_gid;
-  res->username = name;
+  res->name = name;
   res->passwd = format_cstring(passwd->pw_passwd);
   res->home = format_cstring(passwd->pw_dir);
-
+  res->shell = format_cstring(passwd->pw_shell);
+  
   return res;
 }
 
-/* NOTE: Calls function using the *disgusting* convention of returning
+/* NOTE: Calls functions using the *disgusting* convention of returning
  * pointers to static buffers. */
 int verify_password(struct unix_user *user,
 		    struct lsh_string *password, int free)
@@ -118,8 +119,11 @@ struct unix_authentication
 {
   struct userauth super;
 
+#if 0
   struct login_method *login;
-  struct alist *services;  /* Services allowed */
+#endif
+  /* Services allowed. Maps names to struct unix_service */
+  struct alist *services; 
 };
 
 static int do_authenticate(struct userauth *c,
@@ -130,7 +134,7 @@ static int do_authenticate(struct userauth *c,
 {
   struct unix_authentication *closure = (struct unix_authentication *) c;
   struct lsh_string * password = NULL;
-  struct ssh_service *service;
+  struct unix_service *service;
   
   MDEBUG(closure);
 
@@ -170,7 +174,7 @@ static int do_authenticate(struct userauth *c,
 
       if (access)
 	{
-	  *result = LOGIN(closure->login, user, service);
+	  *result = LOGIN(service, user);
 	  return LSH_OK | LSH_GOON;
 	}
       else
@@ -186,17 +190,69 @@ static int do_authenticate(struct userauth *c,
   return 0;
 }
   
-struct userauth *make_unix_userauth(struct login_method *login,
-				    struct alist *services)
+struct userauth *make_unix_userauth(struct alist *services)
 {
   struct unix_authentication *closure;
 
   NEW(closure);
   closure->super.authenticate = do_authenticate;
+#if 0
   closure->login = login;
+#endif
   closure->services = services;
 
   return &closure->super;
+}
+
+int change_uid(struct unix_user *user)
+{
+  /* NOTE: Error handling is crucial here. If we do something
+   * wrong, the server will think that the user is logged in
+   * under his or her user id, while in fact the process is
+   * still running as root. */
+  if (initgroups(user->name->data, user->gid) < 0)
+    {
+      werror("initgroups failed: %s\n", strerror(errno));
+      return 0;
+    }
+  if (setgid(user->gid) < 0)
+    {
+      werror("setgid failed: %s\n", strerror(errno));
+      return 0;
+    }
+  if (setuid(user->uid) < 0)
+    {
+      werror("setuid failed: %s\n", strerror(errno));
+      return 0;
+    }
+  return 1;
+}
+
+int change_dir(struct unix_user *user)
+{
+  /* Change to user's home directory. FIXME: If the server is running
+   * as the same user, perhaps it's better to use $HOME? */
+  if (!user->home)
+    {
+      if (chdir("/") < 0)
+	{
+	  werror("Strange: home directory was NULL, and chdir(\"/\") failed: %s\n",
+		 strerror(errno));
+	  return 0;
+	}
+    }
+  else if (chdir(user->home->data) < 0)
+    {
+      werror("chdir to %s failed (using / instead): %s\n",
+	     user->home ? (char *) user->home->data : "none",
+	     strerror(errno));
+      if (chdir("/") < 0)
+	{
+	  werror("chdir(\"/\") failed: %s\n", strerror(errno));
+	  return 0;
+	}
+    }
+  return 1;  
 }
 
 struct setuid_service
@@ -208,6 +264,10 @@ struct setuid_service
   struct ssh_service *service;
 };
 
+#if 0
+
+/* NOTE: This is used only if early forking (i.e., for directly after
+ * user autentication) is enabled. */
 static int do_setuid(struct ssh_service *c,
 		     struct ssh_connection *connection)
 {
@@ -231,27 +291,10 @@ static int do_setuid(struct ssh_service *c,
 	  return LSH_FAIL | LSH_DIE;
 	case 0:
 	  /* Child */
-	  
-	  /* NOTE: Error handling is crucial here. If we do something
-	   * wrong, the server will think that the user is logged in
-	   * under his or her user id, while in fact the process is
-	   * still running as root. */
-	  if (initgroups(closure->user->username->data, closure->user->gid) < 0)
-	    {
-	      werror("initgroups failed: %s\n", strerror(errno));
-	      return LSH_FAIL | LSH_DIE | LSH_KILL_OTHERS;
-	    }
-	  if (setgid(closure->user->gid) < 0)
-	    {
-	      werror("setgid failed: %s\n", strerror(errno));
-	      return LSH_FAIL | LSH_DIE | LSH_KILL_OTHERS;
-	    }
-	  if (setuid(closure->user->uid) < 0)
-	    {
-	      werror("setuid failed: %s\n", strerror(errno));
-	      return LSH_FAIL | LSH_DIE | LSH_KILL_OTHERS;
-	    }
-	  
+
+	  if (!change_uid(closure->user))
+	    return  LSH_FAIL | LSH_DIE | LSH_KILL_OTHERS;;
+
 	  res |= LSH_KILL_OTHERS;
 	  break;
 	default:
@@ -262,30 +305,17 @@ static int do_setuid(struct ssh_service *c,
 
   /* Change to user's home directory. FIXME: If the server is running
    * as the same user, perhaps it's better to use $HOME? */
-  if (!closure->user->home)
-    {
-      if (chdir("/") < 0)
-	fatal("Strange: home directory was NULL, and chdir(\"/\") failed: %s\n",
-	      strerror(errno));
-    }
-  else
-    if (chdir(closure->user->home->data) < 0)
-      {
-	werror("chdir to %s failed (using / instead): %s\n",
-	       closure->user->home ? (char *) closure->user->home->data : "none",
-	       strerror(errno));
-	if (chdir("/") < 0)
-	  fatal("chdir(\"/\") failed: %s\n", strerror(errno));
-      }
+  if (!change_dir(closure->user))
+    fatal("can't chdir: giving up\n");
 
   /* Initialize environment, somehow. In particular, the HOME and
    * LOGNAME variables */
 
-  /* If closure->user is not needed anymore, deallocate it (and set
-   * the pointer to NULL, to tell gc about that). */
-
-  return res | SERVICE_INIT(closure->service, connection);
+  return res | LOGIN(closure->service, closure->user);		     connection);
 }
+
+/* FIXME: This function is not quite adequate, as it does not pass the
+ * user struct on to the started service. */
 
 static struct ssh_service *do_login(struct login_method *closure,
 				    struct unix_user *user,
@@ -312,3 +342,4 @@ struct login_method *make_unix_login(void)
 
   return self;
 }
+#endif
