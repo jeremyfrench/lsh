@@ -1,4 +1,7 @@
 News for the 1.4 release
+	
+	TCP-wrapper support contributed by Pontus Sköld, pass
+	--with-tcpwrappers to configure to enable.
 
 	Display more information about unknown keys, including
 	openssh-style fingerprint and "bubblebabble"-fingerprint. 
