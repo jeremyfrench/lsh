@@ -21,7 +21,7 @@ Makefile.am: Makefile.am.in
 	./make_am
 
 bin_PROGRAMS = lsh lshd lsh_keygen
-noinst_PROGRAMS = prime_table digit_table
+noinst_PROGRAMS = prime_table digit_table sexp_test
 noinst_LIBRARIES = liblsh.a
 
 # Don't use BUILT_SOURCES, as all these files are #included, and can't be
@@ -38,8 +38,9 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	format.c gc.c getopt.c hmac.c io.c keyexchange.c \
 	list.c md5.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
 	randomness.c \
-	read_data.c read_line.c read_packet.c resource.c \
-	sexp.c sexp_parser.c sha.c service.c \
+	read_scan.c read_data.c read_line.c read_packet.c resource.c \
+	sexp.c sexp_parser.c sexp_streamed_parser.c \
+	sha.c service.c \
 	translate_signal.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c zlib.c
 
@@ -66,16 +67,22 @@ PRIME_LIMIT = 1024
 prime_table.h: prime_table
 	./prime_table $(PRIME_LIMIT) >$@
 
+prime_table_LDADD =
+
 sexp_table.h: sexp_chars.in $(srcdir)/make_char_classes
 	$(srcdir)/make_char_classes <$< >$@
+
+digit_table_LDADD =
 
 digit_table.h: digit_table 
 	./digit_table >$@
 
-lsh_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
-lshd_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
-lsh_keygen_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
+LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
+# lsh_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
+# lshd_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
+# lsh_keygen_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
 
+# lsh_DEPENDENCIES += symmetric
 lsh_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
 lshd_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
 lsh_keygen_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
