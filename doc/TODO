@@ -27,6 +27,9 @@ general user-database abstraction. Also have a look at 'Pluggable Non
 Interactive Authentication Modules' at
 http://www.msu.ru/pniam/pniam.html.
 
+Log a message if user authentication fails because root is not allowed
+to log in.
+
 
 CHARSETS
 
