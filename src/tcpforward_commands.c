@@ -83,11 +83,12 @@ do_tcpip_connect_io(struct command *ignored UNUSED,
 		    struct command_continuation *c,
 		    struct exception_handler *e UNUSED)
 {
-  CAST(lsh_fd, socket, x);
+  CAST(listen_value, lv, x);
 
-  assert(socket);
-
-  COMMAND_RETURN(c, make_tcpip_channel(socket, TCPIP_WINDOW_SIZE));
+  assert(lv);
+  assert(lv->fd);
+  
+  COMMAND_RETURN(c, make_tcpip_channel(lv->fd, TCPIP_WINDOW_SIZE));
 }
 
 struct command tcpip_connect_io = STATIC_COMMAND(do_tcpip_connect_io);
