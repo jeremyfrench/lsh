@@ -528,6 +528,20 @@ if test "x$lsh_cv_c_FUNCTION" = "xyes"; then
   AC_DEFINE(HAVE_GCC_FUNCTION)
 fi
 
+dnl Check for the offsetof macro
+dnl FIXME: This is usually defined in stddef.h
+
+AC_CACHE_CHECK(for offsetof,
+	       lsh_cv_c_offsetof,
+  [ AC_TRY_COMPILE(,
+      [ struct s { int a; int b; };
+        int foo(void) { return offsetof(struct s, b); }	],
+      lsh_cv_c_offsetof=yes,
+      lsh_cv_c_offsetof=no)])
+
+if test "x$lsh_cv_c_offsetof" = "xyes"; then
+  AC_DEFINE(HAVE_C_OFFSETOF)
+fi
 
 AC_MSG_CHECKING(for BSD pty names)
 
