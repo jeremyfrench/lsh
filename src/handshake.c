@@ -61,12 +61,7 @@ static const struct compat_info
 compat[] =
   {
     /* FIXME: Is there any 2.0.x without these bugs? */
-    { "2.0.", (PEER_SSH_DSS_KLUDGE | PEER_SERVICE_ACCEPT_KLUDGE
-	       | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG 
-	       | PEER_X11_OPEN_KLUDGE) },
-    { "2.1.0", (PEER_SSH_DSS_KLUDGE
-		| PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG) },
-    { "3.0", PEER_SEND_NO_DEBUG },
+    { "2.0.", (PEER_X11_OPEN_KLUDGE) },
     { "Sun_SSH_1.0", PEER_KEXINIT_LANGUAGE_KLUDGE },
     { NULL, 0 }
   };
