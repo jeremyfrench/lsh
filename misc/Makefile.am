@@ -2,7 +2,7 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-EXTRA_DIST = libgcc2.c-patch bootstrap.sh make-dist run-tests
+EXTRA_DIST = libgcc2.c-patch make-dist run-tests make-am
 
 all:
 	true
