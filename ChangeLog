@@ -1,3 +1,22 @@
+2004-06-10  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/keyexchange.c (parse_kexinit): Deleted unused argument
+	peer_flags.
+
+	* misc/Makefile.am (EXTRA_DIST): Include tsocks-forcelocal.patch.
+
+	* src/algorithms.c (lookup_hash): Deleted unused function.
+	(all_symmetric_algorithms): Deleted old aes alias
+	rijndael-cbc@lysator.liu.se. Added official serpent name
+	serpent256-cbc. The alias serpent-cbc@lysator.liu.se should be
+	removed at a later date.	
+	(all_crypto_algorithms): Likewise.
+	(lookup_crypto): Likewise.
+
+	* src/atoms.in: Deleted spki-related atoms, now handled by
+	libspki. Also deleted pkcs5-related atoms that aren't used.
+	Deleted rijndael-cbc@lysator.liu.se.
+	
 2004-06-09  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/functions.sh: Removed -q from LSHD_FLAGS.

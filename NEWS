@@ -1,3 +1,29 @@
+News for the 1.5.5 release
+
+	Added SOCKS-style proxying to lsh and lshd. See the new -D
+	command line option. Supports both SOCKS-4 and SOCKS-5.
+
+	The lsh client no longer sets its stdio file descriptors into
+	non-blocking mode, which should avoid a bunch of problems. As
+	a consequence, the --cvs-workaround command line option has
+	been deleted.
+
+	In the user lookup code, lshd now ignores the shadow database
+	if getspnam returns NULL.
+
+	In the server pty setup code, use the group "system" as a
+	fallback if the group "tty" doesn't exist. This is the case on
+	AIX. (There are however more problems on AIX, which makes it
+	uncertain that lshd will work out of the box).
+
+	Deleted the --ssh1-fallback option for lshd. I hope ssh1 is
+	dead by now; if it isn't, you have to run ssh1d and lshd on
+	different ports.
+	
+	Deleted code for bug-compatibility with ancient versions of
+	Datafellow's SSH2. There are zero bug-compatibility hacks in
+	this version.
+
 News for the 1.5.4 release
 
 	Added logging of tcpip-forward requests.
