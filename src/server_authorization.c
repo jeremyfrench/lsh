@@ -79,7 +79,7 @@ static struct verifier *do_key_lookup(struct lookup_verifier *c,
   KILL(h);
   lsh_string_free(pubkey_spki_blob);
   
-  filename = ssh_format("%lS/.lsh/%S/%lxs%c", 
+  filename = ssh_format("%lS/.lsh/%lS/%lxs%c", 
 			user->home,
 			closure->index_name,
 			closure->hashalgo->hash_size, pubkey_spki_hash,
