@@ -136,6 +136,7 @@
        ))
 */
 
+#if 0
 /* FIXME: I'm considering renaming this type to simply "keypair" */ 
 /* GABA:
    (class
@@ -144,7 +145,8 @@
        (public string)
        (private object signer)))
 */
-
+#endif
+     
 struct lsh_string *format_kex(struct kexinit *kex);
 void disconnect_kex_failed(struct ssh_connection *connection, const char *msg);
 
@@ -189,8 +191,10 @@ struct install_keys *
 make_install_new_keys(int is_server,
 		      struct object_list *algorithms);
 
+#if 0
 struct keypair_info *make_keypair_info(struct lsh_string *public,
 				       struct signer *private);
+#endif
 
 struct hash_instance *
 kex_build_secret(struct hash_algorithm *H,

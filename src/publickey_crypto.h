@@ -35,9 +35,21 @@
 #include "publickey_crypto.h.x"
 #undef GABA_DECLARE
 
+/* GABA:
+   (class
+     (name keypair)
+     (vars
+       (public string)
+       (private object signer)))
+*/
+
+struct keypair *make_keypair(struct lsh_string *public,
+			     struct signer *private);
+
 /* parse an ssh keyblob */
 int parse_dsa_public(struct simple_buffer *buffer,
 		     struct dsa_public *public);
+int init_dsa_public(struct dsa_public *public);
 
 struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
 
