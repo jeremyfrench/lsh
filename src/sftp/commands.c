@@ -1543,7 +1543,12 @@ com_mv(const char *arg, const char *command)
 	  j++;
 	  if( j != i ) /* Not the last argument? */
 	    {
-	      if( 2 != i || lsftp_dc_r_isdir( dst ) ) /* More than one source and one destination => we should append src to dst/ */
+	      /* More than one source and one destination => we should append src to dst/.
+	       * Same goes if dst is a directory */
+
+	      if( 2 != i ||
+		  ( lsftp_dc_r_isdir( dst ) > 0 )
+		  ) 
 		{
 		  char *tmp1 = lsftp_concat( dst, "/" );
 		  char *tmp2 = NULL;
