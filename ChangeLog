@@ -1,5 +1,8 @@
 2004-02-17  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/unix_user.c (do_lookup_user) [!HAVE_SHADOW_H]: Enable shadow
+	database code only if shadow.h can be included.
+
 	* src/unix_process.c (do_logout_notice): Deleted gratious
 	semicolon at end of function definition.
 	(do_utmp_cleanup): Use UTMPX_UT_EXIT___E_TERMINATION and
