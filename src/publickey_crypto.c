@@ -341,9 +341,10 @@ static struct signer *make_dss_signer(struct signature_algorithm *c,
   return &res->super;
 }
 
-static struct verifier *make_dss_verifier(struct signature_algorithm *closure,
-					  UINT32 public_length,
-					  UINT8 *public)
+static struct verifier *
+make_dss_verifier(struct signature_algorithm *closure UNUSED,
+		  UINT32 public_length,
+		  UINT8 *public)
 {
   NEW(dss_verifier, res);
   struct simple_buffer buffer;
