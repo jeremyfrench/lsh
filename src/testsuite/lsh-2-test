@@ -14,5 +14,5 @@ fi
 
 . $srcdir/functions.sh
 
-spawn-lshd && run-lsh "echo Hello world."
+spawn_lshd && run_lsh "echo Hello world."
 

@@ -15,22 +15,23 @@ fi
 PORT=11147
 ATEXIT="res=$?"
 
-trap 'eval "$ATEXIT ; exit \$res"' EXIT
+trap 'eval "$ATEXIT ; exit \$res"' 0
 
-function at-exit () {
+at_exit () {
   res=$?
   ATEXIT="$ATEXIT ; $1"
   return $res
 }
 
-function spawn-lshd () {
+spawn_lshd () {
 
-    local delay
+    # local is not available in /bin/sh
+    # local delay
     
     ../lshd -h $srcdir/key-1.private --interface=localhost \
 	-p $PORT $SERVERFLAGS --pid-file lshd.$$.pid &
 
-    at-exit 'kill `cat lshd.$$.pid`; rm -f lshd.$$.pid'
+    at_exit 'kill `cat lshd.$$.pid`; rm -f lshd.$$.pid'
 
     # Wait a little for lshd to start
     for delay in 1 1 1 1 1 5 5 5 20 20 60 60; do
@@ -45,7 +46,7 @@ function spawn-lshd () {
     false
 }
 
-function run-lsh () {
+run_lsh () {
     cmd=$1
     shift
     echo $cmd | ../lsh $CLIENTFLAGS -nt --sloppy-host-authentication \
@@ -53,14 +54,14 @@ function run-lsh () {
 
 }
 
-function spawn-lsh () {
-    # echo spawn-lsh "$@"
+spawn_lsh () {
+    # echo spawn_lsh "$@"
     ../lsh $CLIENTFLAGS -nt --sloppy-host-authentication \
 	--capture-to /dev/null -z -p $PORT "$@" -N localhost &
-    at-exit "kill $!"
+    at_exit "kill $!"
 }
 
-function at-connect () {
+at_connect () {
     mini-inetd -m $2 localhost:$1 -- /bin/sh sh -c "$3" &
-    at-exit "kill $!"
+    at_exit "kill $!"
 }
