@@ -2,7 +2,7 @@
  *
  * $Id$
  *
- * Buffering for sftp.
+ * Reading and writing sftp data.
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -30,92 +30,17 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <stdio.h>
+
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
 
-#define FATAL(x) do { fputs("sftp-server: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
-
 #include <stdlib.h>
 
-/* Reads a 32-bit integer, in network byte order */
-#define READ_UINT32(p)				\
-(  (((UINT32) (p)[0]) << 24)			\
- | (((UINT32) (p)[1]) << 16)			\
- | (((UINT32) (p)[2]) << 8)			\
- |  ((UINT32) (p)[3]))
 
-#define WRITE_UINT32(p, i)			\
-do {						\
-  (p)[0] = ((i) >> 24) & 0xff;			\
-  (p)[1] = ((i) >> 16) & 0xff;			\
-  (p)[2] = ((i) >> 8) & 0xff;			\
-  (p)[3] = (i) & 0xff;				\
-} while(0)
-
-#define SFTP_MAX_STRINGS 2
-
-struct sftp_input
-{
-  int fd;
-  UINT32 left;
-
-  /* Strings that we own */
-  UINT8 *strings[SFTP_MAX_STRINGS];
-  unsigned used_strings;
-};
-
-struct sftp_output
-{
-  int fd;
-
-  /* The message type is the first byte of a message, after the
-   * length. */
-  UINT8 msg;
-
-  /* The next word is either the id, or the version. */
-  UINT32 first;
-
-  /* The rest of the packet is variable length. */
-  UINT8 *data;
-  UINT32 size;
-  UINT32 i;
-};
 
 /* Input */
-
-static int
-sftp_check_input(const struct sftp_input *i, UINT32 length)
-{
-  return (i->left >= length);
-}
-
-int
-sftp_get_data(struct sftp_input *i, UINT32 length, UINT8 *data)
-{
-  if (sftp_check_input(i, length))
-    {
-      UINT8* buf = data;
-      int j;
-
-      while (length) 
-	{
-	  j = read(i->fd, buf, length);
-      
-	  while (-1==j && EINTR==errno)  /* Loop over EINTR */
-	    j = read(i->fd, buf, length);
-	  
-	  if (-1==j) /* Error, and not EINTR */
-	    return -1; /* Error */
-
-	  buf += j; /* Move counters accordingly */
-	  length -= j;
-	  i->left -= j;
-	}
-      return 1; /* Success */
-    }
-  return 0; /* FIXME: Return code? */
-}
 
 #define GET_DATA(i, buf) \
 (sftp_get_data((i), sizeof((buf)), (buf)))
@@ -170,132 +95,23 @@ sftp_get_string_auto(struct sftp_input *i, UINT32 *length)
 {
   UINT8 *data;
 
-  assert(i->used_strings < SFTP_MAX_STRINGS);
-
   data = sftp_get_string(i, length);
 
   if (!data)
     return NULL;
 
   /* Remember the string. */
-  i->strings[i->used_strings++] = data;
+  sftp_input_remember_string(i, data);
+  
   return data;
 }
 
-int
-sftp_get_eod(struct sftp_input *i)
-{
-  return !i->left;
-}
-
-/* Input */
-struct sftp_input *
-sftp_make_input(int fd)
-{
-  struct sftp_input *i = xmalloc(sizeof(struct sftp_input));
-
-  i->fd = fd;
-  i->left = 0;
-  i->used_strings = 0;
-
-  return i;
-}
-
-void
-sftp_input_clear_strings(struct sftp_input *i)
-{
-  unsigned k;
-
-  for (k = 0; k < i->used_strings; k++)
-    sftp_free_string(i->strings[k]);
-
-  i->used_strings = 0;
-}
-
-/* Returns 1 of all was well, 0 on error, and -1 on EOF */
-int
-sftp_read_packet(struct sftp_input *i)
-{
-  UINT8 buf[4];
-  int bytesread = 0;
-
-  if (i->left) /* Unread data? */
-    {
-      UINT8 d;
-
-      while (i->left &&                         /* Data remaining? */
-	     0<sftp_get_data(i, 1, &d)         /* Read OK? */
-	     )
-	;
-
-      /* Now, there shouldn't be any more data remaining. Next time
-       * we're called, the next packet should be read (or we had an
-       * error and all data is not read, if that's the case, return
-       * error).
-       */
-
-      if (i->left)    /* i->left non-zero => sftp_get_data failed => error  */
-	return -1; 
-
-      return 0;
-    }
-
-  /* First, deallocate the strings. */
-  sftp_input_clear_strings(i);
-
-  while (bytesread < sizeof(buf))
-    {
-      int j = read(i->fd, buf+bytesread, sizeof(buf)-bytesread);
-
-      while(-1==j && EINTR==errno)   /* Loop over EINTR */
-	j = read(i->fd, buf+bytesread, sizeof(buf)-bytesread);
-  
-      if (-1==j) /* Not EINTR but a real error */
-	return -1;
-
-      bytesread += j;
-    }
-  
-  i->left = READ_UINT32(buf); /* Store packet size */
-  return 1;
-
-}
 
 /* Output */
-
-static void
-sftp_check_output(struct sftp_output *o, UINT32 length)
-{
-  UINT32 needed = o->i + length;
-  if (!o->data || (needed > o->size))
-  {
-    UINT32 size = 2 * needed + 40;
-    o->data = xrealloc(o->data, size);
-
-    o->size = size;
-  }
-}
-
-void
-sftp_put_data(struct sftp_output *o, UINT32 length, const UINT8 *data)
-{
-  sftp_check_output(o, length);
-
-  memcpy(o->data + o->i, data, length);
-  o->i += length;
-}
 
 
 #define PUT_DATA(o, buf) \
 (sftp_put_data((o), sizeof((buf)), (buf)))
-
-void
-sftp_put_uint8(struct sftp_output *o, UINT8 value)
-{
-  sftp_check_output(o, 1);
-
-  o->data[o->i++] = value;
-}
 
 void
 sftp_put_uint32(struct sftp_output *o, UINT32 value)
@@ -313,41 +129,6 @@ sftp_put_string(struct sftp_output *o, UINT32 length, const UINT8 *data)
   sftp_put_data(o, length, data);
 }
 
-UINT32
-sftp_put_reserve_length(struct sftp_output *o)
-{
-  UINT32 index;
-  sftp_check_output(o, 4);
-
-  index = o->i;
-  o->i += 4;
-
-  return index;
-}
-
-void
-sftp_put_length(struct sftp_output *o,
-		UINT32 index,
-		UINT32 length)
-{
-  assert( (index + 4) < o->i);
-  WRITE_UINT32(o->data + index, length);
-}
-
-void
-sftp_put_final_length(struct sftp_output *o,
-		      UINT32 index)
-{
-  sftp_put_length(o, index, o->i - index - 4);
-}
-
-void
-sftp_put_reset(struct sftp_output *o,
-	       UINT32 index)
-{
-  assert(index < o->i);
-  o->i = index;
-}
 
 UINT32
 sftp_put_printf(struct sftp_output *o, const char *format, ...)
@@ -359,18 +140,19 @@ sftp_put_printf(struct sftp_output *o, const char *format, ...)
   for (needed = 100;; needed *= 2)
     {
       va_list args;
+      uint8_t *current;
       
       va_start(args, format);
 
-      sftp_check_output(o, needed);
-      length = vsnprintf(o->data + o->i, needed, format, args);
+      current = sftp_put_start(o, needed);
+      length = vsnprintf(current, needed, format, args);
       
       va_end(args);
 
       if ( (length >= 0) && (length < needed))
 	break;
     }
-  o->i += length;
+  sftp_put_end(o, length);
   
   return length;
 }
@@ -384,20 +166,21 @@ sftp_put_strftime(struct sftp_output *o, UINT32 size, const char *format,
   /* Initial buffer space */
   size_t needed;
   size_t length;
+  uint8_t *current;
   
   for (needed = size ? size : 100;; needed *= 2)
     {
-      sftp_check_output(o, needed);
-      length = strftime(o->data + o->i, needed, format, tm);
+      current = sftp_put_start(o, needed);
+      length = strftime(current, needed, format, tm);
 
       if ( (length > 0) && (length < needed))
 	break;
     }
 
   while (length < size)
-    o->data[o->i + length++] = ' ';
+    current[length++] = ' ';
 
-  o->i += length;
+  sftp_put_end(o, length);
   
   return length;
 }
@@ -477,86 +260,7 @@ sftp_put_uint64(struct sftp_output *o, off_t value)
 
 #endif /* SIZEOF_OFF_T <= 4 */
 
-/* The first part of the buffer is always
- *
- * uint32 length
- * uint8  msg
- * uint32 id/version
- */
 
-struct sftp_output *
-sftp_make_output(int fd)
-{
-  struct sftp_output *o = xmalloc(sizeof(struct sftp_output));
-
-  o->fd = fd;
-  o->data = NULL;
-  o->size = 0;
-  o->i = 0;
-
-  return o;
-}
-
-void
-sftp_set_msg(struct sftp_output *o, UINT8 msg)
-{
-  o->msg = msg;
-}
-
-void
-sftp_set_id(struct sftp_output *o, UINT32 id)
-{
-  o->first = id;
-}
-
-int
-sftp_write_packet(struct sftp_output *o)
-{
-  int j;
-  int written = 0;
-  UINT32 length = o->i + 5;
-  UINT8 buf[9];
-
-  WRITE_UINT32(buf, length);
-  buf[4] = o->msg;
-  WRITE_UINT32(buf + 5, o->first);
-
-  /* Write 9 bytes from buf */
-
-  while (written<9) 
-    {
-      j = write(o->fd, buf+written, 9-written);
-      
-      while (-1==j && errno==EINTR)  /* Loop over EINTR */
-	j =  write(o->fd, buf+written, 9-written);;
-      
-      if (-1==j) /* Error, and not EINTR */
-	return -1; /* Error */
-      
-      written += j; /* Move counters accordingly */      
-    }
-
-  /* Write o->i bytes from data */
-
-  written = 0; /* Reset counter */
-
-  while (written<o->i) 
-    {
-      j = write(o->fd, o->data+written, o->i-written);
-      
-      while (-1==j && errno==EINTR)  /* Loop over EINTR */
-	j =  write(o->fd, o->data+written, o->i-written);;
-      
-      if (-1==j) /* Error, and not EINTR */
-	return -1; /* Error */
-      
-      written += j; /* Move counters accordingly */      
-    }
-
-  o->i = 0;
-
-  return 1;
-}
 
 /* General functions */
 
@@ -668,10 +372,4 @@ sftp_put_attrib(struct sftp_output *o, const struct sftp_attrib *a)
       sftp_put_uint32(o, a->atime);
       sftp_put_uint32(o, a->mtime);
     }
-}
-
-int
-sftp_packet_size(struct sftp_output* out)
-{
-  return out->i;
 }

@@ -30,6 +30,8 @@
 #include "config.h"
 #endif
 
+#include <inttypes.h>
+
 /* For off_t */
 #include <sys/types.h>
 
@@ -77,6 +79,9 @@ int
 sftp_read_packet(struct sftp_input *i);
 
 int
+sftp_check_input(const struct sftp_input *i, UINT32 length);
+
+int
 sftp_get_data(struct sftp_input *i, UINT32 length, UINT8 *data);
 
 int
@@ -103,6 +108,9 @@ sftp_get_string_auto(struct sftp_input *i, UINT32 *length);
 
 void
 sftp_input_clear_strings(struct sftp_input *i);
+
+void
+sftp_input_remember_string(struct sftp_input *i, uint8_t *s);
 
 int
 sftp_get_eod(struct sftp_input *i);
@@ -133,6 +141,13 @@ sftp_put_uint64(struct sftp_output *o, off_t value);
 void
 sftp_put_string(struct sftp_output *o, UINT32 length, const UINT8 *data);
 
+/* Low-level functions, used by sftp_put_printf and sftp_put_strftime */
+uint8_t *
+sftp_put_start(struct sftp_output *o, uint32_t length);
+
+void
+sftp_put_end(struct sftp_output *o, uint32_t length);
+
 /* Returns index. */
 UINT32
 sftp_put_reserve_length(struct sftp_output *o);
@@ -159,7 +174,9 @@ sftp_put_strftime(struct sftp_output *o, UINT32 size,
 		  const char *format,
 		  const struct tm *tm);
 
-     
+int
+sftp_packet_size(struct sftp_output* out);
+
 /* Constructed types. */
 
 struct sftp_attrib
@@ -187,18 +204,23 @@ sftp_put_attrib(struct sftp_output *o, const struct sftp_attrib *a);
 int
 sftp_skip_extension(struct sftp_input *i);
 
-
-/* Simple input and output objects */
-#include <stdio.h>
-
-struct sftp_input *
-sftp_make_input(int fd);
-
-struct sftp_output *
-sftp_make_output(int fd);
-
-int
-sftp_packet_size(struct sftp_output* out);
 
 
+/* Macros */
+/* Reads a 32-bit integer, in network byte order */
+#define READ_UINT32(p)				\
+(  (((UINT32) (p)[0]) << 24)			\
+ | (((UINT32) (p)[1]) << 16)			\
+ | (((UINT32) (p)[2]) << 8)			\
+ |  ((UINT32) (p)[3]))
+
+#define WRITE_UINT32(p, i)			\
+do {						\
+  (p)[0] = ((i) >> 24) & 0xff;			\
+  (p)[1] = ((i) >> 16) & 0xff;			\
+  (p)[2] = ((i) >> 8) & 0xff;			\
+  (p)[3] = (i) & 0xff;				\
+} while(0)
+
+
 #endif /* SFTP_BUFFER_H_INCLUDED */
