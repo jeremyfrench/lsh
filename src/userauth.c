@@ -1,4 +1,4 @@
-/* userauth.h
+/* userauth.c
  *
  */
 
