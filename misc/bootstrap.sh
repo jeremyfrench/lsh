@@ -17,10 +17,7 @@ autoconf
 (cd src/argp && autoheader)
 
 (cd src/nettle && ./.bootstrap)
-
-(cd src/sftp && aclocal)
-(cd src/sftp && autoconf)
-(cd src/sftp && autoheader)
+(cd src/sftp && ./.bootstrap)
 
 automake -a Makefile src/Makefile
 
