@@ -36,7 +36,7 @@ done
 # Fix PATH for system where the default environment is broken
 
 # We may need /usr/local/bin to get GNU make
-if make --version | grep GNU >/dev/null ; then : ; else
+if make --version 2>/dev/null | grep GNU >/dev/null ; then : ; else
     if /usr/local/bin/make | grep GNU >/dev/null ; then
 	PATH="/usr/local/bin:$PATH"
     fi
@@ -227,7 +227,7 @@ echo $PATH > r/path.txt
 makeinfo --version > r/makeinfo.txt
 type makeinfo >> r/makeinfo.txt 2>&1
 
-make --version > r/makeversion.txt
+make --version > r/makeversion.txt 2>&1 
 type make >> r/makeversion.txt
 
 mv buildid.txt r/buildid.txt
