@@ -198,9 +198,6 @@ client_parse_forward_arg(char *arg,
 			 uint32_t *listen_port,
 			 struct address_info **target);
 
-extern struct command client_options2actions;
-#define OPTIONS2ACTIONS (&client_options2actions.super)
-
 extern const struct argp client_argp;
 
 

@@ -577,7 +577,7 @@ init_client_options(struct client_options *self,
   object_queue_init(&self->actions);  
 }
 
-/* Host to connect to */
+#if 0
 DEFINE_COMMAND(client_options2actions)
      (struct command *s UNUSED,
       struct lsh_object *a,
@@ -591,6 +591,7 @@ DEFINE_COMMAND(client_options2actions)
   
   COMMAND_RETURN(c, queue_to_list(&options->actions));
 }
+#endif
 
 static const struct argp_option
 client_options[] =
