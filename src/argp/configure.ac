@@ -73,4 +73,4 @@ fi
 
 CPPFLAGS="$CPPFLAGS -I$srcdir"
 
-AC_OUTPUT(Makefile)
+AC_OUTPUT(Makefile testsuite/Makefile)
