@@ -10,22 +10,6 @@ BUILT_SOURCES = environ.h
 # Kludge needed for finding the nettle/nettle-types.h file in the build tree
 AM_CPPFLAGS = -I./nettle
 
-# # To remake all Makefile.am-files, run
-# #
-# # 	./make_am
-# #
-# # You should run ./make_am --rethink after recompiling, but before
-# # making a dist, as it uses dependency information to figure out which
-# # header files should be included in th dist. How to tell this to
-# # make? FIXME: These rules won't remake Makefile.am files in
-# # subdrectries.
-# 
-# # FIXME: Use the BASH variable to execute the script. The problem is
-# # that the script attempts to start itself with "$0 args".
-# 
-# Makefile.am: Makefile.am.in
-# 	(cd $(top_srcdir) && $(MAKE) src/Makefile.am)
-
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 EXTRA_PROGRAMS = lsh-krb-checkpw lsh-pam-checkpw srp-gen
@@ -140,18 +124,18 @@ environ.h: environ.h.in Makefile
 # unix_user: environ.h
 
 atoms_defines.h: atoms.in process_atoms
-	$(BASH) $(srcdir)/process_atoms header <$< >$@T
+	$(srcdir)/process_atoms header <$< >$@T
 	test -s $@T && mv -f $@T $@
 
 # With the next version of gperf, add -F ", 0"
 GPERF_FLAGS = -LANSI-C -t -c -C -l -k1,3,6,10,$$ -N gperf_atom 
 atoms_gperf.c: atoms.in process_atoms
-	$(BASH) $(srcdir)/process_atoms gperf <$< \
+	$(srcdir)/process_atoms gperf <$< \
              | gperf $(GPERF_FLAGS) | sed 's/{""}/{"", 0}/g' >$@T 
 	test -s $@T && mv -f $@T $@
 
 atoms_table.c: atoms.in process_atoms
-	$(BASH) $(srcdir)/process_atoms table <$< >$@T
+	$(srcdir)/process_atoms table <$< >$@T
 	test -s $@T && mv -f $@T $@
 
 packet_types.h: ssh.h invert-defs
