@@ -20,10 +20,14 @@
  * MA 02111-1307, USA.
  */
 
-#include "misc.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <stdarg.h>
 #include <stdlib.h>
+
+#include "misc.h"
 
 void *
 xalloc(size_t size)

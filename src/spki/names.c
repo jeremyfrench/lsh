@@ -1,4 +1,4 @@
-/* certificate.h */
+/* names.c */
 
 /* libspki
  *

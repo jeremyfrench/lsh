@@ -24,17 +24,17 @@
 # include "config.h"
 #endif
 
-#include "certificate.h"
-#include "parse.h"
-#include "tag.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "nettle/md5.h"
 #include "nettle/sha.h"
 #include "nettle/sexp.h"
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
+#include "certificate.h"
+#include "parse.h"
+#include "tag.h"
 
 void
 spki_acl_init(struct spki_acl_db *db)

@@ -46,6 +46,8 @@ AC_TYPE_UID_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
 
+LSH_FUNC_ALLOCA
+
 # Needed by the supplied memcmp.c
 AC_C_BIGENDIAN
 

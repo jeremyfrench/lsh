@@ -22,14 +22,18 @@
  * MA 02111-1307, USA.
  */
 
-#include "tag.h"
-
-#include "nettle/buffer.h"
-#include "nettle/sexp.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "nettle/buffer.h"
+#include "nettle/sexp.h"
+
+#include "tag.h"
 
 
 /* Memory allocation */

@@ -1,3 +1,12 @@
+2003-05-18  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* Changed include file ordering, to follow the same conventions as
+	lsh and nettle: .c-files include config.h first, then system
+	files, and finally spki files. .h-files never include config.h,
+	and they include system files before spki files. 
+
+	* configure.ac: Use LSH_FUNC_ALLOCA.
+
 2003-04-11  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (distclean-local, CLEANFILES): Delete

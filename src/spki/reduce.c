@@ -24,12 +24,12 @@
 # include "config.h"
 #endif
 
-#include "certificate.h"
-#include "tag.h"
-
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "certificate.h"
+#include "tag.h"
 
 
 static void

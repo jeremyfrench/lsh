@@ -23,9 +23,9 @@
 #ifndef LIBSPKI_PARSE_H_INCLUDED
 #define LIBSPKI_PARSE_H_INCLUDED
 
-#include "certificate.h"
-
 #include "nettle/sexp.h"
+
+#include "certificate.h"
 
 struct spki_iterator
 {

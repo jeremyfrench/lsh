@@ -24,13 +24,13 @@
 # include "config.h"
 #endif
 
-#include "parse.h"
-#include "tag.h"
+#include <assert.h>
+#include <string.h>
 
 #include "nettle/sexp.h"
 
-#include <assert.h>
-#include <string.h>
+#include "parse.h"
+#include "tag.h"
 
 /* Automatically generated files */
 

@@ -24,12 +24,12 @@
 # include "config.h"
 #endif
 
-#include "certificate.h"
-#include "parse.h"
-
 #include "nettle/bignum.h"
 #include "nettle/dsa.h"
 #include "nettle/rsa.h"
+
+#include "certificate.h"
+#include "parse.h"
 
 #define RSA_KEYSIZE_LIMIT 3000
 
