@@ -27,11 +27,13 @@ running
   bash configure
 
 If you want to hack lsh, you need some more tools: autoconf, automake,
-gcc, gperf (at least version 2.7) and a scheme implementeation. The
-currently supported schemes are guile and scsh. All but scsh can be
-found at your local GNU mirror site. scsh, Olin Shiver's Scheme Shell,
-can be downloaded from <URL:
-ftp://ftp-swiss.ai.mit.edu/pub/su/scsh/scsh.tar.gz>.
+bash, gcc, gperf (at least version 2.7) and a scheme implementeation.
+The currently supported schemes are guile and scsh. All but scsh can
+be found at your local GNU mirror site. scsh, Olin Shiver's Scheme
+Shell, can be downloaded from <URL:
+ftp://ftp-swiss.ai.mit.edu/pub/su/scsh/scsh.tar.gz>. If you use guile,
+you also need the slib library, which is usually distributed
+separately. It's also available at the GNU mirrors.
 
 If you have checked out lsh from CVS, things are more complicated. You
 must first generate Makefile.am files from the corresponding
