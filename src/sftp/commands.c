@@ -893,7 +893,7 @@ get_file_or_folder(const char *arg, const char *command,
   const char* realdest;
   char *tmp;
 
-  struct stat st;
+  struct sftp_attrib attrib;
   int id;
   int mode = 0700;
   int mask;
@@ -931,15 +931,17 @@ get_file_or_folder(const char *arg, const char *command,
   
   /* FIXME: What do we expect filename_part( "foobar/" ) to return? */
   
-  id = lsftp_do_stat( arg, &st );
+  id = lsftp_do_stat( arg, &attrib );
   
   if( id > 0) /* Not a failure? */
     {
       lsftp_await_command( id );
-      mode = st.st_mode;
 
-      if( -1 == mode )
-	mode = 0700;       /* FIXME: Default mode */
+      if (attrib.flags & SSH_FILEXFER_ATTR_PERMISSIONS)
+	mode = attrib.permissions;
+      else
+	/* FIXME: Default mode */
+	mode = 0700;       
     }
 
   if( destname )              /* If given, use it */
@@ -1423,7 +1425,7 @@ int com_chown(const char *arg, const char *command)
   int gotuid = 0;
   int enough_parameters = 0;
   long newuid = 0;
-  struct stat st;
+  struct sftp_attrib attrib;
 
   if( !lsftp_connected() )   /* Bail out if not connected */
     return com_disconnected();
@@ -1471,12 +1473,15 @@ int com_chown(const char *arg, const char *command)
 	
 	  while( (ptr = *glob++) )
 	    {
-	      id = lsftp_do_stat( ptr, &st );
-
+	      id = lsftp_do_stat( ptr, &attrib );
 	      if( id > 0) /* Not a failure? */
 		{
 		  lsftp_await_command( id );
-		  lsftp_do_chown( ptr, newuid, st.st_gid, command );
+
+		  if (! (attrib.flags & SSH_FILEXFER_ATTR_UIDGID))
+		    printf("Remote system doesn't support uids?\n");
+		  
+		  lsftp_do_chown(ptr, newuid, attrib.gid, command );
 		}
 	    }
 	
@@ -1502,7 +1507,7 @@ int com_chgrp(const char *arg, const char *command)
   int gotgid = 0;
   long newgid = 0;
   int enough_parameters = 0;
-  struct stat st;
+  struct sftp_attrib attrib;
 
   if( !lsftp_connected() )   /* Bail out if not connected */
     return com_disconnected();
@@ -1540,13 +1545,15 @@ int com_chgrp(const char *arg, const char *command)
 	  int id;
 
 	  enough_parameters++;
-	  id = lsftp_do_stat( tmp, &st );
+	  id = lsftp_do_stat( tmp, &attrib );
 
 	  if( id > 0) /* Not a failure? */
 	    {
 	      lsftp_await_command( id );
-	  
-	      lsftp_do_chown( tmp, st.st_uid, newgid, command );
+
+	      if (! (attrib.flags & SSH_FILEXFER_ATTR_UIDGID))
+		printf("Remote system doesn't support gids?\n");
+	      lsftp_do_chown( tmp, attrib.uid, newgid, command );
 	    }
 	}
 
