@@ -116,7 +116,28 @@ struct command_context *
 make_command_context(struct command_continuation *c,
 		     struct exception_handler *e);
 
-			    
+/* catch command,
+ *
+ * (catch handler body x)
+ */
+
+/* GABA:
+   (class
+     (name catch_command)
+     (super command_simple)
+     (vars
+       (mask . UINT32)
+       (value . UINT32)))
+*/
+
+struct lsh_object *
+do_catch_simple(struct command_simple *s,
+		struct lsh_object *a);
+
+#define STATIC_CATCH_COMMAND(m, v) \
+{ STATIC_COMMAND_SIMPLE(do_catch_simple), (m), (v) }
+
+
 /* Commands that need to collect some arguments before actually doing
  * anything. */
 

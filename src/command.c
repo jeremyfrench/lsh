@@ -427,3 +427,181 @@ make_delay_continuation(struct command *f,
 }
 
    
+/* Catch command
+ *
+ * (catch handler body x)
+ *
+ * Invokes (body x), with an exception handler that passes exceptions
+ * of certain types to handler. */
+
+/* GABA:
+   (class
+     (name catch_handler_info)
+     (vars
+       (mask . UINT32)
+       (value . UINT32)
+       (handler object command)))
+*/
+
+static struct catch_handler_info *
+make_catch_handler_info(UINT32 mask, UINT32 value,
+			struct command *handler)
+{
+  NEW(catch_handler_info, self);
+  self->mask = mask;
+  self->value = value;
+  self->handler = handler;
+
+  return self;
+}
+
+/* GABA:
+   (class
+     (name catch_handler)
+     (super exception_handler)
+     (vars
+       (c object command_continuation)
+       (info object catch_handler_info)))
+*/
+
+static void
+do_catch_handler(struct exception_handler *s,
+		 const struct exception *e)
+{
+  CAST(catch_handler, self, s);
+  
+  if ((e->type & self->info->mask) == self->info->value)
+    COMMAND_CALL(self->info->handler, e, self->c, self->super.parent);
+  else
+    EXCEPTION_RAISE(self->super.parent, e);
+}
+
+static struct exception_handler *
+make_catch_handler(struct catch_handler_info *info,
+		   struct command_continuation *c,
+		   struct exception_handler *e)
+{
+  NEW(catch_handler, self);
+
+  self->super.raise = do_catch_handler;
+  self->super.parent = e;
+  self->c = c;
+  self->info = info;
+
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name catch_apply)
+     (super command)
+     (vars
+       (info object catch_handler_info)
+       (body object command)))
+*/
+
+static void
+do_catch_apply(struct command *s,
+	       struct lsh_object *a,
+	       struct command_continuation *c,
+	       struct exception_handler *e)
+{
+  CAST(catch_apply, self, s);
+  COMMAND_CALL(self->body, a, c,
+	       make_catch_handler(self->info, c, e));
+}
+
+static struct command *
+make_catch_apply(struct catch_handler_info *info,
+		 struct command *body)
+{
+  NEW(catch_apply, self);
+  self->super.call = do_catch_apply;
+  self->info = info;
+  self->body = body;
+
+  return &self->super;
+}
+
+
+/* GABA:
+   (class
+     (name catch_collect_body)
+     (super command_simple)
+     (vars
+       (info object catch_handler_info)))
+*/
+
+static struct lsh_object *
+do_catch_collect_body(struct command_simple *s,
+		      struct lsh_object *a)
+{
+  CAST(catch_collect_body, self, s);
+  CAST_SUBTYPE(command, body, a);
+
+  return &make_catch_apply(self->info, body)->super;
+}
+
+static struct command *
+make_catch_collect_body(struct catch_handler_info *info)
+{
+  NEW(catch_collect_body, self);
+  self->super.super.call = do_call_simple_command;
+  self->super.call_simple = do_catch_collect_body;
+  self->info = info;
+
+  return &self->super.super;
+}
+
+struct lsh_object *
+do_catch_simple(struct command_simple *s,
+		struct lsh_object *a)
+{
+  CAST(catch_command, self, s);
+  CAST_SUBTYPE(command, f, a);
+
+  return &(make_catch_collect_body(make_catch_handler_info(self->mask, self->value, f))
+	   ->super);
+}
+
+
+#if 0    
+static void
+do_catch_apply(struct command *s,
+	       struct lsh_object *a,
+	       struct command_continuation *c,
+	       struct exception_handler *e)
+{
+  CAST(catch_apply, self, s);
+  COMMAND_CALL(self->f, a, c, self->handler);
+}
+
+static struct command
+make_catch_apply(struct command *f,
+		 struct exception_handler *handler)
+{
+  NEW(catch_apply, self);
+  self->super.call = do_catch_apply;
+  self->f = f;
+  self->handler = handler;
+}
+   
+/* ;; GABA:
+   (class
+     (name catch_command)
+     (super command_simple)
+     (vars
+       (mask . UINT32)
+       (value . UINT32)))
+*/
+
+static void
+do_catch_simple(struct simple_command *s,
+		struct lsh_object *a)
+{
+  CAST(catch_command, self, s);
+  CAST_SUBTYPE(command, f, a);
+
+  return make_catch_apply(f, make_catch_handler);
+}
+#endif
