@@ -71,7 +71,7 @@ rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits)
   /* NOTE: mpz_invert sometimes generates negative inverses. */
   if (!mpz_invert(d, e, phi))
     {
-      werror("rsa_generate_key: e not invertible.\n");
+      debug("rsa_generate_key: e not invertible.\n");
       goto done;
     }
 
