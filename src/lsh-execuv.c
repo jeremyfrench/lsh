@@ -75,11 +75,27 @@
 #include <pwd.h>
 #include <grp.h>
 
+#if 0
+#if WITH_UTMP
+# if HAVE_UTMP_H
+#  include <utmp.h>
+# endif
+
+# if HAVE_UTMPX_H
+#  include <utmpx.h>
+# endif
+#endif
+
+#if HAVE_LIBUTIL_H
+# include <libutil.h>
+#endif
+#endif
+
 static void
 usage(void)
 {
   fprintf(stderr,
-	  "lsh-execuv [-u uid] [-n name] [-g gid] [-i] [-c] [-p]"
+	  "lsh-execuv [-u uid] [-n name] [-g gid] [-i] [-c] [-p] "
 	  "program [--] real-argv\n\n"
 	  "Options:\n"
 	  "  -u   Numeric user id\n"
@@ -88,6 +104,10 @@ usage(void)
 	  "  -i   Call initgroups\n"
 	  "  -c   Clear the list of supplementary groups\n"
 	  "  -p   Use PATH\n"
+#if 0
+	  "  -t   Perform utmp/wtmp logging using the supplied tty name\n"
+	  "  -h   Hostname or ip address for utmp/wtmp logs\n"
+#endif
 	  "  -?   Show this help\n");
 }
 
@@ -122,6 +142,55 @@ atoid(const char *s, int *ok)
 
   return value;
 }
+
+#if 0
+#define CP(dst, src) (strncpy(dst, src, sizeof(dst)))
+
+#if WITH_UTMP 
+static void
+write_login_entries(const char *name, const char *tty, const char *host)
+{
+#if HAVE_UTMP_H
+  const char *prefix;
+
+  struct utmp entry;
+  memset(&entry, 0, sizeof(entry));
+
+  /* Strip matching prefix */
+  for (prefix ="/dev/" ;
+       *prefix && *tty && (*tty == *prefix);
+       tty++, prefix++)
+    ;
+
+  entry.ut_type = LOGIN_PROCESS;
+  CP(entry.ut_line, tty);
+  
+#if HAVE_STRUCT_UTMP_UT_PID
+  entry.ut_pid = getpid();
+#endif
+
+#if HAVE_STRUCT_UTMP_UT_NAME
+  CP(entry.ut_name, name);
+#endif
+
+  /* FIXME: Perform a reverse lookup.
+   * Also use ut_addr and ut_addr_v6 */
+#if HAVE_STRUCT_UTMP_UT_HOST
+  CP(entry.ut_host, host);
+#endif
+
+#if HAVE_PUTUTLINE
+  if (!pututline(&entry))
+    die_errno("pututline failed\n");
+  
+#endif
+#if HAVE_LOGWTMP
+  logwtmp(tty, name, host);
+#endif /* HAVE_LOGWTMP */
+#endif /* HAVE_UTMP_H */
+}
+#endif /* WITH_UTMP */
+#endif
 
 #if INITGROUPS_WORKAROUND
 
@@ -226,7 +295,11 @@ int main(int argc, char **argv)
   int use_path = 0;
   
   char *name = NULL;
-
+#if 0
+  char *tty = NULL;
+  char *host = NULL;
+#endif
+  
   char *program;
   
   int ok;
@@ -265,7 +338,15 @@ int main(int argc, char **argv)
       case 'p':
 	use_path = 1;
 	break;
-	
+#if 0
+      case 't':
+	tty = optarg;
+	break;
+
+      case 'h':
+	host = optarg;
+	break;
+#endif
       case -1:
 	/* Options done */
 	goto options_done;
@@ -312,7 +393,7 @@ int main(int argc, char **argv)
 
   if (!uid)
     die("Won't exec as root.");
-
+  
   /* Fixup the group list */
   if (grouplist_clear)
     {
@@ -327,13 +408,13 @@ int main(int argc, char **argv)
     }
 
   if (setgid(gid) < 0)
-    die_errno("setgid failed.");
+    die_errno("setgid failed");
 
   /* FIXME: On obscure systems, notably UNICOS, it's not enough to
    * change our uid, we must also explicitly lower our privileges. */
 
   if (setuid(uid) < 0)
-    die_errno("setuid failed.");
+    die_errno("setuid failed");
 
   assert(uid == getuid());
 
