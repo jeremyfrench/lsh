@@ -131,7 +131,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  verbose("\n");
 	  
 	  /* FIXME: Cleanup properly. */
-	  lsh_free(closure);
+	  lsh_object_free(closure);
 
 	  return new;
 	}
@@ -142,7 +142,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  werror("\n");
 
 	  /* FIXME: Clean up properly */
-	  lsh_free(closure);
+	  lsh_object_free(closure);
 	  *h = 0;
 		  
 	  return 0;
@@ -219,14 +219,51 @@ struct server_session
 {
   struct ssh_channel super;
 
-  UINT32 max_window;
-
   /* User information */
   struct unix_user *user;
 
   /* Non-zero if a shell or command has been started. */
   int running;
+
+  /* Child process's stdio */
+  struct abstract_write *in;
+  struct io_fd *out;
+  struct io_fd *err;
 };
+
+/* Recieve channel data */
+static int do_recieve(struct ssh_channel *c,
+		      int type, struct lsh_string *data)
+{
+  struct server_session *closure = (struct server_session *) c;
+  
+  MDEBUG(closure);
+
+  switch(type)
+    {
+    case CHANNEL_DATA:
+      return A_WRITE(closure->in, data);
+    case CHANNEL_STDERR_DATA:
+      werror("Ignoring unexpected stderr data.\n");
+      lsh_string_free(data);
+      return LSH_OK | LSH_GOON;
+    default:
+      fatal("Internal error!\n");
+    }
+}
+
+/* We may send more data */
+static int do_send(struct ssh_channel *c)
+{
+  struct server_session *closure = (struct server_session *) c;
+
+  MDEBUG(closure);
+
+  closure->out->on_hold = 0;
+  closure->err->on_hold = 0;
+  
+  return LSH_OK | LSH_GOON;
+}
 
 struct ssh_channel *make_server_session(struct unix_user *user,
 					UINT32 max_window,
@@ -248,6 +285,10 @@ struct ssh_channel *make_server_session(struct unix_user *user,
   self->user = user;
 
   self->running = 0;
+
+  self->in = NULL;
+  self->out = NULL;
+  self->err = NULL;
   
   return &self->super;
 }
@@ -380,9 +421,9 @@ static int do_spawn_shell(struct channel_request *c,
   struct shell_request *closure = (struct shell_request *) c;
   struct server_session *session = (struct server_session *) channel;
 
-  int in_fds[2];
-  int out_fds[2];
-  int err_fds[2];
+  int in[2];
+  int out[2];
+  int err[2];
 
   MDEBUG(closure);
   MDEBUG(channel);
@@ -394,14 +435,14 @@ static int do_spawn_shell(struct channel_request *c,
     /* Already spawned a shell or command */
     goto fail;
   
-  /* {in_fds|out_fds|err_fds}[0] is for reading,
-   * {in_fds|out_fds|err_fds}[1] for writing. */
+  /* {in|out|err}[0] is for reading,
+   * {in|out|err}[1] for writing. */
 
-  if (make_pipe(in_fds))
+  if (make_pipe(in))
     {
-      if (make_pipe(out_fds))
+      if (make_pipe(out))
 	{
-	  if (make_pipe(err_fds))
+	  if (make_pipe(err))
 	    {
 	      pid_t child;
 	      
@@ -440,31 +481,31 @@ static int do_spawn_shell(struct channel_request *c,
 		   * backend. */
 
 		  close(STDIN_FILENO);
-		  if (dup2(in_fds[0], STDIN_FILENO) < 0)
+		  if (dup2(in[0], STDIN_FILENO) < 0)
 		    {
 		      werror("Can't dup stdin!\n");
 		      exit(EXIT_FAILURE);
 		    }
-		  close(in_fds[0]);
-		  close(in_fds[1]);
+		  close(in[0]);
+		  close(in[1]);
 
 		  close(STDOUT_FILENO);
-		  if (dup2(out_fds[1], STDOUT_FILENO) < 0)
+		  if (dup2(out[1], STDOUT_FILENO) < 0)
 		    {
 		      werror("Can't dup stdout!\n");
 		      exit(EXIT_FAILURE);
 		    }
-		  close(out_fds[0]);
-		  close(out_fds[1]);
+		  close(out[0]);
+		  close(out[1]);
 
 		  close(STDERR_FILENO);
-		  if (dup2(err_fds[1], STDERR_FILENO) < 0)
+		  if (dup2(err[1], STDERR_FILENO) < 0)
 		    {
 		      /* Can't write any message to stderr. */ 
 		      exit(EXIT_FAILURE);
 		    }
-		  close(err_fds[0]);
-		  close(err_fds[1]);
+		  close(err[0]);
+		  close(err[1]);
 
 		  {
 		    char *shell = session->user->shell->data;
@@ -493,24 +534,31 @@ static int do_spawn_shell(struct channel_request *c,
 		  }
 		default:
 		  /* Parent */
-		  /* FIXME: Install a calback to catch dying children */
+		  /* FIXME: Install a callback to catch dying children */
 		    
 		  /* Close the child's fd:s */
-		  close(in_fds[0]);
-		  close(out_fds[1]);
-		  close(err_fds[2]);
+		  close(in[0]);
+		  close(out[1]);
+		  close(err[2]);
 
-		  io_write(closure->backend, in_fds[1],
-			   SSH_MAX_PACKET,
-			   /* FIXME: Use a proper close callback */
-			   NULL);
-		  io_read(closure->backend, out_fds[0],
-			  make_channel_read_data(channel),
-			  NULL);
-		  io_read(closure->backend, err_fds[0],
-			  make_channel_read_stderr(channel),
-			  NULL);
+		  
+		  session->in
+		    = &io_write(closure->backend, in[1],
+				SSH_MAX_PACKET,
+				/* FIXME: Use a proper close callback */
+				NULL)->buffer->super;
+		  session->out
+		    = io_read(closure->backend, out[0],
+			      make_channel_read_data(channel),
+			      NULL);
+		  session->err
+		    = io_read(closure->backend, err[0],
+			      make_channel_read_stderr(channel),
+			      NULL);
 
+		  channel->recieve = do_recieve;
+		  channel->send = do_send;
+		  
 		  session->running = 1;
 		  return want_reply
 		    ? A_WRITE(channel->write,
@@ -518,14 +566,14 @@ static int do_spawn_shell(struct channel_request *c,
 		    : LSH_OK | LSH_GOON;
 		  
 		}
-	      close(err_fds[0]);
-	      close(err_fds[1]);
+	      close(err[0]);
+	      close(err[1]);
 	    }
-	  close(out_fds[0]);
-	  close(out_fds[1]);
+	  close(out[0]);
+	  close(out[1]);
 	}
-      close(in_fds[0]);
-      close(in_fds[1]);
+      close(in[0]);
+      close(in[1]);
     }
  fail:
   return want_reply
