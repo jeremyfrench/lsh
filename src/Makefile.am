@@ -99,7 +99,7 @@ atoms_defines.h: atoms.in process_atoms
 	test -s $@T && mv -f $@T $@
 
 # With the next version of gperf, add -F ", 0"
-GPERF_FLAGS = -LANSI-C -t -c -C -l -k1,3,6,10,$$ -N gperf_atom 
+GPERF_FLAGS = -LANSI-C -t -c -C -l -k1,3,6,10,21,$$ -N gperf_atom 
 atoms_gperf.c: atoms.in process_atoms
 	$(srcdir)/process_atoms gperf <$< \
              | gperf $(GPERF_FLAGS) | sed 's/{""}/{"", 0}/g' >$@T 
