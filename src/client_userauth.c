@@ -36,23 +36,6 @@
 
 #include <assert.h>
 
-/* FIXME: For now, use only password authentication. A better method
- * would be to first send a set of publickey authentication requests
- * for the available keys (for some configurable value of
- * "available"). This is analogous to unlocking a door by first
- * examining the keys on one's keyring to see if any of them can be
- * inserted into the lock. Preferably, at this point one should use
- * spki hashed public keys rather than the public keys themselves.
- *
- * Next we wait for SSH_MSH_USERAUTH_FAILURE or SSH_MSG_USERAUTH_PK_OK
- * messages. If any of the keys is recognized, we compute a signature
- * and send it to the server (analogously to inserting the key into
- * the lock and turning it around).
- *
- * If none of the keys were recognized, or if no keys were available
- * from the start, we ask the user for a password and attempt to log
- * in using that. */
-
 /* Forward declaration */
 struct client_userauth; 
 
@@ -123,7 +106,7 @@ format_userauth_publickey(struct lsh_string *name,
      (name client_userauth_method)
      (vars
        (type . int)
-       (login method "struct client_userauth_failure *"
+       (login method (object client_userauth_failure)
                      "struct client_userauth *u"
                      "struct ssh_connection *c"
 		     "struct exception_handler *e")))
@@ -530,7 +513,18 @@ make_client_password_auth(void)
 
 /* Publickey authentication. */
 
-/* NOTE: We try only the first key for which we receive a USERAUTH_PK_OK */
+/* We first send a set of publickey authentication requests for the
+ * available keys. This is analogous to unlocking a door by first
+ * examining the keys on one's keyring to see if any of them can be
+ * inserted into the lock. '
+ *
+ * FIXME: At this stage it is preferable to use spki hashed public
+ * keys rather than the public keys themselves.
+ *
+ * Next we wait for SSH_MSH_USERAUTH_FAILURE or SSH_MSG_USERAUTH_PK_OK
+ * messages. If any of the keys is recognized, we compute a signature
+ * and send it to the server (analogous to inserting the key into the
+ * lock and trying to turn it around). */
 
 /* GABA:
    (class
@@ -551,25 +545,43 @@ make_client_password_auth(void)
        ; Number of keys for which we have received either
        ; a USERAUTH_FAILURE or USERAUTH_PK_OK message.
        (done . UINT32)
-       ; Non-zero if we have computed and sent a signature.
-       (pending . int)
+       ; Number of keys for which we have computed and sent a signature,
+       ; and not yet received any failure.
+       (pending . UINT32)
        (e object exception_handler)))
 */
 
 static void
 client_publickey_next(struct client_publickey_state *state)
 {
-  state->done++;
-  if (state->done == LIST_LENGTH(state->keys))
+  static const struct exception publickey_auth_failed =
+    STATIC_EXCEPTION(EXC_USERAUTH, "Public key userauth failed.");
+
+  if (state->done < LIST_LENGTH(state->keys))
     {
-      static const struct exception publickey_auth_failed =
-	STATIC_EXCEPTION(EXC_USERAUTH, "Public key userauth failed.");
-	  
+      /* We received a response on a query request. */
+      
+      state->done++;
+      if (state->done < LIST_LENGTH(state->keys))
+	/* We are still waiting for SSH_MSG_USERAUTH_FAILURE or
+	 * SSH_MSG_USERAUTH_PK_OK */
+	return;
+
+      /* We have got a response on the final query request. */
       state->connection->dispatch[SSH_MSG_USERAUTH_PK_OK]
 	= state->connection->fail;
-      if (!state->pending)
-	EXCEPTION_RAISE(state->e, &publickey_auth_failed);
     }
+  else
+    {
+      /* We received a response (actually, a failure) on a request
+       * that included a signature. */
+      assert(state->pending);
+      state->pending--;
+    }
+
+  if (!state->pending)
+    /* All failed. */
+    EXCEPTION_RAISE(state->e, &publickey_auth_failed);
 }
 
 static void
@@ -603,8 +615,7 @@ make_client_publickey_state(struct client_userauth *userauth,
      (name userauth_pk_ok_handler)
      (super packet_handler)
      (vars
-       (state object client_publickey_state)))
-*/
+       (state object client_publickey_state))) */
   
 static void 
 do_userauth_pk_ok(struct packet_handler *s,
@@ -655,7 +666,7 @@ do_userauth_pk_ok(struct packet_handler *s,
 			       SIGN(key->private, signed_data->length, signed_data->data));
 	  lsh_string_free(signed_data);
 	  C_WRITE(connection, request);
-	  self->state->pending = 1;
+	  self->state->pending++;
 	}
       else
 	werror("client_userauth.c: Unexpected key in USERAUTH_PK_OK message.\n");
@@ -691,38 +702,27 @@ do_publickey_login(struct client_userauth_method *s,
 
   assert(LIST_LENGTH(self->keys));
   
-#if 0
-  if (!LIST_LENGTH(self->keys))
-    {
-      static const struct exception no_keys =
-	STATIC_EXCEPTION(EXC_USERAUTH, "No keys");
-      
-      werror("do_publickey_login: No keys!\n");
-      EXCEPTION_RAISE(e, &no_keys);
-    }
-  else
-#endif
     
-    {
-      struct client_publickey_state *state =
-	make_client_publickey_state(userauth,
-				    connection,
-				    self->keys,
-				    e);
-      unsigned i;
+  {
+    struct client_publickey_state *state =
+      make_client_publickey_state(userauth,
+				  connection,
+				  self->keys,
+				  e);
+    unsigned i;
       
-      for (i = 0; i < LIST_LENGTH(self->keys); i++)
-	{
-	  CAST(keypair, key, LIST(self->keys)[i]);
+    for (i = 0; i < LIST_LENGTH(self->keys); i++)
+      {
+	CAST(keypair, key, LIST(self->keys)[i]);
 
-	  C_WRITE(connection, 
-		  format_userauth_publickey_query(local_to_utf8(userauth->username, 0),
-						  userauth->service_name,
-						  key->type, key->public));
-	}
-      connection->dispatch[SSH_MSG_USERAUTH_PK_OK] = make_pk_ok_handler(state);
-      return &state->super;
-    }
+	C_WRITE(connection, 
+		format_userauth_publickey_query(local_to_utf8(userauth->username, 0),
+						userauth->service_name,
+						key->type, key->public));
+      }
+    connection->dispatch[SSH_MSG_USERAUTH_PK_OK] = make_pk_ok_handler(state);
+    return &state->super;
+  }
 }
 
 struct client_userauth_method *
