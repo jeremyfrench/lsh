@@ -58,25 +58,35 @@ make_apply(struct command *f, struct command_continuation *c)
 
   return &res->super.super;
 }
-    
+
+int do_call_simple_command(struct command *c,
+			   struct lsh_object *arg,
+			   struct command_continuation *c)
+{
+  CAST_SUBTYPE(command_simple, self, c);
+  return COMMAND_RETURN(c, COMMAND_SIMPLE(self, arg));
+}
+
 /* Combinators */
 
 /* Ix == x */
+
+#if 0
 static int do_command_I(struct command *ignored UNUSED,
 			struct lsh_object *arg,
 			struct command_continuation *c)			
 {
   return COMMAND_RETURN(c, arg);
 }
+#endif
 
-static struct lsh_object *do_simple_I(struct command_simple *ignored UNUSED,
-				      struct lsh_object *arg)
+static struct lsh_object *do_command_I(struct command_simple *ignored UNUSED,
+				       struct lsh_object *arg)
 {
   return arg;
 }
 
-struct command_simple command_I =
-{ { STATIC_HEADER, do_command_I} do_simple_I };
+struct command_simple command_I = STATIC_COMMAND_SIMPLE(do_command_I);
 
 /* ((S f) g)x == (f x)(g x) */
 
