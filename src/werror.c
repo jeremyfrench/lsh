@@ -25,6 +25,8 @@
 
 #include "werror.h"
 
+#include "charset.h"
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
@@ -120,39 +122,36 @@ void verbose_safe(UINT32 length, UINT8 *msg)
     write_washed(length, msg);
 }
 
-/* Limited utf8-support */
 static void write_utf8(UINT32 length, UINT8 *msg)
 {
-  /* FIXME: This function assumes that the system charset is
-   * iso-8859-1, aka latin1. */
+  struct simple_buffer buffer;
 
-  int i=0;
-      
-  while(i<length)
-  {
-    UINT8 c = msg[i++];
-    if (!(c & 0x80))
-      wash_char(c);
-    else
+  simple_buffer_init(&buffer, lengthm msg);
+  
+  while(1)
     {
-      if ( (c & 0xd0) != 0xc0)
-      {
-	/* Unicode value >= 0x800 */
-	fputs("\\?", stderr);
-	while ( (i < length) & (msg[i] & 0x80) )
-	  i++;
-      }
-      else
-      {
-	if (i == length)
-	  /* String ends with a partial character! */
+      UINT32 ucs4;
+      
+      switch (parse_utf8(&buffer, &ucs4))
+	{
+	case -1:
+	  return;
+	case 0:
 	  fputs("\\!", stderr);
-	else
-	  wash_char( ((c & 3) << 6) || (msg[i++] & 0x3f) ); 
-      }
+	  return;
+	case 1:
+	  {
+	    int local = ucs4_to_local(ucs4);
+	    if (local < 0)
+	      fputs("\\?", stderr);
+	    else
+	      wash_char(local);
+	  }
+	default:
+	  fatal("Internal error");
+	}
     }
-  }
-} 
+}
 
 void werror_utf8(UINT32 length, UINT8 *msg)
 {
