@@ -1,3 +1,36 @@
+2003-01-12  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/unix_user.c: Use macros in environ.h, when defining
+	environment veriables. 
+
+
+	* src/lshd.c: Use PATH_KERBEROS_HELPER, defined in environ.h.
+
+	* src/environ.h.in: Define a bunch of PATH_* and ENV_* constants. 
+
+	* src/client.c: Include environ.h, and use those macros for all
+	getenv calls.
+	* src/client_pty.c: Likewise.
+	* src/gateway.c: Likewise.
+	* src/lsh-keygen.c: Likewise.
+	* src/lsh-make-seed.c: Likewise.
+	* src/lsh-writekey.c: Likewise.
+	* src/lsh.c: Likewise.
+	* src/server_session.c: Likewise.
+	* src/server_x11.c: Likewise.
+	* src/srp-gen.c: Likewise.
+	* src/unix_random.c: Likewise.
+	* src/xauth.c: Likewise.
+
+	* src/Makefile.am.in (environ.h): Fixed commands.
+	(generated_sources): Added environ.h.
+
+	* doc/lsh.texinfo (Files and environment variables): Document
+	POSIXLY_CORRECT. 
+
+	* configure.ac: Don't try AC_DEFINE:ing PREFIX and SBINDIR. Those
+	substitutions are now performed at make-time.
+
 2003-01-10  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (read_known_hosts): Display upgrade message only if

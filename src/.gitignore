@@ -24,6 +24,7 @@
 /configure.scan
 /digit_table
 /digit_table.h
+/environ.h
 /lsh
 /lsh-decode-key
 /lsh-execuv
