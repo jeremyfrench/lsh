@@ -96,7 +96,7 @@ atoms_defines.h: atoms.in process_atoms
 GPERF_FLAGS = -LANSI-C -t -c -C -l -k1,3,6,10,$$ -N gperf_atom 
 atoms_gperf.c: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms gperf <$< \
-             | gperf >$@T $(GPERF_FLAGS)
+             | gperf $(GPERF_FLAGS) | sed 's/{""}/{"", 0}/g' >$@T 
 	test -s $@T && mv -f $@T $@
 
 atoms_table.c: atoms.in process_atoms
