@@ -179,7 +179,7 @@ do_utmp_cleanup(struct exit_callback *s,
 #endif
 #endif /* HAVE_UTMP_H */
 #if HAVE_LOGWTMP
-  logwtmp(lsh_get_cstring(self->utmp.ut_line), "", "");
+  logwtmp(self->utmp.ut_line, "", "");
 #endif
   EXIT_CALLBACK(self->c, signaled, core, value);
 }
@@ -212,8 +212,9 @@ strip_tty_name(size_t size, char *dst, struct lsh_string *tty)
 
 #define CP_TTY(dst, src) strip_tty_name(sizeof(dst), dst, src)
 
-struct exit_callback *
+static struct exit_callback *
 utmp_book_keeping(struct lsh_string *name,
+		  int login,
 		  pid_t pid,
 		  struct address_info *peer,
 		  struct lsh_string *tty,
@@ -230,7 +231,7 @@ utmp_book_keeping(struct lsh_string *name,
   CP_TTY(cleanup->utmp.ut_line, tty);
   
 #if HAVE_UTMP_H
-  cleanup->utmp.ut_type = LOGIN_PROCESS;
+  cleanup->utmp.ut_type = login ? LOGIN_PROCESS : USER_PROCESS;
   CP(cleanup->utmp.ut_line, tty);
   
 #if HAVE_STRUCT_UTMP_UT_PID
@@ -266,7 +267,7 @@ utmp_book_keeping(struct lsh_string *name,
 #endif /* WITH_UTMP */
 
 struct lsh_process *
-unix_process_setup(pid_t pid,
+unix_process_setup(pid_t pid, int login, 
 		   struct lsh_user *user,
 		   struct exit_callback **c,
 		   struct address_info *peer,
@@ -276,7 +277,7 @@ unix_process_setup(pid_t pid,
 
 #if WITH_UTMP
   if (tty)
-    *c = utmp_book_keeping(user->name, pid, peer, tty, *c);
+    *c = utmp_book_keeping(user->name, pid, login, peer, tty, *c);
 #endif
 
   *c = make_logout_notice(&process->super, *c);
