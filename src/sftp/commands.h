@@ -54,46 +54,45 @@ extern int buggy_server_treshold;
 
 /* Public functions */
 
-int handle_command(char* s);
+int handle_command(const char *s);
 
 
 /* Internal below */
 
+int com_help(const char *arg, const char *command);
+int com_about(const char *arg, const char *command);
+int com_escape(const char* arg, const char *command);
+int com_quit(const char *arg, const char *command);
+int com_jobs(const char *arg, const char *command);
 
-int com_help( char* arg, char* command );
-int com_about( char* arg, char* command );
-int com_escape( char* arg, char* command);
-int com_quit( char* arg, char* command );
-int com_jobs( char* arg, char* command );
+int com_close(const char *arg, const char *command);
+int com_open(const char *arg, const char *command);
 
-int com_close( char* arg, char* command );
-int com_open( char* arg, char* command );
+int com_cd(const char *arg, const char *command);
+int com_rm(const char *arg, const char *command);
+int com_ls(const char *arg, const char *command);
+int com_pwd(const char *arg, const char *command);
+int com_mv(const char *arg, const char *command);
 
-int com_cd( char* arg, char* command );
-int com_rm( char* arg, char* command );
-int com_ls( char* arg, char* command );
-int com_pwd( char* arg, char* command );
-int com_mv( char* arg, char* command );
+int com_ln(const char *arg, const char *command);
 
-int com_ln( char* arg, char* command );
+int com_mkdir(const char *arg, const char *command);
 
-int com_mkdir( char* arg, char* command );
+int com_set(const char *arg, const char *command);
+int com_mail(const char *arg, const char *command);
+int com_umask(const char *arg, const char *command);
 
-int com_set( char* arg, char* command );
-int com_mail( char* arg, char* command );
-int com_umask( char* arg, char* command );
+int com_get(const char *arg, const char *command);
+int com_put(const char *arg, const char *command);
 
-int com_get( char* arg, char* command );
-int com_put( char* arg, char* command );
+int com_lcd(const char *arg, const char *command);
+int com_lrm(const char *arg, const char *command);
+int com_lls(const char *arg, const char *command);
+int com_lpwd(const char *arg, const char *command);
+int com_lmv(const char *arg, const char *command);
 
-int com_lcd( char* arg, char* command );
-int com_lrm( char* arg, char* command );
-int com_lls( char* arg, char* command );
-int com_lpwd( char* arg, char* command );
-int com_lmv( char* arg, char* command );
-
-int com_chown( char* arg, char* command );
-int com_chgrp( char* arg, char* command );
+int com_chown(const char *arg, const char *command);
+int com_chgrp(const char *arg, const char *command);
 
 enum takes_as_arg
 { 
@@ -105,10 +104,11 @@ enum takes_as_arg
   OTHERARG
 };
 
+typedef int (*command_func)(const char *arg, const char *command);
 typedef struct 
 {
   char *name;                   /* User printable name of the function. */
-  int (*func)();                /* Function to call to do the job. */
+  command_func func;            /* Function to call to do the job. */
   char *doc;                    /* Documentation for this function.  */
   char* longdoc;                /* Longer help to display for help command */
   enum takes_as_arg arg_type;
@@ -116,7 +116,7 @@ typedef struct
   int uniquelen;
 } command;
 
-command commands[35];
+extern command commands[];
 
 #endif
 
