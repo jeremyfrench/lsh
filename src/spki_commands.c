@@ -61,32 +61,9 @@ struct command spki_add_userkey_command;
 EXCEPTION_RAISE((e), make_spki_exception(EXC_SPKI_TYPE, (msg), (expr)))
 
 
-/* Various conversion functions */
-
-DEFINE_COMMAND(spki_signer2verifier)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST_SUBTYPE(signer, private, a);
-  COMMAND_RETURN(c, SIGNER_GET_VERIFIER(private));
-}
-
-DEFINE_COMMAND(spki_verifier2public)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST_SUBTYPE(verifier, v, a);
-  COMMAND_RETURN(c, spki_make_public_key(v));
-}
-
-
 /* Reading keys */
 
-/* FIXME: Ued only by sexp2keypair, move code there? */
+/* FIXME: Used only by sexp2keypair, move code there? */
 static void 
 parse_private_key(struct alist *algorithms,
                   struct sexp_iterator *i,
