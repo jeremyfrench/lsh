@@ -34,7 +34,10 @@
 #include "werror.h"
 #include "xalloc.h"
 
+/* Automatically generated files. */
 #include "sexp_table.h"
+/* FIXME: This should be unified with sexp_parser.c */
+#include "digit_table.h"
 
 #include <assert.h>
 
@@ -44,7 +47,18 @@ static void do_mark_parse_node(struct parse_node *n,
 				 void (*mark)(struct lsh_object *o));
 static void do_free_parse_node(struct parse_node *n);
 
-#include "sexp_parser.c.x"
+/* FIXME: Copied from sexp_parser.c. beas63 decoding should be unified. */
+struct base64_state
+{
+  /* Bits are shifted into the buffer from the right, 6 at a time */
+  unsigned buffer;
+  /* Bits currently in the buffer */
+  unsigned bits;
+
+  UINT8 terminator;
+};
+
+#include "sexp_streamed_parser.c.x"
 
 /* CLASS:
    (class 
@@ -166,7 +180,7 @@ static int do_parse_literal(struct scanner **s, int token)
 }
 
 static struct scanner *make_parse_literal(struct string_handler *handler,
-					    struct scanner *next)
+					  struct scanner *next)
 {
   NEW(parse_literal, closure);
 
@@ -188,7 +202,7 @@ static struct scanner *make_parse_literal(struct string_handler *handler,
 */
 
 static int do_return_string(struct string_handler *h,
-			      struct lsh_string *data)
+			    struct lsh_string *data)
 {
   CAST(return_string, closure, h);
   return HANDLE_SEXP(closure->c, make_sexp_string(NULL, data));
@@ -253,9 +267,9 @@ static int do_parse_skip(struct scanner **s, int token)
 }
 
 static struct scanner *make_parse_skip(int token,
-					 struct sexp *value,
-					 struct sexp_handler *handler,
-					 struct scanner *next)
+				       struct sexp *value,
+				       struct sexp_handler *handler,
+				       struct scanner *next)
 {
   NEW(parse_skip, closure);
 
@@ -342,7 +356,6 @@ static int do_parse_advanced_string(struct scanner **s,
     }
 }
 
-#endif
 
 static struct scanner *make_parse_advanced_string(struct string_handler *h,
 						    struct scanner *next)
@@ -356,7 +369,6 @@ static struct scanner *make_parse_advanced_string(struct string_handler *h,
 }
 
 
-#if 0
 /* xxCLASS:
    (class
      (name return_string_display)
@@ -409,16 +421,16 @@ static int do_handle_display(struct string_handler *h,
 
   if (!closure->display)
     {
-	closure->display = data;
-	return LSH_OK;
+      closure->display = data;
+      return LSH_OK;
     }
   else
     {
-	struct lsh_string *display = closure->display;
-	closure->display = NULL;
-
-	return HANDLE_SEXP(closure->c,
-			   make_sexp_string(display, data));
+      struct lsh_string *display = closure->display;
+      closure->display = NULL;
+      
+      return HANDLE_SEXP(closure->c,
+			 make_sexp_string(display, data));
     }
 }
 
@@ -594,26 +606,26 @@ static int do_parse_list(struct scanner **s, int token)
   if (token < 0)
     return LSH_FAIL | LSH_SYNTAX;
 
-  if (token == ')')
-    {
-	*s = closure->super.super.next;
-	return HANDLE_SEXP(closure->super.handler,
-			   build_parsed_vector(closure->elements));
-    }
-	
   if (closure->advanced && (sexp_char_classes[token] & CHAR_space))
     return LSH_OK;
-
+  
+  if (token == ')')
+    {
+      *s = closure->super.super.next;
+      return HANDLE_SEXP(closure->super.handler,
+			 build_parsed_vector(closure->elements));
+    }
+	
   *s = closure->start;
   return SCAN(*s, token);
 }
 
 static struct scanner *
 make_parse_list(int advanced,
-		  struct scanner * (*make)(struct sexp_handler *c,
-					   struct scanner *next),
-		  struct sexp_handler *handler,
-		  struct scanner *next)
+		struct scanner * (*make)(struct sexp_handler *c,
+					 struct scanner *next),
+		struct sexp_handler *handler,
+		struct scanner *next)
 {
   NEW(parse_list, closure);
 
@@ -624,7 +636,7 @@ make_parse_list(int advanced,
   closure->advanced = advanced;
   closure->elements = make_handle_element();
   closure->start = make(&closure->elements->super,
-			  &closure->super.super.super);
+			&closure->super.super.super);
 
   return &closure->super.super.super;
 }
@@ -637,68 +649,134 @@ MAKE_PARSE(canonical_sexp)
   switch (token)
     {
     case TOKEN_EOS:
-	fatal("Internal error!\n");      
+      fatal("Internal error!\n");      
     case '[':
-	*s = make_parse_display(make_parse_literal, closure->handler,
-				closure->super.next);
-	return LSH_OK;
+      *s = make_parse_display(make_parse_literal, closure->handler,
+			      closure->super.next);
+      return LSH_OK;
     case '(':
-	*s = make_parse_list(0, make_parse_canonical_sexp, closure->handler,
-				closure->super.next);
-	return LSH_OK;
+      *s = make_parse_list(0, make_parse_canonical_sexp, closure->handler,
+			   closure->super.next);
+      return LSH_OK;
     default:
-	/* Should be a string */
-	*s = make_parse_literal(make_return_string(closure->handler),
-				closure->super.next);
-	return SCAN(*s, token);
+      /* Should be a string */
+      *s = make_parse_literal(make_return_string(closure->handler),
+			      closure->super.next);
+      return SCAN(*s, token);
     }
+}
+
+static void init_base64(struct base64_state *state, int terminator)
+{
+  state->buffer = 0;
+  state->bits = 0;
+  state->terminator = terminator;
+}
+
+static int base64_decode(struct base64_state *state, int token)
+{
+  unsigned res;
+  int digit;
+  
+  assert(state->bits < 8);
+  if (token == state->terminator)
+    {
+      /* Check for unused bits */
+      if (state->bits && ((1<<state->bits) & state->buffer))
+	{
+	  werror("sexp: Base64 terminated with %d leftover bits.\n",
+		 state->bits);
+	  return TOKEN_ERROR;
+	}
+      return TOKEN_EOS;
+    }
+
+  assert(token >= 0);
+  
+  digit = base64_digits[token];
+  switch(digit)
+    {
+    case BASE64_SPACE:
+      return TOKEN_NONE;
+    case BASE64_INVALID:
+      return TOKEN_ERROR;
+    default:
+      assert(digit >= 0);
+      state->buffer = (state->buffer << 6) | (unsigned) digit;
+      state->bits += 6;
+    }
+  if (state->bits < 8)
+    return TOKEN_NONE;
+
+  res = (state->buffer >> (state->bits - 8)) & 0xff;
+  state->bits -= 8;
+  
+  return res;
 }
 
 /* CLASS:
    (class
      (name decode_base64)
-     (super scanner)
+     (super parse)
      (vars
-	 (next object scanner);
-	 (end_marker . UINT8)))
+       (state simple "struct base64_state")
+       (contents object scanner)))
 */
 
 static int do_decode_base64(struct scanner **s, int token)
 {
   CAST(decode_base64, closure, *s);
 
-  fatal("do_decode_base64: Not implemented!\n");
-
-#if 0
   if (token < 0)
-	 return LSH_FAIL;
-  
-  if (token == closure->end_marker)
+    return LSH_FAIL;
+
+  token = base64_decode(&closure->state, token);
+  if (token < 0)
     {
-	int res = SCAN(closure->next, TOKEN_EOF);
-	if ()}
-#endif
+      switch (token)
+	{
+	case TOKEN_NONE:
+	  return LSH_OK;
+	case TOKEN_ERROR:
+	  return LSH_FAIL | LSH_SYNTAX;
+	case TOKEN_EOS:
+	  *s = closure->super.next;
+	  break;
+	default:
+	  fatal("Internal error!\n");
+	}
+    }
+  return SCAN(closure->contents, token);
 }
 
+
 static struct scanner *make_decode_base64(int end,
-					    struct scanner *s,
-					    struct scanner *next)
+					  struct scanner *contents,
+					  struct scanner *next)
 {
-  fatal("Not implemented!\n");
+  NEW(decode_base64, closure);
+
+  closure->super.super.scan = do_decode_base64;
+  closure->super.next = next;
+
+  init_base64(&closure->state, end);
+  closure->contents = contents;
+
+  return &closure->super.super;
 }
 
 static struct scanner *
 make_parse_transport(struct scanner * (*make)(struct sexp_handler *c,
-						struct scanner *next),
-		       struct sexp_handler *handler,
-		       struct scanner *next)
+					      struct scanner *next),
+		     struct sexp_handler *handler,
+		     struct scanner *next)
 {
   return
-    make_decode_base64('{',
-			 make(handler,
-			      make_parse_skip(TOKEN_EOS,
-					      NULL, NULL, NULL)),
-			 next);
+    make_decode_base64('}',
+		       make(handler,
+			    make_parse_skip(TOKEN_EOS,
+					    NULL, NULL, NULL)),
+		       next);
 }
 
 /* Parser for the canonical or transport format. */
@@ -730,6 +808,7 @@ MAKE_PARSE(transport_sexp)
     }
 }
 
+#if 0
 /* Parser for any format. */
 MAKE_PARSE(advanced_sexp)
 {
@@ -758,5 +837,52 @@ MAKE_PARSE(advanced_sexp)
 	return SCAN(*s, token);
     }
 }
+#endif
 
- 
+static int do_loop(struct scanner **s, int token)
+{
+  CAST(parse, closure, *s);
+
+  if (token == TOKEN_EOF)
+    return LSH_OK;
+  
+  *s = closure->next;
+  return SCAN(*s, token);
+}
+
+struct read_handler *make_read_sexp(struct sexp_handler *handler,
+				    UINT32 block_size,
+				    int style, int goon)
+{
+  struct scanner *scanner;
+  struct parse *next = NULL;
+
+  if (goon)
+    {
+      NEW(parse, p);
+      next = p;
+    }
+
+  switch (style)
+    {
+    case SEXP_CANONICAL:
+      scanner = make_parse_canonical_sexp(handler, &next->super);
+      break;
+    case SEXP_TRANSPORT:
+      scanner = make_parse_transport_sexp(handler, &next->super);
+      break;
+    case SEXP_ADVANCED:
+    case SEXP_INTERNATIONAL:
+      fatal("Not implemented!\n");
+    default:
+      fatal("Internal error!\n");
+    }
+
+  if (next)
+    {
+      next->super.scan = do_loop;
+      next->next = scanner;
+    }
+  
+  return make_read_scan(block_size, scanner);
+}
