@@ -64,10 +64,10 @@ struct fd_callback
 
 /* Close callbacks are called with a reason as argument. */
 
-#define CLOSE_EOF 0
-#define CLOSE_WRITE_FAILED 1
-#define CLOSE_PROTOCOL_FAILURE 2
-   
+#define CLOSE_EOF 1
+#define CLOSE_WRITE_FAILED 2
+#define CLOSE_PROTOCOL_FAILURE 3
+
 struct close_callback
 {
   struct lsh_object header;
