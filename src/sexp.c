@@ -819,7 +819,7 @@ struct sexp *sexp_assq(struct sexp_iterator *i, int atom)
 {
   struct sexp_iterator *inner;
   if (SEXP_ASSOC(i, get_atom_length(atom), get_atom_name(atom), &inner)
-      && (SEXP_LEFT(i) == 1))
+      && (SEXP_LEFT(inner) == 1))
     {
       struct sexp *value = SEXP_GET(inner);
       assert(value);
