@@ -1,3 +1,7 @@
+2002-03-24  Pontus Sköld  <pont@soua.net>
+
+	* commands.c (com_quit): Only call com_close if connected.
+
 2002-03-23  Pontus Sköld  <pont@soua.net>
 
 	* configure.ac: Removed -G from default after options.
