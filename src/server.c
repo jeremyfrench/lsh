@@ -427,10 +427,14 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
   
   MDEBUG(closure);
   MDEBUG(session);
-  
+
+  /* FIXME: Should we explicitly mark these files for closing?
+   * The io-backend should notice EOF anyway. */
+#if 0
   close_fd(session->in);
   close_fd(session->out);
   close_fd(session->err);
+#endif
   
   if (!(channel->flags & CHANNEL_SENT_EOF)
       /* Don't send eof if the process died violently. */
@@ -500,20 +504,22 @@ static int make_pipe(int *fds)
     }
   if (shutdown(fds[1], REC) < 0)
     {
-      werror("shutdown(%d, SEND) failed: %s\n", fds[0], strerror(errno));
+      werror("shutdown(%d, REC) failed: %s\n", fds[0], strerror(errno));
       return 0;
     }
   return 1;
+#undef REC
+#undef SEND
 }
 
 static char *make_env_pair(char *name, struct lsh_string *value)
 {
-  return ssh_format("%z=%lS%c", name, value, 0)->data;
+  return ssh_format("%lz=%lS%c", name, value, 0)->data;
 }
 
 static char *make_env_pair_c(char *name, char *value)
 {
-  return ssh_format("%z=%z%c", name, value, 0)->data;
+  return ssh_format("%lz=%lz%c", name, value, 0)->data;
 }
 
 static int do_spawn_shell(struct channel_request *c,
@@ -556,69 +562,40 @@ static int do_spawn_shell(struct channel_request *c,
 		  /* Close and return channel_failure */
 		  break; 
 		case 0:
-		  /* Child */
-		  debug("do_spawn_shell: Child process\n");
-		  
-		  if (!session->user->shell)
-		    {
-		      werror("No login shell!\n");
-		      exit(EXIT_FAILURE);
-		    }
-		      
-		  if (getuid() != session->user->uid)
-		    if (!change_uid(session->user))
-		      {
-			werror("Changing uid failed!\n");
-			exit(EXIT_FAILURE);
-		      }
-		  
-		  assert(getuid() == session->user->uid);
-
-		  if (!change_dir(session->user))
-		    {
-		      werror("Could not change to home (or root) directory!\n");
-		      exit(EXIT_FAILURE);
-		    }
-
-		  /* Close all descriptors but those used for
-		   * communicationg with parent. We rely on the
-		   * close-on-exec flag for all fd:s handled by the
-		   * backend. */
-
-		  close(STDIN_FILENO);
-		  if (dup2(in[0], STDIN_FILENO) < 0)
-		    {
-		      werror("Can't dup stdin!\n");
-		      exit(EXIT_FAILURE);
-		    }
-		  close(in[0]);
-		  close(in[1]);
-
-		  close(STDOUT_FILENO);
-		  if (dup2(out[1], STDOUT_FILENO) < 0)
-		    {
-		      werror("Can't dup stdout!\n");
-		      exit(EXIT_FAILURE);
-		    }
-		  close(out[0]);
-		  close(out[1]);
-
-		  close(STDERR_FILENO);
-		  if (dup2(err[1], STDERR_FILENO) < 0)
-		    {
-		      /* Can't write any message to stderr. */ 
-		      exit(EXIT_FAILURE);
-		    }
-		  close(err[0]);
-		  close(err[1]);
-
-		  {
+		  { /* Child */
 		    char *shell = session->user->shell->data;
 #define MAX_ENV 7
 		    char *env[MAX_ENV];
 		    char *tz = getenv("TZ");
 		    int i = 0;
 
+		    int old_stderr;
+		    
+		    debug("do_spawn_shell: Child process\n");
+
+		    if (!session->user->shell)
+		      {
+			werror("No login shell!\n");
+			exit(EXIT_FAILURE);
+		      }
+
+		    if (getuid() != session->user->uid)
+		      if (!change_uid(session->user))
+			{
+			  werror("Changing uid failed!\n");
+			  exit(EXIT_FAILURE);
+			}
+		    
+		    assert(getuid() == session->user->uid);
+		    
+		    if (!change_dir(session->user))
+		      {
+			werror("Could not change to home (or root) directory!\n");
+			exit(EXIT_FAILURE);
+		      }
+
+		    debug("Child: Setting up environment.\n");
+		    
 		    env[i++] = make_env_pair("LOGNAME", session->user->name);
 		    env[i++] = make_env_pair("USER", session->user->name);
 		    env[i++] = make_env_pair("SHELL", session->user->shell);
@@ -632,9 +609,75 @@ static int do_spawn_shell(struct channel_request *c,
 		    env[i++] = NULL;
 		    
 		    assert(i <= MAX_ENV);
+#undef MAX_ENV
 
-		    if (execle(shell, shell, NULL, env) < 0)
+		    debug("Child: Environment:\n");
+		    for (i=0; env[i]; i++)
+		      debug("Child:   '%s'\n", env[i]);
+		    
+		    /* Close all descriptors but those used for
+		     * communicationg with parent. We rely on the
+		     * close-on-exec flag for all fd:s handled by the
+		     * backend. */
+		    
+#if 0
+		    close(STDIN_FILENO);
+#endif
+		    if (dup2(in[0], STDIN_FILENO) < 0)
+		      {
+			werror("Can't dup stdin!\n");
+			exit(EXIT_FAILURE);
+		      }
+		    close(in[0]);
+		    close(in[1]);
+		    
+#if 0
+		    close(STDOUT_FILENO);
+#endif
+		    if (dup2(out[1], STDOUT_FILENO) < 0)
+		      {
+			werror("Can't dup stdout!\n");
+			exit(EXIT_FAILURE);
+		      }
+		    close(out[0]);
+		    close(out[1]);
+
+		    if ((old_stderr = dup(STDERR_FILENO)) < 0)
+		      werror("Couldn't safe old file_no.\n");
+		    io_set_close_on_exec(old_stderr);
+
+		    debug("Child: Duping stderr (bye).\n");
+		    
+#if 0
+		    close(STDERR_FILENO);
+#endif
+		    if (dup2(err[1], STDERR_FILENO) < 0)
+		      {
+			/* Can't write any message to stderr. */ 
+			exit(EXIT_FAILURE);
+		      }
+		    close(err[0]);
+		    close(err[1]);
+		    
+		    execle(shell, shell, NULL, env);
+
+		    /* exec failed! */
+		    {
+		      int exec_errno = errno;
+
+		      if (dup2(old_stderr, STDERR_FILENO) < 0)
+			{
+			  /* This is really bad... We can't restore stderr
+			   * to report our problems. */
+			  char msg[] = "child: execle() failed!\n";
+			  write(old_stderr, msg, sizeof(msg));
+			}
+		      else
+			debug("Child: execle() failed (errno = %d): %s\n",
+			      exec_errno, strerror(exec_errno));
+
 		      exit(EXIT_FAILURE);
+		    }
 #undef MAX_ENV
 		  }
 		default:
