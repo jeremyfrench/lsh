@@ -1,5 +1,11 @@
 2001-03-25  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* Released lsh-1.1.9.
+
+	* misc/libgcc2.c-patch: gcc patch.
+
+	* src/crypto.c: Deleted obsolete file.
+
 	* src/testsuite/Makefile.am (CFLAGS): -O0 is not needed anymore,
 	since most of the rijndael tests were deleted.
 

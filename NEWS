@@ -3,6 +3,10 @@ News for the 1.1.9 release:
 	Some code cleanup. Removed a dozen files, four classes and
 	about 1k lines of code. Useful tools are make class-map and
 	./configure --enable-gcov.
+
+	To get gcov to work properly when running several processes in
+	parallell, you may also want to apply misc/libgcc2.c-patch to
+	gcc. The patch adds locking for the output *.da files.
 	
 News for the 1.1.8 release:
 
