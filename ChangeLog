@@ -1,5 +1,11 @@
+2003-03-01  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh-upgrade: Note that we need to upgrade private keys too. 
+
 2003-02-28  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* Released lsh-1.5.1.
+	
 	* src/spki.c (spki_pkcs5_decrypt): Typo fix, it's
 	"password-encrypted", not "password_encrypted".
 
