@@ -60,13 +60,9 @@ rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits)
 
   debug("n = %xn\n", n);
   
-  /* Compute phi, as well as d % p and d % q  */
+  /* Compute phi */
   mpz_sub_ui(phi, p, 1);
-  mpz_fdiv_r(a, d, phi);
-  
   mpz_sub_ui(tmp, q, 1);
-  mpz_fdiv_r(b, d, tmp);
-  
   mpz_mul(phi, phi, tmp);
 
   debug("phi = %xn\ne = %xn\n", phi, e);
@@ -75,7 +71,7 @@ rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits)
   /* NOTE: mpz_invert sometimes generates negative inverses. */
   if (!mpz_invert(d, e, phi))
     {
-      werror("rsa_generate_key: e not invertible.");
+      werror("rsa_generate_key: e not invertible.\n");
       goto done;
     }
 
@@ -84,8 +80,19 @@ rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits)
 
   debug("d = %xn\n", d);
   
-  /* Compute inverse of q, also needed for the CRT optimization */
+  /* Compute extra values that are needed for the CRT optimization */
 
+  /* a = d % (p-1) */
+  mpz_sub_ui(tmp, p, 1);
+  mpz_fdiv_r(a, d, tmp);
+
+  debug("a = %xn\n", a);
+  
+  mpz_sub_ui(tmp, q, 1);
+  mpz_fdiv_r(b, d, tmp);
+
+  debug("b = %xn\n", b);
+  
   if (!mpz_invert(c, q, p))
     {
       werror("rsa_generate_key: q not invertible.");
@@ -95,7 +102,7 @@ rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits)
   if (mpz_sgn(c) < 0)
     mpz_fdiv_r(c, c, p);
 
-  debug("a = %xn\n b = %xn\nc=%xn\n", a, b, c);
+  debug("a = %xn\n", c);
 
   /* FIXME: Add sanity checking */
   
