@@ -528,6 +528,9 @@ new_session(struct channel_open_command *s,
 {
   CAST(session_open_command, self, s);
   struct ssh_channel *res;
+
+  self->session->write = connection->write;
+  
   *request = prepare_channel_open(connection->channels, ATOM_SESSION,
 				  self->session, "");
   if (!*request)
