@@ -99,14 +99,17 @@ liblsh_a_LIBADD = @LIBOBJS@
 # 	test -s $@T && mv -f $@T $@
 
 # FIXME: Won't work if the filename contains `,', `\', `"' or newline.
+# NOTE: This rule is used by non-maintainer builds, so avoid using
+# $< and $@ which are only available with GNU make.
 environ.h: environ.h.in Makefile
 	(echo '/* Automatically generated from environ.h.in, by make. */' ; \
 	sed -e 's,@''prefix@,$(prefix),' \
 	    -e 's,@''bindir@,$(bindir),' \
 	    -e 's,@''sbindir@,$(sbindir),' \
 	    -e 's,@''libexecdir@,$(libexecdir),' \
-	    -e 's,@''sysconfdir@,$(sysconfdir),' < $<) >$@T
-	test -s $@T && mv -f $@T $@
+	    -e 's,@''sysconfdir@,$(sysconfdir),' \
+	  < $(srcdir)/environ.h.in) >environ.hT
+	test -s environ.hT && mv -f environ.hT environ.h
 
 # # FIXME: Generate these dependencies in some other way.
 # client.o: environ.h
