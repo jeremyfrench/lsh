@@ -64,27 +64,30 @@ do_handle_dh_reply(struct packet_handler *c,
 		   struct lsh_string *packet)
 {
   CAST(dh_client, closure, c);
+  struct lsh_string *server_key;
+  struct lsh_string *signature;
   struct verifier *v;
-  struct lsh_string *hash;
   int res;
   
   trace("handle_dh_reply()\n");
 
-  res = dh_process_server_msg(&closure->dh, packet);
+  server_key = dh_process_server_msg(&closure->dh, &signature, packet);
   lsh_string_free(packet);
-  if (!res)
+  if (!server_key)
     {
       disconnect_kex_failed(connection, "Bad dh-reply\r\n");
       return;
     }
     
   v = LOOKUP_VERIFIER(closure->verifier, closure->hostkey_algorithm,
-		      NULL, closure->dh.server_key);
+		      NULL, server_key);
+  lsh_string_free(server_key);
 
   if (!v)
     {
       /* FIXME: Use a more appropriate error code? */
       disconnect_kex_failed(connection, "Bad server host key\r\n");
+      lsh_string_free(signature);
       return;
     }
 
@@ -96,7 +99,12 @@ do_handle_dh_reply(struct packet_handler *c,
     }
 #endif
 
-  if (!dh_verify_server_msg(&closure->dh, v))
+  res = VERIFY(v,
+	       closure->dh.exchange_hash->length, closure->dh.exchange_hash->data,
+	       signature->length, signature->data);
+  lsh_string_free(signature);
+
+  if (!res)
     {
       /* FIXME: Use a more appropriate error code? */
       disconnect_kex_failed(connection, "Invalid server signature\r\n");
@@ -107,13 +115,14 @@ do_handle_dh_reply(struct packet_handler *c,
 
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = connection->fail;
 
-  hash = closure->dh.exchange_hash;
-  closure->dh.exchange_hash = NULL; /* For gc */
-
   keyexchange_finish(connection, closure->algorithms,
 		     closure->dh.method->H,
-		     hash,
-		     ssh_format("%n", closure->dh.K));
+		     closure->dh.exchange_hash,
+		     closure->dh.K);
+
+  /* For gc */
+  closure->dh.K = NULL;
+  closure->dh.exchange_hash = NULL;  
 }
 
 static void
@@ -170,7 +179,7 @@ make_dh_client(struct dh_method *dh)
      (vars
        (dh struct dh_instance)
        (name string)
-       ;; (salt string)
+       (m2 string)
        (algorithms object object_list)))
 */
 
@@ -189,24 +198,24 @@ do_srp_client_proof_handler(struct packet_handler *s,
 {
   CAST(srp_client_handler, self, s);
 
-  int res = srp_process_server_proof(&self->srp->dh, packet);
+  int res = srp_process_server_proof(self->srp->m2,
+				     packet);
   lsh_string_free(packet);
 
   connection->dispatch[SSH_MSG_KEXSRP_PROOF] = connection->fail;
   
   if (res)
     {
-      struct lsh_string *hash;
-
-      hash = self->srp->dh.exchange_hash;
-      self->srp->dh.exchange_hash = NULL; /* For gc */
-
       connection->flags |= CONNECTION_SRP;
       
       keyexchange_finish(connection, self->srp->algorithms,
 			 self->srp->dh.method->H,
-			 hash,
-			 ssh_format("%n", self->srp->dh.K));
+			 self->srp->dh.exchange_hash,
+			 self->srp->dh.K);
+
+      /* For gc */
+      self->srp->dh.K = NULL;
+      self->srp->dh.exchange_hash = NULL;
     }
   else
     PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_KEXSRP_PROOF message");
@@ -266,7 +275,7 @@ do_handle_srp_reply(struct packet_handler *s,
   lsh_string_free(salt);
   lsh_string_free(passwd);
 
-  response = srp_make_client_proof(&self->srp->dh, x);
+  response = srp_make_client_proof(&self->srp->dh, &self->srp->m2, x);
   mpz_clear(x);
 
   if (!response)
@@ -314,6 +323,7 @@ do_init_client_srp(struct keyexchange_algorithm *s,
 
   srp->algorithms = algorithms;
   srp->name = self->name;
+  srp->m2 = NULL;
   
   /* Send client's message */
   C_WRITE(connection, srp_make_init_msg(&srp->dh, self->name));

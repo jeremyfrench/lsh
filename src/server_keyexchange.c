@@ -52,6 +52,7 @@
      (super packet_handler)
      (vars
        (dh struct dh_instance)
+       (server_key string)
        (signer object signer)
        (algorithms object object_list)))
 */
@@ -62,7 +63,6 @@ do_handle_dh_init(struct packet_handler *c,
 		  struct lsh_string *packet)
 {
   CAST(dh_server, closure, c);
-  struct lsh_string *hash;
   int res;
   
   trace("handle_dh_init()\n");
@@ -79,17 +79,19 @@ do_handle_dh_init(struct packet_handler *c,
   /* Send server's message, to complete key exchange */
   C_WRITE(connection,
 	  dh_make_server_msg(&closure->dh,
+			     closure->server_key,
 			     closure->signer));
 
   connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
 
-  hash = closure->dh.exchange_hash;
-  closure->dh.exchange_hash = NULL; /* For gc */
-
   keyexchange_finish(connection, closure->algorithms,
 		     closure->dh.method->H,
-		     hash,
-		     ssh_format("%n", closure->dh.K));
+		     closure->dh.exchange_hash,
+		     closure->dh.K);
+
+  /* For gc */
+  closure->dh.K = NULL;
+  closure->dh.exchange_hash = NULL;
 
   /* Try to purge information about the key exchange */
   KILL(closure);
@@ -107,40 +109,42 @@ do_init_server_dh(struct keyexchange_algorithm *c,
   CAST(keypair, key, ALIST_GET(keys,
 			       hostkey_algorithm_atom));
 
-  NEW(dh_server, dh);
-
   if (!key)
     {
       werror("Keypair for for selected signature-algorithm not found!\n");
       disconnect_kex_failed(connection, "Configuration error");
       return;
     }
+  else
+    {
+      NEW(dh_server, dh);
+      
+      /* Initialize */
+      dh->super.handler = do_handle_dh_init;
+      init_dh_instance(closure->dh, &dh->dh, connection);
 
-  /* Initialize */
-  dh->super.handler = do_handle_dh_init;
-  init_dh_instance(closure->dh, &dh->dh, connection);
-
-  dh->dh.server_key = lsh_string_dup(key->public);
+      dh->server_key = lsh_string_dup(key->public);
 
 #if DATAFELLOWS_WORKAROUNDS
-  if ( (hostkey_algorithm_atom == ATOM_SSH_DSS)
-       && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
-    {
-      dh->signer = make_dsa_signer_kludge(key->private);
-    }
-  else
+      if ( (hostkey_algorithm_atom == ATOM_SSH_DSS)
+	   && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
+	{
+	  dh->signer = make_dsa_signer_kludge(key->private);
+	}
+      else
 #endif
-    dh->signer = key->private;
+	dh->signer = key->private;
 
-  dh->algorithms = algorithms;
+      dh->algorithms = algorithms;
   
-  /* Generate server's secret exponent */
-  dh_make_server_secret(&dh->dh);
+      /* Generate server's secret exponent */
+      dh_make_server_secret(&dh->dh);
   
-  /* Install handler */
-  connection->dispatch[SSH_MSG_KEXDH_INIT] = &dh->super;
+      /* Install handler */
+      connection->dispatch[SSH_MSG_KEXDH_INIT] = &dh->super;
 
-  connection->kex_state = KEX_STATE_IN_PROGRESS;
+      connection->kex_state = KEX_STATE_IN_PROGRESS;
+    }
 }
 
 
@@ -192,11 +196,7 @@ do_srp_server_proof_handler(struct packet_handler *s,
   
   if (response)
     {
-      struct lsh_string *hash;
       C_WRITE(connection, response);
-
-      hash = self->srp->dh.exchange_hash;
-      self->srp->dh.exchange_hash = NULL; /* For gc */
 
       /* Remember that a user was authenticated. */
       connection->user = self->srp->user;
@@ -204,8 +204,11 @@ do_srp_server_proof_handler(struct packet_handler *s,
       
       keyexchange_finish(connection, self->srp->algorithms,
 			 self->srp->dh.method->H,
-			 hash,
-			 ssh_format("%n", self->srp->dh.K));
+			 self->srp->dh.exchange_hash,
+			 self->srp->dh.K);
+      /* For gc */
+      self->srp->dh.K = NULL;
+      self->srp->dh.exchange_hash = NULL;
     }
   else
     PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_KEXSRP_PROOF message");
@@ -344,10 +347,6 @@ do_init_server_srp(struct keyexchange_algorithm *s,
 
   /* Initialize */
   init_dh_instance(self->dh, &srp->dh, connection);
-
-  /* FIXME: These are not needed here. */
-  srp->dh.server_key = NULL;
-  srp->dh.signature = NULL;
 
   srp->algorithms = algorithms;
   srp->db = self->db;
