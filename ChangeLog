@@ -1,3 +1,72 @@
+2002-03-13  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/Makefile.am (TS_PROGS): Added parse-config-test.
+
+	* src/string_buffer.c (string_buffer_putc): New constant
+	BUFFER_INCREMENT. Code still not used.
+
+	* src/ssh.h (SSH_FIRST_KEYEXCHANGE_SPECIFIC): New constant.
+
+	* src/parse_config.c (parse_setting): Return a status code, to get
+	the handling of ignored keywords right. Updated callers.
+	(parse_hosts): Return a status code. Updated callers.
+
+	* src/lshg.c (do_lshg_send_ignore): Use C_WRITE_NOW.
+
+	* src/keyexchange.c (initiate_keyexchange): Call
+	connection_send_kex_start. Use C_WRITE_NOW.
+	(do_handle_kexinit): Likewise.
+	(do_handle_newkeys): For uniformity, reset the NEWKEYS handler to
+	&connection_fail_handler, even though NULL should work fine.
+	(keyexchange_finish): Use C_WRITE_NOW. Call
+	connection_send_kex_end. #if:ed out the code sending DEBUG
+	messages at this point.
+
+	* src/handshake.c (compat_info): SSH-3.0 still needs the
+	PEER_SEND_NO_DEBUG flag. Also updated code to use the the
+	peer_flag enum.
+
+	* src/client_keyexchange.c (do_init_client_dh): Use C_WRITE_NOW.
+	(do_handle_srp_reply): Likewise.
+	(do_init_client_srp): Likewise.
+	* src/server_keyexchange.c (do_handle_dh_init): Likewise.
+	(do_srp_server_proof_handler): Likewise.
+	(do_server_srp_read_verifier): Likewise.
+
+	* src/config_parse.y: Deleted file, use a recursive-descent parser
+	instead. 
+	
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added parse_config.c.
+	Removed disconnect.c
+
+	* src/disconnect.c, src/disconnect.h: Deleted files, code moved to
+	connection.c.
+
+	* src/debug.c (send_debug_message): Use C_WRITE_NOW.
+	(send_debug, send_verbose): #if:ed out fucntions.
+
+	* src/connection.h (enum connection_flag, enum peer_flag, enum
+	kex_state): New enum types.
+	(C_WRITE_NOW): New macro.
+
+	* src/connection.c (connection_handle_packet): Don't allow random
+	messages during key exchange.
+	(connection_disconnect_handler, format_disconnect): Moved code
+	from disconnect.c.
+	(connection_send): New function, queueing messages during key
+	exchange. 
+	(connection_send_kex_start): New function.
+	(connection_send_kex_end): New function.
+
+2002-03-11  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/testutils.h: Include werror.h.
+
+	* src/testsuite/parse-config-test.c: New file.
+
+	* src/parse_config.c: Work in progress. Added linenumber handling
+	and comments.
+
 2002-03-05  Niels Möller  <nisse@cuckoo.hack.org>
 
 	Cleaned up the bug compatibility tests.
