@@ -1,6 +1,6 @@
 #! /bin/sh
 
-function usage () {
+usage () {
     echo Usage: $0 key-file
 }
 
@@ -29,7 +29,7 @@ if [ $# = 0 ] ; then
     exit 0
 fi
 
-function create-dir () {
+create_dir () {
     if mkdir $1 2>/dev/null; then
 	echo Created $1
 	chmod $2 $1 || exit 1
@@ -37,8 +37,8 @@ function create-dir () {
 }
 
 # Create directories
-create-dir ~/.lsh 0700
-create-dir ~/.lsh/authorized_keys_sha1 0700
+create_dir ~/.lsh 0700
+create_dir ~/.lsh/authorized_keys_sha1 0700
 
 SEXP_CONV=`PATH=$PATH:. \type -path sexp_conv`
 
