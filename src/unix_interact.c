@@ -200,7 +200,7 @@ unix_is_tty(struct interact *s)
 static struct lsh_string *
 unix_read_password(struct interact *s UNUSED,
 		   UINT32 max_length UNUSED,
-		   struct lsh_string *prompt, int free)
+		   const struct lsh_string *prompt, int free)
 {
   /* NOTE: Ignores max_length; instead getpass's limit applies. */
   
@@ -228,7 +228,8 @@ unix_read_password(struct interact *s UNUSED,
 
 static int
 unix_yes_or_no(struct interact *s,
-	       struct lsh_string *prompt, int def, int free)
+	       const struct lsh_string *prompt,
+	       int def, int free)
 {
 #define TTY_BUFSIZE 10
 
