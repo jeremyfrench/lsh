@@ -257,9 +257,14 @@ do_make_raw(struct terminal_attributes *s)
   CAST(unix_termios, self, s);
   CLONED(unix_termios, res, self);
 
-  /* FIXME: Modify the VMIN and TIME attributes. */
   CFMAKERAW(&res->ios);
 
+  /* Modify VMIN and VTIME, to save some bandwidth and make traffic
+   * analysis of interactive sessions a little harder. */
+  res->ios.c_cc[VMIN] = 4;
+  /* Inter-character timer, in units of 0.1s */
+  res->ios.c_cc[VTIME] = 1;
+  
   return &res->super;
 }
 
