@@ -41,7 +41,7 @@ void set_error_stream(int fd, int with_poll);
 void set_error_ignore(void);
 
 #ifdef HAVE_SYSLOG
-void set_error_syslog(void);
+void set_error_syslog(const char *id);
 #endif
 
 /* Format specifiers:

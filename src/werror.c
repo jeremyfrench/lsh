@@ -120,8 +120,9 @@ static void write_syslog(int fd UNUSED, UINT32 length, UINT8 *data,
   syslog(LOG_NOTICE, "%s", string_buffer);
 }
 
-void set_error_syslog(void)
+void set_error_syslog(const char *id)
 {
+  openlog(id, LOG_PID | LOG_CONS, LOG_DAEMON);
   error_write = write_syslog;
   error_fd = -1;
 }
