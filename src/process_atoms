@@ -70,7 +70,7 @@ case $1 in
 	;;
     table)
 	header
-	echo -n '{ { "UNKNOWN", 0 }'
+	echo -n '{ { "UNKNOWN", 7 }'
 	while getatom; do
 	    echo ','
 	    # FIXME: We could replace ${#atom} with `expr $atom :'.*'`
