@@ -77,7 +77,10 @@ fall_back_to_ssh1(struct ssh1_fallback *c,
       /* NOTE: All fds should have the close-on-exec flag set.
        * So all we have to do is to dup the socket fd to stdin
        * and stdout. */
-	      
+
+      /* Reset the fd to blocking mode. */
+      io_set_blocking(fd);
+      
       if (dup2(fd, STDIN_FILENO) < 0)
 	{
 	  werror("lshd: fall_back_to_ssh1: Failed to dup socket to STDIN.\n");
