@@ -181,9 +181,9 @@ do_listen(struct io_backend *backend,
 
   if (!fd)
     {
-      /* FIXME: Raise a real exception. Possibly including errno? */
       /* NOTE: Will never invoke the continuation. */
-      EXCEPTION_RAISE(e, &dummy_exception);
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
+					   NULL, errno, NULL));
       return;
     }
   
