@@ -278,12 +278,24 @@ pty_open_slave(struct pty_info *pty)
    * tty become our controlling terminal. */
 # ifdef HAVE_STROPTS_H
   if (isastream(fd))
-    if (ioctl(fd, I_PUSH, "ptem") < 0
-	|| ioctl(fd, I_PUSH, "ldterm") < 0)
-      {
-	close(fd);
-	return -1;
-      }
+    {
+      if (ioctl(fd, I_PUSH, "ptem") < 0)
+	{
+	  werror("pty_open_slave: Failed to push streams module `ptem'.\n"
+		 "   %e\n", errno);
+	
+	  close(fd);
+	  return -1;
+	}
+      if (ioctl(fd, I_PUSH, "ldterm") < 0)
+	{
+	  werror("pty_open_slave: Failed to push streams module `ldterm'.\n"
+		 "   %e\n", errno);
+	
+	  close(fd);
+	  return -1;
+	}
+    }
 # endif /* HAVE_STROPTS_H */
 
   /* On BSD systems, use TIOCSCTTY. */
@@ -299,14 +311,36 @@ pty_open_slave(struct pty_info *pty)
 #endif /* defined(TIOCSCTTY) */
 
   /* Set terminal modes */
-  if (tty_getattr(fd, &ios))
+  if (!tty_getattr(fd, &ios))
     {
-      tty_decode_term_mode(&ios, STRING_LD(pty->mode));
-
-      if (tty_setattr(fd, &ios)
-	  && tty_setwinsize(fd, &pty->dims))
-	return fd;
+      werror("pty_open_slave: Failed to get tty attributes.\n"
+	     "   %e\n", errno);
+      close(fd);
+      return -1;
     }
-  close(fd);
-  return -1;
+
+  if (!tty_decode_term_mode(&ios, STRING_LD(pty->mode)))
+    {
+      werror("pty_open_slave: Invalid terminal modes from client.\n");
+      close(fd);
+      return -1;
+    }
+
+  if (!tty_setattr(fd, &ios))
+    {
+      werror("pty_open_slave: Failed to set tty attributes.\n"
+	     "   %e\n", errno);
+      close(fd);
+      return -1;
+    }
+	  
+  if (!tty_setwinsize(fd, &pty->dims))
+    {
+      werror("pty_open_slave: Failed to set tty window size.\n"
+	     "   %e\n", errno);
+      close(fd);
+      return -1;
+    }
+
+  return fd;
 }
