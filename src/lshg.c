@@ -175,7 +175,7 @@ main_options[] =
   { "send-ignore", ARG_SEND_IGNORE, "Message", 0, "Send an ignore message "
     "to the remote machine.", 0 },
   { NULL, 'G', 0, 0, "If no usable gateway is found, "
-    "launch lsh instead", 0 },
+    "launch lsh instead.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 

@@ -1,5 +1,7 @@
 2004-11-19  Pontus Freyhult  <pont@soua.net>
 
+	* src/lshg.c (main_options): Added missing dot in -G option help.
+
 	* doc/lsh.1: Updated for lsh 2.0.
 	
 	* doc/lshd.8: Updated for lsh 2.0.
