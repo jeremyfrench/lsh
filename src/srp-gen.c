@@ -93,7 +93,7 @@ make_srp_gen_options(struct io_backend *backend,
   self->file = NULL;
   self->dest = NULL;
 
-  self->style = SEXP_TRANSPORT;
+  self->style = -1;
 
   self->name = getenv("LOGNAME");
   self->passwd = NULL;
@@ -138,6 +138,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case ARGP_KEY_END:
+      if (!self->name)
+	argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
+
       {
 	struct lsh_fd *fd;
 	
@@ -157,10 +160,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  }
 	self->dest = &fd->write_buffer->super;
       }
-	  
-      if (!self->name)
-	argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
-	  
+      
       while (!self->passwd)
 	{
 	  struct lsh_string *pw;
@@ -181,6 +181,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
 	  lsh_string_free(again);
 	}
+      if (self->style < 0)
+	self->style = self->file ? SEXP_CANONICAL : SEXP_TRANSPORT;
+      
       break;
 
     case 'o':
