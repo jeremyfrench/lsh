@@ -200,10 +200,6 @@ considerations apply also to other hashes.
 
 Fix so that lsh compiles in the absense of zlib.
 
-Make separate object files for most generated files, instead if
-#including them. Particularly important for digit_table.h, which is
-used in several places.
-
 Fix configure script to add appropriate -R options when linking.
 Currently, using a shared libz.so doesn't work.
 
@@ -257,3 +253,5 @@ function that wants to start receiving is not necessaily called from
 the functions in channel.c, and therefore the status code doesn't pass
 through channel_process_status().
 
+Let init_channel take enough arguments to initialize the window- and
+packet-size fields properly. It's too easy to forget them.

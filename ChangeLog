@@ -1,3 +1,67 @@
+1999-07-01  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/tcpforward_commands.c (new_tcpip_channel): Don't initialize
+	rec_window_size and rec_max_packet hare; let make_tcpip_channel
+	handle that.
+	(forward_remote_port): Noted that this doesn't work; connect gets
+	called too early.
+
+	* src/tcpforward.c (make_tcpip_channel): Initialize
+	rec_window_size and rec_max_packet.
+
+	* src/channel.c (prepare_channel_open): Added debug output.
+
+	* configure.in: Bumped version to 0.1.3
+
+	* NEWS: Wrote an entry for 0.1.3
+
+1999-06-30  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/tcpforward_commands.c (new_tcpip_channel): Initialize
+	max_window and rec_window_size.
+	(remote_port_install_continuation): Added a port variable.
+	Various bug fixes.
+
+	* src/tcpforward.c (make_tcpip_channel): Set the max_window
+	attribute.
+	(do_tcpip_channel_die): New function.
+	(do_open_forwarded_tcpip_continuation): Initialize channel->write,
+	and call tcpip_channel_start_io, if the connection was successful.
+
+	* src/sexp_parser.c, src/sexp_streamed_parser.c: Use digits.h
+	rather than duplicating code.
+
+	* src/lsh.c (main): Fixed -N flag.
+
+	* src/io_commands.c (connect_with_port): Fixed name. Was
+	connect_with_connection. 
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added digits.c.
+
+	* src/digit_table.c (main): Remove #defines and static
+	declarations from output.
+
+	* src/command.h (COMMAND_RETURN): Evaluate the return value even
+	if the continuation is NULL.
+
+	* src/command.c (discard_continuation): New continuation.
+
+	* src/channel_commands.c (do_install_global_request_handler):
+	fixed format string to trace() call.
+	(do_install_channel_open_handler): -"-
+	(do_install_fix_global_request_handler): -"-
+	(do_install_fix_channel_open_handler): -"-
+
+	* src/digits.h: New file.
+
+	* src/digits.c: New file.
+
+	* src/channel.c (channel_start_receive): New function, to replace
+	the LSH_CHANNEL_READY_REC flag.
+	(do_channel_open_failure): Clear the open_continuation attribute.
+	(do_channel_open_confirm): -"-
+	(channel_close_callback): Handle the case reason == 0.
+
 1999-06-28  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/tcpforward.h: Bugfix: Declare channel_open_forwarded_tcpip
