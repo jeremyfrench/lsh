@@ -131,7 +131,7 @@ do {						\
 
 /* Same, for 16-bit quantities */
 #define READ_UINT16(p)				\
-(  (((UINT32) (p)[0]) << 16)			\
+(  (((UINT32) (p)[0]) << 8)			\
  |  ((UINT32) (p)[1]))
 
 #define WRITE_UINT16(p, i)			\
