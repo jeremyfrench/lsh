@@ -11,6 +11,8 @@
 /md5-test.c
 /rsa-test
 /rsa-test.c
+/serpent-test
+/serpent-test.c
 /sha1-test
 /sha1-test.c
 /spki-tag-test

@@ -1,0 +1,26 @@
+#/bin/sh
+
+# Typical use:
+#
+# ./make-aes-tests < aes/serpent/files/ecb_e_m.txt > serpent-test.m4
+
+tr -d '\r' | awk -- '
+
+/Algorithm Name: / {
+  algorithm_name = tolower($3);
+  FS="=" }
+
+/KEYSIZE=/ {
+  keysize = $2;
+}
+/I=/ { n = $2 }
+/KEY=/ { key = $2 }
+/PT=/ { pt = $2 }
+/CT=/ {
+  printf ("TS_TEST_CRYPTO(»%s %d«, »&%s%d_algorithm«,\n",
+	  algorithm_name, n, algorithm_name, keysize);
+  printf ("  #%s#,\n", key);
+  printf ("  #%s#,\n", pt);
+  printf ("  #%s#)\n\n", $2);
+}
+'

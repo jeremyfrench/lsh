@@ -1,3 +1,56 @@
+2000-10-07  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/symmetric/serpent.c (serpent_setup): Added key_size
+	argument, and added key padding (appearantly not yet working). 
+
+	* src/testsuite/Makefile.am (CFLAGS): Disable optimization.
+	(TS_PROGS): Added serpent-test.
+
+	* src/exception.h (EXC_IO_CLOSE): New exception type.
+	(EXC_PAUSE_READ): Likewise.
+	(EXC_PAUSE_START_READ): Likewise.
+	(EXC_PAUSE_CONNECTION): Likewise.
+	(EXC_PAUSE_START_CONNECTION): Likewise.
+
+	* src/connection.h (ssh_connection): Renamed attribute busy to
+	paused. New attribute pending.
+
+	* src/connection.c (connection_handle_packet): New function, doing
+	the work of the previous handle_connectino function().
+	(connection_handle_pending): New function.
+	(do_handle_connection): New function.
+	(do_exc_connection_handler): Renamed (was
+	do_exc_protocol_exception), and handle EXC_PAUSE_CONNECTION and
+	EXC_PAUSE_START_CONNECTION. 
+	(make_exc_connection_handler): Renamed as well.
+	(connection_lock): Raise EXC_PAUSE_CONNECTION.
+	(connection_unlock): Raise EXC_PAUSE_START_CONNECTION.
+
+	* src/channel.c: Changed close_callback -> lsh_callback.
+
+	* src/io.c (io_iter): Some support for callouts.
+	(do_exc_finish_read_handler): Handle EXC_PAUSE_READ and
+	EXC_PAUSE_START_READ. 
+	(do_buffered_read): Allow handlers to set want_read == 0.
+
+	* src/io.h: Renamed close_callback to lsh_callback, and removed
+	the "reason" argument.
+
+	* src/write_buffer.c (write_buffer_pre_write): Use string_queue.
+	(do_write): Likewise.
+
+	* src/queue.c: New struct-type string_queue, and corresponding
+	functions. 
+
+	* src/algorithms.c: Use static algorithm objects.
+	* src/blowfish.c: Likewise.
+	* src/rijndael.c: Likewise.
+	* src/crypto.h: Likewise.
+	* src/twofish.c: Likewise.
+	* src/cast.c: Likewise.
+
+	* src/serpent.c (make_serpent_instance): Pass key size to serpent_setup().
+
 2000-10-03  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/spki.c (spki_make_signer): New function. Used in
