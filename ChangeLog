@@ -1,3 +1,60 @@
+2000-06-01  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/srp_exchange.c (srp_make_reply_msg): Check return value of
+	GROUP_ADD. 
+	Use new SRP-related atoms. More debug output.
+
+	* src/srp-gen.c (make_srp_gen_options): Use make_ssh_ring_srp_1().
+	Use the sexp_format() function.
+	
+	* src/sexp_commands.c (do_print_raw_hash_to): Use the sexp_format
+	function, rather than invoking the SSH_FORMAT method directly.
+	* src/spki_commands.c (do_spki_encrypt): Likewise.
+
+	* src/server_userauth.c (userauth_handler): New attributes
+	service_e and auth_e. WE use different exception handlers when
+	invoking the AUTHENTICATE method and when invoking the service.
+	(do_userauth_continuation): Simplified this continuation. It is
+	passed a user, and returns the connection.
+	(do_handle_userauth): When a service is eventually invoked, it is
+	passed a single argument: the connection. Previously, the user
+	object was passed as argument to the service.
+	(do_userauth): Clear the user attribute of the connection, and
+	display a warning message if the connection was already
+	authenticated.
+	(do_userauth): Don't call make_userauth_continuation() here.
+
+	* src/server_session.c: Deleted user attribute.
+	(make_server_session): Deleted user argument.
+	(open_session): Deleted user attribute.
+	(make_open_session): Deleted user argument.
+	(server_connection_service): #if:ed out
+	(spawn_process): Added user argument.
+	(do_alloc_pty): Use CAST macro. Get the user from the connection
+	object.
+	(pty_request_handler): Statically allocated object, replaces the
+	make_pty_handler function.
+
+	* src/server_keyexchange.c (do_srp_server_proof_handler): Store
+	the authenticated user in the connection object.
+
+	* src/publickey_crypto.c (make_ssh_ring_srp_1): Use the generator
+	5. Unlike 7, 5 is a primitive root.
+
+	* src/lshd.c: Adapted to the simplified userauth-service
+	framework. Deleted lshd_services and calls to
+	make_server_connection_service. 
+
+	* src/lsh.c (main_argp_parser): Use new srp-related atoms.
+
+	* src/dh_exchange.c (dh_hash_digest): Added debug-message.
+
+	* src/client_keyexchange.c (do_handle_srp_reply): Check return
+	value from srp_make_client_proof().
+
+	* src/atoms.in: Renamed srp-group1-sha1 -> srp-ring1-sha1,
+	ssh-group1 -> ssh-ring1.
+
 2000-05-31  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/lsh.c (main_argp_parser): Use make_srp1().
