@@ -199,6 +199,8 @@ int main(int argc, char **argv)
   struct sexp *key;
   struct randomness_with_poll *r;
 
+  struct abstract_write *out;
+  
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   r = make_default_random(NULL, &handler);
@@ -237,7 +239,8 @@ int main(int argc, char **argv)
 
   /* Now, output a private key spki structure. */
 
-  A_WRITE(make_blocking_write(STDOUT_FILENO, 0, &handler),
+  out = make_blocking_write(STDOUT_FILENO, 0, &handler);
+  A_WRITE(out,
 	  sexp_format(key, options->style, 0));
   
   return EXIT_SUCCESS;
