@@ -21,57 +21,32 @@ static int client_initiate(struct client_callback *closure,
   io_read(closure->backend, fd, make_client_read_line());
 }
 
-/* This limit follows the ssh specification */
-#define MAX_LINE 255
-
-/* FIXME: Abstract this out, so that it can be used by the server as
- * well. */
-static int do_read_line(struct ... *closure, struct abstract_read *read)
+struct client_line_handler
 {
-  int n = A_READ(read, closure->line, MAX_LINE - closure->pos);
-  UINT8 *eol;
-  UINT32 length;
-  
-  if (n<0)
-    {
-      werror("do_read_1: read() failed, %s\n", strerror(errno));
-      return 0;
-    }
-  closure->pos += n;
+  struct line_handler super;
+  struct session *session;
+};
 
-  /* Check for eol */
-  eol = memchr(closure->buffer, '\n', closure->pos);
-  if (!eol)
-    {
-      if (closure->pos == MAX_LINE)
-	{
-	  werror("Too long line from server\n");
-	  return NULL;
-	}
-      return closure;
-    }
-  if ( (eol > closure->buffer)
-       && (eol[-1] == '\r'))
-    eol--;
-
-  length = eol - closure->buffer;
-
-  if ( (length >= 4) && !memcmp(closure->buffer, "SSH-", 4))
+static struct read_handler *do_line(struct client_line_handler *closure,
+				    UINT32 length,
+				    UINT8 *line)
+{
+  if ( (length >= 4) && !memcmp(line, "SSH-", 4))
     {
       /* Parse and remember format string */
-      if ( ((length >= 8) && !memcmp(closure->buffer + 4, "2.0-", 4))
-	   || ((length >= 9) && !memcmp(closure->buffer +4, "1.99-", 5)))
+      if ( ((length >= 8) && !memcmp(line + 4, "2.0-", 4))
+	   || ((length >= 9) && !memcmp(line + 4, "1.99-", 5)))
 	{
-	  session->recieved_version = ssh_format("%s", length, closure->buffer);
+	  closure->session->recieved_version
+	    = ssh_format("%s", length, line);
 
-	  /* FIXME: Unget any extra data */
 	  /* return a new read-handler */
-	  return 0;
+	  return ...
 	}
       else
 	{
 	  werror("Unsupported protocol version: ");
-	  werror_safe(length, closure->buffer);
+	  werror_safe(length, line);
 	  werror("\n");
 	  return 0;
 	}
@@ -79,9 +54,7 @@ static int do_read_line(struct ... *closure, struct abstract_read *read)
   else
     {
       /* Display line */
-      werror_safe(length, closure->buffer);
-      memcpy(closure->buffer, closure->buffer + length, length);
-      closure->pos = 0;
+      werror_safe(length, line);
 
       /* Read next line */
       return closure;
