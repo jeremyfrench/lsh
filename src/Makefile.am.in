@@ -41,7 +41,7 @@ noinst_LIBRARIES = liblsh.a
 # compiled or dependency checked independently.
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
-	packet_types.h
+	packet_types.h environ.h
 
 # BUILT_SOURCES = config_parse.c
 
@@ -106,7 +106,7 @@ environ.h: environ.h.in Makefile
 	sed -e 's,@''prefix@,$(prefix),' \
 	    -e 's,@''bindir@,$(bindir),' \
 	    -e 's,@''sbindir@,$(sbindir),' \
-	    -e 's,@''libexecdir@,$(libexecdir),'
+	    -e 's,@''libexecdir@,$(libexecdir),' \
 	    -e 's,@''sysconfdir@,$(sysconfdir),' < $<) >$@T
 	test -s $@T && mv -f $@T $@
 
