@@ -1,3 +1,7 @@
+2000-09-25  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/ssh-conv: Fixed typo (reported by Timshel Knoll). 
+
 2000-09-19  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/rsa.c (SA): New macro.
