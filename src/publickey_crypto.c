@@ -166,3 +166,33 @@ zn_ring_subtract(struct abstract_group *s,
   mpz_sub(res, a, b);
   mpz_fdiv_r(res, res, self->modulo);
 }
+
+struct abstract_group *
+make_ssh_group1(void)
+{
+  struct abstract_group *G;
+  mpz_t p;
+  mpz_t g;
+  mpz_t order;
+  
+  mpz_init_set_str(p,
+		   "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
+		   "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
+		   "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
+		   "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
+		   "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381"
+		   "FFFFFFFFFFFFFFFF", 16);
+
+  mpz_init_set(order, p);
+  mpz_sub_ui(order, order, 1);
+  mpz_fdiv_q_2exp(order, order, 1);
+  mpz_init_set_ui(g, 2);
+
+  G = &make_zn(p, g, order)->super;
+
+  mpz_clear(p);
+  mpz_clear(g);
+  mpz_clear(order);
+
+  return G;
+}
