@@ -157,6 +157,13 @@
 
 #define GLOBAL_REQUEST(r, c, w, a) ((r)->handler((r), (c), (w), (a)))
 
+/* FIXME: We must be able to handle asyncronous opening of channels.
+ * I.e, on a request for direct-tcp, we should start connect()ing in
+ * non-blocking mode, and delay sending theconfirmation or failure
+ * message until we know if the connect() was successful.
+ *
+ * Do do this, there must be some way to return "in progress". */
+
 /* SSH_MSG_CHANNEL_OPEN */
 /* CLASS:
    (class
@@ -165,7 +172,12 @@
        (handler method (object ssh_channel)
                 "struct ssh_connection *connection"
                 "struct simple_buffer *args"
+		; Set *error non-zero if the channel could not be opened.
+		; In this case, *arror_msg should also be set to a constant
+		; string describing the error.
 	        "UINT32 *error" "char **error_msg"
+		; Extra data that should be sent with the confirm message,
+		; or NULL if there is no extra data.
 	        "struct lsh_string **data")))
 */
 
