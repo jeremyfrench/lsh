@@ -1,3 +1,11 @@
+2000-01-20  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Prefer guile if both guile and scsh are installed. 
+
+	* src/channel.c (dealloc_channel): Fixed verbose message.
+
+	* configure.in: Bumped version to 0.2.4.
+
 2000-01-18  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/zlib.c (RATE_MAX, RATE_MIN): Use rates between 1/16 and 16.

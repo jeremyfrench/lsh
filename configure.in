@@ -129,7 +129,7 @@ fi
 if test x$with_scheme != x ; then
   AC_PATH_PROG(SCHEME_PROGRAM, $with_scheme,, $PATH)
 else  
-  AC_PATH_PROGS(SCHEME_PROGRAM, scsh guile,, $PATH)
+  AC_PATH_PROGS(SCHEME_PROGRAM, guile scsh,, $PATH)
 fi
 
 if test x$SCHEME_PROGRAM = x ; then
