@@ -145,7 +145,7 @@ static int dopr_outch (char *buffer, size_t *currlen, size_t maxlen, char c );
 
 static int dopr (char *buffer, size_t maxlen, const char *format, va_list args)
 {
-  char ch;
+  unsigned char ch;
   long value;
   LDOUBLE fvalue;
   char *strvalue;

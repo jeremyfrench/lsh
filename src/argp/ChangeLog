@@ -1,5 +1,8 @@
 2004-03-05  Niels Möller  <nisse@lysator.liu.se>
 
+	* vsnprintf.c (dopr): Use unsigned char for the argument to
+	isdigit.
+
 	* configure.ac: We have no separeta replacement file for snprintf.
 
 	* vsnprintf.c (dopr): Fixed va_arg calls that used short. Made
