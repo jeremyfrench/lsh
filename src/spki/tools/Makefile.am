@@ -14,4 +14,4 @@ LDADD = misc.o getopt.o getopt1.o \
 spki_make_signature_SOURCES = spki-make-signature.c sign.c
 spki_delegate_SOURCES = spki-delegate.c sign.c
 
-EXTRA_DIST = misc.c misc.h getopt.h getopt.c getopt1.c
+EXTRA_DIST = misc.c misc.h sign.h getopt.h getopt.c getopt1.c
