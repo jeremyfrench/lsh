@@ -940,7 +940,7 @@ sexp_output_options[] =
 {
   { NULL, 0, NULL, 0, "Valid sexp-formats are transport, canonical, "
     "advanced and international.", 0 },
-  { "output-format", 'o', "format", 0,
+  { "output-format", 'f', "format", 0,
     "Variant of the s-expression syntax to generate.", 0},
   { NULL, 0, NULL, 0, NULL, 0 }
 };
@@ -952,7 +952,7 @@ sexp_argp_parser(int key, char *arg, struct argp_state *state)
     {
     default:
       return ARGP_ERR_UNKNOWN;
-    case 'o':
+    case 'f':
     case 'i':
       {
 	int format = lookup_sexp_format(arg);
