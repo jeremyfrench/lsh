@@ -84,12 +84,13 @@ make_listen_with_callback(struct command *callback,
 extern struct collect_info_1 listen_with_callback;
 #define LISTEN_CALLBACK (&listen_with_callback.super.super.super)
 
+#if 0
 struct command *
 make_listen_with_connection(struct io_backend *backend,
 			    struct ssh_connection *connection);
+#endif
 
 #define LISTEN_CONNECTION (&listen_with_connection.super.super.super)
-
 
 extern struct collect_info_1 connect_with_port;
 #define CONNECT_PORT (&connect_with_port.super.super.super)
@@ -110,6 +111,16 @@ make_connect_command(struct io_backend *backend);
 struct command *
 make_simple_listen(struct io_backend *backend,
 		   struct resource_list *resources);
+
+struct command *
+make_listen_local(struct io_backend *backend,
+		  struct local_info *info);
+
+struct command *
+make_connect_local(struct io_backend *backend);
+
+extern struct command_simple connect_local_command;
+#define CONNECT_LOCAL (&connect_local_command.super.super)
 
 extern struct command_simple io_log_peer_command;
 #define LOG_PEER (&io_log_peer_command.super.super)

@@ -79,7 +79,7 @@ do_io_write_file(struct command *s,
     EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_WRITE, NULL, errno, NULL));
 }
 
-COMMAND_SIMPLE(io_write_file_command)
+DEFINE_COMMAND_SIMPLE(io_write_file_command, a)
 {
   CAST(io_backend, backend, a);
 
@@ -265,7 +265,7 @@ STATIC_COLLECT_2_FINAL(collect_listen_callback);
 struct collect_info_1 listen_with_callback =
 STATIC_COLLECT_1(&collect_info_listen_callback_2);
 
-
+#if 0
 /* A listen function taking three arguments:
  * (listen backend connection port).
  *
@@ -276,7 +276,7 @@ STATIC_COLLECT_1(&collect_info_listen_callback_2);
  * accepted fd:s should usually be registered on a channels's resource
  * list, not on the connection's. */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name listen_with_connection)
      (super command)
@@ -331,7 +331,7 @@ STATIC_COLLECT_2_FINAL(collect_listen_connection);
 
 struct collect_info_1 listen_with_connection =
 STATIC_COLLECT_1(&collect_info_listen_connection_2);
-
+#endif
 
 /* GABA:
    (class
@@ -464,6 +464,7 @@ struct collect_info_1 connect_with_port =
 STATIC_COLLECT_1(&collect_info_connect_port_2);
 
 
+
 /* GABA:
    (class
      (name simple_io_command)
@@ -565,10 +566,96 @@ make_simple_listen(struct io_backend *backend,
 }
 
 
+/* GABA:
+   (class
+     (name listen_local)
+     (super command)
+     (vars
+       (backend object io_backend)
+       (info object local_info)))
+*/
+
+static void
+do_listen_local(struct command *s,
+		struct lsh_object *x,
+		struct command_continuation *c,
+		struct exception_handler *e)
+{
+  CAST(listen_local, self, s);
+  CAST_SUBTYPE(command, callback, x);
+  
+  struct lsh_fd *fd
+    = io_listen_local(self->backend,
+		      self->info,
+		      make_listen_callback(self->backend,
+					   make_apply(callback,
+						      &discard_continuation, e),
+					   e),
+		      e);
+  if (!fd)
+    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
+					 NULL, errno, NULL));
+  else
+    COMMAND_RETURN(c, fd);
+}
+
+struct command *
+make_listen_local(struct io_backend *backend,
+		  struct local_info *info)
+{
+  NEW(listen_local, self);
+  self->backend = backend;
+  self->info = info;
+
+  self->super.call = do_listen_local;
+
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name connect_local)
+     (super command)
+     (vars
+       (backend object io_backend)))
+*/
+
+static void
+do_connect_local(struct command *s,
+		struct lsh_object *x,
+		struct command_continuation *c,
+		struct exception_handler *e)
+{
+  CAST(connect_local, self, s);
+  CAST(local_info, info, x);
+
+  io_connect_local(self->backend, info,
+		   make_connect_continuation(NULL, c),
+		   e);
+}
+
+struct command *
+make_connect_local(struct io_backend *backend)
+{
+  NEW(connect_local, self);
+  self->backend = backend;
+
+  self->super.call = do_connect_local;
+
+  return &self->super;
+}
+
+DEFINE_COMMAND_SIMPLE(connect_local_command, a)
+{
+  CAST(io_backend, backend, a);
+  return &make_connect_local(backend)->super;
+}
+
+
 /* Takes a listen_value as argument, logs the peer address, and
  * returns the fd object. */
 
-COMMAND_SIMPLE(io_log_peer_command)
+DEFINE_COMMAND_SIMPLE(io_log_peer_command, a)
 {
   CAST(listen_value, lv, a);
 
