@@ -60,8 +60,8 @@ void
 dont_free_live_resource(int alive)
 {
   if (alive)
-    werror("dont_free_live_resource: "
-	   "garbage collecting a live resource!\n");
+    fatal("dont_free_live_resource: "
+	  "garbage collecting a live resource!\n");
 }
 
 /* For resources that are only marked as dead, and taken care of
