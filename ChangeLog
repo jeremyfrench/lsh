@@ -1,5 +1,12 @@
 2000-07-28  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* configure.in: Bumped version to 1.0.2.
+
+	* src/format.h, src/format.h: Replaced macros with functions
+	again, to get better typechecking.
+	
+	* src/format.h (make_cstring): Fixed macro.
+				       
 	* src/list.h (LIST_LENGTH): Avoid casting.
 
 	* src/jpoll.c (poll): Pass a correct timeout argument to select

@@ -1,3 +1,14 @@
+News for the 1.0.2 release
+
+	Fixed bug in lsh_writekey, and improved the error message when
+	the outputfile already exists.
+
+	Fixed bug in the poll emulation in jpoll.c (noticed by
+	Jean-Pierre Stierlin).
+
+	Portability bugs reported by Jean-Pierre Stierlin, for
+	compiling on MacOS.
+	
 News for the 1.0.1 release
 
 	Various bug fixes. Spelling and grammar fixes in the manual,
