@@ -1,3 +1,21 @@
+1999-10-11  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/sexp_conv.c (main): Make both input and output formats
+	configurable.
+
+	* src/lsh.c: Added argp support.
+	* src/lshd.c: -"-
+	* src/lsh_keygen.c: -"-
+	
+	* src/algorithms.c (algorithms_argp): Added argp parser.
+	(init_algorithms_options): New function.
+
+	* configure.in: Added with-debug-trace option.
+
+1999-10-10  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh.c: Use argp instead of getopt.
+
 1999-10-07  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/lsh_types.h: Use HAVE_GCC_ATTRIBUTE.
