@@ -1,4 +1,14 @@
+2004-11-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.am (CLEANFILES): Delete testfiles lcp-file-*.txt
+	(TS_SH): Added lcp-test.
+
+	* src/testsuite/lcp-test: Test cases for lcp.
+
 2004-11-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lcp: Reviewed, and fixed some bugs. Looks at $LCP_RSH,
+	instead of $LCP_SSH.
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): Don't add dependency
 	files themselves as targets.
