@@ -30,5 +30,7 @@ domain.
 POLL emulation code (for systems that have select(), but not poll())
 written by Sean Reifschneider, released for unlimited use.
 
-SEXP parsing code have some parts in common with Ron Rivest's parser.
+SEXP parsing code has some parts in common with Ron Rivest's parser.
 Distributed under the GPL with permission.
+
+getopt option parsing from the the GNU C library, released under the LGPL.
