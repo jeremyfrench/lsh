@@ -49,127 +49,157 @@ log () {
     date >> r/mainlog.txt
 }
 
+logstart () {
+    log "BEGIN $1"
+}
+
+logpass () {
+    log "PASS"
+}
+
+logfail () {
+    log "FAIL"
+}
+
+logwarn () {
+    log "WARN $1"
+}
+
 dotask() {
     important="$1"
     task="$2"
-    cmd="$3"
+    warnfunc="$3"
+    cmd="$4"
     if test $status = good
     then
-	log Begin $task
+	logstart $task
         timeecho Begin $task
         if sh -c "$cmd" > r/${task}log.txt 2>&1
         then
 	    touch r/$task.pass
+	    if [ -z "$warnfunc" ]
+	    then
+	        logpass
+	    else
+	        $warnfunc
+	    fi
         else
 	    timeecho FAIL: $task
-	    touch r/$task.fail
 	    if [ $important = 1 ]
 	    then
 	        status=${task}-failed
 	    fi
-        fi
+	    logfail
+	fi
     else
 	echo status $status makes it impossible to perform this step \
 	    > r/${task}log.txt
     fi
 }
 
+cfgwarn () {
+    egrep -i 'warning|\(w\)' r/cfglog.txt \
+    > r/cfgwarn.txt
+    warnings=`wc -l < r/cfgwarn.txt`
+    if test $warnings -gt 0
+    then
+	logwarn $warnings
+    else
+	rm r/cfgwarn.txt
+	logpass
+    fi
+}
+
+makewarn () {
+    # Use sed -e /RX/d to get rid of selected warnings.
+    egrep -i 'warning|\(w\)' r/makelog.txt \
+    > r/makewarn.txt
+    warnings=`wc -l < r/makewarn.txt`
+    if test $warnings -gt 0
+    then
+	logwarn $warnings
+    else
+	rm r/makewarn.txt
+	logpass
+    fi
+}
+
+ckprgwarn () {
+    egrep -i 'warning|\(w\)|error' r/ckprglog.txt \
+    > r/ckprgwarn.txt
+    warnings=`wc -l < r/ckprgwarn.txt`
+    if test $warnings -gt 0
+    then
+	egrep -i 'error' r/ckprgwarn.txt \
+	> r/ckprgfail.txt
+	if test `wc -l < r/ckprgfail.txt` -gt 0
+	then
+	    logfail
+	else
+	    rm r/ckprgfail.txt
+	    logwarn $warnings
+	fi
+    else
+	rm r/ckprgwarn.txt
+	logpass
+    fi
+}
+
+
 pfx=`pwd`/pfx
 
 status=good
 
-dotask 1 "unzip" "gzip -d $BASE.tar.gz"
-dotask 1 "unpack" "tar xf $BASE.tar"
-dotask 1 "cfg" "cd $BASE && ./configure -C --prefix=$pfx $cfgargs"
-dotask 1 "make" "cd $BASE && make $makeargs"
+echo 'FORMAT 2' > r/mainlog.txt
+
+dotask 1 "unzip" "" "gzip -d $BASE.tar.gz"
+dotask 1 "unpack" "" "tar xf $BASE.tar"
+dotask 1 "cfg" "cfgwarn" "cd $BASE && ./configure -C --prefix=$pfx $cfgargs"
+dotask 1 "make" "makewarn" "cd $BASE && make $makeargs"
 
 #
 # "make check" requirements
 #
 
-checkdocok=true
-pdfok=true
-dviok=true
-checkprgok=true
-
 dotask 0 "ckprg" "cd $BASE/src && make check"
 dotask 0 "ckdist" "cd $BASE/src && make distcheck"
-dotask 1 "install" "cd $BASE && make install"
+dotask 1 "install" "" "cd $BASE && make install"
 
-if [ -f r/install.pass ]
+find pfx -type f -print | sort > r/installedfiles.txt
+if test `wc -l < r/installedfiles.txt` -eq 0
 then
-    log Xenofarm OK
-    find pfx -type f -print | sort > r/installedfiles.txt
+    rm r/installedfiles.txt
 fi
 
 # FIXME: run distcheck.
 # FIXME: compare the contents of the distcheck-generated tar file
 # with the one we distributed.
 
-log Begin response assembly
-timeecho Collecting results
-
-# Check for warnings
-
-if test -f r/cfg.pass
-then
-    egrep -i 'warning|\(w\)' r/cfglog.txt \
-    > r/cfgwarn.txt
-    if test `wc -l < r/cfgwarn.txt` -gt 0
-    then
-	mv r/cfg.pass r/cfg.warn
-    fi
-fi
-
-if test -f r/make.pass
-then
-    egrep -i 'warning|\(w\)' r/makelog.txt \
-    > r/makewarn.txt
-    if test `wc -l < r/makewarn.txt` -gt 0
-    then
-	mv r/make.pass r/make.warn
-    else
-	rm r/makewarn.txt
-    fi
-fi
-
-if test -f r/ckprg.pass
-then
-    egrep -i 'warning|\(w\)|error' r/ckprglog.txt \
-    > r/ckprgwarn.txt
-    if test `wc -l < r/ckprgwarn.txt` -gt 0
-    then
-	mv r/ckprg.pass r/ckprg.warn
-	egrep -i 'error' r/ckprgwarn.txt \
-	> r/ckprgfail.txt
-	if test `wc -l < r/ckprgfail.txt` -gt 0
-	then
-	    mv r/ckprg.warn r/ckprg.fail
-	else
-	    rm r/ckprgfail.txt
-	fi
-    else
-	rm r/ckprgwarn.txt
-    fi
-fi
-
 # Collect stuff.
 
-cp $BASE/config.cache r/configcache.txt
-cp $BASE/config.log r/configlog.txt
-cp $BASE/src/argp/config.log r/argpconfig.log
-cp $BASE/src/nettle/config.log r/nettleconfig.log
-cp $BASE/src/sftp/config.log r/sftpconfig.log
-cp $BASE/src/spki/config.log r/spkiconfig.log
+timeecho Collecting results
 
-cp $BASE/config.h r/config-h.txt
-# find $BASE -name core -print
+mv $BASE/config.cache r/configcache.txt
+mv $BASE/config.log r/configlog.txt
+mv $BASE/src/argp/config.log r/argpconfig.log
+mv $BASE/src/nettle/config.log r/nettleconfig.log
+mv $BASE/src/sftp/config.log r/sftpconfig.log
+mv $BASE/src/spki/config.log r/spkiconfig.log
+mv $BASE/config.h r/config-h.txt
+
+find $BASE -name core -print > r/corefiles.txt
+if test `wc -l < r/corefiles.txt` -eq 0
+then
+    rm r/corefiles.txt
+fi
+
+
 env > r/environ.txt
 echo $PATH > r/path.txt
 makeinfo --version > r/makeinfo.txt
 type makeinfo >> r/makeinfo.txt 2>&1
 
-cp buildid.txt r/buildid.txt
+mv buildid.txt r/buildid.txt
 
 (cd r && tar cf - *) > xenofarm_result.tar
 gzip -1 xenofarm_result.tar
