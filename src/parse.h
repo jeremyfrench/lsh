@@ -77,6 +77,11 @@ int parse_atom(struct simple_buffer *buffer, int *result);
  * Unknown atoms sets result to zero. */
 int parse_next_atom(struct simple_buffer *buffer, int *result);
 
+/* Reads a list of atoms. The buffer should hold the list body; the
+ * length field should already be stripped off (usually by
+ * parse_sub_buffer()). */
+struct int_list *parse_atoms(struct simple_buffer *buffer, unsigned limit);
+
 /* Creates a list of integers. The 0 atom means an unknown atom was
  * read. Returns a NULL pointer on error. */
 struct int_list *parse_atom_list(struct simple_buffer *buffer, unsigned limit);

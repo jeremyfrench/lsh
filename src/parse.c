@@ -242,7 +242,7 @@ int parse_next_atom(struct simple_buffer *buffer, int *result)
   return 1;
 }
 
-struct int_list *parse_atom_list(struct simple_buffer *buffer, unsigned limit)
+struct int_list *parse_atoms(struct simple_buffer *buffer, unsigned limit)
 {
   unsigned count;
   unsigned i;
@@ -276,6 +276,16 @@ struct int_list *parse_atom_list(struct simple_buffer *buffer, unsigned limit)
     }
 
   return res;
+}
+
+struct int_list *parse_atom_list(struct simple_buffer *buffer, unsigned limit)
+{
+  struct simple_buffer sub_buffer;
+
+  if (!parse_sub_buffer(buffer, &sub_buffer))
+    return NULL;
+
+  return parse_atoms(&sub_buffer, limit);
 }
 
 /* Returns success (i.e. 1) iff there is no data left */
