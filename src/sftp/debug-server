@@ -1,0 +1,11 @@
+#! /bin/sh
+
+"${PROGRAMDIR:-.}"/dump-hex C \
+  | "${PROGRAMDIR:-.}"/sftp-server -d \
+  | "${PROGRAMDIR:-.}"/dump-hex S # &
+
+# exec >/dev/null </dev/null
+
+# wait
+
+
