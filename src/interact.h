@@ -70,6 +70,7 @@ struct terminal_dimensions;
                   "uint32_t max_length"
                   "const struct lsh_string *prompt"
 		  "int free")
+       (set_askpass method void "const char *askpass")
        (yes_or_no method int
                   "const struct lsh_string *prompt"
 		  "int def" "int free")
@@ -86,6 +87,8 @@ struct terminal_dimensions;
   ((i)->is_tty((i)))
 #define INTERACT_READ_PASSWORD(i, l, p, f) \
   ((i)->read_password((i), (l), (p), (f)))
+#define INTERACT_SET_ASKPASS(i, a) \
+  ((i)->set_askpass((i), (a)))
 #define INTERACT_YES_OR_NO(i, p, d, f) \
   ((i)->yes_or_no((i), (p), (d), (f)))
 #define INTERACT_GET_ATTRIBUTES(i) \
