@@ -133,6 +133,16 @@ do_eof(struct ssh_channel *channel)
 
   trace("server_session.c: do_eof\n");
 
+  if (session->pty)
+    /* Is there any better way to signal EOF on a pty? This is what
+     * emacs does. */
+    A_WRITE(&session->in->write_buffer->super,
+            ssh_format("%lc", /* C-d */ 4));
+
+  if (shutdown (session->in->fd, SHUT_WR) < 0)
+    werror("server_session.c: do_eof, shutdown failed, (errno = %i): %z\n",
+	   errno, STRERROR(errno));
+  
   close_fd_nicely(session->in);
 }
 
