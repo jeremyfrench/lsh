@@ -450,7 +450,8 @@ do_format_sexp_vector(struct sexp *e,
 	/* Count extra indentation */
 	size += indent * (LIST_LENGTH(v->elements) + !align_after - 2);
 
-	res = ssh_format("(%lS%lr)", tag, size, &dst);
+        /* NOTE: tag is freed here. */
+	res = ssh_format("(%lfS%lr)", tag, size, &dst);
 
 	for (i = 1; i<LIST_LENGTH(v->elements); i++)
 	  {
