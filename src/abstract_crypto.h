@@ -28,11 +28,7 @@
 
 #include "list.h"
 
-/* Use the same instance struct for both hash functions and macs. This
- * is a little ugly. */
-#define mac_instance_class hash_instance_class
-#define mac_instance hash_instance
-#define mac_size hash_size
+#include "nettle/nettle-meta.h"
 
 #define GABA_DECLARE
 #include "abstract_crypto.h.x"
@@ -74,47 +70,68 @@
 
 #define MAKE_DECRYPT(crypto, key, iv) \
      MAKE_CRYPT((crypto), CRYPTO_DECRYPT, (key), (iv))
-     
-/* FIXME: Hashes could use non-virtual methods. */
-     
+
+
+/* Hashes. */
+/* We have no need for methods here, hashes are sufficiently regular
+ * that struct nettle_hash sufficies. Only reason to use methods would
+ * be to make it possible to use hashes and macs interchangably, and
+ * that doesn't seem terribly useful. */
+
 /* GABA:
    (class
      (name hash_instance)
      (vars
-       (hash_size . UINT32)
-       (update method void 
-	       "UINT32 length" "const UINT8 *data")
-       (digest method void "UINT8 *result")
-
-       ;; FIXME: Perhaps add an argument which
-       ;; is a hash instance to copy to.
-       (copy method (object hash_instance))))
+       (type . "const struct nettle_hash *")
+       (ctx var-array char)))
 */
 
-#define HASH_UPDATE(instance, length, data) \
-((instance)->update((instance), (length), (data)))
+/* Happens to work for both hash_instance and hash_algorithm. */
+#define HASH_SIZE(h) ((h)->type->digest_size)
 
-#define HASH_DIGEST(instance, result) \
-((instance)->digest((instance), (result)))
+/* FIXME: Maybe change these back to macros? */
+void
+hash_update(struct hash_instance *self,
+	    UINT32 length, const UINT8 *data);
 
-#define HASH_COPY(instance) ((instance)->copy((instance)))
+void
+hash_digest(struct hash_instance *self,
+	    UINT8 *result);
+
+struct hash_instance *
+hash_copy(struct hash_instance *self);
 
 /* GABA:
    (class
      (name hash_algorithm)
      (vars
-       (block_size . UINT32)
-       (hash_size . UINT32)
-       (make_hash method (object hash_instance))))
+       (type . "const struct nettle_hash *")))
 */
 
-#define MAKE_HASH(h) ((h)->make_hash((h)))
+struct hash_instance *
+make_hash(const struct hash_algorithm *self);
+
+/* GABA:
+   (class
+     (name mac_instance)
+     (vars
+       (mac_size . UINT32)
+       (update method void 
+	       "UINT32 length" "const UINT8 *data")
+       (digest method void "UINT8 *result")))
+*/
+
+#define MAC_UPDATE(instance, length, data) \
+((instance)->update((instance), (length), (data)))
+
+#define MAC_DIGEST(instance, result) \
+((instance)->digest((instance), (result)))
 
 /* GABA:
    (class
      (name mac_algorithm)
      (vars
-       (hash_size . UINT32)
+       (mac_size . UINT32)
        ; Recommended key size
        (key_size . UINT32)
        (make_mac method (object mac_instance)
@@ -195,7 +212,7 @@
 
 /* Simple hashing */
 struct lsh_string *
-hash_string(struct hash_algorithm *a,
+hash_string(const struct hash_algorithm *a,
 	    struct lsh_string *in,
 	    int free);
 
