@@ -1,5 +1,9 @@
 2004-02-29  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/socks.c (do_read_socks): Bugfix, update self->pos.
+
+	* src/client.c (client_arg_unsigned): Typo fix.
+
 	* src/lshg.c (main_options): Deleted short options -I and -D. The
 	corresponding long options --send-debug and --send-ignore remains.
 
