@@ -187,6 +187,7 @@ struct io_fd *io_write(struct io_backend *b,
 		       UINT32 block_size,
 		       struct close_callback *close_callback);
 
-void close_fd(struct lsh_fd *fd);
+void close_fd(struct lsh_fd *fd, int reason);
+
 
 #endif /* LSH_IO_H_INCLUDED */

@@ -710,9 +710,9 @@ struct io_fd *io_write(struct io_backend *b,
 /* Marks a file for closing, at the end of the current iteration.
  * FIXME: Could be generalized for other fd:s than read-write fds. */
 
-void close_fd(struct lsh_fd *fd)
+void close_fd(struct lsh_fd *fd, int reason)
 {
   debug("Marking fd %d for closing.\n", fd->fd);
-  
+  fd->close_reason = reason;
   fd->close_now = 1;
 }
