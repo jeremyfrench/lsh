@@ -32,6 +32,7 @@
 #include "nettle/sha.h"
 #include "nettle/sexp.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -245,24 +246,6 @@ spki_check_type(struct sexp_iterator *i, enum spki_type type)
 
 /* ACL database */
 
-static int
-parse_valid(struct sexp_iterator *i UNUSED,
-	    struct spki_5_tuple *tuple UNUSED)
-{
-  /* FIXME: Not implemented */
-  return sexp_iterator_exit_list(i);
-}
-
-static int
-parse_version(struct sexp_iterator *i)
-{
-  uint32_t version;
-  return (sexp_iterator_get_uint32(i, &version)
-	  && i->type == SEXP_END
-	  && sexp_iterator_exit_list(i)
-	  && (version == 0));
-}
-
 static enum spki_type
 parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i,
 		struct spki_5_tuple **result)
@@ -303,8 +286,7 @@ parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i,
 	type = spki_parse_skip(i);
       
       if (type == SPKI_TYPE_VALID)
-	/* Not implemented */
-	goto fail;
+	type = spki_parse_valid(i, acl);
 
       type = spki_parse_end(i);
       if (type)
@@ -336,11 +318,7 @@ spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
     return sexp_iterator_exit_list(i);
   
   if (type == SPKI_TYPE_VERSION)
-    {
-      if (!parse_version(i))
-	return 0;
-      type = spki_parse_type(i);
-    }
+    type = spki_parse_version(i);
   
   while (type != SPKI_TYPE_END_OF_EXPR)
     {
@@ -376,12 +354,7 @@ spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
   cert->flags = 0;
   
   if (type == SPKI_TYPE_VERSION)
-    {
-      if (!parse_version(i))
-	return 0;
-      
-      type == spki_parse_type(i);
-    }
+    type == spki_parse_version(i);
 
   SKIP(SPKI_TYPE_DISPLAY);
 
@@ -416,12 +389,7 @@ spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
     return 0;
 
   if (type == SPKI_TYPE_VALID)
-    {
-      if (!parse_valid(i, cert))
-	return 0;
-
-      type = spki_parse_type(i);
-    }
+    type = spki_parse_valid(i, cert);
 
   SKIP(SPKI_TYPE_COMMENT);
 
@@ -436,3 +404,55 @@ spki_cert_parse(struct spki_acl_db *db, struct sexp_iterator *i,
     && spki_cert_parse_body(db, i, cert);
 }
      
+
+
+/* Dates */
+
+static void
+write_decimal(unsigned length, uint8_t *buffer, unsigned x)
+{
+  const unsigned msd[5] = { 0, 1, 10, 100, 1000 };
+  unsigned digit;
+  
+  assert(length <= 4);
+
+  for (digit = msd[length]; digit; digit /= 10)
+    {
+      /* NOTE: Will generate a bogus digit if x is too large. */
+      *buffer++ = '0' + x / digit;
+      x %= digit;
+    }
+}
+
+void
+spki_date_from_time_t(struct spki_date *d, time_t t)
+{
+  struct tm tm_storage;
+  /* FIXME: Configure check for gmtime_r. */
+  struct tm *tm = gmtime_r(&t, &tm_storage);
+
+  if (!tm)
+    /* When can gmtime_r fail??? */
+    abort();
+
+  d->date[4] = d->date[7] = '-';
+  d->date[10] = '_';
+  d->date[13] = d->date[16] = ':';
+  
+  write_decimal(4, d->date,   1900 + tm->tm_year);
+  write_decimal(2, d->date +  5, 1 + tm->tm_mon);
+  write_decimal(2, d->date +  8,     tm->tm_mday);
+  write_decimal(2, d->date + 11,     tm->tm_hour);
+  write_decimal(2, d->date + 14,     tm->tm_min);
+  write_decimal(2, d->date + 17,     tm->tm_sec);
+}
+
+/* Returns -1, 0 or 1 if if d < t, d == t or d > t */ 
+int
+spki_date_cmp_time_t(struct spki_date *d, time_t t)
+{
+  struct spki_date d2;
+  spki_date_from_time_t(&d2, t);
+  return memcmp(d, &d2, SPKI_DATE_SIZE);
+}
+  
