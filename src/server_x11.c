@@ -53,6 +53,25 @@
 
 #if WITH_X11_FORWARD
 
+/* Quite similar to forward_local_port in tcpforward_commands.c */
+/* ;; GABA:
+   (expr
+     (name server_x11_forward)
+     (params
+       (connection object ssh_connection))
+     (expr
+       ; Port should be an fd
+       (lambda (port)
+         (listen_callback
+	   (lambda (peer)
+	       ;; Remembering is done by open_x11_channel
+	       ;; and new_tcpip_channel.
+	       (tcpip_start_io
+	         (catch_channel_open 
+		   (open_x11_channel display peer) connection)))
+	     port))))
+*/
+	     
 #define XAUTH_DEBUG_TO_STDERR 0
 #define X11_MIN_COOKIE_LENGTH 10
 #define X11_SOCKET_DIR "/tmp/.X11-unix"
@@ -153,9 +172,10 @@ open_x11_socket(struct ssh_channel *channel)
   mode_t old_umask;
   
   int number;
-  int s;
+  struct lsh_fd *s;
   struct lsh_string *name = NULL;
-  
+
+#if 0
   s = socket(AF_UNIX, SOCK_STREAM, 0);
   if (s < 0)
     {
@@ -163,7 +183,8 @@ open_x11_socket(struct ssh_channel *channel)
 	     errno, STRERROR(errno));
       return NULL;
     }
-
+#endif
+  
   /* We have to change the umask, as that's the only way to control
    * the permissions that bind uses. */
 
@@ -176,7 +197,6 @@ open_x11_socket(struct ssh_channel *channel)
 	     X11_SOCKET_DIR, errno, STRERROR(errno));
 
       umask(old_umask);
-      close(s);
       return NULL;
     }
   
@@ -190,7 +210,9 @@ open_x11_socket(struct ssh_channel *channel)
       sa.sun_path[sizeof(sa.sun_path) - 1] = '\0';
       snprintf(sa.sun_path, sizeof(sa.sun_path), "X%d", number);
 
-      if (bind(s, (struct sockaddr *) &sa, SUN_LEN(&sa)) < 0)
+      s = io_bind_sockaddr((struct sockaddr *) &sa, SUN_LEN(&sa),
+			   /* FIXME: Exception handler */ NULL);
+      if (s)
 	{
 	  /* Store name */
 	  name = ssh_format("%lz", sa.sun_path);
@@ -205,7 +227,6 @@ open_x11_socket(struct ssh_channel *channel)
   if (!name)
     {
       /* Couldn't find any display */
-      close(s);
       close(dir);
       
       return NULL;
