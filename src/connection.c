@@ -4,6 +4,7 @@
 
 #include "connection.h"
 
+#include "debug.h"
 #include "encrypt.h"
 #include "format.h"
 #include "disconnect.h"
@@ -166,7 +167,7 @@ struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
   connection->dispatch[SSH_MSG_UNIMPLEMENTED] = connection->ignore;
 
   /* FIXME: Write a debug handler */
-  connection->dispatch[SSH_MSG_DEBUG] = connection->ignore;
+  connection->dispatch[SSH_MSG_DEBUG] = make_rec_debug_handler();
 
   connection->dispatch[SSH_MSG_KEXINIT] = kex_handler;
 

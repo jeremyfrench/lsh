@@ -24,6 +24,7 @@
 #include "server_keyexchange.h"
 
 #include "atoms.h"
+#include "debug.h"
 #include "format.h"
 #include "ssh.h"
 #include "werror.h"
@@ -79,7 +80,7 @@ static int do_handle_dh_init(struct packet_handler *c,
   res = A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
   if (res != WRITE_OK)
     return res;
-
+  
   /* Record session id */
   if (!connection->session_id)
     {
@@ -101,7 +102,7 @@ static int do_handle_dh_init(struct packet_handler *c,
   connection->kex_state = KEX_STATE_NEWKEYS;
   connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
   
-  return res;
+  return send_verbose(connection->write, "Key exchange successful!", 0);
 }
 
 static int do_init_dh(struct keyexchange_algorithm *c,

@@ -58,7 +58,7 @@ static int do_disconnect(struct packet_handler *closure,
     {
       /* FIXME: Display a better message */
       werror("Disconnect for reason %d\n", reason);
-      werror_safe_utf8(length, msg);
+      werror_utf8(length, msg);
     }
   else
     werror("Invalid disconnect message!\n");

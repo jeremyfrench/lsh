@@ -24,6 +24,7 @@
 #include "client_keyexchange.h"
 
 #include "atoms.h"
+#include "debug.h"
 #include "format.h"
 #include "ssh.h"
 #include "werror.h"
@@ -106,7 +107,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = connection->fail;
   connection->kex_state = KEX_STATE_NEWKEYS;
   
-  return res;
+  return send_verbose(connection->write, "Key exchange successful!", 0);
 }
 
 static int do_init_dh(struct keyexchange_algorithm *c,

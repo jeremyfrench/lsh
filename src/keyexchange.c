@@ -313,6 +313,8 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
   
   key = lsh_string_alloc(key_length);
 
+  debug("Constructing session key of type %d\n", type);
+  
   if (!key_length)
     return key;
   
@@ -328,6 +330,8 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
 
   memcpy(key->data, digest, key_length);
   lsh_free(hash);
+
+  debug_hex(key->length, key->data);
   return key;
 }
   

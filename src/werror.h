@@ -44,9 +44,15 @@ void werror_safe(UINT32 length, UINT8 *msg);
 void debug_safe(UINT32 length, UINT8 *msg);
 void verbose_safe(UINT32 length, UINT8 *msg);
 
-void werror_safe_utf8(UINT32 length, UINT8 *msg);
+void werror_utf8(UINT32 length, UINT8 *msg);
+void debug_utf8(UINT32 length, UINT8 *msg);
+void verbose_utf8(UINT32 length, UINT8 *msg);
 
 void fatal(char *format, ...) PRINTF_STYLE(1,2) NORETURN;
+
+void werror_hex(UINT32 length, UINT8 *data);
+void debug_hex(UINT32 length, UINT8 *data);
+void verbose_hex(UINT32 length, UINT8 *data);
 
 void werror_mpz(mpz_t n);
 void debug_mpz(mpz_t n);

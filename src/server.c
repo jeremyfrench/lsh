@@ -110,7 +110,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  struct read_handler *new = make_read_packet
 	    (make_packet_unpad
 	     (make_packet_debug(&closure->connection->super,
-				stderr)),
+				"recieved")),
 	     closure->connection);
 	  
 	  closure->connection->client_version
