@@ -138,6 +138,16 @@ spki_acl_by_authorization_next(struct spki_acl_db *,
 			       uint8_t *authorization);
 
 
+/* Certificates */
+int
+spki_cert_parse(struct spki_acl_db *db, struct sexp_iterator *i,
+		struct spki_5_tuple *cert);
+
+int
+spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
+		     struct spki_5_tuple *cert);
+
+
 /* More-or-less internal function for parsing various expressions. */
 enum spki_type
 spki_intern(struct sexp_iterator *i);

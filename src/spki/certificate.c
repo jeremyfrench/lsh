@@ -216,9 +216,14 @@ spki_intern(struct sexp_iterator *i)
   return 0;
 }
 
+/* NOTE: Uses SPKI_TYPE_UNKNOWN (= 0) for both unknown types and
+ * syntax errors. */
 enum spki_type
 spki_get_type(struct sexp_iterator *i)
 {
+  if (i->type == SEXP_END)
+    return SPKI_TYPE_END_OF_EXPR;
+
   return sexp_iterator_enter_list(i) ? spki_intern(i) : 0;
 }
 
@@ -300,16 +305,40 @@ parse_principal(struct spki_acl_db *db, struct sexp_iterator *i)
 }
 
 static int
-parse_tag(struct spki_acl_db *db, struct spki_5_tuple *tuple,
-	  struct sexp_iterator *i)
+parse_tag_body(struct spki_acl_db *db, struct sexp_iterator *i,
+	       struct spki_5_tuple *tuple)
 {
   const uint8_t *tag;
 
-  return (spki_check_type(i, SPKI_TYPE_TAG)
-	  && (tag = sexp_iterator_subexpr(i, &tuple->tag_length))
+  return ((tag = sexp_iterator_subexpr(i, &tuple->tag_length))
 	  && i->type == SEXP_END
 	  && sexp_iterator_exit_list(i)
 	  && (tuple->tag = spki_dup(db, tuple->tag_length, tag)));
+}
+
+static int
+parse_tag(struct spki_acl_db *db, struct sexp_iterator *i,
+	  struct spki_5_tuple *tuple)
+{
+  return spki_check_type(i, SPKI_TYPE_TAG)
+    && parse_tag_body(db, i, tuple);
+}
+
+static int
+parse_valid(struct sexp_iterator *i, struct spki_5_tuple *tuple)
+{
+  /* FIXME: Not implemented */
+  return sexp_iterator_exit_list(i);
+}
+
+static int
+parse_version(struct sexp_iterator *i)
+{
+  uint32_t version;
+  return (sexp_iterator_get_uint32(i, &version)
+	  && i->type == SEXP_END
+	  && sexp_iterator_exit_list(i)
+	  && (version == 0));
 }
 
 static struct spki_5_tuple *
@@ -344,7 +373,7 @@ parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i)
 	  acl->flags |= SPKI_PROPAGATE;
 	}
 
-      if (!parse_tag(db, acl, i))
+      if (!parse_tag(db, i, acl))
 	goto fail;
 
       if (spki_check_type(i, SPKI_TYPE_COMMENT)
@@ -377,15 +406,8 @@ spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
     /* An empty acl is ok */
     return 1;
   
-  if (spki_check_type(i, SPKI_TYPE_VERSION))
-    {
-      uint32_t version;
-      if (! (sexp_iterator_get_uint32(i, &version)
-	     && i->type == SEXP_END
-	     && sexp_iterator_exit_list(i)
-	     && !version))
-	return 0;
-    }
+  if (spki_check_type(i, SPKI_TYPE_VERSION) && !parse_version(i))
+    return 0;
   
   while (i->type != SEXP_END)
     {
@@ -399,3 +421,96 @@ spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
 
   return 1;
 }
+
+static enum spki_type
+parse_skip_optional(struct sexp_iterator *i)
+{
+  return sexp_iterator_exit_list(i) ? spki_get_type(i) : SPKI_TYPE_UNKNOWN;
+}
+
+#define SKIP(t) do				\
+{						\
+  if (type == (t))				\
+    type = parse_skip_optional(i);		\
+} while (0)
+
+#define PRINCIPAL(p)				\
+(						\
+  p = parse_principal(db, i),			\
+  p = (p && i->type == SEXP_END			\
+       && sexp_iterator_exit_list(i)		\
+       && (type = spki_get_type(i)))		\
+      ? p : NULL				\
+)
+
+/* Should be called with the iterator pointing just after the "cert"
+ * type tag. */
+int
+spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
+		     struct spki_5_tuple *cert)
+{
+  enum spki_type type = spki_get_type(i);
+
+  cert->flags = 0;
+  
+  if (type == SPKI_TYPE_VERSION)
+    {
+      if (!parse_version(i))
+	return 0;
+      
+      type == spki_get_type(i);
+    }
+
+  SKIP(SPKI_TYPE_DISPLAY);
+
+  if (type != SPKI_TYPE_ISSUER)
+    return 0;
+
+  if (!PRINCIPAL(cert->issuer))
+    return 0;
+
+  SKIP(SPKI_TYPE_ISSUER_INFO);
+
+  /* For now, support only subjects of type public-key and hash. */
+  if (!PRINCIPAL(cert->subject))
+    return 0;
+  
+  SKIP(SPKI_TYPE_SUBJECT_INFO);
+
+  if (type == SPKI_TYPE_PROPAGATE)
+    {
+      if (!sexp_iterator_exit_list(i))
+	return 0;
+
+      cert->flags |= SPKI_PROPAGATE;
+    }
+
+  if (type != SPKI_TYPE_TAG)
+    return 0;
+  
+  if (!parse_tag_body(db, i, cert))
+    return 0;
+
+  type = spki_get_type(i);
+
+  if (type == SPKI_TYPE_VALID)
+    {
+      if (!parse_valid(i, cert))
+	return 0;
+
+      type = spki_get_type(i);
+    }
+
+  SKIP(SPKI_TYPE_COMMENT);
+
+  return (type == SPKI_TYPE_END_OF_EXPR) && sexp_iterator_exit_list(i);
+}
+
+int
+spki_cert_parse(struct spki_acl_db *db, struct sexp_iterator *i,
+		struct spki_5_tuple *cert)
+{
+  return spki_check_type(i, SPKI_TYPE_CERT)
+    && spki_cert_parse_body(db, i, cert);
+}
+     
