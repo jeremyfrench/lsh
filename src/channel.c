@@ -92,6 +92,16 @@ struct lsh_string *format_channel_failure(UINT32 channel)
   return ssh_format("%c%i", SSH_MSG_CHANNEL_FAILURE, channel);
 }
 
+struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
+					 UINT32 add)
+{
+  channel->rec_window_size += add;
+  
+  return ssh_format("%c%i%i",
+		    SSH_MSG_CHANNEL_WINDOW_ADJUST,
+		    channel->channel_number, add);
+}
+
 /* Channel objects */
 
 #define INITIAL_CHANNELS 32
@@ -504,7 +514,7 @@ static int do_channel_close(struct packet_handler *c,
   return LSH_FAIL | LSH_DIE;
 }
 
-static int do_channel_confirm(struct packet_handler *c,
+static int do_channel_open_confirm(struct packet_handler *c,
 			      struct ssh_connection *connection,
 			      struct lsh_string *packet)
 {
@@ -534,13 +544,13 @@ static int do_channel_confirm(struct packet_handler *c,
 
       lsh_string_free(packet);
 
-      if (channel && channel->confirm)
+      if (channel && channel->open_confirm)
 	{
 	  channel->channel_number = remote_channel_number;
 	  channel->send_window_size = window_size;
 	  channel->send_max_packet = max_packet;
 
-	  return CHANNEL_CONFIRM(channel, connection->write);
+	  return CHANNEL_OPEN_CONFIRM(channel, connection->write);
 	}
       werror("Unexpected SSH_MSG_CHANNEL_OPEN_CONFIRMATION on channel %d\n",
 	     local_channel_number);
@@ -550,7 +560,7 @@ static int do_channel_confirm(struct packet_handler *c,
   return LSH_FAIL | LSH_DIE;
 }
 
-static int do_channel_failure(struct packet_handler *c,
+static int do_channel_open_failure(struct packet_handler *c,
 			      struct ssh_connection *connection,
 			      struct lsh_string *packet)
 {
@@ -584,9 +594,9 @@ static int do_channel_failure(struct packet_handler *c,
 
       /* lsh_string_free(packet); */
 
-      if (channel && channel->fail)
+      if (channel && channel->open_failure)
 	{
-	  int res = CHANNEL_FAIL(channel, connection->write);
+	  int res = CHANNEL_OPEN_FAILURE(channel, connection->write);
 
 	  lsh_string_free(packet);
 	  dealloc_channel(closure->table, channel_number);
@@ -598,6 +608,68 @@ static int do_channel_failure(struct packet_handler *c,
       lsh_string_free(packet);
       
       return LSH_FAIL | LSH_DIE;
+    }
+  lsh_string_free(packet);
+  return LSH_FAIL | LSH_DIE;
+}
+
+static int do_channel_success(struct packet_handler *c,
+			      struct ssh_connection *connection,
+			      struct lsh_string *packet)
+{
+  struct channel_handler *closure = (struct channel_handler *) c;
+
+  struct simple_buffer buffer;
+  int msg_number;
+  UINT32 channel_number;
+  
+  MDEBUG(closure);
+
+  simple_buffer_init(&buffer, packet->length, packet->data);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_CHANNEL_SUCCESS)
+      && parse_eod(&buffer))
+    {
+      struct ssh_channel *channel = lookup_channel(closure->table,
+						   channel_number);
+
+      lsh_string_free(packet);
+      
+      if (channel && channel->success)
+	return CHANNEL_SUCCESS(channel, connection->write);
+      
+    }
+  lsh_string_free(packet);
+  return LSH_FAIL | LSH_DIE;
+}
+
+static int do_channel_failure(struct packet_handler *c,
+			      struct ssh_connection *connection,
+			      struct lsh_string *packet)
+{
+  struct channel_handler *closure = (struct channel_handler *) c;
+
+  struct simple_buffer buffer;
+  int msg_number;
+  UINT32 channel_number;
+  
+  MDEBUG(closure);
+
+  simple_buffer_init(&buffer, packet->length, packet->data);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_CHANNEL_FAILURE)
+      && parse_eod(&buffer))
+    {
+      struct ssh_channel *channel = lookup_channel(closure->table,
+						   channel_number);
+
+      lsh_string_free(packet);
+      
+      if (channel && channel->failure)
+	return CHANNEL_FAILURE(channel, connection->write);
+      
     }
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
@@ -620,10 +692,12 @@ static int init_connection_service(struct ssh_service *s,
   struct channel_handler *eof;
   struct channel_handler *close;
 
-  struct channel_handler *confirm;
-  struct channel_handler *failure;
+  struct channel_handler *open_confirm;
+  struct channel_handler *open_failure;
 
-  /* FIXME: Handler for SSH_MSG_CHANNEL_FAILURE */
+  struct channel_handler *channel_success;
+  struct channel_handler *channel_failure;
+
   
   MDEBUG(self);
 
@@ -671,20 +745,98 @@ static int init_connection_service(struct ssh_service *s,
   close->table = table;
   connection->dispatch[SSH_MSG_CHANNEL_CLOSE] = &close->super;
 
-  NEW(confirm);
-  confirm->super.handler = do_channel_confirm;
-  confirm->table = table;
-  connection->dispatch[SSH_MSG_CHANNEL_OPEN_CONFIRMATION] = &confirm->super;
+  NEW(open_confirm);
+  open_confirm->super.handler = do_channel_open_confirm;
+  open_confirm->table = table;
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN_CONFIRMATION] = &open_confirm->super;
 
-  NEW(failure);
-  failure->super.handler = do_channel_failure;
-  failure->table = table;
-  connection->dispatch[SSH_MSG_CHANNEL_OPEN_FAILURE] = &failure->super;
+  NEW(open_failure);
+  open_failure->super.handler = do_channel_open_failure;
+  open_failure->table = table;
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN_FAILURE] = &open_failure->super;
   
+  NEW(channel_success);
+  channel_success->super.handler = do_channel_success;
+  channel_success->table = table;
+  connection->dispatch[SSH_MSG_CHANNEL_SUCCESS] = &channel_success->super;
+
+  NEW(channel_failure);
+  channel_failure->super.handler = do_channel_failure;
+  channel_failure->table = table;
+  connection->dispatch[SSH_MSG_CHANNEL_FAILURE] = &channel_failure->super;
+    
   return closure->start
     ? CHANNEL_START(closure->start, table, connection->write)
     : LSH_OK | LSH_GOON;
 }
+
+struct lsh_string *channel_transmit_header(struct ssh_channel *channel,
+					   struct abstract_write *write,
+					   struct lsh_string *header,
+					   struct lsh_string *data)
+{
+  UINT32 i;
+  UINT32 left;
+  UINT32 chunk = channel->send_max_packet;
+  int res = 0;
+  
+  assert(data->length <= channel->send_window_size);
+
+  if (data->length <= chunk)
+    return A_WRITE(write, ssh_format("%lS%fS",
+				     header,
+				     data));
+
+  for(i = 0, left = data->length;
+      left; )
+    {
+      UINT32 size = MIN(chunk, left);
+      
+      res |= A_WRITE(write, ssh_format("%lS%s", header, 
+				       size, data->data + i));
+      if (LSH_CLOSEDP(res))
+	break;
+
+      i += size;
+      left -= size;
+    }
+
+  lsh_string_free(data);
+  return res;
+}
+
+struct lsh_string *channel_transmit(struct ssh_channel *channel,
+				    struct abstract_write *write,
+				    struct lsh_string *data)
+{
+  struct lsh_string *header = ssh_format("%c%i",
+					 SSH_MSG_CHANNEL_DATA,
+					 channel->channel_number);
+
+  int res = channel_transmit_header(channel, header, write, data);
+
+  lsh_string_free(header);
+
+  return res;
+}
+
+struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
+					     struct abstract_write *write,
+					     UINT32 type,
+					     struct lsh_string *data)
+{
+  struct lsh_string *header = ssh_format("%c%i%i",
+					 SSH_MSG_CHANNEL_EXTENDED_DATA,
+					 type,
+					 channel->channel_number);
+  
+  int res = channel_transmit_header(channel, header, write, data);
+
+  lsh_string_free(header);
+
+  return res;
+}
+
 
 struct ssh_service *make_connection_service(struct alist *global_requests,
 					    struct alist *channel_types)
@@ -699,3 +851,71 @@ struct ssh_service *make_connection_service(struct alist *global_requests,
 
   return &self->super;
 }
+
+struct lsh_string *prepare_channel_open(struct channel_table *table,
+					int type, struct ssh_channel *channel,
+					char *format, ...)
+{
+  int index;
+    
+  va_list args;
+  UINT32 l1, l2;
+  struct lsh_string *packet;
+
+#define OPEN_FORMAT "%c%a%i%i%i"
+#define OPEN_ARGS SSH_MSG_CHANNEL_OPEN, type, (UINT32) index, \
+  channel->rec_window_size, channel->rec_max_packet  
+
+  index = register_channel(table, channel);
+  if (index < 0)
+    return NULL;
+
+  l1 = ssh_format_length(OPEN_FORMAT, OPEN_ARGS);
+  
+  va_start(args, format);
+  l2 = ssh_vformat_length(format, args);
+  va_end(args);
+
+  packet = lsh_string_alloc(l1 + l2);
+
+  ssh_format_write(OPEN_FORMAT, l1, packet->data, OPEN_ARGS);
+
+  va_start(args, format);
+  ssh_format_write(format, l2, packet->data+l1, args);
+  va_end(args);
+
+  return packet;
+#undef OPEN_FORMAT
+#undef OPEN_ARGS
+}
+		   
+struct lsh_string *format_channel_request(int type, struct ssh_channel *channel,
+					  int want_reply, char *format, ...)
+{
+  va_list args;
+  UINT32 l1, l2;
+  struct lsh_string *packet;
+
+#define REQUEST_FORMAT "%c%i%a%c"
+#define REQUEST_ARGS SSH_MSG_CHANNEL_REQUEST, channel->remote_channel_number \
+  type, want_reply
+    
+  l1 = ssh_format_length(REQUEST_FORMAT, REQUEST_ARGS);
+  
+  va_start(args, format);
+  l2 = ssh_vformat_length(format, args);
+  va_end(args);
+
+  packet = lsh_string_alloc(l1 + l2);
+
+  ssh_format_write(REQUEST_FORMAT, l1, packet->data, REQUEST_ARGS);
+
+  va_start(args, format);
+  ssh_format_write(format, l2, packet->data+l1, args);
+  va_end(args);
+
+  return packet;
+#undef REQUEST_FORMAT
+#undef REQUEST_ARGS
+}
+  
