@@ -93,6 +93,17 @@ hash_string(struct hash_algorithm *a,
   return out;
 }
 
+struct lsh_string *
+crypt_string(struct crypto_instance *c,
+	     struct lsh_string *in,
+	     int free)
+{
+  struct lsh_string *out = (free ? in : lsh_string_alloc(in->length));
+  CRYPT(c, in->length, in->data, out->data);
+
+  return out;
+}
+
 
 /* FIXME: These functions don't really belong here. */
 

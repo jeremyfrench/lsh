@@ -121,20 +121,22 @@
 
 /* GABA:
    (class
-    (name signer)
-    (vars
-      ; Returns a non-spki signature
-      (sign method (string)
-            "UINT32 length" "UINT8 *data")
-      ; Returns a signature sexp
-      (sign_spki method (object sexp)
-                 "struct sexp *hash" "struct sexp *principal"
-                 "UINT32 length" "UINT8 *data")))
+     (name signer)
+     (vars
+       ; Returns a non-spki signature
+       (sign method (string)
+             "UINT32 length" "UINT8 *data")
+       ; Returns a signature sexp
+       (sign_spki method (object sexp)
+                  "struct sexp *hash" "struct sexp *principal"
+                  "UINT32 length" "UINT8 *data")
+       ;; FIXME: Perhaps this should be a method of the algorithm object instead?
+       (public_key method (object sexp) )))
 */
 
 #define SIGN(signer, length, data) ((signer)->sign((signer), (length), (data)))
-
 #define SIGN_SPKI(signer, length, data) ((signer)->sign((signer), (length), (data)))
+#define SIGNER_PUBLIC(signer) ((signer)->public_key((signer)))
 
 /* GABA:
    (class
@@ -164,7 +166,10 @@
                     "struct sexp_iterator *i")
 		    
        (make_verifier method (object verifier)
-                      "struct sexp_iterator *i")))
+                      "struct sexp_iterator *i")
+       ;; (private2public method (object sexp)
+       ;; 		  "struct sexp_iterator *i")
+       ))
 */
 
 #define MAKE_SIGNER(a, i) \
@@ -173,6 +178,10 @@
 #define MAKE_VERIFIER(a, i) \
 ((a)->make_verifier((a), (i)))
 
+#if 0
+#define MAKE_PUBLIC(a, i) \
+((a)->private2public((a), (i)))
+#endif
 
 /* Combining block cryptos */
 
@@ -198,5 +207,10 @@ struct lsh_string *
 hash_string(struct hash_algorithm *a,
 	    struct lsh_string *in,
 	    int free);
+
+struct lsh_string *
+crypt_string(struct crypto_instance *c,
+	     struct lsh_string *in,
+	     int free);
 
 #endif /* LSH_ABSTRACT_CRYPTO_H_INCLUDED */
