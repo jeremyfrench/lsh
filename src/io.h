@@ -336,6 +336,11 @@ struct lsh_fd *
 io_listen(struct lsh_fd *fd,
 	  struct io_callback *callback);
 
+struct resource *
+io_listen_list(struct sockaddr_list *list,
+	       struct io_callback *callback,
+	       struct exception_handler *e);
+
 struct lsh_fd *
 io_bind_local(struct local_info *info,
 	      struct exception_handler *e);

@@ -1774,6 +1774,41 @@ io_listen(struct lsh_fd *fd,
   return fd;
 }
 
+struct resource *
+io_listen_list(struct sockaddr_list *list,
+	       struct io_callback *callback,
+	       struct exception_handler *e)
+{
+  struct resource_list *resources = make_resource_list();
+  unsigned nbound;
+  
+  for (nbound = 0; list; list = list->next)
+    {
+      struct lsh_fd *fd;
+      debug("listen_list: Trying to bind address of type %i\n",
+	    list->address->sa_family);
+      
+      fd = io_bind_sockaddr(list->address, list->length, e);
+      if (fd)
+	{
+	  if (io_listen(fd, callback))
+	    {
+	      remember_resource(resources, &fd->super);
+	      nbound++;
+	    }
+	  else
+	    close_fd(fd);
+	}
+    }
+  if (nbound)
+    return &resources->super;
+  else
+    {
+      KILL_RESOURCE_LIST(resources);
+      return NULL;
+    }
+}
+
 
 /* AF_LOCAL sockets */
 
