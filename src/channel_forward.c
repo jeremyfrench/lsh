@@ -75,7 +75,7 @@ static void
 do_channel_forward_receive(struct ssh_channel *c,
 			   int type, struct lsh_string *data)
 {
-  CAST(channel_forward, closure, c);
+  CAST_SUBTYPE(channel_forward, closure, c);
   
   switch (type)
     {
@@ -95,7 +95,7 @@ static void
 do_channel_forward_send_adjust(struct ssh_channel *s,
 		     UINT32 i UNUSED)
 {
-  CAST(channel_forward, self, s);
+  CAST_SUBTYPE(channel_forward, self, s);
   
   lsh_oop_register_read_fd(self->socket);
 }
@@ -103,7 +103,7 @@ do_channel_forward_send_adjust(struct ssh_channel *s,
 static void
 do_channel_forward_eof(struct ssh_channel *s)
 {
-  CAST(channel_forward, self, s);
+  CAST_SUBTYPE(channel_forward, self, s);
 
   /* We won't write any more. io.c should make sure that shutdown is called
    * once the write_buffer is empty. */
