@@ -123,17 +123,29 @@ make_rsa_algorithm(struct hash_algorithm *hash,
      (vars
        (order bignum)
        (generator bignum)
-       ;; We should have a generator here, as we always work within some
-       ;; cyclic subgroup.
        
        ;; Checks if a bignum is in the correct range for being a group element. 
        (range method int "mpz_t x")
+
+       ; (member method int "mpz_t x")
+       
        (invert method void "mpz_t res" "mpz_t x")
        (combine method void "mpz_t res" "mpz_t a" "mpz_t b")
+
+       ; This provides operations G x G -> G that is unrelated to the
+       ; group operation above. It is needed by SRP. For the group Z/n,
+       ; it can simply be ring addition and subtraction.
+
+       ; The operations may fail (for instance if the result is
+       ; zero, which is not a member of the multiplicative group). In
+       ; that case, the method returns zero.
+
+       (add method int "mpz_t res" "mpz_t a" "mpz_t b")
+       (subtract method int "mpz_t res" "mpz_t a" "mpz_t b")
+       
        ; FIXME: Doesn't handle negative exponents
        (power method void "mpz_t res" "mpz_t g" "mpz_t e")
-       (small_power method void "mpz_t res" "mpz_t g" "UINT32 e")))
-*/
+       (small_power method void "mpz_t res" "mpz_t g" "UINT32 e"))) */
 
 #define GROUP_RANGE(group, x) ((group)->range((group), (x)))
 #define GROUP_INVERT(group, res, x) ((group)->invert((group), (res), (x)))
@@ -143,28 +155,43 @@ make_rsa_algorithm(struct hash_algorithm *hash,
 ((group)->power((group), (res), (g), (e)))
 #define GROUP_SMALL_POWER(group, res, g, e) \
 ((group)->small_power((group), (res), (g), (e)))
+#define GROUP_ADD(group, res, a, b) \
+((group)->add((group), (res), (a), (b)))
+#define GROUP_SUBTRACT(group, res, a, b) \
+((group)->subtract((group), (res), (a), (b)))
 
-/* Groups */
-/* GABA:
+struct abstract_group *
+make_group_zn(mpz_t p, mpz_t g, mpz_t order);
+
+struct abstract_group *
+make_ring_zn(mpz_t p, mpz_t g);
+
+/* NOTE: The object system is not powerful enough for a proper ring
+ * class, as we would like
+ *
+ *   abstract_ring inherits abstract_group,
+ *   group_zn      inherits abstract_group
+ *   ring_zn       inherits abstract_ring, group_zn
+ *
+ * and we don't have multiple inheritance.
+ */
+
+/* ;; GABA:
    (class
-     (name group_zn)
+     (name abstract_ring)
+     ; The group refers to the multiplicative group.
+     ; For SRP, the generator should generate the entire group.
      (super abstract_group)
      (vars
-       (modulo bignum)))
+       (add method void "mpz_t res" "mpz_t a" "mpz_t b")))
 */
-
-struct group_zn *
-make_zn(mpz_t p, mpz_t g, mpz_t order);
-
-void
-zn_ring_add(struct abstract_group *s,
-	    mpz_t res, mpz_t a, mpz_t b);
-void
-zn_ring_subtract(struct abstract_group *s,
-		 mpz_t res, mpz_t a, mpz_t b);
 
 struct abstract_group *
 make_ssh_group1(void);
+
+
+struct abstract_group *
+make_ssh_ring_srp_1(void);
 
 /* DH key exchange, with authentication */
 /* GABA:
