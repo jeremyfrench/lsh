@@ -949,7 +949,8 @@ prefers not to use it.
 
 @item @option{-c} @tab Encryption
   @tab @code{3dec-cbc}, @code{blowfish-cbc}, @code{cast128-cbc},
-@code{twofish-cbc}, @code{arcfour}
+@code{serpent-cbc}, @code{twofish-cbc}, @code{rijndael-cbc},
+@code{arcfour}
 
   @tab The default encryption algorithm is triple-DES in CBC mode. This
 seems to be the algorithm of choice among conservative cryptographers.
