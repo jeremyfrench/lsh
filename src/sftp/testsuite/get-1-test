@@ -6,6 +6,6 @@ fi
 
 . $srcdir/common.sh
 
-client get "x1" | grep -q foo
+client get "x1" | grep foo > /dev/null
 
 

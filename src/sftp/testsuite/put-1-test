@@ -8,7 +8,7 @@ fi
 
 rm -f "$TESTHOME/d/new"
 echo data | client put "d/new" && \
-    [ -r "$TESTHOME/d/new" ] && grep -q data "$TESTHOME/d/new"
+    [ -r "$TESTHOME/d/new" ] && grep data "$TESTHOME/d/new" > /dev/null
 
 
 

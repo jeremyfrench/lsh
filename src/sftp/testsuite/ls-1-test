@@ -7,5 +7,5 @@ fi
 . $srcdir/common.sh
 
 # Match the d directory
-client ls "" | grep -q '^d.* d$'
+client ls "" | grep '^d.* d$' > /dev/null
 

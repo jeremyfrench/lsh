@@ -7,5 +7,5 @@ fi
 . $srcdir/common.sh
 
 # Match the d directory
-client ls "d" | grep -q ' x3$'
+client ls "d" | grep ' x3$' > /dev/null
 
