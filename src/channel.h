@@ -57,6 +57,7 @@
 /* GABA:
    (class
      (name ssh_channel)
+     (super flow_controlled)
      (vars
        ; Remote channel number 
        (channel_number simple UINT32)

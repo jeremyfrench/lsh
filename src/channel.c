@@ -242,14 +242,25 @@ struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i)
     ? table->channels[i] : NULL;
 }
 
-static int adjust_rec_window(struct ssh_channel *channel)
+/* FIXME: It seems suboptimal to send a window adjust message for *every* write that we do.
+ * A better scheme might be as follows:
+ *
+ * Delay window adjust messages, keeping track of both the locally
+ * maintained window size, which is updated after each write, and the
+ * size that has been reported to the remote end. When the difference
+ * between these two values gets large enough (say, larger than one
+ * half or one third of the maximum window size), we send a
+ * window_adjust message to sync them. */
+static void adjust_rec_window(struct flow_controlled *f, UINT32 written)
 {
-  if (channel->rec_window_size < channel->max_window / 2)
-    return A_WRITE(channel->write,
-		   prepare_window_adjust
-		   (channel, channel->max_window - channel->rec_window_size));
-  else
-    return 0;
+  CAST_SUBTYPE(ssh_channel, channel, f);
+
+  int res = A_WRITE(channel->write,
+		    prepare_window_adjust
+		    (channel, written));
+  if (res)
+    werror("adjust_rec_window: Writing window adjust message failed, ignoring\n"
+	   "  (res = %i)\n", res);
 }
 
 /* Process channel-related status codes. Used by the packet handlers,
@@ -278,7 +289,9 @@ static int channel_process_status(struct channel_table *table,
       else if (status & LSH_CHANNEL_READY_REC)
 	{
 	  status &= ~ LSH_CHANNEL_READY_REC;
-	  status |= adjust_rec_window(c);
+	  status |= A_WRITE(c->write,
+			    prepare_window_adjust
+			    (c, c->max_window - c->rec_window_size));
 	}
       else
 	break;
@@ -718,15 +731,17 @@ static int do_channel_data(struct packet_handler *closure UNUSED,
 		return 0;
 	      channel->rec_window_size -= data->length;
 
+#if 0
 	      /* FIXME: Unconditionally adjusting the receive window
 	       * breaks flow control. We better let the channel's
 	       * receive method decide whether or not to receive more
 	       * data. */
 	      res = adjust_rec_window(channel);
-	      
+
 	      if (LSH_CLOSEDP(res))
 		return res;
-
+#endif
+	      
 	      return channel_process_status(
 		connection->channels, channel_number,
 		res | CHANNEL_RECEIVE(channel, 
@@ -792,12 +807,14 @@ static int do_channel_extended_data(struct packet_handler *closure UNUSED,
 	      
 	      channel->rec_window_size -= data->length;
 
+#if 0
 	      /* FIXME: Like for do_channel_data(), unconditionally
 	       * adjusting the window breaks flow control. */
 	      res = adjust_rec_window(channel);
 
 	      if (LSH_CLOSEDP(res))
 		return res;
+#endif
 
 	      switch(type)
 		{
@@ -1243,7 +1260,8 @@ void init_channel(struct ssh_channel *channel)
 {
   /* channel->super.handler = do_read_channel; */
   channel->write = NULL;
-
+  channel->super.report = adjust_rec_window;
+  
   channel->flags = 0;
   channel->sources = 0;
   
