@@ -18,7 +18,7 @@ export LSH_YARROW_SEED_FILE SEXP_CONV
 : ${LSHG_FLAGS:=-q}
 : ${HOSTKEY:="$srcdir/key-1.private"}
 : ${PIDFILE:="`pwd`/lshd.$$.pid"}
-: ${INTERFACE:=127.0.0.1}
+: ${INTERFACE:=localhost}
 
 # Ignore any options the tester might have put in the environment.
 
@@ -84,8 +84,8 @@ spawn_lshd () {
     # Note that --daemon not only forks into the background, it also changes
     # the cwd, uses syslog, etc.
     
-    HOME="$TEST_HOME" ../lshd -h $HOSTKEY --interface=$INTERFACE \
-	-p $PORT $LSHD_FLAGS \
+    HOME="$TEST_HOME" ../lshd -h $HOSTKEY \
+	-p $PORT --interface=$INTERFACE $LSHD_FLAGS \
 	--pid-file $PIDFILE --daemon --no-syslog "$@"
 
     # lshd may catch the ordinary TERM signal, leading to timing
