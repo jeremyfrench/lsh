@@ -11,12 +11,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "nettle/base64.h"
 #include "nettle/sexp.h"
 
 #include "format.h"
 #include "io.h"
 #include "lsh_argp.h"
+#include "lsh_string.h"
 #include "publickey_crypto.h"
 #include "spki.h"
 #include "version.h"
@@ -110,7 +110,7 @@ lsh_decode_key(struct lsh_string *contents)
   struct simple_buffer buffer;
   int type;
 
-  simple_buffer_init(&buffer, contents->length, contents->data);
+  simple_buffer_init(&buffer, STRING_LD(contents));
 
   if (!parse_atom(&buffer, &type))
     {
@@ -192,28 +192,11 @@ int main(int argc, char **argv)
 
   if (options->base64)
     {
-      struct lsh_string *decoded;
-      struct base64_decode_ctx ctx;
-      unsigned done;
-
-      base64_decode_init(&ctx);
-      done = input->length;
-      
-      decoded = lsh_string_alloc(BASE64_DECODE_LENGTH(input->length));
-      if (base64_decode_update(&ctx, &done, decoded->data,
-			       input->length, input->data)
-	  && base64_decode_final(&ctx))
-	{
-	  lsh_string_trunc(decoded, done);
-	  lsh_string_free(input);
-	  input = decoded;
-	}
-      else
+      if (!lsh_string_base64_decode(input))
 	{
           werror("Invalid base64 encoding.\n");
 
 	  lsh_string_free(input);
-	  lsh_string_free(decoded);
 
           return EXIT_FAILURE;
         }
@@ -228,7 +211,7 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
     
-  e = write_raw(out, output->length, output->data);
+  e = write_raw(out, STRING_LD(output));
   lsh_string_free(output);
   
   if (e)
