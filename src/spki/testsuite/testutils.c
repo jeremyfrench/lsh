@@ -7,7 +7,7 @@ read_acl(struct spki_acl_db *db,
   struct spki_iterator i;
 
   ASSERT(spki_iterator_first(&i, length, data) == SPKI_TYPE_ACL);
-  ASSERT(spki_acl_parse(db, &i));
+  ASSERT(spki_acl_process(db, &i));
 }
 
 struct spki_tag *
