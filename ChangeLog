@@ -1,3 +1,10 @@
+2000-04-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.in: Bumped version to 0.9.4.
+
+	* src/userauth.h: Renamed class user to lsh_user, to avoid name
+	clash with glibc. 
+
 2000-04-02  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* contrib/Makefile.am (EXTRA_DIST): Added lshd.debian.init 
