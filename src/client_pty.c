@@ -141,7 +141,7 @@ do_pty_continuation(struct command_continuation *s,
   struct terminal_attributes *raw;
   
   assert(x);
-  verbose("lsh: pty request succeeded\n");
+  verbose("pty request succeeded\n");
   
   raw = TERM_MAKE_RAW(self->req->attr);
   if (!INTERACT_SET_ATTRIBUTES(self->req->tty, raw))
@@ -181,7 +181,7 @@ do_format_pty_request(struct channel_request_command *s,
 {
   CAST(pty_request, self, s);
 
-  verbose("lsh: Requesting a remote pty.\n");
+  verbose("Requesting a remote pty.\n");
 
   *c = make_pty_continuation(self, *c);
 
