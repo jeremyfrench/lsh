@@ -19,7 +19,7 @@ MAKEFILESAM = Makefile.am doc/Makefile.am src/Makefile.am \
 $(MAKEFILESAM): $(addsuffix .in,$(MAKEFILESAM))
 	(cd $(srcdir) && BASH=$(BASH) \
 	    SELF="$(BASH) ./make_am" $(BASH) ./make_am)
-	
+
 $(DOTDISTS): depend
 	(cd $(srcdir) && BASH=$(BASH) \
 	    SELF="$(BASH) ./make_am" $(BASH) ./make_am --rethink)
@@ -34,7 +34,7 @@ bootstrap:
 # FIXME: Have to figure out how to create dependency files recursively.
 # dist-hook: $(DOTDISTS)
 
-MAINTAINERCLEANFILES += aclocal.m4 configure \
+MAINTAINERCLEANFILES = aclocal.m4 configure \
 	config.status config.log config.cache \
 	$(DOTDISTS) $(MAKEFILESAM)
 
