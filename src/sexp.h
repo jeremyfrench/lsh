@@ -30,6 +30,7 @@
 #include "command.h"
 #include "list.h"
 #include "lsh_argp.h"
+#include "parse.h"
 
 #include "sexp_table.h"
 
@@ -165,17 +166,17 @@ int sexp_get_un(struct sexp_iterator *i, const char *name, mpz_t n);
 
 extern int sexp_char_classes[];
 
-/* Parsing sexp */
 
-/* GABA:
-   (class
-     (name sexp_handler)
-     (vars
-       ;; Called when a complete sexpression has been read.
-       (handler method int "struct sexp *e")))
-*/
+/* Simple sexp parser */
 
-#define HANDLE_SEXP(h, s) ((h)->handler((h), (s)))
+struct sexp *
+sexp_parse_canonical(struct simple_buffer *buffer);
+
+struct sexp *
+string_to_sexp(struct lsh_string *src, int free);
+
+
+/* Streamed parser */
 
 struct read_handler *
 make_read_sexp(int style, int goon,
