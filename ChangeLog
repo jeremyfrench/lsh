@@ -1,3 +1,7 @@
+2005-02-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/keyexchange.c (parse_kexinit): Bugfix (DOS). 
+
 2005-02-01  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/exception.h (HANDLER_CONTEXT): Don't use FUNCTION_NAME.
