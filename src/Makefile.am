@@ -214,7 +214,12 @@ MAINTAINERCLEANFILES = $(dist_classes) $(DEP_FILES)
 
 # Class files
 # SUFFIXES = .xh .xc
- 
+
+.PHONY: gcov-list
+gcov-list:
+	for f in *.c; do gcov "$$f"; done
+	grep -c '##' *.gcov | sort -t : -k 2 -nr >gcov-list
+
 .PHONY: depend
 depend:
 	rm -f $(DEP_FILES)
