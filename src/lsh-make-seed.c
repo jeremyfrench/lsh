@@ -24,6 +24,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "environ.h"
 #include "format.h"
 #include "io.h"
 #include "lock_file.h"
@@ -175,7 +176,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_END:
       if (!self->filename)
 	{
-	  char *home = getenv("HOME");
+	  char *home = getenv(ENV_HOME);
 	  
 	  if (!home)
 	    {
