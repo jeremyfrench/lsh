@@ -54,12 +54,12 @@ all_symmetric_algorithms()
 #endif
 		    ,
 		    ATOM_ARCFOUR, &crypto_arcfour_algorithm,
-		    ATOM_BLOWFISH_CBC, crypto_cbc(make_blowfish()),
-		    ATOM_TWOFISH_CBC, crypto_cbc(make_twofish()),
-		    ATOM_RIJNDAEL_CBC_LOCAL, crypto_cbc(make_rijndael()),
-		    ATOM_SERPENT_CBC_LOCAL, crypto_cbc(make_serpent()),
+		    ATOM_BLOWFISH_CBC, crypto_cbc(&blowfish_algorithm),
+		    ATOM_TWOFISH_CBC, crypto_cbc(&twofish256_algorithm),
+		    ATOM_RIJNDAEL_CBC_LOCAL, crypto_cbc(&rijndael256_algorithm),
+		    ATOM_SERPENT_CBC_LOCAL, crypto_cbc(&serpent256_algorithm),
 		    ATOM_3DES_CBC, crypto_cbc(make_des3()),
-		    ATOM_CAST128_CBC, crypto_cbc(make_cast()),
+		    ATOM_CAST128_CBC, crypto_cbc(&cast128_algorithm),
 #if WITH_IDEA
 		    ATOM_IDEA_CBC, crypto_cbc(&idea_algorithm),
 #endif

@@ -93,7 +93,11 @@ make_twofish_algorithm(UINT32 key_size)
   return algorithm;
 }
 
-struct crypto_algorithm *make_twofish(void)
-{
-  return make_twofish_algorithm(TWOFISH_KEYSIZE);
-}
+struct crypto_algorithm twofish128_algorithm =
+{ STATIC_HEADER, TWOFISH_BLOCKSIZE, 16, 0, make_twofish_instance};
+
+struct crypto_algorithm twofish192_algorithm =
+{ STATIC_HEADER, TWOFISH_BLOCKSIZE, 24, 0, make_twofish_instance};
+
+struct crypto_algorithm twofish256_algorithm =
+{ STATIC_HEADER, TWOFISH_BLOCKSIZE, 32, 0, make_twofish_instance};

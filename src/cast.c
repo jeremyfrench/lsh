@@ -93,7 +93,5 @@ struct crypto_algorithm *make_cast_algorithm(UINT32 key_size)
   return algorithm;
 }
 
-struct crypto_algorithm *make_cast(void)
-{
-  return make_cast_algorithm(128/8);
-}
+struct crypto_algorithm cast128_algorithm =
+{ STATIC_HEADER, CAST_BLOCKSIZE, CAST_MAX_KEYSIZE, 0, make_cast_instance};

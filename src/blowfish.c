@@ -99,8 +99,5 @@ make_blowfish_algorithm(UINT32 key_size)
   return algorithm;
 }
 
-struct crypto_algorithm *
-make_blowfish(void)
-{
-  return make_blowfish_algorithm(BLOWFISH_KEYSIZE);
-}
+struct crypto_algorithm blowfish_algorithm =
+{ STATIC_HEADER, BLOWFISH_BLOCKSIZE, BLOWFISH_KEYSIZE, 0, make_blowfish_instance};

@@ -71,8 +71,6 @@ make_rijndael_instance(struct crypto_algorithm *algorithm, int mode,
 			? do_rijndael_encrypt
 			: do_rijndael_decrypt);
 
-  /* We don't have to deal with weak keys - as a second round AES
-   * candidate, Rijndael doesn't have any. */
   rijndael_setup(&self->ctx, algorithm->key_size, key);
 
   return(&self->super);
@@ -94,8 +92,11 @@ make_rijndael_algorithm(UINT32 key_size)
   return algorithm;
 }
 
-struct crypto_algorithm *
-make_rijndael(void)
-{
-  return(make_rijndael_algorithm(RIJNDAEL_KEYSIZE));
-}
+struct crypto_algorithm rijndael128_algorithm =
+{ STATIC_HEADER, RIJNDAEL_BLOCKSIZE, 16, 0, make_rijndael_instance};
+
+struct crypto_algorithm rijndael192_algorithm =
+{ STATIC_HEADER, RIJNDAEL_BLOCKSIZE, 24, 0, make_rijndael_instance};
+
+struct crypto_algorithm rijndael256_algorithm =
+{ STATIC_HEADER, RIJNDAEL_BLOCKSIZE, 32, 0, make_rijndael_instance};
