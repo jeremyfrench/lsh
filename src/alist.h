@@ -28,10 +28,10 @@
 
 /* Abstract interface allows for multiple implementations ("real"
  * alists, linear tables, hash tables */
-strust alist
+struct alist
 {
   void * (*get)(struct alist *self, int atom);
-  void (*set)(struct alist self, int atom, void * value);
+  void (*set)(struct alist *self, int atom, void *value);
 };
 
 #define ALIST_GET(alist, atom) ((alist)->get((alist), (atom)))

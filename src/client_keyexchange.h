@@ -41,10 +41,10 @@ struct lookup_verifier
 
 #define LOOKUP_VERIFIER(l, key) ((l)->lookup((l), (key)))
 
-struct dh_algorithm_client
+struct dh_client_exchange
 {
   struct keyexchange_algorithm super;
-  struct diffie_hellman_method dh;
+  struct diffie_hellman_method *dh;
   struct lookup_verifier *verifier;
 };
 
@@ -54,6 +54,7 @@ struct dh_client
   struct packet_handler super;
   struct diffie_hellman_instance dh;
   struct lookup_verifier *verifier;
+  struct install_keys *install;
   struct packet_handler *saved_kexinit_handler;
 };
 
