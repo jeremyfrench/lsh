@@ -33,15 +33,6 @@
 #include <assert.h>
 #include <errno.h>
 
-#if HAVE_CRYPT_H
-# include <crypt.h>
-#endif
-#include <pwd.h>
-#include <grp.h>
-
-#if HAVE_SHADOW_H
-#include <shadow.h>
-#endif
 
 #define GABA_DEFINE
 #include "server_userauth.h.x"
@@ -49,7 +40,8 @@
 
 #include "server_userauth.c.x"
 
-/* GABA:
+#if 0
+/* ;; GABA:
    (class
      (name unix_user_db)
      (super user_db)
@@ -209,6 +201,7 @@ int change_dir(struct unix_user *user)
     }
   return 1;  
 }
+#endif
 
 struct lsh_string *
 format_userauth_failure(struct int_list *methods,

@@ -52,7 +52,7 @@
  * struct user *, not struct unix_user *.
  */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name unix_user)
      (super user)
@@ -72,7 +72,7 @@
    (class
      (name user_db)
      (vars
-       (lookup method "struct unix_user *"
+       (lookup method "struct user *"
                       "struct lsh_string *name" "int free")))
 */
 
@@ -85,11 +85,13 @@ struct unix_user *lookup_user(struct lsh_string *name, int free);
 struct user_db *
 make_unix_user_db(int allow_root);
 
+#if 0
 int verify_password(struct unix_user *user,
 		    struct lsh_string *password, int free);
 
 int change_uid(struct unix_user *user);
 int change_dir(struct unix_user *user);
+#endif
 
 /* GABA:
    (class
