@@ -140,12 +140,12 @@ int main(int argc, char **argv)
   dh = make_dh1(r);
 
   /* No randomness is needed for verifying signatures */
-  lookup = make_fake_host_db(make_dss_algorithm(NULL)); 
+  lookup = make_fake_host_db(make_dsa_algorithm(NULL)); 
 
   kex = make_dh_client(dh, lookup);
   algorithms = many_algorithms(2, 
 			       ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
-			       ATOM_SSH_DSS, make_dss_algorithm(r),
+			       ATOM_SSH_DSS, make_dsa_algorithm(r),
 			       -1);
 
   not = 0;

@@ -34,7 +34,7 @@
 #include "publickey_crypto.h.x"
 #undef CLASS_DECLARE
 
-struct signature_algorithm *make_dss_algorithm(struct randomness *random);
+struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
 
 /* FIXME: Groups could use "non-virtual" methods */
 
@@ -63,7 +63,7 @@ struct group *make_zn(mpz_t p);
 
 /* CLASS:
    (struct
-     (name dss_public)
+     (name dsa_public)
      (vars
        (p bignum)
        (q bignum)

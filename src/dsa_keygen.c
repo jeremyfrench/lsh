@@ -1,6 +1,6 @@
-/* dss_keygen.c
+/* dsa_keygen.c
  *
- * Generate dss key pairs..
+ * Generate dsa key pairs..
  *
  * $Id$
  */
@@ -24,7 +24,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "dss_keygen.h"
+#include "dsa_keygen.h"
 
 #include "randomness.h"
 
@@ -56,7 +56,7 @@ static void hash(mpz_t x, UINT8 *digest)
   sha_digest(&ctx, digest);
 }
 
-void dss_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
+void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
 {
   unsigned L;
   unsigned n, b;
@@ -145,7 +145,7 @@ void dss_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
     }
 }
 
-void dss_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q)
+void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q)
 {
   mpz_t e;
   mpz_t n;

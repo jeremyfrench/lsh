@@ -45,7 +45,7 @@
 
 /* FIXME: Should support encryption of the private key. */
 
-static struct sexp *dss_private2public(struct sexp_iterator *i)
+static struct sexp *dsa_private2public(struct sexp_iterator *i)
 {
   struct sexp *p;
   struct sexp *q;
@@ -83,7 +83,7 @@ static struct sexp *dss_private2public(struct sexp_iterator *i)
     return NULL;
 
   return sexp_l(2, sexp_z("public-key"),
-		sexp_l(5, sexp_z("dss"), p, q, g, y, -1), -1);
+		sexp_l(5, sexp_z("dsa"), p, q, g, y, -1), -1);
 }
 
 /* CLASS:
@@ -112,16 +112,16 @@ static int do_write_key(struct sexp_handler *h, struct sexp *private)
     }
 
   e = SEXP_GET(i);
-  if (! (e && sexp_check_type(e, "dss", &i)))
+  if (! (e && sexp_check_type(e, "dsa", &i)))
     {
-      werror("lsh_writekey: Unknown key type (only dss is supported)\n");
+      werror("lsh_writekey: Unknown key type (only dsa is supported)\n");
       return LSH_FAIL | LSH_DIE;
     }
 
-  public = dss_private2public(i);
+  public = dsa_private2public(i);
   if (!public)
     {
-      werror("lsh_writekey: Invalid dss key\n");
+      werror("lsh_writekey: Invalid dsa key\n");
       return LSH_FAIL | LSH_DIE;
     }
   

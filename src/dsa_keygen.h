@@ -1,6 +1,6 @@
-/* dss_keygen.h
+/* dsa_keygen.h
  *
- * Generate dss key pairs..
+ * Generate dsa key pairs..
  *
  * $Id$
  */
@@ -29,7 +29,7 @@
 
 #include "bignum.h"
 
-void dss_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l);
-void dss_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q);
+void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l);
+void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q);
 
 #endif /* LSH_DSS_KEYGEN_H_INCLUDED */

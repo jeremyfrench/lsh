@@ -45,31 +45,31 @@
 /* DSS signatures */
 /* CLASS:
    (class
-     (name dss_signer)
+     (name dsa_signer)
      (super signer)
      (vars
        (random object randomness)
-       (public struct dss_public)
+       (public struct dsa_public)
        (a bignum)))
 */
 
 /* CLASS:
    (class
-     (name dss_verifier)
+     (name dsa_verifier)
      (super verifier)
      (vars
-       (public struct dss_public)))
+       (public struct dsa_public)))
 */
 
 /* CLASS:
    (class
-     (name dss_algorithm)
+     (name dsa_algorithm)
      (super signature_algorithm)
      (vars
        (random object randomness)))
 */
 
-static void dss_hash(mpz_t h, UINT32 length, UINT8 *msg)
+static void dsa_hash(mpz_t h, UINT32 length, UINT8 *msg)
 {
   /* Compute hash */
   struct hash_instance *hash = MAKE_HASH(&sha_algorithm);
@@ -86,11 +86,11 @@ static void dss_hash(mpz_t h, UINT32 length, UINT8 *msg)
   KILL(hash);
 }
 
-static struct lsh_string *do_dss_sign(struct signer *c,
+static struct lsh_string *do_dsa_sign(struct signer *c,
 				      UINT32 length,
 				      UINT8 *msg)
 {
-  CAST(dss_signer, closure, c);
+  CAST(dsa_signer, closure, c);
   mpz_t k, r, s, tmp;
   struct lsh_string *signature;
 
@@ -102,7 +102,7 @@ static struct lsh_string *do_dss_sign(struct signer *c,
   bignum_random(k, closure->random, tmp);
   mpz_add_ui(k, k, 1);
 
-  debug("do_dss_sign, k: ");
+  debug("do_dsa_sign, k: ");
   debug_mpz(k);
   debug("\n");
   
@@ -110,23 +110,23 @@ static struct lsh_string *do_dss_sign(struct signer *c,
   mpz_init(r);
   mpz_powm(r, closure->public.g, k, closure->public.p);
 
-  debug("do_dss_sign, group element: ");
+  debug("do_dsa_sign, group element: ");
   debug_mpz(r);
   debug("\n");
   
   mpz_fdiv_r(r, r, closure->public.q);
 
-  debug("do_dss_sign, r: ");
+  debug("do_dsa_sign, r: ");
   debug_mpz(r);
   debug("\n");
 
   /* Compute hash */
-  dss_hash(tmp, length, msg);
+  dsa_hash(tmp, length, msg);
   
   /* Compute k^-1 (mod q) */
   if (!mpz_invert(k, k, closure->public.q))
     {
-      werror("do_dss_sign: k non-invertible\n");
+      werror("do_dsa_sign: k non-invertible\n");
       mpz_clear(tmp);
       mpz_clear(k);
       mpz_clear(r);
@@ -141,7 +141,7 @@ static struct lsh_string *do_dss_sign(struct signer *c,
   mpz_mul(s, s, k);
   mpz_fdiv_r(s, s, closure->public.q);
 
-  debug("do_dss_sign, s: ");
+  debug("do_dsa_sign, s: ");
   debug_mpz(s);
   debug("\n");
   
@@ -157,20 +157,20 @@ static struct lsh_string *do_dss_sign(struct signer *c,
 }
 
 #if 0
-static struct lsh_string *dss_public_key(struct signer *dss)
+static struct lsh_string *dsa_public_key(struct signer *dsa)
 {
   return ssh_format("%a%n%n%n%n",
-		    ATOM_SSH_DSS, dss->p, dss->q, dss->g, dss->y);
+		    ATOM_SSH_DSS, dsa->p, dsa->q, dsa->g, dsa->y);
 }
 #endif
 
-static int do_dss_verify(struct verifier *c,
+static int do_dsa_verify(struct verifier *c,
 			 UINT32 length,
 			 UINT8 *msg,
 			 UINT32 signature_length,
 			 UINT8 * signature_data)
 {
-  CAST(dss_verifier, closure, c);
+  CAST(dsa_verifier, closure, c);
   struct simple_buffer buffer;
 
   int res;
@@ -200,11 +200,11 @@ static int do_dss_verify(struct verifier *c,
       return 0;
     }
   
-  debug("do_dss_verify, r: ");
+  debug("do_dsa_verify, r: ");
   debug_mpz(r);
   debug("\n");
   
-  debug("do_dss_verify, s: ");
+  debug("do_dsa_verify, s: ");
   debug_mpz(s);
   debug("\n");
 
@@ -214,20 +214,20 @@ static int do_dss_verify(struct verifier *c,
   /* FIXME: mpz_invert generates negative inverses. Is this a problem? */
   if (!mpz_invert(w, s, closure->public.q))
     {
-      werror("do_dss_verify: s non-invertible.\n");
+      werror("do_dsa_verify: s non-invertible.\n");
       mpz_clear(r);
       mpz_clear(s);
       mpz_clear(w);
       return 0;
     }
 
-  debug("do_dss_verify, w: ");
+  debug("do_dsa_verify, w: ");
   debug_mpz(w);
   debug("\n");
 
   /* Compute hash */
   mpz_init(tmp);
-  dss_hash(tmp, length, msg);
+  dsa_hash(tmp, length, msg);
 
   /* g^{w * h (mod q)} (mod p)  */
 
@@ -256,13 +256,13 @@ static int do_dss_verify(struct verifier *c,
   mpz_mul(v, v, tmp);
   mpz_fdiv_r(v, v, closure->public.p);
 
-  debug("do_dss_verify, group element: ");
+  debug("do_dsa_verify, group element: ");
   debug_mpz(v);
   debug("\n");
   
   mpz_fdiv_r(v, v, closure->public.q);
 
-  debug("do_dss_verify, v: ");
+  debug("do_dsa_verify, v: ");
   debug_mpz(v);
   debug("\n");
 
@@ -277,8 +277,8 @@ static int do_dss_verify(struct verifier *c,
   return !res;
 }
 
-static int parse_dss_public(struct simple_buffer *buffer,
-			    struct dss_public *public)
+static int parse_dsa_public(struct simple_buffer *buffer,
+			    struct dsa_public *public)
 {
   return (parse_bignum(buffer, public->p)
 	  && (mpz_sgn(public->p) == 1)
@@ -295,14 +295,14 @@ static int parse_dss_public(struct simple_buffer *buffer,
 
 /* FIXME: Outside of the protocol transactions, keys should be stored
  * in SPKI-style S-expressions. */
-static struct signer *make_dss_signer(struct signature_algorithm *c,
+static struct signer *make_dsa_signer(struct signature_algorithm *c,
 				      UINT32 public_length,
 				      UINT8 *public,
 				      UINT32 private_length,
 				      UINT8 *private)
 {
-  CAST(dss_algorithm, closure, c);
-  NEW(dss_signer, res);
+  CAST(dsa_algorithm, closure, c);
+  NEW(dsa_signer, res);
   
   struct simple_buffer public_buffer;
   struct simple_buffer private_buffer;  
@@ -325,7 +325,7 @@ static struct signer *make_dss_signer(struct signature_algorithm *c,
     }
   simple_buffer_init(&private_buffer, private_length, private);
 
-  if (! (parse_dss_public(&public_buffer, &res->public)
+  if (! (parse_dsa_public(&public_buffer, &res->public)
   	 && parse_bignum(&private_buffer, res->a)
 	 /* FIXME: Perhaps do some more sanity checks? */
 	 && (mpz_sgn(res->a) == 1)
@@ -335,18 +335,18 @@ static struct signer *make_dss_signer(struct signature_algorithm *c,
       return NULL;
     }
   
-  res->super.sign = do_dss_sign;
+  res->super.sign = do_dsa_sign;
   res->random = closure->random;
 
   return &res->super;
 }
 
 static struct verifier *
-make_dss_verifier(struct signature_algorithm *closure UNUSED,
+make_dsa_verifier(struct signature_algorithm *closure UNUSED,
 		  UINT32 public_length,
 		  UINT8 *public)
 {
-  NEW(dss_verifier, res);
+  NEW(dsa_verifier, res);
   struct simple_buffer buffer;
   int atom;
 
@@ -365,26 +365,26 @@ make_dss_verifier(struct signature_algorithm *closure UNUSED,
       return 0;
     }
   
-  if (!parse_dss_public(&buffer, &res->public))
+  if (!parse_dsa_public(&buffer, &res->public))
     /* FIXME: Perhaps do some more sanity checks? */
     {
       KILL(res);
       return NULL;
     }
 
-  res->super.verify = do_dss_verify;
+  res->super.verify = do_dsa_verify;
   return &res->super;
 }
 
-struct signature_algorithm *make_dss_algorithm(struct randomness *random)
+struct signature_algorithm *make_dsa_algorithm(struct randomness *random)
 {
-  NEW(dss_algorithm, dss);
+  NEW(dsa_algorithm, dsa);
 
-  dss->super.make_signer = make_dss_signer;
-  dss->super.make_verifier = make_dss_verifier;
-  dss->random = random;
+  dsa->super.make_signer = make_dsa_signer;
+  dsa->super.make_verifier = make_dsa_verifier;
+  dsa->random = random;
 
-  return &dss->super;
+  return &dsa->super;
 }
     
 /* Groups */

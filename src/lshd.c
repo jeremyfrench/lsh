@@ -127,7 +127,7 @@ static void init_host_key(struct randomness *r)
   public_key = ssh_format("%a%n%n%n%n", ATOM_SSH_DSS, p, q, g, y);
   s = ssh_format("%n", a);
 
-  secret_key = MAKE_SIGNER(make_dss_algorithm(r),
+  secret_key = MAKE_SIGNER(make_dsa_algorithm(r),
 			   public_key->length, public_key->data,
 			   s->length, s->data);
 
@@ -171,9 +171,9 @@ static int do_read_key(struct sexp_handler *h, struct sexp *private)
     }
 
   e = SEXP_GET(i);
-  if (! (e && sexp_check_type(e, "dss", &i)))
+  if (! (e && sexp_check_type(e, "dsa", &i)))
     {
-      werror("lshd: Unknown key type (only dss is supported)\n");
+      werror("lshd: Unknown key type (only dsa is supported)\n");
       return LSH_FAIL | LSH_DIE;
     }
 
@@ -211,7 +211,7 @@ static int do_read_key(struct sexp_handler *h, struct sexp *private)
 	  	  
 	  s = ssh_format("%n", x);
 	  
-	  secret = MAKE_SIGNER(make_dss_algorithm(closure->random),
+	  secret = MAKE_SIGNER(make_dsa_algorithm(closure->random),
 			       public->length, public->data,
 			       s->length, s->data);
 	  assert(secret);
@@ -323,7 +323,7 @@ int main(int argc, char **argv)
   dh = make_dh1(r);
   
   algorithms = many_algorithms(1,
-			       ATOM_SSH_DSS, make_dss_algorithm(r),
+			       ATOM_SSH_DSS, make_dsa_algorithm(r),
 			       -1);
 
   while(1)

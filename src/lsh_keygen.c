@@ -26,7 +26,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "dss_keygen.h"
+#include "dsa_keygen.h"
 
 #include "blocking_write.h"
 #include "crypto.h"
@@ -48,7 +48,7 @@ static void usage(void) NORETURN;
 
 static void usage(void)
 {
-  wwrite("Usage: lsh_keygen [-o style] [-l nist-level] [-a dss] [-q] [-d] [-v]\n");
+  wwrite("Usage: lsh_keygen [-o style] [-l nist-level] [-a dsa] [-q] [-d] [-v]\n");
   exit(1);
 }
 
@@ -58,7 +58,7 @@ int main(int argc, char **argv)
   long l = 4;
   int style = SEXP_TRANSPORT;
   
-  struct dss_public public;
+  struct dsa_public public;
   mpz_t x;
   
   mpz_t t;
@@ -84,9 +84,9 @@ int main(int argc, char **argv)
 	  break;
 	}
       case 'a':
-	if (strcmp(optarg, "dss"))
+	if (strcmp(optarg, "dsa"))
 	  {
-	    wwrite("lsh_keygen: Sorry, doesn't support any algorithm but dss.\n");
+	    wwrite("lsh_keygen: Sorry, doesn't support any algorithm but dsa.\n");
 	    usage();
 	  }
 	break;
@@ -132,7 +132,7 @@ int main(int argc, char **argv)
   mpz_init(t);
 
   r = make_poor_random(&sha_algorithm, NULL);
-  dss_nist_gen(public.p, public.q, r, l);
+  dsa_nist_gen(public.p, public.q, r, l);
 
   debug_mpz(public.p);
   debug("\n");
@@ -159,7 +159,7 @@ int main(int argc, char **argv)
       return 1;
     }
 
-  dss_find_generator(public.g, r, public.p, public.q);
+  dsa_find_generator(public.g, r, public.p, public.q);
 
   r = make_reasonably_random();
   mpz_set(t, public.q);
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
     
     struct lsh_string *key = sexp_format
       (sexp_l(2, sexp_z("private-key"),
-	      sexp_l(6, sexp_z("dss"),
+	      sexp_l(6, sexp_z("dsa"),
 		     sexp_l(2, sexp_z("p"), sexp_un(public.p), -1),
 		     sexp_l(2, sexp_z("q"), sexp_un(public.q), -1),
 		     sexp_l(2, sexp_z("g"), sexp_un(public.g), -1),
