@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#ifdef LSH
+#if LSH
 # if !PRINTF_STYLE
 #  if HAVE_GCC_ATTRIBUTE
 #   define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
@@ -37,6 +37,9 @@
 # else
 #  include "getopt.h"
 # endif /* !HAVE_GETOPT_LONG */
+# ifndef __THROW
+#  define __THROW
+# endif
 #else /* !LSH */
 # include <getopt.h>
 #endif /* !LSH */
