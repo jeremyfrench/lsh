@@ -1,3 +1,35 @@
+1999-09-05  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/sexp_streamed_parser.c: Rewrote parser to use continuations
+	and exceptions. For now, support for any encoding but
+	SEXP_CANONICAL is dropped.
+
+	* src/read_packet.c (do_read_packet): Handle available == 0 (EOF).
+	* src/read_line.c (do_read_line): Handle available == 0 (EOF).
+
+	* src/exception.h (EXC_SEXP, EXC_SEXP_SYNTAX, EXC_SEXP_EOF): New
+	constants.
+
+	* src/command.c: First attempt at a catch-command.
+
+	* src/io.c (io_iter): Check for POLLNVAL.
+	(do_buffered_read): Pass EOF to the read handler, rather than
+	raising an exception.
+
+	* src/Makefile.am.in: Added sexp_conv, sexp_commands.c.
+
+	* sexp_commands.c, sexp_commands.h, sexp_conv.c, sexp_conv.h: New
+	files. 
+
+1999-09-04  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh.c (do_lsh_default_handler): Improved handling of I/O
+	exceptions. 
+
+	* src/io_commands.c (do_connect): Improved exception handling.
+
+	* src/io.c (io_connect): Added an exception_handler argument.
+
 1999-08-30  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* Lots of files: Removed the exception argument from the
