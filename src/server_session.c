@@ -898,17 +898,18 @@ do_x11_req(struct channel_request *s UNUSED,
       /* The client may only request one x11-forwarding, and only
        * before starting a process. */
       if (session->x11 || session->process
-	  || !(session->x11 = make_server_x11_info(protocol_length, protocol,
-						   cookie_length, cookie,
-						   channel->connection->user)))
+	  || !(session->x11 = server_x11_setup(channel,
+					       channel->connection->user,
+					       protocol_length, protocol,
+					       cookie_length, cookie,
+					       screen, c, e)))
 	{
 	  verbose("X11 request failed.\n");
 	  EXCEPTION_RAISE(e, &x11_request_failed);
 	}
       else
 	{
-	  server_x11_listen(session->x11, channel->connection,
-			    c, e);
+	  
 	  return;
 	}
     }
