@@ -23,7 +23,7 @@ then
         cat 1>&2 <<EOF!
                 ERROR: lsh is not installed properly
                 check the existence of these files:
-                /usr/sbin/lshd --daemonic
+                /usr/sbin/lshd
 EOF!
         exit 1
 fi
@@ -31,7 +31,7 @@ fi
 case "$1" in
         start)
                 echo -n "Starting lshd secure connection service: "
-                daemon lshd
+                daemon lshd --daemonic
                 touch /var/lock/subsys/lshd
                 echo
                 ;;

@@ -4,8 +4,7 @@ Version:        @VERSION@
 Release:        1
 Copyright:      GPL
 Group:          Application/Internet
-Source0:       
-ftp://ftp.lysator.liu.se/pub/security/lsh/%{name}-%{version}.tar.gz 
+Source0:        ftp://ftp.lysator.liu.se/pub/security/lsh/%{name}-%{version}.tar.gz 
 Source1:        lshd.rhlinux.init
 BuildRoot:      /var/tmp/%{name}-%{version}-root
 Prefix:         /usr
@@ -47,7 +46,7 @@ done )
 
 install -d -m 0755 $RPM_BUILD_ROOT/etc/rc.d/init.d
 
-install -m 0755 $RPM_SOURCE_DIR/lshd.rhlinux.init \
+install -m 0755 contrib/lshd.rhlinux.init \
         $RPM_BUILD_ROOT/etc/rc.d/init.d/lshd
 
 strip $RPM_BUILD_ROOT%{prefix}/bin/lsh
