@@ -20,13 +20,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
-#include "buffer.h"
+#include "io.h"
 #include "sftp.h"
 #include "xmalloc.h"
 #include "client.h"
+#include "werror.h"
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <errno.h>
@@ -37,11 +39,6 @@
 
 #define SFTP_XFER_BLOCKSIZE 16384
 #define SFTP_VERSION 3
-
-#define FATAL(x) do { fputs("sftp-test-client: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
-#define _FATAL(x) do { fputs("sftp-test-client: " x "\n", stderr); _exit(EXIT_FAILURE); } while (0)
-
-
 
 
 static UINT32 
@@ -87,15 +84,15 @@ fork_server(char *name,
   int stdout_pipe[2];
 
   if (pipe(stdin_pipe) < 0)
-    FATAL("Creating stdin_pipe failed.");
+    fatal("Creating stdin_pipe failed.");
 
   if (pipe(stdout_pipe) < 0)
-    FATAL("Creating stdout_pipe failed.");
+    fatal("Creating stdout_pipe failed.");
 
   switch(fork())
     {
     case -1:
-      FATAL("fork failed.");
+      fatal("fork failed.");
     default: /* Parent */
       {
 	close(stdin_pipe[0]);
@@ -108,9 +105,9 @@ fork_server(char *name,
       }
     case 0: /* Child */
       if (dup2(stdin_pipe[0], STDIN_FILENO) < 0)
-	_FATAL("dup2 for stdin failed.");
+	_fatal("dup2 for stdin failed.");
       if (dup2(stdout_pipe[1], STDOUT_FILENO) < 0)
-	_FATAL("dup2 for stdout failed.");
+	_fatal("dup2 for stdout failed.");
 	
       close(stdin_pipe[0]);
       close(stdin_pipe[1]);
@@ -119,7 +116,7 @@ fork_server(char *name,
       
       execl(name, name, NULL);
 
-      _FATAL("execl failed.");
+      _fatal("execl failed.");
     }
 }
 
@@ -227,7 +224,7 @@ do_ls(struct client_ctx *ctx, const char *name)
 	if ( msg == SSH_FXP_STATUS )
 	  {
 	    if (!sftp_client_get_status(ctx->i, &status))
-	      FATAL("Invalid SSH_FXP_STATUS message.");
+	      fatal("Invalid SSH_FXP_STATUS message.");
 	    
 	    lsloop=0; /* End of loop - EOF or failue */
 	    
@@ -396,7 +393,7 @@ do_get(struct client_ctx *ctx,
 	case SSH_FXP_STATUS:
 	  {
 	    if (!sftp_client_get_status(ctx->i, &status))
-	      FATAL("Invalid SSH_FXP_STATUS message.");
+	      fatal("Invalid SSH_FXP_STATUS message.");
 
 	    getloop=0; /* End of loop - EOF or failue */
 	  
@@ -490,7 +487,7 @@ do_put(struct client_ctx *ctx,
 	  if ( msg == SSH_FXP_STATUS )
 	    {
 	      if (!sftp_client_get_status(ctx->i, &status))
-		FATAL("Invalid SSH_FXP_STATUS message.");
+		fatal("Invalid SSH_FXP_STATUS message.");
 		
 	      putloop=0; /* End of loop - EOF or failue */
 	      
@@ -551,12 +548,12 @@ main(int argc, char **argv)
   int i;
   
   if (argc < 2)
-    FATAL("Too few args.");
+    fatal("Too few args.");
 
   fork_server(argv[1], &ctx);
 
   if (!client_handshake(&ctx))
-    FATAL("Handshake failed.");
+    fatal("Handshake failed.");
 
   for (i = 2; i < argc; i += 2)
     {
@@ -577,7 +574,7 @@ main(int argc, char **argv)
 	  res = do_stat(&ctx, argv[i+1]);
 	  break;
 	default:
-	  FATAL("Bad arg");
+	  fatal("Bad arg");
 	}
       if (!res)
 	exit(EXIT_FAILURE);
