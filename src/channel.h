@@ -209,11 +209,20 @@ struct channel_request_info
        ; assigned to them. So the channels table is not enough for keeping track of which
        ; numbers are in use.
        (in_use space UINT8)
-       
+
+       ; Allocated size of the arrays.
        (allocated_channels . UINT32)
-       (next_channel . UINT32)
-     
+
+       ; Number of entries in the arrays that are in use and
+       ; initialized.
        (used_channels . UINT32)
+
+       ; The smallest channel number that is likely to be free
+       (next_channel . UINT32)
+
+       ; Number of currently allocated channel numbers.
+       (channel_count . UINT32)
+       
        (max_channels . UINT32) ; Max number of channels allowed 
 
        ; Forwarded TCP ports
