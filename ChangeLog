@@ -1,3 +1,8 @@
+2003-06-05  Niels Möller  <niels@s3.kth.se>
+
+	* src/unix_interact.c (unix_read_password): Prompt for password
+	only if we have a tty, and the quiet flag is unset.
+
 2003-06-05  Pontus Sköld  <pont@soua.net>
 
 	* src/lsh-decrypt-key.c: New file to provide new utility
