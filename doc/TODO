@@ -337,4 +337,8 @@ or
 
 Figure out whether or not to make --cvs-workaround the default.
 According to Neil Jarram, "lsh-1.1.2 with --cvs-workaround=oe always
-succeeds." 
+succeeds." Update: According to rms, --cvs-workaround=e works, and
+--cvs-workaround=o doesn't, so it seems that it's stderr that causes
+problems. So we need to avoid setting stderr into non-blocking mode.
+
+
