@@ -3,11 +3,10 @@
 (define-syntax let-and
   (syntax-rules '()
 		((let-and (expr) clause clauses ...)
-		 (if expr (let-and clause clauses ...)
-		     #f))
+		 (and expr (let-and clause clauses ...)))
 		((let-and (name expr) clause clauses ...)
 		 (let ((name expr))
-		   (if name (let-and clause clauses ...) #f)))
+		   (and name (let-and clause clauses ...))))
 		((let-and expr) expr)))
 
 (define (atom? o) (not (list? o)))
