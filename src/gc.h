@@ -26,17 +26,14 @@
 #ifndef LSH_GC_H_INCLUDED
 #define LSH_GC_H_INCLUDED
 
-#include "lsh_types.h"
+#include "lsh.h"
+
+void gc_register_global(struct lsh_object *o);
 
 void gc_register(struct lsh_object *o);
 void gc_kill(struct lsh_object *o);
 
-void gc(struct lsh_object *root);
-void gc_maybe(struct lsh_object *root, int busy);
-
-#if 0
-void gc_mark(struct lsh_object *o);
-void gc_sweep(void);
-#endif
+void gc(void);
+void gc_maybe(int busy);
 
 #endif /* LSH_GC_H_INCLUDED */

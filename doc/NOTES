@@ -98,6 +98,12 @@ http://viks.mvrop.org/networking/sock_advanced_tut.html
 Text-Terminal-HOWTO
 http://www.developer.ibm.com/library/ref/about4.1/df4commo.html
 
+Jon Ribbens <jon@oaktree.co.uk>:
+
+The other functions can be found at
+  ftp://ftp.openbsd.org/pub/OpenBSD/src/lib/libutil/pty.c
+
+
 
 3605942 idag 07:59 /32 rader/ assar
 Kommentar till text 3578895 av Niels Möller ()

@@ -29,6 +29,8 @@
 #include "bignum.h"
 #include "list.h"
 
+#include "sexp_table.h"
+
 /* Forward declaration */
 struct sexp_iterator;
 

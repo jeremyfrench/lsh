@@ -1,3 +1,15 @@
+Mon Jan  4 11:25:43 1999    <nisse@puck>
+
+	* werror.c: Avoid using stdio functions.
+
+	* keyexchange.c (make_test_kexinit): Commented out this function.
+
+	* io.c (write_raw): New function.
+	(write_raw_with_poll): -"-
+
+	* alist.c (alist_addv): New function.
+	(alist_add): -"-
+
 Fri Jan  1 04:20:10 1999    <nisse@puck>
 
 	* make_char_classes (make-char-classes): Use #ifdef to separate

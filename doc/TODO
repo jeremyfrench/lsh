@@ -190,3 +190,6 @@ It seems that it is a little difficult to detect that an asyncronous
 connect() failed; poll() indicates that both reading and writing is
 possible, but write failes (with EPIPE/SIGPIPE) later. Perhaps a
 linux-problem?
+
+Key expansion in keyexchenge.c is broken (uses a KILL()ed hash
+instance).

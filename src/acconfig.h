@@ -14,3 +14,7 @@
 
 /* Define to indicate that shutdown seems to work properly */
 #undef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
+
+/* Define if the compiler understands __attribute__ */
+#undef HAVE_ATTRIBUTE
+
