@@ -218,14 +218,5 @@ pointer in some other places as well.
 
 Exceptions from listen are handled badly in several places. 
 
-Occasionally,
-
-  lsh -p 4711 -v localhost echo hello
-
-exits without writing any "hello". Perhaps some race condition, as I
-can't reproduce it reliably.
-
-Get rid of the install_keys class.
-
-invert-defs doesn't work quite right when a message number has several
-names. For now, use sort -nu.
+Write a conversion program to read and write openssh/ssh2 style public
+keys.

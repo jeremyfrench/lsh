@@ -109,7 +109,7 @@ mac_string(struct mac_algorithm *a,
   KILL(mac);
   
   if (kfree)
-    lsh_string_alloc(key);
+    lsh_string_free(key);
   if (ifree)
     lsh_string_free(in);
 

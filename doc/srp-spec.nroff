@@ -14,7 +14,7 @@
 .in 0
 
 .ce
-Using the SRP as a key exchange metod in Secure Shell
+Using the SRP protocol as a key exchange method in Secure Shell
 
 .ti 0
 Status of this Memo
@@ -136,7 +136,7 @@ authenticating the server, the user must prove knowledge of the key
 
 To do this, the client sends m1 = HMAC(K, H) to the server, where H is
 the "exchange hash" defined below. After verifying the MAC, the server
-responds by sending m2 = HMAC(K, e | m1 | K) to the client. Actually,
+responds by sending m2 = HMAC(K, e | m1 | H) to the client. Actually,
 the purpose of this final message exchange is twofold: (i) to prove
 knowledge of the shared secret key K, completing the SRP protocol, and
 (ii) to use the shared key K to authenticate the exchange hash. The
