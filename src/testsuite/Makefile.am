@@ -34,6 +34,13 @@ LDADD = ../liblsh.a ../nettle/libnettle.a $(addprefix ../,@LIBARGP@)
 EXTRA_DIST = macros.m4 $(SOURCES:.c=.m4) $(TS_SH) $(TS_MORE_SH) \
 	functions.sh runtests key-1.private
 
+# FIXME: Get a rm -rf temphome somewhere?
+CLEANFILES = foo foo.pub test-seed-1 test-seed-2 test.out1 test.out2 \
+	     temphome/.lsh/identity \
+	     temphome/.lsh/identity.pub
+
+DISTCLEANFILES = yarrow-seed-file
+
 all:
 	@echo make check to build testprograms.
 
