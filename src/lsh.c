@@ -530,17 +530,31 @@ do_lsh_lookup(struct lookup_verifier *c,
       if (!quiet_flag)
 	{
 	  /* Display fingerprint */
-	  struct lsh_string *fingerprint
-	    = hash_string(self->hash,
-			  sexp_format(subject->key, SEXP_CANONICAL, 0),
-			  1);
-			  
+
+	  struct lsh_string *spki_fingerprint = 
+	    hash_string(self->hash,
+			sexp_format(subject->key, SEXP_CANONICAL, 0),
+			1);
+
+
+	  struct lsh_string *fingerprint = 
+	    lsh_string_colonize( 
+				ssh_format( "%lfxS", 
+					    hash_string(&crypto_md5_algorithm,
+							key,
+							0)
+					    ), 
+				2, 
+				1  
+				);
+
 	  if (!INTERACT_YES_OR_NO
 	      (self->tty,
 	       ssh_format("Received unauthenticated key for host %lS\n"
-			  "Fingerprint: %lfxS\n"
+			  "Fingerprint: %lfS\n"
+			  "(lsh-spki fingerprint: %lfxS)\n"
 			  "Do you trust this key? (y/n) ",
-			  self->host->ip, fingerprint), 0, 1))
+			  self->host->ip, fingerprint, spki_fingerprint), 0, 1))
 	    return NULL;
 	}
 
