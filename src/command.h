@@ -317,7 +317,7 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *real);
 #define MAKE_TRACE(name, real) (real)
 #endif /* !DEBUG_TRACE */
 
-/* Useful clobal commands */
+/* Useful global commands */
 #define PROG1 (&command_K.super.super)
 #define PROGN (&progn_command.super)
 

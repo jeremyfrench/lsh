@@ -27,7 +27,6 @@
 #define LSH_CHANNEL_FORWARD_H_INCLUDED
 
 #include "channel.h"
-#include "command.h"
 
 #define GABA_DECLARE
 #include "channel_forward.h.x"

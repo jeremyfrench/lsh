@@ -25,7 +25,6 @@
 #ifndef LSH_IO_COMMANDS_H_INCLUDED
 #define LSH_IO_COMMANDS_H_INCLUDED
 
-#include "command.h"
 #include "connection.h"
 #include "io.h"
 
@@ -55,6 +54,9 @@ extern struct command_2 listen_command;
 
 extern struct command bind_address_command;
 #define BIND (&bind_address_command.super)
+
+extern struct command bind_local_command;
+#define BIND_LOCAL (&bind_local_command.super)
 
 
 struct command *

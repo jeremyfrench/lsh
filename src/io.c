@@ -23,6 +23,7 @@
 
 #include "io.h"
 
+#include "command.h"
 #include "format.h"
 #include "string_buffer.h"
 #include "werror.h"

@@ -26,7 +26,6 @@
 #define LSH_GATEWAY_CHANNEL_H_INCLUDED
 
 #include "channel.h"
-#include "command.h"
 
 #define GABA_DECLARE
 #include "gateway_channel.h.x"
@@ -59,5 +58,3 @@ extern struct global_request gateway_global_request;
 extern struct channel_open gateway_channel_open_forward;
 
 #endif /* LSH_GATEWAY_CHANNEL_H_INCLUDED */
-
- 

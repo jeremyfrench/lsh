@@ -23,6 +23,7 @@
 
 #include "connection.h"
 
+#include "command.h"
 #include "compress.h"
 #include "debug.h"
 #include "encrypt.h"

@@ -25,7 +25,6 @@
 #ifndef LSH_USERAUTH_H_INCLUDED
 #define LSH_USERAUTH_H_INCLUDED
 
-#include "command.h"
 #include "exception.h"
 #include "resource.h"
 

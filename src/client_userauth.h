@@ -25,7 +25,6 @@
 #define LSH_CLIENT_USERAUTH_H_INCLUDED
 
 #include "alist.h"
-#include "command.h"
 #include "connection.h"
 #include "interact.h"
 #include "list.h"

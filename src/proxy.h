@@ -25,7 +25,6 @@
 #define LSH_PROXY_H_INCLUDED
 
 #include "alist.h"
-#include "command.h"
 
 extern struct command_3 chain_connections;
 #define CHAIN_CONNECTIONS (&chain_connections.super.super)

@@ -27,7 +27,6 @@
 #define LSH_SEXP_H_INCLUDED
 
 #include "bignum.h"
-#include "command.h"
 #include "list.h"
 #include "lsh_argp.h"
 #include "parse.h"

@@ -24,6 +24,7 @@
 
 #include "handshake.h"
 
+#include "command.h"
 #include "compress.h"
 #include "connection.h"
 #include "debug.h"

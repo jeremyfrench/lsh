@@ -26,7 +26,6 @@
 #define HANDSHAKE_H_INCLUDED
 
 #include "alist.h"
-#include "command.h"
 #include "connection.h"
 #include "ssh1_fallback.h"
 

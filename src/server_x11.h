@@ -27,7 +27,6 @@
 #define LSH_SERVER_X11_H_INCLUDED
 
 #include "channel.h"
-#include "command.h"
 #include "resource.h"
 
 #define GABA_DECLARE

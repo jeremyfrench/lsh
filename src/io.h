@@ -27,7 +27,6 @@
 #define LSH_IO_H_INCLUDED
 
 #include "abstract_io.h"
-#include "command.h"
 #include "resource.h"
 #include "write_buffer.h"
 

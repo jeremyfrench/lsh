@@ -24,7 +24,6 @@
 #ifndef LSH_SERVER_H_INCLUDED
 #define LSH_SERVER_H_INCLUDED
 
-#include "command.h"
 #include "alist.h"
 
 struct command *make_offer_service(struct alist *services);

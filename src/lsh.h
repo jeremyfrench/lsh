@@ -107,6 +107,13 @@ struct abstract_write;
 /* client_x11.c */
 struct client_x11_display;
 
+/* command.h */
+struct command_continuation;
+struct command;
+struct command_2;
+struct command_3;
+struct command_4;
+
 /* connection.h */
 struct ssh_connection;
 

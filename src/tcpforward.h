@@ -26,7 +26,6 @@
 #define LSH_TCPFORWARD_H_INCLUDED
 
 #include "channel.h"
-#include "command.h"
 #include "io.h"
 #include "resource.h"
 #include "xalloc.h"
