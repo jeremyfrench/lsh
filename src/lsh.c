@@ -246,6 +246,7 @@ main_options[] =
      (super algorithms_options)
      (vars
        (backend object io_backend)
+       (random object randomness)
 
        ; For i/o exceptions 
        (handler object exception_handler)
@@ -257,7 +258,7 @@ main_options[] =
        (remote object address_info)
 
        (user . "char *")
-       (identity . "char *")
+       (identities struct object_queue)
 
        ; -1 means default behaviour
        (with_pty . int)
@@ -271,6 +272,7 @@ main_options[] =
 
 static struct lsh_options *
 make_options(struct alist *algorithms, struct io_backend *backend,
+	     struct randomness *random,
 	     struct exception_handler *handler,
 	     int *exit_code)
 {
@@ -279,24 +281,20 @@ make_options(struct alist *algorithms, struct io_backend *backend,
   init_algorithms_options(&self->super, algorithms);
   
   self->backend = backend;
+  self->random = random;
   self->handler = handler;
   self->exit_code = exit_code;
   
   self->not = 0;
   self->remote = NULL;
   self->user = getenv("LOGNAME");
-
-  /* FIXME: Default should be ~/.lsh/identity. But we also need some *
-   * option to disable public key authenticaation, and perhaps also
-   * for using several key files. */
-  self->identity = NULL;
-
   self->port = "ssh";
 
   self->with_pty = -1;
   self->start_shell = 1;
   self->with_remote_peers = 0;
   object_queue_init(&self->actions);
+  object_queue_init(&self->identities);
   
   return self;
 }
@@ -435,6 +433,23 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  break;
 	}
 
+      if (object_queue_is_empty(&self->identities))
+	{
+	  char *home = getenv("HOME");
+	  if (home)
+	    {
+	      struct lsh_string *idfile = 
+		ssh_format("%lz/.lsh/identity%c", home, 0);
+	      struct keypair *id;
+	      if ((id = read_spki_key_file(idfile->data, self->random, self->handler)))
+		{
+		  verbose("Adding identity %S\n", idfile);
+		  object_queue_add_tail(&self->identities, &id->super);
+		}
+	      lsh_string_free(idfile);
+	    }
+	}
+      
       break;
       
     case 'p':
@@ -444,9 +459,15 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->user = arg;
       break;
     case 'i':
-      self->identity = arg;
-      break;
-      
+      {
+	struct keypair *id;
+	if ((id = read_spki_key_file(arg, self->random, self->handler)))
+	  {
+	    verbose("Adding identity %s\n", arg);
+	    object_queue_add_tail(&self->identities, &id->super);
+	  }
+	break;
+      }
     case 'L':
       {
 	UINT32 listen_port;
@@ -611,7 +632,6 @@ int main(int argc, char **argv)
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
   struct alist *lookup_table; /* Alist of signature-algorithm -> lookup_verifier */
-  struct alist *identity_keys = NULL;
 
   /* int in, out, err; */
 
@@ -647,21 +667,9 @@ int main(int argc, char **argv)
 			       -1);
 
 
-  options = make_options(algorithms, backend, handler, &lsh_exit_code);
+  options = make_options(algorithms, backend, r, handler, &lsh_exit_code);
 
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
-  
-  if (options->identity)
-    {
-#if 0
-      identity_keys = make_alist(0, -1);
-      if (!read_spki_key_file(options->identity, identity_keys, r, &ignore_exception_handler))
-        {
-          KILL(identity_keys);
-          identity_keys = NULL;
-        }
-#endif
-    }
   
   make_kexinit
     = make_simple_kexinit(r,
@@ -683,11 +691,17 @@ int main(int argc, char **argv)
 						 make_kexinit,
 						 NULL),
 			  make_request_service(ATOM_SSH_USERAUTH),
-			  make_client_userauth(ssh_format("%lz", options->user),
-					       ATOM_SSH_CONNECTION,
-					       ATOM_PASSWORD,
-					       make_alist(1, 
-							  ATOM_PASSWORD, make_client_password_auth(), -1)),
+			  make_client_userauth(
+			    ssh_format("%lz", options->user),
+			    ATOM_SSH_CONNECTION,
+			    /* FIXME: Move this logic into the option parser. */
+			    (object_queue_is_empty(&options->identities)
+			     ? make_object_list(1, make_client_password_auth(), 
+						-1)
+			     : make_object_list(2, 
+						make_client_publickey_auth(queue_to_list(&options->identities)),
+						make_client_password_auth(), 
+						-1))),
 			  queue_to_list(&options->actions));
     
     CAST_SUBTYPE(command, client_connect, o);
