@@ -548,13 +548,23 @@ do_lsh_lookup(struct lookup_verifier *c,
 				1  
 				);
 
+	  struct lsh_string *babble = 
+	    lsh_string_bubblebabble( 
+				    hash_string(&crypto_sha1_algorithm,
+						key,
+						0),
+				    1 
+				    );
+	  
 	  if (!INTERACT_YES_OR_NO
 	      (self->tty,
 	       ssh_format("Received unauthenticated key for host %lS\n"
-			  "Fingerprint: %lfS\n"
-			  "(lsh-spki fingerprint: %lfxS)\n"
+			  "Fingerprints:\n"
+			  "Bubble Babble SHA1: %lfS\n"
+			  "Keyblob MD5:        %lfS\n"
+			  "SPKI SHA1:          %lfxS)\n"
 			  "Do you trust this key? (y/n) ",
-			  self->host->ip, fingerprint, spki_fingerprint), 0, 1))
+			  self->host->ip, babble, fingerprint, spki_fingerprint), 0, 1))
 	    return NULL;
 	}
 
