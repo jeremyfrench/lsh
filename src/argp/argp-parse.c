@@ -513,15 +513,16 @@ parser_init (struct parser *parser, const struct argp *argp,
 #define CLEN (szs.num_child_inputs * sizeof (void *))
 #define LLEN ((szs.long_len + 1) * sizeof (struct option))
 #define SLEN (szs.short_len + 1)
-
+#define STORAGE(offset) (((char *) parser->storage) + (offset))
+  
   parser->storage = malloc (GLEN + CLEN + LLEN + SLEN);
   if (! parser->storage)
     return ENOMEM;
 
   parser->groups = parser->storage;
-  parser->child_inputs = parser->storage + GLEN;
-  parser->long_opts = parser->storage + GLEN + CLEN;
-  parser->short_opts = parser->storage + GLEN + CLEN + LLEN;
+  parser->child_inputs = STORAGE(GLEN);
+  parser->long_opts = STORAGE(GLEN + CLEN);
+  parser->short_opts = STORAGE(GLEN + CLEN + LLEN);
 
   memset (parser->child_inputs, 0, szs.num_child_inputs * sizeof (void *));
   parser_convert (parser, argp, flags);
