@@ -116,26 +116,60 @@ static void *xalloc(size_t size)
 
 #if DEBUG_ALLOC
 unsigned number_of_strings = 0;
-#endif
+struct lsh_string *all_strings = NULL;
+
+static void sanity_check_string_list(void)
+{
+  unsigned i = 0;
+  struct lsh_string *s;
+
+  if (!all_strings)
+    {
+      assert(!number_of_strings);
+      return;
+    }
+  assert(!all_strings->header.prev);
+  
+  for(i = 0, s = all_strings; s; s = s->header.next, i++)
+    {
+      if (s->header.next)
+	{
+	  assert(s->header.next->header.prev = s);
+	}
+    }
+  assert (i == number_of_strings);
+}
 
 struct lsh_string *
-lsh_string_alloc(UINT32 length)
+lsh_string_alloc_clue(UINT32 length, const char *clue)
 {
   /* NOTE: The definition of the struct contains a char array of
    * length 1, so the below includes space for a terminating NUL. */
   
   struct lsh_string *s
     = xalloc(sizeof(struct lsh_string) + length);
-#if DEBUG_ALLOC
+
+  sanity_check_string_list();
+  
   s->header.magic = -1717;
   number_of_strings++;
-#endif
+
+  s->header.clue = clue;
+  s->header.next = all_strings;
+  s->header.prev = NULL;
+  if (s->header.next)
+    s->header.next->header.prev = s;
+  all_strings = s;
+
+  sanity_check_string_list();
+
   s->length = length;
   s->data[length] = '\0';
   s->sequence_number = 0;
   
   return s;
 }
+#endif
 
 void
 lsh_string_free(struct lsh_string *s)
@@ -144,6 +178,8 @@ lsh_string_free(struct lsh_string *s)
     return;
 
 #if DEBUG_ALLOC
+  sanity_check_string_list();
+
   assert(number_of_strings);
   number_of_strings--;
 
@@ -151,6 +187,19 @@ lsh_string_free(struct lsh_string *s)
     fatal("lsh_string_free: Not string!\n");
   if (s->data[s->length])
     fatal("lsh_string_free: String not NUL-terminated.\n");
+
+  if (s->header.next)
+    s->header.next->header.prev = s->header.prev;
+  
+  if (s->header.prev)
+    s->header.prev->header.next = s->header.next;
+  else
+    {
+      assert (all_strings == s);
+      all_strings = s->header.next;
+    }
+  
+  sanity_check_string_list();	
 #endif
 
 #if 0

@@ -45,7 +45,18 @@
  * function. Pointers into a packet are valid only while you own it.
  * */
 
+#if DEBUG_ALLOC
+extern struct lsh_string *all_strings;
+
+struct lsh_string *lsh_string_alloc_clue(UINT32 size, const char *clue);
+
+#define lsh_string_alloc(size) \
+  (lsh_string_alloc_clue((size), (__FILE__ ":" STRING_LINE ": " FUNCTION_NAME)))
+
+#else
 struct lsh_string *lsh_string_alloc(UINT32 size);
+#endif
+
 void lsh_string_free(struct lsh_string *packet);
 
 struct lsh_object *lsh_object_alloc(struct lsh_class *class);
