@@ -1,4 +1,23 @@
+2000-09-04  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* Released 1.0.4.
+
 2000-09-03  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/rsa_keygen.c (rsa_generate_key): Can't compute a and b
+	before d.
+
+	* src/testsuite/keygen-2-test: Use lsh-writekey.
+	* src/testsuite/keygen-test: Likewise.
+
+	* src/rsa.c (make_rsa_algorithm): New argument NAME.
+	* src/rsa.h (rsa_algorithm): New attribute NAME.
+
+	* src/lsh-writekey.c (make_lsh_writekey_options): Added rsa
+	support. 
+
+	* src/dsa.h: New file, all dsa-related declarations moved here
+	from dsa_keygen.h (which is obsoleted) and publickey_crypto.h.
 
 	* configure.in: Bumped version to 1.0.4. 
 

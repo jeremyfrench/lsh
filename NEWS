@@ -1,3 +1,12 @@
+News for the 1.0.4 release
+
+	Fixed yet another bug in the userauth logic.
+
+	Some RSA support (so far, only lsh-keygen and lsh-writekey
+	support RSA). 408 hours left...
+
+	Support for the transport spki format in sexp_parser.c.
+
 News for the 1.0.3 release
 
 	Fixed bug in client userauth logic.
