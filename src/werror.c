@@ -79,6 +79,7 @@ werror_argp_parser(int key, char *arg UNUSED,
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_END:
       program_name = state->name;
+      break;
     case 'q':
       quiet_flag = 1;
       break;
@@ -508,7 +509,9 @@ werror(const char *format, ...)
 {
   va_list args;
 
-  if (!quiet_flag)
+  /* It is somewhat reasonable to use both -q and -v. In this case
+   * werror()-messages should be displayed. */
+  if (verbose_flag || !quiet_flag)
     {
       va_start(args, format);
       werror_vformat(format, args);
