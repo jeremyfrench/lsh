@@ -209,29 +209,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      
 	      self->label = ssh_format("%lz@%lz", name, host);
 	    }
-	  while (!self->passphrase)
-	    {
-	      struct lsh_string *pw;
-	      struct lsh_string *again;
-
-	      /* FIXME: Move to process_private */
-	      pw = INTERACT_READ_PASSWORD(self->tty, 500,
-					  ssh_format("Enter new passphrase: "), 1);
-	      if (!pw)
-		argp_failure(state, EXIT_FAILURE, 0, "Aborted.");
-
-	      again = INTERACT_READ_PASSWORD(self->tty, 500,
-					     ssh_format("Again: "), 1);
-	      if (!again)
-		argp_failure(state, EXIT_FAILURE, 0, "Aborted.");
-
-	      if (lsh_string_eq(pw, again))
-		self->passphrase = pw;
-	      else
-		lsh_string_free(pw);
-		  
-	      lsh_string_free(again);
-	    }
 	  self->r = (self->server
 		     ? make_system_random()
 		     : make_user_random(getenv(ENV_HOME)));
@@ -356,6 +333,37 @@ process_private(struct lsh_string *key,
                    ALIST_GET(options->crypto_algorithms, ATOM_HMAC_SHA1));
       assert(hmac);
       
+      while (!options->passphrase)
+	{
+	  struct lsh_string *pw;
+	  struct lsh_string *again;
+	  
+	  pw = INTERACT_READ_PASSWORD(options->tty, 500,
+				      ssh_format("Enter new passphrase: "), 1);
+	  if (!pw)
+	    {
+	      werror("Aborted.");
+	      return NULL;
+	    }
+
+	  
+	  again = INTERACT_READ_PASSWORD(options->tty, 500,
+					 ssh_format("Again: "), 1);
+	  if (!again)
+	    {
+	      werror("Aborted.");
+	      lsh_string_free(pw);
+	      return NULL;
+	    }
+
+	  if (lsh_string_eq(pw, again))
+	    options->passphrase = pw;
+	  else
+	    lsh_string_free(pw);
+	  
+	  lsh_string_free(again);
+	}
+
       return spki_pkcs5_encrypt(options->r,
 				options->label,
 				ATOM_HMAC_SHA1,
