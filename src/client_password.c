@@ -39,7 +39,7 @@
 #include <termios.h>
 #include <pwd.h>
 
-struct lsh_string *read_password(int max_length,
+struct lsh_string *read_password(int max_length UNUSED,
 				 struct lsh_string *prompt, int free)
 {
   /* NOTE: Ignores max_length; instead getpass()'s limit applies. */
