@@ -50,55 +50,6 @@
 
 #include <signal.h>
 
-/* Socket workround */
-#ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
-
-/* There's an how++ missing in the af_unix shutdown implementation of
- * some linux versions. Try an ugly workaround. */
-#ifdef linux
-
-/* From src/linux/include/net/sock.h */
-#define RCV_SHUTDOWN	1
-#define SEND_SHUTDOWN	2
-
-#undef SHUT_RD
-#undef SHUT_WR
-#undef SHUT_RD_WR
-
-#define SHUT_RD RCV_SHUTDOWN
-#define SHUT_WR SEND_SHUTDOWN
-#define SHUT_RD_WR (RCV_SHUTDOWN | SEND_SHUTDOWN)
-
-#else /* !linux */
-
-/* Don't know how to work around the broken shutdown(). So disable it
- * completely. */
-
-#define SHUTDOWN(fd, how) 0
-
-#endif /* !linux */
-#endif /* !SHUTDOWN_WORKS_WITH_UNIX_SOCKETS */
-
-#ifndef SHUTDOWN
-#define SHUTDOWN(fd, how) (shutdown((fd), (how)))
-#endif
-
-#ifndef SHUT_RD
-#define SHUT_RD 0
-#endif
-
-#ifndef SHUT_WR
-#define SHUT_WR 1
-#endif
-
-#ifndef SHUT_RD_WR
-#define SHUT_RD_WR 2
-#endif
-
-#ifndef UT_NAMESIZE
-#  define UT_NAMESIZE 8		/* FIXME: sane default value */
-#endif
-
 #include "server_session.c.x"
 
 
@@ -355,6 +306,7 @@ make_exit_shell(struct server_session *session)
        (reaper object reap)))
 */
 
+#if 0
 /* Creates a one-way socket connection. Returns 1 on success, 0 on
  * failure. fds[0] is for reading, fds[1] for writing (like for the
  * pipe() system call). */
@@ -390,17 +342,18 @@ make_pipe(int *fds)
   
   return 1;
 }
+#endif
 
 static int
 make_pipes(int *in, int *out, int *err)
 {
   int saved_errno;
   
-  if (make_pipe(in))
+  if (lsh_make_pipe(in))
     {
-      if (make_pipe(out))
+      if (lsh_make_pipe(out))
 	{
-	  if (make_pipe(err))
+	  if (lsh_make_pipe(err))
 	    {
               return 1;
             }
@@ -462,7 +415,7 @@ static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
                   return 1;
                 } 
 #else /* !BASH_WORKAROUND */
-	      if (make_pipe(err))
+	      if (lsh_make_pipe(err))
 		{
 		  /* Success! */
 		  return 1;
