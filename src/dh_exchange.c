@@ -33,9 +33,9 @@
 #include "xalloc.h"
 
 void
-init_diffie_hellman_instance(struct diffie_hellman_method *m,
-			     struct diffie_hellman_instance *self,
-			     struct ssh_connection *c)
+init_dh_instance(struct dh_method *m,
+		 struct dh_instance *self,
+		 struct ssh_connection *c)
 {
   struct lsh_string *s;
   /* FIXME: The allocator could do this kind of initialization
@@ -49,7 +49,7 @@ init_diffie_hellman_instance(struct diffie_hellman_method *m,
   self->hash = MAKE_HASH(m->H);
   self->exchange_hash = NULL;
 
-  debug("init_diffie_hellman_instance()\n"
+  debug("init_dh_instance()\n"
 	" V_C: %pS\n", c->versions[CONNECTION_CLIENT]);
   debug(" V_S: %pS\n", c->versions[CONNECTION_SERVER]);
   debug(" I_C: %pS\n", c->literal_kexinits[CONNECTION_CLIENT]);
@@ -71,10 +71,10 @@ init_diffie_hellman_instance(struct diffie_hellman_method *m,
   c->literal_kexinits[CONNECTION_SERVER] = NULL;
 }
 
-struct diffie_hellman_method *
+struct dh_method *
 make_dh1(struct randomness *r)
 {
-  NEW(diffie_hellman_method, res);
+  NEW(dh_method, res);
   mpz_t p;
   mpz_t g;
   mpz_t order;
@@ -106,7 +106,7 @@ make_dh1(struct randomness *r)
 
 /* R is set to a random, secret, exponent, and V set to is g^r */
 void
-dh_generate_secret(struct diffie_hellman_method *self,
+dh_generate_secret(struct dh_method *self,
 		   mpz_t r, mpz_t v)
 {
   mpz_t tmp;
@@ -122,14 +122,14 @@ dh_generate_secret(struct diffie_hellman_method *self,
 }
 
 struct lsh_string *
-dh_make_client_msg(struct diffie_hellman_instance *self)
+dh_make_client_msg(struct dh_instance *self)
 {
   dh_generate_secret(self->method, self->secret, self->e);
   return ssh_format("%c%n", SSH_MSG_KEXDH_INIT, self->e);
 }
 
 int
-dh_process_client_msg(struct diffie_hellman_instance *self,
+dh_process_client_msg(struct dh_instance *self,
 		      struct lsh_string *packet)
 {
   struct simple_buffer buffer;
@@ -149,47 +149,40 @@ dh_process_client_msg(struct diffie_hellman_instance *self,
   return 1;
 }
 
-#if 0
-void dh_hash_update(struct diffie_hellman_instance *self,
-		    struct lsh_string *packet)
-{
-  debug("dh_hash_update, length = %i, data:\n", packet->length);
-  debug_safe(packet->length, packet->data);
-  debug("\n");
-  
-  HASH_UPDATE(self->hash, packet->length, packet->data);
-}
-#endif
-
-/* Hashes server key, e and f */
 void
-dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
+dh_hash_update(struct dh_instance *self,
+	       struct lsh_string *s, int free)
 {
-  struct lsh_string *s = ssh_format("%S%n%n%n",
-				    self->server_key,
-				    self->e, self->f,
-				    self->K);
-  debug("dh_hash_digest()\n '%pS'\n", s);
+  debug("dh_hash_update: %xS\n", s);
   
   HASH_UPDATE(self->hash, s->length, s->data);
-  lsh_string_free(s);
+  if (free)
+    lsh_string_free(s);
+}
 
-  HASH_DIGEST(self->hash, digest);
+/* Hashes e, f, and the shared secret key */
+void
+dh_hash_digest(struct dh_instance *self)
+{
+  dh_hash_update(self, ssh_format("%n%n%n",
+				  self->e, self->f,
+				  self->K), 1);
+  self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
+  HASH_DIGEST(self->hash, self->exchange_hash->data);
 }
 
 void
-dh_make_server_secret(struct diffie_hellman_instance *self)
+dh_make_server_secret(struct dh_instance *self)
 {
   dh_generate_secret(self->method, self->secret, self->f);
 }
 
 struct lsh_string *
-dh_make_server_msg(struct diffie_hellman_instance *self,
+dh_make_server_msg(struct dh_instance *self,
 		   struct signer *s)
 {
-  self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
-  
-  dh_hash_digest(self, self->exchange_hash->data);
+  dh_hash_update(self, ssh_format("%S", self->server_key), 1);
+  dh_hash_digest(self);
 
   return ssh_format("%c%S%n%fS",
 		    SSH_MSG_KEXDH_REPLY,
@@ -200,7 +193,7 @@ dh_make_server_msg(struct diffie_hellman_instance *self,
 }
 
 int
-dh_process_server_msg(struct diffie_hellman_instance *self,
+dh_process_server_msg(struct dh_instance *self,
 		      struct lsh_string *packet)
 {
   struct simple_buffer buffer;
@@ -218,17 +211,17 @@ dh_process_server_msg(struct diffie_hellman_instance *self,
 	&& parse_eod(&buffer)))
     return 0;
 
+  dh_hash_update(self, ssh_format("%S", self->server_key), 1);
+  
   GROUP_POWER(self->method->G, self->K, self->f, self->secret);
   return 1;
 }
 	  
 int
-dh_verify_server_msg(struct diffie_hellman_instance *self,
+dh_verify_server_msg(struct dh_instance *self,
 		     struct verifier *v)
 {
-  self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
-  
-  dh_hash_digest(self, self->exchange_hash->data);
+  dh_hash_digest(self);
 
   return VERIFY(v,
 		self->hash->hash_size, self->exchange_hash->data,
