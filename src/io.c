@@ -1061,12 +1061,16 @@ sockaddr2info(size_t addr_len UNUSED,
 			      ip & 0xff);
 	return info;
       }
+      /* FIXME: This ssh_format call is broken, %xi is not a valid
+       * format specifier. So this code needs to be rewritten. */
+
 #if WITH_IPV6
     case AF_INET6:
       {
 	struct sockaddr_in6 *in = (struct sockaddr_in6 *) addr;
 	UINT8 *ip = in->sin6_addr.s6_addr;
 	info->port = ntohs(in->sin6_port);
+#if 0
 	info->ip = ssh_format("%xi:%xi:%xi:%xi:%xi:%xi:%xi:%xi",
 			      (ip[0]  << 8) | ip[1],
 			      (ip[2]  << 8) | ip[3],
@@ -1076,9 +1080,12 @@ sockaddr2info(size_t addr_len UNUSED,
 			      (ip[10] << 8) | ip[11],
 			      (ip[12] << 8) | ip[13],
 			      (ip[14] << 8) | ip[15]);
+#else
+	info->ip = ssh_format("%lz", "Unknown IPv6 address");
+#endif
 	return info;
       }
-#endif
+#endif /* WITH_IPV6 */
     case AF_UNIX:
       /* Silently return NULL. This happens when a gateway client
        * connects. */
