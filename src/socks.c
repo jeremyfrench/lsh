@@ -331,6 +331,7 @@ do_read_socks(struct read_handler **h,
 
   available = self->length - self->pos;
   lsh_string_write(self->buffer, self->pos, available, data);
+  self->pos = self->length;
 
   p = lsh_string_data(self->buffer);
   
