@@ -110,6 +110,7 @@ This manual explains how to use and hack @command{lsh}; it corresponds to
 * Getting started::             
 * Invoking lsh::                
 * Invoking lshd::               
+* Files and environment variables::  
 * Terminology::                 
 * Concept Index::               
 
@@ -1212,7 +1213,7 @@ Note that all these options are orthogonal. If you use @option{--trace},
 you usually want to add @option{-v} as well; @option{--trace} does not
 do that automatically.
 
-@node Invoking lshd, Terminology, Invoking lsh, Top
+@node Invoking lshd, Files and environment variables, Invoking lsh, Top
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @command{lshd}
 @anchor{lshd-usage}
@@ -1321,8 +1322,60 @@ Disable support for tcp forwarding, in both directions.
 
 @end table
 
+@node Files and environment variables, Terminology, Invoking lshd, Top
+@comment  node-name,  next,  previous,  up
+@chapter Files and environment variables
 
-@node Terminology, Concept Index, Invoking lshd, Top
+This chapters describes all files and all environment variables that
+are used by @command{lsh}, @command{lshd}, and related programs.
+
+There are a few environment variables that modifies the behaviour of
+the @command{lsh} programs. And there are also a handful of variables
+that are setup by @command{lshd} when starting user processes.
+
+@table @env
+@item DISPLAY
+When @acronym{X}-forwarding is enabled, @env{DISPLAY} specifies the
+local display. Used by @command{lsh}.
+
+@item HOME
+User's home directory. Determines where client programs looks for the
+@file{~/.lsh} directory. When @command{lshd} starts a user program, it
+sets @env{HOME} from the value in the @file{/etc/passwd} file, except
+if @command{lshd} is running as an ordinary user process. In the
+latter case, the new process inherits @command{lsh}'s own value of
+@env{HOME}.
+ 
+@item LOGNAME
+The users log in name. USed as the default name for logging into
+remote systems. Set by @command{lshd} when starting new processes.
+
+@item LSH_YARROW_SEED_FILE
+If set, it points out the location of the seed-file for the randomness
+generator. Recognized both by @command{lshd} and the client programs.
+
+@item TERM
+The type of the local terminal. If the client requests a pty for a
+remote process, the value of @env{TERM} is transferred from client to
+server.
+
+@item TMPDIR
+Determines where the unix socket used by @command{lshg} is located in
+the filesystem.
+
+@item TZ
+Time zone. Processes started by @command{lshd} inherit the value of
+this variable from the server.
+
+@c used by xlib @item XAUTHORITY
+@end table
+
+Files used by the lsh client: (XXX Not yet written)
+
+@table @file
+@end table
+
+@node Terminology, Concept Index, Files and environment variables, Top
 @comment  node-name,  next,  previous,  up
 @chapter Terminology
 
