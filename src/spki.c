@@ -43,6 +43,7 @@
 #include "io.h"
 #include "interact.h"
 #include "list.h"
+#include "lsh_string.h"
 #include "parse.h"
 #include "publickey_crypto.h"
 #include "randomness.h"
@@ -82,7 +83,7 @@ make_ssh_hostkey_tag(const char *host)
       uint8_t *p = memchr(s, '.', left);
       if (!p)
 	{
-	  memcpy(reversed->data, s, left);
+	  lsh_string_write(reversed, 0, left, s);
 	  break;
 	}
       else
@@ -90,14 +91,14 @@ make_ssh_hostkey_tag(const char *host)
 	  uint32_t segment = p - s;
 	  left -= segment;
 
-	  memcpy(reversed->data + left, s, segment);
-	  reversed->data[--left] = '.';
+	  lsh_string_write(reversed, left, segment, s);
+	  lsh_string_putc(reversed, --left, '.');
 	  s = p+1;
 	}
     }
 
-  tag = lsh_sexp_format(0, "(tag(ssh-hostkey%s))",
-			reversed->length, reversed->data);
+  tag = lsh_string_format_sexp(0, "(tag(ssh-hostkey%s))",
+			       STRING_LD(reversed));
   lsh_string_free(reversed);
 
   return tag;
@@ -178,17 +179,17 @@ spki_make_signer(struct alist *algorithms,
 		 int *algorithm_name)
 {
   struct sexp_iterator i;
-  uint8_t *decoded;  
-
-  decoded = alloca(key->length);
-  memcpy(decoded, key->data, key->length);
+  struct lsh_string *decoded = lsh_string_dup(key);
+  struct signer *res = NULL;
   
-  if (sexp_transport_iterator_first(&i, key->length, decoded)
+  if (lsh_string_transport_iterator_first(decoded, &i)
       && sexp_iterator_check_type(&i, "private-key"))
-    return spki_sexp_to_signer(algorithms, &i, algorithm_name);
+    res = spki_sexp_to_signer(algorithms, &i, algorithm_name);
 
-  werror("spki_make_signer: Expected private-key expression.\n");
-  return NULL;
+  lsh_string_free(decoded);
+  if (!res)
+    werror("spki_make_signer: Expected private-key expression.\n");
+  return res;
 }
 
 struct lsh_string *
@@ -202,9 +203,9 @@ spki_hash_data(const struct hash_algorithm *algorithm,
   hash_update(hash, length, data);
   hash_digest(hash, out);
 
-  return lsh_sexp_format(0, "(hash%0s%s)",
-			 "hash", get_atom_name(algorithm_name),
-			 HASH_SIZE(hash), out);
+  return lsh_string_format_sexp(0, "(hash%0s%s)",
+				"hash", get_atom_name(algorithm_name),
+				HASH_SIZE(hash), out);
 }  
 
 static void
@@ -275,7 +276,7 @@ spki_authorize(struct spki_context *self,
   struct spki_iterator i;
   const struct spki_5_tuple_list *p;
   
-  if (!spki_iterator_first(&i, access->length, access->data)
+  if (!spki_iterator_first(&i, STRING_LD(access))
       || !spki_parse_tag(&self->db, &i, &tag))
     {
       werror("spki_authorize: Invalid tag.\n");
@@ -337,7 +338,7 @@ spki_pkcs5_encrypt(struct randomness *r,
 		   uint32_t salt_length,
 		   struct lsh_string *password,
 		   uint32_t iterations,
-                   struct lsh_string *data)
+                   const struct lsh_string *data)
 {
   struct lsh_string *key;
   struct lsh_string *salt;
@@ -349,41 +350,33 @@ spki_pkcs5_encrypt(struct randomness *r,
   assert(prf);
 
   /* NOTE: Allows random to be of bad quality */
-  salt = lsh_string_alloc(salt_length);
-  RANDOM(r, salt->length, salt->data);
-    
-  key = lsh_string_alloc(crypto->key_size);
+  salt = lsh_string_random(r, salt_length);
 
-  pkcs5_derive_key(prf,
-		   password->length, password->data,
-		   salt->length, salt->data,
-		   iterations,
-		   key->length, key->data);
+  key = pkcs5_derive_key(prf,
+			 password, salt, iterations,
+			 crypto->key_size);
 
   if (crypto->iv_size)
-    {
-      iv = lsh_string_alloc(crypto->iv_size);
-      RANDOM(r, iv->length, iv->data);
-    }
+    iv = lsh_string_random(r, crypto->iv_size);
   else
     iv = NULL;
 
   encrypted = crypt_string_pad(MAKE_ENCRYPT(crypto,
-					    key->data,
-					    iv ? iv->data : NULL),
+					    lsh_string_data(key),
+					    iv ? lsh_string_data(iv) : NULL),
 			       data, 0);
   
   /* FIXME: Handle iv == NULL. */
-  value = lsh_sexp_format(0, "(password-encrypted%s(Xpkcs5v2%0s"
-			  "(iterations%i)(salt%s))"
-			  "(%0s(iv%s)(data%s)))",
-			  label->length, label->data,
-			  get_atom_name(prf_name),
-			  iterations,
-			  salt->length, salt->data,
-			  get_atom_name(crypto_name),
-			  iv->length, iv->data,
-			  encrypted->length, encrypted->data);
+  value = lsh_string_format_sexp(0, "(password-encrypted%s(Xpkcs5v2%0s"
+				 "(iterations%i)(salt%s))"
+				 "(%0s(iv%s)(data%s)))",
+				 STRING_LD(label),
+				 get_atom_name(prf_name),
+				 iterations,
+				 STRING_LD(salt),
+				 get_atom_name(crypto_name),
+				 STRING_LD(iv),
+				 STRING_LD(encrypted));
 
   lsh_string_free(key);
   lsh_string_free(salt);
@@ -454,7 +447,7 @@ parse_pkcs5_payload(struct sexp_iterator *i, struct alist *crypto_algorithms,
 
       *iv = lsh_sexp_to_string(&values[1], NULL);
 
-      if ((*iv)->length != (*crypto)->iv_size)
+      if (lsh_string_length(*iv) != (*crypto)->iv_size)
 	return 0;
     }
   else if (!sexp_iterator_assoc(i, 1, names, values))
@@ -462,7 +455,8 @@ parse_pkcs5_payload(struct sexp_iterator *i, struct alist *crypto_algorithms,
 
   *data = lsh_sexp_to_string(&values[0], NULL);
     
-  if ((*crypto)->block_size && ((*data)->length % (*crypto)->block_size))
+  if ((*crypto)->block_size
+      && (lsh_string_length(*data) % (*crypto)->block_size))
     {
       werror("Payload data doesn't match block size for pkcs5v2.\n");
       return 0;
@@ -480,7 +474,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 {
   struct sexp_iterator i;
   
-  if (! (sexp_iterator_first(&i, expr->length, expr->data)
+  if (! (sexp_iterator_first(&i, STRING_LD(expr))
 	 && sexp_iterator_check_type(&i, "password-encrypted")))
     return expr;
 
@@ -526,7 +520,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 				   ssh_format("Passphrase for key `%lS': ",
 					      label));
 	struct lsh_string *clear;
-	uint8_t *key;
+	struct lsh_string *key;
 	
 	if (!password)
 	  {
@@ -534,24 +528,22 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 	    goto fail;
 	  }
 
-	key = alloca(crypto->key_size);
-	pkcs5_derive_key(mac,
-			 password->length, password->data,
-			 salt->length, salt->data,
-			 iterations,
-			 crypto->key_size, key);
-	    
-	clear = crypt_string_unpad(MAKE_DECRYPT(crypto,
-						key,
-						iv ? iv->data : NULL),
-				   data, 0);
+	key = pkcs5_derive_key(mac,
+			       password, salt, iterations,
+			       crypto->key_size);
 
+	clear
+	  = crypt_string_unpad(MAKE_DECRYPT(crypto,
+					    lsh_string_data(key),
+					    iv ? lsh_string_data(iv) : NULL),
+			       data, 0);
 	lsh_string_free(data);
 	lsh_string_free(expr);
 	lsh_string_free(iv);
 	lsh_string_free(password);
 	lsh_string_free(salt);
 	lsh_string_free(label);
+	lsh_string_free(key);
 	    	    
 	if (!clear)
 	  werror("Bad password for pkcs5v2.\n");
