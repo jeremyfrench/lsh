@@ -78,6 +78,14 @@ if test x$with_idea = xyes ; then
   AC_DEFINE(WITH_IDEA)
 fi
 
+AC_ARG_WITH(ssh2_dsa_kludge,
+  [--with-ssh2-dsa-kludge    Support buggy ssh2 clients/servers],,
+  [with_ssh2_dsa_kludge=yes])
+
+if test x$with_ssh2_dsa_kludge = xyes ; then
+  AC_DEFINE(DATAFELLOWS_SSH2_SSH_DSA_KLUDGE)
+fi
+
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
@@ -130,6 +138,7 @@ AC_CHECK_HEADERS(poll.h sys/poll.h)
 AC_CHECK_HEADERS(crypt.h)
 AC_CHECK_HEADERS(pty.h)
 AC_CHECK_HEADERS(stropts.h)
+AC_CHECK_HEADERS(syslog.h)
 
 dnl FIXME: Define a new macro for checking if structure members are
 dnl available.
