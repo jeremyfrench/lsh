@@ -1,3 +1,115 @@
+Sun Apr  4 22:18:54 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server.c (do_spawn_shell): Use the make_io_fd function.
+
+	* src/lsh_writekey.c, src/sexp_test.c (main): Use the make_io_fd
+ 	function.
+
+	* src/tcpforward.c (do_tcpip_connected): Use the make_io_fd
+ 	function.
+
+	* src/lsh.c, src/lshd.c: Use the control language language.
+ 	Commented out a lot of features that are currently broken.
+
+	* src/keyexchange.c (make_kexinit_handler): Removed finished
+	argument. 
+
+	* src/keyexchange.h (keyexchange_algorithm): Removed finished
+	argument from the init method. 
+
+	* src/connection_commands.c (connection_line_handler): Removed
+	continuation attribute.
+	(do_line): Don't invoke any continuation here; return LSH_OK and
+	let the keyexchange-init handlers do their work.
+	(make_connection_read_line): Removed continuation argument.
+
+	* src/connection_commands.c (connection_command): Added randomness
+ 	attribute.
+	(do_connection): Added call to connection_init_io.
+	(make_handshake_command): Added randomness argument.
+
+	* src/client_keyexchange.c (do_client): Removed finished
+ 	attribute.
+	(do_handle_dh_reply): Pass connection to the
+ 	connection->established continuation (if non-NULL).
+
+	* src/server_keyexchange.c (dh_server): Removed finished
+	attribute.
+	(do_handle_dh_init): Pass connection to the
+	connection->established continuation (if non-NULL).
+
+	* src/channel_commands.h (channel_open_command): Fixed declaration
+	of the new_channel method. 
+
+	* src/channel.c (do_channel_open_confirm, do_channel_open_failure,
+ 	init_channel): Use the channel_open_continuation attribute.
+
+	* src/io_commands.c (do_listen, do_connect): Use new
+ 	address_info2sockaddr_in() function.
+	(do_listen): If listen() failes, return LSH_COMMAND_FAILED, and
+	never invoke the command's continuation.
+	(make_simple_listen): New function.
+	(io_log_peer_command): New command.
+
+	* src/lsh.h (LSH_COMMAND_FAILED): New status code.
+
+	* src/io.c (get_portno): New function.
+	(tcp_addr): Commented out this function.
+	(make_address_info_c): New function.
+	(sockaddr_in2address_info): Renamed from sock
+	(sockaddr2info): Fixed bug in format string.
+	(address_info2sockaddr_in): New function.
+
+	* src/format.c (format_decimal): New function (previously
+	duplicated in several places).
+	(ssh_format): New format %di to write decimal integers.
+	(write_decimal_length): Use the format_decimal() function.
+
+	* src/werror.c (werror_decimal): Use the format_decimal() function.
+
+Fri Apr  2 17:00:13 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/make_class (process-expr): Fixed handling of the PARAMS
+	attribute. Declare generated functions static.
+
+	* src/io_commands.c (make_simple_connect): New function.
+
+Tue Mar 30 21:48:08 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/read_line.c (do_read_line): Bug fix noticed by Bazsi.
+
+Fri Mar 26 03:05:16 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io_commands.c (listen_command_callback): Added BACKEND
+	variable.  
+	(do_connect): New function.
+
+	* src/client_keyexchange.c (do_handle_dh_reply): Invoke the
+ 	connection's ESTABLISHED continuation if the key exchange is
+ 	successful.
+	(dh_client_exchange, do_init_client_dh): Removed FINISHED
+ 	attribute.
+
+	* src/command.c, src/command.h (command_die_on_null): New command.
+ 	Don't know how useful it is.
+
+	* src/connection.c (make_ssh_connection): Take a continuation as
+	argument. 
+
+	* src/connection.h (ssh_connection): Added an ESTABLISHED
+	continuation, which replaces the FINISHED field previously found
+	in the keyexchange-related objects.
+
+	* src/keyexchange.c (kexinit_handler): Removed the FINISHED
+	attribute. 
+	(initiate_keyexchange): Deleted some of the arguments. The kexinit
+	is found inside the connection object, and so is any
+	first_kex_packet. 
+
+	* src/keyexchange.h: Changed the MAKE_KEXINIT method back. Added a
+	first_kex_packet field to the kexinit object, which may be filled
+	in by MAKE_KEXINIT.
+
 Wed Mar 24 02:56:41 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/channel_commands.c, src/channel_commands.h: New files.
