@@ -34,7 +34,6 @@
 #include "read_line.h"
 #include "read_packet.h"
 #include "reaper.h"
-#include "service.h"
 #include "ssh.h"
 #include "unpad.h"
 #include "werror.h"
@@ -47,6 +46,22 @@
 
 #include "server.c.x"
 
+
+static struct lsh_string *
+format_service_accept(int name)
+{
+  return ssh_format("%c%a", SSH_MSG_SERVICE_ACCEPT, name);
+}
+
+#if DATAFELLOWS_WORKAROUNDS	      
+static struct lsh_string *
+format_service_accept_kludge(void)
+{
+  return ssh_format("%c", SSH_MSG_SERVICE_ACCEPT);
+}
+#endif /* DATAFELLOWS_WORKAROUNDS */
+
+
 /* GABA:
    (class
      (name service_handler)
@@ -56,13 +71,6 @@
        (c object command_continuation)
        (e object exception_handler)))
 */
-
-#if DATAFELLOWS_WORKAROUNDS	      
-static struct lsh_string *format_service_accept_kludge(void)
-{
-  return ssh_format("%c", SSH_MSG_SERVICE_ACCEPT);
-}
-#endif /* DATAFELLOWS_WORKAROUNDS */
 
 static void
 do_service_request(struct packet_handler *c,
