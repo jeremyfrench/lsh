@@ -61,6 +61,11 @@ struct command open_forwarded_x11;
 
 #if WITH_X11_FORWARD
 
+#ifndef SUN_LEN
+# define SUN_LEN(x) \
+  (offsetof(struct sockaddr_un, sun_path) + strlen((x)->sun_path))
+#endif
+
 #define X11_WINDOW_SIZE 10000
 
 /* GABA:
