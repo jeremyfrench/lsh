@@ -270,6 +270,9 @@ struct command_continuation *
 make_delay_continuation(struct command *f,
 			struct command_continuation *c);
 
+/* Useful clobal commands */
+#define PROG1 (&command_K.super.super)
+
 
 /* The GABA_* macros are used by automatically generated evaluation code */
 
