@@ -1,5 +1,11 @@
 2004-11-19  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/io.c (io_final): Assert that nfiles == 0.
+	(do_buffered_read): Added trace output on EOF.
+	(do_consuming_read): Likewise.
+	(close_fd_write): Added trace output. Close the file if there's no
+	write buffer and no read callback.
+
 	* src/io.h (class lsh_fd): Deleted unused attribute next.
 
 2004-11-19  Pontus Freyhult  <pont@soua.net>
