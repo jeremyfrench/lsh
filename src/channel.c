@@ -873,14 +873,16 @@ static int do_channel_open_confirm(struct packet_handler *closure UNUSED,
 
       lsh_string_free(packet);
 
-      if (channel && channel->open_confirm)
+      if (channel && channel->open_continuation)
 	{
 	  channel->channel_number = remote_channel_number;
 	  channel->send_window_size = window_size;
 	  channel->send_max_packet = max_packet;
 
-	  return channel_process_status(connection->channels, local_channel_number,
-					CHANNEL_OPEN_CONFIRM(channel));
+	  return channel_process_status
+	    (connection->channels,
+	     local_channel_number,
+	     COMMAND_RETURN(channel->open_continuation, channel));
 	}
       werror("Unexpected SSH_MSG_CHANNEL_OPEN_CONFIRMATION on channel %i\n",
 	     local_channel_number);
@@ -920,9 +922,9 @@ static int do_channel_open_failure(struct packet_handler *closure UNUSED,
 
       /* lsh_string_free(packet); */
 
-      if (channel && channel->open_failure)
+      if (channel && channel->open_continuation)
 	{
-	  int res = CHANNEL_OPEN_FAILURE(channel);
+	  int res = COMMAND_RETURN(channel->open_continuation, NULL);
 
 	  lsh_string_free(packet);
 
@@ -1151,8 +1153,7 @@ void init_channel(struct ssh_channel *channel)
   channel->close = NULL;
   channel->eof = NULL;
 
-  channel->open_confirm = NULL;
-  channel->open_failure = NULL;
+  channel->open_continuation = NULL;
   channel->channel_success = NULL;
   channel->channel_failure = NULL;
 }
