@@ -9,4 +9,4 @@ if [ -z "$srcdir" ] ; then
 fi
 
 rm -f foo foo.pub
-../lsh_writekey foo < $srcdir/key-1.private
+../lsh_writekey -o foo < $srcdir/key-1.private
