@@ -341,49 +341,6 @@ DEFINE_COMMAND_SIMPLE(progn_command, a)
   return LIST_LENGTH(body) ? &make_parallell_progn(body)->super
     : &command_I.super.super;
 }
-
-/* Delayed application */
-
-struct delayed_apply *
-make_delayed_apply(struct command *f,
-		   struct lsh_object *a)
-{
-  NEW(delayed_apply, self);
-  self->f = f;
-  self->a = a;
-  return self;
-}
-
-/* GABA:
-   (class
-     (name delay_continuation)
-     (super command_continuation)
-     (vars
-       (f object command)
-       (up object command_continuation)))
-*/
-
-static void
-do_delay_continuation(struct command_continuation *c,
-		      struct lsh_object *o)
-{
-  CAST(delay_continuation, self, c);
-
-  COMMAND_RETURN(self->up, make_delayed_apply(self->f, o));
-}
-
-struct command_continuation *
-make_delay_continuation(struct command *f,
-			struct command_continuation *c)
-{
-  NEW(delay_continuation, self);
-  self->super.c = do_delay_continuation;
-  self->up = c;
-  self->f = f;
-
-  return &self->super;
-}
-
    
 /* Catch command
  *
