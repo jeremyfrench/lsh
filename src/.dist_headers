@@ -4,7 +4,6 @@ dist_headers = \
     algorithms.h \
     alist.h \
     atoms.h \
-    bignum.h \
     channel.h \
     channel_commands.h \
     channel_forward.h \
