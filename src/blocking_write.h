@@ -7,10 +7,10 @@
 
 struct blocking_write_processor
 {
-  struct packet_processor p;
+  struct abstract_write w;
   int fd;
 };
 
-struct packet_processor *make_blocking_write_procesor(int fd);
+struct abstract_write *make_blocking_write_procesor(int fd);
 
 #endif /* LSH_BLOCKING_WRITE_H_INCLUDED */

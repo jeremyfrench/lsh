@@ -32,9 +32,11 @@ binprefix =
 
 #### End of system configuration section. ####
 
-SRCS = atoms.c atoms_bignum.c debug.c encrypt.c format.c packet_dispatch.c \
-       pad.c parse.c server_keyexchange.c transport.c unpad.c void.c werror.c \
-       xalloc.c
+SRCS = atoms.c atoms_gperf.c atoms_table.c bignum.c client.c debug.c \
+	encrypt.c format.c io.c lsh.c packet_dispatch.c \
+	pad.c parse.c read_data.c read_line.c read_packet.c \
+	server_keyexchange.c session.c transport.c unpad.c void.c \
+	werror.c write_buffer.c xalloc.c
 
 OBJS = $(SRCS:.c=.o)
 all: lsh
@@ -43,7 +45,10 @@ all: lsh
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
 
-lsh: lsh.o client.o read_packet.o read_line.o
+lsh: lsh.o client.o read_packet.o read_line.o debug.o werror.o \
+     xalloc.o io.o void.o write_buffer.o
+#	$(CC) -o lsh $(CFLAGS) $<
+
 atoms_defines.h: atoms.in process_atoms
 	bash process_atoms header <atoms.in >atoms_defines.h
 

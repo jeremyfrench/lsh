@@ -2,15 +2,24 @@
  *
  */
 
+#include <errno.h>
+#include <string.h>
+
 #include "read_packet.h"
+#include "werror.h"
+#include "format.h"
+#include "xalloc.h"
+#include "io.h"
+#include "crypto.h"
 
 #define WAIT_HEADER 0
 #define WAIT_CONTENTS 1
 #define WAIT_MAC 2
 
-static struct read_handler *do_read_packet(struct read_packet *closure,
+static struct read_handler *do_read_packet(struct read_handler *c,
 					   struct abstract_read *read)
 {
+  struct read_packet *closure = (struct read_packet *) c;
   while(1)
     {
       switch(closure->state)
@@ -22,14 +31,15 @@ static struct read_handler *do_read_packet(struct read_packet *closure,
 	
 	    if (!closure->buffer)
 	      {
-		closure->buffer = lsh_string_alloc(crypt->block_size);
+		closure->buffer
+		  = lsh_string_alloc(closure->crypto->block_size);
 		closure->pos = 0;
 	      }
-	    n = A_READ(read, closure->buffer + closure->pos, left);
+	    n = A_READ(read, closure->buffer->data + closure->pos, left);
 	    switch(n)
 	      {
 	      case 0:
-		return closure;
+		return c;
 	      case A_FAIL:
 		werror("do_read_packet: read() failed, %s\n", strerror(errno));
 		/* Fall through */
@@ -54,8 +64,8 @@ static struct read_handler *do_read_packet(struct read_packet *closure,
 		  return 0;
 
 		if ( (length < 12)
-		     || (length < (closure->block_size - 4))
-		     || ( (length + 4) % closure->block_size))
+		     || (length < (closure->crypto->block_size - 4))
+		     || ( (length + 4) % closure->crypto->block_size))
 		  return 0;
 
 		/* Process this block before the length field is lost. */
@@ -72,7 +82,7 @@ static struct read_handler *do_read_packet(struct read_packet *closure,
 
 		/* Allocate full packet */
 		closure->buffer = ssh_format("%ls%lr",
-					     closure->block_size - 4,
+					     closure->crypto->block_size - 4,
 					     closure->buffer->data + 4,
 					     length, &closure->crypt_pos);
 
@@ -95,7 +105,7 @@ static struct read_handler *do_read_packet(struct read_packet *closure,
 	    switch(n)
 	      {
 	      case 0:
-		return closure;
+		return c;
 	      case A_FAIL:
 		werror("do_read_packet: read() failed, %s\n", strerror(errno));
 		/* Fall through */
@@ -130,7 +140,7 @@ static struct read_handler *do_read_packet(struct read_packet *closure,
 	      break;
 	  }
 	case WAIT_MAC:
-	  if (closure->mac_size)
+	  if (closure->mac->mac_size)
 	    {
 	      UINT32 left = closure->mac->mac_size - closure->pos;
 	      UINT8 *mac = alloca(left);
@@ -140,7 +150,7 @@ static struct read_handler *do_read_packet(struct read_packet *closure,
 	      switch(n)
 		{
 		case 0:
-		  return closure;
+		  return c;
 		case A_FAIL:
 		  werror("do_read_packet: read() failed, %s\n",
 			 strerror(errno));
@@ -168,11 +178,34 @@ static struct read_handler *do_read_packet(struct read_packet *closure,
 	    return 0;
 	  
 	  closure->buffer = NULL;
-	  state = WAIT_HEADER;
+	  closure->state = WAIT_HEADER;
 	  break;
 	  
 	default:
 	  fatal("Internal error\n");
 	}
     }
+}
+
+struct read_handler *make_read_packet(struct abstract_write *handler,
+				      UINT32 max_packet)
+{
+  struct read_packet *closure = xalloc(sizeof(struct read_packet));
+
+  closure->super.handler = (read_handler_f) do_read_packet;
+
+  closure->state = WAIT_HEADER;
+  closure->max_packet = max_packet;
+  closure->sequence_number = 0;
+
+  /* closure->pos = 0; */
+  closure->buffer = NULL;
+  /* closure->crypt_pos = 0; */
+
+  closure->mac = 0;
+  closure->crypto = &crypto_none_instance;
+
+  closure->handler = handler;
+
+  return &closure->super;
 }

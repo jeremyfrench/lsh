@@ -11,21 +11,21 @@
 struct dispatch_assoc
 {
   int msg;
-  struct packet_processor *f;
+  struct abstract_write *f;
 };
 
-struct dispatch_processor
+struct packet_dispatch
 {
-  struct packet_processor p;
-  struct packet_processor *other;
+  struct abstract_write p;
+  struct abstract_write *other;
   unsigned table_size;
   /* Should be sorted by message number */
   struct dispatch_assoc *dispatch_table;
 };
 
-struct packet_processor *
-make_dispatch_processor(unsigned size,
-			struct dispatch_assoc *table,
-			struct packet_processor *other);
+struct abstract_write *
+make_packet_dispatch(unsigned size,
+		     struct dispatch_assoc *table,
+		     struct abstract_write *other);
 
 #endif /* LSH_PACKET_DISPATH_H_INCLUDED */

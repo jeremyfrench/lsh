@@ -26,8 +26,8 @@ static int do_encrypt(struct encrypt_processor *closure,
   return apply_processor(closure->c.next, new);
 }
 
-struct packet_processor *
-make_encrypt_processor(struct packet_processor *continuation,
+struct abstract_write *
+make_packet_encrypt(struct abstract_write *continuation,
 		       unsigned mac_size,
 		       transform_function mac_function,
 		       void *mac_state,
@@ -44,7 +44,7 @@ make_encrypt_processor(struct packet_processor *continuation,
   closure->encrypt_function = encrypt_function;
   closure->encrypt_state = encrypt_state;
 
-  return (struct packet_processor *) closure;
+  return (struct abstract_write *) closure;
 }
 
     

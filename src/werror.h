@@ -5,9 +5,11 @@
 #ifndef LSH_ERROR_H_INCLUDED
 #define LSH_ERROR_H_INCLUDED
 
+#include "lsh_types.h"
+
 /* Global variables */
 extern int debug_flag;
-extern int quite_flag;
+extern int quiet_flag;
 
 void werror(char *format, ...) PRINTF_STYLE(1,2);
 void debug(char *format, ...) PRINTF_STYLE(1,2);

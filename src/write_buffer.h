@@ -45,5 +45,6 @@ struct write_callback
 };
 
 struct write_callback *write_buffer_alloc(UINT32 size);
+int write_buffer_pre_write(struct write_buffer *buffer);
 
 #endif /* LSH_WRITE_BUFFER_H_INCLUDED */

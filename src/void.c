@@ -5,18 +5,18 @@
 #include "void.h"
 #include "xalloc.h"
 
-static int do_ignore(struct void_processor *closure,
+static int do_ignore(struct abstract_write *closure,
 		     struct lsh_string *packet)
 {
   lsh_string_free(packet);
   return 1;
 }
 
-struct packet_processor *make_void_processor()
+struct abstract_write *make_void()
 {
-  struct void_processor *closure = xalloc(sizeof(struct void_processor));
+  struct abstract_write *closure = xalloc(sizeof(struct abstract_write));
 
-  closure->p.f = (abstract_write_f) do_ignore;
+  closure->write = (abstract_write_f) do_ignore;
 
-  return (struct packet_processor *) closure;
+  return closure;
 }

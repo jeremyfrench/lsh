@@ -33,13 +33,13 @@ static int do_unpad(struct unpad_processor *closure,
   return apply_processor(closure->c.next, new);
 }
 
-struct packet_processor *
-make_unpad_processor(struct packet_processor *continuation)
+struct abstract_write *
+make_packet_unpad(struct abstract_write *continuation)
 {
   struct unpad_processor *closure = xalloc(sizeof(struct unpad_processor));
 
   closure->c.p.f = (abstract_write_f) do_unpad;
   closure->c.next = continuation;
 
-  return (struct packet_processor *) closure;
+  return (struct abstract_write *) closure;
 }

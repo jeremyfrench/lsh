@@ -7,16 +7,16 @@
 #define LSH_DEBUG_H_INCLUDED
 
 #include <stdio.h>
-#include "transport.h"
+#include "abstract_io.h"
 
 struct debug_processor
 {
-  struct abstract_write_pipe c;
+  struct abstract_write_pipe super;
   FILE *output;
 };
 
-struct packet_processor *make_debug_processor(FILE *output,
-					      struct packet_processor *continuation);
+struct abstract_write *
+make_debug_processor(struct abstract_write *continuation, FILE *output);
 
 
 #endif */ LSH_DEBUG_H_INCLUDED */

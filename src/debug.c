@@ -23,16 +23,16 @@ static int do_debug(struct debug_processor *closure,
 
   fprintf(closure->output, "\n");
 
-  return apply_processor(closure->c.next, packet);
+  return A_WRITE(closure->super.next, packet);
 }
 
-struct abstract_write *make_debug_processor(FILE *output,
-					      struct abstract_write *continuation)
+struct abstract_write *
+make_debug_processor(struct abstract_write *continuation, FILE *output)
 {
   struct debug_processor *closure = xalloc(sizeof(struct debug_processor));
 
-  closure->c.p.f = (abstract_write_f) do_debug;
-  closure->c.next = continuation;
+  closure->super.super.write = (abstract_write_f) do_debug;
+  closure->super.next = continuation;
   closure->output = output;
 
   return (struct abstract_write *) closure;

@@ -21,10 +21,10 @@ struct crypto_algorithm
   UINT32 block_size;
   UINT32 key_size;
 
-  struct crypto_instance *make_encrypt(struct crypto_algorithm *self,
-				       UINT8 *key);
-  struct crypto_instance *make_decrypt(struct crypto_algorithm *self,
-				       UINT8 *key);
+  struct crypto_instance * (*make_encrypt)(struct crypto_algorithm *self,
+					   UINT8 *key);
+  struct crypto_instance * (*make_decrypt)(struct crypto_algorithm *self,
+					   UINT8 *key);
 };
 
 struct hash_instance

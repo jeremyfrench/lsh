@@ -7,23 +7,18 @@
 #define LSH_ENCRYPT_H_INCLUDED
 
 #include "transport.h"
-#include "crypto_common.h"
+#include "abstract_crypto.h"
 
 struct encrypt_processor
 {
   struct abstract_write_pipe c;
 
-  unsigned mac_size;
-
-  transform_function mac_function;
-  void *mac_state;
-  
-  transform_function encrypt_function;
-  void *encrypt_state;
+  struct mac_instance *mac;
+  stryct crypto_instance *crypto;
 };
 
-struct packet_processor *
-make_encrypt_processor(struct packet_processor *containing,
+struct abstract_write *
+make_encrypt_processor(struct abstract_write *continue,
 		       unsigned mac_size,
 		       transform_function mac_function,
 		       void *mac_state,

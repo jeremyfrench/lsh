@@ -28,13 +28,15 @@ struct abstract_read
 
 #define A_READ(f, buffer, length) (f)->read((f), (buffer), (length))
 
+struct read_handler;
+typedef struct read_handler * (*read_handler_f)(struct read_handler *closure,
+						struct abstract_read *read);
 struct read_handler
 {
-  struct read_handler (*handler)(struct read_handler *closure,
-				 struct abstract_read *read);
+  read_handler_f handler;
 };
 
-#define READ_HANDLER(handler, read) ((handler)->handler((handler), (read)))
+#define READ_HANDLER(h, read) ((h)->handler((h), (read)))
 
 /* FIXME: What should writers return? Perhaps a new writer,
  * analogous to read-handlers? */
@@ -46,6 +48,15 @@ typedef int (*abstract_write_f)(struct abstract_write *closure,
 struct abstract_write
 {
   abstract_write_f write;
+};
+
+#define A_WRITE(f, packet) ((f)->write((f), (packet)))
+
+/* A processor that passes its result on to another processor */
+struct abstract_write_pipe
+{
+  struct abstract_write super;
+  struct abstract_write *next;
 };
 
 #endif /*LSH_ABSTRACT_IO_H_INCLUDED */

@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 int debug_flag = 0;
 int quiet_flag = 0;
@@ -39,7 +40,7 @@ void werror_washed(UINT32 length, UINT8 *msg)
 {
   int i;
 
-  for(i = 0; i<lengh; i++)
+  for(i = 0; i<length; i++)
     {
       switch(msg[i])
 	{
@@ -52,7 +53,7 @@ void werror_washed(UINT32 length, UINT8 *msg)
 	default:
 	  if (!isprint(msg[i]))
 	    {
-	      fprintf("\\x%2x", msg[i]);
+	      fprintf(stderr, "\\x%2x", msg[i]);
 	      break;
 	    }
 	  /* Fall through */

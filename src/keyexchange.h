@@ -8,7 +8,7 @@
 
 struct server_keyexchange
 {
-  struct packet_processor p;
+  struct abstract_write p;
 
 
 #endif /* LSH_KEYEXCHANGE_H_INCLUDED */

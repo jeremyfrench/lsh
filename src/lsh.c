@@ -3,7 +3,10 @@
  * client main program
  */
 
-#include <getopt.h>
+#include <stdio.h>
+#include <locale.h>
+
+#include "getopt.h"
 
 #include "io.h"
 #include "werror.h"
@@ -25,7 +28,7 @@ int main(int argc, char **argv)
 {
   char *host = NULL;
   char *port = "ssh";
-  int verbose;
+  /* int verbose; */
   int option;
 
   struct sockaddr_in remote;
@@ -61,18 +64,10 @@ int main(int argc, char **argv)
       exit(1);
     }
 
-  {
-    struct client_callback connected = {
-      { (fd_callback_f) client_initiate },
-      &backend,
-      BLOCK_SIZE;
-    };
-
-    io_connect(&backend, &remote, NULL,
-	       make_client_callback(backend, BLOCK_SIZE));
-  }
+  io_connect(&backend, &remote, NULL,
+	     make_client_callback(&backend, BLOCK_SIZE));
   
-  io_run();
+  io_run(&backend);
 
   return 0;
 }

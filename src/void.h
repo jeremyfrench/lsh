@@ -8,11 +8,6 @@
 
 #include "transport.h"
 
-struct void_processor
-{
-  struct packet_processor p;
-};
-
-struct packet_processor *make_void_processor();
+struct abstract_write *make_packet_void();
 
 #endif /* LSH_VOID_H_INCLUDED */

@@ -13,16 +13,16 @@
 
 struct line_handler;
 
-typedef (struct read_handler *line_handler_f)(struct line_handler *closure,
-					      UINT32 length,
-					      UINT8 *line);
+typedef struct read_handler * (*line_handler_f)(struct line_handler *closure,
+						UINT32 length,
+						UINT8 *line);
 struct line_handler
 {
   line_handler_f handler;
 };
 
-#define PROCESS_LINE(handler, length, line) \
-((handler)->handler((handler), (length), (line)))
+#define PROCESS_LINE(h, length, line) \
+((h)->handler((h), (length), (line)))
 
 struct read_line
 {
@@ -33,5 +33,7 @@ struct read_line
 
   struct line_handler *handler;
 };
+
+struct read_handler *make_read_line(struct line_handler *handler);
 
 #endif /* LSH_READ_HANDLER_H_INCLUDED */

@@ -18,8 +18,8 @@ static int do_deflate(struct zlib_processor *closure,
   return apply_processor(closure->c->next, new);  
 }
 
-struct packet_processor *make_zlib_processor(packet_processor *continuation,
-					     int level)
+struct abstract_write *make_packet_zlib(abstract_write *continuation,
+					int level)
 {
   struct debug_processor *closure = xalloc(sizeof(struct zlib_processor));
 
@@ -27,5 +27,5 @@ struct packet_processor *make_zlib_processor(packet_processor *continuation,
   closure->c->next = continuation;
   /* inititialize closure->zstream */
 
-  return (struct packet_processor *) closure;
+  return (struct abstract_write *) closure;
 }

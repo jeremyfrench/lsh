@@ -13,7 +13,7 @@ typedef void (*random_function)(void *state, UINT32 length, UINT8 *dst);
 /* Input to the processor is a packet with the payload. Output is a
  * packet containing a formatted ssh packet (with correct byte order,
  * etc). */
-struct pad_processor
+struct packet_pad
 {
   struct abstract_write_pipe c;
 
@@ -23,8 +23,8 @@ struct pad_processor
   void *state;
 };
 
-struct packet_processor *
-make_pad_processor(struct packet_processor *continuation,
+struct abstract_write *
+make_pad_processor(struct abstract_write *continuation,
 		   unsigned block_size,
 		   random_function random,
 		   void *state);
@@ -38,7 +38,7 @@ struct format_processor
   struct abstract_write_pipe c;
 };
 
-struct packet_processor *make_pad_processor(packet_processor *continuation);
+struct abstract_write *make_packet_pad(abstract_write *continuation);
 #endif
 
 
