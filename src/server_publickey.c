@@ -86,7 +86,7 @@ do_authenticate(struct userauth *s,
 	  && parse_eod(args))
        : parse_eod(args))) 
     {
-      struct unix_user *user;
+      struct user *user;
       
       lookup = ALIST_GET(self->verifiers, algorithm);
 
@@ -117,7 +117,7 @@ do_authenticate(struct userauth *s,
 	  goto fail;
 	}
       
-      v = LOOKUP_VERIFIER(lookup, algorithm, &user->super, keyblob);
+      v = LOOKUP_VERIFIER(lookup, algorithm, user, keyblob);
 
       if (!check_key)
 	{
