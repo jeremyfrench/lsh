@@ -106,9 +106,11 @@ main_argp_parser(int key, char *arg UNUSED, struct argp_state *state)
       state->child_inputs[0] = &self->style;
       state->child_inputs[1] = NULL;
       break;
+#if 0
     case ARGP_KEY_ARG:
       argp_error(state, "Spurious arguments.");
       break;
+#endif
     case 'l':
 	{
 	  char *end;
