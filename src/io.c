@@ -1184,6 +1184,10 @@ io_resolv_address(const char *host, const char *service,
       unsigned port;
       if (!service || !(port = get_portno(service, "tcp")))
 	port = default_port;
+
+      /* Needed to clear addr.sin_zero on systems that have that
+       * field. In particular, AIX. */
+      memset(&addr, 0, sizeof(addr));
       
       addr.sin_port = htons(port);
 
