@@ -238,6 +238,10 @@ bignum_random_size(mpz_t x, struct randomness *random, unsigned bits)
 void
 bignum_random(mpz_t x, struct randomness *random, mpz_t n)
 {
+  /* FIXME: This leaves some bias, which may be bad for DSA. A better
+   * way might to generate a random number of mpz_sizeinbase(n, 2)
+   * bits, and loop until one smaller than n is found. */
+
   /* Add a few bits extra, to decrease the bias from the final modulo
    * operation. */
   bignum_random_size(x, random, mpz_sizeinbase(n, 2) + 10);
