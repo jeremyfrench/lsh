@@ -159,6 +159,7 @@
 #define MAKE_VERIFIER(a, pl, p) \
 ((a)->make_verifier((a), (pl), (p)))
 
+
 /* Combining block cryptos */
 
 /* Example: To create a tripple DES cbc encryptor:
