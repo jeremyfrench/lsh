@@ -40,7 +40,6 @@ dist_classes = \
     io.c.x \
     io.h.x \
     io_commands.c.x \
-    io_commands.h.x \
     keyexchange.c.x \
     keyexchange.h.x \
     list.h.x \
