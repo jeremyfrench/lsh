@@ -257,7 +257,7 @@ com_mail(const char *arg UNUSED, const char *command)
 int
 com_umask(const char *arg, const char *command UNUSED) 
 {
-  char tmp[PATH_MAX];
+  unsigned char tmp[PATH_MAX];
   int given = 0;
 
   while( arg && 
@@ -1883,6 +1883,7 @@ com_lls(const char *arg, const char *command UNUSED)
 		      modestring[6] = 'T';
 		  }
 		/* FIXME: Doesn't handle off_t larger than long */
+		/* FIXME: st_nlink is a long on Solaris */
 		printf( 
 		       "%s %4d %-8s %-8s %8ld ", 
 		       modestring, 
@@ -1929,7 +1930,7 @@ com_lmv(const char *arg UNUSED, const char *command UNUSED)
 
 
 int
-handle_command(const char *s)
+handle_command(const unsigned char *s)
 {
   const char *entered_cmd = s;
   char tmp[WORDLENMAX];
