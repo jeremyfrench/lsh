@@ -1,0 +1,182 @@
+/* server_publickey.c
+ *
+ * Publickey authentication method
+ */
+
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 1999 Balazs Scheidler
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include "server_publickey.h"
+#include "xalloc.h"
+#include "connection.h"
+#include "parse.h"
+#include "werror.h"
+#include "format.h"
+#include "charset.h"
+#include "ssh.h"
+#include "lookup_verifier.h"
+#include "server_password.h"
+
+#include "server_publickey.c.x"
+
+/* GABA:
+   (class
+     (name userauth_publickey)
+     (super userauth)
+     (vars
+       (verifiers object alist)))
+*/
+
+static struct lsh_string *format_userauth_pk_ok(int algorithm, struct lsh_string *keyblob)
+{
+  return ssh_format("%c%a%S", SSH_MSG_USERAUTH_PK_OK, 
+		    algorithm, keyblob);
+}
+
+static void
+do_authenticate(struct userauth *s,
+		struct ssh_connection *connection,
+		struct lsh_string *username,
+		struct simple_buffer *args,
+		struct command_continuation *c,
+		struct exception_handler *e)
+{
+  CAST(userauth_publickey, self, s);
+  
+  struct lsh_string *keyblob = NULL;
+  struct lookup_verifier *lookup;
+  struct verifier *v;
+  UINT8 *signature_blob;
+  UINT32 signature_length;
+  UINT32 signature_start;
+  UINT32 algorithm;
+  int check_key;
+
+  username = utf8_to_local(username, 1, 1);
+  if (!username)
+    {
+      PROTOCOL_ERROR(e, "Invalid utf8 in password.");
+      return;
+    }
+
+  if (parse_boolean(args, &check_key) &&
+      parse_atom(args, &algorithm) &&
+      (keyblob = parse_string_copy(args)) &&
+      /* FIXME: Hmm. This code seems somewhat obscure. Hope it works. /nisse */
+      ((check_key && 
+	(signature_start = args->pos) && 
+	(parse_string(args, &signature_length, &signature_blob)) &&
+	parse_eod(args)) || 
+       (!check_key && parse_eod(args)))) 
+    {
+#if DATAFELLOWS_WORKAROUNDS
+      if (algorithm == ATOM_SSH_DSS && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
+	{
+	  lookup = ALIST_GET(self->verifiers, ATOM_SSH_DSS_KLUDGE);
+	}
+      else
+#endif
+	lookup = ALIST_GET(self->verifiers, algorithm);
+
+      if (!lookup) 
+	{
+	  static const struct exception unsupported_publickey_algorithm
+	    = STATIC_EXCEPTION(EXC_USERAUTH,
+			       "Unsupported public key algorithm.");
+	  
+	  lsh_string_free(keyblob); 
+	  lsh_string_free(username);
+	  verbose("Unknown publickey algorithm\n");
+	  EXCEPTION_RAISE(e, &unsupported_publickey_algorithm);
+	  return;
+	}
+      v = LOOKUP_VERIFIER(lookup, username, keyblob);
+
+      if (!check_key)
+	{
+	  lsh_string_free(username);
+	  if (v)
+	    {
+	      struct lsh_string *reply = format_userauth_pk_ok(algorithm, keyblob);
+	      lsh_string_free(keyblob);
+	      KILL(v);
+	      EXCEPTION_RAISE(e, make_userauth_special_exception(reply, NULL));
+	      return;
+	    }
+	  else
+	    {
+	      static const struct exception unauthorized_key
+		= STATIC_EXCEPTION(EXC_USERAUTH,
+				   "Unauthorized public key.");
+	      
+	      lsh_string_free(keyblob);
+	      EXCEPTION_RAISE(e, &unauthorized_key);
+	      return;
+	    }
+	}
+      else 
+	{
+	  struct lsh_string *signed_data;
+	  struct unix_user *user = NULL;
+#if DATAFELLOWS_WORKAROUNDS
+	  /* FIXME: this check should be made more general */
+	  if (connection->peer_flags & PEER_USERAUTH_REQUEST_KLUDGE)
+	    {
+	      signed_data = ssh_format("%lS%c%S%a%a%c%a%S", 
+				       connection->session_id,
+				       SSH_MSG_USERAUTH_REQUEST,
+				       username, 
+				       ATOM_SSH_USERAUTH,
+				       ATOM_PUBLICKEY,
+				       1,
+				       algorithm,
+				       keyblob);
+	    }
+	  else
+#endif
+	    signed_data = ssh_format("%lS%ls", connection->session_id, 
+				     signature_start, args->data);
+
+	  lsh_string_free(keyblob); 
+	  if (VERIFY(v, signed_data->length, signed_data->data, signature_length, signature_blob))
+	    {
+	      werror("user %S has authenticated\n", username);
+	      user = lookup_user(username, 0);
+	    }
+	  lsh_string_free(username);
+	  lsh_string_free(signed_data);
+	  COMMAND_RETURN(c, user);
+	  return;
+	}
+    }
+  else 
+    {
+      werror("Badly formatted publickey authentication request\n");
+      PROTOCOL_ERROR(e, "Invalid publickey authentication request");
+    }
+}
+
+struct userauth *make_userauth_publickey(struct alist *verifiers)
+{
+  NEW(userauth_publickey, self);
+
+  self->super.authenticate = do_authenticate;
+  self->verifiers = verifiers;
+  return &self->super;
+}
