@@ -327,10 +327,8 @@ do_userauth_proxy(struct command *s,
   connection->dispatch[SSH_MSG_USERAUTH_REQUEST] =
     make_proxy_userauth_handler(self->methods,
 				self->services, 
-				make_once_continuation
-				(NULL, 
-				 make_proxy_userauth_continuation
-				 (connection, c, e)),
+				make_proxy_userauth_continuation
+				(connection, c, e),
 				make_exc_userauth_handler(connection, 
 							  self->advertised_methods,
 							  AUTH_ATTEMPTS, e,
