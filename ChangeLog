@@ -1,3 +1,44 @@
+2000-05-01  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/testsuite/keygen-test: Use -o flag to lsh_writekey.
+
+	* src/spki_commands.c (make_pkcs5_encrypt): New function.
+
+	* src/spki.c: Deleted old #if'ed out code.
+
+	* src/sexp.c (sexp_s): Renamed from make_sexp_string(). Updated
+	all callers.
+
+	* src/pkcs5.c (pkcs5_derive_key): Renamed pkcs5_key_derivation().
+	Added comments trying to analyze the choice of iteration count.
+
+	* src/lsh_writekey.c: Major reorganization. Use argp, and support
+	pkcs5-style encryption. 
+
+	* src/lsh_keygen.c (main_argp_parser): Removed ARGP_KEY_ARG case. 
+	* src/lshd.c (main_argp_parser): Likewise.
+
+	* src/io.c (safe_pushd): Use char * for the directory argument. 
+
+	* src/crypto.h (pkcs5_derive_key): Renamed pkcs5_key_derivation(). 
+
+	* src/algorithms.c (lookup_crypto): Added an extra argument for
+	returning tha algorithm object, not just the name. Updated all
+	callers. 
+	(lookup_mac): Likewise.
+	(lookup_compression): Likewise.
+	(lookup_hash): Likewise.
+	(vlist_algorithms): Made non-static. 
+	(list_algorithms): Likewise.
+	(list_crypto_algorithms): Likewise.
+	(list_mac_algorithms): Likewise.
+	(list_compression_algorithms): Likewise.
+
+	* src/abstract_crypto.c (crypt_string_pad): New function.
+	(crypt_string_unpad): New function.
+
+	* src/Makefile.am.in (noinst_PROGRAMS): Added pkcs5-test.
+
 2000-04-23  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/Makefile.am (TS_PROGS): Added twofish-test.

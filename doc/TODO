@@ -228,3 +228,6 @@ could also be simplified, and perhaps we can get rid of the backend
 pointer in some other places as well.
 
 Exceptions from listen are handled badly in several places. 
+
+Rename the sexp-style caommand line option "-o" to something better.
+-o should be used to specify the output file, where applicable.
