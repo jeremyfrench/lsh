@@ -24,6 +24,7 @@
 
 #include "tcpforward.h"
 
+#include "command.h"
 #include "format.h"
 #include "parse.h"
 #include "read_data.h"
@@ -226,11 +227,11 @@ struct channel_open *make_open_direct_tcpip(struct io_backend *backend)
 
 /* GABA:
    (expr
-     (name tcpforward-foo)
+     (name tcpforward_foo)
      (globals
-        (start-io foo_start)
-        (listen foo_listen)
-	(open-direct-tcpip foo_open))
+        (start-io COMMAND_UNIMPLEMENTED)
+        (listen COMMAND_UNIMPLEMENTED)
+	(open-direct-tcpip COMMAND_UNIMPLEMENTED))
      (expr (lambda (port connection)
               (start-io (listen port connection)
 	                (open-direct-tcpip connection)))))
