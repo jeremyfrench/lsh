@@ -34,6 +34,7 @@
 #include "connection.h"
 #include "crypto.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "randomness.h"
 #include "ssh.h"
 #include "werror.h"
@@ -68,7 +69,7 @@ init_dh_instance(struct dh_method *m,
 		 c->versions[CONNECTION_SERVER],
 		 c->literal_kexinits[CONNECTION_CLIENT],
 		 c->literal_kexinits[CONNECTION_SERVER]);
-  hash_update(self->hash, s->length, s->data);
+  hash_update(self->hash, STRING_LD(s));
 
   lsh_string_free(s);  
 }
@@ -128,7 +129,7 @@ dh_process_client_msg(struct dh_instance *self,
   unsigned msg_number;
   mpz_t tmp;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (! (parse_uint8(&buffer, &msg_number)
 	 && (msg_number == SSH_MSG_KEXDH_INIT)
@@ -154,7 +155,7 @@ dh_hash_update(struct dh_instance *self,
 {
   debug("dh_hash_update: %xS\n", s);
   
-  hash_update(self->hash, s->length, s->data);
+  hash_update(self->hash, STRING_LD(s));
   if (free)
     lsh_string_free(s);
 }
@@ -166,8 +167,7 @@ dh_hash_digest(struct dh_instance *self)
   dh_hash_update(self, ssh_format("%n%n%S",
 				  self->e, self->f,
 				  self->K), 1);
-  self->exchange_hash = lsh_string_alloc(HASH_SIZE(self->hash));
-  hash_digest(self->hash, self->exchange_hash->data);
+  self->exchange_hash = hash_digest_string(self->hash);
 
   debug("dh_hash_digest: %xS\n", self->exchange_hash);  
 }
@@ -191,8 +191,8 @@ dh_make_server_msg(struct dh_instance *self,
 		    SSH_MSG_KEXDH_REPLY,
 		    server_key,
 		    self->f, SIGN(s, hostkey_algorithm,
-				  self->exchange_hash->length,
-				  self->exchange_hash->data));
+				  lsh_string_length(self->exchange_hash),
+				  lsh_string_data(self->exchange_hash)));
 }
 
 /* Returns the host key. */
@@ -208,7 +208,7 @@ dh_process_server_msg(struct dh_instance *self,
   struct lsh_string *key = NULL;
   struct lsh_string *s = NULL;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (! (parse_uint8(&buffer, &msg_number)
 	 && (msg_number == SSH_MSG_KEXDH_REPLY)
