@@ -57,7 +57,13 @@ ARGP_CHECK_VAR(program_invocation_short_name, [#include <errno.h>])
 
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then
-    CFLAGS="$CFLAGS -ggdb3 -Wall -W \
+  # Using -ggdb3 makes (some versions of) Redhat's gcc-2.96 dump core
+  if "$CC" --version | grep '^2\.96$' 1>/dev/null 2>&1; then
+    true
+  else
+    CFLAGS="$CFLAGS -ggdb3"
+  fi
+  CFLAGS="$CFLAGS -Wall -W \
  -Wmissing-prototypes -Wmissing-declarations -Wstrict-prototypes \
  -Waggregate-return \
  -Wpointer-arith -Wbad-function-cast -Wnested-externs"
