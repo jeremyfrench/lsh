@@ -37,7 +37,9 @@
 #undef CLASS_DEFINE
 
 /* Defines int char_classes[0x100] */
+#define CHAR_CLASSES_TABLE sexp_char_classes
 #include "sexp_table.h"
+#undef CHAR_CLASSES_TABLE
 
 #include "sexp.c.x"
 
@@ -76,9 +78,9 @@ static struct lsh_string *do_format_simple_string(struct lsh_string *s,
 
 	/* Compute the set of all character classes represented in the string */
 	for (c = 0, i = 0; i < s->length; i++)
-	  c |= char_classes[s->data[i]];
+	  c |= sexp_char_classes[s->data[i]];
 
-	if (! ( (char_classes[s->data[0]] & CHAR_digit)
+	if (! ( (sexp_char_classes[s->data[0]] & CHAR_digit)
 		|| (c & ~(CHAR_alpha | CHAR_digit | CHAR_punctuation))))
 	  /* Output token, without any quoting at all */
 	  return lsh_string_dup(s);
@@ -92,12 +94,12 @@ static struct lsh_string *do_format_simple_string(struct lsh_string *s,
 	    UINT8 *dst;
 	    
 	    for (i = 0; i<s->length; i++)
-	      if (char_classes[s->data[i]] & CHAR_escapable)
+	      if (sexp_char_classes[s->data[i]] & CHAR_escapable)
 		length++;
 
 	    res = ssh_format("\"%lr\"", length, &dst);
 	    for (i=0; i<s->length; i++)
-	      if (char_classes[s->data[i]] & CHAR_escapable)
+	      if (sexp_char_classes[s->data[i]] & CHAR_escapable)
 		{
 		  *dst++ = '\\';
 		  switch(s->data[i])
@@ -169,7 +171,7 @@ static struct lsh_string *do_format_sexp_string(struct sexp *s, int style)
 }
 
 /* Consumes its args (display may be NULL) */
-static struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c)
+struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c)
 {
   NEW(sexp_string, s);
 

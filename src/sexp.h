@@ -94,6 +94,10 @@ struct lsh_string *encode_base64(struct lsh_string *s,
 				 int free);
 
 /* Creating sexps */
+
+/* Consumes its args (display may be NULL) */
+struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c);
+
 /* atom->sexp */
 struct sexp *sexp_a(const int a);
 
@@ -135,10 +139,11 @@ int sexp_atom(const struct sexp *e);
 int sexp_bignum_u(const struct sexp *e, mpz_t n);
 int sexp_bignum_s(const struct sexp *e, mpz_t n);
 
+extern int sexp_char_classes[];
 
 /* Parsing sexp */
 
-/* ;;CLASS:
+/* CLASS:
    (class
      (name sexp_handler)
      (vars
@@ -147,10 +152,6 @@ int sexp_bignum_s(const struct sexp *e, mpz_t n);
 */
 
 #define HANDLE_SEXP(h, s) ((h)->handler((h), (s)))
-
-#if 0
-struct read_handler make_read_sexp(struct sexp_handler *h);
-#endif
      
 #endif /* LSH_SEXP_H_INCLUDED */
 
