@@ -3,7 +3,7 @@
 # -O0 is not recogniced on AIX
 # AM_CFLAGS = -O0
 
-AM_CPPFLAGS = -I$(srcdir)/.. -I../nettle
+AM_CPPFLAGS = -I$(srcdir)/.. -I.. -I../nettle
 
 TS_PROGS = arcfour-test aes-test blowfish-test cast128-test \
 	   des-test \
