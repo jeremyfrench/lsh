@@ -441,7 +441,7 @@ int main(int argc, char **argv)
 	  
 	  break;
 	case MODE_RAW_HASH:
-	  output = ssh_format("%lxfS",
+	  output = ssh_format("%lxfS\n",
 			      hash_string(options->hash,
 					  sexp_format(expr, SEXP_CANONICAL, 0),
 					  1));
