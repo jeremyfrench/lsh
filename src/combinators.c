@@ -55,17 +55,7 @@ DEFINE_COMMAND2(command_K)
 }
       
 
-/* ((S f) g)x == (f x)(g x) */
-
-/* Represents ((S f) g) */
-/* GABA:
-   (class
-     (name command_S_2)
-     (super command_simple)
-     (vars
-       (f object command)
-       (g object command)))
-*/
+/* ((S f) g) x == (f x)(g x) */
 
 /* Receives the value of (f x) */
 /* GABA:
@@ -143,6 +133,7 @@ DEFINE_COMMAND4(command_Sp)
 	       e);
 }
 
+
 /* B f g x == f (g x) */
 DEFINE_COMMAND3(command_B)
      (struct lsh_object *f,
@@ -182,6 +173,7 @@ DEFINE_COMMAND4(command_Bp)
 			  make_apply(ck, c, e), e),
 	       e);
 }
+
 
 /* ((C f) y) x == (f x) y  */
 
@@ -233,20 +225,7 @@ DEFINE_COMMAND3(command_C)
 	       e);
 }
 
-/* FIXME: Move this function somewhere else. It should also be used by
- * do_trace_continuation. */
-static const char *
-describe_object(struct lsh_object *x)
-{
-  if (!x)
-    return "<NULL>";
-  if (!x->isa)
-    return "<STATIC>";
 
-  return x->isa->name;
-}
-
-#if 1
 /* C' k f y x == k (f x) y */
 DEFINE_COMMAND4(command_Cp)
      (struct lsh_object *k,
@@ -260,97 +239,14 @@ DEFINE_COMMAND4(command_Cp)
   CAST_SUBTYPE(command, cf, f);
 
   trace("command_Cp\n");
-  werror("command_Cp: k: %z, f: %z, y: %z, x: %z\n",
-	 describe_object(k),
-	 describe_object(f),
-	 describe_object(y),
-	 describe_object(x));
+
+#if 0
+  werror("command_Cp: k: %t, f: %t, y: %t, x: %t\n",
+	 k, f, y, x);
+#endif
   
   COMMAND_CALL(cf, x,
 	       make_apply(ck,
 			  make_command_C_continuation(y, c, e), e),
 	       e);
 }
-#else
-
-/* C' c f y x == c (f x) y */
-
-/* Represents (C' c f y x) */
-/* GABA:
-   (class
-     (name command_Cp_3)
-     (super command_simple)
-     (vars
-       (c object command)
-       (f object command)
-       (y object lsh_object)))
-*/
-
-static void
-do_command_Cp_3(struct command *s,
-		struct lsh_object *x,
-		struct command_continuation *c,
-		struct exception_handler *e)
-{
-  CAST(command_Cp_3, self, s);
-
-  werror("do_command_Cp_3: k: %z, f: %z, y: %z, x: %z\n",
-	 describe_object(&self->c->super),
-	 describe_object(&self->f->super),
-	 describe_object(self->y),
-	 describe_object(x));
-  
-  COMMAND_CALL(self->f, x,
-	       make_apply(self->c,
-			  make_command_C_continuation(self->y, c, e), e),
-	       e);
-}
-
-static struct lsh_object *
-do_simple_command_Cp_3(struct command_simple *s,
-		      struct lsh_object *x)
-{
-  CAST(command_Cp_3, self, s);
-  CAST_SUBTYPE(command_simple, cs, self->c);
-  CAST_SUBTYPE(command_simple, fs, self->f);
-  CAST_SUBTYPE(command_simple, op, COMMAND_SIMPLE_CALL(cs, COMMAND_SIMPLE_CALL(fs, x)));
-  return COMMAND_SIMPLE_CALL(op, self->y);
-}
-
-struct command *
-make_command_Cp_3(struct command *c,
-		  struct command *f,
-		  struct lsh_object *y)
-{
-  NEW(command_Cp_3, res);
-  res->c = c;
-  res->f = f;
-  res->y = y;
-  res->super.super.call = do_command_Cp_3;
-  res->super.call_simple = do_simple_command_Cp_3;
-
-  return &res->super.super;
-}
-
-struct lsh_object *
-collect_Cp_3(struct collect_info_3 *info UNUSED,
-	     struct lsh_object *c,
-	     struct lsh_object *f,
-	     struct lsh_object *y)
-{
-  CAST_SUBTYPE(command, cc, c);
-  CAST_SUBTYPE(command, cf, f);
-
-  return &make_command_Cp_3(cc, cf, y)->super;
-}
-
-struct collect_info_3 collect_info_Cp_3 =
-STATIC_COLLECT_3_FINAL(collect_Cp_3);
-
-struct collect_info_2 collect_info_Cp_2 =
-STATIC_COLLECT_2(&collect_info_Cp_3);
-
-struct collect_info_1 command_Cp =
-STATIC_COLLECT_1(&collect_info_Cp_2);
-
-#endif
