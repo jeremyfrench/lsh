@@ -66,12 +66,13 @@ static struct sexp_print_command write_transport
        (read READ_SEXP) )
      (params
        (private object io_write_file_info)
-       (public object io_write_file_info))
+       (public object io_write_file_info)
+       (algorithms object alist))
      (expr
        (lambda (backend)
          (let ((key (read (stdin backend))))
            (prog1 (transport (open backend public)
-	                     (signer2public (spki_parse_private_key key)))
+	                     (signer2public (sexp2signer algorithms key)))
 	          ; FIXME: Add encryption here
 	          (canonical (open backend private) key))))))
 */
@@ -163,7 +164,9 @@ int main(int argc UNUSED, char **argv UNUSED)
 		     make_io_write_file_info(public,
 					     O_CREAT | O_EXCL | O_WRONLY,
 					     0644,
-					     BLOCK_SIZE)));
+					     BLOCK_SIZE),
+		     make_alist(1,
+				ATOM_DSA, make_dsa_algorithm(NULL), -1)));
     
     COMMAND_CALL(work, backend, &discard_continuation, &exc_handler);
   }
