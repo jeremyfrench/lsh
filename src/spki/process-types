@@ -33,6 +33,10 @@ atom2enum () {
     echo "SPKI_TYPE_$1" | tr '[a-z]-' '[A-Z]_' | sed -e 's/\*/STAR/'
 }
 
+length () {
+    expr `echo "$1" | wc -c` - 1
+}
+
 if [ $# != 1 ]; then
     usage
     exit 1
@@ -68,7 +72,7 @@ case $1 in
 	echo 'spki_type_names[] = {'
 	echo '  { 0, NULL },'
 	while getatom; do
-	    echo "  { `expr length $atom`, "'"'$atom'" },'
+	    echo "  { `length $atom`, "'"'$atom'" },'
 	done
 	echo '};'
 	;;
