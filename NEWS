@@ -1,11 +1,22 @@
 News for the 1.3.3 release:
 
+	Server suport for subsystems, and a new experimental command
+	line option --subsystems for lshd. An sftp-server included in
+	the dist, but it's mostly untested.
+
+	Better messages when the initial handshake fails.
+
+	Support for AES (formely known only as rijndael).
+
 	Simplified the internal command definition machinery.
 
-	Fixed bug in lsshg; it crashed if given a host name argument
+	Fixed bug in lshg; it crashed if given a host name argument
 	with strange characters.
 
 	Updates to SRP support, to get it closer to the latest draft.
+
+	New client option -B, which is like -N but also puts the
+	process in the background.
 	
 News for the 1.3.2 release:
 
