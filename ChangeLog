@@ -1,5 +1,7 @@
 Sun Dec 27 06:37:40 1998    <nisse@puck>
 
+	* compress.c (packet_compressor): Removed the mode variable.
+
 	* server.c (do_line): Compression support.
 
 	* make_class: New type special-struct.
