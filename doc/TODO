@@ -245,5 +245,6 @@ other parameters.
 
 Replace most defines with enums, for improved type checking.
 
-Debug the optimized rsa-code that uses CRT. Write testcases for rsa.
- 
+Write more testcases for rsa.
+
+Perhaps change the LOOKUP_VERIFIER method to return an spki_subject?

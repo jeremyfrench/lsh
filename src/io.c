@@ -1550,6 +1550,64 @@ check_user_permissions(struct stat *sbuf, const char *fname,
 }
 
 /* Open a file, but first check that it is owned by the right user and
+ * has proper permissions, and change uid before opening the file.
+ * Doesn't check permissions on parent directory. Also, doesn't try to
+ * forbid symlinks. */
+struct lsh_fd *
+io_read_user_file(struct io_backend *backend,
+		  const char *fname,
+		  uid_t uid, int secret,
+		  const struct exception **x,
+		  struct exception_handler *e)
+{
+  int fd;
+  struct stat sbuf;
+  
+  if (stat(fname, &sbuf) < 0)
+    {
+      if (errno != ENOENT)
+	werror("io_read_user_file: Failed to stat %z (errno = %i): %z\n",
+	       fname, errno, STRERROR(errno));
+
+      *x = make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL);
+      return NULL;
+    }
+
+  *x = check_user_permissions(&sbuf, fname, uid, secret);
+
+  if (*x)
+    return NULL;
+
+  fd = open(fname, O_RDONLY);
+  if (fd < 0)
+    {
+      *x = make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL);
+      return NULL;
+    }
+
+  if (fstat(fd, &sbuf) < 0)
+    {
+      werror("io_read_user_file: Failed to stat %z (errno = %i): %z\n",
+	     fname, errno, STRERROR(errno));
+      close(fd);
+      
+      *x = make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL);
+      return NULL;
+    }
+  
+  *x = check_user_permissions(&sbuf, fname, uid, secret);
+
+  if (*x)
+    {
+      close(fd);
+      return NULL;
+    }
+  
+  return make_lsh_fd(backend, fd, e);
+}
+
+#if 0
+/* Open a file, but first check that it is owned by the right user and
  * has proper permissions. Doesn't check permissions on parent
  * directory. Also, doesn't try to forbid symlinks. */
 struct lsh_fd *
@@ -1604,6 +1662,7 @@ io_read_user_file(struct io_backend *backend,
   
   return make_lsh_fd(backend, fd, e);
 }
+#endif
 
 void kill_fd(struct lsh_fd *fd)
 {
