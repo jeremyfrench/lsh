@@ -63,17 +63,6 @@ static void child_handler(int signum)
        (children object alist)))
 */
 
-#if 0
-struct reaper
-{
-  struct reap super;
-
-  /* Mapping of from pids to exit-callbacks. */
-  /* NOTE: This assumes that a pid_t fits in an int. */
-  struct alist *children;
-};
-#endif
-
 static void do_reap(struct reap *c,
 		    pid_t pid, struct exit_callback *callback)
 {

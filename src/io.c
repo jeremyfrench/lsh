@@ -211,14 +211,6 @@ int io_iter(struct io_backend *b)
          (fd simple int)))
 */
 
-#if 0
-struct fd_read
-{
-  struct abstract_read super;
-  int fd;
-};
-#endif
-
 static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 {
   CAST(fd_read, closure, *r);

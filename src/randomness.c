@@ -47,16 +47,6 @@
        (buffer space UINT8)))
 */
 
-#if 0
-struct poor_random
-{
-  struct randomness super;
-  struct hash_instance *hash;
-  UINT32 pos;
-  UINT8 *buffer;
-};
-#endif
-
 static void do_poor_random(struct randomness *r, UINT32 length, UINT8 *dst)
 {
   CAST(poor_random, self, r);

@@ -49,20 +49,6 @@
 		     "struct simple_buffer *args"
 		     "struct ssh_service **service")))
 */
-       
-#if 0
-struct userauth
-{
-  struct lsh_object header;
-  
-  int (*authenticate)(struct userauth *closure,
-		      /* The name is consumed by this function */
-		      struct lsh_string *username,
-		      int requested_service,
-		      struct simple_buffer *args,
-		      struct ssh_service **service);
-};
-#endif
 
 #define AUTHENTICATE(s, u, r, a, g) \
 ((s)->authenticate((s), (u), (r), (a), (g)))

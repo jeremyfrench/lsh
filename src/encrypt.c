@@ -39,16 +39,6 @@
        (connection object ssh_connection)))
 */
 
-#if 0
-struct packet_encrypt
-{
-  struct abstract_write_pipe super;
-  UINT32 sequence_number;
-
-  struct ssh_connection *connection;
-};
-#endif
-
 static int do_encrypt(struct abstract_write *w,
 		      struct lsh_string *packet)
 {

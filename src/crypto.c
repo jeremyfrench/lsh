@@ -35,25 +35,6 @@
 
 #include "crypto.c.x"
 
-#if 0
-/* No crypto */
-static void do_crypt_none(struct crypto_instance *ignored,
-			  UINT32 length, UINT8 *dst, UINT8 *src)
-{
-  if (length % 8)
-    fatal("Internal error\n");
-  if (src != dst)
-    memcpy(dst, src, length);
-}
-
-struct crypto_instance crypto_none_instance =
-{
-  STATIC_HEADER,
-  8,
-  do_crypt_none
-};
-#endif
-
 /* CLASS:
    (class
      (name rc4_instance)
@@ -62,14 +43,6 @@ struct crypto_instance crypto_none_instance =
        (ctx simple "struct rc4_ctx")))
 */
    
-#if 0
-struct rc4_instance
-{
-  struct crypto_instance super;
-  struct rc4_ctx ctx;
-};
-#endif
-
 static void do_crypt_rc4(struct crypto_instance *s,
 			 UINT32 length, UINT8 *src, UINT8 *dst)
 {
@@ -106,14 +79,6 @@ struct crypto_algorithm crypto_rc4_algorithm =
      (vars
        (ctx simple "struct sha_ctx")))
 */
-
-#if 0
-struct sha_instance
-{
-  struct hash_instance super;
-  struct sha_ctx ctx;
-};
-#endif
 
 static void do_sha_update(struct hash_instance *s,
 			  UINT32 length, UINT8 *data)
@@ -165,14 +130,6 @@ struct hash_algorithm sha_algorithm =
        (hash object hash_algorithm)))
 */
 
-#if 0
-struct hmac_algorithm
-{
-  struct mac_algorithm super;
-  struct hash_algorithm *hash;
-};
-#endif
-
 /* CLASS:
    (class
      (name hmac_instance)
@@ -185,19 +142,6 @@ struct hmac_algorithm
        ; Modified by update 
        (state object hash_instance)))
 */
-
-#if 0
-struct hmac_instance
-{
-  struct mac_instance super;
-  /* Initialized hash objects */
-  struct hash_instance *hinner;
-  struct hash_instance *houter;
-
-  /* Modified by update */
-  struct hash_instance *state;
-};
-#endif
 
 static void do_hmac_update(struct mac_instance *s,
 			   UINT32 length, UINT8 *data)

@@ -67,34 +67,6 @@ struct buffer_node
        (end simple UINT32)))
 */
 
-#if 0
-struct write_buffer
-{
-  struct abstract_write super;
-  
-  UINT32 block_size;
-  UINT8 *buffer; /* Size is twice the blocksize */
-
-  int empty;
-
-  /* If non-zero, don't accept any more data. The i/o-channel shoudl be closed
-   * once the current buffers are flushed. */
-  int closed; 
-#if 0
-  int try_write;
-#endif
-  
-  struct buffer_node *head;
-  struct buffer_node *tail;
-
-  UINT32 pos; /* Partial packet */
-  struct lsh_string *partial;
-
-  UINT32 start;
-  UINT32 end;
-};
-#endif
-
 struct write_buffer *write_buffer_alloc(UINT32 size);
 int write_buffer_pre_write(struct write_buffer *buffer);
 void write_buffer_close(struct write_buffer *buffer);

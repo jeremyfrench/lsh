@@ -137,19 +137,6 @@ int verify_password(struct unix_user *user,
        (services object alist)))
 */
      
-#if 0
-struct unix_authentication
-{
-  struct userauth super;
-
-#if 0
-  struct login_method *login;
-#endif
-  /* Services allowed. Maps names to struct unix_service */
-  struct alist *services; 
-};
-#endif
-
 static int do_authenticate(struct userauth *c,
 			   struct lsh_string *username,
 			   int requested_service,

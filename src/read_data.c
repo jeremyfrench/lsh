@@ -48,23 +48,6 @@
        (channel object ssh_channel)))
 */
 
-#if 0
-struct read_data
-{
-  struct read_handler super; /* Super type */
-
-  /* Where to send the data */
-  struct abstract_write *write;
-
-  /* For flow control. */
-   
-  /* FIXME: Perhaps the information that is needed for flow control
-   * should be abstracted out from the channel struct? */
-
-  struct ssh_channel *channel;
-};
-#endif
-
 static int do_read_data(struct read_handler **h,
 			struct abstract_read *read)
 {

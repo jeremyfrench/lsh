@@ -52,22 +52,6 @@ struct signature_algorithm *make_dss_algorithm(struct randomness *random);
        (power method void "mpz_t res" "mpz_t g" "mpz_t e")))
 */
 
-#if 0
-struct group
-{
-  struct lsh_object header;
-  
-  /* Returns 1 if x is an element of the group, and is in the
-   * canonical representation */
-  int (*member)(struct group *closure, mpz_t x);
-  void (*invert)(struct group *closure, mpz_t res, mpz_t x);
-  void (*combine)(struct group *closure, mpz_t res, mpz_t a, mpz_t b);
-  /* FIXME: Doesn't handle negative exponents */
-  void (*power)(struct group *closure, mpz_t res, mpz_t g, mpz_t e);
-  mpz_t order;
-};
-#endif
-
 #define GROUP_MEMBER(group, x) ((group)->member((group), (x)))
 #define GROUP_INVERT(group, res, x) ((group)->invert((group), (res), (x)))
 #define GROUP_COMBINE(group, res, a, b) \
@@ -87,18 +71,6 @@ struct group *make_zn(mpz_t p);
        (y bignum)))
 */
 
-/* FIXME: Where are these used? */
-#if 0
-/* DSS signatures */
-struct dss_public
-{
-  mpz_t p;
-  mpz_t q;
-  mpz_t g;
-  mpz_t y;
-};
-#endif
-
 /* DH key exchange, with authentication */
 /* CLASS:
    (class
@@ -109,18 +81,6 @@ struct dss_public
        (H object hash_algorithm)
        (random object randomness)))
 */
-
-#if 0
-struct diffie_hellman_method
-{
-  struct lsh_object header;
-  
-  struct group *G;
-  mpz_t generator;
-  struct hash_algorithm *H;
-  struct randomness *random;
-};
-#endif
 
 /* NOTE: Instances are never allocated on the heap by themselves. They
  * are always embedded in other objects. Therefore there's no object
@@ -140,21 +100,6 @@ struct diffie_hellman_method
        (hash object hash_instance)
        (exchange_hash string)))
 */
-
-#if 0
-struct diffie_hellman_instance
-{
-  struct diffie_hellman_method *method;
-  mpz_t e; 			/* client value */
-  mpz_t f; 			/* server value */
-  struct lsh_string *server_key;
-  struct lsh_string *signature;
-  mpz_t secret; 		/* This side's secret exponent */
-  mpz_t K;
-  struct hash_instance *hash;
-  struct lsh_string *exchange_hash;
-};
-#endif
 
 /* Creates client message */
 struct lsh_string *dh_make_client_msg(struct diffie_hellman_instance *self);

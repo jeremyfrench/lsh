@@ -44,15 +44,6 @@
        (services object alist)))
 */
 
-#if 0
-struct service_handler
-{
-  struct packet_handler super;
-  struct alist *services;
-};
-#endif
-
-
 struct lsh_string *format_service_request(int name)
 {
   return ssh_format("%c%a", SSH_MSG_SERVICE_REQUEST, name);
@@ -119,15 +110,6 @@ struct packet_handler *make_service_handler(struct alist *services)
      (vars
        (service_handler object packet_handler)))
 */
-
-#if 0
-struct meta_service
-{
-  struct ssh_service super;
-
-  struct packet_handler *service_handler;
-};
-#endif
 
 static int init_meta_service(struct ssh_service *c,
 			     struct ssh_connection *connection)

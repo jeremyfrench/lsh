@@ -124,23 +124,6 @@
 	(init object make_kexinit)
 	(kexinit_handler object packet_handler)))
 */
-     
-#if 0
-struct server_callback
-{
-  struct fd_callback super;
-  struct io_backend *backend;
-
-  struct signer *secret;        /* secret key */
-  struct lsh_string *host_key;  /* public key */
-  UINT32 block_size;
-  char *id_comment;
-
-  struct randomness *random;
-  struct make_kexinit *init;
-  struct packet_handler *kexinit_handler;
-};
-#endif
 
 static int server_initiate(struct fd_callback **c,
 			   int fd)
@@ -185,14 +168,6 @@ static int server_initiate(struct fd_callback **c,
      (vars
        (connection object ssh_connection)))
 */
-
-#if 0
-struct server_line_handler
-{
-  struct line_handler super;
-  struct ssh_connection *connection;
-};
-#endif
 
 static struct read_handler *do_line(struct line_handler **h,
 				    UINT32 length,
@@ -315,24 +290,6 @@ struct close_callback *make_server_close_handler(void)
        (err object io_fd)))
 */
 
-#if 0
-struct server_session
-{
-  struct ssh_channel super;
-
-  /* User information */
-  struct unix_user *user;
-
-  /* Non-zero if a shell or command has been started. */
-  int running;
-
-  /* Child process's stdio */
-  struct io_fd *in;
-  struct io_fd *out;
-  struct io_fd *err;
-};
-#endif
-
 /* Recieve channel data */
 static int do_recieve(struct ssh_channel *c,
 		      int type, struct lsh_string *data)
@@ -403,16 +360,6 @@ struct ssh_channel *make_server_session(struct unix_user *user,
        (session_requests object alist)))
 */
 
-#if 0
-struct open_session
-{
-  struct channel_open super;
-
-  struct unix_user *user;
-  struct alist *session_requests;
-};
-#endif
-
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
 
 static struct ssh_channel *do_open_session(struct channel_open *c,
@@ -458,21 +405,6 @@ struct channel_open *make_open_session(struct unix_user *user,
        ; must be fixed to support for "direct-tcpip" channels.
        ))
 */
-
-#if 0
-struct server_connection_service
-{
-  struct unix_service super;
-
-  struct alist *global_requests;
-
-  /* Requests specific to session channels */
-  struct alist *session_requests; 
-
-  /* FIXME: Doesn't support any channel types but "session".
-   * This must be fixed to support for "direct-tcpip" channels. */
-};
-#endif
 
 /* Start an authenticated ssh-connection service */
 static struct ssh_service *do_login(struct unix_service *c,
@@ -533,15 +465,6 @@ struct lsh_string *format_exit(struct ssh_channel *channel, int value)
      (vars
        (session object server_session)))
 */
-
-#if 0
-struct exit_shell
-{
-  struct exit_callback super;
-
-  struct server_session *session;
-};
-#endif
 
 static void do_exit_shell(struct exit_callback *c, int signaled,
 			  int core, int value)
@@ -615,16 +538,6 @@ static struct exit_callback *make_exit_shell(struct server_session *session)
        (backend object io_backend)
        (reap object reap)))
 */
-
-#if 0
-struct shell_request
-{
-  struct channel_request super;
-
-  struct io_backend *backend;
-  struct reap *reap;
-};
-#endif
 
 /* Creates a one-way socket connection. Returns 1 on successm 0 on
  * failure. fds[0] is for reading, fds[1] for writing (like for the

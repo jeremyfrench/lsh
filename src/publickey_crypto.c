@@ -52,15 +52,6 @@
        (public struct dss_public)
        (a bignum)))
 */
-#if 0
-struct dss_signer
-{
-  struct signer super;
-  struct randomness *random;
-  struct dss_public public;
-  mpz_t a; 		/* Private key */
-};
-#endif
 
 /* CLASS:
    (class
@@ -70,14 +61,6 @@ struct dss_signer
        (public struct dss_public)))
 */
 
-#if 0
-struct dss_verifier
-{
-  struct verifier super;
-  struct dss_public public;
-};
-#endif
-
 /* CLASS:
    (class
      (name dss_algorithm)
@@ -85,13 +68,6 @@ struct dss_verifier
      (vars
        (random object randomness)))
 */
-#if 0
-struct dss_algorithm
-{
-  struct signature_algorithm super;
-  struct randomness *random;
-};
-#endif
 
 static void dss_hash(mpz_t h, UINT32 length, UINT8 *msg)
 {
@@ -418,13 +394,6 @@ struct signature_algorithm *make_dss_algorithm(struct randomness *random)
      (vars
        (modulo bignum)))
 */
-#if 0
-struct group_zn  /* Z_n^* */
-{
-  struct group super;
-  mpz_t modulo;
-};
-#endif
 
 static int zn_member(struct group *c, mpz_t x)
 {

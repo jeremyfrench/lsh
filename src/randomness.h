@@ -39,15 +39,6 @@
        (random method void "UINT32 length" "UINT8 *dst")))
 */
 
-#if 0
-struct randomness
-{
-  struct lsh_object header;
-  
-  void (*random)(struct randomness **closure, UINT32 length, UINT8 *dst);
-};
-#endif
-
 #define RANDOM(r, length, dst) ((r)->random((r), length, dst))
 
 struct randomness *make_poor_random(struct hash_algorithm *hash,

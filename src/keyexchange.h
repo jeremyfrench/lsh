@@ -60,19 +60,6 @@
 #include "keyexchange.h.x"
 #undef CLASS_DECLARE
 
-#if 0
-/* Use the service struct instead */
-struct keyexchange_finished
-{
-  struct lsh_object header;
-
-  int (*finished)(struct keyexchange_finished *closure,
-		  struct ssh_connection *connection);
-};
-
-#define KEYEXCHANGE_FINISHED(f, c) ((f)->finished((f), (c)))
-#endif
-
 /* CLASS:
    (class
      (name keyexchange_algorithm)
@@ -85,19 +72,6 @@ struct keyexchange_finished
 	     "struct signature_algorithm *hostkey_algorithm"
 	     "struct object_list *algorithms")))
 */
-#if 0
-struct keyexchange_algorithm
-{
-  struct lsh_object header;
-  
-  int (*init)(struct keyexchange_algorithm *closure,
-	      struct ssh_connection *connection,
-	      struct ssh_service *finished,
-	      int hostkey_algorithm_atom,
-	      struct signature_algorithm *hostkey_algorithm,
-	      struct object_list *algorithms);
-};
-#endif
 
 #define KEYEXCHANGE_INIT(kex, connection, f, ha, h, a) \
 ((kex)->init((kex), (connection), (f), (ha), (h), (a)))
@@ -116,22 +90,6 @@ struct keyexchange_algorithm
        (first_kex_packet_follows simple int)))
 */
      
-#if 0     
-struct kexinit
-{
-  struct lsh_object header;
-  
-  UINT8 cookie[16];
-  /* Zero terminated list of atoms */
-  int *kex_algorithms; 
-  int *server_hostkey_algorithms;
-  int *parameters[KEX_PARAMETERS];
-  int *languages_client_to_server;
-  int *languages_server_to_client;
-  int first_kex_packet_follows;
-};
-#endif
-
 /* This function generates a new kexinit message.
  *
  * FIXME: It could be replaced with a function that does more: Send
@@ -145,15 +103,6 @@ struct kexinit
        (make method (object kexinit))))
 */
 
-#if 0
-struct make_kexinit
-{
-  struct lsh_object header;
-  
-  struct kexinit * (*make)(struct make_kexinit *closure);
-};
-#endif
-
 #define MAKE_KEXINIT(m) ((m)->make((m)))
 
 /* Installs keys for use. */
@@ -165,17 +114,6 @@ struct make_kexinit
 		"struct ssh_connection *connection"
 		"struct hash_instance *secret")))
 */
-
-#if 0
-struct install_keys
-{
-  struct lsh_object header;
-  
-  int (*install)(struct install_keys *closure,
-		 struct ssh_connection *connection,
-		 struct hash_instance *secret);
-};
-#endif
 
 #define INSTALL_KEYS(i, c, s) ((i)->install((i), (c), (s)))
 
@@ -191,22 +129,6 @@ struct install_keys
        ;; (compression_server_to_client object compression_algorithm)
        ))
 */
-
-#if 0
-struct newkeys_info
-{
-  struct lsh_object header;
-  
-  struct crypto_algorithm *encryption_client_to_server;
-  struct crypto_algorithm *encryption_server_to_client;
-  struct mac_algorithm *mac_client_to_server;
-  struct mac_algorithm *mac_server_to_client;
-#if 0
-  struct compression_algorithm *compression_client_to_server;
-  struct compression_algorithm *compression_server_to_client;
-#endif
-};
-#endif
 
 struct lsh_string *format_kex(struct kexinit *kex);
 int disconnect_kex_failed(struct ssh_connection *connection, char *msg);

@@ -59,22 +59,6 @@ struct alist;
      (methods NULL NULL))
 */
 
-#if 0
-struct alist
-{
-  struct lsh_object header;
-
-#if ALIST_USE_SIZE
-  int size; /* Number of associations with non-zero values */
-  int * (*keys)(struct alist *self);
-#endif
-  
-  void * (*get)(struct alist *self, int atom);
-  void (*set)(struct alist *self, int atom, void *value);
-
-};
-#endif
-
 #define ALIST_CLASS(l) ((struct alist_meta *) ((l)->super.isa))
 
 #define ALIST_GET(alist, atom) \

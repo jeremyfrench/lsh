@@ -70,15 +70,6 @@ void usage(void)
        (algorithm object signature_algorithm)))
 */
 
-#if 0
-struct fake_host_db
-{
-  struct lookup_verifier super;
-
-  struct signature_algorithm *algorithm;
-};
-#endif
-
 static struct verifier *do_host_lookup(struct lookup_verifier *c,
 				       struct lsh_string *key)
 {

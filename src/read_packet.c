@@ -66,31 +66,6 @@
        (handler object abstract_write)
        (connection object ssh_connection)))
 */
-     
-#if 0
-struct read_packet
-{
-  struct read_handler super; /* Super type */
-
-  int state;
-  
-  UINT32 sequence_number; /* Attached to read packets */
-  
-  /* Buffer partial headers and packets. */
-  UINT32 pos;
-
-  /* FIXME: This buffer should hold one block, and must be reallocated
-   * when the crypto algorithms is changed. */
-  struct lsh_string *buffer;
-  UINT8 *crypt_pos;
-
-  /* Must point to an area large enough to hold a mac */
-  struct lsh_string *recieved_mac; 
-  
-  struct abstract_write *handler;
-  struct ssh_connection *connection;
-};
-#endif
 
 static struct lsh_string *
 lsh_string_realloc(struct lsh_string *s, UINT32 length)

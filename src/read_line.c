@@ -48,17 +48,6 @@
        (buffer array UINT8 MAX_LINE)))
 */
 
-#if 0
-struct read_line
-{
-  struct read_handler super; /* Super type */
-  struct line_handler *handler;
-
-  UINT32 pos;   /* Line buffer */
-  UINT8 buffer[MAX_LINE];
-};
-#endif
-
 /* CLASS:
    (class
      (name string_read)
@@ -67,15 +56,6 @@ struct read_line
        (line object read_line)
        (index simple UINT32)))
 */
-
-#if 0
-struct string_read
-{
-  struct abstract_read super;
-  struct read_line *line;
-  UINT32 index;
-};
-#endif
 
 static int do_string_read(struct abstract_read **r,
 			  UINT32 length, UINT8 *buffer)

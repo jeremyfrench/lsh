@@ -42,16 +42,6 @@
        (signer object signer)))
 */
 
-#if 0
-struct dh_server_exchange
-{
-  struct keyexchange_algorithm super;
-  struct diffie_hellman_method *dh;
-  struct lsh_string *server_key;
-  struct signer *signer;
-};
-#endif
-
 /* Handler for the kex_dh_reply message */
 /* CLASS:
    (class
@@ -64,19 +54,6 @@ struct dh_server_exchange
        (install object install_keys)
        (finished object ssh_service)))
 */
-
-#if 0
-struct dh_server
-{
-  struct packet_handler super;
-  struct diffie_hellman_instance dh;
-  /* struct lsh_string *server_key; */
-  struct signer *signer;
-  struct install_keys *install;
-  
-  struct ssh_service *finished;
-};
-#endif
 
 static int do_handle_dh_init(struct packet_handler *c,
 			     struct ssh_connection *connection,
@@ -207,14 +184,6 @@ make_dh_server(struct diffie_hellman_method *dh,
      (vars
        (algorithms object object_list)))
 */
-
-#if 0
-struct server_install_keys
-{
-  struct install_keys super;
-  struct object_list *algorithms;
-};
-#endif
 
 static int do_install(struct install_keys *c,
 		      struct ssh_connection *connection,

@@ -192,26 +192,6 @@ void lsh_object_free(struct lsh_object *o)
   lsh_free(o);
 };
 
-#if 0
-void *lsh_object_alloc(size_t size)
-{
-  struct lsh_object *self = xalloc(size);
-#ifdef DEBUG_ALLOC
-  self->size = size;
-#endif
-  self->alloc_method = LSH_ALLOC_HEAP;
-  self->marked = 0;
-  return (void *) self;
-};
-
-void lsh_object_free(void *p)
-{
-  if ( ((struct lsh_object *) p)->alloc_method != LSH_ALLOC_HEAP)
-    fatal("lsh_object_free: Object not allocated on the heap!\n");
-  lsh_free(p);
-};
-#endif
-
 #ifdef DEBUG_ALLOC
 struct lsh_object *lsh_object_check(struct lsh_class *class,
 				    struct lsh_object *instance)

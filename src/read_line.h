@@ -44,17 +44,6 @@
 		"UINT32 length" "UINT8 *line")))
 */
 
-#if 0
-struct line_handler
-{
-  struct lsh_object header;
-  
-  struct read_handler * (*handler)(struct line_handler **h,
-				   UINT32 length,
-				   UINT8 *line);
-};
-#endif
-
 #define PROCESS_LINE(h, length, line) \
 ((h)->handler(&(h), (length), (line)))
 

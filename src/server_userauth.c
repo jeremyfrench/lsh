@@ -25,18 +25,6 @@
        (methods object alist)))
 */
 
-#if 0
-struct userauth_service
-{
-  struct ssh_service super;
-
-  /* Methods advertised in failure messages */
-  int *advertised_methods;
-
-  struct alist *methods; /* Maps authentication method names to methods */
-};
-#endif
-
 /* Max number of attempts */
 #define AUTH_ATTEMPTS 20
 
@@ -57,21 +45,6 @@ struct userauth_service
 
        (methods object alist)))
 */
-
-#if 0
-struct userauth_handler
-{
-  struct packet_handler super;
-
-  /* Attempts left */
-  int attempts;
-
-  /* Methods advertised in failure messages */
-  int *advertised_methods;
-  
-  struct alist *methods;
-};
-#endif
 
 struct lsh_string *format_userauth_failure(struct int_list *methods,
 					   int partial)

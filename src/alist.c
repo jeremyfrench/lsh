@@ -45,10 +45,6 @@ struct alist_node
 };
 
 /* Prototypes */
-#if 0
-static void do_mark_table(struct lsh_object **table,
-					void (*mark)(struct lsh_object *o));
-#endif
 
 static void *do_linear_get(struct alist *c, int atom);
 static void do_linear_set(struct alist *c, int atom, void *value);
@@ -74,26 +70,6 @@ static void do_linked_set(struct alist *c, int atom, void *value);
        (table array (object lsh_object) NUMBER_OF_ATOMS))
      (methods do_linear_get do_linear_set))
 */
-
-#if 0
-struct alist_linear
-{
-  struct alist super;
-
-  void *table[NUMBER_OF_ATOMS];
-};
-#endif
-
-#if 0
-void do_mark_table(struct lsh_object **table,
-		   void (*mark)(struct lsh_object *o))
-{
-  unsigned i;
-
-  for (i = 0; i<NUMBER_OF_ATOMS; i++)
-    mark(table[i]);
-}
-#endif
 
 static void *do_linear_get(struct alist *c, int atom)
 {
@@ -159,15 +135,6 @@ struct alist *make_linear_alist(int n, ...)
              do_mark_list do_free_list))
      (methods do_linked_get do_linked_set))
 */
-
-#if 0
-struct alist_linked
-{
-  struct alist super;
-
-  struct alist_node *head;
-};
-#endif
 
 static void do_mark_list(struct alist_node *n,
 			 void (*mark)(struct lsh_object *o))

@@ -65,11 +65,6 @@ struct lsh_object *lsh_object_check(struct lsh_class *class,
 struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
 					    struct lsh_object *instance);
 
-#if 0
-#define MDEBUG(x) lsh_object_check((x), sizeof(*(x)))
-#define MDEBUG_SUBTYPE(x) lsh_object_check_subtype((x), sizeof(*(x)))
-#endif
-
 #define CHECK_TYPE(c, i) \
   lsh_object_check(&CLASS(c), (struct lsh_object *) (i))
 #define CHECK_SUBTYPE(c, i) \
@@ -83,11 +78,6 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
    
 
 #else   /* !DEBUG_ALLOC */
-
-#if 0
-#define MDEBUG(x)
-#define MDEBUG_SUBTYPE(x)
-#endif
 
 #define CHECK_TYPE(c, o)
 #define CHECK_SUBTYPE(c, o)

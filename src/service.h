@@ -35,15 +35,6 @@
 #include "service.h.x"
 #undef CLASS_DECLARE
 
-#if 0
-struct ssh_service
-{
-  struct lsh_object header;
-  
-  int (*init)(struct ssh_service *self, struct ssh_connection *c);
-};
-#endif
-
 /* CLASS:
    (class
      (name ssh_service)

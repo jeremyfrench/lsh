@@ -56,21 +56,6 @@
        (start object connection_startup)))
 */
 
-#if 0
-struct connection_service
-{
-  struct ssh_service super;
-
-  /* Supported global requests */
-  struct alist *global_requests;
-  struct alist *channel_types;
-
-  /* Initialize connection (for instance, request channels to be opened
-   * or services to be forwarded. */
-  struct connection_startup *start;
-};
-#endif
-
 /* CLASS:
    (class
      (name channel_handler)
@@ -78,15 +63,6 @@ struct connection_service
      (vars
        (table object channel_table)))
 */
-
-#if 0
-struct channel_handler
-{
-  struct packet_handler super;
-  
-  struct channel_table *table;
-};
-#endif
 
 /* CLASS:
    (class
@@ -96,15 +72,6 @@ struct channel_handler
        (global_requests object alist)))
 */
 
-#if 0
-struct global_request_handler
-{
-  struct channel_handler super;
-  
-  struct alist *global_requests;
-};
-#endif
-
 /* CLASS:
    (class
      (name channel_open_handler)
@@ -112,15 +79,6 @@ struct global_request_handler
      (vars
        (channel_types object alist)))
 */
-
-#if 0
-struct channel_open_handler
-{
-  struct channel_handler super;
-
-  struct alist *channel_types;
-};
-#endif
 
 struct lsh_string *format_global_failure(void)
 {
@@ -1127,14 +1085,6 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
        (channel object ssh_channel)))
 */
 
-#if 0
-struct channel_write
-{
-  struct abstract_write super;
-  struct ssh_channel *channel;
-};
-#endif
-
 /* CLASS:
    (class
      (name channel_write_extended)
@@ -1142,14 +1092,6 @@ struct channel_write
      (vars
        (type simple UINT32)))
 */
-
-#if 0
-struct channel_write_extended
-{
-  struct channel_write super;
-  UINT32 type;
-};
-#endif
 
 static int do_channel_write(struct abstract_write *w,
 			    struct lsh_string *packet)
@@ -1212,14 +1154,6 @@ struct read_handler *make_channel_read_stderr(struct ssh_channel *channel)
      (vars
        (channel object ssh_channel)))
 */
-
-#if 0
-struct channel_close_callback
-{
-  struct close_callback super;
-  struct ssh_channel *channel;
-};
-#endif
 
 static int channel_close_callback(struct close_callback *c, int reason)
 {

@@ -57,23 +57,6 @@ read_password(int max_length, struct lsh_string *prompt, int free);
        
 */
 
-#if 0
-struct unix_user
-{
-  struct lsh_object header;
-  
-  uid_t uid;
-  gid_t gid;
-  
-  /* These strings include a terminating NUL-character,
-   * for compatibility with library and system calls. */
-  struct lsh_string *name;
-  struct lsh_string *passwd; /* Crypted passwd */
-  struct lsh_string *home;
-  struct lsh_string *shell; 
-};
-#endif
-
 struct unix_user *lookup_user(struct lsh_string *name, int free);
 int verify_password(struct unix_user *user,
 		    struct lsh_string *password, int free);
@@ -86,16 +69,6 @@ struct userauth *make_password_userauth(void);
      (vars
        (login method (object ssh_service) "struct unix_user *user")))
 */
-
-#if 0
-struct unix_service
-{
-  struct lsh_object header;
-
-  struct ssh_service * (*login)(struct unix_service *closure,
-                                struct unix_user *user);
-};
-#endif
 
 #define LOGIN(s, u) ((s)->login((s), (u)))
 

@@ -41,17 +41,6 @@
        (random object randomness)))
 */
 
-#if 0
-struct packet_pad
-{
-  struct abstract_write_pipe super;
-
-  struct ssh_connection *connection;
-
-  struct randomness *random;
-};
-#endif
-
 static int do_pad(struct abstract_write *w,
 		  struct lsh_string *packet)
 {

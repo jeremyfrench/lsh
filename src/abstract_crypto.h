@@ -47,16 +47,6 @@
        (crypt method void
               "UINT32 length" "UINT8 *src" "UINT8 *dst")))
 */
-#if 0
-struct crypto_instance
-{
-  struct lsh_object header;
-  UINT32 block_size;
-  /* Length must be a multiple of the block size */
-  void (*crypt)(struct crypto_instance *self,
-		UINT32 length, UINT8 *src, UINT8 *dst);
-};
-#endif
 
 #define CRYPT(instance, length, src, dst) \
 ((instance)->crypt((instance), (length), (src), (dst)))
@@ -73,19 +63,6 @@ struct crypto_instance
        (make_crypt method (object crypto_instance)
                    "int mode" "UINT8 *key")))
 */
-     
-#if 0
-struct crypto_algorithm
-{
-  struct lsh_object header;
-  UINT32 block_size;
-  UINT32 key_size;
-
-  struct crypto_instance * (*make_crypt)(struct crypto_algorithm *self,
-					 int mode,
-					 UINT8 *key);
-};
-#endif
 
 #define MAKE_ENCRYPT(crypto, key) \
 ((crypto)->make_crypt((crypto), CRYPTO_ENCRYPT, (key)))
@@ -106,20 +83,6 @@ struct crypto_algorithm
        (copy method (object hash_instance))))
 */
 
-#if 0     
-struct hash_instance
-{
-  struct lsh_object header;
-
-  UINT32 hash_size;
-  void (*update)(struct hash_instance *self,
-		 UINT32 length, UINT8 *data);
-  void (*digest)(struct hash_instance *self,
-		 UINT8 *result);
-  struct hash_instance * (*copy)(struct hash_instance *self);
-};
-#endif
-
 #define HASH_UPDATE(instance, length, data) \
 ((instance)->update((instance), (length), (data)))
 
@@ -137,16 +100,6 @@ struct hash_instance
        (make_hash method (object hash_instance))))
 */
 
-#if 0
-struct hash_algorithm
-{
-  struct lsh_object header;
-  UINT32 block_size;
-  UINT32 hash_size;
-  struct hash_instance * (*make_hash)(struct hash_algorithm *self);
-};
-#endif
-
 #define MAKE_HASH(h) ((h)->make_hash((h)))
 
 /* CLASS:
@@ -158,16 +111,6 @@ struct hash_algorithm
        (make_mac method (object mac_instance) "UINT8 *key")))
 */
 
-#if 0
-struct mac_algorithm
-{
-  struct lsh_object header;
-  UINT32 hash_size;
-  UINT32 key_size;
-  struct mac_instance * (*make_mac)(struct mac_algorithm *self,
-				    UINT8 *key);
-};
-#endif
 #define MAKE_MAC(m, key) ((m)->make_mac((m), (key)))
 
 /* CLASS:
@@ -179,16 +122,6 @@ struct mac_algorithm
             "UINT32 length" "UINT8 *data")))
 */
 
-#if 0
-struct signer
-{
-  struct lsh_object header;
-  /* Returns a signature string, *without* the length field */
-  struct lsh_string * (*sign)(struct signer *closure,
-			      UINT32 length,
-			      UINT8 *data);
-};
-#endif
 #define SIGN(signer, length, data) ((signer)->sign((signer), (length), (data)))
 
 /* CLASS:
@@ -199,18 +132,6 @@ struct signer
        	       "UINT32 length" "UINT8 *data"
 	       "UINT32 signature_length" "UINT8 * signature_data")))
 */
-
-#if 0
-struct verifier
-{
-  struct lsh_object header;
-  int (*verify)(struct verifier *closure,
-		UINT32 length,
-		UINT8 *data,
-		UINT32 signature_length,
-		UINT8 * signature_data);
-};
-#endif
 
 #define VERIFY(verifier, length, data, slength, sdata)\
 ((verifier)->verify((verifier), (length), (data), (slength), (sdata)))
@@ -226,21 +147,6 @@ struct verifier
        (make_verifier method (object verifier)
                     "UINT32 public_length" "UINT8 *public")))
 */
-
-#if 0
-struct signature_algorithm
-{
-  struct lsh_object header;
-  struct signer * (*make_signer)(struct signature_algorithm *closure,
-				 UINT32 public_length,
-				 UINT8 *public,
-				 UINT32 secret_length,
-				 UINT8 *secret);
-  struct verifier * (*make_verifier)(struct signature_algorithm *closure,
-				     UINT32 public_length,
-				     UINT8 *public);
-};
-#endif
 
 #define MAKE_SIGNER(a, pl, p, sl, s) \
 ((a)->make_signer((a), (pl), (p), (sl), (s)))

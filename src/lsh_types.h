@@ -111,26 +111,12 @@ struct lsh_class
 
 #ifdef DEBUG_ALLOC
 
-#if 0
-struct lsh_object
-{
-  int size;  /* Zero for objects that are not allocated on the heap. */
-  char alloc_method;
-  char marked;
-};
-#endif
-
 struct lsh_string_header
 {
   int magic;
 };
 
 #else   /* !DEBUG_ALLOC */
-struct lsh_object
-{
-  char alloc_method;
-  char marked;
-};
 
 struct lsh_string_header {};
 
@@ -213,11 +199,5 @@ struct callback
 
 /* If non-zero, return to main-loop is preferred */
 #define LSH_ACTIONP(x) ((x) & (LSH_FAIL | LSH_CLOSE | LSH_DIE | LSH_KILL_OTHERS) )
-
-/* Are return codes really needed here? */
-#if 0
-#define LSH_EXIT(x) ((x) << 3)
-#define LSH_GET_EXIT(x) ((x) >> 3)
-#endif
 
 #endif /* LSH_TYPES_H_INCLUDED */

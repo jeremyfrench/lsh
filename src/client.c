@@ -66,20 +66,6 @@
        (kexinit_handler object packet_handler)))
 */
 
-#if 0     
-struct client_callback
-{
-  struct fd_callback super;
-  struct io_backend *backend;
-  UINT32 block_size;
-  char *id_comment;
-
-  struct randomness *random;
-  struct make_kexinit *init;
-  struct packet_handler *kexinit_handler;
-};
-#endif
-
 static int client_initiate(struct fd_callback **c,
 			   int fd)
 {
@@ -121,14 +107,6 @@ static int client_initiate(struct fd_callback **c,
      (vars
        (connection object ssh_connection)))
 */
-
-#if 0
-struct client_line_handler
-{
-  struct line_handler super;
-  struct ssh_connection *connection;
-};
-#endif
 
 static struct read_handler *do_line(struct line_handler **h,
 				    UINT32 length,
@@ -250,16 +228,6 @@ struct close_callback *make_client_close_handler(void)
        (service object ssh_service)))
 */
 
-#if 0
-struct accept_service_handler
-{
-  struct packet_handler super;
-
-  int service_name;
-  struct ssh_service *service;
-};
-#endif
-
 static int do_accept_service(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
@@ -309,16 +277,6 @@ struct packet_handler *make_accept_service_handler(int service_name,
        (service object ssh_service)))
 */
 
-#if 0
-struct service_request
-{
-  struct ssh_service super;
-
-  int service_name;
-  struct ssh_service *service;
-};
-#endif
-
 static int do_request_service(struct ssh_service *c,
 			      struct ssh_connection *connection)
 {
@@ -362,25 +320,6 @@ struct ssh_service *request_service(int service_name,
        (exit_status simple "int *")))
 */
 
-#if 0
-struct client_session
-{
-  struct ssh_channel super;
-
-  /* Exec or shell request. */
-  int final_request;
-  struct lsh_string *args;
-  
-  /* To access stdio */
-  struct io_fd *in;
-  struct io_fd *out;
-  struct io_fd *err;
-
-  /* Where to save the exit code. */
-  int *exit_status;
-};
-#endif
-
 static int close_client_session(struct ssh_channel *c)
 {
   CAST(client_session, session, c);
@@ -413,15 +352,6 @@ static int client_session_die(struct ssh_channel *c)
      (vars
        (exit_status simple "int *")))
 */
-
-#if 0
-struct exit_handler
-{
-  struct channel_request super;
-
-  int *exit_status;
-};
-#endif
 
 static int do_exit_status(struct channel_request *c,
 			  struct ssh_channel *channel,
@@ -637,25 +567,6 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
        ;; (err object io_fd)
        ))
 */
-
-#if 0
-struct client_startup
-{
-  struct connection_startup super;
-
-  struct ssh_channel *session;
-#if 0
-  /* Exec or shell request. */
-  int final_request;
-  struct lsh_string *args;
-  
-  /* To access stdio */
-  struct io_fd *in;
-  struct io_fd *out;
-  struct io_fd *err;
-#endif
-};
-#endif
 
 static int do_client_startup(struct connection_startup *c,
 			     struct channel_table *table,

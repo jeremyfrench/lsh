@@ -65,19 +65,6 @@
        ))
 */
 
-#if 0
-struct client_userauth
-{
-  struct ssh_service super;
-
-  struct lsh_string *username; /* Remote user name to authenticate as */
-  int service_name;   /* Service we want to access */
-  struct ssh_service *service;
-  
-  /* FIXME: Keys to try */
-};
-#endif
-
 /* CLASS:
    (class
      (name success_handler)
@@ -86,15 +73,6 @@ struct client_userauth
        (service object ssh_service)))
 */
 
-#if 0
-struct success_handler
-{
-  struct packet_handler super;
-
-  struct ssh_service *service;
-};
-#endif
-
 /* CLASS:
    (class
      (name failure_handler)
@@ -102,15 +80,6 @@ struct success_handler
      (vars
        (userauth object client_userauth)))
 */
-
-#if 0
-struct failure_handler
-{
-  struct packet_handler super;
-
-  struct client_userauth *userauth;
-};
-#endif
 
 static struct lsh_string *format_userauth_password(struct lsh_string *name,
 						   int service,

@@ -42,14 +42,6 @@
        (prefix simple "char *")))
 */
 
-#if 0
-struct packet_debug
-{
-  struct abstract_write_pipe super;
-  char *prefix;
-};
-#endif
-
 static int do_debug(struct abstract_write *w,
 		    struct lsh_string *packet)
 {

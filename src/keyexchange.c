@@ -61,25 +61,6 @@
 
        (finished object ssh_service)))
 */
-#if 0
-struct kexinit_handler
-{
-  struct packet_handler super;
-  int type;
-  
-  struct make_kexinit *init;
-  
-  /* Maps names to algorithms. It's dangerous to lookup random atoms
-   * in this table, as not all objects have the same type. This
-   * mapping is used only on atoms that have appeared in *both* the
-   * client's and the server's list of algorithms (of a certain type),
-   * and therefore the remote side can't screw things up. */
-
-  struct alist *algorithms;
-
-  struct ssh_service *finished;
-};
-#endif
 
 #define NLISTS 10
 
@@ -452,15 +433,6 @@ struct mac_instance *kex_make_mac(struct hash_instance *secret,
        (mac object mac_instance)))
 */
 
-#if 0
-struct newkeys_handler
-{
-  struct packet_handler super;
-  struct crypto_instance *crypto;
-  struct mac_instance *mac;
-};
-#endif
-
 static int do_handle_newkeys(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
@@ -574,51 +546,3 @@ struct make_kexinit *make_test_kexinit(struct randomness *r)
      make_int_list(1, ATOM_NONE, -1),
      make_int_list(0, -1));
 }
-
-#if 0
-struct test_kexinit
-{
-  struct make_kexinit super;
-  struct randomness *r;
-};
-
-static struct kexinit *do_make_kexinit(struct make_kexinit *c)
-{
-  CAST(test_kexinit, closure, c);
-  NEW(kexinit, res);
-
-  static int kex_algorithms[] = { ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1 };
-  static int server_hostkey_algorithms[] = { ATOM_SSH_DSS, -1 };
-  static int crypto_algorithms[] = { ATOM_ARCFOUR, ATOM_NONE, -1 };
-  static int mac_algorithms[] = { ATOM_HMAC_SHA1, -1 };
-  static int compression_algorithms[] = { ATOM_NONE, -1 };
-  static int languages[] = { -1 };
-
-  RANDOM(closure->r, 16, res->cookie);
-  res->kex_algorithms = kex_algorithms;
-  res->server_hostkey_algorithms = server_hostkey_algorithms;
-  res->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER] = crypto_algorithms;
-  res->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT] = crypto_algorithms;
-  res->parameters[KEX_MAC_CLIENT_TO_SERVER] = mac_algorithms;
-  res->parameters[KEX_MAC_SERVER_TO_CLIENT] = mac_algorithms;
-  res->parameters[KEX_COMPRESSION_CLIENT_TO_SERVER] = compression_algorithms;
-  res->parameters[KEX_COMPRESSION_SERVER_TO_CLIENT] = compression_algorithms;
-  res->languages_client_to_server = languages;
-  res->languages_server_to_client = languages;
-  res->first_kex_packet_follows = 0;
-
-  return res;
-}
-
-struct make_kexinit *make_test_kexinit(struct randomness *r)
-{
-  NEW(test_kexinit, res);
-
-  res->super.make = do_make_kexinit;
-  res->r = r;
-
-  return &res->super;
-}
-
-#endif
-

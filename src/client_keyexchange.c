@@ -45,15 +45,6 @@
        (verifier object lookup_verifier)))
 */
 
-#if 0     
-struct dh_client_exchange
-{
-  struct keyexchange_algorithm super;
-  struct diffie_hellman_method *dh;
-  struct lookup_verifier *verifier;
-};
-#endif
-
 /* Handler for the kex_dh_reply message */
 /* CLASS:
    (class
@@ -65,18 +56,6 @@ struct dh_client_exchange
        (install object install_keys)
        (finished object ssh_service)))
 */
-
-#if 0
-struct dh_client
-{
-  struct packet_handler super;
-  struct diffie_hellman_instance dh;
-  struct lookup_verifier *verifier;
-  struct install_keys *install;
-  
-  struct ssh_service *finished;
-};
-#endif
     
 static int do_handle_dh_reply(struct packet_handler *c,
 			      struct ssh_connection *connection,
@@ -217,14 +196,6 @@ make_dh_client(struct diffie_hellman_method *dh,
      (vars
        (algorithms object object_list)))
 */
-
-#if 0
-struct client_install_keys
-{
-  struct install_keys super;
-  struct object_list *algorithms;
-};
-#endif
 
 static int do_install(struct install_keys *c,
 		      struct ssh_connection *connection,
