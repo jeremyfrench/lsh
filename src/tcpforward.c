@@ -32,8 +32,6 @@
 #include "werror.h"
 
 #include <assert.h>
-#include <errno.h>
-#include <string.h>
 
 
 #define GABA_DEFINE
