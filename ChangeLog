@@ -1,3 +1,16 @@
+2000-11-16  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/unix_user.c (do_read_file): Use lsh_copy_file(). 
+
+	* src/lsh.c (fork_input): New function.
+	(fork_output): New function.
+	(make_lsh_session): Optionally fork processes for handling stdio,
+	to avoid setting the fd:s, that are potentially shared with other
+	processes, in non-blocking mode.
+	New option --cvs-workaround.
+
+	* src/io.c (lsh_copy_file): New function.
+
 2000-11-15  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/tty.c (tty_makeraw): #if:ed out this function.

@@ -1,5 +1,17 @@
 News for the 1.1.2 release:
 
+	New experimental option to lsh: --cvs-workaround Using this
+	option causes lsh to fork off a few extra processes to handle
+	its stdio file descriptors, and avoid setting them in
+	nonblocking mode. One can also use for instance
+	--cvs-workaround=o to fork only for stdout; the optional
+	argument can be any combination of the characters 'i' (stdin),
+	'o' (stdout) and 'e' (stderr). If this turns out to be useful,
+	the option will probably be renamed and perhaps made the
+	default.
+
+	Implemented window change messages in the client.
+						
 	Added signal handlers to io_backend.
 
 	Reorganized the code a little to make the lshg binary smaller.
