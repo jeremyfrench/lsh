@@ -58,7 +58,6 @@ spki
  
 # Old variants
 
-# ssh-rsa-pkcs1@lysator.liu.se 
 # x509v3               RECOMMENDED  sign      X.509 certificates
 # spki                 OPTIONAL     sign      SPKI certificates
 # spki-rsa@lysator.liu.se 

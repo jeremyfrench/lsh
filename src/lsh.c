@@ -440,25 +440,6 @@ do_lsh_lookup(struct lookup_verifier *c,
 	break;
       }
       
-#if 0
-    case ATOM_RSA_PKCS1_SHA1_LOCAL:
-      {
-	struct rsa_verifier *v = make_ssh_rsa_verifier(key->length, key->data);
-	if (!v)
-	  {
-	    werror("do_lsh_lookup: Invalid ssh-rsa key.\n");
-	    return NULL;
-	  }
-	subject = SPKI_LOOKUP(self->db,
-			      rsa_to_spki_public_key(&v->public),
-			      &v->super);
-	assert(subject);
-	assert(subject->verifier);
-	break;
-      }
-      
-    case ATOM_SPKI:
-#endif
       /* It doesn't matter here which flavour of SPKI is used. */
     case ATOM_SPKI_SIGN_RSA:
     case ATOM_SPKI_SIGN_DSS:
