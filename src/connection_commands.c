@@ -193,6 +193,10 @@ do_line(struct line_handler **h,
 		      | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG);
 		verbose("ssh.com 2.1.0\n");
 	      }
+	    /* FIXME: Deal with "SSH-1.99-2.2.0 Secure Shell" and
+	     * "SSH-2.0-2.2.0 Secure Shell", which should fix most or
+	     * all of the viloations of the spec. */
+	       
 #endif	    
 	    
 	    new = 
