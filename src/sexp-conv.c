@@ -367,7 +367,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
 static const struct argp
 main_argp =
-{ main_options, main_argp_parser, NULL,
+{ main_options, main_argp_parser,
+  "Conversion: sexp-conv [options] <INPUT-SEXP >OUTPUT\n"
+  "Fingerprinting: sexp-conv --raw-hash [ --hash=ALGORITHM ] <PUBLIC-KEY",
   "Reads an s-expression on stdin, and outputs the same "
   "s-expression on stdout, possibly using a different "
   "encoding. By default, output uses the advanced encoding. ",
