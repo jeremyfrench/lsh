@@ -33,25 +33,6 @@
 #include <netdb.h>
 #include <netinet/in.h>
 
-struct io_fd
-{
-  struct lsh_object header;
-  
-  struct io_fd *next;
-  int fd;
-
-  int close_now;
-  
-  /* Reading */
-  struct read_handler *handler;
-  int on_hold; /* For flow control */
-
-  /* Writing */
-  struct write_buffer *buffer;
-  int close_reason;
-  struct close_callback *close_callback;
-};
-
 /* A closed function with a file descriptor as argument */
 struct fd_callback
 {
@@ -84,25 +65,65 @@ struct close_callback
 
 #define CLOSE_CALLBACK(c, r) ((c)->f((c), (r)))
 
+#if 0
+/* fd types */
+#define FD_IO 1
+#define FD_LISTEN 2
+#define FD_CONNECT 3
+#endif
+
+struct lsh_fd
+{
+  struct lsh_object header;
+
+  struct lsh_fd *next;
+  int fd;
+
+  /* User's close callback */
+  int close_reason;
+  struct close_callback *close_callback;
+
+  /* Called before poll */
+  void (*prepare)(struct lsh_fd *self);
+
+  int want_read;
+  /* Called if poll indicates that data can be read. */
+  void (*read)(struct lsh_fd *self);
+
+  int want_write;
+  /* Called if poll indicates that data can be written. */
+  void (*write)(struct lsh_fd *self);
+
+  int close_now;
+  void (*really_close)(struct lsh_fd *self);
+};
+
+#define PREPARE_FD(fd) ((fd)->prepare((fd)))
+#define READ_FD(fd) ((fd)->read((fd)))
+#define WRITE_FD(fd) ((fd)->write((fd)))
+#define REALLY_CLOSE_FD(fd) ((fd)->really_close((fd)))
+
+struct io_fd
+{
+  struct lsh_fd super;
+  
+  /* Reading */
+  struct read_handler *handler;
+
+  /* Writing */
+  struct write_buffer *buffer;
+};
+
 struct listen_fd
 {
-  struct lsh_object header;
+  struct lsh_fd super;
   
-  struct listen_fd *next;
-  int fd;
   struct fd_callback *callback;
 };
 
-struct connect_fd
-{
-  struct lsh_object header;
-  
-  struct connect_fd *next;
-  int fd;
-  struct fd_callback *callback;
+#define connect_fd listen_fd
 
-};
-  
+#if 0
 struct callout
 {
   struct lsh_object header;
@@ -110,20 +131,20 @@ struct callout
   struct callout *next;
   struct callback *callout;
   time_t when;
-  /* callback */
 };
+#endif
 
 struct io_backend
 {
   struct lsh_object header;
-  
-  unsigned nio;
-  struct io_fd *io;
-  unsigned nlisten;
-  struct listen_fd *listen;
-  unsigned nconnect;
-  struct connect_fd *connect;
+
+  /* Linked list of fds. */  
+  struct lsh_fd *files; 
+
+#if 0
+  /* Callouts */
   struct callout *callouts;
+#endif
 };
 
 void init_backend(struct io_backend *b);
@@ -166,6 +187,6 @@ struct io_fd *io_write(struct io_backend *b,
 		       UINT32 block_size,
 		       struct close_callback *close_callback);
 
-void close_fd(struct io_fd *fd);
+void close_fd(struct lsh_fd *fd);
 
 #endif /* LSH_IO_H_INCLUDED */
