@@ -257,6 +257,7 @@ do_make_raw(struct terminal_attributes *s)
   CAST(unix_termios, self, s);
   CLONED(unix_termios, res, self);
 
+  /* FIXME: Modify the VMIN and TIME attributes. */
   CFMAKERAW(&res->ios);
 
   return &res->super;
