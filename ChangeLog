@@ -1,3 +1,7 @@
+2003-02-04  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* Moved argp-related entries from this file to src/argp/ChangeLog. 
+
 2003-01-27  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/rsa_keygen.c, src/rsa.c: Updated for nettle rsa renaming.
@@ -797,12 +801,9 @@
 	(lsh_pushd): Renamed safe_pushd, and use lsh_pushd_fd. Also added
 	arguments result and secret. Updated all callers.
 
-
 2002-07-18  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Use -ggdb3 for gcc, except for gcc-2.96.
-
-	* src/argp/configure.ac: Don't use -ggdb3 with gcc-2.96.
 
 2002-07-05  Niels Möller  <nisse@cuckoo.hack.org>
 
@@ -1071,10 +1072,6 @@
 
 2002-05-06  Niels Möller  <niels@s3.kth.se>
 
-	* src/argp/configure.ac: Use AH_TEMPLATE for
-	PROGRAM_INVOCATION_NAME and PROGRAM_INVOCATION_SHORT_NAME. The
-	third arg to AC_DEFINE_UNQUOTED seems not to work here. 
-
 	* configure.ac (CFLAGS): Don't enable -Waggregate-return.
 
 2002-05-06  Niels Möller  <nisse@cuckoo.hack.org>
@@ -1096,26 +1093,16 @@
 
 2002-05-05  Niels Möller  <nisse@lysator.liu.se>
 
-	* src/argp/acconfig.h: Deleted file.
-
-	* src/argp/configure.ac: Pass no arguments to AM_INIT_AUTOMAKE.
-	Don't substitute LIBOBJS.
-
-	* src/argp/acinclude.m4: Use the three-argument form of
-	AC_DEFINE_UNQUOTED. 
-
 	* configure.ac: Pass no options to AM_INIT_AUTOMAKE.
 
 2002-05-05  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Update for automake-1.6.
-	* src/argp/configure.ac: Likewise.
 
 	* src/gateway_channel.c (do_channel_open_forward): Added a FIXME
 	comment. We should install a new exception handler here.
 
 	* configure.ac: Renamed file, used to be configure.in.
-	* src/argp/configure.ac: Likewise.
 
 	* configure.in: Bumped version number to 1.4.
 
@@ -3983,12 +3970,6 @@
 	* src/testsuite/keygen-1-test: Use NIST security level 2 (640
 	bits), for speed.
 
-	* src/argp/configure.in: Bumped argp version to standalone-1.1. 
-
-2001-03-26  Niels Möller  <nisse@ehand.com>
-
-	* src/argp/configure.in (CPPFLAGS): Added -D_GNU_SOURCE.
-
 2001-03-25  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/functions.sh (spawn_lshd): Use kill -9 to stop
@@ -4356,9 +4337,6 @@
 
 	* src/testsuite/functions.sh (spawn_lshg): New function.
 
-	* src/argp/argp-parse.c (argp_default_parser): Let OPT_HANG print
-	the process id to stderr.
-
 	* src/resource.c (do_remember_resource): If the resource list is
 	dead, immediately kill any resources added to it.
 
@@ -4652,9 +4630,6 @@
 
 	* misc/bootstrap.sh: Fixed comment.
 
-	* src/argp/argp.h: #define PRINTF_STYLE, and use it instead of
-	using __attribute__ directly.
-
 	* src/lsh-keygen.c (main_argp_parser): Don't use optarg (reported
 	by jps).
 
@@ -4707,35 +4682,10 @@
 	* src/rsync/receive.c (rsync_receive_mode): Use an enum instead of
 	defines.
 	(rsync_update): Hash data on output.
-	(rsync_receive) STATE_LITERAL: Update avail_in and next_in after calling rsync_update.
-
-2001-01-07  Niels Möller  <nisse@cuckoo.localdomain>
-
-	* src/argp/argp.h: Added _argp_short_program_name and
-	__argp_short_program_name. 
-
-	* src/argp/argp-parse.c (parser_init): Use
-	argp_short_program_name. 
-	(parser_parse_next): Removed old permutation handling code. 
-
-2001-01-06  Niels Möller  <nisse@cuckoo.localdomain>
-
-	* src/argp/argp-namefrob.h: Added _argp_short_program_name.
+	(rsync_receive) STATE_LITERAL: Update avail_in and next_in after
+	calling rsync_update.
 
 2001-01-02  Niels Möller  <nisse@cuckoo.localdomain>
-
-	* src/argp/argp-help.c (hol_entry_help): Avoid using a
-	non-constant struct initializer.
-	(UNUSED): Define as a macro expanding to __attribute__ ..., if
-	compiling with gcc.
-
-	* src/argp/argp-fmtstream.h (PRINTF_STYLE): Define this macro,
-	to expand to __attribute__ ... if compiling with gcc.
-
-	* src/argp/argp-fmtstream.c (__argp_fmtstream_write,
-	__argp_fmtstream_puts, __argp_fmtstream_putc): Duplicate the
-	inline definitions in argp-fmtstream.h, for compilers that don't
-	do inlining.
 
 	* src/unix_random.c (random_sources): Fixed bug in initialization
 	of the HAS_ALTERNATIVE fields. Noted by jps.
@@ -4746,23 +4696,9 @@
 	(main_argp_parser): Fixed bogus references to optarg (reported by
 	jps). 
 
-	* src/argp/argp-help.c (fill_in_uparams): Use unsigned char * for
-	VAR and ARG. Fixed calls of isalnum, isspace and friends, reported
-	by Kalle Olavi Niemitalo.
-	(canon_doc_option): Fixed calls of isalnum, isspace and friends,
-	reported by Kalle Olavi Niemitalo.
-	(hol_entry_cmp): Fixed calls of tolower, reported by Kalle Olavi
-	Niemitalo.
-
 2000-12-23  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* Released lsh-1.1.4.
-
-2000-12-23  Niels Möller  <nisse@lysator.liu.se>
-
-	* src/argp/acinclude.m4: New file. 
-	* src/argp/acinclude.m4: Reverted the definition of AC_CHECK_VAR
-	to take includes as argument, and renamed it to ARGP_CHECK_VAR.
 
 2000-12-23  Niels Möller  <nisse@cuckoo.localdomain>
 
@@ -4788,9 +4724,6 @@
 
 2000-12-11  Niels Möller  <nisse@cuckoo.localdomain>
 
-	* Removed getopt.c, getopt.h and getopt1.c from the src/argp
-	directory. 
-
 	* src/lsh.c (do_options2identities): Pass two alists to
 	make_spki_read_userkeys (reported by jps).
 
@@ -4801,9 +4734,6 @@
 	* src/abstract_crypto.c (crypt_string_unpad): Adjust length
 	properly (reported by jps).
 
-	* src/argp/argp-parse.c (match_option, ARGP_COMPLETE): #if:ed out
-	completion code for long options.
-
 2000-12-09  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/Makefile.am.in (LDADD, lshg_LDADD): Use @LIBARGP@
@@ -4811,103 +4741,13 @@
 	* misc/bootstrap.sh: Use set -e. Bootstrap in the src/argp
 	subdirectory. 
 
-2000-11-30  Niels Möller  <nisse@cuckoo.localdomain>
-
-	* src/argp/argp-parse.c (match_option): Better abbreviations.
-	Replaced try_getopt with args_only, changed calling convention for
-	parser_parse_arg. 
-
-	* src/argp/configure.in: Don't check for getopt.
-
-	* src/argp/argp.h: Don't include getopt.h.
-
-	* src/argp/argp-parse.c (calc_sizes): Updated comment.
-
-2000-11-29  Niels Möller  <nisse@cuckoo.localdomain>
-
-	* src/argp/configure.in: Use AC_REPLACE_FUNCS for mempcpy, strndup
-	and strchrnul.
-	(AC_CHECK_VAR): Changed second argument to take the type of the
-	variable. 
-
-	* src/argp/argp-parse.c (struct parser): New fields
-	posixly_correct and ordering.
-	(parser_init): Choose ordering.
-	(enum arg_type): New value ARG_LONG_ONLY.
-	(parser_parse_next): Added error messages similar to getopt's. 
-
-	* src/argp/argp-help.c (STRNDUP): New macro to refer to strndup
-	or __strndup, as appropriate.
-	(STRERROR): Define this macro as a wrapper for strerror or
-	sys_errlist. 
-	(__argp_basename): New function.
-
-	* src/argp/argp-namefrob.h (__argp_basename): Added
-	__argp_basename. 
-
-	* src/argp/Makefile.am (libargp_a_LIBADD): Include LIBOBJS in
-	libargp.a. 
-
-	* src/argp/argp.h: Added prototype for _argp_basename and
-	__argp_basename. 
-
-	* src/argp/strndup.c, src/argp/strchrnul.c src/argp/mempcpy.c:
-	Moved replacement functions to separate files.
-
-2000-11-28  Niels Möller  <nisse@cuckoo.localdomain>
-
-	* src/argp/argp-parse.c: Deleted getopt-related code.
-	(struct parser): New field nextchar. Deleted fields try_getotp and long_opts.
-	(find_short_option): New function.
-	(match_option): New function.
-	(find_long_option): New function.
-	(struct parser_convert_state): Deleted field long_end.
-	(convert_options): Don't build getopt_long-style option array. 
-	(parser_convert): Deleted FLAGS arument.
-	(struct parser_sizes): Deleted field long_len.
-	(parser_init): Set short_opts to NULL, unless ARGP_LONG_ONLY is
-	used. 
-	(classify_arg): New function.
-	(parser_parse_next): Don't use getopt_long().
-
 2000-11-27  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Use AC_LIB_ARGP.
 
 	* acinclude.m4 (AC_LIB_ARGP): New test.
 
-	* src/argp/argp-help.c (argp_doc): Use the name strndup, not
-	__strndup. That probably breaks glibc builds.
-
-2000-11-27  Niels Möller  <nisse@lysator.liu.se>
-
-	* src/argp/argp-test.c (asprintf): Bug fix.
-
-	* src/argp/argp.h: Dummy definition of __THROW.
-
-	* src/argp/argp-test.c: Fixed asprintf implementation.
-
-	* src/argp/argp-parse.c (__argp_usage, __option_is_short,
-	__option_is_end): Define these function, in case the user isn't
-	inlining them.
-
-	* src/argp/argp-help.c: #define __mempcpy if needed. Use unsigned
-	arguments to the ctype macros. Handle systems where
-	program_invocation_name and program_invocation_short_name doesn't
-	exist.
-	* src/argp/argp-help.c (short_program_name): New function.
-
-	* src/argp/Makefile.am: Use @LIBOBJS@ when building test program. 
-
-	* src/argp/configure.in: Check for getopt_long. Substitute
-	LIBOBJS. Add -I$srcdir to CPPFLAGS.
-
-	* src/argp: Added getopt.h, getopt.c and getopt1.c, which are
-	needed for separate compilation of argp.
-
 2000-11-27  Niels Möller  <nisse@cuckoo.localdomain>
-
-	* Updated argp from glibc-2.2.
 
 	* Released lsh-1.1.3.
 
