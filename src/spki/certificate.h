@@ -28,13 +28,17 @@
 #include "nettle/realloc.h"
 #include "nettle/buffer.h"
 
+#include <time.h>
+
 /* Real declaration in parse.h */
 struct spki_iterator;
 
+/* Real declaration in tag.c */
 struct spki_tag;
 
-#include <time.h>
-
+/* Forward declaration */
+struct spki_acl_db;
+  
 struct spki_hashes
 {
   /* Include the flags in this struct? */
@@ -105,11 +109,13 @@ spki_date_from_time_t(struct spki_date *d, time_t t);
 int
 spki_date_cmp_time_t(struct spki_date *d, time_t t);
 
+/* Lists of 5-tuples is a fundamental type. We use referens counts and
+ * cons-cells to keep track of them. */
 struct spki_5_tuple
 {
-  /* ACL:s are linked into a list. */
-  struct spki_5_tuple *next;
-
+  /* This is usually the number of lists that the 5-tuple is on. */
+  unsigned refs;
+  
   /* NULL for ACL:s */
   struct spki_principal *issuer;
   
@@ -127,12 +133,50 @@ struct spki_5_tuple
   struct spki_tag *tag;
 };
 
+/* Internal function??? */
 void
 spki_5_tuple_init(struct spki_5_tuple *tuple);
 
+struct spki_5_tuple_list
+{
+  struct spki_5_tuple *car;
+  struct spki_5_tuple_list *cdr;
+};
+
+/* Allocates a new tuple, initializes it and conses it onto the list. */
+struct spki_5_tuple *
+spki_5_tuple_cons_new(struct spki_acl_db *db,
+		      struct spki_5_tuple_list **list);
+
+void
+spki_5_tuple_list_release(struct spki_acl_db *db,
+			  struct spki_5_tuple_list *list);
+
+struct spki_5_tuple_list *
+spki_5_tuple_list_nappend(struct spki_5_tuple_list *a,
+			  struct spki_5_tuple_list *b);
+
+struct spki_5_tuple_list *
+spki_5_tuple_list_nreverse(struct spki_5_tuple_list *l);
+
+typedef int
+spki_5_tuple_filter_func(struct spki_acl_db *db,
+			 void *ctx, struct spki_5_tuple *tuple);
+
+/* Copies a list (if filter == NULL) or a sublist. */
+struct spki_5_tuple_list *
+spki_5_tuple_list_filter(struct spki_acl_db *db,
+			 struct spki_5_tuple_list *list,
+			 void *ctx, spki_5_tuple_filter_func *filter);
+
 const struct spki_5_tuple *
-spki_5_tuple_by_subject(const struct spki_5_tuple *list,
-			const struct spki_principal *subject);
+spki_5_tuple_by_subject_next(const struct spki_5_tuple_list **i,
+			     const struct spki_principal *subject);
+
+const struct spki_5_tuple *
+spki_5_tuple_by_authorization_next(const struct spki_5_tuple_list **i,
+				   struct spki_tag *request);
+
 
 struct spki_acl_db
 {
@@ -142,7 +186,7 @@ struct spki_acl_db
   nettle_realloc_func *realloc;
 
   struct spki_principal *first_principal;
-  struct spki_5_tuple *first_acl;
+  struct spki_5_tuple_list *acls;
 };
 
 void
@@ -172,30 +216,33 @@ spki_principal_free_chain(struct spki_acl_db *db,
 const struct spki_principal *
 spki_principal_normalize(const struct spki_principal *principal);
 
+
 /* Handling the acl database */
-int
-spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i);
 
 const struct spki_5_tuple *
-spki_acl_by_subject_first(struct spki_acl_db *,
-			  const struct spki_principal *principal);
+spki_acl_by_subject_first(struct spki_acl_db *db,
+			  const struct spki_5_tuple_list **i,
+			  const struct spki_principal *subject);
 
 const struct spki_5_tuple *
-spki_acl_by_subject_next(struct spki_acl_db *db,
-			 const struct spki_5_tuple *acl,
+spki_acl_by_subject_next(const struct spki_5_tuple_list **i,
 			 const struct spki_principal *principal);
 
 const struct spki_5_tuple *
 spki_acl_by_authorization_first(struct spki_acl_db *db,
+				const struct spki_5_tuple_list **i,
 				struct spki_tag *authorization);
 
 const struct spki_5_tuple *
-spki_acl_by_authorization_next(struct spki_acl_db *db,
-			       const struct spki_5_tuple *acl,
+spki_acl_by_authorization_next(const struct spki_5_tuple_list **i,
 			       struct spki_tag *authorization);
 
+int
+spki_acl_process(struct spki_acl_db *db,
+		 struct spki_iterator *i);
+
 unsigned
-spki_acl_format(struct spki_5_tuple *acl,
+spki_acl_format(const struct spki_5_tuple_list *list,
 		struct nettle_buffer *buffer);
 
 
@@ -206,16 +253,17 @@ spki_tag_free(struct spki_acl_db *db,
 	      struct spki_tag *tag);
 
 void
-spki_5_tuple_free_chain(struct spki_acl_db *db,
-			struct spki_5_tuple *chain);
+spki_5_tuple_list_release(struct spki_acl_db *db,
+			  struct spki_5_tuple_list *list);
 
-struct spki_5_tuple *
-spki_process_sequence_no_signatures(struct spki_acl_db *db,
-				    struct spki_iterator *i);
+struct spki_5_tuple_list *
+spki_parse_sequence_no_signatures(struct spki_acl_db *db,
+				  struct spki_iterator *i,
+				  struct spki_principal **subject);
 
-struct spki_5_tuple *
+struct spki_5_tuple_list *
 spki_5_tuple_reduce(struct spki_acl_db *db,
-		    struct spki_5_tuple *sequence);
+		    struct spki_5_tuple_list *sequence);
 
 
 /* Other more or less internal functions. */
