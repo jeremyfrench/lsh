@@ -1,5 +1,20 @@
 1999-12-25  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/testsuite/keygen-test: New test script.
+
+	* src/spki_commands.c (spki_read_hostkeys, spki_read_userkeys):
+	Use sexp2keypair. Also deleted some old dead code.
+	
+
+	* src/spki.c (do_spki_sexp2signer): New function.
+	(spki_sexp2signer_command): New command. 
+	(spki_parse_private_key): Renamed to spki_sexp2keypair. 
+
+	* src/lsh_writekey.c (make_writekey): Use sexp2signer, and pass
+	algorithms alist as argument.
+
+	* configure.in: Bumped version to 0.1.20.
+
 	* src/werror.h: Include stdarg.h (moved from werror.c).
 
 	* src/spki.c (do_spki_lookup): Fixed call to spki_make_verifier(). 

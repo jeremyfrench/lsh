@@ -3,5 +3,7 @@ Makefile
 Makefile.in
 des-test
 des-test.c
+foo
+foo.pub
 spki-tag-test
 spki-tag-test.c
