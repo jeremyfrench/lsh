@@ -1252,3 +1252,15 @@ io_write_file(struct io_backend *backend,
 
   return io_write(make_io_fd(backend, fd, e), block_size, c);
 }
+
+struct io_fd *
+io_read_file(struct io_backend *backend,
+	     const char *fname, 
+	     struct exception_handler *e)
+{
+  int fd = open(fname, O_RDONLY);
+  if (fd < 0)
+    return NULL;
+
+  return make_io_fd(backend, fd, e);
+}

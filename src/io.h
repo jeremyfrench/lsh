@@ -371,4 +371,9 @@ struct io_fd *io_write_file(struct io_backend *backend,
 			    struct close_callback *c,
 			    struct exception_handler *e);
 
+struct io_fd *
+io_read_file(struct io_backend *backend,
+	     const char *fname, 
+	     struct exception_handler *e);
+
 #endif /* LSH_IO_H_INCLUDED */
