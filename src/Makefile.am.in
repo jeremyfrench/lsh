@@ -86,7 +86,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	translate_signal.c tty.c twofish.c \
 	unix_interact.c unix_random.c unix_user.c \
 	unpad.c userauth.c \
-	werror.c write_buffer.c xalloc.c zlib.c
+	werror.c write_buffer.c xalloc.c xauth.c zlib.c
 
 liblsh_a_LIBADD = @LIBOBJS@
 
@@ -134,7 +134,6 @@ lsh_krb_checkpw_LDADD=@KRB_LIBS@
 # 	  if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
 
 LDADD = liblsh.a nettle/libnettle.a @LIBARGP@
-# lshg_LDFLAGS = -Wl,-Map,lshg.map
 lshg_LDADD = liblsh.a @LIBARGP@
 
 class-map: $(srcdir)/make-class-map $(dist_x_files)
