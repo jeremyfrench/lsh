@@ -6,7 +6,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -96,7 +96,6 @@ const char *argp_program_version
 const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define OPT_NO 0x400
-#define OPT_SSH1_FALLBACK 0x200
 #define OPT_INTERFACE 0x201
 
 #define OPT_TCPIP_FORWARD 0x202
@@ -187,7 +186,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (userauth_methods object int_list)
        (userauth_algorithms object alist)
        
-       (sshd1 object ssh1_fallback)
        (daemonic . int)
        (no_syslog . int)
        (corefile . int)
@@ -248,7 +246,6 @@ make_lshd_options(void)
   self->userauth_methods = NULL;
   self->userauth_algorithms = NULL;
   
-  self->sshd1 = NULL;
   self->daemonic = 0;
   self->no_syslog = 0;
   
@@ -332,11 +329,6 @@ main_options[] =
     "Listen on this network interface.", 0 }, 
   { "port", 'p', "Port", 0, "Listen on this port.", 0 },
   { "host-key", 'h', "Key file", 0, "Location of the server's private key.", 0},
-#if WITH_SSH1_FALLBACK
-  { "ssh1-fallback", OPT_SSH1_FALLBACK, "File name", OPTION_ARG_OPTIONAL,
-    "Location of the sshd1 program, for falling back to version 1 of the Secure Shell protocol.", 0 },
-#endif /* WITH_SSH1_FALLBACK */
-
   { "banner-file", OPT_BANNER_FILE, "File name", 0, "Banner file to send before " "handshake.", 9 },
 
 #if WITH_TCPWRAPPERS
@@ -709,12 +701,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       }
 	
       break;
-
-#if WITH_SSH1_FALLBACK
-    case OPT_SSH1_FALLBACK:
-      self->sshd1 = make_ssh1_fallback(arg ? arg : SSHD1);
-      break;
-#endif
 
     case OPT_SRP:
       self->with_srp_keyexchange = 1;
@@ -1124,13 +1110,12 @@ make_lshd_listen_callback(struct lshd_options *options,
   {
     CAST_SUBTYPE(command, server_callback,
 		 lshd_listen_callback
-		 (make_handshake_info(CONNECTION_SERVER,
+		   (make_handshake_info(CONNECTION_SERVER,
 					"lsh - a free ssh",
 					NULL,
 					SSH_MAX_PACKET,
 					options->random,
 					options->super.algorithms,
-					options->sshd1,
 				        banner_text),
 		  kexinit,
 		  keys,
