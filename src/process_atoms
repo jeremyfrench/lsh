@@ -51,6 +51,7 @@ case $1 in
 	    atom2define $atom
 	    echo ' ' $atom_id
 	done
+	echo '#define NUMBER_OF_ATOMS' $[ atom_id + 1 ]
 	;;
     gperf)
 	echo '%{'
