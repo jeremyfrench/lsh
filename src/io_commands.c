@@ -92,7 +92,7 @@ DEFINE_COMMAND(io_write_file_command)
   self->super.call = do_io_write_file;
   self->backend = backend;
 
-  return &self->super.super;
+  COMMAND_RETURN(c, self);
 }
 
 struct io_write_file_info *
