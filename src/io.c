@@ -698,8 +698,7 @@ make_listen_value(struct lsh_fd *fd,
      (name io_listen_callback)
      (super io_callback)
      (vars
-       ;; FIXME: Take a command directly instead.
-       (c object command_continuation)
+       (c object command)
        (e object exception_handler)))
 */
 
@@ -727,15 +726,16 @@ do_listen_callback(struct io_callback *s,
     }
 
   trace("io.c: accept on fd %i\n", conn);
-  COMMAND_RETURN(self->c,
-		 make_listen_value(make_lsh_fd(conn, "accepted socket", self->e),
-				   sockaddr2info(addr_len,
-						 (struct sockaddr *) &peer), 
-				   fd2info(fd,0)));
+  COMMAND_CALL(self->c,
+	       make_listen_value(make_lsh_fd(conn, "accepted socket", self->e),
+				 sockaddr2info(addr_len,
+					       (struct sockaddr *) &peer), 
+				 fd2info(fd,0)),
+	       &discard_continuation, self->e);
 }
 
 struct io_callback *
-make_listen_callback(struct command_continuation *c,
+make_listen_callback(struct command *c,
 		     struct exception_handler *e)
 {
   NEW(io_listen_callback, self);
@@ -745,6 +745,7 @@ make_listen_callback(struct command_continuation *c,
   
   return &self->super;
 }
+
 
 /* Connect callback */
 

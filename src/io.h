@@ -323,7 +323,7 @@ io_connect_local(struct local_info *info,
 		 struct exception_handler *e);
 
 struct io_callback *
-make_listen_callback(struct command_continuation *c,
+make_listen_callback(struct command *c,
 		     struct exception_handler *e);
 
 struct lsh_fd *io_read_write(struct lsh_fd *fd,
