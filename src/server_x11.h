@@ -50,36 +50,5 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
 		 struct command_continuation *c,
 		 struct exception_handler *e);
 
-#if 0
-/* Returns the display */
-const struct lsh_string *
-server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
-		 UINT32 protocol_length, const UINT8 *protocol,
-		 UINT32 cookie_length, const UINT8 *cookie);
 
-/* ;; GABA:
-   (class
-     (name server_x11_info)
-     (super resource)
-     (vars
-       (display string)
-       (socket object lsh_fd)
-       ;; Filename of xauth file
-       (xauth string)))
-*/
-
-struct server_x11_info *
-make_server_x11_info(UINT32 protocol_length, const UINT8 *protocol,
-		     UINT32 cookie_length, const UINT8 *cookie,
-		     struct lsh_user *user)
-{
-}
-
-/* Start listening on an AF_UNIX socket, and run xauth */
-void
-server_x11_listen(struct server_x11_info *info,
-		  struct ssh_connection *connection,
-		  struct command_continuation *c,
-		  struct exception_handler *e);
-#endif
 #endif /* LSH_SERVER_X11_H_INCLUDED */
