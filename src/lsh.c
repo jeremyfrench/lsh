@@ -87,9 +87,6 @@ static struct request_service request_userauth_service =
 STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
 #define REQUEST_USERAUTH_SERVICE (&request_userauth_service.super.super)
 
-static struct request_service request_connection_service =
-STATIC_REQUEST_SERVICE(ATOM_SSH_CONNECTION);
-#define REQUEST_CONNECTION_SERVICE (&request_connection_service.super.super)
 
 #include "lsh.c.x"
 
@@ -118,9 +115,6 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_CONNECTION);
 
        (with_srp_keyexchange . int)
        (with_dh_keyexchange . int)
-
-       ; Ask for the userauth service
-       (with_userauth . int)
 
        ; Command to invoke to start ssh-connection service)
        (service object command)
@@ -169,8 +163,6 @@ make_options(struct io_backend *backend,
 
   /* By default, enable only one of dh and srp. */
   self->with_dh_keyexchange = -1;
-
-  self->with_userauth = -1;
   
   self->kex_algorithms = NULL;
   
@@ -588,7 +580,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define OPT_DH 0x206
 #define OPT_SRP 0x207
-#define OPT_USERAUTH 0x208
 
 #define OPT_STDIN 0x210
 #define OPT_STDOUT 0x211
@@ -623,11 +614,13 @@ main_options[] =
 
   { "no-dh-keyexchange", OPT_DH | ARG_NOT, NULL, 0, "Disable DH support.", 0 },
 
+#if 0
   { "userauth", OPT_USERAUTH, NULL, 0,
     "Request the ssh-userauth service (default, unless SRP is being used).", 0 },
   { "no-userauth", OPT_USERAUTH | ARG_NOT, NULL, 0,
     "Request the ssh-userauth service (default if SRP is used).", 0 },
-
+#endif
+  
   /* ACtions */
   { "forward-remote-port", 'R', "remote-port:target-host:target-port",
     0, "", CLIENT_ARGP_ACTION_GROUP },
@@ -729,49 +722,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	argp_error(state, "All keyexchange algorithms disabled.");
 
       {
-	struct command *perform_userauth = NULL;
-
-	/* NOTE: The default, self->with_userauth < 0, means that we
-	 * should figure out the right thing automatically. */
-
-	if (self->with_userauth < 0)
-	  {
-	    /* Make the decision  early, if possible. */
-	    if (!self->with_srp_keyexchange)
-	      /* We're not using SRP, so we request the
-	       * ssh-userauth-service */
-	      self->with_userauth = 1;
-
-	    else if (!self->with_dh_keyexchange)
-	      /* We're using SRP, and should not need any extra
-	       * user authentication. */
-	      self->with_userauth = 0;
-	  }
-	   
-	if (self->with_userauth)
-	  {
-	    CAST_SUBTYPE(command, o, make_lsh_userauth(self));
-	    perform_userauth = o;
-	  }
-
-	switch(self->with_userauth)
-	  {
-	  case 0:
-	    self->service = &request_connection_service.super;
-	    break;
-	  case 1:
-	    self->service = perform_userauth;
-	    break;
-	  case -1:
-	    /* Examine the CONNECTION_SRP flag, later. */
-	    self->service
-	      = make_connection_if_srp(&request_connection_service.super,
-				       perform_userauth);
-	  default:
-	    fatal("Internal error.\n");
-	  }
-	  
-	assert(self->service);
+        CAST_SUBTYPE(command, o, make_lsh_userauth(self));
+        self->service = o;
       }
 	
       {
@@ -871,8 +823,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     CASE_FLAG(OPT_DH, with_dh_keyexchange);
     CASE_FLAG(OPT_SRP, with_srp_keyexchange);
 
-    CASE_FLAG(OPT_USERAUTH, with_userauth);
-      
     case 'R':
       {
 	UINT32 listen_port;
