@@ -21,8 +21,8 @@ license. The RSA patents expire on September 20, 2000. As these expire,
 LSH will add RSA support.
 
 LSH and OpenSSH have been tested together with positive results. LSH
-and OpenSSH use different file formats for storing DSA keys, and a
-conversion tool is on the LSH todo-list.
+and OpenSSH use different file formats for storing DSA keys; some
+conversion tools are included in the LSH dist.
 
 [Faq entry heavily modified: Jeff Bailey <jbailey@gnu.org>]
 
