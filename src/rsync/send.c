@@ -7,8 +7,11 @@
 #include "rsync.h"
 
 #include <assert.h>
+#include <string.h>
 
 #define HASH_SIZE 0x1000
+#define HASH_SUM(a, b) (((a) ^ (b)) & 0xffff)
+#define COMBINE_SUM(a, b) ((a) | ((b) << 16))
 
 struct rsync_node
 {
@@ -16,8 +19,7 @@ struct rsync_node
   UINT32 index;
   UINT32 length;
   
-  unsigned sum_a;
-  unsigned sum_b;
+  UINT32 sum_weak; /* a | b << 16*/
 
   UINT8 sum_md5[MD5_DIGESTSIZE];
 };
@@ -27,36 +29,42 @@ struct rsync_table
   struct rsync_node *hash[HASH_SIZE];
   UINT32 alloc_size;
   UINT32 size;
+  UINT32 block_size;
 
   struct rsync_node all_nodes[1];
 };
 
 static struct rsync_table *
-make_rsync_table(UINT32 count, UINT32)
+make_rsync_table(UINT32 count, UINT32 block_size)
 {
   unsigned i;
   
   struct rsync_table *table =
     malloc(sizeof(struct rsync_table) - sizeof(struct rsync_node)
-	   + count * sizeof(rsync_node));
+	   + count * sizeof(struct rsync_node));
   
   if (!table)
     return NULL;
 
   for (i = 0; i<HASH_SIZE; i++)
-    table->hash[i] = 0;
+    table->hash[i] = NULL;
 
   table->alloc_size = count;
   table->size = 0;
+
+  table->block_size = block_size;
+
+  return table;
 }
 
-struct rsync_node *
+static struct rsync_node *
 rsync_add_entry(struct rsync_table *table,
 		UINT8 *input)
 {
   struct rsync_node *node;
+  unsigned a, b;
   unsigned h;
-  
+
   assert(table->size < table->alloc_size);
   node = table->all_nodes + table->size;
 
@@ -64,15 +72,39 @@ rsync_add_entry(struct rsync_table *table,
 
   /* NOTE: Length field is left uninitialized for now */
   
-  node->sum_a = READ_UINT16(input);
-  node->sum_b = READ_UINT16(input + 2);
+  a = READ_UINT16(input);
+  b = READ_UINT16(input + 2);
+
+  node->sum_weak = COMBINE_SUM(a, b);
   memcpy(node->sum_md5, input + 4, MD5_DIGESTSIZE);
 
-  h = node->sum_a ^ node->sum_b;
+  h = HASH_SUM(a, b);
   node->next = table->hash[h];
   table->hash[h] = node;
 
   return node;
+}
+
+static struct rsync_node *
+rsync_lookup_1(struct rsync_node *n, UINT32 weak)
+{
+  while (n && (n->sum_weak != weak))
+    n = n->next;
+
+  return n;
+}
+
+static struct rsync_node *
+rsync_lookup_2(struct rsync_node *n, UINT32 weak,
+	       const UINT8 *digest)
+{
+  /* FIXME: This could be speeded up slightly if the hash lists were
+   * kept sorted on weak_sum. */
+  while (n && ( (n->sum_weak != weak)
+		|| memcmp(n->sum_md5, digest, MD5_DIGESTSIZE)))
+      n = n->next;
+
+  return n;
 }
 
 int
@@ -91,13 +123,15 @@ rsync_read_table(struct rsync_read_table_state *s,
 	  }
 	else
 	  {
+	    UINT32 block_size;
+	    
 	    memcpy(s->buf + s->pos, input, left);
 	    input += left;
 	    length -= left;
 	    s->pos = 0;
 	    
 	    s->count = READ_UINT32(s->buf);
-	    s->block_size = READ_UINT32(s->buf + 4);
+	    block_size = READ_UINT32(s->buf + 4);
 	    s->remainder = READ_UINT32(s->buf + 8);
 
 	    if ( (s->count > s->max_count)
@@ -105,8 +139,8 @@ rsync_read_table(struct rsync_read_table_state *s,
 		 || (s->remainder >= s->block_size))
 	      return RSYNC_INPUT_ERROR;
 
-	    s->table = make_rsync_table(s->count);
-
+	    s->table = make_rsync_table(s->count, block_size);
+	    
 	    return (s->table) ? RSYNC_PROGRESS : RSYNC_MEMORY;
 	  }
       }
@@ -126,8 +160,6 @@ rsync_read_table(struct rsync_read_table_state *s,
 	      }
 	    else
 	      {
-		struct rsync_node *node;
-		
 		memcpy(s->buf + s->pos, input, left);
 		input += left;
 		length -= left;
@@ -140,7 +172,7 @@ rsync_read_table(struct rsync_read_table_state *s,
 	  {
 	    /* New partial block */
 	    memcpy(s->buf, input, length);
-	    b->pos = length;
+	    s->pos = length;
 	    return RSYNC_PROGRESS;
 	  }
 	else
@@ -152,10 +184,10 @@ rsync_read_table(struct rsync_read_table_state *s,
 	
 	node->length = s->block_size;
 	
-	if (table->size == table->alloc_size)
+	if (s->table->size == s->table->alloc_size)
 	  {
 	    if (s->remainder)
-	      node->length = remainder;
+	      node->length = s->remainder;
 	    
 	    return length ? RSYNC_INPUT_ERROR : RSYNC_DONE;
 	  }
@@ -163,42 +195,465 @@ rsync_read_table(struct rsync_read_table_state *s,
   return RSYNC_PROGRESS;
 }
 
+/* While searching, we have to keep a buffer of previous block of
+ * data. Our buffer consists of count octets starting at start, in the
+ * circular buffer buf. Followed by the data pointed out by next_in
+ * and avail_in. The currently hashed data consists of hash_length
+ * octets, pos octets into the buffer.
+ *
+ * We may have less than one block of data available, in that case we
+ * much collect more data before we can start searching. If we collect
+ * more than buf_size (usually twice the block size), we output a
+ * literal. */
+ 
 #define STATE_INITIAL 0
 #define STATE_SEARCH 1
 #define STATE_LITERAL 2
+#define STATE_TOKEN 3
 
 int rsync_send_init(struct rsync_send_state *s,
 		    struct rsync_table *table)
 {
   assert(table->block_size <= 0xffffffffU/2);
+
   s->buf_size = table->block_size * 2;
   s->table = table;
 
   s->buf = malloc(s->buf_size);
   
-  if (!buf)
+  if (!s->buf)
     return RSYNC_MEMORY;
   
-  s->pos = 0;
-  s->a_sum = s->b_sum = 0;
-  s->state = STATE_SEARCH;
+  s->size = 0;
   
+  s->sum_a = s->sum_b = 0;
+  s->state = STATE_INITIAL;
+
+  return RSYNC_PROGRESS;
 }
 
-/* We first read s->buf_size octets into a buffer (we can improve this
- * if avail_in is large).
- *
- * When the buffer is full, we search for a match. If we find a match,
- * we output a literal and a match.
- *
- * If no match is found, we output a literal consisting of all but the
- * (block_size-1) last octets. */
+#define MIN3(a,b,c) (MIN(MIN((a),(b)),(c)))
+#define MIN4(a,b,c,d) (MIN(MIN((a),(b)),MIN((c),(d))))
 
-int rsync_send(struct rsync_send_state *state, int flush)
+#if 0
+static UINT32
+rsync_send_copy(struct rsync_send_state *s,
+		UINT32 *left, UINT32 limit, UINT8 *src)
+{
+  UINT32 avail = MIN3(*left, s->avail_out, limit);
+  
+  memcpy(s->next_out, src, avail);
+  *left -=avail;
+  s->next_out += avail;
+  s->avail_out -= avail;
+
+  return avail;
+}
+#endif
+
+static UINT32
+rsync_send_copy_out(struct rsync_send_state *s,
+		    UINT32 length, UINT8 *src)
+{
+  UINT32 avail = MIN(length, s->avail_out);
+  memcpy(s->next_out, src, avail);
+  s->next_out += avail;
+  s->avail_out -= avail;
+
+  return avail;
+}
+
+static UINT32
+rsync_send_copy_in(struct rsync_send_state *s,
+		   UINT32 length, UINT8 *dst)
+{
+  UINT32 avail = MIN(length, s->avail_in);
+  memcpy(dst, s->next_in, avail);
+  s->next_in += avail;
+  s->avail_in -= avail;
+
+  return avail;
+}
+
+static void
+rsync_send_shift(struct rsync_send_state *s,
+		 UINT32 length)
+{
+  UINT32 left;
+  assert(length <= s->size);
+
+  left = s->size - length;
+  if (left)
+    {
+      memmove(s->buf, s->buf+length, left);
+    }
+  s->size -= length;
+}
+			     
+int rsync_send(struct rsync_send_state *s, int flush)
+{
+  int progress = 0;
+
+  for (;;)
+    switch (s->state)
+      {
+      case STATE_LITERAL:
+	{
+	  assert(s->i < s->literal);
+	  
+	  s->i += rsync_send_copy_out(s,
+				      s->literal - s->i,
+				      s->buf + s->i);
+	  
+	  if (s->i < s->literal)
+	    /* More to do */
+	    return progress ? RSYNC_PROGRESS : RSYNC_BUF_ERROR;
+	  
+	  rsync_send_shift(s, s->literal);
+	  
+	  if (s->token_length)
+	    {
+	      s->state = STATE_TOKEN;
+	      s->i = 0;
+	    }
+	  else
+	    s->state = (s->size < s->table->block_size)
+	      ? STATE_INITIAL : STATE_SEARCH;
+	  
+	  break;
+	}
+      case STATE_TOKEN:
+	{
+	  assert(s->i < s->token_length);
+	  
+	  s->i += rsync_send_copy_out(s,
+				      s->token_length - s->i,
+				      s->token_buf + s->i);
+	  
+	  if (s->i < s->token_length)
+	    /* More to do */
+	    return progress ? RSYNC_PROGRESS : RSYNC_BUF_ERROR;
+	  
+	      
+	  s->state = (s->size < s->table->block_size)
+	    ? STATE_INITIAL : STATE_SEARCH;
+
+	  break;
+	}
+      case STATE_INITIAL:
+	{
+	  UINT32 done = rsync_send_copy_in(s,
+					   s->table->block_size - s->i,
+					   s->buf + s->i);
+	  rsync_update_1(&s->sum_a, &s->sum_b, done, s->buf + s->i);
+	  s->i += done;
+
+	  if (s->i == s->table->block_size)
+	    {
+	      /* Check for match */
+	      struct rsync_node *n = s->table->hash[HASH_SUM(s->sum_a, s->sum_b)];
+	      if (n)
+		{
+		  /* The first block might match. */
+		  UINT32 weak = COMBINE_SUM(s->sum_a, s->sum_b);
+
+		  /* FIXME: Check s->guess block first */
+		  n = rsync_lookup_1(n, weak);
+		  if (n)
+		    {
+		      struct md5_ctx m;
+		      UINT8 digest[MD5_DIGESTSIZE];
+		      
+		      md5_init(&m);
+		      md5_update(&m, s->buf, s->table->block_size);
+		      md5_final(&m);
+		      md5_digest(&m, digest);
+
+		      n = rsync_lookup_2(n, weak, digest);
+
+		      if (n)
+			{
+			  /* We have a match! */
+			  UINT32 token = n - s->table->all_nodes;
+
+			  /* Next block is more likely to match. */
+			  s->guess = n;
+			  if (token + 1 < s->table->size)
+			    s->guess++;
+
+			  /* One's complement */
+			  token = -(token+1);
+			  WRITE_UINT32(s->token_buf, token);
+			  s->i = 0;
+			  s->token_length = 4;
+			  s->size = 0;
+			  s->state = STATE_TOKEN;
+
+			  /* Go on */
+			  continue;
+			}
+		    }
+		}
+	      s->state = STATE_SEARCH;
+	    }
+	  break;
+	}
+      case STATE_SEARCH:
+	{
+	  /* The current hash is computed on the block
+	   *
+	   * buf[size - block_size...size]
+	   */
+	  if (s->size < s->buf_size)
+	    {
+	      UINT32 avail = MIN(s->avail_in, s->table->block_size);
+	      UINT32 found;
+	      struct rsync_node *n
+		= rsync_search(&s->sum_a, &s->sum_b, s->table->block_size,
+			       avail,
+			       s->buf + s->size - s->table->block_size,
+			       s->next_in,
+			       &found, s->table->hash);
+	      if (n)
+		{
+		  /* The block
+		   *
+		   *   buf[size - block_size + found...size] + avail[0...found]
+		   *
+		   * might match */
+
+		  UINT32 weak = COMBINE_SUM(s->sum_a, s->sum_b);
+		  n = rsync_lookup_1(n, weak);
+
+		  if (n)
+		    {
+		      struct md5_ctx m;
+		      UINT8 digest[MD5_DIGESTSIZE];
+		      
+		      md5_init(&m);
+		      md5_update(&m, s->buf + found,
+				 s->table->block_size - found);
+		      md5_update(&m, s->next_in, found);
+		      md5_final(&m);
+		      md5_digest(&m, digest);
+
+		      n = rsync_lookup_2(n, weak, digest);
+
+		      if (n)
+			{
+			  /* Match found! */
+			  UINT32 token = n - s->table->all_nodes;
+			  /* Token is one-complement of the index */
+			  token = -(token + 1);
+
+			  /* Make a literal of data up to the match */
+			  s->size = s->size - s->table->block_size + found;
+			  s->literal = s->size;
+			  s->state = STATE_LITERAL;
+
+			  s->avail_in -= found;
+			  s->next_in += found;
+
+			  token = -(token + 1);
+			  WRITE_UINT32(s->token_buf, token);
+			  s->literal =
+			  s->state = STATE_TOKEN;
+
+			  /* HERE!!! */
+			  continue;
+			}
+		    }
+		  /* Copy data up to the hash match */
+		  avail += found;
+		}
+	      memcpy(s->buf + s->size, s->next_in, found);
+	      s->size += found;
+	      s->avail_in -= found;
+	      s->next_in += found;
+	    }
+	  else
+	    {
+	      /* No match found. Make a literal out of all but the last block in the buffer */
+	      UINT32 token = s->size - s->table->block_size;
+	      s->literal = token;
+	      s->i = 0;
+	      WRITE_UINT32(s->token_buf, token);
+
+	      s->state = STATE_TOKEN;
+	    }
+	}
+      default:
+	assert(0);
+      }
+}
+
+#if 0
+
+/* Returns amount of data copied. */
+static UINT32
+rsync_send_literal(struct rsync_send_state *s,
+		   UINT32 *left)
+{
+  UINT32 avail;
+  UINT32 total;
+  
+  while ( (avail = rsync_send_avail(s)) )
+    {
+      UINT32 done = rsync_send_copy(s, left, rsync_send_avail(s), s->buf + s->start);
+      if (!done)
+	return total;
+      
+      s->start += done;
+      s->count -= done;
+      total += done;
+    }
+}
+
+/* Return the length of a continuous segment of our circular buffer. */
+static UINT32 rsync_send_avail(struct rsync_send_state *s)
+{
+  if (s->start == s->buf_size)
+    {
+      s->start = 0;
+      return s->count;
+    }
+  else
+    {
+      UINT32 tail = s->buf_size - s->start;
+      return MIN(tail, s->count);
+    }
+}
+
+int rsync_send(struct rsync_send_state *s, int flush)
+{
+  int progress = 0;
+  
+  for (;;)
+    switch (s->state)
+      {
+      case STATE_LITERAL:
+	{
+	  /* s->literal is amount of data left to copy. */
+	   
+	  if (!s->avail_out)
+	    return progress ? RSYNC_PROGRESS : RSYNC_BUF_ERROR;
+
+	  if (s->count)
+	    {
+	      if (rsync_send_literal(s, &s->literal))
+		progress = 1;
+	    }
+	  if (s->literal && !s->count)
+	    {
+	      if (rsync_send_copy(s, &s->literal, s->avail_in, s->next_in))
+		{
+		  progress = 1;
+		  s->avail_in -= done;
+		  s->next_in += done;
+		}
+	    }
+	  if (s->literal)
+	    /* More to do */
+	    return progress ? RSYNC_PROGRESS : RSYNC_BUF_ERROR;
+	  
+	  s->pos = 0;
+	  if (s->token_left)
+	    {
+	      s->state = s->STATE_TOKEN;
+	      s->hash_length = 0;
+	    }
+	  else
+	    {
+	      s->state = STATE_SEARCH;
+	      s->hash_length = s->block_size;
+	    }
+	  break;
+	}
+      case STATE_TOKEN:
+	{
+	  rsync_send_copy(s, &s->token_left, s->token_left,
+			  s->token_buf + TOKEN_LENGTH - s->token_left);
+	  if (!s->token_left)
+	    s->state = STATE_SEARCH;
+
+	  break;
+	}
+      case STATE_SEARCH:
+	{
+	  UINT32 needed = s->table->block_size - s->hash_length;
+
+	  if (needed)
+	    {
+	      /* We need to hash more data before searching. */
+
+	      UINT32 avail = rsync_send_avail(s);
+	      UINT32 chunk = MIN(needed, avail);	      
+	      while (needed && (avail = 
+		{
+		  /* We have less than one block of data available */
+
+		  rsync_update_1(&s->a_sum, &s->b_sum, s->buf + s->start, chunk);
+
+		  s->hash_length += chunk;
+		  needed -= chunk;
+		}
+
+	      if (needed)
+		{
+		  /* Need still more data */
+		  UINT32 chunk = MIN(needed, s->avail_in);
+
+		  assert(!s->count);
+		  
+		  rsync_update_1(&s->a_sum, &s->b_sum, s->next_in, chunk);
+		  s->hash_length += chunk;
+		  needed -= chunk;
+
+		  if (needed)
+		    {
+		      memcpy(
+		}
+
+
+		  
+		  
+			
+	  else
+	    {
+	      if (avail <= s->avail_out)
+		{
+		  memcpy(s->next_out, s->
+	  UINT32 avail = MIN(s->avail_in, s->avail_out);
+
+      
+}
+		   
+
+
 {
   for (;;)
     switch (s->state)
       {
+      case STATE_LITERAL:
+	{
+	  UINT32 avail = MIN(s->avail_in, s->avail_out);
+	  if (s->i <= avail)
+	    {
+	      avail = s->i;
+	      s->pos = 0;
+	      s->state = STATE_SEARCH;
+	    }
+	  else
+	    s->i -= avail;
+	  
+	  memcpy(s->next_out, s->next_in, avail);
+	  s->next_out += avail;
+	  s->next_in += avail;
+	  s->avail_out -= avail;
+	  s->avail_in -= avail;
+	}
+	break;
+	      
       case STATE_SEARCH:
 	{
 	  if (s->pos < s->table->block_size)
@@ -262,7 +717,13 @@ int rsync_send(struct rsync_send_state *state, int flush)
 		    ...
 		  }
 	      }
+	    else
+	      {
+		n = rsync_search(&s->a_sum, &s->b_sum, s->table->block_size,
+				 
+
 	  }
 	}
       }
 }
+#endif
