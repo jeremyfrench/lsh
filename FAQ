@@ -32,3 +32,37 @@ higher level languages like python or scheme rather than plain C is
 that you don't have to mess with memory deallocation. But that's no
 reason why we should have to do that in C; a gc should take care of
 most of it in one place, in a few hundred lines of code.
+
+× I don't see the value in lsh_writekey. Why not have lsh_keygen
+  do the writing?
+
+I like the approach to have each program do one thing, and do it well.
+And I'm a little tired of programs like ssh and pgp which include a
+good key generator, but only generates keys in some specialized,
+internal format, which are difficult to extract for other uses.
+
+My intention is that lsh_keygen should be general program for
+generating key pairs for public key cryptography. It outputs keys as
+"s-expressions", and should use the formats defined by SPKI. It
+supports all of canonical, transport and advanced flavors of
+s-expressions. 
+
+On the other hand, lsh_writekey is responsible for two things: to
+split out the public part of the kay, and for storing the private part
+securely. lsh_writekey need not support the advanced s-expression
+syntax. (When I think of it, perhaps it would be better to have
+lsh_writekey send the public key to stdout...).
+
+Furthermore, if you ever want to import a dss key from some other
+program (say, pgp-5), I suspect that it will be easier to find or
+write up a converter that outputs an unencrypted SPKI style key, than a
+program that can create the files under ~/.lsh directly. Then, the
+separate lsh_writekey program may come in handy.
+
+This said, I understand that we also need a more user friendly
+interface that does all the work with a single command. But I'd rather
+write that as a simple shell script that pipes the primitives
+together.
+
+   http://www.clark.net/pub/cme/html/spki.html
+   http://theory.lcs.mit.edu/~rivest/sexp.html
