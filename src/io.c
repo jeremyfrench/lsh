@@ -45,6 +45,13 @@
 # include "jpoll.h"
 #endif
 
+/* Workaround for some version of FreeBSD. */
+#ifdef POLLRDNORM
+# define MY_POLLIN (POLLIN | POLLRDNORM)
+#else /* !POLLRDNORM */
+# define MY_POLLIN POLLIN
+#endif /* !POLLRDNORM */
+
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -155,7 +162,7 @@ int io_iter(struct io_backend *b)
 	    fds[i].events = 0;
 	    
 	    if (fd->want_read)
-	      fds[i].events |= POLLIN;
+	      fds[i].events |= MY_POLLIN;
 
 	    if (fd->want_write)
 	      fds[i].events |= POLLOUT;
@@ -228,7 +235,9 @@ int io_iter(struct io_backend *b)
 	    kill_fd(fd);
 	    continue;
 	  }
-	
+
+	/* FIXME: POLLHUP is mutually exclusive with POLLOUT, but
+	 * orthogonal to POLLIN. */
 	if (fds[i].revents & POLLHUP)
 	  {
 	    if (fd->want_read)
@@ -260,7 +269,7 @@ int io_iter(struct io_backend *b)
 	if (!fd->super.alive)
 	  continue;
 
-	if (fds[i].revents & POLLIN)
+	if (fds[i].revents & MY_POLLIN)
 	  READ_FD(fd);
       }
     assert(i == nfds);
