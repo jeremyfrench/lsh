@@ -50,6 +50,8 @@
 
        ; FIXME: Perhaps this should be moved to the channel_table, and
        ; a pointer to that table be stored here instead?
+       ; Now that we pass the connection pointer to most functions,
+       ; is this field needed at all?
        (write object abstract_write)
   
        (request_types object alist)
@@ -157,32 +159,54 @@
 
 #define GLOBAL_REQUEST(r, c, w, a) ((r)->handler((r), (c), (w), (a)))
 
-/* FIXME: We must be able to handle asyncronous opening of channels.
- * I.e, on a request for direct-tcp, we should start connect()ing in
- * non-blocking mode, and delay sending theconfirmation or failure
- * message until we know if the connect() was successful.
- *
- * Do do this, there must be some way to return "in progress". */
-
 /* SSH_MSG_CHANNEL_OPEN */
+  
+/* Callback function, used to report success or failure for a
+ * requested channel open. */
+  
+/* CLASS:
+   (class
+     (name channel_open_callback)
+     (vars
+       (response method int
+                "struct ssh_channel *channel"
+                "UINT32 error"
+                "char *error_msg"
+                "struct lsh_string *args")
+       (connection object ssh_connection)))
+*/
+  
+/* xxCLASS:
+   (class
+     (name channel_open_response)
+     (vars
+       (response method int
+                "struct ssh_channel *channel"
+                "UINT32 error"
+		; FIXME: Use an lsh_string for error messages
+                "char *error_msg"
+                "struct lsh_string *args")
+       (connection object ssh_connection)
+       (remote_channel_number simple UINT32)
+       (window_size simple UINT32)
+       (max_packet simple UINT32)))
+*/
+
+#define CHANNEL_OPEN_CALLBACK(c, ch, e, m, a) \
+  (c)->response((c), (ch), (e), (m), (a))
+
 /* CLASS:
    (class
      (name channel_open)
      (vars
-       (handler method (object ssh_channel)
+       (handler method int
                 "struct ssh_connection *connection"
-                "struct simple_buffer *args"
-		; Set *error non-zero if the channel could not be opened.
-		; In this case, *arror_msg should also be set to a constant
-		; string describing the error.
-	        "UINT32 *error" "char **error_msg"
-		; Extra data that should be sent with the confirm message,
-		; or NULL if there is no extra data.
-	        "struct lsh_string **data")))
+                "struct simple_buffer *data"
+                "struct channel_open_callback *response")))
 */
 
-#define CHANNEL_OPEN(o, c, a, e, m, d) \
-((o)->handler((o), (c), (a), (e), (m), (d)))
+#define CHANNEL_OPEN(o, c, d, n) \
+((o)->handler((o), (c), (d), (n)))
 
 /* SSH_MSG_CHANNEL_REQUEST */
 /* CLASS:
@@ -225,6 +249,7 @@ struct read_handler *make_channel_read_data(struct ssh_channel *channel);
 struct read_handler *make_channel_read_stderr(struct ssh_channel *channel);
 
 struct lsh_string *format_global_failure(void);
+struct lsh_string *format_global_success(void);
 
 struct lsh_string *format_open_failure(UINT32 channel, UINT32 reason,
 				       const char *msg, const char *language);
@@ -239,12 +264,14 @@ struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 					 UINT32 add);
 
 struct lsh_string *prepare_channel_open(struct channel_table *table,
-					int type, struct ssh_channel *channel,
+					int type,
+					struct ssh_channel *channel,
 					const char *format, ...);
 
-struct lsh_string *format_channel_request(int type, struct ssh_channel *channel,
-					  int want_reply, const char *format, 
-					  ...);
+struct lsh_string *format_channel_request(int type,
+					  struct ssh_channel *channel,
+					  int want_reply,
+					  const char *format, ...);
 
 struct lsh_string *format_channel_close(struct ssh_channel *channel);
 struct lsh_string *format_channel_eof(struct ssh_channel *channel);

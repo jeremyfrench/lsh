@@ -73,9 +73,24 @@
        (channel_types object alist)))
 */
 
+/* CLASS:
+   (class
+     (name channel_open_response)
+     (super channel_open_callback)
+     (vars
+       (remote_channel_number simple UINT32)
+       (window_size simple UINT32)
+       (max_packet simple UINT32)))
+*/
+
 struct lsh_string *format_global_failure(void)
 {
   return ssh_format("%c", SSH_MSG_REQUEST_FAILURE);
+}
+
+struct lsh_string *format_global_success(void)
+{
+  return ssh_format("%c", SSH_MSG_REQUEST_SUCCESS);
 }
 
 struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
@@ -87,7 +102,8 @@ struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
   struct lsh_string *packet;
 
 #define CONFIRM_FORMAT "%c%i%i%i%i"
-#define CONFIRM_ARGS SSH_MSG_CHANNEL_OPEN_CONFIRMATION, channel->channel_number, \
+#define CONFIRM_ARGS \
+  SSH_MSG_CHANNEL_OPEN_CONFIRMATION, channel->channel_number, \
   channel_number, channel->rec_window_size, channel->rec_max_packet
     
   l1 = ssh_format_length(CONFIRM_FORMAT, CONFIRM_ARGS);
@@ -237,6 +253,8 @@ static int adjust_rec_window(struct ssh_channel *channel)
   return 0;
 }
 
+/* Process channel-related status codes. Used by the packet handlers,
+ * before returning. */
 static int channel_process_status(struct channel_table *table,
 				  int channel,
 				  int status)
@@ -328,6 +346,74 @@ static int do_global_request(struct packet_handler *c,
   END (packet);
 }
 
+/* Callback given to the CHANNEL_OPEN method */
+static int do_channel_open_response(struct channel_open_callback *c,
+                                    struct ssh_channel *channel,
+                                    UINT32 error, char *error_msg,
+                                    struct lsh_string *args)
+{
+  CAST(channel_open_response, closure, c);
+  
+  int local_channel_number;
+
+  if (!channel)
+    {
+      if (error)
+        return A_WRITE(closure->super.connection->write,
+                       format_open_failure(closure->remote_channel_number,
+                                           error, error_msg, ""));
+        /* The request was invalid */
+        return LSH_FAIL | LSH_DIE;
+    }
+
+  if ( (local_channel_number
+            = register_channel(closure->super.connection->channels,
+			       channel)) < 0)
+    {
+      werror("Could not allocate a channel number for opened channel!\n");
+      return A_WRITE(closure->super.connection->write,
+                     format_open_failure(closure->remote_channel_number,
+                                         SSH_OPEN_RESOURCE_SHORTAGE,
+                                         "Could not allocate a channel number "
+                                         "(shouldn't happen...)", ""));
+    }
+
+  /* FIXME: This copying could just as wel be done by the
+   * CHANNEL_OPEN handler? Then we can remove the corresponding fields
+   * from the closure as well. */
+  channel->send_window_size = closure->window_size;
+  channel->send_max_packet = closure->max_packet;
+  channel->channel_number = closure->remote_channel_number;
+
+  /* FIXME: Is the channel->write field really needed? */
+  channel->write = closure->super.connection->write;
+
+  return A_WRITE(closure->super.connection->write,
+                 args
+                 ? format_open_confirmation(channel, local_channel_number,
+                                            "%lfS", args)
+                 : format_open_confirmation(channel, local_channel_number,
+                                            ""));
+}
+
+static struct channel_open_response *
+make_channel_open_response(struct ssh_connection* connection,
+			   UINT32 remote_channel_number,
+			   UINT32 window_size,
+			   UINT32 max_packet)
+{
+  NEW(channel_open_response, closure);
+
+  closure->super.response = do_channel_open_response;
+  closure->super.connection = connection;
+  closure->remote_channel_number = remote_channel_number;
+  closure->window_size = window_size;
+  closure->max_packet = max_packet;
+
+  return closure;
+}
+
+
 static int do_channel_open(struct packet_handler *c,
 			   struct ssh_connection *connection,
 			   struct lsh_string *packet)
@@ -352,12 +438,8 @@ static int do_channel_open(struct packet_handler *c,
       && parse_uint32(&buffer, &max_packet))
     {
       struct channel_open *open;
-      struct ssh_channel *channel;
-      UINT32 error = 0;
-      char *error_msg;
-      struct lsh_string *args = NULL;
-      
-      int local_channel_number;
+      struct channel_open_response *response;
+      int res;
       
       if (connection->channels->pending_close)
 	/* We are waiting for channels to close. Don't open any new ones. */
@@ -372,44 +454,15 @@ static int do_channel_open(struct packet_handler *c,
 			format_open_failure(remote_channel_number,
 					    SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
 					    "Unknown channel type", "")));
-      
-      channel = CHANNEL_OPEN(open, connection, &buffer,
-			     &error, &error_msg, &args);
-      
-      if (!channel)
-	{
-	  if (error)
-	    return A_WRITE(connection->write,
-			   format_open_failure(remote_channel_number,
-					       error, error_msg, ""));
-	  /* The request was invalid */
-	  RETURN (LSH_FAIL | LSH_DIE);
-	}
 
-      if ( (local_channel_number
-	    = register_channel(connection->channels, channel)) < 0)
-	{
-	  werror("Could not allocate a channel number for pened channel!\n");
-	  RETURN
-	    (A_WRITE(connection->write,
-		     format_open_failure(remote_channel_number,
-					 SSH_OPEN_RESOURCE_SHORTAGE,
-					 "Could not allocate a channel number "
-					 "(shouldn't happen...)", "")));
-	}
-      
-      channel->send_window_size = window_size;
-      channel->send_max_packet = max_packet;
-      channel->channel_number = remote_channel_number;
+      response = make_channel_open_response(connection,
+					    remote_channel_number,
+					    window_size, max_packet);
+      /* NOTE: If the channel could be opened immediately, this method
+       * will call response right away. */
+      res = CHANNEL_OPEN(open, connection, &buffer, &response->super);
 
-      channel->write = connection->write;
-
-      RETURN (A_WRITE(connection->write,
-		      args
-		      ? format_open_confirmation(channel, local_channel_number,
-						 "%lfS", args)
-		      : format_open_confirmation(channel, local_channel_number,
-						 "")));
+      RETURN (res);
     }
   RETURN (LSH_FAIL | LSH_DIE);
 
