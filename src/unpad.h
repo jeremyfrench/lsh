@@ -11,7 +11,7 @@
 /* Input to the processor is a padded payload. */
 struct unpad_processor
 {
-  struct chained_processor c;
+  struct abstract_write_pipe c;
 };
 
 struct packet_processor *

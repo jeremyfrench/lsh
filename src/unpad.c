@@ -6,11 +6,11 @@
 #include "xalloc.h"
 
 static int do_unpad(struct unpad_processor *closure,
-		    struct simple_packet *packet)
+		    struct lsh_string *packet)
 {
   UINT8 padding_length;
   UINT32 payload_length;
-  struct simple_packet *new;
+  struct lsh_string *new;
   
   if (packet->length < 1)
     return 0;
@@ -23,11 +23,12 @@ static int do_unpad(struct unpad_processor *closure,
 
   payload_length = packet->length - 1 - padding_length;
   
-  new = simple_packet_alloc(payload_length);
+  /* FIXME: Use ssh_format() */
+  new = lsh_string_alloc(payload_length);
 
   memcpy(new->data, packet->data + 1, payload_length);
 
-  simple_packet_free(packet);
+  lsh_string_free(packet);
 
   return apply_processor(closure->c.next, new);
 }
@@ -37,7 +38,7 @@ make_unpad_processor(struct packet_processor *continuation)
 {
   struct unpad_processor *closure = xalloc(sizeof(struct unpad_processor));
 
-  closure->c.p.f = (raw_processor_function) do_unpad;
+  closure->c.p.f = (abstract_write_f) do_unpad;
   closure->c.next = continuation;
 
   return (struct packet_processor *) closure;

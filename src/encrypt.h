@@ -11,7 +11,7 @@
 
 struct encrypt_processor
 {
-  struct chained_processor c;
+  struct abstract_write_pipe c;
 
   unsigned mac_size;
 

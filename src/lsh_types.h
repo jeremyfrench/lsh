@@ -20,4 +20,22 @@
 
 #define UINT8 unsigned char
 
+/* Generic packet */
+struct lsh_string
+{
+  UINT32 sequence_number; 
+  UINT32 length;
+  UINT8 data[1];
+};
+
+/* A closed function with no arguments */
+struct callback;
+typedef int (*callback_f)(struct callback *closure);
+struct callback
+{
+  callback_f f;
+};
+
+#define CALLBACK(c) ((c)->f(c))
+
 #endif /* LSH_TYPS_H_INCLUDED */

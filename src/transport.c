@@ -5,15 +5,15 @@
 #include "transport.h"
 #include "xalloc.h"
 
-struct simple_packet *simple_packet_alloc(UINT32 length)
+struct lsh_string *lsh_string_alloc(UINT32 length)
 {
-  struct simple_packet *packet
-    = xalloc(sizeof(struct simple_packet) - 1 + length);
+  struct lsh_string *packet
+    = xalloc(sizeof(struct lsh_string) - 1 + length);
   packet->length = length;
   return packet;
 }
 
-void simple_packet_free(struct simple_packet *packet)
+void lsh_string_free(struct lsh_string *packet)
 {
   free(packet);
 }
@@ -43,8 +43,8 @@ UINT32 simple_buffer_avail(struct simple_buffer *buffer)
 }
 #endif
 
-int apply_processor(struct packet_processor *closure,
-		    struct simple_packet *packet)
+int apply_processor(struct abstract_write *closure,
+		    struct lsh_string *packet)
 {
   return closure->f(closure, packet);
 }

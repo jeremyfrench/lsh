@@ -7,7 +7,7 @@
 #endif
 
 static int do_write(struct pad_processor *closure,
-		    struct simple_packet *packet)
+		    struct lsh_string *packet)
 {
   UINT32 left = packet->length;
   UINT8 *p = packet->data;
@@ -27,19 +27,19 @@ static int do_write(struct pad_processor *closure,
       p += written;
     }
 
-  simple_packet_free(packet);
+  lsh_string_free(packet);
   return 1;
 }
 
-struct packet_processor *make_blocking_write_procesor(int fd)
+struct abstract_write *make_blocking_write_procesor(int fd)
 {
   struct blocking_write_processor *closure
     = xalloc(sizeof(struct blocking_write_processor_processor));
 
-  closure->p->f = (raw_processor_function) do_write;
+  closure->p->f = (abstract_write_f) do_write;
   closure->fd = fd;
 
-  return (struct packet_processor *) closure;
+  return (struct abstract_write *) closure;
 }
 
       

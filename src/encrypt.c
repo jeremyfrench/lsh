@@ -8,8 +8,9 @@
 static int do_encrypt(struct encrypt_processor *closure,
 		      struct simple_packet *packet)
 {
+  /* FIXME: Use ssh_format() */
   struct simple_packet *new
-    = simple_packet_alloc(packet->length + closure->mac_size);
+    = lsh_string_alloc(packet->length + closure->mac_size);
 
   closure->encrypt_function(closure->encrypt_state,
 			    packet->length,
@@ -20,7 +21,7 @@ static int do_encrypt(struct encrypt_processor *closure,
 			  packet->length,
 			  packet->data, new->data + packet->length);
   
-  simple_packet_free(packet);
+  lsh_string_free(packet);
 
   return apply_processor(closure->c.next, new);
 }
@@ -35,7 +36,7 @@ make_encrypt_processor(struct packet_processor *continuation,
 {
   struct encrypt_processor *closure = xalloc(sizeof(struct encrypt_processor));
 
-  closure->c.p.f = (raw_processor_function) do_encrypt;
+  closure->c.p.f = (abstract_write_f) do_encrypt;
   closure->c.next = continuation;
   closure->mac_size = mac_size;
   closure->mac_function = mac_function;

@@ -14,7 +14,7 @@
 #define MAX(a, b) ( ((a)>(b)) ? (a) : (b) )
 
 static int do_decrypt(struct decrypt_processor *closure,
-		      struct simple_packet *packet)
+		      struct lsh_string *packet)
 {
   /* Number of octets n the input packet that have been processed */
   UINT32 pos = 0;
@@ -58,7 +58,7 @@ static int do_decrypt(struct decrypt_processor *closure,
 	       * already decrypted, block contains some of the
 	       * decypted payload. */
 	      closure->recieved
-		= simple_packet_alloc(length
+		= lsh_string_alloc(length
 				      - (closure->block_size - 4));
 	      
 	      closure->pos = 0;
@@ -88,8 +88,8 @@ static int do_decrypt(struct decrypt_processor *closure,
 
 	      UINT32 left_overs = closure->block_size - 4;
 	      /* Full packet (including left-overs from the first block) */
-	      struct simple_packet *new
-		= simple_packet_alloc(closure->recieved->length
+	      struct lsh_string *new
+		= lsh_string_alloc(closure->recieved->length
 				      + left_overs);
 
 	      memcpy(new->data, closure->block_buffer + 4,
@@ -100,7 +100,7 @@ static int do_decrypt(struct decrypt_processor *closure,
 					closure->recieved->data,
 					new->data + left_overs);
 
-	      simple_packet_free(closure->recieved);
+	      lsh_string_free(closure->recieved);
 	      closure->recieved = new;
 
 	      if (closure->mac_size)
@@ -156,8 +156,8 @@ static int do_decrypt(struct decrypt_processor *closure,
   return 1;
 }
   
-struct packet_processor *
-make_decrypt_processor(struct packet_processor *continuation,
+struct abstract_write *
+make_decrypt_processor(struct abstract_write *continuation,
 		       UINT32 max_packet,
 		       unsigned mac_size,
 		       transform_function mac_function,
@@ -169,7 +169,7 @@ make_decrypt_processor(struct packet_processor *continuation,
   struct decrypt_processor *closure = xalloc(sizeof(struct decrypt_processor)
 					 + MAX(block_size, mac_size) - 1);
   
-  closure->c.p.f = (raw_processor_function) do_decrypt;
+  closure->c.p.f = (abstract_write_f) do_decrypt;
   closure->c.next = continuation;
 
   /* state */
@@ -186,5 +186,5 @@ make_decrypt_processor(struct packet_processor *continuation,
   closure->decrypt_function = decrypt_function;
   closure->decrypt_state = decrypt_state;
 
-  return (struct packet_processor *) closure;
+  return (struct abstract_write *) closure;
 }

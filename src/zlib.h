@@ -9,7 +9,7 @@
 /* The input to the compressor should be a packet with payload only. */
 struct zlib_processor
 {
-  struct chained_processor c;
+  struct abstract_write_pipe c;
   z_stream state;
 }
 

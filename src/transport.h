@@ -23,13 +23,6 @@ do {						\
   (p)[0] = (i) & 0xff;				\
 } while(0)
 
-/* Generic packet */
-struct simple_packet
-{
-  UINT32 length;
-  UINT8 data[1];
-};
-
 #if 0
 struct ssh_packet
 {
@@ -57,9 +50,10 @@ struct ssh_packet
 /* Size is the maximum amount of payload + padding that will be stored
  * in the packet. */
 
-struct simple_packet *simple_packet_alloc(UINT32 size);
-void simple_packet_free(struct simple_packet *packet);
+struct lsh_string *lsh_string_alloc(UINT32 size);
+void lsh_string_free(struct lsh_string *packet);
 
+#if 0
 /* A packet processing function.
  *
  * Typically, real processors will extend this struct, with fields
@@ -72,23 +66,25 @@ struct packet_processor;  /* Forward declaration */
  * (implying immediate shutdown of (this direction of) a connection.
  * Otherwise returns 1. */
 typedef int (*raw_processor_function)(struct packet_processor *context,
-				      struct simple_packet *packet);
+				      struct lsh_string *packet);
 struct packet_processor
 {
   raw_processor_function f;
 };
 
 int apply_processor(struct packet_processor *closure,
-		    struct simple_packet *packet);
+		    struct lsh_string *packet);
+
+#endif
 
 /* A processor that passes its result on to another processor */
-struct chained_processor
+struct abstract_write_pipe
 {
-  struct packet_processor p;
-  struct packet_processor *next;
+  struct abstract_write p;
+  struct abstract_write *next;
 };
 
-
+#if 0
 /* error codes, returned from packet processors. zero means ok,
  * negative means a fatal protocol failure, and positive values are
  * errors that should be reported to the otrher end. */
@@ -96,5 +92,6 @@ struct chained_processor
 #define LSH_ERR_TOO_LARGE_PACKET -1
 #define LSH_ERR_BAD_LENGTH -2
 #define LSH_ERR_BAD_MAC -3
+#endif
 
 #endif /* LSH_TRANSPORT_H_INCLUDED */

@@ -15,7 +15,7 @@ typedef void (*random_function)(void *state, UINT32 length, UINT8 *dst);
  * etc). */
 struct pad_processor
 {
-  struct chained_processor c;
+  struct abstract_write_pipe c;
 
   unsigned block_size; /* At least 8, even for stream ciphers */
 
@@ -35,7 +35,7 @@ make_pad_processor(struct packet_processor *continuation,
  * etc). No padding is done. */
 struct format_processor
 {
-  struct chained_processor c;
+  struct abstract_write_pipe c;
 };
 
 struct packet_processor *make_pad_processor(packet_processor *continuation);

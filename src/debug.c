@@ -6,7 +6,7 @@
 #include "xalloc.h"
 
 static int do_debug(struct debug_processor *closure,
-		    struct simple_packet *packet)
+		    struct lsh_string *packet)
 {
   UINT32 i;
   
@@ -26,16 +26,16 @@ static int do_debug(struct debug_processor *closure,
   return apply_processor(closure->c.next, packet);
 }
 
-struct packet_processor *make_debug_processor(FILE *output,
-					      struct packet_processor *continuation)
+struct abstract_write *make_debug_processor(FILE *output,
+					      struct abstract_write *continuation)
 {
   struct debug_processor *closure = xalloc(sizeof(struct debug_processor));
 
-  closure->c.p.f = (raw_processor_function) do_debug;
+  closure->c.p.f = (abstract_write_f) do_debug;
   closure->c.next = continuation;
   closure->output = output;
 
-  return (struct packet_processor *) closure;
+  return (struct abstract_write *) closure;
 }
 
 

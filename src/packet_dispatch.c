@@ -7,7 +7,7 @@
 #include "werror.h"
 
 static int do_dispatch(struct dispatch_processor *closure,
-		       struct simple_packet *packet)
+		       struct lsh_string *packet)
 {
   unsigned start;
   unsigned end;
@@ -50,10 +50,10 @@ static int do_dispatch(struct dispatch_processor *closure,
     return 0;
 }
 
-struct packet_processor *
+struct abstract_write *
 make_dispatch_processor(unsigned size,
 			struct dispatch_assoc *table,
-			struct packet_processor *other)
+			struct abstract_write *other)
 {
   struct dispatch_processor *closure
     = xalloc(sizeof(struct dispatch_processor));
@@ -64,12 +64,12 @@ make_dispatch_processor(unsigned size,
     if (table[i].msg >= table[i+1].msg)
       fatal("make_dispatch_processor: Table out of order");
   
-  closure->p.f = (raw_processor_function) do_dispatch;
+  closure->p.f = (abstract_write_f) do_dispatch;
   closure->other = other;
   closure->table_size = size;
   closure->dispatch_table = table;
 
-  return (struct packet_processor *) closure;
+  return (struct abstract_write *) closure;
 }
 
 

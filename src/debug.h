@@ -11,7 +11,7 @@
 
 struct debug_processor
 {
-  struct chained_processor c;
+  struct abstract_write_pipe c;
   FILE *output;
 };
 

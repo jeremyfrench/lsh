@@ -14,14 +14,14 @@
  * processor, as soon as a complete packet has been read. */
 struct decrypt_processor
 {
-  struct chained_processor c;
+  struct abstract_write_pipe c;
 
   int state;
   UINT32 pos;
 
   UINT32 max_packet;
   
-  struct simple_packet *recieved;
+  struct lsh_string *recieved;
 
   unsigned mac_size;
 
