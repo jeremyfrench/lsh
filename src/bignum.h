@@ -45,11 +45,11 @@
 void bignum_parse_s(mpz_t n, UINT32 length, UINT8 *data);
 void bignum_parse_u(mpz_t n, UINT32 length, UINT8 *data);
 
-UINT32 bignum_format_s(mpz_t n, UINT8 *data);
-UINT32 bignum_format_s_length(mpz_t n);
+UINT32 bignum_format_s(const mpz_t n, UINT8 *data);
+UINT32 bignum_format_s_length(const mpz_t n);
 
-UINT32 bignum_format_u(mpz_t n, UINT8 *data);
-UINT32 bignum_format_u_length(mpz_t n);
+UINT32 bignum_format_u(const mpz_t n, UINT8 *data);
+UINT32 bignum_format_u_length(const mpz_t n);
 
 void bignum_write(mpz_t n, unsigned length, UINT8 *data);
 
