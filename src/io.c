@@ -1976,3 +1976,143 @@ lsh_make_pipe(int *fds)
   return 1;
 }
 
+/* Copies data from one fd to another. Works no matter if the fd:s are
+ * in blocking or non-blocking mode. Tries hard not to do premature
+ * reads; we don't want to read data into the buffer, and then
+ * discover that we can't write it out.
+ *
+ * The src fd may be the process stdin, and if we are too gready
+ * reading it, we may consume data that belongs to the user's next
+ * command. */
+int
+lsh_copy_file(int src, int dst)
+{
+#define BUF_SIZE 1024
+  char buf[BUF_SIZE];
+  struct pollfd src_poll;
+  struct pollfd dst_poll;
+
+  src_poll.fd = src;
+  dst_poll.fd = dst;
+  
+  for (;;)
+    {
+      int res;
+      UINT32 i, length;
+
+      /* First wait until dst is writable; otherwise there's no point
+       * in reading the input. */
+
+      dst_poll.events = POLLOUT;
+
+      do
+	res = poll(&dst_poll, 1, -1);
+      while ( (res < 0) && (errno == EINTR));
+
+      debug("lsh_copy_file, initial poll on destination:\n"
+	    "  res = %i, src = %i, dst = %i, events = %xi, revents = %xi.\n",
+	    res, src, dst, dst_poll.events, dst_poll.revents);
+      
+      assert(res == 1);
+      
+      if (!(dst_poll.revents & POLLOUT))
+	/* Most likely, dst is a pipe, and there are no readers. */
+	return 1;
+
+      /* Ok, can we read anything? */
+      src_poll.events = MY_POLLIN;
+      
+      do
+	res = poll(&src_poll, 1, -1);
+      while ( (res < 0) && (errno == EINTR));
+      
+      if (res < 0)
+	return 0;
+
+      debug("lsh_copy_file, poll on src:\n"
+	    "  res = %i, src = %i, dst = %i, events = %xi, revents = %xi.\n",
+	    res, src, dst, src_poll.events, src_poll.revents);
+      
+      assert(res == 1);
+      
+      /* On linux, it seems that POLLHUP is set on read eof. */
+      if (!(src_poll.revents & MY_POLLIN))
+	/* EOF */
+	return 1;
+
+      assert(src_poll.revents & MY_POLLIN);
+
+      /* Before actually reading anything, we need to check that
+       * the dst fd is still alive. */
+
+      dst_poll.events = POLLOUT;
+      do
+	res = poll(&dst_poll, 1, 0);
+      while ( (res < 0) && (errno == EINTR));
+
+      debug("lsh_copy_file, second poll on destination:\n"
+	    "  res = %i, src = %i, dst = %i, events = %xi, revents = %xi.\n",
+	    res, src, dst, dst_poll.events, dst_poll.revents);
+      
+      if (res && !(dst_poll.revents & POLLOUT))
+	{
+	  /* NOTE: Either somebody else filled up the buffer, or
+	   * the fd is dead. How do we know which happened? We
+	   * can't check POLLHUP, because it seems linux always
+	   * sets it. As a kludge, and because this condition
+	   * should be really rare, we check our ppid to see if
+	   * the main process have died and left us to init. */
+
+	  debug("lsh_copy_file: ppid = %i\n", getppid());
+	  
+	  if (getppid() == 1)
+	    return 1;
+	}
+
+      do 
+	res = read(src, buf, BUF_SIZE);
+      while ( (res < 0) && (errno == EINTR));
+
+      debug("lsh_copy_file: read on fd %i returned = %i\n", src, res);
+      
+      if (res < 0)
+	return 0;
+      else if (!res)
+	/* EOF */
+	return 1;
+
+      length = res;
+
+      for (i = 0; i<length; )
+	{
+	  dst_poll.events = POLLOUT;
+	  do
+	    res = poll(&dst_poll, 1, -1);
+	  while ( (res < 0) && (errno == EINTR));
+
+	  debug("lsh_copy_file, inner poll on destination:\n"
+		"  res = %i, src = %i, dst = %i, events = %xi, revents = %xi.\n",
+		res, src, dst, dst_poll.events, dst_poll.revents);
+      
+	  if (res < 0)
+	    return 0;
+
+	  assert(res == 1);
+	  
+	  if (!(dst_poll.revents & POLLOUT))
+	    return 0;
+
+	  do
+	    res = write(dst, buf + i, length - i);
+	  while ( (res < 0) && (errno == EINTR));
+
+	  debug("lsh_copy_file: write on fd %i returned = %i\n", dst, res);
+	  
+	  if (res < 0)
+	    return 0;
+
+	  i += res;
+	}
+    }
+#undef BUF_SIZE
+}

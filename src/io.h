@@ -363,4 +363,7 @@ io_read_user_file(struct io_backend *backend,
 int
 lsh_make_pipe(int *fds);
 
+int
+lsh_copy_file(int src, int dst);
+
 #endif /* LSH_IO_H_INCLUDED */
