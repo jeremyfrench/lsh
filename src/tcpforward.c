@@ -259,6 +259,7 @@ make_open_forwarded_tcpip_continuation(struct ssh_connection *connection,
 static void
 do_channel_open_direct_tcpip(struct channel_open *s,
 			     struct ssh_connection *connection,
+			     UINT32 channel_type UNUSED,
 			     struct simple_buffer *args,
 			     struct command_continuation *c,
 			     struct exception_handler *e)
@@ -498,6 +499,7 @@ struct global_request tcpip_cancel_forward =
 static void
 do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
 				struct ssh_connection *connection,
+				UINT32 channel_type UNUSED,
 				struct simple_buffer *args,
 				struct command_continuation *c,
 				struct exception_handler *e)
