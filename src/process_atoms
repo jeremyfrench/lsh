@@ -15,12 +15,12 @@ atom_id=0
 
 function getatom() {
     atom=''
-    while [ x$atom = x ]; do
+    while [ "x$atom" = x ]; do
 	read atom ignored
 	if [ x$? != x0 ] ; then
 	    return 1
 	fi
-	case $atom in
+	case "$atom" in
 	    \#*)
 		atom=''
 		;;
@@ -30,7 +30,7 @@ function getatom() {
 }
 
 function atom2define () {
-    echo -n ATOM_$1 | tr -- -a-z _A-Z
+    echo -n ATOM_$1 | tr -- -a-z _A-Z | sed 's/*/STAR/'
 }
 
 if [ x$# != x1 ]; then
@@ -41,14 +41,14 @@ fi
 case $1 in
     filter)
 	while getatom; do
-	    echo $atom $atom_id
+	    echo "$atom" $atom_id
 	done
 	;;
     header)
 	header
 	while getatom; do
 	    echo -n '#define '
-	    atom2define $atom
+	    atom2define "$atom"
 	    echo ' ' $atom_id
 	done
 	echo '#define NUMBER_OF_ATOMS' $[ atom_id + 1 ]
@@ -63,7 +63,7 @@ case $1 in
 	    
 	while getatom; do
 	    echo -n "$atom, "
-	    atom2define $atom
+	    atom2define "$atom"
 	    echo
 	done
 	;;
@@ -73,7 +73,7 @@ case $1 in
 	while getatom; do
 	    echo ','
 	    # FIXME: We could replace ${#atom} with `expr $atom :'.*'`
-	    echo -n '  {' \"$atom\", ${#atom} '}'
+	    echo -n '  {' \""$atom"\", ${#atom} '}'
 	done
 	echo ' }'
 	;;
