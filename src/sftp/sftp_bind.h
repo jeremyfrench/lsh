@@ -171,8 +171,9 @@ int lsftp_compact_lsftp_cbs(void);
 
 int lsftp_await_command( int id );
 
-char *lsftp_qualify_path(const char *path);
-const char *lsftp_unqualify_path(const char *path );
+int lsftp_path_is_absolute( const char* path );
+char *lsftp_qualify_path( const char *path );
+const char *lsftp_unqualify_path( const char *path );
 
 int lsftp_active_cbs(void);
 
