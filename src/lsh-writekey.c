@@ -355,7 +355,7 @@ process_public(struct sexp *key,
   struct verifier *v;
   
   s = spki_sexp_to_signer(options->signature_algorithms,
-                          key);
+                          key, NULL);
   
   if (!s)
     return NULL;
