@@ -1,6 +1,6 @@
 # Testsuite
 
-CFLAGS = @CFLAGS@ -O0
+AM_CFLAGS = -O0
 
 # Tests that can be used without any special setup.
 TS_PROGS = arcfour-test aes-test blowfish-test cast128-test \
