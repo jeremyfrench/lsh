@@ -56,10 +56,6 @@ dist_classes = \
     lshg.c.x \
     pad.c.x \
     parse_config.c.x \
-    proxy.c.x \
-    proxy_session.c.x \
-    proxy_userauth.c.x \
-    proxy_userauth.h.x \
     publickey_crypto.c.x \
     publickey_crypto.h.x \
     queue.h.x \
