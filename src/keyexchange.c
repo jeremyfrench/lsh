@@ -687,6 +687,8 @@ make_simple_kexinit(struct randomness *r,
 {
   NEW(simple_kexinit, res);
 
+  assert(r->quality == RANDOM_GOOD);
+  
   res->super.make = do_make_simple_kexinit;
   res->r = r;
   res->kex_algorithms = kex_algorithms;

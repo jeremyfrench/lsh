@@ -732,6 +732,8 @@ make_forward_x11(const char *display_string,
   struct lsh_string *fake = lsh_string_alloc(X11_COOKIE_LENGTH);
   struct client_x11_display *display;
 
+  assert(random->quality == RANDOM_GOOD);
+  
   RANDOM(random, fake->length, fake->data);
 
   debug("Generated X11 fake cookie %xS\n", fake);

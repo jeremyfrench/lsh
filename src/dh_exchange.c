@@ -28,9 +28,12 @@
 #include "connection.h"
 #include "crypto.h"
 #include "format.h"
+#include "randomness.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include <assert.h>
 
 void
 init_dh_instance(struct dh_method *m,
@@ -71,6 +74,9 @@ make_dh(struct abstract_group *G, struct hash_algorithm *H,
 	struct randomness *r)
 {
   NEW(dh_method, res);
+
+  assert(r->quality == RANDOM_GOOD);
+  
   res->G = G;
   res->H = H;
   res->random = r;

@@ -26,8 +26,11 @@
 
 #include "rsa.h"
 
+#include "randomness.h"
 #include "sexp.h"
 #include "werror.h"
+
+#include <assert.h>
 
 #define SA(x) sexp_a(ATOM_##x)
 
@@ -36,6 +39,8 @@ struct sexp *
 rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits)
 {
   struct sexp *key = NULL;
+
+  assert(r->quality == RANDOM_GOOD);
   
   mpz_t n;
   mpz_t d;

@@ -73,7 +73,7 @@ dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
   mpz_t s, t, c;
   
   assert(l <= 8);
-
+  
   L = 512 + 64*l;
   n = (L-1) / 160; b = (L-1) % 160;
 
@@ -190,6 +190,8 @@ struct sexp *
 dsa_generate_key(struct randomness *r, unsigned level)
 {
   struct sexp *key = NULL;
+
+  assert(r->quality == RANDOM_GOOD);
   
   mpz_t p; mpz_t q;
   mpz_t g; mpz_t y;

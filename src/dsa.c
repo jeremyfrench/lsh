@@ -28,6 +28,7 @@
 #include "crypto.h"
 #include "format.h"
 #include "parse.h"
+#include "randomness.h"
 #include "sexp.h"
 #include "spki.h"
 #include "ssh.h"
@@ -415,6 +416,8 @@ generic_dsa_sign(struct dsa_signer *self,
   mpz_t k, tmp;
 
   assert(r && s);
+
+  assert(self->random->quality == RANDOM_GOOD);
   
   /* Select k, 0<k<q, randomly */
   mpz_init_set(tmp, self->verifier->q);
@@ -580,6 +583,7 @@ make_dsa_signer(struct signature_algorithm *c,
 {
   CAST(dsa_algorithm, self, c);
   NEW(dsa_signer, res);
+  
   mpz_init(res->a);
 
 #if 0
