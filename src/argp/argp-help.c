@@ -50,9 +50,9 @@ char *alloca ();
 #include <string.h>
 #include <assert.h>
 #include <stdarg.h>
-#include <malloc.h>
 #include <ctype.h>
-
+/* Does any system still need malloc.h? If so, we'd need a configure
+   test. */
 
 #ifndef _
 /* This is for other GNU distributions with internationalized messages.  */
@@ -1104,17 +1104,14 @@ hol_entry_help (struct hol_entry *entry, const struct argp_state *state,
   int old_wm = __argp_fmtstream_wmargin (stream);
   /* PEST is a state block holding some of our variables that we'd like to
      share with helper functions.  */
-#ifdef __GNUC__
-  struct pentry_state pest = { entry, stream, hhstate, 1, state };
-#else /* !__GNUC__ */
-  /* Decent initializers are a GNU extension */
+
+  /* Decent initializers are a GNU extension, so don't use it here. */
   struct pentry_state pest;
   pest.entry = entry;
   pest.stream = stream;
   pest.hhstate = hhstate;
   pest.first = 1;
   pest.state = state;
-#endif /* !__GNUC__ */
 
   if (! odoc (real))
     for (opt = real, num = entry->num; num > 0; opt++, num--)
