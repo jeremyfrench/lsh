@@ -1,7 +1,20 @@
+2000-02-01  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Fixed messages for --without-* flags.
+
+2000-01-27  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* doc/lsh.texinfo: Added some more sections.
+
+	* src/channel.c (channel_transmit_data,
+	channel_transmit_extended): Shrink send_window_size
+	(noted by Markus).
+
 2000-01-26  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/Makefile.am (TS_MORE_SH): Added tcpip-local-test.
 	(EXTRA_DIST): Added new files.
+	(check-some): Don't use $^, to avoid the VPATH feature.
 
 	* src/tcpforward_commands.c (DIRECT_TCPIP_HANDLER): New define. 
 	(INSTALL_DIRECT_TCPIP): New define.
