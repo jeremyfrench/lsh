@@ -74,8 +74,9 @@ lshd_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
 symmetric:
 	(cd lib && $(MAKE) libsymmetric.a)
 
-EXTRA_DIST = atoms.in process_atoms make_class $(generated_sources) HACKING \
-	$(cvs_headers) $(dist_x_files) Makefile.am.in make_am
+EXTRA_DIST = atoms.in process_atoms make_class $(generated_sources) \
+	$(cvs_headers) $(dist_x_files) Makefile.am.in make_am \
+	HACKING NOTES TASKLIST
 
 # Class files
 # SUFFIXES = .xh .xc

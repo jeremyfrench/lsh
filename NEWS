@@ -1,3 +1,20 @@
+NEWS for the 1998-12-21 snapshot:
+
+Moved most objects in crypto.c and abstract_crypto.c into separate
+files.
+
+Added a workaround for Datafellows ssh2 client, which (contrary to the
+specification) asks for protocol version 1.99.
+
+Use /dev/urandom, if available.
+
+Collect most object files into liblsh.a.
+
+Started on a key generation program.
+
+TASKLIST and NOTES files now included in the snapshot.
+
+
 NEWS since the 1998-12-17 snapshot:
 
 Support for md5 (by Balazs Scheidler).
