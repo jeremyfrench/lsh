@@ -57,114 +57,52 @@ read_file(const char *srcdir,
     }
 }
 
-/* Destructively filters the list */
-static struct spki_5_tuple *
+static int
 filter_by_tag(struct spki_acl_db *db,
-	      struct spki_5_tuple *acl,
-	      struct spki_iterator *iterator)
+	      void *ctx,
+	      struct spki_5_tuple *acl)
 {
-  struct spki_tag *tag;
-  struct spki_5_tuple **pp;
-  struct spki_5_tuple *p;
-  
-  ASSERT(spki_parse_tag(db, iterator, &tag));
+  struct spki_tag *tag = ctx;
+  struct spki_tag *intersection
+    = spki_tag_intersect(db->realloc_ctx, db->realloc,
+			 tag, acl->tag);
 
-  for (pp = &acl; (p = *pp); )
+  if (intersection)
     {
-      struct spki_tag *intersection
-	= spki_tag_intersect(db->realloc_ctx, db->realloc,
-			     tag, p->tag);
-
-      if (intersection)
-	{
-	  spki_tag_release(db->realloc_ctx, db->realloc, p->tag);
-	  p->tag = intersection;
-
-	  pp = &p->next;
-	}
-      else
-	{
-	  /* Unlink element */
-	  *pp = p->next;
-	  p->next = NULL;
-	  spki_5_tuple_free_chain(db, p);
-	}
-    }
-  return acl;
-}
-
-static struct spki_5_tuple *
-filter_by_subject(struct spki_acl_db *db,
-		  struct spki_5_tuple *acl,
-		  struct spki_iterator *iterator)
-{
-  struct spki_principal *subject;
-  struct spki_5_tuple **pp;
-  struct spki_5_tuple *p;
-
-  ASSERT(spki_parse_subject(db, iterator, &subject));
-
-  for (pp = &acl; (p = *pp); )
-    {
-      if (subject == spki_principal_normalize(p->subject))
-	pp = &p->next;
-      
-      else
-	{
-	  /* Unlink element */
-	  *pp = p->next;
-	  p->next = NULL;
-	  spki_5_tuple_free_chain(db, p);
-	}
-    }
-  return acl;
-}
-
-static struct spki_5_tuple *
-filter_by_date(struct spki_acl_db *db,
-	       struct spki_5_tuple *acl,
-	       struct spki_iterator *iterator)
-{
-  struct spki_date not_before;
-  struct spki_date not_after;
-  struct spki_5_tuple **pp;
-  struct spki_5_tuple *p;
-
-  if (iterator->sexp.type == SEXP_ATOM)
-    {
-      /* We have only a single date */
-      ASSERT(spki_parse_date(iterator, &not_before));
-      not_after = not_before;
+      /* NOTE: Destructive change */
+      spki_tag_release(db->realloc_ctx, db->realloc, acl->tag);
+      acl->tag = intersection;
+      return 1;
     }
   else
-    {
-      struct spki_5_tuple tuple;
-      ASSERT(spki_parse_valid(iterator, &tuple));
-      not_before = tuple.not_before;
-      not_after = tuple.not_after;
-    }
-      
-      
-  for (pp = &acl; (p = *pp); )
-    {
-      if (SPKI_DATE_CMP(p->not_before, not_before) < 0)
-	p->not_before = not_before;
+    return 0;
+}
 
-      if (SPKI_DATE_CMP(p->not_after, not_after) > 0)
-	p->not_after = not_after;
+static int
+filter_by_subject(struct spki_acl_db *db UNUSED,
+		  void *ctx,
+		  struct spki_5_tuple *acl)
+{
+  struct spki_principal *subject = ctx;
+
+  return (subject == spki_principal_normalize(acl->subject));
+}
+
+static int
+filter_by_date(struct spki_acl_db *db UNUSED,
+	       void *ctx,
+	       struct spki_5_tuple *acl)
+{
+  struct spki_5_tuple *date = ctx;
+
+  /* NOTE: Destructive operations */
+  if (SPKI_DATE_CMP(acl->not_before, date->not_before) < 0)
+    acl->not_before = date->not_before;
+
+  if (SPKI_DATE_CMP(acl->not_after, date->not_after) > 0)
+    acl->not_after = date->not_after;
       
-      if (SPKI_DATE_CMP(p->not_before, p->not_after) <= 0)
-	pp = &p->next;
-	  
-      else
-	{
-	  /* Unlink element */
-	  *pp = p->next;
-	  p->next = NULL;
-	  spki_5_tuple_free_chain(db, p);
-	}
-    }
-  return acl;
+  return (SPKI_DATE_CMP(acl->not_before, acl->not_after) <= 0);
 }
 
 void
@@ -176,7 +114,7 @@ test_main(void)
   for (i = 1; i <= 91; i++)
     {
       struct spki_acl_db db;      
-      struct spki_5_tuple *result;
+      struct spki_5_tuple_list *result;
 
       if (i == 13 /* This test uses an acl with empty tag. Skip it */
 	  || i == 18 /* This tests uses a validity filter with dates missing
@@ -209,37 +147,63 @@ test_main(void)
 	       
 	/* A "red-test" contains an acl and a sequence */
 	spki_acl_init(&db);
-	ASSERT(spki_acl_parse(&db, &iterator));
+	ASSERT(spki_acl_process(&db, &iterator));
 
 	if (iterator.type == SPKI_TYPE_SEQUENCE)
 	  {
-	    struct spki_5_tuple *sequence
-	      = spki_process_sequence_no_signatures(&db, &iterator);
+	    struct spki_principal *subject;
+	    struct spki_5_tuple_list *sequence
+	      = spki_parse_sequence_no_signatures(&db, &iterator, &subject);
+
 	    ASSERT(sequence);
+	    ASSERT(subject);
 	    result = spki_5_tuple_reduce(&db, sequence);
 
-	    spki_5_tuple_free_chain(&db, sequence);
+	    spki_5_tuple_list_release(&db, sequence);
 	  }
 	else
 	  {
 	    /* Just use the ACL:s */
-	    result = db.first_acl;
-	    db.first_acl = NULL;
+	    result = db.acls;
+	    db.acls = NULL;
 	  }
 
 	if (iterator.type == SPKI_TYPE_TAG)
-	  result = filter_by_tag(&db, result, &iterator);
-
+	  {
+	    struct spki_tag *tag;
+	    ASSERT(spki_parse_tag(&db, &iterator, &tag));
+	    
+	    result = spki_5_tuple_list_filter(&db, result,
+					      tag, filter_by_tag);
+	  }
 	ASSERT(result);
 
 	if (iterator.type == SPKI_TYPE_SUBJECT)
-	  result = filter_by_subject(&db, result, &iterator);
+	  {
+	    struct spki_principal *subject;
+	    ASSERT(spki_parse_subject(&db, &iterator, &subject));
 
+	    result = spki_5_tuple_list_filter(&db, result,
+					      subject, filter_by_subject);
+	  }
 	ASSERT(result);
 
 	if (iterator.type == SPKI_TYPE_VALID)
-	  result = filter_by_date(&db, result, &iterator);
-	
+	  {
+	    struct spki_5_tuple tuple;
+
+	    if (iterator.sexp.type == SEXP_ATOM)
+	      {
+		/* We have only a single date */
+		ASSERT(spki_parse_date(&iterator, &tuple.not_before));
+		tuple.not_after = tuple.not_before;
+	      }
+	    else
+	      ASSERT(spki_parse_valid(&iterator, &tuple));
+	    	  
+	    result = spki_5_tuple_list_filter(&db, result,
+					      &tuple, filter_by_date);
+	  }
 	/* Done with the input file. */
 	free(data);
       }
@@ -251,9 +215,9 @@ test_main(void)
 
       /* The result should be an acl. */
       if (result)
-	ASSERT(!result->issuer);
+	ASSERT(!result->car->issuer);
       
-      spki_5_tuple_free_chain(&db, result);
+      spki_5_tuple_list_release(&db, result);
 
       spki_acl_clear(&db);
     }
