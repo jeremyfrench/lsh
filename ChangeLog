@@ -1,3 +1,10 @@
+2002-03-19  Pontus Sköld  <pont@it.uu.se>
+
+	* src/unix_process.c: Added GETUTXID and UPDWTMPX.
+	(do_utmp_cleanup): Write cleared entry to wtmp{,x} with
+	updwtmp{,x} if logwtmp is not available.
+	(utmp_book_keeping): Likewise.	 
+
 2002-03-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-pam-checkpw.c: Include stdlib.h.
@@ -59,6 +66,9 @@
 	* src/unix_process.c: Unified utmp/utmpx code.
 
 2002-03-18  Pontus Sköld  <pont@it.uu.se>
+
+	* src/unix_process.c: Make certain WTMP_FILE and WTMPX_FILE are
+	defined.
 
 	* configure.in: Can't check for structs with AC_CHECK_MEMBER,
 	check for a sub member instead.
