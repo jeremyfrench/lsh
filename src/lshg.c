@@ -234,7 +234,7 @@ static void
 do_exc_lshg_handler(struct exception_handler *s UNUSED,
 		    const struct exception *e)
 {
-  werror(e->msg);
+  werror("Exiting: %z\n", e->msg);
   exit(EXIT_FAILURE);
 }
 
