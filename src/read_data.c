@@ -79,11 +79,12 @@ struct io_read_callback *make_read_data(struct ssh_channel *channel,
   return &self->super.super;
 }
 
+#if 0
 /* FIXME: This function will be obsoleted with the EXC_IO_EOF
  * exception type. It would be better to move the handling to the
  * "consumer" functions in channel.c.*/
 
-/* GABA:
+/* ;; GABA:
    (class
      (name exc_read_eof_channel_handler)
      (super exception_handler)
@@ -143,5 +144,5 @@ make_exc_read_eof_channel_handler(struct ssh_channel *channel,
 
   return &self->super;
 }
-
+#endif
 				  
