@@ -1,6 +1,8 @@
 /* server_password.c
  *
  * System dependant password related functions.
+ *
+ * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -30,8 +32,18 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include "server_password.c.x"
+
+/* GABA:
+   (class
+     (name userauth_password)
+     (super userauth)
+     (vars
+       (db object user_db)))
+*/
+
 static void
-do_authenticate(struct userauth *ignored UNUSED,
+do_authenticate(struct userauth *s,
 		struct ssh_connection *connection UNUSED,
 		struct lsh_string *username,
 		UINT32 service UNUSED,
@@ -39,8 +51,9 @@ do_authenticate(struct userauth *ignored UNUSED,
 		struct command_continuation *c,
 		struct exception_handler *e)
 {
+  CAST(userauth_password, self, s);
+  
   struct lsh_string *password = NULL;
-  /* struct unix_service *service; */
   int change_passwd;
   
   username = utf8_to_local(username, 1, 1);
@@ -77,7 +90,7 @@ do_authenticate(struct userauth *ignored UNUSED,
 	      return;
 	    }
        
-	  user = lookup_user(username, 1);
+	  user = USER_LOOKUP(self->db, username, 1);
 
 	  if (!user)
 	    {
@@ -115,10 +128,21 @@ do_authenticate(struct userauth *ignored UNUSED,
   PROTOCOL_ERROR(e, "Invalid password USERAUTH message.");
 }
 
+struct userauth *
+make_userauth_password(struct user_db *db)
+{
+  NEW(userauth_password, self);
+  self->super.authenticate = do_authenticate;
+  self->db = db;
+
+  return &self->super;
+}
+
+#if 0
+
 struct userauth unix_userauth =
 { STATIC_HEADER, do_authenticate };
 
-#if 0
 
 struct setuid_service
 {
