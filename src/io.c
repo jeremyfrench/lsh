@@ -1430,6 +1430,8 @@ io_listen(struct io_backend *b,
 /* AF_LOCAL sockets */
 
 #define HAVE_GNU_GETCWD 1
+#define HAVE_FCHDIR 1
+#if 0
 
 /* We have to set and reset the cwd */
 #if HAVE_GNU_GETCWD
@@ -1450,6 +1452,7 @@ gnu_getcwd ()
     }
 }
 #endif /* !HAVE_GNU_GETCWD */
+#endif
 
 /* Requires DIRECTORY and NAME to be NUL-terminated */
 struct lsh_fd *
@@ -1459,7 +1462,11 @@ io_listen_local(struct io_backend *b,
 		struct io_callback *callback,
 		struct exception_handler *e)
 {
+#if HAVE_FCHDIR
+  int old_cd;
+#else
   char *old_cd;
+#endif
   mode_t old_umask;
   struct stat sbuf;
   struct sockaddr_un *local;
@@ -1486,18 +1493,23 @@ io_listen_local(struct io_backend *b,
     {
       werror("io.c: Creating directory %S failed "
 	     "(errno = %i): %z\n", directory, errno, STRERROR(errno));
-
     }
 
-  /* cd to it */
-  old_cd = gnu_getcwd();
-  assert(old_cd);
-
-  if (chdir(directory->data) < 0)
+  /* cd to it, but first save old cwd */
+#if HAVE_FCHDIR
+  old_cd = open(".", O_RDWR); gnu_getcwd();
+  if (old_cd < 0)
     {
-      lsh_space_free(old_cd);
+      werror("io.c: open(".") failed.\n");
       return NULL;
     }
+#else /* !HAVE_FCHDIR */
+  old_cd = gnu_getcwd();
+  assert(old_cd);
+#endif /* !HAVE_FCHDIR */
+  
+  if (chdir(directory->data) < 0)
+    goto free_cd;
 
   /* Check that it has reasonable permissions */
   if (stat(".", &sbuf) < 0)
@@ -1506,14 +1518,24 @@ io_listen_local(struct io_backend *b,
 	     "  (errno = %i): %z\n", directory, errno, STRERROR(errno));
 
     fail:
-      if (chdir(old_cd) < 0)
+      if (
+#if HAVE_FCHDIR
+	  fchdir(old_cd) < 0
+#else
+	  chdir(old_cd) < 0
+#endif
+	  )
 	fatal("io.c: Failed to cd back to %z (errno = %i): %z\n",
 	      old_cd, errno, STRERROR(errno));
-
+       free_cd:
+#if HAVE_FCHDIR
+      close(old_cd);
+#else
       lsh_space_free(old_cd);
+#endif
       return NULL;
     }
-
+  
   if (sbuf.st_uid != getuid())
     {
       werror("io.c: Socket directory %S not owned by user.\n", directory);

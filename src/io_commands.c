@@ -153,16 +153,54 @@ make_listen_command_callback(struct io_backend *backend,
 }
 #endif
 
+/* GABA:
+   (class
+     (name remember_continuation)
+     (super command_continuation)
+     (vars
+       (resources object resource_list)
+       (up object command_continuation)))
+*/
+
+static void
+do_remember_continuation(struct command_continuation *s,
+			 struct lsh_object *x)
+{
+  CAST(remember_continuation, self, s);
+  CAST_SUBTYPE(resource, resource, x);
+
+  assert(resource);
+  REMEMBER_RESOURCE(self->resources, resource);
+
+  COMMAND_RETURN(self->up, resource);
+}
+
+struct command_continuation *
+make_remember_continuation(struct resource_list *resources,
+			   struct command_continuation *up)
+{
+  NEW(remember_continuation, self);
+  self->super.c = do_remember_continuation;
+
+  self->resources = resources;
+  self->up = up;
+
+  return &self->super;
+}
+
 static struct exception resolve_exception =
 STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
 
-/* FIXME: This is used only by do_simple_listen. Could be partially
- * unified with do_listen_connection. */
+/* Used by both do_simple_listen and do_listen_connection. */
 static void
 do_listen(struct io_backend *backend,
 	  struct address_info *a,
+	  int lookup,
 	  struct resource_list *resources,
-	  struct command_continuation *c,
+	  /* Continuation if listen() succeeds. */
+	  struct command_continuation *listen_c,
+	  /* Continuation if accept() succeeds. */
+	  struct command_continuation *accept_c,
 	  struct exception_handler *e)
 {
   struct sockaddr *addr;
@@ -170,57 +208,67 @@ do_listen(struct io_backend *backend,
   
   struct lsh_fd *fd;
 
-  /* Performs a dns lookup, if needed. */
-  addr = address_info2sockaddr(&addr_length, a, NULL, 1);
+  addr = address_info2sockaddr(&addr_length, a, NULL, lookup);
   if (!addr)
     {
       EXCEPTION_RAISE(e, &resolve_exception);
       return;
     }
+
+  if (resources)
+    accept_c = make_remember_continuation(resources, accept_c);
   
   fd = io_listen(backend,
 		 addr, addr_length,
-		 make_listen_callback(backend, c, e),
+		 make_listen_callback(backend, accept_c, e),
 		 e);
   lsh_space_free(addr);
   
   if (!fd)
     {
-      /* NOTE: Will never invoke the continuation. */
       EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
 					   NULL, errno, NULL));
-      return;
     }
-  
-  if (resources)
-    REMEMBER_RESOURCE(resources, &fd->super);
+  else
+    {
+      if (resources)
+	REMEMBER_RESOURCE(resources, &fd->super);
+      if (listen_c)
+	COMMAND_RETURN(listen_c, fd);
+    }
 }
 
 /* A listen function taking three arguments:
  * (listen callback backend port).
  *
- * Suitable for handling forwarding requests. */
+ * Suitable for handling forwarding requests.
+ * NOTE: The calling function has to do all remembering of the fd:s. */
 
 /* GABA:
    (class
-     (name listen_connection)
+     (name listen_with_callback)
      (super command)
      (vars
        (callback object command)
        (backend object io_backend)))
-       ;; (connection object ssh_connection)))
 */
 
 static void
-do_listen_connection(struct command *s,
-		     struct lsh_object *x,
-		     struct command_continuation *c,
-		     struct exception_handler *e)
+do_listen_with_callback(struct command *s,
+			struct lsh_object *x,
+			struct command_continuation *c,
+			struct exception_handler *e)
 {
-  CAST(listen_connection, self, s);
+  CAST(listen_with_callback, self, s);
   CAST(address_info, address, x);
-  struct lsh_fd *fd;
-  
+
+  /* No dns lookups */
+  do_listen(self->backend, address, 0,
+	    NULL, /* FIXME: resources */
+	    c,
+	    make_apply(self->callback,
+		       &discard_continuation, e), e);
+#if 0
   struct sockaddr *addr;
   socklen_t addr_length;
 
@@ -247,37 +295,107 @@ do_listen_connection(struct command *s,
     EXCEPTION_RAISE(e,
 		    make_io_exception(EXC_IO_LISTEN, NULL,
 				      errno, NULL));
+#endif
 }
 
-struct command *make_listen_command(struct command *callback,
-				    struct io_backend *backend)
+struct command *
+make_listen_with_callback(struct command *callback,
+			  struct io_backend *backend)
 {
-  NEW(listen_connection, self);
+  NEW(listen_with_callback, self);
   self->callback = callback;
   self->backend = backend;
 
-  self->super.call = do_listen_connection;
+  self->super.call = do_listen_with_callback;
 
   return &self->super;
 }
 
 static struct lsh_object *
-collect_listen(struct collect_info_2 *info,
-	       struct lsh_object *a,
-	       struct lsh_object *b)
+collect_listen_callback(struct collect_info_2 *info,
+			struct lsh_object *a,
+			struct lsh_object *b)
 {
   CAST_SUBTYPE(command, callback, a);
   CAST(io_backend, backend, b);
   assert(!info->next);
 
-  return &make_listen_command(callback, backend)->super;
+  return &make_listen_with_callback(callback, backend)->super;
 }
 
-static struct collect_info_2 collect_info_listen_2 =
-STATIC_COLLECT_2_FINAL(collect_listen);
+static struct collect_info_2 collect_info_listen_callback_2 =
+STATIC_COLLECT_2_FINAL(collect_listen_callback);
 
-struct collect_info_1 listen_command =
-STATIC_COLLECT_1(&collect_info_listen_2);
+struct collect_info_1 listen_with_callback =
+STATIC_COLLECT_1(&collect_info_listen_callback_2);
+
+
+/* A listen function taking three arguments:
+ * (listen backend connection port).
+ *
+ * Suitable for handling forwarding requests. Adds all fd:s to the
+ * connection's resource list automatically.
+ *
+ * NOTE: On second thought, this is not terribly useful, because
+ * accepted fd:s should usually be registered on a channels's resource
+ * list, not on the connection's. */
+
+/* GABA:
+   (class
+     (name listen_with_connection)
+     (super command)
+     (vars
+       (connection object ssh_connection)
+       (backend object io_backend)))
+*/
+
+static void
+do_listen_with_connection(struct command *s,
+			  struct lsh_object *x,
+			  struct command_continuation *c,
+			  struct exception_handler *e)
+{
+  CAST(listen_with_connection, self, s);
+  CAST(address_info, address, x);
+
+  /* No dns lookups */
+  do_listen(self->backend, address, 0,
+	    self->connection->resources,
+	    NULL,
+	    c, e);
+}
+
+struct command *
+make_listen_with_connection(struct io_backend *backend,
+			    struct ssh_connection *connection)
+{
+  NEW(listen_with_connection, self);
+  self->connection = connection;
+  self->backend = backend;
+
+  self->super.call = do_listen_with_connection;
+
+  return &self->super;
+}
+
+static struct lsh_object *
+collect_listen_connection(struct collect_info_2 *info,
+			  struct lsh_object *a,
+			  struct lsh_object *b)
+{
+  CAST(io_backend, backend, a);
+  CAST(ssh_connection, connection, b);
+  assert(!info->next);
+
+  return &make_listen_with_connection(backend, connection)->super;
+}
+
+static struct collect_info_2 collect_info_listen_connection_2 =
+STATIC_COLLECT_2_FINAL(collect_listen_connection);
+
+struct collect_info_1 listen_with_connection =
+STATIC_COLLECT_1(&collect_info_listen_connection_2);
+
 
 #if 0
 /* FIXME: This could perhaps be merged with io_connect in io.c? */ 
@@ -439,7 +557,7 @@ do_simple_connect(struct command *s,
   CAST(simple_io_command, self, s);
   CAST(address_info, address, a);
 
-  do_connect(self->backend, address, self->resources, c, e);
+  do_connect(self->backend, address, NULL, c, e);
 }
 
 struct command *
@@ -449,14 +567,14 @@ make_simple_connect(struct io_backend *backend,
   NEW(simple_io_command, self);
   self->backend = backend;
   self->resources = resources;
-
+  
   self->super.call = do_simple_connect;
 
   return &self->super;
 }
 
 
-/* (connect port connection) */
+/* (connect connection port) */
 /* GABA:
    (class
      (name connect_connection)
@@ -478,7 +596,8 @@ do_connect_connection(struct command *s,
 		 make_simple_connect(self->backend, connection->resources));
 }
 
-struct command *make_connect_connection(struct io_backend *backend)
+struct command *
+make_connect_connection(struct io_backend *backend)
 {
   NEW(connect_connection, self);
   self->super.call = do_connect_connection;
@@ -497,9 +616,11 @@ do_simple_listen(struct command *s,
   CAST(simple_io_command, self, s);
   CAST(address_info, address, a);
 
-  do_listen(self->backend, address, self->resources, c, e);
+  /* Performs a dns lookup, if needed. */
+  do_listen(self->backend, address, 1, NULL, NULL, c, e);
 }
 
+/* FIXME: The resources argument is never used. */
 struct command *
 make_simple_listen(struct io_backend *backend,
 		   struct resource_list *resources)
@@ -507,7 +628,7 @@ make_simple_listen(struct io_backend *backend,
   NEW(simple_io_command, self);
   self->backend = backend;
   self->resources = resources;
-
+  
   self->super.call = do_simple_listen;
 
   return &self->super;
