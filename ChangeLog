@@ -1,3 +1,7 @@
+2002-06-26  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* doc/lsh.texinfo (lshd basics): Changed invokation of lsh-keygen. 
+
 2002-06-25  Niels Möller  <niels@s3.kth.se>
 
 	* src/server_x11.c, src/server_x11.h: New files.

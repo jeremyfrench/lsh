@@ -65,7 +65,7 @@ for the randomness generator. Use
 to create a personal seed file. If you want to run the lshd server,
 you also need to run
 
-  lsh-make-seed-file --server
+  lsh-make-seed --server
 
 as root.
 
