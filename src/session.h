@@ -42,10 +42,11 @@ struct global_request
 #define GLOBAL_REQUEST(c, w, a) ((c)->handler((c), (w), (a)))
 
 /* SSH_MSG_CHANNEL_OPEN */
-struct channel_open {
+struct channel_open
+{
   struct lsh_object *header;
 
-  int (*handler)(struct channel_request *closure,
+  int (*handler)(struct channel_open *closure,
 		 UINT32 channel_number, /* Remote channel number */
 		 UINT32 rec_window_size,
 		 UINT32 rec_max_packet,
@@ -55,4 +56,18 @@ struct channel_open {
 #define CHANNEL_OPEN(c, n, w, m, a) \
 ((c)->handler((c), (n), (w), (m), (a)))
 
+/* SSH_MSH_CHANNEL_REQUEST */
+struct channel_request
+{
+  struct lsh_object *header;
+
+  int (*handler)(struct channel_request *closure,
+		 struct ssh_channel *channel,
+		 int want_reply;
+		 struct simple_buffer *args);
+};
+
+#define CHANNEL_REQUEST(s, c, w, a) \
+((s)->handler((s), (c), (w), (a)))
+ 
 #endif /* LSH_SESSION_H_INCLUDED */
