@@ -51,5 +51,10 @@ int
 spki_tag_includes(struct spki_tag *delegated,
 		  struct spki_tag *request);
 
+struct spki_tag *
+spki_tag_intersect(void *ctx, nettle_realloc_func *ralloc,
+		   struct spki_tag *a,
+		   struct spki_tag *b);
+
 #endif /* LIBSPKI_TAG_H_INCLUDED */
 

@@ -185,12 +185,14 @@ spki_cons_nreverse(struct spki_cons *c)
 enum spki_tag_type
   {
     SPKI_TAG_ERROR = 0,
-    SPKI_TAG_ATOM,
-    SPKI_TAG_LIST,
+    /* Listed in the order we want to handle tags in
+     * spki_tag_intersect. */
     SPKI_TAG_ANY,
     SPKI_TAG_SET,
+    SPKI_TAG_LIST,
     SPKI_TAG_PREFIX,
-    SPKI_TAG_RANGE
+    SPKI_TAG_RANGE,
+    SPKI_TAG_ATOM,
   };
 
 struct spki_tag
@@ -389,7 +391,7 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
   if (--tag->refs)
     return;
 
-  switch(tag->type)
+  switch (tag->type)
     {
     case SPKI_TAG_ATOM:
     case SPKI_TAG_PREFIX:
@@ -482,7 +484,7 @@ spki_tag_set_new(void *ctx, nettle_realloc_func *realloc,
 static enum spki_tag_type
 spki_tag_classify(struct sexp_iterator *i)
 {
-  switch(i->type)
+  switch (i->type)
     {
     default:
       abort();
@@ -784,120 +786,120 @@ spki_tag_includes(struct spki_tag *delegated,
 }
 
 
-#if 0
 /* Intersecting tags. */
 
-/* FIXME: Collaps redundant set expressions, like
- *
- * (* set foo)                     --> foo
- * (* set (* set a b) (* set c d)) --> (* set a b c d)
- *
- * This may require conversion fo the tags into a tree data
- * structure. */
-
-/* Called when the intersection equals a, so copy it. */
-static int
-copy_intersect(struct nettle_buffer *buffer,
-	       struct sexp_iterator *a)
+static struct spki_tag *
+set_intersect(void *ctx, nettle_realloc_func *realloc,
+	      struct spki_cons *set,
+	      struct spki_tag *b)
 {
-  unsigned length;
-  const uint8_t *data;
-
-  return (data = sexp_iterator_subexpr(a, &length))
-    && nettle_buffer_write(buffer, length, data);
-}
-
-static int
-set_intersect(struct nettle_buffer *buffer,
-	      struct sexp_iterator *s,
-	      struct sexp_iterator *a)
-{
-  /* Needed in case we need to back up after failure. */
-  unsigned start = buffer->size;
-  unsigned first;
-  unsigned n;
-  struct sexp_iterator a_start = *a;
-  struct sexp_iterator a_end;
-	  
-  /* Create a new set by intersecting each element with a. */
-  if (!nettle_buffer_write(buffer, "(1:*3:set"))
-    return 0;
+  struct spki_cons *head = NULL;
   
-  first = buffer->size;
-  
-  for (n = 0; l->type != SEXP_END; )
+  if (b->type == SPKI_TAG_SET)
     {
-      struct sexp_iterator work = *a;
-      if (spki_tag_intersect(buffer, l, &work))
-	{
-	  if (!n)
-	    a_end = work;
-	  n++;
-	}
-      if (!sexp_iterator_next(l))
-	goto fail;
-    }
-  
-  if (n && NETTLE_BUFFER_PUTC(buffer, ')'))
-    {
-      *a = a_end;
-      return 1;
+      struct spki_cons *children = tag_list(b)->children;
+      struct spki_cons *p;
+
+      for (; set; set = set->cdr)
+	for (p = children; p; p = p->cdr)
+	  {
+	    struct spki_tag *tag
+	      = spki_tag_intersect(ctx, realloc, set->car, p->car);
+	    if (tag)
+	      if (!(head = spki_cons(ctx, realloc, tag, head)))
+		return NULL;
+	  }
     }
 
- fail:
-  buffer->size = start;
-  return 0;
+  if (!head)
+    return NULL;
+
+  return spki_tag_set_new(ctx, realloc, head);
 }
 
-static int
-list_intersect(struct nettle_buffer *buffer,
-	       struct sexp_iterator *l,
-	       struct sexp_iterator *a)
+static struct spki_tag *
+list_intersect(void *ctx, nettle_realloc_func *realloc,
+	       struct spki_cons *a,
+	       struct spki_cons *b)
 {
-  if (!sexp_iterator_enter_list(l))
-    abort();
-
-  if (MAGIC(l, "*"))
+  struct spki_cons *head = NULL;
+  
+  for ( ; a && b; a = a->cdr, b = b->cdr)
     {
-      if (l->type == SEXP_END)
-	return sexp_iterator_exit_list(l)
-	  && copy_intersect(buffer, a);
-
-      if (MAGIC(l, "set"))
-	return set_intersect(l, a, 0);
-
-      else
-	/* Not yet implemented */
-	return 0;
+      struct spki_tag *tag
+	= spki_tag_intersect(ctx, realloc, a->car, b->car);
+      if (tag)
+	if (! (head = spki_cons(ctx, realloc, tag, head)))
+	  return NULL;
     }
 
-  /* The other expression must be a list. */
-  if (!sexp_iterator_enter_list(a))
-    return 0;
-
-  if (MAGIC(a, '*'))
-    return magic_intersect(
+  assert(head);
   
+  /* Add the tail */
+  if (!a)
+    a = b;
+
+  for ( ; a; a = a->cdr)
+    if (! (head = spki_cons(ctx, realloc, a->car, head)))
+      return NULL;
+
+  return spki_tag_list_alloc(ctx, realloc,
+			     SPKI_TAG_LIST, spki_cons_nreverse(head));
 }
 
-/* Tries to intersect the current expressions on the A and B lists. If
- * intersection is nonempty, it is written to BUFFER, and the function
- * returns 1. Otherwise, writes nothing to BUFFER, and returns 0. */
-int
-spki_tag_intersect(struct nettle_buffer *buffer,
-		   struct sexp_iterator *a,
-		   struct sexp_iterator *b)
+static struct spki_tag *
+prefix_intersect(struct spki_tag_atom *prefix,
+		 struct spki_tag *b)
 {
-  assert(a->type != SEXP_END);
-  assert(a->type != SEXP_END);
-  
-  if (a->type == SEXP_LIST)
-    return list_intersect(buffer, in_set, a, b);
-  if (b->type == SEXP_LIST)
-    return list_intersect(buffer, in_set, b, a);
-
-  return atom_equal(a, b)
-    && sexp_iterator_next(b)
-    && copy_intersect(buffer, a);
+  return ( (b->type == SPKI_TAG_ATOM
+	    || b->type == SPKI_TAG_PREFIX)
+	   && atom_prefix(prefix, tag_atom(b)))
+    ? spki_tag_dup(b) : NULL;
 }
-#endif
+
+struct spki_tag *
+spki_tag_intersect(void *ctx, nettle_realloc_func *realloc,
+		   struct spki_tag *a,
+		   struct spki_tag *b)
+{
+  if (a->type < b->type)
+    {
+      struct spki_tag *t = a;
+      a = b;
+      b = t;
+    }
+
+  switch (a->type)
+    {
+    default:
+      abort();
+      
+    case SPKI_TAG_ANY:
+      return spki_tag_dup(b);
+      
+    case SPKI_TAG_SET:
+      return set_intersect(ctx, realloc,
+			   tag_list(a)->children, b);
+
+    case SPKI_TAG_LIST:
+      /* A list can never match a string, range or prefix */
+      if (b->type != SPKI_TAG_LIST)
+	return NULL;
+      return list_intersect(ctx, realloc,
+			    tag_list(a)->children, tag_list(b)->children);
+
+    case SPKI_TAG_PREFIX:
+      return prefix_intersect(tag_atom(a), b);
+
+    case SPKI_TAG_RANGE:
+      /* FIXME: Not implemented. */
+      return NULL;
+
+    case SPKI_TAG_ATOM:
+      assert(b->type == SPKI_TAG_ATOM);
+      if (atom_equal(tag_atom(a), tag_atom(b)))
+	return spki_tag_dup(b);
+
+      return NULL;
+    }
+}
