@@ -74,9 +74,6 @@ do_key_lookup(struct lookup_verifier *c,
       /* FIXME: SPKI support. */
       
     case ATOM_SSH_DSS:
-      /* FIXME: Perhaps this is the right place to choose to apply the
-       * PEER_SSH_DSS_KLUDGE? */
-      
       v = make_ssh_dss_verifier(key);
       break;
 
