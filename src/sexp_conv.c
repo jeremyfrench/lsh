@@ -23,10 +23,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "algorithms.h"
+#include "alist.h"
+#include "atoms.h"
+#include "crypto.h"
 #include "io.h"
 #include "lsh.h"
 #include "lsh_argp.h"
 #include "sexp_commands.h"
+#include "spki.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -43,11 +48,12 @@ int exit_code = EXIT_SUCCESS;
      (name make_sexp_conv)
      (params
        (read object command)
-       (write object command))
-       ;; (dest object abstract_write))
+       (transform object command)
+       (print object command)
+       (dest object abstract_write))
      (expr
        (lambda (in)
-         (write (read in)))))
+         (print dest (transform (read in))))))
 */
 
 
@@ -84,6 +90,59 @@ do_exc_sexp_conv_handler(struct exception_handler *self,
 
 /* Option parsing */
 
+#define OPT_HASH 0x200
+#define OPT_SPKI_HASH 0x201
+#define OPT_RAW_HASH 0x202
+#define OPT_ONCE 0x203
+
+static const struct argp_option
+main_options[] =
+{
+  /* Name, key, arg-name, flags, doc, group */
+  { "spki-hash", OPT_SPKI_HASH, NULL, 0, "Output an SPKI hash for the object.", 0 },
+  { "raw-hash", OPT_RAW_HASH, NULL, 0, "Output the hash for the canonical "
+    "representation of the object, in hexadecimal.", 0 },
+  { "hash", OPT_HASH, "Algorithm", 0, "Hash algorithm (default sha1).", 0 },
+  { "once", OPT_ONCE, NULL, 0, "Process at most one s-expression.", 0 },
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+#define MODE_VANILLA 0
+#define MODE_RAW_HASH 1
+#define MODE_SPKI_HASH 2
+
+/* GABA:
+(class
+  (name sexp_conv_options)
+  (vars
+    (input . sexp_argp_state)
+    (output . sexp_argp_state)
+    (once . int)
+    (mode . int)
+    (algorithms object alist)
+    (hash . int)
+    (transform object command)
+    (print object command)
+))
+*/
+
+static struct sexp_conv_options *make_options(void)
+{
+  NEW(sexp_conv_options, self);
+  self->input = SEXP_TRANSPORT;
+  self->output = SEXP_ADVANCED;
+  self->once = 0;
+  self->mode = MODE_VANILLA;
+  self->transform = &command_I.super;
+  self->algorithms = make_alist(2,
+				ATOM_MD5, &md5_algorithm,
+				ATOM_SHA1, &sha1_algorithm,
+				-1);
+  self->hash = ATOM_SHA1;
+
+  return self;
+}
+
 static const struct argp_child
 main_argp_children[] =
 {
@@ -94,27 +153,74 @@ main_argp_children[] =
 };
 
 static error_t
-main_argp_parser(int key, char *arg UNUSED, struct argp_state *state)
+main_argp_parser(int key, char *arg, struct argp_state *state)
 {
-  /* NOTE: No type checking */
-  sexp_argp_state *input = state->input;
+  CAST(sexp_conv_options, self, state->input);
   
   switch(key)
     {
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = input;
-      state->child_inputs[1] = input + 1;
+      state->child_inputs[0] = &self->input;
+      state->child_inputs[1] = &self->output;
       state->child_inputs[2] = NULL;
       break;
+    case ARGP_KEY_END:
+      {
+	switch(self->mode)
+	  {
+	  default:
+	    fatal("Internal error!");
+	  case MODE_VANILLA:
+	    self->transform = &command_I.super;
+	    self->print = &make_sexp_print_command(self->output)->super;
+	    break;
+	  case MODE_SPKI_HASH:
+	    {
+	      CAST_SUBTYPE(hash_algorithm, a,
+			   ALIST_GET(self->algorithms, self->hash));
+	      self->transform = make_spki_hash(self->hash, a);
+	      self->print = &make_sexp_print_command(self->output)->super;
+	      break;
+	    }
+	  case MODE_RAW_HASH:
+	    {
+	      CAST_SUBTYPE(hash_algorithm, a,
+			   ALIST_GET(self->algorithms, self->hash));
+	      self->transform = &command_I.super;
+	      self->print = make_sexp_print_raw_hash(a);
+	      break;
+	    }
+	  }
+	break;
+      }
+    case OPT_HASH:
+      {
+	int hash = lookup_hash(self->algorithms, arg, 0);
+	if (hash)
+	  self->hash = hash;
+	else
+	  argp_error(state, "Unknown hash algorithm '%s'.", arg);
+	break;
+      }
+    case OPT_SPKI_HASH:
+      self->mode = MODE_SPKI_HASH;
+      break;
+    case OPT_RAW_HASH:
+      self->mode = MODE_RAW_HASH;
+      break;
+    case OPT_ONCE:
+      self->once = 1;
+      break;
     }
+  
   return 0;
 }
 
 static const struct argp
 main_argp =
-{ NULL, main_argp_parser, NULL,
+{ main_options, main_argp_parser, NULL,
   "Reads an s-expression on stdin, and outputs the same "
   "s-expression on stdout, possibly using a different "
   "encoding. By default, output uses the advanced encoding. ",
@@ -127,12 +233,11 @@ main_argp =
 
 int main(int argc, char **argv)
 {
-  sexp_argp_state formats[2] = { SEXP_TRANSPORT, SEXP_ADVANCED };
-
+  struct sexp_conv_options *options = make_options();
   struct exception_handler *e;
   NEW(io_backend, backend);
-
-  argp_parse(&main_argp, argc, argv, 0, NULL, formats);
+  
+  argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   init_backend(backend);
 
@@ -143,14 +248,15 @@ int main(int argc, char **argv)
   {
     CAST_SUBTYPE(command, work,
 		 make_sexp_conv(
-		   make_read_sexp_command(formats[0], 1),
-		   make_print_sexp_to(formats[1],
-				      &(io_write(make_io_fd(backend,
-							    STDOUT_FILENO,
-							    e),
-						 SEXP_BUFFER_SIZE,
-						 NULL)
-					->write_buffer->super))));
+		   make_read_sexp_command(options->input, !options->once),
+		   options->transform,
+		   options->print,
+		   &(io_write(make_io_fd(backend,
+					 STDOUT_FILENO,
+					 e),
+			      SEXP_BUFFER_SIZE,
+			      NULL)
+		     ->write_buffer->super)));
 
     struct io_fd *in = make_io_fd(backend, STDIN_FILENO, e);
 
