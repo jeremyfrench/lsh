@@ -153,31 +153,6 @@ make_tcpip_connected(struct tcpip_channel *channel,
        (backend object io_backend)))
 */
 
-/* FIXME: IPv6 support */
-/* FIXME: The host name lookup may block. We would need an asyncronous
- * get_inaddr function. As a work around, we could let the client do
- * all lookups, so that the server ned only deal with ip-numbers. And
- * optionally refuse requests with dns names. */
-
-static int tcp_addr(struct sockaddr_in *sin,
-		UINT32 length,
-		UINT8 *addr,
-		UINT32 port)
-{
-  char *c = alloca(length + 1);
-  int res;
-  
-  memcpy(c, addr, length);
-  c[length] = '\0';
-
-  res = get_inaddr(sin, c, NULL, "tcp");
-  if (!res)
-    return 0;
-
-  sin->sin_port = htons(port);
-  return 1;
-}
-
 static int do_open_direct_tcpip(struct channel_open *c,
 			        struct ssh_connection *connection,
 			        struct simple_buffer *args,
