@@ -781,38 +781,6 @@ make_simple_kexinit(struct randomness *r,
   return &res->super;
 }
 
-
-/* FIXME: Move this to a separate file keyexchange_commands.c? */
-/* (kexinit_filter simple_kexinit alist)
- *
- * Destructively modifies the simple_kexinit to include only hostkey
- * algorithms that have keys in alist. */
-
-DEFINE_COMMAND2(kexinit_filter)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(simple_kexinit, init, a1);
-  CAST_SUBTYPE(alist, keys, a2);
-
-  init->hostkey_algorithms
-    = filter_algorithms(keys, init->hostkey_algorithms);
-
-  if (!init->hostkey_algorithms)
-    {
-      werror("No hostkey algorithms advertised.\n");
-      init->hostkey_algorithms = make_int_list(1, ATOM_NONE, -1);
-    }
-
-  assert(LIST_LENGTH(init->hostkey_algorithms));
-
-  COMMAND_RETURN(c, init);
-}
-
-
 static int
 install_keys(struct object_list *algorithms,
 	     struct ssh_connection *connection,
