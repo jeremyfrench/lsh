@@ -88,6 +88,7 @@ make_packet_pad(struct abstract_write *next,
 {
   NEW(packet_pad, closure);
 
+  /* NOTE: Allows random to be of bad quality */
   closure->super.super.write = do_pad;
   closure->super.next = next;
   closure->connection = connection;
