@@ -229,7 +229,7 @@ do_install_fix_channel_open_handler(struct command *s,
 	    self->name,
 	    self->handler);
 
-  COMMAND_RETURN(c, x);
+  COMMAND_RETURN(c, connection);
 }
 
 struct command *

@@ -157,6 +157,10 @@ initiate_keyexchange(struct ssh_connection *connection)
   s = format_kex(kex);
 
   /* Save value for later signing */
+#if 0
+  debug("do_handle_kexinit: Storing literal_kexinits[%i]\n", mode);
+#endif
+  
   connection->literal_kexinits[mode] = s; 
 
   C_WRITE(connection, lsh_string_dup(s));
@@ -227,6 +231,9 @@ do_handle_kexinit(struct packet_handler *c,
     }
 
   /* Save value for later signing */
+#if 0
+  debug("do_handle_kexinit: Storing literal_kexinits[%i]\n", !mode);
+#endif
   connection->literal_kexinits[!mode] = packet;
   
   connection->kexinits[!mode] = msg;
@@ -238,6 +245,9 @@ do_handle_kexinit(struct packet_handler *c,
       struct kexinit *sent = MAKE_KEXINIT(closure->init);
       connection->kexinits[mode] = sent;
       packet = format_kex(sent);
+#if 0
+      debug("do_handle_kexinit: Storing literal_kexinits[%i]\n", mode);
+#endif
       connection->literal_kexinits[mode] = lsh_string_dup(packet); 
       
       C_WRITE(connection, packet);
