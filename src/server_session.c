@@ -126,6 +126,7 @@ do_send_adjust(struct ssh_channel *s,
     }
 }
 
+/* FIXME: Perhaps unify with client_session.c:do_client_session_eof */
 static void
 do_eof(struct ssh_channel *channel)
 {
@@ -135,9 +136,12 @@ do_eof(struct ssh_channel *channel)
 
   write_buffer_close(session->in->write_buffer);
 
+#if 0
+  /* Moved to channel.c:channel_eof_handler. */
   if ( (channel->flags & CHANNEL_SENT_EOF)
        && (channel->flags & CHANNEL_CLOSE_AT_EOF))
     channel_close(channel);
+#endif
 }
 
 struct ssh_channel *
@@ -271,6 +275,10 @@ do_exit_shell(struct exit_callback *c, int signaled,
   
   if (!(channel->flags & CHANNEL_SENT_CLOSE))
     {
+      verbose("server_session.c: Sending %a message on channel %i\n",
+	      signaled ? ATOM_EXIT_SIGNAL : ATOM_EXIT_STATUS,
+	      channel->channel_number);
+      
       A_WRITE(channel->write,
 	      (signaled
 	       ? format_exit_signal(channel, core, value)
