@@ -2,6 +2,11 @@
 
 	* configure.ac (ARGP_CHECK_FUNC): Use AS_VAR_GET. Use AH_TEMPLATE.
 
+2003-02-10  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* configure.ac (ARGP_CHECK_FUNC): New macro. Use it to test for
+	putc_unlocked. 
+
 2003-02-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* argp-parse.c (argp_default_options): Fixed initializer.
