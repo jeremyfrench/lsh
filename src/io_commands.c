@@ -32,6 +32,9 @@
 
 #include <assert.h>
 
+/* Needed only to get the error code from failed calls to io_connect() */
+#include <errno.h>
+
 #define GABA_DEFINE
 #include "io_commands.h.x"
 #undef GABA_DEFINE
@@ -181,7 +184,7 @@ struct collect_info_1 listen_command =
 STATIC_COLLECT_1(&collect_info_listen_2);
 
 
-
+/* FIXME: This could perhaps be merged with io_connect in io.c? */ 
 /* GABA:
    (class
      (name connect_command_callback)
@@ -192,11 +195,6 @@ STATIC_COLLECT_1(&collect_info_listen_2);
        (e object exception_handler)))
 */
 
-#if 0
-static struct exception connect_exception =
-STATIC_EXCEPTION(EXC_CONNECT, "connect failed");
-#endif
-
 static void
 do_connect_continue(struct fd_callback **s, int fd)
 {
@@ -204,14 +202,8 @@ do_connect_continue(struct fd_callback **s, int fd)
 
   assert(fd >= 0);
 
-#if 0
-  if (fd < 0)
-    return EXCEPTION_RAISE(self->e, &connect_exception);
-#endif
-
   /* FIXME: What exception handler to use? */
-  COMMAND_RETURN(self->c, make_io_fd(self->backend, fd,
-				     &default_exception_handler));
+  COMMAND_RETURN(self->c, make_io_fd(self->backend, fd, self->e));
 }
 
 static struct fd_callback *
@@ -249,12 +241,12 @@ do_connect(struct io_backend *backend,
     }
 
   fd = io_connect(backend, &sin, NULL,
-		  make_connect_command_callback(backend, c, e));
+		  make_connect_command_callback(backend, c, e),
+		  e);
 
-  /* FIXME: Use a proper io-exception */
   if (!fd)
     {
-      EXCEPTION_RAISE(e, &dummy_exception);
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_CONNECT, NULL, errno, NULL));
       return;
     }
 
