@@ -44,21 +44,35 @@ void do_channel_open_command(struct command *s,
   CAST_SUBTYPE(channel_open_command, self, s);
   CAST(ssh_connection, connection, x);
   struct lsh_string *request;
-  struct ssh_channel *channel = NEW_CHANNEL(self, connection, &request);
+  struct ssh_channel *channel;
 
-  if (!channel)
+  int index = alloc_channel(connection->table);
+
+  if (index < 0)
     {
-      /* Probably, we have run out of channel numbers. */
-      werror("do_channel_open_command: NEW_CHANNEL failed\n");
+      /* We have run out of channel numbers. */
+      werror("do_channel_open_command: alloc_channel() failed\n");
       EXCEPTION_RAISE(e,
 		      make_channel_open_exception(
 			SSH_OPEN_RESOURCE_SHORTAGE,
 			"Allocating a local channel number failed."));
     }
+
+  channel = NEW_CHANNEL(self, connection, index, &request);
+
+  if (!channel)
+    {
+      werror("do_channel_open_command: NEW_CHANNEL failed\n");
+      dealloc_channel(connection->table, index);
+    }
   else
     {
+      /* FIXME: Set up channel->write here? If we do that, perhaps we
+       * need not pass the connection to NEW_CHANNEL. */
       channel->open_continuation = c;
-      
+      channel->e = e;
+      register_channel(connection, index, channel, 0);
+
       C_WRITE(connection, request);
     }
 }

@@ -44,10 +44,11 @@
        ;; prepare_channel_open.
        (new_channel method "struct ssh_channel *"
                     "struct ssh_connection *connection"
+                    "UINT32 local_channel_number"
                     "struct lsh_string **request")))
 */
 
-#define NEW_CHANNEL(s, c,r) ((s)->new_channel((s), (c), (r)))
+#define NEW_CHANNEL(s, c, n, r) ((s)->new_channel((s), (c), (n), (r)))
 
 void do_channel_open_command(struct command *s,
 			    struct lsh_object *x,
