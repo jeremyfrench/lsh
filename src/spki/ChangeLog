@@ -1,3 +1,35 @@
+2003-02-11  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* Makefile.am (libspki_a_SOURCES): Added names.c.
+	Removed $(srcdir) prefix from targets.
+
+	* tools/Makefile.am (noinst_PROGRAMS): Added spki-make-signature.
+
+	* tools/spki-make-signature.c: New program.
+
+	* tools/io.c: New file.
+	(hash_file, read_file, read_file_by_name, write_file): New
+	functions. 
+
+	* tools/getopt1.c, tools/getopt.h, tools/getopt.c: New files.
+
+	* testsuite/check-signature-test: New rsa tests, replacing the
+	broken ones from the spki draft.
+
+	* spki-types.in: Added private-key.
+
+	* process-types: For the names file, output only the intializer,
+	not the declaration header.
+
+	* parse.c (spki_parse_fail): Made function non-static.
+
+	* certificate.h (struct spki_type_name): New struct.
+
+	* parse-transport.c (spki_transport_iterator_first): New file, new
+	function. 
+
+	* names.c: New file, including spki-type-names.h.
+
 2003-02-06  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/Makefile.am (DISTCLEANFILES): Delete test.in.
