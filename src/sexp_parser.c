@@ -1,10 +1,10 @@
-/* sexp_parse.c
+/* sexp_parser.c
  *
  * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Ron Rivest, Niels Möller
+ * Copyright (C) 1998, 1999, Ron Rivest, Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
