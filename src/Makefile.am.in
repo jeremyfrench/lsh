@@ -20,27 +20,32 @@ SUBDIRS = lib include
 Makefile.am: Makefile.am.in
 	./make_am
 
-bin_PROGRAMS = lsh lshd
+bin_PROGRAMS = lsh lshd # lsh_keygen
+noinst_PROGRAMS = prime_table
+noinst_LIBRARIES = liblsh.a
 
 # Don't use BUILT_SOURCES, as all these files are #included, and can't be
 # compiled or dependency checked independently.
 
-generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c
+generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c prime_table.h
 
-common_sources = abstract_io.c abstract_crypto.c alist.c atoms.c \
+liblsh_a_SOURCES = abstract_io.c abstract_crypto.c alist.c atoms.c \
 	bignum.c channel.c charset.c connection.c crypto.c \
-	debug.c disconnect.c encrypt.c format.c gc.c getopt.c io.c keyexchange.c \
+	debug.c disconnect.c  dss_keygen.c encrypt.c \
+	format.c gc.c getopt.c io.c keyexchange.c \
 	list.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
 	randomness.c \
 	read_data.c read_line.c read_packet.c resource.c service.c \
 	translate_signal.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c 
 
-lsh_SOURCES = $(common_sources) lsh.c client.c client_keyexchange.c \
+lsh_SOURCES = lsh.c client.c client_keyexchange.c \
 	client_password.c client_userauth.c
 
-lshd_SOURCES = $(common_sources) lshd.c reaper.c server.c server_keyexchange.c \
+lshd_SOURCES = lshd.c reaper.c server.c server_keyexchange.c \
 	server_password.c server_userauth.c
+
+# lsh_keygen_SOURCES = lsh_keygen.c
 
 atoms_defines.h: atoms.in process_atoms
 	bash $(srcdir)/process_atoms header <$(srcdir)/atoms.in >$@
@@ -52,10 +57,16 @@ atoms_gperf.c: atoms.in process_atoms
 atoms_table.c: atoms.in process_atoms
 	bash $(srcdir)/process_atoms table <$(srcdir)/atoms.in >$@
 
-LDADD = @LIBOBJS@ lib/libsymmetric.a
+PRIME_LIMIT = 1024
 
-lsh_DEPENDENCIES = @LIBOBJS@ symmetric
-lshd_DEPENDENCIES = @LIBOBJS@ symmetric
+prime_table.h: prime_table
+	./prime_table $(PRIME_LIMIT) >prime_table.h
+
+lsh_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
+lshd_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
+
+lsh_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
+lshd_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
 
 .PHONY: symmetric
 symmetric:
