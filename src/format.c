@@ -43,9 +43,11 @@ struct lsh_string *ssh_format(char *format, ...)
   packet = lsh_string_alloc(length);
 
   va_start(args, format);
-  ssh_vformat(format, packet->data, args);
+  length = ssh_vformat(format, packet->data, args);
   va_end(args);
 
+  assert(length == packet->length);
+  
   return packet;
 }
  
@@ -59,13 +61,19 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 	{
 	  int literal = 0;
 	  f++;
-	  if (*f == 'l')
+	  while(*f)
 	    {
-	      literal = 1;
-	      f++;
+	      if (*f == 'l')
+		{
+		  literal = 1;
+		  f++;
+		}
+	      else if (*f == 'f')
+		{
+		  f++;
+		}
+	      else break;
 	    }
-	  if (*f == 'f')
-	    f++;
 	  
 	  switch(*f)
 	    {
@@ -97,8 +105,9 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 		
 		if (!literal)
 		  length += 4;
+
+		break;
 	      }
-	      break;
 	    case 'S':
 	      length += va_arg(args, struct lsh_string *)->length;
 	      f++;
@@ -115,7 +124,7 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 		length += 4;
 	      break;
 	    case 'r':
-	      length += va_arg(args, struct lsh_string *)->length;
+	      length += va_arg(args, UINT32);
 	      (void) va_arg(args, UINT8 **);    /* pointer */
 
 	      f++;
@@ -140,13 +149,15 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 	      {
 		int *atom = va_arg(args, int *);
 		int i;
-		
-		for(i = 0; atom[i] > 0; i++)
-		  length += get_atom_length(atom[i]) + 1;
 
-		/* One ','-character less than the number of atoms */
-		length--;
-		
+		if (atom[0])
+		  { /* Non empty */
+		    for(i = 0; atom[i] > 0; i++)
+		      length += get_atom_length(atom[i]) + 1;
+
+		    /* One ','-character less than the number of atoms */
+		    length--;
+		  }
 		if (!literal)
 		  length += 4;
 		f++;
@@ -179,8 +190,8 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 		if (!literal)
 		  length += 4;
 		f++;
+		break;
 	      }
-	    break;
 	    }
 	}
       else
@@ -192,8 +203,10 @@ UINT32 ssh_vformat_length(char *f, va_list args)
   return length;
 }
 
-void ssh_vformat(char *f, UINT8 *buffer, va_list args)
+UINT32 ssh_vformat(char *f, UINT8 *buffer, va_list args)
 {
+  UINT8 *start = buffer;
+  
   while(*f)
     {
       if (*f == '%')
@@ -201,15 +214,19 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 	  int literal = 0;
 	  int do_free = 0;
 	  f++;
-	  if (*f == 'l')
+	  while(*f)
 	    {
-	      literal = 1;
-	      f++;
-	    }
-	  if (*f == 'f')
-	    {
-	      do_free = 1;
-	      f++;
+	      if (*f == 'l')
+		{
+		  literal = 1;
+		  f++;
+		}
+	      else if (*f == 'f')
+		{
+		  do_free = 1;
+		  f++;
+		}
+	      else break;
 	    }
 	  switch(*f)
 	    {
@@ -218,12 +235,14 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 	      break;
 
 	    case 'c':
-	      *buffer++ = va_arg(args, UINT8);
+	      *buffer++ = va_arg(args, int);
 	      f++;
+
 	      break;
 	    case '%':
 	      *buffer++ = '%';
 	      f++;
+
 	      break;
 
 	    case 'i':
@@ -232,8 +251,9 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		WRITE_UINT32(buffer, i);
 		buffer += 4;
 		f++;
+
+		break;
 	      }
-	    break;
 	    case 's':
 	      {
 		UINT32 length = va_arg(args, UINT32);
@@ -248,8 +268,9 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		memcpy(buffer, data, length);
 		buffer += length;
 		f++;
+
+		break;
 	      }
-	    break;
 	    case 'S':
 	      {
 		struct lsh_string *s = va_arg(args, struct lsh_string *);
@@ -266,6 +287,7 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		if (do_free)
 		  lsh_string_free(s);
 		f++;
+
 		break;
 	      }
 	    case 'z':
@@ -281,6 +303,7 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		memcpy(buffer, s, length);
 		buffer += length;
 		f++;
+
 		break;
 	      }
 	    case 'r':
@@ -298,6 +321,8 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		  *p = buffer;
 		buffer += length;
 		f++;
+
+		break;
 	      }
 	    
 	    case 'a':
@@ -318,6 +343,7 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		memcpy(buffer, get_atom_name(atom), length);
 		buffer += length;
 		f++;
+
 		break;
 	      }
 #if 0
@@ -365,10 +391,9 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 
 		if (atom[0] > 0)
 		  {
-		    UINT32 length = get_atom_length(*atom);
-		    memcpy(buffer, get_atom_name(*atom), length);
+		    UINT32 length = get_atom_length(atom[0]);
+		    memcpy(buffer, get_atom_name(atom[0]), length);
 		    buffer += length;
-		    atom ++;
 		    
 		    for (i = 1; atom[i] > 0; i++)
 		      {
@@ -401,8 +426,9 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		  }
 
 		f++;
+
+		break;
 	      }
-	    break;
 	    }
 	}
       else
@@ -410,4 +436,5 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 	  *buffer++ = *f++;
 	}
     }
+  return buffer - start;
 }

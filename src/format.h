@@ -46,7 +46,7 @@
  * %z  Insert a string, using a null-terminated argument.
  *
  * %r  Reserves space in the string, and stores a pointer to this space
- * into the given UINT8 ** argument.
+ *     into the given UINT8 ** argument.
  *
  * %a  Insert a string containing one atom.
  *
@@ -68,7 +68,7 @@
  * Applicable to %S only. */
 
 UINT32 ssh_vformat_length(char *format, va_list args);
-void ssh_vformat(char *format, UINT8 *buffer, va_list args);
+UINT32 ssh_vformat(char *format, UINT8 *buffer, va_list args);
 struct lsh_string *ssh_format(char *format, ...);
 
 /* Short cut */
