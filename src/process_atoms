@@ -30,8 +30,8 @@ getatom() {
 }
 
 atom2define () {
-    echo -n `echo ATOM_$1 | tr [a-z]- [A-Z]_ \
-       | sed -e 's/\*/STAR/' -e 's/@.*$/_LOCAL/'`
+    printf "%s" "`echo ATOM_$1 | tr [a-z]- [A-Z]_ \
+       | sed -e 's/\*/STAR/' -e 's/@.*$/_LOCAL/'`"
 }
 
 if [ x$# != x1 ]; then
@@ -48,7 +48,7 @@ case $1 in
     header)
 	header
 	while getatom; do
-	    echo -n '#define '
+	    printf "%s" '#define '
 	    atom2define "$atom"
 	    echo ' ' $atom_id
 	done
@@ -63,18 +63,16 @@ case $1 in
 	echo '%%'
 	    
 	while getatom; do
-	    echo -n "$atom, "
+	    printf "%s" "$atom, "
 	    atom2define "$atom"
 	    echo
 	done
 	;;
     table)
 	header
-	echo -n '{ { "UNKNOWN", 7 }'
+	printf "%s" '{ { "UNKNOWN", 7 },'
 	while getatom; do
-	    echo ','
-	    # FIXME: We could replace ${#atom} with `expr $atom :'.*'`
-	    echo -n '  {' \""$atom"\", ${#atom} '}'
+	    printf '  {"%s", %s},\n' "$atom" "`expr $atom : '.*'`"
 	done
 	echo ' }'
 	;;
