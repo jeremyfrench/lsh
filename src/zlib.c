@@ -91,13 +91,15 @@ static void do_free_zstream(z_stream *z)
 }
 
 /* Estimates of the resulting packet sizes. We use fixnum arithmetic,
- * with one represented as 1<<10=1024. Only rates between 1/8 and 8
- * are used. */
+ * with one represented as 1<<10=1024. Only rates between 1/16 and 16
+ * are used. This may be a little too conservative; I have observed
+ * compression ratios of about 50. */
  
 #define RATE_UNIT 1024
-#define RATE_MAX (RATE_UNIT * 8)
-#define RATE_MIN (RATE_UNIT / 8)
+#define RATE_MAX (RATE_UNIT * 16)
+#define RATE_MIN (RATE_UNIT / 16)
 #define MARGIN 200
+#define INSIGNIFICANT 100
 
 static UINT32 estimate_size(UINT32 rate, UINT32 input, UINT32 max)
 {
@@ -108,17 +110,28 @@ static UINT32 estimate_size(UINT32 rate, UINT32 input, UINT32 max)
 /* Assumes that input is nonzero */
 static UINT32 estimate_update(UINT32 rate, UINT32 input, UINT32 output)
 {
-  UINT32 estimate = output * rate / input;
-
-  if (estimate > RATE_MAX)
-    return RATE_MAX;
-  
   /* Decay old estimate */
   rate = rate * 15 / 16;
 
-  /* Follow the "envelope" */
-  rate = MAX(estimate, rate);
+  /* FIXME: Following the envelope is suboptimal for small inputs. We
+   * do it only for input packets of reasonable size. This method
+   * could be improved.
+   *
+   * Perhaps a linear combination k * rate + (1-k) estimate, where k
+   * depends on the size of the sample (i.e. input) would make sense?
+   * Or use different rate estimates for different lengths? */
+  
+  if (input > INSIGNIFICANT)
+    {
+      UINT32 estimate = output * RATE_UNIT / input;
 
+      if (estimate > RATE_MAX)
+	return RATE_MAX;
+
+      /* Follow the "envelope" */
+      rate = MAX(estimate, rate);
+    }
+  
   return MAX(rate, RATE_MIN);
 }
 
@@ -129,27 +142,36 @@ static struct lsh_string *do_zlib(struct compress_instance *c,
 {
   CAST(zlib_instance, self, c);
   struct string_buffer buffer;
-  UINT32 limit = self->max;
+  
+  /* LIMIT keeps track of the amount of storage we may still need to
+   * allocate. To detect that a packet grows unexpectedly large, we
+   * need a little extra buffer space beyond the maximum size. */
+  UINT32 limit = self->max + 1;
+
+  UINT32 estimate;
+  
+  debug("do_zlib: length in: %i\n", packet->length);
   
   if (!packet->length)
     {
       werror("do_zlib_deflate: Compressing empty packet.\n");
       return free ? packet : lsh_string_dup(packet);
     }
-  
+
+  estimate = estimate_size(self->rate, packet->length, self->max);
+  debug("do_zlib: estimate:  %i\n", estimate);
+
   string_buffer_init(&buffer, 
 		     estimate_size(self->rate, packet->length, self->max));
 
   limit -= buffer.partial->length;
-  
+
   self->z.next_in = packet->data;
   self->z.avail_in = packet->length;
 
   for (;;)
     {
       int rc;
-      
-      assert(self->z.avail_in);
       
       self->z.next_out = buffer.current;
       self->z.avail_out = buffer.left;
@@ -166,24 +188,17 @@ static struct lsh_string *do_zlib(struct compress_instance *c,
 	  return NULL;
 	}
 
-      if (!self->z.avail_in)
-	{ /* Compressed entire packet */
-	  UINT32 input = packet->length;
-
-	  if (free)
-	    lsh_string_free(packet);
-	  
-	  packet =
-	    string_buffer_final(&buffer, self->z.avail_out);
-
-	  self->rate = estimate_update(self->rate, input, packet->length);
-
-	  return packet;
-	}
-      else
-	{ /* All output space consumed */
-	  assert(!self->z.avail_out);
-	  
+      /* NOTE: It's not enough to check that avail_in is zero to
+       * determine that all data have been flushed. avail_in == 0 and
+       * avail_out > 0 implies that all data has been flushed, but if
+       * avail_in == avail_out == 0, we have to allocate more output
+       * space. */
+	 
+      if (!self->z.avail_in && !self->z.avail_out)
+	verbose("do_zlib: Both avail_in and avail_out are zero.\n");
+      
+      if (!self->z.avail_out)
+	{ /* All output space consumed */  
 	  if (!limit)
 	    {
 	      werror("do_zlib_deflate: Packet grew too large!\n");
@@ -194,8 +209,31 @@ static struct lsh_string *do_zlib(struct compress_instance *c,
 	      return NULL;
 	    }
 
-	  string_buffer_grow(&buffer, MIN(limit, packet->length + 100));
+	  /* Grow to about double size. */
+	  string_buffer_grow(&buffer, MIN(limit, buffer.partial->length + buffer.total + 100));
 	  limit -= buffer.partial->length;
+	}
+      else if (!self->z.avail_in)
+	{ /* Compressed entire packet */
+	  UINT32 input = packet->length;
+
+	  if (free)
+	    lsh_string_free(packet);
+	  
+	  packet =
+	    string_buffer_final(&buffer, self->z.avail_out);
+
+	  assert(packet->length <= self->max);
+
+	  debug("do_zlib: length out: %i\n", packet->length);
+
+	  if (packet->length > estimate)
+	    verbose("do_zlib: Estimated size exceeded: input = %i, estimate = %i, output = %i\n",
+		    input, estimate, packet->length);
+	  
+	  self->rate = estimate_update(self->rate, input, packet->length);
+
+	  return packet;
 	}
     }
 }
