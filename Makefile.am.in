@@ -13,6 +13,7 @@ DOTDISTS = src/.dist_classes src/.dist_headers \
 	src/symmetric/.dist_headers src/symmetric/include/.dist_headers
 
 MAKEFILESAM = Makefile.am doc/Makefile.am src/Makefile.am \
+	src/argp/Makefile.am src/scm/Makefile.am \
 	src/symmetric/Makefile.am src/symmetric/include/Makefile.am
 
 # FIXME: Use the BASH variable to execute the script. The problem is
