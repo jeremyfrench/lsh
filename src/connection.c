@@ -39,6 +39,10 @@
 #include "connection.h.x"
 #undef GABA_DEFINE
 
+static const char *packet_types[0x100] =
+#include "packet_types.h"
+;
+
 static int handle_connection(struct abstract_write *w,
 			     struct lsh_string *packet)
 {
@@ -53,12 +57,8 @@ static int handle_connection(struct abstract_write *w,
 
   msg = packet->data[0];
 
-#if 0
   debug("handle_connection: Received packet of type %i (%z)\n",
-	msg, typedescr[msg]);
-#else
-  debug("handle_connection: Received packet of type %i\n", msg);
-#endif
+	msg, packet_types[msg]);
   
   switch(closure->kex_state)
     {
