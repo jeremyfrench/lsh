@@ -432,7 +432,7 @@ do_read_file(struct lsh_user *u,
   /* out[0] for reading, out[1] for writing */
   int out[2];
 
-  uid_t me = getuid();
+  uid_t me = geteuid();
 
   /* There's no point trying to read other user's files unless we're
    * root. */
@@ -509,14 +509,13 @@ do_read_file(struct lsh_user *u,
 	int fd;
 	close(out[0]);
 
-	/* FIXME: Use seteuid instead? */
-	if ( (me != user->super.uid) && (setuid(user->super.uid) < 0) )
+	if ( (me != user->super.uid) && (seteuid(user->super.uid) < 0) )
 	  {
 	    werror("unix_user.c: do_read_file: setuid failed (errno = %i): %z\n",
 		   errno, STRERROR(errno));
 	    _exit(EXIT_FAILURE);
 	  }
-	assert(user->super.uid == getuid());
+	assert(user->super.uid == geteuid());
 	
 	fd = open(lsh_get_cstring(f), O_RDONLY);
 
@@ -530,7 +529,8 @@ do_read_file(struct lsh_user *u,
 	    _exit(EXIT_FAILURE);
 	  }
 
-	x = check_user_permissions(&sbuf, lsh_get_cstring(f), user->super.uid, secret);
+	x = check_user_permissions(&sbuf, lsh_get_cstring(f),
+				   user->super.uid, secret);
 
 	if (x)
 	  {
