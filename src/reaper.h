@@ -52,7 +52,10 @@
 
 #define REAP(r, p, c) ((r)->reap((r), (p), (c)))
 
-struct reap *make_reaper(void);
+struct reap *make_reaper(struct io_backend *b);
+
+#if 0
 void reaper_run(struct reap *r, struct io_backend *b);
+#endif
 
 #endif /* LSH_REAPER_H_INCLUDED */

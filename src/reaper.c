@@ -63,22 +63,32 @@ static void child_handler(int signum)
        (children object alist)))
 */
 
-static void do_reap(struct reap *c,
+static void
+do_reap(struct reap *c,
 		    pid_t pid, struct exit_callback *callback)
 {
   CAST(reaper, closure, c);
 
   ALIST_SET(closure->children, pid, callback);
 }
-  
-static void reap(struct reaper *r)
+
+/* GABA:
+   (class
+     (name reaper_callback)
+     (super lsh_callback)
+     (vars
+       (reaper object reaper)))
+*/
+
+static void
+do_reaper_callback(struct lsh_callback *s)
 {
+  CAST(reaper_callback, self, s);
+  struct reaper *r = self->reaper;
+  
   pid_t pid;
   int status;
 
-  /* We must reset this flag before reaping the zombies. */
-  halloween = 0;
-  
   while( (pid = waitpid(-1, &status, WNOHANG)) )
     {
       if (pid > 0)
@@ -139,42 +149,78 @@ static void reap(struct reaper *r)
     }
 }
 
-struct reap *make_reaper(void)
+static struct lsh_callback *
+make_reaper_callback(struct reaper *reaper)
 {
-  NEW(reaper, closure);
+  NEW(reaper_callback, self);
+  self->super.f = do_reaper_callback;
+  self->reaper = reaper;
 
-  closure->super.reap = do_reap;
-  closure->children = make_linked_alist(0, -1);
-
-  return &closure->super;
+  return &self->super;
 }
 
+static void
+reaper_install_handler(struct reaper *reaper,
+		       struct io_backend *b)
+{
+  struct sigaction chld;
+  memset(&chld, 0, sizeof(chld));
+
+  chld.sa_handler = child_handler;
+  sigemptyset(&chld.sa_mask);
+  chld.sa_flags = SA_NOCLDSTOP;
+  
+  halloween = 0;
+
+  if (sigaction(SIGCHLD, &chld, NULL) < 0)
+    fatal("Failed to install handler for SIGCHLD.\n");
+
+  io_signal_handler(b, &halloween, make_reaper_callback(reaper));
+}
+
+struct reap *
+make_reaper(struct io_backend *b)
+{
+  NEW(reaper, self);
+
+  self->super.reap = do_reap;
+  self->children = make_linked_alist(0, -1);
+
+  reaper_install_handler(self, b);
+
+  return &self->super;
+}
+
+#if 0
 void
 reaper_run(struct reap *r, struct io_backend *b)
 {
   CAST(reaper, self, r);
   
   struct sigaction pipe;
-  struct sigaction chld;
   
+  struct sigaction chld;
   memset(&pipe, 0, sizeof(pipe));
   memset(&chld, 0, sizeof(chld));
 
   pipe.sa_handler = SIG_IGN;
   sigemptyset(&pipe.sa_mask);
   pipe.sa_flags = 0;
-
+  
   chld.sa_handler = child_handler;
   sigemptyset(&chld.sa_mask);
   chld.sa_flags = SA_NOCLDSTOP;
   
+  halloween = 0;
+
   if (sigaction(SIGPIPE, &pipe, NULL) < 0)
     fatal("Failed to ignore SIGPIPE.\n");
+
   if (sigaction(SIGCHLD, &chld, NULL) < 0)
     fatal("Failed to install handler for SIGCHLD.\n");
 
-  halloween = 0;
   while(io_iter(b))
     if (halloween)
       reap(self);
 }
+#endif
