@@ -1025,7 +1025,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 	  
 	  do
 	    res = read(fd, buffer, sizeof(buffer));
-	  while ( (res < 0) && (errno = EINTR) );
+	  while ( (res < 0) && (errno == EINTR) );
 
 	  if (res < 0)
 	    werror("Reading %z failed %e\n",
