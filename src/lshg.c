@@ -77,10 +77,8 @@ DEFINE_COMMAND(options2info)
       struct exception_handler *e UNUSED)
 {
   CAST(lshg_options, self, a);
-  COMMAND_RETURN(c,
-		 make_gateway_address(self->super.local_user,
-				      self->super.user,
-				      self->super.remote));
+
+  COMMAND_RETURN(c, self->gateway);
 }
 
 
@@ -211,6 +209,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 					   self->super.user,
 					   self->super.remote);
 
+      if (!self->gateway)
+	{
+	  argp_error(state, "Local or remote user name, or the target host name, are too "
+		     "strange for the gateway socket name construction.");
+	  break;
+	}
       break;
 
     case 'D':
