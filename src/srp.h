@@ -84,4 +84,7 @@ srp_process_client_proof(struct dh_instance *dh, struct lsh_string *packet);
 int
 srp_process_server_proof(struct dh_instance *dh, struct lsh_string *packet);
 
+struct dh_method *
+make_srp1(struct randomness *r);
+
 #endif /* SRP_H_INCLUDED */
