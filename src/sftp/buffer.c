@@ -1,7 +1,5 @@
 /* buffer.c
  *
- * $Id$
- *
  * Reading and writing sftp data.
  */
 
