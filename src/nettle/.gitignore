@@ -10,6 +10,8 @@
 /configure
 /desdata
 /keymap.h
+/*.tar.gz
+/*.tar.gz.asc
 /nettle.aux
 /nettle.cp
 /nettle.cps
