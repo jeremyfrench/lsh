@@ -1,3 +1,11 @@
+2003-05-16  Niels Möller  <niels@s3.kth.se>
+
+	* configure.ac: Check for struct utmp.ut_exit.e_termination and
+	struct utmpx.ut_exit.e_termination.
+
+	* src/unix_process.c (do_utmp_cleanup): Fix for HPUX, which uses
+	non-standard names for the fields of struct utmpx's ut_exit.
+
 2003-05-14  Niels Möller  <niels@s3.kth.se>
 
 	* src/io.c (io_resolv_address): More fixes for the non getaddrinfo
