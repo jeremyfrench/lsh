@@ -38,23 +38,28 @@ ATEXIT='set +e'
 
 test_result=1
 
+werror () {
+    echo 1>&2 "$1"
+}
+
+test_done () {
+    eval "$ATEXIT"
+    exit $test_result;
+}
+
 test_fail () {
     test_result=1
-    exit
+    test_done
 }
 
 test_success () {
     test_result=0
-    exit
+    test_done
 }
 
 test_skip () {
     test_result=77
-    exit
-}
-
-werror () {
-    echo 1>&2 "$1"
+    test_done
 }
 
 die () {
@@ -78,8 +83,6 @@ need_tsocks () {
     fi
 }
 
-trap 'eval "$ATEXIT ; exit \$test_result"' 0
-
 at_exit () {
   ATEXIT="$ATEXIT ; $1"
 }
@@ -94,7 +97,7 @@ spawn_lshd () {
     
     HOME="$TEST_HOME" ../lshd -h $HOSTKEY \
 	-p $PORT --interface=$INTERFACE $LSHD_FLAGS \
-	--pid-file $PIDFILE --daemon --no-syslog "$@" || test_fail
+	--pid-file $PIDFILE --daemon --no-syslog "$@" || return 1
     
     # lshd should release its port after receiving HUP, but we may get
     # timing problems when the next lshd process tries to bind the
@@ -108,12 +111,12 @@ spawn_lshd () {
 	    # And a little more for the pid file to be written properly
 	    sleep 1
 	    echo lshd pid: `cat $PIDFILE`
-	    return
+	    return 0
 	fi
 	sleep $delay
     done
     
-    test_fail
+    return 1
 }
 
 run_lsh () {
