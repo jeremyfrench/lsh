@@ -163,8 +163,10 @@ do_parse_literal_data(struct read_handler **s,
 
   left = self->data->length - self->i;
 
+#if 0
   trace("do_parse_literal_data: Needed %i characters, %i available.\n",
 	left, available);
+#endif
   
   if (available < left)
     {
@@ -738,7 +740,9 @@ do_parse_base64(struct read_handler **s,
       return 0;
     }
 
+#if 0
   trace("do_parse_base64\n");
+#endif
   
   for (done = 0; done < available; )
     {
