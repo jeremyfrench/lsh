@@ -1,5 +1,14 @@
 2004-11-20  Pontus Freyhult  <pont@soua.net>
 
+	* doc/lsh.texinfo (Files and environment variables): Added
+	documentation for LSHFLAGS, LSHGFLAGS, SSH_CLIENT and SSH_TTY.
+	(Converting keys): Added lsh-export-key example. Rewrote part
+	about lshs SPKI format slightly.
+
+	* doc/lshg.1: LSHGFLAGS, not LSHG_FLAGS.
+
+	* doc/lshg.1: LSHFLAGS, not LSH_FLAGS.	
+
 	* doc/ssh-conv.1, doc/lsh-upgrade.1, doc/lsh-make-seed.1,
 	doc/lsh-keygen.1, doc/lsh-keygen.1, doc/lsh-export-key.1,
 	doc/lsh-decrypt-key.1, doc/lsh-decode-key.1, doc/lsh-writekey.1,

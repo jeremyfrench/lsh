@@ -947,7 +947,7 @@ keys. @command{ssh-conv} supports both @acronym{DSA} and @command{RSA} keys.
 
 Conversion of keys the other way is also possible, by using the
 @command{lsh-export-key} program. It reads a public key in
-@command{lsh}'s @acronym{SPKI} format on stdin, and writes the key in
+the  @acronym{SPKI} format used by @command{lsh} on stdin, and writes the key in
 @command{ssh2}/OpenSSH format on stdout.
 
 If you want to use your @command{lsh} key to log in to another system
@@ -964,6 +964,18 @@ file, just add it to the end of your @file{authorized_keys} file:
 @example
 cat sshkey >> ~/.ssh/authorized_keys
 @end example
+
+
+@command{lsh-export-key} can also be used to check the fingerprint of
+keys (just like @command{ssh-keygen}).
+
+@example
+lsh-export-key --fingerprint < /etc/lsh_host_key.pub
+@end example
+
+show the @acronym{MD5} and Bubble babble 
+fingerprint of the server public key.
+
 
 There are currently no tools for converting private keys.
 
@@ -1447,6 +1459,14 @@ remote systems. Set by @command{lshd} when starting new processes.
 If set, it points out the location of the seed-file for the randomness
 generator. Recognized both by @command{lshd} and the client programs.
 
+@item LSHFLAGS
+If set, lsh will parse any options as had they been given on the
+command line.
+
+@item LSHGFLAGS
+If set, lshg will parse any options as had they been given on the
+command line.
+
 @item POSIXLY_CORRECT
 Affects the command line parsing of programs which by default accept
 options mixed with arguments.
@@ -1454,6 +1474,17 @@ options mixed with arguments.
 @item SEXP_CONV
 The location of the @command{sexp-conv} program. If not set, the default
 @file{$prefix/bin/sexp-conv} is used.
+
+@item SSH_CLIENT
+This variable may be set by lshd for established sessions. If it is set
+it consists of three parts separated by whitespace, the first part
+contains the address of the connecting client. The second part
+contains the tcp port used on the connecting client and the third part
+contains the tcp port used on the server.
+
+@item SSH_TTY
+This variable may be set by lshd for established sessions. If it is set
+it is the name of the tty allocated.
 
 @item SHELL
 User's login shell. When @command{lshd} starts a user process, it sets
