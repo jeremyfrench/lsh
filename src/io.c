@@ -27,7 +27,13 @@
 #include <string.h>
 
 #include <unistd.h>
+
+#ifdef HAVE_POLL
 #include <poll.h>
+#else
+#include "poll.h"
+#endif
+
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
