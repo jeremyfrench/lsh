@@ -61,11 +61,19 @@ struct command *make_request_service(int service);
 
 /* GABA:
    (class
+     (name escape_callback)
+     (super lsh_callback)
+     (vars
+       (help . "const char *")))
+*/
+
+/* GABA:
+   (class
      (name escape_info)
      (vars
        (escape . uint8_t)
        ; Handlers, indexed by character.
-       (dispatch array (object lsh_callback) "0x100")))
+       (dispatch array (object escape_callback) "0x100")))
 */
 
 struct escape_info *make_escape_info(uint8_t escape);
