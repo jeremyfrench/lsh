@@ -99,7 +99,8 @@ struct ssh_session *make_session()
   struct ssh_session *session;
 
   NEW(session);
-  session->channels = xalloc(sizeof(struct ssh_channel *) * INITIAL_CHANNELS);
+  session->channels = lsh_space_alloc(sizeof(struct ssh_channel *)
+				      * INITIAL_CHANNELS);
   session->allocated_channels = INITIAL_CHANNELS;
   session->next_channel = 0;
   session->used_channels = 0;
@@ -126,7 +127,7 @@ int alloc_channel(struct ssh_session *session)
     {
       int new_size = session->allocated_channels * 2;
       struct ssh_channel **new
-	= xalloc(sizeof(struct ssh_channel *) * new_size);
+	= lsh_space_alloc(sizeof(struct ssh_channel *) * new_size);
 
       memcpy(new, session->channels,
 	     sizeof(struct ssh_channel *) * session->used_channels);
