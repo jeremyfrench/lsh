@@ -348,7 +348,8 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
 					     UINT32 type,
 					     struct lsh_string *data);
 
-extern struct command connection_service;
+extern struct command_simple connection_service_command;
+#define INIT_CONNECTION_SERVICE (&connection_service_command.super.super)
 
 
 #endif /* LSH_CHANNEL_H_INCLUDED */

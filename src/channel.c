@@ -1333,13 +1333,10 @@ do_channel_failure(struct packet_handler *closure UNUSED,
     }
 }
 
-static void
-do_connection_service(struct command *s UNUSED,
-		      struct lsh_object *x,
-		      struct command_continuation *c,
-		      struct exception_handler *e UNUSED)
+
+COMMAND_SIMPLE(connection_service_command)
 {
-  CAST(ssh_connection, connection, x);
+  CAST(ssh_connection, connection, a);
 
   struct channel_table *table;
   
@@ -1413,12 +1410,13 @@ do_connection_service(struct command *s UNUSED,
   global_failure->handler = do_global_request_failure;
   connection->dispatch[SSH_MSG_REQUEST_FAILURE] = global_failure;
   
-  COMMAND_RETURN(c, connection);
+  return a;
 }
 
-
+#if 0
 struct command
 connection_service = STATIC_COMMAND(do_connection_service);
+#endif
 
 struct lsh_string *format_channel_close(struct ssh_channel *channel)
 {
