@@ -1,5 +1,9 @@
 2002-01-14  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/rsa.c (make_rsa_signer): Take advantage of rsa_public_key
+	and rsa_private_key being independent structs now. General cleanup
+	and deletion of old code.
+
 	* src/spki.c (spki_hash_sexp): Bugfix, don't hash the data once.
 	Bug reported by Werner Koch.
 
