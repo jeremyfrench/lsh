@@ -140,8 +140,10 @@ srp_format_proofs(struct dh_instance *dh,
 		  struct lsh_string **m1,
 		  struct lsh_string **m2)
 {
+  struct mac_algorithm *mac_algorithm
+    = make_hmac_algorithm(dh->method->H);
   struct mac_instance *hmac
-    = MAKE_MAC(make_hmac_algorithm(dh->method->H),
+    = MAKE_MAC(mac_algorithm,
 	       dh->K->length, dh->K->data);
   struct lsh_string *s;
   
