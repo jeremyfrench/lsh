@@ -222,7 +222,15 @@ fi
 
 # Use a particular scheme implementation?
 if test x$with_scheme != x ; then
-  AC_PATH_PROG(SCHEME_PROGRAM, $with_scheme,, $PATH)
+  # If an absolute path is given, don't AC_PATH_PROG but just use it
+  if grep "^/" > /dev/null <<EOF
+$with_scheme 
+EOF  
+  then
+    SCHEME_PROGRAM="$with_scheme" 
+  else
+    AC_PATH_PROG(SCHEME_PROGRAM, $with_scheme,, $PATH)
+  fi
 else  
   AC_PATH_PROGS(SCHEME_PROGRAM, guile scsh,, $PATH)
 fi
