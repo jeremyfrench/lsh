@@ -46,6 +46,7 @@
 #include "xalloc.h"
 #include "compress.h"
 #include "server_pty.h"
+#include "tcpforward.h"
 
 #include "getopt.h"
 
@@ -64,6 +65,9 @@
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
+/* FIXME: Add configure and runtime options instead */
+#define WITH_TCPFORWARD_SUPPORT 1
 
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
@@ -460,7 +464,14 @@ int main(int argc, char **argv)
 				   &unix_userauth.super, -1),
 			make_alist(1, ATOM_SSH_CONNECTION,
 				   make_server_connection_service
-				   (make_alist(0, -1),
+				   (make_alist
+				    (0
+#if WITH_TCPFORWARD_SUPPORT
+				     +2,
+				     ATOM_TCPIP_FORWARD, make_tcpip_forward_request(backend),
+				     ATOM_CANCEL_TCPIP_FORWARD, make_cancel_tcpip_forward_request()
+#endif /* WITH_TCPFORWARD_SUPPORT */
+				     ,-1),
 				    make_alist
 				    (1
 #if WITH_PTY_SUPPORT
