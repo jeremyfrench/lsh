@@ -371,6 +371,8 @@ make_ssh_connection(enum connection_flag flags,
   connection->rec_max_packet = SSH_MAX_PACKET;
 
   /* Initial encryption state */
+  connection->kexinit = NULL;
+  
   connection->send_crypto = connection->rec_crypto = NULL;
   connection->send_mac = connection->rec_mac = NULL;
   connection->send_compress = connection->rec_compress = NULL;
@@ -519,6 +521,8 @@ connection_send_kex_end(struct ssh_connection *self)
     C_WRITE_NOW(self, string_queue_remove_head(&self->send_queue));
 
   self->send_kex_only = 0;
+
+  /* FIXME: Restart channels */
 }
 
 /* Serialization. */

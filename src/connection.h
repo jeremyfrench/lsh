@@ -165,6 +165,9 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        ; FIXME: Perhaps this should be a sockaddr or some other object
        ; that facilitates reverse lookups?
        (peer object address_info);
+
+       ; Keyexchange
+       (kexinit object make_kexinit)
        
        ; Receiving
        (rec_max_packet . UINT32)
