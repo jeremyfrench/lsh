@@ -638,6 +638,7 @@ client_command_session(struct client_options *options,
       /* NOTE: Doesn't ask for a pty. That's traditional behaviour,
        * although perhaps not the Right Thing. */
       
+      client_maybe_pty(options, &session_requests);
       client_maybe_x11(options, &session_requests);
 
       object_queue_add_tail(&session_requests,
