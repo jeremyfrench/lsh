@@ -226,8 +226,8 @@ make_lshd_options(void)
   self->with_publickey = 1;
   self->with_password = 1;
   self->with_tcpip_forward = 1;
-  /* Experimental, so disabled by default. */
-  self->with_x11_forward = 0;
+  /* Enabled by default. */
+  self->with_x11_forward = 1;
   self->with_pty = 1;
   self->subsystems = NULL;
 
@@ -410,9 +410,9 @@ main_options[] =
 #endif /* WITH_TCP_FORWARD */
 #if WITH_X11_FORWARD
   { "x11-forward", OPT_X11_FORWARD, NULL, 0,
-    "Enable x11 forwarding.", 0 },
+    "Enable x11 forwarding (default).", 0 },
   { "no-x11-forward", OPT_NO_X11_FORWARD, NULL, 0,
-    "Disable x11 forwarding (default).", 0 },
+    "Disable x11 forwarding.", 0 },
 #endif /* WITH_X11_FORWARD */
   
   { "subsystems", OPT_SUBSYSTEMS, "List of subsystem names and programs", 0,
