@@ -1,5 +1,7 @@
 2001-09-16  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* doc/lsh.texinfo: Moved table of contents first.
+
 	* src/dsa.c (do_dsa_sign): Display any unexpected algorithm atom
 	before crashing.
 
