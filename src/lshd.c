@@ -201,7 +201,7 @@ do_options2keyfile(struct command *ignored UNUSED,
 {
   CAST(lshd_options, options, a);
   
-  struct io_fd *f;
+  struct lsh_fd *f;
 
   f = io_read_file(options->backend, options->hostkey, e);
 
@@ -621,10 +621,11 @@ int main(int argc, char **argv)
     
       COMMAND_CALL(server_listen, options,
 		   &discard_continuation,
-		   make_report_exception_handler(EXC_IO, EXC_IO, "lshd: ",
-						 make_lshd_exception_handler(&default_exception_handler,
-									     HANDLER_CONTEXT),
-						 HANDLER_CONTEXT));
+		   make_report_exception_handler
+		   (make_report_exception_info(EXC_IO, EXC_IO, "lshd: "),
+		    make_lshd_exception_handler(&default_exception_handler,
+						HANDLER_CONTEXT),
+		    HANDLER_CONTEXT));
     }
   }
   
