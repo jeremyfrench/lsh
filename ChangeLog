@@ -1,3 +1,10 @@
+2001-05-03  Niels Möller  <nisse@ehand.com>
+
+	* src/lshd.c (main): Start the background randomness poll *after*
+	forking into the background. XXX Fix in 1.2 branch.
+
+	* src/testsuite/functions.sh (spawn_lshd): Use --daemon flag. 
+
 2001-05-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* sexp_streamed_parser.c: Deleted file.
