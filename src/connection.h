@@ -50,8 +50,20 @@
 #define HANDLE_PACKET(closure, connection, packet) \
 ((closure)->handler((closure), (connection), (packet)))
 
-#define CONNECTION_SERVER 0
-#define CONNECTION_CLIENT 1
+/* NOTE: These are used both for indexing the two-element arrays in
+ * the connection object. But they are also used in the flags field,
+ * to indicate our role in the protocol.
+ * For instance,
+ *
+ *   connection->versions[connection & CONNECTION_MODE]
+ *
+ * is the version string we sent. Furthermore, install_keys() depends
+ * on the numerical values of CONNECTION_SERVER and CONNECTION_CLIENT. */
+
+#define CONNECTION_MODE 1
+
+#define CONNECTION_CLIENT 0
+#define CONNECTION_SERVER 1
 
 #define PEER_SSH_DSS_KLUDGE           0x00000001
 #define PEER_SERVICE_ACCEPT_KLUDGE    0x00000002
@@ -67,16 +79,23 @@
        ; Where to pass errors
        (e object exception_handler)
 
+       ; Connection flags
+       (flags . UINT32)
+
        ; Sent and received version strings
        (versions array (string) 2)
        (session_id string)
        
        ; Connection description, used for debug messages.
-       (debug_comment simple "const char *")
+       (debug_comment . "const char *")
 
        ; Features or bugs peculiar to the peer
-       (peer_flags simple UINT32)
+       (peer_flags . UINT32)
        
+       ; Information about a logged in user. NULL unless some kind of
+       ; user authentication has been performed.
+       (user object lsh_user)
+
        ; the chained connection in the proxy
        (chain object ssh_connection)
 
@@ -89,7 +108,7 @@
        (peer object address_info);
        
        ; Receiving
-       (rec_max_packet simple UINT32)
+       (rec_max_packet . UINT32)
        (rec_mac    object mac_instance)
        (rec_crypto object crypto_instance)
        (rec_compress object compress_instance)
@@ -115,7 +134,7 @@
        (busy . int)
        
        ; Key exchange 
-       (kex_state simple int)
+       (kex_state . int)
 
        ; What to do once the connection is established
        (established object command_continuation)
@@ -137,14 +156,15 @@
        (unimplemented object packet_handler)
        (fail object packet_handler)
 
-       ; (provides_privacy simple int)
-       ; (provides_integrity simple int)
+       ; (provides_privacy . int)
+       ; (provides_integrity . int)
        )) */
 
 #define C_WRITE(c, s) A_WRITE((c)->write, (s) )
 
 struct ssh_connection *
-make_ssh_connection(struct address_info *peer,
+make_ssh_connection(UINT32 flags,
+		    struct address_info *peer,
 		    const char *id_comment,
 		    struct command_continuation *c,
 		    struct exception_handler *e);
