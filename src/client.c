@@ -60,7 +60,7 @@
      (vars
        (backend object io_backend)
        (block_size simple UINT32)
-       (id_comment simple "char *")
+       (id_comment simple "const char *")
        (random object randomness)
        (init object make_kexinit)
        (kexinit_handler object packet_handler)))
@@ -178,7 +178,7 @@ struct read_handler *make_client_read_line(struct ssh_connection *c)
   
 struct fd_callback *
 make_client_callback(struct io_backend *b,
-		     CONST char *comment,
+		     const char *comment,
 		     UINT32 block_size,
 		     struct randomness *random,
 		     struct make_kexinit *init,

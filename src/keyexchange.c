@@ -65,6 +65,9 @@
 
 #define NLISTS 10
 
+/* Arbitrary limit on list length */
+#define KEXINIT_MAX_ALGORITMS 47
+
 static struct kexinit *parse_kexinit(struct lsh_string *packet)
 {
   NEW(kexinit, res);
@@ -94,7 +97,7 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
   for (i = 0; i<NLISTS; i++)
     {
       if (!parse_sub_buffer(&buffer, &sub_buffer)
-	  || ! (lists[i] = parse_atom_list(&sub_buffer)))
+	  || ! (lists[i] = parse_atom_list(&sub_buffer, KEXINIT_MAX_ALGORITMS)))
 	break;
     }
 

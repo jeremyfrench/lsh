@@ -35,9 +35,9 @@ extern int debug_flag;
 extern int quiet_flag;
 extern int verbose_flag;
 
-void werror(CONST char *format, ...) PRINTF_STYLE(1,2);
-void debug(CONST char *format, ...) PRINTF_STYLE(1,2);
-void verbose(CONST char *format, ...) PRINTF_STYLE(1,2);
+void werror(const char *format, ...) PRINTF_STYLE(1,2);
+void debug(const char *format, ...) PRINTF_STYLE(1,2);
+void verbose(const char *format, ...) PRINTF_STYLE(1,2);
 
 /* For outputting data recieved from the other end */
 void werror_safe(UINT32 length, UINT8 *msg);
@@ -48,7 +48,7 @@ void werror_utf8(UINT32 length, UINT8 *msg);
 void debug_utf8(UINT32 length, UINT8 *msg);
 void verbose_utf8(UINT32 length, UINT8 *msg);
 
-void fatal(CONST char *format, ...) PRINTF_STYLE(1,2) NORETURN;
+void fatal(const char *format, ...) PRINTF_STYLE(1,2) NORETURN;
 
 void werror_hex(UINT32 length, UINT8 *data);
 void debug_hex(UINT32 length, UINT8 *data);

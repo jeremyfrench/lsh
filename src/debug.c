@@ -39,7 +39,7 @@
      (name packet_debug)
      (super abstract_write_pipe)
      (vars
-       (prefix simple "char *")))
+       (prefix simple "const char *")))
 */
 
 static int do_debug(struct abstract_write *w,

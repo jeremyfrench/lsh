@@ -56,7 +56,7 @@ static void do_crypt_rc4(struct crypto_instance *s,
 }
 
 static struct crypto_instance *
-make_rc4_instance(UNUSED struct crypto_algorithm *ignored, int mode, UINT8 *key)
+make_rc4_instance(struct crypto_algorithm *ignored UNUSED, int mode, UINT8 *key)
 {
   NEW(rc4_instance, self);
 
@@ -126,7 +126,7 @@ static void do_crypt_blowfish(struct crypto_instance *s,
 }
 
 static struct crypto_instance *
-make_blowfish_instance(UNUSED struct crypto_algorithm *ignored, int mode, 
+make_blowfish_instance(struct crypto_algorithm *ignored UNUSED, int mode, 
                        UINT8 *key)
 {
 /*  struct blowfish_instance *self; */
@@ -181,8 +181,8 @@ static struct hash_instance *do_sha_copy(struct hash_instance *s)
   return &CLONE(sha_instance, s)->super;
 }
 
-static struct hash_instance *make_sha_instance(
-		UNUSED struct hash_algorithm *ignored)
+static struct hash_instance *
+make_sha_instance(struct hash_algorithm *ignored UNUSED)
 {
   NEW(sha_instance, res);
 

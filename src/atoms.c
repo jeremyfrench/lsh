@@ -29,11 +29,11 @@
 
 struct atom_rassoc
 {
-  CONST UINT8 *name;
+  const UINT8 *name;
   UINT32 length;
 };
 
-struct atom_assoc *gperf_atom (CONST char *str, unsigned int len);
+struct atom_assoc *gperf_atom (const char *str, unsigned int len);
 
 #include "atoms_gperf.c"
 
@@ -44,7 +44,7 @@ struct atom_rassoc atom_table[] =
 UINT32 get_atom_length(int atom)
 { return atom_table[atom].length; }
 
-UINT8 *get_atom_name(int atom)
+const UINT8 *get_atom_name(int atom)
 { return atom_table[atom].name; }
   
 UINT32 lookup_atom(UINT32 length, UINT8 *name)

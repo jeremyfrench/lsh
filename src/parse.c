@@ -30,6 +30,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
 #include <string.h>
 
 void simple_buffer_init(struct simple_buffer *buffer,

@@ -36,7 +36,7 @@ int debug_flag = 0;
 int quiet_flag = 0;
 int verbose_flag = 0;
 
-void werror(CONST char *format, ...) 
+void werror(const char *format, ...) 
 {
   va_list args;
 
@@ -48,7 +48,7 @@ void werror(CONST char *format, ...)
     }
 }
 
-void debug(CONST char *format, ...) 
+void debug(const char *format, ...) 
 {
   va_list args;
 
@@ -60,7 +60,7 @@ void debug(CONST char *format, ...)
     }
 }
 
-void verbose(CONST char *format, ...) 
+void verbose(const char *format, ...) 
 {
   va_list args;
 
@@ -228,7 +228,7 @@ void verbose_hex(UINT32 length, UINT8 *data)
     write_hex(length, data);
 }
 
-void fatal(CONST char *format, ...) 
+void fatal(const char *format, ...) 
 {
   va_list args;
 

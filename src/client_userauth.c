@@ -147,6 +147,9 @@ static int do_userauth_success(struct packet_handler *c,
   return LSH_FAIL | LSH_DIE;
 }
 
+/* Arbitrary limit on list length */
+#define USERAUTH_MAX_METHODS 47
+
 static int do_userauth_failure(struct packet_handler *c,
 			       struct ssh_connection *connection,
 			       struct lsh_string *packet)
@@ -162,7 +165,7 @@ static int do_userauth_failure(struct packet_handler *c,
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_FAILURE)
-      && ( (methods = parse_atom_list(&buffer)) )
+      && ( (methods = parse_atom_list(&buffer, USERAUTH_MAX_METHODS)) )
       && parse_boolean(&buffer, &partial_success)
       && parse_eod(&buffer))
     {

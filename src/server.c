@@ -114,7 +114,7 @@
 	(host_key string)      ; Public key 
 
 	(block_size simple UINT32)
-	(id_comment simple "char *")
+	(id_comment simple "const char *")
 
 	(random object randomness)
 	(init object make_kexinit)
