@@ -1,5 +1,24 @@
 2001-04-01  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/sftp/Makefile.am (sftp_server_SOURCES,
+	sftp_test_client_SOURCES): Added xmalloc.c.
+
+	* src/sftp/xmalloc.c: New file. Defines xmalloc, xrealloc and
+	xstrdup. 
+
+	* src/sftp/sftp-test-client.c (do_put): Use xmalloc.
+
+	* src/sftp/sftp-server.c (sftp_get_user): New function.
+	(sftp_get_group): Likewise.
+	(struct sftp_ctx): Added user_cache and group_cache.
+	(sftp_init): Initialize user_cache and group_cache.
+	(sftp_put_longname): Take a sftp_ctx * as argument. Use
+	sftp_get_user and sftp_get_group.
+
+	* src/sftp/buffer.c: Use xmalloc and xrealloc.
+
+	* src/sftp/idcache.c: Rewrite.
+
 	* src/sftp/Makefile.am (sftp_server_SOURCES): Added idcache.c.
 
 	* src/sftp/sftp-server.c: Use the functions from idcache.c.
