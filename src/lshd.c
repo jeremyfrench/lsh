@@ -480,9 +480,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	else
 	  argp_error(state, "All user authentication methods disabled.");
 
-	/* Start background poll */
-	RANDOM_POLL_BACKGROUND(self->random->poller);
-	
 	break;
       }
     case 'p':
@@ -751,6 +748,13 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
+  /* NOTE: We have to do this *after* forking into the background,
+   * because otherwise we won't be able to waitpid() on the background
+   * process. */
+
+  /* Start background poll */
+  RANDOM_POLL_BACKGROUND(options->random->poller);
+	
   {
     /* Commands to be invoked on the connection */
     struct object_list *connection_hooks;
