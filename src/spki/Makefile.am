@@ -7,6 +7,7 @@ noinst_LIBRARIES = libspki.a
 # libspkiincludedir = $(includedir)/nettle
 
 libspki_a_SOURCES = certificate.c parse.c tag.c reduce.c \
+	verify.c \
 	certificate.h parse.h tag.h
 
 # Does this get $(srcdir) right?
