@@ -1,4 +1,8 @@
-News for the lsh-
+News for the lsh-0.1.11 release
+
+	Support for other scheme implementations in the build process,
+	in particular guile.
+	
 
 News for the lsh-0.1.10 release
 
