@@ -1,3 +1,9 @@
+News for the 1.0.5 release
+
+	Renamed lsh_keygen and lsh_writekey to lsh-keygen and
+	lsh-writekey, respectively (actually happened in 1.0.4, but I
+	forgot to mention that).
+
 News for the 1.0.4 release
 
 	Fixed yet another bug in the userauth logic.
