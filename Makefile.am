@@ -37,5 +37,5 @@ bootstrap:
 # all-recursive check-recursive: config.h
 
 EXTRA_DIST = ANNOUNCE AUTHORS FAQ README COPYING ChangeLog ChangeLog.1 \
-	NEWS FAQ distribution-key.gpg
+	NEWS FAQ distribution-key.gpg .bootstrap
 
