@@ -289,15 +289,13 @@ int main(int argc, char **argv)
 	{ "mac", required_argument, NULL, 'm' },
 #if WITH_TCP_FORWARD
 	{ "forward-local-port", required_argument, NULL, 'L'},
-#if 0
 	{ "forward-remote-port", required_argument, NULL, 'R'},
-#endif
 #endif /* WITH_TCP_FORWARD */
 	{ "nop", no_argument, &shell_flag, 0 },
 	{ NULL }
       };
       
-      option = getopt_long(argc, argv, "+c:l:np:qgtvz:L:", options, NULL);
+      option = getopt_long(argc, argv, "+c:l:np:qgtvz:L:R:N", options, NULL);
       switch(option)
 	{
 	case -1:
@@ -366,6 +364,25 @@ int main(int argc, char **argv)
 				  (backend,
 				   make_address_info((forward_gateway
 						      ? NULL
+						      : ssh_format("%lz", "127.0.0.1")),
+						     listen_port),
+				   target)->super);
+	  }
+	  break;
+	case 'R':
+	  {
+	    UINT32 listen_port;
+	    struct address_info *target;
+
+	    if (!parse_forward_arg(optarg, &listen_port, &target))
+	      usage();
+
+	    object_queue_add_tail(&actions,
+				  &forward_remote_port
+				  (backend,
+				   make_address_info((forward_gateway
+						      /* FIXME: Is NULL an ok value? */
+						      ? ssh_format("%lz", "0.0.0.0")
 						      : ssh_format("%lz", "127.0.0.1")),
 						     listen_port),
 				   target)->super);
