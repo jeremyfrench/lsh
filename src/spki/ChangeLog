@@ -1,5 +1,27 @@
 2003-03-10  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* testsuite/Makefile.am (EXTRA_DIST): Added key-1.pub, key2 and
+	key2.pub. 
+
+	* testsuite/key-2.pub, testsuite/key-2: One more test key.
+
+	* testsuite/delegate-test: Include delegation flag in the ACL.
+	Test certificate creation. Test spki-reduce.
+
+	* tag.c (spki_tag_format): Fixed formatting functions, and updated
+	it to use current sexp_format features. Seems to work now.
+
+	* certificate.c (spki_parse_sequence): Must call spki_parse_type
+	to enter hash expression. Fixed missing assignment to ISSUER.
+	(spki_acl_format): Include tag expression in output.
+
+	* parse.c (spki_parse_hash): Check that the expression type is
+	right.
+
+	* tools/misc.c (read_file, read_file_by_name): Interchanged return
+	value and *buffer argument, now returns a char * and uses an
+	unsigned * argument for the length. Updated callers.
+
 	* tools/Makefile.am (noinst_PROGRAMS): Added spki-delegate and
 	spki-reduce. 
 
