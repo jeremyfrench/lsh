@@ -1,15 +1,15 @@
 ## Process this file with make_am to produce Makefile.am
 BODY:
 
-EXTRA_DIST = HACKING NOTES PORTS TASKLIST configuration.txt \
-	Makefile.am.in
-
 Makefile.am: Makefile.am.in
 	(cd $(top_srcdir); ./make_am)
 
 # FIXME: Make this less GNU-make specific
 
 MANPAGES = $(wildcard *.[1-9])
+
+EXTRA_DIST = HACKING NOTES PORTS TASKLIST configuration.txt \
+	Makefile.am.in $(MANPAGES)
 
 DVIS = $(addsuffix .dvi, $(MANPAGES))
 PSS =  $(addsuffix  .ps, $(MANPAGES))
