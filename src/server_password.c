@@ -37,9 +37,19 @@
 #include <pwd.h>
 #include <grp.h>
 
+/* These functions add an extra NUL-character at the end of the string
+ * (not included in the length), to make it possible to pass the
+ * string directly to C library functions. */
+
 static struct lsh_string *format_cstring(char *s)
 {
-  return s ? ssh_format("%lz", s) : NULL;
+  if (s)
+    {
+      struct lsh_string *res = ssh_format("%lz%c", s, 0);
+      res->length--;
+      return res;
+    }
+  return NULL; 
 }
 
 static struct lsh_string *make_cstring(struct lsh_string *s, int free)
@@ -53,7 +63,9 @@ static struct lsh_string *make_cstring(struct lsh_string *s, int free)
       return 0;
     }
 
-  res = ssh_format("%lS", s);
+  res = ssh_format("%lS%c", s, 0);
+  res->length--;
+  
   if (free)
     lsh_string_free(s);
   return res;
@@ -133,8 +145,9 @@ static int do_authenticate(struct userauth *c,
 			   struct ssh_service **result)
 {
   struct unix_authentication *closure = (struct unix_authentication *) c;
-  struct lsh_string * password = NULL;
+  struct lsh_string *password = NULL;
   struct unix_service *service;
+  int change_passwd;
   
   MDEBUG(closure);
 
@@ -147,47 +160,58 @@ static int do_authenticate(struct userauth *c,
   username = utf8_to_local(username, 1);
   if (!username)
     return 0;
-  
-  if ( (password = parse_string_copy(args))
-       && parse_eod(args))
+
+  if (parse_boolean(args, &change_passwd))
     {
-      struct unix_user *user;
-      int access;
-
-      password = utf8_to_local(password, 1);
-
-      if (!password)
+      if (change_passwd)
 	{
+	  /* Password changeing is not implemented. */
 	  lsh_string_free(username);
 	  return LSH_AUTH_FAILED;
 	}
+      if ( (password = parse_string_copy(args))
+	   && parse_eod(args))
+	{
+	  struct unix_user *user;
+	  int access;
+
+	  password = utf8_to_local(password, 1);
+
+	  if (!password)
+	    {
+	      lsh_string_free(username);
+	      return LSH_AUTH_FAILED;
+	    }
        
-      user = lookup_user(username, 1);
+	  user = lookup_user(username, 1);
 
-      if (!user)
-	{
-	  lsh_string_free(password);
-	  return LSH_AUTH_FAILED;
-	}
+	  if (!user)
+	    {
+	      lsh_string_free(password);
+	      return LSH_AUTH_FAILED;
+	    }
 
-      access = verify_password(user, password, 1);
+	  access = verify_password(user, password, 1);
 
-      if (access)
-	{
-	  *result = LOGIN(service, user);
-	  return LSH_OK | LSH_GOON;
-	}
-      else
-	{
-	  /* FIXME: Free user struct */
-	  return LSH_AUTH_FAILED;
+	  if (access)
+	    {
+	      *result = LOGIN(service, user);
+	      return LSH_OK | LSH_GOON;
+	    }
+	  else
+	    {
+	      /* FIXME: Free user struct */
+	      return LSH_AUTH_FAILED;
+	    }
 	}
     }
+
+  /* Request was invalid */
   lsh_string_free(username);
 
   if (password)
     lsh_string_free(password);
-  return 0;
+  return LSH_FAIL | LSH_DIE;
 }
   
 struct userauth *make_unix_userauth(struct alist *services)
