@@ -91,11 +91,14 @@ make_debug_packet(const char *msg, int always_display)
 
 /* Send a debug message to the other end. */
 void
-send_debug_message(struct abstract_write *write, const char *msg, int always_display)
+send_debug_message(struct ssh_connection *connection,
+		   const char *msg, int always_display)
 {
-  A_WRITE(write, make_debug_packet(msg, always_display));
+  /* Can be sent even during key exchange. */
+  C_WRITE_NOW(connection, make_debug_packet(msg, always_display));
 }
 
+#if 0
 void
 send_debug(struct abstract_write *write, const char *msg, int always_display)
 {
@@ -109,6 +112,7 @@ send_verbose(struct abstract_write *write, const char *msg, int always_display)
   if (verbose_flag)
     send_debug_message(write, msg, always_display);
 }
+#endif
 
 DEFINE_PACKET_HANDLER(, connection_debug_handler, connection UNUSED, packet)
 {
