@@ -124,6 +124,11 @@ fi
 SCHEME_NAME=`basename $SCHEME_PROGRAM`
 AC_SUBST(SCHEME_NAME)
 
+AC_ARG_WITH(system-argp,
+  [--without-system-argp    Don't use the system's argp.],,
+  [with_system_argp=yes])
+
+
 AC_PATH_PROG(BASH, bash,, $PATH)
 AC_PATH_PROG(GROFF, groff,, $PATH)
 
@@ -170,6 +175,7 @@ AC_CHECK_HEADERS(crypt.h)
 AC_CHECK_HEADERS(pty.h)
 AC_CHECK_HEADERS(stropts.h)
 AC_CHECK_HEADERS(syslog.h)
+AC_CHECK_HEADERS(argp.h)
 
 dnl FIXME: Define a new macro for checking if structure members are
 dnl available.
@@ -313,8 +319,14 @@ dnl This macro is mentioned in the automake manual, but where is it
 dnl supposed to be defined?
 dnl AC_REPLACE_GNU_GETOPT
 
-# AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o $LIBOBJS"])
+dnl AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o $LIBOBJS"])
 AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
+
+dnl FIXME: If the system already has argp, it's unnecessary to build our own.
+if test x$with_system_argp = xno ; then
+  AC_CHECK_FUNCS(argp_parse,, [LIBOBJS="$LIBOBJS argp/libargp.a"])
+fi
+
 
 dnl Check for broken shutdown
 AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
@@ -479,9 +491,22 @@ foo(void)
 lsh_cv_c_attribute=yes,
 lsh_cv_c_attribute=no)])
 
-if test "$lsh_cv_c_attribute" = "yes"; then
-  AC_DEFINE(HAVE_ATTRIBUTE)
+if test "x$lsh_cv_c_attribute" = "xyes"; then
+  AC_DEFINE(HAVE_GCC_ATTRIBUTE)
 fi
+
+dnl Check for gcc's __FUNCTION__ variable
+AC_CACHE_CHECK(for __FUNCTION__,
+	       lsh_cv_c_FUNCTION,
+  [ AC_TRY_COMPILE(,
+      [ void foo(void) { char c = __FUNCTION__[0]; } ],
+      lsh_cv_c_FUNCTION=yes,
+      lsh_cv_c_FUNCTION=no)])
+
+if test "x$lsh_cv_c_FUNCTION" = "xyes"; then
+  AC_DEFINE(HAVE_GCC_FUNCTION)
+fi
+
 
 AC_MSG_CHECKING(for BSD pty names)
 
@@ -506,5 +531,5 @@ if test x$GCC = xyes ; then
 fi
 
 AC_OUTPUT(Makefile doc/Makefile misc/Makefile
-	  src/Makefile src/scm/Makefile
+	  src/Makefile src/argp/Makefile src/scm/Makefile
 	  src/symmetric/Makefile src/symmetric/include/Makefile)
