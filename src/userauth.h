@@ -45,4 +45,8 @@ struct userauth
 #define AUTHENTICATE(s, u, r, a, g) \
 ((s)->authenticate((s), (u), (r), (a), (g)))
      
+struct ssh_service *make_client_userauth(struct lsh_string username,
+					 int service_name,
+					 struct ssh_service *service);
+     
 #endif /* LSH_USERAUTH_H_INCLUDED */
