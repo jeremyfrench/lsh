@@ -1,3 +1,9 @@
+2004-11-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* dc.h: Reverted apache workaround. It turned out it was not
+	sufficient to solve the problem, there remained undefined
+	references to the function ap_symbol.
+
 2004-11-10  Niels Möller  <nisse@lysator.liu.se>
 
 	* dc.h: Added workaround for broken fnmatch.h installed by apache.

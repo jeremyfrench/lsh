@@ -35,13 +35,11 @@
 #include <glob.h>
 
 #ifdef HAVE_FNMATCH
-/* This is an ugly workaround. On Solaris, some version of Apache
-   installs a file fnmatch.h, which includes ap_config.h, which
-   contains a declaration of gethostname which is incompatible with
-   unistd.h. */
-# define gethostname gethostname_apache
+/* NOTE: Some version of Apache installs a file fnmatch.h, which
+   includes ap_config.h, which contains a declaration of gethostname
+   which is incompatible with unistd.h. We don't even try working
+   around that. */
 # include <fnmatch.h>
-# undef gethostname
 #endif
 
 #include "sftp_bind.h"
