@@ -617,12 +617,18 @@ static int make_pty(struct pty_info *pty UNUSED,
 
 #define USE_LOGIN_DASH_CONVENTION 1
 
+static struct exception shell_request_failed =
+STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
+
 static void
 do_spawn_shell(struct channel_request *c,
 	       struct ssh_channel *channel,
-	       struct ssh_connection *connection,
-	       int want_reply,
-	       struct simple_buffer *args)
+	       struct ssh_connection *connection UNUSED,
+	       UINT32 type UNUSED,
+	       int want_reply UNUSED,
+	       struct simple_buffer *args,
+	       struct command_continuation *s,
+	       struct exception_handler *e)
 {
   CAST(shell_request, closure, c);
   struct server_session *session = (struct server_session *) channel;
@@ -637,7 +643,7 @@ do_spawn_shell(struct channel_request *c,
 
   if (!parse_eod(args))
     {
-      PROTOCOL_ERROR(connection->e, "Invalid shell CHANNEL_REQUEST message.");
+      PROTOCOL_ERROR(e, "Invalid shell CHANNEL_REQUEST message.");
       return;
     }
     
@@ -899,9 +905,7 @@ do_spawn_shell(struct channel_request *c,
 	  REMEMBER_RESOURCE
 	    (channel->resources, &session->err->super);
 
-	if (want_reply)
-	  A_WRITE(channel->write,
-		  format_channel_success(channel->channel_number) );
+	COMMAND_RETURN(s, NULL);
 
 	channel_start_receive(channel);
 	return;
@@ -914,9 +918,7 @@ do_spawn_shell(struct channel_request *c,
     close(in[1]);
   }
  fail:
-  if (want_reply)
-    A_WRITE(channel->write,
-	    format_channel_failure(channel->channel_number));
+  EXCEPTION_RAISE(e, &shell_request_failed);
 }
 
 struct channel_request *make_shell_handler(struct io_backend *backend,
@@ -932,13 +934,20 @@ struct channel_request *make_shell_handler(struct io_backend *backend,
 }
 
 #if WITH_PTY_SUPPORT
+
+static struct exception pty_request_failed =
+STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "pty request failed");
+
 /* pty_handler */
 static void
 do_alloc_pty(struct channel_request *c UNUSED,
 	     struct ssh_channel *channel,
 	     struct ssh_connection *connection UNUSED,
-	     int want_reply,
-	     struct simple_buffer *args)
+	     UINT32 type UNUSED,
+	     int want_reply UNUSED,
+	     struct simple_buffer *args,
+	     struct command_continuation *s,
+	     struct exception_handler *e)
 {
   UINT32 width, height, width_p, height_p;
   UINT8 *mode;
@@ -988,9 +997,8 @@ do_alloc_pty(struct channel_request *c UNUSED,
 		  REMEMBER_RESOURCE(channel->resources, &pty->super);
 
 		  verbose(" granted.\n");
-		  if (want_reply)
-		    A_WRITE(channel->write,
-			    format_channel_success(channel->channel_number) );
+		  COMMAND_RETURN(s, NULL);
+
 		  return;
 		}
 	      else
@@ -1004,9 +1012,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
   verbose("Pty allocation failed.\n");
   lsh_string_free(term);
 
-  if (want_reply)
-    A_WRITE(channel->write,
-	    format_channel_failure(channel->channel_number) );
+  EXCEPTION_RAISE(e, &pty_request_failed);
 }
 
 struct channel_request *make_pty_handler(void)
