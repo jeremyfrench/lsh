@@ -140,11 +140,11 @@ new_tcpip_channel(struct channel_open_command *c,
 
   debug("tcpforward_commands.c: new_tcpip_channel()\n");
 
-  REMEMBER_RESOURCE(connection->resources, &self->peer->fd->super.super);
-  
   channel = make_tcpip_channel(self->peer->fd, TCPIP_WINDOW_SIZE);
   channel->write = connection->write;
-  
+
+  REMEMBER_RESOURCE(channel->resources, &self->peer->fd->super.super);
+
   *request = prepare_channel_open(connection, self->type, 
   				  channel, 
   				  "%S%i%S%i",
