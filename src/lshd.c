@@ -131,12 +131,15 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_KERBEROS_PASSWD 0x223
 #define OPT_NO_KERBEROS_PASSWD (OPT_KERBEROS_PASSWD | OPT_NO)
 
+#define OPT_PASSWORD_HELPER 0x224
+
 /* GABA:
    (class
      (name lshd_options)
      (super algorithms_options)
      (vars
        (backend object io_backend)
+       (reaper object reap)
        (random object randomness)
        (signature_algorithms object alist)
        (style . sexp_argp_state)
@@ -178,6 +181,7 @@ make_lshd_options(struct io_backend *backend)
   init_algorithms_options(&self->super, all_symmetric_algorithms());
 
   self->backend = backend;
+  self->reaper = make_reaper();
   self->random = make_reasonably_random();
 
   /* FIXME: We don't support rsa yet in the rest of the code! */
@@ -299,13 +303,16 @@ main_options[] =
   { "no-root-login", OPT_NO_ROOT_LOGIN, NULL, 0,
     "Don't allow root to login (default).", 0 },
 
-  { "kerberos-passwords", OPT_KERBEROS_PASSWD, "Program", OPTION_ARG_OPTIONAL,
-    "Recognize kerberos passwords. The optional argument is the path to the "
-    "helper program, by default \"" KERBEROS_HELPER "\". This option is "
-    "experimental.", 0 },
+  { "kerberos-passwords", OPT_KERBEROS_PASSWD, NULL, 0,
+    "Recognize kerberos passwords, using the helper program "
+    "\"" KERBEROS_HELPER "\". This option is experimental.", 0 },
   { "no-kerberos-passwords", OPT_NO_KERBEROS_PASSWD, NULL, 0,
     "Don't recognize kerberos passwords (default behaviour)." },
 
+  { "password-helper", OPT_PASSWORD_HELPER, "Program", 0,
+    "Use the named helper program for password verification. "
+    "(experimental).", 0 },
+  
   { NULL, 0, NULL, 0, "Offered services:", 0 },
 
 #if WITH_PTY_SUPPORT
@@ -352,7 +359,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	struct user_db *db = NULL;
 	
 	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
-	  db = make_unix_user_db(self->backend, self->pw_helper, self->allow_root);
+	  db = make_unix_user_db(self->backend, self->reaper,
+				 self->pw_helper, self->allow_root);
 	  
 	if (self->with_dh_keyexchange || self->with_srp_keyexchange)
 	  {
@@ -484,11 +492,15 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_KERBEROS_PASSWD:
-      self->pw_helper = arg ? arg : KERBEROS_HELPER;
+      self->pw_helper = KERBEROS_HELPER;
       break;
 
     case OPT_NO_KERBEROS_PASSWD:
       self->pw_helper = NULL;
+      break;
+
+    case OPT_PASSWORD_HELPER:
+      self->pw_helper = arg;
       break;
       
 #if WITH_TCP_FORWARD
@@ -609,9 +621,7 @@ make_lshd_exception_handler(struct exception_handler *parent,
 int main(int argc, char **argv)
 {
   struct lshd_options *options;
-  
-  struct reap *reaper;
-  
+    
   NEW(io_backend, backend);
   init_backend(backend);
 
@@ -662,9 +672,7 @@ int main(int argc, char **argv)
       werror("lshd seems to be running already.\n");
       return EXIT_FAILURE;
     }
-  
-  reaper = make_reaper();
-  
+    
   {
     /* Commands to be invoked on the connection */
     struct object_list *connection_hooks;
@@ -673,8 +681,8 @@ int main(int argc, char **argv)
     /* Supported channel requests */
     struct alist *supported_channel_requests
       = make_alist(2,
-		   ATOM_SHELL, make_shell_handler(backend, reaper),
-		   ATOM_EXEC, make_exec_handler(backend, reaper),
+		   ATOM_SHELL, make_shell_handler(backend),
+		   ATOM_EXEC, make_exec_handler(backend),
 		   -1);
     
 #if WITH_PTY_SUPPORT
@@ -745,7 +753,7 @@ int main(int argc, char **argv)
     }
   }
   
-  reaper_run(reaper, backend);
+  reaper_run(options->reaper, backend);
 
   return 0;
 }
