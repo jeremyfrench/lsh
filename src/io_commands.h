@@ -46,5 +46,10 @@ struct command *make_listen_connection(struct io_backend *backend,
 
 struct command *make_simple_connect(struct io_backend *backend,
 				    struct resource_list *resources);
+struct command *
+make_simple_listen(struct io_backend *backend,
+		   struct resource_list *resources);
+
+extern struct command_simple io_log_peer_command;
 
 #endif /* LSH_IO_COMMANDS_H_INCLUDED */

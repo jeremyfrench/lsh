@@ -27,6 +27,7 @@
 #include "command.h"
 #include "connection.h"
 #include "io.h"
+#include "werror.h"
 #include "xalloc.h"
 
 #include <assert.h>
@@ -51,6 +52,7 @@ static int do_listen_continue(struct fd_listen_callback *s, int fd,
 {
   CAST(listen_command_callback, self, s);
   NEW(listen_value, res);
+
   res->fd = make_io_fd(self->backend, fd);
   res->peer = peer;
 
@@ -78,14 +80,15 @@ static int do_listen(struct io_backend *backend,
   struct sockaddr_in sin;
   struct listen_fd *fd;
   
-  if (!tcp_addr(&sin, a->address->length, a->address->data, a->port))
+  if (!address_info2sockaddr_in(&sin, a))
     return COMMAND_RETURN(c, NULL);
 
   fd = io_listen(backend, &sin,
 		 make_listen_command_callback(backend, c));
 
   if (!fd)
-    return COMMAND_RETURN(c, NULL);
+    /* NOTE: Will never invoke the continuation. */
+    return LSH_COMMAND_FAILED;
 
   if (resources)
     REMEMBER_RESOURCE(resources, &fd->super.super);
@@ -177,8 +180,11 @@ static int do_connect(struct io_backend *backend,
   /* FIXME: Add ipv6 support somewhere */
   struct sockaddr_in sin;
   struct connect_fd *fd;
+
+  /* Address must specify a host */
+  assert(a->address);
   
-  if (!tcp_addr(&sin, a->address->length, a->address->data, a->port))
+  if (!address_info2sockaddr_in(&sin, a))
     return COMMAND_RETURN(c, NULL);
 
   fd = io_connect(backend, &sin, NULL,
@@ -194,13 +200,14 @@ static int do_connect(struct io_backend *backend,
   return LSH_OK | LSH_GOON;
 }
 
-/* Simple connect function taking port only as argument. 
+/* Simple connect function taking port only as argument. Also used for
+ * listen.
  *
- * (connect address)
- */
+ * (connect address) */
+
 /* GABA:
    (class
-     (name simple_connect_command)
+     (name simple_io_command)
      (super command)
      (vars
        (backend object io_backend)
@@ -211,7 +218,7 @@ static int do_simple_connect(struct command *s,
 			     struct lsh_object *a,
 			     struct command_continuation *c)
 {
-  CAST(simple_connect_command, self, s);
+  CAST(simple_io_command, self, s);
   CAST(address_info, address, a);
 
   return do_connect(self->backend, address, self->resources, c);
@@ -221,7 +228,7 @@ struct command *
 make_simple_connect(struct io_backend *backend,
 		    struct resource_list *resources)
 {
-  NEW(simple_connect_command, self);
+  NEW(simple_io_command, self);
   self->backend = backend;
   self->resources = resources;
 
@@ -229,7 +236,49 @@ make_simple_connect(struct io_backend *backend,
 
   return &self->super;
 }
- 
+
+static int do_simple_listen(struct command *s,
+			    struct lsh_object *a,
+			    struct command_continuation *c)
+{
+  CAST(simple_io_command, self, s);
+  CAST(address_info, address, a);
+
+  return do_listen(self->backend, address, self->resources, c);
+}
+
+struct command *
+make_simple_listen(struct io_backend *backend,
+		   struct resource_list *resources)
+{
+  NEW(simple_io_command, self);
+  self->backend = backend;
+  self->resources = resources;
+
+  self->super.call = do_simple_listen;
+
+  return &self->super;
+}
+
+
+/* Takes a listen_value as argument, logs the peer address, and
+ * returns the fd object. */
+
+static struct lsh_object *
+do_simple_log_peer(struct command_simple *s UNUSED,
+		   struct lsh_object *x)
+{
+  CAST(listen_value, a, x);
+
+  verbose("Accepting connection from %S, port %i\n",
+	  a->peer->address, a->peer->port);
+
+  return &a->fd->super.super.super;
+}
+
+struct command_simple io_log_peer_command =
+STATIC_COMMAND_SIMPLE(do_simple_log_peer);
+  
 /* ***
  *
  * (lambda (backend connection port)
