@@ -53,38 +53,6 @@ DEFINE_COMMAND2(connection_remember)
 }
 
 
-/* (connection_if_srp then_f else_f connection)
- *
- * Invokes either (then_f connection) or (else_f connection)
- * depending on whether or not the CONNECTION_SRP flag is set.
- */
-
-DEFINE_COMMAND3(connection_if_srp)
-     (struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct lsh_object *a3,
-      struct command_continuation *c,
-      struct exception_handler *e)
-{
-  CAST_SUBTYPE(command, then_f, a1);
-  CAST_SUBTYPE(command, else_f, a2);
-  CAST(ssh_connection, connection, a3);
-  
-  struct command *f = ( (connection->flags & CONNECTION_SRP)
-			? then_f : else_f);
-  COMMAND_CALL(f, connection, c, e);
-}
-
-struct command *
-make_connection_if_srp(struct command *then_f,
-		       struct command *else_f)
-{
-  return make_command_3_invoke_2(&connection_if_srp,
-				 &then_f->super,
-				 &else_f->super);
-}
-
-
 DEFINE_COMMAND(connection_require_userauth)
      (struct command *s UNUSED, struct lsh_object *a,
       struct command_continuation *c,
