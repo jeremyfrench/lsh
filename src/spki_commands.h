@@ -60,6 +60,7 @@ make_spki_read_acls(struct alist *algorithms);
 
 struct command *
 make_spki_read_userkeys(struct alist *algorithms,
+			struct alist *signature_algorithms,
 			struct interact *tty);
 			
 

@@ -1,3 +1,21 @@
+2000-12-11  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* Removed getopt.c, getopt.h and getopt1.c from the src/argp
+	directory. 
+
+	* src/lsh.c (do_options2identities): Pass two alists to
+	make_spki_read_userkeys (reported by jps).
+
+	* src/spki_commands.c (make_spki_read_userkeys): Use separate
+	alists for symmetric algorithms and signature algorithms (reported
+	by jps).
+
+	* src/abstract_crypto.c (crypt_string_unpad): Adjust length
+	properly (reported by jps).
+
+	* src/argp/argp-parse.c (match_option, ARGP_COMPLETE): #if:ed out
+	completion code for long options.
+
 2000-12-09  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/Makefile.am.in (LDADD, lshg_LDADD): Use @LIBARGP@
