@@ -1,3 +1,9 @@
+1999-07-04  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/command.c, src/command.h, src/lsh.c, src/lshd.c: Don't allow
+	a NULL continuation. Instead, use discard_continuation to ignore
+	the value.
+
 1999-07-01  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/tcpforward_commands.c (new_tcpip_channel): Don't initialize
