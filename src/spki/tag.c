@@ -681,7 +681,7 @@ spki_tag_from_sexp(void *ctx, nettle_realloc_func *realloc,
 static int
 atom_prefix(struct spki_tag_atom *a, struct spki_tag_atom *b)
 {
-  assert(a->super.type == SPKI_TAG_ATOM);
+  assert(a->super.type == SPKI_TAG_PREFIX);
   assert(b->super.type == SPKI_TAG_ATOM);
 
   return string_equal(a->display, b->display)
@@ -865,7 +865,9 @@ spki_tag_intersect(void *ctx, nettle_realloc_func *realloc,
 		   struct spki_tag *a,
 		   struct spki_tag *b)
 {
-  if (a->type < b->type)
+  /* We want a to have the "widest" type, corresponding to the
+   * smallest numerical value of the type. */
+  if (a->type > b->type)
     {
       struct spki_tag *t = a;
       a = b;
