@@ -304,7 +304,7 @@ DEFINE_COMMAND4(handshake_command)
       struct exception_handler *e)
 {
   CAST(handshake_info, info, a1);
-  CAST(make_kexinit, init, a2);
+  CAST_SUBTYPE(make_kexinit, init, a2);
   CAST(listen_value, lv, a4);
   
   struct lsh_string *version;
