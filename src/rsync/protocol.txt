@@ -1,0 +1,73 @@
+I think it is a good idea to chop the rsync protocol into orthogonal
+parts. One part takes care of transport issues; i.e. version
+negotiaon, authentication, compression. The other does the actual
+data transfer insode a transport channel, and it doesn't have to care
+about transport issues.
+
+Through out this document, "receiver" is the party that wants to
+reconstruct a copy of a file at the other pary, the "sender".
+
+The data in the several phases is represented as follows:
+
+Checksums sent from receiver and sender are represented as follows:
+
+First
+
+  4 octets, number of blocks
+  4 octets, block size
+  4 octets, total size % blocksize, i.e. 0 or size of the final block
+
+Next, a sequence of
+
+  4 octets of rolling checksum
+ 16 octets md5 checksum
+
+In rsync-2.4.1 md4 is used rather than md5. As the length header is
+sent first, the file length must be known in advance.
+
+Next, the sender transmits the information needed to reconstruct the
+file. The stream consists of a series of "tokens". Either
+
+  4 octets, value 0 indicates end of file
+
+or
+
+  4 octets, value n, MSB clear
+  n octets, literal data
+
+or
+
+  4 octets, value n, MSB set. Let i = -(n + 1) == ~n (one's complent).
+                              Then insert block i into the file.
+
+(in rsync-2.4.1, the last form is more complicated; it refers to the
+i:th previous token. I guess that the "previous token"-list is
+initialized with the blocks of the original local file, but I'm not
+quite sure. To me, it seems better to let the outer compressor do its
+work).
+
+Note that this token scheme seems to limit the number of blocks to
+2^31-1, while the other phases of the protocol can handle up to 2^32-1
+blocks.
+
+At last, a checksum, to catch errors that might be caused, for
+instance, if the files are modified under our feet.
+
+ 16 octets, md5 checksum
+
+Old versions of rsync doesn't send any checksum. More recent versions
+do, but use md4 rather than md5.
+
+  
+
+
+
+
+First, an md5 checksum of the entire file (to catch
+errors, for instance if the files are being updated under our feet),
+
+ 16 octets md5 checksum of file
+
+Next,  
+
+
