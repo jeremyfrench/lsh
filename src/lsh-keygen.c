@@ -220,27 +220,7 @@ main(int argc, char **argv)
       key = dsa_generate_key(r, options->level);
       break;
     case 'r':
-      {
-	mpz_t e;
-	mpz_init(e);
-
-	for (;;)
-	  {
-	    /* Use a reasonably small random e, and make sure that at
-	     * it is odd and has at most one more one bit. */
-	    bignum_random_size(e, r, 30);
-	    mpz_setbit(e, 0);
-	    mpz_setbit(e, 17);
-	    
-	    key = rsa_generate_key(e, r, options->level);
-	    if (key)
-	      break;
-
-	    verbose("Bad choice of public exponent. Trying another...\n");
-	  }
-
-	mpz_clear(e);
-      }
+      key = rsa_generate_key(r, options->level);
       break;
     default:
       fatal("Internal error!\n");
