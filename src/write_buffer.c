@@ -33,7 +33,7 @@ static int do_write(struct abstract_write **w,
 		    struct lsh_string *packet)
 {
   struct write_buffer *closure = (struct write_buffer *) *w;
-  struct node *new;
+  struct buffer_node *new;
   
   MDEBUG(closure);
 
@@ -50,7 +50,7 @@ static int do_write(struct abstract_write **w,
     }
   
   /* Enqueue packet */
-  new = xalloc(sizeof(struct node));
+  NEW_SPACE(new);
   new->packet = packet;
   
   new->next = 0;
@@ -136,7 +136,7 @@ int write_buffer_pre_write(struct write_buffer *buffer)
       else
 	{
 	  /* Dequeue a packet, if possible */
-	  struct node *n = buffer->head;
+	  struct buffer_node *n = buffer->head;
 	  if (n)
 	    {
 	      buffer->partial = n->packet;
@@ -163,7 +163,9 @@ void write_buffer_close(struct write_buffer *buffer)
 
 struct write_buffer *write_buffer_alloc(UINT32 size)
 {
-  struct write_buffer *res = xalloc(sizeof(struct write_buffer) - 1 + size*2);
+  struct write_buffer *res;
+
+  NEW(res);
   
   res->super.write = do_write;
   
