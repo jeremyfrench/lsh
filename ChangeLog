@@ -1,5 +1,8 @@
 2003-01-20  Niels Möller  <niels@s3.kth.se>
 
+	* misc/xenofarm.sh: Dont cd into src before running make check and
+	make distcheck.
+
 	* src/testsuite/functions.sh (need_tcputils): Use test_skip.
 
 	* misc/xenofarm.sh (timeecho): Fixed typo.
