@@ -98,6 +98,9 @@ struct lsh_string
   UINT8 data[1];
 };
 
+/* Strings passed to C library functions must be properly
+ * NUL-terminated. */
+#define NUL_TERMINATED(s) (!(s)->data[(s)->length])
 
 /* Forward declarations of various structures */
 
