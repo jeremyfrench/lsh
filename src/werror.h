@@ -37,7 +37,6 @@ extern int verbose_flag;
 extern const struct argp werror_argp;
 
 void set_error_stream(int fd);
-void set_error_nonblocking(int fd);
 void set_error_ignore(void);
 void set_error_raw(int raw);
 

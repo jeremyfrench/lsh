@@ -182,13 +182,6 @@ set_error_stream(int fd)
 }
 
 void
-set_error_nonblocking(int fd)
-{
-  if (error_fd == fd)
-    error_write = write_raw_with_poll;
-}
-
-void
 set_error_raw(int raw)
 {
   /* If the tty is set to raw mode, and we use the same tty for error
