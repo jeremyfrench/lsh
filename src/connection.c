@@ -7,6 +7,7 @@
 #include "encrypt.h"
 #include "format.h"
 #include "disconnect.h"
+#include "keyexchange.h"
 #include "packet_ignore.h"
 #include "pad.h"
 #include "ssh.h"
@@ -28,21 +29,50 @@ static int handle_connection(struct abstract_write **w,
   msg = packet->data[0];
 
   debug("handle_connection: Recieved packet of type %d\n", msg);
-  
-  if (closure->ignore_one_packet)
+
+  switch(closure->kex_state)
     {
+    case KEX_STATE_INIT:
+      if (msg == SSH_MSG_NEWKEYS)
+	{
+	  werror("Unexpected NEWKEYS message!\n");
+	  lsh_free(packet);
+	  return WRITE_CLOSED;
+	}
+      break;
+    case KEX_STATE_IGNORE:
       debug("handle_connection: Ignoring packet %d\n", msg);
-      closure->ignore_one_packet = 0;
-      lsh_string_free(packet);
+
+      /* It's concievable with key exchange methods for which one
+       * wants to switch to the NEWKEYS state immediately. But for
+       * now, we always switch to the IN_PROGRESS state, to wait for a
+       * KEXDH_INIT or KEXDH_REPLY message. */
+      closure->kex_state = KEX_STATE_IN_PROGRESS;
+      lsh_free(packet);
       return WRITE_OK;
+
+    case KEX_STATE_IN_PROGRESS:
+      if ( (msg == SSH_MSG_NEWKEYS)
+	   || (msg == SSH_MSG_KEXINIT))
+	{
+	  werror("Unexpected KEXINIT or NEWKEYS message!\n");
+	  lsh_free(packet);
+	  return WRITE_CLOSED;
+	}
+      break;
+    case KEX_STATE_NEWKEYS:
+      if (msg != SSH_MSG_NEWKEYS)
+	{
+	  werror("Expected NEWKEYS message, but recieved message %d!\n",
+		 msg);
+	  lsh_free(packet);
+	  return WRITE_CLOSED;
+	}
+      break;
+    default:
+      fatal("handle_connection: Internal error.\n");
     }
 
-  /* If we are expecting a NEWKEYS message, don't accept anything else. */
-  
-  if (closure->dispatch[SSH_MSG_NEWKEYS]
-      && (msg != SSH_MSG_NEWKEYS))
-    return WRITE_CLOSED;
-  
   return HANDLE_PACKET(closure->dispatch[msg], closure, packet);
 }
 
@@ -92,6 +122,28 @@ struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
   int i;
 
   connection->super.write = handle_connection;
+
+  /* Initialize instance variables */
+  connection->client_version
+    = connection->server_version
+    = connection->session_id = NULL;
+
+  connection->rec_max_packet = 0x8000;
+  connection->rec_mac = NULL;
+  connection->rec_crypto = NULL;
+
+  connection->send_mac = NULL;
+  connection->send_crypto = NULL;
+  
+  connection->kex_state = KEX_STATE_INIT;
+
+  connection->kexinits[0]
+    = connection->kexinits[1] = NULL;
+
+  connection->literal_kexinits[0]
+    = connection->literal_kexinits[1] = NULL;
+
+  connection->newkeys = NULL;
   
   /* Initialize dispatch */
   connection->ignore = make_ignore_handler();
@@ -155,6 +207,4 @@ void connection_init_io(struct ssh_connection *connection,
 
   connection->send_crypto = connection->rec_crypto = NULL;
   connection->send_mac = connection->rec_mac = NULL;
-  
-  connection->rec_max_packet = 0x8000;
 }
