@@ -29,6 +29,7 @@
 #include "format.h"
 #include "gateway.h"
 #include "gateway_commands.h"
+#include "interact.h"
 #include "io_commands.h"
 #include "ssh.h"
 #include "version.h"
@@ -55,7 +56,7 @@ struct command_simple options2actions;
      (vars
        ;; (not . int)
        ;; (port . "char *")
-
+       (tty object interact)
        (remote object address_info)
        ; Command to connect to the gateway
        (gateway object local_info)
@@ -172,6 +173,8 @@ main_options[] =
   { "port", 'p', "Port", 0, "Connect to this port.", 0 },
   { "user", 'l', "User name", 0, "Login as this user.", 0 },
   { NULL, 0, NULL, 0, "Actions:", 0 },
+  { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },  
+  { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
   { "send-debug", 'D', "Message", 0, "Send a debug message "
     "to the remote machine.", 0 },
   { "send-ignore", 'I', "Message", 0, "Send an ignore message "
@@ -243,7 +246,15 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	}
       
       break;
+#if 0
+    case 'E':
+      lshg_add_action(self, lsh_command_session(self, ssh_format("%lz", arg)));
+      break;
 
+    case 'S':
+      lshg_add_action(self, lsh_shell_session(self));
+      break;
+#endif
     case 'D':
       lshg_add_action(self, make_lshg_send_debug(arg));
       break;
@@ -263,10 +274,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 static const struct argp
 main_argp =
 { main_options, main_argp_parser, 
-  "host",
+  "host\nhost command",
   "Connects to a remote machine, using a gateway\v"
   "Connects to the remote machine, using a local gateway, previously setup"
-  "by running lsh -G. Doesn't yet support any interesting actions.",
+  "by running lsh -G.",
   main_argp_children,
   NULL, NULL
 };
