@@ -55,7 +55,7 @@ spki_acl_init(struct spki_acl_db *db)
   db->first_acl = NULL;
 }
 
-static uint8_t *
+uint8_t *
 spki_dup(struct spki_acl_db *db,
 	 unsigned length, const uint8_t *data)
 {
@@ -246,18 +246,6 @@ spki_check_type(struct sexp_iterator *i, enum spki_type type)
 /* ACL database */
 
 static int
-parse_tag_body(struct spki_acl_db *db, struct sexp_iterator *i,
-	       struct spki_5_tuple *tuple)
-{
-  const uint8_t *tag;
-
-  return ((tag = sexp_iterator_subexpr(i, &tuple->tag_length))
-	  && i->type == SEXP_END
-	  && sexp_iterator_exit_list(i)
-	  && (tuple->tag = spki_dup(db, tuple->tag_length, tag)));
-}
-
-static int
 parse_valid(struct sexp_iterator *i UNUSED,
 	    struct spki_5_tuple *tuple UNUSED)
 {
@@ -275,21 +263,19 @@ parse_version(struct sexp_iterator *i)
 	  && (version == 0));
 }
 
-static struct spki_5_tuple *
-parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i)
+static enum spki_type
+parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i,
+		struct spki_5_tuple **result)
 {
   /* Syntax:
    *
    * ("entry" <principal> <delegate>? <tag> <valid>? <comment>?) */
-  if (!spki_check_type(i, SPKI_TYPE_ENTRY))
-    return NULL;
-  else
     {
       NEW(db, struct spki_5_tuple, acl);
       enum spki_type type;
       
       if (!acl)
-	return NULL;
+	return 0;
 
       acl->issuer = NULL;
       acl->flags = 0;
@@ -310,48 +296,62 @@ parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i)
 
       if (type != SPKI_TYPE_TAG)
 	goto fail;
-      if (!parse_tag_body(db, i, acl))
-	goto fail;
 
-      if (spki_check_type(i, SPKI_TYPE_COMMENT)
-	  && !sexp_iterator_exit_list(i))
-	goto fail;
+      type = spki_parse_tag(db, i, acl);
 
-      if (spki_check_type(i, SPKI_TYPE_VALID))
+      if (type == SPKI_TYPE_COMMENT)
+	type = spki_parse_skip(i);
+      
+      if (type == SPKI_TYPE_VALID)
 	/* Not implemented */
 	goto fail;
 
-      if (i->type == SEXP_END
-	  && sexp_iterator_exit_list(i))
-	return acl;
+      type = spki_parse_end(i);
+      if (type)
+	{
+	  *result = acl;
+	  return type;
+	}
 
     fail:
       if (acl->tag)
 	FREE(db, acl->tag);
       FREE(db, acl);
-      return NULL;
+      return 0;
     }
 }
 
 int
 spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
 {
+  enum spki_type type;
+  
   if (!spki_check_type(i, SPKI_TYPE_ACL))
     return 0;
 
-  if (i->type == SEXP_END)
+  type = spki_parse_type(i);
+ 
+  if (type == SPKI_TYPE_END_OF_EXPR)
     /* An empty acl is ok */
-    return 1;
+    return sexp_iterator_exit_list(i);
   
-  if (spki_check_type(i, SPKI_TYPE_VERSION) && !parse_version(i))
-    return 0;
-  
-  while (i->type != SEXP_END)
+  if (type == SPKI_TYPE_VERSION)
     {
-      struct spki_5_tuple *acl = parse_acl_entry(db, i);
-      if (!acl)
+      if (!parse_version(i))
 	return 0;
-
+      type = spki_parse_type(i);
+    }
+  
+  while (type != SPKI_TYPE_END_OF_EXPR)
+    {
+      struct spki_5_tuple *acl;
+      if (type != SPKI_TYPE_ENTRY)
+	return 0;
+      
+      type = parse_acl_entry(db, i, &acl);
+      if (!type)
+	return 0;
+      
       acl->next = db->first_acl;
       db->first_acl = acl;
     }
@@ -359,16 +359,10 @@ spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
   return 1;
 }
 
-static enum spki_type
-parse_skip_optional(struct sexp_iterator *i)
-{
-  return sexp_iterator_exit_list(i) ? spki_parse_type(i) : 0;
-}
-
 #define SKIP(t) do				\
 {						\
   if (type == (t))				\
-    type = parse_skip_optional(i);		\
+    type = spki_parse_skip(i);			\
 } while (0)
 
 /* Should be called with the iterator pointing just after the "cert"
@@ -417,10 +411,9 @@ spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
   if (type != SPKI_TYPE_TAG)
     return 0;
   
-  if (!parse_tag_body(db, i, cert))
+  type = spki_parse_tag(db, i, cert);
+  if (!type)
     return 0;
-
-  type = spki_parse_type(i);
 
   if (type == SPKI_TYPE_VALID)
     {

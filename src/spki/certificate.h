@@ -170,5 +170,10 @@ int
 spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
 		     struct spki_5_tuple *cert);
 
+
+/* Other more or less itnernal functions. */
+uint8_t *
+spki_dup(struct spki_acl_db *db,
+	 unsigned length, const uint8_t *data);
 
 #endif /* LIBSPKI_CERTIFICATE_H_INCLUDED */
