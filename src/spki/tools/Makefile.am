@@ -10,4 +10,4 @@ AM_LDFLAGS = -L.. -L../../nettle/
 
 LDADD = -lspki -lnettle ../libspki.a ../../nettle/libnettle.a
 
-spki_make_signature_SOURCES = spki-make-signature.c io.c
+spki_make_signature_SOURCES = spki-make-signature.c io.c io.h
