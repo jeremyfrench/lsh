@@ -30,17 +30,19 @@
 #include "charset.h"
 #include "client.h"
 #include "client_keyexchange.h"
+#include "compress.h"
+#include "connection_commands.h"
 #include "crypto.h"
 #include "format.h"
 #include "io.h"
+#include "io_commands.h"
 #include "randomness.h"
 #include "service.h"
 #include "ssh.h"
+#include "tty.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
-#include "compress.h"
-#include "tty.h"
 
 #include <errno.h>
 #include <locale.h>
@@ -111,18 +113,12 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
 
 /* GABA:
    (expr
-     (name client)
-     (globals (request-userauth COMMAND_UNIMPLEMENTED)
-              (initiate-connection connection_command)
-	      (connect connect_command)
-              ;; (die-on-null command_die_on_null)
-	      )
-     ; (params)
-     (expr (start-stdio
-             (channel-requests requests
-	       (request-session 
-                 (request-connection (request-userauth name keys
-                   (initiate-connection (connect port)))))))))
+     (name make_client_connect)
+     ;; (globals (connect connect_command))
+     (params
+       (connect object command)
+       (handshake object command))
+     (expr (lambda (port) (handshake (connect port)))))
 */
 
 
@@ -145,8 +141,8 @@ int main(int argc, char **argv)
 
   int lsh_exit_code;
 
-  struct sockaddr_in remote;
-
+  struct address_info *remote;
+  
   struct randomness *r;
   struct diffie_hellman_method *dh;
   struct keyexchange_algorithm *kex;
@@ -270,7 +266,14 @@ int main(int argc, char **argv)
 	     "Please use the -l option, or set LOGNAME in the environment\n");
       exit(EXIT_FAILURE);
     }
-
+  
+  remote = make_address_info_c(host, port);
+  if (!remote)
+    {
+      werror("lsh: Invalid port or service\n");
+      exit (EXIT_FAILURE);
+    }
+#if 0
   if (!get_inaddr(&remote, host, port, "tcp"))
     {
       werror("No such host or service\n");
@@ -298,6 +301,7 @@ int main(int argc, char **argv)
 	requests = make_pty_request(tty, 0, 1, requests);
     }
 #endif /* WITH_PTY_SUPPORT */
+#endif
   
   in = STDIN_FILENO;
   out = STDOUT_FILENO;
@@ -328,6 +332,7 @@ int main(int argc, char **argv)
 			   : default_compression_algorithms()),
 			  make_int_list(0, -1));
 
+  #if 0
   service = make_connection_service
     (make_alist(0, -1),
      make_alist(0, -1),
@@ -345,7 +350,9 @@ int main(int argc, char **argv)
 		     make_client_userauth(ssh_format("%lz", user),
 					  ATOM_SSH_CONNECTION,
 					  service)));
-  
+#endif
+
+#if 0 
   if (!io_connect(backend, &remote, NULL,
 		  make_client_callback(backend,
 				       "lsh - a free ssh",
@@ -356,10 +363,30 @@ int main(int argc, char **argv)
       werror("lsh: Connection failed: %z\n", strerror(errno));
       return 1;
     }
-
-  /* Exit code if no session is established */
-  lsh_exit_code = 17;
+#endif
   
+  /* Exit code if no session is established */
+
+  lsh_exit_code = 17;
+
+  {
+    struct lsh_object *o =
+      make_client_connect(make_simple_connect(backend, NULL),
+			  make_handshake_command(CONNECTION_CLIENT,
+						 "lsh - a free ssh",
+						 SSH_MAX_PACKET,
+						 r,
+						 algorithms,
+						 make_kexinit,
+						 NULL) );
+    CAST_SUBTYPE(command, client_connect, o);
+    int res = COMMAND_CALL(client_connect, &remote->super, NULL);
+    if (res)
+      {
+	werror("foo: %d\n", res);
+	exit(17);
+      }
+  }
   io_run(backend);
 
   /* FIXME: Perhaps we have to reset the stdio file descriptors to

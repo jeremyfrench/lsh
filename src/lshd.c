@@ -28,9 +28,11 @@
 #include "atoms.h"
 #include "channel.h"
 #include "charset.h"
+#include "connection_commands.h"
 #include "crypto.h"
 #include "format.h"
 #include "io.h"
+#include "io_commands.h"
 #include "password.h"
 #include "randomness.h"
 #include "reaper.h"
@@ -232,7 +234,18 @@ static int read_host_key(const char *name,
       return 1;
     }
 }
-  
+
+/* GABA:
+   (expr
+     (name make_server_listen)
+     (globals
+       (log "&io_log_peer_command.super.super"))
+     (params
+       (listen object command)
+       (handshake object command) )
+     (expr (lambda (port) (handshake (log (listen port))))))
+*/
+
 int main(int argc, char **argv)
 {
   char *host = NULL;  /* Interface to bind */
@@ -252,7 +265,7 @@ int main(int argc, char **argv)
   int preferred_compression = 0;
   int preferred_mac = 0;
 
-  struct sockaddr_in local;
+  struct address_info *local;
 
   struct reap *reaper;
   
@@ -367,13 +380,22 @@ int main(int argc, char **argv)
   /* FIXME: We should check that we have at aleast one host key.
    * We should also extract the host-key algorithms for which we have keys,
    * instead of hardcoding ssh-dss below. */
-  
+
+  local = make_address_info_c(host, port);
+  if (!local)
+    {
+      werror("lshd: Invalid port or service\n");
+      exit (EXIT_FAILURE);
+    }
+
+#if 0
   if (!get_inaddr(&local, host, port, "tcp"))
     {
       werror("lshd: No such host or service.\n");
       return EXIT_FAILURE;
     }
-
+#endif
+  
 #if 0
 #if HAVE_SYSLOG
   {
@@ -397,7 +419,8 @@ int main(int argc, char **argv)
 
   make_kexinit
     = make_simple_kexinit(r,
-			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1),
+			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+					-1),
 			  make_int_list(1, ATOM_SSH_DSS, -1),
 			  (preferred_crypto
 			   ? make_int_list(1, preferred_crypto, -1)
@@ -409,7 +432,7 @@ int main(int argc, char **argv)
 			   ? make_int_list(1, preferred_compression, -1)
 			   : default_compression_algorithms()),
 			  make_int_list(0, -1));
-
+#if 0
   kexinit_handler = make_kexinit_handler
     (CONNECTION_SERVER,
      make_kexinit, algorithms,
@@ -434,7 +457,37 @@ int main(int argc, char **argv)
 			       -1)),
 		   -1)),
        -1)));
-     
+#endif
+  
+  {
+    struct lsh_object *o = make_server_listen
+      (make_simple_listen(backend, NULL),
+       make_handshake_command(CONNECTION_SERVER,
+			      "lsh - a free ssh",
+			      SSH_MAX_PACKET,
+			      r,
+			      algorithms,
+			      make_kexinit,
+#if WITH_SSH1_FALLBACK
+			      sshd1 ? make_ssh1_fallback (sshd1) :
+#endif /* WITH_SSH1_FALLBACK */
+			      NULL
+			      ));
+    
+    CAST_SUBTYPE(command, server_listen, o);
+    
+    int res = COMMAND_CALL(server_listen, &local->super, NULL);
+    if (res)
+      {
+	if (res & LSH_COMMAND_FAILED)
+	    werror("lshd: Failed to bind port. (errno = %d) %z\n",
+		   errno, strerror(errno));
+	else
+	  werror("lshd: Unexpected failure from listen: %d\n", res);
+	return EXIT_FAILURE;
+      }
+  }
+#if 0
   if (!io_listen(backend, &local, 
 		 make_server_callback(backend,
 				      "lsh - a free ssh",
@@ -450,6 +503,7 @@ int main(int argc, char **argv)
 	     errno, strerror(errno));
       return 1;
     }
+#endif
   
   reaper_run(reaper, backend);
 
