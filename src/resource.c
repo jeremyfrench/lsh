@@ -57,6 +57,7 @@ void do_free_resources(struct resource_node **q);
 
 /* NOTE: This happens normally during gc_final. Under all other
  * circumstances, it's a serious error. */
+/* FIXME: Is this still true? */
 void
 dont_free_live_resource(int alive)
 {
