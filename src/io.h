@@ -53,7 +53,8 @@
 /* Close callbacks are called with a reason as argument. */
 
 /* End of file while reading.
- * Or when a closed write_buffer has been flushed successfully. */
+ * Or when a closed write_buffer has been flushed successfully.
+ * Or when poll() returns POLLHUP. */
 /* FIXME: Should we use separate codes for these two events? */
 #define CLOSE_EOF 1
 
@@ -89,7 +90,10 @@
 
        ; Called before poll
        (prepare method void)
-
+       ;; Belongs in the write_buffer
+       ; Called when some data has been successfully written
+       ;;(report object report_write_success)
+       
        (want_read simple int)
        ; Called if poll indicates that data can be read. 
        (read method void)
