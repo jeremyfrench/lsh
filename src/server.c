@@ -101,10 +101,6 @@
 #include <signal.h>
 #include <unistd.h>
 
-#define CLASS_DEFINE
-#include "server.h.x"
-#undef CLASS_DEFINE
-
 #include "server.c.x"
 
 /* CLASS:
