@@ -136,16 +136,15 @@ make_proxy_channel_open_continuation(struct command_continuation *up,
 
 static struct ssh_channel *
 do_proxy_open_channel(struct channel_open_command *c,
-		      struct ssh_connection *connection,
+		      struct ssh_connection *connection UNUSED,
+		      UINT32 local_channel_number,
 		      struct lsh_string **request)
 {
   CAST(proxy_channel_open_command, closure, c);
   
   struct proxy_channel *client = make_proxy_channel(WINDOW_SIZE, closure->requests);
   
-  *request = prepare_channel_open(connection, closure->type, &client->super, "");
-  if (!*request)
-    return NULL;
+  *request = format_channel_open(closure->type, local_channel_number, &client->super, "");
   
   return &client->super;
 }
