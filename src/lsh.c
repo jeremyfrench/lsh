@@ -213,6 +213,7 @@ static int remember_tty(int fd)
 /* Option parsing */
 
 #define ARG_NOT 0x200
+#define OPT_NO_PUBLICKEY 0x201
 
 static const struct argp_option
 main_options[] =
@@ -221,6 +222,8 @@ main_options[] =
   { "port", 'p', "Port", 0, "Connect to this port.", 0 },
   { "user", 'l', "User name", 0, "Login as this user.", 0 },
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
+  { "no-publickey", OPT_NO_PUBLICKEY, NULL, 0,
+    "Don't try publickey user authentication.", 0 },
   { NULL, 0, NULL, 0, "Actions:", 0 },
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
@@ -259,7 +262,7 @@ main_options[] =
 
        (user . "char *")
        (identities struct object_queue)
-
+       (publickey . int)
        ; -1 means default behaviour
        (with_pty . int)
 
@@ -295,6 +298,8 @@ make_options(struct alist *algorithms, struct io_backend *backend,
   self->with_remote_peers = 0;
   object_queue_init(&self->actions);
   object_queue_init(&self->identities);
+
+  self->publickey = 1;
   
   return self;
 }
@@ -433,7 +438,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  break;
 	}
 
-      if (object_queue_is_empty(&self->identities))
+      if (self->publickey && object_queue_is_empty(&self->identities))
 	{
 	  char *home = getenv("HOME");
 	  if (home)
@@ -468,6 +473,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  }
 	break;
       }
+    case OPT_NO_PUBLICKEY:
+      self->publickey = 0;
+      break;
+      
     case 'L':
       {
 	UINT32 listen_port;
@@ -586,8 +595,10 @@ do_lsh_default_handler(struct exception_handler *s,
 #endif
 	default:
 	  *self->status = EXIT_FAILURE;
+#if 0
 	  EXCEPTION_RAISE(self->super.parent, e);
 	  return;
+#endif
 	}
       werror("lsh: %z, (errno = %i)\n", e->msg, exc->error);
     }
