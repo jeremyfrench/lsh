@@ -79,8 +79,8 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	server.c server_authorization.c server_keyexchange.c \
 	server_password.c server_publickey.c \
 	server_pty.c server_session.c server_userauth.c \
-	sexp.c sexp_commands.c sexp_parser.c \
-	sha.c spki.c spki_commands.c srp_exchange.c ssh1_fallback.c \
+	sexp.c sexp_parser.c \
+	sha.c spki.c srp_exchange.c ssh1_fallback.c \
 	string_buffer.c suspend.c \
 	tcpforward.c tcpforward_commands.c \
 	translate_signal.c tty.c twofish.c \
