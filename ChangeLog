@@ -2,6 +2,7 @@
 
 	* misc/xenofarm.sh: Fixed invocation of dotask, which should take
 	four arguments. 
+	(dotask): Don't create $task.pass, they're not used anymore.
 
 2003-01-14  Niels Möller  <nisse@lysator.liu.se>
 
