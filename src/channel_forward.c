@@ -98,7 +98,7 @@ do_channel_forward_receive(struct ssh_channel *c,
 
 static void
 do_channel_forward_send_adjust(struct ssh_channel *s,
-		     uint32_t i UNUSED)
+			       uint32_t i UNUSED)
 {
   CAST_SUBTYPE(channel_forward, self, s);
   
