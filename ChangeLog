@@ -1,3 +1,8 @@
+2003-05-22  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/Makefile.am: Don't use -O0 in AM_CFLAGS, as it
+	breaks the AIX build.
+
 2003-05-21  Niels Möller  <niels@s3.kth.se>
 
 	* src/reaper.c (do_reaper_callback): Check if WCOREDUMP is defined
