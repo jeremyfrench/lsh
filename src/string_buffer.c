@@ -87,11 +87,12 @@ string_buffer_grow(struct string_buffer *buffer, UINT32 increment)
 }
 
 #if 0
+#define BUFFER_INCREMENT 50
 void
 string_buffer_putc(struct string_buffer *buffer, UINT8 c)
 {
   if (!buffer->left)
-    string_buffer_grow(buffer, buffer->increment);
+    string_buffer_grow(buffer, BUFFER_INCREMENT);
 
   assert(buffer->left);
   
