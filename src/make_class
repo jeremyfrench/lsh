@@ -1,0 +1,148 @@
+#! /usr/local/bin/scsh -s
+!#
+
+;; Reads a C source file on stdin. Comments of the form
+;;
+;; /* CLASS:
+;;    expression
+;; */
+;;
+;; are treated specially, and C code for the class is written to
+;; stdout. Typically, the code is saved to a file and included by the
+;; C source file in question.
+
+(define (werror f . args)
+  (display (apply format #f f args) 2))
+
+(define (string-prefix? prefix s)
+  (let ((l (string-length prefix)))
+    (and (<= l (string-length s))
+	 (string=? prefix (substring s 0 l)))))
+    
+(define (read-expression p)
+  (let ((line (read-line)))
+    (werror "read line: '~s'\n" (if (eof-object? line) "<EOF>" line))
+    (cond ((eof-object? line) line)
+	  ((p line) (read))
+	  (else (read-expression p)))))
+
+(define (get key alist select)
+  (cond ((assq key alist) => select)
+	(else #f)))
+
+(define (append-deep o)
+  (werror "append-deep: ~S\n" o)
+  (cond ((string? o) o)
+	((symbol? o) (symbol->string o))
+	(else
+	 (apply string-append (map append-deep o)))))
+
+(define (identity x) x)
+
+(define (filter p list)
+  (cond ((null? list) list)
+	((p (car list)) (cons (car list)
+			      (filter p (cdr list))))
+	(else (filter p (cdr list)))))
+
+;; Variables are describes as lists (category type name)
+;; Known categories are object, simple, bignum, string, space, method
+;;
+;; For function pointers (category simple or method), the type is the
+;; return type, and the name includes the function pointer declaration
+;; and prototype.
+
+(define var-category car)
+(define var-type cadr)
+(define var-name caddr)
+
+(define (declare-var var)
+  (list "  " (var-type var) " " (var-name var) ";\n"))
+
+(define (do-struct name super vars)
+  (list "struct " name 
+	"\n{\n"
+	"  struct " (or super "lsh_object") " super;\n"
+	(map declare-var vars)
+	"};\n\n"))
+
+(define (do-mark-function name vars)
+  (let ((objects (filter (lambda (x) (eq? 'object (var-category x)))
+			 vars)))
+    (cond ((null? objects) #f)
+	  (else
+	   (list "struct lsh_object *do_"
+		 name "_mark(struct lsh_object *o, \n"
+		 "void (*mark)(struct lsh_object *o))\n"
+		 "{\n"
+		 "  struct " name " *i = (struct " name " *) o;\n  "
+		 (map (lambda (var)
+			(list "  mark((struct lsh_object *) (i->"
+			      (var-name var) "));\n"))
+		      (cdr objects))
+		 "return (struct lsh_object *) (i->" (var-name (car vars)) ");\n"
+		 "}\n\n")))))
+
+(define (do-free-function name vars)
+  (define (free/f f var)
+    (list "  " f "(i->" (var-name var) ");\n"))
+  
+  (define (free-var var)
+    (case (var-category var)
+      ((simple object method) #f)
+      ((bignum) (free/f "mpz_clear" var))
+      ((string) (free/f "lsh_string_free" var))
+      ((space) (free/f "lsh_space_free" var))
+      (else "#error make_class: Category " (var-category var) " unknown\n")))
+  
+  (let ((ops (filter identity (map free-var vars))))
+    (cond ((null? ops) #f)
+	  (else
+	   (list "struct lsh_object *do_"
+		 name "_free(struct lsh_object *o)\n"
+		 "{\n"
+		 "  struct " name " *i = (struct " name " *) o;\n  "
+		 ops
+		 "}\n\n")))))
+
+(define (do-class name super mark-function free-function methods)
+  (define initializer
+    (list "{ STATIC_HEADER,\n  "
+	  (if super
+	      (list "&" super "_class")
+	      "0")
+	  ", sizeof(struct " name "),\n  "
+	  (if mark-function (list "do_" name "_mark") "NULL") ",\n  "
+	  (if free-function (list "do_" name "_free") "NULL") ",\n"
+	  "};\n"))
+  (werror "do-class")
+  (if methods
+      ;; Would have to define a new struct
+      "#error make_class: methods not implemented"
+      (list "struct lsh_class " name "_class =\n"
+	    initializer ";")))
+    
+(define (process-class exp)
+  (let ((name (get 'name exp cadr))
+	(super (get 'super exp cadr))
+	(vars (get 'vars exp cdr))
+	(methods (get 'methods exp cdr)))
+    
+    (let ((mark-function (do-mark-function name vars))
+	  (free-function (do-free-function name vars)))
+      (list (do-struct name super vars)
+	    (or mark-function "")
+	    (or free-function "")
+	    (do-class name super mark-function free-function methods)))))
+
+
+(define main
+  (let ((test (lambda (s) (string-prefix? "/* CLASS:" s))))
+    (lambda ()
+      (let ((exp (read-expression test)))
+	(if (not (eof-object? exp))
+	    (begin
+	      (display (append-deep (process-class exp)))
+	      (main)))))))
+
+(main)
