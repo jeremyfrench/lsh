@@ -211,7 +211,7 @@ void lsh_object_free(struct lsh_object *o)
 #endif
   
   lsh_free(o);
-};
+}
 
 #if DEBUG_ALLOC
 struct lsh_object *lsh_object_check(struct lsh_class *class,

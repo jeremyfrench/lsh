@@ -40,4 +40,4 @@ void send_verbose(struct abstract_write *write, const char *msg, int always_disp
 
 struct packet_handler *make_rec_debug_handler(void);
 
-#endif */ LSH_DEBUG_H_INCLUDED */
+#endif /* LSH_DEBUG_H_INCLUDED */

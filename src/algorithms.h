@@ -74,4 +74,4 @@ void init_algorithms_options(struct algorithms_options *self,
 
 extern const struct argp algorithms_argp;
 
-#endif */ LSH_ALGORITHMS_H_INCLUDED */
+#endif /* LSH_ALGORITHMS_H_INCLUDED */

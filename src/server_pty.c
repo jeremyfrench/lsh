@@ -1,4 +1,4 @@
-/* server_pty.h
+/* server_pty.c
  *
  * $Id$
  */
@@ -163,7 +163,7 @@ pty_grantpt_uid(int master, uid_t user)
       
     }
 }
-#endif HAVE_UNIX98_PTYS
+#endif /* HAVE_UNIX98_PTYS */
 
 int pty_allocate(struct pty_info *pty,
 		 uid_t user

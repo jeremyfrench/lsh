@@ -16,4 +16,4 @@
 #define ADVANCE(n) (BUFFER->pos  += (n))
 #define GET() (BUFFER->data[BUFFER->pos++])
 
-#endif */ LSH_PARSE_MACROS_H_INCLUDED */
+#endif /* LSH_PARSE_MACROS_H_INCLUDED */

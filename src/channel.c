@@ -287,7 +287,7 @@ make_channel_table(void)
   object_queue_init(&table->pending_global_requests);
   
   return table;
-};
+}
 
 /* Returns -1 if allocation fails */
 /* NOTE: This function returns locally chosen channel numbers, which

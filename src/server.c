@@ -62,7 +62,7 @@ static struct lsh_string *format_service_accept_kludge(void)
 {
   return ssh_format("%c", SSH_MSG_SERVICE_ACCEPT);
 }
-#endif DATAFELLOWS_WORKAROUNDS
+#endif /* DATAFELLOWS_WORKAROUNDS */
 
 static void
 do_service_request(struct packet_handler *c,
