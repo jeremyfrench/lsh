@@ -52,19 +52,50 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-/* Socket woraround */
+/* Socket workround */
+#ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
+
+/* There's an how++ missing in the af_unix shutdown implementation of
+ * some linux versions. Try an ugly workaround. */
 #ifdef linux
-#ifndef SHUT_RD
 
 /* From src/linux/include/net/sock.h */
 #define RCV_SHUTDOWN	1
 #define SEND_SHUTDOWN	2
 
+#undef SHUT_RD
+#undef SHUT_WR
+#undef SHUT_RD_WR
+
 #define SHUT_RD RCV_SHUTDOWN
 #define SHUT_WR SEND_SHUTDOWN
 #define SHUT_RD_WR (RCV_SHUTDOWN | SEND_SHUTDOWN)
-#endif /* !SHUT_RD */
-#endif /* linux */
+
+#else /* !linux */
+
+/* Don't know how to work around the broken shutdown(). So disable it
+ * completely. */
+
+#define SHUTDOWN(fd, how) 0
+
+#endif /* !linux */
+#endif /* !SHUTDOWN_WORKS_WITH_UNIX_SOCKETS */
+
+#ifndef SHUTDOWN
+#define SHUTDOWN(fd, how) (shutdown((fd), (how)))
+#endif
+
+#ifndef SHUT_RD
+#define SHUT_RD 0
+#endif
+
+#ifndef SHUT_WR
+#define SHUT_WR 1
+#endif
+
+#ifndef SHUT_RD_WR
+#define SHUT_RD_WR 2
+#endif
 
 /* For debug */
 #include <signal.h>
@@ -475,7 +506,8 @@ struct unix_service *make_server_session_service(struct alist *global_requests,
 struct lsh_string *format_exit_signal(struct ssh_channel *channel,
 				      int core, int signal)
 {
-  struct lsh_string *msg = ssh_format("Process killed by %z.", strsignal(signal));
+  struct lsh_string *msg = ssh_format("Process killed by %lz.\n",
+				      strsignal(signal));
   
   return format_channel_request(ATOM_EXIT_SIGNAL,
 				channel,
@@ -546,13 +578,17 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
   if (!(channel->flags & CHANNEL_SENT_CLOSE))
     {
       int res = A_WRITE(channel->write,
-			signaled
-			? format_exit_signal(channel, core, value)
-			: format_exit(channel, value));
-#if 0
-      if (!LSH_CLOSEDP(res))
-	res |= channel_close(channel);
-#endif
+		    signaled
+		    ? format_exit_signal(channel, core, value)
+		    : format_exit(channel, value));
+
+      if (!LSH_CLOSEDP(res)
+	  && (channel->flags & CHANNEL_SENT_EOF))
+	{
+	  /* We have sent EOF already, so initiate close */
+	  res |= channel_close(channel);
+	}
+
       /* FIXME: Can we do anything better with the return code than
        * ignore it? */
 
@@ -602,12 +638,12 @@ static int make_pipe(int *fds)
     }
   debug("Created socket pair. Using fd:s %d <-- %d\n", fds[0], fds[1]);
 
-  if(shutdown(fds[0], SHUT_WR) < 0)
+  if (SHUTDOWN(fds[0], SHUT_WR) < 0)
     {
       werror("shutdown(%d, SEND) failed: %s\n", fds[0], strerror(errno));
       return 0;
     }
-  if (shutdown(fds[1], SHUT_RD) < 0)
+  if (SHUTDOWN(fds[1], SHUT_RD) < 0)
     {
       werror("shutdown(%d, REC) failed: %s\n", fds[0], strerror(errno));
       return 0;
