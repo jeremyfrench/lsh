@@ -938,35 +938,27 @@ fork_output(int out)
     }
 }
 
-/* FIXME: Use const? */
-
-#define DEFINE_CALLBACK(name) \
-static void do_##name(struct lsh_callback *self); \
-static struct lsh_callback \
-name = { STATIC_HEADER, do_##name }; \
-static void do_##name(struct lsh_callback *self UNUSED)
-
 /* A callback that exits the process immediately. */
-DEFINE_CALLBACK(exit_callback)
+DEFINE_ESCAPE(exit_callback, "Exit.")
 {
   exit(EXIT_SUCCESS);
 }
 
-DEFINE_CALLBACK(verbose_callback)
+DEFINE_ESCAPE(verbose_callback, "Toggle verbose messages.")
 {
   verbose_flag = !verbose_flag;
   if (verbose_flag)
     verbose("Enabling verbose messages\n");
 }
 
-DEFINE_CALLBACK(debug_callback)
+DEFINE_ESCAPE(debug_callback, "Toggle debug messages.")
 {
   debug_flag = !debug_flag;
   if (debug_flag)
     debug("Enabling debug messages\n");
 }
 
-DEFINE_CALLBACK(quiet_callback)
+DEFINE_ESCAPE(quiet_callback, "Toggle warning messages.")
 {
   quiet_flag = !quiet_flag;
   if (!quiet_flag)

@@ -25,6 +25,7 @@
 
 #include "suspend.h"
 
+#include "client.h" /* For escape_callback */
 #include "tty.h"
 #include "werror.h"
 
@@ -109,13 +110,8 @@ suspend_handle_tty(int fd)
 
 
 /* A callback that suspends the process. */
-static void
-do_suspend(struct lsh_callback *self UNUSED)
+DEFINE_ESCAPE(suspend_callback, "Suspend.")
 {
   if (kill(getpid(), SIGTSTP) < 0)
     werror("do_suspend: kill failed %e\n", errno);
 }
-
-/* FIXME: Use const? */
-struct lsh_callback
-suspend_callback = { STATIC_HEADER, do_suspend };
