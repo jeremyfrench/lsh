@@ -5,7 +5,7 @@ AC_INIT([lsh], [1.5], [bug-lsh@gnu.org])
 AC_PREREQ(2.52)
 AC_CONFIG_SRCDIR([src/lsh_types.h])
 AM_INIT_AUTOMAKE
-AM_CONFIG_HEADER([config.h])
+AM_CONFIG_HEADER(config.h)
 
 # AH_TEMPLATE([PACKAGE], [The name of this software distribution])
 # AH_TEMPLATE([VERSION], [The version of this software distribution])
@@ -818,6 +818,5 @@ fi
 AC_CONFIG_FILES([Makefile doc/Makefile misc/Makefile
 	  src/Makefile src/scm/Makefile
 	  src/testsuite/Makefile src/rsync/Makefile
-	  src/nettle/Makefile
 	  contrib/Makefile contrib/lsh.spec])
 AC_OUTPUT
