@@ -30,7 +30,7 @@ function getatom() {
 }
 
 function atom2define () {
-    echo -n ATOM_$1 | tr -- -a-z _A-Z | sed 's/*/STAR/'
+    echo `echo -n ATOM_$1 | tr -- -a-z _A-Z | sed 's/*/STAR/'`
 }
 
 if [ x$# != x1 ]; then
