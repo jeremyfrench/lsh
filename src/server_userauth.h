@@ -44,7 +44,7 @@
    (class
      (name user_db)
      (vars
-       ;; FIXME: Do we really need the FREE parameter?
+       ; The FREE parameter is needed only by server_publickey.c
        (lookup method "struct lsh_user *"
                       "struct lsh_string *name" "int free")))
 */
