@@ -1279,6 +1279,20 @@ address_info2sockaddr(socklen_t *length,
 #endif /* !HAVE_GETADDRINFO */  
 }
 
+static void
+handle_nonblock_error(const char *msg)
+{
+  /* On BSD, trying to set /dev/null in nonblocking mode fails with
+   * errno 19, ENODEV. We have to ignore that.
+   *
+   * For now, still display a warning message, to keep track if when
+   * and where it occurs.
+   */
+  if (errno == ENODEV)
+    werror("%z %e\n", msg, errno);
+  else
+    fatal("%z %e\n", msg, errno);
+}
 
 void io_set_nonblocking(int fd)
 {
@@ -1288,7 +1302,7 @@ void io_set_nonblocking(int fd)
     fatal("io_set_nonblocking: fcntl(F_GETFL) failed %e\n", errno);
   
   if (fcntl(fd, F_SETFL, old | O_NONBLOCK) < 0)
-    fatal("io_set_nonblocking: fcntl(F_SETFL) failed %e\n", errno);
+    handle_nonblock_error("io_set_nonblocking: fcntl(F_SETFL) failed");
 }
 
 void io_set_blocking(int fd)
@@ -1299,7 +1313,7 @@ void io_set_blocking(int fd)
     fatal("io_set_blocking: fcntl(F_GETFL) failed %e\n", errno);
   
   if (fcntl(fd, F_SETFL, old & ~O_NONBLOCK) < 0)
-    fatal("io_set_blocking: fcntl(F_SETFL) failed %e\n", errno);
+    handle_nonblock_error("io_set_blocking: fcntl(F_SETFL) failed");
 }
 
 void io_set_close_on_exec(int fd)
