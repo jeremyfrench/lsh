@@ -1,5 +1,11 @@
 2004-10-07  Niels Möller  <niels@s3.kth.se>
 
+	* src/lsh-writekey.c (main_argp_parser): When --server is given,
+	don't use encryption by default.
+
+	* src/testsuite/login-auth-test (LSHD_FLAGS): Use --login-shell
+	instead of --login-program.
+
 	* doc/lsh.texinfo: Updated for version 1.5.6.
 
 	* src/lshd.c (make_lshd_options): New default: Enable X11

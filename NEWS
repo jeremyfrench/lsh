@@ -7,7 +7,7 @@ News for the 1.5.6 release
 	* lsh-keygen generates RSA rather than DSA keys by default.
 
 	* lsh-writekey encrypts the private key by default, using
-	  aes256-cbc.
+	  aes256-cbc. Unless the --server flag is used.
 
 	Implemented the client side of "keyboard-interactive" user
 	authentication.
