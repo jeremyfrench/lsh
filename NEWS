@@ -1,3 +1,25 @@
+News for the 1.5.0 release
+
+	Implemented the server side of X11 forwarding. Try lshd
+	--x11-forward. There's one known bug: The server may start
+	sending data on the sessioc channel (typically your first
+	shell prompt) before it has sent the reply to the client's
+	"shell" or "exec" request. lsh will complain about, and ignore
+	that data.
+
+	As part of the X11 hacking, the socket code have been
+	reorganized.
+
+	Deleted one of the ipv6 configure tests. Now lsh will happily
+	build ipv6 support even if ipv6 is not available at run-time
+	on the build machine.
+
+	Fixed bug preventing -c none from working.
+
+	Another bug fix, call setsid even in the non-pty case.
+
+	Various bug fixes.
+	
 News for the 1.4.2 release
 
 	Fixed minor bug in bubble-babble key display.
