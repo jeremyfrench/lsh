@@ -184,11 +184,16 @@ AC_CHECK_HEADERS([inttypes.h limits.h stdlib.h string.h sys/acl.h sys/file.h\
  readline/readline.h readline/history.h readline.h history.h\
  netinet/in.h string.h sys/stat.h sys/types.h pwd.h grp.h])
 
-# If we didn't find readline/readline.h or the readline library,
-# warn
+# Check for libtermcap, which (it seems) might be used by libreadline
+# sometimes.  (we really don't care about termcap for the moment, but
+# we want to work well on systems with a readline that needs termcap
+# and systems (if there are any) without termcap but with readline.
 
-if test x"$ac_cv_header_readline_readline_h" = xno -o\
-	x"$ac_cv_library_readline" = xno ; then
+AC_CHECK_LIB( termcap, tgetent )
+
+
+if test x"$ac_cv_header_readline_readline_h" = xno -a\
+        x"$ac_cv_header_readline_h" = xno ; then
 		AC_MSG_WARN([
 You don't appear to have the readline library
 (or there seems to be a problem with it). lsftp 
@@ -197,53 +202,94 @@ non interactive mode ONLY.
 ])
 else 
 # Check for libraries only if we found the includes
-AC_CHECK_LIB([readline], [rl_callback_handler_remove])
-# AC_CHECK_FUNCS([filename_completion_function rl_filename_completion_function completion_matches rl_completion_matches])
+ AC_CHECK_LIB(readline, rl_callback_handler_remove,
+   AC_DEFINE( WITH_READLINE, 1, Working readline library found ) 
+   LIBS="-lreadline $LIBS"
+   workingreadline=yes,
+   ,
+ )
 
-# Egrep the header files to find out whatever to use rl_foo or foo
-
-AC_EGREP_HEADER( rl_completion_matches, readline/readline.h, 
-AC_DEFINE(HAVE_RL_COMPLETION_MATCHES, 1, System has rl_completion_matches ))
-AC_EGREP_HEADER(\*completion_matches, readline/readline.h, 
-AC_DEFINE(HAVE_COMPLETION_MATCHES, 1, System has rl_completion_matches ))
-AC_EGREP_HEADER( rl_completion_matches, readline.h, 
-AC_DEFINE(HAVE_RL_COMPLETION_MATCHES, 1, System has rl_completion_matches ))
-AC_EGREP_HEADER(\*completion_matches, readline.h, 
-AC_DEFINE(HAVE_COMPLETION_MATCHES, 1, System has rl_completion_matches ))
-
-AC_EGREP_HEADER( rl_filename_completion_function, readline/readline.h, 
-AC_DEFINE(HAVE_RL_FILENAME_COMPLETION_FUNCTION, 1, System has rl_filename_completion_function ))
-AC_EGREP_HEADER(\*filename_completion_function, readline/readline.h, 
-AC_DEFINE(HAVE_FILENAME_COMPLETION_FUNCTION, 1, Sytsem has filename_completion_function ))
-AC_EGREP_HEADER( rl_filename_completion_function, readline.h, 
-AC_DEFINE(HAVE_RL_FILENAME_COMPLETION_FUNCTION, 1, System has rl_filename_completion_function ))
-AC_EGREP_HEADER(\*filename_completion_function, readline.h, 
-AC_DEFINE(HAVE_FILENAME_COMPLETION_FUNCTION, 1, System has filename_completion_function ))
-
-
-AC_EGREP_HEADER( rl_char_is_quoted_p, readline/readline.h, 
-AC_DEFINE(HAVE_RL_CHAR_IS_QUOTED_P, 1, System has rl_char_is_quoted_p ))
-AC_EGREP_HEADER(\*char_is_quoted, readline/readline.h, 
-AC_DEFINE(HAVE_CHAR_IS_QUOTED, 1, System has char_is_quoted ))
-AC_EGREP_HEADER( rl_char_is_quoted, readline.h, 
-AC_DEFINE(HAVE_RL_CHAR_IS_QUOTED_P, 1, System has rl_char_is_quoted_p ))
-AC_EGREP_HEADER(\*char_is_quoted, readline.h, 
-AC_DEFINE(HAVE_CHAR_IS_QUOTED, 1, System has char_is_quoted ))
-
-
-# Check (and warn) if we disable history because of a missing history.h.
-
-if test x"$ac_cv_header_readline_history_h" = xno -o\
-	x"$ac_cv_library_readline" = xno ; then
-		AC_MSG_WARN([
-Your readline library do not appear to have the 
-history function. History will be disabled.
+ if test x"$workingreadline" != xyes; then
+  AC_MSG_WARN([
+Your readline libary appears to be broken. lsftp will still work, but
+it will be built in non interactive mode ONLY.
 ])
-else
-AC_CHECK_LIB([readline], [using_history])
-fi
+ fi # Working readline?
+fi # Found headers?
 
-fi
+
+if test x"$workingreadline" = xyes; then
+
+ # Egrep the header files to find out whatever to use rl_foo or foo
+
+ AC_EGREP_HEADER( rl_completion_matches, readline/readline.h, 
+ AC_DEFINE(HAVE_RL_COMPLETION_MATCHES, 1, System has rl_completion_matches ))
+ AC_EGREP_HEADER(\*completion_matches, readline/readline.h, 
+ AC_DEFINE(HAVE_COMPLETION_MATCHES, 1, System has rl_completion_matches ))
+ AC_EGREP_HEADER( rl_completion_matches, readline.h, 
+ AC_DEFINE(HAVE_RL_COMPLETION_MATCHES, 1, System has rl_completion_matches ))
+ AC_EGREP_HEADER(\*completion_matches, readline.h, 
+ AC_DEFINE(HAVE_COMPLETION_MATCHES, 1, System has rl_completion_matches ))
+
+ AC_EGREP_HEADER( rl_filename_completion_function, readline/readline.h, 
+ AC_DEFINE(HAVE_RL_FILENAME_COMPLETION_FUNCTION, 1, System has rl_filename_completion_function ))
+ AC_EGREP_HEADER(\*filename_completion_function, readline/readline.h, 
+ AC_DEFINE(HAVE_FILENAME_COMPLETION_FUNCTION, 1, Sytsem has filename_completion_function ))
+ AC_EGREP_HEADER( rl_filename_completion_function, readline.h, 
+ AC_DEFINE(HAVE_RL_FILENAME_COMPLETION_FUNCTION, 1, System has rl_filename_completion_function ))
+ AC_EGREP_HEADER(\*filename_completion_function, readline.h, 
+ AC_DEFINE(HAVE_FILENAME_COMPLETION_FUNCTION, 1, System has filename_completion_function ))
+
+
+ AC_EGREP_HEADER( rl_char_is_quoted_p, readline/readline.h, 
+ AC_DEFINE(HAVE_RL_CHAR_IS_QUOTED_P, 1, System has rl_char_is_quoted_p ))
+ AC_EGREP_HEADER(\*char_is_quoted, readline/readline.h, 
+ AC_DEFINE(HAVE_CHAR_IS_QUOTED, 1, System has char_is_quoted ))
+ AC_EGREP_HEADER( rl_char_is_quoted, readline.h, 
+ AC_DEFINE(HAVE_RL_CHAR_IS_QUOTED_P, 1, System has rl_char_is_quoted_p ))
+ AC_EGREP_HEADER(\*char_is_quoted, readline.h, 
+ AC_DEFINE(HAVE_CHAR_IS_QUOTED, 1, System has char_is_quoted ))
+  
+ # Check (and warn) if we disable history because of a missing history.h.
+
+ if test x"$ac_cv_header_readline_history_h" = xno -a\
+         x"$ac_cv_header_history_h" = xno ; then
+                AC_MSG_WARN([
+Can't find either <history.h> or <readline/history.h>, disabling
+history.
+                ])
+ else
+  # has either <history.h> or <readline/history.h>
+
+  AC_CHECK_LIB(readline, using_history,
+  AC_DEFINE( WITH_HISTORY, 1, Working history functions in readline library )
+    # We get -lreadline two times here, but that's OK.
+    LIBS="-lreadline $LIBS"
+    foundhistoryinreadline=yes,
+    ,
+  )
+
+  if test x"$foundhistoryinreadline" != xyes ; then
+  # using_history is not in libreadline, try libhistory  
+   AC_CHECK_LIB([history], [using_history],
+      AC_DEFINE( WITH_HISTORY, 1, Working history functions in readline library )
+      LIBS="-lhistory $LIBS"
+      foundhistoryinhistory=yes,
+      ,
+   )
+  
+   if test x"$foundhistoryinhistory" != xyes; then
+    # Failed to find working history functions
+    AC_MSG_WARN([
+Your readline library do not appear to have the 
+history functions. History will be disabled.
+    ])
+   fi # history functions in libhistory
+  fi # history functions in libreadline?
+ fi # history.h found? 
+fi # working readline library?
+
+
 
 AC_CHECK_MEMBERS([struct stat.st_rdev])
 
