@@ -4,6 +4,25 @@
  *
  * Parsing of configuration files. */
 
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 2002 Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
 #include "parse_config.h"
 
 #include "format.h"
@@ -13,6 +32,16 @@
 
 #include <assert.h>
 #include <string.h>
+
+#ifndef DEBUG_PARSE_CONFIG
+#define DEBUG_PARSE_CONFIG 1
+#endif
+
+#if DEBUG_PARSE_CONFIG
+# define DEBUG(x) werror x
+#else
+# define DEBUG(x)
+#endif
 
 #define BUFFER (&(self->buffer))
 
@@ -52,10 +81,10 @@
 enum token_type
   { TOK_EOF, TOK_BEGIN_GROUP, TOK_END_GROUP, TOK_STRING, TOK_ERROR };
 
-/* FIXME: Keep track of linenumber */
 struct tokenizer
 {
   struct simple_buffer buffer;
+  unsigned lineno;
   enum token_type type;
   unsigned token_length;
   const char *token;
@@ -66,6 +95,7 @@ tokenizer_init(struct tokenizer *self,
 	       unsigned length, const unsigned char *data)
 {
   simple_buffer_init(&self->buffer, length, data);
+  self->lineno = 1;
 }
 
 static enum token_type
@@ -89,34 +119,62 @@ next_token(struct tokenizer *self)
     };
 #define IS_SPACE(c) (char_class[c] & 1)
 #define IS_SEPARATOR(c) (char_class[c] & 3)
-  while (LEFT && IS_SPACE(*HERE))
-    ADVANCE(1);
-
-  if (!LEFT)
-    self->type = TOK_EOF;
-  else switch(*HERE)
+  for (;;)
     {
-    case '{':
-      self->type = TOK_BEGIN_GROUP;
-      ADVANCE(1);
-      break;
-    case '}':
-      self->type = TOK_END_GROUP;
-      ADVANCE(1);
-      break;
-    default:
-      {
-	unsigned i;
-	self->token = HERE;
+      while (LEFT && IS_SPACE(*HERE))
+	{
+	  if (*HERE == '\n')
+	    self->lineno++;
+	  ADVANCE(1);
+	}
+
+      if (!LEFT)
+	self->type = TOK_EOF;
+      else switch(*HERE)
+	{
+	case '{':
+	  self->type = TOK_BEGIN_GROUP;
+	  ADVANCE(1);
+	  break;
+	case '}':
+	  self->type = TOK_END_GROUP;
+	  ADVANCE(1);
+	  break;
+	case '#':
+	  /* comment */
+	  while (LEFT && *HERE != '\n')
+	    ADVANCE(1);
+	  continue;
+	  
+	default:
+	  {
+	    unsigned i;
+	    self->type = TOK_STRING;
 	
-	for (i = 0; i<LEFT && !IS_SEPARATOR(HERE[i]); i++)
-	  ;
-	self->token_length = i;
-	ADVANCE(i);
-      }
+	    self->token = HERE;
+	
+	    for (i = 0; i<LEFT && !IS_SEPARATOR(HERE[i]); i++)
+	      ;
+	    self->token_length = i;
+	    ADVANCE(i);
+	  }
+	}
+      DEBUG (("next_token: %i\n", self->type));
+  
+      return self->type;
     }
-  return self->type;
 }
+
+/* Display file name as well? */
+static void
+parse_error(struct tokenizer *self, const char *msg)
+{
+  werror("Parse error: %z, config file:%i\n",
+	 msg, self->lineno);
+}
+
+#define PARSE_ERROR(msg) \
+do { parse_error(self, (msg)); return NULL; } while(0)
 
 /* Can only be called if self->type == TOK_STRING */
 static int
@@ -124,8 +182,14 @@ looking_at(struct tokenizer *self, const char *word)
 {
   unsigned length = strlen(word);
 
-  return (length == self->token_length
-	  && !memcmp(self->token, word, length));
+  if (length == self->token_length
+      && !memcmp(self->token, word, length))
+    {
+      next_token(self);
+      return 1;
+    }
+  else
+    return 0;
 }
 
 static struct lsh_string *
@@ -133,7 +197,7 @@ parse_word(struct tokenizer *self)
 {
   struct lsh_string *s;
   if (self->type != TOK_STRING)
-    return NULL;
+    PARSE_ERROR("expected word");
 
   s = ssh_format("%ls", self->token_length, self->token);
   next_token(self);
@@ -145,29 +209,44 @@ parse_setting(struct tokenizer *self, struct config_setting *settings)
 {
   struct lsh_string *s;
   enum config_type type;
-  if (looking_at(self, "address"))
-    type = CONFIG_ADDRESS;
-  else if (looking_at(self, "user"))
-    type = CONFIG_USER;
-  else
-    return NULL;
 
-  next_token(self);
-  s = parse_word(self);
-  if (!s)
-    return NULL;
+  for (;;)
+    {
+      if (self->type != TOK_STRING)
+	PARSE_ERROR("syntax error");
   
-  {
-    /* Push new object on the list */
-    NEW(config_setting, n);
-    n->next = settings;
-    settings = n;
-  }
-  
-  settings->type = type;
-  settings->value = s;
+      if (looking_at(self, "address"))
+	type = CONFIG_ADDRESS;
+      else if (looking_at(self, "user"))
+	type = CONFIG_USER;
+      else
+	{
+	  /* FIXME: Fails if this is the last keyword/value pair */
+	  werror("Unknown keyword `%s'\n", self->token_length, self->token);
+	  next_token(self);
+      
+	  if (self->type == TOK_STRING)
+	    next_token(self);
 
-  return settings;
+	  continue;
+	}
+  
+      s = parse_word(self);
+      if (!s)
+	return NULL;
+  
+      {
+	/* Push new object on the list */
+	NEW(config_setting, n);
+	n->next = settings;
+	settings = n;
+      }
+  
+      settings->type = type;
+      settings->value = s;
+
+      return settings;
+    }
 }
 
 static struct config_setting *
@@ -193,7 +272,7 @@ parse_token(struct tokenizer *self, enum token_type type)
       return 1;
     }
   else
-    return 0;
+    { parse_error(self, "syntax error"); return 0; }
 }
 
 static struct config_host *
@@ -211,6 +290,7 @@ parse_hosts(struct tokenizer *self, struct config_host *hosts)
       assert(hosts->name);
       if (self->type == TOK_BEGIN_GROUP)
 	{
+	  next_token(self);
 	  hosts->settings = parse_host_settings(self);
 	  if (!parse_token(self, TOK_END_GROUP))
 	    return NULL;
@@ -218,43 +298,6 @@ parse_hosts(struct tokenizer *self, struct config_host *hosts)
     }
   return hosts;
 }
-
-#if 0
-static struct config_setting *
-parse_group(struct tokenizer *self)
-{
-  struct config_setting *settings = NULL;
-
-  while (self->type == TOK_STRING)
-    {
-      struct lsh_string *s;
-      {
-	/* Push new object on the list */
-	NEW(config_setting, n);
-	n->next = settings;
-	settings = n;
-      }
-      if (looking_at(self, "address"))
-	settings->type = CONFIG_ADDRESS;
-      else if (looking_at(self, "user"))
-	settings->type = CONFIG_USER;
-      else if (looking_at(self, "hosts"))
-	
-      else
-	return NULL;
-      
-      next_token(self);
-      if (self->type != TOK_STRING)
-	return NULL;
-
-      s = parse_word(self);
-      if (!s)
-	return NULL;
-      settings->value = s;
-    }
-  return settings;
-}
-#endif
 
 static struct config_group *
 parse_groups(struct tokenizer *self)
@@ -280,8 +323,14 @@ parse_groups(struct tokenizer *self)
 	{
 	  if (looking_at(self, "hosts"))
 	    {
+	      werror("HOSTS\n");
+	      if (!parse_token(self, TOK_BEGIN_GROUP))
+		return NULL;
+
 	      groups->hosts = parse_hosts(self, groups->hosts);
 	      if (!groups->hosts)
+		return NULL;
+	      if (!parse_token(self, TOK_END_GROUP))
 		return NULL;
 	    }
 	  else
@@ -298,15 +347,14 @@ parse_groups(struct tokenizer *self)
 }
 
 struct config_group *
-config_parse_string(const struct lsh_string *s)
+config_parse_string(UINT32 length, const UINT8 *data)
 {
   struct tokenizer t;
-  tokenizer_init(&t, s->length, s->data);
+  tokenizer_init(&t, length, data);
   next_token(&t);
 
   return parse_groups(&t);
 }
-
 
 int
 config_lookup_host(const struct config_group *groups,

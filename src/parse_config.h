@@ -35,7 +35,7 @@ struct config_setting;
 struct config_group;
 
 struct config_group *
-config_parse_string(const struct lsh_string *s);
+config_parse_string(UINT32 length, const UINT8 *data);
 
 struct config_match
 {
