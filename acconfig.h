@@ -30,6 +30,12 @@
 /* Define to enable tcp forwarding */
 #undef WITH_TCP_FORWARD
 
+/* For Ipv6 support */
+#undef WITH_IPV6
+
+/* For utmp support */
+#undef WITH_UTMP
+
 /* Define to indicate that shutdown seems to work properly */
 #undef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
 
