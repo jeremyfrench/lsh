@@ -63,20 +63,20 @@ struct sftp_output
 /* Input */
 
 static int
-sftp_check_input(struct sftp_input *input, UINT32 length)
+sftp_check_input(const struct sftp_input *i, UINT32 length)
 {
-  if (input->left < length)
-    return 0;
-
-  input->left -= length;
-  return 1;
+  return (i->left >= length);
 }
 
 int
 sftp_get_data(struct sftp_input *i, UINT32 length, UINT8 *data)
 {
-  return sftp_check_input(i, length)
-    && (fread(data, 1, length, i->f) == length);
+  if (sftp_check_input(i, length))
+    {
+      i->left -= length;
+      return (fread(data, 1, length, i->f) == length);
+    }
+  return 0;
 }
 
 #define GET_DATA(i, buf) \
@@ -104,8 +104,6 @@ sftp_get_string(struct sftp_input *i, UINT32 *length)
 {
   UINT8 *data;
 
-  assert(i->used_strings < SFTP_MAX_STRINGS);
-  
   if (!(sftp_get_uint32(i, length) && sftp_check_input(i, *length)))
     return NULL;
 
@@ -121,6 +119,27 @@ sftp_get_string(struct sftp_input *i, UINT32 *length)
 
   /* NUL-terminate, for convenience */
   data[*length] = '\0';
+
+  return data;
+}
+
+void
+sftp_free_string(UINT8 *s)
+{
+  free(s);
+}
+
+UINT8 *
+sftp_get_string_auto(struct sftp_input *i, UINT32 *length)
+{
+  UINT8 *data;
+
+  assert(i->used_strings < SFTP_MAX_STRINGS);
+
+  data = sftp_get_string(i, length);
+
+  if (!data)
+    return NULL;
 
   /* Remember the string. */
   i->strings[i->used_strings++] = data;
@@ -147,13 +166,13 @@ sftp_make_input(FILE *f)
   return i;
 }
 
-static void
+void
 sftp_input_clear_strings(struct sftp_input *i)
 {
   unsigned k;
 
   for (k = 0; k < i->used_strings; k++)
-    free(i->strings[k]);
+    sftp_free_string(i->strings[k]);
 
   i->used_strings = 0;
 }
@@ -165,7 +184,8 @@ sftp_read_packet(struct sftp_input *i)
   UINT8 buf[4];
   int done;
 
-  assert(i->left == 0);
+  if (i->left)
+    return 0;
 
   /* First, deallocate the strings. */
   sftp_input_clear_strings(i);
@@ -264,15 +284,14 @@ void
 sftp_put_final_length(struct sftp_output *o,
 		      UINT32 index)
 {
-  sftp_put_length(o, index, o->i - index);
+  sftp_put_length(o, index, o->i - index - 4);
 }
 
 void
 sftp_put_reset(struct sftp_output *o,
 	       UINT32 index)
 {
-  assert(index >= o->i);
-  assert(index <= o->size);
+  assert(index < o->i);
   o->i = index;
 }
 
@@ -550,7 +569,7 @@ sftp_get_attrib(struct sftp_input *i, struct sftp_attrib *a)
 void
 sftp_put_attrib(struct sftp_output *o, const struct sftp_attrib *a)
 {
-  assert(!a->flags & SSH_FILEXFER_ATTR_EXTENDED);
+  assert(!(a->flags & SSH_FILEXFER_ATTR_EXTENDED));
   
   sftp_put_uint32(o, a->flags);
 

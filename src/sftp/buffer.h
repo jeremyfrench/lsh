@@ -75,6 +75,17 @@ sftp_get_uint64(struct sftp_input *i, off_t *value);
 UINT8 *
 sftp_get_string(struct sftp_input *i, UINT32 *length);
 
+void
+sftp_free_string(UINT8 *s);
+
+/* Like sftp_get_string, but the data is deallocated automatically by
+ * sftp_read_packet and sftp_input_clear_strings. */
+UINT8 *
+sftp_get_string_auto(struct sftp_input *i, UINT32 *length);
+
+void
+sftp_input_clear_strings(struct sftp_input *i);
+
 int
 sftp_get_eod(struct sftp_input *i);
 
