@@ -46,6 +46,8 @@
 #include "xalloc.h"
 #include "compress.h"
 
+#include <signal.h>
+
 #include <string.h>
 #include <assert.h>
 
