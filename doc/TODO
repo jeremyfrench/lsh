@@ -103,6 +103,17 @@ of packets, without ever reading anything from its socket, the server
 will eventually run out of memory.
 
 
+BUILD ISSUES
+
+make distclean doesn't work, it fails in src/symmetric because it
+tries to rebuild desdata.o.
+
+Have autoconf automatically add -I $prefix/include and -L $prefix/lib ?
+
+Change configure.in and acinclude.m4 to use LDFLAGS for all -L and -R
+options, not LIBS.
+
+
 MISC
 
 Try to find out why read() sometimes returns -1 and sets errno==EPIPE,
@@ -219,5 +230,3 @@ Should lsh fail if some port forwardings fails? In particular,
   $ lsh -R... -N
 
 is pretty useless if the server doesn't let us bind the remote port.
-
-Have autoconf automatically add -I $prefix/include and -L $prefix/lib ?
