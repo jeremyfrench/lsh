@@ -353,10 +353,10 @@ man-in-the-middle attacks.
 @subsection @code{ssh-1.x}
 
 The first of the Secure shell programs was Tatu Ylönen's @command{ssh}.
-The latest of the version 1 series is @code{ssh-1.27} which speaks
-version 1.5 of the protocol. The ``free'' version of @code{ssh-1.27}
+The latest of the version 1 series is @code{ssh-1.33} which speaks
+version 1.5 of the protocol. The ``free'' version of @code{ssh-1.33}
 does not allow commercial use without additional licensing, which makes
-@code{ssh-1.27} non-free software according to Debian's Free Software
+@code{ssh-1.33} non-free software according to Debian's Free Software
 Guidelines and the Open Source Definition.
 
 The version 1 protocol has some minor weaknesses, in particular, all
@@ -480,7 +480,7 @@ configure where lsh should be installed. Default prefix is
 The configure script tries to figure out if the linker needs any special
 flags specifying where to find dynamically linked libraries at run time
 (one case where this matters is if you have a dynamic libz.so installed
-in a non -standard place). Usually, you can use
+in a non-standard place). Usually, you can use
 
 @example
 ./configure --with-lib-path=/opt/lib:/other/place
