@@ -1,0 +1,64 @@
+GATEWAY MODE
+
+One could add a gateway mode for lsh. Something like
+
+  lsh -G host
+
+would connect to host, and create unix socket /tmp/foo/nisse@host with
+paranoid permission bits.
+
+Other programs can connect to that socket, send ssh packets, open new
+channels, etc. These programs need not care about key exchange,
+authentication or encryption; the lsh gateway process listening on the
+socket takes care of all that. Naturally, there should be some flag to
+lsh to connect to a gateway socket rather than connecting directly to
+a remote host.
+
+The first question is what kind of protocol should be spoken on the
+gateway socket. Och could use plain ssh2 packets, or some more human
+readable protocol, or some s-expression syntax like
+
+  (open ssh-session)
+  (request shell)
+  (io mix-stdout-stderr)
+
+to transform the connection to the gateway into a bidirectional
+channel connected to a new shell on the remote host.
+
+One huge advantage of using plain ssh2 packets through the gateway is
+that it enables programs to speak directly to the remote server (for
+instance, one may want to send a packet that the remote server, but
+not the local lsh gateway, understands). And one also gets for free
+all the machinery needed for multiplexing several channels, separating
+stdout and stderr, flow-control, etc.
+
+The next question is if the sh gateway process should forward
+gatewayed packets verbatim, or if it should perform some checks or
+filtering.
+
+Anoter important point, although one that I don't yet know precisely
+how to handle, is channel allocation. The channels handled by the
+gateway process should hade a delegation pointer; all packets related
+to that channel are redirected to one of the connections on the
+gateway socket.
+
+Now, consider a gateway client that wants to open a new channel. It
+must choose a local channel number to associate with the channel. But
+this program doesn't know which numbers are already in use by the
+gateway process, or which allocation policy it uses. So we probably
+have to let each gateway client its own namespace for local
+channelnumbers, and have the gateway process translate the packets
+when they are sent to or received from the remote server.
+
+Channels originating from the server (for example forwarded X or tcp
+channels) are a little more difficult to route to the right gateway
+client. One would have to remember which client requested a particular
+port to be forwarded.
+
+If nothing else, the gateway mode should be useful for programs
+implementing fancier userinterfaces, like a command language or remote
+job control (as outlined in the final sections of
+docs/configuration.txt).
+
+Finally, one should be able to create a similar gateway socket also at
+the remote end of the ssh connection.
