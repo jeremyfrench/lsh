@@ -1,3 +1,7 @@
+2003-02-12  Niels Möller  <niels@s3.kth.se>
+
+	* tools/Makefile.am (spki_make_signature_SOURCES): Added io.h.
+
 2003-02-11  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* Makefile.am (libspki_a_SOURCES): Added names.c.
