@@ -1,3 +1,7 @@
+2001-09-17  Niels Möller  <nisse@ehand.com>
+
+	* src/io.c: Started experimental conversion to use liboop.
+
 2001-09-16  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* doc/lsh.texinfo: Moved table of contents first.
