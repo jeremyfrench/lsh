@@ -37,6 +37,7 @@
 #include "xalloc.h"
 
 #include <assert.h>
+#include <string.h>
 
 #include "gateway_commands.c.x"
 
