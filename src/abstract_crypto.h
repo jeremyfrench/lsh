@@ -28,6 +28,8 @@
 
 #include "lsh_types.h"
 
+#include "list.h"
+
 /* Use the same instance struct for both hash functions and macs. This
  * is a little ugly. */
 #define mac_instance_class hash_instance_class
@@ -43,9 +45,10 @@
      (name crypto_instance)
      (vars
        (block_size simple UINT32)
-       ; Length must be a multiple of the block size        
+       ; Length must be a multiple of the block size.
+       ; NOTE: src == dst is allowed.
        (crypt method void
-              "UINT32 length" "UINT8 *src" "UINT8 *dst")))
+              "UINT32 length" "const UINT8 *src" "UINT8 *dst")))
 */
 
 #define CRYPT(instance, length, src, dst) \
@@ -60,16 +63,20 @@
      (vars
        (block_size simple UINT32)
        (key_size simple UINT32)
+       (iv_size simple UINT32)
        (make_crypt method (object crypto_instance)
-                   "int mode" "UINT8 *key")))
+                   "int mode" "const UINT8 *key" "const UINT8 *iv")))
 */
 
-#define MAKE_ENCRYPT(crypto, key) \
-((crypto)->make_crypt((crypto), CRYPTO_ENCRYPT, (key)))
+#define MAKE_CRYPT(crypto, mode, key, iv) \
+((crypto)->make_crypt((crypto), (mode), (key), (iv)))     
 
-#define MAKE_DECRYPT(crypto, key) \
-((crypto)->make_crypt((crypto), CRYPTO_DECRYPT, (key)))
+#define MAKE_ENCRYPT(crypto, key, iv) \
+     MAKE_CRYPT((crypto), CRYPTO_ENCRYPT, (key), (iv))
 
+#define MAKE_DECRYPT(crypto, key, iv) \
+     MAKE_CRYPT((crypto), CRYPTO_DECRYPT, (key), (iv))
+     
 /* FIXME: Hashes could use non-virtual methods. */
      
 /* CLASS:
@@ -108,7 +115,7 @@
      (vars
        (hash_size simple UINT32)
        (key_size simple UINT32)
-       (make_mac method (object mac_instance) "UINT8 *key")))
+       (make_mac method (object mac_instance) "const UINT8 *key")))
 */
 
 #define MAKE_MAC(m, key) ((m)->make_mac((m), (key)))
@@ -153,5 +160,25 @@
 
 #define MAKE_VERIFIER(a, pl, p) \
 ((a)->make_verifier((a), (pl), (p)))
+
+/* Combining block cryptos */
+
+/* Example: To create a tripple DES cbc encryptor:
+ *
+ * struct crypto_algorithm des3_cbc
+ *  = make_cbc(crypto_cascade(3, des_algorithm,
+ *                               crypto_invert(des_algorithm)
+ *                               des_algorithm, -1));
+ */
+
+struct crypto_algorithm *crypto_cbc(struct crypto_algorithm *inner);
+struct crypto_algorithm *crypto_invert(struct crypto_algorithm *inner);
+struct crypto_algorithm *crypto_cascadel(struct object_list *cascade);
+struct crypto_algorithm *crypto_cascade(unsigned n, ...);
+
+/* Utility functions */
+void memxor(UINT8 *dst, const UINT8 *src, size_t n);
+UINT32 gcd(UINT32 x, UINT32 y);
+UINT32 lcm(UINT32 x, UINT32 y);
 
 #endif /* LSH_ABSTRACT_CRYPTO_H_INCLUDED */
