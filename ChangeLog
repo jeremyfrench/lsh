@@ -1,3 +1,11 @@
+2000-10-11  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Bumped version to 1.0.7.
+
+	* src/unix_user.c: Don't make use kerberos_check_pw conditional on
+	WITH_KERBEROS, as it really isn't very kerberos specific.
+	* src/lshd.c (main_options): Likewise.
+
 2000-10-10  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/unix_user.c (kerberos_check_pw): Fixed call to execl(). 
