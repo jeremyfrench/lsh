@@ -110,6 +110,33 @@ environ.h: environ.h.in Makefile
 	    -e 's,@''sysconfdir@,$(sysconfdir),' < $<) >$@T
 	test -s $@T && mv -f $@T $@
 
+# FIXME: Generate these dependencies in some other way.
+client.o: environ.h
+
+client_pty.o: environ.h
+
+gateway.o: environ.h
+
+lshd.o: environ.h
+
+lsh-keygen.o: environ.h
+
+lsh-make-seed.o: environ.h
+
+lsh.o: environ.h
+
+lsh-writekey.o: environ.h
+
+server_session.o: environ.h
+
+server_x11.o: environ.h
+
+srp-gen.o: environ.h
+
+unix_random: environ.h
+
+unix_user: environ.h
+
 atoms_defines.h: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms header <$< >$@T
 	test -s $@T && mv -f $@T $@
