@@ -47,9 +47,9 @@
      (name dh_client_exchange)
      (super keyexchange_algorithm)
      (vars
-       (dh object diffie_hellman_method)
+       (dh object diffie_hellman_method)))
        ; alist of signature-algorithm -> lookup_verifier
-       (verifiers object alist)))
+       ;; (verifiers object alist)))
 */
 
 /* Handler for the kex_dh_reply message */
@@ -163,37 +163,29 @@ static void
 do_init_client_dh(struct keyexchange_algorithm *c,
 		  struct ssh_connection *connection,
 		  int hostkey_algorithm_atom,
-		  struct signature_algorithm *ignored,
+		  /* struct signature_algorithm *ignored,*/
+		  struct lsh_object *extra,
 		  struct object_list *algorithms)
 {
   CAST(dh_client_exchange, closure, c);
+  CAST_SUBTYPE(lookup_verifier, verifier, extra);
+  
   NEW(dh_client, dh);
 
   CHECK_SUBTYPE(ssh_connection, connection);
+#if 0
   CHECK_SUBTYPE(signature_algorithm, ignored);
+#endif
 
+  assert(verifier);
+  
   /* Initialize */
   dh->super.handler = do_handle_dh_reply;
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
-  {
-    CAST_SUBTYPE(lookup_verifier, v,
-		 ALIST_GET(closure->verifiers, hostkey_algorithm_atom));
+  dh->verifier = verifier;
+  dh->hostkey_algorithm = hostkey_algorithm_atom;
 
-    /* FIXME: We should make sure that we never advertise hostkey
-     * algorithms for which we have no verifiers. */
-
-    assert(v);
-#if 0
-    if (!v)
-      {
-	fatal("No verifier for the '%a' hostkey algorithm.\n", hostkey_algorithm_atom);
-      }
-#endif
-    
-    dh->verifier = v;
-    dh->hostkey_algorithm = hostkey_algorithm_atom;
-  }
   dh->install = make_install_new_keys(0, algorithms);
   
   /* Send client's message */
@@ -207,8 +199,8 @@ do_init_client_dh(struct keyexchange_algorithm *c,
 
 
 struct keyexchange_algorithm *
-make_dh_client(struct diffie_hellman_method *dh,
-	       struct alist *verifiers)
+make_dh_client(struct diffie_hellman_method *dh)
+     /* struct alist *verifiers) */
 {
   NEW(dh_client_exchange, self);
 
@@ -216,7 +208,7 @@ make_dh_client(struct diffie_hellman_method *dh,
   
   self->super.init = do_init_client_dh;
   self->dh = dh;
-  self->verifiers = verifiers;
+  /* self->verifiers = verifiers; */
   
   return &self->super;
 }

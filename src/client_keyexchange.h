@@ -31,8 +31,8 @@
 #include "publickey_crypto.h"
 
 struct keyexchange_algorithm *
-make_dh_client(struct diffie_hellman_method *dh,
-	       struct alist *verifiers);
+make_dh_client(struct diffie_hellman_method *dh);
+     /* struct alist *verifiers); */
 
 struct install_keys *make_client_install_keys(struct object_list *algorithms);
 
