@@ -29,6 +29,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include "nettle/bignum.h"
+
 #include <assert.h>
 #include <string.h>
 
@@ -246,10 +248,14 @@ end_options:
 		if (unsigned_form)
 		  {
 		    assert(mpz_sgn(n) >= 0);
-		    l = bignum_format_u_length(n);
+		    l = nettle_mpz_sizeinbase_256_u(n);
 		  }
 		else
-		  l = bignum_format_s_length(n);
+		  /* FIXME: Do we really need tohandle negative
+		   * numbers in lsh? */
+		  /* Unlike nettle's convention, zero is represented
+		   * as an empty string. */
+		  l = mpz_sgn(n) ? nettle_mpz_sizeinbase_256_s(n) : 0;
 
 		length += l;
 
@@ -516,12 +522,13 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 		if (unsigned_form)
 		  {
 		    assert(mpz_sgn(n) >= 0);
-		
-		    length = bignum_format_u(n, buffer);
+
+		    length = nettle_mpz_sizeinbase_256_u(n);
 		  }
 		else
-		  length = bignum_format_s(n, buffer);
-		
+		  length = mpz_sgn(n) ? nettle_mpz_sizeinbase_256_s(n) : 0;
+
+		nettle_mpz_get_str_256(length, buffer, n);
 		buffer += length;
 
 		if (!literal)
