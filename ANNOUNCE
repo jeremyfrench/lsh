@@ -36,7 +36,7 @@ SSH1, although the lshd deamon can fall back to an SSH1 implementation
 (e.g. OpenSSH or Datafellow's) when an ssh1 client connects.
 
 LSH is reported to have worked at least once on GNU/Linux on Sparc,
-Intel and Alpha, FreeBSD, Solaris and IRIX. There may well be
+Intel, PPC and Alpha, FreeBSD, Solaris and IRIX. There may well be
 portability problems left, please report them to me.
 
 
@@ -69,8 +69,8 @@ o  A file transfer service.
 COPYRIGHT
 
 LSH is distributed under the terms and conditions of the GNU General
-Public License. Unlike other secsh implementations, you can use LSH
-freely for any purpose.
+Public License. Unlike some other secsh implementations, you can use
+LSH freely for any purpose.
 
 
 AVAILABILITY AND FURTHER INFORMATION
