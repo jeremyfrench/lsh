@@ -501,15 +501,30 @@ struct sexp *sexp_z(const char *s)
 }
 
 /* mpz->atom */
-struct sexp *sexp_n(const mpz_t n)
+struct sexp *sexp_un(const mpz_t n)
 {
-  return make_sexp_string(NULL, ssh_format("%ln", n));
+  struct lsh_string *s;
+  UINT32 l = bignum_format_u_length(n);
+
+  s = lsh_string_alloc(l);
+  l -= bignum_format_u(n, s->data);
+
+  assert(!l);
+  
+  return make_sexp_string(NULL, s);
 }
 
 struct sexp *sexp_sn(const mpz_t n)
 {
-  (void) n;
-  fatal("sexp_sn: Signed numbers are not supported.\n");
+  struct lsh_string *s;
+  UINT32 l = bignum_format_s_length(n);
+
+  s = lsh_string_alloc(l);
+  l -= bignum_format_s(n, s->data);
+
+  assert(!l);
+  
+  return make_sexp_string(NULL, s);
 }
     
 struct lsh_string *sexp_format(struct sexp *e, int style, unsigned indent)
@@ -644,3 +659,46 @@ int sexp_check_type(struct sexp *e, const char *type,
   KILL(i);
   return 0;
 }
+
+/* Check that the next element is a pair (name value), and return value */
+struct sexp *sexp_assz(struct sexp_iterator *i, const char *name)
+{
+  struct sexp *l = SEXP_GET(i);
+  struct sexp_iterator *inner;
+  struct sexp *e;
+  
+  if (!l || !(sexp_check_type(l, name, &inner)))
+    return 0;
+
+  e = SEXP_GET(inner);
+
+  if (e)
+    {
+      SEXP_NEXT(inner);
+      if (SEXP_GET(inner))
+	/* Too many elements */
+	e =NULL;
+      else 
+	SEXP_NEXT(i);
+    }
+  KILL(inner);
+  return e;
+}
+
+int sexp_get_un(struct sexp_iterator *i, const char *name, mpz_t n)
+{
+  struct sexp *e = sexp_assz(i, name);
+  struct lsh_string *s;
+  
+  if (!(e && sexp_atomp(e)))
+    return 0;
+  if (sexp_display(e))
+    return 0;
+
+  s = sexp_contents(e);
+  bignum_parse_u(n, s->length, s->data);
+  return 1;
+}
+
+  
+  

@@ -109,7 +109,7 @@ struct sexp *sexp_a(const int a);
 struct sexp *sexp_z(const char *s);
 
 /* mpz->atom */
-struct sexp *sexp_n(const mpz_t n);
+struct sexp *sexp_un(const mpz_t n);
 struct sexp *sexp_sn(const mpz_t n);
 
 /* cons */
@@ -147,6 +147,8 @@ int sexp_bignum_s(const struct sexp *e, mpz_t n);
 int sexp_eqz(const struct sexp *e, const char *s);
 int sexp_check_type(struct sexp *e, const char *type,
 		    struct sexp_iterator **res);
+struct sexp *sexp_assz(struct sexp_iterator *i, const char *name);
+int sexp_get_un(struct sexp_iterator *i, const char *name, mpz_t n);
 
 extern int sexp_char_classes[];
 
