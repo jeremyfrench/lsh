@@ -1,3 +1,8 @@
+2004-10-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): Need extra quoting in
+	case pattern.
+
 2004-10-20  Niels Möller  <niels@s3.kth.se>
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): Disable dependency

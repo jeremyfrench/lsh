@@ -480,7 +480,7 @@ DEP_PROCESS='true'
 if test x$GCC = xyes; then
   gcc_version=`gcc --version | head -1`
   case "$gcc_version" in
-    2.*|*[^1-9.]2.*)
+    2.*|*[[^1-9.]]2.*)
       AC_MSG_WARN([Dependency tracking disabled, gcc-3.x is needed])
     ;;
     *)
