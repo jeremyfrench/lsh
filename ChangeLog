@@ -1,8 +1,43 @@
+2002-03-15  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/userauth.h (struct spawn_info): Struct with information for
+	the new USER_SPAWN method.
+	(USER_SPAWN): New method.
+
+	* src/unix_user.c (chdir_home): New function.
+	(exec_shell): New function.
+	(do_spawn): New function.
+	#if:ed out code that has been moved to unix_process.c.
+	(do_lookup_user): Use /bin/sh as login shell if there's no login
+	shell in the passwd-database.
+
+	* src/unix_process.c (unix_process_setup): Adding login argument,
+	which should be non-zero for a login session.
+
+	* src/reaper.h (reap): Deleted this super class. Updated users.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added unix_process.c.
+	(lsh_execuv_LDADD): lsh-execuv need not be linked with liblsh.
+
+	* configure.in: Check for more utmp related functions.
+
+2002-03-14  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/unix_process.c: New file, to replace the process stuff in
+	unix_user.c
+
 2002-03-14  Pontus  <pont@it.uu.se>
 
 	* configure.in: Added check for libpam if PAM is enabled. 
 
 2002-03-14  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/resource.h (REMEMBER_RESOURCE): Deleted method, use an
+	ordinary fucntion remember_Resource instead. Updated all callers.
+
+	* src/resource.c (concrete_resource_list): Deleted class, put all
+	information directly in the resource_lsit class.
+	(remember_resource): New public function.
 
 	* configure.in: Removed check for 8-bit clean m4.
 
