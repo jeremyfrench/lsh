@@ -104,7 +104,7 @@ do_rsa_verify(struct verifier *v,
 	      && parse_eod(&buffer) ))
 	  goto fail;
 
-	bignum_parse_u(s, length, digits);
+	nettle_mpz_set_str_256_u(s, length, digits);
 
 	break;
       }
