@@ -8,3 +8,5 @@ EXTRA_DIST = ctags.mk
 
 all:
 	true
+
+include ctags.mk
