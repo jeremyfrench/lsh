@@ -135,22 +135,14 @@ make_options(struct exception_handler *handler,
   const char *home = getenv("HOME");
   struct randomness *r = make_user_random(home);
 
-  if (!r)
-    {
-      werror("Failed to initialize randomness generator.\n");
-      return NULL;
-    }
-  
   init_client_options(&self->super, 
 		      r,
 		      handler, exit_code);
 
-  self->algorithms
-    = make_algorithms_options(all_symmetric_algorithms());
-
+  self->algorithms = make_algorithms_options(all_symmetric_algorithms());
   self->home = home;
-  
-  self->signature_algorithms = all_signature_algorithms(r);
+
+  self->signature_algorithms = all_signature_algorithms(r); /* OK to init with NULL */
 
   self->sloppy = 0;
   self->capture = NULL;
@@ -841,6 +833,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  break;
 	}
 
+      if (!self->super.random)
+	argp_failure( state, EXIT_FAILURE, 0,  "No randomness generator available.");
+
       if (self->with_dh_keyexchange < 0)
 	self->with_dh_keyexchange = !self->with_srp_keyexchange;
       
@@ -1091,10 +1086,17 @@ int main(int argc, char **argv)
   set_local_charset(CHARSET_LATIN1);
 
   options = make_options(handler, &lsh_exit_code);
+
   if (!options)
     return EXIT_FAILURE;
   
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
+
+  if (!options->super.random)
+    {
+      werror("Failed to initialize randomness generator.\n");
+      return EXIT_FAILURE;
+    }
 
   spki = read_known_hosts(options);
   
