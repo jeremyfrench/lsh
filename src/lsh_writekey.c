@@ -145,7 +145,9 @@ main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { "output-file", 'o', "Filename", 0, "Default is ~/.lsh/identity", 0 },
+#if 0
   { NULL, 'f', NULL, OPTION_ALIAS, NULL, 0 },
+#endif
   { "iteration-count", 'i', "PKCS#5 iteration count", 0, "Default is 1500", 0 },
   { "crypto", 'c', "Algorithm", 0, "Encryption algorithm for the private key file.", 0 },
   { "label", 'l', "Text", 0, "Unencrypted label for the key.", 0 },
