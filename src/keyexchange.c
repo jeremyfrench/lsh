@@ -730,7 +730,7 @@ do_kexinit_filter(struct command *s,
   COMMAND_RETURN(c, self->init);
 }
 
-COMMAND_SIMPLE(kexinit_filter)
+DEFINE_COMMAND_SIMPLE(kexinit_filter, a)
 {
   CAST(simple_kexinit, init, a);
   NEW(kexinit_filter_command, self);
