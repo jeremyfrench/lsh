@@ -1,3 +1,29 @@
+2000-05-27  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/publickey_crypto.h: Renamed the class group to abstract_group.
+	(GROUP_RANGE): Renamed from GROUP_MEMBER, as it actually doesn't
+	check membership.
+	(GROUP_SMALL_POWER): New method, for raising a group element to a
+	power that fits in an UINT32.
+	(abstract_group): Added generator attribute.
+
+	* src/publickey_crypto.c: Moved most dh-related code to
+	dh_exchange.c. Moved the definition of the group_zn class to
+	publickey_crypto.h. 
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added dh_Exchange.c and
+	srp_exchange.c. 
+
+	* src/userauth.h (lsh_user): Added read_file method.
+
+	* src/unix_user.c (do_read_file): New function.
+	(make_unix_user_db): Added backend argument.
+
+	* src/io.c (check_user_permissions): New function.
+	(io_read_user_file): New function.
+
+	* src/io.h (io_read_user_file): Added prototype.
+
 2000-05-24  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* contrib/lsh.spec.in: Use -o flag for lsh_writekey (Thayne).
