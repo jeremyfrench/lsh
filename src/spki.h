@@ -29,26 +29,14 @@
 #include "alist.h"
 #include "publickey_crypto.h"
 
+#include "spki/certificate.h"
+
 #include <time.h>
 
-/* Needed by spki.h.x */
-/* SPKI validity. No online validity tests supported. */
-struct spki_validity
-{
-  char before_limit; /* Nonzero if not_before was supplied */
-  char after_limit;  /* Nonzero if not_after was supplied */
-  time_t not_before;
-  time_t not_after;
-};
-
-struct spki_5_tuple;
-
 #define GABA_DECLARE
-#include "spki.h.x"
+# include "spki.h.x"
 #undef GABA_DECLARE
 
-
-int spki_get_type(struct sexp_iterator *i);
 
 struct lsh_string *
 make_ssh_hostkey_tag(struct address_info *host);
@@ -72,29 +60,6 @@ spki_hash_data(const struct hash_algorithm *algorithm,
 	       int algorithm_name,
 	       UINT32 length, UINT8 *data);
 
-/* At a point in time, not all fields are known; fields may be added
- * later, or computed as needed. This information is not automatically
- * trusted in any way, except that any non-NULL attributes must be
- * consistent with each other. */
-
-/* GABA:
-   (class
-     (name spki_subject)
-     (vars
-       ; (public-key ...) expression.
-       (key string)
-
-       ; Verifier
-       (verifier object verifier)
-       (sha1 const string)
-       (md5 const string)))
-*/
-
-struct spki_subject *
-make_spki_subject(struct sexp_iterator *key,
-		  struct verifier *verifier,
-		  const struct lsh_string *sha1,
-		  const struct lsh_string *md5);
 
 /* Keeps track of spki_subjects and their keys.
  *
@@ -102,98 +67,43 @@ make_spki_subject(struct sexp_iterator *key,
  * compared pointer-wise. I.e. if we get several (public-key ...) and
  * (hash ...) expressions representing the same principal, we merge
  * them into a single spki_subject object. However, there is one case
- * in which this fails: If we encounter several (hash ...)
- * expressions with different hash algorithms, before we encounter the
- * non-hashed (public-key ...) expression. */
+ * in which the simple method fails: If we encounter several (hash
+ * ...) expressions with different hash algorithms, before we
+ * encounter the non-hashed (public-key ...) expression. So we must
+ * use use spki_principal_normalize when comparing principals. */
 
 /* GABA:
    (class
      (name spki_context)
      (vars
-       ; Looks up a public-key or hash.
-       (lookup method (object spki_subject)
-                      "struct sexp_iterator *i"
-		      ; If non-NULL, use this verifier for
-		      ; the subject. Useful for non-SPKI keys.
-		      "struct verifier *v")
-       (add_tuple method void
-                  "struct spki_5_tuple *tuple")
-       (authorize method int
-                         "struct spki_subject *subject"
-			 "const struct lsh_string *access")))
-       ;; (clone method (object spki_context))))
+       ;; Available public key algorithms
+       
+       (algorithms object alist)
+       ;; We use the spki_principal struct defined by libskpi,
+       ;; and cache verifier objects in its verifier field.
+       ;; So we must traverse the list at gc time.
+       
+       (db indirect-special "struct spki_acl_db"
+           do_spki_acl_db_mark do_spki_acl_db_free)))
 */
 
-#define SPKI_LOOKUP(c, e, v) ((c)->lookup((c), (e), (v)))
-#define SPKI_ADD_TUPLE(c, t) ((c)->add_tuple((c), ((t))))
-#define SPKI_AUTHORIZE(c, s, a) ((c)->authorize((c), (s), (a)))
+struct spki_principal *
+spki_lookup(struct spki_context *self,
+	    unsigned length,
+	    const uint8_t *key,
+	    /* If non-NULL, use this verifier for
+	       the subject. Useful for non-SPKI keys. */
+	    struct verifier *v);
 
+int
+spki_authorize(struct spki_context *self,
+	       struct spki_principal *subject,
+	       time_t t,
+	       /* A tag expression */
+	       struct lsh_string *access);
 
 struct spki_context *
 make_spki_context(struct alist *algorithms);
-
-/* 5-tuples */
-
-#define SPKI_TAG_ATOM 1
-#define SPKI_TAG_LIST 2
-#define SPKI_TAG_SET 3
-#define SPKI_TAG_PREFIX 4
-#define SPKI_TAG_ANY 5
-
-/* GABA:
-   (class
-     (name spki_tag)
-     (vars
-       ; Explicit type field is needed only for computing
-       ; intersections
-       (type . int)
-       ; Returns true iff the resources described by the tag
-       ; include the resource described by the sexp.
-       (match method int "struct sexp_iterator *")))
-*/
-
-#define SPKI_TAG_TYPE(t) ((t)->type)
-#define SPKI_TAG_MATCH(t, e) ((t)->match((t), (e)))
-
-/* The data in a 5-tuple is always trusted, to the extent a non-NULL
- * issuer field implies that the tuple was derived from a certificate
- * that was properly signed by that issuer. However, no trust in the
- * issuer is assumed. */
-
-/* GABA:
-   (class
-     (name spki_5_tuple)
-     (vars
-       ; Principal
-       (issuer object spki_subject)
-       ; Principal (n-to-k not yet supported)
-       (subject object spki_subject)
-       ; Non-zero to allow delegation
-       (propagate . int)
-       ; Authorization, (tag ...) expression
-       (authorization object spki_tag)
-       ; Validity period
-       (validity . "struct spki_validity")))
-       
-*/
-
-struct spki_5_tuple *
-make_spki_5_tuple(struct spki_subject *issuer,
-		  struct spki_subject *subject,
-		  int propagate,
-		  struct spki_tag *authorization,
-		  int before_limit, time_t not_before,
-		  int after_limit, time_t not_after);
-
-
-struct spki_tag *
-spki_sexp_to_tag(struct sexp_iterator *i,
-		 /* Some limit on the recursion */
-		 unsigned limit);
-
-struct spki_5_tuple *
-spki_acl_entry_to_5_tuple(struct spki_context *ctx,
-			  struct sexp_iterator *i);
 
 int
 spki_add_acl(struct spki_context *ctx,
