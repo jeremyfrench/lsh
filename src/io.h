@@ -367,7 +367,12 @@ int
 lsh_make_pipe(int *fds);
 
 int
-lsh_popen(const char *program, const char **argv, int in);
+lsh_popen(const char *program, const char **argv, int in,
+	  pid_t *child);
+
+struct lsh_string *
+lsh_popen_read(const char *program, const char **argv, int in,
+	       unsigned guess);
 
 int
 lsh_copy_file(int src, int dst);

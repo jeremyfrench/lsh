@@ -36,6 +36,9 @@
 #include <unistd.h>
 #endif
 
+/* For the popen code */
+#include <wait.h>
+
 #ifdef HAVE_POLL
 # if HAVE_POLL_H
 #  include <poll.h>
@@ -2052,27 +2055,32 @@ lsh_make_pipe(int *fds)
   return 1;
 }
 
-/* Forks a filtering process. */
+/* Forks a filtering process, and reads the output. */
 int
-lsh_popen(const char *program, const char **argv, int in)
+lsh_popen(const char *program, const char **argv, int in,
+	  pid_t *child)
 {
   /* 0 for read, 1, for write */
   int out[2];
-
+  pid_t pid;
+  
   if (!lsh_make_pipe(out))
     {
       close(in);
       return -1;
     }
-  switch (fork())
+  pid = fork();
+
+  if (pid < 0)
     {
-    case -1:
       close(in);
       close(out[0]);
       close(out[1]);
       return -1;
-
-    case 0: /* Child */
+    }
+  else if (!pid)
+    {
+      /* Child */
       if (dup2(in, STDIN_FILENO) < 0)
 	{
 	  werror("lsh_popen: dup2 for stdin failed %e.\n", errno);
@@ -2091,15 +2099,53 @@ lsh_popen(const char *program, const char **argv, int in)
       /* The execv prototype uses const in the wrong way */
       execv(program, (char **) argv);
 
-      werror("lsh_popen: execv failed %e.\n", errno);
+      werror("lsh_popen: execv `%z' failed %e.\n", program, errno);
 
       _exit(EXIT_FAILURE);
-
-    default: /* Parent process */
+    }
+  else
+    {
+      /* Parent process */
       close(in);
       close(out[1]);
+      *child = pid;
       return out[0];
     }
+}
+
+struct lsh_string *
+lsh_popen_read(const char *program, const char **argv, int in,
+	       unsigned guess)
+{
+  pid_t pid;
+  int status;
+  int fd = lsh_popen(program, argv, in, &pid);
+  struct lsh_string *s = io_read_file_raw(fd, guess);
+  
+  if (waitpid(pid, &status, 0) < 0)
+    {
+      werror("lsh_popen_read: waitpid failed: %e\n", errno);
+      lsh_string_free(s);
+      return NULL;
+    }
+
+  if (!s)
+    return s;
+
+  if (WIFEXITED(status))
+    {
+      if (!WEXITSTATUS(status))
+	/* Success. */
+	return s;
+
+      werror("sexp-conv exited with status %i.\n", WEXITSTATUS(status));
+    }
+  else
+    werror("sexp-conv terminated by signal %i (%z).\n",
+	   WTERMSIG(status), strsignal(WTERMSIG(status)));
+
+  lsh_string_free(s);
+  return NULL;
 }
 
 /* Copies data from one fd to another. Works no matter if the fd:s are
