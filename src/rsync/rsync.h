@@ -41,7 +41,7 @@
 /* FIXME: replace with proper autoconf check */
 #define OFF_T size_t
 
-#define RSYNC_SUM_LENGTH MD5_DIGESTSIZE
+#define RSYNC_SUM_SIZE MD5_DIGESTSIZE
 
 /* Size of block count, block size, tail */
 #define RSYNC_HEADER_SIZE 12
@@ -83,21 +83,31 @@ struct rsync_generate_state
 };
 
 /* Return values */
-/* Things are working fine */
-#define RSYNC_PROGRESS    0
-/* All data is flushed to the output */
-#define RSYNC_DONE        1
-/* No progress possible */
-#define RSYNC_BUF_ERROR   2
-/* Invalid input */
-#define RSYNC_INPUT_ERROR 3
-/* Out of memory (can happen only for rsync_read_table and rsync_send_init) */
-#define RSYNC_MEMORY 4
+enum rsync_result_t
+{
+  /* Things are working fine */
+  RSYNC_PROGRESS,
+  
+  /* All data is flushed to the output */
+ RSYNC_DONE,
+  
+  /* No progress possible */
+  RSYNC_BUF_ERROR,
+  
+  /* Invalid input */
+  RSYNC_INPUT_ERROR,
+  
+  /* Out of memory (can happen only for rsync_read_table and rsync_send_init) */
+  RSYNC_MEMORY
+};
 
-int rsync_generate(struct rsync_generate_state *state);
-int rsync_generate_init(struct rsync_generate_state *state,
-			UINT32 block_size,
-			UINT32 size);
+enum rsync_result_t
+rsync_generate(struct rsync_generate_state *state);
+
+enum rsync_result_t
+rsync_generate_init(struct rsync_generate_state *state,
+		    UINT32 block_size,
+		    UINT32 size);
 
 
 /* Receiving a file. */
@@ -136,21 +146,38 @@ struct rsync_receive_state
   rsync_lookup_read_t lookup;
   void *opaque;
   
-  struct md5_ctx full_sum; /* Sum of all the output data */
+  struct md5_ctx sum_md5; /* Sum of all the output data */
 
   /* Private state */
 
-  /* This is really an enum rsync_receive_mode */
-  int state;
+  enum {
+    /* Reading a partial token */
+    RSYNC_READ_TOKEN,
+
+    /* Reading a literal */
+    RSYNC_READ_LITERAL,
+
+    /* Copying a local block */
+    RSYNC_READ_LOOKUP,
+
+    /* Reading final md5 sum */
+    RSYNC_READ_CHECKSUM,
+
+    /* Results in error */
+    RSYNC_READ_INVALID
+  } state;
   
   UINT32 token; 
   UINT32 i;
 
-  UINT8 buf[RSYNC_SUM_LENGTH];
+  UINT8 buf[RSYNC_SUM_SIZE];
 };
 
-int rsync_receive(struct rsync_receive_state *state);
-void rsync_receive_init(struct rsync_receive_state *state);
+enum rsync_result_t
+rsync_receive(struct rsync_receive_state *state);
+
+void
+rsync_receive_init(struct rsync_receive_state *state);
 
 /* Sending files */
 
@@ -175,7 +202,7 @@ struct rsync_read_table_state
   unsigned pos;
 };
 
-int
+enum rsync_result_t
 rsync_read_table(struct rsync_read_table_state *state,
 		 UINT32 length, UINT8 *input);
 
@@ -191,36 +218,44 @@ struct rsync_send_state
   struct rsync_table *table;
   
   /* Internal state */
-  int state;
 
-  /* The next block that we expect */
-  struct rsync_node *guess;
-
-  /* General buffer pointer */
-  UINT32 i;
-
-  /* Input buffer */
-  UINT32 buf_size;
-  UINT8 *buf;
-  UINT32 size;
-
-  /* Length of literal to output. */
-  UINT32 literal;
-
-  UINT8 token_buf[RSYNC_TOKEN_SIZE];
-  UINT8 length_buf[RSYNC_TOKEN_SIZE];
+  enum { RSYNC_SEND_READING, RSYNC_SEND_WRITING } state;
 
   /* Non-zero if the final EOF-token has been buffered for output. */
   int final;
   
+  /* The next block that we expect */
+  struct rsync_node *guess;
+
+  /* The input and output buffer. */
+  
+  UINT32 buf_size;
+  /* The allocated size includes space for header and trailer,
+   * besides the input buffer of BUD_SIZE octets. */
+  UINT8 *buf;
+  
+  /* In writing mode, we copy the data from I to OUT_END */
+  UINT32 i;
+  UINT32 out_end;
+
+  /* Size of buffer (relevant in primarily in read mode).
+   * It does not include the buffer header. */
+
+  UINT32 size;
+  
   unsigned sum_a;
   unsigned sum_b;
+
+  struct md5_ctx sum_md5; /* Sum of all the input data */
+
 };
 
-int rsync_send_init(struct rsync_send_state *state,
-		    struct rsync_table *table);
+enum rsync_result_t
+rsync_send_init(struct rsync_send_state *state,
+		struct rsync_table *table);
 		     
-int rsync_send(struct rsync_send_state *state, int flush);
+enum rsync_result_t
+rsync_send(struct rsync_send_state *state, int flush);
 
 void rsync_send_free(struct rsync_send_state *state); 
 
