@@ -2,35 +2,54 @@ I'd like to announce a new version of LSH, the GNU implementation of
 the secure shell protocols. LSH includes a client, a server, and a few
 scripts and utility programs.
 
-The LSH-1.2 release, and any following LSH-1.2.x updates, are intended
-to be stable. New features will be added to LSH-1.3.x.
+The LSH-1.4 release, and any following LSH-1.4.x updates, are intended
+to be stable. New features will be added to LSH-1.5.x.
 
 FEATURES
 
-The most notable new features in LSH-1.2 are
+The most notable new features in LSH-1.4 are
 
-o  Support for RSA keys, for both host and user authentication.
+o  Random numbers are generated using the Yarrow pseudorandomness
+   generator, which improves security in particular on systems without
+   /dev/random. A new program lsh-make-seed is provided for
+   initializing the generator.
 
-o  The "gateway" mode of operation, implemented by lsh -G and lshg.
+o  Both lsh and lshd now expire session keys and performs
+   key-reexchange regularly. 
 
-o  Limited Kerberos support, comparable to that available for the
-   original sshd.
+o  AES is now the default cipher. A faster assembler version for sparc
+   is included. x86 code is included as well, but it needs some more
+   work before it can be enabled.
 
-o  An improved randomness generator that works also on systems that
-   lack /dev/random.
-   
-Some of the older (LSH-1.0) features are
+o  Client and server support for subsystems.
+
+o  lsh supports X11 forwarding; lshd support is not yet implemented.
+
+o  Implemented handshake timeout.
+
+o  lshd handles SIGHUP by closing its listening socket, and then
+   waiting for existing connections to be closed before exiting. This
+   makes it easier to restart lshd in a friendly way.
+
+o  Proper utmp logging.
+
+o  Improved handling of process suspend, and other process related
+   things. 
+
+
+Some of the older (LSH-1.0 and LSH-1.2) features are
 
 o  Strong encryption and data authentication.
 
-o  Strong host authentication using public key techniques.
+o  Strong host authentication using public key techniques, DSA and RSA
+   keys. 
 
 o  User authentication by either ordinary UN*X passwords
    or public key techniques.
 
 o  Spawning of remote shells and commands, including pseudo tty support.
 
-o  A "gateway" interface, that lets you create a single SSH connection
+o  A "gateway" interface, which lets you create a single SSH connection
    to a remote host, and reuse that connection for later commands.
    Ideal for applications like remote CVS.
 
@@ -38,11 +57,14 @@ o  Forwarding of TCP connections, in both directions.
 
 o  Zlib compression.
 
+o  Limited Kerberos support, comparable to that available for the
+   original sshd.
+
 o  Experimental support for Secure Remote Password (SRP) authentication.
 
 o  Experimental support for IPv6.
 
-o  A draft manual.
+o  A manual.
 
 
 COMPATIBILITY AND PORTABILITY
@@ -62,20 +84,6 @@ QUALITY
 
 LSH is provided AS IS, ABSOLUTELY no GUARANTEES, etc. Please report
 any bugs you find.
-
-
-PLANNED FEATURES
-
-Some features that are planned but not yet implemented are
-
-o  Forwarding of X, ssh-agent, UDP.
-
-o  Support for SPKI certificates, for both authorization and host
-   authentication. 
-
-o  Kerberos authentication.
-
-o  A file transfer service.
 
 
 LICENSE
