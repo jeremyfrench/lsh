@@ -56,7 +56,7 @@ struct lsh_queue
   for ( n##_this = (q)->ht_links[LSH_QUEUE_HEAD];		\
 	( n = (type) n##_this,					\
 	  (n##_next = n##_this->np_links[LSH_QUEUE_NEXT]));	\
-	n_this = n_next)
+	n##_this = n##_next)
 
 void lsh_queue_init(struct lsh_queue *q);
 int lsh_queue_is_empty(struct lsh_queue *q);
