@@ -30,6 +30,20 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#define X11_WINDOW_SIZE 10000
+
+/* GABA
+   (class
+     (name client_x11_auth_info)
+     (vars
+       ; Fake MIT-COOKIE-1
+       (fake string)
+
+       ; Real authentication info
+       (auth_name string)
+       (auth_data string)))
+*/
+
 /* GABA:
    (class
      (name channel_open_x11)
@@ -38,12 +52,17 @@
        (address_length . socklen_t)
        (address space "struct sockaddr")
 
-       ; Fake MIT-COOKIE-1
-       (fake string)
+       (authinfo object client_x11_auth_info)))
+*/
 
-       ; Real authentication info
-       (auth_name string)
-       (auth_data string)))
+/* GABA:
+   (class
+     (name client_x11_channel)
+     (super channel_forward)
+     (vars
+       (authinfo object client_x11_auth_info)
+       (state . unsigned)
+       (buffer string)))
 */
 
 /* Format is host:display.screen, where display and screen are numbers */
@@ -130,22 +149,34 @@ parse_display(const char *display, socklen_t *sl)
 
 /* GABA:
    (class
-     (name channel_open_callback)
+     (name channel_open_x11_callback)
      (super io_callback)
      (vars
-       (context object channel_open_x11)
+       (ctx object channel_open_x11)
        (c object command_continuation)))
 */
 
 static void
-do_channel_open_callback(struct lsh_fd *fd)
+do_channel_open_x11_callback(struct io_callback *s, struct lsh_fd *fd)
 {
-  
+  CAST(channel_open_callback, self, s);
+
+  struct channel_forward *channel = make_client_channel_x11(fd, X11_WINDOW_SIZE);
+  channel_forward_start_io(channel_forward);
+  channel->super.do_receive = do_channel_x11_receive
+  COMMAND_RETURN(self->c, channel);
 }
 				     
 struct io_callback *
-make_channel_open_x11_callback(struct channel_open_x11 *self)
+make_channel_open_x11_callback(struct channel_open_x11 *ctx,
+			       struct command_continuation *c)
 {
+  NEW(channel_open_x11_callback, self);
+  self->super.f = do_channel_open_x11_callback;
+  self->ctx = ctx;
+  self->c = c;
+
+  return &self->super;
 }
 
 /* Exception handler that promotes connect errors to CHANNEL_OPEN
