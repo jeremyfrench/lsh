@@ -92,10 +92,11 @@ new_x11_channel(struct channel_open_command *c,
   /* NOTE: The request ought to include some reference to the
    * corresponding x11 request, but no such id is specified in the
    * protocol spec. */
+  /* NOTE: The name "unix-domain" was suggested by Tatu in
+   * <200011290813.KAA17106@torni.hel.fi.ssh.com> */
   *request = format_channel_open(ATOM_X11, local_channel_number,
-				 channel, 
-				 "%S%i",
-				 self->peer->peer->ip, self->peer->peer->port);
+				 channel,
+				 "%z%i", "unix-domain", 0);
   
   return channel;
 }
