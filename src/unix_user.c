@@ -30,6 +30,7 @@
 #include "io.h"
 #include "read_file.h"
 #include "reaper.h"
+#include "server_pty.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -81,8 +82,8 @@ struct unix_user_db;
 
 #include "unix_user.c.x"
 
-
-/* GABA:
+#if 0
+/* ;; GABA:
    (class
      (name logout_cleanup)
      (super exit_callback)
@@ -180,7 +181,7 @@ lsh_make_utmp(struct lsh_user *user,
 #endif /* WITH_UTMP */
 
 
-/* GABA:
+/* ;; GABA:
    (class
      (name process_resource)
      (super lsh_process)
@@ -233,7 +234,7 @@ make_process_resource(pid_t pid, int signal)
 
   return &self->super;
 }
-
+#endif
 
 /* GABA:
    (class
@@ -775,15 +776,19 @@ do_fork_process(struct lsh_user *u,
   CAST(unix_user, user, u);
   pid_t child;
 
+#if 0
   struct utmp *log = NULL;
+#endif
   
   /* Don't start any processes unless the user has a login shell. */
   if (!user->shell)
     return 0;
 
+#if 0
 #if WITH_UTMP
   if (tty)
     log = lsh_make_utmp(u, peer, tty);
+#endif
 #endif
   
   child = fork();
@@ -795,6 +800,7 @@ do_fork_process(struct lsh_user *u,
       return 0;
 
     case 0: /* Child */
+#if 0
       /* FIXME: Create utmp entry as well. */
 #if defined(WITH_UTMP) && defined(HAVE_LOGWTMP)
       if (log)
@@ -807,7 +813,7 @@ do_fork_process(struct lsh_user *u,
 #endif
 
 #endif /* WITH_UTMP && HAVE_LOGWTMP */
-      
+#endif 
       if (getuid() != user->super.uid)
 	if (!change_uid(user))
 	  {
@@ -819,8 +825,8 @@ do_fork_process(struct lsh_user *u,
       return 1;
       
     default: /* Parent */
-      *process = make_process_resource(child, SIGHUP);
-      REAP(user->ctx->reaper, child, make_logout_cleanup(&(*process)->super, log, c));
+      *process = unix_process_setup(child, 0, &user->super, &c, peer, tty);
+      REAP(user->ctx->reaper, child, c);
       
       return 1;
     }
@@ -839,6 +845,286 @@ static const char *
 format_env_pair_c(const char *name, const char *value)
 {
   return lsh_get_cstring(ssh_format("%lz=%lz", name, value));
+}
+
+static int
+chdir_home(struct unix_user *user)
+{
+  if (user->home)
+    {
+      if (chdir(lsh_get_cstring(user->home)) < 0)
+	werror("chdir to home directory `%S' failed (errno = %i): %z\n",
+	       user->home, errno, STRERROR(errno));
+      else
+	return 1;
+    }
+  if (chdir("/") < 0)
+    {
+      werror("chdir to `/' failed (errno = %i): %z\n",
+	     errno, STRERROR(errno));
+      return 0;
+    }
+  else
+    return 1;
+}
+
+static void
+exec_shell(struct unix_user *user, struct spawn_info *info)
+{
+  const char **envp;
+  const char **argv;
+  const char **shell_argv;
+  const char *argv0;
+  
+  char *tz = getenv("TZ");
+  unsigned i, j;
+  
+  assert(user->shell);
+
+  /* Make up an initial environment */
+  debug("exec_shell: Setting up environment.\n");
+  
+  /* We need place for the caller's values, 
+   *
+   * SHELL, HOME, USER, LOGNAME, TZ, PATH
+   *
+   * and a terminating NULL */
+
+#define MAX_ENV 6
+
+  envp = alloca(sizeof(char *) * (info->env_length + MAX_ENV + 1));
+
+  i = 0;
+  envp[i++] = format_env_pair("SHELL", user->shell);
+
+  if (user->home)
+    envp[i++] = format_env_pair("HOME", user->home);
+
+  /* FIXME: The value of $PATH should not be hard-coded */
+  envp[i++] = "PATH=/bin:/usr/bin";
+  envp[i++] = format_env_pair("USER", user->super.name);
+  envp[i++] = format_env_pair("LOGNAME", user->super.name);
+
+  if (tz)
+    envp[i++] = format_env_pair_c("TZ", tz);
+
+  assert(i <= MAX_ENV);
+#undef MAX_ENV
+
+  for (j = 0; j < info->env_length; j++)
+    envp[i++] = format_env_pair(info->env[j].name, info->env[j].value);
+
+  envp[i] = NULL;
+
+  debug("exec_shell: Environment:\n");
+  for (i=0; envp[i]; i++)
+    debug("    '%z'\n", envp[i]);
+
+#if USE_LOGIN_DASH_CONVENTION
+  if (login)
+    {
+      /* Fixup argv[0], so that it starts with a dash */
+      const char *p;
+      char *s;
+      const char *shell = lsh_get_cstring(user->shell);
+        
+      debug("do_exec_shell: fixing up name of shell...\n");
+      
+      s = alloca(user->shell->length + 2);
+
+      /* Make sure that the shell's name begins with a -. */
+      p = strrchr (shell, '/');
+      if (!p)
+	p = shell;
+      else
+	p ++;
+
+      s[0] = '-';
+      strncpy (s + 1, p, user->shell->length);
+      argv0 = s;
+    }
+  else
+#endif /* USE_LOGIN_DASH_CONVENTION */
+    argv0 = lsh_get_cstring(user->shell);
+
+  debug("exec_shell: argv0 = '%z'.\n", argv0);
+
+  /* Build argument list for lsh-execuv. We need place for
+   *
+   * lsh-execuv -u uid -g gid -n name -i -- argv0 <user args> NULL
+   */
+#define MAX_ARG 10
+#define NUMBER(x) lsh_get_cstring(ssh_format("%ldi", (x)))
+  
+  argv = alloca(sizeof(char *) * (MAX_ARG + info->argc + 1));
+  i = 0;
+  argv[i++] = "lsh-execuv";
+  argv[i++] = "-u";
+  argv[i++] = NUMBER(user->super.uid);
+  argv[i++] = "-g";
+  argv[i++] = NUMBER(user->gid);
+  argv[i++] = "-n";
+  argv[i++] = lsh_get_cstring(user->super.name);
+  argv[i++] = "-i";
+  argv[i++] = "--";
+  shell_argv = argv + i;
+  
+  argv[i++] = argv0;
+
+  assert(i <= MAX_ARG);
+#undef MAX_ARG
+#undef NUMBER
+  for (j = 0; j<info->argc; j++)
+    argv[i++] = info->argv[j];
+  argv[i++] = NULL;
+  
+  debug("exec_shell: Argument list:\n");
+  for (i=0; argv[i]; i++)
+    debug("    '%z'\n", argv[i]);
+
+  /* NOTE: The execve prototype uses char * const argv, and similarly
+   * for envp, which seems broken. */
+  
+  /* Use lsh-execuv only if we need to change our uid. */
+  if (user->super.uid == getuid())
+    execve(lsh_get_cstring(user->shell), (char **) shell_argv, (char **) envp);
+  else
+    execve(PREFIX "/sbin/lsh-execuv", (char **) argv, (char **) envp);
+
+  werror("unix_user: exec failed (errno = %i): %z\n",
+	 errno, STRERROR(errno));
+  _exit(EXIT_FAILURE);
+}
+
+static struct lsh_process *
+do_spawn(struct lsh_user *u,
+	 struct spawn_info *info,
+	 struct exit_callback *c)
+{
+  CAST(unix_user, user, u);
+  /* Pipe used for syncronization. */
+  int sync[2];
+  pid_t child;
+
+  if (!lsh_make_pipe(sync))
+    {
+      werror("do_spawn: Failed to create syncronization pipe.\n");
+      return NULL;
+    }
+  
+  child = fork();
+  if (child < 0)
+    {
+      werror("fork failed: %z\n", STRERROR(errno));
+      close(sync[0]); close(sync[1]);
+#if 0
+      close(info->in[0]);  close(info->in[1]);
+      close(info->out[0]); close(info->out[1]);
+      close(info->err[0]); close(info->err[1]);
+#endif
+      return NULL;
+    }
+  else if (child)
+    {
+      /* Parent */
+      struct lsh_process *process;
+      char dummy;
+      int res;
+      
+      /* Close the child's fd:s (and don't care about close(-1) ) */
+      close(info->in[0]);
+      close(info->out[1]);
+      close(info->err[2]);
+
+      close(sync[1]);
+
+      /* On Solaris, reading the master side of the pty before the
+       * child has opened the slave side of it results in EINVAL. We
+       * can't have that, so we'll wait until the child has opened the
+       * tty, after which it should close its end of the
+       * syncronization pipe, and our read will return 0.
+       *
+       * We need the syncronizatino only if we're actually using a
+       * pty, but for simplicity, we do it every time. */
+      
+      do
+	res = read(sync[0], &dummy, 1);
+      while (res < 0 && errno == EINTR);
+
+      close(sync[0]);
+      
+      process = unix_process_setup(child, info->login, &user->super, &c,
+				   info->peer, info->pty->tty_name);
+      REAP(user->ctx->reaper, child, c);
+      return process;
+    }
+  else
+    { /* Child */
+      int tty = -1;
+      
+      if (!chdir_home(user))
+	_exit(EXIT_FAILURE);
+      
+#if WITH_PTY_SUPPORT
+      if (info->pty)
+	{
+	  debug("lshd: unix_user.c: Opening slave tty...\n");
+	  if ( (tty = pty_open_slave(info->pty)) < 0)
+	    {
+	      debug("lshd: unix_user.c: "
+		    "Opening slave tty... Failed!\n");
+	      werror("lshd: Can't open controlling tty for child!\n");
+	      _exit(EXIT_FAILURE);
+	    }
+	  else
+	    debug("lshd: unix_user.c: Opening slave tty... Ok.\n");
+	}
+#endif /* WITH_PTY_SUPPORT */
+      /* Now any tty processing is done, so notify our parent by
+       * closing the syncronization pipe. */
+      
+      close(sync[0]); close(sync[1]);
+
+#define DUP_FD_OR_TTY(src, dst) dup2((src) >= 0 ? (src) : tty, dst)
+
+      if (DUP_FD_OR_TTY(info->in[0], STDIN_FILENO) < 0)
+	{
+	  werror("Can't dup stdin!\n");
+	  _exit(EXIT_FAILURE);
+	}
+
+      if (DUP_FD_OR_TTY(info->out[1], STDOUT_FILENO) < 0)
+	{
+	  werror("Can't dup stdout!\n");
+	  _exit(EXIT_FAILURE);
+	}
+
+      if (!dup_error_stream())
+	{
+	  werror("unix_user.c: Failed to dup old stderr. Bye.\n");
+	  set_error_ignore();
+	}
+
+      if (DUP_FD_OR_TTY(info->err[1], STDERR_FILENO) < 0)
+	{
+	  werror("Can't dup stderr!\n");
+	  _exit(EXIT_FAILURE);
+	}
+#undef DUP_FD_OR_TTY
+      
+      /* Unconditionally close all the fd:s, no matter if some
+       * of them are -1. */
+      close(info->in[0]);
+      close(info->in[1]);
+      close(info->out[0]);
+      close(info->out[1]);
+      close(info->err[0]);
+      close(info->err[1]);
+      close(tty);
+      
+      exec_shell(user, info);
+      _exit(EXIT_FAILURE);
+    }
 }
 
 static void
@@ -969,7 +1255,7 @@ make_unix_user(struct lsh_string *name,
      (name unix_user_db)
      (super user_db)
      (vars
-       (reaper object reap)
+       (reaper object reaper)
 
        ; A program to use for verifying passwords.
        (pw_helper . "const char *")
@@ -1086,7 +1372,8 @@ do_lookup_user(struct user_db *s,
 	/* Override the passwd database */
 	shell = self->login_shell;
       else
-	shell = passwd->pw_shell;
+	/* Default login shell is /bin/sh */
+	shell = passwd->pw_shell ? passwd->pw_shell : "/bin/sh";
       
       return make_unix_user(free ? name : lsh_string_dup(name), 
 			    passwd->pw_uid, passwd->pw_gid,
@@ -1104,7 +1391,7 @@ do_lookup_user(struct user_db *s,
 }
 
 struct user_db *
-make_unix_user_db(struct reap *reaper,
+make_unix_user_db(struct reaper *reaper,
 		  const char *pw_helper, const char *login_shell,
 		  int allow_root)
 {
