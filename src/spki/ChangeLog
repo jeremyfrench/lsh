@@ -1,3 +1,32 @@
+2003-01-08  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* testsuite/lookup-acl-test.c (test_main): Added some tests for
+	spki_acl_by_subject_first and spki_acl_by_subject_next.
+
+	* testsuite/cdsa-reduce-test.c (filter_by_subject): Use
+	spki_parse_subject. 
+
+	* parse.c (spki_parse_principal): Parse just the contents of the
+	key or hash expression, not the containing subject or issuer
+	expression. 
+	(spki_parse_subject, spki_parse_issuer): New functions.
+	(spki_parse_acl_entry): Use spki_parse_subject.
+	(spki_parse_cert): Use spki_parse_subject and spki_parse_issuer.
+
+	* certificate.h (struct spki_principal): New field verifier, for
+	use by the application.
+
+	* certificate.c (spki_principal_add_key): Initialize verifier
+	field. 
+	(spki_principal_add_md5, spki_principal_add_sha1): Likewise.
+	(spki_5_tuple_by_subject): Moved function from reduce.c, and made
+	non-static. 
+	(spki_acl_by_subject_first): New function.
+	(spki_acl_by_subject_next): New function.
+
+	* reduce.c (spki_5_tuple_by_subject): Moved function to
+	certificate.c. 
+
 2003-01-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* tag.c (spki_tag_compile): For the unsupported tag type "range",
