@@ -50,6 +50,9 @@ make_channel_forward(struct lsh_fd *socket, uint32_t initial_window);
 void
 channel_forward_start_io(struct channel_forward *channel_forward);
 
+void
+channel_forward_start_io_read(struct channel_forward *channel);
+
 extern struct command start_io_command;
 #define START_IO (&start_io_command.super)
 
