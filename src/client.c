@@ -42,7 +42,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
-struct read_handler *make_client_read_line();
+struct read_handler *make_client_read_line(struct ssh_connection *c);
 struct callback *make_client_close_handler();
 
 static int client_initiate(struct fd_callback **c,
