@@ -161,6 +161,8 @@ do_kill_all(struct resource *s)
   CAST(concrete_resource_list, self, s);
   struct resource_node *n;
 
+  trace("do_kill_all: resource_list %xi\n", self);
+  
   for (n = self->q; n; )
     {
       CAST_SUBTYPE(resource, r, n->resource);
