@@ -35,6 +35,7 @@
 #include "format.h"
 #include "io.h"
 #include "keyexchange.h"
+#include "lsh_string.h"
 #include "parse.h"
 #include "ssh.h"
 #include "werror.h"
@@ -55,10 +56,11 @@ connection_handle_packet(struct ssh_connection *closure,
 			 struct lsh_string *packet)
 {
   uint8_t msg;
-
+  uint32_t length = lsh_string_length(packet);
+  
   assert(!closure->paused);
   
-  if (!packet->length)
+  if (!length)
     {
       werror("connection.c: Received empty packet!\n");
       PROTOCOL_ERROR(closure->e, "Received empty packet.");
@@ -66,7 +68,7 @@ connection_handle_packet(struct ssh_connection *closure,
       return;
     }
 
-  if (packet->length > closure->rec_max_packet)
+  if (length > closure->rec_max_packet)
     {
       werror("connection.c: Packet too large!\n");
       PROTOCOL_ERROR(closure->e, "Packet too large");
@@ -74,7 +76,7 @@ connection_handle_packet(struct ssh_connection *closure,
       return;
     }
     
-  msg = packet->data[0];
+  msg = lsh_string_data(packet)[0];
 
   debug("handle_connection: Received packet of type %i (%z)\n",
 	msg, packet_types[msg]);
@@ -193,12 +195,12 @@ DEFINE_PACKET_HANDLER(, connection_fail_handler, connection, packet UNUSED)
 DEFINE_PACKET_HANDLER(, connection_unimplemented_handler, connection, packet)
 {
   werror("Received packet of unimplemented type %i.\n",
-	 packet->data[0]);
+	 lsh_string_data(packet)[0]);
 
   connection_send(connection,
 	  ssh_format("%c%i",
 		     SSH_MSG_UNIMPLEMENTED,
-		     packet->sequence_number));
+		     lsh_string_sequence_number(packet)));
 }
 
 DEFINE_PACKET_HANDLER(, connection_forward_handler, connection, packet)
@@ -224,7 +226,7 @@ DEFINE_PACKET_HANDLER(, connection_disconnect_handler, connection, packet)
   static const struct exception disconnect_exception =
     STATIC_EXCEPTION(EXC_FINISH_IO, "Received disconnect message.");
     
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_DISCONNECT)
