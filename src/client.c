@@ -81,9 +81,15 @@ do_accept_service(struct packet_handler *c,
   
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_SERVICE_ACCEPT)
-      && parse_atom(&buffer, &name)
-      && parse_eod(&buffer)
-      && (name == closure->service))
+      && (
+#if DATAFELLOWS_WORKAROUNDS
+	  (connection->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE)
+#else
+	  0
+#endif
+	  || (parse_atom(&buffer, &name)
+	      && (name == closure->service)))
+      && parse_eod(&buffer))
     {
       lsh_string_free(packet);
       connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = connection->fail;
@@ -380,6 +386,9 @@ do_client_io(struct command *s UNUSED,
 	= session->err->super.close_callback = make_channel_close(channel);
   
       session->in->super.read = make_channel_read_data(channel);
+
+      /* FIXME: Is this really correct? */
+      /* session->in->super.want_read = 1;  */
       channel->send = do_send;
 
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
