@@ -316,6 +316,13 @@ Forwarding of arbitrary @acronym{TCP/IP} connections is provided. This
 is useful for tunneling otherwise insecure protocols, like telnet and
 pop, through an encrypted @command{lsh} connection.
 
+@command{lsh} also features a @acronym{SOCKS}-proxy which also
+provides tunneling of @acronym{TCP/IP} connections, but can be easily
+used, e.g.  from within popular web browsers like Mozilla and Firefox
+for tunneling web traffic. There are also programs like
+@command{tsocks} that performs transparent redirection of network
+access through a @acronym{SOCKS} proxy.
+
 Convenient tunneling of @acronym{X} was one of the most impressive
 features of the original @command{ssh} programs. Both @command{lsh} and
 @command{lshd} support @acronym{X}-forwarding, although @command{lshg}
@@ -942,6 +949,21 @@ Conversion of keys the other way is also possible, by using the
 @command{lsh-export-key} program. It reads a public key in
 @command{lsh}'s @acronym{SPKI} format on stdin, and writes the key in
 @command{ssh2}/OpenSSH format on stdout.
+
+If you want to use your @command{lsh} key to log in to another system
+running and OpenSSH server, you can do like this:
+ 
+@example
+lsh-export-key --openssh < .lsh/identity.pub >sshkey
+
+@end example
+
+And on the other machine, after having somehow copied the sshkey
+file, just add it to the end of your @file{authorized_keys} file:
+
+@example
+cat sshkey >> ~/.ssh/authorized_keys
+@end example
 
 There are currently no tools for converting private keys.
 

@@ -1,5 +1,8 @@
 2004-11-19  Pontus Freyhult  <pont@soua.net>
 
+	* doc/lsh.texinfo (Converting keys): Added example for sshd host.
+	(Features): Added bit about SOCKS proxy feature.
+
 	* src/lshg.c (main_options): Added missing dot in -G option help.
 
 	* doc/lsh.1: Updated for lsh 2.0.
