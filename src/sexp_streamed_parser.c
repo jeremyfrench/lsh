@@ -697,10 +697,10 @@ do_parse_base64(struct read_handler **s,
       return 0;
     }
 
-  for (done = 0; done < available; done++)
+  for (done = 0; done < available; )
     {
       int digit;
-      switch ( (digit = base64_decode(&self->state, data[done])) )
+      switch ( (digit = base64_decode(&self->state, data[done++])) )
 	{
 	case BASE64_INVALID:
 	  SEXP_ERROR(self->super.e, "Invalid base64 data.");
