@@ -390,8 +390,10 @@ static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
 	  pty->super.alive, pty->master, pty->slave);
   debug("\n");
   
-  if (pty && pty->super.alive)
+  if (pty) 
     {
+      assert(pty->super.alive);
+      
       debug("make_pty: Using allocated pty.\n");
       in[0] = pty->slave;
       in[1] = pty->master;
@@ -881,7 +883,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
 
           if (tty_getattr(pty->slave, &ios))
             {
-	      pty->super.alive = 1;
+	      assert(pty->super.alive);
               session->pty = pty;
 
 	      /* Don't set TERM if the value is empty. */
