@@ -405,26 +405,42 @@ do_lookup_user(struct user_db *s,
 	  if (!(shadowpwd = getspnam(name->data)))
 	    goto fail;
 
-	  /* FIXME: I'm assuming that zero means there's no expiry
-	   * date. */
-	  if (shadowpwd->sp_expire && (now > shadowpwd->sp_expire))
+          /* sp_expire == -1 means there is no account expiration date.
+           * although chage(1) claims that sp_expire == 0 does this */
+	  if ( (shadowpwd->sp_expire >= 0)
+	       && (now > shadowpwd->sp_expire))
 	    {
-	      werror("Access denied for user '%pS', account expired.\n", name);
+	      werror("Access denied for user '%pS', account expired.\n", name); 
 	      goto fail;
 	    }
 	  		     
-	  /* FIXME: I'm assuming that zero means that there is no
-	   * restriction on password age. */
-	  if (shadowpwd->sp_max &&
-	      (now > (shadowpwd->sp_lstchg +  shadowpwd->sp_max)))
-	    {
+          /* sp_inact == -1 means expired password doesn't disable account.
+	   *
+	   * During the time
+	   *
+	   *   sp_lstchg + sp_max < now < sp_lstchg + sp_max + sp_inact
+	   *
+	   * the user is allowed to log in only by changing her
+	   * password. As lsh doesn't support password change, this
+	   * means that access is denied. */
+
+          if ( (shadowpwd->sp_inact >= 0) &&
+	       (now > (shadowpwd->sp_lstchg + shadowpwd->sp_max)))
+            {
 	      werror("Access denied for user '%pS', password too old.\n", name);
 	      goto fail;
 	    }
 
 	  /* FIXME: We could look at sp_warn and figure out if it is
-	   * appropriate to send an SSH_MSG_USERAUTH_PASSWD_CHANGEREQ
-	   * message. */
+	   * appropriate to send a warning about passwords about to
+	   * expire, and possibly also a
+	   * SSH_MSG_USERAUTH_PASSWD_CHANGEREQ message.
+	   *
+	   * A warning is appropriate when
+	   *
+	   *   sp_lstchg + sp_max - sp_warn < now < sp_lstchg + sp_max
+	   *
+	   */
 
 	  crypted = shadowpwd->sp_pwdp;
 	}
