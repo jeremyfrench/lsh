@@ -111,6 +111,8 @@ struct lsh_fd;
        
        (want_read simple int)
        ; Called if poll indicates that data can be read. 
+       ;;(read method void)
+			    
        (read object io_read_callback)
 
        (want_write simple int)
@@ -132,9 +134,10 @@ struct lsh_fd;
      (super lsh_fd)
      (vars
        ; Reading 
+       ;;(read_buffer object read_buffer)
        ;; (handler object read_handler)
        ; Writing 
-       (buffer object write_buffer)))
+       (write_buffer object write_buffer)))
 */
 
 /* Used for read handlers like read_line and read_packet that
