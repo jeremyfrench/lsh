@@ -135,6 +135,7 @@ do_rsa_verify(struct verifier *v,
       /* It doesn't matter here which flavour of SPKI is used. */
     case ATOM_SPKI_SIGN_RSA:
     case ATOM_SPKI_SIGN_DSS:
+    case ATOM_SPKI:
       {
 	struct simple_buffer buffer;
 	struct sexp *e;
@@ -160,32 +161,6 @@ do_rsa_verify(struct verifier *v,
  fail:
   mpz_clear(s);
   
-  return res;
-}
-
-/* FIXME: Add hash algorithm to signature value? */
-static int
-do_rsa_verify_spki(struct verifier *v,
-		   UINT32 length,
-		   const UINT8 *msg,
-		   struct sexp *e)
-{
-  CAST(rsa_verifier, self, v);
-  struct sha1_ctx hash;
-  
-  mpz_t s;
-  int res;
-  
-  mpz_init(s);
-
-  sha1_init(&hash);
-  sha1_update(&hash, length, msg);
-  
-  res = (decode_rsa_sig_val(e, s, self->key.size)
-	 && rsa_sha1_verify(&self->key, &hash, s));
-  
-  mpz_clear(s);
-
   return res;
 }
 
@@ -236,7 +211,6 @@ init_rsa_verifier(struct rsa_verifier *self)
   rsa_init_public_key(&self->key);
   
   self->super.verify = do_rsa_verify;
-  self->super.verify_spki = do_rsa_verify_spki;
   self->super.public_key = do_rsa_public_key;
   self->super.public_spki_key = do_rsa_public_spki_key;
 }
@@ -320,7 +294,7 @@ do_rsa_sign(struct signer *s,
       /* It doesn't matter here which flavour of SPKI is used. */
     case ATOM_SPKI_SIGN_RSA:
     case ATOM_SPKI_SIGN_DSS:
-
+    case ATOM_SPKI:
       res = sexp_format(encode_rsa_sig_val(signature), SEXP_CANONICAL, 0);
       break;
     default:
@@ -328,31 +302,6 @@ do_rsa_sign(struct signer *s,
     }
   mpz_clear(signature);
   return res;
-}
-
-static struct sexp *
-do_rsa_sign_spki(struct signer *s,
-		 /* struct sexp *hash, struct sexp *principal, */
-		 UINT32 msg_length,
-		 const UINT8 *msg)
-{
-  CAST(rsa_signer, self, s);
-  struct sha1_ctx hash;
-  
-  mpz_t x;
-  struct sexp *signature;
-  
-  mpz_init(x);
-
-  sha1_init(&hash);
-  sha1_update(&hash, msg_length, msg);
-
-  rsa_sha1_sign(&self->key, &hash, x);
-  
-  signature = encode_rsa_sig_val(x);
-  
-  mpz_clear(x);
-  return signature;
 }
 
 static struct verifier *
@@ -401,7 +350,6 @@ make_rsa_signer(struct signature_algorithm *s UNUSED,
 	}
 
       res->super.sign = do_rsa_sign;
-      res->super.sign_spki = do_rsa_sign_spki;
       res->super.get_verifier = do_rsa_get_verifier;
       
       return &res->super;
