@@ -1,3 +1,10 @@
+2003-01-28  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* parse.h (struct spki_hash_value): New struct.
+
+	* parse.c (spki_parse_hash): New function.
+	(spki_parse_principal): Use it.
+
 2003-01-27  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* spki-types.in: New keywords rsa-pkcs1-md5, rsa-pkcs1-sha1,
