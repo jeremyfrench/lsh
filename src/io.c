@@ -161,78 +161,40 @@ int io_iter(struct io_backend *b)
 	    p->super.alive = 0;
 	  }
     }
-      
+
+  /* Prepare fds. */
   {
     struct lsh_fd *fd;
-    int need_close;
-    
-    /* Prepare fd:s. This phase calls the prepare-methods, also closes
-     * and unlinks any fd:s that should be closed, and also counts how
-     * many fd:s there are. */
 
     for (fd = b->files; fd; fd = fd->next)
-      {
-	if (fd->super.alive && fd->prepare)
-	  FD_PREPARE(fd);
-      }
+      /* NOTE: The prepare callback is allowed to close files. */
+      if (fd->super.alive && fd->prepare)
+	FD_PREPARE(fd);
+  }
+
+  /* This phase unlinks any closed fd:s, and also counts how many
+   * fd:s there are. */
+  {
+    struct lsh_fd *fd;
+    struct lsh_fd **fd_p;
+    nfds = 0;
     
-    /* Note that calling a close callback might cause other files to
-     * be closed as well, so we need a double loop.
-     *
-     * FIXME: How can we improve this? We could keep a stack of closed
-     * files, but that will require backpointers from the fd:s to the
-     * backend (so that close_fd can find the top of the stack). */
-
-    do
+    for(fd_p = &b->files; (fd = *fd_p); )
       {
-	struct lsh_fd **fd_p;
-	need_close = 0;
-	nfds = 0;
-	
-	for(fd_p = &b->files; (fd = *fd_p); )
+	if (!fd->super.alive)
+	  /* Unlink this fd */
+	  *fd_p = fd->next;
+	    
+	else
 	  {
-	    if (!fd->super.alive)
-	      {
-		if (fd->fd < 0)
-		  /* Unlink the file object, but don't close any
-		   * underlying file. */
-		  ;
-		else
-		  {
-		    /* Used by write fd:s to make sure that writing to its
-		     * buffer fails. */
-		    if (fd->write_close)
-		      FD_WRITE_CLOSE(fd);
-		
-		    if (fd->close_callback)
-		      {
-			LSH_CALLBACK(fd->close_callback);
-			need_close = 1;
-		      }
-		    trace("io.c: Closing fd %i: %z\n", fd->fd, fd->label);
-		
-		    if (close(fd->fd) < 0)
-		      {
-			werror("io.c: close failed, (errno = %i): %z\n",
-			       errno, STRERROR(errno));
-			EXCEPTION_RAISE(fd->e,
-					make_io_exception(EXC_IO_CLOSE, fd,
-							  errno, NULL));
-		      }
-		  }
-		/* Unlink this fd */
-		*fd_p = fd->next;
-		continue;
-	      }
-
 	    if (fd->want_read || fd->want_write)
 	      nfds++;
 
 	    fd_p = &fd->next;
 	  }
-      } while (need_close);
+      }
   }
-
+    
   if (!nfds)
     /* Nothing more to do.
      *
@@ -449,30 +411,8 @@ do_kill_io_backend(struct resource *s)
   
       for (fd = backend->files, backend->files = NULL;
 	   fd; fd = fd->next)
-	{
-	  close_fd(fd);
-      
-	  if (fd->fd < 0)
-	    /* Unlink silently. */
-	    ;
-	  else
-	    {
-	      if (fd->write_close)
-		FD_WRITE_CLOSE(fd);
-	  
-	      if (fd->close_callback)
-		LSH_CALLBACK(fd->close_callback);
-	  
-	      if (close(fd->fd) < 0)
-		{
-		  werror("io.c: close failed, (errno = %i): %z\n",
-			 errno, STRERROR(errno));
-		  EXCEPTION_RAISE(fd->e,
-				  make_io_exception(EXC_IO_CLOSE, fd,
-						    errno, NULL));
-		}
-	    }
-	}
+	close_fd(fd);
+
       /* Check that no callback has opened new files. */
       assert(!backend->files);
 
@@ -708,8 +648,8 @@ do_consuming_read(struct io_callback *c,
 	  lsh_string_free(s);
 	eof:
 	  /* Close the fd, unless it has a write callback. */
-	  close_fd_read(fd);
 	  A_WRITE(self->consumer, NULL);
+	  close_fd_read(fd);
 	}
     }
 }
@@ -1804,9 +1744,37 @@ io_read_file(struct io_backend *backend,
 
 void close_fd(struct lsh_fd *fd)
 {
-  trace("io.c: Marking fd %i: %z, for closing.\n",
+  trace("io.c: Closing fd %i: %z.\n",
 	fd->fd, fd->label);
-  fd->super.alive = 0;
+
+  if (fd->super.alive)
+    {
+      fd->super.alive = 0;
+  
+      if (fd->fd < 0)
+	/* Unlink the file object, but don't close any
+	 * underlying file. */
+	return;
+  
+      /* Used by write fd:s to make sure that writing to its
+       * buffer fails. */
+      if (fd->write_close)
+	FD_WRITE_CLOSE(fd);
+  
+      if (fd->close_callback)
+	LSH_CALLBACK(fd->close_callback);
+  
+      if (close(fd->fd) < 0)
+	{
+	  werror("io.c: close failed, (errno = %i): %z\n",
+		 errno, STRERROR(errno));
+	  EXCEPTION_RAISE(fd->e,
+			  make_io_exception(EXC_IO_CLOSE, fd,
+					    errno, NULL));
+	}
+    }
+  else
+    werror("Closed already.\n");
 }
 
 void close_fd_nicely(struct lsh_fd *fd)
