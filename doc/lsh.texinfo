@@ -7,11 +7,15 @@
 
 @set UPDATED-FOR 0.9.14
 
+@c Latin-1 doesn't work with tex output.
+@c Also lookout for é characters.
+
+@set AUTHOR Niels Möller
 @ifinfo
 Draft manual for LSH. This manual corresponds to @command{lsh} version
 @value{UPDATED-FOR}. 
 
-Copyright 2000 Niels Möller.
+Copyright 2000 @value{AUTHOR}
 
 Permission is granted to make and distribute verbatim
 copies of this manual provided the copyright notice and
@@ -49,12 +53,12 @@ translation approved by the Free Software Foundation.
 @title LSH Manual
 @subtitle For @command{lsh} version @value{UPDATED-FOR}
 
-@author Niels Möller
+@author @value{AUTHOR}
 
 @c The following two commands start the copyright page.
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 2000 Niels Möller.
+Copyright @copyright{} 2000 @value{AUTHOR}
 
 Permission is granted to make and distribute verbatim
 copies of this manual provided the copyright notice and
@@ -77,11 +81,12 @@ translation approved by the Free Software Foundation.
 
 @end titlepage
 
+@ifnottex
 @node     Top, Introduction, (dir), (dir)
 @comment  node-name,  next,  previous,  up
 @top
 
-This document describes @command{lsh} and related programs. @command{lsh} suit
+This document describes @command{lsh} and related programs. The @command{lsh} suit
 of programs is intended as a free replacement for the @command{ssh} suit of
 programs. In turn, @command{ssh} was intended as a secure replacement for
 the @command{rsh} and @command{rlogin} programs for remote login over the
@@ -125,6 +130,7 @@ Getting started
 * public-key::                  Using public-keys
 * srp::                         Using SRP authentication
 * sexp::                        Examining keys and other S-exp files.
+* Converting keys::             
 
 Invoking @command{lsh}
 
@@ -136,6 +142,8 @@ Invoking @command{lsh}
 
 @end detailmenu
 @end menu
+
+@end ifnottex
 
 @node Introduction, Installation, Top, Top
 @comment  node-name,  next,  previous,  up
@@ -153,7 +161,7 @@ This means anybody who is trying to eavesdrop or disturb your private
 communication. This usage is technical, and it does not imply that the
 enemy is somehow morally inferior to you: The enemy may be some awful
 criminals trying to eavesdrop on you, or it may be the police trying to
-eavesdrop the same criminals.
+eavesdrop on the same criminals.
 
 The enemy can be a criminal, or a competitor, or your boss who's trying
 to find out how much you tell collegues at competing firms. It may be
@@ -179,8 +187,8 @@ When logging in to some other machine via the Internet, either in the
 same building or a few continents away, there are several things that
 may be under enemy attack.
 
-@table @asis
-@item @dfn{Local attacks}
+@table @dfn
+@item Local attacks
 The enemy controls your local environment. He or her may be looking over
 your shoulder. Your local machine might be cracked. Or there may be some
 device planted inside your keyboard transmitting everything you type to
@@ -188,14 +196,14 @@ the attacker. About the same problems occur if the attacker has taken
 control over your target machine, i.e. the remote machine you have
 logged in to.
 
-@item @dfn{Denial of service}
+@item Denial-of-service attacks
 The enemy has cut your network cable, effectively stopping your
 communication. Even without doing physical damage, the enemy may be able
 to flood and overload computers or network equipment. Or disrupt network
 traffic by sending fake packets to hangup your @acronym{TCP/IP}
 connections.
 
-@item @dfn{Passive eavesdropping}
+@item Passive eavesdropping
 The enemy may be able to listen to your communication somewhere along
 its path. With the global Internet, it's difficult to predict who might
 be able to listen. Internet traffic between buildings just a few hundred
@@ -225,7 +233,7 @@ although it is more difficult to get hold on the replies to the faked
 packets. But even without any replies, this can cause serious
 problems. 
 
-@item @dfn{Man-in-the-middle} attack
+@item Man-in-the-middle attack
 In this attack, the enemy sits between you and the target. When
 communicating with you, he pretends to be the target. When communicating
 with the target, he pretends to be you. He also passes all information
@@ -245,24 +253,24 @@ Internet café and want to connect to some of the machines at home or at
 work. If the enemy has been able to compromize your friend's or the
 café's equipment, you may well be in trouble.
 
-Protection from denial of service attacks is also a very difficult
-problem, and @dfn{lsh} makes no attempt to protect you from that.
+Protection from denial-of-service attacks is also a very difficult
+problem, and @command{lsh} makes no attempt to protect you from that.
 
-Instead, the aim of @dfn{lsh}, and most serious tools for cryptographic
+Instead, the aim of @command{lsh}, and most serious tools for cryptographic
 protection of communications across the net, is to isolate the
 vulnerabilities to the communication endpoints. If you know that the
 endpoints are safe, the enemy should not be able to compromize your
-privacy or communications. Except for denial of service attacks (which
+privacy or communications. Except for denial-of-service attacks (which
 at least can't be performed without you noticing it).
 
-First of all, @dfn{lsh} provides protection against passive
+First of all, @command{lsh} provides protection against passive
 eavesdropping. In addition, if you take the appropriate steps to make
-sure that hostkeys are properly authenticated, @dfn{lsh} also protects
+sure that hostkeys are properly authenticated, @command{lsh} also protects
 against man-in-the-middle attacks and in particular against attacks on
 the name resolution. In short, you need only trust the security at the
 end points: Even if the enemy controls all other network equipment, name
 resolution and routing infrastructure, etc, he can't do anything beyond
-the denial of service attack.
+the denial-of-service attack.
 
 And at last, remember that there is no such thing as absolute security.
 You have to estimate the value of that which you are protecting, and
@@ -272,7 +280,7 @@ the effort to break them.
 
 @node Features, Related techniques, Threats, Introduction
 @comment  node-name,  next,  previous,  up
-@section Other convenient features
+@section Features
 
 @command{lsh} does not only provide more secure replacements for
 @command{telnet}, @command{rsh} and @command{rlogin}, it also provides some other
@@ -284,22 +292,22 @@ extend it, without messing with the core security functionality.
 @command{lsh} can be configured to allow login based on a personal key-pair
 consisting of a private and a public key, so that you can execute remote
 commands without typing your password every time. You can also use
-Thomas Wu's Secure Remote Password Protocol (SRP). Kerberos support is
+Thomas Wu's Secure Remote Password Protocol (@acronym{SRP}). Kerberos support is
 on the wish list but not yet supported (@pxref{Kerberos}).
 
 The public-key authentication methods should also be extended to support
-Simple Public Key Infrastructure (SPKI) certificates, including some
+Simple Public Key Infrastructure (@acronym{SPKI}) certificates, including some
 mechanism to delegate restricted logins.
 
 Forwarding of arbitrary @acronym{TCP/IP} connections is provided. This
 is useful for tunneling otherwise insecure protocols, like telnet and
 pop, through an encrypted @command{lsh} connection.
 
-Convenient tunneling of X is one of the most impressive features of the
+Convenient tunneling of @acronym{X} is one of the most impressive features of the
 original @command{ssh} programs. @command{lsh} doesn't do this yet. Other kind
 of tunneling that may turn out to be useful include authentication (i.e.
 @command{ssh-agent}), general forwarding of @acronym{UDP}, and why not also
-general ip-tunneling.
+general @acronym{IP}-tunneling.
 
 
 @node Related techniques,  , Features, Introduction
@@ -310,7 +318,7 @@ This sections describes some other programs and techniques related to
 @command{lsh}. The ssh family of programs use mostly the same kind of
 security as @command{lsh}. Kerberos and @acronym{IPSEC} operate quite
 differently, in particular when it comes to protection against
-Man-in-the-middle attacks.
+man-in-the-middle attacks.
 
 @menu
 * ssh1::                        SSH version 1
@@ -321,43 +329,42 @@ Man-in-the-middle attacks.
 
 @node ssh1, ssh2, Related techniques, Related techniques
 @comment  node-name,  next,  previous,  up
-@subsection ssh-1.x
+@subsection @code{ssh-1.x}
 
-The first of the Secure shell programs was Tatu Ylonen's @command{ssh}. The
-latest of the version 1 series is @code{ssh-1.27} which speaks version
-1.5 of the protocol. The ``free'' version of @code{ssh-1.27} does not allow
-commercial use without additional licensing, which makes @code{ssh-1.27}
-non-free software according to the Debian's Free Software Guidelines and
-the Open Source Definition. 
+The first of the Secure shell programs was Tatu Ylonen's @command{ssh}.
+The latest of the version 1 series is @code{ssh-1.27} which speaks
+version 1.5 of the protocol. The ``free'' version of @code{ssh-1.27}
+does not allow commercial use without additional licensing, which makes
+@code{ssh-1.27} non-free software according to Debian's Free Software
+Guidelines and the Open Source Definition.
 
 The version 1 protocol has some minor weaknesses, in particular, all
 support for using stream ciphers was disabled by default a few versions
 back, for security reasons.
 
-There also exists free implementations of ssh-1, for both Unix and
-Windows. @command{ossh} and later OpenSSH are derived from earlier version
-av Tatu Ylonen's @command{ssh}, and are free software.
+There also exists free implementations of @code{ssh-1}, for both Unix
+and Windows. @command{ossh} and later OpenSSH are derived from earlier
+version av Tatu Ylonen's @command{ssh}, and are free software.
 
 Until @command{lsh} becomes stable and well tested, I would recommend using
-some implementation of the ssh-1 protocol.
+some implementation of the @code{ssh-1} protocol.
 
 @node ssh2, Kerberos, ssh1, Related techniques
 @comment  node-name,  next,  previous,  up
-@subsection ssh-2.x
+@subsection @code{ssh-2.x}
 
 @command{ssh2} implements the next generation of the Secure Shell
 protocol, the development of which is supervised by the @acronym{IETF}
-secsh Working Group, although that working groups doesn't seem to be
-very active now. @command{lsh} implements the required subset of this
-protocol. It is intended to be compatible with the @command{ssh2} series
-of programs distributed by Datafellows.
+secsh Working Group. @command{lsh} implements the required subset of
+this protocol. It is intended to be compatible with the @command{ssh2}
+series of programs distributed by Datafellows.
 
 However, the existing versions of @command{ssh2} gets some details of the
 protocol wrong (probably because it predates the protocol
 specification), so there is some amount of bug-compatibility required.
 
-Interoperability between independenly developed implementations is one
-necessary condition for the ssh-2 protocol to become a Proposed
+Interoperability between independently developed implementations is one
+necessary condition for the @code{ssh-2} protocol to become a Proposed
 Standard.
 
 The license for Datafellow's @command{ssh2} programs is similar to that
@@ -365,7 +372,7 @@ for recent versions of @command{ssh1}, but with a narrower definition of
 ``non-commercial use''.
 
 Besides @command{lsh} there are few free implementations of the
-ssh-2 protocols, but since May 2000 it is supported also by
+@code{ssh-2} protocols, but since May 2000 it is supported also by
 OpenSSH.
 
 
@@ -384,7 +391,7 @@ public-key technology.
 
 Usually, Kerberos support is compiled into applications such as telnet,
 ftp and X-clients. The ssh family of programs, on the other hand, tries
-to do all needed magic, for instance to forward X securely, and then
+to do all needed magic, for instance to forward @acronym{X} securely, and then
 provides general @acronym{TCP/IP} forwarding as a kitchen sink.
 
 I believe Kerberos' and lsh's protection against passive eavesdropping
@@ -401,10 +408,10 @@ some other program in the ssh family is likely easier than to get the
 operators to spend time and attention. So @command{lsh} should be easier to
 use in an anarchistic grass-roots environment.
 
-Another perspective is to combine ssh-features like X and @acronym{TCP/IP}
-forwarding with authentication based on Kerberos. Such an arrangement
-may provide the best of two worlds for those who happen to have an
-account at a suitable ticket-granting server.
+Another perspective is to combine ssh-features like @acronym{X} and
+@acronym{TCP/IP} forwarding with authentication based on Kerberos. Such
+an arrangement may provide the best of two worlds for those who happen
+to have an account at a suitable ticket-granting server.
 
 @node ipsec,  , Kerberos, Related techniques
 @comment  node-name,  next,  previous,  up
@@ -412,7 +419,7 @@ account at a suitable ticket-granting server.
 
 @acronym{IPSEC} is a set of protocols for protecting general ip-traffic.
 It is developed by another @acronym{IETF} working group, and is also a
-required part of IP version 6.
+required part of @acronym{IP} version 6.
 
 Again, the main difference between @acronym{IPSEC} and Kerberos and ssh
 is the set of machines that have to be secure and the keys that have to
@@ -431,18 +438,19 @@ hangup of a @acronym{TCP} connection considerably more difficult.
 So it makes sense to use both @acronym{IPSEC} and some application
 level cryptographic protocol.
 
-Also note that it is possible to use the @dfn{Point-to-Point} PPP
-protocol to tunnel arbitrary ip traffic accross an ssh connection. This
-arrangement provides some of the functionality of @acronym{IPSEC}, and
-is some times referred to as ``a poor man's Virtual Private Network''.
+Also note that it is possible to use the @dfn{Point-to-Point Protocol}
+(@acronym{PPP}) to tunnel arbitrary @acronym{IP} traffic accross an ssh
+connection. This arrangement provides some of the functionality of
+@acronym{IPSEC}, and is sometimes referred to as ``a poor man's Virtual
+Private Network''.
 
 @node Installation, Getting started, Introduction, Top
 @comment  node-name,  next,  previous,  up
 @chapter Installation
 
-You install @command{lsh} with the usual @samp{./configure && make &&
+You install @command{lsh} with the usual @code{./configure && make &&
 make install}. For a full listing of the options you can give to
-@command{configure}, use @samp{./configure --help}. For example, use
+@command{configure}, use @code{./configure --help}. For example, use
 @option{--without-pty} to disable pty-support.
 
 The most commonly used option is @option{--prefix}, which tells
@@ -451,16 +459,19 @@ configure where lsh should be installed. Default prefix is
 @file{$prefix/sbin}, all other programs and scripts are installed in
 @file{$prefix/bin}. 
 
-The configure script tries to figure out of the linker needs any special
+The configure script tries to figure out if the linker needs any special
 flags specifying where to find dynamically linked libraries at run time
 (one case where this matters is if you have a dynamic libz.so installed
 in a non -standard place). Usually, you can use
 
-@samp{./configure --with-lib-path=/opt/lib:/other/place}
+@example
+./configure --with-lib-path=/opt/lib:/other/place
+@end example
 
+@noindent
 to specify extra library directories, and the configure script should do
 the right thing. If it doesn't work, or you believe that you know your
-system better than @command{configure}, just set LDFLAGS and/or
+system better than @command{./configure}, just set LDFLAGS and/or
 LD_LIBRARY_PATH to the right values instead.
 
 
@@ -478,6 +489,7 @@ possibilities.
 * public-key::                  Using public-keys
 * srp::                         Using SRP authentication
 * sexp::                        Examining keys and other S-exp files.
+* Converting keys::             
 @end menu
 
 @node lsh basics, tcpip forwarding, Getting started, Getting started
@@ -487,25 +499,31 @@ possibilities.
 @command{lsh} is the program you use for connection to a remote machine. A
 few examples are:
 
-@samp{lsh sara.lysator.liu.se}
+@example
+lsh sara.lysator.liu.se
+@end example
 
+@noindent
 Connects to @samp{sara.lysator.liu.se} and starts an interactive shell.
 In this example, and in the rest of the examples in this section, lsh
 will ask for your password, unless you have public-key user
 authentication set up.
 
 The first time you try to connect between two machines, @command{lsh}
-typically complains about about an ``unknown host key''. This is because
-it has no reason to believe that it was the right machine that answered,
+typically complains about an ``unknown host key''. This is because it
+has no reason to believe that it was the right machine that answered,
 and not a machine controlled by the enemy (@pxref{Threats}). The default
 behaviour is to never ever accept a server that is not properly
-authenticated. And a machine is considered authentic if it follows the
+authenticated. A machine is considered authentic if it follows the
 protocol and has its public hostkey listed in @file{~/.lsh/known_hosts}.
 
 To make lsh less paranoid, use
 
-@samp{lsh --sloppy-host-authentication sara.lysator.liu.se}
+@example
+lsh --sloppy-host-authentication sara.lysator.liu.se
+@end example
 
+@noindent
 Then @command{lsh} will display a @dfn{fingerprint} of the host key of the
 remote machine, and ask you if it is correct. If so, the machine is
 considered authentic and its key is appended to the file
@@ -514,25 +532,37 @@ considered authentic and its key is appended to the file
 
 You can even use
 
-@samp{lsh --sloppy-host-authentication --capture-to ~/.lsh/known_hosts}
+@example
+lsh --sloppy-host-authentication --capture-to ~/.lsh/known_hosts
+@end example
 
+@noindent
 to get @command{lsh} to behave more like the traditional @command{ssh} program.
 
 You can create fingerprints for the hostkeys you need regularly, and
 keep with you (@pxref{sexp}).
 
-@samp{lsh -l omar sara.lysator.liu.se}
+@example
+lsh -l omar sara.lysator.liu.se
+@end example
 
+@noindent
 Connects, like above, but tries to log in as the user ``omar''.
 
-@samp{lsh sara.lysator.liu.se tar cf - some/dir | (cd /target/dir && tar -xf -)}
+@example
+lsh sara.lysator.liu.se tar cf - some/dir | (cd /target/dir && tar -xf -)
+@end example
 
 Copies a directory from the remote machine, by executing one remote and
 one local @command{tar} process and piping them together.
 
-@samp{CVS_RSH=lsh cvs -d sara.lysator.liu.se:/lysator/cvsroot co lsh}
+@example
+CVS_RSH=lsh cvs -d sara.lysator.liu.se:/lysator/cvsroot co lsh
+@end example
 
-Checks out the @command{lsh} source code from cvs.
+@noindent
+Checks out the @command{lsh} source code from the @acronym{CVS}
+repository.
 
 
 @node  tcpip forwarding, lshd basics, lsh basics, Getting started
@@ -545,8 +575,11 @@ connection. There are two flavors: ``local'' and ``remote'' forwarding.
 
 An example of local forwarding is
 
-@samp{lsh -L 4000:kom.lysator.liu.se:4894 sara.lysator.liu.se}
+@example
+lsh -L 4000:kom.lysator.liu.se:4894 sara.lysator.liu.se
+@end example
 
+@noindent
 This makes @command{lsh} listen on port 4000 on the @emph{local} machine. When
 someone connects, @command{lsh} asks the server to open a connection from
 the @emph{remote} machine (i.e. @samp{sara}) to port 4894 on another machine
@@ -579,11 +612,12 @@ example from @samp{sara} to @samp{kom}.
 
 @end enumerate
 
-Only the middle part is protected by @command{lsh}, the first and the last
-part are sent @emph{in the clear}. So forwarding doesn't offer much
-protection unless the tunnel endpoint and the ultimate target machine
-are close to eachother. They should usually be either the same machine,
-or two machines connected by a local network that is trusted.
+Only the middle part is protected by @command{lsh}: all data flowing
+through the tunnel is sent across the first and last part @emph{in the
+clear}. So forwarding doesn't offer much protection unless the tunnel
+endpoint and the ultimate target machine are close to eachother. They
+should usually be either the same machine, or two machines connected by
+a local network that is trusted.
 
 @item
 Port forwarding is very useful for traversing firewalls. Of course, you
@@ -592,18 +626,21 @@ tools like HTTPTunnel for that. But @command{lsh} helps you get out through
 the firewall in a secure way.
 
 @item
-Prt forwarding is done in addition to anything else @command{lsh} is doing.
-In the example above, a tunnel is set up, but @command{lsh} will also start
-an interactive shell for you. Just like the @option{-L} was not present.
-If this is not what you want, the @option{-N} is for you
-(@pxref{Invoking lsh})
+Port forwarding is done in addition to anything else @command{lsh} is
+doing. In the example above, a tunnel is set up, but @command{lsh} will
+also start an interactive shell for you. Just like the @option{-L}
+option was not present. If this is not what you want, the @option{-N}
+option is for you (@pxref{Invoking lsh})
 @end itemize
 
 Remote forwarding is similar, but asks the @emph{remote} machine to
 listen on a port. An example of remote forwarding is
 
-@samp{lsh -g -R 8080:localhost:80 sara.lysator.liu.se}
+@example
+lsh -g -R 8080:localhost:80 sara.lysator.liu.se
+@end example
 
+@noindent
 This ask the remote machine to listen on port 8080 (note that you are
 probably not authorized to listen on port 80). Whenever someone
 connects, the connection is tunnelled to your local machine, and
@@ -620,21 +657,26 @@ on the same command line.
 
 @node lshd basics, public-key, tcpip forwarding, Getting started
 @comment  node-name,  next,  previous,  up
-@section lshd basics
+@section @command{lshd} basics
 There are no global configuration files for @command{lshd}; all
-configuration is done with command line switches @xref{Invoking lshd}.
+configuration is done with command line options (@pxref{Invoking lshd}).
 
 To run @command{lshd}, you must first create a hostkey, usually stored in
 @file{/etc/lsh_host_key}. To do this, run
 
-@samp{lsh_keygen | lsh_writekey -o /etc/lsh_host_key}
+@example
+lsh_keygen | lsh_writekey -o /etc/lsh_host_key
+@end example
 
+@noindent
 This will also create a file @file{/etc/lsh_host_key.pub},
 containing the corresponding public key. 
 
 A typical command line for starting lshd in daemon mode is simply
 
-@samp{lshd --daemonic}
+@example
+lshd --daemonic
+@end example
 
 You can find init script for @command{lshd} tailored for Debian's and
 RedHat's GNU/Linux systems in the @file{contrib} directory. 
@@ -654,46 +696,54 @@ to log in.
 
 To create a keypair, run
 
-@samp{lsh_keygen | lsh_writekey}
+@example
+lsh_keygen | lsh_writekey
+@end example
 
+@noindent
 This can take some time, but in the end it creates two files
 @file{~/.lsh/identity} and @file{~/.lsh/identity.pub}.
 
 If you want to use the key to login to some other machine, say
 @samp{sara}, you can do that by first copying the key,
 
-@samp{lsh sara.lysator.liu.se '>my-key.pub' <~/.lsh/identity.pub}
+@example
+lsh sara.lysator.liu.se '>my-key.pub' <~/.lsh/identity.pub
+@end example
 
+@noindent
 then authorizing it by executing, on @samp{sara},
 
-@samp{lsh-authorize my-key.pub}
+@example
+lsh-authorize my-key.pub
+@end example
 
 For security reasons, you should keep the private key
 @file{~/.lsh/identity} secret. Anybody who can read that file will be
 able to login in your name to any machine where the corresponding public
 key is registered as an authorized key.
 
-Naturally, you should also make sure not to authorize any keyys but your
+Naturally, you should also make sure not to authorize any keys but your
 own. For instance, it is inappropriate to use an insecure mechanism such
 as unauthenticated email, @code{ftp} or @code{http} to transfer your
 public key to the machines where you want to authorize it.
 
 If you have accounts on several systems, you usually create a single
 keypair on each of the systems, and on each system you authorize some or
-all of your public keys for login.
+all of your other public keys for login.
 
-Note that @command{lsh} does currently @emph{not} encrypt your private
+Note that @command{lsh} does @emph{not} currently encrypt your private
 key in any way. That means that you can lose it if a backup tape gets
-int the wrong hands, and if you use NFS it will likely be sent in the
-clear across the local network. (Actually, you can decrypt the key using
-a pass phrase, by passing the @option{-c 3des} to
+into the wrong hands, and if you use NFS it will likely be sent in the
+clear across your local network. (Actually, you can encrypt the key
+using a pass phrase, by passing the @option{-c 3des} option to
 @command{lsh_writekey}, but @command{lsh} doesn't yet support decrypting
 it).
 
 
 @node srp, sexp, public-key, Getting started
 @comment  node-name,  next,  previous,  up
-@section Using Secure Remote Password authentication
+@section Using @acronym{SRP} authentication
 
 The Secure Remote Password protocol is a fairly new protocol that
 provides mutual authentication based on a password. To use it, you must
@@ -710,7 +760,7 @@ The main advantage of using @acronym{SRP} is that you use the password
 not only to get access to the remote machine, but you also use it to
 authenticate the remote machine. I.e. you can use it to connect
 securely, @emph{without} having to know any hostkeys or fingerprints
-before you connect!
+beforehand!
 
 For instance, you could connect using @acronym{SRP} to fetch the hostkey
 fingerprint for the remote machine, as a kind of bootstrapping
@@ -746,13 +796,12 @@ talking to the real server, he needs to know your password as well.
 @acronym{SRP} support is disabled by default, but can be enabled by the
 @option{--srp-keyexchange} option to @command{lshd} and @command{lsh}
 (naturally, it won't be used unless enabled on both sides). At the time
-of this writing, SRP is too new to be trusted, at least according to
-conservative cryptographers (and remember that conservatism is a virtue
-when it comes to security).
+of this writing, @acronym{SRP} is too new to be trusted, at least
+according to conservative cryptographers (and remember that conservatism
+is a virtue when it comes to security).
 
 And even if @acronym{SRP} in itself is secure, the way @command{lsh}
-integrates it into the @code{ssh} protocol has not had much review.
-
+integrates it into the @code{ssh} protocol has not had much peer review.
 The bottom line of this disclaimer is that the @acronym{SRP} support in
 @command{lsh} should be considered experimental.
 
@@ -760,17 +809,17 @@ As far as I know, @acronym{SRP} is not supported by any other @code{ssh}
 implementation. The protocol @command{lsh} uses is described in the
 @file{doc/srp-spec.txt}.
 
-@node sexp,  , srp, Getting started
+@node sexp, Converting keys, srp, Getting started
 @comment  node-name,  next,  previous,  up
-@section Examining keys and other S-exp files
+@section Examining keys and other sexp files
 
 Keys and most other objects @command{lsh} needs to store on disk are
-represented as so called S-expressions or ``sexps'' for short.
+represented as so called S-expressions or @dfn{sexps} for short.
 S-expressions have their roots in the Lisp world, and a variant of them
-is the format used by the Simple Public Key Infrastructure
-(@acronym{SPKI}). Currently, @command{lsh}'s support for @acronym{SPKI}
-is quite limited, but it uses @acronym{SPKI}'s formats for keys and
-Access Control Lists (@acronym{ACL}'s).
+are used in the Simple Public Key Infrastructure (@acronym{SPKI}).
+Currently, @command{lsh}'s support for @acronym{SPKI} is quite limited,
+but it uses @acronym{SPKI}'s formats for keys and Access Control Lists
+(@acronym{ACL}:s).
 
 There are several flavours of the sexp syntax:
 
@@ -791,13 +840,37 @@ bears some resemblance to List expressions.
 
 To see what your @file{~/.lsh/known_hosts} file really contains, try
 
-@samp{sexp-conv -i advanced < ~/.lsh/known_hosts}
+@example
+sexp-conv -i advanced < ~/.lsh/known_hosts
+@end example
 
 The @command{sexp-conv} program can also be used to computes
 fingerprints. The fingerprint of a key (or any sexp, for that matter) is
 simply the hash of its canonical representation. For example,
 
-@samp{sexp-conv --raw-hash </etc/lsh_host_key.pub}
+@example
+sexp-conv --raw-hash </etc/lsh_host_key.pub
+@end example
+
+
+@node  Converting keys,  , sexp, Getting started
+@comment  node-name,  next,  previous,  up
+@section Converting keys from @command{ssh2} and OpenSSH
+
+If you are already using @command{ssh2} or OpenSSH, and have creating
+one or more personal keypairs, you need to convert the public keys to
+@command{lsh}'s format before you can authorize them. Use the supplied
+@command{ssh-conv} script,
+
+@example
+ssh-conv <openssh-key.pub >new-key.pub
+@end example
+
+You can then use the usual @command{lsh-authorize} on the converted
+keys. For this to work, you must be using @acronym{DSA} keys:
+@command{lsh} doesn't support @command{RSA}.
+
+There is currently no tools for converting private keys.
 
 
 @node Invoking lsh, Invoking lshd, Getting started, Top
@@ -898,9 +971,9 @@ support @code{zlib}.
 @comment  node-name,  next,  previous,  up
 @section Host authentication options
 
-As described earlier @pxref{Threats}, proper authentication of the
+As described earlier (@pxref{Threats}), proper authentication of the
 remote host is crucial to protect the connection against
-Man-in-the-middle attacks. By default, @command{lsh} verifies the server's
+man-in-the-middle attacks. By default, @command{lsh} verifies the server's
 claimed host key against the @dfn{Access Control Lists} in
 @file{~/.lsh/known_hosts}. If the remote host cannot be authenticated,
 the connection is dropped.
@@ -913,8 +986,8 @@ Specifies the location of the @acronym{ACL} file.
 
 @item --sloppy-host-authentication
 Tell @command{lsh} not to drop the connection if the server's key can not
-be authenticated. Instead, it display the fingerprint of the key, and
-ask if it is trusted. The received key is also appended to the file
+be authenticated. Instead, it displays the fingerprint of the key, and
+asks if it is trusted. The received key is also appended to the file
 @file{~/.lsh/captured_keys}. If run in quiet mode, @samp{lsh -q
 --sloppy-host-authentication}, @command{lsh} connects to any host, no
 questions asked.
@@ -924,8 +997,16 @@ Disable sloppy operation (this is the default behaviour).
 
 @item --capture-to
 Use some other file than @file{~/.lsh/captured_keys}. For example,
-@samp{--sloppy-host-authentication --capture-to ~/.lsh/known_hosts}
+
+@example
+lsh --sloppy-host-authentication --capture-to ~/.lsh/known_hosts
+@end example
+
+@noindent
 makes @command{lsh} behave more like the @command{ssh} program.
+
+@item --srp-keyexchange
+Try using @acronym{SRP} for keyexchange and mutual authentication.
 
 @end table
 
@@ -937,7 +1018,7 @@ makes @command{lsh} behave more like the @command{ssh} program.
 
 @item -l
 Provide a name to use when logging in. By default, the value of the
-@env{LOGNAME} variable is used.
+@env{LOGNAME} environment variable is used.
 
 @item -i
 Try the keys from this file to log in. By default, @command{lsh} uses
@@ -947,6 +1028,11 @@ currently not implemented.
 
 @item --no-publickey
 Don't attempt to log in using public key authentication.
+
+@item --no-userauth
+Attempt to start a session without performing the user authentication
+sub-protocol at all. This is the default if @acronym{SRP} was used for
+the initial handshake, and should not make much sense otherwise.
 
 @end table
 
@@ -990,12 +1076,11 @@ connects to the remote hosts, the server will inform the local
 @var{target-host}.
 
 @item -E
-This option is not yet implemented. It takes one mandatory argument,
-which is a command to be executed on the remote machine.
+This option takes one mandatory argument, which is a command line to be
+executed on the remote machine.
 
 @item -S
-Start a shell on the remote machine. Currently not implemented, except
-as the default action.
+Start an interactive shell on the remote machine. 
 
 @item -N
 This is a no-operation action. It inhibits the default action, which is
@@ -1006,11 +1091,10 @@ want to set up a few forwarded tunnels, and nothing more.
 
 If there are trailing arguments after the name of the remote system,
 this is equivalent to a @option{-E} option, with a command string
-constructed by taking all the remaining arguments, separated by spaces.
-This implies that the arguments are usually expanded first by the local
-shell, and then the resulting command string is interpreted again by the
-remote system. In any case, just like @option{-E}, this is not yet
-implemented.
+constructed by catenating all the remaining arguments, separated by
+spaces. This implies that the arguments are usually expanded first by
+the local shell, and then the resulting command string is interpreted
+again by the remote system.
 
 If there are no trailing arguments after the name of the remote system,
 and the @option{-N} option is not given, the default action is to start
@@ -1030,6 +1114,23 @@ applies to actions that create remote processes, i.e. @option{-E} and
 @option{-S}, as well as the default actions.
 
 Currently, this option is ignored if there is no local terminal.
+
+@item --stdin
+Redirect the stdin of a remote process from a given, local, file.
+Default is to use @command{lsh}'s stdin for the first process, and
+@file{/dev/null} for the rest. This option applies to the @option{-E}
+and @option{-S} options as well as to the default actions. The option
+applies to only one process; as soon as it is used it is reset to the
+default.
+
+@item --stdout
+Redirect the stdout of a remote process to a given, local, file. Default
+is to use @command{lsh}'s stdout. Like @option{--stdin}, it is reset
+after it is used.
+
+@item --stderr
+Redirect the stdout of a remote process to a given, local, file.
+Analogous to the @option{--stdout} option.
 
 @item -g
 Gateway mode. This option applies to the forwarding actions, i.e.
@@ -1051,7 +1152,7 @@ its stderr.
 @table @option
 
 @item -q
-Quiet mode. Disables all messages and all questions. Except password
+Quiet mode. Disables all messages and all questions, except password
 prompts and fatal internal errors.
 
 @item -v
@@ -1061,7 +1162,7 @@ and makes sense also to those not familiar with @command{lsh} internals.
 
 @item --trace
 Trace mode. Prints some internal information to aid tracking
-lsh's flow of control.
+@command{lsh}'s flow of control.
 
 @item --debug.
 Debug mode. Dumps @emph{a lot} of information, including dumps of all
@@ -1071,14 +1172,19 @@ messages, but you should still use it with care.
 
 @end table
 
+Note that all these options are orthogonal. If you use @option{--trace},
+you usually want to add @option{-v} as well; @option{--trace} does not
+do that automatically.
+
 @node Invoking lshd, Terminology, Invoking lsh, Top
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @command{lshd}
 
-@command{lshd} is a server that accepts connections from clients speaking
-the Secure Shell Protocol. It is usually started automatically when the
-systems boots, and runs with root privileges. However, it is also
-possible to start lshd manually, and with user privileges.
+@command{lshd} is a server that accepts connections from clients
+speaking the Secure Shell Protocol. It is usually started automatically
+when the systems boots, and runs with root privileges. However, it is
+also possible to start @command{lshd} manually, and with user
+privileges.
 
 There is currently no configuration files. Instead, command line options
 are used to tell @command{lshd} what to do. Many options have @option{--foo}
@@ -1110,23 +1216,26 @@ Default is to use transport format. Not a terribly useful option.
 
 @item --ssh1-fallback
 This options enables fallback to @command{ssh1}. @command{lshd} doesn't
-implement version 1 of the Secure Shell Protocol. But it can fork an ssh1
-server when an old client connects. Falling back to ssh1 is inefficient,
-and requires some special features of the server fallen back to. It
-should work with the sshd daemon supplied with reasonably new versions of
-Datafellow's @command{sshd1}, and with @command{openssh}.
+implement version 1 of the Secure Shell Protocol. But it can fork an
+@command{ssh1} server when an old client connects. Falling back to
+@command{ssh1} is inefficient, and requires some special features of the
+server fallen back to. It should work with the @command{sshd} daemon
+supplied with reasonably new versions of Datafellow's @command{sshd1},
+and with OpenSSH.
 
 The optional argument provides the filename of the ssh1 daemon to use.
-Default name is @file{/usr/local/sbin/sshd1}, unless something else was
-configured at compile time.
+The default name is @file{/usr/local/sbin/sshd1}, unless something else
+was configured at compile time.
 
 @item --daemonic
-Enables daemonic mode. @command{lshd} forks into the background, redirects
-its stdio handles to @file{/dev/null}, changes its working directory to
-@file{/}, and redirects any diagnostic or debugging messages via syslog.
+Enables daemonic mode. @command{lshd} forks into the background,
+redirects its stdio file descriptors to @file{/dev/null}, changes its
+working directory to @file{/}, and redirects any diagnostic or debugging
+messages via syslog.
 
-@command{lshd} should be able to deal with the environment it inherits if it
-is started by @command{init} or @command{inetd}, but this is not really tested.
+@command{lshd} should be able to deal with the environment it inherits
+if it is started by @command{init} or @command{inetd}, but this is not
+really tested.
 
 @item --pid-file
 Creates a locked pid file, to make it easier to write start and stop
@@ -1147,6 +1256,9 @@ Disable the "publickey" user authentication mechanism.
 
 @item --root-login
 Enable root login. By default, root can not log in using @command{lshd}.
+
+@item --srp-keyexchange
+Enable @acronym{SRP} keyexchange and user authentication.
 
 @item --no-pty-support
 Disable support for pseudo terminals.
