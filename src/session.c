@@ -24,14 +24,14 @@ struct session_handler
   struct ssh_session *session;
 };
 
-struct handle_global_request
+struct global_request_handler
 {
   struct session_handler super;
   
   struct alist *global_requests;
 };
 
-struct handle_channel_open
+struct channel_open_handler
 {
   struct session_handler *super;
 
@@ -39,39 +39,11 @@ struct handle_channel_open
 };
 
 #if 0
-struct handle_window_adjust
+struct channel_request_handler
 {
   struct session_handler *super;
 
-  struct ssh_session *session;
-};
-
-struct handle_channel_data
-{
-  struct session_handler *super;
-
-  struct ssh_session *session;
-};
-
-struct handle_channel_extended_data
-{
-  struct session_handler *super;
-
-  struct ssh_session *session;
-};
-
-struct handle_channel_eof
-{
-  struct session_handler *super;
-
-  struct ssh_session *session;
-};
-
-struct handle_channel_close
-{
-  struct session_handler *super;
-
-  struct ssh_session *session;
+  struct alist *request_types;
 };
 #endif
 
@@ -148,7 +120,7 @@ static int do_global_request(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
 {
-  struct handle_global_request *closure = (struct handle_global_request *) c;
+  struct global_request_handler *closure = (struct global_request_handler *) c;
 
   struct simple_buffer buffer;
   UINT8 msg_number;
@@ -182,7 +154,7 @@ static int do_channel_open(struct packet_handler *c,
 			   struct ssh_connection *connection,
 			   struct lsh_string *packet)
 {
-  struct handle_channel_open *closure = (struct handle_channel_open *) c;
+  struct channel_open_handler *closure = (struct channel_open_handler *) c;
 
   struct simple_buffer buffer;
   UINT8 msg_number;
@@ -218,8 +190,53 @@ static int do_channel_open(struct packet_handler *c,
   return LSH_FAIL | LSH_DIE;
 }     
 
+static int do_channel_request(struct packet_handler *c,
+			      struct ssh_connection *connection,
+			      struct lsh_string *packet)
+{
+  struct session_handler *closure = (struct session_handler *) c;
+
+  struct simple_buffer buffer;
+  UINT8 msg_number;
+  UINT32 channel_number;
+  int type;
+  int want_reply;
+
+  MDEBUG(closure);
+
+  simple_buffer_init(&buffer, packet->length, packet->data);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_CHANNEL_REQUEST)
+      && parse_uint32(&buffer, &channel_number)
+      && parse_atom(&buffer, &type)
+      && parse_boolean(&bufferm &want_reply))
+    {
+      struct ssh_channel *channel = lookup_channel(channel_number);
+
+      lsh_string_free(packet);
+      
+      if (channel)
+	{
+	  struct channel_request *req;
+
+	  if (!type || ! ( (req = ALIST_GET(channel->request_types, type)) ))
+	    return A_WRITE(connection->write,
+			   format_channel_request_failure(...));
+
+	  return CHANNEL_REQUEST(req, channel, want_reply, &buffer);
+	}
+      werror("SSH_MSG_CHANNEL_REQUEST on nonexistant channel %d\n",
+	     channel_number);
+      return LSH_FAIL | LSH_DIE;
+    }
+  lsh_string_free(packet);
+
+  return LSH_FAIL | LSH_DIE;
+}
+      
 static int do_window_adjust(struct packet_handler *c,
-			   struct ssh_connection *connection,
+			    struct ssh_connection *connection,
 			   struct lsh_string *packet)
 {
   struct session_handler *closure = (struct session_handler *) c;
@@ -284,7 +301,7 @@ static int do_channel_data(struct packet_handler *c,
       
       if (channel)
 	{
-	  if (channel->recieved_close || channel->recieved_eof)
+	  if (!channel->recieve)
 	    {
 	      werror("Recieved data on closed channel\n");
 	      lsh_string_free(data);
@@ -339,7 +356,7 @@ static int do_channel_extended_data(struct packet_handler *c,
       
       if (channel)
 	{
-	  if (channel->recieved_close || channel->recieved_eof)
+	  if (!channel->recieve)
 	    {
 	      werror("Recieved data on closed channel\n");
 	      lsh_string_free(data);
@@ -431,8 +448,9 @@ static int init_session_service(struct ssh_service *s,
   struct connection_service *self = (struct connection_service *) s;
   struct ssh_session *session;
   
-  struct handle_global_request *globals;
-  struct handle_channel_open *open;
+  struct global_request_handler *globals;
+  struct channel_open_handler *open;
+  struct session_handler *request;
   struct session_handler *adjust;
   struct session_handler *data;
   struct session_handler *extended;
@@ -448,13 +466,18 @@ static int init_session_service(struct ssh_service *s,
   globals->super.session = session;
   globals->global_requests = self->global_requests;
   con->dispatch[SSH_MSG_GLOBAL_REQUEST] = &globals->super.super;
-
+    
   NEW(open);
   open->super.super.handler = do_channel_open;
   open->super.session = session;
   open->channel_requests = self->channel_requests;
   con->dispatch[SSH_MSG_CHANNEL_OPEN] = &open->super.super;
 
+  NEW(request);
+  request->super.handler = do_channel_request;
+  request->session = session;
+  con->dispatch[SSH_MSG_CHANNEL_REQUEST] = &request->super;
+  
   NEW(adjust);
   adjust->super.handler = do_window_adjust;
   adjust->session = session;
