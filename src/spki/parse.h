@@ -35,8 +35,14 @@ enum spki_type
 spki_parse_end(struct sexp_iterator *i);
 
 enum spki_type
+spki_parse_skip(struct sexp_iterator *i);
+
+enum spki_type
 spki_parse_principal(struct spki_acl_db *db, struct sexp_iterator *i,
 		     struct spki_principal **principal);
 
+enum spki_type
+spki_parse_tag(struct spki_acl_db *db, struct sexp_iterator *i,
+	       struct spki_5_tuple *tuple);
 
 #endif /* LIBSPKI_PARSE_H_INCLUDED */

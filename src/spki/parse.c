@@ -82,6 +82,14 @@ spki_parse_end(struct sexp_iterator *i)
 }
 
 enum spki_type
+spki_parse_skip(struct sexp_iterator *i)
+{
+  return sexp_iterator_exit_list(i) ? spki_parse_type(i) : 0;
+}
+
+/* Unlike the other parser functions, this should be called with the
+ * iterator pointing at the start of the expression. */
+enum spki_type
 spki_parse_principal(struct spki_acl_db *db, struct sexp_iterator *i,
 		     struct spki_principal **principal)
 {
@@ -142,4 +150,17 @@ spki_parse_principal(struct spki_acl_db *db, struct sexp_iterator *i,
 	return 0;
       }
     } 
+}
+
+enum spki_type
+spki_parse_tag(struct spki_acl_db *db, struct sexp_iterator *i,
+	       struct spki_5_tuple *tuple)
+{
+  const uint8_t *tag;
+  enum spki_type next;
+  
+  return ((tag = sexp_iterator_subexpr(i, &tuple->tag_length))
+	  && (next = spki_parse_end(i))
+	  && (tuple->tag = spki_dup(db, tuple->tag_length, tag)))
+    ? next : 0;
 }
