@@ -157,7 +157,8 @@ local_to_utf8(struct lsh_string *s, int free)
 static int
 ucs4_is_control(uint32_t c)
 {
-  return (c < 0x20) || (c >= 0x7f && c < 0xa0);
+  /* Allow newline characters */
+  return (c < 0x20 && c != '\n') || (c >= 0x7f && c < 0xa0);
 }
 
 struct lsh_string *
