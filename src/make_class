@@ -469,7 +469,7 @@
 	(let ((op (application-op expr))
 	      (args (map output-expression (application-args expr))))
 	  (if (atom? op)
-	      (apply-constant (cdr (lookup-global op)) args)
+	      (apply-constant (lookup-global op) args)
 	      (apply-generic op args)))))
   output-expression)
 
@@ -503,7 +503,7 @@
 (define (process-input exp)
   (let ((type (car exp))
 	(body (cdr exp)))
-    (werror "process-class: type = ~S\n" type)
+    ;; (werror "process-class: type = ~S\n" type)
     (case type
       ((class) (process-class body))
       ((meta) (process-meta body))
