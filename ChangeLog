@@ -1,5 +1,11 @@
 2005-02-15  Niels Möller  <niels@s3.kth.se>
 
+	* src/lshd-userauth.c: Implemented user lookup, and part of
+	publickey authentication.
+
+	* src/werror.c (werror_vformat): Call werror_flush here. Removed
+	corresponding calls from users of werror_vformat.
+
 	* src/Makefile.am (sbin_PROGRAMS): Added lshd-userauth.
 
 	* src/lshd-userauth.c: New file.
