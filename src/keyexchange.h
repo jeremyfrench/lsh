@@ -106,6 +106,8 @@ struct kexinit
 
 struct make_kexinit
 {
+  struct lsh_object *header;
+  
   struct kexinit * (*make)(struct make_kexinit *closure);
 };
 
