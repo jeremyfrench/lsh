@@ -136,9 +136,9 @@ spki_parse_skip(struct spki_iterator *i)
   return sexp_iterator_exit_list(&i->sexp) ? spki_parse_type(i) : 0;
 }
 
-static const uint8_t *
-spki_last_expression(struct spki_iterator *i,
-		     unsigned start, unsigned *length)
+const uint8_t *
+spki_parse_prevexpr(struct spki_iterator *i,
+		    unsigned start, unsigned *length)
 {
   assert(start < i->start);
   *length = i->start - start;
@@ -181,15 +181,15 @@ spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
       {
 	unsigned start = i->start;
 
-	const uint8_t *key;
 	unsigned key_length;
+	const uint8_t *key;
 	enum spki_type next;
 	
 	next = spki_parse_skip(i);
 	if (!next)
 	  return 0;
 
-	key = spki_last_expression(i, start, &key_length);
+	key = spki_parse_prevexpr(i, start, &key_length);
 
 	assert(key);
 
