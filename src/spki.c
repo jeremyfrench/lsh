@@ -69,10 +69,10 @@ do_spki_acl_db_free(struct spki_acl_db *db);
  * dns fqdn:s. */
 
 struct lsh_string *
-make_ssh_hostkey_tag(struct address_info *host)
+make_ssh_hostkey_tag(const char *host)
 {
-  uint32_t left = host->ip->length;
-  uint8_t *s = host->ip->data;
+  uint32_t left = strlen(host);
+  const uint8_t *s = host;
   struct lsh_string *tag;
   struct lsh_string *reversed = lsh_string_alloc(left);
 
@@ -408,13 +408,12 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 
   else
     {
-      const struct lsh_string *label;
       struct sexp_iterator key_info;
 
       struct crypto_algorithm *crypto;
       struct mac_algorithm *mac;
 
-      /* FIXME: Leaks some strings. */
+      const struct lsh_string *label = NULL;
       const struct lsh_string *salt = NULL;
       const struct lsh_string *iv = NULL;
       const struct lsh_string *data = NULL;
@@ -432,6 +431,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 	  lsh_string_free(expr);
 	  lsh_string_free(iv);
 	  lsh_string_free(salt);
+	  lsh_string_free(label);
 	  return NULL;
 	}
 

@@ -39,7 +39,7 @@
 
 
 struct lsh_string *
-make_ssh_hostkey_tag(struct address_info *host);
+make_ssh_hostkey_tag(const char *host);
 
 struct verifier *
 spki_make_verifier(struct alist *algorithms,
