@@ -22,6 +22,25 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "connection_commands.h"
+
+#include "compress.h"
+#include "connection.h"
+#include "debug.h"
+#include "format.h"
+#include "io.h"
+#include "read_line.h"
+#include "read_packet.h"
+#include "ssh.h"
+#include "unpad.h"
+#include "version.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#include <assert.h>
+
+#include "connection_commands.c.x"
+
 /* GABA:
    (class
      (name connection_close_handler)
@@ -63,7 +82,6 @@ struct close_callback *make_connection_close_handler(struct ssh_connection *c)
        (c object command_continuation)
        ;; Needed for fallback.
        (fd . int)
-       (kex_packets string)
        (fallback object ssh1_fallback)))
 */
 
@@ -72,7 +90,7 @@ static int do_line(struct line_handler **h,
 		   UINT32 length,
 		   UINT8 *line)
 {
-  CAST(server_line_handler, closure, *h);
+  CAST(connection_line_handler, closure, *h);
   
   if ( (length >= 4) && !memcmp(line, "SSH-", 4))
     {
@@ -91,12 +109,10 @@ static int do_line(struct line_handler **h,
 	      int res;
 	      
 	      assert(closure->mode == CONNECTION_SERVER);
-	      assert(closure->kex_packets);
 	      
 	      /* Sending keyexchange packet was delayed. Do it now */
-	      res = A_WRITE(closure->connection->raw,
-			    closure->kex_packets);
-	      closure->kex_packets = NULL;
+	      res = initiate_keyexchange(closure->connection,
+					 closure->mode);
 	      
 	      if (LSH_CLOSEDP(res))
 		{
@@ -127,10 +143,8 @@ static int do_line(struct line_handler **h,
 		  closure->connection->versions[CONNECTION_CLIENT],
 		  closure->connection->versions[CONNECTION_SERVER]);
 
-	  /* FIXME: Cleanup properly. */
-
 	  *r = new;
-	  return COMMAND_RETURN(closure->c, connection);
+	  return COMMAND_RETURN(closure->c, closure->connection);
 	}
 #if WITH_SSH1_FALLBACK      
       else if (closure->fallback
@@ -165,11 +179,10 @@ static int do_line(struct line_handler **h,
     }
 }
 
-struct read_handler *
+static struct read_handler *
 make_connection_read_line(struct ssh_connection *connection, int mode,
 			  int fd,
 			  struct ssh1_fallback *fallback,
-			  struct lsh_string *kex_packets,
 			  struct command_continuation *c)
 {
   NEW(connection_line_handler, closure);
@@ -179,7 +192,6 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
   closure->mode = mode;
   closure->fd = fd;
   closure->fallback = fallback;
-  closure->kex_packets = kex_packets;
   closure->c = c;
   return make_read_line(&closure->super);
 }
@@ -196,6 +208,8 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
        (block_size simple UINT32)
        (id_comment simple "const char *")
 
+       (algorithms object alist)
+       
        (init object make_kexinit)
        
        ;; Used only on the server
@@ -209,11 +223,9 @@ static int do_connection(struct command *s,
   CAST(connection_command, self, s);
   CAST(io_fd, fd, x);
   struct lsh_string *version;
-  struct lsh_string *kex_now;
-  struct lsh_string *kex_delayed = NULL;
+  int res;
   
-  struct ssh_connection *connection = make_ssh_connection();
-  kex_now = MAKE_KEXINIT(closure->init, connection, mode); 
+  struct ssh_connection *connection = make_ssh_connection(c);
 
   switch (self->mode)
     {
@@ -221,7 +233,7 @@ static int do_connection(struct command *s,
       version = ssh_format("SSH-%lz-%lz %lz",
 			   CLIENT_PROTOCOL_VERSION,
 			   SOFTWARE_CLIENT_VERSION,
-			   closure->id_comment);
+			   self->id_comment);
       break;
     case CONNECTION_SERVER:
 #if WITH_SSH1_FALLBACK
@@ -232,10 +244,9 @@ static int do_connection(struct command *s,
 		       SSH1_SERVER_PROTOCOL_VERSION,
 		       SOFTWARE_SERVER_VERSION,
 		       self->id_comment);
-	  kex_delayed = kex_now;
-	  kex_now = 0;
 	}
       else
+#endif
 	version =
 	  ssh_format("SSH-%lz-%lz %lz",
 		     SERVER_PROTOCOL_VERSION,
@@ -248,12 +259,15 @@ static int do_connection(struct command *s,
 
   io_read_write(fd,
 		make_connection_read_line(connection, self->mode,
-					  fd, self->fallback, kex_delayed,
+					  fd->super.fd, self->fallback, 
 					  c),
 		self->block_size,
 		make_connection_close_handler(connection));
 
   connection->versions[self->mode] = version;
+  connection->kexinits[self->mode] = MAKE_KEXINIT(self->init); 
+  connection->dispatch[SSH_MSG_KEXINIT]
+    = make_kexinit_handler(self->mode, self->init, self->algorithms);
 
 #if WITH_SSH1_FALLBACK
   /* In this mode the server SHOULD NOT send carriage return character (ascii
@@ -261,15 +275,35 @@ static int do_connection(struct command *s,
    *
    * Furthermore, it should not send any data after the identification string,
    * until the client's identification string is received. */
-  if (closure->fallback)
-    {
-      assert(!kex_now);
-      return A_WRITE(connection->raw,
-		     ssh_format("%lS\n", version));
-    }
+  if (self->fallback)
+    return A_WRITE(connection->raw,
+		   ssh_format("%lS\n", version));
 #endif /* WITH_SSH1_FALLBACK */
 
-  assert(kex_now);
-  return A_WRITE(connection->raw,
-		 ssh_format("%lS\r\n%lfS", version, kex_now));
+  res = A_WRITE(connection->raw,
+		ssh_format("%lS\r\n", version));
+  if (LSH_CLOSEDP(res))
+    return res;
+  
+  return res | initiate_keyexchange(connection, self->mode);
+}
+
+struct command *
+make_handshake_command(int mode,
+		       const char *id,
+		       UINT32 block_size,
+		       struct alist *algorithms,
+		       struct make_kexinit *init,
+		       struct ssh1_fallback *fallback)
+{
+  NEW(connection_command, self);
+  self->mode = mode;
+  self->block_size = block_size;
+  self->id_comment = id;
+  self->algorithms = algorithms;
+  self->init = init;
+  self->fallback = fallback;
+
+  self->super.call = do_connection;
+  return &self->super;
 }
