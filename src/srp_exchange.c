@@ -105,8 +105,7 @@ srp_make_verifier(struct abstract_group *G,
   srp_hash_password(x, H, salt, name, passwd);  
   GROUP_POWER(G, x, G->generator, x);
 
-  expr = lsh_sexp_format(0, "(%z%z%s%b)",
-			 "srp-verifier", "ssh-ring1",
+  expr = lsh_sexp_format(0, "(srp-verifier ssh-ring1%s%b)",
 			 salt->length, salt->data,
 			 x);
 
