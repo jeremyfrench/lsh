@@ -1,12 +1,10 @@
 ;; guile.scm
 ;;
-;; Extra definitions needed when using guile .
-;;
-;; $Id$
+;; Extra definitions needed when using guile.
 
 ;; lsh, an implementation of the ssh protocol
 ;;
-;; Copyright (C) 1999 Tommy Virtanen, Niels Möller
+;; Copyright (C) 1999, 2004, Niels Möller
 ;;
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -22,73 +20,4 @@
 ;; along with this program; if not, write to the Free Software
 ;; Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-(use-modules (ice-9 slib))
-(require 'macro-by-example)
-(require 'format)
-
-(define error-output-port current-error-port)
-(define ascii->char integer->char)
-(define char->ascii char->integer)
-(define write-string display)
-
-;; Implementation of the charset abstraction
-(define (is-in-charset? set n)
-  (not (zero? (char->integer (string-ref set n)))))
-
-(define (char-set-members char-set)
-  (define (helper n)
-    (cond ((>= n 256) '())
-          ((is-in-charset? char-set n) (cons (integer->char n)
-                                             (helper (1+ n))))
-          (else (helper (1+ n)))))
-  (helper 0))
-
-(define (ascii-range->char-set lower upper)
-  (do ((result (make-string 256 (integer->char 0)))
-       (i lower (+ i 1)))
-      ((= i upper) result)
-    (string-set! result i (integer->char 1))))
-
-(define (chars->char-set chars)
-  (do ((result (make-string 256 (integer->char 0)))
-       (chars chars (cdr chars)))
-      ((null? chars) result)
-    (string-set! result (char->integer (car chars)) (integer->char 1))))
-
-(define (string->char-set str)
-  (chars->char-set (string->list str)))
-
-(define (char-set-intersection set1 set2)
-  (do ((result (make-string 256))
-       (i 0 (+ i 1)))
-      ((= i 255) result)
-    (string-set! result i 
-                 (if (and (is-in-charset? set1 i) (is-in-charset? set2 i))
-                     (integer->char 1)
-                     (integer->char 0)))))
-
-(define (char-set-union set1 set2)
-  (do ((result (make-string 256))
-       (i 0 (+ i 1)))
-      ((= i 255) result)
-    (string-set! result i 
-                 (if (or (is-in-charset? set1 i) (is-in-charset? set2 i))
-                     (integer->char 1)
-                     (integer->char 0)))))
-
-(define (char-set-difference set1 set2)
-  (do ((result (make-string 256))
-       (i 0 (+ i 1)))
-      ((= i 255) result)
-    (string-set! result i 
-                 (if (and (is-in-charset? set1 i) 
-                          (not (is-in-charset? set2 i)))
-                     (integer->char 1)
-                     (integer->char 0)))))
-
-(define char-set= string=?)
-
-(define char-set:empty (chars->char-set '()))
-
-(define (string-upcase s)
-  (list->string (map char-upcase (string->list s))))
+(use-syntax (ice-9 syncase))
