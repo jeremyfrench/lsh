@@ -352,11 +352,6 @@ do_read_socks(struct read_handler **h,
 	  werror("Socks connection of unknown version %i.\n", p[0]);
 	  socks_fail(self->socks);
 	}
-      else if (p[1] != 0)
-	{
-	  werror("Socks protocol error.\n");
-	  socks_fail(self->socks);
-	}
       else
 	{
 	  self->socks->version = p[0];
@@ -369,7 +364,7 @@ do_read_socks(struct read_handler **h,
 
     case SOCKS_VERSION_METHODS:
       /* We support only method 0 */
-      if (memcmp(p+2, SOCKS_NOAUTH, p[1]))
+      if (memchr(p+2, SOCKS_NOAUTH, p[1]))
 	{
 	  socks_method(self->socks, SOCKS_NOAUTH);
 	  
