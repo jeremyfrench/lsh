@@ -1,3 +1,8 @@
+2002-11-07  Pontus Sköld  <pont@soua.net>
+
+	* rl.c (lsftp_rl_completion): Bugfix: Don't free memory for every
+	command checked.
+
 2002-07-29  Pontus Sköld  <pont@soua.net>
 
 	* configure.ac: Take advantage of lshg now understanding -G (pass

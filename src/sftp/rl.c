@@ -192,7 +192,7 @@ char** lsftp_rl_completion(char* text, int start, int end)
 
   /* If this word is at the start of the line, then it is a command to
    * complete. 
-n   */
+   */
 
   rl_completion_append_character = ' '; /* Trailing space after word */
 
@@ -228,7 +228,7 @@ n   */
 						lsftp_rl_command_generator
 						);
 		break;
-
+		
 	      case REMOTEFILE:  /* Remote file or dir as argument? */
 		matches = RL_COMPLETION_MATCHES( 
 						text, 
@@ -238,11 +238,11 @@ n   */
 		
 	      case LOCALFILE:
 		matches = RL_COMPLETION_MATCHES(
-					      text, 
-					      RL_FILENAME_COMPLETION_FUNCTION
-					      );
-	      break;
-	      
+						text, 
+						RL_FILENAME_COMPLETION_FUNCTION
+						);
+		break;
+		
 	      default:
 	      case NOARG:  /* Doesn't take any argument? */
 		matches = RL_COMPLETION_MATCHES(
@@ -252,8 +252,10 @@ n   */
 		break;
 	      }
 	  
-	  free( tmp );
+	 
 	}
+
+      free( tmp );
 
       if( !matches ) /* No matching command? */
 	  {
