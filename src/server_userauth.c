@@ -382,11 +382,13 @@ static struct exception_handler *
 make_exc_userauth_handler(struct ssh_connection *connection,
 			  struct int_list *advertised_methods,
 			  unsigned attempts,
-			  struct exception_handler *parent)
+			  struct exception_handler *parent,
+			  const char *context)
 {
   NEW(exc_userauth_handler, self);
   self->super.raise = do_exc_userauth_handler;
   self->super.parent = parent;
+  self->super.context = context;
   
   self->connection = connection;
   self->advertised_methods = advertised_methods;
@@ -416,7 +418,8 @@ static void do_userauth(struct command *s,
 							      c, e));
   auth->e = make_exc_userauth_handler(connection,
 				      self->advertised_methods,
-				      AUTH_ATTEMPTS, e);
+				      AUTH_ATTEMPTS, e,
+				      HANDLER_CONTEXT);
   
   connection->dispatch[SSH_MSG_USERAUTH_REQUEST] = &auth->super;
 }

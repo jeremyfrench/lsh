@@ -749,21 +749,29 @@ static int lookup_sexp_format(const char *name)
 
   for (i = 0; sexp_formats[i].name; i++)
     {
-      if (strcasecmp(sexp_formats[i].name, name) == 0)
+      if (strcmp(sexp_formats[i].name, name) == 0)
 	return sexp_formats[i].id;
     }
   return -1;
 }
 
 static const struct argp_option
-sexp_options[] =
+sexp_input_options[] =
 {
-#if 0
+  { NULL, 0, NULL, 0, "Valid sexp-formats are transport, canonical, "
+    "advanced and international.", 0 },
   { "input-format", 'i', "format", 0,
-    "Variant of the s-expression syntax to accept", 0},
-#endif
+    "Variant of the s-expression syntax to accept.", 0},
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+static const struct argp_option
+sexp_output_options[] =
+{
+  { NULL, 0, NULL, 0, "Valid sexp-formats are transport, canonical, "
+    "advanced and international.", 0 },
   { "output-format", 'o', "format", 0,
-    "Variant of the s-expression syntax to generate", 0},
+    "Variant of the s-expression syntax to generate.", 0},
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -775,23 +783,30 @@ sexp_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
     case 'o':
+    case 'i':
       {
 	int format = lookup_sexp_format(arg);
 	if (format < 0)
 	  argp_error(state, "Unknown s-expression format '%s'", arg);
 	else
-	  (sexp_argp_input *) (state->input) = format;
+	  *(sexp_argp_state *) (state->input) = format;
+
 	break;
       }
     }
   return 0;
 }
 
-const struct argp sexp_argp =
+const struct argp sexp_input_argp =
 {
-  sexp_options,
+  sexp_input_options,
   sexp_argp_parser,
-  "\vValid sexp-formats are transport, canonical, "
-  "advanced and international.",
-  NULL, NULL, NULL
+  NULL, NULL, NULL, NULL
+};
+
+const struct argp sexp_output_argp =
+{
+  sexp_output_options,
+  sexp_argp_parser,
+  NULL, NULL, NULL, NULL
 };

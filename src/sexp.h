@@ -182,8 +182,9 @@ make_read_sexp(int style, int goon,
 	       struct command_continuation *c,
 	       struct exception_handler *e);
 
-extern const struct argp sexp_argp;
-#define sexp_argp_input int
+extern const struct argp sexp_input_argp;
+extern const struct argp sexp_output_argp;
+#define sexp_argp_state int
 
 #endif /* LSH_SEXP_H_INCLUDED */
 

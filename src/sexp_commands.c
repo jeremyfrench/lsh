@@ -148,11 +148,14 @@ do_read_sexp_exception_handler(struct exception_handler *s,
 
 static struct exception_handler *
 make_read_sexp_exception_handler(struct io_fd *fd,
-				 struct exception_handler *e)
+				 struct exception_handler *e,
+				 const char *context)
 {
   NEW(read_sexp_exception_handler, self);
   self->super.raise = do_read_sexp_exception_handler;
   self->super.parent = e;
+  self->super.context = context;
+  
   self->fd = &fd->super;
 
   return &self->super;
@@ -174,8 +177,9 @@ do_read_sexp(struct command *s,
   
   io_read(fd,
 	  make_buffered_read(SEXP_BUFFER_SIZE,
-			     make_read_sexp(self->format, self->goon, c,
-					    make_read_sexp_exception_handler(fd, e))),
+ 	    make_read_sexp(self->format, self->goon, c,
+	      make_read_sexp_exception_handler(fd, e,
+					       HANDLER_CONTEXT))),
 	  NULL);
 }
 

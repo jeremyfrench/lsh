@@ -860,7 +860,8 @@ do_spawn_shell(struct channel_request *c,
 	  struct exception_handler *io_exception_handler
 	    = make_channel_io_exception_handler(channel,
 						"lshd: Child stdio: ",
-						&default_exception_handler);
+						&default_exception_handler,
+						HANDLER_CONTEXT);
 
 	  /* Close callback for stderr and stdout */
 	  struct close_callback *read_close_callback

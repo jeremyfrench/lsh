@@ -657,7 +657,8 @@ static UINT32 do_expect_eof(struct read_handler **s,
   return 0;
 }
 
-static struct read_handler *make_expect_eof(struct exception_handler *e)
+static struct read_handler *
+make_expect_eof(struct exception_handler *e)
 {
   NEW(parser, self);
   self->super.handler = do_expect_eof;
