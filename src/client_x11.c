@@ -23,7 +23,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "channel-h"
+#include "channel.h"
 
 #include "client_x11.c.x"
 
@@ -40,8 +40,8 @@
        (fake string)
 
        ; Real authentication info
-       (auth_name string)
-       (auth_data string)))
+       (name string)
+       (auth string)))
 */
 
 /* GABA:
@@ -57,13 +57,161 @@
 
 /* GABA:
    (class
-     (name client_x11_channel)
+     (name client_channel_x11)
      (super channel_forward)
      (vars
-       (authinfo object client_x11_auth_info)
-       (state . unsigned)
+       (auth_info object client_x11_auth_info)
+       (state . int)
+       (i . UINT32)
        (buffer string)))
 */
+
+/* This function is responsible for checking the fake cookie, and
+ * replacing it with the real one.
+ *
+ * It intercepts the first packet sent by the client, which has the
+ * following format:
+ *
+ * Type                        Possible or typical values
+ *
+ * uint8_t  byte-order         'B' (big endian) or 'L' (little endian)
+ * uint16_t major-version      Usually 11
+ * uint16_t minor-version      Usually 5 or 6.
+ * uint8_t  name_length        18
+ * uint8_t [name_length] name  "MIT-MAGIC-COOKIE-1"
+ * uint8_t  auth_length
+ * uint8_t [auth_length] auth  Authentication data
+ *
+ * As the lengths are maximum 255 octets, the max length of the
+ * setup packet is  517 bytes.
+ */
+
+#define MIT_COOKIE_NAME "MIT-MAGIC-COOKIE-1"
+#define MIT_COOKIE_NAME_LENGTH 18
+#define MIT_COOKIE_LENGTH 16
+
+#define X11_SETUP_MAX_LENGTH 517
+
+enum { CLIENT_X11_START,
+       CLIENT_X11_GOT_NAME_LENGTH,
+       CLIENT_X11_GOT_AUTH_LENGTH,
+       CLIENT_X11_OK,
+       CLIENT_X11_DENIED
+};
+
+
+static void
+do_client_channel_x11_receive(struct ssh_channel *s,
+                              int type, struct lsh_string *data)
+{
+  CAST(client_channel_x11, self, s);
+
+  switch (type)
+    {
+    case CHANNEL_DATA:
+      {
+        /* Copy data to buffer */
+        UINT32 left = self->buffer->size - self->i;
+        UINT32 consumed = MIN(left, data->length);
+
+        memcpy(self->buffer->data + self->i, data->data,
+               consumed);
+        self->i += consumed;
+
+        switch (self->state)
+          {
+          case CLIENT_X11_START:
+            /* We need byte-order, major, minor and name_length,
+             * which is 6 octets */
+               
+            if (self->i < 6)
+              break;
+
+            /* Fall through */
+            self->state = CLIENT_X11_GOT_NAME_LENGTH;
+            
+          case CLIENT_X11_GOT_NAME_LENGTH:
+            /* We want the above data, the name, and the auth_length */
+            if (self->i < (7 + self->buffer->data[5]))
+              break;
+
+            /* Fall through */
+            self->state = CLIENT_X11_GOT_AUTH_LENGTH;
+
+          case CLIENT_X11_GOT_AUTH_LENGTH:
+            {
+              UINT32 name_length = self->buffer->data[5];
+              UINT32 auth_length = self->buffer->data[6 + name_length];
+              UINT32 in_length = 7 + name_length + auth_length;
+              
+              /* We also want the auth data */
+              if (self->i < in_length)
+                break;
+
+              /* Ok, now we have the connection setup message. Check if it's ok. */
+              if ( (name_length == MIT_COOKIE_NAME_LENGTH)
+                   && !memcpy(self->buffer->data + 6, MIT_COOKIE_NAME, MIT_COOKIE_NAME_LENGTH)
+                   && lsh_string_eq_l(self->auth_info->fake,
+                                      auth_length,
+                                      self->buffer->data + 7 + name_length))
+                {
+                  struct lsh_string *msg;
+                  
+                  /* Cookies match! */
+                  verbose("client_x11: Allowing X11 connection; cookies match.\n");
+
+                  /* Construct the real setup message. */
+                  msg = ssh_format("%ls%c%ls%c%ls%ls%ls",
+                                   5, self->buffer->data,
+                                   self->auth_info->name->length,
+                                   self->auth_info->name->length,
+                                   self->auth_name->name->data,
+                                   self->auth_info->auth->length,
+                                   self->auth_info->auth->length,
+                                   self->auth_info->auth->data,
+                                   self->i - length,
+                                   self->buffer + self->i,
+                                   data->length - consumed,
+                                   data->data + consumed);
+                  
+                  out_length = (7
+                                + self->auth_info->name->length
+                                + self->auth_info->auth->length);
+
+                  if (out_length > in_length)
+                    werror("client_x11: Replacing the fake cookie made\n"
+                           "            the X11 setup packet larger.\n"
+                           "            Flow control will be slightly broken.\n");
+                  else if (out_length < in_length)
+                    /* Compensate by saying that we consumed 
+
+                }
+              else
+                {
+                  warning("client_x11: X11 connection
+      A_WRITE(&closure->socket->write_buffer->super, data);
+      break;
+    case CHANNEL_STDERR_DATA:
+      werror("Ignoring unexpected stderr data.\n");
+      lsh_string_free(data);
+      break;
+    default:
+      fatal("Internal error. do_client_channel_x11_receive");
+    }
+}
+
+struct client_x11_channel *
+make_client_x11_channel(struct client_x11_auth_info *auth_info,
+                        struct lsh_fd *fd,
+                        UINT32 window)
+{
+  NEW(client_x11_channel, self);
+
+  init_channel_forward(&self->super, fd, window);
+  self->auth_info = auth_info;
+  self->state = 0;
+  self->buffer = lsh_string_alloc(X11_SETUP_MAX_LENGTH);
+}
 
 /* Format is host:display.screen, where display and screen are numbers */
 static struct sockaddr *
@@ -241,7 +389,7 @@ do_channel_open_x11(struct channel_open *s,
 
 
 struct channel_open *
-make_forward_x11(const char *display, struct lsh_string *fake)
+make_channel_open_x11(const char *display, struct lsh_string *fake)
 {
   NEW(channel_open_x11, self);
 
@@ -259,4 +407,12 @@ make_forward_x11(const char *display, struct lsh_string *fake)
   if (!xauth_lookup(self->address, &self->auth_name,
 		   &self->auth_data))
     werror("Couldn't lookup X authority information.\n");
+}
+
+struct command *
+make_forward_x11(const char *display, struct lsh_string *fake)
+{
+  /* FIXME: Request X11 forwarding, and install a channel open-handler
+     if that succeeds. */
+  return NULL;
 }
