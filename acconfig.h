@@ -50,3 +50,6 @@
 
 /* struct utmp has a ut_addr member */
 #undef HAVE_UT_ADDR
+
+/* struct utmp has a ut_addr_v6 member */
+#undef HAVE_UT_ADDR_V6
