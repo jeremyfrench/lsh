@@ -109,7 +109,7 @@
      (super ssh_channel)
      (vars
        ; User information
-       (user object lsh_user)
+       ;; (user object lsh_user)
 
        (initial_window . UINT32)
 
@@ -201,8 +201,7 @@ do_close(struct ssh_channel *c)
 #endif
 
 struct ssh_channel *
-make_server_session(struct lsh_user *user,
-		    UINT32 initial_window,
+make_server_session(UINT32 initial_window,
 		    struct alist *request_types)
 {
   NEW(server_session, self);
@@ -223,7 +222,6 @@ make_server_session(struct lsh_user *user,
   self->super.close = do_close;
 #endif
   
-  self->user = user;
   self->process = NULL;
   
   self->in = NULL;
@@ -239,7 +237,6 @@ make_server_session(struct lsh_user *user,
      (name open_session)
      (super channel_open)
      (vars
-       (user object lsh_user)
        (session_requests object alist)))
 */
 
@@ -258,12 +255,11 @@ do_open_session(struct channel_open *s,
   CAST(open_session, self, s);
 
   debug("server.c: do_open_session()\n");
-
+  
   if (parse_eod(args))
     {
       COMMAND_RETURN(c,
-		     make_server_session(self->user,
-					 WINDOW_SIZE, self->session_requests));
+		     make_server_session(WINDOW_SIZE, self->session_requests));
     }
   else
     {
@@ -272,21 +268,20 @@ do_open_session(struct channel_open *s,
 }
 
 struct channel_open *
-make_open_session(struct lsh_user *user,
-		  struct alist *session_requests)
+make_open_session(struct alist *session_requests)
 {
   NEW(open_session, closure);
 
   closure->super.handler = do_open_session;
-  closure->user = user;
   closure->session_requests = session_requests;
   
   return &closure->super;
 }
 
+#if 0
 /* A command taking two arguments: unix_user, connection,
  * returns the connection. */
-/* GABA:
+/* ;; GABA:
    (class
      (name server_connection_service)
      (super command)
@@ -305,16 +300,28 @@ do_login(struct command *s,
 	 struct exception_handler *e UNUSED)
 {
   CAST(server_connection_service, closure, s);
-  CAST_SUBTYPE(lsh_user, user, x);
+  CAST(ssh_connection, connection, x);
+
+  if (!connection->user)
+    {
+      EXCEPTION_RAISE(connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+					      "User authentication required."));
+      return;
+    }
   
-  werror("User %pS authenticated for ssh-connection service.\n",
-	 user->name);
+  werror("Starting ssh-connection service for user %pS.\n",
+	 connection->user->name);
 
   /* FIXME: It would be better to take one more alists as arguments,
    * and cons the ATOM_SESSION service at the head of it. But that
    * won't work as long as an alist doesn't consist of independent
    * cons-objects. */
   
+  ALIST_SET(connection->table->channel_types,
+	    ATOM_SESSION, 
+	    self->handler);
+
   COMMAND_RETURN
     (c, make_install_fix_channel_open_handler
      (ATOM_SESSION, make_open_session(user,
@@ -336,9 +343,11 @@ make_server_connection_service(struct alist *session_requests)
 
   return &closure->super;
 }
+#endif
 
-struct lsh_string *format_exit_signal(struct ssh_channel *channel,
-				      int core, int signal)
+struct lsh_string *
+format_exit_signal(struct ssh_channel *channel,
+		   int core, int signal)
 {
   struct lsh_string *msg = ssh_format("Process killed by %lz.\n",
 				      STRSIGNAL(signal));
@@ -352,7 +361,8 @@ struct lsh_string *format_exit_signal(struct ssh_channel *channel,
 				msg, "");
 }
 
-struct lsh_string *format_exit(struct ssh_channel *channel, int value)
+struct lsh_string *
+format_exit(struct ssh_channel *channel, int value)
 {
   return format_channel_request(ATOM_EXIT_STATUS,
 				channel,
@@ -368,8 +378,9 @@ struct lsh_string *format_exit(struct ssh_channel *channel, int value)
        (session object server_session)))
 */
 
-static void do_exit_shell(struct exit_callback *c, int signaled,
-			  int core, int value)
+static void
+do_exit_shell(struct exit_callback *c, int signaled,
+	      int core, int value)
 {
   CAST(exit_shell, closure, c);
   struct server_session *session = closure->session;
@@ -424,7 +435,8 @@ make_exit_shell(struct server_session *session)
 /* Creates a one-way socket connection. Returns 1 on success, 0 on
  * failure. fds[0] is for reading, fds[1] for writing (like for the
  * pipe() system call). */
-static int make_pipe(int *fds)
+static int
+make_pipe(int *fds)
 {
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
     {
@@ -456,7 +468,8 @@ static int make_pipe(int *fds)
   return 1;
 }
 
-static int make_pipes(int *in, int *out, int *err)
+static int
+make_pipes(int *in, int *out, int *err)
 {
   int saved_errno;
   
@@ -559,6 +572,7 @@ static int make_pty(struct pty_info *pty UNUSED,
 /* Returns -1 on failure, 0 for child and +1 for parent */
 static int
 spawn_process(struct server_session *session,
+	      struct lsh_user *user,
 	      struct address_info *peer,
 	      struct io_backend *backend,
 	      struct reap *reaper)
@@ -585,7 +599,7 @@ spawn_process(struct server_session *session,
   {
     struct resource *child;
     
-    if (USER_FORK(session->user, &child,
+    if (USER_FORK(user, &child,
 		  reaper, make_exit_shell(session),
 		  peer, using_pty ? session->pty->tty_name : NULL))
       {
@@ -660,7 +674,7 @@ spawn_process(struct server_session *session,
 	else
 	  { /* Child */
 	    trace("spawn_process: Child process\n");
-	    assert(getuid() == session->user->uid);
+	    assert(getuid() == user->uid);
 
 #if 0
 	    /* Debug timing problems */
@@ -671,7 +685,7 @@ spawn_process(struct server_session *session,
 		sleep(5);
 	      }
 #endif    
-	    if (!USER_CHDIR_HOME(session->user))
+	    if (!USER_CHDIR_HOME(user))
 	      {
 		werror("Could not change to home (or root) directory!\n");
 		_exit(EXIT_FAILURE);
@@ -770,7 +784,8 @@ do_spawn_shell(struct channel_request *c,
     /* Already spawned a shell or command */
     goto fail;
 
-  switch (spawn_process(session, connection->peer,
+  switch (spawn_process(session, connection->user,
+			connection->peer,
 			closure->backend, closure->reaper))
     {
     case 1: /* Parent */
@@ -788,7 +803,7 @@ do_spawn_shell(struct channel_request *c,
 	int env_length = 0;
 	
 	debug("do_spawn_shell: Child process\n");
-	assert(getuid() == session->user->uid);
+	assert(getuid() == connection->user->uid);
 	    	    
 	if (session->term)
 	  {
@@ -800,7 +815,7 @@ do_spawn_shell(struct channel_request *c,
 #undef MAX_ENV
 
 #if 1
-	USER_EXEC(session->user, 1, argv, env_length, env);
+	USER_EXEC(connection->user, 1, argv, env_length, env);
 	
 	/* exec failed! */
 	verbose("server_session: exec() failed (errno = %i): %z\n",
@@ -878,7 +893,8 @@ do_spawn_exec(struct channel_request *c,
   if (!command_line)
     EXCEPTION_RAISE(e, &exec_request_failed);
   else
-    switch (spawn_process(session, connection->peer,
+    switch (spawn_process(session, connection->user,
+			  connection->peer,
 			  closure->backend, closure->reaper))
     {
     case 1: /* Parent */
@@ -898,7 +914,7 @@ do_spawn_exec(struct channel_request *c,
 	int env_length = 0;
 	
 	debug("do_spawn_shell: Child process\n");
-	assert(getuid() == session->user->uid);
+	assert(getuid() == connection->user->uid);
 	    	    
 	if (session->term)
 	  {
@@ -909,7 +925,7 @@ do_spawn_exec(struct channel_request *c,
 	assert(env_length <= MAX_ENV);
 #undef MAX_ENV
 
-	USER_EXEC(session->user, 0, argv, env_length, env);
+	USER_EXEC(connection->user, 0, argv, env_length, env);
 	
 	/* exec failed! */
 	verbose("server_session: exec() failed (errno = %i): %z\n",
@@ -950,7 +966,7 @@ STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "pty request failed");
 static void
 do_alloc_pty(struct channel_request *c UNUSED,
 	     struct ssh_channel *channel,
-	     struct ssh_connection *connection UNUSED,
+	     struct ssh_connection *connection,
 	     UINT32 type UNUSED,
 	     int want_reply UNUSED,
 	     struct simple_buffer *args,
@@ -962,7 +978,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
   UINT32 mode_length;
   struct lsh_string *term = NULL;
 
-  struct server_session *session = (struct server_session *) channel;
+  CAST(server_session, session, channel);
 
   verbose("Client requesting a tty...\n");
   
@@ -978,7 +994,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
     {
       struct pty_info *pty = make_pty_info();
 
-      if (pty_allocate(pty, session->user->uid))
+      if (pty_allocate(pty, connection->user->uid))
         {
           struct termios ios;
 
@@ -1023,12 +1039,8 @@ do_alloc_pty(struct channel_request *c UNUSED,
   EXCEPTION_RAISE(e, &pty_request_failed);
 }
 
-struct channel_request *make_pty_handler(void)
-{
-  NEW(channel_request, self);
+struct channel_request
+pty_request_handler =
+{ STATIC_HEADER, do_alloc_pty };
 
-  self->handler = do_alloc_pty;
-
-  return self;
-}
 #endif /* WITH_PTY_SUPPORT */

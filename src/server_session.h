@@ -33,15 +33,13 @@
 #include <string.h>
 
 struct ssh_channel *
-make_server_session(struct lsh_user *user,
-		    UINT32 initial_window,
+make_server_session(UINT32 initial_window,
 		    struct alist *request_types);
 struct command *
 make_server_connection_service(struct alist *session_requests);
 
 struct channel_open *
-make_open_session(struct lsh_user *user,
-		  struct alist *session_requests);
+make_open_session(struct alist *session_requests);
 
 struct channel_request *
 make_shell_handler(struct io_backend *backend,
@@ -57,7 +55,7 @@ format_exit_signal(struct ssh_channel *channel,
 struct lsh_string *
 format_exit(struct ssh_channel *channel, int value);
 
-struct channel_request *
-make_pty_handler(void);
+extern struct channel_request 
+pty_request_handler;
 
 #endif /* LSH_SERVER_SESSION_H_INCLUDED */
