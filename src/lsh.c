@@ -260,7 +260,7 @@ read_user_keys(struct lsh_options *options)
   struct verifier *v;
   struct lsh_string *spki_public;
 
-  trace("read-user_keys\n");
+  trace("read_user_keys\n");
   
   if (!options->with_publickey)
     return make_object_list(0, -1);
