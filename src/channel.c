@@ -255,6 +255,13 @@ static int channel_process_status(struct channel_table *table,
   
   while (!LSH_CLOSEDP(status))
     {
+      if (status & LSH_CHANNEL_CLOSE)
+	{ /* Close the channel now */ 
+	  if (!c->flags & CHANNEL_SENT_CLOSE)
+	    status |= channel_close(c);
+	  break;
+	}
+      
       if (status & LSH_CHANNEL_READY_SEND)
 	{
 	  status &= ~ LSH_CHANNEL_READY_SEND;
@@ -299,7 +306,7 @@ static int do_global_request(struct packet_handler *c,
   CAST(global_request_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   int name;
   int want_reply;
   
@@ -332,7 +339,7 @@ static int do_channel_open(struct packet_handler *c,
   CAST(channel_open_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   int type;
   UINT32 remote_channel_number;
   UINT32 window_size;
@@ -419,7 +426,7 @@ static int do_channel_request(struct packet_handler *c,
   CAST(channel_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 channel_number;
   int type;
   int want_reply;
@@ -469,7 +476,7 @@ static int do_window_adjust(struct packet_handler *c,
   CAST(channel_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 channel_number;
   UINT32 size;
 
@@ -518,7 +525,7 @@ static int do_channel_data(struct packet_handler *c,
   CAST(channel_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 channel_number;
   struct lsh_string *data;
   
@@ -599,7 +606,7 @@ static int do_channel_extended_data(struct packet_handler *c,
   CAST(channel_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 channel_number;
   UINT32 type;
   struct lsh_string *data;
@@ -681,7 +688,7 @@ static int do_channel_eof(struct packet_handler *c,
   CAST(channel_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 channel_number;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
@@ -746,7 +753,7 @@ static int do_channel_close(struct packet_handler *c,
   CAST(channel_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 channel_number;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
@@ -805,7 +812,7 @@ static int do_channel_open_confirm(struct packet_handler *c,
   CAST(channel_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 local_channel_number;
   UINT32 remote_channel_number;  
   UINT32 window_size;
@@ -850,7 +857,7 @@ static int do_channel_open_failure(struct packet_handler *c,
   CAST(channel_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 channel_number;
   UINT32 reason;
 
@@ -901,24 +908,29 @@ static int do_channel_success(struct packet_handler *c,
   CAST(channel_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 channel_number;
-  
+  struct ssh_channel *channel;
+      
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_SUCCESS)
       && parse_uint32(&buffer, &channel_number)
-      && parse_eod(&buffer))
+      && parse_eod(&buffer)
+      && (channel = lookup_channel(closure->table, channel_number)))
+    
     {
-      struct ssh_channel *channel = lookup_channel(closure->table,
-						   channel_number);
-
       lsh_string_free(packet);
-      
-      if (channel && channel->channel_success)
-	return channel_process_status(closure->table, channel_number,
-				      CHANNEL_SUCCESS(channel));
+
+      if (!channel->channel_failure)
+	{
+	  werror("do_channel_success: No handler. Ignoring.\n");
+	  return LSH_OK | LSH_GOON;
+	}
+
+      return channel_process_status(closure->table, channel_number,
+				    CHANNEL_SUCCESS(channel));
     }
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
@@ -931,24 +943,28 @@ static int do_channel_failure(struct packet_handler *c,
   CAST(channel_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 channel_number;
+  struct ssh_channel *channel;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_FAILURE)
       && parse_uint32(&buffer, &channel_number)
-      && parse_eod(&buffer))
+      && parse_eod(&buffer)
+      && (channel = lookup_channel(closure->table, channel_number)))
     {
-      struct ssh_channel *channel = lookup_channel(closure->table,
-						   channel_number);
-
       lsh_string_free(packet);
       
-      if (channel && channel->channel_failure)
-	return channel_process_status(closure->table, channel_number,
-				      CHANNEL_FAILURE(channel));
+
+      if (!channel->channel_failure)
+	{
+	  werror("do_channel_failure: No handler. Ignoring.\n");
+	  return LSH_OK | LSH_GOON;
+	}
+      return channel_process_status(closure->table, channel_number,
+					CHANNEL_FAILURE(channel));
     }
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
