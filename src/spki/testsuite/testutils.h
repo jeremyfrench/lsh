@@ -1,3 +1,7 @@
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include "certificate.h"
 #include "parse.h"
 #include "tag.h"
@@ -11,6 +15,12 @@
 void
 read_acl(struct spki_acl_db *db,
 	 unsigned length, const uint8_t *data);
+
+struct spki_tag *
+make_tag(unsigned length, const uint8_t *expr);
+
+void
+release_tag(struct spki_tag *tag);
 
 #define FAIL(msg) do { fprintf(stderr, "%s\n", msg); abort(); } while(0)
 

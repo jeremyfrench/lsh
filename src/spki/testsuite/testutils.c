@@ -10,8 +10,24 @@ read_acl(struct spki_acl_db *db,
   ASSERT(spki_acl_parse(db, &i));
 }
 
+struct spki_tag *
+make_tag(unsigned length, const uint8_t *expr)
+{
+  struct spki_tag *tag = spki_tag_from_sexp(NULL, nettle_realloc,
+					    length, expr);
+  ASSERT(tag);
+  
+  return tag;
+}
+
+void
+release_tag(struct spki_tag *tag)
+{
+  spki_tag_release(NULL, nettle_realloc, tag);
+}
+
 int
-main(int argc, char **argv)
+main(int argc UNUSED, char **argv UNUSED)
 {
   test_main();
 
