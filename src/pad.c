@@ -47,8 +47,10 @@ static int do_pad(struct abstract_write **w,
   UINT32 block_size = connection->send_crypto
     ? connection->send_crypto->block_size : 8;
 
-  new_size = 1 + block_size
-    * ( (8 + packet->length) / block_size);
+  /* new_size is (packet->length + 9) rounded up to a multiple of
+   * block_size */
+  new_size = block_size
+    * (1 + (8 + packet->length) / block_size);
 
   padding = new_size - packet->length - 5;
   assert(padding >= 4);
