@@ -383,7 +383,7 @@ fi
 if test x$with_tcpwrappers = xyes; then
   AC_CHECK_LIB(wrap, request_init,, 
   [
-      AC_MSG_WARN([Failed to link libwrap, you might try adding socket to youd LDFLAGS])
+      AC_MSG_WARN([Failed to link libwrap, you might try adding -lsocket to LDFLAGS])
       with_tcpwrappers=no
   ])
 
