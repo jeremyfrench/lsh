@@ -26,14 +26,20 @@
 #ifndef LSH_SEXP_H_INCLUDED
 #define LSH_SEXP_H_INCLUDED
 
-#include "abstract_io.h"
+#include "lsh_types.h"
+
+#define CLASS_DECLARE
+#unclude "sexp.h.x"
+#undef CLASS_DECLARE
 
 /* CLASS:
    (class
      (name sexp)
      (vars
-       (output method int "int style" "struct abstract_write output")))
+       (format method int "int style")))
 */
+
+#define SEXP_FORMAT(e, s) ((e)->format((e), (s)))
 
 /* CLASS:
    (class
@@ -60,6 +66,12 @@
        (car object sexp)
        (cdr object sex_cons)))
 */
+
+/* Output styles */
+
+#define SEXP_CANONICAL 0
+#define SEXP_TRANSPORT 1
+#define SEXP_EXTENDED 2
 
 /* Creating sexps */
 /* atom->sexp */
