@@ -1,3 +1,9 @@
+2000-01-18  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/zlib.c (RATE_MAX, RATE_MIN): Use rates between 1/16 and 16.
+	(estimate_update): Fixed estimate. Also ignore small packets.
+	(do_zlib): Fixed stop condition (noted by Markus Friedl).
+
 2000-01-13  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* Makefile.am.in (EXTRA_DIST): Added distribution-key.gpg.
