@@ -500,6 +500,10 @@ DEFINE_COMMAND2(lsh_login_command)
 
   struct client_userauth_method *password
     = make_client_password_auth(options->super.tty);
+
+  /* FIXME: Perhaps we should try "none" only when using SRP. */
+  struct client_userauth_method *none
+    = make_client_none_auth();
   
   COMMAND_RETURN(c,
 		 make_client_userauth
@@ -507,11 +511,12 @@ DEFINE_COMMAND2(lsh_login_command)
 		  ATOM_SSH_CONNECTION,
 		  (LIST_LENGTH(keys)
 		   ? make_object_list
-		   (2, 
+		   (3,
+                    none,
 		    make_client_publickey_auth(keys),
 		    password,
 		    -1)
-		   : make_object_list(1, password, -1))));
+		   : make_object_list(2, none, password, -1))));
 }
 
 
