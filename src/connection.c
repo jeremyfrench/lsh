@@ -103,7 +103,7 @@ static int handle_connection(struct abstract_write *w,
 }
 
 static int do_fail(struct packet_handler *closure,
-		   struct ssh_connection *connection,
+		   struct ssh_connection *connection UNUSED,
 		   struct lsh_string *packet)
 {
   CHECK_TYPE(packet_handler, closure);
