@@ -32,47 +32,53 @@ int sloppy_complete = 2;
 
 #include "rl.h"
 
-#ifdef HAVE_READLINE_READLINE_H
+#ifdef WITH_READLINE
 #include "str_utils.h"
 
 static int lsftp_rl_line_inited=0;
 
 #ifdef HAVE_RL_FILENAME_COMPLETION_FUNCTION
-#define RL_FILENAME_COMPLETION_FUNCTION rl_filename_completion_function
+# define RL_FILENAME_COMPLETION_FUNCTION rl_filename_completion_function
 #else /* HAVE_RL_FILENAME_COMPLETION_FUNCTION */
-#ifdef HAVE_FILENAME_COMPLETION_FUNCTION
-#define RL_FILENAME_COMPLETION_FUNCTION filename_completion_function
-#else
-#error "lsftp doesn't work with your readline library, please disable readline and contact the author."
-#endif /* HAVE_FILENAME_COMPLETION_FUNCTION */
+# ifdef HAVE_FILENAME_COMPLETION_FUNCTION
+#  define RL_FILENAME_COMPLETION_FUNCTION filename_completion_function
+# else
+#  error "lsftp doesn't work with your readline library, please disable readline and contact the author."
+# endif /* HAVE_FILENAME_COMPLETION_FUNCTION */
 #endif /* HAVE_RL_FILENAME_COMPLETION_FUNCTION */
 
 #ifdef HAVE_RL_COMPLETION_MATCHES
-#define RL_COMPLETION_MATCHES rl_completion_matches
+# define RL_COMPLETION_MATCHES rl_completion_matches
 #else /* HAVE_RL_COMPLETION_MATCHES */
-#ifdef HAVE_COMPLETION_MATCHES
-#define RL_COMPLETION_MATCHES completion_matches
-#else
-#error "lsftp doesn't work with your readline library, please disable readline and contact the author."
-#endif /* HAVE_COMPLETION_MATCHES */
+# ifdef HAVE_COMPLETION_MATCHES
+#  define RL_COMPLETION_MATCHES completion_matches
+# else
+#  error "lsftp doesn't work with your readline library, please disable readline and contact the author."
+# endif /* HAVE_COMPLETION_MATCHES */
 #endif /* HAVE_RL_COMPLETION_MATCHES */
 
 
 #ifdef HAVE_RL_CHAR_IS_QUOTED_P
-#define RL_CHAR_IS_QUOTED rl_char_is_quoted_p
+# define RL_CHAR_IS_QUOTED rl_char_is_quoted_p
 #else /* HAVE_RL_CHAR_IS_QUOTED */
-#ifdef HAVE_CHAR_IS_QUOTED
-#define RL_CHAR_IS_QUOTED char_is_quoted
-#else
-#error "lsftp doesn't work with your readline library, please disable readline and contact the author."
-#endif /* HAVE_CHAR_IS_QUOTED */
+# ifdef HAVE_CHAR_IS_QUOTED
+#  define RL_CHAR_IS_QUOTED char_is_quoted
+# else
+#  error "lsftp doesn't work with your readline library, please disable readline and contact the author."
+# endif /* HAVE_CHAR_IS_QUOTED */
 #endif /* HAVE_RL_CHAR_IS_QUOTED */
+
+
+
+/* FIXME: review readline support, proper way to do it? */
+
+
 
 void lsftp_rl_init()
 {
   /* Basic readline initialization goes here */
 
-# ifdef HAVE_READLINE_HISTORY_H
+# ifdef WITH_HISTORY
 
   char* histfname = lsftp_rl_history_fname();
 
@@ -84,7 +90,7 @@ void lsftp_rl_init()
       free( histfname );
     }
 
-# endif /* HAVE_READLINE_HISTORY_H */
+# endif /* WITH_HISTORY */
 
   /* Allow conditional parsing of the ~/.inputrc file. */
   rl_readline_name = "lsftp";
@@ -104,7 +110,7 @@ void lsftp_rl_exit()
   /* Called to finish business with readline, only saves history and 
    * makes sure we don't have no callback handler */
 
-# ifdef HAVE_READLINE_HISTORY_H
+# ifdef WITH_HISTORY
   char* histfname = lsftp_rl_history_fname();
 
   using_history(); /* Use history function */
@@ -115,7 +121,7 @@ void lsftp_rl_exit()
       free( histfname );
     }
 
-# endif
+# endif /* WITH_HISTORY */
   rl_callback_handler_remove();
 
 }
@@ -174,6 +180,10 @@ int char_quoted( char* text, int index )
 
     return normalq || nextliteral || literalq;
 }
+
+
+
+
 
 char** lsftp_rl_completion(char* text, int start, int end)
 {
@@ -456,7 +466,7 @@ void lsftp_rl_lhandler(char* line)
   lsftp_rl_line_inited=0; 
   lsftp_rl_line=line;
 
-# ifdef HAVE_READLINE_HISTORY_H
+# ifdef WITH_HISTORY
   if ( line && *line) /* Got a line and it's not empty? */
     add_history(line); /* Save to history */
 # endif
@@ -492,7 +502,7 @@ char* lsftp_rl_history_fname()
 }
 
 
-#else /* ifdef HAVE_READLINE_READLINE_H */
+#else /* ifdef WITH_READLINE */
 
 /* Readline not found */
 
@@ -539,5 +549,5 @@ lsftp_rl_history_fname(void)
   return 0;
 }
 
-#endif /* ifdef HAVE_READLINE_READLINE_H */
+#endif /* ifdef WITH_READLINE */
 
