@@ -143,8 +143,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (e object exception_handler)
        
        (reaper object reap)
-       (random_poll object random_poll)
-       (random object randomness)
+       (random object randomness_with_poll)
        
        (signature_algorithms object alist)
        (style . sexp_argp_state)
@@ -212,12 +211,9 @@ make_lshd_options(struct io_backend *backend)
   self->e = make_lshd_exception_handler(&default_exception_handler,
 					HANDLER_CONTEXT);
   self->reaper = make_reaper();
-  self->random_poll = make_unix_random(self->reaper);
-  self->random = make_arcfour_random(self->random_poll,
-				     &sha1_algorithm, self->e);
+  self->random = make_default_random(self->reaper, self->e);
 
-  /* FIXME: We don't support rsa yet in the rest of the code! */
-  self->signature_algorithms = all_signature_algorithms(self->random);
+  self->signature_algorithms = all_signature_algorithms(&self->random->super);
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
 
@@ -405,7 +401,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			  make_dh_server(make_dh1(self->random)));
+			  make_dh_server(make_dh1(&self->random->super)));
 	      }
 #if WITH_SRP	    
 	    if (self->with_srp_keyexchange)
@@ -414,7 +410,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_SRP_RING1_SHA1_LOCAL,
-			  make_srp_server(make_srp1(self->random), db));
+			  make_srp_server(make_srp1(&self->random->super), db));
 	      }
 #endif /* WITH_SRP */
 	  }
@@ -466,6 +462,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  }
 	else
 	  argp_error(state, "All user authentication methods disabled.");
+
+	/* Start background poll */
+	RANDOM_POLL_BACKGROUND(self->random->poller);
 	
 	break;
       }
@@ -684,8 +683,6 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  RANDOM_POLL_BACKGROUND(options->random_poll);
-  
   {
     /* Commands to be invoked on the connection */
     struct object_list *connection_hooks;
@@ -735,11 +732,11 @@ int main(int argc, char **argv)
 					"lsh - a free ssh",
 					NULL,
 					SSH_MAX_PACKET,
-					options->random,
+					&options->random->super,
 					options->super.algorithms,
 					options->sshd1),
 		    make_simple_kexinit
-		    (options->random,
+		    (&options->random->super,
 		     options->kex_algorithms,
 		     options->super.hostkey_algorithms,
 		     options->super.crypto_algorithms,
