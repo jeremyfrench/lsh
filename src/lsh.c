@@ -241,52 +241,145 @@ read_known_hosts(struct lsh_options *options)
   return context;
 }
 
+/* For now, supports only a single key */
+static struct object_list *
+read_user_keys(struct lsh_options *options)
+{
+  struct lsh_string *tmp = NULL;
+  struct lsh_string *contents;
+  const char *name = NULL;
+  struct sexp *expr;
+  int fd;
+  int algorithm_name;
+  
+  struct signer *s;
+  struct verifier *v;
+  struct lsh_string *spki_public;
+
+  trace("read-user_keys\n");
+  
+  if (!options->with_publickey)
+    return make_object_list(0, -1);
+
+  if (options->identity)
+    name = options->identity;
+  else 
+    {
+      tmp = ssh_format("%lz/.lsh/identity", options->home);
+      name = lsh_get_cstring(tmp);
+    }
+
+  fd = open(name, O_RDONLY);
+  if (fd < 0)
+    {
+      werror("Failed to open `%z' for reading: %z\n",
+             name, STRERROR(errno));
+      lsh_string_free(tmp);
+
+      return make_object_list(0, -1);
+    }
+
+  lsh_string_free(tmp);
+
+  contents = io_read_file_raw(fd, 2000);
+
+  if (!contents)
+    {
+      werror("Failed to read private key file: %z\n",
+             STRERROR(errno));
+      close(fd);
+
+      return make_object_list(0, -1);
+    }
+
+  close(fd);
+
+  expr = string_to_sexp(SEXP_TRANSPORT, contents, 1);
+
+  if (!expr)
+    {
+      werror("S-expression syntax error in private key.\n");
+      return make_object_list(0, -1);
+    }
+
+  if (options->super.tty)
+    {
+      struct alist *mac = make_alist(0, -1);
+      struct alist *crypto = make_alist(0, -1);
+
+      alist_select_l(mac, options->algorithms->algorithms,
+		     2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1);
+      alist_select_l(crypto, options->algorithms->algorithms,
+		     3, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
+		     ATOM_RIJNDAEL_CBC_LOCAL, -1);
+      
+      expr = spki_pkcs5_decrypt(mac, crypto,
+                                options->super.tty,
+                                expr);
+      if (!expr)
+        {
+          werror("Decrypting private key failed.\n");
+          return make_object_list(0, -1);
+        }
+    }
+  
+  s = spki_sexp_to_signer(options->signature_algorithms, expr,
+                          &algorithm_name);
+  if (!s)
+    {
+      werror("Invalid private key.\n");
+      return make_object_list(0, -1);
+    }
+  
+  v = SIGNER_GET_VERIFIER(s);
+  assert(v);
+  
+  spki_public = sexp_format(spki_make_public_key(v),
+			    SEXP_CANONICAL, 0);
+
+  /* Test key here? */  
+  switch (algorithm_name)
+    {	  
+    case ATOM_DSA:
+      return make_object_list(2,
+                              make_keypair(ATOM_SSH_DSS,
+                                           PUBLIC_KEY(v),
+                                           s),
+                              make_keypair(ATOM_SPKI_SIGN_DSS,
+                                           spki_public, s),
+                              -1);
+      break;
+
+    case ATOM_RSA_PKCS1_SHA1:
+      return make_object_list(2, 
+                              make_keypair(ATOM_SSH_RSA,
+                                           PUBLIC_KEY(v),
+                                           s),
+                              make_keypair(ATOM_SPKI_SIGN_RSA,
+                                           spki_public, s),
+                              -1);
+
+    case ATOM_RSA_PKCS1_MD5:
+      return make_object_list(1,
+                              make_keypair(ATOM_SPKI_SIGN_RSA,
+                                           spki_public, s),
+                              -1);
+
+    default:
+      fatal("Internal error!\n");
+    }
+}
 
 /* Read user's private keys. By default, "~/.lsh/identity". */
 static void
 do_options2identities(struct command *ignored UNUSED,
 		      struct lsh_object *a,
 		      struct command_continuation *c,
-		      struct exception_handler *e)
+		      struct exception_handler *e UNUSED)
 {
   CAST(lsh_options, options, a);
-  
-  struct lsh_string *tmp = NULL;
-  const char *s = NULL;
-  struct lsh_fd *f = NULL;
 
-  trace("do_options2identities\n");
-  
-  if (!options->with_publickey)
-    {
-      COMMAND_RETURN(c, make_object_list(0, -1));
-      return;
-    }
-  if (options->identity)
-    s = options->identity;
-  else 
-    {
-      tmp = ssh_format("%lz/.lsh/identity", options->home);
-      s = lsh_get_cstring(tmp);
-    }
-  
-  f = io_read_file(s, e);
-  
-  if (!f)
-    {
-      werror("Failed to open '%z' (errno = %i): %z.\n",
-	     s, errno, STRERROR(errno));
-      COMMAND_RETURN(c, make_object_list(0, -1));
-    }
-  else
-    {
-      struct command *command
-	= make_spki_read_userkeys(options->algorithms->algorithms,
-				  options->signature_algorithms,
-				  options->super.tty);
-      COMMAND_CALL(command, f, c, e);
-    }
-  lsh_string_free(tmp);
+  COMMAND_RETURN(c, read_user_keys(options));
 }
 
 static struct command options2identities =
