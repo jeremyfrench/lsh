@@ -117,7 +117,7 @@ make_userauth_special_exception(struct lsh_string *reply,
        ; (argv[0], NULL). 
 
        (exec_shell method void "int login"
-                   "char **argv"
+                   "const char **argv"
 		   "unsigned env_length"
 		   "const struct env_value *env")))
 */
