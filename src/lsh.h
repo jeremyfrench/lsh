@@ -24,15 +24,19 @@
 #ifndef LSH_H_INCLUDED
 #define LSH_H_INCLUDED
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 #include <inttypes.h>
+#include <stddef.h>
 #include <stdlib.h>
 
-#include "lsh_types.h"
+/* Useful macros. */
+#define MIN(a, b) (((a)>(b)) ? (b) : (a))
+#define MAX(a, b) (((a)<(b)) ? (b) : (a))
+#define SQR(x) ((x)*(x))
 
+/* Stringizing */
+#define STRINGIZE1(x) #x
+#define STRINGIZE(x) STRINGIZE1(x)
+#define STRING_LINE STRINGIZE(__LINE__)
 
 /* Generic object */
 
