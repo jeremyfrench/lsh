@@ -1,3 +1,9 @@
+2004-01-08  Niels Möller  <niels@s3.kth.se>
+
+	* src/tcpforward.c (do_channel_open_direct_tcpip): Log
+	direct-tcpip request.
+	(do_tcpip_forward_request): Log forward-tcpip request.
+
 2004-01-07  Niels Möller  <nisse@harpo.hack.org>
 
 	* acinclude.m4 (AX_CREATE_STDINT_H): Copied macro definition from
