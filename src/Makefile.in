@@ -65,7 +65,7 @@ lshd: $(SERVER_OBJS) $(COMMON_OBJS)
 atoms_defines.h: atoms.in process_atoms
 	bash process_atoms header <atoms.in >atoms_defines.h
 
-atoms_gperf.c: atoms.in process_atoms
+atoms_gperf.c: atoms.in process_atoms Makefile
 	bash process_atoms gperf <atoms.in \
              | gperf -t -c -l -k1,7,$$ -N gperf_atom >atoms_gperf.c
 
