@@ -1,3 +1,10 @@
+Mon Jan 11 15:35:02 1999    <nisse@puck>
+
+	* Makefile.am.in (EXTRA_DIST): Add jpoll.c, jpoll.h, getopt.h,
+	getopt.c and getopt1.c to the distribution.
+
+	* io.c (get_inaddr): Check HAVE_INET_ATON.
+
 Sun Jan 10 21:56:37 1999    <nisse@puck>
 
 	* lshd.c (usage): Improved message.

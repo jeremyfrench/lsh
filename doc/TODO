@@ -28,9 +28,7 @@ KEYS
 Code is needed to generate, store and read dss keys. Preferably in a
 SPKI/s-expression form.
 
-DSS == Digital Signature Standard; the algorithm in it is DSA (Digital
-Signature Algorithm); the GNU Privacy Guard contains a DSA implementation
-(cipher/dsa.[ch]); is that implementation suitable?
+Check SPKI:s definitions of DSS keys, and make sure we are compatible.
 
 
 S-EXPRESSIONS
