@@ -121,6 +121,9 @@ label
 # Certificates and ACL:s
 certificate
 acl
+version
+entry
+propagate
 tag
 prefix
 set
