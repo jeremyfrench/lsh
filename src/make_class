@@ -497,6 +497,7 @@
       (list "static struct lsh_object *\n" name "("
 	    (if params (declare-params params) "void")
 	    ")\n{\n"
+	    (format #f "  /* ~S */\n" translated)
 	    "#define A GABA_APPLY\n"
 	    "#define I GABA_VALUE_I\n"
 	    "#define K GABA_VALUE_K\n"
