@@ -456,6 +456,7 @@ int main(int argc, char **argv)
   if (!io_listen(backend, &local, 
 	    make_server_callback(backend,
 				 "lsh - a free ssh",
+				 NULL,
 				 SSH_MAX_PACKET,
 				 r, make_kexinit,
 				 kexinit_handler)))

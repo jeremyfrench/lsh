@@ -31,15 +31,25 @@
 #include "password.h"
 #include "reaper.h"
 
+#if SSH1_FALLBACK
+#include ssh1_fallback.h
+#else /* !SSH1_FALLBACK */
+struct ssh1_fallback;
+#endif /* !SSH1_FALLBACK */
+
 struct fd_callback *
 make_server_callback(struct io_backend *b,
 		     const char *comment,
+		     /* NULL if no falling back should be attempted. */
+		     struct ssh1_fallback *fallback,
 		     UINT32 block_size,
 		     struct randomness *random,		     
 		     struct make_kexinit *init,
 		     struct packet_handler *kexinit_handler);
 
-struct read_handler *make_server_read_line(struct ssh_connection *c);
+struct read_handler *make_server_read_line(struct ssh_connection *c,
+					   int fd,
+					   struct ssh1_fallback *fallback);
 struct close_callback *make_server_close_handler(struct ssh_connection *c);
 
 struct ssh_channel *make_server_session(struct unix_user *user,
