@@ -610,18 +610,24 @@ get_inaddr(struct sockaddr_in	* addr,
  * all lookups, so that the server need only deal with ip-numbers. And
  * optionally refuse requests with dns names. */
 
-#if 0
 int tcp_addr(struct sockaddr_in *sin,
 	     UINT32 length,
 	     UINT8 *addr,
 	     UINT32 port)
 {
-  char *c = alloca(length + 1);
+  char *c;
   int res;
-  
-  memcpy(c, addr, length);
-  c[length] = '\0';
 
+  if (addr)
+    {
+      c = alloca(length + 1);
+  
+      memcpy(c, addr, length);
+      c[length] = '\0';
+    }
+  else
+    c = NULL;
+  
   res = get_inaddr(sin, c, NULL, "tcp");
   if (!res)
     return 0;
@@ -629,7 +635,6 @@ int tcp_addr(struct sockaddr_in *sin,
   sin->sin_port = htons(port);
   return 1;
 }
-#endif
 
 struct address_info *make_address_info_c(const char *host,
 					 const char *port)
@@ -679,22 +684,13 @@ struct address_info *sockaddr2info(size_t addr_len UNUSED,
 int address_info2sockaddr_in(struct sockaddr_in *sin,
 			     struct address_info *a)
 {
-  char *c;
 
   if (a->address)
-    {
-      c = alloca(a->address->length + 1);
-      memcpy(c, a->address->data, a->address->length);
-      c[a->address->length] = '\0';
-    }
+    return tcp_addr(sin,
+		    a->address->length, a->address->data,
+		    a->port);
   else
-    c = NULL;
-
-  if (!get_inaddr(sin, c, NULL, "tcp"))
-    return 0;
-
-  sin->sin_port = htons(a->port);
-  return 1;
+    return tcp_addr(sin, 0, NULL, a->port);
 }
 
 /* For fd:s in blocking mode. */
