@@ -35,7 +35,7 @@
 #include <assert.h>
 
 /* Forward declarations */
-/* extern struct command_simple forward_start_io; */
+
 extern struct collect_info_1 open_direct_tcpip;
 extern struct collect_info_1 remote_listen_command;
 extern struct collect_info_1 open_forwarded_tcpip;
@@ -50,7 +50,6 @@ static struct command make_direct_tcpip_handler;
 struct collect_info_1 install_tcpip_forward_handler;
 static struct command make_tcpip_forward_handler;
 
-/* #define FORWARD_START_IO (&forward_start_io.super.super) */
 #define OPEN_DIRECT_TCPIP (&open_direct_tcpip.super.super.super)
 #define REMOTE_LISTEN (&remote_listen_command.super.super.super)
 #define TCPIP_START_IO (&tcpip_start_io.super)
@@ -153,9 +152,6 @@ new_tcpip_channel(struct channel_open_command *c,
   
   channel = make_tcpip_channel(self->peer->fd, TCPIP_WINDOW_SIZE);
   channel->write = connection->write;
-
-  channel->max_window = self->max_window;
-  channel->rec_window_size = self->max_window;
   
   *request = prepare_channel_open(connection->channels, self->type, 
   				  channel, 
@@ -407,17 +403,19 @@ make_forward_local_port(struct io_backend *backend,
      (globals
        (remote_listen REMOTE_LISTEN)
        ;; (connection_remember CONNECTION_REMEMBER)
-       (start_io TCPIP_CONNECT_IO))
+       (connect_io TCPIP_CONNECT_IO))
      (params
        (connect object command)
        (remote object address_info))
      (expr
        (lambda (connection)
          (remote_listen (lambda (peer)
-	                  (start_io peer
+	                  (connect_io ; peer
 			            ;; FIXME: This calls connect too early
 				    ;; Let it take peer as argument
-			            (connect (K connection peer))))
+				    ;; Replacing connection with (K connection peer)
+				    ;; might work, except that it is optimized away.
+			            (connect connection)))
 	                remote
 			connection))))
 */
