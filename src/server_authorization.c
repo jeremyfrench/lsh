@@ -51,7 +51,7 @@
 static struct verifier *
 do_key_lookup(struct lookup_verifier *c,
 	      int method,
-	      struct user *keyholder,
+	      struct lsh_user *keyholder,
 	      struct lsh_string *key)
 {
   CAST(authorization_db, closure, c);

@@ -123,6 +123,6 @@ struct sexp;
 struct sexp_iterator;
 
 /* userauth.h */
-struct user;
+struct lsh_user;
 
 #endif /* LSH_H_INCLUDED */

@@ -34,14 +34,14 @@
 #include <string.h>
 
 struct ssh_channel *
-make_server_session(struct user *user,
+make_server_session(struct lsh_user *user,
 		    UINT32 initial_window,
 		    struct alist *request_types);
 struct command *
 make_server_connection_service(struct alist *session_requests);
 
 struct channel_open *
-make_open_session(struct user *user,
+make_open_session(struct lsh_user *user,
 		  struct alist *session_requests);
 
 struct channel_request *

@@ -86,7 +86,7 @@ do_authenticate(struct userauth *s,
 	  && parse_eod(args))
        : parse_eod(args))) 
     {
-      struct user *user;
+      struct lsh_user *user;
       
       lookup = ALIST_GET(self->verifiers, algorithm);
 

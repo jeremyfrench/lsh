@@ -79,7 +79,7 @@ do_authenticate(struct userauth *s,
       if ( (password = parse_string_copy(args))
 	   && parse_eod(args))
 	{
-	  struct user *user;
+	  struct lsh_user *user;
 
 	  password = utf8_to_local(password, 1, 1);
 

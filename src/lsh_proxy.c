@@ -398,7 +398,7 @@ main_argp =
 static struct verifier *
 do_host_lookup(struct lookup_verifier *c UNUSED,
 	       int method UNUSED,
-               struct user *user UNUSED,
+               struct lsh_user *user UNUSED,
                struct lsh_string *key)
 {
   assert(method == ATOM_SSH_DSS);

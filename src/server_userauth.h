@@ -49,13 +49,13 @@
  * o  cd:ing to the home directory
  *
  * When this is done, the lookup method in user_db should return a
- * struct user *, not struct unix_user *.
+ * struct lsh_user *, not struct unix_user *.
  */
 
 /* ;; GABA:
    (class
      (name unix_user)
-     (super user)
+     (super lsh_user)
      (vars
        (uid simple uid_t)
        (gid simple gid_t)
@@ -72,7 +72,7 @@
    (class
      (name user_db)
      (vars
-       (lookup method "struct user *"
+       (lookup method "struct lsh_user *"
                       "struct lsh_string *name" "int free")))
 */
 

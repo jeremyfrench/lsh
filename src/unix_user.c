@@ -54,7 +54,7 @@
 /* GABA:
    (class
      (name unix_user)
-     (super user)
+     (super lsh_user)
      (vars
        (gid simple gid_t)
        
@@ -69,7 +69,7 @@
 /* NOTE: Calls functions using the *ugly* convention of returning
  * pointers to static buffers. */
 static int
-do_verify_password(struct user *s,
+do_verify_password(struct lsh_user *s,
 		   struct lsh_string *password,
 		   int free)
 {
@@ -107,7 +107,7 @@ do_verify_password(struct user *s,
 /* NOTE: No arbitrary file names are passed to this function, so we don't have
  * to check for things like "../../some/secret/file" */
 static int
-do_file_exists(struct user *u,
+do_file_exists(struct lsh_user *u,
 	       struct lsh_string *name,
 	       int free)
 {
@@ -138,7 +138,7 @@ do_file_exists(struct user *u,
  * as the same user, perhaps it's better to use $HOME? */
 
 static int
-do_chdir_home(struct user *u)
+do_chdir_home(struct lsh_user *u)
 {
   CAST(unix_user, user, u);
 
@@ -191,7 +191,7 @@ change_uid(struct unix_user *user)
 }
 
 static int
-do_fork_process(struct user *u, pid_t *pid)
+do_fork_process(struct lsh_user *u, pid_t *pid)
 {
   CAST(unix_user, user, u);
   pid_t child;
@@ -240,7 +240,7 @@ format_env_pair_c(const char *name, const char *value)
 }
 
 static void
-do_exec_shell(struct user *u, int login,
+do_exec_shell(struct lsh_user *u, int login,
 	      char **argv,
 	      unsigned env_length,
 	      const struct env_value *env)
@@ -320,7 +320,7 @@ do_exec_shell(struct user *u, int login,
   execve(user->shell->data, argv, envp);
 }
 
-static struct user *
+static struct lsh_user *
 make_unix_user(struct lsh_string *name,
 	       uid_t uid, gid_t gid,
 	       const char *passwd,
@@ -371,7 +371,7 @@ make_unix_user(struct lsh_string *name,
  * An account that is disabled in /etc/passwd should have a value for
  * the login shell that prevents login; replacing the passwd field
  * only doesn't prevent login using publickey authentication. */
-static struct user *
+static struct lsh_user *
 do_lookup_user(struct user_db *s,
 	       struct lsh_string *name, int free)
 {

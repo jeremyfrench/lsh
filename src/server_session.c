@@ -156,7 +156,7 @@ struct resource *make_process_resource(pid_t pid, int signal)
      (super ssh_channel)
      (vars
        ; User information
-       (user object user)
+       (user object lsh_user)
 
        (initial_window . UINT32)
 
@@ -240,7 +240,7 @@ do_close(struct ssh_channel *c)
 }
 
 struct ssh_channel *
-make_server_session(struct user *user,
+make_server_session(struct lsh_user *user,
 		    UINT32 initial_window,
 		    struct alist *request_types)
 {
@@ -278,7 +278,7 @@ make_server_session(struct user *user,
      (name open_session)
      (super channel_open)
      (vars
-       (user object user)
+       (user object lsh_user)
        (session_requests object alist)))
 */
 
@@ -311,7 +311,7 @@ do_open_session(struct channel_open *s,
 }
 
 struct channel_open *
-make_open_session(struct user *user,
+make_open_session(struct lsh_user *user,
 		  struct alist *session_requests)
 {
   NEW(open_session, closure);
@@ -344,7 +344,7 @@ do_login(struct command *s,
 	 struct exception_handler *e UNUSED)
 {
   CAST(server_connection_service, closure, s);
-  CAST_SUBTYPE(user, user, x);
+  CAST_SUBTYPE(lsh_user, user, x);
   
   werror("User %pS authenticated for ssh-connection service.\n",
 	 user->name);
