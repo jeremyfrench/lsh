@@ -135,13 +135,6 @@ do_eof(struct ssh_channel *channel)
   trace("server_session.c: do_eof\n");
 
   write_buffer_close(session->in->write_buffer);
-
-#if 0
-  /* Moved to channel.c:channel_eof_handler. */
-  if ( (channel->flags & CHANNEL_SENT_EOF)
-       && (channel->flags & CHANNEL_CLOSE_AT_EOF))
-    channel_close(channel);
-#endif
 }
 
 struct ssh_channel *
@@ -265,14 +258,8 @@ do_exit_shell(struct exit_callback *c, int signaled,
   
   trace("server_session.c: do_exit_shell\n");
   
-  /* NOTE: We don't close the child's stdio here. The io-backend
-   * should notice EOF anyway, and the client should send EOF when it
-   * receives news of the process's death, unless it really wants to
-   * talk to any live grand children processes. */
+  /* NOTE: We don't close the child's stdio here. */
 
-  /* We close when we have both sent and received eof. */
-  channel->flags |= CHANNEL_CLOSE_AT_EOF;
-  
   if (!(channel->flags & CHANNEL_SENT_CLOSE))
     {
       verbose("server_session.c: Sending %a message on channel %i\n",
@@ -284,8 +271,13 @@ do_exit_shell(struct exit_callback *c, int signaled,
 	       ? format_exit_signal(channel, core, value)
 	       : format_exit(channel, value)) );
 
-      if ( (channel->flags & CHANNEL_SENT_EOF)
-	   && (channel->flags & CHANNEL_RECEIVED_EOF))
+      /* We want to close the channel as soon as all stdout and stderr
+       * data has been sent. In particular, we don't wait for EOF from
+       * the client, most clients never sends that. */
+      
+      channel->flags |= (CHANNEL_NO_WAIT_FOR_EOF | CHANNEL_CLOSE_AT_EOF);
+      
+      if (channel->flags & CHANNEL_SENT_EOF)
 	{
 	  /* We have sent EOF already, so initiate close */
 	  channel_close(channel);
@@ -515,6 +507,9 @@ spawn_process(struct server_session *session,
 	      REMEMBER_RESOURCE
 		(channel->resources, &session->err->super);
 
+	    /* Don't close channel immediately at EOF, as we want to
+	     * get a chance to send exit-status or exit-signal. */
+	    session->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
 	    return 1;
 	  }
 	else
