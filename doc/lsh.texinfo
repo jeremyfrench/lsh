@@ -91,7 +91,9 @@ translation approved by the Free Software Foundation.
 @ifnottex
 @node     Top, Introduction, (dir), (dir)
 @comment  node-name,  next,  previous,  up
+@ifinfo
 @top
+@end ifinfo
 
 This document describes @command{lsh} and related programs. The
 @command{lsh} suite of programs is intended as a free replacement for
