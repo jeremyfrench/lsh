@@ -1,6 +1,7 @@
-#! /bin/sh
+#! /bin/bash
 
-# rcp-like copying program. Requires bash on the remote machine, but
+# rcp-like copying program. Uses bash, for the noclobber feature.
+# Unless -f is used, bash is required also on the remote machine, but
 # no other special programs.
 
 # lsh, an implementation of the ssh protocol
@@ -20,12 +21,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
+
 set -e
 
 verbose=no
 dry_run=no
 force=no
+
+RSH=${LCP_RSH:-lsh}
 
 function werror () {
   if [ "x$verbose" = xyes ] ; then
@@ -51,8 +54,10 @@ function usage () {
   echo "  -n, --dry-run  don't execute any commands. Implies -v"
 }
 
-# This could be improved, e.g. by inserting a backslash
-# before each character.
+# FIXME: This isn't failsafe at all. We could do somthing simple, like
+# inserting a backslash before each character, or do something more
+# sophisticated whichat doesn't quote filenames that don't need it.
+
 function quote () {
   echo '"'"$1"'"'
 }
@@ -81,41 +86,42 @@ function read_src () {
   local user="${1:+-l}$1"
   local host="$2"
   local file="$3"
+  local qfile="`quote "$file"`"
 
   if [ -z "$host" ]; then
-    werror "From: cat "`quote "$file"`
+    werror 'From: cat "'"$file"'"'
     if [ "x$dry_run" = xno ] ; then
       cat "$file"
     fi
   else
-    file=`quote "$file"`
-    werror "From: " ${LCP_SSH:-lsh} $user "$host" cat "$file"
-    if [ "x$dry_run" = no ] ; then
-      ${LCP_SSH:-lsh} $user "$host" cat "$file"
+    werror "From: " $RSH $user "$host" cat "$qfile"
+    if [ "x$dry_run" = xno ] ; then
+      $RSH $user "$host" cat "$qfile"
     fi
   fi
 }
 
-# Arguments USER HOST FILE SRC_FILE
+# Arguments USER HOST DST SRC_FILE
 function write_dst () {
   local user="${1:+-l}$1"
   local host="$2"
-  local file="$3"
-  local src_file=`quote "$4"`
-
+  local dst="$3"
+  local src_file="$4"
+  local qdst="`quote "$file"`"
+  local qsrc="`quote "$src_file"`"
+  
   if [ -z "$host" ]; then
-    werror "To: cat >"`quote "$file"`
+    werror 'To: if [ -d "'"$dst"'" ] ; then cat > "'"$dst/$src_file"'" ; else cat > "'"$dst"'"; fi'
     if [ "x$dry_run" = xno ] ; then
-      cat > "$file"
+      if [ -d "$dst" ] ; then cat > "$dst/$src_file" ; else cat > "$dst"; fi 
     fi
   else
-    file=`quote "$file"`
-    command="$set_clobber ; if [ -d $file ] ; then cat > $file/$src_file ; else cat > $file ; fi"
+    command="$rset_clobber"' if [ -d "'"$dst"'" ] ; then cat > "'"$dst/$src_file"'" ; else cat > "'"$dst"'" ; fi'
 
-    werror "To: " ${LCP_SSH:-lsh} $user "$host" "bash -c '$command'"
+    werror "To: " $RSH $user '"'"$host"'"' "bash -c '$command'"
 
-    if [ $dry_run = no ] ; then
-      ${LCP_SSH:-lsh} $user "$host" bash -c "'$command'"
+    if [ x$dry_run = xno ] ; then
+      $RSH $user "$host" bash -c "'$command'"
     fi
   fi
 }
@@ -183,18 +189,21 @@ dst_file="$file"
 # echo verbose: $verbose
 
 if [ "x$force" = xyes ] ; then
-  set_clobber='set +C'
+  set +C
+  rset_clobber=''
+  SHELL_PROGRAM=sh
 else
-  # noclobber
-  set_clobber='set -C'
+  set -C
+  rset_clobber='set -C ;'
+  SHELL_PROGRAM=bash
 fi
 
-$set_clobber
+file=`basename $src_file`
 
 if [ "x$dry_run" = xyes ] ; then
   read_src "$src_user" "$src_host" "$src_file" 
-  write_dst "$dst_user" "$dst_host" "$dst_file" "$src_file"
+  write_dst "$dst_user" "$dst_host" "$dst_file" "$file"
 else
   read_src "$src_user" "$src_host" "$src_file" \
-  | write_dst "$dst_user" "$dst_host" "$dst_file" "$src_file"
+  | write_dst "$dst_user" "$dst_host" "$dst_file" "$file"
 fi
