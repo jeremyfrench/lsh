@@ -234,7 +234,7 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 	case EWOULDBLOCK:  /* aka EAGAIN */
 	  return 0;
 	case EPIPE:
-	  werror("io.c: read() returned EPIPE! Treating it as EOF.\n");
+	  wwrite("io.c: read() returned EPIPE! Treating it as EOF.\n");
 	  return A_EOF;
 	default:
 	  werror("io.c: do_read: read() failed (errno %d), %s\n",
@@ -358,7 +358,7 @@ static void listen_callback(struct lsh_fd *fd)
   res = FD_CALLBACK(self->callback, conn);
   if (LSH_ACTIONP(res))
     {
-      werror("Strange: Accepted a connection, "
+      wwrite("Strange: Accepted a connection, "
 	     "but failed before writing anything.\n");
       close_fd(fd, (LSH_FAILUREP(res)
 		    ? CLOSE_PROTOCOL_FAILURE
@@ -375,7 +375,7 @@ static void connect_callback(struct lsh_fd *fd)
 
   if (LSH_ACTIONP(res))
     {
-      werror("Strange: Connected, "
+      wwrite("Strange: Connected, "
 	     "but failed before writing anything.\n");
     }
   else
@@ -532,6 +532,70 @@ get_inaddr(struct sockaddr_in	* addr,
 	}
     }
 
+  return 1;
+}
+
+/* For fd:s in blocking mode. */
+int write_raw(int fd, UINT32 length, UINT8 *data)
+{
+  while(length)
+    {
+      int written = write(fd, data, length);
+
+      if (written < 0)
+	switch(errno)
+	  {
+	  case EINTR:
+	  case EAGAIN:
+	    continue;
+	  default:
+	    return 0;
+	  }
+      
+      length -= written;
+      data += written;
+    }
+  return 1;
+}
+
+int write_raw_with_poll(int fd, UINT32 length, UINT8 *data)
+{
+  while(length)
+    {
+      struct pollfd pfd;
+      int res;
+      int written;
+      
+      pfd.fd = fd;
+      pfd.events = POLLOUT;
+
+      res = poll(&pfd, 1, -1);
+
+      if (res < 0)
+	switch(errno)
+	  {
+	  case EINTR:
+	  case EAGAIN:
+	    continue;
+	  default:
+	    return 0;
+	  }
+      
+      written = write(fd, data, length);
+
+      if (written < 0)
+	switch(errno)
+	  {
+	  case EINTR:
+	  case EAGAIN:
+	    continue;
+	  default:
+	    return 0;
+	  }
+      
+      length -= written;
+      data += written;
+    }
   return 1;
 }
 

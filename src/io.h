@@ -159,6 +159,9 @@ int get_inaddr(struct sockaddr_in	* addr,
 	       const char		* service,
 	       const char		* protocol);
 
+int write_raw(int fd, UINT32 length, UINT8 *data);
+int write_raw_with_poll(int fd, UINT32 length, UINT8 *data);
+
 void io_set_nonblocking(int fd);
 void io_set_close_on_exec(int fd);
 void io_init_fd(int fd);
