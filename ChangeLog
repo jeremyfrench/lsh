@@ -1,3 +1,8 @@
+2001-02-21  Niels Möller  <nisse@ehand.com>
+
+	* src/io.c (do_consuming_read): Added an assert do check that
+	want_read is true. Check fd->hanged_up first.
+
 2001-02-21  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/srp_exchange.c (srp_format_proofs): First argument to
