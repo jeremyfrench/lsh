@@ -645,10 +645,12 @@
       ((expr) (process-expr body))
       (else (list "#error Unknown expression type " type "\n")))))
 
-(define main
-  (let ((test (lambda (s) (string-prefix? "/* GABA:" s))))
-    (lambda args
-      (let ((exp (read-expression test)))
-	(unless (eof-object? exp)
-		(out 0 (process-input exp))
-		(main))))))
+(define (main args)
+  (define (loop)
+    (let ((exp (read-expression
+		(lambda (s) (string-prefix? "/* GABA:" s)))))
+      (unless (eof-object? exp)
+	      (out 0 (process-input exp))
+	      (loop))))
+  (loop)
+  (exit 0))
