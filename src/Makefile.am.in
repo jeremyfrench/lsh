@@ -99,7 +99,7 @@ packet_types.h: ssh.h invert-defs
 # 	  $(PERL) $(top_srcdir)/misc/mk-reverse-table ssh.h >$@T
 # 	  if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
 
-LDADD = @LIBOBJS@ liblsh.a symmetric/libsymmetric.a 
+LDADD = liblsh.a @LIBOBJS@ symmetric/libsymmetric.a 
 
 # Is this rule needed?
 # all-recursive check-recursive: config.h
