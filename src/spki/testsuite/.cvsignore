@@ -8,3 +8,5 @@ principal-test
 read-acl-test
 read-cert-test
 tag-test
+test.in
+testhome

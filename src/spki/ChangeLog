@@ -1,3 +1,29 @@
+2003-03-10  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* tools/Makefile.am (noinst_PROGRAMS): Added spki-delegate and
+	spki-reduce. 
+
+	* tools/spki-reduce.c: New program.
+
+	* tools/spki-delegate.c: Implemented creation of acls and chained
+	certificates. The latter not yet tested, though.
+
+	* certificate.c (spki_parse_sequence_no_signatures): Use const for
+	the subject argument. Call spki_principal_normalize before
+	returning. 
+	(spki_hash_verify): New function.
+	(spki_parse_sequence): Implemented signature checks.
+
+	* testsuite/cdsa-reduce-test.c (test_main): const-declare subject. 
+
+	* testsuite/Makefile.am (TS_SH): Added delegate-test.
+
+	* testsuite/delegate-test: New testcase.
+
+	* testsuite/setup-env: New script.
+
+	* testsuite/Makefile.am (EXTRA_DIST): Added key-1.
+
 2003-03-09  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* tools/Makefile.am (noinst_PROGRAMS): Added spki-delegate.
