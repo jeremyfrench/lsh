@@ -26,6 +26,7 @@
 
 #include "server_userauth.h"
 
+#include "environ.h"
 #include "format.h"
 #include "io.h"
 #include "read_file.h"
@@ -585,7 +586,7 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
   const char **shell_argv;
   const char *argv0;
 
-  char *tz = getenv("TZ");
+  char *tz = getenv(ENV_TZ);
   unsigned i, j;
 
   trace("unix_user: exec_shell\n");
@@ -605,18 +606,18 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
   envp = alloca(sizeof(char *) * (info->env_length + MAX_ENV + 1));
 
   i = 0;
-  envp[i++] = format_env_pair("SHELL", user->shell);
+  envp[i++] = format_env_pair(ENV_SHELL, user->shell);
 
   if (user->home)
-    envp[i++] = format_env_pair("HOME", user->home);
+    envp[i++] = format_env_pair(ENV_HOME, user->home);
 
   /* FIXME: The value of $PATH should not be hard-coded */
-  envp[i++] = "PATH=/bin:/usr/bin";
-  envp[i++] = format_env_pair("USER", user->super.name);
-  envp[i++] = format_env_pair("LOGNAME", user->super.name);
+  envp[i++] = ENV_PATH "=/bin:/usr/bin";
+  envp[i++] = format_env_pair(ENV_USER, user->super.name);
+  envp[i++] = format_env_pair(ENV_LOGNAME, user->super.name);
 
   if (tz)
-    envp[i++] = format_env_pair_c("TZ", tz);
+    envp[i++] = format_env_pair_c(ENV_TZ, tz);
 
   assert(i <= MAX_ENV);
 #undef MAX_ENV
@@ -705,7 +706,7 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
   if (user->super.uid == getuid())
     execve(lsh_get_cstring(user->shell), (char **) shell_argv, (char **) envp);
   else
-    execve(PREFIX "/sbin/lsh-execuv", (char **) argv, (char **) envp);
+    execve(PATH_EXECUV, (char **) argv, (char **) envp);
 
   werror("unix_user: exec failed %e\n", errno);
   _exit(EXIT_FAILURE);
@@ -1018,7 +1019,7 @@ do_lookup_user(struct user_db *s,
       /* NOTE: If we are running as the uid of the user, it seems like
        * a good idea to let the HOME environment variable override the
        * passwd-database. */
-      home = getenv("HOME");
+      home = getenv(ENV_HOME);
       if (!home)
 	home = passwd->pw_dir;
     }
