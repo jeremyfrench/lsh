@@ -1,3 +1,30 @@
+Tue May 11 20:22:05 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/sexp_test.c (main): Create the fd objects properly (old
+	problem).
+
+	* src/server_session.c (do_spawn_shell): Fixed typo.
+	(do_send): Handle the case that session->err is NULL.
+
+	* src/server_pty.c: Added a better warning message if opening
+ 	/dev/ptmx failes.
+
+	* src/keyexchange.c (parse_kexinit): Use the improved
+	parse_atom_list() function.
+
+	* src/parse.c (parse_atoms): New function.
+	(parse_atom_list): Read length field first, so that callers don't
+	have to call parse_sub_buffer() manually.
+
+	* src/client_pty.c (do_pty_continuation, make_pty_request): Moved
+	the call of CFMAKERAW (Bazsi). 
+
+	* src/channel.c (adjust_rec_window): Don't touch the
+ 	rec_window_size attribute here; that's done in
+ 	prepare_window_adjust().
+	(do_channel_data, do_channel_extended_data): rec_window_size was
+ 	updated too many times, fixed. (Bazsi).
+
 Mon May 10 23:20:54 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_session.c (make_pty): Added BASH_WORKAROUND (Bazsi).
