@@ -1,3 +1,24 @@
+2001-09-25  Niels Möller  <nisse@ehand.com>
+
+	* src/lsh-writekey.c (lsh_writekey_options2private_file): Dup
+	string before passing it to make_io_write_file_info.
+	(lsh_writekey_options2public_file): Updated call to
+	make_io_write_file_info. 
+
+	* src/sexp.c (do_format_sexp_vector): Fixed string leak in
+	pretty-printing code.
+
+	* src/io_commands.c (make_io_write_file_info): Changed type of the
+	NAME argument. Now a struct lsh_string *.
+
+	* src/io.c (io_final): Call gc_final. That makes sure that all
+	callbacks are cancelled. Updated callers to not use gc_final, only
+	io_final. 
+
+	* src/gc.c (gc_final): Always define gc_fianl, and kill the
+	resources in the root set. Deallocation and checks for leaks is
+	still done only when DEBUG_ALLOC is defined.
+
 2001-09-24  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/xalloc.c (lsh_object_check): Better message on type error.
