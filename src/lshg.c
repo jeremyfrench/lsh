@@ -287,8 +287,6 @@ main(int argc, char **argv)
 
   /* Close all files and other resources associated with the backend. */
   io_final();
-
-  gc_final();
   
   return exit_code;
 }

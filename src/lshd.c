@@ -738,7 +738,7 @@ main_argp =
 static void
 do_terminate_callback(struct lsh_callback *s UNUSED)
 {
-  gc_final();
+  io_final();
   exit(0);
 }
 
@@ -933,7 +933,6 @@ int main(int argc, char **argv)
   io_run();
 
   io_final();
-  gc_final();
   
   return 0;
 }

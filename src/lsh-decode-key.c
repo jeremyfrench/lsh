@@ -261,8 +261,8 @@ int main(int argc, char **argv)
      NULL);
 
   io_run();
+
   io_final();
-  gc_final();
   
   return EXIT_SUCCESS;
 }

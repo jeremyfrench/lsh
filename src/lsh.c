@@ -989,8 +989,6 @@ int main(int argc, char **argv)
   /* Close all files and other resources associated with the backend. */
   io_final();
   
-  gc_final();
-
   /* FIXME: Perhaps we have to reset the stdio file descriptors to
    * blocking mode? */
   return lsh_exit_code;
