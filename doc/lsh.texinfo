@@ -5,6 +5,11 @@
 @settitle lsh
 @c %**end of header
 
+@dircategory GNU Packages
+@direntry
+* LSH: (lsh).           Secure Shell and related utilities.
+@end direntry
+
 @set UPDATED-FOR 1.1.6
 
 @c Latin-1 doesn't work with tex output.
