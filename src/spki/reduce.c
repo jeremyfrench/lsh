@@ -31,19 +31,20 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 static const struct spki_5_tuple *
 spki_5_tuple_by_subject(const struct spki_5_tuple *list,
 			const struct spki_principal *subject)
 {
-  assert(subject);
+  subject = spki_principal_normalize(subject);
+
   assert(!subject->alias);
   
   for ( ; list; list = list->next)
     {
       assert(list->subject);
-      assert(!list->subject->alias);
       
-      if (list->subject == subject)
+      if (spki_principal_normalize(list->subject) == subject)
 	return list;
     }
   return NULL;
