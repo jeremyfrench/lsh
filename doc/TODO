@@ -42,23 +42,23 @@ Not all packet consumers free processed packets properly.
 
 Have the allocator initialize all objects automatically.
 
+Consider adding reference counts to strings.
+
+
+OBJECT SYSTEM
+
 Better typechecking of non-heap objects. To do this one would also
 need valid isa-pointers in classes (as classes are statically
 allocated). If this is done properly, the meta feature could also be
 cleaned up a little.
 
-Consider adding reference counts to strings.
+Consider adding "const" methods. One such method to use that for is
+ALIST_GET.
 
 
 CHANNELS
 
-Consider which errors can occur in the channel callback functions;
-they are probably somewhat different from errors in higher levels. For
-instance, writing to a file associated with a channel may fail. In
-that case, the channel should be closed, but the connection should not
-die. 
-
-Implement window-change requests.
+Implement window-change requests on the server side.
 
 
 FREENESS
@@ -172,8 +172,7 @@ such device).
 Add some workaround for the poll()-bug in linux/glibc-2.07 reported by
 Bazsi. Hmm, this is probably not a bug. I have to find out what the
 right way is to handle the poll conditions POLLERR, POLLHUP and
-POLLERR. For a start, the fd-list passed to poll should include only
-fd:s that we are actually interested in.
+POLLERR. 
 
 Consider removing the write-attribute from ssh_channel.
 
@@ -206,8 +205,6 @@ tunneling is set up.
 Consider using dynamically allocated strings for exception messages.
 Without this, it is impossible to use non-constant messages, for
 instance messages supplied by the peer.
-
-See if we can do without the "reason" argument to close callbacks. 
 
 Try to unify the handling of queued channel requests and global
 requests. 
@@ -248,10 +245,6 @@ Replace most defines with enums, for improved type checking.
 Write more testcases for rsa.
 
 Perhaps change the LOOKUP_VERIFIER method to return an spki_subject?
-
-Change the COMMAND_SIMPLE and COMMAND_STATIC macros to take argument
-names as arguments, making them more hygienig. Perhaps also rename
-them in the process.
 
 Make connection_unlock install a callout that calls
 connection_handle_pending(). 
