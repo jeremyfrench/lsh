@@ -52,6 +52,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	exception.c \
 	format.c gc.c \
 	gateway.c gateway_channel.c gateway_commands.c \
+	handshake.c \
 	hmac.c idea.c interact.c io.c io_commands.c \
 	keyexchange.c \
 	list.c lookup_verifier.c md5.c \
@@ -120,6 +121,8 @@ lsh_krb_checkpw_LDADD=@KRB_LIBS@
 # 	  if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
 
 LDADD = liblsh.a symmetric/libsymmetric.a 
+# lshg_LDFLAGS = -Wl,-Map,lshg.map
+lshg_LDADD = liblsh.a
 
 # Is this rule needed?
 # all-recursive check-recursive: config.h
