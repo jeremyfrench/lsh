@@ -646,7 +646,7 @@ make_cstring_l(UINT32 length, const UINT8 *data)
 struct lsh_string *
 make_cstring(struct lsh_string *s, int free)
 {
-  struct lsh_string *res = return ssh_cformat("%lS", s);
+  struct lsh_string *res = ssh_cformat("%lS", s);
 
   if (free)
     lsh_string_free(s);
