@@ -44,7 +44,7 @@ static void *do_get(struct alist *c, int atom)
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
 
-  return (struct alist_table *) c->table[atom];
+  return ((struct alist_table *) c)->table[atom];
 }
 
 static void do_set(struct alist *c, int atom, void *value)
@@ -52,7 +52,7 @@ static void do_set(struct alist *c, int atom, void *value)
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
 
-  (struct alist_table *) c->table[atom] = value;
+  ((struct alist_table *) c)->table[atom] = value;
 }
 
 struct alist *make_alist(int n, ...)
