@@ -49,10 +49,6 @@ lookup_compression(struct alist *algorithms, const char *name,
 int
 lookup_hostkey_algorithm(const char *name);
 
-int lookup_hash(struct alist *algorithms, const char *name,
-		struct hash_algorithm **ap,
-		int none_is_valid);
-
 void
 list_crypto_algorithms(const struct argp_state *state,
 		       struct alist *algorithms);

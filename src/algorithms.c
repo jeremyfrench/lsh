@@ -57,7 +57,7 @@ all_symmetric_algorithms()
 		    ATOM_BLOWFISH_CBC, &crypto_blowfish_cbc_algorithm,
 		    ATOM_TWOFISH_CBC, &crypto_twofish256_cbc_algorithm,
                     ATOM_AES256_CBC, &crypto_aes256_cbc_algorithm,
-		    ATOM_RIJNDAEL_CBC_LOCAL, &crypto_aes256_cbc_algorithm,
+		    ATOM_SERPENT256_CBC, &crypto_serpent256_cbc_algorithm,
 		    ATOM_SERPENT_CBC_LOCAL, &crypto_serpent256_cbc_algorithm,
 		    ATOM_3DES_CBC, &crypto_des3_cbc_algorithm,
 		    ATOM_CAST128_CBC, &crypto_cast128_cbc_algorithm,
@@ -107,10 +107,10 @@ all_crypto_algorithms(struct alist *algorithms)
   return filter_algorithms_l(algorithms, 8,
                              ATOM_AES256_CBC,
 			     ATOM_3DES_CBC,
-			     ATOM_TWOFISH_CBC, 			   
+			     ATOM_TWOFISH_CBC, 
 			     ATOM_CAST128_CBC,
+			     ATOM_SERPENT256_CBC,
 			     ATOM_SERPENT_CBC_LOCAL,
-			     ATOM_RIJNDAEL_CBC_LOCAL,
 			     ATOM_BLOWFISH_CBC,
 			     ATOM_ARCFOUR, -1);
 }
@@ -175,16 +175,13 @@ lookup_crypto(struct alist *algorithms, const char *name, struct crypto_algorith
     atom = ATOM_BLOWFISH_CBC;
   else if (strcasecmp_list(name, "3des-cbc", "3des", NULL))
     atom = ATOM_3DES_CBC;
-  else if (strcasecmp_list(name, "aes256-cbc", "aes-cbc", "aes", NULL))
+  else if (strcasecmp_list(name, "aes256-cbc", "aes-cbc", "aes", "rijndael", NULL))
     atom = ATOM_AES256_CBC;
-  else if (strcasecmp_list(name, "rijndael-cbc@lysator.liu.se",
-			   "rijndael-cbc", "rijndael", NULL))
-    atom = ATOM_RIJNDAEL_CBC_LOCAL;
-  else if (strcasecmp_list(name, "serpent-cbc@lysator.liu.se",
+  else if (strcasecmp_list(name, "serpent256-cbc",
 			   "serpent-cbc", "serpent", NULL))
-    atom = ATOM_SERPENT_CBC_LOCAL;
+    atom = ATOM_SERPENT256_CBC;
   else if (strcasecmp_list(name, "cast128-cbc", "cast",
-		       "cast-cbc", "cast128", NULL))
+			   "cast-cbc", "cast128", NULL))
     atom = ATOM_CAST128_CBC;
   else
     return 0;
@@ -284,42 +281,6 @@ lookup_hostkey_algorithm(const char *name)
     return ATOM_SPKI_SIGN_DSS;
   else
     return 0;
-}
-
-/* This function is used by sexp-conv */
-int
-lookup_hash(struct alist *algorithms, const char *name,
-	    struct hash_algorithm **ap, int none_is_valid)
-{
-  int atom;
-
-  if (none_is_valid && !strcasecmp(name, "none"))
-    {
-      if (ap)
-	*ap = NULL;
-      
-      return ATOM_NONE;
-    }
-  if (strcasecmp_list(name, "md5", NULL))
-    atom = ATOM_MD5;
-  else if (strcasecmp_list(name, "sha1", NULL))
-    atom = ATOM_SHA1;
-  else
-    return 0;
-
-  /* Is this hash algorithm supported? */
-  {
-    CAST_SUBTYPE(hash_algorithm, a, ALIST_GET(algorithms, atom));
-    if (a)
-      {
-	if (ap)
-	  *ap = a;
-	
-	return atom;
-      }
-    else
-      return 0;
-  }
 }
 
 /* FIXME: Perhaps this function belongs in list.c or alist.c? */
