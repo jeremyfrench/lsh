@@ -59,7 +59,7 @@
        (level . int)))
 */
 
-struct lsh_keygen_options *
+static struct lsh_keygen_options *
 make_lsh_keygen_options(void)
 {
   NEW(lsh_keygen_options, self);
@@ -144,15 +144,6 @@ main_argp =
   NULL
 };
 
-#if 0
-static void usage(void) NORETURN;
-
-static void usage(void)
-{
-  werror("Usage: lsh_keygen [-o style] [-l nist-level] [-a dsa] [-q] [-d] [-v]\n");
-  exit(1);
-}
-#endif
 
 static void
 do_lsh_keygen_handler(struct exception_handler *s UNUSED,
@@ -178,66 +169,6 @@ int main(int argc, char **argv)
   struct randomness *r;
 
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
-  
-#if 0
-  while((option = getopt(argc, argv, "a:dl:o:qv")) != -1)
-    switch(option)
-      {
-      case 'l':
-	{
-	  char *end;
-
-	  l = strtol(optarg, &end, 0);
-	      
-	  if (!*optarg || *end)
-	    usage();
-
-	  if ( (l<0) || (l > 8))
-	    {
-	      werror("lsh_keygen: nist-level should be in the range 0-8.\n");
-	      usage();
-	    }
-	  break;
-	}
-      case 'a':
-	if (strcmp(optarg, "dsa"))
-	  {
-	    werror("lsh_keygen: Sorry, doesn't support any algorithm but dsa.\n");
-	    usage();
-	  }
-	break;
-      case 'o':
-	if (!strcmp(optarg, "transport"))
-	  style = SEXP_TRANSPORT;
-	else if (!strcmp(optarg, "canonical"))
-	  style = SEXP_CANONICAL;
-	else if (!strcmp(optarg, "advanced"))
-	  style = SEXP_ADVANCED;
-	else if (!strcmp(optarg, "international"))
-	  style = SEXP_INTERNATIONAL;
-	else
-	  {
-	    werror("lsh_keygen: Style must be one of\n"
-		   "  'transport', 'canonical', 'advanced' or 'international'\n");
-	    usage();
-	  }
-	break;
-      case 'q':
-	quiet_flag = 1;
-	break;
-      case 'd':
-	debug_flag = 1;
-	break;
-      case 'v':
-	verbose_flag = 1;
-	break;
-      default:
-	usage();
-      }
-  
-  if (argc != optind)
-    usage();
-#endif
   
   mpz_init(public.p);
   mpz_init(public.q);

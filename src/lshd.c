@@ -74,30 +74,6 @@
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
 
-#if 0
-void usage(void) NORETURN;
-
-
-void usage(void)
-{
-  werror("lshd [options]\n"
-	 " -p,  --port=PORT\n"
-	 " -h,  --hostkey=KEYFILE\n"
-	 " -c,  --crypto=ALGORITHM\n"
-	 " -z,  --compression[=ALGORITHM]\n"
-	 "      --mac=ALGORITHM\n"
-	 " -q,  --quiet\n"
-#if WITH_TCP_FORWARD
-	 "      --no-forward\n"
-#endif
-#if WITH_SSH1_FALLBACK
-         "      --ssh1-fallback=SSHD\n"
-#endif
-	 " -v,  --verbose\n"
-	 "      --debug\n");
-  exit(1);
-}
-#endif
 
 /* Option parsing */
 
@@ -120,9 +96,10 @@ void usage(void)
        (sshd1 object ssh1_fallback)))
 */
 
-struct lshd_options *make_lshd_options(struct alist *algorithms)
+static struct lshd_options *
+make_lshd_options(struct alist *algorithms)
 {
-  NEW(self, lshd_options);
+  NEW(lshd_options, self);
 
   init_algorithms_options(&self->super, algorithms);
   
@@ -225,6 +202,15 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     }
   return 0;
 }
+
+static const struct argp
+main_argp =
+{ main_options, main_argp_parser, 
+  NULL,
+  "Server for the ssh-2 protocol.",
+  main_argp_children,
+  NULL
+};
 
 /* FIXME: We should have some more general functions for reading
  * private keys. */
@@ -405,21 +391,6 @@ static int read_host_key(const char *name,
 int main(int argc, char **argv)
 {
   struct lshd_options *options;
-
-#if 0
-  char *host = NULL;  /* Interface to bind */
-  char *port = "ssh";
-  /* TODO: this should probably use sysconfdir */  
-  char *hostkey = "/etc/lsh_host_key";
-
-#if WITH_SSH1_FALLBACK
-  char *sshd1 = NULL;
-#endif
-  
-#if WITH_TCP_FORWARD
-  int forward_flag = 1;
-#endif
-#endif
   
   struct alist *keys;
   
@@ -450,93 +421,8 @@ int main(int argc, char **argv)
 			       -1);
   options = make_lshd_options(algorithms);
   
-  argp_parse(&main_argp, argc, argv, options);
+  argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
-#if 0
-  for (;;)
-    {
-      struct option options[] =
-      {
-	{ "verbose", no_argument, NULL, 'v' },
-	{ "quiet", no_argument, NULL, 'q' },
-	{ "debug", no_argument, &debug_flag, 1},
-	{ "port", required_argument, NULL, 'p' },
-	{ "crypto", required_argument, NULL, 'c' },
-	{ "compression", optional_argument, NULL, 'z'},
-	{ "mac", required_argument, NULL, 'm' },
-	{ "hostkey", required_argument, NULL, 'h' },
-#if WITH_TCP_FORWARD
-	{ "no-forward", no_argument, &forward_flag, 0 },
-#endif
-#if WITH_SSH1_FALLBACK
-	{ "ssh1-fallback", optional_argument, NULL, OPT_SSH1_FALLBACK},
-#endif
-	{ NULL, 0, NULL, 0 }
-      };
-      
-      option = getopt_long(argc, argv, "c:h:p:qvz::", options, NULL);
-      switch(option)
-	{
-	case -1:
-	  goto options_done;
-	case 0:
-	  break;
-#if WITH_SSH1_FALLBACK
-	case OPT_SSH1_FALLBACK:
-	  sshd1 = optarg ? optarg : SSHD1;
-	  break;
-#endif
-	case 'p':
-	  port = optarg;
-	  break;
-	case 'q':
-	  quiet_flag = 1;
-	  break;
-	case 'v':
-	  verbose_flag = 1;
-	  break;
-	case 'h':
-	  hostkey = optarg;
-	  break;
-	case 'c':
-	  preferred_crypto = lookup_crypto(algorithms, optarg);
-	  if (!preferred_crypto)
-	    {
-	      werror("lsh: Unknown crypto algorithm '%z'.\n", optarg);
-	      exit(1);
-	    }
-	  break;
-	case 'z':
-	  if (!optarg)
-	    optarg = "zlib";
-	
-	  preferred_compression = lookup_compression(algorithms, optarg);
-	  if (!preferred_compression)
-	    {
-	      werror("lsh: Unknown compression algorithm '%z'.\n", optarg);
-	      exit(1);
-	    }
-	  break;
-	case 'm':
-	  preferred_mac = lookup_mac(algorithms, optarg);
-	  if (!preferred_mac)
-	    {
-	      werror("lsh: Unknown message authentication algorithm '%z'.\n",
-		      optarg);
-	      exit(1);
-	    }
-	    
-	case '?':
-	  usage();
-	}
-    }
- options_done:
-
-  if ( (argc - optind) != 0)
-    usage();
-
-#endif
-  
   /* Read the hostkey */
   keys = make_alist(0, -1);
   if (!read_host_key(options->hostkey, keys, r))
@@ -587,9 +473,9 @@ int main(int argc, char **argv)
 			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
 					-1),
 			  make_int_list(1, ATOM_SSH_DSS, -1),
-			  options->crypto_algorithms,
-			  options->mac_algorithms,
-			  options->compression_algorithms,
+			  options->super.crypto_algorithms,
+			  options->super.mac_algorithms,
+			  options->super.compression_algorithms,
 			  make_int_list(0, -1));
   
   {
@@ -648,7 +534,7 @@ int main(int argc, char **argv)
     
       CAST_SUBTYPE(command, server_listen, o);
     
-      COMMAND_CALL(server_listen, local,
+      COMMAND_CALL(server_listen, options->local,
 		   &discard_continuation, &default_exception_handler);
     }
   }
