@@ -35,8 +35,9 @@
 #include "connection_commands.h.x"
 #undef GABA_DEFINE
 
+#if 0
 #include "connection_commands.c.x"
-
+#endif
 
 static void
 do_connection_remember(struct command *s,
@@ -70,7 +71,33 @@ DEFINE_COMMAND_SIMPLE(connection_remember, a)
  * depending on whether or not the CONNECTION_SRP flag is set.
  */
 
-/* GABA:
+DEFINE_COMMAND3(connection_if_srp)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct lsh_object *a3,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(command, then_f, a1);
+  CAST_SUBTYPE(command, else_f, a2);
+  CAST(ssh_connection, connection, a3);
+  
+  struct command *f = ( (connection->flags & CONNECTION_SRP)
+			? then_f : else_f);
+  COMMAND_CALL(f, connection, c, e);
+}
+
+struct command *
+make_connection_if_srp(struct command *then_f,
+		       struct command *else_f)
+{
+  return make_command_3_invoke_2(&connection_if_srp,
+				 &then_f->super,
+				 &else_f->super);
+}
+
+#if 0
+/* ;;GABA:
    (class
      (name connection_if_srp)
      (super command)
@@ -122,6 +149,7 @@ STATIC_COLLECT_2_FINAL(collect_if_srp_2);
 
 struct collect_info_1 connection_if_srp_command =
 STATIC_COLLECT_1(&collect_info_if_srp_2);
+#endif
 
 DEFINE_COMMAND(connection_require_userauth)
      (struct command *s UNUSED, struct lsh_object *a,
