@@ -40,10 +40,12 @@
 #include <assert.h>
 #include <string.h>
 
+#if 0
 #include <sys/types.h>
 #include <fcntl.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #endif
 
 #define GABA_DEFINE
@@ -66,9 +68,6 @@ make_spki_exception(UINT32 type, const char *msg, struct sexp *expr)
 
   return &self->super;
 }
-
-#define SPKI_ERROR(e, msg, expr) \
-EXCEPTION_RAISE((e), make_spki_exception(EXC_SPKI_TYPE, (msg), (expr)))
 
 /* FIXME: This should create different tags for hostnames that are not
  * dns fqdn:s. */
@@ -187,24 +186,9 @@ spki_make_public_key(struct verifier *verifier)
 		PUBLIC_SPKI_KEY(verifier), -1);
 }
 
-/* FIXME: Replace this by something more general. */
-#if 0
-struct sexp *
-dsa_to_spki_public_key(struct dsa_public *dsa)
-{
-  return sexp_l(2, SA(PUBLIC_KEY),
-		sexp_l(5, SA(DSA),
-		       sexp_l(2, SA(P), sexp_un(dsa->p), -1),
-		       sexp_l(2, SA(Q), sexp_un(dsa->q), -1),
-		       sexp_l(2, SA(G), sexp_un(dsa->g), -1),
-		       sexp_l(2, SA(Y), sexp_un(dsa->y), -1),
-		       -1),
-		-1);
-}
-#endif
-
 /* Returns 0 or an atom */
-int spki_get_type(struct sexp *e, struct sexp_iterator **res)
+int
+spki_get_type(struct sexp *e, struct sexp_iterator **res)
 {
   struct sexp_iterator *i;
   int type;
@@ -226,12 +210,6 @@ int spki_get_type(struct sexp *e, struct sexp_iterator **res)
   return type;
 }
 
-COMMAND_SIMPLE(spki_signer2public)
-{
-  CAST_SUBTYPE(signer, private, a);
-  return &SIGNER_GET_VERIFIER(private)->super;
-}
-
 struct sexp *
 spki_hash_data(struct hash_algorithm *algorithm,
 	       int algorithm_name,
@@ -249,188 +227,6 @@ spki_hash_data(struct hash_algorithm *algorithm,
 		sexp_s(NULL, out), -1);
 }  
 
-
-/* Create an SPKI hash from an s-expression. */
-/* GABA:
-   (class
-     (name spki_hash)
-     (super command)
-     (vars
-       (name . int)
-       (algorithm object hash_algorithm)))
-*/
-
-static void
-do_spki_hash(struct command *s,
-	     struct lsh_object *a,
-	     struct command_continuation *c,
-	     struct exception_handler *e UNUSED)
-{
-  CAST(spki_hash, self, s);
-  CAST_SUBTYPE(sexp, o, a);
-
-  struct lsh_string *tmp = hash_string(self->algorithm,
-				       sexp_format(o, SEXP_CANONICAL, 0),
-				       1);
-  struct sexp *hash = spki_hash_data(self->algorithm, self->name, 
-				     tmp->length, tmp->data);
-  lsh_string_free(tmp);
-  
-  COMMAND_RETURN(c, hash);
-}
-
-struct command *
-make_spki_hash(int name, struct hash_algorithm *algorithm)
-{
-  NEW(spki_hash, self);
-  self->super.call = do_spki_hash;
-  self->name = name;
-  self->algorithm = algorithm;
-
-  return &self->super;
-}
-
-const struct spki_hash spki_hash_md5 =
-{ STATIC_COMMAND(do_spki_hash), ATOM_MD5, &md5_algorithm };
-
-const struct spki_hash spki_hash_sha1 =
-{ STATIC_COMMAND(do_spki_hash), ATOM_SHA1, &sha1_algorithm };
-
-  
-/* Used for both sexp2keypair and sexp2signer. */
-
-/* GABA:
-   (class
-     (name spki_parse_key)
-     (super command)
-     (vars
-       (algorithms object alist)))
-*/
-
-
-static void
-do_spki_sexp2signer(struct command *s, 
-		    struct lsh_object *a,
-		    struct command_continuation *c,
-		    struct exception_handler *e)
-{
-  CAST(spki_parse_key, self, s);
-  CAST_SUBTYPE(sexp, key, a);
-  
-  struct sexp_iterator *i;
-  
-  if (sexp_check_type(key, ATOM_PRIVATE_KEY, &i)) 
-    {
-      struct sexp *expr = SEXP_GET(i);
-      struct signer *s;
-      
-      if (!expr)
-	SPKI_ERROR(e, "spki.c: Invalid key.", key); 
-
-      s = spki_make_signer(self->algorithms, expr, NULL);
-      
-      if (s)
-	/* Test key here? */
-	COMMAND_RETURN(c, s);
-      else
-	SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
-    }
-  else
-    SPKI_ERROR(e, "spki.c: Expected private-key expression.", key);
-}
-
-/* (parse algorithms sexp) -> signer */
-COMMAND_SIMPLE(spki_sexp2signer_command)
-{
-  CAST_SUBTYPE(alist, algorithms, a);
-  NEW(spki_parse_key, self);
-  
-  self->super.call = do_spki_sexp2signer;
-  self->algorithms = algorithms;
-  return &self->super.super;
-}
-
-
-static void 
-parse_private_key(struct alist *algorithms,
-                  struct sexp_iterator *i,
-		  struct command_continuation *c,
-		  struct exception_handler *e)
-{
-  struct sexp *expr = SEXP_GET(i);
-  int algorithm_name;
-  struct signer *s;
-  
-  if (!expr)
-    {
-      werror("parse_private_key: Invalid key.\n");
-      SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
-      return;
-    }
-
-  s = spki_make_signer(algorithms, expr, &algorithm_name);
-
-  if (!s)
-    {
-      SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
-      return;
-
-    }
-
-  /* Test key here? */  
-  switch (algorithm_name)
-    {	  
-    case ATOM_DSA:
-      COMMAND_RETURN(c, make_keypair(ATOM_SSH_DSS,
-				     PUBLIC_KEY(SIGNER_GET_VERIFIER(s)),
-				     s));
-      /* Fall through */
-    default:
-      /* Get a corresponding public key. */
-      COMMAND_RETURN(c, make_keypair
-		     (ATOM_SPKI,
-		      sexp_format(spki_make_public_key(SIGNER_GET_VERIFIER(s)),
-				  SEXP_CANONICAL, 0),
-		      s));
-
-      break;
-    }
-}
-
-static void
-do_spki_sexp2keypair(struct command *s, 
-		     struct lsh_object *a,
-		     struct command_continuation *c,
-		     struct exception_handler *e)
-{
-  CAST(spki_parse_key, self, s);
-  CAST_SUBTYPE(sexp, key, a);
-  
-  struct sexp_iterator *i;
-  
-  switch (spki_get_type(key, &i)) 
-    {
-      default:
-        SPKI_ERROR(e, "spki.c: Expected private-key expression.", key);
-        return;
-      case ATOM_PRIVATE_KEY:
-	parse_private_key(self->algorithms, i, c, e);
-	break;
-    } 
-}
-
-
-/* (parse algorithms sexp) -> one or more keypairs */
-COMMAND_SIMPLE(spki_sexp2keypair_command)
-{
-  CAST_SUBTYPE(alist, algorithms, a);
-  NEW(spki_parse_key, self);
-  
-  self->super.call = do_spki_sexp2keypair;
-  self->algorithms = algorithms;
-  return &self->super.super;
-}
-  
 
 /* 5-tuples */
 
@@ -869,10 +665,10 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
 			   authorization, 0, 0, 0, 0);
 }
 
-/* A command that takes an spki_context and an ACL s-expression, and
- * adds corresponding 5-tuples to the context. Returns 1 if all
- * entries were correct, 0 on any error. However, it tries to gon on
- * if some sub-expression is invalid. */
+/* Takes an spki_context and an ACL s-expression, and adds
+ * corresponding 5-tuples to the context. Returns 1 if all entries
+ * were correct, 0 on any error. However, it tries to gon on if some
+ * sub-expression is invalid. */
 
 int
 spki_add_acl(struct spki_context *ctx,

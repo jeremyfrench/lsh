@@ -27,8 +27,17 @@
 #include "command.h"
 #include "spki.h"
 
-struct command *
-make_spki_read_acls(struct alist *algorithms);
+extern struct command_simple spki_signer2verifier;
+#define SIGNER2VERIFIER (&spki_signer2verifier.super.super)
+
+extern struct command_simple spki_verifier2public;
+#define VERIFIER2PUBLIC (&spki_verifier2public.super.super)
+
+extern struct command_simple spki_sexp2signer_command;
+#define SEXP2SIGNER (&spki_sexp2signer_command.super.super)
+
+extern struct command_simple spki_sexp2keypair_command;
+#define SEXP2KEYPAIR (&spki_sexp2keypair_command.super.super)
 
 extern struct command_simple spki_make_context_command;
 #define SPKI_MAKE_CONTEXT (&spki_make_context_command.super.super)
@@ -41,6 +50,15 @@ extern struct command_simple spki_read_hostkeys_command;
 
 extern struct command_simple spki_read_userkeys_command;
 #define SPKI_READ_USERKEYS (&spki_read_userkeys_command.super.super)
+
+struct command *
+make_spki_hash(int name, struct hash_algorithm *algorithm);
+
+struct command *
+make_spki_parse_key(struct alist *algorithms);
+
+struct command *
+make_spki_read_acls(struct alist *algorithms);
 
 struct command *
 make_spki_read_userkeys(struct alist *algorithms);

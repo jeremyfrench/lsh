@@ -62,8 +62,6 @@ make_spki_exception(UINT32 type, const char *msg, struct sexp *expr);
 
 int spki_get_type(struct sexp *e, struct sexp_iterator **res);
 
-int spki_check_type(struct sexp *e, int type, struct sexp_iterator **res);
-
 struct sexp *
 make_ssh_hostkey_tag(struct address_info *host);
 
@@ -79,31 +77,10 @@ spki_make_signer(struct alist *algorithms,
 struct sexp *
 spki_make_public_key(struct verifier *verifier);
 
-#if 0
-struct sexp *
-dsa_to_spki_public_key(struct dsa_public *p);
-#endif
-
-extern struct command_simple spki_signer2public;
-#define SIGNER2PUBLIC (&spki_signer2public.super.super)
-
-extern struct command_simple spki_sexp2signer_command;
-#define SEXP2SIGNER (&spki_sexp2signer_command.super.super)
-
-extern struct command_simple spki_sexp2keypair_command;
-#define SEXP2KEYPAIR (&spki_sexp2keypair_command.super.super)
-
 struct sexp *
 spki_hash_data(struct hash_algorithm *algorithm,
 	       int algorithm_name,
 	       UINT32 length, UINT8 *data);
-
-struct command *
-make_spki_hash(int name, struct hash_algorithm *algorithm);
-
-struct command *
-make_spki_parse_key(struct alist *algorithms);
-
 
 /* At a point in time, not all fields are known; fields may be added
  * later, or computed as needed. This information is not automatically
