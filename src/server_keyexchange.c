@@ -200,6 +200,7 @@ do_srp_server_proof_handler(struct packet_handler *s,
 
       /* Remember that a user was authenticated. */
       connection->user = self->srp->user;
+      connection->flags |= CONNECTION_SRP;
       
       keyexchange_finish(connection, self->srp->algorithms,
 			 self->srp->dh.method->H,
