@@ -1,4 +1,4 @@
-/* channel_commands.h
+/* connection_commands.h
  *
  * $Id$
  */
@@ -21,30 +21,22 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#ifndef LSH_CONNECTION_COMMANDS_H_INCLUDED
+#define LSH_CONNECTION_COMMANDS_H_INCLUDED
 
-#include "channel.h"
+#include "alist.h"
+#include "command.h"
+#include "connection.h"
+#include "keyexchange.h"
+#include "ssh1_fallback.h"
 
-#define GABA_DECLARE
-#include "channel_commands.h.x"
-#undef GABA_DECLARE
+struct close_callback *make_connection_close_handler(struct ssh_connection *c);
+struct command *
+make_handshake_command(int mode,
+		       const char *id,
+		       UINT32 block_size,
+		       struct alist *algorithms,
+		       struct make_kexinit *init,
+		       struct ssh1_fallback *fallback);
 
-/* Command to open a new channel. Takes a connection as argument
- * returns a new channel or NULL if opening failed. */
-
-/* GABA:
-   (class
-     (name channel_open_command)
-     (super command)
-     (vars
-       ;; This method should return a partially filled in channel,
-       ;; and create a channel open request by calling
-       ;; prepare_channel_open.
-       (new_channel method "struct ssh_connection *"
-                    "struct lsh_string **request")))
-*/
-
-#define NEW_CHANNEL(s, c,r) ((s)->new_channel((s), (c), (r)))
-
-int do_channel_open_command(struct command *s,
-			    struct lsh_object *x,
-			    struct command_continuation *c);
+#endif /* LSH_CONNECTION_COMMANDS_H_INCLUDED */
