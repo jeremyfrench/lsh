@@ -42,9 +42,11 @@
 /* Forward declarations */
 extern struct command_simple forward_start_io;
 extern struct collect_info_1 open_forwarded_tcp;
+extern struct collect_info_1 open_direct_tcp;
 
 #define FORWARD_START_IO (&forward_start_io.super.super)
 #define OPEN_FORWARDED_TCP (&open_forwarded_tcp.super.super.super)
+#define OPEN_DIRECT_TCP (&open_direct_tcp.super.super.super)
 
 #define GABA_DEFINE
 #include "tcpforward.h.x"
@@ -97,7 +99,7 @@ remove_forward(struct object_queue *q, int null_ok,
 	{
 	  if (null_ok || f->socket)
 	    {
-	      FOR_OBJECT_QUEUE_REMOVE(n);
+	      FOR_OBJECT_QUEUE_REMOVE(q, n);
 	      return f;
 	    }
 	  else return NULL;
@@ -157,6 +159,9 @@ static struct tcpip_channel *make_tcpip_channel(struct io_fd *socket)
   
   init_channel(&self->super);
   self->socket = socket;
+
+  if (socket)
+    socket->buffer->report = &self->super.super;
   
   return self;
 }
@@ -195,7 +200,9 @@ static int do_direct_tcp_server_start_io(struct command *s,
 		   make_channel_read_data(&self->channel->super), 
 		   self->block_size,
 		   make_channel_close(&self->channel->super));
-
+  /* Flow control */
+  fd->buffer->report = &self->channel->super.super;
+  
   res = COMMAND_RETURN(c, (struct lsh_object *) self->channel);
   
   return res | (LSH_CLOSEDP(res)
@@ -232,18 +239,18 @@ make_direct_tcp_server_start_io(struct channel_open_callback *response,
   
 /* GABA:
    (class
-     (name open_direct_tcpip)
+     (name channel_open_direct_tcpip)
      (super channel_open)
      (vars
        (backend object io_backend)))
 */
 
-static int do_open_direct_tcpip(struct channel_open *c,
-			        struct ssh_connection *connection,
-			        struct simple_buffer *args,
-			        struct channel_open_callback *response)
+static int do_channel_open_direct_tcpip(struct channel_open *c,
+					struct ssh_connection *connection,
+					struct simple_buffer *args,
+					struct channel_open_callback *response)
 {
-  CAST(open_direct_tcpip, closure, c);
+  CAST(channel_open_direct_tcpip, closure, c);
 
   struct lsh_string *dest_host;
   UINT32 dest_port;
@@ -272,7 +279,7 @@ static int do_open_direct_tcpip(struct channel_open *c,
        */
       struct lsh_object *o = 
 	make_direct_tcp_connect(make_simple_connect(closure->backend, 
-						   connection->resources),
+						    connection->resources),
 				make_direct_tcp_server_start_io
 				(response,
 				 /* FIXME: Is it ok to pass NULL
@@ -304,11 +311,11 @@ static int do_open_direct_tcpip(struct channel_open *c,
     }
 }
 
-struct channel_open *make_open_direct_tcpip(struct io_backend *backend)
+struct channel_open *make_channel_open_direct_tcpip(struct io_backend *backend)
 {
-  NEW(open_direct_tcpip, self);
+  NEW(channel_open_direct_tcpip, self);
   
-  self->super.handler = do_open_direct_tcpip;
+  self->super.handler = do_channel_open_direct_tcpip;
   self->backend = backend;
   return &self->super;
 }
@@ -317,7 +324,7 @@ struct channel_open *make_open_direct_tcpip(struct io_backend *backend)
  * direct-tcp, and servers requesting tcp_forward. I.e. by the party
  * that accepted a connection for forwarding. */
 static struct lsh_object *do_forward_start_io(struct command_simple *c UNUSED, 
-                                               struct lsh_object *x)
+					      struct lsh_object *x)
 {
   CAST_SUBTYPE(tcpip_channel, channel, x);
   if (!channel)
@@ -329,11 +336,12 @@ static struct lsh_object *do_forward_start_io(struct command_simple *c UNUSED,
   channel->super.receive = do_tcpip_receive;
   channel->super.send = do_tcpip_send;
   channel->super.eof = do_tcpip_eof;
-  channel->socket = 
-  	io_read_write(channel->socket,
-  		      make_channel_read_data(&channel->super),
-		      SSH_MAX_PACKET,
-		      make_channel_close(&channel->super));
+
+  /* Install callbacks on the local socket */
+  io_read_write(channel->socket,
+		make_channel_read_data(&channel->super),
+		SSH_MAX_PACKET,
+		make_channel_close(&channel->super));
 
   return x;
 }
@@ -343,18 +351,19 @@ STATIC_COMMAND_SIMPLE(do_forward_start_io);
 
 /* GABA:
    (class
-     (name open_tcpip_command)
+     (name open_forwarded_tcpip_command)
      (super channel_open_command)
      (vars
        (local object address_info)
        (peer object listen_value)))
 */
 
-static struct ssh_channel *new_tcpip_channel(struct channel_open_command *c,
-					     struct ssh_connection *connection,
-					     struct lsh_string **request)
+static struct ssh_channel *
+new_forwarded_tcpip_channel(struct channel_open_command *c,
+			    struct ssh_connection *connection,
+			    struct lsh_string **request)
 {
-  CAST(open_tcpip_command, self, c);
+  CAST(open_forwarded_tcpip_command, self, c);
   struct tcpip_channel *channel;
 
   /* NOTE: All accepted fd:s must end up in this function, so it
@@ -374,13 +383,14 @@ static struct ssh_channel *new_tcpip_channel(struct channel_open_command *c,
   return &channel->super;
 }
 
-static struct command *make_open_tcpip_command(struct address_info *local,
-					       struct listen_value *peer)
+static struct command *
+make_open_forwarded_tcpip_command(struct address_info *local,
+				  struct listen_value *peer)
 {
-  NEW(open_tcpip_command, self);
+  NEW(open_forwarded_tcpip_command, self);
   
   self->super.super.call = do_channel_open_command;
-  self->super.new_channel = new_tcpip_channel;
+  self->super.new_channel = new_forwarded_tcpip_channel;
 
   self->local = local;
   self->peer = peer;
@@ -398,7 +408,7 @@ collect_open_forwarded_tcp(struct collect_info_2 *info,
 
   assert(!info);
 
-  return &make_open_tcpip_command(local, peer)->super;
+  return &make_open_forwarded_tcpip_command(local, peer)->super;
 }
 
 static struct collect_info_2 collect_open_forwarded_tcp_2 =
@@ -406,6 +416,7 @@ STATIC_COLLECT_2_FINAL(collect_open_forwarded_tcp);
 
 static struct collect_info_1 open_forwarded_tcp =
 STATIC_COLLECT_1(&collect_open_forwarded_tcp_2);
+
 
 /* GABA:
    (expr
@@ -518,7 +529,7 @@ static int do_tcpip_forward_request(struct global_request *s,
       
       verbose("Adding forward-tcpip\n");
       forward = make_forwarded_port(a, NULL);
-      object_queue_add_head(&connection->forwarded_ports, &forward->super.super);
+      object_queue_add_head(&connection->forwarded_ports, &forward->super);
 
       {
 	struct lsh_object *o = make_forward_listen(self->backend, connection);
@@ -598,3 +609,113 @@ struct global_request *make_cancel_tcpip_forward_request(void)
   return self;
 }
 
+/* The client side of direct-tcp.
+ *
+ * FIXME: It's very similar to open_forwarded_tcp_command, perhaps
+ * they could be unified? */
+
+/* GABA:
+   (class
+     (name open_direct_tcpip_command)
+     (super channel_open_command)
+     (vars
+       (target object address_info)
+       (peer object listen_value)))
+*/
+
+static struct ssh_channel *
+new_direct_tcpip_channel(struct channel_open_command *c,
+			 struct ssh_connection *connection,
+			 struct lsh_string **request)
+{
+  CAST(open_direct_tcpip_command, self, c);
+  struct tcpip_channel *channel;
+
+  /* NOTE: All accepted fd:s must end up in this function, so it
+   * should be ok to delay the REMEMBER() call until here. */
+  
+  REMEMBER_RESOURCE(connection->resources, &self->peer->fd->super.super);
+  
+  channel = make_tcpip_channel(self->peer->fd);
+  channel->super.write = connection->write;
+
+  *request = prepare_channel_open(connection->channels, ATOM_DIRECT_TCPIP, 
+  				  &channel->super, 
+  				  "%S%i%S%i",
+				  self->target->ip, self->target->port,
+				  self->peer->peer->ip, self->peer->peer->port);
+  
+  return &channel->super;
+}
+
+static struct command *
+make_open_direct_tcpip_command(struct address_info *target,
+			       struct listen_value *peer)
+{
+  NEW(open_direct_tcpip_command, self);
+  
+  self->super.super.call = do_channel_open_command;
+  self->super.new_channel = new_direct_tcpip_channel;
+
+  self->target = target;
+  self->peer = peer;
+  
+  return &self->super.super;
+}
+
+static struct lsh_object *
+collect_open_direct_tcp(struct collect_info_2 *info,
+			struct lsh_object *a,
+			struct lsh_object *b)
+{
+  CAST(address_info, target, a);
+  CAST(listen_value, peer, b);
+
+  assert(!info);
+
+  return &make_open_direct_tcpip_command(target, peer)->super;
+}
+
+static struct collect_info_2 collect_open_direct_tcp_2 =
+STATIC_COLLECT_2_FINAL(collect_open_direct_tcp);
+
+static struct collect_info_1 open_direct_tcp =
+STATIC_COLLECT_1(&collect_open_direct_tcp_2);
+
+/* GABA:
+   (expr
+     (name make_forward_local_port)
+     (globals
+       (listen LISTEN_COMMAND)
+       (start_io FORWARD_START_IO)
+       (open_direct_tcp OPEN_DIRECT_TCP))
+     (params
+       (local object address_info)
+       (target object address_info))
+     (expr
+       (lambda (connection)
+         (listen (lambda (peer)
+	           (start_io (open_direct_tcp target peer connection)))
+	         local))))
+*/
+
+struct command *forward_local_port(struct address_info *local,
+				   struct address_info *target)
+{
+  CAST(command, res, make_forward_local_port(local, target));
+
+  return res;
+}
+
+/* FIXME: Some more work is needed to do the client side of remote
+ * forwarding. */
+/* ;; GABA:
+   (expr
+     (name forward_remote_port)
+     (params
+       (remote object address_info)
+       (target object address_info))
+     (expr
+       (remote_listen (lambda (peer)
+         (start_io (connect target))))))
+*/

@@ -42,7 +42,7 @@
    (name forwarded_port)
      ;; FIXME: Should this really be a resource?
      ;; Isn't it good enough that the socket is a resource?
-     (super resource)
+     ; (super resource)
      (vars
        ; this could store the type of this forward
        ; tcp, udp etc. Or we could invent relevant methods
@@ -55,10 +55,13 @@
        (local object address_info)))
 */
 
-struct channel_open *make_open_direct_tcpip(struct io_backend *backend);
+struct channel_open *make_channel_open_direct_tcpip(struct io_backend *backend);
 
 struct global_request *make_tcpip_forward_request(struct io_backend *backend);
 
 struct global_request *make_cancel_tcpip_forward_request(void);
+
+struct command *forward_local_port(struct address_info *local,
+				   struct address_info *target);
 
 #endif /* LSH_TCPFORWARD_H_INCLUDED */
