@@ -612,3 +612,65 @@ do_catch_simple(struct command_simple *s,
 							   self->value, self->ignore_value, f))
 	   ->super);
 }
+
+
+/* Catch and report some exceptions.
+ *
+ * FIXME: This duplicates most of the catch command. */
+
+/* GABA:
+   (class
+     (name catch_report_apply)
+     (super command)
+     (vars
+       (info object report_exception_info)
+       (body object command)))
+*/
+   
+static void
+do_catch_report_apply(struct command *s,
+			  struct lsh_object *a,
+			  struct command_continuation *c,
+			  struct exception_handler *e)
+{
+  CAST(catch_report_apply, self, s);
+
+  COMMAND_CALL(self->body, a, c,
+	       make_report_exception_handler(self->info, e,
+					     HANDLER_CONTEXT));
+}
+
+struct command *
+make_catch_report_apply(struct report_exception_info *info,
+			struct command *body)
+{
+  NEW(catch_report_apply, self);
+  self->super.call = do_catch_report_apply;
+  self->info = info;
+  self->body = body;
+
+  return &self->super;
+}
+
+struct lsh_object *
+do_catch_report_collect(struct command_simple *s,
+			struct lsh_object *a)
+{
+  CAST(catch_report_collect, self, s);
+  CAST_SUBTYPE(command, body, a);
+
+  return &make_catch_report_apply(self->info, body)->super;
+}
+
+#if 0
+static struct command *
+make_catch_report_collect_body(struct catch_handler_info *info)
+{
+  NEW(catch_report_collect_body, self);
+  self->super.super.call = do_call_simple_command;
+  self->super.call_simple = do_catch_report_collect_body;
+  self->info = info;
+
+  return &self->super.super;
+}
+#endif

@@ -28,7 +28,7 @@
 
 #include "exception.h"
 #include "list.h"
-#include "io.h"
+/* #include "io.h" */
 
 #include <stdarg.h>
 
@@ -164,6 +164,26 @@ do_catch_simple(struct command_simple *s,
 { STATIC_COMMAND_SIMPLE(do_catch_simple), (m), (v), (i) }
 
 
+/* GABA:
+   (class
+     (name catch_report_collect)
+     (super command_simple)
+     (vars
+       (info object report_exception_info)))
+*/
+
+struct command *
+make_catch_report_apply(struct report_exception_info *info,
+			struct command *body);
+
+struct lsh_object *
+do_catch_report_collect(struct command_simple *s,
+			struct lsh_object *a);
+
+#define STATIC_CATCH_REPORT(i) \
+{ STATIC_COMMAND_SIMPLE(do_catch_report_collect), i }
+
+       
 /* Commands that need to collect some arguments before actually doing
  * anything. */
 
