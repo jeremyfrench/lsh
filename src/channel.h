@@ -143,7 +143,7 @@ struct channel_table
 /* SSH_MSG_GLOBAL_REQUEST */
 struct global_request
 {
-  struct lsh_object *header;
+  struct lsh_object header;
 
   int (*handler)(struct global_request *closure,
 		 int want_reply,
@@ -155,7 +155,7 @@ struct global_request
 /* SSH_MSG_CHANNEL_OPEN */
 struct channel_open
 {
-  struct lsh_object *header;
+  struct lsh_object header;
 
   struct ssh_channel * (*handler)(struct channel_open *closure,
 				  struct simple_buffer *args,
@@ -170,7 +170,7 @@ struct channel_open
 /* SSH_MSH_CHANNEL_REQUEST */
 struct channel_request
 {
-  struct lsh_object *header;
+  struct lsh_object header;
 
   int (*handler)(struct channel_request *closure,
 		 struct ssh_channel *channel,
