@@ -1,3 +1,13 @@
+2001-04-09  Niels Möller  <nisse@ehand.com>
+
+	* src/werror.c (set_error_nonblocking): New function.
+	(set_error_stream): DEleted WITH_POLL argument.
+	(werror_options): Aded option --log-file.
+	(werror_argp_parser): Process --log-file option.
+
+	* ANNOUNCE: Changed "COPYRIGHT" to "LICENSE", by rms' request. XXX
+	Fix in 1.2 branch.
+
 2001-04-08  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (main_argp_parser): Deleted old -L handling (moved to
