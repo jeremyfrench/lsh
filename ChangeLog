@@ -1,3 +1,20 @@
+2003-10-30  Niels Möller  <nisse@harpo.hack.org>
+
+	* src/connection.h (C_WRITE): Deleted macro. Updated all callers
+	to use connection_send directly.
+
+	Changed gateway protocol, to not use any extra padding.
+	* src/gateway_commands.c (do_read_gateway): New function
+	(make_read_gateway): New function.
+	(do_gateway_pad): New extra padding.
+	(gateway_make_connection): No need to call make_packet_unpad.
+
+	* src/abstract_io.h (class read_handler): Use a const uint8_t *
+	argument for the handler method.
+	* src/read_file.c (do_read_file): Const argument.
+	* src/read_line.c (do_read_line): Likewise.
+	* src/read_packet.c (do_read_packet): Likewise.
+
 2003-10-23  Niels Möller  <niels@s3.kth.se>
 
 	* src/server_userauth.c: Rewrote comment about userauth
