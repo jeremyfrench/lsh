@@ -76,7 +76,7 @@ struct lsh_fd;
    (class
      (name close_callback)
      (vars
-       (f method int "int reason")))
+       (f method void "int reason")))
 */
 
 #define CLOSE_CALLBACK(c, r) ((c)->f((c), (r)))

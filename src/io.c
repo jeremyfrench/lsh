@@ -102,7 +102,7 @@ int io_iter(struct io_backend *b)
 		/* FIXME: The value returned from the close callback could be used
 		 * to choose an exit code. */
 		if (fd->close_callback)
-		  (void) CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
+		  CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
 		
 		debug("Closing fd %i.\n", fd->fd);
 		
@@ -112,9 +112,16 @@ int io_iter(struct io_backend *b)
 	    *fd_p = fd->next;
 	    continue;
 	  }
+
 	/* FIXME: nfds should probably include only fd:s that we are
-	 * interested in reading or writing. */
-	nfds++;
+	 * interested in reading or writing. However, that makes the
+	 * mapping from struct pollfd to struct lsh_fd a little more
+	 * difficult. */
+#if 0
+	if (fd->want_read || fd->want_write)
+#endif
+	  nfds++;
+
 	fd_p = &fd->next;
       }
 	
@@ -138,6 +145,10 @@ int io_iter(struct io_backend *b)
       {
 	assert(i < nfds);
 
+#if 0
+	if (! (fd->want_read || fd->want_write))
+	  continue;
+#endif
 	fds[i].fd = fd->fd;
 	fds[i].events = 0;
 
@@ -150,13 +161,16 @@ int io_iter(struct io_backend *b)
 	all_events |= fds[i].events;
       }
     assert(i == nfds);
-
+#if 0
+    assert(all_events);
+#else
     if (!all_events)
       {
 	/* Nothing happens */
 	/* NOTE: There might be some callouts left, but we don't wait */
 	return 0;
       }
+#endif
   }
 
   res = poll(fds, nfds, IDLE_TIME);
