@@ -48,6 +48,7 @@
 #include "format.h"
 #include "interact.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "parse.h"
 #include "ssh.h"
 #include "suspend.h"
@@ -95,7 +96,7 @@ do_accept_service(struct packet_handler *c,
   unsigned msg_number;
   int name;
 
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
   
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_SERVICE_ACCEPT)
@@ -845,16 +846,16 @@ rebuild_command_line(unsigned argc, char **argv)
     }
 
   r = lsh_string_alloc(length);
-  memcpy(r->data, argv[0], alengths[0]);
+  lsh_string_write(r, 0, alengths[0], argv[0]);
   pos = alengths[0];
   for (i = 1; i<argc; i++)
     {
-      r->data[pos++] = ' ';
-      memcpy(r->data + pos, argv[i], alengths[i]);
+      lsh_string_putc(r, pos++, ' ');
+      lsh_string_write(r, pos, alengths[i], argv[i]);
       pos += alengths[i];
     }
 
-  assert(pos == r->length);
+  assert(pos == length);
 
   return r;
 }
