@@ -198,7 +198,7 @@ AC_ARG_WITH(include-path,
   [with_include_path=''])
 
 if test x$with_include_path != x ; then
-  CPPFLAGS="$CPPFLAGS -I `echo $with_include_path | sed 's/:/ -I /g'`"
+  CPPFLAGS="$CPPFLAGS -I`echo $with_include_path | sed 's/:/ -I/g'`"
 fi
 
 AC_ARG_WITH(lib-path,
