@@ -374,7 +374,7 @@ spki_pkcs5_encrypt(struct randomness *r,
 			       data, 0);
   
   /* FIXME: Handle iv == NULL. */
-  value = lsh_sexp_format(0, "(password-encrypted%s(xpkcs5v2%0s"
+  value = lsh_sexp_format(0, "(password-encrypted%s(Xpkcs5v2%0s"
 			  "(iterations%i)(salt%s))"
 			  "(%0s(iv%s)(data%s)))",
 			  label->length, label->data,
@@ -393,6 +393,84 @@ spki_pkcs5_encrypt(struct randomness *r,
   return value;
 }
 
+static int
+parse_pkcs5(struct sexp_iterator *i, struct alist *mac_algorithms,
+	    struct mac_algorithm **mac, uint32_t *iterations,
+	    const struct lsh_string **salt)
+{
+  switch (lsh_sexp_get_type(i)) 
+    {
+    default:
+      werror("Unknown key derivation mechanism.\n");
+      return 0;
+
+    case ATOM_XPKCS5V2:
+      {
+	const uint8_t *names[2] = { "salt", "iterations" };
+	struct sexp_iterator values[2];
+	    
+	CAST_SUBTYPE(mac_algorithm, tmp,
+		     ALIST_GET(mac_algorithms, lsh_sexp_to_atom(i)));
+
+	*mac = tmp;
+	if (!*mac)
+	  {
+	    werror("Unknown mac for pkcs5v2.\n");
+	    return 0;
+	  }
+
+	return (sexp_iterator_assoc(i, 2, names, values)
+		&& (*salt = lsh_sexp_to_string(&values[0], NULL))
+		&& sexp_iterator_get_uint32(&values[1], iterations)
+		&& *iterations);
+      }
+    }
+}
+
+static int
+parse_pkcs5_payload(struct sexp_iterator *i, struct alist *crypto_algorithms,
+		    struct crypto_algorithm **crypto,
+		    const struct lsh_string **iv,
+		    const struct lsh_string **data)
+{
+  const uint8_t *names[2] = { "data", "iv" };
+  struct sexp_iterator values[2];
+
+  CAST_SUBTYPE(crypto_algorithm, tmp,
+	       spki_algorithm_lookup(crypto_algorithms, i, NULL));
+	
+  *crypto = tmp;
+
+  if (!*crypto)
+    {
+      werror("Unknown encryption algorithm for pkcs5v2.\n");
+      return 0;
+    }
+
+  if ((*crypto)->iv_size)
+    {
+      if (!sexp_iterator_assoc(i, 2, names, values))
+	return 0;
+
+      *iv = lsh_sexp_to_string(&values[1], NULL);
+
+      if ((*iv)->length != (*crypto)->iv_size)
+	return 0;
+    }
+  else if (!sexp_iterator_assoc(i, 1, names, values))
+    return 0;
+
+  *data = lsh_sexp_to_string(&values[0], NULL);
+    
+  if ((*crypto)->block_size && ((*data)->length % (*crypto)->block_size))
+    {
+      werror("Payload data doesn't match block size for pkcs5v2.\n");
+      return 0;
+    }
+
+  return 1;
+}
+
 /* Frees input string. */
 struct lsh_string *
 spki_pkcs5_decrypt(struct alist *mac_algorithms,
@@ -408,8 +486,6 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 
   else
     {
-      struct sexp_iterator key_info;
-
       struct crypto_algorithm *crypto;
       struct mac_algorithm *mac;
 
@@ -435,136 +511,51 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 	  return NULL;
 	}
 
-      key_info = i;
-
-      /* Examine the payload expression first, before asking for a
-       * pass phrase. */
-
-      if (!sexp_iterator_next(&i))
+      if (!parse_pkcs5(&i, mac_algorithms, &mac, &iterations, &salt))
 	goto fail;
 
-      if (sexp_iterator_enter_list(&i))
+      if (!parse_pkcs5_payload(&i, crypto_algorithms,
+			       &crypto, &iv, &data))
 	goto fail;
       
+      /* Do the work */
+      
       {
-	const uint8_t *names[2] = { "data", "iv" };
-	struct sexp_iterator values[2];
-
-	CAST_SUBTYPE(crypto_algorithm, tmp,
-		     spki_algorithm_lookup(crypto_algorithms, &i, NULL));
+	struct lsh_string *password
+	  = INTERACT_READ_PASSWORD(interact, 500,
+				   ssh_format("Passphrase for key `%lS': ",
+					      label), 1);
+	struct lsh_string *clear;
+	uint8_t *key;
 	
-	crypto = tmp;
-
-	if (!crypto)
+	if (!password)
 	  {
-	    werror("Unknown encryption algorithm for pkcs5v2.\n");
+	    werror("No password provided for pkcs5v2.");
 	    goto fail;
 	  }
 
-	if (!sexp_iterator_assoc(&i, crypto->iv_size ? 2 : 1,
-				 names, values))
-	  goto fail;
-
-	data = lsh_sexp_to_string(&values[0], NULL);
-	iv = crypto->iv_size ? lsh_sexp_to_string(&values[1], NULL) : NULL;
-      }
-	
-      if (crypto->iv_size)
-	{
-	  if (!iv || (iv->length != crypto->iv_size))
-	    {
-	      werror("Invalid IV for pkcs5v2.\n");
-	      goto fail;
-	    }
-	}
-      else if (iv)
-	{
-	  if (iv->length)
-	    {
-	      werror("Unexpected iv provided for pkcs5v2.\n");
-	      goto fail;
-	    }
-	  lsh_string_free(iv);
-	  iv = NULL;
-	}
-	
-      if (crypto->block_size && (data->length % crypto->block_size))
-	{
-	  werror("Payload data doesn't match block size for pkcs5v2.\n");
-	  goto fail;
-	}
-
-      /* Get key */
-      i = key_info;
-      switch (lsh_sexp_get_type(&i)) 
-	{
-	default:
-	  werror("Unknown key derivation mechanism.\n");
-	  goto fail;
-
-	case ATOM_XPKCS5V2:
-	  {
-	    const uint8_t *names[2] = { "salt", "iterations" };
-	    struct sexp_iterator values[2];
+	key = alloca(crypto->key_size);
+	pkcs5_derive_key(mac,
+			 password->length, password->data,
+			 salt->length, salt->data,
+			 iterations,
+			 crypto->key_size, key);
 	    
-	    CAST_SUBTYPE(mac_algorithm, tmp,
-			 spki_algorithm_lookup(mac_algorithms,
-					       &i, NULL));
+	clear = crypt_string_unpad(MAKE_DECRYPT(crypto,
+						key,
+						iv ? iv->data : NULL),
+				   data, 0);
 
-	    mac = tmp;
-
-	    if (! (sexp_iterator_assoc(&i, 2, names, values)
-		   && (salt = lsh_sexp_to_string(&values[0], NULL))
-		   && sexp_iterator_get_uint32(&values[1], &iterations)
-		   && iterations))
-	      goto fail;
-	  }
-
-	  if (!mac)
-	    {
-	      werror("Unknown mac for pkcs5v2.\n");
-	      goto fail;
-	    }
-
-	  /* Do the work */
-
-	  {
-	    struct lsh_string *password
-	      = INTERACT_READ_PASSWORD(interact, 500,
-				       ssh_format("Passphrase for key `%lS': ",
-						  label), 1);
-	    struct lsh_string *clear;
-	    uint8_t *key;
-	    
-	    if (!password)
-	      {
-		werror("No password provided for pkcs5v2.");
-		goto fail;
-	      }
-
-	    key = alloca(crypto->key_size);
-	    pkcs5_derive_key(mac,
-			     password->length, password->data,
-			     salt->length, salt->data,
-			     iterations,
-			     crypto->key_size, key);
-	    
-	    clear = crypt_string_unpad(MAKE_DECRYPT(crypto,
-						    key,
-						    iv ? iv->data : NULL),
-				       data, 0);
-
-	    lsh_string_free(data);
-	    lsh_string_free(expr);
-	    lsh_string_free(iv);
-	    lsh_string_free(password);
-	    lsh_string_free(salt);
+	lsh_string_free(data);
+	lsh_string_free(expr);
+	lsh_string_free(iv);
+	lsh_string_free(password);
+	lsh_string_free(salt);
 	    	    
-	    if (!clear)
-	      werror("Bad password for pkcs5v2.\n");
+	if (!clear)
+	  werror("Bad password for pkcs5v2.\n");
 
-	    return clear;
-	  }
-	}
+	return clear;
+      }
     }
 }
