@@ -101,7 +101,11 @@ struct ssh_connection;
        
        ; Table of all opened channels
        (channels object channel_table)
-
+       
+       ; Forwarded TCP connections
+       ; FIXME: I don't quite like this name
+       ; (tcp_forwards object forwarded_tcpip)
+              
        ; Shared handlers 
        (ignore object packet_handler)
        (unimplemented object packet_handler)

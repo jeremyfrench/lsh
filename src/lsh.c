@@ -295,9 +295,10 @@ int main(int argc, char **argv)
   
   set_error_stream(STDERR_FILENO, 1);
 
-    make_kexinit
+  make_kexinit
     = make_simple_kexinit(r,
-			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1),
+			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+					-1),
 			  make_int_list(1, ATOM_SSH_DSS, -1),
 			  (preferred_crypto
 			   ? make_int_list(1, preferred_crypto, -1)

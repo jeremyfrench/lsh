@@ -42,7 +42,8 @@
    (class
      (name command)
      (vars
-       (do method int "struct command_continuation *c" "struct lsh_object *arg")))
+       (do method int "struct command_continuation *c"
+                      "struct lsh_object *arg")))
 */
 
 #define COMMAND_DO(f, c) ((f)->do((f), (c)))
