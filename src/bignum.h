@@ -26,6 +26,9 @@
 #ifndef LSH_BIGNUM_H_INCLUDED
 #define LSH_BIGNUM_H_INCLUDED
 
+/* Needed for the declaration of mpz_out_str */
+#include <stdio.h>
+
 #include <gmp.h>
 
 #include "lsh_types.h"

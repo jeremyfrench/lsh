@@ -36,6 +36,8 @@ static int do_unpad(struct abstract_write **w,
   UINT32 payload_length;
   struct lsh_string *new;
   
+  MDEBUG(closure);
+
   if (packet->length < 1)
     return 0;
   

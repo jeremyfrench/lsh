@@ -33,6 +33,8 @@ static int do_debug(struct abstract_write **w,
     = (struct packet_debug *) *w;
   
   UINT32 i;
+
+  MDEBUG(closure);
   
   fprintf(closure->output, "DEBUG: (packet size %d = 0x%x)\n",
 	  packet->length, packet->length);

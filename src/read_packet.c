@@ -39,11 +39,13 @@
 #define WAIT_CONTENTS 1
 #define WAIT_MAC 2
 
-int do_read_packet(struct read_handler **h,
-		   struct abstract_read *read)
+static int do_read_packet(struct read_handler **h,
+			  struct abstract_read *read)
 {
   struct read_packet *closure = (struct read_packet *) *h;
 
+  MDEBUG(closure);
+  
 #if 0
   while(1)
     {

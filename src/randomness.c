@@ -43,6 +43,8 @@ static void do_poor_random(struct randomness **r, UINT32 length, UINT8 *dst)
 {
   struct poor_random *self = (struct poor_random *) *r;
 
+  MDEBUG(self);
+  
   while(length)
     {
       UINT32 available = self->hash->hash_size - self->pos;

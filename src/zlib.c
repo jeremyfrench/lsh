@@ -32,6 +32,8 @@ static int do_deflate(struct abstract_write **c,
   
   struct lsh_string *new;
 
+  MDEBUG(closure);
+
   /* call deflate, copy into new packet */
 
   new = lsh_string_alloc(...);

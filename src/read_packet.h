@@ -39,6 +39,8 @@ struct read_packet
   
   /* Buffer partial headers and packets. */
   UINT32 pos;
+  /* FIXME: This buffer should hold one block, and must be reallocated
+   * when the crypto algorithms is changed. */
   struct lsh_string *buffer;
   UINT32 crypt_pos;
   

@@ -35,9 +35,7 @@ static int do_ignore(struct packet_handler *closure,
   return WRITE_OK;
 }
 
-struct packet_handler *make_ignore_handler(struct packet_handler *closure,
-					   struct ssh_connection *connection,
-					   struct lsh_string *packet)
+struct packet_handler *make_ignore_handler(void)
 {
   struct packet_handler *res =  xalloc(sizeof(struct packet_handler));
 

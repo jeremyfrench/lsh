@@ -61,7 +61,8 @@ static int handle_connection(struct abstract_write **w,
 	}
       break;
     case KEX_STATE_NEWKEYS:
-      if (msg != SSH_MSG_NEWKEYS)
+      if ( (msg != SSH_MSG_NEWKEYS)
+	   && (msg != SSH_MSG_DISCONNECT) )
 	{
 	  werror("Expected NEWKEYS message, but recieved message %d!\n",
 		 msg);
@@ -80,11 +81,13 @@ static int do_fail(struct packet_handler *closure,
 		   struct ssh_connection *connection,
 		   struct lsh_string *packet)
 {
+  MDEBUG(closure);
+
   lsh_string_free(packet);
   return WRITE_CLOSED;
 }
 
-struct packet_handler *make_fail_handler()
+struct packet_handler *make_fail_handler(void)
 {
   struct packet_handler *res =  xalloc(sizeof(struct packet_handler));
 
@@ -96,10 +99,14 @@ static int do_unimplemented(struct packet_handler *closure,
 			    struct ssh_connection *connection,
 			    struct lsh_string *packet)
 {
-  int res =  A_WRITE(connection->write,
-		     ssh_format("%c%i",
-				SSH_MSG_UNIMPLEMENTED,
-				packet->sequence_number));
+  int res;
+
+  MDEBUG(closure);
+
+  res =  A_WRITE(connection->write,
+		 ssh_format("%c%i",
+			    SSH_MSG_UNIMPLEMENTED,
+			    packet->sequence_number));
   verbose("Recieved packet of unimplemented type %d.\n",
 	  packet->data[0]);
   
@@ -107,7 +114,7 @@ static int do_unimplemented(struct packet_handler *closure,
   return res;
 }
 
-struct packet_handler *make_unimplemented_handler()
+struct packet_handler *make_unimplemented_handler(void)
 {
   struct packet_handler *res =  xalloc(sizeof(struct packet_handler));
 

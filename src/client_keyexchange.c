@@ -41,6 +41,8 @@ static int do_handle_dh_reply(struct packet_handler *c,
   struct lsh_string *s;
   int res;
 
+  MDEBUG(closure);
+  
   verbose("handle_dh_reply()\n");
   
   if (!dh_process_server_msg(&closure->dh, packet))
@@ -60,7 +62,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
   
   if (!dh_verify_server_msg(&closure->dh, v))
     /* FIXME: Same here */
-    return disconnect_kex_failed(connection, "Bad server host key\r\n");
+    return disconnect_kex_failed(connection, "Invalid server signature\r\n");
     
   /* Key exchange successful! Send a newkeys message, and install a
    * handler for recieving the newkeys message. */
@@ -94,15 +96,19 @@ static int do_handle_dh_reply(struct packet_handler *c,
 }
 
 static int do_init_dh(struct keyexchange_algorithm *c,
-		       struct ssh_connection *connection,
-		       int hostkey_algorithm_atom,
-		       struct signature_algorithm *ignored,
-		       void **algorithms)
+		      struct ssh_connection *connection,
+		      int hostkey_algorithm_atom,
+		      struct signature_algorithm *ignored,
+		      void **algorithms)
 {
   struct dh_client_exchange *closure = (struct dh_client_exchange *) c;
   struct dh_client *dh = xalloc(sizeof(struct dh_client));
 
   int res;
+
+  MDEBUG(c);
+  MDEBUG(connection);
+  MDEBUG(ignored);
   
   /* FIXME: Use this value to choose a verifier function */
   if (hostkey_algorithm_atom != ATOM_SSH_DSS)
@@ -142,6 +148,8 @@ make_dh_client(struct diffie_hellman_method *dh,
 {
   struct dh_client_exchange *self = xalloc(sizeof(struct dh_client_exchange));
 
+  MDEBUG(dh);
+  
   self->super.init = do_init_dh;
   self->dh = dh;
   self->verifier = verifier;
@@ -164,7 +172,9 @@ static int do_install(struct install_keys *c,
   /* FIXME: No IV:s */
 
   struct client_install_keys *closure = (struct client_install_keys *) c;
-  
+
+  MDEBUG(closure);
+
   /* Keys for recieving */
   connection->dispatch[SSH_MSG_NEWKEYS] = make_newkeys_handler
     (kex_make_encrypt(secret, closure->algorithms,

@@ -80,7 +80,7 @@ void bignum_parse_s(mpz_t n, UINT32 length, UINT8 *data)
   mpz_clear(digit);
 }
 
-int mpz_size_of_complement(mpz_t n)
+static int mpz_size_of_complement(mpz_t n)
 {
   int bits;
 	

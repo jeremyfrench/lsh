@@ -85,6 +85,8 @@ static struct read_handler *do_line(struct line_handler **h,
 {
   struct server_line_handler *closure = (struct server_line_handler *) *h;
   
+  MDEBUG(closure);
+  
   if ( (length >= 4) && !memcmp(line, "SSH-", 4))
     {
       /* Parse and remember format string */

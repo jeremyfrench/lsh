@@ -28,7 +28,7 @@
 
 #include "connection.h"
 
-struct packet_handler *make_ignore_handler();
+struct packet_handler *make_ignore_handler(void);
 
 #endif /* LSH_PACKET_IGNORE_H_INCLUDED */
    

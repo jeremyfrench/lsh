@@ -36,6 +36,8 @@ static int do_encrypt(struct abstract_write **w,
   struct lsh_string *new;
   UINT8 *mac;
 
+  MDEBUG(closure);
+  
   new = ssh_format("%lr%lr", packet->length, NULL,
 		   connection->send_mac ? connection->send_mac->mac_size : 0,
 		   &mac);

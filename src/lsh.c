@@ -46,9 +46,9 @@
 /* Global variable */
 struct io_backend backend;
 
-void usage() NORETURN;
+void usage(void) NORETURN;
 
-void usage()
+void usage(void)
 {
   exit(1);
 }
@@ -61,9 +61,11 @@ struct fake_host_db
 };
 
 static struct verifier *do_host_lookup(struct lookup_verifier *c,
-				struct lsh_string *key)
+				       struct lsh_string *key)
 {
   struct fake_host_db *closure = (struct fake_host_db *) c;
+
+  MDEBUG(closure);
   
   return MAKE_VERIFIER(closure->algorithm, key->length, key->data);
 }

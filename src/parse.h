@@ -29,7 +29,11 @@
 #include "atoms.h"
 #include "bignum.h"
 
-/* Simple buffer */
+
+/* Simple buffer
+ * NOTE: All instances are allocated on the stack.
+ * No object header is needed. */
+
 struct simple_buffer
 {
   UINT32 capacity;

@@ -46,9 +46,9 @@
 /* Global variable */
 struct io_backend backend;
 
-void usage() NORETURN;
+void usage(void) NORETURN;
 
-void usage()
+void usage(void)
 {
   exit(1);
 }
@@ -102,6 +102,9 @@ static void init_host_key(struct randomness *r)
   secret_key = MAKE_SIGNER(make_dss_algorithm(r),
 			   public_key->length, public_key->data,
 			   s->length, s->data);
+
+  if (!secret_key)
+    fatal("Can't parse secret key\n");
 
   lsh_free(s);
   mpz_clear(p);
