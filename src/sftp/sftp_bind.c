@@ -95,6 +95,7 @@ sighandler( int signum )
 
 	  }
 
+      /* FIXME: Use sigaction, so we can get rid of this */
       err = signal( SIGCHLD, sighandler );
       
       if( SIG_ERR == err ) /* Inform if there was an error, but do nothing */
