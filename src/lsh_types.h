@@ -118,4 +118,55 @@ struct callback
 
 #define CALLBACK(c) ((c)->f(c))
 
+/* Return values.
+ *
+ * Every handler should return one or more of these values, ored together.
+ * Zero means everything is ok.
+ */
+
+/* Success/fail indication. LSH_FAIL should always be combined with
+ * LSH_DIE or LSH_CLOSE. */
+#define LSH_OK 0
+#define LSH_FAIL 1
+
+#define LSH_FAILUREP(x) ((x) & 1)
+
+/* Everything is ok */
+#define LSH_GOON 0
+
+/* Close the associated connection, after flushing buffers. May be
+ * combined with LSH_FAIL. */
+#define LSH_CLOSE 2
+
+/* Close connection immediately. This is usually combined with
+ * LSH_FAIL, but not always. For instance, when forking, the parent
+ * process will return this flag in order to have its copy of the
+ * filedescriptor closed. */
+#define LSH_DIE  4
+
+/* Close all other filedescriptors immediately. MAinly used when forking.
+ * Can be combined with LSH_FAIL or LSH_DIE or both. */
+#define LSH_KILL_OTHERS 8
+
+/* Not used by the main loop, but is returned by authentication
+ * handlers to indicate that the client's authentication was rejected.
+ * This can result either in a fatal protocol failure, or in a request
+ * to the client to try again. */
+#define LSH_AUTH_FAILED 0x10
+
+/* Non-zero if no messages can be sent over the connection. Used when
+ * processing error codes from in the middle of the processing a
+ * messages. If this is true, processing should stop, and most likely
+ * return LSH_FAIL (ored together with the intermediate error code). */
+#define LSH_CLOSEDP(x) (x & (LSH_FAIL | LSH_CLOSE | LSH_DIE) )
+
+/* If non-zero, return to main-loop is preferred */
+#define LSH_ACTIONP(x) (x)
+
+/* Are return codes really needed here? */
+#if 0
+#define LSH_EXIT(x) ((x) << 3)
+#define LSH_GET_EXIT(x) ((x) >> 3)
+#endif
+
 #endif /* LSH_TYPES_H_INCLUDED */

@@ -47,30 +47,6 @@ struct abstract_read
 
 #define A_READ(f, length, buffer) (f)->read(&(f), (length), (buffer))
 
-/* Return values for write- and readhandlers.
- *
- * Several components are OR:ed together */
-
-/* Success/fail indication */
-#define LSH_OK 0
-#define LSH_FAIL 1
-
-#define LSH_FAILUREP(x) ((x) & 1)
-
-/* Actions */
-#define LSH_GOON 0
-#define LSH_CLOSE 2
-#define LSH_DIE  4
-#define LSH_GET_ACTION(x) ((x) & 6)
-
-/* Non-zero if there's any problem */
-#define LSH_PROBLEMP(x) (x)
-
-/* Are return codes really needed here? */
-#if 0
-#define LSH_EXIT(x) ((x) << 3)
-#define LSH_GET_EXIT(x) ((x) >> 3)
-#endif
 
 /* May store a new handler into *h. */
 struct read_handler
