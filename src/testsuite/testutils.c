@@ -52,7 +52,7 @@ decode_hex_length(const char *h)
   return count / 2;  
 }
 
-const struct lsh_string *
+struct lsh_string *
 decode_hex(const char *h)
 {  
   const unsigned char *hex = (const unsigned char *) h;

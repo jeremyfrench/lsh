@@ -9,8 +9,9 @@
 
 #include <inttypes.h>
 #include <stdlib.h>
+#include <string.h>
 
-const struct lsh_string *
+struct lsh_string *
 decode_hex(const char *);
 
 /* The main program */
@@ -49,5 +50,7 @@ test_sign(const char *name,
 #define FAIL() abort()
 #define SKIP() exit(77)
 #define SUCCESS() return EXIT_SUCCESS
+
+#define ASSERT(x) do { if (!(x)) FAIL(); } while(0)
 
 #endif /* LSH_TESTUTILS_H_INCLUDED */
