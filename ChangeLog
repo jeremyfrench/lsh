@@ -1,3 +1,18 @@
+2003-04-13  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/Makefile.am (EXTRA_PROGRAMS): Added testutils, as
+	a kludge to get automake to track dependencies for testutils.o.
+
+	* src/io_commands.c (listen_list_command): New command.
+
+	* src/io.h (sockaddr_list): New class.
+
+	* src/io.c (io_resolv_address): New function.
+	(sockaddr_cons): New function. 
+
+	* src/client_session.c (make_client_session_channel): Added place
+	holder for send break escape handler (#if:ed out for now)
+
 2003-04-11  Niels Möller  <niels@s3.kth.se>
 
 	* src/client_pty.c (do_kill_client_tty_resource): Call
