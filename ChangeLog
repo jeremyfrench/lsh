@@ -1,3 +1,9 @@
+2004-12-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/tcpip-remote-test: Don't run tcpconnect with
+	/dev/null as standard input; for some reason, that doesn't work on
+	SunOS-5.4. 
+
 2004-11-30  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/functions.sh (test_done): New function, used when
