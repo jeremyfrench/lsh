@@ -354,6 +354,8 @@ int appl_main(int argc, char **argv);
 #define main appl_main
 #endif
 
+#define MAX_KEY_SIZE 10000
+
 int main(int argc, char **argv)
 {
   struct export_key_options *options = make_options();
@@ -396,7 +398,7 @@ int main(int argc, char **argv)
   {
     CAST_SUBTYPE(command, work,
 		 make_export_key(
-		   make_read_sexp_command(options->input, 0),
+		   make_read_sexp_command(options->input, 0, MAX_KEY_SIZE),
 		   options->print,
 		   &(out->write_buffer->super)));
 
