@@ -385,6 +385,9 @@ do_channel_open_forward(struct channel_open *s UNUSED,
 	       connection->chain,
 	       make_gateway_channel_open_continuation
 	         (c, &gateway_channel_request, origin),
+	       /* FIXME: Install a new exception handler that will
+		* propagate any CHANNEL_OPEN error to the originating
+		* channel. */
 	       e);
 }
 
