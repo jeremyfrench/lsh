@@ -881,14 +881,17 @@ static int
 get_file_or_folder(const char *arg, const char *command,
 		   int cont, const char *destname )
 {
+  /* FIXME: Split into smaller functions get_file and get_folder used
+   * by this function. */
 
   const char **dirinfo = NULL;
   const char **curdirinfo;
 
-  const char *localwd;
-  const char *remotewd;
+  char *localwd;
+  char *remotewd;
 
-  const char *tmp;
+  const char* realdest;
+  char *tmp;
 
   struct stat st;
   int id;
@@ -939,18 +942,21 @@ get_file_or_folder(const char *arg, const char *command,
 	mode = 0700;       /* FIXME: Default mode */
     }
 
-  tmp = filename_part( arg ); /* Destination */
-
   if( destname )              /* If given, use it */
-    tmp = destname;
+    realdest = destname;
+  else
+    realdest = filename_part( arg ); /* Destination */
 
-  ret = lsftp_dc_l_isdir( tmp );
+  if( !realdest )              /* Just to be safe */
+    return -1;
+
+  ret = lsftp_dc_l_isdir( realdest );
 
   if( !ret )       /* Exists, but not a dir? */
     {
       printf( 
 	     "Error, %s exists but is not a directory\n", 
-	      tmp
+	      realdest
 	     );
       return -1;
     }
@@ -961,7 +967,7 @@ get_file_or_folder(const char *arg, const char *command,
     umask( mask );
 
 
-    if( mkdir( tmp, (mode & ~mask) | 0700 ) )  /* Make sure we have proper access */
+    if( mkdir( realdest, (mode & ~mask) | 0700 ) )  /* Make sure we have proper access */
       {
 	/* Problem while creating the directory? */
 	
@@ -970,15 +976,15 @@ get_file_or_folder(const char *arg, const char *command,
       }
   }
   
-  ret = lsftp_dc_l_isdir( tmp ); /* Check status */
+  ret = lsftp_dc_l_isdir( realdest ); /* Check status */
   
   if( 1 != ret ) /* If not directory, bail out */
     {
-      printf( "Unable to create directory %s\n", tmp );
+      printf( "Unable to create directory %s\n", realdest );
       return ret;
     }
   
-  localwd = canonicalize_file_name( tmp );
+  localwd = canonicalize_file_name( realdest );
 
   if( !destname ) /* No destination given => likely first call,
 		   * make sure arg is an absolute path.
@@ -1031,7 +1037,7 @@ get_file_or_folder(const char *arg, const char *command,
       return -1;
     }
 
-  free( (void *) remotewd );
+  free( remotewd );
   remotewd = tmp;
   
   /* Do globbing */
@@ -1040,14 +1046,18 @@ get_file_or_folder(const char *arg, const char *command,
   
   if( tmp )
     dirinfo = lsftp_dc_r_startglob( tmp, 0, 1 );
-  /* free doesn't accept const poitners */
-  free( (void *) tmp );
+  else
+    return -1; /*Bail out on error */
+
+  free(  tmp );
   
   tmp = lsftp_concat( remotewd, ".*" );
   if( tmp )
     dirinfo = lsftp_dc_r_contglob( tmp, dirinfo, 1 );
-  /* free doesn't accept const pointers */
-  free( (void *) tmp );
+  else
+    return -1; /*Bail out on error */
+  
+  free( tmp );
 
   if( dirinfo )
     {
@@ -1086,8 +1096,8 @@ get_file_or_folder(const char *arg, const char *command,
       lsftp_dc_endglob( dirinfo );
     }
   
-  free( (void *) remotewd ); /* Free memory used by to hold remote wd */
-  free( (void *) localwd ); /* Free memory used by to hold remote wd */
+  free(  remotewd ); /* Free memory used by to hold remote wd */
+  free(  localwd ); /* Free memory used by to hold remote wd */
 
   return 0;
 
@@ -1147,14 +1157,19 @@ static int
 put_file_or_folder(const char *arg, const char *command,
 		   int cont, const char *destname )
 {
+
+  /* FIXME: Split into smaller functions put_file and put_folder used
+   * by this function. */
+
   const char **dirinfo = NULL;
   const char **curdirinfo;
 
-  const char *localwd;
-  const char *remotewd;
+  char *localwd;
+  char *remotewd;
 
-  const char *tmp;
-
+  const char* realdest;
+  char *tmp;
+ 
   struct stat st;
   int id;
   int mode = 0700;
@@ -1198,35 +1213,38 @@ put_file_or_folder(const char *arg, const char *command,
     mode = st.st_mode; /* Assign same modes as we have */
   else
     mode = 0700;       /* FIXME: Default mode */
-    
-  tmp = filename_part( arg ); /* Destination */
 
   if( destname )              /* If given, use it */
-    tmp = destname;
+    realdest = destname;
+  else
+    realdest = filename_part( arg ); /* Destination */
 
-  ret = lsftp_dc_r_isdir( tmp );
+  if( !realdest )    /* Just to be safe, bail out on error */
+    return -1;
+
+  ret = lsftp_dc_r_isdir( realdest );
   
   if( !ret )       /* Exists, but not a dir? */
     {
       printf( 
 	     "Error, %s exists but is not a directory\n", 
-	      tmp
+	     realdest
 	     );
       return -1;
     }
   
   if( -1 == ret ) /* stat failed (probably because no such dir) */
   {
-    id = lsftp_do_mkdir( tmp, mode, command ); /* Make directory */
+    id = lsftp_do_mkdir( realdest, mode, command ); /* Make directory */
     
     if( id > 0) /* Not a failure? */
       ret = lsftp_await_command( id );
 
-    ret = lsftp_dc_r_isdir( tmp ); /* Check status */
+    ret = lsftp_dc_r_isdir( realdest ); /* Check status */
 
     if( 1 != ret ) /* If not directory, bail out */
       {
-	printf( "Unable to create directory %s\n", tmp );
+	printf( "Unable to create directory %s\n", realdest );
 	return ret;
       }
 
@@ -1286,7 +1304,7 @@ put_file_or_folder(const char *arg, const char *command,
       return -1;
     }
 
-  free( (void *) remotewd );
+  free( remotewd );
   remotewd = tmp;
   
   /* Do globbing */
@@ -1295,12 +1313,19 @@ put_file_or_folder(const char *arg, const char *command,
   
   if( tmp )
     dirinfo = lsftp_dc_l_startglob( tmp, 1 );
-  free( (void *) tmp );
+  else
+    return -1; /*Bail out on error */
+
+  free( tmp );
   
   tmp = lsftp_concat( localwd, ".*" );
+
   if( tmp )
     dirinfo = lsftp_dc_l_contglob( tmp, dirinfo, 1 );
-  free( (void *) tmp );
+  else
+    return -1; /*Bail out on error */
+
+  free( tmp );
 
   if( dirinfo )
     {
@@ -1340,8 +1365,8 @@ put_file_or_folder(const char *arg, const char *command,
       lsftp_dc_endglob( dirinfo );
     }
   
-  free( (void *) remotewd ); /* Free memory used by to hold remote wd */
-  free( (void *) localwd ); /* Free memory used by to hold remote wd */
+  free( remotewd ); /* Free memory used by to hold remote wd */
+  free( localwd ); /* Free memory used by to hold remote wd */
 
   return 0;
 }    
@@ -1453,11 +1478,9 @@ int com_chown(const char *arg, const char *command)
 		  lsftp_await_command( id );
 		  lsftp_do_chown( ptr, newuid, st.st_gid, command );
 		}
-	    
-	      free( (void *) ptr );
 	    }
 	
-	  free( orgglob );
+	  lsftp_dc_endglob( orgglob );
 	}
 	
       free( tmp );
@@ -1689,10 +1712,9 @@ com_mv(const char *arg, const char *command)
 	      else
 		lsftp_do_mv( ptr, dst, command );
 	    }
-	  free( (void *) ptr );
 	}
 
-      free( orgglob );
+      lsftp_dc_endglob( orgglob );
       }
 
   free( dst );

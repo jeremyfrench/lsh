@@ -1,5 +1,11 @@
 2002-06-27  Pontus Sköld  <pont@soua.net>
 
+	* commands.c (com_mv): Use lsftp_dc_endglob instead of freeing the
+	strings in the glob.
+	(com_chown): Dito.
+	(put_file_or_folder): Cleaned up types of variables used.
+	(get_file_or_folder): Dito.
+
 	* sftp_bind.c (lsftp_do_cd): Pass a char** to lsftp_do_realpath.
 
 	* sftp_bind.h: lsftp_do_realpath takes a char** destptr, not const
