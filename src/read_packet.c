@@ -82,7 +82,7 @@ lsh_string_realloc(struct lsh_string *s, UINT32 length)
     return s;
 }
 
-/* For efficiency, allow reading several packets at a time. Butin
+/* For efficiency, allow reading several packets at a time. But in
  * order not to starve other channels, return when this much data has
  * been read. */
 #define QUANTUM 1024
