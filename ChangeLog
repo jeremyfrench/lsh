@@ -1,3 +1,8 @@
+2000-05-30  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/invert-defs: Improved awk-code to deal with repeated message
+	numbers. Thanks to bellman.
+
 2000-05-29  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/macros.m4 (TS_STRING): Ignore newlines in hex
