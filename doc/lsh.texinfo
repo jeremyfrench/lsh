@@ -1110,7 +1110,7 @@ This is a no-operation action. It inhibits the default action, which is
 to start an interactive shell on the remote machine. It is useful if you
 want to set up a few forwarded tunnels or a gateway, and nothing more.
 
-@iten -B
+@item -B
 Put the client into the background after key exchange and
 user authentication. Implies @option{-N}
 @end table

@@ -1,3 +1,13 @@
+2001-09-04  Niels Möller  <nisse@ehand.com>
+
+	* doc/lsh.texinfo: Updated for 1.3.4. In particular, added doc on
+	X forwarding, -x, -B, and --log-file options, and encrypted
+	private keys. Deleted the paragraph about the obsolete --userauth
+	option. 
+
+	* src/client.c (client_command_session): Ask for a pty also for
+	(supposedly non-interactive) exec sessions.
+
 2001-09-03  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/xauth.c (xauth_process): New function, using XauReadAuth.
