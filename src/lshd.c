@@ -209,7 +209,7 @@ main_argp =
   NULL,
   "Server for the ssh-2 protocol.",
   main_argp_children,
-  NULL
+  NULL, NULL
 };
 
 /* FIXME: We should have some more general functions for reading

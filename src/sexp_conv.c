@@ -119,7 +119,7 @@ main_argp =
   "s-expression on stdout, possibly using a different "
   "encoding. By default, output uses the advanced encoding. ",
   main_argp_children,
-  NULL
+  NULL, NULL
 };
   
 

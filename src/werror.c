@@ -93,7 +93,7 @@ const struct argp werror_argp =
 {
   werror_options,
   werror_argp_parser,
-  NULL, NULL, NULL, NULL
+  NULL, NULL, NULL, NULL, NULL
 };
 
 int error_fd = STDERR_FILENO;

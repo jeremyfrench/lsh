@@ -801,12 +801,12 @@ const struct argp sexp_input_argp =
 {
   sexp_input_options,
   sexp_argp_parser,
-  NULL, NULL, NULL, NULL
+  NULL, NULL, NULL, NULL, NULL
 };
 
 const struct argp sexp_output_argp =
 {
   sexp_output_options,
   sexp_argp_parser,
-  NULL, NULL, NULL, NULL
+  NULL, NULL, NULL, NULL, NULL
 };

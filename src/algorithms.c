@@ -199,7 +199,7 @@ algorithms_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { NULL, 0, NULL, 0, "Algorithm selection:", 0},
-  { "crypto", 'c', "Algorithm", 0, "" },
+  { "crypto", 'c', "Algorithm", 0, "", 0 },
   { "compression", 'z', "Algorithm",
     OPTION_ARG_OPTIONAL, "Default is zlib.", 0 },
   { "mac", 'm', "Algorithm", 0, "", 0 },
@@ -275,5 +275,5 @@ const struct argp algorithms_argp =
 {
   algorithms_options,
   algorithms_argp_parser,
-  NULL, NULL, NULL, NULL
+  NULL, NULL, NULL, NULL, NULL
 };

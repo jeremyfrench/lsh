@@ -141,7 +141,7 @@ main_argp =
     "to split it into its private and public parts, and optionally encrypt "
     "the private information."),
   main_argp_children,
-  NULL
+  NULL, NULL
 };
 
 

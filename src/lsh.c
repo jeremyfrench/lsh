@@ -523,7 +523,7 @@ main_argp =
     "action is to start a remote interactive shell or execute a given "
     "command on the remote machine." ),
   main_argp_children,
-  NULL
+  NULL, NULL
 };
 
 /* GABA:
