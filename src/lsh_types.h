@@ -86,11 +86,17 @@ do {						\
 
 /* Generic object */
 
+#define LSH_ALLOC_HEAP 0
+#define LSH_ALLOC_STATIC 1
+#define LSH_ALLOC_STACK 2
+     
 #ifdef DEBUG_ALLOC
-
+     
 struct lsh_object
 {
   int size;  /* Zero for objects that are not allocated on the heap. */
+  char alloc_method;
+  char marked;
 };
 
 struct lsh_string_header
@@ -98,13 +104,20 @@ struct lsh_string_header
   int magic;
 };
 
-#define STATIC_HEADER { 0 },
+#define STATIC_HEADER { 0, LSH_ALLOC_STATIC, 0 },
+#define STACK_HEADER { 0, LSH_ALLOC_STACK, 0 },
 
 #else   /* !DEBUG_ALLOC */
-struct lsh_object {};
+struct lsh_object
+{
+  char alloc_method;
+  char marked;
+};
+
 struct lsh_string_header {};
 
-#define STATIC_HEADER
+#define STATIC_HEADER { LSH_ALLOC_STATIC, 0 },
+#define STACK_HEADER { LSH_ALLOC_STACK, 0 },
 
 #endif  /* !DEBUG_ALLOC */
 

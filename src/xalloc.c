@@ -111,11 +111,15 @@ void *lsh_object_alloc(size_t size)
 #ifdef DEBUG_ALLOC
   self->size = size;
 #endif
+  self->alloc_method = LSH_ALLOC_HEAP;
+  self->marked = 0;
   return (void *) self;
 };
 
 void lsh_object_free(void *p)
 {
+  if ( ((struct lsh_object *) p)->alloc_method != LSH_ALLOC_HEAP)
+    fatal("lsh_object_free: Object not allocated on the heap!\n");
   lsh_free(p);
 };
 
