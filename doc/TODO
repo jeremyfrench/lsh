@@ -22,6 +22,13 @@ Can one safely assume that the only error that can occur when sending
 a packet (typically by A_WRITE(connection->write, packet)) is LSH_FAIL
 | LSH_CLOSE?
 
+What about returning errors from commands? We can either do
+COMMAND_RETURN(c, NULL) to invoke the commands continuation with an
+error value, or we could decide that the continuation should be
+invoked only if the command was successful. Or we could use a separate
+continuation for errors; that would be similar to a primitive
+exception system.
+
 
 KEYS
 
