@@ -83,7 +83,8 @@ make_userauth_special_exception(struct lsh_string *reply,
        ; an object containing the stdin file objects and perhaps some
        ; other info.
 
-       (fork_process method int "pid_t *")
+       ; The tty argument is for utmp/wtmp logging
+       (fork_process method int "pid_t *" "const char *tty")
 
        ; This modifies the argv vector, in particular its first
        ; element. So the vector must have at least two elements,
@@ -98,7 +99,7 @@ make_userauth_special_exception(struct lsh_string *reply,
 #define USER_VERIFY_PASSWORD(u, p, f) ((u)->verify_password((u), (p), (f)))
 #define USER_FILE_EXISTS(u, n, f) ((u)->file_exists((u), (n), (f)))
 #define USER_CHDIR_HOME(u) ((u)->chdir_home((u)))
-#define USER_FORK(u, c) ((u)->fork_process((u), (c)))
+#define USER_FORK(u, c, t) ((u)->fork_process((u), (c), (t)))
 #define USER_EXEC(u, m, a, l, e) ((u)->exec_shell((u), (m), (a), (l), (e)))
 
 #endif /* LSH_USERAUTH_H_INCLUDED */
