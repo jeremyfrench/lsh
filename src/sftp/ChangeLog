@@ -1,3 +1,11 @@
+2002-03-26  Pontus Sköld  <pont@soua.net>
+
+	* buffer.c (sftp_read_packet): Cosmetic fixes and a bugfix (if
+	sftp_get_data returns -1, it's not ok).
+
+	* gnu_stuff.c (help_option): Added an help text. It needs work but
+	is (hopefully) better than nothing.
+
 2002-03-25  Pontus Sköld  <pont@soua.net>
 
 	* buffer.c (sftp_read_packet): Loop to read data.
