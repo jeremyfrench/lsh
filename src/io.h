@@ -349,4 +349,11 @@ io_read_file(struct io_backend *backend,
 	     const char *fname, 
 	     struct exception_handler *e);
 
+struct lsh_fd *
+io_read_user_file(struct io_backend *backend,
+		  const char *fname,
+		  uid_t uid, int secret,
+		  const struct exception **x,
+		  struct exception_handler *e);
+
 #endif /* LSH_IO_H_INCLUDED */
