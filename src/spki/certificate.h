@@ -46,24 +46,27 @@ enum spki_flags
   SPKI_NOT_AFTER = 4,
 };
 
-struct spki_acl
+struct spki_5_tuple
 {
   /* ACL:s are linked into a list. */
-  struct spki_acl *next;
+  struct spki_5_tuple *next;
 
+  /* NULL for ACL:s */
+  struct spki_principal *issuer;
+  
   /* For now, support only subjects that are principals (i.e. no
    * names) */
   struct spki_principal *subject;
   enum spki_flags flags;
 
-  /* Checked if the correspondign flag is set. */
+  /* Checked if the corresponding flag is set. */
   time_t not_before;
   time_t not_after;
 
   /* An s-expression */
   /* FIXME: Parse into some internal representation? */
   unsigned tag_length;
-  uint8_t tag;
+  uint8_t *tag;
 };
 
 struct spki_acl_db
@@ -72,7 +75,7 @@ struct spki_acl_db
   void *(*realloc)(struct spki_acl_db *, void *, unsigned);
 
   struct spki_principal *first_principal;
-  struct spki_acl *first_acl;
+  struct spki_5_tuple *first_acl;
 };
 
 void
@@ -98,7 +101,7 @@ spki_principal_by_sha1(struct spki_acl_db *db,
 
 
 /* Handling the acl database */
-struct spki_acl *
+int
 spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i);
 
 struct spki_acl *
@@ -122,3 +125,11 @@ spki_acl_by_authorization_next(struct spki_acl_db *,
 			       struct spki_acl *acl,
 			       unsigned authorization_length,
 			       uint8_t *authorization);
+
+
+/* More-or-less internal function for parsing various expressions. */
+enum spki_type
+spki_intern(struct sexp_iterator *i);
+
+enum spki_type
+spki_get_type(struct sexp_iterator *i);
