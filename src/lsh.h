@@ -109,6 +109,7 @@ struct ssh_connection;
 /* io.h */
 struct lsh_fd;
 struct address_info;
+struct listen_value;
 
 /* list.h */
 struct int_list;
