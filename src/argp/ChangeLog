@@ -1,5 +1,7 @@
 2004-02-23  Niels Möller  <niels@s3.kth.se>
 
+	* configure.ac: Bumped version to standalone-1.3.
+
 	Portability to Mac OS X (fixes by Akim Demaille)
 
         * argp/Makefile.am (libargp_a_SOURCES): Remove the duplicate
