@@ -124,9 +124,10 @@
    (class
      (name address_info)
      (vars
-       ;; FIXME: address is a bad name. What is meant is whatever an
-       ;; ip-number refers to, i.e.a host or a network interface.
-       (address string)
+       ; An ipnumber, in decimal dot notation, ipv6 format, or
+       ; a dns name.
+       (ip string)
+       ; The port number here is always in host byte order
        (port . UINT32))) */
 
 /* GABA:
@@ -197,6 +198,9 @@ int tcp_addr(struct sockaddr_in *sin,
 struct address_info *make_address_info_c(const char *host,
 					 const char *port);
 
+struct address_info *make_address_info(struct lsh_string *host, 
+				       UINT32 port);
+
 struct address_info *sockaddr2info(size_t addr_len UNUSED,
 				   struct sockaddr *addr);
 
@@ -235,7 +239,7 @@ struct io_fd *io_write(struct io_fd *fd,
 		       UINT32 block_size,
 		       struct close_callback *close_callback);
 
-/* Marks a file for close, without touching the close_Reason field. */
+/* Marks a file for close, without touching the close_reason field. */
 void kill_fd(struct lsh_fd *fd);
 
 void close_fd(struct lsh_fd *fd, int reason);
