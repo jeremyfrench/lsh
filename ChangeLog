@@ -1,3 +1,12 @@
+2001-06-13  Niels Möller  <nisse@ehand.com>
+
+	* misc/bootstrap.sh: Bootstrap the nettle subdirectory. 
+
+	* src/rsync/: Updated to libnettle conventions.
+
+	* configure.in (CPPFLAGS): Add -LSH and -I$srcdir/src, needed by
+	src/rsync/.
+
 2001-06-12  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/dsa.c, src/dsa_keygen.c, src/md5.c, src/rijndael.c,
