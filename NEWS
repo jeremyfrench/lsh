@@ -1,3 +1,11 @@
+News for the 0.2.6 release
+
+	Bugfixes for tcp forwarding functions.
+
+	Some more tests for testsuite. To try them, you must first
+	setup lsh so that you can login with no password. Then type
+	"make check-more" in the testsuite subdirectory. 
+	
 News for the 0.2.5 release
 
 	Bugfixes.

@@ -1,3 +1,37 @@
+2000-01-26  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/testsuite/Makefile.am (TS_MORE_SH): Added tcpip-local-test.
+	(EXTRA_DIST): Added new files.
+
+	* src/tcpforward_commands.c (DIRECT_TCPIP_HANDLER): New define. 
+	(INSTALL_DIRECT_TCPIP): New define.
+
+	* src/tcpforward.c (lookup_forward): Use CAST_SUBTYPE.
+	(do_tcpip_channel_die): Call close_fd() rather than kill_fd().
+	(tcpip_channel_start_io): Don't call channel_start_receive().
+	(make_exc_tcpip_connect_handler): New exception handler, which
+	raises EXC_CHANNEL_OPEN on connect and dns errors.
+	(do_open_forwarded_tcpip_continuation): Require that channel !=
+	NULL.
+	(make_open_forwarded_tcpip_continuation): Removed
+	exception_handler argument.
+	(do_channel_open_direct_tcpip): Use a better exception handler.
+	(do_channel_open_forwarded_tcpip): -"-
+
+	* src/lsh.c (do_lsh_default_handler): Handle EXC_CHANNEL_OPEN.
+
+	* src/channel.c (make_exc_channel_open_handler): Added missing
+	context argument.
+	(do_window_adjust): Check for CHANNEL_SENT_EOF, so that we don't
+	attempt to send data after EOF.
+
+	* configure.in: Bumped version to 0.2.6.
+
+	* src/testsuite/Makefile.am: Don't use automake's builtin
+	testsuite-support. 
+
+	* src/io.c (do_consuming_read): Don't die on EPIPE.
+
 2000-01-22  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/channel.c (exc_finish_channel_handler): New attribute dead,
