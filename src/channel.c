@@ -449,6 +449,49 @@ static int do_global_request(struct packet_handler *s UNUSED,
   END (packet);
 }
 
+static int do_global_request_success(struct packet_handler *s UNUSED,
+				     struct ssh_connection *connection,
+				     struct lsh_string *packet)
+{
+  if (packet->length != 1)
+    return LSH_FAIL | LSH_DIE;
+
+  assert(packet->data[0] == SSH_MSG_REQUEST_SUCCESS);
+
+  if (object_queue_is_empty(&connection->channels->pending_global_requests))
+    {
+      werror("do_global_request_success: Unexpected message, ignoring.\n");
+      return LSH_OK | LSH_GOON;
+    }
+  {
+    CAST_SUBTYPE(command_continuation, c,
+		 object_queue_remove_head(&connection->channels->pending_global_requests));
+    return COMMAND_RETURN(c, connection);
+  }
+}
+
+static int do_global_request_failure(struct packet_handler *s UNUSED,
+				     struct ssh_connection *connection,
+				     struct lsh_string *packet)
+{
+  if (packet->length != 1)
+    return LSH_FAIL | LSH_DIE;
+
+  assert(packet->data[0] == SSH_MSG_REQUEST_FAILURE);
+
+  if (object_queue_is_empty(&connection->channels->pending_global_requests))
+    {
+      werror("do_global_request_failure: Unexpected message, ignoring.\n");
+      return LSH_OK | LSH_GOON;
+    }
+  {
+    CAST_SUBTYPE(command_continuation, c,
+		 object_queue_remove_head(&connection->channels->pending_global_requests));
+    return COMMAND_RETURN(c, NULL);
+  }
+}
+
+
 /* Callback given to the CHANNEL_OPEN method */
 static int do_channel_open_response(struct channel_open_callback *c,
                                     struct ssh_channel *channel,
@@ -1159,6 +1202,9 @@ static int do_connection_service(struct command *s UNUSED,
   NEW(packet_handler, channel_success);
   NEW(packet_handler, channel_failure);
 
+  NEW(packet_handler, global_success);
+  NEW(packet_handler, global_failure);
+  
   debug("channel.c: do_connection_service()\n");
   
   table = make_channel_table();
@@ -1203,6 +1249,12 @@ static int do_connection_service(struct command *s UNUSED,
   channel_failure->handler = do_channel_failure;
   connection->dispatch[SSH_MSG_CHANNEL_FAILURE] = channel_failure;
 
+  global_success->handler = do_global_request_success;
+  connection->dispatch[SSH_MSG_REQUEST_SUCCESS] = global_success;
+
+  global_failure->handler = do_global_request_failure;
+  connection->dispatch[SSH_MSG_REQUEST_FAILURE] = global_failure;
+  
   return
 #if 0
     self->hook
