@@ -379,6 +379,19 @@ int io_iter(struct io_backend *b)
 	  }
 #endif /* POLLHUP */
 
+#ifdef POLLERR
+	if (fds[i].revents & POLLERR)
+	  {
+	    werror("io.c: POLLERR. Hanging up.\n");
+
+	    /* FIXME: Should we raise any exception here? */
+
+	    close_fd(fd); 
+
+	    continue;
+	  }
+#endif /* POLLERR */
+	
 #ifdef POLLPRI
 	if (fds[i].revents & POLLPRI)
 	  {
