@@ -242,6 +242,8 @@ void gc(void)
   unsigned strings_before = number_of_strings;
 #endif
 
+  verbose("garbage collecting...\n");
+  
   gc_mark(&root_set->super.super);  
   gc_sweep();
   
