@@ -3,13 +3,37 @@
 # This program wants to recieve a list of needed headers on stdin. It
 # reads Makefile.am.in and creates Makefile.am.
 
-if [ x$1 != x ]; then
+rethink=no
+options=''
+
+while true; do
+    case $1 in
+    	--rethink)
+    	    rethink=yes
+    	    ;;
+    	--*)
+    	    echo make_am: Unknown option $1
+    	    exit 1
+    	    ;;
+	*)
+	    break
+    esac
+
+    options="$options $1"
+    shift
+done
+
+if [ $# != 0 ]; then
     dir=$1
-    top=n0
+    top=no
 else
     dir=.
     top=yes
 fi
+
+function werror {
+    echo 1>&2 "$@"
+}
 
 echo 1>&2 "make_am: dir='$dir'"
 

@@ -30,7 +30,7 @@ bin_PROGRAMS = lsh lshd
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c
 
-common_sources = alist.c atoms.c bignum.c channel.c \
+common_sources = abstract_io.c alist.c atoms.c bignum.c channel.c \
 	charset.c connection.c crypto.c \
 	debug.c disconnect.c encrypt.c format.c getopt.c io.c keyexchange.c \
 	packet_ignore.c pad.c parse.c publickey_crypto.c \
