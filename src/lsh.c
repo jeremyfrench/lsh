@@ -129,8 +129,7 @@ make_options(struct exception_handler *handler,
   const char *home = getenv(ENV_HOME);
   struct randomness *r = make_user_random(home);
 
-  init_client_options(&self->super, 
-		      r,
+  init_client_options(&self->super, r,
 		      handler, exit_code);
 
   self->algorithms = make_algorithms_options(all_symmetric_algorithms());
@@ -537,12 +536,12 @@ do_lsh_lookup(struct lookup_verifier *c,
       /* Write an ACL to disk. */
       if (self->file)
 	{
-	  A_WRITE(self->file, ssh_format("\n; ACL for host %lz\n", self->host));
 	  A_WRITE(self->file,
-		  lsh_string_format_sexp(1, "%l", STRING_LD(acl)));
+		  ssh_format("\n; ACL for host %lz\n"
+			     "%lfS\n",
+			     self->host, lsh_string_format_sexp(1, "%l", STRING_LD(acl))));
+
 	  lsh_string_free(acl);
-	  
-	  A_WRITE(self->file, ssh_format("\n"));
 	}
     }
   
@@ -604,8 +603,8 @@ make_lsh_login(struct lsh_options *options,
    (expr
      (name make_lsh_connect)
      (params
+       (resource object resource)
        (handshake object handshake_info)
-       (init object make_kexinit)
        (db object lookup_verifier)
        (actions object object_list)
        (login object command))
@@ -616,8 +615,8 @@ make_lsh_login(struct lsh_options *options,
 		   (login
 		     (request_userauth_service
 		       ; Start the ssh transport protocol
-		       (connection_handshake
-			 handshake init
+		       (protect resource connection_handshake
+			 handshake
 			 db
 			 ; Connect using tcp
 			 (connect_list remote)))))))))
@@ -824,21 +823,17 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    static const struct report_exception_info report =
 	      STATIC_REPORT_EXCEPTION_INFO(EXC_IO, EXC_IO,
 					   "Writing new ACL: ");
-	    
-	    struct lsh_fd *f
+
+	    self->capture_file
 	      = io_write_file(s,
 			      O_CREAT | O_APPEND | O_WRONLY,
-			      0600, 500, NULL,
+			      0600, 
 			      make_report_exception_handler
 			      (&report,
 			       &default_exception_handler,
 			       HANDLER_CONTEXT));
-	    if (f)
-	      self->capture_file = &f->write_buffer->super;
-	    else
-	      {
-		werror("Failed to open '%z' %e.\n", s, errno);
-	      }
+	    if (!self->capture_file)
+	      werror("Failed to open '%z' %e.\n", s, errno);
 	  }
 	lsh_string_free(tmp);
       }
@@ -999,7 +994,7 @@ make_lsh_default_handler(int *status, struct exception_handler *parent,
   self->super.parent = parent;
   self->super.raise = do_lsh_default_handler;
   self->super.context = context;
-  
+
   self->status = status;
 
   return &self->super;
@@ -1034,7 +1029,7 @@ int main(int argc, char **argv, const char** envp)
 
   if (!options)
     return EXIT_FAILURE;
-  
+
   envp_parse(&main_argp, envp, "LSHFLAGS=", ARGP_IN_ORDER, options);
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
 
@@ -1059,19 +1054,21 @@ int main(int argc, char **argv, const char** envp)
   
   lsh_connect =
     make_lsh_connect(
+      &options->super.resources->super,
       make_handshake_info(CONNECTION_CLIENT,
 			  SOFTWARE_SLOGAN, NULL,
 			  SSH_MAX_PACKET,
 			  options->super.random,
 			  options->algorithms->algorithms,
+			  make_simple_kexinit(
+			    options->super.random,
+			    options->kex_algorithms,
+			    options->algorithms->hostkey_algorithms,
+			    options->algorithms->crypto_algorithms,
+			    options->algorithms->mac_algorithms,
+			    options->algorithms->compression_algorithms,
+			    make_int_list(0, -1)),
 			  NULL),
-      make_simple_kexinit(options->super.random,
-			  options->kex_algorithms,
-			  options->algorithms->hostkey_algorithms,
-			  options->algorithms->crypto_algorithms,
-			  options->algorithms->mac_algorithms,
-			  options->algorithms->compression_algorithms,
-			  make_int_list(0, -1)),
       make_lsh_host_db(spki,
 		       options->super.tty,
 		       options->super.target,
@@ -1079,18 +1076,9 @@ int main(int argc, char **argv, const char** envp)
 		       options->capture_file),
       queue_to_list(&options->super.actions),
       make_lsh_login(options, keys));
-  
+
   COMMAND_CALL(lsh_connect, remote, &discard_continuation,
 	       handler);
-
-#if 0
-  /* All commands using stdout have dup:ed stdout by now. We close it,
-   * because if stdout is a pipe, we want the reader to know whether
-   * or not anybody is still using it. */
-  close(STDOUT_FILENO);
-  if (open("/dev/null", O_WRONLY) != STDOUT_FILENO)
-    werror("Strange: Final redirect of stdout to /dev/null failed.\n");
-#endif
   
   io_run();
 
