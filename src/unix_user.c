@@ -279,7 +279,7 @@ do_exec_shell(struct user *u, int login,
   if (tz)
     envp[i++] = format_env_pair_c("TZ", tz);
 
-  assert(i < MAX_ENV);
+  assert(i <= MAX_ENV);
 #undef MAX_ENV
 
   for (j = 0; j<env_length; j++)
