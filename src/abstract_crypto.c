@@ -220,6 +220,8 @@ do_make_cascade(struct crypto_algorithm *s,
   instance->super.block_size = algorithm->super.block_size;
   instance->cascade = alloc_object_list(LIST_LENGTH(algorithm->cascade));
 
+  /* FIXME: When decrypting, the crypto algorithm should be used in
+   * reverse order! */
   for (i = 0; i<LIST_LENGTH(algorithm->cascade); i++)
     {
       CAST_SUBTYPE(crypto_algorithm, a, LIST(algorithm->cascade)[i]);

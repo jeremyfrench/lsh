@@ -73,6 +73,9 @@ cleaned up a little.
 
 Fix gc_kill to deallocate objects immediately.
 
+Consider adding reference counts to strings.
+
+
 CHANNELS
 
 Create some generic methods for connecting a channel to one or more
