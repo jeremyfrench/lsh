@@ -6,6 +6,7 @@
 #define LSH_CONNECTION_H_INCLUDED
 
 #include "lsh_types.h"
+#include "abstract_io.h"
 
 struct ssh_connection
 {
@@ -23,5 +24,15 @@ struct ssh_connection
 };
 
 struct ssh_connection *ssh_connection_alloc();
+
+struct connection_closure
+{
+  struct abstract_write super;
+  struct connection *connection;
+};
+
+#if 0
+struct abstract_write *make_unimplemented(struct connection *c);  
+#endif
 
 #endif /* LSH_CONNECTION_H_INCLUDED */
