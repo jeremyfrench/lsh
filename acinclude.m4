@@ -475,13 +475,21 @@ dnl information, and DEP_PROCESS that is any shell commands needed for
 dnl massaging the dependency information further. Dependencies are
 dnl generated as a side effect of compilation.
 AC_DEFUN([LSH_DEPENDENCY_TRACKING],
-[if test x$GCC = xyes; then
-  DEP_FLAGS='-MT $[]@ -MT $[]@.d -MD -MP -MF $[]@.d'
-  DEP_PROCESS='true'
+[DEP_FLAGS=''
+DEP_PROCESS='true'
+if test x$GCC = xyes; then
+  gcc_version=`gcc --version | head -1`
+  case "$gcc_version" in
+    2.*|*[^1-9.]2.*)
+      AC_MSG_WARN([Dependency tracking disabled, gcc-3.x is needed])
+    ;;
+    *)
+      DEP_FLAGS='-MT $[]@ -MT $[]@.d -MD -MP -MF $[]@.d'
+      DEP_PROCESS='true'
+    ;;
+  esac
 else
   AC_MSG_WARN([Dependency tracking disabled])
-  DEP_FLAGS=''
-  DEP_PROCESS='true'
 fi 
 AC_SUBST([DEP_FLAGS])
 AC_SUBST([DEP_PROCESS])])
