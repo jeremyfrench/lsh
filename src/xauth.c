@@ -37,6 +37,7 @@
 #include "xauth.h"
 
 #include "format.h"
+#include "lsh_string.h"
 #include "werror.h"
 
 #if HAVE_LIBXAU
@@ -340,7 +341,7 @@ xauth_lookup(struct sockaddr *address,
   if (s)
     {
       struct simple_buffer buffer;
-      simple_buffer_init(&buffer, s->length, s->data);
+      simple_buffer_init(&buffer, STRING_LD(s));
 
       while (!parse_eod(&buffer))
 	{
