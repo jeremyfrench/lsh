@@ -1,3 +1,11 @@
+2000-12-23  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/Makefile.am.in (EXTRA_DIST): Removed references to the
+	getopt files getopt.c, getopt.h and getopt1.c.
+
+	* configure.in: Removed getopt-related tests (previously just
+	commented out).
+
 2000-12-23  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/getopt.c, src/getopt1.c, src/getopt.h: Removed.
