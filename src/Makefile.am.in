@@ -150,7 +150,9 @@ lsh_execuv_LDADD=
 # 	  if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
 
 LDADD = liblsh.a nettle/libnettle.a @LIBARGP@
-lshg_LDADD = liblsh.a @LIBARGP@
+
+# lshg needs ssh_format, which need bignum functions from nettle.
+# lshg_LDADD = liblsh.a @LIBARGP@
 
 class-map: $(srcdir)/make-class-map $(dist_x_files)
 	cat $(dist_x_files) | grep '^CLASS:' \
