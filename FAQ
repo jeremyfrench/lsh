@@ -1,3 +1,26 @@
+× Out of curiosity, what's the relationship between LSH and OpenSSH?
+
+They are almost completely unrelated. LSH development started in late
+August 1998, soon after the first specifications for the version 2 of
+the SSH protocols were made public. OpenSSH is derived from the old
+free versions of the ssh program written by Tatu Ylonen, and support
+for version 2 of the protocols was added later on, in May 2000.
+
+I think the implementations share very little source code; perhaps
+things like the implementations of blowfish or SHA1 has common
+ancestors. OpenSSH uses the OpenSSL library for low-level
+cryptographic operations. LSH uses its own library for symmetric
+cryptographic operations, and GMP for its bignum calculations.
+
+OpenSSH supports version 1 of the protocols, and it supports RSA keys.
+LSH don't (RSA support will be added as the patents expire).
+
+LSH and OpenSSH seems to interoperate fine over the wire with
+eachother and with other implementations of ssh version 2. The file
+formats and conventions for storing keys on disk are not compatible,
+but conversion tools are on the LSH todo-list.
+
+
 × Why use a gc?
 
 I'll try to explain how I think about gc, as I'm afraid some may find
