@@ -295,6 +295,9 @@ make_handshake_info(UINT32 flags,
 /* Buffer size when reading from the socket */
 #define BUF_SIZE (1<<14)
 
+/* Ten minutes */
+#define HANDSHAKE_TIMEOUT 600
+
 DEFINE_COMMAND4(handshake_command)
      (struct lsh_object *a1,
       struct lsh_object *a2,
@@ -370,6 +373,11 @@ DEFINE_COMMAND4(handshake_command)
      ->write_buffer->super,
      info->random);
 
+  /* Install timeout. */
+  connection_set_timeout(connection,
+			 HANDSHAKE_TIMEOUT,
+			 "Handshake timed out");
+  
   connection->versions[mode] = version;
   connection->kexinits[mode] = MAKE_KEXINIT(init); 
   connection->dispatch[SSH_MSG_KEXINIT]
