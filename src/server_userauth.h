@@ -54,7 +54,7 @@
 #define USER_LOOKUP(db, n, f) ((db)->lookup((db), (n), (f)))
 
 struct user_db *
-make_unix_user_db(struct io_backend *backend, struct reap *reaper,
+make_unix_user_db(struct reap *reaper,
 		  const char *pw_helper, const char *login_shell,
 		  int allow_root);
 

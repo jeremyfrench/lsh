@@ -385,7 +385,8 @@ int main(int argc, char **argv)
 {
   struct sexp_conv_options *options = make_options();
   struct exception_handler *e;
-  struct io_backend *backend = make_io_backend();
+
+  io_init();
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -402,15 +403,14 @@ int main(int argc, char **argv)
 		   options->select,
 		   options->transform,
 		   options->print,
-		   &(io_write(make_lsh_fd(backend,
-					  STDOUT_FILENO,
+		   &(io_write(make_lsh_fd(STDOUT_FILENO,
 					  "stdout",
 					 e),
 			      SEXP_BUFFER_SIZE,
 			      NULL)
 		     ->write_buffer->super)));
 
-    struct lsh_fd *in = make_lsh_fd(backend, STDIN_FILENO, "stdin", e);
+    struct lsh_fd *in = make_lsh_fd(STDIN_FILENO, "stdin", e);
 
     /* Fixing the exception handler creates a circularity */
     e->parent = make_exc_finish_read_handler(in,
@@ -420,7 +420,10 @@ int main(int argc, char **argv)
     COMMAND_CALL(work, in,
 		 &discard_continuation, e);
   }
-  io_run(backend);
+  io_run();
 
+  io_final();
+  gc_final();
+  
   return exit_code;
 }

@@ -325,7 +325,7 @@ int main(int argc, char **argv)
   struct lsh_fd *in;
   struct lsh_fd *out;
 
-  struct io_backend *backend = make_io_backend();
+  io_init();
 
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -335,7 +335,7 @@ int main(int argc, char **argv)
 
   if (options->infile)
     {
-      in = io_read_file(backend, options->infile, e);
+      in = io_read_file(options->infile, e);
       if (!in)
 	{
 	  werror("Failed to open '%z': %z\n",
@@ -344,16 +344,16 @@ int main(int argc, char **argv)
 	}
     }
   else
-    in = make_lsh_fd(backend, STDIN_FILENO, "stdin", e);
+    in = make_lsh_fd(STDIN_FILENO, "stdin", e);
       
   if (options->outfile)
     {
-      out = io_write_file(backend, options->outfile,
+      out = io_write_file(options->outfile,
 			  O_WRONLY | O_CREAT, 0666,
 			  SEXP_BUFFER_SIZE, NULL, e);
     }
   else
-    out = io_write(make_lsh_fd(backend, STDOUT_FILENO,
+    out = io_write(make_lsh_fd(STDOUT_FILENO,
 			       "stdout", e),
 		   SEXP_BUFFER_SIZE, NULL);
 
@@ -372,7 +372,10 @@ int main(int argc, char **argv)
     COMMAND_CALL(work, in,
 		 &discard_continuation, e);
   }
-  io_run(backend);
+  io_run();
+
+  io_final();
+  gc_final();
   
   return exit_code;
 }

@@ -50,9 +50,10 @@ extern struct command io_write_file_command;
 
 #define IO_WRITE_FILE (&io_write_file_command.super)
 
+#if 0
 /* Read a certain fd */
 
-/* GABA:
+/* ;;GABA:
    (class
      (name io_read_fd)
      (super command)
@@ -70,32 +71,27 @@ void do_io_read_fd(struct command *s,
 
 extern struct io_read_fd io_read_stdin;
 #define IO_READ_STDIN (&io_read_stdin.super.super)
-
+#endif
 
 struct command *
-make_listen_with_callback(struct command *callback,
-			  struct io_backend *backend);
+make_listen_with_callback(struct command *callback);
 
-extern struct command_3 listen_with_callback;
+extern struct command_2 listen_with_callback;
 #define LISTEN_CALLBACK (&listen_with_callback.super.super)
 
 struct command *
-make_connect_port(struct io_backend *backend,
-		  struct address_info *target);
+make_connect_port(struct address_info *target);
+struct command *
+make_connect_connection(void);
 
 struct command *
-make_connect_connection(struct io_backend *backend);
+make_simple_connect(struct resource_list *resources);
 
 struct command *
-make_simple_connect(struct io_backend *backend,
-		    struct resource_list *resources);
+make_listen_local(struct local_info *info);
 
 struct command *
-make_listen_local(struct io_backend *backend,
-		  struct local_info *info);
-
-struct command *
-make_connect_local(struct io_backend *backend);
+make_connect_local(void);
 
 extern struct command connect_local_command;
 #define CONNECT_LOCAL (&connect_local_command.super)

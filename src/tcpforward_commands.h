@@ -28,19 +28,17 @@
 #include "tcpforward.h"
 
 struct command *
-make_forward_local_port(struct io_backend *backend,
-			struct address_info *local,
+make_forward_local_port(struct address_info *local,
 			struct address_info *target);
 
 struct command *
-make_forward_remote_port(struct io_backend *backend,
-			 struct address_info *local,
+make_forward_remote_port(struct address_info *local,
 			 struct address_info *target);
 
 struct command *
-make_direct_tcpip_hook(struct io_backend *backend);
+make_direct_tcpip_hook(void);
 
 struct command *
-make_tcpip_forward_hook(struct io_backend *backend);
+make_tcpip_forward_hook(void);
 
 #endif /* LSH_TCPFORWARD_COMMANDS_H_INCLUDED */

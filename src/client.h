@@ -103,7 +103,7 @@ make_pty_request(struct interact *tty);
 
 
 struct channel_open *
-make_channel_open_x11(struct io_backend *backend);
+make_channel_open_x11(void);
 
 struct command *
 make_forward_x11(const char *display_string,
@@ -116,8 +116,6 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
    (class
      (name client_options)
      (vars
-       (backend object io_backend)
-
        ;; Used only by lsh, NULL for lshg.
        (random object randomness_with_poll)
 
@@ -168,7 +166,6 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
 
 void
 init_client_options(struct client_options *options,
-		    struct io_backend *backend,
 		    struct randomness_with_poll *random,
 		    struct exception_handler *handler,
 		    int *exit_code);

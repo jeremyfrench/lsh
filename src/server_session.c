@@ -296,12 +296,12 @@ make_exit_shell(struct server_session *session)
   return &self->super;
 }
 
+/* FIXME: Delete class */
 /* GABA:
    (class
      (name shell_request)
      (super channel_request)
-     (vars
-       (backend object io_backend)))
+     (vars ))
 */
 
 static int
@@ -411,8 +411,7 @@ static int make_pty(struct pty_info *pty UNUSED,
 static int
 spawn_process(struct server_session *session,
 	      struct lsh_user *user,
-	      struct address_info *peer,
-	      struct io_backend *backend)
+	      struct address_info *peer)
 {
   int in[2];
   int out[2];
@@ -465,7 +464,7 @@ spawn_process(struct server_session *session,
 		= make_channel_read_close_callback(channel);
 
 	      session->in
-		= io_write(make_lsh_fd(backend, in[1], "child stdin",
+		= io_write(make_lsh_fd(in[1], "child stdin",
 				       io_exception_handler),
 			   SSH_MAX_PACKET, NULL);
 	  
@@ -476,13 +475,13 @@ spawn_process(struct server_session *session,
 	       * which will close the channel on read errors, or is it
 	       * better to just send EOF on read errors? */
 	      session->out
-		= io_read(make_lsh_fd(backend, out[0], "child stdout",
+		= io_read(make_lsh_fd(out[0], "child stdout",
 				      io_exception_handler),
 			  make_channel_read_data(channel),
 			  read_close_callback);
 	      session->err 
 		= ( (err[0] != -1)
-		    ? io_read(make_lsh_fd(backend, err[0], "child stderr",
+		    ? io_read(make_lsh_fd(err[0], "child stderr",
 					  io_exception_handler),
 			      make_channel_read_stderr(channel),
 			      read_close_callback)
@@ -549,10 +548,9 @@ spawn_process(struct server_session *session,
 	      }
 #endif /* WITH_PTY_SUPPORT */
 	  
-	    /* Close all descriptors but those used for
-	     * communicationg with parent. We rely on the
-	     * close-on-exec flag for all fd:s handled by the
-	     * backend. */
+	    /* Close all descriptors but those used for communicationg
+	     * with parent. We rely on the close-on-exec flag for all
+	     * other fd:s. */
 	    
 	    if (dup2(in[0], STDIN_FILENO) < 0)
 	      {
@@ -625,8 +623,7 @@ do_spawn_shell(struct channel_request *s,
     goto fail;
 
   switch (spawn_process(session, channel->connection->user,
-			channel->connection->peer,
-			closure->backend))
+			channel->connection->peer))
     {
     case 1: /* Parent */
       /* NOTE: The return value is not used. */
@@ -685,12 +682,11 @@ do_spawn_shell(struct channel_request *s,
 }
 
 struct channel_request *
-make_shell_handler(struct io_backend *backend)
+make_shell_handler(void)
 {
   NEW(shell_request, closure);
 
   closure->super.handler = do_spawn_shell;
-  closure->backend = backend;
   
   return &closure->super;
 }
@@ -731,8 +727,7 @@ do_spawn_exec(struct channel_request *s,
       struct lsh_string *command_line = ssh_format("%ls", command_len, command);
       
       switch (spawn_process(session, channel->connection->user,
-			    channel->connection->peer,
-			    closure->backend))
+			    channel->connection->peer))
 	{
 	case 1: /* Parent */
 	  lsh_string_free(command_line);
@@ -793,12 +788,11 @@ do_spawn_exec(struct channel_request *s,
 }
 
 struct channel_request *
-make_exec_handler(struct io_backend *backend)
+make_exec_handler(void)
 {
   NEW(shell_request, closure);
 
   closure->super.handler = do_spawn_exec;
-  closure->backend = backend;
   
   return &closure->super;
 }
@@ -878,8 +872,7 @@ do_spawn_subsystem(struct channel_request *s,
 	}
       
       switch (spawn_process(session, channel->connection->user,
-			    channel->connection->peer,
-			    self->super.backend))
+			    channel->connection->peer))
 	{
 	case 1: /* Parent */
 	  /* NOTE: The return value is not used. */
@@ -911,13 +904,11 @@ do_spawn_subsystem(struct channel_request *s,
 }
 
 struct channel_request *
-make_subsystem_handler(struct io_backend *backend,
-		       const char **subsystems)
+make_subsystem_handler(const char **subsystems)
 {
   NEW(subsystem_request, self);
 
   self->super.super.handler = do_spawn_subsystem;
-  self->super.backend = backend;
   self->subsystems = subsystems;
   
   return &self->super.super;

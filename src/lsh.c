@@ -131,12 +131,11 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
 
 
 static struct lsh_options *
-make_options(struct io_backend *backend,
-	     struct exception_handler *handler,
+make_options(struct exception_handler *handler,
 	     int *exit_code)
 {
   NEW(lsh_options, self);
-  init_client_options(&self->super, backend,
+  init_client_options(&self->super, 
 		      make_default_random(NULL, handler),
 		      handler, exit_code);
 
@@ -202,7 +201,7 @@ do_options2known_hosts(struct command *ignored UNUSED,
       s = lsh_get_cstring(tmp);
     }
   
-  f = io_read_file(options->super.backend, s, e);
+  f = io_read_file(s, e);
 
   if (!f)
     {
@@ -250,7 +249,7 @@ do_options2identities(struct command *ignored UNUSED,
       s = lsh_get_cstring(tmp);
     }
   
-  f = io_read_file(options->super.backend, s, e);
+  f = io_read_file(s, e);
   
   if (!f)
     {
@@ -748,7 +747,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	if (s)
 	  {
 	    struct lsh_fd *f
-	      = io_write_file(self->super.backend, s,
+	      = io_write_file(s,
 			      O_CREAT | O_APPEND | O_WRONLY,
 			      0600, 500, NULL,
 			      make_report_exception_handler
@@ -792,7 +791,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      
 	  client_add_action(&self->super,
 			    make_gateway_setup
-			    (make_listen_local(self->super.backend, gateway)));
+			    (make_listen_local(gateway)));
 	}
 
       if (object_queue_is_empty(&self->super.actions))
@@ -840,8 +839,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
 	client_add_action(&self->super, make_forward_remote_port
-			  (self->super.backend,
-			   make_address_info((self->super.with_remote_peers
+			  (make_address_info((self->super.with_remote_peers
 					      ? ssh_format("%lz", "0.0.0.0")
 					      : ssh_format("%lz", "127.0.0.1")),
 					     listen_port),
@@ -939,7 +937,7 @@ int main(int argc, char **argv)
     = make_lsh_default_handler(&lsh_exit_code, &default_exception_handler,
 			       HANDLER_CONTEXT);
 
-  struct io_backend *backend = make_io_backend();
+  io_init();
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -948,14 +946,14 @@ int main(int argc, char **argv)
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
-  options = make_options(backend, handler, &lsh_exit_code);
+  options = make_options(handler, &lsh_exit_code);
 
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
   
   {
     struct lsh_object *o =
       make_lsh_connect(
-	make_simple_connect(backend, NULL),
+	make_simple_connect(NULL),
 	make_handshake_info(CONNECTION_CLIENT,
 			    "lsh - a free ssh", NULL,
 			    SSH_MAX_PACKET,
@@ -986,10 +984,10 @@ int main(int argc, char **argv)
     werror("Strange: Final redirect of stdout to /dev/null failed.\n");
 #endif
   
-  io_run(backend);
+  io_run();
 
   /* Close all files and other resources associated with the backend. */
-  io_final(backend);
+  io_final();
   
   gc_final();
 

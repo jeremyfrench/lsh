@@ -146,7 +146,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (name lshd_options)
      (super algorithms_options)
      (vars
-       (backend object io_backend)
        (e object exception_handler)
        
        (reaper object reap)
@@ -212,16 +211,15 @@ make_lshd_exception_handler(struct exception_handler *parent,
 }
 
 static struct lshd_options *
-make_lshd_options(struct io_backend *backend)
+make_lshd_options(void)
 {
   NEW(lshd_options, self);
 
   init_algorithms_options(&self->super, all_symmetric_algorithms());
 
-  self->backend = backend;
   self->e = make_lshd_exception_handler(&default_exception_handler,
 					HANDLER_CONTEXT);
-  self->reaper = make_reaper(backend);
+  self->reaper = make_reaper();
   self->random = make_default_random(self->reaper, self->e);
 
   self->signature_algorithms = all_signature_algorithms(&self->random->super);
@@ -300,7 +298,7 @@ DEFINE_COMMAND(options2keyfile)
   
   struct lsh_fd *f;
 
-  f = io_read_file(options->backend, options->hostkey, e);
+  f = io_read_file(options->hostkey, e);
 
   if (f)
     COMMAND_RETURN(c, f);
@@ -466,7 +464,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	struct user_db *user_db = NULL;
 	
 	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
-	  user_db = make_unix_user_db(self->backend, self->reaper,
+	  user_db = make_unix_user_db(self->reaper,
 				      self->pw_helper, self->login_shell,
 				      self->allow_root);
 	  
@@ -698,7 +696,6 @@ main_argp =
    (expr
      (name make_lshd_listen)
      (params
-       (backend object io_backend)
        (handshake object handshake_info)
        (init object make_kexinit)
        (services object command) )
@@ -713,7 +710,6 @@ main_argp =
     				  (kexinit_filter init keys)
     				  keys 
     				  (log_peer lv))))
-		 backend
 		 (options2local options))))))
 */
 
@@ -739,15 +735,6 @@ main_argp =
 /* Catch SIGTERM and call exit(). That way, profiling info is written
  * properly when the process is terminated. */
 
-static volatile sig_atomic_t terminate;
-
-static void terminate_handler(int signum)
-{
-  assert(signum == SIGTERM);
-
-  terminate = 1;
-}
-
 static void
 do_terminate_callback(struct lsh_callback *s UNUSED)
 {
@@ -760,33 +747,21 @@ terminate_callback =
 { STATIC_HEADER, do_terminate_callback };
 
 static void
-install_terminate_handler(struct io_backend *backend)
+install_terminate_handler(void)
 {
-  struct sigaction term;
-  memset(&term, 0, sizeof(term));
-
-  term.sa_handler = terminate_handler;
-  sigemptyset(&term.sa_mask);
-  term.sa_flags = 0;
-
-  if (sigaction(SIGTERM, &term, NULL) < 0)
-    {
-      werror ("Failed to install SIGTERM handler (errno = %i): %z\n",
-	      errno, STRERROR(errno));
-      exit(EXIT_FAILURE);
-    }
-  io_signal_handler(backend, &terminate, &terminate_callback);
+  io_signal_handler(SIGTERM, &terminate_callback);
 }
+
 #endif /* WITH_GCOV */
 
 int main(int argc, char **argv)
 {
   struct lshd_options *options;
 
-  struct io_backend *backend = make_io_backend();
+  io_init();
 
 #if WITH_GCOV
-  install_terminate_handler(backend);
+  install_terminate_handler();
 #endif
   
   /* For filtering messages. Could perhaps also be used when converting
@@ -796,7 +771,7 @@ int main(int argc, char **argv)
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
-  options = make_lshd_options(backend);
+  options = make_lshd_options();
   
   trace("Parsing options...\n");
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
@@ -880,8 +855,8 @@ int main(int argc, char **argv)
     /* Supported channel requests */
     struct alist *supported_channel_requests
       = make_alist(2,
-		   ATOM_SHELL, make_shell_handler(backend),
-		   ATOM_EXEC, make_exec_handler(backend),
+		   ATOM_SHELL, make_shell_handler(),
+		   ATOM_EXEC, make_exec_handler(),
 		   -1);
     
 #if WITH_PTY_SUPPORT
@@ -893,8 +868,7 @@ int main(int argc, char **argv)
     if (options->subsystems)
       ALIST_SET(supported_channel_requests,
 		ATOM_SUBSYSTEM,
-		&make_subsystem_handler(backend,
-					options->subsystems)->super);
+		&make_subsystem_handler(options->subsystems)->super);
 		
     session_setup = make_install_fix_channel_open_handler
       (ATOM_SESSION, make_open_session(supported_channel_requests));
@@ -904,10 +878,10 @@ int main(int argc, char **argv)
       connection_hooks = make_object_list
 	(4,
 	 session_setup,
-	 make_tcpip_forward_hook(backend),
+	 make_tcpip_forward_hook(),
 	 make_install_fix_global_request_handler
 	 (ATOM_CANCEL_TCPIP_FORWARD, &tcpip_cancel_forward),
-	 make_direct_tcpip_hook(backend),
+	 make_direct_tcpip_hook(),
 	 -1);
     else
 #endif
@@ -922,8 +896,7 @@ int main(int argc, char **argv)
 		   make_lshd_connection_service(connection_hooks));
       CAST_SUBTYPE(command, server_listen, 		   
 		   make_lshd_listen
-		   (backend,
-		    make_handshake_info(CONNECTION_SERVER,
+		   (make_handshake_info(CONNECTION_SERVER,
 					"lsh - a free ssh",
 					NULL,
 					SSH_MAX_PACKET,
@@ -957,8 +930,9 @@ int main(int argc, char **argv)
     }
   }
   
-  io_run(backend);
+  io_run();
 
+  io_final();
   gc_final();
   
   return 0;

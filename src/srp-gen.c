@@ -63,8 +63,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
    (class
      (name srp_gen_options)
      (vars
-       (backend object io_backend)
-
        (tty object interact)
        
        (e object exception_handler)
@@ -82,15 +80,12 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 */
 
 static struct srp_gen_options *
-make_srp_gen_options(struct io_backend *backend,
-		     struct exception_handler *e)
+make_srp_gen_options(struct exception_handler *e)
 {
   NEW(srp_gen_options, self);
 
-  self->backend = backend;
-
   /* We don't need window change tracking. */
-  self->tty = make_unix_interact(NULL);
+  self->tty = make_unix_interact();
   
   self->e = e;
 
@@ -152,7 +147,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	
 	if (self->file)
 	  {
-	    fd = io_write_file(self->backend, self->file->data,
+	    fd = io_write_file(self->file->data,
 			       O_CREAT | O_EXCL | O_WRONLY,
 			       0600, BLOCK_SIZE,
 			       NULL, self->e);
@@ -161,8 +156,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  }
 	else
 	  {
-	    fd = io_write(make_lsh_fd(self->backend,
-				      STDOUT_FILENO, "stdout",
+	    fd = io_write(make_lsh_fd(STDOUT_FILENO, "stdout",
 				      self->e),
 			  BLOCK_SIZE, NULL);
 	  }
@@ -248,16 +242,20 @@ STATIC_EXCEPTION_HANDLER(do_srp_gen_handler, NULL);
 
 int main(int argc, char **argv)
 {
-  struct io_backend *backend = make_io_backend();
   struct srp_gen_options *options
-    = make_srp_gen_options(backend, &exc_handler);
+    = make_srp_gen_options(&exc_handler);
 
+  io_init();
+  
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   A_WRITE(options->dest,
 	  sexp_format(srp_gen(options), options->style, 0));
 
-  io_run(backend);
+  io_run();
+  io_final();
 
+  gc_final();
+  
   return EXIT_SUCCESS;
 }

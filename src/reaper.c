@@ -185,14 +185,14 @@ reaper_install_handler(struct reaper *reaper,
 #endif
 
 struct reap *
-make_reaper(struct io_backend *b)
+make_reaper(void)
 {
   NEW(reaper, self);
 
   self->super.reap = do_reap;
   self->children = make_linked_alist(0, -1);
 
-  io_signal_handler(b, SIGCHLD, make_reaper_callback(self));
+  io_signal_handler(SIGCHLD, make_reaper_callback(self));
 
   return &self->super;
 }

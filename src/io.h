@@ -44,10 +44,11 @@
 #include "io.h.x"
 #undef GABA_DECLARE
 
-
+#if 0
 /* Declare the class object, so that io_commands.c can refer to it for
  * type-checking. */
 extern struct lsh_class io_backend_class;
+#endif
 
 /* GABA:
    (class
@@ -81,9 +82,6 @@ extern struct lsh_class io_backend_class;
        ; For debugging purposes
        (label . "const char *")
        
-       ;; (backend object io_backend)
-       ;; (next_closed object lsh_fd)
-       
        ; Used for raising i/o-exceptions.
        ; Also passed on to readers of the consuming type,
        ; which seems kind of bogus.
@@ -98,7 +96,7 @@ extern struct lsh_class io_backend_class;
        ; This flag is set by the backend if it detects that a
        ; connection is hanged up. 
        
-       (hanged_up . int)
+       ;;; (hanged_up . int)
        
        (want_read . int)
        ; Called if poll indicates that data can be read. 
@@ -227,7 +225,9 @@ void
 io_init(void);
 
 void
-io_finish(void);
+io_final(void);
+
+void io_run(void);
 
 #if 0
 void
@@ -249,27 +249,12 @@ lsh_oop_register_write_fd(struct lsh_fd *fd);
 void
 lsh_oop_cancel_write_fd(struct lsh_fd *fd);
 
-
-
-
-
-struct io_backend *
-make_io_backend(void);
-
-int io_iter(struct io_backend *b);
-void io_run(struct io_backend *b);
-
-void
-io_final(struct io_backend *b);
-
 struct resource *
-io_signal_handler(struct io_backend *b,
-		  int signum,
+io_signal_handler(int signum,
 		  struct lsh_callback *action);
 
 struct resource *
-io_callout(struct io_backend *b,
-	   UINT32 delay,
+io_callout(UINT32 delay,
 	   struct lsh_callback *action);
 
 int blocking_read(int fd, struct read_handler *r);
@@ -310,8 +295,7 @@ void io_set_close_on_exec(int fd);
 void io_init_fd(int fd);
 
 struct lsh_fd *
-make_lsh_fd(struct io_backend *b,
-	    int fd, const char *label,
+make_lsh_fd(int fd, const char *label,
 	    struct exception_handler *e);
 
 struct exception_handler *
@@ -320,34 +304,29 @@ make_exc_finish_read_handler(struct lsh_fd *fd,
 			     const char *context);
 
 struct lsh_fd *
-io_connect(struct io_backend *b,
-	   struct sockaddr *remote,
+io_connect(struct sockaddr *remote,
 	   socklen_t remote_length,
 	   struct command_continuation *c,
 	   struct exception_handler *e);
 
 struct lsh_fd *
-io_listen(struct io_backend *b,
-	  struct sockaddr *local,
+io_listen(struct sockaddr *local,
 	  socklen_t length,
 	  struct io_callback *callback,
 	  struct exception_handler *e);
 
 struct lsh_fd *
-io_listen_local(struct io_backend *b,
-		struct local_info *info,
+io_listen_local(struct local_info *info,
 		struct io_callback *callback,
 		struct exception_handler *e);
 
 struct lsh_fd *
-io_connect_local(struct io_backend *b,
-		 struct local_info *info,
+io_connect_local(struct local_info *info,
 		 struct command_continuation *c,
 		 struct exception_handler *e);
 
 struct io_callback *
-make_listen_callback(struct io_backend *backend,
-		     struct command_continuation *c,
+make_listen_callback(struct command_continuation *c,
 		     struct exception_handler *e);
 
 struct lsh_fd *io_read_write(struct lsh_fd *fd,
@@ -373,16 +352,14 @@ void close_fd_nicely(struct lsh_fd *fd);
 void close_fd_read(struct lsh_fd *fd);
 
 struct lsh_fd *
-io_write_file(struct io_backend *backend,
-	      const char *fname, int flags,
+io_write_file(const char *fname, int flags,
 	      int mode,
 	      UINT32 block_size,
 	      struct lsh_callback *c,
 	      struct exception_handler *e);
 
 struct lsh_fd *
-io_read_file(struct io_backend *backend,
-	     const char *fname, 
+io_read_file(const char *fname, 
 	     struct exception_handler *e);
 
 int

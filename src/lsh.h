@@ -117,7 +117,6 @@ struct interact;
 
 /* io.h */
 struct address_info;
-struct io_backend;
 struct listen_value;
 struct lsh_fd;
 
@@ -131,6 +130,9 @@ struct randomness;
 /* reaper.h */
 struct exit_callback;
 struct reap;
+
+/* resource.h */
+struct resource;
 
 /* sexp.h */
 struct sexp;

@@ -115,7 +115,7 @@ make_lsh_writekey_options(void)
   self->file = NULL;
 
   /* We don't need window change tracking. */
-  self->tty = make_unix_interact(NULL);
+  self->tty = make_unix_interact();
     
   self->label = NULL;
   self->style = -1;
@@ -413,18 +413,16 @@ DEFINE_COMMAND(lsh_writekey_options2private_file)
      (params
        (options object lsh_writekey_options))
      (expr
-       (lambda (backend)
-         (let ((key (read_sexp (io_read_stdin backend))))
+       (lambda (stdin)
+         (let ((key (read_sexp stdin)))
            (prog1 (print_public options
-	   			(io_write_file backend
-					       (options2public_file options))
+	   			(io_write_file (options2public_file options))
 	                        (verifier2public
 				  (signer2verifier
 				    (sexp2signer (options2algorithms options)
 				                 key))))
 	          (print_private options
-		  		 (io_write_file backend
-		  				(options2private_file options))
+		  		 (io_write_file (options2private_file options))
 		                 (transform options key)))))))
 */
 
@@ -469,8 +467,9 @@ STATIC_EXCEPTION_HANDLER(do_lsh_writekey_handler, NULL);
 
 int main(int argc, char **argv)
 {
-  struct io_backend *backend = make_io_backend();
   struct lsh_writekey_options *options = make_lsh_writekey_options();
+
+  io_init();
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -479,9 +478,14 @@ int main(int argc, char **argv)
       (command, work,
        make_writekey(options));
     
-    COMMAND_CALL(work, backend, &discard_continuation, &exc_handler);
+    COMMAND_CALL(work,
+                 make_lsh_fd(STDIN_FILENO, "stdin", &exc_handler),
+                 &discard_continuation, &exc_handler);
   }
-  io_run(backend);
+  io_run();
 
+  io_final();
+  gc_final();
+  
   return EXIT_SUCCESS;
 }

@@ -357,7 +357,6 @@ DEFINE_COMMAND2(remote_listen_command)
    (expr
      (name forward_local_port)
      (params
-       (backend object io_backend)
        (local object address_info)
        (target object address_info))
      (expr
@@ -370,17 +369,15 @@ DEFINE_COMMAND2(remote_listen_command)
 	       (tcpip_start_io
 	         (catch_channel_open 
 		   (open_direct_tcpip target peer) connection)))
-	     backend
 	     local)))))
 */
 
 struct command *
-make_forward_local_port(struct io_backend *backend,
-			struct address_info *local,
+make_forward_local_port(struct address_info *local,
 			struct address_info *target)
 {
   CAST_SUBTYPE(command, res,
-	       forward_local_port(backend, local, target));
+	       forward_local_port(local, target));
 
   trace("tcpforward_commands.c: forward_local_port\n");
 
@@ -407,12 +404,11 @@ make_forward_local_port(struct io_backend *backend,
 */
 
 struct command *
-make_forward_remote_port(struct io_backend *backend,
-			 struct address_info *remote,
+make_forward_remote_port(struct address_info *remote,
 			 struct address_info *target)
 {
   CAST_SUBTYPE(command, res,
-	       forward_remote_port(make_connect_port(backend, target), remote));
+	       forward_remote_port(make_connect_port(target), remote));
 
   debug("tcpforward_commands.c: forward_remote_port\n");
   
@@ -475,10 +471,10 @@ STATIC_INSTALL_OPEN_HANDLER(ATOM_FORWARDED_TCPIP);
 */
 
 struct command *
-make_direct_tcpip_hook(struct io_backend *backend)
+make_direct_tcpip_hook(void)
 {
   CAST_SUBTYPE(command, res,
-	       direct_tcpip_hook(make_connect_connection(backend)));
+	       direct_tcpip_hook(make_connect_connection()));
 
   debug("tcpforward_commands.c: make_direct_tcpip_hook\n");
 
@@ -496,8 +492,6 @@ STATIC_INSTALL_GLOBAL_HANDLER(ATOM_TCPIP_FORWARD);
      (globals
        (install "&install_tcpip_forward_handler.super.super.super")
        (handler "&make_tcpip_forward_handler.super"))
-     (params
-       (backend object io_backend))
      (expr
        (lambda (connection)
          ;; Called when the ssh-connection is established
@@ -515,13 +509,13 @@ STATIC_INSTALL_GLOBAL_HANDLER(ATOM_TCPIP_FORWARD);
 				(tcpip_start_io
 		  		  (catch_channel_open 
 		  		    (open_forwarded_tcpip port peer) connection)))
-		  	      backend port))))))))
+		  	      port))))))))
 */
 
 struct command *
-make_tcpip_forward_hook(struct io_backend *backend)
+make_tcpip_forward_hook(void)
 {
-  CAST_SUBTYPE(command, res, tcpip_forward_hook(backend));
+  CAST_SUBTYPE(command, res, tcpip_forward_hook());
 
   debug("tcpforward_commands.c: tcpip_forward_hook\n");
   

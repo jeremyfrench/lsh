@@ -98,6 +98,6 @@ struct terminal_dimensions;
   ((i)->window_change_subscribe((i), (c)))
 
 struct interact *
-make_unix_interact(struct io_backend *backend);
+make_unix_interact(void);
 
 #endif /* LSH_INTERACT_H_INCLUDED */

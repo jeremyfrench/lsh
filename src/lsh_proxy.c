@@ -123,7 +123,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (name lsh_proxy_options)
      (super algorithms_options)
      (vars
-       (backend object io_backend)
        (random object randomness_with_poll)
        (signature_algorithms object alist)
        (style . sexp_argp_state)
@@ -143,8 +142,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 */
 
 static struct lsh_proxy_options *
-make_lsh_proxy_options(struct io_backend *backend, 
-		       struct randomness_with_poll *random, 
+make_lsh_proxy_options(struct randomness_with_poll *random, 
 		       struct alist *algorithms)
 {
   NEW(lsh_proxy_options, self);
@@ -154,7 +152,6 @@ make_lsh_proxy_options(struct io_backend *backend,
     = make_alist(1,
 		 ATOM_DSA, make_dsa_algorithm(&random->super), -1);
 
-  self->backend = backend;
   self->random = random;
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
@@ -215,7 +212,7 @@ DEFINE_COMMAND(options2keyfile)
   
   struct lsh_fd *f;
 
-  f = io_read_file(options->backend, options->hostkey, e);
+  f = io_read_file(options->hostkey, e);
 
   if (f)
     COMMAND_RETURN(c, f);
@@ -477,7 +474,6 @@ DEFINE_COMMAND2(proxy_destination)
    (expr
      (name lsh_proxy_listen)
      (params
-       (backend object io_backend)
        (services object command)
        (handshake_server object command)
        (handshake_client object command))
@@ -493,7 +489,6 @@ DEFINE_COMMAND2(proxy_destination)
 	         (handshake_server options)   ; callback to perform server side handshake
 		 (handshake_client options)   ; callback to perform client side handshake
 		 client_addr)))
-	   backend 
 	   (options2local options)))) )
 
 	     
@@ -577,15 +572,12 @@ int main(int argc, char **argv)
   struct make_kexinit *make_kexinit;
   struct exception_handler *handler;
 
-  struct io_backend *backend;
-
-  backend = make_io_backend();
-
+  io_init();
+  
 #if WITH_ALF
   proxy_alf_init();
   proxy_alf_end();
 #endif
-
 
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -597,7 +589,7 @@ int main(int argc, char **argv)
     (make_report_exception_info(EXC_IO, EXC_IO, "lsh_proxy: "),
      &default_exception_handler,
      HANDLER_CONTEXT);
-  reaper = make_reaper(backend); 
+  reaper = make_reaper(); 
   r = make_default_random(reaper, handler);
 
   algorithms_server = all_symmetric_algorithms();
@@ -606,7 +598,7 @@ int main(int argc, char **argv)
   
   signature_algorithms = all_signature_algorithms(&r->super);
   
-  options = make_lsh_proxy_options(backend, r, algorithms_server);
+  options = make_lsh_proxy_options(r, algorithms_server);
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -766,8 +758,7 @@ int main(int argc, char **argv)
       
     {
       struct lsh_object *o = lsh_proxy_listen
-	(backend,
-	 make_proxy_offer_service
+	(make_proxy_offer_service
 	 (make_alist(1, 
 		     ATOM_SSH_USERAUTH, 
 		     lsh_proxy_services
@@ -785,7 +776,7 @@ int main(int argc, char **argv)
 		      -1)),
 
 	 /* callback to call when client<->proxy handshake finished */
-	 (struct command *)lsh_proxy_handshake_server(make_simple_connect(backend, NULL),
+	 (struct command *)lsh_proxy_handshake_server(make_simple_connect(NULL),
 						      make_fake_host_db(),
 						      make_handshake_info
 						      (CONNECTION_CLIENT,
@@ -816,7 +807,10 @@ int main(int argc, char **argv)
     }
   }
   
-  io_run(backend);
+  io_run();
 
+  io_final();
+  gc_final();
+  
   return 0;
 }

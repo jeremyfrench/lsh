@@ -58,12 +58,11 @@ struct command options2info;
 */
 
 static struct lshg_options *
-make_options(struct io_backend *backend,
-	     struct exception_handler *handler,
+make_options(struct exception_handler *handler,
 	     int *exit_code) 
 {
   NEW(lshg_options, self);
-  init_client_options(&self->super, backend, NULL, handler, exit_code);
+  init_client_options(&self->super, NULL, handler, exit_code);
 
   self->gateway = NULL;
 
@@ -85,13 +84,11 @@ DEFINE_COMMAND(options2info)
 /* GABA:
    (expr
      (name make_lshg_connect)
-     (params
-       (backend object io_backend))
      (expr
        (lambda (options)
          ((progn (options2actions options))
 	  (gateway_init
-	    (connect_local backend (options2info options)))))))
+	    (connect_local (options2info options)))))))
 */
 
 /* GABA:
@@ -258,9 +255,10 @@ int
 main(int argc, char **argv)
 {
   struct lshg_options *options;
-  struct io_backend *backend = make_io_backend();
 
   int exit_code = 17;
+
+  io_init();
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -269,8 +267,7 @@ main(int argc, char **argv)
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
-  options = make_options(backend,
-			 make_lshg_exception_handler
+  options = make_options(make_lshg_exception_handler
 			 (&default_exception_handler,
 			  HANDLER_CONTEXT),
 			 &exit_code);
@@ -279,17 +276,17 @@ main(int argc, char **argv)
 
   {
     CAST_SUBTYPE(command, lshg_connect,
-		 make_lshg_connect(backend));
+		 make_lshg_connect());
 
     COMMAND_CALL(lshg_connect, options, &discard_continuation,
 		 make_lshg_exception_handler(&default_exception_handler,
 					     HANDLER_CONTEXT));
   }
 
-  io_run(backend);
+  io_run();
 
   /* Close all files and other resources associated with the backend. */
-  io_final(backend);
+  io_final();
 
   gc_final();
   

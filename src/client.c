@@ -382,15 +382,13 @@ make_client_session(struct client_options *options);
 
 void
 init_client_options(struct client_options *self,
-		    struct io_backend *backend,
 		    struct randomness_with_poll *random,
 		    struct exception_handler *handler,
 		    int *exit_code)			 
 {
-  self->backend = backend;
   self->random = random;
   
-  self->tty = make_unix_interact(backend);
+  self->tty = make_unix_interact();
   self->escape = -1;
   
   self->handler = handler;
@@ -920,14 +918,11 @@ make_client_session(struct client_options *options)
   options->stdin_file = options->stdout_file = options->stderr_file = NULL;
   
   return make_client_session_channel
-    (io_read(make_lsh_fd(options->backend,
-			 in, "client stdin", options->handler),
+    (io_read(make_lsh_fd(in, "client stdin", options->handler),
 	     NULL, NULL),
-     io_write(make_lsh_fd(options->backend,
-			  out, "client stdout", options->handler),
+     io_write(make_lsh_fd(out, "client stdout", options->handler),
 	      BLOCK_SIZE, NULL),
-     io_write(make_lsh_fd(options->backend,
-			  err, "client stderr", options->handler),
+     io_write(make_lsh_fd(err, "client stderr", options->handler),
 	      BLOCK_SIZE, NULL),
      escape,
      WINDOW_SIZE,
@@ -1063,7 +1058,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	client_add_action(options,
 			  make_install_fix_channel_open_handler
 			  (ATOM_X11,
-			   make_channel_open_x11(options->backend)));
+			   make_channel_open_x11()));
       
       /* Install suspend-handler */
       suspend_install_handler();
@@ -1104,8 +1099,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
 	client_add_action(options, make_forward_local_port
-			  (options->backend,
-			   make_address_info((options->with_remote_peers
+			  (make_address_info((options->with_remote_peers
 					      ? NULL
 					      : ssh_format("%lz", "127.0.0.1")),
 					     listen_port),
@@ -1123,8 +1117,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
 	client_add_action(options, make_forward_remote_port
-			  (options->backend,
-			   make_address_info((options->with_remote_peers
+			  (make_address_info((options->with_remote_peers
 					      ? ssh_format("%lz", "0.0.0.0")
 					      : ssh_format("%lz", "127.0.0.1")),
 					     listen_port),

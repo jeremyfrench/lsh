@@ -31,8 +31,10 @@
 void gc_register(struct lsh_object *o);
 void gc_kill(struct lsh_object *o);
 
-void gc(struct lsh_object *root);
-void gc_maybe(struct lsh_object *root, int busy);
+void gc_global(struct resource *o);
+
+void gc(void);
+void gc_maybe(int busy);
 
 #if DEBUG_ALLOC
 extern int gc_final_p;

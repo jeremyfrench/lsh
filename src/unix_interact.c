@@ -158,12 +158,13 @@ do_kill_window_subscriber(struct resource *s)
     }
 }
 
+/* FIXME: Remove subscribers list, and register multiple liboop signal
+ * handlers instead? */
 /* GABA:
    (class
      (name unix_interact)
      (super interact)
      (vars
-       (backend object io_backend)
        (tty_fd . int)
        ; Signal handler
        (winch_handler object resource)
@@ -379,8 +380,6 @@ unix_window_change_subscribe(struct interact *s,
 
   NEW(window_subscriber, subscriber);
 
-  assert(self->backend);
-  
   init_resource(&subscriber->super, do_kill_window_subscriber);
 
   subscriber->interact = self;
@@ -394,7 +393,7 @@ unix_window_change_subscribe(struct interact *s,
     {
       /* This is the first subscriber */
       self->winch_handler
-        = io_signal_handler(self->backend, SIGWINCH,
+        = io_signal_handler(SIGWINCH,
                             make_winch_handler(self));
     }
   
@@ -402,7 +401,7 @@ unix_window_change_subscribe(struct interact *s,
 }
 
 struct interact *
-make_unix_interact(struct io_backend *backend)
+make_unix_interact(void)
 {
   NEW(unix_interact, self);
   
@@ -427,7 +426,7 @@ make_unix_interact(struct io_backend *backend)
   self->tty_fd = open("/dev/tty", O_RDWR);
 #endif
 
-  if (backend && (self->tty_fd >= 0))
+  if (self->tty_fd >= 0)
     {
       /* Track window changes. */
 #if 0
@@ -446,7 +445,5 @@ make_unix_interact(struct io_backend *backend)
       suspend_handle_tty(self->tty_fd);
     }
 
-  self->backend = backend;
-  
   return &self->super;
 }

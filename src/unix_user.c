@@ -367,8 +367,7 @@ kerberos_check_pw(struct unix_user *user, struct lsh_string *pw,
 
 	close(in[0]);
 
-	fd = io_write(make_lsh_fd(user->ctx->backend,
-				  in[1], "password helper stdin",
+	fd = io_write(make_lsh_fd(in[1], "password helper stdin",
 				  e),
 		      pw->length, NULL);
 
@@ -607,8 +606,7 @@ do_read_file(struct lsh_user *u,
 
       /* NOTE: We could install an exit handler for the child process,
        * but there's nothing useful for that to do. */
-      COMMAND_RETURN(c, make_lsh_fd(user->ctx->backend,
-				    out[0], "stdout, reading a user file", e));
+      COMMAND_RETURN(c, make_lsh_fd(out[0], "stdout, reading a user file", e));
 
       lsh_string_free(f);
       return;
@@ -916,7 +914,6 @@ make_unix_user(struct lsh_string *name,
      (name unix_user_db)
      (super user_db)
      (vars
-       (backend object io_backend)
        (reaper object reap)
 
        ; A program to use for verifying passwords.
@@ -1052,14 +1049,13 @@ do_lookup_user(struct user_db *s,
 }
 
 struct user_db *
-make_unix_user_db(struct io_backend *backend, struct reap *reaper,
+make_unix_user_db(struct reap *reaper,
 		  const char *pw_helper, const char *login_shell,
 		  int allow_root)
 {
   NEW(unix_user_db, self);
 
   self->super.lookup = do_lookup_user;
-  self->backend = backend;
   self->reaper = reaper;
   self->pw_helper = pw_helper;
   self->login_shell = login_shell;

@@ -52,6 +52,6 @@
 
 #define REAP(r, p, c) ((r)->reap((r), (p), (c)))
 
-struct reap *make_reaper(struct io_backend *b);
+struct reap *make_reaper(void);
 
 #endif /* LSH_REAPER_H_INCLUDED */

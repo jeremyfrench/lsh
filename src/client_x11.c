@@ -423,6 +423,7 @@ make_exc_x11_connect_handler(struct exception_handler *parent,
   return make_exception_handler(do_exc_x11_connect_handler, parent, context);
 }
 
+/* FIXME: Use a static object? */
 static void
 do_channel_open_x11(struct channel_open *s,
 		    struct ssh_connection *connection,
@@ -450,8 +451,7 @@ do_channel_open_x11(struct channel_open *s,
       if (display)
 	{
 	  struct lsh_fd *fd
-	    = io_connect(self->backend,
-			 display->address,
+	    = io_connect(display->address,
 			 display->address_length,
 			 make_channel_open_x11_continuation(display,
 							    c),
@@ -480,12 +480,11 @@ do_channel_open_x11(struct channel_open *s,
 }
 
 struct channel_open *
-make_channel_open_x11(struct io_backend *backend)
+make_channel_open_x11(void)
 {
   NEW(channel_open_x11, self);
 
   self->super.handler = do_channel_open_x11;
-  self->backend = backend;
 
   return &self->super;
 }

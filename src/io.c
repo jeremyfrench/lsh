@@ -72,29 +72,53 @@
 /* Glue to liboop */
 
 /* Because of signal handlers, there can be only one oop object. */
-oop_source_sys *the_oop = NULL;
+static oop_source_sys *global_oop_sys = NULL;
+static oop_source *source = NULL;
 
 void
 io_init(void)
 {
-  assert(!the_oop);
-  the_oop = oop_sys_new();
-  if (!the_oop)
+  struct sigaction pipe;
+  memset(&pipe, 0, sizeof(pipe));
+
+  pipe.sa_handler = SIG_IGN;
+  sigemptyset(&pipe.sa_mask);
+  pipe.sa_flags = 0;
+  
+  if (sigaction(SIGPIPE, &pipe, NULL) < 0)
+    fatal("Failed to ignore SIGPIPE.\n");
+
+  assert(!global_oop_sys);
+  global_oop_sys = oop_sys_new();
+  if (!global_oop_sys)
     fatal("Failed to initialize liboop.\n");
+
+  source = oop_sys_source(global_oop_sys);
 }
 
 void
-io_finish(void)
+io_final(void)
 {
   /* There mustn't be any outstanding callbacks left. */
-  oop_sys_delete(the_oop);
-  the_oop = NULL;
+  oop_sys_delete(global_oop_sys);
+  global_oop_sys = NULL;
+  source = NULL;
+}
+
+void
+io_run(void)
+{
+  oop_sys_run(global_oop_sys);
+
+  /* FIXME: Check for OOP_ERROR */
+  
+  trace("io_run: Exiting\n");
 }
 
 
 /* OOP Callbacks */
 static void *
-lsh_oop_signal_callback(oop_source *source UNUSED, int sig, void *data)
+lsh_oop_signal_callback(oop_source *s UNUSED, int sig, void *data)
 {
   CAST(lsh_signal_handler, self, (struct lsh_object *) data);
 
@@ -115,11 +139,7 @@ lsh_oop_register_signal(struct lsh_signal_handler *handler)
 	handler->signum, handler);
   
   if (handler->super.alive)
-    {
-      oop_source *source = oop_sys_source(the_oop);
-  
-      source->on_signal(source, handler->signum, lsh_oop_signal_callback, handler);
-    }
+    source->on_signal(source, handler->signum, lsh_oop_signal_callback, handler);
 }
 
 static void
@@ -127,16 +147,13 @@ lsh_oop_cancel_signal(struct lsh_signal_handler *handler)
 {
   trace("lsh_oop_cancel_signal: signal: %i, handler: %t\n",
 	handler->signum, handler);
-  if (handler->super.alive)
-    {
-      oop_source *source = oop_sys_source(the_oop);
 
-      source->cancel_signal(source, handler->signum, lsh_oop_signal_callback, handler);
-    }
+  if (handler->super.alive)
+    source->cancel_signal(source, handler->signum, lsh_oop_signal_callback, handler);
 }
 
 static void *
-lsh_oop_fd_read_callback(oop_source *source UNUSED, int fileno, oop_event event, void *data)
+lsh_oop_fd_read_callback(oop_source *s UNUSED, int fileno, oop_event event, void *data)
 {
   CAST(lsh_fd, fd, (struct lsh_object *) data);
 
@@ -160,8 +177,6 @@ lsh_oop_register_read_fd(struct lsh_fd *fd)
   
   if (fd->super.alive && !fd->want_read)
     {
-      oop_source *source = oop_sys_source(the_oop);
-
       assert(fd->read);
       
       source->on_fd(source, fd->fd, OOP_READ, lsh_oop_fd_read_callback, fd);
@@ -177,15 +192,13 @@ lsh_oop_cancel_read_fd(struct lsh_fd *fd)
   
   if (fd->super.alive)
     {
-      oop_source *source = oop_sys_source(the_oop);
-
       source->cancel_fd(source, fd->fd, OOP_READ);
       fd->want_read = 0;
     }
 }
 
 static void *
-lsh_oop_fd_write_callback(oop_source *source UNUSED, int fileno, oop_event event, void *data)
+lsh_oop_fd_write_callback(oop_source *s UNUSED, int fileno, oop_event event, void *data)
 {
   CAST(lsh_fd, fd, (struct lsh_object *) data);
 
@@ -209,8 +222,6 @@ lsh_oop_register_write_fd(struct lsh_fd *fd)
   
   if (fd->super.alive && !fd->want_write)
     {
-      oop_source *source = oop_sys_source(the_oop);
-
       assert(fd->write);
       
       source->on_fd(source, fd->fd, OOP_WRITE, lsh_oop_fd_write_callback, fd);
@@ -226,8 +237,6 @@ lsh_oop_cancel_write_fd(struct lsh_fd *fd)
 
   if (fd->super.alive)
     {
-      oop_source *source = oop_sys_source(the_oop);
-
       source->cancel_fd(source, fd->fd, OOP_WRITE);
       fd->want_write = 0;
     }
@@ -240,7 +249,6 @@ lsh_oop_cancel_write_fd(struct lsh_fd *fd)
      (name lsh_signal_handler)
      (super resource)
      (vars
-       (next object lsh_signal_handler)
        (signum . int)
        (action object lsh_callback)))
 */
@@ -258,7 +266,7 @@ lsh_oop_cancel_write_fd(struct lsh_fd *fd)
 
 /* FIXME: With liboop, we should not need this object, we'd only need
  * a resource_list owned by the gc. */
-/* GABA:
+/* ;; GABA:
    (class
      (name io_backend)
      (super resource)
@@ -550,24 +558,7 @@ int io_iter(struct io_backend *b)
 }
 #endif
 
-void
-io_run(struct io_backend *b)
-{
-  struct sigaction pipe;
-  memset(&pipe, 0, sizeof(pipe));
-
-  pipe.sa_handler = SIG_IGN;
-  sigemptyset(&pipe.sa_mask);
-  pipe.sa_flags = 0;
-  
-  if (sigaction(SIGPIPE, &pipe, NULL) < 0)
-    fatal("Failed to ignore SIGPIPE.\n");
-
-  oop_sys_run(the_oop);
-
-  trace("oop_sys_run returned!?\n");
-}
-
+#if 0
 static void
 do_kill_io_backend(struct resource *s)
 {
@@ -593,13 +584,13 @@ do_kill_io_backend(struct resource *s)
       backend->super.alive = 0;
     }
 }
+#endif
 
+#if 0
 struct io_backend *
 make_io_backend(void)
 {
   NEW(io_backend, b);
-
-  assert(!the_oop);
 
   io_init();
   init_resource(&b->super, do_kill_io_backend);
@@ -610,12 +601,7 @@ make_io_backend(void)
 
   return b;
 }
-
-void
-io_final(struct io_backend *b)
-{
-  KILL_RESOURCE(&b->super);
-}
+#endif
 
 static void
 do_kill_signal_handler(struct resource *s)
@@ -630,39 +616,34 @@ do_kill_signal_handler(struct resource *s)
 }
 
 struct resource *
-io_signal_handler(struct io_backend *b,
-		  int signum,
+io_signal_handler(int signum,
 		  struct lsh_callback *action)
 {
   NEW(lsh_signal_handler, handler);
 
   init_resource(&handler->super, do_kill_signal_handler);
 
-  handler->next = b->signals;
   handler->signum = signum;
   handler->action = action;
 
-  b->signals = handler;
-
   lsh_oop_register_signal(handler);
+  gc_global(&handler->super);
   
   return &handler->super;
 }
 
 /* Delays not implemented. */
 struct resource *
-io_callout(struct io_backend *b,
-	   UINT32 delay UNUSED,
+io_callout(UINT32 delay UNUSED,
 	   struct lsh_callback *action)
 {
-  NEW(lsh_callout, callout);
-  init_resource(&callout->super, NULL);
+  NEW(lsh_callout, self);
+  init_resource(&self->super, NULL);
 
-  callout->next = b->callouts;
-  callout->action = action;
-  b->callouts = callout;
+  self->action = action;
 
-  return &callout->super;
+  gc_global(&self->super);
+  return &self->super;
 }
 
 /* Read-related callbacks */
@@ -793,11 +774,13 @@ do_consuming_read(struct io_callback *c,
 
   assert(fd->want_read);
 
+#if 0
   if (fd->hanged_up)
     {
       /* If hanged_up is set, pretend that read returned 0 */
       goto eof;
     }
+#endif
   
   if (!wanted)
     {
@@ -948,7 +931,6 @@ make_listen_value(struct lsh_fd *fd,
      (name io_listen_callback)
      (super io_callback)
      (vars
-       (backend object io_backend)
        (c object command_continuation)
        (e object exception_handler)))
 */
@@ -977,20 +959,17 @@ do_listen_callback(struct io_callback *s,
     }
   trace("io.c: accept on fd %i\n", conn);
   COMMAND_RETURN(self->c,
-		 make_listen_value(make_lsh_fd(self->backend,
-					       conn, "accepted socket", self->e),
+		 make_listen_value(make_lsh_fd(conn, "accepted socket", self->e),
 				   sockaddr2info(addr_len,
 						 (struct sockaddr *) &peer)));
 }
 
 struct io_callback *
-make_listen_callback(struct io_backend *backend,
-		     struct command_continuation *c,
+make_listen_callback(struct command_continuation *c,
 		     struct exception_handler *e)
 {
   NEW(io_listen_callback, self);
   self->super.f = do_listen_callback;
-  self->backend = backend;
   self->c = c;
   self->e = e;
   
@@ -1079,6 +1058,7 @@ do_exc_io_handler(struct exception_handler *self,
   return;
 }
 
+#if 0
 /* Initializes a file structure, and adds it to the backend's list. */
 static void
 init_file(struct io_backend *b, struct lsh_fd *f, int fd,
@@ -1108,6 +1088,7 @@ init_file(struct io_backend *b, struct lsh_fd *f, int fd,
   f->next = b->files;
   b->files = f;
 }
+#endif
 
 /* These functions are used by werror and friends */
 
@@ -1533,22 +1514,38 @@ void io_init_fd(int fd)
 }
 
 struct lsh_fd *
-make_lsh_fd(struct io_backend *b,
-	    int fd, const char *label,
+make_lsh_fd(int fd, const char *label,
 	    struct exception_handler *e)
 {
-  NEW(lsh_fd, f);
+  NEW(lsh_fd, self);
 
   io_init_fd(fd);
-  init_file(b, f, fd, label, e);
 
-  return f;
+  init_resource(&self->super, do_kill_fd);
+
+  self->fd = fd;
+  self->label = label;
+  
+  self->e = make_exception_handler(do_exc_io_handler, e, HANDLER_CONTEXT);
+  
+  self->close_callback = NULL;
+
+  self->prepare = NULL;
+
+  self->want_read = 0;
+  self->read = NULL;
+
+  self->want_write = 0;
+  self->write = NULL;
+  self->write_close = NULL;
+
+  gc_global(&self->super);
+  return self;
 }
 
 /* Some code is taken from Thomas Bellman's tcputils. */
 struct lsh_fd *
-io_connect(struct io_backend *b,
-	   struct sockaddr *remote,
+io_connect(struct sockaddr *remote,
 	   socklen_t remote_length,
 	   struct command_continuation *c,
 	   struct exception_handler *e)
@@ -1582,7 +1579,7 @@ io_connect(struct io_backend *b,
       return NULL;
     }
 
-  fd = make_lsh_fd(b, s, "connecting socket", e);
+  fd = make_lsh_fd(s, "connecting socket", e);
   
   fd->write = make_connect_callback(c);
   lsh_oop_register_write_fd(fd);
@@ -1591,8 +1588,7 @@ io_connect(struct io_backend *b,
 }
 
 struct lsh_fd *
-io_listen(struct io_backend *b,
-	  struct sockaddr *local,
+io_listen(struct sockaddr *local,
 	  socklen_t length,
 	  struct io_callback *callback,
 	  struct exception_handler *e)
@@ -1624,7 +1620,7 @@ io_listen(struct io_backend *b,
       return NULL;
     }
 
-  fd = make_lsh_fd(b, s, "listening socket", e);
+  fd = make_lsh_fd(s, "listening socket", e);
 
   fd->read = callback;
   lsh_oop_register_read_fd(fd);
@@ -1748,8 +1744,7 @@ safe_pushd(const char *directory,
 
 
 struct lsh_fd *
-io_listen_local(struct io_backend *b,
-		struct local_info *info,
+io_listen_local(struct local_info *info,
 		struct io_callback *callback,
 		struct exception_handler *e)
 {
@@ -1802,7 +1797,7 @@ io_listen_local(struct io_backend *b,
   old_umask = umask(0077);
 
   /* Bind and listen */
-  fd = io_listen(b, (struct sockaddr *) local, local_length, callback, e);
+  fd = io_listen( (struct sockaddr *) local, local_length, callback, e);
   
   /* Ok, now we restore umask and cwd */
   umask(old_umask);
@@ -1814,8 +1809,7 @@ io_listen_local(struct io_backend *b,
 
 /* Requires DIRECTORY and NAME to be NUL-terminated */
 struct lsh_fd *
-io_connect_local(struct io_backend *b,
-		 struct local_info *info,
+io_connect_local(struct local_info *info,
 		 struct command_continuation *c,
 		 struct exception_handler *e)
 {
@@ -1847,7 +1841,7 @@ io_connect_local(struct io_backend *b,
   if (old_cd < 0)
     return NULL;
   
-  fd = io_connect(b, (struct sockaddr *) addr, addr_length, c, e);
+  fd = io_connect( (struct sockaddr *) addr, addr_length, c, e);
 
   safe_popd(old_cd, cdir);
 
@@ -1920,8 +1914,7 @@ io_write(struct lsh_fd *fd,
 }
 
 struct lsh_fd *
-io_write_file(struct io_backend *backend,
-	      const char *fname, int flags, int mode,
+io_write_file(const char *fname, int flags, int mode,
 	      UINT32 block_size,
 	      struct lsh_callback *c,
 	      struct exception_handler *e)
@@ -1930,20 +1923,19 @@ io_write_file(struct io_backend *backend,
   if (fd < 0)
     return NULL;
 
-  return io_write(make_lsh_fd(backend, fd, "write-only file", e),
+  return io_write(make_lsh_fd(fd, "write-only file", e),
 		  block_size, c);
 }
 
 struct lsh_fd *
-io_read_file(struct io_backend *backend,
-	     const char *fname, 
+io_read_file(const char *fname, 
 	     struct exception_handler *e)
 {
   int fd = open(fname, O_RDONLY);
   if (fd < 0)
     return NULL;
 
-  return make_lsh_fd(backend, fd, "read-only file", e);
+  return make_lsh_fd(fd, "read-only file", e);
 }
 
 void close_fd(struct lsh_fd *fd)

@@ -39,15 +39,15 @@ make_server_session(UINT32 initial_window,
 struct channel_open *
 make_open_session(struct alist *session_requests);
 
+/* FIXME: Use static object? */
 struct channel_request *
-make_shell_handler(struct io_backend *backend);
+make_shell_handler(void);
 
 struct channel_request *
-make_exec_handler(struct io_backend *backend);
+make_exec_handler(void);
 
 struct channel_request *
-make_subsystem_handler(struct io_backend *backend,
-		       const char **subsystems);
+make_subsystem_handler(const char **subsystems);
 
 struct lsh_string *
 format_exit_signal(struct ssh_channel *channel,
