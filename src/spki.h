@@ -71,8 +71,11 @@ dsa_to_spki_public_key(struct dsa_public *p);
 extern struct command_simple spki_signer2public;
 #define SIGNER2PUBLIC (&spki_signer2public.super.super)
 
-extern struct command_simple spki_parse_private_key_command;
-#define SPKI_PARSE_PRIVATE_KEY (&spki_parse_private_key_command.super.super)
+extern struct command_simple spki_sexp2signer_command;
+#define SEXP2SIGNER (&spki_sexp2signer_command.super.super)
+
+extern struct command_simple spki_sexp2keypair_command;
+#define SEXP2KEYPAIR (&spki_sexp2keypair_command.super.super)
 
 #if 0
 extern struct spki_hash spki_hash_md5;

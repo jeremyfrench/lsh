@@ -335,8 +335,10 @@ const struct spki_hash spki_hash_sha1 =
 
 
   
-/* Processes an already parsed S-expression, and inserts it into an alist.
- * FIXME: No, it doesn't; it returns the keypair to its continuation. */
+/* Used for both sexp2keypair and sexp2signer.
+ *
+ * FIXME: There is some overlap between those two functions. */
+
 /* GABA:
    (class
      (name spki_parse_key)
@@ -389,6 +391,55 @@ parse_dsa_private_key(struct sexp_iterator *i
 }
 #endif
 
+static void
+do_spki_sexp2signer(struct command *s, 
+		    struct lsh_object *a,
+		    struct command_continuation *c,
+		    struct exception_handler *e)
+{
+  CAST(spki_parse_key, self, s);
+  CAST_SUBTYPE(sexp, key, a);
+  
+  struct sexp_iterator *i;
+  
+  if (spki_check_type(key, ATOM_PRIVATE_KEY, &i)) 
+    {
+      struct sexp *expr = SEXP_GET(i);
+      struct sexp_iterator *inner;
+      int type = spki_get_type(expr, &inner);
+
+      CAST_SUBTYPE(signature_algorithm, algorithm,
+		   ALIST_GET(self->algorithms, type));
+
+      if (algorithm)
+	{
+	  struct signer *s = MAKE_SIGNER(algorithm, inner);
+	  if (s)
+	    /* Test key here? */
+	    COMMAND_RETURN(c, s);
+	  else
+	    {
+	      werror("parse_private_key: Invalid key.\n");
+	      SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
+	    }
+	}
+    }
+  else
+    SPKI_ERROR(e, "spki.c: Expected private-key expression.", key);
+}
+
+/* (parse algorithms sexp) -> signer */
+COMMAND_SIMPLE(spki_sexp2signer_command)
+{
+  CAST_SUBTYPE(alist, algorithms, a);
+  NEW(spki_parse_key, self);
+  
+  self->super.call = do_spki_sexp2signer;
+  self->algorithms = algorithms;
+  return &self->super.super;
+}
+
+
 static void 
 parse_private_key(struct alist *algorithms,
                   struct sexp_iterator *i,
@@ -435,19 +486,11 @@ parse_private_key(struct alist *algorithms,
     }
 }
 
-#if 0
-static struct keypair *
-publickey2keypair(struct sexp_iterator *i,
-		  struct exception_handler *e)
-{
-}
-#endif
-
 static void
-do_spki_parse_key(struct command *s, 
-		  struct lsh_object *a,
-		  struct command_continuation *c,
-		  struct exception_handler *e)
+do_spki_sexp2keypair(struct command *s, 
+		     struct lsh_object *a,
+		     struct command_continuation *c,
+		     struct exception_handler *e)
 {
   CAST(spki_parse_key, self, s);
   CAST_SUBTYPE(sexp, key, a);
@@ -483,12 +526,13 @@ make_spki_parse_key(struct alist *algorithms)
 }
 #endif
 
-COMMAND_SIMPLE(spki_parse_private_key_command)
+/* (parse algorithms sexp) -> one or more keypairs */
+COMMAND_SIMPLE(spki_sexp2keypair_command)
 {
   CAST_SUBTYPE(alist, algorithms, a);
   NEW(spki_parse_key, self);
   
-  self->super.call = do_spki_parse_key;
+  self->super.call = do_spki_sexp2keypair;
   self->algorithms = algorithms;
   return &self->super.super;
 }
