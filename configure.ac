@@ -528,8 +528,6 @@ LSH_FUNC_STRSIGNAL
 AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(select socket strtol alarm)
-# HP-UX doesn't have seteuid
-AC_CHECK_FUNCS(seteuid setresuid)
 AC_CHECK_FUNCS(getrusage gettimeofday)
 AC_CHECK_FUNCS(getspnam)
 AC_CHECK_FUNCS(vsnprintf inet_aton)
@@ -540,6 +538,16 @@ AC_CHECK_FUNCS(getaddrinfo getnameinfo gai_strerror)
 AC_CHECK_FUNCS(setrlimit)
 AC_FUNC_GETPGRP
 AC_CHECK_FUNCS(syslog)
+
+# HP-UX doesn't have seteuid
+AC_CHECK_FUNCS(seteuid setresuid)
+
+AH_BOTTOM(
+[#if !HAVE_SETEUID
+# if HAVE_SETRESUID
+#  define seteuid(uid) setresuid(-1, (uid), -1)
+# endif
+#endif])
 
 # FIXME: Is there a better way in autoconf 2.50?
 AC_CACHE_CHECK([if netdb.h defines AI_NUMERICHOST],
