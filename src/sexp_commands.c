@@ -33,6 +33,7 @@
 
 #include <assert.h>
 
+
 /* Forward declarations */
 static struct catch_command catch_sexp_exceptions;
 #define CATCH_SEXP (&catch_sexp_exceptions.super.super)
@@ -40,11 +41,13 @@ static struct catch_command catch_sexp_exceptions;
 static struct read_sexp_command read_sexp;
 #define READ_SEXP (&read_sexp.super.super)
 
+
 #define GABA_DEFINE
 #include "sexp_commands.h.x"
 #undef GABA_DEFINE
 
 #include "sexp_commands.c.x"
+
 
 /* (write out sexp)
  *
@@ -119,6 +122,7 @@ make_sexp_print_raw_hash(struct hash_algorithm *algorithm)
   return make_command_3_invoke(&sexp_print_raw_hash,
 			       &algorithm->super);
 }
+/* FIXME: Should be obsoleted; used by spki_commands.c */
 
 /* GABA:
    (class
