@@ -205,6 +205,9 @@ do_exc_connection_handler(struct exception_handler *s,
     case EXC_PROTOCOL:
       {
 	CAST_SUBTYPE(protocol_exception, exc, e);
+
+        werror("Protocol error: %z\n", e->msg);
+        
 	if (exc->reason)
 	  C_WRITE(self->connection, format_disconnect(exc->reason, exc->super.msg, ""));
 	
