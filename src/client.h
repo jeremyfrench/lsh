@@ -29,6 +29,8 @@
 #include "io.h"
 #include "keyexchange.h"
 
+struct request_info;
+
 struct fd_callback *
 make_client_callback(struct io_backend *b,
 		     const char *comment,
@@ -52,8 +54,20 @@ struct channel_request *make_handle_exit_signal(int *exit_code);
 struct connection_startup *make_client_startup(struct io_fd *in,
 					       struct io_fd *out,
 					       struct io_fd *err,
-					       int final_request,
-					       struct lsh_string *args,
+					       struct request_info *requests,
 					       int *exit_status);
 
+struct request_info *make_shell_request(struct request_info *next);
+struct request_info *make_pty_request(int fd, int essential, int raw,
+				      struct request_info *next);
+
+#if 0
+struct lsh_object *make_channel_request(int request, struct lsh_string *args);
+
+
+#define request_shell() make_channel_request(ATOM_SHELL, ssh_format(""))
+#define request_pty(term, w, h, wp, hp, modes) \
+make_channel_request(ATOM_PTY_REQ, ssh_format("%z%i%i%i%i%fS", term, w, h, wp, hp, modes))
+#endif
+     
 #endif /* LSH_CLIENT_H_INCLUDED */

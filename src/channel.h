@@ -9,6 +9,7 @@
 #include "alist.h"
 #include "connection.h"
 #include "parse.h"
+#include "server_pty.h"
 
 #define CLASS_DECLARE
 #include "channel.h.x"
@@ -47,6 +48,13 @@
        (send_window_size simple UINT32)
        (send_max_packet simple UINT32)
 
+       ; pty. This is needed by the server only. FIXME: Does it really
+       ; belong here?
+       (pty object pty_info)
+
+       ; Value of the TERM environment variable.
+       (term string)
+       
        ; FIXME: Perhaps this should be moved to the channel_table, and
        ; a pointer to that table be stored here instead?
        (write object abstract_write)
@@ -86,8 +94,7 @@
 
        ; Reply from SSH_MSG_CHANNEL_REQUEST 
        (channel_success method int)
-       (channel_failure method int)))
-*/
+       (channel_failure method int))) */
 
 #define CHANNEL_RECEIVE(s, t, d) \
 ((s)->receive((s), (t), (d)))
@@ -184,7 +191,7 @@
 #define CHANNEL_OPEN(o, c, a, e, m, d) \
 ((o)->handler((o), (c), (a), (e), (m), (d)))
 
-/* SSH_MSH_CHANNEL_REQUEST */
+/* SSH_MSG_CHANNEL_REQUEST */
 /* CLASS:
    (class
      (name channel_request)
