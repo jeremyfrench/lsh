@@ -989,7 +989,7 @@ static int do_channel_success(struct packet_handler *closure UNUSED,
 	  return LSH_OK | LSH_GOON;
 	}
       {
-	CAST(command_continuation, c,
+	CAST_SUBTYPE(command_continuation, c,
 	     object_queue_remove_head(&channel->pending_requests));
 	return channel_process_status(connection->channels, channel_number,
 				      COMMAND_RETURN(c, channel));
@@ -1024,7 +1024,7 @@ static int do_channel_failure(struct packet_handler *closure UNUSED,
 	  return LSH_OK | LSH_GOON;
 	}
       {
-	CAST(command_continuation, c,
+	CAST_SUBTYPE(command_continuation, c,
 	     object_queue_remove_head(&channel->pending_requests));
 
 	return channel_process_status(connection->channels, channel_number,

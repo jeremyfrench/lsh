@@ -1,3 +1,8 @@
+NEWS for the 1999-04-20 snapshot:
+
+	Internal reorganization. Implemented the "control language".
+	And some bug fixes. See ChangeLog for all the details.
+
 NEWS for the 1999-03-17 snapshot
 
 	CAST and TWFOFISH seem to work now.
