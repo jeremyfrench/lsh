@@ -71,7 +71,7 @@ lookup_forward(struct object_queue *q,
 {
   FOR_OBJECT_QUEUE(q, n)
     {
-      CAST(forwarded_port, f, n);
+      CAST_SUBTYPE(forwarded_port, f, n);
       
       if ( (port == f->listen->port)
 	   && lsh_string_eq_l(f->listen->ip, length, ip) )
@@ -155,7 +155,7 @@ do_tcpip_channel_die(struct ssh_channel *c)
   CAST(tcpip_channel, channel, c);
 
   if (channel->socket)
-    kill_fd(&channel->socket->super);
+    close_fd(&channel->socket->super, 0);
 }
 
 struct ssh_channel *make_tcpip_channel(struct io_fd *socket, UINT32 max_window)
@@ -165,6 +165,8 @@ struct ssh_channel *make_tcpip_channel(struct io_fd *socket, UINT32 max_window)
   
   init_channel(&self->super);
 
+  /* The rest of the callbacks are not set up until tcpip_start_io. */
+  
   self->super.close = do_tcpip_channel_die;
 
   self->super.max_window = max_window;
@@ -178,8 +180,11 @@ struct ssh_channel *make_tcpip_channel(struct io_fd *socket, UINT32 max_window)
   return &self->super;
 }
 
-/* FIXME: Where should we install a proper I/O-error handler, that
- * closes the channel? */
+/* NOTE: Because this function is called by
+ * do_open_forwarded_tcpip_continuation, the same restrictions apply.
+ * I.e we can not assume that the channel is completely initialized
+ * (channel_open_continuation has not yet done its work), and we can't
+ * send any packets. */
 
 void tcpip_channel_start_io(struct ssh_channel *c)
 {
@@ -188,16 +193,13 @@ void tcpip_channel_start_io(struct ssh_channel *c)
   channel->super.receive = do_tcpip_receive;
   channel->super.send = do_tcpip_send;
   channel->super.eof = do_tcpip_eof;
-
+  
   /* Install callbacks on the local socket */
   io_read_write(channel->socket,
 		make_channel_read_data(&channel->super),
 		/* FIXME: Make this configurable */
 		SSH_MAX_PACKET * 10, /* self->block_size, */
 		make_channel_read_close_callback(&channel->super));
-
-  /* Start receiving */
-  channel_start_receive(&channel->super);
   
   /* Flow control */
   channel->socket->write_buffer->report = &channel->super.super;
@@ -206,14 +208,45 @@ void tcpip_channel_start_io(struct ssh_channel *c)
 
 /* Handle channel open requests */
 
+/* Exception handler that promotes connect and dns errors to
+ * CHANNEL_OPEN exceptions */
+
+static void
+do_exc_tcip_connect_handler(struct exception_handler *s,
+			    const struct exception *e)
+{
+  switch(e->type)
+    {
+    case EXC_IO_CONNECT:
+    case EXC_RESOLVE:
+      EXCEPTION_RAISE(s->parent,
+		      make_channel_open_exception(SSH_OPEN_CONNECT_FAILED,
+						  e->msg));
+      break;
+    default:
+      EXCEPTION_RAISE(s->parent, e);
+    }
+}
+
+static struct exception_handler *
+make_exc_tcpip_connect_handler(struct exception_handler *parent,
+			       const char *context)
+{
+  return make_exception_handler(do_exc_tcip_connect_handler, parent, context);
+}
+
 /* GABA:
    (class
      (name open_forwarded_tcpip_continuation)
-     (super command_frame)
+     (super command_continuation)
      (vars
+       (up object command_continuation)
        (connection object ssh_connection)))
 */
 
+/* NOTE: This continuation should not duplicate the work done by
+ * channel_open_continuation. It must also not send any packets on the
+ * channel, because it is not yet completely initialized. */
 static void
 do_open_forwarded_tcpip_continuation(struct command_continuation *s,
 				     struct lsh_object *x)
@@ -221,32 +254,25 @@ do_open_forwarded_tcpip_continuation(struct command_continuation *s,
   CAST(open_forwarded_tcpip_continuation, self, s);
   CAST_SUBTYPE(ssh_channel, channel, x);
 
-  if (channel)
-    {
-      channel->write = self->connection->write;
-      tcpip_channel_start_io(channel);
+  assert(channel);
 
-      COMMAND_RETURN(self->super.up, channel);
-    }
-  else
-    EXCEPTION_RAISE(self->super.e,
-		    make_channel_open_exception(SSH_OPEN_CONNECT_FAILED,
-						NULL));
+  tcpip_channel_start_io(channel);
+
+  COMMAND_RETURN(self->up, channel);
 }
 
 static struct command_continuation *
 make_open_forwarded_tcpip_continuation(struct ssh_connection *connection,
-				       struct command_continuation *c,
-				       struct exception_handler *e)
+				       struct command_continuation *c)
 {
   NEW(open_forwarded_tcpip_continuation, self);
-  self->super.super.c = do_open_forwarded_tcpip_continuation;
-  self->super.up = c;
-  self->super.e = e;
+  self->super.c = do_open_forwarded_tcpip_continuation;
+  self->up = c;
   self->connection = connection;
 
-  return &self->super.super;
+  return &self->super;
 }
+
 
 /* GABA:
    (class
@@ -283,9 +309,10 @@ do_channel_open_direct_tcpip(struct channel_open *s,
       COMMAND_CALL
 	(closure->callback,
 	 make_address_info(dest_host, dest_port),
-	 make_open_forwarded_tcpip_continuation(connection, c, e),
-	 /* FIXME: Which exception handler should we use? */
-	 e /* make_open_forwarded_tcpip_raise(response) */);
+	 make_open_forwarded_tcpip_continuation(connection, c), 
+	 /* NOTE: This exception handler will be associated with the
+	  * fd for its entire lifetime. */
+	 make_exc_tcpip_connect_handler(e, HANDLER_CONTEXT));
     }
   else
     {
@@ -524,10 +551,11 @@ do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
 	{
 	  COMMAND_CALL(port->callback,
 		       make_address_info(peer_host, peer_port),
-		       make_open_forwarded_tcpip_continuation(connection, c, e),
-		       /* FIXME: Use a better exception handler */
-		       e
-		       /* make_open_forwarded_tcpip_raise(response) */);
+		       make_open_forwarded_tcpip_continuation(connection, c),
+		       /* NOTE: This exception handler will be
+			* associated with the fd for its entire
+			* lifetime. */
+		       make_exc_tcpip_connect_handler(e, HANDLER_CONTEXT));
 	  return;
 	}
       werror("Received a forwarded-tcpip request on a port for which we\n"
