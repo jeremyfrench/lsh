@@ -69,6 +69,10 @@ do_read_data_query(struct io_consuming_read *s)
 	("read_data: Data arrived during key exchange. Won't read it now.\n");
       return 0;
     }
+  
+  /* The fuzz factor is because the max size refers to the complete
+   * packet including some overhead (9 octets for SSH_MSG_CHANNEL_DATA
+   * and 13 octets for SSH_MSG_CHANNEL_EXTENDED_DATA). */
 
   if ( (self->channel->send_window_size + SSH_MAX_PACKET_FUZZ)
        < self->channel->send_max_packet)
