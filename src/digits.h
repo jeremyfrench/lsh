@@ -34,6 +34,7 @@ extern int hex_digits[0x100];
 #define BASE64_INVALID -1
 #define BASE64_END -2
 #define BASE64_SPACE -3
+#define BASE64_PARTIAL -4
 
 extern int base64_digits[0x100];
 
@@ -48,5 +49,11 @@ struct base64_state
 };
 
 #define BASE64_INIT(t) {0, 0, (t)}
+
+void
+base64_init(struct base64_state *state, UINT8 terminator);
+
+int
+base64_decode(struct base64_state *state, UINT8 c);
 
 #endif /* LSH_DIGITS_H_INCLUDED */
