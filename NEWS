@@ -1,3 +1,11 @@
+News for the 1.0.3 release
+
+	Fixed bug in client userauth logic.
+
+	Configure fix: put -L and -R flags in LDFLAGS, not LIBS.
+
+	Portability fixes and some signed/unsigned cleanup.
+	
 News for the 1.0.2 release
 
 	Fixed bug in lsh_writekey, and improved the error message when
