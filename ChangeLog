@@ -1,3 +1,13 @@
+2001-09-13  Niels Möller  <nisse@ehand.com>
+
+	* src/io.c (address_info2sockaddr): Fixed debug invocation. FIX
+	copied from 1.2 branch.
+
+2001-09-12  Niels Möller  <nisse@ehand.com>
+
+	* src/werror.c (werror_vformat): Don't crash if %a gets a zero
+	argument. FIXED in 1.2 branch.
+
 2001-09-09  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/des.c (make_des_instance): Use the des_fix_parity function
@@ -668,10 +678,11 @@
 
 	* src/scm/gaba.scm: Some more cleanup.
 
-	* src/lshd.c (do_exc_lshd_handler): Handle EXC_RESOLVE.
+	* src/lshd.c (do_exc_lshd_handler): Handle EXC_RESOLVE. FIXED in
+	1.2 branch (2001-09-13).
 
 	* src/testsuite/functions.sh (spawn_lshd): Use 127.0.0.1 instead
-	of localhost.
+	of localhost. FIXED in 1.2 branch (2001-09-13).
 
 	* src/scm/gaba.scm (append-deep): Deleted.
 	(type->category): Deleted.
