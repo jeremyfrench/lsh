@@ -26,8 +26,18 @@
 #include "queue.h"
 
 #include "werror.h"
+#include "xalloc.h"
 
 #include <assert.h>
+
+/* Prototypes */
+static void do_object_queue_mark(struct lsh_queue *q,
+			  void (*mark)(struct lsh_object *o));
+static void do_object_queue_free(struct lsh_queue *q);
+
+#define GABA_DEFINE
+#include "queue.h.x"
+#undef GABA_DEFINE
 
 /* Short cuts */
 #define next np_links[LSH_QUEUE_NEXT]
@@ -136,6 +146,76 @@ struct lsh_queue_node *lsh_queue_remove_tail(struct lsh_queue *q)
   sanity_check_queue(q);
 
   return n;
+}
+
+/* Object queue */
+struct object_queue_node
+{
+  struct lsh_queue_node header;
+  struct lsh_object *o;
+};
+
+#if 0
+void object_queue_init(struct object_queue *q)
+{
+  lsh_queue_init(&q->q);
+}
+#endif
+
+static struct object_queue_node *
+make_object_queue_node(struct lsh_object *o)
+{
+  struct object_queue_node *n;
+
+  NEW_SPACE(n);
+  n->o = o;
+
+  return n;
+}
+
+void object_queue_add_head(struct object_queue *q, struct lsh_object *o)
+{
+  lsh_queue_add_head(&q->q, &make_object_queue_node(o)->header);
+}
+
+void object_queue_add_tail(struct object_queue *q, struct lsh_object *o)
+{
+  lsh_queue_add_tail(&q->q, &make_object_queue_node(o)->header);
+}
+
+static struct lsh_object *
+object_queue_get_contents(struct object_queue_node *n)
+{
+  struct lsh_object *res = n->o;
+  lsh_space_free(n);
+
+  return res;
+}
+
+struct lsh_object *object_queue_remove_head(struct object_queue *q)
+{
+  return object_queue_get_contents((struct object_queue_node *)
+				   lsh_queue_remove_head(&q->q));
+}
+
+struct lsh_object *object_queue_remove_tail(struct object_queue *q)
+{
+  return object_queue_get_contents((struct object_queue_node *)
+				   lsh_queue_remove_tail(&q->q));
+}
+
+/* For gc */
+static void do_object_queue_mark(struct lsh_queue *q,
+				 void (*mark)(struct lsh_object *o))
+{
+  FOR_QUEUE(q, struct object_queue_node *, n)
+    mark(n->o);
+}
+
+static void do_object_queue_free(struct lsh_queue *q)
+{
+  FOR_QUEUE(q, struct object_queue_node *, n)
+    lsh_space_free(n);
 }
 
   

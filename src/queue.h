@@ -66,4 +66,24 @@ void lsh_queue_remove(struct lsh_queue_node *n);
 struct lsh_queue_node *lsh_queue_remove_head(struct lsh_queue *q);
 struct lsh_queue_node *lsh_queue_remove_tail(struct lsh_queue *q);
 
+#define GABA_DECLARE
+#include "queue.h.x"
+#undef GABA_DECLARE
+
+/* GABA:
+   (struct
+     (name object_queue)
+     (vars
+       (q special-struct "struct lsh_queue"
+          do_object_queue_mark do_object_queue_free)))
+*/
+
+#define object_queue_is_empty(x) (lsh_queue_is_empty(&(x)->q))
+#define object_queue_init(x) (lsh_queue_init(&(x)->q))
+
+void object_queue_add_head(struct object_queue *q, struct lsh_object *o);
+void object_queue_add_tail(struct object_queue *q, struct lsh_object *o);
+struct lsh_object *object_queue_remove_head(struct object_queue *q);
+struct lsh_object *object_queue_remove_tail(struct object_queue *q);
+
 #endif /* LSH_QUEUE_H_INCLUDED */
