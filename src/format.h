@@ -44,8 +44,8 @@
  *
  * %z  Insert a string, using a null-terminated argument.
  *
- * %r  Reserves space in the string, and stores a pointer to this space
- *     into the given uint8_t ** argument.
+ * %r  Reserves space in the string, and stores the start position
+ *     into the given uint32_t * argument.
  *
  * %a  Insert a string containing one atom.
  *
@@ -78,16 +78,17 @@
 
 struct lsh_string *ssh_format(const char *format, ...);
 uint32_t ssh_format_length(const char *format, ...);
-void ssh_format_write(const char *format, uint32_t length, uint8_t *buffer, ...);
+void ssh_format_write(const char *format,
+		      struct lsh_string *buffer, uint32_t pos, ...);
 
 uint32_t ssh_vformat_length(const char *format, va_list args);
-void ssh_vformat_write(const char *format, uint32_t length, uint8_t *buffer, va_list args);
-void format_hex_string(uint8_t *dst, uint32_t length, const uint8_t *data);
+void ssh_vformat_write(const char *format,
+		       struct lsh_string *buffer, uint32_t pos, va_list args);
 
-/* Returns an ordinary NUL-terminated string, or NULL if the string
- * contains any NUL-character. */
-const char *
-lsh_get_cstring(const struct lsh_string *s);
+void
+format_hex_string(struct lsh_string *buffer, uint32_t pos,
+		  uint32_t length, const uint8_t *data);
+
      
 /* Short cuts */
 #define lsh_string_dup(s) (ssh_format("%lS", (s)))
@@ -95,24 +96,17 @@ lsh_get_cstring(const struct lsh_string *s);
 #define make_string(s) (ssh_format("%lz", (s)))
 
 unsigned format_size_in_decimal(uint32_t n);
-void format_decimal(unsigned length, uint8_t *buffer, uint32_t n);
+void
+format_decimal(struct lsh_string *buffer, uint32_t pos,
+	       uint32_t length, uint32_t n);
 
 /* FIXME: These functions don't really belong here */
 
-/* NOTE: Destructive, returns the string only for convenience. */
-struct lsh_string *
-lsh_string_trunc(struct lsh_string *s, uint32_t length);
-
-int lsh_string_eq(const struct lsh_string *a, const struct lsh_string *b);
-int lsh_string_eq_l(const struct lsh_string *a, uint32_t length, const uint8_t *b);
-
-int lsh_string_prefixp(const struct lsh_string *prefix,
-		       const struct lsh_string *s);
 
 struct lsh_string *
-lsh_string_colonize(struct lsh_string *s, int every, int freeflag);
+lsh_string_colonize(const struct lsh_string *s, int every, int freeflag);
 
 struct lsh_string *
-lsh_string_bubblebabble(struct lsh_string *s, int freeflag);
+lsh_string_bubblebabble(const struct lsh_string *s, int freeflag);
 
 #endif /* LSH_FORMAT_H_INCLUDED */
