@@ -32,6 +32,7 @@
 #include "gc.h"
 
 #include "io.h"
+#include "lsh_string.h"
 #include "resource.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -244,7 +245,8 @@ void gc(void)
 {
   unsigned objects_before = number_of_objects;
 #if DEBUG_ALLOC
-  unsigned strings_before = number_of_strings;
+  unsigned strings_before = lsh_get_number_of_strings();
+  unsigned strings_after;
 #endif
 
   verbose("garbage collecting...\n");
@@ -255,8 +257,9 @@ void gc(void)
   verbose("Objects alive: %i, garbage collected: %i\n",
 	  live_objects, objects_before - live_objects);
 #if DEBUG_ALLOC
+  strings_after = lsh_get_number_of_strings();
   verbose("Used strings:  %i, garbage collected: %i\n",
-	  number_of_strings, strings_before - number_of_strings);
+	  strings_after, strings_before - strings_after);
 #endif
 }
 
@@ -276,13 +279,6 @@ void gc_final(void)
   gc_sweep();
   assert(!number_of_objects);
 
-  if (number_of_strings)
-    {
-      struct lsh_string *s;
-      werror("gc_final: %i strings leaked!\n", number_of_strings);
-      for (s = all_strings; s; s = s->header.next)
-	werror("  clue: %z\n", s->header.clue);
-      fatal("gc_final: Internal error!\n");
-    }
+  lsh_string_final_check();
 #endif /* DEBUG_ALLOC */
 }
