@@ -53,9 +53,7 @@ do_md5_digest(struct hash_instance *s,
 {
   CAST(md5_instance, self, s);
 
-  md5_final(&self->ctx);
   md5_digest(&self->ctx, MD5_DIGEST_SIZE, dst);
-  md5_init(&self->ctx);
 }
 
 static struct hash_instance *
