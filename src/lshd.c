@@ -65,12 +65,14 @@
 struct command options2local;
 #define OPTIONS2LOCAL (&options2local.super)
 
-struct command options2keyfile;
-#define OPTIONS2KEYFILE (&options2keyfile.super)
+struct command options2keys;
+#define OPTIONS2KEYS (&options2keys.super)
 
+#if 0
 struct command options2signature_algorithms;
 #define OPTIONS2SIGNATURE_ALGORITHMS \
   (&options2signature_algorithms.super)
+#endif
 
 #include "lshd.c.x"
 
@@ -286,28 +288,20 @@ DEFINE_COMMAND(options2signature_algorithms)
   COMMAND_RETURN(c, options->signature_algorithms);
 }
 
-/* Read server's private key */
 
-DEFINE_COMMAND(options2keyfile)
+/* FIXME: Call read_host_key directly from main instead. */
+DEFINE_COMMAND(options2keys)
      (struct command *ignored UNUSED,
       struct lsh_object *a,
       struct command_continuation *c,
-      struct exception_handler *e)
+      struct exception_handler *e UNUSED)
 {
   CAST(lshd_options, options, a);
-  
-  struct lsh_fd *f;
 
-  f = io_read_file(options->hostkey, e);
+  struct alist *keys = make_alist(0, -1);
+  read_host_key(options->hostkey, options->signature_algorithms, keys);
 
-  if (f)
-    COMMAND_RETURN(c, f);
-  else
-    {
-      werror("Failed to open '%z' (errno = %i): %z.\n",
-	     options->hostkey, errno, STRERROR(errno));
-      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
-    }
+  COMMAND_RETURN(c, keys);
 }
 
 
@@ -700,9 +694,7 @@ main_argp =
        (init object make_kexinit)
        (services object command) )
      (expr (lambda (options)
-             (let ((keys 
-		    (spki_read_hostkeys (options2signature_algorithms options)
-			                (options2keyfile options))))
+             (let ((keys (options2keys options)))
 	       (listen_callback
 	         (lambda (lv)
     		   (services (connection_handshake
