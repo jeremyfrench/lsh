@@ -43,7 +43,7 @@
 
 #include "connection.c.x"
 
-static const char *packet_types[0x100] =
+const char *packet_types[0x100] =
 #include "packet_types.h"
 ;
 

@@ -139,4 +139,7 @@ void connection_init_io(struct ssh_connection *connection,
 struct packet_handler *make_fail_handler(void);
 struct packet_handler *make_unimplemented_handler(void);  
 
+/* Table of packet types */
+extern const char *packet_types[0x100];
+
 #endif /* LSH_CONNECTION_H_INCLUDED */
