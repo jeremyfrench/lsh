@@ -157,9 +157,12 @@ do_client_lookup(struct lookup_verifier *c,
     }
   else
     {
-      verbose("SPKI authorization failed.");
+      verbose("SPKI authorization failed.\n");
       if (!self->sloppy)
-	return NULL;
+	{
+	  werror("lsh: Server's hostkey is not trusted. Disconnecting.\n");
+	  return NULL;
+	}
       
       /* Ok, let's see if we want to use this untrusted key. */
       if (!quiet_flag)
@@ -182,7 +185,7 @@ do_client_lookup(struct lookup_verifier *c,
 #if 0
 	  struct io_fd *fd = io_write_file(self->backend, self->filename,
 					   O_CREAT | O_APPEND | O_WRONLY,
-					   0004, 500, NULL,
+					   0600, 500, NULL,
 					   make_report_exception_handler(EXC_IO, EXC_IO,
 									 "Writing new ACL: "
 									 &default_exception_handler,
@@ -190,7 +193,7 @@ do_client_lookup(struct lookup_verifier *c,
 	  if (fd)
 	    {
 #endif
-	      A_WRITE(self->file, ssh_format("\n; ACL for host %z\n", self->host->ip));
+	      A_WRITE(self->file, ssh_format("\n; ACL for host %lS\n", self->host->ip));
 	      A_WRITE(self->file,
 		      sexp_format(sexp_l(2, sexp_a(ATOM_ACL),
 					 sexp_l(3, sexp_a(ATOM_ENTRY),
@@ -344,8 +347,13 @@ static int remember_tty(int fd)
 
 /* Option parsing */
 
-#define ARG_NOT 0x200
+#define ARG_NOT 0x400
+
 #define OPT_NO_PUBLICKEY 0x201
+
+#define OPT_SLOPPY 0x202
+#define OPT_STRICT 0x203
+#define OPT_CAPTURE 0x204
 
 static const struct argp_option
 main_options[] =
@@ -356,6 +364,13 @@ main_options[] =
   { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
   { "no-publickey", OPT_NO_PUBLICKEY, NULL, 0,
     "Don't try publickey user authentication.", 0 },
+  { "sloppy-host-authentication", OPT_SLOPPY, NULL, 0,
+    "Allow untrusted hostkeys.", 0 },
+  { "strict-host-authentication", OPT_STRICT, NULL, 0,
+    "Never, never, ever trust an unknown hostkey. (default)", 0 },
+  { "capture-to", OPT_CAPTURE, "File", 0,
+    "When a new hostkey is received, append an ACL expressing trust in the key. "
+    "In sloppy mode, the default is ~/.lsh/captured_keys.", 0 },
   { NULL, 0, NULL, 0, "Actions:", 0 },
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
@@ -395,6 +410,11 @@ main_options[] =
        (user . "char *")
        (identities struct object_queue)
        (publickey . int)
+
+       (sloppy . int)
+       (capture . "const char *")
+       (capture_file object abstract_write)
+       
        ; -1 means default behaviour
        (with_pty . int)
 
@@ -425,6 +445,10 @@ make_options(struct alist *algorithms, struct io_backend *backend,
   self->user = getenv("LOGNAME");
   self->port = "ssh";
 
+  self->sloppy = 0;
+  self->capture = NULL;
+  self->capture_file = NULL;
+  
   self->with_pty = -1;
   self->start_shell = 1;
   self->with_remote_peers = 0;
@@ -480,112 +504,145 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case ARGP_KEY_END:
-      if (!self->user)
-	{
-	  argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
-	  break;
-	}
+      {
+	char *home = getenv("HOME");
+	if (!self->user)
+	  {
+	    argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
+	    break;
+	  }
 
-#if WITH_TCP_FORWARD
-      if (self->remote_forward)
-	object_queue_add_tail
-	  (&self->actions,
-	   &make_install_fix_channel_open_handler
-	   (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip)->super);
-#endif /* WITH_TCP_FORWARD */
-      
-      /* Add shell action */
-      if (self->start_shell)
 	{
-	  int in;
-	  int out;
-	  int err;
-
-	  struct command *get_pty = NULL;
+	  struct lsh_string *tmp = NULL;
+	  const char *s = NULL;
 	  
-	  struct object_list *session_requests;
-      
-#if WITH_PTY_SUPPORT
-	  if (self->with_pty)
+	  if (self->capture)
+	    s = self->capture;
+	  else if (self->sloppy)
 	    {
-	      if (tty_fd < 0)
-		{
-		  werror("lsh: No tty available.\n");
-		}
+	      tmp = ssh_format("%lz/.lsh/captured_keys%c", home, 0);
+	      s = tmp->data;
+	    }
+	  if (s)
+	    {
+	      struct io_fd *f
+		= io_write_file(self->backend, s,
+				O_CREAT | O_APPEND | O_WRONLY,
+				0600, 500, NULL,
+				make_report_exception_handler(EXC_IO, EXC_IO,
+							      "Writing new ACL: ",
+							      &default_exception_handler,
+							      HANDLER_CONTEXT));
+	      if (f)
+		self->capture_file = &f->write_buffer->super;
 	      else
 		{
-		  if (! (remember_tty(tty_fd)
-			 && (get_pty = make_pty_request(tty_fd))))
-		    {
-		      werror("lsh: Can't use tty (probably getattr or atexit() failed.\n");
-		    }
+		  werror("Failed to open '%z' (errno = %i): %z.\n",
+			 s, errno, STRERROR(errno));
 		}
 	    }
-	  /* FIXME: We need a non-varargs constructor for lists. */
-	  if (get_pty)
-	    session_requests = make_object_list(2, get_pty, start_shell(), -1);
-	  else
-#endif /* WITH_PTY_SUPPORT */
-	    session_requests = make_object_list(1, start_shell(), -1);
-	  
-	  in = STDIN_FILENO;
-	  out = STDOUT_FILENO;
-	  
-	  if ( (err = dup(STDERR_FILENO)) < 0)
-	    {
-	      argp_failure(state, EXIT_FAILURE, errno, "Can't dup stderr: %s", STRERROR(errno));
-	      fatal("Can't happen.\n");
-	    }
-
-	  set_error_stream(STDERR_FILENO, 1);
-	  
-	  /* Exit code if no session is established */
-	  *self->exit_code = 17;
-	  
+	  lsh_string_free(tmp);
+	}
+	
+#if WITH_TCP_FORWARD
+	if (self->remote_forward)
 	  object_queue_add_tail
 	    (&self->actions,
-	     make_start_session
-	     (make_open_session_command(make_client_session
-					(io_read(make_io_fd(self->backend, in, self->handler),
-						 NULL, NULL),
-					 io_write(make_io_fd(self->backend, out, self->handler),
-						  BLOCK_SIZE, NULL),
-					 io_write(make_io_fd(self->backend, err, self->handler),
-						  BLOCK_SIZE, NULL),
-					 WINDOW_SIZE,
-					 self->exit_code)),
-	      session_requests));
-	}
-	  
-      if (object_queue_is_empty(&self->actions))
-	{
-	  argp_error(state, "No actions given.");
-	  break;
-	}
+	     &make_install_fix_channel_open_handler
+	     (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip)->super);
+#endif /* WITH_TCP_FORWARD */
+      
+	/* Add shell action */
+	if (self->start_shell)
+	  {
+	    int in;
+	    int out;
+	    int err;
 
-      if (self->publickey && object_queue_is_empty(&self->identities))
-	{
-	  char *home = getenv("HOME");
-	  if (home)
-	    {
-	      struct lsh_string *idfile = 
-		ssh_format("%lz/.lsh/identity%c", home, 0);
-	      struct keypair *id;
-	      if ((id = read_spki_key_file(idfile->data,
-					   make_linear_alist(1, ATOM_DSA,
-							     make_dsa_algorithm(self->random),
-							     -1),
-					   self->handler)))
-		{
-		  verbose("Adding identity %S\n", idfile);
-		  object_queue_add_tail(&self->identities, &id->super);
-		}
-	      lsh_string_free(idfile);
-	    }
-	}
+	    struct command *get_pty = NULL;
+	  
+	    struct object_list *session_requests;
       
-      break;
+#if WITH_PTY_SUPPORT
+	    if (self->with_pty)
+	      {
+		if (tty_fd < 0)
+		  {
+		    werror("lsh: No tty available.\n");
+		  }
+		else
+		  {
+		    if (! (remember_tty(tty_fd)
+			   && (get_pty = make_pty_request(tty_fd))))
+		      {
+			werror("lsh: Can't use tty (probably getattr or atexit() failed.\n");
+		      }
+		  }
+	      }
+	    /* FIXME: We need a non-varargs constructor for lists. */
+	    if (get_pty)
+	      session_requests = make_object_list(2, get_pty, start_shell(), -1);
+	    else
+#endif /* WITH_PTY_SUPPORT */
+	      session_requests = make_object_list(1, start_shell(), -1);
+	  
+	    in = STDIN_FILENO;
+	    out = STDOUT_FILENO;
+	  
+	    if ( (err = dup(STDERR_FILENO)) < 0)
+	      {
+		argp_failure(state, EXIT_FAILURE, errno, "Can't dup stderr: %s", STRERROR(errno));
+		fatal("Can't happen.\n");
+	      }
+
+	    set_error_stream(STDERR_FILENO, 1);
+	  
+	    /* Exit code if no session is established */
+	    *self->exit_code = 17;
+	  
+	    object_queue_add_tail
+	      (&self->actions,
+	       make_start_session
+	       (make_open_session_command(make_client_session
+					  (io_read(make_io_fd(self->backend, in, self->handler),
+						   NULL, NULL),
+					   io_write(make_io_fd(self->backend, out, self->handler),
+						    BLOCK_SIZE, NULL),
+					   io_write(make_io_fd(self->backend, err, self->handler),
+						    BLOCK_SIZE, NULL),
+					   WINDOW_SIZE,
+					   self->exit_code)),
+		session_requests));
+	  }
+	  
+	if (object_queue_is_empty(&self->actions))
+	  {
+	    argp_error(state, "No actions given.");
+	    break;
+	  }
+
+	if (self->publickey && object_queue_is_empty(&self->identities))
+	  {
+	    if (home)
+	      {
+		struct lsh_string *idfile = 
+		  ssh_format("%lz/.lsh/identity%c", home, 0);
+		struct keypair *id;
+		if ((id = read_spki_key_file(idfile->data,
+					     make_linear_alist(1, ATOM_DSA,
+							       make_dsa_algorithm(self->random),
+							       -1),
+					     self->handler)))
+		  {
+		    verbose("Adding identity %S\n", idfile);
+		    object_queue_add_tail(&self->identities, &id->super);
+		  }
+		lsh_string_free(idfile);
+	      }
+	  }
       
+	break;
+      }
     case 'p':
       self->port = arg;
       break;
@@ -609,6 +666,18 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       }
     case OPT_NO_PUBLICKEY:
       self->publickey = 0;
+      break;
+
+    case OPT_SLOPPY:
+      self->sloppy = 1;
+      break;
+
+    case OPT_STRICT:
+      self->sloppy = 0;
+      break;
+
+    case OPT_CAPTURE:
+      self->capture = arg;
       break;
       
     case 'L':
@@ -819,8 +888,9 @@ int main(int argc, char **argv)
 					   ATOM_DSA,
 					   make_dsa_algorithm(NULL), -1)),
 			       options->remote,
-			       1,
-			       NULL);
+			       options->sloppy,
+			       options->capture_file);
+  
   lookup_table = make_alist(2,
 			    ATOM_SSH_DSS, lookup,
 			    ATOM_SPKI, lookup,
