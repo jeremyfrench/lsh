@@ -1,5 +1,11 @@
 2001-08-27  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/sftp/testsuite/Makefile.am (EXTRA_DIST): Use EXTRA_DIST, not
+	DISTFILES. cd to $srcdir when running the tests.
+
+	* src/sftp/Makefile.am (EXTRA_DIST): Include header files in the
+	dist. 
+
 	* buffer.c, buffer.h, client.c, client.h: Added copyright notices. 
 
 	* src/sftp/testsuite/Makefile.am: New file.
