@@ -25,6 +25,13 @@ static int handle_connection(struct abstract_write **w,
     }
 
   msg = packet->data[0];
+
+  if (closure->ignore_one_packet)
+    {
+      closure->ignore_one_packet = 0;
+      lsh_string_free(packet);
+      return WRITE_OK;
+    }
   
   return HANDLE_PACKET(closure->dispatch[msg], closure, packet);
 }
