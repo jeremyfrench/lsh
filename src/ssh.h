@@ -19,6 +19,7 @@
 #define SSH_MSG_KEXINIT                20
 #define SSH_MSG_NEWKEYS                21
 
+#define SSH_FIRST_KEYEXCHANGE_SPECIFIC 30
 /* 30-49 Key exchange method specific (numbers can be reused for
  *       different authentication methods) */
 
