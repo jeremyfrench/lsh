@@ -1,3 +1,10 @@
+2003-01-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/.dist_classes: sexp.h.x has disappeared.
+
+	* misc/bootstrap.sh: Bootstrap spki subdir. Removed redundant
+	automake calls. 
+
 2003-01-14  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/.dist_classes: hmac.c.x, md5.c.x and sha.c.x have
