@@ -206,6 +206,27 @@ do_format_sexp_nil(struct sexp *ignored UNUSED, int style UNUSED,
   return ssh_format("()");
 }
 
+
+/* For assoc */
+struct sexp_iterator *
+sexp_check_type(struct sexp *e, UINT32 length,
+		const UINT8 *name)
+{
+  if (!sexp_atomp(e))
+    {
+      struct sexp_iterator *i = SEXP_ITER(e);
+
+      if (sexp_eq(SEXP_GET(i), length, name))
+	{
+	  SEXP_NEXT(i);
+	  return i;
+	}
+      else
+	KILL(i);
+    }  
+  return NULL;
+}
+
 /* Forward declaration */
 static struct sexp_iterator *make_iter_cons(struct sexp *s);
 
@@ -226,7 +247,7 @@ struct sexp_cons sexp_nil =
 static struct sexp *do_cons_get(struct sexp_iterator *c)
 {
   CAST(sexp_iter_cons, i, c);
-  return (i->p != &sexp_nil) ? NULL : i->p->car;
+  return (i->p == &sexp_nil) ? NULL : i->p->car;
 }
 
 static void do_cons_set(struct sexp_iterator *c, struct sexp *e)
@@ -235,6 +256,39 @@ static void do_cons_set(struct sexp_iterator *c, struct sexp *e)
   assert (i->p != &sexp_nil);
 
   i->p->car = e;
+}
+
+static struct sexp *
+do_cons_assoc(struct sexp_iterator *s, UINT32 length,
+	      const UINT8 *name, struct sexp_iterator **i)
+{
+  CAST(sexp_iter_cons, self, s);
+  struct sexp_cons *p;
+
+  for (p = self->p; p != &sexp_nil; p = p->cdr)
+    {
+      struct sexp_iterator *inner = sexp_check_type(p->car, length, name);
+      if (inner)
+	{
+	  if (i)
+	    *i = inner;
+
+	  return p->car;
+	}
+    }
+  return NULL;
+}
+
+static unsigned do_cons_left(struct sexp_iterator *i)
+{
+  CAST(sexp_iter_cons, self, i);
+  struct sexp_cons *p;
+  unsigned k;
+
+  for (p = self->p, k = 0; p != &sexp_nil; p = p->cdr, k++)
+    ;
+
+  return k;
 }
 
 static void do_cons_next(struct sexp_iterator *c)
@@ -250,6 +304,8 @@ static struct sexp_iterator *make_iter_cons(struct sexp *s)
 
   iter->super.get = do_cons_get;
   iter->super.set = do_cons_set;
+  iter->super.assoc = do_cons_assoc;
+  iter->super.left = do_cons_left;
   iter->super.next = do_cons_next;
   iter->p = c;
   
@@ -372,6 +428,35 @@ static void do_vector_set(struct sexp_iterator *c, struct sexp *e)
   LIST(i->l)[i->i] = &e->super;
 }
 
+static struct sexp *
+do_vector_assoc(struct sexp_iterator *s, UINT32 length,
+		const UINT8 *name, struct sexp_iterator **i)
+{
+  CAST(sexp_iter_vector, self, s);
+  unsigned j;
+  
+  for (j = self->i; j < LIST_LENGTH(self->l); j++)
+    {
+      CAST_SUBTYPE(sexp, e, LIST(self->l)[j]);
+      struct sexp_iterator *inner = sexp_check_type(e, length, name);
+      
+      if (inner)
+	{
+	  if (i)
+	    *i = inner;
+
+	  return e;
+	}
+    }
+  return NULL;
+}
+
+static unsigned do_vector_left(struct sexp_iterator *s)
+{
+  CAST(sexp_iter_vector, i, s);
+  return LIST_LENGTH(i->l) - i->i;
+}
+
 static void do_vector_next(struct sexp_iterator *c)
 {
   CAST(sexp_iter_vector, i, c);
@@ -385,7 +470,9 @@ static struct sexp_iterator *make_iter_vector(struct sexp *s)
   NEW(sexp_iter_vector, iter);
 
   iter->super.get = do_vector_get;
-  iter->super.set = do_vector_set;  
+  iter->super.set = do_vector_set;
+  iter->super.assoc = do_vector_assoc;
+  iter->super.left = do_vector_left;
   iter->super.next = do_vector_next;
 
   iter->l = v->elements;
@@ -458,14 +545,19 @@ static struct lsh_string *do_format_sexp_vector(struct sexp *e,
 
 struct sexp *sexp_v(struct object_list *l)
 {
-  NEW(sexp_vector, v);
-
-  v->super.format = do_format_sexp_vector;
-  v->super.iter = make_iter_vector;
-  
-  v->elements = l;
-
-  return &v->super;
+  if (LIST_LENGTH(l))
+    {
+      NEW(sexp_vector, v);
+      
+      v->super.format = do_format_sexp_vector;
+      v->super.iter = make_iter_vector;
+      
+      v->elements = l;
+      
+      return &v->super;
+    }
+  else
+    return SEXP_NIL;
 }
 
 struct sexp *sexp_l(unsigned n, ...)
@@ -633,13 +725,22 @@ sexp2string(struct sexp *e)
 }
   
 
-UINT32
+int
 sexp2atom(struct sexp *e)
 {
   struct lsh_string *s = sexp2string(e);
   return s ? lookup_atom(s->length, s->data) : 0;
 }
 
+int sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name)
+{
+  struct lsh_string *c = sexp2string(e);
+
+  return c && lsh_string_eq_l(c, length, name);
+}
+  
+
+#if 0
 int sexp_eqz(const struct sexp *e, const char *s)
 {
   struct lsh_string *c;
@@ -700,22 +801,31 @@ struct sexp *sexp_assz(struct sexp_iterator *i, const char *name)
   KILL(inner);
   return e;
 }
+#endif
 
-int sexp_get_un(struct sexp_iterator *i, const char *name, mpz_t n)
+struct sexp *sexp_assq(struct sexp_iterator *i, int atom)
 {
-  struct sexp *e = sexp_assz(i, name);
-  struct lsh_string *s;
-  
-  if (!(e && sexp_atomp(e)))
-    return 0;
-  if (sexp_display(e))
-    return 0;
+  struct sexp_iterator *inner;
+  if (SEXP_ASSOC(i, get_atom_length(atom), get_atom_name(atom), &inner))
+    {
+      struct sexp *value = SEXP_GET(inner);
+      KILL(inner);
+      return value;
+    }
+  else
+    return NULL;
+}
+     
+int sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n)
+{
+  struct lsh_string *s = sexp2string(sexp_assq(i, atom));
 
-  s = sexp_contents(e);
+  if (!s)
+    return 0;
+  
   bignum_parse_u(n, s->length, s->data);
   return 1;
 }
-
 
 /* Command line options */
 struct sexp_format

@@ -41,6 +41,9 @@ struct sexp_iterator;
 #include "sexp.h.x"
 #undef GABA_DECLARE
 
+/* FIXME: Do some constification. Strings inside sexpressions should
+ * always be const. */
+
 /* GABA:
    (class
      (name sexp)
@@ -72,17 +75,24 @@ struct sexp_iterator;
 
 
 /* Iterator abstraction idea taken from Ron's code */
+/* FIXME: It would make a lot of sense to use (meta)class methods for
+ * iterators. */
 /* GABA:
    (class
      (name sexp_iterator)
      (vars
        (get method "struct sexp *")
        (set method void "struct sexp *")
+       (assoc method "struct sexp *"
+              "UINT32 length" "const UINT8 *name"
+	      "struct sexp_iterator **i")
+       (left method unsigned)
        (next method void)))
 */
 
 #define SEXP_GET(i) ((i)->get((i)))
 #define SEXP_SET(i, v) ((i)->set((i), (v)))
+#define SEXP_ASSOC(s, l, n, i) ((s)->assoc((s), (l), (n), (i)))
 #define SEXP_NEXT(i) ((i)->next((i)))
 
 /* Syntax styles */
@@ -144,7 +154,7 @@ struct lsh_string *sexp2string(struct sexp *e);
 
 /* Returns an ATOM_FOO constant if e is a simple sexp string
  * corresponding to an atom. Or zero if that is not the case. */
-UINT32 sexp2atom(struct sexp *e);
+int sexp2atom(struct sexp *e);
 
 /* int sexp_null_cdr(struct sexp *e); */
 
@@ -156,13 +166,21 @@ int sexp_bignum_s(const struct sexp *e, mpz_t n);
 
 /* Utility functions for parsing spki objects. */
 
-/* FIXME: These function might get obsoleted by spki.c */
+int sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name);
+struct sexp *sexp_assq(struct sexp_iterator *i, int atom);
 
+struct sexp_iterator *
+sexp_check_type(struct sexp *e, UINT32 length,
+		const UINT8 *name);
+
+#if 0
 int sexp_eqz(const struct sexp *e, const char *s);
 int sexp_check_type(struct sexp *e, const char *type,
 		    struct sexp_iterator **res);
 struct sexp *sexp_assz(struct sexp_iterator *i, const char *name);
-int sexp_get_un(struct sexp_iterator *i, const char *name, mpz_t n);
+#endif
+
+int sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n);
 
 extern int sexp_char_classes[];
 
