@@ -1,3 +1,7 @@
+2003-01-23  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* parse.c (spki_parse_string): Made non-static.
+
 2003-01-22  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* testsuite/testutils.c (read_acl): Use spki_acl_process.
