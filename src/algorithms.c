@@ -164,7 +164,16 @@ int lookup_compression(struct alist *algorithms, char *name)
 
 struct int_list *default_crypto_algorithms(void)
 {
-  return make_int_list(3, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC, ATOM_ARCFOUR, -1);
+  return make_int_list(4
+#if WITH_IDEA
+		       + 1
+#endif
+		       , ATOM_3DES_CBC,
+#if WITH_IDEA
+		       ATOM_IDEA_CBC,
+#endif
+		       ATOM_BLOWFISH_CBC,
+		       ATOM_TWOFISH_CBC, ATOM_ARCFOUR, -1);
 }
 
 struct int_list *default_mac_algorithms(void)
