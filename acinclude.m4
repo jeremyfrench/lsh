@@ -40,6 +40,9 @@ AC_CACHE_VAL(lsh_cv_sys_ccpic,[
 	  # Could also use -fPIC, if there are a large number of symbol reference
 	  CCPIC="-fPIC"
 	;;
+	CYGWIN*)
+	  CCPIC=""
+	;;
 	*)
 	  CCPIC="-fpic"
 	;;
