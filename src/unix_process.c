@@ -62,9 +62,9 @@
 # include <libutil.h>
 #endif
 
-#include "reaper.h"
-
 #include "format.h"
+#include "lsh_string.h"
+#include "reaper.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -227,9 +227,9 @@ make_logout_notice(struct resource *process,
 
 static void
 lsh_strncpy(char *dst, unsigned n, struct lsh_string *s)
-{
-  unsigned length = MIN(n, s->length);
-  memcpy(dst, s->data, length);
+{  
+  unsigned length = MIN(n, lsh_string_length(s));
+  memcpy(dst, lsh_string_data(s), length);
   if (length < n)
     dst[length] = '\0';
 }
@@ -333,8 +333,8 @@ make_utmp_cleanup(struct lsh_string *tty,
 		  struct exit_callback *c)
 {
   NEW(utmp_cleanup, self);
-  uint32_t length = tty->length;
-  uint8_t *data = tty->data;
+  uint32_t length = lsh_string_length(tty);
+  const uint8_t *data = lsh_string_data(tty);
 
   self->super.exit = do_utmp_cleanup;
   self->c = c;
