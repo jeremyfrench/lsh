@@ -3,11 +3,10 @@ dnl $Id$
 
 dnl Process this file with autoconf to produce a configure script.
 
-AC_INIT(sftp-server.c)
-
-AM_INIT_AUTOMAKE(lsh-sftp, 1.0-pre)
-
-AM_CONFIG_HEADER(config.h)
+AC_INIT([lsh-sftp], [1.0-pre])
+AC_CONFIG_SRCDIR([sftp-server.c])
+AM_INIT_AUTOMAKE([dist-gzip])
+AM_CONFIG_HEADER([config.h])
 
 CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
 
