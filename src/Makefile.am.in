@@ -45,7 +45,8 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	client_userauth.c \
 	combinators.c command.c compress.c connection.c connection_commands.c \
 	daemon.c \
-	debug.c des.c digits.c disconnect.c dsa.c dsa_keygen.c encrypt.c \
+	debug.c des.c digits.c disconnect.c dh_exchange.c \
+	dsa.c dsa_keygen.c encrypt.c \
 	exception.c \
 	format.c gc.c gateway_channel.c \
 	hmac.c idea.c interact.c io.c io_commands.c \
@@ -62,7 +63,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	server_password.c server_publickey.c \
 	server_pty.c server_session.c server_userauth.c \
 	sexp.c sexp_commands.c sexp_parser.c sexp_streamed_parser.c \
-	sha.c service.c spki.c spki_commands.c ssh1_fallback.c \
+	sha.c service.c spki.c spki_commands.c srp_exchange.c ssh1_fallback.c \
 	string_buffer.c tcpforward.c tcpforward_commands.c \
 	translate_signal.c tty.c twofish.c unix_user.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c zlib.c
