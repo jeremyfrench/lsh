@@ -588,14 +588,18 @@ do_consuming_read(struct io_callback *c,
   CAST_SUBTYPE(io_consuming_read, self, c);
   UINT32 wanted = READ_QUERY(self);
 
-  if (!wanted)
-    {
-      fd->want_read = 0;
-    }
-  else if (fd->hanged_up)
+  assert(fd->want_read);
+
+  if (fd->hanged_up)
     {
       /* If hanged_up is set, pretend that read() returned 0 */
       A_WRITE(self->consumer, NULL);
+      return;
+    }
+  
+  if (!wanted)
+    {
+      fd->want_read = 0;
     }
   else
     {
@@ -633,7 +637,6 @@ do_consuming_read(struct io_callback *c,
       
 	  A_WRITE(self->consumer, NULL);
 	}
-      
     }
 }
 
