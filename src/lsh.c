@@ -311,8 +311,8 @@ read_user_keys(struct lsh_options *options)
       alist_select_l(mac, options->algorithms->algorithms,
 		     2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1);
       alist_select_l(crypto, options->algorithms->algorithms,
-		     3, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
-		     ATOM_RIJNDAEL_CBC_LOCAL, -1);
+		     4, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
+		     ATOM_TWOFISH_CBC, ATOM_AES256_CBC, -1);
       
       expr = spki_pkcs5_decrypt(mac, crypto,
                                 options->super.tty,
