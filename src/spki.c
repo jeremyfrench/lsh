@@ -198,14 +198,19 @@ spki_hash_data(const struct hash_algorithm *algorithm,
 	       uint32_t length, uint8_t *data)
 {
   struct hash_instance *hash = make_hash(algorithm);
-  uint8_t *out = alloca(HASH_SIZE(hash));
-
+  struct lsh_string *digest;
+  struct lsh_string *out;
+  
   hash_update(hash, length, data);
-  hash_digest(hash, out);
+  digest = hash_digest_string(hash);
 
-  return lsh_string_format_sexp(0, "(hash%0s%s)",
-				"hash", get_atom_name(algorithm_name),
-				HASH_SIZE(hash), out);
+  out = lsh_string_format_sexp(0, "(hash%0s%s)",
+			       "hash", get_atom_name(algorithm_name),
+			       STRING_LD(digest));
+  KILL(hash);
+  lsh_string_free(digest);
+
+  return out;
 }  
 
 static void
