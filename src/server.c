@@ -382,13 +382,17 @@ static int do_send(struct ssh_channel *c)
   return LSH_OK | LSH_GOON;
 }
 
-static int do_eof(struct ssh_channel *c)
+static int do_eof(struct ssh_channel *channel)
 {
-  CAST(server_session, session, c);
+  CAST(server_session, session, channel);
 
   write_buffer_close(session->in->buffer);
 
-  return LSH_OK | LSH_GOON;
+  if ( (channel->flags & CHANNEL_SENT_EOF)
+       && (channel->flags & CHANNEL_CLOSE_AT_EOF))
+    return channel_close(channel);
+  else
+    return LSH_OK | LSH_GOON;
 }
 
 static void do_close(struct ssh_channel *c)
