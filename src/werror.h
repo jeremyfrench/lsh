@@ -49,5 +49,7 @@ void werror_safe_utf8(UINT32 length, UINT8 *msg);
 void fatal(char *format, ...) PRINTF_STYLE(1,2) NORETURN;
 
 void werror_mpz(mpz_t n);
-     
+void debug_mpz(mpz_t n);
+void verbose_mpz(mpz_t n);
+
 #endif /* LSH_ERROR_H_INCLUDED */

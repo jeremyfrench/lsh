@@ -169,6 +169,18 @@ void fatal(char *format, ...)
 
 void werror_mpz(mpz_t n)
 {
-  mpz_out_str(stderr, 16, n);
-  putc('\n', stderr);
+  if (!quiet_flag)
+    mpz_out_str(stderr, 16, n);
+}
+
+void debug_mpz(mpz_t n)
+{
+  if (debug_flag)
+    mpz_out_str(stderr, 16, n);
+}
+
+void verbose_mpz(mpz_t n)
+{
+  if (verbose_flag)
+    mpz_out_str(stderr, 16, n);
 }
