@@ -1,5 +1,8 @@
 2004-06-09  Niels Möller  <niels@s3.kth.se>
 
+	* src/testsuite/Makefile.am (TS_SH): Removed ssh1-fallback-test.
+	(EXTRA_DIST): Removed fake-sshd1.
+
 	* src/testsuite/fake-sshd1, src/testsuite/ssh1-fallback-test:
 	Deleted files.
 
