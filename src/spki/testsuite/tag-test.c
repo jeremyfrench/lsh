@@ -4,16 +4,13 @@ static int
 includes(unsigned alength, const uint8_t *adata,
 	 unsigned blength, const uint8_t *bdata)
 {
-  struct sexp_iterator a;
-  struct sexp_iterator b;
-  
-  ASSERT(sexp_iterator_first(&a, alength, adata));
-  ASSERT(sexp_iterator_first(&b, blength, bdata));
+  struct spki_tag *atag = make_tag(alength, adata);
+  struct spki_tag *btag = make_tag(blength, bdata);
 
-  if (spki_tag_includes(&a, &b))
+  if (spki_tag_includes(atag, btag))
     {
-      ASSERT(a.type == SEXP_END);
-      ASSERT(b.type == SEXP_END);
+      release_tag(atag);
+      release_tag(btag);
       return 1;
     }
   else
@@ -55,8 +52,6 @@ test_main(void)
   ASSERT(!INCLUDES("(1:*3:set(3:foo)(3:bar))",
 		   "(3:baz)"));
 
-  /* Set inclusions not implemented. */
-#if 0
   ASSERT(INCLUDES("(1:*3:set(3:foo)(3:bar))",
 		  "(1:*3:set(3:foo))"));
   ASSERT(INCLUDES("(1:*3:set(3:foo)(3:bar))",
@@ -65,5 +60,4 @@ test_main(void)
 		   "(1:*3:set(3:foo)(3:bar)(3:baz))"));
   ASSERT(!INCLUDES("(1:*3:set(3:foo)(3:bar))",
 		   "(1:*3:set(3:foo)(3:baz))"));
-#endif
 }
