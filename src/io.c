@@ -583,7 +583,7 @@ static void connect_callback(struct lsh_fd *fd)
     {
       debug("io.c: connect_callback: Connect failed.\n");
       EXCEPTION_RAISE(fd->e,
-		      make_io_exception(EXC_CONNECT, fd, 0, "connect() failed."));
+		      make_io_exception(EXC_IO_CONNECT, fd, 0, "connect() failed."));
     }
   else
     {
@@ -1042,10 +1042,12 @@ void io_init_fd(int fd)
 }
 
 /* Some code is taken from Thomas Bellman's tcputils. */
-struct connect_fd *io_connect(struct io_backend *b,
-			      struct sockaddr_in *remote,
-			      struct sockaddr_in *local,
-			      struct fd_callback *f)
+struct connect_fd *
+io_connect(struct io_backend *b,
+	   struct sockaddr_in *remote,
+	   struct sockaddr_in *local,
+	   struct fd_callback *f,
+	   struct exception_handler *e)
 {
   int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   
@@ -1076,8 +1078,7 @@ struct connect_fd *io_connect(struct io_backend *b,
   {
     NEW(connect_fd, fd);
 
-    /* FIXME: What handler to use? */
-    init_file(b, &fd->super, s, &default_exception_handler);
+    init_file(b, &fd->super, s, e);
 
     fd->super.want_write = 1;
     fd->super.write = connect_callback;

@@ -310,10 +310,12 @@ struct exception_handler *
 make_exc_finish_read_handler(struct lsh_fd *fd,
 			     struct exception_handler *parent);
 
-struct connect_fd *io_connect(struct io_backend *b,
-			      struct sockaddr_in *remote,
-			      struct sockaddr_in *local,
-			      struct fd_callback *f);
+struct connect_fd *
+io_connect(struct io_backend *b,
+	   struct sockaddr_in *remote,
+	   struct sockaddr_in *local,
+	   struct fd_callback *f,
+	   struct exception_handler *e);
 
 struct listen_fd *io_listen(struct io_backend *b,
 			    struct sockaddr_in *local,
