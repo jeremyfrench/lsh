@@ -71,6 +71,20 @@
 ;; (define (make-B* p q) (make-combine 'B* p q))
 ;; (define (make-C* p q) (make-combine 'C* p q))
 
+;; Some mor patterns that can ba useful for optimization. From "A
+;; combinator-based compiler for a functional language" by Hudak &
+;; Kranz.
+
+;; S K => K I
+;; S (K I) => I
+;; S (K (K x)) => K (K x)
+;; S (K x) I => x
+;; S (K x) (K y) => K (x y)
+;; S f g x = f x (g x)
+;; K x y => x
+;; I x => x
+;; Y (K x) => x
+
 (define optimizations
   (list (rule '(S (K *) (K *)) (lambda (p q) (make-K (make-appliction p q))))
 	(rule '(S (K *) I) (lambda (p) p))
