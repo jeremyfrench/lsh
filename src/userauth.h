@@ -123,52 +123,19 @@ struct spawn_info
        (read_file method "const struct exception *"
                   "const char *name" "int secret"
 		  "UINT32 limit"
-		  ; Get's the contents of the file
+		  ; Gets the contents of the file
 		  "struct abstract_write *c")
 		  
-       ; chdir to the user's home directory
-       (chdir_home method int)
-
        ; Spawns a user process executing the user's login shell.
-       ; Also closes the appropriate fd:s in info.
+       ; Also closes the appropriate fd:s in info. '
        (spawn method "struct lsh_process *"
               "struct spawn_info *info"
-              "struct exit_callback *c")
-	      
-       ; Fork a user process.
-
-       ; FIXME: For non-UN*X-systems, we need a method
-       ; that combines fork() and exec(). It would have lots of
-       ; input arguments, perhaps a tag list, and return
-       ; an object containing the stdin file objects and perhaps some
-       ; other info.
-
-       ; Perhaps POSIX process_spawn is suitable?
-
-       ; This function also returns the pid.
-
-       ; The tty argument is for utmp/wtmp logging
-       (fork_process method int "struct lsh_process **child"
-                     "struct exit_callback *c"
-                     "struct address_info * peer" "struct lsh_string *tty")
-
-       ; This modifies the argv vector, in particular its first
-       ; element. So the vector must have at least two elements,
-       ; (argv[0], NULL). 
-
-       (exec_shell method void "int login"
-                   "const char **argv"
-		   "unsigned env_length"
-		   "const struct env_value *env")))
+              "struct exit_callback *c")))
 */
 
 #define USER_VERIFY_PASSWORD(u, p, c, e) ((u)->verify_password((u), (p), (c), (e)))
 #define USER_FILE_EXISTS(u, n, f) ((u)->file_exists((u), (n), (f)))
 #define USER_READ_FILE(u, n, s, l, c) ((u)->read_file((u), (n), (s), (l), (c)))
-#define USER_CHDIR_HOME(u) ((u)->chdir_home((u)))
-#define USER_FORK(u, c, e, p, t) \
-  ((u)->fork_process((u), (c), (e), (p), (t)))
-#define USER_EXEC(u, m, a, l, e) ((u)->exec_shell((u), (m), (a), (l), (e)))
 #define USER_SPAWN(u, i, c) ((u)->spawn((u), (i), (c)))
 
 /* This prototype doesn't really belong here. */
