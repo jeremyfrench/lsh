@@ -55,7 +55,8 @@ static struct command make_tcpip_forward_handler;
 #define TCPIP_START_IO (&tcpip_start_io.super)
 #define TCPIP_CONNECT_IO (&tcpip_connect_io.super)
 #define OPEN_FORWARDED_TCPIP (&open_forwarded_tcpip.super.super.super)
-
+#define DIRECT_TCPIP_HANDLER (&make_direct_tcpip_handler.super)
+#define INSTALL_DIRECT_TCPIP (&install_direct_tcpip_handler.super.super.super)
 
 #include "tcpforward_commands.c.x"
 
@@ -362,9 +363,7 @@ STATIC_COLLECT_1(&collect_info_remote_listen_2);
    (expr
      (name forward_local_port)
      (globals
-       (listen LISTEN_COMMAND)
-       (start_io TCPIP_START_IO)
-       (open_direct_tcpip OPEN_DIRECT_TCPIP))
+       (listen LISTEN_COMMAND))
      (params
        (backend object io_backend)
        (local object address_info)
@@ -372,7 +371,7 @@ STATIC_COLLECT_1(&collect_info_remote_listen_2);
      (expr
        (lambda (connection)
          (listen (lambda (peer)
-	           (start_io (open_direct_tcpip target peer connection)))
+	           (tcpip_start_io (open_direct_tcpip target peer connection)))
 		 backend
 	         local))))
 */
@@ -484,17 +483,13 @@ STATIC_COLLECT_1(&install_forwarded_tcpip_info_2.super);
 /* GABA:
    (expr
      (name direct_tcpip_hook)
-     (globals
-       (install "&install_direct_tcpip_handler.super.super.super")
-       (handler "&make_direct_tcpip_handler.super")
-       (connect_io TCPIP_CONNECT_IO))
      (params
        (connect object command))
      (expr
        (lambda (connection)
-         (install connection
-	   (handler (lambda (port)
-	     (connect_io (connect connection port))))))))
+         (install_direct_tcpip connection
+	   (direct_tcpip_handler (lambda (port)
+	     (tcpip_connect_io (connect connection port))))))))
 */
 
 struct command *
@@ -521,8 +516,6 @@ STATIC_COLLECT_1(&install_tcpip_forward_info_2.super);
      (globals
        (install "&install_tcpip_forward_handler.super.super.super")
        (handler "&make_tcpip_forward_handler.super")
-       (start_io TCPIP_START_IO)
-       (open_forwarded_tcpip OPEN_FORWARDED_TCPIP)
        (listen LISTEN_COMMAND))
      (params
        (backend object io_backend))
@@ -535,7 +528,7 @@ STATIC_COLLECT_1(&install_tcpip_forward_info_2.super);
              (listen (lambda (peer)
 	               ;; Called when someone connects to the
 		       ;; forwarded port.
-                       (start_io (open_forwarded_tcpip port peer
+                       (tcpip_start_io (open_forwarded_tcpip port peer
 		                                       connection)))
 	             backend port)))))))
 */
