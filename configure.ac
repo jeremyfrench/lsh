@@ -758,25 +758,7 @@ AC_MSG_RESULT([done])
 # IPv6 support
 
 if test x$enable_ipv6 = xyes ; then
-  AC_CACHE_CHECK([if IPv6 is supported],
-    lsh_cv_sys_ipv6,
-    [AC_TRY_RUN([/* AF_INET6 avalable check */
-  #include <sys/types.h>
-  #include <sys/socket.h>
-  int main(int argc, char **argv)
-  {
-   if (socket(AF_INET6, SOCK_STREAM, 0) < 0)
-     exit(1);
-   else
-     exit(0);
-  }
-  ], lsh_cv_sys_ipv6=yes,
-     lsh_cv_sys_ipv6=no,
-     lsh_cv_sys_ipv6=no)])
-  
-  if test x$lsh_cv_sys_ipv6 != xyes ; then
-    enable_ipv6=no
-  elif test x$ac_cv_func_getaddrinfo != xyes ; then
+  if test x$ac_cv_func_getaddrinfo != xyes ; then
     AC_MSG_WARN([getaddrinfo not found. Disabling IPv6 support])
     enable_ipv6=no
   elif test x$ac_cv_func_gai_strerror != xyes ; then
