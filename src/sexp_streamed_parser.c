@@ -813,6 +813,96 @@ MAKE_PARSE_VALUE(transport_sexp)
 }
 
 static UINT32
+do_skip_comment(struct read_handler **s,
+		UINT32 available, UINT8 *data)
+{
+  CAST(parser, self, *s);
+  UINT32 i;
+  
+  if (!available)
+    {
+      SEXP_EOF(self->e, "EOF in comment.");
+      *s = NULL;
+      return 0;
+    }
+  
+  for (i = 0;  (i < available) && (data[i] != 0xa); i++)
+    ;
+  
+  if (i == available)
+    *s = self->next;
+  
+  return i;
+}
+
+static struct read_handler *
+make_parse_comment(struct exception_handler *e,
+		   struct read_handler *next)
+{
+  NEW(parser, self);
+  self->e = e;
+  self->next = next;
+  self->super.handler = do_skip_comment;
+
+  return &self->super;
+}
+
+/* FIXME: Doesn't implement the full advanced syntax, but at least
+ * allows extra white space. Also allows comments, starting with ';'
+ * and terminating at end of line. */
+MAKE_PARSE_VALUE(advanced_sexp)
+{
+  CAST(parse_value, self, *s);
+  unsigned i;
+
+  if (!available)
+    {
+      SEXP_EOF(self->super.e, "No more sexps.");
+      *s = NULL;
+      return 0;
+    }
+  
+  for (i = 0;  (i < available) && (sexp_char_classes[data[i]] & CHAR_space); i++)
+    ;
+  
+  if (i == available)
+    return i;
+  
+  switch(data[i])
+    {
+    case '[':
+      *s = make_parse_display(make_parse_literal, self->c,
+			      self->super.e, self->super.next);
+      return i + 1;
+
+    case '(':
+      *s = make_parse_list(0, make_parse_advanced_sexp,
+			   self->c, self->super.e, self->super.next);
+      return i + 1;
+
+    case '0': case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8': case '9':
+      *s = make_parse_length(data[i], make_return_string(self->c),
+			     self->super.e, self->super.next);
+      return i + 1;
+
+    case '{':
+      *s = make_parse_transport(make_parse_canonical_sexp,
+				self->c, self->super.e, self->super.next);
+      return i + 1;
+
+    case ';':  /* Comment */
+      *s = make_parse_comment(self->super.e, &self->super);
+      return i+1;
+      
+    default:
+      SEXP_ERROR(self->super.e, "Invalid ur unimplemented advanced-style expression");
+      *s = NULL;
+      return i;
+    }
+}
+
+static UINT32
 do_parse_loop(struct read_handler **s,
 	      UINT32 available,
 	      UINT8 *data)
@@ -858,7 +948,8 @@ make_read_sexp(int style, int goon,
       break;
     case SEXP_ADVANCED:
     case SEXP_INTERNATIONAL:
-      fatal("Not implemented!\n");
+      reader = make_parse_advanced_sexp(c, e, &loop->super);
+      break;
     default:
       fatal("Internal error!\n");
     }
