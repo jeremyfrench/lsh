@@ -61,21 +61,17 @@ static struct sexp_print_command write_transport
    (expr
      (name make_writekey)
      (globals
-       ;; (prog1 PROG1)
-       ;; (private2public PRIVATE2PUBLIC)
        (open IO_WRITE_FILE)
        (stdin IO_READ_STDIN)
-       (read READ_SEXP)
-       ;; (transport TRANSPORT)
-       ;; (canonical CANONICAL)
-       )
+       (read READ_SEXP) )
      (params
        (private object io_write_file_info)
        (public object io_write_file_info))
      (expr
        (lambda (backend)
          (let ((key (read (stdin backend))))
-           (prog1 (transport (open backend public) (private2public key))
+           (prog1 (transport (open backend public)
+	                     (signer2public (spki_parse_private_key key)))
 	          ; FIXME: Add encryption here
 	          (canonical (open backend private) key))))))
 */
