@@ -1,4 +1,5 @@
 dnl -*-shell-script-*-
+dnl $Id$
 
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(keyexchange.h)
@@ -58,11 +59,18 @@ dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
+AM_PROG_CC_STDC
+
+if test x$am_cv_prog_cc_stdc = xno ; then
+  AC_ERROR([the C compiler doesn't handle ANSI-C])
+fi
 
 dnl Checks for libraries.
-AC_CHECK_LIB(gmp, mpz_set_d)
+AC_CHECK_LIB(gmp, mpz_set_d, [],
 dnl Some debian systems have both gmp1 and gmp2.
-AC_CHECK_LIB(gmp2, mpz_set_d)
+    [AC_CHECK_LIB(gmp2, mpz_set_d, [],
+	AC_ERROR([GMP is missing (ftp://ftp.gnu.org/pub/gnu/gmp-2.0.2.tar.gz)]))])
+
 AC_CHECK_LIB(z, inflate, [], [with_zlib=no])
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
@@ -71,8 +79,12 @@ AC_CHECK_LIB(socket, setsockopt)
 
 dnl Checks for header files.
 AC_HEADER_STDC
+
+dnl Some debian systems have both gmp1 and gmp2.
+AC_CHECK_HEADERS(gmp2.h gmp.h, [break], 
+  [AC_ERROR([Neither gmp.h nor gmp2.h found])])
+  
 AC_CHECK_HEADERS(fcntl.h strings.h sys/time.h unistd.h)
-AC_CHECK_HEADERS(gmp.h)
 AC_CHECK_HEADERS(shadow.h)
 AC_CHECK_HEADERS(zlib.h, [], [with_zlib=no])
 
@@ -103,8 +115,8 @@ AC_CHECK_FUNCS(getspnam)
 AC_REPLACE_FUNCS(poll)
 
 dnl Check for broken shutdown
-AC_MSG_CHECKING(for working shutdown on AF_UNIX sockets)
-AC_CACHE_VAL(lsh_shutdown_on_unix_sockets,
+AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
+	       lsh_cv_func_shutdown_works_on_unix_sockets,
 [
 AC_TRY_RUN([
 #include <stdio.h>
@@ -141,12 +153,14 @@ static int make_pipe(int *fds)
 
   if(shutdown(fds[0], SHUT_WR) < 0)
     {
-      fprintf(stderr, "shutdown(%d, SHUT_WR) failed: %s\n", fds[0], strerror(errno));
+      fprintf(stderr, "shutdown(%d, SHUT_WR) failed: %s\n",
+	      fds[0], strerror(errno));
       return 0;
     }
   if (shutdown(fds[1], SHUT_RD) < 0)
     {
-      fprintf(stderr, "shutdown(%d, SHUT_RD) failed: %s\n", fds[1], strerror(errno));
+      fprintf(stderr, "shutdown(%d, SHUT_RD) failed: %s\n",
+	      fds[1], strerror(errno));
       return 0;
     }
 
@@ -172,18 +186,18 @@ int main(int argc, char **argv)
 
   exit(0);
 }
-], lsh_shutdown_on_unix_sockets=yes, lsh_shutdown_on_unix_sockets=no,
-   lsh_shutdown_on_unix_sockets=yes)])
+], lsh_cv_func_shutdown_works_on_unix_sockets=yes,
+   lsh_cv_func_shutdown_works_on_unix_sockets=no,
+   lsh_cv_func_shutdown_works_on_unix_sockets=yes)])
 
-AC_MSG_RESULT($lsh_shutdown_on_unix_sockets)
-if test x$lsh_shutdown_on_unix_sockets = xyes ; then
+if test x$lsh_cv_func_shutdown_works_on_unix_sockets = xyes ; then
     AC_DEFINE(SHUTDOWN_WORKS_WITH_UNIX_SOCKETS)
 fi
 
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then
-    CFLAGS="$CFLAGS -Wall -Wmissing-prototypes \
-                 -Wmissing-declarations"
+    CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wmissing-declarations \
+      -Wstrict-prototypes -Waggregate-return"
 fi
 
 AC_OUTPUT(Makefile lib/Makefile include/Makefile)
