@@ -121,7 +121,6 @@ do_tcpip_receive(struct ssh_channel *c,
   switch (type)
     {
     case CHANNEL_DATA:
-      /* FIXME: What exception handler should we use? */
       A_WRITE(&closure->socket->write_buffer->super, data);
       break;
     case CHANNEL_STDERR_DATA:
@@ -285,7 +284,7 @@ do_channel_open_direct_tcpip(struct channel_open *s,
 	 make_address_info(dest_host, dest_port),
 	 make_open_forwarded_tcpip_continuation(connection, c, e),
 	 /* FIXME: Which exception handler should we use? */
-	 &default_exception_handler /* make_open_forwarded_tcpip_raise(response) */);
+	 e /* make_open_forwarded_tcpip_raise(response) */);
     }
   else
     {
@@ -417,7 +416,8 @@ do_tcpip_forward_request(struct global_request *s,
 	COMMAND_CALL(self->callback,
 		     a,
 		     make_tcpip_forward_request_continuation
-		     (connection, forward, c), 
+		     (connection, forward, c),
+		     /* FIXME: Use a better exception handler */
 		     &default_exception_handler
 		     /* make_tcpip_forward_request_raise
 			(connection, forward) */ );
@@ -524,7 +524,7 @@ do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
 		       make_address_info(peer_host, peer_port),
 		       make_open_forwarded_tcpip_continuation(connection, c, e),
 		       /* FIXME: Use a better exception handler */
-		       &default_exception_handler
+		       e
 		       /* make_open_forwarded_tcpip_raise(response) */);
 	  return;
 	}
