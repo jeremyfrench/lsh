@@ -948,15 +948,15 @@ make_unix_user(struct lsh_string *name,
  *   usually don't want remote logins on pasword-less accounts). We may
  *   need to make this check optional, though.
  *
- * o If the passwd entry starts with a "*", consider the account
- *   disabled. (Other bogus values like "NP" means that the account is
- *   enabled, only password login is disabled)
+ * o If the passwd entry starts with a "*" and is longer than one
+ *   character, consider the account disabled. (Other bogus values like
+ *   "NP" means that the account is enabled, only password login is
+ *   disabled)
  *
  * o Otherwise, the account is active, and a user record is returned.
  *
- * FIXME: One problem is sites that have active accounts with "*" in
- * the password field. This seems common at sites using kerberos. We
- * may need some option to disable the "*" == disabled interpretation.
+ * FIXME: What about systems that uses a single "*" to disable
+ * accounts?
  */
 
 static struct lsh_user *
@@ -1072,11 +1072,15 @@ do_lookup_user(struct user_db *s,
 	}
 #endif /* HAVE_GETSPNAM */
       /* Check again for empty passwd field (as it may have been
-       * replaced by the shadow one), and check if crypted starts with
-       * a star. */
-      if (!crypted || !*crypted || (*crypted == '*'))
+       * replaced by the shadow one). */
+      if (!crypted || !*crypted)
 	goto fail;
 
+      /* A passwd field of more than one character, which starts with a star,
+       * indicates a disabled account. */
+      if ( (crypted[0] == '*') && crypted[1])
+	goto fail;
+      
       home = passwd->pw_dir;
     }
   

@@ -1,5 +1,8 @@
 2002-06-26  Niels Möller  <niels@s3.kth.se>
 
+	* src/unix_user.c (do_lookup_user): Don't treat accounts with a
+	single "*" in the paswd-field as disabled.
+
 	* src/spki.c (spki_pkcs5_decrypt): Bug fixes. Friendlier pass
 	phrase prompt.
 
