@@ -108,7 +108,7 @@ do_lshg_send_debug(struct command *s,
   CAST(lshg_simple_action, self, s);
   CAST(ssh_connection, connection, x);
 
-  send_debug_message(connection->write, self->msg, 1);
+  send_debug_message(connection, self->msg, 1);
 }
 
 static struct command *
@@ -130,7 +130,8 @@ do_lshg_send_ignore(struct command *s,
   CAST(lshg_simple_action, self, s);
   CAST(ssh_connection, connection, x);
 
-  C_WRITE(connection, ssh_format("%c%z", SSH_MSG_IGNORE, self->msg));
+  /* Can be sent even during key exchange. */
+  C_WRITE_NOW(connection, ssh_format("%c%z", SSH_MSG_IGNORE, self->msg));
 }
 
 static struct command *
