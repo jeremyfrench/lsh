@@ -38,6 +38,89 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#if 0
+/* GABA:
+   (class
+     (name interact_unix)
+     (super abstract_interact)
+     (vars
+       (tty_fd . int)
+       (dims . "struct terminal_dimensions")
+       (changed . sig_atomic_t)))
+*/
+
+static int
+unix_is_tty(struct abstract_interact *s)
+{
+  CAST(interact_unix, self, s);
+
+  return self->tty_fd >= 0;
+}
+
+
+/* FIXME: Rewrite to operate on tty_fd. */
+static struct lsh_string *
+unix_read_password(struct abstract_interact *s UNUSED,
+		   int max_length UNUSED,
+		   struct lsh_string *prompt, int free)
+{
+  /* NOTE: Ignores max_length; instead getpass()'s limit applies. */
+
+  char *password;
+  
+  prompt = make_cstring(prompt, free);
+
+  if (!prompt)
+    return 0;
+
+  /* NOTE: This function uses a static buffer. */
+  password = getpass(prompt->data);
+
+  lsh_string_free(prompt);
+  
+  if (!password)
+    return 0;
+
+  return format_cstring(password);
+}
+
+static int
+unix_yes_or_no(struct abstract_interact *s,
+	       struct lsh_string *s, int def, int free)
+{
+  CAST(interact_unix, self, s);
+  UINT8 buffer[TTY_BUFSIZE];
+  const struct exception *e;
+  
+  if ( (self->tty_fd < 0) || quiet_flag)
+    {
+      if (free)
+	lsh_string_free(s);
+      return def;
+    }
+  
+  e = write_raw(self->tty_fd, s->length, s->data);
+
+  if (free)
+    lsh_string_free(s);
+
+  if (e)
+    return def;
+
+  if (!tty_read_line(TTY_BUFSIZE, buffer))
+    return def;
+
+  switch (buffer[0])
+    {
+    case 'y':
+    case 'Y':
+      return 1;
+    default:
+      return 0;
+    }
+}	       
+
+#endif
 
 int tty_fd = -1;
 

@@ -28,6 +28,34 @@
 
 #include "lsh.h"
 
+/* Abstract class defining methods needed to comminucate with the
+   user's terminal. */
+
+struct terminal_dimensions
+{
+  UINT32 char_width;
+  UINT32 char_height;
+  UINT32 pixel_width;
+  UINT32 pixel_heght;
+};
+
+/* GABA:
+   (class
+     (name abstract_interact)
+     (vars
+       (is_tty method int)
+       ; (read_line method int "UINT32 size" "UINT8 *buffer")
+       (read_password method string
+                  "UINT32 max_length"
+                  "struct lsh_string *prompt"
+		  "int free")
+       (yes_or_no method int
+                  "struct lsh_string *prompt"
+		  "int def" "int free")
+       (window_change method int
+                  "struct terminal_dimensions *d")))
+*/
+
 extern int tty_fd;
 
 int lsh_open_tty(void);
