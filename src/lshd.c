@@ -434,11 +434,16 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 	  else
 	    {
 	      /* Child process */
+	      struct lsh_string *hex;
+	      
 	      close(pipe[0]);
 	      dup2(pipe[1], STDIN_FILENO);
 	      dup2(pipe[1], STDOUT_FILENO);
 	      close(pipe[1]);
-	      execl(program, program, NULL);
+
+	      hex = ssh_format("%lxS", connection->session_id);
+
+	      execl(program, program, "--session-id", lsh_string_data(hex), NULL);
 
 	      werror("lshd_service_request_handler: exec failed: %e\n", errno);
 	      _exit(EXIT_FAILURE);
