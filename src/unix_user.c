@@ -356,7 +356,9 @@ kerberos_check_pw(struct unix_user *user, struct lsh_string *pw,
 
 	close(in[0]);
 
-	fd = io_write(make_lsh_fd(user->ctx->backend, in[1], e),
+	fd = io_write(make_lsh_fd(user->ctx->backend,
+				  in[1], "password helper stdin",
+				  e),
 		      pw->length, NULL);
 
 	A_WRITE(&fd->write_buffer->super, pw);
@@ -592,9 +594,10 @@ do_read_file(struct lsh_user *u,
       /* Parent */
       close(out[1]);
 
-      /* NOTE: We could install an exit handler for tre child process,
+      /* NOTE: We could install an exit handler for the child process,
        * but there's nothing useful for that to do. */
-      COMMAND_RETURN(c, make_lsh_fd(user->ctx->backend, out[0], e));
+      COMMAND_RETURN(c, make_lsh_fd(user->ctx->backend,
+				    out[0], "stdout, reading a user file", e));
 
       lsh_string_free(f);
       return;

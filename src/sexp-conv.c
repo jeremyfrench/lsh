@@ -400,13 +400,14 @@ int main(int argc, char **argv)
 		   options->transform,
 		   options->print,
 		   &(io_write(make_lsh_fd(backend,
-					 STDOUT_FILENO,
+					  STDOUT_FILENO,
+					  "stdout",
 					 e),
 			      SEXP_BUFFER_SIZE,
 			      NULL)
 		     ->write_buffer->super)));
 
-    struct lsh_fd *in = make_lsh_fd(backend, STDIN_FILENO, e);
+    struct lsh_fd *in = make_lsh_fd(backend, STDIN_FILENO, "stdin", e);
 
     /* Fixing the exception handler creates a circularity */
     e->parent = make_exc_finish_read_handler(in,

@@ -466,7 +466,7 @@ spawn_process(struct server_session *session,
 		= make_channel_read_close_callback(channel);
 
 	      session->in
-		= io_write(make_lsh_fd(backend, in[1],
+		= io_write(make_lsh_fd(backend, in[1], "child stdin",
 				       io_exception_handler),
 			   SSH_MAX_PACKET, NULL);
 	  
@@ -477,12 +477,14 @@ spawn_process(struct server_session *session,
 	       * which will close the channel on read errors, or is it
 	       * better to just send EOF on read errors? */
 	      session->out
-		= io_read(make_lsh_fd(backend, out[0], io_exception_handler),
+		= io_read(make_lsh_fd(backend, out[0], "child stdout",
+				      io_exception_handler),
 			  make_channel_read_data(channel),
 			  read_close_callback);
 	      session->err 
 		= ( (err[0] != -1)
-		    ? io_read(make_lsh_fd(backend, err[0], io_exception_handler),
+		    ? io_read(make_lsh_fd(backend, err[0], "child stderr",
+					  io_exception_handler),
 			      make_channel_read_stderr(channel),
 			      read_close_callback)
 		    : NULL);

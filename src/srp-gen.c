@@ -161,7 +161,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  }
 	else
 	  {
-	    fd = io_write(make_lsh_fd(self->backend, STDIN_FILENO, self->e),
+	    fd = io_write(make_lsh_fd(self->backend,
+				      STDOUT_FILENO, "stdout",
+				      self->e),
 			  BLOCK_SIZE, NULL);
 	  }
 	self->dest = &fd->write_buffer->super;

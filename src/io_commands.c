@@ -111,7 +111,8 @@ void do_io_read_fd(struct command *s,
   CAST(io_read_fd, self, s);
   CAST(io_backend, backend, a);
 
-  COMMAND_RETURN(c, make_lsh_fd(backend, self->fd, e));
+  COMMAND_RETURN(c, make_lsh_fd(backend,
+				self->fd, "io_read_stdin", e));
 }
 
 struct io_read_fd io_read_stdin

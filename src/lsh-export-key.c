@@ -380,7 +380,7 @@ int main(int argc, char **argv)
 	}
     }
   else
-    in = make_lsh_fd(backend, STDIN_FILENO, e);
+    in = make_lsh_fd(backend, STDIN_FILENO, "stdin", e);
       
   if (options->outfile)
     {
@@ -389,7 +389,8 @@ int main(int argc, char **argv)
 			  SEXP_BUFFER_SIZE, NULL, e);
     }
   else
-    out = io_write(make_lsh_fd(backend, STDOUT_FILENO, e),
+    out = io_write(make_lsh_fd(backend, STDOUT_FILENO,
+			       "stdout", e),
 		   SEXP_BUFFER_SIZE, NULL);
 
   {

@@ -785,11 +785,14 @@ make_client_session(struct client_options *options)
   options->stdin_file = options->stdout_file = options->stderr_file = NULL;
   
   return make_client_session_channel
-    (io_read(make_lsh_fd(options->backend, in, options->handler),
+    (io_read(make_lsh_fd(options->backend,
+			 in, "client stdin", options->handler),
 	     NULL, NULL),
-     io_write(make_lsh_fd(options->backend, out, options->handler),
+     io_write(make_lsh_fd(options->backend,
+			  out, "client stdout", options->handler),
 	      BLOCK_SIZE, NULL),
-     io_write(make_lsh_fd(options->backend, err, options->handler),
+     io_write(make_lsh_fd(options->backend,
+			  err, "client stderr", options->handler),
 	      BLOCK_SIZE, NULL),
      WINDOW_SIZE,
      options->exit_code);
