@@ -100,7 +100,7 @@ crypt_string(struct crypto_instance *c,
 {
   struct lsh_string *out = (free ? in : lsh_string_alloc(in->length));
   CRYPT(c, in->length, in->data, out->data);
-
+  
   return out;
 }
 

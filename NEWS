@@ -1,3 +1,12 @@
+News for the lsh-0.1.18 release
+
+	lsh now reads ACL:s from the ~/.lsh/known_hosts file.
+
+	First attempt at a m4-based testsuite. It depends on m4 being
+	able to handle the eight-bit quote characters » and «. If your
+	m4 doesn't do that, get the latest beta of GNU m4 or recompile
+	GNU m4-1.4 with CFLAGS=-funsigned-char.
+
 News for the lsh-0.1.17 release
 
 	More support for host authentication and SPKI.
