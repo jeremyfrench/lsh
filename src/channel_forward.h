@@ -53,5 +53,11 @@ channel_forward_start_io(struct channel_forward *channel_forward);
 extern struct command start_io_command;
 #define START_IO (&start_io_command.super)
 
+/* FIXME: Move forward declaration to lsh.h? */
+struct catch_report_collect;
+
+extern struct catch_report_collect catch_channel_open;
+#define CATCH_CHANNEL_OPEN (&catch_channel_open.super.super)
+
 #endif /* LSH_CHANNEL_FORWARD_H_INCLUDED */
 

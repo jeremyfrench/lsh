@@ -155,3 +155,10 @@ DEFINE_COMMAND(start_io_command)
 
   COMMAND_RETURN(c, channel);  
 }
+
+static const struct report_exception_info forward_open_report =
+STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_OPEN,
+			     "Forwarding failed, coudl not open channel");
+
+struct catch_report_collect catch_channel_open
+= STATIC_CATCH_REPORT(&forward_open_report);

@@ -68,17 +68,8 @@ static struct install_info install_tcpip_forward_handler;
 struct command make_tcpip_forward_handler;
 #define TCPIP_FORWARD_HANDLER (&make_tcpip_forward_handler.super)
 
-static struct catch_report_collect catch_channel_open;
-#define CATCH_CHANNEL_OPEN (&catch_channel_open.super.super)
-
 #include "tcpforward_commands.c.x"
 
-static const struct report_exception_info open_tcpip_report =
-STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_OPEN,
-			     "Failed to open tcpip channel");
-
-static struct catch_report_collect catch_channel_open
-= STATIC_CATCH_REPORT(&open_tcpip_report);
 
 /* Takes a socket as argument, and returns a tcpip channel. Used by
  * the party receiving a open-tcp request, when a channel to the
