@@ -15,6 +15,13 @@ integer. And some actions are orthogonal. For instance, a handler may
 fork, and send a few messages. Now, both the fork action and any error
 codes from writing must be taken care of.
 
+Perhaps errors when processing data on one socket should propagate to
+another one?
+
+Can one safely assume that the only error that can occur when sending
+a packet (typically by A_WRITE(connection->write, packet)) is LSH_FAIL
+| LSH_CLOSE?
+
 
 KEYS
 
