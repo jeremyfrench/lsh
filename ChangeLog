@@ -1,5 +1,19 @@
 2004-11-20  Pontus Freyhult  <pont@soua.net>
 
+	* doc/ssh-conv.1, doc/lsh-upgrade.1, doc/lsh-make-seed.1,
+	doc/lsh-keygen.1, doc/lsh-keygen.1, doc/lsh-export-key.1,
+	doc/lsh-decrypt-key.1, doc/lsh-decode-key.1, doc/lsh-writekey.1,
+	doc/lsh-authorize.1, doc/lsh-upgrade-key.1, doc/lsh.1, 
+	doc/lshd.8, doc/lshg.1: Added disclaimer pointing to info system.
+	
+	* doc/ssh-conv.1 (lsh-decode-key): New manpage.
+
+	* doc/lsh-upgrade.1: Misc. fixes.
+
+	* doc/lsh-make-seed.1: New manpage.
+
+	* doc/lsh-keygen.1: New manpage.
+
 	* doc/lsh-export-key.1: New manpage.
 
 	* doc/lsh-decrypt-key.1: New manpage.

@@ -22,11 +22,12 @@
 .\" maintainers of the package you received this manual from and make your
 .\" modified versions available to them.
 .\"
-.TH LSH-UPGRADE-KEY 1 "NOVEMBER 2004" LSH-UPGRADE-KEY "Lsh Manuals"
+.TH SSH-CONV 1 "NOVEMBER 2004" SSH-CONV "Lsh Manuals"
 .SH NAME
-lsh-upgrade-key \- script for key conversion to lsh 2.0 format
+ssh-conv \- script to convert OpenSSH/SSH2 keys to lsh format
 .SH SYNOPSIS
-.B lsh-upgrade-key KEY-FILE
+.B ssh-conv 
+[\fIOPTION\fR...]
 
 .SH DESCRIPTION
 .B CAUTION! The information in this manpage may be invalid or outdated. For authorative
@@ -34,11 +35,29 @@ lsh-upgrade-key \- script for key conversion to lsh 2.0 format
 .I SEE\ ALSO
 .B section).
 
-The key in KEY-FILE is converted to the new format and stored in
-KEY-FILE.new (i.e. the suffix .new is added to the KEY-FILE name).
+Converts an OpenSSH style public key to spki format used by lsh. Reads the key from 
+stdin and outputs the converted key on stdout.
+
+Example usage:
+
+.PD 0
+$ ssh-conv < /home/pont/.ssh/id_dsa.pub
+.PP
+lsh-decode-key: lsh-decode-key: Reading key of type ssh-dss...
+.PP
+{KDEwOnB1YmxpYy1rZXkoMzpkc2EoMTpwMTI5OgD1qRFBMowgnnOzjOp3HptHWf9836wy/3F59d8DfWWehKgy8DNISgmzCnRNXReL/5PvTZwFID2KvEYfyxAYy4uTSJbtkzDfsicGWi7nYbXu2VpWHpNdhsaKrEu9iXmQb4JoN1grC0QsaCZrngACZRKEAklPH9ubwCMBK55yRP27gykoMTpxMjE6AIoOrpe064y7L2oYQqBE3sNskW19KSgxOmcxMjg6Olyu4xMIWsUBeVnbg2oUBvvbcsnHHhHyDVHmMZ1ERhDCLl6gjIsbWjBIBIXZUaFJ6AO236CfgdM5Rop5XYmcIIA9G7QD2GWTe48MGdjFQVyr2SKoDiNFKSJXqHVYzZJeosvz6FyTDt7aGNGqcL0tG7GXl9savALtRSQRfO9JlOcpKDE6eTEyOToAwyzp6sIt6KsLhFoeM9ADA7opHq4lFT6bS8su9g3KBGqGG4JNsEN9CI5SnLpqsfVm5SxmqPMPJvdGVOqAjjfzsv7SvfhSBUHXYeYpgci49pfc5bZCh/EYzX7bVnOVV3gQgNGeT0FN1gf9vTUMKh1VGPRfm7unXNqjBLEMYmlRwqcpKSk=}
+.PP
+$
+.PP
+.PD
 
 
+.SH OPTIONS
 
+.TP
+\fB\-\-decode\-with\fR PROGRAM-NAME
+The program to use for the
+actual decoding.
 
 .SH "REPORTING BUGS"
 Report bugs to <bug-lsh@gnu.org>.
@@ -62,13 +81,14 @@ J.H.M. Dassen (Ray) <jdassen@wi.LeidenUniv.nl>.
 .BR lsh-authorize (1),
 .BR lsh-decode-key (1),
 .BR lsh-decrypt-key (1),
+.BR lsh-export-key (1),
 .BR lsh-keygen (1),
 .BR lsh-make-seed (1),
 .BR lsh-upgrade (1),
 .BR lsh-upgrade-key (1),
 .BR lsh-writekey (1),
-.BR lshd (8),
-.BR ssh-conv (1)
+.BR lshd (8)
+
 
 The full documentation for
 .B lsh
