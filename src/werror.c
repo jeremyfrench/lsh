@@ -182,6 +182,8 @@ void verbose(const char *format, ...)
 
 static void wash_char(UINT8 c)
 {
+  static const char hex[16] = "0123456789abcdef";
+  
   switch(c)
     {
     case '\\':
@@ -195,8 +197,8 @@ static void wash_char(UINT8 c)
       if (!isprint(c))
 	{
 	  werror_putc('\\');
-	  werror_putc(c / 16);
-	  werror_putc(c % 16);
+	  werror_putc(hex[c / 16]);
+	  werror_putc(hex[c % 16]);
 	  break;
 	}
       /* Fall through */
@@ -332,7 +334,7 @@ static void write_hex(UINT32 length, UINT8 *data)
     
     w_nprintf(4, "%02x ", data[i]);
   }
-  w_nprintf(1, "\n");
+  w_nprintf(2, "\n");
   werror_flush();
 }
 
