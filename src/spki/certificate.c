@@ -5,6 +5,8 @@
 #include "nettle/md5.h"
 #include "nettle/sha.h"
 
+#include "nettle/sexp.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -103,4 +105,23 @@ spki_principal_by_key(struct spki_acl_db *db,
       return s;
   
   return NULL;
+}
+
+
+
+/* ACL database */
+struct spki_acl *
+spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
+{
+  NEW(db, struct spki_acl, acl);
+
+  /* FIXME: How about detailed error reporting? */
+  if (!acl)
+    return NULL;
+
+  if (!sexp_iterator_check_type(i, "acl"))
+    return NULL;
+
+  /* XXX */
+  return NULL;  
 }
