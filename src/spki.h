@@ -67,6 +67,17 @@ int spki_check_type(struct sexp *e, int type, struct sexp_iterator **res);
 struct sexp *
 make_ssh_hostkey_tag(struct address_info *host);
 
+struct verifier *
+spki_make_verifier(struct alist *algorithms,
+		   struct sexp *e);
+
+struct signer *
+spki_make_signer(struct alist *algorithms,
+		 struct sexp *e,
+		 int *type);
+
+struct sexp *
+spki_make_public_key(struct signer *signer);
 
 struct sexp *
 dsa_to_spki_public_key(struct dsa_public *p);

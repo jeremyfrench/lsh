@@ -105,7 +105,90 @@ make_ssh_hostkey_tag(struct address_info *host)
 		sexp_s(NULL, reversed),
 		-1);
 }      
+
+
+struct verifier *
+spki_make_verifier(struct alist *algorithms,
+		   struct sexp *e)
+{
+  /* Syntax: (<algorithm> <s-expr>*) */
+  struct signature_algorithm *algorithm;
+  struct verifier *v;
+  int algorithm_name;
+  struct sexp_iterator *i;
+
+  algorithm_name = spki_get_type(e, &i);
   
+  algorithm = ALIST_GET(algorithms, algorithm_name);
+
+  if (!algorithm)
+    {
+      werror("spki_make_verifier: Unsupported algorithm %a.\n", algorithm_name);
+      return NULL;
+    }
+
+  v = MAKE_VERIFIER(algorithm, i);
+  KILL(i);
+  
+  if (!v)
+    {
+      werror("spki_make_verifier: Invalid public-key data.\n");
+      return NULL;
+    }
+  
+  return v;
+}
+
+
+/* Returns the algorithm type, or zero on error. */
+struct signer *
+spki_make_signer(struct alist *algorithms,
+		 struct sexp *e,
+		 int *type)
+{
+  /* Syntax: (<algorithm> <s-expr>*) */
+  struct signature_algorithm *algorithm;
+  struct signer *s;
+  int algorithm_name;
+  struct sexp_iterator *i;
+
+  algorithm_name = spki_get_type(e, &i);
+
+  if (!algorithm_name)
+    return NULL;
+  
+  algorithm = ALIST_GET(algorithms, algorithm_name);
+
+  if (!algorithm)
+    {
+      werror("spki_make_signer: Unsupported algorithm %a.\n", algorithm_name);
+      return NULL;
+    }
+
+  s = MAKE_SIGNER(algorithm, i);
+  KILL(i);
+  
+  if (!s)
+    {
+      werror("spki_make_signer: Invalid public-key data.\n");
+      return NULL;
+    }
+
+  if (type)
+    *type = algorithm_name;
+
+  return s;
+}
+
+struct sexp *
+spki_make_public_key(struct signer *signer)
+{
+  return sexp_l(2, SA(PUBLIC_KEY),
+		SIGNER_PUBLIC(signer), -1);
+}
+
+/* FIXME: Replace this by something more general. */
+#if 1
 struct sexp *
 dsa_to_spki_public_key(struct dsa_public *dsa)
 {
@@ -118,7 +201,7 @@ dsa_to_spki_public_key(struct dsa_public *dsa)
 		       -1),
 		-1);
 }
-
+#endif
 
 /* Returns 0 or an atom */
 int spki_get_type(struct sexp *e, struct sexp_iterator **res)
@@ -146,7 +229,7 @@ int spki_get_type(struct sexp *e, struct sexp_iterator **res)
 COMMAND_SIMPLE(spki_signer2public)
 {
   CAST_SUBTYPE(signer, private, a);
-  return &SIGNER_PUBLIC(private)->super;
+  return &spki_make_public_key(private)->super;
 }
 
 struct sexp *
@@ -213,11 +296,8 @@ const struct spki_hash spki_hash_md5 =
 const struct spki_hash spki_hash_sha1 =
 { STATIC_COMMAND(do_spki_hash), ATOM_SHA1, &sha1_algorithm };
 
-
   
-/* Used for both sexp2keypair and sexp2signer.
- *
- * FIXME: There is some overlap between those two functions. */
+/* Used for both sexp2keypair and sexp2signer. */
 
 /* GABA:
    (class
@@ -242,24 +322,18 @@ do_spki_sexp2signer(struct command *s,
   if (sexp_check_type(key, ATOM_PRIVATE_KEY, &i)) 
     {
       struct sexp *expr = SEXP_GET(i);
-      struct sexp_iterator *inner;
-      int type = spki_get_type(expr, &inner);
+      struct signer *s;
+      
+      if (!expr)
+	SPKI_ERROR(e, "spki.c: Invalid key.", key); 
 
-      CAST_SUBTYPE(signature_algorithm, algorithm,
-		   ALIST_GET(self->algorithms, type));
-
-      if (algorithm)
-	{
-	  struct signer *s = MAKE_SIGNER(algorithm, inner);
-	  if (s)
-	    /* Test key here? */
-	    COMMAND_RETURN(c, s);
-	  else
-	    {
-	      werror("parse_private_key: Invalid key.\n");
-	      SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
-	    }
-	}
+      s = spki_make_signer(self->algorithms, expr, NULL);
+      
+      if (s)
+	/* Test key here? */
+	COMMAND_RETURN(c, s);
+      else
+	SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
     }
   else
     SPKI_ERROR(e, "spki.c: Expected private-key expression.", key);
@@ -284,42 +358,40 @@ parse_private_key(struct alist *algorithms,
 		  struct exception_handler *e)
 {
   struct sexp *expr = SEXP_GET(i);
-  struct sexp_iterator *inner;
-  int type = spki_get_type(expr, &inner);
-
-  CAST_SUBTYPE(signature_algorithm, algorithm,
-	       ALIST_GET(algorithms, type));
-
-  if (algorithm)
+  int algorithm_name;
+  struct signer *s;
+  
+  if (!expr)
     {
-      struct signer *s = MAKE_SIGNER(algorithm, inner);
-      if (!s)
-	{
-	  werror("parse_private_key: Invalid key.\n");
-	  SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
-	  return;
-	}
-      /* Test key here? */
-      switch (type)
-	{
-	case ATOM_DSA:
-	  COMMAND_RETURN(c, make_keypair(ATOM_SSH_DSS,
-					 ssh_dss_public_key(s),
-					 s));
-	  /* Fall through */
-	default:
-	  /* Get a corresponding public key. */
-	  COMMAND_RETURN(c, make_keypair(ATOM_SPKI,
-					 sexp_format(SIGNER_PUBLIC(s), SEXP_CANONICAL, 0),
-					 s));
-
-	  break;
-	}
+      werror("parse_private_key: Invalid key.\n");
+      SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
+      return;
     }
-  else
+
+  s = spki_make_signer(algorithms, expr, &algorithm_name);
+
+  if (!s)
     {
-      werror("spki.c: Unknown key type (only dsa is supported).\n");
-      SPKI_ERROR(e, "spki.c: Unknown key type (only dsa is supported).", expr);
+      SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
+      return;
+
+    }
+
+  /* Test key here? */  
+  switch (algorithm_name)
+    {	  
+    case ATOM_DSA:
+      COMMAND_RETURN(c, make_keypair(ATOM_SSH_DSS,
+				     ssh_dss_public_key(s),
+				     s));
+      /* Fall through */
+    default:
+      /* Get a corresponding public key. */
+      COMMAND_RETURN(c, make_keypair(ATOM_SPKI,
+				     sexp_format(spki_make_public_key(s), SEXP_CANONICAL, 0),
+				     s));
+
+      break;
     }
 }
 
@@ -871,38 +943,6 @@ spki_subject_by_hash(struct spki_state *self,
 	return subject;
     }
   return NULL;
-}
-
-static struct verifier *
-spki_make_verifier(struct alist *algorithms,
-		   struct sexp *e)
-{
-  /* Syntax: (<algorithm> <s-expr>*) */
-  struct signature_algorithm *algorithm;
-  struct verifier *v;
-  int algorithm_name;
-  struct sexp_iterator *i;
-
-  algorithm_name = spki_get_type(e, &i);
-  
-  algorithm = ALIST_GET(algorithms, algorithm_name);
-
-  if (!algorithm)
-    {
-      werror("spki_make_verifier: Unsupported algorithm %a.\n", algorithm_name);
-      return NULL;
-    }
-
-  v = MAKE_VERIFIER(algorithm, i);
-  KILL(i);
-  
-  if (!v)
-    {
-      werror("spki_make_verifier: Invalid public-key data.\n");
-      return NULL;
-    }
-  
-  return v;
 }
 
 static struct spki_subject *
