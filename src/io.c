@@ -99,13 +99,13 @@ lsh_oop_signal_callback(oop_source *source UNUSED, int sig, void *data)
   CAST(lsh_signal_handler, self, (struct lsh_object *) data);
 
   trace("lsh_oop_signal_callback: Signal %i, handler: %t\n",
-	sig, self);
+	sig, self->action);
   
   assert(sig == self->signum);
   
   LSH_CALLBACK(self->action);
 
-  return NULL;
+  return OOP_CONTINUE;
 }
 
 static void
@@ -149,7 +149,7 @@ lsh_oop_fd_read_callback(oop_source *source UNUSED, int fileno, oop_event event,
 
   FD_READ(fd);
 
-  return NULL;
+  return OOP_CONTINUE;
 }
 
 void
@@ -158,7 +158,7 @@ lsh_oop_register_read_fd(struct lsh_fd *fd)
   trace("lsh_oop_register_read_fd: fd: %i, %z\n",
 	fd->fd, fd->label);
   
-  if (fd->super.alive)
+  if (fd->super.alive && !fd->want_read)
     {
       oop_source *source = oop_sys_source(the_oop);
 
@@ -190,7 +190,7 @@ lsh_oop_fd_write_callback(oop_source *source UNUSED, int fileno, oop_event event
   CAST(lsh_fd, fd, (struct lsh_object *) data);
 
   assert(fileno == fd->fd);
-  assert(event == OOP_READ);
+  assert(event == OOP_WRITE);
   assert(fd->super.alive);
   
   trace("lsh_oop_fd_write_callback: fd %i: %z\n",
@@ -198,7 +198,7 @@ lsh_oop_fd_write_callback(oop_source *source UNUSED, int fileno, oop_event event
 
   FD_WRITE(fd);
 
-  return NULL;
+  return OOP_CONTINUE;
 }
 
 void
@@ -207,7 +207,7 @@ lsh_oop_register_write_fd(struct lsh_fd *fd)
   trace("lsh_oop_register_write_fd: fd: %i, %z\n",
 	fd->fd, fd->label);
   
-  if (fd->super.alive)
+  if (fd->super.alive && !fd->want_write)
     {
       oop_source *source = oop_sys_source(the_oop);
 
@@ -564,6 +564,8 @@ io_run(struct io_backend *b)
     fatal("Failed to ignore SIGPIPE.\n");
 
   oop_sys_run(the_oop);
+
+  trace("oop_sys_run returned!?\n");
 }
 
 static void
@@ -1018,13 +1020,14 @@ do_connect_callback(struct io_callback *s,
 		  (char *) &socket_error, &len) < 0)
       || socket_error)
     {
-      debug("io.c: connect_callback: Connect failed.\n");
+      trace("io.c: connect_callback: Connect on fd %i failed.\n", fd->fd);
       EXCEPTION_RAISE(fd->e,
 		      make_io_exception(EXC_IO_CONNECT, fd, 0, "connect failed."));
       close_fd(fd);
     }
   else
     {
+      trace("io.c: connect_callback: fd %i connected.\n", fd->fd);
       fd->write = NULL;
       lsh_oop_cancel_write_fd(fd);
       fd->label = "connected socket";
@@ -1581,8 +1584,8 @@ io_connect(struct io_backend *b,
 
   fd = make_lsh_fd(b, s, "connecting socket", e);
   
-  lsh_oop_register_write_fd(fd);
   fd->write = make_connect_callback(c);
+  lsh_oop_register_write_fd(fd);
     
   return fd;
 }
@@ -1623,8 +1626,8 @@ io_listen(struct io_backend *b,
 
   fd = make_lsh_fd(b, s, "listening socket", e);
 
-  lsh_oop_register_read_fd(fd);
   fd->read = callback;
+  lsh_oop_register_read_fd(fd);
 
   return fd;
 }
@@ -1950,6 +1953,9 @@ void close_fd(struct lsh_fd *fd)
 
   if (fd->super.alive)
     {
+      lsh_oop_cancel_read_fd(fd);
+      lsh_oop_cancel_write_fd(fd);
+
       fd->super.alive = 0;
   
       if (fd->fd < 0)
@@ -1964,9 +1970,6 @@ void close_fd(struct lsh_fd *fd)
   
       if (fd->close_callback)
 	LSH_CALLBACK(fd->close_callback);
-
-      lsh_oop_cancel_read_fd(fd);
-      lsh_oop_cancel_write_fd(fd);
       
       if (close(fd->fd) < 0)
 	{
