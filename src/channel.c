@@ -1171,11 +1171,9 @@ DEFINE_PACKET_HANDLER(static, window_adjust_handler,
 	  if (! (channel->flags & (CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF)))
 	    {
 	      channel->send_window_size += size;
+
 	      if (channel->send_window_size && channel->send_adjust)
-		{
-		  assert(channel->send_window_size);
-		  CHANNEL_SEND_ADJUST(channel, size);
-		}
+		CHANNEL_SEND_ADJUST(channel, size);
 	    }
 	}
       else
@@ -1628,17 +1626,12 @@ DEFINE_PACKET_HANDLER(static, channel_failure_handler,
     PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_FAILURE message.");
 }
 
+/* During keyexchange, and when the connection's write buffer gets
+   full, we do not allow more channel data. This function is called
+   when data is reallowed. */
 static void
-do_channels_after_keyexchange(struct command_continuation *s UNUSED,
-			      struct lsh_object *x);
-
-static struct command_continuation
-channels_after_keyexchange =
-  { STATIC_HEADER, do_channels_after_keyexchange };
-    
-static void
-do_channels_after_keyexchange(struct command_continuation *s UNUSED,
-			      struct lsh_object *x)
+do_channels_wakeup(struct command_continuation *s UNUSED,
+		   struct lsh_object *x)
 {
   CAST(ssh_connection, connection, x);
   struct channel_table *table = connection->table;
@@ -1655,10 +1648,11 @@ do_channels_after_keyexchange(struct command_continuation *s UNUSED,
 	  && channel->send_adjust)
 	CHANNEL_SEND_ADJUST(channel, 0);
     }
-
-  /* Reinstall hook */
-  connection_after_keyexchange(connection, &channels_after_keyexchange);
 }
+
+static struct command_continuation
+channels_wakeup =
+  { STATIC_HEADER, do_channels_wakeup };
 
 void
 init_connection_service(struct ssh_connection *connection)
@@ -1673,7 +1667,7 @@ init_connection_service(struct ssh_connection *connection)
   connection_clear_timeout(connection);
 
   /* Unfreeze channels after key exchange */
-  connection_after_keyexchange(connection, &channels_after_keyexchange);
+  connection_wakeup(connection, &channels_wakeup);
   
   connection->dispatch[SSH_MSG_GLOBAL_REQUEST]
     = &global_request_handler;

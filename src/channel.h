@@ -108,7 +108,7 @@ struct channel_request_info
        ; put onto the connections resource list.
        (resources object resource_list)
        
-       ; NOTE: The channels maximum packet sizes refer to the packet
+       ; NOTE: The channel's maximum packet sizes refer to the packet
        ; payload, i.e. the DATA string in SSH_CHANNEL_DATA and
        ; SSH_MSG_CHANNEL_EXTENDED_DATA.
 
