@@ -98,7 +98,7 @@ static const struct argp_option argp_default_options[] =
      N_("Set the program name"), 0},
   {"HANG",	  OPT_HANG,    "SECS", OPTION_ARG_OPTIONAL | OPTION_HIDDEN,
      N_("Hang for SECS seconds (default 3600)"), 0 },
-  {0, 0}
+  {0, 0, 0, 0, 0, 0}
 };
 
 static error_t
