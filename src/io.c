@@ -316,6 +316,12 @@ io_final(void)
   oop_sys_delete(global_oop_sys);
   global_oop_sys = NULL;
   source = NULL;
+
+  /* It's a good idea to reset std* to blocking mode. */
+
+  io_set_blocking(STDIN_FILENO);
+  io_set_blocking(STDOUT_FILENO);
+  io_set_blocking(STDERR_FILENO);
 }
 
 void
