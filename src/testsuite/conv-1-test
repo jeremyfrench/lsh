@@ -17,11 +17,7 @@ fi
 # All output is diagnostic
 exec 1>&2
 
-echo "conv-test: Testing ssh-conv and sexp-conv"
-
-if [ -z "$srcdir" ] ; then
-  srcdir=`pwd`
-fi
+echo "conv-1-test: Testing ssh-conv and sexp-conv"
 
 ($srcdir/../ssh-conv --decode-with ../lsh-decode-key | ../sexp-conv |tee test.out1) <<EOF
 ---- BEGIN SSH2 PUBLIC KEY ----
