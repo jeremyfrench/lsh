@@ -1,3 +1,8 @@
+News for the 1.4.1 release
+
+	Added --enable-initgroups-workaround option to the configure
+	script.
+
 News for the 1.4 release
  
 	In 1.3.6, there was an incompatible change to the rsa key

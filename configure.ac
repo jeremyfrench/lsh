@@ -1,8 +1,7 @@
-dnl -*- mode: shell-script; sh-indentation: 2; -*-
 dnl $Id$
 
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([lsh], [1.4], [bug-lsh@gnu.org]) 
+AC_INIT([lsh], [1.4.1], [bug-lsh@gnu.org]) 
 AC_PREREQ(2.52)
 AC_CONFIG_SRCDIR([src/lsh_types.h])
 AM_INIT_AUTOMAKE
@@ -140,6 +139,19 @@ AH_TEMPLATE([DATAFELLOWS_WORKAROUNDS],
 if test x$enable_datafellows_workarounds = xyes ; then
   AC_DEFINE(DATAFELLOWS_WORKAROUNDS)
 fi
+
+
+AC_ARG_ENABLE(initgroups_workaround,
+  AC_HELP_STRING([--enable-initgroups-workaround],
+		 [Use a special initgroups for supporting more groups]),,
+  [enable_initgroups_workaround=no])
+
+AH_TEMPLATE([INITGROUPS_WORKAROUND],
+	    [Define to enable the initgroups workaround])
+if test x$enable_initgroups_workaround = xyes ; then
+  AC_DEFINE(INITGROUPS_WORKAROUND)
+fi
+
 
 AC_ARG_ENABLE(tcp_forward,
   AC_HELP_STRING([--disable-tcp-forward], [Disable tcp forwarding]),,

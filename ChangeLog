@@ -1,3 +1,8 @@
+2002-06-05  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* configure.ac: Bumped version to 1.4.1. New option
+	--enable-initgroups-workaround, copied from the 1.2 branch.
+
 2002-06-04  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.4.
