@@ -1,3 +1,7 @@
+2001-02-22  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* Released lsh-1.1.7.
+
 2001-02-22  Niels Möller  <nisse@ehand.com>
 
 	* src/io.c (close_fd_read): New function.
