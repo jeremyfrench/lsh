@@ -116,7 +116,21 @@
       (case (car type)
 	((string simple function space bignum) #f)
 	((object) (list "mark((struct lsh_object *) " expr ");\n"))
-	((pointer) (type->mark (cadr type) (list "*(" expr ")")))
+	((pointer) (if (null? (cddr type))
+		       (type->mark (cadr type) (list "*(" expr ")"))
+
+		       ;; The optional argument should be the name of
+		       ;; an instance variable holding the length of
+		       ;; the area pointed to
+		       (let ((mark-k (type->mark (cadr type)
+						 (list "(" expr ")[k]"))))
+			 (and mark-k
+			      (list "{\n  unsigned k;\n"
+				    "  for (k=0; k<i->" (caddr type)
+				    "; k++)\n"
+				    "    " mark-k
+				    "}\n")))))
+
 	((special) (let ((mark-fn (caddr type)))
 		     (and mark-fn (list mark-fn "(" expr ", mark);\n"))))
 
