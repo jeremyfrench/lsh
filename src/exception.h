@@ -114,6 +114,11 @@
 #define EXC_SEXP_SYNTAX 0x40001
 #define EXC_SEXP_EOF 0x40002
 
+/* SPKI errors */
+#define EXC_SPKI 0x80000
+/* Unexpected or unsupported expression type */
+#define EXC_SPKI_TYPE 0x80001
+
 extern struct exception_handler default_exception_handler;
 struct exception_handler ignore_exception_handler;
 extern struct exception dummy_exception;
