@@ -1,5 +1,8 @@
 2001-08-21  Niels Möller  <nisse@ehand.com>
 
+	* src/client_userauth.c (make_client_publickey_auth): Initialize
+	TYPE attribute properly.
+
 	* src/server_userauth.c (server_userauth_none): New authentication
 	method. 
 
