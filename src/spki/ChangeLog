@@ -2,6 +2,8 @@
 
 	* testsuite/Makefile.am (EXTRA_DIST): Fixed file list. Also
 	include *.in and *.out from the cdsa-cases subdirectory.
+	(EXTRA_DIST): Added an explicit list of the files in cdsa-cases.
+	Really ugly.
 
 2003-01-14  Niels Möller  <nisse@lysator.liu.se>
 
