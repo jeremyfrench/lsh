@@ -1,5 +1,8 @@
 2001-03-25  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/testsuite/functions.sh (spawn_lshd): Use kill -9 to stop
+	lshd; otherwise lshd catching SIGTERM leads to timing problems.
+
 	* Released lsh-1.1.9.
 
 	* misc/libgcc2.c-patch: gcc patch.
