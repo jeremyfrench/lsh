@@ -90,6 +90,8 @@ that LSH is *not* compatible with SSH1.
 LSH is intended to be portable. LSH-2.0 compiles and works on at least
 
   * GNU/Linux (x86, x86_64, ia64, alpha)
+
+  * FreeBSD (x86)
   
   * Solaris (sparc)
 
