@@ -2,14 +2,19 @@
  *
  */
 
-#include "io.h"
 #include <unistd.h>
 #include <poll.h>
 #include <errno.h>
+#include <string.h>
 
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+
+#include "io.h"
+#include "werror.h"
+#include "write_buffer.h"
+#include "xalloc.h"
 
 /* A little more than an hour */
 #define MAX_TIMEOUT 4000
@@ -37,6 +42,7 @@ static int do_read(struct fd_read *closure, UINT8 *buffer, UINT32 length)
 	case EWOULDBLOCK:  /* aka EAGAIN */
 	  return 0;
 	default:
+	  werror("io.c: do_read: read() failed, %s\n", strerror(errno));
 	  return A_FAIL;
 	}
     }
@@ -45,7 +51,8 @@ static int do_read(struct fd_read *closure, UINT8 *buffer, UINT32 length)
 #define FOR_FDS(type, fd, list, extra)				\
 {								\
   type **(_fd);							\
-  for(_fd = &(list); (fd) = *_fd; _fd = &(*_fd)->next, (extra))	
+  type *(fd);							\
+  for(_fd = &(list); ((fd) = *_fd); _fd = &(*_fd)->next, (extra))	
 
 
 #define END_FOR_FDS } 
@@ -62,19 +69,19 @@ void io_run(struct io_backend *b)
       int timeout;
       int res;
       
-      nfds = b->nio + b->nlisten + n->nconnect;
+      nfds = b->nio + b->nlisten + b->nconnect;
 
       if (b->callouts)
 	{
-	  time_t now = time();
-	  if (now >= b->callout->when)
+	  time_t now = time(NULL);
+	  if (now >= b->callouts->when)
 	    timeout = 0;
 	  else
 	    {
-	      if (b->callout->when > now + MAX_TIMEOUT)
+	      if (b->callouts->when > now + MAX_TIMEOUT)
 		timeout = MAX_TIMEOUT * 1000;
 	      else
-		timeout = (b->callout->when - now) * 1000;
+		timeout = (b->callouts->when - now) * 1000;
 	    }
 	}
       else
@@ -92,26 +99,28 @@ void io_run(struct io_backend *b)
 
       FOR_FDS(struct io_fd, fd, b->io, i++)
 	{
-	  fds[i]->fd = fd->hold_on ? -1 : fd->fd;
-	  fds[i]->events =
-	    (fd->hold_on ? 0 : POLLIN)
-	    /* pre_write returns 0 if the buffer is empty */
-	    | (write_buffer_pre_write(fd->buffer)
-	       ? POLLOUT : 0);
+	  fds[i].fd = fd->on_hold ? -1 : fd->fd;
+	  fds[i].events = 0;
+	  if (!fd->on_hold)
+	    fds[i].events |= POLLIN;
+
+	  /* pre_write returns 0 if the buffer is empty */
+	  if (write_buffer_pre_write(fd->buffer))
+	    fds[i].events |= POLLOUT;
 	}
       END_FOR_FDS;
 
-      FOR_FDS(struct accept_fd, fd, b->accept, i++)
+      FOR_FDS(struct listen_fd, fd, b->listen, i++)
 	{
-	  fds[i]->fd = fd->fd;
-	  fds[i]->events = POLLIN;
+	  fds[i].fd = fd->fd;
+	  fds[i].events = POLLIN;
 	}
       END_FOR_FDS;
 
       FOR_FDS(struct connect_fd, fd, b->connect, i++)
 	{
-	  fds[i]->fd = fd->fd;
-	  fds[i]->events = POLLOUT;
+	  fds[i].fd = fd->fd;
+	  fds[i].events = POLLOUT;
 	}
       END_FOR_FDS;
 
@@ -122,7 +131,7 @@ void io_run(struct io_backend *b)
 	  /* Timeout. Run the callout */
 	  struct callout *f = b->callouts;
 	  
-	  if (!CALLBACK(f->callout);)
+	  if (!CALLBACK(f->callout))
 	    fatal("What now?");
 	  b->callouts = f->next;
 	  free(f);
@@ -145,11 +154,12 @@ void io_run(struct io_backend *b)
 	  /* Handle writing first */
 	  FOR_FDS(struct io_fd, fd, b->io, i++)
 	    {
-	      if (fds[i]->revents & POLLOUT)
+	      if (fds[i].revents & POLLOUT)
 		{
 		  UINT32 size = MIN(fd->buffer->end - fd->buffer->start,
 				    fd->buffer->block_size);
-		  int res = write(fd->fd, fd->buffer->data + fd->buffer->start,
+		  int res = write(fd->fd,
+				  fd->buffer->buffer + fd->buffer->start,
 				  size);
 		  if (!res)
 		    fatal("Closed?");
@@ -163,11 +173,8 @@ void io_run(struct io_backend *b)
 			CALLBACK(fd->close_callback);
 			/* FIXME: Must do this later. Perhaps add a
 			 * closed flag to th io_fd struct? */
-#if 0
-			UNLINK_FD;
-			free(fd->write_buffer);
-			free(fd);
-#endif
+			fd->please_close = 1;
+
 			break;
 		      }
 		  else
@@ -180,28 +187,42 @@ void io_run(struct io_backend *b)
 	  i = 0; /* Start over */
 	  FOR_FDS(struct io_fd, fd, b->io, i++)
 	    {
-	      if (fds[i]->revents & POLLIN)
+	      if (!fd->please_close
+		  && (fds[i].revents & POLLIN))
 		{
 		  struct fd_read r =
-		  { { (abstract_read_f) do_read }, fd->fd, 0 };
+		  { { (abstract_read_f) do_read }, fd->fd };
 
 		  /* The handler function returns a new handler for the
 		   * file, or NULL. */
-		  if (!(fd->handler = READ_HANDLER(fd->handler, &r)))
+		  if (!(fd->handler
+			= READ_HANDLER(fd->handler,
+				       (struct abstract_read *) &r)))
 		    {
-		      /* FIXME: Should fd be closed here? */
-		      UNLINK_FD;
-		      free(fd);
+		      fd->please_close = 1;
 		    }
+		}
+	      if (fd->please_close)
+		{
+		  /* FIXME: Cleanup properly...
+		   *
+		   * After a write error, read state must be freed,
+		   * and vice versa. */
+		  UNLINK_FD;
+		  free(fd->buffer);
+		  free(fd);
 		}
 	    }
 	  END_FOR_FDS;
 
-	  FOR_FDS(struct accept_fd, fd, b->accept, i++)
+	  FOR_FDS(struct listen_fd, fd, b->listen, i++)
 	    {
-	      if (fds[i]->revents & POLLIN)
+	      if (fds[i].revents & POLLIN)
 		{
-		  int conn = accept(fd->fd);
+		  /* FIXME: Do something with the peer address? */
+		  struct sockaddr_in peer;
+		  
+		  int conn = accept(fd->fd, &peer, sizeof(peer));
 		  if (conn < 0)
 		    {
 		      werror("io.c: accept() failed, %s", strerror(errno));
@@ -213,7 +234,6 @@ void io_run(struct io_backend *b)
 		      UNLINK_FD;
 		      free(fd);
 		    }
-
 		}
 	    }
 	  END_FOR_FDS;
@@ -394,35 +414,25 @@ struct listen_fd *io_listen(struct io_backend *b,
   return fd;
 }
 
-void io_read(struct io_backend *b,
-	     int fd,
-	     struct read_callback *callback)
+struct abstract_write *io_read_write(struct io_backend *b,
+				     int fd,
+				     struct read_callback *read_callback,
+				     UINT32 block_size,
+				     struct callback *close_callback)
 {
-  struct input_fd *fd = xalloc(sizeof(struct input_fd));
-
-  fd->fd == fd;
-  fd->callback = callback;
-
-  fd->next = b->input;
-  b->input = fd;
-  b->ninput++;
-}
-
-struct abstract_write *io_write(struct io_backend *b,
-			      int fd,
-			      UINT32 block_size,
-			      struct callback *close_callback)
-{
-  struct output_fd = xalloc(sizeof(struct output_fd));
+  struct io_fd = xalloc(sizeof(struct io_fd));
   struct write_buffer *buffer = write_buffer_alloc(block_size);
   
   fd->fd = fd;
+  fd->please_close = 0;
+  
+  fd->read_callback = read_callback;
   fd->close_callback = close_callback;
   fd->buffer = buffer;
 
-  fd->next = b->output;
-  b->output = fd;
-  b->noutput++;
+  fd->next = b->io;
+  b->io = fd;
+  b->nio++;
 
   return (struct abstract_write *) buffer;
 }
