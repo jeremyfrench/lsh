@@ -68,10 +68,25 @@
 /* Set if SRP keyexchange was used. */
 #define CONNECTION_SRP 2
 
+/* Use a different encoding of ssh-dss signatures, for compatibility with
+ * SSH Inc's ssh version 2.0.x and 2.1.0 */
 #define PEER_SSH_DSS_KLUDGE           0x00000001
+
+/* Support SSH_MSG_SERVICE_ACCEPT with omitted service name, for
+ * compatibility with SSH Inc's ssh version 2.0.x */
 #define PEER_SERVICE_ACCEPT_KLUDGE    0x00000002
+
+/* Replace the service name with the string "ssh-userauth" in
+ * publickey userauth requests, for compatibility with SSH Inc's ssh
+ * version 2.0.x and 2.1.0 */
 #define PEER_USERAUTH_REQUEST_KLUDGE  0x00000004
+
+/* Never send a debug message after successful keyexchange, as SSH
+ * Inc's ssh version 2.0.x and 2.1 can't handle that. */
 #define PEER_SEND_NO_DEBUG            0x00000008
+
+/* Don't include the originator port in X11 channel open messages, for
+ * compatibility with SSH Inc's ssh version 2.0.x */
 #define PEER_X11_OPEN_KLUDGE          0x00000010
 
 /* GABA:
