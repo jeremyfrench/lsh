@@ -35,6 +35,7 @@ lsh-pam-checkpw
 lsh-writekey
 lsh_proxy
 lshd
+lshd-userauth
 lshg
 packet_types.h
 pkcs5-test
