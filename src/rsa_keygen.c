@@ -1,6 +1,6 @@
 /* rsa_keygen.c
  *
- * Generate rsa key pairs..
+ * Generate rsa key pairs.
  *
  * $Id$
  */
@@ -24,11 +24,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "rsa.h"
+#include "publickey_crypto.h"
 
 #include "randomness.h"
 #include "sexp.h"
 #include "werror.h"
+
+#include "nettle/rsa.h"
 
 #include <assert.h>
 
@@ -113,7 +115,7 @@ rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits)
   /* FIXME: Add sanity checking */
   
   key = sexp_l(2, SA(PRIVATE_KEY),
-	       sexp_l(9, SA(RSA_PKCS1_SHA1),
+	       sexp_l(9, SA(RSA_PKCS1),
 		      sexp_l(2, SA(N), sexp_un(n), -1),
 		      sexp_l(2, SA(E), sexp_un(e), -1),
 		      sexp_l(2, SA(D), sexp_un(d), -1),
