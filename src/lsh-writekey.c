@@ -47,6 +47,7 @@
 #include "format.h"
 #include "io_commands.h"
 #include "interact.h"
+#include "lsh_string.h"
 #include "publickey_crypto.h"
 #include "spki.h"
 #include "version.h"
@@ -173,11 +174,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      else
 		{
 		  s = ssh_format("%lz/.lsh", home);
-		  if (mkdir(lsh_get_cstring(s), 0755) < 0)
+		  const char *cs = lsh_get_cstring(s);
+		  if (mkdir(cs, 0755) < 0)
 		    {
 		      if (errno != EEXIST)
 			argp_failure(state, EXIT_FAILURE, errno,
-				     "Creating directory %s failed.", s->data);
+				     "Creating directory %s failed.", cs);
 		    }
 		  lsh_string_free(s);
 		  self->private_file = ssh_format("%lz/.lsh/identity", home);
@@ -324,7 +326,7 @@ open_file(const struct lsh_string *file)
 }
 
 static struct lsh_string *
-process_private(struct lsh_string *key,
+process_private(const struct lsh_string *key,
                 struct lsh_writekey_options *options)
 {
   if (options->crypto)
@@ -380,7 +382,7 @@ process_private(struct lsh_string *key,
 }
 
 static struct lsh_string *
-process_public(struct lsh_string *key,
+process_public(const struct lsh_string *key,
                struct lsh_writekey_options *options)
 {
   struct signer *s;
@@ -421,7 +423,7 @@ main(int argc, char **argv)
       return EXIT_FAILURE;
     }
   
-  if (!input->length)
+  if (!lsh_string_length(input))
     {
       werror("Empty key on input, giving up.\n");
       return EXIT_FAILURE;
@@ -435,7 +437,7 @@ main(int argc, char **argv)
   if (private_fd < 0)
     return EXIT_FAILURE;
 
-  e = write_raw(private_fd, output->length, output->data);
+  e = write_raw(private_fd, STRING_LD(output));
   lsh_string_free(output);
 
   if (e)
@@ -455,7 +457,7 @@ main(int argc, char **argv)
   if (public_fd < 0)
     return EXIT_FAILURE;
   
-  e = write_raw(public_fd, output->length, output->data);
+  e = write_raw(public_fd, STRING_LD(output));
   lsh_string_free(output);
   
   if (e)
