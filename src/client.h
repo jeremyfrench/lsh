@@ -40,8 +40,7 @@
 
 struct packet_handler *
 make_accept_service_handler(UINT32 service,
-			    struct command_continuation *c,
-			    struct exception_handler *e);
+			    struct command_continuation *c);
 
 /* GABA:
    (class

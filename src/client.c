@@ -76,10 +76,7 @@ format_service_request(int name)
      (super packet_handler)
      (vars
        (service . int)
-       (c object command_continuation)
-
-       ;; FIXME: Do we really need the exception handler here?
-       (e object exception_handler)))
+       (c object command_continuation)))
 */
 
 static void
@@ -112,20 +109,18 @@ do_accept_service(struct packet_handler *c,
       COMMAND_RETURN(closure->c, connection);
     }
   else
-    PROTOCOL_ERROR(closure->e, "Invalid SSH_MSG_SERVICE_ACCEPT message");
+    PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_SERVICE_ACCEPT message");
 }
 
 struct packet_handler *
 make_accept_service_handler(UINT32 service,
-			    struct command_continuation *c,
-			    struct exception_handler *e)
+			    struct command_continuation *c)
 {
   NEW(accept_service_handler, closure);
 
   closure->super.handler = do_accept_service;
   closure->service = service;
   closure->c = c;
-  closure->e = e;
   
   return &closure->super;
 }
@@ -134,13 +129,15 @@ void
 do_request_service(struct command *s,
 		   struct lsh_object *x,
 		   struct command_continuation *c,
-		   struct exception_handler *e)
+		   struct exception_handler *e UNUSED)
 {
   CAST(request_service, self, s);
   CAST(ssh_connection, connection, x);
-  
+
+  /* NOTE: Uses the connection's exception handler, not the one passed
+   * in. */
   connection->dispatch[SSH_MSG_SERVICE_ACCEPT]
-    = make_accept_service_handler(self->service, c, e);
+    = make_accept_service_handler(self->service, c);
   
   C_WRITE(connection,
 	  format_service_request(self->service));
@@ -493,10 +490,6 @@ client_options[] =
     "is applied to stderr only.", 0 },
   { "no-cvs-workaround", OPT_FORK_STDIO | ARG_NOT, NULL, 0,
     "Disable the cvs workaround.", 0 },
-
-  /* FIXME: Perhaps this should be moved from client.c to lsh.c? It
-   * doesn't work with lshg. Or perhaps that can be fixed?
-   * About the same problem applies to -R. */
 
 #if WITH_PTY_SUPPORT
   { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
