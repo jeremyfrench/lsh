@@ -109,7 +109,7 @@ static void init_host_key(struct randomness *r)
   if (!secret_key)
     fatal("Can't parse secret key\n");
 
-  lsh_free(s);
+  lsh_string_free(s);
   mpz_clear(p);
   mpz_clear(q);
   mpz_clear(g);
@@ -202,7 +202,11 @@ int main(int argc, char **argv)
 			       make_server_session_service
 			       (make_alist(0, -1),
 				make_alist(1, ATOM_SHELL,
-					   make_shell_handler(&backend))))))))));
+					   make_shell_handler(&backend),
+					   -1)),
+			       -1)),
+		   -1)),
+       -1)));
      
   if (!io_listen(&backend, &local, 
 	    make_server_callback(&backend,
