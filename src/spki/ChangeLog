@@ -1,3 +1,10 @@
+2004-01-31  Niels Möller  <nisse@lysator.liu.se>
+
+	* tag.c: Comment fixes.
+	(spki_tag_compile): In the SPKI_TAG_LIST case, check for
+	spki_tag_compile_list returning NULL.
+	(spki_tag_list_alloc): Minor reorganization of failure case.
+
 2004-01-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* Makefile.am (AM_CPPFLAGS): Added -I../nettle. Needed to find the
