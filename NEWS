@@ -1,3 +1,11 @@
+News for the 0.2.3 release
+
+	Added lshd options --password, --no-password, --publickey and
+	--no-publickey, for configuring the set of supported userauth
+	methods.
+
+	Changes to the proxy program (Bazsi).
+
 News for the 0.2.2 release
 
 	Bug fixes. Verbose messages on algorithm selection.

@@ -1,3 +1,9 @@
+2000-01-13  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* Makefile.am.in (EXTRA_DIST): Added distribution-key.gpg.
+
+	* configure.in: Bumped version to 0.2.3.
+
 2000-01-12  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/tcpforward.c (do_channel_open_direct_tcpip): Added type
