@@ -210,7 +210,9 @@ static int client_close_die(struct close_callback *closure, int reason)
   verbose("Connection died, for reason %d.\n", reason);
   if (reason != CLOSE_EOF)
     werror("Connection died.\n");
-  exit(1);
+
+  /* FIXME: Return value is not used. */
+  return 4711;
 }
 
 struct close_callback *make_client_close_handler(void)
