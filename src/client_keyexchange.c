@@ -58,6 +58,7 @@
      (name dh_client)
      (super packet_handler)
      (vars
+       ;; (hostname string)
        (dh struct diffie_hellman_instance)
        (hostkey_algorithm . UINT32)
        (verifier object lookup_verifier)
