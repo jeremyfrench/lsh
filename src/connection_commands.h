@@ -38,7 +38,7 @@
        (connection object ssh_connection)))
 */
 
-extern struct command_simple connection_remember;
+extern struct command_2 connection_remember;
 #define CONNECTION_REMEMBER (&connection_remember.super.super)
 
 struct command *

@@ -35,35 +35,23 @@
 #include "connection_commands.h.x"
 #undef GABA_DEFINE
 
-#if 0
-#include "connection_commands.c.x"
-#endif
-
-static void
-do_connection_remember(struct command *s,
-		       struct lsh_object *x,
-		       struct command_continuation *c,
-		       struct exception_handler *e UNUSED)
+/* (remember connection resource) */
+DEFINE_COMMAND2(connection_remember)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
-  CAST(connection_command, self, s);
-  CAST_SUBTYPE(resource, resource, x);
-
+  CAST(ssh_connection, connection, a1);
+  CAST_SUBTYPE(resource, resource, a2);
+  
   if (resource)
-    REMEMBER_RESOURCE(self->connection->resources, resource);
+    REMEMBER_RESOURCE(connection->resources, resource);
 
   COMMAND_RETURN(c, resource);
 }
 
-DEFINE_COMMAND_SIMPLE(connection_remember, a)
-{
-  CAST(ssh_connection, connection, a);
-  NEW(connection_command, self);
-
-  self->super.call = do_connection_remember;
-  self->connection = connection;
-
-  return &self->super.super;
-}
 
 /* (connection_if_srp then_f else_f connection)
  *
