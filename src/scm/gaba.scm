@@ -37,14 +37,6 @@
   (cond ((assq key alist) => select)
 	(else #f)))
 
-(define (append-deep o)
-  ; (werror "append-deep: ~S\n" o)
-  (cond ((string? o) o)
-	((symbol? o) (symbol->string o))
-	((number? o) (number->string o))
-	(else
-	 (apply string-append (map append-deep o)))))
-
 (define (identity x) x)
 
 (define (filter p list)
@@ -74,7 +66,6 @@
   (syntax-rules ()
     ((unless <cond> . <body>)
      (if (not <cond>) (begin . <body>)))))
-
   
 ;; Variables are describes as lists (name . type)
 ;; Known types (and corresponding C declarations) are
@@ -141,13 +132,6 @@
 	  (display "  ")
 	  (loop (+ 1 count)))))
 	     
-#!
-(define-syntax cdef
-  (syntax-rules () ((cdef <i> <spec>
-			  <body>)
-		    (define <spec>
-		      (lambda <i> <body>)))))
-!#
 (define (c-append . args)
   (lambda (i) (apply out i args)))
 
@@ -189,20 +173,26 @@
 
 (define (c-initializer* . expressions) (c-initializer expressions))
 
-(define (c-prototype return name . args)
+(define (c-prototype return name args)
   (c-append return indent name
 	    "("
-	    (if (null? args) "void" (c-list (c-nl ",") args))
+	    (if (null? args ) "void"
+		(c-list (c-nl ",") args))
 	    ")"))
+
+(define (c-prototype* return name . args)
+  (c-prototype return name args))
 
 (define (c-for var range body)
   (c-append "for(" var "=0; "
 	    var "<" range "; "
 	    var "++)"
-	    indent (list body)))
+	    (list indent body)))
 
-(define (c-call f . args)
+(define (c-call f args)
   (c-append f "(" (c-list (c-append "," indent) args) ")"))
+
+(define (c-call* f . args) (c-call f args))
 
 (define (c-declare var)
   (define (c-decl-1 type expr)
@@ -230,7 +220,7 @@
        (c-decl-1 (cadr type) 
 		 (c-append expr "(" (c-list "," (cddr type)) ")")))
       ((const)
-       (c-append "const" (c-decl-1 (cdr type) expr)))
+       (c-append "const " (c-decl-1 (cdr type) expr)))
       (else (error "c-decl: Invalid type " type))))
   (c-decl-1 (var-type var) (var-name var)))
 
@@ -239,134 +229,6 @@
 	    (c-block (map c-declare vars))
 	    ";" indent))
 
-(define (type->category type)
-  (if (atom? type)
-      (type->category `(simple ,type))
-      (let ((tag (car type)))
-	(case tag
-	  ((string object simple special indirect-special
-	    bignum struct) tag)
-	  ((const) (type->category (cdr type)))
-	  ((array var-array pointer space) (type->category (cadr type)))
-	  
-	  (else (error "make_class: type->category: Invalid type" type))))))
-
-
-(define (type->declaration type expr)
-  (if (atom? type)
-      (type->declaration `(simple ,type) expr)
-      (case (car type)
-	((string) (list "struct lsh_string *" expr))
-	((object) (list "struct " (cadr type) " *" expr))
-	((struct) (list "struct " (cadr type) " " expr)) 
-	((bignum) (list "mpz_t " expr))
-	((simple special indirect-special) (list (cadr type) " " expr))
-	((pointer space) (type->declaration (cadr type)
-					    (list "(*(" expr "))")))
-	((array)  (type->declaration (cadr type)
-				     (list "((" expr ")[" (caddr type) "])")))
-	((var-array)  (type->declaration (cadr type)
-				     (list "((" expr ")[1])")))
-	((function) (type->declaration (cadr type)
-				       (list expr
-					     "(" (implode (cddr type) ", ")
-					     ")")))
-	((const) `("const " ,(type->declaration (cdr type) expr)))
-	(else (error "make_class: type->declaration: Invalid type" type)))))
-
-(define (type->mark type expr)
-  (if (atom? type)
-      (type->mark `(simple ,type) expr)
-      (case (car type)
-	((string simple function bignum) #f)
-	((object) (list "mark((struct lsh_object *) " expr ");\n"))
-	((struct) (list (cadr type) "_mark(&" expr ", mark);\n"))
-	((pointer space)
-	 (if (null? (cddr type))
-	     (type->mark (cadr type) (list "*(" expr ")"))
-	     
-	     ;; The optional argument should be the name of
-	     ;; an instance variable holding the length of
-	     ;; the area pointed to
-	     (let ((mark-k (type->mark (cadr type)
-				       (list "(" expr ")[k]"))))
-	       (and mark-k
-		    (list "{\n  unsigned k;\n"
-			  "  for (k=0; k<i->" (caddr type)
-			  "; k++)\n"
-			  "    " mark-k
-			  "  }\n")))))
-	
-	((special) (let ((mark-fn (caddr type)))
-		     (and mark-fn (list mark-fn "(" expr ", mark);\n"))))
-	((indirect-special) (let ((mark-fn (caddr type)))
-			      (and mark-fn (list mark-fn "(&(" expr
-						 "), mark);\n"))))
-	
-	;; FIXME: Doesn't handle nested arrays
-	((array)
-	 (let ((mark-k (type->mark (cadr type) (list "(" expr ")[k]"))))
-	   (and mark-k
-		(list "{\n  unsigned k;\n"
-		      "  for (k=0; k<" (caddr type) "; k++)\n"
-		      "    " mark-k
-		      "}\n"))))
-	((var-array)
-	 (let ((mark-k (type->mark (cadr type) (list "(" expr ")[k]"))))
-	   (and mark-k
-		(list "{\n  unsigned k;\n"
-		      "  for (k=0; k<i->" (caddr type) "; k++)\n"
-		      "    " mark-k
-		      "}\n"))))
-	((const) (type->mark (cdr type) expr))
-	(else (error "make_class: type->mark: Invalid type" type)))))
-
-(define (type->free type expr)
-  (define (free/f f)
-    (and f (list f "(" expr ");\n")))
-
-  (if (atom? type)
-      (type->free `(simple ,type) expr)
-      (case (car type)
-	;; FIXME: Doesn't free array elements for variables of type space.
-	((object simple function pointer) #f)
-	((struct) (list (cadr type) "_free(&" expr ");\n"))
-	((string) (free/f "lsh_string_free"))
-	((bignum) (free/f "mpz_clear"))
-	((space) (free/f "lsh_space_free"))
-	((special) (free/f (cadddr type)))
-	((indirect-special) (let ((free-fn (cadddr type)))
-			      (and free-fn
-				   (list free-fn "(&(" expr "));\n")))) 
-	
-	((array)
-	 (let ((free-k (type->free (cadr type) (list "(" expr ")[k]"))))
-	   (and free-k
-		(list "{\n  unsigned k;\n"
-		      "  for (k=0; k<" (caddr type) "; k++)\n"
-		      "    " free-k
-		      "}\n"))))
-	((var-array)
-	 (let ((free-k (type->free (cadr type) (list "(" expr ")[k]"))))
-	   (and free-k
-		(list "{\n  unsigned k;\n"
-		      "  for (k=0; k<i->" (caddr type) "; k++)\n"
-		      "    " free-k
-		      "}\n"))))
-	((const) (type->free (cdr type) expr))
-#!
-	((dyn-array)
-	 (let ((free-k (type->free (cadr type) (list "(" expr ")[k]"))))
-	   (append (if (null? free-k)
-		       '("{\n  unsigned k;\n"
-			     "  for (k=0; k<i->" (caddr type) "; k++)\n"
-			     "    " free-k
-			     "}\n")
-		       '())
-		   (list "lsh_space_free(" expr ");\n")) ))
-!#
-    
-	(else (error "make_class: type->free: Invalid type" type)))))
 
 #!
 (define (type->init type expr)
@@ -388,22 +250,6 @@
 
 (define var-name car)
 (define var-type cdr)
-
-(define (fix-method name var)
-  (let ((type (var-type var))
-	(variable (var-name var)))
-    (if (atom? type)
-	var
-	(case (car type)
-	  ((method)
-	   `(,variable pointer (function ,(cadr type)
-					 ("struct " ,name " *self")
-					 ,@(cddr type))))
-	  ((indirect-method)
-	   `(,variable pointer (function ,(cadr type)
-					 ("struct " ,name " **self")
-					 ,@(cddr type))))
-	  (else var)))))
 
 ; New version
 (define (make-instance-struct name super vars)
@@ -427,10 +273,10 @@
 (define (make-marker type expr)
   (case (car type)
     ((string simple function bignum) #f)
-    ((object) (c-call "mark" (c-append "(struct lsh_object *) " expr)))
-    ((struct) (c-call (c-append (cadr type) "_mark")
-		      (c-address expr)
-		      "mark"))
+    ((object) (c-call* "mark" (c-append "(struct lsh_object *) " expr)))
+    ((struct) (c-call* (c-append (cadr type) "_mark")
+		       (c-address expr)
+		       "mark"))
     ((pointer space)
      (if (null? (cddr type))
 	 (make-marker (cadr type)
@@ -447,13 +293,13 @@
 				 mark-k))))))
     ((special)
      (let ((mark-fn (caddr type)))
-       (and mark-fn (c-call mark-fn expr "mark"))))
+       (and mark-fn (c-call* mark-fn expr "mark"))))
       
     ((indirect-special)
      (let ((mark-fn (caddr type)))
-       (and mark-fn (c-call mark-fn
-			    (c-address expr)
-			    "mark"))))
+       (and mark-fn (c-call* mark-fn
+			     (c-address expr)
+			     "mark"))))
     ((array)
      (let* ((counter (make-var))
 	    (mark-k (make-marker (cadr type)
@@ -476,26 +322,26 @@
 (define (make-mark-function name vars)
   (let ((markers (map-variables make-marker vars "i")))
     (and (not (null? markers))
-	 (c-append (c-prototype "static void" (c-append "do_" name "_mark")
-				"struct lsh_object *o"
-				"void (*mark)(struct lsh_object *o)")
+	 (c-append (c-prototype* "static void" (c-append "do_" name "_mark")
+				 "struct lsh_object *o"
+				 "void (*mark)(struct lsh_object *o)")
 		   indent
 		   (c-block (cons (c-append "struct " name
-					    " *i = (struct " name " *) o;")
+					    " *i = (struct " name " *) o")
 				  markers))
 		   indent))))
 
 (define (make-freer type expr)
   (case (car type)
     ((object simple function pointer) #f)
-    ((struct) (c-call (c-append (cadr type) "_free") (c-address expr)))
-    ((string) (c-call "lsh_string_free" expr))
-    ((bignum) (c-call "mpz_clear" expr))
-    ((space) (c-call "lsh_space_free" expr))
-    ((special) (c-call (cadddr type) expr))
+    ((struct) (c-call* (c-append (cadr type) "_free") (c-address expr)))
+    ((string) (c-call* "lsh_string_free" expr))
+    ((bignum) (c-call* "mpz_clear" expr))
+    ((space) (c-call* "lsh_space_free" expr))
+    ((special) (c-call* (cadddr type) expr))
     ((indirect-special)
      (let ((free (cadddr type)))
-       (and free (c-call free (c-address expr)))))
+       (and free (c-call* free (c-address expr)))))
     ((array)
      (let* ((counter (make-var))
 	    (free-k (make-freer (cadr type)
@@ -519,10 +365,11 @@
 (define (make-free-function name vars)
   (let ((freers (map-variables make-freer vars "i")))
     (and (not (null? freers))
-	 (c-append (c-prototype "static void" (c-append "do_" name "_free")
-				"struct lsh_object *o)")
+	 (c-append (c-prototype* "static void" (c-append "do_" name "_free")
+				 "struct lsh_object *o")
+		   indent
 		   (c-block (cons (c-append "struct " name
-					    " *i = (struct " name " *) o;")
+					    " *i = (struct " name " *) o")
 				  freers))
 		   indent))))
 	 
@@ -534,18 +381,20 @@
   (c-append (struct-mark-prototype name) indent
 	    (c-block
 	     ;; To avoid warnings for unused parameters
-	     (cons "(void) mark; (void) i;"
-		   (map-variables make-marker vars "i")))))
+	     (cons "(void) mark; (void) i"
+		   (map-variables make-marker vars "i")))
+	    indent))
 
 (define (struct-free-prototype name)
   (c-append "void " name "_free(struct " name " *i)"))
 
 (define (struct-free-function name vars)
-  (c-append (struct-mark-prototype name) indent
+  (c-append (struct-free-prototype name) indent
 	    (c-block
 	     ;; To avoid warnings for unused parameters
-	     (cons "(void) mark; (void) i;"
-		   (map-variables make-freer vars "i")))))
+	     (cons "(void) i"
+		   (map-variables make-freer vars "i")))
+	    indent))
 
 (define (make-class name super mark free meta methods)
   (let ((initializer
@@ -560,7 +409,7 @@
 	      (c-address (c-append super "_class"))
 	      "NULL")
 	  (c-string name)
-	  (c-call "sizeof" (c-append "struct " name))
+	  (c-call* "sizeof" (c-append "struct " name))
 	  (if mark (c-append "do_" name "_mark") "NULL")
 	  (if free (c-append "do_" name "_free") "NULL"))))
     (if meta
@@ -573,134 +422,18 @@
 
 (define (make-meta name methods)
   (c-append "struct " name "_meta" indent
-	    (c-block methods) ";" indent)) 
-
-(define (do-instance-struct name super vars)
-  ; (werror "do-instance-struct\n")
-  (list "struct " name 
-	"\n{\n"
-	"  struct " (or super "lsh_object") " super;\n"
-	(map (lambda (var)
-	       (list "  " (type->declaration (var-type var)
-					     (var-name var)) ";\n"))
-	     vars)
-	"};\n"))
-
-(define (do-struct name super vars)
-  ; (werror "do-struct\n")
-  (list "struct " name 
-	"\n{\n"
-	(map (lambda (var)
-	       (list "  " (type->declaration (var-type var)
-					     (var-name var)) ";\n"))
-	     vars)
-	"};\n"))
-
-(define (do-mark-function name vars)
-  ; (werror "do-mark-function\n")
-  (let ((markers (filter identity
-			 (map (lambda (var)
-				(type->mark (var-type var)
-					    (list "i->" (var-name var))))
-			      vars))))
-    ; (werror "gazonk\n")
-    (and (not (null? markers))
-	 (list "static void do_"
-	       name "_mark(struct lsh_object *o, \n"
-	       "void (*mark)(struct lsh_object *o))\n"
-	       "{\n"
-	       "  struct " name " *i = (struct " name " *) o;\n"
-	       (map (lambda (x) (list "  " x))
-		    markers)
-	       "}\n\n"))))
-
-(define (do-free-function name vars)
-  ; (werror "do-free-function\n")
-  (let ((freers (filter identity
-			(map (lambda (var)
-			       (type->free (var-type var) 
-					   (list "i->" (var-name var))))
-			     
-			     vars))))
-    ; (werror "gazonk\n")
-
-    (and (not (null? freers))
-	 (list "static void do_"
-	       name "_free(struct lsh_object *o)\n"
-	       "{\n"
-	       "  struct " name " *i = (struct " name " *) o;\n"
-	       (map (lambda (x) (list "  " x))
-		    freers)
-	       "}\n\n"))))
+	    (c-block (cons "struct lsh_class super"
+			   methods))
+	    ";" indent)) 
 
 (define (declare-struct-mark-function name)
   (list "void "	name "_mark(struct " name " *i, \n"
 	"    void (*mark)(struct lsh_object *o))"))
 
-(define (do-struct-mark-function name vars)
-  ; (werror "do-struct-mark-function\n")
-  (let ((markers (filter identity
-			 (map (lambda (var)
-				(type->mark (var-type var)
-					    (list "i->" (var-name var))))
-			      vars))))
-    ; (werror "gazonk\n")
-    (list (declare-struct-mark-function name)
-	  "\n{\n"
-	  ; To avoid warnings for unused parameters
-	  "  (void) mark; (void) i;\n"
-	  (map (lambda (x) (list "  " x))
-	       markers)
-	  "}\n\n")))
-
 (define (declare-struct-free-function name)
   (list "void " name "_free(struct " name " *i)"))
 
-(define (do-struct-free-function name vars)
-  ; (werror "do-struct-free-function\n")
-  (let ((freers (filter identity
-			(map (lambda (var)
-			       (type->free (var-type var) 
-					   (list "i->" (var-name var))))
-			     
-			     vars))))
-    ; (werror "gazonk\n")
-
-    (list (declare-struct-free-function name)
-	  "\n{\n"
-	  ; To avoid warnings for unused parameters
-	  "  (void) i;\n"
-	  (map (lambda (x) (list "  " x))
-	       freers)
-	  "}\n\n")))
-
-(define (do-class name super mark-function free-function meta methods)
-  (define initializer
-    (list "{ STATIC_HEADER,\n  "
-	  (if super
-	      ; FIXME: A cast (struct lsh_class *) or something
-	      ; equivalent is needed if the super class is not a
-	      ; struct lsh_class *. For now, fixed with macros
-	      ; expanding to the right component of extended class
-	      ; structures.
-	      (list "&" super "_class")
-	      "0")
-	  ", \"" name "\", sizeof(struct " name "),\n  "
-	  (if mark-function (list "do_" name "_mark") "NULL") ",\n  "
-	  (if free-function (list "do_" name "_free") "NULL") "\n"
-	  "}"))
-  ; (werror "do-class\n")
-  (if meta
-      (list "struct " meta "_meta " name "_class_extended =\n"
-	    "{ " initializer 
-	    (if methods
-		(map (lambda (m) (list ",\n  " m)) methods)
-		"")
-	    "};\n")
-      (list "struct lsh_class " name "_class =\n"
-	    initializer ";\n")))
-
-(define (preprocess name vars)
+(define (preprocess-vars name vars)
   (define (preprocess-type type)
     (if (atom? type)
 	`(simple ,type)
@@ -718,13 +451,13 @@
 	  ((method)
 	   `(pointer (function ,(preprocess-type (cadr type))
 			       ("struct " ,name " *self")
-			       ,@(cddr type)))))
-	((indirect-method)
-	 `(pointer (function ,(preprocess-type (cadr type))
-			     ("struct " ,name " **self")
-			     ,@(cddr type))))
-	(else (error "preprocess-type: Invalid type " type))))
-
+			       ,@(cddr type))))
+	  ((indirect-method)
+	   `(pointer (function ,(preprocess-type (cadr type))
+			       ("struct " ,name " **self")
+			       ,@(cddr type))))
+	  (else (error "preprocess-type: Invalid type " type)))))
+    
   (map (lambda (var)
 	 (cons (var-name var) (preprocess-type (var-type var))))
        vars))
@@ -734,64 +467,62 @@
 	    (if meta (list ":" meta "_meta") "") "\n*/\n"))
 
 (define (process-class attributes)
-  (let ((name (get 'name attributes cadr))
-	(super (get 'super attributes cadr))
-	(raw-vars (get 'vars attributes cdr))
-	(meta (get 'meta attributes cadr))
-	(methods (get 'methods attributes cdr)))
+  (let* ((name (get 'name attributes cadr))
+	 (super (get 'super attributes cadr))
+	 (vars (preprocess-vars name (get 'vars attributes cdr)))
+	 (meta (get 'meta attributes cadr))
+	 (methods (get 'methods attributes cdr)))
     (werror "Processing class ~S\n" name)
     ; (werror "foo\n")
-    (let ((vars (preprocess name raw-vars)))
-      (let ((mark-function (make-mark-function name vars))
-	    (free-function (make-free-function name vars)))
-	; (werror "baar\n")
-	(c-append (class-annotate name super meta)
-		  "#ifndef GABA_DEFINE\n"	
-		  (make-instance-struct name super vars)
-		  (if meta
-		      (c-append "extern struct " meta "_meta "
-				name "_class_extended;\n"
-				"#define " name "_class (" name
-				"_class_extended.super)\n")
-		      (c-append "extern struct lsh_class " name "_class;\n"))
-		  "#endif /* !GABA_DEFINE */\n\n"
-		  "#ifndef GABA_DECLARE\n"
-		  (or mark-function "")
-		  (or free-function "")
-		  (make-class name super mark-function free-function
-			      meta methods)
-		  "#endif /* !GABA_DECLARE */\n\n")))))
+    (let ((mark-function (make-mark-function name vars))
+	  (free-function (make-free-function name vars)))
+					; (werror "baar\n")
+      (c-append (class-annotate name super meta)
+		"#ifndef GABA_DEFINE\n"	
+		(make-instance-struct name super vars)
+		(if meta
+		    (c-append "extern struct " meta "_meta "
+			      name "_class_extended;\n"
+			      "#define " name "_class (" name
+			      "_class_extended.super)\n")
+		    (c-append "extern struct lsh_class " name "_class;\n"))
+		"#endif /* !GABA_DEFINE */\n\n"
+		"#ifndef GABA_DECLARE\n"
+		(or mark-function "")
+		(or free-function "")
+		(make-class name super mark-function free-function
+			    meta methods)
+		"#endif /* !GABA_DECLARE */\n\n"))))
 
 (define (process-meta attributes)
   (let ((name (get 'name attributes cadr))
 	(methods (get 'methods attributes cdr)))
     (werror "Processing meta ~S\n" name)
     (c-append "#ifndef GABA_DEFINE\n"
-	      (make-meta name methods)"struct " name "_meta\n"
+	      (make-meta name methods)
 	      "#endif /* !GABA_DEFINE */"
 	      indent)))
 
 (define (process-struct attributes)
-  (let ((name (get 'name attributes cadr))
-	;; FIXME: Do we really handle super?
-	(super (get 'super attributes cadr))
-	(raw-vars (get 'vars attributes cdr))
-	(meta (get 'meta attributes cadr))
-	(methods (get 'methods attributes cdr)))
+  (let* ((name (get 'name attributes cadr))
+	 ;; FIXME: Do we really handle super?
+	 (super (get 'super attributes cadr))
+	 (vars (preprocess-vars name (get 'vars attributes cdr)))
+	 (meta (get 'meta attributes cadr))
+	 (methods (get 'methods attributes cdr)))
     (werror "Processing struct ~S\n" name)
-    ; (werror "foo\n")
+    ;; (werror "foo\n")
     ;; FIXME: Is this really needed?
-    (let ((vars (preprocess name raw-vars)))
-      ; (werror "baar\n")
-      (c-append "#ifndef GABA_DEFINE\n"	
-		(c-struct name vars)
-		"extern " (struct-mark-prototype name) ";\n"
-		"extern " (struct-free-prototype name) ";\n"
-		"#endif /* !GABA_DEFINE */\n\n"
-		"#ifndef GABA_DECLARE\n"
-		(struct-mark-function name vars)
-		(struct-free-function name vars)
-		"#endif /* !GABA_DECLARE */\n\n"))))
+    ;; (werror "baar\n")
+    (c-append "#ifndef GABA_DEFINE\n"	
+	      (c-struct name vars)
+	      "extern " (struct-mark-prototype name) ";\n"
+	      "extern " (struct-free-prototype name) ";\n"
+	      "#endif /* !GABA_DEFINE */\n\n"
+	      "#ifndef GABA_DECLARE\n"
+	      (struct-mark-function name vars)
+	      (struct-free-function name vars)
+	      "#endif /* !GABA_DECLARE */\n\n")))
 
 ;;;; Expression compiler
 
@@ -803,12 +534,12 @@
 ;; where value is a C expression representing the value. call_i is
 ;; present, it is a function that can be called to apply the value to
 ;; i arguments directly.
-(define (make-output constants)
+(define (make-output constants expr)
   ;; OP and ARGS are C expressons
   (define (apply-generic op args)
     ;; (werror "(apply-generic ~S)\n" (cons op args))
     (if (null? args) op
-	(apply-generic (list "A(" op ", " (car args) ")")
+	(apply-generic (c-call* "A" op (car args))
 		       (cdr args))))
   ;; INFO is the (value [n]) associated with a constant,
   ;; and ARGS is a list of C expressions
@@ -820,8 +551,8 @@
 	(apply-generic (car info) args)
 	(let ((n (min (length calls) (length args))))
 	  ;; (werror "n: ~S\n" n)
-	  (apply-generic (list (nth info n)
-			       "(" (implode (list-prefix args n) ", ") ")")
+	  (apply-generic (c-call (nth info n)
+				 (list-prefix args n))
 			 (list-tail args n))))))
   (define (lookup-global v)
     (cond ((assq v constants) => cdr)
@@ -836,15 +567,9 @@
 	  (if (atom? op)
 	      (apply-constant (lookup-global op) args)
 	      (apply-generic op args)))))
-  output-expression)
+  (output-expression expr))
 
 (define (process-expr attributes)
-  (define (declare-params params)
-    (implode (map (lambda (var)
-		    (type->declaration (var-type var)
-				       (var-name var)))
-		  params)
-	     ", "))
   (define (params->alist params)
     (map (lambda (var)
 	   (let ((name (var-name var)))
@@ -854,7 +579,7 @@
   ;; (werror "foo\n")
   (let ((name (get 'name attributes cadr))
 	(globals (or (get 'globals attributes cdr) '()))
-	(params (get 'params attributes cdr))
+	(params (preprocess-vars #f (get 'params attributes cdr)))
 	(expr (get 'expr attributes cadr)))
     (werror "Processing expression ~S\n" name)
     (let ((translated (translate expr)))
@@ -862,8 +587,8 @@
       ;; (werror "Globals: ~S\n" globals)
       ;; (werror "Params: ~S\n" params)
       (c-append (c-prototype "static struct lsh_object *" name
-			     (if params (declare-params params) "void"))
-		indent "{\n"
+			     (map c-declare params))
+		indent
 		(format #f "  /* ~S */\n" translated)
 		"#define A GABA_APPLY\n"
 		"#define I GABA_VALUE_I\n"
@@ -891,21 +616,25 @@
 		"#define Cp2 GABA_APPLY_Cp_2\n"
 		"#define Cp3 GABA_APPLY_Cp_3\n"
 		;; "  trace(\"Entering " name "\\n\");\n"
-		"  return MAKE_TRACE(\"" name "\", \n    "
-		((make-output (append '( (I I)
-					 (K K K1)
-					 (S S S1 S2)
-					 (B B B1 B2)
-					 (C C C1 C2)
-					 (S* Sp Sp1 Sp2 Sp3)
-					 (B* Bp Bp1 Bp2 Bp3)
-					 (C* Cp Cp1 Cp2 Cp3))
-				      globals
-				      (if params
-					  (params->alist params)
-					  '())))
-		 translated)
-		"\n  );\n"
+		(c-block*
+		 (c-append
+		  "return "
+		  (c-call* "MAKE_TRACE"
+			  (c-string name)
+			  (make-output (append '( (I I)
+						   (K K K1)
+						   (S S S1 S2)
+						   (B B B1 B2)
+						   (C C C1 C2)
+						   (S* Sp Sp1 Sp2 Sp3)
+						   (B* Bp Bp1 Bp2 Bp3)
+						   (C* Cp Cp1 Cp2 Cp3))
+						globals
+						(if params
+						    (params->alist params)
+						    '()))
+				       translated))))
+		indent
 		"#undef A\n"
 		"#undef I\n" 
 		"#undef K\n"
@@ -930,8 +659,7 @@
 		"#undef Cp\n"
 		"#undef Cp1\n"
 		"#undef Cp2\n"
-		"#undef Cp3\n"
-		"}\n"))))
+		"#undef Cp3\n"))))
 
 (define (process-input exp)
   (let ((type (car exp))
@@ -948,9 +676,8 @@
   (let ((test (lambda (s) (string-prefix? "/* GABA:" s))))
     (lambda args
       (let ((exp (read-expression test)))
-	(if (not (eof-object? exp))
-	    (begin
-	      (out 0 (process-input exp))
-	      (main)))))))
+	(unless (eof-object? exp)
+		(out 0 (process-input exp))
+		(main))))))
 
 ; (main)
