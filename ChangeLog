@@ -1,3 +1,51 @@
+2000-11-20  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/unix_interact.c (make_unix_interact): Install signal handler
+	only if backend is non-NULL.
+
+	* src/srp-gen.c: New tty attribute.
+	(main_argp_parser): Use new interact class.
+
+	* src/spki_commands.c: Updated pkcs#5v2 sexp representation to
+	include the iteration count.
+	(do_spki_encrypt): Removed the dummy noiv string. Use NULL
+	instead. 
+	(do_spki_encrypt): Include iteration count, using sexp_uint32(). 
+	(spki_password_decrypt): New class.
+	(do_spki_decrypt): New function.
+	(make_pkcs5_decrypt): New function.
+
+	* src/sexp.c (sexp_uint32): New function.
+	(sexp2uint32): New function.
+
+	* src/password.h: Marked as obsolete.
+
+	* src/lsh_types.h (READ_UINT24): New macro.
+
+	* src/lsh.c: Pass tty object to make_client_password_auth and
+	make_srp_client. 
+
+	* src/lsh-writekey.c (lsh_writekey_options): New attribute tty.
+	(main_argp_parser): Use interact class to ask for the password. 
+
+	* src/client_userauth.c: New attribute tty.
+	(send_password): Use interact class to ask for the password. 
+	(make_client_password_state): New argument tty.
+	(client_password_method): New class.
+	(make_client_password_auth): New argument tty.
+
+	* src/client_password.c: Marked as obsolete.
+
+	* src/client_keyexchange.c (srp_client_instance,
+	srp_client_exchange): New attribute tty.
+	(do_handle_srp_reply): Use new interact class for asking for the
+	password.
+	(make_srp_client): New argument tty.
+
+	* src/atoms.in: Added keyword "iterations".
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Removed client_password.c.
+
 2000-11-16  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/unix_user.c (do_read_file): Use lsh_copy_file(). 
