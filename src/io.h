@@ -40,7 +40,7 @@ struct io_fd
   struct io_fd *next;
   int fd;
 
-  int please_close;
+  int close_now;
   
   /* Reading */
   struct read_handler *handler;
@@ -48,11 +48,11 @@ struct io_fd
 
   /* Writing */
   struct write_buffer *buffer;
-  struct callback *close_callback;
+  int close_reason;
+  struct close_callback *close_callback;
 };
 
 /* A closed function with a file descriptor as argument */
-
 struct fd_callback
 {
   struct lsh_object header;
@@ -61,6 +61,20 @@ struct fd_callback
 };
 
 #define FD_CALLBACK(c, fd) ((c)->f(&(c), (fd)))
+
+/* Close callbacks are called with a reason as argument. */
+
+#define CLOSE_EOF 0
+#define CLOSE_WRITE_FAILED 1
+#define CLOSE_PROTOCOL_FAILURE 2
+   
+struct close_callback
+{
+  struct lsh_object header;
+  int (*f)(struct close_callback *closure, int reason);
+};
+
+#define CLOSE_CALLBACK(c, r) ((c)->f((c), (r)))
 
 struct listen_fd
 {
@@ -127,6 +141,6 @@ struct abstract_write *io_read_write(struct io_backend *b,
 				     int fd,
 				     struct read_handler *read_callback,
 				     UINT32 block_size,
-				     struct callback *close_callback);
+				     struct close_callback *close_callback);
 
 #endif /* LSH_IO_H_INCLUDED */
