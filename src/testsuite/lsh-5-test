@@ -1,0 +1,19 @@
+#! /bin/sh
+
+# Tests connecting with lsh. In order to use this, you must already
+# have lsh set up so that you can login without password.
+
+# This restriction can be fixed if we add an option to lshd to use a
+# custom passwd-file.
+
+echo lsh, test 5, using an RSA hostkey
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+HOSTKEY=$srcdir/key-2.private
+
+spawn_lshd && run_lsh "exit" && test_success
