@@ -82,16 +82,22 @@ validity_intersect(struct spki_5_tuple *result,
     }
   return 1;
 }
-		   
-static struct spki_5_tuple *
-reduce_with_list(struct spki_acl_db *db, const
-		 struct spki_5_tuple *known,
+
+/* Uses the given list to reduce the given certificate. Resulting
+ * reduced certificates are consed onto the list.
+ *
+ * Returns 0 on out of memory. */
+static int
+reduce_with_list(struct spki_acl_db *db,
+		 struct spki_5_tuple_list **list,
 		 const struct spki_5_tuple *tuple)
 {
+  const struct spki_5_tuple *known;
+  const struct spki_5_tuple_list *i;
   assert(tuple->issuer);
   
-  for (; (known = spki_5_tuple_by_subject(known, tuple->issuer));
-       known = known->next)
+  for (i = *list;
+       (known = spki_5_tuple_by_subject_next(&i, tuple->issuer)); )
     if (known->flags & SPKI_PROPAGATE
 	&& validity_intersect(NULL, known, tuple))
       {
@@ -99,8 +105,9 @@ reduce_with_list(struct spki_acl_db *db, const
 						  known->tag, tuple->tag);
 	if (tag)
 	  {
-	    SPKI_NEW(db, struct spki_5_tuple, result);
-	    spki_5_tuple_init(result);
+	    struct spki_5_tuple *result = spki_5_tuple_cons_new(db, list);
+	    if (!result)
+	      return 0;
 
 	    result->issuer = known->issuer;
 	    result->subject = tuple->subject;
@@ -111,36 +118,31 @@ reduce_with_list(struct spki_acl_db *db, const
 
 	    if (tuple->flags & SPKI_PROPAGATE)
 	      result->flags |= SPKI_PROPAGATE;
-	      
-	    return result;
 	  }
       }
-  return NULL;
+  return 1;
 }
 
-/* Returns a series of reduced 5 tuples, where the first one is
- * generally the most interesting. */
-struct spki_5_tuple *
+/* Returns a list of reduced 5 tuples.
+ *
+ * FIXME: How to distinguish out of memory from other failing
+ * reductions? */
+
+struct spki_5_tuple_list *
 spki_5_tuple_reduce(struct spki_acl_db *db,
-		    struct spki_5_tuple *sequence)
+		    struct spki_5_tuple_list *sequence)
 {
-  struct spki_5_tuple *result;
+  struct spki_5_tuple_list *result;
 
-  for (result = NULL; sequence; sequence = sequence->next)
+  for (result = spki_5_tuple_list_filter(db, db->acls, NULL, NULL);
+       sequence; sequence = sequence->cdr)
     {
-      struct spki_5_tuple *reduced;
-      
-      assert(sequence->issuer);
+      assert(sequence->car->issuer);
 
-      /* First try our list of already reduced certificates. */
-      reduced = reduce_with_list(db, result, sequence);
-      if (!reduced)
-	reduced = reduce_with_list(db, db->first_acl, sequence);
-
-      if (reduced)
+      if (!reduce_with_list(db, &result, sequence->car))
 	{
-	  reduced->next = result;
-	  result = reduced;
+	  spki_5_tuple_list_release(db, result);
+	  return NULL;
 	}
     }
   return result;
