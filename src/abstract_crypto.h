@@ -193,25 +193,6 @@
 ((a)->make_verifier((a), (i)))
 
 
-/* Combining block cryptos */
-
-/* Example: To create a tripple DES cbc encryptor:
- *
- * struct crypto_algorithm des3_cbc
- *  = make_cbc(crypto_cascade(3, des_algorithm,
- *                               crypto_invert(des_algorithm)
- *                               des_algorithm, -1));
- */
-
-struct crypto_algorithm *crypto_cbc(struct crypto_algorithm *inner);
-struct crypto_algorithm *crypto_invert(struct crypto_algorithm *inner);
-struct crypto_algorithm *crypto_cascadel(struct object_list *cascade);
-struct crypto_algorithm *crypto_cascade(unsigned n, ...);
-
-/* Utility functions */
-UINT32 gcd(UINT32 x, UINT32 y);
-UINT32 lcm(UINT32 x, UINT32 y);
-
 /* Simple hashing */
 struct lsh_string *
 hash_string(struct hash_algorithm *a,
