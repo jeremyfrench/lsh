@@ -252,6 +252,9 @@ do_gateway_channel_request(struct channel_request *s UNUSED,
   command = make_general_channel_request_command
     (format_channel_request_i(info, &channel->chain->super,
 			      args_length, args_data));
+
+  /* FIXME: Set up a continuation, so that we can return the correct
+     channel */ 
   COMMAND_CALL(command, channel->chain, c, e);
 }
 
