@@ -95,6 +95,8 @@ int main(int argc, char **argv)
   char *user = NULL;
   char *port = "ssh";
   int option;
+
+  int lsh_exit_code;
   
   struct sockaddr_in remote;
 
@@ -201,7 +203,7 @@ int main(int argc, char **argv)
      make_client_startup(io_read(&backend, in, NULL, NULL),
 			 io_write(&backend, out, BLOCK_SIZE, NULL),
 			 io_write(&backend, err, BLOCK_SIZE, NULL),
-			 ATOM_SHELL, ssh_format("")));
+			 ATOM_SHELL, ssh_format(""), &lsh_exit_code));
   
   kexinit_handler = make_kexinit_handler
     (CONNECTION_CLIENT,
@@ -223,10 +225,13 @@ int main(int argc, char **argv)
     }
   
   lsh_string_free(random_seed);
+
+  /* Exit code if no session is established */
+  lsh_exit_code = 17;
   
   io_run(&backend);
 
-  return 0;
+  return lsh_exit_code;
 }
 
   
