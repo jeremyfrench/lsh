@@ -162,7 +162,14 @@ dotask 1 "make" "makewarn" "cd $BASE && make $makeargs"
 #
 
 dotask 0 "ckprg" "" "cd $BASE && make check"
-dotask 0 "ckdist" "" "cd $BASE && make distcheck"
+
+# FIXME: run distcheck.
+# FIXME: compare the contents of the distcheck-generated tar file
+# with the one we distributed.
+# A problem is that make distcheck leaves some write-protected directories that
+# can't be deleted with rm -rf
+
+# dotask 0 "ckdist" "" "cd $BASE && make distcheck"
 dotask 1 "install" "" "cd $BASE && make install"
 
 find pfx -type f -print | sort > r/installedfiles.txt
@@ -170,10 +177,6 @@ if test `wc -l < r/installedfiles.txt` -eq 0
 then
     rm r/installedfiles.txt
 fi
-
-# FIXME: run distcheck.
-# FIXME: compare the contents of the distcheck-generated tar file
-# with the one we distributed.
 
 # Collect stuff.
 
