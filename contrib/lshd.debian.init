@@ -25,7 +25,8 @@ set -e
 
 if [ ! -x $DAEMON \
      -o ! -f /etc/lsh_host_key  \
-     -o   ! -f /etc/lsh_host_key.pub ]
+     -o ! -f /etc/lsh_host_key.pub \
+     -o ! -f /var/spool/lsh/yarrow-seed-file ]
 then
 	echo "lshd not installed properly" >&2
         exit 1
@@ -36,7 +37,7 @@ case "$1" in
 	echo -n "Starting $DESC: "
 	start-stop-daemon --start --quiet --pidfile $PIDFILE \
 		--exec $DAEMON \
-		-- --pid-file $PIDFILE --daemonic --port $PORT 
+		-- --pid-file $PIDFILE --daemonic --port $PORT
 	echo "$NAME."
 	;;
   stop)
@@ -57,7 +58,18 @@ case "$1" in
 	# start-stop-daemon --stop --signal 1 --quiet --pidfile \
 	#	/var/run/$NAME.pid --exec $DAEMON
   #;;
-  restart|force-reload)
+  restart)
+	echo -n "Restarting $DESC: "
+	# Makes the old lshd stop listening for new connections
+	start-stop-daemon --stop --signal 1 --quiet --pidfile $PIDFILE \
+		--exec $DAEMON
+	sleep 1
+	start-stop-daemon --start --quiet --pidfile $PIDFILE \
+		--exec $DAEMON \
+		-- --pid-file $PIDFILE --daemonic --port $PORT
+	echo "$NAME."
+	;;
+  force-reload)
 	#
 	#	If the "reload" option is implemented, move the "force-reload"
 	#	option to the "reload" entry above. If not, "force-reload" is
@@ -69,7 +81,7 @@ case "$1" in
 	sleep 1
 	start-stop-daemon --start --quiet --pidfile $PIDFILE \
 		--exec $DAEMON \
-		-- --pid-file $PIDFILE --daemonic --port $PORT 
+		-- --pid-file $PIDFILE --daemonic --port $PORT
 	echo "$NAME."
 	;;
   *)
