@@ -128,6 +128,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (super algorithms_options)
      (vars
        (backend object io_backend)
+       (random object randomness_with_poll)
        (signature_algorithms object alist)
        (style . sexp_argp_state)
        (interface . "char *")
@@ -147,7 +148,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
 static struct lsh_proxy_options *
 make_lsh_proxy_options(struct io_backend *backend, 
-		       struct randomness *random, 
+		       struct randomness_with_poll *random, 
 		       struct alist *algorithms)
 {
   NEW(lsh_proxy_options, self);
@@ -155,9 +156,10 @@ make_lsh_proxy_options(struct io_backend *backend,
   init_algorithms_options(&self->super, algorithms);
   self->signature_algorithms
     = make_alist(1,
-		 ATOM_DSA, make_dsa_algorithm(random), -1);
+		 ATOM_DSA, make_dsa_algorithm(&random->super), -1);
 
   self->backend = backend;
+  self->random = random;
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
 
@@ -316,6 +318,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		   self->port);
       if (self->use_pid_file < 0)
 	self->use_pid_file = self->daemonic;
+
+      /* Start background poll */
+      RANDOM_POLL_BACKGROUND(self->random->poller);
       
       break;
       
@@ -573,6 +578,7 @@ DEFINE_COMMAND_SIMPLE(proxy_destination, a)
 #include "proxy_alf.h"
 #endif
 
+
 int main(int argc, char **argv)
 {
   struct lsh_proxy_options *options;
@@ -581,12 +587,12 @@ int main(int argc, char **argv)
   
   struct reap *reaper;
   
-  struct randomness *r;
+  struct randomness_with_poll *r;
   struct alist *algorithms_server, *algorithms_client;
   struct alist *signature_algorithms;
   
   struct make_kexinit *make_kexinit;
-
+  struct exception_handler *handler;
   
   NEW(io_backend, backend);
   init_backend(backend);
@@ -603,13 +609,18 @@ int main(int argc, char **argv)
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
-  r = make_reasonably_random();
+  handler = make_report_exception_handler
+    (make_report_exception_info(EXC_IO, EXC_IO, "lsh_proxy: "),
+     &default_exception_handler,
+     HANDLER_CONTEXT);
+  reaper = make_reaper();  
+  r = make_default_random(reaper, handler);
 
   algorithms_server = all_symmetric_algorithms();
   /* FIXME: copy algorithms_server */
   algorithms_client = all_symmetric_algorithms();
   
-  signature_algorithms = all_signature_algorithms(r);
+  signature_algorithms = all_signature_algorithms(&r->super);
   
   options = make_lsh_proxy_options(backend, r, algorithms_server);
   
@@ -669,8 +680,6 @@ int main(int argc, char **argv)
    * We should also extract the host-key algorithms for which we have keys,
    * instead of hardcoding ssh-dss below. */
  
-  reaper = make_reaper();
-
 #if 0
   lookup_keys = make_alist(1, 
 			   ATOM_SSH_DSS, make_fake_host_db(),
@@ -678,12 +687,14 @@ int main(int argc, char **argv)
 #endif
 
   ALIST_SET(algorithms_server, 
-	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, make_dh_server(make_dh1(r)));
+	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+	    make_dh_server(make_dh1(&r->super)));
   ALIST_SET(algorithms_client, 
-	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, make_dh_client(make_dh1(r)));
+	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+	    make_dh_client(make_dh1(&r->super)));
   
   make_kexinit
-    = make_simple_kexinit(r,
+    = make_simple_kexinit(&r->super,
 			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
 					-1),
 			  options->super.hostkey_algorithms,
@@ -797,7 +808,7 @@ int main(int argc, char **argv)
 						       "lsh_proxy_client - a free ssh",
 						       "proxy client",
 						       SSH_MAX_PACKET,
-						       r,
+						       &r->super,
 						       algorithms_client,
 						       NULL),
 						      make_kexinit),
@@ -806,7 +817,7 @@ int main(int argc, char **argv)
 						       "lsh_proxy_server - a free ssh",
 						       "proxy server",
 						       SSH_MAX_PACKET,
-						       r,
+						       &r->super,
 						       algorithms_server,
 						       NULL),
 						      make_kexinit));
@@ -817,10 +828,7 @@ int main(int argc, char **argv)
 
       COMMAND_CALL(server_listen, options,
                    &discard_continuation,
-                   make_report_exception_handler
-                   (make_report_exception_info(EXC_IO, EXC_IO, "lsh_proxy: "),
-                    &default_exception_handler,
-                    HANDLER_CONTEXT));
+		   handler);
     }
   }
   
