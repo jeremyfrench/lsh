@@ -1,3 +1,64 @@
+2000-09-15  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/parse.c (parse_next_atom): Updated comment. Return error for
+	empty atoms.
+	(parse_atoms): Handle the empty list case better.
+	(parse_atom_list): Simplified.
+
+	* src/keyexchange.c (do_handle_kexinit): Check kex_state.
+	(do_handle_kexinit): Check length of received kex_algorithms list. 
+	(do_handle_kexinit): Set kex_state to KEX_STATE_IGNORE or
+	KEX_STATE_IN_PROGRESS as appropriate.
+	(do_handle_newkeys): Clear kexinits and literal_kexinits when
+	resetting kex_state (fixes key renegotiation bug reported by jps). 
+	(kexinit_filter): New command.
+
+	* src/dh_exchange.c (init_dh_instance): Don't clear
+	connection->kexinits and connection->literal_kexinits here. 
+
+	* src/connection_commands.c (handshake_command): Added
+	make_kexinit argument (and deleted the corresponding field from
+	handshake_info). Updated all callers.
+
+	* src/client_keyexchange.c (do_init_client_dh): Don't touch connection->kex_state.
+	(do_init_client_srp): Likewise.
+	* src/server_keyexchange.c: Likewise.
+	
+	* src/algorithms.c (list_hostkey_algorithms): New function.
+	(lookup_hostkey_algorithm): New function.
+	(algorithms_options): New option --hostkey-algorithm.
+	(filter_algorithms): New function.
+	(filter_algorithms_l): New function.
+
+	* src/lshd.c: Renamed lshd_listen to make_lshd_listen and
+	lshd_connection_service to make_lshd_connection_service.
+	(make_lshd_listen): Use kexinit_filter to restrict announced
+	hostkey algorithms to those that we actually have keys for. 
+	(make_lshd_listen): Use listen_callback, in order to get the right
+	evaluation order.
+
+2000-09-14  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/algorithms.c (default_crypto_algorithms): Make the default
+	list more restrictive.
+	(all_crypto_algorithms): New function, returning a less
+	conservative algorithm list.
+
+	* src/connection.h (ssh_connection): Deleted obsolete newkeys
+	attribute. 
+
+	* src/process_atoms (atom2define): Replace @domain suffix with
+	"_LOCAL".
+
+	* src/lsh-writekey.c (make_lsh_writekey_options): Use
+	all_symmetric_algorithms() and all_symmetric_algorithms(). 
+	* src/lsh.c (make_options): Likewise.
+	* src/lsh_proxy.c (main): Likewise.
+	* src/lshd.c (make_lshd_options): Likewise.
+
+	* src/atoms.in: Added @lysator.liu.se suffix to non-standard
+	algorithms. 
+
 2000-09-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/keyexchange.c (do_handle_newkeys): Clear

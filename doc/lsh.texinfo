@@ -948,12 +948,14 @@ algorithm negotiation will fail because the peer doesn't support
 prefers not to use it. 
 
 @item @option{-c} @tab Encryption
-  @tab @code{3dec-cbc}, @code{blowfish-cbc}, @code{cast128-cbc},
-@code{serpent-cbc}, @code{twofish-cbc}, @code{rijndael-cbc},
+  @tab @code{3dec-cbc}, @code{blowfish-cbc}, @code{arcfour}
 @code{arcfour}
 
   @tab The default encryption algorithm is triple-DES in CBC mode. This
 seems to be the algorithm of choice among conservative cryptographers.
+The default list includes only quite old and well studied algorithms.
+There is a special algorithm name @code{all} to enable all supported
+encryption algorithms (except @code{none}). 
 
 @item @option{-m} @tab Message Authentication
   @tab @code{hmac-sha1}, @code{hmac-md5}

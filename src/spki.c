@@ -299,7 +299,7 @@ parse_private_key(struct alist *algorithms,
     }
   else
     {
-      werror("spki.c: Unknown key type (only dsa is supported).");
+      werror("spki.c: Unknown key type (only dsa is supported).\n");
       SPKI_ERROR(e, "spki.c: Unknown key type (only dsa is supported).", expr);
     }
 }
@@ -989,6 +989,10 @@ do_spki_lookup(struct spki_context *s,
 	
 	return subject;
       }
+    case ATOM_SEQUENCE:
+      werror("do_spki_lookup: spki sequences not yet supported.\n");
+      return NULL;
+      
     case ATOM_NAME:
       werror("do_spki_lookup: names not yet supported.\n");
       return NULL;

@@ -242,3 +242,5 @@ supported algorithms in the list?
 
 Use static objects for crypto algorithms with fixed key sizes and
 other parameters.
+
+Replace most defines with enums, for improved type checking.
