@@ -174,7 +174,7 @@ do_connect_continuation(struct command_continuation *c,
   CAST(connect_continuation, self, c);
   CAST(lsh_fd, fd, x);
 
-  COMMAND_RETURN(self->up, make_listen_value(fd, self->target));
+  COMMAND_RETURN(self->up, make_listen_value(fd, self->target, fd2info(fd,0)));
 }
 
 static struct command_continuation *
