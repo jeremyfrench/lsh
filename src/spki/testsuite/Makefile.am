@@ -24,5 +24,6 @@ all:
 .PHONY: check
 
 check: $(TS_ALL)
-	srcdir=$(srcdir) $(srcdir)/run-tests $(TS_ALL)
+	LD_LIBRARY_PATH=../../nettle/.lib srcdir=$(srcdir) \
+		$(srcdir)/run-tests $(TS_ALL)
 
