@@ -269,7 +269,8 @@ do_options2identities(struct command *ignored UNUSED,
       COMMAND_RETURN(c, make_object_list(0, -1));
     }
   else
-    COMMAND_CALL(make_spki_read_userkeys(options->signature_algorithms,
+    COMMAND_CALL(make_spki_read_userkeys(options->algorithms->algorithms,
+					 options->signature_algorithms,
 					 options->super.tty),
 		 f, c, e);
   
