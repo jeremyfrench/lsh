@@ -33,6 +33,7 @@
 #include "pad.h"
 #include "parse.h"
 #include "ssh.h"
+#include "suspend.h"
 #include "tcpforward_commands.h"
 #include "translate_signal.h"
 #include "werror.h"
@@ -58,6 +59,8 @@
 #undef GABA_DEFINE
 
 #include "client.c.x"
+
+#define DEFAULT_ESCAPE_CHAR '~'
 
 static struct lsh_string *
 format_service_request(int name)
@@ -387,6 +390,8 @@ init_client_options(struct client_options *self,
 {
   self->backend = backend;
   self->tty = make_unix_interact(backend);
+  self->escape = -1;
+  
   self->handler = handler;
 
   self->exit_code = exit_code;
@@ -482,6 +487,8 @@ client_options[] =
   { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
   { "no-pty", 't' | ARG_NOT, NULL, 0, "Don't request a remote pty.", 0 },
 #endif /* WITH_PTY_SUPPORT */
+  { "escape-char", 'e', "Character", 0, "Escape char. `none' means disable. "
+    "Default is to use `~' if we have a tty, otherwise none.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -691,6 +698,22 @@ fork_output(int out)
     }
 }
 
+static struct escape_info *
+client_escape_info(struct client_options *options)
+{
+  struct escape_info *info = NULL;
+
+  if (!options->escape)
+    return NULL;
+
+  info = make_escape_info(options->escape);
+
+  /* C-z */
+  info->dispatch[26] = &suspend_callback;
+
+  return info;
+}
+
 /* Create a session object. stdout and stderr are shared (although
  * with independent lsh_fd objects). stdin can be used by only one
  * session (until something "session-control"/"job-control" is added).
@@ -701,7 +724,8 @@ make_client_session(struct client_options *options)
   int in;
   int out;
   int err;
-
+  struct escape_info *escape = NULL;
+  
   debug("lsh.c: Setting up stdin\n");
 
   if (options->stdin_file)
@@ -713,6 +737,10 @@ make_client_session(struct client_options *options)
       else 
 	{
 	  in = (options->stdin_fork ? fork_input : dup)(STDIN_FILENO);
+
+	  /* Attach the escape char handler. */
+	  escape = client_escape_info(options);
+
 	  options->used_stdin = 1;
 	}
     }
@@ -774,9 +802,11 @@ make_client_session(struct client_options *options)
      io_write(make_lsh_fd(options->backend,
 			  err, "client stderr", options->handler),
 	      BLOCK_SIZE, NULL),
+     escape,
      WINDOW_SIZE,
      options->exit_code);
 }
+
 
 /* Parse the argument for -R and -L */
 int
@@ -902,6 +932,17 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       if (options->start_shell)
 	client_add_action(options, client_shell_session(options));
 
+      if (options->escape < 0)
+	{
+	  /* Default behaviour */
+	  if (options->tty && INTERACT_IS_TTY(options->tty))
+	    options->escape = DEFAULT_ESCAPE_CHAR;
+	  else
+	    options->escape = 0;
+	}
+      
+      /* Install suspend-handler */
+      suspend_install_handler();
       break;
 
     case 'p':
@@ -912,6 +953,16 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       options->user = arg;
       break;
 
+    case 'e':
+      if (arg[0] && !arg[1])
+	/* A single char argument */
+	options->escape = arg[0];
+      else if (!strcasecmp(arg, "none"))
+	options->escape = 0;
+      else
+	argp_error(state, "Invalid escape char: `%s'. "
+		   "You must use a single character or `none'.", arg);
+      break;
     case 'E':
       client_add_action(options, client_command_session(options, ssh_format("%lz", arg)));
       break;
