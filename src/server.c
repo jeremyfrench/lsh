@@ -182,16 +182,18 @@ make_server_callback(struct io_backend *b,
   return &connected->super;
 }
 
-static int server_die(struct callback *closure)
+static int server_die(struct close_callback *closure, int reason)
 {
-  werror("Connection died.\n");
-  /* FIXME: Cleanup properly. */
+  verbose("Connection died, for reason %d.\n", reason);
+  if (reason != CLOSE_EOF)
+    werror("Connection died.\n");
+
   return 0;  /* Ignored */
 }
 
-struct callback *make_server_close_handler(void)
+struct close_callback *make_server_close_handler(void)
 {
-  struct callback *c = xalloc(sizeof(struct callback));
+  struct close_callback *c = xalloc(sizeof(struct close_callback));
 
   c->f = server_die;
 

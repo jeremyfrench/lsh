@@ -40,6 +40,6 @@ make_server_callback(struct io_backend *b,
 		     struct packet_handler *kexinit_handler);
 
 struct read_handler *make_server_read_line(struct ssh_connection *c);
-struct callback *make_server_close_handler(void);
+struct close_callback *make_server_close_handler(void);
 
 #endif /* LSH_SERVER_H_INCLUDED */
