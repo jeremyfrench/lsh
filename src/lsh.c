@@ -559,10 +559,10 @@ do_lsh_lookup(struct lookup_verifier *c,
 	  if (!INTERACT_YES_OR_NO
 	      (self->tty,
 	       ssh_format("Received unauthenticated key for host %lS\n"
-			  "Fingerprints:\n"
-			  "Bubble Babble SHA1: %lfS\n"
-			  "Keyblob MD5:        %lfS\n"
-			  "SPKI SHA1:          %lfxS)\n"
+			  "Key details:\n"
+			  "Bubble Babble: %lfS\n"
+			  "Fingerprint:   %lfS\n"
+			  "SPKI SHA1:     %lfxS\n"
 			  "Do you trust this key? (y/n) ",
 			  self->host->ip, babble, fingerprint, spki_fingerprint), 0, 1))
 	    return NULL;
