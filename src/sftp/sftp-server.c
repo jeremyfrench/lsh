@@ -55,6 +55,7 @@
 
 #include "filemode.h"
 #include "idcache.h"
+#include "xmalloc.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -97,134 +98,6 @@ debug(const char *format, ...)
 # define DEBUG(x)
 #endif /* !WITH_DEBUG */
 
-static void
-sftp_attrib_from_stat(struct stat *st, struct sftp_attrib* a)
-{
-  a->permissions=st->st_mode;
-  a->uid=st->st_uid;
-  a->gid=st->st_gid;
-  a->atime=st->st_atime;
-  a->mtime=st->st_mtime;
-  a->size=st->st_size;
-  a->flags= ( SSH_FILEXFER_ATTR_SIZE ||
-	      SSH_FILEXFER_ATTR_UIDGID ||
-	      SSH_FILEXFER_ATTR_PERMISSIONS || 
-	      SSH_FILEXFER_ATTR_ACMODTIME
-	      );
-}
-
-static void
-sftp_put_longname_mode(struct sftp_output *o, struct stat *st)
-{
-  /* A 10 character modestring and a space */
-  UINT8 modes[MODE_STRING_LENGTH];
-
-  filemodestring(st, modes);
-
-  sftp_put_data(o, sizeof(modes), modes);
-}
-
-#if 0
-/* FIXME: Replace these dummy functions with the functions from
- * fileutil's lib/idcache.c. */
-static const char *
-getuser(uid_t uid UNUSED)
-{ return NULL; }
-
-static const char *
-getgroup(gid_t gid UNUSED)
-{ return NULL; }
-#endif
-
-static void
-sftp_put_longname(struct sftp_output *o,
-		  struct stat *st, const UINT8 *fname)
-{
-  /* NOTE: The current spec doesn't mandate utf8. */
-
-  /* Where to store the length. */
-  UINT32 length_index = sftp_put_reserve_length(o);
-  const char *user_name;
-  const char *group_name;
-  time_t now, when;
-  struct tm *when_local;
-  const char *time_format;
-  
-  sftp_put_longname_mode(o, st);
-  sftp_put_printf(o, " %3u ", (unsigned) st->st_nlink);
-
-  user_name = getuser(st->st_uid);
-  if (user_name)
-    sftp_put_printf(o, "%-8.8s ", user_name);
-  else
-    sftp_put_printf(o, "%-8u ", (unsigned int) st->st_uid);
-
-  group_name = getgroup(st->st_gid);
-  if (group_name)
-    sftp_put_printf(o, "%-8.8s ", group_name);
-  else
-    sftp_put_printf(o, "%-8u ", (unsigned) st->st_gid);
-
-  /* FIXME: How to deal with long long sizes? */
-  sftp_put_printf(o, "%8lu ", (unsigned long) st->st_size);
-
-  now = time(NULL);
-  when = st->st_mtime;
-
-  when_local = localtime( &st->st_mtime );
-
-  if ( (now > when + 6L * 30L * 24L * 60L * 60L)	/* Old. */
-       || (now < when - 60L * 60L) )		/* In the future. */
-    /* The file is fairly old or in the future.
-       POSIX says the cutoff is 6 months old;
-       approximate this by 6*30 days.
-       Allow a 1 hour slop factor for what is considered "the future",
-       to allow for NFS server/client clock disagreement.
-       Show the year instead of the time of day.  */
-    time_format = "%b %e  %Y";
-  else
-    time_format = "%b %e %H:%M";
-      
-  sftp_put_strftime(o, 12, time_format, when_local);
-
-  sftp_put_printf(o, " %s", fname);
-
-  sftp_put_final_length(o, length_index);
-}
-
-static void
-sftp_put_filename(struct sftp_output *o,
-		  struct stat *st,
-		  const char *name)
-{
-  struct sftp_attrib a;
-  
-  sftp_attrib_from_stat( st, &a);
-  sftp_put_string(o, strlen(name), name);
-  sftp_put_longname(o, st, name);
-  sftp_put_attrib(o, &a);
-}
-
-/* FIXME: We need to distinguish invalid messages from invalid file
-   names. */
-static const UINT8 *
-sftp_get_name(struct sftp_input *i)
-{
-  UINT8 *name;
-  UINT32 length;
-  
-  name = sftp_get_string_auto(i, &length);
-  if (!length)
-    name = ".";
-
-  else if (memchr(name, 0, length))
-    name = NULL;
-
-  DEBUG (("sftp_get_name: %s\n", name ? (char *) name : "<INVALID>"));
-
-  return name;
-}
-
 #define SFTP_MAX_HANDLES 200
 
 /* We need to keep the name of directories around, in order to stat
@@ -257,6 +130,8 @@ struct sftp_ctx
 {
   struct sftp_input *i;
   struct sftp_output *o;
+  struct sftp_user_info *user_cache;
+  struct sftp_user_info *group_cache;
   
   struct sftp_handle handles[SFTP_MAX_HANDLES];
 };
@@ -264,21 +139,166 @@ struct sftp_ctx
 static void
 sftp_init(struct sftp_ctx *ctx, FILE *in, FILE *out)
 {
-  struct sftp_input *input;
-  struct sftp_output *output;
   unsigned i;
+  
+  ctx->i = sftp_make_input(in);
+  ctx->o = sftp_make_output(out);
 
-  if (!(input = sftp_make_input(in)))
-    FATAL("sftp_make_input failed");
-
-  if (!(output = sftp_make_output(out)))
-    FATAL("sftp_make_input failed");
-
-  ctx->i = input;
-  ctx->o = output;
-
+  ctx->user_cache = NULL;
+  ctx->group_cache = NULL;
+  
   for (i = 0; i < SFTP_MAX_HANDLES; i++)
     ctx->handles[i].type = HANDLE_UNUSED;
+}
+
+static const char *
+sftp_get_user(struct sftp_ctx *ctx, uid_t id)
+{
+  const char *name;
+  
+  if (sftp_cache_assoc(&ctx->user_cache, id, &name))
+    return name;
+
+  else
+    {
+      struct passwd *pwd = getpwuid(id);
+      name = pwd ? xstrdup(pwd->pw_name) : NULL;
+      sftp_cache_push(&ctx->user_cache, id, name);
+      return name;
+    }
+}
+
+static const char *
+sftp_get_group(struct sftp_ctx *ctx, gid_t id)
+{
+  const char *name;
+  
+  if (sftp_cache_assoc(&ctx->group_cache, id, &name))
+    return name;
+
+  else
+    {
+      struct group *grp = getgrgid(id);
+      name = grp ? xstrdup(grp->gr_name) : NULL;
+      sftp_cache_push(&ctx->group_cache, id, name);
+      return name;
+    }
+}
+
+static void
+sftp_attrib_from_stat(struct stat *st, struct sftp_attrib* a)
+{
+  a->permissions=st->st_mode;
+  a->uid=st->st_uid;
+  a->gid=st->st_gid;
+  a->atime=st->st_atime;
+  a->mtime=st->st_mtime;
+  a->size=st->st_size;
+  a->flags= ( SSH_FILEXFER_ATTR_SIZE ||
+	      SSH_FILEXFER_ATTR_UIDGID ||
+	      SSH_FILEXFER_ATTR_PERMISSIONS || 
+	      SSH_FILEXFER_ATTR_ACMODTIME
+	      );
+}
+
+static void
+sftp_put_longname_mode(struct sftp_output *o, struct stat *st)
+{
+  /* A 10 character modestring and a space */
+  UINT8 modes[MODE_STRING_LENGTH];
+
+  filemodestring(st, modes);
+
+  sftp_put_data(o, sizeof(modes), modes);
+}
+
+static void
+sftp_put_longname(struct sftp_ctx *ctx,
+		  struct stat *st, const UINT8 *fname)
+{
+  /* NOTE: The current spec doesn't mandate utf8. */
+
+  /* Where to store the length. */
+  UINT32 length_index = sftp_put_reserve_length(ctx->o);
+  const char *user_name;
+  const char *group_name;
+  time_t now, when;
+  struct tm *when_local;
+  const char *time_format;
+  
+  sftp_put_longname_mode(ctx->o, st);
+  sftp_put_printf(ctx->o, " %3u ", (unsigned) st->st_nlink);
+
+  user_name = sftp_get_user(ctx, st->st_uid);
+  if (user_name)
+    sftp_put_printf(ctx->o, "%-8.8s ", user_name);
+  else
+    sftp_put_printf(ctx->o, "%-8u ", (unsigned int) st->st_uid);
+
+  group_name = sftp_get_group(ctx, st->st_gid);
+  if (group_name)
+    sftp_put_printf(ctx->o, "%-8.8s ", group_name);
+  else
+    sftp_put_printf(ctx->o, "%-8u ", (unsigned) st->st_gid);
+
+  /* FIXME: How to deal with long long sizes? */
+  sftp_put_printf(ctx->o, "%8lu ", (unsigned long) st->st_size);
+
+  now = time(NULL);
+  when = st->st_mtime;
+
+  when_local = localtime( &st->st_mtime );
+
+  if ( (now > when + 6L * 30L * 24L * 60L * 60L)	/* Old. */
+       || (now < when - 60L * 60L) )		/* In the future. */
+    /* The file is fairly old or in the future.
+       POSIX says the cutoff is 6 months old;
+       approximate this by 6*30 days.
+       Allow a 1 hour slop factor for what is considered "the future",
+       to allow for NFS server/client clock disagreement.
+       Show the year instead of the time of day.  */
+    time_format = "%b %e  %Y";
+  else
+    time_format = "%b %e %H:%M";
+      
+  sftp_put_strftime(ctx->o, 12, time_format, when_local);
+
+  sftp_put_printf(ctx->o, " %s", fname);
+
+  sftp_put_final_length(ctx->o, length_index);
+}
+
+static void
+sftp_put_filename(struct sftp_ctx *ctx,
+		  struct stat *st,
+		  const char *name)
+{
+  struct sftp_attrib a;
+  
+  sftp_attrib_from_stat( st, &a);
+  sftp_put_string(ctx->o, strlen(name), name);
+  sftp_put_longname(ctx, st, name);
+  sftp_put_attrib(ctx->o, &a);
+}
+
+/* FIXME: We need to distinguish invalid messages from invalid file
+   names. */
+static const UINT8 *
+sftp_get_name(struct sftp_input *i)
+{
+  UINT8 *name;
+  UINT32 length;
+  
+  name = sftp_get_string_auto(i, &length);
+  if (!length)
+    name = ".";
+
+  else if (memchr(name, 0, length))
+    name = NULL;
+
+  DEBUG (("sftp_get_name: %s\n", name ? (char *) name : "<INVALID>"));
+
+  return name;
 }
 
 static int 
@@ -498,7 +518,7 @@ sftp_process_readdir(struct sftp_ctx *ctx)
   /* Use count == 1 for now. */
   sftp_put_uint32(ctx->o, 1);
 
-  sftp_put_filename(ctx->o, &st, entry->d_name);
+  sftp_put_filename(ctx, &st, entry->d_name);
 
   sftp_set_msg(ctx->o, SSH_FXP_NAME );
   return 1;
@@ -722,7 +742,7 @@ sftp_process_realpath(struct sftp_ctx *ctx)
       sftp_put_uint32(ctx->o, 0);
     }
   else
-    sftp_put_filename(ctx->o, &st, resolved);
+    sftp_put_filename(ctx, &st, resolved);
 
   sftp_set_msg( ctx->o, SSH_FXP_NAME );
   return 1;
