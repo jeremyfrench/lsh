@@ -30,6 +30,8 @@
 #include "lsh.h"
 #include "werror.h"
 
+#include <assert.h>
+
 #define GABA_DEFINE
 #include "proxy_userauth.h.x"
 #undef GABA_DEFINE
@@ -288,16 +290,19 @@ do_proxy_userauth_continuation(struct command_continuation *c,
 			       struct lsh_object *x)
 {
   CAST(proxy_userauth_continuation, self, c);
-  CAST(delayed_apply, action, x);
+  CAST(proxy_user, user, x);
   int i;
 
+  assert(user);
+  /* self->connection->user = user; */
+  
   connection_unlock(self->connection);
 
   /* Ignore any further userauth messages. */
   for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
     self->connection->dispatch[i] = &connection_ignore_handler;
   
-  FORCE_APPLY(action, self->super.up, self->super.e);
+  COMMAND_RETURN(self->super.up, self->connection);
 
   /* FIXME: Possibly call connection_handle_pending. */
 }
