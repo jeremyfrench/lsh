@@ -31,9 +31,13 @@ If this does not work, please use an absolute path to the configure script. ])
     ;;
 esac
 
+# echo Replacing CPPFLAGS: $CPPFLAGS
 # FIXME: Should be obsoleted by the nettle library
 # We want to compile the crypto lib for use with lsh
 # CPPFLAGS="$CPPFLAGS -I$srcdir -I$srcdir/src -I$srcdir/src/symmetric/include -DLSH"
+
+# src/rsync relies on lsh's definitions of WRITE_UINT32 etc.
+CPPFLAGS="-I$srcdir/src -DLSH"
 
 # GNU libc defaults to supplying the ISO C library functions only. 
 # initgroups() and strsignal() are extensions; the _GNU_SOURCE define
