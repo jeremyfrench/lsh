@@ -92,6 +92,7 @@ struct ssh_channel *
 make_client_session_channel(struct lsh_fd *in,
 			    struct lsh_fd *out,
 			    struct lsh_fd *err,
+			    struct escape_info *escape,
 			    UINT32 initial_window,
 			    int *exit_status);
 
@@ -109,6 +110,9 @@ make_pty_request(struct interact *tty);
 
        (tty object interact)
 
+       ; -1 means default.
+       (escape . int)
+       
        ; For i/o exceptions 
        (handler object exception_handler)
 
