@@ -48,6 +48,8 @@
 
 #define X11_WINDOW_SIZE 10000
 
+#define X11_COOKIE_LENGTH 16
+
 /* GABA:
    (class
      (name client_x11_auth_info)
@@ -514,6 +516,7 @@ make_client_x11_display(const char *display, struct lsh_string *fake)
   if (!self->address)
     {
       werror("Can't parse X11 display: `%s'\n", display);
+      lsh_string_free(fake);
       KILL(self);
       return NULL;
     }
@@ -637,10 +640,16 @@ do_format_request_x11_forward(struct channel_request_command *s,
 
 /* Consumes fake */
 struct command *
-make_forward_x11(const char *display_string, struct lsh_string *fake)
+make_forward_x11(const char *display_string,
+		 struct randomness *random)
 {
-  struct client_x11_display *display
-    = make_client_x11_display(display_string, fake);
+  struct lsh_string *fake = lsh_string_alloc(X11_COOKIE_LENGTH);
+  struct client_x11_display *display;
+
+  RANDOM(random, fake->length, fake->data);
+
+  /* This deallocates fake if it fails. */
+  display = make_client_x11_display(display_string, fake);
 
   if (display)
     {
