@@ -2,7 +2,6 @@
 
 AM_CFLAGS = -O0
 
-# Tests that can be used without any special setup.
 TS_PROGS = arcfour-test aes-test blowfish-test cast128-test \
 	   des-test \
 	   serpent-test twofish-test \
@@ -20,10 +19,6 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 
 TS_ALL = $(TS_PROGS) $(TS_SH)
 
-# Don't use automakes testsuite support
-# TESTS = $(TS_PROGS) $(TS_SH)
-
-# SUFFIXES = .c .o
 noinst_PROGRAMS = $(TS_PROGS)
 
 LDADD = testutils.o ../liblsh.a ../nettle/libnettle.a \
