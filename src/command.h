@@ -67,6 +67,13 @@
 #define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v))) 
 #define COMMAND_SIMPLE(f, a) ((f)->call_simple((f), (a)))
 
+int do_call_simple_command(struct command *c,
+			   struct lsh_object *arg,
+			   struct command_continuation *c);
+
+#define STATIC_COMMAND_SIMPLE(f) \
+{ { STATIC_HEADER, do_call_simple_command }, f}
+
 /* CLASS:
    (class
      (name command_frame)
