@@ -68,6 +68,10 @@ static void dss_hash(mpz_t h, UINT32 length, UINT8 *msg)
 
   bignum_parse_u(h, hash->hash_size, digest);
 
+  debug("DSS hash: ");
+  debug_mpz(h);
+  debug("\n");
+  
   lsh_free(hash);
 }
 
@@ -89,14 +93,27 @@ static struct lsh_string *do_dss_sign(struct signer *c,
   bignum_random(k, closure->random, tmp);
   mpz_add_ui(k, k, 1);
 
+  debug("do_dss_sign, k: ");
+  debug_mpz(k);
+  debug("\n");
+  
   /* Compute r = (g^k (mod p)) (mod q) */
   mpz_init(r);
   mpz_powm(r, closure->public.g, k, closure->public.p);
-  mpz_tdiv_r(r, r, closure->public.q);
+
+  debug("do_dss_sign, group element: ");
+  debug_mpz(r);
+  debug("\n");
   
+  mpz_tdiv_r(r, r, closure->public.q);
+
+  debug("do_dss_sign, r: ");
+  debug_mpz(r);
+  debug("\n");
+
   /* Compute hash */
   dss_hash(tmp, length, msg);
-
+  
   /* Compute k^-1 (mod q) */
   if (!mpz_invert(k, k, closure->public.q))
     {
@@ -114,6 +131,10 @@ static struct lsh_string *do_dss_sign(struct signer *c,
   mpz_add(s, s, tmp);
   mpz_mul(s, s, k);
   mpz_tdiv_r(s, s, closure->public.q);
+
+  debug("do_dss_sign, s: ");
+  debug_mpz(s);
+  debug("\n");
   
   /* Build signature */
   signature = ssh_format("%a%n%n", ATOM_SSH_DSS, r, s);
@@ -171,9 +192,19 @@ static int do_dss_verify(struct verifier *c,
       mpz_clear(s);
       return 0;
     }
+  
+  debug("do_dss_verify, r: ");
+  debug_mpz(r);
+  debug("\n");
+  
+  debug("do_dss_verify, s: ");
+  debug_mpz(s);
+  debug("\n");
 
   /* Compute w = s^-1 (mod q) */
   mpz_init(w);
+
+  /* FIXME: mpz_invert generates negative inverses. Is this a problem? */
   if (!mpz_invert(w, s, closure->public.q))
     {
       werror("do_dss_verify: s non-invertible.\n");
@@ -182,6 +213,10 @@ static int do_dss_verify(struct verifier *c,
       mpz_clear(w);
       return 0;
     }
+
+  debug("do_dss_verify, w: ");
+  debug_mpz(w);
+  debug("\n");
 
   /* Compute hash */
   mpz_init(tmp);
@@ -203,7 +238,17 @@ static int do_dss_verify(struct verifier *c,
 
   /* (g^{w * h} * y^{w * r} (mod p) ) (mod q) */
   mpz_mul(v, v, tmp);
+  mpz_tdiv_r(v, v, closure->public.p);
+
+  debug("do_dss_verify, group element: ");
+  debug_mpz(v);
+  debug("\n");
+  
   mpz_tdiv_r(v, v, closure->public.q);
+
+  debug("do_dss_verify, v: ");
+  debug_mpz(v);
+  debug("\n");
 
   res = mpz_cmp(v, r);
 
@@ -351,6 +396,8 @@ static void zn_invert(struct group *c, mpz_t res, mpz_t x)
 
   if (!mpz_invert(res, x, closure->modulo))
     fatal("zn_invert: element is non-invertible\n");
+
+  mpz_tdiv_r(res, res, closure->modulo);
 }
 
 static void zn_combine(struct group *c, mpz_t res, mpz_t a, mpz_t b)
@@ -398,19 +445,33 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
   self->method = m;
   self->hash = MAKE_HASH(m->H);
   self->exchange_hash = NULL;
-  
+
+  debug("init_diffie_hellman_instance()\n V_C: ");
+
+  debug_safe(c->client_version->length,
+	     c->client_version->data);
   HASH_UPDATE(self->hash,
 	      c->client_version->length,
 	      c->client_version->data);
+  debug("\n V_S: ");
+  debug_safe(c->server_version->length,
+	     c->server_version->data);
   HASH_UPDATE(self->hash,
 	      c->server_version->length,
 	      c->server_version->data);
+  debug("\n I_C: ");
+  debug_safe(c->literal_kexinits[CONNECTION_CLIENT]->length,
+	     c->literal_kexinits[CONNECTION_CLIENT]->data);
   HASH_UPDATE(self->hash,
 	      c->literal_kexinits[CONNECTION_CLIENT]->length,
 	      c->literal_kexinits[CONNECTION_CLIENT]->data);
+  debug("\n I_C: ");
+  debug_safe(c->literal_kexinits[CONNECTION_SERVER]->length,
+	     c->literal_kexinits[CONNECTION_SERVER]->data);
   HASH_UPDATE(self->hash,
 	      c->literal_kexinits[CONNECTION_SERVER]->length,
 	      c->literal_kexinits[CONNECTION_SERVER]->data);
+  debug("\n");
   
   lsh_string_free(c->literal_kexinits[CONNECTION_CLIENT]);
   lsh_string_free(c->literal_kexinits[CONNECTION_SERVER]);
@@ -486,11 +547,17 @@ int dh_process_client_msg(struct diffie_hellman_instance *self,
   return 1;
 }
 
+#if 0
 void dh_hash_update(struct diffie_hellman_instance *self,
 		    struct lsh_string *packet)
 {
+  debug("dh_hash_update, length = %d, data:\n", packet->length);
+  debug_safe(packet->length, packet->data);
+  debug("\n");
+  
   HASH_UPDATE(self->hash, packet->length, packet->data);
 }
+#endif
 
 /* Hashes server key, e and f */
 void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
@@ -499,18 +566,25 @@ void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
 				    self->server_key,
 				    self->e, self->f,
 				    self->K);
-
+  debug("dh_hash_digest()\n ");
+  debug_safe(s->length,
+	     s->data);
+  debug("\n");
+  
   HASH_UPDATE(self->hash, s->length, s->data);
   lsh_string_free(s);
 
   HASH_DIGEST(self->hash, digest);
 }
 
+void dh_make_server_secret(struct diffie_hellman_instance *self)
+{
+  dh_generate_secret(self, self->f);
+}
+
 struct lsh_string *dh_make_server_msg(struct diffie_hellman_instance *self,
 				      struct signer *s)
 {
-  dh_generate_secret(self, self->f);
-
   self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
   
   dh_hash_digest(self, self->exchange_hash->data);

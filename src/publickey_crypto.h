@@ -99,9 +99,14 @@ struct lsh_string *dh_make_client_msg(struct diffie_hellman_instance *self);
 int dh_process_client_msg(struct diffie_hellman_instance *self,
 			  struct lsh_string *packet);
 
+#if 0
 /* Should be called with the kex_init messages, client's first */
 void dh_hash_update(struct diffie_hellman_instance *self,
 		    struct lsh_string *packet);
+#endif
+
+/* Generates server's secret exponent */
+void dh_make_server_secret(struct diffie_hellman_instance *self);
 
 /* Creates server message */
 struct lsh_string *dh_make_server_msg(struct diffie_hellman_instance *self,

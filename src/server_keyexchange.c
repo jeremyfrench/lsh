@@ -128,6 +128,9 @@ static int do_init_dh(struct keyexchange_algorithm *c,
 
   dh->install = make_server_install_keys(algorithms);
 
+  /* Generate server's secret exponent */
+  dh_make_server_secret(&dh->dh);
+  
   /* Install handler */
   connection->dispatch[SSH_MSG_KEXDH_INIT] = &dh->super;
 
