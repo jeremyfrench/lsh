@@ -164,7 +164,7 @@ new_tcpip_channel(struct channel_open_command *c,
   channel = make_tcpip_channel(self->peer->fd, TCPIP_WINDOW_SIZE);
   channel->write = connection->write;
   
-  *request = prepare_channel_open(connection->table, self->type, 
+  *request = prepare_channel_open(connection, self->type, 
   				  channel, 
   				  "%S%i%S%i",
 				  self->port->ip, self->port->port,

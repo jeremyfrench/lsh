@@ -129,6 +129,9 @@ instance, a writing to a file associated with a channel may fail. In
 that case, the channel should be closed, but the connection should not
 die. Handle the LSH_CHANNEL_FINISHED code properly.
 
+Should channels be resources, or get some other kind of notification
+if the connection they are associated with disappears?
+
 
 CHANNEL CLOSE
 
@@ -299,4 +302,4 @@ Add const to arguments of type struct exception_handler *?
 Do something reasonable in do_buffered_read() when self->handler is
 NULL?
 
-
+Figure out why -nt doesn't work.

@@ -1,5 +1,39 @@
 1999-09-07  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* configure.in: Bumbed version to 0.1.9.
+
+	* src/server_session.c (do_spawn_shell): Use better exception
+	handlers. 
+
+	* src/read_data.c (do_exc_read_eof_channel_handler): Bugfix: Don't
+	call channel_close() twice.
+
+	* src/io_commands.c (do_listen): Raise a better exception.
+
+	* src/io.h (close_callback): Changed return type to void.
+
+	* src/exception.h (EXC_IO_LISTEN): New constant.
+
+	* src/exception.c (make_report_exception_handler): New function.
+
+	* src/connection.c (packet_types): Made this table public. 
+
+	* src/channel_commands.c (do_channel_open_command): Raise a more
+	sensible exception.
+
+	* src/channel.c (register_channel): Take a connections as
+	argument, in order to install the right exception handler.
+	(prepare_channel_open): -"-
+
+	* src/debug.c (do_debug): Display packet type. Don't display
+	USERAUTH_REQUEST messages.
+
+	* src/channel.h (ssh_channel): Added a connection argument to
+	CHANNEL_SEND.
+
+	* src/client.c (do_send_first): New function, to add stdin to the
+	connection's resources.
+
 	* src/userauth.h (authenticate): Added connection argument.
 
 	* src/userauth.c (format_userauth_failure): Moved here (from

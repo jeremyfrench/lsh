@@ -134,11 +134,12 @@ do_tcpip_receive(struct ssh_channel *c,
 }
 
 static void
-do_tcpip_send(struct ssh_channel *c)
+do_tcpip_send(struct ssh_channel *s,
+	      struct ssh_connection *c UNUSED)
 {
-  CAST(tcpip_channel, closure, c);
+  CAST(tcpip_channel, self, s);
   
-  closure->socket->super.want_read = 1;
+  self->socket->super.want_read = 1;
 }
 
 static void
