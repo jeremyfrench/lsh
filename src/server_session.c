@@ -603,6 +603,7 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
   static const struct exception shell_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
 
+  trace("shell_request_handler");
   if (!parse_eod(args))
     {
       PROTOCOL_ERROR(e, "Invalid shell CHANNEL_REQUEST message.");
