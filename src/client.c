@@ -41,18 +41,17 @@
 #include "werror.h"
 #include "xalloc.h"
 
-struct read_handler *make_client_read_line(struct ssh_connection *c);
-struct callback *make_client_close_handler();
-
 static int client_initiate(struct fd_callback **c,
 			   int fd)
 {
   struct client_callback *closure
     = (struct client_callback *) *c;
 
+  int res;
+  
   /* FIXME: Should pass a key exchange handler, not NULL! */
   struct ssh_connection *connection
-    = make_ssh_connection(NULL);
+    = make_ssh_connection(closure->kexinit_handler);
 
   connection_init_io(connection,
 		     io_read_write(closure->backend, fd,
@@ -67,8 +66,14 @@ static int client_initiate(struct fd_callback **c,
 		 SOFTWARE_CLIENT_VERSION,
 		 closure->id_comment);
   
-  return A_WRITE(connection->raw,
-		 ssh_format("%lS\r\n", connection->client_version));
+  res = A_WRITE(connection->raw,
+		ssh_format("%lS\r\n", connection->client_version));
+  if (res != WRITE_OK)
+    return res;
+
+  return initiate_keyexchange(connection, CONNECTION_CLIENT,
+			      MAKE_KEXINIT(closure->init),
+			      NULL);
 }
 
 struct client_line_handler
@@ -146,11 +151,14 @@ struct read_handler *make_client_read_line(struct ssh_connection *c)
   return make_read_line(&closure->super);
 }
   
-struct fd_callback *make_client_callback(struct io_backend *b,
-					 char *comment,
-					 UINT32 block_size,
-					 struct randomness *r)
-					 
+struct fd_callback *
+make_client_callback(struct io_backend *b,
+		     char *comment,
+		     UINT32 block_size,
+		     struct randomness *random,
+		     struct make_kexinit *init,
+		     struct packet_handler *kexinit_handler)
+  
 {
   struct client_callback *connected = xalloc(sizeof(struct client_callback));
 
@@ -158,7 +166,11 @@ struct fd_callback *make_client_callback(struct io_backend *b,
   connected->backend = b;
   connected->block_size = block_size;
   connected->id_comment = comment;
-  connected->random = r;
+
+  connected->random = random;
+  connected->init = init;
+  connected->kexinit_handler = kexinit_handler;
+
   return &connected->super;
 }
 
@@ -168,7 +180,7 @@ static int client_die(struct callback *closure)
   exit(1);
 }
 
-struct callback *make_client_close_handler()
+struct callback *make_client_close_handler(void)
 {
   struct callback *c = xalloc(sizeof(struct callback));
 
@@ -176,26 +188,3 @@ struct callback *make_client_close_handler()
 
   return c;
 }
-
-#if 0
-/* FIXME: HERE */
-struct abstract_write *make_client_dispatch(struct ssh_connection *c)
-{
-  struct abstract_write *ignore = make_packet_void();
-  struct abstract_write *fail = make_disconnect(connection);
-  struct abstract_write *kex = make_client_key_exchange(connection);
-  
-  struct dispatch_assoc table[] = {
-    { SSH_MSG_DISCONNECT, make_handle_disconnect(connection) },
-    { SSH_MSG_IGNORE, ignore },
-    { SSH_MSG_UNIMPLEMENTED, ignore },
-    { SSH_MSG_DEBUG, make_handle_debug(connection) },
-    { SSH_MSG_SERVICE_REQUEST, fail },
-    { SSH_MSG_SERVICE_ACCEPT, fail },
-    { SSH_MSG_KEXINIT, kex },
-    { SSH_MSG_NEWKEYS, fail },
-    { SSH_MSG
-
-      
-#endif
-      

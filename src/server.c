@@ -36,9 +36,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-struct read_handler *make_server_read_line();
-struct callback *make_server_close_handler();
-
 static int server_initiate(struct fd_callback **c,
 			   int fd)
 {
@@ -46,13 +43,18 @@ static int server_initiate(struct fd_callback **c,
   
   struct ssh_connection *connection
     = make_ssh_connection(closure->kexinit_handler);
-  struct abstract_write *write =
-    io_read_write(closure->backend, fd,
-		  make_server_read_line(),
-		  closure->block_size,
-		  make_server_close_handler());
 
+  int res;
+  
   verbose("server_initiate()\n");
+
+  connection_init_io(connection,
+		     io_read_write(closure->backend, fd,
+				   make_server_read_line(connection),
+				   closure->block_size,
+				   make_server_close_handler()),
+		     closure->random);
+
   
   connection->server_version
     = ssh_format("SSH-%lz-%lz %lz",
@@ -60,7 +62,14 @@ static int server_initiate(struct fd_callback **c,
 		 SOFTWARE_SERVER_VERSION,
 		 closure->id_comment);
 
-  return A_WRITE(write, ssh_format("%lS\r\n", connection->server_version));
+  res = A_WRITE(connection->raw,
+		 ssh_format("%lS\r\n", connection->server_version));
+  if (res != WRITE_OK)
+    return res;
+
+  return initiate_keyexchange(connection, CONNECTION_SERVER,
+			      MAKE_KEXINIT(closure->init),
+			      NULL);
 }
 
 struct server_line_handler
@@ -121,13 +130,13 @@ static struct read_handler *do_line(struct line_handler **h,
     }
 }
 
-struct read_handler *make_server_read_line(struct ssh_connection *s)
+struct read_handler *make_server_read_line(struct ssh_connection *c)
 {
   struct server_line_handler *closure
     = xalloc(sizeof(struct server_line_handler));
   
   closure->super.handler = do_line;
-  closure->connection = s;
+  closure->connection = c;
   
   return make_read_line(&closure->super);
 }
@@ -136,6 +145,8 @@ struct fd_callback *
 make_server_callback(struct io_backend *b,
 		     char *comment,
 		     UINT32 block_size,
+		     struct randomness *random,
+		     struct make_kexinit *init,
 		     struct packet_handler *kexinit_handler)
 {
   struct server_callback *connected = xalloc(sizeof(struct server_callback));
@@ -145,6 +156,8 @@ make_server_callback(struct io_backend *b,
   connected->block_size = block_size;
   connected->id_comment = comment;
 
+  connected->random = random;  
+  connected->init = init;
   connected->kexinit_handler = kexinit_handler;
   
   return &connected->super;
@@ -157,7 +170,7 @@ static int server_die(struct callback *closure)
   return 0;  /* Ignored */
 }
 
-struct callback *make_server_close_handler()
+struct callback *make_server_close_handler(void)
 {
   struct callback *c = xalloc(sizeof(struct callback));
 

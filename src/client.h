@@ -27,7 +27,7 @@
 #define LSH_CLIENT_H_INCLUDED
 
 #include "io.h"
-#include "abstract_crypto.h"
+#include "keyexchange.h"
 
 struct client_callback
 {
@@ -35,13 +35,22 @@ struct client_callback
   struct io_backend *backend;
   UINT32 block_size;
   char *id_comment;
+
   struct randomness *random;
+  struct make_kexinit *init;
+  struct packet_handler *kexinit_handler;
 };
 
-struct fd_callback *make_client_callback(struct io_backend *b,
-					 char *comment,
-					 UINT32 block_size,
-					 struct randomness *r);
+struct fd_callback *
+make_client_callback(struct io_backend *b,
+		     char *comment,
+		     UINT32 block_size,
+		     struct randomness *random,
+		     struct make_kexinit *init,
+		     struct packet_handler *kexinit_handler);
+
+struct read_handler *make_client_read_line(struct ssh_connection *c);
+struct callback *make_client_close_handler(void);
 
 #if 0
 struct client_session
