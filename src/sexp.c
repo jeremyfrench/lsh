@@ -36,6 +36,9 @@
 #include "sexp.h.x"
 #undef CLASS_DEFINE
 
+/* Defines int char_classes[0x100] */
+#include "sexp_table.h"
+
 #include "sexp.c.x"
 
 /* CLASS:
@@ -47,6 +50,101 @@
        (contents string)))
 */
 
+/* For advanced format */
+static struct lsh_string *do_format_simple_string(struct lsh_string *s,
+						  int style)
+{
+  int quote_friendly = ( (~CHAR_control & ~CHAR_international)
+			 | CHAR_escapable);
+  
+  switch(style)
+    {
+    case SEXP_TRANSPORT:
+      fatal("Internal error!\n");
+    case SEXP_CANONICAL:
+      return ssh_format("%dS", s);
+    case SEXP_INTERNATIONAL:
+      quote_friendly |= CHAR_international;
+      /* Fall through */
+    case SEXP_ADVANCED:
+      {
+	int c;
+	unsigned i;
+
+	if (!s->length)
+	  return ssh_format("\"\"");
+
+	/* Compute the set of all character classes represented in the string */
+	for (c = 0, i = 0; i < s->length; i++)
+	  c |= char_classes[s->data[i]];
+
+	if (! ( (char_classes[s->data[0]] & CHAR_digit)
+		|| (c & ~(CHAR_alpha | CHAR_digit | CHAR_punctuation))))
+	  /* Output token, without any quoting at all */
+	  return lsh_string_dup(s);
+
+	if (! (c & ~quote_friendly))
+	  {
+	    /* Count the number of characters needing escape */
+	    unsigned length = s->length;
+	    unsigned i;
+	    struct lsh_string *res;
+	    UINT8 *dst;
+	    
+	    for (i = 0; i<s->length; i++)
+	      if (char_classes[s->data[i]] & CHAR_escapable)
+		length++;
+
+	    res = ssh_format("\"%lr\"", length, &dst);
+	    for (i=0; i<s->length; i++)
+	      if (char_classes[s->data[i]] & CHAR_escapable)
+		{
+		  *dst++ = '\\';
+		  switch(s->data[i])
+		    {
+		    case '\b':
+		      *dst++ = 'b';
+		      break;
+		    case '\t':
+		      *dst++ = 't';
+		      break;
+		    case '\v':
+		      *dst++ = 'v';
+		      break;
+		    case '\n':
+		      *dst++ = 'n';
+		      break;
+		    case '\f':
+		      *dst++ = 'f';
+		      break;
+		    case '\r':
+		      *dst++ = 'r';
+		      break;
+		    case '\"':
+		      *dst++ = '\"';
+		      break;
+		    case '\\':
+		      *dst++ = '\\';
+		      break;
+		    default:
+		      fatal("Internal error!\n");
+		    }
+		}
+	      else
+		*dst++ = s->data[i];
+
+	    assert(dst == (res->data + 1 + length));
+
+	    return res;
+	  }
+	/* Base 64 string */
+	return encode_base64(s, "||", 0);
+      }
+    default:
+      fatal("do_format_sexp_string: Unknown output style.\n");
+    }
+}
+  
 static struct lsh_string *do_format_sexp_string(struct sexp *s, int style)
 {
   CAST(sexp_string, self, s);
@@ -56,15 +154,15 @@ static struct lsh_string *do_format_sexp_string(struct sexp *s, int style)
     case SEXP_TRANSPORT:
       fatal("Internal error!\n");
     case SEXP_ADVANCED:
-      /* Special case of canonical, so we'll fal through for now. */
+    case SEXP_INTERNATIONAL:
     case SEXP_CANONICAL:
       if (self->display)
-	return ssh_format("[%ds]%ds",
-			  self->display->length, self->display->data,
-			  self->contents->length, self->contents->data);
+	return ssh_format("[%lfS]%lfS",
+			  do_format_simple_string(self->display, style),
+			  do_format_simple_string(self->contents, style));
       else
-	return ssh_format("%ds",
-			  self->contents->length, self->contents->data);
+	return ssh_format("%lfS",
+			  do_format_simple_string(self->contents, style));
     default:
       fatal("do_format_sexp_string: Unknown output style.\n");
     }
@@ -83,9 +181,27 @@ static struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c)
   return &s->super;
 }
 
+static struct lsh_string *
+do_format_sexp_nil(struct sexp *ignored UNUSED, int style)
+{
+  return ssh_format("()");
+}
+
+struct sexp_cons sexp_nil =
+{ { STATIC_HEADER, do_format_sexp_nil }, &sexp_nil.super, &sexp_nil };
+
+#define SEXP_NIL (&sexp_nil.super)
+
+int sexp_nullp(struct sexp *e)
+{
+  return (e == SEXP_NIL);
+}
+
 static struct lsh_string *do_format_sexp_tail(struct sexp_cons *c, int style)
 {
-  if (!c)
+  int use_space = 0;
+  
+  if (c == &sexp_nil)
     return ssh_format(")");
 
   switch(style)
@@ -93,9 +209,11 @@ static struct lsh_string *do_format_sexp_tail(struct sexp_cons *c, int style)
     case SEXP_TRANSPORT:
       fatal("Internal error!\n");
     case SEXP_ADVANCED:
-      /* Special case of canonical, so we'll fall through for now. */
+    case SEXP_INTERNATIONAL:
+      use_space = 1;
+      /* Fall through */
     case SEXP_CANONICAL:
-      return ssh_format("%ls %ls",
+      return ssh_format(use_space ? " %ls%ls" : "%ls%ls",
 			sexp_format(c->car, style),
 			do_format_sexp_tail(c->cdr, style));
     default:
@@ -112,7 +230,7 @@ static struct lsh_string *do_format_sexp_cons(struct sexp *s, int style)
     case SEXP_TRANSPORT:
       fatal("Internal error!\n");
     case SEXP_ADVANCED:
-      /* Special case of canonical, so we'll fal through for now. */
+    case SEXP_INTERNATIONAL:
     case SEXP_CANONICAL:
       return ssh_format("(%ls", do_format_sexp_tail(self, style));
     default:
@@ -148,6 +266,7 @@ static struct lsh_string *do_format_sexp_vector(struct sexp *e, int style)
 
   unsigned i;
   UINT32 size;
+  int use_space = 0;
   
   struct lsh_string **elements = alloca(LIST_LENGTH(v->elements)
 					* sizeof(struct lsh_string *) );
@@ -157,27 +276,35 @@ static struct lsh_string *do_format_sexp_vector(struct sexp *e, int style)
     case SEXP_TRANSPORT:
       fatal("Internal error!\n");
     case SEXP_ADVANCED:
-      /* Special case of canonical, so we'll fal through for now. */
+    case SEXP_INTERNATIONAL:
+      use_space = 1;
+      /* Fall through */
     case SEXP_CANONICAL:
       {
 	struct lsh_string *res;
 	UINT8 *dst;
 	
 	assert(LIST_LENGTH(v->elements));
-	for (i = 0, size = 0; i<LIST_LENGTH(v->elements); i++)
+	for (i = 0, size = 2; i<LIST_LENGTH(v->elements); i++)
 	  {
 	    CAST_SUBTYPE(sexp, o, LIST(v->elements)[i]);
 	    
 	    elements[i] = sexp_format(o, style);
 	    size += elements[i]->length;
 	  }
+
+	if (use_space)
+	  size += LIST_LENGTH(v->elements) - 1;
 	
-	res = lsh_string_alloc(size + 2);
+	res = lsh_string_alloc(size);
 	dst = res->data;
 	
 	*dst++ = '(';
 	for (i = 0; i<LIST_LENGTH(v->elements); i++)
 	  {
+	    if (i && use_space)
+	      *dst++ = ' ';
+	    
 	    memcpy(dst, elements[i]->data, elements[i]->length);
 	    dst += elements[i]->length;
 	    
@@ -204,7 +331,7 @@ struct sexp *sexp_l(unsigned n, ...)
     {
       assert(va_arg(args, int) == -1);
       va_end(args);
-      return NULL;
+      return SEXP_NIL;
     }
   else
     {
@@ -245,13 +372,12 @@ struct lsh_string *sexp_format(struct sexp *e, int style)
   switch(style)
     {
     case SEXP_TRANSPORT:
-      return ssh_format("{%lfs}",
-			encode_base64(sexp_format(e, SEXP_CANONICAL), 1));
-    case SEXP_ADVANCED:
+      return encode_base64(sexp_format(e, SEXP_CANONICAL), "{}", 1);
     case SEXP_CANONICAL:
-      return e
-	? SEXP_FORMAT(e, style)
-	: ssh_format("()");
+    case SEXP_ADVANCED:
+    case SEXP_INTERNATIONAL:
+      /* NOTE: Check for NULL here? I don't think so. */
+      return SEXP_FORMAT(e, style);
     default:
       fatal("sexp_format: Unknown output style.\n");
     }
@@ -271,22 +397,27 @@ static void encode_base64_group(UINT32 n, UINT8 *dest)
     }
 }
 
-struct lsh_string *encode_base64(struct lsh_string *s, int free)
+struct lsh_string *encode_base64(struct lsh_string *s,
+				 char *delimiters,
+				 int free)				 
 {
   UINT32 full_groups = (s->length) / 3;
   unsigned last = (s->length) % 3;
-
-  struct lsh_string *res = lsh_string_alloc( (full_groups + !!last) * 4);
-
+  unsigned length =  (full_groups + !!last) * 4;
   UINT8 *src = s->data;
-  UINT8 *dst = res->data;
-
+  UINT8 *dst;
+    
+  struct lsh_string *res
+    = (delimiters
+       ? ssh_format("%c%lr%c", delimiters[0], length, &dst, delimiters[1])
+       : ssh_format("%lr", length, &dst));
+  
   if (full_groups)
     {
       unsigned i;
       
       /* Loop over all but the last group. */
-      for (i=0; i+1<full_groups; dst += 4, i++)
+      for (i=0; i<full_groups; dst += 4, i++)
 	{
 	  encode_base64_group( ( (*src++) << 16)
 			       | ( (*src++) << 8)
@@ -314,7 +445,7 @@ struct lsh_string *encode_base64(struct lsh_string *s, int free)
       fatal("encode_base64: Internal error!\n");
     }
 
-  assert(dst == (res->data + res->length));
+  assert( (dst + !!delimiters) == (res->data + res->length));
 
   if (free)
     lsh_string_free(s);
