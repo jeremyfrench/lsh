@@ -33,4 +33,5 @@ libargp_a_SOURCES = argp-ba.c argp-eexst.c argp-fmtstream.c \
 		    argp-help.c argp-parse.c argp-pv.c \
 		    argp-pvh.c  argp-eexst.c
 
-argp_test_LIBS = libargp.a
+argp_test_LDADD = libargp.a @LIBOBJS@
+
