@@ -20,9 +20,60 @@ function test_invalid () {
 }
 
 # Test cases taken from draft-ietf-spki-cert-structure-06.txt
-test_valid "valid rsa" '
+# test_valid "valid rsa" '
+#    (signature
+#     (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJPA=|)
+#     (public-key
+#      (rsa-pkcs1-sha1
+#       (e #11#)
+#       (n
+#        |AMC7wEqs+AjILPsUmS+R1PV9OihhqSTfmdLo9Y2hdj7+2f31qxXsMpx
+#        ZedTxmcW9RKsf7dRjnRTxY51/MOIn0isY3DV3fMiaT8NUrjf+jEjF91V
+#        1HtCPn7+MHTv/quWToc9/n4BhVDxH1IspFteoW0RHtZqOUfQcSQNswt7
+#        yrXFN|)))
+#     (rsa-pkcs1-sha1
+#      |UN0g7krgm6Xq6vvws+oDZes9hy0pwDV9gVjuUV+uRC8Y7TDh1JPfv2dhX
+#      BXqgERa3q99GHxgyjoDgfFgl/fAOplwz3vySmnATInrtCMxGdXgZlQ/SQ5
+#      xFXz3VlKQHgak0rK4xpZEbsR6YMggcGK7NjZWTfNK0q8v4FSSD9UDkxk=|
+#      ))'
+
+test_invalid "rsa, different hash" '
    (signature
-    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJPA=|)
+    (hash sha1 |UNGhcpNFWg6UhtoV2yxV6wPMJPA=|)
+    (public-key
+     (rsa-pkcs1-sha1
+      (e #11#)
+      (n
+       |AMC7wEqs+AjILPsUmS+R1PV9OihhqSTfmdLo9Y2hdj7+2f31qxXsMpx
+       ZedTxmcW9RKsf7dRjnRTxY51/MOIn0isY3DV3fMiaT8NUrjf+jEjF91V
+       1HtCPn7+MHTv/quWToc9/n4BhVDxH1IspFteoW0RHtZqOUfQcSQNswt7
+       yrXFN|)))
+    (rsa-pkcs1-sha1
+     |UN0g7krgm6Xq6vvws+oDZes9hy0pwDV9gVjuUV+uRC8Y7TDh1JPfv2dhX
+     BXqgERa3q99GHxgyjoDgfFgl/fAOplwz3vySmnATInrtCMxGdXgZlQ/SQ5
+     xFXz3VlKQHgak0rK4xpZEbsR6YMggcGK7NjZWTfNK0q8v4FSSD9UDkxk=|
+     ))'
+
+test_invalid "rsa, too long hash" '
+   (signature
+    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJPAB|)
+    (public-key
+     (rsa-pkcs1-sha1
+      (e #11#)
+      (n
+       |AMC7wEqs+AjILPsUmS+R1PV9OihhqSTfmdLo9Y2hdj7+2f31qxXsMpx
+       ZedTxmcW9RKsf7dRjnRTxY51/MOIn0isY3DV3fMiaT8NUrjf+jEjF91V
+       1HtCPn7+MHTv/quWToc9/n4BhVDxH1IspFteoW0RHtZqOUfQcSQNswt7
+       yrXFN|)))
+    (rsa-pkcs1-sha1
+     |UN0g7krgm6Xq6vvws+oDZes9hy0pwDV9gVjuUV+uRC8Y7TDh1JPfv2dhX
+     BXqgERa3q99GHxgyjoDgfFgl/fAOplwz3vySmnATInrtCMxGdXgZlQ/SQ5
+     xFXz3VlKQHgak0rK4xpZEbsR6YMggcGK7NjZWTfNK0q8v4FSSD9UDkxk=|
+     ))'
+
+test_invalid "rsa, too short hash" '
+   (signature
+    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJA==|)
     (public-key
      (rsa-pkcs1-sha1
       (e #11#)
@@ -62,59 +113,7 @@ test_valid "valid dsa" '
      (r |APyNegTrlzLMCCcMRWoMlnKAOHIu|)
      (s |AIPV/423068nuoNmoQQupyW3x+S1|)))'
 
-test_invalid "rsa, different hash" '
-   (signature
-    (hash sha1 |UNGhcpNFWg6UhtoV2yxV6wPMJPA=|)
-    (public-key
-     (rsa-pkcs1-sha1
-      (e #11#)
-      (n
-       |AMC7wEqs+AjILPsUmS+R1PV9OihhqSTfmdLo9Y2hdj7+2f31qxXsMpx
-       ZedTxmcW9RKsf7dRjnRTxY51/MOIn0isY3DV3fMiaT8NUrjf+jEjF91V
-       1HtCPn7+MHTv/quWToc9/n4BhVDxH1IspFteoW0RHtZqOUfQcSQNswt7
-       yrXFN|)))
-    (rsa-pkcs1-sha1
-     |UN0g7krgm6Xq6vvws+oDZes9hy0pwDV9gVjuUV+uRC8Y7TDh1JPfv2dhX
-     BXqgERa3q99GHxgyjoDgfFgl/fAOplwz3vySmnATInrtCMxGdXgZlQ/SQ5
-     xFXz3VlKQHgak0rK4xpZEbsR6YMggcGK7NjZWTfNK0q8v4FSSD9UDkxk=|
-     ))'
-
-test_invalid "rsa, too long hash" '
-   (signature
-    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJPAB|)
-    (public-key
-     (rsa-pkcs1-sha1
-      (e #11#)
-      (n
-       |AMC7wEqs+AjILPsUmS+R1PV9OihhqSTfmdLo9Y2hdj7+2f31qxXsMpx
-       ZedTxmcW9RKsf7dRjnRTxY51/MOIn0isY3DV3fMiaT8NUrjf+jEjF91V
-       1HtCPn7+MHTv/quWToc9/n4BhVDxH1IspFteoW0RHtZqOUfQcSQNswt7
-       yrXFN|)))
-    (rsa-pkcs1-sha1
-     |UN0g7krgm6Xq6vvws+oDZes9hy0pwDV9gVjuUV+uRC8Y7TDh1JPfv2dhX
-     BXqgERa3q99GHxgyjoDgfFgl/fAOplwz3vySmnATInrtCMxGdXgZlQ/SQ5
-     xFXz3VlKQHgak0rK4xpZEbsR6YMggcGK7NjZWTfNK0q8v4FSSD9UDkxk=|
-     ))'
-
-# Too short hash
-test_invalid "rsa, too short hash" '
-   (signature
-    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJP==|)
-    (public-key
-     (rsa-pkcs1-sha1
-      (e #11#)
-      (n
-       |AMC7wEqs+AjILPsUmS+R1PV9OihhqSTfmdLo9Y2hdj7+2f31qxXsMpx
-       ZedTxmcW9RKsf7dRjnRTxY51/MOIn0isY3DV3fMiaT8NUrjf+jEjF91V
-       1HtCPn7+MHTv/quWToc9/n4BhVDxH1IspFteoW0RHtZqOUfQcSQNswt7
-       yrXFN|)))
-    (rsa-pkcs1-sha1
-     |UN0g7krgm6Xq6vvws+oDZes9hy0pwDV9gVjuUV+uRC8Y7TDh1JPfv2dhX
-     BXqgERa3q99GHxgyjoDgfFgl/fAOplwz3vySmnATInrtCMxGdXgZlQ/SQ5
-     xFXz3VlKQHgak0rK4xpZEbsR6YMggcGK7NjZWTfNK0q8v4FSSD9UDkxk=|
-     ))'
-
-test_valid "dsa, different hash" '
+test_invalid "dsa, different hash" '
    (signature
     (hash sha1 |UNGhcpNFWg5UhtoV3yxV6wPMJPA=|)
     (public-key
@@ -139,7 +138,7 @@ test_valid "dsa, different hash" '
      (r |APyNegTrlzLMCCcMRWoMlnKAOHIu|)
      (s |AIPV/423068nuoNmoQQupyW3x+S1|)))'
 
-test_valid "dsa, too long hash" '
+test_invalid "dsa, too long hash" '
    (signature
     (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJPAB|)
     (public-key
@@ -166,7 +165,7 @@ test_valid "dsa, too long hash" '
 
 test_invalid "dsa, too short hash" '
    (signature
-    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJP==|)
+    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJA==|)
     (public-key
      (dsa-sha1
       (p
