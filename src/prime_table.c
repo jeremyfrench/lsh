@@ -55,7 +55,8 @@ fill_table(unsigned long *primes, unsigned long *squares, int length)
 
 
 void
-write_table(char *program, unsigned long *primes, unsigned long *squares, int length)
+write_table(char *program, unsigned long *primes,
+	    unsigned long *squares, int length)
 {
   int i;
   

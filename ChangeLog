@@ -1,3 +1,20 @@
+2000-06-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io.c (address_info2sockaddr): Look at HAVE_GAI_STRERROR and
+	HAVE_AI_NUMERICHOST. Use #error rather than #warning
+
+	* Include string.h in all files that use memcpy() or strlen().
+	
+	* configure.in: New option --with-include path.
+	Fixed test of am_cv_prog_cc_stdc.
+	Check for gai_strerror and AI_NUMERICHOST.
+	Disable ipv6 and display a warning if gai_strerror and
+	AI_NUMERICHOST are not found.
+
+	* acconfig.h (HAVE_AI_NUMERICHOST): New define.
+
+	* README: Updated, and added a reference to the manual. 
+
 2000-06-21  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/lsh.c (do_lsh_default_handler): Handle EXC_GLOBAL_REQUEST. 

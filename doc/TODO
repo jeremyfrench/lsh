@@ -219,3 +219,5 @@ Should lsh fail if some port forwardings fails? In particular,
   $ lsh -R... -N
 
 is pretty useless if the server doesn't let us bind the remote port.
+
+Have autoconf automatically add -I $prefix/include and -L $prefix/lib ?
