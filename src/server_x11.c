@@ -50,6 +50,12 @@
 #include "server_x11.h.x"
 #undef GABA_DEFINE
 
+/* Forward declarations */
+
+/* FIXME: Should be static */
+struct command open_forwarded_x11;
+#define OPEN_FORWARDED_X11 (&open_forwarded_x11.super)
+
 #include "server_x11.c.x"
 
 
@@ -112,21 +118,18 @@ DEFINE_COMMAND(open_forwarded_x11)
 }
 
 /* Quite similar to forward_local_port in tcpforward_commands.c */
-/* ;; GABA:
+/* GABA:
    (expr
-     (name server_x11_forward)
+     (name server_x11_callback)
      (params
        (connection object ssh_connection))
      (expr
-       (lambda (port)
-         (listen
-	   (lambda (peer)
-	       ;; FIXME: Make sure remembering is done by open_x11_channel
-	       ;; and new_x11_channel.
-	       (start_io
-	         (catch_channel_open 
-		   (open_forwarded_x11 peer) connection)))
-	     port))))
+       ;; FIXME: This is a common construction for all types of
+       ;; forwardings.
+       (lambda (peer)
+	 (start_io
+	   (catch_channel_open 
+       	     (open_forwarded_x11 peer) connection)))))
 */
 	     
 #define XAUTH_DEBUG_TO_STDERR 0
@@ -150,6 +153,7 @@ DEFINE_COMMAND(open_forwarded_x11)
        (dir . int)
        ; Name of the local socket
        (name string)
+       (display_number . int)
        ; The user that should own the socket
        (uid . uid_t)
        ; The corresponding listening fd
@@ -232,15 +236,6 @@ open_x11_socket(struct ssh_channel *channel)
   struct lsh_fd *s;
   struct lsh_string *name = NULL;
 
-#if 0
-  s = socket(AF_UNIX, SOCK_STREAM, 0);
-  if (s < 0)
-    {
-      werror("server_x11_socket: socket(AF_UNIX, ...) failed %e\n", errno);
-      return NULL;
-    }
-#endif
-  
   /* We have to change the umask, as that's the only way to control
    * the permissions that bind uses. */
 
@@ -266,7 +261,12 @@ open_x11_socket(struct ssh_channel *channel)
       snprintf(sa.sun_path, sizeof(sa.sun_path), "X%d", number);
 
       s = io_bind_sockaddr((struct sockaddr *) &sa, SUN_LEN(&sa),
-			   /* FIXME: Exception handler */ NULL);
+			   /* Use the connection's exception handler,
+			    * as the channel may live shorter.
+			    *
+			    * FIXME: How does that handle i/o errors?
+			    */
+			   channel->connection->e);
       if (s)
 	{
 	  /* Store name */
@@ -286,25 +286,33 @@ open_x11_socket(struct ssh_channel *channel)
       
       return NULL;
     }
-  else
-    {
-      NEW(server_x11_socket, self);
-      init_resource(&self->super, do_kill_x11_socket);
 
-      self->dir = dir;
-      self->name = name;
-#if 0
-      self->fd = io_listen_fd(s,
-			      make_server_x11_callback(connection),
-			      );
-#endif
-      return self;
-    }
+  {
+    CAST_SUBTYPE(command, callback, server_x11_callback(channel->connection));
+    
+    if (!io_listen(s, make_listen_callback(callback,
+					   channel->connection->e)))
+      {
+	close(dir);
+	close_fd(s);
+	return NULL;
+      }
+  }
+  {
+    NEW(server_x11_socket, self);
+    init_resource(&self->super, do_kill_x11_socket);
+
+    self->dir = dir;
+    self->name = name;
+    self->fd = s;
+    self->display_number = number;
+    
+    remember_resource(channel->resources, &self->super);
+    return self;
+  }
 }
 
 /* Creates a socket in tmp, accessible only by the right user. */
-
-
 static struct server_x11_socket *
 server_x11_listen(struct ssh_channel *channel)
 {
@@ -397,23 +405,25 @@ bad_string(UINT32 length, const UINT8 *data)
 /* On success, returns 1 and sets *DISPLAY and *XAUTHORITY */
 struct server_x11_info *
 server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
+		 int single,
 		 UINT32 protocol_length, const UINT8 *protocol,
 		 UINT32 cookie_length, const UINT8 *cookie,
 		 UINT32 screen,
 		 struct command_continuation *c,
 		 struct exception_handler *e)
 {
-  /* Get a free socket under /tmp/.X11-unix/ */
-  UINT32 display_number = 17;
-
   struct lsh_string *display;
   struct lsh_string *xauthority;
+  struct server_x11_socket *socket;
   
   const char *tmp;
 
-  /* FIXME: Bind socket, set up forwarding */
-  struct server_x11_socket *socket = NULL;
-
+  if (single)
+    {
+      werror("server_x11_setup: Single forwardings not yet supported.\n");
+      return NULL;
+    }
+  
   if (bad_string(protocol_length, protocol))
     {
       werror("server_x11_setup: Bogus protocol name.\n");
@@ -432,13 +442,18 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
       return NULL;
     }
 
+  /* Get a free socket under /tmp/.X11-unix/ */
+  socket = server_x11_setup(channel);
+  if (!socket)
+    return NULL;
+
   tmp = getenv("TMPDIR");
   if (!tmp)
-    tmp = "tmp";
+    tmp = "/tmp";
   
-  display = ssh_format(":%di.%di", display_number, screen);
-  xauthority = ssh_format("/%lz/.lshd.%lS.Xauthority", tmp, user->name);
-
+  display = ssh_format(":%di.%di", socket->display_number, screen);
+  xauthority = ssh_format("%lz/.lshd.%lS.Xauthority", tmp, user->name);
+  
   {
     struct spawn_info spawn;
     const char *args[2] = { "-c", XAUTH_PROGRAM };

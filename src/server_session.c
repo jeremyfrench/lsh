@@ -913,6 +913,7 @@ do_x11_req(struct channel_request *s UNUSED,
       if (session->x11 || session->process
 	  || !(session->x11 = server_x11_setup(channel,
 					       channel->connection->user,
+					       single,
 					       protocol_length, protocol,
 					       cookie_length, cookie,
 					       screen, c, e)))
