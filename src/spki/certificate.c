@@ -621,79 +621,6 @@ spki_acl_format(const struct spki_5_tuple_list *list,
 
 /* Certificates */
 
-struct spki_5_tuple_list *
-spki_parse_sequence_no_signatures(struct spki_acl_db *db,
-				  struct spki_iterator *i,
-				  const struct spki_principal **subject)
-{
-  struct spki_5_tuple_list *list = NULL;
-  
-  *subject = NULL;
-  
-  if (!spki_check_type(i, SPKI_TYPE_SEQUENCE))
-    return NULL;
-  
-  for (;;)
-    {
-      switch (i->type)
-	{
-	case SPKI_TYPE_END_OF_EXPR:
-	  if (spki_parse_end(i) && *subject)
-	    {
-	      *subject = spki_principal_normalize(*subject);
-	      return list;
-	    }
-	  
-	  /* Fall through */
-	default:
-	fail:
-	  spki_5_tuple_list_release(db, list);
-	  *subject = NULL;
-	  return NULL;
-	  
-	case SPKI_TYPE_CERT:
-	  {
-	    struct spki_5_tuple *cert = spki_5_tuple_cons_new(db, &list);
-	    
-	    if (!cert)
-	      goto fail;
-
-	    if (!spki_parse_cert(db, i, cert))
-	      goto fail;
-
-	    assert(cert->subject);
-	    assert(cert->issuer);
-	    *subject = cert->subject;
-	    
-	    break;
-	  }
-	case SPKI_TYPE_PUBLIC_KEY:
-	  {
-	    /* Just remember key. */
-	    unsigned start = i->start;
-
-	    unsigned key_length;
-	    const uint8_t *key;
-
-	    if (spki_parse_skip(i))
-	      {
-		key = spki_parse_prevexpr(i, start, &key_length);
-		assert(key);
-		*subject = spki_principal_by_key(db, key_length, key);
-		if (!*subject)
-		  goto fail;
-	      }
-	    break;
-	  }
-	case SPKI_TYPE_SIGNATURE:
-	case SPKI_TYPE_DO:
-	  /* Ignore */
-	  spki_parse_skip(i);
-	  break;
-	}
-    }
-}
-
 #define HASH_CHECK(hash, method, digest_length, data_length, data) 	\
 do {									\
   struct method##_ctx ctx;						\
@@ -742,12 +669,12 @@ spki_hash_verify(const struct spki_hash_value *hash,
  * to perform that operation.
  */
 
-struct spki_5_tuple_list *
-spki_parse_sequence(struct spki_acl_db *db,
-		    struct spki_iterator *i,
-		    const struct spki_principal **subject,
-		    void *verify_ctx,
-		    spki_verify_func *verify)
+static struct spki_5_tuple_list *
+parse_sequence(struct spki_acl_db *db,
+	       struct spki_iterator *i,
+	       const struct spki_principal **subject,
+	       void *verify_ctx,
+	       spki_verify_func *verify)
 {
   struct spki_5_tuple_list *list = NULL;
 
@@ -802,9 +729,11 @@ spki_parse_sequence(struct spki_acl_db *db,
 	    assert(cert->subject);
 	    assert(cert->issuer);
 
-	    cert_to_verify = spki_parse_prevexpr(i, start, &cert_length);
-	    assert(cert_to_verify);
-	    
+	    if (verify)
+	      {
+		cert_to_verify = spki_parse_prevexpr(i, start, &cert_length);
+		assert(cert_to_verify);
+	      }
 	    *subject = cert->subject;
 	    issuer = cert->issuer;
 	    break;
@@ -828,29 +757,31 @@ spki_parse_sequence(struct spki_acl_db *db,
 	    break;
 	  }
 	case SPKI_TYPE_SIGNATURE:
-	  /* FIXME: Allow spurious extra signatures? */
-	  if (!cert_to_verify)
-	    goto fail;
-	  {
-	    struct spki_hash_value hash;
-	    struct spki_principal *principal;
+	  /* NOTE: Allows spurious extra signatures */
+	  if (cert_to_verify)
+	    {
+	      struct spki_hash_value hash;
+	      struct spki_principal *principal;
 
-	    assert(issuer);
-	    
-	    if (spki_parse_type(i) == SPKI_TYPE_HASH
-		&& spki_parse_hash(i, &hash)
-		&& spki_hash_verify(&hash, cert_length, cert_to_verify)
-		&& spki_parse_principal(db, i, &principal)
-		&& principal == spki_principal_normalize(issuer)
-		&& verify(verify_ctx, &hash, issuer, i))
-	      {
-		/* Valid signature */
-		cert_to_verify = NULL;
-		break;
-	      }
-	    else
-	      goto fail;
-	  }
+	      assert(issuer);
+	      assert(verify);
+	      
+	      if (spki_parse_type(i) == SPKI_TYPE_HASH
+		  && spki_parse_hash(i, &hash)
+		  && spki_hash_verify(&hash, cert_length, cert_to_verify)
+		  && spki_parse_principal(db, i, &principal)
+		  && principal == spki_principal_normalize(issuer)
+		  && verify(verify_ctx, &hash, issuer, i))
+		{
+		  /* Valid signature */
+		  cert_to_verify = NULL;
+		  break;
+		}
+	      else
+		goto fail;
+	    }
+	  else
+	    /* Fall through */
 	case SPKI_TYPE_DO:
 	  /* Ignore */
 	  spki_parse_skip(i);
@@ -859,6 +790,24 @@ spki_parse_sequence(struct spki_acl_db *db,
     }
 }
 
+struct spki_5_tuple_list *
+spki_parse_sequence(struct spki_acl_db *db,
+		    struct spki_iterator *i,
+		    const struct spki_principal **subject,
+		    void *verify_ctx,
+		    spki_verify_func *verify)
+{
+  assert(verify);
+  return parse_sequence(db, i, subject, verify_ctx, verify);
+}
+
+struct spki_5_tuple_list *
+spki_parse_sequence_no_signatures(struct spki_acl_db *db,
+				  struct spki_iterator *i,
+				  const struct spki_principal **subject)
+{
+  return parse_sequence(db, i, subject, NULL, NULL);
+}
 
 
 /* Dates */
