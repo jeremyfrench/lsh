@@ -54,6 +54,14 @@ sftp_client_new_id(void)
   return curid++;
 }
 
+static int
+sftp_client_get_id(struct sftp_input *i, UINT32 expected)
+{
+  UINT32 id;
+  return (sftp_get_uint32(i, &id)
+	  && (id == expected));
+}
+
 static void
 fork_server(char *name,
 	    struct client_ctx *ctx)
@@ -137,55 +145,42 @@ client_handshake(struct client_ctx *ctx)
 static int
 do_ls(struct client_ctx *ctx, const char *name)
 {
-  UINT32 sentid, recvid;
+  UINT32 id;
   UINT32 status;
   UINT8* handle;
   UINT32 hlength;
-  UINT32 count;
-
-  UINT8* fname;
-  UINT32 fnamel;
-
-  UINT8* lname;
-  UINT32 lnamel;
-
-  struct sftp_attrib a;
 
   UINT8 msg;
   int lsloop=1;
   int failure=0;
-  
-  sentid=sftp_client_new_id();
+
+  id=sftp_client_new_id();
 
   sftp_set_msg(ctx->o, SSH_FXP_OPENDIR); /* Send a OPENDIR message */
-  sftp_set_id(ctx->o, sentid);
+  sftp_set_id(ctx->o, id);
   sftp_put_string(ctx->o, strlen(name), name);
-
+  
   if (!sftp_write_packet(ctx->o))
     return 0;
 
   if (sftp_read_packet(ctx->i) <= 0)
     return 0;
 
-  if ( !(
-	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
-	 msg==SSH_FXP_HANDLE &&
-	 sftp_get_uint32(ctx->i, &recvid) &&
-	 recvid==sentid &&
-	 (handle=sftp_get_string(ctx->i, &hlength)) 	 
-	 ))
+  /* None of these may fail */  
+  if ( !(sftp_get_uint8(ctx->i, &msg)
+	 && (msg==SSH_FXP_HANDLE)
+	 && sftp_client_get_id(ctx->i, id)
+	 && (handle=sftp_get_string(ctx->i, &hlength)) ))
     return 0;
   
-  /* OK, we now have a successfull call and a handle to a directory */
-     
-
+  /* OK, we now have a successfull call and a handle to a directory. */
+  
   while ( lsloop )
     {
-      
-      sentid=sftp_client_new_id();
+      id=sftp_client_new_id();
       
       sftp_set_msg(ctx->o, SSH_FXP_READDIR);
-      sftp_set_id(ctx->o, sentid);
+      sftp_set_id(ctx->o, id);
       sftp_put_string(ctx->o, hlength, handle);
       
       if (!sftp_write_packet(ctx->o))
@@ -194,23 +189,31 @@ do_ls(struct client_ctx *ctx, const char *name)
       if (sftp_read_packet(ctx->i) <= 0)
 	return 0;
       
-      
-      if( !(
-	    sftp_get_uint8(ctx->i, &msg) &&
-	    sftp_get_uint32(ctx->i, &recvid) &&
-	    recvid==sentid
-	    ))
+      if( !(sftp_get_uint8(ctx->i, &msg)
+	    && sftp_client_get_id(ctx->i, id)))
 	return 0;
       
       if ( msg == SSH_FXP_NAME )
 	{
+	  UINT32 count;
+	  struct sftp_attrib a;
+	  
 	  sftp_get_uint32(ctx->i, &count );
 
 	  while ( count-- )
 	    {
-	      fname=sftp_get_string(ctx->i, &fnamel);
-	      lname=sftp_get_string(ctx->i, &lnamel);
-	      sftp_get_attrib(ctx->i, &a);
+	      UINT8* fname;
+	      UINT32 fnamel;
+	      
+	      UINT8* lname;
+	      UINT32 lnamel;
+
+	      sftp_input_clear_strings(ctx->i);
+
+	      if (! ( (fname=sftp_get_string_auto(ctx->i, &fnamel))
+		      && (lname=sftp_get_string_auto(ctx->i, &lnamel))
+		      && sftp_get_attrib(ctx->i, &a)))
+		return 0;
 
 	      printf("%s\n", lname);
 	    }
@@ -228,11 +231,55 @@ do_ls(struct client_ctx *ctx, const char *name)
 
   /* Time to close */
 
-  sentid=sftp_client_new_id();
+  id=sftp_client_new_id();
 
   sftp_set_msg(ctx->o, SSH_FXP_CLOSE); /* Send a close message */
-  sftp_set_id(ctx->o, sentid);
+  sftp_set_id(ctx->o, id);
   sftp_put_string(ctx->o, hlength, handle);
+
+  sftp_free_string(handle);
+  
+  if (!sftp_write_packet(ctx->o))
+    return 0;
+
+  if (sftp_read_packet(ctx->i) <= 0)
+    return 0;
+
+  return (sftp_get_uint8(ctx->i, &msg)
+	  && (msg==SSH_FXP_STATUS)
+	  && sftp_client_get_id(ctx->i, id)
+	  && sftp_get_uint32(ctx->i, &status)
+	  && (status == SSH_FX_OK)
+	  && !failure);
+}
+
+static int
+do_get(struct client_ctx *ctx, 
+       const char *name,
+       int dst)
+{
+  UINT32 id;
+  UINT8* handle;
+  UINT32 hlength;
+  UINT32 status;
+
+  off_t curpos=0;
+
+  struct sftp_attrib a;
+  
+  UINT8 msg;
+  int getloop=1;
+  int failure=0;
+
+  id=sftp_client_new_id();
+
+  sftp_clear_attrib(&a); /* Don't pass any information on how to open */
+
+  sftp_set_msg(ctx->o, SSH_FXP_OPEN); /* Send a OPEN message */
+  sftp_set_id(ctx->o, id);
+  sftp_put_string(ctx->o, strlen(name), name );
+  sftp_put_uint32(ctx->o, SSH_FXF_READ ); /* Read mode only */
+  sftp_put_attrib(ctx->o, &a);
 
   if (!sftp_write_packet(ctx->o))
     return 0;
@@ -240,20 +287,105 @@ do_ls(struct client_ctx *ctx, const char *name)
   if (sftp_read_packet(ctx->i) <= 0)
     return 0;
 
-  if ( !(
-	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
-	 msg==SSH_FXP_STATUS &&
-	 sftp_get_uint32(ctx->i, &recvid) &&
-	 recvid==sentid &&
-	 sftp_get_uint32(ctx->i, &status) &&
-	 status == SSH_FX_OK &&
-	 !failure
-	 ))
+  /* None of these may fail */
+  if ( !(sftp_get_uint8(ctx->i, &msg)
+	 && (msg==SSH_FXP_HANDLE)
+	 && sftp_client_get_id(ctx->i, id)
+	 && (handle=sftp_get_string(ctx->i, &hlength))))
     return 0;
   
-  return 1;
+  /* OK, we now have a successfull call and file handle */
+     
+  id=sftp_client_new_id();
+
+  while ( getloop )
+    {
+      id=sftp_client_new_id();
+      
+      sftp_set_msg(ctx->o, SSH_FXP_READ); /* Send a read request */
+      sftp_set_id(ctx->o, id);
+      sftp_put_string(ctx->o, hlength, handle);
+      sftp_put_uint64(ctx->o, curpos);
+      sftp_put_uint32(ctx->o, SFTP_XFER_BLOCKSIZE);
+
+      if (!sftp_write_packet(ctx->o))
+	return 0;
+      
+      if (sftp_read_packet(ctx->i) <= 0)
+	return 0;
+      
+      if( !(sftp_get_uint8(ctx->i, &msg)
+	    && sftp_client_get_id(ctx->i, id)))
+	return 0;
+      
+      switch (msg)
+	{
+	case SSH_FXP_DATA:
+	  {
+	    UINT8 *data;
+	    UINT32 length;
+	  
+	    data = sftp_get_string_auto(ctx->i, &length);
+	    curpos += length;
+	  
+	    while (length)
+	      {
+		int res;
+		do
+		  res = write(dst, data, length);
+		while ( (res < 0) && (errno = EINTR) );
+		if (res < 0)
+		  {
+		    getloop=0; 
+		    failure=1;
+		    break;
+		  }
+		data +=res;
+		length -= res;
+	      }
+	    break;
+	  } 
+	case SSH_FXP_STATUS:
+	  {
+	    sftp_get_uint32(ctx->i, &status);
+	    getloop=0; /* End of loop - EOF or failue */
+	  
+	    if ( status != SSH_FX_EOF)
+	      failure=1;
+
+	    break;
+	  }
+	default:
+	  return 0;
+	}
+    }
+
+  /* Time to close */
+
+  id=sftp_client_new_id();
+
+  sftp_set_msg(ctx->o, SSH_FXP_CLOSE); /* Send a close message */
+  sftp_set_id(ctx->o, id);
+  sftp_put_string(ctx->o, hlength, handle);
+
+  sftp_free_string(handle);
+  
+  if (!sftp_write_packet(ctx->o))
+    return 0;
+
+  if (sftp_read_packet(ctx->i) <= 0)
+    return 0;
+
+  /* None of these may fail */
+  return (sftp_get_uint8(ctx->i, &msg)
+	  && (msg==SSH_FXP_STATUS)
+	  && sftp_client_get_id(ctx->i, id)
+	  && sftp_get_uint32(ctx->i, &status)
+	  && (status == SSH_FX_OK) &&
+	  !failure);
 }
 
+#if 0
 static int
 do_get(struct client_ctx *ctx, 
        const char *lname, 
@@ -261,7 +393,7 @@ do_get(struct client_ctx *ctx,
        int cont,
        off_t contat)
 {
-  UINT32 sentid, recvid;
+  UINT32 id;
   UINT32 status;
   UINT8* handle;
   UINT32 hlength;
@@ -277,14 +409,12 @@ do_get(struct client_ctx *ctx,
   int failure=0;
   int fd=-1;
 
-
-
-  sentid=sftp_client_new_id();
+  id=sftp_client_new_id();
 
   sftp_clear_attrib(&a); /* Don't pass any information on how to open */
 
   sftp_set_msg(ctx->o, SSH_FXP_OPEN); /* Send a OPEN message */
-  sftp_set_id(ctx->o, sentid);
+  sftp_set_id(ctx->o, id);
   sftp_put_string(ctx->o, strlen(rname), rname );
   sftp_put_uint32(ctx->o, SSH_FXF_READ ); /* Read mode only */
   sftp_put_attrib(ctx->o, &a);
@@ -295,20 +425,18 @@ do_get(struct client_ctx *ctx,
   if (sftp_read_packet(ctx->i) <= 0)
     return 0;
 
-  if ( !(
-	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
+  if ( !(sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
 	 msg==SSH_FXP_HANDLE &&
-	 sftp_get_uint32(ctx->i, &recvid) &&
-	 recvid==sentid &&
+	 sftp_client_get_id(ctx->i, id) &&
 	 (handle=sftp_get_string(ctx->i, &hlength)) 
 	 ))
     return 0;
   
   /* OK, we now have a successfull call and file handle */
      
-  sentid=sftp_client_new_id();
+  id=sftp_client_new_id();
   sftp_set_msg(ctx->o, SSH_FXP_FSTAT); /* Send a FSTAT message */
-  sftp_set_id(ctx->o, sentid);
+  sftp_set_id(ctx->o, id);
   sftp_put_string(ctx->o, hlength, handle );
 
   if (!sftp_write_packet(ctx->o))
@@ -317,11 +445,9 @@ do_get(struct client_ctx *ctx,
   if (sftp_read_packet(ctx->i) <= 0)
     return 0;
 
-  if ( !(
-	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
+  if ( !(sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
 	 msg==SSH_FXP_ATTRS &&
-	 sftp_get_uint32(ctx->i, &recvid) &&
-	 recvid==sentid &&
+	 sftp_client_get_id(ctx->i, id) &&
 	 sftp_get_attrib(ctx->i, &a) 
 	 ))
     {
@@ -369,10 +495,10 @@ do_get(struct client_ctx *ctx,
   while ( getloop )
     {
       
-      sentid=sftp_client_new_id();
+      id=sftp_client_new_id();
       
       sftp_set_msg(ctx->o, SSH_FXP_READ); /* Send a read request */
-      sftp_set_id(ctx->o, sentid);
+      sftp_set_id(ctx->o, id);
       sftp_put_string(ctx->o, hlength, handle);
       sftp_put_uint64(ctx->o, curpos);
       sftp_put_uint32(ctx->o, SFTP_XFER_BLOCKSIZE);
@@ -384,16 +510,14 @@ do_get(struct client_ctx *ctx,
 	return 0;
       
       
-      if( !(
-	    sftp_get_uint8(ctx->i, &msg) &&
-	    sftp_get_uint32(ctx->i, &recvid) &&
-	    recvid==sentid
+      if( !(sftp_get_uint8(ctx->i, &msg) &&
+	    sftp_client_get_id(ctx->i, id)
 	    ))
 	return 0;
       
       if ( msg == SSH_FXP_DATA )
 	{
-	  rdata=sftp_get_string(ctx->i, &rdatal);
+	  rdata=sftp_get_string_auto(ctx->i, &rdatal);
 	  /* Fixme; display this somehow */
 	    
 	  if ( ( -1 == lseek(fd,curpos, SEEK_SET) ) ||
@@ -419,12 +543,14 @@ do_get(struct client_ctx *ctx,
 
   /* Time to close */
 
-  sentid=sftp_client_new_id();
+  id=sftp_client_new_id();
 
   sftp_set_msg(ctx->o, SSH_FXP_CLOSE); /* Send a close message */
-  sftp_set_id(ctx->o, sentid);
+  sftp_set_id(ctx->o, id);
   sftp_put_string(ctx->o, hlength, handle);
 
+  sftp_free_string(handle);
+  
   if (!sftp_write_packet(ctx->o))
     return 0;
 
@@ -437,8 +563,7 @@ do_get(struct client_ctx *ctx,
   if ( !(
 	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
 	 msg==SSH_FXP_STATUS &&
-	 sftp_get_uint32(ctx->i, &recvid) &&
-	 recvid==sentid &&
+	 sftp_client_get_id(ctx->i, id) &&
 	 sftp_get_uint32(ctx->i, &status) &&
 	 status == SSH_FX_OK &&
 	 !failure
@@ -448,6 +573,7 @@ do_get(struct client_ctx *ctx,
   return 1;
 
 }
+#endif
 
 static int
 do_put(struct client_ctx *ctx,
@@ -456,7 +582,7 @@ do_put(struct client_ctx *ctx,
        int cont,
        off_t contat)
 {
-  UINT32 sentid, recvid;
+  UINT32 id;
   UINT32 status;
   UINT8* handle;
   UINT32 hlength;
@@ -489,12 +615,12 @@ do_put(struct client_ctx *ctx,
   a.uid=st.st_uid;
   a.gid=st.st_gid;
   
-  sentid=sftp_client_new_id();
+  id=sftp_client_new_id();
   
   
 
   sftp_set_msg(ctx->o, SSH_FXP_OPEN); /* Send a OPEN message */
-  sftp_set_id(ctx->o, sentid);
+  sftp_set_id(ctx->o, id);
   sftp_put_string(ctx->o, strlen(rname), rname );
   sftp_put_uint32(ctx->o, SSH_FXF_CREAT | SSH_FXF_WRITE );
   sftp_put_attrib(ctx->o, &a);
@@ -508,17 +634,16 @@ do_put(struct client_ctx *ctx,
   if ( !(
 	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
 	 msg==SSH_FXP_HANDLE &&
-	 sftp_get_uint32(ctx->i, &recvid) &&
-	 recvid==sentid &&
+	 sftp_client_get_id(ctx->i, id) &&
 	 (handle=sftp_get_string(ctx->i, &hlength)) 
 	 ))
     return 0;
   
   /* OK, we now have a successfull call and file handle */
   
-  sentid=sftp_client_new_id();
+  id=sftp_client_new_id();
   sftp_set_msg(ctx->o, SSH_FXP_FSTAT); /* Send a FSTAT message */
-  sftp_set_id(ctx->o, sentid);
+  sftp_set_id(ctx->o, id);
   sftp_put_string(ctx->o, hlength, handle );
   
   if (!sftp_write_packet(ctx->o))
@@ -530,8 +655,7 @@ do_put(struct client_ctx *ctx,
   if ( !(
 	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
 	 msg==SSH_FXP_ATTRS &&
-	 sftp_get_uint32(ctx->i, &recvid) &&
-	 recvid==sentid &&
+	 sftp_client_get_id(ctx->i, id) &&
 	 sftp_get_attrib(ctx->i, &a) 
 	 ))
     {
@@ -570,10 +694,10 @@ do_put(struct client_ctx *ctx,
 	putloop=0;
       else
 	{
-	  sentid=sftp_client_new_id();
+	  id=sftp_client_new_id();
 	  
 	  sftp_set_msg(ctx->o, SSH_FXP_WRITE); /* Send a read request */
-	  sftp_set_id(ctx->o, sentid);
+	  sftp_set_id(ctx->o, id);
 	  sftp_put_string(ctx->o, hlength, handle);
 	  sftp_put_uint64(ctx->o, curpos);
 	  sftp_put_string(ctx->o, rbytes, wdata);
@@ -589,8 +713,7 @@ do_put(struct client_ctx *ctx,
 	  
 	  if( !(
 		sftp_get_uint8(ctx->i, &msg) &&
-		sftp_get_uint32(ctx->i, &recvid) &&
-		recvid==sentid
+		sftp_client_get_id(ctx->i, id)
 		))
 	    return 0;
 	  
@@ -606,11 +729,13 @@ do_put(struct client_ctx *ctx,
     }
   /* Time to close */
   
-  sentid=sftp_client_new_id();
+  id=sftp_client_new_id();
   
   sftp_set_msg(ctx->o, SSH_FXP_CLOSE); /* Send a close message */
-  sftp_set_id(ctx->o, sentid);
+  sftp_set_id(ctx->o, id);
   sftp_put_string(ctx->o, hlength, handle);
+
+  sftp_free_string(handle);
   
   if (!sftp_write_packet(ctx->o)) 
     return 0;
@@ -626,8 +751,7 @@ do_put(struct client_ctx *ctx,
   if ( !(
 	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
 	 msg==SSH_FXP_STATUS &&
-	 sftp_get_uint32(ctx->i, &recvid) &&
-	 recvid==sentid &&
+	 sftp_client_get_id(ctx->i, id) &&
 	 sftp_get_uint32(ctx->i, &status) &&
 	 status == SSH_FX_OK &&
 	 !failure
@@ -641,14 +765,14 @@ do_put(struct client_ctx *ctx,
 static int
 do_stat(struct client_ctx *ctx, const char *name)
 {
-  UINT32 sentid, recvid;
+  UINT32 id;
   UINT8 msg;
   struct sftp_attrib a;
 
-  sentid=sftp_client_new_id();
+  id=sftp_client_new_id();
   
   sftp_set_msg(ctx->o, SSH_FXP_STAT);
-  sftp_set_id(ctx->o, sentid);
+  sftp_set_id(ctx->o, id);
   sftp_put_string(ctx->o, strlen(name), name);
 
   if (!sftp_write_packet(ctx->o))
@@ -657,11 +781,9 @@ do_stat(struct client_ctx *ctx, const char *name)
   if (sftp_read_packet(ctx->i) <= 0)
     return 0;
 
-  if ( !(
-	 sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
+  if ( !(sftp_get_uint8(ctx->i, &msg) &&  /* None of these may fail */
 	 msg==SSH_FXP_ATTRS &&
-	 sftp_get_uint32(ctx->i, &recvid) &&
-	 recvid==sentid &&
+	 sftp_client_get_id(ctx->i, id) &&
 	 sftp_get_attrib(ctx->i, &a) 	 
 	 ))
     return 0;
@@ -687,24 +809,29 @@ main(int argc, char **argv)
     FATAL("Handshake failed.");
 
   for (i = 2; i < argc; i += 2)
-    switch (argv[i][0])
-      {
-      case 'l': /* ls */
-	/* Depends on argv[argc] == NULL */
-	do_ls(&ctx, argv[i+1]);
-	break;
-      case 'g': /* get */
-	do_get(&ctx, argv[i+1],NULL,0,0); /* Note; changed signature */
-	break;
-      case 'p':
-	do_put(&ctx, argv[i+1],NULL,0,0);
-	break;
-      case 's':
-	do_stat(&ctx, argv[i+1]);
-	break;
-      default:
-	FATAL("Bad arg");
-      }
+    {
+      int res; 
+      switch (argv[i][0])
+	{
+	case 'l': /* ls */
+	  /* Depends on argv[argc] == NULL */
+	  res = do_ls(&ctx, argv[i+1]);
+	  break;
+	case 'g': /* get */
+	  res = do_get(&ctx, argv[i+1], STDOUT_FILENO);
+	  break;
+	case 'p':
+	  res = do_put(&ctx, argv[i+1],NULL,0,0);
+	  break;
+	case 's':
+	  res = do_stat(&ctx, argv[i+1]);
+	  break;
+	default:
+	  FATAL("Bad arg");
+	}
+      if (!res)
+	exit(EXIT_FAILURE);
+    }
   
   return EXIT_SUCCESS;
 }
