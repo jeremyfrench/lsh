@@ -34,7 +34,7 @@
 
 /* The memory allocation model (for strings) is as follows:
  *
- * Packets are allocated when the are needed. A packet may be passed
+ * Packets are allocated when they are needed. A packet may be passed
  * through a chain of processing functions, until it is finally
  * discarded or transmitted, at which time it is deallocated.
  * Processing functions may deallocate their input packets and
