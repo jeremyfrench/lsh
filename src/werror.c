@@ -426,21 +426,6 @@ werror_vformat(const char *f, va_list args)
 	    case 'n':
 	      werror_bignum(va_arg(args, MP_INT *), do_hex ? 16 : 10);
 	      break;
-	    case 'z':
-	      {
-		char *s = va_arg(args, char *);
-
-		if (do_hex)
-		  werror_hexdump(strlen(s), s);
-
-		else if (do_paranoia)
-		  while (*s)
-		    werror_paranoia_putc(*s++);
-		else
-		  werror_write(strlen(s), s);
-		
-		break;
-	      }
 	    case 'a':
 	      {
 		int atom = va_arg(args, int);
@@ -517,9 +502,40 @@ werror_vformat(const char *f, va_list args)
 
 		if (do_free)
 		  lsh_string_free(s);
-	      }
-	      break;
 
+		break;
+	      }
+	    case 't':
+	      {
+		struct lsh_object *o = va_arg(args, struct lsh_object *);
+		const char *type;
+
+		if (!o)
+		  type = "<NULL>";
+		else if (o->isa)
+		  type = o->isa->name;
+		else
+		  type = "<STATIC>";
+
+		werror_write(strlen(type), type);
+
+		break;
+	      }
+	    case 'z':
+	      {
+		char *s = va_arg(args, char *);
+
+		if (do_hex)
+		  werror_hexdump(strlen(s), s);
+
+		else if (do_paranoia)
+		  while (*s)
+		    werror_paranoia_putc(*s++);
+		else
+		  werror_write(strlen(s), s);
+		
+		break;
+	      }
 	    default:
 	      fatal("werror_vformat: bad format string!\n");
 	      break;

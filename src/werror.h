@@ -62,6 +62,7 @@ void set_error_syslog(const char *id);
  * %a  Insert a string containing one atom.
  * %s  UINT32 length, UINT8 *data
  * %S  lsh_string *s
+ * %t  The type of an struct lsh_object *
  *
  * Modifiers:
  *
