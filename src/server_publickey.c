@@ -69,7 +69,7 @@ do_authenticate(struct userauth *s,
   const UINT8 *signature_blob;
   UINT32 signature_length;
   UINT32 signature_start = 0;
-  UINT32 algorithm;
+  int algorithm;
   int check_key;
 
   username = utf8_to_local(username, 1, 1);
