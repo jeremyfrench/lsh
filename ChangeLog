@@ -1,3 +1,142 @@
+1999-09-07  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/userauth.h (authenticate): Added connection argument.
+
+	* src/userauth.c (format_userauth_failure): Moved here (from
+	server_userauth.c). 
+	(format_userauth_success): -"-
+	(make_userauth_special_exception): New function.
+
+	* src/spki.c: Assorted bug fixes.
+
+	* src/sexp_streamed_parser.c (make_parse_transport_sexp): New
+	function. 
+	(make_parse_base64): New function.
+
+	* src/sexp_conv.c (main): Simplified exception handling.
+
+	* src/sexp_commands.c: Commands to read and write s-expressions.
+
+	* src/sexp.c (sexp2string): New function.
+	(sexp2atom): New function.
+
+	* src/server_userauth.c (do_exc_userauth_handler): Added handler
+	for EXC_USERAUTH_SPECIAL.
+
+	* src/server_password.c (do_authenticate): Added connection
+	argument. 
+
+	* src/server_keyexchange.c (do_handle_dh_init): Make sending of
+	debug messages conditional on the peer-flags.
+
+	* src/read_scan.h: Flagged as obsolete.
+
+	* src/lsh_writekey.c (do_write_key): Deleted function. Use the
+	appropriate commands instead.
+	(main): Adapted to new sexp parser.
+
+	* src/keyexchange.c (invoke_ssh2_dsa_kludge_p): Removed this
+	function. 
+	(do_handle_kexinit): Use the connection's peer_flags rather than
+	an explicit check of the version string.
+
+	* src/io_commands.c (do_io_write_file, do_io_read_fd): New
+	commands to read and write files.
+	(make_io_write_file_info): New function.
+
+	* src/io.c (do_buffered_read): Attempt to recover if the handler
+	disappears. 
+	(do_exc_io_handler): New exception handler.
+	(init_file): Install exception handler to close the file on i/o
+	errors. 
+	(io_write_file): New function.
+
+	* src/exception.c (make_exception_handler): New function.
+
+	* src/dsa.c (do_dsa_sign_kludge): Fixed ssh2 compatibility hack.
+	(do_dsa_verify_kludge): -"-
+
+	* src/digits.h (BASE64_PARTIAL): New constant.
+
+	* src/digits.c (base64_init): Moved function to this file.
+	(base64_decode): -"-
+
+	* src/connection.h (ssh_connection): Added peer_flags field.
+
+	* src/compiler.scm: Added comments describing the combinators
+	used. 
+
+	* src/command.h (PROG1): New global command.
+
+	* src/client_keyexchange.c: instead of a simple verifier, an alist
+	of verifiers is passed to make_dh_client(). Removed sending "Key
+	exchange successful!" debug message, because it bugs ssh2. (Bazsi)
+
+
+1999-09-06  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/atoms.c: Bugfix: Include <string.h> rather than <strings.h>. 
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added lookup_verifier.c,
+	server_authorization.c, server_publickey.c and spki.c. Removed
+	read_scan.c. 
+
+	* src/lshd.c (main): Create an authorization_db class (Bazsi).
+
+1999-07-23  Balazs Scheidler  <bazsi@balabit.hu>
+
+	* configure.in: merged different DATAFELLOWS workaround defines to
+	a simple DATAFELLOWS_WORKAROUNDS, this affects a few files, for a
+	list grep for DATAFELLOWS_WORKAROUNDS *.{c,h}
+
+	* src/connection.h: peer_flags added to ssh_connection, workarounds
+	and peer features have a flag here, which is then checked at
+	appropriate places. 
+
+	* src/connection_commands.c (do_line): peer_flags is set according
+	to the peer version,
+	(split_version_string): new function
+
+	* src/dsa.c (parse_dsa_public): made public, moved public key
+	mpz_t initialization here. [No, I didn't move the initialization.
+	/nisse] 
+
+	* src/server_authorization.c: new file, some public key checking
+	is done
+	
+1999-07-22  Balazs Scheidler  <bazsi@balabit.hu>
+
+	* src/lookup_verifier.{c,h}: new files. moved lookup_verifier
+	class from client_keyexchange.h to separate files. It is also used
+	by publickey authentication. Added an additional parameter to
+	LOOKUP_VERIFIER: keyholder, which determines which host, or which
+	user's keys should be checked.
+
+	* src/dsa.c: do_dsa_verify_kludge() cleaned up
+	
+1999-07-11  Balazs Scheidler  <bazsi@balabit.hu>
+
+	* src/client.c: added DataFellows workaround for
+	SSH_MSG_SERVICE_ACCEPT, compiled in conditionally if
+	DATAFELLOWS_SSH2_SERVICE_ACCEPT_KLUDGE is defined.
+
+	* src/server.c: -"-
+
+	* configure.in: changed --with-ssh-dss-kludge option to
+	--with-datafellows-workarounds
+
+	* src/dsa.c: ssh2 dsa kludge fixes, added dsa_kludge_algorithm
+	(only creates verifiers!)
+	
+	* src/lsh.c: added support for alist maps of lookup verifiers 
+
+	* src/debug.c: fixed a bug in packet_debug class
+
+	* src/connection.c: added debug messages for sent packets
+
+	* src/server_keyexchange.c: removed "Key exchange successful!"
+	[actually, made conditional. /nisse]
+	
 1999-09-05  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/exception.h: Added SPKI-related exceptions.
