@@ -110,159 +110,127 @@ main_argp =
 };
 
 
-#define EXC_APP_UNKNOWN_KEY (EXC_APP + 1)
-#define EXC_APP_BAD_KEY (EXC_APP + 2)
-#define EXC_APP_BAD_ARMOUR (EXC_APP + 3)
-#define EXC_APP_BAD_FORMAT (EXC_APP + 4)
-
-/* GABA:
-   (class
-     (name decode_key)
-     (super abstract_write)
-     (vars
-       (c object command_continuation)
-       (e object exception_handler)))
-*/
-
-static void
-do_decode_key(struct abstract_write *s,
-	      struct lsh_string *contents)
+struct verifier *
+lsh_decode_key(struct lsh_string *contents)
 {
-  CAST(decode_key, self, s);
+  struct simple_buffer buffer;
+  int type;
 
-  /* Stop reading. */
-  EXCEPTION_RAISE(self->e, &finish_io_exception);
-  
-  if (!contents)
+  simple_buffer_init(&buffer, contents->length, contents->data);
+
+  if (!parse_atom(&buffer, &type))
     {
-      EXCEPTION_RAISE(self->e,
-		      make_simple_exception(EXC_APP_BAD_ARMOUR,
-					    "Invalid base64 data."));
+      werror("Invalid (binary) input data.\n");
+      return NULL;
     }
-  else
+
+  switch (type)
     {
-      struct simple_buffer buffer;
-      int type;
+    case ATOM_SSH_DSS:
+      {
+        struct verifier *v;
+        
+        werror("lsh-decode-key: Reading key of type ssh-dss...\n");
 
-      simple_buffer_init(&buffer, contents->length, contents->data);
+        v = parse_ssh_dss_public(&buffer);
+        
+        if (!v)
+          {
+            werror("Invalid dsa key.\n");
+            return NULL;
+          }
+        else
+          return spki_make_public_key(v);
+      }
+      
+    case ATOM_SSH_RSA:
+      {
+          struct verifier *v;
+          
+          werror("lsh-decode-key: Reading key of type ssh-rsa...\n");
 
-      if (!parse_atom(&buffer, &type))
-	EXCEPTION_RAISE(self->e,
-			make_simple_exception(EXC_APP_BAD_FORMAT,
-					      "Invalid (binary) input data.\n"));
-      else
-	switch (type)
-	  {
-	  case ATOM_SSH_DSS:
-	    {
-	      struct verifier *v;
-	    
-	      werror("lsh-decode-key: Reading key of type ssh-dss...\n");
+          v = parse_ssh_rsa_public(&buffer);
 
-	      if (! ( (v = parse_ssh_dss_public(&buffer)) ))
-		{
-		  EXCEPTION_RAISE(self->e,
-				  make_simple_exception(EXC_APP_BAD_KEY,
-							"Invalid dsa key.\n"));
-		}
-	      else
-		COMMAND_RETURN(self->c, spki_make_public_key(v));
-
-	      break;
-	    }
-	  case ATOM_SSH_RSA:
-	    {
-	      struct verifier *v;
-	    
-	      werror("lsh-decode-key: Reading key of type ssh-rsa...\n");
-
-	      if (! ( (v = parse_ssh_rsa_public(&buffer)) ))
-		{
-		  EXCEPTION_RAISE(self->e,
-				  make_simple_exception(EXC_APP_BAD_KEY,
-							"Invalid rsa key.\n"));
-		}
-	      else
-		COMMAND_RETURN(self->c, spki_make_public_key(v));
-	      
-	      break;
-	    }	    
-	  default:
-	    EXCEPTION_RAISE(self->e,
-			    make_simple_exception(EXC_APP_BAD_KEY,
-						  "Unknown key type."));
-	  }
+          if (!v)
+            {
+              werror("Invalid rsa key.\n");
+              return NULL;
+            }
+          else
+            return spki_make_public_key(v);
+      }      
+    default:
+      werror("Unknown key type.");
+      return NULL;
     }
-  lsh_string_free(contents);
 }
 
-static struct abstract_write *
-make_decode_key(struct command_continuation *c,
-		struct exception_handler *e)
-{
-  NEW(decode_key, self);
-  self->super.write = do_decode_key;
-  self->c = c;
-  self->e = e;
-
-  return &self->super;
-}
-
-static void
-do_exc_lsh_decode_key(struct exception_handler *s UNUSED,
-		      const struct exception *e)
-{
-  werror("lsh-decode-key: %z\n", e->msg);
-
-  exit(EXIT_FAILURE);
-}
-
-static struct exception_handler exc_handler =
-STATIC_EXCEPTION_HANDLER(do_exc_lsh_decode_key, NULL);
-
-#define MAX_FILE 30000
-#define BLOCKSIZE 1024
 
 int main(int argc, char **argv)
 {
   struct lsh_decode_key_options *options = make_lsh_decode_key_options();
-  struct exception_handler *e;
-  struct lsh_fd *in;
-  struct lsh_fd *out;
-
-  io_init();
+  const struct exception *e;
+  struct lsh_string *input;
+  struct lsh_string *output;
+  struct sexp *expr;
+  
+  int out = STDOUT_FILENO;
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
-  in = make_lsh_fd(STDIN_FILENO, "stdin",
-		   &exc_handler);
-
-  /* We want an exception handler that deals with EXC_FINISH_IO. */
-  e = make_exc_finish_read_handler(in, &exc_handler, HANDLER_CONTEXT);
-  
   if (options->file)
-    out = io_write_file(options->file,
-			O_WRONLY | O_CREAT, 0666,
-			BLOCKSIZE, NULL, e);
-  else
-    out = io_write(make_lsh_fd(STDOUT_FILENO,
-			       "stdout", e),
-		   BLOCKSIZE, NULL);
-  io_read
-    (in,
-     make_buffered_read(BLOCKSIZE,
-			(options->base64 ? make_read_base64 : make_read_file)
-			(make_decode_key
-			 (make_apply
-			  (make_sexp_print_to(options->style,
-					      &out->write_buffer->super),
-			   &discard_continuation, e), e),
-			 MAX_FILE)),
-     NULL);
+    {
+      out = open(lsh_get_cstring(options->file),
+                 O_WRONLY | O_CREAT, 0666);
+      if (out < 0)
+        {
+          werror("Failed to open file `%S' for writing: %z\n",
+                 options->file, STRERROR(errno));
+          return EXIT_FAILURE;
+        }
+    }
 
-  io_run();
+  input = io_read_file_raw(STDIN_FILENO, 3000);
+  if (!input)
+    {
+      werror("Failed to read stdin: %z\n",
+             STRERROR(errno));
+      return EXIT_FAILURE;
+    }
 
-  io_final();
+  if (options->base64)
+    {
+      struct lsh_string *old = input;
+      input = decode_base64(input->length, input->data);
+      lsh_string_free(old);
+
+      if (!input)
+        {
+          werror("Invalid base64 encoding.\n");
+          return EXIT_FAILURE;
+        }
+    }
+
+  expr = lsh_decode_key(input);
+
+  lsh_string_free(input);
+  
+  if (!expr)
+    return EXIT_FAILURE;
+
+  output = sexp_format(expr, options->style, 0);
+
+  e = write_raw(out, output->length, output->data);
+  lsh_string_free(output);
+  
+  if (e)
+    {
+      werror("Write failed: %z\n",
+             e->msg);
+      return EXIT_FAILURE;
+    }
+  
+  gc_final();
   
   return EXIT_SUCCESS;
 }
