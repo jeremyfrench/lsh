@@ -50,61 +50,41 @@ static struct read_sexp_command read_sexp;
  *
  * Prints the sexp to tha abstract_write OUT. Returns the sexp. */
 
-/* GABA:
-   (class
-     (name sexp_print_to)
-     (super command)
-     (vars
-       (format . int)
-       (dest object abstract_write)))
-*/
-
 static void
-do_sexp_print(struct command *s,
-	      struct lsh_object *a,
+do_sexp_print(struct command_2 *s,
+	      struct lsh_object *a1,
+	      struct lsh_object *a2,
 	      struct command_continuation *c,
 	      struct exception_handler *e UNUSED)
 {
-  CAST(sexp_print_to, self, s);
-  CAST_SUBTYPE(sexp, o, a);
+  CAST(sexp_print_command, self, s);
+  CAST_SUBTYPE(abstract_write, dest, a1);
+  CAST_SUBTYPE(sexp, o, a2);
 
-  A_WRITE(self->dest, sexp_format(o, self->format, 0));
+  A_WRITE(dest, sexp_format(o, self->format, 0));
   if (self->format != SEXP_CANONICAL)
-    A_WRITE(self->dest, ssh_format("\n"));
+    A_WRITE(dest, ssh_format("\n"));
 
-  COMMAND_RETURN(c, a);
+  COMMAND_RETURN(c, o);
+}
+
+struct command_2 *
+make_sexp_print_command(int format)
+{
+  NEW(sexp_print_command, self);
+  self->super.super.call = do_command_2;
+  self->super.invoke = do_sexp_print;
+  self->format = format;
+
+  return &self->super;
 }
 
 struct command *
 make_sexp_print_to(int format, struct abstract_write *dest)
 {
-  NEW(sexp_print_to, self);
-  self->super.call = do_sexp_print;
-  self->format = format;
-  self->dest = dest;
-
-  return &self->super;
-}
-
-struct lsh_object *
-do_sexp_print_simple(struct command_simple *s,
-		     struct lsh_object *a)
-{
-  CAST(sexp_print_command, self, s);
-  CAST_SUBTYPE(abstract_write, dest, a);
-
-  return &make_sexp_print_to(self->format, dest)->super;
-}
-
-struct command_simple *
-make_sexp_print_command(int format)
-{
-  NEW(sexp_print_command, self);
-  self->super.super.call = do_call_simple_command;
-  self->super.call_simple = do_sexp_print_simple;
-  self->format = format;
-
-  return &self->super;
+  return
+    make_command_2_invoke(make_sexp_print_command(format),
+			  &dest->super);
 }
 
 DEFINE_COMMAND3(sexp_print_raw_hash)
@@ -280,8 +260,12 @@ static struct read_sexp_command read_sexp
 		       (proc (read_sexp file)))))))
 */
 
-DEFINE_COMMAND_SIMPLE(for_sexp_command, a)
+DEFINE_COMMAND(for_sexp_command)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(command, handler, a);
-  return for_sexp(handler);
+  COMMAND_RETURN(c, for_sexp(handler));
 }

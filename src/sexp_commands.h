@@ -38,19 +38,15 @@
 /* GABA:
    (class
      (name sexp_print_command)
-     (super command_simple)
+     (super command_2)
      (vars
        (format . int)))
 */
 
-struct lsh_object *
-do_sexp_print_simple(struct command_simple *s,
-		     struct lsh_object *a);
-
 #define STATIC_PRINT_SEXP(format) \
-{ STATIC_COMMAND_SIMPLE(do_sexp_print_simple), format }
+{{ STATIC_HEADER, do_command_2}, format }
 
-struct command_simple *
+struct command_2 *
 make_sexp_print_command(int format);
 
 struct command *
@@ -85,7 +81,7 @@ do_read_sexp(struct command *s,
 struct command *
 make_read_sexp_command(int format, int goon, UINT32 max_size);
 
-extern struct command_simple for_sexp_command;
-#define FOR_SEXP (&for_sexp_command.super.super)
+extern struct command for_sexp_command;
+#define FOR_SEXP (&for_sexp_command.super)
 
 #endif /* SEXP_COMMANDS_H_INCLUDED */
