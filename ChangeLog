@@ -1,3 +1,36 @@
+2002-06-26  Niels Möller  <niels@s3.kth.se>
+
+	* src/spki.c (spki_pkcs5_decrypt): Bug fixes. Friendlier pass
+	phrase prompt.
+
+	* src/unix_user.c (do_verify_password): Interpret short
+	passwd-fields as password login disabled.
+	(do_lookup_user): Improved rules for dealing with shadow
+	passwords, disabled accounts, etc.
+
+	* src/io.c (do_write_callback): Added some code to ignore write
+	errors for the final , but #if:ed out the code again.
+
+	* src/client_userauth.c (do_none_login): Print a verbose message.
+	(send_password): Likewise.
+	(do_userauth_pk_ok): Likewise.
+	(do_publickey_login): Likewise.
+
+	* src/client_session.c (do_client_io): Updated invocations of
+	make_channel_io_exception_handler. 
+
+	* src/server_session.c (spawn_process): Create a silent exception
+	handler for i/o errors on stdout, to avoid cluttering down the
+	log. 
+
+	* src/channel.c (make_channel_io_exception_handler): New argument
+	silent.
+
+	* configure.ac: Bumped version to 1.4.2.
+
+	* src/lsh.c (read_user_keys): Support aes for encrypted private
+	keys. 
+
 2002-06-26  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* doc/lsh.texinfo (lshd basics): Changed invokation of lsh-keygen. 
