@@ -6,6 +6,9 @@
 /* The installation prefix. */
 #undef PREFIX
 
+/* sbin directory */
+#undef SBINDIR
+
 /* Define to enable sanity checking on memory allocation and casting */
 #undef DEBUG_ALLOC
 
