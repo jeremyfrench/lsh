@@ -548,7 +548,7 @@ init_client_options(struct client_options *self,
   
   self->not = 0;
   self->port = NULL;
-  self->remote = NULL;
+  self->target = NULL;
 
   self->local_user = self->user = getenv(ENV_LOGNAME);
 
@@ -575,19 +575,6 @@ init_client_options(struct client_options *self,
   self->inhibit_actions = 0;
 
   object_queue_init(&self->actions);  
-}
-
-/* Host to connect to */
-DEFINE_COMMAND(client_options2remote)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST_SUBTYPE(client_options, options, a);
-  trace("client.c: client_options2remote\n");
-  
-  COMMAND_RETURN(c, options->remote);
 }
 
 /* Host to connect to */
@@ -1261,18 +1248,8 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       break;
     case ARGP_KEY_ARG:
       if (!state->arg_num)
-	{
-	  if (options->port)
-	    options->remote = make_address_info_c(arg, options->port, 0);
-	  else
-	    options->remote = make_address_info_c(arg, "ssh", 22);
-	  
-	  if (!options->remote)
-	    argp_error(state, "Invalid port or service '%s'.",
-		       options->port ? options->port : "22");
-	  
-	  break;
-	}
+	options->target = arg;
+      
       else
 	/* Let the next case parse it.  */
 	return ARGP_ERR_UNKNOWN;

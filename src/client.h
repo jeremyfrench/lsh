@@ -144,8 +144,8 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
        (exit_code . "int *")
 
        (not . int)
-       (port . "char *")
-       (remote object address_info)
+       (port . "const char *")
+       (target . "const char *")
 
        (local_user . "char *")
        (user . "char *")
@@ -197,9 +197,6 @@ int
 client_parse_forward_arg(char *arg,
 			 uint32_t *listen_port,
 			 struct address_info **target);
-
-extern struct command client_options2remote;
-#define OPTIONS2REMOTE (&client_options2remote.super)
 
 extern struct command client_options2actions;
 #define OPTIONS2ACTIONS (&client_options2actions.super)
