@@ -358,8 +358,6 @@ static void listen_callback(struct lsh_fd *fd)
   int res;
   int conn;
 
-  /* FIXME: Do something with the peer address? */
-
   conn = accept(fd->fd,
 		(struct sockaddr *) &peer, &addr_len);
   if (conn < 0)
@@ -367,8 +365,9 @@ static void listen_callback(struct lsh_fd *fd)
       werror("io.c: accept() failed, %z", strerror(errno));
       return;
     }
-  res = FD_LISTEN_CALLBACK(self->callback, conn,
-			   addr_len, (struct sockaddr *) &peer);
+  res = FD_LISTEN_CALLBACK(self->callback, conn, 
+			   format_addr(addr_len,
+				       (struct sockaddr *) &peer));
   if (LSH_ACTIONP(res))
     {
       werror("Strange: Accepted a connection, "
@@ -574,7 +573,7 @@ get_inaddr(struct sockaddr_in	* addr,
 /* FIXME: IPv6 support */
 /* FIXME: The host name lookup may block. We would need an asyncronous
  * get_inaddr function. As a work around, we could let the client do
- * all lookups, so that the server ned only deal with ip-numbers. And
+ * all lookups, so that the server need only deal with ip-numbers. And
  * optionally refuse requests with dns names. */
 
 int tcp_addr(struct sockaddr_in *sin,
@@ -596,6 +595,34 @@ int tcp_addr(struct sockaddr_in *sin,
   return 1;
 }
 
+struct address_info *sockaddr2info(size_t addr_len UNUSED,
+				   struct sockaddr *addr)
+{
+  NEW(peer_info, info);
+  
+  switch(addr->sa_family)
+    {
+    case AF_INET:
+      {
+	struct sockaddr_in *in = (struct sockaddr_in *) addr;
+	UINT32 ip = ntohl(in->sin_addr.s_addr);
+	info->port = ntoh(in->sin_port);
+	info->address = ssh_format("%d.%d.%d.%d",
+				   (ip >> 24) & 0xff,
+				   (ip >> 16) & 0xff,
+				   (ip >> 8) & 0xff,
+				   ip & 0xff);
+	return info;
+      }
+#if 0
+    case AF_INETv6:
+      ...
+#endif
+    default:
+      fatal("io.c: format_addr(): Unsupported address family.\n");
+    }
+}
+	
 /* For fd:s in blocking mode. */
 int write_raw(int fd, UINT32 length, UINT8 *data)
 {
@@ -789,76 +816,69 @@ static void prepare_write(struct lsh_fd *fd)
       && self->buffer->closed)
     close_fd(fd, CLOSE_EOF);
 }
-  
-struct io_fd *io_read_write(struct io_backend *b,
-			    int fd,
+
+struct io_fd *make_io_fd(struct io_backend *b,
+			 int fd)
+{
+  NEW(io_fd, f);
+
+  io_init_fd(fd);
+  init_file(b, &f->super, fd);
+
+  return f;
+}
+
+struct io_fd *io_read_write(struct io_fd *fd,
 			    struct read_handler *handler,
 			    UINT32 block_size,
 			    struct close_callback *close_callback)
 {
-  NEW(io_fd, f);
   struct write_buffer *buffer = write_buffer_alloc(block_size);
 
-  debug("io.c: Preparing fd %i for reading and writing\n", fd);
-  
-  io_init_fd(fd);
-  
-  init_file(b, &f->super, fd);
+  debug("io.c: Preparing fd %i for reading and writing\n",
+	fd->super.fd);
   
   /* Reading */
-  f->super.read = read_callback;
-  f->super.want_read = !!handler;
-  f->handler = handler;
+  fd->super.read = read_callback;
+  fd->super.want_read = !!handler;
+  fd->handler = handler;
 
   /* Writing */
-  f->super.prepare = prepare_write;
-  f->super.write = write_callback;
-  f->buffer = buffer;
+  fd->super.prepare = prepare_write;
+  fd->super.write = write_callback;
+  fd->buffer = buffer;
 
   /* Closing */
-  f->super.really_close = really_close;
-  f->super.close_callback = close_callback;
+  fd->super.really_close = really_close;
+  fd->super.close_callback = close_callback;
 
-  return f;
+  return fd;
 }
 
-struct io_fd *io_read(struct io_backend *b,
-		      int fd,
+struct io_fd *io_read(struct io_fd *fd,
 		      struct read_handler *handler,
 		      struct close_callback *close_callback)
 {
-  NEW(io_fd, f);
-
-  debug("io.c: Preparing fd %i for reading\n", fd);
+  debug("io.c: Preparing fd %i for reading\n", fd->super.fd);
   
-  io_init_fd(fd);
-
-  init_file(b, &f->super, fd);
-
   /* Reading */
-  f->super.want_read = !!handler;
-  f->super.read = read_callback;
-  f->handler = handler;
+  fd->super.want_read = !!handler;
+  fd->super.read = read_callback;
+  fd->handler = handler;
 
-  f->super.close_callback = close_callback;
+  fd->super.close_callback = close_callback;
 
-  return f;
+  return fd;
 }
 
-struct io_fd *io_write(struct io_backend *b,
-		       int fd,
+struct io_fd *io_write(struct io_fd *fd,
 		       UINT32 block_size,
 		       struct close_callback *close_callback)
 {
-  NEW(io_fd, f);
   struct write_buffer *buffer = write_buffer_alloc(block_size);
 
-  debug("io.c: Preparing fd %i for writing\n", fd);
+  debug("io.c: Preparing fd %i for writing\n", fd->super.fd);
   
-  io_init_fd(fd);
-  
-  init_file(b, &f->super, fd);
-
   /* Writing */
   f->super.prepare = prepare_write;
   f->super.write = write_callback;
