@@ -159,7 +159,7 @@ make_server_session(UINT32 initial_window,
   self->super.rec_window_size = 0;
 
   /* FIXME: Make maximum packet size configurable. */
-  self->super.rec_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
+  self->super.rec_max_packet = SSH_MAX_PACKET;
   self->super.request_types = request_types;
 
   /* Note: We don't need a close handler; the channels resource list

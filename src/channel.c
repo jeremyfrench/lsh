@@ -1016,16 +1016,11 @@ parse_channel_open(struct simple_buffer *buffer,
       info->type = lookup_atom(info->type_length, info->type_data);
 
       /* We don't support larger packets than the default,
-       * SSH_MAX_PACKET. The fuzz factor is because the
-       * channel's max sizes refer to the data string inside the
-       * packet, while the SSH_PACKET limit refers to the complete
-       * packet including some overhead (9 octets for
-       * SSH_MSG_CHANNEL_DATA and 13 octets for
-       * SSH_MSG_CHANNEL_EXTENDED_DATA). */
-      if (info->send_max_packet > (SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ))
+       * SSH_MAX_PACKET. */
+      if (info->send_max_packet > SSH_MAX_PACKET)
 	{
 	  werror("do_channel_open: The remote end asked for really large packets.\n");
-	  info->send_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
+	  info->send_max_packet = SSH_MAX_PACKET;
 	}
 
       return 1;
