@@ -353,8 +353,8 @@ werror_vformat(const char *f, va_list args)
 {
   if (program_name)
     {
-      werror_write(program_name, strlen(program_name));
-      werror_write(": ", 2);
+      werror_write(strlen(program_name), program_name);
+      werror_write(2, ": ");
     }
   
   while (*f)
@@ -410,7 +410,7 @@ werror_vformat(const char *f, va_list args)
 		  while (*s)
 		    werror_paranoia_putc(*s++);
 		else
-		  werror_write(s, strlen(s));
+		  werror_write(strlen(s), s);
 		
 		break;
 	      }
