@@ -366,6 +366,8 @@ AC_CHECK_LIB(gmp, __gmpz_getlimbn,,
 #   [LSH_RPATH_FIX],
 #   [AC_MSG_ERROR([GMP is missing. Get gmp-2.0.2 or better from ftp://ftp.gnu.org/pub/gnu/gmp]) ])
 
+LSH_RPATH_FIX
+
 AC_CHECK_LIB([oop], [oop_sys_new],,
   [AC_MSG_ERROR([liboop is missing. Get liboop from http://www.liboop.org])])
 
