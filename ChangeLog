@@ -1,3 +1,7 @@
+2001-11-06  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* configure.in: Bumped version to 1.3.6.
+
 2001-11-02  Niels Möller  <nisse@ehand.com>
 
 	* src/server_session.c (do_eof): Use close_fd_write instead of
@@ -62,6 +66,8 @@
 
 2001-10-15  Niels Möller  <nisse@ehand.com>
 
+	Released lsh-1.3.5.
+	
 	* src/testsuite/cast128-test.m4: New cast-128 cbc testcase.
 
 	* src/crypto.c (crypto_cast128_cbc_algorithm): New algorithm,
