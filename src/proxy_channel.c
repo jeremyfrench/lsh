@@ -283,7 +283,7 @@ make_proxy_channel_open_continuation(struct command_continuation *up,
      (super channel_open_command)
      (vars
        ; channel type
-       (type . UINT32)
+       (type . int)
        (max_packet . UINT32)
        (requests object alist)
        (open_request string)))
@@ -314,7 +314,7 @@ do_proxy_channel_open(struct channel_open_command *c,
 }
 
 struct command *
-make_proxy_channel_open_command(UINT32 type,
+make_proxy_channel_open_command(int type,
 				UINT32 max_packet,
                                 struct lsh_string *open_request,
 				struct alist *requests)

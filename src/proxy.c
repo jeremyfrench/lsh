@@ -291,7 +291,7 @@ make_proxy_connection_service(struct object_list *server_hooks,
      (name proxy_accept_service_handler)
      (super packet_handler)
      (vars
-       (name . UINT32)
+       (name . int)
        (service object command)
        (c object command_continuation)
        (e object exception_handler)))
@@ -306,7 +306,7 @@ do_proxy_accept_service(struct packet_handler *c,
 
   struct simple_buffer buffer;
   UINT32 msg_number;
-  UINT32 name;
+  int name;
 
   simple_buffer_init(&buffer, packet->length, packet->data);
 
