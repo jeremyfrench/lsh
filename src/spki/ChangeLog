@@ -1,3 +1,11 @@
+2003-01-09  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* certificate.c (spki_acl_parse): Use spki_check_type.
+	(spki_process_sequence_no_signatures): Likewise.
+
+	* parse.c (spki_check_type): New function. Now used in most places
+	that check the type of an expression and then enters it.
+
 2003-01-08  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* testsuite/lookup-acl-test.c (test_main): Added some tests for

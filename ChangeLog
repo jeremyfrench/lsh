@@ -1,3 +1,23 @@
+2003-01-09  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/spki.c: Deleted old spki implementation.
+	(spki_lookup, spki_authorize): New functions.
+	(do_spki_acl_db_mark, do_spki_acl_db_free): New functions.
+
+	* src/lsh.c (read_known_hosts): Read new known-hosts file as
+	"~/.lsh/host-acls", and filter it through sexp-conv. Fall back to
+	the old file name "~/.lsh/known_hosts" if the new file doesn't
+	exist. 
+	(do_lsh_lookup): Use the new spki_lookup function.
+	(do_lsh_lookup): Use new spki_authorize function.
+	(do_lsh_lookup): Disable spki fingerprinting for now.
+
+	* src/io.c (lsh_popen): New argument for recording the child pid.
+	(lsh_popen_read): New function.
+
+	* doc/lsh.texinfo (Files and environment variables): Document
+	SEXP_CONV. 
+
 2003-01-08  Niels Möller  <niels@s3.kth.se>
 
 	* src/Makefile.am.in (environ.h): New rule for creating environ.h

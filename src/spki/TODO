@@ -10,4 +10,5 @@ includes
 What if certificate reduction ends up with more than one reduced 5
 tuple?
 
-Odd range types
+Implement range, and figure out if and how to support all the
+different range types.
