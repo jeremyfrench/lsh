@@ -64,7 +64,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	crypto.c \
 	daemon.c \
 	debug.c dh_exchange.c \
-	dsa.c encrypt.c \
+	dsa.c \
 	exception.c \
 	format.c gc.c \
 	gateway.c gateway_channel.c gateway_commands.c \
@@ -73,7 +73,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	keyexchange.c \
 	list.c lookup_verifier.c \
 	lock_file.c \
-	pad.c parse.c \
+	parse.c \
 	pkcs5.c \
 	publickey_crypto.c queue.c \
 	randomness.c \
@@ -90,7 +90,8 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	translate_signal.c tty.c \
 	unix_interact.c unix_process.c unix_random.c unix_user.c \
 	unpad.c userauth.c \
-	werror.c write_buffer.c xalloc.c xauth.c zlib.c
+	werror.c write_buffer.c write_packet.c \
+	xalloc.c xauth.c zlib.c
 
 liblsh_a_LIBADD = @LIBOBJS@
 
