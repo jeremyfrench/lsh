@@ -1,3 +1,7 @@
+2003-02-24  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* rl.c (lsftp_rl_remotefile_generator): Use const char.
+
 2003-02-23  Niels Moller  <nisse@carduelis>
 
 	* dc.c (lsftp_dc_r_isdir): Adapted to new sftp_attrib argument to
