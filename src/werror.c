@@ -26,13 +26,17 @@
 #include "werror.h"
 
 #include "charset.h"
+#include "format.h"  /* For format_size_in_decimal() */
 #include "gc.h"
 #include "io.h"
 #include "parse.h"
+#include "xalloc.h"
 
-#include <stdio.h>
+#include <assert.h>
+/* #include <stdio.h> */
 #include <stdarg.h>
 #include <ctype.h>
+
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -68,6 +72,123 @@ static void werror_putc(UINT8 c)
   error_buffer[error_pos++] = c;
 }
 
+static void werror_write(UINT32 length, UINT8 *msg)
+{
+  if (error_pos + length <= BUF_SIZE)
+    {
+      memcpy(error_buffer + error_pos, msg, length);
+      error_pos += length;
+#if 0
+      if (length && (msg[length-1] == '\n'))
+	werror_flush();
+#endif
+    }
+  else
+    {
+      werror_flush();
+      WERROR(length, msg);
+    }
+}
+
+static void werror_cstring(char *s) { werror_write(strlen(s), s); }
+
+static void werror_bignum(mpz_t n, int base)
+{
+  UINT8 *s = alloca(mpz_sizeinbase(n, base) + 2);
+  mpz_get_str(s, 16, n);
+
+  werror_cstring(s);
+}
+
+static void werror_decimal(UINT32 n)
+{
+  unsigned length = format_size_in_decimal(n);
+  char *buffer = alloca(length);
+  unsigned i;
+  
+  for (i = 0; i<length; i++)
+    buffer[length - i - 1] = '0' + n % 10;
+  
+  werror_write(length, buffer);
+}
+
+static unsigned format_size_in_hex(UINT32 n);
+
+static void werror_hex_digit(unsigned digit)
+{
+  werror_putc("0123456789abcdef"[digit]);
+}
+
+static void werror_hex_putc(UINT8 c)
+{
+  werror_hex_digit(c / 16);
+  werror_hex_digit(c % 16);
+}
+
+static void werror_hex(UINT32 n)
+{
+  unsigned left = 8;
+  
+  while ( (left > 1)
+	  && (n & 0xf0000000UL))
+    {
+      left --;
+      n <<= 4;
+    }
+		    
+  while (left--)
+    werror_hex_digit((n >> 28) & 0xf);
+}
+
+static void werror_hexdump(UINT32 length, UINT8 *data)
+{
+  UINT32 i;
+  werror("(size %i = 0x%xi)", length, length);
+
+  for(i=0; i<length; i++)
+  {
+    if (! (i%16))
+      {
+	unsigned j = format_size_in_hex(i);
+
+	werror_cstring("\n0x");
+
+	for ( ; j < 8; j++)
+	  werror_putc('0');
+	
+	werror_hex(i);
+	werror_cstring(": ");
+      }
+
+    werror_hex_putc(data[i]);
+  }
+  werror_putc('\n');
+}
+
+static void werror_paranoia_putc(UINT8 c)
+{
+  switch (c)
+    {
+    case '\\':
+      werror_cstring("\\\\");
+      break;
+    case '\r':
+      /* Ignore */
+      break;
+    default:
+      if (!isprint(c))
+	{
+	  werror_putc('\\');
+	  werror_hex_putc(c);
+	  break;
+	}
+      /* Fall through */
+    case '\n':
+      werror_putc(c);
+      break;
+    }
+}
+
 void set_error_stream(int fd, int with_poll)
 {
   error_fd = fd;
@@ -75,6 +196,7 @@ void set_error_stream(int fd, int with_poll)
   error_write = with_poll ? write_raw_with_poll : write_raw;
 }
 
+#if 0
 void wwrite(char *msg)
 {
   if (!quiet_flag)
@@ -96,53 +218,145 @@ void wwrite(char *msg)
 	}
     }
 }
+#endif
 
-#ifdef HAVE_VSNPRINTF
-/* FIXME: Too bad we can't create a custom FILE * using werror_putc to
- * output each character. */
-static void w_vnprintf(unsigned size, const char *format, va_list args)
+void werror_vformat(const char *f, va_list args)
 {
-  int written;
-  
-  if (error_pos + size <= BUF_SIZE)
+  while (*f)
     {
-      written = vsnprintf(error_buffer + error_pos, size, format, args);
+      if (*f == '%')
+	{
+	  int do_hex = 0;
+	  int do_free = 0;
+	  int do_paranoia = 0;
+	  int do_utf8 = 0;
 
-      error_pos += (written >= 0) ? written : size;
+	  while (*++f)
+	    switch (*f)
+	      {
+	      case 'x':
+		do_hex = 1;
+		break;
+	      case 'f':
+		do_free = 1;
+		break;
+	      case 'p':
+		do_paranoia = 1;
+		break;
+	      case 'u':
+		do_utf8 = 1;
+		break;
+	      case 'h':
+		do_hex = 1;
+		break;
+	      default:
+		goto end_options;
+	      }
+	end_options:
+	  switch(*f++)
+	    {
+	    case '%':
+	      werror_putc(*f);
+	      break;
+	    case 'i':
+	      (do_hex ? werror_hex : werror_decimal)(va_arg(args, UINT32));
+	      break;
+	    case 'c':
+	      werror_putc(va_arg(args, int));
+	      break;
+	    case 'n':
+	      werror_bignum(va_arg(args, MP_INT *), do_hex ? 16 : 10);
+	      break;
+	    case 'z':
+	      {
+		char *s = va_arg(args, char *);
+
+		if (do_hex)
+		  werror_hexdump(strlen(s), s);
+
+		while (*s)
+		  (do_paranoia ? werror_paranoia_putc : werror_putc)(*s++);
+	      }
+	      break;
+	    case 's':
+	      {
+		UINT32 length = va_arg(args, UINT32);
+		UINT8 *s = va_arg(args, UINT8 *);
+
+		struct lsh_string *u = NULL; 
+
+		if (do_utf8 && !local_is_utf8())
+		  {
+		    u = low_utf8_to_local(length, s, 0);
+		    if (!u)
+		      {
+			werror_cstring("<Invalid utf-8 string>");
+			break;
+		      }
+		    length = u->length;
+		    s = u->data;
+		  }
+		if (do_hex)
+		  {
+		    assert(!do_paranoia);
+		    werror_hexdump(length, s);
+		  }
+		else if (do_paranoia)
+		  {
+		    UINT32 i;
+		    for (i=0; i<length; i++)
+		      werror_paranoia_putc(*s++);
+		  }
+		else
+		  werror_write(length, s);
+
+		if (u)
+		  lsh_string_free(u);
+	      }
+	      break;
+	    case 'S':
+	      {
+		struct lsh_string *s = va_arg(args, struct lsh_string *);
+
+		if (do_utf8)
+		  {
+		    s = utf8_to_local(s, 0, do_free);
+		    if (!s)
+		      {
+			werror_cstring("<Invalid utf-8 string>");
+			break;
+		      }
+		    do_free = 1;
+		  }
+		if (do_hex)
+		  {
+		    assert(!do_paranoia);
+		    werror_hexdump(s->length, s->data);
+		  }
+		else if (do_paranoia)
+		  {
+		    UINT32 i;
+		    for (i=0; i<s->length; i++)
+		      werror_paranoia_putc(s->data[i]);
+		  }
+		else
+		  werror_write(s->length, s->data);
+
+		if (do_free)
+		  lsh_string_free(s);
+	      }
+	      break;
+
+	    default:
+	      fatal("werror_vformat: bad format string");
+	      break;
+	    }
+	}
+      else
+	werror_putc(*f++);
     }
-  else
-    {
-      UINT8 *s = alloca(size);
-
-      werror_flush();
-      written = vsnprintf(s, size, format, args);
-
-      if (written >= 0)
-	size = written;
-      
-      WERROR(size, s);
-    }
-}
-#else /* !HAVE_VSNPRINTF */
-
-#warning No vsnprintf. Some output to stderr will be lost.
-
-static void w_vnprintf(unsigned size, const char *format, va_list args)
-{
-  /* NOTE: This loses the interesting parts of the messages. */
-  wwrite(format);
-}
-#endif /* !HAVE_VSNPRINTF */
-
-static void w_nprintf(UINT32 size, const char *format, ...)
-{
-  va_list args;
-  va_start(args, format);
-  w_vnprintf(size, format, args);
-  va_end(args);
 }
 
-#define WERROR_MAX 150
 void werror(const char *format, ...) 
 {
   va_list args;
@@ -150,7 +364,7 @@ void werror(const char *format, ...)
   if (!quiet_flag)
     {
       va_start(args, format);
-      w_vnprintf(WERROR_MAX, format, args);
+      werror_vformat(format, args);
       va_end(args);
       werror_flush();
     }
@@ -163,7 +377,7 @@ void debug(const char *format, ...)
   if (debug_flag)
     {
       va_start(args, format);
-      w_vnprintf(WERROR_MAX, format, args);
+      werror_vformat(format, args);
       va_end(args);
       werror_flush();
     }
@@ -176,186 +390,10 @@ void verbose(const char *format, ...)
   if (verbose_flag)
     {
       va_start(args, format);
-      w_vnprintf(WERROR_MAX, format, args);
+      werror_vformat(format, args);
       va_end(args);
       werror_flush();
     }
-}
-
-static void wash_char(UINT8 c)
-{
-  static const char hex[16] = "0123456789abcdef";
-  
-  switch(c)
-    {
-    case '\\':
-      werror_putc('\\');
-      werror_putc('\\');
-      break;
-    case '\r':
-      /* Ignore */
-      break;
-    default:
-      if (!isprint(c))
-	{
-	  werror_putc('\\');
-	  werror_putc(hex[c / 16]);
-	  werror_putc(hex[c % 16]);
-	  break;
-	}
-      /* Fall through */
-    case '\n':
-      werror_putc(c);
-      break;
-    }
-}
-
-/* Escape non-printable characters. */
-static void write_washed(UINT32 length, UINT8 *msg)
-{
-  UINT32 i;
-
-  for(i = 0; i<length; i++)
-    wash_char(msg[i]);
-
-  werror_flush();
-}
-
-/* For outputting data received from the other end */
-void werror_safe(UINT32 length, UINT8 *msg)
-{
-  if (!quiet_flag)
-    write_washed(length, msg);
-}
-
-void debug_safe(UINT32 length, UINT8 *msg)
-{
-  if (debug_flag)
-    write_washed(length, msg);
-}
-
-void verbose_safe(UINT32 length, UINT8 *msg)
-{
-  if (verbose_flag)
-    write_washed(length, msg);
-}
-
-static void write_utf8(UINT32 length, UINT8 *msg)
-{
-  struct simple_buffer buffer;
-  
-  simple_buffer_init(&buffer, length, msg);
-  
-  for (;;)
-    {
-      UINT32 ucs4;
-      
-      switch (parse_utf8(&buffer, &ucs4))
-	{
-	case -1:
-	  return;
-	case 0:
-	  werror_putc('\\');
-	  werror_putc('!');
-	  return;
-	case 1:
-	  {
-	    int local = ucs4_to_local(ucs4);
-	    if (local < 0)
-	      {
-		werror_putc('\\');
-		werror_putc('?');
-	      }
-	    else
-	      wash_char(local);
-	    break;
-	  }
-	default:
-	  fatal("Internal error");
-	}
-    }
-  werror_flush();
-}
-
-void werror_utf8(UINT32 length, UINT8 *msg)
-{
-  if (!quiet_flag)
-    write_utf8(length, msg);
-}
-
-void verbose_utf8(UINT32 length, UINT8 *msg)
-{
-  if (verbose_flag)
-    write_utf8(length, msg);
-}
-
-void debug_utf8(UINT32 length, UINT8 *msg)
-{
-  if (debug_flag)
-    write_utf8(length, msg);
-}
-
-/* Bignums */
-static void write_mpz(mpz_t n)
-{
-  UINT8 *s = alloca(mpz_sizeinbase(n, 16) + 2);
-  mpz_get_str(s, 16, n);
-
-  WERROR(strlen(s), s);
-}
-
-void werror_mpz(mpz_t n)
-{
-  if (!quiet_flag)
-    write_mpz(n);
-}
-
-void debug_mpz(mpz_t n)
-{
-  if (debug_flag)
-    write_mpz(n);
-}
-
-void verbose_mpz(mpz_t n)
-{
-  if (verbose_flag)
-    mpz_out_str(stderr, 16, n);
-}
-
-/* hex dumps */
-static void write_hex(UINT32 length, UINT8 *data)
-{
-  UINT32 i;
-  
-  w_nprintf(40, "(size %d = 0x%x)", length, length);
-
-  for(i=0; i<length; i++)
-  {
-    if (! (i%16))
-      w_nprintf(20, "\n%08x: ", i);
-    
-    w_nprintf(4, "%02x ", data[i]);
-  }
-  w_nprintf(2, "\n");
-  werror_flush();
-}
-
-void werror_hex(UINT32 length, UINT8 *data)
-{
-  if (!quiet_flag)
-    write_hex(length, data);
-}
-
-void debug_hex(UINT32 length, UINT8 *data)
-{
-  if (debug_flag)
-    write_hex(length, data);
-}
-
-void verbose_hex(UINT32 length, UINT8 *data)
-{
-  if (verbose_flag)
-    write_hex(length, data);
 }
 
 void fatal(const char *format, ...) 
@@ -363,9 +401,35 @@ void fatal(const char *format, ...)
   va_list args;
 
   va_start(args, format);
-  w_vnprintf(WERROR_MAX, format, args);
+  werror_vformat(format, args);
   va_end(args);
   werror_flush();
 
   abort();
 }
+
+static unsigned format_size_in_hex(UINT32 n)
+{
+  int i;
+  int e;
+  
+  /* Table of 16^(2^n) */
+  static const UINT32 powers[] = { 0x10UL, 0x100UL, 0x10000UL };
+
+#define SIZE (sizeof(powers) / sizeof(powers[0])) 
+
+  /* Determine the smallest e such that n < 10^e */
+  for (i = SIZE - 1 , e = 0; i >= 0; i--)
+    {
+      if (n >= powers[i])
+	{
+	  e += 1UL << i;
+	  n /= powers[i];
+	}
+    }
+
+#undef SIZE
+  
+  return e+1;
+}
+
