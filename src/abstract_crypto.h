@@ -210,6 +210,13 @@ hash_string(struct hash_algorithm *a,
 	    int free);
 
 struct lsh_string *
+mac_string(struct mac_algorithm *a,
+	   struct lsh_string *key,
+	   int kfree,
+	   struct lsh_string *in,
+	   int ifree);
+
+struct lsh_string *
 crypt_string(struct crypto_instance *c,
 	     struct lsh_string *in,
 	     int free);

@@ -1,3 +1,21 @@
+2000-05-29  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/macros.m4 (TS_STRING): Ignore newlines in hex
+	literals. 
+	(TS_TEST_STRING_EQ): Construct values only once.
+	(TS_TEST_HMAC): New macro.
+
+	* src/testsuite/Makefile.am (TS_PROGS): Added sha1-test and
+	m5-test. 
+
+	* src/testsuite/sha1-test.m4: New file.
+	* src/testsuite/md5-test.m4: New file.
+
+	* src/digit_table.c (main): There's no hex digit with the value
+	16. 
+
+	* src/abstract_crypto.c (mac_string): New function.
+
 2000-05-28  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/werror.c (werror_hexdump): Include an ascii column in the

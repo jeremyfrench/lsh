@@ -75,7 +75,6 @@ struct crypto_algorithm *crypto_invert(struct crypto_algorithm *inner)
   return &algorithm->super;
 }
 
-
 struct lsh_string *
 hash_string(struct hash_algorithm *a,
 	    struct lsh_string *in,
@@ -89,6 +88,29 @@ hash_string(struct hash_algorithm *a,
 
   KILL(hash);
   if (free)
+    lsh_string_free(in);
+
+  return out;
+}
+
+struct lsh_string *
+mac_string(struct mac_algorithm *a,
+	   struct lsh_string *key,
+	   int kfree,
+	   struct lsh_string *in,
+	   int ifree)
+{
+  struct mac_instance *mac = MAKE_MAC(a, key->length, key->data);
+  struct lsh_string *out = lsh_string_alloc(mac->mac_size);
+
+  HASH_UPDATE(mac, in->length, in->data);
+  HASH_DIGEST(mac, out->data);
+
+  KILL(mac);
+  
+  if (kfree)
+    lsh_string_alloc(key);
+  if (ifree)
     lsh_string_free(in);
 
   return out;

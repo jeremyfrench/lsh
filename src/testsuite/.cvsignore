@@ -5,6 +5,10 @@ des-test
 des-test.c
 foo
 foo.pub
+md5-test
+md5-test.c
+sha1-test
+sha1-test.c
 spki-tag-test
 spki-tag-test.c
 twofish-test
