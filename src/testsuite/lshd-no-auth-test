@@ -1,0 +1,14 @@
+#! /bin/sh
+
+echo lshd, no-auth-test
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+LSHD_FLAGS="$LSHD_FLAGS --no-password --no-publickey --no-srp"
+
+spawn_lshd || test_success
+
