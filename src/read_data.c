@@ -63,7 +63,7 @@ do_read_data_query(struct io_consuming_read *s)
     }
 
   /* If a keyexchange is in progress, we should stop reading. We rely
-   * on channels_after_keyexchange to restart reading. */
+   * on channels_wakeup to restart reading. */
   if (self->channel->connection->send_kex_only)
     {
       trace
@@ -71,6 +71,13 @@ do_read_data_query(struct io_consuming_read *s)
       return 0;
     }
 
+  if (self->channel->connection->hard_limit)
+    {
+      trace
+	("read_data: Data arrived, but connection' write_buffer is full.\n");
+      return 0;
+    }
+  
   /* There are three numbers that limit the amount of data we can read:
    *
    *   1 The current send_window_size.
