@@ -25,23 +25,26 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "nettle/macros.h"
 #include "channel_forward.h"
 #include "command.h"
+#include "connection_commands.h"
 #include "format.h"
-#include "io.h"
+#include "io_commands.h"
 #include "lsh_string.h"
 #include "resource.h"
-#include "tcpforward_commands.h"
+#include "ssh.h"
+#include "tcpforward.h"
 #include "werror.h"
 #include "xalloc.h"
 
 /* Various protocol constants */
 enum {
   /* Version exchange */
-  SOCKS_VERSION = 5,
   SOCKS_NOAUTH = 0,
   SOCKS_NOMETHOD = 0xff,
 };
@@ -83,56 +86,45 @@ enum {
 
 enum socks_state {
   SOCKS_VERSION_HEADER, SOCKS_VERSION_METHODS,
-  SOCKS_COMMAND_HEADER, SOCKS_COMMAND_ADDR
+  SOCKS_COMMAND_HEADER, SOCKS_COMMAND_ADDR, SOCKS_COMMAND_WAIT,
 };
+
+struct command_2 socks_handshake;
+#define SOCKS_HANDSHAKE (&socks_handshake.super.super)
 
 #include "socks.c.x"
 
 /* GABA:
    (class
      (name socks_connection)
-     (super resource)
      (vars
+       (version . uint8_t)
        (connection object ssh_connection)
-       (fd object lsh_fd)
-       (resources object resource_list)))
+       (peer object listen_value)))
 */
-
-static void
-do_kill_socks_connection(struct resource *s)
-{
-  CAST(socks_connection, self, s);
-  if (self->super.alive)
-    {
-      self->super.alive = 0;
-      KILL_RESOURCE_LIST(self->resources);
-    }
-}
 
 static void
 socks_close(struct socks_connection *self)
 {
-  close_fd_nicely(self->fd);
-  KILL_RESOURCE_LIST(self->resources);
+  close_fd_nicely(self->peer->fd);
 }
 
 static void
 socks_fail(struct socks_connection *self)
 {
-  close_fd(self->fd);
-  KILL_RESOURCE_LIST(self->resources);  
+  close_fd(self->peer->fd);
 }
 
 static void
 socks_write(struct socks_connection *self, struct lsh_string *data)
 {
-  A_WRITE(&self->fd->write_buffer->super, data);
+  A_WRITE(&self->peer->fd->write_buffer->super, data);
 }
      
 static void
 socks_method(struct socks_connection *self, uint8_t method)
 {
-  socks_write(self, ssh_format("%c%c", SOCKS_VERSION, method));
+  socks_write(self, ssh_format("%c%c", self->version, method));
 }
 
 static void
@@ -144,7 +136,7 @@ socks_reply(struct socks_connection *self,
 	    uint16_t port)
 {
   socks_write(self, ssh_format("%c%c%c%c%ls%c%c",
-			       SOCKS_VERSION, status, 0, atype,
+			       self->version, status, 0, atype,
 			       alength, addr,
 			       port >> 8, port & 0xff));
 }
@@ -182,10 +174,52 @@ socks2address_info(uint8_t atype,
   return make_address_info(host, port);
 }
 
+/* GABA:
+   (class
+     (name socks_continuation)
+     (super command_continuation)
+     (vars
+       (socks object socks_connection)))
+*/
+
 static void
-do_exc_socks_io_handler(struct exception_handler *s UNUSED,
-			const struct exception *e)
+do_socks_continuation(struct command_continuation *s, struct lsh_object *x)
 {
+  CAST(socks_continuation, self, s);
+  CAST_SUBTYPE(channel_forward, channel, x);
+
+  static uint8_t noaddr[4] = {0,0,0,0};
+
+  /* We don't have the address at the server's end, so we can't pass it along. */
+  socks_reply(self->socks, SOCKS_ERROR_NONE, SOCKS_IP4, 4, noaddr, 0);
+
+  /* Overwrites the read and close callbacks we have installed. */
+  channel_forward_start_io_read(channel);
+}
+
+static struct command_continuation *
+make_socks_continuation(struct socks_connection *socks)
+{
+  NEW(socks_continuation, self);
+  self->super.c = do_socks_continuation;
+  self->socks = socks;
+
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name socks_exception_handler)
+     (super exception_handler)
+     (vars
+       (socks object socks_connection)))
+*/
+
+static void
+do_exc_socks_handler(struct exception_handler *s,
+		     const struct exception *e)
+{
+  CAST(socks_exception_handler, self, s);
   if (e->type & EXC_IO)
     {
       CAST_SUBTYPE(io_exception, exc, e);
@@ -194,53 +228,39 @@ do_exc_socks_io_handler(struct exception_handler *s UNUSED,
 
       werror("Socks: %z, (errno = %i)\n", e->msg, exc->error);
     }
+  else if (e->type == EXC_CHANNEL_OPEN)
+    {
+      CAST_SUBTYPE(channel_open_exception, exc, e);
+      uint8_t reply = SOCKS_ERROR_GENERAL;
+      static uint8_t noaddr[4] = {0,0,0,0};
+      
+      if (exc->error_code == SSH_OPEN_ADMINISTRATIVELY_PROHIBITED)
+	reply = SOCKS_ERROR_NOT_ALLOWED;
+      else if (exc->error_code == SSH_OPEN_CONNECT_FAILED)
+	reply = SOCKS_ERROR_CONNECTION_REFUSED;
+
+      verbose("Socks forwarding denied by server: %z\n", e->msg);
+      socks_reply(self->socks, reply, SOCKS_IP4, 4, noaddr, 0);
+    }
   else
-    werror("Socks: %z\n", e->msg);
+    EXCEPTION_RAISE(self->super.parent, e);
 }
 
-/* FIXME: A similar callback must be feined somewhere else? */
-/* GABA:  
-   (class
-     (name socks_close_callback)
-     (super lsh_callback)
-     (vars
-       (socks object socks_connection)))
-*/
-
-static void
-do_socks_close_callback(struct lsh_callback *s)
+static struct exception_handler *
+make_socks_exception_handler(struct socks_connection *socks,
+			     struct exception_handler *e,
+			     const char *context)
 {
-  CAST(socks_close_callback, self, s);
-  KILL_RESOURCE(&self->socks->super);
-}
+  NEW(socks_exception_handler, self);
+  self->super.parent = e;
+  self->super.raise = do_exc_socks_handler;
+  self->super.context = context;
 
-static struct lsh_callback *
-make_socks_close_callback(struct socks_connection *socks)
-{
-  NEW(socks_close_callback, self);
-  self->super.f = do_socks_close_callback;
   self->socks = socks;
-
   return &self->super;
 }
 
-/* GABA:
-   (expr
-     (name socks_forward_local)
-     (params
-       (connection object ssh_connection)
-       (target object address_info))
-     (expr
-       ;; FIXME: Some duplication with tcpforward_commands.c:forward_local_port
-       (lambda (peer)
-         ;; Remembering is done by open_direct_tcpip
-	 ;; and new_tcpip_channel.
-	 (start_io
-	   (catch_channel_open 
-	     (open_direct_tcpip target peer) connection)))))
-*/
-
-static void
+static int
 socks_command(struct socks_connection *self, uint8_t command,
 	      uint8_t addr_type, const uint8_t *addr,
 	      uint16_t port)
@@ -248,52 +268,27 @@ socks_command(struct socks_connection *self, uint8_t command,
   static const uint8_t noaddr[4] = {0,0,0,0};  
   if (command != SOCKS_CONNECT)
     {
-      socks_reply(self, SOCKS_ERROR_COMMAND, SOCKS_IP4, sizeof(noaddr), noaddr, 0); 
+      socks_reply(self, SOCKS_ERROR_COMMAND, SOCKS_IP4, sizeof(noaddr), noaddr, 0);
+      return 0;
     }
   else
     {
-      /* FIXME: Always binds an ipv4 port */
-      struct sockaddr_in sin;
-      socklen_t slen;
-      struct lsh_fd *fd;
       struct address_info *target = socks2address_info(addr_type, addr, port);
-      struct exception_handler *e;
+      struct command *open_command;
       
       if (!target)
 	{
 	  socks_reply(self, SOCKS_ERROR_ADDRESS, SOCKS_IP4, sizeof(noaddr), noaddr, 0); 
-	  return;
+	  return 0;
 	}
 
-      e = make_exception_handler(do_exc_socks_io_handler, &default_exception_handler,
-				 HANDLER_CONTEXT);
-      
-      memset(&sin, 0, sizeof(sin));
-      sin.sin_addr.s_addr = ntohl(0x7f000001L);
-
-      fd = io_bind_sockaddr((struct sockaddr *) &sin, sizeof(sin), e);
-      if (!fd)
-	{
-	  socks_reply(self, SOCKS_ERROR_GENERAL, SOCKS_IP4, sizeof(noaddr), noaddr, 0); 
-	  return;
-	}
-      
-      /* Find out which port we got */
-      slen = sizeof(sin);
-      if (getsockname(fd->fd, (struct sockaddr *) &sin, &slen) < 0)
-	{
-	  close_fd(fd);
-	  socks_reply(self, SOCKS_ERROR_GENERAL, SOCKS_IP4, sizeof(noaddr), noaddr, 0); 
-	  return;
-	}
-
-      remember_resource(self->resources, &fd->super);
-
-      io_listen(fd, make_listen_callback(socks_forward_local(self->connection, target), e));
-      
-      socks_reply(self, SOCKS_ERROR_NONE, SOCKS_IP4,
-		  4, (uint8_t *) &sin.sin_addr.s_addr,
-		  ntohs(sin.sin_port));
+      open_command = make_open_tcpip_command(ATOM_DIRECT_TCPIP, target, self->peer);
+      COMMAND_CALL(open_command,
+		   self->connection,
+		   make_socks_continuation(self),
+		   make_socks_exception_handler(self, &default_exception_handler,
+						HANDLER_CONTEXT));
+      return 1;
     }
 }
 
@@ -316,6 +311,8 @@ do_read_socks(struct read_handler **h,
 {
   CAST(read_socks, self, *h);
   const uint8_t *p;
+
+  assert(self->buffer);
   
   if (!available)
     {
@@ -339,6 +336,9 @@ do_read_socks(struct read_handler **h,
   
   switch (self->state)
     {
+    default:
+      abort();
+      
       /* Version exchange is:
 
          byte     version ; 4 or 5
@@ -347,13 +347,23 @@ do_read_socks(struct read_handler **h,
       */
       
     case SOCKS_VERSION_HEADER:
-      if (p[0] != SOCKS_VERSION || p[1] == 0)
-	/* Not valid */
-	socks_fail(self->socks);
+      if (p[0] < 4  || p[0] > 5)
+	{
+	  werror("Socks connection of unknown version %i.\n", p[0]);
+	  socks_fail(self->socks);
+	}
+      else if (p[1] != 0)
+	{
+	  werror("Socks protocol error.\n");
+	  socks_fail(self->socks);
+	}
       else
 	{
+	  self->socks->version = p[0];
 	  self->length = 2 + p[1];
 	  self->state = SOCKS_VERSION_METHODS;
+
+	  verbose("Socks version %i connection.\n", self->socks->version);
 	}
       break;
 
@@ -369,6 +379,7 @@ do_read_socks(struct read_handler **h,
 	}
       else
 	{
+	  werror("Socks client doesn't support no authentication!?\n");
 	  socks_method(self->socks, SOCKS_NOMETHOD);
 	  socks_close(self->socks);
 	}
@@ -391,8 +402,11 @@ do_read_socks(struct read_handler **h,
 
 	 We count the first byte of address as part of the header.
       */
-      if (p[0] != SOCKS_VERSION_METHODS || p[2] != 0)
-	socks_fail(self->socks);
+      if (p[0] != self->socks->version || p[2] != 0)
+	{
+	  werror("Invalid socks request.\n");
+	  socks_fail(self->socks);
+	}
       else
 	{
 	  self->state = SOCKS_COMMAND_ADDR;
@@ -415,11 +429,19 @@ do_read_socks(struct read_handler **h,
       break;
 
     case SOCKS_COMMAND_ADDR:
-      socks_command(self->socks, p[1], p[3], p+4,
-		    READ_UINT16(p + self->length - 2));
-      self->pos = 0;
-      self->length = SOCKS_COMMAND_SIZE;
-      self->state = SOCKS_COMMAND_HEADER;
+      if (socks_command(self->socks, p[1], p[3], p+4,
+			READ_UINT16(p + self->length - 2)))
+	{
+	  self->state = SOCKS_COMMAND_WAIT;
+	}
+      else
+	{
+	  socks_fail(self->socks);
+	}
+      
+      lsh_string_free(self->buffer);
+      self->buffer = NULL;
+      *h = NULL;
       break;
     }
   return available;
@@ -440,21 +462,52 @@ make_read_socks(struct socks_connection *socks)
   return &self->super;
 }
 
-#define SOCKS_BUF_SIZE 100
+/* The read buffer is replaced when we go into connected mode, but the
+   writebuffer is not */
+#define SOCKS_READ_BUF_SIZE 100
+#define SOCKS_WRITE_BUF_SIZE (SSH_MAX_PACKET * 10)
 
-static struct socks_connection *
-make_socks_connection(struct ssh_connection *connection, struct lsh_fd *fd)
+/* (socks_handshake peer connection) */
+DEFINE_COMMAND2(socks_handshake)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
+  CAST(listen_value, peer, a1);
+  CAST(ssh_connection, connection, a2);
   NEW(socks_connection, self);
-  init_resource(&self->super, do_kill_socks_connection);
-
+  
   self->connection = connection;
-  self->fd = fd;
-  self->resources = make_resource_list();
-  remember_resource(self->resources, &fd->super);
+  self->peer = peer;
+  remember_resource(connection->resources, &peer->fd->super);
 
-  io_read_write(fd, make_buffered_read(SOCKS_BUF_SIZE, make_read_socks(self)),
-		SOCKS_BUF_SIZE, make_socks_close_callback(self));
+  io_read_write(peer->fd, make_buffered_read(SOCKS_READ_BUF_SIZE, make_read_socks(self)),
+		SOCKS_WRITE_BUF_SIZE, NULL);
 
-  return self;
+  COMMAND_RETURN(c, self);
+}
+
+/* GABA:
+   (expr
+     (name forward_socks)
+     (params
+       (local object address_info))
+     (expr
+       (lambda (connection)
+         (connection_remember connection
+           (listen
+	     (lambda (peer)
+	       (socks_handshake peer connection))
+	     ; NOTE: The use of prog1 is needed to delay the bind call
+	     ; until the (otherwise ignored) connection argument is
+	     ; available.
+	     (bind (prog1 local connection)))))))
+*/
+
+struct command *
+make_socks_server(struct address_info *local)
+{
+  return forward_socks(local);
 }
