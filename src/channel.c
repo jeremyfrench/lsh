@@ -316,7 +316,7 @@ static int do_global_request(struct packet_handler *c,
 	return A_WRITE(connection->write,
 		       format_global_failure());
 
-      return GLOBAL_REQUEST(req, want_reply, &buffer);
+      return GLOBAL_REQUEST(req, connection, want_reply, &buffer);
     }
   lsh_string_free(packet);
 
@@ -368,7 +368,7 @@ static int do_channel_open(struct packet_handler *c,
 					   SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
 					   "Unknown channel type", ""));
       
-      channel = CHANNEL_OPEN(open, &buffer, &error, &error_msg, &args);
+      channel = CHANNEL_OPEN(open, connection, &buffer, &error, &error_msg, &args);
       
       if (!channel)
 	{
@@ -442,7 +442,7 @@ static int do_channel_request(struct packet_handler *c,
 	      && ( (req = ALIST_GET(channel->request_types, type)) ))
 	    return channel_process_status
 	      (closure->table, channel_number,
-	       CHANNEL_REQUEST(req, channel, want_reply, &buffer));
+	       CHANNEL_REQUEST(req, channel, connection, want_reply, &buffer));
 	  else
 	    return want_reply
 	      ? A_WRITE(connection->write,
@@ -484,7 +484,7 @@ static int do_window_adjust(struct packet_handler *c,
       lsh_string_free(packet);
       
       if (channel
-	  && !(channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_RECIEVED_CLOSE)))
+	  && !(channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE)))
 	{
 	  if (! (channel->flags & CHANNEL_SENT_CLOSE))
 	    {
@@ -531,8 +531,8 @@ static int do_channel_data(struct packet_handler *c,
 
       lsh_string_free(packet);
       
-      if (channel && channel->recieve
-	  && !(channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_RECIEVED_CLOSE)))
+      if (channel && channel->receive
+	  && !(channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE)))
 	{
 	  if (channel->flags & CHANNEL_SENT_CLOSE)
 	    {
@@ -555,9 +555,9 @@ static int do_channel_data(struct packet_handler *c,
 		return 0;
 	      channel->rec_window_size -= data->length;
 
-	      /* FIXME: Unconditionally adjusting the recieve window
+	      /* FIXME: Unconditionally adjusting the receive window
 	       * breaks flow control. We better let the channel's
-	       * recieve method decide whether or not to recieve more
+	       * receive method decide whether or not to receive more
 	       * data. */
 	      res = adjust_rec_window(channel);
 	      
@@ -572,7 +572,7 @@ static int do_channel_data(struct packet_handler *c,
 
 	      return channel_process_status(
 		closure->table, channel_number,
-		res | CHANNEL_RECIEVE(channel, 
+		res | CHANNEL_RECEIVE(channel, 
 				      CHANNEL_DATA, data));
 	    }
 	  return LSH_OK | LSH_GOON;
@@ -614,8 +614,8 @@ static int do_channel_extended_data(struct packet_handler *c,
 
       lsh_string_free(packet);
       
-      if (channel && channel->recieve
-	  && !(channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_RECIEVED_CLOSE)))
+      if (channel && channel->receive
+	  && !(channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE)))
 	{
 	  if (channel->flags & CHANNEL_SENT_CLOSE)
 	    {
@@ -650,7 +650,7 @@ static int do_channel_extended_data(struct packet_handler *c,
 		case SSH_EXTENDED_DATA_STDERR:
 		  return channel_process_status(
 		    closure->table, channel_number,
-		    res | CHANNEL_RECIEVE(channel, 
+		    res | CHANNEL_RECEIVE(channel, 
 					  CHANNEL_STDERR_DATA, data));
 		default:
 		  werror("Unknown type %d of extended data.\n",
@@ -696,13 +696,13 @@ static int do_channel_eof(struct packet_handler *c,
 	{
 	  int res = 0;
 	  
-	  if (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_RECIEVED_CLOSE))
+	  if (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE))
 	    {
-	      werror("Recieving EOF on channel on closed channel.\n");
+	      werror("Receiving EOF on channel on closed channel.\n");
 	      return LSH_FAIL | LSH_DIE;
 	    }
 
-	  channel->flags |= CHANNEL_RECIEVED_EOF;
+	  channel->flags |= CHANNEL_RECEIVED_EOF;
 
 	  if (channel->eof)
 	    res = CHANNEL_EOF(channel);
@@ -761,20 +761,20 @@ static int do_channel_close(struct packet_handler *c,
 	{
 	  int res = 0;
 	  
-	  if (channel->flags & CHANNEL_RECIEVED_CLOSE)
+	  if (channel->flags & CHANNEL_RECEIVED_CLOSE)
 	    {
-	      werror("Recieving multiple CLOSE on channel.\n");
+	      werror("Receiving multiple CLOSE on channel.\n");
 	      return LSH_FAIL | LSH_DIE;
 	    }
 
-	  channel->flags |= CHANNEL_RECIEVED_CLOSE;
+	  channel->flags |= CHANNEL_RECEIVED_CLOSE;
 	  
-	  if (! (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_SENT_EOF)))
+	  if (! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_SENT_EOF)))
 	    {
 	      werror("Unexpected channel CLOSE.\n");
 	    }
 
-	  if (! (channel->flags & (CHANNEL_RECIEVED_EOF))
+	  if (! (channel->flags & (CHANNEL_RECEIVED_EOF))
 	      && channel->eof)
 	    res = CHANNEL_EOF(channel);
 	  
@@ -1054,10 +1054,12 @@ struct lsh_string *format_channel_close(struct ssh_channel *channel)
 
 int channel_close(struct ssh_channel *channel)
 {
+  assert(! (channel->flags & CHANNEL_SENT_CLOSE));
+  
   channel->flags |= CHANNEL_SENT_CLOSE;
 
   return A_WRITE(channel->write, format_channel_close(channel))
-    | ( (channel->flags & CHANNEL_RECIEVED_CLOSE)
+    | ( (channel->flags & CHANNEL_RECEIVED_CLOSE)
 	? LSH_CHANNEL_FINISHED : 0);
 }
 
@@ -1078,7 +1080,8 @@ int channel_eof(struct ssh_channel *channel)
   if (LSH_CLOSEDP(res))
     return res;
 
-  if (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_CLOSE_AT_EOF))
+  if ( (channel->flags & CHANNEL_CLOSE_AT_EOF)
+       && (channel->flags & CHANNEL_RECEIVED_EOF))
     {
       /* Initiate close */
       res |= channel_close(channel);
@@ -1096,7 +1099,7 @@ void init_channel(struct ssh_channel *channel)
   channel->sources = 0;
   
   channel->request_types = NULL;
-  channel->recieve = NULL;
+  channel->receive = NULL;
   channel->send = NULL;
 
   channel->close = NULL;

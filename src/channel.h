@@ -23,11 +23,11 @@
 #define CHANNEL_STDERR_DATA 1
 
 #define CHANNEL_SENT_CLOSE 1
-#define CHANNEL_RECIEVED_CLOSE 2
+#define CHANNEL_RECEIVED_CLOSE 2
 #define CHANNEL_SENT_EOF 4
-#define CHANNEL_RECIEVED_EOF 8
+#define CHANNEL_RECEIVED_EOF 8
 
-/* Means that we should send close immediately after sending eof. */
+/* Means that we should send close when we have both sent and received EOF. */
 #define CHANNEL_CLOSE_AT_EOF 0x10
 
 /* CLASS:
@@ -66,7 +66,7 @@
        ; propagate a channel broken message to the other end? 
 
        ; Type is CHANNEL_DATA or CHANNEL_STDERR_DATA
-       (recieve method int "int type" "struct lsh_string *data")
+       (receive method int "int type" "struct lsh_string *data")
 
        ; Called when we are allowed to send data on the channel. 
        (send method int)
@@ -75,7 +75,7 @@
        ; FIXME: Is this needed for anything?
        (close method void)
 
-       ; Called when eof is recieved on the channel (or when it is
+       ; Called when eof is received on the channel (or when it is
        ; closed, whatever happens first).
  
        (eof method int)
@@ -89,8 +89,8 @@
        (channel_failure method int)))
 */
 
-#define CHANNEL_RECIEVE(s, t, d) \
-((s)->recieve((s), (t), (d)))
+#define CHANNEL_RECEIVE(s, t, d) \
+((s)->receive((s), (t), (d)))
 
 #define CHANNEL_SEND(s) ((s)->send((s)))
      
@@ -151,10 +151,11 @@
    (class
      (name global_request)
      (vars
-       (handler method int "int want_reply" "struct simple_buffer *args")))
+       (handler method int "struct ssh_connection *connection"
+                           "int want_reply" "struct simple_buffer *args")))
 */
 
-#define GLOBAL_REQUEST(c, w, a) ((c)->handler((c), (w), (a)))
+#define GLOBAL_REQUEST(r, c, w, a) ((r)->handler((r), (c), (w), (a)))
 
 /* SSH_MSG_CHANNEL_OPEN */
 /* CLASS:
@@ -162,13 +163,14 @@
      (name channel_open)
      (vars
        (handler method (object ssh_channel)
-               "struct simple_buffer *args"
-	       "UINT32 *error" "char **error_msg"
-	       "struct lsh_string **data")))
+                "struct ssh_connection *connection"
+                "struct simple_buffer *args"
+	        "UINT32 *error" "char **error_msg"
+	        "struct lsh_string **data")))
 */
 
-#define CHANNEL_OPEN(c, a, e, m, d) \
-((c)->handler((c), (a), (e), (m), (d)))
+#define CHANNEL_OPEN(o, c, a, e, m, d) \
+((o)->handler((o), (c), (a), (e), (m), (d)))
 
 /* SSH_MSH_CHANNEL_REQUEST */
 /* CLASS:
@@ -177,12 +179,13 @@
      (vars
        (handler method int
 		"struct ssh_channel *channel"
+		"struct ssh_connection *connection"
 		"int want_reply"
 		"struct simple_buffer *args")))
 */
 
-#define CHANNEL_REQUEST(s, c, w, a) \
-((s)->handler((s), (c), (w), (a)))
+#define CHANNEL_REQUEST(s, c, conn, w, a) \
+((s)->handler((s), (c), (conn), (w), (a)))
 
 /* CLASS:
    (class
