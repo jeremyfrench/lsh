@@ -85,6 +85,9 @@
        ; and max_window.
        (max_window simple UINT32)       
 
+       ; FIXME: Does the maximum packet sizes apply to complete ssh
+       ; packets, or the data payload?
+
        (rec_window_size simple UINT32)
        (rec_max_packet simple UINT32)
 
@@ -114,8 +117,9 @@
        ; Type is CHANNEL_DATA or CHANNEL_STDERR_DATA
        (receive method void "int type" "struct lsh_string *data")
 
-       ; Called when we are allowed to send data on the channel. 
-       (send method void "struct ssh_connection *connection")
+       ; Called when we are allowed to send more data on the channel.
+       ; Implies that the send_window_size is non-zero. 
+       (send_adjust method void "UINT32 increment")
 
        ; Called when the channel is closed
        ; FIXME: Is this needed for anything?
@@ -144,7 +148,7 @@
 #define CHANNEL_RECEIVE(s, t, d) \
 ((s)->receive((s), (t), (d)))
 
-#define CHANNEL_SEND(s, c) ((s)->send((s), (c)))
+#define CHANNEL_SEND_ADJUST(s, i) ((s)->send_adjust((s), (i)))
      
 #define CHANNEL_CLOSE(s) \
 ((s)->close((s)))
@@ -256,13 +260,14 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
        (handler method void
                 "struct ssh_connection *connection"
 		"UINT32 type"
+		"UINT32 send_max_packet"
                 "struct simple_buffer *data"
                 "struct command_continuation *c"
 		"struct exception_handler *e")))
 */
 
-#define CHANNEL_OPEN(o, c, t, d, r, e) \
-((o)->handler((o), (c), (t), (d), (r), (e)))
+#define CHANNEL_OPEN(o, c, t, m, d, r, e) \
+((o)->handler((o), (c), (t), (m), (d), (r), (e)))
 
 /* SSH_MSG_CHANNEL_REQUEST */
 /* GABA:
