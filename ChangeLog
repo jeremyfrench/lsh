@@ -1,5 +1,7 @@
 2003-05-12  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/crypto.h (FOR_BLOCKS): Deleted unused macro.
+
 	* src/lsh-execuv.c: Don't include lsh_types.h.
 	* src/lsh-krb-checkpw.c: Likewise.
 
