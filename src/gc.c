@@ -58,12 +58,15 @@ static void sanity_check_object_list(void)
     fatal("sanity_check_object_list: Found %i objects, expected %i.\n",
 	  i, number_of_objects);
 }
+#else
+#define sanity_check_object_list()
 #endif
 
 /* FIXME: This function recurses heavily. One could use some trickery
- * to emulate tail recursion, which would help marking linked list. Or
- * one could use some more efficient datastructures than the C stack
- * for keeping track of the marked but not yet traced objects. */
+ * to emulate tail recursion, which would help marking linked lists.
+ * Or one could use some more efficient datastructures than the C
+ * stack for keeping track of the marked but not yet traced objects.
+ * Or use something more sophisticated, like pointer reversal. */
 static void gc_mark(struct lsh_object *o)
 {
   if (!o)
@@ -144,46 +147,23 @@ static void gc_sweep(void)
 
 void gc_register(struct lsh_object *o)
 {
-#if DEBUG_ALLOC
   sanity_check_object_list();
-#endif
+
   o->marked = o->dead = 0;
   o->next = all_objects;
   all_objects = o;
 
   number_of_objects ++;
-#if DEBUG_ALLOC
-  sanity_check_object_list();
-#endif
-}
 
-#if 0
-/* FIXME: This function is utterly broken, and should be deleted. The
- * problem is that the object must be unlinked from the all_objects
- * list before linked into the globals list. */
-void gc_register_global(struct lsh_object *o)
-{
-#if DEBUG_ALLOC
   sanity_check_object_list();
-#endif
-  o->marked = o->dead = 0;
-  o->next = globals;
-  globals = o;
-
-#if DEBUG_ALLOC
-  sanity_check_object_list();
-#endif
 }
-#endif
 
 /* FIXME: This function should really deallocate and forget the object
  * early. But we keep it until the next gc, in order to catch any
  * references to killed objects. */
 void gc_kill(struct lsh_object *o)
 {
-#if DEBUG_ALLOC
   sanity_check_object_list();
-#endif
 
   if (!o)
     return;
@@ -192,9 +172,7 @@ void gc_kill(struct lsh_object *o)
 
   o->dead = 1;
 
-#if DEBUG_ALLOC
   sanity_check_object_list();
-#endif
 }
 
 void gc(struct lsh_object *root)
@@ -210,9 +188,7 @@ void gc(struct lsh_object *root)
 
 void gc_maybe(struct lsh_object *root, int busy)
 {
-#if DEBUG_ALLOC
   sanity_check_object_list();
-#endif
 
   if (number_of_objects > (100 + live_objects*(2+busy)))
     {
