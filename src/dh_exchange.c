@@ -72,36 +72,21 @@ init_dh_instance(struct dh_method *m,
 }
 
 struct dh_method *
-make_dh1(struct randomness *r)
+make_dh(struct abstract_group *G, struct hash_algorithm *H,
+	struct randomness *r)
 {
   NEW(dh_method, res);
-  mpz_t p;
-  mpz_t g;
-  mpz_t order;
-  
-  mpz_init_set_str(p,
-		   "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
-		   "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
-		   "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
-		   "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
-		   "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381"
-		   "FFFFFFFFFFFFFFFF", 16);
-
-  mpz_init_set(order, p);
-  mpz_sub_ui(order, order, 1);
-  mpz_fdiv_q_2exp(order, order, 1);
-  mpz_init_set_ui(g, 2);
-
-  res->G = &make_zn(p, g, order)->super;
-
-  mpz_clear(p);
-  mpz_clear(g);
-  mpz_clear(order);
-
-  res->H = &sha1_algorithm;
+  res->G = G;
+  res->H = H;
   res->random = r;
   
   return res;
+  
+}
+struct dh_method *
+make_dh1(struct randomness *r)
+{
+  return make_dh(make_ssh_group1(), &sha1_algorithm, r);
 }
 
 /* R is set to a random, secret, exponent, and V set to is g^r */
