@@ -36,40 +36,6 @@
 
 #include <pwd.h>
 #include <grp.h>
-
-/* These functions add an extra NUL-character at the end of the string
- * (not included in the length), to make it possible to pass the
- * string directly to C library functions. */
-
-static struct lsh_string *format_cstring(char *s)
-{
-  if (s)
-    {
-      struct lsh_string *res = ssh_format("%lz%c", s, 0);
-      res->length--;
-      return res;
-    }
-  return NULL; 
-}
-
-static struct lsh_string *make_cstring(struct lsh_string *s, int free)
-{
-  struct lsh_string *res;
-  
-  if (memchr(s->data, '\0', s->length))
-    {
-      if (free)
-	lsh_string_free(s);
-      return 0;
-    }
-
-  res = ssh_format("%lS%c", s, 0);
-  res->length--;
-  
-  if (free)
-    lsh_string_free(s);
-  return res;
-}
     
 /* NOTE: Calls functions using the *disgusting* convention of returning
  * pointers to static buffers. */
@@ -84,8 +50,10 @@ struct unix_user *lookup_user(struct lsh_string *name, int free)
     return 0;
   
   if (!(passwd = getpwnam(name->data)))
-    return 0;
-  
+    {
+      lsh_string_free(name);
+      return 0;
+    }
   NEW(res);
   res->uid = passwd->pw_uid;
   res->gid = passwd->pw_gid;
@@ -104,9 +72,6 @@ int verify_password(struct unix_user *user,
 {
   char *salt;
   
-  /* Convert password to a NULL-terminated string */
-  password = make_cstring(password, free);
-
   if (!user->passwd || (user->passwd->length < 2) )
     {
       /* FIXME: How are accounts without passwords handled? */
@@ -114,6 +79,12 @@ int verify_password(struct unix_user *user,
       return 0;
     }
 
+  /* Convert password to a NULL-terminated string */
+  password = make_cstring(password, free);
+
+  if (!password)
+    return 0;
+  
   salt = user->passwd->data;
 
   if (strcmp(crypt(password->data, salt), user->passwd->data))
