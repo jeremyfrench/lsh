@@ -1,3 +1,8 @@
+2003-05-13  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io.c (io_resolv_address): Fixes for the non getaddrinfo
+	code. 
+
 2003-05-13  Niels Möller  <niels@s3.kth.se>
 
 	* acinclude.m4 (LSH_FUNC_STRSIGNAL): Use a dummy STRSIGNAL if none
