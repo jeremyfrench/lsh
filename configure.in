@@ -201,23 +201,6 @@ AC_CHECK_HEADERS(stropts.h)
 AC_CHECK_HEADERS(syslog.h)
 AC_CHECK_HEADERS(argp.h)
 
-
-dnl AC_CHECK_MEMBER(includes, struct, field)
-AC_DEFUN(AC_CHECK_MEMBER,
-[ AC_CACHE_CHECK([if $2 has member $3],
-    lsh_cv_decl_struct_$2_$3,
-    [AC_TRY_COMPILE([$1],
-changequote(<{, }>)dnl
-      <{ struct $2 x; (void) &x.$3; }>,
-changequote([, ])dnl
-      [lsh_cv_decl_struct_$2_$3=yes],
-      [lsh_cv_decl_struct_$2_$3=no])])
-  if eval "test \"`echo '$lsh_cv_decl_struct_'$2`_'$3'\" = yes"; then
-    AC_DEFINE_UNQUOTED(`echo HAVE_$3 | tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'`)
-  fi
-])
-
-
 AC_CHECK_HEADERS(utmp.h, [have_utmp_h=yes], [have_utmp_h=no])
 
 if test x$have_utmp_h = xyes; then
@@ -321,19 +304,6 @@ dnl Needed by argp
 AC_CHECK_FUNCS(mempcpy strndup)
 AC_CHECK_FUNCS(flockfile putc_unlocked)
 AC_CHECK_FUNCS(fputs_unlocked fwrite_unlocked)
-
-dnl AC_CHECK_VAR(VAR, INCLUDES)
-AC_DEFUN(AC_CHECK_VAR,
-[ AC_CACHE_CHECK(
-    [for $1],
-    lsh_cv_var_$1,
-    AC_TRY_LINK([$2], [void *p = (void *) &$1;],
-		[lsh_cv_var_$1=yes],
-		[lsh_cv_var_$1=no]))
-  if eval "test \"`echo '$lsh_cv_var_'$1`\" = yes"; then
-    AC_DEFINE_UNQUOTED(HAVE_`echo $1 | tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'`)
-  fi
-])
 
 AC_CHECK_VAR(program_invocation_name, [#include <errno.h>])
 AC_CHECK_VAR(program_invocation_short_name, [#include <errno.h>])
