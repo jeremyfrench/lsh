@@ -9,28 +9,32 @@
 #include <assert.h>
 #include <string.h>
 
-/* Reading a partial token */
-#define STATE_TOKEN 0
+enum rsync_receive_mode
+{
+  /* Reading a partial token */
+  STATE_TOKEN,
 
-/* Reading a literal */
-#define STATE_LITERAL 1
+  /* Reading a literal */
+  STATE_LITERAL,
 
-/* Copying a local block */
-#define STATE_LOOKUP 2
+  /* Copying a local block */
+  STATE_LOOKUP,
 
-/* Reading final md5 sum */
-#define STATE_CHECKSUM 3
+  /* Reading final md5 sum */
+  STATE_CHECKSUM,
 
-/* Results in error */
-#define STATE_INVALID 4
+  /* Results in error */
+  STATE_INVALID
+};
 
+/* Hash the data after it is copied to the output buffer. */
 static void
 rsync_update(struct rsync_receive_state *s,
 	     UINT32 length)
 {
-  md5_update(&s->full_sum, s->next_in, length);
-  s->next_in += length;
-  s->avail_in -= length;
+  md5_update(&s->full_sum, s->next_out, length);
+  s->next_out += length;
+  s->avail_out -= length;
 }
 
 #define GET() (assert(s->avail_in), s->avail_in--, *s->next_in++)
@@ -41,6 +45,7 @@ rsync_receive(struct rsync_receive_state *s)
   int progress = 0;
   
   for (;;)
+    /* FIXME: Cast to enum rsync_receive_mode, for better type checking? */
     switch (s->state)
       {
       do_token:
@@ -53,9 +58,11 @@ rsync_receive(struct rsync_receive_state *s)
 	  return progress ? RSYNC_PROGRESS : RSYNC_BUF_ERROR;
 	
 	s->token = (s->token << 8) | GET();
+	s->i++;
+
 	progress = 1;
 	
-	if (++s->i == 4)
+	if (s->i == 4)
 	  {
 	    if (!s->token)
 	      goto do_checksum;
@@ -68,7 +75,7 @@ rsync_receive(struct rsync_receive_state *s)
 	    else
 	      {
 		/* Index is one's complement */ 
-		s->token = -(s->token + 1);
+		s->token = ~s->token;
 		goto do_lookup;
 	      }
 	  }
@@ -87,12 +94,16 @@ rsync_receive(struct rsync_receive_state *s)
 	    {
 	      memcpy(s->next_out, s->next_in, avail);
 	      rsync_update(s, avail);
+	      s->next_in += avail;
+	      s->avail_in -= avail;
 	      s->i -= avail;
 	    }
 	  else
 	    {
 	      memcpy(s->next_out, s->next_in, s->i);
 	      rsync_update(s, s->i);
+	      s->next_in += s->i;
+	      s->avail_in -= s->i;
 	      goto do_token;
 	    }
 	}
@@ -121,7 +132,7 @@ rsync_receive(struct rsync_receive_state *s)
 	    case -1:
 	      return RSYNC_INPUT_ERROR;
 	    default:
-	      assert(0);
+	      abort();
 	    }
 	}
 	break;
@@ -139,7 +150,7 @@ rsync_receive(struct rsync_receive_state *s)
 	if (GET() != s->buf[s->i++])
 	  return RSYNC_INPUT_ERROR;
 
-	if (s->i == MD5_DIGESTSIZE)
+	if (s->i == RSYNC_SUM_LENGTH)
 	  {
 	    s->state = STATE_INVALID;
 	    return RSYNC_DONE;
@@ -147,7 +158,7 @@ rsync_receive(struct rsync_receive_state *s)
 	break;
 
       default:
-	assert(0);
+	abort();
       }
 }
 
