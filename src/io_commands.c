@@ -151,8 +151,8 @@ collect_listen(struct collect_info_2 *info,
 	       struct lsh_object *a,
 	       struct lsh_object *b)
 {
-  CAST(io_backend, backend, a);
-  CAST_SUBTYPE(command, callback, b);
+  CAST_SUBTYPE(command, callback, a);
+  CAST(io_backend, backend, b);
   assert(!info->next);
 
   return &make_listen_command(callback, backend)->super;
