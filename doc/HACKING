@@ -423,12 +423,16 @@ should ahve an exc_ prefix.
 Below, TYPE stands for a type name,
 and METHOD for the name one of its methods.
 
-The constructor function for a TYPE should be make_TYPE(). Functions
-implementing its methods should be do_TYPE_METHOD. Except for
-closure-like objects, i.e. objects with essentially only one method,
-where the method implementation is do_TYPE. The do_* functions are not
-intended to be called directly; they are only installed in objects'
-method pointers. Most of them, but not all, are declared static.
+The constructor function for a TYPE should be make_TYPE().
+Some objects also have a separate initialization function, for use by
+subclasses. That should be named init_TYPE().
+
+Functions implementing its methods should be do_TYPE_METHOD. Except
+for closure-like objects, i.e. objects with essentially only one
+method, where the method implementation is do_TYPE. The do_* functions
+are not intended to be called directly; they are only installed in
+objects' method pointers. Most of them, but not all, are declared
+static.
  
 Functions related to the collect_info-mechanism have a collect_
 prefix. They take and return arguments of type struct lsh_object *,

@@ -626,7 +626,7 @@ main_options[] =
     "Request the ssh-userauth service (default if SRP is used).", 0 },
 #endif
   
-  /* ACtions */
+  /* Actions */
   { "forward-remote-port", 'R', "remote-port:target-host:target-port",
     0, "", CLIENT_ARGP_ACTION_GROUP },
   { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 },
