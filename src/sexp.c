@@ -26,7 +26,6 @@
 #include "sexp.h"
 
 #include "format.h"
-#include "list.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -415,6 +414,18 @@ static struct lsh_string *do_format_sexp_vector(struct sexp *e, int style)
     }
 }
 
+struct sexp *sexp_v(struct object_list *l)
+{
+  NEW(sexp_vector, v);
+
+  v->super.format = do_format_sexp_vector;
+  v->super.iter = make_iter_vector;
+  
+  v->elements = l;
+
+  return &v->super;
+}
+
 struct sexp *sexp_l(unsigned n, ...)
 {
   va_list args;
@@ -429,16 +440,11 @@ struct sexp *sexp_l(unsigned n, ...)
     }
   else
     {
-      NEW(sexp_vector, v);
-
-      v->super.format = do_format_sexp_vector;
-      v->super.iter = make_iter_vector;
+      struct sexp *v = sexp_v(make_object_listv(n, args));
       
-      v->elements = make_object_listv(n, args);
-
       va_end(args);
 
-      return &v->super;
+      return v;
     }
 }
 

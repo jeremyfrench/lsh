@@ -27,6 +27,7 @@
 #define LSH_SEXP_H_INCLUDED
 
 #include "bignum.h"
+#include "list.h"
 
 /* Forward declaration */
 struct sexp_iterator;
@@ -108,6 +109,9 @@ struct sexp *sexp_c(struct sexp *car, struct sexp_cons *cdr);
 
 /* list */
 struct sexp *sexp_l(unsigned n, ...);
+
+/* vector */
+struct sexp *sexp_v(struct object_list *l);
 
 #if 0
 /* Extracting information from sexp. These functions accept NULL
