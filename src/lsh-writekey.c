@@ -30,8 +30,8 @@
 #include "io_commands.h"
 #include "interact.h"
 #include "rsa.h"
-#include "sexp_commands.h"
-#include "spki_commands.h"
+#include "sexp.h"
+#include "spki.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -48,36 +48,7 @@
 #include <unistd.h>
 #endif
 
-#define BLOCK_SIZE 2000
-#define MAX_SEXP_SIZE 5000
-
-static struct read_sexp_command read_sexp
-= STATIC_READ_SEXP(SEXP_TRANSPORT, 0, MAX_SEXP_SIZE);
-
-#define READ_SEXP (&read_sexp.super.super)
-
-struct lsh_writekey_options;
-
-extern struct command lsh_writekey_print_public;
-#define PRINT_PUBLIC (&lsh_writekey_print_public.super)
-
-extern struct command lsh_writekey_print_private;
-#define PRINT_PRIVATE (&lsh_writekey_print_private.super)
-
-extern struct command lsh_writekey_options2algorithms;
-#define OPTIONS2ALGORITHMS (&lsh_writekey_options2algorithms.super)
-
-extern struct command lsh_writekey_options2transform;
-#define TRANSFORM (&lsh_writekey_options2transform.super)
-
-extern struct command lsh_writekey_options2public_file;
-#define OPTIONS2PUBLIC_FILE (&lsh_writekey_options2public_file.super)
-
-extern struct command lsh_writekey_options2private_file;
-#define OPTIONS2PRIVATE_FILE (&lsh_writekey_options2private_file.super)
-
 #include "lsh-writekey.c.x"
-
 
 /* Option parsing */
 
@@ -310,182 +281,160 @@ main_argp =
   NULL, NULL
 };
 
-DEFINE_COMMAND(lsh_writekey_print_public)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
+static int
+open_private_file(const struct lsh_string *file)
 {
-  CAST(lsh_writekey_options, options, a);
+  int fd = open(lsh_get_cstring(file),
+                O_CREAT | O_EXCL | O_WRONLY,
+                0600);
 
-  COMMAND_RETURN(c,
-		 make_sexp_print_command
-		 ((options->style > 0)
-		  ? options->style : SEXP_TRANSPORT));
+  if (fd < 0)
+    werror("Failed to open `%z'for writing: %z\n"
+           "lsh-writekey doesn't overwrite existing key files.\n"
+           "If you *really* want to do that, you should delete\n"
+           "the existing files first\n",
+           file, STRERROR(errno));
+
+  return fd;
 }
 
-DEFINE_COMMAND(lsh_writekey_print_private)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
+static int
+open_public_file(const struct lsh_string *file)
 {
-  CAST(lsh_writekey_options, options, a);
+  struct lsh_string *s = ssh_format("%lS.pub", file);
+  
+  int fd = open(lsh_get_cstring(s),
+                O_CREAT | O_EXCL | O_WRONLY,
+                0644);
 
-  COMMAND_RETURN(c,
-		 make_sexp_print_command
-		 ((options->style > 0)
-		  ? options->style : SEXP_CANONICAL));
+  if (fd < 0)
+    werror("Failed to open `%z'for writing: %z\n"
+           "lsh-writekey doesn't overwrite existing key files.\n"
+           "If you *really* want to do that, you should delete\n"
+           "the existing files first\n",
+           file, STRERROR(errno));
+
+  lsh_string_free(s);
+  
+  return fd;
 }
 
-DEFINE_COMMAND(lsh_writekey_options2algorithms)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
+static struct lsh_string *
+process_private(struct sexp *key,
+                struct lsh_writekey_options *options)
 {
-  CAST(lsh_writekey_options, options, a);
-  COMMAND_RETURN(c, options->signature_algorithms);
-}
+  struct sexp *expr = key;
 
-DEFINE_COMMAND(lsh_writekey_options2transform)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(lsh_writekey_options, options, a);
-  if (!options->crypto)
-    COMMAND_RETURN(c, &command_I);
-  else
+  if (options->crypto)
     {
       CAST_SUBTYPE(mac_algorithm, hmac,
-		   ALIST_GET(options->crypto_algorithms, ATOM_HMAC_SHA1));
+                   ALIST_GET(options->crypto_algorithms, ATOM_HMAC_SHA1));
       assert(hmac);
       
-      COMMAND_RETURN(c,
-		     make_pkcs5_encrypt(options->r,
-					lsh_string_dup(options->label),
-					ATOM_HMAC_SHA1,
-					hmac,
-					options->crypto_name,
-					options->crypto,
-					10, /* Salt length */
-					lsh_string_dup(options->passphrase),
-					options->iterations));
+      expr = spki_pkcs5_encrypt(options->r,
+                                options->label,
+                                ATOM_HMAC_SHA1,
+                                hmac,
+                                options->crypto_name,
+                                options->crypto,
+                                10, /* Salt length */
+                                options->passphrase,
+                                options->iterations,
+                                sexp_format(SEXP_CANONICAL, key, 0));
     }
+  return sexp_format(expr,
+                     (options->style > 0) ? options->style : SEXP_CANONICAL,
+                     0);
 }
 
-DEFINE_COMMAND(lsh_writekey_options2public_file)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
+static struct lsh_string *
+process_public(struct sexp *key,
+               struct lsh_writekey_options *options)
 {
-  CAST(lsh_writekey_options, options, a);
-  struct lsh_string *public = ssh_format("%lS.pub", options->file);
-
-  COMMAND_RETURN(c,
-		 make_io_write_file_info(public,
-					 O_CREAT | O_EXCL | O_WRONLY,
-					 0644,
-					 BLOCK_SIZE));
-}
-
-DEFINE_COMMAND(lsh_writekey_options2private_file)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(lsh_writekey_options, options, a);
-
-  COMMAND_RETURN(c,
-		 make_io_write_file_info(lsh_string_dup(options->file),
-					 O_CREAT | O_EXCL | O_WRONLY,
-					 0600,
-					 BLOCK_SIZE));
-}
-
-/* GABA:
-   (expr
-     (name make_writekey)
-     (params
-       (stdin object lsh_fd))
-     (expr
-       (lambda (options)
-         (let ((key (read_sexp
-	              ; Delay reading a little
-	              (prog1 stdin options))))
-           (prog1 (print_public options
-	   			(io_write_file (options2public_file options))
-	                        (verifier2public
-				  (signer2verifier
-				    (sexp2signer (options2algorithms options)
-				                 key))))
-	          (print_private options
-		  		 (io_write_file (options2private_file options))
-		                 (transform options key)))))))
-*/
-
-static void
-do_lsh_writekey_handler(struct exception_handler *s UNUSED,
-			const struct exception *e)
-{
-  /* NOTE: This is quite a complicated way to just write a friendlier
-   * message if we fail because the output files already exists. This
-   * way, it is easier to handle other kinds of errors later, as the
-   * need arises. */
+  struct signer *s;
+  struct verifier *v;
   
-  switch (e->type)
-    {
-    case EXC_IO_OPEN_WRITE:
-      {
-	CAST_SUBTYPE(io_exception, x, e);
-	switch(x->error)
-	  {
-	  case EEXIST:
-	    werror("\nlsh-writekey doesn't overwrite existing key files.\n"
-		   "If you *really* want to do that, you should delete\n"
-		   "the existing files \"FOO\" and \"FOO.pub\" first\n"
-		   "(where \"FOO\" usually is \"~/.lsh/identity\").\n");
-	    break;
-	    
-	  default:
-	    goto outer_default;
-	  }
-	break;
-      }
-    outer_default:
-    default:
-      werror("lsh-writekey: %z\n", e->msg);
-    }
-  exit(EXIT_FAILURE);
+  s = spki_sexp_to_signer(options->signature_algorithms,
+                          key);
+  
+  if (!s)
+    return NULL;
+
+  v = SIGNER_GET_VERIFIER(s);
+  assert(v);
+
+  return sexp_format(spki_make_public_key(v),
+                     (options->style > 0) ? options->style : SEXP_TRANSPORT,
+                     0);
 }
 
-static struct exception_handler exc_handler =
-STATIC_EXCEPTION_HANDLER(do_lsh_writekey_handler, NULL);
-
-
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
   struct lsh_writekey_options *options = make_lsh_writekey_options();
-
-  io_init();
+  int private_fd;
+  int public_fd;
+  struct lsh_string *input;
+  struct lsh_string *output;
+  struct sexp *key;
+  const struct exception *e;
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
-  {
-    CAST_SUBTYPE
-      (command, work,
-       make_writekey(make_lsh_fd(STDIN_FILENO, "stdin", &exc_handler)));
-    
-    COMMAND_CALL(work, options,
-                 &discard_continuation, &exc_handler);
-  }
-  io_run();
+  private_fd = open_private_file(options->file);
+  if (private_fd < 0)
+    return EXIT_FAILURE;
 
-  io_final();
+  public_fd = open_public_file(options->file);
+  if (public_fd < 0)
+    return EXIT_FAILURE;
+
+  input = io_read_file_raw(STDIN_FILENO, 2000);
+
+  if (!input)
+    {
+      werror("Failed to read key from stdin: %z\n",
+             STRERROR(errno));
+      return EXIT_FAILURE;
+    }
+
+  key = string_to_sexp(SEXP_TRANSPORT, input, 1);
+
+  if (!key)
+    {
+      werror("S-expression syntax error.\n");
+      return EXIT_FAILURE;
+    }
+
+  output = process_private(key, options);
+  if (!output)
+    return EXIT_FAILURE;
+
+  e = write_raw(private_fd, output->length, output->data);
+  lsh_string_free(output);
+
+  if (e)
+    {
+      werror("Writing private key failed: %z\n",
+             e->msg);
+      return EXIT_FAILURE;
+    }
+
+  output = process_public(key, options);
+  if (!output)
+    return EXIT_FAILURE;
+
+  e = write_raw(public_fd, output->length, output->data);
+  lsh_string_free(output);
+  
+  if (e)
+    {
+      werror("Writing public key failed: %z\n",
+             e->msg);
+      return EXIT_FAILURE;
+    }
+  
+  gc_final();
   
   return EXIT_SUCCESS;
 }
