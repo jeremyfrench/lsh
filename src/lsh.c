@@ -1075,7 +1075,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 			      &make_forward_remote_port
 			      (self->backend,
 			       make_address_info((self->with_remote_peers
-						  /* FIXME: Is NULL an ok value? */
 						  ? ssh_format("%lz", "0.0.0.0")
 						  : ssh_format("%lz", "127.0.0.1")),
 						 listen_port),
@@ -1202,13 +1201,10 @@ int main(int argc, char **argv)
   struct randomness *r;
   struct alist *algorithms;
   
-  /* FIXME: A single exception handler everywhere seems a little to
-   * crude. */
   struct exception_handler *handler
     = make_lsh_default_handler(&lsh_exit_code, &default_exception_handler,
 			       HANDLER_CONTEXT);
 
-  /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
   init_backend(backend);
 

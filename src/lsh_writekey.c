@@ -403,7 +403,6 @@ do_lsh_writekey_handler(struct exception_handler *s UNUSED,
 {
   werror("lsh_writekey: %z\n", e->msg);
 
-  /* FIXME: It would be better to set the exit_success variable. */
   exit(EXIT_FAILURE);
 }
 

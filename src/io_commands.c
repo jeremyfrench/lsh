@@ -205,8 +205,8 @@ do_listen(struct io_backend *backend,
 /* A listen function taking three arguments:
  * (listen callback backend port).
  *
- * Suitable for handling forwarding requests.
- * NOTE: The calling function has to do all remembering of the fd:s. */
+ * Suitable for handling forwarding requests. NOTE: The calling
+ * function has to do all remembering of the fd:s. */
 
 /* GABA:
    (class
@@ -228,7 +228,7 @@ do_listen_with_callback(struct command *s,
 
   /* No dns lookups */
   do_listen(self->backend, address, 0,
-	    NULL, /* FIXME: resources */
+	    NULL,
 	    c,
 	    make_apply(self->callback,
 		       &discard_continuation, e), e);

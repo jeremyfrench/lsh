@@ -111,7 +111,6 @@ dsa_to_spki_public_key(struct dsa_public *dsa)
 {
   return sexp_l(2, SA(PUBLIC_KEY),
 		sexp_l(5, SA(DSA),
-		       /* FIXME: Should we use unsigned format? */
 		       sexp_l(2, SA(P), sexp_un(dsa->p), -1),
 		       sexp_l(2, SA(Q), sexp_un(dsa->q), -1),
 		       sexp_l(2, SA(G), sexp_un(dsa->g), -1),

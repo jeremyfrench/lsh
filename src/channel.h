@@ -107,10 +107,6 @@
        ; sources.
        (sources simple int)
 
-       ; FIXME: What about return values from these functions? A
-       ; channel may fail to process it's data. Is there some way to
-       ; propagate a channel broken message to the other end? 
-
        ; Type is CHANNEL_DATA or CHANNEL_STDERR_DATA
        (receive method void "int type" "struct lsh_string *data")
 
@@ -118,8 +114,8 @@
        ; Implies that the send_window_size is non-zero. 
        (send_adjust method void "UINT32 increment")
 
-       ; Called when the channel is closed
-       ; FIXME: Is this needed for anything?
+       ; Called when the channel is closed.
+       ; Used by client_session and gateway_channel.
        (close method void)
 
        ; Called when eof is received on the channel (or when it is
@@ -167,13 +163,7 @@
 /* GABA:
    (class
      (name channel_table)
-     ;; (super exception_handler)
      (vars
-       ; FIXME: This is relevant only for the server side. It's
-       ; probably better to store this in the connection struct.
-
-       ;; uid_t user;  ; Authenticated user 
-
        ; Channels are indexed by local number
        (channels space (object ssh_channel) used_channels)
        

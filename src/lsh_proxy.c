@@ -162,6 +162,7 @@ make_lsh_proxy_options(struct io_backend *backend,
   /* Default behaviour is to lookup the "ssh" service, and fall back
    * to port 22 if that fails. */
   self->port = NULL;
+
   /* FIXME: this should perhaps use sysconfdir */  
   self->hostkey = "/etc/lsh_host_key";
   self->local = NULL;
@@ -576,7 +577,6 @@ int main(int argc, char **argv)
   struct alist *algorithms_server, *algorithms_client;
   struct make_kexinit *make_kexinit;
   
-  /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
   init_backend(backend);
 

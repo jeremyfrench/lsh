@@ -230,7 +230,8 @@ int daemon_started_by_init(void)
 
 /* FIXME: Do we need to detect if the socket is listening or connected
  * to a peer? */
-int daemon_started_by_inetd(void)
+int
+daemon_started_by_inetd(void)
 {
   int optval;
   socklen_t optlen = sizeof(optval);
@@ -239,7 +240,8 @@ int daemon_started_by_inetd(void)
 }
 
 /* Disable core files */
-int daemon_disable_core(void)
+int
+daemon_disable_core(void)
 {
   struct rlimit limit = { 0, 0 };
 

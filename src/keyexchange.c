@@ -168,8 +168,9 @@ initiate_keyexchange(struct ssh_connection *connection,
     }
 }
 
-static int select_algorithm(struct int_list *server_list,
-			    struct int_list *client_list)
+static int
+select_algorithm(struct int_list *server_list,
+		 struct int_list *client_list)
 {
   /* FIXME: This quadratic complexity algorithm should do as long as
    * the lists are short. To avoid DOS-attacks, ther should probably
@@ -190,7 +191,8 @@ static int select_algorithm(struct int_list *server_list,
   return 0;
 }
 
-void disconnect_kex_failed(struct ssh_connection *connection, const char *msg)
+void
+disconnect_kex_failed(struct ssh_connection *connection, const char *msg)
 {
   EXCEPTION_RAISE
     (connection->e,

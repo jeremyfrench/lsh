@@ -525,13 +525,13 @@ int main(int argc, char **argv)
   struct randomness *r;
   struct alist *algorithms;
   
-  /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
   init_backend(backend);
 
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
   setlocale(LC_CTYPE, "");
+
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
@@ -615,9 +615,9 @@ int main(int argc, char **argv)
 		ATOM_PTY_REQ, make_pty_handler());
 #endif /* WITH_PTY_SUPPORT */
     {
-      /* FIXME: We should check that we have at least one host key.
-       * We should also extract the host-key algorithms for which we have keys,
-       * instead of hardcoding ssh-dss below. */
+      /* FIXME: We should check that we have at least one host key. We
+       * should also extract the host-key algorithms for which we have
+       * keys, instead of hardcoding ssh-dss below. */
  
       struct lsh_object *o = lshd_listen
 	(make_simple_listen(backend, NULL),

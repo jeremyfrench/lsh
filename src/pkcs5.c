@@ -62,14 +62,8 @@
  * on my machine. And perhaps only a few minutes on a modern office
  * machine.
  *
- * FIXME: What is the conclusion?
- *
- * Based on this, 1000 iterations seems like a reasonable default
- * (today, April 2000). On one hand, key derivation can still be
- * doable on a really old machine (25 seconds on an old 386, assuming
- * that it is 50 times slower. On the other hand, trying 10000
- * passwords (which is quite a small dictionary for a dictionary
- * attack) would take 9 hours on my machine. */
+ * Based on this, it seems that something between 1000 and 10000 is a
+ * reasonable number of iterations (today, May 2000). */
 
 void
 pkcs5_derive_key(struct mac_algorithm *prf,

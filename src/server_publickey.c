@@ -127,9 +127,6 @@ do_authenticate(struct userauth *s,
 	      struct lsh_string *reply = format_userauth_pk_ok(algorithm, keyblob);
 	      lsh_string_free(keyblob);
 
-	      /* FIXME: This is ok for all current LOOKUP_VERIFIER-methods,
-	       * but perhaps not in general. */
-	      KILL(v);
 	      EXCEPTION_RAISE(e, make_userauth_special_exception(reply, NULL));
 	    }
 	  else

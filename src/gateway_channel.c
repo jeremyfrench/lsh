@@ -43,14 +43,14 @@
  * Chaining happens as follows:
  *
  * 1. First a CHANNEL_OPEN request is received on one connection, and
- *    an channel object is created. We refer to this object as the
+ *    a channel object is created. We refer to this object as the
  *    _originating_ channel.
  *
  * 2. Next, we send a similar CHANNEL_OPEN request on some other
  *    connection, and create a channel object referred to as the
  *    _target_ channel.
  *
- * 3. When we receive a reply to the CHANNEL_OPEN request send in (2),
+ * 3. When we receive a reply to the CHANNEL_OPEN request sent in (2),
  *    we chain the two channel objects together, and reply to the
  *    CHANNEL_OPEN request we received in (1). */
 

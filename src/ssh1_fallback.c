@@ -46,9 +46,10 @@
        (sshd1 . "char *")))
 */
 
-static void fall_back_to_ssh1(struct ssh1_fallback *c,
-			      int fd, UINT32 length, const UINT8 *line,
-			      struct exception_handler *e)
+static void
+fall_back_to_ssh1(struct ssh1_fallback *c,
+		  int fd, UINT32 length, const UINT8 *line,
+		  struct exception_handler *e)
 {
   CAST(sshd1, closure, c);
   
@@ -77,7 +78,6 @@ static void fall_back_to_ssh1(struct ssh1_fallback *c,
        * So all we have to do is to dup the socket fd to stdin
        * and stdout. */
 	      
-      /* FIXME: not implemented yet. How do we know the socket fd? */
       if (dup2(fd, STDIN_FILENO) < 0)
 	{
 	  werror("lshd: fall_back_to_ssh1: Failed to dup socket to STDIN.\n");
@@ -89,7 +89,7 @@ static void fall_back_to_ssh1(struct ssh1_fallback *c,
 	  _exit(EXIT_FAILURE);
 	}
       
-      /* What should we do about stderr? We can probably not share it
+      /* What should we do about stderr? We can probably share it
        * (that would be more difficult if we had put it into
        * non-blocking mode, but we haven't). */
 

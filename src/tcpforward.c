@@ -149,6 +149,8 @@ do_tcpip_eof(struct ssh_channel *c)
     channel_close(c);
 }
 
+/* Not needed, as the channel's resource list is taken care of automatically. */
+#if 0
 static void
 do_tcpip_channel_die(struct ssh_channel *c)
 {
@@ -157,6 +159,7 @@ do_tcpip_channel_die(struct ssh_channel *c)
   if (channel->socket)
     close_fd(channel->socket, 0);
 }
+#endif
 
 struct ssh_channel *
 make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
@@ -167,9 +170,11 @@ make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
   init_channel(&self->super);
 
   /* The rest of the callbacks are not set up until tcpip_start_io. */
-  
-  self->super.close = do_tcpip_channel_die;
 
+#if 0
+  self->super.close = do_tcpip_channel_die;
+#endif
+  
   self->super.rec_window_size = initial_window;
 
   /* FIXME: Make maximum packet size configurable. */
@@ -194,7 +199,8 @@ void tcpip_channel_start_io(struct ssh_channel *c)
   channel->super.send_adjust = do_tcpip_send_adjust;
   channel->super.eof = do_tcpip_eof;
   
-  /* Install callbacks on the local socket */
+  /* Install callbacks on the local socket.
+   * NOTE: We don't install any channel_io_exception_handler. */
   io_read_write(channel->socket,
 		make_channel_read_data(&channel->super),
 		/* FIXME: Make this configurable */
@@ -537,8 +543,12 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
       parse_uint32(args, &bind_port) &&
       parse_eod(args))
     {
-      /* FIXME: using null_ok == 0 is not quite right, if the
-       * forwarding was requested with want_reply == 0 */
+      /* FIXME: Using null_ok == 0 is not quite right. If the
+       * tcpip_forward_hook doesn't return immediately, and we receive
+       * a cancel request before the forwarding is setup (which should
+       * be ok, if the forarding was requested with want_reply == 0),
+       * cancelling failes and the client has to try again later. */
+
       struct local_port *port
 	= remove_forward(&connection->table->local_ports, 0,
 			 bind_host_length,

@@ -36,10 +36,11 @@
 
 #include <assert.h>
 
-void do_channel_open_command(struct command *s,
-			     struct lsh_object *x,
-			     struct command_continuation *c,
-			     struct exception_handler *e)
+void
+do_channel_open_command(struct command *s,
+			struct lsh_object *x,
+			struct command_continuation *c,
+			struct exception_handler *e)
 {
   CAST_SUBTYPE(channel_open_command, self, s);
   CAST(ssh_connection, connection, x);
@@ -77,12 +78,11 @@ void do_channel_open_command(struct command *s,
     }
 }
 
-/* FIXME: Where should we use the passed in exception handler, and when should we use the one
- * in the connection struct? */
-void do_channel_request_command(struct command *s,
-				struct lsh_object *x,
-				struct command_continuation *c,
-				struct exception_handler *e)
+void
+do_channel_request_command(struct command *s,
+			   struct lsh_object *x,
+			   struct command_continuation *c,
+			   struct exception_handler *e)
 {
   CAST_SUBTYPE(channel_request_command, self, s);
   CAST_SUBTYPE(ssh_channel, channel, x);
@@ -97,10 +97,11 @@ void do_channel_request_command(struct command *s,
   A_WRITE(channel->write, request);
 }
 
-void do_channel_global_command(struct command *s,
-			       struct lsh_object *x,
-			       struct command_continuation *c,
-			       struct exception_handler *e)
+void
+do_channel_global_command(struct command *s,
+			  struct lsh_object *x,
+			  struct command_continuation *c,
+			  struct exception_handler *e)
 {
   CAST_SUBTYPE(global_request_command, self, s);
   CAST_SUBTYPE(ssh_connection, connection, x);

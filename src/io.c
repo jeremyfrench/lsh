@@ -127,9 +127,6 @@ int io_iter(struct io_backend *b)
 		    if (fd->write_close)
 		      FD_WRITE_CLOSE(fd);
 		
-		    /* FIXME: The value returned from the close
-		     * callback could be used to choose an exit code.
-		     * */
 		    if (fd->close_callback)
 		      {
 			CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
@@ -144,10 +141,6 @@ int io_iter(struct io_backend *b)
 		continue;
 	      }
 
-	    /* FIXME: nfds should probably include only fd:s that we are
-	     * interested in reading or writing. However, that makes the
-	     * mapping from struct pollfd to struct lsh_fd a little more
-	     * difficult. */
 	    if (fd->want_read || fd->want_write)
 	      nfds++;
 
@@ -309,7 +302,6 @@ int io_iter(struct io_backend *b)
 }
 
 
-/* FIXME: Perhaps this function should return a suitable exit code? */
 void io_run(struct io_backend *b)
 {
   struct sigaction pipe;
@@ -371,9 +363,24 @@ do_buffered_read(struct io_callback *s,
 	{
 	  UINT32 done;
 
-	  /* FIXME: What to do if want_read is false? */
-	  assert(fd->want_read);
-	  assert(self->handler);
+	  /* FIXME: What to do if want_read is false?
+	   * To improve the connection_lock() mechanism,
+	   * it must be possible to temporarily stop reading, which means that
+	   * fd->want_read has to be cleared.
+	   *
+	   * But when doing this, we have to keep the data that we
+	   * have read, some of which is buffered here, on the stack,
+	   * and the rest inside the read-handler.
+	   *
+	   * There are two alternatives: Save our buffer here, or
+	   * continue looping, letting the read-handler process it
+	   * into packets. In the latter case, the ssh_connection
+	   * could keep a queue of waiting packets, but it would still
+	   * have to clear the want_read flag, to prevent that queue
+	   * from growing arbitrarily large.
+	   */
+
+	  assert(fd->want_read); assert(self->handler);
 
 	  /* NOTE: This call may replace self->handler */
 	  done = READ_HANDLER(self->handler, left, buffer);
@@ -675,6 +682,8 @@ static void do_kill_fd(struct resource *r)
   /* NOTE: We use the zero close reason for files killed this way.
    * Close callbacks are still called, but they should probably not do
    * anything if reason == 0. */
+
+  /* FIXME: Should we use close_fd() or close_fd_nicely() ? */
   if (r->alive)
     close_fd(fd, 0);
 }
@@ -723,7 +732,7 @@ static void init_file(struct io_backend *b, struct lsh_fd *f, int fd,
   b->files = f;
 }
 
-
+#if 0
 /* Blocking read from a file descriptor (i.e. don't use the backend).
  * The fd should *not* be in non-blocking mode. */
 
@@ -772,7 +781,7 @@ int blocking_read(int fd, struct read_handler *handler)
   close(fd);
   return !handler;
 }
-
+#endif
 
 /* These functions are used by werror() and friends */
 
@@ -879,123 +888,6 @@ int get_portno(const char *service, const char *protocol)
     }
 }
 
-#if 0
-/*
- * Fill in ADDR from HOST, SERVICE and PROTOCOL.
- * Supplying a null pointer for HOST means use INADDR_ANY.
- * Otherwise HOST is an numbers-and-dots ip-number or a dns name.
- *
- * PROTOCOL can be tcp or udp.
- *
- * Supplying a null pointer for SERVICE, means use port 0, i.e. no port.
- * 
- * Returns zero on errors, 1 if everything is ok.
- */
-int
-get_inaddr(struct sockaddr	* addr,
-	   const char		* host,
-	   const char		* service,
-	   const char		* protocol)
-{
-  /* HERE!!! IPv6 */
-  memset(addr, 0, sizeof *addr);
-  addr->sin_family = AF_INET;
-
-  /*
-   *  Set host part of ADDR
-   */
-  if (host == NULL)
-    addr->sin_addr.s_addr = INADDR_ANY;
-  else
-    {
-      /* First check for numerical ip-number */
-#if HAVE_INET_ATON
-      if (!inet_aton(host, &addr->sin_addr))
-#else /* !HAVE_INET_ATON */
-	/* TODO: It is wrong to work with ((unsigned long int) -1)
-	 * directly, as this breaks Linux/Alpha systems. But
-	 * INADDR_NONE isn't portable. The clean solution is to use
-	 * inet_aton rather than inet_addr; see the GNU libc
-	 * documentation. */
-# ifndef INADDR_NONE
-# define INADDR_NONE ((unsigned long int) -1)
-# endif /* !INADDR_NONE */
-      addr->sin_addr.s_addr = inet_addr(host);
-      if (addr->sin_addr.s_addr == INADDR_NONE)
-#endif  /* !HAVE_INET_ATON */
-	{
-	  struct hostent * hp;
-	  
-	  hp = gethostbyname(host);
-	  if (hp == NULL)
-	    return 0;
-	  memcpy(&addr->sin_addr, hp->h_addr, (size_t) (hp->h_length));
-	  addr->sin_family = hp->h_addrtype;
-	}
-    }
-
-  /*
-   *  Set port part of ADDR
-   */
-  if (service == NULL)
-    addr->sin_port = htons(0);
-  else
-    {
-      char		* end;
-      long		  portno;
-
-      portno = strtol(service, &end, 10);
-      if (portno > 0  &&  portno <= 65535
-	  &&  end != service  &&  *end == '\0')
-	{
-	  addr->sin_port = htons(portno);
-	}
-      else
-	{
-	  struct servent	* serv;
-
-	  serv = getservbyname(service, protocol);
-	  if (serv == NULL)
-	    return 0;
-	  addr->sin_port = serv->s_port;
-	}
-    }
-
-  return 1;
-}
-
-/* FIXME: IPv6 support */
-/* FIXME: The host name lookup may block. We would need an asyncronous
- * get_inaddr function. As a work around, we could let the client do
- * all lookups, so that the server need only deal with ip-numbers. And
- * optionally refuse requests with dns names. */
-
-int tcp_addr(struct sockaddr_in *sin,
-	     UINT32 length,
-	     UINT8 *addr,
-	     UINT32 port)
-{
-  char *c;
-  int res;
-
-  if (addr)
-    {
-      c = alloca(length + 1);
-  
-      memcpy(c, addr, length);
-      c[length] = '\0';
-    }
-  else
-    c = NULL;
-  
-  res = get_inaddr(sin, c, NULL, "tcp");
-  if (!res)
-    return 0;
-
-  sin->sin_port = htons(port);
-  return 1;
-}
-#endif
 
 /* If def != 0, use that value as a fallback if the lookup fails. */
 struct address_info *
@@ -1356,7 +1248,6 @@ io_listen(struct io_backend *b,
       return NULL;
     }
 
-  /* FIXME: What handler to use? */
   fd = make_lsh_fd(b, s, e);
 
   fd->want_read = 1;
@@ -1669,7 +1560,6 @@ void close_fd(struct lsh_fd *fd, int reason)
 void close_fd_nicely(struct lsh_fd *fd, int reason)
 {
   /* Don't attempt to read any further. */
-  /* FIXME: Is it safe to free the handler here? */
 
   fd->want_read = 0;
   fd->read = NULL;

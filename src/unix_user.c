@@ -232,9 +232,9 @@ do_verify_password(struct lsh_user *s,
   CAST(unix_user, user, s);
   char *salt;
   
+  /* NOTE: We don't allow login to accounts with empty passwords. */
   if (!user->passwd || (user->passwd->length < 2) )
     {
-      /* FIXME: How are accounts without passwords handled? */
       if (free)
 	lsh_string_free(password);
 

@@ -240,8 +240,6 @@ do_line(struct line_handler **h,
 	  werror("Unsupported protocol version: %ps\n",
 		 length, line);
 
-	  /* FIXME: Clean up properly */
-	  KILL(closure);
 	  *h = NULL;
 
 	  EXCEPTION_RAISE(connection->e,

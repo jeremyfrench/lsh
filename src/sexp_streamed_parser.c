@@ -209,7 +209,7 @@ make_parse_literal_data(UINT32 length,
   return &self->super.super.super;
 }
 
-/* FIXME: Arbitrary limit. */
+/* Arbitrary limit. */
 #define SEXP_MAX_STRING 100000
 
 /* GABA:

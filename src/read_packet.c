@@ -232,7 +232,8 @@ do_read_packet(struct read_handler **h,
 			       length - done,
 			       &closure->crypt_pos);
 
-		/* FIXME: Is this needed anywhere? */
+		/* The sequence number is needed by the handler for
+		 * unimplemented message types. */
 		closure->packet_buffer->sequence_number
 		  = closure->sequence_number++;
 
@@ -351,8 +352,6 @@ do_read_packet(struct read_handler **h,
       default:
 	fatal("Internal error\n");
     }
-  /* FIXME: Not reached. */
-  return total;
 }
 
 struct read_handler *

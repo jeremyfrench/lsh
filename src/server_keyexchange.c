@@ -145,11 +145,6 @@ do_init_server_dh(struct keyexchange_algorithm *c,
 
   NEW(dh_server, dh);
 
-  CHECK_TYPE(ssh_connection, connection);
-  
-  /* FIXME: No spki-style signatures for host keys. */
-  assert(hostkey_algorithm_atom == ATOM_SSH_DSS);
-  
   if (!key)
     {
       werror("Keypair for for selected signature-algorithm not found!\n");

@@ -185,6 +185,8 @@ do_eof(struct ssh_channel *channel)
     channel_close(channel);
 }
 
+#if 0
+/* Not needed; the channels resource list is taken care of automatically. */
 static void
 do_close(struct ssh_channel *c)
 {
@@ -193,6 +195,7 @@ do_close(struct ssh_channel *c)
   if (session->process)
     KILL_RESOURCE(session->process);
 }
+#endif
 
 struct ssh_channel *
 make_server_session(struct lsh_user *user,
@@ -213,7 +216,9 @@ make_server_session(struct lsh_user *user,
   self->super.rec_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
   self->super.request_types = request_types;
 
+#if 0
   self->super.close = do_close;
+#endif
   
   self->user = user;
   self->process = NULL;
@@ -369,15 +374,10 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
   
   CHECK_TYPE(server_session, session);
   
-  /* FIXME: Should we explicitly mark these files for closing? The
-   * io-backend should notice EOF anyway. And the client should send
-   * EOF when it receives news of the process's death, unless it
-   * really wants to talk to any live children processes. */
-#if 0
-  close_fd(&session->in->super, 0);
-  close_fd(session->out);
-  close_fd(session->err);
-#endif
+  /* NOTE: We don't close the child's stdio here. The io-backend
+   * should notice EOF anyway, and the client should send EOF when it
+   * receives news of the process's death, unless it really wants to
+   * talk to any live grand children processes. */
 
   /* We close when we have both sent and received eof. */
   channel->flags |= CHANNEL_CLOSE_AT_EOF;
@@ -641,6 +641,7 @@ spawn_process(struct server_session *session,
 	     * cleaned up if the channel or connection dies. */
 	    REMEMBER_RESOURCE
 	      (channel->resources, child);
+
 	    /* FIXME: How to do this properly if in and out may use the
 	     * same fd? */
 	    REMEMBER_RESOURCE

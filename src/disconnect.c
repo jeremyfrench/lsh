@@ -46,9 +46,13 @@ do_disconnect(struct packet_handler *closure UNUSED,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 length;
   UINT32 reason;
+
+  UINT32 length;
   const UINT8 *msg;
+
+  const UINT8 *language;
+  UINT32 language_length;
   
   static const struct exception disconnect_exception =
     STATIC_EXCEPTION(EXC_FINISH_IO, "Received disconnect message.");
@@ -59,7 +63,8 @@ do_disconnect(struct packet_handler *closure UNUSED,
       && (msg_number == SSH_MSG_DISCONNECT)
       && (parse_uint32(&buffer, &reason))
       && (parse_string(&buffer, &length, &msg))
-      /* FIXME: Language tag is ignored */ )
+      && (parse_string(&buffer, &language_length, &language))
+      && parse_eod(&buffer))
     {
       /* FIXME: Display a better message */
       werror("Disconnect for reason %i\n%ups\n", reason, length, msg);
@@ -69,9 +74,6 @@ do_disconnect(struct packet_handler *closure UNUSED,
 
   lsh_string_free(packet);
   
-  /* FIXME: Mark the file as closed, somehow (probably a variable in
-   * the write buffer) */
-
   EXCEPTION_RAISE(connection->e, &disconnect_exception);
 }
 

@@ -118,7 +118,6 @@ do_install_channel_open_handler(struct collect_info_2 *info,
 				struct lsh_object *a,
 				struct lsh_object *b);
 
-/* FIXME: This doesn't work */
 #define STATIC_INSTALL_GLOBAL_HANDLER(atom) \
 { STATIC_COLLECT_2_FINAL(do_install_global_request_handler),(atom) }
 

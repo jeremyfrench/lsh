@@ -41,33 +41,6 @@
 #include "server_userauth.h.x"
 #undef GABA_DECLARE
 
-/* FIXME: We should abstract out more of the "user"-like features and
- * add them to the generic user class in userauth.h. Things like
- *
- * o  verifying a password
- * o  reading files in ~/.lsh
- * o  cd:ing to the home directory
- *
- * When this is done, the lookup method in user_db should return a
- * struct lsh_user *, not struct unix_user *.
- */
-
-/* ;; GABA:
-   (class
-     (name unix_user)
-     (super lsh_user)
-     (vars
-       (uid simple uid_t)
-       (gid simple gid_t)
-       
-       ; These strings include a terminating NUL-character, for
-       ; compatibility with library and system calls.
-       ;; (name string)
-       (passwd string)  ; Crypted passwd
-       (home string)
-       (shell string)))
-*/
-
 /* GABA:
    (class
      (name user_db)

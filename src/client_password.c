@@ -109,7 +109,8 @@ static int echo_off(int fd)
 }
 
 /* FIXME: Perhaps it is better to avoid using stdio functions? */
-struct lsh_string *read_password(int max_length, struct lsh_string *prompt)
+struct lsh_string *
+read_password(int max_length, struct lsh_string *prompt)
 {
   int fd;
   FILE *tty;

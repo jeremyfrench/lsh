@@ -276,7 +276,7 @@ generic_dsa_verify(struct dsa_public *key,
   /* Compute w = s^-1 (mod q) */
   mpz_init(w);
 
-  /* FIXME: mpz_invert generates negative inverses. Is this a problem? */
+  /* NOTE: mpz_invert somtimes generates negative inverses. */
   if (!mpz_invert(w, s, key->q))
     {
       werror("generic_dsa_verify: s non-invertible.\n");
@@ -572,8 +572,8 @@ make_ssh_dss_verifier(UINT32 public_length,
     }
   
   if (!parse_dsa_public(&buffer, &res->public))
-    /* FIXME: Perhaps do some more sanity checks? */
     {
+      /* FIXME: Perhaps do some more sanity checks? */
       KILL(res);
       return NULL;
     }

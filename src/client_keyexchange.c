@@ -80,8 +80,8 @@ do_handle_dh_reply(struct packet_handler *c,
 		      NULL, closure->dh.server_key);
 
   if (!v)
-    /* FIXME: Use a more appropriate error code? */
     {
+      /* FIXME: Use a more appropriate error code? */
       disconnect_kex_failed(connection, "Bad server host key\r\n");
       return;
     }
@@ -97,7 +97,7 @@ do_handle_dh_reply(struct packet_handler *c,
   
   if (!dh_verify_server_msg(&closure->dh, v))
     {
-      /* FIXME: Same here */
+      /* FIXME: Use a more appropriate error code? */
       disconnect_kex_failed(connection, "Invalid server signature\r\n");
       return;
     }

@@ -30,9 +30,10 @@
 #include "abstract_compress.h"
 #include "alist.h"
 
-/* FIXME: The only thing in this file that needs bignum.h is the
+/* NOTE: The only thing in this file that needs bignum.h is the
  * declaration of kex_build_secret(). Perhaps, that indicates that the
  * function doesn't really belong here? */
+
 #include "bignum.h"
 #include "list.h"
 #include "connection.h"

@@ -42,7 +42,6 @@ do_sexp_test_handler(struct exception_handler *s UNUSED,
 {
   werror("sexp_test: %z\n", e->msg);
 
-  /* FIXME: It would be better to set the exit_success variable. */
   exit(EXIT_FAILURE);
 }
 

@@ -65,8 +65,6 @@
      (super abstract_write)
      (vars
        ; Where to pass errors
-       ; FIXME: Is this the right place, or should the exception handler be passed
-       ; to each packet handler?
        (e object exception_handler)
 
        ; Sent and received version strings
