@@ -792,8 +792,12 @@ if test x$GCC = xyes ; then
 
 fi
 
+AC_SUBST(BUILD_ARCH, `uname -p`)
+AC_SUBST(BUILD_OSSYS,`uname -s`)
+AC_SUBST(BUILD_OSREV,`uname -r`)
+
 AC_CONFIG_FILES([Makefile doc/Makefile misc/Makefile
 	  src/Makefile src/scm/Makefile
 	  src/testsuite/Makefile src/rsync/Makefile
-	  contrib/Makefile contrib/lsh.spec])
+	  contrib/Makefile contrib/lsh.spec contrib/solpkg.sh])
 AC_OUTPUT
