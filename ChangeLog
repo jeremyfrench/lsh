@@ -1,5 +1,13 @@
 1999-06-23  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/tcpforward_commands.c (forward_local_port): Use
+	CAST_SUBTYPE() rather than CAST().
+
+	* src/lsh.c (main): Added -R option.
+
+	* src/io_commands.c (collect_listen): The _first_ argument is the
+	callback function.
+
 	* channel_commands.c, combinators.c, connection_commands.c,
 	io_commands.c, tcpforward.c, tcpforward_commands.c: In collect_*
 	functions, don't assert that info == NULL. It's info->next that
