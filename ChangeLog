@@ -1,3 +1,10 @@
+Thu Jan 14 04:36:41 1999    <nisse@puck>
+
+	* dss_keygen.c (dss_nist_gen): Fixed off-by-one bug, discovered by
+	"Joseph Galbraith" <galb@rt66.com>.
+
+	* configure.in: Check for poll.h, sys/poll.h and crypt.h.
+
 Mon Jan 11 15:35:02 1999    <nisse@puck>
 
 	* Makefile.am.in (EXTRA_DIST): Add jpoll.c, jpoll.h, getopt.h,
