@@ -473,6 +473,15 @@ init_algorithms_options(struct algorithms_options *self,
   self->hostkey_algorithms = NULL;
 }
 
+struct algorithms_options *
+make_algorithms_options(struct alist *algorithms)
+{
+  NEW(algorithms_options, self);
+  init_algorithms_options(self, algorithms);
+
+  return self;
+}
+
 static error_t
 algorithms_argp_parser(int key, char *arg, struct argp_state *state)
 {

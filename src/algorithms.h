@@ -69,6 +69,9 @@ list_hostkey_algorithms(const struct argp_state *state);
 void init_algorithms_options(struct algorithms_options *self,
 			     struct alist *algorithms);
 
+struct algorithms_options *
+make_algorithms_options(struct alist *algorithms);
+
 extern const struct argp algorithms_argp;
 
 #endif /* LSH_ALGORITHMS_H_INCLUDED */
