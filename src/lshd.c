@@ -95,9 +95,11 @@ struct command_simple options2signature_algorithms;
 #define OPT_INTERFACE 0x201
 #define OPT_TCPIP_FORWARD 0x202
 #define OPT_NO_TCPIP_FORWARD (OPT_TCPIP_FORWARD | OPT_NO)
-#define OPT_DAEMONIC 0x203
+#define OPT_PTY 0x203
+#define OPT_NO_PTY (OPT_PTY | OPT_NO)
+#define OPT_DAEMONIC 0x204
 #define OPT_NO_DAEMONIC (OPT_DAEMONIC | OPT_NO)
-#define OPT_PIDFILE 0x204
+#define OPT_PIDFILE 0x205
 #define OPT_NO_PIDFILE (OPT_PIDFILE | OPT_NO)
 #define OPT_CORE 0x207
 
@@ -114,6 +116,7 @@ struct command_simple options2signature_algorithms;
        (hostkey . "char *")
        (local object address_info)
        (with_tcpip_forward . int)
+       (with_pty . int)
        (sshd1 object ssh1_fallback)
        (daemonic . int)
        (corefile . int)
@@ -143,6 +146,7 @@ make_lshd_options(struct io_backend *backend,
   self->local = NULL;
 
   self->with_tcpip_forward = 1;
+  self->with_pty = 1;
   
   self->sshd1 = NULL;
   self->daemonic = 0;
@@ -215,6 +219,11 @@ main_options[] =
   { "no-tcp-forward", OPT_NO_TCPIP_FORWARD, NULL, 0, "Disable tcpip forwarding.", 0 },
 #endif /* WITH_TCP_FORWARD */
 
+#if WITH_PTY_SUPPORT
+  { "pty-support", OPT_PTY, NULL, 0, "Enable pty allocation (default).", 0 },
+  { "no-pty-support", OPT_NO_PTY, NULL, 0, "Disable pty allocation.", 0 },
+#endif /* WITH_PTY_SUPPORT */
+    
   { NULL, 0, NULL, 0, "Daemonic behaviour", 0 },
   { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, redirect stdio to /dev/null, and chdir to /.", 0 },
   { "no-daemonic", OPT_NO_DAEMONIC, NULL, 0, "Run in the foreground, with messages to stderr (default).", 0 },
@@ -282,6 +291,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 #endif
 
+#if WITH_TCP_FORWARD
     case OPT_TCPIP_FORWARD:
       self->with_tcpip_forward = 1;
       break;
@@ -289,7 +299,17 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case OPT_NO_TCPIP_FORWARD:
       self->with_tcpip_forward = 0;
       break;
-
+#endif /* WITH_TCP_FORWARD */
+      
+#if WITH_PTY_SUPPORT
+    case OPT_PTY:
+      self->with_pty = 1;
+      break;
+    case OPT_NO_PTY:
+      self->with_pty = 0;
+      break;
+#endif /* WITH_PTY_SUPPORT */
+	  
     case OPT_DAEMONIC:
       self->daemonic = 1;
       break;
@@ -479,6 +499,14 @@ int main(int argc, char **argv)
     /* Commands to be invoked on the connection */
     struct object_list *connection_hooks;
 
+    /* Supported channel requests */
+    struct alist *supported_channel_requests
+      = make_alist(1,
+		   ATOM_SHELL, make_shell_handler(backend,
+						  reaper),
+		   -1);
+    
+    
 #if WITH_TCP_FORWARD
     if (options->with_tcpip_forward)
       connection_hooks = make_object_list
@@ -491,6 +519,11 @@ int main(int argc, char **argv)
     else
 #endif
       connection_hooks = make_object_list(0, -1);
+#if WITH_PTY_SUPPORT
+    if (options->with_pty)
+      ALIST_SET(supported_channel_requests,
+		ATOM_PTY_REQ, make_pty_handler());
+#endif /* WITH_PTY_SUPPORT */
     {
       struct lsh_object *o = lshd_listen
 	(make_simple_listen(backend, NULL),
@@ -522,16 +555,7 @@ int main(int argc, char **argv)
 				     -1),
 			  make_alist(1, ATOM_SSH_CONNECTION,
 				     lshd_connection_service
-				     (make_server_connection_service
-				      (make_alist
-				       (1
-#if WITH_PTY_SUPPORT
-					+1, ATOM_PTY_REQ, make_pty_handler()
-#endif /* WITH_PTY_SUPPORT */
-					, ATOM_SHELL,
-					make_shell_handler(backend,
-							   reaper),
-					-1)),
+				     (make_server_connection_service(supported_channel_requests),
 				      connection_hooks),
 				     -1))),
 	   -1)));
