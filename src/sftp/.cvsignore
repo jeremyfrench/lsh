@@ -9,6 +9,7 @@ config.log
 config.status
 configure
 dump-hex
+lsftp
 sftp-server
 sftp-test-client
 stamp-h

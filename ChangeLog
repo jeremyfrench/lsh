@@ -1,3 +1,23 @@
+2002-03-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io.c (lsh_oop_stop_callback): Use the OOP_HALT constant.
+
+	* src/client_x11.c (do_client_channel_x11_receive): Allow
+	lowercase letters 'l' and 'b' for the endianness indicator.
+
+	* src/client.c: Removed the short alias, -C, for the --subsystem
+	option. 
+
+2002-03-26  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh-authorize: Don't use &>-redirects, as /bin/sh doesn't
+	understand that. Noticed by Timshell Knoll.
+
+2002-03-25  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh-execuv.c: Deleted utmp stuff, this is not the right
+	place for that.
+
 2002-03-26  Pontus Sköld  <pont@soua.net>
 
 	* configure.in: If with_scheme is absolute, don't AC_PATH_PROG for

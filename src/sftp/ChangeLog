@@ -1,3 +1,39 @@
+2002-03-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* werror.c (_fatal): New function.
+
+	* sftp.h (SFTP_MAX_PACKET): New constant.
+
+	* sftp-test-client.c: Replaced FATAL with calls of fatal.
+	* sftp_bind.c: Likewise.
+
+	* sftp-server.c: Define the werror_program_name constant. Replaced
+	FATAL with calls of fatal.
+
+	* buffer.c: Moved the definitions of struct sftp_input and struct
+	sftp_output, and selected functions, to separate files io_input
+	and io_output. The code left in this file does not depend on the
+	details of those structs.
+
+	* Makefile.am (shared_src): New make variable listing
+	source files used by all clients and servers. Added io_input and
+	io_output. 
+
+	* io.h (sftp_make_output): New file with declarations that doesn't
+	fit in buffer.h, in particular the constructors for sftp_input and
+	sftp_output. 
+
+	* lsftp.c: Include werror.h, and define
+	werror_program_name. 
+
+	* io_output.c: New file, with all the functions that need to knwo
+	about the internals of struct sftp_output.
+	* io_input.c: New file, with all the functions that need to knwo
+	about the internals of struct sftp_input.
+
+	* misc_fun.c (FATAL): Deleted function, use the fatal
+	function in werror.c instead.
+
 2002-03-26  Pontus Sköld  <pont@soua.net>
 
 	* buffer.c (sftp_read_packet): Cosmetic fixes and a bugfix (if
