@@ -105,7 +105,7 @@ lsh_string_realloc(struct lsh_string *s, uint32_t length)
 static uint32_t
 do_read_packet(struct read_handler **h,
 	       uint32_t available,
-	       uint8_t *data /*, struct exception_handler *e */)
+	       const uint8_t *data)
 {
   CAST(read_packet, closure, *h);
   uint32_t total = 0;

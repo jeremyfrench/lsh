@@ -64,7 +64,7 @@
 		; make sure that handler is not called again. '
 
 		; Available is 0 iff we have got EOF.
-		uint32_t "uint32_t available" "uint8_t *data")))
+		uint32_t "uint32_t available" "const uint8_t *data")))
 		"struct exception_handler *e")))
 */
 

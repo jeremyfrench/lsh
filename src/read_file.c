@@ -51,7 +51,7 @@
 static uint32_t
 do_read_file(struct read_handler **h,
 	     uint32_t available,
-	     uint8_t *data)
+	     const uint8_t *data)
 {
   CAST(read_file, self, *h);
 
