@@ -1,6 +1,8 @@
 2003-02-18  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Added check for inet_ntop in -lnsl.
+	Check for -lnsl before checking for -lsocket, to avoid strange
+	confusion with Solaris' library dependencies.
 
 2003-02-17  Niels Möller  <nisse@cuckoo.hack.org>
 
