@@ -79,8 +79,8 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
 
 #else   /* !DEBUG_ALLOC */
 
-#define CHECK_TYPE(c, o)
-#define CHECK_SUBTYPE(c, o)
+#define CHECK_TYPE(c, o) o
+#define CHECK_SUBTYPE(c, o) o
      
 #define CAST(class, var, o) \
    struct class *(var) = (struct class *) (o)
