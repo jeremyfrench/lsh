@@ -35,47 +35,13 @@
 		  (src) += (blocksize),		\
 		  (dst) += (blocksize)) )
 
-extern struct crypto_algorithm crypto_arcfour_algorithm;
-
-#if 0
-extern struct crypto_algorithm crypto_des_algorithm;
-struct crypto_algorithm *make_des3(void);
-#endif
-
-extern struct crypto_algorithm crypto_des3_cbc_algorithm;
-
-struct crypto_algorithm *make_cast_algorithm(UINT32 key_size);
-extern struct crypto_algorithm cast128_algorithm;
-
-#if 0
-struct crypto_algorithm *make_blowfish_algorithm(UINT32 key_size);
-extern struct crypto_algorithm blowfish_algorithm;
-#endif
-extern struct crypto_algorithm crypto_blowfish_cbc_algorithm;
-
-
-#if 0
-struct crypto_algorithm *make_twofish_algorithm(UINT32 key_size);
-extern struct crypto_algorithm twofish128_algorithm;
-extern struct crypto_algorithm twofish192_algorithm;
-extern struct crypto_algorithm twofish256_algorithm;
-#endif
-
-extern struct crypto_algorithm crypto_twofish256_cbc_algorithm;
-
-#if 0
-struct crypto_algorithm *make_rijndael_algorithm(UINT32 key_size);
-extern struct crypto_algorithm rijndael128_algorithm;
-extern struct crypto_algorithm rijndael192_algorithm;
-extern struct crypto_algorithm rijndael256_algorithm;
-#endif
-
 extern struct crypto_algorithm crypto_aes256_cbc_algorithm;
-
-struct crypto_algorithm *make_serpent_algorithm(UINT32 key_size);
-extern struct crypto_algorithm serpent128_algorithm;
-extern struct crypto_algorithm serpent192_algorithm;
-extern struct crypto_algorithm serpent256_algorithm;
+extern struct crypto_algorithm crypto_arcfour_algorithm;
+extern struct crypto_algorithm crypto_blowfish_cbc_algorithm;
+extern struct crypto_algorithm crypto_cast128_cbc_algorithm;
+extern struct crypto_algorithm crypto_des3_cbc_algorithm;
+extern struct crypto_algorithm crypto_serpent256_cbc_algorithm;
+extern struct crypto_algorithm crypto_twofish256_cbc_algorithm;
 
 extern struct hash_algorithm sha1_algorithm;
 extern struct hash_algorithm md5_algorithm;

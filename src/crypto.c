@@ -31,7 +31,9 @@
 #include "nettle/arcfour.h"
 #include "nettle/aes.h"
 #include "nettle/blowfish.h"
+#include "nettle/cast128.h"
 #include "nettle/des.h"
+#include "nettle/serpent.h"
 #include "nettle/twofish.h"
 
 #include "nettle/cbc.h"
@@ -195,6 +197,56 @@ struct crypto_algorithm crypto_des3_cbc_algorithm =
   DES3_BLOCK_SIZE, DES3_KEY_SIZE, DES3_BLOCK_SIZE, make_des3_cbc_instance };
 
 
+/* Cast-128 */
+/* GABA:
+   (class
+     (name cast128_instance)
+     (super crypto_instance)
+     (vars
+       (ctx . "struct CBC_CTX(struct cast128_ctx, CAST128_BLOCK_SIZE)")))
+*/
+
+static void
+do_cast128_encrypt(struct crypto_instance *s,
+                   UINT32 length, const UINT8 *src, UINT8 *dst)
+{
+  CAST(cast128_instance, self, s);
+
+  CBC_ENCRYPT(&self->ctx, cast128_encrypt, length, dst, src);
+}
+
+static void
+do_cast128_decrypt(struct crypto_instance *s,
+                   UINT32 length, const UINT8 *src, UINT8 *dst)
+{
+  CAST(cast128_instance, self, s);
+
+  CBC_DECRYPT(&self->ctx, cast128_decrypt, length, dst, src);
+}
+
+static struct crypto_instance *
+make_cast128_cbc_instance(struct crypto_algorithm *algorithm, int mode,
+                          const UINT8 *key, const UINT8 *iv UNUSED)
+{
+  NEW(cast128_instance, self);
+
+  self->super.block_size = CAST128_BLOCK_SIZE;
+  self->super.crypt = ( (mode == CRYPTO_ENCRYPT)
+			? do_cast128_encrypt
+			: do_cast128_decrypt);
+
+  cast128_set_key(&self->ctx.ctx, algorithm->key_size, key);
+  CBC_SET_IV(&self->ctx, iv);
+
+  return(&self->super);
+}
+
+struct crypto_algorithm crypto_cast128_cbc_algorithm =
+{ STATIC_HEADER,
+  CAST128_BLOCK_SIZE, CAST128_KEY_SIZE, CAST128_BLOCK_SIZE,
+  make_cast128_cbc_instance};
+
+
 /* Twofish */
 /* GABA:
    (class
@@ -299,3 +351,52 @@ struct crypto_algorithm crypto_blowfish_cbc_algorithm =
   BLOWFISH_BLOCK_SIZE, BLOWFISH_KEY_SIZE, BLOWFISH_BLOCK_SIZE,
   make_blowfish_cbc_instance};
 
+
+/* Serpent */
+/* GABA:
+   (class
+     (name serpent_instance)
+     (super crypto_instance)
+     (vars
+       (ctx . "struct CBC_CTX(struct serpent_ctx, SERPENT_BLOCK_SIZE)")))
+*/
+
+static void
+do_serpent_encrypt(struct crypto_instance *s,
+	       UINT32 length, const UINT8 *src, UINT8 *dst)
+{
+  CAST(serpent_instance, self, s);
+
+  CBC_ENCRYPT(&self->ctx, serpent_encrypt, length, dst, src);
+}
+
+static void
+do_serpent_decrypt(struct crypto_instance *s,
+	       UINT32 length, const UINT8 *src, UINT8 *dst)
+{
+  CAST(serpent_instance, self, s);
+
+  CBC_DECRYPT(&self->ctx, serpent_decrypt, length, dst, src);
+}
+
+static struct crypto_instance *
+make_serpent_cbc_instance(struct crypto_algorithm *algorithm, int mode,
+		      const UINT8 *key, const UINT8 *iv UNUSED)
+{
+  NEW(serpent_instance, self);
+
+  self->super.block_size = SERPENT_BLOCK_SIZE;
+  self->super.crypt = ( (mode == CRYPTO_ENCRYPT)
+			? do_serpent_encrypt
+			: do_serpent_decrypt);
+
+  serpent_set_key(&self->ctx.ctx, algorithm->key_size, key);
+  CBC_SET_IV(&self->ctx, iv);
+
+  return(&self->super);
+}
+
+struct crypto_algorithm crypto_serpent256_cbc_algorithm =
+{ STATIC_HEADER,
+  SERPENT_BLOCK_SIZE, SERPENT_KEY_SIZE, SERPENT_BLOCK_SIZE,
+  make_serpent_cbc_instance};
