@@ -121,6 +121,7 @@ static int do_read_packet(struct read_handler **h,
 	  int n;
 
 	  left = block_size - closure->pos;
+	  assert(left > 0);
 	    
 	  n = A_READ(read, left, closure->buffer->data + closure->pos);
 	  switch(n)
@@ -207,8 +208,10 @@ static int do_read_packet(struct read_handler **h,
       case WAIT_CONTENTS:
 	{
 	  UINT32 left = closure->buffer->length - closure->pos;
-	  int n = A_READ(read, left, closure->buffer->data + closure->pos);
+	  int n;
 
+	  assert(left > 0);
+	  n = A_READ(read, left, closure->buffer->data + closure->pos);
 	  switch(n)
 	    {
 	    case 0:

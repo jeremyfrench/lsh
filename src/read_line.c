@@ -23,6 +23,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <assert.h>
 #include <string.h>
 
 #include "read_line.h"
@@ -81,6 +82,7 @@ static int do_read_line(struct read_handler **h,
   struct read_handler *next = NULL;
   int n;
 
+  assert(MAX_LINE - closure->pos > 0);
   n = A_READ(read, MAX_LINE - closure->pos, closure->buffer);
 
   switch(n)

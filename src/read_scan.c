@@ -24,6 +24,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <assert.h>
 #include "read_scan.h"
 
 #include "xalloc.h"
@@ -51,8 +52,10 @@ static int do_read_scan(struct read_handler **h,
   CAST(read_scan, closure, *h);
 
   UINT8 *buffer = alloca(closure->buffer_size);
-  int n = A_READ(read, closure->buffer_size, buffer);
+  int n;
   int i;
+  assert(closure->buffer_size > 0);
+  n = A_READ(read, closure->buffer_size, buffer);
   
   switch(n)
     {
