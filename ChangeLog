@@ -1,8 +1,17 @@
 2002-03-20  Pontus Sköld  <pont@r3>
 
+	* src/testsuite/lsh-1-test: Run "exec 0" instead of "exec" in case
+	the last command in the user's startup files ended with nonzero
+	exit status.
+
+	* src/testsuite/lsh-5-test: Likewise.
+	* src/testsuite/lsh-6-test: Likewise.
+	
 	* src/testsuite/lshg-1-test: grep -q changed to redirection to
 	/dev/null.
 
+	* src/testsuite/ssh1-fallback-test: Likewise.
+	
 2002-03-20  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/run-tests (test_program): Added missing single
