@@ -28,7 +28,11 @@
 
 #include "format.h"
 #include "resource.h"
+#include "werror.h"
 #include "xalloc.h"
+
+#include <errno.h>
+#include <string.h>
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -65,17 +69,38 @@ do_kill_file_lock(struct resource *s)
 
 /* FIXME: Probably doesn't work right with NFS */
 static struct resource *
-do_lsh_file_lock(struct lsh_file_lock_info *self)
+do_lsh_file_lock(struct lsh_file_lock_info *self, unsigned retries)
 {
-  int fd = open(lsh_get_cstring(self->lockname),
+  int fd = -1;
+  unsigned i;
+  
+  fd = open(lsh_get_cstring(self->lockname),
+	    O_CREAT | O_EXCL | O_WRONLY,
+	    0666);
+  
+  for (i = 0; (fd < 0) && (errno == EEXIST) && (i<retries); i++)
+    {
+      /* Wait a few seconds and try again. */
+      sleep(17);
+      
+      fd = open(lsh_get_cstring(self->lockname),
 		O_CREAT | O_EXCL | O_WRONLY,
 		0666);
-
+    }
+  
   if (fd < 0)
-    return NULL;
+    {
+      if (errno != EEXIST)
+	werror("Could not create lock file `%S' (errno = %i): %z",
+	       self->lockname, errno, STRERROR(errno));
+      return NULL;
+    }
   else
     {
       NEW(lsh_file_lock, lock);
+
+      trace("lock_file.c: Creation of lock file `%S' succeeded.\n",
+	    self->lockname);
       init_resource(&lock->super, do_kill_file_lock);
 
       lock->info = self;
@@ -86,7 +111,7 @@ do_lsh_file_lock(struct lsh_file_lock_info *self)
 }
 
 /* Checks if a file is locked, without actually trying to lock it. */
-static struct resource *
+static int
 do_lsh_file_lock_p(struct lsh_file_lock_info *self)
 {
   struct stat sbuf;
