@@ -2,5 +2,5 @@
 
 AUTOMAKE_OPTIONS = foreign
 
-EXTRA_DIST = compiler.scm gaba.scm make-char-classes.scm  \
+EXTRA_DIST = compiler.scm gaba.scm \
 	guile-compat.scm scsh-compat.scm
