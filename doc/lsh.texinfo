@@ -5,7 +5,7 @@
 @settitle lsh
 @c %**end of header
 
-@set UPDATED-FOR 1.0
+@set UPDATED-FOR 1.1.6
 
 @c Latin-1 doesn't work with tex output.
 @c Also lookout for é characters.
@@ -1146,12 +1146,12 @@ Redirect the stdout of a remote process to a given, local, file.
 Analogous to the @option{--stdout} option.
 
 @item -g
-Gateway mode. This option applies to the forwarding actions, i.e.
-@option{-L} and @option{-R}. By default, only connections to the
-loopback interface, ip 127.0.0.1, are forwared. This implies that only
-processes on the same machine can use the forwarded tunnel directly. If
-the -g modifier is in effect, the forwarding party will listen on
-@emph{all} network interfaces.
+Remote peers, aka Global forwarding. This option applies to the
+forwarding actions, i.e. @option{-L} and @option{-R}. By default, only
+connections to the loopback interface, ip 127.0.0.1, are forwared. This
+implies that only processes on the same machine can use the forwarded
+tunnel directly. If the -g modifier is in effect, the forwarding party
+will listen on @emph{all} network interfaces.
 
 @end table
 
@@ -1270,6 +1270,22 @@ Disable the "publickey" user authentication mechanism.
 
 @item --root-login
 Enable root login. By default, root can not log in using @command{lshd}.
+
+@item --kerberos-passwords
+Verify passwords against the kerberos database. This is implemented
+using the @command{lsh-krb-checkpw} helper program. Note that this does
+@emph{not} use the Kerberos infrastructure in the Right Way. Experimental.
+
+@item --password-helper
+Tells @command{lshd} to use a helper program for verifying passwords.
+This is a generalization of @option{--kerberos-passwords}, and it could
+be used for verifying passwords against any password database. See the
+source files @file{lsh-krb-checkpw.c} and @file{unix_user.c} for
+details. 
+
+@item --login-shell
+Use the specified program as the login shell for all users, overriding
+the login shell in the passwd database. 
 
 @item --srp-keyexchange
 Enable @acronym{SRP} keyexchange and user authentication.
