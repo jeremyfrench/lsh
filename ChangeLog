@@ -1,3 +1,14 @@
+2001-04-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* lsh-1.2 released.
+
+	* configure.in: Bumped version to 1.2.
+
+	* src/Makefile.am.in (EXTRA_DIST): Added lcp.
+
+	* src/Makefile.am.in (noinst_SCRIPTS): Added the experimental lcp
+	script.
+
 2001-04-02  Niels Möller  <nisse@ehand.com>
 
 	* src/sftp/sftp-server.c (sftp_process_read): Fixed size passed to

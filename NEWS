@@ -1,3 +1,8 @@
+News for the 1.2.0 release:
+
+	Added the lcp copying script to the distribution (although it
+	isn't installed automatically). No other changes.
+	
 News for the 1.1.9 release:
 
 	Some code cleanup. Removed a dozen files, four classes and
