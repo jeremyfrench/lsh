@@ -25,6 +25,7 @@
 /gcov-list
 /lsh
 /lsh-decode-key
+/lsh-decrypt-key
 /lsh-execuv
 /lsh-export-key
 /lsh-keygen
