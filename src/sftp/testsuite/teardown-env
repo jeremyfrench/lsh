@@ -2,4 +2,4 @@
 
 . common.sh
 
-rm -rf $TEMPHOME
+rm -rf $TESTHOME
