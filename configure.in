@@ -328,6 +328,19 @@ if test x$with_zlib = xyes; then
   LSH_RPATH_FIX
 fi
 
+# X11 stuff. We only need libXau.
+AC_PATH_X
+
+if test -z "$no_x" ; then
+    CPPFLAGS="$CPPFLAGS -I$x_includes"
+    LDFLAGS="$LDFLAGS -L$x_libraries"
+    LSH_RPATH_ADD($x_libraries)
+fi
+
+AC_CHECK_HEADERS(X11/Xauth.h)
+AC_CHECK_LIB(Xau, XauGetAuthByAddr)
+LSH_RPATH_FIX
+
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
 AC_CHECK_LIB(nsl, gethostbyname)
@@ -388,6 +401,7 @@ AC_CHECK_SIZEOF(long, 4)
 # FIXME: We should check that a pid_t fits in an int
 	
 # Checks for library functions.
+
 AC_FUNC_ALLOCA
 AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
