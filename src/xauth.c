@@ -127,7 +127,7 @@ xauth_lookup(struct sockaddr *sa,
       {
 	struct sockaddr_in6 *s = (struct sockaddr_in6 *) sa;
 	
-	address = (char *) s->sin6_addr;
+	address = (char *) &s->sin6_addr;
 	address_length = 16;
 	family = 0;
 	break;
