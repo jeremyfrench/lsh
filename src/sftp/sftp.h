@@ -24,6 +24,8 @@ enum sftp_msg_type {
   SSH_FXP_REALPATH       =  16, /* 0x10 */
   SSH_FXP_STAT           =  17, /* 0x11 */
   SSH_FXP_RENAME         =  18, /* 0x12 */
+  SSH_FXP_READLINK       =  19, /* 0x13 */
+  SSH_FXP_SYMLINK        =  20, /* 0x14 */
   SSH_FXP_STATUS         = 101, /* 0x65 */
   SSH_FXP_HANDLE         = 102, /* 0x66 */
   SSH_FXP_DATA           = 103, /* 0x67 */
