@@ -153,7 +153,7 @@ collect_listen(struct collect_info_2 *info,
 {
   CAST(io_backend, backend, a);
   CAST_SUBTYPE(command, callback, b);
-  assert(!info);
+  assert(!info->next);
 
   return &make_listen_command(callback, backend)->super;
 }
@@ -269,7 +269,7 @@ collect_connect_port(struct collect_info_2 *info,
 {
   CAST(io_backend, backend, a);
   CAST(address_info, target, b);
-  assert(!info);
+  assert(!info->next);
   assert(backend);
   assert(target);
   

@@ -166,7 +166,7 @@ struct lsh_object *collect_S_2(struct collect_info_2 *info,
 {
   CAST_SUBTYPE(command, cf, f);
   CAST_SUBTYPE(command, cg, g);
-  assert(!info);
+  assert(!info->next);
   
   return &make_command_S_2(cf, cg)->super;
 }
@@ -235,7 +235,7 @@ struct lsh_object *collect_Sp_3(struct collect_info_3 *info,
   CAST_SUBTYPE(command, cc, c);
   CAST_SUBTYPE(command, cf, f);
   CAST_SUBTYPE(command, cg, g);
-  assert(!info);
+  assert(!info->next);
   
   return &make_command_Sp_3(cc, cf, cg)->super;
 }
@@ -299,7 +299,7 @@ struct lsh_object *collect_B_2(struct collect_info_2 *info,
 {
   CAST_SUBTYPE(command, cf, f);
   CAST_SUBTYPE(command, cg, g);
-  assert(!info);
+  assert(!info->next);
   
   return &make_command_B_2(cf, cg)->super;
 }
@@ -368,7 +368,7 @@ struct lsh_object *collect_Bp_3(struct collect_info_3 *info,
   CAST_SUBTYPE(command, cc, c);
   CAST_SUBTYPE(command, cf, f);
   CAST_SUBTYPE(command, cg, g);
-  assert(!info);
+  assert(!info->next);
   
   return &make_command_Bp_3(cc, cf, cg)->super;
 }
@@ -460,7 +460,7 @@ struct lsh_object *collect_C_2(struct collect_info_2 *info,
 			       struct lsh_object *y)
 {
   CAST_SUBTYPE(command, cf, f);
-  assert(!info);
+  assert(!info->next);
   
   return &make_command_C_2(cf, y)->super;
 }
@@ -529,7 +529,7 @@ collect_Cp_3(struct collect_info_3 *info,
 {
   CAST_SUBTYPE(command, cc, c);
   CAST_SUBTYPE(command, cf, f);
-  assert(!info);
+  assert(!info->next);
   
   return &make_command_Cp_3(cc, cf, y)->super;
 }

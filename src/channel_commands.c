@@ -97,7 +97,7 @@ do_install_global_request_handler(struct collect_info_2 *info,
   CAST(ssh_connection, connection, a);
   CAST_SUBTYPE(global_request, handler, b);
 
-  assert(!info);
+  assert(!info->next);
   ALIST_SET(connection->channels->global_requests,
 	    self->name,
 	    handler);
@@ -114,7 +114,7 @@ do_install_channel_open_handler(struct collect_info_2 *info,
   CAST(ssh_connection, connection, a);
   CAST_SUBTYPE(channel_open, handler, b);
 
-  assert(!info);
+  assert(!info->next);
   ALIST_SET(connection->channels->channel_types,
 	    self->name,
 	    handler);

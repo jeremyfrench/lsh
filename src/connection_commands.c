@@ -340,7 +340,7 @@ collect_connection_remember(struct collect_info_1 *info,
   CAST(ssh_connection, connection, x);
   NEW(connection_remember_command, self);
 
-  assert(!info);
+  assert(!info->next);
 
   self->super.call = do_connection_remember;
   self->connection = connection;

@@ -303,7 +303,6 @@ make_open_forwarded_tcpip_continuation(struct channel_open_callback *response)
      (name channel_open_direct_tcpip)
      (super channel_open)
      (vars
-       ;;(backend object io_backend)
        (callback object command)))
 */
 
@@ -344,6 +343,7 @@ do_channel_open_direct_tcpip(struct channel_open *c,
        *
        * COMMAND_CALL(closure->connect_command, port, make_start_io(make_tcpip_channel()))
        */
+
       struct lsh_object *o = 
 	make_direct_tcp_connect(make_simple_connect(closure->backend, 
 						    connection->resources),
@@ -353,7 +353,6 @@ do_channel_open_direct_tcpip(struct channel_open *c,
 				  * to make_tcpip_channel() ? */
 				 make_tcpip_channel(NULL),
 				 SSH_MAX_PACKET));
-
       /* FIXME: implement filtering on original host? */
       
       a = make_address_info(dest_host, dest_port);
@@ -674,7 +673,7 @@ collect_open_direct_tcp(struct collect_info_2 *info,
   CAST(address_info, target, a);
   CAST(listen_value, peer, b);
 
-  assert(!info);
+  assert(!info->next);
 
   return &make_open_direct_tcpip_command(target, peer)->super;
 }
@@ -816,7 +815,7 @@ collect_start_forwarded_client_io(struct collect_info_1 *info,
 				  struct lsh_object *x)
 {
   CAST(remote_listen_value, peer, x);
-  assert(!info);
+  assert(!info->next);
 
   return &make_start_forwarded_client_io(peer->c)->super;
 }

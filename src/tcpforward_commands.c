@@ -102,7 +102,7 @@ do_tcpip_start_io(struct command *s UNUSED,
   if (!channel)
     {
       verbose("Error opening channel.\n");
-      return NULL;
+      return COMMAND_RETURN(c, NULL);
     }
 
   tcpip_channel_start_io(channel);
@@ -184,7 +184,7 @@ collect_open_forwarded_tcp(struct collect_info_2 *info,
   CAST(address_info, local, a);
   CAST(listen_value, peer, b);
 
-  assert(!info);
+  assert(!info->next);
 
   return &make_open_tcpip_command(ATOM_FORWARDED_TCPIP,
 				  local, peer)->super;
@@ -204,7 +204,7 @@ collect_open_direct_tcp(struct collect_info_2 *info,
   CAST(address_info, local, a);
   CAST(listen_value, peer, b);
 
-  assert(!info);
+  assert(!info->next);
 
   return &make_open_tcpip_command(ATOM_DIRECT_TCPIP,
 				  local, peer)->super;
@@ -319,7 +319,7 @@ collect_remote_listen(struct collect_info_2 *info,
 {
   CAST_SUBTYPE(command, callback, a);
   CAST(address_info, port, b);
-  assert(!info);
+  assert(!info->next);
   
   return &make_request_tcpip_forward_command(callback, port)->super;
 }
