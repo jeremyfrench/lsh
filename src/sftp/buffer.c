@@ -8,6 +8,8 @@
 #include "buffer.h"
 #include <assert.h>
 
+#define FATAL(x) do { fputs("sftp-server: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
+
 #if LSH
 #include <stdlib.h>
 
@@ -166,7 +168,7 @@ sftp_read_packet(struct sftp_input *i)
 
 /* Output */
 
-static int
+static void
 sftp_check_output(struct sftp_output *o, UINT32 length)
 {
   UINT32 needed = o->i + length;
@@ -176,48 +178,40 @@ sftp_check_output(struct sftp_output *o, UINT32 length)
     UINT32 size = 2 * needed + 40;
     p = realloc(o->data, size);
     if (!p)
-      return 0;
+      FATAL("Virtual memory exhausted");
 
     o->data = p;
     o->size = size;
   }
-  
-  return 1;
 }
 
-int
+void
 sftp_put_data(struct sftp_output *o, UINT32 length, const UINT8 *data)
 {
-  if (!sftp_check_output(o, length))
-    return 0;
+  sftp_check_output(o, length);
 
   memcpy(o->data + o->i, data, length);
   o->i += length;
-
-  return 1;
 }
 
 #define PUT_DATA(o, buf) \
 (sftp_put_data((o), sizeof((buf)), (buf)))
 
-int
+void
 sftp_put_uint8(struct sftp_output *o, UINT8 value)
 {
-  if (!sftp_check_output(o, 1))
-    return 0;
+  sftp_check_output(o, 1);
 
   o->data[o->i++] = value;
-
-  return 1;
 }
 
-int
+void
 sftp_put_uint32(struct sftp_output *o, UINT32 value)
 {
   UINT8 buf[4];
 
   WRITE_UINT32(buf, value);
-  return PUT_DATA(o, buf);
+  PUT_DATA(o, buf);
 }
 
 #define WRITE_UINT64(p, i)			\
@@ -232,20 +226,20 @@ do {						\
   (p)[7] = (i) & 0xff;				\
 } while(0)
 
-int
+void
 sftp_put_uint64(struct sftp_output *o, UINT64 value)
 {
   UINT8 buf[8];
 
   WRITE_UINT64(buf, value);
-  return PUT_DATA(o, buf);
+  PUT_DATA(o, buf);
 }
 
-int
+void
 sftp_put_string(struct sftp_output *o, UINT32 length, UINT8 *data)
 {
-  return sftp_put_uint32(o, length)
-    && sftp_put_data(o, length, data);
+  sftp_put_uint32(o, length);
+  sftp_put_data(o, length, data);
 }
 
 UINT8 *
@@ -253,8 +247,7 @@ sftp_put_reserve(struct sftp_output *o, UINT32 length)
 {
   UINT8 *result;
   
-  if (!sftp_check_output(o, length))
-    return NULL;
+  sftp_check_output(o, length);
 
   result = o->data + o->i;
   o->i += length;
@@ -315,7 +308,7 @@ sftp_write_packet(struct sftp_output *o)
   /* FIXME: Flushing after each packet is sub-optimal. */
   if (fflush(o->f))
     return 0;
-  
+
   return 1;
 }
 

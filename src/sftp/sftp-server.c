@@ -116,45 +116,30 @@ sftp_get_attrib(struct sftp_input *i, struct sftp_attrib *a)
   return 1;
 }
 
-int
+void
 sftp_put_attrib(struct sftp_output *o, const struct sftp_attrib *a)
 {
   assert(!a->flags & SSH_FILEXFER_ATTR_EXTENDED);
   
-  if (!sftp_put_uint32(o, a->flags))
-    return 0;
+  sftp_put_uint32(o, a->flags);
 
   if (a->flags & SSH_FILEXFER_ATTR_SIZE)
-    {
-      if (!sftp_put_uint64(o, a->size))
-	return 0;
-    }
+    sftp_put_uint64(o, a->size);
 
   if (a->flags & SSH_FILEXFER_ATTR_UIDGID)
     {
-      if (!sftp_put_uint32(o, a->uid))
-	return 0;
-
-      if (!sftp_put_uint32(o, a->gid))
-	return 0;
+      sftp_put_uint32(o, a->uid);
+      sftp_put_uint32(o, a->gid);
     }
 
   if (a->flags & SSH_FILEXFER_ATTR_PERMISSIONS)
-    {
-      if (!sftp_put_uint32(o, a->permissions))
-	return 0;
-    }
+    sftp_put_uint32(o, a->permissions);
 
   if (a->flags & SSH_FILEXFER_ATTR_ACMODTIME)
     {
-      if (!sftp_put_uint32(o, a->atime))
-	return 0;
-
-      if (!sftp_put_uint32(o, a->mtime))
-	return 0;
+      sftp_put_uint32(o, a->atime);
+      sftp_put_uint32(o, a->mtime);
     }
-
-  return 1;
 }
 
 #define SFTP_MAX_FDS 200
@@ -227,11 +212,11 @@ sftp_get_handle(struct sftp_ctx *ctx, handle_t *handle)
   return 0;
 }
 
-int
+void
 sftp_put_handle(struct sftp_ctx *ctx, handle_t handle)
 {
-  return sftp_put_uint32(ctx->o, 4)
-    && sftp_put_uint32(ctx->o, handle);
+  sftp_put_uint32(ctx->o, 4);
+  sftp_put_uint32(ctx->o, handle);
 }
 
 /* NOTE: The status message should be expanded with a human-readable
@@ -240,7 +225,8 @@ int
 sftp_send_status(struct sftp_ctx *ctx, UINT32 status)
 {
   sftp_set_msg(ctx->o, SSH_FXP_STATUS);
-  return sftp_put_uint32(ctx->o, status);
+  sftp_put_uint32(ctx->o, status);
+  return 1;
 }
 
 int
@@ -307,7 +293,8 @@ sftp_process_open(struct sftp_ctx *ctx)
 	  switch (pflags & (SSH_FXF_READ | SSH_FXF_WRITE))
 	    {
 	    case 0:
-	      return sftp_send_status(ctx, SSH_FX_FAILURE);
+	      sftp_send_status(ctx, SSH_FX_FAILURE);
+	      return 1;
 	    case SSH_FXF_READ:
 	      mode = O_RDONLY;
 	      break;
@@ -414,8 +401,8 @@ sftp_process(sftp_process_func **dispatch,
     
   /* Every handler should result in at least one message */
   if (!sftp_write_packet(ctx->o))
-    FATAL("writing packet failed.");
-
+    exit(EXIT_FAILURE);
+  
   if (!ok)
     exit(EXIT_FAILURE);
 }  

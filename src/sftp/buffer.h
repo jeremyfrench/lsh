@@ -37,11 +37,9 @@ sftp_set_id(struct sftp_output *o, UINT32 id);
 int
 sftp_write_packet(struct sftp_output *o);
 
-#elif OPENSSH
-
-#else /* !OPENSSH */
-# error Needs either LSH or OPENSSH
-#endif /* !OPENSSH */
+#else /* !LSH */
+# error Needs either LSH config.h 
+#endif /* !LSH */
 
 struct sftp_input;
 struct sftp_output;
@@ -69,19 +67,19 @@ int
 sftp_get_eod(struct sftp_input *i);
 
 /* Output */
-int
+void
 sftp_put_data(struct sftp_output *o, UINT32 length, const UINT8 *data);
 
-int
+void
 sftp_put_uint8(struct sftp_output *o, UINT8 value);
 
-int
+void
 sftp_put_uint32(struct sftp_output *o, UINT32 value);
 
-int
+void
 sftp_put_uint64(struct sftp_output *o, UINT64 value);
 
-int
+void
 sftp_put_string(struct sftp_output *o, UINT32 length, UINT8 *data);
 
 UINT8 *
