@@ -1,3 +1,12 @@
+Fri Mar 19 01:03:50 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/combinators.c: New file. Implemented all of the I, K, S, B,
+ 	C S', B' and C' combinators.
+
+	* src/command.c, src/command.h: Added collect_info_N and
+	collect_state_N (n=1, 2, 3, 4) to handle builtin functions that
+	need to collect some arguments before actually doing anything.
+
 Wed Mar 17 00:07:07 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/compiler.scm (let-and): New macro.
