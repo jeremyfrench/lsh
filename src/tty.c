@@ -50,6 +50,7 @@ tty_setattr(int fd, struct termios *ios)
   return tcsetattr(fd, TCSADRAIN, ios) != -1 ? 1 : 0;
 }
 
+#if 0
 int tty_makeraw(int fd)
 {
   struct termios ios;
@@ -61,6 +62,7 @@ int tty_makeraw(int fd)
     }
   return 0;
 }
+#endif
 
 int
 tty_getwinsize(int fd, UINT32 *w, UINT32 *h, UINT32 *wp, UINT32 *hp)
@@ -92,8 +94,6 @@ tty_setwinsize(int fd, UINT32 w, UINT32 h, UINT32 wp, UINT32 hp)
   
   return ioctl(fd, TIOCSWINSZ, &ws) == -1 ? 0 : 1;
 }
-
-
 
 static int cc_ndx[] = 
 {
