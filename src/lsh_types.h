@@ -28,6 +28,8 @@
 #include "config.h"
 #endif
 
+#include <stddef.h>
+
 #ifndef alloca
 # ifdef __GNUC__
 #  define alloca __builtin_alloca
