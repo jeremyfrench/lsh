@@ -54,7 +54,8 @@
 
 /* For advanced format */
 static struct lsh_string *do_format_simple_string(struct lsh_string *s,
-						  int style)
+						  int style,
+						  unsigned indent)
 {
   int quote_friendly = ( (~CHAR_control & ~CHAR_international)
 			 | CHAR_escapable);
@@ -140,14 +141,15 @@ static struct lsh_string *do_format_simple_string(struct lsh_string *s,
 	    return res;
 	  }
 	/* Base 64 string */
-	return encode_base64(s, "||", 0);
+	return encode_base64(s, "||", indent + 1, 0);
       }
     default:
       fatal("do_format_sexp_string: Unknown output style.\n");
     }
 }
   
-static struct lsh_string *do_format_sexp_string(struct sexp *s, int style)
+static struct lsh_string *do_format_sexp_string(struct sexp *s,
+						int style, unsigned indent)
 {
   CAST(sexp_string, self, s);
 
@@ -160,11 +162,11 @@ static struct lsh_string *do_format_sexp_string(struct sexp *s, int style)
     case SEXP_CANONICAL:
       if (self->display)
 	return ssh_format("[%lfS]%lfS",
-			  do_format_simple_string(self->display, style),
-			  do_format_simple_string(self->contents, style));
+			  do_format_simple_string(self->display, style, indent + 1),
+			  do_format_simple_string(self->contents, style, indent));
       else
 	return ssh_format("%lfS",
-			  do_format_simple_string(self->contents, style));
+			  do_format_simple_string(self->contents, style, indent));
     default:
       fatal("do_format_sexp_string: Unknown output style.\n");
     }
@@ -186,7 +188,8 @@ struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c)
 
 
 static struct lsh_string *
-do_format_sexp_nil(struct sexp *ignored UNUSED, int style UNUSED)
+do_format_sexp_nil(struct sexp *ignored UNUSED, int style UNUSED,
+		   unsigned indent UNUSED)
 {
   return ssh_format("()");
 }
@@ -241,7 +244,8 @@ static struct sexp_iterator *make_iter_cons(struct sexp *s)
   return &iter->super;
 }
 
-static struct lsh_string *do_format_sexp_tail(struct sexp_cons *c, int style)
+static struct lsh_string *do_format_sexp_tail(struct sexp_cons *c,
+					      int style, unsigned indent)
 {
   int use_space = 0;
   
@@ -258,14 +262,23 @@ static struct lsh_string *do_format_sexp_tail(struct sexp_cons *c, int style)
       /* Fall through */
     case SEXP_CANONICAL:
       return ssh_format(use_space ? " %ls%ls" : "%ls%ls",
-			sexp_format(c->car, style),
-			do_format_sexp_tail(c->cdr, style));
+			sexp_format(c->car, style, indent),
+			do_format_sexp_tail(c->cdr, style, indent));
     default:
       fatal("do_format_sexp_tail: Unknown output style.\n");
     }
 }
 
-static struct lsh_string *do_format_sexp_cons(struct sexp *s, int style)
+#if 0
+static int is_short(struct lsh_string *s)
+{
+  return ( (s->length < 15)
+	   && !memchr(s->data, '\n', s->length); )
+}
+#endif
+
+static struct lsh_string *do_format_sexp_cons(struct sexp *s,
+					      int style, unsigned indent)
 {
   CAST(sexp_cons, self, s);
 
@@ -275,8 +288,22 @@ static struct lsh_string *do_format_sexp_cons(struct sexp *s, int style)
       fatal("Internal error!\n");
     case SEXP_ADVANCED:
     case SEXP_INTERNATIONAL:
+#if 0
+      {
+	struct lsh_string *head = format_sexp(self->car, style, indent + 1);
+
+	if (is_short(head))
+	  return ssh_format("(%lfS%lfS",
+			    head, do_format_sexp_tail(self->cdr, style,
+						      indent + 2 + head->length));
+	else
+	  return ssh_format("(%lfS\n", do_format_sexp_tail(self->cdr, style,
+							 indent + 1));
+      }
+#endif
+      /* Fall through */
     case SEXP_CANONICAL:
-      return ssh_format("(%ls", do_format_sexp_tail(self, style));
+      return ssh_format("(%ls", do_format_sexp_tail(self, style, indent));
     default:
       fatal("do_format_sexp_tail: Unknown output style.\n");
     }
@@ -355,7 +382,8 @@ static struct sexp_iterator *make_iter_vector(struct sexp *s)
   return &iter->super;
 }
 
-static struct lsh_string *do_format_sexp_vector(struct sexp *e, int style)
+static struct lsh_string *do_format_sexp_vector(struct sexp *e,
+						int style, unsigned indent)
 {
   CAST(sexp_vector, v, e);
 
@@ -384,7 +412,7 @@ static struct lsh_string *do_format_sexp_vector(struct sexp *e, int style)
 	  {
 	    CAST_SUBTYPE(sexp, o, LIST(v->elements)[i]);
 	    
-	    elements[i] = sexp_format(o, style);
+	    elements[i] = sexp_format(o, style, indent + 1);
 	    size += elements[i]->length;
 	  }
 
@@ -472,17 +500,17 @@ struct sexp *sexp_sn(const mpz_t n)
   fatal("sexp_sn: Signed numbers are not supported.\n");
 }
     
-struct lsh_string *sexp_format(struct sexp *e, int style)
+struct lsh_string *sexp_format(struct sexp *e, int style, unsigned indent)
 {
   switch(style)
     {
     case SEXP_TRANSPORT:
-      return encode_base64(sexp_format(e, SEXP_CANONICAL), "{}", 1);
+      return encode_base64(sexp_format(e, SEXP_CANONICAL, 0), "{}", indent, 1);
     case SEXP_CANONICAL:
     case SEXP_ADVANCED:
     case SEXP_INTERNATIONAL:
       /* NOTE: Check for NULL here? I don't think so. */
-      return SEXP_FORMAT(e, style);
+      return SEXP_FORMAT(e, style, indent);
     default:
       fatal("sexp_format: Unknown output style.\n");
     }
@@ -504,6 +532,7 @@ static void encode_base64_group(UINT32 n, UINT8 *dest)
 
 struct lsh_string *encode_base64(struct lsh_string *s,
 				 const char *delimiters,
+				 unsigned indent UNUSED,
 				 int free)				 
 {
   UINT32 full_groups = (s->length) / 3;

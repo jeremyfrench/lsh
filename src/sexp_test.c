@@ -24,6 +24,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "format.h"
 #include "io.h"
 #include "sexp.h"
 #include "werror.h"
@@ -45,8 +46,12 @@
 static int do_output_sexp(struct sexp_handler *h, struct sexp *e)
 {
   CAST(output_sexp, closure, h);
+  int res = A_WRITE(closure->write, sexp_format(e, closure->style, 0));
 
-  return A_WRITE(closure->write, sexp_format(e, closure->style));
+  if (!LSH_FAILUREP(res))
+    res |= A_WRITE(closure->write, ssh_format("\n"));
+  
+  return res;
 }
 
 /* CLASS:

@@ -44,10 +44,10 @@ struct sexp_iterator;
      (vars
        ;; NULL for non-lists
        (iter method "struct sexp_iterator *")
-       (format method "struct lsh_string *" "int style")))
+       (format method "struct lsh_string *" "int style" "unsigned indent")))
 */
 
-#define SEXP_FORMAT(e, s) ((e)->format((e), (s)))
+#define SEXP_FORMAT(e, s, i) ((e)->format((e), (s), (i)))
 
 /* CLASS:
    (class
@@ -89,11 +89,11 @@ struct sexp_iterator;
 /* Like advanced, but allow international characters in quoted strings. */
 #define SEXP_INTERNATIONAL 3
 
-struct lsh_string *sexp_format(struct sexp *e, int style);
+struct lsh_string *sexp_format(struct sexp *e, int style, unsigned indent);
 
 struct lsh_string *encode_base64(struct lsh_string *s,
 				 const char *delimiters,
-				 int free);
+				 unsigned indent, int free);
 
 /* Creating sexps */
 

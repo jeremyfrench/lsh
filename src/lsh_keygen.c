@@ -180,7 +180,7 @@ int main(int argc, char **argv)
 		     sexp_l(2, sexp_z("g"), sexp_n(public.g), -1),
 		     sexp_l(2, sexp_z("y"), sexp_n(public.y), -1),
 		     sexp_l(2, sexp_z("x"), sexp_n(x), -1), -1), -1),
-       style);
+       style, 0);
 
     return LSH_FAILUREP(A_WRITE(output, key))
       ? 1 : 0;
