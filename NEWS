@@ -1,3 +1,10 @@
+News for the 0.9.9 release
+
+	autoconf fixes. Add -R-flags when appropriate. Recognize
+	gmp-3.x. Added --with-lib-path option.
+
+	Portability fixes.
+
 News for the 0.9.7 release
 
 	Experimental IPv6 support.
