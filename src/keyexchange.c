@@ -149,12 +149,12 @@ int initiate_keyexchange(struct ssh_connection *connection,
   struct lsh_string *s;
   struct kexinit *kex = connection->kexinits[mode];
 
-  assert(kex->first_kex_packet_follows == !!kex->first_packet);
+  assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);
 
   s = format_kex(kex);
 
   /* Save value for later signing */
-  connection->literal_kexinits[type] = s; 
+  connection->literal_kexinits[mode] = s; 
 
   res = A_WRITE(connection->write, lsh_string_dup(s));
   
@@ -315,8 +315,7 @@ static int do_handle_kexinit(struct packet_handler *c,
 
 struct packet_handler *make_kexinit_handler(int type,
 					    struct make_kexinit *init,
-					    struct alist *algorithms,
-					    struct ssh_service *finished)
+					    struct alist *algorithms)
 {
   NEW(kexinit_handler, self);
 
@@ -325,7 +324,6 @@ struct packet_handler *make_kexinit_handler(int type,
   self->type = type;
   self->init = init;
   self->algorithms = algorithms;
-  self->finished = finished;
   
   return &self->super;
 }
@@ -585,7 +583,7 @@ make_newkeys_handler(struct crypto_instance *crypto,
        (languages object int_list)))
 */
 
-static struct lsh_string *
+static struct kexinit *
 do_make_simple_kexinit(struct make_kexinit *c)
 {
   CAST(simple_kexinit, closure, c);
