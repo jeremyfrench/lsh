@@ -1,3 +1,47 @@
+2000-03-16  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/proxy.c, src/proxy.h: Merged changes (Bazsi).
+
+	* src/lsh_proxy.c: More features (Bazsi).
+
+	* src/lsh.c (WINDOW_SIZE): Decreased to 10000.
+	* src/server_session.c (WINDOW_SIZE): Likewise.
+
+	* src/channel.h (ssh_channel): Replaced CHANNEL_SEND method with
+	CHANNEL_SEND_ADJUST. 
+	(CHANNEL_OPEN): Added send_max_packet argument.
+
+	* src/channel.c (format_open_confirmation): Added debug output. 
+	(do_channel_open): Pass send_packet_size to the CHANNEL_OPEN
+	method, and round it down to SSH_MAX_PACKET if needed.
+	(do_window_adjust): Pass the window adjustment to the
+	CHANNEL_SEND_ADJUST method.
+
+	(do_channel_data): Check that data length is less than
+	rec_max_packet. More debug output.
+	(do_channel_extended_data): Likewise.
+
+	* src/proxy_agentforward.c, src/proxy_agentforward.h,
+	proxy_x11forward.c, proxy_x11forward.h: New files (Bazsi). 
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added
+	proxy_agentforward.c and proxy_x11forward.c.
+
+	* configure.in: Bumped version to 0.9.1.
+	(--without-x11-forward, --without-agent-forward): New flags. So
+	far, used only by the proxy.
+
+	* acconfig.h (WITH_X11_FORWARD, WITH_AGENT_FORWARD): New defines.  
+
+2000-03-14  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/server_session.c (do_spawn_exec): New function.
+	(make_exec_handler): New function.
+
+	* src/lshd.c (main): Enable command execution.
+
+	* src/format.c (make_cstring_l): New function.
+
 2000-03-08  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/server_session.c (do_login): Fixed message.
