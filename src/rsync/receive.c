@@ -9,37 +9,19 @@
 #include <assert.h>
 #include <string.h>
 
-enum rsync_receive_mode
-{
-  /* Reading a partial token */
-  STATE_TOKEN,
-
-  /* Reading a literal */
-  STATE_LITERAL,
-
-  /* Copying a local block */
-  STATE_LOOKUP,
-
-  /* Reading final md5 sum */
-  STATE_CHECKSUM,
-
-  /* Results in error */
-  STATE_INVALID
-};
-
 /* Hash the data after it is copied to the output buffer. */
 static void
 rsync_update(struct rsync_receive_state *s,
 	     UINT32 length)
 {
-  md5_update(&s->full_sum, s->next_out, length);
+  md5_update(&s->sum_md5, s->next_out, length);
   s->next_out += length;
   s->avail_out -= length;
 }
 
 #define GET() (assert(s->avail_in), s->avail_in--, *s->next_in++)
 
-int
+enum rsync_result_t
 rsync_receive(struct rsync_receive_state *s)
 {
   int progress = 0;
@@ -52,8 +34,8 @@ rsync_receive(struct rsync_receive_state *s)
 	/* Here, i is octets read */
 	s->token = 0;
 	s->i = 0;
-	s->state = STATE_TOKEN;
-      case STATE_TOKEN:
+	s->state = RSYNC_READ_TOKEN;
+      case RSYNC_READ_TOKEN:
 	if (!s->avail_in)
 	  return progress ? RSYNC_PROGRESS : RSYNC_BUF_ERROR;
 	
@@ -83,8 +65,8 @@ rsync_receive(struct rsync_receive_state *s)
 
       do_literal:
 	/* Here, i is the number of octets to read. */
-	s->state = STATE_LITERAL;
-      case STATE_LITERAL:
+	s->state = RSYNC_READ_LITERAL;
+      case RSYNC_READ_LITERAL:
 	{
 	  UINT32 avail = MIN(s->avail_in, s->avail_out);
 	  if (!avail)
@@ -110,9 +92,9 @@ rsync_receive(struct rsync_receive_state *s)
 	break;
 
       do_lookup:
-	s->state = STATE_LOOKUP;
+	s->state = RSYNC_READ_LOOKUP;
 	s->i = 0;
-      case STATE_LOOKUP:
+      case RSYNC_READ_LOOKUP:
 	{
 	  UINT32 done;
 
@@ -140,19 +122,19 @@ rsync_receive(struct rsync_receive_state *s)
       do_checksum:
 	/* i is number of octets read */
 	s->i = 0;
-	md5_final(&s->full_sum);
-	md5_digest(&s->full_sum, s->buf);
-	s->state = STATE_CHECKSUM;
-      case STATE_CHECKSUM:
+	md5_final(&s->sum_md5);
+	md5_digest(&s->sum_md5, s->buf);
+	s->state = RSYNC_READ_CHECKSUM;
+      case RSYNC_READ_CHECKSUM:
 	if (!s->avail_in)
 	  return progress ? RSYNC_PROGRESS : RSYNC_BUF_ERROR;
 
 	if (GET() != s->buf[s->i++])
 	  return RSYNC_INPUT_ERROR;
 
-	if (s->i == RSYNC_SUM_LENGTH)
+	if (s->i == RSYNC_SUM_SIZE)
 	  {
-	    s->state = STATE_INVALID;
+	    s->state = RSYNC_READ_INVALID;
 	    return RSYNC_DONE;
 	  }
 	break;
@@ -165,6 +147,6 @@ rsync_receive(struct rsync_receive_state *s)
 void
 rsync_receive_init(struct rsync_receive_state *s)
 {
-  s->state = STATE_TOKEN;
+  s->state = RSYNC_READ_TOKEN;
   s->i = 0;
 }

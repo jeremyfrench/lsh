@@ -68,7 +68,7 @@ rsync_update(struct rsync_generate_state *s,
 
 #define DONE (s->offset == s->total_length)
 
-int
+enum rsync_result_t
 rsync_generate(struct rsync_generate_state *s)
 {
   /* Have we made any progress? */
@@ -139,7 +139,7 @@ rsync_generate(struct rsync_generate_state *s)
     }
 }
 
-int
+enum rsync_result_t
 rsync_generate_init(struct rsync_generate_state *s,
 		    UINT32 block_size,
 		    UINT32 size)
