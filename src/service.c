@@ -35,6 +35,11 @@ struct service_handler
   struct alist *services;
 };
 
+struct lsh_string *format_service_request(int name)
+{
+  return ssh_format("%c%a", SSH_MSG_SERVICE_REQUEST, name);
+}
+
 struct lsh_string *format_service_accept(int name)
 {
   return ssh_format("%c%a", SSH_MSG_SERVICE_ACCEPT, name);
@@ -61,6 +66,8 @@ static int do_service(struct packet_handler *c,
     {
       struct ssh_service *service;
 
+      lsh_string_free(packet);
+      
       if (!name
 	  || !(service = ALIST_GET(closure->services, name))
 	  || !SERVICE_INIT(service, connection))

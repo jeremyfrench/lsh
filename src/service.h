@@ -27,9 +27,10 @@
 #include "alist.h"
 #include "connection.h"
 
-/* Used on both client and server side */
+/* Used for both proper services (i.e. services that can be requested
+ * in a SSH_MSG_SERVICE_REQUEST or SSH_MSG_USERAUTH_REQUEST) and for
+ * any other stuff that needs initialization at some later time. */.
 
-/* The init function only returns 1 on success, 0 on failure. */
 struct ssh_service
 {
   int (*init)(struct ssh_service *self, struct ssh_connection *c);
@@ -40,10 +41,11 @@ struct ssh_service
 /* services is an alist mapping names to service objects */
 struct packet_handler *make_service_handler(struct alist *services); 
 
-struct lsh_string *format_service_request(int name);
-
+#if 0
 int request_service(int name, struct ssh_service * service);
+#endif
 
+struct lsh_string *format_service_request(int name);
 struct lsh_string *format_service_accept(int name);
 
 struct ssh_service *make_meta_service(struct alist *services);
