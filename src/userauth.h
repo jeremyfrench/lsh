@@ -66,8 +66,11 @@ make_userauth_special_exception(struct lsh_string *reply,
        (name string)
        (uid . uid_t)
        
-       ; Verify a password
-       (verify_password method int "struct lsh_string *pw" "int free")
+       ; Verify a password. Consumes the password string.
+       (verify_password method void
+                        "struct lsh_string *pw"
+                        "struct command_continuation *c"
+			"struct exception_handler *e")
 
        ; Check if a file in the user's home directory exists.
        ; Used by the current publickey userauth method.
@@ -93,7 +96,7 @@ make_userauth_special_exception(struct lsh_string *reply,
 
        ; The tty argument is for utmp/wtmp logging
        (fork_process method int "struct resource **child"
-                     "struct reap *reaper" "struct exit_callback *c"
+                     "struct exit_callback *c"
                      "struct address_info * peer" "struct lsh_string *tty")
 
        ; This modifies the argv vector, in particular its first
@@ -106,12 +109,12 @@ make_userauth_special_exception(struct lsh_string *reply,
 		   "const struct env_value *env")))
 */
 
-#define USER_VERIFY_PASSWORD(u, p, f) ((u)->verify_password((u), (p), (f)))
+#define USER_VERIFY_PASSWORD(u, p, c, e) ((u)->verify_password((u), (p), (c), (e)))
 #define USER_FILE_EXISTS(u, n, f) ((u)->file_exists((u), (n), (f)))
 #define USER_READ_FILE(u, n, s, x, e) ((u)->read_file((u), (n), (s), (x), (e)))
 #define USER_CHDIR_HOME(u) ((u)->chdir_home((u)))
-#define USER_FORK(u, c, r, e, p, t) \
-  ((u)->fork_process((u), (c), (r), (e), (p), (t)))
+#define USER_FORK(u, c, e, p, t) \
+  ((u)->fork_process((u), (c), (e), (p), (t)))
 #define USER_EXEC(u, m, a, l, e) ((u)->exec_shell((u), (m), (a), (l), (e)))
 
 #endif /* LSH_USERAUTH_H_INCLUDED */
