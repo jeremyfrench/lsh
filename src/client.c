@@ -52,7 +52,7 @@
 #include "parse.h"
 #include "ssh.h"
 #include "suspend.h"
-#include "tcpforward_commands.h"
+#include "tcpforward.h"
 #include "translate_signal.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -67,6 +67,7 @@
 #include "client.c.x"
 
 #define DEFAULT_ESCAPE_CHAR '~'
+#define DEFAULT_SOCKS_PORT 1080
 
 static struct lsh_string *
 format_service_request(int name)
@@ -590,6 +591,7 @@ client_options[] =
     "Should be an absolute filename.", 0 },
   { NULL, 0, NULL, 0, "Actions:", CLIENT_ARGP_ACTION_GROUP },
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
+  { "forward-socks", 'D', "port", OPTION_ARG_OPTIONAL, "Enable socks dynamic forwarding", 0 },
 #if 0
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
 #endif
@@ -1195,6 +1197,17 @@ client_parse_forward_arg(char *arg,
   return 1;
 }
 
+static int
+client_arg_unsigned(const char *arg, unsigned long *n)
+{
+  char *end;
+  if (*arg)
+    return 0;
+
+  *n = strtoul(arg, &end, 0);
+  return *end == 0;
+}
+		    
 #define CASE_ARG(opt, attr, none)		\
   case opt:					\
     if (options->not)				\
@@ -1333,7 +1346,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	struct address_info *target;
 
 	if (!client_parse_forward_arg(arg, &listen_port, &target))
-	  argp_error(state, "Invalid forward specification '%s'.", arg);
+	  argp_error(state, "Invalid forward specification `%s'.", arg);
 
 	client_add_action(options, make_forward_local_port
 			  (make_address_info((options->with_remote_peers
@@ -1344,6 +1357,20 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	break;
       }      
 
+    case 'D':
+      {
+	unsigned long socks_port = DEFAULT_SOCKS_PORT;
+	if (arg && (client_arg_unsigned(arg, &socks_port) == 0 || socks_port > 0xffff))
+	  argp_error(state, "Invalid port number `%s' for socks.", arg);
+
+	client_add_action(options, make_socks_server
+			  (make_address_info((options->with_remote_peers
+					      ? NULL
+					      : ssh_format("%lz", "127.0.0.1")),
+					     socks_port)));
+	break;
+      }
+      
     case 'N':
       options->start_shell = 0;
       break;
