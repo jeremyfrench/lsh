@@ -25,7 +25,6 @@
 #include "publickey_crypto.h"
 
 #include "atoms.h"
-/* #include "crypto.h" */
 #include "format.h"
 #include "parse.h"
 #include "sexp.h"
@@ -38,12 +37,6 @@
 #include <assert.h>
 #include <string.h>
 
-#if 0
-#define GABA_DEFINE
-#include "rsa.h.x"
-#undef GABA_DEFINE
-#endif
-
 #include "rsa.c.x"
 
 #define SA(x) sexp_a(ATOM_##x)
@@ -53,18 +46,6 @@
  * attacks. */
 
 #define RSA_MAX_SIZE 625
-
-#if 0
-enum rsa_type { RSA_MD5, RSA_SHA1 };
-
-/* ;;GABA:
-   (class
-     (name rsa_algorithm)
-     (super signature_algorithm)
-     (vars
-       (type . "enum rsa_type")))
-*/
-#endif
 
 /* GABA:
    (class
@@ -85,59 +66,6 @@ enum rsa_type { RSA_MD5, RSA_SHA1 };
             #f rsa_clear_private_key)))
 */
 
-
-/* Utility functions */
-#if 0   
-static void
-pkcs1_encode(mpz_t m,
-	     struct rsa_algorithm *params,
-	     UINT32 length,
-	     UINT32 msg_length,
-	     const UINT8 *msg)
-{
-  UINT8 *em = alloca(length);
-  unsigned i = length;
-  
-  struct hash_instance *h = MAKE_HASH(params->hash);
-  HASH_UPDATE(h, msg_length, msg);
-
-  assert(i >= h->hash_size);
-  i -= h->hash_size;
-
-  HASH_DIGEST(h, em + i);
-  KILL(h);
-
-  assert(i >= params->prefix_length);
-  i -= params->prefix_length;
-
-  memcpy(em + i, params->prefix, params->prefix_length);
-
-  assert(i);
-  em[--i] = 0;
-
-  assert(i >= 9);
-  em[0] = 1;
-  memset(em + 1, 0xff, i - 1);
-  
-  bignum_parse_u(m, length, em);
-
-  debug("pkcs1_encode: m = %xn\n", m);
-}
-
-static int
-rsa_check_size(struct rsa_verifier *key)
-{
-  /* Size in octets */
-  key->size = (mpz_sizeinbase(key->n, 2) + 7) / 8;
-
-  /* For PKCS#1 to make sense, the size of the modulo, in octets, must
-   * be at least 11 + the length of the DER-encoded Digest Info.
-   *
-   * And a DigestInfo is 34 octets for md5, and 35 octets for sha1.
-   * 46 octets is 368 bits. */
-  return (key->size >= 46);
-}
-#endif
 
 /* FIXME: Add hash algorithm to signature value? */
 static struct sexp *
@@ -161,42 +89,6 @@ spki_init_rsa_verifier(struct rsa_public_key *key,
 	  && rsa_prepare_public_key(key));
 }
 
-#if 0
-/* Signature verification */
-static int
-rsa_pkcs1_verify(struct rsa_verifier *self,
-		 UINT32 length,
-		 const UINT8 *msg,
-		 mpz_t signature)
-{
-  int res;
-  mpz_t m;
-  mpz_t s;
-  
-  if (mpz_cmp(signature, self->n) >= 0)
-    return 0;
-
-  mpz_init(m);
-  mpz_init(s);
-
-  debug("rsa_pkcs1_verify: n = %xn\n"
-	"                  e = %xn\n"
-	"                  s = %xn\n",
-	self->n, self->e, signature);
-
-  mpz_powm(s, signature, self->e, self->n);
-
-  debug("rsa_pkcs1_verify: m = %xn\n", s);
-  
-  pkcs1_encode(m, self->params, self->size - 1,
-	       length, msg);
-  
-  res = !mpz_cmp(m, s);
-  mpz_clear(m); mpz_clear(s);
-
-  return res;
-}
-#endif
 
 /* NOTE: For now, always use sha1. */
 static int
@@ -386,101 +278,6 @@ parse_ssh_rsa_public(struct simple_buffer *buffer)
 }
 
 /* Signature creation */
-#if 0
-/* Compute x, the d:th root of m. Calling it with x == m is allowed. */
-static void
-rsa_compute_root(struct rsa_signer *self, mpz_t x, mpz_t m)
-{
-  debug("rsa_compute_root: n = %xn\n"
-	"                  e = %xn\n"
-	"                  m = %xn\n",
-	self->verifier->n, self->verifier->e, m);
-
-#if RSA_CRT
-  {
-    mpz_t xp; /* modulo p */
-    mpz_t xq; /* modulo q */
-
-    mpz_init(xp); mpz_init(xq);    
-
-#if 0
-    debug("rsa_compute_root: p = %xn\n"
-	  "                  q = %xn\n",
-	  self->p, self->q);
-
-    debug("rsa_compute_root: d = %xn\n"
-	  "                  a = %xn\n"
-	  "                  b = %xn\n"
-	  "                  c = %xn\n",
-	  self->d, self->a, self->b, self->c);
-#endif
-    
-    /* Compute xq = m^d % q = (m%q)^b % q */
-    mpz_fdiv_r(xq, m, self->q);
-    mpz_powm(xq, xq, self->b, self->q);
-
-#if 0
-    debug("rsa_compute_root: xq = %xn\n", xq);
-#endif
-    
-    /* Compute xp = m^d % p = (m%p)^a % p */
-    mpz_fdiv_r(xp, m, self->p);
-    mpz_powm(xp, xp, self->a, self->p);
-
-#if 0
-    debug("rsa_compute_root: xp = %xn\n", xp);
-#endif
-    
-    /* Set xp' = (xp - xq) c % p. */
-    mpz_sub(xp, xp, xq);
-    mpz_mul(xp, xp, self->c);
-    mpz_fdiv_r(xp, xp, self->p);
-
-#if 0
-    debug("rsa_compute_root: xp' = %xn\n", xp);
-#endif
-    
-    /* Finally, compute x = xq + q xp'
-     *
-     * To prove that this works, note that
-     *
-     *   xp  = x + i p,
-     *   xq  = x + j q,
-     *   c q = 1 + k p
-     *
-     * for some integers i, j and k. Now, for some integer l,
-     *
-     *   xp' = (xp - xq) c + l p
-     *       = (x + i p - (x + j q)) c + l p
-     *       = (i p - j q) c + l p
-     *       = (i + l) p - j (c q)
-     *       = (i + l) p - j (1 + kp)
-     *       = (i + l - j k) p - j
-     *
-     * which shows that xp' = -j (mod p). We get
-     *
-     *   xq + q xp' = x + j q + (i + l - j k) p q - j q
-     *              = x + (i + l - j k) p q
-     *
-     * so that
-     *
-     *   xq + q xp' = x (mod pq)
-     *
-     * We also get 0 <= xq + q xp' < p q, because
-     *
-     *   0 <= xq < q and 0 <= xp' < p.
-     */
-    mpz_mul(x, self->q, xp);
-    mpz_add(x, x, xq);
-
-    mpz_clear(xp); mpz_clear(xq);
-  }  
-#else /* !RSA_CRT */
-  mpz_powm(x, m, self->d, self->verifier->n);
-#endif /* !RSA_CRT */
-  debug("rsa_compute_root: x = %xn\n", x);
-}
-#endif
 
 static struct lsh_string *
 do_rsa_sign(struct signer *s,
@@ -576,22 +373,18 @@ make_rsa_signer(struct signature_algorithm *s UNUSED,
   NEW(rsa_signer, res);
 
   rsa_init_private_key(&res->key);
-  
-  if ( (SEXP_LEFT(i) == 8)
+
+  /* The secret d is optional, it's not needed. */
+  if ( (SEXP_LEFT(i) >= 7)
        && ( (res->verifier = make_rsa_verifier_internal(i)) )
-       && sexp_get_un(i, ATOM_D, res->key.d, RSA_MAX_SIZE)
        && sexp_get_un(i, ATOM_P, res->key.p, RSA_MAX_SIZE)
        && sexp_get_un(i, ATOM_Q, res->key.q, RSA_MAX_SIZE)
        && sexp_get_un(i, ATOM_A, res->key.a, RSA_MAX_SIZE)
        && sexp_get_un(i, ATOM_B, res->key.b, RSA_MAX_SIZE)
        && sexp_get_un(i, ATOM_C, res->key.c, RSA_MAX_SIZE) )
     {
-      /* FIXME: This could be made easier if rsa_public_key and
-       * rsa_private_key were distinct structs. */
-      mpz_set(res->key.pub.n, res->verifier->key.n);
-      mpz_set(res->key.pub.e, res->verifier->key.e);
-
-      if (!rsa_prepare_private_key(&res->key))
+      if (!rsa_prepare_private_key(&res->key)
+	  || (res->key.size != res->verifier->key.size))
 	{
 	  KILL(res->verifier);
 	  res->verifier = NULL;
@@ -600,8 +393,6 @@ make_rsa_signer(struct signature_algorithm *s UNUSED,
 	  return NULL;
 	}
 
-      assert(res->key.pub.size == res->verifier->key.size);
-      
       res->super.sign = do_rsa_sign;
       res->super.sign_spki = do_rsa_sign_spki;
       res->super.get_verifier = do_rsa_get_verifier;
@@ -617,80 +408,6 @@ make_rsa_signer(struct signature_algorithm *s UNUSED,
 
 struct signature_algorithm rsa_sha1_algorithm =
   { STATIC_HEADER, make_rsa_signer, make_rsa_verifier };
-
-#if 0
-struct signature_algorithm *
-make_rsa_algorithm(struct hash_algorithm *hash,
-		   int name,
-		   UINT32 prefix_length,
-		   const UINT8 *prefix)
-{
-  NEW(rsa_algorithm, self);
-  self->super.make_signer = make_rsa_signer;
-  self->super.make_verifier = make_rsa_verifier;
-  self->hash = hash;
-  self->name = name;
-  
-  self->prefix_length = prefix_length;
-  self->prefix = prefix;
-
-  return &self->super;
-}
-
-#define STATIC_RSA_ALGORITHM(a, n, l, id) \
-{ { STATIC_HEADER, make_rsa_signer, make_rsa_verifier }, \
-  (a), (n), (l), (id) }
-
-/* From pkcs-1v2
- *
- *   md5 OBJECT IDENTIFIER ::=
- *     {iso(1) member-body(2) US(840) rsadsi(113549) digestAlgorithm(2) 5}
- *
- * The parameters part of the algorithm identifier is NULL:
- *
- *   md5Identifier ::= AlgorithmIdentifier {md5, NULL}
- */
-
-static const UINT8 md5_prefix[] =
-{
-  /* 18 octets prefic 16 octets hash, 34 total. */
-  0x30,       32, /* SEQUENCE */
-    0x30,     12, /* SEQUENCE */
-      0x06,    8, /* OBJECT IDENTIFIER */
-  	0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x02, 0x05,
-      0x05,    0, /* NULL */
-    0x04,     16  /* OCTET STRING */
-      /* Here comes the raw hash value */
-};
-
-struct rsa_algorithm rsa_md5_algorithm =
-STATIC_RSA_ALGORITHM(&md5_algorithm, ATOM_RSA_PKCS1_MD5, 18, md5_prefix);
-
-/* From pkcs-1v2
- *
- *   id-sha1 OBJECT IDENTIFIER ::=
- *     {iso(1) identified-organization(3) oiw(14) secsig(3)
- *   	 algorithms(2) 26}
- *   
- *   The default hash function is SHA-1: 
- *   sha1Identifier ::= AlgorithmIdentifier {id-sha1, NULL}
- */
-
-static const UINT8 sha1_prefix[] =
-{
-  /* 15 octets prefix, 20 octets hash, total 35 */
-  0x30,       33, /* SEQUENCE */
-    0x30,      9, /* SEQUENCE */
-      0x06,    5, /* OBJECT IDENTIFIER */
-  	  0x2b, 0x0e, 0x03, 0x02, 0x1a,
-      0x05,    0, /* NULL */
-    0x04,     20  /* OCTET STRING */
-      /* Here comes the raw hash value */
-};
-
-struct rsa_algorithm rsa_sha1_algorithm =
-STATIC_RSA_ALGORITHM(&sha1_algorithm, ATOM_RSA_PKCS1, 15, sha1_prefix);
-#endif
 
 struct verifier *
 make_ssh_rsa_verifier(UINT32 public_length,
