@@ -32,6 +32,7 @@
      (name listen_command_callback)
      (super fd_listen_callback)
      (vars
+       (backend object io_backend)
        (c object command_continuation)))
 */
 
@@ -40,16 +41,18 @@ static int do_listen_continue(struct fd_listen_callback *s, int fd,
 {
   CAST(listen_command_callback, self, s);
   NEW(listen_value, res);
-  res->fd = fd;
+  res->fd = make_io_fd(self->backend, fd);
   res->peer = peer;
 
   return COMMAND_RETURN(self->c, &res->super);
 }
 
 static struct fd_listen_callback *
-make_listen_command_callback(struct command_continuation *c)
+make_listen_command_callback(struct io_backend *backend,
+			     struct command_continuation *c)
 {
   NEW(listen_command_callback, closure);
+  closure->backend = backend;
   closure->c = c;
   closure->super.f = do_listen_continue;
   
@@ -69,7 +72,7 @@ static int do_listen(struct io_backend *backend,
     return COMMAND_RETURN(c, NULL);
 
   fd = io_listen(self->backend, &sin,
-		 make_listen_command_callback(c));
+		 make_listen_command_callback(backend, c));
 
   if (!fd)
     return COMMAND_RETURN(c, NULL);
@@ -129,6 +132,60 @@ do_collect_listen_connection(struct collect_info_2 *info,
   return &make_listen_connection(backend, connection)->super;
 }
 
+/* GABA:
+   (class
+     (name connect_command_callback)
+     (super fd_connect_callback)
+     (vars
+       (backend object io_backend)
+       (c object command_continuation)))
+*/
+
+static int do_connect_continue(struct fd_connect_callback *s, int fd)
+{
+  CAST(connect_command_callback, self, s);
+
+  return COMMAND_RETURN(self->c, make_io_fd(self->backend, fd));
+}
+
+static struct fd_connect_callback *
+make_connect_command_callback(struct io_backend *backend,
+			      struct command_continuation *c)
+{
+  NEW(listen_command_callback, closure);
+  closure->backend = backend;
+  closure->c = c;
+  closure->super.f = do_connect_continue;
+  
+  return &closure->super;
+}
+
+static int do_connect(struct io_backend *backend,
+		      struct address_info *a,
+		      struct resource_list *resources,
+		      struct command_continuation *c)
+{
+  /* FIXME: Add ipv6 support somewhere */
+  struct sockaddr_in sin;
+  struct connect_fd *fd;
+  
+  if (!tcp_addr(&sin, a->address->length, a->address->data, a->port))
+    return COMMAND_RETURN(c, NULL);
+
+  fd = io_connect(self->backend, &sin,
+		  make_connect_command_callback(backend, c));
+
+  if (!fd)
+    return COMMAND_RETURN(c, NULL);
+
+  if (resources)
+    REMEMBER_RESOURCE(connection->resources,
+		      &fd->super.super);
+  
+  return LSH_OK | LSH_GOON;
+}
+
+
 /* Connect function, taking three arguments:
  *
  * (connect backend connection address)
@@ -136,3 +193,10 @@ do_collect_listen_connection(struct collect_info_2 *info,
 
 
  
+/* ***
+ *
+ * (lambda (backend connection port)
+     (listen backend connection port
+             (lambda (peer)
+                (start-io peer (request-forwarded-tcpip connection peer)))))
+ */
