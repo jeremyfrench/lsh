@@ -298,11 +298,10 @@ make_fake_host_db(void)
 /* GABA:
    (expr
      (name lsh_proxy_listen)
-     (globals
-       (log "&io_log_peer_command.super.super"))
      (params
        (listen object command)
-       (handshake object command)
+       (handshake object handshake_info)
+       (keys object alist)
        (services object command)
        (connect_server object command)
        (chain_connections object command))
@@ -313,7 +312,8 @@ make_fake_host_db(void)
 	     (chain_connections 
 	       connect_server 
 	       peer
-	       (handshake (log peer))))))))
+	       (connection_handshake
+	         handshake keys (log_peer peer))))))))
 */
 
 /* GABA:
@@ -321,10 +321,11 @@ make_fake_host_db(void)
      (name lsh_proxy_connect_server)
      (params
        (connect object command)
-       (handshake object command))
+       (verifier object lookup_verifier)
+       (handshake object handshake_info))
      (expr 
        (lambda (port)
-         (handshake (connect port)))))
+         (connection_handshake handshake verifier (connect port)))))
 */
 
 /* Invoked when the client requests the userauth service. */
@@ -342,9 +343,6 @@ make_fake_host_db(void)
 /* GABA:
    (expr
      (name lsh_proxy_connection_service)
-     (globals
-       (progn "&progn_command.super.super")
-       (init "&connection_service.super"))
      (params
        (login object command)     
        (hooks object object_list))
@@ -353,7 +351,7 @@ make_fake_host_db(void)
          ((progn hooks) (login user
 	                       ; We have to initialize the connection
 			       ; before logging in.
-	                       (init connection))))))
+	                       (init_connection_service connection))))))
 */
 
 int main(int argc, char **argv)
@@ -366,7 +364,6 @@ int main(int argc, char **argv)
   
   struct randomness *r;
   struct alist *algorithms_server, *algorithms_client;
-  struct alist *lookup_keys;
   struct make_kexinit *make_kexinit;
   struct keypair *hostkey;
   
@@ -433,6 +430,7 @@ int main(int argc, char **argv)
       
   /* Read the hostkey */
   keys = make_alist(0, -1);
+#if 0
   if (!(hostkey = read_spki_key_file(options->hostkey,
 				     make_alist(1, ATOM_DSA, make_dsa_algorithm(r), -1),
 				     &ignore_exception_handler)))
@@ -441,6 +439,7 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
   ALIST_SET(keys, hostkey->type, hostkey);
+#endif
 
   /* FIXME: We should check that we have at least one host key.
    * We should also extract the host-key algorithms for which we have keys,
@@ -448,14 +447,16 @@ int main(int argc, char **argv)
  
   reaper = make_reaper();
 
+#if 0
   lookup_keys = make_alist(1, 
 			   ATOM_SSH_DSS, make_fake_host_db(),
 			   -1);
-
+#endif
+  
   ALIST_SET(algorithms_server, 
-	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, make_dh_server(make_dh1(r), keys));
+	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, make_dh_server(make_dh1(r)));
   ALIST_SET(algorithms_client, 
-	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, make_dh_client(make_dh1(r), lookup_keys));
+	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, make_dh_client(make_dh1(r)));
 
   make_kexinit
     = make_simple_kexinit(r,
@@ -475,13 +476,14 @@ int main(int argc, char **argv)
     {
       struct lsh_object *o = lsh_proxy_listen
 	(make_simple_listen(backend, NULL),
-	 make_handshake_command(CONNECTION_SERVER,
-				"lsh_proxy_server - a free ssh",
-				SSH_MAX_PACKET,
-				r,
-				algorithms_server,
-				make_kexinit,
-				NULL),
+	 make_handshake_info(CONNECTION_SERVER,
+			     "lsh_proxy_server - a free ssh",
+			     SSH_MAX_PACKET,
+			     r,
+			     algorithms_server,
+			     make_kexinit,
+			     NULL),
+	 keys,
 	 make_offer_service(make_alist(1, 
 				       ATOM_SSH_USERAUTH, 
 				       lsh_proxy_services
@@ -500,7 +502,8 @@ int main(int argc, char **argv)
 
 	 /* callback to call when client<->proxy handshake finished */
 	 (struct command *)lsh_proxy_connect_server(make_simple_connect(backend, NULL),
-			      make_handshake_command(CONNECTION_CLIENT,
+						    make_fake_host_db(),
+			      make_handshake_info(CONNECTION_CLIENT,
 						     "lsh_proxy_client - a free ssh",
 						     SSH_MAX_PACKET,
 						     r,
