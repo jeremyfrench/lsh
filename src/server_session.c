@@ -351,6 +351,8 @@ static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
       in[1] = pty->master;
 
       /* Ownership of the fd:s passes on to some file objects. */
+      /* FIXME: This doesn't quite work, we need the slave fd around
+       * for window_change_request. */
       pty->super.alive = 0;
 
       /* FIXME: It seems unnecessary to dup the fd:s here. But perhaps
@@ -948,7 +950,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
 		      tty_setwinsize(pty->slave, &dims))
 		    {
 		      REMEMBER_RESOURCE(channel->resources, &pty->super);
-		      
+
 		      verbose(" granted.\n");
 		      COMMAND_RETURN(s, NULL);
 		      

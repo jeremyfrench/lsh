@@ -1,5 +1,11 @@
 2001-09-27  Niels Möller  <nisse@ehand.com>
 
+	* src/server_session.h (window_change_request_handler): Declare
+	object. 
+
+	* src/lshd.c (main): Install window_change_request_handler for
+	session channels.
+
 	* src/tcpforward_commands.c: Made some more objects static.
 
 	* src/spki_commands.c (spki_parse_key): Deleted class.
