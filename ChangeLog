@@ -1,3 +1,8 @@
+2004-01-07  Niels Möller  <nisse@harpo.hack.org>
+
+	* acinclude.m4 (AX_CREATE_STDINT_H): Copied macro definition from
+	http://ac-archive.sourceforge.net/guidod/ax_create_stdint_h.html.
+
 2003-11-18  Niels Möller  <niels@s3.kth.se>
 
 	* src/unix_process.c (utmp_book_keeping) [UTMPX_UT_SYSLEN]: Use
