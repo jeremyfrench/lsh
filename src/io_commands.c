@@ -244,6 +244,20 @@ DEFINE_COMMAND(connect_simple_command)
   do_connect(address, NULL, c, e);
 }
 
+/* (connect addresses) */
+DEFINE_COMMAND(connect_list_command)
+     (struct command *self UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST(sockaddr_list, addresses, a);
+
+  io_connect_list(addresses,
+		  /* FIXME: Fix handshake_command to take a plain fd
+		     as argument, not a listen value. */
+		  make_connect_continuation(NULL, c), e);
+}
 
 /* (connect_connection connection port) */
 DEFINE_COMMAND2(connect_connection_command)

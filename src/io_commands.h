@@ -46,6 +46,8 @@ extern struct command_2 connect_connection_command;
 extern struct command connect_simple_command;
 #define CONNECT_SIMPLE (&connect_simple_command.super)
 
+extern struct command connect_list_command;
+#define CONNECT_LIST (&connect_list_command.super)
 
 extern struct command connect_local_command;
 #define CONNECT_LOCAL (&connect_local_command.super)
