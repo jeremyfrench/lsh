@@ -404,7 +404,8 @@ init_client_options(struct client_options *self,
 
   self->with_remote_peers = 0; 
   self->with_pty = -1;
-
+  self->with_x11 = 0;
+    
   self->stdin_file = NULL;
   self->stdout_file = NULL;
   self->stderr_file = NULL;
@@ -415,7 +416,8 @@ init_client_options(struct client_options *self,
 
   self->used_stdin = 0;
   self->used_pty = 0;
-
+  self->used_x11 = 0;
+  
   self->start_shell = 1;
   self->remote_forward = 0;
 
@@ -467,7 +469,6 @@ client_options[] =
   { "background", 'B', NULL, 0, "Put process into the background. Implies -N.", 0 },
   { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },
   { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
-  { "x11-forward", 'X', NULL, 0, "Enable X11 forwarding", 0 },
   /* { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 }, */
   { NULL, 0, NULL, 0, "Universal not:", 0 },
   { "no", 'n', NULL, 0, "Inverts the effect of the next modifier", 0 },
@@ -493,6 +494,15 @@ client_options[] =
     "is applied to stderr only.", 0 },
   { "no-cvs-workaround", OPT_FORK_STDIO | ARG_NOT, NULL, 0,
     "Disable the cvs workaround.", 0 },
+
+  /* FIXME: Perhaps this should be moved from client.c to lsh.c? It
+   * doesn't work with lshg. Or perhaps that can be fixed?
+   * About the same problem applies to -R. */
+#if 1
+  { "x11-forward", 'x', NULL, 0, "Enable X11 forwarding.", 0 },
+  { "no-x11-forward", 'x' | ARG_NOT, NULL, 0,
+    "Disable X11 forwarding (default).", 0 },
+#endif
 #if WITH_PTY_SUPPORT
   { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
   { "no-pty", 't' | ARG_NOT, NULL, 0, "Don't request a remote pty.", 0 },
@@ -533,19 +543,10 @@ make_client_start_session(struct command *request)
   return r;
 }
 
-/* Create an interactive session */
-static struct command *
-client_shell_session(struct client_options *options)
+static void
+client_maybe_pty(struct client_options *options,
+		 struct object_queue *q)
 {
-  struct command *get_pty = NULL;
-  struct command *get_shell;
-  
-  struct object_list *session_requests;
-  struct ssh_channel *session = make_client_session(options);
-
-  if (!session)
-    return NULL;
-  
 #if WITH_PTY_SUPPORT
   if (options->with_pty && !options->used_pty)
     {
@@ -553,40 +554,83 @@ client_shell_session(struct client_options *options)
       
       if (options->tty && INTERACT_IS_TTY(options->tty))
 	{
-	  get_pty = make_pty_request(options->tty);
-	  if (!get_pty)
-	    {
-	      werror("lsh: Can't use tty (probably getattr or atexit failed).\n");
-	    }
+	  struct command *get_pty = make_pty_request(options->tty);
+
+	  if (get_pty)
+	    object_queue_add_tail(q,
+				  /* Ignore EXC_CHANNEL_REQUEST for the pty allocation call. */
+				  &make_catch_apply
+				  (make_catch_handler_info(EXC_ALL, EXC_CHANNEL_REQUEST,
+							   0, NULL),
+				   get_pty)->super);
+	  else
+	    werror("lsh: Can't use tty (probably getattr or atexit failed).\n");
 	}
       else
+	werror("lsh: No tty available.\n");
+    }
+#endif
+}
+
+static void
+client_maybe_x11(struct client_options *options,
+		 struct object_queue *q)
+{
+  if (options->with_x11)
+    {
+      char *display = getenv("DISPLAY");
+      
+      if (display)
 	{
-	  werror("lsh: No tty available.\n");
+	  const char cookie[16] = { 0x24, 0x51, 0x5f, 0x50, 0x69, 0x81, 0x6d, 0xeb,
+				    0xcc, 0x6e, 0x38, 0xb5, 0x42, 0x95, 0x06, 0x0d };
+	  struct command *request;
+	  
+	  /* FIXME: Get a random cookie. Unfortunataly, this means that
+	   * a lot more gets linked into lshg. */
+
+	  werror("WARNING: Good X11 cookie generation not implemented!\n");
+
+	  request = make_forward_x11(display,
+				     ssh_format("%ls", sizeof(cookie), cookie));
+
+	  if (request)
+	    {
+	      object_queue_add_tail(q, &request->super);
+	      options->used_x11 = 1;
+	    }
 	}
     }
+}
 
-  get_shell = make_client_start_session(&request_shell.super);
+/* Create an interactive session */
+static struct command *
+client_shell_session(struct client_options *options)
+{
+  struct ssh_channel *session = make_client_session(options);
   
-  /* FIXME: We need a non-varargs constructor for lists. */
-  if (get_pty)
-    session_requests
-      = make_object_list(2,
-			 /* Ignore EXC_CHANNEL_REQUEST for the pty allocation call. */
-			 make_catch_apply
-			 (make_catch_handler_info(EXC_ALL, EXC_CHANNEL_REQUEST,
-						  0, NULL),
-			  get_pty),
-			 get_shell, -1);
+  if (session)
+    {
+      struct object_queue session_requests;
+    
+      object_queue_init(&session_requests);
+  
+      client_maybe_pty(options, &session_requests);
+      client_maybe_x11(options, &session_requests);
+  
+      object_queue_add_tail(&session_requests,
+			    &make_client_start_session(&request_shell.super)->super);
+  
+      {
+	CAST_SUBTYPE(command, r,
+		     make_start_session
+		     (make_open_session_command(session),
+		      queue_to_list_and_kill(&session_requests)));
+	return r;
+      }
+    }
   else
-#endif /* WITH_PTY_SUPPORT */
-    session_requests = make_object_list(1, get_shell, -1);
-
-  {
-    CAST_SUBTYPE(command, r,
-		 make_start_session
-		 (make_open_session_command(session), session_requests));
-    return r;
-  }
+    return NULL;
 }
 
 /* Create a session executing a command line */
@@ -595,16 +639,27 @@ client_command_session(struct client_options *options,
 		       struct lsh_string *command)
 {
   struct ssh_channel *session = make_client_session(options);
-
+  
   if (session)
     {
-      CAST_SUBTYPE(command, r,
-		   make_start_session
-		   (make_open_session_command(session),
-		    make_object_list
-		    (1, make_client_start_session(make_exec_request(command)),
-		     -1)));
-      return r;
+      struct object_queue session_requests;
+    
+      object_queue_init(&session_requests);
+  
+      /* NOTE: Doesn't ask for a pty. That's traditional behaviour,
+       * although perhaps not the Right Thing. */
+      
+      client_maybe_x11(options, &session_requests);
+
+      object_queue_add_tail(&session_requests,
+			    &make_client_start_session(make_exec_request(command))->super);
+      {
+	CAST_SUBTYPE(command, r,
+		     make_start_session
+		     (make_open_session_command(session),
+		      queue_to_list_and_kill(&session_requests)));
+	return r;
+      }
     }
   
   return NULL;
@@ -980,6 +1035,12 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 			  make_install_fix_channel_open_handler
 			  (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip));
 #endif /* WITH_TCP_FORWARD */
+
+      if (options->used_x11)
+	client_add_action(options,
+			  make_install_fix_channel_open_handler
+			  (ATOM_X11,
+			   make_channel_open_x11(options->backend)));
       
       /* Add shell action */
       if (options->start_shell)
@@ -1053,30 +1114,6 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	break;
       }      
 #endif
-    case 'X':
-      {
-        char *display = getenv("DISPLAY");
-          
-        if (display)
-          {
-            const char cookie[16] = { 0x24, 0x51, 0x5f, 0x50, 0x69, 0x81, 0x6d, 0xeb,
-                                      0xcc, 0x6e, 0x38, 0xb5, 0x42, 0x95, 0x06, 0x0d };
-            
-            /* FIXME: Get a random cookie. Unfortunataly, this means that
-             * a lot more gets lonked into lshg. */
-            
-            werror("WARNING: Good X11 cookie generation not implemented!\n");
-            
-            client_add_action(options,
-                              make_forward_x11(display,
-                                               ssh_format("%ls", sizeof(cookie), cookie)));
-          }
-        else
-          /* FIXME: Should this be a fatal error? */
-          argp_error(state, "Can't do X11 forwarding; please set DISPLAY in the environment.\n");
-
-        break;
-      }
     case 'N':
       options->start_shell = 0;
       break;
@@ -1091,7 +1128,8 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 #if WITH_PTY_SUPPORT
     CASE_FLAG('t', with_pty);
 #endif /* WITH_PTY_SUPPORT */
-
+    CASE_FLAG('x', with_x11);
+    
     CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
     CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
     CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
