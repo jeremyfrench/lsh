@@ -203,17 +203,17 @@ fi
 
 timeecho Collecting results
 
-mv $BASE/config.cache r/configcache.txt
-mv $BASE/config.log r/configlog.txt
-mv $BASE/src/argp/config.log r/argpconfiglog.txt
-mv $BASE/src/argp/config.h r/argpconfig-h.txt
-mv $BASE/src/nettle/config.log r/nettleconfiglog.txt
-mv $BASE/src/nettle/config.h r/nettleconfig-h.txt
-mv $BASE/src/sftp/config.log r/sftpconfiglog.txt
-mv $BASE/src/sftp/config.h r/sftpconfig-h.txt
-mv $BASE/src/spki/config.log r/spkiconfiglog.txt
-mv $BASE/src/spki/config.h r/spkiconfig-h.txt
-mv $BASE/config.h r/config-h.txt
+cp $BASE/config.cache r/configcache.txt
+cp $BASE/config.log r/configlog.txt
+cp $BASE/src/argp/config.log r/argpconfiglog.txt
+cp $BASE/src/argp/config.h r/argpconfig-h.txt
+cp $BASE/src/nettle/config.log r/nettleconfiglog.txt
+cp $BASE/src/nettle/config.h r/nettleconfig-h.txt
+cp $BASE/src/sftp/config.log r/sftpconfiglog.txt
+cp $BASE/src/sftp/config.h r/sftpconfig-h.txt
+cp $BASE/src/spki/config.log r/spkiconfiglog.txt
+cp $BASE/src/spki/config.h r/spkiconfig-h.txt
+cp $BASE/config.h r/config-h.txt
 
 find $BASE -name core -print > r/corefiles.txt
 if test `wc -l < r/corefiles.txt` -eq 0
@@ -230,7 +230,7 @@ type makeinfo >> r/makeinfo.txt 2>&1
 make --version > r/makeversion.txt 2>&1 
 type make >> r/makeversion.txt
 
-mv buildid.txt r/buildid.txt
+cp buildid.txt r/buildid.txt
 
 (cd r && tar cf - *) > xenofarm_result.tar
 gzip -1 xenofarm_result.tar
