@@ -1,5 +1,11 @@
 2004-06-15  Niels Möller  <niels@s3.kth.se>
 
+	* src/lsh.c (main_argp_parser): Added support for
+	diffie-hellman-group14-sha1. 
+	* src/lshd.c (main_argp_parser): Likewise.
+
+	* src/dh_exchange.c (make_dh14): New function.
+
 	* src/publickey_crypto.c (zn_member): Deleted unused method.
 	(zn_range, zn_invert, zn_mul, zn_exp, zn_exp_ui, zn_add, zn_sub):
 	Non-static functions replaces the GROUP_COMBINE etc methods.
