@@ -299,6 +299,8 @@ struct lsh_string *format_channel_failure(UINT32 channel);
 struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 					 UINT32 add);
 
+int channel_start_receive(struct ssh_channel *channel);
+
 struct lsh_string *prepare_channel_open(struct channel_table *table,
 					int type,
 					struct ssh_channel *channel,
