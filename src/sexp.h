@@ -28,6 +28,9 @@
 
 #include "bignum.h"
 
+/* Forward declaration */
+struct sexp_iterator;
+
 #define CLASS_DECLARE
 #include "sexp.h.x"
 #undef CLASS_DECLARE
@@ -36,6 +39,8 @@
    (class
      (name sexp)
      (vars
+       ;; NULL for non-lists
+       (iter method "struct sexp_iter *")
        (format method "struct lsh_string *" "int style")))
 */
 
@@ -57,6 +62,20 @@
      (vars
        (atom . int)))
 */
+
+
+/* Iterator abstraction idea taken from Ron's code */
+/* CLASS:
+   (class
+     (name sexp_iterator)
+     (vars
+       (get method "struct sexp *")
+       (set method void "struct sexp *")
+       (next method void)))
+*/
+
+#define SEXP_CURRENT(i) ((i)->current((i)))
+#define SEXP_NEXT(i) ((i)->next((i)))
 
 /* Output styles */
 
@@ -90,6 +109,7 @@ struct sexp *sexp_c(struct sexp *car, struct sexp_cons *cdr);
 /* list */
 struct sexp *sexp_l(unsigned n, ...);
 
+#if 0
 /* Extracting information from sexp. These functions accept NULL
  * arguments, and return NULL if the conversion is not possible */
 
@@ -98,7 +118,10 @@ int sexp_consp(struct sexp *e);
 /* For lists */
 struct sexp *sexp_car(struct sexp *e);
 struct sexp *sexp_cdr(struct sexp *e);
+#endif
+
 int sexp_nullp(struct sexp *e);
+int sexp_atomp(struct sexp *e);
 
 /* int sexp_null_cdr(struct sexp *e); */
 
@@ -115,8 +138,12 @@ int sexp_bignum_s(struct sexp *e, mpz_t n);
    (class
      (name sexp_handler)
      (vars
+       ;; Called when a complete sexpression has been read,
+       ;; on error e == NULL.
        (handler method int "struct sexp *e")))
 */
+
+#define HANDLE_SEXP(h, s) ((h)->handler((h), (s)))
 
 #if 0
 struct read_handler make_read_sexp(struct sexp_handler *h);
