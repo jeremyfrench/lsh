@@ -24,7 +24,7 @@ static int handle_connection(struct abstract_write *w,
   if (!packet->length)
     {
       werror("connection.c: Recieved empty packet!\n");
-      return 0;
+      return LSH_FAIL | LSH_DIE;
     }
 
   msg = packet->data[0];
