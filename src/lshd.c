@@ -524,7 +524,8 @@ int main(int argc, char **argv)
     
       CAST_SUBTYPE(command, server_listen, o);
     
-      int res = COMMAND_CALL(server_listen, local, &discard_continuation);
+      int res = COMMAND_CALL(server_listen, local,
+			     &discard_continuation, &default_exception_handler);
       if (res)
 	{
 	  if (res & LSH_COMMAND_FAILED)

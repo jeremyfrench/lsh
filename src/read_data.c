@@ -60,13 +60,18 @@ static int do_read_data(struct read_handler **h,
   
   if (closure->channel->flags &
       (CHANNEL_RECEIVED_CLOSE | CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
-    return LSH_FAIL | LSH_DIE;
+    {
+      werror("read_data: Receiving data on closed channel. Ignoring.\n");
+      *h = NULL;
+      return;
+    }
 
   to_read = MIN(closure->channel->send_max_packet,
 		closure->channel->send_window_size);
 
   if (!to_read)
     {
+      /* FIXME: Do this in some other way */
       /* Stop reading */
       return LSH_OK | LSH_HOLD;
     }
@@ -78,23 +83,25 @@ static int do_read_data(struct read_handler **h,
     {
     case 0:
       lsh_string_free(packet);
-      return LSH_OK | LSH_GOON;
+      return;
     case A_FAIL:
-      /* Send a channel close, and prepare the channel for closing */      
-      return channel_close(closure->channel)
-	| LSH_FAIL | LSH_DIE;
+      /* Send a channel close, and prepare the channel for closing */
+      lsh_string_free(packet);
+
+      /* FIXME: Raise some appropriate exception */
+      channel_close(closure->channel);
+      return;
+      
     case A_EOF:
       if (!--closure->channel->sources)
 	/* Send eof (but no close). */
 	channel_eof(closure->channel);
-      return LSH_OK | LSH_DIE;
+      *h = NULL;
+      return;
     default:
       packet->length = n;
 
-      /* FIXME: Should we consider the error code here? Probably not;
-       * an error here means that the fd connected to the channel will be closed.
-       * Cleaning up the channel itself should be taken care of later. */
-      return A_WRITE(closure->write, packet);
+      A_WRITE(closure->write, packet, e);
     }
 }
 

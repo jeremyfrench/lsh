@@ -40,6 +40,7 @@
 #include "io.h.x"
 #undef GABA_DECLARE
 
+
 /* A closed function with a file descriptor as argument */
 /* GABA:
    (class
@@ -84,15 +85,13 @@
        (next object lsh_fd)
        (fd simple int)
 
+       ;; FIXME: Can the close handlers be replaced by exceptions?
        ; User's close callback
        (close_reason simple int)
        (close_callback object close_callback)
 
        ; Called before poll
        (prepare method void)
-       ;; Belongs in the write_buffer
-       ; Called when some data has been successfully written
-       ;;(report object report_write_success)
        
        (want_read simple int)
        ; Called if poll indicates that data can be read. 
@@ -180,6 +179,26 @@ struct callout
        ))
 */
 
+/* I/O exceptions */
+/* GABA:
+   (class
+     (name io_exception)
+     (super exception)
+     (vars
+       ;; NULL if no fd was involved
+       (fd object lsh_fd)
+       ;; errno code, or zero if not available
+       (error . int))))
+*/
+
+/* If msg is NULL, it is derived from errno */
+struct exception *
+make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg);
+
+/* Used in cases where the fd and errno are not available */
+#define STATIC_IO_EXCEPTION(type, name) \
+{ { STATIC_HEADER, (type), (name) }, NULL, 0}
+
 void init_backend(struct io_backend *b);
 
 int io_iter(struct io_backend *b);
@@ -247,6 +266,10 @@ struct io_fd *io_write(struct io_fd *fd,
 void kill_fd(struct lsh_fd *fd);
 
 void close_fd(struct lsh_fd *fd, int reason);
+
+/* Stop reading from the fd, and close it as soon as the buffer
+ * is completely written. */
+void close_fd_nicely(struct lsh_fd *fd, int reason)
 
 
 #endif /* LSH_IO_H_INCLUDED */

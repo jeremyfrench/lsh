@@ -61,7 +61,9 @@
      (super packet_handler)
      (vars
        (service simple int)
-       (c object command_continuation)))
+       (c object command_continuation)
+       ;; Do we really need the exception handler here?
+       (e object exception_handler)))
 */
 
 static int do_accept_service(struct packet_handler *c,
@@ -89,19 +91,22 @@ static int do_accept_service(struct packet_handler *c,
     }
 
   lsh_string_free(packet);
-  return LSH_FAIL | LSH_DIE;
+  return EXCEPTION_RAISE(closure->e,
+			 make_protocol_exception("Invalid SSH_MSG_SERVICE_ACCEPT message"));
 }
 
 struct packet_handler *
 make_accept_service_handler(int service,
-			    struct command_continuation *c)
+			    struct command_continuation *c,
+			    struct exception_handler *e)
 {
   NEW(accept_service_handler, closure);
 
   closure->super.handler = do_accept_service;
   closure->service = service;
   closure->c = c;
-
+  closure->e = e;
+  
   return &closure->super;
 }
 
@@ -116,13 +121,14 @@ make_accept_service_handler(int service,
 
 static int do_request_service(struct command *s,
 			      struct lsh_object *x,
-			      struct command_continuation *c)
+			      struct command_continuation *c,
+			      struct exception_handler *e)
 {
   CAST(request_service, self, s);
   CAST(ssh_connection, connection, x);
   
   connection->dispatch[SSH_MSG_SERVICE_ACCEPT]
-    = make_accept_service_handler(self->service, c);
+    = make_accept_service_handler(self->service, c, e);
   
   return A_WRITE(connection->write,
 		 format_service_request(self->service));
@@ -345,15 +351,19 @@ static int do_send(struct ssh_channel *c)
 /* We have a remote shell */
 static int do_client_io(struct command *s UNUSED,
 			struct lsh_object *x,
-			struct command_continuation *c)
+			struct command_continuation *c,
+			struct exception_handler *e UNUSED)
 
 {
+  assert(x);
+#if 0
   if (!x)
     {
       werror("do_client_io: Starting shell failed.\n");
       return LSH_CHANNEL_CLOSE | LSH_FAIL;
     }
   else
+#endif
     {
       CAST(client_session, session, x);
       struct ssh_channel *channel = &session->super;

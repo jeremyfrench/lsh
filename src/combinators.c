@@ -109,18 +109,22 @@ static int do_command_S_continuation(struct command_continuation *c,
 {
   CAST(command_S_continuation, self, c);
   CAST_SUBTYPE(command, op, value);
-  return COMMAND_CALL(self->g, self->x, make_apply(op, self->super.up));
+  return COMMAND_CALL(self->g, self->x,
+		      make_apply(op, self->super.up, self->super.e),
+		      self->super.e);
 }
 
 static struct command_continuation *
 make_command_S_continuation(struct command *g,
 			    struct lsh_object *x,
-			    struct command_continuation *up)
+			    struct command_continuation *up,
+			    struct exception_handler *e)
 {
   NEW(command_S_continuation, c);
   c->g = g;
   c->x = x;
   c->super.up = up;
+  c->super.e = e;
   c->super.super.c = do_command_S_continuation;
 
   return &c->super.super;
@@ -128,12 +132,14 @@ make_command_S_continuation(struct command *g,
 
 static int do_command_S_2(struct command *s,
 			  struct lsh_object *x,
-			  struct command_continuation *c)
+			  struct command_continuation *c,
+			  struct exception_handler *e)
 {
   CAST(command_S_2, self, s);
   
   return COMMAND_CALL(self->f, x,
-		      make_command_S_continuation(self->g, x, c));
+		      make_command_S_continuation(self->g, x, c, e),
+		      e);
 }
 
 static struct lsh_object *
@@ -192,13 +198,16 @@ STATIC_COLLECT_1(&collect_info_S_2);
 
 static int do_command_Sp_3(struct command *s,
 			   struct lsh_object *x,
-			   struct command_continuation *c)
+			   struct command_continuation *c,
+			   struct exception_handler *e)
 {
   CAST(command_Sp_3, self, s);
   return COMMAND_CALL(self->f, x,
 		      make_apply(self->c,
 				 make_command_S_continuation(self->g,
-							     x, c)));
+							     x, c, e),
+				 e),
+		      e);
 }
 
 static struct lsh_object *
@@ -264,10 +273,12 @@ STATIC_COLLECT_1(&collect_info_Sp_2);
 
 static int do_command_B_2(struct command *s,
 			  struct lsh_object *x,
-			  struct command_continuation *c)
+			  struct command_continuation *c,
+			  struct exception_handler *e)
 {
   CAST(command_B_2, self, s);
-  return COMMAND_CALL(self->g, x, make_apply(self->f, c));
+  return COMMAND_CALL(self->g, x,
+		      make_apply(self->f, c, e), e);
 }
 
 static struct lsh_object *
@@ -325,18 +336,20 @@ STATIC_COLLECT_1(&collect_info_B_2);
 */
 
 static int do_command_Bp_3(struct command *s,
-			  struct lsh_object *x,
-			  struct command_continuation *c)
+			   struct lsh_object *x,
+			   struct command_continuation *c,
+			   struct exception_handler *e)
 {
   CAST(command_Bp_3, self, s);
   return COMMAND_CALL(self->g, x,
 		      make_apply(self->f,
-				 make_apply(self->c, c)));
+				 make_apply(self->c, c, e), e),
+		      e);
 }
 
 static struct lsh_object *
 do_simple_command_Bp_3(struct command_simple *s,
-		      struct lsh_object *x)
+		       struct lsh_object *x)
 {
   CAST(command_Bp_3, self, s);
   CAST_SUBTYPE(command_simple, cs, self->c);
@@ -408,16 +421,19 @@ static int do_command_C_continuation(struct command_continuation *c,
 {
   CAST(command_C_continuation, self, c);
   CAST_SUBTYPE(command, op, value);
-  return COMMAND_CALL(op, self->y, self->super.up);
+  
+  return COMMAND_CALL(op, self->y, self->super.up, self->super.e);
 }
 
 static struct command_continuation *
 make_command_C_continuation(struct lsh_object *y,
-			    struct command_continuation *up)
+			    struct command_continuation *up,
+			    struct exception_handler *e)
 {
   NEW(command_C_continuation, c);
   c->y = y;
   c->super.up = up;
+  c->super.e = e;
   c->super.super.c = do_command_C_continuation;
   
   return &c->super.super;
@@ -425,12 +441,14 @@ make_command_C_continuation(struct lsh_object *y,
 
 static int do_command_C_2(struct command *s,
 			  struct lsh_object *x,
-			  struct command_continuation *c)
+			  struct command_continuation *c,
+			  struct exception_handler *e)
 {
   CAST(command_C_2, self, s);
   
   return COMMAND_CALL(self->f, x,
-		      make_command_C_continuation(self->y, c));
+		      make_command_C_continuation(self->y, c, e),
+		      e);
 }
 
 static struct lsh_object *do_simple_command_C_2(struct command_simple *s,
@@ -485,14 +503,16 @@ STATIC_COLLECT_1(&collect_info_C_2);
 */
 
 static int do_command_Cp_3(struct command *s,
-			  struct lsh_object *x,
-			  struct command_continuation *c)
+			   struct lsh_object *x,
+			   struct command_continuation *c,
+			   struct exception_handler *e)
 {
   CAST(command_Cp_3, self, s);
   
   return COMMAND_CALL(self->f, x,
 		      make_apply(self->c,
-				 make_command_C_continuation(self->y, c)));
+				 make_command_C_continuation(self->y, c, e), e),
+		      e);
 }
 
 static struct lsh_object *

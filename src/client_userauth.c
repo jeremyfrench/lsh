@@ -265,7 +265,8 @@ static struct packet_handler *make_banner_handler(void)
 
 static int do_client_userauth(struct command *s,
 			      struct lsh_object *x,
-			      struct command_continuation *c)
+			      struct command_continuation *c,
+			      struct exception_handler *e UNUSED)
 {
   CAST(client_userauth, self, s);
   CAST(ssh_connection, connection, x);
@@ -277,6 +278,7 @@ static int do_client_userauth(struct command *s,
   connection->dispatch[SSH_MSG_USERAUTH_BANNER]
     = make_banner_handler();
 
+  /* Pass e on? */
   return send_passwd(self, connection);
 }
 

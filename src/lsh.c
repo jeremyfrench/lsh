@@ -531,7 +531,7 @@ int main(int argc, char **argv)
 			      queue_to_list(&actions));
 
 	CAST_SUBTYPE(command, client_connect, o);
-	int res = COMMAND_CALL(client_connect, remote, &discard_continuation);
+	int res = COMMAND_CALL(client_connect, remote, &discard_continuation, &default_exception_handler);
 
 	/* We can free the queue nodes now */
 	KILL_OBJECT_QUEUE(&actions);

@@ -69,16 +69,21 @@ static struct command make_tcpip_forward_handler;
 /* NOTE: This command does not do any remembering. */
 static int do_tcpip_connect_io(struct command *ignored UNUSED,
 			       struct lsh_object *x,
-			       struct command_continuation *c)
+			       struct command_continuation *c,
+			       struct exception_handler *e UNUSED)
 {
   CAST(io_fd, socket, x);
 
+  assert(socket);
+
+#if 0
   debug("tcpforward_commands.c: do_tcpip_connect_io, socket is %z\n",
 	socket ? "valid" : "invalid");
   
   if (!socket)
     COMMAND_RETURN(c, NULL);
-
+#endif
+  
   return COMMAND_RETURN(c, make_tcpip_channel(socket, TCPIP_WINDOW_SIZE));
 }
 
@@ -92,10 +97,14 @@ struct command tcpip_connect_io = STATIC_COMMAND(do_tcpip_connect_io);
 static int
 do_tcpip_start_io(struct command *s UNUSED, 
 		  struct lsh_object *x,
-		  struct command_continuation *c)
+		  struct command_continuation *c,
+		  struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(ssh_channel, channel, x);
 
+  assert(channel);
+
+#if 0
   debug("tcpforward_commands.c: do_tcpip_start_io, channel is %z\n",
 	channel ? "valid" : "invalid");
 
@@ -104,7 +113,8 @@ do_tcpip_start_io(struct command *s UNUSED,
       verbose("Error opening channel.\n");
       return COMMAND_RETURN(c, NULL);
     }
-
+#endif
+  
   tcpip_channel_start_io(channel);
 
   return COMMAND_RETURN(c, channel);
@@ -437,8 +447,9 @@ make_forward_remote_port(struct io_backend *backend,
  * handler. */
 static int
 do_make_direct_tcpip_handler(struct command *s UNUSED,
-			   struct lsh_object *x,
-			   struct command_continuation *c)
+			     struct lsh_object *x,
+			     struct command_continuation *c,
+			     struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(command, callback,  x);
 
@@ -456,7 +467,8 @@ make_direct_tcpip_handler = STATIC_COMMAND(do_make_direct_tcpip_handler);
 static int
 do_make_tcpip_forward_handler(struct command *s UNUSED,
 			      struct lsh_object *x,
-			      struct command_continuation *c)
+			      struct command_continuation *c,
+			      struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(command, callback,  x);
 

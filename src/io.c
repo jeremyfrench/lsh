@@ -246,7 +246,7 @@ int io_iter(struct io_backend *b)
      (name fd_read)
      (super abstract_read)
        (vars
-         (fd simple int)))
+         (fd object lsh_fd)))
 */
 
 static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
@@ -258,13 +258,17 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
       werror("io.c: do_read(): Zero length read was requested.\n");
       return 0;
     }
-    
+
   for (;;)
     {
-      int res = read(closure->fd, buffer, length);
-      if (!res)
+      int res;
+
+      if (! (closure->fd->super.alive && closure->fd->want_read)
+	return 0;
+      
+      if (! (res = read(closure->fd->fd, buffer, length)) )
 	{
-	  debug("Read EOF on fd %i.\n", closure->fd);
+	  debug("Read EOF on fd %i.\n", closure->fd->fd);
 	  return A_EOF;
 	}
       if (res > 0)
@@ -290,6 +294,19 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
     }
 }
 
+#if 1
+static void read_callback(struct lsh_fd *fd)
+{
+  CAST(io_fd, self, fd);
+  int res;
+
+  struct fd_read r =
+  { { STACK_HEADER, do_read }, fd->fd };
+
+  READ_HANDLER(self->handler, &r.super, fd->e);
+}
+
+#else
 static void read_callback(struct lsh_fd *fd)
 {
   CAST(io_fd, self, fd);
@@ -345,6 +362,7 @@ static void read_callback(struct lsh_fd *fd)
 	= LSH_FAILUREP(res) ? CLOSE_PROTOCOL_FAILURE : CLOSE_EOF;
     }
 }
+#endif
 
 static void write_callback(struct lsh_fd *fd)
 {
@@ -1020,4 +1038,38 @@ void close_fd(struct lsh_fd *fd, int reason)
   debug("Marking fd %i for closing.\n", fd->fd);
   fd->close_reason = reason;
   kill_fd(fd);
+}
+
+void close_fd_nicely(struct lsh_fd *fd, int reason)
+{
+  if (self->buffer)
+    {
+      write_buffer_close(self->buffer);
+      /* Don't attempt to read any further. */
+      /* FIXME: Is it safe to free the handler here? */
+      self->super.want_read = 0;
+      self->handler = NULL;
+    }
+  else
+    kill_fd(fd);
+
+  fd->close_reason = reason;
+}
+
+struct exception *
+make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)
+{
+  NEW(io_exception, self);
+  assert(type & EXC_IO);
+  
+  self->super.type = type;
+
+  if (msg)
+    self->super.name = msg;
+  else
+    self->super.name = error ? strerror(error) : "Unknown i/o error";
+
+  self->error = error;
+
+  return &self->super;
 }

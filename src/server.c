@@ -54,7 +54,8 @@
      (super packet_handler)
      (vars
        (services object alist)
-       (c object command_continuation)))
+       (c object command_continuation)
+       (e object exception_handler)))
 */
 
      
@@ -92,7 +93,8 @@ static int do_service_request(struct packet_handler *c,
 	      res = A_WRITE(connection->write, format_service_accept(name));
 	      if (LSH_CLOSEDP(res))
 		return res;
-	      return res | COMMAND_CALL(service, connection, closure->c);
+	      return res | COMMAND_CALL(service, connection,
+					closure->c, closure->e);
 	    }
 	}
       return (LSH_FAIL | LSH_CLOSE)
@@ -107,14 +109,16 @@ static int do_service_request(struct packet_handler *c,
       
 static struct packet_handler *
 make_service_request_handler(struct alist *services,
-			     struct command_continuation *c)
+			     struct command_continuation *c,
+			     struct exception_handler *e)
 {
   NEW(service_handler, self);
 
   self->super.handler = do_service_request;
   self->services = services;
   self->c = c;
-
+  self->e = e;
+  
   return &self->super;
 }
 
@@ -129,13 +133,14 @@ make_service_request_handler(struct alist *services,
 
 static int do_offer_service(struct command *s,
 			    struct lsh_object *x,
-			    struct command_continuation *c)
+			    struct command_continuation *c,
+			    struct exception_handler *e)
 {
   CAST(offer_service, self, s);
   CAST(ssh_connection, connection, x);
 
   connection->dispatch[SSH_MSG_SERVICE_REQUEST]
-    = make_service_request_handler(self->services, c);
+    = make_service_request_handler(self->services, c, e);
 
   return LSH_OK | LSH_GOON;
 }

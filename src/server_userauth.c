@@ -47,6 +47,7 @@
 
        ; What to do after successful authentication
        (c object command_continuation)
+       (e object exception_handler)
        
        ; Methods advertised in failure messages
        (advertised_methods object int_list)
@@ -139,7 +140,7 @@ static int do_handle_userauth(struct packet_handler *c,
       if (LSH_CLOSEDP(res))
 	return res;
       
-      return res | COMMAND_CALL(service, auth_info, closure->c);
+      return res | COMMAND_CALL(service, auth_info, closure->c, closure->e);
     }
 
   /* Invalid request */
@@ -150,7 +151,8 @@ static int do_handle_userauth(struct packet_handler *c,
 
 static int do_userauth(struct command *s, 
 		       struct lsh_object *x,
-		       struct command_continuation *c)
+		       struct command_continuation *c,
+		       struct exception_handler *e)
 {
   CAST(userauth_service, self, s);
   CAST(ssh_connection, connection, x);
@@ -162,6 +164,7 @@ static int do_userauth(struct command *s,
   auth->services = self->services;
   auth->attempts = AUTH_ATTEMPTS;
   auth->c = c;
+  auth->e = e;
   
   connection->dispatch[SSH_MSG_USERAUTH_REQUEST] = &auth->super;
 

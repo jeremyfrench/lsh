@@ -51,7 +51,8 @@
 
 int do_channel_open_command(struct command *s,
 			    struct lsh_object *x,
-			    struct command_continuation *c);
+			    struct command_continuation *c,
+			    struct exception_handler *e);
 
 /* Takes a channel as argument, and returns the same channel or NULL. */
 /* GABA:
@@ -72,7 +73,8 @@ int do_channel_open_command(struct command *s,
 
 int do_channel_request_command(struct command *s,
 			       struct lsh_object *x,
-			       struct command_continuation *c);
+			       struct command_continuation *c,
+			       struct exception_handler *e);
 
 /* GABA:
    (class
@@ -89,7 +91,8 @@ int do_channel_request_command(struct command *s,
 
 int do_channel_global_command(struct command *s,
 			      struct lsh_object *x,
-			      struct command_continuation *c);
+			      struct command_continuation *c,
+			      struct exception_handler *e);
 
 struct command *
 make_install_global_request_handler(UINT32 name,

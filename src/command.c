@@ -36,8 +36,9 @@
 
 #include "command.c.x"
 
-int do_discard_continuation(struct command_continuation *ignored UNUSED,
-			    struct lsh_object *x UNUSED)
+static int
+do_discard_continuation(struct command_continuation *ignored UNUSED,
+			struct lsh_object *x UNUSED)
 {
   return LSH_OK | LSH_GOON;
 }
@@ -45,7 +46,17 @@ int do_discard_continuation(struct command_continuation *ignored UNUSED,
 struct command_continuation discard_continuation =
 { STATIC_HEADER, do_discard_continuation};
 
+struct command_context *
+make_command_context(struct command_continuation *c,
+		     struct exception_handler *e)
+{
+  NEW(command_context, self);
+  self->c = c;
+  self->e = e;
 
+  return self;
+}
+  
 /* GABA:
    (class
      (name command_apply)
@@ -58,16 +69,19 @@ static int do_command_apply(struct command_continuation *s,
 			    struct lsh_object *value)
 {
   CAST(command_apply, self, s);
-  return COMMAND_CALL(self->f, value, self->super.up);
+  return COMMAND_CALL(self->f, value,
+		      self->super.up, self->super.e);
 }
 
 struct command_continuation *
-make_apply(struct command *f, struct command_continuation *c)
+make_apply(struct command *f,
+	   struct command_continuation *c, struct exception_handler *e)
 {
   NEW(command_apply, res);
 
   res->f = f;
   res->super.up = c;
+  res->super.e = e;
   res->super.super.c = do_command_apply;
 
   return &res->super.super;
@@ -82,7 +96,8 @@ struct lsh_object *gaba_apply(struct lsh_object *f,
 
 int do_call_simple_command(struct command *s,
 			   struct lsh_object *arg,
-			   struct command_continuation *c)
+			   struct command_continuation *c,
+			   struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(command_simple, self, s);
   return COMMAND_RETURN(c, COMMAND_SIMPLE(self, arg));
@@ -93,7 +108,8 @@ int do_call_simple_command(struct command *s,
 static int
 do_command_unimplemented(struct command *s UNUSED,
 			 struct lsh_object *o UNUSED,
-			 struct command_continuation *c UNUSED)
+			 struct command_continuation *c UNUSED,
+			 struct exception_handler *e UNUSED)
 { fatal("command.c: Unimplemented command.\n"); }
 
 static struct lsh_object *
@@ -120,12 +136,13 @@ struct command_simple command_unimplemented =
 
 static int do_trace_command(struct command *s,
 			    struct lsh_object *x,
-			    struct command_continuation *c)
+			    struct command_continuation *c,
+			    struct exception_handler *e)
 {
   CAST(trace_command, self, s);
 
   trace("Entering %z\n", self->name);
-  return COMMAND_CALL(self->real, x, c);
+  return COMMAND_CALL(self->real, x, c, e);
 }
 
 struct command *make_trace(const char *name, struct command *real)
@@ -144,7 +161,8 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *c)
   return &make_trace(name, real)->super;
 }
 
-
+#if 0
+/* This command should be obsoleted by the exception mechanism */
 /* Fail if NULL. This commands returns its argument unchanged. Unless
  * it is NULL, in which case it doesn't return at all, but instead
  * returns an LSH_FAIL status to the mainloop. */
@@ -152,14 +170,15 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *c)
 static int
 do_command_die_on_null(struct command *s UNUSED,
 		       struct lsh_object *x,
-		       struct command_continuation *c)
+		       struct command_continuation *c,
+		       struct exception_handler *e)
 {
   return x ? COMMAND_RETURN(c, x) : LSH_FAIL | LSH_DIE;
 }
 
 struct command command_die_on_null =
 { STATIC_HEADER, do_command_die_on_null};
-
+#endif
 
 /* Collecting arguments */
 struct lsh_object *
@@ -281,7 +300,8 @@ make_collect_state_3(struct collect_info_3 *info,
 
 static int do_parallell_progn(struct command *s,
 			      struct lsh_object *x,
-			      struct command_continuation *c)
+			      struct command_continuation *c,
+			      struct exception_handler *e)
 {
   CAST(parallell_progn, self, s);
   unsigned i;
@@ -290,14 +310,14 @@ static int do_parallell_progn(struct command *s,
   for (i=0; i < LIST_LENGTH(self->body) - 1; i++)
     {
       CAST_SUBTYPE(command, command, LIST(self->body)[i]);
-      res |= COMMAND_CALL(command, x, &discard_continuation);
+      res |= COMMAND_CALL(command, x, &discard_continuation, e);
       if (LSH_CLOSEDP(res))
 	return res;
     }
   {
     CAST_SUBTYPE(command, command, LIST(self->body)[i]);
     
-    return res | COMMAND_CALL(command, x, c);
+    return res | COMMAND_CALL(command, x, c, e);
   }
 }
 

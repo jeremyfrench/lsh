@@ -26,6 +26,7 @@
 
 #include "lsh.h"
 
+#include "exception.h"
 #include "list.h"
 #include "io.h"
 
@@ -42,30 +43,16 @@
    (class
      (name command_continuation)
      (vars
-       (c method int "struct lsh_object *result")))
-*/
-
-/* GABA:
-   (class
-     (name exception)
-     (vars
-       (type . UINT32)))
-*/
-
-/* GABA:
-   (class
-     (name command_raise)
-     (vars
-       (e method int "struct exception *")))
+       (c method void "struct lsh_object *result")))
 */
 
 /* GABA:
    (class
      (name command)
      (vars
-       (call method int "struct lsh_object *arg"
-                        "struct command_continuation *c")))
-			;; "struct command_continuation *e)))
+       (call method void "struct lsh_object *arg"
+                         "struct command_continuation *c"
+			 "struct exception_handler *e")))
 */
 
 /* GABA:
@@ -78,25 +65,18 @@
        (call_simple method "struct lsh_object *" "struct lsh_object *")))
 */
 
-#define COMMAND_CALL(f, a, c) \
-  ((f)->call((f), (struct lsh_object *) (a), (c)))
-
-#if 0
-/* NOTE: If R == NULL, don't call the continuation, _but_ the argument
- * V must still be evaluated. */
-#define COMMAND_RETURN(r, v) \
-  ((r) ? ((r)->c((r), (struct lsh_object *) (v))) : ((void)(v), LSH_OK | LSH_GOON))
-#endif
+#define COMMAND_CALL(f, a, c, e) \
+  ((f)->call((f), (struct lsh_object *) (a), (c), (e)))
 
 #define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v)))
-#define COMMAND_RAISE(r, v)  ((r)->e((r), (v)))
 
 #define COMMAND_SIMPLE(f, a) \
   ((f)->call_simple((f), (struct lsh_object *)(a)))
 
-int do_call_simple_command(struct command *s,
-			   struct lsh_object *arg,
-			   struct command_continuation *c);
+void do_call_simple_command(struct command *s,
+			    struct lsh_object *arg,
+			    struct command_continuation *c,
+			    struct exception_handler *e);
 
 #define STATIC_COMMAND_SIMPLE(f) \
 { { STATIC_HEADER, do_call_simple_command }, f}
@@ -113,9 +93,28 @@ extern struct command_continuation discard_continuation;
      (name command_frame)
      (super command_continuation)
      (vars
-       (up object command_continuation)))
+       (up object command_continuation)
+       (e object exception_handler)))
 */
 
+/* Used when the execution context must be saved for later use.
+ *
+ * FIXME: Perhaps use a struct instead? This pair is needed in many
+ * places.
+ * */
+/* GABA:
+   (class
+     (name command_context)
+     (vars
+       (c object command_continuation)
+       (e object exception_handler)))
+*/
+
+struct command_context *
+make_command_context(struct command_continuation *c,
+		     struct exception_handler *e);
+
+			    
 /* Commands that need to collect some arguments before actually doing
  * anything. */
 
@@ -221,7 +220,9 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *real);
 /* The GABA_* macros are used by automatically generated evaluation code */
 
 struct command_continuation *
-make_apply(struct command *f, struct command_continuation *c);  
+make_apply(struct command *f,
+	   struct command_continuation *c, struct exception_handler *e);
+
 struct lsh_object *gaba_apply(struct lsh_object *f,
 			      struct lsh_object *x);
 

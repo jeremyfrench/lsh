@@ -271,10 +271,11 @@ do_channel_open_direct_tcpip(struct channel_open *c,
     {
       verbose("direct-tcpip connection attempt\n");
 
-      return COMMAND_CALL(closure->callback,
-			  make_address_info(dest_host, dest_port),
-			  make_open_forwarded_tcpip_continuation
-			  (response));
+      return COMMAND_CALL
+	(closure->callback,
+	 make_address_info(dest_host, dest_port),
+	 make_open_forwarded_tcpip_continuation(response),
+	 &default_exception_handler /* make_open_forwarded_tcpip_raise(response) */);
     }
   else
     {
@@ -402,7 +403,10 @@ static int do_tcpip_forward_request(struct global_request *s,
 	return COMMAND_CALL(self->callback,
 			    a,
 			    make_tcpip_forward_request_continuation
-			    (connection, forward, c));
+			    (connection, forward, c), 
+			    &default_exception_handler
+			    /* make_tcpip_forward_request_raise
+			       (connection, forward) */ );
       }
     }
   else
@@ -500,7 +504,9 @@ static int do_channel_open_forwarded_tcpip(struct channel_open *c UNUSED,
 	return
 	  COMMAND_CALL(port->callback,
 		       make_address_info(peer_host, peer_port),
-		       make_open_forwarded_tcpip_continuation(response));
+		       make_open_forwarded_tcpip_continuation(response),
+		       &default_exception_handler
+		       /* make_open_forwarded_tcpip_raise(response) */);
       
       werror("Received a forwarded-tcpip request on a port for which we\n"
 	     "haven't requested forwarding. Denying.\n");

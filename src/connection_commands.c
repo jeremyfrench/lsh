@@ -118,8 +118,7 @@ static int do_line(struct line_handler **h,
 		  werror("server.c: do_line: "
 			 "Delayed initiate_keyexchange() failed.\n");
 		  *h = NULL;
-		  
-		  return res | LSH_DIE;
+		  return;
 		}
 	    }
 #endif /* WITH_SSH1_FALLBACK */
@@ -164,8 +163,12 @@ static int do_line(struct line_handler **h,
 	  /* FIXME: Clean up properly */
 	  KILL(closure);
 	  *h = NULL;
-	  
-	  return LSH_FAIL | LSH_DIE;
+
+	  EXCEPTION_RAISE(connection->e,
+			  make_protocol_exception
+			  (SSH_DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED,
+			   NULL));
+	  return;
 	}
     }
   else
@@ -174,7 +177,6 @@ static int do_line(struct line_handler **h,
       werror("%ps\n", length, line);
 
       /* Read next line */
-      return LSH_OK | LSH_GOON;
     }
 }
 
@@ -190,7 +192,7 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
   closure->mode = mode;
   closure->fd = fd;
   closure->fallback = fallback;
-  return make_read_line(&closure->super);
+  return make_read_line(&closure->super, connection->e);
 }
 
 /* Takes a fd as argument, and returns a connection object. Never
@@ -216,7 +218,8 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
 
 static int do_connection(struct command *s,
 			 struct lsh_object *x,
-			 struct command_continuation *c)
+			 struct command_continuation *c,
+			 struct exception_handler *e UNUSED)
 {
   CAST(connection_command, self, s);
   CAST(io_fd, fd, x);

@@ -26,7 +26,7 @@
 #ifndef LSH_ABSTRACT_IO_H_INCLUDED
 #define LSH_ABSTRACT_IO_H_INCLUDED
 
-#include "lsh.h"
+#include "exception.h"
 
 #define GABA_DECLARE
 #include "abstract_io.h.x"
@@ -61,19 +61,32 @@
    (class
      (name read_handler)
      (vars
-       (handler indirect-method int "struct abstract_read *read")))
+       (handler indirect-method void "struct abstract_read *read")))
+                                     ;; "struct exception_handler *io")))
 */
 
 #define READ_HANDLER(h, read) ((h)->handler(&(h), (read)))
+
+#if 0
+/* Return values */
+/* Everything's fine */
+#define READ_OK 0
+/* Can't process any more data right now; please hold */
+#define READ_HOLD 1
+/* Close nicely, after fluching the write buffer */
+#define READ_CLOSE 2
+/* Close immediately */
+#define READ_DIE 3
+#endif
 
 /* GABA:
    (class
      (name abstract_write)
      (vars
-       (write method int "struct lsh_string *packet")))
+       (write method void "struct lsh_string *packet" "struct exception_handler *e")))
 */
 
-#define A_WRITE(f, packet) ((f)->write((f), (packet)))
+#define A_WRITE(f, packet, e) ((f)->write((f), (packet), (e)))
 
 /* A handler that passes packets on to another handler */
 /* GABA:

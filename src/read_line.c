@@ -43,7 +43,8 @@
      (super read_handler)
      (vars
        (handler object line_handler)
-
+       (e object exception_handler)
+       
        ; Line buffer       
        (pos simple UINT32)
        (buffer array UINT8 MAX_LINE)))
@@ -72,8 +73,9 @@ static int do_string_read(struct abstract_read **r,
   return to_read;
 }
 
-static int do_read_line(struct read_handler **h,
-			struct abstract_read *read)
+
+static void do_read_line(struct read_handler **h,
+			 struct abstract_read *read)
 {
   CAST(read_line, closure, *h);
   
@@ -89,25 +91,25 @@ static int do_read_line(struct read_handler **h,
   switch(n)
     {
     case 0:
-      return LSH_OK | LSH_GOON;
+      return;
     case A_FAIL:
-      /* Fall throw */
+      /* Fall through */
     case A_EOF:
-      /* FIXME: Free associated resources! */
-      return LSH_FAIL | LSH_DIE;
+      EXCEPTION_RAISE(closure->e, &read_exception.super);
+      return;
     }
 
   closure->pos += n;
 
   /* Loop over all received lines */
   
-  while ( (eol = memchr(closure->buffer, '\n', closure->pos) ))
+  while ( (eol = memchr(closure->buffer, '\n', closure->pos) )
+	  && closure->handler)
     {
       /* eol points at the newline character. end points at the
        * character terminating the line, which may be a carriage
        * return preceeding the newline. */
       UINT8 *end = eol;
-      int res;
       
       if ( (eol > closure->buffer)
 	   && (eol[-1] == '\r'))
@@ -115,7 +117,7 @@ static int do_read_line(struct read_handler **h,
       
       length = end - closure->buffer;
       
-      res = PROCESS_LINE(closure->handler, &next, length, closure->buffer);
+      PROCESS_LINE(closure->handler, &next, length, closure->buffer);
       {
 	/* Remove line from buffer */
 	/* Number of characters that have been processed */
@@ -126,9 +128,6 @@ static int do_read_line(struct read_handler **h,
 	closure->pos = left;
       }
 
-      if (LSH_CLOSEDP(res))
-	return res;
-      
       if (next)
 	{
 	  /* Read no more lines. Instead, pass remaining data to next,
@@ -141,36 +140,41 @@ static int do_read_line(struct read_handler **h,
 	      { { STACK_HEADER, do_string_read },
 		closure,
 		0 };
+
 	      while(next && (read.index < closure->pos))
-		{
-		  res = READ_HANDLER(next, &read.super);
-		  if (LSH_CLOSEDP(res))
-		    return res;
-		}
+		/* FIXME: What if an exception occurs during this
+		 * call? */
+
+		READ_HANDLER(next, &read.super);
 	    }
 	  /* No data left */
 	  KILL(closure);
 	  *h = next;
-	  return LSH_OK | LSH_GOON;
+	  return;
 	}
-      else
-	if (!closure->handler)
-	  {
-	    /* Fail */
-	    return LSH_FAIL | LSH_DIE;
-	  }
-    }     
+    }
+
+  if (!closure->handler)
+    {
+      /* FIXME: Should we raise an exception here, or should we assume
+       * that has already been done? */
+      *h = NULL;
+      return;
+    }
   
   /* Partial line */
   if (closure->pos == MAX_LINE)
     {
+      static const struct io_exception line_too_long =
+	STATIC_PROTOCOL_EXCEPTION(0, "Line too long");
+
       werror("Received too long a line\n");
-      return LSH_FAIL | LSH_DIE;
+      EXCEPTION_RAISE(closure->e, &line_too_long.super);
     }
-  return LSH_OK | LSH_GOON;
 }
 
-struct read_handler *make_read_line(struct line_handler *handler)
+struct read_handler *make_read_line(struct line_handler *handler,
+				    struct exception_handler *e)
 {
   NEW(read_line, closure);
 
@@ -178,7 +182,8 @@ struct read_handler *make_read_line(struct line_handler *handler)
   closure->pos = 0;
 
   closure->handler = handler;
-
+  closure->e = e;
+  
   return &closure->super;
 }
 

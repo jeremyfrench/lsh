@@ -339,7 +339,8 @@ struct channel_open *make_open_session(struct unix_user *user,
 /* Start an authenticated ssh-connection service */
 static int do_login(struct command *s,
 		    struct lsh_object *x,
-		    struct command_continuation *c)
+		    struct command_continuation *c,
+		    struct exception_handler *e UNUSED)
 {
   CAST(server_connection_service, closure, s);
   CAST(unix_user, user, x);

@@ -42,6 +42,26 @@
 
 #include "read_packet.c.x"
 
+#if 0
+/* ;;GABA:
+   (class
+     (name flag_exception)
+     (super exception_frame)
+     (vars
+       (flag . int)))
+*/
+
+static void
+do_flag_exception(struct exception_handler *s,
+		  struct exception *e)
+{
+  CAST(flag_exception, self, s);
+  self->flag = 1;
+
+  EXCEPTION_RAISE(self->super.parent, e);
+}
+#endif
+
 /* GABA:
    (class
      (name read_packet)
@@ -49,6 +69,10 @@
      (vars
        (state simple int)
   
+       ; This is usually initialized from the command
+       ; that created the fd.
+       ;; (e object exception_handler)
+
        ; Attached to read packets
        (sequence_number simple UINT32)
   
@@ -87,8 +111,14 @@ lsh_string_realloc(struct lsh_string *s, UINT32 length)
  * been read. */
 #define QUANTUM 1024
 
-static int do_read_packet(struct read_handler **h,
-			  struct abstract_read *read)
+static const struct io_exception read_exception =
+STATIC_IO_EXCEPTION(EXC_IO, "read_packet: i/o error");
+
+static const struct io_exception read_eof =
+STATIC_IO_EXCEPTION(EXC_READ_EOF, "read_packet: Read EOF");
+
+static void do_read_packet(struct read_handler **h,
+			   struct abstract_read *read)
 {
   CAST(read_packet, closure, *h);
   int total = 0;
@@ -127,12 +157,13 @@ static int do_read_packet(struct read_handler **h,
 	  switch(n)
 	    {
 	    case 0:
-	      return LSH_OK | LSH_GOON;
+	      return;
 	    case A_FAIL:
-	      return LSH_FAIL | LSH_DIE;
+	      EXCEPTION_RAISE(closure->connection->e, &read_exception.super);
+	      return;
 	    case A_EOF:
-	      /* FIXME: Free associated resources! */
-	      return LSH_OK | LSH_CLOSE;
+	      EXCEPTION_RAISE(closure->connection->e, &read_eof.super);
+	      return;
 	    }
 
 	  assert(n > 0);
@@ -154,19 +185,28 @@ static int do_read_packet(struct read_handler **h,
 	      length = READ_UINT32(closure->buffer->data);
 	      if (length > closure->connection->rec_max_packet)
 		{
+		  static const struct protocol_exception too_large =
+		    STATIC_PROTOCOL_EXCEPTION(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Packet too large");
+		  
 		  werror("read_packet: Receiving too large packet.\n"
 			 "  %i octets, limit is %i\n",
 			 length, closure->connection->rec_max_packet);
-		  return LSH_FAIL | LSH_DIE;
+		  
+		  EXCEPTION_RAISE(closure->connection->e, &too_large.super);
 		}
 
 	      if ( (length < 12)
 		   || (length < (block_size - 4))
 		   || ( (length + 4) % block_size))
 		{
+		  static const struct protocol_exception invalid =
+		    STATIC_PROTOCOL_EXCEPTION(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Invalid packet length");
+		  
 		  werror("read_packet: Bad packet length %i\n",
 			 length);
-		  return LSH_FAIL | LSH_DIE;
+		  EXCEPTION_RAISE(closure->connection->e, &invalid.super);
 		}
 
 	      /* Process this block before the length field is lost. */
@@ -242,12 +282,12 @@ static int do_read_packet(struct read_handler **h,
 	  switch(n)
 	    {
 	    case 0:
-	      return LSH_OK | LSH_GOON;
+	      return;
 	    case A_FAIL:
 	      /* Fall through */
 	    case A_EOF:
-	      /* FIXME: Free associated resources! */
-	      return LSH_FAIL | LSH_DIE;
+	      EXCEPTION_RAISE(closure->e, &read_exception.super);
+	      return;
 	    }
 
 	  assert(n > 0);
@@ -294,12 +334,12 @@ static int do_read_packet(struct read_handler **h,
 	    switch(n)
 	      {
 	      case 0:
-		return LSH_OK | LSH_GOON;
+		return;
 	      case A_FAIL:
 		/* Fall through */
 	      case A_EOF:
-		/* FIXME: Free associated resources! */
-		return LSH_FAIL | LSH_DIE;
+		EXCEPTION_RAISE(closure->e, &read_exception.super);
+		return;
 	      }
 
 	    assert(n > 0);
@@ -316,9 +356,13 @@ static int do_read_packet(struct read_handler **h,
 		if (!memcmp(mac,
 			    closure->received_mac,
 			    closure->connection->rec_mac->hash_size))
-		  /* FIXME: Free resources */
-		  return LSH_FAIL | LSH_DIE;
+		  {
+		    static const struct protocol_exception mac_error =
+		      STATIC_PROTOCOL_EXCEPTION(SSH_DISCONNECT_PROTOCOL_ERROR,
+						"MAC error");
 
+		    EXCEPTION_RAISE(closure->connection->e, &mac_error.super);
+		  }
 		closure->pos += n;
 	      }
 	    else
@@ -332,16 +376,20 @@ static int do_read_packet(struct read_handler **h,
 	  
 	  closure->buffer = NULL;
 	  closure->state = WAIT_START;
-	  
-	  res = A_WRITE(closure->handler, packet);
-	  if (LSH_ACTIONP(res))
-	    return res;
+
+	  /* FIXME: What if an exception occurs during this call? Note
+	   * that if we are called from read_line rather than directly
+	   * from th backend, A_READ() won't indicate that the
+	   * connection is closed. Perhaps we have to install an
+	   * exception handler that will clear *h, but that implies
+	   * extra overhead. */
+	  A_WRITE(closure->handler, packet, closure->connection->e);
 	  break;
 	}
       default:
 	fatal("Internal error\n");
       }
-  return LSH_OK | LSH_GOON;
+  return;
 }
 
 struct read_handler *make_read_packet(struct abstract_write *handler,

@@ -45,7 +45,8 @@ struct close_callback *make_client_close_handler(void);
 
 struct packet_handler *
 make_accept_service_handler(int service,
-			    struct command_continuation *c);
+			    struct command_continuation *c,
+			    struct exception_handler *e);
 
 struct command *make_request_service(int service);
 

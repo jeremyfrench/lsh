@@ -469,11 +469,14 @@ static int do_global_request_success(struct packet_handler *s UNUSED,
       return LSH_OK | LSH_GOON;
     }
   {
-    CAST_SUBTYPE(command_continuation, c,
+    CAST_SUBTYPE(command_context, ctx,
 		 object_queue_remove_head(&connection->channels->pending_global_requests));
-    return COMMAND_RETURN(c, connection);
+    return COMMAND_RETURN(ctx->c, connection);
   }
 }
+
+struct exception global_request_exception =
+STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, "Global request failed");
 
 static int do_global_request_failure(struct packet_handler *s UNUSED,
 				     struct ssh_connection *connection,
@@ -490,13 +493,13 @@ static int do_global_request_failure(struct packet_handler *s UNUSED,
       return LSH_OK | LSH_GOON;
     }
   {
-    CAST_SUBTYPE(command_continuation, c,
+    CAST_SUBTYPE(command_context, ctx,
 		 object_queue_remove_head(&connection->channels->pending_global_requests));
-    return COMMAND_RETURN(c, NULL);
+    return EXCEPTION_RAISE(ctx->e, &global_request_exception);
   }
 }
 
-
+/* FIXME: Split into a continuation and an exception handler */
 /* Callback given to the CHANNEL_OPEN method */
 static int do_channel_open_response(struct channel_open_callback *c,
                                     struct ssh_channel *channel,
@@ -517,6 +520,8 @@ static int do_channel_open_response(struct channel_open_callback *c,
       return LSH_FAIL | LSH_DIE;
     }
 
+  /* FIXME: It would be better to allocate or at least reservea channel number earlier,
+   * so that we can't fail at this point */
   if ( (local_channel_number
             = register_channel(closure->super.connection->channels,
 			       channel)) < 0)
@@ -992,7 +997,8 @@ static int do_channel_close(struct packet_handler *closure UNUSED,
 
 	  channel->flags |= CHANNEL_RECEIVED_CLOSE;
 	  
-	  if (! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_SENT_EOF)))
+	  if (! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_SENT_EOF
+				   | CHANNEL_SENT_CLOSE)))
 	    {
 	      werror("Unexpected channel CLOSE.\n");
 	    }
@@ -1137,15 +1143,18 @@ static int do_channel_success(struct packet_handler *closure UNUSED,
 	  return LSH_OK | LSH_GOON;
 	}
       {
-	CAST_SUBTYPE(command_continuation, c,
+	CAST_SUBTYPE(command_context, ctx,
 	     object_queue_remove_head(&channel->pending_requests));
 	return channel_process_status(connection->channels, channel_number,
-				      COMMAND_RETURN(c, channel));
+				      COMMAND_RETURN(ctx->c, channel));
       }
     }
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
 }
+
+static struct exception channel_request_exception =
+STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Channel request failed");
 
 static int do_channel_failure(struct packet_handler *closure UNUSED,
 			      struct ssh_connection *connection,
@@ -1172,11 +1181,11 @@ static int do_channel_failure(struct packet_handler *closure UNUSED,
 	  return LSH_OK | LSH_GOON;
 	}
       {
-	CAST_SUBTYPE(command_continuation, c,
+	CAST_SUBTYPE(command_context, ctx,
 	     object_queue_remove_head(&channel->pending_requests));
 
 	return channel_process_status(connection->channels, channel_number,
-				      COMMAND_RETURN(c, NULL));
+				      EXCEPTION_RAISE(ctx->e, &channel_request_exception));
       }
     }
   lsh_string_free(packet);
@@ -1185,7 +1194,8 @@ static int do_channel_failure(struct packet_handler *closure UNUSED,
 
 static int do_connection_service(struct command *s UNUSED,
 				 struct lsh_object *x,
-				 struct command_continuation *c)
+				 struct command_continuation *c,
+				 struct exception_handler *e UNUSED)
 {
   CAST(ssh_connection, connection, x);
 
@@ -1261,13 +1271,7 @@ static int do_connection_service(struct command *s UNUSED,
   global_failure->handler = do_global_request_failure;
   connection->dispatch[SSH_MSG_REQUEST_FAILURE] = global_failure;
   
-  return
-#if 0
-    self->hook
-    ? COMMAND_CALL(hook, connection, c)
-    :
-#endif
-    COMMAND_RETURN(c, connection);
+  return COMMAND_RETURN(c, connection);
 }
 
 #if 0
