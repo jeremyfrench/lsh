@@ -44,6 +44,7 @@
 
 #include "channel_forward.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -205,16 +206,14 @@ do_client_channel_x11_receive(struct ssh_channel *s,
     default:
       {
         /* Copy data to buffer */
-        uint32_t left = self->buffer->length - self->i;
-          
-        /* The small initial window size should ensure that we don't get
-         * more data. */
-        assert(data->length <= left);
-          
-        memcpy(self->buffer->data + self->i, data->data,
-               data->length);
-        self->i += data->length;
+	const uint8_t *buffer;
+	
+        /* The small initial window size should ensure that all the
+	   data fits. */
+	lsh_string_write_string(self->buffer, self->i, data);
         lsh_string_free(data);
+
+	buffer = lsh_string_data(self->buffer);
 	
         switch (self->state)
           {
@@ -226,20 +225,19 @@ do_client_channel_x11_receive(struct ssh_channel *s,
               break;
 
             self->state = CLIENT_X11_GOT_LENGTHS;
-
-            switch (self->buffer->data[0])
+            switch (buffer[0])
               {
               case 'B': /* Big endian */
 	      case 'b':
                 self->little_endian = 0;
-                self->name_length = READ_UINT16(self->buffer->data + 6);
-                self->auth_length = READ_UINT16(self->buffer->data + 8);
+                self->name_length = READ_UINT16(buffer + 6);
+                self->auth_length = READ_UINT16(buffer + 8);
                 break;
               case 'L': /* Little endian */
 	      case 'l':
                 self->little_endian = 1;
-                self->name_length = LE_READ_UINT16(self->buffer->data + 6);
-                self->auth_length = LE_READ_UINT16(self->buffer->data + 8);
+                self->name_length = LE_READ_UINT16(buffer + 6);
+                self->auth_length = LE_READ_UINT16(buffer + 8);
                 break;
               default:
                 werror("client_x11.c: Bad endian indicator.\n");
@@ -263,62 +261,63 @@ do_client_channel_x11_receive(struct ssh_channel *s,
               uint32_t auth_offset = X11_SETUP_HEADER_LENGTH
                 + self->name_length + PAD(self->name_length);
 
-              uint32_t length = auth_offset + self->auth_length
-                + pad_length[self->auth_length % 4]; 
+              uint32_t length = auth_offset
+		+ self->auth_length + PAD(self->auth_length); 
                 
               if (self->i < length)
                 break;
 
               debug("Received cookie of type `%ps': %xs\n",
-                    self->name_length, self->buffer->data + X11_SETUP_HEADER_LENGTH,
-                    self->auth_length, self->buffer->data + auth_offset);
+                    self->name_length, buffer + X11_SETUP_HEADER_LENGTH,
+                    self->auth_length, buffer + auth_offset);
 
               /* Ok, now we have the connection setup message. Check if it's ok. */
               if ( (self->name_length == MIT_COOKIE_NAME_LENGTH)
-                   && !memcmp(self->buffer->data + X11_SETUP_HEADER_LENGTH,
+                   && !memcmp(buffer + X11_SETUP_HEADER_LENGTH,
                               MIT_COOKIE_NAME, MIT_COOKIE_NAME_LENGTH)
                    && lsh_string_eq_l(self->display->fake,
                                       self->auth_length,
-                                      self->buffer->data + auth_offset))
+                                      buffer + auth_offset))
                 {
                   struct lsh_string *msg;
                   uint8_t lengths[4];
                   static const uint8_t pad[3] = { 0, 0, 0 };
-                  
+                  uint32_t nlength = lsh_string_length(self->display->auth_name);
+                  uint32_t alength = lsh_string_length(self->display->auth_data);
+		  
                   /* Cookies match! */
                   verbose("client_x11: Allowing X11 connection; cookies match.\n");
                   
                   if (self->little_endian)
                     {
-                      LE_WRITE_UINT16(lengths, self->display->auth_name->length);
-                      LE_WRITE_UINT16(lengths + 2, self->display->auth_data->length);
+                      LE_WRITE_UINT16(lengths, nlength);
+                      LE_WRITE_UINT16(lengths + 2, alength);
                     }
                   else
                     {
-                      WRITE_UINT16(lengths, self->display->auth_name->length);
-                      WRITE_UINT16(lengths + 2, self->display->auth_data->length);
+                      WRITE_UINT16(lengths, nlength);
+                      WRITE_UINT16(lengths + 2, alength);
                     }
 
                   /* FIXME: Perhaps it would be easier to build the
                    * message by hand than using ssh_format? */
                   /* Construct the real setup message. */
-                  msg = ssh_format("%ls%ls%c%c%ls%ls%ls%ls",
-                                   X11_SETUP_VERSION_LENGTH, self->buffer->data,
+                  msg = ssh_format("%ls%ls%c%c%lS%ls%lS%ls",
+                                   X11_SETUP_VERSION_LENGTH, buffer,
                                    4, lengths,
                                    0, 0,
-                                   self->display->auth_name->length,
-                                   self->display->auth_name->data,
-                                   PAD(self->display->auth_name->length), pad,
-                                   self->display->auth_data->length,
-                                   self->display->auth_data->data,
+                                   self->display->auth_name,
+                                   PAD(nlength), pad,
+                                   self->display->auth_data,
                                    self->i - length,
-                                   self->buffer + self->i);
+                                   buffer + self->i);
 
                   lsh_string_free(self->buffer);
                   self->buffer = NULL;
 
                   /* Bump window size */
-                  channel_start_receive(&self->super.super, X11_WINDOW_SIZE - msg->length);
+                  channel_start_receive(&self->super.super,
+					X11_WINDOW_SIZE - lsh_string_length(msg));
 
                   debug("client_x11.c: Sending real X11 setup message: %xS\n",
                         msg);
@@ -565,14 +564,15 @@ parse_display(struct client_x11_display *self, const char *display)
     {
       /* Local transport */
       struct lsh_string *name = ssh_format("/tmp/.X11-unix/X%di", display_num);
+      uint32_t nlength = lsh_string_length(name);
       struct sockaddr_un *sa;
 
       verbose("Using local X11 transport `%pS'\n", name);
       
-      self->address_length = offsetof(struct sockaddr_un, sun_path) + name->length;
+      self->address_length = offsetof(struct sockaddr_un, sun_path) + nlength;
       sa = lsh_space_alloc(self->address_length);
       sa->sun_family = AF_UNIX;
-      memcpy(sa->sun_path, name->data, name->length);
+      memcpy(sa->sun_path, lsh_string_data(name), nlength);
 
       lsh_string_free(name);
       self->address = (struct sockaddr *) sa;
@@ -732,12 +732,11 @@ struct command *
 make_forward_x11(const char *display_string,
 		 struct randomness *random)
 {
-  struct lsh_string *fake = lsh_string_alloc(X11_COOKIE_LENGTH);
+  struct lsh_string *fake;
   struct client_x11_display *display;
 
   assert(random->quality == RANDOM_GOOD);
-  
-  RANDOM(random, fake->length, fake->data);
+  fake = lsh_string_random(random, X11_COOKIE_LENGTH);
 
   debug("Generated X11 fake cookie %xS\n", fake);
   
