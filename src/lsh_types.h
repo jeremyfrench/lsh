@@ -2,8 +2,8 @@
  *
  */
 
-#ifndef LSH_TYPS_H_INCLUDED
-#define LSH_TYPS_H_INCLUDED
+#ifndef LSH_TYPES_H_INCLUDED
+#define LSH_TYPES_H_INCLUDED
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -16,6 +16,14 @@
 #define UINT32 unsigned int
 #elif SIZEOF_LONG >= 4
 #define UINT32 unsigned long
+#else
+#error Ledsen error
+#endif
+
+#if SIZEOF_SHORT >= 2
+#define UINT16 unsigned short
+#elif SIZEOF_INT >= 2
+#define UINT16 unsigned int
 #else
 #error Ledsen error
 #endif
@@ -68,4 +76,4 @@ struct callback
 
 #define CALLBACK(c) ((c)->f(c))
 
-#endif /* LSH_TYPS_H_INCLUDED */
+#endif /* LSH_TYPES_H_INCLUDED */
