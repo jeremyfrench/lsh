@@ -94,13 +94,13 @@
      (name io_backend)
      (super resource)
      (vars
+       (oop_sys . "oop_source_sys *")
+       (oop_signal . "oop_adapter_signal *")
+       
        ; Linked list of fds. 
        (files object lsh_fd)
 
-       ; Stack of closed files
-       ;; (closed object lsh_fd)
-
-       ; Flags
+       ; Signal handlers
        (signals object lsh_signal_handler)
        
        ; Callouts
@@ -115,6 +115,7 @@
 
 #define IDLE_TIME 100
 
+#if 0
 int io_iter(struct io_backend *b)
 {
   unsigned long nfds; /* FIXME: Should be nfds_t if that type is defined */
@@ -381,7 +382,8 @@ int io_iter(struct io_backend *b)
 
   return 1;
 }
-  
+#endif
+
 void
 io_run(struct io_backend *b)
 {
@@ -394,9 +396,8 @@ io_run(struct io_backend *b)
   
   if (sigaction(SIGPIPE, &pipe, NULL) < 0)
     fatal("Failed to ignore SIGPIPE.\n");
-  
-  while(io_iter(b))
-    ;
+
+  oop_sys_run(b->oop);
 }
 
 static void
@@ -404,6 +405,7 @@ do_kill_io_backend(struct resource *s)
 {
   CAST(io_backend, backend, s);
 
+  fatal("Not implemented\n");
   if (backend->super.alive)
     {
       struct lsh_fd *fd;
@@ -430,6 +432,11 @@ make_io_backend(void)
   NEW(io_backend, b);
 
   init_resource(&b->super, do_kill_io_backend);
+  
+  b->oop_sys = oop_sys_new();
+  assert(b->oop_sys);
+  b->oop_signal = oop_signal_new(oop_sys_source(oop_sys));
+  assert(b->oop_signal);
   
   b->files = NULL;
   b->signals = NULL;
