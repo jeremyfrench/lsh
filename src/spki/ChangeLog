@@ -1,5 +1,7 @@
 2002-11-13  Niels Möller  <niels@s3.kth.se>
 
+	* certificate.c (spki_acl_parse): New function (not done yet).
+
 	* certificate.h, certificate.c: Fixed terminology, refer to keys
 	as "principals", not "subjects". 
 
