@@ -24,11 +24,23 @@
 
 #include "tag.h"
 
+#include "nettle/buffer.h"
 #include "nettle/sexp.h"
 
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
+
+enum spki_tag_type
+  {
+    SPKI_TAG_ERROR = 0,
+    SPKI_TAG_ATOM,
+    SPKI_TAG_LIST,
+    SPKI_TAG_ANY,
+    SPKI_TAG_SET,
+    SPKI_TAG_PREFIX,
+    SPKI_TAG_RANGE
+  };
 
 static int
 display_equal(struct sexp_iterator *a, struct sexp_iterator *b)
@@ -56,17 +68,60 @@ atom_equal(struct sexp_iterator *a, struct sexp_iterator *b)
 	  && !memcmp(a->atom, b->atom, a->atom_length));
 }
 
-static int
-tag_magic(struct sexp_iterator *i,
-	  unsigned length, const uint8_t *magic)
+static enum spki_tag_type
+spki_tag_classify(struct sexp_iterator *i)
 {
-  return i->type == SEXP_ATOM
-    && !i->display
-    && i->atom_length == length
-    && !memcmp(i->atom, magic, length);
-}
+  switch(i->type)
+    {
+    default:
+      abort();
+      
+    case SEXP_END:
+      return 0;
+      
+    case SEXP_ATOM:
+      return SPKI_TAG_ATOM;
+      
+    case SEXP_LIST:
+      if (!sexp_iterator_enter_list(i))
+	return 0;
 
-#define MAGIC(i, m) tag_magic(i, sizeof("" m) - 1, m)
+      if (i->type == SEXP_ATOM && !i->display
+	  && i->atom_length == 1 && i->atom[0] == '*')
+	{
+	  enum spki_tag_type type;
+	  
+	  if (!sexp_iterator_next(i))
+	    return 0;
+
+	  if (i->type == SEXP_END)
+	    return sexp_iterator_exit_list(i) ? SPKI_TAG_ANY : 0;
+
+	  if (i->type != SEXP_ATOM || i->display)
+	    return 0;
+
+#define CASE(x, t)				\
+case sizeof("" x) - 1:				\
+  if (!memcmp(i->atom, x, sizeof("" x) - 1)) 	\
+    { type = t; break; }			\
+  return 0
+
+	  switch (i->atom_length)
+	    {
+	    default:
+	      return 0;
+	      
+	    CASE("set", SPKI_TAG_SET);
+	    CASE("range", SPKI_TAG_RANGE);
+	    CASE("prefix", SPKI_TAG_PREFIX);
+	    }
+
+	  return sexp_iterator_next(i) ? type : 0;
+	}
+      else
+	return SPKI_TAG_LIST;
+    }
+}
 
 static int
 set_includes(struct sexp_iterator *delegated,
@@ -128,9 +183,12 @@ int
 spki_tag_includes(struct sexp_iterator *delegated,
 		  struct sexp_iterator *request)
 {
-  switch (delegated->type)
+  switch (spki_tag_classify(delegated))
     {
-    case SEXP_ATOM:
+    default:
+      return 0;
+
+    case SPKI_TAG_ATOM:
       if (request->type == SEXP_ATOM
 	  && atom_equal(delegated, request))
 	{
@@ -139,42 +197,136 @@ spki_tag_includes(struct sexp_iterator *delegated,
 	  return sexp_iterator_next(request);
 	}
       return 0;
+
+    case SPKI_TAG_LIST:
+      return sexp_iterator_enter_list(request)
+	&& list_includes(delegated, request);
       
-    case SEXP_END:
-      abort();
-      
-    case SEXP_LIST:
-      if (!sexp_iterator_enter_list(delegated))
-	abort();
+    case SPKI_TAG_ANY:
+      return 1;
 
-      if (MAGIC(delegated, "*"))
-	{
-	  if (!sexp_iterator_next(delegated))
-	    abort();
+    case SPKI_TAG_SET:
+      return set_includes(delegated, request);
 
-	  /* The form (*) matches anything */
-	  if (delegated->type == SEXP_END)
-	    {
-	      if (!sexp_iterator_exit_list(delegated))
-		abort();
-	      return 1;
-	    }
-
-	  if (MAGIC(delegated, "set"))
-	    {
-	      if (!sexp_iterator_next(delegated))
-		abort();
-
-	      return set_includes(delegated, request);
-	    }
-	  else
-	    /* Other star forms not yet implemented. */
-	    return 0;
-	}
-      else
-	{
-	  return sexp_iterator_enter_list(request)
-	    && list_includes(delegated, request);
-	}
+      /* Other star forms not yet implemented. */
     }
 }
+
+
+#if 0
+/* Intersecting tags. */
+
+/* FIXME: Collaps redundant set expressions, like
+ *
+ * (* set foo)                     --> foo
+ * (* set (* set a b) (* set c d)) --> (* set a b c d)
+ *
+ * This may require conversion fo the tags into a tree data
+ * structure. */
+
+/* Called when the intersection equals a, so copy it. */
+static int
+copy_intersect(struct nettle_buffer *buffer,
+	       struct sexp_iterator *a)
+{
+  unsigned length;
+  const uint8_t *data;
+
+  return (data = sexp_iterator_subexpr(a, &length))
+    && nettle_buffer_write(buffer, length, data);
+}
+
+static int
+set_intersect(struct nettle_buffer *buffer,
+	      struct sexp_iterator *s,
+	      struct sexp_iterator *a)
+{
+  /* Needed in case we need to back up after failure. */
+  unsigned start = buffer->size;
+  unsigned first;
+  unsigned n;
+  struct sexp_iterator a_start = *a;
+  struct sexp_iterator a_end;
+	  
+  /* Create a new set by intersecting each element with a. */
+  if (!nettle_buffer_write(buffer, "(1:*3:set"))
+    return 0;
+  
+  first = buffer->size;
+  
+  for (n = 0; l->type != SEXP_END; )
+    {
+      struct sexp_iterator work = *a;
+      if (spki_tag_intersect(buffer, l, &work))
+	{
+	  if (!n)
+	    a_end = work;
+	  n++;
+	}
+      if (!sexp_iterator_next(l))
+	goto fail;
+    }
+  
+  if (n && NETTLE_BUFFER_PUTC(buffer, ')'))
+    {
+      *a = a_end;
+      return 1;
+    }
+
+ fail:
+  buffer->size = start;
+  return 0;
+}
+
+static int
+list_intersect(struct nettle_buffer *buffer,
+	       struct sexp_iterator *l,
+	       struct sexp_iterator *a)
+{
+  if (!sexp_iterator_enter_list(l))
+    abort();
+
+  if (MAGIC(l, "*"))
+    {
+      if (l->type == SEXP_END)
+	return sexp_iterator_exit_list(l)
+	  && copy_intersect(buffer, a);
+
+      if (MAGIC(l, "set"))
+	return set_intersect(l, a, 0);
+
+      else
+	/* Not yet implemented */
+	return 0;
+    }
+
+  /* The other expression must be a list. */
+  if (!sexp_iterator_enter_list(a))
+    return 0;
+
+  if (MAGIC(a, '*'))
+    return magic_intersect(
+  
+}
+
+/* Tries to intersect the current expressions on the A and B lists. If
+ * intersection is nonempty, it is written to BUFFER, and the function
+ * returns 1. Otherwise, writes nothing to BUFFER, and returns 0. */
+int
+spki_tag_intersect(struct nettle_buffer *buffer,
+		   struct sexp_iterator *a,
+		   struct sexp_iterator *b)
+{
+  assert(a->type != SEXP_END);
+  assert(a->type != SEXP_END);
+  
+  if (a->type == SEXP_LIST)
+    return list_intersect(buffer, in_set, a, b);
+  if (b->type == SEXP_LIST)
+    return list_intersect(buffer, in_set, b, a);
+
+  return atom_equal(a, b)
+    && sexp_iterator_next(b)
+    && copy_intersect(buffer, a);
+}
+#endif
