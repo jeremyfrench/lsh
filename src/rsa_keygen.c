@@ -59,8 +59,8 @@ rsa_generate_key(struct randomness *r, UINT32 bits)
   struct rsa_private_key private;
   struct lsh_string *key = NULL;
 
-  rsa_init_public_key(&public);
-  rsa_init_private_key(&private);
+  rsa_public_key_init(&public);
+  rsa_private_key_init(&private);
 
   assert(r->quality == RANDOM_GOOD);
   
@@ -81,8 +81,8 @@ rsa_generate_key(struct randomness *r, UINT32 bits)
 			    "b", private.b,
 			    "c", private.c);
     }
-  rsa_clear_public_key(&public);
-  rsa_clear_private_key(&private);
+  rsa_public_key_clear(&public);
+  rsa_private_key_clear(&private);
   return key;
 }
 

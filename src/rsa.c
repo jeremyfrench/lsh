@@ -54,7 +54,7 @@
      (super verifier)
      (vars
        (key indirect-special "struct rsa_public_key"
-            #f rsa_clear_public_key)))
+            #f rsa_public_key_clear)))
 */
 
 /* GABA:
@@ -64,7 +64,7 @@
      (vars
        (verifier object rsa_verifier)
        (key indirect-special "struct rsa_private_key"
-            #f rsa_clear_private_key)))
+            #f rsa_private_key_clear)))
 */
 
 /* NOTE: For now, always use sha1. */
@@ -177,7 +177,7 @@ init_rsa_verifier(struct rsa_verifier *self)
 {
   /* FIXME: The allocator could do this kind of initialization
    * automatically. */
-  rsa_init_public_key(&self->key);
+  rsa_public_key_init(&self->key);
   
   self->super.verify = do_rsa_verify;
   self->super.public_key = do_rsa_public_key;
@@ -198,7 +198,7 @@ parse_ssh_rsa_public(struct simple_buffer *buffer)
       && (mpz_sgn(res->key.n) == 1)
       && (mpz_cmp(res->key.e, res->key.n) < 0)
       && parse_eod(buffer)
-      && rsa_prepare_public_key(&res->key))
+      && rsa_public_key_prepare(&res->key))
     return &res->super;
 
   else
@@ -271,7 +271,7 @@ make_rsa_verifier(struct signature_algorithm *s UNUSED,
   init_rsa_verifier(res);
 
   if (rsa_keypair_from_sexp_alist(&res->key, NULL, RSA_MAX_BITS, i)
-      && rsa_prepare_public_key(&res->key))
+      && rsa_public_key_prepare(&res->key))
     return &res->super;
 
   KILL(res);
@@ -288,10 +288,10 @@ make_rsa_signer(struct signature_algorithm *s UNUSED,
 
   init_rsa_verifier(verifier);
   
-  rsa_init_private_key(&res->key);
+  rsa_private_key_init(&res->key);
   if (rsa_keypair_from_sexp_alist(&verifier->key, &res->key, RSA_MAX_BITS, i)
-      && rsa_prepare_public_key(&verifier->key)
-      && rsa_prepare_private_key(&res->key)
+      && rsa_public_key_prepare(&verifier->key)
+      && rsa_private_key_prepare(&res->key)
       && res->key.size == verifier->key.size)
     {
       res->verifier = verifier;
