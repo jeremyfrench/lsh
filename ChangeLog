@@ -1,3 +1,34 @@
+2004-06-08  Niels Möller  <niels@s3.kth.se>
+
+	* src/client.c (client_options): Deleted --cvs-workaround option.
+	(client_argp_parser): Deleted handling of --cvs-workaround.
+	(fork_input): Deleted function.
+	(fork_output): Deleted function.
+	(make_client_session): Keep our original stdio fd:s in blocking
+	mode, and pass the type IO_STDIO to make_lsh_fd when appropriate.
+	(do_detach_cb): Resetting stdio to blocking mode is no longer
+	needed.
+
+	* src/client.h (client_options): Deleted stdin_fork, stdout_fork
+	and stderr_fork attributes.
+
+	* src/werror.c (set_error_nonblocking): Deleted function.
+
+	* src/server_session.c (spawn_process): Pass correct type
+	(IO_NORMAL or IO_PTY) to make_lsh_fd. io_set_type is no longer
+	needed. 
+
+	* src/io.h (enum io_type): New type IO_STDIO.
+
+	* src/io.c (io_final): No longer any need to reset stdio file
+	descriptors to blocking mode.
+	(write_raw_with_poll): Deleted function.
+	(io_set_type): Deleted function.
+	(io_init_fd): New argument, allowing certain fd:s to remain in
+	blocking mode.
+	(make_lsh_fd): New argument TYPE. Updated callers.
+	(close_fd): Don't close fd:s that are of type IO_STDIO.
+
 2004-04-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_pty.c (pty_open_slave): More verbose messages on failure.
