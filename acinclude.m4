@@ -313,3 +313,78 @@ AH_BOTTOM(
 # define UNUSED
 #endif
 ])])
+
+AC_DEFUN([LSH_GCC_FUNCTION_NAME],
+[# Check for gcc's __FUNCTION__ variable
+AH_TEMPLATE([HAVE_GCC_FUNCTION],
+	    [Define if the compiler understands __FUNCTION__])
+AH_BOTTOM(
+[#if HAVE_GCC_FUNCTION
+# define FUNCTION_NAME __FUNCTION__
+#else
+# define FUNCTION_NAME "Unknown"
+#endif
+])
+
+AC_CACHE_CHECK(for __FUNCTION__,
+	       lsh_cv_c_FUNCTION,
+  [ AC_TRY_COMPILE(,
+      [ #if __GNUC__ == 3
+	#  error __FUNCTION__ is broken in gcc-3
+	#endif
+        void foo(void) { char c = __FUNCTION__[0]; } ],
+      lsh_cv_c_FUNCTION=yes,
+      lsh_cv_c_FUNCTION=no)])
+
+if test "x$lsh_cv_c_FUNCTION" = "xyes"; then
+  AC_DEFINE(HAVE_GCC_FUNCTION)
+fi
+])
+
+# Check for alloca, and include the standard blurb in config.h
+AC_DEFUN([LSH_FUNC_ALLOCA],
+[AC_FUNC_ALLOCA
+AH_BOTTOM(
+[/* AIX requires this to be the first thing in the file.  */
+#ifndef __GNUC__
+# if HAVE_ALLOCA_H
+#  include <alloca.h>
+# else
+#  ifdef _AIX
+ #pragma alloca
+#  else
+#   ifndef alloca /* predefined by HP cc +Olibcalls */
+char *alloca ();
+#   endif
+#  endif
+# endif
+#endif
+])])
+
+AC_DEFUN([LSH_FUNC_STRERROR],
+[AC_CHECK_FUNCS(strerror)
+AH_BOTTOM(
+[#if HAVE_STRERROR
+#define STRERROR strerror
+#else
+#define STRERROR(x) (sys_errlist[x])
+#endif
+])])
+
+AC_DEFUN([LSH_FUNC_STRSIGNAL],
+[AC_CHECK_FUNCS(strsignal)
+AC_CHECK_DECLS([sys_siglist, _sys_siglist])
+AH_BOTTOM(
+[#if HAVE_STRSIGNAL
+# define STRSIGNAL strsignal
+#else /* !HAVE_STRSIGNAL */
+# if HAVE_DECL_SYS_SIGLIST
+#  define STRSIGNAL(x) (sys_siglist[x])
+# else
+#  if HAVE_DECL__SYS_SIGLIST
+#   define STRSIGNAL(x) (_sys_siglist[x])
+#  endif
+# endif
+#endif /* !HAVE_STRSIGNAL */
+])])
+

@@ -520,10 +520,12 @@ AC_CHECK_SIZEOF(long, 4)
 	
 # Checks for library functions.
 
-AC_FUNC_ALLOCA
+LSH_FUNC_ALLOCA
+LSH_FUNC_STRERROR
+LSH_FUNC_STRSIGNAL
 AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS(select socket strerror strsignal strtol alarm)
+AC_CHECK_FUNCS(select socket strtol alarm)
 AC_CHECK_FUNCS(getrusage gettimeofday)
 AC_CHECK_FUNCS(getspnam)
 AC_CHECK_FUNCS(vsnprintf inet_aton)
@@ -723,23 +725,7 @@ if test x$lsh_cv_sys_unix98_ptys = xyes; then
 fi
 
 LSH_GCC_ATTRIBUTES
-
-# Check for gcc's __FUNCTION__ variable
-AC_CACHE_CHECK(for __FUNCTION__,
-	       lsh_cv_c_FUNCTION,
-  [ AC_TRY_COMPILE(,
-      [ #if __GNUC__ == 3
-	#  error __FUNCTION__ is broken in gcc-3
-	#endif
-        void foo(void) { char c = __FUNCTION__[0]; } ],
-      lsh_cv_c_FUNCTION=yes,
-      lsh_cv_c_FUNCTION=no)])
-
-AH_TEMPLATE([HAVE_GCC_FUNCTION],
-	    [Define if the compiler understands __FUNCTION__])
-if test "x$lsh_cv_c_FUNCTION" = "xyes"; then
-  AC_DEFINE(HAVE_GCC_FUNCTION)
-fi
+LSH_GCC_FUNCTION_NAME
 
 AC_MSG_CHECKING(for BSD pty names)
 
