@@ -121,7 +121,8 @@ struct read_handler *make_read_line(struct line_handler *handler,
 				    struct exception_handler *e)
 {
   NEW(read_line, closure);
-
+  assert(e);
+  
   closure->super.handler = do_read_line;
   closure->pos = 0;
 
