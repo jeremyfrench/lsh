@@ -407,7 +407,9 @@ bad_string(UINT32 length, const UINT8 *data)
 }
 
 /* FIXME: Use autoconf */
-#define XAUTH_PROGRAM "/usr/X11R6/bin/xauth"
+#ifndef XAUTH_PROGRAM
+# define XAUTH_PROGRAM "/usr/X11R6/bin/xauth"
+#endif
 
 /* On success, returns 1 and sets *DISPLAY and *XAUTHORITY */
 struct server_x11_info *
