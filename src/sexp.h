@@ -34,11 +34,11 @@
 /* Forward declaration */
 struct sexp_iterator;
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "sexp.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
    (class
      (name sexp)
      (vars
@@ -50,7 +50,7 @@ struct sexp_iterator;
 #define SEXP_FORMAT(e, s, i) ((e)->format((e), (s), (i)))
 #define SEXP_ITER(e) ((e)->iter((e)))
 
-/* CLASS:
+/* GABA:
    (class
      (name sexp_cons)
      (super sexp)
@@ -59,7 +59,7 @@ struct sexp_iterator;
        (cdr object sexp_cons)))
 */
 
-/* ;; CLASS:
+/* ;; GABA:
    (class
      (name sexp_atom)
      (super sexp)
@@ -69,7 +69,7 @@ struct sexp_iterator;
 
 
 /* Iterator abstraction idea taken from Ron's code */
-/* CLASS:
+/* GABA:
    (class
      (name sexp_iterator)
      (vars
@@ -154,7 +154,7 @@ extern int sexp_char_classes[];
 
 /* Parsing sexp */
 
-/* CLASS:
+/* GABA:
    (class
      (name sexp_handler)
      (vars

@@ -53,7 +53,7 @@ static struct packet_handler *make_banner_handler(void);
 
 #include "client_userauth.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name client_userauth)
      (super ssh_service)
@@ -67,7 +67,7 @@ static struct packet_handler *make_banner_handler(void);
        ))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name success_handler)
      (super packet_handler)
@@ -75,7 +75,7 @@ static struct packet_handler *make_banner_handler(void);
        (service object ssh_service)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name failure_handler)
      (super packet_handler)

@@ -28,9 +28,9 @@
 
 #include "lsh.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "abstract_io.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* A read-function returning n means:
  *
@@ -42,7 +42,7 @@
 #define A_FAIL -1
 #define A_EOF -2
 
-/* CLASS:
+/* GABA:
    (class
      (name abstract_read)
      (vars
@@ -55,7 +55,7 @@
 
 /* May store a new handler into *h. */
 
-/* CLASS:
+/* GABA:
    (class
      (name read_handler)
      (vars
@@ -64,7 +64,7 @@
 
 #define READ_HANDLER(h, read) ((h)->handler(&(h), (read)))
 
-/* CLASS:
+/* GABA:
    (class
      (name abstract_write)
      (vars
@@ -74,7 +74,7 @@
 #define A_WRITE(f, packet) ((f)->write((f), (packet)))
 
 /* A handler that passes packets on to another handler */
-/* CLASS:
+/* GABA:
    (class
      (name abstract_write_pipe)
      (super abstract_write)

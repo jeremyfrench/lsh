@@ -31,21 +31,21 @@
 
 #include <stdarg.h>
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "command.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* Continuation based command execution. A command can take one object
  * as argument, and returns one object. */
 
-/* CLASS:
+/* GABA:
    (class
      (name command_continuation)
      (vars
        (c method int "struct lsh_object *result")))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name command)
      (vars
@@ -53,7 +53,7 @@
                         "struct command_continuation *c")))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name command_simple)
      (super command)
@@ -74,7 +74,7 @@ int do_call_simple_command(struct command *s,
 #define STATIC_COMMAND_SIMPLE(f) \
 { { STATIC_HEADER, do_call_simple_command }, f}
 
-/* CLASS:
+/* GABA:
    (class
      (name command_frame)
      (super command_continuation)

@@ -30,7 +30,7 @@
 
 #include "encrypt.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name packet_encrypt)
      (super abstract_write_pipe)

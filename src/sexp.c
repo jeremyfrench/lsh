@@ -33,9 +33,9 @@
 #include <stdarg.h>
 #include <string.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "sexp.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 /* Defines int sexp_char_classes[0x100] */
 #define CHAR_CLASSES_TABLE sexp_char_classes
@@ -44,7 +44,7 @@
 
 #include "sexp.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name sexp_string)
      (super sexp)
@@ -215,7 +215,7 @@ struct sexp_cons sexp_nil =
 
 #define SEXP_NIL (&sexp_nil.super)
 
-/* CLASS:
+/* GABA:
    (class
      (name sexp_iter_cons)
      (super sexp_iterator)
@@ -334,7 +334,7 @@ struct sexp *sexp_c(struct sexp *car, struct sexp_cons *cdr)
   return &c->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name sexp_vector)
      (super sexp)
@@ -344,7 +344,7 @@ struct sexp *sexp_c(struct sexp *car, struct sexp_cons *cdr)
        (elements object object_list)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name sexp_iter_vector)
      (super sexp_iterator)

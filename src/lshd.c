@@ -90,7 +90,7 @@ void usage(void)
 /* FIXME: We should have some more general functions for reading
  * private keys. */
 
-/* CLASS:
+/* GABA:
    (class
      (name read_key)
      (super sexp_handler)

@@ -38,14 +38,14 @@
 
 #include <assert.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "publickey_crypto.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "publickey_crypto.c.x"
 
 /* DSA signatures */
-/* CLASS:
+/* GABA:
    (class
      (name dsa_signer)
      (super signer)
@@ -55,7 +55,7 @@
        (a bignum)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name dsa_signer_kludge)
      (super signer)
@@ -63,7 +63,7 @@
        (dsa object dsa_signer)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name dsa_verifier)
      (super verifier)
@@ -71,7 +71,7 @@
        (public struct dsa_public)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name dsa_algorithm)
      (super signature_algorithm)
@@ -417,7 +417,7 @@ struct signature_algorithm *make_dsa_algorithm(struct randomness *random)
 }
     
 /* Groups */
-/* CLASS:
+/* GABA:
    (class
      (name group_zn)
      (super group)

@@ -131,7 +131,7 @@ int verify_password(struct unix_user *user,
   return 1;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name unix_authentication)
      (super userauth)

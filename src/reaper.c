@@ -38,9 +38,9 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "reaper.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "reaper.c.x"
 
@@ -53,7 +53,7 @@ static void child_handler(int signum)
   halloween = 1;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name reaper)
      (super reap)

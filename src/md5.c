@@ -30,7 +30,7 @@
 #include "md5.c.x"
 
 /* MD5 hash */
-/* CLASS:
+/* GABA:
    (class
      (name md5_instance)
      (super hash_instance)

@@ -26,7 +26,7 @@
 #include "io.h"
 #include "xalloc.h"
 
-/* CLASS:
+/* GABA:
    (class
      (name blocking_write)
      (super abstract_write)

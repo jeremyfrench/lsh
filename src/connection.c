@@ -35,9 +35,9 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "connection.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 static int handle_connection(struct abstract_write *w,
 			     struct lsh_string *packet)

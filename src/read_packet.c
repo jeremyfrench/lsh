@@ -42,7 +42,7 @@
 
 #include "read_packet.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name read_packet)
      (super read_handler)

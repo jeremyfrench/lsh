@@ -34,7 +34,7 @@
 #endif
 
 /* The HMAC (rfc-2104)  construction */
-/* CLASS:
+/* GABA:
    (class
      (name hmac_algorithm)
      (super mac_algorithm)
@@ -42,7 +42,7 @@
        (hash object hash_algorithm)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name hmac_instance)
      (super mac_instance)

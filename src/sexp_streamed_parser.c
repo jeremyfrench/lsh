@@ -60,7 +60,7 @@ struct base64_state
 
 #include "sexp_streamed_parser.c.x"
 
-/* CLASS:
+/* GABA:
    (class 
      (name string_handler)
      (vars
@@ -69,7 +69,7 @@ struct base64_state
 
 #define HANDLE_STRING(h,s) ((h)->handler((h), (s)))
 
-/* CLASS:
+/* GABA:
    (class
      (name parse)
      (super scanner)
@@ -78,7 +78,7 @@ struct base64_state
 	 (next object scanner)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name parse_string)
      (super parse)
@@ -86,7 +86,7 @@ struct base64_state
 	 (handler object string_handler)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name parse_sexp)
      (super parse)
@@ -95,7 +95,7 @@ struct base64_state
 	 (handler object sexp_handler)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name parse_literal_data)
      (super parse_string)
@@ -142,7 +142,7 @@ make_parse_literal_data(UINT32 length,
 /* FIXME: Arbitrary limit. */
 #define SEXP_MAX_STRING 100000
 
-/* CLASS:
+/* GABA:
    (class
      (name parse_literal)
      (super parse_string)
@@ -193,7 +193,7 @@ static struct scanner *make_parse_literal(struct string_handler *handler,
   return &closure->super.super.super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name return_string)
      (super string_handler)
@@ -235,7 +235,7 @@ static struct scanner *make_parse_##name(struct sexp_handler *h,	\
 									\
 static int do_parse_##name(struct scanner **s, int token)
      
-/* CLASS:
+/* GABA:
    (class
      (name parse_skip)
      (super parse_sexp)
@@ -405,7 +405,7 @@ make_return_string_display(struct lsh_string *display,
 }
 #endif
 
-/* CLASS:
+/* GABA:
    (class
      (name handle_display)
      (super string_handler)
@@ -510,7 +510,7 @@ static void do_free_parse_node(struct parse_node *n)
     }
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name handle_element)
      (super sexp_handler)
@@ -584,7 +584,7 @@ static struct sexp *build_parsed_vector(struct handle_element *h)
   return sexp_v(l);
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name parse_list)
      (super parse_sexp)
@@ -714,7 +714,7 @@ static int base64_decode(struct base64_state *state, int token)
   return res;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name decode_base64)
      (super parse)

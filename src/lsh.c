@@ -83,7 +83,7 @@ void usage(void)
   exit(1);
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name fake_host_db)
      (super lookup_verifier)

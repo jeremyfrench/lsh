@@ -30,13 +30,13 @@
 #include "ssh.h"
 #include "xalloc.h"
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "service.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "service.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name service_handler)
      (super packet_handler)
@@ -103,7 +103,7 @@ struct packet_handler *make_service_handler(struct alist *services)
   return &self->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name meta_service)
      (super ssh_service)

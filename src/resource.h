@@ -30,11 +30,11 @@
 
 #include "queue.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "resource.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
    (class
      (name resource)
      (vars
@@ -58,7 +58,7 @@ struct resource_node
 
 /* FIXME: Non-virtual methods would make sense for this class. Or
  * perhaps we should use a struct rather than a class? */
-/* CLASS:
+/* GABA:
    (class
      (name resource_list)
      (vars

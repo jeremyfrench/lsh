@@ -33,9 +33,9 @@
 #include <errno.h>
 #include <string.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "tcpforward.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "tcpforward.c.x"
 
@@ -45,7 +45,7 @@ make_tcpip_connected(struct tcpip_channel *c,
 		     UINT32 block_size);
 
 /* TCP forwarding channel */
-/* CLASS:
+/* GABA:
    (class
      (name tcpip_channel)
      (super ssh_channel)
@@ -99,7 +99,7 @@ static struct tcpip_channel *make_tcpip_channel(void)
 }
 
 /* Connect callback */
-/* CLASS:
+/* GABA:
    (class
      (name tcpip_connected)
      (super fd_callback)
@@ -145,7 +145,7 @@ make_tcpip_connected(struct tcpip_channel *channel,
   return &self->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name open_direct_tcpip)
      (super channel_open)

@@ -41,7 +41,7 @@ static void do_free_zstream(z_stream *z);
   
 #include "zlib.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name zlib_instance)
      (super compress_instance)
@@ -54,7 +54,7 @@ static void do_free_zstream(z_stream *z);
           #f do_free_zstream)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name zlib_algorithm)
      (super compress_algorithm)

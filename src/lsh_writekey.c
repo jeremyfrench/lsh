@@ -86,7 +86,7 @@ static struct sexp *dsa_private2public(struct sexp_iterator *i)
 		sexp_l(5, sexp_z("dsa"), p, q, g, y, -1), -1);
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name write_key)
      (super sexp_handler)

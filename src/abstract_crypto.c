@@ -30,9 +30,9 @@
 #include <assert.h>
 #include <string.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "abstract_crypto.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "abstract_crypto.c.x"
 
@@ -40,7 +40,7 @@
 
 /* Inverts the encryption mode (needed for the EDE-operation of
  * triple DES). */
-/* CLASS:
+/* GABA:
    (class
      (name crypto_inverted)
      (super crypto_algorithm)

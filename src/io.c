@@ -50,9 +50,9 @@
 #include <arpa/inet.h>
 #include <signal.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "io.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "io.c.x"
 
@@ -209,7 +209,7 @@ int io_iter(struct io_backend *b)
   return 1;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name fd_read)
      (super abstract_read)

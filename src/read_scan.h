@@ -29,11 +29,11 @@
 
 #include "abstract_io.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "read_scan.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
    (class
      (name scanner)
      (vars

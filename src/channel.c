@@ -35,13 +35,13 @@
 #include <assert.h>
 #include <string.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "channel.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "channel.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name connection_service)
      (super ssh_service)
@@ -57,7 +57,7 @@
        (start object connection_startup)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name global_request_handler)
      (super packet_handler)
@@ -65,7 +65,7 @@
        (global_requests object alist)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name channel_open_handler)
      (super packet_handler)
@@ -73,7 +73,7 @@
        (channel_types object alist)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name channel_open_response)
      (super channel_open_callback)
@@ -1184,7 +1184,7 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
 }
 
 /* Writing data to a channel */
-/* CLASS:
+/* GABA:
    (class
      (name channel_write)
      (super abstract_write)
@@ -1192,7 +1192,7 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
        (channel object ssh_channel)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name channel_write_extended)
      (super channel_write)
@@ -1254,7 +1254,7 @@ struct read_handler *make_channel_read_stderr(struct ssh_channel *channel)
 						    SSH_EXTENDED_DATA_STDERR));
 }    
 
-/* CLASS:
+/* GABA:
    (class
      (name channel_close_callback)
      (super close_callback)

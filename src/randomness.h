@@ -28,11 +28,11 @@
 
 #include "abstract_crypto.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "randomness.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
    (class
      (name randomness)
      (vars

@@ -34,7 +34,7 @@
 
 #include "server_keyexchange.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name dh_server_exchange)
      (super keyexchange_algorithm)
@@ -44,7 +44,7 @@
 */
 
 /* Handler for the kex_dh_reply message */
-/* CLASS:
+/* GABA:
    (class
      (name dh_server)
      (super packet_handler)

@@ -29,9 +29,9 @@
 #include "keyexchange.h"
 #include "publickey_crypto.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "client_keyexchange.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* Maps a key blob to a signature verifier, using some signature
  * algorithm and some method to determine the authenticity of the key.
@@ -39,7 +39,7 @@
 
 /* FIXME: This function needs the hostname we are connecting to. */
 
-/* CLASS:
+/* GABA:
    (class
      (name lookup_verifier)
      (vars

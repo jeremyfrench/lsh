@@ -31,7 +31,7 @@
 
 
 /* SHA1 hash */
-/* CLASS:
+/* GABA:
    (class
      (name sha_instance)
      (super hash_instance)

@@ -29,7 +29,7 @@
 
 #include "compress.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name packet_compressor)
      (super abstract_write_pipe)

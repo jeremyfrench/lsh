@@ -1,3 +1,17 @@
+Fri Mar 12 02:00:53 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/tcpforward.c (tcpforward-foo): Added a first test expression
+ 	for the compiler.
+
+	* src/make_class: Changed the magic tag. Now is "/* GABA:".
+ 	(process-expr): New function interfacing to compiler.scm.
+	(process-input, process-class): Splitted the process-class
+ 	function into several functions.
+
+	* src/command.c (gaba_apply, gaba_apply_S_1, gaba_apply_S_2): New
+ 	functions, to be called by automatically generated code.
+	(command_K, command_K_1) : Implemented the K combinator.
+
 Thu Mar 11 18:07:25 1999    <nisse@idonex.se>
 
 	* src/bignum.c (bignum_next_prime): Fixed off-by-one overflow.

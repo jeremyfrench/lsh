@@ -31,12 +31,12 @@
 
 #define MAX_TTY_NAME	32
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "server_pty.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 
-/* CLASS:
+/* GABA:
    (class 
      (name pty_info)
      (super resource)

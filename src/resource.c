@@ -37,9 +37,9 @@ void do_mark_resources(struct lsh_queue *q,
 void do_free_resources(struct lsh_queue *q);
 void dont_free_live_resource(int alive);
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "resource.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 void do_mark_resources(struct lsh_queue *q,
 		       void (*mark)(struct lsh_object *o))

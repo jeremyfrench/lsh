@@ -33,9 +33,9 @@
 /* Forward declaration */
 struct alist;
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "alist.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* Not supported anymore */
 /* #define ALIST_USE_SIZE 0 */
@@ -43,7 +43,7 @@ struct alist;
 /* Abstract interface allows for multiple implementations ("real"
  * alists, linear tables, hash tables */
 
-/* CLASS:
+/* GABA:
    (meta
      (name alist)
      (methods
@@ -51,7 +51,7 @@ struct alist;
        "void (*set)(struct alist *self, int atom, void *value)"))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name alist)
      (meta alist)

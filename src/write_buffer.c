@@ -34,9 +34,9 @@
 /* Prototype */
 static void do_free_buffer(struct lsh_queue *q);
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "write_buffer.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 static void do_free_buffer(struct lsh_queue *q)
 {

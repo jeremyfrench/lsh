@@ -28,9 +28,9 @@
 #include <assert.h>
 #include <stdarg.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "list.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "xalloc.h"
 

@@ -42,14 +42,14 @@
 
 #include <string.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "randomness.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "randomness.c.x"
 
 /* Random */
-/* CLASS:
+/* GABA:
    (class
      (name poor_random)
      (super randomness)
@@ -116,7 +116,7 @@ struct randomness *make_poor_random(struct hash_algorithm *hash,
   return &self->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name device_random)
      (super randomness)

@@ -30,7 +30,7 @@
 
 #include "arcfour.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name arcfour_instance)
      (super crypto_instance)

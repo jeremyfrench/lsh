@@ -5,7 +5,7 @@
 ;; Reads a C source file on stdin. Comments of the form
 ;;
 ;; /*
-;; CLASS:
+;; GABA:
 ;;    expression
 ;; */
 ;;
@@ -380,32 +380,32 @@
       (let ((mark-function (do-mark-function name vars))
 	    (free-function (do-free-function name vars)))
 	; (werror "baar\n")
-	(list "#ifndef CLASS_DEFINE\n"	
+	(list "#ifndef GABA_DEFINE\n"	
 	      (do-instance-struct name super vars)
 	      (if meta
 		  (list "extern struct " meta "_meta "
 			name "_class_extended;\n")
 		  (list "extern struct lsh_class " name "_class;\n"))
-	      "#endif /* !CLASS_DEFINE */\n\n"
-	      "#ifndef CLASS_DECLARE\n"
+	      "#endif /* !GABA_DEFINE */\n\n"
+	      "#ifndef GABA_DECLARE\n"
 	      (or mark-function "")
 	      (or free-function "")
 	      (do-class name super mark-function free-function
 			meta methods)
-	      "#endif /* !CLASS_DECLARE */\n\n")))))
+	      "#endif /* !GABA_DECLARE */\n\n")))))
 
 (define (process-meta attributes)
   (let ((name (get 'name attributes cadr))
 	(methods (get 'methods attributes cdr)))
     (werror "Processing meta ~S\n" name)
-    (list "#ifndef CLASS_DEFINE\n"
+    (list "#ifndef GABA_DEFINE\n"
 	  "struct " name "_meta\n"
 	  "{\n"
 	  "  struct lsh_class super;\n"
 	  (map (lambda (m) (list "  " m ";\n"))
 	       methods)
 	  "};\n"
-	  "#endif /* !CLASS_DEFINE */\n\n")))
+	  "#endif /* !GABA_DEFINE */\n\n")))
 
 (define (process-struct attributes)
   (let ((name (get 'name attributes cadr))
@@ -419,15 +419,15 @@
     (let ((vars (map (lambda (var) (fix-method name var))
 		     raw-vars)))
       ; (werror "baar\n")
-      (list "#ifndef CLASS_DEFINE\n"	
+      (list "#ifndef GABA_DEFINE\n"	
 	    (do-struct name super vars)
 	    "extern " (declare-struct-mark-function name) ";\n"
 	    "extern " (declare-struct-free-function name) ";\n"
-	    "#endif /* !CLASS_DEFINE */\n\n"
-	    "#ifndef CLASS_DECLARE\n"
+	    "#endif /* !GABA_DEFINE */\n\n"
+	    "#ifndef GABA_DECLARE\n"
 	    (do-struct-mark-function name vars)
 	    (do-struct-free-function name vars)
-	    "#endif /* !CLASS_DECLARE */\n\n"))))
+	    "#endif /* !GABA_DECLARE */\n\n"))))
 
 ;;;; Expression compiler
 

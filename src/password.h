@@ -36,14 +36,14 @@
 #include <unistd.h>
 #endif
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "password.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 struct lsh_string *
 read_password(int max_length, struct lsh_string *prompt, int free);
 
-/* CLASS:
+/* GABA:
    (class
      (name unix_user)
      (vars
@@ -65,7 +65,7 @@ int verify_password(struct unix_user *user,
 
 struct userauth *make_password_userauth(void);
 
-/* CLASS:
+/* GABA:
    (class
      (name unix_service)
      (vars

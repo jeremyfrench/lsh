@@ -31,11 +31,11 @@
  * in a SSH_MSG_SERVICE_REQUEST or SSH_MSG_USERAUTH_REQUEST) and for
  * any other stuff that needs initialization at some later time. */
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "service.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
    (class
      (name ssh_service)
      (vars

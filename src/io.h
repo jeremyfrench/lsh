@@ -36,12 +36,12 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "io.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* A closed function with a file descriptor as argument */
-/* CLASS:
+/* GABA:
    (class
      (name fd_callback)
      (vars
@@ -66,7 +66,7 @@
 
 #define CLOSE_PROTOCOL_FAILURE 5
 
-/* CLASS:
+/* GABA:
    (class
      (name close_callback)
      (vars
@@ -75,7 +75,7 @@
 
 #define CLOSE_CALLBACK(c, r) ((c)->f((c), (r)))
 
-/* CLASS:
+/* GABA:
    (class
      (name lsh_fd)
      (super resource)
@@ -107,7 +107,7 @@
 #define WRITE_FD(fd) ((fd)->write((fd)))
 #define REALLY_CLOSE_FD(fd) ((fd)->really_close((fd)))
 
-/* CLASS:
+/* GABA:
    (class
      (name io_fd)
      (super lsh_fd)
@@ -118,7 +118,7 @@
        (buffer object write_buffer)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name fd_listen_callback)
      (vars
@@ -126,7 +126,7 @@
 */
 #define FD_LISTEN_CALLBACK(c, fd, s, a) ((c)->f((c), (fd), (s), (a)))
 
-/* CLASS:
+/* GABA:
    (class
      (name listen_fd)
      (super lsh_fd)
@@ -134,7 +134,7 @@
        (callback object fd_listen_callback)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name connect_fd)
      (super lsh_fd)
@@ -153,7 +153,7 @@ struct callout
 };
 #endif
 
-/* CLASS:
+/* GABA:
    (class
      (name io_backend)
      (vars

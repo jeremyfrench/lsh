@@ -30,9 +30,9 @@
 #include "parse.h"
 #include "server_pty.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "channel.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* Channels are indexed by local channel number in some array. This
  * index is not stored in the channel struct. When sending messages on
@@ -50,7 +50,7 @@
 /* Means that we should send close when we have both sent and received EOF. */
 #define CHANNEL_CLOSE_AT_EOF 0x10
 
-/* CLASS:
+/* GABA:
    (class
      (name ssh_channel)
      (vars
@@ -136,7 +136,7 @@
 /* FIXME: Perhaps, this information is better kept in the connection
  * object? */
 
-/* CLASS:
+/* GABA:
    (class
      (name channel_table)
      (vars
@@ -168,7 +168,7 @@
 */
 
 /* SSH_MSG_GLOBAL_REQUEST */
-/* CLASS:
+/* GABA:
    (class
      (name global_request)
      (vars
@@ -183,7 +183,7 @@
 /* Callback function, used to report success or failure for a
  * requested channel open. */
   
-/* CLASS:
+/* GABA:
    (class
      (name channel_open_callback)
      (vars
@@ -214,7 +214,7 @@
 #define CHANNEL_OPEN_CALLBACK(c, ch, e, m, a) \
   (c)->response((c), (ch), (e), (m), (a))
 
-/* CLASS:
+/* GABA:
    (class
      (name channel_open)
      (vars
@@ -228,7 +228,7 @@
 ((o)->handler((o), (c), (d), (n)))
 
 /* SSH_MSG_CHANNEL_REQUEST */
-/* CLASS:
+/* GABA:
    (class
      (name channel_request)
      (vars
@@ -242,7 +242,7 @@
 #define CHANNEL_REQUEST(s, c, conn, w, a) \
 ((s)->handler((s), (c), (conn), (w), (a)))
 
-/* CLASS:
+/* GABA:
    (class
      (name connection_startup)
      (vars

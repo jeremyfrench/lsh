@@ -32,14 +32,14 @@
 /* Forward declaration */
 struct ssh_connection;
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "connection.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* This is almost a write handler; difference is that it gets an extra
  * argument with a connection object. */
 
-/* CLASS:
+/* GABA:
    (class
      (name packet_handler)
      (vars
@@ -54,7 +54,7 @@ struct ssh_connection;
 #define CONNECTION_SERVER 0
 #define CONNECTION_CLIENT 1
 
-/* CLASS:
+/* GABA:
    (class
      (name ssh_connection)
      (super abstract_write)

@@ -30,13 +30,13 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "read_line.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "read_line.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name read_line)
      (super read_handler)
@@ -48,7 +48,7 @@
        (buffer array UINT8 MAX_LINE)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name string_read)
      (super abstract_read)

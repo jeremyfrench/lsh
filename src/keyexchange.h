@@ -57,11 +57,11 @@
  * nothing else. */
 #define KEX_STATE_NEWKEYS 3
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "keyexchange.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
    (class
      (name keyexchange_algorithm)
      (vars
@@ -78,7 +78,7 @@
 #define KEYEXCHANGE_INIT(kex, connection, f, ha, h, a) \
 ((kex)->init((kex), (connection), (f), (ha), (h), (a)))
 
-/* CLASS:
+/* GABA:
    (class
      (name kexinit)
      (vars
@@ -98,7 +98,7 @@
  * the message, record it in the connection structure, and possibly
  * send a first guessed message. */
 
-/* CLASS:
+/* GABA:
    (class
      (name make_kexinit)
      (vars
@@ -108,7 +108,7 @@
 #define MAKE_KEXINIT(m) ((m)->make((m)))
 
 /* Installs keys for use. */
-/* CLASS:
+/* GABA:
    (class
      (name install_keys)
      (vars
@@ -119,7 +119,7 @@
 
 #define INSTALL_KEYS(i, c, s) ((i)->install((i), (c), (s)))
 
-/* CLASS:
+/* GABA:
    (class
      (name newkeys_info)
      (vars
@@ -133,7 +133,7 @@
 */
 
 /* FIXME: I'm considering renaming this type to simply "keypair" */ 
-/* CLASS:
+/* GABA:
    (class
      (name keypair_info)
      (vars

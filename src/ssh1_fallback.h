@@ -26,11 +26,11 @@
 
 #include "lsh.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "ssh1_fallback.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
    (class
      (name ssh1_fallback)
      (vars

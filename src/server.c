@@ -126,7 +126,7 @@
 
 #include "server.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name server_callback)
      (super fd_listen_callback)
@@ -206,7 +206,7 @@ static int server_initiate(struct fd_listen_callback *c,
 }
 
 
-/* CLASS:
+/* GABA:
    (class
      (name server_line_handler)
      (super line_handler)
@@ -349,7 +349,7 @@ make_server_callback(struct io_backend *b,
   return &connected->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name server_cleanup)
      (super close_callback)
@@ -381,7 +381,7 @@ struct close_callback *make_server_close_handler(struct ssh_connection *c)
 }
 
 
-/* CLASS:
+/* GABA:
    (class
      (name process_resource)
      (super resource)
@@ -424,7 +424,7 @@ struct resource *make_process_resource(pid_t pid, int signal)
 }
 
 /* Session */
-/* CLASS:
+/* GABA:
    (class
      (name server_session)
      (super ssh_channel)
@@ -541,7 +541,7 @@ struct ssh_channel *make_server_session(struct unix_user *user,
   return &self->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name open_session)
      (super channel_open)
@@ -590,7 +590,7 @@ struct channel_open *make_open_session(struct unix_user *user,
   return &closure->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name server_connection_service)
      (super unix_service)
@@ -660,7 +660,7 @@ struct lsh_string *format_exit(struct ssh_channel *channel, int value)
 				"%i", value);
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name exit_shell)
      (super exit_callback)
@@ -749,7 +749,7 @@ static struct exit_callback *make_exit_shell(struct server_session *session)
   return &self->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name shell_request)
      (super channel_request)

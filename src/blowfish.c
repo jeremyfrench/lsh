@@ -33,7 +33,7 @@
 #include "blowfish.c.x"
 
 /* Blowfish */
-/* CLASS:
+/* GABA:
    (class
      (name blowfish_instance)
      (super crypto_instance)

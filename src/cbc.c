@@ -34,7 +34,7 @@
 #include "memxor.h"
 #endif
 
-/* CLASS:
+/* GABA:
    (class
      (name cbc_algorithm)
      (super crypto_algorithm)
@@ -42,7 +42,7 @@
        (inner object crypto_algorithm)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name cbc_instance)
      (super crypto_instance)

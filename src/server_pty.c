@@ -48,9 +48,9 @@
 #endif
 
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "server_pty.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 static void do_kill_pty_info(struct resource *r)
 {

@@ -30,9 +30,9 @@
 #include "bignum.h"
 #include "connection.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "publickey_crypto.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
 #if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
@@ -43,7 +43,7 @@ struct signer *make_dsa_signer_kludge(struct signer *dsa);
 
 /* Groups. For now, assume that all group elements are represented by
  * bignums. */
-/* CLASS:
+/* GABA:
    (class
      (name group)
      (vars
@@ -66,7 +66,7 @@ struct signer *make_dsa_signer_kludge(struct signer *dsa);
 
 struct group *make_zn(mpz_t p, mpz_t order);
 
-/* CLASS:
+/* GABA:
    (struct
      (name dsa_public)
      (vars
@@ -77,7 +77,7 @@ struct group *make_zn(mpz_t p, mpz_t order);
 */
 
 /* DH key exchange, with authentication */
-/* CLASS:
+/* GABA:
    (class
      (name diffie_hellman_method)
      (vars
@@ -91,7 +91,7 @@ struct group *make_zn(mpz_t p, mpz_t order);
  * are always embedded in other objects. Therefore there's no object
  * header. */
 
-/* CLASS:
+/* GABA:
    (struct
      (name diffie_hellman_instance)
      (vars

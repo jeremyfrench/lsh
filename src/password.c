@@ -28,8 +28,8 @@
 
 #include "xalloc.h"
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "password.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 

@@ -27,13 +27,13 @@
 #include "io.h"
 #include "xalloc.h"
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "command.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "command.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name command_apply)
      (super command_frame)
@@ -100,7 +100,7 @@ STATIC_COMMAND_SIMPLE(do_simple_command_I);
 /* ((S f) g)x == (f x)(g x) */
 
 /* Continuation called after evaluating (f x) */
-/* CLASS:
+/* GABA:
    (class
      (name command_S_continuation)
      (super command_frame)
@@ -118,7 +118,7 @@ static int do_command_S_continuation(struct command_continuation *c,
 }
 
 /* Represents ((S f) g) */
-/* CLASS:
+/* GABA:
    (class
      (name command_S_2)
      (super command_simple)
@@ -167,7 +167,7 @@ struct command *make_command_S_2(struct command *f,
 
 struct lsh_object *
 /* Represents (S f) */
-/* CLASS:
+/* GABA:
    (class
      (name command_S_1)
      (super command_simple)
@@ -222,7 +222,7 @@ struct lsh_object *gaba_apply_S_2(struct lsh_object *f,
 /* ((K x) y) == x */
 
 /* Represents (K x) */
-/* CLASS:
+/* GABA:
    (class
      (name command_K_1)
      (super command_simple)
@@ -253,7 +253,7 @@ struct command_simple command_K = STATIC_COMMAND_SIMPLE(do_simple_command_K);
 /* ((B f) g) x == (f (g x)) */
 
 /* Represents ((B f) g) */
-/* CLASS:
+/* GABA:
    (class
      (name command_B_2)
      (super command_simple)
@@ -293,7 +293,7 @@ make_command_B_2(struct command *f,
 }
 
 /* Represents (B f) */
-/* CLASS:
+/* GABA:
    (class
      (name command_B_1)
      (super command_simple)
@@ -332,7 +332,7 @@ do_simple_command_B(struct command_simple *ignored UNUSED,
 struct command_simple command_B = STATIC_COMMAND_SIMPLE(do_simple_command_B);
 
 /* Returned by listen */
-/* CLASS:
+/* GABA:
    (class
      (name listen_value)
      (vars
@@ -341,7 +341,7 @@ struct command_simple command_B = STATIC_COMMAND_SIMPLE(do_simple_command_B);
        (peerport . int)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name listen_command)
      (super command)
@@ -350,7 +350,7 @@ struct command_simple command_B = STATIC_COMMAND_SIMPLE(do_simple_command_B);
        (address . "struct sockaddr_in")))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name listen_command_callback)
      (super fd_listen_callback)

@@ -30,18 +30,18 @@
 
 #include <stdarg.h>
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "list.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
    (class
      (name list_header)
      (vars
        (length simple unsigned)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name int_list)
      (super list_header)
@@ -50,7 +50,7 @@
        (elements var-array int "super.length")))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name object_list)
      (super list_header)

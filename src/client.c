@@ -53,7 +53,7 @@
 #include "client.c.x"
 
 /* Handle connection and initial handshaking. */
-/* CLASS:
+/* GABA:
    (class
      (name client_callback)
      (super fd_callback)
@@ -102,7 +102,7 @@ static int client_initiate(struct fd_callback **c,
 				    NULL);
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name client_line_handler)
      (super line_handler)
@@ -226,7 +226,7 @@ struct close_callback *make_client_close_handler(void)
 }
 
 /* Start a service that the server has accepted (for instance ssh-userauth). */
-/* CLASS:
+/* GABA:
    (class
      (name accept_service_handler)
      (super packet_handler)
@@ -275,7 +275,7 @@ struct packet_handler *make_accept_service_handler(int service_name,
   return &closure->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name service_request)
      (super ssh_service)
@@ -308,7 +308,7 @@ struct ssh_service *request_service(int service_name,
   return &closure->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name request_info)
      (vars
@@ -327,7 +327,7 @@ struct ssh_service *request_service(int service_name,
 #define REQUEST_RESULT(r, c, i) ((r)->result((r), (c), (i)))
 
 /* Initiate and manage a session */
-/* CLASS:
+/* GABA:
    (class
      (name client_session)
      (super ssh_channel)
@@ -376,7 +376,7 @@ static int client_session_die(struct ssh_channel *c)
   exit(EXIT_FAILURE);
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name exit_handler)
      (super channel_request)
@@ -693,7 +693,7 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
   return &self->super;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name client_startup)
      (super connection_startup)
@@ -754,7 +754,7 @@ struct connection_startup *make_client_startup(struct io_fd *in,
 }
 
 /* FIXME: This should probably move to client_pty */
-/* CLASS:
+/* GABA:
    (class
      (name pty_request)
      (super request_info)

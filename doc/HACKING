@@ -36,7 +36,7 @@ debugging easier.
 An example might make this clearer. The definition of a write handler,
 taken from abstract_io.h:
 
-   /* CLASS:
+   /* GABA:
       (class
  	(name abstract_write)
  	(vars
@@ -46,7 +46,7 @@ taken from abstract_io.h:
    #define A_WRITE(f, packet) ((f)->write((f), (packet)))
    
    /* A handler that passes packets on to another handler */
-   /* CLASS:
+   /* GABA:
       (class
  	(name abstract_write_pipe)
  	(super abstract_write)
@@ -131,7 +131,7 @@ hundred lines long.
 Classes are written inside C comments. For each definition the source
 file contains a line
 
-   /* CLASS:
+   /* GABA:
 
 followed by an s-expression. There are a few different kinds of
 definitions. The most important is the class-expression, which looks

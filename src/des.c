@@ -32,7 +32,7 @@
 
 #include "des.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name des_instance)
      (super crypto_instance)

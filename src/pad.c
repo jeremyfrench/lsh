@@ -33,7 +33,7 @@
 
 #include "pad.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name packet_pad)
      (super abstract_write_pipe)

@@ -25,6 +25,6 @@
 
 #include "abstract_io.h"
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "abstract_io.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE

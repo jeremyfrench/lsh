@@ -28,11 +28,11 @@
 
 #include "lsh.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "abstract_compress.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
     (class 
        (name compress_instance)
        (vars
@@ -46,7 +46,7 @@
 #define COMPRESS_DEFLATE 0
 #define COMPRESS_INFLATE 1
 
-/* CLASS:
+/* GABA:
    (class
      (name compress_algorithm)
      (vars

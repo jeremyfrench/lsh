@@ -32,9 +32,9 @@
 
 #include <assert.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "alist.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 struct alist *alist_addv(struct alist *a, unsigned n, va_list args)
 {
@@ -90,7 +90,7 @@ static void do_linked_set(struct alist *c, int atom, void *value);
 /* NOTE: For a linear alist, all keys must be non-negative and less
  * than NUMBER_OF_ATOMS. */
 
-/* CLASS:
+/* GABA:
    (class
      (name alist_linear)
      (super alist)
@@ -159,7 +159,7 @@ struct alist *make_linear_alist(unsigned n, ...)
 
 /* NOTE: A linked alist does not have any limit on the size of its keys. */
 
-/* CLASS:
+/* GABA:
    (class
      (name alist_linked)
      (super alist)

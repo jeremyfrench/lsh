@@ -28,13 +28,13 @@
 
 #include "xalloc.h"
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "read_scan.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "read_scan.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name read_scan)
      (super read_handler)

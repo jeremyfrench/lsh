@@ -16,7 +16,7 @@
 /* FIXME: Supports only password authentication so far. There should
  * be some abstraction for handling several authentication methods. */
 
-/* CLASS:
+/* GABA:
    (class
      (name userauth_service)
      (super ssh_service)
@@ -32,7 +32,7 @@
  * io.c could be used for timeouts, but it's not clear how the timeout
  * handler can close the right connection. */
 
-/* CLASS:
+/* GABA:
    (class
      (name userauth_handler)
      (super packet_handler)

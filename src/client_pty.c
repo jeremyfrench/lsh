@@ -25,7 +25,7 @@
 
 #warning client_pty.c is currently not used.
 
-/* CLASS:
+/* GABA:
    (class
      (name pty_request)
      (super request_info)

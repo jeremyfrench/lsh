@@ -23,7 +23,7 @@
 
 #include "userauth.h"
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "userauth.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 

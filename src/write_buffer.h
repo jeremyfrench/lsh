@@ -29,9 +29,9 @@
 #include "abstract_io.h"
 #include "queue.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "write_buffer.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* For the packet queue */
 /* NOTE: No object header */
@@ -41,7 +41,7 @@ struct buffer_node
   struct lsh_string *packet;
 };
 
-/* CLASS:
+/* GABA:
    (class
      (name write_buffer)
      (super abstract_write)

@@ -28,9 +28,9 @@
 
 #include "abstract_io.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "read_line.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* This limit follows the ssh specification */
 #define MAX_LINE 255
@@ -40,7 +40,7 @@
  * install a new read handler. */
 
 /* May store a new handler into *h. */
-/* CLASS:
+/* GABA:
    (class
      (name line_handler)
      (vars

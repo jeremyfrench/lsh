@@ -32,7 +32,7 @@
 
 #include "read_data.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name read_data)
      (super read_handler)

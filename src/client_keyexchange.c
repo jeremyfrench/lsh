@@ -30,13 +30,13 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "client_keyexchange.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "client_keyexchange.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name dh_client_exchange)
      (super keyexchange_algorithm)
@@ -46,7 +46,7 @@
 */
 
 /* Handler for the kex_dh_reply message */
-/* CLASS:
+/* GABA:
    (class
      (name dh_client)
      (super packet_handler)

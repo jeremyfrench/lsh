@@ -30,13 +30,13 @@
 #include <string.h>
 #include <unistd.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "ssh1_fallback.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "ssh1_fallback.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name sshd1)
      (super ssh1_fallback)

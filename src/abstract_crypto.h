@@ -34,11 +34,11 @@
 #define mac_instance hash_instance
 #define mac_size hash_size
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "abstract_crypto.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
    (class
      (name crypto_instance)
      (vars
@@ -55,7 +55,7 @@
 #define CRYPTO_ENCRYPT 0
 #define CRYPTO_DECRYPT 1
 
-/* CLASS:
+/* GABA:
    (class
      (name crypto_algorithm)
      (vars
@@ -77,7 +77,7 @@
      
 /* FIXME: Hashes could use non-virtual methods. */
      
-/* CLASS:
+/* GABA:
    (class
      (name hash_instance)
      (vars
@@ -96,7 +96,7 @@
 
 #define HASH_COPY(instance) ((instance)->copy((instance)))
 
-/* CLASS:
+/* GABA:
    (class
      (name hash_algorithm)
      (vars
@@ -107,7 +107,7 @@
 
 #define MAKE_HASH(h) ((h)->make_hash((h)))
 
-/* CLASS:
+/* GABA:
    (class
      (name mac_algorithm)
      (vars
@@ -118,7 +118,7 @@
 
 #define MAKE_MAC(m, key) ((m)->make_mac((m), (key)))
 
-/* CLASS:
+/* GABA:
    (class
     (name signer)
     (vars
@@ -129,7 +129,7 @@
 
 #define SIGN(signer, length, data) ((signer)->sign((signer), (length), (data)))
 
-/* CLASS:
+/* GABA:
    (class
      (name verifier)
      (vars
@@ -141,7 +141,7 @@
 #define VERIFY(verifier, length, data, slength, sdata)\
 ((verifier)->verify((verifier), (length), (data), (slength), (sdata)))
 
-/* CLASS:
+/* GABA:
    (class
      (name signature_algorithm)
      (vars

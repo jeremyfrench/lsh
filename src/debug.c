@@ -34,7 +34,7 @@
 
 #include "debug.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name packet_debug)
      (super abstract_write_pipe)

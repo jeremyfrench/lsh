@@ -31,7 +31,7 @@
 
 #include "cascade.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name crypto_cascade_algorithm)
      (super crypto_algorithm)
@@ -39,7 +39,7 @@
        (cascade object object_list)))
 */
 
-/* CLASS:
+/* GABA:
    (class
      (name crypto_cascade_instance)
      (super crypto_instance)

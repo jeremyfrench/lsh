@@ -30,14 +30,14 @@
 #include "resource.h"
 #include "xalloc.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "tcpforward.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* this class encapsulates tcpip_forward global requests currently
  * opened by the client. */
 
-/* CLASS:
+/* GABA:
    (class
      (name forwarded_tcpip)
      ; (inherit resource)

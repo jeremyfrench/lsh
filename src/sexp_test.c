@@ -36,7 +36,7 @@
 
 #include "sexp_test.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name output_sexp)
      (super sexp_handler)
@@ -56,7 +56,7 @@ static int do_output_sexp(struct sexp_handler *h, struct sexp *e)
   return res;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name input_closed)
      (super close_callback)

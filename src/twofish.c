@@ -33,7 +33,7 @@
 #include "twofish.c.x"
 
 /* Twofish */
-/* CLASS:
+/* GABA:
    (class
      (name twofish_instance)
      (super crypto_instance)

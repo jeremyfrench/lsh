@@ -29,11 +29,11 @@
 
 #include "io.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "reaper.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
-/* CLASS:
+/* GABA:
    (class
      (name exit_callback)
      (vars
@@ -42,7 +42,7 @@
 
 #define EXIT_CALLBACK(e, s, c, v) ((e)->exit((e), (s), (c), (v)))
 
-/* CLASS:
+/* GABA:
    (class
      (name reap)
      (vars

@@ -28,9 +28,9 @@
 #include "parse.h"
 #include "service.h"
 
-#define CLASS_DECLARE
+#define GABA_DECLARE
 #include "userauth.h.x"
-#undef CLASS_DECLARE
+#undef GABA_DECLARE
 
 /* Returns 0 if the request is somehow invalid. Otheerwise, returns 1,
  * and sets SERVICE non-NULL iff access is granted. */
@@ -38,7 +38,7 @@
 /* FIXME: Something more general is needed for authentication methods
  * which send additional messages. */
 
-/* CLASS:
+/* GABA:
    (class
      (name userauth)
      (vars

@@ -37,13 +37,13 @@
 #include <string.h>
 #include <assert.h>
 
-#define CLASS_DEFINE
+#define GABA_DEFINE
 #include "keyexchange.h.x"
-#undef CLASS_DEFINE
+#undef GABA_DEFINE
 
 #include "keyexchange.c.x"
 
-/* CLASS:
+/* GABA:
    (class
      (name kexinit_handler)
      (super packet_handler)
@@ -517,7 +517,7 @@ static struct compress_instance *kex_make_inflate(struct object_list *algorithms
   return algorithm ? MAKE_INFLATE(algorithm) : NULL;
 }
 
-/* CLASS:
+/* GABA:
    (class
      (name newkeys_handler)
      (super packet_handler)
@@ -572,7 +572,7 @@ make_newkeys_handler(struct crypto_instance *crypto,
 }
 
 /* Uses the same algorithms for both directions */
-/* CLASS:
+/* GABA:
    (class
      (name simple_kexinit)
      (super make_kexinit)
@@ -656,7 +656,7 @@ struct make_kexinit *make_test_kexinit(struct randomness *r)
 }
 #endif
 
-/* CLASS:
+/* GABA:
    (class
      (name install_new_keys)
      (super install_keys)
