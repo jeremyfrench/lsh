@@ -2,6 +2,25 @@
  *
  */
 
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 1998 Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 #include "connection.h"
 
 #include "debug.h"
@@ -15,10 +34,14 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#define CLASS_DEFINE
+#include "connection.h.x"
+#undef CLASS_DEFINE
+
 static int handle_connection(struct abstract_write *w,
 			     struct lsh_string *packet)
 {
-  struct ssh_connection *closure = (struct ssh_connection *) w;
+  CAST(closure, ssh_connection, w);
   UINT8 msg;
 
   if (!packet->length)
@@ -82,7 +105,7 @@ static int do_fail(struct packet_handler *closure,
 		   struct ssh_connection *connection,
 		   struct lsh_string *packet)
 {
-  MDEBUG(closure);
+  CHECK_TYPE(packet_handler, closure);
 
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
@@ -90,9 +113,7 @@ static int do_fail(struct packet_handler *closure,
 
 struct packet_handler *make_fail_handler(void)
 {
-  struct packet_handler *res;
-
-  NEW(res);
+  NEW(packet_handler, res);
 
   res->handler = do_fail;
   return res;
@@ -103,8 +124,7 @@ static int do_unimplemented(struct packet_handler *closure,
 			    struct lsh_string *packet)
 {
   int res;
-
-  MDEBUG(closure);
+  CHECK_TYPE(packet_handler, closure);
 
   res =  A_WRITE(connection->write,
 		 ssh_format("%c%i",
@@ -119,9 +139,7 @@ static int do_unimplemented(struct packet_handler *closure,
 
 struct packet_handler *make_unimplemented_handler(void)
 {
-  struct packet_handler *res;
-
-  NEW(res);
+  NEW(packet_handler, res);
 
   res->handler = do_unimplemented;
   return res;
@@ -130,10 +148,10 @@ struct packet_handler *make_unimplemented_handler(void)
 
 struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
 {
-  struct ssh_connection *connection;
   int i;
 
-  NEW(connection);
+  NEW(ssh_connection, connection);
+  
   connection->super.write = handle_connection;
 
   /* Initialize instance variables */

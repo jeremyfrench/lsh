@@ -28,6 +28,10 @@
 
 #include "lsh_types.h"
 
+#define CLASS_DECLARE
+#include "abstract_io.h.x"
+#undef CLASS_DECLARE
+
 /* A read-function returning n means:
  *
  * n > 0: n bytes were read successfully.
@@ -38,40 +42,78 @@
 #define A_FAIL -1
 #define A_EOF -2
 
+/* CLASS:
+   (class
+     (name abstract_read)
+     (vars
+       (read method int
+             "UINT32 length" "UINT8 *buffer")))
+*/
+#if 0
 struct abstract_read
 {
   struct lsh_object header;
   int (*read)(struct abstract_read **r,
 	      UINT32 length, UINT8 *buffer);
 };
+#endif
 
 #define A_READ(f, length, buffer) (f)->read(&(f), (length), (buffer))
 
 
 /* May store a new handler into *h. */
+
+/* CLASS:
+   (class
+     (name read_handler)
+     (vars
+       (handler method int "struct abstract_read *read")))
+*/
+
+#if 0
 struct read_handler
 {
   struct lsh_object header;
   int (*handler)(struct read_handler **h,
 		 struct abstract_read *read);
 };
+#endif
 
 #define READ_HANDLER(h, read) ((h)->handler(&(h), (read)))
 
+/* CLASS:
+   (class
+     (name abstract_write)
+     (vars
+       (write method int "struct lsh_string *packet")))
+*/
+
+#if 0
 struct abstract_write
 {
   struct lsh_object header;
   int (*write)(struct abstract_write *w,
 	       struct lsh_string *packet);
 };
+#endif
 
 #define A_WRITE(f, packet) ((f)->write((f), (packet)))
 
 /* A handler that passes packets on to another processor */
+/* CLASS:
+   (class
+     (name abstract_write_pipe)
+     (super abstract_write)
+     (vars
+       (next object abstract_write)))
+*/
+
+#if 0
 struct abstract_write_pipe
 {
   struct abstract_write super;
   struct abstract_write *next;
 };
+#endif
 
 #endif /*LSH_ABSTRACT_IO_H_INCLUDED */
