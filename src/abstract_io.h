@@ -20,9 +20,11 @@ struct abstract_read
 
 struct read_handler
 {
-  int (*handler)(struct read_handler *closure,
-		 struct abstract_read *read);
+  struct read_handler (*handler)(struct read_handler *closure,
+				 struct abstract_read *read);
 };
+
+#define READ_HANDLER(handler, read) ((handler)->handler((handler), (read)))
 
 struct abstract_write;
 typedef int (*abstract_write_f)(struct abstract_write *closure,
