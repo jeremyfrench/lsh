@@ -1,0 +1,264 @@
+# Nettle Makefile
+
+@SET_MAKE@
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+LIBOBJS = @LIBOBJS@
+
+SUBDIRS = tools testsuite examples
+
+include config.make
+
+
+TARGETS = aesdata$(EXEEXT) desdata$(EXEEXT) shadata$(EXEEXT) libnettle.a $(SHLIBTARGET)
+
+all check install uninstall clean distclean mostlyclean maintainer-clean distdir:
+	$(MAKE) $@-here
+	set -e; for d in $(SUBDIRS); do $(MAKE) -C $$d $@; done
+
+check-here:
+	true
+
+.SUFFIXES:
+.SUFFIXES: .asm .html .c .dvi .info .$(OBJEXT) .p$(OBJEXT) .exe .pdf .ps .texinfo
+
+all-here: $(TARGETS)
+
+nettle_SOURCES = aes.c \
+	         aes-decrypt-table.c aes-decrypt.c \
+		 aes-encrypt-table.c aes-encrypt.c \
+		 aes-set-encrypt-key.c aes-set-decrypt-key.c aes-meta.c \
+		 arcfour.c arcfour-crypt.c arcfour-meta.c \
+		 arctwo.c arctwo-meta.c \
+		 base16-encode.c base16-decode.c base16-meta.c \
+                 base64-encode.c base64-decode.c base64-meta.c \
+		 cast128.c cast128-meta.c \
+		 blowfish.c \
+		 cbc.c \
+		 des.c \
+		 des3.c des-compat.c \
+		 hmac.c hmac-md5.c hmac-sha1.c hmac-sha256.c \
+		 knuth-lfib.c \
+		 md2.c md2-meta.c md4.c md4-meta.c \
+		 md5.c md5-compat.c md5-meta.c \
+		 sha1.c sha1-compress.c sha1-meta.c sha256.c sha256-meta.c \
+		 serpent.c serpent-meta.c \
+		 twofish.c twofish-meta.c \
+		 yarrow256.c yarrow_key_event.c \
+		 sexp.c sexp-format.c \
+		 sexp-transport.c sexp-transport-format.c \
+		 bignum.c bignum-random.c sexp2bignum.c \
+		 pkcs1.c pkcs1-rsa-md5.c pkcs1-rsa-sha1.c \
+		 rsa.c rsa-sign.c rsa-verify.c \
+		 rsa-md5-sign.c rsa-md5-verify.c \
+		 rsa-sha1-sign.c rsa-sha1-verify.c \
+		 rsa-encrypt.c rsa-decrypt.c \
+		 rsa-keygen.c rsa-compat.c \
+		 rsa2sexp.c sexp2rsa.c \
+		 dsa.c dsa-sign.c dsa-verify.c dsa-keygen.c \
+		 sexp2dsa.c \
+		 pgp-encode.c rsa2openpgp.c \
+		 buffer.c buffer-init.c realloc.c \
+		 nettle-internal.c
+
+HEADERS = aes.h arcfour.h arctwo.h bignum.h blowfish.h \
+	  base16.h base64.h buffer.h cast128.h \
+	  cbc.h \
+	  des.h des-compat.h dsa.h \
+	  hmac.h \
+	  knuth-lfib.h \
+	  macros.h \
+	  md2.h md4.h \
+	  md5.h md5-compat.h \
+	  memxor.h \
+	  nettle-meta.h \
+	  pgp.h pkcs1.h realloc.h rsa.h rsa-compat.h \
+	  sexp.h \
+	  serpent.h sha.h twofish.h \
+	  yarrow.h
+
+INSTALL_HEADERS = $(HEADERS) nettle-types.h
+
+SOURCES = $(nettle_SOURCES) aesdata.c desdata.c shadata.c
+
+DISTFILES = $(SOURCES) $(HEADERS) .bootstrap aclocal.m4 configure.ac configure \
+	config.guess config.sub texinfo.tex \
+	config.h.in config.m4.in config.make.in	Makefile.in \
+	README AUTHORS COPYING INSTALL NEWS TODO \
+	nettle.texinfo nettle.info sha-example.c
+
+# Rules building libnettle.a
+# FIXME: Do we really need to delete the archive first?
+libnettle.a: $(nettle_SOURCES:.c=.o) $(LIBOBJS)
+	-rm -f $@
+	$(AR) $(ARFLAGS) $@ $^
+	$(RANLIB) $@
+
+.c.$(OBJEXT):
+	$(COMPILE) $(CCPIC_MAYBE) -c $< \
+	&& $(DEP_PROCESS)
+
+# Rules building libnettle.so
+$(SHLIBFORLINK): $(nettle_SOURCES:.c=.p$(OBJEXT)) $(LIBOBJS:.$(OBJEXT)=.p$(OBJEXT))
+	$(SHLIBLINK) $^ -o $@ $(SHLIBLIBS)
+	-mkdir .lib 2>/dev/null
+	[ -z "$(SHLIBSONAME)" ] || (cd .lib \
+          && ln -sf ../$(SHLIBFORLINK) $(SHLIBSONAME))
+
+.c.p$(OBJEXT):
+	$(COMPILE) $(SHLIBCFLAGS) -c $< -o $@ \
+	&& $(DEP_PROCESS)
+
+.o$(EXEEXT):
+	$(LINK) $^ $(LIBS) -o $@
+
+# aesdata.$(OBJEXT) : aesdata.c
+# 	$(COMPILE) -c $< && $(DEP_PROCESS)
+aesdata$(EXEEXT): aesdata.$(OBJEXT)
+	$(LINK) $^ $(LIBS) -o $@
+
+# desdata.$(OBJEXT) : desdata.c
+# 	$(COMPILE)  -c $< && $(DEP_PROCESS)
+desdata$(EXEEXT): desdata.$(OBJEXT)
+	$(LINK) $^ $(LIBS) -o $@
+
+# shadata.$(OBJEXT) : shadata.c
+# 	$(COMPILE)  -c $< && $(DEP_PROCESS)
+shadata$(EXEEXT): shadata.$(OBJEXT)
+	$(LINK) $^ $(LIBS) -lm -o $@
+
+# FIXME: For some reason, this rule breaks builds on Tru64 5.1B (on
+# alpha), with the system make. It fails with "Don't know how to make
+# aes.asm", which is very strange, since the make program on this
+# system is not supposed to know about %-style pattern rules, and
+# "aes.asm" doesn't occur explicitly in any target or dependency.
+
+@IF_ENABLE_ASM@%.$(OBJEXT): %.asm asm.m4 machine.m4 config.m4
+@IF_ENABLE_ASM@	$(M4) $(srcdir)/asm.m4 machine.m4 config.m4 \
+@IF_ENABLE_ASM@		`test -f $< || echo '$(srcdir)/'`$< >$*.s
+@IF_ENABLE_ASM@	$(CC) $(CFLAGS) $(CCPIC_MAYBE) -c $*.s -o $@
+@IF_ENABLE_ASM@	echo >$*.d 
+
+# All assembler files should use pic-code only.
+@IF_ENABLE_ASM@%.p$(OBJEXT): %.asm asm.m4 machine.m4 config.m4
+@IF_ENABLE_ASM@	$(M4) $(srcdir)/asm.m4 machine.m4 config.m4 \
+@IF_ENABLE_ASM@		`test -f $< || echo '$(srcdir)/'`$< >$*.s
+@IF_ENABLE_ASM@	$(CC) $(CFLAGS) $(CCPIC) -c $*.s -o $@
+@IF_ENABLE_ASM@	echo >$*.d 
+
+# Configure-related rules
+
+.PRECIOUS: Makefile
+Makefile: $(srcdir)/Makefile.in config.status
+	$(SHELL) ./config.status $@
+
+settings: $(srcdir)/settings.in config.status
+	$(SHELL) ./config.status $@
+
+config.status: $(srcdir)/configure
+	$(SHELL) ./config.status --recheck
+
+configure: $(srcdir)/configure.ac $(srcdir)/aclocal.m4
+	cd $(srcdir) && $(AUTOCONF)
+
+config.h: stamp-h1
+	@if test ! -f $@; then \
+	  rm -f stamp-h1; \
+	  $(MAKE) stamp-h1; \
+	else :; fi
+
+stamp-h1: $(srcdir)/config.h.in config.status
+	@rm -f stamp-h1
+	$(SHELL) ./config.status config.h
+$(srcdir)/config.h.in: $(srcdir)/configure.ac
+	cd $(srcdir) && $(AUTOHEADER)
+	rm -f stamp-h1
+	touch $@
+
+# Installation
+install-here: install-info libnettle.a $(SHLIBTARGET) $(INSTALL_HEADERS) $(SHLIBINSTALL)
+	$(INSTALL) -d $(includedir)/nettle
+	$(INSTALL) -d $(libdir)
+	$(INSTALL_DATA) $(INSTALL_HEADERS) $(includedir)/nettle
+	$(INSTALL_DATA) libnettle.a $(libdir)
+
+install-shared: $(SHLIBFORLINK)
+	$(INSTALL) -d $(libdir)
+	$(INSTALL_DATA) $(SHLIBFORLINK) $(libdir)/$(SHLIBFILE)
+	[ -z "$(SHLIBSONAME)" ] \
+                || (cd $(libdir) \
+		&& ln -sf $(SHLIBFILE) $(SHLIBSONAME) \
+		&& ln -sf $(SHLIBFILE) $(SHLIBFORLINK) )
+
+install-info: nettle.info
+	$(INSTALL) -d $(infodir)
+	$(INSTALL_DATA) nettle.info $(infodir) ; \
+	if (install-info --version && \
+	    install-info --version 2>&1 | sed 1q | grep -i -v debian) >/dev/null 2>&1; then \
+	  install-info --info-dir="$(infodir)" nettle.info ; \
+	else : ; fi
+
+# Distribution
+distdir = $(PACKAGE_NAME)-$(PACKAGE_VERSION)
+top_distdir = $(distdir)
+
+# $(distdir) must always be a relative path!
+distdir-here: $(DISTFILES)
+	rm -rf $(distdir)
+	mkdir $(distdir)
+	cp $(DISTFILES) $(distdir)
+	set -e; for d in $(SUBDIRS); do \
+	  sd=$(distdir)/$$d ; \
+	  mkdir $$sd && $(MAKE) -C $$d distdir=../$$sd $@ ; \
+	done
+
+dist: distdir
+	tar cf - $(distdir) | gzip -c >$(distdir).tar.gz	
+	rm -rf $(distdir)
+
+rm_distcheck = test ! -d distcheck-tmp \
+	    || { find distcheck-tmp -type d ! -perm -200 -exec chmod u+w {} ';' \
+          && rm -fr distcheck-tmp; }; }
+
+distcheck: dist
+	$(rm_distcheck)
+	mkdir distcheck-tmp
+	cd distcheck-tmp && gzip -d < $(distdir).tar.gz | tar xf - && chmod -R a-w $(distdir)
+	mkdir distcheck-tmp/build
+	mkdir distcheck-tmp/install
+	cd distcheck-tmp/build && ../$(distdir)/configure --prefix=`cd ../install && pwd`
+	cd distcheck-tmp/build && $(MAKE)
+	cd distcheck-tmp/build && $(MAKE) check
+	cd distcheck-tmp/build && $(MAKE) install
+	cd distcheck-tmp/build && $(MAKE) dist
+	cd distcheck-tmp/build && rm *.gz
+	cd distcheck-tmp/build && $(MAKE) distcleancheck
+	cd distcheck-tmp && find build -type f -print > leftover-files
+	@test `cat distcheck-tmp/leftover-files | wc -l` -eq 0  \
+	  || { echo "ERROR: files left in build directory after distclean:" ; \
+	       cat distcheck-tmp/leftover-files ; \
+	       exit 1; }
+	$(rm_distcheck)
+
+distcleancheck: distclean
+	@if test '$(srcdir)' = . ; then \
+	  echo "ERROR: distcleancheck can only run from a VPATH build" ; \
+	  exit 1 ; \
+	fi
+	@test `$(distcleancheck_listfiles) | wc -l` -eq 0 \
+	  || { echo "ERROR: files left in build directory after distclean:" ; \
+	       $(distcleancheck_listfiles) ; \
+	       exit 1; } >&2
+
+
+clean-here:
+	rm -f $(TARGETS) *.$(OBJEXT) *.p$(OBJEXT) *.d
+
+distclean-hdr:
+	-rm -f config.h stamp-h1
+config.m4: config.status $(srcdir)/config.m4.in
+	$(SHELL) ./config.status $@
+
+-include $(SOURCES:.c=.$(OBJEXT).d) $(SOURCES:.c=.p$(OBJEXT).d)
