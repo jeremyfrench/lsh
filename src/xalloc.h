@@ -26,7 +26,8 @@
 #ifndef LSH_XALLOC_H_INCLUDED
 #define LSH_XALLOC_H_INCLUDED
 
-#include "lsh_types.h"
+#include "list.h"
+
 #include <stdlib.h>
 
 /* Allocation */
@@ -53,6 +54,7 @@ void lsh_object_free(struct lsh_object *o);
 void *lsh_space_alloc(size_t size);
 void lsh_space_free(void *p);
 
+struct lsh_list *lsh_list_alloc(unsigned length);
 
 #ifdef DEBUG_ALLOC
 

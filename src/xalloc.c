@@ -24,6 +24,7 @@
  */
 
 #include "xalloc.h"
+
 #include "werror.h"
 
 #include <stdlib.h>
@@ -127,6 +128,21 @@ struct lsh_object *lsh_object_alloc(struct lsh_class *class)
   return instance;
 }
 
+struct lsh_list *lsh_list_alloc(unsigned length)
+{
+  struct lsh_class *class = &CLASS(lsh_list);
+  struct lsh_list *list = xalloc(class->size
+				 + sizeof(int) * (length - 1));
+  list->super.isa = class;
+  list->super.alloc_method = LSH_ALLOC_HEAP;
+
+  list->length = length;
+  
+  gc_register(&list->super);
+
+  return list;
+}
+    
 /* Should be called *only* by the gc */
 void lsh_object_free(struct lsh_object *o)
 {
