@@ -1208,7 +1208,7 @@ DEFINE_PACKET_HANDLER(static, channel_data_handler,
               if (data->length > channel->rec_max_packet)
                 {
                   werror("Channel data larger than rec_max_packet. Extra data ignored.\n");
-                  data->length = channel->rec_max_packet;
+		  lsh_string_trunc(data, channel->rec_max_packet);
                 }
 
 	      if (data->length > channel->rec_window_size)
@@ -1217,8 +1217,8 @@ DEFINE_PACKET_HANDLER(static, channel_data_handler,
 		  werror("Channel data overflow. Extra data ignored.\n");
 		  debug("   (data->length=%i, rec_window_size=%i).\n", 
 			data->length, channel->rec_window_size);
-		  
-		  data->length = channel->rec_window_size;
+
+		  lsh_string_trunc(data, channel->rec_window_size);
 		}
 
 	      if (!data->length)
@@ -1279,7 +1279,7 @@ DEFINE_PACKET_HANDLER(static, channel_extended_data_handler,
               if (data->length > channel->rec_max_packet)
                 {
                   werror("Channel data larger than rec_max_packet. Extra data ignored.\n");
-                  data->length = channel->rec_max_packet;
+		  lsh_string_trunc(data, channel->rec_max_packet);
                 }
 
 	      if (data->length > channel->rec_window_size)
@@ -1289,7 +1289,8 @@ DEFINE_PACKET_HANDLER(static, channel_extended_data_handler,
 			 "Extra data ignored.\n");
 		  debug("   (data->length=%i, rec_window_size=%i).\n", 
 			data->length, channel->rec_window_size);
-		  data->length = channel->rec_window_size;
+
+		  lsh_string_trunc(data, channel->rec_window_size);
 		}
 	      
 	      if (!data->length)
