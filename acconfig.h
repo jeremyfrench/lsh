@@ -3,6 +3,9 @@
 #undef PACKAGE
 #undef VERSION
 
+/* The installation prefix. */
+#undef PREFIX
+
 /* Define to enable sanity checking on memory allocation and casting */
 #undef DEBUG_ALLOC
 
@@ -41,6 +44,9 @@
 
 /* For utmp support */
 #undef WITH_UTMP
+
+/* For kerberos */
+#undef WITH_KERBEROS
 
 /* Define to indicate that shutdown seems to work properly */
 #undef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
