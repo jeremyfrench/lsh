@@ -37,7 +37,7 @@
      (name packet_encrypt)
      (super abstract_write_pipe)
      (vars
-       (sequence_number simple UINT32)
+       (sequence_number . UINT32)
        (connection object ssh_connection)))
 */
 

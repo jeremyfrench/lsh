@@ -56,7 +56,7 @@ struct alist;
      (name alist)
      (meta alist)
      (vars
-       (size simple unsigned))
+       (size . unsigned))
      ; Only subclasses has methods 
      (methods NULL NULL))
 */

@@ -41,7 +41,7 @@ struct crypto_algorithm *make_cast_algorithm(UINT32 key_size);
      (name cast_instance)
      (super crypto_instance)
      (vars
-       (ctx simple "struct cast_key")))
+       (ctx . "struct cast_key")))
 */
 
 

@@ -60,7 +60,7 @@
      (name accept_service_handler)
      (super packet_handler)
      (vars
-       (service simple UINT32)
+       (service . int)
        (c object command_continuation)
        ;; Do we really need the exception handler here?
        (e object exception_handler)))
@@ -75,7 +75,7 @@ do_accept_service(struct packet_handler *c,
 
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 name;
+  int name;
 
   simple_buffer_init(&buffer, packet->length, packet->data);
   
@@ -170,7 +170,7 @@ make_request_service(int service)
      (super ssh_channel)
      (vars
        ; Exec or shell request. 
-       ;(final_request simple int)
+       ;(final_request . int)
        ;(args string)
 
        ; List of requests
@@ -182,7 +182,7 @@ make_request_service(int service)
        (err object lsh_fd)
 
        ; Where to save the exit code.
-       (exit_status simple "int *")))
+       (exit_status . "int *")))
 */
 
 /* Callback used when the server sends us eof */
@@ -209,7 +209,7 @@ do_client_session_close(struct ssh_channel *c)
      (name exit_handler)
      (super channel_request)
      (vars
-       (exit_status simple "int *")))
+       (exit_status . "int *")))
 */
 
 static void

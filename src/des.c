@@ -37,7 +37,7 @@
      (name des_instance)
      (super crypto_instance)
      (vars
-       (ctx array (simple UINT32) DES_EXPANDED_KEYLEN)))
+       (ctx array UINT32 DES_EXPANDED_KEYLEN)))
 */
 
 static void do_des_encrypt(struct crypto_instance *s,

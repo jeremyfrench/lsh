@@ -55,7 +55,7 @@ make_accept_service_handler(UINT32 service,
      (name request_service)
      (super command)
      (vars
-       (service simple int)))
+       (service . int)))
 */
 
 void

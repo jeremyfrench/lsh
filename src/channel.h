@@ -85,11 +85,11 @@
        ; payload, i.e. the DATA string in SSH_CHANNEL_DATA and
        ; SSH_MSG_CHANNEL_EXTENDED_DATA.
 
-       (rec_window_size simple UINT32)
-       (rec_max_packet simple UINT32)
+       (rec_window_size . UINT32)
+       (rec_max_packet . UINT32)
 
-       (send_window_size simple UINT32)
-       (send_max_packet simple UINT32)
+       (send_window_size . UINT32)
+       (send_max_packet . UINT32)
 
        ; FIXME: Perhaps this should be moved to the channel_table, and
        ; a pointer to that table be stored here instead?
@@ -99,13 +99,13 @@
   
        (request_types object alist)
 
-       (flags simple int)
+       (flags . int)
 
        ; Number of files connected to this channel. For instance,
        ; stdout and stderr can be multiplexed on the same channel. We
        ; should not close the channel until we have got an EOF on both
        ; sources.
-       (sources simple int)
+       (sources . int)
 
        ; Type is CHANNEL_DATA or CHANNEL_STDERR_DATA
        (receive method void "int type" "struct lsh_string *data")
@@ -181,11 +181,11 @@
        ; numbers are in use.
        (in_use space UINT8)
        
-       (allocated_channels simple UINT32)
-       (next_channel simple UINT32)
+       (allocated_channels . UINT32)
+       (next_channel . UINT32)
      
-       (used_channels simple UINT32)
-       (max_channels simple UINT32) ; Max number of channels allowed 
+       (used_channels . UINT32)
+       (max_channels . UINT32) ; Max number of channels allowed 
 
        ; Forwarded TCP ports
        (local_ports struct object_queue)
@@ -200,7 +200,7 @@
        
        ; If non-zero, close connection after all active channels have
        ; died, and don't allow any new channels to be opened.
-       (pending_close simple int)))
+       (pending_close . int)))
 */
 
 /* SSH_MSG_GLOBAL_REQUEST */

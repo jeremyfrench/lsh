@@ -42,7 +42,7 @@
    (class
      (name crypto_instance)
      (vars
-       (block_size simple UINT32)
+       (block_size . UINT32)
        ; Length must be a multiple of the block size.
        ; NOTE: src == dst is allowed, but no other overlaps.
        (crypt method void
@@ -59,9 +59,9 @@
    (class
      (name crypto_algorithm)
      (vars
-       (block_size simple UINT32)
-       (key_size simple UINT32)
-       (iv_size simple UINT32)
+       (block_size . UINT32)
+       (key_size . UINT32)
+       (iv_size . UINT32)
        (make_crypt method (object crypto_instance)
                    "int mode" "const UINT8 *key" "const UINT8 *iv")))
 */
@@ -81,7 +81,7 @@
    (class
      (name hash_instance)
      (vars
-       (hash_size simple UINT32)
+       (hash_size . UINT32)
        (update method void 
 	       "UINT32 length" "const UINT8 *data")
        (digest method void "UINT8 *result")
@@ -103,8 +103,8 @@
    (class
      (name hash_algorithm)
      (vars
-       (block_size simple UINT32)
-       (hash_size simple UINT32)
+       (block_size . UINT32)
+       (hash_size . UINT32)
        (make_hash method (object hash_instance))))
 */
 
@@ -114,9 +114,9 @@
    (class
      (name mac_algorithm)
      (vars
-       (hash_size simple UINT32)
+       (hash_size . UINT32)
        ; Recommended key size
-       (key_size simple UINT32)
+       (key_size . UINT32)
        (make_mac method (object mac_instance)
                  "UINT32 length" "const UINT8 *key")))
 */

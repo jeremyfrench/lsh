@@ -42,9 +42,9 @@
        ; CONNECTION_SERVER or CONNECTION_CLIENT
        (flags . UINT32)
        
-       (block_size simple UINT32)
-       (id_comment simple "const char *")
-       (debug_comment simple "const char *")
+       (block_size . UINT32)
+       (id_comment . "const char *")
+       (debug_comment . "const char *")
 
        (random object randomness)
        (algorithms object alist)

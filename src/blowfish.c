@@ -38,7 +38,7 @@
      (name blowfish_instance)
      (super crypto_instance)
      (vars
-       (ctx simple "BLOWFISH_context")))
+       (ctx . "BLOWFISH_context")))
 */
 
 static void do_blowfish_encrypt(struct crypto_instance *s,

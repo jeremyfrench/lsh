@@ -35,7 +35,7 @@
      (name arcfour_instance)
      (super crypto_instance)
      (vars
-       (ctx simple "struct arcfour_ctx")))
+       (ctx . "struct arcfour_ctx")))
 */
    
 static void do_crypt_arcfour(struct crypto_instance *s,

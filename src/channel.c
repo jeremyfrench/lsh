@@ -1857,7 +1857,7 @@ channel_transmit_extended(struct ssh_channel *channel,
      (name channel_write_extended)
      (super channel_write)
      (vars
-       (type simple UINT32)))
+       (type . UINT32)))
 */
 
 static void

@@ -53,7 +53,7 @@
      (super packet_handler)
      (vars
        (dh struct dh_instance)
-       (hostkey_algorithm . UINT32)
+       (hostkey_algorithm . int)
        (verifier object lookup_verifier)
        (algorithms object object_list)))
 */
