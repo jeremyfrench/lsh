@@ -324,12 +324,9 @@ spki_5_tuple_by_subject(const struct spki_5_tuple *list,
 int
 spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i)
 {
-  /* FIXME: Change to an assertion? */
-  if (i->type != SPKI_TYPE_ACL)
+  if (!spki_check_type(i,  SPKI_TYPE_ACL))
     return 0;
 
-  spki_parse_type(i);
- 
   if (i->type == SPKI_TYPE_VERSION)
     spki_parse_version(i);
   
@@ -521,11 +518,8 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
 {
   struct spki_5_tuple *chain = NULL;
 
-  /* FIXME: Change to an assertion? */
-  if (i->type != SPKI_TYPE_SEQUENCE)
+  if (!spki_check_type(i, SPKI_TYPE_SEQUENCE))
     return NULL;
-
-  spki_parse_type(i);
   
   for (;;)
     {
@@ -643,7 +637,7 @@ spki_date_from_time_t(struct spki_date *d, time_t t)
   write_decimal(2, d->date + 17,     tm->tm_sec);
 }
 
-/* Returns -1, 0 or 1 if if d < t, d == t or d > t */ 
+/* Returns < 0, 0 or > 0 if if d < t, d == t or d > t */ 
 int
 spki_date_cmp_time_t(struct spki_date *d, time_t t)
 {
