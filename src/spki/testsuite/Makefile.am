@@ -6,7 +6,8 @@ AM_LDFLAGS = -L../../nettle
 TS_PROGS = principal-test date-test tag-test read-acl-test \
 	   lookup-acl-test read-cert-test cdsa-reduce-test
 
-TS_SH = check-signature-test make-signature-test delegate-test
+TS_SH = check-signature-test make-signature-test \
+	delegate-test reduce-test
 
 TS_ALL = $(TS_PROGS) $(TS_SH)
 
