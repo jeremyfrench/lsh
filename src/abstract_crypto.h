@@ -126,26 +126,6 @@
 
 /* GABA:
    (class
-     (name signer)
-     (vars
-       ; Returns a non-spki signature
-       (sign method (string)
-             "int algorithm" "UINT32 length" "const UINT8 *data")
-       ; Returns a <sig-val> sexp
-       (sign_spki method (object sexp)
-       	     ;; "struct sexp *hash" "struct sexp *principal"
-       	     "UINT32 length" "const UINT8 *data")
-
-       (get_verifier method (object verifier))))
-*/
-
-#define SIGN(signer, algorithm, length, data) \
-((signer)->sign((signer), (algorithm), (length), (data)))
-#define SIGN_SPKI(signer, length, data) ((signer)->sign_spki((signer), (length), (data)))
-#define SIGNER_GET_VERIFIER(signer) ((signer)->get_verifier((signer)))
-
-/* GABA:
-   (class
      (name verifier)
      (vars
        (verify method int
@@ -173,6 +153,28 @@
 
 #define PUBLIC_KEY(signer) ((signer)->public_key((signer)))
 #define PUBLIC_SPKI_KEY(signer) ((signer)->public_spki_key((signer)))
+
+
+/* GABA:
+   (class
+     (name signer)
+     (vars
+       ; Returns a non-spki signature
+       (sign method (string)
+             "int algorithm" "UINT32 length" "const UINT8 *data")
+       ; Returns a <sig-val> sexp
+       (sign_spki method (object sexp)
+       	     ;; "struct sexp *hash" "struct sexp *principal"
+       	     "UINT32 length" "const UINT8 *data")
+
+       (get_verifier method (object verifier))))
+*/
+
+#define SIGN(signer, algorithm, length, data) \
+((signer)->sign((signer), (algorithm), (length), (data)))
+#define SIGN_SPKI(signer, length, data) ((signer)->sign_spki((signer), (length), (data)))
+#define SIGNER_GET_VERIFIER(signer) ((signer)->get_verifier((signer)))
+
 
 /* GABA:
    (class

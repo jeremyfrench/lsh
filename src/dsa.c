@@ -80,7 +80,11 @@
        (a bignum)))
 */
 
-static void dsa_hash(mpz_t h, UINT32 length, const UINT8 *msg)
+
+/* Utility functions */
+
+static void
+dsa_hash(mpz_t h, UINT32 length, const UINT8 *msg)
 {
   /* Compute hash */
   struct hash_instance *hash = MAKE_HASH(&sha1_algorithm);
@@ -114,186 +118,6 @@ decode_dsa_sig_val(struct sexp *e, mpz_t r, mpz_t s)
 	       && sexp_get_un(i, ATOM_R, r, DSA_MAX_QSIZE)
 	       && sexp_get_un(i, ATOM_S, s, DSA_MAX_QSIZE));
     }
-}
-
-static void
-generic_dsa_sign(struct dsa_signer *self,
-		 UINT32 length, const UINT8 *msg,
-		 mpz_t r, mpz_t s)
-{
-  mpz_t k, tmp;
-
-  assert(r && s);
-  
-  /* Select k, 0<k<q, randomly */
-  mpz_init_set(tmp, self->verifier->q);
-  mpz_sub_ui(tmp, tmp, 1);
-
-  mpz_init(k);
-  bignum_random(k, self->random, tmp);
-  mpz_add_ui(k, k, 1);
-
-  debug("generic_dsa_sign, k: %xn\n", k);
-  
-  /* Compute r = (g^k (mod p)) (mod q) */
-  mpz_powm(r, self->verifier->g, k, self->verifier->p);
-
-  debug("generic_dsa_sign, group element: %xn\n", r);
-  
-  mpz_fdiv_r(r, r, self->verifier->q);
-
-  debug("generic_dsa_sign, r: %xn\n", r);
-
-  /* Compute hash */
-  dsa_hash(tmp, length, msg);
-  
-  /* Compute k^-1 (mod q) */
-  if (!mpz_invert(k, k, self->verifier->q))
-    {
-      fatal("generic_dsa_sign: k non-invertible\n");
-    }
-
-  /* Compute signature s = k^-1(h + ar) (mod q) */
-  mpz_mul(s, r, self->a);
-  mpz_fdiv_r(s, s, self->verifier->q);
-  mpz_add(s, s, tmp);
-  mpz_mul(s, s, k);
-  mpz_fdiv_r(s, s, self->verifier->q);
-
-  debug("generic_dsa_sign, s: %xn\n", s);
-  
-  mpz_clear(k);
-  mpz_clear(tmp);
-}
-
-static UINT32
-dsa_blob_length(mpz_t r, mpz_t s)
-{
-  UINT32 r_length = bignum_format_u_length(r);
-  UINT32 s_length = bignum_format_u_length(s);
-
-  return MAX(r_length, s_length);
-}
-
-static void
-dsa_blob_write(mpz_t r, mpz_t s, UINT32 length, UINT8 *buf)
-{
-  bignum_write(r, length, buf);
-  bignum_write(s, length, buf + length);
-}
-
-static struct lsh_string *
-do_dsa_sign(struct signer *c,
-	    int algorithm,
-	    UINT32 msg_length,
-	    const UINT8 *msg)
-{
-  CAST(dsa_signer, self, c);
-  mpz_t r, s;
-  struct lsh_string *signature;
-  UINT32 buf_length;
-  UINT8 *p;
-
-  trace("do_dsa_sign: Signing according to %a\n", algorithm);
-  
-  mpz_init(r); mpz_init(s);
-  generic_dsa_sign(self, msg_length, msg, r, s);
-
-  /* Build signature */
-  buf_length = dsa_blob_length(r, s);
-
-  switch (algorithm)
-    {
-    case ATOM_SSH_DSS:
-      /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
-       * length field, which should be removed in the next version. */
-      signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &p);
-      dsa_blob_write(r, s, buf_length, p);
-
-      break;
-      
-#if DATAFELLOWS_WORKAROUNDS
-    case ATOM_SSH_DSS_KLUDGE_LOCAL:
-      
-      /* NOTE: This doesn't include any length field. Is that right? */
-      signature = ssh_format("%lr", buf_length * 2, &p);
-      dsa_blob_write(r, s, buf_length, p);
-
-      break;
-
-#endif
-    case ATOM_SPKI:
-      /* NOTE: Generates the <sig-val> only. */
-      signature
-	= sexp_format(encode_dsa_sig_val(r, s),
-		      SEXP_CANONICAL, 0);
-      
-      break;
-    default:
-      fatal("do_dsa_sign: Internal error.");
-    }
-  mpz_clear(r);
-  mpz_clear(s);
-
-  return signature;
-}
-
-static struct sexp *
-do_dsa_sign_spki(struct signer *c,
-		 /* struct sexp *hash, struct sexp *principal, */
-		 UINT32 msg_length,
-		 const UINT8 *msg)
-{
-  CAST(dsa_signer, self, c);
-  mpz_t r, s;
-  struct sexp *signature;
-    
-  mpz_init(r); mpz_init(s);
-  generic_dsa_sign(self, msg_length, msg, r, s);
-      
-  /* Build signature */
-  signature = encode_dsa_sig_val(r, s);
-  
-  mpz_clear(r);
-  mpz_clear(s);
-
-  return signature;
-}
-
-static struct sexp *
-make_dsa_public_key(struct dsa_verifier *dsa)
-{
-  return sexp_l(5, SA(DSA),
-		sexp_l(2, SA(P), sexp_un(dsa->p), -1),
-		sexp_l(2, SA(Q), sexp_un(dsa->q), -1),
-		sexp_l(2, SA(G), sexp_un(dsa->g), -1),
-		sexp_l(2, SA(Y), sexp_un(dsa->y), -1),
-		-1);
-}
-
-static struct lsh_string *
-do_dsa_public_key(struct verifier *s)
-{
-  CAST(dsa_verifier, self, s);
-  return ssh_format("%a%n%n%n%n",
-		    ATOM_SSH_DSS,
-		    self->p, self->q,
-		    self->g, self->y);
-}
-
-static struct sexp *
-do_dsa_public_spki_key(struct verifier *s)
-{
-  CAST(dsa_verifier, self, s);
-
-  return make_dsa_public_key(self);
-}
-
-static struct verifier *
-do_dsa_get_verifier(struct signer *s)
-{
-  CAST(dsa_signer, self, s);
-  return &self->verifier->super;
 }
 
 
@@ -486,12 +310,34 @@ do_dsa_verify_spki(struct verifier *c,
   return res;
 }
 
+static struct lsh_string *
+do_dsa_public_key(struct verifier *s)
+{
+  CAST(dsa_verifier, self, s);
+  return ssh_format("%a%n%n%n%n",
+		    ATOM_SSH_DSS,
+		    self->p, self->q,
+		    self->g, self->y);
+}
 
-/* FIXME: The allocator could do this kind of initialization
- * automatically. */
+static struct sexp *
+do_dsa_public_spki_key(struct verifier *s)
+{
+  CAST(dsa_verifier, self, s);
+
+  return sexp_l(5, SA(DSA),
+		sexp_l(2, SA(P), sexp_un(self->p), -1),
+		sexp_l(2, SA(Q), sexp_un(self->q), -1),
+		sexp_l(2, SA(G), sexp_un(self->g), -1),
+		sexp_l(2, SA(Y), sexp_un(self->y), -1),
+		-1);
+}
+
 static void
 init_dsa_verifier(struct dsa_verifier *self)
 {
+  /* FIXME: The allocator could do this kind of initialization
+   * automatically. */
   mpz_init(self->p);
   mpz_init(self->q);
   mpz_init(self->g);
@@ -503,16 +349,6 @@ init_dsa_verifier(struct dsa_verifier *self)
   self->super.public_key = do_dsa_public_key;
 }
 
-static int
-spki_init_dsa_verifier(struct dsa_verifier *key,
-		     struct sexp_iterator *i)
-{
-  return (sexp_get_un(i, ATOM_P, key->p, DSA_MAX_SIZE)
-	  && sexp_get_un(i, ATOM_Q, key->q, DSA_MAX_QSIZE)
-	  && sexp_get_un(i, ATOM_G, key->g, DSA_MAX_SIZE)
-	  && sexp_get_un(i, ATOM_Y, key->y, DSA_MAX_SIZE) );
-}
-
 static struct dsa_verifier *
 make_dsa_verifier_internal(struct sexp_iterator *i)
 {
@@ -520,7 +356,11 @@ make_dsa_verifier_internal(struct sexp_iterator *i)
   init_dsa_verifier(res);
 
   assert(SEXP_LEFT(i) >= 4);
-  if (spki_init_dsa_verifier(res, i))
+
+  if (sexp_get_un(i, ATOM_P, res->p, DSA_MAX_SIZE)
+      && sexp_get_un(i, ATOM_Q, res->q, DSA_MAX_QSIZE)
+      && sexp_get_un(i, ATOM_G, res->g, DSA_MAX_SIZE)
+      && sexp_get_un(i, ATOM_Y, res->y, DSA_MAX_SIZE))
     {
       return res;
     }
@@ -530,6 +370,190 @@ make_dsa_verifier_internal(struct sexp_iterator *i)
       return NULL;
     }
 }
+  
+/* Alternative constructor using a key of type ssh-dss, when the atom
+ * "ssh-dss" is already read from the buffer. */
+struct verifier *
+parse_ssh_dss_public(struct simple_buffer *buffer)
+{
+  NEW(dsa_verifier, res);
+  init_dsa_verifier(res);
+
+  if (parse_bignum(buffer, res->p, DSA_MAX_SIZE)
+      && (mpz_sgn(res->p) == 1)
+      && parse_bignum(buffer, res->q, DSA_MAX_QSIZE)
+      && (mpz_sgn(res->q) == 1)
+      && (mpz_cmp(res->q, res->p) < 0) /* q < p */ 
+      && parse_bignum(buffer, res->g, DSA_MAX_SIZE)
+      && (mpz_sgn(res->g) == 1)
+      && (mpz_cmp(res->g, res->p) < 0) /* g < p */ 
+      && parse_bignum(buffer, res->y, DSA_MAX_SIZE) 
+      && (mpz_sgn(res->y) == 1)
+      && (mpz_cmp(res->y, res->p) < 0) /* y < p */
+      && parse_eod(buffer))
+    
+    return &res->super;
+
+  else
+    {
+      KILL(res);
+      return NULL;
+    }
+}
+
+  
+/* Creating signatures */
+static void
+generic_dsa_sign(struct dsa_signer *self,
+		 UINT32 length, const UINT8 *msg,
+		 mpz_t r, mpz_t s)
+{
+  mpz_t k, tmp;
+
+  assert(r && s);
+  
+  /* Select k, 0<k<q, randomly */
+  mpz_init_set(tmp, self->verifier->q);
+  mpz_sub_ui(tmp, tmp, 1);
+
+  mpz_init(k);
+  bignum_random(k, self->random, tmp);
+  mpz_add_ui(k, k, 1);
+
+  debug("generic_dsa_sign, k: %xn\n", k);
+  
+  /* Compute r = (g^k (mod p)) (mod q) */
+  mpz_powm(r, self->verifier->g, k, self->verifier->p);
+
+  debug("generic_dsa_sign, group element: %xn\n", r);
+  
+  mpz_fdiv_r(r, r, self->verifier->q);
+
+  debug("generic_dsa_sign, r: %xn\n", r);
+
+  /* Compute hash */
+  dsa_hash(tmp, length, msg);
+  
+  /* Compute k^-1 (mod q) */
+  if (!mpz_invert(k, k, self->verifier->q))
+    {
+      fatal("generic_dsa_sign: k non-invertible\n");
+    }
+
+  /* Compute signature s = k^-1(h + ar) (mod q) */
+  mpz_mul(s, r, self->a);
+  mpz_fdiv_r(s, s, self->verifier->q);
+  mpz_add(s, s, tmp);
+  mpz_mul(s, s, k);
+  mpz_fdiv_r(s, s, self->verifier->q);
+
+  debug("generic_dsa_sign, s: %xn\n", s);
+  
+  mpz_clear(k);
+  mpz_clear(tmp);
+}
+
+static UINT32
+dsa_blob_length(mpz_t r, mpz_t s)
+{
+  UINT32 r_length = bignum_format_u_length(r);
+  UINT32 s_length = bignum_format_u_length(s);
+
+  return MAX(r_length, s_length);
+}
+
+static void
+dsa_blob_write(mpz_t r, mpz_t s, UINT32 length, UINT8 *buf)
+{
+  bignum_write(r, length, buf);
+  bignum_write(s, length, buf + length);
+}
+
+static struct lsh_string *
+do_dsa_sign(struct signer *c,
+	    int algorithm,
+	    UINT32 msg_length,
+	    const UINT8 *msg)
+{
+  CAST(dsa_signer, self, c);
+  mpz_t r, s;
+  struct lsh_string *signature;
+  UINT32 buf_length;
+  UINT8 *p;
+
+  trace("do_dsa_sign: Signing according to %a\n", algorithm);
+  
+  mpz_init(r); mpz_init(s);
+  generic_dsa_sign(self, msg_length, msg, r, s);
+
+  /* Build signature */
+  buf_length = dsa_blob_length(r, s);
+
+  switch (algorithm)
+    {
+    case ATOM_SSH_DSS:
+      /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
+       * length field, which should be removed in the next version. */
+      signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &p);
+      dsa_blob_write(r, s, buf_length, p);
+
+      break;
+      
+#if DATAFELLOWS_WORKAROUNDS
+    case ATOM_SSH_DSS_KLUDGE_LOCAL:
+      
+      /* NOTE: This doesn't include any length field. Is that right? */
+      signature = ssh_format("%lr", buf_length * 2, &p);
+      dsa_blob_write(r, s, buf_length, p);
+
+      break;
+
+#endif
+    case ATOM_SPKI:
+      /* NOTE: Generates the <sig-val> only. */
+      signature
+	= sexp_format(encode_dsa_sig_val(r, s),
+		      SEXP_CANONICAL, 0);
+      
+      break;
+    default:
+      fatal("do_dsa_sign: Internal error.");
+    }
+  mpz_clear(r);
+  mpz_clear(s);
+
+  return signature;
+}
+
+static struct sexp *
+do_dsa_sign_spki(struct signer *c,
+		 /* struct sexp *hash, struct sexp *principal, */
+		 UINT32 msg_length,
+		 const UINT8 *msg)
+{
+  CAST(dsa_signer, self, c);
+  mpz_t r, s;
+  struct sexp *signature;
+    
+  mpz_init(r); mpz_init(s);
+  generic_dsa_sign(self, msg_length, msg, r, s);
+      
+  /* Build signature */
+  signature = encode_dsa_sig_val(r, s);
+  
+  mpz_clear(r);
+  mpz_clear(s);
+
+  return signature;
+}
+
+static struct verifier *
+do_dsa_get_verifier(struct signer *s)
+{
+  CAST(dsa_signer, self, s);
+  return &self->verifier->super;
+}
+
 
 static struct verifier *
 make_dsa_verifier(struct signature_algorithm *self UNUSED,
@@ -584,35 +608,6 @@ make_dsa_algorithm(struct randomness *random)
   return &dsa->super;
 }
 
-/* Constructor using a key of type ssh-dss, when the atom "ssh-dss" is
- * already read from the buffer. */
-struct verifier *
-parse_ssh_dss_public(struct simple_buffer *buffer)
-{
-  NEW(dsa_verifier, res);
-  init_dsa_verifier(res);
-
-  if (parse_bignum(buffer, res->p, DSA_MAX_SIZE)
-      && (mpz_sgn(res->p) == 1)
-      && parse_bignum(buffer, res->q, DSA_MAX_QSIZE)
-      && (mpz_sgn(res->q) == 1)
-      && (mpz_cmp(res->q, res->p) < 0) /* q < p */ 
-      && parse_bignum(buffer, res->g, DSA_MAX_SIZE)
-      && (mpz_sgn(res->g) == 1)
-      && (mpz_cmp(res->g, res->p) < 0) /* g < p */ 
-      && parse_bignum(buffer, res->y, DSA_MAX_SIZE) 
-      && (mpz_sgn(res->y) == 1)
-      && (mpz_cmp(res->y, res->p) < 0) /* y < p */
-      && parse_eod(buffer))
-    
-    return &res->super;
-
-  else
-    {
-      KILL(res);
-      return NULL;
-    }
-}
 
 struct verifier *
 make_ssh_dss_verifier(UINT32 public_length,
@@ -628,15 +623,3 @@ make_ssh_dss_verifier(UINT32 public_length,
 	   ? parse_ssh_dss_public(&buffer)
 	   : NULL);
 }
-
-#if 0
-struct lsh_string *
-ssh_dss_public_key(struct signer *s)
-{
-  CAST(dsa_signer, dsa, s);
-  return ssh_format("%a%n%n%n%n",
-		    ATOM_SSH_DSS,
-		    dsa->public.p, dsa->public.q,
-		    dsa->public.g, dsa->public.y);
-}
-#endif

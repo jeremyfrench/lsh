@@ -44,6 +44,46 @@
 
 #define SA(x) sexp_a(ATOM_##x)
 
+#define RSA_CRT 1
+
+/* GABA:
+   (class
+     (name rsa_verifier)
+     (super verifier)
+     (vars
+       (params object rsa_algorithm)
+       (size . unsigned)
+       (n bignum)
+       (e bignum)))
+*/
+
+/* GABA:
+   (class
+     (name rsa_signer)
+     (super signer)
+     (vars
+       (verifier object rsa_verifier)
+
+       ; Secret exponent
+       (d bignum)
+
+       ; The two factors
+       (p bignum)
+       (q bignum)
+
+       ; d % (p-1), i.e. a e = 1 (mod p)
+       (a bignum)
+
+       ; d % (q-1), i.e. b e = 1 (mod q)
+       (b bignum)
+
+       ; modular inverse of q , i.e. c q = 1 (mod p)
+       (c bignum)))
+*/
+
+
+/* Utility functions */
+   
 static void
 pkcs1_encode(mpz_t m,
 	     struct rsa_algorithm *params,
@@ -78,26 +118,6 @@ pkcs1_encode(mpz_t m,
   bignum_parse_u(m, length, em);
 
   debug("pkcs1_encode: m = %xn\n", m);
-}
-
-/* ;; GABA:
-   (struct
-     (name rsa_public)
-     (vars
-       (params object rsa_algorithm)
-       (size . unsigned)
-       (n bignum)
-       (e bignum)))
-*/
-
-/* FIXME: The allocator could do this kind of initialization
- * automatically. */
-static void
-init_rsa_verifier(struct rsa_verifier *public, struct rsa_algorithm *params)
-{
-  public->params = params;
-  mpz_init(public->n);
-  mpz_init(public->e);
 }
 
 static int
@@ -135,16 +155,6 @@ spki_init_rsa_verifier(struct rsa_verifier *key,
 	  && rsa_check_size(key));
 }
 
-/* GABA:
-   (class
-     (name rsa_verifier)
-     (super verifier)
-     (vars
-       (params object rsa_algorithm)
-       (size . unsigned)
-       (n bignum)
-       (e bignum)))
-*/
 
 /* Signature verification */
 static int
@@ -274,6 +284,22 @@ do_rsa_public_spki_key(struct verifier *s)
 		-1);
 }
 
+static void
+init_rsa_verifier(struct rsa_verifier *self, struct rsa_algorithm *params)
+{
+  self->params = params;
+
+  /* FIXME: The allocator could do this kind of initialization
+   * automatically. */
+  mpz_init(self->n);
+  mpz_init(self->e);
+
+  self->super.verify = do_rsa_verify;
+  self->super.verify_spki = do_rsa_verify_spki;
+  self->super.public_key = do_rsa_public_key;
+  self->super.public_spki_key = do_rsa_public_spki_key;
+}
+
 static struct rsa_verifier *
 make_rsa_verifier_internal(struct rsa_algorithm *params,
 			   struct sexp_iterator *i)
@@ -285,11 +311,6 @@ make_rsa_verifier_internal(struct rsa_algorithm *params,
   
   if (spki_init_rsa_verifier(res, i))
     {
-      res->super.verify = do_rsa_verify;
-      res->super.verify_spki = do_rsa_verify_spki;
-      res->super.public_key = do_rsa_public_key;
-      res->super.public_spki_key = do_rsa_public_spki_key;
-      
       return res;
     }
   else
@@ -299,43 +320,8 @@ make_rsa_verifier_internal(struct rsa_algorithm *params,
     }
 }
   
-static struct verifier *
-make_rsa_verifier(struct signature_algorithm *s,
-		  struct sexp_iterator *i)
-{
-  CAST(rsa_algorithm, self, s);
 
-  return ( (SEXP_LEFT(i) == 2)
-	   ? &make_rsa_verifier_internal(self, i)->super
-	   : NULL);
-}
-
-/* GABA:
-   (class
-     (name rsa_signer)
-     (super signer)
-     (vars
-       (verifier object rsa_verifier)
-
-       ; Secret exponent
-       (d bignum)
-
-       ; The two factors
-       (p bignum)
-       (q bignum)
-
-       ; d % (p-1), i.e. a e = 1 (mod p)
-       (a bignum)
-
-       ; d % (q-1), i.e. b e = 1 (mod q)
-       (b bignum)
-
-       ; modular inverse of q , i.e. c q = 1 (mod p)
-       (c bignum)))
-*/
-
-
-#define RSA_CRT 1
+/* Signature creation */
 
 /* Compute x, the d:th root of m. Calling it with x == m is allowed. */
 static void
@@ -505,6 +491,18 @@ do_rsa_get_verifier(struct signer *s)
 {
   CAST(rsa_signer, self, s);
   return &self->verifier->super;
+}
+
+
+static struct verifier *
+make_rsa_verifier(struct signature_algorithm *s,
+		  struct sexp_iterator *i)
+{
+  CAST(rsa_algorithm, self, s);
+
+  return ( (SEXP_LEFT(i) == 2)
+	   ? &make_rsa_verifier_internal(self, i)->super
+	   : NULL);
 }
 
 
