@@ -437,6 +437,37 @@ make_connect_command_callback(struct io_backend *backend,
 }
 #endif
 
+/* GABA:
+   (class
+     (name connect_continuation)
+     (super command_continuation)
+     (vars
+       (target object address_info)
+       (up object command_continuation)))
+*/
+
+static void
+do_connect_continuation(struct command_continuation *c,
+			struct lsh_object *x)
+{
+  CAST(connect_continuation, self, c);
+  CAST(lsh_fd, fd, x);
+
+  COMMAND_RETURN(self->up, make_listen_value(fd, self->target));
+}
+
+static struct command_continuation *
+make_connect_continuation(struct address_info *target,
+			  struct command_continuation *up)
+{
+  NEW(connect_continuation, self);
+  self->super.c = do_connect_continuation;
+  self->target = target;
+  self->up = up;
+
+  return &self->super;
+}
+     
 static void
 do_connect(struct io_backend *backend,
 	   struct address_info *a,
@@ -459,8 +490,10 @@ do_connect(struct io_backend *backend,
       return;
     }
 
+  /* If the name is canonicalized in any way, we should pass the
+   * canonical name to make_connect_continuation() .*/
   fd = io_connect(backend, addr, addr_length, 
-		  c, e);
+		  make_connect_continuation(a, c), e);
   lsh_space_free(addr);
 
   if (!fd)
@@ -502,8 +535,9 @@ do_connect_port(struct command *s,
 }
 
 
-struct command *make_connect_port(struct io_backend *backend,
-				  struct address_info *target)
+struct command *
+make_connect_port(struct io_backend *backend,
+		  struct address_info *target)
 {
   NEW(connect_port, self);
   self->super.call = do_connect_port;
@@ -645,7 +679,7 @@ COMMAND_SIMPLE(io_log_peer_command)
   verbose("Accepting connection from %S, port %i\n",
 	  lv->peer->ip, lv->peer->port);
 
-  return &lv->fd->super.super;
+  return &lv->super;
 }
 
 
