@@ -203,13 +203,15 @@ void gc_kill(struct lsh_object *o)
 
 void gc(struct lsh_object *root)
 {
-  unsigned before = number_of_objects;
-
+  unsigned objects_before = number_of_objects;
+  unsigned strings_before = number_of_strings;
   gc_mark(root);  
   gc_sweep();
   
-  verbose("Objects alive: %i, garbage collected: %i\n", live_objects,
-	  before - live_objects);
+  verbose("Objects alive: %i, garbage collected: %i\n",
+	  live_objects, objects_before - live_objects);
+  verbose("Used strings:  %i, garbage collected: %i\n",
+	  number_of_strings, strings_before - number_of_strings);
 }
 
 void gc_maybe(struct lsh_object *root, int busy)
