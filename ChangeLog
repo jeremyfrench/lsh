@@ -1,5 +1,11 @@
 2003-02-18  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/Makefile.am (bootstrap): Bootstrap the spki dirctory too.
+	(EXTRA_DIST): dist_x_files and cvs_headers renamed to dist_classes
+	and dist_headers.
+
+	* doc/Makefile.am (EXTRA_DIST): Deleted man_MANS.
+
 	* misc/bootstrap.sh: Deleted old bootstrap file.
 
 	* src/.dist_classes, src/.dist_headers: Reformatted so that they
