@@ -1,3 +1,7 @@
+Wed May 26 18:54:43 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c: #include signal.h (reported by MArtin Jabobsson).  
+
 Wen May 12 21:35:22 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* Configure tests for strerror and strsignal.
