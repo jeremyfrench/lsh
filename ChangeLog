@@ -1,3 +1,9 @@
+2003-06-01  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io.c (do_listen_callback): To get enough space, PEER must be
+	a sockaddr_in (if the IPv6 type sockaddr_storage isn't available).
+	(fd2info): Likewise.
+
 2003-05-24  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-make-seed.c: Fixed nesting of WITH_ZLIB #if:s. Also
