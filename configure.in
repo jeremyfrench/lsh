@@ -109,7 +109,7 @@ dnl Checks for libraries.
 AC_CHECK_LIB(gmp, mpz_set_d,,
 dnl Some debian systems have both gmp1 and gmp2.
     [AC_CHECK_LIB(gmp2, mpz_set_d,,
-	AC_ERROR([GMP is missing (ftp://ftp.gnu.org/pub/gnu/gmp-2.0.2.tar.gz)]))])
+	AC_ERROR([GMP is missing (ftp://ftp.gnu.org/pub/gnu/gmp/gmp-2.0.2.tar.gz)]))])
 
 if test x$with_zlib = xyes; then
   AC_CHECK_LIB(z, inflate,, [with_zlib=no])
