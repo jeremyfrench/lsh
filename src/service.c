@@ -22,7 +22,12 @@
  */
 
 #include "service.h"
+
+#include "disconnect.h"
 #include "format.h"
+#include "parse.h"
+#include "ssh.h"
+#include "xalloc.h"
 
 struct service_handler
 {
@@ -42,7 +47,7 @@ static int do_service(struct packet_handler *c,
   struct service_handler *closure = (struct service_handler *) c;
 
   struct simple_buffer buffer;
-  UINT8 msg_number;
+  int msg_number;
   int name;
   
   MDEBUG(closure);
@@ -60,19 +65,16 @@ static int do_service(struct packet_handler *c,
 	  || !(service = ALIST_GET(closure->services, name))
 	  || !SERVICE_INIT(service, connection))
 	{
-	  int res
-	    = A_WRITE(c->write,
+	  return (LSH_FAIL | LSH_CLOSE)
+	    | A_WRITE(connection->write,
 		      format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
-					"Service not available.\n"));
-	  return (LSH_PROBLEMP(res)
-		  ? LSH_FAIL | LSH_DIE
-		  : LSH_FAIL | LSH_CLOSE);
+					"Service not available.", ""));
 	}
       /* Don't accept any further service requests */
-      connection->dispatch[SSH_SERVICE_REQUEST]
+      connection->dispatch[SSH_MSG_SERVICE_REQUEST]
 	= connection->fail;
       
-      return A_WRITE(c->write(format_service_accept(name)));
+      return A_WRITE(connection->write, format_service_accept(name));
     }
   return LSH_FAIL | LSH_DIE;
 }
@@ -83,6 +85,37 @@ struct packet_handler *make_service_handler(struct alist *services)
 
   self->super.handler = do_service;
   self->services = services;
+
+  return &self->super;
+}
+
+struct meta_service
+{
+  struct ssh_service super;
+
+  struct packet_handler *service_handler;
+};
+
+static int init_meta_service(struct ssh_service *c,
+				   struct ssh_connection *connection)
+{
+  struct meta_service *closure = (struct meta_service *) c;
+
+  MDEBUG(closure);
+  
+  connection->dispatch[SSH_MSG_SERVICE_REQUEST] = closure->service_handler;
+
+  return LSH_OK | LSH_GOON;
+}
+  
+struct ssh_service *make_meta_service(struct alist *services)
+{
+  struct meta_service *self;
+
+  NEW(self);
+
+  self->super.init = init_meta_service;
+  self->service_handler = make_service_handler(services);
 
   return &self->super;
 }
