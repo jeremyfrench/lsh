@@ -110,7 +110,11 @@ fi
 AC_ARG_WITH(scheme,
   [--with-scheme[=PROGRAM]    Use a particular scheme implementation],,
   [with_scheme=])
-    
+
+AC_ARG_WITH(system-argp,
+  [--without-system-argp    Don't use the system's argp.],,
+  [with_system_argp=yes])
+        
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
@@ -131,11 +135,6 @@ fi
 
 SCHEME_NAME=`basename $SCHEME_PROGRAM`
 AC_SUBST(SCHEME_NAME)
-
-AC_ARG_WITH(system-argp,
-  [--without-system-argp    Don't use the system's argp.],,
-  [with_system_argp=yes])
-
 
 AC_PATH_PROG(BASH, bash,, $PATH)
 AC_PATH_PROG(GROFF, groff,, $PATH)
@@ -331,8 +330,10 @@ dnl AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o $LIBOBJS"])
 AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
 
 dnl FIXME: If the system already has argp, it's unnecessary to build our own.
-if test x$with_system_argp = xno ; then
+if test x$with_system_argp = xyes ; then
   AC_CHECK_FUNCS(argp_parse,, [LIBOBJS="$LIBOBJS argp/libargp.a"])
+else
+  LIBOBJS="$LIBOBJS argp/libargp.a"
 fi
 
 
