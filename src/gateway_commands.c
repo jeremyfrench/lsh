@@ -204,20 +204,21 @@ gateway_make_connection(struct listen_value *lv,
 			  lv->peer, lv->local, "gateway",
 			  make_exc_finish_read_handler(lv->fd, e, HANDLER_CONTEXT));
 
-  /* Instead of calling connection_init_io. */
-  connection->raw =
-    &io_read_write(lv->fd,
-		   make_buffered_read(
-		     BUF_SIZE,
-		     make_read_gateway(
-                       make_packet_debug(&connection->super,
-					 ssh_format("%lz received", connection->debug_comment)),
-		       connection)),
+  connection_init_io
+    (connection,
+     io_read_write(lv->fd,
+		   make_buffered_read
+		     (BUF_SIZE,
+		      make_read_gateway
+		        (make_packet_debug(&connection->super,
+					   ssh_format("%lz received",
+						      connection->debug_comment)),
+			 connection)),
 		   BLOCK_SIZE,
-		   make_connection_close_handler(connection))->write_buffer->super;
+		   make_connection_close_handler(connection)));
   
   connection->write_packet
-    = make_packet_debug(make_gateway_pad(connection->raw),
+    = make_packet_debug(make_gateway_pad(&connection->socket->write_buffer->super),
 			ssh_format("%lz sent", connection->debug_comment));
 
   init_connection_service(connection);
