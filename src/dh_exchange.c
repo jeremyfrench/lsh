@@ -155,6 +155,8 @@ dh_hash_digest(struct dh_instance *self)
 				  self->K), 1);
   self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
   HASH_DIGEST(self->hash, self->exchange_hash->data);
+
+  debug("dh_hash_digest: %xS\n", self->exchange_hash);  
 }
 
 void
