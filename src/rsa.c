@@ -58,7 +58,7 @@ pkcs_1_encode(mpz_t m,
 	      struct rsa_algorithm *params,
 	      UINT32 length,
 	      UINT32 msg_length,
-	      UINT8 *msg)
+	      const UINT8 *msg)
 {
   UINT8 *em = alloca(length);
   unsigned i = length;
@@ -112,12 +112,11 @@ static int rsa_check_size(struct rsa_public *key)
   /* Size in octets */
   key->size = (mpz_sizeinbase(key->n, 2) + 7) / 8;
 
-  /* PKCS#1 to make sense, the size of the modulo, in octets, must be
-   * at least 1 + the length of the DER-encoded Digest Info.
+  /* For PKCS#1 to make sense, the size of the modulo, in octets, must
+   * be at least 1 + the length of the DER-encoded Digest Info.
    *
    * And a DigestInfo is 34 octets for md5, and 35 octets for sha1.
-   * 46 octets is 368 bits.
-   */
+   * 46 octets is 368 bits. */
   return (key->size >= 46);
 }
 
@@ -152,21 +151,86 @@ spki_init_rsa_public(struct rsa_public *key,
        (p bignum)
        (q bignum)
 
-       ; d % (p-1), i.e. ae = 1 (mod p)
+       ; d % (p-1), i.e. a e = 1 (mod p)
        (a bignum)
 
-       ; d % (q-1), i.e. be = 1 (mod q)
+       ; d % (q-1), i.e. b e = 1 (mod q)
        (b bignum)
 
-       ; modular inverse of q , i.e. cq = 1 (mod p)
+       ; modular inverse of q , i.e. c q = 1 (mod p)
        (c bignum)))
 */
 
 
+#define RSA_CRT 1
+
+/* Compute x, the d:th root of m. Calling it with x == m is allowed. */
+static void
+compute_rsa_root(struct rsa_signer *self, mpz_t x, mpz_t m)
+{
+#if RSA_CRT
+  mpz_t xp; /* modulo p */
+  mpz_t xq; /* modulo q */
+
+  mpz_init(xp); mpz_init(xq);    
+  
+  /* Compute xq = m^d % q = (m%q)^b % q */
+  mpz_fdiv_r(xp, m, self->q);
+  mpz_powm(xq, xq, self->b, self->q);
+
+  /* Compute xp = m^d % p = (m%p)^a % p */
+  mpz_fdiv_r(xp, m, self->p);
+  mpz_powm(xp, xp, self->a, self->p);
+
+  /* Set xp' = (xp - xq) c % p. */
+  mpz_sub(xp, xp, xq);
+  mpz_mul(xp, xp, self->c);
+  mpz_fdiv_r(xp, xp, self->p);
+
+  /* Finally, compute x = xq + q xp'
+   *
+   * To prove that this works, note that
+   *
+   *   xp  = x + i p,
+   *   xq  = x + j q,
+   *   c q = 1 + k p
+   *
+   * for some integers i, j and k. Now, for some integer l,
+   *
+   *   xp' = (xp - xq) c + l p
+   *       = (x + i p - (x + j q)) c + l p
+   *       = (i p - j q) c + l p
+   *       = (i + l) p - j (c q)
+   *       = (i + l) p - j (1 + kp)
+   *       = (i + l - j k) p - j
+   *
+   * which shows that xp' = -j (mod p). We get
+   *
+   *   xq + q xp' = x + j q + (i + l - j k) p q - j q
+   *              = x + (i + l - j k) p q
+   *
+   * so that
+   *
+   *   xq + q xp' = x (mod pq)
+   *
+   * We also get 0 <= xq + q xp' < p q, because
+   *
+   *   0 <= xq < q and 0 <= * xp' < p.
+   */
+  mpz_mul(x, self->q, xp);
+  mpz_add(x, x, xq);
+
+  mpz_clear(xp); mpz_clear(xq);
+  
+#else /* !RSA_CRT */
+  mpz_powm(x, m, self->d, self->public.n);
+#endif /* !RSA_CRT */
+}
+
 static struct lsh_string *
 do_rsa_sign(struct signer *s,
 	    UINT32 msg_length,
-	    UINT8 *msg)
+	    const UINT8 *msg)
 {
   CAST(rsa_signer, self, s);
   struct lsh_string *res;
@@ -176,8 +240,7 @@ do_rsa_sign(struct signer *s,
   pkcs_1_encode(m, self->public.params, self->public.size - 1,
 		msg_length, msg);
 
-  /* FIXME: Optimize using CRT */
-  mpz_powm(m, m, self->d, self->public.n);
+  compute_rsa_root(self, m, m);
   
   res = ssh_format("%lun", m);
 
@@ -189,7 +252,7 @@ static struct sexp *
 do_rsa_sign_spki(struct signer *s,
 		 struct sexp *hash, struct sexp *principal,
 		 UINT32 msg_length,
-		 UINT8 *msg)
+		 const UINT8 *msg)
 {
   fatal("do_rsa_sign_spki() not implemented.\n");
   
@@ -210,9 +273,9 @@ do_rsa_public_key(struct signer *s)
 static int
 do_rsa_verify(struct verifier *v,
 	      UINT32 length,
-	      UINT8 *msg,
+	      const UINT8 *msg,
 	      UINT32 signature_length,
-	      UINT8 * signature_data)
+	      const UINT8 *signature_data)
 {
   CAST(rsa_verifier, self, v);
   mpz_t m;
@@ -246,7 +309,7 @@ do_rsa_verify(struct verifier *v,
 static int
 do_rsa_verify_spki(struct verifier *s,
 		   UINT32 length,
-		   UINT8 *msg,
+		   const UINT8 *msg,
 		   struct sexp_iterator *i)
 {
   fatal("do_rsa_verify_spki() not implemented.\n");
