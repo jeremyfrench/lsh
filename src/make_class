@@ -66,6 +66,7 @@
 ;; (bignum)          mpz_t name
 ;; (simple c-type)   c-type
 ;; (special c-type mark-fn free-fn)
+;; (special-struct c-type mark-fn free-fn)
 ;;
 ;; (struct tag)
 ;;
@@ -91,7 +92,7 @@
       (type->category `(simple ,type))
       (let ((tag (car type)))
 	(case tag
-	  ((string object simple special space bignum struct) tag)
+	  ((string object simple special special-struct space bignum struct) tag)
 	  ((array var-array pointer) (type->category (cadr type)))
 	  
 	  (else (error "make_class: type->category: Invalid type" type))))))
@@ -104,7 +105,7 @@
 	((object) (list "struct " (cadr type) " *" expr))
 	((struct) (list "struct " (cadr type) " " expr)) 
 	((bignum) (list "mpz_t " expr))
-	((simple special) (list (cadr type) " " expr))
+	((simple special special-struct) (list (cadr type) " " expr))
 	((pointer space) (type->declaration (cadr type)
 					    (list "(*(" expr "))")))
 	((array)  (type->declaration (cadr type)
@@ -141,7 +142,9 @@
 
 	((special) (let ((mark-fn (caddr type)))
 		     (and mark-fn (list mark-fn "(" expr ", mark);\n"))))
-
+	((special-struct) (let ((mark-fn (caddr type)))
+			    (and mark-fn (list mark-fn "(&(" expr "), mark);\n"))))
+	
 	;; FIXME: Doesn't handle nested arrays
 	((array)
 	 (let ((mark-k (type->mark (cadr type) (list "(" expr ")[k]"))))
@@ -173,7 +176,10 @@
 	((bignum) (free/f "mpz_clear"))
 	((space) (free/f "lsh_space_free"))
 	((special) (free/f (cadddr type)))
-    
+	((special-struct) (let ((free-fn (cadddr type)))
+			    (and free-fn
+				 (list free-fn "(&(" expr "));\n")))) 
+	
 	((array)
 	 (let ((free-k (type->free (cadr type) (list "(" expr ")[k]"))))
 	   (and free-k
