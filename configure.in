@@ -657,19 +657,19 @@ if test x$enable_ipv6 = xyes ; then
   
   if test x$lsh_cv_sys_ipv6 != xyes ; then
     enable_ipv6=no
-  elif test x$ac_cv_func_getaddrinfo != yes ; then
+  elif test x$ac_cv_func_getaddrinfo != xyes ; then
     AC_MSG_WARN([getaddrinfo not found. Disabling IPv6 support])
     enable_ipv6=no
-  elif test x$ac_cv_func_gai_strerror != yes ; then
+  elif test x$ac_cv_func_gai_strerror != xyes ; then
     AC_MSG_WARN([gai_strerror not found. Disabling IPv6 support])
     enable_ipv6=no
-  elif test x$lsh_cv_sys_ai_numerichost != yes ; then
+  elif test x$lsh_cv_sys_ai_numerichost != xyes ; then
     AC_MSG_WARN([AI_NUMERICHOST not defined. Disabling IPv6 support])
     enable_ipv6=no
   fi
 fi
 
-if test x$enable_ipv6 = yes ; then
+if test x$enable_ipv6 = xyes ; then
   AC_DEFINE(WITH_IPV6)
 fi
 
