@@ -1,5 +1,26 @@
 Wed Apr 14 00:32:34 1999  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/command.c (make_parallell_progn): New command.
+
+	* src/channel_commands.h (channel_request_command): New class. 
+
+	* src/channel_commands.c (do_channel_open_command): Bugfix: Use
+	CAST rather than CAST_SUBTYPE for connection argument.
+
+	* src/channel_commands.c (do_channel_request_command): New
+ 	function.
+
+	* src/channel.c (init_channel): Init pending_requests queue.
+	Deleted channel_success and channel_failure.
+	(do_channel_success): Use pending_requests queue rather than
+	channel_success and channel_failure.
+	(do_channel_failure): Likewise.
+
+	* src/channel.h (ssh_channel): New attribute pending_requests
+	(a queue). Removed methods channel_success and channel_failure.
+
+	* src/io.c (connect_callback): Fixed call to getsockopt.
+
 	* src/io_commands.c (do_connect_continue): Check for fd < 0, and
 	in this case, invoke the continuation with a NULL value.
 
