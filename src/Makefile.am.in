@@ -32,7 +32,7 @@ bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey \
 
 sbin_PROGRAMS = lshd lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
 bin_SCRIPTS = lsh-authorize ssh-conv
-noinst_PROGRAMS = prime_table digit_table pkcs5-test
+noinst_PROGRAMS = prime_table pkcs5-test
 noinst_SCRIPTS = lcp
 noinst_LIBRARIES = liblsh.a
 # noinst_HEADERS = $(dist_x_files) $(cvs_headers)
@@ -41,7 +41,7 @@ noinst_LIBRARIES = liblsh.a
 # compiled or dependency checked independently.
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
-	prime_table.h sexp_table.h digit_table.h packet_types.h
+	prime_table.h packet_types.h
 
 # BUILT_SOURCES = config_parse.c
 
@@ -65,7 +65,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	parse_config.c connection.c connection_commands.c \
 	crypto.c \
 	daemon.c \
-	debug.c digits.c dh_exchange.c \
+	debug.c dh_exchange.c \
 	dsa.c dsa_keygen.c encrypt.c \
 	exception.c \
 	format.c gc.c \
@@ -129,13 +129,13 @@ sexp_table.h: sexp_chars.in $(srcdir)/scm/make-char-classes.scm
 	$(SCHEME) -e main -s $(srcdir)/scm/make-char-classes.scm <$< >$@T
 	test -s $@T && mv -f $@T $@
 
-digit_table_LDADD =
-
-# We don't want an explicit dependency on the executable program
-digit_table.h: digit_table.c
-	$(MAKE) digit_table
-	./digit_table >$@T
-	test -s $@T && mv -f $@T $@
+# digit_table_LDADD =
+# 
+# # We don't want an explicit dependency on the executable program
+# digit_table.h: digit_table.c
+# 	$(MAKE) digit_table
+# 	./digit_table >$@T
+# 	test -s $@T && mv -f $@T $@
 
 packet_types.h: ssh.h invert-defs
 	$(srcdir)/invert-defs <ssh.h >$@T
