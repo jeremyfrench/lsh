@@ -84,7 +84,19 @@ href="http://cvs.lysator.liu.se/viewcvs/viewcvs.cgi/lsh/src/spki/?cvsroot=lsh">c
 Beware that the build system is not perfect, in particular it expects
 to find Nettle as "../nettle" from both source and build trees, the
 same way things are arranged if you check out all the complete lsh
-source code.
+source code. The easiest way to try it out is to use
+
+<blockquote><tt>
+cvs -d :pserver:anonymous@cvs.lysator.liu.se:/cvsroot/lsh co lsh <br>
+cd lsh <br>
+./.bootstrap <br>
+./configure <br>
+make bootstrap <br>
+make <br>
+</tt></blockquote>
+
+The important parts here are the <tt>src/nettle</tt> and
+<tt>src/spki</tt> subdirectories.
 
 </body>
 </html>
