@@ -71,4 +71,8 @@
 /* May store a new handler into *h. */
 #define READ_HANDLER(h, l, d) ((h)->handler(&(h), (l), (d)))
 
+struct read_handler *
+make_read_file(struct abstract_write *c,
+	       uint32_t max_size);
+
 #endif /*LSH_ABSTRACT_IO_H_INCLUDED */

@@ -226,11 +226,6 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        ))
 */
 
-/* Processes the packet at once, passing it on to the write buffer. */
-/* FIXME: Could be replaced by a single function doing the
- * compress, encrypt, mac. */
-#define C_WRITE_NOW(c, s) A_WRITE((c)->write_packet, (s) )
-
 struct ssh_connection *
 make_ssh_connection(enum connection_flag flags,
 		    struct address_info *peer,
@@ -249,6 +244,11 @@ connection_after_keyexchange(struct ssh_connection *self,
 
 struct lsh_callback *
 make_connection_close_handler(struct ssh_connection *c);
+
+/* Processes the packet at once, passing it on to the write buffer. */
+void
+connection_send_kex(struct ssh_connection *self,
+		    struct lsh_string *message);
 
 /* Sending ordinary (non keyexchange) packets */
 void
@@ -289,5 +289,15 @@ struct abstract_write *
 make_write_packet(struct ssh_connection *connection,
 		  struct randomness *random,
 		  struct abstract_write *next);
+
+/* Implemented in debug.c */
+struct abstract_write *
+make_packet_debug(struct abstract_write *continuation,
+		  struct lsh_string *prefix);
+
+void send_debug_message(struct ssh_connection *connection,
+			const char *msg, int always_display);
+
+extern struct packet_handler connection_debug_handler;
 
 #endif /* LSH_CONNECTION_H_INCLUDED */
