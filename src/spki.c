@@ -109,7 +109,7 @@ struct sexp *keyblob2spki(struct lsh_string *keyblob)
 }
 
 /* Returns 0 or an atom */
-UINT32 spki_get_type(struct sexp *e, struct sexp_iterator **res)
+int spki_get_type(struct sexp *e, struct sexp_iterator **res)
 {
   struct sexp_iterator *i;
   UINT32 type;
@@ -132,29 +132,21 @@ UINT32 spki_get_type(struct sexp *e, struct sexp_iterator **res)
 }
 
 /* Returns 1 if the type matches. */
-int spki_check_type(struct sexp *e, UINT32 type, struct sexp_iterator **res)
+int
+spki_check_type(struct sexp *e, int type, struct sexp_iterator **res)
 {
-  struct sexp_iterator *i;
-  struct lsh_string *tag;
-  
-  if (sexp_atomp(e) || sexp_nullp(e))
-    return 0;
+  struct sexp_iterator *i =
+    sexp_check_type(e, get_atom_length(type), get_atom_name(type));
 
-  i = SEXP_ITER(e);
-
-  tag = sexp2string(SEXP_GET(i));
-
-  if (tag && (!lsh_string_cmp_l(tag, get_atom_length(type), get_atom_name(type))))
+  if (i)
     {
-      SEXP_NEXT(i);
-      *res = i;
+      if (res)
+	*res = i;
+      else
+	KILL(i);
       return 1;
     }
-  else
-    {
-      KILL(i);
-      return 0;
-    }
+  return 0;
 }
 
 /* NOTE: This function requires a particular order. */
@@ -165,40 +157,18 @@ static struct sexp *dsa_private2public(struct sexp_iterator *i)
   struct sexp *g;
   struct sexp *y;
   struct sexp *x;
-  
-  p = SEXP_GET(i);
 
-  /* FIXME: Rewrite to use spki_get_type() */
-  
-  if (!(p && sexp_check_type(p, "p", NULL)))
+  /* FIXME: Check length? */
+  if ( (p = sexp_assq(i, ATOM_P))
+       && (q = sexp_assq(i, ATOM_Q))
+       && (g = sexp_assq(i, ATOM_G))
+       && (y = sexp_assq(i, ATOM_Y))
+       && (x = sexp_assq(i, ATOM_X)))
+    return sexp_l(2, SA(PUBLIC_KEY),
+		  sexp_l(5, SA(DSA), p, q, g, y, -1), -1);
+  else
     return NULL;
-
-  SEXP_NEXT(i); q = SEXP_GET(i);
-  
-  if (!(q && sexp_check_type(q, "q", NULL)))
-    return NULL;
-
-  SEXP_NEXT(i); g = SEXP_GET(i);
-  
-  if (!(g && sexp_check_type(g, "g", NULL)))
-    return NULL;
-
-  SEXP_NEXT(i); y = SEXP_GET(i);
-  
-  if (!(y && sexp_check_type(y, "y", NULL)))
-    return NULL;
-
-  SEXP_NEXT(i); x = SEXP_GET(i);
-  
-  if (!(x && sexp_check_type(x, "x", NULL)))
-    return NULL;
-
-  SEXP_NEXT(i);
-  if (SEXP_GET(i))
-    return NULL;
-
-  return sexp_l(2, SA(PUBLIC_KEY),
-		sexp_l(5, SA(DSA), p, q, g, y, -1), -1);
+      
 }
 
 
@@ -313,68 +283,41 @@ parse_dsa_private_key(struct randomness *random,
 		      struct sexp_iterator *i
 		      /*, struct exception_handler *e */)
 {
-  mpz_t p, q, g, y, x; 
-  struct keypair *key = NULL;
-  
-  mpz_init(p);
-  mpz_init(q);
-  mpz_init(g);
-  mpz_init(y);
-  mpz_init(x);
-  
-  if (sexp_get_un(i, "p", p)
-      && sexp_get_un(i, "q", q)
-      && sexp_get_un(i, "g", g)
-      && sexp_get_un(i, "y", y)
-      && sexp_get_un(i, "x", x)
-      && !SEXP_GET(i))
+  struct dsa_signer *key = make_dsa_spki_signer(i, random);
+
+  if (key)
     {
       /* Test key */
       mpz_t tmp;
-      struct lsh_string *s;
       int valid;
       
-      mpz_init_set(tmp, g);
-      mpz_powm(tmp, tmp, x, p);
-      valid = !mpz_cmp(tmp, y);
+      mpz_init_set(tmp, key->public.g);
+      mpz_powm(tmp, tmp, key->a, key->public.p);
+      valid = !mpz_cmp(tmp, key->public.y);
       mpz_clear(tmp);      
 
       if (valid)
 	{
 	  struct lsh_string *public
-	    = ssh_format("%a%n%n%n%n", ATOM_SSH_DSS, p, q, g, y);
-	  struct signer *private;
-	  	  
-	  s = ssh_format("%n", x);
-	  
-	  private = MAKE_SIGNER(make_dsa_algorithm(random),
-				public->length, public->data,
-				s->length, s->data);
-	  assert(private);
-	  lsh_string_free(s);
+	    = ssh_format("%a%n%n%n%n", ATOM_SSH_DSS,
+			 key->public.p, key->public.q,
+			 key->public.g, key->public.y);
 
 	  debug("spki.c: parse_dsa_private_key: Using (public) key:\n"
 		"  p=%xn\n"
 		"  q=%xn\n"
 		"  g=%xn\n"
 		"  y=%xn\n",
-		p, q, g, y);
+		key->public.p, key->public.q,
+		key->public.g, key->public.y);
 	  
-	  key = make_keypair(ATOM_SSH_DSS, public, private);
+	  return make_keypair(ATOM_SSH_DSS, public, &key->super);
 	}
       else
 	werror("spki.c: parse_dsa_private_key: Key doesn't work.");
     }
 
-  /* Cleanup */
-  mpz_clear(p);
-  mpz_clear(q);
-  mpz_clear(g);
-  mpz_clear(y);
-  mpz_clear(x);
-  /* SPKI_ERROR(e, "Error parsing DSA key.", NULL);   */
-     
-  return key;
+  return NULL;
 }
 
 /* FIXME: Use exceptions here? */
@@ -503,6 +446,113 @@ read_spki_key_file(const char *name,
     }
   return NULL;
 }
+
+#if 0
+
+struct signer *
+spki_signer(struct sexp *e, struct alist *algorithms, int *t)
+{
+  struct sexp_iterator *i;
+  
+  if (spki_check_type(e, ATOM_PRIVATE_KEY, &i))
+    {
+      struct sexp *key = SEXP_GET(i);
+      struct sexp_iterator *inner;
+      int type = spki_get_type(key, &inner);
+      
+      if (type)
+	{
+	  CAST_SUBTYPE(spki_algorithm, algorithm, ALIST_GET(algorithms, type));
+
+	  if (algorithm)
+	    {
+	      *t = type;
+	      return SPKI_SIGNER(algorithm, i);
+	    }
+	}
+    }
+  return NULL;
+}
+
+struct verifier *
+spki_verifier(struct sexp *e, struct alist *algorithms, int *t)
+{
+  struct sexp_iterator *i;
+  
+  if (spki_check_type(e, ATOM_PRIVATE_KEY, &i))
+    {
+      struct sexp *key = SEXP_GET(i);
+      struct sexp_iterator *inner;
+      int type = spki_get_type(key, &inner);
+      
+      if (type)
+	{
+	  CAST_SUBTYPE(spki_algorithm, algorithm, ALIST_GET(algorithms, type));
+
+	  if (algorithm)
+	    {
+	      *t = type;
+	      return SPKI_VERIFIER(algorithm, i);
+	    }
+	}
+    }
+  return NULL;
+}
+
+/* ;; GABA:
+   (class
+     (name spki_dsa)
+     (super spki_algorithm)
+     (vars
+       (random object randomness)))
+*/
+
+static int do_spki_dsa_verify(struct verifier *s,
+			      UINT32 length,
+			      UINT8 *msg,
+			      UINT32 signature_length,
+			      UINT8 * signature_data)
+{
+  CAST(dsa_verifier, self, s);
+  struct simple_buffer buffer;
+  struct sexp *e;
+  mpz_t r, s;
+  
+  simple_buffer_init(&buffer, signature_length, signature_data);
+
+  if ( (e = sexp_parse_canonical(&buffer))
+       && parse_eod(buffer) )
+    {
+    }
+}
+    
+static verifier *
+make_spki_dsa_verifier(struct spki_algorithm *s UNUSED,
+		       struct sexp_iterator *i)
+{
+  NEW(dsa_verifier, res);
+  init_dsa_public(&res->public);
+
+  if (spki_dsa_init_public_key(&res->public, i))
+    {
+      res->super.verify = do_spki_dsa_verify;
+      return &res->super;
+    }
+  else
+    {
+      KILL(res);
+      return NULL;
+    }
+}
+
+static signer *
+make_spki_dsa_signer(struct spki_algorithm *s,
+		     struct sexp_iterator *i)
+{
+  NEW(dsa_signer, signer);
+  
+}
+#endif
 
 
 #if 0
