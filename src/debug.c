@@ -48,7 +48,7 @@ do_debug(struct abstract_write *w,
 {
   CAST(packet_debug, closure, w);
   
-  debug("DEBUG: received packet %xS\n", packet);
+  debug("DEBUG: %z packet %xS\n", closure->prefix, packet);
   
   A_WRITE(closure->super.next, packet);
 }
