@@ -2,6 +2,15 @@
 
 # echo srcdir = $srcdir
 
+# Make sure we have a randomness genereetor
+LSH_YARROW_SEED_FILE="`pwd`/yarrow-seed-file"
+export LSH_YARROW_SEED_FILE
+
+if [ -s "$LSH_YARROW_SEED_FILE" ] ; then : ; else
+    echo "Creating seed file $LSH_YARROW_SEED_FILE"
+    ../lsh-make-seed --sloppy -q -o "$LSH_YARROW_SEED_FILE"
+fi
+
 if [ -z "$LSHD_FLAGS" ] ; then
     LSHD_FLAGS='-q --enable-core'
 fi
