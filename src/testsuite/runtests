@@ -6,7 +6,7 @@ failed=0
 all=0
 
 if [ -z "$srcdir" ] ; then
-  srcdir=.
+  srcdir=`pwd`
 fi
 
 export srcdir
