@@ -34,7 +34,29 @@
 
 #include "xalloc.h"
 
-struct int_list *make_int_listv(unsigned n, va_list args)
+struct list_header *
+lsh_list_alloc(struct lsh_class *class,
+	       unsigned length, size_t element_size)
+{
+  /* FIXME: When gaba.scm is fixed to use offsetof instead of sizeof,
+   * the size calculation below must be updated as well. */
+  struct list_header *list;
+
+  assert(element_size < 1024);
+
+  list = (struct list_header *) lsh_var_alloc(class,
+					      class->size
+					      + element_size * length
+					      - element_size);
+  CHECK_SUBTYPE(list_header, list);
+  
+  list->length = length;
+
+  return list;
+}
+
+struct int_list *
+make_int_listv(unsigned n, va_list args)
 {
   unsigned i;
   
@@ -52,7 +74,8 @@ struct int_list *make_int_listv(unsigned n, va_list args)
   return l;
 }
 
-struct int_list *make_int_list(unsigned n, ...)
+struct int_list *
+make_int_list(unsigned n, ...)
 {
   va_list args;
   struct int_list *l;
@@ -64,7 +87,8 @@ struct int_list *make_int_list(unsigned n, ...)
   return l;
 }
 
-struct object_list *make_object_listv(unsigned n, va_list args)
+struct object_list *
+make_object_listv(unsigned n, va_list args)
 {
   unsigned i;
   
@@ -79,8 +103,8 @@ struct object_list *make_object_listv(unsigned n, va_list args)
   return l;
 }
 
-
-struct object_list *make_object_list(unsigned n, ...)
+struct object_list *
+make_object_list(unsigned n, ...)
 {
   va_list args;
   struct object_list *l;
@@ -91,4 +115,3 @@ struct object_list *make_object_list(unsigned n, ...)
 
   return l;
 }
-
