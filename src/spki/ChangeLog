@@ -1,3 +1,10 @@
+2003-01-29  Niels Möller  <niels@s3.kth.se>
+
+	* verify.c (spki_verify): Don't call spki_parse_type for the
+	signature. 
+
+	* testsuite/check-signature-test: Write input to test.in.
+
 2003-01-29  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* configure.ac (AC_OUTPUT): Generate tools/Makefile.
