@@ -69,6 +69,12 @@
 /* struct utmp has a ut_host member */
 #undef HAVE_UT_HOST
 
+/* struct utmp has a ut_name member */
+#undef HAVE_UT_NAME
+
+/* struct utmp has a ut_user member */
+#undef HAVE_UT_USER
+
 /* struct utmp has a ut_addr member */
 #undef HAVE_UT_ADDR
 
