@@ -217,7 +217,7 @@ struct close_callback *make_client_close_handler(void)
   return c;
 }
 
-/* Start a service that the servar has accepted (for instance ssh-userauth). */
+/* Start a service that the server has accepted (for instance ssh-userauth). */
 struct accept_service_handler
 {
   struct packet_handler super;
@@ -303,11 +303,9 @@ struct ssh_service *request_service(int service_name,
 }
 
 /* Initiate and manage a session */
-struct session
+struct client_session
 {
   struct ssh_channel super;
-
-  UINT32 max_window;
 
   /* Exec or shell request. */
   int final_request;
@@ -321,7 +319,7 @@ struct session
 
 static int client_session_die(struct ssh_channel *c)
 {
-  struct session *closure = (struct session *) c;
+  struct client_session *closure = (struct client_session *) c;
   
   MDEBUG(closure);
 
@@ -337,20 +335,10 @@ static int client_session_die(struct ssh_channel *c)
 static int do_recieve(struct ssh_channel *c,
 		      int type, struct lsh_string *data)
 {
-  struct session *closure = (struct session *) c;
-  int res = 0;
+  struct client_session *closure = (struct client_session *) c;
   
   MDEBUG(closure);
 
-  if (closure->super.rec_window_size < closure->max_window / 2)
-    {
-      res = A_WRITE(closure->super.write, prepare_window_adjust
-		    (&closure->super,
-		     closure->max_window - closure->super.rec_window_size));
-      if (LSH_CLOSEDP(res))
-	return res;
-    }
-  
   switch(type)
     {
     case CHANNEL_DATA:
@@ -365,7 +353,7 @@ static int do_recieve(struct ssh_channel *c,
 /* We may send more data */
 static int do_send(struct ssh_channel *c)
 {
-  struct session *closure = (struct session *) c;
+  struct client_session *closure = (struct client_session *) c;
 
   MDEBUG(closure);
 
@@ -377,11 +365,13 @@ static int do_send(struct ssh_channel *c)
 /* We have a remote shell */
 static int do_io(struct ssh_channel *c)
 {
-  struct session *closure = (struct session *) c;
+  struct client_session *closure = (struct client_session *) c;
 
   MDEBUG(closure);
   
   closure->super.recieve = do_recieve;
+  /* FIXME: Should install close callbacks on stdout and stderr,
+   * to detect write errors (and close the channel). */
   closure->in->handler = make_channel_read_data(&closure->super);
   closure->super.send = do_send;
   
@@ -391,7 +381,7 @@ static int do_io(struct ssh_channel *c)
 /* We have opened a channel of type "session" */
 static int do_open_confirm(struct ssh_channel *c)
 {
-  struct session *closure = (struct session *) c;
+  struct client_session *closure = (struct client_session *) c;
   struct lsh_string *args;
   
   MDEBUG(closure);
@@ -410,20 +400,20 @@ static int do_open_confirm(struct ssh_channel *c)
 					"%lfS", args));
 }
 
-static struct ssh_channel *make_session(struct io_fd *in,
-					struct abstract_write *out,
-					struct abstract_write *err,
-					UINT32 max_window,
-					int final_request,
-					struct lsh_string *args)
+static struct ssh_channel *make_client_session(struct io_fd *in,
+					       struct abstract_write *out,
+					       struct abstract_write *err,
+					       UINT32 max_window,
+					       int final_request,
+					       struct lsh_string *args)
 {
-  struct session *self;
+  struct client_session *self;
 
   NEW(self);
 
   init_channel(&self->super);
 
-  self->max_window = max_window;
+  self->super.max_window = max_window;
   self->super.rec_window_size = max_window;
 
   /* FIXME: Make maximum packet size configurable */
@@ -462,6 +452,7 @@ static int do_client_startup(struct connection_startup *c,
 			     struct abstract_write *write)
 {
   struct client_startup *closure = (struct client_startup *) c;
+  struct lsh_string *s;
   
   MDEBUG(closure);
 
@@ -470,8 +461,12 @@ static int do_client_startup(struct connection_startup *c,
   closure->session->open_confirm = do_open_confirm;
   closure->session->open_failure = client_session_die;
 
-  return A_WRITE(write, prepare_channel_open(table, ATOM_SESSION,
-					     closure->session, ""));
+  s = prepare_channel_open(table, ATOM_SESSION,
+			   closure->session, "");
+  if (!s)
+    fatal("Couldn't allocate a channel number!\n");
+
+  return A_WRITE(write, s);
 }
 
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
@@ -487,9 +482,9 @@ struct connection_startup *make_client_startup(struct io_fd *in,
   
   NEW(closure);
   closure->super.start = do_client_startup;
-  closure->session = make_session(in, out, err,
-				  WINDOW_SIZE,
-				  final_request, args);
+  closure->session = make_client_session(in, out, err,
+					 WINDOW_SIZE,
+					 final_request, args);
 
   return &closure->super;
 }
