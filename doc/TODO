@@ -113,6 +113,10 @@ Improve the tail recursiveness of builtin functions.
 
 FORWARDING
 
+Generalize the -L and -R options to
+[<source-ip>:]<source-port>:<target-ip>:<target-port>
+where the first component is optional.
+
 Implement other types of forwarding; X, ssh-agent, UDP, etc.
 
 Review the naming of functions in tcpforward.c; it appears a little
