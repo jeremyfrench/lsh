@@ -331,7 +331,11 @@ void close_fd(struct lsh_fd *fd);
 void close_fd_nicely(struct lsh_fd *fd);
 
 /* Stop reading, but if the fd has a write callback, keep it open. */
-void close_fd_read(struct lsh_fd *fd);
+void
+close_fd_read(struct lsh_fd *fd);
+
+void
+close_fd_write(struct lsh_fd *fd);
 
 struct lsh_fd *
 io_write_file(const char *fname, int flags,

@@ -557,7 +557,7 @@ do_write_callback(struct io_callback *s UNUSED,
     {
       /* Buffer is empty */
       if (fd->write_buffer->closed)
-	close_fd(fd);
+        close_fd_write(fd);
       else
 	lsh_oop_cancel_write_fd(fd);
     }
@@ -1668,7 +1668,8 @@ close_fd(struct lsh_fd *fd)
 void
 close_fd_nicely(struct lsh_fd *fd)
 {
-  /* Don't attempt to read any further. */
+  /* Don't attempt to read any further, and close the buffer as soon
+   * as the write_buffer is empty. */
 
   trace("io.c: close_fd_nicely called on fd %i: %z\n",
 	fd->fd, fd->label);
@@ -1690,7 +1691,8 @@ close_fd_nicely(struct lsh_fd *fd)
 }
 
 /* Stop reading, but if the fd has a write callback, keep it open. */
-void close_fd_read(struct lsh_fd *fd)
+void
+close_fd_read(struct lsh_fd *fd)
 {
   fd->read = NULL;
 
@@ -1699,6 +1701,35 @@ void close_fd_read(struct lsh_fd *fd)
   if (!fd->write)
     /* We won't be writing anything on this fd, so close it. */
     close_fd(fd);
+}
+
+/* Stop writing, but if the fd has a read callback, keep it open. */
+void
+close_fd_write(struct lsh_fd *fd)
+{
+  if (fd->write_buffer)
+    {
+      /* Mark the write_buffer as closed */
+      fd->write_buffer->closed = 1;
+      if (fd->write_buffer->empty)
+	{
+          if (!fd->read)
+            close_fd(fd);
+          else
+            {
+              /* Keep the fd open, but shutdown writing. */
+              
+              fd->write = NULL;
+              lsh_oop_cancel_write_fd(fd);
+
+              /* Try calling shutdown */
+              if ( (shutdown (fd->fd, SHUT_WR) < 0)
+                   && errno != ENOTSOCK)
+                werror("close_fd_write, shutdown failed, (errno = %i): %z\n",
+                       errno, STRERROR(errno));
+            }
+        }
+    }
 }
 
 /* Responsible for handling the EXC_FINISH_READ exception. It should
