@@ -1,5 +1,7 @@
 2003-02-10  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/.dist_classes: Deleted lsh_proxy.c.x and sexp-conv.c.x.
+
 	* src/dsa.c (do_dsa_sign): Use tokens in format string to
 	lsh_sexp_format. 
 	* src/dsa_keygen.c (dsa_generate_key): Likewise.
