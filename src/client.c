@@ -36,11 +36,13 @@
 #include "pad.h"
 #include "read_line.h"
 #include "read_packet.h"
+#include "service.h"
 #include "unpad.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
+/* Handle connection and initial handshaking. */
 struct client_callback
 {
   struct fd_callback super;
@@ -209,5 +211,118 @@ struct close_callback *make_client_close_handler(void)
   c->f = client_die;
 
   return c;
+}
+
+/* Request a service (for instance ssh-userauth). */
+struct accept_service_handler
+{
+  struct packet_handler super;
+
+  int service_name;
+  struct ssh_service *service;
+};
+
+static int do_accept_service(struct packet_handler *c,
+			     struct ssh_connection *connection,
+			     struct lsh_string *packet)
+{
+  struct accept_service_handler *closure = (struct accept_service_handler *) c;
+
+  struct simple_buffer buffer;
+  int msg_number;
+  int name;
+
+  MDEBUG(closure);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_SERVICE_ACCEPT)
+      && parse_atom(&buffer, &name)
+      && parse_eod(&buffer)
+      && (name == closure->service_name))
+    {
+      lsh_string_free(packet);
+      connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = connection->fail;
+      
+      return SERVICE_INIT(closure->service, connection);
+    }
+
+  lsh_string_free(packet);
+  return LSH_FAIL | LSH_DIE;
+}
+
+struct ssh_service *make_accept_service_handler(int service_name,
+						struct ssh_service *service)
+{
+  struct service_request *closure;
+
+  NEW(closure);
+  closure->super.init = do_accept_service;
+  closure->service_name = service_name;
+  closure->service = service;
+
+  return &closure->super;
+}
+
+struct service_request
+{
+  struct ssh_service super;
+
+  int service_name;
+  struct ssh_service *service;
+};
+
+static int do_request_service(struct ssh_service *c,
+			      struct ssh_connection *connection)
+{
+  struct service_request *closure = (struct service_request *) c;
+  int res;
+  
+  MDEBUG(c);
+
+  connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = make_accept_service(...);
+
+  return A_WRITE(connection->write, format_service_request(closure->name));
+}
+
+struct ssh_service *request_service(int service_name,
+				    struct ssh_service *service)
+{
+  struct service_request *closure;
+
+  NEW(closure);
+  closure->super.init = do_request_service;
+  closure->service_name = service_name;
+  closure->service = service;
+
+  return &closure->super;
+}
+
+struct client_startup
+{
+  struct connection_startup super;
+
+  /* Whether to request pty, forwarding, exec ... */
+  int shell;
+};
+
+void int do_client_startup(struct connection_startup *c,
+			   struct channel_table *table,
+			   struct abstract_write *write)
+{
+  struct client_startup *closure = (struct client_startup *) c;
+
+  MDEBUG(closure);
+  
+}
+
+/* Request opening a session. */
+struct connection_startup *make_client_startup(int want_shell)
+{
+  struct ssh_service *closure;
+
+  NEW(closure);
+  closure->super.start = do_client_startup;
+  closure->shell = want_shell;
+  return &closure->super;
 }
 
