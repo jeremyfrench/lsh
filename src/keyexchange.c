@@ -27,7 +27,7 @@ struct kexinit *parse_kexinit(struct lsh_string *packet)
 
   res = xalloc(sizeof(keyexinit));
 
-  if (!parse_string(&buffer, 16, &res->cookie))
+  if (!parse_octets(&buffer, 16, &res->cookie))
     {
       lsh_free(res);
       return NULL;
@@ -92,3 +92,40 @@ struct abstract_write *make_packet_kexinit(struct handle_kexinit *handler)
   return &closure->super;
 }
 
+struct lsh_string *format_kex(struct kexinit *kex)
+{
+  return ssh_format("%c%ls%A%A%A%A%A%A%A%A%A%A%c%i",
+		    SSH_MSG_KEXINIT,
+		    16, kex->cookie,
+		    kex->kex_algorithms,
+		    kex->server_host_key_algorithms,
+		    kex->encryption_algorithms_client_to_server,
+		    kex->encryption_algorithms_server_to_client,
+		    kex->mac_algorithms_client_to_server,
+		    kex->mac_algorithms_server_to_client,
+		    kex->compression_algorithms_client_to_server,
+		    kex->compression_algorithms_server_to_client,
+		    kex->languages_client_to_server,
+		    kex->languages_server_to_client,
+		    kex->first_kex_packet_follows, 0);
+}
+  
+
+int initiate_keyexchange(struct ssh_connection *connection,
+			 struct kexinit *kex,
+			 struct lsh_string *first_packet)
+{
+  int res;
+  
+  connection->sent_kexinit = kex;
+  kex->first_kex_packet_follows = !!first_packet;
+   
+  res = A_WRITE(connection->write, format_kex(kex));
+
+  if (res && first_packet)
+    return A_WRITE(connection->write, first_packet);
+  else
+    return res;
+}
+
+    
