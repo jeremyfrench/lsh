@@ -159,7 +159,7 @@ lsh_execuv_LDADD=
 # 	  $(PERL) $(top_srcdir)/misc/mk-reverse-table ssh.h >$@T
 # 	  if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
 
-LDADD = liblsh.a nettle/libnettle.a @LIBARGP@
+LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 
 # lshg needs ssh_format, which need bignum functions from nettle.
 # lshg_LDADD = liblsh.a @LIBARGP@
