@@ -1,3 +1,15 @@
+2000-06-14  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/sexp-conv.c: Renamed from sexp_conv.c.
+
+	* src/sexp.c (do_format_sexp_string): Removed redundant call to
+	ssh_format. 
+	(is_short): New function (removed #if 0).
+	(do_format_sexp_tail): Implemented pretty printing.
+	(do_format_sexp_cons): Enabled pretty printing.
+	(do_format_sexp_vector): Implemented pretty printing.
+	(encode_base64): Implemented line folding.
+
 2000-06-10  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/ssh-conv: New script.
