@@ -69,8 +69,7 @@
 static int client_initiate(struct fd_callback **c,
 			   int fd)
 {
-  struct client_callback *closure
-    = (struct client_callback *) *c;
+  CAST(client_callback, *closure, *c);
 
   int res;
   
@@ -588,6 +587,7 @@ static int do_channel_success(struct ssh_channel *c)
   return res;
 }
 
+#if 0
 static int do_channel_failure(struct ssh_channel *c)
 {
   CAST(client_session, closure, c);
@@ -635,32 +635,7 @@ static int do_open_confirm(struct ssh_channel *c)
 
   return res;
 }
-  
-
-#if 0
-  if (LIST_LENGTH(closure->requests))
-    {
-      struct channel_request_descriptor *req;
-      
-      req = (struct channel_request_descriptor *) LIST(closure->requests)[0];
-      if (LIST_LENGTH(closure->requests) == 1)
-        closure->super.channel_success = do_io;
-      else
-        closure->super.channel_success = do_next_request;
-      closure->super.channel_failure = client_session_die;
-      closure->current_request = 1;
-      return A_WRITE(closure->super.write,
-		 format_channel_request(req->request, c, 1,
-					"%lS", req->args));
-    }
-  
-  else
-    {
-      closure->super.channel_success = closure->super.channel_failure = NULL;
-      return LSH_OK | LSH_CHANNEL_READY_SEND;
-    }
-}
-#endif
+#endif  
 
 static struct ssh_channel *make_client_session(struct io_fd *in,
 					       struct io_fd *out,
@@ -691,6 +666,44 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
   self->exit_status = exit_status;
   
   return &self->super;
+}
+
+/* GABA:
+   (class
+     (name session_open_command)
+     (super channel_open_command)
+     (vars
+       ; This command can only be executed once,
+       ; so we can allocate the session object in advance.
+       (session object client_session)))
+*/
+
+static struct ssh_channel *
+new_session(struct channel_open_command *s,
+	    struct ssh_connection *connection,
+	    struct lsh_string **request)
+{
+  CAST(session_open_command, self, s);
+  struct ssh_channel *res;
+  *request = prepare_channel_open(connection->channels, ATOM_SESSION,
+				  self->session, "");
+  if (!*request)
+    return NULL;
+  
+  res = &self->session->super;
+
+  /* Make sure this command can not be invoked again */
+  self->session = NULL;
+
+  return res;
+}
+
+struct command *make_open_session_command(struct client_session *session)
+{
+  NEW(session_open_command, self);
+  self->super.super.call = do_channel_open_command;
+  self->super.new_channel = new_session;
+  self->session = session;
 }
 
 /* GABA:
@@ -863,4 +876,5 @@ struct request_info *make_shell_request(struct request_info *next)
 
   return req;
 }
+
 
