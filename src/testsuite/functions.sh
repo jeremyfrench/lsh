@@ -57,7 +57,7 @@ check_x11_support () {
 
 need_tcputils () {
     if type tcpconnect >/dev/null 2>&1 ; then : ; else
-	exit 77
+	test_skip
     fi
 }
 
