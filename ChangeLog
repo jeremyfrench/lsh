@@ -1,3 +1,11 @@
+2003-03-04  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* misc/xenofarm.sh (make): Don't use -k flag, it seems to mask
+	errors. 
+
+	* src/Makefile.am (environ.h): Avoid requiring GNU make for this
+	rule. 
+
 2003-03-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/unix_random.c: Include <sys/time.h> before <sys/resource.h>. 
