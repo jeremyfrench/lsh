@@ -289,14 +289,16 @@ void
 spki_5_tuple_list_release(struct spki_acl_db *db,
 			  struct spki_5_tuple_list *list);
 
-struct spki_5_tuple_list *
+int
 spki_parse_sequence_no_signatures(struct spki_acl_db *db,
 				  struct spki_iterator *i,
+				  struct spki_5_tuple_list **list,
 				  const struct spki_principal **subject);
 
-struct spki_5_tuple_list *
+int
 spki_parse_sequence(struct spki_acl_db *db,
 		    struct spki_iterator *i,
+		    struct spki_5_tuple_list **list,
 		    const struct spki_principal **subject,
 		    void *verify_ctx,
 		    spki_verify_func *verify);

@@ -669,15 +669,14 @@ spki_hash_verify(const struct spki_hash_value *hash,
  * to perform that operation.
  */
 
-static struct spki_5_tuple_list *
+static int
 parse_sequence(struct spki_acl_db *db,
 	       struct spki_iterator *i,
+	       struct spki_5_tuple_list **list,	       
 	       const struct spki_principal **subject,
 	       void *verify_ctx,
 	       spki_verify_func *verify)
 {
-  struct spki_5_tuple_list *list = NULL;
-
   /* When we process a certificate, we store the information needed
    * to verify the signature that follows it. If NULL, we have no data
    * that need verification. */
@@ -685,10 +684,11 @@ parse_sequence(struct spki_acl_db *db,
   unsigned cert_length;
   struct spki_principal *issuer = NULL;
   
+  *list = NULL;
   *subject = NULL;
   
   if (!spki_check_type(i, SPKI_TYPE_SEQUENCE))
-    return NULL;
+    return 0;
   
   for (;;)
     {
@@ -702,15 +702,16 @@ parse_sequence(struct spki_acl_db *db,
 	       * it a makro? */
 		 
 	      *subject = spki_principal_normalize(*subject);
-	      return list;
+	      return 1;
 	    }
 	  
 	  /* Fall through */
 	default:
 	fail:
-	  spki_5_tuple_list_release(db, list);
+	  spki_5_tuple_list_release(db, *list);
+	  *list = NULL;
 	  *subject = NULL;
-	  return NULL;
+	  return 0;
 	  
 	case SPKI_TYPE_CERT:
 	  if (cert_to_verify)
@@ -718,7 +719,7 @@ parse_sequence(struct spki_acl_db *db,
 	    goto fail;
 	  {
 	    unsigned start = i->start;
-	    struct spki_5_tuple *cert = spki_5_tuple_cons_new(db, &list);
+	    struct spki_5_tuple *cert = spki_5_tuple_cons_new(db, list);
 	    
 	    if (!cert)
 	      goto fail;
@@ -790,23 +791,25 @@ parse_sequence(struct spki_acl_db *db,
     }
 }
 
-struct spki_5_tuple_list *
+int
 spki_parse_sequence(struct spki_acl_db *db,
 		    struct spki_iterator *i,
+		    struct spki_5_tuple_list **list,
 		    const struct spki_principal **subject,
 		    void *verify_ctx,
 		    spki_verify_func *verify)
 {
   assert(verify);
-  return parse_sequence(db, i, subject, verify_ctx, verify);
+  return parse_sequence(db, i, list, subject, verify_ctx, verify);
 }
 
-struct spki_5_tuple_list *
+int
 spki_parse_sequence_no_signatures(struct spki_acl_db *db,
 				  struct spki_iterator *i,
+				  struct spki_5_tuple_list **list,
 				  const struct spki_principal **subject)
 {
-  return parse_sequence(db, i, subject, NULL, NULL);
+  return parse_sequence(db, i, list, subject, NULL, NULL);
 }
 
 
