@@ -1,5 +1,13 @@
 2003-04-16  Niels Möller  <niels@s3.kth.se>
 
+	* src/lshd.c (do_exc_lshd_handler, make_lshd_exception_handler):
+	Deleted functions.
+
+	* src/exception.h (EXC_RANDOMNESS_LOW_ENTROPY, EXC_APP): Deleted
+	unused exceptions.
+
+	* src/io.c (io_read_file): Deleted unused function.
+
 	* src/testsuite/functions.sh (spawn_lshd): Check exit code from
 	lshd. Print out the lshd pid.
 	(spawn_lsh): Print out the lsh pid.
