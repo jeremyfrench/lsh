@@ -154,28 +154,6 @@ atoms_table.c: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms table <$< >$@T
 	test -s $@T && mv -f $@T $@
 
-PRIME_LIMIT = 1024
-
-# We don't want an explicit dependency on the executable program
-# prime_table.h: prime_table.c
-# 	$(MAKE) prime_table
-# 	./prime_table $(PRIME_LIMIT) >$@T
-# 	test -s $@T && mv -f $@T $@
-# 
-# prime_table_LDADD =
-
-sexp_table.h: sexp_chars.in $(srcdir)/scm/make-char-classes.scm
-	$(SCHEME) -e main -s $(srcdir)/scm/make-char-classes.scm <$< >$@T
-	test -s $@T && mv -f $@T $@
-
-# digit_table_LDADD =
-# 
-# # We don't want an explicit dependency on the executable program
-# digit_table.h: digit_table.c
-# 	$(MAKE) digit_table
-# 	./digit_table >$@T
-# 	test -s $@T && mv -f $@T $@
-
 packet_types.h: ssh.h invert-defs
 	$(srcdir)/invert-defs <$< >$@T
 	test -s $@T && mv -f $@T $@
