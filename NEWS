@@ -1,3 +1,21 @@
+News for the lsh-0.1 release
+
+	Added compiler.scm to the dist.
+
+	Changed the session key generation to comply with the latest
+	draft (pointed out by Joseph Galbraith).
+
+	Added IDEA support (Bazsi).
+
+	Fixes to pty handling and flow control (mostly Bazsi). 
+
+	Fixed the client side handling of userauth failures.
+
+	By default, if we are running with a pty, use the same fd for
+	stdout and stderr. This workaround should make lsh more
+	friendly to bash and other programs that expect stderr to be a
+	tty.
+
 NEWS for the 1999-04-25 snapshot:
 
 	Fixed a few bugs in pty and eof handling. Should now work

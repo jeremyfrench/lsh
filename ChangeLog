@@ -1,3 +1,7 @@
+Wen May 12 21:35:22 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* Configure tests for strerror and strsignal.
+
 Tue May 11 20:22:05 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/sexp_test.c (main): Create the fd objects properly (old

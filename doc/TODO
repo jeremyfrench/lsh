@@ -244,3 +244,11 @@ such device).
 
 Add some workaround for the poll()-bug in linux/glibc-2.07 reported by
 Bazsi.
+
+Implement some limit on the amount of data that may be buffered for
+write on a connection. When the limit is exceeded, the connection
+should be dropped. The problem: if a client connects and sends a lot
+of packets, without ever reading anything from its socket, the server
+will eventually run out of memory.
+
+Make sure tty modes are restored on exit.

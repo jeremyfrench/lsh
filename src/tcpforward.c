@@ -308,9 +308,9 @@ make_forwarded_tcpip(struct lsh_string *bind_host,
 */
 
 static int do_tcpip_forward_request(struct global_request *c, 
-		struct ssh_connection *connection,
-		int want_reply UNUSED, 
-		struct simple_buffer *args)
+				    struct ssh_connection *connection,
+				    int want_reply UNUSED, 
+				    struct simple_buffer *args)
 {
   CAST(tcpip_forward_request, self, c);
   UINT8 *bind_host;
@@ -416,4 +416,15 @@ struct global_request *make_cancel_tcpip_forward_request(void)
   self->handler = do_cancel_tcpip_forward;
   return self;
 }
+
+/* GABA:
+   (expr
+     (name make_forward_connect)
+     (params
+       (connect object command)
+       (start_io object command))
+     (expr
+       (lambda (port) (start_io (connect port)))))
+*/
+
 #endif /* 0 */
