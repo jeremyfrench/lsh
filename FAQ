@@ -1,3 +1,20 @@
+× Is there anonymous CVS access to LSH?
+
+No. The main repository for LSH's source code is a Lysator-internal
+CVS repository. A read-only mirror on a public CVS server would be
+nice, but has not been set up for various reasons.
+
+However, there is a read-only HTTP-gateway to the CVS repository,
+located at <URL: http://www.lysator.liu.se/~nisse/lsh>. Running wget
+against that URL will give you the latest code that is checked in, and
+if you know tha right magic you can also get older versions, diffs
+etc.
+
+If you want to add code to LSH, you have to mail me, either directly
+to <nisse@lysator.liu.se> or via the psst mailing list at
+<psst@net.lut.ac.uk>.
+
+
 × Out of curiosity, what's the relationship between LSH and OpenSSH?
 
 They are almost completely unrelated. LSH development started in late
