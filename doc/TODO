@@ -5,34 +5,7 @@ we use the passed in exception handler, and when should we use the
 handler in the connection struct? Perhaps we should not have any
 connection->e handler at all?
 
-What about A_WRITE()? Perhaps it would make things simpler if this
-method doesn't get any exception handler argument? If the destination
-is dead, the function should either call fatal() or ignore the data.
-If the data is somehow bogus, an error could be signalled to
-connection->e or something like that.
-
-Non-trivial handlers to write:
-
-* The connection-error handler, which should recognize protocol errors,
-  send a disconnect message, and close the fd for reading.
-
-* The channel-exception handler, which should take care of channel
-  close events, instead of the channel_process_status function.
-
-Perhaps io.c should install its own exception handler on the fd:s, to
-make sure that they are closed automaticalle on i/o errors? That would
-simplify programs like sexp_conv.
-
   
-KEYS
-
-Code is needed to generate, store and read dss keys. Preferably in a
-SPKI/s-expression form.
-
-Fix compliance with the (next) SPKI draft. In particular, the order of
-fields and the encoding of numbers needs updating.
-
-
 S-EXPRESSIONS
 
 Add newlines and pretty printing to the sexp formatter.
@@ -42,9 +15,10 @@ read_handler.
 
 USERS
 
-Functions to lookup users, their passwords and .lsh/authorized_keys.
-Also have a look at 'Pluggable Non Interactive Authentication Modules'
-at http://www.msu.ru/pniam/pniam.html.
+Use real ACL:s instead of the authorized keys hack. Implement a
+general user-database abstraction. Also have a look at 'Pluggable Non
+Interactive Authentication Modules' at
+http://www.msu.ru/pniam/pniam.html.
 
 
 CHARSETS
@@ -55,8 +29,7 @@ characters properly. Probably needs a complete rewrite.
 
 CONFIGURATION
 
-Read configuration files. Better command line options. In particular
-lsh.c needs a cleanup of argument parsing, probably using argp.
+Figure out what configuration files we need. 
 
 
 LOGGING
@@ -85,59 +58,11 @@ Consider adding reference counts to strings.
 
 CHANNELS
 
-Create some generic methods for connecting a channel to one or more
-files. The data shuffling and error handling should be very similar
-for most channel types. 
-
-Fix the handling of EOF on fd:s associated with channels. Related
-stuff functions: make_channel_read_data,
-make_exc_read_eof_channel_handler, consuming_read.
-
 Consider which errors can occur in the channel callback functions;
 they are probably somewhat different from errors in higher levels. For
-instance, a writing to a file associated with a channel may fail. In
+instance, writing to a file associated with a channel may fail. In
 that case, the channel should be closed, but the connection should not
-die. Handle the LSH_CHANNEL_FINISHED code properly.
-
-Should channels be resources, or get some other kind of notification
-if the connection they are associated with disappears?
-
-
-CHANNEL CLOSE
-
-Channels may need some live-ness status. For instance, a remote
-process may close its stdout and stderr, but still keep on running. In
-this case, the local process should close it's stdout and stderr, but
-not close the channel until it has received a close message and
-possibly an exit status.
-
-
-USER INFO
-
-Where should the user information (name, home directory, login shell,
-etc), be stored? Is there any reasonable place but the connection
-structure? Perhaps the channel_open handler for the session is a
-reasonable place? Then we only have to figure out when to install that
-information.
-
-
-USER AUTHENTICATION
-
-On the server side, make userauthentication more robust by serializing
-handling of USERAUTH_REQUESTs. Use some user_db abstraction.
- 
-
-PROCESSES
-
-Dying children must be handled. For example like this: Use a signal
-handler to set a flag when a child dies. Let the backend loop (io.c)
-look at this flag, wait() to get status from dying children. Use an
-alist pid->callback to report children's exit status back to the remote
-end. Another issue are process groups... Are they relevant? 
-
-Kill child processes if its channel or its connection is closed
-unexpectedly. 
-
+die. 
 
 FREENESS
 
@@ -147,28 +72,38 @@ taken with GnuPG).
 
 scsh is not free software. Olin Shivers (one of the scsh copyright owners)
 has indicated he is willing to free it, but currently he has no time to
-handle the paperwork. We need scsh to be freed, or we need to rewrite the
-Scheme scripts so that they are as portable between Scheme implementations
-as possible, or switch to a free Scheme implementation, like Guile. This is
-not urgent however.
+handle the paperwork. 
 
 
 CONTROL LANGUAGE
-
-Implement some kind of tracing in the command language (the current
-attempt is broken). Implement and use exceptions.
 
 Improve the tail recursiveness of builtin functions.
 
 
 FORWARDING
 
-Perhaps split tcpforward.c into two files, tcpforward.c and
-tcpforward_commands.c. Implement other types of forwarding; X,
-ssh-agent, UDP, etc.
+Implement other types of forwarding; X, ssh-agent, UDP, etc.
 
 Review the naming of functions in tcpforward.c; it appears a little
 inconsistent. 
+
+
+RANDOMNESS
+
+Get a decent source of random (the current version will fall back to a
+really poorly seeded generator if /dev/urandom is not available). Two
+main alternatives are Werner Koch's code in GnuPG, and Peter Gutmann's
+libcrypt. Even on systems with /dev/random, it might be suboptimal to
+use it directly.
+
+
+DENIAL OF SERVICE
+
+Implement some limit on the amount of data that may be buffered for
+write on a connection. When the limit is exceeded, the connection
+should be dropped. The problem: if a client connects and sends a lot
+of packets, without ever reading anything from its socket, the server
+will eventually run out of memory.
 
 
 MISC
@@ -183,35 +118,21 @@ be a documented feature of 2.1.
 Description: Baby Shell for Novices with DOS compatible commands). Perhaps
 we need to change our name?
 
-Get a decent source of random (the current version will fall back to a
-really poorly seeded generator if /dev/urandom is not available). Two
-main alternatives are Werner Koch's code in GnuPG, and Peter Gutmann's
-libcrypt. 
-
 Make it cleaner wrt. more gcc warnings.
 
 Fix desTest.c to use proper declarations of its function pointers, and
 have autoconf check for rusage().
-
-Use argp instead of getopt_long (but we must first find out how to use
-argp on non-glibc systems).
 
 It seems that it is a little difficult to detect that an asyncronous
 connect() failed; poll() indicates that both reading and writing is
 possible, but write failes (with EPIPE/SIGPIPE) later. Perhaps a
 linux-problem?
 
-Extract handling of hex and base 64 encodings into a separate file.
-
-Include length fields when hashing in
-publickey_crypto.c:init_diffie_hellman_instance() (Done now). Perhaps
-some of this code should be moved to keyexchange.c? Similar
-considerations apply also to other hashes.
-
-Fix so that lsh compiles in the absense of zlib.
+Perhaps some of the dh-code in publickey_crypto should be moved to
+keyexchange.c?
 
 Fix configure script to add appropriate -R options when linking.
-Currently, using a shared libz.so doesn't work.
+Currently, using a shared libz.so sometimes doesn't work.
 
 Fix the src/symmetric/desTest program. It doesn't complain if the
 desCode is compiled with empty keymap.h, parity.h and rotors.h files.
@@ -249,31 +170,15 @@ right way is to handle the poll conditions POLLERR, POLLHUP and
 POLLERR. For a start, the fd-list passed to poll should include only
 fd:s that we are actually interested in.
 
-Implement some limit on the amount of data that may be buffered for
-write on a connection. When the limit is exceeded, the connection
-should be dropped. The problem: if a client connects and sends a lot
-of packets, without ever reading anything from its socket, the server
-will eventually run out of memory.
-
 Consider removing the write-attribute from ssh_channel.
 
 Let init_channel take enough arguments to initialize the window- and
 packet-size fields properly. It's too easy to forget them.
 
-It would be nice also to be able to see what encryption and compression
-algorithms were negotiated, if these are chosen at connect time, when
-verbose mode is on. (David C Niemi <niemi@niemi.erols.com>).
-
-Remove the EXC_IO_EOF exception, and let the read handler get a NULL
-argument instead. This is already done for buffered_read, should we do
-it for consuming_read as well?
-
 Add const to arguments of type struct exception_handler *?
 
 Do something reasonable in do_buffered_read() when self->handler is
 NULL?
-
-Figure out why -nt doesn't work.
 
 The supplied argp is compiled even if it isn't used.
 
@@ -299,13 +204,6 @@ instance messages supplied by the peer.
 
 See if we can do without the "reason" argument to close callbacks. 
 
-Current bugs (Bazsi):
-
-* the client side of pty allocation request should catch exceptions.
-(currently only a continuation is installed, no exception handler) In my
-proxy patches I made this possible adding a struct exception_handler **e to
-channel_request_command's format method.
-
 FIXME:
 static void do_free_zstream(z_stream *z)
 {
@@ -321,8 +219,8 @@ Get rid of the double close loop in io_iter. Perhaps start using a
 doubly linked list for fds? Add a backend-pointer to fd:s? Use an
 extra stack of fds that should be closed?
 
-If we add the backend field, the code for listen could also be
-simplified, and perhaps we can get rid of the backend pointer in some
-other places as well.
+If we add the backend field to lsh_fd objects, the code for listen
+could also be simplified, and perhaps we can get rid of the backend
+pointer in some other places as well.
 
 Exceptions from listen are handled badly in several places. 

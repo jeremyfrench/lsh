@@ -5,20 +5,15 @@ and we need to coordinate.
 
 
 Port forwarding services
-  TCP,
   X,
   ssh-agent,
   UDP (not in the spec, but that's no reason why it couldn't be
        implemented).
 
-PTY support. See NOTES.
-
 User interface. This includes command line options, configuration
 files, an escape-character mechanism and any features attached to that,
 including a command mode to create or terminate forwarded ports and
 channels interactively.
-
-More user authentication methods; in particular the public-key method.
 
 Key storage, generation and management.
 
@@ -31,10 +26,6 @@ protocol.
 
 SSH agent (does anybody have a specification of the protocol(s) used
 by ssh-agent?)
-
-SSH1 fallback support in the daemon. This should be done through an external
-SSH1 daemon. The configure part of this is already done (SSH1_FALLBACK and
-SSH1D).
 
 Projects not to do:
 
