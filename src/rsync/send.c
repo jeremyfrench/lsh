@@ -14,7 +14,8 @@
 #include <nettle/macros.h>
 
 #include "rsync.h"
-#include "macros.h"
+
+#define MIN(a, b) (((a)>(b)) ? (b) : (a))
 
 #define HASH_SIZE 0x10000
 #define HASH_SUM(a, b) (((a) ^ (b)) & 0xffff)

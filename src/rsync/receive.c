@@ -11,7 +11,8 @@
 #include <string.h>
 
 #include "rsync.h"
-#include "macros.h"
+
+#define MIN(a, b) (((a)>(b)) ? (b) : (a))
 
 /* Hash the data after it is copied to the output buffer. */
 static void
