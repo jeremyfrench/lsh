@@ -150,10 +150,6 @@ make_hash(const struct hash_algorithm *self);
        	       "UINT32 length" "const UINT8 *data"
 	       "UINT32 signature_length" "const UINT8 *signature_data")
 
-       (verify_spki method int
-       	  "UINT32 length" "const UINT8 *data"
-       	  "struct sexp *e")
-
        (public_key method (string))
        
        ; Returns ( <pub-sig-alg-id> <s-expr>* ), i.e. the same
@@ -163,9 +159,6 @@ make_hash(const struct hash_algorithm *self);
 
 #define VERIFY(verifier, algorithm, length, data, slength, sdata) \
 ((verifier)->verify((verifier), (algorithm), (length), (data), (slength), (sdata)))
-
-#define VERIFY_SPKI(verifier, length, data, e) \
-((verifier)->verify_spki((verifier), (length), (data), (e)))
 
 #define PUBLIC_KEY(signer) ((signer)->public_key((signer)))
 #define PUBLIC_SPKI_KEY(signer) ((signer)->public_spki_key((signer)))
@@ -178,16 +171,12 @@ make_hash(const struct hash_algorithm *self);
        ; Returns a non-spki signature
        (sign method (string)
              "int algorithm" "UINT32 length" "const UINT8 *data")
-       ; Returns a <sig-val> sexp
-       (sign_spki method (object sexp)
-       	     "UINT32 length" "const UINT8 *data")
 
        (get_verifier method (object verifier))))
 */
 
 #define SIGN(signer, algorithm, length, data) \
 ((signer)->sign((signer), (algorithm), (length), (data)))
-#define SIGN_SPKI(signer, length, data) ((signer)->sign_spki((signer), (length), (data)))
 #define SIGNER_GET_VERIFIER(signer) ((signer)->get_verifier((signer)))
 
 
