@@ -189,18 +189,17 @@ read_known_hosts(struct lsh_options *options)
       if (fd < 0)
 	{
 	  struct stat sbuf;
+	  struct lsh_string *known_hosts
+	    = ssh_format("%lz/.lsh/known_hosts", options->home);
 
-	  /* FIXME: Don't reuse tmp here. */
-	  lsh_string_free(tmp);
-	  tmp = ssh_format("%lz/.lsh/known_hosts", options->home);
-
-	  if (stat(lsh_get_cstring(tmp), &sbuf) == 0)
+	  if (stat(lsh_get_cstring(known_hosts), &sbuf) == 0)
 	    {
 	      werror("You have an old known-hosts file `%S'.\n"
 		     "To work with lsh-2.0, run the lsh-upgrade script,\n"
 		     "which will convert that to a new host-acls file.\n",
 		     tmp);
 	    }
+	  lsh_string_free(known_hosts);
 	}
     }
 
