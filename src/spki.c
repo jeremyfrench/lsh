@@ -39,6 +39,8 @@
 #include "xalloc.h"
 #include "alist.h"
 
+#include "nettle/sexp.h"
+
 #include <assert.h>
 #include <string.h>
 
@@ -48,30 +50,16 @@
 
 #include "spki.c.x"
 
-#define SA(x) sexp_a(ATOM_##x)
-
-struct exception *
-make_spki_exception(UINT32 type, const char *msg, struct sexp *expr)
-{
-  NEW(spki_exception, self);
-  assert(type & EXC_SPKI);
-
-  self->super.type = type;
-  self->super.msg = msg;
-  self->expr = expr;
-
-  return &self->super;
-}
 
 /* FIXME: This should create different tags for hostnames that are not
  * dns fqdn:s. */
 
-struct sexp *
+struct lsh_string *
 make_ssh_hostkey_tag(struct address_info *host)
 {
   UINT32 left = host->ip->length;
   UINT8 *s = host->ip->data;
-  
+  struct lsh_string *tag;
   struct lsh_string *reversed = lsh_string_alloc(left);
 
   /* First, transform "foo.lysator.liu.se" into "se.liu.lysator.foo" */
@@ -94,38 +82,50 @@ make_ssh_hostkey_tag(struct address_info *host)
 	}
     }
 
-  return sexp_l(2, sexp_z("ssh-hostkey"),
-		sexp_s(NULL, reversed),
-		-1);
+  tag = lsh_sexp_format(0, "(%z%s)",
+			"ssh-hostkey", reversed->length, reversed->data);
+  lsh_string_free(reversed);
+
+  return tag;
 }      
 
+/* Syntax: (<algorithm> ...). Advances the iterator passed the algorithm
+ * identifier, and returns the corresponding algorithm. */
+static const struct lsh_object *
+spki_algorithm_lookup(struct alist *algorithms,
+		      struct sexp_iterator *i,
+		      int *type)
+{
+  struct lsh_object *res;
+  int algorithm_name = lsh_sexp_get_type(i);
+  
+  /* FIXME: Display a pretty message if lookup fails. */
+  res = ALIST_GET(algorithms, algorithm_name);
+
+  if (res && type)
+    *type = algorithm_name;
+
+  return res;
+}
 
 struct verifier *
 spki_make_verifier(struct alist *algorithms,
-		   struct sexp *e)
+		   struct sexp_iterator *i)
 {
   /* Syntax: (<algorithm> <s-expr>*) */
   struct signature_algorithm *algorithm;
   struct verifier *v;
-  int algorithm_name;
-  struct sexp_iterator *i;
-
-  algorithm_name = spki_get_type(e, &i);
 
   {
     CAST_SUBTYPE(signature_algorithm, a, 
-		 ALIST_GET(algorithms, algorithm_name));
+		 spki_algorithm_lookup(algorithms, i, NULL));
     algorithm = a;
   }
   
   if (!algorithm)
-    {
-      werror("spki_make_verifier: Unsupported algorithm %a.\n", algorithm_name);
-      return NULL;
-    }
+    return NULL;
 
   v = MAKE_VERIFIER(algorithm, i);
-  KILL(i);
   
   if (!v)
     {
@@ -136,159 +136,74 @@ spki_make_verifier(struct alist *algorithms,
   return v;
 }
 
-/* FIXME: Merge spki_make_signer and spki_sexp_to_signer? */
 /* Returns the algorithm type, or zero on error. */
 struct signer *
-spki_make_signer(struct alist *algorithms,
-		 struct sexp *e,
-		 int *type)
+spki_sexp_to_signer(struct alist *algorithms,
+		    struct sexp_iterator *i,
+		    int *type)
 {
   /* Syntax: (<algorithm> <s-expr>*) */
   struct signature_algorithm *algorithm;
-  struct signer *s;
-  int algorithm_name;
-  struct sexp_iterator *i;
 
-  algorithm_name = spki_get_type(e, &i);
-
-  if (!algorithm_name)
-    return NULL;
-  
   {
     CAST_SUBTYPE(signature_algorithm, a, 
-		 ALIST_GET(algorithms, algorithm_name));
+		 spki_algorithm_lookup(algorithms, i, type));
     algorithm = a;
   }
 
-  if (!algorithm)
-    {
-      werror("spki_make_signer: Unsupported algorithm %a.\n", algorithm_name);
-      return NULL;
-    }
-
-  s = MAKE_SIGNER(algorithm, i);
-  KILL(i);
-  
-  if (!s)
-    {
-      werror("spki_make_signer: Invalid public-key data.\n");
-      return NULL;
-    }
-
-  if (type)
-    *type = algorithm_name;
-
-  return s;
+  return algorithm ? MAKE_SIGNER(algorithm, i) : NULL;
 }
 
 /* Reading keys */
 
-struct signer *
-spki_sexp_to_signer(struct alist *algorithms,
-                    struct sexp *key,
-                    int *algorithm_name)
-{
-  struct sexp_iterator *i;
-  
-  if ((i = sexp_check_type(key, ATOM_PRIVATE_KEY)))
-    {
-      struct sexp *expr = SEXP_GET(i);
-      struct signer *s;
-      
-      if (!expr)
-        {
-          werror("sexp_to_signer: Invalid key\n");
-          return NULL;
-        }
-      
-      s = spki_make_signer(algorithms, expr, algorithm_name);
-      
-      if (s)
-	/* Test key here? */
-	;
-      else
-	werror("sexp_to_signer: Invalid key.\n", expr);
+/* NOTE: With transport syntax */
 
-      return s;
-    }
-  werror("sexp_to_signer: Expected private-key expression.");
+struct signer *
+spki_make_signer(struct alist *algorithms,
+		 const struct lsh_string *key,
+		 int *algorithm_name)
+{
+  struct sexp_iterator i;
+  UINT8 *decoded;  
+
+  decoded = alloca(key->length);
+  memcpy(decoded, key->data, key->length);
+  
+  if (sexp_transport_iterator_first(&i, key->length, decoded)
+      && sexp_iterator_check_type(&i, "private-key"))
+    return spki_sexp_to_signer(algorithms, &i, algorithm_name);
+
+  werror("spki_make_signer: Expected private-key expression.\n");
   return NULL;
 }
 
-struct sexp *
-spki_make_public_key(struct verifier *verifier)
-{
-  return sexp_l(2, SA(PUBLIC_KEY),
-		PUBLIC_SPKI_KEY(verifier), -1);
-}
-
-/* Returns 0 or an atom */
-int
-spki_get_type(struct sexp *e, struct sexp_iterator **res)
-{
-  struct sexp_iterator *i;
-  int type;
-  
-  if (sexp_atomp(e) || sexp_nullp(e))
-    return 0;
-
-  i = SEXP_ITER(e);
-
-  type = sexp2atom(SEXP_GET(i));
-  if (type && res)
-    {
-      SEXP_NEXT(i);
-      *res = i;
-    }
-  else
-    KILL(i);
-
-  return type;
-}
-
-struct sexp *
+struct lsh_string *
 spki_hash_data(const struct hash_algorithm *algorithm,
 	       int algorithm_name,
 	       UINT32 length, UINT8 *data)
 {
   struct hash_instance *hash = make_hash(algorithm);
-  struct lsh_string *out = lsh_string_alloc(HASH_SIZE(hash));
+  UINT8 *out = alloca(HASH_SIZE(hash));
 
   hash_update(hash, length, data);
-  hash_digest(hash, out->data);
+  hash_digest(hash, out);
 
-  return sexp_l(3,
-		SA(HASH),
-		sexp_a(algorithm_name),
-		sexp_s(NULL, out), -1);
+  return lsh_sexp_format(0, "(%z%z%s)",
+			 "hash", get_atom_name(algorithm_name),
+			 HASH_SIZE(hash), out);
 }  
-
-/* Create an SPKI hash from an s-expression. */
-struct sexp *
-spki_hash_sexp(const struct hash_algorithm *algorithm,
-	       int name,
-	       struct sexp *expr)
-{
-  struct lsh_string *s = sexp_format(expr, SEXP_CANONICAL, 0);
-  
-  struct sexp *hash = spki_hash_data(algorithm, name, 
-				     s->length, s->data);
-  lsh_string_free(s);
-
-  return hash;
-}
 
 
 /* 5-tuples */
 
 struct spki_subject *
-make_spki_subject(struct sexp *key,
+make_spki_subject(struct sexp_iterator *i,
 		  struct verifier *verifier,
-		  struct lsh_string *sha1,
-		  struct lsh_string *md5)
+		  const struct lsh_string *sha1,
+		  const struct lsh_string *md5)
 {
   NEW(spki_subject, self);
-  self->key = key;
+  self->key = lsh_sexp_copy(i);
   self->verifier = verifier;
   self->sha1 = sha1;
   self->md5 = md5;
@@ -296,12 +211,13 @@ make_spki_subject(struct sexp *key,
   return self;
 }
 
+#if 0
 static int
 subject_match_hash(struct spki_subject *self,
 		   int method,
 		   const struct lsh_string *h1)
 {
-  struct lsh_string *h2;
+  const struct lsh_string *h2;
 
   switch (method)
     {
@@ -311,8 +227,7 @@ subject_match_hash(struct spki_subject *self,
 #if 0
       else if (self->key)
 	h2 = self->sha1
-	  = hash_string(&sha1_algorithm,
-			sexp_format(self->key, SEXP_CANONICAL, 0), 1);
+	  = hash_string(&sha1_algorithm, self->key, 0);
 #endif
       else
 	return 0;
@@ -324,8 +239,7 @@ subject_match_hash(struct spki_subject *self,
 #if 0
       else if (self->key)
 	h2 = self->md5
-	  = hash_string(&md5_algorithm,
-			sexp_format(self->key, SEXP_CANONICAL, 0), 1);
+	  = hash_string(&md5_algorithm, self->key, 0);
 #endif
       else
 	return 0;
@@ -336,6 +250,7 @@ subject_match_hash(struct spki_subject *self,
     }
   return lsh_string_eq(h1, h2);
 }
+#endif
 
 struct spki_5_tuple *
 make_spki_5_tuple(struct spki_subject *issuer,
@@ -370,33 +285,50 @@ make_spki_5_tuple(struct spki_subject *issuer,
      (name spki_tag_atom)
      (super spki_tag)
      (vars
-       (resource object sexp)))
+       (display string)
+       (resource string)))
 */
 
 static int
 do_spki_tag_atom_match(struct spki_tag *s,
-		       struct sexp *e)
+		       struct sexp_iterator *e)
 {
   CAST(spki_tag_atom, self, s);
 
-  assert(sexp_atomp(self->resource));
+  if (e->type != SEXP_ATOM
+      || !lsh_string_eq_l(self->resource, e->atom_length, e->atom))
+    return 0;
   
-  return sexp_atomp(e)
-    && sexp_atoms_eq(self->resource, e);
+  if (self->display)
+    {
+      if (! (e->display &&
+	     lsh_string_eq_l(self->display, e->display_length, e->display)))
+	return 0;
+    }
+  else if (e->display)
+    return 0;
+  
+  return sexp_iterator_next(e);
 }
 
 static struct spki_tag *
-make_spki_tag_atom(struct sexp *resource)
+make_spki_tag_atom(struct sexp_iterator *i)
 {
   NEW(spki_tag_atom, self);
 
-  assert(sexp_atomp(resource));
+  assert(i->type == SEXP_ATOM);
   
   self->super.type = SPKI_TAG_ATOM;
   self->super.match = do_spki_tag_atom_match;
 
-  self->resource = resource;
+  self->resource = lsh_sexp_to_string(i, &self->display);
 
+  if (!self->resource)
+    {
+      KILL(self);
+      return NULL;
+    }
+  
   return &self->super;
 }
 
@@ -414,27 +346,25 @@ make_spki_tag_atom(struct sexp *resource)
 
 static int
 do_spki_tag_list_match(struct spki_tag *s,
-		       struct sexp *e)
+		       struct sexp_iterator *j)
 {
   CAST(spki_tag_list, self, s);
   unsigned i;
-  struct sexp_iterator *j;
   
-  if (sexp_atomp(e))
+  if (!sexp_iterator_enter_list(j))
     return 0;
 
-  for (i = 0, j = SEXP_ITER(e);
+  for (i = 0;
        i<LIST_LENGTH(self->list);
-       i++, SEXP_NEXT(j))
+       i++)
     {
       CAST_SUBTYPE(spki_tag, tag, LIST(self->list)[i]);
-      struct sexp *o = SEXP_GET(j);
 
-      if (! (o && SPKI_TAG_MATCH(tag, o)))
+      if (j->type == SEXP_END
+	  || !SPKI_TAG_MATCH(tag, j))
 	return 0;
     }
-  
-  return 1;
+  return sexp_iterator_exit_list(j);
 }
 
 static struct spki_tag *
@@ -462,16 +392,21 @@ make_spki_tag_list(struct object_list *list)
 
 static int
 do_spki_tag_set_match(struct spki_tag *s,
-		      struct sexp *e)
+		      struct sexp_iterator *e)
 {
   CAST(spki_tag_set, self, s);
   unsigned i;
 
   for (i = 0; i<LIST_LENGTH(self->set); i++)
     {
+      struct sexp_iterator j = *e;
       CAST_SUBTYPE(spki_tag, tag, LIST(self->set)[i]);
-      if (SPKI_TAG_MATCH(tag, e))
-	return 1;
+
+      if (SPKI_TAG_MATCH(tag, &j))
+	{
+	  *e = j;
+	  return 1;
+	}
     }
 
   return 0;
@@ -498,49 +433,57 @@ make_spki_tag_set(struct object_list *set)
      (name spki_tag_prefix)
      (super spki_tag)
      (vars
-       (prefix object sexp)))
+       (display string)
+       (prefix string)))
 */
 
 static int
 do_spki_tag_prefix_match(struct spki_tag *s,
-			 struct sexp *e)
+			 struct sexp_iterator *i)
 {
   CAST(spki_tag_prefix, self, s);
-  const struct lsh_string *ed;
-  const struct lsh_string *pd;
-
-  assert(sexp_atomp(self->prefix));
   
-  if (!sexp_atomp(e))
+  if (i->type != SEXP_ATOM)
     return 0;
 
-  ed = sexp_display(e);
-  pd = sexp_display(self->prefix);
-  
-  return (ed ? (pd && lsh_string_eq(ed, pd)) : !pd)
-    && lsh_string_prefixp(sexp_contents(self->prefix),
-			  sexp_contents(e));
+  if (self->display)
+    {
+      if (!i->display
+	  || !lsh_string_eq_l(self->display, i->display_length, i->display))
+	return 0;
+    }
+  else if (i->display)
+    return 0;
+	  
+  return i->atom_length >= self->prefix->length
+    && !memcmp(i->atom, self->prefix->data, self->prefix->length);
 }
 
 static struct spki_tag *
-make_spki_tag_prefix(struct sexp *prefix)
+make_spki_tag_prefix(struct sexp_iterator *i)
 {
   NEW(spki_tag_prefix, self);
 
+  assert(i->type == SEXP_ATOM);
+  
   self->super.type = SPKI_TAG_PREFIX;
   self->super.match = do_spki_tag_prefix_match;
 
-  self->prefix = prefix;
-
+  self->prefix = lsh_sexp_to_string(i, &self->display);
+  if (!self->prefix)
+    {
+      KILL(self);
+      return NULL;
+    }
   return &self->super;
 }
 
 
 static int
 do_spki_tag_any_match(struct spki_tag *self UNUSED,
-			 struct sexp *e UNUSED)
+		      struct sexp_iterator *i)
 {
-  return 1;
+  return sexp_iterator_next(i);
 }
 
 /* FIXME: Make this const */
@@ -551,90 +494,92 @@ struct spki_tag spki_tag_any =
 static struct object_list *
 spki_sexp_to_tag_list(struct sexp_iterator *i, unsigned limit)
 {
-  unsigned left;
-  struct object_list *l;
-  unsigned j;
+  struct object_queue q;
 
-  left = SEXP_LEFT(i);
-
-  if (!left)
+  if (i->type == SEXP_END)
     {
       werror("spki_sexp_to_tag_list: Empty list.\n");
       return NULL;
     }
+
+  object_queue_init(&q);
   
-  l = alloc_object_list(left);
-  
-  for (j = 0; j<left; j++)
+  while (i->type != SEXP_END)
     {
-      struct spki_tag *tag = spki_sexp_to_tag(SEXP_GET(i), limit);
+      struct spki_tag *tag = spki_sexp_to_tag(i, limit);
       if (!tag)
 	{
-	  /* FIXME: We could explicitly kill the elements of the list
+	  /* FIXME: We could explicitly kill the elements of the queue
 	   * as well. */
-	  KILL(l);
+	  object_queue_kill(&q);
 	  return NULL;
 	}
-      LIST(l)[j] = &tag->super;
-      SEXP_NEXT(i);
+      object_queue_add_tail(&q, &tag->super);
     }
-  assert(!SEXP_GET(i));
 
-  return l;
+  return queue_to_list_and_kill(&q);
 }
 
 struct spki_tag *
-spki_sexp_to_tag(struct sexp *e,
+spki_sexp_to_tag(struct sexp_iterator *i,
 		 /* Some limit on the recursion */
 		 unsigned limit)
 {
-  if (sexp_atomp(e))
-    return make_spki_tag_atom(e);
-  else
+  switch (i->type)
     {
-      struct sexp_iterator *i;
-      if (!limit)
-	{
-	  werror("spki_sexp_to_tag: Nesting too deep.\n");
+    default:
+      abort();
+    case SEXP_ATOM:
+      return make_spki_tag_atom(i);
+    case SEXP_END:
+      /* Should this ever happen? */
+      abort();
+    case SEXP_LIST:
+      {
+	if (!limit)
+	  {
+	    werror("spki_sexp_to_tag: Nesting too deep.\n");
+	    return NULL;
+	  }
+
+	if (!sexp_iterator_enter_list(i))
 	  return NULL;
-	}
-      
-      if ((i = sexp_check_type(e, ATOM_STAR)))
-	{
-	  struct sexp *magic = SEXP_GET(i);
-	  
-	  if (!magic)
-	    return &spki_tag_any;
 
-	  SEXP_NEXT(i);
-	  
-	  switch(sexp2atom(magic))
-	    {
-	    case ATOM_SET:
-	      {
-		struct object_list *l = spki_sexp_to_tag_list(i, limit - 1);
-
-		return l ? make_spki_tag_set(l) : NULL;
-	      }
-	    case ATOM_PREFIX:
-	      {
-		struct sexp *prefix = SEXP_GET(i);
-
-		return (prefix && sexp_atomp(prefix))
-		  ? make_spki_tag_prefix(prefix)
-		  : NULL;
-	      }
-	    default:
-	      werror("spki_sexp_to_tag: Invalid (* ...) tag.\n");
+	if (i->type == SEXP_ATOM && !i->display
+	    && i->atom_length == 1 && i->atom[0] == '*')
+	  {
+	    if (!sexp_iterator_next(i))
 	      return NULL;
-	    }
-	}
-      else
-	{
-	  struct object_list *l = spki_sexp_to_tag_list(SEXP_ITER(e), limit - 1);
 
-	  return l ? make_spki_tag_list(l) : NULL;
-	}
+	    if (i->type != SEXP_ATOM || i->display)
+	      {
+		werror("spki_sexp_to_tag: Invalid (* ...) tag.\n");
+		return NULL;
+	      }
+	    
+	    switch (lsh_sexp_to_atom(i))
+	      {
+	      case ATOM_SET:
+		{
+		  struct object_list *l = spki_sexp_to_tag_list(i, limit - 1);
+
+		  return l ? make_spki_tag_set(l) : NULL;
+		}
+	      case ATOM_PREFIX:
+		return make_spki_tag_prefix(i);
+
+	      default:
+		werror("spki_sexp_to_tag: Invalid (* ...) tag.\n");
+		return NULL;
+	      }
+	  }
+	else
+	  {
+	    struct object_list *l = spki_sexp_to_tag_list(i, limit - 1);
+	    
+	    return l ? make_spki_tag_list(l) : NULL;
+	  }
+      }
     }
 }
 
@@ -650,62 +595,37 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
 			  struct sexp_iterator *i)
 {
   struct spki_subject *subject;
-  struct sexp_iterator *j;
   struct spki_tag *authorization;
-  
   int propagate = 0;
+  int type;
   
-  struct sexp *e = SEXP_GET(i);
-  
-  if (!e)
-    {
-      werror("spki_acl_entry_to_5_tuple: Invalid entry.\n");
-      return NULL;
-    }
-
-  subject = SPKI_LOOKUP(ctx, e, NULL);
+  subject = SPKI_LOOKUP(ctx, i, NULL);
   if (!subject)
     return NULL;
 
-  SEXP_NEXT(i);
-  e = SEXP_GET(i);
-  if (!e)
-    return NULL;
-
-  if ((j = sexp_check_type(e, ATOM_PROPAGATE)))
+  type = lsh_sexp_get_type(i);
+  if (type == ATOM_PROPAGATE)
     {
-      if (SEXP_GET(j))
-	{
-	  werror("spki_acl_entry_to_5_tuple: Invalid propagate-expression.\n");
-	  return NULL;
-	}
       propagate = 1;
-      SEXP_NEXT(i);
-      e = SEXP_GET(i);
+
+      if (!sexp_iterator_enter_list(i))
+	return 0;
+      type = lsh_sexp_get_type(i);
     }
 
-  if ((j = sexp_check_type(e, ATOM_TAG)))
-    {
-      struct sexp *tag = SEXP_GET(j);
-      SEXP_NEXT(j);
-      if (SEXP_GET(j))
-	{
-	  werror("spki_acl_entry_to_5_tuple: Invalid tag-expression.\n");
-	  return NULL;
-	}
-      
-      authorization = spki_sexp_to_tag(tag, SPKI_NESTING_LIMIT);
-      if (!authorization)
-	return NULL;
-    }
-  else
+  if (type != ATOM_TAG)
     {
       werror("spki_acl_entry_to_5_tuple: Invalid entry.\n");
       return NULL;
     }
-    
-  SEXP_NEXT(i);
-  if (SEXP_GET(i))
+  else
+    {
+      authorization = spki_sexp_to_tag(i, SPKI_NESTING_LIMIT);
+      if (!authorization || !sexp_iterator_exit_list(i))
+	return NULL;
+    }
+
+  if (i->type != SEXP_END || !sexp_iterator_exit_list(i))
     {
       werror("spki_acl_entry_to_5_tuple: Garbage at end of entry.\n");
       return NULL;
@@ -718,17 +638,13 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
 
 /* Takes an spki_context and an ACL s-expression, and adds
  * corresponding 5-tuples to the context. Returns 1 if all entries
- * were correct, 0 on any error. However, it tries to go on if some
- * sub-expression is invalid. */
+ * were correct, 0 on any error. */
 
 int
 spki_add_acl(struct spki_context *ctx,
-	     struct sexp *e)
+	     struct sexp_iterator *i)
 {
-  struct sexp_iterator *i;
-  int res = 1;
-  
-  if (!(i = sexp_check_type(e, ATOM_ACL)))
+  if (!sexp_iterator_check_type(i, "acl"))
     {
       werror("spki_read_acls: Invalid acl\n");
       return 0;
@@ -743,24 +659,20 @@ spki_add_acl(struct spki_context *ctx,
     }
 #endif
   
-  for (; (e = SEXP_GET(i)); SEXP_NEXT(i))
+  while (i->type != SEXP_END)
     {
-      struct sexp_iterator *j;
-      if ((j = sexp_check_type(e, ATOM_ENTRY)))
-	{
-	  struct spki_5_tuple *acl = spki_acl_entry_to_5_tuple(ctx, j);
-	  if (acl)
-	    SPKI_ADD_TUPLE(ctx, acl);
-	  else res = 0;
-	}
-      else
-	{
-	  werror("spki_read_acls: Invalid entry, ignoring\n");
-	  res = 0;
-	}
+      struct spki_5_tuple *acl;
+      if (!sexp_iterator_check_type(i, "entry"))
+	return 0;
+      
+      acl = spki_acl_entry_to_5_tuple(ctx, i);
+      if (!acl)
+	return 0;
+      
+      SPKI_ADD_TUPLE(ctx, acl);
     }
 
-  return res;
+  return sexp_iterator_exit_list(i);
 }
 
 
@@ -782,6 +694,7 @@ spki_add_acl(struct spki_context *ctx,
        (db struct object_queue)))
 */
 
+#if 0
 static struct spki_subject *
 spki_subject_by_hash(struct spki_state *self,
 		     int algorithm,
@@ -796,17 +709,17 @@ spki_subject_by_hash(struct spki_state *self,
     }
   return NULL;
 }
+#endif
 
 static struct spki_subject *
 do_spki_lookup(struct spki_context *s,
-	       struct sexp *e,
+	       struct sexp_iterator *i,
 	       struct verifier *v)
 
 {
   CAST(spki_state, self, s);
-  struct sexp_iterator *i;
-
-  switch (spki_get_type(e, &i))
+  
+  switch (lsh_sexp_get_type(i))
     {
     case ATOM_HASH:
       {
@@ -814,36 +727,40 @@ do_spki_lookup(struct spki_context *s,
 	struct spki_subject *subject;
 	const struct lsh_string *hash;
 
-	int method = sexp2atom(SEXP_GET(i));
+	int method = lsh_sexp_to_atom(i);
 	if (!method)
 	  return NULL;
 
-	SEXP_NEXT(i);
-	hash = sexp2string(SEXP_GET(i));
+	hash = lsh_sexp_to_string(i, NULL);
 
 	if (!hash)
 	  return NULL;
 
-	SEXP_NEXT(i);
-	if (SEXP_GET(i))
+	if (i->type != SEXP_END
+	    || !sexp_iterator_exit_list(i))
 	  return NULL;
-	
+
+#if 0
 	subject = spki_subject_by_hash(self, method, hash);
 	
-	if (!subject)
+	if (subject)
+	  lsh_string_free(hash);
+	else
+#endif
 	  {
 	    switch (method)
 	      {
 	      case ATOM_SHA1:
-		subject = make_spki_subject(NULL, NULL, lsh_string_dup(hash), NULL);
+		subject = make_spki_subject(NULL, NULL, hash, NULL);
 		break;
 	      case ATOM_MD5:
-		subject = make_spki_subject(NULL, NULL, NULL, lsh_string_dup(hash));
+		subject = make_spki_subject(NULL, NULL, NULL, hash);
 		break;
 	      default:
+		lsh_string_free(hash);
 		return NULL;
 	      }
-
+	    
 	    object_queue_add_tail(&self->keys, &subject->super);
 	  }
 
@@ -856,16 +773,12 @@ do_spki_lookup(struct spki_context *s,
       {
 	/* Syntax: (public-key (<pub-sig-alg-id> <s-expr>*) <uris>) */
 	struct spki_subject *subject;
-	struct lsh_string *sha1;
-	struct lsh_string *md5;
-	struct sexp *key = SEXP_GET(i);
+	const struct lsh_string *sha1;
+	const struct lsh_string *md5;
 
-	if (!key)
-	  {
-	    werror("do_spki_lookup: Invalid (public-key ...) expression.\n");
-	    return NULL;
-	  }
-
+	/* FIXME: We should hash the full expression, including
+	 * "public-key", uri:s, and any other stuff. */
+#if 0
 	/* We first se if we can find the key by hash */
 	{
 	  struct lsh_string *canonical = sexp_format(e, SEXP_CANONICAL, 0);
@@ -889,11 +802,17 @@ do_spki_lookup(struct spki_context *s,
 	      }
 	  }
 	else
+#endif
 	  {
 	    /* New subject */
-	    subject = make_spki_subject(e,
-					v ? v : spki_make_verifier(self->algorithms, key),
-					sha1, md5);
+	    if (!v)
+	      {
+		v = spki_make_verifier(self->algorithms, i);
+		if (!v)
+		  return NULL;
+	      }
+	    /* FIXME: Add sha1 and md5 hashes. */
+	    subject = make_spki_subject(i, v, NULL, NULL);
 	    
 	    object_queue_add_head(&self->keys, &subject->super);
 	  }
@@ -925,18 +844,24 @@ do_spki_add_tuple(struct spki_context *s,
 static int
 do_spki_authorize(struct spki_context *s,
 		  struct spki_subject *user,
-		  struct sexp *access)
+		  const struct lsh_string *access)
 {
   CAST(spki_state, self, s);
 
+  struct sexp_iterator start;
+
+  if (!sexp_iterator_first(&start, access->length, access->data))
+    return 0;
+  
   FOR_OBJECT_QUEUE(&self->db, n)
     {
       CAST(spki_5_tuple, tuple, n);
-
+      struct sexp_iterator i = start;
+      
       /* FIXME: Handles ACL:s only. I.e. issuer == NULL. */
       if ( (user == tuple->subject)
 	   && !tuple->issuer
-	   && SPKI_TAG_MATCH(tuple->authorization, access))
+	   && SPKI_TAG_MATCH(tuple->authorization, &i))
 	return 1;
     }
   return 0;
@@ -957,7 +882,6 @@ make_spki_context(struct alist *algorithms)
   return &self->super;
 }
 
-
 /* PKCS-5 handling */
 
 /* Encryption of private data.
@@ -972,7 +896,7 @@ make_spki_context(struct alist *algorithms)
  *
  */
 
-struct sexp *
+struct lsh_string *
 spki_pkcs5_encrypt(struct randomness *r,
                    struct lsh_string *label,
 		   UINT32 prf_name,
@@ -987,7 +911,8 @@ spki_pkcs5_encrypt(struct randomness *r,
   struct lsh_string *key;
   struct lsh_string *salt;
   struct lsh_string *iv;
-  struct sexp *method;
+  struct lsh_string *encrypted;
+  struct lsh_string *value;
   
   assert(crypto);
   assert(prf);
@@ -1004,10 +929,6 @@ spki_pkcs5_encrypt(struct randomness *r,
 		   iterations,
 		   key->length, key->data);
 
-  method = sexp_l(4, SA(XPKCS5V2), sexp_a(prf_name),
-                  sexp_l(2, SA(ITERATIONS), sexp_uint32(iterations), -1),
-                  sexp_l(2, SA(SALT), sexp_s(NULL, salt), -1), -1);
-
   if (crypto->iv_size)
     {
       iv = lsh_string_alloc(crypto->iv_size);
@@ -1016,97 +937,111 @@ spki_pkcs5_encrypt(struct randomness *r,
   else
     iv = NULL;
 
-  return sexp_l(4,
-                SA(PASSWORD_ENCRYPTED),
-                sexp_s(NULL, lsh_string_dup(label)),
-                method,
-                sexp_l(3,
-                       sexp_a(crypto_name),
-                       sexp_l(2, SA(IV), sexp_s(NULL, iv), -1),
-                       sexp_l(2, SA(DATA),
-                              sexp_s(NULL, crypt_string_pad
-                                     (MAKE_ENCRYPT(crypto,
-                                                   key->data,
-                                                   iv ? iv->data : NULL),
-                                      data, 0)),
-                              -1),
-                       -1),
-                -1);
+  encrypted = crypt_string_pad(MAKE_ENCRYPT(crypto,
+					    key->data,
+					    iv ? iv->data : NULL),
+			       data, 0);
+  
+  /* FIXME: Handle iv == NULL. */
+  value = lsh_sexp_format(0, "(%z%s(%z%z(%z%i)(%z%s))(%z(%z%s)(%z%s)))",
+			  "password-encrypted", label->length, label->data,
+			  "xpkcs5v2", get_atom_name(prf_name),
+			  "iterations", iterations,
+			  "salt", salt->length, salt->data,
+			  get_atom_name(crypto_name),
+			  "iv", iv->length, iv->data,
+			  "data", encrypted->length, encrypted->data);
+
+  lsh_string_free(key);
+  lsh_string_free(salt);
+  lsh_string_free(iv);
+  lsh_string_free(encrypted);
+
+  return value;
 }
 
-struct sexp *
+/* Frees input string. */
+struct lsh_string *
 spki_pkcs5_decrypt(struct alist *mac_algorithms,
                    struct alist *crypto_algorithms,
                    struct interact *interact,
-                   struct sexp *expr)
+                   struct lsh_string *expr)
 {
-  struct sexp_iterator *i;
+  struct sexp_iterator i;
   
-  if (!(i = sexp_check_type(expr, ATOM_PASSWORD_ENCRYPTED)))
+  if (! (sexp_iterator_first(&i, expr->length, expr->data)
+	 && sexp_iterator_check_type(&i, "password_encrypted")))
     return expr;
 
   else
     {
       const struct lsh_string *label;
-      struct sexp *key_info;
-      struct sexp *payload;
+      struct sexp_iterator key_info;
 
       struct crypto_algorithm *crypto;
       struct mac_algorithm *mac;
-      
-      const struct lsh_string *salt;
-      const struct lsh_string *iv;
-      const struct lsh_string *data;
+
+      /* FIXME: Leaks some strings. */
+      const struct lsh_string *salt = NULL;
+      const struct lsh_string *iv = NULL;
+      const struct lsh_string *data = NULL;
       UINT32 iterations;
       
-      if (SEXP_LEFT(i) != 3)
-	{
-	  werror("Invalid (password-encrypted ...) expression.\n");
-	  return NULL;
-	}
-	
       /* NOTE: This is a place where it might make sense to use a sexp
        * display type, but we don't support that for now. */
-      label = sexp2string(SEXP_GET(i));
+      label = lsh_sexp_to_string(&i, NULL);
 
       if (!label)
 	{
 	  werror("Invalid label in (password-encrypted ...) expression.\n");
+	fail:
+	  lsh_string_free(data);
+	  lsh_string_free(expr);
+	  lsh_string_free(iv);
+	  lsh_string_free(salt);
 	  return NULL;
 	}
 
-      SEXP_NEXT(i);
-      key_info = SEXP_GET(i);
-      assert(key_info);
-
-      SEXP_NEXT(i);
-      payload = SEXP_GET(i);
-      assert(payload);
+      key_info = i;
 
       /* Examine the payload expression first, before asking for a
        * pass phrase. */
 
+      if (!sexp_iterator_next(&i))
+	goto fail;
+
+      if (sexp_iterator_enter_list(&i))
+	goto fail;
+      
       {
-	int algorithm_name = spki_get_type(payload, &i);
+	const uint8_t *names[2] = { "data", "iv" };
+	struct sexp_iterator values[2];
+
 	CAST_SUBTYPE(crypto_algorithm, tmp,
-		     ALIST_GET(crypto_algorithms, algorithm_name));
+		     spki_algorithm_lookup(crypto_algorithms, &i, NULL));
+	
 	crypto = tmp;
+
+	if (!crypto)
+	  {
+	    werror("Unknown encryption algorithm for pkcs5v2.\n");
+	    goto fail;
+	  }
+
+	if (!sexp_iterator_assoc(&i, crypto->iv_size ? 2 : 1,
+				 names, values))
+	  goto fail;
+
+	data = lsh_sexp_to_string(&values[0], NULL);
+	iv = crypto->iv_size ? lsh_sexp_to_string(&values[1], NULL) : NULL;
       }
-
-      if (!crypto)
-	{
-          werror("Unknown encryption algorithm for pkcs5v2.\n");
-	  return NULL;
-	}
-
-      iv = sexp2string(sexp_assq(i, ATOM_IV));
-
+	
       if (crypto->iv_size)
 	{
 	  if (!iv || (iv->length != crypto->iv_size))
 	    {
 	      werror("Invalid IV for pkcs5v2.\n");
-	      return NULL;
+	      goto fail;
 	    }
 	}
       else if (iv)
@@ -1114,69 +1049,48 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 	  if (iv->length)
 	    {
 	      werror("Unexpected iv provided for pkcs5v2.\n");
-	      return NULL;
+	      goto fail;
 	    }
+	  lsh_string_free(iv);
 	  iv = NULL;
 	}
 	
-      data = sexp2string(sexp_assq(i, ATOM_DATA));
-
-      if (!data)
-	{
-	  werror("Payload data missing for pkcs5v2.\n");
-	  return NULL;
-	}
-
       if (crypto->block_size && (data->length % crypto->block_size))
 	{
 	  werror("Payload data doesn't match block size for pkcs5v2.\n");
-	  return NULL;
+	  goto fail;
 	}
 
       /* Get key */
-      switch (spki_get_type(key_info, &i)) 
+      i = key_info;
+      switch (lsh_sexp_get_type(&i)) 
 	{
 	default:
 	  werror("Unknown key derivation mechanism.\n");
-	  return NULL;
+	  goto fail;
 
 	case ATOM_XPKCS5V2:
-	  if (SEXP_LEFT(i) != 3)
-	    {
-	      werror("Invalid pkcs5v2 parameters.\n");
-	      return NULL;
-	    }
-	  
 	  {
-	    int algorithm_name = sexp2atom(SEXP_GET(i));
+	    const uint8_t *names[2] = { "salt", "iterations" };
+	    struct sexp_iterator values[2];
 	    
 	    CAST_SUBTYPE(mac_algorithm, tmp,
-			 ALIST_GET(mac_algorithms,
-				   algorithm_name));
+			 spki_algorithm_lookup(mac_algorithms,
+					       &i, NULL));
 
 	    mac = tmp;
+
+	    if (! (sexp_iterator_assoc(&i, 2, names, values)
+		   && (salt = lsh_sexp_to_string(&values[0], NULL))
+		   && lsh_sexp_to_uint32(&values[1], &iterations)
+		   && iterations))
+	      goto fail;
 	  }
 
 	  if (!mac)
 	    {
 	      werror("Unknown mac for pkcs5v2.\n");
-	      return NULL;
-	    }
-
-	  SEXP_NEXT(i);
-	  if (!sexp2uint32(sexp_assq(i, ATOM_ITERATIONS), &iterations)
-	      || !iterations)
-	    {
-	      werror("Invalid iteration count for pkcs5v2.\n");
-	      return NULL;
-	    }
-	    
-	  salt = sexp2string(sexp_assq(i, ATOM_SALT));
-
-	  if (!salt)
-	    {
-	      werror("Invalid salt for pkcs5v2.\n");
-	      return NULL;
+	      goto fail;
 	    }
 
 	  /* Do the work */
@@ -1187,13 +1101,12 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 				       ssh_format("Passphrase for key `%lS': ",
 						  label), 1);
 	    struct lsh_string *clear;
-	    struct sexp *res;
 	    UINT8 *key;
 	    
 	    if (!password)
 	      {
 		werror("No password provided for pkcs5v2.");
-		return NULL;
+		goto fail;
 	      }
 
 	    key = alloca(crypto->key_size);
@@ -1202,26 +1115,22 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 			     salt->length, salt->data,
 			     iterations,
 			     crypto->key_size, key);
-
-	    lsh_string_free(password);
-
+	    
 	    clear = crypt_string_unpad(MAKE_DECRYPT(crypto,
 						    key,
 						    iv ? iv->data : NULL),
 				       data, 0);
 
+	    lsh_string_free(data);
+	    lsh_string_free(expr);
+	    lsh_string_free(iv);
+	    lsh_string_free(password);
+	    lsh_string_free(salt);
+	    	    
 	    if (!clear)
-	      {
-		werror("Bad password for pkcs5v2.\n");
-		return NULL;
-	      }
+	      werror("Bad password for pkcs5v2.\n");
 
-	    res = string_to_sexp(SEXP_CANONICAL, clear, 1);
-
-	    if (!res)
-              werror("Bad password for pkcs5v2.\n");
-
-            return res;
+	    return clear;
 	  }
 	}
     }
