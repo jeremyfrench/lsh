@@ -302,3 +302,7 @@ or
 
 : ERROR: Stack overflow
 : make: *** [sexp_table.h] Error 2
+
+Figure out whether or not to make --cvs-workaround the default.
+According to Neil Jarram, "lsh-1.1.2 with --cvs-workaround=oe always
+succeeds." 
