@@ -103,7 +103,7 @@ rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits)
   if (mpz_sgn(c) < 0)
     mpz_fdiv_r(c, c, p);
 
-  debug("a = %xn\n", c);
+  debug("c = %xn\n", c);
 
   /* FIXME: Add sanity checking */
   
