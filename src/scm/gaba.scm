@@ -98,6 +98,9 @@
 ;; (method type args)
 ;; is transformed into (pointer (function type self-arg args)) before
 ;; processing,
+;;
+;; (const . type)               Like type, but declared const.
+;;                              Primarily used for const string.
 
 (define (type->category type)
   (if (atom? type)
@@ -106,6 +109,7 @@
 	(case tag
 	  ((string object simple special indirect-special
 	    bignum struct) tag)
+	  ((const) (type->category (cdr type)))
 	  ((array var-array pointer space) (type->category (cadr type)))
 	  
 	  (else (error "make_class: type->category: Invalid type" type))))))
@@ -129,6 +133,7 @@
 				       (list expr
 					     "(" (implode (cddr type) ", ")
 					     ")")))
+	((const) `("const " ,(type->declaration (cdr type) expr)))
 	(else (error "make_class: type->declaration: Invalid type" type)))))
 
 (define (type->mark type expr)
@@ -175,7 +180,7 @@
 		      "  for (k=0; k<i->" (caddr type) "; k++)\n"
 		      "    " mark-k
 		      "}\n"))))
-	 
+	((const) (type->mark (cdr type) expr))
 	(else (error "make_class: type->mark: Invalid type" type)))))
 
 (define (type->free type expr)
@@ -210,6 +215,7 @@
 		      "  for (k=0; k<i->" (caddr type) "; k++)\n"
 		      "    " free-k
 		      "}\n"))))
+	((const) (type->free (cdr type) expr))
 #!
 	((dyn-array)
 	 (let ((free-k (type->free (cadr type) (list "(" expr ")[k]"))))
