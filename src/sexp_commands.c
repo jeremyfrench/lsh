@@ -26,9 +26,17 @@
 #include "sexp_commands.h"
 
 #include "format.h"
+#include "werror.h"
 #include "xalloc.h"
 
 #include <assert.h>
+
+/* Forward declarations */
+static struct catch_command catch_sexp_exceptions;
+#define CATCH_SEXP (&catch_sexp_exceptions.super.super.super)
+
+static struct read_sexp_command read_sexp;
+#define READ_SEXP (&read_sexp.super.super)
 
 #define GABA_DEFINE
 #include "sexp_commands.h.x"
@@ -201,6 +209,8 @@ do_read_sexp_continue(struct command_continuation *s,
   CAST(read_sexp_continuation, self, s);
   close_fd_nicely(self->fd, 0);
 
+  trace("do_read_sexp_continue\n");
+  
   COMMAND_RETURN(self->up, a);
 }
 
@@ -209,6 +219,8 @@ make_read_sexp_continuation(struct io_fd *fd,
 			    struct command_continuation *up)
 {
   NEW(read_sexp_continuation, self);
+
+  trace("make_read_sexp_continuation\n");
   self->super.c =do_read_sexp_continue;
   self->fd = &fd->super;
   self->up = up;
@@ -241,6 +253,9 @@ make_read_sexp_exception_handler(struct io_fd *fd,
 				 const char *context)
 {
   NEW(read_sexp_exception_handler, self);
+
+  trace("make_read_sexp_exception_handler\n");
+
   self->super.raise = do_read_sexp_exception_handler;
   self->super.parent = e;
   self->super.context = context;
@@ -261,6 +276,21 @@ do_read_sexp(struct command *s,
   CAST(read_sexp_command, self, s);
   CAST_SUBTYPE(io_fd, fd, a);
 
+  trace("do_read_sexp\n");
+  
+#if 0
+  if (self->goon && !fd)
+    {
+      /* NOTE: fd == NULL is allowed if and only goon is true. This way,
+       * non-existant and empty files can be treated the same way. */
+
+      EXCEPTION_RAISE(e, make_simple_exception(EXC_SEXP_EOF, "Non-existant file."));
+      return;
+    }
+#endif
+  
+  assert(fd);
+  
   if (!self->goon)
     c = make_read_sexp_continuation(fd, c);
   
@@ -276,9 +306,36 @@ struct command *
 make_read_sexp_command(int format, int goon)
 {
   NEW(read_sexp_command, self);
+
+  trace("make_read_sexp_command\n");
+  
   self->super.call = do_read_sexp;
   self->format = format;
   self->goon = goon;
 
   return &self->super;
+}
+
+static struct catch_command catch_sexp_exceptions
+= STATIC_CATCH_COMMAND(EXC_ALL, EXC_SEXP_EOF, 1);
+
+static struct read_sexp_command read_sexp
+= STATIC_READ_SEXP(SEXP_ADVANCED, 1);
+
+/* GABA:
+   (expr
+     (name for_sexp)
+     (params
+       (handler object command))
+     (expr
+       (lambda (proc)
+         (catch_sexp handler
+	             (lambda (file)
+		       (proc (read_sexp file)))))))
+*/
+
+COMMAND_SIMPLE(for_sexp_command)
+{
+  CAST_SUBTYPE(command, handler, a);
+  return for_sexp(handler);
 }

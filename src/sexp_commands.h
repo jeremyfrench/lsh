@@ -87,4 +87,7 @@ do_read_sexp(struct command *s,
 struct command *
 make_read_sexp_command(int format, int goon);
 
+extern struct command_simple for_sexp_command;
+#define FOR_SEXP (&for_sexp_command.super.super)
+
 #endif /* SEXP_COMMANDS_H_INCLUDED */
