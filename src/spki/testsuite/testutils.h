@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define FAIL(msg) do { fprintf(stderr, "%s\n", msg); abort(); } while(0)
 
