@@ -109,6 +109,18 @@ static int rsa_check_size(struct rsa_public *key)
   return (key->size >= 46);
 }
 
+static struct sexp *
+encode_rsa_sig_val(mpz_t s)
+{
+  return sexp_un(s);
+}
+
+static int
+decode_rsa_sig_val(struct sexp *e, mpz_t s, unsigned limit)
+{
+  return sexp2bignum_u(e, s, limit);
+}
+
 static int
 spki_init_rsa_public(struct rsa_public *key,
 		     struct sexp_iterator *i)
@@ -218,6 +230,7 @@ rsa_compute_root(struct rsa_signer *self, mpz_t x, mpz_t m)
 
 static struct lsh_string *
 do_rsa_sign(struct signer *s,
+	    int algorithm,
 	    UINT32 msg_length,
 	    const UINT8 *msg)
 {
@@ -225,27 +238,40 @@ do_rsa_sign(struct signer *s,
   struct lsh_string *res;
   mpz_t m;
 
+  trace("do_rsa_sign: Signing according to %a\n", algorithm);
+  
   mpz_init(m);
   pkcs1_encode(m, self->public.params, self->public.size - 1,
 	       msg_length, msg);
 
   rsa_compute_root(self, m, m);
 
-  /* Uses the encoding:
-   *
-   * string rsa-pkcs1
-   * string signature-blob
-   */
+  switch (algorithm)
+    {
+    case ATOM_RSA_PKCS1_SHA1:
+    case ATOM_RSA_PKCS1_SHA1_LOCAL:
+      /* Uses the encoding:
+       *
+       * string rsa-pkcs1
+       * string signature-blob
+       */
   
-  res = ssh_format("%a%un", m);
+      res = ssh_format("%a%un", ATOM_RSA_PKCS1_SHA1, m);
+      break;
 
+    case ATOM_SPKI:
+      res = sexp_format(encode_rsa_sig_val(m), SEXP_CANONICAL, 0);
+      break;
+    default:
+      fatal("do_rsa_sign: Internal error!\n");
+    }
   mpz_clear(m);
   return res;
 }
 
 static struct sexp *
 do_rsa_sign_spki(struct signer *s,
-		 struct sexp *hash, struct sexp *principal,
+		 /* struct sexp *hash, struct sexp *principal, */
 		 UINT32 msg_length,
 		 const UINT8 *msg)
 {
@@ -259,10 +285,14 @@ do_rsa_sign_spki(struct signer *s,
 
   rsa_compute_root(self, m, m);
 
+  signature = encode_rsa_sig_val(m);
+
+#if 0
   /* Build signature */
   signature = sexp_l(4, sexp_a(ATOM_SIGNATURE), hash, principal,
 		     sexp_un(m), -1);
-
+#endif
+  
   mpz_clear(m);
   return signature;
 }
@@ -308,6 +338,7 @@ rsa_pkcs1_verify(struct rsa_verifier *self,
 
 static int
 do_rsa_verify(struct verifier *v,
+	      int algorithm,
 	      UINT32 length,
 	      const UINT8 *msg,
 	      UINT32 signature_length,
@@ -315,16 +346,44 @@ do_rsa_verify(struct verifier *v,
 {
   CAST(rsa_verifier, self, v);
   mpz_t s;
-  int res;
+  int res = 0;
 
-  if (signature_length > self->public.size)
-    return 0;
+  trace("do_rsa_verify: Verifying %a signature\n", algorithm);
   
   mpz_init(s);
-  bignum_parse_u(s, signature_length, signature_data);
-
-  res = rsa_pkcs1_verify(self, length, msg, s);
   
+  switch(algorithm)
+    {
+    case ATOM_RSA_PKCS1_SHA1:
+    case ATOM_RSA_PKCS1_SHA1_LOCAL:
+
+      if (signature_length > self->public.size)
+	goto fail;
+  
+      bignum_parse_u(s, signature_length, signature_data);
+      break;
+      
+    case ATOM_SPKI:
+      {
+	struct simple_buffer buffer;
+	struct sexp *e;
+	
+	simple_buffer_init(&buffer, signature_length, signature_data);
+
+	if (! ( (e = sexp_parse_canonical(&buffer))
+		&& parse_eod(&buffer)
+		&& decode_rsa_sig_val(e, s, self->public.size)) )
+	  goto fail;
+
+	break;
+      }
+    default:
+      fatal("do_rsa_verify: Internal error!\n");
+    }
+  
+  res = rsa_pkcs1_verify(self, length, msg, s);
+
+ fail:
   mpz_clear(s);
   
   return res;
@@ -334,20 +393,17 @@ static int
 do_rsa_verify_spki(struct verifier *v,
 		   UINT32 length,
 		   const UINT8 *msg,
-		   struct sexp_iterator *i)
+		   struct sexp *e)
 {
   CAST(rsa_verifier, self, v);
   mpz_t s;
   int res;
-  
-  if (SEXP_LEFT(i) != 1)
-    return 0;
 
   mpz_init(s);
   
-  res = (sexp2bignum_u(SEXP_GET(i), s, self->public.size)
+  res = (decode_rsa_sig_val(e, s, self->public.size)
 	 && rsa_pkcs1_verify(self, length, msg, s));
-
+  
   mpz_clear(s);
 
   return res;
