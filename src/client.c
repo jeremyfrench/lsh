@@ -334,9 +334,11 @@ static int close_client_session(struct ssh_channel *c)
   
   MDEBUG(session);
 
-  close_fd(&session->in->super);
-  close_fd(&session->out->super);
-  close_fd(&session->err->super);
+  close_fd(&session->in->super, 0);
+#if 0
+  close_fd(&session->out->super, 0);
+  close_fd(&session->err->super, 0);
+#endif
   
   return LSH_OK | LSH_CHANNEL_PENDING_CLOSE;
 }  
@@ -512,7 +514,9 @@ static int do_io(struct ssh_channel *channel)
 	    make_handle_exit_status(closure->exit_status));
   ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
 	    make_handle_exit_signal(closure->exit_status));
-  
+
+  channel->eof = close_client_session;
+
   return LSH_OK | LSH_GOON;
 }
 
@@ -559,7 +563,7 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
   self->super.rec_max_packet = SSH_MAX_PACKET;
 
   self->super.request_types = make_alist(0, -1);
-  
+
   /* self->expect_close = 0; */
   self->in = in;
   self->out = out;
