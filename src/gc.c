@@ -258,8 +258,11 @@ void gc(void)
 
 void gc_final(void)
 {
-  KILL_RESOURCE_LIST(root_set);
-  root_set = NULL;
+  if (root_set)
+    {
+      KILL_RESOURCE_LIST(root_set);
+      root_set = NULL;
+    }
 
 #if DEBUG_ALLOC
 
