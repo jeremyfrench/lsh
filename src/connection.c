@@ -330,7 +330,7 @@ make_ssh_connection(UINT32 flags,
 
   connection->dispatch[SSH_MSG_DEBUG] = &connection_debug_handler;
 
-    /* Make all other known message types terminate the connection */
+  /* Make all other known message types terminate the connection */
 
   connection->dispatch[SSH_MSG_SERVICE_REQUEST] = &connection_fail_handler;
   connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = &connection_fail_handler;
@@ -361,9 +361,10 @@ make_ssh_connection(UINT32 flags,
   return connection;
 }
 
-void connection_init_io(struct ssh_connection *connection,
-			struct abstract_write *raw,
-			struct randomness *r)
+void
+connection_init_io(struct ssh_connection *connection,
+		   struct abstract_write *raw,
+		   struct randomness *r)
 {
   /* Initialize i/o hooks */
   connection->raw = raw;
