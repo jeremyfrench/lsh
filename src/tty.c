@@ -35,6 +35,8 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#if WITH_PTY_SUPPORT
+
 int tty_getattr(int fd, struct termios *ios)
 {
   return tcgetattr(fd, ios) != -1 ? 1 : 0;
@@ -84,7 +86,7 @@ int tty_makeraw(int fd)
 	
   if (tty_getattr(fd, &ios))
     {
-      cfmakeraw(&ios);
+      CFMAKERAW(&ios);
       return tty_setattr(fd, &ios);
     }
   return 0;
@@ -498,3 +500,5 @@ int tty_decode_term_mode(struct termios *ios, UINT32 t_len, UINT8 *t_modes)
     }
   return 1;
 }
+
+#endif /* WITH_PTY_SUPPORT */
