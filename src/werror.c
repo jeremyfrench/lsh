@@ -36,7 +36,7 @@ int debug_flag = 0;
 int quiet_flag = 0;
 int verbose_flag = 0;
 
-void werror(char *format, ...) 
+void werror(CONST char *format, ...) 
 {
   va_list args;
 
@@ -48,7 +48,7 @@ void werror(char *format, ...)
     }
 }
 
-void debug(char *format, ...) 
+void debug(CONST char *format, ...) 
 {
   va_list args;
 
@@ -60,7 +60,7 @@ void debug(char *format, ...)
     }
 }
 
-void verbose(char *format, ...) 
+void verbose(CONST char *format, ...) 
 {
   va_list args;
 
@@ -98,7 +98,7 @@ static void wash_char(UINT8 c)
 /* Escape non-printable characters. */
 static void write_washed(UINT32 length, UINT8 *msg)
 {
-  int i;
+  UINT32 i;
 
   for(i = 0; i<length; i++)
     wash_char(msg[i]);
@@ -195,7 +195,7 @@ void verbose_mpz(mpz_t n)
 /* hex dumps */
 static void write_hex(UINT32 length, UINT8 *data)
 {
-  int i;
+  UINT32 i;
   
   fprintf(stderr, "(size %d = 0x%x)",
 	  length, length);
@@ -228,7 +228,7 @@ void verbose_hex(UINT32 length, UINT8 *data)
     write_hex(length, data);
 }
 
-void fatal(char *format, ...) 
+void fatal(CONST char *format, ...) 
 {
   va_list args;
 
