@@ -151,7 +151,9 @@ spawn_lshg () {
 
 # at_connect local-port max-connections shell-command
 at_connect () {
+    # sleep 1 # Allow some time for earlier processes to die
     mini-inetd -m $2 -- localhost:$1 /bin/sh sh -c "$3" &
+    at_exit "kill $!"
 }
 
 compare_output() {
