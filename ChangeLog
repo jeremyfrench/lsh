@@ -1,3 +1,29 @@
+2004-02-27  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (client_argp_parser): New command line option -D,
+	--forward-socks. 	
+	(client_arg_unsigned): New function.
+
+	* src/lshd.c: Don't include tcpforward_commands.h.
+
+	* src/tcpforward_commands.c (make_open_tcpip_command): Made non-static.
+	(open_direct_tcpip): Moved declaration back here, reverting
+	yesterday's change.
+	
+	* src/tcpforward_commands.h: Deleted file. Prototypes moved to...
+	* src/tcpforward.h: ...here.
+
+	* src/socks.c: Rewritten. A successful connect should transform
+	the control channel into a data channel.
+
+	* src/process_atoms: Added extra quotes needed to get the length
+	of "*" into atoms_table.c.
+
+	* src/lsh.c (main): make_lsh_connect now returns a struct command *, so
+	can delete one CAST_SUBTYPE.
+
+	* src/channel_forward.c (channel_forward_start_io_read): New function.
+
 2004-02-26  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh_string.c (lsh_string_ntop): Use const void * for the
