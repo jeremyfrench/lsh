@@ -220,3 +220,49 @@ spki_parse_version(struct sexp_iterator *i)
     ? spki_parse_end(i) : 0;
 }
 		   
+enum spki_type
+spki_parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i,
+		     struct spki_5_tuple *acl)
+{
+  /* Syntax:
+   *
+   * ("entry" <principal> <delegate>? <tag> <valid>? <comment>?) */
+
+  enum spki_type type;
+      
+  acl->issuer = NULL;
+  acl->flags = 0;
+  acl->tag = NULL;
+
+  type = spki_parse_principal(db, i, &acl->subject);
+
+  if (type == SPKI_TYPE_PROPAGATE)
+    {
+      acl->flags |= SPKI_PROPAGATE;
+      type = spki_parse_end(i);
+    }
+
+  if (type != SPKI_TYPE_TAG)
+    return 0;
+
+  type = spki_parse_tag(db, i, acl);
+
+  if (type == SPKI_TYPE_COMMENT)
+    type = spki_parse_skip(i);
+      
+  if (type == SPKI_TYPE_VALID)
+    type = spki_parse_valid(i, acl);
+
+  type = spki_parse_end(i);
+
+  if (type)
+    return type;
+
+  else if (acl->tag)
+    {
+      SPKI_FREE(db, acl->tag);
+      acl->tag = NULL;
+    }
+  
+  return 0;
+}
