@@ -127,6 +127,14 @@ adns_state object, I have to find out which objects are disposed with
 it, and clear them from my list (so I would probably have to keep one
 list for each adns_state object).
 
-One more thing, the SIGPIPE handler. Do I understand you correctly
-that if my application makes sure that SIGPIPE is ignored, I can just
-pass adns_if_nosigpipe to adns and be happy?
+About the SIGPIPE handler. Do I understand you correctly that if my
+application makes sure that SIGPIPE is ignored, I can just pass
+adns_if_nosigpipe to adns and be happy?
+
+Another feature I have been missing in gethostbyname is to get the
+ip-number _and_ the fqdn for a host that is looked up using the search
+path. For example, I want to lookup the host "sanna", and get the pair
+<"sanna.lysator.liu.se", 130.236.254.206>. Without any reverse
+lookups, as I want the to get the same fqdn no matter if sanna has an
+A or CNAME record.
+
