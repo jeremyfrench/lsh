@@ -31,8 +31,9 @@ extern struct collect_info_1 chain_connections;
 #define CHAIN_CONNECTIONS (&chain_connections.super.super.super)
 
 struct command *
-make_proxy_connection_service(struct alist *server_requests,
-			      struct alist *client_requests);
+make_proxy_connection_service(struct object_list *server_hooks,
+			      struct object_list *client_hooks);
+
 
 struct command *
 make_proxy_offer_service(struct alist *services);

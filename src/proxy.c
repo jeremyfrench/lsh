@@ -37,6 +37,10 @@
 #include <assert.h>
 #include <arpa/inet.h>
 
+#define CHAINED_CONNECTION (&chained_connection.super.super)
+
+struct command_simple chained_connection;
+
 #include "proxy.c.x" 
 
 /* GABA:
@@ -66,10 +70,8 @@ do_exc_chain_connections_handler(struct exception_handler *c,
 	    EXCEPTION_RAISE(chain->e, e);
 	  }
       }
-    default:
-      EXCEPTION_RAISE(c->parent, e);
     }
-  
+  EXCEPTION_RAISE(c->parent, e);  
 }
 
 static struct exception_handler *
@@ -91,9 +93,10 @@ make_exc_chain_connections_handler(struct ssh_connection *connection,
 /* GABA:
    (class
      (name chain_connections_continuation)
-     (super command_frame)
+     (super command_continuation)
      (vars
-       (connection object ssh_connection)))
+       (connection object ssh_connection)
+       (up object command_continuation)))
  */
 
 static void
@@ -116,7 +119,7 @@ do_chain_connections_continuation(struct command_continuation *s,
 				       chained->e,
 				       HANDLER_CONTEXT);
 
-  COMMAND_RETURN(self->super.up, &self->connection->super.super);
+  COMMAND_RETURN(self->up, x);
 }
 
 static struct command_continuation *
@@ -125,9 +128,48 @@ make_chain_connections_continuation(struct ssh_connection *connection,
 {
   NEW(chain_connections_continuation, self);
   
-  self->super.super.c = do_chain_connections_continuation;
+  self->super.c = do_chain_connections_continuation;
   self->connection = connection;
+  self->up = c;
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name chain_connections_client)
+     (super command_frame)
+     (vars
+       (client_addr object listen_value)
+       (client_callback object command)))
+*/
+
+static void
+do_chain_connections_client(struct command_continuation *s,
+			    struct lsh_object *x)
+{
+  CAST(chain_connections_client, closure, s);
+  CAST(ssh_connection, server_connection, x);
+
+  COMMAND_CALL(closure->client_callback,
+	       &closure->client_addr->super,
+	       make_chain_connections_continuation(server_connection, closure->super.up),
+	       closure->super.e);
+}
+
+static struct command_continuation *
+make_chain_connections_client(struct command *client_callback,
+			      struct listen_value *client_addr,
+			      struct command_continuation *c,
+			      struct exception_handler *e)
+{
+  NEW(chain_connections_client, self);
+
+  self->super.super.c = do_chain_connections_client;
   self->super.up = c;
+  self->super.e = e;
+  self->client_callback = client_callback;
+  self->client_addr = client_addr;
+
   return &self->super.super;
 }
 
@@ -136,9 +178,8 @@ make_chain_connections_continuation(struct ssh_connection *connection,
      (name chain_connections)
      (super command)
      (vars
-       (callback object command)
-       (client_addr object listen_value)
-       (server_addr object address_info)))
+       (server_callback object command)
+       (client_callback object command)))
 */
 
 static void
@@ -148,61 +189,38 @@ do_chain_connections(struct command *s,
 		     struct exception_handler *e)
 {
   CAST(chain_connections, self, s);
-  CAST(ssh_connection, connection, x);
-  struct address_info *a = NULL;
+  CAST(listen_value, client_addr, x);
 
-  if (self->server_addr)
-    a = self->server_addr;
-  else 
-    {
-      struct sockaddr_in sa;
-      int salen = sizeof(sa);
-      /* try to be transparent */
-      /* FIXME: support non AF_INET address families */
-      if (getsockname(self->client_addr->fd->fd, (struct sockaddr *) &sa, &salen) != -1)
-        {
-          a = make_address_info(ssh_format("%z", inet_ntoa(sa.sin_addr)), ntohs(sa.sin_port)); 
-          /* a = make_address_info(ssh_format("localhost"), 1998); */
-        }
-    }
-  COMMAND_CALL(self->callback, &a->super, 
-               make_chain_connections_continuation(connection, c),
+  COMMAND_CALL(self->server_callback, &client_addr->super, 
+               make_chain_connections_client(self->client_callback, client_addr, c, e),
                e);
 }
 
 static struct command *
-make_chain_connections(struct command *callback,
-		       struct listen_value *client_addr,
-		       struct address_info *server_addr)
+make_chain_connections(struct command *server_callback,
+		       struct command *client_callback)
 {
   NEW(chain_connections, self);
 
   self->super.call = do_chain_connections;
-  self->callback = callback;
-  self->client_addr = client_addr;
-  self->server_addr = server_addr;
-
+  self->server_callback = server_callback;
+  self->client_callback = client_callback;
   return &self->super;
 }
 
 static struct lsh_object *
-do_collect_chain_params(struct collect_info_3 *info UNUSED,
+do_collect_chain_params(struct collect_info_2 *info UNUSED,
 			struct lsh_object *a,
-			struct lsh_object *b,
-			struct lsh_object *c)
+			struct lsh_object *b)
 {
-  CAST_SUBTYPE(command, callback, a);
-  CAST(listen_value, client_addr, b);
-  CAST(address_info, server_addr, c);
+  CAST_SUBTYPE(command, server_callback, a);
+  CAST_SUBTYPE(command, client_callback, b);
 
-  return &make_chain_connections(callback, client_addr, server_addr)->super;
+  return &make_chain_connections(server_callback, client_callback)->super;
 }
 
-struct collect_info_3 chain_connections_3 = 
-STATIC_COLLECT_3_FINAL(do_collect_chain_params);
-
 struct collect_info_2 chain_connections_2 =
-STATIC_COLLECT_2(&chain_connections_3);
+STATIC_COLLECT_2_FINAL(do_collect_chain_params);
 
 struct collect_info_1 chain_connections =
 STATIC_COLLECT_1(&chain_connections_2);
@@ -213,45 +231,51 @@ STATIC_COLLECT_1(&chain_connections_2);
      (name proxy_connection_service)
      (super command)
      (vars
-       (server_requests object alist)
-       (client_requests object alist)))
+       ; hooks called on the client side (the server connection)
+       (server_hooks object object_list)
+       ; hooks called on the server side (the client connection)
+       (client_hooks object object_list)))
 */
+
+COMMAND_SIMPLE(chained_connection)
+{
+  CAST(ssh_connection, connection, a);
+  return &connection->chain->super.super;
+}
+
+/* GABA:
+   (expr
+     (name make_call_hooks)
+     (params
+       (server_hooks object object_list)
+       (client_hooks object object_list))
+     (expr 
+       (lambda (connection) 
+         (progn 
+           client_hooks 
+           (chained_connection (progn server_hooks connection))))))
+ */
 
 static void
 do_login(struct command *s,
 	 struct lsh_object *x UNUSED,
 	 struct command_continuation *c,
-	 struct exception_handler *e)
+	 struct exception_handler *e UNUSED)
 {
   CAST(proxy_connection_service, self, s);
-  struct object_list *install_open_handlers;
 
-  install_open_handlers = 
-    make_object_list(3, 
-		     make_install_fix_channel_open_handler
-		     (ATOM_SESSION, 
-		      make_proxy_open_session(self->server_requests,
-					      self->client_requests)),
-		     make_install_fix_channel_open_handler
-		     (ATOM_DIRECT_TCPIP,
-		      make_proxy_open_direct_tcpip()),
-		     make_install_fix_channel_open_handler
-		     (ATOM_FORWARDED_TCPIP,
-		      make_proxy_open_forwarded_tcpip()),
-		     -1);
-  
-  COMMAND_CALL(&progn_command.super, install_open_handlers, c, e);
+  COMMAND_RETURN(c, make_call_hooks(self->server_hooks, self->client_hooks));
 }
 
 struct command *
-make_proxy_connection_service(struct alist *server_requests,
-			      struct alist *client_requests)
+make_proxy_connection_service(struct object_list *server_hooks,
+			      struct object_list *client_hooks)
 {
   NEW(proxy_connection_service, self);
 
   self->super.call = do_login;
-  self->server_requests = server_requests;
-  self->client_requests = client_requests;
+  self->server_hooks = server_hooks;
+  self->client_hooks = client_hooks;
   return &self->super;
 }
 
@@ -291,9 +315,26 @@ do_proxy_accept_service(struct packet_handler *c,
 	      && (name == closure->name)))
       && parse_eod(&buffer))
     {
-      connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = connection->fail;
+      struct lsh_string *new_packet;
 
-      C_WRITE(connection->chain, packet);
+      connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = connection->fail;
+#if DATAFELLOWS_WORKAROUNDS
+      if ((connection->chain->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE) ==
+	  (connection->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE))
+	new_packet = packet;
+      else
+	{
+	  if (connection->chain->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE)
+	    new_packet = ssh_format("%c", SSH_MSG_SERVICE_ACCEPT);
+	  else
+	    new_packet = ssh_format("%c%a", SSH_MSG_SERVICE_ACCEPT, closure->name);
+	  lsh_string_free(packet);
+	}
+#else
+      new_packet = packet;
+#endif
+
+      C_WRITE(connection->chain, new_packet);
       COMMAND_CALL(closure->service,
 		   connection->chain,
 		   closure->c, closure->e);
