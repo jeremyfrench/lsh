@@ -34,6 +34,7 @@
 
 /* Forward declaration */
 struct env_value;
+struct spawn_info;
 
 #define GABA_DECLARE
 #include "userauth.h.x"
@@ -68,6 +69,35 @@ make_userauth_special_exception(struct lsh_string *reply,
 
 #define SIGNAL_PROCESS(p, s) ((p)->signal((p), (s)))
 
+struct spawn_info
+{
+  /* For logging */
+  struct address_info *peer;
+  /* If a pty should be allocated */
+  struct pty_info *pty;
+
+  /* Is it a login session? */
+  int login ;
+  
+  /* {in|out|err}[0] is for reading,
+   * {in|out|err}[1] for writing. */
+
+  /* Negative values for the child fd:smeans that the slave tty should
+   * be used. */
+  int in[2]; int out[2]; int err[2];
+
+  /* These are the arguments to the shell, not including
+   * the traditional argv[0]. */
+  unsigned argc;
+  const char **argv;
+  
+  /* Currently, this environment is used also for the
+   * execution of the lsh-execuv program, so dangerous
+   * variables must not be set. */
+  unsigned env_length;
+  const struct env_value *env;
+};
+
 /* GABA:
    (class
      (name lsh_user)
@@ -99,6 +129,10 @@ make_userauth_special_exception(struct lsh_string *reply,
        ; chdir to the user's home directory
        (chdir_home method int)
 
+       (spawn method "struct lsh_process *"
+              "struct spawn_info *info"
+              "struct exit_callback *c")
+	      
        ; Fork a user process.
 
        ; FIXME: For non-UN*X-systems, we need a method
@@ -133,5 +167,14 @@ make_userauth_special_exception(struct lsh_string *reply,
 #define USER_FORK(u, c, e, p, t) \
   ((u)->fork_process((u), (c), (e), (p), (t)))
 #define USER_EXEC(u, m, a, l, e) ((u)->exec_shell((u), (m), (a), (l), (e)))
+#define USER_SPAWN(u, i, c) ((u)->spawn((u), (i), (c)))
+
+/* This prototype doesn't really belong here. */
+struct lsh_process *
+unix_process_setup(pid_t pid, int login,
+		   struct lsh_user *user,
+		   struct exit_callback **c,
+		   struct address_info *peer,
+		   struct lsh_string *tty);
 
 #endif /* LSH_USERAUTH_H_INCLUDED */
