@@ -31,11 +31,12 @@
 #include "command.h"
 #include "format.h"
 #include "io_commands.h"
+#include "ssh.h"
 
 #include <assert.h>
 #include <arpa/inet.h>
 
-#include "proxy.c.x"
+#include "proxy.c.x" 
 
 /* GABA:
    (class
@@ -134,14 +135,14 @@ STATIC_COLLECT_2_FINAL(do_collect_chain_params);
 struct collect_info_1 chain_connections =
 STATIC_COLLECT_1(&chain_connections_2);
 
-/* gets two params: user connection ->
-   handles user here, and returns a command taking a connection */
+/* (proxy_connection_service user connection) -> connection */
 /* GABA:
    (class
      (name proxy_connection_service)
      (super command)
      (vars
-       (session_requests object alist)))
+       (server_requests object alist)
+       (client_requests object alist)))
 */
 
 static void
@@ -155,15 +156,193 @@ do_login(struct command *s,
   COMMAND_RETURN(c, 
 		 make_install_fix_channel_open_handler
 		 (ATOM_SESSION, 
-		  make_proxy_open_session(self->session_requests)));
+		  make_proxy_open_session(self->server_requests,
+					  self->client_requests)));
 }
 
 struct command *
-make_proxy_connection_service(struct alist *session_requests)
+make_proxy_connection_service(struct alist *server_requests,
+			      struct alist *client_requests)
 {
   NEW(proxy_connection_service, self);
 
   self->super.call = do_login;
-  self->session_requests = session_requests;
+  self->server_requests = server_requests;
+  self->client_requests = client_requests;
   return &self->super;
 }
+
+/* GABA:
+   (class
+     (name proxy_accept_service_handler)
+     (super packet_handler)
+     (vars
+       (name . UINT32)
+       (service object command)
+       (c object command_continuation)
+       (e object exception_handler)))
+*/
+
+static void
+do_proxy_accept_service(struct packet_handler *c,
+			struct ssh_connection *connection,
+			struct lsh_string *packet)
+{
+  CAST(proxy_accept_service_handler, closure, c);
+
+  struct simple_buffer buffer;
+  UINT32 msg_number;
+  UINT32 name;
+
+  simple_buffer_init(&buffer, packet->length, packet->data);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_SERVICE_ACCEPT)
+      && (
+#if DATAFELLOWS_WORKAROUNDS
+	  (connection->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE)
+#else
+	  0
+#endif
+	  || (parse_atom(&buffer, &name)
+	      && (name == closure->name)))
+      && parse_eod(&buffer))
+    {
+      connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = connection->fail;
+
+      C_WRITE(connection->chain, packet);
+      COMMAND_CALL(closure->service,
+		   connection->chain,
+		   closure->c, closure->e);
+    }
+  else
+    {
+      lsh_string_free(packet);
+      PROTOCOL_ERROR(closure->e, "Invalid SSH_MSG_SERVICE_ACCEPT message");
+    }
+}
+
+static struct packet_handler *
+make_proxy_accept_service_handler(UINT32 name,
+				  struct command *service,
+				  struct command_continuation *c,
+				  struct exception_handler *e)
+{
+  NEW(proxy_accept_service_handler, self);
+
+  self->super.handler = do_proxy_accept_service;
+  self->name = name;
+  self->service = service;
+  self->c = c;
+  self->e = e;
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name proxy_service_handler)
+     (super packet_handler)
+     (vars
+       (services object alist)
+       (c object command_continuation)
+       (e object exception_handler)))
+*/
+
+static void
+do_proxy_service_request(struct packet_handler *c,
+			 struct ssh_connection *connection,
+			 struct lsh_string *packet)
+{
+  CAST(proxy_service_handler, self, c);
+
+  struct simple_buffer buffer;
+  unsigned msg_number;
+  int name;
+
+  simple_buffer_init(&buffer, packet->length, packet->data);
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_SERVICE_REQUEST)
+      && parse_atom(&buffer, &name)
+      && parse_eod(&buffer))
+    {
+      if (name)
+	{
+	  CAST_SUBTYPE(command, service, ALIST_GET(self->services, name));
+	  if (service)
+	    {
+	      /* Don't accept any further service requests */
+	      connection->dispatch[SSH_MSG_SERVICE_REQUEST]
+		= connection->fail;
+
+	      connection->chain->dispatch[SSH_MSG_SERVICE_ACCEPT]
+		= make_proxy_accept_service_handler(name, service, self->c, self->e);
+
+	      C_WRITE(connection->chain, packet);
+
+	      return;
+	    }
+	}
+
+      EXCEPTION_RAISE(connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE, NULL));
+    }
+  else
+    {
+      lsh_string_free(packet);
+      PROTOCOL_ERROR(connection->e, "Invalid SERVICE_REQUEST message");
+    }
+
+}
+
+static struct packet_handler *
+make_proxy_service_handler(struct alist *services,
+			   struct command_continuation *c,
+			   struct exception_handler *e)
+{
+  NEW(proxy_service_handler, self);
+
+  self->super.handler = do_proxy_service_request;
+  self->services = services;
+  self->c = c;
+  self->e = e;
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name proxy_offer_service)
+     (super command)
+     (vars
+       (services object alist)))
+*/
+
+static void
+do_proxy_offer_service(struct command *s,
+		       struct lsh_object *x,
+		       struct command_continuation *c,
+		       struct exception_handler *e)
+{
+  CAST(proxy_offer_service, self, s);
+  CAST(ssh_connection, connection, x);
+
+  connection->dispatch[SSH_MSG_SERVICE_REQUEST]
+    = make_proxy_service_handler(self->services, c, e);
+
+#if 0
+  /* currently servers may not ask for servives in clients */
+  connection->chain->dispatch[SSH_MSG_SERVICE_REQUEST]
+    = make_proxy_service_request(self->server_services, c, e);
+#endif
+}
+
+struct command *
+make_proxy_offer_service(struct alist *services)
+{
+  NEW(proxy_offer_service, self);
+
+  self->super.call = do_proxy_offer_service;
+  self->services = services;
+  return &self->super;
+}
+
+

@@ -30,6 +30,11 @@
 extern struct collect_info_1 chain_connections;
 
 struct command *
-make_proxy_connection_service(struct alist *session_requests);
+make_proxy_connection_service(struct alist *server_requests,
+			      struct alist *client_requests);
+
+struct command *
+make_proxy_offer_service(struct alist *services);
+
 
 #endif /* LSH_PROXY_H_INCLUDED */

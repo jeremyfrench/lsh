@@ -36,6 +36,7 @@
 
 #include "proxy_userauth.c.x"
 
+/* authenticated user is returned in this class */
 static struct proxy_user *
 make_proxy_user(struct lsh_string *name)
 {
@@ -43,6 +44,39 @@ make_proxy_user(struct lsh_string *name)
   self->name = name;
   return self;
 }
+
+/* GABA:
+   (class
+     (name proxy_userauth)
+     (vars
+       (proxy_auth method void "struct ssh_connection *"
+                               "struct lsh_string *username"
+			       "UINT32 service"
+			       "struct simple_buffer *args")))
+*/
+
+#define PROXY_AUTH(u, c, n, s, a) ((u)->proxy_auth(u, c, n, s, a))
+
+static void
+do_forward_password_userauth(struct proxy_userauth *ignored UNUSED,
+			     struct ssh_connection *connection,
+			     struct lsh_string *username,
+			     UINT32 service,
+			     struct simple_buffer *args)
+{
+  struct lsh_string *password;
+  int change_password;
+
+  if (parse_boolean(args, &change_password) &&
+      (password = parse_string_copy(args)) &&
+      parse_eod(args))
+    {
+      C_WRITE(connection->chain, format_userauth_password(username, service, password, 1));
+    }
+}
+
+struct proxy_userauth proxy_password_auth =
+{ STATIC_HEADER, do_forward_password_userauth };
 
 /* GABA:
    (class
@@ -64,9 +98,6 @@ do_forward_success(struct packet_handler *c,
   unsigned msg_number;
 
   simple_buffer_init(&buffer, packet->length, packet->data);
-
-  connection->dispatch[SSH_MSG_USERAUTH_FAILURE] = connection->fail;
-  connection->dispatch[SSH_MSG_USERAUTH_SUCCESS] = connection->fail;
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_SUCCESS)
@@ -102,30 +133,41 @@ make_forward_success(struct lsh_string *name,
        (e object exception_handler)))
 */
 
+/* Arbitrary limit on list length */
+#define USERAUTH_MAX_METHODS 47
 
 static void
-do_forward_failure(struct packet_handler *c UNUSED,
+do_forward_failure(struct packet_handler *c,
 		   struct ssh_connection *connection,
 		   struct lsh_string *packet)
 {
+  CAST(proxy_userauth_failure, closure, c);
   struct simple_buffer buffer;
   unsigned msg_number;
+  struct int_list *methods = NULL;
+  int partial_success;
 
   simple_buffer_init(&buffer, packet->length, packet->data);
 
-  connection->dispatch[SSH_MSG_USERAUTH_FAILURE] = connection->fail;
-  connection->dispatch[SSH_MSG_USERAUTH_SUCCESS] = connection->fail;
-
   if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_USERAUTH_SUCCESS)
+      && (msg_number == SSH_MSG_USERAUTH_FAILURE)
+      && ( (methods = parse_atom_list(&buffer, USERAUTH_MAX_METHODS)) )
+      && parse_boolean(&buffer, &partial_success)
       && parse_eod(&buffer))
     {
+      static const struct exception userauth_failed
+	= STATIC_EXCEPTION(EXC_USERAUTH,
+			   "Server authentication error.");
+
+      lsh_string_free(packet);
       verbose("Authentication failure");
-      C_WRITE(connection->chain, packet);
+      
+      EXCEPTION_RAISE(closure->e, &userauth_failed);
+
     }
   else
     {
-      PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_USERAUTH_SUCCESS message.");
+      PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_USERAUTH_FAILURE message.");
       lsh_string_free(packet);
     }
 }
@@ -139,43 +181,132 @@ make_forward_failure(struct exception_handler *e)
   return &self->super;
 }
 
-/* ;; GABA:
+/* GABA:
    (class
-     (name proxy_userauth)
-     (super userauth)
+     (name proxy_userauth_handler)
+     (super packet_handler)
      (vars
+       ; What to do after successful authentication
+       (c object command_continuation)
+       ; or failed.
+       (e object exception_handler)
+       
+       ; Maps authentication methods to userath objects
+       (methods object alist)
+
+       ; Maps services to commands
+       (services object alist)))
 */
 
 static void
-do_forward_userauth_req(struct userauth *ignored UNUSED,
-			struct ssh_connection *connection,
-			struct lsh_string *username,
-			UINT32 service,
-			struct simple_buffer *args,
-			struct command_continuation *c UNUSED,
-			struct exception_handler *e UNUSED)
+do_handle_userauth(struct packet_handler *c,
+		   struct ssh_connection *connection,
+		   struct lsh_string *packet)
 {
-  struct lsh_string *password;
-  int change_password;
+  CAST(proxy_userauth_handler,  closure, c);
+  struct simple_buffer buffer;
 
-  if (parse_boolean(args, &change_password) &&
-      (password = parse_string_copy(args)) &&
-      parse_eod(args))
+  unsigned msg_number;
+  struct lsh_string *user;
+  int requested_service;
+  int method;
+  
+  simple_buffer_init(&buffer, packet->length, packet->data);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_USERAUTH_REQUEST)
+      && ( (user = parse_string_copy(&buffer)) )
+      && parse_atom(&buffer, &requested_service)
+      && parse_atom(&buffer, &method))
     {
+      CAST_SUBTYPE(proxy_userauth, auth, ALIST_GET(closure->methods, method));
+      CAST_SUBTYPE(command, service,
+		   ALIST_GET(closure->services, requested_service));
+      
+      if (auth && service)
+	{
+	  connection->chain->dispatch[SSH_MSG_USERAUTH_FAILURE] = 
+	    make_forward_failure(closure->e);
+	  
+	  connection->chain->dispatch[SSH_MSG_USERAUTH_SUCCESS] =
+	    make_forward_success(user, make_delay_continuation(service, closure->c));
 
-      connection->chain->dispatch[SSH_MSG_USERAUTH_FAILURE] = 
-	make_forward_failure(e);	
+	  PROXY_AUTH(auth, connection, user, requested_service, &buffer);
+	}
+      else
+	{
+	  static const struct exception userauth_failed
+	    = STATIC_EXCEPTION(EXC_USERAUTH,
+			       "Unknown auth method or service.");
 
-      connection->chain->dispatch[SSH_MSG_USERAUTH_SUCCESS] =
-	make_forward_success(username, c);
-
-      C_WRITE(connection->chain, format_userauth_password(username, service, password, 1));
+	  EXCEPTION_RAISE(closure->e, &userauth_failed);
+	}
     }
+  else
+    PROTOCOL_ERROR(connection->e, "Invalid USERAUTH message.");
+
+  lsh_string_free(packet);
 }
 
-struct userauth proxy_password_auth =
-{ STATIC_HEADER, do_forward_userauth_req };
+static struct packet_handler *
+make_proxy_userauth_handler(struct alist *methods,
+			    struct alist *services,
+			    struct command_continuation *c,
+			    struct exception_handler *e)
+{
+  NEW(proxy_userauth_handler, auth);
 
+  auth->super.handler = do_handle_userauth;
+  auth->methods = methods;
+  auth->services = services;
+  auth->c = c;
+  auth->e = e;
+
+  return &auth->super;
+}
+
+/* chained into the returning of the authenticated user, ignores all
+   authentication messages */
+/* GABA:
+   (class
+     (name proxy_userauth_continuation)
+     (super command_frame)
+     (vars
+       (connection object ssh_connection)))
+*/
+
+static void
+do_proxy_userauth_continuation(struct command_continuation *c,
+			       struct lsh_object *x)
+{
+  CAST(proxy_userauth_continuation, self, c);
+  CAST(delayed_apply, action, x);
+  int i;
+
+  /* Ignore any further userauth messages. */
+  for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
+    self->connection->dispatch[i] = self->connection->ignore;
+  
+  FORCE_APPLY(action, self->super.up, self->super.e);
+}
+
+static struct command_continuation *
+make_proxy_userauth_continuation(struct ssh_connection *connection,
+				 struct command_continuation *c,
+				 struct exception_handler *e)
+{
+  NEW(proxy_userauth_continuation, self);
+  
+  self->super.super.c = do_proxy_userauth_continuation;
+  self->super.up = c;
+  self->super.e = e;
+  self->connection = connection;
+  return &self->super.super;
+}
+
+#define AUTH_ATTEMPTS 20
+
+/* Install an SSH_MSG_USERAUTH_REQUEST handler */
 static void
 do_userauth_proxy(struct command *s,
 		  struct lsh_object *x, 
@@ -186,14 +317,20 @@ do_userauth_proxy(struct command *s,
   CAST(ssh_connection, connection, x);
 
   connection->dispatch[SSH_MSG_USERAUTH_REQUEST] =
-    make_userauth_handler(self->methods,
-			  self->services, 
-			  c,
-			  e);
+    make_proxy_userauth_handler(self->methods,
+				self->services, 
+				make_once_continuation
+				(NULL, 
+				 make_proxy_userauth_continuation
+				 (connection, c, e)),
+				make_exc_userauth_handler(connection, 
+							  self->advertised_methods,
+							  AUTH_ATTEMPTS, e,
+							  HANDLER_CONTEXT));
 }
 
 struct command *
-make_userauth_proxy(struct int_list *allowed_methods,
+make_proxy_userauth(struct int_list *allowed_methods,
 		    struct alist *methods,
 		    struct alist *services)
 {
@@ -205,4 +342,3 @@ make_userauth_proxy(struct int_list *allowed_methods,
   self->services = services;
   return &self->super;
 }
-

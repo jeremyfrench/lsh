@@ -28,6 +28,7 @@
 #include "channel.h"
 
 struct channel_open *
-make_proxy_open_session(struct alist *session_requests);
+make_proxy_open_session(struct alist *server_requests,
+			struct alist *client_requests);
 
 #endif /* LSH_PROXY_SESSION_H_INCLUDED */

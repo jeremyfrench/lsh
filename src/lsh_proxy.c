@@ -54,8 +54,20 @@
 #include "proxy_session.h"
 #include "sexp.h"
 #include "sexp_commands.h"
+#include "spki_commands.h"
 
 #include "lsh_argp.h"
+
+/* Forward declarations */
+struct command_simple options2local;
+#define OPTIONS2LOCAL (&options2local.super.super)
+
+static struct command options2keyfile;
+#define OPTIONS2KEYFILE (&options2keyfile.super)
+
+struct command_simple options2signature_algorithms;
+#define OPTIONS2SIGNATURE_ALGORITHMS \
+  (&options2signature_algorithms.super.super)
 
 #include "lsh_proxy.c.x"
 
@@ -95,6 +107,8 @@
      (name lsh_proxy_options)
      (super algorithms_options)
      (vars
+       (backend object io_backend)
+       (signature_algorithms object alist)
        (style . sexp_argp_state)
        (interface . "char *")
        (port . "char *")
@@ -110,12 +124,18 @@
 */
 
 static struct lsh_proxy_options *
-make_lsh_proxy_options(struct alist *algorithms)
+make_lsh_proxy_options(struct io_backend *backend, 
+		       struct randomness *random, 
+		       struct alist *algorithms)
 {
   NEW(lsh_proxy_options, self);
 
   init_algorithms_options(&self->super, algorithms);
-  
+  self->signature_algorithms
+    = make_alist(1,
+		 ATOM_DSA, make_dsa_algorithm(random), -1);
+
+  self->backend = backend;
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
   self->port = "ssh";
@@ -135,6 +155,46 @@ make_lsh_proxy_options(struct alist *algorithms)
   
   return self;
 }
+
+/* Port to listen on */
+COMMAND_SIMPLE(options2local)
+{
+  CAST(lsh_proxy_options, options, a);
+  return &options->local->super;
+}
+
+/* alist of signature algorithms */
+COMMAND_SIMPLE(options2signature_algorithms)
+{
+  CAST(lsh_proxy_options, options, a);
+  return &options->signature_algorithms->super;
+}
+
+/* Read server's private key */
+static void
+do_options2keyfile(struct command *ignored UNUSED,
+		   struct lsh_object *a,
+		   struct command_continuation *c,
+		   struct exception_handler *e)
+{
+  CAST(lsh_proxy_options, options, a);
+  
+  struct io_fd *f;
+
+  f = io_read_file(options->backend, options->hostkey, e);
+
+  if (f)
+    COMMAND_RETURN(c, f);
+  else
+    {
+      werror("Failed to open '%z' (errno = %i): %z.\n",
+	     options->hostkey, errno, STRERROR(errno));
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
+    }
+}
+
+static struct command options2keyfile =
+STATIC_COMMAND(do_options2keyfile);
 
 static const struct argp_option
 main_options[] =
@@ -294,26 +354,27 @@ make_fake_host_db(void)
   return &res->super;
 }
 
-
 /* GABA:
    (expr
      (name lsh_proxy_listen)
      (params
        (listen object command)
        (handshake object handshake_info)
-       (keys object alist)
        (services object command)
        (connect_server object command)
        (chain_connections object command))
      (expr 
-       (lambda (port)
+       (lambda (options)
          (services 
-	   (let ((peer (listen port)))
+	   (let ((peer (listen(options2local options))))
 	     (chain_connections 
 	       connect_server 
 	       peer
 	       (connection_handshake
-	         handshake keys (log_peer peer))))))))
+	         handshake 
+		 (spki_read_hostkeys (options2signature_algorithms options)
+		                     (options2keyfile options)) 
+		 (log_peer peer))))))))
 */
 
 /* GABA:
@@ -325,7 +386,8 @@ make_fake_host_db(void)
        (handshake object handshake_info))
      (expr 
        (lambda (port)
-         (connection_handshake handshake verifier (connect port)))))
+         (init_connection_service 
+	   (connection_handshake handshake verifier (connect port))))))
 */
 
 /* Invoked when the client requests the userauth service. */
@@ -345,7 +407,7 @@ make_fake_host_db(void)
      (name lsh_proxy_connection_service)
      (params
        (login object command)     
-       (hooks object object_list))
+       (hooks object object_list)) 
      (expr
        (lambda (user connection)
          ((progn hooks) (login user
@@ -365,7 +427,6 @@ int main(int argc, char **argv)
   struct randomness *r;
   struct alist *algorithms_server, *algorithms_client;
   struct make_kexinit *make_kexinit;
-  struct keypair *hostkey;
   
   /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
@@ -387,7 +448,7 @@ int main(int argc, char **argv)
 				      ATOM_SSH_DSS, make_dsa_algorithm(r),
 				      -1);
 
-  options = make_lsh_proxy_options(algorithms_server);
+  options = make_lsh_proxy_options(backend, r, algorithms_server);
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -483,22 +544,23 @@ int main(int argc, char **argv)
 			     algorithms_server,
 			     make_kexinit,
 			     NULL),
-	 keys,
-	 make_offer_service(make_alist(1, 
-				       ATOM_SSH_USERAUTH, 
-				       lsh_proxy_services
-				       (make_userauth_proxy
-					(make_int_list(1, ATOM_PASSWORD, -1), 
-					 make_alist(1, ATOM_PASSWORD, &proxy_password_auth, -1),
-					 make_alist
-					 (1, 
-					  ATOM_SSH_CONNECTION,
-					  lsh_proxy_connection_service
-					  (make_proxy_connection_service
-					   (make_alist(0, -1)),
-					   connection_hooks),
-					  -1))),
-				       -1)),
+	 make_proxy_offer_service
+	 (make_alist(1, 
+		     ATOM_SSH_USERAUTH, 
+		     lsh_proxy_services
+		     (make_proxy_userauth
+		      (make_int_list(1, ATOM_PASSWORD, -1), 
+		       make_alist(1, ATOM_PASSWORD, &proxy_password_auth, -1),
+		       make_alist
+		       (1, 
+			ATOM_SSH_CONNECTION,
+			lsh_proxy_connection_service
+			(make_proxy_connection_service
+			 (make_alist(0, -1),
+			  make_alist(0, -1)),
+			 connection_hooks),
+			-1))),
+		     -1)),
 
 	 /* callback to call when client<->proxy handshake finished */
 	 (struct command *)lsh_proxy_connect_server(make_simple_connect(backend, NULL),
@@ -517,7 +579,7 @@ int main(int argc, char **argv)
     
       CAST_SUBTYPE(command, server_listen, o);
     
-      COMMAND_CALL(server_listen, options->local,
+      COMMAND_CALL(server_listen, options,
 		   &discard_continuation,
 		   make_report_exception_handler(EXC_IO, EXC_IO, "lsh_proxy: ",
 						 &default_exception_handler,

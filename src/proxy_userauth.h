@@ -40,9 +40,11 @@
        (name string)))
 */
 
-extern struct userauth proxy_password_auth;
+struct proxy_userauth;
 
-struct command *make_userauth_proxy(struct int_list *allowed_methods,
+extern struct proxy_userauth proxy_password_auth;
+
+struct command *make_proxy_userauth(struct int_list *allowed_methods,
 				    struct alist *methods,
 				    struct alist *services);
 
