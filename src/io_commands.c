@@ -227,33 +227,35 @@ static int do_connect(struct io_backend *backend,
 
 
 /* Connect variant, taking a connection object as argument (used for
- * rememembering the connected fd). */
+ * rememembering the connected fd).
+ *
+ * (connect backend port connection) -> fd */
 
 /* GABA:
    (class
-     (name connect_connection)
+     (name connect_port)
      (super command)
      (vars
        (backend object io_backend)
        (target object address_info)))
 */
 
-static int do_connect_connection(struct command *s,
+static int do_connect_port(struct command *s,
 				 struct lsh_object *x,
 				 struct command_continuation *c)
 {
-  CAST(connect_connection, self, s);
+  CAST(connect_port, self, s);
   CAST(ssh_connection, connection, x);
   
   return do_connect(self->backend, self->target, connection->resources, c);
 }
 
 
-struct command *make_connect_connection(struct io_backend *backend,
-					struct address_info *target)
+struct command *make_connect_port(struct io_backend *backend,
+				  struct address_info *target)
 {
-  NEW(connect_connection, self);
-  self->super.call = do_connect_connection;
+  NEW(connect_port, self);
+  self->super.call = do_connect_port;
   self->backend = backend;
   self->target = target;
 
@@ -261,7 +263,7 @@ struct command *make_connect_connection(struct io_backend *backend,
 }
 
 static struct lsh_object *
-collect_connect_connection(struct collect_info_2 *info,
+collect_connect_port(struct collect_info_2 *info,
 			   struct lsh_object *a,
 			   struct lsh_object *b)
 {
@@ -271,11 +273,11 @@ collect_connect_connection(struct collect_info_2 *info,
   assert(backend);
   assert(target);
   
-  return &make_connect_connection(backend, target)->super;
+  return &make_connect_port(backend, target)->super;
 }
 
 static struct collect_info_2 collect_info_connect_2 =
-STATIC_COLLECT_2_FINAL(collect_connect_connection);
+STATIC_COLLECT_2_FINAL(collect_connect_port);
 
 struct collect_info_1 connect_with_connection =
 STATIC_COLLECT_1(&collect_info_connect_2);
@@ -318,6 +320,35 @@ make_simple_connect(struct io_backend *backend,
   return &self->super;
 }
 
+
+/* GABA:
+   (class
+     (name connect_connection)
+     (super command)
+     (vars
+       (backend object io_backend)))
+*/
+
+static int do_connect_connection(struct command *s,
+				 struct lsh_object *x,
+				 struct command_continuation *c)
+{
+  CAST(connect_connection, self, s);
+  CAST(ssh_connection, connection, x);
+
+  return
+    COMMAND_RETURN(c,
+		   make_simple_connect(self->backend, connection->resources));
+}
+
+struct command *make_connect_connection(struct io_backend *backend)
+{
+  NEW(connect_connection, self);
+  self->super.call = do_connect_connection;
+  self->backend = backend;
+
+  return &self->super;
+}
 
 static int do_simple_listen(struct command *s,
 			    struct lsh_object *a,

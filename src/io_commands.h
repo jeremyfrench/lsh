@@ -48,8 +48,9 @@ struct command *make_listen_command(struct command *callback,
 extern struct collect_info_1 listen_command;
 #define LISTEN_COMMAND (&listen_command.super.super.super)
 
-struct command *make_connect_connection(struct io_backend *backend,
+struct command *make_connect_port(struct io_backend *backend,
 					struct address_info *target);
+struct command *make_connect_connection(struct io_backend *backend);
 
 extern struct collect_info_1 connect_with_connection;
 
