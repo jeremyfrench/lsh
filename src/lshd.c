@@ -422,14 +422,15 @@ int main(int argc, char **argv)
 		   make_unix_userauth
 		   (make_alist(1,
 			       ATOM_SSH_CONNECTION,
-			       make_server_session_service
+			       make_server_connection_service
 			       (make_alist(0, -1),
 				make_alist(1
 #if WITH_PTY_SUPPORT
 					   +1, ATOM_PTY_REQ, make_pty_handler()
 #endif /* WITH_PTY_SUPPORT */
 					   , ATOM_SHELL, make_shell_handler(backend, reaper),
-					   -1)),
+					   -1),
+				backend),
 			       -1)),
 		   -1)),
        -1)));
