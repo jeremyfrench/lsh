@@ -139,6 +139,12 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define OPT_TCPWRAP_GOAWAY_MSG 0x228
 
+#define OPT_LOGIN_AUTH_MODE 0x230
+#define OPT_NO_LOGIN_AUTH_MODE (OPT_LOGIN_AUTH_MODE | OPT_NO)
+#define OPT_LOGIN_AUTH_USER 0x231
+
+#define OPT_BANNER_FILE 0x232
+
 /* GABA:
    (class
      (name lshd_options)
@@ -160,12 +166,16 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
        ;; (kexinit object make_kexinit)
        (kex_algorithms object int_list)
-       
+
+       (with_loginauthmode . int)
        (with_publickey . int)
        (with_password . int)
        (allow_root . int)
        (pw_helper . "const char *")
        (login_shell . "const char *")
+       (loginauthmode_user . "const char *")
+
+       (banner_file . "const char *")
        
        (with_tcpip_forward . int)
        (with_x11_forward . int)
@@ -212,6 +222,7 @@ make_lshd_options(void)
 
   self->kex_algorithms = NULL;
   
+  self->with_loginauthmode = 0;
   self->with_publickey = 1;
   self->with_password = 1;
   self->with_tcpip_forward = 1;
@@ -220,6 +231,9 @@ make_lshd_options(void)
   self->with_pty = 1;
   self->subsystems = NULL;
   
+  self->loginauthmode_user = NULL;
+  self->banner_file = NULL;
+
   self->tcp_wrapper_name = "lshd";
   self->tcp_wrapper_message = NULL;
 
@@ -319,6 +333,8 @@ main_options[] =
     "Location of the sshd1 program, for falling back to version 1 of the Secure Shell protocol.", 0 },
 #endif /* WITH_SSH1_FALLBACK */
 
+  { "banner-file", OPT_BANNER_FILE, "File name", 0, "Banner file to send before " "handshake.", 9 },
+
 #if WITH_TCPWRAPPERS
   { NULL, 0, NULL, 0, "Connection filtering:", 0 },
   { "tcpwrappers", OPT_TCPWRAPPERS, "name", 0, "Set service name for tcp wrappers (default lshd)", 0 },
@@ -337,6 +353,21 @@ main_options[] =
   { "no-dh-keyexchange", OPT_NO_DH, NULL, 0, "Disable DH support.", 0 },
   
   { NULL, 0, NULL, 0, "User authentication options:", 0 },
+
+  { "login-auth-mode", OPT_LOGIN_AUTH_MODE, NULL, 0, 
+    "Enable a telnet like mode (accept none-authentication and launch the" 
+    "login-program, making it responsible for authenticating the user).", 0 },
+
+  { "no-login-auth-mode", OPT_NO_LOGIN_AUTH_MODE, NULL, 0, 
+    "Disable login-auth-mode (default).", 0 },
+
+  { "login-program", OPT_LOGIN_SHELL, "Program", 0,
+    "Use this as the login program for login-auth-mode, must " 
+    "authenticate users. ", 0 },
+
+  { "login-auth-mode-user", OPT_LOGIN_AUTH_USER, "username", 0,
+    "Run login-program as this user, defaults to the user "
+    "who started lshd.", 0 },
 
   { "password", OPT_PASSWORD, NULL, 0,
     "Enable password user authentication (default).", 0},
@@ -523,7 +554,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	if (!self->random)
 	  argp_failure( state, EXIT_FAILURE, 0,  "No randomness generator available.");
 	
-       	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
+       	if (self->with_password || self->with_publickey || self->with_srp_keyexchange || self->with_loginauthmode)
 	  user_db = make_unix_user_db(self->reaper,
 				      self->pw_helper, self->login_shell,
 				      self->allow_root);
@@ -574,13 +605,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	if (self->use_pid_file < 0)
 	  self->use_pid_file = self->daemonic;
 
+	self->userauth_algorithms = make_alist(0, -1);
+
 	if (self->with_password || self->with_publickey)
 	  {
 	    int i = 0;
 	    
 	    self->userauth_methods
 	      = alloc_int_list(self->with_password + self->with_publickey);
-	    self->userauth_algorithms = make_alist(0, -1);
 	    
 	    if (self->with_password)
 	      {
@@ -608,10 +640,35 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 			  ->super);
 	      }
 	  }
+
+
         if (self->with_srp_keyexchange)
           ALIST_SET(self->userauth_algorithms,
                     ATOM_NONE,
-                    &server_userauth_none.super);
+                    &make_userauth_none(0, NULL)->super); /* do not ignore username */
+	else if (self->with_loginauthmode)
+	  {
+	    struct lsh_string *runas;
+	    
+	    if (self->loginauthmode_user)
+	      runas = make_string(self->loginauthmode_user);
+	    else
+	      {
+		/* FIXME: Pherhaps have an LSHD_USER or similar */
+		
+		runas = CURRENT_USER();
+		
+		if (!runas) /* FIXME: Is it better to just croak? */
+		  runas = make_string("nobody");
+	      }
+
+	      
+	    ALIST_SET(self->userauth_algorithms,
+		      ATOM_NONE,
+		      &make_userauth_none(1, USER_LOOKUP(user_db, runas, 1 ))->super); /* ignore username */
+
+	  }
+
 
         if (!self->userauth_algorithms->size)
 	  argp_error(state, "All user authentication methods disabled.");
@@ -686,6 +743,22 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       
     case OPT_NO_PUBLICKEY:
       self->with_publickey = 0;
+      break;
+
+    case OPT_LOGIN_AUTH_MODE:
+      self->with_loginauthmode = 1;
+      break;
+
+    case OPT_NO_LOGIN_AUTH_MODE:
+      self->with_loginauthmode = 0;
+      break;
+
+    case OPT_LOGIN_AUTH_USER:
+      self->loginauthmode_user = arg;
+      break;
+
+    case OPT_BANNER_FILE:
+      self->banner_file = arg;
       break;
 
     case OPT_ROOT_LOGIN:
@@ -861,13 +934,15 @@ make_lshd_connection_service(struct lshd_options *options)
   /* FIXME: Use a queue instead. */
   struct object_list *connection_hooks;
   struct command *session_setup;
-    
+  struct alist *supported_channel_requests;
+
   /* Supported channel requests */
-  struct alist *supported_channel_requests
-    = make_alist(2,
-		 ATOM_SHELL, &shell_request_handler,
-		 ATOM_EXEC, &exec_request_handler,
-		 -1);
+
+
+  supported_channel_requests = make_alist(2,
+					  ATOM_SHELL, &shell_request_handler,
+					  ATOM_EXEC, &exec_request_handler,
+					  -1);
     
 #if WITH_PTY_SUPPORT
   if (options->with_pty)
@@ -906,11 +981,63 @@ make_lshd_connection_service(struct lshd_options *options)
   else
 #endif
     connection_hooks
-      = make_object_list (1, session_setup, -1);
+      = make_object_list (1, session_setup, -1); 
 
   {
     CAST_SUBTYPE(command, connection_service,
 		 lshd_connection_service(connection_hooks));
+    return connection_service;
+  }
+}
+
+
+/* Invoked when starting the ssh-connection service */ 
+/* GABA: 
+   (expr 
+     (name lshd_login_service) 
+     (params
+       (hooks object object_list))
+     (expr 
+       (lambda (connection) 
+         ((progn hooks)
+          ; We have to initialize the connection 
+	  ; before adding handlers. 
+	  (init_login_service connection)))))
+*/ 
+
+
+static struct command *
+make_lshd_login_service(struct lshd_options *options)
+{
+  /* Commands to be invoked on the connection */
+  /* FIXME: Use a queue instead. */
+  struct object_list *connection_hooks;
+  struct alist *supported_channel_requests;
+
+
+  supported_channel_requests = make_alist(1,
+					    ATOM_SHELL, &shell_request_handler,
+					    -1);    
+#if WITH_PTY_SUPPORT
+  if (options->with_pty)
+    {
+      ALIST_SET(supported_channel_requests,
+		ATOM_PTY_REQ, &pty_request_handler.super);
+      ALIST_SET(supported_channel_requests,
+		ATOM_WINDOW_CHANGE, &window_change_request_handler.super);
+    }
+#endif /* WITH_PTY_SUPPORT */
+
+  connection_hooks
+    = make_object_list(1, 
+		       make_install_fix_channel_open_handler(
+				  ATOM_SESSION, 
+			          make_open_session(supported_channel_requests)),
+		       -1); 
+
+  {
+    CAST_SUBTYPE(command, connection_service,
+		 lshd_login_service(connection_hooks));
     return connection_service;
   }
 }
@@ -924,7 +1051,7 @@ make_lshd_connection_service(struct lshd_options *options)
        (kexinit object make_kexinit)
        (keys object alist)
        (logger object command)
-       (services object command) )
+       (services object command))
      (expr (lambda (lv)
     	      (services (connection_handshake
 	                   handshake
@@ -941,6 +1068,7 @@ make_lshd_listen_callback(struct lshd_options *options,
   struct int_list *hostkey_algorithms;
   struct make_kexinit *kexinit;
   struct command *logger;
+  struct lsh_string *banner_text = NULL;
   
   /* Include only hostkey algorithms that we have keys for. */
   hostkey_algorithms
@@ -969,8 +1097,25 @@ make_lshd_listen_callback(struct lshd_options *options,
 		   ? options->tcp_wrapper_message : ""));
   else
 #endif /* WITH_TCPWRAPPERS */
-    logger = &io_log_peer_command;
-  
+    {
+      logger = &io_log_peer_command;
+
+    }
+
+  if (options->banner_file) /* Banner? */
+    {
+
+      int fd = open(options->banner_file, 0);
+      
+      if (fd >= 0)
+	{
+	  banner_text = io_read_file_raw(fd, 1024);
+	  close(fd);
+	}
+    }
+
+
+
   {
     CAST_SUBTYPE(command, server_callback,
 		 lshd_listen_callback
@@ -980,7 +1125,8 @@ make_lshd_listen_callback(struct lshd_options *options,
 					SSH_MAX_PACKET,
 					options->random,
 					options->super.algorithms,
-					options->sshd1),
+					options->sshd1,
+				        banner_text),
 		  kexinit,
 		  keys,
 		  logger,
@@ -1069,11 +1215,21 @@ main(int argc, char **argv)
   if (!read_host_key(options->hostkey, options->signature_algorithms, keys))
     return EXIT_FAILURE;
 
-  fds = io_listen_list(&options->local,
-		       make_lshd_listen_callback
-		       (options, keys,
-			make_lshd_connection_service(options)),
-		       &lshd_exception_handler);
+
+                                                                                                
+  if (options->with_loginauthmode) 
+    fds = io_listen_list(&options->local, 
+			 make_lshd_listen_callback 
+			 (options, keys, 
+			  make_lshd_login_service(options)), 
+			 &lshd_exception_handler);           
+  else 
+    fds = io_listen_list(&options->local, 
+			 make_lshd_listen_callback 
+			 (options, keys, 
+			  make_lshd_connection_service(options)), 
+			 &lshd_exception_handler); 
+  
   if (!fds)
     {
       werror("Could not bind any address.\n");
