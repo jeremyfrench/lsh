@@ -290,7 +290,7 @@ static int do_parallell_progn(struct command *s,
   for (i=0; i < LIST_LENGTH(self->body) - 1; i++)
     {
       CAST_SUBTYPE(command, command, LIST(self->body)[i]);
-      res |= COMMAND_CALL(command, x, NULL);
+      res |= COMMAND_CALL(command, x, &discard_continuation);
       if (LSH_CLOSEDP(res))
 	return res;
     }

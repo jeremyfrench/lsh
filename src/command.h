@@ -47,9 +47,16 @@
 
 /* GABA:
    (class
-     (name command_exception)
+     (name exception)
      (vars
-       (e method int UINT32)))
+       (type . UINT32)))
+*/
+
+/* GABA:
+   (class
+     (name command_raise)
+     (vars
+       (e method int "struct exception *")))
 */
 
 /* GABA:
@@ -58,6 +65,7 @@
      (vars
        (call method int "struct lsh_object *arg"
                         "struct command_continuation *c")))
+			;; "struct command_continuation *e)))
 */
 
 /* GABA:
@@ -73,10 +81,16 @@
 #define COMMAND_CALL(f, a, c) \
   ((f)->call((f), (struct lsh_object *) (a), (c)))
 
+#if 0
 /* NOTE: If R == NULL, don't call the continuation, _but_ the argument
  * V must still be evaluated. */
 #define COMMAND_RETURN(r, v) \
   ((r) ? ((r)->c((r), (struct lsh_object *) (v))) : ((void)(v), LSH_OK | LSH_GOON))
+#endif
+
+#define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v)))
+#define COMMAND_RAISE(r, v)  ((r)->e((r), (v)))
+
 #define COMMAND_SIMPLE(f, a) \
   ((f)->call_simple((f), (struct lsh_object *)(a)))
 
