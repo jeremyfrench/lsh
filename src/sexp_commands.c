@@ -134,7 +134,7 @@ do_print_raw_hash_to(struct command *s,
   lsh_string_free(canonical);
   KILL(hash);
 
-  A_WRITE(self->dest, ssh_format("%lxfS", digest));
+  A_WRITE(self->dest, ssh_format("%lxfS\n", digest));
 
   COMMAND_RETURN(c, a);
 }
