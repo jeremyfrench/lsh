@@ -30,7 +30,7 @@
 #include "reaper.h"
 #include "ssh1_fallback.h"
 
-struct fd_callback *
+struct fd_listen_callback *
 make_server_callback(struct io_backend *b,
 		     const char *comment,
 		     /* NULL if no falling back should be attempted. */

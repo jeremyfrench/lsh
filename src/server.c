@@ -129,7 +129,7 @@
 /* CLASS:
    (class
      (name server_callback)
-     (super fd_callback)
+     (super fd_listen_callback)
      (vars
        (backend object io_backend)
 
@@ -146,10 +146,12 @@
        (kexinit_handler object packet_handler)))
 */
 
-static int server_initiate(struct fd_callback **c,
-			   int fd)
+static int server_initiate(struct fd_listen_callback *c,
+			   int fd,
+			   size_t addr_len UNUSED,
+			   struct sockaddr *peer UNUSED)
 {
-  CAST(server_callback, closure, *c);
+  CAST(server_callback, closure, c);
   
   struct ssh_connection *connection
     = make_ssh_connection(closure->kexinit_handler);
@@ -322,7 +324,7 @@ struct read_handler *make_server_read_line(struct ssh_connection *c,
   return make_read_line(&closure->super);
 }
 
-struct fd_callback *
+struct fd_listen_callback *
 make_server_callback(struct io_backend *b,
 		     const char *comment,
 		     /* NULL if no falling back should be attempted. */
