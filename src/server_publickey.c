@@ -156,10 +156,6 @@ do_authenticate(struct userauth *s,
 	  assert(v);
 	  
 #if DATAFELLOWS_WORKAROUNDS
-	  if ( (algorithm == ATOM_SSH_DSS)
-	       && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
-	    algorithm = ATOM_SSH_DSS_KLUDGE_LOCAL;
-	  
 	  if (connection->peer_flags & PEER_USERAUTH_REQUEST_KLUDGE)
 	    {
 	      signed_data = ssh_format("%lS%c%S%a%a%c%a%S", 
