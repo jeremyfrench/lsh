@@ -1,3 +1,16 @@
+2001-10-05  Niels Möller  <nisse@ehand.com>
+
+	* src/testsuite/aes-test.m4: New testcase; NIST:s testcases for
+	aes256-cbc. 
+
+	* src/testsuite/macros.m4 (TS_TEST_CRYPTO): Added optional 6:th
+	argument for iv.
+
+	* src/testsuite/Makefile.am (TS_PROGS): Added aes-test.
+
+	* src/crypto.h, src/crypto.c: Deleted aes128_cbc_algorithm and
+	aes192_cbc_algorithm.
+
 2001-10-05  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/crypto.c: New file, with glue to Nettle.

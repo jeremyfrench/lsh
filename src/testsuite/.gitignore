@@ -6,6 +6,7 @@
 /.deps
 /Makefile
 /Makefile.in
+/aes-test.c
 /arcfour-test
 /arcfour-test.c
 /des-test
