@@ -130,7 +130,7 @@ if test -d "$2/." ; then
       AC_MSG_RESULT(already added)
     else
       AC_MSG_RESULT(added)
-      # LIBS="$LIBS -L $2"
+      # LDFLAGS="$LDFLAGS -L $2"
       $1_REAL_DIRS="$ac_real_dir [$]$1_REAL_DIRS"
       $1_DIRS="$2 [$]$1_DIRS"
     fi
@@ -203,20 +203,20 @@ AC_DEFUN(LSH_RPATH_FIX,
     AC_MSG_CHECKING([Running simple test program failed. Trying -R flags])
 dnl echo RPATH_CANDIDATE_DIRS = $RPATH_CANDIDATE_DIRS
     ac_remaining_dirs=''
-    ac_rpath_save_LIBS="$LIBS"
+    ac_rpath_save_LDFLAGS="$LDFLAGS"
     for d in $RPATH_CANDIDATE_DIRS ; do
       if test $ac_success = yes ; then
   	ac_remaining_dirs="$ac_remaining_dirs $d"
       else
-  	LIBS="$RPATHFLAG$d $LIBS"
-dnl echo LIBS = $LIBS
+  	LDFLAGS="$RPATHFLAG$d $LDFLAGS"
+dnl echo LDFLAGS = $LDFLAGS
   	AC_TRY_RUN([int main(int argc, char **argv) { return 0; }],
   	  [ac_success=yes
-  	  ac_rpath_save_LIBS="$LIBS"
+  	  ac_rpath_save_LDFLAGS="$LDFLAGS"
   	  AC_MSG_RESULT([adding $RPATHFLAG$d])
   	  ],
   	  [ac_remaining_dirs="$ac_remaining_dirs $d"], :)
-  	LIBS="$ac_rpath_save_LIBS"
+  	LDFLAGS="$ac_rpath_save_LDFLAGS"
       fi
     done
     RPATH_CANDIDATE_DIRS=$ac_remaining_dirs
