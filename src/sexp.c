@@ -577,6 +577,7 @@ sexp_un(const mpz_t n)
   return sexp_s(NULL, s);
 }
 
+#if 0
 struct sexp *
 sexp_sn(const mpz_t n)
 {
@@ -590,9 +591,11 @@ sexp_sn(const mpz_t n)
   
   return sexp_s(NULL, s);
 }
+#endif
 
 /* Small unsigned int -> sexp */
-struct sexp *sexp_uint32(UINT32 n)
+struct sexp *
+sexp_uint32(UINT32 n)
 {
   /* FIXME: Eliminate redundant leading zeroes. */
   struct lsh_string *digits = lsh_string_alloc(4);
