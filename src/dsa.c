@@ -194,6 +194,20 @@ do_dsa_sign_spki(struct signer *c,
   return signature;
 }
 
+static struct sexp *
+do_dsa_public_key(struct signer *s)
+{
+  CAST(dsa_signer, self, s);
+
+  return sexp_l(2, sexp_a(ATOM_PUBLIC_KEY),
+		sexp_l(5, sexp_a(ATOM_DSA),
+		       sexp_l(2, sexp_a(ATOM_P), sexp_un(self->public.p), -1),
+		       sexp_l(2, sexp_a(ATOM_Q), sexp_un(self->public.q), -1),
+		       sexp_l(2, sexp_a(ATOM_G), sexp_un(self->public.g), -1),
+		       sexp_l(2, sexp_a(ATOM_Y), sexp_un(self->public.y), -1),
+		       -1), -1);
+}
+
 #if DATAFELLOWS_WORKAROUNDS
 #if 0
 struct lsh_string *dsa_sign_kludge(struct signer *c,
@@ -535,7 +549,8 @@ make_dsa_signer(struct signature_algorithm *c,
       res->random = closure->random;
       res->super.sign = do_dsa_sign;
       res->super.sign_spki = do_dsa_sign_spki;
-
+      res->super.public_key = do_dsa_public_key;
+      
       return &res->super;
     }
   else
@@ -545,7 +560,6 @@ make_dsa_signer(struct signature_algorithm *c,
     }
 }
 
-/* Create a usual ssh-dss verifier from an spki key */
 static struct verifier *
 make_dsa_verifier(struct signature_algorithm *self UNUSED,
 		  struct sexp_iterator *i)
@@ -566,7 +580,7 @@ make_dsa_verifier(struct signature_algorithm *self UNUSED,
       return NULL;
     }
 }
-
+  
 struct signature_algorithm *make_dsa_algorithm(struct randomness *random)
 {
   NEW(dsa_algorithm, dsa);
