@@ -63,6 +63,11 @@ in such a way that they can also be allocated statically?
 
 Have the allocator initialize all objects automatically.
 
+Better typechecking of non-heap objects. To do this one would also
+need valid isa-pointers in classes (as classes are statically
+allocated). If this is done properly, the meta feature could also be
+cleaned up a little.
+
 
 CHANNELS
 
