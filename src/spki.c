@@ -1084,7 +1084,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 
 	    if (! (sexp_iterator_assoc(&i, 2, names, values)
 		   && (salt = lsh_sexp_to_string(&values[0], NULL))
-		   && lsh_sexp_to_uint32(&values[1], &iterations)
+		   && sexp_iterator_get_uint32(&values[1], &iterations)
 		   && iterations))
 	      goto fail;
 	  }
