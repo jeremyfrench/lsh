@@ -261,7 +261,9 @@ make_ssh_connection(UINT32 flags,
   connection->literal_kexinits[CONNECTION_CLIENT]
     = connection->literal_kexinits[CONNECTION_SERVER] = NULL;
 
+#if 0
   connection->newkeys = NULL;
+#endif
   
   /* Initialize dispatch */
   connection->ignore = make_ignore_handler();

@@ -146,7 +146,7 @@
        (literal_kexinits array (string) 2)
 
        ; Negotiated algorithms
-       (newkeys object newkeys_info)
+       ; (newkeys object newkeys_info)
   
        ; Table of all known message types 
        (dispatch array (object packet_handler) "0x100");
