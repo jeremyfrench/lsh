@@ -1494,6 +1494,7 @@ struct lsh_string *channel_transmit_data(struct ssh_channel *channel,
 {
   assert(data->length <= channel->send_window_size);
   assert(data->length <= channel->send_max_packet);
+  channel->send_window_size -= data->length;
   
   return ssh_format("%c%i%fS",
 		    SSH_MSG_CHANNEL_DATA,
@@ -1507,7 +1508,8 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
 {
   assert(data->length <= channel->send_window_size);
   assert(data->length <= channel->send_max_packet);
-  
+  channel->send_window_size -= data->length;
+
   return ssh_format("%c%i%i%fS",
 		    SSH_MSG_CHANNEL_EXTENDED_DATA,
 		    channel->channel_number,
@@ -1516,6 +1518,20 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
 }
 
 /* Writing data to a channel */
+
+/* NOTE: Flow control when sending data on a channel works as follows:
+ * When the i/o backend wants to read from one of the channel's
+ * sources, it first calls do_read_data_query() (in read_data.c),
+ * which looks at the current value of send_window_size to determine
+ * how much data can be sent right now. The backend reads at most that
+ * amount of data, and then calls do_channel_write or
+ * do_channel_write_extended. These objects are responsible for
+ * subtracting the actual amount of data from the send_window_size.
+ *
+ * It is crucial that no other i/o is done between the call to
+ * do_read_data_query and do_channel_write, otherwise we would have a
+ * race condition. */
+
 /* GABA:
    (class
      (name channel_write)
