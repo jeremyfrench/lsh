@@ -87,64 +87,37 @@ char *alloca ();
 # ifndef __mempcpy
 #  define __mempcpy mempcpy
 # endif
-/* FIXME: __strndup is a macro expanding to a call of the function
- * __strndup which is not declared properly. */
-# ifndef __strndup
-#  define __strndup strndup
-# endif
+/* We need to use a different name, as __strndup is likely a macro. */
+# define STRNDUP strndup
 # ifndef __flockfile
 #  define __flockfile flockfile
 # endif
 # ifndef __funlockfile
 #  define __funlockfile funlockfile
 # endif
+# if HAVE_STRERROR
+#  define STRERROR strerror
+# else
+#  define STRERROR(x) (sys_errlist[x])
+# endif
+#else /* _LIBC */
+# define STRNDUP __strndup
+# define STRERROR strerror
 #endif
 
 #if !_LIBC
 # if !HAVE_STRNDUP
-
-static char *strndup (const char *s, size_t size)
-{
-  char *r;
-  char *end = memchr(s, 0, size);
-  
-  if (end)
-    /* Length + 1 */
-    size = end - s + 1;
-  
-  r = malloc(size);
-
-  if (size)
-    {
-      memcpy(r, s, size-1);
-      r[size-1] = '\0';
-    }
-  return r;
-}
+char *strndup (const char *s, size_t size);
 # endif /* !HAVE_STRNDUP */
+
 # if !HAVE_MEMPCPY
-static void *mempcpy (void *to, const void *from, size_t size)
-{
-  memcpy(to, from, size);
-  return (char *) to + size;
-}
+void *mempcpy (void *to, const void *from, size_t size);
 # endif /* !HAVE_MEMPCPY */
+
 # if !HAVE_STRCHRNUL
-
-/* FIXME: What is this function supposed to do? My guess is that it is
- * like strchr, but returns a pointer to the NUL character, not a NULL
- * pointer, if the character isn't found. */
-
-static char *strchrnul(const char *s, int c)
-{
-  const char *p = s;
-  while (*p && (*p != c))
-    p++;
-
-  return (char *) p;
-}
-
+char *strchrnul(const char *s, int c);
 # endif /* !HAVE_STRCHRNUL */
+
 #endif /* !_LIBC */
 
 
@@ -1531,15 +1504,7 @@ argp_doc (const struct argp *argp, const struct argp_state *state,
     {
       if (inp_text_limit)
 	/* Copy INP_TEXT so that it's nul-terminated.  */
-	/* FIXME: The glibc version of argp uses the name __strndup.
-	 * However, that causes link errors because there's no such
-	 * function in the public namespace, and __strndup is already
-	 * defined as a macro so that the
-	 *
-	 *   #define __strndup strndup
-	 *
-	 * above is never used. */
-	inp_text = strndup (inp_text, inp_text_limit);
+	inp_text = STRNDUP (inp_text, inp_text_limit);
       input = __argp_input (argp, state);
       text =
 	(*argp->help_filter) (post
@@ -1603,10 +1568,9 @@ argp_doc (const struct argp *argp, const struct argp_state *state,
    set ARGP_HELP_*.  NAME is what to use wherever a `program name' is
    needed. */
 
-/* FIXME: NAME ought to be a const char * */
 static void
 _help (const struct argp *argp, const struct argp_state *state, FILE *stream,
-       unsigned flags, char *name)
+       unsigned flags, const char *name)
 {
   int anything = 0;		/* Whether we've output anything.  */
   struct hol *hol = 0;
@@ -1750,6 +1714,12 @@ void __argp_help (const struct argp *argp, FILE *stream,
 weak_alias (__argp_help, argp_help)
 #endif
 
+char *__argp_basename(char *name)
+{
+  char *short_name = strrchr(name, '/');
+  return short_name ? short_name + 1 : name;
+}
+
 static const char *
 short_program_name(const struct argp_state *state)
 {
@@ -1758,12 +1728,11 @@ short_program_name(const struct argp_state *state)
 #if HAVE_PROGRAM_INVOCATION_SHORT_NAME
   return program_invocation_short_name;
 #elif HAVE_PROGRAM_INVOCATION_NAME
-  {
-    const char *short_name = strrchr(program_invocation_name, '/');
-    return short_name ? short_name + 1 : program_invocation_name;
-  }
+  return __argp_basename(program_invocation_name);
 #else
-  /* FIXME: What now? */
+  /* FIXME: What now? Miles suggests that it is better to use NULL,
+     but currently the value is passed on directly to fputs_unlocked,
+     so that requires more changes. */
   return "";
 #endif
 }
@@ -1870,7 +1839,7 @@ __argp_failure (const struct argp_state *state, int status, int errnum,
 	    {
 	      putc_unlocked (':', stream);
 	      putc_unlocked (' ', stream);
-	      fputs (strerror (errnum), stream);
+	      fputs (STRERROR (errnum), stream);
 	    }
 
 	  putc_unlocked ('\n', stream);
