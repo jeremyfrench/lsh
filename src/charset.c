@@ -57,9 +57,9 @@ int ucs4_to_local(UINT32 c)
   switch (local_charset)
     {
     case CHARSET_USASCII:
-      return (c < 0x80) ? c : -1;
+      return (c < 0x80) ? (int) c : -1;
     case CHARSET_LATIN1:
-      return (c < 0x100) ? c : -1;
+      return (c < 0x100) ? (int) c : -1;
     default:
       fatal("Internal error");
     };
@@ -79,7 +79,7 @@ struct lsh_string *local_to_utf8(struct lsh_string *s, int free)
 
 	UINT32 total = 0;
 	{
-	  int i;
+	  UINT32 i;
 	
 	  /* First convert to ucs-4, and compute the length of the corresponding
 	   * utf-8 string. */
@@ -88,22 +88,22 @@ struct lsh_string *local_to_utf8(struct lsh_string *s, int free)
 	      UINT32 c = local_to_ucs4(s->data[i]);
 	      unsigned char l = 1;
 
-	      if (c >= (1L<<7))
+	      if (c >= (1UL<<7))
 		{
 		  l++;
-		  if (c >= (1L<<11))
+		  if (c >= (1UL<<11))
 		    {
 		      l++;
-		      if (c >= (1L<<16))
+		      if (c >= (1UL<<16))
 			{
 			  l++;
-			  if (c >= (1L<<21))
+			  if (c >= (1UL<<21))
 			    {
 			      l++;
-			      if (c >= (1L<<25))
+			      if (c >= (1UL<<25))
 				{
 				  l++;
-				  if (c >= (1L<<31))
+				  if (c >= (1UL<<31))
 				    fatal("Internal error!\n");
 				}}}}}
 	      chars[i] = c;
@@ -113,7 +113,7 @@ struct lsh_string *local_to_utf8(struct lsh_string *s, int free)
 	}
 	{
 	  struct lsh_string *res = lsh_string_alloc(total);
-	  int i, j;
+	  UINT32 i, j;
 
 	  for(i = j = 0; i<s->length; i++)
 	    {
@@ -148,7 +148,7 @@ struct lsh_string *local_to_utf8(struct lsh_string *s, int free)
   
 struct lsh_string *utf8_to_local(struct lsh_string *s, int free)
 {
-  int i;
+  UINT32 i;
   struct lsh_string *res;
   struct simple_buffer buffer;
   

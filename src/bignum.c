@@ -26,6 +26,8 @@
 #include "bignum.h"
 #include "werror.h"
 
+#include <stdlib.h>
+
 static void limbs_to_octets(mpz_t n, UINT32 length,
 			    UINT8 pad, UINT8 *data)
 {
@@ -38,7 +40,7 @@ static void limbs_to_octets(mpz_t n, UINT32 length,
       (length > 0) && (left  > 0);
       left--)
     {
-      int i;
+      size_t i;
       mp_limb_t word = *l++;
       for(i = 0; i<sizeof(mp_limb_t); i++)
 	{
@@ -60,7 +62,7 @@ static void limbs_to_octets(mpz_t n, UINT32 length,
 void bignum_parse_s(mpz_t n, UINT32 length, UINT8 *data)
 {
   int negative = length && (*data & 0x80);
-  int i;
+  size_t i;
   mpz_t digit;
 
   mpz_init(digit);
@@ -121,7 +123,7 @@ UINT32 bignum_format_s(mpz_t n, UINT8 *data)
       return 0;
     case 1:
       {
-	int length = mpz_sizeinbase(n, 2)/8 + 1;
+	size_t length = mpz_sizeinbase(n, 2)/8 + 1;
 
 	limbs_to_octets(n, length, 0, data);
 	return length;
@@ -129,7 +131,7 @@ UINT32 bignum_format_s(mpz_t n, UINT8 *data)
     case -1:
       {
 	mpz_t complement;
-	int length;
+	size_t length;
 	int i;
 	
 	mpz_init(complement);
@@ -154,7 +156,7 @@ UINT32 bignum_format_s(mpz_t n, UINT8 *data)
 /* Formatting of unsigned numbers */
 void bignum_parse_u(mpz_t n, UINT32 length, UINT8 *data)
 {
-  int i;
+  size_t i;
   mpz_t digit;
 
   mpz_init(digit);
@@ -189,7 +191,7 @@ UINT32 bignum_format_u(mpz_t n, UINT8 *data)
       return 0;
     case 1:
       {
-	int length = (mpz_sizeinbase(n, 2) + 7) / 8;
+	size_t length = (mpz_sizeinbase(n, 2) + 7) / 8;
 
 	limbs_to_octets(n, length, 0, data);
 	return length;
@@ -202,7 +204,7 @@ UINT32 bignum_format_u(mpz_t n, UINT8 *data)
 void bignum_random(mpz_t x, struct randomness *random, mpz_t n)
 {
   /* Add a few bits extra */
-  int length = (mpz_sizeinbase(n, 2) + 17) / 8;
+  size_t length = (mpz_sizeinbase(n, 2) + 17) / 8;
   UINT8 *data = alloca(length);
 
   RANDOM(random, length, data);
