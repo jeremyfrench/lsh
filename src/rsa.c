@@ -34,6 +34,7 @@
 #include "xalloc.h"
 
 #include <assert.h>
+#include <string.h>
 
 #define GABA_DEFINE
 #include "rsa.h.x"
