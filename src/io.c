@@ -101,7 +101,7 @@ int io_iter(struct io_backend *b)
 		
 		/* FIXME: The value returned from the close callback could be used
 		 * to choose an exit code. */
-		if (fd->close_callback && fd->close_reason)
+		if (fd->close_callback)
 		  (void) CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
 		
 		debug("Closing fd %i.\n", fd->fd);
@@ -192,9 +192,34 @@ int io_iter(struct io_backend *b)
     for(fd = b->files, i=0; fd; fd = fd->next, i++)
       {
 	assert(i<nfds);
+
+	debug("io.c: poll for fd %i: events = 0x%xi, revents = 0x%xi.\n",
+ 	      fds[i].fd, fds[i].events,fds[i].revents);
 	
 	if (!fd->super.alive)
 	  continue;
+
+	if (fds[i].revents & POLLHUP)
+	  {
+	    if (fd->want_read)
+	      READ_FD(fd);
+	    else if (fd->want_write)
+	      WRITE_FD(fd);
+	    else
+	      werror("io.c: poll said POLLHUP on an inactive fd.\n");
+	    continue;
+	  }
+
+	if (fds[i].revents & POLLPRI)
+	  {
+	    werror("io.c: Peer is trying to send Out of Band data. Hanging up.\n");
+	    /* FIXME: We have to add some callback to invoke on this
+	     * kind of i/o errors? */
+
+	    close_fd(fd, CLOSE_PROTOCOL_FAILURE); 
+
+	    continue;
+	  }
 
 	if (fds[i].revents & POLLOUT)
 	  WRITE_FD(fd);
@@ -659,10 +684,19 @@ struct address_info *make_address_info_c(const char *host,
       NEW(address_info, info);
       
       info->port = portno;
-      info->address = host ? ssh_format("%lz", host) : NULL;
+      info->ip = host ? ssh_format("%lz", host) : NULL;
       
       return info;
     }
+}
+
+struct address_info *make_address_info(struct lsh_string *host, UINT32 port)
+{
+  NEW(address_info, info);
+
+  info->port = port; /* htons(port); */
+  info->ip = host;
+  return info;
 }
 
 struct address_info *sockaddr2info(size_t addr_len UNUSED,
@@ -677,11 +711,11 @@ struct address_info *sockaddr2info(size_t addr_len UNUSED,
 	struct sockaddr_in *in = (struct sockaddr_in *) addr;
 	UINT32 ip = ntohl(in->sin_addr.s_addr);
 	info->port = ntohs(in->sin_port);
-	info->address = ssh_format("%di.%di.%di.%di",
-				   (ip >> 24) & 0xff,
-				   (ip >> 16) & 0xff,
-				   (ip >> 8) & 0xff,
-				   ip & 0xff);
+	info->ip = ssh_format("%di.%di.%di.%di",
+			      (ip >> 24) & 0xff,
+			      (ip >> 16) & 0xff,
+			      (ip >> 8) & 0xff,
+			      ip & 0xff);
 	return info;
       }
 #if 0
@@ -697,9 +731,9 @@ int address_info2sockaddr_in(struct sockaddr_in *sin,
 			     struct address_info *a)
 {
 
-  if (a->address)
+  if (a->ip)
     return tcp_addr(sin,
-		    a->address->length, a->address->data,
+		    a->ip->length, a->ip->data,
 		    a->port);
   else
     return tcp_addr(sin, 0, NULL, a->port);
