@@ -99,6 +99,7 @@ struct read_handler *make_read_data(struct ssh_channel *channel,
   NEW(closure);
 
   closure->super.handler = do_read_data;
+  closure->channel = channel;
   closure->write = write;
 
   return &closure->super;

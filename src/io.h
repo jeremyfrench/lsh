@@ -64,9 +64,17 @@ struct fd_callback
 
 /* Close callbacks are called with a reason as argument. */
 
+/* End of file while reading */
 #define CLOSE_EOF 1
-#define CLOSE_WRITE_FAILED 2
-#define CLOSE_PROTOCOL_FAILURE 3
+
+/* EPIPE when writing */
+#define CLOSE_BROKEN_PIPE 2
+
+#define CLOSE_WRITE_FAILED 3
+
+/* #define CLOSE_READ_FAILED 4 */
+
+#define CLOSE_PROTOCOL_FAILURE 5
 
 struct close_callback
 {

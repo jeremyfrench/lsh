@@ -126,6 +126,7 @@ int parse_utf8(struct simple_buffer *buffer, UINT32 *result)
   if (first < 0x80)
     {
       *result = first;
+      ADVANCE(1);
       return 1;
     }
 

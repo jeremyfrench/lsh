@@ -51,7 +51,8 @@ struct lsh_string *format_userauth_failure(int *methods, int partial);
 struct lsh_string *format_userauth_success(void);
 
 /* Server functions */     
-struct ssh_service *make_userauth_service(struct alist *methods);
+struct ssh_service *make_userauth_service(int *advertised_methods,
+					  struct alist *methods);
 
 /* Client functions */
 struct ssh_service *make_client_userauth(struct lsh_string *username,

@@ -167,7 +167,7 @@ struct lsh_string *utf8_to_local(struct lsh_string *s, int free)
       switch(parse_utf8(&buffer, &ucs4))
 	{
 	case -1:
-	  assert(i<res->length);
+	  assert(i<=res->length);
 	  
 	  res->length = i;
 	  if (free)

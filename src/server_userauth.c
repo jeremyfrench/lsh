@@ -18,6 +18,9 @@ struct userauth_service
 {
   struct ssh_service super;
 
+  /* Methods advertised in failure messages */
+  int *advertised_methods;
+
   struct alist *methods; /* Maps authentication method names to methods */
 };
 
@@ -137,6 +140,7 @@ static int init_userauth(struct ssh_service *s, /* int name, */
 
   NEW(auth);
   auth->super.handler = do_handle_userauth;
+  auth->advertised_methods = self->advertised_methods;
   auth->methods = self->methods;
   auth->attempts = AUTH_ATTEMPTS;
   
@@ -145,13 +149,15 @@ static int init_userauth(struct ssh_service *s, /* int name, */
   return 1;
 }
 
-struct ssh_service *make_userauth_service(struct alist *methods)
+struct ssh_service *make_userauth_service(int *advertised_methods,
+					  struct alist *methods)
 {
   struct userauth_service *self;
 
   NEW(self);
 
   self->super.init = init_userauth;
+  self->advertised_methods = advertised_methods;
   self->methods = methods;
   
   return &self->super;

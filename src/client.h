@@ -47,8 +47,8 @@ struct ssh_service *request_service(int service_name,
 				    struct ssh_service *service);
 
 struct connection_startup *make_client_startup(struct io_fd *in,
-					       struct abstract_write *out,
-					       struct abstract_write *err,
+					       struct io_fd *out,
+					       struct io_fd *err,
 					       int final_request,
 					       struct lsh_string *args);
 

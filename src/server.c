@@ -398,19 +398,34 @@ static int make_pipe(int *fds)
 #define REC 0
 #define SEND 1
 
-  return !socketpair(AF_UNIX, SOCK_STREAM, 0, fds)
-    && !shutdown(fds[0], SEND)
-    && !shutdown(fds[1], REC);
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
+    {
+      werror("socketpair() failed: %s\n", strerror(errno));
+      return 0;
+    }
+  debug("Created socket pair. Using fd:s %d <-- %d\n", fds[0], fds[1]);
+
+  if(shutdown(fds[0], SEND) < 0)
+    {
+      werror("shutdown(%d, SEND) failed: %s\n", fds[0], strerror(errno));
+      return 0;
+    }
+  if (shutdown(fds[1], REC) < 0)
+    {
+      werror("shutdown(%d, SEND) failed: %s\n", fds[0], strerror(errno));
+      return 0;
+    }
+  return 1;
 }
 
 static char *make_env_pair(char *name, struct lsh_string *value)
 {
-  return ssh_format("%z=%lS\0", name, value)->data;
+  return ssh_format("%z=%lS%c", name, value, 0)->data;
 }
 
 static char *make_env_pair_c(char *name, char *value)
 {
-  return ssh_format("%z=%z\0", name, value)->data;
+  return ssh_format("%z=%z%c", name, value, 0)->data;
 }
 
 static int do_spawn_shell(struct channel_request *c,
@@ -426,7 +441,7 @@ static int do_spawn_shell(struct channel_request *c,
   int err[2];
 
   MDEBUG(closure);
-  MDEBUG(channel);
+  MDEBUG(session);
 
   if (!parse_eod(args))
     return LSH_FAIL | LSH_DIE;
@@ -539,14 +554,15 @@ static int do_spawn_shell(struct channel_request *c,
 		  /* Close the child's fd:s */
 		  close(in[0]);
 		  close(out[1]);
-		  close(err[2]);
+		  close(err[1]);
 
 		  
 		  session->in
 		    = &io_write(closure->backend, in[1],
 				SSH_MAX_PACKET,
 				/* FIXME: Use a proper close callback */
-				NULL)->buffer->super;
+				make_channel_close(channel))
+		    ->buffer->super;
 		  session->out
 		    = io_read(closure->backend, out[0],
 			      make_channel_read_data(channel),
@@ -587,7 +603,8 @@ struct channel_request *make_shell_handler(struct io_backend *backend)
 
   NEW(closure);
   closure->super.handler = do_spawn_shell;
-
+  closure->backend = backend;
+  
   return &closure->super;
 }
 

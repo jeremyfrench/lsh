@@ -107,7 +107,7 @@ struct meta_service
 };
 
 static int init_meta_service(struct ssh_service *c,
-				   struct ssh_connection *connection)
+			     struct ssh_connection *connection)
 {
   struct meta_service *closure = (struct meta_service *) c;
 
