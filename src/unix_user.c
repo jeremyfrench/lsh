@@ -775,14 +775,14 @@ do_fork_process(struct lsh_user *u,
 
 #define USE_LOGIN_DASH_CONVENTION 1
 
-static char *
+static const char *
 format_env_pair(const char *name, struct lsh_string *value)
 {
   assert(lsh_get_cstring(value));
   return lsh_get_cstring(ssh_format("%lz=%lS", name, value));
 }
 
-static char *
+static const char *
 format_env_pair_c(const char *name, const char *value)
 {
   return lsh_get_cstring(ssh_format("%lz=%lz", name, value));
@@ -790,12 +790,12 @@ format_env_pair_c(const char *name, const char *value)
 
 static void
 do_exec_shell(struct lsh_user *u, int login,
-	      char **argv,
+	      const char **argv,
 	      unsigned env_length,
 	      const struct env_value *env)
 {
   CAST(unix_user, user, u);
-  char **envp;
+  const char **envp;
   char *tz = getenv("TZ");
   unsigned i, j;
   
@@ -845,28 +845,34 @@ do_exec_shell(struct lsh_user *u, int login,
     {
       /* Fixup argv[0], so that it starts with a dash */
       const char *p;
-
+      const char *shell = lsh_get_cstring(user->shell);
+      char *loginshell;
+      
       debug("do_exec_shell: fixing up name of shell...\n");
       
-      argv[0] = alloca(user->shell->length + 2);
+      loginshell = alloca(user->shell->length + 2);
 
       /* Make sure that the shell's name begins with a -. */
-      p = strrchr (lsh_get_cstring(user->shell), '/');
+      p = strrchr (shell, '/');
       if (!p)
-	p = lsh_get_cstring(user->shell);
+	p = shell;
       else
 	p ++;
-	      
-      argv[0][0] = '-';
-      strncpy (argv[0] + 1, p, user->shell->length);
+
+      loginshell[0] = '-';
+      strncpy (loginshell + 1, p, user->shell->length);
+      
+      argv[0] = loginshell;
     }
   else
 #endif /* USE_LOGIN_DASH_CONVENTION */
     argv[0] = lsh_get_cstring(user->shell);
 
   debug("do_exec_shell: argv[0] = '%z'.\n", argv[0]);
-  
-  execve(lsh_get_cstring(user->shell), argv, envp);
+
+  /* FIXME: Is there a better way? The execve prototype uses char *
+   * const argv, and similarly for envp. */
+  execve(lsh_get_cstring(user->shell), (char **) argv, (char **) envp);
 }
 
 static struct lsh_user *
