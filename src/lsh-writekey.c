@@ -25,6 +25,7 @@
 
 #include "algorithms.h"
 #include "crypto.h"
+#include "environ.h"
 #include "format.h"
 #include "io_commands.h"
 #include "interact.h"
@@ -157,7 +158,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    self->private_file = make_string("/etc/lsh_host_key");
 	  else
 	    {
-	      char *home = getenv("HOME");
+	      char *home = getenv(ENV_HOME);
 	      struct lsh_string *s;
 	  
 	      if (!home)
@@ -184,7 +185,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	{
 	  if (!self->label)
 	    {
-	      const char *name = getenv("LOGNAME");
+	      const char *name = getenv(ENV_LOGNAME);
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 300
 #endif
@@ -229,7 +230,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    }
 	  self->r = (self->server
 		     ? make_system_random()
-		     : make_user_random(getenv("HOME")));
+		     : make_user_random(getenv(ENV_HOME)));
 	  if (!self->r)
 	    argp_failure(state, EXIT_FAILURE, 0, 
 			 "Failed to initialize randomness generator.");
