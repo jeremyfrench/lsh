@@ -59,26 +59,29 @@
 
 struct sftp_mem {
   char* at;
-  int size;
-  int used;
+  UINT32 size;
+  UINT32 used;
 };
 
 
 struct sftp_callback;
 
-struct sftp_callback {
-  struct sftp_callback (*nextfun) (
-				   UINT8 msg, 
-				   UINT32 id,
-				   struct sftp_input *in,
-				   struct sftp_output *out,
-  				   struct sftp_callback state 
-  				   );
+typedef void
+(*sftp_callback_func)(struct sftp_callback *next,
+		      UINT8 msg, 
+		      UINT32 id,
+		      struct sftp_input *in,
+		      struct sftp_output *out,
+		      const struct sftp_callback *state);
+
+struct sftp_callback
+{
+  sftp_callback_func nextfun;
   
   UINT32 id; /* Id - for which id is this callback valid? */
   
-  UINT64 filepos; 
-  UINT64 filesize;  /* Only used for informational purposes */
+  off_t filepos; 
+  off_t filesize;  /* Only used for informational purposes */
 
   int op_id; /* Operation ID - identifier for caller */
   
@@ -100,11 +103,16 @@ struct sftp_callback {
 };
 
 
-struct sftp_callback sftp_null_state();
-struct sftp_mem sftp_alloc_mem( int desired_size );  /* Allocates a string/buffer of the given size */
+void sftp_null_state(struct sftp_callback *s);
+
+/* Allocates a string/buffer of the given size */
+void sftp_alloc_mem(struct sftp_mem *s, int desired_size);
+
 int sftp_free_mem( struct sftp_mem *mem );           /* Free that buffer */ 
 int sftp_resize_mem( struct sftp_mem *mem, int newsize ); /* */
-struct sftp_mem sftp_null_mem();                          /* Suitable for new */
+
+/* Suitable for new */
+void sftp_null_mem(struct sftp_mem *s);
 int sftp_toggle_mem( struct sftp_mem *mem );
 
 
@@ -116,240 +124,240 @@ UINT32 sftp_rumask( UINT32 new );
 void sftp_attrib_from_stat( struct stat *st, struct sftp_attrib* a );
 mode_t sftp_attrib_perms( struct sftp_attrib* a);
 
-UINT32 sftp_unique_id();
+UINT32 sftp_unique_id(void);
 
-
-struct sftp_callback sftp_symlink_init(
-				      int op_id,
-				      struct sftp_input *in, 
-				      struct sftp_output *out,
-				      UINT8 *linkname, 
-				      UINT32 linklen,
-				      UINT8 *targetname, 
-				      UINT32 targetlen
-				      );
-
-
-
-struct sftp_callback sftp_rename_init(
-				      int op_id,
-				      struct sftp_input *in, 
-				      struct sftp_output *out,
-				      UINT8 *srcname, 
-				      UINT32 srclen,
-				      UINT8 *dstname, 
-				      UINT32 dstlen
-				      );
+void
+sftp_symlink_init(struct sftp_callback *state,
+		  int op_id,
+		  struct sftp_input *in, 
+		  struct sftp_output *out,
+		  UINT8 *linkname, 
+		  UINT32 linklen,
+		  UINT8 *targetname,
+		  UINT32 targetlen);
 
 
 
-struct sftp_callback sftp_remove_init(
-				      int op_id,
-				      struct sftp_input *in, 
-				      struct sftp_output *out,
-				      UINT8 *name,
-				      UINT32 namelen
-				      );
-
-struct sftp_callback sftp_mkdir_init(
-				     int op_id,
-				     struct sftp_input *in, 
-				     struct sftp_output *out,
-				     UINT8 *name,
-				     UINT32 namelen,
-				     struct sftp_attrib* a
-				     );
-
-struct sftp_callback sftp_rmdir_init(
-				     int op_id,
-				     struct sftp_input *in, 
-				     struct sftp_output *out,
-				     UINT8 *name,
-				     UINT32 namelen
-				     );
+void
+sftp_rename_init(struct sftp_callback *state,
+		 int op_id,
+		 struct sftp_input *in, 
+		 struct sftp_output *out,
+		 UINT8 *srcname, 
+		 UINT32 srclen,
+		 UINT8 *dstname, 
+		 UINT32 dstlen);
 
 
-struct sftp_callback sftp_realpath_init(
-					int op_id,
-					struct sftp_input *in, 
-					struct sftp_output *out,
-					UINT8 *name,
-					UINT32 namelen
-					);
 
-struct sftp_callback sftp_readlink_init(
-					int op_id,
-					struct sftp_input *in, 
-					struct sftp_output *out,
-					UINT8 *name,
-					UINT32 namelen
-					);
+void
+sftp_remove_init(struct sftp_callback *state,
+		 int op_id,
+		 struct sftp_input *in, 
+		 struct sftp_output *out,
+		 UINT8 *name,
+		 UINT32 namelen);
 
+void
+sftp_mkdir_init(struct sftp_callback *state,
+		int op_id,
+		struct sftp_input *in, 
+		struct sftp_output *out,
+		UINT8 *name,
+		UINT32 namelen,
+		struct sftp_attrib* a);
 
-struct sftp_callback sftp_stat_init(
-				    int op_id,
-				    struct sftp_input *in, 
-				    struct sftp_output *out,
-				    UINT8 *name,
-				    UINT32 namelen
-				    );
-
-
-struct sftp_callback sftp_lstat_init(
-				     int op_id,
-				     struct sftp_input *in, 
-				     struct sftp_output *out,
-				     UINT8 *name,
-				     UINT32 namelen
-				     );
-
-struct sftp_callback sftp_fstat_init(
-				     int op_id,
-				     struct sftp_input *in, 
-				     struct sftp_output *out,
-				     UINT8 *handle,
-				     UINT32 handlelen
-				     );
+void
+sftp_rmdir_init(struct sftp_callback *state,
+		int op_id,
+		struct sftp_input *in, 
+		struct sftp_output *out,
+		UINT8 *name,
+		UINT32 namelen);
 
 
-struct sftp_callback sftp_setstat_init(
-				       int op_id,
-				       struct sftp_input *in, 
-				       struct sftp_output *out,
-				       UINT8 *name,
-				       UINT32 namelen,
-				       struct sftp_attrib* attrib
-				       );
+void
+sftp_realpath_init(struct sftp_callback *state,
+		   int op_id,
+		   struct sftp_input *in, 
+		   struct sftp_output *out,
+		   UINT8 *name,
+		   UINT32 namelen);
+
+void
+sftp_readlink_init(struct sftp_callback *state,
+		   int op_id,
+		   struct sftp_input *in, 
+		   struct sftp_output *out,
+		   UINT8 *name,
+		   UINT32 namelen);
 
 
-struct sftp_callback sftp_fsetstat_init(
-					int op_id,
-					struct sftp_input* in, 
-					struct sftp_output* out,
-					UINT8 *handle,
-					UINT32 handlelen,
-					struct sftp_attrib* attrib
-					);
+void
+sftp_stat_init(struct sftp_callback *state,
+	       int op_id,
+	       struct sftp_input *in, 
+	       struct sftp_output *out,
+	       UINT8 *name,
+	       UINT32 namelen);
+
+
+void
+sftp_lstat_init(struct sftp_callback *state,
+		int op_id,
+		struct sftp_input *in, 
+		struct sftp_output *out,
+		UINT8 *name,
+		UINT32 namelen);
+
+void
+sftp_fstat_init(struct sftp_callback *state,
+		int op_id,
+		struct sftp_input *in, 
+		struct sftp_output *out,
+		UINT8 *handle,
+		UINT32 handlelen);
+
+
+void
+sftp_setstat_init(struct sftp_callback *state,
+		  int op_id,
+		  struct sftp_input *in, 
+		  struct sftp_output *out,
+		  UINT8 *name,
+		  UINT32 namelen,
+		  struct sftp_attrib* attrib);
+
+
+void
+sftp_fsetstat_init(struct sftp_callback *state,
+		   int op_id,
+		   struct sftp_input* in, 
+		   struct sftp_output* out,
+		   UINT8 *handle,
+		   UINT32 handlelen,
+		   struct sftp_attrib* attrib);
 
 
 
 /* Get to memory */
 
-struct sftp_callback sftp_get_mem_init(
-				       int op_id,
-				       struct sftp_input *in,
-				       struct sftp_output *out,
-				       UINT8 *name, 
-				       UINT32 namelen,
-				       struct sftp_mem *mem,
-				       UINT64 startat
-				       );
+void
+sftp_get_mem_init(struct sftp_callback *state,
+		  int op_id,
+		  struct sftp_input *in,
+		  struct sftp_output *out,
+		  UINT8 *name, 
+		  UINT32 namelen,
+		  struct sftp_mem *mem,
+		  off_t startat);
 
-struct sftp_callback sftp_get_mem_step_one(
-					   UINT8 msg,
-					   UINT32 id,
-					   struct sftp_input *in,
-					   struct sftp_output *out,
-					   struct sftp_callback state
-					   );
+void
+sftp_get_mem_step_one(struct sftp_callback *next,
+		      UINT8 msg,
+		      UINT32 id,
+		      struct sftp_input *in,
+		      struct sftp_output *out,
+		      const struct sftp_callback *state);
 
 
-struct sftp_callback sftp_get_mem_main(
-				       UINT8 msg,
-				       UINT32 id,
-				       struct sftp_input *in,
-				       struct sftp_output *out,
-				       struct sftp_callback state
-				       );
+void
+sftp_get_mem_main(struct sftp_callback *next,
+		  UINT8 msg,
+		  UINT32 id,
+		  struct sftp_input *in,
+		  struct sftp_output *out,
+		  const struct sftp_callback *state);
 
 /* End get to memory */
 
 /* Get to file */
 
-struct sftp_callback sftp_get_file_init(
-					int op_id,
-					struct sftp_input *in,
-					struct sftp_output *out,
-					UINT8 *name, 
-					UINT32 namelen,
-					UINT8 *fname, 
-					UINT32 fnamelen,
-					int cont
-					);
+void
+sftp_get_file_init(struct sftp_callback *state,
+		   int op_id,
+		   struct sftp_input *in,
+		   struct sftp_output *out,
+		   UINT8 *name, 
+		   UINT32 namelen,
+		   UINT8 *fname, 
+		   UINT32 fnamelen,
+		   int cont);
 
-struct sftp_callback sftp_get_file_step_one(
-					    UINT8 msg,
-					    UINT32 id,
-					    struct sftp_input *in,
-					    struct sftp_output *out,
-					    struct sftp_callback state
-					    );
+void
+sftp_get_file_step_one(struct sftp_callback *next,
+		       UINT8 msg,
+		       UINT32 id,
+		       struct sftp_input *in,
+		       struct sftp_output *out,
+		       const struct sftp_callback *state);
 
-struct sftp_callback sftp_get_file_step_two(
-					    UINT8 msg,
-					    UINT32 id,
-					    struct sftp_input *in,
-					    struct sftp_output *out,
-					    struct sftp_callback state
-					    );
+void
+sftp_get_file_step_two(struct sftp_callback *next,
+		       UINT8 msg,
+		       UINT32 id,
+		       struct sftp_input *in,
+		       struct sftp_output *out,
+		       const struct sftp_callback *state);
 
 
-struct sftp_callback sftp_get_file_main(
-					UINT8 msg,
-					UINT32 id,
-					struct sftp_input *in,
-					struct sftp_output *out,
-					struct sftp_callback state
-					);
+void
+sftp_get_file_main(struct sftp_callback *next,
+		   UINT8 msg,
+		   UINT32 id,
+		   struct sftp_input *in,
+		   struct sftp_output *out,
+		   const struct sftp_callback *state);
 
 /* End get to file */
 
 /* Put fromfile */
 
-struct sftp_callback sftp_put_file_init(
-					int op_id,
-					struct sftp_input *in,
-					struct sftp_output *out,
-					UINT8 *name,
-					UINT32 namelen,
-					UINT8 *fname,
-					UINT32 fnamelen,
-					int cont
-					);
+void
+sftp_put_file_init(struct sftp_callback *state,
+		   int op_id,
+		   struct sftp_input *in,
+		   struct sftp_output *out,
+		   UINT8 *name,
+		   UINT32 namelen,
+		   UINT8 *fname,
+		   UINT32 fnamelen,
+		   int cont);
 
-struct sftp_callback sftp_put_file_step_one(
-					    UINT8 msg,
-					    UINT32 id,
-					    struct sftp_input *in,
-					    struct sftp_output *out,
-					    struct sftp_callback state
-					    );
-
-
-struct sftp_callback sftp_put_file_main(
-					UINT8 msg,
-					UINT32 id,
-					struct sftp_input *in,
-					struct sftp_output *out,
-					struct sftp_callback state
-					);
+void
+sftp_put_file_step_one(struct sftp_callback *next,
+		       UINT8 msg,
+		       UINT32 id,
+		       struct sftp_input *in,
+		       struct sftp_output *out,
+		       const struct sftp_callback *state);
 
 
-struct sftp_callback sftp_put_file_do_fstat(					
-					    UINT8 msg,
-					    UINT32 id,
-					    struct sftp_input *in,
-					    struct sftp_output *out,
-					    struct sftp_callback state
-					    );
+void
+sftp_put_file_main(struct sftp_callback *next,
+		   UINT8 msg,
+		   UINT32 id,
+		   struct sftp_input *in,
+		   struct sftp_output *out,
+		   const struct sftp_callback *state);
 
-struct sftp_callback sftp_put_file_handle_stat(
-					       UINT8 msg,
-					       UINT32 id,
-					       struct sftp_input *in,
-					       struct sftp_output *out,
-					       struct sftp_callback state
-					       );
+
+void
+sftp_put_file_do_fstat(struct sftp_callback *next,
+		       UINT8 msg,
+		       UINT32 id,
+		       struct sftp_input *in,
+		       struct sftp_output *out,
+		       const struct sftp_callback *state);
+
+
+void
+sftp_put_file_handle_stat(struct sftp_callback *next,
+			  UINT8 msg,
+			  UINT32 id,
+			  struct sftp_input *in,
+			  struct sftp_output *out,
+			  const struct sftp_callback *state);
 
 /* End put from file */
 
@@ -357,87 +365,87 @@ struct sftp_callback sftp_put_file_handle_stat(
 
 /* Put from memory */
 
-struct sftp_callback sftp_put_mem_init(
-				       int op_id,
-				       struct sftp_input *in,
-				       struct sftp_output *out,
-				       UINT8 *name, 
-				       UINT32 namelen,
-				       struct sftp_mem *mem,
-				       UINT64 startat,
-				       struct sftp_attrib a
-				       );
+void
+sftp_put_mem_init(struct sftp_callback *state,
+		  int op_id,
+		  struct sftp_input *in,
+		  struct sftp_output *out,
+		  UINT8 *name, 
+		  UINT32 namelen,
+		  struct sftp_mem *mem,
+		  off_t startat,
+		  struct sftp_attrib a);
 
-struct sftp_callback sftp_put_mem_step_one(	
-					   UINT8 msg,
-					   UINT32 id,
-					   struct sftp_input *in,
-					   struct sftp_output *out,
-					   struct sftp_callback state
-					   );
+void
+sftp_put_mem_step_one(struct sftp_callback *next,
+		      UINT8 msg,
+		      UINT32 id,
+		      struct sftp_input *in,
+		      struct sftp_output *out,
+		      const struct sftp_callback *state);
 
 
-struct sftp_callback sftp_put_mem_main(
-				       UINT8 msg,
-				       UINT32 id,
-				       struct sftp_input *in,
-				       struct sftp_output *out,
-				       struct sftp_callback state
-				       );
+void
+sftp_put_mem_main(struct sftp_callback *next,
+		  UINT8 msg,
+		  UINT32 id,
+		  struct sftp_input *in,
+		  struct sftp_output *out,
+		  const struct sftp_callback *state);
 
 /* End put from memory */
 
 
-struct sftp_callback sftp_ls_init(			
-				  int op_id,
-				  struct sftp_input *in,
-				  struct sftp_output *out,
-				  UINT8 *dir,
-				  UINT32 dirlen
-				  );
+void
+sftp_ls_init(struct sftp_callback *state,
+	     int op_id,
+	     struct sftp_input *in,
+	     struct sftp_output *out,
+	     UINT8 *dir,
+	     UINT32 dirlen);
 
-struct sftp_callback sftp_ls_step_one(
-				      UINT8 msg,
-				      UINT32 id,
-				      struct sftp_input *in,
-				      struct sftp_output *out,
-				      struct sftp_callback state
-				      );
-
-
-
-struct sftp_callback sftp_ls_main(
-				  UINT8 msg,
-				  UINT32 id,
-				  struct sftp_input *in,
-				  struct sftp_output *out,
-				  struct sftp_callback state
-				  );
-
-struct sftp_callback sftp_handle_status(
-					UINT8 msg,
-					UINT32 id,
-					struct sftp_input *in, 
-					struct sftp_output *out,
-					struct sftp_callback state
-					);
-
-struct sftp_callback sftp_handle_attrs(
-				       UINT8 msg,
-				       UINT32 id,
-				       struct sftp_input *in, 
-				       struct sftp_output *out,
-				       struct sftp_callback state
-				       );
+void
+sftp_ls_step_one(struct sftp_callback *next,
+		 UINT8 msg,
+		 UINT32 id,
+		 struct sftp_input *in,
+		 struct sftp_output *out,
+		 const struct sftp_callback *state);
 
 
-struct sftp_callback sftp_handle_name(
-				      UINT8 msg,
-				      UINT32 id,
-				      struct sftp_input *in, 
-				      struct sftp_output *out,
-				      struct sftp_callback state
-				      );
+
+void
+sftp_ls_main(struct sftp_callback *next,
+	     UINT8 msg,
+	     UINT32 id,
+	     struct sftp_input *in,
+	     struct sftp_output *out,
+	     const struct sftp_callback *state);
+
+void
+sftp_handle_status(struct sftp_callback *next,
+		   UINT8 msg,
+		   UINT32 id,
+		   struct sftp_input *in, 
+		   struct sftp_output *out,
+		   const struct sftp_callback *state);
+
+void
+sftp_handle_attrs(struct sftp_callback *next,
+		  UINT8 msg,
+		  UINT32 id,
+		  struct sftp_input *in, 
+		  struct sftp_output *out,
+		  const struct sftp_callback *state);
+
+
+void
+sftp_handle_name(struct sftp_callback *next,
+		 UINT8 msg,
+		 UINT32 id,
+		 struct sftp_input *in, 
+		 struct sftp_output *out,
+		 const struct sftp_callback *state);
 
 int sftp_handshake( 
 		   struct sftp_input *in,
