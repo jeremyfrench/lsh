@@ -221,7 +221,7 @@ kerberos_check_pw(struct unix_user *user, struct lsh_string *pw,
 
 	close(in[0]);
 
-	fd = io_write(make_lsh_fd(in[1], "password helper stdin",
+	fd = io_write(make_lsh_fd(in[1], IO_NORMAL, "password helper stdin",
 				  e),
 		      lsh_string_length(pw), NULL);
 
@@ -501,7 +501,7 @@ do_read_file(struct lsh_user *u,
       /* NOTE: We could install an exit handler for the child process,
        * but there's nothing useful for that to do. */
       io_read(make_lsh_fd
-	        (out[0], "stdout, reading a user file",
+	        (out[0], IO_NORMAL, "stdout, reading a user file",
 		 make_exc_read_user_file_handler(c,
 						 &default_exception_handler,
 						 HANDLER_CONTEXT)),

@@ -518,7 +518,7 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
 	  STATIC_REPORT_EXCEPTION_INFO(EXC_IO, EXC_IO, "writing xauth stdin");
 
 	struct lsh_fd *in
-	  = io_write(make_lsh_fd(spawn.in[1],
+	  = io_write(make_lsh_fd(spawn.in[1], IO_NORMAL,
 				 "xauth stdin",
 				 make_report_exception_handler
 				 (&report, e, HANDLER_CONTEXT)),
