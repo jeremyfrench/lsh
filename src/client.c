@@ -247,8 +247,7 @@ do_exit_status(struct channel_request *c,
       /* FIXME: Make this behaviour configurable, there may be some
        * child process alive that we could talk to. */
 
-      if (!(channel->flags & CHANNEL_SENT_EOF))
-	channel_eof(channel);
+      channel_eof(channel);
     }
   else
     /* Invalid request */
@@ -299,8 +298,7 @@ do_exit_signal(struct channel_request *c,
       /* FIXME: Make this behaviour configurable, there may be some
        * child process alive that we could talk to. */
 
-      if (!(channel->flags & CHANNEL_SENT_EOF))
-	channel_eof(channel);
+      channel_eof(channel);
     }
   else
     /* Invalid request */
