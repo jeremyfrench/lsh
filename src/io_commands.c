@@ -138,9 +138,9 @@ DEFINE_COMMAND2(listen_list_command)
     {
       struct lsh_fd *fd;
       debug("listen_list_command: Trying to bind address of type %i\n",
-	    list->addr->sa_family);
+	    list->address->sa_family);
       
-      fd = io_bind_sockaddr(list->addr, list->length, e);
+      fd = io_bind_sockaddr(list->address, list->length, e);
       if (fd)
 	{
 	  if (io_listen(fd, callback))
@@ -233,6 +233,7 @@ do_connect_continuation(struct command_continuation *c,
   COMMAND_RETURN(self->up, make_listen_value(fd, self->target, fd2info(fd,0)));
 }
 
+/* FIXME: Return an io_callback instead */
 static struct command_continuation *
 make_connect_continuation(struct address_info *target,
 			  struct command_continuation *up)
@@ -269,7 +270,8 @@ do_connect(struct address_info *a,
   /* If the name is canonicalized in any way, we should pass the
    * canonical name to make_connect_continuation .*/
   fd = io_connect(addr, addr_length, 
-		  make_connect_continuation(a, c), e);
+		  make_connect_callback(make_connect_continuation(a, c)),
+		  e);
   lsh_space_free(addr);
 
   if (!fd)
