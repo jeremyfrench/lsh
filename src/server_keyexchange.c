@@ -85,7 +85,7 @@ do_handle_dh_init(struct packet_handler *c,
 			     closure->hostkey_algorithm,
 			     closure->signer));
 
-  connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
+  connection->dispatch[SSH_MSG_KEXDH_INIT] = &connection_fail_handler;
 
   keyexchange_finish(connection, closure->algorithms,
 		     closure->dh.method->H,
@@ -194,7 +194,7 @@ do_srp_server_proof_handler(struct packet_handler *s,
   struct lsh_string *response = srp_process_client_proof(&self->srp->dh, packet);
   lsh_string_free(packet);
 
-  connection->dispatch[SSH_MSG_KEXSRP_PROOF] = connection->fail;
+  connection->dispatch[SSH_MSG_KEXSRP_PROOF] = &connection_fail_handler;
   
   if (response)
     {
@@ -291,7 +291,7 @@ do_handle_srp_init(struct packet_handler *s,
   struct lsh_string *name = srp_process_init_msg(&self->srp->dh, packet);
   struct exception_handler *e;
   
-  connection->dispatch[SSH_MSG_KEXSRP_INIT] = connection->fail;
+  connection->dispatch[SSH_MSG_KEXSRP_INIT] = &connection_fail_handler;
   
   if (!name)
     {

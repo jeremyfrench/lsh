@@ -91,7 +91,7 @@ do_service_request(struct packet_handler *c,
 	    {
 	      /* Don't accept any further service requests */
 	      connection->dispatch[SSH_MSG_SERVICE_REQUEST]
-		= connection->fail;
+		= &connection_fail_handler;
 
 	      /* Start service */
 #if DATAFELLOWS_WORKAROUNDS
