@@ -43,6 +43,8 @@ read_handler.
 USERS
 
 Functions to lookup users, their passwords and .lsh/authorized_keys.
+Also have a look at 'Pluggable Non Interactive Authentication Modules'
+at http://www.msu.ru/pniam/pniam.html.
 
 
 CHARSETS
@@ -251,6 +253,10 @@ Consider removing the write-attribute from ssh_channel.
 Let init_channel take enough arguments to initialize the window- and
 packet-size fields properly. It's too easy to forget them.
 
+It would be nice also to be able to see what encryption and compression
+algorithms were negotiated, if these are chosen at connect time, when
+verbose mode is on. (David C Niemi <niemi@niemi.erols.com>).
+
 Remove the EXC_IO_EOF exception, and let the read handler get a NULL
 argument instead. This is already done for buffered_read, should we do
 it for consuming_read as well?
@@ -261,3 +267,4 @@ Do something reasonable in do_buffered_read() when self->handler is
 NULL?
 
 Figure out why -nt doesn't work.
+
