@@ -50,6 +50,11 @@ extern struct command io_write_file_command;
 
 #define IO_WRITE_FILE (&io_write_file_command.super)
 
+extern struct command_2 listen_command;
+#define LISTEN (&listen_command.super.super)
+
+extern struct command bind_address_command;
+#define BIND (&bind_address_command.super)
 
 struct command *
 make_listen_with_callback(struct command *callback);

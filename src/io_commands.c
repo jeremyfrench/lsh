@@ -118,6 +118,36 @@ DEFINE_COMMAND2(listen_command)
 static struct exception resolve_exception =
 STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
 
+DEFINE_COMMAND(bind_address_command)
+     (struct command *self UNUSED,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST(address_info, a, x);
+  struct sockaddr *addr;
+  socklen_t addr_length;
+  
+  struct lsh_fd *fd;
+
+  addr = address_info2sockaddr(&addr_length, a, NULL, 0);
+  if (!addr)
+    {
+      EXCEPTION_RAISE(e, &resolve_exception);
+      return;
+    }
+
+  fd = io_bind_sockaddr(addr, addr_length, e);
+  lsh_space_free(addr);
+  
+  if (!fd)
+    /* FIXME: Do we need an EXC_IO_BIND ? */
+    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
+					 NULL, errno, NULL));
+  else
+    COMMAND_RETURN(c, fd);
+}
+
 /* FIXME: Use a single listen variant that takes an bound fd as
  * argument. */
 /* Used by do_listen_callback and any other listen variants. Currently
