@@ -477,6 +477,16 @@ struct verifier *make_dsa_verifier_classic(struct verifier *v)
 }
 #endif /* WITH_DSA_CLASSIC */
 
+/* FIXME: The allocator could do this kind of initialization
+ * automatically. */
+void init_dsa_public(struct dsa_public *public)
+{
+  mpz_init(public->p);
+  mpz_init(public->q);
+  mpz_init(public->g);
+  mpz_init(public->y);
+}
+
 int parse_dsa_public(struct simple_buffer *buffer,
 		     struct dsa_public *public)
 {
@@ -508,12 +518,7 @@ static struct signer *make_dsa_signer(struct signature_algorithm *c,
   struct simple_buffer private_buffer;  
   int atom;
 
-  /* FIXME: The allocator could do this kind of initialization
-   * automatically. */
-  mpz_init(res->public.p);
-  mpz_init(res->public.q);
-  mpz_init(res->public.g);
-  mpz_init(res->public.y);
+  init_dsa_public(&res->public);
   mpz_init(res->a);
   
   simple_buffer_init(&public_buffer, public_length, public);
