@@ -240,6 +240,9 @@ int io_iter(struct io_backend *b)
 	if (!fd->super.alive)
 	  continue;
 
+	/* On systems without poll(), we use jpoll.c to emulate some
+	 * of poll(), but we lack POLLNVAL, POLLPRI and POLLHUP. */
+#ifdef POLLNVAL
 	if (fds[i].revents & POLLNVAL)
 	  {
 	    werror("io.c: poll request on fd %i, for events of type %xi\n"
@@ -248,7 +251,9 @@ int io_iter(struct io_backend *b)
 	    kill_fd(fd);
 	    continue;
 	  }
+#endif /* POLLNVAL */
 
+#ifdef POLLHUP
 	/* FIXME: According to Solaris' man page, POLLHUP is mutually
 	 * exclusive with POLLOUT, but orthogonal to POLLIN.
 	 *
@@ -272,7 +277,9 @@ int io_iter(struct io_backend *b)
 	      }
 	    continue;
 	  }
+#endif /* POLLHUP */
 
+#ifdef POLLPRI
 	if (fds[i].revents & POLLPRI)
 	  {
 	    werror("io.c: Peer is trying to send Out of Band data. Hanging up.\n");
@@ -283,7 +290,7 @@ int io_iter(struct io_backend *b)
 
 	    continue;
 	  }
-
+#endif /* POLLPRI */
 	if (fds[i].revents & POLLOUT)
 	  FD_WRITE(fd);
 
@@ -566,8 +573,12 @@ do_listen_callback(struct io_callback *s,
 		   struct lsh_fd *fd)
 {
   CAST(io_listen_callback, self, s);
-  /* FIXME: ip6 support? */
-  struct sockaddr_in peer;
+
+#if WITH_IPV6
+  struct sockaddr_storage peer;
+#else
+  struct sockaddr peer;
+#endif
 
   socklen_t addr_len = sizeof(peer);
   int conn;
@@ -836,8 +847,8 @@ write_raw_with_poll(int fd, UINT32 length, const UINT8 *data)
 /* Network utility functions */
 
 /* Converts a string port number or service name to a port number.
- * Returns the port number in _host_ byte order, or -1 of the port
- * or service was invalid. */
+ * Returns the port number in _host_ byte order, or 0 if lookup
+ * fails. */
 
 int get_portno(const char *service, const char *protocol)
 {
@@ -859,13 +870,14 @@ int get_portno(const char *service, const char *protocol)
 	  struct servent * serv;
 
 	  serv = getservbyname(service, protocol);
-	  if (serv == NULL)
-	    return -1;
+	  if (!serv)
+	    return 0;
 	  return ntohs(serv->s_port);
 	}
     }
 }
 
+#if 0
 /*
  * Fill in ADDR from HOST, SERVICE and PROTOCOL.
  * Supplying a null pointer for HOST means use INADDR_ANY.
@@ -878,11 +890,12 @@ int get_portno(const char *service, const char *protocol)
  * Returns zero on errors, 1 if everything is ok.
  */
 int
-get_inaddr(struct sockaddr_in	* addr,
+get_inaddr(struct sockaddr	* addr,
 	   const char		* host,
 	   const char		* service,
 	   const char		* protocol)
 {
+  /* HERE!!! IPv6 */
   memset(addr, 0, sizeof *addr);
   addr->sin_family = AF_INET;
 
@@ -980,13 +993,21 @@ int tcp_addr(struct sockaddr_in *sin,
   sin->sin_port = htons(port);
   return 1;
 }
+#endif
 
-struct address_info *make_address_info_c(const char *host,
-					 const char *port)
+/* If def != 0, use that value as a fallback if the lookup fails. */
+struct address_info *
+make_address_info_c(const char *host,
+		    const char *port,
+		    int def)
 {
   int portno = get_portno(port, "tcp");
-  if (portno < 0)
-    return 0;
+  if (!portno)
+    portno = def;
+
+  if (!portno)
+    return NULL;
+
   else
     {
       NEW(address_info, info);
@@ -998,7 +1019,8 @@ struct address_info *make_address_info_c(const char *host,
     }
 }
 
-struct address_info *make_address_info(struct lsh_string *host, UINT32 port)
+struct address_info *
+make_address_info(struct lsh_string *host, UINT32 port)
 {
   NEW(address_info, info);
 
@@ -1007,8 +1029,9 @@ struct address_info *make_address_info(struct lsh_string *host, UINT32 port)
   return info;
 }
 
-struct address_info *sockaddr2info(size_t addr_len UNUSED,
-				   struct sockaddr *addr)
+struct address_info *
+sockaddr2info(size_t addr_len UNUSED,
+	      struct sockaddr *addr)
 {
   NEW(address_info, info);
   
@@ -1026,19 +1049,150 @@ struct address_info *sockaddr2info(size_t addr_len UNUSED,
 			      ip & 0xff);
 	return info;
       }
-#if 0
-    case AF_INETv6:
-      ...
+#if WITH_IPV6
+    case AF_INET6:
+      {
+	struct sockaddr_in6 *in = (struct sockaddr_in6 *) addr;
+	UINT8 *ip = in->sin6_addr.s6_addr;
+	info->port = ntohs(in->sin6_port);
+	info->ip = ssh_format("%xi:%xi:%xi:%xi:%xi:%xi:%xi:%xi",
+			      (ip[0]  << 8) | ip[1],
+			      (ip[2]  << 8) | ip[3],
+			      (ip[4]  << 8) | ip[5],
+			      (ip[6]  << 8) | ip[7],
+			      (ip[8]  << 8) | ip[9],
+			      (ip[10] << 8) | ip[11],
+			      (ip[12] << 8) | ip[13],
+			      (ip[14] << 8) | ip[15]);
+	return info;
+      }
 #endif
     default:
       fatal("io.c: format_addr(): Unsupported address family.\n");
     }
 }
 
-int address_info2sockaddr_in(struct sockaddr_in *sin,
-			     struct address_info *a)
+struct sockaddr *
+address_info2sockaddr(socklen_t *length,
+		      struct address_info *a,
+		      int lookup)
 {
+  char *host;
 
+  if (a->ip)
+    {
+      host = alloca(a->ip->length + 1);
+  
+      memcpy(host, a->ip->data, a->ip->length);
+      host[a->ip->length] = '\0';
+    }
+  else
+    host = NULL;
+  
+#if HAVE_GETADDRINFO
+  {
+    struct addrinfo hints;
+    struct addrinfo *list;
+    struct sockaddr *res;
+    
+    int err;
+    /* FIXME: It seems ugly to have to convert the port number to a
+     * string. */
+    struct lsh_string *service = ssh_format("%d%c", a->port, 0);
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = PF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    if (!lookup)
+      hints.ai_flags |= AI_NUMERICHOST;
+    
+    err = getaddrinfo(host, service->data, &hints, &list);
+    lsh_string_free(service);
+
+    if (err)
+      {
+	debug("address_info2sockaddr: getaddrinfo failed (err = %d): %s\n",
+	      err, gai_strerror(err));
+	return NULL;
+      }
+
+    *length = list->ai_addrlen;
+    
+    res = lsh_space_alloc(*length);
+    memcpy(res, list->ai_addr, *length);
+    freeaddrinfo(list);
+
+    return res;
+  }
+#else /* !HAVE_GETADDRINFO */
+
+#if WITH_IPV6
+#warning IPv6 enabled, but getaddrinfo() was not found. 
+#endif
+
+  if (a->ip && memchr(a->ip->data, ':', a->ip->length))
+    {
+      debug("address_info2sockaddr: Literal IPv6 used. Failing.\n");
+      return NULL;
+    }
+  else
+    {
+      struct sockaddr_in *addr;
+      NEW_SPACE(addr);
+
+      *length = sizeof(*addr);
+      addr->sin_port = htons(a->port);
+    
+      if (!host)
+	{
+	  /* Use INADDR_ANY (and IPv4 only) */
+
+	  addr->sin_family = AF_INET;
+	  addr->sin_addr.s_addr = INADDR_ANY;
+
+	  return (struct sockaddr *) addr;
+	}
+      else
+	{
+	  /* First check for numerical ip-number */
+#if HAVE_INET_ATON
+	  if (!inet_aton(host, &addr->sin_addr))
+#else /* !HAVE_INET_ATON */
+	    /* NOTE: It is wrong to work with ((unsigned long int) -1)
+	     * directly, as this breaks Linux/Alpha systems. But
+	     * INADDR_NONE isn't portable. That's what inet_aton is for;
+	     * see the GNU libc documentation. */
+# ifndef INADDR_NONE
+# define INADDR_NONE ((unsigned long int) -1)
+# endif /* !INADDR_NONE */
+	  addr->sin_addr.s_addr = inet_addr(host);
+	  if (addr->sin_addr.s_addr == INADDR_NONE)
+#endif  /* !HAVE_INET_ATON */
+	    {
+	      struct hostent *hp;
+
+	      if (! (lookup 
+		     && (hp = gethostbyname(host))
+		     && (hp->h_addrtype == AF_INET)))
+		{
+		  lsh_space_free(addr);
+		  return NULL;
+		}
+
+	      memcpy(&addr->sin_addr, hp->h_addr, hp->h_length);
+	    }
+	  return (struct sockaddr *) addr;
+	}
+    }
+#endif /* !HAVE_GETADDRINFO */  
+}
+
+#if 0
+int address_info2sockaddr(struct sockaddr_in *sin,
+			  struct address_info *a)
+{
   if (a->ip)
     return tcp_addr(sin,
 		    a->ip->length, a->ip->data,
@@ -1046,7 +1200,7 @@ int address_info2sockaddr_in(struct sockaddr_in *sin,
   else
     return tcp_addr(sin, 0, NULL, a->port);
 }
-
+#endif
 
 
 void io_set_nonblocking(int fd)
@@ -1101,12 +1255,12 @@ make_lsh_fd(struct io_backend *b,
 /* Some code is taken from Thomas Bellman's tcputils. */
 struct lsh_fd *
 io_connect(struct io_backend *b,
-	   struct sockaddr_in *remote,
-	   struct sockaddr_in *local,
+	   struct sockaddr *remote,
+	   socklen_t remote_length,
 	   struct command_continuation *c,
 	   struct exception_handler *e)
 {
-  int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  int s = socket(remote->sa_family, SOCK_STREAM, 0);
   struct lsh_fd *fd;
   
   if (s<0)
@@ -1116,6 +1270,7 @@ io_connect(struct io_backend *b,
   
   io_init_fd(s);
 
+#if 0
   if (local  &&  bind(s, (struct sockaddr *)local, sizeof *local) < 0)
     {
       int saved_errno = errno;
@@ -1123,8 +1278,9 @@ io_connect(struct io_backend *b,
       errno = saved_errno;
       return NULL;
     }
-
-  if ( (connect(s, (struct sockaddr *)remote, sizeof *remote) < 0)
+#endif
+  
+  if ( (connect(s, remote, remote_length) < 0)
        && (errno != EINPROGRESS) )       
     {
       int saved_errno = errno;
