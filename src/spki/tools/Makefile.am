@@ -1,4 +1,4 @@
-noinst_PROGRAMS = spki-check-signature spki-make-signature
+noinst_PROGRAMS = spki-check-signature spki-make-signature spki-delegate
 
 # FIXME: Create a link to nettle directory instead?
 AM_CPPFLAGS = -I$(top_srcdir) -I$(top_srcdir)/..
@@ -12,5 +12,6 @@ LDADD = misc.o getopt.o getopt1.o \
 	-lspki -lnettle ../libspki.a ../../nettle/libnettle.a
 
 spki_make_signature_SOURCES = spki-make-signature.c sign.c
+spki_delegate_SOURCES = spki-delegate.c sign.c
 
 EXTRA_DIST = misc.c misc.h getopt.h getopt.c getopt1.c
