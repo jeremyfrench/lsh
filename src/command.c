@@ -75,18 +75,163 @@ int do_call_simple_command(struct command *s,
   return COMMAND_RETURN(c, COMMAND_SIMPLE(self, arg));
 }
 
+/* Commands that need to collect some arguments before actually doing
+ * anything. */
+
+/* GABA:
+   (class
+     (name collect_info_4)
+     (vars
+       (f pointer function "struct lsh_object *"
+                  "struct lsh_object *" "struct lsh_object *"
+		  "struct lsh_object *" "struct lsh_object *")
+       ))
+*/
+
+/* GABA:
+   (class
+     (name collect_info_3)
+     (vars
+       (f method  "struct lsh_object *"
+                  "struct lsh_object *" "struct lsh_object *"
+		  "struct lsh_object *")
+       (next object collect_info_3)))
+*/
+
+/* GABA:
+   (class
+     (name collect_info_3)
+     (vars
+       (f method  "struct lsh_object *"
+                  "struct lsh_object *" "struct lsh_object *")
+       (next object collect_info_2)))
+*/
+   
+/* GABA:
+   (class
+     (name command_collect)
+     (inherit command_simple)
+     (vars
+       ;; Is called with the argument count (for sanity checks)
+       ;; followed by the arguments.
+       (f pointer function "struct lsh_object *" void)
+       ;; The number of additional arguments to collect before calling f.
+       (left . unsigned)))
+*/
+
+/* GABA:
+   (class
+     (name command_simple_1)
+     (inherit command_collect)
+     (vars
+       (a object lsh_object)))
+*/
+
+/* GABA:
+   (class
+     (name command_simple_2)
+     (inherit command_simple_0)
+     (vars
+       (b object lsh_object)))
+*/
+
+/* GABA:
+   (class
+     (name command_collect_3)
+     (inherit command_collect_2)
+     (vars
+       (c object lsh_object)))
+*/
+
+static void init_command_collect(struct command_collect *self,
+				 unsigned left,
+				 void * f))(unsigned n, ...))
+{
+  self->f = f;
+  self->left = left;
+
+  self->super.super.call = do_call_simple_command;
+}
+
+static struct lsh_object *
+do_command_collect_3(struct command_simple *s,
+		     struct lsh_object *x)
+{
+  CAST(command_collect_3, self, s);
+  unsigned left = self->left - 1;
+  
+  if (!left)
+    return self->f(3, self->super.a, self->b, x);
+  else
+    fatal("command.c: comand_collect_4 not implemented\n");
+}
+
+static struct lsh_object *
+do_command_collect_2(struct command_simple *s,
+		     struct lsh_object *x)
+{
+  CAST(command_collect_2, self, s);
+  unsigned left = self->left - 1;
+  
+  if (!left)
+    return self->f(3, self->super.a, self->b, x);
+  else
+    {
+      NEW(command_collect_3, new);
+      init_command_simple(&new->super.super.super, self->f, self->left - 1);
+      new->super.a = self->a;
+      new->b = b;
+
+      new->super.super.super.call_simple = do_command_collect_3;
+
+      return (struct lsh_object *) new;
+    }
+}
+
+struct lsh_object *do_command_collect_1(struct command_simple *s,
+					struct lsh_object *x)
+{
+  CAST(command_collect_1, self, s);
+  unsigned left = self->left - 1;
+  
+  if (!left)
+    return self->f(2, self->a, x);
+  else
+    {
+      NEW(command_collect_2, new);
+      init_command_simple(&new->super.super, self->f, left);
+      new->super.a = self->a;
+      new->b = x;
+
+      new->super.super.call_simple = do_command_collect_2;
+      
+      return (struct lsh_object *) new;
+    }
+}
+
+struct lsh_object *do_command_collect(struct command_simple *s,
+				      struct lsh_object *x)
+{
+  CAST(command_collect, self, s);
+  unsigned left = self->left - 1;
+
+  if (!left)
+    return self->f(1, x);
+  else
+    {
+      NEW(command_collect_1, new);
+      init_command_collect(&new->super, self->f, left);
+      f->a = x;
+
+      new->super.call_simple = do_command_collect_1;
+
+      return (struct lsh_object *) new;
+    }
+}
+
 /* Combinators */
 
 /* Ix == x */
-
-#if 0
-static int do_command_I(struct command *ignored UNUSED,
-			struct lsh_object *arg,
-			struct command_continuation *c)			
-{
-  return COMMAND_RETURN(c, arg);
-}
-#endif
 
 static struct lsh_object *
 do_simple_command_I(struct command_simple *ignored UNUSED,
@@ -98,6 +243,7 @@ do_simple_command_I(struct command_simple *ignored UNUSED,
 struct command_simple command_I =
 STATIC_COMMAND_SIMPLE(do_simple_command_I);
 
+static 
 /* ((S f) g)x == (f x)(g x) */
 
 /* Continuation called after evaluating (f x) */
