@@ -24,6 +24,9 @@ then
                 ERROR: lsh is not installed properly
                 check the existence of these files:
                 /usr/sbin/lshd
+		/etc/lsh_host_key
+		/etc/lsh_host_key.pub
+		 
 EOF!
         exit 1
 fi
