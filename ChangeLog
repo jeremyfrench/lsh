@@ -1,5 +1,11 @@
 Wed Dec 16 01:33:25 1998    <nisse@puck>
 
+	* client.c (do_exit_status): Send eof, if we haven't done that
+	already. 
+
+	* channel.c (do_channel_eof): Don't initiate close automatically
+	when eof has been both sent and recieved.
+
 	* list.c (make_int_listv): New function
 	(make_object_listv): New function
 

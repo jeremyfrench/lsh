@@ -1,13 +1,3 @@
-CORRECT USE OF TYPES
-
-In channel.c and readpacket.c there are logical problems with the code: the
-channel numbers are of type UINT32, but are often assigned to ints for which 
-negative values are used to signal error conditions. These negative values
-can well be valid channel numbers! Either the signalling of errors needs to
-be done through a separate mechanism (this is probably the cleanest
-solution), or a (signed) INT64 should be made for "channel number or error".
-
-
 ERROR HANDLING
 
 Consider return values from handlers. A return value has several
