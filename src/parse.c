@@ -204,7 +204,10 @@ parse_bignum(struct simple_buffer *buffer, mpz_t result, UINT32 limit)
   if (!parse_string(buffer, &length, &digits))
     return 0;
 
-  if (limit && (length > limit))
+  /* NOTE: If the reciever expects an integer less than 256^limit,
+   * there may still be limit + 1 digits, as a leading zero is
+   * sometimes required to resolve signedness. */
+  if (limit && (length > (limit + 1)))
     return 0;
   
   bignum_parse_s(result, length, digits);
