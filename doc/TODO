@@ -166,6 +166,13 @@ Some SSH Inc sshd server sends USERAUTH_FAILURE messages with a
 trailing ",", like "publickey,password,". Consider hacking
 parse.c:parse_next_atom to allow that.
 
+The server currently allows the client to send random banner text
+before its version string. Such text is not allowed by the protocol
+spec.
+
+Add a timeout, to drop connections that hasn't older than (say) five
+minutes without having authenticated properly.
+
 
 USER INTERFACE ISSUES
 
