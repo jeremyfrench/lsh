@@ -5,7 +5,7 @@
 @settitle lsh
 @c %**end of header
 
-@set UPDATED-FOR 0.9.14
+@set UPDATED-FOR 1.0
 
 @c Latin-1 doesn't work with tex output.
 @c Also lookout for é characters.
