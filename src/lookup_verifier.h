@@ -35,13 +35,7 @@
 
 /* Maps a key blob to a signature verifier, using some signature
  * algorithm and some method to determine the authenticity of the key.
- * Returns NULL If the key is invalid or not trusted. */
-
-/* FIXME: Does this function really need the keyholder? On the client
- * side, the client ought to know which host it is trying to connect
- * to. What about the server side? There the action has to depends on
- * the user. But there, a struct unix_user is probably more
- * appropriate than a user name alone. */
+ * Returns NULL if the key is invalid or not trusted. */
 
 /* GABA:
    (class
@@ -49,6 +43,8 @@
      (vars
        (lookup method (object verifier)
                       "int method"
+
+		      ; NOTE: The user is only needed on the server side.
                       "struct lsh_user *user"
 		      "struct lsh_string *key")))
 */
