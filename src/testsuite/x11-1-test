@@ -1,0 +1,15 @@
+#! /bin/sh
+
+echo lshd X11, test 1
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+check_x11_support
+
+# For this test, it doesn't matter at all if we have an X-server listening
+
+DISPLAY=:47 spawn_lshd --x11-forward && run_lsh --x11 'test -n "$DISPLAY"' && test_success
