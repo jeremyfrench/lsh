@@ -844,6 +844,8 @@ do_publickey_login(struct client_userauth_method *s,
       {
 	CAST(keypair, key, LIST(self->keys)[i]);
 
+	/* NOTE: The PEER_USERAUTH_REQUEST_KLUDGE only applies to the
+	 * signed data. */
 	C_WRITE(connection, 
 		format_userauth_publickey_query(userauth->username,
 						userauth->service_name,
