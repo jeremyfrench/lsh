@@ -41,13 +41,13 @@ struct alist_node
 };
 
 /* Prototypes */
-static struct lsh_object *do_mark_table(struct lsh_object **table,
+static void do_mark_table(struct lsh_object **table,
 					void (*mark)(struct lsh_object *o));
 
 static void *do_linear_get(struct alist *c, int atom);
 static void do_linear_set(struct alist *c, int atom, void *value);
 
-static struct lsh_object *do_mark_list(struct alist_node *n,
+static void do_mark_list(struct alist_node *n,
 				       void (*mark)(struct lsh_object *o));
 static void do_free_list(struct alist_node *n);
 
@@ -80,15 +80,13 @@ struct alist_linear
 };
 #endif
 
-static struct lsh_object *do_mark_table(struct lsh_object **table,
-					void (*mark)(struct lsh_object *o))
+void do_mark_table(struct lsh_object **table,
+		   void (*mark)(struct lsh_object *o))
 {
   unsigned i;
 
   for (i = 0; i<NUMBER_OF_ATOMS; i++)
     mark(table[i]);
-
-  return NULL;
 }
 
 static void *do_linear_get(struct alist *c, int atom)
@@ -166,19 +164,14 @@ struct alist_linked
 };
 #endif
 
-static struct lsh_object *do_mark_list(struct alist_node *n,
-				       void (*mark)(struct lsh_object *o))
+static void do_mark_list(struct alist_node *n,
+			 void (*mark)(struct lsh_object *o))
 {
-  if (!n)
-    return NULL;
-
-  while(n->next)
+  while(n)
     {
       mark(n->value);
       n = n->next;
     }
-
-  return n;
 }
 
 static void do_free_list(struct alist_node *n)
