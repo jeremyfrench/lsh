@@ -202,7 +202,9 @@ do_trivia_source(struct unix_random *self, int init)
 {
   struct {
     struct timeval now;
+#if HAVE_GETRUSAGE
     struct rusage rusage;
+#endif
     unsigned count;
     pid_t pid;
   } event;
@@ -211,10 +213,11 @@ do_trivia_source(struct unix_random *self, int init)
 
   if (gettimeofday(&event.now, NULL) < 0)
     fatal("gettimeofday failed %e\n", errno);
-
+#if HAVE_GETRUSAGE
   if (getrusage(RUSAGE_SELF, &event.rusage) < 0)
     fatal("getrusage failed %e\n", errno);
-  
+#endif
+
   event.count = 0;
   if (init)
     {
