@@ -12,7 +12,7 @@ The most notable changes and new features in LSH-2.0 are:
 o  Incompatible change to key format, to comply with the latest spki
    structure draft. You can use the script lsh-upgrade to copy and
    convert the information in the old .lsh/known-hosts to the new file
-   .lsh/host-acls, and the script lsh-upgrade-key to covnert private
+   .lsh/host-acls, and the script lsh-upgrade-key to convert private
    keys to the new format. (This change was made between lsh-1.5 and
    lsh-1.5.1).
 
@@ -26,7 +26,8 @@ o  Several programs have new default behaviour:
    * lsh-writekey encrypts the private key by default, using
      aes256-cbc. Unless the --server flag is used.
 
-o  Client support for the "keyboard-interactive" user authentication.
+o  Client support for the "keyboard-interactive" user authentication
+   method.
 
 o  SOCKS-style forwarding, using lsh -D. Supports both SOCKS-4 and
    SOCKS-5.
