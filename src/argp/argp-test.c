@@ -42,12 +42,16 @@
 #endif
 
 #if !HAVE_ASPRINTF
-int asprintf (char **result, const char *format, ...)
-{
-  size_t size = 200;
-  char *p = NULL;
+#include <stdarg.h>
 
-  do {
+static int
+asprintf (char **result, const char *format, ...)
+{
+  size_t size;
+  char *p;
+
+  for (size = 200, p = NULL;; size *= 2)
+  {
     va_list args;
     int written;
     
@@ -61,12 +65,15 @@ int asprintf (char **result, const char *format, ...)
     p[size] = '\0';
     
     va_start(args, format);
-    written = vsnprintf(format, size, args);
+    written = vsnprintf(p, format, size, args);
     va_end(args);
 
-  } while (written < 0);
-
-  *result = p;
+    if (written >= 0)
+    {
+      *result = p;
+      return written;
+    }
+  }
 }
 #endif /* !HAVE_ASPRINTF */
 
