@@ -431,9 +431,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  argp_error(state, "All keyexchange algorithms disabled.");
 
 	if (self->port)
-	  self->local = make_address_info_c(arg, self->port, 0);
+	  self->local = make_address_info_c(self->interface, self->port, 0);
 	else
-	  self->local = make_address_info_c(arg, "ssh", 22);
+	  self->local = make_address_info_c(self->interface, "ssh", 22);
       
 	if (!self->local)
 	  argp_error(state, "Invalid interface, port or service, %s:%s'.",
