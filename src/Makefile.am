@@ -29,7 +29,7 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 EXTRA_PROGRAMS = lsh-krb-checkpw lsh-pam-checkpw srp-gen
 
-bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey \
+bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey lsh-decrypt-key \
 	       lsh-decode-key lsh-export-key lsh-make-seed \
 	       @SRP_PROGRAM@
 
