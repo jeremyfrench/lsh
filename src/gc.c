@@ -227,8 +227,13 @@ void gc_maybe(struct lsh_object *root, int busy)
 
 #if DEBUG_ALLOC
 /* Deallocate all objects. */
+
+int gc_final_p = 0;
+
 void gc_final(void)
 {
+  gc_final_p = 1;
+  
   gc_sweep();
   assert(!number_of_objects);
 
