@@ -90,11 +90,5 @@
 
 (define char-set:empty (chars->char-set '()))
 
-(define (nth l n)
-  (cond ((< n 0) (error "nth: negative index not allowed" n))
-        ((null? l) (error "nth: index too big" n))
-        ((= n 0) (car l))
-        (else (nth (cdr l) (-1+ n)))))
-
 (define (string-upcase s)
   (list->string (map char-upcase (string->list s))))
