@@ -186,6 +186,23 @@ make_listen_value(struct lsh_fd *fd,
 		  struct address_info *peer,
 		  struct address_info *local);
 
+/* FIXME: Uses a singly linked list. Could use the functions in
+ * queue.c instead. */
+/* GABA:
+   (class
+     (name sockaddr_list)
+     (vars
+       (next object sockaddr_list)
+       (length . socklen_t)
+       (addr space "struct sockaddr")))
+*/
+
+/* Copies the sockaddr */
+struct sockaddr_list *
+sockaddr_cons(socklen_t length,
+	      const struct sockaddr *addr,
+	      struct sockaddr_list *tail);
+
 /* I/O exceptions */
 /* GABA:
    (class
@@ -262,6 +279,10 @@ address_info2sockaddr(socklen_t *length,
 		      const int *preference,
 		      int lookup);
 
+struct sockaddr_list *
+io_resolv_address(struct address_info *a,
+		  struct sockaddr_list *tail);
+
 /* Returns an exception, if anything went wrong */
 const struct exception *
 write_raw(int fd, uint32_t length, const uint8_t *data);
@@ -290,6 +311,7 @@ make_exc_finish_read_handler(struct lsh_fd *fd,
 			     struct exception_handler *parent,
 			     const char *context);
 
+/* FIXME: Reorder arguments to put length first, for consistency? */
 struct lsh_fd *
 io_connect(struct sockaddr *remote,
 	   socklen_t remote_length,
