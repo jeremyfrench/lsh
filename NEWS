@@ -1,3 +1,13 @@
+News for the 1.1.2 release:
+
+	Added signal handlers to io_backend.
+
+	Reorganized the code a little to make the lshg binary smaller.
+	
+	Some work on an "interactive" class, encapsulating the
+	oparations one may want to do on the user's tty, including
+	subscription for window change events.
+	
 News for the 1.1.1 release:
 
 	First try for the gateway mode. New option -G for lsh, and a

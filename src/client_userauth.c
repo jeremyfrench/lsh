@@ -29,7 +29,6 @@
 #include "parse.h"
 #include "password.h"
 #include "publickey_crypto.h"
-#include "service.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"

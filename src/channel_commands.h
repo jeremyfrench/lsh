@@ -32,7 +32,8 @@
 #undef GABA_DECLARE
 
 /* Command to open a new channel. Takes a connection as argument
- * returns a new channel or NULL if opening failed. */
+ * returns a new channel. Raises an exception on error. FIXME: Which
+ * exception??? */
 
 /* GABA:
    (class
@@ -55,7 +56,8 @@ void do_channel_open_command(struct command *s,
 			    struct command_continuation *c,
 			    struct exception_handler *e);
 
-/* Takes a channel as argument, and returns the same channel or NULL. */
+/* Takes a channel as argument, and returns the same channel. Raises
+ * an exception on error. FIXME: Which exception??? */
 /* GABA:
    (class
      (name channel_request_command)
@@ -89,6 +91,15 @@ void do_channel_request_command(struct command *s,
 
 #define FORMAT_GLOBAL_REQUEST(r, conn, c) \
 ((r)->format_request((r), (conn), (c)))
+
+/* For simple channel-related commands */
+/* ;; GABA:
+   (class
+     (name channel_command)
+     (super command)
+     (vars
+       (channel object ssh_channel)))
+*/
 
 void do_channel_global_command(struct command *s,
 			       struct lsh_object *x,
