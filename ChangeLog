@@ -1,3 +1,26 @@
+2001-09-01  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/resource.c (init_resource): Renamed from resource_init, for
+	consistency. Updated all callers.
+
+	* src/lsh.h (struct client_x11_display): Forward declare.
+
+	* src/client_x11.h: Deleted, prototypes moved to client.h.
+
+	* src/client.h (client_options): New attributes with_x11 and
+	used_x11.
+
+	* src/client.c (client_maybe_pty): New function.
+	(client_maybe_x11): New function.
+	(client_shell_session): Use client_maybe_pty and client_maybe_x11.
+	(client_command_session): Use client_maybe_x11.
+	(client_argp_parser): --x11-forward should be a modifier option,
+	not an action.
+
+	* src/channel.h (channel_table): Added attribute x11_display.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added client_x11.c.
+
 2001-08-31  Niels Möller  <nisse@ehand.com>
 
 	* src/client.c (client_argp_parser): Implemented -X flag.

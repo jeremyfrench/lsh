@@ -750,7 +750,7 @@ make_channel_request_response(struct ssh_connection *connection,
      (name channel_request_exception_handler)
      (super exception_handler)
      (vars
-       ;; /* FIXME: Delete connection argument */
+       ;; FIXME: Delete connection argument
        (connection object ssh_connection)
        (channel object ssh_channel)
        (active object request_status)))
