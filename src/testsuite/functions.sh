@@ -90,6 +90,12 @@ spawn_lsh () {
     at_exit "kill $!"
 }
 
+spawn_lshg () {
+    # echo spawn_lshg "$@"
+    ../lshg $CLIENTFLAGS -p $PORT "$@" -N localhost &
+    at_exit "kill $!"
+}
+
 at_connect () {
     mini-inetd -m $2 localhost:$1 -- /bin/sh sh -c "$3" &
     at_exit "kill $!"
