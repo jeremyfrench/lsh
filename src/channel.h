@@ -311,9 +311,8 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
 					     UINT32 type,
 					     struct lsh_string *data);
 
-struct ssh_service *make_connection_service(struct alist *global_requests,
-					    struct alist *channel_types,
-					    struct connection_startup *start);
+struct command *make_connection_service(struct alist *global_requests,
+					struct alist *channel_types);
 
 
 #endif /* LSH_CHANNEL_H_INCLUDED */
