@@ -1,3 +1,11 @@
+2002-11-21  Niels Möller  <niels@s3.kth.se>
+
+	* testsuite/testutils.h: Include tag.h.
+
+	* testsuite/Makefile.am (TS_PROGS): Added tag-test.
+
+	* testsuite/tag-test.c: Test cases for operations on tags.
+
 2002-11-19  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* Makefile.am (libspki_a_SOURCES): Added tag.c.
