@@ -1,3 +1,15 @@
+News for the 0.9.14 release
+
+	Implemented pretty-printing of s-expressions when using the
+	advanced syntax.
+
+	Renamed sexp_conv to sexp-conv.
+	
+	Fixed bug preventing forwarded connections from being closed
+	properly. Reported by [FIXME!!!] and Joseph Galbraith.
+
+	Documentation update.
+	
 News for the 0.9.13 release
 
 	New program lsh-decode-key and script ssh-conv, for converting

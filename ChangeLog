@@ -1,4 +1,19 @@
+2000-06-21  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh.c (do_lsh_default_handler): Handle EXC_GLOBAL_REQUEST. 
+
+	* doc/Makefile.am.in (man_MANS): Use automake's man_MANS.
+	(EXTRA_DIST): Added gateway-mode.txt and lsh.html to the
+	distribution. 
+	Added rule to build html version of the manual.
+
+	* doc/lsh.texinfo (Getting started): New chapter.
+
+	* src/sexp_commands.c (do_print_raw_hash_to): Write newline. 
+
 2000-06-20  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Bumped version to 0.9.14.
 
 	* src/tcpforward_commands.c (new_tcpip_channel): Leave the
 	REMEMBER_RESOURCE call for make_tcpip_channel().

@@ -213,3 +213,9 @@ Exceptions from listen are handled badly in several places.
 
 Write a conversion program to read and write openssh/ssh2 style public
 keys.
+
+Should lsh fail if some port forwardings fails? In particular,
+
+  $ lsh -R... -N
+
+is pretty useless if the server doesn't let us bind the remote port.

@@ -15,7 +15,7 @@ the Free Software Foundation. See the file COPYING for details.
 
 INSTALLATION
 
-If you have downloaded a snapshot, you should be able to compile it
+If you have downloaded a release, you should be able to compile it
 with
 
    ./configure
@@ -49,7 +49,8 @@ tries to do all this.
 
 NEEDED LIBRARIES
 
-GMP-2.0.2 can be found at ftp.gnu.org, or some of its mirrors.
+GMP (cersion 2.0.2 or better) can be found at ftp.gnu.org, or some of
+its mirrors.
 
 ZLIB can be found at ftp://ftp.cdrom.com/pub/infozip/zlib/zlib.html or
 http://www.cdrom.com/pub/infozip/zlib/. Latest version is zlib-1.1.3.

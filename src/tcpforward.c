@@ -170,7 +170,7 @@ make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
   
   self->socket = socket;
 
-  REMEMBER_RESOURCE(self->super.resources, socket);
+  REMEMBER_RESOURCE(self->super.resources, &socket->super);
   
   return &self->super;
 }
