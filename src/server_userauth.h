@@ -1,6 +1,8 @@
-/* server_password.h
+/* server_userauth.h
  *
  * System dependant password related functions.
+ *
+ * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,13 +24,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef LSH_SERVER_PASSWORD_H_INCLUDED
-#define LSH_SERVER_PASSWORD_H_INCLUDED
+#ifndef LSH_SERVER_USERAUTH_H_INCLUDED
+#define LSH_SERVER_USERAUTH_H_INCLUDED
 
-#include "password.h"
+#include "alist.h"
 
 #define GABA_DECLARE
-#include "server_password.h.x"
+#include "server_userauth.h.x"
 #undef GABA_DECLARE
 
 /* GABA:
@@ -51,9 +53,11 @@ struct unix_user *lookup_user(struct lsh_string *name, int free);
 int verify_password(struct unix_user *user,
 		    struct lsh_string *password, int free);
 
-extern struct userauth unix_userauth;
-
 int change_uid(struct unix_user *user);
 int change_dir(struct unix_user *user);
 
-#endif /* LSH_SERVER_PASSWORD_H_INCLUDED */
+/* authentication methods */
+extern struct userauth unix_userauth;
+struct userauth *make_userauth_publickey(struct alist *verifiers);
+
+#endif /* LSH_SERVER_USERAUTH_H_INCLUDED */

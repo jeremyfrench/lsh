@@ -22,8 +22,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "server_password.h"
-
+#include "server_userauth.h"
 #include "charset.h"
 #include "format.h"
 #include "parse.h"
@@ -31,108 +30,6 @@
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <string.h>
-#include <errno.h>
-
-#if HAVE_CRYPT_H
-# include <crypt.h>
-#endif
-#include <pwd.h>
-#include <grp.h>
-
-#if HAVE_SHADOW_H
-#include <shadow.h>
-#endif
-
-#define GABA_DEFINE
-#include "server_password.h.x" 
-#undef GABA_DEFINE
-
-/* NOTE: Calls functions using the disgusting convention of returning
- * pointers to static buffers. */
-struct unix_user *lookup_user(struct lsh_string *name, int free)
-{
-  struct passwd *passwd;
-
-  NEW(unix_user, res);
-
-  name = make_cstring(name, free);
-
-  if (!name)
-    {
-      KILL(res);
-      return 0;
-    }
-  
-  if (!(passwd = getpwnam(name->data)))
-    {
-      lsh_string_free(name);
-      KILL(res);
-      return 0;
-    }
-
-  res->uid = passwd->pw_uid;
-  res->gid = passwd->pw_gid;
-  res->name = name;
-  
-#if HAVE_GETSPNAM
-  /* FIXME: What's the most portable way to test for shadow passwords?
-   * A single character in the passwd field should cover most variants. */
-  if (passwd->pw_passwd && (strlen(passwd->pw_passwd) == 1))
-  {
-    struct spwd *shadowpwd;
-    
-    if (!(shadowpwd = getspnam(name->data)))
-    {
-      KILL(res);
-      return 0;
-    }
-    res->passwd = format_cstring(shadowpwd->sp_pwdp);
-  }
-  else
-#endif /* HAVE_GETSPNAM */
-    res->passwd = format_cstring(passwd->pw_passwd);
-
-  res->home = format_cstring(passwd->pw_dir);
-  res->shell = format_cstring(passwd->pw_shell);
-  
-  return res;
-}
-
-/* NOTE: Calls functions using the *disgusting* convention of returning
- * pointers to static buffers. */
-int verify_password(struct unix_user *user,
-		    struct lsh_string *password, int free)
-{
-  char *salt;
-  
-  if (!user->passwd || (user->passwd->length < 2) )
-    {
-      /* FIXME: How are accounts without passwords handled? */
-      lsh_string_free(password);
-      return 0;
-    }
-
-  /* Convert password to a NULL-terminated string */
-  password = make_cstring(password, free);
-
-  if (!password)
-    return 0;
-  
-  salt = user->passwd->data;
-
-  if (strcmp(crypt(password->data, salt), user->passwd->data))
-    {
-      /* Passwd doesn't match */
-      lsh_string_free(password);
-      return 0;
-    }
-
-  lsh_string_free(password);
-  return 1;
-}
-
 
 static void
 do_authenticate(struct userauth *ignored UNUSED,
@@ -220,58 +117,6 @@ do_authenticate(struct userauth *ignored UNUSED,
 
 struct userauth unix_userauth =
 { STATIC_HEADER, do_authenticate };
-
-
-int change_uid(struct unix_user *user)
-{
-  /* NOTE: Error handling is crucial here. If we do something
-   * wrong, the server will think that the user is logged in
-   * under his or her user id, while in fact the process is
-   * still running as root. */
-  if (initgroups(user->name->data, user->gid) < 0)
-    {
-      werror("initgroups failed: %z\n", STRERROR(errno));
-      return 0;
-    }
-  if (setgid(user->gid) < 0)
-    {
-      werror("setgid failed: %z\n", STRERROR(errno));
-      return 0;
-    }
-  if (setuid(user->uid) < 0)
-    {
-      werror("setuid failed: %z\n", STRERROR(errno));
-      return 0;
-    }
-  return 1;
-}
-
-int change_dir(struct unix_user *user)
-{
-  /* Change to user's home directory. FIXME: If the server is running
-   * as the same user, perhaps it's better to use $HOME? */
-  if (!user->home)
-    {
-      if (chdir("/") < 0)
-	{
-	  werror("Strange: home directory was NULL, and chdir(\"/\") failed: %z\n",
-		 STRERROR(errno));
-	  return 0;
-	}
-    }
-  else if (chdir(user->home->data) < 0)
-    {
-      werror("chdir to %z failed (using / instead): %z\n",
-	     user->home ? (char *) user->home->data : "none",
-	     STRERROR(errno));
-      if (chdir("/") < 0)
-	{
-	  werror("chdir(\"/\") failed: %z\n", STRERROR(errno));
-	  return 0;
-	}
-    }
-  return 1;  
-}
 
 #if 0
 
