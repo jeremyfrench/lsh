@@ -41,7 +41,46 @@
 enum escape_state { GOT_NONE, GOT_NEWLINE, GOT_ESCAPE };
 
 #include "client_escape.c.x"
+
+/* GABA:
+   (class
+     (name escape_help)
+     (super escape_callback)
+     (vars
+       (info object escape_info)))
+*/
+
+static void
+do_escape_help(struct lsh_callback *s)
+{
+  CAST(escape_help, self, s);
+  unsigned i;
+
+  werror("The escape character is `%pc'\n",
+	 self->info->escape);
+
+  werror("Available commands:\n\n");
   
+  for (i = 0; i < 0x100; i++)
+    {
+      struct escape_callback *c = self->info->dispatch[i];
+
+      if (c)
+	werror("`%pc': %z\n", i, c->help);
+    }
+}    
+
+static struct escape_callback *
+make_escape_help(struct escape_info *info)
+{
+  NEW(escape_help, self);
+  self->super.super.f = do_escape_help;
+  self->super.help = "Display this help.";
+  self->info = info;
+
+  return &self->super;
+}
+
 struct escape_info *
 make_escape_info(uint8_t escape)
 {
@@ -53,6 +92,8 @@ make_escape_info(uint8_t escape)
   for (i = 0; i<0x100; i++)
     self->dispatch[i] = NULL;
 
+  self->dispatch['?'] = make_escape_help(self);
+  
   return self;
 }
 
@@ -93,14 +134,14 @@ static int
 escape_dispatch(struct escape_info *info,
 		uint8_t c)
 {
-  struct lsh_callback *f;
+  struct escape_callback *f;
 
   if (c == info->escape)
     return 1;
   
   f = info->dispatch[c];
   if (f)
-    LSH_CALLBACK(f);
+    LSH_CALLBACK(&f->super);
   else
     werror("<escape> `%pc' not defined.\n", c);
   
