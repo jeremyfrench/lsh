@@ -47,11 +47,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
-/* For strsignal */
-#ifndef _GNU_SOURCE
-#warning _GNU_SOURCE undefined
-#endif
 #include <string.h>
+#include <assert.h>
 
 /* Handle connection and initial handshaking. */
 struct client_callback
@@ -74,7 +71,7 @@ static int client_initiate(struct fd_callback **c,
 
   int res;
   
-  /* FIXME: Should pass a key exchange handler, not NULL! */
+
   struct ssh_connection *connection
     = make_ssh_connection(closure->kexinit_handler);
 
@@ -337,9 +334,9 @@ static int close_client_session(struct ssh_channel *c)
   
   MDEBUG(session);
 
-  close_fd(session->in);
-  close_fd(session->out);
-  close_fd(session->err);
+  close_fd(&session->in->super);
+  close_fd(&session->out->super);
+  close_fd(&session->err->super);
   
   return LSH_OK | LSH_CHANNEL_PENDING_CLOSE;
 }  
@@ -384,7 +381,7 @@ static int do_exit_status(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);;
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);;
 
-      return close_client_session(channel);
+      return LSH_OK | LSH_GOON;
     }
   
   /* Invalid request */
@@ -489,7 +486,9 @@ static int do_send(struct ssh_channel *c)
 
   MDEBUG(closure);
 
-  closure->in->on_hold = 0;
+  assert(closure->in->super.read);
+  assert(closure->in->handler);
+  closure->in->super.want_read = 1;
 
   return LSH_OK | LSH_GOON;
 }
@@ -503,8 +502,8 @@ static int do_io(struct ssh_channel *channel)
 
   channel->recieve = do_recieve;
   
-  closure->out->close_callback
-    = closure->err->close_callback = make_channel_close(channel);
+  closure->out->super.close_callback
+    = closure->err->super.close_callback = make_channel_close(channel);
   
   closure->in->handler = make_channel_read_data(&closure->super);
   channel->send = do_send;
