@@ -78,6 +78,7 @@ int do_call_simple_command(struct command *s,
 { { STATIC_HEADER, do_call_simple_command }, f}
 
 struct command *make_parallell_progn(struct object_list *body);
+extern struct command_simple progn_command;
 
 /* GABA:
    (class

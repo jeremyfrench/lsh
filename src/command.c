@@ -261,3 +261,14 @@ struct command *make_parallell_progn(struct object_list *body)
     return &self->super;
   }
 }
+
+static struct lsh_object *do_progn(struct command_simple *s UNUSED,
+				   struct lsh_object *x)
+{
+  CAST(object_list, body, x);
+  return make_parallell_progn(body);
+}
+
+struct command_simple progn_command =
+STATIC_COMMAND_SIMPLE(do_progn);
+

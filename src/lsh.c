@@ -114,16 +114,43 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
 /* GABA:
    (expr
      (name make_client_connect)
-     ;; (globals (connect connect_command))
+     (globals
+       (connect connect_command)
+       (progn "&progn_command->super"))
+     
      (params
        (connect object command)
        (handshake object command)
-       (userauth object command)
-       (login object command))
+       (userauth_service object command)
+       (login object command)
+       (requests object object_list))
      (expr (lambda (port)
-             (login (userauth (handshake (connect port)))))))
+             ((progn requests) (open_session (login (userauth_service
+	         (handshake (connect port)))))))))
 */
 
+/* Requests a shell, and connects the channel to our stdio. */
+/* GABA:
+   (expr
+     (name start_shell)
+     (super command)
+     (globals  )
+     (params  )
+     (expr
+       (lambda (session)
+          (start_io (shell_request session)))))
+*/
+
+/* GABA
+   (expr
+     (name do_pty)
+     (super command)
+     (params
+       (pty object ...))
+     (expr
+       (lambda (session)
+         (raw_mode (request_pty session)))))
+*/
 
 int main(int argc, char **argv)
 {
@@ -276,12 +303,6 @@ int main(int argc, char **argv)
       werror("lsh: Invalid port or service\n");
       exit (EXIT_FAILURE);
     }
-#if 0
-  if (!get_inaddr(&remote, host, port, "tcp"))
-    {
-      werror("No such host or service\n");
-      exit(1);
-    }
 
   /* This is the final request. */
   requests = make_shell_request(NULL);
@@ -304,7 +325,6 @@ int main(int argc, char **argv)
 	requests = make_pty_request(tty, 0, 1, requests);
     }
 #endif /* WITH_PTY_SUPPORT */
-#endif
   
   in = STDIN_FILENO;
   out = STDOUT_FILENO;
