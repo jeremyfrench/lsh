@@ -25,6 +25,8 @@
 
 #include "server_x11.h"
 
+#include "channel_commands.h"
+#include "channel_forward.h"
 #include "format.h"
 #include "reaper.h"
 #include "resource.h"
@@ -53,6 +55,62 @@
 
 #if WITH_X11_FORWARD
 
+#define X11_WINDOW_SIZE 10000
+
+/* GABA:
+   (class
+     (name channel_open_command_x11)
+     (super channel_open_command)
+     (vars
+       (peer object listen_value)))
+*/
+
+static struct ssh_channel *
+new_x11_channel(struct channel_open_command *c,
+		struct ssh_connection *connection,
+		UINT32 local_channel_number,
+		struct lsh_string **request)
+{
+  CAST(channel_open_command_x11, self, c);
+  struct ssh_channel *channel;
+
+  /* NOTE: All accepted fd:s must end up in this function, so it
+   * should be ok to delay the REMEMBER call until here. It is done
+   * by make_channel_forward. */
+
+  debug("server_x11.c: new_x11_channel\n");
+
+  channel = &make_channel_forward(self->peer->fd, X11_WINDOW_SIZE)->super;
+  channel->connection = connection;
+
+  /* NOTE: The request ought to include some reference to the
+   * corresponding x11 request, but no such id is specified in the
+   * protocol spec. */
+  *request = format_channel_open(ATOM_X11, local_channel_number,
+				 channel, 
+				 "%S%i",
+				 self->peer->peer->ip, self->peer->peer->port);
+  
+  return channel;
+}
+
+DEFINE_COMMAND(open_forwarded_x11)
+     (struct command *s UNUSED,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)      
+{
+  CAST(listen_value, peer, x);
+
+  NEW(channel_open_command_x11, self);
+  self->super.super.call = do_channel_open_command;
+  self->super.new_channel = new_x11_channel;
+
+  self->peer = peer;
+
+  COMMAND_RETURN(c, self);
+}
+
 /* Quite similar to forward_local_port in tcpforward_commands.c */
 /* ;; GABA:
    (expr
@@ -60,15 +118,14 @@
      (params
        (connection object ssh_connection))
      (expr
-       ; Port should be an fd
        (lambda (port)
-         (listen_callback
+         (listen
 	   (lambda (peer)
-	       ;; Remembering is done by open_x11_channel
-	       ;; and new_tcpip_channel.
-	       (tcpip_start_io
+	       ;; FIXME: Make sure remembering is done by open_x11_channel
+	       ;; and new_x11_channel.
+	       (start_io
 	         (catch_channel_open 
-		   (open_x11_channel display peer) connection)))
+		   (open_forwarded_x11 peer) connection)))
 	     port))))
 */
 	     
