@@ -1093,9 +1093,18 @@ hol_entry_help (struct hol_entry *entry, const struct argp_state *state,
   int old_wm = __argp_fmtstream_wmargin (stream);
   /* PEST is a state block holding some of our variables that we'd like to
      share with helper functions.  */
-  /* FIXME: Decent initializers is a GNU extension */
+#ifdef __GNUC__
   struct pentry_state pest = { entry, stream, hhstate, 1, state };
-
+#else /* !__GNUC__ */
+  /* Decent initializers is a GNU extension */
+  struct pentry_state pest;
+  pest.entry = entry;
+  pest.stream = stream;
+  pest.hhstate = hhstate;
+  pest.first = 1;
+  pest.state = state;
+#endif /* !__GNUC__ */
+  
   if (! odoc (real))
     for (opt = real, num = entry->num; num > 0; opt++, num--)
       if (opt->name && ovisible (opt))
