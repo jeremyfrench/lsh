@@ -92,7 +92,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	string_buffer.c suspend.c \
 	tcpforward.c tcpforward_commands.c \
 	translate_signal.c tty.c \
-	unix_interact.c unix_random.c unix_user.c \
+	unix_interact.c unix_process.c unix_random.c unix_user.c \
 	unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c xauth.c zlib.c
 
@@ -144,6 +144,8 @@ packet_types.h: ssh.h invert-defs
 	test -s $@T && mv -f $@T $@
 
 lsh_krb_checkpw_LDADD=@KRB_LIBS@
+
+lsh_execuv_LDADD=
 
 # typedescr.h: ssh.h $(top_srcdir)/misc/mk-reverse-table
 # 	  $(PERL) $(top_srcdir)/misc/mk-reverse-table ssh.h >$@T
