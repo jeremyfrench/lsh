@@ -1,0 +1,45 @@
+#! /bin/sh
+
+# Test case from Oscar Cánovas Reverte
+
+conv () {
+    ../../nettle/tools/sexp-conv -s transport
+}
+
+die () {
+    echo "Test failed:" "$@"
+    exit 1
+}
+
+check_sexp () {
+    file="$1"
+    shift
+    ../../nettle/tools/sexp-conv -s canonical | cmp "$file" - || die "$@"
+}
+
+conv >test.acl <<EOF
+(3:acl
+       (5:entry
+          (7:subject
+             (10:public-key3:foo))
+          (3:tag
+             (7:pkpfsys14:/home/ocanovas
+                (1:*3:set
+                   (3:zip)
+                   (6:backup))))))
+EOF
+
+conv >test.in <<EOF
+(sequence
+  (10:public-key3:foo))
+EOF
+../tools/spki-reduce < test.in > test.out \
+    --acl-file=test.acl || die "Reduction failed."
+
+check_sexp test.out "Reduction differs" <<EOF
+(acl (entry (public-key foo)
+            (tag (pkpfsys /home/ocanovas
+                          (* set
+                             (zip)
+                             (backup))))))
+EOF
