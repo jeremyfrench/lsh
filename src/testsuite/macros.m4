@@ -84,7 +84,7 @@ m4_dnl TS_TEST_VERIFY(name, key, msg, signature)
 TS_DEFINE(»TS_TEST_VERIFY«,
 »
 {
-  struct alist *algorithms = all_signature_algorithms(make_reasonably_random());
+  struct alist *algorithms = all_signature_algorithms(make_bad_random());
   struct sexp *key = TS_SEXP(»$2«);
   struct lsh_string *msg = TS_STRING(»$3«);
   struct sexp *sign = TS_SEXP(»$4«);
