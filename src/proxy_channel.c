@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1999, 2000 Balázs Scheidler
+ * Copyright (C) 1999 Balázs Scheidler
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -22,11 +22,12 @@
  */
 
 #include "proxy_channel.h"
-#include "xalloc.h"
-#include "ssh.h"
-#include "werror.h"
+
 #include "channel_commands.h"
 #include "format.h"
+#include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
 
 #define GABA_DEFINE
 #include "proxy_channel.h.x"
@@ -34,7 +35,36 @@
 
 #include "proxy_channel.c.x"
 
-#define WINDOW_SIZE (SSH_MAX_PACKET << 3)
+#define WINDOW_SIZE 10000
+
+#if 0
+/* ;;GABA:
+   (class
+     (name proxy_flow_control)
+     (super flow_controlled)
+     (vars
+       (channel object proxy_channel)))
+*/
+
+static void
+do_proxy_flow_control(struct flow_controlled *c,
+		      UINT32 res UNUSED)
+{
+  CAST(proxy_flow_control, closure, c);
+
+  CHANNEL_SEND(&closure->channel->super, NULL);
+}
+
+static struct flow_controlled *
+make_proxy_flow_control(struct proxy_channel *channel)
+{
+  NEW(proxy_flow_control, self);
+  
+  self->super.report = do_proxy_flow_control;
+  self->channel = channel;
+  return &self->super;
+}
+#endif
 
 static void
 do_receive(struct ssh_channel *c,
@@ -56,6 +86,15 @@ do_receive(struct ssh_channel *c,
     }
 }
 
+/* We may send more data */
+static void
+do_send_adjust(struct ssh_channel *s,
+	       UINT32 i)
+{
+  CAST(proxy_channel, self, s);
+  FLOW_CONTROL_REPORT(&self->chain->super.super, i);
+}
+
 static void
 do_eof(struct ssh_channel *c)
 {
@@ -73,14 +112,18 @@ do_close(struct ssh_channel *c)
 static void 
 do_init_io(struct proxy_channel *self)
 {
-/*  self->super.send = do_send;  */
+  self->super.send_adjust = do_send_adjust;  
   self->super.receive = do_receive;
   self->super.eof = do_eof;
   self->super.close = do_close;
 }
 
+/* NOTE: It seems most calls doesn't provide the correct value for
+ * rec_max_packet. In these cases, it should probably be filled in
+ * later, by do_proxy_channel_open_continuation() fill it in later. */
 struct proxy_channel *
 make_proxy_channel(UINT32 window_size,
+		   UINT32 rec_max_packet,
 		   struct alist *request_types,
 		   int client_side)
 {
@@ -89,7 +132,7 @@ make_proxy_channel(UINT32 window_size,
 
   self->super.max_window = SSH_MAX_PACKET << 3;
   self->super.rec_window_size = window_size;
-  self->super.rec_max_packet = SSH_MAX_PACKET;
+  self->super.rec_max_packet = rec_max_packet;
   self->super.request_types = request_types;
   self->init_io = do_init_io;
 
@@ -112,8 +155,7 @@ make_proxy_channel(UINT32 window_size,
 static struct lsh_string *
 do_format_channel_general(struct channel_request_command *s,
 			  struct ssh_channel *ch UNUSED,
-			  struct command_continuation **c UNUSED
-			  /* , struct exception_handler **e UNUSED */)
+			  struct command_continuation **c UNUSED)
 {
   CAST(general_channel_request_command, self, s);
 
@@ -169,8 +211,7 @@ struct channel_request proxy_channel_request =
 static struct lsh_string *
 do_format_general_global_request(struct global_request_command *s,
 			  	 struct ssh_connection *connection UNUSED,
-				 struct command_continuation **c UNUSED
-				 /* , struct exception_handler **e UNUSED */)
+				 struct command_continuation **c UNUSED)
 {
   CAST(general_global_request_command, self, s);
 
@@ -237,6 +278,11 @@ do_proxy_channel_open_continuation(struct command_continuation *c,
   self->channel->chain = chain_channel;
   chain_channel->chain = self->channel;
 
+  /* FIXME: I think this is the right thing to do, but I'm not quite
+   * sure. /nisse */
+
+  /* self->channel->rec_max_packet = chain_channel->send_max_packet; */
+  
   PROXY_CHANNEL_INIT_IO(self->channel);
   PROXY_CHANNEL_INIT_IO(chain_channel);
     
@@ -263,6 +309,7 @@ make_proxy_channel_open_continuation(struct command_continuation *up,
      (vars
        ; channel type
        (type . UINT32)
+       (max_packet . UINT32)
        (requests object alist)
        (open_request string)))
 */
@@ -275,7 +322,9 @@ do_proxy_channel_open(struct channel_open_command *c,
 {
   CAST(proxy_channel_open_command, closure, c);
   
-  struct proxy_channel *client = make_proxy_channel(WINDOW_SIZE, closure->requests, 1);
+  struct proxy_channel *client
+    = make_proxy_channel(WINDOW_SIZE, closure->max_packet,
+			 closure->requests, 1);
 
   client->super.write = connection->write;
   
@@ -291,6 +340,7 @@ do_proxy_channel_open(struct channel_open_command *c,
 
 struct command *
 make_proxy_channel_open_command(UINT32 type,
+				UINT32 max_packet,
                                 struct lsh_string *open_request,
 				struct alist *requests)
 {
@@ -299,7 +349,9 @@ make_proxy_channel_open_command(UINT32 type,
   self->super.new_channel = do_proxy_channel_open;
   self->super.super.call = do_channel_open_command;
   self->type = type;
-  self->open_request = open_request;
+  self->max_packet = max_packet;
   self->requests = requests;
+  self->open_request = open_request;
+
   return &self->super.super;
 }

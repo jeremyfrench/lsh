@@ -43,11 +43,13 @@
 
 struct proxy_channel *
 make_proxy_channel(UINT32 window_size,
+		   UINT32 rec_max_packet,
 		   struct alist *request_types,
 		   int client_side);
 
 struct command *
 make_proxy_channel_open_command(UINT32 type,
+				UINT32 max_packet,
                                 struct lsh_string *open_request,
 				struct alist *requests);
 

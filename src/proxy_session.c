@@ -32,7 +32,7 @@
 
 #include "proxy_session.c.x"
 
-#define WINDOW_SIZE (SSH_MAX_PACKET << 3)
+#define WINDOW_SIZE 10000
 
 
 /* GABA:
@@ -51,6 +51,7 @@ static void
 do_proxy_open_session(struct channel_open *s,
 		      struct ssh_connection *connection,
 		      UINT32 type,
+		      UINT32 send_max_packet,
 		      struct simple_buffer *args,
 		      struct command_continuation *c,
 		      struct exception_handler *e)
@@ -61,9 +62,18 @@ do_proxy_open_session(struct channel_open *s,
 
   if (parse_eod(args))
     {
-      struct proxy_channel *server = make_proxy_channel(WINDOW_SIZE, closure->server_requests, 0);
+      struct proxy_channel *server
+	= make_proxy_channel(WINDOW_SIZE,
+			     /* FIXME: We should adapt to the other
+			      * end's max packet size. Parhaps should
+			      * be done by
+			      * do_proxy_channel_open_continuation() ?
+			      * */
+			     SSH_MAX_PACKET,
+			     closure->server_requests, 0);
       struct command *o =
-	make_proxy_channel_open_command(type, ssh_format(""), closure->client_requests);
+	make_proxy_channel_open_command(type, send_max_packet,
+					ssh_format(""), closure->client_requests);
 
       COMMAND_CALL(o,
 		   connection->chain,

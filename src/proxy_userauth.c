@@ -103,8 +103,10 @@ do_forward_success(struct packet_handler *c,
       && (msg_number == SSH_MSG_USERAUTH_SUCCESS)
       && parse_eod(&buffer))
     {
+      struct lsh_string *name = self->name;
+      self->name = NULL;
       C_WRITE(connection->chain, packet);
-      COMMAND_RETURN(self->c, make_proxy_user(self->name));
+      COMMAND_RETURN(self->c, make_proxy_user(name));
     }
   else
     {
