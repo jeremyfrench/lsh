@@ -28,6 +28,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include "nettle/macros.h"
+
 #include "gateway_commands.h"
 
 #include "channel.h"
@@ -38,64 +40,150 @@
 #include "io_commands.h"
 #include "read_packet.h"
 #include "ssh.h"
-#include "unpad.h"
 #include "werror.h"
 #include "xalloc.h"
 
+#define HEADER_SIZE 4
 #include "gateway_commands.c.x"
 
-/* A simplified version of do_pad in pad.c. This one uses
- * a fixed block size and pads with zeros. */
-
-/* FIXME: It seems very unnecessary to pad at all; we could just use
+/* The protocol used over the gateway socket is clear text ssh-packets
  *
  *   uint32     packet_length
  *   byte[n]    payload; n = packet_length
  *
- * But then we can't reuse the plain read_packet class. */
+ * There is no extra padding. Max packet size
+ * connection->rec_max_packet.*/
 
 static void
 do_gateway_pad(struct abstract_write *w,
 	       struct lsh_string *packet)
 {
-  CAST(abstract_write_pipe, closure, w);
+  CAST(abstract_write_pipe, self, w);
 
-  struct lsh_string *new;
-  
-  uint32_t new_size;
-  uint8_t padding;
-
-  uint8_t *data;
-
-  /* new_size is (packet->length + 9) rounded up to a multiple of
-   * block_size. But the block_size if fixed to 8 octets. */
-  new_size = 8 * (2 + packet->length / 8);
-
-  padding = new_size - packet->length - 5;
-  assert(padding >= 4);
-
-  new = ssh_format("%i%c%lr", packet->length + padding + 1,
-		   padding, packet->length + padding, &data);
-
-  assert(new->length == new_size);
-
-  memcpy(data, packet->data, packet->length);
-  memset(data + packet->length, '\0', padding);
-  
-  lsh_string_free(packet);
-
-  A_WRITE(closure->next, new);
+  A_WRITE(self->next, ssh_format("%fS", packet));
 }
 
 static struct abstract_write *
 make_gateway_pad(struct abstract_write *next)
 {
-  NEW(abstract_write_pipe, closure);
+  NEW(abstract_write_pipe, self);
 
-  closure->super.write = do_gateway_pad;
-  closure->next = next;
+  self->super.write = do_gateway_pad;
+  self->next = next;
 
-  return &closure->super;
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name read_gateway_packet)
+     (super read_handler)
+     (vars
+       ; Buffer index, used for all the buffers
+       (pos . uint32_t)
+       (header array "uint8_t" HEADER_SIZE)
+       (payload string)
+       (handler object abstract_write)
+       (connection object ssh_connection)))
+*/
+
+static uint32_t
+do_read_gateway(struct read_handler **h,
+		uint32_t available,
+		const uint8_t *data)
+{
+  CAST(read_gateway_packet, self, *h);
+
+  if (!available)
+    {
+      debug("read_gateway: Got EOF.\n");
+
+      if (self->payload)
+        EXCEPTION_RAISE(self->connection->e,
+                        make_protocol_exception(0, "Unexpected EOF"));
+      else
+        EXCEPTION_RAISE(self->connection->e, &finish_read_exception);
+
+      *h = NULL;
+      return 0;
+    }
+
+  if (!self->payload)
+    {
+      /* Get length field */	
+      uint32_t left;
+      uint32_t length;
+	
+      assert(self->pos < HEADER_SIZE);	
+      left = HEADER_SIZE - self->pos;
+
+      if (available < left)
+	{
+	  memcpy(self->header + self->pos, data, available);
+	  self->pos += available;
+	  return available;
+	}
+
+      memcpy(self->header + self->pos, data, left);
+
+      length = READ_UINT32(self->header);
+      if (length > self->connection->rec_max_packet)
+	{
+	  static const struct protocol_exception too_large =
+	    STATIC_PROTOCOL_EXCEPTION(SSH_DISCONNECT_PROTOCOL_ERROR,
+				      "Packet too large");
+	    
+	  werror("read_gateway: Receiving too large packet.\n"
+		 "  %i octets, limit is %i\n",
+		 length, self->connection->rec_max_packet);
+	    
+	  EXCEPTION_RAISE(self->connection->e, &too_large.super);
+	  *h = NULL;
+	}
+      else
+	{
+	  self->payload = lsh_string_alloc(length);
+	  self->pos = 0;
+	}
+
+      return left;
+    }
+  else
+    {
+      uint32_t left;
+      left = self->payload->length - self->pos;
+
+      if (available < left)
+	{
+	  memcpy(self->payload->data + self->pos, data, available);
+	  self->pos += available;
+	  return available;
+	}
+
+      memcpy(self->payload->data + self->pos, data, left);
+
+      A_WRITE(self->handler, self->payload);
+      self->payload = NULL;
+      self->pos = 0;
+
+      return left;
+    }
+}
+
+static struct read_handler *
+make_read_gateway(struct abstract_write *handler,
+		  struct ssh_connection *connection)
+{
+  NEW(read_gateway_packet, self);
+  self->super.handler = do_read_gateway;
+
+  self->connection = connection;
+  self->handler = handler;
+
+  self->pos = 0;
+  self->payload = NULL;
+
+  return &self->super;
 }
 
 
@@ -120,11 +208,9 @@ gateway_make_connection(struct listen_value *lv,
     &io_read_write(lv->fd,
 		   make_buffered_read(
 		     BUF_SIZE,
-		     make_read_packet(
-		       make_packet_unpad(
-			 connection,
-			 make_packet_debug(&connection->super,
-				 	  ssh_format("%lz received", connection->debug_comment))),
+		     make_read_gateway(
+                       make_packet_debug(&connection->super,
+					 ssh_format("%lz received", connection->debug_comment)),
 		       connection)),
 		   BLOCK_SIZE,
 		   make_connection_close_handler(connection))->write_buffer->super;
