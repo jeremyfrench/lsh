@@ -161,8 +161,8 @@ dotask 1 "make" "makewarn" "cd $BASE && make $makeargs"
 # "make check" requirements
 #
 
-dotask 0 "ckprg" "" "cd $BASE/src && make check"
-dotask 0 "ckdist" "" "cd $BASE/src && make distcheck"
+dotask 0 "ckprg" "" "cd $BASE && make check"
+dotask 0 "ckdist" "" "cd $BASE && make distcheck"
 dotask 1 "install" "" "cd $BASE && make install"
 
 find pfx -type f -print | sort > r/installedfiles.txt
