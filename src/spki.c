@@ -994,6 +994,7 @@ spki_pkcs5_encrypt(struct randomness *r,
   assert(crypto);
   assert(prf);
 
+  /* NOTE: Allows random to be of bad quality */
   salt = lsh_string_alloc(salt_length);
   RANDOM(r, salt->length, salt->data);
     
