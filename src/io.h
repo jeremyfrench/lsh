@@ -33,10 +33,14 @@
 #include <netinet/in.h>
 
 #include "abstract_io.h"
+#include "queue.h"
 #include "resource.h"
 #include "write_buffer.h"
 
 enum io_type { IO_PTY = 1 };
+
+/* Max number of simultaneous connection attempts */
+#define CONNECT_ATTEMPTS_LIMIT 3
 
 #define GABA_DECLARE
 #include "io.h.x"
@@ -186,23 +190,6 @@ make_listen_value(struct lsh_fd *fd,
 		  struct address_info *peer,
 		  struct address_info *local);
 
-/* FIXME: Uses a singly linked list. Could use the functions in
- * queue.c instead. */
-/* GABA:
-   (class
-     (name sockaddr_list)
-     (vars
-       (next object sockaddr_list)
-       (length . socklen_t)
-       (address space "struct sockaddr")))
-*/
-
-/* Copies the sockaddr */
-struct sockaddr_list *
-sockaddr_cons(socklen_t length,
-	      const struct sockaddr *addr,
-	      struct sockaddr_list *tail);
-
 /* I/O exceptions */
 /* GABA:
    (class
@@ -277,7 +264,7 @@ address_info2sockaddr(socklen_t *length,
 unsigned
 io_resolv_address(const char *host, const char *service,
 		  unsigned default_port,
-		  struct sockaddr_list **tail);
+		  struct addr_queue *q);
 
 /* Returns an exception, if anything went wrong */
 const struct exception *
@@ -307,8 +294,22 @@ make_exc_finish_read_handler(struct lsh_fd *fd,
 			     struct exception_handler *parent,
 			     const char *context);
 
+/* GABA:
+   (class
+     (name connect_list_state)
+     (super resource)
+     (vars
+       (q struct addr_queue)
+       ;; Number of currently active fd:s
+       (nfds . unsigned)
+       (fds array (object lsh_fd) CONNECT_ATTEMPTS_LIMIT)))
+*/
+
+struct connect_list_state *
+make_connect_list_state(void);
+
 struct resource *
-io_connect_list(struct sockaddr_list *remote,
+io_connect_list(struct connect_list_state *remote,
 		struct command_continuation *c,
 		struct exception_handler *e);
 
@@ -332,7 +333,7 @@ io_listen(struct lsh_fd *fd,
 	  struct io_callback *callback);
 
 struct resource *
-io_listen_list(struct sockaddr_list *list,
+io_listen_list(struct addr_queue *addresses,
 	       struct io_callback *callback,
 	       struct exception_handler *e);
 

@@ -71,9 +71,6 @@
 # define MY_POLLIN POLLIN
 #endif /* !POLLRDNORM */
 
-/* Max number of simultaneous connection attempts */
-#define CONNECT_ATTEMPTS_LIMIT 3
-
 #define GABA_DEFINE
 #include "io.h.x"
 #undef GABA_DEFINE
@@ -694,18 +691,6 @@ make_listen_value(struct lsh_fd *fd,
   return self;
 }
 
-struct sockaddr_list *
-sockaddr_cons(socklen_t length, const struct sockaddr *addr,
-	      struct sockaddr_list *tail)
-{
-  NEW(sockaddr_list, self);
-  self->next = tail;
-  self->length = length;
-  self->address = lsh_space_alloc(length);
-  memcpy(self->address, addr, length);
-
-  return self;
-}
 
 /* Listen callback */
 
@@ -1133,7 +1118,7 @@ choose_address(struct addrinfo *list,
 unsigned
 io_resolv_address(const char *host, const char *service,
 		  unsigned default_port,
-		  struct sockaddr_list **tail)
+		  struct addr_queue *q)
 {
   unsigned naddresses = 0;
   
@@ -1173,7 +1158,8 @@ io_resolv_address(const char *host, const char *service,
     for (p = list; p; p = p->ai_next)
       {
 	/* FIXME: Do we need to filter out some address families? */
-	*tail = sockaddr_cons(p->ai_addrlen, p->ai_addr, *tail);
+	struct sockaddr *n = addr_queue_add_tail(q, p->ai_addrlen);
+	memcpy(n, p->ai_addr, p->ai_addrlen);
 	naddresses++;
       }
     
@@ -1238,14 +1224,17 @@ io_resolv_address(const char *host, const char *service,
 	      
 	      for (i = 0; hp->h_addr_list[i]; i++)
 		{
+		  struct sockaddr *n;
 		  memcpy(&addr.sin_addr, hp->h_addr_list[i], hp->h_length);
-		  *tail = sockaddr_cons(sizeof(addr), &addr, *tail);
+		  n = addr_queue_add_tail(q, sizeof(addr));
+		  memcpy(n, &addr, sizeof(addr)(;
 		  naddresses++;
 		}
 	    }
 	}
     }
 #endif /* !HAVE_GETADDRINFO */
+    
   return naddresses;
 }
 
@@ -1539,19 +1528,7 @@ io_connect(struct sockaddr *remote,
   return fd;
 }
 
-/* GABA:
-   (class
-     (name connect_list_state)
-     (super resource)
-     (vars
-       (c object command_continuation)
-       (e object exception_handler)
-       (remaining object sockaddr_list)
-       ;; Number of currently active fd:s
-       (nfds . unsigned)
-       (fds array (object lsh_fd) CONNECT_ATTEMPTS_LIMIT)))
-*/
-
+/* connect_list_state */
 static void
 do_connect_list_kill(struct resource *s)
 {
@@ -1570,18 +1547,14 @@ do_connect_list_kill(struct resource *s)
     }
 }
 
-static struct connect_list_state *
-make_connect_list_state(struct sockaddr_list *list,
-			struct command_continuation *c,
-			struct exception_handler *e)
+struct connect_list_state *
+make_connect_list_state(void)
 {
   NEW(connect_list_state, self);
   unsigned i;
 
   init_resource(&self->super, do_connect_list_kill);
-  self->remaining = list;
-  self->c = c;
-  self->e = e;
+  addr_queue_init(&self->q);
   self->nfds = 0;
   
   for (i = 0; i < CONNECT_ATTEMPTS_LIMIT; i++)
@@ -1590,22 +1563,34 @@ make_connect_list_state(struct sockaddr_list *list,
   return self;
 }
 
+/* GABA:
+   (class
+     (name connect_list_callback)
+     (super io_callback)
+     (vars
+       (state object connect_list_state)
+       (index . unsigned)
+       (c object command_continuation)
+       (e object exception_handler)))
+*/
+
 static void
 connect_attempt(struct connect_list_callback *self)
 {
   struct connect_list_state *state = self->state;
   struct lsh_fd * fd;
-
+  socklen_t addr_length;
+  struct sockaddr *addr;
+  
   assert(state->super.alive);
 
   state->fds[self->index] = NULL;
   
-  while (state->remaining)
+  while ( (addr = addr_queue_peek_head(&state->q, &addr_length)))
     {
-      fd = io_connect(state->remaining->address, state->remaining->length,
-		      &self->super, state->e);
-
-      state->remaining = state->remaining->next;
+      fd = io_connect(addr, addr_length,
+		      &self->super, self->e);
+      addr_queue_remove_head(&state->q);
 
       if (fd)
 	{
@@ -1615,15 +1600,6 @@ connect_attempt(struct connect_list_callback *self)
 	}
     }
 }
-
-/* GABA:
-   (class
-     (name connect_list_callback)
-     (super io_callback)
-     (vars
-       (state object connect_list_state)
-       (index . unsigned)))
-*/
 
 static void
 do_connect_list_callback(struct io_callback *s,
@@ -1650,7 +1626,7 @@ do_connect_list_callback(struct io_callback *s,
       if (!self->state->nfds)
 	{
 	  /* All addresses failed */
-	  EXCEPTION_RAISE(self->state->e,
+	  EXCEPTION_RAISE(self->e,
 			  make_io_exception(EXC_IO_CONNECT, NULL,
 					    errno, NULL));
 	  KILL_RESOURCE(&self->state->super);
@@ -1663,37 +1639,44 @@ do_connect_list_callback(struct io_callback *s,
       self->state->fds[self->index] = NULL;
       KILL_RESOURCE(&self->state->super);
       fd->label = "connected socket";
-      COMMAND_RETURN(self->state->c, fd);
+      COMMAND_RETURN(self->c, fd);
     }
 }
 
 static struct connect_list_callback *
 make_connect_list_callback(struct connect_list_state *state,
-			   unsigned index)
+			   unsigned index,
+			   struct command_continuation *c,
+			   struct exception_handler *e)
 {
   NEW(connect_list_callback, self);
 
   self->super.f = do_connect_list_callback;
   self->state = state;
   self->index = index;
-
+  self->c = c;
+  self->e = e;
+  
   return self;
 }
 
 /* Tries to connect to the addresses in the list, by attempting
  * CONNECT_ATTEMPTS_LIMIT connect calls in parallel. The first
- * successful connection (if any) is returned. */
+ * successful connection (if any) is returned.
+ *
+ * Addresses are removed from the list as we go. */
 struct resource *
-io_connect_list(struct sockaddr_list *remote,
+io_connect_list(struct connect_list_state *state,
 		struct command_continuation *c,
 		struct exception_handler *e)
 {
   unsigned i;
-  struct connect_list_state *state
-    = make_connect_list_state(remote, c, e);
 
-  for (i = 0; state->remaining && i < CONNECT_ATTEMPTS_LIMIT; i++)
-    connect_attempt(make_connect_list_callback(state, i));
+  for (i = 0;
+       !addr_queue_is_empty(&state->q)
+	 && i < CONNECT_ATTEMPTS_LIMIT;
+       i++)
+    connect_attempt(make_connect_list_callback(state, i, c, e));
 
   return &state->super;
 }
@@ -1717,7 +1700,7 @@ io_bind_sockaddr(struct sockaddr *local,
     setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof yes);
   }
 
-  if (bind(s, (struct sockaddr *)local, length) < 0)
+  if (bind(s, local, length) < 0)
     {
       trace("io.c: bind failed %e\n", errno);
       close(s);
@@ -1751,20 +1734,24 @@ io_listen(struct lsh_fd *fd,
 }
 
 struct resource *
-io_listen_list(struct sockaddr_list *list,
+io_listen_list(struct addr_queue *addresses,
 	       struct io_callback *callback,
 	       struct exception_handler *e)
 {
   struct resource_list *resources = make_resource_list();
-  unsigned nbound;
+  unsigned nbound = 0;
+  socklen_t addr_length;
+  struct sockaddr *addr;
   
-  for (nbound = 0; list; list = list->next)
+  for (nbound = 0;
+       (addr = addr_queue_peek_head(addresses, &addr_length));
+       addr_queue_remove_head(addresses))
     {
       struct lsh_fd *fd;
       debug("listen_list: Trying to bind address of type %i\n",
-	    list->address->sa_family);
-      
-      fd = io_bind_sockaddr(list->address, list->length, e);
+	    addr->sa_family);
+
+      fd = io_bind_sockaddr(addr, addr_length, e);
       if (fd)
 	{
 	  if (io_listen(fd, callback))
