@@ -134,7 +134,11 @@ parse_utf8(struct simple_buffer *buffer, uint32_t *result, unsigned *utf8_length
   static const uint32_t min_value[7] =
     {
       0, 0,
-      0x80, 0x20, 0x10, 0x08, 0x04,
+           0x80,
+          0x800,
+        0x10000,
+       0x200000,
+      0x4000000,
     };
 
   uint32_t c;
@@ -158,6 +162,8 @@ parse_utf8(struct simple_buffer *buffer, uint32_t *result, unsigned *utf8_length
   switch(c & 0xF0)
     {
     default:
+      ADVANCE(1);
+      *utf8_length = 1;
       return 0;
     case 0xC0:
     case 0xD0:
@@ -189,32 +195,46 @@ parse_utf8(struct simple_buffer *buffer, uint32_t *result, unsigned *utf8_length
 	  value = c & 0x01;
 	  break;
 	default:
-	  /* Invalid format 1111 111x */ 
+	  /* Invalid format 1111 111x */
+	  ADVANCE(1);
 	  return 0;
 	}
       break;
     }
   if (LEFT < length)
-    return 0;
-
+    {
+      ADVANCE(LEFT);
+      *utf8_length = 1;
+      return 0;
+    }
   c = HERE[1];
   
   if ( (c & 0xC0) != 0x80)
-    return 0;  
-
+    {
+      ADVANCE(1);
+      *utf8_length = 1;
+      return 0;  
+    }
   value = (value << 6) | (c & 0x3f);
-
-  /* Check for overlong sequences */
-  if (value < min_value[length])
-    return 0;
 
   for(i = 2; i<length; i++)
     {
       c = HERE[i];
       if ( (c & 0xC0) != 0x80)
-	return 0;
+	{
+	  ADVANCE(i);
+	  *utf8_length = i;
+	  return 0;
+	}
       value = (value << 6) | (c & 0x3f);
     }
+
+  ADVANCE(length);
+  *utf8_length = length;
+  
+  /* Check for overlong sequences */
+  if (value < min_value[length])
+    return 0;
 
   /* Surrogates and non-characters should not appear in utf8 text. */
   if ( (value >= 0xd800 && value <0xe000)
@@ -222,9 +242,7 @@ parse_utf8(struct simple_buffer *buffer, uint32_t *result, unsigned *utf8_length
     return 0;
   
   *result = value;
-  *utf8_length = length;
   
-  ADVANCE(length);
   return 1;
 }  
       

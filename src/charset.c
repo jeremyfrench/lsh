@@ -220,11 +220,16 @@ low_utf8_to_local(uint32_t length, const uint8_t *s, enum utf8_flag flags)
 	    break;
 	  }
 	case 0: /* Error */
-	fail:
-	  lsh_string_free(res);
-
-	  return NULL;
-
+	  if (flags & utf8_tolerant)
+	    lsh_string_putc(res, i++, '?');
+	  else
+	    {
+	    fail:
+	      lsh_string_free(res);
+	      
+	      return NULL;
+	    }
+	  break;
 	default:
 
 	  fatal("Internal error!\n");

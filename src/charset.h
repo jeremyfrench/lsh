@@ -48,6 +48,9 @@ enum utf8_flag
     /* If set, control characters are treated as never existing in any
        local character set */
     utf8_paranoid = 2,
+
+    /* If set, also invalid utf8 sequences are replaced by '?' */
+    utf8_tolerant = 4
   };
 
 struct lsh_string *local_to_utf8(struct lsh_string *s, int free);
