@@ -40,14 +40,14 @@ rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits)
 {
   struct sexp *key = NULL;
 
-  assert(r->quality == RANDOM_GOOD);
-  
   mpz_t n;
   mpz_t d;
   mpz_t p; mpz_t q;
   mpz_t a; mpz_t b; mpz_t c;
   mpz_t phi;
   mpz_t tmp;
+  
+  assert(r->quality == RANDOM_GOOD);
   
   mpz_init(n); mpz_init(d); mpz_init(p), mpz_init(q);
   mpz_init(a); mpz_init(b); mpz_init(c);

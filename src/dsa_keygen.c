@@ -191,13 +191,13 @@ dsa_generate_key(struct randomness *r, unsigned level)
 {
   struct sexp *key = NULL;
 
-  assert(r->quality == RANDOM_GOOD);
-  
   mpz_t p; mpz_t q;
   mpz_t g; mpz_t y;
   mpz_t x;
   mpz_t t;
 
+  assert(r->quality == RANDOM_GOOD);
+  
   mpz_init(p); mpz_init(q);
   mpz_init(g); mpz_init(y);
   mpz_init(x);
