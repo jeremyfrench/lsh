@@ -24,7 +24,7 @@
  */
 
 #include "charset.h"
-#include "client.c"
+#include "client.h"
 #include "connection.h"
 #include "debug.h"
 #include "format.h"
