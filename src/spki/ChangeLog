@@ -1,5 +1,9 @@
 2002-11-18  Niels Möller  <niels@s3.kth.se>
 
+	* testsuite/testutils.h: Include more header files.
+
+	* testsuite/read-cert-test.c (read_cert): New function.
+
 	* certificate.c (spki_cert_parse_body): Deleted function (replaced
 	by code in parse.c).
 	(spki_5_tuple_free_chain): New function.
