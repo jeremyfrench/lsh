@@ -61,9 +61,18 @@ enum spki_type
 spki_iterator_first(struct spki_iterator *i,
 		    unsigned length, const uint8_t *expr);
 
+/* NOTE: Decodes the input string in place */
+enum spki_type
+spki_transport_iterator_first(struct spki_iterator *i,
+			      unsigned length, uint8_t *expr);
+
+/* FIXME: Delete this function? */
 enum spki_type
 spki_iterator_first_sexp(struct spki_iterator *i,
 			 const struct sexp_iterator *sexp);
+
+enum spki_type
+spki_parse_fail(struct spki_iterator *i);
 
 enum spki_type
 spki_intern(struct spki_iterator *i);
