@@ -65,6 +65,9 @@ void werror(const char *format, ...);
 void debug(const char *format, ...);
 void verbose(const char *format, ...);
 
+/* FIXME: Use a separate flag to enable tracing */
+#define trace debug
+
 void fatal(const char *format, ...) NORETURN;
 
 #endif /* LSH_ERROR_H_INCLUDED */

@@ -523,6 +523,7 @@
 	    "#define Cp1 GABA_APPLY_Cp_1\n"
 	    "#define Cp2 GABA_APPLY_Cp_2\n"
 	    "#define Cp3 GABA_APPLY_Cp_3\n"
+	    "  trace(\"Entering " name "\\n\");\n"
 	    "  return\n    "
 	    ((make-output (append '( (I I)
 				     (K K K1)
