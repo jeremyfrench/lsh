@@ -49,15 +49,17 @@
                       "struct lsh_string *name" "int free")))
 */
 
-#define CURRENT_USER unix_current_user
-struct lsh_string* unix_current_user(void);
-
 #define USER_LOOKUP(db, n, f) ((db)->lookup((db), (n), (f)))
 
 struct user_db *
 make_unix_user_db(struct reaper *reaper,
 		  const char *pw_helper, const char *login_shell,
 		  int allow_root);
+
+struct lsh_user *
+make_unix_user_self(struct lsh_string *name,
+		    struct reaper *reaper,
+		    const char *home, const char *shell);
 
 /* GABA:
    (class
@@ -103,9 +105,10 @@ struct userauth *
 make_userauth_publickey(struct user_db *db,
 			struct alist *verifiers);
 
+struct userauth server_userauth_none_preauth;
+
 struct userauth *
-make_userauth_none(int ignore_user, 
-		   struct lsh_user *user);
+make_userauth_none_permit(struct lsh_user *user);
 
 struct command *
 make_userauth_service(struct int_list *advertised_methods,
