@@ -69,7 +69,7 @@ void verbose(char *format, ...)
     }
 }
 
-void wash_char(UINT8 c)
+static void wash_char(UINT8 c)
 {
   switch(c)
     {
@@ -93,7 +93,7 @@ void wash_char(UINT8 c)
 }
 
 /* Escape non-printable characters. */
-void werror_washed(UINT32 length, UINT8 *msg)
+static void werror_washed(UINT32 length, UINT8 *msg)
 {
   int i;
 
@@ -165,4 +165,10 @@ void fatal(char *format, ...)
   va_end(args);
 
   abort();
+}
+
+void werror_mpz(mpz_t n)
+{
+  mpz_out_str(stderr, 16, n);
+  putc('\n', stderr);
 }
