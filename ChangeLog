@@ -1,3 +1,8 @@
+2004-11-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* misc/xenofarm.sh (oopcfgargs): Disable all add-on liboop
+	adapters. 
+
 2004-11-18  Niels Möller  <niels@s3.kth.se>
 
 	* README: Updated examples, and the lists of needed tools and
