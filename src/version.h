@@ -27,14 +27,9 @@
 #define CLIENT_PROTOCOL_VERSION "2.0"
 #define SERVER_PROTOCOL_VERSION "2.0"
 
-#if WITH_SSH1_FALLBACK
-#define SSH1_SERVER_PROTOCOL_VERSION "1.99"
-#endif
-
 #define SOFTWARE_CLIENT_VERSION ("lsh_" VERSION)
 #define SOFTWARE_SERVER_VERSION ("lshd_" VERSION)
 
-/* Use "psst@net.lut.ac.uk" ? */
 #define BUG_ADDRESS "<bug-lsh@gnu.org>"
 
 #endif /* LSH_VERSION_H_INCLUDED */
