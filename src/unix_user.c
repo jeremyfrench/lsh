@@ -48,6 +48,16 @@
 #include <shadow.h>
 #endif
 
+#if WITH_UTMP
+#if HAVE_UTMP_H
+#include <utmp.h>
+#endif
+
+#if HAVE_UTMPX_H
+#include <utmpx.h>
+#endif
+#endif /* WITH_UTMP */
+
 #include "unix_user.c.x"
 
 
@@ -191,7 +201,7 @@ change_uid(struct unix_user *user)
 }
 
 static int
-do_fork_process(struct lsh_user *u, pid_t *pid)
+do_fork_process(struct lsh_user *u, pid_t *pid, const char *tty)
 {
   CAST(unix_user, user, u);
   pid_t child;
@@ -209,6 +219,12 @@ do_fork_process(struct lsh_user *u, pid_t *pid)
       return 0;
 
     case 0: /* Child */
+      /* FIXME: Create utmp entry as well. */
+#if WITH_UTMP && HAVE_LOGWTMP
+      if (tty)
+	logwtmp(tty, user->super.name->data, "foo-host");
+#endif /* WITH_UTMP && HAVE_LOGWTMP */
+      
       if (getuid() != user->super.uid)
 	if (!change_uid(user))
 	  {
