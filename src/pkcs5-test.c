@@ -5,8 +5,10 @@
 #include "crypto.h"
 
 /* FIXME: In which include file can getopt be found? Solaris man page
- * says stdlib.h. */
+ * says stdlib.h, linux's says unistd.h. */
 #include <stdlib.h>
+#include <unistd.h>
+
 #include <stdio.h>
 #include <string.h>
 
