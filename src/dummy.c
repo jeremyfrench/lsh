@@ -49,14 +49,14 @@ nettle_mpz_sizeinbase_256_u(const mpz_t x UNUSED)
 { abort(); }
 
 void
-cbc_encrypt(void *ctx UNUSED, void (*f)() UNUSED,
+cbc_encrypt(void *ctx UNUSED, nettle_crypt_func f UNUSED,
 	    unsigned block_size UNUSED, uint8_t *iv UNUSED,
 	    unsigned length UNUSED, uint8_t *dst UNUSED,
 	    const uint8_t *src UNUSED)
 { abort(); }
 
 void
-cbc_decrypt(void *ctx UNUSED, void (*f)() UNUSED,
+cbc_decrypt(void *ctx UNUSED, nettle_crypt_func f UNUSED,
 	    unsigned block_size UNUSED, uint8_t *iv UNUSED,
 	    unsigned length UNUSED, uint8_t *dst UNUSED,
 	    const uint8_t *src UNUSED)
