@@ -860,8 +860,12 @@ int main(int argc, char **argv)
     
 #if WITH_PTY_SUPPORT
     if (options->with_pty)
-      ALIST_SET(supported_channel_requests,
-		ATOM_PTY_REQ, &pty_request_handler.super);
+      {
+        ALIST_SET(supported_channel_requests,
+                  ATOM_PTY_REQ, &pty_request_handler.super);
+        ALIST_SET(supported_channel_requests,
+                  ATOM_WINDOW_CHANGE, &window_change_request_handler);
+      }
 #endif /* WITH_PTY_SUPPORT */
 
     if (options->subsystems)
