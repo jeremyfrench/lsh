@@ -349,6 +349,21 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
 	    break;
 	  }
 	case SPKI_TYPE_PUBLIC_KEY:
+	  {
+	    /* Just remember key. */
+	    unsigned start = i->start;
+
+	    unsigned key_length;
+	    const uint8_t *key;
+
+	    if (spki_parse_skip(i))
+	      {
+		key = spki_parse_prevexpr(i, start, &key_length);
+		assert(key);
+		spki_principal_by_key(db, key_length, key);
+	      }
+	    /* Fall through */
+	  }
 	case SPKI_TYPE_SIGNATURE:
 	case SPKI_TYPE_DO:
 	  /* Ignore */
