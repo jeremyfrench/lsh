@@ -1,3 +1,45 @@
+Tue Feb 16 23:32:51 1999    <nisse@idonex.se>
+
+	* src/tty.h, src/tty.c: Fallback macro for the cfmakeraw function.
+
+	* src/lsh.c, src/lshd.c: Make it possible to disable pty support a
+ 	compile time.
+
+	* src/zlib.c: Temporarily disable zlib support, as it is a
+	dysfunctional state at when I'm building the 1999-02-16 snapshot.
+
+	* src/channel.h, optionchannel.c, optionconnection.c,
+ 	optionclient.c: Moved the channel table pointer to the connection
+ 	object, and general cleanup
+	(Bazsi).
+
+	* configure.in: New option --without-pty to disable pty support. 
+
+	* make_am, Makefile.am.in: Use BASH variable to start scripts.
+
+	* misc/ctags.mk: New file.
+
+Sat Feb 13 17:21:07 1999    <nisse@idonex.se>
+
+	* configure.in: Added test for the cfmakeraw function. 
+
+	* src/client.c (CFMAKERAW): Define this as a macro, if there is no
+	cfmakeraw function. (Rafal Maszkowski <rzm@icm.edu.pl>)
+
+	* configure.in: Check if libutil defines openpty.
+
+	* src/server.c (do_spawn_shell): Use STDIN_FILENO when calling
+	tty_setctty, not pty->slave. The latter fd is already closed.
+	(Noted by Keresztg).
+
+	* configure.in (SHUTDOWN_WORKS_WITH_UNIX_SOCKETS): Use AF_UNIX,
+	not AF_LOCAL (reported by Heinz Knutzen <heinz.knutzen@landsh.de>)
+
+Thu Feb 11 14:43:51 1999    <nisse@idonex.se>
+
+	* src/channel.c (do_channel_request): Delay freeing of packet
+	(reported by Ray Dassen). 
+
 Sun Jan 31 04:25:30 1999    <nisse@puck>
 
 	* src/werror.c (werror_vformat): New function, with different

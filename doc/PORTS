@@ -2,10 +2,12 @@ This file lists systems/architectures on which versions of lsh has been
 tested.
 
 
-lsh version:	CVS 1998-12-30 with patches
-uname -a:	Linux penguin.wi.leidenuniv.nl 2.0.36 #2 Mon Nov 16 15:28:56 CET 1998 i586 unknown
-libc:		libc6 2.0.7v-1
-Status:		Compiles quite cleanly; both client and server work.
+lsh version:	1999-01-28 with patches
+uname -a:	Linux zensunni 2.0.36 #1 Mon Nov 16 19:50:22 CET 1998 i686 unknown
+libc:		2.0.7.19981211
+Status:		Compiles quite cleanly.
+		Both client and server work.
+		SSH1 fallback works.
 
 
 lsh version:	CVS 1998-12-30 with patches

@@ -803,6 +803,7 @@ static int make_pipes(int *in, int *out, int *err)
   return 0;
 }
 
+#if WITH_PTY_SUPPORT
 static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
 {
   int saved_errno = 0;
@@ -854,6 +855,11 @@ static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
   errno = saved_errno;
   return 0;
 }
+#else /* !WITH_PTY_SUPPORT */
+static int make_pty(struct pty_info *pty UNUSED,
+		    int *in UNUSED, int *out UNUSED, int *err UNUSED)
+{ return 0; }
+#endif /* !WITH_PTY_SUPPORT */
 
 #define USE_LOGIN_DASH_CONNVENTION 1
 
@@ -990,9 +996,12 @@ static int do_spawn_shell(struct channel_request *c,
 	    }
 	  close(err[0]);
 	  close(err[1]);
-	    
+
+#if WITH_PTY_SUPPORT
 	  if (using_pty)
-	    tty_setctty(session->pty->slave);
+	    tty_setctty(STDIN_FILENO);
+#endif /* WITH_PTY_SUPPORT */
+	  
 #if 1
 #if USE_LOGIN_DASH_CONNVENTION
 	  {
@@ -1125,6 +1134,7 @@ struct channel_request *make_shell_handler(struct io_backend *backend,
   return &closure->super;
 }
 
+#if WITH_PTY_SUPPORT
 /* pty_handler */
 static int do_alloc_pty(struct channel_request *c UNUSED,
                         struct ssh_channel *channel,
@@ -1208,3 +1218,4 @@ struct channel_request *make_pty_handler(void)
 
   return self;
 }
+#endif /* WITH_PTY_SUPPORT */

@@ -41,8 +41,6 @@ void dont_free_live_resource(int alive);
 #include "resource.h.x"
 #undef CLASS_DEFINE
 
-#include "resource.c.x"
-
 void do_mark_resources(struct resource_node *n,
 		       void (*mark)(struct lsh_object *o))
 {

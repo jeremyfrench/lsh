@@ -17,12 +17,13 @@ AUTOMAKE_OPTIONS = foreign
 # subdrectries.
 
 # FIXME: Use the BASH variable to execute the script. The problem is
-# that the script attempts to start itselt with "$0 args".
+# that the script attempts to start itself with "$0 args".
 
 Makefile.am: Makefile.am.in
 	(cd $(top_srcdir); ./make_am)
 
-bin_PROGRAMS = lsh lshd lsh_keygen lsh_writekey
+bin_PROGRAMS = lsh lsh_keygen lsh_writekey
+sbin_PROGRAMS = lshd
 noinst_PROGRAMS = prime_table digit_table sexp_test
 noinst_LIBRARIES = liblsh.a
 # noinst_HEADERS = $(dist_x_files) $(cvs_headers)
@@ -41,7 +42,8 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	compress.c connection.c crypto.c \
 	debug.c des.c disconnect.c  dsa_keygen.c encrypt.c \
 	format.c gc.c hmac.c io.c keyexchange.c \
-	list.c md5.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
+	list.c md5.c \
+	packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
 	randomness.c \
 	read_scan.c read_data.c read_line.c read_packet.c reaper.c resource.c \
 	server.c server_keyexchange.c server_password.c \
@@ -53,35 +55,34 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 
 atoms_defines.h: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms header <$(srcdir)/atoms.in >$@T
-	mv -f $@T $@
+	test -s $@T && mv -f $@T $@
 
 atoms_gperf.c: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms gperf <$(srcdir)/atoms.in \
              | gperf >$@T -LANSI-C -t -c -l -k1,7,$$ -N gperf_atom 
-	mv -f $@T $@
+	test -s $@T && mv -f $@T $@
 
 atoms_table.c: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms table <$(srcdir)/atoms.in >$@T
-	mv -f $@T $@
+	test -s $@T && mv -f $@T $@
 
 PRIME_LIMIT = 1024
 
 prime_table.h: prime_table
 	./prime_table $(PRIME_LIMIT) >$@T
-	mv -f $@T $@
+	test -s $@T && mv -f $@T $@
 
 prime_table_LDADD =
 
-# FIXME: Use the SCHEME-variable
 sexp_table.h: sexp_chars.in $(srcdir)/make_char_classes
-	$(srcdir)/make_char_classes <$< >$@T
-	mv -f $@T $@
+	$(SCHEME) -e main -s $(srcdir)/make_char_classes <$< >$@T
+	test -s $@T && mv -f $@T $@
 
 digit_table_LDADD =
 
 digit_table.h: digit_table
 	./digit_table >$@T
-	mv -f $@T $@
+	test -s $@T && mv -f $@T $@
 
 LDADD = @LIBOBJS@ liblsh.a symmetric/libsymmetric.a 
 
@@ -121,7 +122,7 @@ depend:
 # There are three problems with this rule:
 
 # 1. It causes the dependency files to be created twice. It would be
-# better to add .deps/%.P as an extra target to compileation rule.
+# better to add .deps/%.P as an extra target to compilation rule.
 # I.e, %.o .deps/%.P : %.c
 
 # 2. It should not depend on the .c.x file.
@@ -134,36 +135,10 @@ depend:
 
 MAINTAINERCLEANFILES += $(DEP_FILES)
 
-.PHONY: ctags-recursive ctags
-
-ctags-recursive:
-	list='$(SUBDIRS)'; for subdir in $$list; do \
-	  (cd $$subdir && $(MAKE) ctags); \
-	done
-
-ctags: ctags-recursive $(HEADERS) $(SOURCES) $(CONFIG_HEADER) $(TAGS_DEPENDENCIES) $(LISP)
-	tags=; \
-	here=`pwd`; \
-	list='$(SUBDIRS)'; for subdir in $$list; do \
-	  test -f $$subdir/tags && tags="$$tags $$here/$$subdir/tags"; \
-	done; \
-	list='$(SOURCES) $(HEADERS)'; \
-	unique=`for i in $$list; do echo $$i; done | \
-	  awk '    { files[$$0] = 1; } \
-	       END { for (i in files) print i; }'`; \
-	test -z "$(CTAGS_ARGS)$(CONFIG_HEADER)$$unique$(LISP)$$tags" \
-	  || (cd $(srcdir) && ctags --langmap=c:.c.x -o $$here/tags $(CTAGS_ARGS) $$tags $(CONFIG_HEADER) $$unique $(LISP))
-# This treats .h.x files as C files rather than headers, but we can't
-# distinguish them from .c.x files with ctags.
-
-# Override the standard distclean-tags target, as this doesn't support `tags'
-distclean-tags:
-	-rm -f TAGS ID tags
-
 # This is GNU make specific
 
-# FIXME: Use the SCHEME-variable
 %.x: % $(srcdir)/make_class
-	$(srcdir)/make_class <$< >$@T
-	mv -f $@T $@
+	$(SCHEME) -e main -s $(srcdir)/make_class <$< >$@T
+	test -s $@T && mv -f $@T $@
 
+include $(top_srcdir)/misc/ctags.mk

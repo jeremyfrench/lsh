@@ -196,3 +196,9 @@ Include length fields when hashing in
 publickey_crypto.c:init_diffie_hellman_instance(). Perhaps some of
 this code should be moved to keyexchange.c? Similar considerations
 apply also to other hashes.
+
+Fix so that lsh compiles in the absense of zlib.
+
+Fix the cvs_headers not to use the construction "sed -f -", as that
+doesn't work with Solaris sed.
+

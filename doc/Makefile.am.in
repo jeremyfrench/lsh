@@ -27,3 +27,5 @@ ps:	$(PSS)
 	$(GROFF) -Tps -mandoc $< > $@
 
 DISTCLEANFILES = $(DVIS) $(PSS)
+
+include $(top_srcdir)/misc/ctags.mk

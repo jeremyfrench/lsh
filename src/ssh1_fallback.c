@@ -96,6 +96,8 @@ static int fall_back_to_ssh1(struct ssh1_fallback *c,
       werror("lshd: fall_back_to_ssh1: execl failed (errno = %i): %z\n",
 	     errno, strerror(errno));
       _exit(EXIT_FAILURE);
+      /* To make gcc happy, if _exit is not declared as NORETURN */
+      return 0; 
     }
   else
     { /* pid > 0 */
