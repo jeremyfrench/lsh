@@ -126,7 +126,7 @@ spawn_lshg () {
 }
 
 at_connect () {
-    mini-inetd -m $2 localhost:$1 /bin/sh sh -c "$3" &
+    mini-inetd -m $2 -- localhost:$1 /bin/sh sh -c "$3" &
     at_exit "kill $!"
 }
 
