@@ -8,7 +8,7 @@ changequote(<{, }>)dnl
 changequote([, ])dnl
       [lsh_cv_decl_struct_$2_$3=yes],
       [lsh_cv_decl_struct_$2_$3=no])])
-  if eval "test \"`echo '$lsh_cv_decl_struct_'$2`_'$3'\" = yes"; then
+  if test x$lsh_cv_decl_struct_$2_$3 = xyes; then
     AC_DEFINE_UNQUOTED(`echo HAVE_$3 | tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'`)
   fi
 ])
