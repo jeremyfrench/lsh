@@ -317,7 +317,9 @@ com_umask(const char *arg, const char *command UNUSED)
 
       given++; /* User gave a new mask */
 
-      if( isdigit( tmp[0] ) )
+      /* FIXME: Should probably explicitly state signed/unsigned in all declarations. */
+
+      if( isdigit( (unsigned char) tmp[0] ) )
 	{
 	  newmask = atol( tmp );
 	  umask( newmask );

@@ -1,5 +1,8 @@
 2002-06-27  Pontus Sköld  <Pontus.Skold@dis.uu.se>
 
+	* commands.c (com_umask): Do an explicit cast of the parameter to
+	isdigit.
+
 	* str_utils.c (lsftp_s_strtok): Don't use strndup.
 	(lsftp_s_strtok): Removed unused variable.
 
