@@ -50,7 +50,8 @@
        (connection object ssh_connection)))
 */
 
-static int connection_die(struct close_callback *c, int reason)
+static void
+connection_die(struct close_callback *c, int reason)
 {
   CAST(connection_close_handler, closure, c);
   
@@ -59,8 +60,6 @@ static int connection_die(struct close_callback *c, int reason)
     werror("Connection died.\n");
 
   KILL_RESOURCE_LIST(closure->connection->resources);
-  
-  return 4711;  /* Ignored */
 }
 
 struct close_callback *make_connection_close_handler(struct ssh_connection *c)
