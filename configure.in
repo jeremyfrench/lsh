@@ -377,8 +377,14 @@ AC_SUBST(KRB_PROGRAM)
 
 AH_TEMPLATE([WITH_PAM], [For PAM])
 if test x$enable_pam = xyes; then
-  AC_DEFINE(WITH_PAM)
-  PAM_PROGRAM=lsh-pam-checkpw
+  AC_CHECK_LIB(pam,pam_start,, enable_pam=no )
+
+  if test x$enable_pam = xyes; then
+    AC_DEFINE(WITH_PAM)
+    PAM_PROGRAM=lsh-pam-checkpw
+  else
+    AC_MSG_WARN([pam_start not found in libpam, disabling PAM])
+  fi
 fi
 
 AC_SUBST(PAM_PROGRAM)
