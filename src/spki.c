@@ -28,6 +28,7 @@
 #include "atoms.h"
 #include "crypto.h"
 #include "format.h"
+#include "list.h"
 #include "parse.h"
 #include "publickey_crypto.h"
 #include "sexp.h"
@@ -447,6 +448,327 @@ read_spki_key_file(const char *name,
   return NULL;
 }
 
+
+/* Sets of authorizations, representing the (tag ...) expressions in
+ * acl:s and certificates. */
+
+/* An authorization represented as a string (optionally with display
+ * type). */
+
+/* GABA:
+   (class
+     (name spki_tag_atom)
+     (super spki_tag)
+     (vars
+       (resource object sexp)))
+*/
+
+static int
+do_spki_tag_atom_match(struct spki_tag *s,
+			 struct sexp *e)
+{
+  CAST(spki_tag_atom, self, s);
+
+  assert(sexp_atomp(self->resource));
+  
+  return sexp_atomp(e)
+    && sexp_atom_eq(self->resource, e);
+}
+
+static struct spki_tag *
+make_spki_tag_atom(struct sexp *resource)
+{
+  NEW(spki_tag_atom, self);
+
+  assert(sexp_atomp(resource));
+  
+  self->super.type = SPKI_TAG_ATOM;
+  self->super.match = do_spki_tag_atom_match;
+
+  self->resource = resource;
+
+  return &self->super;
+}
+
+
+/* An authorization represented as a list. Includes all authorizations
+ * that for which a prefix matches the list. */
+
+/* GABA:
+   (class
+     (name spki_tag_list)
+     (super spki_tag)
+     (vars
+       (list object object_list)))
+*/
+
+static int
+do_spki_tag_list_match(struct spki_tag *s,
+		       struct sexp *e)
+{
+  CAST(spki_tag_set, self, s);
+  unsigned i;
+  struct sexp_iterator *j;
+  
+  if (sexp_atomp(e))
+    return 0;
+
+  for (i = 0, j = SEXP_ITER(e);
+       i<LIST_LENGTH(self->set);
+       i++, SEXP_NEXT(j))
+    {
+      CAST_SUBTYPE(spki_tag, tag, LIST(self->set)[i]);
+      struct sexp *o = SEXP_GET(j);
+
+      if (! (o && SPKI_TAG_MATCH(tag, o)))
+	return 0;
+    }
+  
+  return 1;
+}
+
+static struct spki_tag *
+make_spki_tag_list(struct object_list *list)
+{
+  NEW(spki_tag_list, self);
+
+  self->super.type = SPKI_TAG_LIST;
+  self->super.match = do_spki_tag_list_match;
+
+  self->list = list;
+
+  return &self->super;
+}
+
+/* A (* set ...) construction */
+
+/* GABA:
+   (class
+     (name spki_tag_set)
+     (super spki_tag)
+     (vars
+       (set object object_list)))
+*/
+
+static int
+do_spki_tag_set_match(struct spki_tag *s,
+		      struct sexp *e)
+{
+  CAST(spki_tag_set, self, s);
+  unsigned i;
+
+  for (i = 0; i<LIST_LENGTH(self->set); i++)
+    {
+      CAST_SUBTYPE(spki_tag, tag, LIST(self->set)[i]);
+      if (SPKI_TAG_MATCH(tag, e))
+	return 1;
+    }
+
+  return 0;
+}
+
+static struct spki_tag *
+make_spki_tag_set(struct object_list *set)
+{
+  NEW(spki_tag_set, self);
+
+  self->super.type = SPKI_TAG_SET;
+  self->super.match = do_spki_tag_set_match;
+
+  self->set = set;
+
+  return &self->super;
+}
+
+/* Authorizations represented as a string prefix. If display types are
+ * present, they must be equal. */
+
+/* GABA:
+   (class
+     (name spki_tag_prefix)
+     (super spki_tag)
+     (vars
+       (prefix object sexp)))
+*/
+
+static int
+do_spki_tag_prefix_match(struct spki_tag *s,
+			 struct sexp *e)
+{
+  CAST(spki_tag_prefix, self, s);
+  struct lsh_string *ed;
+  struct lsh_string *pd;
+
+  assert(sexp_atomp(self->prefix));
+  
+  if (!sexp_atomp(e))
+    return 0;
+
+  ed = sexp_display(e);
+  pd = sexp_display(self->prefix);
+  
+  return (ed ? (pd && lsh_string_eq(ed, pd)) : !pd)
+    && lsh_string_prefixp(sexp_contents(self->prefix),
+			  sexp_contents(e));
+}
+
+static struct spki_tag *
+make_spki_tag_prefix(struct sexp *prefix)
+{
+  NEW(spki_tag_prefix, self);
+
+  self->super.type = SPKI_TAG_PREFIX;
+  self->super.match = do_spki_tag_prefix_match;
+
+  self->prefix = prefix;
+
+  return &self->super;
+}
+
+
+static int
+do_spki_tag_any_match(struct spki_tag *self UNUSED,
+			 struct sexp *e UNUSED)
+{
+  return 1;
+}
+
+/* FIXME: Make this const */
+struct spki_tag spki_tag_any =
+{ STATIC_HEADER, SPKI_TAG_ANY, do_spki_tag_any_match };
+
+
+/* Forward declaration */
+struct spki_tag *
+spki_sexp_to_tag(struct sexp *e,
+		 /* Some limit on the recursion */
+		 unsigned limit);
+
+static struct object_list *
+spki_sexp_to_tag_list(struct sexp_iterator *i, unsigned limit)
+{
+  unsigned left;
+  struct object_list *l;
+  unsigned j;
+
+  left = SEXP_LEFT(i);
+
+  if (!left)
+    {
+      werror("spki_sexp_to_tag_list: Empty list.\n");
+      return NULL;
+    }
+  
+  l = alloc_object_list(left);
+  
+  for (j = 0; j<left; i++)
+    {
+      struct spki_tag *tag = spki_sexp_to_tag(SEXP_GET(i), limit);
+      if (!tag)
+	{
+	  /* FIXME: We could explicitly kill the elements of the list
+	   * as well. */
+	  KILL(l);
+	  return NULL;
+	}
+      LIST(l)[j] = &tag->super;
+      SEXP_NEXT(i);
+    }
+  assert(!SEXP_GET(i));
+
+  return l;
+}
+
+struct spki_tag *
+spki_sexp_to_tag(struct sexp *e,
+		 /* Some limit on the recursion */
+		 unsigned limit)
+{
+  if (sexp_atomp(e))
+    return make_spki_tag_atom(e);
+  else
+    {
+      struct sexp_iterator *i;
+      if (!limit)
+	{
+	  werror("spki_sexp_to_tag: Nesting too deep.\n");
+	  return NULL;
+	}
+      
+      if (spki_check_type(e, ATOM_STAR, &i))
+	{
+	  struct sexp *magic = SEXP_GET(i);
+	  
+	  if (!magic)
+	    return &spki_tag_any;
+
+	  SEXP_NEXT(i);
+	  
+	  switch(sexp2atom(magic))
+	    {
+	    case ATOM_SET:
+	      {
+		struct object_list *l = spki_sexp_to_tag_list(i, limit - 1);
+
+		return l ? make_spki_tag_set(l) : NULL;
+	      }
+	    case ATOM_PREFIX:
+	      {
+		struct sexp *prefix = SEXP_GET(i);
+
+		return (prefix && sexp_atomp(prefix))
+		  ? make_spki_tag_prefix(prefix)
+		  : NULL;
+	      }
+	    default:
+	      werror("spki_sexp_to_tag: Invalid (* ...) tag.\n");
+	      return NULL;
+	    }
+	}
+      else
+	{
+	  struct object_list *l = spki_sexp_to_tag_list(SEXP_ITER(e), limit - 1);
+
+	  return l ? make_spki_tag_list(l) : NULL;
+	}
+    }
+}
+
+#define SPKI_NESTING_LIMIT 17
+
+#if 0
+struct spki_5_tuple *
+spki_sexp_to_5_tuple(struct sexp *e)
+{
+  if (sexp_atomp(e))
+    return NULL;
+  else
+    {
+      struct sexp_iterator *i = SEXP_ITER(e);
+      struct sexp *type = SEXP_GET(i);
+
+      if (!type)
+	return NULL;
+
+      SEXP_NEXT(i);
+      
+      switch (sexp2atom(type))
+	{
+	case ATOM_CERTIFICATE:
+	  werror("spki_sexp_to_5_tuple: Certificates not yet supported.\n");
+	  return NULL;
+	case ATOM_ACL:
+	  /* HERE!!! */  
+#endif 
+  
+
+
+
+
+
+
+
+
 #if 0
 
 struct signer *
@@ -498,6 +820,7 @@ spki_verifier(struct sexp *e, struct alist *algorithms, int *t)
     }
   return NULL;
 }
+
 
 /* ;; GABA:
    (class
