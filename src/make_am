@@ -93,21 +93,42 @@ while true; do
 	    # put all the files on one line, for simplicity.  
 	    
 	    # comm -12 - <(./cvs_headers $dir) | sed 's/\$/ \\\\/';
-
-	    add_command "(echo $args=\\\\;
-	    comm -12 - <(./cvs_headers $dir) | tr '\\n' ' ';
-	    echo) 1>&4"
+	    if [ $rethink = yes ]; then
+		add_command "(echo $args = .dist_headers\\\\;
+		comm -12 - <(./cvs_headers $dir) \\
+		     | tee $dir/.dist_headers | tr '\\n' ' ';
+		echo) 1>&4"
+		
+	    else
+		(echo $args = .dist_headers \\
+		 tr <.dist_headers '\n' ' '
+		 echo) 1>&4
+	    fi
+	    ;;
+	CLASS_FILES)
+	    (   echo $args = .dist_classes \\;
+		if [ $rethink = yes ]; then
+		    ./used_headers .x $dir | tee $dir/.dist_classes \
+		                           | tr '\n' ' '
+		else
+		    tr <.dist_classes '\n' ' '
+		fi
+	        echo) 1>&4
 	    ;;
 	SUBDIRS)
 	    subdirs=$args
 	    echo 1>&4 "SUBDIRS = $args"
 	    for d in $args; do
-		add_command "$0 $dir/$d"
+		add_command "$0 $options $dir/$d"
 	    done
 	    ;;
 	BODY)
 	    if [ $top = yes ]; then
-		./used_headers . $subdirs | run_commands
+		if [ $rethink = yes ]; then
+		    ./used_headers .h . $subdirs | run_commands		    
+		else
+		    run_commands </dev/null
+		fi
 	    else
 		run_commands
 	    fi && cat <&3 >&4

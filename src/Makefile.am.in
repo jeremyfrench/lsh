@@ -1,6 +1,7 @@
 ## Process this file with make_am to produce Makefile.am
 SUBDIRS: lib include
 CVS_HEADERS: cvs_headers
+CLASS_FILES: dist_x_files
 BODY:
 
 AUTOMAKE_OPTIONS = foreign
@@ -65,7 +66,7 @@ symmetric:
 	(cd lib && $(MAKE) libsymmetric.a)
 
 EXTRA_DIST = atoms.in process_atoms $(generated_sources) HACKING \
-	$(cvs_headers) Makefile.am.in
+	$(cvs_headers) $(dist_x_files) Makefile.am.in
 
 # Class files
 # SUFFIXES = .xh .xc
