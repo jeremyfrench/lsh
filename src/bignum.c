@@ -242,6 +242,21 @@ bignum_random(mpz_t x, struct randomness *random, mpz_t n)
    * way might to generate a random number of mpz_sizeinbase(n, 2)
    * bits, and loop until one smaller than n is found. */
 
+  /* From Daniel Bleichenbacher (via coderpunks):
+   *
+   * There is still a theoretical attack possible with 8 extra bits.
+   * But, the attack would need about 2^66 signatures 2^66 memory and
+   * 2^66 time (if I remember that correctly). Compare that to DSA,
+   * where the attack requires 2^22 signatures 2^40 memory and 2^64
+   * time. And of course, the numbers above are not a real threat for
+   * PGP. Using 16 extra bits (i.e. generating a 176 bit random number
+   * and reducing it modulo q) will defeat even this theoretical
+   * attack.
+   * 
+   * More generally log_2(q)/8 extra bits are enoug to defeat my
+   * attack. NIST also plans to update the standard.
+   */
+
   /* Add a few bits extra, to decrease the bias from the final modulo
    * operation. */
   bignum_random_size(x, random, mpz_sizeinbase(n, 2) + 10);
