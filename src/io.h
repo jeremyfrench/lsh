@@ -124,9 +124,10 @@
    (class
      (name address_info)
      (vars
+       ;; FIXME: address is a bad name. What is meant is whatever an
+       ;; ip-number refers to, i.e.a host or a network interface.
        (address string)
-       (port . UINT32)))
-*/
+       (port . UINT32))) */
 
 /* GABA:
    (class
@@ -186,10 +187,21 @@ int get_inaddr(struct sockaddr_in	* addr,
 	       const char		* service,
 	       const char		* protocol);
 
+int get_portno(const char *s, const char *protocol);
+
 int tcp_addr(struct sockaddr_in *sin,
 	     UINT32 length,
 	     UINT8 *addr,
 	     UINT32 port);
+
+struct address_info *make_address_info_c(const char *host,
+					 const char *port);
+
+struct address_info *sockaddr2info(size_t addr_len UNUSED,
+				   struct sockaddr *addr);
+
+int address_info2sockaddr_in(struct sockaddr_in *sin,
+			     struct address_info *a);
 
 int write_raw(int fd, UINT32 length, UINT8 *data);
 int write_raw_with_poll(int fd, UINT32 length, UINT8 *data);
@@ -197,6 +209,9 @@ int write_raw_with_poll(int fd, UINT32 length, UINT8 *data);
 void io_set_nonblocking(int fd);
 void io_set_close_on_exec(int fd);
 void io_init_fd(int fd);
+
+struct io_fd *make_io_fd(struct io_backend *b,
+			 int fd);
 
 struct connect_fd *io_connect(struct io_backend *b,
 			      struct sockaddr_in *remote,
@@ -207,20 +222,16 @@ struct listen_fd *io_listen(struct io_backend *b,
 			    struct sockaddr_in *local,
 			    struct fd_listen_callback *callback);
 
-
-struct io_fd *io_read_write(struct io_backend *b,
-			    int fd,
+struct io_fd *io_read_write(struct io_fd *fd,
 			    struct read_handler *read_callback,
 			    UINT32 block_size,
 			    struct close_callback *close_callback);
 
-struct io_fd *io_read(struct io_backend *b,
-		      int fd,
+struct io_fd *io_read(struct io_fd *fd,
 		      struct read_handler *read_callback,
 		      struct close_callback *close_callback);
 
-struct io_fd *io_write(struct io_backend *b,
-		       int fd,
+struct io_fd *io_write(struct io_fd *fd,
 		       UINT32 block_size,
 		       struct close_callback *close_callback);
 

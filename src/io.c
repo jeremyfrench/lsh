@@ -22,6 +22,8 @@
  */
 
 #include "io.h"
+
+#include "format.h"
 #include "werror.h"
 #include "write_buffer.h"
 #include "xalloc.h"
@@ -487,6 +489,38 @@ int blocking_read(int fd, struct read_handler *handler)
 	werror("blocking_read: Ignoring error %i\n", res);
     }
 }
+
+/* Converts a string port number or service name to a port number.
+ * Returns the port number in _host_ byte order, or -1 of the port
+ * or service was invalid. */
+
+int get_portno(const char *service, const char *protocol)
+{
+  if (service == NULL)
+    return 0;
+  else
+    {
+      char *end;
+      long portno;
+
+      portno = strtol(service, &end, 10);
+      if (portno > 0
+	  &&  portno <= 65535
+	  &&  end != service
+	  &&  *end == '\0')
+	  return portno;
+      else
+	{
+	  struct servent * serv;
+
+	  serv = getservbyname(service, protocol);
+	  if (serv == NULL)
+	    return -1;
+	  return ntohs(serv->s_port);
+	}
+    }
+}
+
 /*
  * Fill in ADDR from HOST, SERVICE and PROTOCOL.
  * Supplying a null pointer for HOST means use INADDR_ANY.
@@ -576,6 +610,7 @@ get_inaddr(struct sockaddr_in	* addr,
  * all lookups, so that the server need only deal with ip-numbers. And
  * optionally refuse requests with dns names. */
 
+#if 0
 int tcp_addr(struct sockaddr_in *sin,
 	     UINT32 length,
 	     UINT8 *addr,
@@ -594,11 +629,29 @@ int tcp_addr(struct sockaddr_in *sin,
   sin->sin_port = htons(port);
   return 1;
 }
+#endif
+
+struct address_info *make_address_info_c(const char *host,
+					 const char *port)
+{
+  int portno = get_portno(port, "tcp");
+  if (portno < 0)
+    return 0;
+  else
+    {
+      NEW(address_info, info);
+      
+      info->port = portno;
+      info->address = host ? ssh_format("%lz", host) : NULL;
+      
+      return info;
+    }
+}
 
 struct address_info *sockaddr2info(size_t addr_len UNUSED,
 				   struct sockaddr *addr)
 {
-  NEW(peer_info, info);
+  NEW(address_info, info);
   
   switch(addr->sa_family)
     {
@@ -606,8 +659,8 @@ struct address_info *sockaddr2info(size_t addr_len UNUSED,
       {
 	struct sockaddr_in *in = (struct sockaddr_in *) addr;
 	UINT32 ip = ntohl(in->sin_addr.s_addr);
-	info->port = ntoh(in->sin_port);
-	info->address = ssh_format("%d.%d.%d.%d",
+	info->port = ntohs(in->sin_port);
+	info->address = ssh_format("%di.%di.%di.%di",
 				   (ip >> 24) & 0xff,
 				   (ip >> 16) & 0xff,
 				   (ip >> 8) & 0xff,
@@ -622,7 +675,28 @@ struct address_info *sockaddr2info(size_t addr_len UNUSED,
       fatal("io.c: format_addr(): Unsupported address family.\n");
     }
 }
-	
+
+int address_info2sockaddr_in(struct sockaddr_in *sin,
+			     struct address_info *a)
+{
+  char *c;
+
+  if (a->address)
+    {
+      c = alloca(a->address->length + 1);
+      memcpy(c, a->address->data, a->address->length);
+      c[a->address->length] = '\0';
+    }
+  else
+    c = NULL;
+
+  if (!get_inaddr(sin, c, NULL, "tcp"))
+    return 0;
+
+  sin->sin_port = htons(a->port);
+  return 1;
+}
+
 /* For fd:s in blocking mode. */
 int write_raw(int fd, UINT32 length, UINT8 *data)
 {
@@ -880,13 +954,13 @@ struct io_fd *io_write(struct io_fd *fd,
   debug("io.c: Preparing fd %i for writing\n", fd->super.fd);
   
   /* Writing */
-  f->super.prepare = prepare_write;
-  f->super.write = write_callback;
-  f->buffer = buffer;
+  fd->super.prepare = prepare_write;
+  fd->super.write = write_callback;
+  fd->buffer = buffer;
   
-  f->super.close_callback = close_callback;
+  fd->super.close_callback = close_callback;
 
-  return f;
+  return fd;
 }
 
 void kill_fd(struct lsh_fd *fd)
