@@ -36,7 +36,6 @@ extern int trace_flag;
 extern int debug_flag;
 extern int quiet_flag;
 extern int verbose_flag;
-extern int logfile_flag;
 
 extern const struct argp werror_argp;
 
