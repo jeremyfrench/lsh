@@ -14,7 +14,8 @@ die () {
 check_sexp () {
     file="$1"
     shift
-    ../../nettle/tools/sexp-conv -s canonical | cmp "$file" - || die "$@"
+    ../../nettle/tools/sexp-conv -s canonical > test.canonical || die "sexp-conv failed"
+    cmp "$file" test.canonical || die "$@"
 }
 
 conv >test.acl <<EOF
