@@ -39,9 +39,12 @@
 #include "io_commands.h"
 #include "lookup_verifier.h"
 #include "proxy.h"
+#include "proxy_agentforward.h"
 #include "proxy_channel.h"
 #include "proxy_session.h"
+#include "proxy_tcpforward.h"
 #include "proxy_userauth.h"
+#include "proxy_x11forward.h"
 #include "randomness.h"
 #include "reaper.h"
 #include "server.h"
@@ -70,6 +73,10 @@ static struct command options2keyfile;
 struct command_simple options2signature_algorithms;
 #define OPTIONS2SIGNATURE_ALGORITHMS \
   (&options2signature_algorithms.super.super)
+
+struct command_simple proxy_destination;
+#define PROXY_DESTINATION (&proxy_destination.super.super)
+
 
 #include "lsh_proxy.c.x"
 
@@ -103,9 +110,13 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_INTERFACE 0x201
 #define OPT_TCPIP_FORWARD 0x202
 #define OPT_NO_TCPIP_FORWARD (OPT_TCPIP_FORWARD | OPT_NO)
-#define OPT_DAEMONIC 0x203
+#define OPT_X11_FORWARD 0x203
+#define OPT_NO_X11_FORWARD (OPT_X11_FORWARD | OPT_NO)
+#define OPT_AGENT_FORWARD  0x204
+#define OPT_NO_AGENT_FORWARD (OPT_AGENT_FORWARD | OPT_NO)
+#define OPT_DAEMONIC 0x205
 #define OPT_NO_DAEMONIC (OPT_DAEMONIC | OPT_NO)
-#define OPT_PIDFILE 0x204
+#define OPT_PIDFILE 0x206
 #define OPT_NO_PIDFILE (OPT_PIDFILE | OPT_NO)
 #define OPT_CORE 0x207
 
@@ -123,6 +134,8 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (local object address_info)
        (destination object address_info)
        (with_tcpip_forward . int)
+       (with_x11_forward . int)
+       (with_agent_forward . int)
        (daemonic . int)
        (corefile . int)
        (pid_file . "const char *")
@@ -151,6 +164,8 @@ make_lsh_proxy_options(struct io_backend *backend,
   self->local = NULL;
 
   self->with_tcpip_forward = 1;
+  self->with_x11_forward = 1;
+  self->with_agent_forward = 1;
   
   self->daemonic = 0;
 
@@ -216,6 +231,14 @@ main_options[] =
   { "tcp-forward", OPT_TCPIP_FORWARD, NULL, 0, "Enable tcpip forwarding (default).", 0 },
   { "no-tcp-forward", OPT_NO_TCPIP_FORWARD, NULL, 0, "Disable tcpip forwarding.", 0 },
 #endif /* WITH_TCP_FORWARD */
+#if WITH_X11_FORWARD
+  { "x11-forward", OPT_X11_FORWARD, NULL, 0, "Enable X11 forwarding (default).", 0 },
+  { "no-x11-forward", OPT_NO_X11_FORWARD, NULL, 0, "Disable X11 forwarding.", 0 },
+#endif
+#if WITH_AGENT_FORWARD
+  { "agent-forward", OPT_AGENT_FORWARD, NULL, 0, "Enable auth agent forwarding (default).", 0 },
+  { "no-agent-forward", OPT_NO_AGENT_FORWARD, NULL, 0, "Disable auth agent forwarding.", 0 },
+#endif
 
   { NULL, 0, NULL, 0, "Daemonic behaviour", 0 },
   { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, redirect stdio to /dev/null, and chdir to /.", 0 },
@@ -314,6 +337,22 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->with_tcpip_forward = 0;
       break;
 
+    case OPT_X11_FORWARD:
+      self->with_x11_forward = 1;
+      break;
+
+    case OPT_NO_X11_FORWARD:
+      self->with_x11_forward = 0;
+      break;
+
+    case OPT_AGENT_FORWARD:
+      self->with_agent_forward = 1;
+      break;
+
+    case OPT_NO_AGENT_FORWARD:
+      self->with_agent_forward = 0;
+      break;
+
     case OPT_DAEMONIC:
       self->daemonic = 1;
       break;
@@ -378,40 +417,115 @@ make_fake_host_db(void)
 }
 
 /* GABA:
+   (class
+     (name proxy_destination)
+     (super command)
+     (vars
+       (options object lsh_proxy_options)))
+*/
+
+static void
+do_proxy_destination(struct command *s,
+		     struct lsh_object *x,
+		     struct command_continuation *c,
+		     struct exception_handler *e)
+{
+  CAST(proxy_destination, closure, s);
+  CAST(listen_value, client_addr, x);
+
+  if (closure->options->destination)
+    COMMAND_RETURN(c, closure->options->destination);
+  else
+    {
+      struct sockaddr_in sa;
+      int salen = sizeof(sa);
+
+      /* try to be transparent */
+      /* FIXME: support non AF_INET address families */
+      if (getsockname(client_addr->fd->fd, (struct sockaddr *) &sa, &salen) != -1)
+        {
+          COMMAND_RETURN(c,
+			 sockaddr2info(salen, (struct sockaddr *) &sa));
+          /* a = make_address_info(ssh_format("localhost"), 1998); */
+        }
+      else
+	{
+	  struct exception *ex = 
+	    make_io_exception(EXC_IO, client_addr->fd, errno, "getsockname() failed");
+
+	  EXCEPTION_RAISE(e, ex);
+	}
+
+    }
+}
+
+static struct command *
+make_proxy_destination_command(struct lsh_proxy_options *options)
+{
+  NEW(proxy_destination, self);
+
+  self->super.call = do_proxy_destination;
+  self->options = options;
+  return &self->super;
+}
+
+COMMAND_SIMPLE(proxy_destination)
+{
+  CAST(lsh_proxy_options, options, a);
+  return &make_proxy_destination_command(options)->super;
+}
+
+/* GABA:
    (expr
      (name lsh_proxy_listen)
      (params
        (listen object command)
-       (handshake object handshake_info)
        (services object command)
-       (connect_server object command)
-       (server_addr object address_info))
+       (handshake_server object command)
+       (handshake_client object command))
      (expr 
        (lambda (options)
          (services 
-	   (let ((client_addr (listen(options2local options))))
+	   (let 
+	     ; accept a connection
+             ((client_addr (listen(options2local options)))) 
+	     ; chain two connections
 	     (chain_connections 
-	       connect_server 		; callback to connect to server
-	       client_addr		; address of accepted connection
-	       server_addr
-	       (connection_handshake    ; handshake on the client side
-	         handshake 
-		 (spki_read_hostkeys (options2signature_algorithms options)
-		                     (options2keyfile options)) 
-		 (log_peer client_addr))))))))
+	       (handshake_server options)   ; callback to perform server side handshake
+	       (handshake_client options)   ; callback to perform client side handshake
+	       client_addr))))))	    ; address of accepted connection
+	     
 */
 
 /* GABA:
    (expr
-     (name lsh_proxy_connect_server)
+     (name lsh_proxy_handshake_client)
+     (params
+       (handshake object handshake_info))
+     (expr
+       (lambda (options client_addr)
+         (connection_handshake    ; handshake on the client side
+            handshake 
+	    (spki_read_hostkeys (options2signature_algorithms options)
+	                        (options2keyfile options)) 
+	    (log_peer client_addr)))))
+
+*/
+
+/* GABA:
+   (expr
+     (name lsh_proxy_handshake_server)
      (params
        (connect object command)
        (verifier object lookup_verifier)
        (handshake object handshake_info))
      (expr 
-       (lambda (port)
+       (lambda (options client_addr)
          (init_connection_service 
-	   (connection_handshake handshake verifier (connect port))))))
+	   (connection_handshake 
+             handshake 
+             verifier 
+             (connect (proxy_destination options client_addr)))))))
 */
 
 /* Invoked when the client requests the userauth service. */
@@ -430,15 +544,18 @@ make_fake_host_db(void)
    (expr
      (name lsh_proxy_connection_service)
      (params
-       (login object command)     
-       (hooks object object_list)) 
+       (login object command))
      (expr
        (lambda (user connection)
-         ((progn hooks) (login user
-	                       ; We have to initialize the connection
-			       ; before logging in.
-	                       (init_connection_service connection))))))
+         (login user
+	    ; We have to initialize the connection
+	    ; before logging in.
+	    (init_connection_service connection)))))
 */
+
+#if WITH_ALF
+#include "proxy_alf.h"
+#endif
 
 int main(int argc, char **argv)
 {
@@ -455,6 +572,12 @@ int main(int argc, char **argv)
   /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
   init_backend(backend);
+
+#if WITH_ALF
+  proxy_alf_init();
+  proxy_alf_end();
+#endif
+
 
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -555,32 +678,84 @@ int main(int argc, char **argv)
   
   {
     /* Commands to be invoked on the connection */
-    struct object_list *connection_hooks;
-    
+    struct object_queue connection_server_hooks, connection_client_hooks;
+    struct alist *server_session_requests, *client_session_requests;
+
+    server_session_requests = make_alist
+      (4,
+       ATOM_SHELL, &proxy_channel_request, 
+       ATOM_PTY_REQ, &proxy_channel_request,
+       ATOM_EXIT_STATUS, &proxy_channel_request,
+       ATOM_EXIT_SIGNAL, &proxy_channel_request,
+       -1);
+    client_session_requests = make_alist(0, -1);
+
+#if WITH_X11_FORWARD
+    if (options->with_x11_forward)
+      {
+	ALIST_SET(server_session_requests, ATOM_X11_REQ, &proxy_channel_request);
+      }
+#endif
+#if WITH_AGENT_FORWARD
+    if (options->with_agent_forward)
+      {
+	ALIST_SET(server_session_requests, ATOM_AUTH_AGENT_REQ, &proxy_channel_request);
+      }
+#endif
+
+    object_queue_init(&connection_server_hooks);
+    object_queue_init(&connection_client_hooks);
+
+    object_queue_add_tail(&connection_server_hooks,
+			  &make_install_fix_channel_open_handler
+			  (ATOM_SESSION, 
+			   make_proxy_open_session(server_session_requests,
+						   client_session_requests))->super);
+
 #ifdef WITH_TCP_FORWARD
     if (options->with_tcpip_forward)
-      connection_hooks = make_object_list
-        (2,
-         make_install_fix_global_request_handler
-         (ATOM_TCPIP_FORWARD, &proxy_global_request),
-         make_install_fix_global_request_handler
-         (ATOM_CANCEL_TCPIP_FORWARD, &proxy_global_request),
-         -1);
-    else
+      {
+	object_queue_add_tail(&connection_server_hooks,
+			      &make_install_fix_global_request_handler
+			      (ATOM_TCPIP_FORWARD, &proxy_global_request)->super);
+	object_queue_add_tail(&connection_server_hooks,
+			      &make_install_fix_global_request_handler
+			      (ATOM_CANCEL_TCPIP_FORWARD, &proxy_global_request)->super);
+	object_queue_add_tail(&connection_server_hooks,
+			      &make_install_fix_channel_open_handler
+			      (ATOM_DIRECT_TCPIP,
+			       make_proxy_open_direct_tcpip())->super);
+	
+	object_queue_add_tail(&connection_client_hooks,
+			      &make_install_fix_channel_open_handler
+			      (ATOM_FORWARDED_TCPIP,
+			       make_proxy_open_forwarded_tcpip())->super);
+      }
 #endif
-      connection_hooks = make_object_list(0, -1);
+
+#if WITH_X11_FORWARD
+    if (options->with_x11_forward)
+      {
+	object_queue_add_tail(&connection_client_hooks,
+			      &make_install_fix_channel_open_handler
+			      (ATOM_X11,
+			       make_proxy_open_x11())->super);
+      }
+#endif
+
+#if WITH_AGENT_FORWARD
+    if (options->with_agent_forward)
+      {
+	object_queue_add_tail(&connection_client_hooks,
+			      &make_install_fix_channel_open_handler
+			      (ATOM_AUTH_AGENT,
+			       make_proxy_open_auth_agent())->super);
+      }
+#endif
       
     {
       struct lsh_object *o = lsh_proxy_listen
 	(make_simple_listen(backend, NULL),
-	 make_handshake_info(CONNECTION_SERVER,
-			     "lsh_proxy_server - a free ssh",
-			     "proxy server",
-			     SSH_MAX_PACKET,
-			     r,
-			     algorithms_server,
-			     make_kexinit,
-			     NULL),
 	 make_proxy_offer_service
 	 (make_alist(1, 
 		     ATOM_SSH_USERAUTH, 
@@ -593,42 +768,44 @@ int main(int argc, char **argv)
 			ATOM_SSH_CONNECTION,
 			lsh_proxy_connection_service
 			(make_proxy_connection_service
-			 (make_alist
-			  (4, 
-			   ATOM_SHELL, &proxy_channel_request, 
-			   ATOM_PTY_REQ, &proxy_channel_request,
-			   ATOM_EXIT_STATUS, &proxy_channel_request,
-			   ATOM_EXIT_SIGNAL, &proxy_channel_request,
-			   -1),
-			  make_alist(0, -1)),
-			 connection_hooks),
+			 (queue_to_list_and_kill(&connection_server_hooks),
+			  queue_to_list_and_kill(&connection_client_hooks))),
 			-1))),
-		     -1)),
+		      -1)),
 
 	 /* callback to call when client<->proxy handshake finished */
-	 (struct command *)lsh_proxy_connect_server(make_simple_connect(backend, NULL),
-						    make_fake_host_db(),
-			      make_handshake_info(CONNECTION_CLIENT,
-						  "lsh_proxy_client - a free ssh",
-						  "proxy client",
-						  SSH_MAX_PACKET,
-						  r,
-						  algorithms_client,
-						  make_kexinit,
-						  NULL)
-			      ),
-	 options->destination);
+	 (struct command *)lsh_proxy_handshake_server(make_simple_connect(backend, NULL),
+						      make_fake_host_db(),
+						      make_handshake_info
+						      (CONNECTION_CLIENT,
+						       "lsh_proxy_client - a free ssh",
+						       "proxy client",
+						       SSH_MAX_PACKET,
+						       r,
+						       algorithms_client,
+						       make_kexinit,
+						       NULL)
+						      ),
+	 (struct command *)lsh_proxy_handshake_client(make_handshake_info
+						      (CONNECTION_SERVER,
+						       "lsh_proxy_server - a free ssh",
+						       "proxy server",
+						       SSH_MAX_PACKET,
+						       r,
+						       algorithms_server,
+						       make_kexinit,
+						       NULL)));
 
 
     
       CAST_SUBTYPE(command, server_listen, o);
-    
+
       COMMAND_CALL(server_listen, options,
-		   &discard_continuation,
-		   make_report_exception_handler
-		   (make_report_exception_info(EXC_IO, EXC_IO, "lsh_proxy: "),
-		    &default_exception_handler,
-		    HANDLER_CONTEXT));
+                   &discard_continuation,
+                   make_report_exception_handler
+                   (make_report_exception_info(EXC_IO, EXC_IO, "lsh_proxy: "),
+                    &default_exception_handler,
+                    HANDLER_CONTEXT));
     }
   }
   
