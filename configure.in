@@ -237,6 +237,12 @@ fi
 SCHEME_NAME=`basename $SCHEME_PROGRAM`
 AC_SUBST(SCHEME_NAME)
 
+# BASH gets set to the bogus value "/bin/sh" if /bin/sh is a bash.
+# So unset it in that case.
+if test "x$BASH" = x/bin/sh ; then
+  unset BASH
+fi
+    
 AC_PATH_PROG(BASH, bash,, $PATH)
 AC_PATH_PROG(GROFF, groff,, $PATH)
 AC_PATH_PROG(M4, m4, m4)
