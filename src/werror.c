@@ -607,6 +607,7 @@ werror_vformat(const char *f, va_list args)
       else
 	werror_putc(*f++);
     }
+  werror_flush();  
 }
 
 /* Unconditionally display message. */
@@ -618,7 +619,6 @@ werror_format(const char *format, ...)
   va_start(args, format);
   werror_vformat(format, args);
   va_end(args);
-  werror_flush();
 }
 
 void
@@ -633,7 +633,6 @@ werror(const char *format, ...)
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
-      werror_flush();
     }
 }
 
@@ -657,7 +656,6 @@ trace(const char *format, ...)
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
-      werror_flush();
     }
 }
 
@@ -671,7 +669,6 @@ debug(const char *format, ...)
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
-      werror_flush();
     }
 }
 
@@ -685,7 +682,6 @@ verbose(const char *format, ...)
       va_start(args, format);
       werror_vformat(format, args);
       va_end(args);
-      werror_flush();
     }
 }
 
@@ -702,7 +698,6 @@ fatal(const char *format, ...)
   va_start(args, format);
   werror_vformat(format, args);
   va_end(args);
-  werror_flush();
 
 #if FATAL_SLEEP
   werror_format("attach gdb to process %i. Going to sleep...\n", getpid());
