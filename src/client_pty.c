@@ -26,6 +26,7 @@
 #include "channel_commands.h"
 #include "format.h"
 #include "interact.h"
+#include "tty.h"
 #include "werror.h"
 #include "xalloc.h"
 
