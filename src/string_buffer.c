@@ -26,10 +26,14 @@
 
 #include "string_buffer.h"
 
+#include "xalloc.h"
+
+#include <assert.h>
+
 struct string_node
 {
-  struct string_node *next;
-  strict lsh_string *s;
+  struct string_node *prev;
+  struct lsh_string *s;
 };
 
 void string_buffer_init(struct string_buffer *buffer,
@@ -39,21 +43,21 @@ void string_buffer_init(struct string_buffer *buffer,
   buffer->left = guess;
   buffer->current = buffer->partial->data;
 
-  buffer->list = NULL;
-  buffer->nlist = 0;
+  buffer->tail = NULL;
+  /* buffer->nlist = 0; */
 
   buffer->total = 0;
 }
 
-static void string_buffer_clear(struct string_buffer *buffer)
+void string_buffer_clear(struct string_buffer *buffer)
 {
   struct string_node *n;
 
   lsh_string_free(buffer->partial);
-  for (n = n->tail; n; )
+  for (n = n->prev; n; )
     {
       struct string_node *old = n;
-      n = old->next;
+      n = old->prev;
 
       lsh_string_free(old->s);
       lsh_space_free(old);
@@ -61,14 +65,16 @@ static void string_buffer_clear(struct string_buffer *buffer)
 }
 
 /* Assumes that the buffer->partial string is full */
-static void string_buffer_grow(struct string_buffer *buffer, UINT32 increment)
+void string_buffer_grow(struct string_buffer *buffer, UINT32 increment)
 {
-  NEW_SPACE(string_node, n);
+  struct string_node *n;
+
+  NEW_SPACE(n);
 
   buffer->total += buffer->partial->length;
   
-  n->s = current;
-  n->next = buffer->tail;
+  n->s = buffer->partial;
+  n->prev = buffer->tail;
   buffer->tail = n;
 
   buffer->partial = lsh_string_alloc(increment);
@@ -106,8 +112,8 @@ void string_buffer_write(struct string_buffer *buffer,
   buffer->left -= length;
 }
 
-struct lsh_string string_buffer_final_write(struct string_buffer *buffer,
-					    UINT32 length, const UINT8 *s)
+struct lsh_string *string_buffer_final_write(struct string_buffer *buffer,
+					     UINT32 length, const UINT8 *s)
 {
   UINT32 final = buffer->total + length;
   
@@ -156,13 +162,20 @@ struct lsh_string string_buffer_final_write(struct string_buffer *buffer,
 }
 #endif
 
-struct lsh_string string_buffer_final(struct string_buffer *buffer,
-				      UINT32 left_over)
+#if 0
+UINT32 string_buffer_length(struct string_buffer *buffer)
+{
+  return buffer->total + length;
+}
+#endif
+
+struct lsh_string *string_buffer_final(struct string_buffer *buffer,
+				       UINT32 left_over)
 {
   UINT32 length = buffer->partial->length - left_over;
   UINT32 final = buffer->total + length;
   
-  if (!tail)
+  if (!buffer->tail)
     {
       /* This should be the usual case. */
 
@@ -182,7 +195,7 @@ struct lsh_string string_buffer_final(struct string_buffer *buffer,
       for (n = buffer->tail; n; )
 	{
 	  struct string_node *old = n;
-	  n = n->next;
+	  n = n->prev;
 
 	  p -= old->s->length;
 	  memcpy(p, old->s->data, old->s->length);
@@ -190,12 +203,9 @@ struct lsh_string string_buffer_final(struct string_buffer *buffer,
 	  lsh_string_free(old->s);
 	  lsh_space_free(old);
 	}
-
+      
       assert(p == res->data);
 
       return res;
     }
 }
-
-  
-  
