@@ -43,7 +43,7 @@ spki_gperf (const char *str, unsigned int len);
 
 /* Make sure that i->type is set to SPKI_TYPE_SYNTAX_ERROR on all
  * failures. */
-static enum spki_type
+enum spki_type
 spki_parse_fail(struct spki_iterator *i)
 {
   i->type = 0;
@@ -102,6 +102,7 @@ spki_iterator_first(struct spki_iterator *i,
   return spki_parse_fail(i);
 }
 
+/* FIXME: Delete this function? */
 enum spki_type
 spki_iterator_first_sexp(struct spki_iterator *i,
 			 const struct sexp_iterator *sexp)
