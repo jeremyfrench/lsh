@@ -1,3 +1,12 @@
+2000-03-29  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/unix_user.c (do_lookup_user): Improved shadow support,
+	following suggestions by Thayne Harbaugh.
+
+2000-03-28  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* contrib/lshd.rhlinux.init: chkconfig priorities.
+
 2000-03-26  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/server_session.c (server_session): New attribute

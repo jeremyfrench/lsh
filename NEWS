@@ -1,3 +1,9 @@
+News for the 0.9.2 release
+
+	Improved support for shadow passwords.
+
+	Some preparations for gatewaty mode.
+	
 News for the 0.9.1 release
 
 	Support for remote commands directly on the lsh command line.
