@@ -6,7 +6,7 @@ News for the lsh-0.1.9 release
 	to test them.
 
 	The SEXP parser is rewritten to use the new exception
-	framework. The program that makes the most of of this rigth
+	framework. The program that makes the most of of this right
 	now is lsh_writekey. Its core reads like
 
      (params
