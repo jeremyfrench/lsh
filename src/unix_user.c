@@ -148,8 +148,11 @@ lsh_make_utmp(struct lsh_user *user,
 
   CP(log->ut_name, user->name);
   CP_TTY(log->ut_line, ttyname);
-  CP(log->ut_host, peer->ip);
 
+#if HAVE_UT_HOST
+  CP(log->ut_host, peer->ip);
+#endif
+  
   return log;
 }
 #undef CP
