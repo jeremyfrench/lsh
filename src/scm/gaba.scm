@@ -386,6 +386,10 @@
       (list "struct lsh_class " name "_class =\n"
 	    initializer ";\n")))
 
+(define (class-annotate name super meta)
+  (list "/*\nCLASS:" name ":" (or super "")
+	(if meta (list ":" meta "_meta") "") "\n*/\n"))
+	
 (define (process-class attributes)
   (let ((name (get 'name attributes cadr))
 	(super (get 'super attributes cadr))
@@ -399,7 +403,9 @@
       (let ((mark-function (do-mark-function name vars))
 	    (free-function (do-free-function name vars)))
 	; (werror "baar\n")
-	(list "#ifndef GABA_DEFINE\n"	
+	(list (class-annotate name super meta)
+	      
+	      "#ifndef GABA_DEFINE\n"	
 	      (do-instance-struct name super vars)
 	      (if meta
 		  (list "extern struct " meta "_meta "
