@@ -89,8 +89,9 @@ int main(int argc UNUSED, char **argv UNUSED)
   
   init_backend(backend);
 
+  /* FIXME:
   write = io_write(backend, STDOUT_FILENO, BLOCK_SIZE, NULL)->buffer;
-
+  */
   out->super.handler = do_output_sexp;
   out->write = &write->super;
   out->style = SEXP_ADVANCED;
@@ -99,7 +100,7 @@ int main(int argc UNUSED, char **argv UNUSED)
   close->output = write;
   close->status = &status;
   
-  io_read(backend, STDIN_FILENO,
+  io_read(make_io_fd(backend, STDIN_FILENO),
 	  make_read_sexp(&out->super, BLOCK_SIZE, SEXP_TRANSPORT, 1),
 	  &close->super);
 
