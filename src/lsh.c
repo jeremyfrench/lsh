@@ -170,21 +170,17 @@ int main(int argc, char **argv)
 
   service = make_connection_service
     (make_alist(0, -1),
-     make_alist(0, -1));
+     make_alist(0, -1),
+     make_client_startup(1));
   
   kexinit_handler = make_kexinit_handler
     (CONNECTION_CLIENT,
      make_kexinit, algorithms,
-     4711);
-#if 0
-     /* FIXME: make_service_handler is wrong function: It's for
-      * the server side. */
-     make_service_handler(make_alist
-				 (1, ATOM_SSH_USERAUTH, 
-				  make_client_userauth(ssh_format("%lz", user),
-						       ATOM_SSH_CONNECTION,
-						       service))));
-#endif
+     request_service(ATOM_SSH_USERAUTH, 
+		     make_client_userauth(ssh_format("%lz", user),
+					  ATOM_SSH_CONNECTION,
+					  service)));
+  
   if (!io_connect(&backend, &remote, NULL,
 		  make_client_callback(&backend,
 				       "lsh - a free ssh",
