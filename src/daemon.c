@@ -50,6 +50,7 @@
 #include "daemon.h"
 
 #include "format.h"
+#include "lsh_string.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -187,11 +188,11 @@ int daemon_pidfile(const char *name)
   else
     {
       struct lsh_string *pid = ssh_format("%di", getpid());
-
-      int res = write(fd, pid->data, pid->length);
+      uint32_t pid_length = lsh_string_length(pid);
+      int res = write(fd, lsh_string_data(pid), pid_length);
       close(fd);
       
-      if ( (res > 0) && ((unsigned) res == pid->length) )
+      if ( (res > 0) && ((unsigned) res == pid_length) )
 	{
 	  /* Success! */
 	  lsh_string_free(pid);
