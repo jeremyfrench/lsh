@@ -152,13 +152,15 @@ struct packet_handler *make_unimplemented_handler(void)
 }
 
 
-struct ssh_connection *make_ssh_connection(void)
+struct ssh_connection *make_ssh_connection(struct command_continuation *c)
 {
   int i;
 
   NEW(ssh_connection, connection);
   connection->super.write = handle_connection;
 
+  connection->established = c;
+  
   /* Initialize instance variables */
   /* connection->mode = mode; */
 
