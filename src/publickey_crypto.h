@@ -172,6 +172,9 @@ make_dh(const struct zn_group *G,
 struct dh_method *
 make_dh1(struct randomness *r);
 
+struct dh_method *
+make_dh14(struct randomness *r);
+
 void
 init_dh_instance(const struct dh_method *m,
 		 struct dh_instance *self,

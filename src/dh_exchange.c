@@ -97,6 +97,12 @@ make_dh1(struct randomness *r)
   return make_dh(make_ssh_group1(), &crypto_sha1_algorithm, r);
 }
 
+struct dh_method *
+make_dh14(struct randomness *r)
+{
+  return make_dh(make_ssh_group14(), &crypto_sha1_algorithm, r);
+}
+
 /* R is set to a random, secret, exponent, and V set to is g^r */
 void
 dh_generate_secret(const struct dh_method *self,
