@@ -275,8 +275,11 @@ lookup_hostkey_algorithm(const char *name)
     return ATOM_NONE;
   else if (strcasecmp_list(name, "ssh-dss", "dsa", "dss", NULL))
     return ATOM_SSH_DSS;
-  else if (!strcasecmp(name, "spki"))
-    return ATOM_SPKI;
+  else if (strcasecmp_list(name, "spki-sign-rsa", "spki-rsa", NULL))
+    return ATOM_SPKI_SIGN_RSA;
+  else if (strcasecmp_list(name, "spki-sign-dss", "spki-dss",
+			   "spki-sign-dsa", "spki-dsa", NULL))
+    return ATOM_SPKI_SIGN_DSS;
   else
     return 0;
 }
@@ -499,7 +502,8 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
       if (!self->compression_algorithms)
 	self->compression_algorithms = default_compression_algorithms(self->algorithms);
       if (!self->hostkey_algorithms)
-	self->hostkey_algorithms = make_int_list(2, ATOM_SPKI, ATOM_SSH_DSS, -1);
+	self->hostkey_algorithms = make_int_list(4, ATOM_SSH_RSA, ATOM_SSH_DSS,
+						 ATOM_SPKI_SIGN_RSA, ATOM_SPKI_SIGN_DSS, -1);
       break;
     case 'c':
       {
