@@ -34,10 +34,16 @@
 #ifdef HAVE_LIBINTL_H
 # include <libintl.h>
 #else
-# define dgettext(domain, msgid) (msgid)
-# define gettext(msgid) (msgid)
+# define dgettext(domain, msgid) (((void) (domain), (msgid)))
+# define gettext(msgid) (((void) (domain), (msgid)))
 #endif
 #define N_(msgid) (msgid)
+#endif
+
+#if __GNUC__ && HAVE_GCC_ATTRIBUTE
+# define UNUSED __attribute__ ((__unused__))
+#else
+# define UNUSED
 #endif
 
 #if _LIBC - 0
@@ -150,7 +156,7 @@ static const struct argp_option argp_version_options[] =
 };
 
 static error_t
-argp_version_parser (int key, char *arg, struct argp_state *state)
+argp_version_parser (int key, char *arg UNUSED, struct argp_state *state)
 {
   switch (key)
     {
@@ -743,7 +749,7 @@ parser_parse_arg (struct parser *parser, char *val)
 /* Call the user parsers to parse the option OPT, with argument VAL, at the
    current position, returning any error.  */
 static error_t
-parser_parse_opt (struct parser *parser, int opt, char *val)
+parser_parse_opt (struct parser *parser, int opt, char *val UNUSED)
 {
   /* The group key encoded in the high bits; 0 for short opts or
      group_number + 1 for long opts.  */

@@ -36,14 +36,20 @@
 
 #include "argp.h"
 
-#if !(_LIBC || \
+#if (_LIBC || \
   (defined (HAVE_FLOCKFILE) && defined(HAVE_PUTC_UNLOCKED) \
     && defined (HAVE_FPUTS_UNLOCKED) && defined (HAVE_FWRITE_UNLOCKED) ))
-# define flockfile(f)
-# define funlockfile(f)
-# define putc_unlocked(c, f) putc((c), (f))
-# define fputs_unlocked(s, f) fputs((s), (f))
-# define fwrite_unlocked(b, s, n, f) fwrite((b), (s), (n), (f))
+# define FLOCKFILE(f) flockfile(f) 
+# define FUNLOCKFILE(f) funlockfile(f)
+# define PUTC_UNLOCKED(c, f) putc_unlocked(c, f)
+# define FPUTS_UNLOCKED(s, f) fputs_unlocked(s, f)
+# define FWRITE_UNLOCKED(b, s, n, f) fwrite_unlocked(b, s, n, f)
+#else /* Don't use stdio locking */
+# define FLOCKFILE(f)
+# define FUNLOCKFILE(f)
+# define PUTC_UNLOCKED(c, f) putc((c), (f))
+# define FPUTS_UNLOCKED(s, f) fputs((s), (f))
+# define FWRITE_UNLOCKED(b, s, n, f) fwrite((b), (s), (n), (f))
 #endif /* No thread safe i/o */
 
 #if    (_LIBC - 0 && !defined (USE_IN_LIBIO)) \

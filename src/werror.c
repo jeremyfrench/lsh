@@ -58,7 +58,7 @@ int syslog_flag = 0;
 static const struct argp_option
 werror_options[] =
 {
-  { "quiet", 'q', NULL, 0, "Supress all warnings and diagnostic messages", 0 },
+  { "quiet", 'q', NULL, 0, "Suppress all warnings and diagnostic messages", 0 },
   { "verbose", 'v', NULL, 0, "Verbose diagnostic messages", 0},
   { "trace", WERROR_TRACE, NULL, 0, "Detailed trace", 0 },
   { "debug", WERROR_DEBUG, NULL, 0, "Print huge amounts of debug information", 0 },
@@ -102,11 +102,11 @@ int error_fd = STDERR_FILENO;
 static UINT8 error_buffer[BUF_SIZE];
 static UINT32 error_pos = 0;
 
-static void (*error_write)(int fd, UINT32 length, UINT8 *data,
+static void (*error_write)(int fd, UINT32 length, const UINT8 *data,
 			   struct exception_handler *e) = write_raw;
 
 #if HAVE_SYSLOG
-static void write_syslog(int fd UNUSED, UINT32 length, UINT8 *data,
+static void write_syslog(int fd UNUSED, UINT32 length, const UINT8 *data,
 			 struct exception_handler *e UNUSED)
 {
   UINT8 string_buffer[BUF_SIZE];
@@ -129,7 +129,7 @@ void set_error_syslog(const char *id)
 #endif /* HAVE_SYSLOG */
 
 static void write_ignore(int fd UNUSED,
-			 UINT32 length UNUSED, UINT8 *data UNUSED,
+			 UINT32 length UNUSED, const UINT8 *data UNUSED,
 			 struct exception_handler *e UNUSED)
 {}
 
@@ -164,7 +164,7 @@ static void werror_putc(UINT8 c)
   error_buffer[error_pos++] = c;
 }
 
-static void werror_write(UINT32 length, UINT8 *msg)
+static void werror_write(UINT32 length, const UINT8 *msg)
 {
   if (error_pos + length <= BUF_SIZE)
     {

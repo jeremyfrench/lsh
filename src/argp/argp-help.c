@@ -45,6 +45,12 @@ char *alloca ();
 # endif
 #endif
 
+#if __GNUC__ && HAVE_GCC_ATTRIBUTE
+# define UNUSED __attribute__ ((__unused__))
+#else
+# define UNUSED
+#endif
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,7 +64,7 @@ char *alloca ();
 # ifdef HAVE_LIBINTL_H
 #  include <libintl.h>
 # else
-#  define dgettext(domain, msgid) (msgid)
+#  define dgettext(domain, msgid) (((void) (domain), (msgid)))
 # endif
 #endif
 
@@ -599,8 +605,8 @@ hol_entry_long_iterate (const struct hol_entry *entry,
 
 /* Iterator that returns true for the first short option.  */
 static inline int
-until_short (const struct argp_option *opt, const struct argp_option *real,
-	     const char *domain, void *cookie)
+until_short (const struct argp_option *opt, const struct argp_option *real UNUSED,
+	     const char *domain UNUSED, void *cookie UNUSED)
 {
   return oshort (opt) ? opt->key : 0;
 }
@@ -1237,7 +1243,7 @@ optional for any corresponding short options.");
 static int
 add_argless_short_opt (const struct argp_option *opt,
 		       const struct argp_option *real,
-		       const char *domain, void *cookie)
+		       const char *domain UNUSED, void *cookie)
 {
   char **snao_end = cookie;
   if (!(opt->arg || real->arg)
@@ -1283,7 +1289,7 @@ usage_argful_short_opt (const struct argp_option *opt,
 static int
 usage_long_opt (const struct argp_option *opt,
 		const struct argp_option *real,
-		const char *domain, void *cookie)
+		const char *domain UNUSED, void *cookie)
 {
   argp_fmtstream_t stream = cookie;
   const char *arg = opt->arg;
@@ -1559,7 +1565,7 @@ _help (const struct argp *argp, const struct argp_state *state, FILE *stream,
   if (! stream)
     return;
 
-  flockfile (stream);
+  FLOCKFILE (stream);
 
   if (! uparams.valid)
     fill_in_uparams (state);
@@ -1567,7 +1573,7 @@ _help (const struct argp *argp, const struct argp_state *state, FILE *stream,
   fs = __argp_make_fmtstream (stream, 0, uparams.rmargin, 0);
   if (! fs)
     {
-      funlockfile (stream);
+      FUNLOCKFILE (stream);
       return;
     }
 
@@ -1675,7 +1681,7 @@ Try `%s --help' or `%s --usage' for more information.\n"),
       anything = 1;
     }
 
-  funlockfile (stream);
+  FUNLOCKFILE (stream);
 
   if (hol)
     hol_free (hol);
@@ -1734,22 +1740,22 @@ __argp_error (const struct argp_state *state, const char *fmt, ...)
 	{
 	  va_list ap;
 
-	  flockfile (stream);
+	  FLOCKFILE (stream);
 
-	  fputs_unlocked (state ? state->name : program_invocation_short_name,
+	  FPUTS_UNLOCKED (state ? state->name : program_invocation_short_name,
 			  stream);
-	  putc_unlocked (':', stream);
-	  putc_unlocked (' ', stream);
+	  PUTC_UNLOCKED (':', stream);
+	  PUTC_UNLOCKED (' ', stream);
 
 	  va_start (ap, fmt);
 	  vfprintf (stream, fmt, ap);
 	  va_end (ap);
 
-	  putc_unlocked ('\n', stream);
+	  PUTC_UNLOCKED ('\n', stream);
 
 	  __argp_state_help (state, stream, ARGP_HELP_STD_ERR);
 
-	  funlockfile (stream);
+	  FUNLOCKFILE (stream);
 	}
     }
 }
@@ -1775,17 +1781,17 @@ __argp_failure (const struct argp_state *state, int status, int errnum,
 
       if (stream)
 	{
-	  flockfile (stream);
+	  FLOCKFILE (stream);
 
-	  fputs_unlocked (state ? state->name : program_invocation_short_name,
+	  FPUTS_UNLOCKED (state ? state->name : program_invocation_short_name,
 			  stream);
 
 	  if (fmt)
 	    {
 	      va_list ap;
 
-	      putc_unlocked (':', stream);
-	      putc_unlocked (' ', stream);
+	      PUTC_UNLOCKED (':', stream);
+	      PUTC_UNLOCKED (' ', stream);
 
 	      va_start (ap, fmt);
 	      vfprintf (stream, fmt, ap);
@@ -1794,14 +1800,14 @@ __argp_failure (const struct argp_state *state, int status, int errnum,
 
 	  if (errnum)
 	    {
-	      putc_unlocked (':', stream);
-	      putc_unlocked (' ', stream);
+	      PUTC_UNLOCKED (':', stream);
+	      PUTC_UNLOCKED (' ', stream);
 	      fputs (strerror (errnum), stream);
 	    }
 
-	  putc_unlocked ('\n', stream);
+	  PUTC_UNLOCKED ('\n', stream);
 
-	  funlockfile (stream);
+	  FUNLOCKFILE (stream);
 
 	  if (status && (!state || !(state->flags & ARGP_NO_EXIT)))
 	    exit (status);

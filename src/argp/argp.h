@@ -71,9 +71,15 @@ typedef int error_t;
 #  else
 #   define __P(args)	args
 #  endif
-#  define __PMT(args)	args
 # else
 #  define __P(args)	()
+# endif
+#endif
+
+#ifndef __PMT
+# if (defined __STDC__ && __STDC__) || defined __cplusplus
+#  define __PMT(args)	args
+# else
 #  define __PMT(args)	()
 # endif
 #endif
