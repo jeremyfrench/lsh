@@ -71,6 +71,9 @@
 #define NLISTS 10
 
 /* Arbitrary limit on list length */
+/* An SSH-2.0-Sun_SSH_1.0 server has been reported to list 250
+ * different algorithms, or in fact a list of installed locales. If
+ * that turns out to be a real problem, increase this limit. */
 #define KEXINIT_MAX_ALGORITMS 47
 
 static struct kexinit *
