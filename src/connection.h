@@ -50,6 +50,21 @@
 #define HANDLE_PACKET(closure, connection, packet) \
 ((closure)->handler((closure), (connection), (packet)))
 
+#define DEFINE_PACKET_HANDLER(SPEC, NAME, CARG, PARG)	\
+static void						\
+do_##NAME(struct packet_handler *,			\
+	  struct ssh_connection *,			\
+	  struct lsh_string *);				\
+							\
+SPEC struct packet_handler NAME =			\
+{ STATIC_HEADER, do_##NAME };				\
+							\
+static void						\
+do_##NAME(struct packet_handler *s UNUSED,		\
+	  struct ssh_connection *CARG,			\
+	  struct lsh_string *PARG)
+
+
 /* NOTE: These are used both for indexing the two-element arrays in
  * the connection object. But they are also used in the flags field,
  * to indicate our role in the protocol.
@@ -114,7 +129,7 @@
        ; user authentication has been performed.
        (user object lsh_user)
 
-       ; the chained connection in the proxy
+       ; The chained connection in the proxy, or gateway.
        (chain object ssh_connection)
 
        ; Cleanup
@@ -164,10 +179,11 @@
        ; Table of all opened channels
        (table object channel_table)
        
-       ; Shared handlers 
-       (ignore object packet_handler)
-       (unimplemented object packet_handler)
-       (fail object packet_handler)
+       ;; ; Shared handlers 
+       ;; (ignore object packet_handler)
+       ;; (unimplemented object packet_handler)
+       ;; (fail object packet_handler)
+       ;; (forward object packet_handler)
 
        ; (provides_privacy . int)
        ; (provides_integrity . int)
@@ -199,5 +215,11 @@ void connection_unlock(struct ssh_connection *self);
 
 /* Table of packet types */
 extern const char *packet_types[0x100];
+
+/* Simple packet handlers. */
+extern struct packet_handler connection_ignore_handler;
+extern struct packet_handler connection_unimplemented_handler;
+extern struct packet_handler connection_fail_handler;
+extern struct packet_handler connection_forward_handler;
 
 #endif /* LSH_CONNECTION_H_INCLUDED */
