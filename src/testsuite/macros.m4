@@ -115,7 +115,7 @@ m4_dnl TS_TEST_SIGN(name, key, msg [, signature])
 TS_DEFINE(»TS_TEST_SIGN«,
 »
 {
-  struct alist *algorithms = all_signature_algorithms(make_reasonably_random());
+  struct alist *algorithms = all_signature_algorithms(make_bad_random());
   struct sexp *key = TS_SEXP(»$2«);
   struct lsh_string *msg = TS_STRING(»$3«);
   struct sexp *sign;
@@ -137,7 +137,7 @@ TS_DEFINE(»TS_TEST_SIGN«,
       TS_FAIL
   }
   «)
-  v = spki_make_verifier(algorithms, SIGNER_PUBLIC(s));
+  v = SIGNER_GET_VERIFIER(s);
   if (!v)
     /* Can't create verifier */
     TS_FAIL
