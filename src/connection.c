@@ -23,15 +23,14 @@
 
 #include "connection.h"
 
+#include "compress.h"
 #include "debug.h"
+#include "disconnect.h"
 #include "encrypt.h"
 #include "exception.h"
 #include "format.h"
-#include "disconnect.h"
 #include "io.h"
 #include "keyexchange.h"
-#include "compress.h"
-#include "packet_ignore.h"
 #include "pad.h"
 #include "ssh.h"
 #include "werror.h"
@@ -150,23 +149,20 @@ do_handle_connection(struct abstract_write *w,
     }
 }
 
-static void
-do_fail(struct packet_handler *closure UNUSED,
-	struct ssh_connection *connection,
-	struct lsh_string *packet)
+DEFINE_PACKET_HANDLER(, connection_ignore_handler,
+                      connection UNUSED, packet)
+{
+  lsh_string_free(packet);
+}
+
+DEFINE_PACKET_HANDLER(, connection_fail_handler, connection, packet)
 {
   lsh_string_free(packet);
 
   PROTOCOL_ERROR(connection->e, NULL);
 }
 
-static struct packet_handler fail_handler =
-{ STATIC_HEADER, do_fail };
-
-static void
-do_unimplemented(struct packet_handler *closure UNUSED,
-		 struct ssh_connection *connection,
-		 struct lsh_string *packet)
+DEFINE_PACKET_HANDLER(, connection_unimplemented_handler, connection, packet)
 {
   werror("Received packet of unimplemented type %i.\n",
 	 packet->data[0]);
@@ -179,8 +175,11 @@ do_unimplemented(struct packet_handler *closure UNUSED,
   lsh_string_free(packet);
 }
 
-static struct packet_handler unimplemented_handler =
-{ STATIC_HEADER, do_unimplemented };
+DEFINE_PACKET_HANDLER(, connection_forward_handler, connection, packet)
+{
+  assert(connection->chain);
+  C_WRITE(connection->chain, packet);
+}
 
 
 /* GABA:
@@ -290,12 +289,12 @@ make_ssh_connection(UINT32 flags,
   connection->resources = empty_resource_list();
   
   connection->rec_max_packet = SSH_MAX_PACKET;
-  connection->rec_mac = NULL;
-  connection->rec_crypto = NULL;
 
-  connection->send_mac = NULL;
-  connection->send_crypto = NULL;
-
+  /* Initial encryption state */
+  connection->send_crypto = connection->rec_crypto = NULL;
+  connection->send_mac = connection->rec_mac = NULL;
+  connection->send_compress = connection->rec_compress = NULL;
+  
   connection->paused = 0;
   string_queue_init(&connection->pending);
   
@@ -310,50 +309,54 @@ make_ssh_connection(UINT32 flags,
 #if 0
   connection->newkeys = NULL;
 #endif
-  
+
+#if 0
   /* Initialize dispatch */
-  connection->ignore = make_ignore_handler();
+  connection->ignore = &connection_ignore_handler;
   connection->unimplemented = &unimplemented_handler;
   connection->fail = &fail_handler;
+  connection->forward = &forward_handler;
+#endif
   
   for (i = 0; i < 0x100; i++)
-    connection->dispatch[i] = connection->unimplemented;
+    connection->dispatch[i] = &connection_unimplemented_handler;
 
-  connection->dispatch[0] = connection->fail;
+  connection->dispatch[0] = &connection_fail_handler;
   connection->dispatch[SSH_MSG_DISCONNECT] = &disconnect_handler;
-  connection->dispatch[SSH_MSG_IGNORE] = connection->ignore;
-  connection->dispatch[SSH_MSG_UNIMPLEMENTED] = connection->ignore;
+  connection->dispatch[SSH_MSG_IGNORE] = &connection_ignore_handler;
 
-  connection->dispatch[SSH_MSG_DEBUG] = make_rec_debug_handler();
+  /* So far, all messages we send have to be supported. */ 
+  connection->dispatch[SSH_MSG_UNIMPLEMENTED] = &connection_fail_handler;
 
-  
-  /* Make all other known message types terminate the connection */
+  connection->dispatch[SSH_MSG_DEBUG] = &connection_debug_handler;
 
-  connection->dispatch[SSH_MSG_SERVICE_REQUEST] = connection->fail;
-  connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = connection->fail;
-  connection->dispatch[SSH_MSG_NEWKEYS] = connection->fail;
-  connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
-  connection->dispatch[SSH_MSG_KEXDH_REPLY] = connection->fail;
-  connection->dispatch[SSH_MSG_USERAUTH_REQUEST] = connection->fail;
-  connection->dispatch[SSH_MSG_USERAUTH_FAILURE] = connection->fail;
-  connection->dispatch[SSH_MSG_USERAUTH_SUCCESS] = connection->fail;
-  connection->dispatch[SSH_MSG_USERAUTH_BANNER] = connection->fail;
-  connection->dispatch[SSH_MSG_USERAUTH_PK_OK] = connection->fail;
-  connection->dispatch[SSH_MSG_USERAUTH_PASSWD_CHANGEREQ] = connection->fail;
-  connection->dispatch[SSH_MSG_GLOBAL_REQUEST] = connection->fail;
-  connection->dispatch[SSH_MSG_REQUEST_SUCCESS] = connection->fail;
-  connection->dispatch[SSH_MSG_REQUEST_FAILURE] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_OPEN] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_OPEN_CONFIRMATION] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_OPEN_FAILURE] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_WINDOW_ADJUST] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_DATA] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_EXTENDED_DATA] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_EOF] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_CLOSE] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_REQUEST] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_SUCCESS] = connection->fail;
-  connection->dispatch[SSH_MSG_CHANNEL_FAILURE] = connection->fail;
+    /* Make all other known message types terminate the connection */
+
+  connection->dispatch[SSH_MSG_SERVICE_REQUEST] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_NEWKEYS] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_KEXDH_INIT] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_KEXDH_REPLY] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_USERAUTH_REQUEST] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_USERAUTH_FAILURE] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_USERAUTH_SUCCESS] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_USERAUTH_BANNER] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_USERAUTH_PK_OK] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_USERAUTH_PASSWD_CHANGEREQ] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_GLOBAL_REQUEST] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_REQUEST_SUCCESS] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_REQUEST_FAILURE] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN_CONFIRMATION] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN_FAILURE] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_WINDOW_ADJUST] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_DATA] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_EXTENDED_DATA] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_EOF] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_CLOSE] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_REQUEST] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_SUCCESS] = &connection_fail_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_FAILURE] = &connection_fail_handler;
   
   return connection;
 }
@@ -375,11 +378,6 @@ void connection_init_io(struct ssh_connection *connection,
       (connection->debug_comment
        ? ssh_format("%lz sent", connection->debug_comment)
        : ssh_format("Sent")));
-
-  /* Initial encryption state */
-  connection->send_crypto = connection->rec_crypto = NULL;
-  connection->send_mac = connection->rec_mac = NULL;
-  connection->send_compress = connection->rec_compress = NULL;
 }
 
 /* Serialization. */
