@@ -146,7 +146,7 @@ make_protocol_exception(UINT32 reason, const char *msg)
 {
   NEW(protocol_exception, self);
 
-#define MAX_REASON 11
+#define MAX_REASON 15
   const char *messages[MAX_REASON+1] =
   {
     NULL, "Host not allowed to connect",
@@ -154,11 +154,13 @@ make_protocol_exception(UINT32 reason, const char *msg)
     "Host authentication failed", "MAC error",
     "Compression error", "Service not available",
     "Protocol version not supported", "Host key not verifiable",
-    "Connection lost", "By application"
+    "Connection lost", "By application",
+    "Too many connections", "Auth cancelled by user",
+    "No more auth methods available", "Illegal user name"
   };
     
   assert(reason <= MAX_REASON);
-
+  assert(reason != SSH_DISCONNECT_RESERVED);
 #undef MAX_REASON
 
   self->super.type = EXC_PROTOCOL;
