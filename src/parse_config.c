@@ -31,6 +31,7 @@
 #include "parse_config.h"
 
 #include "format.h"
+#include "lsh_string.h"
 #include "parse.h"
 #include "werror.h"
 #include "xalloc.h"
