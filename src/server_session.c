@@ -27,6 +27,7 @@
 #include "channel_commands.h"
 #include "format.h"
 #include "read_data.h"
+#include "reaper.h"
 #include "server_pty.h"
 #include "ssh.h"
 #include "tcpforward.h"
@@ -38,7 +39,10 @@
 #include <errno.h>
 
 /* For debug */
+
+#if 0
 #include <signal.h>
+#endif
 #include <string.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -47,6 +51,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#if 0
 #if WITH_UTMP
 #if HAVE_UTMP_H
 #include <utmp.h>
@@ -56,6 +61,7 @@
 #include <utmpx.h>
 #endif
 #endif /* WITH_UTMP */
+#endif
 
 /* Socket workround */
 #ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
@@ -108,7 +114,8 @@
 
 #include "server_session.c.x"
 
-/* GABA:
+#if 0
+/* ;; GABA:
    (class
      (name process_resource)
      (super resource)
@@ -131,16 +138,21 @@ static void do_kill_process(struct resource *r)
        * process. An improvement would be to install a callout handler
        * which will kill -9 the process after a delay, if it hasn't died
        * voluntarily. */
-      
-      if (kill(self->pid, self->signal) < 0)
+
+      /* NOTE: Our exit callback sets signal to zero if the process
+       * has already been reaped. */
+      if (self->signal)
 	{
-	  werror("do_kill_process: kill() failed (errno = %i): %z\n",
-		 errno, STRERROR(errno));
+	  if (kill(self->pid, self->signal) < 0)
+	    {
+	      werror("do_kill_process: kill() failed (errno = %i): %z\n",
+		     errno, STRERROR(errno));
+	    }
 	}
 #if WITH_UTMP && HAVE_LOGWTMP
       if (self->tty)
 	{
-#if HAVE_LOGOUT
+#if 0 && HAVE_LOGOUT
 	  logout(self->tty->data);
 #else /* !HAVE_LOGOUT */
 	  /* FIXME: Should we pass NULL:s or empty strings for the
@@ -152,7 +164,7 @@ static void do_kill_process(struct resource *r)
     }
 }
           
-struct resource *
+static struct process_resource *
 make_process_resource(pid_t pid, struct lsh_string *tty, int signal)
 {
   NEW(process_resource, self);
@@ -164,8 +176,9 @@ make_process_resource(pid_t pid, struct lsh_string *tty, int signal)
 
   self->super.kill = do_kill_process;
 
-  return &self->super;
+  return self;
 }
+#endif
 
 /* Session */
 /* GABA:
@@ -277,13 +290,11 @@ make_server_session(struct lsh_user *user,
 
   /* FIXME: Make maximum packet size configurable. */
   self->super.rec_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
-
   self->super.request_types = request_types;
 
   self->super.close = do_close;
   
   self->user = user;
-
   self->process = NULL;
   
   self->in = NULL;
@@ -437,7 +448,8 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
   
   CHECK_TYPE(server_session, session);
 
-  if (! session->process->alive)
+#if 0
+  if (! session->process->super.alive)
     {
       /* The process was killed by a the resource callback (most
        * likely because the connection died. Keep silent. */
@@ -445,8 +457,14 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
       return;
     }
   
-  /* No need to kill the process. */
-  session->process->alive = 0;
+  /* No need to signal the process. */
+  session->process->signal = 0;
+  
+  /* Even if the process need not be signalled, we call the KILL
+   * method for book-keeping purposes. For instance, the lastlog
+   * is updated. */
+  KILL_RESOURCE(&session->process->super);
+#endif
   
   /* FIXME: Should we explicitly mark these files for closing? The
    * io-backend should notice EOF anyway. And the client should send
@@ -494,7 +512,7 @@ make_exit_shell(struct server_session *session)
      (super channel_request)
      (vars
        (backend object io_backend)
-       (reap object reap)))
+       (reaper object reap)))
 */
 
 /* Creates a one-way socket connection. Returns 1 on success, 0 on
@@ -632,36 +650,30 @@ static int make_pty(struct pty_info *pty UNUSED,
 { return 0; }
 #endif /* !WITH_PTY_SUPPORT */
 
-/* Strips any directory part of s. Both argument must be NUL
- * terminated. */
+#if 0
+/* "/dev/" part of s. s must be NUL terminated. */
 static const char *
-lsh_basename(struct lsh_string *s)
+lsh_tty_name(struct lsh_string *s)
 {
-  UINT8 *base;
-  unsigned i;
-
   assert(NUL_TERMINATED(s));
 
-  for (i = 0,  base = s->data; i < s->length; i++)
-    {
-      if (s->data[i] == '/')
-	base = s->data + i + 1;
-    };
-
-  return base;
+  return ( ((s->length > 5) && !memcmp(s->data, "/dev/", 5))
+	   ? s->data + 5
+	   : s->data);
 }
-  
+#endif
 /* Returns -1 on failure, 0 for child and +1 for parent */
 static int
 spawn_process(struct server_session *session,
+	      struct address_info *peer,
 	      struct io_backend *backend,
-	      struct reap *reap)
+	      struct reap *reaper)
 {
   int in[2];
   int out[2];
   int err[2];
 
-  const char *tty = NULL;
+  int using_pty = 0;
   
   if (session->process)
     /* Already spawned a shell or command */
@@ -671,24 +683,33 @@ spawn_process(struct server_session *session,
    * {in|out|err}[1] for writing. */
 
   if (make_pty(session->pty, in, out, err))
-    tty = lsh_basename(session->pty->tty_name);
-
+    using_pty = 1;
+#if 0
+    {
+      tty = lsh_tty_name(session->pty->tty_name);
+      debug("spawn_process: tty-name '%z'\n", tty);
+    }
+#endif
   else if (!make_pipes(in, out, err))
     return -1;
+
   {
-    pid_t child;
+    struct resource *child;
     
-    if (USER_FORK(session->user, &child, tty))
+    if (USER_FORK(session->user, &child,
+		  reaper, make_exit_shell(session),
+		  peer, using_pty ? session->pty->tty_name : NULL))
       {
 	if (child)
 	  { /* Parent */
 	    struct ssh_channel *channel = &session->super;
 	    debug("Parent process\n");
 
-	    session->process
+	    session->process = child;
+#if 0
 	      = make_process_resource(child, format_cstring(tty), SIGHUP);
 	    REAP(reap, child, make_exit_shell(session));
-	  
+#endif  
 	    /* Close the child's fd:s */
 	    close(in[0]);
 	    close(out[1]);
@@ -736,7 +757,7 @@ spawn_process(struct server_session *session,
 	    /* Make sure that the process and it's stdio is
 	     * cleaned up if the channel or connection dies. */
 	    REMEMBER_RESOURCE
-	      (channel->resources, session->process);
+	      (channel->resources, child);
 	    /* FIXME: How to do this properly if in and out may use the
 	     * same fd? */
 	    REMEMBER_RESOURCE
@@ -761,7 +782,7 @@ spawn_process(struct server_session *session,
 	      }
 	    
 #if WITH_PTY_SUPPORT
-	    if (tty)
+	    if (using_pty)
 	      {
 		debug("lshd: server.c: Setting controlling tty...\n");
 		if (!tty_setctty(session->pty))
@@ -833,7 +854,7 @@ STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
 static void
 do_spawn_shell(struct channel_request *c,
 	       struct ssh_channel *channel,
-	       struct ssh_connection *connection UNUSED,
+	       struct ssh_connection *connection,
 	       UINT32 type UNUSED,
 	       int want_reply UNUSED,
 	       struct simple_buffer *args,
@@ -853,7 +874,8 @@ do_spawn_shell(struct channel_request *c,
     /* Already spawned a shell or command */
     goto fail;
 
-  switch (spawn_process(session, closure->backend, closure->reap))
+  switch (spawn_process(session, connection->peer,
+			closure->backend, closure->reaper))
     {
     case 1: /* Parent */
       /* NOTE: The return value is not used. */
@@ -913,13 +935,13 @@ do_spawn_shell(struct channel_request *c,
 
 struct channel_request *
 make_shell_handler(struct io_backend *backend,
-		   struct reap *reap)
+		   struct reap *reaper)
 {
   NEW(shell_request, closure);
 
   closure->super.handler = do_spawn_shell;
   closure->backend = backend;
-  closure->reap = reap;
+  closure->reaper = reaper;
   
   return &closure->super;
 }
@@ -930,7 +952,7 @@ STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Exec request failed");
 static void
 do_spawn_exec(struct channel_request *c,
 	      struct ssh_channel *channel,
-	      struct ssh_connection *connection UNUSED,
+	      struct ssh_connection *connection,
 	      UINT32 type UNUSED,
 	      int want_reply UNUSED,
 	      struct simple_buffer *args,
@@ -960,7 +982,8 @@ do_spawn_exec(struct channel_request *c,
   if (!command_line)
     EXCEPTION_RAISE(e, &exec_request_failed);
   else
-    switch (spawn_process(session, closure->backend, closure->reap))
+    switch (spawn_process(session, connection->peer,
+			  closure->backend, closure->reaper))
     {
     case 1: /* Parent */
       lsh_string_free(command_line);
@@ -1011,13 +1034,13 @@ do_spawn_exec(struct channel_request *c,
 
 struct channel_request *
 make_exec_handler(struct io_backend *backend,
-		  struct reap *reap)
+		  struct reap *reaper)
 {
   NEW(shell_request, closure);
 
   closure->super.handler = do_spawn_exec;
   closure->backend = backend;
-  closure->reap = reap;
+  closure->reaper = reaper;
   
   return &closure->super;
 }

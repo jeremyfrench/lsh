@@ -27,11 +27,31 @@
 
 #include "channel.h"
 #include "io.h"
-#include "reaper.h"
 #include "server_userauth.h"
 
 #include <assert.h>
 #include <string.h>
+
+#if 0
+#define GABA_DECLARE
+#include "server_session.h.x"
+#undef GABA_DECLARE
+
+/* ;; GABA:
+   (class
+     (name process_resource)
+     (super resource)
+     (vars
+       (pid . pid_t)
+       ; Signal used for killing the process.
+       (signal . int)
+       ; Cleanup, an alternative to KILL_RESOURCE
+       ; that performs any needed book-keeping,
+       ; but doesn't try to send any signal
+       ; to the process.
+       (note_dead method void)
+*/
+#endif
 
 struct ssh_channel *
 make_server_session(struct lsh_user *user,
@@ -46,11 +66,11 @@ make_open_session(struct lsh_user *user,
 
 struct channel_request *
 make_shell_handler(struct io_backend *backend,
-		   struct reap *reap);
+		   struct reap *reaper);
 
 struct channel_request *
 make_exec_handler(struct io_backend *backend,
-		  struct reap *reap);
+		  struct reap *reaper);
 
 struct lsh_string *
 format_exit_signal(struct ssh_channel *channel,
@@ -58,8 +78,10 @@ format_exit_signal(struct ssh_channel *channel,
 struct lsh_string *
 format_exit(struct ssh_channel *channel, int value);
 
+#if 0
 struct resource *
 make_process_resource(pid_t pid, struct lsh_string *tty, int signal);
+#endif
 
 struct channel_request *
 make_pty_handler(void);
