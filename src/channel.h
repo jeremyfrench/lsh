@@ -36,8 +36,13 @@
 
 /* FIXME: Reorder definitions so that we don't need this forward
  * declaration. */
-struct channel_open_handler;
 struct channel_open_info;
+
+#if 0
+struct channel_request;
+#endif
+
+struct channel_request_info;
 
 #define GABA_DECLARE
 #include "channel.h.x"
@@ -104,8 +109,8 @@ struct channel_open_info;
   
        (request_types object alist)
 
-       ; FIXME: Add a fallback, to be used for unknown requests.
-       ; (request_fallback object ...)
+       ; If non-NULL, invoked for unknown channel requests.
+       (request_fallback object channel_request)
        
        (flags . int)
 
@@ -241,7 +246,7 @@ struct channel_open_info
 
   /* NOTE: This is a pointer into the packet, so if it is needed later
    * it must be copied. */
-  const UINT8 *type_string;
+  const UINT8 *type_data;
   
   int type;
 
@@ -284,15 +289,16 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
 
 /* SSH_MSG_CHANNEL_REQUEST */
 
-#if 0
 struct channel_request_info
 {
   UINT32 type_length;
-  const UINT8 *type_string;
+  const UINT8 *type_data;
   
   int type;
+
+  int want_reply;
 };
-#endif
+
 
 /* GABA:
    (class
@@ -301,15 +307,16 @@ struct channel_request_info
        (handler method void
 		"struct ssh_channel *channel"
 		"struct ssh_connection *connection"
-		"UINT32 type"
-		"int want_reply"
+		"struct channel_request_info *info"
+		;; "UINT32 type"
+		;; "int want_reply"
 		"struct simple_buffer *args"
 		"struct command_continuation *c"
 		"struct exception_handler *e")))
 */
 
-#define CHANNEL_REQUEST(s, c, conn, t, w, a, n, e) \
-((s)->handler((s), (c), (conn), (t), (w), (a), (n), (e)))
+#define CHANNEL_REQUEST(s, c, conn, i, a, n, e) \
+((s)->handler((s), (c), (conn), (i), (a), (n), (e)))
 
 /* #define CONNECTION_START(c, s) ((c)->start((c), (s))) */
 
@@ -360,26 +367,34 @@ channel_start_receive(struct ssh_channel *channel,
 		      UINT32 initial_window_size);
 
 struct lsh_string *
-format_channel_open_s(UINT32 type_length, UINT8 *type,
+format_channel_open_s(struct lsh_string *type,
 		      UINT32 local_channel_number,
 		      struct ssh_channel *channel,
 		      struct lsh_string *args);
 
+#if 0
 struct lsh_string *
 format_channel_open_a(int type,
 		      UINT32 local_channel_number,
 		      struct ssh_channel *channel,
 		      struct lsh_string *args);
+#endif
 
 struct lsh_string *
 format_channel_open(int type, UINT32 local_channel_number,
 		    struct ssh_channel *channel,
 		    const char *format, ...);
 
-struct lsh_string *format_channel_request(int type,
-					  struct ssh_channel *channel,
-					  int want_reply,
-					  const char *format, ...);
+struct lsh_string *
+format_channel_request_i(struct channel_request_info *info,
+			 struct ssh_channel *channel,
+			 UINT32 args_length, const UINT8 *args_data);
+
+struct lsh_string *
+format_channel_request(int type,
+		       struct ssh_channel *channel,
+		       int want_reply,
+		       const char *format, ...);
 
 struct lsh_string *
 format_global_request(int type, int want_reply,
