@@ -291,11 +291,11 @@ do_catch_simple(struct command *s,
      (name catch_report_collect)
      (super command)
      (vars
-       (info object report_exception_info)))
+       (info const object report_exception_info)))
 */
 
 struct command *
-make_catch_report_apply(struct report_exception_info *info,
+make_catch_report_apply(const struct report_exception_info *info,
 			struct command *body);
 
 void

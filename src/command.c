@@ -668,7 +668,7 @@ do_catch_simple(struct command *s,
      (name catch_report_apply)
      (super command)
      (vars
-       (info object report_exception_info)
+       (info const object report_exception_info)
        (body object command)))
 */
    
@@ -686,7 +686,7 @@ do_catch_report_apply(struct command *s,
 }
 
 struct command *
-make_catch_report_apply(struct report_exception_info *info,
+make_catch_report_apply(const struct report_exception_info *info,
 			struct command *body)
 {
   NEW(catch_report_apply, self);
