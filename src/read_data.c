@@ -24,8 +24,11 @@
  */
 
 #include "read_data.h"
+
 #include "werror.h"
 #include "xalloc.h"
+
+#include <assert.h>
 
 struct read_data
 {
@@ -52,10 +55,12 @@ static int do_read_data(struct read_handler **h,
   
   MDEBUG_SUBTYPE(closure);
 
+  assert(closure->channel->sources);
+  
   if (closure->channel->flags &
       (CHANNEL_RECIEVED_CLOSE | CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
     return LSH_FAIL | LSH_DIE;
-      
+
   to_read = MIN(closure->channel->send_max_packet,
 		closure->channel->send_window_size);
 
@@ -78,8 +83,9 @@ static int do_read_data(struct read_handler **h,
       channel_close(closure->channel);
       return LSH_FAIL | LSH_DIE;
     case A_EOF:
-      /* Send eof (but no close). */
-      channel_eof(closure->channel);
+      if (!--closure->channel->sources)
+	/* Send eof (but no close). */
+	channel_eof(closure->channel);
       return LSH_OK | LSH_DIE;
     default:
       packet->length = n;
@@ -102,5 +108,7 @@ struct read_handler *make_read_data(struct ssh_channel *channel,
   closure->channel = channel;
   closure->write = write;
 
+  channel->sources++;
+  
   return &closure->super;
 }

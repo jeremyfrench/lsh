@@ -30,6 +30,9 @@
 #define CHANNEL_SENT_EOF 4
 #define CHANNEL_RECIEVED_EOF 8
 
+/* Means that we should send close immediately after sending eof. */
+#define CHANNEL_CLOSE_AT_END_OF_FILE 0x10
+
 struct ssh_channel
 {
   struct lsh_object header;
@@ -51,12 +54,11 @@ struct ssh_channel
   struct alist *request_types;
 
   int flags;
-#if 0
-  int recieved_close;
-  int sent_close;
-  int recieved_eof;
-  int sent_eof;
-#endif
+
+  /* Number of files connected to this channel. For instance, stdout
+   * and stderr can be multiplexed on the same channel. We should not
+   * close the channel until we have got an EOF on both sources. */
+  int sources;
 
   /* FIXME: What about return values from these functions? A channel
    * may fail to process it's data. Is there some way to propagate a

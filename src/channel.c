@@ -1049,7 +1049,7 @@ int channel_eof(struct ssh_channel *channel)
   if (LSH_CLOSEDP(res))
     return res;
 
-  if (channel->flags & CHANNEL_RECIEVED_EOF)
+  if (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_CLOSE_AT_END_OF_FILE))
     {
       /* Initiate close */
       res |= channel_close(channel);
@@ -1064,6 +1064,7 @@ void init_channel(struct ssh_channel *channel)
   channel->write = NULL;
 
   channel->flags = 0;
+  channel->sources = 0;
   
   channel->request_types = NULL;
   channel->recieve = NULL;
