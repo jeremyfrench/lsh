@@ -36,7 +36,6 @@
 #include "alist.h"
 #include "command.h"
 #include "connection.h"
-#include "debug.h"
 #include "format.h"
 #include "io.h"
 #include "parse.h"
@@ -192,7 +191,7 @@ send_kexinit(struct ssh_connection *connection)
   connection->literal_kexinits[mode] = s; 
   connection_send_kex_start(connection);  
 
-  C_WRITE_NOW(connection, lsh_string_dup(s));
+  connection_send_kex(connection, lsh_string_dup(s));
 
   /* NOTE: This feature isn't fully implemented, as we won't tell
    * the selected key exchange method if the guess was "right". */
@@ -201,7 +200,7 @@ send_kexinit(struct ssh_connection *connection)
       s = kex->first_kex_packet;
       kex->first_kex_packet = NULL;
 
-      C_WRITE_NOW(connection, s);
+      connection_send_kex(connection, s);
     }
 }
 
@@ -868,7 +867,7 @@ keyexchange_finish(struct ssh_connection *connection,
    * newkeys message. */
 
   assert(connection->send_kex_only);
-  C_WRITE_NOW(connection, ssh_format("%c", SSH_MSG_NEWKEYS));
+  connection_send_kex(connection, ssh_format("%c", SSH_MSG_NEWKEYS));
   
   /* A hash instance initialized with the key, to be used for key
    * generation */

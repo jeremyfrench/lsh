@@ -75,7 +75,6 @@
 #include "environ.h"
 #include "format.h"
 #include "io.h"
-#include "read_file.h"
 #include "reaper.h"
 #include "server_pty.h"
 #include "werror.h"

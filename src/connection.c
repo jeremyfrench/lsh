@@ -31,7 +31,6 @@
 
 #include "command.h"
 #include "compress.h"
-#include "debug.h"
 #include "exception.h"
 #include "format.h"
 #include "io.h"
@@ -206,7 +205,7 @@ DEFINE_PACKET_HANDLER(, connection_forward_handler, connection, packet)
 {
   assert(connection->chain);
   /* FIXME: Packets of certain types (IGNORE, DEBUG, DISCONNECT)
-   * could be sent with C_WRITE_NOW. */
+   * could be sent with connection_send_kex. */
   connection_send(connection->chain, packet);
 }
 
@@ -277,8 +276,8 @@ do_exc_connection_handler(struct exception_handler *s,
         werror("Protocol error: %z\n", e->msg);
         
 	if (exc->reason)
-	  C_WRITE_NOW(self->connection,
-		      format_disconnect(exc->reason, exc->super.msg, ""));
+	  connection_send_kex(self->connection,
+			      format_disconnect(exc->reason, exc->super.msg, ""));
 	
 	EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
       }
@@ -467,6 +466,14 @@ make_connection_close_handler(struct ssh_connection *c)
   return &closure->super;
 }
 
+/* Processes the packet at once, passing it on to the write buffer. */
+void
+connection_send_kex(struct ssh_connection *self,
+		    struct lsh_string *message)
+{
+  A_WRITE(self->write_packet, message);
+}
+
 /* Sends one ordinary (non keyexchange) packet */
 void
 connection_send(struct ssh_connection *self,
@@ -479,7 +486,7 @@ connection_send(struct ssh_connection *self,
   else
     {
       assert(string_queue_is_empty(&self->send_queue));
-      C_WRITE_NOW(self, message);
+      connection_send_kex(self, message);
     }
 }
 
@@ -497,7 +504,7 @@ connection_send_kex_end(struct ssh_connection *self)
   assert(self->send_kex_only);
 
   while (!string_queue_is_empty(&self->send_queue))
-    C_WRITE_NOW(self, string_queue_remove_head(&self->send_queue));
+    connection_send_kex(self, string_queue_remove_head(&self->send_queue));
 
   self->send_kex_only = 0;
 

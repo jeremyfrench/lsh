@@ -18,7 +18,6 @@
 #include "io.h"
 #include "lsh_argp.h"
 #include "publickey_crypto.h"
-#include "read_file.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"

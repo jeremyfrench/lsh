@@ -31,7 +31,6 @@
 
 #include "atoms.h"
 #include "command.h"
-#include "debug.h"
 #include "format.h"
 #include "sexp.h"
 #include "srp.h"
@@ -81,11 +80,11 @@ do_handle_dh_init(struct packet_handler *c,
     }
   
   /* Send server's message, to complete key exchange */
-  C_WRITE_NOW(connection,
-	      dh_make_server_msg(&closure->dh,
-				 closure->server_key,
-				 closure->hostkey_algorithm,
-				 closure->signer));
+  connection_send_kex(connection,
+		      dh_make_server_msg(&closure->dh,
+					 closure->server_key,
+					 closure->hostkey_algorithm,
+					 closure->signer));
 
   connection->dispatch[SSH_MSG_KEXDH_INIT] = &connection_fail_handler;
 
@@ -198,7 +197,7 @@ do_srp_server_proof_handler(struct packet_handler *s,
   
   if (response)
     {
-      C_WRITE_NOW(connection, response);
+      connection_send_kex(connection, response);
 
       /* Remember that a user was authenticated. */
       connection->user = self->srp->user;
@@ -272,7 +271,7 @@ do_server_srp_read_verifier(struct abstract_write *s,
 	{
 	  /* Success */
 
-	  C_WRITE_NOW(self->connection,
+	  connection_send_kex(self->connection,
 		      srp_make_reply_msg(&self->srp->dh,
 					 self->srp->entry));
 	  self->connection->dispatch[SSH_MSG_KEXSRP_PROOF]

@@ -33,7 +33,6 @@
 #include "command.h"
 #include "compress.h"
 #include "connection.h"
-#include "debug.h"
 #include "format.h"
 #include "io.h"
 #include "keyexchange.h"

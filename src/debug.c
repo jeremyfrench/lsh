@@ -25,8 +25,6 @@
 #include "config.h"
 #endif
 
-#include "debug.h"
-
 #include "connection.h"
 #include "format.h"
 #include "parse.h"
@@ -97,7 +95,7 @@ send_debug_message(struct ssh_connection *connection,
 		   const char *msg, int always_display)
 {
   /* Can be sent even during key exchange. */
-  C_WRITE_NOW(connection, make_debug_packet(msg, always_display));
+  connection_send_kex(connection, make_debug_packet(msg, always_display));
 }
 
 DEFINE_PACKET_HANDLER(, connection_debug_handler, connection UNUSED, packet)

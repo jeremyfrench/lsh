@@ -32,7 +32,6 @@
 #include "charset.h"
 #include "client.h"
 #include "connection.h"
-#include "debug.h"
 #include "format.h"
 #include "gateway.h"
 #include "gateway_commands.h"
@@ -143,7 +142,7 @@ do_lshg_send_ignore(struct command *s,
   CAST(ssh_connection, connection, x);
 
   /* Can be sent even during key exchange. */
-  C_WRITE_NOW(connection, ssh_format("%c%z", SSH_MSG_IGNORE, self->msg));
+  connection_send_kex(connection, ssh_format("%c%z", SSH_MSG_IGNORE, self->msg));
 }
 
 static struct command *

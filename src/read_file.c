@@ -30,7 +30,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "read_file.h"
+#include "abstract_io.h"
 
 #include "format.h"
 #include "werror.h"

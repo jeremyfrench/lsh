@@ -34,7 +34,6 @@
 
 #include "channel.h"
 #include "connection_commands.h"
-#include "debug.h"
 #include "format.h"
 #include "gateway_channel.h"
 #include "io_commands.h"
