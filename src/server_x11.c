@@ -443,7 +443,7 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
     }
 
   /* Get a free socket under /tmp/.X11-unix/ */
-  socket = server_x11_setup(channel);
+  socket = server_x11_listen(channel);
   if (!socket)
     return NULL;
 
