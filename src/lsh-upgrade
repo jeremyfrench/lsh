@@ -2,6 +2,9 @@
 
 # A script for upgrading files under .lsh for lsh-2.0
 
+# FIXME: Fix private keys as well, at least unencrypted keys like the
+# server host key.
+
 werror () {
   echo "$1" >&2
 }
