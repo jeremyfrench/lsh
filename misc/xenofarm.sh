@@ -196,11 +196,11 @@ else
 fi
 
 dotask 1 "oopunzip" "" "gzip -d $LIBOOPBASE.tar.gz" liboopstatus
-dotask 1 "oopunpack" "" "tar xf $LIBOOPBASE.tar.gz" liboopstatus
+dotask 1 "oopunpack" "" "tar xf $LIBOOPBASE.tar" liboopstatus
 dotask 1 "oopcfg" "cfgwarn" "cd $LIBOOPBASE && ./configure $oopcfgargs" liboopstatus
-dotask 1 "oopmake "makewarn" "cd $LIBOOPBASE && make" liboopstatus
-dotask 0 "oopcheck "makewarn" "cd $LIBOOPBASE && make check" liboopstatus
-dotask 1 "oopinstall "makewarn" "cd $LIBOOPBASE && make install" liboopstatus
+dotask 1 "oopmake" "makewarn" "cd $LIBOOPBASE && make" liboopstatus
+dotask 0 "oopcheck" "makewarn" "cd $LIBOOPBASE && make check" liboopstatus
+dotask 1 "oopinstall" "makewarn" "cd $LIBOOPBASE && make install" liboopstatus
 
 dotask 1 "unzip" "" "gzip -d $BASE.tar.gz"
 dotask 1 "unpack" "" "tar xf $BASE.tar"
