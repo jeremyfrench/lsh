@@ -224,12 +224,14 @@ static int do_eof(struct ssh_channel *channel)
     return LSH_OK | LSH_GOON;
 }
 
-static void do_close(struct ssh_channel *c)
+static int do_close(struct ssh_channel *c)
 {
   CAST(server_session, session, c);
 
   if (session->process)
     KILL_RESOURCE(session->process);
+
+  return LSH_OK;
 }
 
 struct ssh_channel *make_server_session(struct unix_user *user,
