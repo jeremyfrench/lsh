@@ -24,9 +24,43 @@
 
 #include "tcpforward_commands.h"
 
+#if 0
 #define GABA_DEFINE
 #include "tcpforward_commands.h.x"
-#endif GABA_DEFINE
+#undef GABA_DEFINE
+#endif
+
+#include "atoms.h"
+#include "channel_commands.h"
+#include "format.h"
+#include "io_commands.h"
+#include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#include <assert.h>
+
+/* Forward declarations */
+/* extern struct command_simple forward_start_io; */
+extern struct collect_info_1 open_direct_tcp;
+extern struct collect_info_1 remote_listen_command;
+extern struct collect_info_1 open_forwarded_tcp;
+extern struct command tcpip_start_io;
+extern struct command tcpip_connect_io;
+
+struct collect_info_1 install_forwarded_tcp_handler;
+static struct command make_direct_tcp_handler;
+
+struct collect_info_1 install_tcpip_forward_request_handler;
+static struct command make_forward_tcpip_handler;
+
+/* #define FORWARD_START_IO (&forward_start_io.super.super) */
+#define OPEN_DIRECT_TCP (&open_direct_tcp.super.super.super)
+#define REMOTE_LISTEN (&remote_listen_command.super.super.super)
+#define TCPIP_START_IO (&tcpip_start_io.super)
+#define TCPIP_CONNECT_IO (&tcpip_connect_io.super)
+#define OPEN_FORWARDED_TCP (&open_forwarded_tcp.super.super.super)
+
 
 #include "tcpforward_commands.c.x"
 
@@ -35,6 +69,7 @@
  * the party receiving a open-tcp request, when a channel to the
  * target has been opened. */
 
+/* NOTE: This command does not do any remembering. */
 static int do_tcpip_connect_io(struct command *ignored UNUSED,
 			       struct lsh_object *x,
 			       struct command_continuation *c)
@@ -46,55 +81,33 @@ static int do_tcpip_connect_io(struct command *ignored UNUSED,
     COMMAND_RETURN(c, NULL);
 
   channel = make_tcpip_channel(socket);
+  tcpip_channel_start_io(channel);
 
-  self->channel->receive = do_tcpip_receive;
-  self->channel->send = do_tcpip_send;
-  self->channel->eof = do_tcpip_eof;
-  
-  io_read_write(socket, 
-		make_channel_read_data(&self->channel->super), 
-
-		/* FIXME: Make this configurable */
-		SSH_MAX_PACKET * 10, /* self->block_size, */
-		make_channel_close(&self->channel->super));
-
-  /* Flow control */
-  fd->buffer->report = &self->channel->super;
-
-  COMMAND_RETURN(channel);
+  return COMMAND_RETURN(c, channel);
 }
 
-struct command tcpip_start_io = STATIC_COMMAND(do_tcpip_connect_io);
-
-#define TCPIP_START_IO (&tcpip_start_io.super)
+struct command tcpip_connect_io = STATIC_COMMAND(do_tcpip_connect_io);
 
 /* Used by the party requesting tcp forwarding, i.e. when a socket is
  * already open, and we have asked the other end to forward it. Takes
  * a channel as argument, and connects it to the socket. Returns the
  * channel. */
 
-static struct lsh_object *do_tcpip_start_io(struct command *s UNUSED, 
-					    struct lsh_object *x,
-					    struct command_continuation *c)
+static int
+do_tcpip_start_io(struct command *s UNUSED, 
+		  struct lsh_object *x,
+		  struct command_continuation *c)
 {
-  CAST_SUBTYPE(tcpip_channel, channel, x);
+  CAST_SUBTYPE(ssh_channel, channel, x);
   if (!channel)
     {
       verbose("Error opening channel.\n");
       return NULL;
     }
 
-  channel->super.receive = do_tcpip_receive;
-  channel->super.send = do_tcpip_send;
-  channel->super.eof = do_tcpip_eof;
+  tcpip_channel_start_io(channel);
 
-  /* Install callbacks on the local socket */
-  io_read_write(channel->socket,
-		make_channel_read_data(&channel->super),
-		SSH_MAX_PACKET,
-		make_channel_close(&channel->super));
-
-  COMMAND_RETURN(c, x);
+  return COMMAND_RETURN(c, channel);
 }
 
 struct command tcpip_start_io =
@@ -140,7 +153,7 @@ new_tcpip_channel(struct channel_open_command *c,
   *request = prepare_channel_open(connection->channels, self->type, 
   				  channel, 
   				  "%S%i%S%i",
-				  self->local->ip, self->local->port,
+				  self->port->ip, self->port->port,
 				  self->peer->peer->ip, self->peer->peer->port);
   
   return channel;
@@ -148,16 +161,16 @@ new_tcpip_channel(struct channel_open_command *c,
 
 static struct command *
 make_open_tcpip_command(int type,
-			struct address_info *local,
+			struct address_info *port,
 			struct listen_value *peer)
 {
-  NEW(open_forwarded_tcpip_command, self);
+  NEW(open_tcpip_command, self);
   
   self->super.super.call = do_channel_open_command;
-  self->super.new_channel = new_forwarded_tcpip_channel;
+  self->super.new_channel = new_tcpip_channel;
 
   self->type = type;
-  self->local = local;
+  self->port = port;
   self->peer = peer;
   
   return &self->super.super;
@@ -173,8 +186,8 @@ collect_open_forwarded_tcp(struct collect_info_2 *info,
 
   assert(!info);
 
-  return &make_open_forwarded_tcpip_command(ATOM_FORWARDED_TCPIP,
-					    local, peer)->super;
+  return &make_open_tcpip_command(ATOM_FORWARDED_TCPIP,
+				  local, peer)->super;
 }
 
 static struct collect_info_2 collect_open_forwarded_tcp_2 =
@@ -193,14 +206,14 @@ collect_open_direct_tcp(struct collect_info_2 *info,
 
   assert(!info);
 
-  return &make_open_forwarded_tcpip_command(ATOM_DIRECT_TCPIP,
-					    local, peer)->super;
+  return &make_open_tcpip_command(ATOM_DIRECT_TCPIP,
+				  local, peer)->super;
 }
 
 static struct collect_info_2 collect_open_direct_tcp_2 =
 STATIC_COLLECT_2_FINAL(collect_open_direct_tcp);
 
-struct collect_info_1 open_forwarded_tcp =
+struct collect_info_1 open_direct_tcp =
 STATIC_COLLECT_1(&collect_open_direct_tcp_2);
 
 
@@ -328,7 +341,7 @@ STATIC_COLLECT_1(&collect_info_remote_listen_2);
      (name make_forward_local_port)
      (globals
        (listen LISTEN_COMMAND)
-       (start_io FORWARD_START_IO)
+       (start_io TCPIP_START_IO)
        (open_direct_tcp OPEN_DIRECT_TCP))
      (params
        (backend object io_backend)
@@ -357,7 +370,7 @@ struct command *forward_local_port(struct io_backend *backend,
      (globals
        (remote_listen REMOTE_LISTEN)
        ;; (connection_remember CONNECTION_REMEMBER)
-       (start_io TCPIP_START_IO))
+       (start_io TCPIP_CONNECT_IO))
      (params
        (connect object command)
        (remote object address_info)
@@ -383,3 +396,135 @@ struct command *forward_remote_port(struct io_backend *backend,
   return res;
 }
 
+/* Takes a callback function and returns a channel_open
+ * handler. */
+static int
+do_make_direct_tcp_handler(struct command *s UNUSED,
+			   struct lsh_object *x,
+			   struct command_continuation *c)
+{
+  CAST_SUBTYPE(command, callback,  x);
+
+  return
+    COMMAND_RETURN(c,
+		   &make_channel_open_direct_tcpip(callback)->super);
+}
+
+static struct command
+make_direct_tcp_handler = STATIC_COMMAND(do_make_direct_tcp_handler);
+
+/* Takes a callback function and returns a global_request handler. */
+static int
+do_make_tcpip_forward_handler(struct command *s UNUSED,
+			      struct lsh_object *x,
+			      struct command_continuation *c)
+{
+  CAST_SUBTYPE(command, callback,  x);
+
+  return
+    COMMAND_RETURN(c,
+		   &make_tcpip_forward_request(callback)->super);
+}
+
+static struct command
+make_forward_tcpip_handler
+= STATIC_COMMAND(do_make_tcpip_forward_handler);
+
+
+/* Commands to install open hadnlers */
+struct install_info install_direct_tcp_info_2 =
+STATIC_INSTALL_OPEN_HANDLER(ATOM_DIRECT_TCPIP);
+
+struct collect_info_1 install_direct_tcp_handler =
+STATIC_COLLECT_1(&install_direct_tcp_info_2.super);
+
+struct install_info install_forwarded_tcp_info_2 =
+STATIC_INSTALL_OPEN_HANDLER(ATOM_FORWARDED_TCPIP);
+
+struct collect_info_1 install_forwarded_tcp_handler =
+STATIC_COLLECT_1(&install_forwarded_tcp_info_2.super);
+
+/* Server side callbacks */
+
+/* Make this non-static? */
+/* GABA:
+   (expr
+     (name direct_tcpip_hook)
+     (globals
+       (install "&install_forwarded_tcp_handler.super.super.super")
+       (handler "&make_direct_tcp_handler.super")
+       (start_io TCPIP_START_IO))
+     (params
+       (connect object command))
+     (expr
+       (lambda (connection)
+         (install connection
+	   (handler (lambda (port)
+	     (start_io (connect connection port))))))))
+*/
+
+struct command *
+make_direct_tcpip_hook(struct io_backend *backend)
+{
+  CAST_SUBTYPE(command, res,
+	       direct_tcpip_hook(make_connect_connection(backend)));
+
+  return res;
+}
+
+
+/* ;; GABA:
+   (expr
+     (name forwarded_tcpip_hook)
+     (expr
+       (lambda (connection)
+         ())))
+*/
+
+struct install_info install_tcpip_forward_request_info_2 =
+STATIC_INSTALL_OPEN_HANDLER(ATOM_TCPIP_FORWARD);
+
+struct collect_info_1 install_tcpip_forward_request_handler =
+STATIC_COLLECT_1(&install_tcpip_forward_request_info_2.super);
+
+/* GABA:
+   (expr
+     (name make_tcpip_forward_hook)
+     (globals
+       (install "&install_tcpip_forward_request_handler.super.super.super")
+       (handler "&make_forward_tcpip_handler.super")
+       (start_io TCPIP_START_IO)
+       (open_forwarded_tcp OPEN_FORWARDED_TCP)
+       (listen LISTEN_COMMAND))
+     (params
+       (backend object io_backend))
+     (expr
+       (lambda (connection)
+         (install connection
+	   (handler (lambda (port)
+             (listen (lambda (peer)
+                       (start_io (open_forwarded_tcp port peer
+		                                     connection)))
+	             backend port)))))))
+*/
+
+struct command *
+tcpip_forward_hook(struct io_backend *backend)
+{
+  CAST_SUBTYPE(command, res, make_tcpip_forward_hook(backend));
+
+  return res;
+}
+	 
+/* Invoked when a direct-tcp request is received */
+/* ;; GABA:
+   (expr
+     (name forward_connect)
+     (globals
+       (start_io TCPIP_START_IO))
+     (params
+       (connect object command))
+     (expr
+       (lambda (connection port)
+         (start_io (connect connection port)))))
+*/

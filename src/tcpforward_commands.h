@@ -22,16 +22,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef LSH_TCPFORWARD_H_INCLUDED
-#define LSH_TCPFORWARD_H_INCLUDED
+#ifndef LSH_TCPFORWARD_COMMANDS_H_INCLUDED
+#define LSH_TCPFORWARD_COMMANDS_H_INCLUDED
 
 #include "tcpforward.h"
 
 #if 0
 #define GABA_DECLARE
 #include "tcpforward_commands.h.x"
-#endif GABA_DECLARE
+#undef GABA_DECLARE
+#endif
 
+#if 0
 /* ;;GABA:
    (class
      (name remote_listen_value)
@@ -52,4 +54,11 @@ make_remote_listen_value(struct channel_open_callback *c,
 }
 #endif
 
-#endif /* LSH_TCPFORWARD_H_INCLUDED */
+/* FIXME: The naming is inconsistent */
+struct command *
+make_direct_tcpip_hook(struct io_backend *backend);
+
+struct command *
+tcpip_forward_hook(struct io_backend *backend);
+
+#endif /* LSH_TCPFORWARD_COMMANDS_H_INCLUDED */
