@@ -1,6 +1,6 @@
 dnl (progn (modify-syntax-entry ?' "'") (modify-syntax-entry ?` "'"))
 dnl AC_CHECK_MEMBER(includes, struct, field)
-AC_DEFUN(AC_CHECK_MEMBER,
+AC_DEFUN([AC_CHECK_MEMBER],
 [ AC_CACHE_CHECK([if $2 has member $3],
     lsh_cv_decl_struct_$2_$3,
     [AC_TRY_COMPILE([$1],
@@ -15,7 +15,7 @@ changequote([, ])dnl
 ])
 
 dnl AC_CHECK_VAR(VAR, TYPE)
-AC_DEFUN(AC_CHECK_VAR,
+AC_DEFUN([AC_CHECK_VAR],
 [ AC_CACHE_CHECK(
     [for $1],
     lsh_cv_var_$1,
@@ -28,7 +28,7 @@ AC_DEFUN(AC_CHECK_VAR,
 ])
 
 dnl Try to detect the type of the third arg to getsockname() et al
-AC_DEFUN(AC_TYPE_SOCKLEN_T,
+AC_DEFUN([AC_TYPE_SOCKLEN_T],
 [AC_CACHE_CHECK([for socklen_t in sys/socket.h], ac_cv_type_socklen_t,
 [AC_EGREP_HEADER(socklen_t, sys/socket.h,
   [ac_cv_type_socklen_t=yes], [ac_cv_type_socklen_t=no])])
@@ -50,7 +50,7 @@ fi
 
 dnl checks for gmp version 2 or later. 
 dnl AC_CHECK_LIBGMP(library, [, if-found [, if-not-found]])
-AC_DEFUN(AC_CHECK_LIBGMP,
+AC_DEFUN([AC_CHECK_LIBGMP],
 [AC_CACHE_CHECK([for mpz_get_d in -l$1], ac_cv_lib_$1_mpz_get_d,
 [ac_save_libs="$LIBS"
 LIBS="-l$1 $LIBS"
@@ -80,7 +80,7 @@ fi
 
 dnl checks for gmp version 2 or later. 
 dnl AC_SEARCH_LIBGMP(libraries, [, if-found [, if-not-found]])
-AC_DEFUN(AC_SEARCH_LIBGMP,
+AC_DEFUN([AC_SEARCH_LIBGMP],
 [AC_CACHE_CHECK([for library containing mpz_get_d], ac_cv_search_mpz_get_d,
 [ac_search_save_LIBS="$LIBS"
 ac_cv_search_mpz_get_d="no"
@@ -113,7 +113,7 @@ fi
 ])
 
 dnl LSH_PATH_ADD(path-id, directory)
-AC_DEFUN(LSH_PATH_ADD,
+AC_DEFUN([LSH_PATH_ADD],
 [AC_MSG_CHECKING($2)
 ac_exists=no
 if test -d "$2/." ; then
@@ -143,10 +143,10 @@ fi
 ])
 
 dnl LSH_RPATH_ADD(dir)
-AC_DEFUN(LSH_RPATH_ADD, [LSH_PATH_ADD(RPATH_CANDIDATE, $1)])
+AC_DEFUN([LSH_RPATH_ADD], [LSH_PATH_ADD(RPATH_CANDIDATE, $1)])
 
 dnl LSH_RPATH_INIT(candidates)
-AC_DEFUN(LSH_RPATH_INIT,
+AC_DEFUN([LSH_RPATH_INIT],
 [AC_MSG_CHECKING([for -R flag])
 RPATHFLAG=''
 case `uname -sr` in
@@ -194,7 +194,7 @@ done
 dnl Try to execute a main program, and if it fails, try adding some
 dnl -R flag.
 dnl LSH_RPATH_FIX
-AC_DEFUN(LSH_RPATH_FIX,
+AC_DEFUN([LSH_RPATH_FIX],
 [if test $cross_compiling = no -a "x$RPATHFLAG" != x ; then
   ac_success=no
   AC_TRY_RUN([int main(int argc, char **argv) { return 0; }],
@@ -232,7 +232,7 @@ dnl Like AC_CHECK_LIB, but uses $KRB_LIBS rather than $LIBS.
 dnl AC_CHECK_KRB_LIB(LIBRARY, FUNCTION, [, ACTION-IF-FOUND [,
 dnl                  ACTION-IF-NOT-FOUND [, OTHER-LIBRARIES]]])
 
-AC_DEFUN(AC_CHECK_KRB_LIB,
+AC_DEFUN([AC_CHECK_KRB_LIB],
 [AC_CHECK_LIB([$1], [$2],
   ifelse([$3], ,
       [ changequote(, )dnl
@@ -248,7 +248,7 @@ AC_DEFUN(AC_CHECK_KRB_LIB,
 ])
 
 dnl AC_LIB_ARGP(ACTION-IF-OK, ACTION-IF-BAD)
-AC_DEFUN(AC_LIB_ARGP,
+AC_DEFUN([AC_LIB_ARGP],
 [ ac_argp_save_LIBS="$LIBS"
   ac_argp_save_LDFLAGS="$LDFLAGS"
   ac_argp_ok=no
