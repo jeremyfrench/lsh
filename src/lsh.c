@@ -47,6 +47,7 @@
 #include "ssh.h"
 #include "tcpforward_commands.h"
 #include "tty.h"
+#include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -317,7 +318,7 @@ make_options_command(struct lsh_options *options,
 static struct verifier *
 do_lsh_lookup(struct lookup_verifier *c,
 	      int method,
-	      struct lsh_string *keyholder UNUSED,
+	      struct user *keyholder UNUSED,
 	      struct lsh_string *key)
 {
   CAST(lsh_host_db, self, c);
@@ -613,6 +614,11 @@ static int remember_tty(int fd)
 
 
 /* Option parsing */
+
+const char *argp_program_version
+= "lsh-" VERSION ", secsh protocol version " CLIENT_PROTOCOL_VERSION;
+
+const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define ARG_NOT 0x400
 
