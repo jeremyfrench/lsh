@@ -75,28 +75,28 @@
 
 /* GABA:
    (class
-     (name fake_host_db)
+     (name sloppy_host_db)
      (super lookup_verifier)
      (vars
        (algorithm object signature_algorithm)))
 */
 
 static struct verifier *
-do_host_lookup(struct lookup_verifier *c,
-	       struct lsh_string *keyholder UNUSED,	       
-	       struct lsh_string *key)
+do_sloppy_lookup(struct lookup_verifier *c,
+		 struct lsh_string *keyholder UNUSED,	       
+		 struct lsh_string *key)
 {
-  CAST(fake_host_db, closure, c);
+  CAST(sloppy_host_db, closure, c);
 
   return MAKE_VERIFIER(closure->algorithm, key->length, key->data);
 }
 
 static struct lookup_verifier *
-make_fake_host_db(struct signature_algorithm *a)
+make_sloppy_host_db(struct signature_algorithm *a)
 {
-  NEW(fake_host_db, res);
+  NEW(sloppy_host_db, res);
 
-  res->super.lookup = do_host_lookup;
+  res->super.lookup = do_sloppy_lookup;
   res->algorithm = a;
 
   return &res->super;
@@ -667,8 +667,8 @@ int main(int argc, char **argv)
   dh = make_dh1(r);
 
   /* No randomness is needed for verifying signatures */
-  lookup_table = make_alist(1
-			    , ATOM_SSH_DSS, make_fake_host_db(make_dsa_algorithm(NULL)),
+  lookup_table = make_alist(1,
+			    ATOM_SSH_DSS, make_sloppy_host_db(make_dsa_algorithm(NULL)),
 			    -1); 
 
   kex = make_dh_client(dh, lookup_table);
