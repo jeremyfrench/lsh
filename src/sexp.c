@@ -594,7 +594,9 @@ sexp_format(struct sexp *e, int style, unsigned indent)
   switch(style)
     {
     case SEXP_TRANSPORT:
-      return encode_base64(sexp_format(e, SEXP_CANONICAL, 0), "{}", 1, indent, 1);
+      return ssh_format("%lfS\n",
+			encode_base64(sexp_format(e, SEXP_CANONICAL, 0),
+				      "{}", 1, indent, 1));
     case SEXP_CANONICAL:
       return SEXP_FORMAT(e, style, indent);
 
