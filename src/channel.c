@@ -242,14 +242,11 @@ struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i)
 static int adjust_rec_window(struct ssh_channel *channel)
 {
   if (channel->rec_window_size < channel->max_window / 2)
-    {
-      int increment = channel->max_window - channel->rec_window_size;
-      channel->rec_window_size = channel->max_window;
-      
-      return A_WRITE(channel->write,
-		     prepare_window_adjust(channel, increment));
-    }
-  return 0;
+    return A_WRITE(channel->write,
+		   prepare_window_adjust
+		   (channel, channel->max_window - channel->rec_window_size));
+  else
+    return 0;
 }
 
 /* Process channel-related status codes. Used by the packet handlers,
@@ -640,14 +637,8 @@ static int do_channel_data(struct packet_handler *closure UNUSED,
 	       * data. */
 	      res = adjust_rec_window(channel);
 	      
-	      if (channel->rec_window_size < channel->max_window / 2)
-		{
-		  res = A_WRITE(channel->write, prepare_window_adjust
-				(channel,
-				 channel->max_window - channel->rec_window_size));
-		  if (LSH_CLOSEDP(res))
-		    return res;
-		}
+	      if (LSH_CLOSEDP(res))
+		return res;
 
 	      return channel_process_status(
 		connection->channels, channel_number,
@@ -714,15 +705,12 @@ static int do_channel_extended_data(struct packet_handler *closure UNUSED,
 	      
 	      channel->rec_window_size -= data->length;
 
-	      if (channel->rec_window_size < channel->max_window / 2)
-		{
-		  res = A_WRITE(channel->write, prepare_window_adjust
-				(channel,
-				 channel->max_window
-				 - channel->rec_window_size));
-		  if (LSH_CLOSEDP(res))
-		    return res;
-		}
+	      /* FIXME: Like for do_channel_data(), unconditionally
+	       * adjusting the window breaks flow control. */
+	      res = adjust_rec_window(channel);
+
+	      if (LSH_CLOSEDP(res))
+		return res;
 
 	      switch(type)
 		{
