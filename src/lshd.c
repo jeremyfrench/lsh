@@ -292,6 +292,7 @@ int main(int argc, char **argv)
 {
   char *host = NULL;  /* Interface to bind */
   char *port = "ssh";
+  /* TODO: this should probably use sysconfdir */  
   char *hostkey = "/etc/lsh_host_key";
 
 #if WITH_SSH1_FALLBACK
@@ -415,15 +416,30 @@ int main(int argc, char **argv)
   /* Read the hostkey */
   if (!read_host_key(hostkey, &public_key, &secret_key, r))
     {
+      werror("lshd: Could not read hostkey.\n");
       return EXIT_FAILURE;
     }
 
   if (!get_inaddr(&local, host, port, "tcp"))
     {
-      fprintf(stderr, "No such host or service");
+      werror("lshd: No such host or service.\n");
       return EXIT_FAILURE;
     }
 
+#if 0
+#ifdef HAVE_SYSLOG
+  {
+    int option = LOG_PID | LOG_CONS;
+    if (foreground_flag)
+      {
+	option |= LOG_PERROR;
+      }
+    openlog("lshd", option, LOG_DAEMON);
+    syslog_flag = 1;
+  }
+#endif /* HAVE_SYSLOG */
+#endif
+ 
   init_backend(backend);
   reaper = make_reaper();
 
@@ -481,7 +497,8 @@ int main(int argc, char **argv)
 				 r, make_kexinit,
 				 kexinit_handler)))
     {
-      werror("lsh: Connection failed: %z\n", strerror(errno));
+      werror("lshd: listen() failed: (errno = %i): %z\n",
+	     errno, strerror(errno));
       return 1;
     }
   

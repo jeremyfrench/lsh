@@ -120,6 +120,7 @@ int main(int argc, char **argv)
   /* int term_width, term_height, term_width_pix, term_height_pix; */
   int not;
 #if WITH_PTY_SUPPORT
+  int tty;
   int use_pty = -1; /* Means default */
 #endif /* WITH_PTY_SUPPORT */
   
@@ -127,8 +128,6 @@ int main(int argc, char **argv)
 
   int lsh_exit_code;
 
-  int tty;
-  
   struct sockaddr_in remote;
 
   struct randomness *r;
