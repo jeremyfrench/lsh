@@ -27,6 +27,7 @@
 #define LSH_SEXP_H_INCLUDED
 
 #include "bignum.h"
+#include "command.h"
 #include "list.h"
 
 #include "sexp_table.h"
@@ -82,7 +83,7 @@ struct sexp_iterator;
 #define SEXP_SET(i, v) ((i)->set((i), (v)))
 #define SEXP_NEXT(i) ((i)->next((i)))
 
-/* Output styles */
+/* Syntax styles */
 
 #define SEXP_CANONICAL 0
 #define SEXP_TRANSPORT 1
@@ -164,8 +165,10 @@ extern int sexp_char_classes[];
 
 #define HANDLE_SEXP(h, s) ((h)->handler((h), (s)))
 
-struct read_handler *make_read_sexp(struct sexp_handler *handler,
-				    int style, int goon);
+struct read_handler *
+make_read_sexp(int style, int goon,
+	       struct command_continuation *c,
+	       struct exception_handler *e);
 
 #endif /* LSH_SEXP_H_INCLUDED */
 
