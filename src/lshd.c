@@ -298,6 +298,7 @@ DEFINE_COMMAND(options2local)
       struct exception_handler *e UNUSED)
 {
   CAST(lshd_options, options, a);
+  /* FIXME: Call bind already here? */
   COMMAND_RETURN(c, options->local);
 }
 
@@ -417,7 +418,6 @@ DEFINE_COMMAND(options2tcp_wrapper)
 {
 #if WITH_TCPWRAPPERS
   CAST(lshd_options, options, a);
-
 
   if (options->tcp_wrapper_name) 
     COMMAND_RETURN(c, 
@@ -870,14 +870,14 @@ main_argp =
      (expr (lambda (options)
              (let ((keys (options2keys options)))
 	       (close_on_sighup options
-	         (listen_callback
+	         (listen
 	           (lambda (lv)
     	             (services (connection_handshake
     	           		  handshake
     	           		  (kexinit_filter init keys)
     	           		  keys 
 				  (options2tcp_wrapper options lv))))
-	           (options2local options) ))))))
+	           (bind (options2local options)) ))))))
 */
 
 
