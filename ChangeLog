@@ -1,5 +1,7 @@
 2001-02-22  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/randomness.c (do_arcfour_random): Spelling fix.
+
 	* Released lsh-1.1.7.
 
 2001-02-22  Niels Möller  <nisse@ehand.com>

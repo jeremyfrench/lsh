@@ -1,0 +1,25 @@
+#! /bin/sh
+
+function quote ()
+{
+  echo '"'"$1"'"'
+}
+  
+function foo ()
+{
+  echo $1 | (IFS=":" read a file
+  if [ -z "$file" ]; then
+    quote "$a"
+  else
+    echo $a | (IFS="@" read user host
+    if [ -z "$host" ]; then
+      echo `quote $user` ":" `quote $file`
+    else
+      echo `quote $user` "@" `quote $host` ":" `quote $file`
+    fi)
+  fi)
+}
+
+foo "file foo"
+foo "sture:index.html"
+foo "nisse@sture:konstig fil"
