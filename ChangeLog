@@ -1,3 +1,10 @@
+2002-03-17  Pontus  <pont@it.uu.se>
+
+	* src/unix_process.c (do_utmp_cleanup): Set ut_type to
+	USER_PROCESS before calling getutid (neccessary on my Linux
+	system, and shouldn't break anything). Make a working copy to
+	modify. Do some logging.
+
 2002-03-16  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/unix_user.c (exec_shell): Bugfix, fixed test for login-mode.

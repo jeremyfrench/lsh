@@ -186,20 +186,34 @@ do_utmp_cleanup(struct exit_callback *s,
   struct utmp pattern;
   struct utmp *utmp;
 
+  trace("unix_process.c: do_utmp_cleanup\n");
+
   memset(&pattern, 0, sizeof(pattern));
   CP(pattern.ut_line, self->line);
   CP(pattern.ut_id, self->id);
+
+  /* For Linux/glibc (and possibly others), we need to set 
+   * ut_type to find our entry */
+
+  pattern.ut_type = USER_PROCESS;
 
   /* Rewind database */
   setutent();
   utmp = getutid(&pattern);
   if (!utmp)
     /* Entry destroyed? Do nothing. */
-    ;
+    debug("unix_process.c: do_utmp_cleanup found no match\n");
   else
     {
+      /* Make a working copy of this entry that we can modify */
+
+      struct utmp wc = *utmp;
+      utmp = &wc;
+
       utmp->ut_type = DEAD_PROCESS;
-  
+
+      debug("unix_process.c: do_utmp_cleanup getutid found match\n");
+
 #if HAVE_STRUCT_UTMP_UT_EXIT
       utmp->ut_exit.e_exit = signaled ? 0 : value;
       utmp->ut_exit.e_termination = signaled ? value : 0;
