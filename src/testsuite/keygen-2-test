@@ -1,0 +1,12 @@
+#! /bin/sh
+
+# Tests the key generation programs
+
+echo Testing lsh_writekey with no argument
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+rm -rf temphome && mkdir temphome
+HOME="`pwd`/temphome" ../lsh_writekey < $srcdir/key-1.private
