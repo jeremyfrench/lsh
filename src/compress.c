@@ -23,6 +23,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/* FIXME: The deflate functions aren't used anymore */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -74,6 +76,7 @@ do_packet_inflate(struct abstract_write *closure,
 
   if (self->connection->rec_compress)
     {
+      uint32_t sequence_number = packet->sequence_number;
       packet = CODEC(self->connection->rec_compress, packet, 1);
       if (!packet)
 	{
@@ -85,6 +88,8 @@ do_packet_inflate(struct abstract_write *closure,
 				     "Inflating compressed data failed."));
 	  return;
 	}
+      /* Keep sequence number */
+      packet->sequence_number = sequence_number;
     }
   A_WRITE(self->super.next, packet);
 }
