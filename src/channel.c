@@ -442,7 +442,7 @@ void channel_start_receive(struct ssh_channel *channel)
 
 /* GABA:
    (class
-     (name global_request_status)
+     (name request_status)
      (vars
        ; -1 for still active requests,
        ; 0 for failure,
@@ -450,73 +450,123 @@ void channel_start_receive(struct ssh_channel *channel)
        (status . int)))
 */
 
-static struct global_request_status *make_global_request_status(void)
+static struct request_status *
+make_request_status(void)
 {
-  NEW(global_request_status, self);
+  NEW(request_status, self);
   self->status = -1;
 
   return self;
 }
 
-/* FIXME: Split into a continuation and an exception handler */
 /* GABA:
    (class
-     (name global_request_response)
-     (super global_request_callback)
+     (name global_request_continuation)
+     (super command_continuation)
      (vars
-       (active object global_request_status)))
+       (connection object ssh_connection)
+       (active object request_status)))
 */
 
-static void
-do_global_request_response(struct global_request_callback *c,
-			   int success)
+static void 
+send_global_request_responses(struct ssh_connection *connection, 
+			      struct object_queue *q)
 {
-  CAST(global_request_response, self, c);
-  struct object_queue *q = &self->super.connection->table->active_global_requests;
-
-  assert( self->active->status == -1);
-  assert( (success == 0) || (success == 1) );
-  assert( !object_queue_is_empty(q));
-	  
-  self->active->status = success;
-
-  for (;;)
-    {
-      CAST(global_request_status, n, object_queue_peek_head(q));
-      if (!n || (n->status < 0))
-	break;
-
+   for (;;)
+     {
+       CAST(request_status, n, object_queue_peek_head(q));
+       if (!n || (n->status < 0))
+	 break;
+ 
       object_queue_remove_head(q);
 
-      /* FIXME: Perhaps install some exception handler that cancels
-       * the queue as soon as a write failes. */
-      C_WRITE(self->super.connection,
+      C_WRITE(connection,
 	      (n->status
 	       ? format_global_success()
 	       : format_global_failure()));
     }
 }
 
-static struct global_request_callback *
-make_global_request_response(struct ssh_connection *connection,
-			     struct global_request_status *active)
+static void
+do_global_request_response(struct command_continuation *s,
+			   struct lsh_object *x UNUSED)
 {
-  NEW(global_request_response, self);
+  CAST(global_request_continuation, self, s);
+  struct object_queue *q = &self->connection->table->active_global_requests;
 
-  self->super.connection = connection;
-  self->super.response = do_global_request_response;
+  assert(self->active->status == -1);
+  assert(!object_queue_is_empty(q));
+	  
+  self->active->status = 1;
 
+  send_global_request_responses(self->connection, q);
+}
+
+static struct command_continuation *
+make_global_request_response(struct ssh_connection *connection,
+			     struct request_status *active)
+{
+  NEW(global_request_continuation, self);
+
+  self->super.c = do_global_request_response;
+  self->connection = connection;
   self->active = active;
-
+   
   return &self->super;
 }
-     
-static void do_global_request(struct packet_handler *s UNUSED,
-			      struct ssh_connection *connection,
-			      struct lsh_string *packet)
-{
-  /* CAST(global_request_handler, closure, c); */
 
+
+/* GABA:
+   (class
+     (name global_request_exception_handler)
+     (super exception_handler)
+     (vars
+       (connection object ssh_connection)
+       (active object request_status)))
+*/
+
+/* NOTE: We handle *only* EXC_GLOBAL_REQUEST */
+static void 
+do_global_request_handler(struct exception_handler *c,
+			  const struct exception *e)
+{
+  CAST(global_request_exception_handler, self, c);
+  if (e->type == EXC_GLOBAL_REQUEST)
+    {
+      struct object_queue *q = &self->connection->table->active_global_requests;
+      
+      assert(self->active->status == -1);
+      assert(!object_queue_is_empty(q));
+
+      self->active->status = 0;
+  
+      send_global_request_responses(self->connection, q);
+    }
+  else
+    EXCEPTION_RAISE(c->parent, e);
+}
+
+static struct exception_handler *
+make_global_request_exception_handler(struct ssh_connection *connection,
+				      struct request_status *active,
+				      struct exception_handler *h,
+				      const char *context)
+{
+  NEW(global_request_exception_handler, self);
+
+  self->super.raise = do_global_request_handler;
+  self->super.context = context;
+  self->super.parent = h;
+  self->active = active;
+  self->connection = connection;
+  return &self->super;
+}
+
+static void
+do_global_request(struct packet_handler *s UNUSED,
+		  struct ssh_connection *connection,
+		  struct lsh_string *packet)
+{
   struct simple_buffer buffer;
   unsigned msg_number;
   int name;
@@ -530,7 +580,8 @@ static void do_global_request(struct packet_handler *s UNUSED,
       && parse_boolean(&buffer, &want_reply))
     {
       struct global_request *req;
-      struct global_request_callback *c = NULL;
+      struct command_continuation *c = &discard_continuation;
+      struct exception_handler *e = connection->e;
       
       if (!name || !(req = ALIST_GET(connection->table->global_requests,
 				     name)))
@@ -544,14 +595,25 @@ static void do_global_request(struct packet_handler *s UNUSED,
 	{
 	  if (want_reply)
 	    {
-	      struct global_request_status *a = make_global_request_status();
+	      struct request_status *a = make_request_status();
 	      
 	      object_queue_add_tail(&connection->table->active_global_requests,
 				    &a->super);
 	      
 	      c = make_global_request_response(connection, a);
+	      e = make_global_request_exception_handler(connection, a, e, HANDLER_CONTEXT);
 	    }
-	  GLOBAL_REQUEST(req, connection, &buffer, c);
+	  else
+	    {
+	      /* We should ignore failures. */
+	      static struct report_exception_info global_req_ignore =
+		STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_GLOBAL_REQUEST,
+					     "Ignored:");
+	      
+	      e = make_report_exception_handler(&global_req_ignore,
+						e, HANDLER_CONTEXT);
+	    }
+	  GLOBAL_REQUEST(req, connection, name, want_reply, &buffer, c, e);
 	}
     }
   else
@@ -614,6 +676,199 @@ do_global_request_failure(struct packet_handler *s UNUSED,
       EXCEPTION_RAISE(ctx->e, &global_request_exception);
     }
   END(packet);
+}
+
+
+/* FIXME: Don't store the channel here, instead have it passed as the
+ * argument of the continuation. This might also allow some
+ * unification with the handling of global_requests. */
+
+/* GABA:
+   (class
+     (name channel_request_continuation)
+     (super command_continuation)
+     (vars
+       (connection object ssh_connection)
+       (channel object ssh_channel)
+       (active object request_status)))
+*/
+
+static void
+send_channel_request_responses(struct ssh_connection *connection,
+			       struct ssh_channel *channel,
+			       struct object_queue *q)
+{
+  for (;;)
+    {
+      CAST(request_status, n, object_queue_peek_head(q));
+      if (!n || (n->status < 0))
+	break;
+
+      object_queue_remove_head(q);
+
+      C_WRITE(connection,
+	      (n->status
+	       ? format_channel_success(channel->channel_number)
+	       : format_channel_failure(channel->channel_number)));
+    }
+}
+
+static void
+do_channel_request_response(struct command_continuation *s,
+			    struct lsh_object *x UNUSED)
+{
+  CAST(channel_request_continuation, self, s);
+  struct object_queue *q = &self->channel->active_requests;
+
+  assert(self->active->status == -1);
+  assert(!object_queue_is_empty(q));
+	  
+  self->active->status = 1;
+
+  send_channel_request_responses(self->connection, self->channel, q);
+}
+
+static struct command_continuation *
+make_channel_request_response(struct ssh_connection *connection,
+			      struct ssh_channel *channel,
+			      struct request_status *active)
+{
+  NEW(channel_request_continuation, self);
+
+  self->super.c = do_channel_request_response;
+  self->connection = connection;
+  self->channel = channel;
+  self->active = active;
+
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name channel_request_exception_handler)
+     (super exception_handler)
+     (vars
+       (connection object ssh_connection)
+       (channel object ssh_channel)
+       (active object request_status)))
+*/
+
+/* NOTE: We handle *only* EXC_CHANNEL_REQUEST */
+static void 
+do_channel_request_handler(struct exception_handler *c,
+			   const struct exception *e)
+{
+  CAST(channel_request_exception_handler, self, c);
+  if (e->type == EXC_CHANNEL_REQUEST)
+    {
+      struct object_queue *q = &self->channel->active_requests;
+
+      assert(self->active->status == -1);
+      assert(!object_queue_is_empty(q));
+      
+      self->active->status = 0;
+      
+      send_channel_request_responses(self->connection, self->channel, q);
+    }
+  else
+    EXCEPTION_RAISE(c->parent, e);
+}
+
+static struct exception_handler *
+make_channel_request_exception_handler(struct ssh_connection *connection,
+				       struct ssh_channel *channel,
+				       struct request_status *active,
+				       struct exception_handler *h,
+				       const char *context)
+{
+  NEW(channel_request_exception_handler, self);
+
+  self->super.raise = do_channel_request_handler;
+  self->super.parent = h;
+  self->super.context = context;
+  self->connection = connection;
+  self->channel = channel;
+  self->active = active;
+
+  return &self->super;
+}
+
+static void
+do_channel_request(struct packet_handler *closure UNUSED,
+		   struct ssh_connection *connection,
+		   struct lsh_string *packet)
+{
+  struct simple_buffer buffer;
+  unsigned msg_number;
+  UINT32 channel_number;
+  int type;
+  int want_reply;
+  
+  simple_buffer_init(&buffer, packet->length, packet->data);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_CHANNEL_REQUEST)
+      && parse_uint32(&buffer, &channel_number)
+      && parse_atom(&buffer, &type)
+      && parse_boolean(&buffer, &want_reply))
+    {
+      struct ssh_channel *channel = lookup_channel(connection->table,
+						   channel_number);
+
+      /* NOTE: We can't free packet yet, because it is not yet fully
+       * parsed. There may be some more arguments, which are parsed by
+       * the CHANNEL_REQUEST method below. */
+
+      if (channel)
+	{
+	  struct channel_request *req;
+	  struct command_continuation *c = &discard_continuation;
+	  struct exception_handler *e = channel->e;
+
+	  if (type && channel->request_types 
+	      && ( (req = ALIST_GET(channel->request_types, type)) ))
+	    {
+	      if (want_reply)
+		{
+		  struct request_status *a = make_request_status();
+		  
+		  object_queue_add_tail(&channel->active_requests,
+					&a->super);
+		  
+		  c = make_channel_request_response(connection, channel, a);
+		  e = make_channel_request_exception_handler(connection, channel, a, e, HANDLER_CONTEXT);
+		  
+		}
+	      else
+		{
+		  /* We should ignore failures. */
+		  static struct report_exception_info channel_req_ignore =
+		    STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_REQUEST,
+						 "Ignored:");
+		  
+		  e = make_report_exception_handler(&channel_req_ignore,
+						    e, HANDLER_CONTEXT);
+		}
+	      
+	      CHANNEL_REQUEST(req, channel, connection, type, want_reply, &buffer, c, e);
+	    }
+	  else
+	    {
+	      if (want_reply)
+		C_WRITE(connection,
+			format_channel_failure(channel->channel_number));
+	    }
+	}
+      else
+	{
+	  werror("SSH_MSG_CHANNEL_REQUEST on nonexistant channel %i\n",
+		 channel_number);
+	}
+    }
+  else
+    PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_CHANNEL_REQUEST message.");
+  
+  lsh_string_free(packet);
 }
 
 
@@ -809,58 +1064,6 @@ static void do_channel_open(struct packet_handler *c UNUSED,
   lsh_string_free(packet);
 }     
 
-static void
-do_channel_request(struct packet_handler *closure UNUSED,
-		   struct ssh_connection *connection,
-		   struct lsh_string *packet)
-{
-  struct simple_buffer buffer;
-  unsigned msg_number;
-  UINT32 channel_number;
-  int type;
-  int want_reply;
-  
-  simple_buffer_init(&buffer, packet->length, packet->data);
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_REQUEST)
-      && parse_uint32(&buffer, &channel_number)
-      && parse_atom(&buffer, &type)
-      && parse_boolean(&buffer, &want_reply))
-    {
-      struct ssh_channel *channel = lookup_channel(connection->table,
-						   channel_number);
-
-      /* NOTE: We can't free packet yet, because it is not yet fully
-       * parsed. There may be some more arguments, which are parsed by
-       * the CHANNEL_REQUEST method below. */
-
-      if (channel)
-	{
-	  struct channel_request *req;
-
-	  if (type && channel->request_types 
-	      && ( (req = ALIST_GET(channel->request_types, type)) ))
-	    CHANNEL_REQUEST(req, channel, connection, want_reply, &buffer);
-	  else
-	    {
-	      if (want_reply)
-		C_WRITE(connection,
-			format_channel_failure(channel->channel_number));
-	    }
-	}
-      else
-	{
-	  werror("SSH_MSG_CHANNEL_REQUEST on nonexistant channel %i\n",
-		 channel_number);
-	}
-    }
-  else
-    PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_CHANNEL_REQUEST message.");
-  
-  lsh_string_free(packet);
-}
-      
 static void
 do_window_adjust(struct packet_handler *closure UNUSED,
 		 struct ssh_connection *connection,
@@ -1533,6 +1736,7 @@ void init_channel(struct ssh_channel *channel)
   channel->resources = empty_resource_list();
   
   object_queue_init(&channel->pending_requests);
+  object_queue_init(&channel->active_requests);
 }
 
 struct lsh_string *channel_transmit_data(struct ssh_channel *channel,

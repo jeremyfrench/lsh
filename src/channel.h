@@ -131,7 +131,11 @@
        (open_continuation object command_continuation)
 
        ; Queue of channel requests that we expect replies on
-       (pending_requests struct object_queue)))
+       (pending_requests struct object_queue)
+
+       ; Channel requests that we have received, and should reply to
+       ; in the right order
+       (active_requests struct object_queue)))
        
        ; Reply from SSH_MSG_CHANNEL_REQUEST 
        ;; (channel_success method int)
@@ -212,30 +216,22 @@
        ))
 */
 
-
 /* SSH_MSG_GLOBAL_REQUEST */
-
-/* GABA:
-   (class
-     (name global_request_callback)
-     (vars
-       (response method void "int success")
-       (connection object ssh_connection)))
-*/
-
-#define GLOBAL_REQUEST_CALLBACK(c, s) \
-((c)->response((c), (s)))
 
 /* GABA:
    (class
      (name global_request)
      (vars
        (handler method void "struct ssh_connection *connection"
+                            "UINT32 type"
+			    ;; FIXME: Is want-reply really needed?
+                            "int want_reply"
                             "struct simple_buffer *args"
-			    "struct global_request_callback *response")))
+			    "struct command_continuation *c"
+			    "struct exception_handler *e")))
 */
 
-#define GLOBAL_REQUEST(r, c, a, n) ((r)->handler((r), (c), (a), (n)))
+#define GLOBAL_REQUEST(r, c, t, w, a, n, e) ((r)->handler((r), (c), (t), (w), (a), (n), (e)))
 
 /* SSH_MSG_CHANNEL_OPEN */
 
@@ -276,20 +272,15 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
        (handler method void
 		"struct ssh_channel *channel"
 		"struct ssh_connection *connection"
+		"UINT32 type"
 		"int want_reply"
-		"struct simple_buffer *args")))
+		"struct simple_buffer *args"
+		"struct command_continuation *c"
+		"struct exception_handler *e")))
 */
 
-#define CHANNEL_REQUEST(s, c, conn, w, a) \
-((s)->handler((s), (c), (conn), (w), (a)))
-
-/* ;;GABA:
-   (class
-     (name connection_startup)
-     (vars
-       (start method int
-	      "struct ssh_connection *connection")))
-*/
+#define CHANNEL_REQUEST(s, c, conn, t, w, a, n, e) \
+((s)->handler((s), (c), (conn), (t), (w), (a), (n), (e)))
 
 /* #define CONNECTION_START(c, s) ((c)->start((c), (s))) */
 
