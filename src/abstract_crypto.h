@@ -5,6 +5,8 @@
 #ifndef LSH_ABSTRACT_CRYPTO_H_INCLUDED
 #define LSH_ABSTRACT_CRYPTO_H_INCLUDED
 
+#include "lsh_types.h"
+
 struct crypto_instance
 {
   UINT32 block_size;
