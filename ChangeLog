@@ -1,5 +1,28 @@
 2000-11-26  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/parse.c (parse_rest, parse_rest_copy): Renamed parse_rest to
+	parse_rest_copy. New function parse_rest.
+
+	* src/gateway_channel.c (do_gateway_channel_request): Use
+	format_channel_request_i(). 
+	(gateway_channel_open_continuation): New attribute fallback.
+	(do_gateway_channel_open_continuation): Set the target channel's
+	request_fallback pointer.
+	(do_channel_open_forward): Set the origin channel's
+	request_fallback pointer.
+
+	* src/channel.h (ssh_channel): Added request_fallback attribute.
+	(channel_request_info): New struct.
+	(channel_request): Use a channel_request_info argument.
+
+	* src/channel.c (parse_channel_request): New function.
+	(DEFINE_PACKET_HANDLER): Use parse_channel_request. Invoke request
+	fallback if appropriate.
+	(init_channel): Initialize request_fallback = NULL.
+	(format_channel_open_s): Use a struct lsh_string for the type
+	argument. 
+	(format_channel_request_i): New function.
+
 	* src/spki_commands.c (spki_read_userkeys): Try to decrypt the key.
 	(make_spki_read_userkeys): New argument tty. If supplied, try to
 	decrypt password protected keys.

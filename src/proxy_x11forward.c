@@ -76,7 +76,7 @@ do_proxy_open_x11(struct channel_open *s UNUSED,
 	werror("datafellows compatible x11 open request: %S\n", host);
       COMMAND_CALL(o,
 		   connection->chain,
-		   make_gateway_channel_open_continuation(c, server),
+		   make_gateway_channel_open_continuation(c, NULL, server),
 		   e);
 
     }

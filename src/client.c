@@ -171,8 +171,7 @@ static void
 do_exit_status(struct channel_request *c,
 	       struct ssh_channel *channel,
 	       struct ssh_connection *connection UNUSED,
-	       UINT32 type UNUSED,
-	       int want_reply,
+	       struct channel_request_info *info,
 	       struct simple_buffer *args,
 	       struct command_continuation *s,
 	       struct exception_handler *e)
@@ -180,7 +179,7 @@ do_exit_status(struct channel_request *c,
   CAST(exit_handler, closure, c);
   UINT32 status;
 
-  if (!want_reply
+  if (!info->want_reply
       && parse_uint32(args, &status)
       && parse_eod(args))
     {
@@ -205,8 +204,7 @@ static void
 do_exit_signal(struct channel_request *c,
 	       struct ssh_channel *channel,
 	       struct ssh_connection *connection UNUSED,
-	       UINT32 type UNUSED,
- 	       int want_reply,
+	       struct channel_request_info *info,
 	       struct simple_buffer *args,
 	       struct command_continuation *s,
 	       struct exception_handler *e)
@@ -222,7 +220,7 @@ do_exit_signal(struct channel_request *c,
   const UINT8 *language;
   UINT32 language_length;
   
-  if (!want_reply
+  if (!info->want_reply
       && parse_uint32(args, &signal)
       && parse_boolean(args, &core)
       && parse_string(args, &length, &msg)

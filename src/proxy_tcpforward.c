@@ -67,7 +67,7 @@ do_proxy_open_direct_tcpip(struct channel_open *s UNUSED,
 	     host, port, orig_host, orig_port);
       COMMAND_CALL(o,
 		   connection->chain,
-		   make_gateway_channel_open_continuation(c, server),
+		   make_gateway_channel_open_continuation(c, NULL, server),
 		   e);
 
     }
@@ -122,7 +122,7 @@ do_proxy_open_forwarded_tcpip(struct channel_open *s UNUSED,
 	     host, port, orig_host, orig_port);
       COMMAND_CALL(o,
 		   connection->chain,
-		   make_gateway_channel_open_continuation(c, server),
+		   make_gateway_channel_open_continuation(c, NULL, server),
 		   e);
 
     }

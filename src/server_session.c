@@ -602,8 +602,7 @@ static void
 do_spawn_shell(struct channel_request *c,
 	       struct ssh_channel *channel,
 	       struct ssh_connection *connection,
-	       UINT32 type UNUSED,
-	       int want_reply UNUSED,
+	       struct channel_request_info *info UNUSED,
 	       struct simple_buffer *args,
 	       struct command_continuation *s,
 	       struct exception_handler *e)
@@ -699,8 +698,7 @@ static void
 do_spawn_exec(struct channel_request *c,
 	      struct ssh_channel *channel,
 	      struct ssh_connection *connection,
-	      UINT32 type UNUSED,
-	      int want_reply UNUSED,
+	      struct channel_request_info *info UNUSED,
 	      struct simple_buffer *args,
 	      struct command_continuation *s,
 	      struct exception_handler *e)
@@ -810,8 +808,7 @@ static void
 do_alloc_pty(struct channel_request *c UNUSED,
 	     struct ssh_channel *channel,
 	     struct ssh_connection *connection,
-	     UINT32 type UNUSED,
-	     int want_reply UNUSED,
+	     struct channel_request_info *info UNUSED,
 	     struct simple_buffer *args,
 	     struct command_continuation *s,
 	     struct exception_handler *e)
