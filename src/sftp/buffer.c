@@ -14,13 +14,33 @@
 
 #define FATAL(x) do { fputs("sftp-server: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
 
-#if LSH
 #include <stdlib.h>
+
+/* Reads a 32-bit integer, in network byte order */
+#define READ_UINT32(p)				\
+(  (((UINT32) (p)[0]) << 24)			\
+ | (((UINT32) (p)[1]) << 16)			\
+ | (((UINT32) (p)[2]) << 8)			\
+ |  ((UINT32) (p)[3]))
+
+#define WRITE_UINT32(p, i)			\
+do {						\
+  (p)[0] = ((i) >> 24) & 0xff;			\
+  (p)[1] = ((i) >> 16) & 0xff;			\
+  (p)[2] = ((i) >> 8) & 0xff;			\
+  (p)[3] = (i) & 0xff;				\
+} while(0)
+
+#define SFTP_MAX_STRINGS 2
 
 struct sftp_input
 {
   FILE *f;
   UINT32 left;
+
+  /* Strings that we own */
+  UINT8 *strings[SFTP_MAX_STRINGS];
+  unsigned used_strings;
 };
 
 struct sftp_output
@@ -79,31 +99,12 @@ sftp_get_uint32(struct sftp_input *i, UINT32 *value)
   return 1;
 }
 
-#define READ_UINT64(p)				\
-(  (((UINT64) (p)[0]) << 56)			\
- | (((UINT64) (p)[1]) << 48)			\
- | (((UINT64) (p)[2]) << 40)			\
- | (((UINT64) (p)[3]) << 32)			\
- | (((UINT64) (p)[4]) << 24)			\
- | (((UINT64) (p)[5]) << 16)			\
- | (((UINT64) (p)[6]) << 8)			\
- |  ((UINT64) (p)[7]))
-
-int
-sftp_get_uint64(struct sftp_input *i, UINT64 *value)
-{
-  UINT8 buf[8];
-  if (!GET_DATA(i, buf))
-    return 0;
-
-  *value = READ_UINT64(buf);
-  return 1;
-}
-
 UINT8 *
 sftp_get_string(struct sftp_input *i, UINT32 *length)
 {
   UINT8 *data;
+
+  assert(i->used_strings < SFTP_MAX_STRINGS);
   
   if (!(sftp_get_uint32(i, length) && sftp_check_input(i, *length)))
     return NULL;
@@ -120,16 +121,14 @@ sftp_get_string(struct sftp_input *i, UINT32 *length)
 
   /* NUL-terminate, for convenience */
   data[*length] = '\0';
+
+  /* Remember the string. */
+  i->strings[i->used_strings++] = data;
   return data;
 }
 
-void
-sftp_free_string(UINT8 *data)
-{
-  free(data);
-}
-
-int sftp_get_eod(struct sftp_input *i)
+int
+sftp_get_eod(struct sftp_input *i)
 {
   return !i->left;
 }
@@ -143,8 +142,20 @@ sftp_make_input(FILE *f)
     {
       i->f = f;
       i->left = 0;
+      i->used_strings = 0;
     }
   return i;
+}
+
+static void
+sftp_input_clear_strings(struct sftp_input *i)
+{
+  unsigned k;
+
+  for (k = 0; k < i->used_strings; k++)
+    free(i->strings[k]);
+
+  i->used_strings = 0;
 }
 
 /* Returns 1 of all was well, 0 on error, and -1 on EOF */
@@ -153,9 +164,12 @@ sftp_read_packet(struct sftp_input *i)
 {
   UINT8 buf[4];
   int done;
-  
+
   assert(i->left == 0);
 
+  /* First, deallocate the strings. */
+  sftp_input_clear_strings(i);
+  
   done = fread(buf, 1, sizeof(buf), i->f);
 
   switch (done)
@@ -218,29 +232,8 @@ sftp_put_uint32(struct sftp_output *o, UINT32 value)
   PUT_DATA(o, buf);
 }
 
-#define WRITE_UINT64(p, i)			\
-do {						\
-  (p)[0] = ((i) >> 56) & 0xff;			\
-  (p)[1] = ((i) >> 48) & 0xff;			\
-  (p)[2] = ((i) >> 40) & 0xff;			\
-  (p)[3] = ((i) >> 32) & 0xff;			\
-  (p)[4] = ((i) >> 24) & 0xff;			\
-  (p)[5] = ((i) >> 16) & 0xff;			\
-  (p)[6] = ((i) >> 8) & 0xff;			\
-  (p)[7] = (i) & 0xff;				\
-} while(0)
-
 void
-sftp_put_uint64(struct sftp_output *o, UINT64 value)
-{
-  UINT8 buf[8];
-
-  WRITE_UINT64(buf, value);
-  PUT_DATA(o, buf);
-}
-
-void
-sftp_put_string(struct sftp_output *o, UINT32 length, UINT8 *data)
+sftp_put_string(struct sftp_output *o, UINT32 length, const UINT8 *data)
 {
   sftp_put_uint32(o, length);
   sftp_put_data(o, length, data);
@@ -274,11 +267,20 @@ sftp_put_final_length(struct sftp_output *o,
   sftp_put_length(o, index, o->i - index);
 }
 
+void
+sftp_put_reset(struct sftp_output *o,
+	       UINT32 index)
+{
+  assert(index >= o->i);
+  assert(index <= o->size);
+  o->i = index;
+}
+
 UINT32
 sftp_put_printf(struct sftp_output *o, const char *format, ...)
 {
   /* Initial buffer space */
-  size_t needed;
+  int needed;
   int length;
   
   for (needed = 100;; needed *= 2)
@@ -308,24 +310,99 @@ sftp_put_strftime(struct sftp_output *o, UINT32 size, const char *format,
 {
   /* Initial buffer space */
   size_t needed;
-  int length;
+  size_t length;
   
   for (needed = size ? size : 100;; needed *= 2)
     {
       sftp_check_output(o, needed);
       length = strftime(o->data + o->i, needed, format, tm);
 
-      if ( (length >= 0) && (length < needed))
+      if ( (length > 0) && (length < needed))
 	break;
     }
 
-  while ( (unsigned) length < size)
+  while (length < size)
     o->data[o->i + length++] = ' ';
 
   o->i += length;
   
   return length;
 }
+
+
+/* 64-bit stuff */
+#if SIZEOF_OFF_T > 4
+#define READ_UINT64(p)				\
+(  (((UINT64) (p)[0]) << 56)			\
+ | (((UINT64) (p)[1]) << 48)			\
+ | (((UINT64) (p)[2]) << 40)			\
+ | (((UINT64) (p)[3]) << 32)			\
+ | (((UINT64) (p)[4]) << 24)			\
+ | (((UINT64) (p)[5]) << 16)			\
+ | (((UINT64) (p)[6]) << 8)			\
+ |  ((UINT64) (p)[7]))
+
+
+int
+sftp_get_uint64(struct sftp_input *i, off_t *value)
+{
+  UINT8 buf[8];
+  if (!GET_DATA(i, buf))
+    return 0;
+
+  *value = READ_UINT64(buf);
+  return 1;
+}
+
+#define WRITE_UINT64(p, i)			\
+do {						\
+  (p)[0] = ((i) >> 56) & 0xff;			\
+  (p)[1] = ((i) >> 48) & 0xff;			\
+  (p)[2] = ((i) >> 40) & 0xff;			\
+  (p)[3] = ((i) >> 32) & 0xff;			\
+  (p)[4] = ((i) >> 24) & 0xff;			\
+  (p)[5] = ((i) >> 16) & 0xff;			\
+  (p)[6] = ((i) >> 8) & 0xff;			\
+  (p)[7] = (i) & 0xff;				\
+} while(0)
+
+void
+sftp_put_uint64(struct sftp_output *o, off_t value)
+{
+  UINT8 buf[8];
+
+  WRITE_UINT64(buf, value);
+  PUT_DATA(o, buf);
+}
+
+#else /* SIZEOF_OFF_T <= 4 */
+
+/* Fail for too large numbers. */
+int
+sftp_get_uint64(struct sftp_input *i, off_t *value)
+{
+  UINT32 high;
+  UINT32 low;
+
+  if (sftp_get_uint32(i, &high)
+      && !high
+      && sftp_get_uint32(i, &low))
+    {
+      *value = low;
+      return 1;
+    }
+  else
+    return 0;
+}
+
+void
+sftp_put_uint64(struct sftp_output *o, off_t value)
+{
+  sftp_put_uint32(o, 0);
+  sftp_put_uint32(o, value);
+}
+
+#endif /* SIZEOF_OFF_T <= 4 */
 
 /* The first part of the buffer is always
  *
@@ -384,8 +461,6 @@ sftp_write_packet(struct sftp_output *o)
   return 1;
 }
 
-#endif /* LSH */
-
 /* General functions */
 
 void
@@ -412,9 +487,9 @@ sftp_skip_extension(struct sftp_input *i)
     {
       if (!(data = sftp_get_string(i, &length)))
 	return 0;
-      
-      sftp_free_string(data);
     }
+  sftp_input_clear_strings(i);
+  
   return 1;
 }
 
