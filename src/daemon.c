@@ -29,6 +29,7 @@
 
 #include "format.h"
 #include "werror.h"
+#include "xalloc.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -199,15 +200,17 @@ int daemon_pidfile(const char *name)
     }
   else
     {
-      struct lsh_string *pid = ssh_format("%ldi", getpid());
+      struct lsh_string *pid = ssh_format("%di", getpid());
 
       int res = write(fd, pid->data, pid->length);
       close(fd);
       
       if ( (res > 0) && ((unsigned) res == pid->length) )
-	/* Success! */
-	return 1;
-
+	{
+	  /* Success! */
+	  lsh_string_free(pid);
+	  return 1;
+	}
       werror("Writing pid file '%z' failed (errno = %i): %z",
 	     name, errno, STRERROR(errno));
 
@@ -215,10 +218,13 @@ int daemon_pidfile(const char *name)
       if (unlink(name) < 0)
 	werror("Unlinking pid file '%z' failed (errno = %i): %z",
 	       name, errno, STRERROR(errno));
-
+      
+      lsh_string_free(pid);
+	  
       return 0;
     }
 }
+
 /*
 ** int daemon_started_by_init(void)
 **

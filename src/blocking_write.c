@@ -34,7 +34,7 @@
        (fd . int)
        (e object exception_handler)
        (write . (pointer (function void
-                          int UINT32 "UINT8 *" "struct exception_handler *e")))))
+                          int UINT32 "const UINT8 *" "struct exception_handler *e")))))
 */
 
 #include "blocking_write.c.x"
