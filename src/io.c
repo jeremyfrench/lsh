@@ -758,11 +758,11 @@ static void prepare_write(struct lsh_fd *fd)
     close_fd(fd, CLOSE_EOF);
 }
   
-struct abstract_write *io_read_write(struct io_backend *b,
-				     int fd,
-				     struct read_handler *handler,
-				     UINT32 block_size,
-				     struct close_callback *close_callback)
+struct io_fd *io_read_write(struct io_backend *b,
+			    int fd,
+			    struct read_handler *handler,
+			    UINT32 block_size,
+			    struct close_callback *close_callback)
 {
   NEW(io_fd, f);
   struct write_buffer *buffer = write_buffer_alloc(block_size);
@@ -787,7 +787,7 @@ struct abstract_write *io_read_write(struct io_backend *b,
   f->super.really_close = really_close;
   f->super.close_callback = close_callback;
 
-  return &buffer->super;
+  return f;
 }
 
 struct io_fd *io_read(struct io_backend *b,

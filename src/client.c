@@ -78,10 +78,11 @@ static int client_initiate(struct fd_callback **c,
     = make_ssh_connection(closure->kexinit_handler);
 
   connection_init_io(connection,
-		     io_read_write(closure->backend, fd,
-				   make_client_read_line(connection),
-				   closure->block_size,
-				   make_client_close_handler()),
+		     &io_read_write(closure->backend, fd,
+				    make_client_read_line(connection),
+				    closure->block_size,
+				    make_client_close_handler())
+		     ->buffer->super,
 		     closure->random);
   
   connection->versions[CONNECTION_CLIENT]
@@ -91,7 +92,8 @@ static int client_initiate(struct fd_callback **c,
 		 closure->id_comment);
   
   res = A_WRITE(connection->raw,
-		ssh_format("%lS\r\n", connection->versions[CONNECTION_CLIENT]));
+		ssh_format("%lS\r\n",
+			   connection->versions[CONNECTION_CLIENT]));
   if (LSH_CLOSEDP(res))
     return res;
 
@@ -543,28 +545,6 @@ static int do_io(struct ssh_channel *channel)
 
   return LSH_OK | LSH_CHANNEL_READY_SEND;
 }
-
-#if 0
-static int do_next_request(struct ssh_channel *c)
-{
-  CAST(client_session, closure, c);
-  struct channel_request_descriptor *req;
-  
-  req = (struct channel_request_descriptor *) LIST(closure->requests)[closure->current_request];
-  if (closure->current_request >= ((int) LIST_LENGTH(closure->requests)) - 1)
-    {
-      closure->super.channel_success = do_io;
-      closure->requests = NULL; /* for gc */
-    }
-    
-  closure->current_request++;
-  
-  return A_WRITE(closure->super.write,
-                   format_channel_request(req->request, c, 1,
-		   "%lS", req->args));
-  
-}
-#endif
 
 static struct request_info *skip_silent_requests(struct request_info *req)
 {

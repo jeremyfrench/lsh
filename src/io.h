@@ -178,11 +178,11 @@ struct listen_fd *io_listen(struct io_backend *b,
 			    struct fd_callback *callback);
 
 
-struct abstract_write *io_read_write(struct io_backend *b,
-				     int fd,
-				     struct read_handler *read_callback,
-				     UINT32 block_size,
-				     struct close_callback *close_callback);
+struct io_fd *io_read_write(struct io_backend *b,
+			    int fd,
+			    struct read_handler *read_callback,
+			    UINT32 block_size,
+			    struct close_callback *close_callback);
 
 struct io_fd *io_read(struct io_backend *b,
 		      int fd,
