@@ -45,11 +45,13 @@ struct sexp_iterator;
        ; Length must be a multiple of the block size.
        ; NOTE: src == dst is allowed, but no other overlaps.
        (crypt method void
-              "uint32_t length" "const uint8_t *src" "uint8_t *dst")))
+              "uint32_t length"
+	      "struct lsh_string *dst" "uint32_t di"
+	      "const struct lsh_string *src" "uint32_t si")))
 */
 
-#define CRYPT(instance, length, src, dst) \
-((instance)->crypt((instance), (length), (src), (dst)))
+#define CRYPT(instance, length, dst, di, src, si) \
+((instance)->crypt((instance), (length), (dst), (di), (src), (si)))
 
 #define CRYPTO_ENCRYPT 0
 #define CRYPTO_DECRYPT 1
@@ -97,9 +99,9 @@ void
 hash_update(struct hash_instance *self,
 	    uint32_t length, const uint8_t *data);
 
-void
-hash_digest(struct hash_instance *self,
-	    uint8_t *result);
+/* Returns digest in a newly allocated string. */
+struct lsh_string *
+hash_digest_string(struct hash_instance *self);
 
 struct hash_instance *
 hash_copy(struct hash_instance *self);
@@ -121,14 +123,18 @@ make_hash(const struct hash_algorithm *self);
        (mac_size . uint32_t)
        (update method void 
 	       "uint32_t length" "const uint8_t *data")
-       (digest method void "uint8_t *result")))
+       ; Returns the string, for convenience
+       (digest method "struct lsh_string *" "struct lsh_string *res" "uint32_t pos")))
 */
 
 #define MAC_UPDATE(instance, length, data) \
 ((instance)->update((instance), (length), (data)))
 
-#define MAC_DIGEST(instance, result) \
-((instance)->digest((instance), (result)))
+#define MAC_DIGEST(instance, res, pos) \
+((instance)->digest((instance), (res), (pos)))
+
+#define MAC_DIGEST_STRING(instance) \
+MAC_DIGEST((instance), lsh_string_alloc((instance)->mac_size), 0)
 
 /* GABA:
    (class

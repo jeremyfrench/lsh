@@ -43,6 +43,7 @@
 
 #include "crypto.h"
 
+#include "lsh_string.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -60,13 +61,16 @@
    
 static void
 do_crypt_arcfour(struct crypto_instance *s,
-		 uint32_t length, const uint8_t *src, uint8_t *dst)
+		 uint32_t length,
+		 struct lsh_string *dst, uint32_t di,
+		 const struct lsh_string *src, uint32_t si)
 {
   CAST(arcfour_instance, self, s);
 
   assert(!(length % 8));
 
-  arcfour_crypt(&self->ctx, length, dst, src);
+  lsh_string_crypt(dst, di, src, si, length,
+		   (nettle_crypt_func) arcfour_crypt, &self->ctx);
 }
 
 static struct crypto_instance *
@@ -88,6 +92,28 @@ struct crypto_algorithm crypto_arcfour_algorithm =
 { STATIC_HEADER,
   8, 16, 0, make_arcfour_instance };
 
+/* Create a CBC super class? */
+/* ;;GABA:
+   (class
+     (name cbc_crypto_algorithm)
+     (super crypto_algorithm)
+     (vars
+       (context_size . uint32_t)
+       (block_size . uint32_t)
+       (encrypt . nettle_encrypt_func)
+       (encrypt . nettle_decrypt_func)))
+*/
+
+/* ;; GABA:
+   (class
+     (name cbc_instance)
+     (super crypto_instance)
+     (vars
+       (type object cbc_crypto_algorithm)
+       (ctx space void)
+       (iv string)))
+*/
+
 /* AES/Rijndael */
 /* GABA:
    (class
@@ -99,20 +125,30 @@ struct crypto_algorithm crypto_arcfour_algorithm =
 
 static void
 do_aes_encrypt(struct crypto_instance *s,
-	       uint32_t length, const uint8_t *src, uint8_t *dst)
+	       uint32_t length,
+	       struct lsh_string *dst, uint32_t di,
+	       const struct lsh_string *src, uint32_t si)
 {
   CAST(aes_instance, self, s);
 
-  CBC_ENCRYPT(&self->ctx, aes_encrypt, length, dst, src);
+  lsh_string_cbc_encrypt(dst, di, src, si, length,
+			 AES_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) aes_encrypt,
+			 &self->ctx.ctx);
 }
 
 static void
 do_aes_decrypt(struct crypto_instance *s,
-	       uint32_t length, const uint8_t *src, uint8_t *dst)
+	       uint32_t length,
+	       struct lsh_string *dst, uint32_t di,
+	       const struct lsh_string *src, uint32_t si)
 {
   CAST(aes_instance, self, s);
 
-  CBC_DECRYPT(&self->ctx, aes_decrypt, length, dst, src);
+  lsh_string_cbc_decrypt(dst, di, src, si, length,
+			 AES_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) aes_decrypt,
+			 &self->ctx.ctx);
 }
 
 static struct crypto_instance *
@@ -154,20 +190,30 @@ struct crypto_algorithm crypto_aes256_cbc_algorithm =
 
 static void
 do_des3_encrypt(struct crypto_instance *s,
-		uint32_t length, const uint8_t *src, uint8_t *dst)
+		uint32_t length,
+		struct lsh_string *dst, uint32_t di,
+		const struct lsh_string *src, uint32_t si)
 {
   CAST(des3_instance, self, s);
 
-  CBC_ENCRYPT(&self->ctx, des3_encrypt, length, dst, src);
+  lsh_string_cbc_encrypt(dst, di, src, si, length,
+			 DES3_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) des3_encrypt,
+			 &self->ctx.ctx);
 }
 
 static void
 do_des3_decrypt(struct crypto_instance *s,
-		uint32_t length, const uint8_t *src, uint8_t *dst)
+		uint32_t length,
+		struct lsh_string *dst, uint32_t di,
+		const struct lsh_string *src, uint32_t si)
 {
   CAST(des3_instance, self, s);
 
-  CBC_DECRYPT(&self->ctx, des3_decrypt, length, dst, src);
+  lsh_string_cbc_decrypt(dst, di, src, si, length,
+			 DES3_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) des3_decrypt,
+			 &self->ctx.ctx);
 }
 
 static struct crypto_instance *
@@ -220,25 +266,35 @@ struct crypto_algorithm crypto_des3_cbc_algorithm =
 
 static void
 do_cast128_encrypt(struct crypto_instance *s,
-                   uint32_t length, const uint8_t *src, uint8_t *dst)
+		   uint32_t length,
+		   struct lsh_string *dst, uint32_t di,
+		   const struct lsh_string *src, uint32_t si)
 {
   CAST(cast128_instance, self, s);
 
-  CBC_ENCRYPT(&self->ctx, cast128_encrypt, length, dst, src);
+  lsh_string_cbc_encrypt(dst, di, src, si, length,
+			 CAST128_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) cast128_encrypt,
+			 &self->ctx.ctx);
 }
 
 static void
 do_cast128_decrypt(struct crypto_instance *s,
-                   uint32_t length, const uint8_t *src, uint8_t *dst)
+		   uint32_t length,
+		   struct lsh_string *dst, uint32_t di,
+		   const struct lsh_string *src, uint32_t si)
 {
   CAST(cast128_instance, self, s);
 
-  CBC_DECRYPT(&self->ctx, cast128_decrypt, length, dst, src);
+  lsh_string_cbc_decrypt(dst, di, src, si, length,
+			 CAST128_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) cast128_decrypt,
+			 &self->ctx.ctx);
 }
 
 static struct crypto_instance *
 make_cast128_cbc_instance(struct crypto_algorithm *algorithm, int mode,
-                          const uint8_t *key, const uint8_t *iv UNUSED)
+                          const uint8_t *key, const uint8_t *iv)
 {
   NEW(cast128_instance, self);
 
@@ -270,25 +326,35 @@ struct crypto_algorithm crypto_cast128_cbc_algorithm =
 
 static void
 do_twofish_encrypt(struct crypto_instance *s,
-	       uint32_t length, const uint8_t *src, uint8_t *dst)
+		   uint32_t length,
+		   struct lsh_string *dst, uint32_t di,
+		   const struct lsh_string *src, uint32_t si)
 {
   CAST(twofish_instance, self, s);
 
-  CBC_ENCRYPT(&self->ctx, twofish_encrypt, length, dst, src);
+  lsh_string_cbc_encrypt(dst, di, src, si, length,
+			 TWOFISH_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) twofish_encrypt,
+			 &self->ctx.ctx);
 }
 
 static void
 do_twofish_decrypt(struct crypto_instance *s,
-	       uint32_t length, const uint8_t *src, uint8_t *dst)
+		   uint32_t length,
+		   struct lsh_string *dst, uint32_t di,
+		   const struct lsh_string *src, uint32_t si)
 {
   CAST(twofish_instance, self, s);
 
-  CBC_DECRYPT(&self->ctx, twofish_decrypt, length, dst, src);
+  lsh_string_cbc_decrypt(dst, di, src, si, length,
+			 TWOFISH_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) twofish_decrypt,
+			 &self->ctx.ctx);
 }
 
 static struct crypto_instance *
 make_twofish_cbc_instance(struct crypto_algorithm *algorithm, int mode,
-		      const uint8_t *key, const uint8_t *iv UNUSED)
+		      const uint8_t *key, const uint8_t *iv)
 {
   NEW(twofish_instance, self);
 
@@ -319,25 +385,35 @@ struct crypto_algorithm crypto_twofish256_cbc_algorithm =
 
 static void
 do_blowfish_encrypt(struct crypto_instance *s,
-                    uint32_t length, const uint8_t *src, uint8_t *dst)
+		    uint32_t length,
+		    struct lsh_string *dst, uint32_t di,
+		    const struct lsh_string *src, uint32_t si)
 {
   CAST(blowfish_instance, self, s);
 
-  CBC_ENCRYPT(&self->ctx, blowfish_encrypt, length, dst, src);
+  lsh_string_cbc_encrypt(dst, di, src, si, length,
+			 BLOWFISH_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) blowfish_encrypt,
+			 &self->ctx.ctx);
 }
 
 static void
 do_blowfish_decrypt(struct crypto_instance *s,
-	       uint32_t length, const uint8_t *src, uint8_t *dst)
+		    uint32_t length,
+		    struct lsh_string *dst, uint32_t di,
+		    const struct lsh_string *src, uint32_t si)
 {
   CAST(blowfish_instance, self, s);
 
-  CBC_DECRYPT(&self->ctx, blowfish_decrypt, length, dst, src);
+  lsh_string_cbc_decrypt(dst, di, src, si, length,
+			 BLOWFISH_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) blowfish_decrypt,
+			 &self->ctx.ctx);
 }
 
 static struct crypto_instance *
 make_blowfish_cbc_instance(struct crypto_algorithm *algorithm, int mode,
-                           const uint8_t *key, const uint8_t *iv UNUSED)
+                           const uint8_t *key, const uint8_t *iv)
 {
   NEW(blowfish_instance, self);
 
@@ -375,25 +451,35 @@ struct crypto_algorithm crypto_blowfish_cbc_algorithm =
 
 static void
 do_serpent_encrypt(struct crypto_instance *s,
-	       uint32_t length, const uint8_t *src, uint8_t *dst)
+		   uint32_t length,
+		   struct lsh_string *dst, uint32_t di,
+		   const struct lsh_string *src, uint32_t si)
 {
   CAST(serpent_instance, self, s);
 
-  CBC_ENCRYPT(&self->ctx, serpent_encrypt, length, dst, src);
+  lsh_string_cbc_encrypt(dst, di, src, si, length,
+			 SERPENT_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) serpent_encrypt,
+			 &self->ctx.ctx);
 }
 
 static void
 do_serpent_decrypt(struct crypto_instance *s,
-	       uint32_t length, const uint8_t *src, uint8_t *dst)
+		   uint32_t length,
+		   struct lsh_string *dst, uint32_t di,
+		   const struct lsh_string *src, uint32_t si)
 {
   CAST(serpent_instance, self, s);
 
-  CBC_DECRYPT(&self->ctx, serpent_decrypt, length, dst, src);
+  lsh_string_cbc_decrypt(dst, di, src, si, length,
+			 SERPENT_BLOCK_SIZE, self->ctx.iv,
+			 (nettle_crypt_func) serpent_decrypt,
+			 &self->ctx.ctx);
 }
 
 static struct crypto_instance *
 make_serpent_cbc_instance(struct crypto_algorithm *algorithm, int mode,
-		      const uint8_t *key, const uint8_t *iv UNUSED)
+			  const uint8_t *key, const uint8_t *iv)
 {
   NEW(serpent_instance, self);
 
@@ -423,11 +509,13 @@ hash_update(struct hash_instance *self,
   self->type->update(self->ctx, length, data);
 }
 
-void
-hash_digest(struct hash_instance *self,
-	    uint8_t *result)
+struct lsh_string *
+hash_digest_string(struct hash_instance *self)
 {
-  self->type->digest(self->ctx, self->type->digest_size, result);
+  struct lsh_string *s = lsh_string_alloc(self->type->digest_size);
+  lsh_string_write_hash(s, 0, self->type, self->ctx);
+
+  return s;
 }
 
 #define HASH_INSTANCE_SIZE(type) \
@@ -488,14 +576,16 @@ do_hmac_update(struct mac_instance *s,
   self->type->update(HMAC_STATE(self), length, data);
 }
 
-static void
+static struct lsh_string *
 do_hmac_digest(struct mac_instance *s,
-	       uint8_t *digest)
+	       struct lsh_string *res, uint32_t start)
 {
   CAST(hmac_instance, self, s);
-  hmac_digest(HMAC_OUTER(self), HMAC_INNER(self), HMAC_STATE(self),
-	      self->type, self->super.mac_size, digest);
+  lsh_string_write_hmac(res, start, self->type, self->super.mac_size,
+			HMAC_OUTER(self), HMAC_INNER(self), HMAC_STATE(self));
+  return res;
 }
+
 
 /* GABA:
    (class

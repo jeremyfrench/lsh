@@ -43,11 +43,11 @@ make_hmac_algorithm(const struct hash_algorithm *h);
 /* 10 million iterations would take 5 hours on my machine */
 #define PKCS5_MAX_ITERATIONS 10000000
 
-void
+struct lsh_string *
 pkcs5_derive_key(struct mac_algorithm *prf,
-		 uint32_t password_length, const uint8_t *password,
-		 uint32_t salt_length, const uint8_t *salt,
+		 const struct lsh_string *password,
+		 const struct lsh_string *salt,
 		 uint32_t iterations,
-		 uint32_t key_length, uint8_t *key);
+		 uint32_t key_length);
 
 #endif /* LSH_CRYPTO_H_INCLUDED */

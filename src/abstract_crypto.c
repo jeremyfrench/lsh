@@ -32,6 +32,7 @@
 
 #include "crypto.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -46,10 +47,10 @@ hash_string(const struct hash_algorithm *a,
 	    int free)
 {
   struct hash_instance *hash = make_hash(a);
-  struct lsh_string *out = lsh_string_alloc(HASH_SIZE(hash));
+  struct lsh_string *out;
 
-  hash_update(hash, in->length, in->data);
-  hash_digest(hash, out->data);
+  hash_update(hash, STRING_LD(in));
+  out = hash_digest_string(hash);
 
   KILL(hash);
   if (free)
@@ -65,11 +66,12 @@ mac_string(struct mac_algorithm *a,
 	   const struct lsh_string *in,
 	   int ifree)
 {
-  struct mac_instance *mac = MAKE_MAC(a, key->length, key->data);
-  struct lsh_string *out = lsh_string_alloc(mac->mac_size);
+  struct lsh_string *out;
+  struct mac_instance *mac
+    = MAKE_MAC(a, lsh_string_length(key), lsh_string_data(key));
 
-  MAC_UPDATE(mac, in->length, in->data);
-  MAC_DIGEST(mac, out->data);
+  MAC_UPDATE(mac, lsh_string_length(in), lsh_string_data(in));
+  out = MAC_DIGEST_STRING(mac);
 
   KILL(mac);
   
@@ -87,10 +89,11 @@ crypt_string(struct crypto_instance *c,
 	     int free)
 {
   struct lsh_string *out;
-
-  if (c->block_size && (in->length % c->block_size))
-    return NULL;
+  uint32_t length = lsh_string_length(in);
   
+  if (c->block_size && (length % c->block_size))
+    return NULL;
+
   if (free)
     {
       /* Do the encryption in place. The type cast is permissible
@@ -100,9 +103,9 @@ crypt_string(struct crypto_instance *c,
     }
   else
     /* Allocate fresh storage. */
-    out = lsh_string_alloc(in->length);
+    out = lsh_string_alloc(length);
   
-  CRYPT(c, in->length, in->data, out->data);
+  CRYPT(c, length, out, 0, in, 0);
   
   return out;
 }
@@ -115,15 +118,16 @@ crypt_string_pad(struct crypto_instance *c,
 		 int free)
 {
   struct lsh_string *s;
-  uint8_t *p;
-  uint32_t pad = c->block_size - (in->length % c->block_size);
+  uint32_t length = lsh_string_length(in);
+  uint32_t pos;
+  uint32_t pad = c->block_size - (length % c->block_size);
   
   assert(pad);
   
-  s = ssh_format(free ? "%lfS%lr" : "%lS%lr", in, pad, &p);
+  s = ssh_format(free ? "%lfS%lr" : "%lS%lr", in, pad, &pos);
   /* Use RFC 1423 and "generalized RFC 1423" as described in
    * PKCS#5 version 2. */
-  memset(p, pad, pad);
+  lsh_string_set(s, pos, pad, pad);
 
   return crypt_string(c, s, 1);
 }
@@ -135,22 +139,23 @@ crypt_string_unpad(struct crypto_instance *c,
 {
   struct lsh_string *out;
   uint32_t pad;
-  
-  assert(in->length);
+  uint32_t length = lsh_string_length(in);
+  assert(length);
   
   out = crypt_string(c, in, free);
   if (!out)
     return NULL;
-  
-  pad = out->data[out->length - 1];
+
+  length = lsh_string_length(out);
+  pad = lsh_string_data(out)[length - 1];
 
   if ( (pad > 0) && (pad <= c->block_size) )
     {
       /* This should not happen, as crypt string
        * must return a multiple of the block size. */
-      assert(pad <= out->length);
+      assert(pad <= length);
 
-      lsh_string_trunc(out, out->length - pad);
+      lsh_string_trunc(out, length - pad);
       return out;
     }
   else
