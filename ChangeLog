@@ -1,3 +1,52 @@
+2002-01-21  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/xalloc.h (NEW_VAR_OBJECT, CLONE_VAR_OBJECT,
+	CLONED_VAR_OBJECT): New macros. 
+
+	* src/xalloc.c (lsh_var_alloc): New function.
+	(lsh_object_alloc): Use lsh_var_alloc.
+	(lsh_var_clone): New function.
+	(lsh_object_clone): Use lsh_var_clone.
+
+	* src/list.c (lsh_list_alloc): Moved function here, from xalloc.c.
+	Now uses lsh_var_alloc.
+
+2002-01-20  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/crypto.c (hash_update, hash_digest, hash_copy, make_hash):
+	New functions using struct nettle_hash.
+	(make_hmac_algorithm): Reorganized hmac implementation again. Now
+	uses struct nettle_hash.
+	Updated all users.
+
+	* src/algorithms.c (all_symmetric_algorithms): Changed back to use
+	make_hmac_algorithm. 
+
+	* src/abstract_crypto.h (hash_instance): Rewrote, use nettle,
+	replaced methods with ordinary functions.
+	(mac_instance): New class, before it was just analias for
+	hash_instance.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Removed md5.c and sha.c. 
+
+2002-01-17  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/md5.c, src/sha.c: Deleted files. The wrapper code was moved
+	to crypto.c, and now uses struct nettle_hash.
+
+2002-01-16  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/pkcs5-test.c (main): Use crypto_hmac_sha1_algorithm.
+
+	* src/lock_file.c (do_lsh_file_lock): Improved error message.
+
+	* src/algorithms.c (all_symmetric_algorithms): Don't use
+	make_hmac_algorithm. 
+
+	* src/crypto.c: Rewrote the hmac code to use Nettle.
+
+	* src/hmac.c, src/Makefile.am.in: Deleted file hmac.c.
+
 2002-01-14  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/rsa.c (make_rsa_signer): Take advantage of rsa_public_key
