@@ -42,6 +42,7 @@
 
 #  define flockfile(f)
 #  define funlockfile(f)
+#  undef putc_unlocked
 #  define putc_unlocked(c, f) putc((c), (f))
 #  define fputs_unlocked(s, f) fputs((s), (f))
 #  define fwrite_unlocked(b, s, n, f) fwrite((b), (s), (n), (f))

@@ -1,3 +1,7 @@
+2003-02-12  Niels Möller  <niels@s3.kth.se>
+
+	* argp-fmtstream.h: When disabling putc_unlocked, #undef it first.
+
 2003-02-10  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac (ARGP_CHECK_FUNC): Use AS_VAR_GET. Use AH_TEMPLATE.
