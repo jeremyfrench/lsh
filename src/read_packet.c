@@ -61,13 +61,13 @@
        ; Buffer index, used for all the buffers
        (pos . uint32_t)
 
-       ; NOTE: This buffer should hold one block, and must be
-       ; reallocated when the crypto algorithms is changed. 
+       ; Buffer for first received block
        (block_buffer string)
-
-       ; Must point to an area large enough to hold a mac 
+       ; Buffer for received MAC
        (mac_buffer string) 
-
+       ; Computed MAC
+       (mac_computed string)
+       
        ; Holds the packet payload
        (packet_buffer string)
 
@@ -81,21 +81,6 @@
        (handler object abstract_write)
        (connection object ssh_connection)))
 */
-
-static struct lsh_string *
-lsh_string_realloc(struct lsh_string *s, uint32_t length)
-{
-  if (!s)
-    return lsh_string_alloc(length);
-
-  if (lsh_string_length(s) < length)
-    {
-      lsh_string_free(s);
-      return lsh_string_alloc(length);
-    }
-  else
-    return s;
-}
 
 
 #define READ(n, dst) do {				\
@@ -135,22 +120,11 @@ do_read_packet(struct read_handler **h,
     switch(closure->state)
       {
       case WAIT_START:
-	{
-	  uint32_t block_size = closure->connection->rec_crypto
-	    ? closure->connection->rec_crypto->block_size : 8;
+	assert(! closure->connection->rec_crypto
+	       || closure->connection->rec_crypto->block_size <= SSH_MAX_BLOCK_SIZE); 
+	assert(! closure->connection->rec_mac
+	       || closure->connection->rec_mac->mac_size <= SSH_MAX_MAC_SIZE);
 
-	  closure->block_buffer
-	    = lsh_string_realloc(closure->block_buffer,
-				 block_size);
-
-	  if (closure->connection->rec_mac)
-	    closure->mac_buffer = lsh_string_realloc
-	      (closure->mac_buffer,
-	       closure->connection->rec_mac->mac_size);
-
-	  /* FALL THROUGH */
-	}
-	/* do_header: */
         closure->state = WAIT_HEADER;
 	closure->pos = 0;
 	/* FALL THROUGH */
@@ -329,11 +303,17 @@ do_read_packet(struct read_handler **h,
 	closure->pos = 0;
       
       case WAIT_MAC:
-
+	/* NOTE: It would be possible to first compute the expected
+	   MAC, and then compare bytes as they are read. But we don't
+	   want to tell an attacker that the MAC was wrong until we
+	   have received all the bytes, to avoid information leakage.
+	   And then it seems easier to read the entire MAC first and
+	   examine it later. */
+	
 	if (closure->connection->rec_mac)
 	  {
-	    uint32_t left = (closure->connection->rec_mac->mac_size
-			   - closure->pos);
+	    uint32_t mac_size = closure->connection->rec_mac->mac_size;
+	    uint32_t left = mac_size - closure->pos;
 
 	    assert(left);
 
@@ -346,25 +326,20 @@ do_read_packet(struct read_handler **h,
 	    else
 	      {
 		/* Read a complete MAC */
-
-		struct lsh_string *mac;
-
 		READ(left, closure->mac_buffer);
 
-		/* FIXME: Allocating this temporary string seems a
-		   little inefficient */
-		mac = MAC_DIGEST_STRING(closure->connection->rec_mac);
+		MAC_DIGEST(closure->connection->rec_mac, closure->mac_computed, 0);
 
-		if (!lsh_string_eq(mac, closure->mac_buffer))
+		if (memcmp(lsh_string_data(closure->mac_buffer),
+			   lsh_string_data(closure->mac_computed),
+			   mac_size))
 		  {
 		    static const struct protocol_exception mac_error =
 		      STATIC_PROTOCOL_EXCEPTION(SSH_DISCONNECT_MAC_ERROR,
 						"MAC error");
-		    lsh_string_free(mac);
 		    EXCEPTION_RAISE(closure->connection->e, &mac_error.super);
 		    return total;
 		  }
-		lsh_string_free(mac);
 	      }
 	  }
 	
@@ -419,8 +394,9 @@ make_read_packet(struct abstract_write *handler,
   closure->state = WAIT_START;
   closure->sequence_number = 0;
 
-  closure->block_buffer = NULL;
-  closure->mac_buffer = NULL;
+  closure->block_buffer = lsh_string_alloc(SSH_MAX_BLOCK_SIZE);
+  closure->mac_buffer = lsh_string_alloc(SSH_MAX_MAC_SIZE);
+  closure->mac_computed = lsh_string_alloc(SSH_MAX_MAC_SIZE);
   closure->packet_buffer = NULL;
   
   return &closure->super;
