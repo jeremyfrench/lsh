@@ -171,6 +171,8 @@ struct resource *make_process_resource(pid_t pid, int signal)
        ; Child process's stdio 
        (in object io_fd)
        (out object io_fd)
+       ;; err may be NULL, if there's no separate stderr channel.
+       ;; This happens if we use a pty, and the bash workaround
        (err object io_fd)))
 */
 
@@ -549,6 +551,8 @@ static int make_pipes(int *in, int *out, int *err)
   return 0;
 }
 
+#define BASH_WORKAROUND 1
+
 #if WITH_PTY_SUPPORT
 static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
 {
@@ -579,12 +583,23 @@ static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
         {
           if ((out[1] = dup(pty->slave)) != -1) 
             {
+#if BASH_WORKAROUND
+	      /* Don't use a separate stderr channel; just dup the
+	       * stdout pty to stderr. */
+	      if ((err[1] = dup(pty->slave)) != -1)
+                {
+                  err[0] = -1;
+                  return 1;
+                } 
+#else /* !BASH_WORKAROUND */
 	      if (make_pipe(err))
 		{
 		  /* Success! */
 		  return 1;
 		}
+#endif /* !BASH_WORKAROUND */
               saved_errno = errno;
+	      
             }
 	  else
 	    saved_errno = errno;
@@ -842,11 +857,13 @@ static int do_spawn_shell(struct channel_request *c,
 	  = io_read(make_io_fd(closure->backend, out[0]),
 		    make_channel_read_data(channel),
 		    NULL);
-	session->err
-	  = io_read(make_io_fd(closure->backend, err[0]),
-		    make_channel_read_stderr(channel),
-		    NULL);
-
+	session->err 
+	  = ( (err[0] == -1)
+	      ? io_read(make_io_fd(closure->backend, err[0]),
+			make_channel_read_stderr(channel),
+			NULL)
+	      : NULL);
+	
 	channel->receive = do_receive;
 	channel->send = do_send;
 	channel->eof = do_eof;
@@ -864,8 +881,9 @@ static int do_spawn_shell(struct channel_request *c,
 	  (connection->resources, &session->in->super.super);
 	REMEMBER_RESOURCE
 	  (connection->resources, &session->out->super.super);
-	REMEMBER_RESOURCE
-	  (connection->resources, &session->err->super.super);
+	if (session->err)
+	  REMEMBER_RESOURCE
+	    (connection->resources, &session->err->super.super);
 
 	return (want_reply
 		? A_WRITE(channel->write,
