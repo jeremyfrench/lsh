@@ -26,7 +26,6 @@
 
 #include "certificate.h"
 #include "parse.h"
-#include "spki-types.h"
 
 #include "nettle/md5.h"
 #include "nettle/sha.h"
@@ -214,58 +213,27 @@ spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest)
 
 
 
-/* Automatically generated table. */
-#include "spki-type-names.h"
-
-/* If the type doesn't match, don't move the iterator. */
-/* FIXME: static because enum spki_type isn't defined in the header
- * file. */
-static int
-spki_check_type(struct sexp_iterator *i, enum spki_type type)
-{
-  struct sexp_iterator before = *i;
-
-  if (sexp_iterator_enter_list(i)
-      && i->type == SEXP_ATOM
-      && !i->display
-      && i->atom_length == spki_type_names[type].length
-      && !memcmp(i->atom,
-		 spki_type_names[type].name,
-		 spki_type_names[type].length))
-    return sexp_iterator_next(i);
-
-  *i = before;
-  return 0;    
-}
-
-
 /* ACL database */
 
 int
-spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
+spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i)
 {
-  enum spki_type type;
-  
-  if (!spki_check_type(i, SPKI_TYPE_ACL))
+  /* FIXME: Change to an assertion? */
+  if (i->type != SPKI_TYPE_ACL)
     return 0;
 
-  type = spki_parse_type(i);
+  spki_parse_type(i);
  
-  if (type == SPKI_TYPE_END_OF_EXPR)
-    /* An empty acl is ok */
-    return sexp_iterator_exit_list(i);
+  if (i->type == SPKI_TYPE_VERSION)
+    spki_parse_version(i);
   
-  if (type == SPKI_TYPE_VERSION)
-    type = spki_parse_version(i);
-  
-  while (type == SPKI_TYPE_ENTRY)
+  while (i->type == SPKI_TYPE_ENTRY)
     {
       SPKI_NEW(db, struct spki_5_tuple, acl);
       if (!acl)
 	return 0;
       
-      type = spki_parse_acl_entry(db, i, acl);
-      if (!type)
+      if (!spki_parse_acl_entry(db, i, acl))
 	{
 	  SPKI_FREE(db, acl);
 	  return 0;
@@ -275,9 +243,8 @@ spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
       db->first_acl = acl;
     }
 
-  return type == SPKI_TYPE_END_OF_EXPR && spki_parse_end(i);
+  return spki_parse_end(i);
 }
-
 
 void
 spki_5_tuple_free_chain(struct spki_acl_db *db,
@@ -296,25 +263,27 @@ spki_5_tuple_free_chain(struct spki_acl_db *db,
 
 struct spki_5_tuple *
 spki_process_sequence_no_signatures(struct spki_acl_db *db,
-				    struct sexp_iterator *i)
+				    struct spki_iterator *i)
 {
   struct spki_5_tuple *chain = NULL;
-  enum spki_type type;  
 
-  if (!spki_check_type(i, SPKI_TYPE_SEQUENCE))
+  /* FIXME: Change to an assertion? */
+  if (i->type != SPKI_TYPE_SEQUENCE)
     return NULL;
-
-  type = spki_parse_type(i);
   
   for (;;)
     {
-      switch (type)
+      switch (i->type)
 	{
-	default:
-	  goto fail;
-
 	case SPKI_TYPE_END_OF_EXPR:
-	  goto done;
+	  if (spki_parse_end(i))
+	    return chain;
+
+	  /* Fall through */
+	default:
+	fail:
+	  spki_5_tuple_free_chain(db, chain);
+	  return NULL;
 	  
 	case SPKI_TYPE_CERT:
 	  {
@@ -322,9 +291,7 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
 	    cert->next = chain;
 	    chain = cert;
 	    
-	    type = spki_parse_cert(db, i, cert);
-
-	    if (!type)
+	    if (!spki_parse_cert(db, i, cert))
 	      goto fail;
 
 	    break;
@@ -333,21 +300,10 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
 	case SPKI_TYPE_SIGNATURE:
 	case SPKI_TYPE_DO:
 	  /* Ignore */
-	  type = spki_parse_skip(i);
+	  spki_parse_skip(i);
 	  break;
 	}
     }
-
- done:
-
-  assert(type == SPKI_TYPE_END_OF_EXPR);
-  
-  if (sexp_iterator_exit_list(i))
-    return chain;
-  
- fail:
-  spki_5_tuple_free_chain(db, chain);
-  return NULL;
 }
 
 

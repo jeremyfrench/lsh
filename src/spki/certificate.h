@@ -23,9 +23,11 @@
 #ifndef LIBSPKI_CERTIFICATE_H_INCLUDED
 #define LIBSPKI_CERTIFICATE_H_INCLUDED
 
-#include "nettle/sexp.h"
 #include "nettle/md5.h"
 #include "nettle/sha.h"
+
+/* Real declaration in parse.h */
+struct spki_iterator;
 
 #include <time.h>
 
@@ -153,7 +155,7 @@ spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest);
 
 /* Handling the acl database */
 int
-spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i);
+spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i);
 
 struct spki_acl *
 spki_acl_by_principal_first(struct spki_acl_db *,
@@ -186,7 +188,7 @@ spki_5_tuple_free_chain(struct spki_acl_db *db,
 
 struct spki_5_tuple *
 spki_process_sequence_no_signatures(struct spki_acl_db *db,
-				    struct sexp_iterator *i);
+				    struct spki_iterator *i);
 
 
 /* Other more or less internal functions. */
