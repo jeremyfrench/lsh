@@ -27,6 +27,7 @@
 
 #include "resource.h"
 
+#include "gc.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -60,8 +61,16 @@ void
 dont_free_live_resource(int alive)
 {
   if (alive)
-    fatal("dont_free_live_resource: "
-	  "garbage collecting a live resource!\n");
+    {
+#if DEBUG_ALLOC
+      if (gc_final_p)
+	verbose("dont_free_live_resource: "
+		"final collection of a live resource!\n");
+      else
+#endif
+	fatal("dont_free_live_resource: "
+	      "garbage collecting a live resource!\n");
+    }
 }
 
 /* For resources that are only marked as dead, and taken care of
@@ -181,6 +190,7 @@ empty_resource_list(void)
   NEW(concrete_resource_list, self);
   resource_init(&self->super.super, do_kill_all);
 
+  trace("empty_resource_list: created %xi\n", self);
   self->super.remember = do_remember_resource;
   
   self->q = NULL;
