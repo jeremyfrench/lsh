@@ -384,7 +384,7 @@ do_xauth_exit(struct exit_callback *s, int signaled,
 	werror("xauth invocation failed: exit code: %i\n", value);
     }
   else
-    /* NOTE: Return value is ignored. */
+    /* FIXME: Doesn't return the channel. */
     COMMAND_RETURN(self->c, NULL);
 }
 
