@@ -1080,7 +1080,7 @@ struct address_info *
 fd2info(struct lsh_fd *fd, int side)
 {
 #if WITH_IPV6
-    struct sockaddr_storage sock;
+  struct sockaddr_storage sock;
 #else
   struct sockaddr sock;
 #endif
