@@ -1,3 +1,86 @@
+2000-11-15  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/unix_user.c (make_process_resource): Use resource_init().
+
+	* src/server_session.c (make_pty): assert that the pty is alive.
+	(do_alloc_pty): Likewise.
+
+	* src/server_pty.c (do_kill_pty_info): Check that fd:s are >=
+	before closing them.
+	(make_pty_info): Use resource_init(). Bugfix: Don't initialize
+	alive to 0; that would cause the pty to be dropped from resource
+	lists where it is inserted. Instead, set the fd:s to -1 to
+	indicate that no pty has been allocated yet.
+	(pty_allocate): Set fd:s to -1 if they are closed.
+
+	* src/resource.c (do_resource_kill): New function.
+	(resource_init): New function.
+	(empty_resource_list): Use resource_init().
+
+	* src/reaper.c (reaper_callback): New class.
+	(do_reaper_callback): Moved the waitpid() logic into a callback,
+	that is used as an lsh signal handler.
+	(reaper_install_handler): New function.
+	(make_reaper): Install lsh signal handler (by calling
+	reaper_install_handler). 
+	(reaper_run): Obsoleted, #if:ed out.
+
+	* src/lshg.c: New file (actually introduced already in 1.1.1).
+
+	* src/lsh.h: Forward declare struct io_backend.
+
+	* src/lsh_proxy.c (main): Use make_io_backend(). Pass backend to
+	make_reaper(). Use io_run rather than reaper_run.
+	* src/lshd.c (make_lshd_options): Likewise.
+
+	* src/lsh-decode-key.c (main): Use make_io_backend().
+	* src/lsh.c (main): Likewise.
+	* src/lsh-writekey.c (main): Likewise.
+	* src/lsh-export-key.c (main): Likewise.
+	* src/sexp-conv.c (main): Likewise.
+	* src/srp-gen.c (main): Likewise.
+
+	* src/io.h (close_callback): Deleted old close_callback code.
+	Moved classes io_backend and callout to io.c.
+
+	* src/io.c (lsh_signal_handler): New class. 
+	(lsh_callout): Renamed the callout class, and made it inherit
+	resource. 
+	(io_iter): Call signal handlers.
+	(make_io_backend): New function.
+	(init_backend): Deleted function.
+	(io_signal_handler): New function.
+	(io_callout): New function.
+	(init_file): Use resource_init().
+
+	* src/interact.h (window_change_callback): New class.
+	(abstract_interact): Replaced the window_change method with to
+	methods, window_size and window_change_subscribe.
+
+	* src/interact.c: Moved unix_interact class to unix_interact.c.
+
+	* src/gateway_commands.c (do_gateway_accept): Use
+	connection_command. 
+
+	* src/connection_commands.h (connection_command): New class, for
+	simple connection related commands.
+	Moved a lot of code to handshake.h.
+
+	* src/connection_commands.c: Moved a lot of code to handshake.c. 
+
+	* src/connection.c (connection_close_handler): Moved from
+	connection_commands.c
+	(make_connection_close_handler): Likewise.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added handshake.c.
+	(lshg_LDADD): Don't link lshg with symmetric/libsymmetric.a.
+
+	* src/handshake.c: New file, with ssh handshake logic extracted
+	from connection_commands.c. This way, it is possible to link lshg
+	without dragging in the keyexchange and crypto code.
+
+	* configure.in: Bumped version to 1.1.2.
+
 2000-11-14  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/macros.m4(TS_TEST_VERIFY): Use make_bad_random(). 

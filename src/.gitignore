@@ -27,6 +27,7 @@
 /lsh-writekey
 /lsh_proxy
 /lshd
+/lshg
 /packet_types.h
 /pkcs5-test
 /prime_table
