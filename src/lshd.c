@@ -23,13 +23,6 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <errno.h>
-#include <locale.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "getopt.h"
-
 #include "algorithms.h"
 #include "alist.h"
 #include "atoms.h"
@@ -43,11 +36,28 @@
 #include "reaper.h"
 #include "server.h"
 #include "server_keyexchange.h"
+#include "sexp.h"
 #include "ssh.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 #include "compress.h"
+
+#include "getopt.h"
+
+#include "lshd.c.x"
+
+#include <assert.h>
+
+#include <errno.h>
+#include <locale.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
@@ -56,10 +66,19 @@ void usage(void) NORETURN;
 
 void usage(void)
 {
-  fprintf(stderr, "lshd [-p port] [-q] [-d] [-i] [-v]\n");
+  wwrite("lshd [options]\n"
+	 " -p,  --port=PORT\n"
+	 " -h,  --hostkey=KEYFILE\n"
+	 " -c,  --crypto=ALGORITHM\n"
+	 " -z,  --compression=ALGORITHM\n"
+	 "      --mac=ALGORITHM\n"
+	 " -q,  --quiet\n"
+	 " -v,  --verbose\n"
+	 "      --debug\n");
   exit(1);
 }
 
+#if 0
 struct signer *secret_key;
 struct lsh_string *public_key;
 
@@ -120,11 +139,159 @@ static void init_host_key(struct randomness *r)
   mpz_clear(y);
   mpz_clear(a);
 }
+#endif
 
+/* FIXME: We should have some more general functions for reading private keys. */
+
+/* CLASS:
+   (class
+     (name read_key)
+     (super sexp_handler)
+     (vars
+       (random object randomness)
+       (secret pointer (object signer))
+       (public pointer (string))))
+*/
+
+static int do_read_key(struct sexp_handler *h, struct sexp *private)
+{
+  CAST(read_key, closure, h);
+  struct sexp_iterator *i;
+  struct sexp *e;
+  mpz_t p, q, g, y, x;
+
+  int res;
+  
+  if (!sexp_check_type(private, "private-key", &i))
+    {
+      werror("lshd: Host key file does not contain a private key.");
+      return LSH_FAIL | LSH_DIE;
+    }
+
+  e = SEXP_GET(i);
+  if (! (e && sexp_check_type(e, "dss", &i)))
+    {
+      werror("lshd: Unknown key type (only dss is supported)\n");
+      return LSH_FAIL | LSH_DIE;
+    }
+
+  mpz_init(p);
+  mpz_init(q);
+  mpz_init(g);
+  mpz_init(y);
+  mpz_init(x);
+
+  if (sexp_get_un(i, "p", p)
+      && sexp_get_un(i, "q", q)
+      && sexp_get_un(i, "g", g)
+      && sexp_get_un(i, "y", y)
+      && sexp_get_un(i, "x", x)
+      && !SEXP_GET(i))
+    {
+      /* Test key */
+      mpz_t tmp;
+      struct lsh_string *s;
+      
+      mpz_init_set(tmp, g);
+      mpz_powm(tmp, tmp, x, p);
+      if (mpz_cmp(tmp, y))
+	{
+	  werror("lshd: Host key doesn't work.\n");
+	  mpz_clear(tmp);
+
+	  res = LSH_FAIL | LSH_DIE;
+	}
+      else
+	{
+	  struct lsh_string *public
+	    = ssh_format("%a%n%n%n%n", ATOM_SSH_DSS, p, q, g, y);
+	  struct signer *secret;
+	  	  
+	  s = ssh_format("%n", x);
+	  
+	  secret = MAKE_SIGNER(make_dss_algorithm(closure->random),
+			       public->length, public->data,
+			       s->length, s->data);
+	  assert(secret);
+	  lsh_string_free(s);
+
+	  *closure->public = public;
+	  *closure->secret = secret;
+
+	  verbose("lshd: Using (public) hostkey:\n  p=");
+	  verbose_mpz(p);
+	  verbose("\n  q=");
+	  verbose_mpz(q);
+	  verbose("\n  g=");
+	  verbose_mpz(g);
+	  verbose("\n  y=");
+	  verbose_mpz(y);
+	  verbose("\n");
+		  
+	  res = LSH_OK | LSH_CLOSE;
+	}
+    }
+  else
+    res = LSH_FAIL | LSH_DIE;
+
+  /* Cleanup */
+  mpz_clear(p);
+  mpz_clear(q);
+  mpz_clear(g);
+  mpz_clear(y);
+  mpz_clear(x);
+
+  return res;
+}
+
+static int read_host_key(const char *name,
+			 struct lsh_string **public,
+			 struct signer **secret,
+			 struct randomness *r)
+{
+  int fd = open(name, O_RDONLY);
+  if (fd < 0)
+    {
+      werror("lshd: Could not open %s (errno = %d): %s\n",
+	     name, errno, strerror(errno));
+      return 0;
+    }
+  else
+    {
+      int res;
+      
+      NEW(read_key, handler);
+      handler->super.handler = do_read_key;
+
+      handler->random = r;
+      handler->public = public;
+      handler->secret = secret;
+      
+      res = blocking_read(fd, make_read_sexp(&handler->super,
+					     2000, SEXP_TRANSPORT, 0));
+      close(fd);
+
+      KILL(handler);
+      
+      if (LSH_FAILUREP(res))
+	{
+	  werror("lshd: Invalid host key.\n");
+	  return 0;
+	}
+
+      return 1;
+    }
+}
+  
 int main(int argc, char **argv)
 {
   char *host = NULL;  /* Interface to bind */
   char *port = "ssh";
+  char *hostkey = "/etc/lsh_host_key";
+
+  struct lsh_string *public_key = NULL; 
+  struct signer *secret_key = NULL;
+  
   int option;
 
   int preferred_crypto = 0;
@@ -168,10 +335,11 @@ int main(int argc, char **argv)
 	{ "crypto", required_argument, NULL, 'c' },
 	{ "compression", optional_argument, NULL, 'z'},
 	{ "mac", required_argument, NULL, 'm' },
+	{ "hostkey", required_argument, NULL, 'h' },
 	{ NULL }
       };
       
-      option = getopt_long(argc, argv, "c:p:qvz::", options, NULL);
+      option = getopt_long(argc, argv, "c:h:p:qvz::", options, NULL);
       switch(option)
 	{
 	case -1:
@@ -186,6 +354,9 @@ int main(int argc, char **argv)
 	  break;
 	case 'v':
 	  verbose_flag = 1;
+	  break;
+	case 'h':
+	  hostkey = optarg;
 	  break;
 	case 'c':
 	  preferred_crypto = lookup_crypto(algorithms, optarg);
@@ -224,16 +395,21 @@ int main(int argc, char **argv)
   if ( (argc - optind) != 0)
     usage();
 
+  /* Read the hostkey */
+  if (!read_host_key(hostkey, &public_key, &secret_key, r))
+    {
+      return EXIT_FAILURE;
+    }
+
   if (!get_inaddr(&local, host, port, "tcp"))
     {
       fprintf(stderr, "No such host or service");
-      exit(1);
+      return EXIT_FAILURE;
     }
 
   init_backend(backend);
   reaper = make_reaper();
 
-  init_host_key(r); /* Initializes public_key and secret_key */
   kex = make_dh_server(dh, public_key, secret_key);
 
   ALIST_SET(algorithms, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex);
