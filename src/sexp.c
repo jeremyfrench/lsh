@@ -144,7 +144,7 @@ do_format_simple_string(struct lsh_string *s,
 	    return res;
 	  }
 	/* Base 64 string */
-	return encode_base64(s, "||", indent + 1, 0);
+	return encode_base64(s, "||", 1, indent + 1, 0);
       }
     default:
       fatal("do_format_sexp_string: Unknown output style.\n");
@@ -746,7 +746,7 @@ sexp_format(struct sexp *e, int style, unsigned indent)
   switch(style)
     {
     case SEXP_TRANSPORT:
-      return encode_base64(sexp_format(e, SEXP_CANONICAL, 0), "{}", indent, 1);
+      return encode_base64(sexp_format(e, SEXP_CANONICAL, 0), "{}", 1, indent, 1);
     case SEXP_CANONICAL:
     case SEXP_ADVANCED:
     case SEXP_INTERNATIONAL:
@@ -779,6 +779,7 @@ encode_base64_group(UINT32 n, UINT8 *dest)
 struct lsh_string *
 encode_base64(struct lsh_string *s,
 	      const char *delimiters,
+	      int break_lines,
 	      unsigned indent,
 	      int free)				 
 {
@@ -787,7 +788,7 @@ encode_base64(struct lsh_string *s,
 
   /* We never fold after the last full group, so we don't fold strings
    * with full_groups <= GROUPS_PER_LINE. */
-  unsigned linebreaks = ( (indent && full_groups)
+  unsigned linebreaks = ( (break_lines && full_groups)
 			  ? (full_groups - 1) / GROUPS_PER_LINE
 			  : 0);
   unsigned length = (full_groups + !!last) * 4 + (indent + 1) * linebreaks;
@@ -807,7 +808,7 @@ encode_base64(struct lsh_string *s,
       /* Loop over all but the last group. */
       for (i=0; i<full_groups; dst += 4, src += 3, i++)
 	{
-	  if (indent && i && !(i % GROUPS_PER_LINE))
+	  if (break_lines && i && !(i % GROUPS_PER_LINE))
 	    {
 	      assert(linebreaks);
 	      linebreaks--;

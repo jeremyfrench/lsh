@@ -107,6 +107,7 @@ struct lsh_string *sexp_format(struct sexp *e, int style, unsigned indent);
 
 struct lsh_string *encode_base64(struct lsh_string *s,
 				 const char *delimiters,
+				 int break_lines,
 				 unsigned indent, int free);
 
 /* Creating sexps */
