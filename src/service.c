@@ -30,11 +30,13 @@
 #include "ssh.h"
 #include "xalloc.h"
 
+#if 0
 #define GABA_DEFINE
 #include "service.h.x"
 #undef GABA_DEFINE
 
-/* #include "service.c.x" */
+#include "service.c.x" 
+#endif
 
 /* ;;GABA:
    (class

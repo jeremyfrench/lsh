@@ -31,9 +31,11 @@
  * in a SSH_MSG_SERVICE_REQUEST or SSH_MSG_USERAUTH_REQUEST) and for
  * any other stuff that needs initialization at some later time. */
 
+#if 0
 #define GABA_DECLARE
 #include "service.h.x"
 #undef GABA_DECLARE
+#endif
 
 /* GABA:
    (class
