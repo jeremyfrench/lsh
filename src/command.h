@@ -63,9 +63,12 @@
        (call_simple method "struct lsh_object *" "struct lsh_object *")))
 */
 
-#define COMMAND_CALL(f, a, c) ((f)->call((f), (a), (c)))
-#define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v))) 
-#define COMMAND_SIMPLE(f, a) ((f)->call_simple((f), (a)))
+#define COMMAND_CALL(f, a, c) \
+  ((f)->call((f), (struct lsh_object *) (a), (c)))
+#define COMMAND_RETURN(r, v) \
+  ((r) ? ((r)->c((r), (struct lsh_object *) (v))) : LSH_OK | LSH_GOON)
+#define COMMAND_SIMPLE(f, a) \
+  ((f)->call_simple((f), (struct lsh_object *)(a)))
 
 int do_call_simple_command(struct command *s,
 			   struct lsh_object *arg,
