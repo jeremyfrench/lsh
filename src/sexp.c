@@ -720,7 +720,7 @@ int sexp_atomp(const struct sexp *e)
 struct lsh_string *
 sexp2string(struct sexp *e)
 {
-  return (e && (sexp_atomp(e) && !sexp_display(e))
+  return ( (e && sexp_atomp(e) && !sexp_display(e))
 	   ? sexp_contents(e) : NULL);
 }
   
