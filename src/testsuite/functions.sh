@@ -18,6 +18,8 @@ export LSH_YARROW_SEED_FILE SEXP_CONV
 : ${LSHG_FLAGS:=-q}
 : ${HOSTKEY:="$srcdir/key-1.private"}
 : ${PIDFILE:="`pwd`/lshd.$$.pid"}
+: ${LSH_PIDFILE:="`pwd`/lsh.$$.pid"}
+: ${LSHG_PIDFILE:="`pwd`/lshg.$$.pid"}
 : ${INTERFACE:=localhost}
 
 # Ignore any options the tester might have put in the environment.
@@ -94,7 +96,7 @@ spawn_lshd () {
 	-p $PORT --interface=$INTERFACE $LSHD_FLAGS \
 	--pid-file $PIDFILE --daemon --no-syslog "$@" || test_fail
     
-    # lshd should release its port after receivinf HUP, but we may get
+    # lshd should release its port after receiving HUP, but we may get
     # timing problems when the next lshd process tries to bind the
     # port. So we also wait a little.
 
@@ -132,10 +134,9 @@ exec_lsh () {
 spawn_lsh () {
     # echo spawn_lsh "$@"
     HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
-	--capture-to /dev/null -z -p $PORT "$@" -N localhost &
-    lsh_pid="$!"
-    at_exit "kill $lsh_pid"
-    echo lsh pid: $lsh_pid
+	--capture-to /dev/null -z -p $PORT "$@" --write-pid -B localhost > "$LSH_PIDFILE"
+
+    at_exit 'kill `cat $LSH_PIDFILE`'
 }
 
 exec_lshg () {
@@ -144,13 +145,13 @@ exec_lshg () {
 
 spawn_lshg () {
     # echo spawn_lshg "$@"
-    ../lshg $LSHG_FLAGS -p $PORT "$@" -N localhost &
-    at_exit "kill $!"
+    ../lshg $LSHG_FLAGS -p $PORT "$@" --write-pid -B localhost > "$LSHG_PIDFILE"
+    at_exit 'kill `cat $LSHG_PIDFILE`'
 }
 
+# at_connect local-port max-connections shell-command
 at_connect () {
     mini-inetd -m $2 -- localhost:$1 /bin/sh sh -c "$3" &
-    at_exit "kill $!"
 }
 
 compare_output() {
