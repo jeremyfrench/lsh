@@ -140,7 +140,7 @@ int main(int argc, char **argv)
 	{ "debug", no_argument, &debug_flag, 1},
 	{ "input", required_argument, NULL, 'i'},
 	{ "output", required_argument, NULL, 'o'},
-	{ NULL }
+	{ NULL, 0, NULL, 0 }
       };
       
       option = getopt_long(argc, argv, "qvi:o:", options, NULL);
