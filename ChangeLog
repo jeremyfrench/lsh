@@ -1,3 +1,11 @@
+2004-11-09  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-krb-checkpw.c (main): Noted that the current code seems
+	to work only with Heimdal, not MIT kerberos.
+
+	* configure.ac: Check for krb5_verify_user_lrealm, and disable
+	kerberos support if not found.
+
 2004-11-09  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo: Set UPDATED-FOR to 2.0.

@@ -474,7 +474,9 @@ if test x$enable_kerberos = xyes; then
   LSH_CHECK_KRB_LIB(resolv, dn_expand)
   LSH_CHECK_KRB_LIB(des, des_cbc_encrypt)
   LSH_CHECK_KRB_LIB(asn1, der_get_octet_string)
-  LSH_CHECK_KRB_LIB(krb5, krb5_cc_gen_new,, [enable_kerberos=no])
+  # Check for krb5_cc_gen_new too?
+  # krb5_verify_user_lrealm seems to be unique to heimdal
+  LSH_CHECK_KRB_LIB(krb5, krb5_verify_user_lrealm,, [enable_kerberos=no])
 fi
 
 AH_TEMPLATE([WITH_KERBEROS], [For kerberos])
