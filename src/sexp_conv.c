@@ -32,6 +32,7 @@
 #include "lsh_argp.h"
 #include "sexp_commands.h"
 #include "spki.h"
+#include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -89,6 +90,11 @@ do_exc_sexp_conv_handler(struct exception_handler *self,
 }
 
 /* Option parsing */
+
+const char *argp_program_version
+= "sexp_conv-" VERSION;
+
+const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define OPT_HASH 0x200
 #define OPT_SPKI_HASH 0x201
