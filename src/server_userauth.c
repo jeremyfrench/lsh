@@ -384,9 +384,18 @@ make_userauth_service(struct int_list *advertised_methods,
 }
 
 
+/* GABA:
+   (class
+     (name userauth_none)
+     (super userauth)
+     (vars
+       (user object lsh_user)
+       (ignore_username . int)))
+*/
+
 /* None service (which works like external-keyexchange) */
 static void
-do_none_authenticate(struct userauth *s UNUSED,
+do_none_authenticate(struct userauth *s,
                      struct ssh_connection *connection UNUSED,
                      struct lsh_string *username,
                      uint32_t service UNUSED,
@@ -394,6 +403,9 @@ do_none_authenticate(struct userauth *s UNUSED,
                      struct command_continuation *c,
                      struct exception_handler *e)
 {
+  CAST(userauth_none, self, s);
+
+  trace("do_none_authenticate\n");
   username = utf8_to_local(username, 1, 1);
   if (!username)
     {
@@ -407,9 +419,15 @@ do_none_authenticate(struct userauth *s UNUSED,
         = STATIC_EXCEPTION(EXC_USERAUTH,
                            "User needs to authenticate properly");
 
-      if (connection->user
-          && lsh_string_eq(username, connection->user->name))
-        COMMAND_RETURN(c, connection->user);
+      if (self->ignore_username || 
+	  (connection->user &&
+	   lsh_string_eq(username, connection->user->name)))
+	{
+	  if (self->ignore_username)
+	    connection->user = self->user;
+	  
+	  COMMAND_RETURN(c, connection->user);
+	}
       else
         EXCEPTION_RAISE(e, &wrong_user);
     }
@@ -419,5 +437,16 @@ do_none_authenticate(struct userauth *s UNUSED,
   lsh_string_free(username);
 }
 
-struct userauth server_userauth_none =
-  { STATIC_HEADER, do_none_authenticate };
+
+struct userauth *
+make_userauth_none(int ignore_username, struct lsh_user *user)
+{
+  NEW(userauth_none, self);
+
+  trace("make_userauth_none\n");
+  self->super.authenticate = do_none_authenticate;
+  self->ignore_username = ignore_username;
+  self->user = user;
+  return &self->super;
+}
+
