@@ -922,13 +922,26 @@ write_raw_with_poll(int fd, UINT32 length, const UINT8 *data)
 
 void io_set_nonblocking(int fd)
 {
-  if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
-    fatal("io_set_nonblocking: fcntl() failed, %z", STRERROR(errno));
+  int old = fcntl(fd, F_GETFL);
+
+  if (old < 0)
+    fatal("io_set_nonblocking: fcntl(F_GETFL) failed, %z", STRERROR(errno));
+  
+  if (fcntl(fd, F_SETFL, old | O_NONBLOCK) < 0)
+    fatal("io_set_nonblocking: fcntl(F_SETFL) failed, %z", STRERROR(errno));
 }
 
 void io_set_close_on_exec(int fd)
 {
-  if (fcntl(fd, F_SETFD, 1) < 0)
+  /* NOTE: There's only one documented flag bit, so reading the old
+   * value should be redundant. */
+  
+  int old = fcntl(fd, F_GETFD);
+
+  if (old < 0)
+    fatal("io_set_nonblocking: fcntl(F_GETFD) failed, %z", STRERROR(errno));
+  
+  if (fcntl(fd, F_SETFD, old | 1) < 0)
     fatal("Can't set close-on-exec flag for fd %i: %z\n",
 	  fd, STRERROR(errno));
 }
