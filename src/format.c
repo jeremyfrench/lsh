@@ -416,3 +416,37 @@ void ssh_vformat_write(char *f, UINT32 size, UINT8 *buffer, va_list args)
   
   assert(buffer == start + size);
 }
+
+/* These functions add an extra NUL-character at the end of the string
+ * (not included in the length), to make it possible to pass the
+ * string directly to C library functions. */
+
+struct lsh_string *format_cstring(char *s)
+{
+  if (s)
+    {
+      struct lsh_string *res = ssh_format("%lz%c", s, 0);
+      res->length--;
+      return res;
+    }
+  return NULL; 
+}
+
+struct lsh_string *make_cstring(struct lsh_string *s, int free)
+{
+  struct lsh_string *res;
+  
+  if (memchr(s->data, '\0', s->length))
+    {
+      if (free)
+	lsh_string_free(s);
+      return 0;
+    }
+
+  res = ssh_format("%lS%c", s, 0);
+  res->length--;
+  
+  if (free)
+    lsh_string_free(s);
+  return res;
+}
