@@ -35,9 +35,10 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#define WAIT_HEADER 0
-#define WAIT_CONTENTS 1
-#define WAIT_MAC 2
+#define WAIT_START 0
+#define WAIT_HEADER 1
+#define WAIT_CONTENTS 2
+#define WAIT_MAC 3
 
 struct read_packet
 {
@@ -89,16 +90,25 @@ static int do_read_packet(struct read_handler **h,
     {
 #endif
       switch(closure->state)
-      {
+	{
+	case WAIT_START:
+	  {
+	    UINT32 block_size = closure->connection->rec_crypto
+	      ? closure->connection->rec_crypto->block_size : 8;
+
+	    closure->buffer = lsh_string_realloc(closure->buffer,
+						 block_size);
+	    closure->pos = 0;
+
+	    closure->state = WAIT_HEADER;
+	    /* FALL THROUGH */
+	  }
 	case WAIT_HEADER:
 	  {
 	    UINT32 block_size = closure->connection->rec_crypto
 	      ? closure->connection->rec_crypto->block_size : 8;
 	    UINT32 left;
 	    int n;
-
-	    closure->buffer = lsh_string_realloc(closure->buffer,
-						 block_size);
 
 	    left = block_size - closure->pos;
 	    
@@ -273,7 +283,7 @@ static int do_read_packet(struct read_handler **h,
 	    return 0;
 	  
 	  closure->buffer = NULL;
-	  closure->state = WAIT_HEADER;
+	  closure->state = WAIT_START;
 	  break;
 	  
 	default:
@@ -295,7 +305,7 @@ struct read_handler *make_read_packet(struct abstract_write *handler,
   closure->connection = connection;
   closure->handler = handler;
 
-  closure->state = WAIT_HEADER;
+  closure->state = WAIT_START;
   closure->sequence_number = 0;
 
   /* closure->pos = 0; */
