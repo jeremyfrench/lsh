@@ -23,7 +23,7 @@ for f in $srcdir/rapid7-ssh-pdu/*.pdu ; do
     ln -s $f current || die "Creating symlink current -> $f failed"
 
     set +e
-    ../lsh -q --sloppy --capture-to=/dev/null -p $PORT localhost exit 0
+    HOME="$TEST_HOME" ../lsh -q --sloppy --capture-to=/dev/null -p $PORT localhost exit 0
     status="$?"
     set -e
     # Should be either 1 or 17 (not sure exactly when
