@@ -1,5 +1,26 @@
 /* io.c
  *
+ *
+ *
+ * $Id$ */
+
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 1998 Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include <unistd.h>
@@ -200,11 +221,16 @@ void io_run(struct io_backend *b)
 		   struct fd_read r =
 		   { { do_read }, fd->fd };
 
-		   /* The handler function returns a new handler for the
-		    * file, or NULL. */
-		   if (!(READ_HANDLER(fd->handler,
-				      &r.super)))
+		   /* The handler function may install a new handler */
+		   if (!READ_HANDLER(fd->handler,
+				     &r.super))
 		     {
+		       /* FIXME: Perhaps we should not close yet, but
+			* stop reading and close as soon as the write
+			* buffer is flushed? But in that case, we
+			* probably also want to set some flag on the
+			* write buffer so that no more data can be
+			* written into it. */
 		       fd->please_close = 1;
 		     }
 		}
