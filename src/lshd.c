@@ -187,7 +187,7 @@ int main(int argc, char **argv)
   init_host_key(r); /* Initializes public_key and secret_key */
   kex = make_dh_server(dh, public_key, secret_key);
   algorithms = make_alist(4,
-			  ATOM_ARCFOUR, crypto_rc4_algorithm,
+			  ATOM_ARCFOUR, &crypto_rc4_algorithm,
 			  ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
