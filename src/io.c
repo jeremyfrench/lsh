@@ -53,6 +53,8 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
   struct fd_read *closure
     = (struct fd_read *) *r;
 
+  MDEBUG(closure);
+  
   while(1)
     {
       int res = read(closure->fd, buffer, length);
@@ -205,8 +207,8 @@ static int io_iter(struct io_backend *b)
 
 		    break;
 		  }
-	      else if (!res)
-		fatal("What now?");
+	      // else if (!res)
+	      // fatal("What now?");
 	      else
 		fd->buffer->start += res;
 	    }
@@ -221,7 +223,7 @@ static int io_iter(struct io_backend *b)
 	      && (fds[i].revents & POLLIN))
 	    {
 	      struct fd_read r =
-	      { { do_read }, fd->fd };
+	      { { STATIC_HEADER do_read }, fd->fd };
 
 	      /* The handler function may install a new handler */
 	      if (!READ_HANDLER(fd->handler,
@@ -474,10 +476,14 @@ struct abstract_write *io_read_write(struct io_backend *b,
   
   f->fd = fd;
   f->please_close = 0;
-  
+
+  /* Reading */
   f->handler = read_callback;
-  f->close_callback = close_callback;
+  f->on_hold = 0;
+
+  /* Writing */
   f->buffer = buffer;
+  f->close_callback = close_callback;
 
   f->next = b->io;
   b->io = f;
