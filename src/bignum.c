@@ -27,8 +27,9 @@
 #include "randomness.h"
 #include "werror.h"
 
-#include <stdlib.h>
+#include <assert.h>
 #include <limits.h>
+#include <stdlib.h>
 
 #include "prime_table.h"
 
@@ -228,6 +229,9 @@ bignum_random_size(mpz_t x, struct randomness *random, unsigned bits)
   RANDOM(random, length, data);
 
   bignum_parse_u(x, length, data);
+
+  if (bits % 8)
+    mpz_fdiv_r_2exp(x, x, bits);
 }
 
 /* Returns a random number, 0 <= x < n. */
@@ -271,10 +275,8 @@ void
 bignum_next_prime(mpz_t p, mpz_t n, int count, int prime_limit)
 {
   mpz_t tmp;
-  unsigned long *moduli = 0;
+  unsigned long *moduli = NULL;
   unsigned long difference;
-  int i;
-  int composite;
   
   /* First handle tiny numbers */
   if (mpz_cmp_ui(n, 2) <= 0)
@@ -285,42 +287,51 @@ bignum_next_prime(mpz_t p, mpz_t n, int count, int prime_limit)
   mpz_set(p, n);
   mpz_setbit(p, 0);
 
-  if (mpz_cmp_ui(n, 8) < 0)
+  if (mpz_cmp_ui(p, 8) < 0)
     return;
 
   mpz_init(tmp);
 
   if (prime_limit > (NUMBER_OF_PRIMES -1))
     prime_limit = NUMBER_OF_PRIMES - 1;
+
   if (prime_limit && (mpz_cmp_ui(p, primes[prime_limit]) <= 0) )
     /* Don't use table for small numbers */
     prime_limit = 0;
+
   if (prime_limit)
     {
       /* Compute residues modulo small odd primes */
-      moduli = (unsigned long*) alloca(prime_limit * sizeof(*moduli));
+      int i;
+
+      moduli = alloca(prime_limit * sizeof(*moduli));
       for (i = 0; i < prime_limit; i++)
 	moduli[i] = mpz_fdiv_ui(p, primes[i + 1]);
     }
- for (difference = 0; ; difference += 2)
+
+  for (difference = 0; ; difference += 2)
     {
       if (difference >= ULONG_MAX - 10)
 	{ /* Should not happen, at least not very often... */
 	  mpz_add_ui(p, p, difference);
 	  difference = 0;
 	}
-      composite = 0;
 
       /* First check residues */
       if (prime_limit)
-	for (i = 0; i < prime_limit; i++)
-	  {
-	    if (moduli[i] == 0)
-	      composite = 1;
-	    moduli[i] = (moduli[i] + 2) % primes[i + 1];
-	  }
-      if (composite)
-	continue;
+	{
+	  int composite = 0;
+      	  int i;
+
+	  for (i = 0; i < prime_limit; i++)
+	    {
+	      if (moduli[i] == 0)
+		composite = 1;
+	      moduli[i] = (moduli[i] + 2) % primes[i + 1];
+	    }
+	  if (composite)
+	    continue;
+	}
       
       mpz_add_ui(p, p, difference);
       difference = 0;
@@ -336,4 +347,22 @@ bignum_next_prime(mpz_t p, mpz_t n, int count, int prime_limit)
 	break;
     }
   mpz_clear(tmp);
+}
+
+void
+bignum_random_prime(mpz_t x, struct randomness *random, unsigned bits)
+{
+  assert(bits);
+  
+  do
+    {
+      bignum_random_size(x, random, bits);
+      mpz_setbit(x, bits - 1);
+
+      /* Miller-rabin count of 25, and use primes in the table. */
+      bignum_next_prime(x, x, 25, 5000);
+    }
+  while (mpz_sizeinbase(x, 2) > bits);
+
+  assert(mpz_sizeinbase(x, 2) == bits);
 }

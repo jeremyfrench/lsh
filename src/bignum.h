@@ -55,6 +55,8 @@ void bignum_write(mpz_t n, unsigned length, UINT8 *data);
 /* Generates a random number in the interval 0 <= x < n */
 void bignum_random(mpz_t x, struct randomness *random, mpz_t n);
 void bignum_random_size(mpz_t x, struct randomness *random, unsigned bits);
+void
+bignum_random_prime(mpz_t x, struct randomness *random, unsigned bits);
 
 unsigned long bignum_small_factor(mpz_t n, int limit);
 void bignum_next_prime(mpz_t p, mpz_t n, int count, int prime_limit);
