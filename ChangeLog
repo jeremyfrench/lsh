@@ -1,3 +1,8 @@
+2002-03-18  Pontus Sköld <pont@it.uu.se>
+
+	* configure.in: Checkfor utmpx symmetrically to utmp. Check for
+	more members of struct utmp. Check for members of struct utmpx.
+
 2002-03-17  Pontus  <pont@it.uu.se>
 
 	* src/unix_process.c (do_utmp_cleanup): Set ut_type to
