@@ -267,7 +267,7 @@ collect_C_2(struct collect_info_2 *info,
 	    struct lsh_object *f,
 	    struct lsh_object *y);
 
-#define GABA_VALUE_C (&command_C.super.super)
+#define GABA_VALUE_C (&command_C.super.super.super)
 #define GABA_APPLY_C_1(f) (make_collect_state_1(&command_C, (f)))
 #define GABA_APPLY_C_2(f, y) (collect_C_2(NULL, (f), (y)))
 
