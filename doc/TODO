@@ -134,6 +134,9 @@ draft-ietf-secsh-connect-08.txt.
 Implement RSA public-key operations according to
 draft-ietf-secsh-transport-08.txt.
 
+On the server, present a hostkey algorithms list that actually matches
+the available hostkeys.
+
 
 USER INTERFACE ISSUES
 

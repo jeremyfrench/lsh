@@ -1,7 +1,62 @@
+2001-01-24  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/spki_commands.c (parse_private_key): Generate keypairs with
+	algorithms ATOM_SSH_RSA, ATOM_SPKI_SIGN_RSA and ATOM_SPKI_SIGN_DSS.
+
+	* src/rsa.c (do_rsa_verify): Replaced ATOM_RSA_PKCS1_SHA1 with
+	ATOM_SSH_RSA, and replaced ATOM_SPKI with ATOM_SPKI_SIGN_RSA and
+	ATOM_SPKI_SIGN_DSS.
+	(do_rsa_sign): Likewise.
+	(parse_ssh_rsa_public): New function.
+	(make_ssh_rsa_verifier): New function.
+
+	* src/pkcs5-test.c: Include both unistd.h and stdlib.h, do get a
+	declaration of getopt().
+
+	* src/lsh.c (do_lsh_lookup): Handle ATOM_SSH_RSA.
+	(do_lsh_lookup): Replace ATOM_SPKI with ATOM_SPKI_SIGN_RSA and
+	ATOM_SPKI_SIGN_DSS.
+
+	* src/dsa.c (do_dsa_verify): Check that there's no trailing
+	garbage.
+	(do_dsa_verify): Replace ATOM_SPKI with ATOM_SPKI_SIGN_RSA and
+	ATOM_SPKI_SIGN_DSS.
+	(do_dsa_sign): Likewise.
+
+	* src/atoms.in: Updated algorithm names to match
+	draft-ietf-secsh-transport-09.txt. 
+
+	* src/algorithms.c (algorithms_argp_parser): Replace ATOM_SPKI
+	with ATOM_SPKI_SIGN_RSA and ATOM_SPKI_SIGN_DSS.
+	(lookup_hostkey_algorithm): Likewise.
+
+	* src/Makefile.am.in: Removed $(srcdir) prefixes from targets.
+	* src/testsuite/Makefile.am (%.c): Likewise.
+
+	* configure.in (PREFIX): Replace NONE with $ac_default_prefix.
+	(SBINDIR): MAke a #define from sbindin. Currently broken. 
+
+	* acconfig.h: Added SBINDIR.
+
 2001-01-23  Niels Möller  <nisse@ehand.com>
 
 	* src/tcpforward.c (do_tcpip_eof): Call shutdown(socket, SHUT_WR),
 	to signal to the local peer that there's no more data.
+
+2001-01-18  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lshd.c (KERBEROS_HELPER): Added /sbin/ between PREFIX and the
+	program name. Note that PREFIX seems to get a bogus value "NONE"
+	if the default prefix is used.
+
+	* src/sftp: New directory. Not compiled or used by default.
+
+2001-01-17  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh_types.h: Improved formatting.
+
+	* src/channel.c (alloc_channel): Use UINT32, not int, for
+	new_size. 
 
 2001-01-15  Niels Möller  <nisse@ehand.com>
 

@@ -95,7 +95,12 @@ const char *argp_program_version
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
-#define KERBEROS_HELPER PREFIX "/sbin/lsh-krb-checkpw"
+/* The definition of SBINDIR is currently broken */
+#if 0
+# define KERBEROS_HELPER SBINDIR "/lsh-krb-checkpw"
+#else
+# define KERBEROS_HELPER PREFIX "/sbin/lsh-krb-checkpw"
+#endif
 
 #define OPT_NO 0x400
 #define OPT_SSH1_FALLBACK 0x200
