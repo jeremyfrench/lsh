@@ -91,23 +91,32 @@ static struct lsh_object *				\
 do_simple_##cname(struct command_simple *s UNUSED,	\
 		  struct lsh_object *ARG)
 
-#define DEFINE_COMMAND(cname, ARG, CC, EXC)	\
+#define DEFINE_COMMAND(cname)			\
 static void					\
 do_##cname(struct command *s UNUSED,		\
-	   struct lsh_object *ARG,		\
-           struct command_continuation *CC,	\
-           struct exception_handler *EXC);	\
+	   struct lsh_object *,			\
+           struct command_continuation *,	\
+           struct exception_handler *);		\
 						\
 struct command cname =				\
 STATIC_COMMAND(do_##cname);			\
 						\
 static void					\
-do_##cname(struct command *s UNUSED,		\
-	   struct lsh_object *ARG,		\
-           struct command_continuation *CC,	\
-           struct exception_handler *EXC)
+do_##cname
 
+#if 0
+#define DEFINE_COMMAND2(cname, ARG1, ARG2, CC, EXC)
+static void do_##cname(struct lsh_object *ARG1,
+		       struct lsh_object *ARG2,
+		       struct command_continuation *CC,
+		       struct exception_handler *EXC);
 
+static void do_##cname(struct lsh_object *ARG1,
+		       struct lsh_object *ARG2,
+		       struct command_continuation *CC,
+		       struct exception_handler *EXC)
+#endif
+     
 void do_call_simple_command(struct command *s,
 			    struct lsh_object *arg,
 			    struct command_continuation *c,
@@ -260,9 +269,6 @@ make_collect_state_2(struct collect_info_2 *info,
 
 #define STATIC_COLLECT_3_FINAL(f) \
 { STATIC_HEADER, f }
-
-extern struct command_simple command_unimplemented;
-#define COMMAND_UNIMPLEMENTED (&command_unimplemented.super.super)
 
 extern struct command command_die_on_null;
 
