@@ -1,3 +1,94 @@
+2001-05-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* sexp_streamed_parser.c: Deleted file.
+
+	* src/unix_user.c (format_env_pair): Return const char *.
+	(format_env_pair_c): Likewise.
+	(do_exec_shell): Use const char ** for argv and envp.
+
+	* src/xalloc.c (lsh_free): Cast to void * before calling free, as
+	free doesn't accept const void *.
+	(lsh_string_free): Changed argument type to const struct
+	lsh_string *.
+	(lsh_space_free): Bug-fix.
+	(lsh_space_alloc): Use lsh_malloc, not xalloc directly.
+	(lsh_space_free): Changed argument type to const void *.
+
+	* src/userauth.h (lsh_user): Use const char ** for argv. 
+
+2001-05-01  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/unix_interact.c (unix_read_password): Use const prompt
+	string. 
+	(unix_yes_or_no): Likewise.
+
+	* src/srp_exchange.c (make_srp_entry): Use const struct lsh_string
+	for the salt.
+
+	* src/spki_commands.c (do_spki_decrypt): Use const struct lsh_string.
+
+	* src/spki.c (subject_match_hash): Use const struct lsh_string.
+	(do_spki_tag_prefix_match): Likewise.
+	(spki_subject_by_hash): Likewise.
+	(do_spki_lookup): Likewise.
+
+	* src/sexp_parser.c (skip_space): New function, skipping
+	whitespace and comments.
+	(sexp_parse_transport): Allow whitespace and comments.
+
+	* src/sexp_commands.c: Don't use the streamed sexp parser.
+	(sexp_parser): New class.
+	(do_sexp_parse_once): New function.
+	(do_sexp_parse_many): New function. 
+	(do_read_sexp_continue): Deleted function.
+	(make_read_sexp_continuation): Deleted function.
+	(read_sexp_exception_handler): Deleted class.
+	(do_read_sexp_exception_handler): Deleted function.
+	(make_read_sexp_exception_handler): Deleted function.
+	(make_sexp_parser): New function.
+	(make_read_sexp_command): New argument MAX_SIZE.
+
+	* src/sexp.c: Constification, use const struct lsh_string for all
+	sexp-related strings. 
+
+2001-04-26  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/scm/gaba.scm: Added const type modifier.
+
+	* src/sexp-conv.c (MAX_SEXP_SIZE): New constant, used with
+	make_read_sexp_command. 
+
+	* src/server_session.c (do_spawn_exec): Use const char * for argv
+	entries. 
+
+	* src/server_keyexchange.c (MAX_SRP_SIZE): New constant, used with
+	make_read_sexp_command. 
+
+	* src/lsh-writekey.c (MAX_SEXP_SIZE): New constant. Used with
+	STATIC_READ_SEXP. 
+
+	* src/lsh-export-key.c (MAX_KEY_SIZE): New constant. Use with
+	make_read_sexp_command. 
+
+	* src/io.c (do_buffered_read): Call close_fd_read on error. This
+	way, the user doensn't have to use an exception handler just for
+	closing the file.
+
+	* src/interact.h (interact): Use const for prompt arguments.
+
+	* src/format.c (lsh_get_cstring): Use const for input and output.
+
+	* src/pkcs5.c (pkcs5_derive_key): Declare password and salt input
+	as const.
+
+	* src/abstract_crypto.c (crypt_string): Declare the input string
+	const. Nevertheless, reuse it for output in case FREE is true.
+	(crypt_string_pad): Declare input string const.
+	(crypt_string_unpad): Likewise.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Deleted
+	sexp_streamed_parser.c. 
+
 2001-04-25  Niels Möller  <nisse@ehand.com>
 
 	* src/keyexchange.c (do_handle_newkeys): Added verbose message
