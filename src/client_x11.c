@@ -124,6 +124,15 @@
  * I.e. no minor version, and name length at index 7.
  */
 
+/* From Pike's X.pmod:
+ *
+ *     /( Always uses network byteorder (big endian) 
+ *     string msg = sprintf("B\0%2c%2c%2c%2c\0\0%s%s",
+ * 			    11, 0,
+ * 			    strlen(auth_data->name), strlen(auth_data->data),
+ * 			    ._Xlib.pad(auth_data->name), ._Xlib.pad(auth_data->data));
+ */
+
 #define MIT_COOKIE_NAME "MIT-MAGIC-COOKIE-1"
 #define MIT_COOKIE_NAME_LENGTH 18
 #define MIT_COOKIE_LENGTH 16
