@@ -55,11 +55,14 @@ extern struct hash_algorithm md5_algorithm;
 
 struct mac_algorithm *make_hmac_algorithm(struct hash_algorithm *h);
 
+/* 10 million iterations would take 5 hours on my machine */
+#define PKCS5_MAX_ITERATIONS 10000000
+
 void
-pkcs5_key_derivation(struct mac_algorithm *prf,
-		     UINT32 password_length, UINT8 *password,
-		     UINT32 salt_length, UINT8 *salt,
-		     UINT32 iterations,
-		     UINT32 key_length, UINT8 *key);
+pkcs5_derive_key(struct mac_algorithm *prf,
+		 UINT32 password_length, UINT8 *password,
+		 UINT32 salt_length, UINT8 *salt,
+		 UINT32 iterations,
+		 UINT32 key_length, UINT8 *key);
 
 #endif
