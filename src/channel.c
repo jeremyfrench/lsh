@@ -81,11 +81,47 @@ struct lsh_string *format_global_failure(void)
   return ssh_format("%c", SSH_MSG_REQUEST_FAILURE);
 }
 
+struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
+					    UINT32 channel_number,
+					    char *format, ...)
+{
+  va_list args;
+  UINT32 l1, l2;
+  struct lsh_string *packet;
+
+#define CONFIRM_FORMAT "%c%i%i%i%i"
+#define CONFIRM_ARGS SSH_MSG_CHANNEL_OPEN_CONFIRMATION, channel->channel_number, \
+  channel_number, channel->rec_window_size, channel->rec_max_packet
+    
+  l1 = ssh_format_length(CONFIRM_FORMAT, CONFIRM_ARGS);
+
+  va_start(args, format);
+  l2 = ssh_vformat_length(format, args);
+  va_end(args);
+
+  packet = lsh_string_alloc(l1 + l2);
+
+  ssh_format_write(CONFIRM_FORMAT, l1, packet->data, CONFIRM_ARGS);
+
+  va_start(args, format);
+  ssh_format_write(format, l2, packet->data+l1, args);
+  va_end(args);
+
+  return packet;
+#undef CONFIRM_FORMAT
+#undef CONFIRM_ARGS
+}
+
 struct lsh_string *format_open_failure(UINT32 channel, UINT32 reason,
 				       char *msg, char *language)
 {
   return ssh_format("%c%i%i%z%z", SSH_MSG_CHANNEL_OPEN_FAILURE,
 		    channel, reason, msg, language);
+}
+
+struct lsh_string *format_channel_success(UINT32 channel)
+{
+  return ssh_format("%c%i", SSH_MSG_CHANNEL_SUCCESS, channel);
 }
 
 struct lsh_string *format_channel_failure(UINT32 channel)
@@ -229,9 +265,9 @@ static int do_channel_open(struct packet_handler *c,
   struct simple_buffer buffer;
   int msg_number;
   int type;
-  UINT32 channel_number;
-  UINT32 rec_window_size;
-  UINT32 rec_max_packet;
+  UINT32 remote_channel_number;
+  UINT32 window_size;
+  UINT32 max_packet;
   
   MDEBUG(closure);
 
@@ -240,20 +276,60 @@ static int do_channel_open(struct packet_handler *c,
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_OPEN)
       && parse_atom(&buffer, &type)
-      && parse_uint32(&buffer, &rec_window_size)
-      && parse_uint32(&buffer, &rec_max_packet))
+      && parse_uint32(&buffer, &remote_channel_number)
+      && parse_uint32(&buffer, &window_size)
+      && parse_uint32(&buffer, &max_packet))
     {
       struct channel_open *open;
-
+      struct ssh_channel *channel;
+      UINT32 error = 0;
+      char *error_msg;
+      struct lsh_string *args = NULL;
+      
+      int local_channel_number;
+      
       lsh_string_free(packet);
       
       if (!type || !(open = ALIST_GET(closure->channel_types, type)))
 	return A_WRITE(connection->write,
-		       format_open_failure(channel_number,
+		       format_open_failure(remote_channel_number,
 					   SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
 					   "Unknown channel type", ""));
-      return CHANNEL_OPEN(open, channel_number, rec_window_size,
-			  rec_max_packet, &buffer);
+      
+      channel = CHANNEL_OPEN(open, &buffer, &error, &error_msg, &args);
+      
+      if (!channel)
+	{
+	  if (error)
+	    return A_WRITE(connection->write,
+			   format_open_failure(remote_channel_number,
+					       error, error_msg, ""));
+	  /* The request was invalid */
+	  return LSH_FAIL | LSH_DIE;
+	}
+
+      if ( (local_channel_number
+	    = register_channel(closure->super.table, channel)) < 0)
+	{
+	  werror("Could not allocate a channel number for pened channel!\n");
+	  return A_WRITE(connection->write,
+			 format_open_failure(remote_channel_number,
+					     SSH_OPEN_RESOURCE_SHORTAGE,
+					     "Could not allocate a channel number "
+					     "(shouldn't happen...)", ""));
+	}
+      
+      channel->send_window_size = window_size;
+      channel->send_max_packet = max_packet;
+      channel->channel_number = remote_channel_number;
+
+      channel->write = connection->write;
+
+      return A_WRITE(connection->write,
+		     args
+		     ? format_open_confirmation(channel, local_channel_number,
+						"%lfS", args)
+		     : format_open_confirmation(channel, local_channel_number, ""));
     }
   lsh_string_free(packet);
 
@@ -295,8 +371,11 @@ static int do_channel_request(struct packet_handler *c,
 	      && ( (req = ALIST_GET(channel->request_types, type)) ))
 	    return CHANNEL_REQUEST(req, channel, want_reply, &buffer);
 	  else
-	    return A_WRITE(connection->write,
-			   format_channel_failure(channel->channel_number));
+	    return want_reply
+	      ? A_WRITE(connection->write,
+			format_channel_failure(channel->channel_number))
+	      : LSH_OK | LSH_GOON;
+	  
 	}
       werror("SSH_MSG_CHANNEL_REQUEST on nonexistant channel %d\n",
 	     channel_number);
@@ -389,15 +468,27 @@ static int do_channel_data(struct packet_handler *c,
 	    }
 	  else
 	    {
+	      int res = 0;
+	      
 	      if (data->length > channel->rec_window_size)
 		{
 		  /* Truncate data to fit window */
 		  werror("Channel data overflow. Extra data ignored.\n"); 
 		  data->length = channel->rec_window_size;
 		}
-	      channel->rec_window_size -= data->length; 
-	      return CHANNEL_RECIEVE(channel, 
-				     CHANNEL_DATA, data);
+	      channel->rec_window_size -= data->length;
+
+	      if (channel->rec_window_size < channel->max_window / 2)
+		{
+		  res = A_WRITE(channel->write, prepare_window_adjust
+				(channel,
+				 channel->max_window - channel->rec_window_size));
+		  if (LSH_CLOSEDP(res))
+		    return res;
+		}
+
+	      return res | CHANNEL_RECIEVE(channel, 
+					   CHANNEL_DATA, data);
 	    }
 	  return LSH_OK | LSH_GOON;
 	}
@@ -449,6 +540,8 @@ static int do_channel_extended_data(struct packet_handler *c,
 	    }
 	  else
 	    {
+	      int res = 0;
+	      
 	      if (data->length > channel->rec_window_size)
 		{
 		  /* Truncate data to fit window */
@@ -458,11 +551,21 @@ static int do_channel_extended_data(struct packet_handler *c,
 		}
 	      
 	      channel->rec_window_size -= data->length;
+
+	      if (channel->rec_window_size < channel->max_window / 2)
+		{
+		  res = A_WRITE(channel->write, prepare_window_adjust
+				(channel,
+				 channel->max_window - channel->rec_window_size));
+		  if (LSH_CLOSEDP(res))
+		    return res;
+		}
+
 	      switch(type)
 		{
 		case SSH_EXTENDED_DATA_STDERR:
-		  return CHANNEL_RECIEVE(channel, 
-					 CHANNEL_DATA, data);
+		  return res | CHANNEL_RECIEVE(channel, 
+					       CHANNEL_STDERR_DATA, data);
 		default:
 		  werror("Unknown type %d of extended data.\n",
 			 type);

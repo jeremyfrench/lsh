@@ -36,6 +36,8 @@ struct ssh_channel
   
   UINT32 channel_number;  /* Remote channel number */
 
+  UINT32 max_window;      /* We try to keep the rec_window_size
+			   * between max_window / 2 and max_window. */
   UINT32 rec_window_size;
   UINT32 rec_max_packet;
 
@@ -144,15 +146,15 @@ struct channel_open
 {
   struct lsh_object *header;
 
-  int (*handler)(struct channel_open *closure,
-		 UINT32 channel_number, /* Remote channel number */
-		 UINT32 rec_window_size,
-		 UINT32 rec_max_packet,
-		 struct simple_buffer *args);
+  struct ssh_channel * (*handler)(struct channel_open *closure,
+				  struct simple_buffer *args,
+				  UINT32 *error,
+				  char **error_msg,
+				  struct lsh_string **data);
 };
 
-#define CHANNEL_OPEN(c, n, w, m, a) \
-((c)->handler((c), (n), (w), (m), (a)))
+#define CHANNEL_OPEN(c, a, e, m, d) \
+((c)->handler((c), (a), (e), (m), (d)))
 
 /* SSH_MSH_CHANNEL_REQUEST */
 struct channel_request
@@ -195,8 +197,14 @@ struct read_handler *make_channel_read_data(struct ssh_channel *channel);
 struct read_handler *make_channel_read_stderr(struct ssh_channel *channel);
 
 struct lsh_string *format_global_failure(void);
+
 struct lsh_string *format_open_failure(UINT32 channel, UINT32 reason,
 				       char *msg, char *language);
+struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
+					    UINT32 channel_number,
+					    char *format, ...);
+
+struct lsh_string *format_channel_success(UINT32 channel);
 struct lsh_string *format_channel_failure(UINT32 channel);
 
 struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
