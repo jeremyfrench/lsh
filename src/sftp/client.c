@@ -31,6 +31,8 @@
 
 #include "sftp.h"
 
+#include <string.h>
+
 /* We never have several pending calls at once. */
 static UINT32 
 sftp_client_new_id(void)

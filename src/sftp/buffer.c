@@ -30,6 +30,7 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <string.h>
 
 #define FATAL(x) do { fputs("sftp-server: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
 
