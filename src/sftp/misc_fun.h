@@ -40,9 +40,9 @@ char* mgetenv( char* var );
 void mgetenv_init( char** envp );
 
 char* massage_fname( char* fname, int local );
-char* filename_part( char* s );
+const char *filename_part(const char *s);
 char* lsftp_concat( const char* s1, const char* s2 );
-char* lsftp_skip_common( char* s1, char* s2);
+const char *lsftp_skip_common(const char *s1, const char *s2);
 int lsftp_get_opts( char* options, char* string );
 
 int FATAL(char* msg);

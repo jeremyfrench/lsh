@@ -40,11 +40,12 @@ char* mgetenv( char* var )
   char** lenviron;
   int varlen;
   
-  lenviron=environ;
-  valren=strlen(var);
+  lenviron = environ;
+  varlen = strlen(var);
   
   while( ( env = *lenviron++) ) /* Get next enviroment variable */
-    if( !( strncmp( var, env, varlen ) )) /* Found it? (ignores A==B and AX=B) */
+    if( !( strncmp( var, env, varlen ) ))
+      /* Found it? (ignores A==B and AX=B) */
       return lsftp_s_skipn( env, "=" )+1; 
   /* We return whatever is after the equal sign */
   
@@ -65,7 +66,8 @@ char* massage_fname(char* fname, int local)
 }
 
 
-char* filename_part( char* s )
+const char *
+filename_part(const char *s)
 {
   int i = strlen(s);
   
@@ -101,7 +103,8 @@ char* lsftp_concat( const char* s1, const char* s2 )
 }
 
 
-char* lsftp_skip_common( char* s1,  char* s2 )
+const char *
+lsftp_skip_common(const char *s1, const char *s2)
 {
   /* Returns the adress of the first charater in s1 not in s2 */
   int i = 0;
