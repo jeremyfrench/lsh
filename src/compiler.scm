@@ -27,18 +27,50 @@
 
 ;; Transform (a b c)-> ((a b) c) and
 ;; (lambda (a b) ...) -> (lambda a (lambda b ...)
-(define (preprocess expr)
-  (define (do-lambda formals body)
-    (if (null? formals) body
-	(do-lambda (cdr formals) (make-lambda (car formals) body))))
-  (cond ((atom? expr) expr)
-	((lambda? expr)
-	 (do-lambda (reverse (lambda-formal expr))
-		    (preprocess (lambda-body expr))))
-	(else
-	 (normalize-application (preprocess (car expr))
-				(map preprocess (cdr expr))))))
+(define (make-preprocess specials)
 
+  (define (preprocess expr)
+    (if (atom? expr) expr
+	(let ((op (car expr)))
+	  (cond ((and (atom? op)
+		      (assq op specials))
+		 => (lambda (pair) ((cdr pair) (cdr expr) preprocess)))
+		(else
+		 (normalize-application (preprocess op)
+					(map preprocess (cdr expr))))))))
+  preprocess)
+
+(define preprocess-applications (make-preprocess '()))
+
+(define (do-lambda args preprocess)
+  (let loop ((formals (reverse (car args)))
+	     (body (preprocess (cadr args))))
+    (if (null? formals) body
+	(loop (cdr formals)
+	      (make-lambda (car formals) body)))))
+
+(define (do-let* args preprocess)
+  (let loop ((definitions (reverse (car args)))
+	     (body (preprocess (cadr args))))
+    (if (null? definitions) body
+	(loop (cdr definitions)
+	      (make-appliction
+	       (make-lambda (caar definitions)
+			    body)
+	       (preprocess (cadar definitions)))))))
+
+(define (do-let args preprocess)
+  (let ((definitions (car args))
+	(body (cadr args)))
+    (normalize-application 
+     (do-lambda (list (map car definitions) body) preprocess)
+     (map cadr definitions))))
+
+(define preprocess (make-preprocess
+		    `((lambda . ,do-lambda)
+		      (let . ,do-let)
+		      (let* . ,do-let*))))
+  
 (define (free-variable? v expr)
   (cond ((atom? expr) (eq? v expr))
 	((lambda? expr)
@@ -60,7 +92,7 @@
 	       (append op-matches arg-matches))))
 
 (define (rule pattern f)
-  (cons (preprocess pattern) f))
+  (cons (preprocess-applications pattern) f))
 
 (define (make-K e) (make-combine 'K e))
 (define (make-S p q) (make-combine 'S p q))
