@@ -1,4 +1,4 @@
-SUBDIRS = . testsuite
+SUBDIRS = . tools testsuite
 
 # FIXME: Create a link to nettle directory instead?
 AM_CPPFLAGS = -I$(srcdir)/..
