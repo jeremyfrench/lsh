@@ -365,14 +365,14 @@ sftp_put_strftime(struct sftp_output *o, UINT32 size, const char *format,
 /* 64-bit stuff */
 #if SIZEOF_OFF_T > 4
 #define READ_UINT64(p)				\
-(  (((UINT64) (p)[0]) << 56)			\
- | (((UINT64) (p)[1]) << 48)			\
- | (((UINT64) (p)[2]) << 40)			\
- | (((UINT64) (p)[3]) << 32)			\
- | (((UINT64) (p)[4]) << 24)			\
- | (((UINT64) (p)[5]) << 16)			\
- | (((UINT64) (p)[6]) << 8)			\
- |  ((UINT64) (p)[7]))
+(  (((off_t) (p)[0]) << 56)			\
+ | (((off_t) (p)[1]) << 48)			\
+ | (((off_t) (p)[2]) << 40)			\
+ | (((off_t) (p)[3]) << 32)			\
+ | (((off_t) (p)[4]) << 24)			\
+ | (((off_t) (p)[5]) << 16)			\
+ | (((off_t) (p)[6]) << 8)			\
+ |  ((off_t) (p)[7]))
 
 
 int
