@@ -1,3 +1,19 @@
+2000-03-02  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/rsync/send.c: Improved the sending state machine. Still
+	missing some pieces.
+
+	* src/rsync/checksum.c (rsync_search): Increment i in the middle
+	of the loop.
+
+	* src/rsync/Makefile.am (librsync_a_SOURCES): Added send.c.
+
+2000-02-27  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/rsync/generate.c (rsync_update): Call rsync_update_1.
+
+	* src/rsync/Makefile.am (librsync_a_SOURCES): Added checksum.c. 
+
 2000-02-26  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/Makefile.am.in (SUBDIRS): Added rsync.
