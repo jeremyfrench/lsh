@@ -10,6 +10,10 @@
 #include "nettle/knuth-lfib.h"
 #include "nettle/sexp.h"
 
+#include "spki/certificate.h"
+#include "spki/parse.h"
+#include "spki/tag.h"
+
 /* -1 means invalid */
 static const signed char hex_digits[0x100] =
   {
@@ -244,22 +248,35 @@ test_spki_match(const char *name,
 		const struct lsh_string *resource,
 		const struct lsh_string *access)
 {
-  struct sexp_iterator i;
-  struct spki_tag *tag;
-
-  if (!sexp_iterator_first(&i, resource->length, resource->data))
-    return 0;
+  struct spki_acl_db db;
+  struct spki_iterator i;
+  struct spki_tag *resource_tag;
+  struct spki_tag *access_tag;
+  int result;
   
-  tag = spki_sexp_to_tag(&i, 17);
+  spki_acl_init(&db);
+  
+  if (!spki_iterator_first(&i, resource->length, resource->data))
+    FAIL();
+  
+  if (!spki_parse_tag(&db, &i, &resource_tag))
+    FAIL();
 
-  if (!tag)
-    return 0;
+  if (!spki_iterator_first(&i, access->length, access->data))
+    FAIL();
 
-  if (!sexp_iterator_first(&i, access->length, access->data))
-    return 0;
+  if (!spki_parse_tag(&db, &i, &access_tag))
+    FAIL();
   
   (void) name;
-  return SPKI_TAG_MATCH(tag, &i);
+
+  result = spki_tag_includes(resource_tag, access_tag);
+
+  spki_tag_free(&db, resource_tag);
+  spki_tag_free(&db, access_tag);
+  spki_acl_clear(&db);
+  
+  return result;
 }
 
 void
@@ -279,4 +296,3 @@ test_spki_deny(const char *name,
   if (test_spki_match(name, resource, access))
     FAIL();
 }
-
