@@ -188,7 +188,13 @@ spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
 		     struct spki_5_tuple *cert);
 
 
-/* Other more or less itnernal functions. */
+/* Other more or less internal functions. */
+
+#define SPKI_MALLOC(db, size) ((db)->realloc((db), NULL, (size)))
+#define SPKI_FREE(db, p) ((db)->realloc((db), (p), 0))
+
+#define SPKI_NEW(db, type, var) type *var = SPKI_MALLOC((db), sizeof(type))
+
 uint8_t *
 spki_dup(struct spki_acl_db *db,
 	 unsigned length, const uint8_t *data);
