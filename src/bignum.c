@@ -25,198 +25,15 @@
 #include "randomness.h"
 #include "werror.h"
 
+#include "nettle/bignum.h"
+
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
 
-static void
-limbs_to_octets(const mpz_t n, UINT32 length,
-		UINT8 pad, UINT8 *data)
-{
-  UINT8 *dst = data + length - 1;
-	
-  mp_limb_t *l = n->_mp_d;  /* Starts at the least significant limb */
-  int left;
-	
-  for (left = n->_mp_size;
-      (length > 0) && (left  > 0);
-      left--)
-    {
-      size_t i;
-      mp_limb_t word = *l++;
-      for(i = 0; i<sizeof(mp_limb_t); i++)
-	{
-	  *dst-- = word & 0xff;
-	  word >>= 8;
-	  length--;
-	  if (!length)
-	    break;
-	}
-    }
-  while (length > 0)
-    {
-      *dst-- = pad;
-      length--;
-    }
-}
-
-/* Formatting of signed numbers */
-void
-bignum_parse_s(mpz_t n, UINT32 length, const UINT8 *data)
-{
-  int negative = length && (*data & 0x80);
-  size_t i;
-  mpz_t digit;
-
-  mpz_init(digit);
-  mpz_set_ui(n, 0);
-  for (i = 0; i < length; i++)
-    {
-      mpz_set_ui(digit, data[i]);
-      mpz_mul_2exp(digit, digit, (length - i - 1) * 8);
-      mpz_ior(n, n, digit);
-    }
-  if (negative)
-    {
-      mpz_set_ui(digit, 1);
-      mpz_mul_2exp(digit, digit, length*8);
-      mpz_sub(n, n, digit);
-    }
-  mpz_clear(digit);
-}
-
-static int
-mpz_size_of_complement(const mpz_t n)
-{
-  int bits;
-	
-  /* One's complement(x) = - x - 1 */
-  mpz_t complement;
-  mpz_init(complement);
-  mpz_com(complement, n);
-  
-  /* Note that bits == 1 if complement == 0, i.e n = -1 */
-  bits = mpz_sizeinbase(complement, 2);
-  
-  mpz_clear(complement);
-  
-  return bits;
-}
-
-/* This function should handle both positive and negative numbers */
-UINT32 bignum_format_s_length(const mpz_t n)
-{
-  switch(mpz_sgn(n))
-    {
-    case 0:
-      return 0;
-    case 1:
-      return mpz_sizeinbase(n, 2)/8 + 1;
-    case -1:
-      return mpz_size_of_complement(n)/8 + 1;
-    default:
-      fatal("Internal error");
-    }
-}
-  
-UINT32
-bignum_format_s(const mpz_t n, UINT8 *data)
-{
-  switch(mpz_sgn(n))
-    {
-    case 0:
-      return 0;
-    case 1:
-      {
-	size_t length = mpz_sizeinbase(n, 2)/8 + 1;
-
-	limbs_to_octets(n, length, 0, data);
-	return length;
-      }
-    case -1:
-      {
-	mpz_t complement;
-	size_t length;
-	int i;
-	
-	mpz_init(complement);
-	mpz_com(complement, n);
-
-	/* Note that mpz_sizeinbase(0) == 0.*/
-	length = mpz_sizeinbase(complement, 2)/8 + 1;
-	
-	for (i = 0; i<complement->_mp_size; i++)
-	  complement->_mp_d[i] = ~complement->_mp_d[i];
-	
-	limbs_to_octets(complement, length, 0xff, data);
-
-	mpz_clear(complement);
-	return length;
-      }
-    default:
-      fatal("Internal error");
-    }
-}
-
-/* Formatting of unsigned numbers */
-void
-bignum_parse_u(mpz_t n, UINT32 length, const UINT8 *data)
-{
-  size_t i;
-  mpz_t digit;
-
-  mpz_init(digit);
-  mpz_set_ui(n, 0);
-  for (i = 0; i < length; i++)
-    {
-      mpz_set_ui(digit, data[i]);
-      mpz_mul_2exp(digit, digit, (length - i - 1) * 8);
-      mpz_ior(n, n, digit);
-    }
-  mpz_clear(digit);
-}
-
-UINT32
-bignum_format_u_length(const mpz_t n)
-{
-  switch(mpz_sgn(n))
-    {
-    case 0:
-      return 0;
-    case 1:
-      return (mpz_sizeinbase(n, 2) + 7) / 8;
-    default:
-      fatal("Internal error: Negative number to bignum_format_u_length\n");
-    }
-}
-
-void
-bignum_write(const mpz_t n, unsigned length, UINT8 *data)
-{
-  limbs_to_octets(n, length, 0, data);
-}
-
-UINT32
-bignum_format_u(const mpz_t n, UINT8 *data)
-{
-  switch(mpz_sgn(n))
-    {
-    case 0:
-      return 0;
-    case 1:
-      {
-	size_t length = (mpz_sizeinbase(n, 2) + 7) / 8;
-
-	limbs_to_octets(n, length, 0, data);
-	return length;
-      }
-    default:
-      fatal("Internal error: Negative number to bignum_format_u\n");
-    }
-}
 
 /* Returns a random number, 0 <= x < 2^bits. */
-void
+static void
 bignum_random_size(mpz_t x, struct randomness *random, unsigned bits)
 {
   unsigned length = (bits + 7) / 8;
@@ -224,13 +41,13 @@ bignum_random_size(mpz_t x, struct randomness *random, unsigned bits)
 
   RANDOM(random, length, data);
 
-  bignum_parse_u(x, length, data);
+  nettle_mpz_set_str_256_u(x, length, data);
 
   if (bits % 8)
     mpz_fdiv_r_2exp(x, x, bits);
 }
 
-/* FIXME: Replace with some function in nettle? */
+/* FIXME: Replace with some function in nettle? Used only by dh_exchange.c. */
 /* Returns a random number, 0 <= x < n. */
 void
 bignum_random(mpz_t x, struct randomness *random, mpz_t n)
