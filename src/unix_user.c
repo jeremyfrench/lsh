@@ -1182,3 +1182,13 @@ make_unix_user_db(struct reaper *reaper,
 
   return &self->super;
 }
+
+struct lsh_string * unix_current_user(void)
+{
+  struct passwd *p = getpwuid(getuid());
+
+  if (p)                                   
+    return make_string(p->pw_name);
+  
+  return NULL;
+}
