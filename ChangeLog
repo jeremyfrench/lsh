@@ -1,3 +1,87 @@
+1999-06-14  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Added option -with-tcp-forward.
+	Bumped version to 0.1.2.
+
+	* src/queue.c (object_queue_init): New function.
+	(object_queue_is_empty): New function.
+	(object_queue_add_head): Update length.
+	(object_queue_add_tail): -"-
+	(object_queue_remove_head): -"-
+	(object_queue_remove_tail): -"-
+	(queue_to_list): New function.
+	(object_queue_kill): New function.
+
+	* src/queue.h (object_queue): Added length attribute.
+	(FOR_OBJECT_QUEUE_REMOVE): Update length.
+
+	* src/read_data.c (do_read_data): When the channel
+	is closed because  of a read failure, don't throw away the
+	return value from channel_close().
+
+	* src/tcpforward.h (forwarded_port): Don't inherit resource.
+
+	* src/tcpforward.c (do_direct_tcp_server_start_io): Fix flow control.
+	(make_tcpip_channel): -"-
+	(channel_open_direct_tcpip): Renamed (was open_direct_tcp).
+	(do_channel_open_direct_tcpip): Renamed similarly.
+	(make_channel_open_direct_tcpip): -"-
+	(open_forwarded_tcpip_command): Renamed (was open_tcpip_command).
+	(new_forwarded_tcpip_channel): Renamed similarly.
+	(make_open_forwarded_tcpip_command): -"-
+	(do_forward_start_io): Removed redundant assignment to
+	channel->socket.
+	(open_direct_tcpip_command): New class.
+	(new_direct_tcpip_channel): New function.
+	(make_open_direct_tcpip_command): New function.
+	(open_direct_tcp): New command.
+	(make_forward_local_port): New expression.
+	(forward_local_port): New function.
+
+	* src/server_session.c (do_spawn_shell): Fix flow control.
+
+	* src/client.c (make_client_session): Fix flow control.
+
+	* src/channel.h (ssh_channel): Inherit flow_controlled. 
+
+	* src/channel.c (adjust_rec_window): Adapted for flow control.
+	(channel_process_status): On LSH_CHANNEL_READY_REC, call
+	prepare_window_adjust and c->write directly, rather than
+	adjust_rec_window. 
+	(do_channel_data): Don't call adjust_rec_window.
+	(do_channel_extended_data): -"- 
+	(init_channel): Install adjust_rec_window as flow control callback.
+
+	* src/lshd.c (main): Added a --no-forward option.
+
+	* src/lsh.c (make_client_connect): Don't invoke open_session here;
+	instead use progn to apply a list of "actions"-commands to the
+	connection. 
+	(make_start_session): New command, do open a session and send some
+	requests to it.
+	(parse_forward_arg): New function, to parse arguments to -L and -R.
+	(main): Build a list of "actions" when parsing the options. Added
+	options -L, -N, -g.
+
+	* src/write_buffer.h (flow_controlled): New class.
+	(write_buffer): Added REPORT attribute.
+
+	* src/write_buffer.c (write_buffer_consume): Do flow control. 
+
+	* src/publickey_crypto.h (make_dsa_verifier_kludge,
+	make_dsa_signer_classic, make_dsa_verifier_classic): New
+	functions.
+
+	* src/publickey_crypto.c: Moved the dsa-ralated code to a separate
+	file. 
+
+	* src/io.c (io_iter): Close fd:s that report POLLHUP.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added dsa.c.
+
+	* src/dsa.c: New file. Extracted from publickey_crypto.c. Also
+	fixed the dsa signature format to match the latest draft.
+
 1999-06-12  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Bump version to lsh-0.1.1
