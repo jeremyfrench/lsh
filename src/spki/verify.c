@@ -100,8 +100,7 @@ spki_verify(void *ctx UNUSED,
     /* Actual key not known */
     return 0;
 
-  if (! (signature_type = spki_parse_type(signature)))
-    return 0;
+  signature_type = signature->type;
 
   if (spki_iterator_first(&key, principal->key_length, principal->key)
       != SPKI_TYPE_PUBLIC_KEY)
