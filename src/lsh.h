@@ -86,16 +86,13 @@ struct lsh_string_header
   struct lsh_string *next;
 };
 
-#else   /* !DEBUG_ALLOC */
-
-struct lsh_string_header {};
-
-#endif  /* !DEBUG_ALLOC */
+#endif  /* DEBUG_ALLOC */
 
 struct lsh_string
 {
+#if DEBUG_ALLOC
   struct lsh_string_header header;
-  
+#endif
   UINT32 sequence_number;
   /* NOTE: The allocated size may be larger than the string length. */
   UINT32 length; 
