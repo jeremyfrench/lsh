@@ -71,14 +71,20 @@
 
 #define KILL_WAIT 5
 
-struct lsftp_callback {
+struct lsftp_callback;
+
+typedef int (*lsftp_callback_func)(struct sftp_callback *s,
+				   const struct lsftp_callback *l);
+
+struct lsftp_callback
+{
   int op_id;
-  int (*nextfun)();
-  struct sftp_attrib* a;
-  struct stat* st;
-  char* local;
-  char* remote;
-  char* command;
+  lsftp_callback_func nextfun;
+  struct sftp_attrib *a;
+  struct stat *st;
+  const char *local;
+  const char *remote;
+  const char *command;
   void* memory;
 
   int opt1;
@@ -87,89 +93,98 @@ struct lsftp_callback {
 };
 
 int lsftp_open_connection(char** argv, int argc); /* Open a new outgoing connection */
-int lsftp_close_connection();                     /* Close an existing connection */
+int lsftp_close_connection(void);                     /* Close an existing connection */
 
-int lsftp_want_to_write();                        /* Returns whatever we want to write or not */
+int lsftp_want_to_write(void);                        /* Returns whatever we want to write or not */
 
-int lsftp_connected();    /* Are we connected? */
+int lsftp_connected(void);    /* Are we connected? */
 
-int lsftp_handshake();    /* Handshake with remote */
-int lsftp_sftp_init();    /* Init sftp things */
+int lsftp_handshake(void);    /* Handshake with remote */
+int lsftp_sftp_init(void);    /* Init sftp things */
 
-int lsftp_callback();
+int lsftp_callback(void);
 
-int lsftp_cb_list();
+int lsftp_cb_list(void);
 int lsftp_cb_status( int jobid );
 
 
-char* lsftp_pwd();
+char* lsftp_pwd(void);
 
-int lsftp_do_ls( char* dir, char* command, int longlist, int all );
-int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l );
+int lsftp_do_ls(const char* dir, const char* command, int longlist, int all);
+int lsftp_handle_ls(struct sftp_callback *s,
+		    const struct lsftp_callback *l);
 
-int lsftp_internal_ls( char* dir, char* command, char*** dirinfop );
-int lsftp_handle_internal_ls( 
-			     struct sftp_callback s,
-			     struct lsftp_callback l 
-			     );
+int lsftp_internal_ls(const char *dir, const char *command,
+		      const char*** dirinfop );
+int lsftp_handle_internal_ls(struct sftp_callback *s,
+			     const struct lsftp_callback *l);
 
-int lsftp_do_get( char* local, char* remote, char* command, int cont );
-int lsftp_handle_get( struct sftp_callback s, struct lsftp_callback l );
+int lsftp_do_get(const char *local, const char *remote,
+		 const char *command, int cont); 
+int lsftp_handle_get(struct sftp_callback *s,
+		     const struct lsftp_callback *l);
 
-int lsftp_do_put( char* local, char* remote, char* command, int cont );
-int lsftp_handle_put( struct sftp_callback s, struct lsftp_callback l );
+int lsftp_do_put(const char *local, const char *remote,
+		 const char *command, int cont);
+int lsftp_handle_put(struct sftp_callback *s,
+		     const struct lsftp_callback *l);
 
-int lsftp_do_cd( char* dir );
+int lsftp_do_cd(const char *dir);
 
-int lsftp_do_chmod( char* file, mode_t mode, char* command );
-int lsftp_do_chown( char* file, UINT32 uid, UINT32 gid, char* command );
-int lsftp_handle_chall( struct sftp_callback s, struct lsftp_callback l );
+int lsftp_do_chmod(const char *file, mode_t mode, const char *command);
+int lsftp_do_chown(const char *file, UINT32 uid, UINT32 gid,
+		   const char *command);
+int lsftp_handle_chall(struct sftp_callback *s,
+		       const struct lsftp_callback *l);
 
-int lsftp_do_stat( char* file, struct stat* st );
-int lsftp_handle_stat( struct sftp_callback s, struct lsftp_callback l );
+int lsftp_do_stat(const char* file, struct stat* st);
+int lsftp_handle_stat(struct sftp_callback *s,
+		      const struct lsftp_callback *l);
 
-int lsftp_do_realpath( char* file, char** destptr );
-int lsftp_handle_realpath( struct sftp_callback s, struct lsftp_callback l );
+int lsftp_do_realpath(const char* file, const char **destptr );
+int lsftp_handle_realpath(struct sftp_callback *s,
+			  const struct lsftp_callback *l);
 
-int lsftp_do_mv( char* src, char* dst, char* command );
-int lsftp_do_rm( char* path, char* command );
+int lsftp_do_mv(const char *src, const char *dst, const char *command);
+int lsftp_do_rm(const char *path, const char *command);
 
-int lsftp_do_ln( char* link, char* target, char* command );
+int lsftp_do_ln(const char *link, const char *target, const char *command);
 
-int lsftp_do_mkdir( char* dir, int permissions, char* command );
-int lsftp_do_rmdir( char* dir, char* command );
-int lsftp_handle_alldir( struct sftp_callback s, struct lsftp_callback l );
+int lsftp_do_mkdir(const char *dir, int permissions, const char *command);
+int lsftp_do_rmdir(const char *dir, const char *command);
+int lsftp_handle_alldir(struct sftp_callback *s,
+			const struct lsftp_callback *l);
 
 
-int lsftp_install_lsftp_cb( int (*nextfun)() );
-int lsftp_install_sftp_cb( struct sftp_callback s );
+int lsftp_install_lsftp_cb(lsftp_callback_func nextfun);
+int lsftp_install_sftp_cb(struct sftp_callback *s);
 
 
 int lsftp_sftp_cb_init( int new_sftp_callbacks );
-void lsftp_sftp_cb_uninit();
-int lsftp_compact_sftp_cbs();
+void lsftp_sftp_cb_uninit(void);
+int lsftp_compact_sftp_cbs(void);
 
 
 int lsftp_lsftp_cb_init( int new_lsftp_callbacks );
-void lsftp_lsftp_cb_uninit();
-int lsftp_compact_lsftp_cbs();
+void lsftp_lsftp_cb_uninit(void);
+int lsftp_compact_lsftp_cbs(void);
 
 int lsftp_await_command( int id );
 
-char* lsftp_qualify_path( char* path );
-char* lsftp_unqualify_path( char* path );
+char *lsftp_qualify_path(const char *path);
+const char *lsftp_unqualify_path(const char *path );
 
-int lsftp_active_cbs();
+int lsftp_active_cbs(void);
 
-void lsftp_perror( char* msg, int err );
+void lsftp_perror(const char* msg, int err);
 
-void lsftp_report_error( struct sftp_callback, struct lsftp_callback l );
+void lsftp_report_error(const struct sftp_callback *s,
+			const struct lsftp_callback *l);
 
-int lsftp_fd_read_net();
-int lsftp_fd_write_net();
+int lsftp_fd_read_net(void);
+int lsftp_fd_write_net(void);
 
-
-char* status_codes_text[9];
+extern const char* status_codes_text[];
 
 #endif /* LSFTP_SFTP_BIND_H */
 

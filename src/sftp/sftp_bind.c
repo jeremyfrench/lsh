@@ -40,15 +40,18 @@ static int lsftp_callbacks = 256;
 static int fd_to_transport = -1;
 static int fd_from_transport = -1;
 
-static struct sftp_callback* sftp_cbs = 0;
-static struct lsftp_callback* lsftp_cbs = 0;
+static struct sftp_callback* sftp_cbs = NULL;
+static struct lsftp_callback* lsftp_cbs = NULL;
+
+static int lsftp_cb_index(int id);
+static int lsftp_remove_lsftp_cb(int id);
 
 static struct sftp_input* in;
 static struct sftp_output* out;
 
 int buggy_server_treshold = 0;
 
-char* status_codes_text[9] = { 
+const char *status_codes_text[9] = { 
   "Ok" , 
   "End of file", 
   "No such file", 
@@ -60,9 +63,10 @@ char* status_codes_text[9] = {
   "Operation unsupported"
 };
 
-static char* curpath = 0;
+static const char* curpath = NULL;
 
-void sighandler( int signum )
+static void
+sighandler( int signum )
 {
   if( SIGCHLD == signum )
     {
@@ -167,9 +171,9 @@ int lsftp_open_connection(char** argv, int argc)
 	char tmp[PATH_MAX];	
 	char* lsh_name=NULL;
 	char** new_argv=NULL;
-	char* before_string;
-	char* after_string;
-	char* cur_string;
+	const char* before_string;
+	const char* after_string;
+	const char* cur_string;
 
 	/* Check how many arguments we send to the secsh client */
 
@@ -244,8 +248,8 @@ int lsftp_open_connection(char** argv, int argc)
      	
 	i = 1;                             /* argv[0] doesn't interest us */
 	
-	while( argv[i] && ( i < argc ) )     /* Copy argv */
-	  new_argv[i + j] = argv[i++];
+	for ( ; argv[i] && ( i < argc ); i++)     /* Copy argv */
+	  new_argv[i + j] = argv[i];
 	
 	new_argv[i + j] = NULL;
 	
@@ -449,7 +453,10 @@ int lsftp_handshake()
   return 0;
 }
 
-int lsftp_wait_not_eof()
+#if 0
+/* Not used ??? */
+static int
+lsftp_wait_not_eof(void)
 {
   clearerr( from_transport );
   while( feof( from_transport ) )
@@ -457,17 +464,14 @@ int lsftp_wait_not_eof()
 
   return 0;
 }
+#endif
 
-
-
-
-
-int lsftp_handle_packet()
+static int
+lsftp_handle_packet(void)
 {
   int i, j;
   UINT8 msg = 0 ;
   UINT32 id = 0;
-  struct sftp_callback state;
 
   /* Hrrm, peek at id somehow */
 
@@ -486,8 +490,13 @@ int lsftp_handle_packet()
        ( sftp_cbs[i].id == id )
        )
       {
+	/* FIXME: Keep a separate copy of the new state, in case the
+	 * callback function doesn't like next == state. It would be
+	 * better if all did.*/
+	struct sftp_callback state;
+
 	/* Do callback */
-	state = sftp_cbs[i].nextfun( msg, id, in, out, sftp_cbs[i] );
+	sftp_cbs[i].nextfun(&state, msg, id, in, out, &sftp_cbs[i]);
 	sftp_cbs[i] = state; /* Replace old callback with the new one */
 
 /*  	printf( "Returned from packet nextfun\n "); */
@@ -503,20 +512,20 @@ int lsftp_handle_packet()
 
 /*  		  printf( "Doing lsftp callback\n "); */
 		  /* Do callback */
-		  i = lsftp_cbs[j].nextfun( state, lsftp_cbs[j] );
+		  i = lsftp_cbs[j].nextfun(&state, &lsftp_cbs[j]); 
 
 		  /* Free any memory used */
 		  if( lsftp_cbs[j].a )
 		    free( lsftp_cbs[j].a );
  
 		  if( lsftp_cbs[j].local )
-		    free( lsftp_cbs[j].local );
+		    free( (void *) lsftp_cbs[j].local );
  
 		  if( lsftp_cbs[j].remote )
-		    free( lsftp_cbs[j].remote );
+		    free( (void *) lsftp_cbs[j].remote );
 
 		  if( lsftp_cbs[j].command )
-		    free( lsftp_cbs[j].command );
+		    free( (void *) lsftp_cbs[j].command );
 		    		    
 		  lsftp_cbs[j].op_id = 0; /* Remove id so it can be reused */
 		  lsftp_cbs[j].st = 0;
@@ -537,12 +546,8 @@ int lsftp_handle_packet()
   return 0; /* No callback found, ignored */
 }
 
-
-
-
-
-
-int lsftp_safe_to_write()
+static int
+lsftp_safe_to_write(void)
 {
   int success = 1;
 
@@ -566,7 +571,8 @@ int lsftp_safe_to_write()
 }
 
 
-int lsftp_want_to_write()
+int
+lsftp_want_to_write(void)
 {
   /*
    * Return non-zero if we want to write 
@@ -578,11 +584,8 @@ int lsftp_want_to_write()
   return sftp_packet_size( out );
 }
 
-
-
-
-
-int lsftp_callback()
+int
+lsftp_callback(void)
 {
   int n;
   fd_set rfds;
@@ -661,30 +664,32 @@ int lsftp_callback()
   return 0;
 }
 
-void lsftp_perror( char* msg, int err )
+void
+lsftp_perror(const char* msg, int err)
 {
   printf( "%s: %s\n", msg, strerror( err ) );
 }
 
-void lsftp_report_error( struct sftp_callback s, struct lsftp_callback l )
+void
+lsftp_report_error(const struct sftp_callback *s,
+		   const struct lsftp_callback *l)
 {
-  int i;
-
-  if( s.bad_status )
+  if( s->bad_status )
     {
-      if( l.remote )
-	printf( "%s: %s\n", l.remote, status_codes_text[s.bad_status] );
+      if( l->remote )
+	printf( "%s: %s\n", l->remote, status_codes_text[s->bad_status] );
       else
-	printf( "%s\n", status_codes_text[s.bad_status] );
+	printf( "%s\n", status_codes_text[s->bad_status] );
       return;
     }
 
-  if( s.retval )
-    if( l.remote )
-      printf( "%s: %s (received by %d) \n", l.remote, status_codes_text[s.retval], s.last );
-    else
-      printf( "%s\n", status_codes_text[s.retval] );
-
+  if( s->retval )
+    {
+      if( l->remote )
+	printf( "%s: %s (received by %d) \n", l->remote, status_codes_text[s->retval], s->last );
+      else
+	printf( "%s\n", status_codes_text[s->retval] );
+    }
 }
 
 
@@ -705,9 +710,8 @@ int lsftp_fd_write_net()
   return fd_to_transport;
 }
 
-
-
-int lsftp_unique_id()
+static int
+lsftp_unique_id(void)
 {
   static int id=1;
 
@@ -715,7 +719,8 @@ int lsftp_unique_id()
   return id;
 }
 
-int lsftp_free_lsftp_cb()
+static int
+lsftp_free_lsftp_cb(void)
 {
   int j;
               
@@ -726,7 +731,8 @@ int lsftp_free_lsftp_cb()
   return -1;
 }
 
-int lsftp_free_sftp_cb()
+static int
+lsftp_free_sftp_cb(void)
 {
   int j;
               
@@ -753,12 +759,13 @@ int lsftp_active_cbs()
   return active;
 }
 
-
-int lsftp_do_get( char* local, char* remote, char* command, int cont )
+int
+lsftp_do_get(const char *local, const char *remote,
+	     const char *command, int cont)
 {
   int id;
   int index;
-  char* tmp;
+  const char *tmp;
   struct sftp_callback s;
 
   id = lsftp_install_lsftp_cb( lsftp_handle_get );
@@ -786,19 +793,16 @@ int lsftp_do_get( char* local, char* remote, char* command, int cont )
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
-      s =  sftp_get_file_init( id,
-			       in, 
-			       out,
-			       tmp, strlen( tmp ), 
-			       local, strlen( local),
-			       cont
-			       );
+      sftp_get_file_init(&s, id, in, out,
+			 tmp, strlen( tmp ), 
+			 local, strlen( local),
+			 cont);
       
       if( freeflag )
-	free( tmp );
+	free( (void *) tmp );
 
       if( s.nextfun )
-	lsftp_install_sftp_cb( s );
+	lsftp_install_sftp_cb( &s );
       else
 	{
 	  lsftp_perror( local, s.localerrno );
@@ -809,20 +813,20 @@ int lsftp_do_get( char* local, char* remote, char* command, int cont )
   return id;
 }
 
-
-
-int lsftp_handle_get( struct sftp_callback s, struct lsftp_callback l )
+int
+lsftp_handle_get(struct sftp_callback *s,
+		 const struct lsftp_callback *l)
 {
   if(
-      s.retval != SSH_FX_EOF &&   /* We should have an EOF status, but may have OK */
-      s.retval != SSH_FX_OK
+      s->retval != SSH_FX_EOF &&   /* We should have an EOF status, but may have OK */
+      s->retval != SSH_FX_OK
      ) 
     lsftp_report_error( s, l );
 
-  if( s.localerr )
-    lsftp_perror( l.local, s.localerrno );
+  if( s->localerr )
+    lsftp_perror( l->local, s->localerrno );
 
-  return s.retval;
+  return s->retval;
 }
 
 
@@ -874,8 +878,9 @@ int lsftp_cb_status( int jobid )
       {
 	printf( "Information for sftp callback %d\n", sftp_cbs[j].id );
 	printf( "Corresponding lsftp id %d\n", sftp_cbs[j].op_id );
-	printf( "Fileposition %x\n", sftp_cbs[j].filepos );
-	printf( "File descriptor %l\n", sftp_cbs[j].fd );
+	/* Doesn't handle off_t bigger than long */
+	printf( "Fileposition %lx\n", (long) sftp_cbs[j].filepos );
+	printf( "File descriptor %d\n", sftp_cbs[j].fd );
 	printf( "Return value %d\n", sftp_cbs[j].retval );
 	printf( "Last callback %d\n", sftp_cbs[j].last );
 	printf( "Bad status %d\n", sftp_cbs[j].bad_status );
@@ -899,7 +904,8 @@ int lsftp_cb_status( int jobid )
   return 0;
 }
 
-int lsftp_cb_index( int id )
+static int
+lsftp_cb_index(int id)
 {
   int j;
               
@@ -910,7 +916,9 @@ int lsftp_cb_index( int id )
   return -1;
 }
 
-int lsftp_install_lsftp_cb( int (*nextfun)() )
+
+int
+lsftp_install_lsftp_cb(lsftp_callback_func nextfun)
 {
   int i = -1;
   int id = lsftp_unique_id();
@@ -942,7 +950,6 @@ int lsftp_install_lsftp_cb( int (*nextfun)() )
 int lsftp_await_command( int id )
 {
   int active = 1;
-  int abortcout = 0;
   
 /*    printf( "Waiting for finish of command with id %d\n", id ); */
 
@@ -1049,10 +1056,13 @@ int lsftp_compact_lsftp_cbs()
 	 lsftp_cbs[index].op_id &&          /* Used callback */
 	 lsftp_cbs[index].nextfun 
 	)
-      if( index > used )                  /* That should be moved? */
-	lsftp_cbs[used++] =  lsftp_cbs[index];
-      else 
-	used;                            /* Don't move, just count */
+	{
+	  if( index > used )                /* That should be moved? */
+	    lsftp_cbs[used++] =  lsftp_cbs[index];
+	  else
+	    /* FIXME: What's intended here? */
+	    used;                           /* Don't move, just count */
+	}
       index++;
     }
 
@@ -1087,7 +1097,7 @@ int lsftp_sftp_cb_init( int new_sftp_callbacks )
   sftp_cbs = newmem;
 
   for( ; i < sftp_callbacks; i++ )
-    sftp_cbs[i] = sftp_null_state();
+    sftp_null_state(&sftp_cbs[i]);
 
 
   return 0;
@@ -1126,10 +1136,13 @@ int lsftp_compact_sftp_cbs()
 	 sftp_cbs[index].id &&          /* Used callback */
 	 sftp_cbs[index].nextfun
 	)
-      if( index > used )                  /* That should be moved? */
-	sftp_cbs[used++] =  sftp_cbs[index];
-      else 
-	used;                            /* Don't move, just count */
+	{
+	  if( index > used )            /* That should be moved? */
+	    sftp_cbs[used++] =  sftp_cbs[index];
+	  else
+	    /* FIXME: What's intended here? */
+	    used;                        /* Don't move, just count */
+	}
       index++;
     }
 
@@ -1137,8 +1150,11 @@ int lsftp_compact_sftp_cbs()
 }
 
 
+/* FIXME: It would be better with a function that allocates and
+ * returns a struct sftp_callback *. */
 
-int lsftp_install_sftp_cb( struct sftp_callback s )
+int
+lsftp_install_sftp_cb(struct sftp_callback *s)
 {
   int i = -1;
 
@@ -1147,14 +1163,16 @@ int lsftp_install_sftp_cb( struct sftp_callback s )
   if( i == -1 )
     return 0;
 
-  sftp_cbs[i] = s;
+  sftp_cbs[i] = *s;
 
   return 1;
 }
 
 
-
-int lsftp_remove_sftp_cb( id )
+#if 0
+/* Not used??? */
+static int
+lsftp_remove_sftp_cb(UINT32 id)
 {
   int j, flag=0;
 
@@ -1167,14 +1185,15 @@ int lsftp_remove_sftp_cb( id )
 
   return flag;
 }
+#endif
 
 
-
-int lsftp_remove_lsftp_cb( id )
+static int
+lsftp_remove_lsftp_cb(int id)
 {
   int j, flag;
 
-  for( j = 0; j < lsftp_callbacks; j++ )
+  for( j = 0, flag = 0; j < lsftp_callbacks; j++ )
     if( lsftp_cbs[j].op_id == id  ) /* Callback is free? */
       {
 	lsftp_cbs[j].op_id = 0;
@@ -1193,9 +1212,10 @@ char* lsftp_pwd()
   return strdup("");
 }
 
-int lsftp_do_cd( char* dir )
+int
+lsftp_do_cd(const char *dir)
 {
-  char* real = 0;
+  const char* real = 0;
   int id;
 
   if( !dir ) /* dir == NULL? */
@@ -1205,7 +1225,7 @@ int lsftp_do_cd( char* dir )
       !curpath ||
       !curpath[0])  
     {                 
-      free( curpath );            /* Free memory used by old curpath */
+      free( (void *) curpath );   /* Free memory used by old curpath */
       curpath = strdup( dir );    /* strdup new path */
     }    
   else
@@ -1240,7 +1260,7 @@ int lsftp_do_cd( char* dir )
 	  free( tmp1 );
 	}
       
-      free( curpath );
+      free( (void *) curpath );
       curpath = tmp;
       
     }
@@ -1259,21 +1279,22 @@ int lsftp_do_cd( char* dir )
     
   if( real )         /* If we received an answer */
     {
-      free( curpath );
+      free( (void *) curpath );
       curpath = real;
     }
 
   return 0;
 }
 
-char* lsftp_unqualify_path( char* path )
+const char *
+lsftp_unqualify_path(const char *path )
 {
   /*
    * Returns the part that was passed to lsftp_qualify_path 
    * does NOT malloc a new string
    */
 
-  char* tmp;
+  const char* tmp;
 
   if( !path ) /* No path given? */
     return 0;
@@ -1298,7 +1319,8 @@ char* lsftp_unqualify_path( char* path )
   return tmp;
 }
 
-char* lsftp_qualify_path( char* path )
+char *
+lsftp_qualify_path(const char *path)
 {
   /* Given a filename, converts it to something to send to the other
    * side (no operation on absoulte paths, adds pwd/ to relative paths
@@ -1328,8 +1350,10 @@ char* lsftp_qualify_path( char* path )
       tmp1 = lsftp_concat( curpath, "/" );
 
       if( tmp1 ) /* Don't do this if it failed */
-      tmp2 = lsftp_concat( tmp1, path );
-
+	tmp2 = lsftp_concat( tmp1, path );
+      else
+	/* FIXME: What to do here? */
+	tmp2 = NULL;
       return tmp2;
     }
 
@@ -1338,12 +1362,13 @@ char* lsftp_qualify_path( char* path )
   return 0;
 }
 
-
-int lsftp_do_put( char* local, char* remote, char* command, int cont )
+int
+lsftp_do_put(const char *local, const char *remote,
+	     const char *command, int cont)
 {
   int id;
   int index;
-  char* tmp;
+  const char* tmp;
   struct sftp_callback s;
 
   id = lsftp_install_lsftp_cb( lsftp_handle_put );
@@ -1367,19 +1392,16 @@ int lsftp_do_put( char* local, char* remote, char* command, int cont )
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
-      s =  sftp_put_file_init( id, 
-			       in, 
-			       out, 
-			       tmp, strlen( tmp ), 
-			       local, strlen( local), 
-			       cont 
-			       );
+      sftp_put_file_init(&s, id, in, out, 
+			 tmp, strlen( tmp ), 
+			 local, strlen( local), 
+			 cont);
       
       if( freeflag )
-	free( tmp );
+	free( (void *) tmp );
 
       if( s.nextfun )
-	lsftp_install_sftp_cb( s );
+	lsftp_install_sftp_cb( &s );
       else
 	{
 	  lsftp_perror( local, s.localerrno );
@@ -1392,44 +1414,33 @@ int lsftp_do_put( char* local, char* remote, char* command, int cont )
 }
 
 
-int lsftp_handle_put( struct sftp_callback s, struct lsftp_callback l )
+int
+lsftp_handle_put(struct sftp_callback *s,
+		 const struct lsftp_callback *l)
 {
-  if( s.retval != SSH_FX_OK )
+  if( s->retval != SSH_FX_OK )
     lsftp_report_error( s, l );
 
-  if( s.localerr )
-    lsftp_perror( l.local, s.localerrno );
+  if( s->localerr )
+    lsftp_perror( l->local, s->localerrno );
 
-  return s.retval;
+  return s->retval;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-int lsftp_do_ls( char* dir, char* command, int longlist, int all )
+int
+lsftp_do_ls(const char* dir, const char* command, int longlist, int all)
 {
   /* Do ls for glob, now accepts a more, but will only return the last id */
 
-  int id;
+  /* FIXME: What to return if there are no id:s? */
+  int id = 0;
   int index;
-  char* tmp;
-  char** glob;
-  char** orgglob;
-  char* ptr;
-  char* dglob = 0;
-  char* fnameg = 0;
+  const char *tmp;
+  const char **glob;
+  const char **orgglob;
+  const char *ptr;
+  char *dglob = NULL;
+  const char *fnameg = NULL;
   int i = 0;
 
   struct sftp_callback s;
@@ -1475,14 +1486,14 @@ int lsftp_do_ls( char* dir, char* command, int longlist, int all )
       
       if( gtmp )
 	{
-	  free( fnameg );
+	  free( (void *) fnameg );
 	  fnameg = gtmp;	  
 	}
     }
 
 /*   printf( "dglob is %s\n", dglob ); */
 
-  while( ptr = *(glob++) ) 
+  while( (ptr = *glob++) ) 
     {
 /*       printf( "ptr is %s, fnameg is %s\n", ptr, fnameg ); */
 
@@ -1513,24 +1524,21 @@ int lsftp_do_ls( char* dir, char* command, int longlist, int all )
 	  if( !strlen(tmp) )
 	    {
 	      /* Empty path, should work, but misbehaves. Replace with . */
-	      free( tmp );
+	      free( (void *) tmp );
 	      
 	      tmp = strdup( "." );
 	    }
 	  
      	  lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 	  
-	  s =  sftp_ls_init( id,
-			     in, 
-			     out,
-			     tmp, 
-			     strlen( tmp )			 
-			     );
+	  sftp_ls_init(&s, id, in, out,
+		       tmp, 
+		       strlen( tmp ) );
 	  
-	  free( tmp );
+	  free( (void *) tmp );
 	  
 	  if( s.nextfun )
-	    lsftp_install_sftp_cb( s );
+	    lsftp_install_sftp_cb( &s );
 	  else
 	    {
 	      lsftp_perror( dir, s.localerrno );
@@ -1545,12 +1553,14 @@ int lsftp_do_ls( char* dir, char* command, int longlist, int all )
   lsftp_dc_endglob( orgglob );
   
   free( dglob );
-  free( fnameg );
+  free( (void *) fnameg );
 
   return id; 
 }
 
-int string_comparer( char** s1, char** s2 )
+/* FIXME: Use void ** arguments? */
+static int
+string_comparer(char **s1, char **s2)
 {
 #ifdef HAVE_STRCOLL 
   return strcoll( *s1,*s2 );
@@ -1560,12 +1570,14 @@ int string_comparer( char** s1, char** s2 )
 }
 
 
-int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l )
+int
+lsftp_handle_ls(struct sftp_callback *s,
+		const struct lsftp_callback *l)
 {
-  char* prefix = strdup( l.remote );
+  char* prefix = strdup( l->remote );
 
-  int all = l.opt1;
-  int longlist = l.opt2;
+  int all = l->opt1;
+  int longlist = l->opt2;
   char** namestrings = 0;
   char** longstrings = 0;
 
@@ -1604,16 +1616,16 @@ int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l )
     }
   
   
-  if( s.retval != SSH_FX_OK &&
-      s.retval != SSH_FX_EOF 
+  if( s->retval != SSH_FX_OK &&
+      s->retval != SSH_FX_EOF 
       )  /* We should have EOF or OK status */
 	lsftp_report_error( s, l );
 
-  if( s.localerr ) /* Highly unlikely, but report it if we have a local error */
-    lsftp_perror( l.local, s.localerrno );
+  if( s->localerr ) /* Highly unlikely, but report it if we have a local error */
+    lsftp_perror( l->local, s->localerrno );
 
 
-  sftp_toggle_mem( &s.mem ); /* Reset counter so we can read */
+  sftp_toggle_mem( &s->mem ); /* Reset counter so we can read */
   
   if( prefix ) /* Dup succeded */
     {
@@ -1650,7 +1662,7 @@ int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l )
       struct sftp_attrib* a;
       char* prefixed_fname;
 
-      lenptr = sftp_retrieve( &s.mem, 4, &slen); /* Get string length */ 
+      lenptr = sftp_retrieve( &s->mem, 4, &slen); /* Get string length */ 
       
       if( slen != 4 )
 	break;
@@ -1658,10 +1670,10 @@ int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l )
       p = lenptr;         /* Explicit cast to lessen warnings */
       slen = *p;          /* Read as UINT32 (no conversion needed) */
       sftp_free_string( lenptr );
-      fname = sftp_retrieve( &s.mem, slen, &fnamelen); /* Get string */
+      fname = sftp_retrieve( &s->mem, slen, &fnamelen); /* Get string */
       
       /* Get filename string */ 
-      lenptr = sftp_retrieve( &s.mem, 4, &slen);
+      lenptr = sftp_retrieve( &s->mem, 4, &slen);
 
       if( slen != 4 )
 	break;
@@ -1669,10 +1681,10 @@ int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l )
       p = lenptr;       /* Explicit cast to lessen warnings */
       slen = *p;     /* Read as UINT32 (no conversion needed) */
       sftp_free_string( lenptr );
-      longname = sftp_retrieve( &s.mem, slen, &longnamelen); /* Get string */
+      longname = sftp_retrieve( &s->mem, slen, &longnamelen); /* Get string */
       
       
-      lenptr = sftp_retrieve( &s.mem, 4, &slen); 
+      lenptr = sftp_retrieve( &s->mem, 4, &slen); 
       if( slen != 4 )
 	break;
 
@@ -1681,7 +1693,7 @@ int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l )
       sftp_free_string( lenptr );
       
       /* Get attrib */
-      attrib = sftp_retrieve( &s.mem, slen, &attriblen); 
+      attrib = sftp_retrieve( &s->mem, slen, &attriblen); 
       a = attrib;       /* Explicit cast to lessen warnings */
 
       prefixed_fname = lsftp_concat( prefix, fname );
@@ -1699,7 +1711,7 @@ int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l )
 	    newlongstrings = realloc( longstrings, sizeof( char* ) * ( allocated + allocstepsize ) );
 
 	  if( !newnamestrings ||  /* realloc failed for either? */
-	      longlist && ! newlongstrings 
+	      (longlist && ! newlongstrings)
 	      )
 	    {
 	      int l;
@@ -1731,17 +1743,17 @@ int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l )
 	      allocated += allocstepsize;
 	      namestrings = newnamestrings;
 	      longstrings = newlongstrings;
-	    }		   
+	    }
 	}
 
-      if( ( l.memory &&                              /* Filepart glob given? */ 
+      if( ( l->memory &&                              /* Filepart glob given? */ 
 	    lsftp_dc_glob_matches(                   /* That matches */
 				  fname, 
-				  l.memory,
+				  l->memory,
 				  all
 				  )
 	    ) ||                                     /* or... */
-	  !l.memory                                  /* No glob given*/
+	  !l->memory                                  /* No glob given*/
 	  )
 
 	if( !namestrings ) /* No place to store information in */
@@ -1791,6 +1803,7 @@ int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l )
 
 	int i;
 	int numcols = 4;
+	/* FIXME: Unused? */
 	int screenwidth = 80;
 	int* colwidths = 0;
 
@@ -1857,21 +1870,20 @@ int lsftp_handle_ls( struct sftp_callback s, struct lsftp_callback l )
   free( namestrings );
   free( longstrings );
 
-  sftp_free_mem( &s.mem );
+  sftp_free_mem( &s->mem );
   
-  free( l.memory );
+  free( l->memory );
   free( prefix );
-  return s.retval;
+  return s->retval;
 } 
 
- 
-
-
-int lsftp_internal_ls( char* dir, char* command, char*** dirinfop )
+int
+lsftp_internal_ls(const char *dir, const char *command,
+		  const char*** dirinfop )
 {
       int id;
       int index;
-      char* tmp;
+      const char* tmp;
       
       struct sftp_callback s;
       
@@ -1890,24 +1902,21 @@ int lsftp_internal_ls( char* dir, char* command, char*** dirinfop )
 	  if( !strlen(tmp) )
 	    {
 	      /* Empty path, should work, but misbehaves. Replace with . */
-	      free( tmp );
+	      free( (void *) tmp );
 	      
 	      tmp = strdup( "." );
 	    }
 	  
 	  lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
-	  s =  sftp_ls_init( id,
-			     in, 
-			     out,
-			     tmp,
-			     strlen( tmp )
-			     );
+	  sftp_ls_init(&s, id, in, out,
+		       tmp,
+		       strlen( tmp ) );
 	  
-	  free( tmp );
+	  free( (void *) tmp );
       
 	  if( s.nextfun )
-	    lsftp_install_sftp_cb( s );
+	    lsftp_install_sftp_cb( &s );
 	  else
 	    {
 	      lsftp_perror( dir, s.localerrno );
@@ -1919,24 +1928,23 @@ int lsftp_internal_ls( char* dir, char* command, char*** dirinfop )
       return id;       
 }
 
-int lsftp_handle_internal_ls(
-			     struct sftp_callback s, 
-			     struct lsftp_callback l 
-			     )
+int
+lsftp_handle_internal_ls(struct sftp_callback *s, 
+			 const struct lsftp_callback *l)
 {
   char** mem = 0;
-  char*** dirinfop = l.memory;
-  char* prefix = strdup( l.remote );
+  char*** dirinfop = l->memory;
+  char* prefix = strdup( l->remote );
   
   int allocated = 0;
   int used = 0;
   int allocstepsize = 100;
   int len;
 
-  if( s.retval != SSH_FX_OK &&
-      s.retval != SSH_FX_EOF &&
-      s.retval != SSH_FX_NO_SUCH_FILE  &&
-      s.retval != SSH_FX_FAILURE 
+  if( s->retval != SSH_FX_OK &&
+      s->retval != SSH_FX_EOF &&
+      s->retval != SSH_FX_NO_SUCH_FILE  &&
+      s->retval != SSH_FX_FAILURE 
       )  /* OK or EOF are ok, as are NO_SUCH_FILE */
     {
       lsftp_report_error( s, l );
@@ -1945,8 +1953,8 @@ int lsftp_handle_internal_ls(
       return -1;
     }
 
-  if( s.localerr ) /* Report any localerrors */
-    lsftp_perror( l.local, s.localerrno );
+  if( s->localerr ) /* Report any localerrors */
+    lsftp_perror( l->local, s->localerrno );
 
   mem = malloc( allocstepsize * sizeof( char* ) ); /* Allocate initial memory */
   
@@ -1977,7 +1985,7 @@ int lsftp_handle_internal_ls(
 	}
     }
 
-  sftp_toggle_mem( &s.mem ); /* Reset counter so we can read */
+  sftp_toggle_mem( &s->mem ); /* Reset counter so we can read */
   
   while( 1 )
     {
@@ -1994,7 +2002,7 @@ int lsftp_handle_internal_ls(
       struct sftp_attrib *a;
       char* prefixed_fname;
       
-      lenptr = sftp_retrieve( &s.mem, 4, &slen); /* Get string length */ 
+      lenptr = sftp_retrieve( &s->mem, 4, &slen); /* Get string length */ 
       
       if( slen != 4 )
 	break;
@@ -2002,18 +2010,18 @@ int lsftp_handle_internal_ls(
       p = lenptr; 
       slen = *p;               /* Read as UINT32 (no conversion needed) */
       sftp_free_string( lenptr );
-      fname = sftp_retrieve( &s.mem, slen, &fnamelen); /* Get string */
+      fname = sftp_retrieve( &s->mem, slen, &fnamelen); /* Get string */
       
-      lenptr = sftp_retrieve( &s.mem, 4, &slen); /* Get filename string */ 
+      lenptr = sftp_retrieve( &s->mem, 4, &slen); /* Get filename string */ 
       if( slen != 4 )
 	break;
   
       p = lenptr; 
       slen = *p;             /* Read as UINT32 (no conversion needed) */
       sftp_free_string( lenptr );
-      longname = sftp_retrieve( &s.mem, slen, &longnamelen); /* Get string */
+      longname = sftp_retrieve( &s->mem, slen, &longnamelen); /* Get string */
       
-      lenptr = sftp_retrieve( &s.mem, 4, &slen); /* Get filename string */ 
+      lenptr = sftp_retrieve( &s->mem, 4, &slen); /* Get filename string */ 
  
       if( slen != 4 )
 	break;
@@ -2021,7 +2029,7 @@ int lsftp_handle_internal_ls(
       p = lenptr; 
       slen = *p;            /* Read as UINT32 (no conversion needed) */
       sftp_free_string( lenptr );
-      attrib = sftp_retrieve( &s.mem, slen, &attriblen); /* Get attrib */
+      attrib = sftp_retrieve( &s->mem, slen, &attriblen); /* Get attrib */
       a = attrib;
       
       prefixed_fname = lsftp_concat( prefix, fname );
@@ -2080,18 +2088,17 @@ int lsftp_handle_internal_ls(
   *dirinfop = mem;
 
   free( prefix ); 
-  sftp_free_mem( &s.mem );
-  return s.retval;
+  sftp_free_mem( &s->mem );
+  return s->retval;
 }
 
-
-
-int lsftp_do_stat( char* file, struct stat* st )
+int
+lsftp_do_stat(const char *file, struct stat *st )
 {
   int id;
   int index;
   
-  char* tmp;
+  const char* tmp;
   struct sftp_callback s;
   
   id = lsftp_install_lsftp_cb( lsftp_handle_stat );
@@ -2112,17 +2119,15 @@ int lsftp_do_stat( char* file, struct stat* st )
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
-      s =  sftp_stat_init( id,
-			   in, 
-			   out,
-			   tmp, strlen( tmp )
-			   );
+      sftp_stat_init(&s, id, in, out,
+		     tmp, strlen( tmp ));
       
       if( freeflag )
-	free( tmp );
-      
+	free( (void *) tmp );
+
+      /* FIXME: Ugly indentation */
 	  if( s.nextfun )
-	    lsftp_install_sftp_cb( s );
+	    lsftp_install_sftp_cb( &s );
 	  else
 	    {
 	      /* We should newer have a local error for setstat */
@@ -2134,15 +2139,13 @@ int lsftp_do_stat( char* file, struct stat* st )
   return id;  
 }
 
-
-
-
-int lsftp_do_realpath( char* file, char** destptr )
+int
+lsftp_do_realpath(const char* file, const char **destptr )
 {
   int id;
   int index;
   
-  char* tmp;
+  const char* tmp;
   struct sftp_callback s;
   
   id = lsftp_install_lsftp_cb( lsftp_handle_realpath );
@@ -2164,18 +2167,15 @@ int lsftp_do_realpath( char* file, char** destptr )
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
-      s =  sftp_realpath_init( id,
-			       in, 
-			       out,
-			       tmp, 
-			       strlen( tmp )
-			       );
+      sftp_realpath_init(&s, id, in, out,
+			 tmp, 
+			 strlen( tmp ) );
       
       if( freeflag )
-	free( tmp );
+	free( (void *) tmp );
       
       if( s.nextfun )
-	lsftp_install_sftp_cb( s );
+	lsftp_install_sftp_cb( &s );
       else
 	{
 	  /* We should newer have a local error for realpath */
@@ -2188,17 +2188,19 @@ int lsftp_do_realpath( char* file, char** destptr )
   return id;  
 }
 
-int lsftp_handle_realpath( struct sftp_callback s, struct lsftp_callback l )
+int
+lsftp_handle_realpath(struct sftp_callback *s,
+		      const struct lsftp_callback *l)
 {
   /* Should we check status here? */
 
-  if( s.retval != SSH_FX_OK )  /* We should have an OK status */
+  if( s->retval != SSH_FX_OK )  /* We should have an OK status */
 	lsftp_report_error( s, l );
 
-  if( s.localerr )
-    lsftp_perror( l.local, s.localerrno );
+  if( s->localerr )
+    lsftp_perror( l->local, s->localerrno );
 
-  sftp_toggle_mem( &s.mem ); /* Reset counter so we can read */
+  sftp_toggle_mem( &s->mem ); /* Reset counter so we can read */
   
   while( 1 ) /* */
     {
@@ -2212,11 +2214,12 @@ int lsftp_handle_realpath( struct sftp_callback s, struct lsftp_callback l )
       UINT32 longnamelen;
       void* attrib;
       UINT32 attriblen;
+      /* FIXME: Not used? */
       struct sftp_attrib *a;
       char** destptr;
 
 
-      lenptr = sftp_retrieve( &s.mem, 4, &slen); /* Get string length */ 
+      lenptr = sftp_retrieve( &s->mem, 4, &slen); /* Get string length */ 
       
       if( slen != 4 )
 	break;
@@ -2224,27 +2227,27 @@ int lsftp_handle_realpath( struct sftp_callback s, struct lsftp_callback l )
       p = lenptr; 
       slen = *p;          /* Read as UINT32 (no conversion needed) */
       sftp_free_string( lenptr );
-      fname = sftp_retrieve( &s.mem, slen, &fnamelen); /* Get string */
+      fname = sftp_retrieve( &s->mem, slen, &fnamelen); /* Get string */
       
       /* Get filename string */ 
-      lenptr = sftp_retrieve( &s.mem, 4, &slen);
+      lenptr = sftp_retrieve( &s->mem, 4, &slen);
       p = lenptr; 
       slen = *p;     /* Read as UINT32 (no conversion needed) */
       sftp_free_string( lenptr );
-      longname = sftp_retrieve( &s.mem, slen, &longnamelen); /* Get string */
+      longname = sftp_retrieve( &s->mem, slen, &longnamelen); /* Get string */
       
       
-      lenptr = sftp_retrieve( &s.mem, 4, &slen); 
+      lenptr = sftp_retrieve( &s->mem, 4, &slen); 
       p = lenptr; 
       slen = *p;            /* Read as UINT32 (no conversion needed) */
       sftp_free_string( lenptr );
       
       /* Get attrib */
-      attrib = sftp_retrieve( &s.mem, slen, &attriblen); 
+      attrib = sftp_retrieve( &s->mem, slen, &attriblen); 
             
       /* The attribs may be fake, so don't notice */
 
-      destptr = l.memory;
+      destptr = l->memory;
       *destptr = strdup( fname ); /* Copy whatever name we have */
       
       sftp_free_string( longname );
@@ -2252,19 +2255,17 @@ int lsftp_handle_realpath( struct sftp_callback s, struct lsftp_callback l )
       sftp_free_string( attrib );
     }
   
-  sftp_free_mem( &s.mem );
-  return s.retval;
+  sftp_free_mem( &s->mem );
+  return s->retval;
 } 
 
-
-
-
-int lsftp_do_chown( char* file, UINT32 uid, UINT32 gid, char* command )
+int
+lsftp_do_chown(const char *file, UINT32 uid, UINT32 gid, const char *command)
 {
   int id;
   int index;
       
-  char* tmp;
+  const char* tmp;
   struct sftp_callback s;
   struct sftp_attrib* attrib;
   
@@ -2299,18 +2300,15 @@ int lsftp_do_chown( char* file, UINT32 uid, UINT32 gid, char* command )
       
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
-      s =  sftp_setstat_init( id,
-			      in, 
-			      out,
-			      tmp, strlen( tmp ), 
-			      attrib			      
-			      );
+      sftp_setstat_init(&s, id, in, out,
+			tmp, strlen( tmp ), 
+			attrib);
       
       if( freeflag )
-	free( tmp );
+	free( (void *) tmp );
       
       if( s.nextfun )
-	lsftp_install_sftp_cb( s );
+	lsftp_install_sftp_cb( &s );
       else
 	{
 	  /* We should newer have a local error for setstat */
@@ -2323,12 +2321,13 @@ int lsftp_do_chown( char* file, UINT32 uid, UINT32 gid, char* command )
 }
 
 
-int lsftp_do_chmod( char* file, mode_t mode, char* command )
+int
+lsftp_do_chmod(const char *file, mode_t mode, const char *command)
 {
   int id;
   int index;
   
-  char* tmp;
+  const char* tmp;
   struct sftp_callback s;
   struct sftp_attrib* attrib;
   
@@ -2365,18 +2364,15 @@ int lsftp_do_chmod( char* file, mode_t mode, char* command )
       
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
-      s =  sftp_setstat_init( id,
-			      in, 
-			      out,
-			      tmp, strlen( tmp ), 
-			      attrib			      
-			      );
+      sftp_setstat_init(&s, id, in, out,
+			tmp, strlen( tmp ), 
+			attrib);
       
       if( freeflag )
-	free( tmp );
+	free( (void *) tmp );
       
       if( s.nextfun )
-	lsftp_install_sftp_cb( s );
+	lsftp_install_sftp_cb( &s );
       else
 	{
 	  /* We should newer have a local error for setstat */
@@ -2388,75 +2384,75 @@ int lsftp_do_chmod( char* file, mode_t mode, char* command )
   return id;  
 }
 
-int lsftp_handle_stat( struct sftp_callback s, struct lsftp_callback l )
+int
+lsftp_handle_stat(struct sftp_callback *s,
+		  const struct lsftp_callback *l)
 {
+  l->st->st_mode = -1;
+  l->st->st_ino = -1;
+  l->st->st_dev = -1;
+  l->st->st_rdev = -1;
+  l->st->st_nlink = -1;
+  l->st->st_uid = -1;
+  l->st->st_gid = -1;
+  l->st->st_size = -1;
+  l->st->st_atime = -1;
+  l->st->st_mtime = -1;
+  l->st->st_ctime = -1;
   
-  l.st->st_mode = -1;
-  l.st->st_ino = -1;
-  l.st->st_dev = -1;
-  l.st->st_rdev = -1;
-  l.st->st_nlink = -1;
-  l.st->st_uid = -1;
-  l.st->st_gid = -1;
-  l.st->st_size = -1;
-  l.st->st_atime = -1;
-  l.st->st_mtime = -1;
-  l.st->st_ctime = -1;
-  
-  if( s.localerr )
-    lsftp_perror( l.local, s.localerrno );
+  if( s->localerr )
+    lsftp_perror( l->local, s->localerrno );
 
-  if( s.retval == SSH_FX_OK )  /* We should have an OK status */
+  if( s->retval == SSH_FX_OK )  /* We should have an OK status */
     {
-      if( s.attrib.flags & SSH_FILEXFER_ATTR_SIZE )
-	l.st->st_size = s.attrib.size;
+      if( s->attrib.flags & SSH_FILEXFER_ATTR_SIZE )
+	l->st->st_size = s->attrib.size;
       
-      if( s.attrib.flags & SSH_FILEXFER_ATTR_UIDGID )
+      if( s->attrib.flags & SSH_FILEXFER_ATTR_UIDGID )
 	{
-	  l.st->st_uid = s.attrib.uid;
-	  l.st->st_gid = s.attrib.gid;
+	  l->st->st_uid = s->attrib.uid;
+	  l->st->st_gid = s->attrib.gid;
 	}
       
-      if( s.attrib.flags & SSH_FILEXFER_ATTR_ACMODTIME )
+      if( s->attrib.flags & SSH_FILEXFER_ATTR_ACMODTIME )
 	{
-	  l.st->st_atime = s.attrib.atime;
-	  l.st->st_ctime = s.attrib.mtime;
+	  l->st->st_atime = s->attrib.atime;
+	  l->st->st_ctime = s->attrib.mtime;
 	}
       
-      if( s.attrib.flags & SSH_FILEXFER_ATTR_PERMISSIONS )
-	l.st->st_mode = s.attrib.permissions;
+      if( s->attrib.flags & SSH_FILEXFER_ATTR_PERMISSIONS )
+	l->st->st_mode = s->attrib.permissions;
     }
   
-  return s.retval;
+  return s->retval;
 }
 
 
-
-
-
-int lsftp_handle_chall( struct sftp_callback s, struct lsftp_callback l )
+int
+lsftp_handle_chall(struct sftp_callback *s,
+		   const struct lsftp_callback *l)
 {
-  if( l.a ) /* Memory for attribute? */
-    free( l.a ); /* Free it */
+  if( l->a ) /* Memory for attribute? */
+    free( l->a ); /* Free it */
 
-  if( s.retval != SSH_FX_OK )  /* We should have an OK status */
+  if( s->retval != SSH_FX_OK )  /* We should have an OK status */
     lsftp_report_error( s, l );
 
-  if( s.localerr )
-    lsftp_perror( l.local, s.localerrno );
+  if( s->localerr )
+    lsftp_perror( l->local, s->localerrno );
   
-  return s.retval;
+  return s->retval;
 }
 
 
-
-int lsftp_do_mv( char* src, char* dst, char* command )
+int
+lsftp_do_mv(const char *src, const char *dst, const char *command )
 {
   int id;
   int index;
       
-  char* tmp1;
-  char* tmp2;
+  const char* tmp1;
+  const char* tmp2;
 
   struct sftp_callback s;
   
@@ -2489,23 +2485,20 @@ int lsftp_do_mv( char* src, char* dst, char* command )
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
-      s =  sftp_rename_init( id,
-			     in, 
-			     out,
-			     tmp1,
-			     strlen( tmp1 ),
-			     tmp2,
-			     strlen( tmp2 )
-			     );
+      sftp_rename_init(&s, id, in, out,
+		       tmp1,
+		       strlen( tmp1 ),
+		       tmp2,
+		       strlen( tmp2 ));
       
       if( freeflag1 )
-	free( tmp1 );
+	free( (void *) tmp1 );
 
       if( freeflag2 )
-	free( tmp2 );
+	free( (void *) tmp2 );
      
       if( s.nextfun )
-	lsftp_install_sftp_cb( s );
+	lsftp_install_sftp_cb( &s );
       else
 	{
 	  /* We should newer have a local error for mv */
@@ -2517,15 +2510,14 @@ int lsftp_do_mv( char* src, char* dst, char* command )
   return id;  
 }
 
-
-
-int lsftp_do_ln( char* link, char* target, char* command )
+int
+lsftp_do_ln(const char *link, const char *target, const char *command)
 {
   int id;
   int index;
       
-  char* tmp1;
-  char* tmp2;
+  const char* tmp1;
+  const char* tmp2;
 
   struct sftp_callback s;
   
@@ -2558,23 +2550,20 @@ int lsftp_do_ln( char* link, char* target, char* command )
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
-      s =  sftp_symlink_init( id,
-			     in, 
-			     out,
-			     tmp1,
-			     strlen( tmp1 ),
-			     tmp2,
-			     strlen( tmp2 )
-			     );
+      sftp_symlink_init(&s, id, in, out,
+			tmp1,
+			strlen( tmp1 ),
+			tmp2,
+			strlen( tmp2 ));
       
       if( freeflag1 )
-	free( tmp1 );
+	free( (void *) tmp1 );
 
       if( freeflag2 )
-	free( tmp2 );
+	free( (void *) tmp2 );
      
       if( s.nextfun )
-	lsftp_install_sftp_cb( s );
+	lsftp_install_sftp_cb( &s );
       else
 	{
 	  /* We should newer have a local error for ln */
@@ -2586,15 +2575,14 @@ int lsftp_do_ln( char* link, char* target, char* command )
   return id;  
 }
 
-
-
-int lsftp_do_mkdir( char* dir, int permissions, char* command )
+int
+lsftp_do_mkdir(const char *dir, int permissions, const char *command)
 {
   int id;
   int index;
   int mask = 0777; /* FIXME: Implement remote umask */
 
-  char* tmp;
+  const char *tmp;
   struct sftp_callback s;
   struct sftp_attrib* attrib;
   
@@ -2630,21 +2618,18 @@ int lsftp_do_mkdir( char* dir, int permissions, char* command )
             
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
-      s =  sftp_mkdir_init( id,
-			    in, 
-			    out,
-			    tmp,
-			    strlen( tmp ),
-			    attrib
-			    );
+      sftp_mkdir_init(&s, id, in, out,
+		      tmp,
+		      strlen( tmp ),
+		      attrib);
       
       if( freeflag )
-	free( tmp );
+	free( (void *) tmp );
       
       free( attrib );
 
       if( s.nextfun )
-	lsftp_install_sftp_cb( s );
+	lsftp_install_sftp_cb( &s );
       else
 	{
 	  /* We should newer have a local error for mkdir */
@@ -2656,14 +2641,15 @@ int lsftp_do_mkdir( char* dir, int permissions, char* command )
   return id;  
 }
 
-
-int lsftp_do_rmdir( char* dir, char* command )
+int
+lsftp_do_rmdir(const char *dir, const char *command)
 {
   int id;
   int index;
       
-  char* tmp;
+  const char* tmp;
   struct sftp_callback s;
+  /* FIXME: Unsued? */
   struct sftp_attrib* attrib;
   
   id = lsftp_install_lsftp_cb( lsftp_handle_alldir );
@@ -2686,18 +2672,15 @@ int lsftp_do_rmdir( char* dir, char* command )
             
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
-      s =  sftp_rmdir_init( id,
-			      in, 
-			      out,
-			      tmp,
-			      strlen( tmp )
-			      );
+      sftp_rmdir_init(&s, id, in, out,
+		      tmp,
+		      strlen( tmp ));
       
       if( freeflag )
-	free( tmp );
+	free( (void *) tmp );
       
       if( s.nextfun )
-	lsftp_install_sftp_cb( s );
+	lsftp_install_sftp_cb( &s );
       else
 	{
 	  /* We should newer have a local error for rmdir */
@@ -2709,12 +2692,13 @@ int lsftp_do_rmdir( char* dir, char* command )
   return id;  
 }
 
-int lsftp_do_rm( char* path, char* command )
+int
+lsftp_do_rm(const char *path, const char *command )
 {
   int id;
   int index;
       
-  char* tmp;
+  const char* tmp;
   struct sftp_callback s;
   struct sftp_attrib* attrib;
   
@@ -2738,18 +2722,15 @@ int lsftp_do_rm( char* path, char* command )
             
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
       
-      s =  sftp_remove_init( id,
-			     in, 
-			     out,
-			     tmp,
-			     strlen( tmp )
-			     );
+      sftp_remove_init(&s, id, in, out,
+		       tmp,
+		       strlen( tmp ));
       
       if( freeflag )
-	free( tmp );
+	free( (void *) tmp );
       
       if( s.nextfun )
-	lsftp_install_sftp_cb( s );
+	lsftp_install_sftp_cb( &s );
       else
 	{
 	  /* We should newer have a local error for rmdir */
@@ -2762,15 +2743,16 @@ int lsftp_do_rm( char* path, char* command )
 }
 
 
-
-int lsftp_handle_alldir( struct sftp_callback s, struct lsftp_callback l )
+int
+lsftp_handle_alldir(struct sftp_callback *s,
+		    const struct lsftp_callback *l)
 {
-  if( s.retval != SSH_FX_OK )  /* We should have an EOF status */
+  if( s->retval != SSH_FX_OK )  /* We should have an EOF status */
     lsftp_report_error( s, l );
 
-  if( s.localerr )
-    lsftp_perror( l.local, s.localerrno );
+  if( s->localerr )
+    lsftp_perror( l->local, s->localerrno );
 
-  return s.retval;
+  return s->retval;
 }
 
