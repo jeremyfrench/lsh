@@ -50,7 +50,7 @@ static void *do_linear_get(struct alist *c, int atom);
 static void do_linear_set(struct alist *c, int atom, void *value);
 
 static void do_mark_list(struct alist_node *n,
-				       void (*mark)(struct lsh_object *o));
+			 void (*mark)(struct lsh_object *o));
 static void do_free_list(struct alist_node *n);
 
 static void *do_linked_get(struct alist *c, int atom);
