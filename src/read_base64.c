@@ -26,6 +26,7 @@
 #include "read_file.h"
 
 #include "digits.h"
+#include "format.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -68,7 +69,7 @@ do_read_base64(struct read_handler **h,
       if (base64_decode(&self->state, TERMINATOR)
 	  == BASE64_END)
 	{
-	  self->buffer->length = self->pos;
+	  lsh_string_trunc(self->buffer, self->pos);
 	  A_WRITE(self->c, self->buffer);
 	}
       else
