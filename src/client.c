@@ -350,13 +350,28 @@ do_receive(struct ssh_channel *c,
 }
 
 /* We may send more data */
-static void do_send(struct ssh_channel *c)
+static void
+do_send(struct ssh_channel *s,
+	struct ssh_connection *c UNUSED)
 {
-  CAST(client_session, closure, c);
+  CAST(client_session, self, s);
 
-  assert(closure->in->super.read);
+  assert(self->in->super.read);
 
-  closure->in->super.want_read = 1;
+  self->in->super.want_read = 1;
+}
+
+/* Used for the first callback, to register stdin as a resource. */
+static void
+do_send_first(struct ssh_channel *s,
+	      struct ssh_connection *connection)
+{
+  CAST(client_session, self, s);
+
+  REMEMBER_RESOURCE(connection->resources, &self->in->super.super);
+  s->send = do_send;
+
+  do_send(s, connection);
 }
 
 /* We have a remote shell */
@@ -387,9 +402,7 @@ do_client_io(struct command *s UNUSED,
   
       session->in->super.read = make_channel_read_data(channel);
 
-      /* FIXME: Is this really correct? */
-      /* session->in->super.want_read = 1;  */
-      channel->send = do_send;
+      channel->send = do_send_first;
 
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
 		make_handle_exit_status(session->exit_status));
@@ -462,7 +475,7 @@ new_session(struct channel_open_command *s,
 
   self->session->write = connection->write;
   
-  *request = prepare_channel_open(connection->table, ATOM_SESSION,
+  *request = prepare_channel_open(connection, ATOM_SESSION,
 				  self->session, "");
   if (!*request)
     return NULL;
