@@ -1,5 +1,8 @@
 2003-04-16  Niels Möller  <niels@s3.kth.se>
 
+	* src/lshd.c (main): No need to check for make_lshd_options
+	returnning NULL.
+
 	* src/.dist_classes (dist_classes): Deleted io_commands.h.x.
 	* src/io_commands.h (io_write_file_info): Deleted class.
 	* src/io_commands.c (io_write_file_command) 
