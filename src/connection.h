@@ -1,11 +1,13 @@
-/* session.h
+/* connection.h
  *
  */
 
-#ifndef LSH_SESSION_H_INCLUDED
-#define LSH_SESSION_H_INCLUDED
+#ifndef LSH_CONNECTION_H_INCLUDED
+#define LSH_CONNECTION_H_INCLUDED
 
-struct ssh_session
+#include "lsh_types.h"
+
+struct ssh_connection
 {
   /* Sent and recieved version strings */
   struct lsh_string *client_version;
@@ -20,6 +22,6 @@ struct ssh_session
   int provides_integrity;
 };
 
-struct ssh_session *ssh_session_alloc();
+struct ssh_connection *ssh_connection_alloc();
 
-#endif /* LSH_SESSION_H_INCLUDED */
+#endif /* LSH_CONNECTION_H_INCLUDED */
