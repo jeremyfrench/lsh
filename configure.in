@@ -326,7 +326,7 @@ dnl ## fi
 
 
 AC_SEARCH_LIBGMP(gmp gmp2,
-  LSH_RPATH_FIX,
+  [LSH_RPATH_FIX],
   [AC_ERROR([GMP is missing. Get gmp-2.0.2 or better from ftp://ftp.gnu.org/pub/gnu/gmp]) ])
 
 if test x$with_zlib = xyes; then
@@ -344,7 +344,7 @@ AC_CHECK_LIB(socket, setsockopt)
 dnl logwtmp is also in libutil
 AC_CHECK_LIB(util, openpty)
 dnl This macro is new in autoconf-2.13
-AC_SEARCH_LIBS(syslog, bsd socket inet, AC_DEFINE(HAVE_SYSLOG))
+AC_SEARCH_LIBS(syslog, bsd socket inet, [AC_DEFINE(HAVE_SYSLOG)])
 
 dnl Should we use zlib?
 if test x$with_zlib = xyes ; then
