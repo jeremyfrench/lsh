@@ -129,16 +129,23 @@ int do_read_packet(struct read_handler **h,
 		  }
 
 		/* Allocate full packet */
-		closure->buffer = ssh_format("%ls%lr",
-					     block_size - 4,
-					     closure->buffer->data + 4,
-					     length, &closure->crypt_pos);
+		{
+		  int done = block_size - 4;
+		  
+		  closure->buffer
+		    = ssh_format("%ls%lr",
+				 done,
+				 closure->buffer->data + 4,
+				 length - done,
+				 &closure->crypt_pos);
 
-		/* FIXME: Is this needed anywhere? */
-		closure->buffer->sequence_number = closure->sequence_number++;
+		  /* FIXME: Is this needed anywhere? */
+		  closure->buffer->sequence_number
+		    = closure->sequence_number++;
 
-		closure->pos = 4;
-		closure->state = WAIT_CONTENTS;
+		  closure->pos = done;
+		  closure->state = WAIT_CONTENTS;
+		}
 		/* Fall through */
 	      }
 	    else
