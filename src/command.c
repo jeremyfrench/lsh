@@ -59,8 +59,8 @@ make_apply(struct command *f, struct command_continuation *c)
   return &res->super.super;
 }
 
-struct lsh_object gaba_apply(struct lsh_object *f,
-			     struct lsh_object *x)
+struct lsh_object *gaba_apply(struct lsh_object *f,
+			      struct lsh_object *x)
 {
   CAST_SUBTYPE(command_simple, cf, f);
   return COMMAND_SIMPLE(cf, x);
@@ -165,7 +165,6 @@ struct command *make_command_S_2(struct command *f,
   return &res->super.super;
 }
 
-struct lsh_object *
 /* Represents (S f) */
 /* GABA:
    (class
@@ -240,12 +239,19 @@ do_simple_command_K_1(struct command_simple *s,
 
 struct command *make_command_K_1(struct lsh_object *x)
 {
-  NEW(command_S_1, res);
+  NEW(command_K_1, res);
   res->x = x;
   res->super.super.call = do_call_simple_command;
   res->super.call_simple = do_simple_command_K_1;
 
   return &res->super.super;
+}
+
+static struct lsh_object *
+do_simple_command_K(struct command_simple *ignored UNUSED,
+		    struct lsh_object *a)
+{
+  return &make_command_K_1(a)->super;
 }
 
 struct command_simple command_K = STATIC_COMMAND_SIMPLE(do_simple_command_K);
