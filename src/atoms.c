@@ -27,13 +27,15 @@
 
 #include <strings.h>
 
-#include "atoms_gperf.c"
-
 struct atom_rassoc
 {
   UINT8 *name;
   UINT32 length;
 };
+
+struct atom_assoc *gperf_atom (const char *str, unsigned int len);
+
+#include "atoms_gperf.c"
 
 struct atom_rassoc atom_table[] =
 #include "atoms_table.c"
