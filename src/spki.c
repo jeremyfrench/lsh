@@ -687,7 +687,7 @@ static int
 do_spki_tag_list_match(struct spki_tag *s,
 		       struct sexp *e)
 {
-  CAST(spki_tag_set, self, s);
+  CAST(spki_tag_list, self, s);
   unsigned i;
   struct sexp_iterator *j;
   
@@ -695,10 +695,10 @@ do_spki_tag_list_match(struct spki_tag *s,
     return 0;
 
   for (i = 0, j = SEXP_ITER(e);
-       i<LIST_LENGTH(self->set);
+       i<LIST_LENGTH(self->list);
        i++, SEXP_NEXT(j))
     {
-      CAST_SUBTYPE(spki_tag, tag, LIST(self->set)[i]);
+      CAST_SUBTYPE(spki_tag, tag, LIST(self->list)[i]);
       struct sexp *o = SEXP_GET(j);
 
       if (! (o && SPKI_TAG_MATCH(tag, o)))
@@ -836,7 +836,7 @@ spki_sexp_to_tag_list(struct sexp_iterator *i, unsigned limit)
   
   l = alloc_object_list(left);
   
-  for (j = 0; j<left; i++)
+  for (j = 0; j<left; j++)
     {
       struct spki_tag *tag = spki_sexp_to_tag(SEXP_GET(i), limit);
       if (!tag)
@@ -1073,28 +1073,27 @@ spki_subject_by_hash(struct spki_state *self,
 
 static struct verifier *
 spki_make_verifier(struct alist *algorithms,
-		   struct sexp_iterator *i)
+		   struct sexp *e)
 {
+  /* Syntax: (<algorithm> <s-expr>*) */
   struct signature_algorithm *algorithm;
   struct verifier *v;
+  int algorithm_name;
+  struct sexp_iterator *i;
 
-  if (!SEXP_GET(i))
-    {
-      werror("spki_make_verifier: Invalid (public-key ...) expression.\n");
-      return NULL;
-    }
-
-  algorithm = ALIST_GET(algorithms, sexp2atom(SEXP_GET(i)));
+  algorithm_name = spki_get_type(e, &i);
+  
+  algorithm = ALIST_GET(algorithms, algorithm_name);
 
   if (!algorithm)
     {
-      werror("spki_make_verifier: Unsupported algorithm.\n");
+      werror("spki_make_verifier: Unsupported algorithm %a.\n", algorithm_name);
       return NULL;
     }
 
-  SEXP_NEXT(i);
   v = MAKE_VERIFIER(algorithm, i);
-
+  KILL(i);
+  
   if (!v)
     {
       werror("spki_make_verifier: Invalid public-key data.\n");
@@ -1117,7 +1116,7 @@ do_spki_lookup(struct spki_context *s,
     {
     case ATOM_HASH:
       {
-	/* (hash ALGORITHM value) */
+	/* Syntax: (hash <hash-alg-name> <hash-value> <uris>) */
 	struct spki_subject *subject;
 	struct lsh_string *hash;
 
@@ -1161,7 +1160,7 @@ do_spki_lookup(struct spki_context *s,
       }
     case ATOM_PUBLIC_KEY:
       {
-	/* (public-key ALGORITHM KEY s-expr* URI) */
+	/* Syntax: (public-key (<pub-sig-alg-id> <s-expr>*) <uris>) */
 	struct spki_subject *subject;
 	struct lsh_string *sha1;
 	struct lsh_string *md5;
@@ -1191,8 +1190,14 @@ do_spki_lookup(struct spki_context *s,
 	else
 	  {
 	    /* New subject */
+	    struct sexp *key = SEXP_GET(i);
+	    if (!key)
+	      {
+		werror("do_spki_lookup: Invalid (public-key ...) expression.\n");
+		return NULL;
+	      }
 	    subject = make_spki_subject(e,
-					v ? v : spki_make_verifier(self->algorithms, i),
+					v ? v : spki_make_verifier(self->algorithms, key),
 					sha1, md5);
 	    
 	    object_queue_add_head(&self->keys, &subject->super);
