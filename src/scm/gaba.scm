@@ -71,21 +71,26 @@
 ;; Variables are describes as lists (name . type)
 ;; Known types (and corresponding C declarations) are
 ;;
-;; (string)          struct lsh_string *name
-;; (object class)    struct class *name
-;; (bignum)          mpz_t name
-;; (simple c-type)   c-type
+;; (string)                     struct lsh_string *name
+;; (object class)               struct class *name
+;; (bignum)                     mpz_t name
+;; (simple c-type)              c-type
 ;; (special c-type mark-fn free-fn)
 ;; (indirect-special c-type mark-fn free-fn)
 ;;
 ;; (struct tag)
 ;;
-;; (array type size) type name[size]
+;; (array type size)            type name[size]
+;;
+;; size-field, when present, is the name of a field that holds
+;; the current size of variable size objects.
+;;
 ;; Variable size array (must be last) */
 ;; (var-array type size-field)  type name[1]
 ;;
-;; (pointer type)    type *name
-;; (space type)      Like pointer, but should be freed
+;; FIXME: Split into var-pointer and var-space?
+;; (pointer type [size-field])  type *name
+;; (space type [size-field])    Like pointer, but should be freed
 ;;
 ;; (function type . arg-types) type name(arg-types)
 ;;
@@ -103,8 +108,8 @@
       (let ((tag (car type)))
 	(case tag
 	  ((string object simple special indirect-special
-	    space bignum struct) tag)
-	  ((array var-array pointer) (type->category (cadr type)))
+	    bignum struct) tag)
+	  ((array var-array pointer space) (type->category (cadr type)))
 	  
 	  (else (error "make_class: type->category: Invalid type" type))))))
 
@@ -133,24 +138,25 @@
   (if (atom? type)
       (type->mark `(simple ,type) expr)
       (case (car type)
-	((string simple function space bignum) #f)
+	((string simple function bignum) #f)
 	((object) (list "mark((struct lsh_object *) " expr ");\n"))
 	((struct) (list (cadr type) "_mark(&" expr ", mark);\n"))
-	((pointer) (if (null? (cddr type))
-		       (type->mark (cadr type) (list "*(" expr ")"))
-
-		       ;; The optional argument should be the name of
-		       ;; an instance variable holding the length of
-		       ;; the area pointed to
-		       (let ((mark-k (type->mark (cadr type)
-						 (list "(" expr ")[k]"))))
-			 (and mark-k
-			      (list "{\n  unsigned k;\n"
-				    "  for (k=0; k<i->" (caddr type)
-				    "; k++)\n"
-				    "    " mark-k
-				    "}\n")))))
-
+	((pointer space)
+	 (if (null? (cddr type))
+	     (type->mark (cadr type) (list "*(" expr ")"))
+	     
+	     ;; The optional argument should be the name of
+	     ;; an instance variable holding the length of
+	     ;; the area pointed to
+	     (let ((mark-k (type->mark (cadr type)
+				       (list "(" expr ")[k]"))))
+	       (and mark-k
+		    (list "{\n  unsigned k;\n"
+			  "  for (k=0; k<i->" (caddr type)
+			  "; k++)\n"
+			  "    " mark-k
+			  "  }\n")))))
+	
 	((special) (let ((mark-fn (caddr type)))
 		     (and mark-fn (list mark-fn "(" expr ", mark);\n"))))
 	((indirect-special) (let ((mark-fn (caddr type)))
@@ -182,6 +188,7 @@
   (if (atom? type)
       (type->free `(simple ,type) expr)
       (case (car type)
+	;; FIXME: Doesn't free array elements for variables of type space.
 	((object simple function pointer) #f)
 	((struct) (list (cadr type) "_free(&" expr ");\n"))
 	((string) (free/f "lsh_string_free"))
@@ -206,6 +213,17 @@
 		      "  for (k=0; k<i->" (caddr type) "; k++)\n"
 		      "    " free-k
 		      "}\n"))))
+#!
+	((dyn-array)
+	 (let ((free-k (type->free (cadr type) (list "(" expr ")[k]"))))
+	   (append (if (null? free-k)
+		       '("{\n  unsigned k;\n"
+			     "  for (k=0; k<i->" (caddr type) "; k++)\n"
+			     "    " free-k
+			     "}\n")
+		       '())
+		   (list "lsh_space_free(" expr ");\n")) ))
+!#
     
 	(else (error "make_class: type->free: Invalid type" type)))))
 
