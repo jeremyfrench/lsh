@@ -27,6 +27,7 @@
 #define LSH_CHANNEL_FORWARD_H_INCLUDED
 
 #include "channel.h"
+#include "command.h"
 
 #define GABA_DECLARE
 #include "channel_forward.h.x"
@@ -50,6 +51,8 @@ make_channel_forward(struct lsh_fd *socket, UINT32 initial_window);
 void
 channel_forward_start_io(struct channel_forward *channel_forward);
 
+extern struct command start_io_command;
+#define START_IO (&start_io_command.super)
 
 #endif /* LSH_CHANNEL_FORWARD_H_INCLUDED */
 

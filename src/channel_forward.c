@@ -47,7 +47,8 @@ init_channel_forward(struct channel_forward *self,
   
   init_channel(&self->super);
 
-  /* The rest of the callbacks are not set up until tcpip_start_io. */
+  /* The rest of the callbacks are not set up until
+   * channel_forward_start_io. */
 
   /* NOTE: We don't need a close handler, as the channel's resource
    * list is taken care of automatically. */
@@ -135,3 +136,17 @@ channel_forward_start_io(struct channel_forward *channel)
   channel->socket->write_buffer->report = &channel->super.super;
 }
 
+DEFINE_COMMAND(start_io_command)
+     (struct command *s UNUSED,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+  CAST_SUBTYPE(channel_forward, channel, x);
+
+  assert(channel);
+  
+  channel_forward_start_io(channel);
+
+  COMMAND_RETURN(c, channel);  
+}
