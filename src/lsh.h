@@ -122,4 +122,7 @@ struct randomness;
 struct sexp;
 struct sexp_iterator;
 
+/* userauth.h */
+struct user;
+
 #endif /* LSH_H_INCLUDED */
