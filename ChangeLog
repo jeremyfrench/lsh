@@ -1,5 +1,13 @@
 2002-03-19  Pontus Sköld  <pont@it.uu.se>
 
+	* src/testsuite/seed-test: Fixed bashism.
+
+2002-03-19  Pontus Sköld  <pont@it.uu.se>
+
+	* src/testsuite/run-tests: Replaced bashims.
+
+2002-03-19  Pontus Sköld  <pont@it.uu.se>
+
 	* src/unix_process.c: Added GETUTXID and UPDWTMPX.
 	(do_utmp_cleanup): Write cleared entry to wtmp{,x} with
 	updwtmp{,x} if logwtmp is not available.
