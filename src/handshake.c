@@ -296,7 +296,8 @@ make_handshake_info(enum connection_flag flags,
 		    uint32_t block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,
-		    struct ssh1_fallback *fallback)
+		    struct ssh1_fallback *fallback,
+		    struct lsh_string *banner_text)
 {
   NEW(handshake_info, self);
   self->flags = flags;
@@ -306,6 +307,7 @@ make_handshake_info(enum connection_flag flags,
   self->random = r;
   self->algorithms = algorithms;
   self->fallback = fallback;
+  self->banner_text = banner_text;
 
   return self;
 }
@@ -424,6 +426,12 @@ DEFINE_COMMAND4(handshake_command)
       return;
     }
 #endif /* WITH_SSH1_FALLBACK */
+
+  if (info->banner_text)
+    {
+      A_WRITE(connection->raw, 
+	      ssh_format("%lS\r\n", info->banner_text));
+    }
 
   A_WRITE(connection->raw,
 	  ssh_format("%lS\r\n", version));
