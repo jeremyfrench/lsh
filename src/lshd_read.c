@@ -37,35 +37,10 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include "lshd_read.c.x"
-
-struct lshd_read_state *
-make_lshd_read_state(struct header_callback *process,
-		     struct error_callback *error)
-{
-  NEW(lshd_read_state, self);
-  init_ssh_read_state(&self->super, SSH_MAX_BLOCK_SIZE, 8, process, error);
-  self->sequence_number = 0;
-
-  return self;
-}
-
-
-/* GABA:
-   (class
-     (name lshd_process_ssh_header)
-     (super header_callback)
-     (vars
-       (sequence_number . uint32_t);
-       (connection object lshd_connection)))
-*/
-
 static struct lsh_string *
-lshd_process_ssh_header(struct header_callback *s, struct ssh_read_state *rs,
-			uint32_t *done)
+lshd_process_ssh_header(struct ssh_read_state *s)
 {
-  CAST(lshd_process_ssh_header, self, s);
-  CAST(lshd_read_state, state, rs);
+  CAST(lshd_read_state, self, s);
 
   struct lshd_connection *connection = self->connection;
   
@@ -80,13 +55,13 @@ lshd_process_ssh_header(struct header_callback *s, struct ssh_read_state *rs,
 
   if (connection->rec_crypto)
     {
-      assert(state->super.header_length == block_size);
+      assert(self->super.header_length == block_size);
       CRYPT(connection->rec_crypto,
 	    block_size,
-	    state->super.header, 0,
-	    state->super.header, 0);
+	    self->super.header, 0,
+	    self->super.header, 0);
     }
-  header = lsh_string_data(state->super.header);
+  header = lsh_string_data(self->super.header);
   length = READ_UINT32(header);
 
   /* NOTE: We don't implement a limit at _exactly_
@@ -121,10 +96,10 @@ lshd_process_ssh_header(struct header_callback *s, struct ssh_read_state *rs,
 		 block_size, header);
     }
 
-  state->padding = header[4];
+  self->padding = header[4];
   
-  if ( (state->padding < 4)
-       || (state->padding >= length) )
+  if ( (self->padding < 4)
+       || (self->padding >= length) )
     {
       connection_error(connection, "Bogus padding length.");
       return NULL;
@@ -148,18 +123,22 @@ lshd_process_ssh_header(struct header_callback *s, struct ssh_read_state *rs,
       return NULL;
     }
 
-  *done = block_size - 5;
+  self->super.pos = block_size - 5;
   return packet;
 }
 
-struct header_callback *
-make_lshd_process_ssh_header(struct lshd_connection *connection)
+struct lshd_read_state *
+make_lshd_read_state(struct lshd_connection *connection,
+		     struct error_callback *error)
 {
-  NEW(lshd_process_ssh_header, self);
-  self->super.process = lshd_process_ssh_header;
-  self->connection = connection;
+  NEW(lshd_read_state, self);
+  init_ssh_read_state(&self->super, SSH_MAX_BLOCK_SIZE, 8,
+		      lshd_process_ssh_header, error);
 
-  return &self->super;
+  self->connection = connection;
+  self->sequence_number = 0;
+
+  return self;
 }
 
 void
