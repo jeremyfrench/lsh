@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 0.1.18)
+AM_INIT_AUTOMAKE(lsh, 0.1.19)
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
@@ -594,4 +594,5 @@ fi
 AC_OUTPUT(Makefile doc/Makefile misc/Makefile
 	  src/Makefile src/argp/Makefile src/scm/Makefile
 	  src/testsuite/Makefile
-	  src/symmetric/Makefile src/symmetric/include/Makefile)
+	  src/symmetric/Makefile src/symmetric/include/Makefile
+	  contrib/Makefile contrib/lsh.spec)
