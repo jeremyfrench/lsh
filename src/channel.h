@@ -29,11 +29,24 @@ struct ssh_channel
   UINT32 send_window_size;
   UINT32 send_max_packet;
 
+  int recieved_close;
+  int sent_close;
+  int recieved_eof;
+  int sent_eof;
+  
   /* Type is CHANNEL_DATA or CHANNEL_STDERR_DATA */
-  int (*recieve)(struct ssh_channel *self, int type, struct lsh_string *data);
+  int (*recieve)(struct ssh_channel *self, struct abstract_write *write,
+		 int type, struct lsh_string *data);
 
   /* Type is CHANNEL_EOF or CHANNEL_CLOSE */
-  int (*close)(struct ssh_channel *self, int type);
+  int (*close)(struct ssh_channel *self, struct abstract_write *write,
+	       int type);
 };
 
+#define CHANNEL_RECIEVE(s, w, t, d) \
+((s)->recieve((s), (w), (t), (d)))
+
+#define CHANNEL_CLOSE(s, w, t) \
+((s)->close((s), (w), (t)))
+     
 #endif /* LSH_CHANNEL_H_INCLUDED */
