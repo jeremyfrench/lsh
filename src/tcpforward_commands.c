@@ -38,30 +38,39 @@
 
 /* Forward declarations */
 
-extern struct command_2 open_direct_tcpip;
-extern struct command_2 remote_listen_command;
-extern struct command_2 open_forwarded_tcpip;
-extern struct command tcpip_start_io;
-extern struct command tcpip_connect_io;
+/* FIXME: Should be static */
+struct command_2 open_direct_tcpip;
+#define OPEN_DIRECT_TCPIP (&open_direct_tcpip.super.super)
 
-struct install_info install_direct_tcpip_handler;
-struct install_info install_forwarded_tcpip_handler;
+/* FIXME: Should be static */
+struct command_2 remote_listen_command;
+#define REMOTE_LISTEN (&remote_listen_command.super.super)
 
-/* FIXME: Should be static? */
+/* FIXME: Should be static */
+struct command_2 open_forwarded_tcpip;
+#define OPEN_FORWARDED_TCPIP (&open_forwarded_tcpip.super.super)
+
+static struct command tcpip_start_io;
+#define TCPIP_START_IO (&tcpip_start_io.super)
+
+static struct command tcpip_connect_io;
+#define TCPIP_CONNECT_IO (&tcpip_connect_io.super)
+
+static struct install_info install_direct_tcpip_handler;
+#define INSTALL_DIRECT_TCPIP (&install_direct_tcpip_handler.super.super.super)
+
+static struct install_info install_forwarded_tcpip_handler;
+
+/* FIXME: Should be static */
 struct command make_direct_tcpip_handler;
+#define DIRECT_TCPIP_HANDLER (&make_direct_tcpip_handler.super)
 
-struct install_info install_tcpip_forward_handler;
+static struct install_info install_tcpip_forward_handler;
+#define INSTALL_TCPIP_FORWARD (&install_tcpip_forward_handler.super.super.super)
 
 /* FIXME: Should be static? */
 struct command make_tcpip_forward_handler;
-
-#define OPEN_DIRECT_TCPIP (&open_direct_tcpip.super.super)
-#define REMOTE_LISTEN (&remote_listen_command.super.super)
-#define TCPIP_START_IO (&tcpip_start_io.super)
-#define TCPIP_CONNECT_IO (&tcpip_connect_io.super)
-#define OPEN_FORWARDED_TCPIP (&open_forwarded_tcpip.super.super)
-#define DIRECT_TCPIP_HANDLER (&make_direct_tcpip_handler.super)
-#define INSTALL_DIRECT_TCPIP (&install_direct_tcpip_handler.super.super.super)
+#define TCPIP_FORWARD_HANDLER (&make_tcpip_forward_handler.super)
 
 static struct catch_report_collect catch_channel_open;
 #define CATCH_CHANNEL_OPEN (&catch_channel_open.super.super)
@@ -95,7 +104,7 @@ do_tcpip_connect_io(struct command *ignored UNUSED,
   COMMAND_RETURN(c, make_channel_forward(lv->fd, TCPIP_WINDOW_SIZE));
 }
 
-struct command tcpip_connect_io = STATIC_COMMAND(do_tcpip_connect_io);
+static struct command tcpip_connect_io = STATIC_COMMAND(do_tcpip_connect_io);
 
 /* Used by the party requesting tcp forwarding, i.e. when a socket is
  * already open, and we have asked the other end to forward it. Takes
@@ -117,7 +126,7 @@ do_tcpip_start_io(struct command *s UNUSED,
   COMMAND_RETURN(c, channel);
 }
 
-struct command tcpip_start_io =
+static struct command tcpip_start_io =
 { STATIC_HEADER, do_tcpip_start_io };
 
 
@@ -431,6 +440,7 @@ DEFINE_COMMAND(make_direct_tcpip_handler)
 		 &make_channel_open_direct_tcpip(callback)->super);
 }
 
+/* FIXME: Merge with install_tcpip_forward_handler */
 /* Takes a callback function and returns a global_request handler. */
 DEFINE_COMMAND(make_tcpip_forward_handler)
      (struct command *s UNUSED,
@@ -446,12 +456,11 @@ DEFINE_COMMAND(make_tcpip_forward_handler)
 		 &make_tcpip_forward_request(callback)->super);
 }
 
-
 /* Commands to install handlers */
-struct install_info install_direct_tcpip_handler =
+static struct install_info install_direct_tcpip_handler =
 STATIC_INSTALL_OPEN_HANDLER(ATOM_DIRECT_TCPIP);
 
-struct install_info install_forwarded_tcpip_handler =
+static struct install_info install_forwarded_tcpip_handler =
 STATIC_INSTALL_OPEN_HANDLER(ATOM_FORWARDED_TCPIP);
 
 
@@ -479,22 +488,17 @@ make_direct_tcpip_hook(void)
   return res;
 }
 
-struct install_info install_tcpip_forward_handler =
+static struct install_info install_tcpip_forward_handler =
 STATIC_INSTALL_GLOBAL_HANDLER(ATOM_TCPIP_FORWARD);
-
 
 /* GABA:
    (expr
      (name tcpip_forward_hook)
-     ; FIXME: Don't use globals.
-     (globals
-       (install "&install_tcpip_forward_handler.super.super.super")
-       (handler "&make_tcpip_forward_handler.super"))
      (expr
        (lambda (connection)
          ;; Called when the ssh-connection is established
-         (install connection
-	   (handler (lambda (port)
+         (install_tcpip_forward connection
+	   (tcpip_forward_handler (lambda (port)
 	     ;; Called when the client requests remote forwarding.
 	     ;; It should return the fd associated with the port.
 	     ;; NOTE: The caller, do_tcpip_forward_request, is responsible
