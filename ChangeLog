@@ -1,3 +1,7 @@
+2004-11-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh-writekey.c (main_argp_parser): Fixed C99-ism.
+
 2004-11-16  Niels Möller  <nisse@lysator.liu.se>
 
 	* misc/getopt.h: Deleted __ from argument names in prototypes,
