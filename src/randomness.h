@@ -42,11 +42,33 @@
 
 #define RANDOM(r, length, dst) ((r)->random((r), length, dst))
 
+/* A class polling the environment for randomness. Following Peter
+ * Gutmann's ideas, there are two methods for a slow more thorough
+ * poll done at startup, and a faster poll performed from time to time
+ * as a generator is used. */
+
+/* GABA:
+   (class
+     (name random_poll)
+     (vars
+       ;; Both functions return an entropy estimate, and adds the
+       ;; randomness to the given hash instance.
+       (slow method unsigned "struct hash_instance *")
+       (fast method unsigned "struct hash_instance *"))) */
+
+#define RANDOM_POLL_SLOW(p, h) ((p)->slow((p), (h)))
+#define RANDOM_POLL_FAST(p, h) ((p)->fast((p), (h)))
+
+
 /* Consumes the init string (which may be NULL). */
 struct randomness *make_poor_random(struct hash_algorithm *hash,
 				    struct lsh_string *init);
 
 struct randomness *make_device_random(const char *device);
 struct randomness *make_reasonably_random(void);
+
+struct randomness *
+make_arcfour_random(struct random_poll *poller,
+		    struct hash_algorithm *hash);
 
 #endif /* LSH_RANDOMNESS_H_INCLUDED */
