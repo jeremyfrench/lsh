@@ -27,6 +27,7 @@
 #include "alist.h"
 
 #include "atoms.h"
+#include "list.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -36,7 +37,8 @@
 #include "alist.h.x"
 #undef GABA_DEFINE
 
-struct alist *alist_addv(struct alist *a, unsigned n, va_list args)
+struct alist *
+alist_addv(struct alist *a, unsigned n, va_list args)
 {
   unsigned i;
   
@@ -55,7 +57,8 @@ struct alist *alist_addv(struct alist *a, unsigned n, va_list args)
   return a;
 }
 
-struct alist *alist_add(struct alist *a, unsigned n, ...)
+struct alist
+*alist_add(struct alist *a, unsigned n, ...)
 {
   va_list args;
 
@@ -75,15 +78,21 @@ struct alist_node
 
 /* Prototypes */
 
-static void *do_linear_get(struct alist *c, int atom);
-static void do_linear_set(struct alist *c, int atom, void *value);
+static struct lsh_object *
+do_linear_get(struct alist *c, int atom);
+static void
+do_linear_set(struct alist *c, int atom, struct lsh_object *value);
 
-static void do_mark_list(struct alist_node *n,
-			 void (*mark)(struct lsh_object *o));
-static void do_free_list(struct alist_node *n);
+static void
+do_mark_list(struct alist_node *n,
+	     void (*mark)(struct lsh_object *o));
+static void
+do_free_list(struct alist_node *n);
 
-static void *do_linked_get(struct alist *c, int atom);
-static void do_linked_set(struct alist *c, int atom, void *value);
+static struct lsh_object *
+do_linked_get(struct alist *c, int atom);
+static void
+do_linked_set(struct alist *c, int atom, struct lsh_object *value);
 
 #include "alist.c.x"
 
@@ -100,7 +109,8 @@ static void do_linked_set(struct alist *c, int atom, void *value);
      (methods do_linear_get do_linear_set))
 */
 
-static void *do_linear_get(struct alist *c, int atom)
+static struct lsh_object *
+do_linear_get(struct alist *c, int atom)
 {
   CAST(alist_linear, self, c);
 
@@ -110,7 +120,8 @@ static void *do_linear_get(struct alist *c, int atom)
   return self->table[atom];
 }
 
-static void do_linear_set(struct alist *c, int atom, void *value)
+static void
+do_linear_set(struct alist *c, int atom, struct lsh_object *value)
 {
   CAST(alist_linear, self, c);
   
@@ -122,7 +133,8 @@ static void do_linear_set(struct alist *c, int atom, void *value)
   self->table[atom] = value;
 }
 
-struct alist *make_linear_alist(unsigned n, ...)
+struct alist *
+make_linear_alist(unsigned n, ...)
 {
   int i;
   va_list args;
@@ -155,8 +167,9 @@ struct alist *make_linear_alist(unsigned n, ...)
      (methods do_linked_get do_linked_set))
 */
 
-static void do_mark_list(struct alist_node *n,
-			 void (*mark)(struct lsh_object *o))
+static void
+do_mark_list(struct alist_node *n,
+	     void (*mark)(struct lsh_object *o))
 {
   while(n)
     {
@@ -165,7 +178,8 @@ static void do_mark_list(struct alist_node *n,
     }
 }
 
-static void do_free_list(struct alist_node *n)
+static void
+do_free_list(struct alist_node *n)
 {
   while(n)
     {
@@ -175,7 +189,8 @@ static void do_free_list(struct alist_node *n)
     }
 }
 
-static void *do_linked_get(struct alist *c, int atom)
+static struct lsh_object *
+do_linked_get(struct alist *c, int atom)
 {
   CAST(alist_linked, self, c);
   struct alist_node *p;
@@ -189,7 +204,8 @@ static void *do_linked_get(struct alist *c, int atom)
   return NULL;
 }
 
-static void do_linked_set(struct alist *c, int atom, void *value)
+static void
+do_linked_set(struct alist *c, int atom, struct lsh_object *value)
 {
   CAST(alist_linked, self, c);
   
@@ -234,7 +250,8 @@ static void do_linked_set(struct alist *c, int atom, void *value)
     }
 }
 
-struct alist *make_linked_alist(unsigned n, ...)
+struct alist *
+make_linked_alist(unsigned n, ...)
 {
   va_list args;
   
@@ -255,3 +272,43 @@ struct alist *make_linked_alist(unsigned n, ...)
   return res;
 }
 
+/* Copies selected elements from one alist to another. */
+
+unsigned
+alist_select(struct alist *dst, struct alist *src,
+	     struct int_list *names)
+{
+  unsigned selected;
+  unsigned i;
+  for (i = 0, selected = 0; i < LIST_LENGTH(names); i++)
+    {
+      int atom = LIST(names)[i];
+      struct lsh_object *o = ALIST_GET(src, atom);
+      if (o)
+	{
+	  ALIST_SET(dst, atom, o);
+	  selected ++;
+	}
+    }
+  return selected;
+}
+
+unsigned
+alist_select_l(struct alist *dst, struct alist *src,
+	       unsigned n, ...)
+{
+  va_list args;
+  struct int_list *names;
+  unsigned selected;
+  
+  va_start(args, n);
+  names = make_int_listv(n, args);
+  va_end(args);
+
+  selected = alist_select(dst, src, names);
+
+  KILL(names);
+
+  return selected;
+}
+  

@@ -47,8 +47,8 @@ struct alist;
    (meta
      (name alist)
      (methods
-       "void * (*get)(struct alist *self, int atom)"
-       "void (*set)(struct alist *self, int atom, void *value)"))
+       "struct lsh_object * (*get)(struct alist *self, int atom)"
+       "void (*set)(struct alist *self, int atom, struct lsh_object *value)"))
 */
 
 /* GABA:
@@ -83,5 +83,13 @@ struct alist *make_linear_alist(unsigned n, ...);
 struct alist *make_linked_alist(unsigned n, ...);
 
 #define make_alist make_linear_alist
+
+unsigned
+alist_select(struct alist *dst, struct alist *src,
+	     struct int_list *names);
+
+unsigned
+alist_select_l(struct alist *dst, struct alist *src,
+	       unsigned n, ...);
 
 #endif /* LSH_ALIST_H_INCLUDED */
