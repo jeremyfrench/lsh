@@ -45,6 +45,11 @@
 
 #include "sexp.c.x"
 
+/* Forward declaration. */
+static struct lsh_string *
+encode_hex(const struct lsh_string *s,
+	   unsigned indent);
+
 /* GABA:
    (class
      (name sexp_string)
@@ -53,6 +58,7 @@
        (display const string)
        (contents const string)))
 */
+
 
 /* For advanced format */
 static struct lsh_string *
@@ -72,6 +78,7 @@ do_format_simple_string(const struct lsh_string *s,
     case SEXP_INTERNATIONAL:
       quote_friendly |= CHAR_international;
       /* Fall through */
+    case SEXP_ADVANCED_HEX:
     case SEXP_ADVANCED:
       {
 	int c;
@@ -143,8 +150,12 @@ do_format_simple_string(const struct lsh_string *s,
 
 	    return res;
 	  }
-	/* Base 64 string */
-	return encode_base64(s, "||", 1, indent + 1, 0);
+	if (style == SEXP_ADVANCED_HEX)
+	  /* Hex encode string */
+	  return encode_hex(s, indent + 1);
+	else
+	  /* Base 64 string */
+	  return encode_base64(s, "||", 1, indent + 1, 0);
       }
     default:
       fatal("do_format_sexp_string: Unknown output style.\n");
@@ -162,6 +173,7 @@ do_format_sexp_string(struct sexp *s,
     case SEXP_TRANSPORT:
       fatal("Internal error!\n");
     case SEXP_ADVANCED:
+    case SEXP_ADVANCED_HEX:
     case SEXP_INTERNATIONAL:
     case SEXP_CANONICAL:
       return (self->display)
@@ -397,6 +409,7 @@ do_format_sexp_vector(struct sexp *e,
     case SEXP_TRANSPORT:
       fatal("Internal error!\n");
     case SEXP_ADVANCED:
+    case SEXP_ADVANCED_HEX:
     case SEXP_INTERNATIONAL:
       {
 	struct lsh_string **elements;
@@ -586,6 +599,7 @@ sexp_format(struct sexp *e, int style, unsigned indent)
       return SEXP_FORMAT(e, style, indent);
 
     case SEXP_ADVANCED:
+    case SEXP_ADVANCED_HEX:
     case SEXP_INTERNATIONAL:
       return ssh_format("%lfS\n", SEXP_FORMAT(e, style, indent));
       
@@ -630,7 +644,7 @@ encode_base64(const struct lsh_string *s,
 			  : 0);
   unsigned length = (full_groups + !!last) * 4 + (indent + 1) * linebreaks;
 
-  UINT8 *src = s->data;
+  const UINT8 *src = s->data;
   UINT8 *dst;
     
   struct lsh_string *res
@@ -687,6 +701,115 @@ encode_base64(const struct lsh_string *s,
   if (free)
     lsh_string_free(s);
   
+  return res;
+}
+
+/* Group 8 octets (16 hex digits) with spaces between them.
+ * At most 3 groups per line. */
+#define HEX_GROUP_SIZE 8
+#define HEX_GROUPS_PER_LINE 3
+
+static struct lsh_string *
+encode_hex(const struct lsh_string *s,
+	   unsigned indent)
+{
+  unsigned full_groups = s->length / HEX_GROUP_SIZE;
+  unsigned last_group = s->length % HEX_GROUP_SIZE;
+
+  unsigned full_lines = s->length / (HEX_GROUP_SIZE * HEX_GROUPS_PER_LINE);
+  unsigned last_line = s->length % (HEX_GROUP_SIZE * HEX_GROUPS_PER_LINE);
+  unsigned line_breaks;
+  unsigned group_breaks;
+  
+  const UINT8 *src = s->data;
+  UINT8 *dst;
+
+  unsigned length;
+  struct lsh_string *res;
+
+  unsigned i;
+  unsigned j;
+
+  debug("encode_hex: length = %i, indent = %i\n"
+	"       full_groups = %i, last_group = %i\n"
+	"       full_lines  = %i, last_line = %i\n",
+	s->length, indent, full_groups, last_group, full_lines, last_line);
+
+  /* Empty strings are never hex encoded */
+  assert(s->length);
+
+  if (last_line)
+    line_breaks = full_lines;
+  else
+    {
+      line_breaks = full_lines - 1;
+      last_line = (HEX_GROUP_SIZE * HEX_GROUPS_PER_LINE);
+    }
+
+  debug("encode_hex: line_breaks = %i\n", line_breaks);
+  
+  length = (s->length * 2                     /* The digits */
+	    + full_groups + !!last_group - 1  /* One space between the groups */
+	    + line_breaks * indent);          /* Indentation */
+
+  debug("encode_hex: length: %i\n", length);
+  
+  res = ssh_format("#%lr#", length, &dst);
+
+  for (i = 0; i < line_breaks; i++, full_lines--, full_groups -= HEX_GROUPS_PER_LINE)
+    {
+      for (j = 0; j < HEX_GROUPS_PER_LINE - 1; j++)
+	{
+	  format_hex_string(dst, HEX_GROUP_SIZE, src);
+	  src += HEX_GROUP_SIZE; dst += 2 * HEX_GROUP_SIZE;
+
+	  *dst++ = ' ';
+	}
+
+      format_hex_string(dst, HEX_GROUP_SIZE, src);
+      src += HEX_GROUP_SIZE; dst += 2 * HEX_GROUP_SIZE;
+      
+      *dst++ = '\n';
+      memset(dst, ' ', indent); dst += indent;
+
+      debug("encode_hex: i = %i, full_lines = %i, full_groups = %i\n"
+	    "       pos: %i\n",
+	    i, full_lines, full_groups, dst - (res->data + 1));
+    }
+
+  /* The final line */
+  if (last_group)
+    group_breaks = full_groups;
+  else
+    {
+      group_breaks = full_groups - 1;
+      last_group = HEX_GROUP_SIZE;
+    }
+
+  debug("encode_hex: group_breaks: %i\n",
+	group_breaks);
+  
+  for (j = 0; j < group_breaks; j++)
+    {
+      format_hex_string(dst, HEX_GROUP_SIZE, src);
+      src += HEX_GROUP_SIZE; dst += 2 * HEX_GROUP_SIZE;
+      *dst++ = ' ';
+
+      debug("encode_hex: j = %i\n"
+	    "       pos: %i\n",
+	    j, dst - (res->data + 1));
+    }
+
+  debug("encode_hex: before last group, pos: %i\n",
+	dst - (res->data + 1));
+  
+  format_hex_string(dst, last_group, src); dst += 2 * last_group;
+
+  debug("encode_hex: pos: %i, expected: %i\n",
+	dst - (res->data + 1), res->length - 2);
+  
+  assert( (dst + 1) == (res->data + res->length) );
+
   return res;
 }
 
@@ -845,6 +968,7 @@ sexp_formats[] =
   { "transport", SEXP_TRANSPORT },
   { "canonical", SEXP_CANONICAL },
   { "advanced", SEXP_ADVANCED },
+  { "advanced-hex", SEXP_ADVANCED_HEX },
   { "international", SEXP_INTERNATIONAL },
   { NULL, 0 }
 };
@@ -866,7 +990,7 @@ static const struct argp_option
 sexp_input_options[] =
 {
   { NULL, 0, NULL, 0, "Valid sexp-formats are transport, canonical, "
-    "advanced and international.", 0 },
+    "advanced, and international.", 0 },
   { "input-format", 'i', "format", 0,
     "Variant of the s-expression syntax to accept.", 0},
   { NULL, 0, NULL, 0, NULL, 0 }
@@ -876,7 +1000,7 @@ static const struct argp_option
 sexp_output_options[] =
 {
   { NULL, 0, NULL, 0, "Valid sexp-formats are transport, canonical, "
-    "advanced and international.", 0 },
+    "advanced, advanced-hex and international.", 0 },
   { "output-format", 'f', "format", 0,
     "Variant of the s-expression syntax to generate.", 0},
   { NULL, 0, NULL, 0, NULL, 0 }

@@ -77,8 +77,11 @@
 #define SEXP_TRANSPORT 1
 #define SEXP_ADVANCED 2
 
+/* Like advanced, but use hex instead of base64 */
+#define SEXP_ADVANCED_HEX 3
+
 /* Like advanced, but allow international characters in quoted strings. */
-#define SEXP_INTERNATIONAL 3
+#define SEXP_INTERNATIONAL 4
 
 struct lsh_string *sexp_format(struct sexp *e, int style, unsigned indent);
 
