@@ -26,7 +26,7 @@ struct packet_handler
 
 #define CONNECTION_SERVER 0
 #define CONNECTION_CLIENT 1
-     
+  
 struct ssh_connection
 {
   struct abstract_write super;
@@ -38,7 +38,9 @@ struct ssh_connection
 			       * inside the newkeys-handler? */
 #endif
 
+#if 0
   int type; /* CONNECTION_SERVER or CONNECTION_CLIENT */
+#endif
   
   /* Sent and recieved version strings */
   struct lsh_string *client_version;
@@ -69,8 +71,11 @@ struct ssh_connection
   struct packet_handler *fail;
   
   /* Key exchange */
-  /* int kex_state; */
-  
+
+#if 0
+  int kex_state; 
+  struct make_kexinit *make_kexinit;
+#endif
   /* First element is the kexinit sent by the server */
   struct kexinit *kexinits[2];
   struct lsh_string *literal_kexinits[2];

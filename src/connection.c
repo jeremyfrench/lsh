@@ -18,7 +18,7 @@ static int handle_connection(struct abstract_write **w,
 {
   struct ssh_connection *closure = (struct ssh_connection *) *w;
   UINT8 msg;
-  
+
   if (!packet->length)
     {
       werror("connection.c: Recieved empty packet!\n");
@@ -27,8 +27,11 @@ static int handle_connection(struct abstract_write **w,
 
   msg = packet->data[0];
 
+  debug("handle_connection: Recieved packet of type %d\n", msg);
+  
   if (closure->ignore_one_packet)
     {
+      debug("handle_connection: Ignoring packet %d\n", msg);
       closure->ignore_one_packet = 0;
       lsh_string_free(packet);
       return WRITE_OK;
@@ -67,6 +70,9 @@ static int do_unimplemented(struct packet_handler *closure,
 		     ssh_format("%c%i",
 				SSH_MSG_UNIMPLEMENTED,
 				packet->sequence_number));
+  verbose("Recieved packet of unimplemented type %d.\n",
+	  packet->data[0]);
+  
   lsh_string_free(packet);
   return res;
 }

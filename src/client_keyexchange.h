@@ -33,10 +33,11 @@
  * algorithm and some method to determine the authenticity of the key.
  * Returns NULL If the key is invalid or not trusted. */
 
+/* FIXME: This function needs the hostname we are connecting to. */
 struct lookup_verifier
 {
   struct verifier * (*lookup)(struct lookup_verifier *closure,
-			      struct lsh_string *);
+			      struct lsh_string *key);
 };
 
 #define LOOKUP_VERIFIER(l, key) ((l)->lookup((l), (key)))
@@ -57,5 +58,9 @@ struct dh_client
   struct install_keys *install;
   struct packet_handler *saved_kexinit_handler;
 };
+
+struct keyexchange_algorithm *
+make_dh_client(struct diffie_hellman_method *dh,
+	       struct lookup_verifier *verifier);
 
 #endif /* LSH_CLIENT_KEYEXCHANGE_H_INCLUDED */

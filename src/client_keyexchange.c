@@ -32,14 +32,16 @@
 struct install_keys *make_client_install_keys(void **algorithms);
 
 static int do_handle_dh_reply(struct packet_handler *c,
-			       struct ssh_connection *connection,
-			       struct lsh_string *packet)
+			      struct ssh_connection *connection,
+			      struct lsh_string *packet)
 {
   struct dh_client *closure = (struct dh_client *) c;
   struct verifier *v;
   struct hash_instance *hash;
   struct lsh_string *s;
   int res;
+
+  verbose("handle_dh_reply()\n");
   
   if (!dh_process_server_msg(&closure->dh, packet))
     {
@@ -50,9 +52,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
   v = LOOKUP_VERIFIER(closure->verifier, closure->dh.server_key);
 
   if (!v)
-    /* FIXME: Use a more appropriate error code. Should probably have
-     * a separate file for sending and recieving various types of
-     * disconnects. */
+    /* FIXME: Use a more appropriate error code? */
     {
       disconnect_kex_failed(connection, "Bad server host key\r\n");
       return WRITE_CLOSED;
@@ -102,6 +102,8 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   struct dh_client_exchange *closure = (struct dh_client_exchange *) c;
   struct dh_client *dh = xalloc(sizeof(struct dh_client));
 
+  int res;
+  
   /* FIXME: Use this value to choose a verifier function */
   if (hostkey_algorithm_atom != ATOM_SSH_DSS)
     fatal("Internal error\n");
@@ -115,7 +117,10 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   dh->install = make_client_install_keys(algorithms);
   
   /* Send client's message */
-  A_WRITE(connection->write, dh_make_client_msg(&dh->dh));
+  res = A_WRITE(connection->write, dh_make_client_msg(&dh->dh));
+
+  if (res != WRITE_OK)
+    return res;
   
   /* Install handler */
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = &dh->super;
@@ -153,8 +158,8 @@ struct client_install_keys
 };
 
 static int do_install(struct install_keys *c,
-	       struct ssh_connection *connection,
-	       struct hash_instance *secret)
+		      struct ssh_connection *connection,
+		      struct hash_instance *secret)
 {
   /* FIXME: For DES, instantiating a crypto may fail, if the key
    * happens to be weak. */
