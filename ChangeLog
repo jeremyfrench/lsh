@@ -1,3 +1,11 @@
+2004-02-29  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshg.c (main_options): Deleted short options -I and -D. The
+	corresponding long options --send-debug and --send-ignore remains.
+
+	* src/socks.c (do_read_socks): Fixed bugs in parsing of client's
+	first message.
+
 2004-02-27  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client.c (client_argp_parser): New command line option -D,
