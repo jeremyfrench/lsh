@@ -79,7 +79,7 @@ do_forward_password_userauth(struct proxy_userauth *ignored UNUSED,
       parse_eod(args))
     {
       /* FIXME: Should we really pass the last argument free=1 ? */
-      C_WRITE(connection->chain, format_userauth_password(username, service, password, 1));
+      connection_send(connection->chain, format_userauth_password(username, service, password, 1));
     }
 }
 
@@ -113,7 +113,7 @@ do_forward_success(struct packet_handler *c,
     {
       struct lsh_string *name = self->name;
       self->name = NULL;
-      C_WRITE(connection->chain, lsh_string_dup(packet));
+      connection_send(connection->chain, lsh_string_dup(packet));
       COMMAND_RETURN(self->c, make_proxy_user(name));
     }
   else

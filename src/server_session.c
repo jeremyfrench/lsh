@@ -278,10 +278,10 @@ do_exit_shell(struct exit_callback *c, int signaled,
 	      signaled ? ATOM_EXIT_SIGNAL : ATOM_EXIT_STATUS,
 	      channel->channel_number);
       
-      C_WRITE(channel->connection,
-	      (signaled
-	       ? format_exit_signal(channel, core, value)
-	       : format_exit(channel, value)) );
+      connection_send(channel->connection,
+		      (signaled
+		       ? format_exit_signal(channel, core, value)
+		       : format_exit(channel, value)) );
 
       /* We want to close the channel as soon as all stdout and stderr
        * data has been sent. In particular, we don't wait for EOF from

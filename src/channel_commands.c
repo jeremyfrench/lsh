@@ -79,7 +79,7 @@ do_channel_open_command(struct command *s,
       channel->e = e;
       register_channel(index, channel, 0);
 
-      C_WRITE(connection, request);
+      connection_send(connection, request);
     }
 }
 
@@ -99,7 +99,7 @@ do_channel_request_command(struct command *s,
     object_queue_add_tail(&channel->pending_requests,
 			  &make_command_context(c, e)->super);
   
-  C_WRITE(channel->connection, request);
+  connection_send(channel->connection, request);
 }
 
 void
@@ -118,7 +118,7 @@ do_channel_global_command(struct command *s,
     object_queue_add_tail(&connection->table->pending_global_requests,
 			  &make_command_context(c, e)->super);
 
-  C_WRITE(connection, request);
+  connection_send(connection, request);
 }
 
 void

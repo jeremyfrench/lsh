@@ -145,8 +145,8 @@ do_request_service(struct command *s,
   connection->dispatch[SSH_MSG_SERVICE_ACCEPT]
     = make_accept_service_handler(self->service, c);
   
-  C_WRITE(connection,
-	  format_service_request(self->service));
+  connection_send(connection,
+		  format_service_request(self->service));
 }
 
 struct command *

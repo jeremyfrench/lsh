@@ -460,8 +460,8 @@ adjust_rec_window(struct flow_controlled *f, uint32_t written)
    * may live longer than the actual channel. */
   if (! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE
 			   | CHANNEL_SENT_CLOSE)))
-    C_WRITE(channel->connection,
-	    prepare_window_adjust(channel, written));
+    connection_send(channel->connection,
+		    prepare_window_adjust(channel, written));
 }
 
 void
@@ -469,9 +469,9 @@ channel_start_receive(struct ssh_channel *channel,
 		      uint32_t initial_window_size)
 {
   if (channel->rec_window_size < initial_window_size)
-    C_WRITE(channel->connection,
-	    prepare_window_adjust
-	    (channel, initial_window_size - channel->rec_window_size));
+    connection_send(channel->connection,
+		    prepare_window_adjust
+		    (channel, initial_window_size - channel->rec_window_size));
 }
 
 /* Channel related messages */
@@ -516,10 +516,10 @@ send_global_request_responses(struct ssh_connection *connection,
  
       object_queue_remove_head(q);
 
-      C_WRITE(connection,
-	      (n->status
-	       ? format_global_success()
-	       : format_global_failure()));
+      connection_send(connection,
+		      (n->status
+		       ? format_global_success()
+		       : format_global_failure()));
     }
 }
 
@@ -625,7 +625,7 @@ DEFINE_PACKET_HANDLER(static, global_request_handler, connection, packet)
 	}
       if (!req)
 	{
-	  C_WRITE(connection, format_global_failure());
+	  connection_send(connection, format_global_failure());
 	  return;
 	}
       else
@@ -735,10 +735,10 @@ send_channel_request_responses(struct ssh_channel *channel,
 
       object_queue_remove_head(q);
 
-      C_WRITE(channel->connection,
-	      (n->status
-	       ? format_channel_success(channel->channel_number)
-	       : format_channel_failure(channel->channel_number)));
+      connection_send(channel->connection,
+		      (n->status
+		       ? format_channel_success(channel->channel_number)
+		       : format_channel_failure(channel->channel_number)));
     }
 }
 
@@ -901,8 +901,8 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
 	  else
 	    {
 	      if (info.want_reply)
-		C_WRITE(connection,
-			format_channel_failure(channel->channel_number));
+		connection_send(connection,
+				format_channel_failure(channel->channel_number));
 	    }
 	}
       else
@@ -953,8 +953,9 @@ do_channel_open_continue(struct command_continuation *c,
   /* FIXME: Doesn't support sending extra arguments with the
    * confirmation message. */
 
-  C_WRITE(self->connection,
-	  format_open_confirmation(channel, self->local_channel_number, ""));
+  connection_send(self->connection,
+		  format_open_confirmation(channel,
+					   self->local_channel_number, ""));
 }
 
 static struct command_continuation *
@@ -1004,9 +1005,9 @@ do_exc_channel_open_handler(struct exception_handler *s,
 
 	dealloc_channel(table, self->local_channel_number);
 	
-        C_WRITE(self->connection,
-		format_open_failure(self->remote_channel_number,
-				    exc->error_code, e->msg, ""));
+        connection_send(self->connection,
+			format_open_failure(self->remote_channel_number,
+					    exc->error_code, e->msg, ""));
 	break;
       }
     default:
@@ -1082,10 +1083,11 @@ DEFINE_PACKET_HANDLER(static, channel_open_handler,
 	{
 	  /* We are waiting for channels to close. Don't open any new ones. */
 
-	  C_WRITE(connection,
-		  format_open_failure(info.remote_channel_number,
-				      SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
-				      "Waiting for channels to close.", ""));
+	  connection_send(connection,
+			  format_open_failure
+			    (info.remote_channel_number,
+			     SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
+			     "Waiting for channels to close.", ""));
 	}
       else
 	{
@@ -1102,10 +1104,11 @@ DEFINE_PACKET_HANDLER(static, channel_open_handler,
 	  
 	  if (!open)
 	    {
-	      C_WRITE(connection,
-		      format_open_failure(info.remote_channel_number,
-					  SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
-					  "Unknown channel type", ""));
+	      connection_send(connection,
+			      format_open_failure
+			        (info.remote_channel_number,
+				 SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
+				 "Unknown channel type", ""));
 	    }
 	  else
 	    {
@@ -1113,10 +1116,11 @@ DEFINE_PACKET_HANDLER(static, channel_open_handler,
 
 	      if (local_number < 0)
 		{
-		  C_WRITE(connection,
-			  format_open_failure(info.remote_channel_number,
-					      SSH_OPEN_RESOURCE_SHORTAGE,
-					      "Channel limit exceeded.", ""));
+		  connection_send(connection,
+				  format_open_failure
+				    (info.remote_channel_number,
+				     SSH_OPEN_RESOURCE_SHORTAGE,
+				     "Channel limit exceeded.", ""));
 		  return;
 		}
 	      
@@ -1736,7 +1740,7 @@ channel_close(struct ssh_channel *channel)
 
       channel->flags |= CHANNEL_SENT_CLOSE;
       
-      C_WRITE(channel->connection, format_channel_close(channel) );
+      connection_send(channel->connection, format_channel_close(channel));
 
       if (channel->flags & CHANNEL_RECEIVED_CLOSE)
 	EXCEPTION_RAISE(channel->e, &finish_exception);
@@ -1760,7 +1764,7 @@ channel_eof(struct ssh_channel *channel)
       verbose("Sending EOF on channel %i\n", channel->channel_number);
 
       channel->flags |= CHANNEL_SENT_EOF;
-      C_WRITE(channel->connection, format_channel_eof(channel) );
+      connection_send(channel->connection, format_channel_eof(channel) );
 
       if ( (channel->flags & CHANNEL_CLOSE_AT_EOF)
 	   && (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_NO_WAIT_FOR_EOF)) )
@@ -1877,8 +1881,8 @@ do_channel_write(struct abstract_write *w,
 	channel_eof(closure->channel);
     }
   else
-    C_WRITE(closure->channel->connection,
-	    channel_transmit_data(closure->channel, packet) );
+    connection_send(closure->channel->connection,
+		    channel_transmit_data(closure->channel, packet));
 }
 
 static void
@@ -1895,10 +1899,10 @@ do_channel_write_extended(struct abstract_write *w,
 	channel_eof(closure->super.channel);
     }
   else
-    C_WRITE(closure->super.channel->connection,
-	    channel_transmit_extended(closure->super.channel,
-				      closure->type,
-				      packet));
+    connection_send(closure->super.channel->connection,
+		    channel_transmit_extended(closure->super.channel,
+					      closure->type,
+					      packet));
 }
 
 struct abstract_write *

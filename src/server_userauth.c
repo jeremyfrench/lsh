@@ -121,7 +121,7 @@ do_userauth_continuation(struct command_continuation *s,
   /* Unlock connection */
   connection_unlock(self->connection);
   
-  C_WRITE(self->connection, format_userauth_success());
+  connection_send(self->connection, format_userauth_success());
   
   /* Ignore any further userauth messages. */
   for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
@@ -270,8 +270,8 @@ do_exc_userauth_handler(struct exception_handler *s,
 	if (self->attempts)
 	  {
 	    self->attempts--;
-	    C_WRITE(self->connection,
-		    format_userauth_failure(self->advertised_methods, 0));
+	    connection_send(self->connection,
+			    format_userauth_failure(self->advertised_methods, 0));
 	  }
 	else
 	  {
@@ -292,7 +292,7 @@ do_exc_userauth_handler(struct exception_handler *s,
 	
 	/* NOTE: We can't NULL e->reply, since the exception is supposed to be constant.
 	 * So we have to dup it, to make the gc happy. */
-	C_WRITE(self->connection, lsh_string_dup(e->reply));
+	connection_send(self->connection, lsh_string_dup(e->reply));
 
 	/* FIXME: Possibly call connection_handle_pending. */	
 	break;

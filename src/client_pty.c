@@ -111,8 +111,8 @@ do_client_winch_handler(struct window_change_callback *s,
   if (!INTERACT_WINDOW_SIZE(tty, &dims))
     return;
 
-  C_WRITE(self->channel->connection,
-	  format_window_change(self->channel, &dims));
+  connection_send(self->channel->connection,
+		  format_window_change(self->channel, &dims));
 }
 
 static struct window_change_callback *

@@ -231,10 +231,6 @@ do_##NAME(struct packet_handler *s UNUSED,		\
  * compress, encrypt, mac. */
 #define C_WRITE_NOW(c, s) A_WRITE((c)->write_packet, (s) )
 
-/* Same as C_WRITE_NOW, except that it queues packets while key
- * exchange is in progress. */
-#define C_WRITE(c, s) connection_send((c), (s))
-
 struct ssh_connection *
 make_ssh_connection(enum connection_flag flags,
 		    struct address_info *peer,

@@ -198,7 +198,7 @@ DEFINE_PACKET_HANDLER(, connection_unimplemented_handler, connection, packet)
   werror("Received packet of unimplemented type %i.\n",
 	 packet->data[0]);
 
-  C_WRITE(connection,
+  connection_send(connection,
 	  ssh_format("%c%i",
 		     SSH_MSG_UNIMPLEMENTED,
 		     packet->sequence_number));
@@ -209,7 +209,7 @@ DEFINE_PACKET_HANDLER(, connection_forward_handler, connection, packet)
   assert(connection->chain);
   /* FIXME: Packets of certain types (IGNORE, DEBUG, DISCONNECT)
    * could be sent with C_WRITE_NOW. */
-  C_WRITE(connection->chain, packet);
+  connection_send(connection->chain, packet);
 }
 
 DEFINE_PACKET_HANDLER(, connection_disconnect_handler, connection, packet)
@@ -475,8 +475,7 @@ make_connection_close_handler(struct ssh_connection *c)
   return &closure->super;
 }
 
-
-/* Sending ordinary (non keyexchange) packets */
+/* Sends one ordinary (non keyexchange) packet */
 void
 connection_send(struct ssh_connection *self,
 		struct lsh_string *message)

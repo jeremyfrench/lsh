@@ -108,10 +108,10 @@ do_service_request(struct packet_handler *c,
 	      /* Start service */
 #if DATAFELLOWS_WORKAROUNDS
 	      if (connection->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE)
-		C_WRITE(connection, format_service_accept_kludge());
+		connection_send(connection, format_service_accept_kludge());
 	      else
 #endif /* DATAFELLOWS_WORKAROUNDS */
-		C_WRITE(connection, format_service_accept(name));
+		connection_send(connection, format_service_accept(name));
 	      
 	      COMMAND_CALL(service, connection,
 			   closure->c, closure->e);

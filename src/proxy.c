@@ -309,7 +309,7 @@ do_proxy_accept_service(struct packet_handler *c,
       new_packet = packet;
 #endif
 
-      C_WRITE(connection->chain, new_packet);
+      connection_send(connection->chain, new_packet);
       COMMAND_CALL(closure->service,
 		   connection->chain,
 		   closure->c, closure->e);
@@ -373,7 +373,7 @@ do_proxy_service_request(struct packet_handler *c,
 	      connection->chain->dispatch[SSH_MSG_SERVICE_ACCEPT]
 		= make_proxy_accept_service_handler(name, service, self->c, self->e);
 
-	      C_WRITE(connection->chain, packet);
+	      connection_send(connection->chain, packet);
 
 	      return;
 	    }

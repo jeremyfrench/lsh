@@ -565,9 +565,9 @@ do_none_login(struct client_userauth_method *s UNUSED,
 {
   verbose("Requesting authentication using the `none' method.\n");
   
-  C_WRITE(connection,
-          format_userauth_none(userauth->username,
-                               userauth->service_name));
+  connection_send(connection,
+		  format_userauth_none(userauth->username,
+				       userauth->service_name));
   
   return make_client_none_state(e);
 }
@@ -624,11 +624,11 @@ send_password(struct client_password_state *state)
 
       verbose("Requesting authentication using the `password' method.\n");
       
-      C_WRITE(state->connection,
-	      format_userauth_password(state->userauth->username,
-				       state->userauth->service_name,
-				       local_to_utf8(passwd, 1),
-				       1));
+      connection_send(state->connection,
+		      format_userauth_password(state->userauth->username,
+					       state->userauth->service_name,
+					       local_to_utf8(passwd, 1),
+					       1));
     }
   else
     {
@@ -893,7 +893,7 @@ do_userauth_pk_ok(struct packet_handler *s,
 			       request, 
 			       SIGN(key->private, key->type, signed_data->length, signed_data->data));
 	  lsh_string_free(signed_data);
-	  C_WRITE(connection, request);
+	  connection_send(connection, request);
 	  self->state->pending++;
 	}
       else
@@ -943,10 +943,11 @@ do_publickey_login(struct client_userauth_method *s,
 	
 	/* NOTE: The PEER_USERAUTH_REQUEST_KLUDGE only applies to the
 	 * signed data. */
-	C_WRITE(connection, 
-		format_userauth_publickey_query(userauth->username,
-						userauth->service_name,
-						key->type, key->public));
+	connection_send(connection, 
+			format_userauth_publickey_query
+			  (userauth->username,
+			   userauth->service_name,
+			   key->type, key->public));
       }
     connection->dispatch[SSH_MSG_USERAUTH_PK_OK] = make_pk_ok_handler(state);
     return &state->super;

@@ -68,13 +68,13 @@ do_receive(struct ssh_channel *c,
   switch(type)
     {
     case CHANNEL_DATA:
-      C_WRITE(channel->chain->super.connection,
-	      channel_transmit_data(&channel->chain->super, data));
+      connection_send(channel->chain->super.connection,
+		      channel_transmit_data(&channel->chain->super, data));
       break;
     case CHANNEL_STDERR_DATA:
-      C_WRITE(channel->chain->super.connection,
-	      channel_transmit_extended(&channel->chain->super,
-					CHANNEL_STDERR_DATA, data));
+      connection_send(channel->chain->super.connection,
+		      channel_transmit_extended(&channel->chain->super,
+						CHANNEL_STDERR_DATA, data));
       break;
     default:
       fatal("Internal error!\n");
