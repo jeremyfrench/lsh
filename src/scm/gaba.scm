@@ -311,7 +311,21 @@
     ((struct) (c-call* (c-append (cadr type) "_free") (c-address expr)))
     ((string) (c-call* "lsh_string_free" expr))
     ((bignum) (c-call* "mpz_clear" expr))
-    ((space) (c-call* "lsh_space_free" expr))
+    ((space)
+     (let* ((free-space (c-call* "lsh_space_free" expr))
+	    (counter (make-var))
+	    (free-k (and (not (null? (cddr type)))
+			 ;; The optional argument should be the name
+			 ;; of an instance variable holding the length
+			 ;; of the area pointed to.
+			 (make-freer (cadr type)
+				     (c-append "(" expr ")[" counter "]")))))
+       (if free-k
+	   (c-block* (c-declare `( ,counter simple unsigned))
+			   (c-for counter (c-append "i->" (caddr type))
+				  free-k)
+			   free-space)
+	   free-space)))
     ((special) (c-call* (cadddr type) expr))
     ((indirect-special)
      (let ((free (cadddr type)))
