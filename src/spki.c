@@ -60,28 +60,42 @@ EXCEPTION_RAISE((e), make_spki_exception(EXC_SPKI_TYPE, (msg), (expr)))
 struct sexp *keyblob2spki(struct lsh_string *keyblob)
 {
   struct simple_buffer buffer;
-  struct dsa_public dsa;
   UINT32 kbtype;
-
+  struct sexp *e = NULL;
+  
   simple_buffer_init(&buffer, keyblob->length, keyblob->data);
-  if (parse_atom(&buffer, &kbtype) &&
-      (kbtype == ATOM_SSH_DSS) &&
-      parse_dsa_public(&buffer, &dsa))
-    {
-      return sexp_l(2, SA(PUBLIC_KEY),
-		    sexp_l(5, SA(DSA),
-			   sexp_l(2, SA(P), sexp_un(dsa.p), -1),
-			   sexp_l(2, SA(Q), sexp_un(dsa.q), -1),
-			   sexp_l(2, SA(G), sexp_un(dsa.g), -1),
-			   sexp_l(2, SA(Y), sexp_un(dsa.y), -1),
-			   -1),
-		    -1);
-    }
+
+  if (parse_atom(&buffer, &kbtype))
+    switch(kbtype)
+      {
+      case ATOM_SSH_DSS:
+	{
+	  struct dsa_public dsa;
+	  init_dsa_public(&dsa);
+      
+	  if (parse_dsa_public(&buffer, &dsa))
+	    e = sexp_l(2, SA(PUBLIC_KEY),
+		       sexp_l(5, SA(DSA),
+			      /* FIXME: Should we use unsigned format? */
+			      sexp_l(2, SA(P), sexp_un(dsa.p), -1),
+			      sexp_l(2, SA(Q), sexp_un(dsa.q), -1),
+			      sexp_l(2, SA(G), sexp_un(dsa.g), -1),
+			      sexp_l(2, SA(Y), sexp_un(dsa.y), -1),
+			      -1),
+		       -1);
+	  else
+	    werror("Invalid dsa keyblob.");
+      
+	  dsa_public_free(&dsa);
+	  break;
+	}
+      default:
+	werror("Unknown keyblob format, only ssh-dss is supported\n");
+      }
   else
-    {
-      werror("Unknown keyblob format, only ssh-dss is supported\n");
-      return NULL;
-    }
+    werror("Invalid keyblob.\n");
+
+  return e;
 }
 
 /* Returns 0 or an atom */
