@@ -23,11 +23,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <assert.h>
+#include <string.h>
+
 #include <unistd.h>
 #include <poll.h>
 #include <errno.h>
-#include <string.h>
-
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -47,7 +48,7 @@ struct fd_read
   int fd;
 };
 
-static int do_read(struct abstract_read **r, UINT8 *buffer, UINT32 length)
+static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 {
   struct fd_read *closure
     = (struct fd_read *) *r;
@@ -67,7 +68,10 @@ static int do_read(struct abstract_read **r, UINT8 *buffer, UINT32 length)
 	case EWOULDBLOCK:  /* aka EAGAIN */
 	  return 0;
 	default:
-	  werror("io.c: do_read: read() failed, %s\n", strerror(errno));
+	  werror("io.c: do_read: read() failed (errno %d), %s\n",
+		 errno, strerror(errno));
+	  debug("  fd = %d, buffer = %p, length = %ud\n",
+		closure->fd, buffer, length);
 	  return A_FAIL;
 	}
     }
