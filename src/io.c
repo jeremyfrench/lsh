@@ -91,6 +91,26 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 /* UNLINK_FD must be followed by a continue, to avoid updating _fd */
 #define UNLINK_FD (*_fd = (*_fd)->next)
 
+static void close_fd(struct io_fd *fd)
+{
+  /* FIXME: The value returned from the close callback could be used
+   * to choose an exit code. */
+  if (fd->close_callback && fd->close_reason)
+    (void) CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
+  
+  close(fd->fd);
+	      
+  /* There can be other objects around that may still
+   * attempt to write to the buffer. So let gc handle it
+   * instead of freeing it explicitly */
+#if 0
+  lsh_free(fd->buffer);
+#endif
+  /* Handlers are not shared, so it should be ok to free them. */
+  lsh_free(fd->handler);
+  lsh_free(fd);
+}
+
 static int io_iter(struct io_backend *b)
 {
   struct pollfd *fds;
@@ -234,24 +254,104 @@ static int io_iter(struct io_backend *b)
 	      /* The handler function may install a new handler */
 	      res = READ_HANDLER(fd->handler,
 				 &r.super);
-	      switch(LSH_GET_ACTION(res))
+	      /* NOTE: These flags are not mutually exclusive. All
+	       * combination must be handled correctly. */
+
+	      if ( (res & (LSH_CLOSE | LSH_DIE)) == (LSH_CLOSE | LSH_DIE) )
 		{
-		case LSH_GOON:
-		  if (LSH_FAILUREP(res))
-		    fatal("Internal error\n");
-		  break;
-		case LSH_CLOSE:
+		  debug("return code %x, both LSH_CLOSE and LSH_DIE set.\n",
+			res);
+		  /* LSH_DIE takes precedence */
+		  res &= ~LSH_CLOSE;
+
+		  /* FIXME: Perhaps we should always set LSH_FAIL in
+		   * this case? */
+		}
+	      
+	      if (res & LSH_CLOSE)
+		{
 		  if (fd->buffer)
 		    write_buffer_close(fd->buffer);
 		  fd->close_reason
 		    = LSH_FAILUREP(res) ? CLOSE_PROTOCOL_FAILURE : CLOSE_EOF;
-		  break;
-		case LSH_DIE:
-		  fd->close_reason = CLOSE_PROTOCOL_FAILURE;
+		}
+	      if (res & LSH_DIE)
+		{
+		  if (fd->buffer)
+		    write_buffer_close(fd->buffer);
+		  
+		  fd->close_reason = LSH_FAILUREP(res)
+		    ? CLOSE_PROTOCOL_FAILURE : 0;
 		  fd->close_now = 1;
-		  break;
-		default:
-		  fatal("Internal error!\n");
+		}
+	      if (res & LSH_KILL_OTHERS)
+		{
+		  /* Close all other files. We have probably fork()ed. */
+		  {
+		    struct io_fd *p;
+		    struct io_fd *next;
+		    
+		    for (p = b->io; (p = next) ; )
+		      {
+			next = p->next;
+			
+			if (p->fd != fd->fd)
+			  {
+			    p->close_reason = 0;
+			    
+			    /* In this case, it should be safe to
+			     * deallocate the buffer immediately */
+			    lsh_free(p->buffer);
+			    close_fd(p);
+			  }
+		      }
+		    if (fd->close_now)
+		      {
+			/* Some error occured. So close this fd too! */
+			close_fd(fd);
+			b->io = NULL;
+			b->nio = 0;
+		      }
+		    else
+		      { /* Keep this single descriptor open */
+			fd->next = NULL;
+			b->io = fd;
+			b->nio = 1;
+		      }
+		  }{
+		    struct listen_fd *p;
+		    struct listen_fd *next;
+		    for (p = b->listen; (p = next); )
+		      {
+			next = p->next;
+			close(p->fd);
+			lsh_free(p);
+		      }
+		    b->listen = NULL;
+		    b->nlisten = 0;
+		  }{
+		    struct connect_fd *p;
+		    struct connect_fd *next;
+		    for (p = b->connect; (p = next); )
+		      {
+			next = p->next;
+			close(p->fd);
+			lsh_free(p);
+		      }
+		    b->connect = NULL;
+		    b->nconnect = 0;
+		  }{
+		    struct callout *p;
+		    struct callout *next;
+		    for (p = io->callouts; (p = next); )
+		      {
+			next = p->next;
+			lsh_free(p);
+		      }
+		    b->callouts = NULL;
+		  }
+		  /* Skip the rest od this iteration */
+		  return 1;
 		}
 	    }
 	  if (fd->close_now)
@@ -261,17 +361,11 @@ static int io_iter(struct io_backend *b)
 	       * After a write error, read state must be freed,
 	       * and vice versa. */
 
-	      /* FIXME: The value returned from the close callback could be used
-	       * to choose an exit code. */
-	      if (fd->close_callback)
-		CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
+	      close_fd(fd);
 
 	      UNLINK_FD;
+
 	      b->nio--;
-	      if (fd->handler)
-		lsh_free(fd->handler);
-	      lsh_free(fd->buffer);
-	      lsh_free(fd);
 	      continue;
 	    }
 	}
@@ -294,7 +388,7 @@ static int io_iter(struct io_backend *b)
 		  continue;
 		}
 	      res = FD_CALLBACK(fd->callback, conn);
-	      if (LSH_PROBLEMP(res))
+	      if (LSH_ACTIONP(res))
 		{
 		  werror("Strange: Accepted a connection, "
 			 "but failed before writing anything.\n");
@@ -313,7 +407,7 @@ static int io_iter(struct io_backend *b)
 	    {
 	      int res = FD_CALLBACK(fd->callback, fd->fd);
 
-	      if (LSH_PROBLEMP(res))
+	      if (LSH_ACTIONP(res))
 		werror("Strange: Connected, "
 		       "but failed before writing anything.\n");
 	      b->nconnect--;
