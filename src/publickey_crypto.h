@@ -193,6 +193,8 @@ make_ssh_ring_srp_1(void);
        (random object randomness)))
 */
 
+/* State common for both DH keyechange and SRP, for both client and
+ * server. */
 /* GABA:
    (struct
      (name dh_instance)
@@ -200,15 +202,16 @@ make_ssh_ring_srp_1(void);
        (method object dh_method)
        (e bignum)       ; Client value
        (f bignum)       ; Server value
-       ;; FIXME: Move these somewhere else?
-       (server_key string)
-       (signature string)
+
        (secret bignum)  ; This side's secret exponent
-       (K bignum)
+
+       ; Currently, K doesn't include any length header.
+       (K string)
        (hash object hash_instance)
        (exchange_hash string)))
 */
 
+     
 /* Creates client message */
 struct lsh_string *
 dh_make_client_msg(struct dh_instance *self);
@@ -230,11 +233,13 @@ dh_make_server_secret(struct dh_instance *self);
 /* Creates server message */
 struct lsh_string *
 dh_make_server_msg(struct dh_instance *self,
+		   struct lsh_string *server_key,
 		   struct signer *s);
 
-/* Decodes server message, but does not verify its signature */
-int
+/* Decodes server message, but does not verify its signature. */
+struct lsh_string *
 dh_process_server_msg(struct dh_instance *self,
+		      struct lsh_string **signature,
 		      struct lsh_string *packet);
 
 /* Verifies server's signature */
