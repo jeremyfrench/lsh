@@ -114,6 +114,8 @@ static void *xalloc(size_t size)
   return res;
 }
 
+static unsigned number_of_strings = 0;
+
 struct lsh_string *lsh_string_alloc(UINT32 length)
 {
   struct lsh_string *s
@@ -123,6 +125,8 @@ struct lsh_string *lsh_string_alloc(UINT32 length)
 #endif
   s->length = length;
   s->sequence_number = 0;
+  number_of_strings++;
+  
   return s;
 }
 
@@ -130,6 +134,10 @@ void lsh_string_free(struct lsh_string *s)
 {
   if (!s)
     return;
+
+  assert(number_of_strings);
+
+  number_of_strings--;
 
 #if 0
   debug("lsh_string_free: freeing %xi,\n", (UINT32) s);
