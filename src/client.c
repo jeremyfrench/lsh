@@ -397,12 +397,14 @@ do_client_io(struct command *s UNUSED,
   session->out->super.e
     = make_channel_io_exception_handler(channel,
 					"lsh: I/O error on stdout",
-					session->out->super.e);
+					session->out->super.e,
+					HANDLER_CONTEXT);
 
   session->err->super.e
     = make_channel_io_exception_handler(channel,
 					"lsh: I/O error on stderr",
-					session->err->super.e);
+					session->err->super.e,
+					HANDLER_CONTEXT);
 
   /* Set up the fd we read from. */
   channel->send = do_send;
