@@ -224,10 +224,42 @@ struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i)
     ? table->channels[i] : NULL;
 }
 
+static int adjust_rec_window(struct ssh_channel *channel)
+{
+  if (channel->rec_window_size < channel->max_window / 2)
+    {
+      int increment = channel->max_window - channel->rec_window_size;
+      channel->rec_window_size = channel->max_window;
+      
+      return A_WRITE(channel->write,
+		     prepare_window_adjust(channel, increment));
+    }
+  return 0;
+}
+
 static int channel_process_status(struct channel_table *table,
 				  int channel,
 				  int status)
 {
+  struct ssh_channel *c = table->channels[channel];
+  
+  while (!LSH_CLOSEDP(status))
+    {
+      if (status & LSH_CHANNEL_READY_SEND)
+	{
+	  status &= ~ LSH_CHANNEL_READY_SEND;
+	  if (c->send_window_size)
+	    status |= CHANNEL_SEND(c);
+	}
+      else if (status & LSH_CHANNEL_READY_REC)
+	{
+	  status &= ~ LSH_CHANNEL_READY_REC;
+	  status |= adjust_rec_window(c);
+	}
+      else
+	break;
+    }
+	
   if (status & LSH_CHANNEL_PENDING_CLOSE)
     table->pending_close = 1;
   
@@ -236,8 +268,8 @@ static int channel_process_status(struct channel_table *table,
       /* Clear this bit */
       status &= ~LSH_CHANNEL_FINISHED;
 
-      if (table->channels[channel]->close)
-	CHANNEL_CLOSE(table->channels[channel]);
+      if (c->close)
+	CHANNEL_CLOSE(c);
       
       dealloc_channel(table, channel);
 
@@ -509,8 +541,18 @@ static int do_channel_data(struct packet_handler *c,
 		  werror("Channel data overflow. Extra data ignored.\n"); 
 		  data->length = channel->rec_window_size;
 		}
+
+	      if (!data->length)
+		/* Ignore data packet */
+		return 0;
 	      channel->rec_window_size -= data->length;
 
+	      /* FIXME: Unconditionally adjusting the recieve window
+	       * breaks flow control. We better let the channel's
+	       * recieve method decide whether or not to recieve more
+	       * data. */
+	      res = adjust_rec_window(channel);
+	      
 	      if (channel->rec_window_size < channel->max_window / 2)
 		{
 		  res = A_WRITE(channel->write, prepare_window_adjust
@@ -656,7 +698,9 @@ static int do_channel_eof(struct packet_handler *c,
 
 	  if (channel->eof)
 	    res = CHANNEL_EOF(channel);
-
+	  else
+	    /* FIXME: What is a reasonable default behaviour?
+	     * Closing the channel may be the right thing to do. */
 	  if (!LSH_CLOSEDP(res)
 	      && ! (channel->flags & CHANNEL_SENT_CLOSE)
 	      && (channel->flags & CHANNEL_SENT_EOF))
@@ -704,6 +748,8 @@ static int do_channel_close(struct packet_handler *c,
       
       if (channel)
 	{
+	  int res = 0;
+	  
 	  if (channel->flags & CHANNEL_RECIEVED_CLOSE)
 	    {
 	      werror("Recieving multiple CLOSE on channel.\n");
@@ -719,13 +765,14 @@ static int do_channel_close(struct packet_handler *c,
 
 	  if (! (channel->flags & (CHANNEL_RECIEVED_EOF))
 	      && channel->eof)
-	    CHANNEL_EOF(channel);
+	    res = CHANNEL_EOF(channel);
 	  
 	  return channel_process_status(
 	    closure->table, channel_number,
-	    ( (channel->flags & (CHANNEL_SENT_CLOSE))
-	      ? LSH_OK | LSH_CHANNEL_FINISHED
-	      : channel_close(channel)));
+	    ( ( (channel->flags & (CHANNEL_SENT_CLOSE))
+		? LSH_OK | LSH_CHANNEL_FINISHED
+		: channel_close(channel))
+	      | res));
 	}
       werror("CLOSE on non-existant channel %d\n",
 	     channel_number);
@@ -942,7 +989,7 @@ static int init_connection_service(struct ssh_service *s,
 
   extended->super.handler = do_channel_extended_data;
   extended->table = table;
-  connection->dispatch[SSH_MSG_CHANNEL_WINDOW_ADJUST] = &extended->super;
+  connection->dispatch[SSH_MSG_CHANNEL_EXTENDED_DATA] = &extended->super;
 
   eof->super.handler = do_channel_eof;
   eof->table = table;
@@ -1071,8 +1118,8 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
   
   return ssh_format("%c%i%i%fS",
 		    SSH_MSG_CHANNEL_EXTENDED_DATA,
-		    type,
 		    channel->channel_number,
+		    type,
 		    data);
 }
 
