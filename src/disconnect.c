@@ -67,7 +67,7 @@ do_disconnect(struct packet_handler *closure UNUSED,
       && parse_eod(&buffer))
     {
       /* FIXME: Display a better message */
-      werror("Disconnect for reason %i\n%ups\n", reason, length, msg);
+      werror("Disconnect for reason %i: %ups\n", reason, length, msg);
     }
   else
     werror("Invalid disconnect message!\n");
