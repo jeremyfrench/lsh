@@ -1,3 +1,14 @@
+2003-02-23  Niels Moller  <nisse@carduelis>
+
+	* src/scm/gaba.scm (main): Simplified. Explicitly use echo,
+	otherwise scsh-0.6 seems to return a non-zero exit code.
+
+	* acinclude.m4 (LSH_GCC_ATTRIBUTES): New macro, copied from lsh's
+	configure.ac. 
+	* configure.ac: Use it.
+
+	* .bootstrap: Link acinclude.m4 to argp and sftp subdirectories.
+
 2003-02-19  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/nettle/acinclude.m4, src/spki/acinclude.m4: Deleted files,

@@ -1,3 +1,24 @@
+2003-02-23  Niels Moller  <nisse@carduelis>
+
+	* dc.c (lsftp_dc_r_isdir): Adapted to new sftp_attrib argument to
+	lsftp_do_stat. 
+	* commands.c (get_file_or_folder, com_chown, com_chgrp): Likewise.
+
+	* dc.h: Deleted the posixperms field, and replaced it with two
+	fields, has_permissions and permissions. That way we don't need
+	to compare (unsigned) mode_t:s to the special constant -1.
+
+	* sftp_bind.h (struct lsftp_callback): Deleted stat pointer.
+
+	* sftp_bind.c (lsftp_do_stat): Use a struct sftp_attrib for
+	reporting the result, not a struct stat.
+	(lsftp_handle_stat): Just copy the sftp_attrib struct, don't try
+	converting it to a struct stat.
+
+	* configure.ac: Use LSH_GCC_ATTRIBUTES.
+
+	* Use uint32_t and friends instead of UINT32.
+
 2003-02-17  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Deleted initial newline in readline warning.
