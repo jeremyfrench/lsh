@@ -29,6 +29,7 @@
 #include "digits.h"
 #include "format.h"
 #include "parse_macros.h"
+#include "queue.h"
 #include "werror.h"
 #include "xalloc.h"
 

@@ -101,7 +101,7 @@ int main(int argc UNUSED, char **argv UNUSED)
   
   init_backend(backend);
 
-  write = io_write(make_io_fd(backend, STDOUT_FILENO, &handler),
+  write = io_write(make_lsh_fd(backend, STDOUT_FILENO, &handler),
 		   BLOCK_SIZE, NULL)->write_buffer;
 
   out->super.handler = do_output_sexp;
@@ -112,7 +112,7 @@ int main(int argc UNUSED, char **argv UNUSED)
   close->output = write;
   close->status = &status;
   
-  io_read(make_io_fd(backend, STDIN_FILENO, &handler),
+  io_read(make_lsh_fd(backend, STDIN_FILENO, &handler),
 	  make_buffered_read(BLOCK_SIZE,
 			     make_read_sexp(&out->super, SEXP_TRANSPORT, 1)),
 	  &close->super);

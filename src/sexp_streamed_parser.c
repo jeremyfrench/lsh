@@ -29,6 +29,7 @@
 #include "command.h"
 #include "digits.h"
 #include "format.h"
+#include "queue.h"
 #include "sexp.h"
 #include "werror.h"
 #include "xalloc.h"
