@@ -206,7 +206,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  break;
 	}
       assert(self->super.user);
-      assert(self->super.remote);
+      assert(self->super.target);
       
       if (object_queue_is_empty(&self->super.actions))
 	{
@@ -216,7 +216,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
       self->gateway = make_gateway_address(self->super.local_user,
 					   self->super.user,
-					   self->super.remote);
+					   self->super.target);
 
       if (!self->gateway)
 	{
