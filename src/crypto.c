@@ -23,16 +23,19 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "crypto.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#include "blowfish.h"
+#include "des.h"
+#include "rc4.h"
+#include "sha.h"
+
+#include <assert.h>
 #include <string.h>
 #include <sys/types.h>
 #include <time.h>
-
-#include "crypto.h"
-#include "sha.h"
-#include "rc4.h"
-#include "blowfish.h"
-#include "werror.h"
-#include "xalloc.h"
 
 #include "crypto.c.x"
 
@@ -45,7 +48,7 @@
 */
    
 static void do_crypt_rc4(struct crypto_instance *s,
-			 UINT32 length, UINT8 *src, UINT8 *dst)
+			 UINT32 length, const UINT8 *src, UINT8 *dst)
 {
   CAST(rc4_instance, self, s);
 
@@ -56,7 +59,8 @@ static void do_crypt_rc4(struct crypto_instance *s,
 }
 
 static struct crypto_instance *
-make_rc4_instance(struct crypto_algorithm *ignored UNUSED, int mode, UINT8 *key)
+make_rc4_instance(struct crypto_algorithm *ignored UNUSED, int mode,
+		  const UINT8 *key, const UINT8 *iv UNUSED)
 {
   NEW(rc4_instance, self);
 
@@ -70,9 +74,9 @@ make_rc4_instance(struct crypto_algorithm *ignored UNUSED, int mode, UINT8 *key)
 
 struct crypto_algorithm crypto_rc4_algorithm =
 { STATIC_HEADER,
-  8, 16, make_rc4_instance };
+  8, 16, 0, make_rc4_instance };
   
-  
+
 /* Blowfish */
 /* CLASS:
    (class
@@ -81,7 +85,8 @@ struct crypto_algorithm crypto_rc4_algorithm =
      (vars
        (ctx simple "BLOWFISH_context")))
 */
-   
+
+#if 0
 static int  (*bf_setkey)( void *c, const byte *key, unsigned keylen ) = NULL;
 static void (*bf_encrypt)( void *c, byte *outbuf, const byte *inbuf ) = NULL;
 static void (*bf_decrypt)( void *c, byte *outbuf, const byte *inbuf ) = NULL;
@@ -112,42 +117,150 @@ static void blowfish_crypt(BLOWFISH_context *ctx, UINT8 *dest,
 	bf_encrypt((void *) ctx, dest, src);
 }
 
-static void do_crypt_blowfish(struct crypto_instance *s,
-			UINT32 length, UINT8 *src, UINT8 *dst)
-{
-/*  struct blowfish_instance *self = (struct blowfish_instance *) s; */
+#endif
 
+static void do_blowfish_encrypt(struct crypto_instance *s,
+				UINT32 length, const UINT8 *src, UINT8 *dst)
+{
   CAST(blowfish_instance, self, s);
 
-  if (length % 8)
-    fatal("Internal error\n");
+  FOR_BLOCKS(length, src, dst, BLOWFISH_BLOCKSIZE)
+    bf_encrypt_block(&self->ctx, dst, src);
+}
 
-  blowfish_crypt(&self->ctx, dst, src, length);
+static void do_blowfish_decrypt(struct crypto_instance *s,
+				UINT32 length, const UINT8 *src, UINT8 *dst)
+{
+  CAST(blowfish_instance, self, s);
+
+  FOR_BLOCKS(length, src, dst, BLOWFISH_BLOCKSIZE)
+    bf_decrypt_block(&self->ctx, dst, src);
 }
 
 static struct crypto_instance *
-make_blowfish_instance(struct crypto_algorithm *ignored UNUSED, int mode, 
-                       UINT8 *key)
+make_blowfish_instance(struct crypto_algorithm *algorithm, int mode, 
+		       const UINT8 *key, const UINT8 *iv UNUSED)
 {
-/*  struct blowfish_instance *self; */
-
   NEW(blowfish_instance, self);
 
-  bf_init();
-
-  self->super.block_size = 8;
-  self->super.crypt = do_crypt_blowfish;
-
-  blowfish_set_key(&self->ctx, key, 16);
-
-  return &self->super;
-}
+  self->super.block_size = BLOWFISH_BLOCKSIZE;
+  self->super.crypt = ( (mode == CRYPTO_ENCRYPT)
+			? do_blowfish_encrypt
+			: do_blowfish_decrypt);
   
+  switch (bf_set_key(&self->ctx, key, algorithm->key_size))
+    {
+    case 0:
+      return &self->super;
+    default:
+      werror("Detected a weak blowfish key!\n");
+      KILL(self);
+      return NULL;
+    }
+}
+
+#if 0
 struct crypto_algorithm crypto_blowfish_algorithm =
 { STATIC_HEADER,
-  8, 16, make_blowfish_instance };
+  BLOWFISH_BLOCKSIZE, BLOWFISH_KEYSIZE, 0, make_blowfish_instance };
+#endif
 
+struct crypto_algorithm *make_blowfish_algorithm(UINT32 key_size)
+{
+  NEW(crypto_algorithm, algorithm);
 
+  assert(key_size <= BLOWFISH_MAX_KEYSIZE);
+  assert(key_size >= BLOWFISH_MIN_KEYSIZE);
+  
+  algorithm->block_size = BLOWFISH_BLOCKSIZE;
+  algorithm->key_size = key_size;
+  algorithm->iv_size = 0;
+  algorithm->make_crypt = make_blowfish_instance;
+
+  return algorithm;
+}
+
+struct crypto_algorithm *make_blowfish(void)
+{
+  return make_blowfish_algorithm(BLOWFISH_KEYSIZE);
+}
+
+/* CLASS:
+   (class
+     (name des_instance)
+     (super crypto_instance)
+     (vars
+       (ctx array (simple UINT32) DES_EXPANDED_KEYLEN)))
+*/
+
+static void do_des_encrypt(struct crypto_instance *s,
+			   UINT32 length, const UINT8 *src, UINT8 *dst)
+{
+  CAST(des_instance, self, s);
+
+  FOR_BLOCKS(length, src, dst, DES_BLOCKSIZE)
+    DesSmallFipsEncrypt(dst, self->ctx, src);
+}
+
+static void do_des_decrypt(struct crypto_instance *s,
+			 UINT32 length, const UINT8 *src, UINT8 *dst)
+{
+  CAST(des_instance, self, s);
+
+  FOR_BLOCKS(length, src, dst, DES_BLOCKSIZE)
+    DesSmallFipsDecrypt(dst, self->ctx, src);
+}
+
+static struct crypto_instance *
+make_des_instance(struct crypto_algorithm *algorithm, int mode, 
+		  const UINT8 *key, const UINT8 *iv UNUSED)
+{
+  NEW(des_instance, self);
+  UINT8 pkey[DES_KEYSIZE];
+  unsigned i;
+
+  /* Fix parity */
+  for (i=0; i<DES_KEYSIZE; i++)
+    {
+      UINT8 p = key[i];
+      p ^= (p >> 4);
+      p ^= (p >> 2);
+      p ^= (p >> 1);
+      pkey[i] = key[i] ^ (p & 1);
+    }
+
+  self->super.block_size = DES_BLOCKSIZE;
+  self->super.crypt = ( (mode == CRYPTO_ENCRYPT)
+			? do_des_encrypt
+			: do_des_decrypt);
+  
+  switch (DesMethod(self->ctx, pkey))
+    {
+    case 0:
+      return &self->super;
+    case -1:
+      fatal("Internal error! Bad parity in make_des_instance.\n");
+    case -2:
+      werror("Detected weak DES key.\n");
+      KILL(self);
+      return NULL;
+    default:
+      fatal("Internal error!\n");
+    }
+}
+
+struct crypto_algorithm crypto_des_algorithm =
+{ STATIC_HEADER,
+  DES_BLOCKSIZE, DES_KEYSIZE, 0, make_des_instance };
+
+struct crypto_algorithm *make_des3(void)
+{
+  return crypto_cascade(3,
+			&crypto_des_algorithm,
+			crypto_invert(&crypto_des_algorithm),
+			&crypto_des_algorithm,
+			-1);
+}
 
 /* SHA1 hash */
 /* CLASS:
@@ -199,111 +312,4 @@ make_sha_instance(struct hash_algorithm *ignored UNUSED)
 struct hash_algorithm sha_algorithm =
 { STATIC_HEADER,
   SHA_DATASIZE, SHA_DIGESTSIZE, make_sha_instance };
-
-/* HMAC (rfc-2104) */
-/* CLASS:
-   (class
-     (name hmac_algorithm)
-     (super mac_algorithm)
-     (vars
-       (hash object hash_algorithm)))
-*/
-
-/* CLASS:
-   (class
-     (name hmac_instance)
-     (super mac_instance)
-     (vars
-       ; Initialized hash objects 
-       (hinner object hash_instance)
-       (houter object hash_instance)
-
-       ; Modified by update 
-       (state object hash_instance)))
-*/
-
-static void do_hmac_update(struct mac_instance *s,
-			   UINT32 length, UINT8 *data)
-{
-  CAST(hmac_instance, self, s);
-
-  HASH_UPDATE(self->state, length, data);
-}
-
-static void do_hmac_digest(struct mac_instance *s,
-			   UINT8 *data)
-{
-  CAST(hmac_instance, self, s);
-  struct hash_instance *h = self->state;
-
-  HASH_DIGEST(h, data);   /* Inner hash */
-  KILL(h);
-  h = HASH_COPY(self->houter);
-  HASH_UPDATE(h, self->super.mac_size, data);
-  HASH_DIGEST(h, data);
-  KILL(h);
-
-  self->state = HASH_COPY(self->hinner);
-}
-
-static struct mac_instance *do_hmac_copy(struct mac_instance *s)
-{
-  CAST(hmac_instance, self, s);
-  CLONED(hmac_instance, new, self);
-
-  new->state = HASH_COPY(self->state);
-
-  return &new->super;
-}
-
-#define IPAD 0x36
-#define OPAD 0x5c
-
-static struct mac_instance *make_hmac_instance(struct mac_algorithm *s,
-					       UINT8 *key)
-{
-  CAST(hmac_algorithm, self, s);
-  NEW(hmac_instance, instance);
-  UINT8 *pad = alloca(self->hash->block_size);
-  UINT32 i;
-
-  instance->super.hash_size = self->super.hash_size;
-  instance->super.update = do_hmac_update;
-  instance->super.digest = do_hmac_digest;
-  instance->super.copy = do_hmac_copy;
-
-  instance->hinner = MAKE_HASH(self->hash);
-  memset(pad, IPAD, self->hash->block_size);
-
-  for(i = 0; i<self->hash->hash_size; i++)
-    pad[i] ^= key[i];
-
-  HASH_UPDATE(instance->hinner, self->hash->block_size, pad);
-
-  instance->houter = MAKE_HASH(self->hash);
-  memset(pad, OPAD, self->hash->block_size);
-
-  for(i = 0; i<self->hash->hash_size; i++)
-    pad[i] ^= key[i];
-
-  HASH_UPDATE(instance->houter, self->hash->block_size, pad);
-
-  instance->state = HASH_COPY(instance->hinner);
-
-  return &instance->super;
-} 
-  
-struct mac_algorithm *make_hmac_algorithm(struct hash_algorithm *h)
-{
-  NEW(hmac_algorithm, self);
-
-  self->super.hash_size = h->hash_size;
-  /* Recommended in RFC-2104 */
-  self->super.key_size = h->hash_size;
-  self->super.make_mac = make_hmac_instance;
-
-  self->hash = h;
-
-  return &self->super;
-}
 
