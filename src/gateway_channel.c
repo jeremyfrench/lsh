@@ -147,7 +147,7 @@ make_gateway_channel(struct alist *request_types)
      (vars
        ; The channel type is represented as a string, as
        ; we should be able to forward unknown channel
-       ; types (i.e. types not listen in atoms.in).
+       ; types (i.e. types not listed in atoms.in).
        (type string)
        (rec_window_size . uint32_t)
        (rec_max_packet . uint32_t)
@@ -314,8 +314,11 @@ struct global_request gateway_global_request =
 /* Continuation to handle the returned channel, and chain two channels
  * together.
  *
- * CHANNEL is the "originating" end of the channel. The argument to
- * the continuation is a new channel connected to the other end. */
+ * The argument to the continuation is a new channel connected to the
+ * other end. We don't create the ORIGIN channel object until now,
+ * because the channel's resources aren't attached to the connection's
+ * resource list until the object is returned to
+ * do_channel_open_continue. */
 
 /* GABA:
    (class
@@ -323,8 +326,7 @@ struct global_request gateway_global_request =
      (super command_continuation)
      (vars
        (up object command_continuation)
-       (fallback object channel_request fallback)
-       (origin object gateway_channel)))
+       (fallback object channel_request fallback)))
 */
 
 static void
@@ -334,29 +336,32 @@ do_gateway_channel_open_continuation(struct command_continuation *c,
   CAST(gateway_channel_open_continuation, self, c);
   CAST(gateway_channel, target, x);
 
-  self->origin->chain = target;
-  target->chain = self->origin;
+  struct gateway_channel *origin
+    = make_gateway_channel(NULL);
 
-  self->origin->super.rec_window_size = target->super.send_window_size;
-  self->origin->super.rec_max_packet = target->super.send_max_packet;
+  origin->super.request_fallback = &gateway_channel_request;
+  
+  origin->chain = target;
+  target->chain = origin;
 
-  gateway_init_io(self->origin);
+  origin->super.rec_window_size = target->super.send_window_size;
+  origin->super.rec_max_packet = target->super.send_max_packet;
+
+  gateway_init_io(origin);
   gateway_init_io(target);
 
   target->super.request_fallback = self->fallback;
   
-  COMMAND_RETURN(self->up, self->origin);
+  COMMAND_RETURN(self->up, origin);
 }
 
 struct command_continuation *
 make_gateway_channel_open_continuation(struct command_continuation *up,
-				       struct channel_request *fallback,
-				       struct gateway_channel *origin)
+				       struct channel_request *fallback)
 {
   NEW(gateway_channel_open_continuation, self);
   
   self->super.c = do_gateway_channel_open_continuation;
-  self->origin = origin;
   self->fallback = fallback;
   self->up = up;
 
@@ -371,18 +376,13 @@ do_channel_open_forward(struct channel_open *s UNUSED,
 			struct command_continuation *c,
 			struct exception_handler *e)
 {
-  struct gateway_channel *origin
-    = make_gateway_channel(NULL);
-
   struct command *command
     = make_gateway_channel_open_command(info, parse_rest_copy(args), NULL);
 
-  origin->super.request_fallback = &gateway_channel_request;
-  
   COMMAND_CALL(command,
 	       connection->chain,
 	       make_gateway_channel_open_continuation
-	         (c, &gateway_channel_request, origin),
+	         (c, &gateway_channel_request),
 	       /* FIXME: Install a new exception handler that will
 		* propagate any CHANNEL_OPEN error to the originating
 		* channel. */
