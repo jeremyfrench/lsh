@@ -169,6 +169,9 @@ void write_buffer_consume(struct write_buffer *buffer, UINT32 size)
   buffer->start += size;
   assert(buffer->start <= buffer->end);
   buffer->length -= size;
+
+  if (buffer->report)
+    FLOW_CONTROL_REPORT(buffer->report, size);
 }
 
 void write_buffer_close(struct write_buffer *buffer)

@@ -33,6 +33,17 @@
 #include "write_buffer.h.x"
 #undef GABA_DECLARE
 
+/* For flow control, we use this callback to report that data
+ * has been flushed from a write_buffer. */
+/* GABA:
+   (class
+     (name flow_controlled)
+     (vars
+       (report method void UINT32)))
+*/
+
+#define FLOW_CONTROL_REPORT(o, written) ((o)->report((o), written))
+
 /* For the packet queue */
 /* NOTE: No object header */
 struct buffer_node
@@ -50,8 +61,10 @@ struct buffer_node
        (buffer space UINT8)        ; Size is twice the blocksize 
        (empty simple int)
 
-       ; Total amount of data currently in the buffer)
+       ; Total amount of data currently in the buffer
        (length . UINT32)
+
+       (report object flow_controlled)
        
        ; If non-zero, don't accept any more data. The i/o-channel
        ; should be closed once the current buffers are flushed. 
