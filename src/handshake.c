@@ -383,15 +383,20 @@ DEFINE_COMMAND4(handshake_command)
   
   connection_init_io
     (connection, 
-     &io_read_write(lv->fd,
-		    make_buffered_read
-		    (BUF_SIZE,
-		     make_connection_read_line(connection, 
-					       lv->fd->fd, info->fallback)),
-		    info->block_size,
-		    make_connection_close_handler(connection))
-     ->write_buffer->super,
-     info->random);
+     io_read_write(lv->fd,
+		   make_buffered_read
+		   (BUF_SIZE,
+		    make_connection_read_line(connection, 
+					      lv->fd->fd, info->fallback)),
+		   info->block_size,
+		   make_connection_close_handler(connection)));
+
+  connection->write_packet =
+    make_packet_debug(make_write_packet(connection, info->random,
+					&connection->socket->write_buffer->super),
+		      (info->debug_comment
+		       ? ssh_format("%lz sent", info->debug_comment)
+		       : ssh_format("Sent")));
 
   /* Install timeout. */
   connection_set_timeout(connection,
@@ -411,7 +416,7 @@ DEFINE_COMMAND4(handshake_command)
    * until the client's identification string is received. */
   if (info->fallback)
     {
-      A_WRITE(connection->raw,
+      A_WRITE(&connection->socket->write_buffer->super,
 	      ssh_format("%lS\n", version));
       return;
     }
@@ -419,11 +424,11 @@ DEFINE_COMMAND4(handshake_command)
 
   if (info->banner_text)
     {
-      A_WRITE(connection->raw, 
+      A_WRITE(&connection->socket->write_buffer->super, 
 	      ssh_format("%lS\r\n", info->banner_text));
     }
 
-  A_WRITE(connection->raw,
+  A_WRITE(&connection->socket->write_buffer->super,
 	  ssh_format("%lS\r\n", version));
   
   send_kexinit(connection);
