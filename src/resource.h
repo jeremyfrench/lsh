@@ -64,8 +64,7 @@ init_resource(struct resource *self,
 #define REMEMBER_RESOURCE(l, r) ((l)->remember((l), (r)))
 #define KILL_RESOURCE_LIST(l) KILL_RESOURCE(&(l)->super)
 
-/* FIXME: Rename to make_resource_list */
 /* Allocates an empty list. */
-struct resource_list *empty_resource_list(void);
+struct resource_list *make_resource_list(void);
 
 #endif /* LSH_RESOURCE_H_INCLUDED */

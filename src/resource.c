@@ -63,7 +63,7 @@ dont_free_live_resource(int alive)
 {
   if (alive)
     {
-#if DEBUG_ALLOC
+#if 0 && DEBUG_ALLOC
       if (gc_final_p)
 	verbose("dont_free_live_resource: "
 		"final collection of a live resource!\n");
@@ -187,12 +187,12 @@ do_kill_all(struct resource *s)
 }
   
 struct resource_list *
-empty_resource_list(void)
+make_resource_list(void)
 {
   NEW(concrete_resource_list, self);
   init_resource(&self->super.super, do_kill_all);
 
-  trace("empty_resource_list: created %xi\n", self);
+  trace("make_resource_list: created %xi\n", self);
   self->super.remember = do_remember_resource;
   
   self->q = NULL;
