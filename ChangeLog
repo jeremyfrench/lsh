@@ -1,5 +1,8 @@
 2003-05-24  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/lsh-make-seed.c: Fixed nesting of WITH_ZLIB #if:s. Also
+	disable the zlib code.
+
 	* misc/xenofarm.sh: Use cp in stead of mv, when putting files into
 	the result package.
 
