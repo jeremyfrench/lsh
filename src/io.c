@@ -260,7 +260,7 @@ lsh_oop_stop_callback(oop_source *source UNUSED,
   
   if (!nfiles)
     /* An arbitrary non-NULL value stops oop_sys_run. */
-    return &nfiles;
+    return OOP_HALT;
   else
     return OOP_CONTINUE;
 }
