@@ -141,7 +141,7 @@ do_remember_resource(struct resource_list *s,
   if (!self->super.super.alive)
     {
       werror("do_remember_resource: resource list is already dead.\n");
-      KILL(resource);
+      KILL_RESOURCE(resource);
       return;
     }
   
