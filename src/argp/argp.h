@@ -21,16 +21,32 @@
 #ifndef _ARGP_H
 #define _ARGP_H
 
-#ifdef LSH
-/* Portability stuff */
-#include "argp-comp.h"
-#endif
-
 #include <stdio.h>
 #include <ctype.h>
 
-#if 0
-#include <getopt.h>
+#ifdef LSH
+# if !PRINTF_STYLE
+#  if HAVE_GCC_ATTRIBUTE
+#   define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
+#  else
+#   define PRINTF_STYLE(f, a)
+#  endif /* HAVE_GCC_ATTRIBUTE */
+# endif /* !PRINTF_STYLE */
+# if HAVE_GETOPT_LONG
+#  include <getopt.h>
+# else
+#  include "getopt.h"
+# endif /* !HAVE_GETOPT_LONG */
+#else /* !LSH */
+# include <getopt.h>
+#endif /* !LSH */
+
+#if !HAVE_PROGRAM_INVOCATION_NAME
+extern char *program_invocation_name;
+#endif
+
+#if !HAVE_PROGRAM_INVOCATION_SHORT_NAME
+extern char *program_invocation_short_name;
 #endif
 
 #define __need_error_t
