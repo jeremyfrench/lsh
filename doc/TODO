@@ -58,6 +58,10 @@ more environment variables when starting user processes.
 
 bash looks at SSH_CLIENT, and reads .bashrc if it is set.
 
+The lshd server should register a signal handler, probably for
+SIGTERM, that causes it to close it's listening socket, and exit after
+current connections are gone (or after a timeout).
+
 
 ALLOCATION
 
