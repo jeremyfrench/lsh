@@ -13,6 +13,7 @@ name
 not-after
 not-before
 propagate
+private-key
 public-key
 rsa-pkcs1-md5
 rsa-pkcs1-sha1
