@@ -38,3 +38,33 @@ pgp                  OPTIONAL     sign      OpenPGP certificates
 
 ssh-userauth
 ssh-connection
+
+# User authentication
+
+publickey
+password
+hostbased
+
+# Channel related
+
+session
+pty-req
+x11-req
+x11
+auth-agent-req
+auth-agent
+auth-ssh1-agent-req
+auth-ssh1-agent
+env
+shell
+exec
+subsystem
+window-change
+xon-xoff
+signal
+exit-status
+exit-signal
+tcpip-forward
+cancel-tcpip-forward
+forwarded-tcpip
+direct-tcpip
