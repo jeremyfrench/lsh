@@ -1,6 +1,6 @@
 # Testsuite
 
-CFLAGS=-O0
+CFLAGS = @CFLAGS@ -O0
 
 # Tests that can be used without any special setup.
 TS_PROGS = arcfour-test des-test rijndael-test twofish-test \
