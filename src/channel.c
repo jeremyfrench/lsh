@@ -282,6 +282,12 @@ make_channel_table(struct abstract_write *write
   NEW(channel_table, table);
   table->write = write;
   table->e = NULL; /* FIXME: XXX */
+
+  /* FIXME: Really need this? */
+  table->chain = NULL;
+
+  /* FIXME: Use an argument for initialization? */
+  table->resources = make_resource_list();
   
   table->channels = lsh_space_alloc(sizeof(struct ssh_channel *)
 				      * INITIAL_CHANNELS);
@@ -1075,6 +1081,8 @@ handle_channel_open(struct channel_table *table,
 {
   struct simple_buffer buffer;
   struct channel_open_info info;
+
+  trace("handle_channel_open\n");
   
   simple_buffer_init(&buffer, STRING_LD(packet));
 
@@ -1110,6 +1118,8 @@ handle_channel_open(struct channel_table *table,
 	  
 	  if (!open)
 	    {
+	      werror("handle_channel_open: Unknown channel type `%ps'\n",
+		     info.type_length, info.type_data);
 	      A_WRITE(table->write,
 		      format_open_failure
 		      (info.remote_channel_number,
@@ -1559,8 +1569,10 @@ handle_open_failure(struct channel_table *table,
 	  assert(channel->open_continuation);
 	  
 	  /* FIXME: It would be nice to pass the message on. */
+	  werror("Channel open for channel %i failed: %ps\n", channel_number, length, msg);
+
 	  EXCEPTION_RAISE(channel->e,
-			  make_channel_open_exception(reason, "Refused by peer"));
+			  make_channel_open_exception(reason, "Channel open refused by peer"));
 	  EXCEPTION_RAISE(channel->e, &finish_exception);
 	}
       else
@@ -1720,6 +1732,68 @@ init_channel(struct ssh_channel *channel)
   
   object_queue_init(&channel->pending_requests);
   object_queue_init(&channel->active_requests);
+}
+
+void
+channel_packet_handler(struct channel_table *table,
+		       struct lsh_string *packet)
+{
+  uint8_t msg;
+  
+  assert(lsh_string_length(packet) > 0);
+
+  msg = lsh_string_data(packet)[0];
+  trace("channel_packet_handler, packet type %i\n", msg);
+  
+  switch (msg)
+    {
+    default:
+      A_WRITE(table->write,
+	      format_unimplemented(lsh_string_sequence_number(packet)));
+      break;
+    case SSH_MSG_GLOBAL_REQUEST:
+      handle_global_request(table, packet);
+      break;
+    case SSH_MSG_REQUEST_SUCCESS:
+      handle_global_success(table, packet);
+      break;
+    case SSH_MSG_REQUEST_FAILURE:
+      handle_global_failure(table, packet);
+      break;
+    case SSH_MSG_CHANNEL_OPEN:
+      handle_channel_open(table, packet);
+      break;
+    case SSH_MSG_CHANNEL_OPEN_CONFIRMATION:
+      handle_open_confirm(table, packet);
+      break;
+    case SSH_MSG_CHANNEL_OPEN_FAILURE:
+      handle_open_failure(table, packet);
+      break;
+    case SSH_MSG_CHANNEL_WINDOW_ADJUST:
+      handle_adjust_window(table, packet);
+      break;
+    case SSH_MSG_CHANNEL_DATA:
+      handle_channel_data(table, packet);
+      break;
+    case SSH_MSG_CHANNEL_EXTENDED_DATA:
+      handle_channel_extended_data(table, packet);
+      break;
+    case SSH_MSG_CHANNEL_EOF:
+      handle_channel_eof(table, packet);
+      break;
+    case SSH_MSG_CHANNEL_CLOSE:
+      handle_channel_close(table, packet);       
+      break;
+    case SSH_MSG_CHANNEL_REQUEST:
+      handle_channel_request(table, packet); 
+      break;
+    case SSH_MSG_CHANNEL_SUCCESS:
+      handle_channel_success(table, packet); 
+      break;
+    case SSH_MSG_CHANNEL_FAILURE:
+      handle_channel_failure(table, packet); 
+      break;
+    }
 }
 
 struct lsh_string *

@@ -237,7 +237,7 @@ struct channel_request_info
        
        (max_channels . uint32_t) ; Max number of channels allowed 
 
-       ; Forwarded TCP ports
+       ; Forwarded TCP ports. FIXME: Do we really need two of them?
        (local_ports struct object_queue)
        (remote_ports struct object_queue)
 
@@ -511,6 +511,10 @@ handle_channel_success(struct channel_table *table,
 
 void
 handle_channel_failure(struct channel_table *table,
+		       struct lsh_string *packet);
+
+void
+channel_packet_handler(struct channel_table *table,
 		       struct lsh_string *packet);
 
 #endif /* LSH_CHANNEL_H_INCLUDED */
