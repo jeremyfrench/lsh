@@ -1,6 +1,8 @@
-*.x
 *.d
+*.x
 .deps
+.dist_classes
+.dist_headers
 Makefile
 Makefile.am
 Makefile.in
