@@ -158,6 +158,47 @@ How should we handle POLLERR in io_iter()?
 Add a descriptive string to the lsh_fd struct, to aid debugging.
 
 
+TESTING
+
+The testsuite is far from complete. Some parts that it misses are
+
+ * Sending and receiving of SSH_MSG_REQUEST_FAILURE and
+   SSH_MSG_CHANNEL_FAILURE, and handling of the corresponding
+   exceptions.
+
+ * Same for SSH_MSG_CHANNEL_OPEN_FAILURE.
+
+ * All SSH_MSG_CHANNEL_EXTENDED_DATA (i.e. stderr data)
+
+ * i/o exceptions on channels.
+
+ * Failed key exchanges. SRP key exchange.
+
+ * PTY allocation, requests, etc.
+
+ * Userauth banner, failures, passwords,kerberos  password helper.
+
+ * connection_handle_pending(), connection_ignore_handler,
+   connection_fail_handler, connection_unimplemented_handler,
+   connection_forward_handler.
+
+ * Gatewayed channel requests and global requests.
+
+ * lsh-export-key.
+   
+ * sexp-conv with options --select, --*-hash.
+
+ * sexp display types.
+
+ * spki, tag prefix and tag any.
+
+ * Encrypted provate keys.
+
+ * TCP forwarding: cancel-tcpip-forward, various exception.
+
+ * utmp logging.
+
+
 MISC
 
 Try to find out why read() sometimes returns -1 and sets errno==EPIPE,
