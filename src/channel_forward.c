@@ -97,7 +97,7 @@ do_channel_forward_send_adjust(struct ssh_channel *s,
 {
   CAST(channel_forward, self, s);
   
-  self->socket->want_read = 1;
+  lsh_oop_register_read_fd(self->socket);
 }
 
 static void
