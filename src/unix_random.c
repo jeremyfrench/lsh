@@ -2,12 +2,12 @@
  *
  * $Id$
  *
- * Randomness polling on unix, using ideas from Peter Gutmann's
- * cryptlib. */
+ * Randomness polling on unix, using yarrow and ideas from Peter
+ * Gutmann's cryptlib. */
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 2000 Niels Möller
+ * Copyright (C) 2000, 2001 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,9 +27,13 @@
 #include "randomness.h"
 
 #include "crypto.h"
+#include "format.h"
+#include "lock_file.h"
 #include "reaper.h"
 #include "xalloc.h"
 #include "werror.h"
+
+#include "nettle/yarrow.h"
 
 #include <assert.h>
 #include <string.h>
@@ -41,834 +45,424 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <sys/wait.h>
-#include <pwd.h>
-
-#ifdef HAVE_POLL
-# if HAVE_POLL_H
-#  include <poll.h>
-# elif HAVE_SYS_POLL_H
-#  include <sys/poll.h>
-# endif
-#else
-# include "jpoll.h"
-#endif
-
-/* Workaround for some version of FreeBSD. */
-#ifdef POLLRDNORM
-# define MY_POLLIN (POLLIN | POLLRDNORM)
-#else /* !POLLRDNORM */
-# define MY_POLLIN POLLIN
-#endif /* !POLLRDNORM */
 
 #include <sys/time.h>
 #include <sys/resource.h>
-
-enum poll_status { POLL_NO_POLL, POLL_RUNNING, POLL_FINISHED, POLL_FAILED };
 
 #include "unix_random.c.x"
 
 /* GABA:
    (class
      (name unix_random)
-     (super random_poll)
+     (super randomness)
      (vars
-       ; For the slow poll
-       (reaper object reap)
-       (poll_uid . uid_t)
-       (pid . pid_t)
-       (status . "enum poll_status")
-       ; NOTE: This fd is not known to the gc. 
-       (fd . int)
-     
-       ; For the fast poll, count number of slow polls per second.
-       (previous_time . time_t)
-       (time_count . unsigned)))
+       (seed_file_fd . int)
+       (lock object lsh_file_lock_info)
+       (yarrow . "struct yarrow256_ctx")
+       (sources array "struct yarrow_source" RANDOM_NSOURCES)
+
+       ; For the SOURCE_TRIVIA, count the number of invocations per second
+       (previous_time . long)
+       (time_count . unsigned)
+
+       ; For SOURCE_DEVICE
+       (device_fd . int)
+       (device_last_read . time_t)))
 */
 
-/* GABA:
-   (class
-     (name unix_random_callback)
-     (super exit_callback)
-     (vars
-       (ctx object unix_random)))
-*/
-
-static void
-do_unix_random_callback(struct exit_callback *s,
-			int signalled, int core UNUSED,
-			int value)
-{
-  CAST(unix_random_callback, self, s);
-
-  if (signalled || value)
-    {
-      self->ctx->status = POLL_FAILED;
-      trace("unix_random.c: do_unix_random_callback, background poll failed.\n");
-    }
-  else
-    {
-      self->ctx->status = POLL_FINISHED;
-      trace("unix_random.c: do_unix_random_callback, background poll finished.\n");
-    }
-}
-
-static struct exit_callback *
-make_unix_random_callback(struct unix_random *ctx)
-{
-  NEW(unix_random_callback, self);
-  self->super.exit = do_unix_random_callback;
-  self->ctx = ctx;
-
-  return &self->super;
-}
-
-#define UNIX_RANDOM_POLL_SIZE 20
-
-/* This structure ought to fit in a pipe buffer (so that we can
- * waitpid the process before reading its stdout). */
-
-struct unix_random_poll_result
-{
-  UINT32 count;
-  UINT8 data[UNIX_RANDOM_POLL_SIZE];
-};
-
-#define UNIX_RANDOM_SOURCE_SCALE 8192
-struct unix_random_source
-{
-  const char *path;
-  const char *arg; /* For now, use at most one argument. */
-  int has_alternative;
-
- /* If non-zero, count quality bits of entropy if the amount of output
-  * exceeds this value. */
-  unsigned small;
-  /* Bits of entropy per UNIX_RANDOM_SOURCE_SCALE bytes of output. */
-  unsigned quality;
-};
-
-/* Lots of output expected; round downwards. */
-#define WLARGE(x) 0, x
-/* Small but significant output expected; round upwards */
-#define WSMALL(x) 100, x
-
-static const struct unix_random_source random_sources[] =
-{
-  { "/bin/vmstat", "-s", 	1, WSMALL(30) },
-  { "/usr/bin/vmstat", "-s", 	0, WSMALL(30) },
-  { "/bin/vmstat", "-c", 	1, WSMALL(30) },
-  { "/usr/bin/vmstat", "-c", 	0, WSMALL(30) },
-  { "/usr/bin/pfstat", NULL, 	0, WSMALL(20) },
-  { "/bin/vmstat", "-i", 	1, WSMALL(20) },
-  { "/usr/bin/vmstat", "-i", 	0, WSMALL(20) },
-  { "/usr/ucb/netstat", "-s", 	1, WLARGE(20) },
-  { "/usr/bin/netstat", "-s", 	1, WLARGE(20) },
-  { "/usr/sbin/netstat", "-s", 	1, WLARGE(20) },
-  { "/bin/netstat", "-s", 	1, WLARGE(20) },
-  { "/usr/etc/netstat", "-s", 	0, WLARGE(20) },
-  { "/usr/bin/nfsstat", NULL, 	0, WLARGE(20) },
-  { "/usr/ucb/netstat", "-m", 	1, WSMALL(10) },
-  { "/usr/bin/netstat", "-m", 	1, WSMALL(10) },
-  { "/usr/sbin/netstat", "-m", 	1, WSMALL(10) },
-  { "/bin/netstat", "-m", 	1, WSMALL(10) },
-  { "/usr/etc/netstat", "-m", 	0, WSMALL(10) },
-  { "/usr/ucb/netstat", "-in", 	1, WSMALL(10) },
-  { "/usr/bin/netstat", "-in", 	1, WSMALL(10) },
-  { "/usr/sbin/netstat", "-in", 1, WSMALL(10) },
-  { "/bin/netstat", "-in", 	1, WSMALL(10) },
-  { "/usr/etc/netstat", "-in", 	0, WSMALL(10) },
-#if 0
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.7.1.0", 0 	WSMALL(10) }, /* UDP in */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.7.4.0", 0	WSMALL(10) }, /* UDP out */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.4.3.0", 0	WSMALL(10) }, /* IP ? */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.6.10.0", 0	WSMALL(10) }, /* TCP ? */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.6.11.0", 0	WSMALL(10) }, /* TCP ? */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.6.13.0", 0	WSMALL(10) }, /* TCP ? */
-#endif
-  { "/usr/bin/mpstat", NULL,	0, WLARGE(10) },
-  { "/usr/bin/w", NULL,		1, WLARGE(10) },
-  { "/usr/bsd/w", NULL,		0, WLARGE(10) },
-  { "/usr/bin/df", NULL,	1, WLARGE(10) },
-  { "/bin/df", NULL,		0, WLARGE(10) },
-  { "/usr/sbin/portstat", NULL,	0, WLARGE(10) },
-  { "/usr/bin/iostat", NULL,	0, WLARGE(0) },
-  { "/usr/bin/uptime", NULL,	1, WLARGE(0) },
-  { "/usr/bsd/uptime", NULL,	0, WLARGE(0) },
-  { "/bin/vmstat", "-f",	1, WLARGE(0) },
-  { "/usr/bin/vmstat", "-f",	0, WLARGE(0) },
-  { "/bin/vmstat", NULL,	1, WLARGE(0) },
-  { "/usr/bin/vmstat", NULL,	0, WLARGE(0) },
-  { "/usr/ucb/netstat", "-n",	1, WLARGE(5) },
-  { "/usr/bin/netstat", "-n",	1, WLARGE(5) },
-  { "/usr/sbin/netstat", "-n",	1, WLARGE(5) },
-  { "/bin/netstat", "-n", 	1, WLARGE(5) },
-  { "/usr/etc/netstat", "-n",	0, WLARGE(5) },
-#if defined( __sgi ) || defined( __hpux )
-  { "/bin/ps", "-el", 		1, WLARGE(3) },
-#endif /* __sgi || __hpux */
-  { "/usr/ucb/ps", "aux", 	1, WLARGE(3) },
-  { "/usr/bin/ps", "aux", 	1, WLARGE(3) },
-  { "/bin/ps", "aux", 		0, WLARGE(3) },
-  { "/usr/bin/ipcs", "-a", 	1, WLARGE(5) },
-  { "/bin/ipcs", "-a", 		0, WLARGE(5) },
-  /* Unreliable source, depends on system usage */
-  { "/etc/pstat", "-p", 	1, WLARGE(5) },
-  { "/bin/pstat", "-p", 	0, WLARGE(5) },
-  { "/etc/pstat", "-S", 	1, WLARGE(2) },
-  { "/bin/pstat", "-S", 	0, WLARGE(2) },
-  { "/etc/pstat", "-v", 	1, WLARGE(2) },
-  { "/bin/pstat", "-v", 	0, WLARGE(2) },
-  { "/etc/pstat", "-x", 	1, WLARGE(2) },
-  { "/bin/pstat", "-x", 	0, WLARGE(2) },
-  { "/etc/pstat", "-t", 	1, WLARGE(1) },
-  { "/bin/pstat", "-t", 	0, WLARGE(1) },
-  /* pstat is your friend */
-  { "/usr/bin/last", "-n 50", 	1, WLARGE(3) },
-#ifdef __sgi
-  { "/usr/bsd/last", "-50",	0, WLARGE(3) },
-#endif /* __sgi */
-#ifdef __hpux
-  { "/etc/last", "-50", 	0, WLARGE(3) },
-#endif /* __hpux */
-  { "/usr/bsd/last", "-n 50", 	0, WLARGE(3) },
-  { "/usr/local/bin/lsof", "-lnwP", 0, WLARGE(3) },
-  /* Output is very system and version-dependent */
-#if 0
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.5.1.0", 0, WLARGE(1) }, /* ICMP ? */
-  { "/usr/sbin/snmp_request", "localhost public get 1.3.6.1.2.1.5.3.0", 0, WLARGE(1) }, /* ICMP ? */
-#endif
-  { "/etc/arp", "-a",		1, WLARGE(1) },
-  { "/usr/etc/arp", "-a",	1, WLARGE(1) },
-  { "/usr/bin/arp", "-a",	1, WLARGE(1) },
-  { "/usr/sbin/arp", "-a",	0, WLARGE(1) },
-  { "/usr/sbin/ripquery", "-nw 1 127.0.0.1", 0, WLARGE(1) },
-  { "/bin/lpstat", "-t",	1, WLARGE(1) },
-  { "/usr/bin/lpstat", "-t",	1, WLARGE(1) },
-  { "/usr/ucb/lpstat", "-t",	0, WLARGE(1) },
-#if 0
-  { "/usr/bin/tcpdump", "-c 5 -efvvx", 0, WLARGE(10) },
-  /* This is very environment-dependant.  If
-     network traffic is low, it'll probably time
-     out before delivering 5 packets, which is OK
-     because it'll probably be fixed stuff like
-     ARP anyway */
-  { "/usr/sbin/advfsstat", "-b usr_domain", 	0, WLARGE(0) },
-  { "/usr/sbin/advfsstat", "-l 2 usr_domain", 	0, WLARGE(5) },
-  { "/usr/sbin/advfsstat", "-p usr_domain", 	0, WLARGE(0) },
-  /* This is a complex and screwball program.  Some
-     systems have things like rX_dmn, x = integer,
-     for RAID systems, but the statistics are
-     pretty dodgy */
-
-  /* The following aren't enabled since they're somewhat slow and not very
-     unpredictable, however they give an indication of the sort of sources
-     you can use (for example the finger might be more useful on a
-     firewalled internal network) */
-  { "/usr/bin/finger", "@ml.media.mit.edu", 	0, WLARGE(9) },
-  { "/usr/local/bin/wget", "-O - http://lavarand.sgi.com/block.html", 0, WLARGE(9) },
-  { "/bin/cat", "/usr/spool/mqueue/syslog", 	0, WLARGE(9) },
-#endif /* 0 */
-  { NULL, NULL, 0, 0, 0 }
-};
-
-#undef WSMALL
-#undef WLARGE
-
-struct unix_random_source_state
-{
-  const struct unix_random_source *source;
-  pid_t pid;       /* Running process. */
-  int fd;
-  unsigned length; /* Amount of data read so far. */
-};
+static struct unix_random *the_random = NULL;
 
 static int
-spawn_source_process(unsigned *index,
-		     struct unix_random_source_state *state,
-		     int null)
+write_seed_file(struct yarrow256_ctx *ctx,
+	       int fd)
 {
-  unsigned i;
-  pid_t pid;
-  /* output[0] for reading, output[1] for writing. */
-  int output[2];
-      
-  for (i = *index; random_sources[i].path; )
-    {
-      if (access(random_sources[i].path, X_OK) < 0)
-	{
-	  debug("unix_random.c: spawn_source_process: Skipping '%z'; not executable: %z\n",
-		random_sources[i].path, STRERROR(errno));
-	  i++;
-	}
-      else
-	break;
-    }
-
-  if (!random_sources[i].path)
-    {
-      *index = i;
-      return 0;
-    }
+  const struct exception *e;
   
-  if (!lsh_make_pipe(output))
+  if (lseek(fd, 0, SEEK_SET) < 0)
     {
-      werror("unix_random.c: spawn_source_process: Can't create pipe (errno = %i): %z\n",
+      werror("Seeking to beginning of seed file failed!? (errno = %i): %z\n",
 	     errno, STRERROR(errno));
       return 0;
     }
-  
-  state->source = random_sources + i;
-  
-  if (!random_sources[i].has_alternative)
-    i++;
-  else
-    /* Skip alternatives */
-    while (random_sources[i].has_alternative)
-      i++;
-  
-  *index = i;
 
-  debug("unix_random.c: Trying source %z %z\n",
-	state->source->path,
-	state->source->arg ? state->source->arg : "");
-  
-  pid = fork();
-  switch(pid)
+  e = write_raw(fd, YARROW256_SEED_FILE_SIZE, ctx->seed_file);
+
+  if (e)
     {
-    default:
-      /* Parent */
-      close (output[1]);
-      state->fd = output[0];
-      state->pid = pid;
-      io_set_close_on_exec(state->fd);
-      io_set_nonblocking(state->fd);
-      state->length = 0;
-      return 1;
-      
-    case -1:
-      /* Error */
-      close(output[0]);
-      close(output[1]);
+      werror("Overwriting seed file failed: %z\n",
+	     e->msg);
       return 0;
-    case 0:
-      /* Child */
-      if (dup2(output[1], STDOUT_FILENO) < 0)
-	{
-	  werror("unix_random.c: spawn_source_process: dup2 for stdout failed (errno = %i): %z\n",
-		 errno, STRERROR(errno));
-	  _exit(EXIT_FAILURE);
-	}
-
-      /* Ignore stderr. */
-      if (dup2(null, STDERR_FILENO) < 0)
-	{
-	  werror("unix_random.c: spawn_source_process: dup2 for stderr failed (errno = %i): %z\n",
-		 errno, STRERROR(errno));
-	  _exit(EXIT_FAILURE);
-	}
-	
-      close (output[0]);
-      close (output[1]);
-      
-      /* Works also if state->source->arg == NULL */
-      execl(state->source->path, state->source->path, state->source->arg, NULL);
-      
-      werror("spawn_source_process: execl '%z' failed (errno = %i): %z\n",
-	     state->source->path, errno, STRERROR(errno));
-      
-      _exit(EXIT_FAILURE);
     }
+
+  return 1;
 }
 
-static unsigned
-use_dev_random(struct hash_instance *hash)
+static struct lsh_string *
+read_seed_file(int fd)
 {
-#define DEVRANDOM_SIZE 40
-  UINT8 buffer[DEVRANDOM_SIZE];
-  unsigned count = 0;
-  int res;
+  struct lsh_string *seed;
   
-  int fd = open("/dev/urandom", O_RDONLY);
-  if (fd < 0)
-    return 0;
-
-  do
-    { res = read(fd, buffer, DEVRANDOM_SIZE); }
-  while ( (res < 0) && (errno == EINTR));
-
-  if (res < 0)
-    werror("unix_random.c: Reading from /dev/urandom failed (errno = %i): %z\n",
-	   errno, STRERROR(errno));
-  else if (res > 0)
+  if (lseek(fd, 0, SEEK_SET) < 0)
     {
-      HASH_UPDATE(hash, res, buffer);
-      /* Count 4 bits of entropy for each byte. */
-      count = res * 4;
+      werror("Seeking to beginning of seed file failed!? (errno = %i): %z\n",
+	     errno, STRERROR(errno));
+      return NULL;
+    }
+
+  seed = io_read_file_raw(fd, YARROW256_SEED_FILE_SIZE + 1);
+  if (!seed)
+    werror("Couldn't read seed file (errno = %i): %z\n",
+	   errno, STRERROR(errno));
+  return seed;
+}
+
+static int
+read_initial_seed_file(struct yarrow256_ctx *ctx,
+		       int fd)
+{
+  struct lsh_string *seed;
+  struct stat sbuf;
+
+  if (fstat(fd, &sbuf) < 0)
+    {
+      werror("Couldn't stat seed file (errno = %i): %z\n",
+	     errno, STRERROR(errno));
+      return 0;
+    }
+
+  /* Check permissions */
+  if (sbuf.st_uid != getuid())
+    {
+      werror("Seed file not owned by you!\n");
+      return 0;
+    }
+
+  if (sbuf.st_mode & (S_IRWXG | S_IRWXO))
+    {
+      werror("Too permissive permissions on seed-file.\n");
+      return 0;
+    }
+  
+  seed = read_seed_file(fd);
+  if (!seed)
+    return 0;
+  
+  if (seed->length < YARROW256_SEED_FILE_SIZE)
+    {
+      werror("Seed file too short\n");
+      lsh_string_free(seed);
+      return 0;
+    }
+  
+  yarrow256_seed(ctx, seed->length, seed->data);
+  lsh_string_free(seed);
+
+  assert(yarrow256_is_seeded(ctx));
+
+  if (lseek(fd, 0, SEEK_SET) < 0)
+    {
+      werror("Seeking to beginning of seed file failed!? (errno = %i): %z\n",
+	     errno, STRERROR(errno));
+      return 0;
+    }
+
+  return 1;
+}
+
+static void
+update_seed_file(struct unix_random *self)
+{
+  struct resource *lock;
+  verbose("Overwriting seed file.\n");
+
+  lock = LSH_FILE_LOCK(self->lock, 0);
+  if (!lock)
+    {
+      werror("Failed to lock seed file, so not overwriting it now.\n");
     }
   else
-    werror("unix_random.c: No data available on /dev/urandom!\n");
+    {
+      struct lsh_string *s = read_seed_file(self->seed_file_fd);
 
-  close(fd);
-  
-  return count;
+      write_seed_file(&self->yarrow, self->seed_file_fd);
+      KILL_RESOURCE(lock);
+
+      /* Mix in the old seed file, it might have picked up
+       * some randomness. */
+      if (s)
+	{
+	  yarrow256_update(&self->yarrow, RANDOM_SOURCE_NEW_SEED,
+			   0, s->length, s->data);
+	  lsh_string_free(s);
+	}
+    }
 }
 
-static unsigned
-use_procfs(struct hash_instance *hash)
+static int
+do_trivia_source(struct unix_random *self, int init)
 {
-#if 0
-  /* Peter Gutmann's code uses the following sources. I'm not sure
-   * what quality to assign to them. */
-  static const char *proc_sources[] =
-  {
-    "/proc/interrupts", "/proc/loadavg", "/proc/locks",
-    "/proc/meminfo", "/proc/stat", "/proc/net/tcp", "/proc/net/udp", 
-    "/proc/net/dev", "/proc/net/ipx", NULL
-  };
-#endif
+  struct {
+    struct timeval now;
+    struct rusage rusage;
+    unsigned count;
+    pid_t pid;
+  } event;
   
-  /* Not implemented. */
+  unsigned entropy = 0;
+
+  if (gettimeofday(&event.now, NULL) < 0)
+    fatal("gettimeofday failed (errno = %i): %z\n",
+	  errno, STRERROR(errno));
+
+  if (getrusage(RUSAGE_SELF, &event.rusage) < 0)
+    fatal("getrusage failed: (errno = %i) %z\n",
+	  errno, STRERROR(errno));
+  
+  event.count = 0;
+  if (init)
+    {
+      self->time_count = 0;
+    }
+  else
+    {
+      event.count = self->time_count++;
+      
+      if (event.now.tv_sec != self->previous_time)
+	{
+	  /* Count one bit of entropy if we either have more than two
+	   * invocations in one second, or more than two seconds
+	   * between invocations. */
+	  if ( (self->time_count > 2)
+	       || ( (event.now.tv_sec - self->previous_time) > 2) )
+	    entropy++;
+
+	  self->time_count = 0;
+	}
+    }
+  self->previous_time = event.now.tv_sec;
+  event.pid = getpid();
+
+  return yarrow256_update(&self->yarrow, RANDOM_SOURCE_TRIVIA, entropy,
+			  sizeof(event), (const UINT8 *) &event);
+}
+
+#define DEVICE_READ_SIZE 10
+static int
+do_device_source(struct unix_random *self, int init)
+{
+  time_t now = time(NULL);
+  
+  if (init)
+    {
+      self->device_fd = open("/dev/urandom", O_RDONLY);
+      if (self->device_fd < 0)
+	return 0;
+
+      self->device_last_read = now;
+    }
+
+  if ( (self->device_fd > 0)
+       && (init || ( (now - self->device_last_read) > 60)))
+    {
+      /* More than a minute since we last read the device */
+      UINT8 buf[DEVICE_READ_SIZE];
+      const struct exception *e
+	= read_raw(self->device_fd, sizeof(buf), buf);
+
+      if (e)
+	{
+	  werror("Failed to read /dev/urandom (errno = %i): %z\n",
+		 errno, STRERROR(errno));
+	  return 0;
+	}
+
+      self->device_last_read = now;
+      
+      return yarrow256_update(&self->yarrow, RANDOM_SOURCE_DEVICE,
+			      10, /* Estimate 10 bits of entropy */
+			      sizeof(buf), buf);
+    }
   return 0;
 }
+#undef DEVICE_READ_SIZE
 
-/* Spawn this number of processes. */
-#define UNIX_RANDOM_POLL_PROCESSES 10
-#define UNIX_RANDOM_THRESHOLD 200
 
-static unsigned
-background_poll(struct hash_instance *hash)
+static void
+do_unix_random(struct randomness *s,
+	       UINT32 length,
+	       UINT8 *dst)
 {
-  struct unix_random_source_state state[UNIX_RANDOM_POLL_PROCESSES];
-  unsigned count = 0;
-  unsigned running = 0;
-  unsigned i;
-  unsigned index = 0;
-  int null;
-  
-  trace("unix_random.c: background_poll\n");
+  CAST(unix_random, self, s);
 
-  null = open("/dev/null", O_WRONLY);
-  if (null < 0)
-    {
-      werror("unix_random.c: background_poll: Failed to open /dev/null (errno = %i): %z\n",
-	     errno, STRERROR(errno));
-      return count;
-    }
-  
-  count += use_dev_random(hash);
-  count += use_procfs(hash);
-  
-  for (i = 0; i < UNIX_RANDOM_POLL_PROCESSES; i++)
-    state[i].fd = -1;
+  /* First do a "fast" poll. */
+  int trivia_reseed = do_trivia_source(self, 0);
+  int device_reseed = do_device_source(self, 0);
 
-  for (running = 0; running<UNIX_RANDOM_POLL_PROCESSES; running++)
-    {
-      if (!spawn_source_process(&index, state + running, null))
-	break;
-    }
+  if (trivia_reseed || device_reseed)
+    update_seed_file(self);
 
-  while (running)
-    {
-      struct pollfd fds[UNIX_RANDOM_POLL_PROCESSES];
-      unsigned nfds;
-      unsigned i;
-
-      for (i = 0, nfds = 0; i < UNIX_RANDOM_POLL_PROCESSES; i++)
-	if (state[i].fd > 0)
-	  {
-	    fds[nfds].fd = state[i].fd;
-	    fds[nfds].events = MY_POLLIN;
-	    nfds++;
-	  }
-
-      assert(nfds == running);
-
-      debug("unix_random.c: calling poll, nfds = %i\n", nfds);
-      if (poll(fds, nfds, -1) < 0)
-	{
-	  werror("unix_random.c: background_poll poll failed (errno = %i): %z\n",
-		 errno, STRERROR(errno));
-	  return count;
-	}
-
-      debug("unix_random.c: returned from poll.\n");
-
-      for (i = 0; i<nfds; i++)
-	{
-	  debug("background_poll: poll for fd %i: events = 0x%xi, revents = 0x%xi.\n",
-		fds[i].fd, fds[i].events, fds[i].revents);
-
-	  /* Linux sets POLLHUP on EOF */
-#ifndef POLLHUP
-#define POLLHUP 0
-#endif
-	  if (fds[i].revents & (MY_POLLIN | POLLHUP))
-	    {
-#define BUFSIZE 1024
-	      UINT8 buffer[BUFSIZE];
-	      int res;
-	      unsigned j;
-	    
-	      for (j = 0; j<UNIX_RANDOM_POLL_PROCESSES; j++)
-		if (fds[i].fd == state[j].fd)
-		  break;
-
-	      assert(j < UNIX_RANDOM_POLL_PROCESSES);
-
-	      debug("background_poll: reading from source %z\n",
-		    state[j].source->path);
-	      
-	      res = read(fds[i].fd, buffer, BUFSIZE);
-#undef BUFSIZE
-	    
-	      if (res < 0)
-		{
-		  if (errno != EINTR)
-		    {
-		      werror("unix_random.c: background_poll read failed (errno = %i): %z\n",
-			     errno, STRERROR(errno));
-		      return count;
-		    }
-		}
-	      else if (res > 0)
-		{
-		  HASH_UPDATE(hash, res, buffer);
-		  state[j].length += res;
-		}
-	      else
-		{ /* EOF */
-		  int status;
-		  unsigned entropy;
-		
-		  close(fds[i].fd);
-
-		  state[j].fd = -1;
-
-		  /* Estimate entropy */
-		  entropy = state[j].length * state[j].source->quality / UNIX_RANDOM_SOURCE_SCALE ;
-
-		  if (!entropy && state[j].source->small
-		      && (state[j].length > state[j].source->small))
-		    entropy = state[j].source->quality;
-		
-		  debug("unix_random.c: background_poll: Got %i bytes from %z %z,\n"
-			"               estimating %i bits of entropy.\n",
-			state[j].length,
-			state[j].source->path, state[j].source->arg ? state[j].source->arg : "",
-			entropy);
-
-		  count += entropy;
-		
-		  if (waitpid(state[j].pid, &status, 0) < 0)
-		    {
-		      werror("unix_random.c: background_poll waitpid failed (errno = %i): %z\n",
-			     errno, STRERROR(errno));
-		      return count;
-		    }
-		  if (WIFEXITED(status))
-		    {
-		      if (WEXITSTATUS(status))
-			debug("unix_random.c: background_poll: %z exited unsuccessfully.\n",
-			      state[j].source->path);
-		    }
-		  else if (WIFSIGNALED(status))
-		    {
-		      werror("unix_random.c: background_poll: %z died from signal %i (%z).\n",
-			     state[j].source->path, WTERMSIG(status), STRSIGNAL(WTERMSIG(status)));
-		    }
-
-		  if (! ((count < UNIX_RANDOM_THRESHOLD)
-			 && spawn_source_process(&index, state + j, null)))
-		    running--;
-		}
-	    }
-	}
-    }
-  return count;
+  /* Ok, generate some output */
+  yarrow256_random(&self->yarrow, length, dst);
 }
 
 static void
-start_background_poll(struct unix_random *self)
+do_unix_random_add(struct randomness *s,
+		   enum random_source_type type,
+		   UINT32 length,
+		   const UINT8 *data)
 {
-  pid_t pid;
-  int output[2];
+  CAST(unix_random, self, s);
+
+  unsigned entropy;
   
-  assert(self->status == POLL_NO_POLL);
-
-  trace("unix_random.c: start_background_poll\n");
-  
-  if (!lsh_make_pipe(output))
+  switch(type)
     {
-      werror("Failed to create pipe for background randomness poll.\n");
-      return;
-    }
-  
-  pid = fork();  
-  switch(pid)
-    {
-    default:
-      /* Parent */
-      close(output[1]);
-      self->fd = output[0];
-      io_set_close_on_exec(self->fd);
-
-      if (self->reaper)
-	REAP(self->reaper, pid, make_unix_random_callback(self));
-      
-      self->pid = pid;
-      self->status = POLL_RUNNING;
-
-      verbose("unix_random.c: Started background poll. pid = %i.\n",
-	      pid);
-      
-      return;
-
-    case -1:
-      /* Error */
-      werror("Failed to fork background randomness poll (errno = %i): %z\n",
-	     errno, STRERROR(errno));
-      return;
-      
-    case 0:
-      /* Child */
-      {
-	struct unix_random_poll_result result;
-	struct hash_instance *hash = MAKE_HASH(&sha1_algorithm);
-
-#if 0
-	int hang = 1;
-	while (hang)
-	  sleep(1);
-#endif
-	int null = open("/dev/null", O_RDONLY);
-
-	if (null < 0)
-	  {
-	    werror("start_background_poll: Failed to open /dev/null (errno = %i): %z\n",
-		   errno, STRERROR(errno));
-	    _exit(EXIT_FAILURE);
-	  }
-	
-	if (dup2(null, STDIN_FILENO) < 0)
-	  {
-	    werror("start_background_poll: dup2 for stdin failed (errno = %i): %z\n",
-		   errno, STRERROR(errno));
-
-	    _exit(EXIT_FAILURE);
-	  }
-
-	close(null);
-	close(output[0]);
-	io_set_close_on_exec(output[1]);
-	
-	/* Change uid */
-	if (!getuid())
-	  setuid(self->poll_uid);
-	
-	if (!getuid())
-	  _exit(EXIT_FAILURE);
-
-	result.count = background_poll(hash);
-
-	assert(hash->hash_size == sizeof(result.data));
-	HASH_DIGEST(hash, result.data);
-	
-	if (!write_raw(output[1], sizeof(result), (UINT8 *) &result))
-	  _exit(EXIT_SUCCESS);
-
-	_exit(EXIT_FAILURE);
-      }
-    }
-}
-
-static void
-wait_background_poll(struct unix_random *self)
-{
-  int status;
-  
-  assert(self->status == POLL_RUNNING);
-  trace("unix_random.c: wait_background_poll\n");
-  self->status = POLL_FAILED;
-
-  /* FIXME: Check error code. */
-  if (waitpid(self->pid, &status, 0) == self->pid)
-    {
-      if (WIFEXITED(status) && !WEXITSTATUS(status))
-	self->status = POLL_FINISHED;
-    }
-
-  if (self->reaper)
-    REAP(self->reaper, self->pid, NULL);  
-}
-
-
-static unsigned
-finish_background_poll(struct unix_random *self, struct hash_instance *hash)
-{
-  unsigned count = 0;
-
-  switch(self->status)
-    {
-    case POLL_FINISHED:
-      {
-	struct unix_random_poll_result result;
-	const struct exception *e;
-	
-	e = read_raw(self->fd, sizeof(result), (UINT8 *) &result);
-	
-	if (e)
-	  werror("Failed to read result from background randomness poll.\n");
-	else
-	  {
-	    HASH_UPDATE(hash, UNIX_RANDOM_POLL_SIZE, result.data);
-	    count = result.count;
-	  }
-	break;
-      }
-    case POLL_FAILED:
-      werror("Background randomness poll failed.\n");
+    case RANDOM_SOURCE_SECRET:
+      /* Count one bit of entropy per character in a password or
+       * key */
+      entropy = length;
+      break;
+    case RANDOM_SOURCE_REMOTE:
+      /* Count one bit of entropy if we have two bytes of padding. */
+      entropy = (length >= 2);
       break;
 
-    case POLL_NO_POLL:
-      return 0;
-      
     default:
-      fatal("finish_background_poll: Internal error.\n");
+      fatal("Internal error\n");
     }
-  close(self->fd);
-  self->status = POLL_NO_POLL;
 
-  return count;
-}  
-
-static unsigned
-use_seed_file(struct hash_instance *hash)
-{
-  if (getuid())
-    {
-      /* Lock and read seed file. */
-    }
-  
-  return 0;
+  if (yarrow256_update(&self->yarrow, type,
+		       entropy,
+		       length, data))
+    update_seed_file(self);
 }
 
-#define HASH_OBJECT(h, x) HASH_UPDATE((h), sizeof(x), (UINT8 *) &(x))
-
-static unsigned
-do_unix_random_slow(struct random_poll *s, struct hash_instance *hash)
+struct randomness *
+random_init(struct lsh_string *seed_file_name)
 {
-  CAST(unix_random, self, s);
-  unsigned count;
-  time_t now = time(NULL); 
-  pid_t pid = getpid();
+  assert(!the_random);
 
-  /* Make sure we don't start with the same state, if several
-   * instances are initializing at about the same time. */
-  
-  HASH_OBJECT(hash, now);
-  HASH_OBJECT(hash, pid);
-  
-  if (self->status == POLL_NO_POLL)
-    start_background_poll(self);
-
-  if (self->status == POLL_RUNNING)
-    wait_background_poll(self);
-
-  count = finish_background_poll(self, hash);
-
-  /* Do this in the main process, as the background process may run as
-   * different user. */
-  count += use_seed_file(hash);
-  
-  return count;
-}
-
-static unsigned
-do_unix_random_fast(struct random_poll *s, struct hash_instance *hash)
-{
-  CAST(unix_random, self, s);
-  unsigned count = 0;
-
-#if HAVE_GETRUSAGE
+  trace("random_init\n");
   {
-    struct rusage rusage;
-    if (getrusage(RUSAGE_SELF, &rusage) < 0)
-      fatal("do_unix_random_fast: getrusage failed: (errno = %i) %z\n",
-	    errno, STRERROR(errno));
+    NEW(unix_random, self);
+    struct resource *lock;
+
+    self->super.quality = RANDOM_GOOD;
+    self->super.random = do_unix_random;
+    self->super.add = do_unix_random_add;
+
+    yarrow256_init(&self->yarrow, RANDOM_NSOURCES, self->sources);
     
-    HASH_OBJECT(hash, rusage);
-    count += 1;
-  }
-#endif /* HAVE_GETRUSAGE */
-#if HAVE_GETTIMEOFDAY
-  {
-    struct timeval tv;
-    if (gettimeofday(&tv, NULL) < 0)
-      fatal("do_unix_random_fast: gettimeofday failed(errno = %i) %z\n",
-	    errno, STRERROR(errno));
-
-    HASH_OBJECT(hash, tv);
-  }
-#endif /* HAVE_GETTIMEOFDAY */
-
-  {
-    /* Fallback that is useful if nothing else works. Count the number
-     * of slow polls between time ticks, and count one bit of
-     * entropy if we have more than 2 calls or more than two seconds
-     * between calls. */
+    verbose("Reading seed-file `%S'\n", seed_file_name);
     
-    time_t now = time(NULL);
-    self->time_count++;
-    if (now != self->previous_time)
+    self->lock
+      = make_lsh_file_lock_info(ssh_format("%lS.lock", seed_file_name));
+
+    trace("random_init, locking seed file...\n");
+    
+    lock = LSH_FILE_LOCK(self->lock, 5);
+
+    if (!lock)
       {
-	if ( (self->time_count > 2) || ((now - self->previous_time) > 2))
-	  count++;
-	
-	HASH_OBJECT(hash, now);
-	HASH_OBJECT(hash, self->time_count);
-	
-	self->time_count = 0;
-	self->previous_time = now;
+	werror("Could not lock seed-file `%S'\n", seed_file_name);
+	KILL(self);
+	return NULL;
       }
+
+    trace("random_init, seed file locked successfully.\n");
+    
+    self->seed_file_fd = open(lsh_get_cstring(seed_file_name), O_RDWR);
+    if (self->seed_file_fd < 0)
+      {
+	werror("No seed file. Please create one by running\n");
+	werror("lsh-make-seed -o \"%S\".\n", seed_file_name);
+
+	KILL_RESOURCE(lock);
+	KILL(self);
+	return NULL;
+      }
+
+    trace("random_init, reading seed file...\n");
+    
+    if (!read_initial_seed_file(&self->yarrow, self->seed_file_fd))
+      {
+	KILL_RESOURCE(lock);
+	KILL(self);
+	return NULL;
+      }
+
+    trace("random_init, seed file read successfully.\n");
+    
+    assert(yarrow256_is_seeded(&self->yarrow));
+    
+    /* Ok, now yarrow is initialized. */
+    do_device_source(self, 1);
+    do_trivia_source(self, 1);
+
+    /* Mix that data in before generating any output. */
+    yarrow256_force_reseed(&self->yarrow);
+
+    /* Overwrite seed file. */
+    if (!write_seed_file(&self->yarrow, self->seed_file_fd))
+      {
+	KILL_RESOURCE(lock);
+	KILL(self);
+	return NULL;
+      }
+
+    trace("random_init: All done, releasing lock.\n");
+
+    KILL_RESOURCE(lock);
+    
+    the_random = self;
+    return &self->super;
   }
-
-  return count;
 }
 
-static void do_unix_random_background(struct random_poll *s)
+struct randomness *
+make_user_random(const char *home)
 {
-  CAST(unix_random, self, s);
+  struct randomness *r;
+  struct lsh_string *file_name;
+  const char *env_name;
 
-  if (self->status == POLL_NO_POLL)
-    start_background_poll(self);
-}
-
-/* Using a NULL reaper argument is ok. It must be supplied only if the
- * application is using a reaper, as that may get to our child process
- * before we can waitpid it. */
-
-struct random_poll *
-make_unix_random(struct reap *reaper)
-{
-  NEW(unix_random, self);
-
-  struct passwd *pw = getpwnam("nobody");
-  
-  self->super.slow = do_unix_random_slow;
-  self->super.fast = do_unix_random_fast;
-  self->super.background = do_unix_random_background;
-  
-  self->reaper = reaper;
-
-  if (pw && pw->pw_uid)
-    self->poll_uid = pw->pw_uid;
+  env_name = getenv("LSH_YARROW_SEED_FILE");
+  if (env_name)
+    file_name = make_string(env_name);
   else
-    self->poll_uid = (uid_t) -1;
+    {
+      if (!home)
+	{
+	  werror("Please set HOME in your environment.\n");
+	  return NULL;
+	}
 
-  self->status = POLL_NO_POLL;
-  self->previous_time = time(NULL);
-  self->time_count = 0;
+      file_name = ssh_format("%lz/.lsh/yarrow-seed-file", home);
+    }
+  r = random_init(file_name);
+  
+  lsh_string_free(file_name);
 
-  return &self->super;
+  return r;
+}
+
+struct randomness *
+make_system_random(void)
+{
+  struct randomness *r;
+  struct lsh_string *file_name;
+  
+  const char *env_name;
+
+  env_name = getenv("LSH_YARROW_SEED_FILE");
+
+  /* FIXME: What's a proper place for this? */
+  file_name = make_string(env_name ? env_name
+			  : "/var/spool/lsh/yarrow-seed-file");
+
+  r = random_init(file_name);
+  
+  lsh_string_free(file_name);
+
+  return r;
 }
