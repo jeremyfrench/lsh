@@ -192,11 +192,14 @@ do_exit_status(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
+#if 0
       /* Send EOF, if we haven't done that already. */
       /* FIXME: Make this behaviour configurable, there may be some
        * child process alive that we could talk to. */
 
       channel_eof(channel);
+#endif
+      
       COMMAND_RETURN(s, NULL);
     }
   else
@@ -246,11 +249,13 @@ do_exit_signal(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
+#if 0
       /* Send EOF, if we haven't done that already. */
       /* FIXME: Make this behaviour configurable, there may be some
        * child process alive that we could talk to. */
 
       channel_eof(channel);
+#endif
       COMMAND_RETURN(s, NULL);
     }
   else
