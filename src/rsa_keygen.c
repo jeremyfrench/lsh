@@ -26,6 +26,7 @@
 
 #include "publickey_crypto.h"
 
+#include "format.h"
 #include "randomness.h"
 #include "sexp.h"
 #include "werror.h"
@@ -49,12 +50,14 @@ progress(void *ctx UNUSED, int c)
 
 /* Uses a 30-bit e. */
 #define E_SIZE 30
-struct sexp *
+
+/* FIXME: Fold directly into the lsh-keygen program. */
+struct lsh_string *
 rsa_generate_key(struct randomness *r, UINT32 bits)
 {
   struct rsa_public_key public;
   struct rsa_private_key private;
-  struct sexp *key = NULL;
+  struct lsh_string *key = NULL;
 
   rsa_init_public_key(&public);
   rsa_init_private_key(&private);
@@ -66,16 +69,16 @@ rsa_generate_key(struct randomness *r, UINT32 bits)
 			   NULL, progress,
 			   bits, E_SIZE))
     {
-      key = sexp_l(2, SA(PRIVATE_KEY),
-		   sexp_l(9, SA(RSA_PKCS1),
-			  sexp_l(2, SA(N), sexp_un(public.n), -1),
-			  sexp_l(2, SA(E), sexp_un(public.e), -1),
-			  sexp_l(2, SA(D), sexp_un(private.d), -1),
-			  sexp_l(2, SA(P), sexp_un(private.p), -1),
-			  sexp_l(2, SA(Q), sexp_un(private.q), -1),
-			  sexp_l(2, SA(A), sexp_un(private.a), -1),
-			  sexp_l(2, SA(B), sexp_un(private.b), -1),
-			  sexp_l(2, SA(C), sexp_un(private.c), -1), -1), -1);
+      key = lsh_sexp_format(0, "(%z(%z(%z%b)(%z%b)(%z%b)(%z%b)(%z%b)(%z%b)(%z%b)(%z%b)))",
+			    "private-key", "rsa-pkcs1",
+			    "n", public.n,
+			    "e", public.e,
+			    "d", private.d,
+			    "p", private.p,
+			    "q", private.q,
+			    "a", private.a,
+			    "b", private.b,
+			    "c", private.c);
     }
   rsa_clear_public_key(&public);
   rsa_clear_private_key(&private);
