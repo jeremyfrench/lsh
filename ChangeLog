@@ -1,3 +1,7 @@
+2000-04-01  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/unix_user.c (do_exec_shell): Fixed MAX_ENV check.
+
 2000-03-29  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/unix_user.c (do_lookup_user): Improved shadow support,
