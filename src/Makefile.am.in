@@ -24,7 +24,7 @@ Makefile.am: Makefile.am.in
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
-bin_PROGRAMS = lsh lsh_keygen lsh_writekey lsh-decode-key sexp-conv srp-gen
+bin_PROGRAMS = lsh lsh-keygen lsh-writekey lsh-decode-key sexp-conv srp-gen
 sbin_PROGRAMS = lshd lsh_proxy
 bin_SCRIPTS = lsh-authorize ssh-conv
 noinst_PROGRAMS = prime_table digit_table pkcs5-test
@@ -60,7 +60,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	randomness.c \
 	read_base64.c read_data.c read_file.c read_line.c read_packet.c \
 	reaper.c resource.c \
-	rsa.c \
+	rsa.c rsa_keygen.c \
 	server.c server_authorization.c server_keyexchange.c \
 	server_password.c server_publickey.c \
 	server_pty.c server_session.c server_userauth.c \
