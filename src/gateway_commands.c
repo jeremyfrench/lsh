@@ -145,11 +145,9 @@ DEFINE_COMMAND(gateway_init, a, c, e)
 }
 
 
-/* FIXME: Same vars as connection_remember_command */
-
 /* (gateway_accept main-connection gateway-connection) */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name gateway_accept_command)
      (super command)
@@ -163,7 +161,7 @@ do_gateway_accept(struct command *s,
 		 struct command_continuation *c,
 		 struct exception_handler *e)
 {
-  CAST(gateway_accept_command, self, s);
+  CAST(connection_command, self, s);
   CAST(listen_value, lv, x);
 
   struct ssh_connection *gateway = gateway_make_connection(lv, e);
@@ -179,7 +177,7 @@ do_gateway_accept(struct command *s,
 DEFINE_COMMAND_SIMPLE(gateway_accept, a)
 {
   CAST(ssh_connection, connection, a);
-  NEW(gateway_accept_command, self);
+  NEW(connection_command, self);
   self->connection = connection;
   self->super.call = do_gateway_accept;
 
