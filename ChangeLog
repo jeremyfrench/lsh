@@ -1,3 +1,17 @@
+2001-05-29  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* acinclude.m4: AC_CHECK_MEMBER: Deleted definition (a similar
+	macro is included in autoconf-2.50).
+	AC_CHECK_VAR: Deleted.
+	(AC_CHECK_KRB_LIB): Don't use changequote.
+
+	* configure.in: Set SRP_PROGRAM.
+	Require autoconf-2.50.
+	Use the new AC_CHECK_MEMBERS macro.
+
+	* src/unix_user.c: Update for autoconf-2.50, changed HAVE_UT_NAME
+	to HAVE_STRUCT_UTMP_NAME, and similarly for other defines.
+
 2001-05-23  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* configure.in: Some cleanup, and update for autoconf-2.50. Some
