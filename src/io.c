@@ -319,8 +319,10 @@ io_final(void)
   /* The final gc may have closed some files, and called lsh_oop_stop.
    * So we must unregister that before deleting the oop source. */
   lsh_oop_cancel_stop();
-  
+
   /* There mustn't be any outstanding callbacks left. */
+  assert(nfiles == 0);
+  
   oop_sys_delete(global_oop_sys);
   global_oop_sys = NULL;
   source = NULL;
@@ -520,6 +522,9 @@ do_buffered_read(struct io_callback *s,
       assert(fd->want_read);
       assert(self->handler);
 
+      trace("io.c: do_buffered_read: EOF on fd %i: %z\n",
+	    fd->fd, fd->label);
+
       /* Close the fd, unless it has a write callback. */
       close_fd_read(fd);
       
@@ -589,6 +594,9 @@ do_consuming_read(struct io_callback *c,
 	}
       else
 	{
+	  trace("io.c: do_consuming_read: EOF on fd %i: %z\n",
+		fd->fd, fd->label);
+
 	  lsh_string_free(s);
 
 	  /* Close the fd, unless it has a write callback. */
@@ -2161,6 +2169,9 @@ close_fd_read(struct lsh_fd *fd)
 void
 close_fd_write(struct lsh_fd *fd)
 {
+  trace("io.c: close_fd_write called on fd %i: %z\n",
+	fd->fd, fd->label);
+
   if (fd->write_buffer)
     {
       /* Mark the write_buffer as closed */
@@ -2196,6 +2207,9 @@ close_fd_write(struct lsh_fd *fd)
             }
         }
     }
+  else
+    if (!fd->read)
+      close_fd(fd);
 }
 
 /* Responsible for handling the EXC_FINISH_READ exception. It should
