@@ -411,10 +411,12 @@ DEFINE_COMMAND(lsh_writekey_options2private_file)
    (expr
      (name make_writekey)
      (params
-       (options object lsh_writekey_options))
+       (stdin object lsh_fd))
      (expr
-       (lambda (stdin)
-         (let ((key (read_sexp stdin)))
+       (lambda (options)
+         (let ((key (read_sexp
+	              ; Delay reading a little
+	              (prog1 stdin options))))
            (prog1 (print_public options
 	   			(io_write_file (options2public_file options))
 	                        (verifier2public
@@ -476,10 +478,9 @@ int main(int argc, char **argv)
   {
     CAST_SUBTYPE
       (command, work,
-       make_writekey(options));
+       make_writekey(make_lsh_fd(STDIN_FILENO, "stdin", &exc_handler)));
     
-    COMMAND_CALL(work,
-                 make_lsh_fd(STDIN_FILENO, "stdin", &exc_handler),
+    COMMAND_CALL(work, options,
                  &discard_continuation, &exc_handler);
   }
   io_run();
