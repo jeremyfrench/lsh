@@ -1,6 +1,7 @@
 # Testsuite
 
 AM_CFLAGS = -O0
+AM_CPPFLAGS = -I..
 
 TS_PROGS = arcfour-test aes-test blowfish-test cast128-test \
 	   des-test \
