@@ -156,15 +156,17 @@ struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
      (name exc_finish_channel_handler)
      (super exception_handler)
      (vars
-       (table object channel_table)
+       (connection object ssh_connection)
+       ;; (table object channel_table)
        ; Non-zero if the channel has already been deallocated.
        (dead . int)
        ; Local channel number 
        (channel_number . UINT32)))
 */
 
-static void do_exc_finish_channel_handler(struct exception_handler *s,
-					  const struct exception *e)
+static void
+do_exc_finish_channel_handler(struct exception_handler *s,
+			      const struct exception *e)
 {
   CAST(exc_finish_channel_handler, self, s);
 
@@ -174,10 +176,10 @@ static void do_exc_finish_channel_handler(struct exception_handler *s,
       if (self->dead)
 	werror("channel.c: EXC_FINISH_PENDING on dead channel.\n");
 
-      self->table->pending_close = 1;
+      self->connection->table->pending_close = 1;
       
-      if (!self->table->next_channel)
-	EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
+      if (!self->connection->table->next_channel)
+	EXCEPTION_RAISE(self->connection->e, &finish_read_exception);
       break;
       
     case EXC_FINISH_CHANNEL:
@@ -197,7 +199,7 @@ static void do_exc_finish_channel_handler(struct exception_handler *s,
       else
 	{
 	  struct ssh_channel *channel
-	    = self->table->channels[self->channel_number];
+	    = self->connection->table->channels[self->channel_number];
 
 	  assert(channel);
 	  assert(channel->resources->super.alive);
@@ -207,13 +209,14 @@ static void do_exc_finish_channel_handler(struct exception_handler *s,
 	
 	  KILL_RESOURCE_LIST(channel->resources);
 	
-	  dealloc_channel(self->table, self->channel_number);
+	  dealloc_channel(self->connection->table, self->channel_number);
 	  self->dead = 1;
 
-	  if (self->table->pending_close && !self->table->next_channel)
+	  if (self->connection->table->pending_close &&
+	      !self->connection->table->next_channel)
 	    {
 	      /* FIXME: Send a SSH_DISCONNECT_BY_APPLICATION message? */
-	      EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
+	      EXCEPTION_RAISE(self->connection->e, &finish_read_exception);
 	    }
 	}
       break;
@@ -223,7 +226,7 @@ static void do_exc_finish_channel_handler(struct exception_handler *s,
 }
 
 static struct exception_handler *
-make_exc_finish_channel_handler(struct channel_table *table,
+make_exc_finish_channel_handler(struct ssh_connection *connection,
 				UINT32 channel_number,
 				struct exception_handler *e,
 				const char *context)
@@ -233,7 +236,7 @@ make_exc_finish_channel_handler(struct channel_table *table,
   self->super.raise = do_exc_finish_channel_handler;
   self->super.context = context;
 
-  self->table = table;
+  self->connection = connection;
   self->channel_number = channel_number;
   self->dead = 0;
   
@@ -284,10 +287,10 @@ int alloc_channel(struct channel_table *table)
   
   for(i = table->next_channel; i < table->used_channels; i++)
     {
-      if (!table->in_use[i])
+      if (table->in_use[i] == CHANNEL_FREE)
 	{
 	  assert(!table->channels[i]);
-	  table->in_use[i] = 1;
+	  table->in_use[i] = CHANNEL_RESERVED;
 	  table->next_channel = i+1;
 
 	  verbose("Allocated local channel number %i\n", i);
@@ -310,6 +313,7 @@ int alloc_channel(struct channel_table *table)
       lsh_space_free(table->channels);
       table->channels = new_channels;
 
+      /* FIXME: Use realloc(). */
       new_in_use = lsh_space_alloc(new_size);
       memcpy(new_in_use, table->in_use, table->used_channels);
       lsh_space_free(table->in_use);
@@ -320,7 +324,7 @@ int alloc_channel(struct channel_table *table)
 
   table->next_channel = table->used_channels = i+1;
 
-  table->in_use[i] = 1;
+  table->in_use[i] = CHANNEL_RESERVED;
   verbose("Allocated local channel number %i\n", i);
 
   return i;
@@ -333,40 +337,72 @@ void dealloc_channel(struct channel_table *table, int i)
 
   verbose("Deallocating local channel %i\n", i);
   table->channels[i] = NULL;
-  table->in_use[i] = 0;
+  table->in_use[i] = CHANNEL_FREE;
   
   if ( (unsigned) i < table->next_channel)
     table->next_channel = i;
 }
 
 void
+use_channel(struct ssh_connection *connection,
+	    UINT32 local_channel_number)
+{
+  struct channel_table *table = connection->table;
+  struct ssh_channel *channel = table->channels[local_channel_number];
+
+  assert(channel);
+  assert(table->in_use[local_channel_number] == CHANNEL_RESERVED);
+  
+  table->in_use[local_channel_number] = CHANNEL_IN_USE;
+  verbose("Taking channel %i in use, (local %i).\n",
+	  channel->channel_number, local_channel_number);
+}
+	    
+void
 register_channel(struct ssh_connection *connection,
 		 UINT32 local_channel_number,
-		 struct ssh_channel *channel)
+		 struct ssh_channel *channel,
+		 int take_into_use)
 {
   struct channel_table *table = connection->table;
   
-  assert(table->in_use[local_channel_number]);
+  assert(table->in_use[local_channel_number] == CHANNEL_RESERVED);
   assert(!table->channels[local_channel_number]);
 
-  verbose("Taking channel %i in use, (local %i).\n",
-	  channel->channel_number, local_channel_number);
+  verbose("Registering local channel %i.\n",
+	  local_channel_number);
+  
+  /* FIXME: Is this the right place to install this exception handler? */
+  channel->e =
+    make_exc_finish_channel_handler(connection,
+				    local_channel_number,
+				    channel->e ? channel->e : connection->e,
+				    HANDLER_CONTEXT);
+
   table->channels[local_channel_number] = channel;
 
-  /* FIXME: Is this the right place to install this exception handler? */
-  channel->e = make_exc_finish_channel_handler(table,
-					       local_channel_number,
-					       connection->e,
-					       HANDLER_CONTEXT);
-
+  if (take_into_use)
+    use_channel(connection, local_channel_number);
+  
   REMEMBER_RESOURCE(connection->resources, &channel->resources->super);
 }
 
-struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i)
+struct ssh_channel *
+lookup_channel(struct channel_table *table, UINT32 i)
 {
-  return (i < table->used_channels)
+  return ( (i < table->used_channels)
+	   && (table->in_use[i] == CHANNEL_IN_USE))
     ? table->channels[i] : NULL;
 }
+
+struct ssh_channel *
+lookup_channel_reserved(struct channel_table *table, UINT32 i)
+{
+  return ( (i < table->used_channels)
+	   && (table->in_use[i] == CHANNEL_RESERVED))
+    ? table->channels[i] : NULL;
+}
+
 
 /* FIXME: It seems suboptimal to send a window adjust message for *every* write that we do.
  * A better scheme might be as follows:
@@ -613,7 +649,8 @@ do_channel_open_continue(struct command_continuation *c,
   channel->write = self->connection->write;
 
   register_channel(self->connection,
-		   self->local_channel_number, channel);
+		   self->local_channel_number, channel,
+		   1);
 
   /* FIXME: Doesn't support sending extra arguments with the
    * confirmation message. */
@@ -1172,19 +1209,25 @@ do_channel_open_confirm(struct packet_handler *closure UNUSED,
       && parse_uint32(&buffer, &max_packet)
       && parse_eod(&buffer))
     {
-      struct ssh_channel *channel = lookup_channel(connection->table,
-						   local_channel_number);
+      struct ssh_channel *channel =
+	lookup_channel_reserved(connection->table,
+				local_channel_number);
 
       lsh_string_free(packet);
 
-      if (channel && channel->open_continuation)
+      if (channel) 
 	{
 	  struct command_continuation *c = channel->open_continuation;
+	  assert(c);
+
 	  channel->open_continuation = NULL;
-	  
+
 	  channel->channel_number = remote_channel_number;
 	  channel->send_window_size = window_size;
 	  channel->send_max_packet = max_packet;
+
+	  /* FIXME: Initialize channel->write here? */
+	  use_channel(connection, local_channel_number);
 
 	  COMMAND_RETURN(c, channel);
 	}
@@ -1228,16 +1271,19 @@ do_channel_open_failure(struct packet_handler *closure UNUSED,
       && parse_string(&buffer, &language_length, &language)
       && parse_eod(&buffer))
     {
-      struct ssh_channel *channel = lookup_channel(connection->table,
-						   channel_number);
+      struct ssh_channel *channel =
+	lookup_channel_reserved(connection->table,
+				channel_number);
 
       lsh_string_free(packet); 
 
-      if (channel && channel->open_continuation)
+      if (channel)
 	{
 	  static const struct exception finish_exception
 	    = STATIC_EXCEPTION(EXC_FINISH_CHANNEL, "CHANNEL_OPEN failed.");
 
+	  assert(channel->open_continuation);
+	  
 	  /* FIXME: It would be nice to pass the message on. */
 	  EXCEPTION_RAISE(channel->e,
 			  make_channel_open_exception(reason, "Refused by peer"));
@@ -1719,34 +1765,25 @@ make_channel_io_exception_handler(struct ssh_channel *channel,
 }
 
 struct lsh_string *
-prepare_channel_open(struct ssh_connection *connection,
-		     int type, struct ssh_channel *channel,
-		     const char *format, ...)
+format_channel_open(int type, UINT32 local_channel_number,
+		    struct ssh_channel *channel,
+		    const char *format, ...)
 {
-  int index;
-    
   va_list args;
   UINT32 l1, l2;
   struct lsh_string *packet;
   
 #define OPEN_FORMAT "%c%a%i%i%i"
-#define OPEN_ARGS SSH_MSG_CHANNEL_OPEN, type, (UINT32) index, \
+#define OPEN_ARGS SSH_MSG_CHANNEL_OPEN, type, local_channel_number, \
   channel->rec_window_size, channel->rec_max_packet  
 
-  debug("prepare_channel_open: rec_window_size = %i,\n"
-	"                      rec_max_packet = %i,\n"
-	"                      max_packet = %i\n",
+  debug("format_channel_open: rec_window_size = %i,\n"
+	"                     rec_max_packet = %i,\n"
+	"                     max_window = %i\n",
 	channel->rec_window_size,
 	channel->rec_max_packet,
 	channel->max_window);
   
-  index = alloc_channel(connection->table);
-
-  if (index < 0)
-    return 0;
-
-  register_channel(connection, index, channel);
-
   l1 = ssh_format_length(OPEN_FORMAT, OPEN_ARGS);
   
   va_start(args, format);

@@ -68,7 +68,13 @@
        ; is needed for deallocating it.
        ;; (local_number . UINT32)
        
-       ; Where to pass errors
+       ; Where to pass errors. This is used for two different
+       ; purposes: If opening the channel fails, EXC_CHANNEL_OPEN is
+       ; raised. Once the channel is open, this handler is used for
+       ; EXC_FINISH_CHANNEL and EXC_FINISH_PENDING. If the channel was
+       ; opened on the peer's request, the connection's exception
+       ; handler is a parent of the channel's. But that is not true in
+       ; general.
        (e object exception_handler)
 
        ; Resources associated with the channel. This object is also
@@ -129,8 +135,7 @@
        
        ; Reply from SSH_MSG_CHANNEL_REQUEST 
        ;; (channel_success method int)
-       ;; (channel_failure method int)))
-*/
+       ;; (channel_failure method int))) */
 
 #define CHANNEL_RECEIVE(s, t, d) \
 ((s)->receive((s), (t), (d)))
@@ -148,6 +153,11 @@
 
 #define CHANNEL_OPEN_FAILURE(s) \
 ((s)->open_failure((s)))
+
+/* Values used in the in_use array. */
+#define CHANNEL_FREE 0
+#define CHANNEL_RESERVED 1
+#define CHANNEL_IN_USE 2
 
 /* GABA:
    (class
@@ -289,11 +299,19 @@ struct channel_table *make_channel_table(void);
 int alloc_channel(struct channel_table *table);
 void dealloc_channel(struct channel_table *table, int i);
 
+void
+use_channel(struct ssh_connection *connection,
+	    UINT32 local_channel_number);
+
 void register_channel(struct ssh_connection *connection,
 		      UINT32 local_channel_number,
-		      struct ssh_channel *channel);
+		      struct ssh_channel *channel,
+		      int take_into_use);
 
-struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i);
+struct ssh_channel *
+lookup_channel(struct channel_table *table, UINT32 i);
+struct ssh_channel *
+lookup_channel_reserved(struct channel_table *table, UINT32 i);
 
 struct abstract_write *make_channel_write(struct ssh_channel *channel);
 struct abstract_write *make_channel_write_extended(struct ssh_channel *channel,
@@ -319,10 +337,16 @@ struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 
 void channel_start_receive(struct ssh_channel *channel);
 
+#if 0
 struct lsh_string *prepare_channel_open(struct ssh_connection *connection,
 					int type,
 					struct ssh_channel *channel,
 					const char *format, ...);
+#endif
+struct lsh_string *
+format_channel_open(int type, UINT32 local_channel_number,
+		    struct ssh_channel *channel,
+		    const char *format, ...);
 
 struct lsh_string *format_channel_request(int type,
 					  struct ssh_channel *channel,
