@@ -1,3 +1,19 @@
+2003-02-16  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* .bootstrap: New file, to replace misc/bootstrap.sh.
+
+	* General cleanup. Use types uint32_t and friends instead of
+	UINT32. Include files in the order config.h, C headers, system
+	headers, lsh headers. Deleted RCS id strings. Affects most files.
+
+	* src/digits.h, src/read_base64.c: Deleted obsolete file.
+	
+	* src/Makefile.am.in (liblsh_a_SOURCES): Removed read_base64.c. 
+
+	* configure.ac: Added missing LSH_RPATH_FIX between the checks for
+	gmp and liboop.
+	Use AH_BOTTOM to define NORETURN, PRINTF_STYLE and UNUSED.
+
 2003-02-15  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io.h (lsh_fd): Deleted old hanged_up attribute.
