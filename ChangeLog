@@ -7,6 +7,8 @@
 	* src/srp_exchange.c (srp_make_verifier): Likewise.
 	* src/rsa_keygen.c (rsa_generate_key): Likewise.
 	* src/rsa.c (do_rsa_public_spki_key): Likewise.
+	* src/spki.c (spki_pkcs5_encrypt, make_ssh_hostkey_tag) 
+	(spki_hash_data): Likewise.
 
 	* src/sexp-conv.c, src/sexp_test.c: Deleted file, not used
 	anymore.
