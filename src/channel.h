@@ -76,10 +76,10 @@ struct ssh_channel
 ((s)->fail((s), (w)))
 
 /* FIXME: Perhaps, this information is better kept in the connection
- * object? In any case, "session" is a bad name, as that name is more
- * relevant for the session channel. */
-struct ssh_session
+ * object? */
+struct channel_table
 {
+  struct lsh_object header;
 #if 0
   /* FIXME: This is relevant only for the server side. It's probably
    * better to store this in the connection struct */
@@ -139,10 +139,22 @@ struct channel_request
 #define CHANNEL_REQUEST(s, c, w, a) \
 ((s)->handler((s), (c), (w), (a)))
 
-struct ssh_session *make_session(void);
-int alloc_channel(struct ssh_session *session);
-void dealloc_channel(struct ssh_session *session, int i);
-struct ssh_channel *lookup_channel(struct ssh_session *session, UINT32 i);
+struct connection_startup
+{
+  struct lsh_object header;
+
+  int (*start)(struct connection_startup *closure,
+	       struct channel_table *table,
+	       struct abstract_write *write);
+};
+
+#define CONNECTION_START(c, s, w) ((c)->start((c), (s), (w)))
+
+struct channel_table *make_channel_table(void);
+int alloc_channel(struct channel_table *table);
+void dealloc_channel(struct channel_table *table, int i);
+int register_channel(struct channel_table *table, struct ssh_channel *channel);
+struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i);
 
 struct lsh_string *format_global_failure(void);
 struct lsh_string *format_open_failure(UINT32 channel, UINT32 reason,
