@@ -109,6 +109,11 @@ struct signer *make_dsa_signer_kludge(struct signer *dsa);
 struct signer *make_dsa_signer_classic(struct signer *s);
 struct verifier *make_dsa_verifier_classic(struct verifier *v);
 
+struct signature_algorithm *
+make_rsa_algorithm(struct hash_algorithm *hash,
+		   UINT32 prefix_length,
+		   const UINT8 *prefix);
+
 /* FIXME: Groups could use (meta)class methods */
 
 /* Groups. For now, assume that all group elements are represented by
