@@ -45,3 +45,17 @@ else
       | "$SEXP_CONV" >host-acls
   fi
 fi
+
+if [ -d authorized_keys_sha1 ]; then
+  # Upgrade authorized keys
+  werror "Upgrading any authorized keys"
+
+  for p in authorized_keys_sha1/*; do
+    # Upgrade the current key and store it temporary
+    "$SEXP_CONV" -s hex < "$p" | \
+	sed -e 's,(\(.\) #\([89a-fA-F]\),(\1 #00\2,' > tmp_upgraded_auth_key && \
+    lsh-authorize tmp_upgraded_auth_key 
+  done
+
+  rm tmp_upgraded_auth_key
+fi
