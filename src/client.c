@@ -424,7 +424,7 @@ init_client_options(struct client_options *self,
 
   self->stdin_fork = 0;
   self->stdout_fork = 0;
-  self->stderr_fork = 0;
+  self->stderr_fork = 1;
 
   self->used_stdin = 0;
   self->used_pty = 0;
@@ -499,10 +499,14 @@ client_options[] =
   { "no-stdout", OPT_STDOUT | ARG_NOT, NULL, 0, "Redirect stdout to /dev/null", 0}, 
   { "stderr", OPT_STDERR, "Filename", 0, "Redirect stderr", 0},
   { "no-stderr", OPT_STDERR | ARG_NOT, NULL, 0, "Redirect stderr to /dev/null", 0}, 
+
   { "cvs-workaround", OPT_FORK_STDIO, "i?o?e?", OPTION_ARG_OPTIONAL,
-    "fork extra processes to read one or more of the stdio file "
-    "descriptors, to avoid setting them in non-blocking mode.", 0 },
-  
+    "Avoid setting one or more of the stdio file descriptors into "
+    "non-blocking mode. If no argument is provided, the workaround is "
+    "applied to all three file descriptors. By default, the workaround "
+    "is applied to stderr only.", 0 },
+  { "no-cvs-workaround", OPT_FORK_STDIO | ARG_NOT, NULL, 0,
+    "Disable the cvs workaround.", 0 },
 #if WITH_PTY_SUPPORT
   { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
   { "no-pty", 't' | ARG_NOT, NULL, 0, "Don't request a remote pty.", 0 },
@@ -995,11 +999,21 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
     CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
 
     case OPT_FORK_STDIO:
-      if (!arg)
+      if (options->not)
+	{
+	  options->not = 0;
+	case OPT_FORK_STDIO | ARG_NOT:
+	  options->stdin_fork = options->stdout_fork = options->stderr_fork = 0;
+	  break;
+	}
+      else if (!arg)
 	options->stdin_fork = options->stdout_fork = options->stderr_fork = 1;
       else
 	{
 	  int i;
+
+	  options->stdin_fork = options->stdout_fork = options->stderr_fork = 0;
+
 	  for (i = 0; arg[i]; i++)
 	    switch(arg[i])
 	      {
