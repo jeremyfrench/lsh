@@ -1,9 +1,9 @@
 A Hacker's Guide to LSH
 
 This document contains some notes, which I hope will make it easier
-for you to understand and hack lsh. It is divided into four main
-sections: Abstraction, Object system, Memory allocation, and a Source
-road map.
+for you to understand and hack lsh. It is divided into five main
+sections: Abstraction, Object system, Memory allocation, a Source road
+map, and at last some comments about the naming conventions used.
 
 
 ABSTRACTION
@@ -383,3 +383,27 @@ lsh.c			Client main program.
 lshd.c			Server main program.
 
 
+NAMING CONVENTIONS
+
+Choosing good names for types, variables and functions is difficult.
+The naming in lsh is not as consistent as I would like it to. Below, I
+assemble some rules that I try to follow.
+
+The name of a type, usually defined in a /* GABA: (class ...) */,
+should be fairly short and say something about the function of the
+type. It is more important to keep time names short and clean than
+names of functions or variables. Some examples are
+
+  compress_instance, compress_algorithm
+
+These names have a suffix to distinguish between an algorithm object
+and the state in one instance of the algorithm.
+
+  signer, read_handler, abstract_write
+
+These are short names of fairly abstract types.
+
+  global_request, channel_open
+
+These are names of packet handlers. There's no common suffix for
+packet handler types; perhaps there should be.
