@@ -1,6 +1,8 @@
 /* password.h
  *
  * System dependant password related functions.
+ *
+ * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -44,16 +46,34 @@ struct unix_user
   
   /* These strings include a terminating NUL-character,
    * for compatibility with library and system calls. */
-  struct lsh_string *username;
+  struct lsh_string *name;
   struct lsh_string *passwd; /* Crypted passwd */
   struct lsh_string *home;
+  struct lsh_string *shell; 
 };
 
 struct unix_user *lookup_user(struct lsh_string *name, int free);
-int verify_password(struct unix_user *user, struct lsh_string *password, int free);
+int verify_password(struct unix_user *user,
+		    struct lsh_string *password, int free);
 
 struct userauth *make_password_userauth(void);
 
+struct unix_service
+{
+  struct lsh_object header;
+
+  struct ssh_service * (*login)(struct unix_service *closure,
+                                struct unix_user *user);
+};
+
+#define LOGIN(s, u) ((s)->login((s), (u)))
+
+struct userauth *make_unix_userauth(struct alist *services);
+
+int change_uid(struct unix_user *user);
+int change_dir(struct unix_user *user);
+
+#if 0
 struct login_method
 {
   struct lsh_object header;
@@ -68,5 +88,6 @@ struct login_method
 struct userauth *make_unix_userauth(struct login_method *login,
 				    struct alist *services);
 struct login_method *make_unix_login(void);
+#endif
 
 #endif /* LSH_PASSWORD_H_INCLUDED */
