@@ -17,16 +17,16 @@ EXTRA_DIST = HACKING NOTES PORTS TASKLIST \
 	Makefile.am.in $(man_MANS) lsh.html \
 	srp-spec.nroff srp-spec.txt fixff.sh fixff.pl
 
-DVIS = $(addsuffix .dvi, $(man_MANS))
-PSS =  $(addsuffix  .ps, $(man_MANS))
-
-all-local: srp-spec.txt lsh.html 
+# DVIS = $(addsuffix .dvi, $(man_MANS))
+# PSS =  $(addsuffix  .ps, $(man_MANS))
 
 # all:	dvi ps
 
-dvi:	$(DVIS)
+# dvi:	$(DVIS)
+# 
+# ps:	$(PSS)
 
-ps:	$(PSS)
+all-local: srp-spec.txt lsh.html 
 
 %.dvi: %
 	$(GROFF) -Tdvi -mandoc $< > $@
