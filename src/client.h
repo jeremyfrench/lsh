@@ -62,9 +62,9 @@ extern struct channel_request_command request_shell;
 extern struct command client_io;
 #define CLIENT_START_IO (&client_io.super)
 
-struct ssh_channel *make_client_session(struct io_fd *in,
-					struct io_fd *out,
-					struct io_fd *err,
+struct ssh_channel *make_client_session(struct lsh_fd *in,
+					struct lsh_fd *out,
+					struct lsh_fd *err,
 					UINT32 max_window,
 					int *exit_status);
 

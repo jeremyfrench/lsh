@@ -185,9 +185,9 @@ struct command *make_request_service(int service)
        (requests object request_info)
   
        ; To access stdio
-       (in object io_fd)
-       (out object io_fd)
-       (err object io_fd)
+       (in object lsh_fd)
+       (out object lsh_fd)
+       (err object lsh_fd)
 
        ; Where to save the exit code.
        (exit_status simple "int *")))
@@ -199,10 +199,10 @@ do_client_session_eof(struct ssh_channel *c)
 {
   CAST(client_session, session, c);
   
-  close_fd(&session->in->super, 0);
+  close_fd(session->in, 0);
 #if 0
-  close_fd(&session->out->super, 0);
-  close_fd(&session->err->super, 0);
+  close_fd(session->out, 0);
+  close_fd(session->err, 0);
 #endif
 }  
 
@@ -354,9 +354,9 @@ do_send(struct ssh_channel *s,
 {
   CAST(client_session, self, s);
 
-  assert(self->in->super.read);
+  assert(self->in->read);
 
-  self->in->super.want_read = 1;
+  self->in->want_read = 1;
 }
 
 /* We have a remote shell */
@@ -379,35 +379,35 @@ do_client_io(struct command *s UNUSED,
    * exception handlers here; it would be better to create the
    * fd-objects at a point where the right exception handlers can be
    * installed from the start. */
-  session->out->super.e
+  session->out->e
     = make_channel_io_exception_handler(channel,
 					"lsh: I/O error on stdout",
-					session->out->super.e,
+					session->out->e,
 					HANDLER_CONTEXT);
 
-  session->err->super.e
+  session->err->e
     = make_channel_io_exception_handler(channel,
 					"lsh: I/O error on stderr",
-					session->err->super.e,
+					session->err->e,
 					HANDLER_CONTEXT);
 
   /* Set up the fd we read from. */
   channel->send = do_send;
 
-  session->in->super.read = make_channel_read_data(channel);
+  session->in->read = make_channel_read_data(channel);
 
   /* FIXME: Perhaps there is some way to arrange that channel.c calls
    * the CHANNEL_SEND method instead? */
   if (session->super.send_window_size)
-    session->in->super.want_read = 1;
+    session->in->want_read = 1;
   
-  session->in->super.close_callback
+  session->in->close_callback
     = make_channel_read_close_callback(channel);
 
   /* Make sure stdio is closed properly if the channel or connection dies */
-  REMEMBER_RESOURCE(channel->resources, &session->in->super.super);
-  REMEMBER_RESOURCE(channel->resources, &session->out->super.super);
-  REMEMBER_RESOURCE(channel->resources, &session->err->super.super);
+  REMEMBER_RESOURCE(channel->resources, &session->in->super);
+  REMEMBER_RESOURCE(channel->resources, &session->out->super);
+  REMEMBER_RESOURCE(channel->resources, &session->err->super);
   
   ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
 	    make_handle_exit_status(session->exit_status));
@@ -423,9 +423,9 @@ struct command client_io =
 { STATIC_HEADER, do_client_io };
 
 
-struct ssh_channel *make_client_session(struct io_fd *in,
-					struct io_fd *out,
-					struct io_fd *err,
+struct ssh_channel *make_client_session(struct lsh_fd *in,
+					struct lsh_fd *out,
+					struct lsh_fd *err,
 					UINT32 max_window,
 					int *exit_status)
 {
