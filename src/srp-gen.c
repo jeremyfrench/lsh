@@ -88,7 +88,7 @@ make_srp_gen_options(struct io_backend *backend,
   self->backend = backend;
   self->e = e;
 
-  self->G = make_ssh_group1();
+  self->G = make_ssh_ring_srp_1();
   self->H = &sha1_algorithm;
   self->file = NULL;
   self->dest = NULL;
@@ -243,7 +243,7 @@ int main(int argc, char **argv)
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   A_WRITE(options->dest,
-	  SEXP_FORMAT(srp_gen(options), options->style, 0));
+	  sexp_format(srp_gen(options), options->style, 0));
 
   io_run(backend);
 
