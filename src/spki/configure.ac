@@ -29,6 +29,11 @@ AC_HEADER_TIME
 # Needed by the supplied memcmp.c
 AC_C_BIGENDIAN
 
+# Checks for libraries
+AC_CHECK_LIB(gmp, __gmpz_getlimbn,,
+    [AC_MSG_ERROR(
+    [GNU MP not found, or not 3.1 or up, see http://www.swox.com/gmp.])])
+
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then
   # Using -ggdb3 makes (some versions of) Redhat's gcc-2.96 dump core
