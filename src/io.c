@@ -241,7 +241,8 @@ int io_iter(struct io_backend *b)
   return 1;
 }
 
-/* GABA:
+
+/* ;;GABA:
    (class
      (name fd_read)
      (super abstract_read)
@@ -249,6 +250,7 @@ int io_iter(struct io_backend *b)
          (fd object lsh_fd)))
 */
 
+#if 0
 static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 {
   CAST(fd_read, closure, *r);
@@ -263,7 +265,7 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
     {
       int res;
 
-      if (! (closure->fd->super.alive && closure->fd->want_read)
+      if (! (closure->fd->super.alive && closure->fd->want_read) )
 	return 0;
       
       if (! (res = read(closure->fd->fd, buffer, length)) )
@@ -293,17 +295,47 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 	}
     }
 }
-
+#endif
+  
 #if 1
 static void read_callback(struct lsh_fd *fd)
 {
   CAST(io_fd, self, fd);
   int res;
+  
+  assert(self->read_buffer);
 
-  struct fd_read r =
-  { { STACK_HEADER, do_read }, fd->fd };
+  res = read_buffer_fill_fd(self->read_buffer_fill_fd, fd->fd);
 
-  READ_HANDLER(self->handler, &r.super, fd->e);
+  if (res < 0)
+    switch(errno)
+      {
+      case EINTR:
+	return;
+      case EWOULDBLOCK:
+	werror("io.c: read_callback: Unexpected EWOULDBLOCK\n");
+      case EPIPE:
+	fatal("EPIPE should probably be handled as EOF. Not implemented.\n");
+      default:
+	EXCEPTION_RAISE(fd->e, fd,
+			make_io_exception(EXC_IO_READ),
+			errno, NULL);
+      }
+
+  
+  while (fd->super.alive && fd->want_read)
+    {
+      if (!read_buffer_flush())
+	{
+	  EXCEPTION_RAISE(fd->e, fd, make_io_exception(EXC_IO_READ_EOF)) ;
+	  break;
+	}
+    }
+
+  read_buffer_justify(self->read_buffer);
+
+  assert(!(self->read_buffer->start
+	   && fd->super.alive && fd->want_read));
 }
 
 #else
@@ -981,7 +1013,8 @@ struct io_fd *io_read_write(struct io_fd *fd,
   fd->super.read = read_callback;
   fd->super.want_read = !!handler;
   fd->handler = handler;
-
+  fd->read_buffer = make_fd_read_buffer(READ_BUFFER_SIZE);
+  
   /* Writing */
   fd->super.prepare = prepare_write;
   fd->super.write = write_callback;
@@ -1004,6 +1037,7 @@ struct io_fd *io_read(struct io_fd *fd,
   fd->super.want_read = !!handler;
   fd->super.read = read_callback;
   fd->handler = handler;
+  fd->read_buffer = make_fd_read_buffer(READ_BUFFER_SIZE);
 
   fd->super.close_callback = close_callback;
 
@@ -1022,7 +1056,7 @@ struct io_fd *io_write(struct io_fd *fd,
   fd->super.prepare = prepare_write;
   fd->super.write = write_callback;
   fd->buffer = buffer;
-  
+
   fd->super.close_callback = close_callback;
 
   return fd;

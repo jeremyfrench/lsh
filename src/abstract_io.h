@@ -32,6 +32,7 @@
 #include "abstract_io.h.x"
 #undef GABA_DECLARE
 
+#if 0
 /* A read-function returning n means:
  *
  * n > 0: n bytes were read successfully.
@@ -42,7 +43,7 @@
 #define A_FAIL -1
 #define A_EOF -2
 
-/* GABA:
+/* ;; GABA:
    (class
      (name abstract_read)
      (vars
@@ -53,10 +54,29 @@
 */
 
 #define A_READ(f, length, buffer) (f)->read(&(f), (length), (buffer))
-
+#endif
 
 /* May store a new handler into *h. */
 
+/* GABA:
+   (class
+     (name read_handler)
+     (vars
+       (handler indirect-method
+
+		;; The method returns the amount of data processed. 
+		;; On errors, it can set self to NULL, but only for
+		;; debugging purposes; it's the responibility of the the
+		;; exception handler to close the corresponding fd and
+		;; make sure that handler is not called again.
+
+		UINT32 "UINT32 available" "UINT8 *data")))
+		;; "struct exception_handler *io")))
+*/
+
+#define READ_HANDLER(h, l, d) ((h)->handler(&(h), (l), (d)))
+
+#if 0
 /* GABA:
    (class
      (name read_handler)
@@ -66,7 +86,7 @@
 */
 
 #define READ_HANDLER(h, read) ((h)->handler(&(h), (read)))
-
+#endif
 #if 0
 /* Return values */
 /* Everything's fine */
