@@ -153,10 +153,12 @@ parse_utf8(struct simple_buffer *buffer, uint32_t *result)
       return 0;
     case 0xC0:
     case 0xD0:
+      /* Format 110y yyyy 10xx xxxx, 11 bits */
       length = 2;
       *result = first & 0x1F;
       break;
     case 0xE0:
+      /* Format 1110 zzzz 10yy yyyy 10xx xxxx, 16 bits */
       length = 3;
       *result = first & 0x0F;
       break;
@@ -164,14 +166,17 @@ parse_utf8(struct simple_buffer *buffer, uint32_t *result)
       switch(first & 0x0E)
 	{
 	case 0: case 2: case 4: case 6:
+	  /* Format 1111 0www 10zz zzzz 10yy yyyy 10xx xxxx, 21 bits */
 	  length = 4;
 	  *result = first & 0x07;
 	  break;
 	case 8: case 0xA:
+	  /* Format 1111 10xx 10ww wwww 10zz zzzz 10yy yyyy 10xx xxxx, 26 bits */
 	  length = 5;
 	  *result = first & 0x03;
 	  break;
 	case 0xC:
+	  /* Format 1111 110y 10xx xxxx 10ww wwww 10zz zzzz 10yy yyyy 10xx xxxx, 31 bits */
 	  length = 6;
 	  *result = first & 0x01;
 	  break;
@@ -180,6 +185,9 @@ parse_utf8(struct simple_buffer *buffer, uint32_t *result)
 	}
       break;
     }
+  if (LEFT < length)
+    return 0;
+  
   for(i = 1; i<length; i++)
     {
       uint32_t c = HERE[i];
