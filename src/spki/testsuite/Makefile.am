@@ -3,7 +3,7 @@
 AM_CPPFLAGS = -O0 -I$(top_srcdir) -I$(top_srcdir)/..
 AM_LDFLAGS = -L../../nettle
 
-TS_PROGS = principal-test date-test read-acl-test \
+TS_PROGS = principal-test date-test tag-test read-acl-test \
 	   lookup-acl-test read-cert-test
 TS_SH =
 
