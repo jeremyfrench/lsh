@@ -189,7 +189,7 @@ static int server_initiate(struct fd_listen_callback *c,
    * until the client's identification string is received. */
   if (closure->fallback)
     {
-      connection->kexinits[CONNECTION_SERVER] = MAKE_KEXINIT(closure->init);      
+      connection->kexinits[CONNECTION_SERVER] = MAKE_KEXINIT(closure->init); 
       return A_WRITE(connection->raw,
 		     ssh_format("%lS\n", connection->versions[CONNECTION_SERVER]));
     }
