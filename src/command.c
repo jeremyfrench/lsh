@@ -294,32 +294,6 @@ make_collect_state_2(struct collect_info_2 *info,
   return &self->super.super.super;
 }
 
-static struct lsh_object *
-do_collect_4(struct command_simple *s,
-	     struct lsh_object *x)
-{
-  CAST(collect_state_3, self, s);
-  return self->info->f(self->info, self->a, self->b, self->c, x);
-}
-
-struct lsh_object *
-make_collect_state_3(struct collect_info_3 *info,
-		     struct lsh_object *a,
-		     struct lsh_object *b,
-		     struct lsh_object *c)
-{
-  NEW(collect_state_3, self);
-  self->info = info->next;
-  self->a = a;
-  self->b = b;
-  self->c = c;
-  
-  self->super.call_simple = do_collect_4;
-  self->super.super.call = do_call_simple_command;
-  
-  return &self->super.super.super;
-}
-
 /* GABA:
    (class
      (name parallell_progn)
@@ -367,48 +341,6 @@ DEFINE_COMMAND_SIMPLE(progn_command, a)
   return LIST_LENGTH(body) ? &make_parallell_progn(body)->super
     : &command_I.super.super;
 }
-
-
-/* A continuation that passes on its value only the first time it is
- * invoked. */
-/* GABA:
-   (class
-     (name once_continuation)
-     (super command_continuation)
-     (vars
-       (invoked . int)
-       (msg . "const char *")
-       (up object command_continuation)))
-*/
-
-static void
-do_once_continuation(struct command_continuation *s,
-		     struct lsh_object *value)
-{
-  CAST(once_continuation, self, s);
-
-  if (!self->invoked)
-    {
-      self->invoked = 1;
-      COMMAND_RETURN(self->up, value);
-    }
-  else if (self->msg)
-    debug("%z", self->msg);
-}
-
-struct command_continuation *
-make_once_continuation(const char *msg,
-		       struct command_continuation *up)
-{
-  NEW(once_continuation, self);
-  self->super.c = do_once_continuation;
-  self->invoked = 0;
-  self->msg = msg;
-  self->up = up;
-
-  return &self->super;
-}
-
 
 /* Delayed application */
 
@@ -661,16 +593,3 @@ do_catch_report_collect(struct command_simple *s,
 
   return &make_catch_report_apply(self->info, body)->super;
 }
-
-#if 0
-static struct command *
-make_catch_report_collect_body(struct catch_handler_info *info)
-{
-  NEW(catch_report_collect_body, self);
-  self->super.super.call = do_call_simple_command;
-  self->super.call_simple = do_catch_report_collect_body;
-  self->info = info;
-
-  return &self->super.super;
-}
-#endif
