@@ -1,0 +1,7 @@
+#! /bin/sh
+
+. common.sh
+
+# Match the d directory
+client ls "" | grep -q '^d.* d$'
+
