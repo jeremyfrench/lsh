@@ -147,207 +147,22 @@ make_zn(mpz_t p, mpz_t g, mpz_t order)
   return res;
 }
 
-#if 0
-/* diffie-hellman */
-
+/* These are not really operations on the group, but they are needed
+ * for SRP. */
 void
-init_diffie_hellman_instance(struct diffie_hellman_method *m,
-			     struct diffie_hellman_instance *self,
-			     struct ssh_connection *c)
+zn_ring_add(struct abstract_group *s,
+	    mpz_t res, mpz_t a, mpz_t b)
 {
-  struct lsh_string *s;
-  /* FIXME: The allocator could do this kind of initialization
-   * automatically. */
-  mpz_init(self->e);
-  mpz_init(self->f);
-  mpz_init(self->secret);
-  mpz_init(self->K);
-  
-  self->method = m;
-  self->hash = MAKE_HASH(m->H);
-  self->exchange_hash = NULL;
-
-  debug("init_diffie_hellman_instance()\n"
-	" V_C: %pS\n", c->versions[CONNECTION_CLIENT]);
-  debug(" V_S: %pS\n", c->versions[CONNECTION_SERVER]);
-  debug(" I_C: %pS\n", c->literal_kexinits[CONNECTION_CLIENT]);
-  debug(" I_C: %pS\n", c->literal_kexinits[CONNECTION_SERVER]);
-
-  s = ssh_format("%S%S%S%S",
-		 c->versions[CONNECTION_CLIENT],
-		 c->versions[CONNECTION_SERVER],
-		 c->literal_kexinits[CONNECTION_CLIENT],
-		 c->literal_kexinits[CONNECTION_SERVER]);
-  HASH_UPDATE(self->hash, s->length, s->data);
-
-  lsh_string_free(s);  
-
-  /* We don't need the kexinit strings anymore. */
-  lsh_string_free(c->literal_kexinits[CONNECTION_CLIENT]);
-  lsh_string_free(c->literal_kexinits[CONNECTION_SERVER]);
-  c->literal_kexinits[CONNECTION_CLIENT] = NULL;
-  c->literal_kexinits[CONNECTION_SERVER] = NULL;
-}
-
-struct diffie_hellman_method *
-make_dh1(struct randomness *r)
-{
-  NEW(diffie_hellman_method, res);
-  mpz_t p;
-  mpz_t order;
-  
-  mpz_init_set_str(p,
-		   "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
-		   "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
-		   "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
-		   "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
-		   "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381"
-		   "FFFFFFFFFFFFFFFF", 16);
-
-  mpz_init_set(order, p);
-  mpz_sub_ui(order, order, 1);
-  mpz_fdiv_q_2exp(order, order, 1);
-
-  res->G = make_zn(p, order);
-  mpz_clear(p);
-  mpz_clear(order);
-  
-  mpz_init_set_ui(res->generator, 2);
-
-  res->H = &sha1_algorithm;
-  res->random = r;
-  
-  return res;
+  CAST(group_zn, self, s);
+  mpz_add(res, a, b);
+  mpz_fdiv_r(res, res, self->modulo);
 }
 
 void
-dh_generate_secret(struct diffie_hellman_instance *self,
-		   mpz_t r)
+zn_ring_subtract(struct abstract_group *s,
+		 mpz_t res, mpz_t a, mpz_t b)
 {
-  mpz_t tmp;
-
-  /* Generate a random number, 1 < x <= p-1 = O(G) */
-  mpz_init_set(tmp, self->method->G->order);  
-  mpz_sub_ui(tmp, tmp, 1);
-  bignum_random(self->secret, self->method->random, tmp);
-  mpz_add_ui(self->secret, self->secret, 1);
-  mpz_clear(tmp);
-
-  GROUP_POWER(self->method->G, r, self->method->generator, self->secret);
+  CAST(group_zn, self, s);
+  mpz_sub(res, a, b);
+  mpz_fdiv_r(res, res, self->modulo);
 }
-
-struct lsh_string *
-dh_make_client_msg(struct diffie_hellman_instance *self)
-{
-  dh_generate_secret(self, self->e);
-  return ssh_format("%c%n", SSH_MSG_KEXDH_INIT, self->e);
-}
-
-int
-dh_process_client_msg(struct diffie_hellman_instance *self,
-		      struct lsh_string *packet)
-{
-  struct simple_buffer buffer;
-  unsigned msg_number;
-  
-  simple_buffer_init(&buffer, packet->length, packet->data);
-
-  if (! (parse_uint8(&buffer, &msg_number)
-	 && (msg_number == SSH_MSG_KEXDH_INIT)
-	 && parse_bignum(&buffer, self->e)
-	 && (mpz_cmp_ui(self->e, 1) > 0)
-	 && GROUP_MEMBER(self->method->G, self->e)
-	 && parse_eod(&buffer) ))
-    return 0;
-
-  GROUP_POWER(self->method->G, self->K, self->e, self->secret);
-  return 1;
-}
-
-#if 0
-void dh_hash_update(struct diffie_hellman_instance *self,
-		    struct lsh_string *packet)
-{
-  debug("dh_hash_update, length = %i, data:\n", packet->length);
-  debug_safe(packet->length, packet->data);
-  debug("\n");
-  
-  HASH_UPDATE(self->hash, packet->length, packet->data);
-}
-#endif
-
-/* Hashes server key, e and f */
-void
-dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
-{
-  struct lsh_string *s = ssh_format("%S%n%n%n",
-				    self->server_key,
-				    self->e, self->f,
-				    self->K);
-  debug("dh_hash_digest()\n '%pS'\n", s);
-  
-  HASH_UPDATE(self->hash, s->length, s->data);
-  lsh_string_free(s);
-
-  HASH_DIGEST(self->hash, digest);
-}
-
-void
-dh_make_server_secret(struct diffie_hellman_instance *self)
-{
-  dh_generate_secret(self, self->f);
-}
-
-struct lsh_string *
-dh_make_server_msg(struct diffie_hellman_instance *self,
-		   struct signer *s)
-{
-  self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
-  
-  dh_hash_digest(self, self->exchange_hash->data);
-
-  return ssh_format("%c%S%n%fS",
-		    SSH_MSG_KEXDH_REPLY,
-		    self->server_key,
-		    self->f, SIGN(s,
-				  self->exchange_hash->length,
-				  self->exchange_hash->data));
-}
-
-int
-dh_process_server_msg(struct diffie_hellman_instance *self,
-		      struct lsh_string *packet)
-{
-  struct simple_buffer buffer;
-  unsigned msg_number;
-  
-  simple_buffer_init(&buffer, packet->length, packet->data);
-
-  if (!(parse_uint8(&buffer, &msg_number)
-	&& (msg_number == SSH_MSG_KEXDH_REPLY)
-	&& (self->server_key = parse_string_copy(&buffer))
-	&& (parse_bignum(&buffer, self->f))
-	&& (mpz_cmp_ui(self->f, 1) > 0)
-	&& GROUP_MEMBER(self->method->G, self->f)
-	&& (self->signature = parse_string_copy(&buffer))
-	&& parse_eod(&buffer)))
-    return 0;
-
-  GROUP_POWER(self->method->G, self->K, self->f, self->secret);
-  return 1;
-}
-	  
-int
-dh_verify_server_msg(struct diffie_hellman_instance *self,
-		     struct verifier *v)
-{
-  self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
-  
-  dh_hash_digest(self, self->exchange_hash->data);
-
-  return VERIFY(v,
-		self->hash->hash_size, self->exchange_hash->data,
-		self->signature->length, self->signature->data);
-}
-
-#endif
