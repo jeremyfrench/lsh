@@ -79,18 +79,19 @@ check_string(const uint8_t *s)
 }
 
 struct local_info *
-make_gateway_address(char *local_user, char *remote_user,
-		     struct address_info *target)
+make_gateway_address(const char *local_user, const char *remote_user,
+		     const char *target)
 {
   char *tmp = getenv(ENV_TMPDIR);
+  unsigned length = strlen(target);
   if (!tmp)
     tmp = "/tmp";
   
   if (check_string(local_user)
       && check_string(remote_user)
-      && check_string_l(target->ip->length, target->ip->data))
+      && check_string_l(length, target))
     return make_local_info(ssh_format("%lz/x-lsh-%lz", tmp, local_user),
-			   ssh_format("%lS:%lz", target->ip, remote_user));
+			   ssh_format("%lz:%lz", target, remote_user));
   else
     return NULL;
 }

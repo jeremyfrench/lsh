@@ -31,7 +31,7 @@
 /* Formats the address of the local gateway socket. */
 
 struct local_info *
-make_gateway_address(char *local_user, char *remote_user,
-		     struct address_info *target);
+make_gateway_address(const char *local_user, const char *remote_user,
+		     const char *target);
 
 #endif /* GATEWAY_H_INCLUDED */
