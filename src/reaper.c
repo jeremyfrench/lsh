@@ -44,7 +44,7 @@
 
 #include "reaper.c.x"
 
-static sig_atomic_t halloween;
+static volatile sig_atomic_t halloween;
 
 static void child_handler(int signum)
 {

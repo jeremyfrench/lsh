@@ -74,7 +74,7 @@
      (super resource)
      (vars
        (next object lsh_signal_handler)
-       (flag . "sig_atomic_t *")
+       (flag . "volatile sig_atomic_t *")
        (action object lsh_callback)))
 */
 
@@ -438,7 +438,7 @@ make_io_backend(void)
 
 struct resource *
 io_signal_handler(struct io_backend *b,
-		  sig_atomic_t *flag,
+		  volatile sig_atomic_t *flag,
 		  struct lsh_callback *action)
 {
   NEW(lsh_signal_handler, handler);

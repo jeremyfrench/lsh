@@ -48,7 +48,7 @@
 
 #include "unix_interact.c.x"
 
-static sig_atomic_t window_changed;
+static volatile sig_atomic_t window_changed;
 
 static void winch_handler(int signum)
 {

@@ -228,7 +228,7 @@ void io_run(struct io_backend *b);
 
 struct resource *
 io_signal_handler(struct io_backend *b,
-		  sig_atomic_t *flag,
+		  volatile sig_atomic_t *flag,
 		  struct lsh_callback *action);
 
 struct resource *
