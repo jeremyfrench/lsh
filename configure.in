@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 0.2.6)
+AM_INIT_AUTOMAKE(lsh, 0.2.7)
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
@@ -294,6 +294,7 @@ dnl ## fi
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
+AC_C_INLINE
 AC_TYPE_UID_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
