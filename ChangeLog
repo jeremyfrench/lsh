@@ -1,3 +1,13 @@
+1999-09-27  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/Makefile.am.in (SUBDIRS): Added scm subdirectory.
+	(SCHEME): Added -l flag to load compatibility code for the right
+	scheme implementation. Changed rules to use gaba.scm and
+	make-char-classes.scm which have moved to the scm subdir.
+
+	* configure.in: Bumped version to 0.1.11. Added --with-scheme
+	option to select scheme implementation. Generate src/scm/Makefile.
+
 Wed Sep 22 00:30:47 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/channel.c (channel_close_callback): Check the

@@ -3,6 +3,7 @@
  * Server side user authentication. */
 
 #include "server_userauth.h"
+
 #include "userauth.h"
 #include "connection.h"
 #include "format.h"
