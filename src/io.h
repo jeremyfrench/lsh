@@ -294,9 +294,25 @@ io_connect(struct io_backend *b,
 
 struct lsh_fd *
 io_listen(struct io_backend *b,
+	  struct sockaddr *local,
+	  socklen_t length,
+	  struct io_callback *callback,
+	  struct exception_handler *e);
+
+#if 0
+struct lsh_fd *
+io_listen(struct io_backend *b,
 	  struct sockaddr_in *local,
 	  struct io_callback *callback,
 	  struct exception_handler *e);
+#endif
+
+struct lsh_fd *
+io_listen_local(struct io_backend *b,
+		struct lsh_string *directory,
+		struct lsh_string *name,
+		struct io_callback *callback,
+		struct exception_handler *e);
 
 struct io_callback *
 make_listen_callback(struct io_backend *backend,
