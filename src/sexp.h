@@ -93,6 +93,7 @@ struct sexp_iterator;
 #define SEXP_GET(i) ((i)->get((i)))
 #define SEXP_SET(i, v) ((i)->set((i), (v)))
 #define SEXP_ASSOC(s, l, n, i) ((s)->assoc((s), (l), (n), (i)))
+#define SEXP_LEFT(i) ((i)->left((i)))
 #define SEXP_NEXT(i) ((i)->next((i)))
 
 /* Syntax styles */
@@ -166,6 +167,7 @@ int sexp_bignum_s(const struct sexp *e, mpz_t n);
 
 /* Utility functions for parsing spki objects. */
 
+int sexp_atom_eq(struct sexp *a, struct sexp *b);
 int sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name);
 struct sexp *sexp_assq(struct sexp_iterator *i, int atom);
 
