@@ -62,24 +62,10 @@ make_des_instance(struct crypto_algorithm *algorithm UNUSED, int mode,
 {
   NEW(des_instance, self);
   UINT8 pkey[DES_KEY_SIZE];
-  unsigned i;
 
   /* Fix odd parity */
-  for (i=0; i<DES_KEY_SIZE; i++)
-    {
-      UINT8 p = key[i];
-      p ^= (p >> 4);
-      p ^= (p >> 2);
-      p ^= (p >> 1);
-      pkey[i] = key[i] ^ (p & 1) ^ 1;
-#if 0
-      debug("make_des_instance: computing parity: key[%i] = %xi,\n"
-	    "                                    pkey[%i] = %xi,\n"
-	    "                   parity = %xi\n",
-	    i, key[i], i, pkey[i], p);
-#endif
-    }
-
+  des_fix_parity(DES_KEY_SIZE, pkey, key);
+  
   self->super.block_size = DES_BLOCK_SIZE;
   self->super.crypt = ( (mode == CRYPTO_ENCRYPT)
 			? do_des_encrypt
