@@ -102,12 +102,12 @@ int error_fd = STDERR_FILENO;
 static UINT8 error_buffer[BUF_SIZE];
 static UINT32 error_pos = 0;
 
-static void (*error_write)(int fd, UINT32 length, const UINT8 *data,
-			   struct exception_handler *e) = write_raw;
+static const struct exception *
+(*error_write)(int fd, UINT32 length, const UINT8 *data) = write_raw;
 
 #if HAVE_SYSLOG
-static void write_syslog(int fd UNUSED, UINT32 length, const UINT8 *data,
-			 struct exception_handler *e UNUSED)
+static const struct exception *
+write_syslog(int fd UNUSED, UINT32 length, const UINT8 *data)
 {
   UINT8 string_buffer[BUF_SIZE];
   
@@ -118,6 +118,8 @@ static void write_syslog(int fd UNUSED, UINT32 length, const UINT8 *data,
    * debug? */
   
   syslog(LOG_NOTICE, "%s", string_buffer);
+
+  return NULL;
 }
 
 void set_error_syslog(const char *id)
@@ -128,10 +130,10 @@ void set_error_syslog(const char *id)
 }
 #endif /* HAVE_SYSLOG */
 
-static void write_ignore(int fd UNUSED,
-			 UINT32 length UNUSED, const UINT8 *data UNUSED,
-			 struct exception_handler *e UNUSED)
-{}
+static const struct exception *
+write_ignore(int fd UNUSED,
+	     UINT32 length UNUSED, const UINT8 *data UNUSED)
+{ return NULL; }
 
 void set_error_stream(int fd, int with_poll)
 {
@@ -145,7 +147,7 @@ void set_error_ignore(void)
   error_write = write_ignore;
 }
 
-#define WERROR(l, d) (error_write(error_fd, (l), (d), &ignore_exception_handler))
+#define WERROR(l, d) (error_write(error_fd, (l), (d)))
 
 static void werror_flush(void)
 {

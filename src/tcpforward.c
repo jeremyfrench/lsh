@@ -74,7 +74,7 @@ lookup_forward(struct object_queue *q,
       CAST(forwarded_port, f, n);
       
       if ( (port == f->listen->port)
-	   && (lsh_string_cmp_l(f->listen->ip, length, ip) == 0) )
+	   && lsh_string_eq_l(f->listen->ip, length, ip) )
 	return f;
     }
   return NULL;
@@ -89,7 +89,7 @@ remove_forward(struct object_queue *q, int null_ok,
       CAST(local_port, f, n);
       
       if ( (port == f->super.listen->port)
-	   && (lsh_string_cmp_l(f->super.listen->ip, length, ip) == 0) )
+	   && lsh_string_eq_l(f->super.listen->ip, length, ip) )
 	{
 	  if (null_ok || f->socket)
 	    {
