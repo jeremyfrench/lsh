@@ -136,6 +136,11 @@ SPKI ISSUES
 Use the name "rsa-pkcs1" consistently for all keys, and perhaps
 include the name of the hash function in the signature objects.
 
+Encryption of private keys seems broken, decryption gives the error
+
+  lsh: Unknown encryption algorithm for pkcs5v2.
+  lsh: Decrypting private key failed.
+  
 
 DENIAL OF SERVICE
 
