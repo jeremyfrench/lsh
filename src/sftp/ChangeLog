@@ -1,3 +1,8 @@
+2002-07-29  Pontus Sköld  <pont@soua.net>
+
+	* configure.ac: Take advantage of lshg now understanding -G (pass
+	-G by default if compiling with lsh).
+
 2002-07-18  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Don't use -ggdb3 with gcc-2.96.

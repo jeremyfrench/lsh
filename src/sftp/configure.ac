@@ -51,7 +51,7 @@ if test -f $srcdir/../lsh.c; then
   
   transport_prog="$bindir/lshg"
   before_opts="--subsystem=sftp --no-pty"
-  after_opts=""
+  after_opts="-G"
 
   # Now, make sure these are included properly when compiling (to resolve $bindr).
   # FIXME: Spaces? Autoconf evals
