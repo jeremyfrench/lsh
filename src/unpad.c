@@ -2,7 +2,10 @@
  *
  */
 
-static int do_unpad(struct pad_processor *closure,
+#include "unpad.h"
+#include "xalloc.h"
+
+static int do_unpad(struct unpad_processor *closure,
 		    struct simple_packet *packet)
 {
   UINT8 padding_length;
@@ -26,15 +29,16 @@ static int do_unpad(struct pad_processor *closure,
 
   simple_packet_free(packet);
 
-  return apply_continuation(closure->next, new);
+  return apply_processor(closure->c.next, new);
 }
 
-struct packet_processor *make_pad_processor(packet_processor *continuation)
+struct packet_processor *
+make_unpad_processor(struct packet_processor *continuation)
 {
-  struct pad_processor *closure = xalloc(sizeof(struct pad_processor));
+  struct unpad_processor *closure = xalloc(sizeof(struct unpad_processor));
 
-  closure->c->p->f = (raw_processor_function) do_unpad;
-  closure->c->next = continuation;
+  closure->c.p.f = (raw_processor_function) do_unpad;
+  closure->c.next = continuation;
 
   return (struct packet_processor *) closure;
 }

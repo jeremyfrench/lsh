@@ -5,7 +5,7 @@
 #include "bignum.h"
 #include "werror.h"
 
-void parse_bignum(bignum *n, UINT32 length, UINT8 *data)
+void bignum_parse(bignum *n, UINT32 length, UINT8 *data)
 {
   int negative = length && (*data & 0x80);
   int i;

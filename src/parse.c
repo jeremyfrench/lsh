@@ -3,6 +3,7 @@
  */
 
 #include "parse.h"
+#include "transport.h"
 
 void simple_buffer_init(struct simple_buffer *buffer,
 			UINT32 capacity, UINT8 *data)
@@ -12,16 +13,16 @@ void simple_buffer_init(struct simple_buffer *buffer,
   buffer->data = data;
 }
 
-#define BUFFER_LEFT (buffer->capacity - buffer->pos)
+#define LEFT (buffer->capacity - buffer->pos)
 #define HERE (buffer->data + buffer->pos)
 #define ADVANCE(n) (buffer->pos  += (n))
 
 int parse_uint32(struct simple_buffer *buffer, UINT32 *result)
 {
-  if (BUFFER_LEFT < 4)
+  if (LEFT < 4)
     return 0;
 
-  *result = READ_INT32(HERE);
+  *result = READ_UINT32(HERE);
   ADVANCE(4);
   return 1;
 }
@@ -34,12 +35,13 @@ int parse_string(struct simple_buffer *buffer,
   if (!parse_uint32(buffer, &l))
     return 0;
 
-  if (BUFFER_LEFT < length)
+  if (LEFT < l)
     return 0;
 
   *length = l;
   *start = HERE;
   ADVANCE(l);
+  return 1;
 }
 
 /* Initializes subbuffer to parse a string from buffer */
@@ -56,7 +58,7 @@ int parse_sub_buffer(struct simple_buffer *buffer,
   return 1;
 }
 
-int parse_uint8(struct simple_buffer *buffer, uint8 *result)
+int parse_uint8(struct simple_buffer *buffer, UINT8 *result)
 {
   if (!LEFT)
     return 0;
@@ -74,7 +76,7 @@ int parse_bignum(struct simple_buffer *buffer, bignum *result)
   if (!parse_string(buffer, &length, &digits))
     return 0;
 
-  parse_bignum(result, length, digits);
+  bignum_parse(result, length, digits);
 
   return 1;
 }
@@ -92,21 +94,21 @@ int parse_next_atom(struct simple_buffer *buffer, int *result)
   if (buffer->pos > buffer->capacity)
     return -1;
 
-  for(i = 0; i < left; i++)
+  for(i = 0; i < LEFT; i++)
     if (HERE[i] == ',')
       {
 	*result = lookup_atom(HERE, i);
-	ADVANCE[i+1];
+	ADVANCE(i+1);
 	return 1;
       }
 
-  *result = lookup(HERE, i);
+  *result = lookup_atom(HERE, i);
   ADVANCE(i+1);  /* Beyond end of buffer */
   return 1;
 }
 
 /* Returns success (i.e. 1) iff there is no data left */
-int parse_eod(struct simple_buffer *buffer);
+int parse_eod(struct simple_buffer *buffer)
 {
   return !LEFT;
 }

@@ -3,8 +3,9 @@
  */
 
 #include "void.h"
+#include "xalloc.h"
 
-static int do_ignore(struct pad_processor *closure,
+static int do_ignore(struct void_processor *closure,
 		     struct simple_packet *packet)
 {
   free(packet);
@@ -15,7 +16,7 @@ struct packet_processor *make_void_processor()
 {
   struct void_processor *closure = xalloc(sizeof(struct void_processor));
 
-  closure->p->f = (raw_processor_function) do_ignore;
+  closure->p.f = (raw_processor_function) do_ignore;
 
   return (struct packet_processor *) closure;
 }

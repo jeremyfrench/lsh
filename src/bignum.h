@@ -11,7 +11,7 @@
 
 #define bignum MP_INT
 
-void parse_bignum(bignum *n, UINT32 length, UINT8 *data);
+void bignum_parse(bignum *n, UINT32 length, UINT8 *data);
 UINT32 bignum_format_length(bignum *n);
 UINT32 bignum_format(bignum *n, UINT8 *data);
 

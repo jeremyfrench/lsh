@@ -6,7 +6,7 @@
 #ifndef LSH_UNPAD_H_INCLUDED
 #define LSH_UNPAD_H_INCLUDED
 
-#include "tranport.h"
+#include "transport.h"
 
 /* Input to the processor is a padded payload. */
 struct unpad_processor
@@ -14,6 +14,7 @@ struct unpad_processor
   struct chained_processor c;
 };
 
-struct packet_processor *make_unpad_processor(packet_processor *continuation);
+struct packet_processor *
+make_unpad_processor(struct packet_processor *continuation);
 
 #endif /* LSH_UNPAD_H_INCLUDED */

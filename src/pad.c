@@ -3,6 +3,8 @@
  */
 
 #include "pad.h"
+#include "xalloc.h"
+#include <assert.h>
 
 static int do_pad(struct pad_processor *closure,
 		  struct simple_packet *packet)
@@ -20,7 +22,7 @@ static int do_pad(struct pad_processor *closure,
     * ( (8 + packet->length) / closure->block_size);
 
   padding = new_size - packet->length - 5;
-  assert(ssh->padding_length >= 4);
+  assert(padding >= 4);
   
   new = simple_packet_alloc(new_size);
 
@@ -30,7 +32,7 @@ static int do_pad(struct pad_processor *closure,
   ssh->padding_length = padding;
 #endif
 
-  WRITE_INT32(new->data, new_size - 4);
+  WRITE_UINT32(new->data, new_size - 4);
   new->data[4] = padding;
   
   memcpy(new->data + 5, packet->data, packet->length);
@@ -38,19 +40,20 @@ static int do_pad(struct pad_processor *closure,
 
   simple_packet_free(packet);
 
-  return apply_processor(closure->c->next, new);
+  return apply_processor(closure->c.next, new);
 }
   
 
-struct packet_processor *make_pad_processor(packet_processor *continuation,
-					    unsigned block_size,
-					    random_function random,
-					    void *state)
+struct packet_processor *
+make_pad_processor(struct packet_processor *continuation,
+		   unsigned block_size,
+		   random_function random,
+		   void *state)
 {
   struct pad_processor *closure = xalloc(sizeof(struct pad_processor));
 
-  closure->c->p->f = (raw_processor_function) do_pad;
-  closure->c->next = continuation;
+  closure->c.p.f = (raw_processor_function) do_pad;
+  closure->c.next = continuation;
   closure->block_size = block_size;
   closure->random = random;
   closure->state = state;

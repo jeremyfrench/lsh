@@ -8,7 +8,7 @@
 
 #include "transport.h"
 
-typedef (*random_function)(void *state, UINT32 length, UINT8 *dst);
+typedef void (*random_function)(void *state, UINT32 length, UINT8 *dst);
 
 /* Input to the processor is a packet with the payload. Output is a
  * packet containing a formatted ssh packet (with correct byte order,
@@ -23,10 +23,11 @@ struct pad_processor
   void *state;
 };
 
-struct packet_processor *make_pad_processor(packet_processor *continuation,
-					    unsigned block_size,
-					    random_function random,
-					    void *state);
+struct packet_processor *
+make_pad_processor(struct packet_processor *continuation,
+		   unsigned block_size,
+		   random_function random,
+		   void *state);
 
 #if 0
 /* Input to the processor is a packet with the payload. Output is a

@@ -12,7 +12,7 @@
 /* Simple buffer */
 struct simple_buffer
 {
-  UNIT32 capacity;
+  UINT32 capacity;
   UINT32 pos;
   UINT8 *data;
 };
@@ -27,7 +27,7 @@ int parse_string(struct simple_buffer *buffer,
 /* Initializes subbuffer to parse a string from buffer */
 int parse_sub_buffer(struct simple_buffer *buffer,
 		     struct simple_buffer *subbuffer);
-int parse_uint8(struct simple_buffer *buffer, uint8 *result);
+int parse_uint8(struct simple_buffer *buffer, UINT8 *result);
 #define parse_boolean parse_uint8
 
 int parse_bignum(struct simple_buffer *buffer, bignum *result);
