@@ -410,7 +410,7 @@ do_host_lookup(struct lookup_verifier *c UNUSED,
   switch(method)
     {
     case ATOM_SSH_DSS:
-      return make_ssh_dss_verifier(key->length, key->data);
+      return make_ssh_dss_verifier(STRING_LD(key));
     default:
       return NULL;
     }

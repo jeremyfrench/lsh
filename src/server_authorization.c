@@ -32,6 +32,7 @@
 #include "server_authorization.h"
 
 #include "format.h"
+#include "lsh_string.h"
 #include "publickey_crypto.h"
 #include "server_userauth.h"
 #include "sexp.h"
@@ -74,11 +75,11 @@ do_key_lookup(struct lookup_verifier *c,
       /* FIXME: SPKI support. */
       
     case ATOM_SSH_DSS:
-      v = make_ssh_dss_verifier(key);
+      v = make_ssh_dss_verifier(STRING_LD(key));
       break;
 
     case ATOM_SSH_RSA:
-      v = make_ssh_rsa_verifier(key);
+      v = make_ssh_rsa_verifier(STRING_LD(key));
       break;
     }
 

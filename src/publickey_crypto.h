@@ -190,7 +190,7 @@ struct verifier *
 parse_ssh_rsa_public(struct simple_buffer *buffer);
 
 struct verifier *
-make_ssh_rsa_verifier(const struct lsh_string *public);
+make_ssh_rsa_verifier(uint32_t length, const uint8_t *key);
 
 
 /* DSA signatures */
@@ -203,7 +203,7 @@ struct verifier *
 parse_ssh_dss_public(struct simple_buffer *buffer);
 
 struct verifier *
-make_ssh_dss_verifier(const struct lsh_string *public);
+make_ssh_dss_verifier(uint32_t length, const uint8_t *key);
 
 
 #endif /* LSH_PUBLICKEY_CRYPTO_H_INCLUDED */

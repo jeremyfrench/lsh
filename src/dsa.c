@@ -371,12 +371,12 @@ make_dsa_algorithm(struct randomness *random)
 
 
 struct verifier *
-make_ssh_dss_verifier(const struct lsh_string *public)
+make_ssh_dss_verifier(uint32_t length, const uint8_t *key)
 {
   struct simple_buffer buffer;
   int atom;
   
-  simple_buffer_init(&buffer, STRING_LD(public));
+  simple_buffer_init(&buffer, length, key);
 
   return ( (parse_atom(&buffer, &atom)
 	    && (atom == ATOM_SSH_DSS))

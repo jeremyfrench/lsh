@@ -400,7 +400,7 @@ do_lsh_lookup(struct lookup_verifier *c,
     case ATOM_SSH_DSS:
       {	
 	struct lsh_string *spki_key;
-	struct verifier *v = make_ssh_dss_verifier(key);
+	struct verifier *v = make_ssh_dss_verifier(STRING_LD(key));
 
 	if (!v)
 	  {
@@ -421,7 +421,7 @@ do_lsh_lookup(struct lookup_verifier *c,
     case ATOM_SSH_RSA:
       {
 	struct lsh_string *spki_key;
-	struct verifier *v = make_ssh_rsa_verifier(key);
+	struct verifier *v = make_ssh_rsa_verifier(STRING_LD(key));
 
 	if (!v)
 	  {
