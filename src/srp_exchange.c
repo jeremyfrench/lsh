@@ -56,7 +56,7 @@ make_srp_entry(struct lsh_string *name, struct sexp *e)
 
   if (sexp_check_type(e, ATOM_SRP_VERIFIER, &i)
       && (SEXP_LEFT(i) == 3)
-      && sexp_atom_eq(SEXP_GET(i), ATOM_SSH_GROUP1) )
+      && sexp_atom_eq(SEXP_GET(i), ATOM_SSH_RING1) )
     {
       NEW(srp_entry, res);
       struct lsh_string *salt;
@@ -106,7 +106,7 @@ srp_make_verifier(struct abstract_group *G,
   GROUP_POWER(G, x, G->generator, x);
 
   e = sexp_l(4,
-	     sexp_a(ATOM_SRP_VERIFIER), sexp_a(ATOM_SSH_GROUP1),
+	     sexp_a(ATOM_SRP_VERIFIER), sexp_a(ATOM_SSH_RING1),
 	     sexp_s(NULL, salt),
 	     sexp_un(x),
 	     -1);
@@ -152,6 +152,8 @@ srp_make_init_msg(struct dh_instance *dh, struct lsh_string *name)
 {
   dh_generate_secret(dh->method, dh->secret, dh->e);
   dh_hash_update(dh, ssh_format("%S", name), 1);
+
+  debug("srp_make_init_msg: e = %xn\n", dh->e);
   return ssh_format("%c%S%n", SSH_MSG_KEXSRP_INIT, name, dh->e);
 }
 
@@ -173,9 +175,10 @@ srp_process_init_msg(struct dh_instance *self, struct lsh_string *packet)
       && (mpz_cmp_ui(self->e, 1) > 0)
       && GROUP_RANGE(self->method->G, self->e)
       && parse_eod(&buffer) )
-
-    return name;
-
+    {
+      debug("srp_process_init_msg: e = %xn\n", self->e);
+      return name;
+    }
   else
     {
       werror("Invalid SSH_MSG_KEXSRP_INIT message.\n");
@@ -195,6 +198,7 @@ srp_select_u(struct dh_instance *dh)
   u = READ_UINT32(h->data);
   lsh_string_free(h);
 
+  debug("srp_select_u: u = %xi\n", u);
   return u;
 }
 
@@ -203,20 +207,24 @@ struct lsh_string *
 srp_make_reply_msg(struct dh_instance *dh, struct srp_entry *entry)
 {
   UINT32 u;
+
+  debug("srp_make_reply_msg: v = %xn\n", entry->verifier);
   
   for (;;)
     {
       /* Loop, in case f or u turns out to be zero */
       dh_generate_secret(dh->method, dh->secret, dh->f);
 
-      GROUP_ADD(dh->method->G, dh->f, dh->f, entry->verifier);
-
-      if (!mpz_sgn(dh->f))
+      debug("srp_make_reply_msg: f - v = %xn\n", dh->f);
+      
+      if (!GROUP_ADD(dh->method->G, dh->f, dh->f, entry->verifier))
 	{
 	  werror("srp_exchange.c: Found cleartext password by mistake!\n");
 	  continue;
 	}
 
+      debug("srp_make_reply_msg: f = %xn\n", dh->f);
+      
       u = srp_select_u(dh);
       if (u)
 	break;
@@ -227,6 +235,8 @@ srp_make_reply_msg(struct dh_instance *dh, struct srp_entry *entry)
   GROUP_COMBINE(dh->method->G, dh->K, dh->e, dh->K);
   GROUP_POWER(dh->method->G, dh->K, dh->K, dh->secret);
 
+  debug("srp_make_reply_msg: K = %xn\n", dh->K);
+  
   /* Update the exchange hash */
   
   dh_hash_update(dh, ssh_format("%S%S", entry->name, entry->salt), 1);
@@ -253,6 +263,8 @@ srp_process_reply_msg(struct dh_instance *dh, struct lsh_string *packet)
       && GROUP_RANGE(dh->method->G, dh->f)
       && parse_eod(&buffer))
     {
+      debug("srp_process_reply_msg: f = %xn\n", dh->f);
+      
       /* FIXME: It would be better to keep the u around. Now, we have
        * to compute it again later. */
       if (!srp_select_u(dh))
@@ -283,12 +295,21 @@ srp_make_client_proof(struct dh_instance *dh,
   assert(u);
   
   mpz_init(v);
-  mpz_init(tmp);
 
   /* Compute the verifier */
   GROUP_POWER(dh->method->G, v, dh->method->G->generator, x);
 
-  GROUP_SUBTRACT(dh->method->G, dh->K, dh->f, v);
+  debug("srp_make_client_proof: v = %xn\n", v);
+  
+  if (!GROUP_SUBTRACT(dh->method->G, dh->K, dh->f, v))
+    {
+      mpz_clear(v);
+      return NULL;
+    }
+
+  debug("srp_make_client_proof: f - v = %xn\n", dh->K);
+  
+  mpz_init(tmp);
 
   /* Compute the exponent */
   mpz_mul_ui(tmp, x, u);
@@ -296,6 +317,8 @@ srp_make_client_proof(struct dh_instance *dh,
 
   GROUP_POWER(dh->method->G, dh->K, dh->K, tmp);
 
+  debug("srp_make_client_proof: K = %xn\n", dh->K);
+  
   mpz_clear(v);
   mpz_clear(tmp);
 
