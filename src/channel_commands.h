@@ -116,10 +116,10 @@ do_install_channel_open_handler(struct collect_info_2 *info,
 
 /* FIXME: This doesn't work */
 #define STATIC_INSTALL_GLOBAL_HANDLER(atom) \
-{ STATIC_COLLECT_2(do_install_global_request_handler),(atom) }
+{ STATIC_COLLECT_2_FINAL(do_install_global_request_handler),(atom) }
 
 #define STATIC_INSTALL_OPEN_HANDLER(atom) \
-{ STATIC_COLLECT_2(do_install_channel_open_handler),(atom) }
+{ STATIC_COLLECT_2_FINAL(do_install_channel_open_handler),(atom) }
 
 struct command *
 make_install_fix_global_request_handler(UINT32 name,
