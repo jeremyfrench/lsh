@@ -1,5 +1,55 @@
 2000-06-01  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/srp-gen.c (main_argp_parser): By default, use transport
+	syntax when writing to stdout, and canonical syntax when writing
+	to a file.
+
+	* src/server_session.c (do_open_session): assert() that
+	connection->user is non-NULL.
+
+	* src/lshd.c (lshd_connection_service): Use
+	connection_require_userauth. 
+	(main): Allow user's to request ssh-connection service without
+	first executing the ssh-userauth protocol. This makes sense if SRP
+	was used for key exchange. lshd_connection_service checks that the
+	user is properly authenticated before actually starting the
+	service. 
+
+	* src/lsh.c (lsh_options): New attributes with_userauth and service. 
+	(options2service): New command.
+	(make_lsh_userauth): New expression.
+	(make_lsh_connect): Use options2service.
+	(main_options): New flags --publickey, --userauth, --no-userauth.
+	(CASE_FLAG): New macro.
+	(main_argp_parser): Implemented --userauth and --no-userauth
+	options, with defaults depending on whether or not SRP is being
+	used.
+	Use the CASE_FLAG macro.
+	(request_userauth_service): New global command object.
+	(request_connection_service): New global command object.
+	
+	* src/connection_commands.c (connection_require_userauth): New command.
+	(make_connection_if_srp): New function.
+
+	* src/connection.h (CONNECTION_SRP): New constant.
+
+	* src/client_keyexchange.c (do_srp_client_proof_handler): Set
+	CONNECTION_SRP flag.
+	* src/server_keyexchange.c (do_srp_server_proof_handler):
+	Likewise. 
+
+	* src/client.h (request_service): Moved class declaration here.
+	(do_request_service): Added prototype and made non-static.
+	(STATIC_REQUEST_SERVICE): New macro.
+
+	* src/command, src/connection.c, src/exception.c, src/io.c,
+	src/keyexchange.c, src/keyexchange.h, src/lsh_keygen.c,
+	src/lshd.c, src/publickey_crypto.h, src/server_session.c,
+	src/server_userauth.c, src/server_userauth.h, src/sexp.c,
+	src/sexp_parser.c, src/spki.c, src/spki_commands.c,
+	src/srp_exchange.c, src/tcpforward.c, src/werror.c: Removed old
+	dead code.
+
 	* src/srp_exchange.c (srp_make_reply_msg): Check return value of
 	GROUP_ADD. 
 	Use new SRP-related atoms. More debug output.
