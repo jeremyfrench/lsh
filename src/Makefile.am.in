@@ -134,6 +134,10 @@ LDADD = liblsh.a symmetric/libsymmetric.a @LIBARGP@
 # lshg_LDFLAGS = -Wl,-Map,lshg.map
 lshg_LDADD = liblsh.a @LIBARGP@
 
+class-map: $(srcdir)/make-class-map $(dist_x_files)
+	cat $(dist_x_files) | grep '^CLASS:' \
+	| sort | $(srcdir)/make-class-map > $@
+
 # Is this rule needed?
 # all-recursive check-recursive: config.h
 
