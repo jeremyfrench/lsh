@@ -191,6 +191,12 @@ struct callback
  * channels are closed. */
 #define LSH_CHANNEL_PENDING_CLOSE 0x80
 
+/* Indicates that a channel is ready to recieve remote data */
+#define LSH_CHANNEL_READY_REC 0x100
+
+/* Indicates that a channel is ready to send data to the remote end. */
+#define LSH_CHANNEL_READY_SEND 0x200
+
 /* Non-zero if no messages can be sent over the connection. Used when
  * processing error codes from in the middle of the processing a
  * messages. If this is true, processing should stop, and most likely
