@@ -32,7 +32,7 @@ bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey \
 
 sbin_PROGRAMS = lshd lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
 bin_SCRIPTS = lsh-authorize ssh-conv
-noinst_PROGRAMS = prime_table pkcs5-test
+noinst_PROGRAMS = pkcs5-test
 noinst_SCRIPTS = lcp
 noinst_LIBRARIES = liblsh.a
 # noinst_HEADERS = $(dist_x_files) $(cvs_headers)
@@ -41,7 +41,7 @@ noinst_LIBRARIES = liblsh.a
 # compiled or dependency checked independently.
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
-	prime_table.h packet_types.h
+	packet_types.h
 
 # BUILT_SOURCES = config_parse.c
 
@@ -118,12 +118,12 @@ atoms_table.c: atoms.in process_atoms
 PRIME_LIMIT = 1024
 
 # We don't want an explicit dependency on the executable program
-prime_table.h: prime_table.c
-	$(MAKE) prime_table
-	./prime_table $(PRIME_LIMIT) >$@T
-	test -s $@T && mv -f $@T $@
-
-prime_table_LDADD =
+# prime_table.h: prime_table.c
+# 	$(MAKE) prime_table
+# 	./prime_table $(PRIME_LIMIT) >$@T
+# 	test -s $@T && mv -f $@T $@
+# 
+# prime_table_LDADD =
 
 sexp_table.h: sexp_chars.in $(srcdir)/scm/make-char-classes.scm
 	$(SCHEME) -e main -s $(srcdir)/scm/make-char-classes.scm <$< >$@T
