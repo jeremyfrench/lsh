@@ -1271,9 +1271,22 @@ Options specific to the @command{lshd} server are:
 Port to listen to. The mandatory argument is a decimal port number or a
 service name. Default is "ssh", usually port 22.
 
+It should also be possible to use several -p options as a convenient way
+to make lshd listen on several ports on each specified (or default)
+interface, but that is not yet implemented.
+
 @item --interface
 Network interface to listen on. By default, @command{lshd} listens on all
-interfaces.
+interfaces. An interface can be specified as a DNS name, a literal IPv4
+address, or a literal IPv6 address enclosed in square brackets. It can
+optionally be followed by a colon and a port number or service name. If
+no port number or service is specified, the default or the value from a
+@emph{preceding} @option{-p} is used.
+
+Some examples: @code{--interface=localhost},
+@code{--interface=1.2.3.4:443}, @code{--interface=[aaaa::bbbb]:4711}. To
+make @command{lshd} listen on several ports and interfaces at the same
+time, just use several @option{--interface} options on the command line.
 
 @item -h
 Location of the server's private key file. By default,
