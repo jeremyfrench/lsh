@@ -215,6 +215,6 @@ make_ssh_rsa_verifier(UINT32 public_length,
 		      const UINT8 *public);
 
 struct sexp *
-rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits);
+rsa_generate_key(struct randomness *r, UINT32 bits);
 
 #endif /* LSH_PUBLICKEY_CRYPTO_H_INCLUDED */
