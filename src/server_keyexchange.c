@@ -32,14 +32,16 @@
 struct install_keys *make_server_install_keys(void **algorithms);
 
 static int do_handle_dh_init(struct packet_handler *c,
-			      struct ssh_connection *connection,
-			      struct lsh_string *packet)
+			     struct ssh_connection *connection,
+			     struct lsh_string *packet)
 {
   struct dh_server *closure = (struct dh_server *) c;
   struct hash_instance *hash;
   struct lsh_string *s;
   int res;
 
+  MDEBUG(closure);
+  
   verbose("handle_dh_init()\n");
   
   if (!dh_process_client_msg(&closure->dh, packet))
@@ -95,6 +97,8 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   struct dh_server_exchange *closure = (struct dh_server_exchange *) c;
   struct dh_server *dh = xalloc(sizeof(struct dh_server));
 
+  MDEBUG(closure);
+  
   /* FIXME: Use this value to choose a signer function */
   if (hostkey_algorithm_atom != ATOM_SSH_DSS)
     fatal("Internal error\n");
@@ -103,7 +107,7 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   dh->super.handler = do_handle_dh_init;
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
-  dh->server_key = closure->server_key;
+  dh->dh.server_key = closure->server_key;
   dh->signer = closure->signer;
 
   dh->install = make_server_install_keys(algorithms);
@@ -153,6 +157,8 @@ static int do_install(struct install_keys *c,
 
   struct server_install_keys *closure = (struct server_install_keys *) c;
   
+  MDEBUG(closure);
+
   /* Keys for recieving */
   connection->dispatch[SSH_MSG_NEWKEYS] = make_newkeys_handler
     (kex_make_encrypt(secret, closure->algorithms,

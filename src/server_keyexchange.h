@@ -42,7 +42,7 @@ struct dh_server
 {
   struct packet_handler super;
   struct diffie_hellman_instance dh;
-  struct lsh_string *server_key;
+  /* struct lsh_string *server_key; */
   struct signer *signer;
   struct install_keys *install;
 };
