@@ -415,6 +415,18 @@ AC_CHECK_HEADERS(X11/Xauth.h)
 AC_CHECK_LIB(Xau, XauGetAuthByAddr)
 LSH_RPATH_FIX
 
+AC_ARG_VAR(XAUTH_PROGRAM, Program used to handle .Xauthority-files by lshd)
+
+if test -z "$XAUTH_PROGRAM"; then
+  AC_PATH_PROG(XAUTH_PROGRAM, xauth,, /usr/X11R6/bin:/usr/openwin/bin:/usr/X/bin:/usr/X11/bin:/usr/bin:/usr/bin/X:/usr/bin/X11)
+fi
+
+if test -z "$XAUTH_PROGRAM"; then
+  AC_MSG_WARN(Couldn't find xauth, try passing XAUTH_PROGRAM=/path/to/xauth to configure)
+else
+  AC_DEFINE_UNQUOTED(XAUTH_PROGRAM, "$XAUTH_PROGRAM", Program used by lshd to handle .Xauthority-files)
+fi
+
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
 AC_CHECK_LIB(nsl, gethostbyname)

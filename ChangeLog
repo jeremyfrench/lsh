@@ -1,3 +1,7 @@
+2002-09-03  Pontus Sköld  <pont@soua.net>
+
+	* configure.ac: Search for xauth.
+
 2002-09-02  Pontus Sköld  <pont@soua.net>
 
 	* src/testsuite/lsh-8-test: New test. Check whatever unencrypted
