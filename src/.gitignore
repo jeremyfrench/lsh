@@ -20,9 +20,9 @@
 /digit_table.h
 /lsh
 /lsh-decode-key
-/lsh_keygen
+/lsh-keygen
+/lsh-writekey
 /lsh_proxy
-/lsh_writekey
 /lshd
 /packet_types.h
 /pkcs5-test

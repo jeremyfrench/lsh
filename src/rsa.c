@@ -22,24 +22,26 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "publickey_crypto.h"
+#include "rsa.h"
 
 #include "atoms.h"
-#include "bignum.h"
 #include "crypto.h"
 #include "format.h"
 #include "parse.h"
 #include "sexp.h"
-#include "sha.h"
-#include "ssh.h"
+/* #include "ssh.h" */
 #include "werror.h"
 #include "xalloc.h"
 
 #include <assert.h>
 
+#define GABA_DEFINE
+#include "rsa.h.x"
+#undef GABA_DEFINE
+
 #include "rsa.c.x"
 
-/* GABA:
+/* ;; GABA:
    (class
      (name rsa_algorithm)
      (super signature_algorithm)
@@ -54,11 +56,11 @@
 */
 
 static void
-pkcs_1_encode(mpz_t m,
-	      struct rsa_algorithm *params,
-	      UINT32 length,
-	      UINT32 msg_length,
-	      const UINT8 *msg)
+pkcs1_encode(mpz_t m,
+	     struct rsa_algorithm *params,
+	     UINT32 length,
+	     UINT32 msg_length,
+	     const UINT8 *msg)
 {
   UINT8 *em = alloca(length);
   unsigned i = length;
@@ -124,8 +126,8 @@ static int
 spki_init_rsa_public(struct rsa_public *key,
 		     struct sexp_iterator *i)
 {
-  return (sexp_get_un(i, ATOM_N, key->n)
-	  && sexp_get_un(i, ATOM_E, key->e)
+  return (sexp_get_un(i, ATOM_N, key->n, RSA_MAX_SIZE)
+	  && sexp_get_un(i, ATOM_E, key->e, RSA_MAX_SIZE)
 	  && rsa_check_size(key));
 }
 
@@ -166,7 +168,7 @@ spki_init_rsa_public(struct rsa_public *key,
 
 /* Compute x, the d:th root of m. Calling it with x == m is allowed. */
 static void
-compute_rsa_root(struct rsa_signer *self, mpz_t x, mpz_t m)
+rsa_compute_root(struct rsa_signer *self, mpz_t x, mpz_t m)
 {
 #if RSA_CRT
   mpz_t xp; /* modulo p */
@@ -237,12 +239,18 @@ do_rsa_sign(struct signer *s,
   mpz_t m;
 
   mpz_init(m);
-  pkcs_1_encode(m, self->public.params, self->public.size - 1,
-		msg_length, msg);
+  pkcs1_encode(m, self->public.params, self->public.size - 1,
+	       msg_length, msg);
 
-  compute_rsa_root(self, m, m);
+  rsa_compute_root(self, m, m);
+
+  /* Uses the encoding:
+   *
+   * string rsa-pkcs1
+   * string signature-blob
+   */
   
-  res = ssh_format("%lun", m);
+  res = ssh_format("%a%un", m);
 
   mpz_clear(m);
   return res;
@@ -254,8 +262,22 @@ do_rsa_sign_spki(struct signer *s,
 		 UINT32 msg_length,
 		 const UINT8 *msg)
 {
-  fatal("do_rsa_sign_spki() not implemented.\n");
-  
+  CAST(rsa_signer, self, s);
+  mpz_t m;
+  struct sexp *signature;
+
+  mpz_init(m);
+  pkcs1_encode(m, self->public.params, self->public.size - 1,
+	       msg_length, msg);
+
+  rsa_compute_root(self, m, m);
+
+  /* Build signature */
+  signature = sexp_l(4, sexp_a(ATOM_SIGNATURE), hash, principal,
+		     sexp_un(m), -1);
+
+  mpz_clear(m);
+  return signature;
 }
 
 static struct sexp *
@@ -264,10 +286,37 @@ do_rsa_public_key(struct signer *s)
   CAST(rsa_signer, self, s);
 
   return sexp_l(2, sexp_a(ATOM_PUBLIC_KEY),
-		sexp_l(3, sexp_a(ATOM_RSA_PKCS1),
+		sexp_l(3, sexp_a(ATOM_RSA_PKCS1_SHA1),
 		       sexp_l(2, sexp_a(ATOM_N), sexp_un(self->public.n), -1),
 		       sexp_l(2, sexp_a(ATOM_E), sexp_un(self->public.e), -1),
 		       -1), -1);
+}
+
+static int
+rsa_pkcs1_verify(struct rsa_verifier *self,
+		 UINT32 length,
+		 const UINT8 *msg,
+		 mpz_t signature)
+{
+  int res;
+  mpz_t m;
+  mpz_t s;
+  
+  if (mpz_cmp(signature, self->public.n) >= 0)
+    return 0;
+
+  mpz_init(m);
+  mpz_init(s);
+  
+  mpz_powm(s, signature, self->public.e, self->public.n);
+
+  pkcs1_encode(m, self->public.params, self->public.size - 1,
+	       length, msg);
+  
+  res = !mpz_cmp(m, s);
+  mpz_clear(m); mpz_clear(s);
+
+  return res;
 }
 
 static int
@@ -278,41 +327,43 @@ do_rsa_verify(struct verifier *v,
 	      const UINT8 *signature_data)
 {
   CAST(rsa_verifier, self, v);
-  mpz_t m;
   mpz_t s;
   int res;
-  
+
   if (signature_length > self->public.size)
     return 0;
   
   mpz_init(s);
   bignum_parse_u(s, signature_length, signature_data);
 
-  if (mpz_cmp(s, self->public.n) >= 0)
-    {
-      mpz_clear(s);
-      return 0;
-    }
-
-  mpz_powm(s, s, self->public.e, self->public.n);
-
-  mpz_init(m);
-  pkcs_1_encode(m, self->public.params, self->public.size - 1,
-		length, msg);
+  res = rsa_pkcs1_verify(self, length, msg, s);
   
-  res = !mpz_cmp(m, s);
-  mpz_clear(m); mpz_clear(s);
-
+  mpz_clear(s);
+  
   return res;
 }
 
 static int
-do_rsa_verify_spki(struct verifier *s,
+do_rsa_verify_spki(struct verifier *v,
 		   UINT32 length,
 		   const UINT8 *msg,
 		   struct sexp_iterator *i)
 {
-  fatal("do_rsa_verify_spki() not implemented.\n");
+  CAST(rsa_verifier, self, v);
+  mpz_t s;
+  int res;
+  
+  if (SEXP_LEFT(i) != 1)
+    return 0;
+
+  mpz_init(s);
+  
+  res = (sexp2bignum_u(SEXP_GET(i), s, self->public.size)
+	 && rsa_pkcs1_verify(self, length, msg, s));
+
+  mpz_clear(s);
+
+  return res;
 }
 
 static struct signer *
@@ -323,9 +374,14 @@ make_rsa_signer(struct signature_algorithm *s,
   NEW(rsa_signer, res);
   init_rsa_public(&res->public, params);
 
-  if ( (SEXP_LEFT(i) >= 3)
+  if ( (SEXP_LEFT(i) == 8)
        && spki_init_rsa_public(&res->public, i)
-       && sexp_get_un(i, ATOM_D, res->d) )
+       && sexp_get_un(i, ATOM_D, res->d, RSA_MAX_SIZE)
+       && sexp_get_un(i, ATOM_P, res->p, RSA_MAX_SIZE)
+       && sexp_get_un(i, ATOM_Q, res->q, RSA_MAX_SIZE)
+       && sexp_get_un(i, ATOM_A, res->a, RSA_MAX_SIZE)
+       && sexp_get_un(i, ATOM_B, res->b, RSA_MAX_SIZE)
+       && sexp_get_un(i, ATOM_C, res->c, RSA_MAX_SIZE) )
     {
       res->super.sign = do_rsa_sign;
       res->super.sign_spki = do_rsa_sign_spki;
