@@ -309,7 +309,7 @@ lsh_string_write_random(struct lsh_string *s, uint32_t start,
 
 #if WITH_IPV6
 struct lsh_string *
-lsh_string_ntop(int family, uint32_t length, void *addr)
+lsh_string_ntop(int family, uint32_t length, const void *addr)
 {
   struct lsh_string *s = lsh_string_alloc(length + 1);
 

@@ -167,7 +167,7 @@ struct lsh_string *
 lsh_string_random(struct randomness *r, uint32_t length);
 
 struct lsh_string *
-lsh_string_ntop(int family, uint32_t length, void *addr);
+lsh_string_ntop(int family, uint32_t length, const void *addr);
 
 int
 lsh_string_read(struct lsh_string *s, uint32_t start,
