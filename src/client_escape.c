@@ -36,10 +36,6 @@
 
 enum escape_state { GOT_NONE, GOT_NEWLINE, GOT_ESCAPE };
 
-/* The terminal is typically in raw mode, so we should look for CR
- * <escape> rather than NL <escape>. */
-#define NEWLINE '\r'
-
 #include "client_escape.c.x"
   
 struct escape_info *
@@ -67,35 +63,25 @@ make_escape_info(UINT8 escape)
        (state . "enum escape_state")))
 */
 
+static inline int
+newlinep(UINT8 c)
+{
+  return (c == '\n') || (c == '\r');
+}
+
 /* Search for NEWLINE ESCAPE, starting at pos. If successful, returns
  * 1 and returns the index of the escape char. Otherwise, returns
  * zero. */
 static UINT32
 scan_escape(struct lsh_string *packet, UINT32 pos, UINT8 escape)
 {
-  for (;;)
+  for ( ; (pos + 2) <= packet->length; pos++)
     {
-      UINT32 left;
-      UINT8 *p;
-
-      if (pos + 2 > packet->length)
-	return 0;
-      
-      left = packet->length - pos;
-
-      assert(left >= 2);
-
-      p = memchr(packet->data + pos, NEWLINE, left - 1);
-      if (!p)
-	return 0;
-      else
-	{
-	  pos = p - packet->data + 1;
-	  assert(pos < packet->length);
-	  if (packet->data[pos] == escape)
-	    return pos;
-	}
+      if (newlinep(packet->data[pos])
+	  && (packet->data[pos+1] == escape))
+	return pos + 1;
     }
+  return 0;
 }
 
 /* Returns 1 for the quote action. */ 
@@ -212,7 +198,7 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
   if (done < packet->length)
     {
       /* Rember if the last character is a newline. */
-      if (packet->data[packet->length - 1] == NEWLINE)
+      if (newlinep(packet->data[packet->length - 1]))
 	self->state = GOT_NEWLINE;
       else
 	self->state = GOT_NONE;
