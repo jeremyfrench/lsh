@@ -53,13 +53,16 @@ struct lsh_string *lsh_string_alloc_clue(UINT32 size, const char *clue);
 #define lsh_string_alloc(size) \
   (lsh_string_alloc_clue((size), (__FILE__ ":" STRING_LINE ": " FUNCTION_NAME)))
 
-#else
+#else /* !DEBUG_ALLOC */
 struct lsh_string *lsh_string_alloc(UINT32 size);
-#endif
+#endif /* !DEBUG_ALLOC */
 
-void lsh_string_free(struct lsh_string *packet);
+void
+lsh_string_free(const struct lsh_string *packet);
 
 struct lsh_object *lsh_object_alloc(struct lsh_class *class);
+
+/* FIXME: Should take a const struct lsh_object. */
 void lsh_object_free(struct lsh_object *o);
 
 /* NOTE: This won't work for if there are strings or other instance
@@ -67,7 +70,7 @@ void lsh_object_free(struct lsh_object *o);
 struct lsh_object *lsh_object_clone(struct lsh_object *o);
 
 void *lsh_space_alloc(size_t size);
-void lsh_space_free(void *p);
+void lsh_space_free(const void *p);
 
 #if DEBUG_ALLOC
 

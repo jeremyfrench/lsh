@@ -73,7 +73,8 @@ static void *debug_malloc(size_t real_size)
   return (void *) res;
 }
 
-static void debug_free(void *m)
+static void
+debug_free(const void *m)
 {
   if (m)
     {
@@ -92,7 +93,9 @@ static void debug_free(void *m)
 
 #else  /* !DEBUG_ALLOC */
 
-#define lsh_free free
+/* ANSI-C free doesn't allow const pointers to be freed. (That is one
+ * of the few things that C++ gets right). */
+#define lsh_free(p) free((void *) (p))
 #define lsh_malloc malloc
 
 #endif /* !DEBUG_ALLOC */
@@ -186,7 +189,7 @@ lsh_string_alloc_clue(UINT32 length, const char *clue)
 #endif
 
 void
-lsh_string_free(struct lsh_string *s)
+lsh_string_free(const struct lsh_string *s)
 {
   if (!s)
     return;
@@ -347,36 +350,37 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
 #if DEBUG_ALLOC
 void *lsh_space_alloc(size_t size)
 {
-  int * p = xalloc(size + sizeof(int));
+  UNIT *p = xalloc(size + sizeof(UNIT));
 
   *p = -1919;
 
   return (void *) (p + 1);
 }
 
-void lsh_space_free(void *p)
+void lsh_space_free(const void *p)
 {
-  int *m;
+  UNIT *m;
   
   if (!p)
     return;
-  
-  m = ((int *) p) - 1;
 
-  if (*m != -1919)
+  m = (UNIT *) p;
+  
+  if (m[-1] != (UNIT) -1919)
     fatal("lsh_free_space: Type error!\n");
 
-  lsh_free(m);
+  lsh_free(m-1);
 }
 
 #else /* !DEBUG_ALLOC */
 
+/* FIXME: Why not use macros for this? */
 void *lsh_space_alloc(size_t size)
 {
-  return xalloc(size);
+  return lsh_malloc(size);
 }
 
-void lsh_space_free(void *p)
+void lsh_space_free(const void *p)
 {
   lsh_free(p);
 }
