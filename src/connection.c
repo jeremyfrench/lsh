@@ -37,6 +37,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
+
 #define GABA_DEFINE
 #include "connection.h.x"
 #undef GABA_DEFINE
@@ -54,6 +56,15 @@ handle_connection(struct abstract_write *w,
   CAST(ssh_connection, closure, w);
   UINT8 msg;
 
+  if (closure->busy)
+    {
+      werror("connection.c: Internal error: connection busy. Disconnecting!\n");
+      EXCEPTION_RAISE(closure->e,
+		      make_protocol_exception(SSH_DISCONNECT_BY_APPLICATION,
+					      "Internal error."));
+      return;
+    }
+  
   if (!packet->length)
     {
       werror("connection.c: Received empty packet!\n");
@@ -184,6 +195,17 @@ do_exc_protocol_handler(struct exception_handler *s,
 	EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
       }
       break;
+#if 0
+    case EXC_CONNECTION_LOCK:
+      assert(!self->connection->busy);
+      self->connection->busy = 1;
+      break;
+
+    case EXC_CONNECTION_UNLOCK:
+      assert(self->connection->busy);
+      self->connection->busy = 0;
+      break;
+#endif 
     default:
       EXCEPTION_RAISE(self->super.parent, e);
     }
@@ -237,6 +259,8 @@ make_ssh_connection(struct command_continuation *c,
   connection->send_mac = NULL;
   connection->send_crypto = NULL;
 
+  connection->busy = 0;
+  
   connection->kex_state = KEX_STATE_INIT;
 
   connection->kexinits[CONNECTION_CLIENT]
@@ -314,6 +338,26 @@ void connection_init_io(struct ssh_connection *connection,
   connection->send_crypto = connection->rec_crypto = NULL;
   connection->send_mac = connection->rec_mac = NULL;
   connection->send_compress = connection->rec_compress = NULL;
+}
+
+/* Serialization. Breaks if we ever return to the main loop with the
+ * connection locked.
+ *
+ * A better implementation should communicate with the packet source
+ * to stop reading packets while the connection is locked. Perhaps by
+ * raising appropriate exceptions, if we are to keep the connection
+ * code free from i/o.*/
+
+void connection_lock(struct ssh_connection *self)
+{
+  assert(!self->busy);
+  self->busy = 1;
+}
+
+void connection_unlock(struct ssh_connection *self)
+{
+  assert(self->busy);
+  self->busy = 0;
 }
 
 /* ;; GABA:

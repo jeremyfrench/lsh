@@ -94,6 +94,17 @@
        (send_crypto object crypto_instance)
        (send_compress object compress_instance)
 
+       ; For operations that require serialization. In particular
+       ; the server side of user authentication.
+       
+       ; To handle this intelligently, we should stop reading from the
+       ; socket, and/or put received packets on a wait queue.
+
+       ; Currently, we don't do anything like that, we use this flag
+       ; for sanity checks, and relies on the functions setting the flag
+       ; to clear it before returning to the main loop.
+       (busy . int)
+       
        ; Key exchange 
        (kex_state simple int)
 
@@ -119,8 +130,7 @@
 
        ; (provides_privacy simple int)
        ; (provides_integrity simple int)
-       ))
-*/
+       )) */
 
 #define C_WRITE(c, s) A_WRITE((c)->write, (s) )
 
@@ -139,6 +149,10 @@ void connection_init_io(struct ssh_connection *connection,
 
 struct packet_handler *make_fail_handler(void);
 struct packet_handler *make_unimplemented_handler(void);  
+
+/* Serialization */
+void connection_lock(struct ssh_connection *self);
+void connection_unlock(struct ssh_connection *self);
 
 /* Table of packet types */
 extern const char *packet_types[0x100];
