@@ -27,7 +27,9 @@
 #include "lsh.h"
 #include "command.h"
 
-struct command *make_pty_request(int tty);
+struct interact;
+
+struct command *make_pty_request(struct interact *tty);
 
 #endif /* LSH_CLIENT_PTY_H_INCLUDED */
 

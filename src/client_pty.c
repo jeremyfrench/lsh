@@ -25,7 +25,7 @@
 
 #include "channel_commands.h"
 #include "format.h"
-#include "tty.h"
+#include "interact.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -38,18 +38,86 @@
      (name pty_request)
      (super channel_request_command)
      (vars
-       (tty . int)
+       (tty object interact)
        (term string)
-       (ios . "struct termios")
-       (width . UINT32)
-       (height . UINT32)
-       (width_p . UINT32)
-       (height_p . UINT32)))
+       (attr object terminal_attributes)
+       (dims . "struct terminal_dimensions")))
 */
 
-/* FIXME: Add a resource, to make sure that the tty is reset and
- * closed when the channel dies. */
+/* GABA:
+   (class
+     (name client_tty_resource)
+     (super resource)
+     (vars
+       (tty object interact)
+       (attr object terminal_attributes)))
+*/
 
+static void
+do_kill_client_tty_resource(struct resource *s)
+{
+  CAST(client_tty_resource, self, s);
+  self->super.alive = 0;
+  INTERACT_SET_ATTRIBUTES(self->tty, self->attr);
+}
+
+static struct resource *
+make_client_tty_resource(struct interact *tty,
+			 struct terminal_attributes *attr)
+{
+  NEW(client_tty_resource, self);
+  resource_init(&self->super, do_kill_client_tty_resource);
+
+  self->tty = tty;
+  self->attr = attr;
+
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name client_winch_handler)
+     (super window_change_callback)
+     (vars
+       (channel object ssh_channel)))
+*/
+
+static struct lsh_string *
+format_window_change(struct ssh_channel *channel,
+		     struct terminal_dimensions *dims)
+{
+  return format_channel_request
+    (ATOM_WINDOW_CHANGE, channel,
+     0, "%i%i%i%i",
+     dims->char_width, dims->char_height,
+     dims->pixel_width, dims->pixel_height); 
+}
+
+static void
+do_client_winch_handler(struct window_change_callback *s,
+			struct interact *tty)
+{
+  CAST(client_winch_handler, self, s);
+  struct terminal_dimensions dims;
+
+  if (!INTERACT_WINDOW_SIZE(tty, &dims))
+    return;
+
+  A_WRITE(self->channel->write,
+	  format_window_change(self->channel, &dims));
+}
+
+static struct window_change_callback *
+make_client_winch_handler(struct ssh_channel *channel)
+{
+  NEW(client_winch_handler, self);
+  self->super.f = do_client_winch_handler;
+  self->channel = channel;
+
+  return &self->super;
+}
+
+       
 /* GABA:
    (class
      (name pty_request_continuation)
@@ -68,17 +136,28 @@ do_pty_continuation(struct command_continuation *s,
 		    struct lsh_object *x)
 {
   CAST(pty_request_continuation, self, s);
-
+  CAST_SUBTYPE(ssh_channel, channel, x);
+  struct terminal_attributes *raw;
+  
   assert(x);
   verbose("lsh: pty request succeeded\n");
   
-  CFMAKERAW(&self->req->ios);
-  if (!tty_setattr(self->req->tty, &self->req->ios))
+  raw = TERM_MAKE_RAW(self->req->attr);
+  if (!INTERACT_SET_ATTRIBUTES(self->req->tty, raw))
     {
       werror("do_pty_continuation: "
 	     "Setting the attributes of the local terminal failed.\n");
     }
 
+  REMEMBER_RESOURCE(channel->resources,
+		    make_client_tty_resource(self->req->tty,
+					     self->req->attr));
+  
+  REMEMBER_RESOURCE(channel->resources,
+		    INTERACT_WINDOW_SUBSCRIBE
+		    (self->req->tty,
+		     make_client_winch_handler(channel)));
+  
   COMMAND_RETURN(self->super.up, x);
 }
 
@@ -105,28 +184,32 @@ do_format_pty_request(struct channel_request_command *s,
 
   *c = make_pty_continuation(self, *c);
 
-  return format_channel_request(ATOM_PTY_REQ, channel, 1,
-				"%S%i%i%i%i%fS",
-				self->term,
-				self->width, self->height,
-				self->width_p, self->height_p,
-				tty_encode_term_mode(&self->ios));
+  return format_channel_request
+    (ATOM_PTY_REQ, channel, 1,
+     "%S%i%i%i%i%fS",
+     self->term,
+     self->dims.char_width, self->dims.char_height,
+     self->dims.pixel_width, self->dims.pixel_height,
+     TERM_ENCODE(self->attr));
 }
 
-struct command *make_pty_request(int tty)
+struct command *
+make_pty_request(struct interact *tty)
 {
   NEW(pty_request, req);
   char *term = getenv("TERM");
 
-  if (!tty_getattr(tty, &req->ios))
+  req->attr = INTERACT_GET_ATTRIBUTES(tty);
+
+  if (!req->attr)
     {
       KILL(req);
       return NULL;
     }
   
-  if (!tty_getwinsize(tty, &req->width, &req->height,
-		      &req->width_p, &req->height_p))
-    req->width = req->height = req->width_p = req->height_p = 0;
+  if (!INTERACT_WINDOW_SIZE(tty, &req->dims))
+    req->dims.char_width = req->dims.char_height
+      = req->dims.pixel_width = req->dims.pixel_height = 0;
 
   req->super.format_request = do_format_pty_request;
   req->super.super.call = do_channel_request_command;
