@@ -34,6 +34,7 @@
 
 #include "crypto.h"
 
+#include "lsh_string.h"
 #include "xalloc.h"
 
 /* NOTE: The PKCS#5 v2 spec doesn't recommend or specify any
@@ -71,24 +72,28 @@
  * Based on this, it seems that something between 1000 and 10000 is a
  * reasonable number of iterations (today, May 2000). */
 
-void
+struct lsh_string *
 pkcs5_derive_key(struct mac_algorithm *prf,
-		 uint32_t password_length, const uint8_t *password,
-		 uint32_t salt_length, const uint8_t *salt,
+		 const struct lsh_string *password,
+		 const struct lsh_string *salt,
 		 uint32_t iterations,
-		 uint32_t key_length, uint8_t *key)
+		 uint32_t key_length)
 {
-  struct mac_instance *m = MAKE_MAC(prf, password_length, password);
+  struct mac_instance *m = MAKE_MAC(prf,
+				    lsh_string_length(password),
+				    lsh_string_data(password));
+  struct lsh_string *key = lsh_string_alloc(key_length);
   uint32_t left = key_length;
-
+  uint32_t pos = 0;
+  
   /* Set up the block counter buffer. This will never have more than
    * the last few bits set (using sha1, 8 bits = 5100 bytes of key) so
    * we only change the last byte. */
 
   uint8_t block_count[4] = { 0, 0, 0, 1 }; 
 
-  uint8_t *digest = alloca(prf->mac_size);
-  uint8_t *buffer = alloca(prf->mac_size);
+  struct lsh_string *digest = lsh_string_alloc(prf->mac_size);
+  struct lsh_string *buffer = lsh_string_alloc(prf->mac_size);
 
   assert(iterations);
   assert(key_length <= 255 * prf->mac_size);
@@ -99,28 +104,34 @@ pkcs5_derive_key(struct mac_algorithm *prf,
       assert(block_count[3]);
       
       /* First iterate */
-      MAC_UPDATE(m, salt_length, salt);
+      MAC_UPDATE(m, lsh_string_length(salt), lsh_string_data(salt));
       MAC_UPDATE(m, 4, block_count);
-      MAC_DIGEST(m, buffer);
+      MAC_DIGEST(m, buffer, 0);
 
       for (i = 1; i < iterations; i++)
 	{
-	  MAC_UPDATE(m, prf->mac_size, buffer);
-	  MAC_DIGEST(m, digest);
-	  memxor(buffer, digest, prf->mac_size);
+	  MAC_UPDATE(m, prf->mac_size, lsh_string_data(buffer));
+	  MAC_DIGEST(m, digest, 0);
+	  lsh_string_write_xor(buffer, 0, STRING_LD(digest));
 	}
 
+      assert(pos + left == key_length);
+      
       if (left <= prf->mac_size)
 	{
-	  memcpy(key, buffer, left);
+	  lsh_string_write(key, pos, left, lsh_string_data(buffer));
 	  break;
 	}
       else
 	{
-	  memcpy(key, buffer, prf->mac_size);
-	  key += prf->mac_size;
+	  lsh_string_write_string(key, pos, buffer);
+	  pos += prf->mac_size;
 	  left -= prf->mac_size;
 	}
     }
   KILL(m);
+  lsh_string_free(digest);
+  lsh_string_free(buffer);
+
+  return key;
 }
