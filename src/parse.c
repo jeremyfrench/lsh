@@ -306,8 +306,18 @@ parse_atom_list(struct simple_buffer *buffer, unsigned limit)
   return parse_atoms(&sub_buffer, limit);
 }
 
+void
+parse_rest(struct simple_buffer *buffer,
+	   UINT32 *length, const UINT8 **start)
+{
+  *length = LEFT;
+  *start = HERE;
+
+  ADVANCE(*length);
+}
+
 struct lsh_string *
-parse_rest(struct simple_buffer *buffer)
+parse_rest_copy(struct simple_buffer *buffer)
 {
   UINT32 length = LEFT;
   struct lsh_string *s = ssh_format("%ls", length, HERE);
