@@ -1,3 +1,12 @@
+2003-01-10  Niels Möller  <niels@s3.kth.se>
+
+	* parse.c (spki_parse_principal): Deleted the final calls to
+	spki_parse_end.
+	(spki_parse_subject, spki_parse_issuer): Call spki_parse_end.
+
+	* certificate.c (spki_tag_free): New function.
+	(spki_5_tuple_free_chain): ...Use it.
+
 2003-01-09  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* certificate.c (spki_acl_parse): Use spki_check_type.
