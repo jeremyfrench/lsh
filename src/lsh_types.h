@@ -30,6 +30,11 @@
 #include "config.h"
 #endif
 
+/* FIXME: This should probably be set in config.h by autoconf */
+
+/* The crypt function requires _XOPEN_SOURCE, while the initgroups
+ * function requires _BSD_SOURCE */
+#define _GNU_SOURCE
 
 #if SIZEOF_SHORT >= 4
 #define UINT32 unsigned short
@@ -85,20 +90,27 @@ do {						\
 
 struct lsh_object
 {
-  int type;  /* Zero for objects that are not allocated on the heap. */
+  int size;  /* Zero for objects that are not allocated on the heap. */
+};
+
+struct lsh_string_header
+{
+  int magic;
 };
 
 #define STATIC_HEADER { 0 },
 
 #else   /* !DEBUG_ALLOC */
 struct lsh_object {};
+struct lsh_string_header {};
+
 #define STATIC_HEADER
 
 #endif  /* !DEBUG_ALLOC */
 
 struct lsh_string
 {
-  struct lsh_object header;
+  struct lsh_string_header header;
   
   UINT32 sequence_number;
   /* NOTE: The allocated size may be larger than the string length. */
