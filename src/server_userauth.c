@@ -85,11 +85,12 @@ static int do_handle_userauth(struct packet_handler *c,
       && parse_atom(&buffer, &method))
     {
       struct ssh_service *service;
-      struct userauth *auth;
+      CAST_SUBTYPE(userauth, auth, ALIST_GET(closure->methods, method));
 
+      lsh_string_free(packet);
+      
       closure->attempts--;
 
-      auth = ALIST_GET(closure->methods, method);
       if (!auth)
 	return closure->attempts
 	  ? A_WRITE(connection->write,
@@ -127,7 +128,10 @@ static int do_handle_userauth(struct packet_handler *c,
       
       return res | SERVICE_INIT(service, connection);
     }
+
   /* Invalid request */
+  lsh_string_free(packet);
+
   return LSH_FAIL | LSH_DIE;
 }
 
