@@ -30,7 +30,6 @@
 #include "publickey_crypto.h"
 
 #include "atoms.h"
-#include "bignum.h"
 #include "connection.h"
 #include "crypto.h"
 #include "format.h"
