@@ -43,7 +43,7 @@
 #include "randomness.h"
 #include "service.h"
 #include "sexp.h"
-#include "spki.h"
+#include "spki_commands.h"
 #include "ssh.h"
 #include "tcpforward_commands.h"
 #include "tty.h"
@@ -67,6 +67,26 @@
 
 #include "lsh_argp.h"
 
+struct command_simple options2remote;
+#define OPTIONS2REMOTE (&options2remote.super.super)
+
+struct command_simple lsh_verifier_command;
+#define OPTIONS2VERIFIER (&lsh_verifier_command.super.super)
+
+struct command_simple lsh_login_command;
+#define LSH_LOGIN (&lsh_login_command.super.super)
+
+static struct command options2known_hosts;
+#define OPTIONS2KNOWN_HOSTS (&options2known_hosts)
+
+static struct command options2identities;
+#define OPTIONS2IDENTITIES (&options2identities.super)
+
+static struct catch_command catch_open_exceptions =
+STATIC_CATCH_COMMAND(EXC_IO_OPEN_READ, EXC_IO_OPEN_READ, 0);
+#define CATCH_OPEN (&catch_open_exceptions.super.super.super)
+
+		    
 #include "lsh.c.x"
 
 /* Block size for stdout and stderr buffers */
@@ -75,11 +95,105 @@
 /* Window size for the session channel */
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
 
+/* GABA:
+   (class
+     (name lsh_options)
+     (super algorithms_options)
+     (vars
+       (backend object io_backend)
+       (random object randomness)
+       (signature_algorithms object alist)
+       (home . "const char *")
+       
+       ; For i/o exceptions 
+       (handler object exception_handler)
+
+       (exit_code . "int *")
+       
+       (not . int)
+       (port . "char *")
+       (remote object address_info)
+
+       (user . "char *")
+       (identity . "char *")
+       (publickey . int)
+
+       (sloppy . int)
+       (capture . "const char *")
+       (capture_file object abstract_write)
+
+       (known_hosts . "const char *")
+       ;; (known_hosts_file object io_fd)
+       
+       ; -1 means default behaviour
+       (with_pty . int)
+
+       (with_remote_peers . int)
+       
+       (start_shell . int)
+       (remote_forward . int)
+       (actions struct object_queue)))
+*/
+
+
+static struct lsh_options *
+make_options(struct alist *algorithms, struct io_backend *backend,
+	     struct randomness *random,
+	     struct exception_handler *handler,
+	     int *exit_code)
+{
+  NEW(lsh_options, self);
+
+  init_algorithms_options(&self->super, algorithms);
+  
+  self->backend = backend;
+
+  self->home = getenv("HOME");
+  
+  /* FIXME: Really needed? */
+  self->random = random;
+  
+  self->signature_algorithms = make_alist(1,
+					  ATOM_DSA, make_dsa_algorithm(random));
+  
+  self->handler = handler;
+  self->exit_code = exit_code;
+  
+  self->not = 0;
+  self->remote = NULL;
+  self->user = getenv("LOGNAME");
+  self->port = "ssh";
+
+  self->sloppy = 0;
+  self->capture = NULL;
+  self->capture_file = NULL;
+
+  self->known_hosts = NULL;
+  /* self->known_hosts_file = NULL; */
+  
+  self->with_pty = -1;
+  self->start_shell = 1;
+  self->with_remote_peers = 0;
+  object_queue_init(&self->actions);
+
+  self->publickey = 1;
+  
+  return self;
+}
+
+/* GABA:
+   (class
+     (name options_command)
+     (super command)
+     (vars
+       (options object lsh_options)))
+*/
+
 /* NOTE: Handles only ssh-dss keys */
 
 /* GABA:
    (class
-     (name client_host_db)
+     (name lsh_host_db)
      (super lookup_verifier)
      (vars
        (db object spki_context)
@@ -95,12 +209,12 @@
 */
 
 static struct verifier *
-do_client_lookup(struct lookup_verifier *c,
+do_lsh_lookup(struct lookup_verifier *c,
 		 int method,
 		 struct lsh_string *keyholder UNUSED,
 		 struct lsh_string *key)
 {
-  CAST(client_host_db, self, c);
+  CAST(lsh_host_db, self, c);
   struct spki_subject *subject;
 
   switch (method)
@@ -110,7 +224,7 @@ do_client_lookup(struct lookup_verifier *c,
 	struct dsa_verifier *v = make_ssh_dss_verifier(key->length, key->data);
 	if (!v)
 	  {
-	    werror("do_client_lookup: Invalid ssh-dss key.\n");
+	    werror("do_lsh_lookup: Invalid ssh-dss key.\n");
 	    return NULL;
 	  }
 	subject = SPKI_LOOKUP(self->db,
@@ -125,25 +239,25 @@ do_client_lookup(struct lookup_verifier *c,
 	struct sexp *e = string_to_sexp(key, 0);
 	if (!e)
 	  {
-	    werror("do_client_lookup: Invalid spki s-expression.\n");
+	    werror("do_lsh_lookup: Invalid spki s-expression.\n");
 	    return NULL;
 	  }
 	  
 	subject = SPKI_LOOKUP(self->db, e, NULL);
 	if (!subject)
 	  {
-	    werror("do_client_lookup: Invalid spki key.\n");
+	    werror("do_lsh_lookup: Invalid spki key.\n");
 	    return NULL;
 	  }
 	if (!subject->verifier)
 	  {
-	    werror("do_client_lookup: Valid SPKI subject, but no key available.\n");
+	    werror("do_lsh_lookup: Valid SPKI subject, but no key available.\n");
 	    return NULL;
 	  }
 	break;
       }
     default:
-      werror("do_client_lookup: Unknown key type. Should not happen!\n");
+      werror("do_lsh_lookup: Unknown key type. Should not happen!\n");
       return NULL;
     }
 
@@ -219,14 +333,14 @@ do_client_lookup(struct lookup_verifier *c,
 }
 
 static struct lookup_verifier *
-make_client_host_db(struct spki_context *db,
+make_lsh_host_db(struct spki_context *db,
 		    struct address_info *host,
 		    int sloppy,
 		    struct abstract_write *file)
 {
-  NEW(client_host_db, res);
+  NEW(lsh_host_db, res);
 
-  res->super.lookup = do_client_lookup;
+  res->super.lookup = do_lsh_lookup;
   res->db = db;
   res->access = make_ssh_hostkey_tag(host);
   res->host = host;
@@ -237,33 +351,94 @@ make_client_host_db(struct spki_context *db,
   return &res->super;
 }
 
+static void
+do_lsh_verifier(struct command *s,
+		struct lsh_object *a,
+		struct command_continuation *c,
+		struct exception_handler *e UNUSED)
+{
+  CAST(options_command, self, s);
+  CAST_SUBTYPE(spki_context, db, a);
+  COMMAND_RETURN(c, make_lsh_host_db(db,
+					self->options->remote,
+					self->options->sloppy,
+					self->options->capture_file));
+}
+
+COMMAND_SIMPLE(lsh_verifier_command)
+{
+  CAST(lsh_options, options, a);
+
+  NEW(options_command, self);
+  self->super.call = do_lsh_verifier;
+  self->options = options;
+
+  return &self->super.super;
+}
+
+static void do_lsh_login(struct command *s,
+			    struct lsh_object *a,
+			    struct command_continuation *c,
+			    struct exception_handler *e UNUSED)
+{
+  CAST(options_command, self, s);
+  CAST_SUBTYPE(object_list, keys, a);
+
+  COMMAND_RETURN(c,
+		 make_client_userauth(ssh_format("%lz", self->options->user),
+				      ATOM_SSH_CONNECTION,
+				      (LIST_LENGTH(keys)
+				       ? make_object_list
+				         (2, 
+					  make_client_publickey_auth(keys),
+					  make_client_password_auth(), 
+					  -1)
+				       : make_object_list(1, make_client_password_auth(), 
+							  -1))));
+}
+
+COMMAND_SIMPLE(lsh_login_command)
+{
+  CAST(lsh_options, options, a);
+
+  NEW(options_command, self);
+  self->super.call = do_lsh_login;
+  self->options = options;
+
+  return &self->super.super;
+}
+
 /* GABA:
    (expr
-     (name make_client_connect)
-     (globals
-       (progn "&progn_command.super.super")
+     (name make_lsh_connect)
+     ;; (globals
+       ;; (progn "&progn_command.super.super")
        ;; FIXME: Use some function that also displays an error message
        ;; if connect() fails.
-       (init_connection "&connection_service.super"))
-       ;; (die_on_null "&command_die_on_null.super"))
+       ;; (init_connection "&connection_service.super"))
+       ;; (die_on_null "&command_die_on_null.super")
      (params
        (connect object command)
-       (handshake object command)
+       (handshake object handshake_info)
        (userauth_service object command)
-       (login object command)
+       ;;(login object command)
        ; (init_connection object command)
        (requests object object_list))
-     (expr (lambda (port)
-             ((progn requests) (init_connection
-	         (login (userauth_service
-	           (handshake (connect port)))))))))
+     (expr (lambda (options)
+             ((progn requests) (init_connection_service
+	         (lsh_login (options2identities options)
+		   (userauth_service
+	             (connection_handshake
+		       handshake
+		       (options2verifier options
+				         (options2known_hosts options))
+ 		       (connect (options2remote options))))))))))
 */
 
 /* GABA:
    (expr
      (name make_start_session)
-     (globals
-       (progn "&progn_command.super.super"))
+     ;;(globals (progn "&progn_command.super.super"))
      (params
        (open_session object command)
        (requests object object_list))
@@ -390,74 +565,11 @@ main_options[] =
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
-/* GABA:
-   (class
-     (name lsh_options)
-     (super algorithms_options)
-     (vars
-       (backend object io_backend)
-       (random object randomness)
 
-       ; For i/o exceptions 
-       (handler object exception_handler)
-
-       (exit_code . "int *")
-       
-       (not . int)
-       (port . "char *")
-       (remote object address_info)
-
-       (user . "char *")
-       (identities struct object_queue)
-       (publickey . int)
-
-       (sloppy . int)
-       (capture . "const char *")
-       (capture_file object abstract_write)
-       
-       ; -1 means default behaviour
-       (with_pty . int)
-
-       (with_remote_peers . int)
-       
-       (start_shell . int)
-       (remote_forward . int)
-       (actions struct object_queue)))
-*/
-
-static struct lsh_options *
-make_options(struct alist *algorithms, struct io_backend *backend,
-	     struct randomness *random,
-	     struct exception_handler *handler,
-	     int *exit_code)
+COMMAND_SIMPLE(options2remote)
 {
-  NEW(lsh_options, self);
-
-  init_algorithms_options(&self->super, algorithms);
-  
-  self->backend = backend;
-  self->random = random;
-  self->handler = handler;
-  self->exit_code = exit_code;
-  
-  self->not = 0;
-  self->remote = NULL;
-  self->user = getenv("LOGNAME");
-  self->port = "ssh";
-
-  self->sloppy = 0;
-  self->capture = NULL;
-  self->capture_file = NULL;
-  
-  self->with_pty = -1;
-  self->start_shell = 1;
-  self->with_remote_peers = 0;
-  object_queue_init(&self->actions);
-  object_queue_init(&self->identities);
-
-  self->publickey = 1;
-  
-  return self;
+  CAST(lsh_options, options, a);
+  return &options->remote->super;
 }
 
 static const struct argp_child
@@ -505,7 +617,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case ARGP_KEY_END:
       {
-	char *home = getenv("HOME");
+	if (!self->home)
+	  {
+	    argp_error(state, "No home directory. Please set HOME in the environment.");
+	    break;
+	  }
+	  
 	if (!self->user)
 	  {
 	    argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
@@ -520,7 +637,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    s = self->capture;
 	  else if (self->sloppy)
 	    {
-	      tmp = ssh_format("%lz/.lsh/captured_keys%c", home, 0);
+	      tmp = ssh_format("%lz/.lsh/captured_keys%c", self->home, 0);
 	      s = tmp->data;
 	    }
 	  if (s)
@@ -621,6 +738,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    break;
 	  }
 
+#if 0
 	if (self->publickey && object_queue_is_empty(&self->identities))
 	  {
 	    if (home)
@@ -640,6 +758,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		lsh_string_free(idfile);
 	      }
 	  }
+#endif
       
 	break;
       }
@@ -650,6 +769,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->user = arg;
       break;
     case 'i':
+      self->identity = optarg;
+      break;
+#if 0
       {
 	struct keypair *id;
 	/* FIXME: Get the algorithms alist from some parameter. */
@@ -664,6 +786,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  }
 	break;
       }
+#endif
     case OPT_NO_PUBLICKEY:
       self->publickey = 0;
       break;
@@ -834,6 +957,118 @@ make_lsh_default_handler(int *status, struct exception_handler *parent,
   return &self->super;
 }
 
+static void
+do_options2known_hosts(struct command *ignored UNUSED,
+		       struct lsh_object *a,
+		       struct command_continuation *c,
+		       struct exception_handler *e)
+{
+  CAST(lsh_options, options, a);
+  
+  struct lsh_string *tmp = NULL;
+  const char *s = NULL;
+  struct io_fd *f;
+  
+  if (options->known_hosts)
+    s = options->known_hosts;
+  else 
+    {
+      tmp = ssh_format("%lz/.lsh/known_hosts%c", options->home, 0);
+      s = tmp->data;
+    }
+  
+  f = io_read_file(options->backend, s, e);
+
+  if (!f)
+    {
+      werror("Failed to open '%z' (errno = %i): %z.\n",
+	     s, errno, STRERROR(errno));
+      COMMAND_RETURN(c, make_spki_context(options->signature_algorithms));
+    }
+  else
+    {
+      CAST_SUBTYPE(command, read,
+		   make_spki_read_acls(options->signature_algorithms));
+      COMMAND_CALL(read, f, c, e);
+    }
+  lsh_string_free(tmp);
+}
+
+static struct command options2known_hosts =
+STATIC_COMMAND(do_options2known_hosts);
+
+static void
+do_options2identities(struct command *ignored UNUSED,
+		      struct lsh_object *a,
+		      struct command_continuation *c,
+		      struct exception_handler *e)
+{
+  CAST(lsh_options, options, a);
+  
+  struct lsh_string *tmp = NULL;
+  const char *s = NULL;
+  struct io_fd *f = 0;
+
+  if (options->publickey)
+    {
+      COMMAND_RETURN(c, make_object_list(0, -1));
+      return;
+    }
+  if (options->identity)
+    s = options->identity;
+  else 
+    {
+      tmp = ssh_format("%lz/.lsh/identity%c", options->home, 0);
+      s = tmp->data;
+    }
+  
+  f = io_read_file(options->backend, s, e);
+  
+  if (!f)
+    {
+      werror("Failed to open '%z' (errno = %i): %z.\n",
+	     s, errno, STRERROR(errno));
+      COMMAND_RETURN(c, make_object_list(0, -1));
+    }
+  else
+    COMMAND_CALL(&spki_read_userkeys_command.super, f, c, e);
+  
+  lsh_string_free(tmp);
+}
+
+static struct command options2identities =
+STATIC_COMMAND(do_options2identities);
+
+#if 0
+static void
+do_options2verifier(struct command *s UNUSED,
+		    struct lsh_object *a,
+		    struct command_continuation *c,
+		    struct exception_handler *e)
+{
+  CAST(lsh_options, options, a);
+  struct io_fd f = io_read_file(options->backend,
+				options->known_hosts,
+				e);
+  if (!f)
+    COMMAND_RETURN(c,
+		   make_lsh_host_db(make_spki_context(options->algorithms),
+				       options->remote,
+				       options->sloppy,
+				       options->capture_file));
+  else
+    {
+      struct command *read = make_spki_read_acls(options->algorithms);
+      COMMAND_CALL(read, file,
+		   make_options2verifier_continuation(options, c),
+		   e);
+    }
+}
+
+struct command options2verifier =
+STATIC_COMMAND(do_options2verifier);
+#endif
+
 int main(int argc, char **argv)
 {
   struct lsh_options *options;
@@ -871,34 +1106,44 @@ int main(int argc, char **argv)
   set_local_charset(CHARSET_LATIN1);
 
   r = make_reasonably_random();
-  dh = make_dh1(r);
 
+#if 0
+  dh = make_dh1(r);
+#endif
   /* FIXME: Is this really used? */
   algorithms = many_algorithms(1,
+			       ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+			       make_dh_client(make_dh1(r)),
+#if 0
 			       ATOM_SSH_DSS, make_dsa_algorithm(r),
+#endif
 			       -1);
 
   options = make_options(algorithms, backend, r, handler, &lsh_exit_code);
 
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
-  
+
   /* No randomness is needed for verifying signatures */
-  lookup = make_client_host_db(make_spki_context
+  lookup = make_lsh_host_db(make_spki_context
 			       (make_alist(1,
 					   ATOM_DSA,
 					   make_dsa_algorithm(NULL), -1)),
 			       options->remote,
 			       options->sloppy,
 			       options->capture_file);
-  
+#if 0
+ 
   lookup_table = make_alist(2,
 			    ATOM_SSH_DSS, lookup,
 			    ATOM_SPKI, lookup,
 			    -1); 
+#endif
 
+#if 0
   ALIST_SET(algorithms,
 	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-	    make_dh_client(dh, lookup_table));
+	    make_dh_client(dh));
+#endif
   
   make_kexinit
     = make_simple_kexinit(r,
@@ -911,31 +1156,20 @@ int main(int argc, char **argv)
 			  make_int_list(0, -1));
   {
     struct lsh_object *o =
-      make_client_connect(make_simple_connect(backend, NULL),
-			  make_handshake_command(CONNECTION_CLIENT,
-						 "lsh - a free ssh",
-						 SSH_MAX_PACKET,
-						 r,
-						 algorithms,
-						 make_kexinit,
-						 NULL),
-			  make_request_service(ATOM_SSH_USERAUTH),
-			  make_client_userauth(
-			    ssh_format("%lz", options->user),
-			    ATOM_SSH_CONNECTION,
-			    /* FIXME: Move this logic into the option parser. */
-			    (object_queue_is_empty(&options->identities)
-			     ? make_object_list(1, make_client_password_auth(), 
-						-1)
-			     : make_object_list(2, 
-						make_client_publickey_auth(queue_to_list(&options->identities)),
-						make_client_password_auth(), 
-						-1))),
-			  queue_to_list(&options->actions));
+      make_lsh_connect(make_simple_connect(backend, NULL),
+		       make_handshake_info(CONNECTION_CLIENT,
+					   "lsh - a free ssh",
+					   SSH_MAX_PACKET,
+					   r,
+					   algorithms,
+					   make_kexinit,
+					   NULL),
+		       make_request_service(ATOM_SSH_USERAUTH),
+		       queue_to_list(&options->actions));
     
-    CAST_SUBTYPE(command, client_connect, o);
+    CAST_SUBTYPE(command, lsh_connect, o);
 
-    COMMAND_CALL(client_connect, options->remote, &discard_continuation,
+    COMMAND_CALL(lsh_connect, options->remote, &discard_continuation,
 		 handler);
 	
   } 
