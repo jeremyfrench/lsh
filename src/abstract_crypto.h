@@ -214,4 +214,14 @@ crypt_string(struct crypto_instance *c,
 	     struct lsh_string *in,
 	     int free);
 
+struct lsh_string *
+crypt_string_pad(struct crypto_instance *c,
+		 struct lsh_string *in,
+		 int free);
+
+struct lsh_string *
+crypt_string_unpad(struct crypto_instance *c,
+		   struct lsh_string *in,
+		   int free);
+
 #endif /* LSH_ABSTRACT_CRYPTO_H_INCLUDED */

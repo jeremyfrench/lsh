@@ -24,6 +24,7 @@
 #include "abstract_crypto.h"
 
 #include "crypto.h"
+#include "format.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -102,6 +103,47 @@ crypt_string(struct crypto_instance *c,
   CRYPT(c, in->length, in->data, out->data);
   
   return out;
+}
+
+struct lsh_string *
+crypt_string_pad(struct crypto_instance *c,
+		 struct lsh_string *in,
+		 int free)
+{
+  struct lsh_string *s;
+  UINT8 *p;
+  UINT32 pad = c->block_size - (in->length % c->block_size);
+  
+  assert(pad);
+  
+  s = ssh_format(free ? "%lfS%lr" : "%lS%lr", in, pad, &p);
+  /* Use RFC 1423 and "generalized RFC 1423" as described in
+   * PKCS#5 version 2. */
+  memset(p, pad, pad);
+
+  return crypt_string(c, s, 1);
+}
+
+struct lsh_string *
+crypt_string_unpad(struct crypto_instance *c,
+		   struct lsh_string *in,
+		   int free)
+{
+  struct lsh_string *out;
+  UINT32 pad;
+  
+  assert(in->length);
+  
+  out = crypt_string(c, in, free);
+  pad = out->data[out->length - 1];
+
+  if ( (pad > 0) && (pad <= c->block_size) )
+    return out;
+  else
+    {
+      lsh_string_free(out);
+      return NULL;
+    }
 }
 
 
