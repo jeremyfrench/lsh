@@ -98,6 +98,7 @@ struct lsh_string
   UINT8 data[1];
 };
 
+#if 0
 /* A closed function with no arguments */
 struct callback;
 typedef int (*callback_f)(struct callback *closure);
@@ -109,6 +110,6 @@ struct callback
 };
 
 #define CALLBACK(c) ((c)->f(c))
-
+#endif
 
 #endif /* LSH_H_INCLUDED */
