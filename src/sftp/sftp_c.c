@@ -1108,9 +1108,9 @@ sftp_get_file_main(struct sftp_callback *next,
   uint32_t i;
 
   /* FIXME: This is ugly. The me object needs to be moved a pointer
-  * away, or redsigned so that we don't need to modify it here. (Or
-  * the constification of sftp_callback could be undone
-  * altogether). */
+   * away, or redesigned so that we don't need to modify it here. (Or
+   * the constification of sftp_callback could be undone
+   * altogether). */
   ((struct sftp_callback *)state)->mem.used = 0;
 
   sftp_get_mem_main(next, msg, id, in, out, state );
