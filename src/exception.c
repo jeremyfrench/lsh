@@ -55,10 +55,10 @@ do_default_handler(struct exception_handler *ignored UNUSED,
 }
 
 struct exception_handler default_exception_handler =
-{ STATIC_HEADER, do_default_handler };
+STATIC_EXCEPTION_HANDLER(do_default_handler, NULL);
 
 struct exception dummy_exception =
-{ STATIC_HEADER, EXC_DUMMY, "dummy" };
+STATIC_EXCEPTION(EXC_DUMMY, "dummy");
 
 static void
 do_ignore_exception_handler(struct exception_handler *self UNUSED,
@@ -66,7 +66,7 @@ do_ignore_exception_handler(struct exception_handler *self UNUSED,
 {}
 
 struct exception_handler ignore_exception_handler =
-{ STATIC_HEADER, do_ignore_exception_handler };
+STATIC_EXCEPTION_HANDLER(do_ignore_exception_handler, NULL);
 
 struct exception_handler *
 make_exception_handler(void (*raise)(struct exception_handler *s,
