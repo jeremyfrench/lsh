@@ -64,9 +64,14 @@
 #define SEXP_TRANSPORT 1
 #define SEXP_ADVANCED 2
 
+/* Like advanced, but allow international characters in quoted strings. */
+#define SEXP_INTERNATIONAL 3
+
 struct lsh_string *sexp_format(struct sexp *e, int style);
 
-struct lsh_string *encode_base64(struct lsh_string *s, int free);
+struct lsh_string *encode_base64(struct lsh_string *s,
+				 char *delimiters,
+				 int free);
 
 /* Creating sexps */
 /* atom->sexp */
@@ -88,13 +93,14 @@ struct sexp *sexp_l(unsigned n, ...);
 /* Extracting information from sexp. These functions accept NULL
  * arguments, and return NULL if the conversion is not possible */
 
-int *sexp_consp(struct sexp *e);
+int sexp_consp(struct sexp *e);
 
 /* For lists */
 struct sexp *sexp_car(struct sexp *e);
 struct sexp *sexp_cdr(struct sexp *e);
+int sexp_nullp(struct sexp *e);
 
-int sexp_null_cdr(struct sexp *e);
+/* int sexp_null_cdr(struct sexp *e); */
 
 struct lsh_string *sexp_contents(struct sexp *e);
 struct lsh_string *sexp_display(struct sexp *e);
