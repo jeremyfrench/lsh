@@ -28,7 +28,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 #if _LIBC || (defined (HAVE_FLOCKFILE) && defined(HAVE_PUTC_UNLOCKED) \
      && defined (HAVE_FPUTS_UNLOCKED) && defined (HAVE_FWRITE_UNLOCKED) )
