@@ -100,9 +100,19 @@ depend:
 	rm -f $(DEP_FILES)
 	make $(DEP_FILES)
 
-# This rule requires GNU-make
-.deps/%.P : %.c %.c.x
-	$(CC) $(CPPFLAGS) $(DEFS) -M -MG $< > $@
+# There are three problems with this rule:
+
+# 1. It causes the dependency files to be created twice. It would be
+# better to add .deps/%.P as an extra target to compileation rule.
+# I.e, %.o .deps/%.P : %.c
+
+# 2. It should not depend on the .c.x file.
+
+# 3. It requires GNU-make. We'll have to figure out how to include
+# some rules only in developer mode.
+
+# .deps/%.P : %.c %.c.x
+# 	  $(CC) $(CPPFLAGS) $(DEFS) -M -MG $< > $@
 
 MAINTAINERCLEANFILES += $(DEP_FILES)
 
