@@ -46,6 +46,8 @@
        (c method void "struct lsh_object *result")))
 */
 
+#define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v)))
+
 /* GABA:
    (class
      (name command)
@@ -54,6 +56,10 @@
                          "struct command_continuation *c"
 			 "struct exception_handler *e")))
 */
+
+#define COMMAND_CALL(f, a, c, e) \
+  ((void)&(f), ((f)->call((f), (struct lsh_object *) (a), (c), (e))))
+
 
 /* GABA:
    (class
@@ -65,10 +71,6 @@
        (call_simple method "struct lsh_object *" "struct lsh_object *")))
 */
 
-#define COMMAND_CALL(f, a, c, e) \
-  ((void)&(f), ((f)->call((f), (struct lsh_object *) (a), (c), (e))))
-
-#define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v)))
 
 #define COMMAND_SIMPLE_CALL(f, a) \
   ((f)->call_simple((f), (struct lsh_object *)(a)))
@@ -93,7 +95,7 @@ do_simple_##cname(struct command_simple *s UNUSED,	\
 
 #define DEFINE_COMMAND(cname)			\
 static void					\
-do_##cname(struct command *s UNUSED,		\
+do_##cname(struct command *,			\
 	   struct lsh_object *,			\
            struct command_continuation *,	\
            struct exception_handler *);		\
@@ -104,26 +106,93 @@ STATIC_COMMAND(do_##cname);			\
 static void					\
 do_##cname
 
-#if 0
-#define DEFINE_COMMAND2(cname, ARG1, ARG2, CC, EXC)
-static void do_##cname(struct lsh_object *ARG1,
-		       struct lsh_object *ARG2,
-		       struct command_continuation *CC,
-		       struct exception_handler *EXC);
+/* A command taking 2 arguments */
+/* GABA:
+   (class
+     (name command_2)
+     (super command)
+     (vars
+       (invoke pointer
+         (function void
+		   "struct lsh_object *a1"
+		   "struct lsh_object *a2"
+		   "struct command_continuation *c"
+		   "struct exception_handler *e"))))
+*/
 
-static void do_##cname(struct lsh_object *ARG1,
-		       struct lsh_object *ARG2,
-		       struct command_continuation *CC,
-		       struct exception_handler *EXC)
-#endif
-     
+void
+do_command_2(struct command *s,
+	     struct lsh_object *a1,
+	     struct command_continuation *c,
+	     struct exception_handler *e);
+
+struct command *
+make_command_2_invoke(struct command_2 *f,
+		      struct lsh_object *a1);
+
+#define DEFINE_COMMAND2(cname)				\
+static void						\
+do_##cname(struct lsh_object *,				\
+	   struct lsh_object *,				\
+	   struct command_continuation *,		\
+	   struct exception_handler *);			\
+							\
+struct command_2 cname =				\
+{ { STATIC_HEADER, do_command_2 }, do_##cname };	\
+							\
+static void						\
+do_##cname
+
+/* A command taking 3 arguments */
+/* GABA:
+   (class
+     (name command_3)
+     (super command)
+     (vars
+       (invoke pointer
+         (function void "struct lsh_object *a1"
+			"struct lsh_object *a2"
+			"struct lsh_object *a3"
+			"struct command_continuation *c"
+			"struct exception_handler *e"))))
+*/
+
+void
+do_command_3(struct command *s,
+	     struct lsh_object *a1,
+	     struct command_continuation *c,
+	     struct exception_handler *e);
+
+struct command *
+make_command_3_invoke(struct command_3 *f,
+		      struct lsh_object *a1);
+
+struct command *
+make_command_3_invoke_2(struct command_3 *f,
+			struct lsh_object *a1,
+			struct lsh_object *a2);
+
+#define DEFINE_COMMAND3(cname)				\
+static void						\
+do_##cname(struct lsh_object *,				\
+	   struct lsh_object *,				\
+	   struct lsh_object *,				\
+	   struct command_continuation *,		\
+	   struct exception_handler *);			\
+							\
+struct command_3 cname =				\
+{ { STATIC_HEADER, do_command_3 }, do_##cname };	\
+							\
+static void						\
+do_##cname
+
 void do_call_simple_command(struct command *s,
 			    struct lsh_object *arg,
 			    struct command_continuation *c,
 			    struct exception_handler *e);
 
 struct command *make_parallell_progn(struct object_list *body);
-extern struct command_simple progn_command;
+extern struct command progn_command;
 
 extern struct command_continuation discard_continuation;
 
@@ -245,6 +314,7 @@ do_catch_report_collect(struct command_simple *s,
        (next object collect_info_2)))
 */
 
+
 struct lsh_object *
 do_collect_1(struct command_simple *s, struct lsh_object *a);
 
@@ -284,7 +354,7 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *real);
 
 /* Useful clobal commands */
 #define PROG1 (&command_K.super.super)
-#define PROGN (&progn_command.super.super)
+#define PROGN (&progn_command.super)
 
 /* The GABA_* macros are used by automatically generated evaluation code */
 
@@ -297,17 +367,19 @@ struct lsh_object *gaba_apply(struct lsh_object *f,
 
 #define GABA_APPLY gaba_apply
 
-extern struct command_simple command_I;
-#define GABA_VALUE_I (&command_I.super.super)
+extern struct command command_I;
+#define GABA_VALUE_I (&command_I.super)
 #define GABA_APPLY_I_1(x) (x)
 
-extern struct command_simple command_K;
+extern struct command_2 command_K;
 struct command *make_command_K_1(struct lsh_object *x);
 
 #define GABA_VALUE_K (&command_K.super.super)
-#define GABA_APPLY_K_1(x) ((struct lsh_object *) make_command_K_1(x))
+#define GABA_APPLY_K_1(x) \
+((struct lsh_object *) make_command_2_invoke(&command_K, (x)))
 
-extern struct collect_info_1 command_S;
+extern struct command_3 command_S;
+#if 0
 extern struct collect_info_2 collect_info_S_2; 
 
 struct command *make_command_S_2(struct command *f,
@@ -316,10 +388,13 @@ struct command *make_command_S_2(struct command *f,
 struct lsh_object *collect_S_2(struct collect_info_2 *info,
 			       struct lsh_object *f,
 			       struct lsh_object *g);
+#endif
 
-#define GABA_VALUE_S (&command_S.super.super.super)
-#define GABA_APPLY_S_1(f) (make_collect_state_1(&command_S, (f)))
-#define GABA_APPLY_S_2(f, g) (collect_S_2(&collect_info_S_2, (f), (g)))
+#define GABA_VALUE_S (&command_S.super.super)
+#define GABA_APPLY_S_1(f) \
+((struct lsh_object *) make_command_3_invoke(&command_S, (f)))
+#define GABA_APPLY_S_2(f, g) \
+((struct lsh_object *) make_command_3_invoke_2(&command_S, (f), (g)))
 
 extern struct collect_info_1 command_Sp;
 extern struct collect_info_2 collect_info_Sp_2;
