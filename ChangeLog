@@ -1,3 +1,20 @@
+2004-02-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.am (AM_CPPFLAGS): Need -I.., in order to
+	include nettle-types.h.
+
+	* src/unix_user.c (do_lookup_user): Just ignore shadow database if
+	getspnam returns NULL.
+
+	* src/lsh.h: #include nettle/types.h instead of inttypes.h.
+
+	* src/atoms.h: #include lsh.h instead of inttypes.h.
+	* src/charset.h: Likewise.
+	* src/tty.h: Likewise.
+	* src/testsuite/testutils.h: Likewise.
+
+	* configure.ac: Bumped version to 1.5.5.
+
 2004-02-12  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/io.c (address_info2sockaddr) [!HAVE_GETADDRINFO]: Updated

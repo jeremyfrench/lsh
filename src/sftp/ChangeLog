@@ -1,3 +1,15 @@
+2004-02-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* Makefile.am (AM_CPPFLAGS): Added -I.., needed for inclusion of
+	nettle-types.h. This is somewhat ugly, as sftp shouldn't really
+	depend on nettle or lsh.
+
+	* buffer.h: Include nettle/nettle-types.h, for unint32_t and
+	friends.
+
+	* sftp_c.h: Don't include inttypes.h or stdint.h, rely on buffer.h
+	doing the right thing.
+
 2003-05-20  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Commented out AC_FUNC_MALLOC.
