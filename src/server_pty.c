@@ -54,30 +54,32 @@
 #include "server_pty.h.x"
 #undef GABA_DEFINE
 
-static void do_kill_pty_info(struct resource *r)
+static void
+do_kill_pty_info(struct resource *r)
 {
   CAST(pty_info, closure, r);
 
   if (closure->super.alive)
     {
       closure->super.alive = 0;
-      if (close(closure->master) < 0)
+      if ( (closure->master >= 0) && (close(closure->master) < 0) )
 	werror("do_kill_pty_info: closing master failed (errno = %i): %z\n",
 	       errno, STRERROR(errno));
-      if (close(closure->slave) < 0)
+
+      if ( (closure->slave >= 0) && (close(closure->slave) < 0) )
 	werror("do_kill_pty_info: closing slave failed (errno = %i): %z\n",
 	       errno, STRERROR(errno));
     }
 }
 
-struct pty_info *make_pty_info(void)
+struct pty_info *
+make_pty_info(void)
 {
   NEW(pty_info, pty);
 
-  pty->super.alive = 0;
-  pty->super.kill = do_kill_pty_info;
-  pty->tty_name = NULL; /* Perhaps not needed; Cleared by NEW() */
-
+  resource_init(&pty->super, do_kill_pty_info);
+  pty->tty_name = NULL;
+  pty->master = pty->slave = -1;
   return pty;
 }
 
@@ -94,7 +96,8 @@ struct pty_info *make_pty_info(void)
  * This function is derived from the grantpt function in
  * sysdeps/unix/grantpt.c in glibc-2.1. */
 
-static int pty_check_permissions(const char *name, uid_t user)
+static int
+pty_check_permissions(const char *name, uid_t user)
 {
   struct stat st;
   struct group *grp;
@@ -165,12 +168,13 @@ pty_grantpt_uid(int master, uid_t user)
 }
 #endif /* HAVE_UNIX98_PTYS */
 
-int pty_allocate(struct pty_info *pty,
-		 uid_t user
+int
+pty_allocate(struct pty_info *pty,
+	     uid_t user
 #if !HAVE_UNIX98_PTYS
-		 UNUSED
+	     UNUSED
 #endif
-		 )
+	     )
 {
 #if HAVE_UNIX98_PTYS
   struct lsh_string *name = NULL;
@@ -204,10 +208,10 @@ int pty_allocate(struct pty_info *pty,
   return 1;
 
 close_slave:
-  close (pty->slave);
-
+  close (pty->slave); pty->slave = -1;
 close_master:
-  close (pty->master);
+  close (pty->master); pty->master = -1;
+  
   if (name)
     lsh_string_free(name);
   return 0;
@@ -242,8 +246,7 @@ close_master:
 	      if (pty->slave == -1) 
 	        {
 		  saved_errno = errno;
-		  close(pty->master);
-		  pty->master = -1;
+		  close(pty->master); pty->master = -1;
 		  errno = saved_errno;
 		  return 0;
 	        }
@@ -260,8 +263,8 @@ close_master:
 		  return 1;
 		}
 	      saved_errno = errno;
-	      close(pty->master);
-	      close(pty->slave);
+	      close(pty->master); pty->master = -1;
+	      close(pty->slave); pty->slave = -1;
 	      return 0;
 	    }
         }
@@ -282,7 +285,8 @@ close_master:
 
 /* NOTE: This function also makes the current process a process group
  * leader. */
-int tty_setctty(struct pty_info *pty)
+int
+tty_setctty(struct pty_info *pty)
 {
   debug("tty_setctty\n");
   if (setsid() < 0)
@@ -296,8 +300,11 @@ int tty_setctty(struct pty_info *pty)
     int fd;
     
     /* Open the slave, to make it our controlling tty */
+
     /* FIXME: According to carson@tla.org, there's a cleaner POSIX way
-     * to make a tty the process's controlling tty. */
+     * to make a tty the process's controlling tty, but I haven't
+     * found out how. */
+
     debug("setctty: Attempting open\n");
     fd = open(pty->tty_name->data, O_RDWR);
     if (fd < 0)
