@@ -37,6 +37,7 @@
 #include "alist.h"
 
 #include <assert.h>
+#include <string.h>
 
 #include <sys/types.h>
 #include <fcntl.h>
@@ -68,6 +69,60 @@ make_spki_exception(UINT32 type, const char *msg, struct sexp *expr)
 #define SPKI_ERROR(e, msg, expr) \
 EXCEPTION_RAISE((e), make_spki_exception(EXC_SPKI_TYPE, (msg), (expr)))
 
+/* FIXME: This should create different tags for hostnames that are not
+ * dns fqdn:s. */
+
+struct sexp *
+make_ssh_hostkey_tag(struct address_info *host)
+{
+  UINT32 left = host->ip->length;
+  UINT8 *s = host->ip->data;
+  
+  struct lsh_string *reversed = lsh_string_alloc(left);
+
+  /* First, transform "foo.lysator.liu.se" into "se.liu.lysator.foo" */
+  while (left)
+    {
+      UINT8 *p = memchr(s, '.', left);
+      if (!p)
+	{
+	  memcpy(reversed->data, s, left);
+	  break;
+	}
+      else
+	{
+	  UINT32 segment = p - s;
+	  left -= segment;
+
+	  memcpy(reversed->data + left, s, segment);
+	  reversed->data[--left] = '.';
+	  s = p+1;
+	}
+    }
+
+  return sexp_l(2, sexp_z("ssh-hostkey"),
+		make_sexp_string(NULL, reversed),
+		-1);
+}      
+  
+struct sexp *
+dsa_to_spki_public_key(struct dsa_public *dsa)
+{
+  return sexp_l(2, SA(PUBLIC_KEY),
+		sexp_l(5, SA(DSA),
+		       /* FIXME: Should we use unsigned format? */
+		       sexp_l(2, SA(P), sexp_un(dsa->p), -1),
+		       sexp_l(2, SA(Q), sexp_un(dsa->q), -1),
+		       sexp_l(2, SA(G), sexp_un(dsa->g), -1),
+		       sexp_l(2, SA(Y), sexp_un(dsa->y), -1),
+		       -1),
+		-1);
+}
+
+#if 0
+/* This functions expects only keyblobs of type ssh-dss. When we
+ * accept spki keys, we must not accept ssh-dss keys, and vice versa.
+ */
 struct sexp *keyblob2spki(struct lsh_string *keyblob)
 {
   struct simple_buffer buffer;
@@ -84,7 +139,8 @@ struct sexp *keyblob2spki(struct lsh_string *keyblob)
 	  struct dsa_public dsa;
 	  init_dsa_public(&dsa);
       
-	  if (parse_dsa_public(&buffer, &dsa))
+	  if (parse_dsa_public(&buffer, &dsa)
+	      && parse_eod(&buffer))
 	    e = sexp_l(2, SA(PUBLIC_KEY),
 		       sexp_l(5, SA(DSA),
 			      /* FIXME: Should we use unsigned format? */
@@ -100,6 +156,16 @@ struct sexp *keyblob2spki(struct lsh_string *keyblob)
 	  dsa_public_free(&dsa);
 	  break;
 	}
+#if 0
+      case ATOM_SPKI:
+	e = sexp_parse_canonical(&buffer);
+	if (! (e && parse_eod(&buffer)))
+	  {
+	    werror("Invalid spki keyblob\n");
+	    e = NULL;
+	  }
+	break;
+#endif
       default:
 	werror("Unknown keyblob format, only ssh-dss is supported\n");
       }
@@ -108,6 +174,7 @@ struct sexp *keyblob2spki(struct lsh_string *keyblob)
 
   return e;
 }
+#endif
 
 /* Returns 0 or an atom */
 int spki_get_type(struct sexp *e, struct sexp_iterator **res)
@@ -232,20 +299,13 @@ static void do_spki_hash(struct command *s,
   CAST(spki_hash, self, s);
   CAST_SUBTYPE(sexp, o, a);
 
-  struct lsh_string *canonical = SEXP_FORMAT(o, SEXP_CANONICAL, 0);
-  struct hash_instance *hash = MAKE_HASH(self->algorithm);
-  struct lsh_string *digest = lsh_string_alloc(hash->hash_size);
-  
-  HASH_UPDATE(hash, canonical->length, canonical->data);
-  HASH_DIGEST(hash, digest->data);
-
-  lsh_string_free(canonical);
-  KILL(hash);
-  
   COMMAND_RETURN(c, sexp_l(3,
-			   sexp_a(ATOM_HASH),
+			   SA(HASH),
 			   sexp_a(self->name),
-			   make_sexp_string(NULL, digest),
+			   make_sexp_string(NULL,
+					    hash_string(self->algorithm,
+							sexp_format(o, SEXP_CANONICAL, 0),
+							1)),
 			   -1));
 }
 
@@ -275,13 +335,13 @@ const struct spki_hash spki_hash_sha1 =
      (name spki_parse_key)
      (super command)
      (vars
-       (random object randomness)))
+       (algorithms object alist)))
 */
 
+#if 0
 /* FIXME: Perhaps this function should throw exceptions? */
 static struct keypair *
-parse_dsa_private_key(struct randomness *random,
-		      struct sexp_iterator *i
+parse_dsa_private_key(struct sexp_iterator *i
 		      /*, struct exception_handler *e */)
 {
   struct dsa_signer *key = make_dsa_spki_signer(i, random);
@@ -320,25 +380,39 @@ parse_dsa_private_key(struct randomness *random,
 
   return NULL;
 }
+#endif
 
 /* FIXME: Use exceptions here? */
 static struct keypair *
-parse_private_key(struct randomness *random,
+parse_private_key(struct alist *algorithms,
                   struct sexp_iterator *i
 		  /* , struct exception_handler *e */)
 {
-  struct sexp *expr;
-  
-  expr = SEXP_GET(i);
-  switch (spki_get_type(expr, &i)) 
+  struct sexp_iterator *inner;
+  int type = spki_get_type(SEXP_GET(i), &inner);
+  CAST_SUBTYPE(signature_algorithm, algorithm,
+	       ALIST_GET(algorithms, type));
+
+  if (algorithm)
     {
-      default:
-        /* SPKI_ERROR(e, "spki.c: Unknown key type (only dsa is supported).", expr); */
-	werror("spki.c: Unknown key type (only dsa is supported).");
-	break;
-      case ATOM_DSA:
-        return parse_dsa_private_key(random, i /* , e */);
+      struct signer *s = MAKE_SIGNER(algorithm, inner);
+      /* Test key here? */
+      switch (type)
+	{
+	case ATOM_DSA:
+	  /* FIXME: Return two key pairs? */
+	  return make_keypair(ATOM_SSH_DSS,
+			      ssh_dss_public_key(s),
+			      s);
+	default:
+	  /* FIXME: Get a corresponding public key. */
+	  /* Fall through to error case */
+	  break;
+	}
     }
+
+  /* SPKI_ERROR(e, "spki.c: Unknown key type (only dsa is supported).", expr); */
+  werror("spki.c: Unknown key type (only dsa is supported).");
   return NULL;
 }
 
@@ -367,7 +441,7 @@ static void do_spki_parse_key(struct command *s,
         return;
       case ATOM_PRIVATE_KEY:
 	{
-	  struct keypair *key = parse_private_key(self->random, i /* , e */);
+	  struct keypair *key = parse_private_key(self->algorithms, i /* , e */);
 
 	  if (key)
 	    COMMAND_RETURN(c, key);
@@ -384,12 +458,12 @@ static void do_spki_parse_key(struct command *s,
 }
 
 struct command *
-make_spki_parse_key(struct randomness *random)
+make_spki_parse_key(struct alist *algorithms)
 {
   NEW(spki_parse_key, self);
   
   self->super.call = do_spki_parse_key;
-  self->random = random;
+  self->algorithms = algorithms;
   return &self->super;
 }
 
@@ -414,7 +488,7 @@ do_handle_key(struct command_continuation *c, struct lsh_object *r)
 /* NOTE: Reads only the first key from the file. */
 struct keypair *
 read_spki_key_file(const char *name,
-		   struct randomness *r,
+		   struct alist *algorithms,
 		   struct exception_handler *e)
 {
   int fd = open(name, O_RDONLY);
@@ -436,7 +510,7 @@ read_spki_key_file(const char *name,
 					
       res = blocking_read(fd,
 			  make_read_sexp(SEXP_TRANSPORT, 0,
-					 make_apply(make_spki_parse_key(r), 
+					 make_apply(make_spki_parse_key(algorithms), 
 					            &handler->super, 
 					            e), 
 					 e));
@@ -450,6 +524,62 @@ read_spki_key_file(const char *name,
 
 
 /* 5-tuples */
+
+struct spki_subject *
+make_spki_subject(struct sexp *key,
+		  struct verifier *verifier,
+		  struct lsh_string *sha1,
+		  struct lsh_string *md5)
+{
+  NEW(spki_subject, self);
+  self->key = key;
+  self->verifier = verifier;
+  self->sha1 = sha1;
+  self->md5 = md5;
+
+  return self;
+}
+
+static int
+subject_match_hash(struct spki_subject *self,
+		   int method,
+		   struct lsh_string *h1)
+{
+  struct lsh_string *h2;
+
+  switch (method)
+    {
+    case ATOM_SHA1:
+      if (self->sha1)
+	h2 = self->sha1;
+#if 0
+      else if (self->key)
+	h2 = self->sha1
+	  = hash_string(&sha1_algorithm,
+			sexp_format(self->key, SEXP_CANONICAL, 0), 1);
+#endif
+      else
+	return 0;
+      break;
+
+    case ATOM_MD5:
+      if (self->md5)
+	h2 = self->md5;
+#if 0
+      else if (self->key)
+	h2 = self->md5
+	  = hash_string(&md5_algorithm,
+			sexp_format(self->key, SEXP_CANONICAL, 0), 1);
+#endif
+      else
+	return 0;
+      break;
+
+    default:
+      return 0;
+    }
+  return lsh_string_eq(h1, h2);
+}
 
 struct spki_5_tuple *
 make_spki_5_tuple(struct spki_subject *issuer,
@@ -777,7 +907,7 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
       return NULL;
     }
 
-  subject = SPKI_LOOKUP(ctx, e);
+  subject = SPKI_LOOKUP(ctx, e, NULL);
   if (!subject)
     return NULL;
 
@@ -869,6 +999,211 @@ spki_read_acls(struct spki_context *ctx,
     }
 
   return queue_to_list_and_kill(&q);
+}
+
+
+/* SPKI context */
+
+/* GABA:
+   (class
+     (name spki_state)
+     (super spki_context)
+     (vars
+       ; Signature algorithms
+       (algorithms object alist)
+       ;; FIXME: Could have a alist of hash algorithms as well.
+       
+       ; We could use some kind of hash table instead
+       (keys struct object_queue)
+
+       ; Five tuples. 
+       (db struct object_queue)))
+*/
+
+static struct spki_subject *
+spki_subject_by_hash(struct spki_state *self,
+		int algorithm, struct lsh_string *hash)
+{
+  FOR_OBJECT_QUEUE(&self->keys, n)
+    {
+      CAST(spki_subject, subject, n);
+	    
+      if (subject_match_hash(subject, algorithm, hash))
+	return subject;
+    }
+  return NULL;
+}
+
+static struct verifier *
+spki_make_verifier(struct alist *algorithms,
+		   struct sexp_iterator *i)
+{
+  struct signature_algorithm *algorithm;
+  struct verifier *v;
+
+  if (!SEXP_GET(i))
+    {
+      werror("spki_make_verifier: Invalid (public-key ...) expression.\n");
+      return NULL;
+    }
+
+  algorithm = ALIST_GET(algorithms, sexp2atom(SEXP_GET(i)));
+
+  if (!algorithm)
+    {
+      werror("spki_make_verifier: Unsupported algorithm.\n");
+      return NULL;
+    }
+
+  SEXP_NEXT(i);
+  v = MAKE_VERIFIER(algorithm, i);
+
+  if (!v)
+    {
+      werror("spki_make_verifier: Invalid public-key data.\n");
+      return NULL;
+    }
+  
+  return v;
+}
+
+static struct spki_subject *
+do_spki_lookup(struct spki_context *s,
+	       struct sexp *e,
+	       struct verifier *v)
+
+{
+  CAST(spki_state, self, s);
+  struct sexp_iterator *i;
+
+  switch (spki_get_type(e, &i))
+    {
+    case ATOM_HASH:
+      {
+	/* (hash ALGORITHM value) */
+	struct spki_subject *subject;
+	struct lsh_string *hash;
+
+	int method = sexp2atom(SEXP_GET(i));
+	if (!method)
+	  return NULL;
+
+	SEXP_NEXT(i);
+	hash = sexp2string(SEXP_GET(i));
+
+	if (!hash)
+	  return NULL;
+
+	SEXP_NEXT(i);
+	if (SEXP_GET(i))
+	  return NULL;
+	
+	subject = spki_subject_by_hash(self, method, hash);
+	
+	if (!subject)
+	  {
+	    switch (method)
+	      {
+	      case ATOM_SHA1:
+		subject = make_spki_subject(NULL, NULL, lsh_string_dup(hash), NULL);
+		break;
+	      case ATOM_MD5:
+		subject = make_spki_subject(NULL, NULL, NULL, lsh_string_dup(hash));
+		break;
+	      default:
+		return NULL;
+	      }
+
+	    object_queue_add_tail(&self->keys, &subject->super);
+	  }
+
+	if (!subject->verifier && v)
+	  subject->verifier = v;
+
+	return subject;
+      }
+    case ATOM_PUBLIC_KEY:
+      {
+	/* (public-key ALGORITHM KEY s-expr* URI) */
+	struct spki_subject *subject;
+	struct lsh_string *sha1;
+	struct lsh_string *md5;
+
+	/* We first se if we can find the key by hash */
+	{
+	  struct lsh_string *canonical = sexp_format(e, SEXP_CANONICAL, 0);
+	  sha1 = hash_string(&sha1_algorithm, canonical, 0);
+	  md5 = hash_string(&md5_algorithm, canonical, 1);
+	}
+
+	if ( ((subject = spki_subject_by_hash(self, ATOM_SHA1, sha1)))
+	     || ((subject = spki_subject_by_hash(self, ATOM_MD5, md5))) )
+	  {
+	    lsh_string_free(md5);
+	    lsh_string_free(sha1);
+
+	    if (!subject->key)
+	      {
+		assert(!subject->verifier);
+		subject->key = e;
+		
+		subject->verifier
+		  = v ? v : spki_make_verifier(self->algorithms, i);
+	      }
+	  }
+	else
+	  {
+	    /* New subject */
+	    subject = make_spki_subject(e,
+					v ? v : spki_make_verifier(self->algorithms, i),
+					sha1, md5);
+	    
+	    object_queue_add_head(&self->keys, &subject->super);
+	  }
+	
+	return subject;
+      }
+    case ATOM_NAME:
+      werror("do_spki_lookup: names not yet supported.\n");
+      return NULL;
+    default:
+      werror("do_spki_lookup: Invalid expression.\n");
+      return NULL;
+    }
+}
+
+static int
+do_spki_authorize(struct spki_context *s,
+		  struct spki_subject *user,
+		  struct sexp *access)
+{
+  CAST(spki_state, self, s);
+
+  FOR_OBJECT_QUEUE(&self->db, n)
+    {
+      CAST(spki_5_tuple, tuple, n);
+
+      /* FIXME: Handles ACL:s only. I.e. issuer == NULL. */
+      if ( (user == tuple->subject)
+	   && !tuple->issuer
+	   && SPKI_TAG_MATCH(tuple->authorization, access))
+	return 1;
+    }
+  return 0;
+}
+
+struct spki_context *
+make_spki_context(struct alist *algorithms)
+{
+  NEW(spki_state, self);
+  self->super.lookup = do_spki_lookup;
+  self->super.authorize = do_spki_authorize;
+  
+  self->algorithms = algorithms;
+  object_queue_init(&self->keys);
+  object_queue_init(&self->db);
+
+  return &self->super;
 }
 
 /* GABA:
