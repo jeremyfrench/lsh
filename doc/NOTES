@@ -89,3 +89,11 @@ with remaining child processes even after that the first process has
 died (i.e. after that it has received exit-status or exit-signal from
 the server). In this case, the client should be considered not to send
 EOF until it detects EOF on stdin.
+
+
+PTY REFERENCES (from Keresztg)
+
+the code of tnlited
+http://viks.mvrop.org/networking/sock_advanced_tut.html
+Text-Terminal-HOWTO
+http://www.developer.ibm.com/library/ref/about4.1/df4commo.html
