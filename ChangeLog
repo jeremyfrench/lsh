@@ -1,3 +1,15 @@
+Mon Apr 19 16:23:22 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/invert-defs: Don't use echo "\n" (Bazsi).
+
+Sun Apr 18 23:03:20 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel_commands.h (channel_request_command): Pass a pointer
+ 	to a pointer to the command's continuation as an argument. This
+	replaces the want_reply argument, and it also makes it possible
+	for the command to add a new continuation which is invoked when
+	the peers response is received. 
+
 Wed Apr 14 00:32:34 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/command.c (make_parallell_progn): New command.
