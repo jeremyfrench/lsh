@@ -1,3 +1,10 @@
+2003-02-07  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh.c (do_lsh_lookup): The public key should be wrapped in a
+	subject expression in the generated acl:s.
+
+	* src/io.c (sockaddr2info): #ifed out broken IPv6 code.
+
 2003-02-06  Niels Möller  <niels@s3.kth.se>
 
 	* src/Makefile.am.in (DISTCLEANFILES): Delete environ.h.
