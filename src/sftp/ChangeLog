@@ -1,3 +1,14 @@
+2004-11-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* commands.c (uidstring, gidstring): When using snprintf,
+	NUL-terminate the result string explicitly.
+
+	* Makefile.am (lsftp_LDADD): Link lsftp with $(LIBOBJS), to pickup
+	snprintf and vsnprintf.
+
+	* configure.ac: Deleted AC_FUNC_ERROR_AT_LINE.
+	Added checks for snprintf and vsnprintf.
+
 2004-11-13  Niels Möller  <nisse@lysator.liu.se>
 
 	* dc.h: Reverted apache workaround. It turned out it was not

@@ -1,5 +1,16 @@
 2004-11-14  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/server_pty.c: When using snprintf, NUL-terminate the strings
+	explicitly.
+
+	* .bootstrap: Link misc/vsnprintf.c info the argp and sftp
+	directories.
+
+	* misc/vsnprintf.c: Portable and public domain implementation of
+	snprintf and vsnprintf, copied from
+	http://www.fiction.net/blong/programs/snprintf.c, with some minor
+	fixes. This file is moved here from the src/argp directory.
+
 	* src/testsuite/Makefile.am (CLEANFILES): Delete testfiles lcp-file-*.txt
 	(TS_SH): Added lcp-test.
 
