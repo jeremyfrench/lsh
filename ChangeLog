@@ -1,3 +1,11 @@
+2002-05-06  Niels Möller  <niels@s3.kth.se>
+
+	* src/argp/configure.ac: Use AH_TEMPLATE for
+	PROGRAM_INVOCATION_NAME and PROGRAM_INVOCATION_SHORT_NAME. The
+	third arg to AC_DEFINE_UNQUOTED seems not to work here. 
+
+	* configure.ac (CFLAGS): Don't enable -Waggregate-return.
+
 2002-05-06  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/gateway_channel.c (do_gateway_channel_open): Undid previous
