@@ -239,13 +239,15 @@ do_exit_signal(struct channel_request *c,
 
       *closure->exit_status = 7;
 
+#if 0
       signal = signal_network_to_local(signal);
 
       werror("%ups", length, msg);
-      werror("Remote process was killed by %z.%z\n",
-	     signal ? STRSIGNAL(signal) : "an unknown signal",
+#endif
+      werror("Remote process was killed by signal: %ups %z\n",
+	     length, msg,
 	     core ? "(core dumped remotely)\n": "");
-
+      
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
