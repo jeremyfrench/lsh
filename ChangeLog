@@ -1,3 +1,12 @@
+2004-11-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* .bootstrap: Typo fix.
+
+	* misc/getopt.c, misc/getopt1.c, misc/getopt.h: Moved files here.
+	Linked into the directories that need them by ./.bootstrap.
+
+	* src/environ.h.in (USER_NAME_FROM_ENV): Check $USER first.
+
 2004-11-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/io.c (handle_nonblock_error): Ignore errno ENOTTY. FreeBSD 5
