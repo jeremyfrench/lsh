@@ -20,7 +20,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */1 1999/06/06 23:2
+ */
 
 #include "tcpforward.h"
 
@@ -35,10 +35,13 @@
 #include "read_data.h"
 #endif
 
+#include <assert.h>
 #include <errno.h>
 #include <string.h>
 
-/* extern struct command_simple forward_client_start_io; */
+/* Forward declarations */
+extern struct command_simple forward_client_start_io;
+extern struct collect_info_1 open_forwarded_tcp;
 
 #define GABA_DEFINE
 #include "tcpforward.h.x"
@@ -54,7 +57,7 @@ make_tcpip_connected(struct tcpip_channel *c,
 #endif
 
 static struct forwarded_port *
-make_forwarded_port(struct address_info *address, struct lsh_fd *socket))
+make_forwarded_port(struct address_info *address, struct lsh_fd *socket)
 {
   NEW(forwarded_port, self);
 
@@ -72,7 +75,7 @@ lookup_forward(struct object_queue *q,
       CAST(forwarded_port, f, n);
       
       if ( (port == f->local->port)
-	   && (lsh_string_cmp_l(bind_host, length, ip) == 0) )
+	   && (lsh_string_cmp_l(f->local->ip, length, ip) == 0) )
 	return f;
     }
   return NULL;
@@ -87,7 +90,7 @@ remove_forward(struct object_queue *q, int null_ok,
       CAST(forwarded_port, f, n);
       
       if ( (port == f->local->port)
-	   && (lsh_string_cmp_l(bind_host, length, ip) == 0) )
+	   && (lsh_string_cmp_l(f->local->ip, length, ip) == 0) )
 	{
 	  if (null_ok || f->socket)
 	    {
@@ -267,8 +270,10 @@ static int do_open_direct_tcpip(struct channel_open *c,
       struct lsh_object *o = 
 	make_forward_connect(make_simple_connect(closure->backend, 
 						 connection->resources),
-			     make_forward_server_start_io(response, 
-						          make_tcpip_channel(),
+			     make_forward_server_start_io(response,
+							  /* FIXME: Is it ok to pass NULL
+							   * to make_tcpip_channel() ? */
+						          make_tcpip_channel(NULL),
 							  SSH_MAX_PACKET));
       
       verbose("direct-tcp connection attempt\n");
@@ -326,7 +331,7 @@ static struct lsh_object *do_forward_client_io(struct command_simple *c UNUSED,
   return x;
 }
 
-struct command_simple forward_client_start_io = 
+static struct command_simple forward_client_start_io = 
 STATIC_COMMAND_SIMPLE(do_forward_client_io);
 
 /* GABA:
@@ -367,7 +372,7 @@ static struct ssh_channel *new_tcpip_channel(struct channel_open_command *c,
   /* NOTE: All accepted fd:s must end up in this function, so it
    * should be ok to delay the REMEMBER() call until here. */
   
-  REMEMBER_RESOURCE(connection->resources, &self->peer->fd->super);
+  REMEMBER_RESOURCE(connection->resources, &self->peer->fd->super.super);
   
   channel = make_tcpip_channel(self->peer->fd);
   channel->super.write = connection->write;
@@ -382,7 +387,7 @@ static struct ssh_channel *new_tcpip_channel(struct channel_open_command *c,
 }
 
 static struct command *make_open_tcpip_command(struct address_info *local,
-					       struct forwarded_port *port)
+					       struct listen_value *peer)
 {
   NEW(open_tcpip_command, self);
   
@@ -405,13 +410,13 @@ collect_open_forwarded_tcp(struct collect_info_2 *info,
 
   assert(!info);
 
-  return &make_open_tcpip_command(local, peer)->super.super.super;
+  return &make_open_tcpip_command(local, peer)->super;
 }
 
-static struct collect_info_2 collect_info_open_forwarded_tcp_2 =
+static struct collect_info_2 collect_open_forwarded_tcp_2 =
 STATIC_COLLECT_2_FINAL(collect_open_forwarded_tcp);
 
-struct collect_info_1 open_forwarded_tcp =
+static struct collect_info_1 open_forwarded_tcp =
 STATIC_COLLECT_1(&collect_open_forwarded_tcp_2);
 
 /* ;; GABA:
@@ -431,7 +436,7 @@ STATIC_COLLECT_1(&collect_open_forwarded_tcp_2);
      (name make_forward_listen)
      (globals
        (start_io "&forward_client_start_io.super.super")
-       (open_forwarded_tcp "&open_forwarded_tcp.super.super")
+       (open_forwarded_tcp "&open_forwarded_tcp.super.super.super")
        (listen "&listen_command.super.super"))
      (params
        (backend object io_backend)
@@ -449,7 +454,7 @@ STATIC_COLLECT_1(&collect_open_forwarded_tcp_2);
      (vars
        (connection object ssh_connection)
        (forward object forwarded_port)
-       (c object global_request_callback))
+       (c object global_request_callback)))
 */
 
 static int
@@ -464,7 +469,8 @@ do_tcp_forward_continuation(struct command_continuation *c,
   if (!fd)
     {
       struct forwarded_port *port
-	= remove_forward(connection->forwarded_ports, 1,
+	= remove_forward(self->connection->forwarded_ports,
+			 1,
 			 self->forward->local->ip->length,
 			 self->forward->local->ip->data,
 			 self->forward->local->port);
@@ -482,7 +488,7 @@ do_tcp_forward_continuation(struct command_continuation *c,
 }
 
 static struct command_continuation *
-make_tcp_forward_continuation(struct ssh_connection *connection,
+make_tcpforward_continuation(struct ssh_connection *connection,
 			      struct forwarded_port *forward,
 			      struct global_request_callback *c)
 {
@@ -522,14 +528,13 @@ static int do_tcpip_forward_request(struct global_request *s,
     {
       struct address_info *a = make_address_info(bind_host, bind_port);
       struct forwarded_port *forward;
-      struct lsh_object *o;
-      int res;
 
       if (bind_port < 1024)
 	{
 	  werror("Denying forwarding of privileged port %i.\n", bind_port);
 	  return GLOBAL_REQUEST_CALLBACK(c, 0);
 	}
+
       if (lookup_forward(connection->forwarded_ports,
 			 bind_host->length, bind_host->data, bind_port))
 	{
@@ -539,11 +544,17 @@ static int do_tcpip_forward_request(struct global_request *s,
       
       verbose("Adding forward-tcpip\n");
       forward = make_forwarded_port(a, NULL);
-      object_queue_add_head(connection->forwarded_ports, &port->super);
+      object_queue_add_head(connection->forwarded_ports, &forward->super.super);
+
+      {
+	struct lsh_object *o = make_forward_listen(self->backend, connection);
+	
+	CAST_SUBTYPE(command, listen, o);
       
-      return COMMAND_CALL(make_forward_listen(self->backend, connection),
-			  port,
-			  make_register_forward(connection, forward, c));
+	return COMMAND_CALL(listen,
+			    a,
+			    make_tcpforward_continuation(connection, forward, c));
+      }
     }
   else
     {
@@ -562,10 +573,10 @@ struct global_request *make_tcpip_forward_request(struct io_backend *backend)
   return &self->super;
 }
 
-static int do_cancel_tcpip_forward(struct global_request *c UNUSED, 
+static int do_cancel_tcpip_forward(struct global_request *s UNUSED, 
 				   struct ssh_connection *connection,
-				   int want_reply, 
-				   struct simple_buffer *args)
+				   struct simple_buffer *args,
+				   struct global_request_callback *c)
 {
   UINT32 bind_host_length;
   UINT8 *bind_host;
@@ -577,28 +588,25 @@ static int do_cancel_tcpip_forward(struct global_request *c UNUSED,
     {
       struct forwarded_port *port
 	= remove_forward(connection->forwarded_ports, 0,
-			 bind_host->length,
-			 bind_host->data,
+			 bind_host_length,
+			 bind_host,
 			 bind_port);
 
       if (port)
         {
-	  assert(f->socket);
+	  assert(port->socket);
 	  verbose("Cancelling a requested tcpip-forward.\n");
 
-	  close_fd(f->socket, 0);
-	  f->socket = NULL;
+	  close_fd(port->socket, 0);
+	  port->socket = NULL;
 
-	  return want_reply
-	    ? A_WRITE(connection->write, format_global_success()) 
-	    : LSH_OK | LSH_GOON;
+	  return GLOBAL_REQUEST_CALLBACK(c, 1);
 	}
       else
 	{      
 	  verbose("Could not find tcpip-forward to cancel\n");
-	  return want_reply
-	    ? A_WRITE(connection->write, format_global_failure())
-	    : LSH_OK | LSH_GOON;
+
+	  return GLOBAL_REQUEST_CALLBACK(c, 0);
 	}
     }
   else
