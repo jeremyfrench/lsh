@@ -34,7 +34,7 @@
 
 /* Ix == x */
 
-COMMAND_SIMPLE(command_I) { return a; }
+DEFINE_COMMAND_SIMPLE(command_I, a) { return a; }
 
 
 /* ((K x) y) == x */
@@ -66,7 +66,7 @@ struct command *make_command_K_1(struct lsh_object *x)
   return &res->super.super;
 }
 
-COMMAND_SIMPLE(command_K)
+DEFINE_COMMAND_SIMPLE(command_K, a)
 { return &make_command_K_1(a)->super; }
 
 
