@@ -68,10 +68,10 @@ struct terminal_dimensions;
        ;; FIXME: Do we really need the FREE parameter?
        (read_password method (string)
                   "UINT32 max_length"
-                  "struct lsh_string *prompt"
+                  "const struct lsh_string *prompt"
 		  "int free")
        (yes_or_no method int
-                  "struct lsh_string *prompt"
+                  "const struct lsh_string *prompt"
 		  "int def" "int free")
 
        (get_attributes method (object terminal_attributes) )
