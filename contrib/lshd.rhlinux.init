@@ -2,7 +2,7 @@
 #
 # Version 0.1
 #
-# chkconfig: 345 99 01
+# chkconfig: 345 40 60
 # description: provides secure connections through untrusted networks
 # lsh is based on the specification for ssh2 and should (eventually)
 # be compatible.
