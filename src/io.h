@@ -280,7 +280,8 @@ address_info2sockaddr(socklen_t *length,
 		      int lookup);
 
 unsigned
-io_resolv_address(struct address_info *a,
+io_resolv_address(const char *host, const char *service,
+		  unsigned default_port,
 		  struct sockaddr_list **tail);
 
 /* Returns an exception, if anything went wrong */

@@ -581,56 +581,48 @@ parse_subsystem_list(char *arg)
   return subsystems;
 }
 
-static struct address_info *
-parse_interface(const char *interface, const char *port)
+/* NOTE: On success, modifies interface destructively. */
+static int
+parse_interface(char *interface, const char **host, const char **port)
 {
-  struct lsh_string *ip;
-  struct address_info *a;
+  *port = NULL;
   
   if (interface[0] == '[')
     {
       /* A literal address */
-      const char *end;
+      char *end;
       interface++;
       
       end = strchr(interface, ']');
       if (!end)
-	return NULL;
+	return 0;
 
       switch (end[1])
 	{
 	case ':':
-	  port = end + 2;
+	  *port = end + 2;
 	  break;
 	case 0:
 	  break;
 	default:
-	  return NULL;
+	  return 0;
 	}
-      
-      ip = ssh_format("%ls", end - interface, interface);
+
+      *host = interface;
+      *end = 0;
+      return 1;
     }
   else
     {
-      const char *end = strchr(interface, ':');
+      char *end = strchr(interface, ':');
       if (end)
 	{
-	  ip = ssh_format("%ls", end - interface, interface);
-	  port = end + 1;
+	  *port = end + 1;
+	  *end = 0;
 	}
-      else
-	ip = ssh_format("%lz", interface);
+      *host = interface;
+      return 1;
     }
-
-  if (port)
-    a = make_address_info_c(NULL, port, 0);
-  else
-    a = make_address_info_c(NULL, "ssh", 22);
-
-  if (!a)
-    lsh_string_free(ip);
-
-  return a;
 }
 
 static error_t
@@ -691,14 +683,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	if (!self->local)
 	  {
 	    /* Default interface */
-	    struct address_info *a;
-	    
-	    if (self->port)
-	      a = make_address_info_c(NULL, self->port, 0);
-	    else
-	      a = make_address_info_c(NULL, "ssh", 22);
 
-	    if (!io_resolv_address(a, &self->local))
+	    if (!(self->port
+		  ? io_resolv_address(NULL, self->port, 0, &self->local)
+		  : io_resolv_address(NULL, "ssh", 22, &self->local)))
+		
 	      argp_failure(state, EXIT_FAILURE, 0,
 			   "Strange. Could not resolve the ANY address.");
 	  }
@@ -763,17 +752,22 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case OPT_INTERFACE:
       {
-	struct address_info *a = parse_interface(arg, self->port);
+	const char *host;
+	const char *port;
+
+	/* On success, modifies arg destructively. */
+	if (!parse_interface(arg, &host, &port))
+	  argp_error(state, "Invalid interface, port or service: %s.", arg);
+
+	if (!port)
+	  port = self->port;
 	
-	if (!a)
-	  argp_error(state, "Invalid intarface, port or service: %s.", arg);
-
-	if (!io_resolv_address(a, &self->local))
+	if (!(port
+	      ? io_resolv_address(host, port, 0, &self->local)
+	      : io_resolv_address(host, "ssh", 22, &self->local)))
 	  argp_failure(state, EXIT_FAILURE, 0,
-		       "Address %s:%d could not be resolved.\n",
-		       lsh_get_cstring(a->ip), a->port);
-
-	KILL(a);
+		       "Address %s:%s could not be resolved.\n",
+		       host, port ? port : "ssh");
       }
 	
       break;

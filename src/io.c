@@ -1150,25 +1150,16 @@ choose_address(struct addrinfo *list,
 }
 #endif /* HAVE_GETADDRINFO */
 
+/* Uses NUL-terminated strings. HOST can be NULL, meaning any address.
+ * If PORT is NULL or can't be looked up, and DEFAULT_PORT is non-zero,
+ * the DEFAULT_PORT is used. */
 unsigned
-io_resolv_address(struct address_info *a,
+io_resolv_address(const char *host, const char *service,
+		  unsigned default_port,
 		  struct sockaddr_list **tail)
 {
-  const char *host;
   unsigned naddresses = 0;
   
-  if (a->ip)
-    {
-      host = lsh_get_cstring(a->ip);
-      if (!host)
-	{
-	  werror("io_resolv_address: hostname contains NUL characters.\n");
-	  return 0;
-	}
-    }
-  else
-    host = NULL;
-
   /* Some systems have getaddrinfo, but still doesn't implement all of
    * RFC 2553 */
 #if defined(HAVE_GETADDRINFO) && \
@@ -1179,18 +1170,22 @@ io_resolv_address(struct address_info *a,
     struct addrinfo *p;
     int err;
 
-    /* FIXME: It seems ugly to have to convert the port number to a
-     * string. */
-    struct lsh_string *service = ssh_format("%di", a->port);
-
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = PF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    err = getaddrinfo(host, lsh_get_cstring(service), &hints, &list);
-    lsh_string_free(service);
-
+    if (!service || (err = getaddrinfo(host, service, &hints, &list)))
+      {
+	/* FIXME: It seems ugly to have to convert the port number to
+	 * a string. Perhaps we can call getaddrinfo with a NULL or
+	 * dummy service and patch in the right port number later? */
+	
+	struct lsh_string *port = ssh_format("%di", default_port);
+	err = getaddrinfo(host, lsh_get_cstring(port), &hints, &list);
+	lsh_string_free(port);
+      }
+    
     if (err)
       {
 	debug("io_listen_address: getaddrinfo failed (err = %i): %z\n",
@@ -1215,7 +1210,7 @@ io_resolv_address(struct address_info *a,
 #error IPv6 enabled, but getaddrinfo and friends were not found. 
 #endif
 
-  if (a->ip && memchr(a->ip->data, ':', a->ip->length))
+  if (strchr(host, ':'))
     {
       debug("io_resolv_address: Literal IPv6 used. Failing.\n");
       return 0;
@@ -1223,7 +1218,11 @@ io_resolv_address(struct address_info *a,
   else
     {
       struct sockaddr_in addr;
-      addr.sin_port = htons(a->port);
+      unsigned port;
+      if (!service || !(port = get_portno(service, "tcp")))
+	port = default_port;
+      
+      addr.sin_port = htons(port);
 
       /* Use IPv4 only */
       addr.sin_family = AF_INET;
