@@ -1,3 +1,20 @@
+2002-05-26  Pontus Sköld  <pont@soua.net>
+
+	* commands.c (com_cd): Glob absolute paths only.
+	(com_rm): Dito.
+	(com_get): Dito.
+	(com_mv): Dito.
+
+2002-05-25  Pontus Sköld  <pont@soua.net>
+
+	* rl.c (lsftp_rl_remotefile_generator): (Hopefully) fixed
+	completion to behave correctly. Always glob on absolute path and
+	make them relative if neccessary when returning them.
+
+	* sftp_bind.c (lsftp_path_is_absolute): New function.
+
+	* sftp_bind.h: Declaration.
+
 2002-05-23  Pontus Sköld  <pont@soua.net>
 
 	* sftp_bind.c (lsftp_do_ls): Bail out if globbing failed.
