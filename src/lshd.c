@@ -131,7 +131,6 @@ int main(int argc, char **argv)
 
   struct reap *reaper;
   
-  struct lsh_string *random_seed;
   struct randomness *r;
   struct diffie_hellman_method *dh;
   struct keyexchange_algorithm *kex;
@@ -178,9 +177,8 @@ int main(int argc, char **argv)
 
   init_backend(backend);
   reaper = make_reaper();
-  random_seed = ssh_format("%z", "foobar");
 
-  r = make_poor_random(&sha_algorithm, random_seed);
+  r = make_reasonably_random();
   dh = make_dh1(r);
   init_host_key(r); /* Initializes public_key and secret_key */
   kex = make_dh_server(dh, public_key, secret_key);

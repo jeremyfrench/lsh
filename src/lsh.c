@@ -102,7 +102,6 @@ int main(int argc, char **argv)
 
   NEW(io_backend, backend);
 
-  struct lsh_string *random_seed;
   struct randomness *r;
   struct diffie_hellman_method *dh;
   struct keyexchange_algorithm *kex;
@@ -164,8 +163,7 @@ int main(int argc, char **argv)
 
   init_backend(backend);
   
-  random_seed = ssh_format("%z", "gazonk");
-  r = make_poor_random(&sha_algorithm, random_seed);
+  r = make_reasonably_random();
   dh = make_dh1(r);
   /* No randomness is needed for verifying signatures */
   lookup = make_fake_host_db(make_dss_algorithm(NULL)); 
@@ -229,8 +227,6 @@ int main(int argc, char **argv)
       return 1;
     }
   
-  lsh_string_free(random_seed);
-
   /* Exit code if no session is established */
   lsh_exit_code = 17;
   

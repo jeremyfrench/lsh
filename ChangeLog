@@ -1,3 +1,21 @@
+Sun Dec 20 20:11:02 1998    <nisse@puck>
+
+	* server.c (do_line): Accept client version 1.99, if
+	DATAFELLOWS_SSH2_GREETING_WORKAROUND is defined.
+
+	* randomness.c (make_poor_random): Allow NULL init string. Use pid
+	for seeding.
+	(make_device_random): New function.
+	(make_reasonably_random): New function.
+
+	* bignum.c (bignum_write): New function.
+	(bignum_random_size): New function.
+	(bignum_small_factor): New function.
+	(bignum_next_prime): New function.
+
+	* Makefile.am.in (noinst_LIBRARIES): Collect most object files
+	into liblsh.a.
+
 Fri Dec 18 01:53:22 1998    <nisse@puck>
 
 	* server.c (do_eof): Consider closing (if CHANNEL_SENT_EOF and

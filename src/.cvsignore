@@ -17,6 +17,9 @@ config.status
 configure
 configure.scan
 lsh
+lsh_keygen
 lshd
+prime_table
+prime_table.h
 stamp-h
 stamp-h.in
