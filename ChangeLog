@@ -1,3 +1,14 @@
+Wed Dec 16 01:33:25 1998    <nisse@puck>
+
+	* list.c (make_int_listv): New function
+	(make_object_listv): New function
+
+	* keyexchange.c (do_install): Unified key installation.
+
+	* client_keyexchange.c (do_handle_dh_reply): Better handling of
+	weak keys (i.e. INSTALL_KEYS() returning NULL).
+	* server_keyexchange.c (do_handle_dh_init): -"-
+
 Tue Dec 15 00:01:33 1998    <nisse@puck>
 
 	* xalloc.c (lsh_list_alloc): Avoid unsigned under flow when length

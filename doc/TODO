@@ -180,3 +180,7 @@ Make it cleaner wrt. more gcc warnings.
 
 Don't use stdio for werror and similar functions. The non-blocking
 stderr sometime causes the C library to lose data.
+
+Split crypto.c into several files, one for each algorithm.
+
+Handling of user authentication failures seems broken.
