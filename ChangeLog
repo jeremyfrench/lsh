@@ -1,4 +1,18 @@
+Tue Mar 16 03:36:20 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/tcpforward.c (tcpforward_foo): Use COMMAND_UNIMPLEMENTED, so
+	that the expression compiles.
+
+	* src/make_class (output-expression): Bug fix.
+
+	* src/io.c (do_read): Warn when called with a zero length.
+
+	* src/command.c (command_unimplemented): New command (which aborts
+	if called).
+
 Mon Mar 15 00:56:18 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/digit_table.c (main): Fixed hex digits a-f.
 
 	* configure.in: Disabled the AM_MAINTAINER_MODE macro.
 

@@ -46,6 +46,8 @@
    (class
      (name abstract_read)
      (vars
+       ;; FIXME: Should we allow that the read method is called with
+       ;; length = 0? I think so.
        (read indirect-method int
              "UINT32 length" "UINT8 *buffer")))
 */

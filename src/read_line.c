@@ -82,7 +82,8 @@ static int do_read_line(struct read_handler **h,
   struct read_handler *next = NULL;
   int n;
 
-  assert(MAX_LINE - closure->pos > 0);
+  /* FIXME: Is this ok? */
+  assert(MAX_LINE - closure->pos > 0); 
   n = A_READ(read, MAX_LINE - closure->pos, closure->buffer);
 
   switch(n)

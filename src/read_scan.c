@@ -54,7 +54,9 @@ static int do_read_scan(struct read_handler **h,
   UINT8 *buffer = alloca(closure->buffer_size);
   int n;
   int i;
-  assert(closure->buffer_size > 0);
+
+  /* FIXME: Is this ok? */
+  assert(closure->buffer_size > 0); 
   n = A_READ(read, closure->buffer_size, buffer);
   
   switch(n)
