@@ -411,6 +411,8 @@ list_algorithms(const struct argp_state *state,
 	fprintf(state->out_stream, ", ");
       fprintf(state->out_stream, "none");
     }
+
+  fprintf(state->out_stream, "\n");
 }
 
 void
@@ -446,7 +448,7 @@ list_compression_algorithms(const struct argp_state *state,
 void
 list_hostkey_algorithms(const struct argp_state *state)
 {
-  fprintf(state->out_stream, "%s", "Supported hostkey algorithms: ssh-dss, spki, none");
+  fprintf(state->out_stream, "%s", "Supported hostkey algorithms: ssh-dss, spki, none\n");
 }
 
 
