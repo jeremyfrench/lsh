@@ -101,8 +101,8 @@ make_lsh_writekey_options(void)
   self->signature_algorithms = all_signature_algorithms(NULL);
 
   /* We use this only for salt and iv generation. */
-  self->r = make_bad_random();
-
+  self->r = make_user_random(getenv("HOME"));
+  
   /* A better default would be crypto_cbc(make_des3()) */
   self->crypto = NULL;
   
@@ -289,7 +289,7 @@ open_private_file(const struct lsh_string *file)
                 0600);
 
   if (fd < 0)
-    werror("Failed to open `%z'for writing: %z\n"
+    werror("Failed to open `%S'for writing: %z\n"
            "lsh-writekey doesn't overwrite existing key files.\n"
            "If you *really* want to do that, you should delete\n"
            "the existing files first\n",

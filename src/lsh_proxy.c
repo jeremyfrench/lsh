@@ -140,7 +140,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 */
 
 static struct lsh_proxy_options *
-make_lsh_proxy_options(struct randomness_with_poll *random, 
+make_lsh_proxy_options(struct randomness *random, 
 		       struct alist *algorithms)
 {
   NEW(lsh_proxy_options, self);
@@ -148,7 +148,7 @@ make_lsh_proxy_options(struct randomness_with_poll *random,
   init_algorithms_options(&self->super, algorithms);
   self->signature_algorithms
     = make_alist(1,
-		 ATOM_DSA, make_dsa_algorithm(&random->super), -1);
+		 ATOM_DSA, make_dsa_algorithm(random), -1);
 
   self->random = random;
   self->style = SEXP_TRANSPORT;
@@ -310,9 +310,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       if (self->use_pid_file < 0)
 	self->use_pid_file = self->daemonic;
 
-      /* Start background poll */
-      RANDOM_POLL_BACKGROUND(self->random->poller);
-      
       break;
       
     case 'p':
@@ -555,7 +552,7 @@ int main(int argc, char **argv)
   
   struct reap *reaper;
   
-  struct randomness_with_poll *r;
+  struct randomness *r;
   struct alist *algorithms_server, *algorithms_client;
   struct alist *signature_algorithms;
   
@@ -580,13 +577,19 @@ int main(int argc, char **argv)
      &default_exception_handler,
      HANDLER_CONTEXT);
   reaper = make_reaper(); 
-  r = make_default_random(reaper, handler);
 
+  r = make_system_random();
+  if (!r)
+    {
+      werror("Failed to initialize randomness generator.\n");
+      return EXIT_FAILURE;
+    }
+  
   algorithms_server = all_symmetric_algorithms();
   /* FIXME: copy algorithms_server */
   algorithms_client = all_symmetric_algorithms();
   
-  signature_algorithms = all_signature_algorithms(&r->super);
+  signature_algorithms = all_signature_algorithms(r);
   
   options = make_lsh_proxy_options(r, algorithms_server);
   
@@ -654,13 +657,13 @@ int main(int argc, char **argv)
 
   ALIST_SET(algorithms_server, 
 	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-	    &make_dh_server(make_dh1(&r->super))->super);
+	    &make_dh_server(make_dh1(r))->super);
   ALIST_SET(algorithms_client, 
 	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-	    &make_dh_client(make_dh1(&r->super))->super);
+	    &make_dh_client(make_dh1(r))->super);
   
   make_kexinit
-    = make_simple_kexinit(&r->super,
+    = make_simple_kexinit(r,
 			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
 					-1),
 			  options->super.hostkey_algorithms,
@@ -772,7 +775,7 @@ int main(int argc, char **argv)
 						       "lsh_proxy_client - a free ssh",
 						       "proxy client",
 						       SSH_MAX_PACKET,
-						       &r->super,
+						       r,
 						       algorithms_client,
 						       NULL),
 						      make_kexinit),
@@ -781,7 +784,7 @@ int main(int argc, char **argv)
 						       "lsh_proxy_server - a free ssh",
 						       "proxy server",
 						       SSH_MAX_PACKET,
-						       &r->super,
+						       r,
 						       algorithms_server,
 						       NULL),
 						      make_kexinit));

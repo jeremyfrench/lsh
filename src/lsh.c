@@ -132,16 +132,25 @@ make_options(struct exception_handler *handler,
 	     int *exit_code)
 {
   NEW(lsh_options, self);
+  const char *home = getenv("HOME");
+  struct randomness *r = make_user_random(home);
+
+  if (!r)
+    {
+      werror("Failed to initialize randomness generator.\n");
+      return NULL;
+    }
+  
   init_client_options(&self->super, 
-		      make_default_random(NULL, handler),
+		      r,
 		      handler, exit_code);
 
   self->algorithms
     = make_algorithms_options(all_symmetric_algorithms());
 
-  self->home = getenv("HOME");
+  self->home = home;
   
-  self->signature_algorithms = all_signature_algorithms(&self->super.random->super);
+  self->signature_algorithms = all_signature_algorithms(r);
 
   self->sloppy = 0;
   self->capture = NULL;
@@ -822,7 +831,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
 	      ALIST_SET(self->algorithms->algorithms,
 			ATOM_SRP_RING1_SHA1_LOCAL,
-			&make_srp_client(make_srp1(&self->super.random->super),
+			&make_srp_client(make_srp1(self->super.random),
 					 self->super.tty,
 					 ssh_format("%lz", self->super.user))
 			->super);
@@ -833,7 +842,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
 	      ALIST_SET(self->algorithms->algorithms,
 			ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			&make_dh_client(make_dh1(&self->super.random->super))
+			&make_dh_client(make_dh1(self->super.random))
 			->super);
 	    }
 	}
@@ -911,10 +920,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  argp_error(state, "No actions given.");
 	  break;
 	}
-      
-      /* Start background poll */
-      RANDOM_POLL_BACKGROUND(self->super.random->poller);
-      
+
       break;
       
     case 'i':
@@ -1060,7 +1066,9 @@ int main(int argc, char **argv)
   set_local_charset(CHARSET_LATIN1);
 
   options = make_options(handler, &lsh_exit_code);
-
+  if (!options)
+    return EXIT_FAILURE;
+  
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
 
   spki = read_known_hosts(options);
@@ -1071,10 +1079,10 @@ int main(int argc, char **argv)
 	make_handshake_info(CONNECTION_CLIENT,
 			    "lsh - a free ssh", NULL,
 			    SSH_MAX_PACKET,
-			    &options->super.random->super,
+			    options->super.random,
 			    options->algorithms->algorithms,
 			    NULL),
-	make_simple_kexinit(&options->super.random->super,
+	make_simple_kexinit(options->super.random,
 			    options->kex_algorithms,
 			    options->algorithms->hostkey_algorithms,
 			    options->algorithms->crypto_algorithms,

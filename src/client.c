@@ -413,7 +413,7 @@ make_client_session(struct client_options *options);
 
 void
 init_client_options(struct client_options *self,
-		    struct randomness_with_poll *random,
+		    struct randomness *random,
 		    struct exception_handler *handler,
 		    int *exit_code)			 
 {
@@ -612,7 +612,7 @@ client_maybe_x11(struct client_options *options,
       
       assert(options->random);
       if (display)
-	request = make_forward_x11(display, &options->random->super);
+	request = make_forward_x11(display, options->random);
 	  
       if (request)
 	{

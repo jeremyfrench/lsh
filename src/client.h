@@ -117,7 +117,7 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
      (name client_options)
      (vars
        ;; Used only by lsh, NULL for lshg.
-       (random object randomness_with_poll)
+       (random object randomness)
 
        (tty object interact)
 
@@ -166,7 +166,7 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
 
 void
 init_client_options(struct client_options *options,
-		    struct randomness_with_poll *random,
+		    struct randomness *random,
 		    struct exception_handler *handler,
 		    int *exit_code);
 

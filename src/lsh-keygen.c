@@ -40,6 +40,7 @@
 
 #include "lsh_argp.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -179,6 +180,7 @@ main_argp =
   NULL, NULL
 };
 
+#if 0
 static void
 do_lsh_keygen_handler(struct exception_handler *s UNUSED,
 		      const struct exception *e)
@@ -190,26 +192,37 @@ do_lsh_keygen_handler(struct exception_handler *s UNUSED,
 
 static struct exception_handler handler =
 STATIC_EXCEPTION_HANDLER(do_lsh_keygen_handler, NULL);
+#endif
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
   struct lsh_keygen_options * options
     = make_lsh_keygen_options();
 
   struct sexp *key;
-  struct randomness_with_poll *r;
+  struct randomness *r;
 
   struct lsh_string *out;
   const struct exception *e;
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
-  r = make_default_random(NULL, &handler);
+  r = make_user_random(getenv("HOME"));
+  if (!r)
+    {
+      werror("Failed to initialize randomness generator.\n");
+      return EXIT_FAILURE;
+    }
 
+  /* FIXME: Optionally use interactive keyboard input to get some more
+   * entropy */
+  assert(r->quality == RANDOM_GOOD);
+  
   switch (options->algorithm)
     {
     case 'd':
-      key = dsa_generate_key(&r->super, options->level);
+      key = dsa_generate_key(r, options->level);
       break;
     case 'r':
       {
@@ -220,11 +233,11 @@ int main(int argc, char **argv)
 	  {
 	    /* Use a reasonably small random e, and make sure that at
 	     * it is odd and has at most one more one bit. */
-	    bignum_random_size(e, &r->super, 30);
+	    bignum_random_size(e, r, 30);
 	    mpz_setbit(e, 0);
 	    mpz_setbit(e, 17);
 	    
-	    key = rsa_generate_key(e, &r->super, options->level);
+	    key = rsa_generate_key(e, r, options->level);
 	    if (key)
 	      break;
 

@@ -100,7 +100,7 @@ make_srp_gen_options(struct exception_handler *e)
   self->passwd = NULL;
 
   /* We use this only for generating the salt. */
-  self->r = make_bad_random();
+  self->r = make_user_random(getenv("HOME"));
 
   return self;
 }
@@ -217,7 +217,9 @@ srp_gen(struct srp_gen_options *options)
   struct lsh_string *name;
   struct sexp *e;
 
+  /* NOTE: Allows random to be of bad quality */
   salt = lsh_string_alloc(SALT_SIZE);
+
   RANDOM(options->r, salt->length, salt->data);
   name = ssh_format("%lz", options->name);
 

@@ -150,7 +150,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (e object exception_handler)
        
        (reaper object reap)
-       (random object randomness_with_poll)
+       (random object randomness)
        
        (signature_algorithms object alist)
        (style . sexp_argp_state)
@@ -221,9 +221,15 @@ make_lshd_options(void)
   self->e = make_lshd_exception_handler(&default_exception_handler,
 					HANDLER_CONTEXT);
   self->reaper = make_reaper();
-  self->random = make_default_random(self->reaper, self->e);
+  self->random = make_system_random();
 
-  self->signature_algorithms = all_signature_algorithms(&self->random->super);
+  if (!self->random)
+    {
+      werror("Failed to initialize randomness generator.\n");
+      return NULL;
+    }
+  
+  self->signature_algorithms = all_signature_algorithms(self->random);
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
 
@@ -472,7 +478,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			  &make_dh_server(make_dh1(&self->random->super))
+			  &make_dh_server(make_dh1(self->random))
 			  ->super);
 	      }
 #if WITH_SRP	    
@@ -482,7 +488,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_SRP_RING1_SHA1_LOCAL,
-			  &make_srp_server(make_srp1(&self->random->super),
+			  &make_srp_server(make_srp1(self->random),
 					   user_db)
 			  ->super);
 	      }
@@ -762,6 +768,9 @@ int main(int argc, char **argv)
   set_local_charset(CHARSET_LATIN1);
 
   options = make_lshd_options();
+
+  if (!options)
+    return EXIT_FAILURE;
   
   trace("Parsing options...\n");
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
@@ -830,13 +839,6 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  /* NOTE: We have to do this *after* forking into the background,
-   * because otherwise we won't be able to waitpid() on the background
-   * process. */
-
-  /* Start background poll */
-  RANDOM_POLL_BACKGROUND(options->random->poller);
-	
   {
     /* Commands to be invoked on the connection */
     struct object_list *connection_hooks;
@@ -890,7 +892,7 @@ int main(int argc, char **argv)
 					"lsh - a free ssh",
 					NULL,
 					SSH_MAX_PACKET,
-					&options->random->super,
+					options->random,
 					options->super.algorithms,
 					options->sshd1),
 		    make_simple_kexinit
