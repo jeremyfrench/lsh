@@ -194,9 +194,7 @@ struct channel_request_info
        ; Channel types that we can open
        (channel_types object alist)
 
-       ; FIXME: Add fallbacks, to be used for unknown requests
-       ; and channel types.
-       ; (global_fallback object ...)
+       ; Used for unknown requests unknown channel types.
        (open_fallback object channel_open)
        
        ; Allocation of local channel numbers is managed using the same
