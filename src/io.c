@@ -82,59 +82,75 @@ int io_iter(struct io_backend *b)
   /* int timeout; */
   int res;
 
-  nfds = 0;
-  
   {
+    struct lsh_fd *fd;
+    int need_close;
+    
     /* Prepare fd:s. This phase calls the prepare-methods, also closes
      * and unlinks any fd:s that should be closed, and also counts how
      * many fd:s there are. */
-    
-    struct lsh_fd **fd_p;
-    struct lsh_fd *fd;
-    
-    for(fd_p = &b->files; (fd = *fd_p); )
+
+    for (fd = b->files; fd; fd = fd->next)
       {
 	if (fd->super.alive && fd->prepare)
 	  FD_PREPARE(fd);
-	
-	if (!fd->super.alive)
-	  {
-	    if (fd->fd < 0)
-	      /* Unlink the file object, but don't close any underlying file. */
-	      ;
-	    else
-	      {
-		/* Used by write fd:s to make sure that writing to its
-		 * buffer fails. */
-		if (fd->write_close)
-		  FD_WRITE_CLOSE(fd);
-		
-		/* FIXME: The value returned from the close callback could be used
-		 * to choose an exit code. */
-		if (fd->close_callback)
-		  CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
-		
-		debug("Closing fd %i.\n", fd->fd);
-		
-		close(fd->fd);
-	      }
-	    /* Unlink this fd */
-	    *fd_p = fd->next;
-	    continue;
-	  }
-
-	/* FIXME: nfds should probably include only fd:s that we are
-	 * interested in reading or writing. However, that makes the
-	 * mapping from struct pollfd to struct lsh_fd a little more
-	 * difficult. */
-#if 1
-	if (fd->want_read || fd->want_write)
-#endif
-	  nfds++;
-
-	fd_p = &fd->next;
       }
+    
+    /* Note that calling a close callback might cause other files to
+     * be closed as well, so we need a double loop.
+     *
+     * FIXME: How can we improve this? We could keep a stack of closed
+     * files, but that will require backpointers from the fd:s to the
+     * backend (so that kill_fd() can find the top of the stack). */
+
+    do
+      {
+	struct lsh_fd **fd_p;
+	need_close = 0;
+	nfds = 0;
 	
+	for(fd_p = &b->files; (fd = *fd_p); )
+	  {
+	    if (!fd->super.alive)
+	      {
+		if (fd->fd < 0)
+		  /* Unlink the file object, but don't close any
+		   * underlying file. */
+		  ;
+		else
+		  {
+		    /* Used by write fd:s to make sure that writing to its
+		     * buffer fails. */
+		    if (fd->write_close)
+		      FD_WRITE_CLOSE(fd);
+		
+		    /* FIXME: The value returned from the close
+		     * callback could be used to choose an exit code.
+		     * */
+		    if (fd->close_callback)
+		      {
+			CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
+			need_close = 1;
+		      }
+		    trace("io.c: Closing fd %i.\n", fd->fd);
+		
+		    close(fd->fd);
+		  }
+		/* Unlink this fd */
+		*fd_p = fd->next;
+		continue;
+	      }
+
+	    /* FIXME: nfds should probably include only fd:s that we are
+	     * interested in reading or writing. However, that makes the
+	     * mapping from struct pollfd to struct lsh_fd a little more
+	     * difficult. */
+	    if (fd->want_read || fd->want_write)
+	      nfds++;
+
+	    fd_p = &fd->next;
+	  }
+      } while (need_close);
   }
 
   if (!nfds)
@@ -154,6 +170,8 @@ int io_iter(struct io_backend *b)
     
     for (fd = b->files, i = 0; fd; fd = fd->next)
       {
+	assert(fd->super.alive);
+	
 	if (fd->want_read || fd->want_write)
 	  {
 	    assert(i < nfds);
@@ -558,6 +576,7 @@ do_listen_callback(struct io_callback *s,
       werror("io.c: accept() failed, %z", STRERROR(errno));
       return;
     }
+  trace("io.c: accept() on fd %i\n", conn);
   COMMAND_RETURN(self->c,
 		 make_listen_value(make_lsh_fd(self->backend,
 					       conn, self->e),
@@ -1090,7 +1109,7 @@ io_connect(struct io_backend *b,
   if (s<0)
     return NULL;
 
-  debug("io.c: connecting using fd %i\n", s);
+  trace("io.c: Connecting using fd %i\n", s);
   
   io_init_fd(s);
 
@@ -1131,7 +1150,7 @@ io_listen(struct io_backend *b,
   if (s<0)
     return NULL;
 
-  debug("io.c: listening on fd %i\n", s);
+  trace("io.c: Listening on fd %i\n", s);
   
   io_init_fd(s);
 
@@ -1169,7 +1188,7 @@ io_read_write(struct lsh_fd *fd,
 	      UINT32 block_size,
 	      struct close_callback *close_callback)
 {
-  debug("io.c: Preparing fd %i for reading and writing\n",
+  trace("io.c: Preparing fd %i for reading and writing\n",
 	fd->fd);
   
   /* Reading */
@@ -1194,7 +1213,7 @@ io_read(struct lsh_fd *fd,
 	struct io_callback *read,
 	struct close_callback *close_callback)
 {
-  debug("io.c: Preparing fd %i for reading\n", fd->fd);
+  trace("io.c: Preparing fd %i for reading\n", fd->fd);
   
   /* Reading */
   fd->want_read = !!read;
@@ -1210,7 +1229,7 @@ io_write(struct lsh_fd *fd,
 	 UINT32 block_size,
 	 struct close_callback *close_callback)
 {
-  debug("io.c: Preparing fd %i for writing\n", fd->fd);
+  trace("io.c: Preparing fd %i for writing\n", fd->fd);
   
   /* Writing */
   fd->write_buffer = write_buffer_alloc(block_size);
@@ -1257,7 +1276,7 @@ void kill_fd(struct lsh_fd *fd)
 
 void close_fd(struct lsh_fd *fd, int reason)
 {
-  debug("Marking fd %i for closing.\n", fd->fd);
+  trace("io.c: Marking fd %i for closing.\n", fd->fd);
   fd->close_reason = reason;
   kill_fd(fd);
 }

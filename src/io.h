@@ -89,6 +89,9 @@
        (next object lsh_fd)
        (fd simple int)
 
+       ;; (backend object io_backend)
+       ;; (next_closed object lsh_fd)
+       
        ; Used for raising i/o- and eof-exceptions.
        ; Also passed on to readers of the consuming type,
        ; which seems kind of bogus.
@@ -201,6 +204,10 @@ make_listen_value(struct lsh_fd *fd,
      (vars
        ; Linked list of fds. 
        (files object lsh_fd)
+
+       ; Stack of closed files
+       ;; (closed object lsh_fd)
+       
        ; Callouts
        ;; (callouts object callout)
        ))
