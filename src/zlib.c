@@ -205,10 +205,13 @@ do_zlib(struct compress_instance *c,
       switch (rc)
 	{
 	case Z_BUF_ERROR:
-	  werror("do_zlib (%z): Z_BUF_ERROR (probably harmless),\n"
-		 "  avail_in = %i, avail_out = %i\n",
-		 ZLIB_TYPE(&self->z)->operation,
-		 self->z.avail_in, self->z.avail_out);
+	  /* If avail_in is zero, this just means that all data have
+	   * been flushed. */
+	  if (self->z.avail_in)
+	    werror("do_zlib (%z): Z_BUF_ERROR (probably harmless),\n"
+		   "  avail_in = %i, avail_out = %i\n",
+		   ZLIB_TYPE(&self->z)->operation,
+		   self->z.avail_in, self->z.avail_out);
 	  /* Fall through */
 	case Z_OK:
 	  break;
