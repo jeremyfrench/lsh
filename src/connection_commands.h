@@ -45,8 +45,8 @@ struct command *
 make_connection_if_srp(struct command *then_f,
 		       struct command *else_f);
 
-extern struct collect_info_1 connection_if_srp_command;
-#define CONNECTION_IF_SRP (&connection_if_srp_command.super.super.super)
+extern struct command_3 connection_if_srp;
+#define CONNECTION_IF_SRP (&connection_if_srp_command.super.super)
 
 extern struct command connection_require_userauth;
 #define CONNECTION_REQUIRE_USERAUTH (&connection_require_userauth.super)

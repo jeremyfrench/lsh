@@ -1,8 +1,22 @@
 2001-07-04  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/command.c (collect_state_1): Deleted class.
+	(collect_state_1): Deleted class.
+	(collect_state_2): Deleted class.
+	(collect_state_3): Deleted class.
+	(make_collect_state_1): Deleted function.
+	(make_collect_state_2): Deleted function.
+
 	* src/command.h (command_2): Made invoke a method, not a function
 	pointer. Updated users.
 	(COMMAND_2_INVOKE): New macro.
+	(collect_info_3): Deleted class.
+	(collect_info_2): Deleted class.
+	(collect_info_1): Deleted class.
+	(STATIC_COLLECT_1): Deleted macro.
+	(STATIC_COLLECT_2): Deleted macro.
+	(STATIC_COLLECT_2_FINAL): Deleted macro.
+	(STATIC_COLLECT_3_FINAL): Deleted macro.
 
 	* src/channel_commands.h (install_info): Inherit command_2,
 	instead of collect_info_2.
