@@ -88,9 +88,9 @@ do_connection_if_srp(struct command *s,
   CAST(connection_if_srp, self, s);
   CAST(ssh_connection, connection, a);
 
-  COMMAND_CALL(( (connection->flags & CONNECTION_SRP)
-		 ? self->then_f : self->else_f),
-	       connection, c, e);
+  struct command *f = ( (connection->flags & CONNECTION_SRP)
+			? self->then_f : self->else_f);
+  COMMAND_CALL(f, connection, c, e);
 }
 
 struct command *
