@@ -459,8 +459,9 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
 	  struct lsh_fd *fd
 	    = io_connect(display->address,
 			 display->address_length,
-			 make_channel_open_x11_continuation(display,
-							    c),
+			 make_connect_callback
+			 (make_channel_open_x11_continuation(display,
+							     c)),
 			 make_exc_x11_connect_handler(e, HANDLER_CONTEXT));
 
 	  if (fd)
