@@ -54,7 +54,7 @@ extern int buggy_server_treshold;
 
 /* Public functions */
 
-int handle_command(const char *s);
+int handle_command(const unsigned char *s);
 
 
 /* Internal below */

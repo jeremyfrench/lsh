@@ -1312,7 +1312,7 @@ int com_put(const char *arg, const char *command)
 
 int com_chown(const char *arg, const char *command) 
 {
-  char tmp[PATH_MAX];
+  unsigned char tmp[PATH_MAX];
   int gotuid = 0;
   int enough_parameters = 0;
   long newuid = 0;
@@ -1390,7 +1390,7 @@ int com_chown(const char *arg, const char *command)
 
 int com_chgrp(const char *arg, const char *command) 
 {
-  char tmp[PATH_MAX];
+  unsigned char tmp[PATH_MAX];
   int gotgid = 0;
   long newgid = 0;
   int enough_parameters = 0;
@@ -1885,9 +1885,9 @@ com_lls(const char *arg, const char *command UNUSED)
 		/* FIXME: Doesn't handle off_t larger than long */
 		/* FIXME: st_nlink is a long on Solaris */
 		printf( 
-		       "%s %4d %-8s %-8s %8ld ", 
+		       "%s %4ld %-8s %-8s %8ld ", 
 		       modestring, 
-		       st.st_nlink, 
+		       (long) st.st_nlink, 
 		       uidstring( st.st_uid ), 
 		       gidstring( st.st_gid ),
 		       (long) st.st_size 

@@ -1,6 +1,8 @@
 2002-03-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* commands.c (com_umask): Use unsigned char.
+	(com_chown): Likewise.
+	(com_chgrp): Likewise.
 	(handle_command): Unsigned char argument.
 
 2002-03-14  Pontus  <pont@it.uu.se>
