@@ -65,7 +65,7 @@
        (initial_window . UINT32)
 
        ; Resource to kill when the channel is closed. 
-       (process object resource)
+       (process object lsh_process)
 
        ; pty
        (pty object pty_info)
@@ -435,7 +435,7 @@ spawn_process(struct server_session *session,
     return -1;
 
   {
-    struct resource *child;
+    struct lsh_process *child;
     
     if (USER_FORK(user, &child,
 		  make_exit_shell(session),
@@ -497,7 +497,7 @@ spawn_process(struct server_session *session,
 	    /* Make sure that the process and it's stdio is
 	     * cleaned up if the channel or connection dies. */
 	    REMEMBER_RESOURCE
-	      (channel->resources, child);
+	      (channel->resources, &child->super);
 
 	    /* FIXME: How to do this properly if in and out may use the
 	     * same fd? */
@@ -805,9 +805,6 @@ make_exec_handler(struct io_backend *backend)
 
 #if WITH_PTY_SUPPORT
 
-static struct exception pty_request_failed =
-STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "pty request failed");
-
 /* pty_handler */
 static void
 do_alloc_pty(struct channel_request *c UNUSED,
@@ -818,74 +815,132 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	     struct command_continuation *s,
 	     struct exception_handler *e)
 {
-  UINT32 width, height, width_p, height_p;
+  struct terminal_dimensions dims;
   const UINT8 *mode;
   UINT32 mode_length;
   struct lsh_string *term = NULL;
 
+  static struct exception pty_request_failed =
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "pty request failed");
+
   CAST(server_session, session, channel);
 
   verbose("Client requesting a tty...\n");
-  
-  /* The client may only request a tty once. */
-  if (!session->pty &&
-      (term = parse_string_copy(args)) &&
-      parse_uint32(args, &width) &&
-      parse_uint32(args, &height) &&
-      parse_uint32(args, &width_p) &&
-      parse_uint32(args, &height_p) &&
-      parse_string(args, &mode_length, &mode) &&
-      parse_eod(args))
+
+  if ((term = parse_string_copy(args))
+      && parse_uint32(args, &dims.char_width)
+      && parse_uint32(args, &dims.char_height)
+      && parse_uint32(args, &dims.pixel_width)
+      && parse_uint32(args, &dims.pixel_height)
+      && parse_string(args, &mode_length, &mode)
+      && parse_eod(args))
     {
-      struct pty_info *pty = make_pty_info();
-
-      if (pty_allocate(pty, connection->user->uid))
-        {
-          struct termios ios;
-
-          if (tty_getattr(pty->slave, &ios))
-            {
-	      assert(pty->super.alive);
-              session->pty = pty;
-
-	      /* Don't set TERM if the value is empty. */
-	      if (!term->length)
-		{
-		  lsh_string_free(term);
-		  term = NULL;
-		}
+      /* The client may only request a tty once. */
+      if (session->pty)
+	{
+	  lsh_string_free(term);
+	  EXCEPTION_RAISE(e, &pty_request_failed);
+	}
+      else
+	{
+	  struct pty_info *pty = make_pty_info();
+      
+	  if (pty_allocate(pty, connection->user->uid))
+	    {
+	      struct termios ios;
 	      
-              session->term = term;
-              tty_decode_term_mode(&ios, mode_length, mode); 
-	      
-	      /* cfmakeraw(&ios); */
-              if (tty_setattr(pty->slave, &ios) &&
-                  tty_setwinsize(pty->slave,
-				 width, height, width_p, height_p))
+	      if (tty_getattr(pty->slave, &ios))
 		{
-		  REMEMBER_RESOURCE(channel->resources, &pty->super);
-
-		  verbose(" granted.\n");
-		  COMMAND_RETURN(s, NULL);
-
-		  return;
+		  assert(pty->super.alive);
+		  session->pty = pty;
+		  
+		  /* Don't set TERM if the value is empty. */
+		  if (!term->length)
+		    {
+		      lsh_string_free(term);
+		      term = NULL;
+		    }
+	      
+		  session->term = term;
+		  tty_decode_term_mode(&ios, mode_length, mode); 
+	      
+		  if (tty_setattr(pty->slave, &ios) &&
+		      tty_setwinsize(pty->slave, &dims))
+		    {
+		      REMEMBER_RESOURCE(channel->resources, &pty->super);
+		      
+		      verbose(" granted.\n");
+		      COMMAND_RETURN(s, NULL);
+		      
+		      return;
+		    }
 		}
-	      else
-		/* Close fd:s and mark the pty-struct as dead */
-		KILL_RESOURCE(&pty->super);
-            }
-        }
-      KILL(pty);
+	    }
+	  
+	  /* Close fd:s and mark the pty-struct as dead */
+	  KILL_RESOURCE(&pty->super);
+	  KILL(pty);
+	}
+      verbose("Pty allocation failed.\n");
+      lsh_string_free(term);
+      EXCEPTION_RAISE(e, &pty_request_failed);
     }
+  else
+    {
+      werror("Invalid pty request.\n");
+      lsh_string_free(term);
 
-  verbose("Pty allocation failed.\n");
-  lsh_string_free(term);
-
-  EXCEPTION_RAISE(e, &pty_request_failed);
+      PROTOCOL_ERROR(e, "Invalid pty request.");
+    }
 }
 
 struct channel_request
 pty_request_handler =
 { STATIC_HEADER, do_alloc_pty };
+
+static void
+do_window_change_request(struct channel_request *c UNUSED,
+			 struct ssh_channel *channel,
+			 struct ssh_connection *connection UNUSED,
+			 struct channel_request_info *info UNUSED,
+			 struct simple_buffer *args,
+			 struct command_continuation *s,
+			 struct exception_handler *e)
+{
+  struct terminal_dimensions dims;
+  CAST(server_session, session, channel);
+
+  verbose("Receiving window-change request...\n");
+
+  if (parse_uint32(args, &dims.char_width)
+      && parse_uint32(args, &dims.char_height)
+      && parse_uint32(args, &dims.pixel_width)
+      && parse_uint32(args, &dims.pixel_height)
+      && parse_eod(args))
+    {
+      static const struct exception winch_request_failed =
+	STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "window-change request failed: No pty");
+
+      if (!(session->pty && session->pty->super.alive))
+	EXCEPTION_RAISE(e, &winch_request_failed);
+      
+      else if (!tty_setwinsize(session->pty->slave, &dims))
+	EXCEPTION_RAISE(e, &winch_request_failed);
+
+      else
+	{
+	  if (!SIGNAL_PROCESS(session->process, SIGWINCH))
+	    werror("Sending SIGWINCH signal failed.\n");
+
+	  COMMAND_RETURN(s, NULL);
+	}
+    }
+  else
+    PROTOCOL_ERROR(e, "Invalid window-change request.");
+}
+
+struct channel_request
+window_change_request_handler =
+{ STATIC_HEADER, do_window_change_request };
 
 #endif /* WITH_PTY_SUPPORT */
