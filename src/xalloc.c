@@ -41,19 +41,24 @@
  * that can allocate memory for any purpose, and object allocators
  * that assume that the allocated object begins with a type field. */
 
-/* NOTE: This doesn't work if there are types that require other
- * alignment than int boundaries. But it doesn't matter much if the
- * optional debug code isn't fully portable. */
+/* UNIT should be a type of a size that is a multiple of the alignment
+ * requirement of the machine. */
 
-#define SIZE_IN_INTS(x) (((x) + sizeof(int)-1) / sizeof(int))
+/* NOTE: The code breaks horribly if UNIT is of the wrong size. But it
+ * doesn't matter much if we guess wrong on some platforms, as this
+ * affects only optionalal debug code. */
+
+#define UNIT long
+
+#define SIZE_IN_UNITS(x) (((x) + sizeof(UNIT)-1) / sizeof(UNIT))
 
 static void *debug_malloc(size_t real_size)
 {
   static int count = 4711;
   int *res;
-  int size = SIZE_IN_INTS(real_size);
+  int size = SIZE_IN_UNITS(real_size);
   
-  res = malloc((size + 3)*sizeof(int));
+  res = malloc((size + 3)*sizeof(UNIT));
 
   if (!res)
     return NULL;
@@ -74,7 +79,7 @@ static void debug_free(void *m)
     {
       int *p = (int *) m;
       int real_size = p[-1];
-      int size = SIZE_IN_INTS(real_size);
+      int size = SIZE_IN_UNITS(real_size);
       
       if (~p[-2] != p[size])
 	fatal("Memory corrupted!\n");
