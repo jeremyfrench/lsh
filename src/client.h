@@ -30,7 +30,9 @@
 #include "io.h"
 #include "keyexchange.h"
 
-struct request_info;
+#define GABA_DECLARE
+#include "client.h.x"
+#undef GABA_DECLARE
 
 struct fd_callback *
 make_client_callback(struct io_backend *b,
@@ -48,8 +50,24 @@ make_accept_service_handler(UINT32 service,
 			    struct command_continuation *c,
 			    struct exception_handler *e);
 
-struct command *make_request_service(int service);
+/* GABA:
+   (class
+     (name request_service)
+     (super command)
+     (vars
+       (service simple int)))
+*/
 
+void
+do_request_service(struct command *s,
+		   struct lsh_object *x,
+		   struct command_continuation *c,
+		   struct exception_handler *e);
+
+#define STATIC_REQUEST_SERVICE(service) \
+{ STATIC_COMMAND(do_request_service), service } 
+
+struct command *make_request_service(int service);
 struct channel_request *make_handle_exit_status(int *exit_code);
 struct channel_request *make_handle_exit_signal(int *exit_code);
 

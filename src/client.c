@@ -47,6 +47,10 @@
 #include <string.h>
 #include <assert.h>
 
+#define GABA_DEFINE
+#include "client.h.x"
+#undef GABA_DEFINE
+
 #include "client.c.x"
 
 /* Start a service that the server has accepted (for instance
@@ -114,16 +118,7 @@ make_accept_service_handler(UINT32 service,
   return &closure->super;
 }
 
-/* GABA:
-   (class
-     (name request_service)
-     (super command)
-     (vars
-       (service simple int)))
-       ;; (service object ssh_service)))
-*/
-
-static void
+void
 do_request_service(struct command *s,
 		   struct lsh_object *x,
 		   struct command_continuation *c,
@@ -139,7 +134,8 @@ do_request_service(struct command *s,
 	  format_service_request(self->service));
 }
 
-struct command *make_request_service(int service)
+struct command *
+make_request_service(int service)
 {
   NEW(request_service, closure);
 
