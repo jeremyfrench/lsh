@@ -16,6 +16,11 @@ autoconf
 (cd src/argp && autoconf)
 (cd src/argp && autoheader)
 
-automake -a
+(cd src/nettle && aclocal)
+(cd src/nettle && autoconf)
+(cd src/nettle && autoheader)
+
+automake -a Makefile src/Makefile
 
 (cd src/argp && automake -a)
+(cd src/nettle && automake -a)
