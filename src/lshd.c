@@ -41,10 +41,9 @@
 #include "server.h"
 #include "server_authorization.h"
 #include "server_keyexchange.h"
-#include "server_password.h"
 #include "server_pty.h"
-#include "server_publickey.h"
 #include "server_session.h"
+#include "server_userauth.h"
 #include "sexp.h"
 #include "ssh.h"
 #include "tcpforward.h"
@@ -177,11 +176,11 @@ static void do_read_key(struct command_continuation *s,
 	  /* FIXME: Check if we already have a key for this algorithm,
 	   * and warn about multiple keys. */
 	  ALIST_SET(closure->keys, ATOM_SSH_DSS,
-		    make_keypair_info(public, private));
+		    make_keypair(public, private));
 
 #if DATAFELLOWS_WORKAROUNDS
 	  ALIST_SET(closure->keys, ATOM_SSH_DSS_KLUDGE,
-		    make_keypair_info(public,
+		    make_keypair(public,
 				      make_dsa_signer_kludge(private)));
 #endif /* DATAFELLOWS_WORKAROUNDS */
 	  
@@ -342,7 +341,7 @@ int main(int argc, char **argv)
 #if WITH_SSH1_FALLBACK
 	{ "ssh1-fallback", optional_argument, NULL, OPT_SSH1_FALLBACK},
 #endif
-	{ NULL }
+	{ NULL, 0, NULL, 0 }
       };
       
       option = getopt_long(argc, argv, "c:h:p:qvz::", options, NULL);
