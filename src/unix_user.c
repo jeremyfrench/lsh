@@ -682,7 +682,7 @@ do_lookup_user(struct user_db *s,
        * like a good idea to let the HOME environment variable
        * override the passwd-database. */
 
-#if 0
+#if 1
       if (! (passwd->pw_uid
 	     && (passwd->pw_uid == getuid())
 	     && (home = getenv("HOME"))))
