@@ -35,14 +35,11 @@
 static void
 do_proxy_open_auth_agent(struct channel_open *s UNUSED,
 			 struct ssh_connection *connection,
-			 UINT32 type,
-			 UINT32 send_window_size,
-			 UINT32 send_max_packet,
+			 struct channel_open_info *info,
 			 struct simple_buffer *args,
 			 struct command_continuation *c,
 			 struct exception_handler *e)
 {
-
   if (parse_eod(args))
     {
       struct gateway_channel *server
@@ -51,8 +48,7 @@ do_proxy_open_auth_agent(struct channel_open *s UNUSED,
       /* NOTE: The origin's rec_window_size and rec_max_packet becomes the target's
        * send_window_size and send_max_packet. */
       struct command *o
-	= make_gateway_channel_open_command(type, 
-					    send_window_size, send_max_packet,
+	= make_gateway_channel_open_command(info,
 					    ssh_format(""),
 					    NULL);
 
