@@ -8,18 +8,16 @@
 #include "abstract_io.h"
 #include "write_buffer.h"
 
-struct input_fd
+struct io_fd
 {
-  struct input_fd *next;
+  struct io_fd *next;
   int fd;
+
+  /* Reading */
   struct read_handler *handler;
   int on_hold; /* For flow control */
-};
 
-struct output_fd
-{
-  struct output_fd *next;
-  int fd;
+  /* Writing */
   struct write_buffer *buffer;
   struct callback *close_callback;
 };
@@ -59,10 +57,8 @@ struct callout
 
 struct io_backend
 {
-  unsigned ninput;
-  struct input_fd *input;
-  unsigned noutput;
-  struct output_fd *output;
+  unsigned nio;
+  struct io_fd *io;
   unsigned nlisten;
   struct listen_fd *listen;
   unsigned nconnect;

@@ -22,14 +22,25 @@ struct fd_read
 
 static int do_read(struct fd_read *closure, UINT8 *buffer, UINT32 length)
 {
-  int res;
-  do
-    res = read(closure->fd, buffer, length);
-  while ( (res < 0)
-	  && ( (errno == EINTR)
-	       || (errno == EAGAIN) ) );
-  return res;
-};
+  while(1)
+    {
+      int res = read(closure->fd, buffer, length);
+      if (!res)
+	return A_EOF;
+      if (res > 0)
+	return res;
+      
+      switch(errno)
+	{
+	case EINTR:
+	  continue;
+	case EWOULDBLOCK:  /* aka EAGAIN */
+	  return 0;
+	default:
+	  return A_FAIL;
+	}
+    }
+}
 
 #define FOR_FDS(type, fd, list, extra)				\
 {								\
@@ -51,7 +62,7 @@ void io_run(struct io_backend *b)
       int timeout;
       int res;
       
-      nfds = b->ninput + b->noutput + b->nlisten + n->nconnect;
+      nfds = b->nio + b->nlisten + n->nconnect;
 
       if (b->callouts)
 	{
@@ -79,10 +90,14 @@ void io_run(struct io_backend *b)
       /* Handle fds in order: read, accept, connect, write, */
       i = 0;
 
-      FOR_FDS(struct input_fd, fd, b->input, i++)
+      FOR_FDS(struct io_fd, fd, b->io, i++)
 	{
 	  fds[i]->fd = fd->hold_on ? -1 : fd->fd;
-	  fds[i]->events = POLLIN;
+	  fds[i]->events =
+	    (fd->hold_on ? 0 : POLLIN)
+	    /* pre_write returns 0 if the buffer is empty */
+	    | (write_buffer_pre_write(fd->buffer)
+	       ? POLLOUT : 0);
 	}
       END_FOR_FDS;
 
@@ -97,15 +112,6 @@ void io_run(struct io_backend *b)
 	{
 	  fds[i]->fd = fd->fd;
 	  fds[i]->events = POLLOUT;
-	}
-      END_FOR_FDS;
-
-      FOR_FDS(struct output_fd, fd, b->output, i++)
-	{
-	  /* pre_write returns 0 if the buffer is empty */
-	  fds[i]->fd = write_buffer_pre_write(fd->buffer)
-	    ? fd->fd : -1
-	    fds[i]->events = POLLOUT;
 	}
       END_FOR_FDS;
 
@@ -136,14 +142,50 @@ void io_run(struct io_backend *b)
 	{ /* Process files */
 	  i = 0;
 
-	  FOR_FDS(struct input_fd, fd, b->input, i++)
+	  /* Handle writing first */
+	  FOR_FDS(struct io_fd, fd, b->io, i++)
+	    {
+	      if (fds[i]->revents & POLLOUT)
+		{
+		  UINT32 size = MIN(fd->buffer->end - fd->buffer->start,
+				    fd->buffer->block_size);
+		  int res = write(fd->fd, fd->buffer->data + fd->buffer->start,
+				  size);
+		  if (!res)
+		    fatal("Closed?");
+		  if (res < 0)
+		    switch(errno)
+		      {
+		      case EINTR:
+		      case EAGAIN:
+			break;
+		      default:
+			CALLBACK(fd->close_callback);
+			/* FIXME: Must do this later. Perhaps add a
+			 * closed flag to th io_fd struct? */
+#if 0
+			UNLINK_FD;
+			free(fd->write_buffer);
+			free(fd);
+#endif
+			break;
+		      }
+		  else
+		    fd->buffer->start += res;
+		}
+	    }
+	  END_FOR_FDS;
+
+	  /* Handle reading */
+	  i = 0; /* Start over */
+	  FOR_FDS(struct io_fd, fd, b->io, i++)
 	    {
 	      if (fds[i]->revents & POLLIN)
 		{
 		  struct fd_read r =
-		  { { (abstract_read_f) do_read }, fd->fd };
+		  { { (abstract_read_f) do_read }, fd->fd, 0 };
 
-		  /* The handler function returns a ew handler for the
+		  /* The handler function returns a new handler for the
 		   * file, or NULL. */
 		  if (!(fd->handler = READ_HANDLER(fd->handler, &r)))
 		    {
@@ -184,35 +226,6 @@ void io_run(struct io_backend *b)
 		    fatal("What now?");
 		  UNLINK_FD;
 		  free(fd);
-		}
-	    }
-	  END_FOR_FDS;
-
-	  FOR_FDS(struct output_fd, fd, b->output, i++)
-	    {
-	      if (fds[i]->revents & POLLOUT)
-		{
-		  UINT32 size = MIN(fd->buffer->end - fd->buffer->start,
-				    fd->buffer->block_size);
-		  int res = write(fd->fd, fd->buffer->data + fd->buffer->start,
-				  size);
-		  if (!res)
-		    fatal("Closed?");
-		  if (res < 0)
-		    switch(errno)
-		      {
-		      case EINTR:
-		      case EAGAIN:
-			break;
-		      default:
-			CALLBACK(fd->close_Callback);
-			UNLINK_FD;
-			free(fd->write_buffer);
-			free(fd);
-			break;
-		      }
-		  else
-		    fd->buffer->start += res;
 		}
 	    }
 	  END_FOR_FDS;
