@@ -140,6 +140,9 @@ void exception_raise(struct exception_handler *e,
 /* Unexpected or unsupported expression type */
 #define EXC_SPKI_TYPE 0x80001
 
+/* Application specific exceptions */
+#define EXC_APP 0x100000
+
 #define EXC_ALL (~0)
 
 extern struct exception_handler default_exception_handler;
