@@ -248,19 +248,11 @@ do_remote_port_install_continuation(struct command_continuation *s,
   CAST(remote_port_install_continuation, self, s);
   CAST(ssh_connection, connection, x);
 
-  if (connection)
-    {
-      debug("tcpforward_commands.c: do_remote_port_install_continuation(), success.\n");
-  
-      self->port->callback = self->callback;
-    }
-  else
-    {
-      debug("tcpforward_commands.c: do_remote_port_install_continuation(), failed.\n");
+  assert(connection);
 
-      /* FIXME: Cleanup, and delete the port from the remote_ports list. */
-      
-    }
+  debug("tcpforward_commands.c: do_remote_port_install_continuation(), success.\n");
+  self->port->callback = self->callback;
+
   COMMAND_RETURN(self->super.up, x);
 }
 
@@ -315,6 +307,8 @@ do_format_request_tcpip_forward(struct global_request_command *s,
 
   if (CONTINUATION_USED_P(*c))
     {
+      /* FIXME: Use some exception handler to remove the port from the
+       * list if the request fails. */
       port = make_remote_port(self->port, NULL);
       *c = make_remote_port_install_continuation(port, self->callback, *c);
       want_reply = 1;
@@ -384,6 +378,8 @@ STATIC_COLLECT_1(&collect_info_remote_listen_2);
          (connection_remember connection
            (listen_callback
 	     (lambda (peer)
+	       ;; Remembering is done by open_direct_tcpip
+	       ;; and new_tcpip_channel.
 	       (tcpip_start_io
 	         (catch_channel_open 
 		   (open_direct_tcpip target peer) connection)))
@@ -537,11 +533,13 @@ STATIC_COLLECT_1(&install_tcpip_forward_info_2.super);
 	     ;; Called when the client requests remote forwarding.
 	     ;; It should return the fd associated with the port.
 	     ;; NOTE: The caller, do_tcpip_forward_request, is responsible
-	     ;; for handling I/O exceptions. and for remembering the port.
+	     ;; for handling I/O exceptions, and for remembering the port.
 	     (listen_callback (lambda (peer)
   		  		;; Called when someone connects to the
 		  		;; forwarded port.
-		  		(tcpip_start_io
+				;; Remembering is done by open_direct_tcpip
+				;; and new_tcpip_channel.
+				(tcpip_start_io
 		  		  (catch_channel_open 
 		  		    (open_forwarded_tcpip port peer) connection)))
 		  	      backend port))))))))
