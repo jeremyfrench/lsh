@@ -17,10 +17,6 @@ static int do_pad(struct abstract_write **w,
 
   struct lsh_string *new;
 
-#if 0
-  struct ssh_packet *ssh;
-#endif
-  
   new_size = 1 + closure->block_size
     * ( (8 + packet->length) / closure->block_size);
 
@@ -34,8 +30,8 @@ static int do_pad(struct abstract_write **w,
   new->data[4] = padding;
   
   memcpy(new->data + 5, packet->data, packet->length);
-  closure->random(closure->state, padding, new->data + 5 + packet->length);
-
+  RANDOM(closure->random, padding, new->data + 5 + packet->length);
+  
   lsh_string_free(packet);
 
   return A_WRITE(closure->super.next, new);
@@ -44,7 +40,7 @@ static int do_pad(struct abstract_write **w,
 struct abstract_write *
 make_packet_pad(struct abstract_write *continuation,
 		unsigned block_size,
-		random_function random)
+		struct randomness *random)
 {
   struct packet_pad *closure = xalloc(sizeof(struct packet_pad));
 

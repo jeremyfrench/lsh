@@ -8,12 +8,6 @@
 
 #include "lsh_types.h"
 
-#if 0
-struct abstract_read;
-typedef int (*abstract_read_f)(struct abstract_read *r,
-			       UINT8 *buffer, UINT32 length);
-#endif
-
 /* A read-function returning n means:
  *
  * n > 0: n bytes were read successfully.
@@ -32,12 +26,6 @@ struct abstract_read
 
 #define A_READ(f, buffer, length) (f)->read(&(f), (buffer), (length))
 
-#if 0
-struct read_handler;
-typedef struct read_handler * (*read_handler_f)(struct read_handler *closure,
-						struct abstract_read *read);
-#endif
-
 /* May store a new handler into *h. */
 struct read_handler
 {
@@ -50,11 +38,6 @@ struct read_handler
 /* FIXME: What should writers return? Perhaps a new writer,
  * analogous to read-handlers? */
 
-#if 0
-struct abstract_write;
-typedef int (*abstract_write_f)(struct abstract_write *closure,
-				struct lsh_string *packet);
-#endif
 /* May store a new handler into *w. */
 struct abstract_write
 {

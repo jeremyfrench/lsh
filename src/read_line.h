@@ -11,14 +11,6 @@
 /* This limit follows the ssh specification */
 #define MAX_LINE 255
 
-#if 0
-struct line_handler;
-
-typedef struct read_handler * (*line_handler_f)(struct line_handler *closure,
-						UINT32 length,
-						UINT8 *line);
-#endif
-
 /* May store a new handler into *h. */
 struct line_handler
 {

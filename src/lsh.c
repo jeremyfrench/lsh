@@ -11,6 +11,9 @@
 #include "io.h"
 #include "werror.h"
 #include "client.h"
+#include "format.h"
+#include "crypto.h"
+#include "xalloc.h"
 
 #define BLOCK_SIZE 32768
 
@@ -30,6 +33,8 @@ int main(int argc, char **argv)
   char *port = "ssh";
   int option;
 
+  struct lsh_string *random_seed;
+  
   struct sockaddr_in remote;
 
   /* For filtering messages. Could perhaps also be used when converting
@@ -66,10 +71,16 @@ int main(int argc, char **argv)
       exit(1);
     }
 
+  random_seed = ssh_format("%z", "gazonk");
+  
   io_connect(&backend, &remote, NULL,
 	     make_client_callback(&backend,
 				  "lsh - a free ssh",
-				  BLOCK_SIZE));
+				  BLOCK_SIZE,
+				  make_poor_random(&sha_algorithm,
+						   random_seed)));
+
+  lsh_string_free(random_seed);
   
   io_run(&backend);
 

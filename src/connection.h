@@ -15,8 +15,11 @@ struct ssh_connection
   struct lsh_string *server_version;
 
   struct lsh_string *session_id;
-  struct abstract_write *write;   /* Socket connected to the other end */
+  struct abstract_write *raw;   /* Socket connected to the other end */
 
+  struct abstract_write *write; /* Where to send packets throw the
+				 * pipeline */
+  
   UINT32 max_packet;
   
   int provides_privacy;

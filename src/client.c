@@ -15,6 +15,9 @@
 #include "werror.h"
 #include "void.h"
 #include "xalloc.h"
+#include "encrypt.h"
+#include "pad.h"
+#include "crypto.h"
 
 struct read_handler *make_client_read_line();
 struct callback *make_client_close_handler();
@@ -26,7 +29,7 @@ static int client_initiate(struct fd_callback **c,
     = (struct client_callback *) *c;
   
   struct ssh_connection *connection = ssh_connection_alloc();
-  struct abstract_write *write =
+  connection->raw =
     io_read_write(closure->backend, fd,
 		  make_client_read_line(),
 		  closure->block_size,
@@ -38,7 +41,16 @@ static int client_initiate(struct fd_callback **c,
 		 SOFTWARE_CLIENT_VERSION,
 		 closure->id_comment);
 
-  return A_WRITE(write, ssh_format("%lS\r\n", connection->client_version));
+  /* Link in padding and encryption */
+  connection->write
+    = make_packet_pad(make_packet_encrypt(connection->raw,
+					  NULL,
+					  &crypto_none_instance),
+		      crypto_none_instance.block_size,
+		      closure->random);
+  
+  return A_WRITE(connection->raw,
+		 ssh_format("%lS\r\n", connection->client_version));
 }
 
 struct client_line_handler
@@ -117,7 +129,8 @@ struct read_handler *make_client_read_line(struct ssh_connection *s)
   
 struct fd_callback *make_client_callback(struct io_backend *b,
 					 char *comment,
-					 UINT32 block_size)
+					 UINT32 block_size,
+					 struct randomness *r)
 					 
 {
   struct client_callback *connected = xalloc(sizeof(struct client_callback));
@@ -126,7 +139,7 @@ struct fd_callback *make_client_callback(struct io_backend *b,
   connected->backend = b;
   connected->block_size = block_size;
   connected->id_comment = comment;
-  
+  connected->random = r;
   return &connected->super;
 }
 

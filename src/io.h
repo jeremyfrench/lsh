@@ -28,10 +28,6 @@ struct io_fd
 };
 
 /* A closed function with a file descriptor as argument */
-#if 0
-struct fd_callback;
-typedef int (*fd_callback_f)(struct fd_callback *closure, int fd);
-#endif
 
 struct fd_callback
 {

@@ -39,13 +39,4 @@ int parse_next_atom(struct simple_buffer *buffer, int *result);
 /* Returns success (i.e. 1) iff there is no data left */
 int parse_eod(struct simple_buffer *buffer);
 
-#if 0
-/* Returns the number of octets that were actually written into the buffer */
-
-UINT32 simple_buffer_write(struct simple_buffer *buffer,
-			   UINT32 length, UINT32 *data);
-
-UINT32 simple_buffer_avail(struct simple_buffer *buffer);
-#endif
-
 #endif /* LSH_PARSE_H_INCLUDED */
