@@ -103,7 +103,7 @@ do_authenticate(struct userauth *s,
       v = LOOKUP_VERIFIER(lookup, username, keyblob);
 
 #if DATAFELLOWS_WORKAROUNDS
-      if ( (algorithm == ATOM_SSH_DSS)
+      if ( v && (algorithm == ATOM_SSH_DSS)
 	   && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
 	v = make_dsa_verifier_kludge(v);
 #endif
@@ -133,7 +133,7 @@ do_authenticate(struct userauth *s,
       else 
 	{
 	  struct lsh_string *signed_data;
-	  struct unix_user *user = NULL;
+
 #if DATAFELLOWS_WORKAROUNDS
 	  if (connection->peer_flags & PEER_USERAUTH_REQUEST_KLUDGE)
 	    {
@@ -159,11 +159,18 @@ do_authenticate(struct userauth *s,
 	  if (VERIFY(v, signed_data->length, signed_data->data, signature_length, signature_blob))
 	    {
 	      werror("user %S has authenticated\n", username);
-	      user = lookup_user(username, 0);
+	      /* FIXME: We should have done this lookup already */
+	      COMMAND_RETURN(c, lookup_user(username, 0));
+	    }
+	  else
+	    {
+              static const struct exception bad_sign
+                = STATIC_EXCEPTION(EXC_USERAUTH, "Bad signature in userauth request");
+	      
+              EXCEPTION_RAISE(e, &bad_sign);
 	    }
 	  lsh_string_free(username);
 	  lsh_string_free(signed_data);
-	  COMMAND_RETURN(c, user);
 	  return;
 	}
     }
