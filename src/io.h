@@ -366,4 +366,7 @@ io_read_user_file(struct io_backend *backend,
 		  const struct exception **x,
 		  struct exception_handler *e);
 
+int
+lsh_make_pipe(int *fds);
+
 #endif /* LSH_IO_H_INCLUDED */

@@ -151,7 +151,7 @@ int io_iter(struct io_backend *b)
 		
 		    if (close(fd->fd) < 0)
 		      {
-			werror("io.c: close() failed, (errno = %i): %s\n",
+			werror("io.c: close() failed, (errno = %i): %z\n",
 			       errno, STRERROR(errno));
 			EXCEPTION_RAISE(fd->e,
 					make_io_exception(EXC_IO_CLOSE, fd,
@@ -1010,7 +1010,7 @@ address_info2sockaddr(socklen_t *length,
 
     if (err)
       {
-	debug("address_info2sockaddr: getaddrinfo failed (err = %d): %s\n",
+	debug("address_info2sockaddr: getaddrinfo failed (err = %d): %z\n",
 	      err, gai_strerror(err));
 	return NULL;
       }
@@ -1708,3 +1708,86 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)
   
   return &self->super;
 }
+
+
+/* Socket workround */
+#ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
+
+/* There's an how++ missing in the af_unix shutdown implementation of
+ * some linux versions. Try an ugly workaround. */
+#ifdef linux
+
+/* From src/linux/include/net/sock.h */
+#define RCV_SHUTDOWN	1
+#define SEND_SHUTDOWN	2
+
+#undef SHUT_RD
+#undef SHUT_WR
+#undef SHUT_RD_WR
+
+#define SHUT_RD RCV_SHUTDOWN
+#define SHUT_WR SEND_SHUTDOWN
+#define SHUT_RD_WR (RCV_SHUTDOWN | SEND_SHUTDOWN)
+
+#else /* !linux */
+
+/* Don't know how to work around the broken shutdown(). So disable it
+ * completely. */
+
+#define SHUTDOWN(fd, how) 0
+
+#endif /* !linux */
+#endif /* !SHUTDOWN_WORKS_WITH_UNIX_SOCKETS */
+
+#ifndef SHUTDOWN
+#define SHUTDOWN(fd, how) (shutdown((fd), (how)))
+#endif
+
+#ifndef SHUT_RD
+#define SHUT_RD 0
+#endif
+
+#ifndef SHUT_WR
+#define SHUT_WR 1
+#endif
+
+#ifndef SHUT_RD_WR
+#define SHUT_RD_WR 2
+#endif
+
+/* Creates a one-way socket connection. Returns 1 on success, 0 on
+ * failure. fds[0] is for reading, fds[1] for writing (like for the
+ * pipe() system call). */
+int
+lsh_make_pipe(int *fds)
+{
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
+    {
+      werror("socketpair() failed: %z\n", STRERROR(errno));
+      return 0;
+    }
+  debug("Created socket pair. Using fd:s %i <-- %i\n", fds[0], fds[1]);
+
+  if (SHUTDOWN(fds[0], SHUT_WR) < 0)
+    {
+      werror("shutdown(%i, SEND) failed: %z\n", fds[0], STRERROR(errno));
+      goto fail;
+    }
+  if (SHUTDOWN(fds[1], SHUT_RD) < 0)
+    {
+      werror("shutdown(%i, REC) failed: %z\n", fds[0], STRERROR(errno));
+    fail:
+      {
+	int saved_errno = errno;
+
+	close(fds[0]);
+	close(fds[1]);
+
+	errno = saved_errno;
+	return 0;
+      }
+    }
+  
+  return 1;
+}
+
