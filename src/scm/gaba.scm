@@ -375,6 +375,9 @@
 	      (c-address (c-append super "_class"))
 	      "NULL")
 	  (c-string name)
+	  ;; FIXME: For classes using var-array,
+	  ;; we should emit offsetof(struct <name>, <last-var>)
+	  ;; instead of sizeof.
 	  (c-call* "sizeof" (c-append "struct " name))
 	  (if mark (c-append "do_" name "_mark") "NULL")
 	  (if free (c-append "do_" name "_free") "NULL"))))
