@@ -1,3 +1,11 @@
+2001-02-22  Niels Möller  <nisse@ehand.com>
+
+	* src/io.c (close_fd_read): New function.
+	(do_buffered_read): Call close_fd_read on EOF. This stops reading
+	from the file, and also marks it for closing unless it has a write
+	callback.
+	(do_consuming_read): Likewise.
+
 2001-02-21  Niels Möller  <nisse@ehand.com>
 
 	* src/io.c (do_consuming_read): Added an assert do check that

@@ -560,8 +560,8 @@ do_buffered_read(struct io_callback *s,
       assert(fd->want_read);
       assert(self->handler);
 
-      /* NOTE: We don't close the fd here, it's up to the read handler
-       * to do that if appropriate. */
+      /* Close the fd, unless it has a write callback. */
+      close_fd_read(fd);
       
       READ_HANDLER(self->handler, 0, NULL);
     }
@@ -593,8 +593,7 @@ do_consuming_read(struct io_callback *c,
   if (fd->hanged_up)
     {
       /* If hanged_up is set, pretend that read() returned 0 */
-      A_WRITE(self->consumer, NULL);
-      return;
+      goto eof;
     }
   
   if (!wanted)
@@ -632,9 +631,9 @@ do_consuming_read(struct io_callback *c,
 	}
       else
 	{
-	  /* NOTE: We don't close the fd here, it's up to the read handler
-	   * to do that if appropriate. */
-      
+	eof:
+	  /* Close the fd, unless it has a write callback. */
+	  close_fd_read(fd);
 	  A_WRITE(self->consumer, NULL);
 	}
     }
@@ -874,7 +873,8 @@ static void do_kill_fd(struct resource *r)
 {
   CAST_SUBTYPE(lsh_fd, fd, r);
 
-  /* FIXME: Should we use close_fd() or close_fd_nicely() ? */
+  /* We use close_fd_nicely, so that any data in the write buffer is
+   * flushed before the fd is closed. */
   if (r->alive)
     close_fd_nicely(fd);
 }
@@ -1768,6 +1768,16 @@ void close_fd_nicely(struct lsh_fd *fd)
     kill_fd(fd);
 }
 
+/* Stop reading, but if the fd has a write callback, keep it open. */
+void close_fd_read(struct lsh_fd *fd)
+{
+  fd->want_read = 0;
+  fd->read = NULL;
+  
+  if (!fd->write)
+    /* We won't be writing anything on this fd, so close it. */
+    kill_fd(fd);
+}
 
 /* Responsible for handling the EXC_FINISH_READ exception. It should
  * be a parent to the connection related exception handlers, as for
