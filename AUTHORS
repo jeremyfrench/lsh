@@ -1,0 +1,27 @@
+lsh is written by Niels Möller, and distributed under the terms and
+conditions of the GNU General Public License (see the file COPYING for
+details). But many other people have written free code which is used
+in lsh.
+
+CAST implementation by Steve Reid, and released into the public
+domain.
+
+DES implementation by Dana L. How. Released under the LGPL.
+
+IDEA implementation originally by Xeejia Lai, optimized by Colin
+Plumb. Released into the public domain.
+
+GMP, the GNU multiple precision arithmetic library, was written by
+Torbjörn Granlund and many contributors. It is not actually included
+in lsh, but it is needed for all public key computations. GMP is
+released under the LPGL.
+
+MD5 implementation by Colin Plumb, somewhat hacked by Andrew Kuchling.
+Released into the public domain.
+
+SHA implementation by Peter Gutmann, somewhat hacked by Andrew
+Kuchling. Released into the public domain.
+
+TCPUTILS networking code by Thomas Bellman. Released into the public
+domain.
+

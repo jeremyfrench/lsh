@@ -1,0 +1,206 @@
+A Hacker's Guide to LSH
+
+This document contains some random notes, which I hope will make it
+easier for you to understand and hack lsh. It is divided into three
+main sections: Abstraction, memory allocation, and a source roadmap.
+
+
+ABSTRACTION
+
+All sent and recieved data are represented as a struct lsh_string.
+This is a simple string type, with a length field and a sequence of
+unsigned octets. The NUL character does *not* have any special status.
+
+Most of the functions in lsh are organized in terms of objects. An
+object type has a public interface: a struct containing attributes
+that all instances of all implementations of the type must have, and
+one or more method pointers. A method implementation is a C functions
+which takes an instance of a corresponding instance as its first
+argument (or in some cases, a pointer to a pointer to an instance).
+For many types, there is only one public attribute, which is a method
+pointer. In this case, the object is called a "closure".
+
+Specific types of objects and closures often include more data; they
+are structures where the first element is an interface structure.
+Extra data can be considered private, in OO-speak.
+
+Explicit casts are avoided as much as possible; instances that are
+passed around are typed as pointers to the corresponding interface
+struct, not as void *. Macros are used to make application of methods
+and closures more convenient.
+
+An example might make this clearer. The definition of a write handler,
+taken from abstract_io.h:
+
+   /* May store a new handler into *w. */
+   struct abstract_write
+   {
+     int (*write)(struct abstract_write **w,
+ 		  struct lsh_string *packet);
+   };
+   
+   #define A_WRITE(f, packet) ((f)->write(&(f), (packet)))
+
+   /* A processor that passes its result on to another processor */
+   struct abstract_write_pipe
+   {
+     struct abstract_write super;
+     struct abstract_write *next;
+   };
+
+This is the interface structure common to all write handlers, and a
+generic subtype used for piping write handlers which are piped
+together. One specific kind of write handler is the unpad handler,
+which removes padding from recieved packets, and sends them on. This
+code is found in unpad.c, and it does not have any private data
+beyond the abstract_write_pipe structure above. The write method
+implementation of this type looks as follows:
+
+   static int do_unpad(struct abstract_write **w,
+   		       struct lsh_string *packet)
+   {
+     struct abstract_write_pipe *closure = (struct abstract_write_pipe *) *w;
+     
+     UINT8 padding_length;
+     UINT32 payload_length;
+     struct lsh_string *new;
+     
+     if (packet->length < 1)
+       return 0;
+     
+     padding_length = packet->data[0];
+   
+     if ( (padding_length < 4)
+   	  || (padding_length >= packet->length) )
+       return 0;
+   
+     payload_length = packet->length - 1 - padding_length;
+     
+     new = ssh_format("%ls", payload_length, packet->data + 1);
+   
+     /* Keep sequence number */
+     new->sequence_number = packet->sequence_number;
+   
+     lsh_string_free(packet);
+   
+     return A_WRITE(closure->super.next, new);
+   }
+
+Note the last line; the function passes a newly created packet on to
+the next handler in the pipe.
+
+
+MEMORY ALLOCATION
+
+As always when writing C programs, memory allocation is the most
+complicated and boring part of it. The objects in lsh can be
+classified by allocation strategy into three classes:
+
+× Strings. These use a producer-consumer abstractions. Strings are
+allocated in various places, usually by reading a packet from some
+socket, or by calling ssh_format(). They are passed on to some
+consumer function, which has to deallocate the string when it is
+finished procesing it usually by throwing it a way, transforming it
+into a new string, or writing it to some socket. If you want to *both*
+pass a string to a consumer, and keep it for later reference, you have
+to copy it.
+
+Sometimes, a consumer modifies a string destructively and sends it on,
+rather than freeing it and allocating a new one. This is allowed; the
+function that produced the string can not assume that it is alive or
+intact after that it has been passed to a consumer.
+
+× Local objects, used in only one module, and with references from
+only one place. Examples are the list nodes that io.c uses to link
+file objects together. These are freed explicitly when  they are no
+longer needed.
+
+× Other objects and closures, which references eachother in some
+complex fashion. Except places where it is *obvious* that an object
+can be freed, these objects are currently not freed at all. This is a
+serious bug, but it may not be as disastrous as one may think. In real
+use, almost all allocated memory are strinsg, which *are* freed when
+they are no longer used. The problem are things like pipes of write
+handlers, keyexchange state objects, etc, which are rather few.
+
+Of course, this should be fixed. I don't think it is practical to
+manually free all objects at the right time. Instead, one could use
+some of the following methods.
+
+1. Reference counting (circular references still have to be broken
+   manually, but that's a lot easier than explicitly freeing objects
+   at the right time).
+
+2. Some pool-based mechanism: Associate each allocated objects with
+   some connection, and free them all when the connection dies. One
+   could also have a limit on the amount of storage that can be
+   allocated for one connection, to avoid trivial denial of service
+   attacks. If the a connection tries to allocate beyond that limit,
+   it is killed.
+
+3. A simple mark&sweep gc. Should be fairly straight forward. Install
+   som runtime type info in the object structs, and do an occational
+   gc instead of sleeping in the main loop in io.c. Note that all
+   action is hooked into the callbacklists in io.c, so these lists can
+   serve well as the root set for the traversal.
+
+For all these alternatives, note that the amount of data they must
+handle is quite limited. There will likely be at most a few dozens of
+objects for each connection that has to be considered.
+
+
+ROADMAP
+
+Some of the central source files are:
+
+abstract_io.h		Definitions of read and write handlers.
+
+abstract_crypto.h	Common interfaces for all cryptographic
+			algorithms.
+
+atoms.in		Textual names of the algorithms and services
+			recognized by lsh. From this file, several
+			source and header files are generated, by the
+			process_atoms bash script and the GNU gperf
+			program.
+
+io.[hc]			The io module. I believe that it is a good
+			thing to separate io from other processing.
+			This module is the only one performing actual
+			io calls (read, write, accept, poll, etc).
+			File descriptors are associated with various
+			types of handlers which are called when
+			something happens on the fd.
+
+read_{line|packet|data}.[hc]
+			These are read handlers. They are hooked into
+			the io-system, and called when there is input
+			available at a socket. Complete packets (or
+			lines) are passed on to some other handler for
+			processing.
+
+parse.[hc]		Functions to parse ssh packets.
+
+format.[hc]		The function ssh_format is a varargs function
+			accepting a format string and an arbitrary
+			number of other arguments. The supported
+			format specifiers are very different from the
+			stdio format functions, and works with
+			ssh datatypes. It allocates and returns a
+			string of the right size.
+
+lib/			Free implementations of hash functions and
+			symmetric cryptographic algorithms. See the
+			file AUTHORS for credits.
+
+include/		Corresponding include files.
+
+crypto.[hc]		lsh's interface to those algorithms.
+
+publickey_crypto.[hc]	Public key cryptography objects.
+
+lsh.c			Client main program.
+
+lshd.c			Server main program.
+
+
