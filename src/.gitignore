@@ -10,6 +10,7 @@
 /atoms_defines.h
 /atoms_gperf.c
 /atoms_table.c
+/class-map
 /config.cache
 /config.h
 /config.h.in
