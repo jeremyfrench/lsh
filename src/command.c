@@ -77,7 +77,10 @@ make_apply(struct command *f,
 	   struct command_continuation *c, struct exception_handler *e)
 {
   NEW(command_apply, res);
-
+  assert(f);
+  assert(c);
+  assert(e);
+  
   res->f = f;
   res->super.up = c;
   res->super.e = e;
@@ -121,9 +124,47 @@ struct command_simple command_unimplemented =
 { { STATIC_HEADER, do_command_unimplemented}, do_command_simple_unimplemented};
 
 
-/* Tracing
- *
- * For now, trace only function entry. */
+/* Tracing */
+
+#if DEBUG_TRACE
+
+/* GABA:
+   (class
+     (name trace_continuation)
+     (super command_continuation)
+     (vars
+       (name . "const char *")
+       (real object command_continuation)))
+*/
+
+static void
+do_trace_continuation(struct command_continuation *s,
+		      struct lsh_object *x)
+{
+  CAST(trace_continuation, self, s);
+  const char *type;
+
+  if (x)
+    type = (x->isa) ? x->isa->name : "<STATIC>";
+  else
+    type = "<NULL>";
+  
+  trace("Leaving %z, value of type %z.\n",
+	self->name, type);
+  COMMAND_RETURN(self->real, x);
+}
+
+static struct command_continuation *
+make_trace_continuation(const char *name,
+			struct command_continuation *real)
+{
+  NEW(trace_continuation, self);
+  self->super.c = do_trace_continuation;
+  self->name = name;
+  self->real = real;
+
+  return &self->super;
+}
 
 /* GABA:
    (class
@@ -143,10 +184,15 @@ do_trace_command(struct command *s,
   CAST(trace_command, self, s);
 
   trace("Entering %z\n", self->name);
+#if 1
+  COMMAND_CALL(self->real, x,
+	       make_trace_continuation(self->name, c),
+	       e);
+#else
   COMMAND_CALL(self->real, x, c, e);
+#endif
 }
 
-#if DEBUG_TRACE
 struct command *make_trace(const char *name, struct command *real)
 {
   NEW(trace_command, self);
@@ -422,6 +468,10 @@ make_delay_continuation(struct command *f,
  *
  * (catch handler body x)
  *
+ * or
+ *
+ * ( (catch handler body) x)
+ *
  * Invokes (body x), with an exception handler that passes exceptions
  * of certain types to handler. */
 
@@ -437,11 +487,13 @@ make_delay_continuation(struct command *f,
 
 static struct catch_handler_info *
 make_catch_handler_info(UINT32 mask, UINT32 value,
+			int ignore_value,
 			struct command *handler)
 {
   NEW(catch_handler_info, self);
   self->mask = mask;
   self->value = value;
+  self->ignore_value = ignore_value;
   self->handler = handler;
 
   return self;
@@ -502,8 +554,7 @@ do_catch_apply(struct command *s,
 	       struct exception_handler *e)
 {
   CAST(catch_apply, self, s);
-  if (self->info->ignore_value)
-    c = &discard_continuation;
+
   COMMAND_CALL(self->body, a, (self->info->ignore_value
 			       ? &discard_continuation
 			       : c),
@@ -560,7 +611,8 @@ do_catch_simple(struct command_simple *s,
   CAST(catch_command, self, s);
   CAST_SUBTYPE(command, f, a);
 
-  return &(make_catch_collect_body(make_catch_handler_info(self->mask, self->value, f))
+  return &(make_catch_collect_body(make_catch_handler_info(self->mask,
+							   self->value, self->ignore_value, f))
 	   ->super);
 }
 
@@ -585,15 +637,6 @@ make_catch_apply(struct command *f,
   self->f = f;
   self->handler = handler;
 }
-   
-/* ;; GABA:
-   (class
-     (name catch_command)
-     (super command_simple)
-     (vars
-       (mask . UINT32)
-       (value . UINT32)))
-*/
 
 static void
 do_catch_simple(struct simple_command *s,

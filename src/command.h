@@ -317,6 +317,10 @@ extern struct collect_info_2 collect_info_S_2;
 struct command *make_command_S_2(struct command *f,
 				 struct command *g);
 
+struct lsh_object *collect_S_2(struct collect_info_2 *info,
+			       struct lsh_object *f,
+			       struct lsh_object *g);
+
 #define GABA_VALUE_S (&command_S.super.super.super)
 #define GABA_APPLY_S_1(f) (make_collect_state_1(&command_S, (f)))
 #define GABA_APPLY_S_2(f, g) (collect_S_2(&collect_info_S_2, (f), (g)))
@@ -329,9 +333,6 @@ struct command *make_command_Sp_3(struct command *c,
 				  struct command *f,
 				  struct command *g);
 
-struct lsh_object *collect_S_2(struct collect_info_2 *info,
-			       struct lsh_object *f,
-			       struct lsh_object *g);
 struct lsh_object *collect_Sp_3(struct collect_info_3 *info,
 				struct lsh_object *c,
 				struct lsh_object *f,
