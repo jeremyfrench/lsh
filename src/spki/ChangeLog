@@ -1,3 +1,16 @@
+2003-01-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* spki-types.in: New keywords rsa-pkcs1-md5, rsa-pkcs1-sha1,
+	dsa-sha1. 
+
+	* certificate.c (spki_parse_sequence): New function (#if:ed out
+	for now).
+
+	* certificate.h: Include "spki-types.h". This should be the only
+	file including that. Removed the include in parse.h.
+
+	* verify.c (spki_verify): New file, new function.
+
 2003-01-23  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* parse.c (spki_parse_string): Made non-static.

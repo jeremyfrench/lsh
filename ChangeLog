@@ -1,3 +1,10 @@
+2003-01-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/rsa_keygen.c, src/rsa.c: Updated for nettle rsa renaming.
+
+	* configure.ac: Fixed syntax error when testing $x_includes and
+	$x_libraries.
+
 2003-01-24  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: --with-lib-path should add to LDFLAGS, not replace
