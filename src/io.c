@@ -568,6 +568,9 @@ do_buffered_read(struct io_callback *s,
 	EXCEPTION_RAISE(fd->e, 
 			make_io_exception(EXC_IO_READ, fd,
 					  errno, NULL));
+	/* Close the fd, unless it has a write callback. */
+	close_fd_read(fd);
+	
 	break;
       }
   else if (res > 0)
