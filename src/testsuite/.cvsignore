@@ -1,6 +1,9 @@
+*.pid
 .deps
 Makefile
 Makefile.in
+arcfour-test
+arcfour-test.c
 des-test
 des-test.c
 dsa-test
@@ -23,4 +26,3 @@ spki-tag-test.c
 temphome
 twofish-test
 twofish-test.c
-*.pid

@@ -39,14 +39,14 @@
 */
    
 static void do_crypt_arcfour(struct crypto_instance *s,
-			 UINT32 length, const UINT8 *src, UINT8 *dst)
+			     UINT32 length, const UINT8 *src, UINT8 *dst)
 {
   CAST(arcfour_instance, self, s);
 
   if (length % 8)
     fatal("Internal error\n");
 
-  arcfour_crypt(&self->ctx, dst, src, length);
+  arcfour_crypt(&self->ctx, dst, length, src);
 }
 
 static struct crypto_instance *
@@ -59,7 +59,7 @@ make_arcfour_instance(struct crypto_algorithm *ignored UNUSED,
   self->super.block_size = 8;
   self->super.crypt = do_crypt_arcfour;
 
-  arcfour_set_key(&self->ctx, key, 16);
+  arcfour_set_key(&self->ctx, 16, key);
 
   return &self->super;
 }

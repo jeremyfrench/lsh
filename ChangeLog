@@ -1,3 +1,30 @@
+2000-10-22  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/exception.h (EXC_IO_BLOCKING_READ): New exception type.
+
+	* src/io.c (read_raw): New function.
+
+	* src/randomness.c (arcfour_random): New class. 
+	(do_arcfour_random): New function.
+	(do_arcfour_random_slow): New function.
+	(make_arcfour_random): New function.
+
+	* src/randomness.h (random_poll): New class.
+
+	* src/symmetric/arcfour.c (arcfour_crypt): Changed argument order.
+	(arcfour_set_key): Likewise.
+	(arcfour_stream): New function.
+	(arcfour_update_key): New function.
+	(arcfour_init): New function.
+
+	* src/testsuite/Makefile.am (TS_PROGS): Added arcfour-test.
+
+	* configure.in: Bumped version to 1.1.1. Check for getrusage and
+	gettimeofday. 
+
+	* src/reaper.c (do_reap): Removed assert(), to allow replacement
+	of registered callbacks.
+
 2000-10-20  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/sexp.c (encode_base64): Added argument break_lines.

@@ -46,6 +46,7 @@
    (class
      (name reap)
      (vars
+       ; Use callback == NULL to cancel a previous callback.
        (reap method void "pid_t pid" "struct exit_callback *callback")))
 */
 
