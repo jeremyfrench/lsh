@@ -16,7 +16,7 @@ export DEFS = @DEFS@
 LIBS = @LIBS@
 
 CFLAGS = -g -Wall -Wmissing-prototypes \
-         -Wmissing-declarations -Werror # -O2 -fomit-frame-pointer
+         -Wmissing-declarations -Werror -O # -O2 -fomit-frame-pointer
 LDFLAGS = @LDFLAGS@
 
 CPPFLAGS = -DDEBUG_ALLOC -DLSH -I$(srcdir) -I$(srcdir)/include
