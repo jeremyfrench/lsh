@@ -2443,7 +2443,7 @@ lsh_popen_read(const char *program, const char **argv, int in,
     }
   else
     werror("sexp-conv terminated by signal %i (%z).\n",
-	   WTERMSIG(status), strsignal(WTERMSIG(status)));
+	   WTERMSIG(status), STRSIGNAL(WTERMSIG(status)));
 
   lsh_string_free(s);
   return NULL;
