@@ -222,7 +222,7 @@ make_read_sexp_continuation(struct lsh_fd *fd,
   NEW(read_sexp_continuation, self);
 
   trace("make_read_sexp_continuation\n");
-  self->super.c =do_read_sexp_continue;
+  self->super.c = do_read_sexp_continue;
   self->fd = fd;
   self->up = up;
 

@@ -445,6 +445,7 @@ STATIC_COLLECT_2_FINAL(collect_handshake_2);
 struct collect_info_1 handshake_command =
 STATIC_COLLECT_1(&collect_info_handshake_2);
 
+
 /* GABA:
    (class
      (name connection_remember_command)
