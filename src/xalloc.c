@@ -294,8 +294,9 @@ lsh_object_free(struct lsh_object *o)
 }
 
 #if DEBUG_ALLOC
-struct lsh_object *lsh_object_check(struct lsh_class *class,
-				    struct lsh_object *instance)
+struct lsh_object *
+lsh_object_check(struct lsh_class *class,
+		 struct lsh_object *instance)
 {
   if (!instance)
     return instance;
@@ -308,13 +309,15 @@ struct lsh_object *lsh_object_check(struct lsh_class *class,
 
   if ( (instance->alloc_method == LSH_ALLOC_HEAP)
        && (instance->isa != class))
-    fatal("lsh_object_check: Type error!\n");
+    fatal("lsh_object_check: Type error, expected %z, got %z!\n",
+	  class->name, instance->isa->name);
 
   return instance;
 }
 
-struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
-					    struct lsh_object *instance)
+struct lsh_object *
+lsh_object_check_subtype(struct lsh_class *class,
+			 struct lsh_object *instance)
 {
   struct lsh_class *type;
   
@@ -343,7 +346,8 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
     if (type == class)
       return instance;
 
-  fatal("lsh_object_check_subtype: Type error!\n");
+  fatal("lsh_object_check_subtype: Type error, expected %z, got %z!\n",
+	class->name, instance->isa->name);
 }
 #endif /* DEBUG_ALLOC */
 
