@@ -343,5 +343,11 @@ void close_fd(struct lsh_fd *fd, int reason);
  * is completely written. */
 void close_fd_nicely(struct lsh_fd *fd, int reason);
 
+struct io_fd *io_write_file(struct io_backend *backend,
+			    const char *fname, int flags,
+			    int mode,
+			    UINT32 block_size,
+			    struct close_callback *c,
+			    struct exception_handler *e);
 
 #endif /* LSH_IO_H_INCLUDED */
