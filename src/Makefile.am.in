@@ -100,6 +100,16 @@ liblsh_a_LIBADD = @LIBOBJS@
 # 	bison $< -o $@T
 # 	test -s $@T && mv -f $@T $@
 
+# FIXME: Won't work if the filename contains `,', `\', `"' or newline.
+environ.h: environ.h.in Makefile
+	(echo '/* Automatically generated from environ.h.in, by make. */' ; \
+	sed -e 's,@''prefix@,$(prefix),' \
+	    -e 's,@''bindir@,$(bindir),' \
+	    -e 's,@''sbindir@,$(sbindir),' \
+	    -e 's,@''libexecdir@,$(libexecdir),'
+	    -e 's,@''sysconfdir@,$(sysconfdir),' < $<) >$@T
+	test -s $@T && mv -f $@T $@
+
 atoms_defines.h: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms header <$< >$@T
 	test -s $@T && mv -f $@T $@

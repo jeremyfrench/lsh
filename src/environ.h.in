@@ -1,0 +1,11 @@
+/* -*- c -*-
+ *
+ * Defines file names and environment variables used by the lsh
+ * programs. Substitutions are performed at make time, not configure
+ * time. */
+
+#define PREFIX "@prefix@"
+#define BINDIR "@bindir@"
+#define SBINDIR "@sbindir@"
+#define LIBEXECDIR "@libexecdir@"
+#define SYSCONFDIR "@sysconfdir@"
