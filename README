@@ -55,6 +55,18 @@ liboop (version 0.7 or better) can be found at www.liboop.org.
 
 GETTING STARTED
 
+After install, the first thing you need to do is creating a seed-file
+for the randomness generator. Use
+
+  lsh-make-seed
+
+to create a personal seed file. If you want to run the lshd server,
+you also need to run
+
+  lsh-make-seed-file --server
+
+as root.
+
 Some examples...
 
 Create a new DSS key pair, and save it in NEW_KEY and NEW_KEY.pub:
@@ -86,8 +98,9 @@ details.
 If you are interested in lsh, you may want to subscribe to the
 psst-list. Subscription address is psst-request@net.lut.ac.uk.
 
-Current snapshots of lsh can be found at
-<URL: http://www.lysator.liu.se/~nisse/archive/>.
+LSH releases are available at
+<URL: http://www.lysator.liu.se/~nisse/archive/> and <URL:
+ftp://ftp.lysator.liu.se/pub/security/lsh>.
 
-
+Happy hacking,
 /Niels Möller <nisse@lysator.liu.se>
