@@ -186,7 +186,7 @@ dotask 1 "make" "makewarn" "cd $BASE && make $makeargs"
 # "make check" requirements
 #
 
-dotask 0 "ckprg" "" "cd $BASE && make check"
+dotask 1 "ckprg" "" "cd $BASE && make check"
 
 # FIXME: run distcheck.
 # A problem is that make distcheck leaves some write-protected directories that
@@ -205,10 +205,12 @@ else
 fi
 
 dotask 1 "argpcfg" "cfgwarn" "cd $BASE/src/argp && ./configure $cfgargs" argpstatus
-dotask 1 "argpmake" "makewarn" "cd $BASE/src/argp && make $makeargs argpstatus
+dotask 1 "argpmake" "makewarn" "cd $BASE/src/argp && make $makeargs" argpstatus
+dotask 1 "ckargp" "" "cd $BASE/src/argp && make check" argpstatus
 
 dotask 1 "nettlecfg" "cfgwarn" "cd $BASE/src/nettle && ./configure $cfgargs" nettlestatus
-dotask 1 "nettlemake" "makewarn" "cd $BASE/src/nettle && make $makeargs nettlestatus
+dotask 1 "nettlemake" "makewarn" "cd $BASE/src/nettle && make $makeargs" nettlestatus
+dotask 1 "cknettle" "" "cd $BASE/src/nettle && make check" nettlestatus
 
 find pfx -type f -print | sort > r/installedfiles.txt
 if test `wc -l < r/installedfiles.txt` -eq 0

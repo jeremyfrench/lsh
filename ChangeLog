@@ -1,5 +1,8 @@
 2004-02-24  Niels Möller  <nisse@lysator.liu.se>
 
+	* misc/xenofarm.sh: Fixed tasks argpmake and nettlemake. New tasks
+	ckargp and cknettle.
+
 	* src/Makefile.am (lshg_SOURCES, lshg_LDADD): Avoid linking with
 	nettle. Need to link with dummy.o instead.
 
