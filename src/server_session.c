@@ -26,6 +26,7 @@
 
 #include "channel_commands.h"
 #include "format.h"
+#include "read_data.h"
 #include "server_password.h"
 #include "server_pty.h"
 #include "ssh.h"
@@ -200,9 +201,10 @@ do_receive(struct ssh_channel *c,
 
 /* We may send more data */
 static void
-do_send(struct ssh_channel *c)
+do_send(struct ssh_channel *s,
+	struct ssh_connection *c UNUSED)
 {
-  CAST(server_session, session, c);
+  CAST(server_session, session, s);
 
   assert(session->out->super.read);
   /* assert(session->out->handler); */
@@ -566,7 +568,8 @@ static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
 	  "  slave = %i\n"
 	  "... ",
 	  pty->super.alive, pty->master, pty->slave);
-      
+  debug("\n");
+  
   if (pty && pty->super.alive)
     {
       debug("make_pty: Using allocated pty.\n");
@@ -853,25 +856,35 @@ do_spawn_shell(struct channel_request *c,
 	close(out[1]);
 	close(err[1]);
 
-	/* FIXME: Use proper exception handlers. */
-	session->in
-	  = io_write(make_io_fd(closure->backend, in[1], &default_exception_handler),
-		     SSH_MAX_PACKET,
-		     /* FIXME: Use a proper close callback */
-		     make_channel_close(channel));
-	/* Flow control */
-	session->in->write_buffer->report = &session->super.super;
-	
-	session->out
-	  = io_read(make_io_fd(closure->backend, out[0], &default_exception_handler),
-		    make_channel_read_data(channel),
-		    NULL);
-	session->err 
-	  = ( (err[0] != -1)
-	      ? io_read(make_io_fd(closure->backend, err[0], &default_exception_handler),
-			make_channel_read_stderr(channel),
-			NULL)
-	      : NULL);
+	{
+	  /* Exception handlers */
+	  struct exception_handler *read_exception_handler
+	    = make_exc_read_eof_channel_handler(channel,
+						&default_exception_handler);
+
+	  session->in
+	    = io_write(make_io_fd(closure->backend, in[1],
+				  make_report_exception_handler(
+				    EXC_IO, EXC_IO, "lshd: Child stdin: ",
+				    &default_exception_handler)),
+		       SSH_MAX_PACKET,
+		       /* FIXME: Use a proper close callback */
+		       make_channel_close(channel));
+
+	  /* Flow control */
+	  session->in->write_buffer->report = &session->super.super;
+	  
+	  session->out
+	    = io_read(make_io_fd(closure->backend, out[0], read_exception_handler),
+		      make_channel_read_data(channel),
+		      NULL);
+	  session->err 
+	    = ( (err[0] != -1)
+		? io_read(make_io_fd(closure->backend, err[0], read_exception_handler),
+			  make_channel_read_stderr(channel),
+			  NULL)
+		: NULL);
+	}
 	
 	channel->receive = do_receive;
 	channel->send = do_send;
