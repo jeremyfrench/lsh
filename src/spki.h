@@ -28,6 +28,7 @@
 
 #include "exception.h"
 #include "sexp.h"
+#include "alist.h"
 
 #define GABA_DECLARE
 #include "spki.h.x"
@@ -53,5 +54,14 @@ struct sexp *keyblob2spki(struct lsh_string *keyblob);
 
 extern struct command spki_public2private;
 #define PRIVATE2PUBLIC (&spki_public2private.super)
+
+struct command *
+make_spki_parse_key(struct randomness *random);
+
+struct keypair *
+read_spki_key_file(const char *name,
+		   struct randomness *r,
+		   struct exception_handler *e);
+
 
 #endif /* LSH_SPKI_H_INCLUDED */

@@ -39,11 +39,14 @@
    (class
      (name keypair)
      (vars
+       ; atom identifying algorithm type
+       (type . UINT32)
        (public string)
        (private object signer)))
 */
 
-struct keypair *make_keypair(struct lsh_string *public,
+struct keypair *make_keypair(UINT32 type,
+			     struct lsh_string *public,
 			     struct signer *private);
 
 /* parse an ssh keyblob */

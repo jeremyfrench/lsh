@@ -48,7 +48,8 @@
      (name lookup_verifier)
      (vars
        (lookup method (object verifier)
-                      "struct lsh_string *keyholder" "struct lsh_string *key")))
+                      "struct lsh_string *keyholder"
+		      "struct lsh_string *key")))
 */
 
 #define LOOKUP_VERIFIER(l, kh, key) ((l)->lookup((l), (kh), (key)))

@@ -410,6 +410,11 @@ do_client_io(struct command *s UNUSED,
   channel->send = do_send;
 
   session->in->super.read = make_channel_read_data(channel);
+
+  /* FIXME: Perhaps there is some way to arrange that channel.c calls
+   * the CHANNEL_SEND method instead? */
+  if (session->super.send_window_size)
+    session->in->super.want_read = 1;
   
   session->in->super.close_callback
     = make_channel_read_close_callback(channel);

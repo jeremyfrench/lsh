@@ -32,12 +32,21 @@
 #include "sexp.h"
 #include "werror.h"
 #include "xalloc.h"
+#include "alist.h"
 
 #include <assert.h>
+
+#include <sys/types.h>
+#include <fcntl.h>
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
 
 #define GABA_DEFINE
 #include "spki.h.x"
 #undef GABA_DEFINE
+
+#include "spki.c.x"
 
 #define SA(x) sexp_a(ATOM_##x)
 
@@ -231,6 +240,214 @@ do_spki_private2public(struct command *s UNUSED,
 
 struct command spki_public2private
 = STATIC_COMMAND(do_spki_private2public);
+
+/* Processes an already parsed S-expression, and inserts it into an alist.
+ * FIXME: No, it doesn't; it returns the keypair to its continuation. */
+/* GABA:
+   (class
+     (name spki_parse_key)
+     (super command)
+     (vars
+       (random object randomness)))
+*/
+
+/* FIXME: Perhaps this function should throw exceptions? */
+static struct keypair *
+parse_dsa_private_key(struct randomness *random,
+		      struct sexp_iterator *i
+		      /*, struct exception_handler *e */)
+{
+  mpz_t p, q, g, y, x; 
+  struct keypair *key = NULL;
+  
+  mpz_init(p);
+  mpz_init(q);
+  mpz_init(g);
+  mpz_init(y);
+  mpz_init(x);
+  
+  if (sexp_get_un(i, "p", p)
+      && sexp_get_un(i, "q", q)
+      && sexp_get_un(i, "g", g)
+      && sexp_get_un(i, "y", y)
+      && sexp_get_un(i, "x", x)
+      && !SEXP_GET(i))
+    {
+      /* Test key */
+      mpz_t tmp;
+      struct lsh_string *s;
+      int valid;
+      
+      mpz_init_set(tmp, g);
+      mpz_powm(tmp, tmp, x, p);
+      valid = !mpz_cmp(tmp, y);
+      mpz_clear(tmp);      
+
+      if (valid)
+	{
+	  struct lsh_string *public
+	    = ssh_format("%a%n%n%n%n", ATOM_SSH_DSS, p, q, g, y);
+	  struct signer *private;
+	  	  
+	  s = ssh_format("%n", x);
+	  
+	  private = MAKE_SIGNER(make_dsa_algorithm(random),
+				public->length, public->data,
+				s->length, s->data);
+	  assert(private);
+	  lsh_string_free(s);
+
+	  debug("spki.c: parse_dsa_private_key: Using (public) key:\n"
+		"  p=%xn\n"
+		"  q=%xn\n"
+		"  g=%xn\n"
+		"  y=%xn\n",
+		p, q, g, y);
+	  
+	  key = make_keypair(ATOM_SSH_DSS, public, private);
+	}
+      else
+	werror("spki.c: parse_dsa_private_key: Key doesn't work.");
+    }
+
+  /* Cleanup */
+  mpz_clear(p);
+  mpz_clear(q);
+  mpz_clear(g);
+  mpz_clear(y);
+  mpz_clear(x);
+  /* SPKI_ERROR(e, "Error parsing DSA key.", NULL);   */
+     
+  return key;
+}
+
+/* FIXME: Use exceptions here? */
+static struct keypair *
+parse_private_key(struct randomness *random,
+                  struct sexp_iterator *i
+		  /* , struct exception_handler *e */)
+{
+  struct sexp *expr;
+  
+  expr = SEXP_GET(i);
+  switch (spki_get_type(expr, &i)) 
+    {
+      default:
+        /* SPKI_ERROR(e, "spki.c: Unknown key type (only dsa is supported).", expr); */
+	werror("spki.c: Unknown key type (only dsa is supported).");
+	break;
+      case ATOM_DSA:
+        return parse_dsa_private_key(random, i /* , e */);
+    }
+  return NULL;
+}
+
+#if 0
+static struct keypair *
+publickey2keypair(struct sexp_iterator *i,
+		  struct exception_handler *e)
+{
+}
+#endif
+
+static void do_spki_parse_key(struct command *s, 
+	                      struct lsh_object *a,
+			      struct command_continuation *c,
+			      struct exception_handler *e)
+{
+  CAST(spki_parse_key, self, s);
+  CAST_SUBTYPE(sexp, key, a);
+  
+  struct sexp_iterator *i;
+  
+  switch (spki_get_type(key, &i)) 
+    {
+      default:
+        SPKI_ERROR(e, "Keyfile is not a private nor a public key.", key);
+        return;
+      case ATOM_PRIVATE_KEY:
+	{
+	  struct keypair *key = parse_private_key(self->random, i /* , e */);
+
+	  if (key)
+	    COMMAND_RETURN(c, key);
+	  else
+	    SPKI_ERROR(e, "Invalid key.", NULL);
+	  
+	  break;
+	}
+#if 0
+      case ATOM_PUBLIC_KEY:
+        break;
+#endif
+    } 
+}
+
+struct command *
+make_spki_parse_key(struct randomness *random)
+{
+  NEW(spki_parse_key, self);
+  
+  self->super.call = do_spki_parse_key;
+  self->random = random;
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name handle_key)
+     (super command_continuation)
+     (vars
+       (key simple "struct keypair **")))
+*/
+
+static void
+do_handle_key(struct command_continuation *c, struct lsh_object *r)
+{
+  CAST(handle_key, self, c);
+  CAST(keypair, key, r);
+
+  *self->key = key;
+}
+
+/* FIXME: We should really use some command instead. */
+/* NOTE: Reads only the first key from the file. */
+struct keypair *
+read_spki_key_file(const char *name,
+		   struct randomness *r,
+		   struct exception_handler *e)
+{
+  int fd = open(name, O_RDONLY);
+  if (fd < 0)
+    {
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
+    }
+  else
+    {
+      struct keypair *keypair = NULL;
+      int res;
+
+      NEW(handle_key, handler);
+      handler->super.c = do_handle_key;
+      handler->key = &keypair;
+
+      e = make_report_exception_handler(EXC_SEXP, EXC_SEXP, "Reading keyfile: ",
+					e, HANDLER_CONTEXT);
+					
+      res = blocking_read(fd,
+			  make_read_sexp(SEXP_TRANSPORT, 0,
+					 make_apply(make_spki_parse_key(r), 
+					            &handler->super, 
+					            e), 
+					 e));
+      close(fd);
+      KILL(handler);
+
+      return keypair;
+    }
+  return NULL;
+}
+
 
 #if 0
 /* Encryption of private data.

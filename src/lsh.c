@@ -41,6 +41,7 @@
 #include "randomness.h"
 #include "service.h"
 #include "ssh.h"
+#include "spki.h"
 #include "tcpforward_commands.h"
 #include "tty.h"
 #include "userauth.h"
@@ -219,6 +220,7 @@ main_options[] =
   /* Name, key, arg-name, flags, doc, group */
   { "port", 'p', "Port", 0, "Connect to this port.", 0 },
   { "user", 'l', "User name", 0, "Login as this user.", 0 },
+  { "identity", 'i',  "Identity key", 0, "Use this key to authenticate.", 0 },
   { NULL, 0, NULL, 0, "Actions:", 0 },
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
@@ -255,6 +257,7 @@ main_options[] =
        (remote object address_info)
 
        (user . "char *")
+       (identity . "char *")
 
        ; -1 means default behaviour
        (with_pty . int)
@@ -282,6 +285,12 @@ make_options(struct alist *algorithms, struct io_backend *backend,
   self->not = 0;
   self->remote = NULL;
   self->user = getenv("LOGNAME");
+
+  /* FIXME: Default should be ~/.lsh/identity. But we also need some *
+   * option to disable public key authenticaation, and perhaps also
+   * for using several key files. */
+  self->identity = NULL;
+
   self->port = "ssh";
 
   self->with_pty = -1;
@@ -433,6 +442,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
     case 'l':
       self->user = arg;
+      break;
+    case 'i':
+      self->identity = arg;
       break;
       
     case 'L':
@@ -599,6 +611,7 @@ int main(int argc, char **argv)
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
   struct alist *lookup_table; /* Alist of signature-algorithm -> lookup_verifier */
+  struct alist *identity_keys = NULL;
 
   /* int in, out, err; */
 
@@ -624,10 +637,6 @@ int main(int argc, char **argv)
 
   /* No randomness is needed for verifying signatures */
   lookup_table = make_alist(1
-#if DATAFELLOWS_WORKAROUNDS
-			    +1,
-			    ATOM_SSH_DSS_KLUDGE, make_fake_host_db(make_dsa_kludge_algorithm(NULL))
-#endif
 			    , ATOM_SSH_DSS, make_fake_host_db(make_dsa_algorithm(NULL)),
 			    -1); 
 
@@ -641,6 +650,18 @@ int main(int argc, char **argv)
   options = make_options(algorithms, backend, handler, &lsh_exit_code);
 
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
+  
+  if (options->identity)
+    {
+#if 0
+      identity_keys = make_alist(0, -1);
+      if (!read_spki_key_file(options->identity, identity_keys, r, &ignore_exception_handler))
+        {
+          KILL(identity_keys);
+          identity_keys = NULL;
+        }
+#endif
+    }
   
   make_kexinit
     = make_simple_kexinit(r,
@@ -663,7 +684,10 @@ int main(int argc, char **argv)
 						 NULL),
 			  make_request_service(ATOM_SSH_USERAUTH),
 			  make_client_userauth(ssh_format("%lz", options->user),
-					       ATOM_SSH_CONNECTION),
+					       ATOM_SSH_CONNECTION,
+					       ATOM_PASSWORD,
+					       make_alist(1, 
+							  ATOM_PASSWORD, make_client_password_auth(), -1)),
 			  queue_to_list(&options->actions));
     
     CAST_SUBTYPE(command, client_connect, o);

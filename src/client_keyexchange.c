@@ -59,6 +59,7 @@
      (super packet_handler)
      (vars
        (dh struct diffie_hellman_instance)
+       (hostkey_algorithm . UINT32)
        (verifier object lookup_verifier)
        (install object install_keys)))
 */
@@ -81,6 +82,14 @@ do_handle_dh_reply(struct packet_handler *c,
     }
     
   v = LOOKUP_VERIFIER(closure->verifier, NULL, closure->dh.server_key);
+
+#if DATAFELLOWS_WORKAROUNDS
+  if (closure->hostkey_algorithm == ATOM_SSH_DSS && 
+      (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
+    {
+      v = make_dsa_verifier_kludge(v);
+    }
+#endif
 
   if (!v)
     /* FIXME: Use a more appropriate error code? */
@@ -160,14 +169,6 @@ do_init_client_dh(struct keyexchange_algorithm *c,
   CHECK_SUBTYPE(ssh_connection, connection);
   CHECK_SUBTYPE(signature_algorithm, ignored);
 
-  /* FIXME: Use this value to choose a verifier function */
-  if ( (hostkey_algorithm_atom != ATOM_SSH_DSS )
-#if DATAFELLOWS_WORKAROUNDS
-       && (hostkey_algorithm_atom != ATOM_SSH_DSS_KLUDGE)
-#endif
-      )
-    fatal("Internal error\n");
-  
   /* Initialize */
   dh->super.handler = do_handle_dh_reply;
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
@@ -175,8 +176,15 @@ do_init_client_dh(struct keyexchange_algorithm *c,
   {
     CAST_SUBTYPE(lookup_verifier, v,
 		 ALIST_GET(closure->verifiers, hostkey_algorithm_atom));
-    assert(v);
+
+    /* FIXME: We should make sure that we never advertise hostkey
+     * algorithms for which we have no verifiers. */
+    if (!v)
+      {
+	fatal("No verifier for the '%a' hostkey algorithm.\n", hostkey_algorithm_atom);
+      }
     dh->verifier = v;
+    dh->hostkey_algorithm = hostkey_algorithm_atom;
   }
   dh->install = make_install_new_keys(0, algorithms);
   

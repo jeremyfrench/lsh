@@ -43,11 +43,13 @@
 
 #include "publickey_crypto.c.x"
 
-struct keypair *make_keypair(struct lsh_string *public,
+struct keypair *make_keypair(UINT32 type,
+			     struct lsh_string *public,
 			     struct signer *private)
 {
   NEW(keypair, self);
   
+  self->type = type;
   self->public = public;
   self->private = private;
   return self;

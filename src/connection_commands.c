@@ -171,7 +171,7 @@ do_line(struct line_handler **h,
 #endif /* WITH_SSH1_FALLBACK */
 
 #if DATAFELLOWS_WORKAROUNDS
-	    if ( (swver_len > 6) && !memcmp(swver, "2.0.", 4)
+	    if ( (swver_len >= 6) && !memcmp(swver, "2.0.", 4)
 		 /* FIXME: Perhaps do a numerical comparison here? */
 		 && (memcmp(swver + 4, "13", 2) <= 0) )
 	      {

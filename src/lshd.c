@@ -46,6 +46,8 @@
 #include "server_session.h"
 #include "server_userauth.h"
 #include "sexp.h"
+#include "sexp_commands.h"
+#include "spki.h"
 #include "ssh.h"
 #include "tcpforward.h"
 #include "tcpforward_commands.h"
@@ -262,140 +264,6 @@ main_argp =
   NULL, NULL
 };
 
-/* FIXME: We should have some more general functions for reading
- * private keys. */
-
-/* GABA:
-   (class
-     (name read_key)
-     (super command_continuation)
-     (vars
-       (random object randomness)
-       ;; Maps hostkey algorithm to a keyinfo structure
-       (keys object alist)))
-*/
-
-static void do_read_key(struct command_continuation *s,
-			struct lsh_object *a)
-{
-  CAST(read_key, closure, s);
-  CAST_SUBTYPE(sexp, private, a);
-  
-  struct sexp_iterator *i;
-  struct sexp *e;
-  mpz_t p, q, g, y, x;
-  
-  if (!sexp_check_type(private, "private-key", &i))
-    {
-      werror("lshd: Host key file does not contain a private key.");
-      return;
-    }
-
-  e = SEXP_GET(i);
-  if (! (e && sexp_check_type(e, "dsa", &i)))
-    {
-      werror("lshd: Unknown key type (only dsa is supported)\n");
-      return;
-    }
-
-  mpz_init(p);
-  mpz_init(q);
-  mpz_init(g);
-  mpz_init(y);
-  mpz_init(x);
-
-  if (sexp_get_un(i, "p", p)
-      && sexp_get_un(i, "q", q)
-      && sexp_get_un(i, "g", g)
-      && sexp_get_un(i, "y", y)
-      && sexp_get_un(i, "x", x)
-      && !SEXP_GET(i))
-    {
-      /* Test key */
-      mpz_t tmp;
-      struct lsh_string *s;
-      
-      mpz_init_set(tmp, g);
-      mpz_powm(tmp, tmp, x, p);
-      if (mpz_cmp(tmp, y))
-	{
-	  werror("lshd: Host key doesn't work.\n");
-	  mpz_clear(tmp);
-	}
-      else
-	{
-	  struct lsh_string *public
-	    = ssh_format("%a%n%n%n%n", ATOM_SSH_DSS, p, q, g, y);
-	  struct signer *private;
-	  	  
-	  s = ssh_format("%n", x);
-	  
-	  private = MAKE_SIGNER(make_dsa_algorithm(closure->random),
-				public->length, public->data,
-				s->length, s->data);
-	  assert(private);
-	  lsh_string_free(s);
-	  
-	  /* FIXME: Check if we already have a key for this algorithm,
-	   * and warn about multiple keys. */
-	  ALIST_SET(closure->keys, ATOM_SSH_DSS,
-		    make_keypair(public, private));
-
-#if DATAFELLOWS_WORKAROUNDS
-	  ALIST_SET(closure->keys, ATOM_SSH_DSS_KLUDGE,
-		    make_keypair(public,
-				      make_dsa_signer_kludge(private)));
-#endif /* DATAFELLOWS_WORKAROUNDS */
-	  
-	  debug("lshd: Using (public) hostkey:\n"
-		"  p=%xn\n"
-		"  q=%xn\n"
-		"  g=%xn\n"
-		"  y=%xn\n",
-		p, q, g, y);
-	}
-    }
-
-  /* Cleanup */
-  mpz_clear(p);
-  mpz_clear(q);
-  mpz_clear(g);
-  mpz_clear(y);
-  mpz_clear(x);
-}
-
-static int read_host_key(const char *name,
-			 struct alist *keys,
-			 struct randomness *r)
-{
-  int fd = open(name, O_RDONLY);
-  if (fd < 0)
-    {
-      werror("lshd: Could not open %z (errno = %i): %z\n",
-	     name, errno, STRERROR(errno));
-      return 0;
-    }
-  else
-    {
-      int res;
-      
-      NEW(read_key, handler);
-      handler->super.c = do_read_key;
-
-      handler->random = r;
-      handler->keys = keys;
-      
-      res = blocking_read(fd,
-			  make_read_sexp(SEXP_TRANSPORT, 1,
-					 &handler->super, &ignore_exception_handler));
-      close(fd);
-
-      KILL(handler);
-      
-      return 1;
-    }
-}
-
 /* GABA:
    (expr
      (name lshd_listen)
@@ -452,6 +320,7 @@ int main(int argc, char **argv)
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
   struct alist *authorization_lookup;
+  struct keypair *hostkey;
   
   /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
@@ -512,11 +381,12 @@ int main(int argc, char **argv)
       
   /* Read the hostkey */
   keys = make_alist(0, -1);
-  if (!read_host_key(options->hostkey, keys, r))
+  if (!(hostkey = read_spki_key_file(options->hostkey, r, &ignore_exception_handler)))
     {
       werror("lshd: Could not read hostkey.\n");
       return EXIT_FAILURE;
     }
+  ALIST_SET(keys, hostkey->type, hostkey);
 
   /* FIXME: We should check that we have at least one host key.
    * We should also extract the host-key algorithms for which we have keys,
@@ -528,13 +398,6 @@ int main(int argc, char **argv)
 
   authorization_lookup
     = make_alist(1
-#if DATAFELLOWS_WORKAROUNDS
-		 +1,
-		 ATOM_SSH_DSS_KLUDGE, make_authorization_db(ssh_format("keys_md5"), 
-							    make_dsa_kludge_algorithm(NULL),
-							    &md5_algorithm)
-#endif
-				    
 		 ,ATOM_SSH_DSS, make_authorization_db(ssh_format("keys_md5"),
 						      make_dsa_algorithm(NULL),
 						      &md5_algorithm),

@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1999 Niels Möller, Balazs Scheidler
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -50,38 +50,12 @@
  * from the start, we ask the user for a password and attempt to log
  * in using that. */
 
-static struct packet_handler *make_banner_handler(void);
+/* Forward declaration */
+struct client_userauth; 
 
 #include "client_userauth.c.x"
 
-/* GABA:
-   (class
-     (name client_userauth)
-     (super command)
-     (vars
-       (username string)            ; Remote user name to authenticate as.
-       (service_name simple int)    ; Service we want to access .
-  
-       ; FIXME: Keys to try
-       ))
-*/
-
-/* GABA:
-   (class
-     (name success_handler)
-     (super packet_handler)
-     (vars
-       (c object command_continuation)))
-*/
-
-/* GABA:
-   (class
-     (name failure_handler)
-     (super packet_handler)
-     (vars
-       (e object exception_handler)
-       (userauth object client_userauth)))
-*/
+static struct packet_handler *make_banner_handler(void);
 
 static struct lsh_string *format_userauth_password(struct lsh_string *name,
 						   int service,
@@ -97,29 +71,106 @@ static struct lsh_string *format_userauth_password(struct lsh_string *name,
 		    passwd);
 }
 
+
+/* GABA:
+   (class
+     (name client_userauth_method)
+     (vars
+       ; set up message handlers
+       (setup method void "struct ssh_connection *connection")
+       ; send authentication request
+       (send method void "struct client_userauth *userauth" 
+                         "struct ssh_connection *connection")
+       ; clean up message handlers
+       (cleanup method void "struct ssh_connection *connection")))
+*/
+
+#define CLIENT_USERAUTH_SETUP(m, c) ((m->setup) ? ((m)->setup(m, c)) : (void) 0)
+#define CLIENT_USERAUTH_SEND(m, u, c) ((m->send) ? ((m)->send(m, u, c)) : (void) 0)
+#define CLIENT_USERAUTH_CLEANUP(m, c) ((m->cleanup) ? ((m)->cleanup(m, c)) : (void) 0)
+
 #define MAX_PASSWD 100
 
 static void
-send_passwd(struct client_userauth *userauth,
-	    struct ssh_connection *connection)
+do_send_password(struct client_userauth_method *self UNUSED,
+		 struct client_userauth *userauth,
+                 struct ssh_connection *connection)
 {
   struct lsh_string *passwd
     = read_password(MAX_PASSWD,
-		    ssh_format("Password for %lS: ",
-			       userauth->username), 1);
-  
+                    ssh_format("Password for %lS: ",
+                               userauth->username), 1);
+
   if (!passwd)
     {
       /* FIXME: What to do now??? */
       fatal("read_password failed!?\n");
     }
-  
+
   C_WRITE(connection,
-	  format_userauth_password(local_to_utf8(userauth->username, 0),
-				   userauth->service_name,
-				   local_to_utf8(passwd, 1),
-				   1));
+          format_userauth_password(local_to_utf8(userauth->username, 0),
+                                   userauth->service_name,
+                                   local_to_utf8(passwd, 1),
+                                   1));
+
 }
+
+struct client_userauth_method *
+make_client_password_auth(void)
+{
+  NEW(client_userauth_method, self);
+
+  self->send = do_send_password;
+  return self;
+}
+
+/* GABA:
+   (class
+     (name client_publickey_method)
+     (super client_userauth_method)
+     (vars
+       (dummy . int)))
+*/
+
+struct client_userauth_method *
+make_client_publickey_auth(void)
+{
+  NEW(client_publickey_method, self);
+  
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name client_userauth)
+     (super command)
+     (vars
+       (username string)            ; Remote user name to authenticate as.
+       (service_name simple int)    ; Service we want to access .
+       (current_method simple int)
+       (methods object alist)       ; authentication methods
+            
+       ; FIXME: Keys to try
+       ))
+*/
+
+/* GABA:
+   (class
+     (name success_handler)
+     (super packet_handler)
+     (vars
+       (c object command_continuation)
+       (userauth object client_userauth)))
+*/
+
+/* GABA:
+   (class
+     (name failure_handler)
+     (super packet_handler)
+     (vars
+       (e object exception_handler)
+       (userauth object client_userauth)))
+*/
 
 static void
 do_userauth_success(struct packet_handler *c,
@@ -137,6 +188,9 @@ do_userauth_success(struct packet_handler *c,
       && (msg_number == SSH_MSG_USERAUTH_SUCCESS)
       && parse_eod(&buffer))
     {
+      CAST(client_userauth_method, method, 
+	   ALIST_GET(closure->userauth->methods,
+		     closure->userauth->current_method));
       werror("User authentication successful.\n");
 
       lsh_string_free(packet);
@@ -144,6 +198,8 @@ do_userauth_success(struct packet_handler *c,
       connection->dispatch[SSH_MSG_USERAUTH_SUCCESS] = connection->fail;
       connection->dispatch[SSH_MSG_USERAUTH_FAILURE] = connection->fail;
       connection->dispatch[SSH_MSG_USERAUTH_BANNER] = connection->fail;
+
+      CLIENT_USERAUTH_CLEANUP(method, connection);
       
       COMMAND_RETURN(closure->c, connection);
     }
@@ -190,13 +246,31 @@ do_userauth_failure(struct packet_handler *c,
 	       "indicating partial success.\n");
 
       for(i = 0; i < LIST_LENGTH(methods); i++)
-	if (LIST(methods)[i] == ATOM_PASSWORD)
-	  {
-	    /* Try again */
-	    KILL(methods);
-	    send_passwd(closure->userauth, connection);
-	    return;
-	  }
+	{
+	  CAST(client_userauth_method, method, 
+	       ALIST_GET(closure->userauth->methods,
+			 LIST(methods)[i]));
+	  CAST(client_userauth_method, old_method, 
+	       ALIST_GET(closure->userauth->methods, 
+			 closure->userauth->current_method));
+	  if (method)
+	    {
+	      if (old_method != method)
+		{
+		  closure->userauth->current_method = LIST(methods)[i];
+		  CLIENT_USERAUTH_CLEANUP(old_method, connection);
+		  CLIENT_USERAUTH_SETUP(method, connection);
+		  CLIENT_USERAUTH_SEND(method, closure->userauth, connection);
+		  KILL(methods);
+		  return;
+		}
+	      else
+		{
+		  /* no need to cleanup & setup */
+		  CLIENT_USERAUTH_SEND(method, closure->userauth, connection);
+		}
+	    }
+	}
       /* No methods that we can use */
       KILL(methods);
 
@@ -244,11 +318,13 @@ do_userauth_banner(struct packet_handler *closure,
 }
 
 static struct packet_handler *
-make_success_handler(struct command_continuation *c)
+make_success_handler(struct client_userauth *userauth,
+		     struct command_continuation *c)
 {
   NEW(success_handler, self);
 
   self->super.handler = do_userauth_success;
+  self->userauth = userauth;
   self->c = c;
 
   return &self->super;
@@ -284,26 +360,39 @@ do_client_userauth(struct command *s,
 {
   CAST(client_userauth, self, s);
   CAST(ssh_connection, connection, x);
+  struct client_userauth_method *m;
   
   connection->dispatch[SSH_MSG_USERAUTH_SUCCESS]
-    = make_success_handler(c);
+    = make_success_handler(self, c);
   connection->dispatch[SSH_MSG_USERAUTH_FAILURE]
     = make_failure_handler(self, e);
   connection->dispatch[SSH_MSG_USERAUTH_BANNER]
     = make_banner_handler();
 
+  m = ALIST_GET(self->methods, self->current_method);
+  if (m)
+    {
+      CLIENT_USERAUTH_SETUP(m, connection);
+      CLIENT_USERAUTH_SEND(m, self, connection);
+    }
+#if 0
   /* Pass e on? */
   return send_passwd(self, connection);
+#endif
 }
 
 struct command *make_client_userauth(struct lsh_string *username,
-				     int service_name)
+				     int service_name,
+				     int first_method,
+				     struct alist *methods)
 {
   NEW(client_userauth, self);
 
   self->super.call = do_client_userauth;
   self->username = username;
   self->service_name = service_name;
+  self->current_method = first_method;
+  self->methods = methods;
 
   return &self->super;
 }

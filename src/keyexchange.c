@@ -269,6 +269,7 @@ do_handle_kexinit(struct packet_handler *c,
     = select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
 		       connection->kexinits[1]->server_hostkey_algorithms);
 
+#if 0
 #if DATAFELLOWS_WORKAROUNDS
   if ( (hostkey_algorithm_atom == ATOM_SSH_DSS)
        && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
@@ -276,7 +277,8 @@ do_handle_kexinit(struct packet_handler *c,
       hostkey_algorithm_atom = ATOM_SSH_DSS_KLUDGE;
     }
 #endif /* DATAFELLOWS_WORKAROUNDS */
-
+#endif
+  
   for(i = 0; i<KEX_PARAMETERS; i++)
     {
       parameters[i]

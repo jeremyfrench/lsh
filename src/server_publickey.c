@@ -32,6 +32,7 @@
 #include "charset.h"
 #include "ssh.h"
 #include "lookup_verifier.h"
+#include "publickey_crypto.h"
 
 #include "server_publickey.c.x"
 
@@ -84,14 +85,8 @@ do_authenticate(struct userauth *s,
 	  && parse_eod(args))
        : parse_eod(args))) 
     {
-#if DATAFELLOWS_WORKAROUNDS
-      if (algorithm == ATOM_SSH_DSS && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
-	{
-	  lookup = ALIST_GET(self->verifiers, ATOM_SSH_DSS_KLUDGE);
-	}
-      else
-#endif
-	lookup = ALIST_GET(self->verifiers, algorithm);
+
+      lookup = ALIST_GET(self->verifiers, algorithm);
 
       if (!lookup) 
 	{
@@ -106,6 +101,12 @@ do_authenticate(struct userauth *s,
 	  return;
 	}
       v = LOOKUP_VERIFIER(lookup, username, keyblob);
+
+#if DATAFELLOWS_WORKAROUNDS
+      if ( (algorithm == ATOM_SSH_DSS)
+	   && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
+	v = make_dsa_verifier_kludge(v);
+#endif
 
       if (!check_key)
 	{
@@ -134,7 +135,6 @@ do_authenticate(struct userauth *s,
 	  struct lsh_string *signed_data;
 	  struct unix_user *user = NULL;
 #if DATAFELLOWS_WORKAROUNDS
-	  /* FIXME: this check should be made more general */
 	  if (connection->peer_flags & PEER_USERAUTH_REQUEST_KLUDGE)
 	    {
 	      signed_data = ssh_format("%lS%c%S%a%a%c%a%S", 

@@ -157,7 +157,17 @@ do_init_server_dh(struct keyexchange_algorithm *c,
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
   dh->dh.server_key = lsh_string_dup(keypair->public);
-  dh->signer = keypair->private;
+
+#if DATAFELLOWS_WORKAROUNDS
+  if ( (hostkey_algorithm_atom == ATOM_SSH_DSS)
+       && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
+    {
+      dh->signer = make_dsa_signer_kludge(keypair->private);
+    }
+  else
+#endif
+    dh->signer = keypair->private;
+
   dh->install = make_install_new_keys(1, algorithms);
   
   /* Generate server's secret exponent */
