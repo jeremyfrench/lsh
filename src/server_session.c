@@ -242,6 +242,8 @@ do_open_session(struct channel_open *s,
   CAST(open_session, self, s);
 
   debug("server.c: do_open_session()\n");
+
+  assert(connection->user);
   
   if (parse_eod(args))
     {
