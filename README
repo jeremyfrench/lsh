@@ -23,17 +23,34 @@ running
 
   bash configure
 
-If you want to hack lsh, you need some more tools: autoconf (at least
-version 2.52), automake (at least version 1.6.1), bash, gcc, gperf (at
-least version 2.7) and a scheme implementation. The currently
-supported schemes are guile and scsh (at least version 0.5.2). All but
-scsh can be found at your local GNU mirror site. scsh, Olin Shiver's
-Scheme Shell, can be downloaded from <URL: http://www.scsh.net>. If
-you use guile, you also need the slib library, which is usually
-distributed separately. It's also available at the GNU mirrors.
-Installing tcputils is optional, but it is needed to get the most out
-of the lsh testsuite. It can be found at
-ftp://ftp.lysator.liu.se/pub/unix/tcputils.
+If you want to hack lsh, you need some more tools:
+
+ * autoconf (version 2.59 or later is recommended),
+
+ * automake (version 1.8.2 or later),
+
+ * bash,
+
+ * gcc,
+
+ * gperf (at least version 2.7)
+
+ * a scheme implementation. The currently supported schemes are guile
+   and scsh (at least version 0.6).
+
+All but scsh can be found at your local GNU mirror site. scsh,
+Olin Shiver's Scheme Shell, can be downloaded from <URL:
+http://www.scsh.net>. If you use guile, you also need the slib
+library, which is usually distributed separately. It's also available
+at the GNU mirrors.
+
+Optional programs that are needed to get the most out
+of the lsh testsuite:
+
+ * tcputils, available at ftp://ftp.lysator.liu.se/pub/unix/tcputils.
+
+ * tsocks (plus the supplied patch misc/tsocks-forcelocal.patch). It
+   can be downloaded from http://tsocks.sourceforge.net/.
 
 If you have checked out lsh from CVS, things are a little more
 complicated. Run the ./.bootstrap script, which will run aclocal,
@@ -49,9 +66,8 @@ NEEDED LIBRARIES
 GMP (version 3.1 or better) can be found at ftp.gnu.org, or some of
 its mirrors.
 
-ZLIB can be found at http://www.zlib.org. Latest version is
-zlib-1.1.4, earlier versions of zlib have a known security problem, so
-make sure you get version 1.1.4 or later.
+ZLIB can be found at http://www.zlib.org. Older versions zlib have a
+known security problems, so make sure you get the latest one.
 
 liboop (version 0.8 or better) can be found at www.liboop.org.
 
@@ -72,15 +88,15 @@ as root.
 
 Some examples...
 
-Create a new DSS key pair, and save it in ~/.lsh/identity and
+Create a new RSA key pair, and save it in ~/.lsh/identity and
 ~/.lsh/identity.pub: 
 
-  lsh-keygen -l 8 | lsh-writekey
+  lsh-keygen | lsh-writekey
 
 To create a key for the server, using the server's seed-file and
 storing the result as /etc/lsh_host_key and /etc/lsh_host_key.pub, run
 
-  lsh-keygen -l 8 --server | lsh-writekey --server
+  lsh-keygen --server | lsh-writekey --server
 
 Start an lshd server in the background, on the default port, using the
 key at /etc/lsh_host_key, created above:

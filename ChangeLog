@@ -1,5 +1,8 @@
 2004-11-18  Niels Möller  <niels@s3.kth.se>
 
+	* README: Updated examples, and the lists of needed tools and
+	libraries. 
+
 	* misc/xenofarm.sh (oopcfgargs): Build liboop with
 	--disable-shared.
 
