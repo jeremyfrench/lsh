@@ -212,9 +212,6 @@ struct verifier *
 make_ssh_rsa_verifier(uint32_t public_length,
 		      const uint8_t *public);
 
-struct lsh_string *
-rsa_generate_key(struct randomness *r, uint32_t bits);
-
 
 /* DSA signatures */
 
@@ -229,10 +226,5 @@ struct verifier *
 make_ssh_dss_verifier(uint32_t public_length,
 		      const uint8_t *public);
 
-void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l);
-void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q);
-
-struct lsh_string *
-dsa_generate_key(struct randomness *r, unsigned level);
 
 #endif /* LSH_PUBLICKEY_CRYPTO_H_INCLUDED */

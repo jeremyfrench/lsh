@@ -26,8 +26,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/* FIXME: Incorporate code from dsa_keygen and rsa_keygen */
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -41,12 +39,16 @@
 #include <unistd.h>
 #endif
 
+#include "nettle/dsa.h"
+#include "nettle/rsa.h"
+
 #include "crypto.h"
 #include "environ.h"
 #include "format.h"
 #include "io.h"
 #include "publickey_crypto.h"
 #include "randomness.h"
+#include "sexp.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -54,6 +56,9 @@
 #include "lsh_argp.h"
 
 #include "lsh-keygen.c.x"
+
+/* Uses a 30-bit public exponetnt for RSA. */
+#define E_SIZE 30
 
 /* Option parsing */
 
@@ -187,6 +192,72 @@ main_argp =
   NULL, NULL
 };
 
+static void
+progress(void *ctx UNUSED, int c)
+{
+  char buf[2];
+  buf[0] = c; buf[1] = '\0';
+  if (c != 'e')
+    werror_progress(buf);
+}
+
+static struct lsh_string *
+dsa_generate_key(struct randomness *r, unsigned level)
+{
+  struct dsa_public_key public;
+  struct dsa_private_key private;
+  struct lsh_string *key = NULL;
+
+  dsa_public_key_init(&public);
+  dsa_private_key_init(&private);
+
+  assert(r->quality == RANDOM_GOOD);
+  
+  if (dsa_generate_keypair(&public, &private,
+			   r, lsh_random,
+			   NULL, progress,
+			   512 + 64 * level))
+    {
+      key = lsh_sexp_format(0, "(private-key(dsa(p%b)(q%b)(g%b)(y%b)(x%b)))",
+			    public.p, public.q, public.g, public.y,
+			    private.x);
+    }
+
+  dsa_public_key_clear(&public);
+  dsa_private_key_clear(&private);
+  return key;
+}
+
+static struct lsh_string *
+rsa_generate_key(struct randomness *r, uint32_t bits)
+{
+  struct rsa_public_key public;
+  struct rsa_private_key private;
+  struct lsh_string *key = NULL;
+
+  rsa_public_key_init(&public);
+  rsa_private_key_init(&private);
+
+  assert(r->quality == RANDOM_GOOD);
+  
+  if (rsa_generate_keypair(&public, &private,
+			   r, lsh_random,
+			   NULL, progress,
+			   bits, E_SIZE))
+    {
+      /* FIXME: Use rsa-pkcs1 or rsa-pkcs1-sha1? */
+      /* FIXME: Some code duplication with
+	 rsa.c:do_rsa_public_spki_key */
+      key = lsh_sexp_format(0, "(private-key(rsa-pkcs1(n%b)(e%b)"
+			    "(d%b)(p%b)(q%b)(a%b)(b%b)(c%b)))",
+			    public.n, public.e,
+			    private.d, private.p, private.q,
+			    private.a, private.b, private.c);
+    }
+  rsa_public_key_clear(&public);
+  rsa_private_key_clear(&private);
+  return key;
+}
 int
 main(int argc, char **argv)
 {

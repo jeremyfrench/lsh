@@ -64,7 +64,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	crypto.c \
 	daemon.c \
 	debug.c dh_exchange.c \
-	dsa.c dsa_keygen.c encrypt.c \
+	dsa.c encrypt.c \
 	exception.c \
 	format.c gc.c \
 	gateway.c gateway_channel.c gateway_commands.c \
@@ -79,7 +79,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	randomness.c \
 	read_data.c read_file.c read_line.c read_packet.c \
 	reaper.c resource.c \
-	rsa.c rsa_keygen.c \
+	rsa.c \
 	server.c server_authorization.c server_keyexchange.c \
 	server_password.c server_publickey.c \
 	server_pty.c server_session.c server_userauth.c \
