@@ -41,14 +41,16 @@
 #include "lookup_verifier.h"
 #include "randomness.h"
 #include "service.h"
-#include "ssh.h"
+#include "sexp.h"
 #include "spki.h"
+#include "ssh.h"
 #include "tcpforward_commands.h"
 #include "tty.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <locale.h>
 #include <stdio.h>
@@ -77,70 +79,156 @@
 
 /* GABA:
    (class
-     (name sloppy_host_db)
+     (name client_host_db)
      (super lookup_verifier)
      (vars
+       (db object spki_context)
+       (access object sexp)
+       (host object address_info)
+       ; Allow unauthorized keys
+       (sloppy . int)
+       ; If non-null, append an ACL for the received key to this file.
+       (file object abstract_write)
        (hash object hash_algorithm) ; For fingerprinting
-       (algorithm object signature_algorithm)))
+       ;; (algorithm object signature_algorithm)
+       ))
 */
 
 static struct verifier *
-do_sloppy_lookup(struct lookup_verifier *c,
+do_client_lookup(struct lookup_verifier *c,
 		 int method,
 		 struct lsh_string *keyholder UNUSED,
 		 struct lsh_string *key)
 {
-  CAST(sloppy_host_db, self, c);
+  CAST(client_host_db, self, c);
+  struct spki_subject *subject;
 
-  if (method != ATOM_SSH_DSS)
-    return NULL;
-  
-  if (!quiet_flag)
+  switch (method)
     {
-      /* Display fingerprint */
-      struct sexp *e;
-      struct lsh_string *canonical;
-      struct hash_instance *hash;
-      struct lsh_string *digest;
-      
-      e = keyblob2spki(key);
+    case ATOM_SSH_DSS:
+      {
+	struct dsa_verifier *v = make_ssh_dss_verifier(key->length, key->data);
+	if (!v)
+	  {
+	    werror("do_client_lookup: Invalid ssh-dss key.\n");
+	    return NULL;
+	  }
+	subject = SPKI_LOOKUP(self->db,
+			      dsa_to_spki_public_key(&v->public),
+			      &v->super);
+	assert(subject);
+	assert(subject->verifier);
+	break;
+      }
+    case ATOM_SPKI:
+      {
+	struct sexp *e = string_to_sexp(key, 0);
+	if (!e)
+	  {
+	    werror("do_client_lookup: Invalid spki s-expression.\n");
+	    return NULL;
+	  }
+	  
+	subject = SPKI_LOOKUP(self->db, e, NULL);
+	if (!subject)
+	  {
+	    werror("do_client_lookup: Invalid spki key.\n");
+	    return NULL;
+	  }
+	if (!subject->verifier)
+	  {
+	    werror("do_client_lookup: Valid SPKI subject, but no key available.\n");
+	    return NULL;
+	  }
+	break;
+      }
+    default:
+      werror("do_client_lookup: Unknown key type. Should not happen!\n");
+      return NULL;
+    }
 
-      if (!e)
+  assert(subject->key);
+  
+  /* Check authorization */
+
+  if (SPKI_AUTHORIZE(self->db, subject, self->access))
+    {
+      verbose("SPKI authorization successful!");
+    }
+  else
+    {
+      verbose("SPKI authorization failed.");
+      if (!self->sloppy)
+	return NULL;
+      
+      /* Ok, let's see if we want to use this untrusted key. */
+      if (!quiet_flag)
 	{
-	  werror("Invalid host key.\n");
-	  return NULL;
+	  /* Display fingerprint */
+	  struct lsh_string *fingerprint
+	    = hash_string(self->hash,
+			  sexp_format(subject->key, SEXP_CANONICAL, 0),
+			  1);
+			  
+	  if (!yes_or_no(ssh_format("Received unauthenticated key for host %S\n"
+				    "Fingerprint: %lfxS\n"
+				    "Do you trust this key? (y/n) ",
+				    self->host->ip, fingerprint), 0, 1))
+	    return NULL;
 	}
       
-      canonical = SEXP_FORMAT(e, SEXP_CANONICAL, 0);
-      hash = MAKE_HASH(self->hash);
-      digest = lsh_string_alloc(hash->hash_size);
-      
-      HASH_UPDATE(hash, canonical->length, canonical->data);
-      HASH_DIGEST(hash, digest->data);
-      KILL(hash);
-
-      if (!yes_or_no(ssh_format("Received unauthenticated key for host FOO\n"
-				"Fingerprint: %lxS\n"
-				"Do you trust this key? (y/n) ",
-				/* keyholder, */ digest), 0, 1))
+      if (self->file)
 	{
-	  lsh_string_free(canonical);
-	  lsh_string_free(digest);
-	  return NULL;
+#if 0
+	  struct io_fd *fd = io_write_file(self->backend, self->filename,
+					   O_CREAT | O_APPEND | O_WRONLY,
+					   0004, 500, NULL,
+					   make_report_exception_handler(EXC_IO, EXC_IO,
+									 "Writing new ACL: "
+									 &default_exception_handler,
+									 HANDLER_CONTEXT));
+	  if (fd)
+	    {
+#endif
+	      A_WRITE(self->file, ssh_format("\n; ACL for host %z\n", self->host->ip));
+	      A_WRITE(self->file,
+		      sexp_format(sexp_l(2, sexp_a(ATOM_ACL),
+					 sexp_l(3, sexp_a(ATOM_ENTRY),
+						subject->key,
+						sexp_l(2, sexp_a(ATOM_TAG),
+						       self->access,
+						       -1),
+						-1),
+					 -1),
+				  SEXP_TRANSPORT, 0));
+	      A_WRITE(self->file, ssh_format("\n"));
+#if 0
+	      close_fd_nicely(&fd->super, 0);
+	    }
+	  else
+	    werror("Failed to open '%z' (errno = %i): %z.\n",
+		   self->filename, errno, STRERROR(errno));
+#endif
 	}
-      /* Save key */
     }
   
-  return MAKE_VERIFIER(self->algorithm, key->length, key->data);
+  return subject->verifier;
 }
 
 static struct lookup_verifier *
-make_sloppy_host_db(struct signature_algorithm *a)
+make_client_host_db(struct spki_context *db,
+		    struct address_info *host,
+		    int sloppy,
+		    struct abstract_write *file)
 {
-  NEW(sloppy_host_db, res);
+  NEW(client_host_db, res);
 
-  res->super.lookup = do_sloppy_lookup;
-  res->algorithm = a;
+  res->super.lookup = do_client_lookup;
+  res->db = db;
+  res->access = make_ssh_hostkey_tag(host);
+  res->host = host;
+  res->sloppy = sloppy;
+  res->file = file;
   res->hash = &sha1_algorithm;
 
   return &res->super;
@@ -483,7 +571,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      struct lsh_string *idfile = 
 		ssh_format("%lz/.lsh/identity%c", home, 0);
 	      struct keypair *id;
-	      if ((id = read_spki_key_file(idfile->data, self->random, self->handler)))
+	      if ((id = read_spki_key_file(idfile->data,
+					   make_linear_alist(1, ATOM_DSA,
+							     make_dsa_algorithm(self->random),
+							     -1),
+					   self->handler)))
 		{
 		  verbose("Adding identity %S\n", idfile);
 		  object_queue_add_tail(&self->identities, &id->super);
@@ -503,7 +595,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case 'i':
       {
 	struct keypair *id;
-	if ((id = read_spki_key_file(arg, self->random, self->handler)))
+	/* FIXME: Get the algorithms alist from some parameter. */
+	if ((id = read_spki_key_file(arg,
+				     make_linear_alist(1, ATOM_DSA,
+						       make_dsa_algorithm(self->random),
+						       -1),
+				     self->handler)))
 	  {
 	    verbose("Adding identity %s\n", arg);
 	    object_queue_add_tail(&self->identities, &id->super);
@@ -676,11 +773,12 @@ int main(int argc, char **argv)
 
   struct randomness *r;
   struct diffie_hellman_method *dh;
-  struct keyexchange_algorithm *kex;
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
+  struct lookup_verifier *lookup;
+  
   struct alist *lookup_table; /* Alist of signature-algorithm -> lookup_verifier */
-
+  
   /* int in, out, err; */
 
   /* FIXME: A single exception handler everywhere seems a little to
@@ -706,21 +804,31 @@ int main(int argc, char **argv)
   r = make_reasonably_random();
   dh = make_dh1(r);
 
-  /* No randomness is needed for verifying signatures */
-  lookup_table = make_alist(1,
-			    ATOM_SSH_DSS, make_sloppy_host_db(make_dsa_algorithm(NULL)),
-			    -1); 
-
-  kex = make_dh_client(dh, lookup_table);
-  algorithms = many_algorithms(2, 
-			       ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
+  /* FIXME: Is this really used? */
+  algorithms = many_algorithms(1,
 			       ATOM_SSH_DSS, make_dsa_algorithm(r),
 			       -1);
-
 
   options = make_options(algorithms, backend, r, handler, &lsh_exit_code);
 
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
+  
+  /* No randomness is needed for verifying signatures */
+  lookup = make_client_host_db(make_spki_context
+			       (make_alist(1,
+					   ATOM_DSA,
+					   make_dsa_algorithm(NULL), -1)),
+			       options->remote,
+			       1,
+			       NULL);
+  lookup_table = make_alist(2,
+			    ATOM_SSH_DSS, lookup,
+			    ATOM_SPKI, lookup,
+			    -1); 
+
+  ALIST_SET(algorithms,
+	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+	    make_dh_client(dh, lookup_table));
   
   make_kexinit
     = make_simple_kexinit(r,
