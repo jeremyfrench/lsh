@@ -1,5 +1,8 @@
 2004-03-01  Niels Möller  <nisse@lysator.liu.se>
 
+	* Makefile.am (EXTRA_PROGRAMS): Don't build argp-test, as it's the
+	only program depending on the functions asprintf/vsnprintf.
+
 	* configure.ac: Check for sleep and getpid.
 
 	* argp-parse.c: Make inclusion of unistd.h conditional.
