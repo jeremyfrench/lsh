@@ -787,7 +787,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      }
 	    /* FIXME: We need a non-varargs constructor for lists. */
 	    if (get_pty)
-	      session_requests = make_object_list(2, get_pty, start_shell(), -1);
+	      session_requests
+		= make_object_list(2,
+				   /* Ignore EXC_CHANNEL_REQUEST for the pty allocation call. */
+				   make_catch_apply
+				   (make_catch_handler_info(EXC_ALL, EXC_CHANNEL_REQUEST,
+							    0, NULL),
+				    get_pty),
+				   start_shell(), -1);
 	    else
 #endif /* WITH_PTY_SUPPORT */
 	      session_requests = make_object_list(1, start_shell(), -1);
@@ -986,6 +993,7 @@ do_lsh_default_handler(struct exception_handler *s,
       case EXC_SERVICE:
       case EXC_SEXP_SYNTAX:
       case EXC_SPKI_TYPE:
+      case EXC_CHANNEL_REQUEST:
 	werror("lsh: %z\n", e->msg);
 	*self->status = EXIT_FAILURE;
 	break;
