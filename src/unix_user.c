@@ -214,12 +214,10 @@ static struct resource *
 make_process_resource(pid_t pid, int signal)
 {
   NEW(process_resource, self);
-  self->super.alive = 1;
+  resource_init(&self->super, do_kill_process);
 
   self->pid = pid;
   self->signal = signal;
-
-  self->super.kill = do_kill_process;
 
   return &self->super;
 }
