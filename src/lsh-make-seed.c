@@ -31,7 +31,9 @@
 
 #include "nettle/yarrow.h"
 
+#include <errno.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -162,10 +164,50 @@ enum source_type
     NSOURCES
   };
 
+#define DEVRANDOM_SIZE 40
 
 static void
 get_dev_random(struct yarrow256_ctx *ctx, enum source_type source)
 {
+  static const char *names[] = { "/dev/random", "/dev/urandom", NULL };
+
+  int fd = -1;
+  unsigned i;
+  int res;
+  
+  char buffer[DEVRANDOM_SIZE];
+
+  for (i = 0; names[i]; i++)
+    {
+      fd = open("/dev/random", O_RDONLY);
+      if (fd >= 0)
+	break;
+    }
+
+  if (fd < 0)
+    return;
+
+  verbose("Reading %z\n", names[i]);
+
+  do
+    { res = read(fd, buffer, DEVRANDOM_SIZE); }
+  while ( (res < 0) && (errno == EINTR));
+  
+  if (res < 0)
+    werror("Reading from %z failed (errno = %i): %z\n",
+	   names[i], errno, STRERROR(errno));
+
+  else if (res > 0)
+    {
+      /* Count 4 bits of entropy for each byte. */
+
+      yarrow256_update(ctx, source, res * 4, res, buffer);
+    }
+  else
+    werror("unix_random.c: No data available on %z\n",
+	   names[i]);
+  
+  close(fd);
 }
 
 static void
@@ -315,6 +357,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 static void
 get_interact(struct yarrow256_ctx *ctx, enum source_type source)
 {
+  werror("Please type some random data.\n");
 }
 
 int
