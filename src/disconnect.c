@@ -75,6 +75,10 @@ do_disconnect(struct packet_handler *closure UNUSED,
   EXCEPTION_RAISE(connection->e, &disconnect_exception);
 }
 
+struct packet_handler disconnect_handler =
+{ STATIC_HEADER, do_disconnect };
+
+#if 0
 struct packet_handler *make_disconnect_handler(void)
 {
   NEW(packet_handler, res);
@@ -82,3 +86,4 @@ struct packet_handler *make_disconnect_handler(void)
   res->handler = do_disconnect;
   return res;
 }
+#endif
