@@ -51,7 +51,7 @@ int daemon_started_by_inetd(void);
 int daemon_disable_core(void);
 int daemon_pidfile(const char *name);
 int daemon_init(void);
-int daemon_close(const char *name)
+int daemon_close(const char *name);
 
 #ifdef __cplusplus
 }
