@@ -164,13 +164,12 @@ do_format_sexp_string(struct sexp *s,
     case SEXP_ADVANCED:
     case SEXP_INTERNATIONAL:
     case SEXP_CANONICAL:
-      if (self->display)
-	return ssh_format("[%lfS]%lfS",
-			  do_format_simple_string(self->display, style, indent + 1),
-			  do_format_simple_string(self->contents, style, indent));
-      else
-	return ssh_format("%lfS",
-			  do_format_simple_string(self->contents, style, indent));
+      return (self->display)
+	? ssh_format("[%lfS]%lfS",
+		     do_format_simple_string(self->display, style, indent + 1),
+		     do_format_simple_string(self->contents, style, indent))
+	: do_format_simple_string(self->contents, style, indent);
+      
     default:
       fatal("do_format_sexp_string: Unknown output style.\n");
     }
@@ -345,12 +344,17 @@ make_iter_cons(struct sexp *s)
   return &iter->super;
 }
 
+static int
+is_short(struct lsh_string *s)
+{
+  return ( (s->length < 15)
+	   && !memchr(s->data, '\n', s->length) );
+}
+
 static struct lsh_string *
 do_format_sexp_tail(struct sexp_cons *c,
 		    int style, unsigned indent)
 {
-  int use_space = 0;
-  
   if (c == &sexp_nil)
     return ssh_format(")");
 
@@ -360,25 +364,32 @@ do_format_sexp_tail(struct sexp_cons *c,
       fatal("Internal error!\n");
     case SEXP_ADVANCED:
     case SEXP_INTERNATIONAL:
-      use_space = 1;
-      /* Fall through */
+      {
+	struct lsh_string *head = sexp_format(c->car, style, indent);
+	struct lsh_string *tail = do_format_sexp_tail(c->cdr, style, indent);
+
+	/* NOTE: Allows arbitrarily many small items on a single line */
+	if (is_short(head))
+	  return ssh_format(" %ls%ls", head, tail);
+
+	else
+	  {
+	    UINT8 *pad;
+	    struct lsh_string *res = ssh_format(" %ls%lr%ls", head,
+						indent+1, &pad, tail);
+	    *pad++ = '\n';
+	    memset(pad, ' ', indent);
+	    return res;
+	  }
+      }      
     case SEXP_CANONICAL:
-      return ssh_format(use_space ? " %ls%ls" : "%ls%ls",
+      return ssh_format("%ls%ls",
 			sexp_format(c->car, style, indent),
 			do_format_sexp_tail(c->cdr, style, indent));
     default:
       fatal("do_format_sexp_tail: Unknown output style.\n");
     }
 }
-
-#if 0
-static int
-is_short(struct lsh_string *s)
-{
-  return ( (s->length < 15)
-	   && !memchr(s->data, '\n', s->length); )
-}
-#endif
 
 static struct lsh_string *
 do_format_sexp_cons(struct sexp *s,
@@ -392,9 +403,8 @@ do_format_sexp_cons(struct sexp *s,
       fatal("Internal error!\n");
     case SEXP_ADVANCED:
     case SEXP_INTERNATIONAL:
-#if 0
       {
-	struct lsh_string *head = format_sexp(self->car, style, indent + 1);
+	struct lsh_string *head = sexp_format(self->car, style, indent + 1);
 
 	if (is_short(head))
 	  return ssh_format("(%lfS%lfS",
@@ -402,10 +412,9 @@ do_format_sexp_cons(struct sexp *s,
 						      indent + 2 + head->length));
 	else
 	  return ssh_format("(%lfS\n", do_format_sexp_tail(self->cdr, style,
-							 indent + 1));
+							   indent + 1));
       }
-#endif
-      /* Fall through */
+
     case SEXP_CANONICAL:
       return ssh_format("(%ls", do_format_sexp_tail(self, style, indent));
     default:
@@ -529,12 +538,21 @@ do_format_sexp_vector(struct sexp *e,
 {
   CAST(sexp_vector, v, e);
 
-  unsigned i;
-  UINT32 size;
-  int use_space = 0;
+  struct lsh_string *res;
+  UINT8 *dst;
   
-  struct lsh_string **elements = alloca(LIST_LENGTH(v->elements)
-					* sizeof(struct lsh_string *) );
+  CAST_SUBTYPE(sexp, car, LIST(v->elements)[0]);
+      
+  assert(LIST_LENGTH(v->elements));
+
+  indent++;
+  
+  if (LIST_LENGTH(v->elements) == 1)
+    {
+      CAST_SUBTYPE(sexp, car, LIST(v->elements)[0]);
+
+      return ssh_format("(%lfS)", sexp_format(car, style, indent));
+    }
   
   switch(style)
     {
@@ -542,15 +560,75 @@ do_format_sexp_vector(struct sexp *e,
       fatal("Internal error!\n");
     case SEXP_ADVANCED:
     case SEXP_INTERNATIONAL:
-      use_space = 1;
-      /* Fall through */
+      {
+	struct lsh_string **elements;
+
+	unsigned i;
+	UINT32 size;
+
+	/* align_after means formatting like
+	 *
+	 * (tag a
+	 *      b)
+	 */
+	unsigned align_after = 0;
+	
+	struct lsh_string *tag = sexp_format(car, style, indent);
+
+	if (is_short(tag))
+	  {
+	    indent += tag->length + 1;
+	    align_after = 1;
+	  }
+
+	/* NOTE: The first element is never used. */
+	elements = alloca(LIST_LENGTH(v->elements)
+			  * sizeof(struct lsh_string *) );
+	
+	for (i = 1, size = 0; i<LIST_LENGTH(v->elements); i++)
+	  {
+	    CAST_SUBTYPE(sexp, o, LIST(v->elements)[i]);
+	    
+	    elements[i] = sexp_format(o, style, indent);
+	    size += elements[i]->length;
+	  }
+
+	/* Count a single character separator between each element. */
+	size += LIST_LENGTH(v->elements) - 1;
+	
+	/* Count extra indentation */
+	size += indent * (LIST_LENGTH(v->elements) + !align_after - 2);
+
+	res = ssh_format("(%lS%lr)", tag, size, &dst);
+
+	for (i = 1; i<LIST_LENGTH(v->elements); i++)
+	  {
+	    if (i <= align_after)
+	      *dst++ = ' ';
+	    else
+	      {
+		*dst++ = '\n';
+		memset(dst, ' ', indent);
+		dst += indent;
+	      }
+	    memcpy(dst, elements[i]->data, elements[i]->length);
+	    dst += elements[i]->length;
+	    
+	    lsh_string_free(elements[i]);
+	  }
+
+	break;
+      }
     case SEXP_CANONICAL:
       {
-	struct lsh_string *res;
-	UINT8 *dst;
-	
-	assert(LIST_LENGTH(v->elements));
-	for (i = 0, size = 2; i<LIST_LENGTH(v->elements); i++)
+	struct lsh_string **elements
+	  = alloca(LIST_LENGTH(v->elements) 
+		   * sizeof(struct lsh_string *) );
+
+	unsigned i;
+	UINT32 size;
+
+	for (i = 0, size = 0; i<LIST_LENGTH(v->elements); i++)
 	  {
 	    CAST_SUBTYPE(sexp, o, LIST(v->elements)[i]);
 	    
@@ -558,32 +636,26 @@ do_format_sexp_vector(struct sexp *e,
 	    size += elements[i]->length;
 	  }
 
-	if (use_space)
-	  size += LIST_LENGTH(v->elements) - 1;
+	res = ssh_format("(%lr)", size, &dst);
 	
-	res = lsh_string_alloc(size);
-	dst = res->data;
-	
-	*dst++ = '(';
 	for (i = 0; i<LIST_LENGTH(v->elements); i++)
 	  {
-	    if (i && use_space)
-	      *dst++ = ' ';
-	    
 	    memcpy(dst, elements[i]->data, elements[i]->length);
 	    dst += elements[i]->length;
 	    
 	    lsh_string_free(elements[i]);
 	  }
-	*dst++ = ')';
 	
-	assert(dst == (res->data + res->length));
-	
-	return res;
+	break;
       }
     default:
       fatal("do_format_sexp_vector: Unknown output style.\n");
     }
+
+  assert( (dst + 1) == (res->data + res->length));
+  
+  return res;
+
 }
 
 struct sexp *
@@ -700,15 +772,26 @@ encode_base64_group(UINT32 n, UINT8 *dest)
     }
 }
 
+/* In pretty-print mode, print 40 characters or 10 groups on each
+ * line. */
+#define GROUPS_PER_LINE 10
+
 struct lsh_string *
 encode_base64(struct lsh_string *s,
 	      const char *delimiters,
-	      unsigned indent UNUSED,
+	      unsigned indent,
 	      int free)				 
 {
   UINT32 full_groups = (s->length) / 3;
   unsigned last = (s->length) % 3;
-  unsigned length =  (full_groups + !!last) * 4;
+
+  /* We never fold after the last full group, so we don't fold strings
+   * with full_groups <= GROUPS_PER_LINE. */
+  unsigned linebreaks = ( (indent && full_groups)
+			  ? (full_groups - 1) / GROUPS_PER_LINE
+			  : 0);
+  unsigned length = (full_groups + !!last) * 4 + (indent + 1) * linebreaks;
+
   UINT8 *src = s->data;
   UINT8 *dst;
     
@@ -724,11 +807,22 @@ encode_base64(struct lsh_string *s,
       /* Loop over all but the last group. */
       for (i=0; i<full_groups; dst += 4, src += 3, i++)
 	{
+	  if (indent && i && !(i % GROUPS_PER_LINE))
+	    {
+	      assert(linebreaks);
+	      linebreaks--;
+	      *dst++ = '\n';
+	      memset(dst, ' ', indent);
+	      dst += indent;
+	    }
 	  encode_base64_group( (src[0] << 16)
 			       | (src[1] << 8)
 			       | src[2], dst);
 	}
     }
+
+  assert(!linebreaks);
+  
   switch(last)
     {
     case 0:
