@@ -27,9 +27,12 @@
 
 #include "crypto.h"
 #include "format.h"
+#include "interact.h"
 #include "io.h"
+#if 0
 /* For read_password() */
 #include "password.h"
+#endif
 #include "randomness.h"
 #include "sexp.h"
 #include "srp.h"
@@ -65,6 +68,9 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (name srp_gen_options)
      (vars
        (backend object io_backend)
+
+       (tty object interact)
+       
        (e object exception_handler)
        (G object abstract_group)
        (H object hash_algorithm)
@@ -86,6 +92,10 @@ make_srp_gen_options(struct io_backend *backend,
   NEW(srp_gen_options, self);
 
   self->backend = backend;
+
+  /* We don't need window change tracking. */
+  self->tty = make_unix_interact(NULL);
+  
   self->e = e;
 
   self->G = make_ssh_ring_srp_1();
@@ -166,11 +176,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  struct lsh_string *pw;
 	  struct lsh_string *again;
 
-	  pw = read_password(500, ssh_format("Enter new SRP password: "), 1);
+	  pw = INTERACT_READ_PASSWORD(self->tty, 500,
+				      ssh_format("Enter new SRP password: "), 1);
 	  if (!pw)
 	    argp_failure(state, EXIT_FAILURE, 0, "Aborted.");
 
-	  again = read_password(500, ssh_format("Again: "), 1);
+	  again = INTERACT_READ_PASSWORD(self->tty, 500,
+					 ssh_format("Again: "), 1);
 	  if (!again)
 	    argp_failure(state, EXIT_FAILURE, 0, "Aborted.");
 
