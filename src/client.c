@@ -499,8 +499,11 @@ client_options[] =
   { "background", 'B', NULL, 0, "Put process into the background. Implies -N.", 0 },
   { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },
   { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
-  { "subsystem", 'C', "subsystem-name", 0, "Connect to given subsystem", 0 },
-
+#if WITH_PTY_SUPPORT 
+  { "subsystem", 'C', "subsystem-name", 0, "Connect to given subsystem. Implies --no-pty.", 0 },
+#else
+  { "subsystem", 'C', "subsystem-name", 0, "Connect to given subsystem.", 0 },
+#endif
   /* { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 }, */
   { NULL, 0, NULL, 0, "Universal not:", 0 },
   { "no", 'n', NULL, 0, "Inverts the effect of the next modifier", 0 },
@@ -1161,6 +1164,9 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       client_add_action(options,
 			client_subsystem_session(options,
 						 ssh_format("%lz", arg)));
+#if WITH_PTY_SUPPORT
+      options->with_pty = 0;
+#endif
       break;
 
     case 'L':
