@@ -33,6 +33,8 @@
 #include "lookup_verifier.h"
 #include "publickey_crypto.h"
 
+#include <assert.h>
+
 #include "server_publickey.c.x"
 
 /* GABA:
@@ -119,33 +121,32 @@ do_authenticate(struct userauth *s,
       
       v = LOOKUP_VERIFIER(lookup, algorithm, user, keyblob);
 
+      if (!v)
+	{
+	  static const struct exception unauthorized_key
+	    = STATIC_EXCEPTION(EXC_USERAUTH,
+			       "Unauthorized public key.");
+	  
+	  EXCEPTION_RAISE(e, &unauthorized_key);
+	  goto fail;
+	}
+	
       if (!check_key)
 	{
-	  lsh_string_free(username);
-	  if (v)
-	    {
-	      struct lsh_string *reply = format_userauth_pk_ok(algorithm, keyblob);
-	      lsh_string_free(keyblob);
-
-	      EXCEPTION_RAISE(e, make_userauth_special_exception(reply, NULL));
-	    }
-	  else
-	    {
-	      static const struct exception unauthorized_key
-		= STATIC_EXCEPTION(EXC_USERAUTH,
-				   "Unauthorized public key.");
-	      
-	      lsh_string_free(keyblob);
-	      EXCEPTION_RAISE(e, &unauthorized_key);
-	    }
-	  return;
+	  assert(v);
+	  EXCEPTION_RAISE(e, make_userauth_special_exception
+			  (format_userauth_pk_ok(algorithm, keyblob),
+			   NULL));
+	  goto fail;
 	}
       else 
 	{
 	  struct lsh_string *signed_data;
 
+	  assert(v);
+	  
 #if DATAFELLOWS_WORKAROUNDS
-	  if ( v && (algorithm == ATOM_SSH_DSS)
+	  if ( (algorithm == ATOM_SSH_DSS)
 	       && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
 	    v = make_dsa_verifier_kludge(v);
 	  
