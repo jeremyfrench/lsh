@@ -1,5 +1,9 @@
 2002-11-07  Niels Möller  <niels@s3.kth.se>
 
+	* configure.ac: Don't use quotes with AM_CONFIG_HEADER, it seems
+	to confuse automake.
+	Bugfix: Don't generate nettle/Makefile here.
+
 	* src/testsuite/functions.sh: Tolerate unset failing.
 
 2002-11-04  Pontus Sköld  <pont@soua.net>
