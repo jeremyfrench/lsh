@@ -26,6 +26,7 @@
 #include "spki.h"
 
 #include "atoms.h"
+#include "crypto.h"
 #include "format.h"
 #include "parse.h"
 #include "publickey_crypto.h"
@@ -241,6 +242,61 @@ do_spki_private2public(struct command *s UNUSED,
 struct command spki_public2private
 = STATIC_COMMAND(do_spki_private2public);
 
+
+/* Create an SPKI hash from an s-expression. */
+/* GABA:
+   (class
+     (name spki_hash)
+     (super command)
+     (vars
+       (name . int)
+       (algorithm object hash_algorithm)))
+*/
+
+static void do_spki_hash(struct command *s,
+			 struct lsh_object *a,
+			 struct command_continuation *c,
+			 struct exception_handler *e UNUSED)
+{
+  CAST(spki_hash, self, s);
+  CAST_SUBTYPE(sexp, o, a);
+
+  struct lsh_string *canonical = SEXP_FORMAT(o, SEXP_CANONICAL, 0);
+  struct hash_instance *hash = MAKE_HASH(self->algorithm);
+  struct lsh_string *digest = lsh_string_alloc(hash->hash_size);
+  
+  HASH_UPDATE(hash, canonical->length, canonical->data);
+  HASH_DIGEST(hash, digest->data);
+
+  lsh_string_free(canonical);
+  KILL(hash);
+  
+  COMMAND_RETURN(c, sexp_l(3,
+			   sexp_a(ATOM_HASH),
+			   sexp_a(self->name),
+			   make_sexp_string(NULL, digest),
+			   -1));
+}
+
+struct command *
+make_spki_hash(int name, struct hash_algorithm *algorithm)
+{
+  NEW(spki_hash, self);
+  self->super.call = do_spki_hash;
+  self->name = name;
+  self->algorithm = algorithm;
+
+  return &self->super;
+}
+
+const struct spki_hash spki_hash_md5 =
+{ STATIC_COMMAND(do_spki_hash), ATOM_MD5, &md5_algorithm };
+
+const struct spki_hash spki_hash_sha1 =
+{ STATIC_COMMAND(do_spki_hash), ATOM_SHA1, &sha1_algorithm };
+
+
+  
 /* Processes an already parsed S-expression, and inserts it into an alist.
  * FIXME: No, it doesn't; it returns the keypair to its continuation. */
 /* GABA:

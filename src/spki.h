@@ -55,6 +55,16 @@ struct sexp *keyblob2spki(struct lsh_string *keyblob);
 extern struct command spki_public2private;
 #define PRIVATE2PUBLIC (&spki_public2private.super)
 
+#if 0
+extern struct spki_hash spki_hash_md5;
+#define SPKI_HASH_MD5 (&spki_hash_md5.super.super)
+extern struct spki_hash spki_hash_sha1;
+#define SPKI_HASH_SHA1 (&spki_hash_sha1.super.super)
+#endif
+
+struct command *
+make_spki_hash(int name, struct hash_algorithm *algorithm);
+
 struct command *
 make_spki_parse_key(struct randomness *random);
 
