@@ -178,35 +178,39 @@ DEFINE_COMMAND2(gateway_accept)
    (expr
      (name gateway_setup)
      (params
-       (listen object command))
+       (local object local_info))
      (expr
        (lambda (connection)
          (connection_remember connection
 	   (listen
 	     (lambda (peer)
-	       (gateway_accept connection peer)))))))
+	       (gateway_accept connection peer))
+	       ;; prog1, to delay binding until we're connected.
+	       (bind_local (prog1 local connection)) )))))
 */
 
 struct command *
-make_gateway_setup(struct command *listen)
+make_gateway_setup(struct local_info *local)
 {
   CAST_SUBTYPE(command, res,
-	       gateway_setup(listen));
+	       gateway_setup(local));
 
   trace("make_gateway_setup\n");
 
   return res;
 }
 
+#if 0
 DEFINE_COMMAND(gateway_setup_command)
      (struct command *s UNUSED,
       struct lsh_object *a,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)
 {
-  CAST_SUBTYPE(command, listen, a);
+  CAST(local, local_info, a);
   CAST_SUBTYPE(command, res,
-	       gateway_setup(listen));
+	       gateway_setup(local));
 
   COMMAND_RETURN(c, res);
 }
+#endif

@@ -25,7 +25,7 @@
 #ifndef GATEWAY_COMMANDS_H_INCLUDED
 #define GATEWAY_COMMANDS_H_INCLUDED
 
-#include "command.h"
+#include "io.h"
 
 extern struct command gateway_init;
 #define GATEWAY_INIT (&gateway_init.super)
@@ -34,7 +34,7 @@ extern struct command_2 gateway_accept;
 #define GATEWAY_ACCEPT (&gateway_accept.super.super)
 
 struct command *
-make_gateway_setup(struct command *listen);
+make_gateway_setup(struct local_info *local);
 
 extern struct command gateway_setup_command;
 #define GATEWAY_SETUP (&gateway_setup_command.super)
