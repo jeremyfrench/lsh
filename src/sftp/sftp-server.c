@@ -111,24 +111,31 @@ struct sftp_dir
   DIR *dir;
   char *name;
 };
-  
+
+/* And we need the position, so we know if we need to seek.
+ * Not all fd:s have an internal file position */
+struct sftp_file
+{
+  int fd;
+  off_t position;
+};
+
 struct sftp_handle
 {
   enum sftp_handle_type
-  { HANDLE_UNUSED = 0, HANDLE_FILE, HANDLE_DIRECTORY } type;
+  { HANDLE_UNUSED = 0, HANDLE_TYPE_FILE, HANDLE_TYPE_DIRECTORY } type;
 
   union
   {
-    int fd;
+    struct sftp_file file;
     struct sftp_dir dir;
   } u;
 };
 
-#define handle_t UINT32
-
 #define HANDLE_TYPE(ctx, handle) ((ctx)->handles[handle].type)
+
 #define HANDLE_DIR(ctx, handle) ((ctx)->handles[handle].u.dir)
-#define HANDLE_FD(ctx, handle) ((ctx)->handles[handle].u.fd)
+#define HANDLE_FILE(ctx, handle) ((ctx)->handles[handle].u.file)
 
 struct sftp_ctx
 {
@@ -306,7 +313,7 @@ sftp_get_name(struct sftp_input *i)
 }
 
 static int 
-sftp_handle_used(struct sftp_ctx *ctx, handle_t handle)
+sftp_handle_used(struct sftp_ctx *ctx, UINT32 handle)
 {
   return (handle < SFTP_MAX_HANDLES)
     && (ctx->handles[handle].type != HANDLE_UNUSED);
@@ -315,9 +322,9 @@ sftp_handle_used(struct sftp_ctx *ctx, handle_t handle)
 static int
 sftp_new_handle(struct sftp_ctx *ctx,
 		enum sftp_handle_type type,
-		handle_t *handle)
+		UINT32 *handle)
 {
-  handle_t i;
+  UINT32 i;
 
   assert(type != HANDLE_UNUSED);
 
@@ -338,7 +345,7 @@ sftp_new_handle(struct sftp_ctx *ctx,
 }
 
 static int
-sftp_get_handle(struct sftp_ctx *ctx, handle_t *handle)
+sftp_get_handle(struct sftp_ctx *ctx, UINT32 *handle)
 {
   UINT32 length;
   UINT32 value;
@@ -357,10 +364,10 @@ sftp_get_handle(struct sftp_ctx *ctx, handle_t *handle)
 static int
 sftp_get_handle_dir(struct sftp_ctx *ctx, struct sftp_dir **value)
 {
-  handle_t handle;
+  UINT32 handle;
 
   if (sftp_get_handle(ctx, &handle)
-      && (HANDLE_TYPE(ctx, handle) == HANDLE_DIRECTORY))
+      && (HANDLE_TYPE(ctx, handle) == HANDLE_TYPE_DIRECTORY))
     {
       *value = &HANDLE_DIR(ctx, handle);
       return 1;
@@ -370,14 +377,28 @@ sftp_get_handle_dir(struct sftp_ctx *ctx, struct sftp_dir **value)
 }
 
 static int
-sftp_get_handle_fd(struct sftp_ctx *ctx, int *fd)
+sftp_get_handle_file(struct sftp_ctx *ctx, struct sftp_file **f)
 {
-  handle_t handle;
+  UINT32 handle;
 
   if (sftp_get_handle(ctx, &handle)
-      && (HANDLE_TYPE(ctx, handle) == HANDLE_FILE))
+      && (HANDLE_TYPE(ctx, handle) == HANDLE_TYPE_FILE))
     {
-      *fd = HANDLE_FD(ctx, handle);
+      *f = &HANDLE_FILE(ctx, handle);
+      return 1;
+    }
+  else
+    return 0;
+}
+
+static int
+sftp_get_handle_fd(struct sftp_ctx *ctx, int *fd)
+{
+  struct sftp_file *f;
+
+  if (sftp_get_handle_file(ctx, &f))
+    {
+      *fd = f->fd;
       return 1;
     }
   else
@@ -385,7 +406,7 @@ sftp_get_handle_fd(struct sftp_ctx *ctx, int *fd)
 }
 
 static void
-sftp_put_handle(struct sftp_ctx *ctx, handle_t handle)
+sftp_put_handle(struct sftp_ctx *ctx, UINT32 handle)
 {
   sftp_put_uint32(ctx->o, 4);
   sftp_put_uint32(ctx->o, handle);
@@ -452,7 +473,7 @@ sftp_process_opendir(struct sftp_ctx *ctx)
 {
   const UINT8 *name;
   DIR* dir;
-  handle_t handle;
+  UINT32 handle;
 
   DEBUG (("sftp_process_opendir\n"));
   
@@ -469,11 +490,12 @@ sftp_process_opendir(struct sftp_ctx *ctx)
 
   /* Open successful */
 
-  if (!sftp_new_handle(ctx, HANDLE_DIRECTORY, &handle))
+  if (!sftp_new_handle(ctx, HANDLE_TYPE_DIRECTORY, &handle))
     return sftp_send_status(ctx, SSH_FX_FAILURE);
-  
+
   HANDLE_DIR(ctx, handle).dir = dir;
   HANDLE_DIR(ctx, handle).name = strdup(name);
+
   return sftp_send_handle(ctx, handle);
 }
 
@@ -572,6 +594,7 @@ sftp_process_lstat(struct sftp_ctx *ctx)
   return 1;
 }
 
+/* FIXME: Implement fstat for directories as well. */
 static int
 sftp_process_fstat(struct sftp_ctx *ctx)
 {
@@ -581,7 +604,7 @@ sftp_process_fstat(struct sftp_ctx *ctx)
 
   if (!sftp_get_handle_fd(ctx, &fd) )
     return sftp_bad_message(ctx);
-
+  
   
   if (fstat(fd, &st ) < 0 )
     return sftp_send_errno(ctx, errno);
@@ -785,7 +808,7 @@ sftp_process_open(struct sftp_ctx *ctx)
       int fd;
       int mode;
       struct stat sb;
-      handle_t handle;
+      UINT32 handle;
       
       switch (pflags & (SSH_FXF_READ | SSH_FXF_WRITE))
 	{
@@ -852,12 +875,14 @@ sftp_process_open(struct sftp_ctx *ctx)
 	  return sftp_send_status(ctx, SSH_FX_NO_SUCH_FILE);
 	}
 
-      if (!sftp_new_handle(ctx, HANDLE_FILE, &handle))
+      if (!sftp_new_handle(ctx, HANDLE_TYPE_FILE, &handle))
 	return sftp_send_status(ctx, SSH_FX_FAILURE);
 
       DEBUG (("sftp_process_open: handle = %d, fd = %d\n", handle, fd));
       
-      HANDLE_FD(ctx, handle) = fd;
+      HANDLE_FILE(ctx, handle).fd = fd;
+      HANDLE_FILE(ctx, handle).position = 0;
+
       sftp_send_handle(ctx, handle);
       return 1;
     }
@@ -867,20 +892,20 @@ sftp_process_open(struct sftp_ctx *ctx)
 static int
 sftp_process_close(struct sftp_ctx *ctx)
 {
-  handle_t handle;
+  UINT32 handle;
 
   if (sftp_get_handle(ctx, &handle) )
     {
       switch (HANDLE_TYPE(ctx, handle))
 	{
-	case HANDLE_FILE:
-	  if (close(HANDLE_FD(ctx, handle)) < 0)
+	case HANDLE_TYPE_FILE:
+	  if (close(HANDLE_FILE(ctx, handle).fd) < 0)
 	    /* FIXME: Should we do something on error ? */
 	    return sftp_send_errno(ctx, errno); 
 
 	  break;
 
-	case HANDLE_DIRECTORY:
+	case HANDLE_TYPE_DIRECTORY:
 	  if (closedir(HANDLE_DIR(ctx, handle).dir) < 0)
 	    /* FIXME: Should we do something on error ? */
 	    return sftp_send_errno(ctx, errno); 
@@ -906,28 +931,48 @@ sftp_process_close(struct sftp_ctx *ctx)
 
 #define SFTP_MAX_SIZE 32768
 
-#if !HAVE_PREAD
-/* Unlike the real pread, this function modifies the file pointer. */
 static ssize_t
-pread(int fd, void *buf, size_t count, off_t offset)
+sftp_read(struct sftp_file *f, void *buf, size_t count, off_t offset)
 {
-  if (lseek(fd, offset, SEEK_SET) == (off_t) -1)
-    return -1;
+  ssize_t done;
 
-  return read(fd, buf, count);
-}
+  if (offset != f->position)
+    {
+#if HAVE_PREAD
+      do
+	done = pread(f->fd, buf, count, offset);
+      while ( (done < 0) && (errno == EINTR) );
+
+      return done;
+#else /* !HAVE_PREAD */
+
+      if (lseek(f->fd, offset, SEEK_SET) == (off_t) -1)
+	return -1;
+
+      f->position = offset;
 #endif /* !HAVE_PREAD */
+    }
+
+  do /* Plain read */
+    done = read(f->fd, buf, count);
+  while ( (done < 0) && (errno == EINTR) );
+  
+  if (done > 0)
+    f->position += done;
+  
+  return done;
+}
 
 #define BUFFER_SIZE 4096
 
 static int
 sftp_process_read(struct sftp_ctx *ctx)
 {
-  int fd;
+  struct sftp_file *f;
   off_t offset;
   UINT32 length;
 
-  if ( !(sftp_get_handle_fd(ctx, &fd) && 
+  if ( !(sftp_get_handle_file(ctx, &f) && 
 	 sftp_get_uint64(ctx->i, &offset) &&
 	 sftp_get_uint32(ctx->i, &length)))
     return sftp_bad_message(ctx);
@@ -944,7 +989,7 @@ sftp_process_read(struct sftp_ctx *ctx)
       int res;
       UINT32 index;
 
-      DEBUG (("sftp_process_read: fd = %d\n", fd));
+      DEBUG (("sftp_process_read: fd = %d\n", f->fd));
       
       /* FIXME: Should we really sanity check the length? */
       if (length > SFTP_MAX_SIZE)
@@ -955,9 +1000,8 @@ sftp_process_read(struct sftp_ctx *ctx)
       while (length)
 	{
 	  UINT8 buf[BUFFER_SIZE];
-	  do
-	    res = pread(fd, buf, sizeof(buf), offset);
-	  while ( (res < 0) && (errno == EINTR) );
+
+	  res = sftp_read(f, buf, sizeof(buf), offset);
 
 	  DEBUG (("sftp_process_read: read => %d\n", res));
 	  if (res < 0)
@@ -996,29 +1040,49 @@ sftp_process_read(struct sftp_ctx *ctx)
   return 1;
 }
 
-#if !HAVE_PWRITE
-/* Unlike the real pwrite, this function modifies the file pointer. */
 static ssize_t
-pwrite(int fd, void *buf, size_t count, off_t offset)
+sftp_write(struct sftp_file *f, const void *buf, size_t count, off_t offset)
 {
-  if (lseek(fd, offset, SEEK_SET) == (off_t) -1)
-    return -1;
+  ssize_t done;
 
-  return write(fd, buf, count);
+  if (offset != f->position)
+    {
+#if HAVE_PWRITE
+      do
+	done = pwrite(f->fd, buf, count, offset);
+      while ( (done < 0) && (errno == EINTR) );
+
+      return done;
+#else /* !HAVE_PWRITE */
+
+      if (lseek(f->fd, offset, SEEK_SET) == (off_t) -1)
+	return -1;
+
+      f->position = offset;
+#endif /* !HAVE_PWRITE */
+    }
+
+  do /* Plain write */
+    done = write(f->fd, buf, count);
+  while ( (done < 0) && (errno == EINTR) );
+  
+  if (done > 0)
+    f->position += done;
+  
+  return done;
 }
-#endif /* !HAVE_PREAD */
 
 static int
 sftp_process_write(struct sftp_ctx *ctx)
 {
-  int fd;
+  struct sftp_file *f;
   off_t offset;
   size_t done;
   
   UINT8 *data;
   UINT32 length;
   
-  if ( !(sftp_get_handle_fd(ctx, &fd)
+  if ( !(sftp_get_handle_file(ctx, &f)
 	 && sftp_get_uint64(ctx->i, &offset)
 	 && (data = sftp_get_string_auto(ctx->i, &length))))
     return sftp_bad_message(ctx);
@@ -1034,10 +1098,7 @@ sftp_process_write(struct sftp_ctx *ctx)
   
   for (done = 0; length; )
     {
-      int res;
-      do
-	res = pwrite(fd, data + done, length, offset);
-      while ( (res < 0) && (errno == EINTR));
+      int res = sftp_write(f, data + done, length, offset);
 
       if (res <= 0)
 	return sftp_send_errno(ctx, errno);
