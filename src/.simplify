@@ -234,5 +234,3 @@ write_buffer.h
   Change the conventions for write_buffer_pre_write?
 
 xalloc.h
-
-  Make lsh_object_alloc and lsh_object_free static.
