@@ -37,12 +37,13 @@
 
 #if HAVE_LIBXAU
 
-static int xauth_process(const char *filename,
-			 unsigned family,
-			 unsigned address_length, const char *address,
-			 unsigned number_length, const char *number,
-			 struct lsh_string **name,
-			 struct lsh_string **data)
+static int
+xauth_process(const char *filename,
+	      unsigned family,
+	      unsigned address_length, const char *address,
+	      unsigned number_length, const char *number,
+	      struct lsh_string **name,
+	      struct lsh_string **data)
 {
   FILE *f = fopen(filename, "rb");
   Xauth *xa;
