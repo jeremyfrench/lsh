@@ -1,3 +1,24 @@
+2003-02-18  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* misc/bootstrap.sh: Deleted old bootstrap file.
+
+	* src/.dist_classes, src/.dist_headers: Reformatted so that they
+	can be included directly in the Makefile.
+
+	* src/.dist_deps: Dependencies on environ.h.
+
+	* misc/run-tests: Moved testsuite driver here, and symlink it from
+	all directories that need it.
+
+	* misc/make-am: New script, for generating the files
+	src/.dist_headers, src/.dist_classes and src/.dist_deps. Replaces
+	* make_am, src/used_headers, src/cvs_headers: Deleted files.
+
+	* .bootstrap: Bugfixes.
+	
+	* Makefile.am.in: Removed all these files. Use plain Makefile.am
+	instead. 
+
 2003-02-18  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Added check for inet_ntop in -lnsl.
@@ -15,7 +36,7 @@
 
 2003-02-17  Niels Möller  <nisse@cuckoo.hack.org>
 
-	* src/testsuite/testutils.c: Use uint32_T and friends, not UINT32.
+	* src/testsuite/testutils.c: Use uint32_t and friends, not UINT32.
 
 	* misc/xenofarm.sh (cfgwarn): Fixed sed expression.
 
