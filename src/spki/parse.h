@@ -24,45 +24,77 @@
 #define LIBSPKI_PARSE_H_INCLUDED
 
 #include "certificate.h"
+#include "spki-types.h"
 
+#include "nettle/sexp.h"
+
+struct spki_iterator
+{
+  /* When a parsing function is invoked, the sexp_iterator points into
+   * the body of the expression being parsed, just after the type.
+   * Type is an interned representation fo the expresssion type, and start
+   * is the position of the first byte of the expression. For example,
+   *
+   *     (foo x y z)
+   *     ^ ^  ^
+   *     | |  i->sexp
+   *     | i->type
+   *     i->start
+   */
+  
+  struct sexp_iterator sexp;
+
+  /* Type of the current expression */
+  enum spki_type type;
+
+  /* Start of the most recently entered expression */
+  unsigned start;
+};
 
 enum spki_type
-spki_intern(struct sexp_iterator *i);
+spki_iterator_first(struct spki_iterator *i,
+		    unsigned length, const uint8_t *expr);
 
 enum spki_type
-spki_parse_type(struct sexp_iterator *i);
+spki_intern(struct spki_iterator *i);
 
 enum spki_type
-spki_parse_end(struct sexp_iterator *i);
+spki_parse_type(struct spki_iterator *i);
+
+int
+spki_check_type(struct spki_iterator *i, enum spki_type type);
 
 enum spki_type
-spki_parse_skip(struct sexp_iterator *i);
+spki_parse_end(struct spki_iterator *i);
 
 enum spki_type
-spki_parse_principal(struct spki_acl_db *db, struct sexp_iterator *i,
+spki_parse_skip(struct spki_iterator *i);
+
+enum spki_type
+spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 		     struct spki_principal **principal);
 
 enum spki_type
-spki_parse_tag(struct spki_acl_db *db, struct sexp_iterator *i,
+spki_parse_tag(struct spki_acl_db *db, struct spki_iterator *i,
 	       struct spki_5_tuple *tuple);
 
 enum spki_type
-spki_parse_date(struct sexp_iterator *i,
+spki_parse_date(struct spki_iterator *i,
 		struct spki_date *d);
 
 enum spki_type
-spki_parse_valid(struct sexp_iterator *i,
+spki_parse_valid(struct spki_iterator *i,
 		 struct spki_5_tuple *tuple);
 
 enum spki_type
-spki_parse_version(struct sexp_iterator *i);
+spki_parse_version(struct spki_iterator *i);
 
 enum spki_type
-spki_parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i,
+spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
 		     struct spki_5_tuple *acl);
 
 enum spki_type
-spki_parse_cert(struct spki_acl_db *db, struct sexp_iterator *i,
+spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
 		struct spki_5_tuple *cert);
 
 #endif /* LIBSPKI_PARSE_H_INCLUDED */
