@@ -47,6 +47,13 @@
 
 /* GABA:
    (class
+     (name command_exception)
+     (vars
+       (e method int UINT32)))
+*/
+
+/* GABA:
+   (class
      (name command)
      (vars
        (call method int "struct lsh_object *arg"
@@ -181,6 +188,16 @@ extern struct command_simple command_unimplemented;
 #define COMMAND_UNIMPLEMENTED (&command_unimplemented.super.super)
 
 struct command command_die_on_null;
+
+
+struct command *make_trace(const char *name, struct command *real);
+struct lsh_object *collect_trace(const char *name, struct lsh_object *real);
+
+#if 1
+#define MAKE_TRACE(name, real) (collect_trace((name), (real)))
+#else
+#define MAKE_TRACE(name, real) (real)
+#endif
 
 /* The GABA_* macros are used by automatically generated evaluation code */
 

@@ -94,6 +94,46 @@ struct command_simple command_unimplemented =
 { { STATIC_HEADER, do_command_unimplemented}, do_command_simple_unimplemented};
 
 
+/* Tracing
+ *
+ * For now, trace only function entry. */
+
+/* GABA:
+   (class
+     (name trace_command)
+     (super command)
+     (vars
+       (name . "const char *")
+       (real object command)))
+*/
+
+static int do_trace_command(struct command *s,
+			    struct lsh_object *x,
+			    struct command_continuation *c)
+{
+  CAST(trace_command, self, s);
+
+  trace("Entering %z\n", self->name);
+  return COMMAND_CALL(self->real, x, c);
+}
+
+struct command *make_trace(const char *name, struct command *real)
+{
+  NEW(trace_command, self);
+  self->super.call = do_trace_command;
+  self->name = name;
+  self->real = real;
+
+  return &self->super;
+}
+
+struct lsh_object *collect_trace(const char *name, struct lsh_object *c)
+{
+  CAST_SUBTYPE(command, real, c);
+  return &make_trace(name, real)->super;
+}
+
+
 /* Fail if NULL. This commands returns its argument unchanged. Unless
  * it is NULL, in which case it doesn't return at all, but instead
  * returns an LSH_FAIL status to the mainloop. */

@@ -523,8 +523,8 @@
 	    "#define Cp1 GABA_APPLY_Cp_1\n"
 	    "#define Cp2 GABA_APPLY_Cp_2\n"
 	    "#define Cp3 GABA_APPLY_Cp_3\n"
-	    "  trace(\"Entering " name "\\n\");\n"
-	    "  return\n    "
+	    ;; "  trace(\"Entering " name "\\n\");\n"
+	    "  return MAKE_TRACE(\"" name "\", \n    "
 	    ((make-output (append '( (I I)
 				     (K K K1)
 				     (S S S1 S2)
@@ -538,7 +538,7 @@
 				      (params->alist params)
 				      '())))
 	     translated)
-	    ";\n"
+	    "\n  );\n"
 	    "#undef A\n"
 	    "#undef I\n" 
 	    "#undef K\n"
