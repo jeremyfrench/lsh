@@ -1,5 +1,5 @@
 ## Process this file with make_am to produce Makefile.am -*-makefile-*-
-SUBDIRS: argp rsync symmetric scm . testsuite
+SUBDIRS: argp rsync nettle scm . testsuite
 CVS_HEADERS: cvs_headers
 CLASS_FILES: dist_x_files
 BODY:
@@ -131,7 +131,7 @@ lsh_krb_checkpw_LDADD=@KRB_LIBS@
 # 	  $(PERL) $(top_srcdir)/misc/mk-reverse-table ssh.h >$@T
 # 	  if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
 
-LDADD = liblsh.a symmetric/libsymmetric.a @LIBARGP@
+LDADD = liblsh.a nettle/libnettle.a @LIBARGP@
 # lshg_LDFLAGS = -Wl,-Map,lshg.map
 lshg_LDADD = liblsh.a @LIBARGP@
 
@@ -141,10 +141,6 @@ class-map: $(srcdir)/make-class-map $(dist_x_files)
 
 # Is this rule needed?
 # all-recursive check-recursive: config.h
-
-# .PHONY: symmetric
-# symmetric:
-# 	  (cd lib && $(MAKE) libsymmetric.a)
 
 EXTRA_DIST = lsh-authorize ssh-conv lcp \
 	atoms.in process_atoms \
