@@ -85,9 +85,34 @@ int do_call_simple_command(struct command *s,
 struct command_continuation *
 make_apply(struct command *f, struct command_continuation *c);  
 
+/* The macros are used by automatically generated evaluation code */
+extern struct simple_command command_S;
+struct command *make_command_S_2(struct command *f,
+				 struct command *g);
+
+struct command *make_command_S_1(struct command *f);
+
+struct lsh_object *make_apply_S_1(struct lsh_object *f);
+struct lsh_object *make_apply_S_2(struct lsh_object *f,
+				  struct lsh_object *g);
+
+#define GABA_VALUE_S (&command_S.super.super)
+#define GABA_APPLY_S_1 gaba_apply_S_1
+#define GABA_APPLY_S_2 gaba_apply_S_2
+
+extern struct simple_command command_K;
+struct command *make_command_K_1(struct lsh_object *x);
+
+#define GABA_VALUE_K (&command_K.super.super)
+#define GABA_APPLY_K_1(x) ((struct lsh_object *) make_command_K_1(x))
+
+#define GABA_APPLY gaba_apply
+
+extern struct command_simple command_I;
+#define GABA_VALUE_I (&command_I.super.super)
+#define GABA_APPLY_I_1(x) (x)
+
 #if 0
-extern struct command command_I;
-extern struct command command_S;
 extern struct command command_B;
 #endif
 
