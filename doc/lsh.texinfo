@@ -499,12 +499,17 @@ of the initial handshake and key exchange.
 
 Each party provides a list of supported algorithms, and the first
 algorithm listed by the client, which is also found on the server's
-list, is selected. Algorithms of different types, e.g. data compression
-and message authentication, are negotiated independently. Furthermore,
-algorithms used for transmission from the client to the server are
-independent of the algorithms used for transmission from the server to
-the client. There are therefore no less than six different lists that
-could be configured at each end.
+list, is selected. Note that this implies that order in which algorithms
+are listed on the server's list doesn't matter: if several algorithms
+are present on both the server's and the client's lists, it's the
+client's order that determines which algorithm is selected.
+
+Algorithms of different types, e.g. data compression and message
+authentication, are negotiated independently. Furthermore, algorithms
+used for transmission from the client to the server are independent of
+the algorithms used for transmission from the server to the client.
+There are therefore no less than six different lists that could be
+configured at each end.
 
 The command line options for lsh and lshd don't let you specify
 arbitrary lists. For instance, you can't specify different preferences
@@ -525,9 +530,8 @@ algorithm negotiation will fail because the peer doesn't support
 @item @option{-z} @tab Data compression
   @tab @code{none}, @code{zlib}
 
-  @tab The default preference list supports zlib compression, but doesn't
-insist. To enable compression, use @option{-z}, which is a shorthand for
-@option{-z zlib}.
+  @tab The default preference list supports zlib compression, but
+prefers not to use it. 
 
 @item @option{-c} @tab Encryption
   @tab @code{3dec-cbc}, @code{blowfish-cbc}, @code{cast128-cbc},
@@ -542,6 +546,13 @@ seems to be the algorithm of choice among conservative cryptographers.
   @tab Both supported message authentication algorithms are of the
 @acronym{HMAC} family.
 @end multitable
+
+As a special case, @option{-z} with no argument changes the compression
+algorithm list to @code{zlib}, @code{none}, which means that you want to
+use @code{zlib} if the other end supports it. This is different from @option{-z
+zlib} which causes the negotiation to fail if the other end doesn't
+support @code{zlib}.
+
 
 @node Hostauth options, Userauth options, Algorithm options, Invoking lsh
 @comment  node-name,  next,  previous,  up
