@@ -450,8 +450,7 @@ static int
 spawn_process(struct server_session *session,
 	      struct lsh_user *user,
 	      struct address_info *peer,
-	      struct io_backend *backend,
-	      struct reap *reaper)
+	      struct io_backend *backend)
 {
   int in[2];
   int out[2];
@@ -476,7 +475,7 @@ spawn_process(struct server_session *session,
     struct resource *child;
     
     if (USER_FORK(user, &child,
-		  reaper, make_exit_shell(session),
+		  make_exit_shell(session),
 		  peer, using_pty ? session->pty->tty_name : NULL))
       {
 	if (child)
@@ -662,7 +661,7 @@ do_spawn_shell(struct channel_request *c,
 
   switch (spawn_process(session, connection->user,
 			connection->peer,
-			closure->backend, closure->reaper))
+			closure->backend))
     {
     case 1: /* Parent */
       /* NOTE: The return value is not used. */
@@ -721,14 +720,12 @@ do_spawn_shell(struct channel_request *c,
 }
 
 struct channel_request *
-make_shell_handler(struct io_backend *backend,
-		   struct reap *reaper)
+make_shell_handler(struct io_backend *backend)
 {
   NEW(shell_request, closure);
 
   closure->super.handler = do_spawn_shell;
   closure->backend = backend;
-  closure->reaper = reaper;
   
   return &closure->super;
 }
@@ -772,7 +769,7 @@ do_spawn_exec(struct channel_request *c,
   else
     switch (spawn_process(session, connection->user,
 			  connection->peer,
-			  closure->backend, closure->reaper))
+			  closure->backend))
     {
     case 1: /* Parent */
       lsh_string_free(command_line);
@@ -831,14 +828,12 @@ do_spawn_exec(struct channel_request *c,
 }
 
 struct channel_request *
-make_exec_handler(struct io_backend *backend,
-		  struct reap *reaper)
+make_exec_handler(struct io_backend *backend)
 {
   NEW(shell_request, closure);
 
   closure->super.handler = do_spawn_exec;
   closure->backend = backend;
-  closure->reaper = reaper;
   
   return &closure->super;
 }

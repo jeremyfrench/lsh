@@ -42,12 +42,10 @@ struct channel_open *
 make_open_session(struct alist *session_requests);
 
 struct channel_request *
-make_shell_handler(struct io_backend *backend,
-		   struct reap *reaper);
+make_shell_handler(struct io_backend *backend);
 
 struct channel_request *
-make_exec_handler(struct io_backend *backend,
-		  struct reap *reaper);
+make_exec_handler(struct io_backend *backend);
 
 struct lsh_string *
 format_exit_signal(struct ssh_channel *channel,
