@@ -29,6 +29,7 @@
 #include "keyexchange.h"
 #include "publickey_crypto.h"
 
+/* This function consumes the server key */
 struct keyexchange_algorithm *
 make_dh_server(struct diffie_hellman_method *dh,
 	       struct lsh_string *server_key,

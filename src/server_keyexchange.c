@@ -160,7 +160,7 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   dh->super.handler = do_handle_dh_init;
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
-  dh->dh.server_key = closure->server_key;
+  dh->dh.server_key = lsh_string_dup(closure->server_key);
   dh->signer = closure->signer;
   dh->install = make_server_install_keys(algorithms);
   dh->finished = finished;
