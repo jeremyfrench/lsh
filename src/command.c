@@ -398,7 +398,7 @@ do_once_continuation(struct command_continuation *s,
 
 struct command_continuation *
 make_once_continuation(const char *msg,
-		      struct command_continuation *up)
+		       struct command_continuation *up)
 {
   NEW(once_continuation, self);
   self->super.c = do_once_continuation;

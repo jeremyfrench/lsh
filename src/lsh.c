@@ -488,7 +488,7 @@ static void do_lsh_login(struct command *s,
 							  -1))));
 }
 
-/* (login options publi-keys connection) */
+/* (login options public-keys connection) */
 COMMAND_SIMPLE(lsh_login_command)
 {
   CAST(lsh_options, options, a);
