@@ -1,0 +1,593 @@
+Two interfaces for a general purpose cryptographic library.
+
+
+INTRODUCTION
+
+This document describes a general-purpose cryptographic library. The
+goal is not to provide an advanced high-level interface that makes it
+easy to write applications. The goal is to provide a *simple*
+interface on top of which more advanced and more application-specific
+interfaces can be built. In particular, it should be straight-forward
+to add wrappers for anybody's favourite object oriented environment.
+That way, the low-level code can be reused in different contexts.
+
+There are actually two interfaces: The low level interface, and the
+LSH interface. The latter is an example of an object-oriented
+interface, and is not really a part of the library.
+
+
+SIMPLICITY
+
+In order to fit within many different contexts, it is important that
+the low-level library doesn't insist on doing things that an
+application or a higher-level toolkit can do better. It should avoid
+things like algorithm selection, as well as memory allocation and i/o.
+
+The library should provide a consistent interface to the supported
+algorithms, but at the same time not try to hide differences that may
+be relevant where the algorithms are used.
+
+
+NAMING
+
+The library should have a catchy name. Below, I'm referring to the
+library as "gcrypt".
+
+
+SYMMETRIC CIPHERS
+
+For a symmetric cipher called FOO, there is a context struct, a few
+functions and constants, all defined in a headerfile called
+"gcrypt/foo.h".
+
+  struct foo_ctx
+  {
+    ... internal state ...
+  };
+
+The header file contains a real definition of the context struct, not
+jsut a forward declaration, so that the user of the library is free to
+allocate instances statically or on the stack, or include the struct
+in other structs. No special action is required before deallocating
+an instance, although some appliction may want to clear the memory as
+soon as it is no longer needed.
+
+For block ciphers, the blocksize is defined. All sizes are in octets
+(uint8_t). 
+
+  #define FOO_BLOCK_SIZE 16
+
+Constants defining the keysize. For ciphers with variable size keys,
+minimum and maximum sizes are defined (the cipher doesn't
+necessarily support all key sizes in between). A reasonable
+"recommended" keysize is also provided for all ciphers.
+
+  #define FOO_KEY_SIZE 8
+  #define FOO_MIN_KEY_SIZE 16
+  #define FOO_MAX_KEY_SIZE 32
+
+Key setup operations depend on the cipher; the profived functions are
+those that are natural for the cipher in questions. For ciphers with
+similar key-setup for encryption and decryption, there is a single
+set_key function
+
+  /* For fixed key size ciphers */
+  void foo_set_key(struct foo_ctx *ctx, uint8_t *key);
+
+    /* For variable key size ciphers */
+  void foo_set_key(struct foo_ctx *ctx, unsigned length, uint8_t *key);
+
+Ciphers that have weak keys can return a value (of type int) from the
+key-setup functions. In that case, the functions return 1 for
+successful key setup, and 0 if the key was weak. (In general, ciphers
+with weak keys should be avoided).
+
+For DES, which have the strange parity check on keys, the key-setup
+function should silently ignore the parity bits. If needed, there can
+be separate functions for setting and checking the DES parity.
+
+Algorithms that have fundamentally different key setup for encryption
+and decryption use two distinct functions,
+
+  void foo_set_encrypt(struct foo_ctx *ctx, uint8_t *key);
+  void foo_set_decrypt(struct foo_ctx *ctx, uint8_t *key);
+
+(again with variants for ciphers with variable size keys).
+
+Algorithms for which inversion of the key is natural (IDEA is one
+example) provide a function to do that,
+
+  void foo_invert(struct foo_ctx *ctx);
+  
+
+When it comes to encrypting data, there are again two types of
+ciphers. Some ciphers have a single function for both encrypting and
+decrypting (possibly with different key setup):
+
+  void foo_crypt(struct foo_ctx *ctx, unsigned length,
+                 uint8_t *dest, const uint8_t *src);
+
+Others provide two different functions:
+
+  void foo_encrypt(struct foo_ctx *ctx, unsigned length,
+                   uint8_t *dest, const uint8_t *src);
+  void foo_decrypt(struct foo_ctx *ctx, unsigned length,
+                   uint8_t *dest, const uint8_t *src);
+
+In all cases, length is the size of the source and destination areas.
+Encryption in-place (i.e. src == dst) is allowed, but no other
+overlaps. For block ciphers, the length must be a multiple of the
+blocksize; if there is more than one block, they are processed
+independently, in ECB mode.
+
+
+Utility Functions
+
+TODO: Some general functions for applying a cipher in CBS mode would be
+nice.
+
+
+HASH FUNCTIONS
+
+Each hash funcion BAR has a header file "gcrypt/bar.h" which defines a
+context struct, constants and functions:
+
+  /* Size of hash digest */
+  #define BAR_DIGEST_SIZE 20
+
+  /* Size of internal state, for those hash functions for 
+   * which that makes sense (e.g. md5 and sha1) */
+
+  #define BAR_DATA_SIZE 64
+ 
+  struct bar_ctx
+  {
+   .. internal state...
+  };
+
+Any internal buffers are included in the context struct, so that the
+state can be cloned by simply copyinging the struct. The functions
+operationg on the context are
+  
+  /* Initialize or reset the state */
+  void bar_init(struct bar_ctx *ctx);
+
+  /* Hash some data */
+  void bar_update(struct bar_ctx *ctx, unsigned length,
+                  const uint8_t *data);
+
+  /* Do any needed "end-of-data" processing */
+  void bar_final(struct bar_ctx *ctx);
+
+  /* Extracts a digest, but doesn't modify the state. */
+  void bar_digest(struct bar_ctx *ctx,
+                  unsigned length,
+		  uint8_t *digest);
+
+For the last function, LENGTH must be equal or less than
+BAR_DIGEST_SIZE; if it is less, the digest is truncated.
+
+
+OBJECT ORIENTED INTERFACE
+
+This section describes an object oriented interface that can be built
+on top of the low-level interface described above. It is implemented
+in LSH, and a previous design was used for the cryptographic toolkit
+for Pike (an object oriented language with C-like syntax). The
+interfce also includes classes for creating and verifying digital
+signatures.
+
+I'll use a simplified C++-like notation, with only methods (which
+should be considered public and virtual in C++ speak). When
+implementing this design in some real language, some of the methods
+may be replaced with publicly accessible variables or otherwise
+tweaked to fit the context.
+
+
+Symmetric encryption
+
+  class crypto_instance
+  {
+    /* For stream-ciphers, this could return 0,
+     * or some other value that is reasonable
+     * for the application. For example,
+     * in secsh, arcfour is used as if
+     * it had a block size of 8 */ 
+    unsigned block_size();
+
+    /* The same rules for overlapping as
+     * for the corresponding low-level functions. */
+    void crypt(unsigned length,
+               uint8_t *dst, const uint8_t *src);
+  };
+
+The length passed to the crypt() merho must be a multiple of the
+block_size (unless the block size is zero). If there are several
+blocks, the processing is not necessarily in ECB mode.
+
+  class crypto_algorithm
+  {
+    enum mode_t { CRYPTO_ENCRYPT, CRYPTO_DECRYPT };
+    unsigned block_size();
+    unsigned key_size();
+    unsigned iv_size();
+
+    crypto_instance *make_crypt(mode_t mode,
+                                const uint8_t *key,
+				const uint8_t *iv);
+  };
+
+The a crypto_algorithm works as a factory for a particular type of
+crypto_instance. The key and iv arguments should point to strings of
+the appropriate size (and may be NULL if the size is 0).
+
+This interface makes it straight-forward to build general classes for
+implementing cascading of ciphers and other feedback modes. A few
+examples. First, a cascade,
+
+  class crypto_cascade : crypto_algorithm
+  {
+    array(crypto_algorithm) algorithms;
+
+    /* Constructor */
+    crypto_cascade(array(crypto_algorithm) a)
+      { algorithms = a; }
+      
+    class cascade_instance : crypto_instance
+    {
+      array(crypto_instance) cryptos; 
+
+      /* Constructor */
+      cascade_instance(array(crypto_instance) a)
+        { cryptos = a; }
+      
+      unsigned block_size()
+        {
+	  /* Return the least common multiple
+	   * of the block-sizes of cryptos */
+	}
+
+      unsigned crypt(unsigned length,
+                     uint8_t *dst, const uint8_t *src)
+	{
+	  cryptos[0]->crypt(length, src, dst);
+	  for (unsigned i = 1; i < cryptos->size(); i++)
+	    cryptos[i]->crypt(length, dst, dst);
+	}
+    };
+
+    unsigned key_size()
+      {
+        /* Return the sum of the key-sizes of algorithms. */
+      }
+
+    unsigned block_size()
+      {
+        /* Return the least common multiple
+	 * of the block-sizes of algorithms. */
+      }
+
+    unsigned iv_size()
+      {
+        /* Return the sum of the iv-sizes of algorithms. */
+      }
+
+    crypto_instance *make_crypt(mode_t mode,
+                                const uint8_t *key,
+				const uint8_t *iv)
+      {
+        array(crypto_instance) instances = allocate(algorithms->size());
+	for (unsigned i = 0; i<algorithms->size(); i++)
+	  {
+	    instances[i] = algorithms[i]
+	      ->make_crypt(mode, key, iv);
+	    key += algorithms[i]->key_size();
+	    iv += algorithms[i]->iv_size();
+	  }
+
+	return cascade_instance(instances);
+      }
+  };
+
+To invert the encrypt/decrypt meaning
+
+  class crypto_invert : crypto_algorithm
+  {
+    crypto_algorithm *real;
+
+    /* Constructor */
+    crypto_invert(crypto_algorithm *a)
+      { real = a; }
+
+    unsigned key_size() { return real->key_size(); }
+    unsigned block_size() { return real->block_size(); }
+    unsigned iv_size() { return real->iv_size(); }
+
+    crypto_instance *make_crypt(mode_t mode,
+                                const uint8_t *key,
+				const uint8_t *iv)
+    {
+      return real->make_crypt(mode == CRYPTO_ENCRYPT
+                              ? CRYPTO_DECRYPT :CRYPTO_ENCRYPT,
+			      key, iv);
+    }
+  };
+
+We also need a CBC wrapper
+
+  class crypto_cbc : crypto_algorithm
+  {
+    crypto_algorithm *inner;
+
+    /* Constructor */
+    crypto_invert(crypto_algorithm *a)
+      { inner = a; }
+
+    unsigned key_size() { return inner->key_size(); }
+    unsigned block_size() { return inner->block_size(); }
+    unsigned iv_size()
+      {
+        return inner->block_size() + inner->iv_size();
+      }
+       
+    class cbc_instance_base : crypto_instance
+    {
+      crypto_instance *inner;
+      uint8_t *last;
+      
+      /* Constructor */
+      crypto_instance_base(crypto_instance *a,
+			   uint8_t *iv)
+        {
+	  inner = a;
+	  last = xalloc(inner->block_size());
+	  memcpy(last, iv, inner->block_size());
+	}
+    };
+
+    class cbc_encrypt : cbc_instance_base
+    {
+      unsigned crypt(unsigned length,
+                     uint8_t *dst, const uint8_t *src)
+	{
+	  unsigned block_size = inner->block_size();
+	  for (unsigned i = 0; i<length; i += block_size)
+	  {
+	    memxor(last, src + i, block_size);
+	    inner->crypt(block_size,
+	                 dst + i, last);
+	    memcpy(last, dst + i, block_size);
+	  }
+	}
+    };
+
+    class cbc_decrypt : cbc_instance_base
+    {
+      unsigned crypt(unsigned length,
+                     uint8_t *dst, const uint8_t *src)
+	{
+	  unsigned block_size = inner->block_size();
+	  
+	  if (!length)
+	    return;
+
+	  if (src == dst)
+	    {
+	      /* Keep a copy of the ciphertext */
+	      uint8_t *tmp = alloca(length);
+	      memcpy(tmp, src, length);
+	      src = tmp;
+	    }
+
+	  /* First decrypt in ECB mode. */
+	  inner->crypt(length, dst, src);
+
+	  /* XOR the ciphertext, shifted one block */
+	  memxor(dst, last, block_size);
+	  memxor(dst + block_size, src, length - block_size);
+	  memcpy(last, src + length - block_size);
+	}
+    };
+
+    crypto_instance *make_crypt(mode_t mode,
+                                const uint8_t *key,
+				const uint8_t *iv)
+    {
+      crypto_instance *i
+        = inner->make_crypt(mode, key, iv + inner->block_size());
+
+      return (mode == CRYPTO_ENCRYPT)
+        ? cbc_encrypt(i, iv)
+	: cbc_decrypt(i, iv);
+    }
+  };
+
+Finally, if DES is a crypto_algorithm implementing plain single DES in
+ECB mode, we can construct triple DES (EDE) in (outer) CBC mode as
+
+  crypto_cbc(crypto_cascade([des, crypto_invert(des), des]))
+
+
+Hash and MAC functions
+
+  class hash_instance
+  {
+    unsigned hash_size();
+
+    /* Corresponds to bar_update() */
+    void update(unsigned length, const uint8_t *data);
+
+    /* Corresponds to a sequence of bar_final(), bar_digest() and
+     * bar_init() */
+    void digest(unsigned length, uint8_t *digest);
+
+    /* Creates a new instance, copying the state. */
+    hash_instance *copy();
+  };
+  
+  class hash_algorithm
+  {
+    /* Corresponds to BAR_DATA_SIZE */
+    unsigned block_size();
+    
+    /* Corresponds to BAR_DIGEST_SIZE */
+    unsigned hash_size();
+
+    hash_instance *make_hash();
+  };
+
+
+Mac algorithms
+
+  /* A mac_instance has precisely the same interface as
+   * a hash instance. */ 
+  class mac_instance : hash_instance
+  {
+    /* A mac_instance has precisely the same interface as
+     * a hash instance, except for the return type of
+     * the copy() method. */
+
+    mac_instance *copy();
+  };
+
+  class mac_algorithm
+  {
+    unsigned hash_size();
+
+    /* Recommended key size. */
+    unsigned key_size();
+    
+    mac_instance *make_mac(unsigned length,
+			   const uint8_t *key);
+  };
+
+As an example, consider HMAC, defined by RFC 2104.
+
+  class hmac_algorithm : mac_algorithm
+  {
+    enum { IPAD = 0x36,  OPAD = 0x5c };
+    
+    hash_algorithm *hash;
+
+    unsigned hash_size() { return hash->hash_size(); }
+
+    /* Recommended by RFC 2104 */
+    unsigned key_size() { return hash->hash_size(); }
+    
+    class hmac_instance : mac_instance
+    {
+      /* Fixed. */
+      hash_instance *inner;
+      hash_instance *outer;
+
+      /* Modified by update() */
+      hash_instance *state;
+
+      /* Constructor */
+      hmac_instance(hash_instance *i, hash_instance *o,
+		    hash_instance *s)
+	{
+	  inner = i; outer = o; state = s;
+	}
+	
+      void update(unsigned length, const uint8_t *data)
+        { state->update(length, data); }
+      
+      void digest(unsigned length, uint8_t *digest)
+        {
+          unsigned size = state->hash_size();
+          uint8_t *tmp = alloca(size);
+        	
+          state->digest(length, data);
+        
+        	hash_instance *h = outer->copy();
+        	h->update(tmp, size);
+        	h->digest(length, digest);
+        
+        	state = inner->copy(); 
+        }
+
+      /* Creates a new instance, copying the state. */
+      hash_instance *copy()
+        {
+          return hmac_instance(inner, outer, state->copy());
+        }
+    };
+    
+    mac_instance *make_mac(unsigned length,
+			   const uint8_t *key)
+      {
+        unsigned size = hash->hash_size();
+	uint8_t *pad = alloca(size);
+	
+	if (length >= size)
+	  {
+	    /* Reduce to the algorithm's hash size. */
+	    uint8_t *tmp = alloca(size);
+
+	    hash_instance *h = hash->make_hash();
+	    h->update(length, key);
+	    h->digest(tmp, size);
+
+	    key = tmp;
+	    length = size;
+	  }
+
+	hash_instance *inner = hash->make_hash();
+	memset(pad, IPAD, size);
+	memxor(pad, key, length);
+	inner->update(size, pad);
+
+	hash_instance *outer = hash->make_hash();
+	memset(pad, OPAD, size);
+	memxor(pad, key, length);
+	outer->update(size, pad);
+
+	return hmac_instance(inner, outer, inner->copy());
+      }
+  };
+
+
+
+Signature Algorithms
+
+Notable features of these objects is that they can support several
+flavours of signatures (spki, ssh-dss, bug-compatible variants of
+ssh-dss).
+
+The current factory class (signature_algorithm) only handles
+spki-style keys, but one could use other types of factories. There is
+no essnetial requirement that a signer instance knows the clear-text
+private key; the signer may communicate with a hardware token, an
+ssh-agent-like program, or a user that is willing to provide the
+passphrase for an encrypted private key on request. If features like
+that are implemented, the sign() methods will sometimes return NULL.
+
+  class verifier
+  {
+    /* Returns 1 if signature is ok, otherwise 0 */
+    int verify(int style,
+	       unsigned length, uint8_t *data,
+	       unsigned signature_length, uint8_t *signature);
+
+    int verify_spki(unsigned length, uint8_t *data,
+		    sexp *e);
+		    
+    string *public_key();
+    sexp *public_spki_key();
+  };
+
+  class signer
+  {
+    string *sign(int style, unsigned length, uint8_t *data);
+    sexp *sign_spki(unsigned length, uint8_t *data);
+
+    verifier *get_verifier();
+  };
+
+  class signature_algorithm
+  {
+    signer *make_signer(sexp_iterator *i);
+    verifier *make_verifier(sexp_iterator *i);
+  };
+  
