@@ -6,9 +6,12 @@
 #include <unistd.h>
 #endif
 
-static int do_write(struct pad_processor *closure,
+static int do_write(struct abstract_write **w,
 		    struct lsh_string *packet)
 {
+  struct packet_blocking_write *closure
+    = (struct packet_blocking_write *) *w;
+  
   UINT32 left = packet->length;
   UINT8 *p = packet->data;
 
@@ -36,10 +39,10 @@ struct abstract_write *make_blocking_write_procesor(int fd)
   struct blocking_write_processor *closure
     = xalloc(sizeof(struct blocking_write_processor_processor));
 
-  closure->p->f = (abstract_write_f) do_write;
+  closure->p->f = do_write;
   closure->fd = fd;
 
-  return (struct abstract_write *) closure;
+  return &closure->super;
 }
 
       

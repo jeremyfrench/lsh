@@ -4,10 +4,11 @@
 
 #include "zlib.h"
 
-#define 
-static int do_deflate(struct zlib_processor *closure,
+static int do_deflate(struct abstract_write **c,
 		      struct lsh_string *packet)
 {
+  struct zlib_processor *closure = (struct zlib_processor *) *c;
+  
   struct lsh_string *new;
 
   /* call deflate, copy into new packet */
@@ -23,9 +24,9 @@ struct abstract_write *make_packet_zlib(abstract_write *continuation,
 {
   struct debug_processor *closure = xalloc(sizeof(struct zlib_processor));
 
-  closure->c->p->f = (abstract_write_f) do_deflate;
+  closure->super.super.write = do_deflate;
   closure->c->next = continuation;
   /* inititialize closure->zstream */
 
-  return (struct abstract_write *) closure;
+  return &closure->super.super;
 }

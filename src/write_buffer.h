@@ -17,7 +17,7 @@ struct node
 
 struct write_buffer
 {
-  struct abstract_write a;
+  struct abstract_write super;
   
   UINT32 block_size;
 

@@ -15,9 +15,12 @@ struct string_read
   UINT32 index;
 };
 
-static int do_string_read(struct string_read *closure,
+static int do_string_read(struct abstract_read **r,
 			  UINT8 *buffer, UINT32 length)
 {
+  struct string_read *closure
+    = (struct string_read *) *r;
+  
   UINT32 left = closure->line->pos - closure->index;
   UINT32 to_read = MIN(length, left);
 
@@ -27,13 +30,16 @@ static int do_string_read(struct string_read *closure,
   return to_read;
 }
 
-static struct read_handler *do_read_line(struct read_line *closure,
-					 struct abstract_read *read)
+static int do_read_line(struct read_handler **h,
+			struct abstract_read *read)
 {
-  int n = A_READ(read, closure->buffer, MAX_LINE - closure->pos);
+  struct read_line *closure = (struct read_line *) *h;
+  
   UINT8 *eol;
   UINT32 length;
   struct read_handler *next;
+
+  int n = A_READ(read, closure->buffer, MAX_LINE - closure->pos);
   
   if (n<0)
     {
@@ -58,54 +64,64 @@ static struct read_handler *do_read_line(struct read_line *closure,
       
       next = PROCESS_LINE(closure->handler, length, closure->buffer);
       
-      if (!next)
-	{
-	  /* Read another line */
-	  /* Number of characters that have been processed */
-	  UINT32 done = eol - closure->buffer + 1;
-	  UINT32 left = closure->pos - done;
-
-	  memcpy(closure->buffer, closure->buffer + done, left);
-	  closure->pos = left;
-	}
-      else
+      if (next)
 	{
 	  /* Read no more lines. Instead, pass remaining data to next,
 	   * and return a new read-handler. */
 	  if (closure->pos)
 	    {
 	      struct string_read read =
-	      { { (abstract_read_f) do_string_read },
+	      { { do_string_read },
 		closure,
 		0 };
 	      while(next && (read.index < closure->pos))
-		next = READ_HANDLER(next, &read.super);
+		if (!READ_HANDLER(next, &read.super))
+		  return 0;
 	    }
 	  /* No data left */
 	  free(closure);
-	  return next;
+	  *h = next;
+	  return 1;
 	}
-    }
-  
+      else
+	{
+	  if (closure->handler)
+	    {
+	      /* Read another line */
+	      /* Number of characters that have been processed */
+	      UINT32 done = eol - closure->buffer + 1;
+	      UINT32 left = closure->pos - done;
+	      
+	      memcpy(closure->buffer, closure->buffer + done, left);
+	      closure->pos = left;
+	    }
+	  else
+	    {
+	      /* Fail */
+	      return 0;
+	    }
+	}
+    }     
+
   /* Partial line */
   if (closure->pos == MAX_LINE)
     {
       werror("Too long line from server\n");
-      return NULL;
+      return 0;
     }
-  return &(closure->super);
+  return 1;
 }
 
 struct read_handler *make_read_line(struct line_handler *handler)
 {
   struct read_line *closure = xalloc(sizeof(struct read_line));
 
-  closure->super.handler = (read_handler_f) do_read_line;
+  closure->super.handler = do_read_line;
   closure->pos = 0;
 
   closure->handler = handler;
 
-  return (struct read_handler *) closure;
+  return &closure->super;
 }
 
   

@@ -6,9 +6,12 @@
 #include "xalloc.h"
 #include <assert.h>
 
-static int do_pad(struct pad_processor *closure,
+static int do_pad(struct abstract_write **c,
 		  struct lsh_string *packet)
 {
+  struct pad_processor *closure
+    = (struct pad_processor *) *c;
+  
   UINT32 new_size;
   UINT8 padding;
 
@@ -26,12 +29,6 @@ static int do_pad(struct pad_processor *closure,
 
   /* FIXME: Use ssh_format() */
   new = lsh_string_alloc(new_size);
-
-#if 0
-  ssh = (struct ssh_packet *) new->data; 
-  ssh->length = htonl(new_size);
-  ssh->padding_length = padding;
-#endif
 
   WRITE_UINT32(new->data, new_size - 4);
   new->data[4] = padding;
@@ -53,11 +50,11 @@ make_pad_processor(struct abstract_write *continuation,
 {
   struct pad_processor *closure = xalloc(sizeof(struct pad_processor));
 
-  closure->c.p.f = (abstract_write_f) do_pad;
+  closure->super.super = do_pad;
   closure->c.next = continuation;
   closure->block_size = block_size;
   closure->random = random;
   closure->state = state;
 
-  return (struct abstract_write *) closure;
+  return &closure->super.super;
 }

@@ -9,7 +9,7 @@
 
 struct client_callback
 {
-  struct fd_callback c;
+  struct fd_callback super;
   struct io_backend *backend;
   UINT32 block_size;
   char *id_comment;

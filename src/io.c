@@ -22,12 +22,15 @@
 
 struct fd_read
 {
-  struct abstract_read a;
+  struct abstract_read super;
   int fd;
 };
 
-static int do_read(struct fd_read *closure, UINT8 *buffer, UINT32 length)
+static int do_read(struct abstract_read **r, UINT8 *buffer, UINT32 length)
 {
+  struct fd_read *closure
+    = (struct fd_read *) *r;
+
   while(1)
     {
       int res = read(closure->fd, buffer, length);
@@ -35,7 +38,7 @@ static int do_read(struct fd_read *closure, UINT8 *buffer, UINT32 length)
 	return A_EOF;
       if (res > 0)
 	return res;
-      
+
       switch(errno)
 	{
 	case EINTR:
@@ -60,7 +63,7 @@ static int do_read(struct fd_read *closure, UINT8 *buffer, UINT32 length)
 
 /* UNLINK_FD must be followed by a continue, to avoid updating _fd */
 #define UNLINK_FD (*_fd = (*_fd)->next)
-    
+
 void io_run(struct io_backend *b)
 {
   while(1)
@@ -70,141 +73,140 @@ void io_run(struct io_backend *b)
       nfds_t nfds;
       int timeout;
       int res;
-      
+
       nfds = b->nio + b->nlisten + b->nconnect;
 
       if (b->callouts)
-	{
-	  time_t now = time(NULL);
-	  if (now >= b->callouts->when)
-	    timeout = 0;
-	  else
-	    {
-	      if (b->callouts->when > now + MAX_TIMEOUT)
-		timeout = MAX_TIMEOUT * 1000;
-	      else
-		timeout = (b->callouts->when - now) * 1000;
-	    }
-	}
+	 {
+	   time_t now = time(NULL);
+	   if (now >= b->callouts->when)
+	     timeout = 0;
+	   else
+	     {
+	       if (b->callouts->when > now + MAX_TIMEOUT)
+		 timeout = MAX_TIMEOUT * 1000;
+	       else
+		 timeout = (b->callouts->when - now) * 1000;
+	     }
+	 }
       else
-	{
-	  if (!nfds)
-	    /* All done */
-	    break;
-	  timeout = -1;
-	}
-      
+	 {
+	   if (!nfds)
+	     /* All done */
+	     break;
+	   timeout = -1;
+	 }
+
       fds = alloca(sizeof(struct pollfd) * nfds);
 
-      /* Handle fds in order: read, accept, connect, write, */
+      /* Handle fds in order: write, read, accept, connect. */
       i = 0;
 
       FOR_FDS(struct io_fd, fd, b->io, i++)
-	{
-	  fds[i].fd = fd->on_hold ? -1 : fd->fd;
-	  fds[i].events = 0;
-	  if (!fd->on_hold)
-	    fds[i].events |= POLLIN;
+	 {
+	   fds[i].fd = fd->on_hold ? -1 : fd->fd;
+	   fds[i].events = 0;
+	   if (!fd->on_hold)
+	     fds[i].events |= POLLIN;
 
-	  /* pre_write returns 0 if the buffer is empty */
-	  if (write_buffer_pre_write(fd->buffer))
-	    fds[i].events |= POLLOUT;
-	}
+	   /* pre_write returns 0 if the buffer is empty */
+	   if (write_buffer_pre_write(fd->buffer))
+	     fds[i].events |= POLLOUT;
+	 }
       END_FOR_FDS;
 
       FOR_FDS(struct listen_fd, fd, b->listen, i++)
-	{
-	  fds[i].fd = fd->fd;
-	  fds[i].events = POLLIN;
-	}
+	 {
+	   fds[i].fd = fd->fd;
+	   fds[i].events = POLLIN;
+	 }
       END_FOR_FDS;
 
       FOR_FDS(struct connect_fd, fd, b->connect, i++)
-	{
-	  fds[i].fd = fd->fd;
-	  fds[i].events = POLLOUT;
-	}
+	 {
+	   fds[i].fd = fd->fd;
+	   fds[i].events = POLLOUT;
+	 }
       END_FOR_FDS;
 
       res = poll(fds, nfds, timeout);
 
       if (!res)
-	{
-	  /* Timeout. Run the callout */
-	  struct callout *f = b->callouts;
-	  
-	  if (!CALLBACK(f->callout))
-	    fatal("What now?");
-	  b->callouts = f->next;
-	  free(f);
-	}
+	 {
+	   /* Timeout. Run the callout */
+	   struct callout *f = b->callouts;
+
+	   if (!CALLBACK(f->callout))
+	     fatal("What now?");
+	   b->callouts = f->next;
+	   free(f);
+	 }
       if (res<0)
-	{
-	  switch(errno)
-	    {
-	    case EAGAIN:
-	    case EINTR:
-	      continue;
-	    default:
-	      fatal("io_run:poll failed: %s", strerror(errno));
-	    }
-	}
+	 {
+	   switch(errno)
+	     {
+	     case EAGAIN:
+	     case EINTR:
+	       continue;
+	     default:
+	       fatal("io_run:poll failed: %s", strerror(errno));
+	     }
+	 }
       else
-	{ /* Process files */
-	  i = 0;
+	 { /* Process files */
+	   i = 0;
 
-	  /* Handle writing first */
-	  FOR_FDS(struct io_fd, fd, b->io, i++)
-	    {
-	      if (fds[i].revents & POLLOUT)
-		{
-		  UINT32 size = MIN(fd->buffer->end - fd->buffer->start,
-				    fd->buffer->block_size);
-		  int res = write(fd->fd,
-				  fd->buffer->buffer + fd->buffer->start,
-				  size);
-		  if (!res)
-		    fatal("Closed?");
-		  if (res < 0)
-		    switch(errno)
-		      {
-		      case EINTR:
-		      case EAGAIN:
-			break;
-		      default:
-			werror("io.c: write failed, %s\n", strerror(errno));
-			CALLBACK(fd->close_callback);
+	   /* Handle writing first */
+	   FOR_FDS(struct io_fd, fd, b->io, i++)
+	     {
+	       if (fds[i].revents & POLLOUT)
+		 {
+		   UINT32 size = MIN(fd->buffer->end - fd->buffer->start,
+				     fd->buffer->block_size);
+		   int res = write(fd->fd,
+				   fd->buffer->buffer + fd->buffer->start,
+				   size);
+		   if (!res)
+		     fatal("Closed?");
+		   if (res < 0)
+		     switch(errno)
+		       {
+		       case EINTR:
+		       case EAGAIN:
+			 break;
+		       default:
+			 werror("io.c: write failed, %s\n", strerror(errno));
+			 CALLBACK(fd->close_callback);
 
-			fd->please_close = 1;
+			 fd->please_close = 1;
 
-			break;
-		      }
-		  else if (!res)
-		    fatal("What now?");
-		  else
-		    fd->buffer->start += res;
-		}
-	    }
-	  END_FOR_FDS;
+			 break;
+		       }
+		   else if (!res)
+		     fatal("What now?");
+		   else
+		     fd->buffer->start += res;
+		 }
+	     }
+	   END_FOR_FDS;
 
-	  /* Handle reading */
-	  i = 0; /* Start over */
-	  FOR_FDS(struct io_fd, fd, b->io, i++)
-	    {
-	      if (!fd->please_close
-		  && (fds[i].revents & POLLIN))
-		{
-		  struct fd_read r =
-		  { { (abstract_read_f) do_read }, fd->fd };
+	   /* Handle reading */
+	   i = 0; /* Start over */
+	   FOR_FDS(struct io_fd, fd, b->io, i++)
+	     {
+	       if (!fd->please_close
+		   && (fds[i].revents & POLLIN))
+		 {
+		   struct fd_read r =
+		   { { do_read }, fd->fd };
 
-		  /* The handler function returns a new handler for the
-		   * file, or NULL. */
-		  if (!(fd->handler
-			= READ_HANDLER(fd->handler,
-				       (struct abstract_read *) &r)))
-		    {
-		      fd->please_close = 1;
-		    }
+		   /* The handler function returns a new handler for the
+		    * file, or NULL. */
+		   if (!(READ_HANDLER(fd->handler,
+				      &r.super)))
+		     {
+		       fd->please_close = 1;
+		     }
 		}
 	      if (fd->please_close)
 		{
@@ -213,6 +215,9 @@ void io_run(struct io_backend *b)
 		   * After a write error, read state must be freed,
 		   * and vice versa. */
 		  UNLINK_FD;
+		  b->nio--;
+		  if (fd->handler)
+		    free(fd->handler);
 		  free(fd->buffer);
 		  free(fd);
 		  continue;
@@ -260,7 +265,7 @@ void io_run(struct io_backend *b)
 	    }
 	  END_FOR_FDS;
 	}
-    }
+   }
 }
 
 /*
@@ -444,5 +449,5 @@ struct abstract_write *io_read_write(struct io_backend *b,
   b->io = f;
   b->nio++;
 
-  return (struct abstract_write *) buffer;
+  return &buffer->super;
 }

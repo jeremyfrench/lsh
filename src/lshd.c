@@ -21,15 +21,18 @@ void usage()
 
 int main(int argc, char **argv)
 {
+  char *host = NULL;  /* Interface to bind */
   char *port = "ssh";
   int verbose;
   int option;
 
+  struct sockaddr_in local;
+    
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
   setlocale(LC_CTYPE, "");
   
-  while((option = getopt(argc, argv, "dp:q")) != -1)
+  while((option = getopt(argc, argv, "dp:qi:")) != -1)
     switch(option)
       {
       case 'p':
@@ -41,6 +44,9 @@ int main(int argc, char **argv)
       case 'd':
 	debug_flag = 1;
 	break;
+      case 'i':
+	host = optarg;
+	break;
       default:
 	usage();
       }
@@ -48,7 +54,7 @@ int main(int argc, char **argv)
   if ( (argc - optind) != 0)
     usage();
 
-  if (!get_inaddr(&remote, NULL, port, "tcp"))
+  if (!get_inaddr(&local, host, port, "tcp"))
     {
       fprintf(stderr, "No such host or service");
       exit(1);
@@ -61,8 +67,8 @@ int main(int argc, char **argv)
       BLOCK_SIZE;
     };
 
-    io_connect(&backend, &remote, NULL,
-	       make_client_callback(backend, BLOCK_SIZE));
+    io_listen(&backend, &local, 
+	      make_server_callback(backend, BLOCK_SIZE));
   }
   
   io_run();

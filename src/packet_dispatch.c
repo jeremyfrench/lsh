@@ -6,9 +6,12 @@
 #include "xalloc.h"
 #include "werror.h"
 
-static int do_dispatch(struct dispatch_processor *closure,
+static int do_dispatch(struct abstract_write **c,,
 		       struct lsh_string *packet)
 {
+  struct dispatch_processor *closure
+    = (struct dispatch_processor *) *c;
+  
   unsigned start;
   unsigned end;
   unsigned msg;
@@ -69,7 +72,7 @@ make_dispatch_processor(unsigned size,
   closure->table_size = size;
   closure->dispatch_table = table;
 
-  return (struct abstract_write *) closure;
+  return &closure->super;
 }
 
 

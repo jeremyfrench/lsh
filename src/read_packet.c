@@ -16,10 +16,10 @@
 #define WAIT_CONTENTS 1
 #define WAIT_MAC 2
 
-static struct read_handler *do_read_packet(struct read_handler *c,
-					   struct abstract_read *read)
+int do_read_packet(struct read_handler **h,
+		   struct abstract_read *read)
 {
-  struct read_packet *closure = (struct read_packet *) c;
+  struct read_packet *closure = (struct read_packet *) *h;
   while(1)
     {
       switch(closure->state)
@@ -39,7 +39,7 @@ static struct read_handler *do_read_packet(struct read_handler *c,
 	    switch(n)
 	      {
 	      case 0:
-		return c;
+		return 1;
 	      case A_FAIL:
 		werror("do_read_packet: read() failed, %s\n", strerror(errno));
 		/* Fall through */
@@ -105,7 +105,7 @@ static struct read_handler *do_read_packet(struct read_handler *c,
 	    switch(n)
 	      {
 	      case 0:
-		return c;
+		return 1;
 	      case A_FAIL:
 		werror("do_read_packet: read() failed, %s\n", strerror(errno));
 		/* Fall through */
@@ -150,7 +150,7 @@ static struct read_handler *do_read_packet(struct read_handler *c,
 	      switch(n)
 		{
 		case 0:
-		  return c;
+		  return 1;
 		case A_FAIL:
 		  werror("do_read_packet: read() failed, %s\n",
 			 strerror(errno));
@@ -192,7 +192,7 @@ struct read_handler *make_read_packet(struct abstract_write *handler,
 {
   struct read_packet *closure = xalloc(sizeof(struct read_packet));
 
-  closure->super.handler = (read_handler_f) do_read_packet;
+  closure->super.handler = do_read_packet;
 
   closure->state = WAIT_HEADER;
   closure->max_packet = max_packet;

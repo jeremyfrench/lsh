@@ -5,9 +5,12 @@
 #include "encrypt.h"
 #include "xalloc.h"
 
-static int do_encrypt(struct encrypt_processor *closure,
+static int do_encrypt(struct encrypt_processor **c,
 		      struct simple_packet *packet)
 {
+  struct encrypt_processor *closure
+    = (struct encrypt_processor *) *c;
+  
   /* FIXME: Use ssh_format() */
   struct simple_packet *new
     = lsh_string_alloc(packet->length + closure->mac_size);
@@ -36,7 +39,7 @@ make_packet_encrypt(struct abstract_write *continuation,
 {
   struct encrypt_processor *closure = xalloc(sizeof(struct encrypt_processor));
 
-  closure->c.p.f = (abstract_write_f) do_encrypt;
+  closure->super.super.write = do_encrypt;
   closure->c.next = continuation;
   closure->mac_size = mac_size;
   closure->mac_function = mac_function;
@@ -44,7 +47,7 @@ make_packet_encrypt(struct abstract_write *continuation,
   closure->encrypt_function = encrypt_function;
   closure->encrypt_state = encrypt_state;
 
-  return (struct abstract_write *) closure;
+  return &closure->super.super;
 }
 
     

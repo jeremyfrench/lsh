@@ -9,14 +9,14 @@
 #include <stdio.h>
 #include "abstract_io.h"
 
-struct debug_processor
+struct packet_debug
 {
   struct abstract_write_pipe super;
   FILE *output;
 };
 
 struct abstract_write *
-make_debug_processor(struct abstract_write *continuation, FILE *output);
+make_packet_debug(struct abstract_write *continuation, FILE *output);
 
 
 #endif */ LSH_DEBUG_H_INCLUDED */

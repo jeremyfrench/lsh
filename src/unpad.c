@@ -5,9 +5,11 @@
 #include "unpad.h"
 #include "xalloc.h"
 
-static int do_unpad(struct unpad_processor *closure,
+static int do_unpad(struct abstract_write **c,
 		    struct lsh_string *packet)
 {
+  struct unpad_processor *closure = (struct unpad_processor *) *c;
+  
   UINT8 padding_length;
   UINT32 payload_length;
   struct lsh_string *new;
@@ -38,8 +40,8 @@ make_packet_unpad(struct abstract_write *continuation)
 {
   struct unpad_processor *closure = xalloc(sizeof(struct unpad_processor));
 
-  closure->c.p.f = (abstract_write_f) do_unpad;
+  closure->super.super.write = do_unpad;
   closure->c.next = continuation;
 
-  return (struct abstract_write *) closure;
+  return &closure->super.super;
 }

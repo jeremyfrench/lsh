@@ -5,9 +5,11 @@
 #include "xalloc.h"
 #include "write_buffer.h"
 
-static int do_write(struct write_buffer *closure,
+static int do_write(struct abstract_write **w,
 		    struct lsh_string *packet)
 {
+  struct write_buffer *closure = (struct write_buffer *) *w;
+  
   struct node *new;
   if (!packet->length)
     {
@@ -17,6 +19,8 @@ static int do_write(struct write_buffer *closure,
 
   /* Enqueue packet */
   new = xalloc(sizeof(struct node));
+  new->packet = packet;
+  
   new->next = 0;
   
   if (closure->tail)
@@ -122,7 +126,7 @@ struct write_buffer *write_buffer_alloc(UINT32 size)
 {
   struct write_buffer *res = xalloc(sizeof(struct write_buffer) - 1 + size*2);
   
-  res->a.write = (abstract_write_f) do_write;
+  res->super.write = do_write;
   
   res->block_size = size;
 

@@ -19,9 +19,12 @@
 struct read_handler *make_client_read_line();
 struct callback *make_client_close_handler();
 
-static int client_initiate(struct client_callback *closure,
+static int client_initiate(struct fd_callback *c,
 			   int fd)
 {
+  struct client_callback *closure
+    = (struct client_callback *) c;
+  
   struct ssh_connection *connection = ssh_connection_alloc();
   struct abstract_write *write =
     io_read_write(closure->backend, fd,
@@ -44,10 +47,13 @@ struct client_line_handler
   struct ssh_connection *connection;
 };
 
-static struct read_handler *do_line(struct client_line_handler *closure,
+static struct read_handler *do_line(struct line_handler **h,
 				    UINT32 length,
 				    UINT8 *line)
 {
+  struct client_line_handler *closure
+    = (struct client_line_handler *) *h;
+  
   if ( (length >= 4) && !memcmp(line, "SSH-", 4))
     {
       /* Parse and remember format string */
@@ -55,8 +61,8 @@ static struct read_handler *do_line(struct client_line_handler *closure,
 	   || ((length >= 9) && !memcmp(line + 4, "1.99-", 5)))
 	{
 	  struct read_handler *new
-	    = make_read_packet(make_debug_processor(make_packet_void(),
-						    stderr),
+	    = make_read_packet(make_packet_debug(make_packet_void(),
+						 stderr),
 			       closure->connection->max_packet);
 	  
 	  closure->connection->server_version
@@ -73,8 +79,10 @@ static struct read_handler *do_line(struct client_line_handler *closure,
 	  werror_safe(length, line);
 	  werror("\n");
 
-	  fatal("client.c: do_line: Unsupported version.\n"); 
-	  /* FIXME: What could be returned here? */
+	  /* FIXME: Clean up properly */
+	  free(closure);
+	  *h = 0;
+		  
 	  return 0;
 	}
     }
@@ -93,10 +101,10 @@ struct read_handler *make_client_read_line(struct ssh_connection *s)
   struct client_line_handler *closure
     = xalloc(sizeof(struct client_line_handler));
   
-  closure->super.handler = (line_handler_f) do_line;
+  closure->super.handler = do_line;
   closure->connection = s;
   
-  return make_read_line( (struct line_handler *) closure);
+  return make_read_line(&closure->super);
 }
   
 struct fd_callback *make_client_callback(struct io_backend *b,
@@ -106,12 +114,12 @@ struct fd_callback *make_client_callback(struct io_backend *b,
 {
   struct client_callback *connected = xalloc(sizeof(struct client_callback));
 
-  connected->c.f = (fd_callback_f) client_initiate;
+  connected->super.f = client_initiate;
   connected->backend = b;
   connected->block_size = block_size;
   connected->id_comment = comment;
   
-  return (struct fd_callback *) connected;
+  return &connected->super;
 }
 
 static int client_die(struct callback *closure)

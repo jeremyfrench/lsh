@@ -5,9 +5,9 @@
 #ifndef LSH_BLOCKING_WRITE_H_INCLUDED
 #define LSH_BLOCKING_WRITE_H_INCLUDED
 
-struct blocking_write_processor
+struct packet_blocking_write
 {
-  struct abstract_write w;
+  struct abstract_write super;
   int fd;
 };
 

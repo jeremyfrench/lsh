@@ -5,9 +5,12 @@
 #include "debug.h"
 #include "xalloc.h"
 
-static int do_debug(struct debug_processor *closure,
+static int do_debug(struct abstract_write **w,
 		    struct lsh_string *packet)
 {
+  struct packet_debug *closure
+    = (struct packet_debug *) *w;
+  
   UINT32 i;
   
   fprintf(closure->output, "DEBUG: (packet size %d = 0x%x)\n",
@@ -27,15 +30,15 @@ static int do_debug(struct debug_processor *closure,
 }
 
 struct abstract_write *
-make_debug_processor(struct abstract_write *continuation, FILE *output)
+make_packet_debug(struct abstract_write *continuation, FILE *output)
 {
-  struct debug_processor *closure = xalloc(sizeof(struct debug_processor));
+  struct packet_debug *closure = xalloc(sizeof(struct packet_debug));
 
-  closure->super.super.write = (abstract_write_f) do_debug;
+  closure->super.super.write = do_debug;
   closure->super.next = continuation;
   closure->output = output;
 
-  return (struct abstract_write *) closure;
+  return &closure->super.super;
 }
 
 
