@@ -670,12 +670,14 @@ static struct io_callback io_write_callback =
 
 struct listen_value *
 make_listen_value(struct lsh_fd *fd,
-		  struct address_info *peer)
+		  struct address_info *peer,
+		  struct address_info *local)
 {
   NEW(listen_value, self);
 
   self->fd = fd;
   self->peer = peer;
+  self->local = local;
 
   return self;
 }
@@ -714,11 +716,13 @@ do_listen_callback(struct io_callback *s,
       werror("io.c: accept failed, %z", STRERROR(errno));
       return;
     }
+
   trace("io.c: accept on fd %i\n", conn);
   COMMAND_RETURN(self->c,
 		 make_listen_value(make_lsh_fd(conn, "accepted socket", self->e),
 				   sockaddr2info(addr_len,
-						 (struct sockaddr *) &peer)));
+						 (struct sockaddr *) &peer), 
+				   fd2info(fd,0)));
 }
 
 struct io_callback *
@@ -1070,6 +1074,35 @@ sockaddr2info(size_t addr_len UNUSED,
       werror("io.c: sockaddr2info: Unsupported address family.\n");
       return NULL;
     }
+}
+
+struct address_info *
+fd2info(struct lsh_fd *fd, int side)
+{
+#if WITH_IPV6
+    struct sockaddr_storage sock;
+#else
+  struct sockaddr sock;
+#endif
+  
+  socklen_t s_len = sizeof(sock);
+
+  int get;
+
+  if( !side ) /* Local */
+    get = getsockname( fd->fd, (struct sockaddr *)  &sock, &s_len );
+  else
+    get = getpeername( fd->fd, (struct sockaddr *)  &sock, &s_len );
+
+        
+  if (get < 0)  
+    {               
+      werror("io.c: getXXXXname failed, %z", STRERROR(errno));
+      return NULL;
+    }
+
+  return sockaddr2info(s_len,
+		       (struct sockaddr *) &sock);
 }
 
 #if HAVE_GETADDRINFO
