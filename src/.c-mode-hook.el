@@ -1,1 +1,0 @@
-(c-set-style "gnu")
