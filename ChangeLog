@@ -1,3 +1,9 @@
+Thu Oct 14 20:35:43 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/argp/argp-fmtstream.h: #include argp-comp.h.
+
+	* configure.in: Check for fwrite_unlocked and fputs_unlocked. 
+
 Wed Oct 13 22:40:49 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/argp/argp-comp.h: Added ugly hack for fwrite_unlocked and
