@@ -131,7 +131,7 @@ static int do_read_line(struct read_handler **h,
 	      while(next && (read.index < closure->pos))
 		{
 		  res = READ_HANDLER(next, &read.super);
-		  if (LSH_PROBLEMP(res))
+		  if (LSH_CLOSEDP(res))
 		    return res;
 		}
 	    }

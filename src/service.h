@@ -24,6 +24,7 @@
 #ifndef LSH_SERVICE_H_INCLUDED
 #define LSH_SERVICE_H_INCLUDED
 
+#include "alist.h"
 #include "connection.h"
 
 /* Used on both client and server side */
@@ -42,5 +43,9 @@ struct packet_handler *make_service_handler(struct alist *services);
 struct lsh_string *format_service_request(int name);
 
 int request_service(int name, struct ssh_service * service);
+
+struct lsh_string *format_service_accept(int name);
+
+struct ssh_service *make_meta_service(struct alist *services);
 
 #endif /* LSH_SERVICE_H_INCLUDED */

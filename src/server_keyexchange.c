@@ -73,14 +73,14 @@ static int do_handle_dh_init(struct packet_handler *c,
   res = A_WRITE(connection->write, dh_make_server_msg(&closure->dh,
 						      closure->signer));
 
-  if (LSH_PROBLEMP(res))
+  if (LSH_CLOSEDP(res))
     return res;
   
   /* Send a newkeys message, and install a handler for recieving the
    * newkeys message. */
 
-  res = A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
-  if (LSH_PROBLEMP(res))
+  res |= A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
+  if (LSH_CLOSEDP(res))
     return res;
   
   /* Record session id */
@@ -105,11 +105,11 @@ static int do_handle_dh_init(struct packet_handler *c,
   connection->kex_state = KEX_STATE_NEWKEYS;
   connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
 
-  res = send_verbose(connection->write, "Key exchange successful!", 0);
-  if (LSH_PROBLEMP(res))
+  res |= send_verbose(connection->write, "Key exchange successful!", 0);
+  if (LSH_CLOSEDP(res))
     return res;
   
-  return SERVICE_INIT(closure->finished, connection);
+  return res | SERVICE_INIT(closure->finished, connection);
 }
 
 static int do_init_dh(struct keyexchange_algorithm *c,

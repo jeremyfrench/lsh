@@ -290,7 +290,7 @@ static int do_read_packet(struct read_handler **h,
 	  closure->state = WAIT_START;
 	  
 	  res = A_WRITE(closure->handler, packet);
-	  if (LSH_PROBLEMP(res))
+	  if (LSH_ACTIONP(res))
 	    return res;
 	  break;
 	}

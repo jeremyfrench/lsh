@@ -1,73 +1,40 @@
 /* session.h
  *
  * Manage the ssh-connection service.
+ *
+ * $Id$
+ */
+
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 1998 Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #ifndef LSH_SESSION_H_INCLUDED
 #define LSH_SESSION_H_INCLUDED
 
+#include "alist.h"
 #include "connection.h"
 #include "channel.h"
+#include "parse.h"
 
-struct ssh_session
-{
 #if 0
-  /* FIXME: This is relevant only for the server side. It's probably
-   * better to store this in the connection struct */
-  uid_t user;  /* Authenticated user */
+struct ssh_service *make_session_service(struct alist *global_requests,
+					 struct alist *channel_requests);
 #endif
-  /* Channels are indexed by local number */
-  struct channel **channels;
 
-  /* Allocation of local channel numbers is managed using the same *
-   * method as is traditionally used for allocation of unix file
-   * descriptors. */
-
-  UINT32 allocated_channels;
-  UINT32 next_channel;
-  UINT32 used_channels;
-  UINT32 max_channels; /* Max number of channels allowed */
-};
-
-/* SSH_MSG_GLOBAL_REQUEST */
-struct global_request
-{
-  struct lsh_object *header;
-
-  int (*handler)(struct global_request *closure,
-		 int want_reply,
-		 struct simple_buffer *args);
-};
-
-#define GLOBAL_REQUEST(c, w, a) ((c)->handler((c), (w), (a)))
-
-/* SSH_MSG_CHANNEL_OPEN */
-struct channel_open
-{
-  struct lsh_object *header;
-
-  int (*handler)(struct channel_open *closure,
-		 UINT32 channel_number, /* Remote channel number */
-		 UINT32 rec_window_size,
-		 UINT32 rec_max_packet,
-		 struct simple_buffer *args);
-};
-
-#define CHANNEL_OPEN(c, n, w, m, a) \
-((c)->handler((c), (n), (w), (m), (a)))
-
-/* SSH_MSH_CHANNEL_REQUEST */
-struct channel_request
-{
-  struct lsh_object *header;
-
-  int (*handler)(struct channel_request *closure,
-		 struct ssh_channel *channel,
-		 int want_reply;
-		 struct simple_buffer *args);
-};
-
-#define CHANNEL_REQUEST(s, c, w, a) \
-((s)->handler((s), (c), (w), (a)))
- 
 #endif /* LSH_SESSION_H_INCLUDED */

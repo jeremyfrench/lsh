@@ -150,8 +150,8 @@ int initiate_keyexchange(struct ssh_connection *connection,
 
   res = A_WRITE(connection->write, lsh_string_dup(s));
   
-  if (!LSH_PROBLEMP(res) && first_packet)
-    return A_WRITE(connection->write, first_packet);
+  if (!LSH_CLOSEDP(res) && first_packet)
+    return res | A_WRITE(connection->write, first_packet);
   else
     return res;
 }
@@ -179,7 +179,7 @@ int disconnect_kex_failed(struct ssh_connection *connection, char *msg)
 {
   return A_WRITE(connection->write,
 		 format_disconnect(SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
-				   msg));
+				   msg, ""));
 }
 
 static int do_handle_kexinit(struct packet_handler *c,
@@ -196,12 +196,13 @@ static int do_handle_kexinit(struct packet_handler *c,
   void **algorithms;
 
   int i;
+  int res = 0;
 
   MDEBUG(closure);
   MDEBUG(msg);
   
   if (!msg)
-    return 0;
+    return LSH_FAIL | LSH_DIE;
 
   /* Save value for later signing */
   connection->literal_kexinits[!closure->type] = packet;
@@ -211,7 +212,6 @@ static int do_handle_kexinit(struct packet_handler *c,
   /* Have we sent a kexinit message? */
   if (!connection->kexinits[closure->type])
     {
-      int res;
       struct lsh_string *packet;
       struct kexinit *sent = MAKE_KEXINIT(closure->init);
       connection->kexinits[closure->type] = sent;
@@ -219,7 +219,7 @@ static int do_handle_kexinit(struct packet_handler *c,
       connection->literal_kexinits[closure->type] = lsh_string_dup(packet); 
       
       res = A_WRITE(connection->write, packet);
-      if (LSH_PROBLEMP(res))
+      if (LSH_CLOSEDP(res))
 	return res;
     }
 
@@ -250,7 +250,7 @@ static int do_handle_kexinit(struct packet_handler *c,
 	  disconnect_kex_failed(connection,
 				"No common key exchange method.\r\n");
 	  
-	  return LSH_FAIL | LSH_CLOSE;
+	  return res | LSH_FAIL | LSH_CLOSE;
 	}
     }
   hostkey_algorithm
@@ -266,7 +266,7 @@ static int do_handle_kexinit(struct packet_handler *c,
       if (!parameters[i])
 	{
 	  disconnect_kex_failed(connection, "");
-	  return LSH_FAIL | LSH_CLOSE;
+	  return res | LSH_FAIL | LSH_CLOSE;
 	}
     }
   
@@ -275,13 +275,14 @@ static int do_handle_kexinit(struct packet_handler *c,
   for (i = 0; i<KEX_PARAMETERS; i++)
     algorithms[i] = ALIST_GET(closure->algorithms, parameters[i]);
       
-  return KEYEXCHANGE_INIT( (struct keyexchange_algorithm *)
-			   ALIST_GET(closure->algorithms, kex_algorithm),
-			   connection,
-			   closure->finished,
-			   hostkey_algorithm,
-			   ALIST_GET(closure->algorithms, hostkey_algorithm),
-			   algorithms);
+  return res
+    | KEYEXCHANGE_INIT( (struct keyexchange_algorithm *)
+			ALIST_GET(closure->algorithms, kex_algorithm),
+			connection,
+			closure->finished,
+			hostkey_algorithm,
+			ALIST_GET(closure->algorithms, hostkey_algorithm),
+			algorithms);
 }
 
 struct packet_handler *make_kexinit_handler(int type,

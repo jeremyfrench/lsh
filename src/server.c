@@ -80,12 +80,12 @@ static int server_initiate(struct fd_callback **c,
 
   res = A_WRITE(connection->raw,
 		 ssh_format("%lS\r\n", connection->server_version));
-  if (LSH_PROBLEMP(res))
+  if (LSH_CLOSEDP(res))
     return res;
 
-  return initiate_keyexchange(connection, CONNECTION_SERVER,
-			      MAKE_KEXINIT(closure->init),
-			      NULL);
+  return res | initiate_keyexchange(connection, CONNECTION_SERVER,
+				    MAKE_KEXINIT(closure->init),
+				    NULL);
 }
 
 struct server_line_handler

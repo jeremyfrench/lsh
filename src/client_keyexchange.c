@@ -85,7 +85,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
    * handler for recieving the newkeys message. */
 
   res = A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
-  if (LSH_PROBLEMP(res))
+  if (LSH_CLOSEDP(res))
     return res;
 
   /* Record session id */
@@ -110,11 +110,11 @@ static int do_handle_dh_reply(struct packet_handler *c,
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = connection->fail;
   connection->kex_state = KEX_STATE_NEWKEYS;
   
-  res = send_verbose(connection->write, "Key exchange successful!", 0);
-  if (LSH_PROBLEMP(res))
+  res |= send_verbose(connection->write, "Key exchange successful!", 0);
+  if (LSH_CLOSEDP(res))
     return res;
   
-  return SERVICE_INIT(closure->finished, connection);
+  return res | SERVICE_INIT(closure->finished, connection);
 }
 
 static int do_init_dh(struct keyexchange_algorithm *c,
@@ -148,15 +148,15 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   /* Send client's message */
   res = A_WRITE(connection->write, dh_make_client_msg(&dh->dh));
 
-  if (LSH_PROBLEMP(res))
-    return res;
+  if (LSH_CLOSEDP(res))
+    return res | LSH_FAIL;
   
   /* Install handler */
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = &dh->super;
   
   connection->kex_state = KEX_STATE_IN_PROGRESS;
   
-  return LSH_OK | LSH_GOON;
+  return res | LSH_OK | LSH_GOON;
 }
 
 

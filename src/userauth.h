@@ -24,7 +24,8 @@
 #ifndef LSH_USERAUTH_H_INCLUDED
 #define LSH_USERAUTH_H_INCLUDED
 
-#include "lsh_types.h"
+#include "parse.h"
+#include "service.h"
 
 /* Returns 0 if the request is somehow invalid. Otheerwise, returns 1,
  * and sets SERVICE non-NULL iff access is granted. */
@@ -35,8 +36,9 @@ struct userauth
 {
   struct lsh_object header;
   
-  int (*authenticate)(struct userauth *self,
-		      lsh_string *user,
+  int (*authenticate)(struct userauth *closure,
+		      /* The name is consumed by this function */
+		      struct lsh_string *username,
 		      int requested_service,
 		      struct simple_buffer *args,
 		      struct ssh_service **service);
@@ -45,8 +47,8 @@ struct userauth
 #define AUTHENTICATE(s, u, r, a, g) \
 ((s)->authenticate((s), (u), (r), (a), (g)))
      
-struct ssh_service *make_client_userauth(struct lsh_string username,
+struct ssh_service *make_client_userauth(struct lsh_string *username,
 					 int service_name,
 					 struct ssh_service *service);
-     
+
 #endif /* LSH_USERAUTH_H_INCLUDED */
