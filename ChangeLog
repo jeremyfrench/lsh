@@ -1,3 +1,8 @@
+2001-11-02  Niels Möller  <nisse@ehand.com>
+
+	* src/server_session.c (do_eof): Use close_fd_write instead of
+	close_fd_nicely. 
+
 2001-10-30  Niels Möller  <nisse@ehand.com>
 
 	* src/channel_forward.c (do_channel_forward_eof): Don't call
