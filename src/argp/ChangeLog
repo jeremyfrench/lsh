@@ -1,3 +1,10 @@
+2003-03-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* argp-help.c: Don't include malloc.h. If any system still needs
+	it, we need a configure test for it. 
+	(hol_entry_help): Don't use a non-constant initializer, as that's
+	a GNU C extension.
+
 2003-02-23  Niels Moller  <nisse@carduelis>
 
 	* configure.ac: Use LSH_GCC_ATTRIBUTES. Deleted the definition of
