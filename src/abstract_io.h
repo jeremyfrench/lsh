@@ -41,10 +41,10 @@
 struct abstract_read
 {
   int (*read)(struct abstract_read **r,
-	      UINT8 *buffer, UINT32 length);
+	      UINT32 length, UINT8 *buffer);
 };
 
-#define A_READ(f, buffer, length) (f)->read(&(f), (buffer), (length))
+#define A_READ(f, length, buffer) (f)->read(&(f), (length), (buffer))
 
 /* May store a new handler into *h. */
 struct read_handler

@@ -37,7 +37,7 @@ struct string_read
 };
 
 static int do_string_read(struct abstract_read **r,
-			  UINT8 *buffer, UINT32 length)
+			  UINT32 length, UINT8 *buffer)
 {
   struct string_read *closure
     = (struct string_read *) *r;
@@ -60,7 +60,7 @@ static int do_read_line(struct read_handler **h,
   UINT32 length;
   struct read_handler *next;
 
-  int n = A_READ(read, closure->buffer, MAX_LINE - closure->pos);
+  int n = A_READ(read, MAX_LINE - closure->pos, closure->buffer);
   
   if (n<0)
     {

@@ -35,7 +35,7 @@ static int do_read_data(struct read_handler **h,
   while(1)
     {
       struct lsh_string *packet = lsh_string_alloc(closure->block_size);
-      int n = A_READ(read, packet->data, packet->length);
+      int n = A_READ(read, packet->length, packet->data);
       
       switch(n)
 	{

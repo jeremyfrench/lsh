@@ -59,7 +59,7 @@ int do_read_packet(struct read_handler **h,
 	  {
 	    UINT32 block_size = closure->connection->rec_crypto
 	      ? closure->connection->rec_crypto->block_size : 8;
-	    UINT32 left = block_size - closure->pos;
+	    UINT32 left;
 	    int n;
 	
 	    if (!closure->buffer)
@@ -68,13 +68,18 @@ int do_read_packet(struct read_handler **h,
 		  = lsh_string_alloc(block_size);
 		closure->pos = 0;
 	      }
-	    n = A_READ(read, closure->buffer->data + closure->pos, left);
+
+	    left = block_size - closure->pos;
+	    
+	    n = A_READ(read, left, closure->buffer->data + closure->pos);
 	    switch(n)
 	      {
 	      case 0:
 		return 1;
 	      case A_FAIL:
+#if 0
 		werror("do_read_packet: read() failed, %s\n", strerror(errno));
+#endif
 		/* Fall through */
 	      case A_EOF:
 		/* FIXME: Free associated resources! */
@@ -143,7 +148,7 @@ int do_read_packet(struct read_handler **h,
 	case WAIT_CONTENTS:
 	  {
 	    UINT32 left = closure->buffer->length - closure->pos;
-	    int n = A_READ(read, closure->buffer->data + closure->pos, left);
+	    int n = A_READ(read, left, closure->buffer->data + closure->pos);
 
 	    switch(n)
 	      {
@@ -189,7 +194,7 @@ int do_read_packet(struct read_handler **h,
 			     - closure->pos);
 	      UINT8 *mac = alloca(left);
 
-	      int n = A_READ(read, mac, left);
+	      int n = A_READ(read, left, mac);
 
 	      switch(n)
 		{
