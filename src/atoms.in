@@ -95,3 +95,20 @@ tcpip-forward
 cancel-tcpip-forward
 forwarded-tcpip
 direct-tcpip
+
+# Used in spki keys
+
+private-key
+public-key
+dsa
+p
+q
+g
+y
+
+# spki password encrypted data
+password-encrypted
+sha1
+pkcs5v2
+salt
+label
