@@ -62,14 +62,12 @@ struct resource_node
    (class
      (name resource_list)
      (vars
-       (q special-struct "struct lsh_queue"
-                         do_mark_resources do_free_resources)
+       (q struct object_queue)
+       ;;(q special-struct "struct lsh_queue"
+       ;;                  do_mark_resources do_free_resources)
 
-       ; Returns the node.
-       ; NOTE: This pointer should only be stored together with
-       ; the resource list object pointer, as the nodes are not gc:ed
-       ; individually.  
-       (remember method "struct resource_node *" "struct resource *r")
+       ; NOTE: No longer returns the node.
+       (remember method void "struct resource *r")
 
        ; Kills the resource and unlinks and deallocates the node.
        ;; (kill_resource method void "struct resource_node *n")
@@ -78,9 +76,9 @@ struct resource_node
 */
 
 /* For now, don't use the value returned from remember. */
-#define REMEMBER_RESOURCE(l, r) ((void) ((l)->remember((l), (r))))
+#define REMEMBER_RESOURCE(l, r) ((l)->remember((l), (r)))
 
-#define KILL_RESOURCE_NODE(l, n) ((l)->kill_resource((l), (n)))
+/* #define KILL_RESOURCE_NODE(l, n) ((l)->kill_resource((l), (n))) */
 #define KILL_RESOURCE_LIST(l) ((l)->kill_all((l)))
 
 /* Allocates an empty list. */

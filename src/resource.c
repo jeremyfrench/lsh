@@ -31,16 +31,20 @@
 #include "xalloc.h"
 
 /* Prototypes */
+#if 0
 void do_mark_resources(struct lsh_queue *q,
 		       void (*mark)(struct lsh_object *o));
 
 void do_free_resources(struct lsh_queue *q);
+#endif
+
 void dont_free_live_resource(int alive);
 
 #define GABA_DEFINE
 #include "resource.h.x"
 #undef GABA_DEFINE
 
+#if 0
 void do_mark_resources(struct lsh_queue *q,
 		       void (*mark)(struct lsh_object *o))
 {
@@ -53,6 +57,7 @@ void do_free_resources(struct lsh_queue *q)
   FOR_QUEUE(q, struct resource_node *, n)
     lsh_space_free(n);
 }
+#endif
 
 void dont_free_live_resource(int alive)
 {
@@ -61,32 +66,31 @@ void dont_free_live_resource(int alive)
 	  "About to garbage collect a live resource!\n");
 }
 
-static struct resource_node *do_remember_resource(struct resource_list *self,
+static void do_remember_resource(struct resource_list *self,
 						  struct resource *r)
 {
-  struct resource_node *n;
-
-  NEW_SPACE(n);
-  n->resource = r;
-
-  lsh_queue_add_head(&self->q, &n->header);
-
-  return n;
+  object_queue_add_head(&self->q, &r->super);
 }
 
 static void do_kill_all(struct resource_list *self)
 {
+  while (!object_queue_is_empty(&self->q))
+    {
+      CAST(resource, r, object_queue_remove_head(&self->q));
+      KILL_RESOURCE(r);
+    }
+  #if 0
   /* FIXME: Doesn't deallocate any nodes (but gc should do that
    * later). */
-
   FOR_QUEUE(&self->q, struct resource_node *, n)
     KILL_RESOURCE(n->resource);
+  #endif
 }
   
 struct resource_list *empty_resource_list(void)
 {
   NEW(resource_list, self);
-  lsh_queue_init(&self->q);
+  object_queue_init(&self->q);
 
   self->remember = do_remember_resource;
   self->kill_all = do_kill_all;
