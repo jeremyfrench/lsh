@@ -79,6 +79,7 @@
 # define SETUTXENT setutxent 
 # define UTMPX utmpx
 # define UTMPX_UT_EXIT    HAVE_STRUCT_UTMPX_UT_EXIT
+# define UTMPX_UT_EXIT_E_TERMINATION HAVE_STRUCT_UTMPX_UT_EXIT_E_TERMINATION
 # define UTMPX_UT_PID     HAVE_STRUCT_UTMPX_UT_PID
 # define UTMPX_UT_USER    HAVE_STRUCT_UTMPX_UT_USER
 # define UTMPX_UT_TV      HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
@@ -99,6 +100,7 @@
 #  define SETUTXENT setutent 
 #  define UTMPX utmp
 #  define UTMPX_UT_EXIT    HAVE_STRUCT_UTMP_UT_EXIT
+#  define UTMPX_UT_EXIT_E_TERMINATION HAVE_STRUCT_UTMP_UT_EXIT_E_TERMINATION
 #  define UTMPX_UT_PID     HAVE_STRUCT_UTMP_UT_PID
 #  define UTMPX_UT_USER    HAVE_STRUCT_UTMP_UT_USER
 #  define UTMPX_UT_TV      HAVE_STRUCT_UTMP_UT_TV_TV_SEC
@@ -262,8 +264,14 @@ do_utmp_cleanup(struct exit_callback *s,
    * entries that shouldn't be 0 */
 
 #if UTMPX_UT_EXIT
+# if UTMPX_UT_EXIT_E_TERMINATION
   entry.ut_exit.e_exit = signaled ? 0 : value;
   entry.ut_exit.e_termination = signaled ? value : 0;
+# else
+  /* HPUX uses these odd names in struct utmpx */
+  entry.ut_exit.__e_exit = signaled ? 0 : value;
+  entry.ut_exit.__e_termination = signaled ? value : 0;
+# endif
 #endif
 
 #ifndef HAVE_LOGWTMP
