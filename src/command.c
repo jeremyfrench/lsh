@@ -618,51 +618,6 @@ make_catch_apply(struct catch_handler_info *info,
 }
 
 
-/* GABA:
-   (class
-     (name catch_collect_body)
-     (super command)
-     (vars
-       (info object catch_handler_info)))
-*/
-
-static void
-do_catch_collect_body(struct command *s,
-		      struct lsh_object *a,
-		      struct command_continuation *c,
-		      struct exception_handler *e UNUSED)
-{
-  CAST(catch_collect_body, self, s);
-  CAST_SUBTYPE(command, body, a);
-
-  COMMAND_RETURN(c, make_catch_apply(self->info, body));
-}
-
-static struct command *
-make_catch_collect_body(struct catch_handler_info *info)
-{
-  NEW(catch_collect_body, self);
-  self->super.call = do_catch_collect_body;
-  self->info = info;
-
-  return &self->super;
-}
-
-void
-do_catch_simple(struct command *s,
-		struct lsh_object *a,
-		struct command_continuation *c,
-		struct exception_handler *e UNUSED)
-{
-  CAST(catch_command, self, s);
-  CAST_SUBTYPE(command, f, a);
-  COMMAND_RETURN(c,
-		 make_catch_collect_body
-		 (make_catch_handler_info(self->mask,
-					  self->value, self->ignore_value, f)));
-}
-
-
 /* Catch and report some exceptions.
  *
  * FIXME: This duplicates most of the catch command. */
@@ -712,4 +667,59 @@ do_catch_report_collect(struct command *s,
 
   COMMAND_RETURN(c,
 		 make_catch_report_apply(self->info, body));
+}
+
+/* Protecting resources.
+ *
+ *   (protect resource f)
+ *
+ * calls (f resource), and if any exception is raised, the resource is
+ * killed. */
+
+/* GABA:
+   (class
+     (name protect_handler)
+     (super exception_handler)
+     (vars
+       (resource object resource)))
+*/
+
+static void
+do_exc_protect_handler(struct exception_handler *s,
+		       const struct exception *e)
+{
+  CAST(protect_handler, self, s);
+  
+  KILL_RESOURCE(self->resource);
+  
+  EXCEPTION_RAISE(self->super.parent, e);
+}
+
+static struct exception_handler *
+make_protect_exception_handler(struct resource *resource,
+			       struct exception_handler *e,
+			       const char *context)
+{
+  NEW(protect_handler, self);
+  self->super.raise = do_exc_protect_handler;
+  self->super.parent = e;
+  self->super.context = context;
+
+  self->resource = resource;
+
+  return &self->super;
+}
+
+DEFINE_COMMAND2(protect_command)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(resource, resource, a1);
+  CAST_SUBTYPE(command, f, a2);
+
+  COMMAND_CALL(f, a1, c,
+	       make_protect_exception_handler(resource, e, HANDLER_CONTEXT));
 }

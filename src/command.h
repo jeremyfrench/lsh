@@ -219,6 +219,8 @@ void do_call_simple_command(struct command *s,
 struct command *make_parallell_progn(struct object_list *body);
 extern struct command progn_command;
 
+extern struct command_2 protect_command;
+
 extern struct command_continuation discard_continuation;
 
 #define CONTINUATION_USED_P(c) ((c) != &discard_continuation)
@@ -248,24 +250,6 @@ struct command_context *
 make_command_context(struct command_continuation *c,
 		     struct exception_handler *e);
 
-/* catch command,
- *
- * (catch handler body x)
- */
-
-/* GABA:
-   (class
-     (name catch_command)
-     (super command)
-     (vars
-       (mask . uint32_t)
-       (value . uint32_t)
-
-       ; Ignore return values from body. This means that the catch
-       ; will return *only* if some exception is raised. Useful for
-       ; reading until some EOF exception is raised.
-       (ignore_value . int))) */
-
 struct catch_handler_info *
 make_catch_handler_info(uint32_t mask, uint32_t value,
 			int ignore_value,
@@ -274,15 +258,6 @@ make_catch_handler_info(uint32_t mask, uint32_t value,
 struct command *
 make_catch_apply(struct catch_handler_info *info,
 		 struct command *body);
-
-void
-do_catch_simple(struct command *s,
-		struct lsh_object *a,
-		struct command_continuation *c,
-		struct exception_handler *e);
-
-#define STATIC_CATCH_COMMAND(m, v, i) \
-{ STATIC_COMMAND(do_catch_simple), (m), (v), (i) }
 
 
 /* GABA:
@@ -319,6 +294,7 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *real);
 /* Useful global commands */
 #define PROG1 (&command_K.super.super)
 #define PROGN (&progn_command.super)
+#define PROTECT (&protect_command.super.super)
 
 /* The GABA_* macros are used by automatically generated evaluation code */
 
