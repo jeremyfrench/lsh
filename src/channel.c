@@ -1385,13 +1385,21 @@ DEFINE_PACKET_HANDLER(static, channel_eof_handler,
 	      channel->flags |= CHANNEL_RECEIVED_EOF;
 	      
 	      if (channel->eof)
-		CHANNEL_EOF(channel);
+		{
+		  CHANNEL_EOF(channel);
+
+		  /* Should we close the channel now? */
+		  if ( (channel->flags & CHANNEL_SENT_EOF)
+		       && (channel->flags & CHANNEL_CLOSE_AT_EOF))
+		    channel_close(channel);
+		}
 	      else
 		{
 		  /* By default, close the channel. */
 		  debug("No CHANNEL_EOF handler. Closing.\n"); 
 		  channel_close(channel);
 		}
+	      
 	    }
 	}
       else
@@ -1954,6 +1962,17 @@ make_channel_read_stderr(struct ssh_channel *channel)
      (vars
        (channel object ssh_channel))) */
 
+
+/* FIXME: Do we really need this? The EOF cases in do_channel_write
+ * and do_channel_write_extended should take care of sending
+ * SSH_MSG_CHANNEL_EOF when appropriate (and they could also decrement
+ * the sources counter, even if they don't do that now).
+ *
+ * Then the ordinary close logic could take care of sending
+ * SSH_MSG_CHANNEL_CLOSE: We send SSH_MSG_CHANNEL_CLOSE when we have
+ * both sent and received SSH_MSG_CHANNEL_EOF, and the
+ * CHANNEL_CLOSE_AT_EOF flag is set. */
+
 /* Close callback for files we are reading from. */
 
 static void
@@ -1967,8 +1986,8 @@ channel_read_close_callback(struct lsh_callback *c)
   
   if (!--closure->channel->sources)
     {
-      /* Send close, unless already done. */
-      channel_close(closure->channel);
+      /* Send eof, unless already done. */
+      channel_eof(closure->channel);
     }
 }
 
