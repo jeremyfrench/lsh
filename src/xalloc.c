@@ -28,13 +28,14 @@
 
 #ifdef DEBUG_ALLOC
 
-void *debug_malloc(size_t size)
+void *debug_malloc(size_t real_size)
 {
   static int count = 4711;
   int *res;
+  int size;
   
   /* Count size in ints, and round up */
-  size = (size + sizeof(int)-1) / sizeof(int);
+  size = (real_size + sizeof(int)-1) / sizeof(int);
   
   res = malloc((size + 3)*sizeof(int));
 
@@ -43,23 +44,49 @@ void *debug_malloc(size_t size)
   
   res[0] = count;
   res[1] = size;
+  ((struct lsh_object *) (res + 2))->type = real_size;
   res[size+2] = ~count;
   count++;
 
   return (void *) (res + 2);
 }
 
+void debug_check_object(void *m, UINT32 expected_size)
+{
+  int real_size = ((struct lsh_object *) m)->type;
+  if (real_size)
+    { /* Heap allocated object */
+      int *p = (int *) m;
+      size_t size = p[-1];
+
+      if (expected_size > real_size)
+	fatal("Type error: pointing at too small an object!\n");	
+      
+      if (~p[-2] != p[size])
+	fatal("Memory corrupted!\n");
+      
+      if (expected_size > size * sizeof(int))
+	fatal("Memory corrupted!\n");
+    }
+}
+
 void debug_free(void *m)
 {
-  int *p = (int *) m;
-  size_t size = p[-1];
+  int real_size = ((struct lsh_object *) m)->type;
+  if (real_size)
+    { /* Heap allocated object */
+      int *p = (int *) m;
+      size_t size = p[-1];
+      
+      if (~p[-2] != p[size])
+	fatal("Memory corrupted!\n");
 
-  if (~p[-2] != p[size])
-    fatal("Memory currupted!\n");
-
-  p[-2] = p[size] = 0;
-  
-  free(p-2);
+      p[-2] = p[size] = 0;
+      
+      free(p-2);
+    }
+  else
+    fatal("Freeing an object not allcoated on the heap!\n");
 }
 
 #endif
@@ -77,6 +104,7 @@ struct lsh_string *lsh_string_alloc(UINT32 length)
   struct lsh_string *packet
     = xalloc(sizeof(struct lsh_string) - 1 + length);
   packet->length = length;
+  packet->sequence_number = 0;
   return packet;
 }
 

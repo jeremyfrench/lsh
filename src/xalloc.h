@@ -50,14 +50,20 @@ struct lsh_string *lsh_string_alloc(UINT32 size);
 void lsh_string_free(struct lsh_string *packet);
 
 #ifdef DEBUG_ALLOC
+
 void *debug_malloc(size_t size);
 void debug_free(void *m);
-  
+void debug_check_object(void *m, UINT32 size);
+
 #define lsh_free debug_free
 #define lsh_malloc debug_malloc
-#else
+#define MDEBUG(x) debug_check_object(x, sizeof(*(x)))
+
+#else   /* !DEBUG_ALLOC */
+
 #define lsh_free free
 #define lsh_malloc malloc
-#endif
+#define MDEBUG(x)
+#endif  /* !DEBUG_ALLOC */
 
 #endif /* LSH_XALLOC_H_INCLUDED */
