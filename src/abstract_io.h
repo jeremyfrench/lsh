@@ -35,8 +35,7 @@ struct read_handler
 
 #define READ_HANDLER(h, read) ((h)->handler(&(h), (read)))
 
-/* FIXME: What should writers return? Perhaps a new writer,
- * analogous to read-handlers? */
+/* FIXME: What should writers return? */
 
 /* May store a new handler into *w. */
 struct abstract_write

@@ -18,6 +18,7 @@
 #include "encrypt.h"
 #include "pad.h"
 #include "crypto.h"
+#include "unpad.h"
 
 struct read_handler *make_client_read_line();
 struct callback *make_client_close_handler();
@@ -73,9 +74,11 @@ static struct read_handler *do_line(struct line_handler **h,
 	   || ((length >= 9) && !memcmp(line + 4, "1.99-", 5)))
 	{
 	  struct read_handler *new
-	    = make_read_packet(make_packet_debug(make_packet_void(),
-						 stderr),
-			       closure->connection->max_packet);
+	    = make_read_packet
+	    (make_packet_debug
+	     (make_packet_unpad(make_client_dispatch(connection)),
+	      stderr),
+	     closure->connection->max_packet);
 	  
 	  closure->connection->server_version
 	    = ssh_format("%ls", length, line);
@@ -157,3 +160,26 @@ struct callback *make_client_close_handler()
 
   return c;
 }
+
+#if 0
+/* FIXME: HERE */
+struct abstract_write *make_client_dispatch(struct ssh_connection *c)
+{
+  struct abstract_write *ignore = make_packet_void();
+  struct abstract_write *fail = make_disconnect(connection);
+  struct abstract_write *kex = make_client_key_exchange(connection);
+  
+  struct dispatch_assoc table[] = {
+    { SSH_MSG_DISCONNECT, make_handle_disconnect(connection) },
+    { SSH_MSG_IGNORE, ignore },
+    { SSH_MSG_UNIMPLEMENTED, ignore },
+    { SSH_MSG_DEBUG, make_handle_debug(connection) },
+    { SSH_MSG_SERVICE_REQUEST, fail },
+    { SSH_MSG_SERVICE_ACCEPT, fail },
+    { SSH_MSG_KEXINIT, kex },
+    { SSH_MSG_NEWKEYS, fail },
+    { SSH_MSG
+
+      
+#endif
+      

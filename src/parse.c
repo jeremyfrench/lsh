@@ -3,6 +3,7 @@
  */
 
 #include "parse.h"
+#include "xalloc.h"
 
 void simple_buffer_init(struct simple_buffer *buffer,
 			UINT32 capacity, UINT8 *data)
@@ -107,6 +108,36 @@ int parse_next_atom(struct simple_buffer *buffer, int *result)
 		  * buffer, rather than by a comma, this points beyond
 		  * the end of the buffer */
   return 1;
+}
+
+int *parse_atom_list(struct simple_buffer *buffer)
+{
+  int count;
+  int i;
+  int *res;
+  
+  /* Count commas (no commas means one atom) */
+  for (i = buffer->pos, count = 1; i < buffer->capacity; i++)
+    if (buffer->data[i] == ',')
+      count++;
+
+  res = xalloc(sizeof(int) * (count+1));
+
+  for (i = 0; i < count; i++)
+    {
+      switch(parse_next_atom(buffer, res+i))
+	{
+	case 1:
+	  continue;
+	case 0:
+	  lsh_free(res);
+	  return NULL;
+	default:
+	  fatal("Internal error\n");
+	}
+    }
+  res[i] = -1;
+  return res;
 }
 
 /* Returns success (i.e. 1) iff there is no data left */

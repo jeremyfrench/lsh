@@ -19,6 +19,9 @@ struct ssh_connection
 
   struct abstract_write *write; /* Where to send packets throw the
 				 * pipeline */
+
+  /* Table of all known message types */
+  struct abstract_write *dispatch[0x100];
   
   UINT32 max_packet;
   

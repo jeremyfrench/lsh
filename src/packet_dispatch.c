@@ -73,6 +73,3 @@ make_dispatch_processor(unsigned size,
 
   return &closure->super;
 }
-
-
-      
