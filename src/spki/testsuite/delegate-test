@@ -12,7 +12,7 @@ die () {
 check_sexp () {
     file="$1"
     shift
-    sexp-conv -s canonical | cmp "$file" - || die "$@"
+    ../../nettle/tools/sexp-conv -s canonical | cmp "$file" - || die "$@"
 }
     
 TAG1='(3:tag(1:*))'
