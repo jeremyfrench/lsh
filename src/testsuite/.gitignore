@@ -21,6 +21,7 @@
 /rsa-test
 /serpent-test
 /sha1-test
+/sockaddr2info-test
 /spki-tag-test
 /string-test
 /temphome
