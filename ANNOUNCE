@@ -78,7 +78,7 @@ o  Kerberos authentication.
 o  A file transfer service.
 
 
-COPYRIGHT
+LICENSE
 
 LSH is distributed under the terms and conditions of the GNU General
 Public License. Unlike some other secsh implementations, you can use
