@@ -25,6 +25,7 @@
 
 #include "abstract_io.h"
 #include "channel.h"
+#include "compress.h"
 #include "connection.h"
 #include "debug.h"
 #include "format.h"
@@ -32,15 +33,14 @@
 #include "read_line.h"
 #include "read_packet.h"
 #include "reaper.h"
+#include "server_pty.h"
 #include "ssh.h"
 #include "translate_signal.h"
+#include "tty.h"
 #include "unpad.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-#include "compress.h"
-#include "tty.h"
-#include "server_pty.h"
 
 #include <assert.h>
 #include <string.h>
@@ -51,6 +51,10 @@
 
 #ifdef HAVE_UTMP_H
 #include <utmp.h>
+#endif
+
+#ifdef HAVE_UTMPX_H
+#include <utmpx.h>
 #endif
 
 #include <pwd.h>
@@ -971,7 +975,27 @@ static int do_spawn_shell(struct channel_request *c,
 	  debug("Child: Environment:\n");
 	  for (i=0; env[i]; i++)
 	    debug("Child:   '%z'\n", env[i]);
-	    
+
+	  /* We do this before closing fd:s, because the sysv version
+	   * of tty_setctty depends on the master pty fd still open.
+	   * It would be cleaner if we could pass the slave fd only
+	   * (i.e. STDIN_FILENO) to tty_setctty(). */
+#if WITH_PTY_SUPPORT
+	  if (using_pty)
+	    {
+	      debug("lshd: server.c: Setting controlling tty...\n");
+	      if (!tty_setctty(session->pty))
+		{
+		  debug("lshd: server.c: "
+			"Setting controlling tty... Failed!\n");
+		  werror("lshd: Can't set controlling tty for child!\n");
+		  exit(EXIT_FAILURE);
+		}
+	      else
+		debug("lshd: server.c: Setting controlling tty... Ok.\n");
+	    }
+#endif /* WITH_PTY_SUPPORT */
+	  
 	  /* Close all descriptors but those used for
 	   * communicationg with parent. We rely on the
 	   * close-on-exec flag for all fd:s handled by the
@@ -994,24 +1018,24 @@ static int do_spawn_shell(struct channel_request *c,
 	  close(out[1]);
 
 	  if ((old_stderr = dup(STDERR_FILENO)) < 0)
-	    werror("Couldn't save old file_no.\n");
-	  io_set_close_on_exec(old_stderr);
-	  set_error_stream(old_stderr, 1);
-
-	  debug("Child: Duping stderr (bye).\n");
-	    
+	    {
+	      werror("Couldn't save old file_no.\n");
+	      set_error_ignore();
+	    }
+	  else
+	    {
+	      io_set_close_on_exec(old_stderr);
+	      set_error_stream(old_stderr, 1);
+	    }
+	  /* debug("Child: Duping stderr (bye).\n"); */
+	  
 	  if (dup2(err[1], STDERR_FILENO) < 0)
 	    {
-	      /* Can't write any message to stderr. */ 
+	      werror("Can't dup stderr!\n");
 	      exit(EXIT_FAILURE);
 	    }
 	  close(err[0]);
 	  close(err[1]);
-
-#if WITH_PTY_SUPPORT
-	  if (using_pty)
-	    tty_setctty(STDIN_FILENO);
-#endif /* WITH_PTY_SUPPORT */
 	  
 #if 1
 #if USE_LOGIN_DASH_CONVENTION
@@ -1019,6 +1043,7 @@ static int do_spawn_shell(struct channel_request *c,
 	    char *argv0 = alloca(session->user->shell->length + 2);
 	    char *p;
 
+	    debug("lshd: server.c: fixing up name of shell...\n");
 	    /* Make sure that the shell's name begins with a -. */
 	    p = strrchr (shell, '/');
 	    if (!p)
@@ -1028,7 +1053,7 @@ static int do_spawn_shell(struct channel_request *c,
 	      
 	    argv0[0] = '-';
 	    strncpy (argv0 + 1, p, session->user->shell->length);
-
+	    debug("lshd: server.c: fixing up name of shell... done.\n");
 #if 0
 	    /* Not needed; shell and p should be NUL-terminated properly. */
 	    argv0[sizeof (argv0) - 1] = '\0';
