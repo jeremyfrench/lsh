@@ -93,10 +93,11 @@ volatile int _argp_hang;
 static const struct argp_option argp_default_options[] =
 {
   {"help",	  '?',    	0, 0,  N_("Give this help list"), -1},
-  {"usage",	  OPT_USAGE,	0, 0,  N_("Give a short usage message")},
-  {"program-name",OPT_PROGNAME,"NAME", OPTION_HIDDEN, N_("Set the program name")},
+  {"usage",	  OPT_USAGE,	0, 0,  N_("Give a short usage message"), 0 },
+  {"program-name",OPT_PROGNAME,"NAME", OPTION_HIDDEN,
+     N_("Set the program name"), 0},
   {"HANG",	  OPT_HANG,    "SECS", OPTION_ARG_OPTIONAL | OPTION_HIDDEN,
-     N_("Hang for SECS seconds (default 3600)")},
+     N_("Hang for SECS seconds (default 3600)"), 0 },
   {0, 0}
 };
 
@@ -114,7 +115,7 @@ argp_default_parser (int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_PROGNAME:		/* Set the program name.  */
-#if HAVE_PROGRAM_INVOCATION_NAME
+#if HAVE_DECL_PROGRAM_INVOCATION_NAME
       program_invocation_name = arg;
 #endif
       /* [Note that some systems only have PROGRAM_INVOCATION_SHORT_NAME (aka
@@ -125,7 +126,7 @@ argp_default_parser (int key, char *arg, struct argp_state *state)
 
       state->name = __argp_basename(arg);
       
-#if HAVE_PROGRAM_INVOCATION_SHORT_NAME
+#if HAVE_DECL_PROGRAM_INVOCATION_SHORT_NAME
       program_invocation_short_name = state->name;
 #endif
 
@@ -157,7 +158,7 @@ static const struct argp argp_default_argp =
 static const struct argp_option argp_version_options[] =
 {
   {"version",	  'V',    	0, 0,  N_("Print program version"), -1},
-  {0, 0}
+  {0, 0, 0, 0, 0, 0 }
 };
 
 static error_t
