@@ -1,3 +1,17 @@
+2003-01-29  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* configure.ac (AC_OUTPUT): Generate tools/Makefile.
+
+	* Makefile.am (SUBDIRS): Added tools subdirectory.
+
+	* testsuite/check-signature-test: New testcase. Not yet enabled by
+	default. 
+
+	* tools/spki-check-signature.c: New program.
+
+	* verify.c (spki_verify): Take a struct spki_hash_value as
+	argument. 
+
 2003-01-28  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* parse.h (struct spki_hash_value): New struct.
