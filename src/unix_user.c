@@ -97,7 +97,11 @@ do_file_exists(struct user *u,
   struct stat st;
   
   if (!user->home)
-    return 0;
+    {
+      if (free)
+	lsh_string_free(name);
+      return 0;
+    }
   
   path = ssh_format(free ? "%lS/%lfS%c" : "%lS/%lS%c",
 		    user->home, name, 0);
