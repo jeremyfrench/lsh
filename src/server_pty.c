@@ -222,9 +222,11 @@ close_master:
   unsigned int i, j;
   int saved_errno;
 
-  for (i = 0; i < sizeof(first); i++)
+#define CONST_STRLEN(s) (sizeof((s)) - sizeof(""))
+  
+  for (i = 0; i < CONST_STRLEN(first); i++)
     {
-      for (j = 0; j < sizeof(second); j++) 
+      for (j = 0; j < CONST_STRLEN(second); j++) 
         {
 	  snprintf(master, sizeof(master),
 		   PTY_BSD_SCHEME_MASTER, first[i], second[j]);
