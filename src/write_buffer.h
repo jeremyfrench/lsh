@@ -49,6 +49,8 @@
      (name write_buffer)
      (super abstract_write)
      (vars
+       (fd object lsh_fd)
+
        (block_size . UINT32)
        (buffer space UINT8)        ; Size is twice the blocksize 
        (empty . int)
@@ -62,8 +64,6 @@
        ; should be closed once the current buffers are flushed. 
        (closed . int)
 
-       ;; (try_write . int)
-
        (q struct string_queue)
 
        (pos . UINT32)        ; Partial packet
@@ -73,7 +73,9 @@
        (end . UINT32)))
 */
 
-struct write_buffer *make_write_buffer(UINT32 size);
+struct write_buffer *
+make_write_buffer(struct lsh_fd *fd, UINT32 size);
+
 int write_buffer_pre_write(struct write_buffer *buffer);
 void write_buffer_consume(struct write_buffer *buffer, UINT32 size);
 void write_buffer_close(struct write_buffer *buffer);

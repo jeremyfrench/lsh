@@ -61,14 +61,12 @@ do_write(struct abstract_write *w,
 
   string_queue_add_tail(&closure->q, packet);
   
-#if 0
-  if (closure->try_write)
-    {
-      /* Attempt writing to the corresponding fd. */
-    }
-#endif
-
+  if (!closure->length)
+    /* We're making the buffer non-empty */
+    lsh_oop_register_write_fd(closure->fd);
+  
   closure->empty = 0;
+  
   closure->length += packet->length;
 
   debug("write_buffer: do_write closure->length = %i\n",
@@ -161,11 +159,13 @@ void write_buffer_close(struct write_buffer *buffer)
 }
 
 struct write_buffer *
-make_write_buffer(UINT32 size)
+make_write_buffer(struct lsh_fd *fd, UINT32 size)
 {
   NEW(write_buffer, res);
-  
+
   res->super.write = do_write;
+
+  res->fd = fd;
   
   res->block_size = size;
 
