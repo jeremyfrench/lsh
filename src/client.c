@@ -38,6 +38,7 @@
 #include "translate_signal.h"
 #include "werror.h"
 #include "xalloc.h"
+#include "io.h"
 
 #include <assert.h>
 #include <string.h>
@@ -157,6 +158,120 @@ make_request_service(int service)
 
 /* GABA:
    (class
+     (name detach_callback)
+     (super lsh_callback)
+     (vars 
+       (channel_flag . int)
+       (fd_flag . int)
+       (exit_status . "int *")))
+*/
+
+/* GABA:
+   (class
+     (name detach_resource)
+     (super resource)
+     (vars
+       (c object detach_callback)))
+*/
+
+static void 
+do_detach_res_kill(struct resource *r)
+{
+  CAST(detach_resource,self,r);
+
+  trace("client.c:do_detach_res\n");
+  self->c->channel_flag = 1;
+
+  if (self->c->channel_flag && self->c->fd_flag)
+    /* If the fd_flag is set, the callback should be changed */
+    io_callout(&self->c->super, 0);
+}
+
+static struct resource*
+make_detach_resource(struct lsh_callback *c)
+{
+   NEW(detach_resource, self);
+   CAST(detach_callback, cb, c);
+
+   trace("client.c:make_detach_resource\n");
+   init_resource(&self->super, do_detach_res_kill);
+
+   self->c = cb;
+
+   return &self->super;
+}
+
+
+static void 
+do_detach_cb_second(struct lsh_callback *c)
+{
+  CAST(detach_callback,self,c);
+
+  int pid;
+  
+  trace("client.c: do_detach\n");
+  pid = fork();
+
+  /* Ignore any errors, what can we do? */
+
+  switch(pid)
+    {
+    case -1: /* Fork failed, this we can handle by doing nothing */
+      werror("Fork failed, not detaching.\n");
+      break;
+      
+    case 0:
+      /* Detach, lsh doesn't actually use these fds but dup(2)s them */
+
+      close(STDIN_FILENO); 
+      close(STDOUT_FILENO); 
+      close(STDERR_FILENO); 
+      
+      /* Make sure they aren't used by any file lsh opens */
+
+      open("/dev/null", O_RDONLY);
+      open("/dev/null", O_RDONLY);
+      open("/dev/null", O_RDONLY);
+      break;
+
+    default:
+      /* It's a good idea to reset std* to blocking mode. */
+      io_set_blocking(STDIN_FILENO);
+      io_set_blocking(STDOUT_FILENO);
+      io_set_blocking(STDERR_FILENO);
+      
+      exit(*self->exit_status);
+    }
+}
+
+static void
+do_detach_cb_first(struct lsh_callback *c)
+{
+  CAST(detach_callback,self,c);
+  trace("client.c: do_detach_cb_first\n");
+
+  self->super.f = do_detach_cb_second;
+  self->fd_flag = 1;
+
+  if (self->channel_flag && self->fd_flag)
+    io_callout(c, 0);
+}
+
+static struct lsh_callback* 
+make_detach_callback(int *exit_status)
+{
+   NEW(detach_callback, self);
+
+   self->super.f = do_detach_cb_first;
+   self->exit_status = exit_status;
+   self->fd_flag = 0;
+   self->channel_flag = 0;
+
+   return &self->super;
+}
+
+/* GABA:
+   (class
      (name exit_handler)
      (super channel_request)
      (vars
@@ -180,12 +295,11 @@ do_exit_status(struct channel_request *c,
     {
       verbose("client.c: Receiving exit-status %i on channel %i\n",
 	      status, channel->channel_number);
-      
-      *closure->exit_status = status;
 
+      *closure->exit_status = status;
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
-
+      
       COMMAND_RETURN(s, NULL);
     }
   else
@@ -412,6 +526,7 @@ make_client_session(struct client_options *options);
 #define OPT_FORK_STDIO 0x213
 
 #define OPT_SUBSYSTEM 0x214
+#define OPT_DETACH 0x215
 
 void
 init_client_options(struct client_options *self,
@@ -450,6 +565,7 @@ init_client_options(struct client_options *self,
   self->used_pty = 0;
   self->used_x11 = 0;
   
+  self->detach_end = 0;
   self->start_shell = 1;
   self->remote_forward = 0;
 
@@ -533,6 +649,9 @@ client_options[] =
     "is applied to stderr only.", 0 },
   { "no-cvs-workaround", OPT_FORK_STDIO | ARG_NOT, NULL, 0,
     "Disable the cvs workaround.", 0 },
+  { "detach", OPT_DETACH, NULL, 0, "Detach from terminal at session end.", 0},
+  { "no-detach", OPT_DETACH | ARG_NOT, NULL, 0, "Do not detach session at end," 
+    " wait for all open channels (default).", 0},
 
 #if WITH_PTY_SUPPORT
   { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
@@ -888,6 +1007,7 @@ make_client_session(struct client_options *options)
   struct ssh_channel *session;
   
   struct escape_info *escape = NULL;
+  struct lsh_callback *detach_cb = NULL;
   
   debug("lsh.c: Setting up stdin\n");
 
@@ -975,6 +1095,9 @@ make_client_session(struct client_options *options)
       return NULL;
     }
 
+  if (options->detach_end) /* Detach? */
+    detach_cb = make_detach_callback(options->exit_code);  
+
   /* Clear options */
   options->stdin_file = options->stdout_file = options->stderr_file = NULL;
 
@@ -982,12 +1105,20 @@ make_client_session(struct client_options *options)
     (io_read(make_lsh_fd(in, "client stdin", options->handler),
 	     NULL, NULL),
      io_write(make_lsh_fd(out, "client stdout", options->handler),
-	      BLOCK_SIZE, NULL),
+	      BLOCK_SIZE, 
+	      detach_cb
+	      ),
      io_write(make_lsh_fd(err, "client stderr", options->handler),
 	      BLOCK_SIZE, NULL),
      escape,
      WINDOW_SIZE,
      options->exit_code);
+  
+  if (options->detach_end)
+    {
+      remember_resource(session->resources, make_detach_resource(detach_cb));
+      options->detach_end = 0;
+    }
 
   /* The channel won't get registered in any other resource_list
    * until later, so we must register it here to avoid a "garbage
@@ -1203,7 +1334,9 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 #if WITH_PTY_SUPPORT
     CASE_FLAG('t', with_pty);
 #endif /* WITH_PTY_SUPPORT */
-    
+
+    CASE_FLAG(OPT_DETACH, detach_end);
+
     CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
     CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
     CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");

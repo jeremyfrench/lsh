@@ -1,3 +1,26 @@
+2002-10-22  Pontus Sköld  <pont@soua.net>
+
+	* src/client.c: Include io.h.
+	(detach_callback): New class to handle detachment and
+	synchronization with fds.
+	(detach_resource): New class used for synchonization with channel
+	disappearance.
+	(do_detach_res_kill): Kill method for detach_resource.
+	(make_detach_resource): New function.
+	(do_detach_cb_second): New function that does the actual
+	detaching.
+	(do_detach_cb_first): Callback for synchronization with fds.
+	(make_detach_callback): New function.
+	(init_client_options): Set options->detach_end to 0 (detachment
+	disabled by default).
+	(client_options): Help message for detach and no-detach.
+	(make_client_session): If options->detach_end, make a callback for
+	stdout and set a resource on the channel to synchronize. Also
+	reset options->detach_end to 0 (so it only affects one action).
+	(client_argp_parser): Handle detach and no-detach.
+
+	* src/client.h: New variable in client_options: detach_end.
+
 2002-10-03  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Use AC_SEARCH_LIBS instead of AC_CHECK_LIB when

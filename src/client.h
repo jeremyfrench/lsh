@@ -159,6 +159,9 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
        (used_pty . int)
        (used_x11 . int)
        
+       ; True if the client should detach when a session closes (useful for gateways)
+       (detach_end . int)
+
        (start_shell . int)
        (remote_forward . int)
        (actions struct object_queue)))
