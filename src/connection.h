@@ -22,9 +22,13 @@ struct ssh_connection
 
   /* Table of all known message types */
   struct abstract_write *dispatch[0x100];
-  
+
   UINT32 max_packet;
-  
+
+  /* Key exchange */
+  struct kexinit *recieved_kexinit;
+  struct kexinit *sent_kexinit;
+
   int provides_privacy;
   int provides_integrity;
 };
