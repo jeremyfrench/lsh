@@ -16,6 +16,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include "nettle/base64.h"
 #include "nettle/sexp.h"
 
 #include <unistd.h>
@@ -190,20 +191,42 @@ int main(int argc, char **argv)
 
   if (options->base64)
     {
-      struct lsh_string *old = input;
-      input = decode_base64(input->length, input->data);
-      lsh_string_free(old);
+      struct lsh_string *decoded;
+      struct base64_decode_ctx ctx;
+      unsigned done;
 
-      if (!input)
-        {
+      base64_decode_init(&ctx);
+      done = input->length;
+      
+      decoded = lsh_string_alloc(BASE64_DECODE_LENGTH(input->length));
+      if (base64_decode_update(&ctx, &done, decoded->data,
+			       input->length, input->data)
+	  && base64_decode_final(&ctx))
+	{
+	  lsh_string_trunc(decoded, done);
+	  lsh_string_free(input);
+	  input = decoded;
+	}
+      else
+	{
           werror("Invalid base64 encoding.\n");
+
+	  lsh_string_free(input);
+	  lsh_string_free(decoded);
+
           return EXIT_FAILURE;
         }
     }
-
+  
   output = lsh_decode_key(input);
   lsh_string_free(input);
-  
+
+  if (!output)
+    {
+      werror("Invalid ssh2 key.\n");
+      return EXIT_FAILURE;
+    }
+    
   e = write_raw(out, output->length, output->data);
   lsh_string_free(output);
   
