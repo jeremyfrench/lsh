@@ -48,6 +48,8 @@ struct signer *make_dsa_signer_kludge(struct signer *dsa);
      (name group)
      (vars
        (order bignum)
+       ;; We should have a generator here, as we always work within some
+       ;; cyclic subgroup.
        (member method int "mpz_t x")
        (invert method void "mpz_t res" "mpz_t x")
        (combine method void "mpz_t res" "mpz_t a" "mpz_t b")

@@ -458,7 +458,7 @@ static void zn_power(struct group *c, mpz_t res, mpz_t g, mpz_t e)
 }
 
 /* Assumes p is a prime number */
-struct group *make_zn(mpz_t p)
+struct group *make_zn(mpz_t p, mpz_t order)
 {
   NEW(group_zn, res);
 
@@ -526,6 +526,7 @@ struct diffie_hellman_method *make_dh1(struct randomness *r)
 		   "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381"
 		   "FFFFFFFFFFFFFFFF", 16);
 
+  /* FIXME: The order of the subgroup we use is (p-1)/2 */
   res->G = make_zn(p);
   mpz_clear(p);
 
