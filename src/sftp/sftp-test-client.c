@@ -22,6 +22,7 @@
 
 #include "buffer.h"
 #include "sftp.h"
+#include "xmalloc.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -600,14 +601,12 @@ do_put(struct client_ctx *ctx,
 
   sftp_clear_attrib(&a); 
 
-
   if ( ((fd=open( lname, O_RDONLY)) < 0) || 
        fstat(fd, &st) )
     return 0;                 /* Open or stat failed */
 
-  if (  !(wdata=malloc( SFTP_XFER_BLOCKSIZE ) ) )
-	return 0; /* Failed to allocate memory */
-
+  wdata=xmalloc(SFTP_XFER_BLOCKSIZE);
+  
   a.flags= ( SSH_FILEXFER_ATTR_PERMISSIONS | 
 	     SSH_FILEXFER_ATTR_UIDGID ); /* Fixme; what should we pass? */
 
@@ -616,8 +615,6 @@ do_put(struct client_ctx *ctx,
   a.gid=st.st_gid;
   
   id=sftp_client_new_id();
-  
-  
 
   sftp_set_msg(ctx->o, SSH_FXP_OPEN); /* Send a OPEN message */
   sftp_set_id(ctx->o, id);
