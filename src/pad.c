@@ -44,9 +44,14 @@ static int do_pad(struct abstract_write **w,
   UINT32 new_size;
   UINT8 padding;
 
-  UINT32 block_size = connection->send_crypto
-    ? connection->send_crypto->block_size : 8;
+  UINT8 *data;
+  UINT32 block_size;
 
+  MDEBUG(closure);
+
+  block_size = connection->send_crypto
+    ? connection->send_crypto->block_size : 8;
+  
   /* new_size is (packet->length + 9) rounded up to a multiple of
    * block_size */
   new_size = block_size
@@ -55,13 +60,13 @@ static int do_pad(struct abstract_write **w,
   padding = new_size - packet->length - 5;
   assert(padding >= 4);
 
-  new = ssh_format("%lr", new_size, NULL);
+  new = ssh_format("%i%c%lr", packet->length + padding + 1,
+		   padding, packet->length + padding, &data);
 
-  WRITE_UINT32(new->data, new_size - 4);
-  new->data[4] = padding;
+  assert(new->length == new_size);
   
-  memcpy(new->data + 5, packet->data, packet->length);
-  RANDOM(closure->random, padding, new->data + 5 + packet->length);
+  memcpy(data, packet->data, packet->length);
+  RANDOM(closure->random, padding, data + packet->length);
   
   lsh_string_free(packet);
 
@@ -75,6 +80,8 @@ make_packet_pad(struct abstract_write *continuation,
 {
   struct packet_pad *closure = xalloc(sizeof(struct packet_pad));
 
+  MDEBUG(closure);
+  
   closure->super.super.write = do_pad;
   closure->super.next = continuation;
   closure->connection = connection;
