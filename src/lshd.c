@@ -43,6 +43,7 @@
 #include "io.h"
 #include "lsh_string.h"
 #include "ssh.h"
+#include "ssh_read.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -51,313 +52,27 @@ struct ssh_read_state;
 
 #include "lshd.c.x"
 
-void
-ssh_read_line(struct ssh_read_state *self, uint32_t max_length,
-	      oop_source *source, int fd,
-	      struct abstract_write *handler);
-
-void
-ssh_read_header(struct ssh_read_state *self,
-		oop_source *source, int fd,
-		struct abstract_write *handler);
 
 static oop_source *global_oop_source;
 
 /* GABA:
    (class
-     (name header_callback)
+     (name lshd_read_state)
+     (super ssh_read_state)
      (vars
-       (process method "struct lsh_string *"
-                       "struct ssh_read_state *" "uint32_t *done")))
+       (sequence_number . uint32_t);
+       (padding . uint8_t)))
 */
 
-#define HEADER_CALLBACK(c, s, p) \
-((c)->process((c), (s), (p)))
-
-/* GABA:
-   (class
-     (name ssh_read_state)
-     (vars
-       ; Needed only for debugging and sanity checks.
-       (state . "enum read_state")
-       (pos . uint32_t)
-       
-       ; Fix buffer space of size SSH_MAX_BLOCK_SIZE       
-       (header string)
-       ; Current header length
-       (header_length . uint32_t);
-       
-       ; The line or packet being read
-       (data string)
-
-       ; Called when header is read. It has total responsibility for
-       ; setting up the next state.
-       (process object header_callback)
-       ; Called for each complete line or packet
-       (handler object abstract_write)
-       (e object exception_handler)))
-*/  
-
-static const struct exception *
-ssh_read(struct lsh_string *data, uint32_t start, int fd, uint32_t length,
-	 int allow_eof, uint32_t *done)
+static struct lshd_read_state *
+make_lshd_read_state(struct header_callback *process,
+		     struct exception_handler *e)
 {
-  int res;
-  
-  assert(length > 0);
-  
-  do
-    res = lsh_string_read(data, start, fd, length);
-  while (res < 0 && errno == EINTR);
-
-  if (res < 0)
-    return make_io_exception(EXC_IO_READ, NULL,
-			     errno, NULL);
-  else if (res == 0)
-    {
-      if (allow_eof)
-	{
-	  *done = 0;
-	  return NULL;
-	}
-      else
-	return make_io_exception(EXC_IO_READ, NULL,
-				 0, "Unexpected EOF");
-    }
-  else
-    {
-      *done = res;
-      return NULL;
-    }
-}
-
-/* NOTE: All the ssh_read_* functions cancel the liboop callback
-   before invoking any of it's own callbacks. */
-
-/* Reads the initial line. This reader will read only one text line,
-   and expects the first binary packet to start after the first
-   newline character. */
-static void *
-oop_ssh_read_line(oop_source *source, int fd, oop_event event, void *state)
-{
-  CAST(ssh_read_state, self, (struct lsh_object *) state);
-  const struct exception *e;
-  uint32_t to_read;
-  uint32_t done;
-  
-  assert(event == OOP_READ);
-  assert(self->state == READ_LINE);
-  assert(self->data);
-
-  to_read = lsh_string_length(self->data) - self->pos;
-
-  /* If we read ahead, we don't want to read more than the header of
-     the first packet. */
-  if (to_read > self->header_length)
-    to_read = self->header_length;
-
-  e = ssh_read(self->data, self->pos, fd, to_read, 0, &done);
-  if (e)
-    {
-    error:
-      source->cancel_fd(source, fd, OOP_READ);
-      EXCEPTION_RAISE(self->e, e);
-      return OOP_CONTINUE;
-    }
-  else
-    {
-      const uint8_t *s = lsh_string_data(self->data);
-      const uint8_t *eol = memchr(s + self->pos, 0xa, done);
-      if (eol)
-	{
-	  struct lsh_string *line = self->data;
-	  /* Excludes the newline character */
-	  uint32_t length = eol - s;
-	  uint32_t left_over = self->pos + done - length - 1;
-
-	  /* Prepare for header reading mode */
-	  self->data = 0;
-	  if (left_over)
-	    lsh_string_write(self->header, 0, left_over, eol + 1);
-	  self->state = READ_UNDEF;
-	  self->pos = left_over;
-
-	  source->cancel_fd(source, fd, OOP_READ);
-	  
-	  /* Ignore any carriage return character */
-	  if (length > 0 && s[length-1] == 0x0d)
-	    length--;
-
-	  lsh_string_trunc(line, length);
-	  A_WRITE(self->handler, line);
-	}
-      else
-	{
-	  self->pos += done;
-	  assert(self->pos <= lsh_string_length(self->data));
-
-	  if (self->pos == lsh_string_length(self->data))
-	    {
-	      e = make_io_exception(EXC_IO_READ, NULL,
-				    0, "Line too long");
-	      goto error;
-	    }
-	}
-      return OOP_CONTINUE;
-    }
-}
-
-static void *
-oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state);
-
-static void *
-oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
-{
-  CAST(ssh_read_state, self, (struct lsh_object *) state);
-  const struct exception *e;
-  uint32_t to_read;
-  uint32_t done;
-  
-  assert(event == OOP_READ);
-  assert(self->state == READ_HEADER);
-  to_read = self->header_length - self->pos;
-
-  e = ssh_read(self->data, self->pos, fd, to_read,
-	       self->pos == 0, &done);
-  if (e)
-    {
-      source->cancel_fd(source, fd, OOP_READ);
-      EXCEPTION_RAISE(self->e, e);
-      return OOP_CONTINUE;
-    }
-
-  if (done == 0)
-    {
-      assert(self->pos == 0);
-      source->cancel_fd(source, fd, OOP_READ);
-
-      A_WRITE(self->handler, NULL);
-      return OOP_CONTINUE;
-    }
-  
-  self->pos += done;
-  assert(self->pos <= self->header_length);
-  if (self->pos == self->header_length)
-    {
-      struct lsh_string *packet;
-      source->cancel_fd(source, fd, OOP_READ);
-      self->pos = 0;
-      
-      packet = HEADER_CALLBACK(self->process, self, &self->pos);
-      if (packet)
-	{
-	  assert(!self->data);
-	  self->state = READ_PACKET;
-	  source->on_fd(source, fd, OOP_READ, oop_ssh_read_packet, self);
-	}
-    }
-  return OOP_CONTINUE;      
-}
-
-static void *
-oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state)
-{
-  CAST(ssh_read_state, self, (struct lsh_object *) state);
-  const struct exception *e;
-  uint32_t to_read;
-  uint32_t done;
-  
-  assert(event == OOP_READ);
-  assert(self->state == READ_PACKET);
-  to_read = lsh_string_length(self->data) - self->pos;
-
-  e = ssh_read(self->data, self->pos, fd, to_read, 0, &done);
-  if (e)
-    {
-      source->cancel_fd(source, fd, OOP_READ);
-      EXCEPTION_RAISE(self->e, e);
-      return OOP_CONTINUE;
-    }  
-
-  self->pos += done;
-  assert(self->pos < lsh_string_length(self->data));
-  if (self->pos == self->header_length)
-    {
-      struct lsh_string *packet = self->data;
-
-      self->pos = 0;
-      self->data = NULL;
-      self->state = READ_UNDEF;
-      source->cancel_fd(source, fd, OOP_READ);
-	  
-      A_WRITE(self->handler, packet);
-    }
-  return OOP_CONTINUE; 
-}
-
-static struct ssh_read_state *
-make_ssh_read_state(uint32_t max_header, uint32_t header_length,
-		    struct header_callback *process,
-		    struct exception_handler *e)
-{
-  NEW(ssh_read_state, self);
-  self->state = READ_UNDEF;
-  self->pos = 0;
-  
-  self->header = lsh_string_alloc(max_header);
-  self->header_length = header_length;
-  
-  self->data = NULL;
-  self->process = process;
-  self->handler = NULL;
-  self->e = e;
+  NEW(lshd_read_state, self);
+  init_ssh_read_state(&self->super, SSH_MAX_BLOCK_SIZE, 8, process, e);
+  self->sequence_number = 0;
 
   return self;
-}
-
-void
-ssh_read_line(struct ssh_read_state *self, uint32_t max_length,
-	      oop_source *source, int fd,
-	      struct abstract_write *handler)
-{
-  assert(!self->data);
-  self->data = lsh_string_alloc(max_length);
-  self->pos = 0;
-  self->handler = handler;
-  self->state = READ_LINE;
-
-  source->on_fd(source, fd, OOP_READ, oop_ssh_read_line, self);
-}
-
-/* NOTE: Depends on the previous value of pos */
-void
-ssh_read_header(struct ssh_read_state *self,
-		oop_source *source, int fd,
-		struct abstract_write *handler)
-{
-  /* assert(header_length <= lsh_string_length(self->header)); */
-
-  self->handler = handler;
-  self->state = READ_HEADER;
-
-  source->on_fd(source, fd, OOP_READ, oop_ssh_read_header, self);
-}
-
-/* NOTE: Usually invoked by the header_callback. */
-static void
-ssh_read_packet(struct ssh_read_state *self,
-		struct lsh_string *data, uint32_t pos,
-		oop_source *source, int fd,
-		struct abstract_write *handler)
-{
-  assert(pos < lsh_string_length(data));
-  self->pos = pos;
-  self->data = data;
-
-  self->handler = handler;
-  self->state = READ_PACKET;
-  
-  source->on_fd(source, fd, OOP_READ, oop_ssh_read_packet, self);
 }
 
 
@@ -371,10 +86,12 @@ ssh_read_packet(struct ssh_read_state *self,
 */
 
 static struct lsh_string *
-ssh_process_header(struct header_callback *s, struct ssh_read_state *state,
+ssh_process_header(struct header_callback *s, struct ssh_read_state *rs,
 		   uint32_t *done)
 {
   CAST(ssh_process_header, self, s);
+  CAST(lshd_read_state, state, rs);
+  
   const uint8_t *header;
   uint32_t length;
   uint32_t padding;
@@ -387,13 +104,13 @@ ssh_process_header(struct header_callback *s, struct ssh_read_state *state,
 
   if (self->connection->rec_crypto)
     {
-      assert(state->header_length == block_size);
+      assert(state->super.header_length == block_size);
       CRYPT(self->connection->rec_crypto,
 	    block_size,
-	    state->header, 0,
-	    state->header, 0);
+	    state->super.header, 0,
+	    state->super.header, 0);
     }
-  header = lsh_string_data(state->header);
+  header = lsh_string_data(state->super.header);
   length = READ_UINT32(header);
 
   /* NOTE: We don't implement a limit at _exactly_
@@ -440,17 +157,17 @@ ssh_process_header(struct header_callback *s, struct ssh_read_state *state,
   mac_size = self->connection->rec_mac
     ? self->connection->rec_mac->mac_size : 0;
   
-  packet = lsh_string_alloc(length + padding + mac_size);
+  packet = lsh_string_alloc(length - 1 + mac_size);
   lsh_string_write(packet, 0, block_size - 5, header + 5);
   lsh_string_set_sequence_number(packet, self->sequence_number++);
   
-  if (block_size - 5 == length + padding + mac_size)
+  if (block_size - 5 == length + mac_size)
     {
-#if 1
+      werror("Entire paccket fit in first block.\n");
       abort();
-#else
-      /* This can happen only if we use encryption with a large block
-	 size, and no mac. */
+#if 0
+      /* This can happen only if we're using a cipher with a large
+	 block size, and no mac. */
       assert(!self->connection->rec_mac);
       assert(self->connection->rec_crypto);
       lsh_string_trunc(packet, length);
@@ -469,7 +186,6 @@ make_ssh_process_header(struct lshd_connection *connection)
 {
   NEW(ssh_process_header, self);
   self->super.process = ssh_process_header;
-  self->sequence_number = 0;
   self->connection = connection;
 
   return &self->super;
@@ -482,10 +198,14 @@ make_ssh_process_header(struct lshd_connection *connection)
      (vars
        (e object exception_handler)
 
+       ; Sent and received version strings.
+       ; Client is index 0, server is index 1.
+       (versions array (string) 2)
+       
        ; Receiving encrypted packets
        ; Input fd for the ssh connection
        (ssh_input . int)
-       (reader object ssh_read_state)
+       (reader object lshd_read_state)
        (rec_max_packet . uint32_t)
        (rec_mac object mac_instance)
        (rec_crypto object crypto_instance)
@@ -551,9 +271,10 @@ make_lshd_connection(int input, int output)
      probably don't even need to kill the child process, as it should
      get EOF. */
   self->e = &default_exception_handler;
-  self->reader = make_ssh_read_state(SSH_MAX_BLOCK_SIZE, 8,
-				     make_ssh_process_header(self),
-				     self->e);
+  self->version[0] = self->version[1] = NULL;
+  
+  self->reader = make_lshd_read_state(make_ssh_process_header(self),
+				      self->e);
   self->rec_max_packet = SSH_MAX_PACKET;
   self->rec_mac = NULL;
   self->rec_crypto = NULL;
@@ -580,10 +301,10 @@ static void
 lshd_handle_packet(struct abstract_write *s, struct lsh_string *packet)
 {
   CAST(lshd_read_handler, self, s);
-  werror("Received packet%xS\n", packet);
+  werror("Received packet: %xS\n", packet);
   lsh_string_free(packet);
 
-  ssh_read_header(self->connection->reader,
+  ssh_read_header(&self->connection->reader->super,
 		  global_oop_source, self->connection->ssh_input,
 		  &self->super);
 }
@@ -603,12 +324,26 @@ static void
 lshd_handle_line(struct abstract_write *s, struct lsh_string *line)
 {
   CAST(lshd_read_handler, self, s);
-  werror("Received handshake line %pS\n", line);
-  lsh_string_free(line);
+  const uint8_t *version;
+  uint32_t length;
+  
+  verbose("Client version string: %pS\n", line);
+
+  length = lsh_string_length(line);
+  version = lsh_string_data(line);
+
+  /* Line must start with "SSH-2.0-" (we may need to allow "SSH-1.99" as well). */
+  if (length < 8 || 0 != memcmp(version, "SSH-2.0-", 4))
+    {
+      PROTOCOL_ERROR_DISCONNECT(self->connection->e, 0, "Invalid version line");
+      return;
+    }
+
+  self->connection->version[0] = line;
   
   self->super.write = lshd_handle_packet;
   
-  ssh_read_header(self->connection->reader,
+  ssh_read_header(&self->connection->reader->super,
 		  global_oop_source, self->connection->ssh_input,
 		  &self->super);
 }
@@ -625,11 +360,13 @@ make_lshd_handle_line(struct lshd_connection *connection)
 static void
 lshd_handshake(struct lshd_connection *connection)
 {
+  connection->version[1] = make_string("SSH-2.0-lshd-ng");
+  
   if (write_raw(connection->ssh_output,
 		16, "SSH-2.0-lshd-ng\n"))
     fatal("Writing greeting failed.\n");
 
-  ssh_read_line(connection->reader, 256,
+  ssh_read_line(&connection->reader->super, 256,
 		global_oop_source, connection->ssh_input,
 		make_lshd_handle_line(connection));  
 }
