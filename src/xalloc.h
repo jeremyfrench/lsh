@@ -26,8 +26,8 @@
 #ifndef LSH_XALLOC_H_INCLUDED
 #define LSH_XALLOC_H_INCLUDED
 
-#include <stdlib.h>
 #include "lsh_types.h"
+#include <stdlib.h>
 
 #if 0
 void *xalloc(size_t size);
