@@ -1,5 +1,13 @@
 2004-03-05  Niels Möller  <nisse@lysator.liu.se>
 
+	* vsnprintf.c (dopr): Fixed va_arg calls that used short. Made
+	inclusion of "config.h" conditional on HAVE_CONFIG_H.
+
+	* configure.ac: Check for snprintf, vsnprintf and stdarg.h.
+
+	* Makefile.am (EXTRA_DIST): Added vsnprintf.c. Renabled building
+	of argp-test.
+
 	* vsnprintf.c: New replacement vsnprintf, by Patrick Powell,
 	Brandom Long and others.
 

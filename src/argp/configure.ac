@@ -26,7 +26,7 @@ fi
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS(limits.h malloc.h unistd.h sysexits.h)
+AC_CHECK_HEADERS(limits.h malloc.h unistd.h sysexits.h stdarg.h)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -40,7 +40,7 @@ AC_FUNC_ALLOCA
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(strerror sleep getpid)
 
-AC_REPLACE_FUNCS(mempcpy strndup strchrnul strcasecmp)
+AC_REPLACE_FUNCS(mempcpy strndup strchrnul strcasecmp snprintf vsnprintf)
 
 dnl ARGP_CHECK_FUNC(includes, function-call [, if-found [, if-not-found]])
 AC_DEFUN([ARGP_CHECK_FUNC],
