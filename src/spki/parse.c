@@ -41,6 +41,15 @@ spki_gperf (const char *str, unsigned int len);
 
 #include "spki-gperf.h"
 
+/* Make sure that i->type is set to SPKI_TYPE_SYNTAX_ERROR on all
+ * failures. */
+static enum spki_type
+spki_parse_fail(struct spki_iterator *i)
+{
+  i->type = 0;
+  return 0;
+}
+
 enum spki_type
 spki_intern(struct spki_iterator *i)
 {  
@@ -54,7 +63,7 @@ spki_intern(struct spki_iterator *i)
 	return assoc->id;
     }
   
-  return 0;
+  return spki_parse_fail(i);;
 }
 
 /* NOTE: Uses SPKI_TYPE_SYNTAX_ERROR (= 0) for both unknown types and
@@ -90,8 +99,7 @@ spki_iterator_first(struct spki_iterator *i,
   if (sexp_iterator_first(&i->sexp, length, expr))
     return spki_parse_type(i);
 
-  i->type = 0;
-  return 0;
+  return spki_parse_fail(i);
 }
 
 enum spki_type
@@ -107,14 +115,20 @@ spki_iterator_first_sexp(struct spki_iterator *i,
 enum spki_type
 spki_parse_end(struct spki_iterator *i)
 {
-  return (i->type && i->sexp.type == SEXP_END
-	  && sexp_iterator_exit_list(&i->sexp)) ? spki_parse_type(i) : 0;
+  if (i->type && i->sexp.type == SEXP_END
+      && sexp_iterator_exit_list(&i->sexp))
+    return spki_parse_type(i);
+  else
+    return spki_parse_fail(i);
 }
 
 enum spki_type
 spki_parse_skip(struct spki_iterator *i)
 {
-  return sexp_iterator_exit_list(&i->sexp) ? spki_parse_type(i) : 0;
+  if (sexp_iterator_exit_list(&i->sexp))
+    return spki_parse_type(i);
+  else
+    return spki_parse_fail(i);
 }
 
 const uint8_t *
@@ -144,12 +158,16 @@ spki_parse_string(struct spki_iterator *i,
 
 enum spki_type
 spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
+		     enum spki_type type,
 		     struct spki_principal **principal)
 {
+  if (i->type != type)
+    return spki_parse_fail(i);
+  
   switch (spki_parse_type(i))
     {
     default:
-      return 0;
+      return spki_parse_fail(i);
 
     case SPKI_TYPE_PUBLIC_KEY:
       {
@@ -157,18 +175,18 @@ spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 
 	unsigned key_length;
 	const uint8_t *key;
-	enum spki_type next;
 	
-	next = spki_parse_skip(i);
-	if (!next)
-	  return 0;
+	if (!spki_parse_skip(i))
+	  return spki_parse_fail(i);
 
 	key = spki_parse_prevexpr(i, start, &key_length);
 
 	assert(key);
-
-	return (*principal = spki_principal_by_key(db, key_length, key))
-	  ? next : 0;
+	
+	if ( (*principal = spki_principal_by_key(db, key_length, key)) )
+	  return spki_parse_end(i);
+	else
+	  return spki_parse_fail(i);
       }
 
     case SPKI_TYPE_HASH:
@@ -176,11 +194,10 @@ spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 	enum spki_type type = spki_intern(i);
 	unsigned digest_length;
 	const uint8_t *digest;
-	enum spki_type next;
 	
 	if (type
 	    && (digest = spki_parse_string(i, &digest_length))
-	    && (next = spki_parse_end(i)))
+	    && spki_parse_end(i))
 	  {
 	    if (type == SPKI_TYPE_MD5
 		&& digest_length == MD5_DIGEST_SIZE)
@@ -190,26 +207,27 @@ spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 		     && digest_length == SHA1_DIGEST_SIZE)
 	      *principal = spki_principal_by_sha1(db, digest);
 	    else
-	      return 0;
+	      return spki_parse_fail(i);
 
-	    return next;
+	    return spki_parse_end(i);
 	  }
-	return 0;
+	return spki_parse_fail(i);
       }
     } 
 }
 
+/* FIXME: Perhaps the other parser functions should handle type
+ * mismatches in the same way as spki_parse_tag. */
 enum spki_type
 spki_parse_tag(struct spki_acl_db *db, struct spki_iterator *i,
 	       struct spki_tag **tag)
 {
-  enum spki_type next;
-
-  assert(i->type == SPKI_TYPE_TAG);
-  
-  return ((*tag = spki_tag_compile(db->realloc_ctx, db->realloc,
-				   &i->sexp))
-	  && (next = spki_parse_end(i)));
+  if ( i->type == SPKI_TYPE_TAG
+       && (*tag = spki_tag_compile(db->realloc_ctx, db->realloc,
+				   &i->sexp)) )
+    return spki_parse_end(i);
+  else
+    return spki_parse_fail(i);
 }
 
 enum spki_type
@@ -232,7 +250,7 @@ spki_parse_date(struct spki_iterator *i,
       memcpy(d->date, date_string, SPKI_DATE_SIZE);
       return next;
     }
-  return 0;
+  return spki_parse_fail(i);
 }
 
 enum spki_type
@@ -272,9 +290,10 @@ spki_parse_version(struct spki_iterator *i)
   uint32_t version;
   assert(i->type == SPKI_TYPE_VERSION);
   
-  return (spki_parse_uint32(i, &version)
-	  && version == 0)
-    ? spki_parse_end(i) : 0;
+  if (spki_parse_uint32(i, &version) && version == 0)
+    return spki_parse_end(i);
+  else
+    return spki_parse_fail(i);
 }
 
 /* The acl must already be initialized. */
@@ -292,22 +311,14 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
   
   /* NOTE: draft-ietf-spki-cert-structure-06.txt has a raw <subj-obj>,
    * but that should be changed. */
-  if (i->type != SPKI_TYPE_SUBJECT)
-    return 0;
 
-  /* FIXME: Write an spki_parse_subject function. */
-  if (! (spki_parse_principal(db, i, &acl->subject)
-	 && spki_parse_end(i)))
-    return 0;
+  spki_parse_principal(db, i, SPKI_TYPE_SUBJECT, &acl->subject);
 
   if (i->type == SPKI_TYPE_PROPAGATE)
     {
       acl->flags |= SPKI_PROPAGATE;
       spki_parse_end(i);
     }
-
-  if (i->type != SPKI_TYPE_TAG)
-    return 0;
 
   spki_parse_tag(db, i, &acl->tag);
 
@@ -335,23 +346,12 @@ spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
   if (i->type == SPKI_TYPE_DISPLAY)
     spki_parse_skip(i);
 
-  if (i->type != SPKI_TYPE_ISSUER)
-    return 0;
-
-  if (! (spki_parse_principal(db, i, &cert->issuer)
-	 && spki_parse_end(i)))
-    return 0;
+  spki_parse_principal(db, i, SPKI_TYPE_ISSUER, &cert->issuer);
 
   if (i->type == SPKI_TYPE_ISSUER_INFO)
     spki_parse_skip(i);    
 
-  if (i->type != SPKI_TYPE_SUBJECT)
-    return 0;
-  
-  /* FIXME: Write an spki_parse_subject function. */
-  if (! (spki_parse_principal(db, i, &cert->subject)
-	 && spki_parse_end(i)))
-    return 0;
+  spki_parse_principal(db, i, SPKI_TYPE_SUBJECT, &cert->subject);
   
   if (i->type == SPKI_TYPE_SUBJECT_INFO)
     spki_parse_skip(i);    
@@ -362,9 +362,6 @@ spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
       spki_parse_end(i);
     }
 
-  if (i->type != SPKI_TYPE_TAG)
-    return 0;
-  
   spki_parse_tag(db, i, &cert->tag);
     
   if (i->type == SPKI_TYPE_VALID)

@@ -80,6 +80,7 @@ spki_parse_skip(struct spki_iterator *i);
 
 enum spki_type
 spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
+		     enum spki_type type,
 		     struct spki_principal **principal);
 
 enum spki_type
