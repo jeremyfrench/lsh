@@ -30,6 +30,7 @@
 #include "bignum.h"
 #include "connection.h"
 #include "parse.h"
+#include "sexp.h"
 
 #define GABA_DECLARE
 #include "publickey_crypto.h.x"
@@ -50,23 +51,85 @@ struct keypair *make_keypair(UINT32 type,
 			     struct lsh_string *public,
 			     struct signer *private);
 
+/* DSA definitions */
+/* GABA:
+   (struct
+     (name dsa_public)
+     (vars
+       (p bignum)
+       (q bignum)
+       (g bignum)
+       (y bignum)))
+*/
+
+/* DSA signatures */
+
+/* NOTE: These definitions should not really be public. But the
+ * structures are needed for both plain ssh-dss and spki-style dsa. */
+
+/* GABA:
+   (class
+     (name dsa_signer)
+     (super signer)
+     (vars
+       (random object randomness)
+       (public struct dsa_public)
+       (a bignum)))
+*/
+
+/* GABA:
+   (class
+     (name dsa_verifier)
+     (super verifier)
+     (vars
+       (public struct dsa_public)))
+*/
+
+void init_dsa_public(struct dsa_public *public);
+
 /* parse an ssh keyblob */
 int parse_dsa_public(struct simple_buffer *buffer,
 		     struct dsa_public *public);
-void init_dsa_public(struct dsa_public *public);
+int
+spki_init_dsa_public(struct dsa_public *key,
+		     struct sexp_iterator *i);
 
 struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
 
+/* Some support for spki style keys */
+struct dsa_verifier *
+make_dsa_spki_verifier(struct sexp_iterator *i);
+
+struct dsa_signer *
+make_dsa_spki_signer(struct sexp_iterator *i,
+		     struct randomness *random);
+
+
 #if DATAFELLOWS_WORKAROUNDS
-struct signer *make_dsa_signer_kludge(struct signer *dsa);
+
+#if 0
+static struct lsh_string *dsa_sign_kludge(struct signer *c,
+					  UINT32 msg_length,
+					  UINT8 *msg);
+
+
+int dsa_verify_kludge(struct verifier *c,
+		      UINT32 length,
+		      UINT8 *msg,
+		      UINT32 signature_length,
+		      UINT8 * signature_data);
+#endif
+
 struct verifier *make_dsa_verifier_kludge(struct verifier *v);
+struct signer *make_dsa_signer_kludge(struct signer *dsa);
+
 /* struct signature_algorithm *make_dsa_kludge_algorithm(struct randomness *random); */
 #endif
 
 struct signer *make_dsa_signer_classic(struct signer *s);
 struct verifier *make_dsa_verifier_classic(struct verifier *v);
 
-/* FIXME: Groups could use "non-virtual" methods */
+/* FIXME: Groups could use (meta)class methods */
 
 /* Groups. For now, assume that all group elements are represented by
  * bignums. */
@@ -93,15 +156,6 @@ struct verifier *make_dsa_verifier_classic(struct verifier *v);
 
 struct group *make_zn(mpz_t p, mpz_t order);
 
-/* GABA:
-   (struct
-     (name dsa_public)
-     (vars
-       (p bignum)
-       (q bignum)
-       (g bignum)
-       (y bignum)))
-*/
 
 /* DH key exchange, with authentication */
 /* GABA:
