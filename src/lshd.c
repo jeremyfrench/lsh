@@ -363,9 +363,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    if (self->with_srp_keyexchange)
 	      {
 		assert(db);
-		LIST(self->kex_algorithms)[i++] = ATOM_SRP_GROUP1_SHA1;
+		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1;
 		ALIST_SET(self->super.algorithms,
-			  ATOM_SRP_GROUP1_SHA1,
+			  ATOM_SRP_RING1_SHA1,
 			  make_srp_server(make_srp1(self->random), db));
 	      }
 #endif /* WITH_SRP */
@@ -555,7 +555,7 @@ main_argp =
 */
 
 /* Invoked when the client requests the userauth service. */
-/* GABA:
+/* ;; GABA:
    (expr
      (name lshd_services)
      (params 
@@ -570,14 +570,13 @@ main_argp =
    (expr
      (name lshd_connection_service)
      (params
-       (login object command)     
        (hooks object object_list))
      (expr
-       (lambda (user connection)
-         ((progn hooks) (login user
-	                       ; We have to initialize the connection
-			       ; before logging in.
-	                       (init_connection_service connection))))))
+       (lambda (connection)
+         ((progn hooks)
+	    ; We have to initialize the connection
+	    ; before adding handlers.
+	    (init_connection_service connection))))))
 */
 
 static void
@@ -664,7 +663,8 @@ int main(int argc, char **argv)
   {
     /* Commands to be invoked on the connection */
     struct object_list *connection_hooks;
-
+    struct command *session_setup;
+    
     /* Supported channel requests */
     struct alist *supported_channel_requests
       = make_alist(2,
@@ -672,11 +672,20 @@ int main(int argc, char **argv)
 		   ATOM_EXEC, make_exec_handler(backend, reaper),
 		   -1);
     
+#if WITH_PTY_SUPPORT
+    if (options->with_pty)
+      ALIST_SET(supported_channel_requests,
+		ATOM_PTY_REQ, &pty_request_handler);
+#endif /* WITH_PTY_SUPPORT */
+
+    session_setup = make_install_fix_channel_open_handler
+      (ATOM_SESSION, make_open_session(supported_channel_requests));
     
 #if WITH_TCP_FORWARD
     if (options->with_tcpip_forward)
       connection_hooks = make_object_list
-	(3,
+	(4,
+	 session_setup,
 	 make_tcpip_forward_hook(backend),
 	 make_install_fix_global_request_handler
 	 (ATOM_CANCEL_TCPIP_FORWARD, &tcpip_cancel_forward),
@@ -684,12 +693,8 @@ int main(int argc, char **argv)
 	 -1);
     else
 #endif
-      connection_hooks = make_object_list(0, -1);
-#if WITH_PTY_SUPPORT
-    if (options->with_pty)
-      ALIST_SET(supported_channel_requests,
-		ATOM_PTY_REQ, make_pty_handler());
-#endif /* WITH_PTY_SUPPORT */
+      connection_hooks
+	= make_object_list (1, session_setup, -1);
     {
       /* FIXME: We should check that we have at least one host key. We
        * should also extract the host-key algorithms for which we have
@@ -715,14 +720,11 @@ int main(int argc, char **argv)
 	 make_offer_service
 	 (make_alist
 	  (1, ATOM_SSH_USERAUTH,
-	   lshd_services(make_userauth_service
-			 (options->userauth_methods,
-			  options->userauth_algorithms,
-			  make_alist(1, ATOM_SSH_CONNECTION,
-				     lshd_connection_service
-				     (make_server_connection_service(supported_channel_requests),
-				      connection_hooks),
-				     -1))),
+	   make_userauth_service(options->userauth_methods,
+				  options->userauth_algorithms,
+				  make_alist(1, ATOM_SSH_CONNECTION,
+					     lshd_connection_service(connection_hooks),
+					     -1)),
 	   -1)));
     
       CAST_SUBTYPE(command, server_listen, o);
