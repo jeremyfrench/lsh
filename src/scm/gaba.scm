@@ -367,8 +367,7 @@
 	    (if methods
 		(map (lambda (m) (list ",\n  " m)) methods)
 		"")
-	    "};\n"
-	    "#define " name "_class (" name "_class_extended.super)\n")
+	    "};\n")
       (list "struct lsh_class " name "_class =\n"
 	    initializer ";\n")))
 
@@ -389,7 +388,8 @@
 	      (do-instance-struct name super vars)
 	      (if meta
 		  (list "extern struct " meta "_meta "
-			name "_class_extended;\n")
+			name "_class_extended;\n"
+			"#define " name "_class (" name "_class_extended.super)\n")
 		  (list "extern struct lsh_class " name "_class;\n"))
 	      "#endif /* !GABA_DEFINE */\n\n"
 	      "#ifndef GABA_DECLARE\n"
