@@ -78,6 +78,29 @@ format_global_success(void)
   return ssh_format("%c", SSH_MSG_REQUEST_SUCCESS);
 }
 
+/* The advertised rec_max_size must be a little smaller than SSH_MAX_PACKET,
+ * to make sure that our peer won't send us packets exceeding our limit for
+ * the connection. */
+
+/* NOTE: It would make some sense to use the connection's
+ * rec_max_packet instead of the SSH_MAX_PACKET constant. */
+
+#define SSH_MAX_DATA_SIZE (SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ)
+
+static void
+check_rec_max_packet(struct ssh_channel *channel)
+{
+  /* Never advertise a larger rec_max_packet than we're willing to
+   * handle. */
+
+  if (channel->rec_max_packet > SSH_MAX_DATA_SIZE)
+    {
+      debug("check_rec_max_packet: Reduced rec_max_packet from %i to %i.\n",
+	    channel->rec_max_packet, SSH_MAX_DATA_SIZE);
+      channel->rec_max_packet = SSH_MAX_DATA_SIZE;
+    }
+}
+
 struct lsh_string *
 format_open_confirmation(struct ssh_channel *channel,
 			 UINT32 channel_number,
@@ -86,12 +109,14 @@ format_open_confirmation(struct ssh_channel *channel,
   va_list args;
   UINT32 l1, l2;
   struct lsh_string *packet;
-
+  
 #define CONFIRM_FORMAT "%c%i%i%i%i"
 #define CONFIRM_ARGS \
   SSH_MSG_CHANNEL_OPEN_CONFIRMATION, channel->channel_number, \
   channel_number, channel->rec_window_size, channel->rec_max_packet
     
+  check_rec_max_packet(channel);
+
   debug("format_open_confirmation: rec_window_size = %i,\n"
 	"                          rec_max_packet = %i,\n",
        channel->rec_window_size,
@@ -2023,6 +2048,8 @@ format_channel_open_s(struct lsh_string *type,
 		      struct ssh_channel *channel,
 		      struct lsh_string *args)
 {
+  check_rec_max_packet(channel);
+
   return ssh_format("%c%S%i%i%i%lS", SSH_MSG_CHANNEL_OPEN,
 		    type, local_channel_number, 
 		    channel->rec_window_size, channel->rec_max_packet,
@@ -2041,6 +2068,8 @@ format_channel_open(int type, UINT32 local_channel_number,
 #define OPEN_FORMAT "%c%a%i%i%i"
 #define OPEN_ARGS SSH_MSG_CHANNEL_OPEN, type, local_channel_number, \
   channel->rec_window_size, channel->rec_max_packet  
+
+  check_rec_max_packet(channel);
 
   debug("format_channel_open: rec_window_size = %i,\n"
 	"                     rec_max_packet = %i,\n",
