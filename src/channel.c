@@ -367,7 +367,6 @@ use_channel(struct ssh_connection *connection,
 	  channel->channel_number, local_channel_number);
 }
 
-/* FIXME: Delete connection argument */
 void
 register_channel(UINT32 local_channel_number,
 		 struct ssh_channel *channel,
@@ -688,16 +687,12 @@ DEFINE_PACKET_HANDLER(static, global_failure_handler,
      (name channel_request_continuation)
      (super command_continuation)
      (vars
-       ;; FIXME: Delete connection argument 
-       (connection object ssh_connection)
        (channel object ssh_channel)
        (active object request_status)))
 */
 
-/* FIXME: Delete connection argument */
 static void
-send_channel_request_responses(struct ssh_connection *connection,
-			       struct ssh_channel *channel,
+send_channel_request_responses(struct ssh_channel *channel,
 			       struct object_queue *q)
 {
   for (;;)
@@ -708,7 +703,7 @@ send_channel_request_responses(struct ssh_connection *connection,
 
       object_queue_remove_head(q);
 
-      C_WRITE(connection,
+      C_WRITE(channel->connection,
 	      (n->status
 	       ? format_channel_success(channel->channel_number)
 	       : format_channel_failure(channel->channel_number)));
@@ -727,19 +722,16 @@ do_channel_request_response(struct command_continuation *s,
 	  
   self->active->status = 1;
 
-  send_channel_request_responses(self->connection, self->channel, q);
+  send_channel_request_responses(self->channel, q);
 }
 
-/* FIXME: Delete connection argument */
 static struct command_continuation *
-make_channel_request_response(struct ssh_connection *connection,
-			      struct ssh_channel *channel,
+make_channel_request_response(struct ssh_channel *channel,
 			      struct request_status *active)
 {
   NEW(channel_request_continuation, self);
 
   self->super.c = do_channel_request_response;
-  self->connection = connection;
   self->channel = channel;
   self->active = active;
 
@@ -751,8 +743,6 @@ make_channel_request_response(struct ssh_connection *connection,
      (name channel_request_exception_handler)
      (super exception_handler)
      (vars
-       ;; FIXME: Delete connection argument
-       (connection object ssh_connection)
        (channel object ssh_channel)
        (active object request_status)))
 */
@@ -772,16 +762,14 @@ do_exc_channel_request_handler(struct exception_handler *c,
       
       self->active->status = 0;
       
-      send_channel_request_responses(self->connection, self->channel, q);
+      send_channel_request_responses(self->channel, q);
     }
   else
     EXCEPTION_RAISE(c->parent, e);
 }
 
-/* FIXME: Delete connection argument */
 static struct exception_handler *
-make_channel_request_exception_handler(struct ssh_connection *connection,
-				       struct ssh_channel *channel,
+make_channel_request_exception_handler(struct ssh_channel *channel,
 				       struct request_status *active,
 				       struct exception_handler *h,
 				       const char *context)
@@ -791,7 +779,7 @@ make_channel_request_exception_handler(struct ssh_connection *connection,
   self->super.raise = do_exc_channel_request_handler;
   self->super.parent = h;
   self->super.context = context;
-  self->connection = connection;
+
   self->channel = channel;
   self->active = active;
 
@@ -861,8 +849,8 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
 		  object_queue_add_tail(&channel->active_requests,
 					&a->super);
 		  
-		  c = make_channel_request_response(connection, channel, a);
-		  e = make_channel_request_exception_handler(connection, channel, a, e, HANDLER_CONTEXT);
+		  c = make_channel_request_response(channel, a);
+		  e = make_channel_request_exception_handler(channel, a, e, HANDLER_CONTEXT);
 		}
 	      else
 		{
@@ -1471,7 +1459,6 @@ DEFINE_PACKET_HANDLER(static, channel_open_confirm_handler,
 	  channel->send_window_size = window_size;
 	  channel->send_max_packet = max_packet;
 
-	  /* FIXME: Initialize channel->write here? */
 	  use_channel(connection, local_channel_number);
 
 	  COMMAND_RETURN(c, channel);
@@ -1739,7 +1726,7 @@ init_channel(struct ssh_channel *channel)
 
   channel->open_continuation = NULL;
 
-  channel->resources = empty_resource_list();
+  channel->resources = make_resource_list();
   
   object_queue_init(&channel->pending_requests);
   object_queue_init(&channel->active_requests);
