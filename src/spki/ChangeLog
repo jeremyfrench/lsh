@@ -1,5 +1,23 @@
 2002-11-18  Niels Möller  <niels@s3.kth.se>
 
+	* testsuite/testutils.h: Don't include spki-types.h.
+
+	* testsuite/Makefile.am (AM_CPPFLAGS): Fixed obscure bug, we must
+	use AM_CPPFLAGS, not AM_CFLAGS, to get include directories in the
+	right order.
+
+	* process-types: The gperf file should not include spki-types.h.
+
+	* certificate.c (spki_check_type): Deleted function.
+	(spki_acl_parse): Use new parsing conventions.
+	(spki_process_sequence_no_signatures): Likewise.
+	* testsuite/read-acl-test.c (test_main): Likewise.
+	* testsuite/read-cert-test.c (read_cert): Likewise.
+
+	* parse.h (struct spki_iterator): New struct for keeping track of
+	parsing state. Rewrote parsing functions to use it.
+	* parse.c (spki_iterator_first): New function.
+
 	* testsuite/testutils.h: Include more header files.
 
 	* testsuite/read-cert-test.c (read_cert): New function.
