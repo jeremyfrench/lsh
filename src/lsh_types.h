@@ -79,9 +79,27 @@ do {						\
 #define MIN(a, b) (((a)>(b)) ? (b) : (a))
 #define MAX(a, b) (((a)>(b)) ? (b) : (a))
 
-/* Generic packet */
+/* Generic object */
+
+#ifdef DEBUG_ALLOC
+
+struct lsh_object
+{
+  int type;  /* Zero for objects that are not allocated on the heap. */
+};
+
+#define STATIC_HEADER { 0 },
+
+#else   /* !DEBUG_ALLOC */
+struct lsh_object {};
+#define STATIC_HEADER
+
+#endif  /* !DEBUG_ALLOC */
+
 struct lsh_string
 {
+  struct lsh_object header;
+  
   UINT32 sequence_number; 
   UINT32 length;
   UINT8 data[1];
@@ -92,7 +110,9 @@ struct callback;
 typedef int (*callback_f)(struct callback *closure);
 struct callback
 {
-  callback_f f;
+  struct lsh_object header;
+  
+  int (*f)(struct callback *closure);
 };
 
 #define CALLBACK(c) ((c)->f(c))

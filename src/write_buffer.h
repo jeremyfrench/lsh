@@ -31,6 +31,8 @@
 /* For the packet queue */
 struct node
 {
+  struct lsh_object header;
+  
   struct node *next;
   struct node *prev;
   struct lsh_string *packet;

@@ -34,6 +34,8 @@
 /* May store a new handler into *h. */
 struct line_handler
 {
+  struct lsh_object header;
+  
   struct read_handler * (*handler)(struct line_handler **h,
 				   UINT32 length,
 				   UINT8 *line);

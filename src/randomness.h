@@ -30,6 +30,8 @@
 
 struct randomness
 {
+  struct lsh_object header;
+  
   void (*random)(struct randomness **closure, UINT32 length, UINT8 *dst);
 };
 
