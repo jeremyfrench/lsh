@@ -69,7 +69,7 @@
 #include "spki.h"
 #include "srp.h" 
 #include "ssh.h"
-#include "tcpforward_commands.h"
+#include "tcpforward.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -987,6 +987,7 @@ int main(int argc, char **argv, const char** envp)
   struct spki_context *spki;
   struct object_list *keys;
   struct connect_list_state *remote;
+  struct command *lsh_connect;
   
   /* Default exit code if something goes wrong. */
   int lsh_exit_code = 17;
@@ -1031,36 +1032,32 @@ int main(int argc, char **argv, const char** envp)
   spki = read_known_hosts(options);
   keys = read_user_keys(options);
   
-  {
-    struct lsh_object *o =
-      make_lsh_connect(
-	make_handshake_info(CONNECTION_CLIENT,
-			    "lsh - a free ssh", NULL,
-			    SSH_MAX_PACKET,
-			    options->super.random,
-			    options->algorithms->algorithms,
-			    NULL,
-			    NULL),
-	make_simple_kexinit(options->super.random,
-			    options->kex_algorithms,
-			    options->algorithms->hostkey_algorithms,
-			    options->algorithms->crypto_algorithms,
-			    options->algorithms->mac_algorithms,
-			    options->algorithms->compression_algorithms,
-			    make_int_list(0, -1)),
-        make_lsh_host_db(spki,
-                         options->super.tty,
-                         options->super.target,
-                         options->sloppy,
-                         options->capture_file),
-	queue_to_list(&options->super.actions),
-	make_lsh_login(options, keys));
-    
-    CAST_SUBTYPE(command, lsh_connect, o);
-
-    COMMAND_CALL(lsh_connect, remote, &discard_continuation,
-		 handler);
-  } 
+  lsh_connect =
+    make_lsh_connect(
+      make_handshake_info(CONNECTION_CLIENT,
+			  "lsh - a free ssh", NULL,
+			  SSH_MAX_PACKET,
+			  options->super.random,
+			  options->algorithms->algorithms,
+			  NULL,
+			  NULL),
+      make_simple_kexinit(options->super.random,
+			  options->kex_algorithms,
+			  options->algorithms->hostkey_algorithms,
+			  options->algorithms->crypto_algorithms,
+			  options->algorithms->mac_algorithms,
+			  options->algorithms->compression_algorithms,
+			  make_int_list(0, -1)),
+      make_lsh_host_db(spki,
+		       options->super.tty,
+		       options->super.target,
+		       options->sloppy,
+		       options->capture_file),
+      queue_to_list(&options->super.actions),
+      make_lsh_login(options, keys));
+  
+  COMMAND_CALL(lsh_connect, remote, &discard_continuation,
+	       handler);
 
 #if 0
   /* All commands using stdout have dup:ed stdout by now. We close it,
