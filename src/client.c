@@ -494,7 +494,7 @@ static int do_io(struct ssh_channel *channel)
 
   channel->eof = close_client_session;
 
-  return LSH_OK | LSH_GOON;
+  return LSH_OK | LSH_CHANNEL_READY_SEND;
 }
 
 /* We have opened a channel of type "session" */
