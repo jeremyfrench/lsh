@@ -477,7 +477,7 @@ spawn_process(struct server_session *session,
 	   * child has opened the slave side of it results in EINVAL.
 	   * We can't have that, so we'll wait until the child has
 	   * opened the tty, after which it should close its end of
-	   * the syncronizatino pipe, and our read will return 0.
+	   * the syncronization pipe, and our read will return 0.
 	   *
 	   * We need the syncronizatino only if we're actually using a
 	   * pty, but for simplicity, we do it every time. */
