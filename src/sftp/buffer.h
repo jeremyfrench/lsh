@@ -6,57 +6,58 @@
 #ifndef SFTP_BUFFER_H_INCLUDED
 #define SFTP_BUFFER_H_INCLUDED
 
-/* FIXME: We could use a configure test to check for __attribute__,
- * just like lsh does. */
-#ifndef PRINTF_STYLE
-# if __GNUC__ >= 2
-#  define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
-# else
-#  define PRINTF_STYLE(f, a)
-# endif
+/* Basic configuration */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
 #endif
 
-#define LSH 1
+/* For off_t */
+#include <sys/types.h>
 
-#if LSH
+#if SIZEOF_SHORT >= 4
+# define UINT32 unsigned short
+#elif SIZEOF_INT >= 4
+# define UINT32 unsigned int
+#elif SIZEOF_LONG >= 4
+# define UINT32 unsigned long
+#else
+# error No suitable type found to use for UINT32
+#endif /* UINT32 */
+ 
+#if SIZEOF_SHORT >= 2
+# define UINT16 unsigned short
+#elif SIZEOF_INT >= 2
+# define UINT16 unsigned int
+#else
+# error No suitable type found to use for UINT16
+#endif  /* UINT16 */
+ 
+#define UINT8 unsigned char
 
-#include "../lsh_types.h"
+#if __GNUC__ && HAVE_GCC_ATTRIBUTE
+# define NORETURN __attribute__ ((__noreturn__))
+# define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
+# define UNUSED __attribute__ ((__unused__))
+#else
+# define NORETURN
+# define PRINTF_STYLE(f, a)
+# define UNUSED
+#endif
 
-/* FIXME: Add to lsh_types.h */
-
-#define UINT64 long long
-
-#include <stdio.h>
-
-struct sftp_input *
-sftp_make_input(FILE *f);
-
-/* Returns 1 of all was well, 0 on error, and -1 on EOF */
-int
-sftp_read_packet(struct sftp_input *i);
-
-struct sftp_output *
-sftp_make_output(FILE *f);
-
-void
-sftp_set_msg(struct sftp_output *o, UINT8 msg);
-
-void
-sftp_set_id(struct sftp_output *o, UINT32 id);
-
-int
-sftp_write_packet(struct sftp_output *o);
-
-#else /* !LSH */
-# error Needs either LSH config.h 
-#endif /* !LSH */
-
+
+/* Abstract input and output functions */
 #include <time.h>
 
 struct sftp_input;
 struct sftp_output;
 
 /* Input */
+
+/* Returns 1 of all was well, 0 on error, and -1 on EOF */
+int
+sftp_read_packet(struct sftp_input *i);
+
 int
 sftp_get_data(struct sftp_input *i, UINT32 length, UINT8 *data);
 
@@ -67,18 +68,27 @@ int
 sftp_get_uint32(struct sftp_input *i, UINT32 *value);
 
 int
-sftp_get_uint64(struct sftp_input *i, UINT64 *value);
+sftp_get_uint64(struct sftp_input *i, off_t *value);
 
+/* Allocates storage. Caller must deallocate using
+ * sftp_free_string. */
 UINT8 *
 sftp_get_string(struct sftp_input *i, UINT32 *length);
-
-void
-sftp_free_string(UINT8 *data);
 
 int
 sftp_get_eod(struct sftp_input *i);
 
 /* Output */
+
+void
+sftp_set_msg(struct sftp_output *o, UINT8 msg);
+
+void
+sftp_set_id(struct sftp_output *o, UINT32 id);
+
+int
+sftp_write_packet(struct sftp_output *o);
+
 void
 sftp_put_data(struct sftp_output *o, UINT32 length, const UINT8 *data);
 
@@ -89,10 +99,10 @@ void
 sftp_put_uint32(struct sftp_output *o, UINT32 value);
 
 void
-sftp_put_uint64(struct sftp_output *o, UINT64 value);
+sftp_put_uint64(struct sftp_output *o, off_t value);
 
 void
-sftp_put_string(struct sftp_output *o, UINT32 length, UINT8 *data);
+sftp_put_string(struct sftp_output *o, UINT32 length, const UINT8 *data);
 
 /* Returns index. */
 UINT32
@@ -106,6 +116,10 @@ void
 sftp_put_length(struct sftp_output *o,
 		UINT32 index,
 		UINT32 length);
+
+void
+sftp_put_reset(struct sftp_output *o,
+	       UINT32 index);
 
 UINT32
 sftp_put_printf(struct sftp_output *o, const char *format, ...)
@@ -122,7 +136,7 @@ sftp_put_strftime(struct sftp_output *o, UINT32 size,
 struct sftp_attrib
 {
   UINT32 flags;
-  UINT64 size;
+  off_t size;
   UINT32 uid;
   UINT32 gid;
   UINT32 permissions;
@@ -144,4 +158,15 @@ sftp_put_attrib(struct sftp_output *o, const struct sftp_attrib *a);
 int
 sftp_skip_extension(struct sftp_input *i);
 
+
+/* Simple input and output objects based on FILE * */
+#include <stdio.h>
+
+struct sftp_input *
+sftp_make_input(FILE *f);
+
+struct sftp_output *
+sftp_make_output(FILE *f);
+
+
 #endif /* SFTP_BUFFER_H_INCLUDED */
