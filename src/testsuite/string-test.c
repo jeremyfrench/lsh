@@ -40,10 +40,28 @@ test_main(void)
   ASSERT(p && !*p) ;
   
   s = S("colonize this");
-  s = lsh_string_colonize(s, 1, 1);
+  s = lsh_string_colonize( s, 1, 1);
   p = lsh_get_cstring(s);
 
   ASSERT(p && !strcmp(p, "c:o:l:o:n:i:z:e: :t:h:i:s")) ;
   
+  s = S("");
+  s = lsh_string_bubblebabble(s, 1);
+  p = lsh_get_cstring(s);
+  
+  ASSERT(p && !strcmp(p, "xexax")) ;
+
+  s = S("1234567890");
+  s = lsh_string_bubblebabble(s, 1);
+  p = lsh_get_cstring(s);
+  
+  ASSERT(p && !strcmp(p, "xesef-disof-gytuf-katof-movif-baxux")) ;
+  
+  s = S("Pineapple");
+  s = lsh_string_bubblebabble(s, 1);
+  p = lsh_get_cstring(s);
+
+  ASSERT(p && !strcmp(p, "xigak-nyryk-humil-bosek-sonax")) ;
+           
   SUCCESS();
 }
