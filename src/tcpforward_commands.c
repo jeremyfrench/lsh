@@ -26,6 +26,7 @@
 
 #include "atoms.h"
 #include "channel_commands.h"
+#include "connection_commands.h"
 #include "format.h"
 #include "io_commands.h"
 #include "ssh.h"
@@ -379,12 +380,13 @@ STATIC_COLLECT_1(&collect_info_remote_listen_2);
        (target object address_info))
      (expr
        (lambda (connection)
-         (listen (lambda (peer)
-	           (tcpip_start_io
-		     (catch_channel_open 
-		       (open_direct_tcpip target peer) connection)))
-		 backend
-	         local))))
+         (connection_remember connection
+           (listen (lambda (peer)
+	             (tcpip_start_io
+		       (catch_channel_open 
+		         (open_direct_tcpip target peer) connection)))
+		   backend
+	           local)))))
 */
 
 struct command *
@@ -403,17 +405,13 @@ make_forward_local_port(struct io_backend *backend,
 /* GABA:
    (expr
      (name forward_remote_port)
-     (globals
-       (remote_listen REMOTE_LISTEN)
-       ;; (connection_remember CONNECTION_REMEMBER)
-       (connect_io TCPIP_CONNECT_IO))
      (params
        (connect object command)
        (remote object address_info))
      (expr
        (lambda (connection)
          (remote_listen (lambda (peer)
-	                  (connect_io 
+	                  (tcpip_connect_io 
 			     ; NOTE: The use of prog1 is needed to
 			     ; delay the connect call until the
 			     ; (otherwise ignored) peer argument is
@@ -536,6 +534,7 @@ STATIC_COLLECT_1(&install_tcpip_forward_info_2.super);
          (install connection
 	   (handler (lambda (port)
 	     ;; Called when the client requests remote forwarding
+	     ;; FIXME: Doesn't catch all exceptions from listen.
              (listen (lambda (peer)
   		       ;; Called when someone connects to the
   		       ;; forwarded port.
