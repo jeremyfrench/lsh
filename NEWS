@@ -1,5 +1,8 @@
 News for the 1.x.y release
 
+	Incompatible change to key format, to comply with the current
+	spki structure draft.
+	
 	lshd now does the equivalence of ulimit -n unlimited, this is
 	inherited by processes started upon client requests. If you
 	don't want this, you should use /etc/{profile,login,whatever}
