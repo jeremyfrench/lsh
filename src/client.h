@@ -102,6 +102,16 @@ make_exec_request(struct lsh_string *command);
 struct command *
 make_pty_request(struct interact *tty);
 
+
+struct channel_open *
+make_channel_open_x11(struct io_backend *backend);
+
+struct command *
+make_forward_x11(const char *display, struct lsh_string *fake);
+
+struct client_x11_display *
+make_client_x11_display(const char *display, struct lsh_string *fake);
+
 /* GABA:
    (class
      (name client_options)
@@ -129,6 +139,8 @@ make_pty_request(struct interact *tty);
        
        ; -1 means default behaviour
        (with_pty . int)
+
+       (with_x11 . int)
        
        ; Session modifiers
        (stdin_file . "const char *")
@@ -144,7 +156,8 @@ make_pty_request(struct interact *tty);
        ; True if the process's stdin or pty (respectively) has been used. 
        (used_stdin . int)
        (used_pty . int)
-
+       (used_x11 . int)
+       
        (start_shell . int)
        (remote_forward . int)
        (actions struct object_queue)))
