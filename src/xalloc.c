@@ -26,7 +26,12 @@
 #include "xalloc.h"
 #include "werror.h"
 
+#include <stdlib.h>
+
 #ifdef DEBUG_ALLOC
+
+#define lsh_free debug_free
+#define lsh_malloc debug_malloc
 
 /* There are two sets of allocation functions: Low level allocation *
  * that can allocate memory for any purpose, and object allocators
@@ -38,7 +43,7 @@
 
 #define SIZE_IN_INTS(x) (((x) + sizeof(int)-1) / sizeof(int))
 
-void *debug_malloc(size_t real_size)
+static void *debug_malloc(size_t real_size)
 {
   static int count = 4711;
   int *res;
@@ -58,7 +63,7 @@ void *debug_malloc(size_t real_size)
   return (void *) (res + 2);
 }
 
-void debug_free(void *m)
+static void debug_free(void *m)
 {
   if (m)
     {
@@ -74,7 +79,13 @@ void debug_free(void *m)
       free(p-2);
     }
 }
-#endif /* DEBUG_ALLOC */
+
+#else  /* !DEBUG_ALLOC */
+
+#define lsh_free free
+#define lsh_malloc malloc
+
+#endif /* !DEBUG_ALLOC */
 
 static void *xalloc(size_t size)
 {
@@ -127,15 +138,36 @@ void lsh_object_free(void *p)
 void lsh_object_check(void *p, size_t size)
 {
   struct lsh_object *self = (struct lsh_object *) p;
-  if (self->size != size)
-    fatal("Type error!\n");
+
+  switch(self->alloc_method)
+    {
+    case LSH_ALLOC_HEAP:
+      if (self->size != size)
+	fatal("Type error!\n");
+      break;
+    case LSH_ALLOC_STATIC:
+    case LSH_ALLOC_STACK:
+      break;
+    default:
+      fatal("Type error!\n");
+    }
 }
 
 void lsh_object_check_subtype(void *p, size_t size)
 {
   struct lsh_object *self = (struct lsh_object *) p;
-  if (self->size < size)
-    fatal("Type error!\n");
+  switch(self->alloc_method)
+    {
+    case LSH_ALLOC_HEAP:
+      if (self->size < size)
+	fatal("Type error!\n");
+      break;
+    case LSH_ALLOC_STATIC:
+    case LSH_ALLOC_STACK:
+      break;
+    default:
+      fatal("Type error!\n");
+    }
 }
 
 #endif /* DEBUG_ALLOC */

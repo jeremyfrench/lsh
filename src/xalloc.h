@@ -60,20 +60,14 @@ void lsh_space_free(void *p);
 
 #ifdef DEBUG_ALLOC
 
-void *debug_malloc(size_t size);
-void debug_free(void *m);
 void lsh_object_check(void *m, size_t size);
 void lsh_object_check_subtype(void *m, size_t size);
 
-#define lsh_free debug_free
-#define lsh_malloc debug_malloc
 #define MDEBUG(x) lsh_object_check((x), sizeof(*(x)))
 #define MDEBUG_SUBTYPE(x) lsh_object_check_subtype((x), sizeof(*(x)))
 
 #else   /* !DEBUG_ALLOC */
 
-#define lsh_free free
-#define lsh_malloc malloc
 #define MDEBUG(x)
 #define MDEBUG_SUBTYPE(x)
 
