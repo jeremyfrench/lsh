@@ -1598,6 +1598,9 @@ void init_connection_service(struct ssh_connection *connection)
   
   connection->table = table;
 
+  /* Cancel handshake timeout */
+  connection_clear_timeout(connection);
+  
   connection->dispatch[SSH_MSG_GLOBAL_REQUEST]
     = &global_request_handler;
   connection->dispatch[SSH_MSG_CHANNEL_OPEN]
