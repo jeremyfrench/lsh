@@ -419,20 +419,6 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
   c->literal_kexinits[CONNECTION_CLIENT] = NULL;
 }
 
-#if 0
-struct diffie_hellman_instance *
-make_diffie_hellman_instance(struct diffie_hellman_method *m,
-			     struct ssh_connection *c)
-{
-  struct diffie_hellman_instance *res
-    = xalloc(sizeof(struct diffie_hellman_instance));
-
-  init_diffie_hellman_instance(m, res, c);
-
-  return res;
-}
-#endif
-
 struct diffie_hellman_method *make_dh1(struct randomness *r)
 {
   struct diffie_hellman_method *res

@@ -28,9 +28,6 @@
 
 #include "abstract_crypto.h"
 
-#if 0
-extern struct crypto_instance crypto_none_instance;
-#endif
 extern struct crypto_algorithm crypto_rc4_algorithm;
 
 extern struct hash_algorithm sha_algorithm;

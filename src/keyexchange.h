@@ -175,8 +175,4 @@ struct packet_handler *
 make_newkeys_handler(struct crypto_instance *crypto,
 		     struct mac_instance *mac);
 
-#if 0
-struct kexinit *parse_kexinit(struct lsh_string *packet);
-#endif
-
 #endif /* LSH_KEYEXCHANGE_H_INCLUDED */

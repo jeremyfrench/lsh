@@ -33,11 +33,6 @@ struct ssh_connection
   struct abstract_write super;
   
 #if 0
-  struct read_packet *reader; /* Needed for changing the decryption
-			       * algorithms. Is there a better way?
-			       * Perhaps one can keep this pointer
-			       * inside the newkeys-handler? */
-
   int type; /* CONNECTION_SERVER or CONNECTION_CLIENT */
 #endif
   

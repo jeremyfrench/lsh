@@ -66,21 +66,6 @@ struct dss_public
   mpz_t y;
 };
 
-#if 0
-struct signer *make_dss_signer(struct signature_algorithm *closure,
-			       UINT32 public_length,
-			       UINT8 *public,
-			       UINT32 private_length,
-			       UINT8 *private);
-
-struct verifier *make_dss_verifier(struct signature_algorithm *closure,
-				   UINT32 public_length,
-				   UINT8 *public);
-
-
-int parse_dss_public(struct simple_buffer *buffer, struct dss_public *public);
-#endif
-
 /* DH key exchange, with authentication */
 struct diffie_hellman_method
 {
@@ -135,23 +120,10 @@ void dh_generate_secret(struct diffie_hellman_instance *self,
 
 void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest);
 
-#if 0
-struct diffie_hellman_method *
-make_diffie_hellman_method(struct group *group,
-			   struct hash_algorithm *h,
-			   struct randomness *r);
-#endif
-
 struct diffie_hellman_method *make_dh1(struct randomness *r);
 
 void init_diffie_hellman_instance(struct diffie_hellman_method *m,
 				  struct diffie_hellman_instance *self,
 				  struct ssh_connection *c);
-
-#if 0
-struct diffie_hellman_instance *
-make_diffie_hellman_instance(struct diffie_hellman_method *m,
-			     struct ssh_connection *c);
-#endif
 
 #endif /* LSH_PUBLICKEY_CRYPTO_H_INCLUDED */
