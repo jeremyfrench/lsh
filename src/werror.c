@@ -26,16 +26,110 @@
 #include "werror.h"
 
 #include "charset.h"
+#include "gc.h"
+#include "io.h"
 #include "parse.h"
 
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <unistd.h>
 
 int debug_flag = 0;
 int quiet_flag = 0;
 int verbose_flag = 0;
 
+int error_fd = STDERR_FILENO;
+
+#define BUF_SIZE 500
+static UINT8 error_buffer[BUF_SIZE];
+static UINT32 error_pos = 0;
+
+static int (*error_write)(int fd, UINT32 length, UINT8 *data) = write_raw;
+
+#define WERROR(l, d) (error_write(error_fd, (l), (d)))
+
+static void werror_flush(void)
+{
+  if (error_pos)
+    {
+      WERROR(error_pos, error_buffer);
+      error_pos = 0;
+    }
+}
+
+static void werror_putc(UINT8 c)
+{
+  if (error_pos == BUF_SIZE)
+    werror_flush();
+
+  error_buffer[error_pos++] = c;
+}
+
+void set_error_stream(int fd, int with_poll)
+{
+  error_fd = fd;
+
+  error_write = with_poll ? write_raw_with_poll : write_raw;
+}
+
+/* FIXME: Too bad we can't create a custom FILE * using werror_putc to
+ * output each character. */
+static void w_vnprintf(unsigned size, const char *format, va_list args)
+{
+  int written;
+  
+  if (error_pos + size <= BUF_SIZE)
+    {
+      written = vsnprintf(error_buffer + error_pos, size, format, args);
+
+      error_pos += (written >= 0) ? written : size;
+    }
+  else
+    {
+      UINT8 *s = alloca(size);
+
+      werror_flush();
+      written = vsnprintf(s, size, format, args);
+
+      if (written >= 0)
+	size = written;
+      
+      WERROR(size, s);
+    }
+}
+
+void wwrite(char *msg)
+{
+  if (!quiet_flag)
+    {
+      UINT32 size = strlen(msg);
+
+      if (error_pos + size <= BUF_SIZE)
+	{
+	  memcpy(error_buffer + error_pos, msg, size);
+	  error_pos += size;
+      
+	  if (size && (msg[size-1] == '\n'))
+	    werror_flush();	
+	}
+      else
+	{
+	  werror_flush();
+	  WERROR(size, msg);
+	}
+    }
+}
+  
+static void w_nprintf(UINT32 size, const char *format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  w_vnprintf(size, format, args);
+  va_end(args);
+}
+
+#define WERROR_MAX 150
 void werror(const char *format, ...) 
 {
   va_list args;
@@ -43,8 +137,9 @@ void werror(const char *format, ...)
   if (!quiet_flag)
     {
       va_start(args, format);
-      vfprintf(stderr, format, args);
+      w_vnprintf(WERROR_MAX, format, args);
       va_end(args);
+      werror_flush();
     }
 }
 
@@ -55,8 +150,9 @@ void debug(const char *format, ...)
   if (debug_flag)
     {
       va_start(args, format);
-      vfprintf(stderr, format, args);
+      w_vnprintf(WERROR_MAX, format, args);
       va_end(args);
+      werror_flush();
     }
 }
 
@@ -67,8 +163,9 @@ void verbose(const char *format, ...)
   if (verbose_flag)
     {
       va_start(args, format);
-      vfprintf(stderr, format, args);
+      w_vnprintf(WERROR_MAX, format, args);
       va_end(args);
+      werror_flush();
     }
 }
 
@@ -77,7 +174,8 @@ static void wash_char(UINT8 c)
   switch(c)
     {
     case '\\':
-      fputs("\\\\", stderr);
+      werror_putc('\\');
+      werror_putc('\\');
       break;
     case '\r':
       /* Ignore */
@@ -85,12 +183,14 @@ static void wash_char(UINT8 c)
     default:
       if (!isprint(c))
 	{
-	  fprintf(stderr, "\\x%02x", c);
+	  werror_putc('\\');
+	  werror_putc(c / 16);
+	  werror_putc(c % 16);
 	  break;
 	}
       /* Fall through */
     case '\n':
-      putc(c, stderr);
+      werror_putc(c);
       break;
     }
 }
@@ -102,6 +202,8 @@ static void write_washed(UINT32 length, UINT8 *msg)
 
   for(i = 0; i<length; i++)
     wash_char(msg[i]);
+
+  werror_flush();
 }
 
 /* For outputting data received from the other end */
@@ -138,13 +240,17 @@ static void write_utf8(UINT32 length, UINT8 *msg)
 	case -1:
 	  return;
 	case 0:
-	  fputs("\\!", stderr);
+	  werror_putc('\\');
+	  werror_putc('!');
 	  return;
 	case 1:
 	  {
 	    int local = ucs4_to_local(ucs4);
 	    if (local < 0)
-	      fputs("\\?", stderr);
+	      {
+		werror_putc('\\');
+		werror_putc('?');
+	      }
 	    else
 	      wash_char(local);
 	    break;
@@ -153,6 +259,7 @@ static void write_utf8(UINT32 length, UINT8 *msg)
 	  fatal("Internal error");
 	}
     }
+  werror_flush();
 }
 
 void werror_utf8(UINT32 length, UINT8 *msg)
@@ -174,16 +281,24 @@ void debug_utf8(UINT32 length, UINT8 *msg)
 }
 
 /* Bignums */
+static void write_mpz(mpz_t n)
+{
+  UINT8 *s = alloca(mpz_sizeinbase(n, 16) + 2);
+  mpz_get_str(s, 16, n);
+
+  WERROR(strlen(s), s);
+}
+
 void werror_mpz(mpz_t n)
 {
   if (!quiet_flag)
-    mpz_out_str(stderr, 16, n);
+    write_mpz(n);
 }
 
 void debug_mpz(mpz_t n)
 {
   if (debug_flag)
-    mpz_out_str(stderr, 16, n);
+    write_mpz(n);
 }
 
 void verbose_mpz(mpz_t n)
@@ -197,17 +312,17 @@ static void write_hex(UINT32 length, UINT8 *data)
 {
   UINT32 i;
   
-  fprintf(stderr, "(size %d = 0x%x)",
-	  length, length);
+  w_nprintf(40, "(size %d = 0x%x)", length, length);
 
   for(i=0; i<length; i++)
   {
     if (! (i%16))
-      fprintf(stderr, "\n%08x: ", i);
+      w_nprintf(20, "\n%08x: ", i);
     
-    fprintf(stderr, "%02x ", data[i]);
+    w_nprintf(4, "%02x ", data[i]);
   }
-  fprintf(stderr, "\n");
+  w_nprintf(1, "\n");
+  werror_flush();
 }
 
 void werror_hex(UINT32 length, UINT8 *data)
@@ -233,8 +348,9 @@ void fatal(const char *format, ...)
   va_list args;
 
   va_start(args, format);
-  vfprintf(stderr, format, args);
+  w_vnprintf(WERROR_MAX, format, args);
   va_end(args);
+  werror_flush();
 
   abort();
 }

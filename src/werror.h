@@ -26,8 +26,6 @@
 #ifndef LSH_ERROR_H_INCLUDED
 #define LSH_ERROR_H_INCLUDED
 
-#include "lsh_types.h"
-
 #include "bignum.h"
 
 /* Global variables */
@@ -35,6 +33,9 @@ extern int debug_flag;
 extern int quiet_flag;
 extern int verbose_flag;
 
+void set_error_stream(int fd, int with_poll);
+
+void wwrite(char *msg);
 void werror(const char *format, ...) PRINTF_STYLE(1,2);
 void debug(const char *format, ...) PRINTF_STYLE(1,2);
 void verbose(const char *format, ...) PRINTF_STYLE(1,2);
