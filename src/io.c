@@ -324,7 +324,7 @@ static void do_buffered_read(struct io_read_callback *s,
     {
       UINT32 left = res;
     
-      while (fd->super.alive && left)
+      while (fd->super.alive && fd->read && left)
 	{
 	  UINT32 done;
 
@@ -364,7 +364,7 @@ make_buffered_read(UINT32 buffer_size,
 static void do_consuming_read(struct io_read_callback *c,
 			      struct lsh_fd *fd)
 {
-  CAST(io_consuming_read, self, c);
+  CAST_SUBTYPE(io_consuming_read, self, c);
   UINT32 wanted = READ_QUERY(self);
 
   if (!wanted)
