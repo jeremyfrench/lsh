@@ -1,5 +1,3 @@
-dnl $Id$
-
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT([lsh], [1.5], [bug-lsh@gnu.org]) 
 AC_PREREQ(2.52)
@@ -712,6 +710,8 @@ if test x$lsh_cv_sys_unix98_ptys = xyes; then
 fi
   
 # Check for gcc's __attribute__ construction
+# FIXME: Move this into acinclude.m4.
+
 AC_CACHE_CHECK(for __attribute__,
 	       lsh_cv_c_attribute,
 [ AC_TRY_COMPILE([
@@ -733,6 +733,18 @@ AH_TEMPLATE([HAVE_GCC_ATTRIBUTE], [Define if the compiler understands __attribut
 if test "x$lsh_cv_c_attribute" = "xyes"; then
   AC_DEFINE(HAVE_GCC_ATTRIBUTE)
 fi
+
+AH_BOTTOM(
+[#if __GNUC__ && HAVE_GCC_ATTRIBUTE
+# define NORETURN __attribute__ ((__noreturn__))
+# define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
+# define UNUSED __attribute__ ((__unused__))
+#else
+# define NORETURN
+# define PRINTF_STYLE(f, a)
+# define UNUSED
+#endif
+])
 
 # Check for gcc's __FUNCTION__ variable
 AC_CACHE_CHECK(for __FUNCTION__,
