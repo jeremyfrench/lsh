@@ -45,7 +45,7 @@ COMMON_SRCS = alist.c atoms.c bignum.c channel.c \
 
 CLIENT_SRCS = lsh.c client.c client_keyexchange.c \
 	client_password.c client_userauth.c
-SERVER_SRCS = lshd.c server.c server_keyexchange.c\
+SERVER_SRCS = lshd.c reaper.c server.c server_keyexchange.c\
 	server_password.c server_userauth.c
 
 SRCS = $(COMMON_SRCS) $(CLIENT_SRCS) $(SERVER_SRCS)
