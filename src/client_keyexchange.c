@@ -234,6 +234,8 @@ do_handle_srp_reply(struct packet_handler *s,
   CAST(srp_client_handler, self, s);
   struct lsh_string *salt = srp_process_reply_msg(&self->srp->dh, packet);
   struct lsh_string *passwd;
+  struct lsh_string *response;
+  
   mpz_t x;
   
   connection->dispatch[SSH_MSG_KEXSRP_REPLY] = connection->fail;
@@ -261,11 +263,18 @@ do_handle_srp_reply(struct packet_handler *s,
 
   lsh_string_free(salt);
   lsh_string_free(passwd);
-  
-  C_WRITE(connection, srp_make_client_proof(&self->srp->dh, x));
+
+  response = srp_make_client_proof(&self->srp->dh, x);
   mpz_clear(x);
 
-  connection->dispatch[SSH_MSG_KEXSRP_PROOF] = make_srp_client_proof_handler(self->srp);
+  if (!response)
+    PROTOCOL_ERROR(connection->e,
+		   "SRP failure: Invalid public value from server.");
+  
+  C_WRITE(connection, response);
+  
+  connection->dispatch[SSH_MSG_KEXSRP_PROOF]
+    = make_srp_client_proof_handler(self->srp);
 }
 
 static struct packet_handler *
