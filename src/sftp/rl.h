@@ -42,31 +42,25 @@
 /* Ehrm */
 #define REMOTEMAXLEN 256             
 
-
-
-
-
-
 #ifdef HAVE_READLINE_READLINE_H
-
 /* Use readline */
-#include <readline/readline.h>
-
+# include <readline/readline.h>
+#else
+# ifdef HAVE_READLINE_H
+#  include <readline.h>
+# endif
 #endif /* HAVE_READLINE_READLINE_H */
 
-
-
-
-
 #ifdef  HAVE_READLINE_HISTORY_H
-
-#include <readline/history.h>
-
+# include <readline/history.h>
+#else
+# ifdef HAVE_HISTORY_H
+#  include <history.h>
+# endif
 #endif /* HAVE_READLINE_HISTORY_H */
 
 #define LSFTP_HISTNAME_VAR "LSFTP_HISTORY_FILE"
 #define LSFTP_HIST_FILENAME "/.lsftp"
-
 
 
 
