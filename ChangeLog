@@ -1,6 +1,21 @@
 2004-03-17  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/Makefile.am (TS_SH): Run the socks4 and socks5
+	tests. This is pointless, and hopefully harmless, on machines that
+	don't have my hacked version of tsocks.
+
+	* src/socks.c (socks_reply): Send a version 4 reply, if
+	appropriate.
+	(do_read_socks): Almost implemented socks4. Handling of username
+	is slightly broken.
+
+	* src/testsuite/socks4-test: New file.
+	* src/testsuite/socks4-config: New file.
+
 	* misc/tsocks-forcelocal.patch: New file.
+
+	* misc/tsocks-forcelocal.patch: Also patch the tsocks script to
+	look for the library in $libdir.
 
 2004-03-15  Niels Möller  <nisse@lysator.liu.se>
 
