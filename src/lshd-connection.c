@@ -36,8 +36,11 @@
 #include "io.h"
 #include "lsh_string.h"
 #include "resource.h"
+#include "server_session.h"
+#include "ssh.h"
 #include "ssh_read.h"
 #include "ssh_write.h"
+#include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -60,6 +63,29 @@ kill_connection(struct resource *s)
 {
   CAST(connection, self, s);
   werror("kill_connection\n");
+  exit(EXIT_FAILURE);
+}
+
+static void
+write_packet(struct connection *connection,
+	     struct lsh_string *packet)
+{
+  if (ssh_write_data(connection->writer,
+		     global_oop_source, STDOUT_FILENO,
+		     ssh_format("%i%S",
+				lsh_string_sequence_number(packet),
+				packet)) < 0)
+    fatal("write_packet: Write failed: %e\n", errno);
+}
+
+static void
+disconnect(struct connection *connection, const char *msg)
+{
+  werror("disconnecting: %z.\n", msg);
+
+  write_packet(connection,
+	       format_disconnect(SSH_DISCONNECT_BY_APPLICATION,
+				 msg, ""));
   exit(EXIT_FAILURE);
 }
 
@@ -90,10 +116,29 @@ static void
 read_handler(struct abstract_write *s, struct lsh_string *packet)
 {
   CAST(connection_write, self, s);
-  werror("read_handler: Got packet %xS\n", packet);
-  lsh_string_free(packet);
+  uint8_t msg;
 
-  /* FIXME: XXX */
+  werror("read_handler: Received packet %xS\n", packet);
+
+  if (!lsh_string_length(packet))
+    disconnect(self->connection,
+	       "lshd-connection received an empty packet");
+  
+  msg = lsh_string_data(packet)[0];
+
+  if (msg < SSH_FIRST_USERAUTH_GENERIC)
+    /* FIXME: We might want to handle SSH_MSG_UNIMPLEMENTED. */
+    disconnect(self->connection,
+	       "lshd-connection received a transport layer packet");
+
+  if (msg < SSH_FIRST_CONNECTION_GENERIC)
+    {
+      /* Ignore */
+    }
+  else
+    channel_packet_handler(self->connection->table, packet);
+
+  lsh_string_free(packet);
 }
 
 static struct abstract_write *
@@ -110,12 +155,7 @@ write_handler(struct abstract_write *s, struct lsh_string *packet)
 {
   CAST(connection_write, self, s);
 
-  if (ssh_write_data(self->connection->writer,
-		     global_oop_source, STDOUT_FILENO,
-		     ssh_format("%i%S",
-				lsh_string_sequence_number(packet),
-				packet)) < 0)
-    fatal("write_handler: Write failed.\n");
+  write_packet(self->connection, packet);
 }
 
 static struct abstract_write *
@@ -146,12 +186,49 @@ make_connection(void)
 
   self->table = make_channel_table(make_connection_write_handler(self));
 
+  ALIST_SET(self->table->channel_types, ATOM_SESSION,
+	    &make_open_session(
+	      make_alist(1, ATOM_SHELL, &shell_request_handler, -1))->super);
+
   return self;
 }
+
+/* Option parsing */
+
+const char *argp_program_version
+= "lshd-connection (lsh-" VERSION "), secsh protocol version " SERVER_PROTOCOL_VERSION;
+
+const char *argp_program_bug_address = BUG_ADDRESS;
+
+static const struct argp_child
+main_argp_children[] =
+{
+  { &werror_argp, 0, "", 0 },
+  { NULL, 0, NULL, 0}
+};
+
+static const struct argp
+main_argp =
+{ NULL, NULL,
+  NULL,
+  "Handles the ssh-connection service.\v"
+  "Intended to be invoked by lshd and lshd-userauth.",
+  main_argp_children,
+  NULL, NULL
+};
 
 int
 main(int argc, char **argv)
 {
+  fprintf(stderr, "argc = %d\n", argc);
+  {
+    int i;
+    for (i = 0; i < argc; i++)
+      fprintf(stderr, "argv[%d] = %s\n", i, argv[i]);
+  }
+      
+  argp_parse(&main_argp, argc, argv, 0, NULL, NULL);
+
   global_oop_source = io_init();
 
   struct connection *connection;
