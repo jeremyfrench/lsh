@@ -24,8 +24,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "dsa.h"
+#include "publickey_crypto.h"
 
+#include "format.h"
 #include "randomness.h"
 #include "sexp.h"
 #include "werror.h"
@@ -34,8 +35,6 @@
 
 #include <assert.h>
 
-
-#define SA(x) sexp_a(ATOM_##x)
 
 /* FIXME: Let caller supply the progress function. */
 
@@ -48,12 +47,13 @@ progress(void *ctx UNUSED, int c)
     werror_progress(buf);
 }
 
-struct sexp *
+/* FIXME: Fold directly into the lsh-keygen program. */
+struct lsh_string *
 dsa_generate_key(struct randomness *r, unsigned level)
 {
   struct dsa_public_key public;
   struct dsa_private_key private;
-  struct sexp *key = NULL;
+  struct lsh_string *key = NULL;
 
   dsa_public_key_init(&public);
   dsa_private_key_init(&private);
@@ -65,13 +65,13 @@ dsa_generate_key(struct randomness *r, unsigned level)
 			   NULL, progress,
 			   512 + 64 * level))
     {
-      key = sexp_l(2, SA(PRIVATE_KEY),
-		   sexp_l(6, SA(DSA),
-			  sexp_l(2, SA(P), sexp_un(public.p), -1),
-			  sexp_l(2, SA(Q), sexp_un(public.q), -1),
-			  sexp_l(2, SA(G), sexp_un(public.g), -1),
-			  sexp_l(2, SA(Y), sexp_un(public.y), -1),
-			  sexp_l(2, SA(X), sexp_un(private.x), -1), -1), -1);
+      key = lsh_sexp_format(0, "(%z(%z(%z%b)(%z%b)(%z%b)(%z%b)(%z%b)))",
+			    "private-key", "dsa",
+			    "p", public.p,
+			    "q", public.q,
+			    "g", public.g,
+			    "y", public.y,
+			    "x", private.x);
     }
 
   dsa_public_key_clear(&public);
