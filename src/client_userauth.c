@@ -1057,7 +1057,6 @@ do_userauth_info_request(struct packet_handler *s,
   struct simple_buffer buffer;
 
   unsigned msg_number;
-  /* What is the name used for anyway??? For now, we ignore it. */
   const uint8_t *name;
   uint32_t name_length;
 
@@ -1066,8 +1065,9 @@ do_userauth_info_request(struct packet_handler *s,
   /* Deprecated and ignored */
   const uint8_t *language;
   uint32_t language_length;
-  
-  uint32_t nprompt; /* Typed as "int" in the spec. Hope that means uint32_t? */
+
+  /* Typed as "int" in the spec. Hope that means uint32_t? */  
+  uint32_t nprompt; 
   
   simple_buffer_init(&buffer, STRING_LD(packet));
   if (parse_uint8(&buffer, &msg_number)
@@ -1080,7 +1080,9 @@ do_userauth_info_request(struct packet_handler *s,
       struct interact_dialog *dialog;
       unsigned i;
       
-      if (nprompt > KBDINTERACT_MAX_PROMPTS)
+      if (nprompt > KBDINTERACT_MAX_PROMPTS
+	  || name_length > KBDINTERACT_MAX_LENGTH
+	  || instruction_length > 10*KBDINTERACT_MAX_LENGTH)
 	{
 	  static const struct exception bad_info_request =
 	    STATIC_EXCEPTION(EXC_USERAUTH, "Too large USERAUTH_INFO_RQUEST");
@@ -1096,7 +1098,8 @@ do_userauth_info_request(struct packet_handler *s,
 	{
 	  const uint8_t *prompt;
 	  uint32_t prompt_length;
-	  
+	  struct lsh_string *s;
+
 	  if (! (parse_string(&buffer, &prompt_length, &prompt)
 		 && parse_boolean(&buffer, &dialog->echo[i])))
 	    {
@@ -1109,14 +1112,38 @@ do_userauth_info_request(struct packet_handler *s,
 	      KILL(dialog);
 	      goto beyond_limit;
 	    }
-	  dialog->prompt[i] = low_utf8_to_local(prompt_length, prompt,
-						utf8_replace | utf8_paranoid);
+	  s = low_utf8_to_local(prompt_length, prompt,
+				utf8_replace | utf8_paranoid);
+	  if (!s)
+	    goto error;
+	  
+	  dialog->prompt[i] = s;
 	}
       
-      if (!INTERACT_DIALOG(self->state->tty,
-			   low_utf8_to_local(instruction_length, instruction,
-					     utf8_replace | utf8_paranoid),
-			   dialog))
+      dialog->instruction
+	= low_utf8_to_local(instruction_length, instruction,
+			    utf8_replace | utf8_paranoid);
+      
+      if (!dialog->instruction)
+	goto error;
+
+      if (name_length > 0)
+	{
+	  /* Prepend to instruction */
+	  struct lsh_string *s;
+      
+	  s = low_utf8_to_local(name_length, name,
+				utf8_replace | utf8_paranoid);
+	  if (!s)
+	    goto error;
+
+	  dialog->instruction = ssh_format("%lfS\n%lfS\n",
+					   s, dialog->instruction);
+	}
+      else
+	dialog->instruction = ssh_format("%lfS\n", dialog->instruction);
+
+      if (!INTERACT_DIALOG(self->state->tty, dialog))
 	{
 	  static const struct exception bad_info_request =
 	    STATIC_EXCEPTION(EXC_USERAUTH, "No user response");
