@@ -43,14 +43,20 @@
        (vars
          (master simple int)
 	 (slave simple int)
-	 ; FIXME: Is this used for anything?
-	 ;; (tty_name array (simple char) MAX_TTY_NAME)
+	 ; Needed for SysV pty-handling (where opening the tty
+	 ; makes it the controlling terminal).
+	 (tty_name array (simple char) MAX_TTY_NAME)
 	 ;; (saved_ios simple "struct termios")
 	 ));
 */
 
 struct pty_info *make_pty_info(void);
 int pty_allocate(struct pty_info *pty);
+
+/* NOTE: This function also makes the current process a process group
+ * leader. */
+int tty_setctty(struct pty_info *pty);
+
 void tty_interpret_term_modes(struct termios *ios, UINT32 t_len, UINT8 *t_modes);
 
 #endif /* LSH_SERVER_PTY_H_INCLUDED */

@@ -19,7 +19,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
 #include "server_pty.h"
@@ -38,6 +38,15 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>  /* FIXME: for snprintf, maybe use a custom snprintf? Bazsi */
+
+#ifdef HAVE_STROPTS_H
+#  include <stropts.h>  /* isastream() */
+#endif
+
+#ifdef HAVE_PTY_H
+#  include <pty.h>  /* openpty() */
+#endif
+
 
 #define CLASS_DEFINE
 #include "server_pty.h.x"
@@ -69,21 +78,55 @@ struct pty_info *make_pty_info(void)
   return pty;
 }
 
-#if HAVE_OPENPTY
-
 int pty_allocate(struct pty_info *pty)
 {
-  return openpty(&pty->fd_master, &pty->fd_slave, NULL, NULL, NULL) == 0 ?
+#if UNIX98_PTYS
+  char *name;
+  if ((pty->master = open("/dev/ptmx", O_RDWR)) < 0)
+    {
+      return 0;
+    }
+
+  /* FIXME: Calling grantpt now will set wrong permissions on the tty,
+   * as this function is called before the server forks and changes
+   * uid. */
+  if (grantpt(pty->master) < 0 || unlockpt(pty->master) < 0)
+    goto close_master;
+  name = ptsname(pty->master);
+  if (name == NULL)
+    goto close_master;
+
+  pty->slave = open(name, O_RDWR);
+  if (pty->slave == -1)
+    goto close_master;
+
+# ifdef HAVE_STROPTS_H
+  if (isastream(pty->slave))
+    {
+      if (ioctl(pty->slave, I_PUSH, "ptem") < 0
+          || ioctl(pty->slave, I_PUSH, "ldterm") < 0)
+        goto close_slave;
+    }
+#  endif /* HAVE_STROPTS_H */
+
+  return 0;
+
+close_slave:
+  close (pty->slave);
+
+close_master:
+  close (pty->master);
+  return 1;
+
+#elif HAVE_OPENPTY
+
+  return openpty(&pty->master, &pty->slave, NULL, NULL, NULL) == 0 ?
          1 : 0;
-}
 
 #elif PTY_BSD_SCHEME
 
 #define PTY_BSD_SCHEME_MASTER "/dev/pty%c%c"
 #define PTY_BSD_SCHEME_SLAVE  "/dev/tty%c%c"
-
-int pty_allocate(struct pty_info *pty)
-{
   char first[] = PTY_BSD_SCHEME_FIRST_CHARS;
   char second[] = PTY_BSD_SCHEME_SECOND_CHARS;
   char master[MAX_TTY_NAME], slave[MAX_TTY_NAME];
@@ -101,6 +144,9 @@ int pty_allocate(struct pty_info *pty)
 	  if (pty->master != -1) 
 	    {
 	      /* master succesfully opened */
+#if 0
+              snprintf(pty->tty_name, MAX_TTY_NAME, master);
+#endif
 	      snprintf(slave, sizeof(slave),
 		       PTY_BSD_SCHEME_SLAVE, first[i], second[j]);
 				
@@ -119,6 +165,71 @@ int pty_allocate(struct pty_info *pty)
         }
     }
   return 0;
+#else /* !PTY_BSD_SCHEME */
+  /* No pty:s */
+  return 0;
+#endif
 }
 
+/* NOTE: This function also makes the current process a process group
+ * leader. */
+int tty_setctty(struct pty_info *pty)
+{
+  if (setsid() < 0)
+    {
+      werror("tty_setctty: setsid() failed, already process group leader?\n"
+	     "   (errno = %i): %z\n", errno, strerror(errno));
+      return 0;
+    }
+#if HAVE_UNIX98_PTYS
+  {
+    int fd;
+
+    /* Set up permissions with our new uid. */
+    if (grantpt(pty->master) < 0 || unlockpt(pty->master) < 0)
+      return 0;
+
+    /* Open the slave, to make it our controlling tty */
+    fd = open(pty->tty_name, O_RDWR);
+    if (fd < 0)
+      return 0;
+
+    close(fd);
+
+    return 1;
+  }
+#elif PTY_BSD_SCHEME
+  {
+    /* Is this really needed? setsid() should unregister the
+     * controlling tty */
+#if 0
+    int oldtty;
+  
+    oldtty = open("/dev/tty", O_RDWR | O_NOCTTY);
+    if (oldtty >= 0)
+      {
+	ioctl(oldtty, TIOCNOTTY, NULL);
+	close(oldtty);
+	oldtty = open("/dev/tty", O_RDWR | O_NOCTTY);
+	if (oldtty >= 0)
+	  {
+	    werror("pty_setctty: Error disconnecting from controlling tty.\n");
+	    close(oldtty);
+	    return 0;
+	  }
+      }
 #endif
+    
+    if (ioctl(pty->slave, TIOCSCTTY, NULL) == -1)
+      {
+	werror("tty_setctty: Failed to set the controlling tty.\n"
+	       "   (errno = %i): %z\n", errno, strerror(errno));
+	return 0;
+      }
+    
+    return 1;
+  }
+#else /* !PTY_BSD_SCHEME */
+#error Dont know how to register a controlling tty
+#endif
+}
