@@ -1,4 +1,28 @@
+2001-09-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lshg.c (make_options): Pass NULL random to
+	init_client_options. 
+
+	* src/client_x11.c (make_client_x11_display): Free the fake cookie
+	if we fail.
+	(make_forward_x11): Make up a random cookie.
+
+	* src/client.c (init_client_options): New argument RANDOM.
+	(client_maybe_x11): Pass on RANDOM to make_forward_x11.
+
+	* src/client.h (client_options): Moved RANDOM attribute here, from
+	lsh_options. 
+
 2001-09-01  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/client.c: Moved -x option to lsh.c.
+
+	* src/channel.c (register_channel): Deleted connection argument.
+
+	* src/channel.h (ssh_channel): Replaced the write pointer with a
+	pointer to the connection.
+	(channel_request): Deleted connection argument.
+	* src/channel.h (CHANNEL_REQUEST): Likewise.
 
 	* src/resource.c (init_resource): Renamed from resource_init, for
 	consistency. Updated all callers.
