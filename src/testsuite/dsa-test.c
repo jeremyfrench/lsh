@@ -4,17 +4,17 @@ int
 test_main(void)
 {
   test_sign("DSA signing",
-	    S("{KDM6ZHNhKDE6cDEyODqD2afCziqRefQ82zv/594PDu8m3V365E1TG8DeRWNN"
- 	      "LAfLkpsNvhDaWABw5qv7uEFcRL/1cLitd532U6rZfce964FdfogQPmFgbtPY"
- 	      "opX7/TQNLUniIIM+us5VEeIsTwKX7TUemUj6hI6cj623tHvMR970JVteHV4Q"
- 	      "IVs7VaC4XykoMTpxMjA6gmbg3q9GAgukjUEMpYDzqXhim10pKDE6ZzEyODow"
- 	      "00u583a+yUcVSv5Adrx9NZydMvVHHdu+jWqUHEf6ncTzJXMVHbtKpZ65ibdK"
- 	      "w2u2MQpei1gFAWVdkfOT2qGTrhMDBJuH/rsJPcBAS1O0xdokYzAPnFsVbXiM"
- 	      "Ss6Oy7ndAMGNmVN/JVrAJdB02JSmB8vjAjoSdu9VaRajP33lQykoMTp5MTI4"
- 	      "OmRAIEiyfzn0BKVGqEkJycDp4t0VOoSZRhBiiSWY0wryeuPO/CtwD7bQdzkK"
- 	      "g73K14oSmUh8liO7Yq8MhaPfnvHuLA1mZY4f0yg7VAf2zTDufmFU+tQaaosP"
- 	      "XIbFrMwRJ798ml1rrcsBIYDLYqVcXhfW01KM2+ACzO4THBuGhn96KSgxOngy"
- 	      "MDpWxu+vh40G7vIdwHD6tx2m7B4wpikp}"),
+	    S("{KDM6ZHNhKDE6cDEyOToAg9mnws4qkXn0PNs7/+feDw7vJt1d+uRNUxvA3kVj"
+	      "TSwHy5KbDb4Q2lgAcOar+7hBXES/9XC4rXed9lOq2X3HveuBXX6IED5hYG7T"
+	      "2KKV+/00DS1J4iCDPrrOVRHiLE8Cl+01HplI+oSOnI+tt7R7zEfe9CVbXh1e"
+	      "ECFbO1WguF8pKDE6cTIxOgCCZuDer0YCC6SNQQylgPOpeGKbXSkoMTpnMTI4"
+	      "OjDTS7nzdr7JRxVK/kB2vH01nJ0y9Ucd276NapQcR/qdxPMlcxUdu0qlnrmJ"
+	      "t0rDa7YxCl6LWAUBZV2R85PaoZOuEwMEm4f+uwk9wEBLU7TF2iRjMA+cWxVt"
+	      "eIxKzo7Lud0AwY2ZU38lWsAl0HTYlKYHy+MCOhJ271VpFqM/feVDKSgxOnkx"
+	      "Mjg6ZEAgSLJ/OfQEpUaoSQnJwOni3RU6hJlGEGKJJZjTCvJ64878K3APttB3"
+	      "OQqDvcrXihKZSHyWI7tirwyFo9+e8e4sDWZljh/TKDtUB/bNMO5+YVT61Bpq"
+	      "iw9chsWszBEnv3yaXWutywEhgMtipVxeF9bTUozb4ALM7hMcG4aGf3opKDE6"
+	      "eDIwOlbG76+HjQbu8h3AcPq3HabsHjCmKSk=}"),
 	    S("Needs some randomness."),
 	    NULL);
   SUCCESS();

@@ -36,12 +36,12 @@ r1qSvQSlc6T43RcCKg==
 EOF
 
 cat >test.out2 <<EOF
-(public-key (dsa (p |hMdr9U31pqTYrdAtp30jY+UzyJotTzbrjDShBNun
-                     d/Y14vW5zEldqRYgtWf9pt7Mv9lvJZrToeN3pBrt
-                     rSkXsT/Fq0L+9UpUav8pztuT6aa8vhrTZefITcpJ
-                     mKWJno7roQvLd/BbFtMUH9TXaOQB6GDE+ycJYz/t
-                     gVXLt4DhfKE=|)
-                 (q |0O27ftoLcPhyL38Dz9fg0hGP+YM=|)
+(public-key (dsa (p |AITHa/VN9aak2K3QLad9I2PlM8iaLU8264w0oQTb
+                     p3f2NeL1ucxJXakWILVn/abezL/ZbyWa06Hjd6Qa
+                     7a0pF7E/xatC/vVKVGr/Kc7bk+mmvL4a02XnyE3K
+                     SZiliZ6O66ELy3fwWxbTFB/U12jkAehgxPsnCWM/
+                     7YFVy7eA4Xyh|)
+                 (q |ANDtu37aC3D4ci9/A8/X4NIRj/mD|)
                  (g |BmLjuwtax0ru51QGkLDjGNXJEcYwUI4Off3ygOFk
                      C3vi8rdDoNrhmrFQ3yv1FMUkWN9MSqPqeLzxZj7u
                      irQ5mg0SY/u9k1My74yMwQ1FfanVbPmEXd6geBLZ

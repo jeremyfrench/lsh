@@ -24,11 +24,11 @@ ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEApUmWhj0f4TD/XcDW88zcKo1ZYBn09jT0RzP1aoPwKuzF
 EOF
 
 cat >test.out2 <<EOF
-(public-key (rsa-pkcs1-sha1 (n |pUmWhj0f4TD/XcDW88zcKo1ZYBn09jT0RzP1aoPw
-                                KuzFbvupfbvKjPB3SC6r8cXTH0OY60EdfcQs1Ymt
-                                eIJNMEnWEvV9ZHPJYanU6dVSlajnbKwEhqrFMLlR
-                                uS4UKJQ67A5NFt0WV9DjYaLIzY5RmPJYci/C8bo+
-                                Pawj8r/j1As=|)
+(public-key (rsa-pkcs1-sha1 (n |AKVJloY9H+Ew/13A1vPM3CqNWWAZ9PY09Ecz9WqD
+                                8CrsxW77qX27yozwd0guq/HF0x9DmOtBHX3ELNWJ
+                                rXiCTTBJ1hL1fWRzyWGp1OnVUpWo52ysBIaqxTC5
+                                UbkuFCiUOuwOTRbdFlfQ42GiyM2OUZjyWHIvwvG6
+                                Pj2sI/K/49QL|)
                             (e "#")))
 EOF
 
