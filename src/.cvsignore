@@ -20,6 +20,7 @@ digit_table
 digit_table.h
 lsh
 lsh_keygen
+lsh_writekey
 lshd
 prime_table
 prime_table.h
