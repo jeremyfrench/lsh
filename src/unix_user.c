@@ -253,8 +253,9 @@ do_verify_password(struct lsh_user *s,
       return;
     }
   
-  /* NOTE: Check for accounts with empty passwords. */
-  if (!user->passwd || (user->passwd->length < 2) )
+  /* NOTE: Check for accounts with empty passwords, or generally short
+   * passwd fields like "NP" or "x". */
+  if (!user->passwd || (user->passwd->length < 5) )
     {
       static const struct exception no_passwd
 	= STATIC_EXCEPTION(EXC_USERAUTH, "No password in passwd db.");
@@ -922,16 +923,42 @@ make_unix_user(struct lsh_string *name,
 */
 
 
-/* NOTE: Calls functions using the disgusting convention of returning
- * pointers to static buffers. */
-
-/* This method filters out accounts that are known to be disabled
- * (i.e. root, or shadow style expiration). However, it may still
- * return some disabled accounts.
+/* It's somewhat tricky to determine when accounts are disabled. To be
+ * safe, it is recommended that all disabled accounts have a harmless
+ * login-shell, like /bin/false.
  *
- * An account that is disabled in /etc/passwd should have a value for
- * the login shell that prevents login; replacing the passwd field
- * only doesn't prevent login using publickey authentication. */
+ * We return NULL for disabled accounts, according to the following
+ * rules:
+ *
+ * If our uid is non-zero, i.e. we're not running as root, then an
+ * account is considered valid if and only if it's uid matches the
+ * server's. We never try checking the shadow record.
+ *
+ * If we're running as root, first check the passwd record.
+ *
+ * o If the uid is zero, consider the account disabled. --root-login
+ *   omits this check.
+ *
+ * o If the passwd equals "x", look up the shadow record, check
+ *   expiration etc, and replace the passwd value with the one from the
+ *   shadow record. If there's no shadow record, consider the account
+ *   disabled.
+ *
+ * o If the passwd field is empty, consider the account disabled (we
+ *   usually don't want remote logins on pasword-less accounts). We may
+ *   need to make this check optional, though.
+ *
+ * o If the passwd entry starts with a "*", consider the account
+ *   disabled. (Other bogus values like "NP" means that the account is
+ *   enabled, only password login is disabled)
+ *
+ * o Otherwise, the account is active, and a user record is returned.
+ *
+ * FIXME: One problem is sites that have active accounts with "*" in
+ * the password field. This seems common at sites using kerberos. We
+ * may need some option to disable the "*" == disabled interpretation.
+ */
+
 static struct lsh_user *
 do_lookup_user(struct user_db *s,
 	       struct lsh_string *name, int free)
@@ -942,24 +969,57 @@ do_lookup_user(struct user_db *s,
   const char *home;
   const char *shell;
   const char *cname = lsh_get_cstring(name);
-  
+  char *crypted;
+  uid_t me;
+
   if (!cname)
     {
       if (free)
 	lsh_string_free(name);
       return NULL;
     }
+
+  me = getuid();
+  passwd = getpwnam(cname);
+
+  if (!passwd)
+    {
+    fail:
+      if (free)
+	lsh_string_free(name);
+      return NULL;
+    }
+
+  crypted = passwd->pw_passwd;
   
-  if ((passwd = getpwnam(cname))
+  if (!crypted || !*crypted)
+    /* Ignore accounts with empty passwords. */
+    goto fail;
+
+  if (me)
+    {
+      /* We're not root. Disable all accounts but our own. */
+      if (passwd->pw_uid != me)
+	goto fail;
+
+      /* NOTE: If we are running as the uid of the user, it seems like
+       * a good idea to let the HOME environment variable override the
+       * passwd-database. */
+      home = getenv("HOME");
+      if (!home)
+	home = passwd->pw_dir;
+    }
+  else
+    {
       /* Check for root login */
-      && (passwd->pw_uid || self->allow_root))
-    {      
-      char *crypted;
-  
+      if (!passwd->pw_uid && !self->allow_root)
+	goto fail;
+      
 #if HAVE_GETSPNAM
-      /* FIXME: What's the most portable way to test for shadow passwords?
-       * A single character in the passwd field should cover most variants. */
-      if (passwd->pw_passwd && (strlen(passwd->pw_passwd) == 1))
+      /* FIXME: What's the most portable way to test for shadow
+       * passwords? For now, we look up shadow database if and only if
+       * the passwd field equals "x". */
+      if (!strcmp(crypted, "x"))
 	{
 	  struct spwd *shadowpwd;
 
@@ -1010,39 +1070,28 @@ do_lookup_user(struct user_db *s,
 
 	  crypted = shadowpwd->sp_pwdp;
 	}
-      else
 #endif /* HAVE_GETSPNAM */
-	crypted = passwd->pw_passwd;
+      /* Check again for empty passwd field (as it may have been
+       * replaced by the shadow one), and check if crypted starts with
+       * a star. */
+      if (!crypted || !*crypted || (*crypted == '*'))
+	goto fail;
 
-      /* NOTE: If we are running as the uid of the user, it seems
-       * like a good idea to let the HOME environment variable
-       * override the passwd-database. */
-
-      if (! (passwd->pw_uid
-	     && (passwd->pw_uid == getuid())
-	     && (home = getenv("HOME"))))
-	home = passwd->pw_dir;
-
-      if (self->login_shell)
-	/* Override the passwd database */
-	shell = self->login_shell;
-      else
-	/* Default login shell is /bin/sh */
-	shell = passwd->pw_shell ? passwd->pw_shell : "/bin/sh";
-      
-      return make_unix_user(free ? name : lsh_string_dup(name), 
-			    passwd->pw_uid, passwd->pw_gid,
-			    self,
-			    crypted,
-			    home, shell);
+      home = passwd->pw_dir;
     }
+  
+  if (self->login_shell)
+    /* Override the passwd database */
+    shell = self->login_shell;
   else
-    {
-    fail:
-      if (free)
-	lsh_string_free(name);
-      return NULL;
-    }
+    /* Default login shell is /bin/sh */
+    shell = passwd->pw_shell ? passwd->pw_shell : "/bin/sh";
+      
+  return make_unix_user(free ? name : lsh_string_dup(name), 
+			passwd->pw_uid, passwd->pw_gid,
+			self,
+			crypted,
+			home, shell);
 }
 
 struct user_db *
