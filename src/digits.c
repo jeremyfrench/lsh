@@ -101,3 +101,39 @@ simple_decode_hex(const unsigned char *in)
 
   return out;
 }
+
+struct lsh_string *
+decode_base64(UINT32 length, const UINT8 *in)
+{
+  struct base64_state state;
+  struct lsh_string *out = lsh_string_alloc(length * 3 / 4 + 1);
+  UINT32 i;
+  UINT32 j;
+
+  base64_init(&state, 0);
+  for (i=0, j=0; i<length; i++)
+    {
+      int digit = base64_decode(&state, in[i]);
+      switch (digit)
+	{
+	case BASE64_INVALID:
+	case BASE64_END:
+	  lsh_string_free(out);
+	  return NULL;
+	case BASE64_SPACE:
+	case BASE64_PARTIAL:
+	  continue;
+	default:
+	  assert(j < out->length);
+	  out->data[j++] = digit;
+	}
+    }
+  out->length = j;
+  return out;
+}
+      
+struct lsh_string *
+simple_decode_base64(const unsigned char *in)
+{
+  return decode_base64(strlen(in), in);
+}
