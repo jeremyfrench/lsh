@@ -46,7 +46,7 @@
 #include "server_session.h"
 #include "sexp.h"
 #include "sexp_commands.h"
-#include "spki.h"
+#include "spki_commands.h"
 #include "ssh.h"
 #include "tcpforward.h"
 #include "tcpforward_commands.h"
@@ -56,6 +56,17 @@
 #include "xalloc.h"
 
 #include "lsh_argp.h"
+
+/* Forward declarations */
+struct command_simple options2local;
+#define OPTIONS2LOCAL (&options2local.super.super)
+
+static struct command options2keyfile;
+#define OPTIONS2KEYFILE (&options2keyfile.super)
+
+struct command_simple options2signature_algorithms;
+#define OPTIONS2SIGNATURE_ALGORITHMS \
+  (&options2signature_algorithms.super.super)
 
 #include "lshd.c.x"
 
@@ -95,6 +106,8 @@
      (name lshd_options)
      (super algorithms_options)
      (vars
+       (backend object io_backend)
+       (signature_algorithms object alist)
        (style . sexp_argp_state)
        (interface . "char *")
        (port . "char *")
@@ -110,12 +123,18 @@
 */
 
 static struct lshd_options *
-make_lshd_options(struct alist *algorithms)
+make_lshd_options(struct io_backend *backend,
+		  struct randomness *random,
+		  struct alist *algorithms)
 {
   NEW(lshd_options, self);
 
   init_algorithms_options(&self->super, algorithms);
-  
+
+  self->backend = backend;
+  self->signature_algorithms
+    = make_alist(1,
+		 ATOM_DSA, make_dsa_algorithm(random), -1);
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
   self->port = "ssh";
@@ -263,17 +282,56 @@ main_argp =
   NULL, NULL
 };
 
+COMMAND_SIMPLE(options2local)
+{
+  CAST(lshd_options, options, a);
+  return &options->local->super;
+}
+
+COMMAND_SIMPLE(options2signature_algorithms)
+{
+  CAST(lshd_options, options, a);
+  return &options->signature_algorithms->super;
+}
+
+static void
+do_options2keyfile(struct command *ignored UNUSED,
+		   struct lsh_object *a,
+		   struct command_continuation *c,
+		   struct exception_handler *e)
+{
+  CAST(lshd_options, options, a);
+  
+  struct io_fd *f;
+
+  f = io_read_file(options->backend, options->hostkey, e);
+
+  if (f)
+    COMMAND_RETURN(c, f);
+  else
+    {
+      werror("Failed to open '%z' (errno = %i): %z.\n",
+	     options->hostkey, errno, STRERROR(errno));
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
+    }
+}
+
+static struct command options2keyfile =
+STATIC_COMMAND(do_options2keyfile);
+
 /* GABA:
    (expr
      (name lshd_listen)
-     (globals
-       (log "&io_log_peer_command.super.super"))
      (params
        (listen object command)
-       (handshake object command)
+       (handshake object handshake_info)
        (services object command) )
-     (expr (lambda (port)
-             (services (handshake (log (listen port)))))))
+     (expr (lambda (options)
+             (services (connection_handshake
+	                    handshake
+			    (spki_read_hostkeys (options2signature_algorithms options)
+			                        (options2keyfile options))
+			    (log_peer (listen (options2local options))))))))
 */
 
 /* Invoked when the client requests the userauth service. */
@@ -291,9 +349,6 @@ main_argp =
 /* GABA:
    (expr
      (name lshd_connection_service)
-     (globals
-       (progn "&progn_command.super.super")
-       (init "&connection_service.super"))
      (params
        (login object command)     
        (hooks object object_list))
@@ -302,24 +357,55 @@ main_argp =
          ((progn hooks) (login user
 	                       ; We have to initialize the connection
 			       ; before logging in.
-	                       (init connection))))))
+	                       (init_connection_service connection))))))
 */
+
+/* ;; GABA:
+   (class
+     (name lshd_default_handler)
+     (super exception_handler)
+     (vars
+       (status . "int *")))
+*/
+
+static void
+do_lshd_default_handler(struct exception_handler *s,
+			const struct exception *e)
+{
+  switch(e->type)
+    {
+    case EXC_SEXP_SYNTAX:
+    case EXC_SPKI_TYPE:
+      werror("lshd: %z\n", e->msg);
+      exit(EXIT_FAILURE);
+    default:
+      EXCEPTION_RAISE(s->parent, e);
+    }
+}
+
+struct exception_handler *
+make_lshd_exception_handler(struct exception_handler *parent,
+			    const char *context)
+{
+  return make_exception_handler(do_lshd_default_handler, parent, context);
+}
 
 int main(int argc, char **argv)
 {
   struct lshd_options *options;
   
-  struct alist *keys;
-  
   struct reap *reaper;
   
   struct randomness *r;
-  struct diffie_hellman_method *dh;
-  struct keyexchange_algorithm *kex;
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
   struct alist *authorization_lookup;
+#if 0
   struct keypair *hostkey;
+  struct keyexchange_algorithm *kex;
+  struct diffie_hellman_method *dh;
+  struct alist *keys;
+#endif
   
   /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
@@ -332,12 +418,13 @@ int main(int argc, char **argv)
   set_local_charset(CHARSET_LATIN1);
 
   r = make_reasonably_random();
-  dh = make_dh1(r);
   
   algorithms = many_algorithms(1,
-			       ATOM_SSH_DSS, make_dsa_algorithm(r),
+			       ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+			       make_dh_server(make_dh1(r)),
 			       -1);
-  options = make_lshd_options(algorithms);
+  
+  options = make_lshd_options(backend, r, algorithms);
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -377,7 +464,8 @@ int main(int argc, char **argv)
       werror("lshd seems to be running already.\n");
       return EXIT_FAILURE;
     }
-      
+
+#if 0
   /* Read the hostkey */
   keys = make_alist(0, -1);
   if (!(hostkey = read_spki_key_file(options->hostkey,
@@ -388,15 +476,18 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
   ALIST_SET(keys, hostkey->type, hostkey);
-
+#endif
+  
   /* FIXME: We should check that we have at least one host key.
    * We should also extract the host-key algorithms for which we have keys,
    * instead of hardcoding ssh-dss below. */
  
   reaper = make_reaper();
 
+#if 0
   kex = make_dh_server(dh, keys);
-
+#endif
+  
   authorization_lookup
     = make_alist(1,
 		 ATOM_SSH_DSS, make_authorization_db(ssh_format("authorized_keys_sha1"),
@@ -406,8 +497,10 @@ int main(int argc, char **argv)
 		 -1);
 
   
+#if 0
   ALIST_SET(algorithms, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex);
-
+#endif
+  
   make_kexinit
     = make_simple_kexinit(r,
 			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
@@ -437,13 +530,13 @@ int main(int argc, char **argv)
     {
       struct lsh_object *o = lshd_listen
 	(make_simple_listen(backend, NULL),
-	 make_handshake_command(CONNECTION_SERVER,
-				"lsh - a free ssh",
-				SSH_MAX_PACKET,
-				r,
-				algorithms,
-				make_kexinit,
-				options->sshd1),
+	 make_handshake_info(CONNECTION_SERVER,
+			     "lsh - a free ssh",
+			     SSH_MAX_PACKET,
+			     r,
+			     algorithms,
+			     make_kexinit,
+			     options->sshd1),
 	 make_offer_service
 	 (make_alist
 	  (1, ATOM_SSH_USERAUTH,
@@ -473,10 +566,11 @@ int main(int argc, char **argv)
     
       CAST_SUBTYPE(command, server_listen, o);
     
-      COMMAND_CALL(server_listen, options->local,
+      COMMAND_CALL(server_listen, options,
 		   &discard_continuation,
 		   make_report_exception_handler(EXC_IO, EXC_IO, "lshd: ",
-						 &default_exception_handler,
+						 make_lshd_exception_handler(&default_exception_handler,
+									     HANDLER_CONTEXT),
 						 HANDLER_CONTEXT));
     }
   }
