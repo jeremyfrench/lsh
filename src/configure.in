@@ -1,3 +1,5 @@
+dnl -*-shell-script-*-
+
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(keyexchange.h)
 
@@ -33,13 +35,24 @@ AC_ARG_WITH(debug_alloc,
   [--with-debug-alloc    sanity check memory allocation and casts],
   [], [with_debug_alloc=yes])
 
-dnl Can't use if, as it's difficult to quote the square brackets.
-case "$with_debug_alloc" in
-    no)
-    ;;
-    *) AC_DEFINE(DEBUG_ALLOC)
-    ;;
-esac
+if test x$with_debug_alloc = xyes ; then
+  AC_DEFINE(DEBUG_ALLOC)
+fi
+
+AC_ARG_WITH(zlib,
+  [--with-zlib    use zlib compression],
+  [], [with_zlib=yes])
+
+dnl Checking this variable is delayed until we have checked if zlib is
+dnl actually available.
+
+AC_ARG_WITH(idea,
+  [--with-idea    support the patent-encumbered IDEA algorithm],
+  [], [with_idea=no])
+
+if test x$with_idea = xyes ; then
+  AC_DEFINE(WITH_IDEA)
+fi
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -50,6 +63,7 @@ dnl Checks for libraries.
 AC_CHECK_LIB(gmp, mpz_set_d)
 dnl Some debian systems have both gmp1 and gmp2.
 AC_CHECK_LIB(gmp2, mpz_set_d)
+AC_CHECK_LIB(z, inflate, [], [with_zlib=no])
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
 AC_CHECK_LIB(nsl, hostbyname)
@@ -60,6 +74,13 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS(fcntl.h strings.h sys/time.h unistd.h)
 AC_CHECK_HEADERS(gmp.h)
 AC_CHECK_HEADERS(shadow.h)
+AC_CHECK_HEADERS(zlib.h, [], [with_zlib=no])
+
+dnl Should we use zlib?
+
+if test x$with_zlib = xyes ; then
+  AC_DEFINE(WITH_ZLIB)
+fi
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -141,7 +162,7 @@ int main(int argc, char **argv)
 
   if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
     {
-      fprintf("signal failed.\n");
+      fprintf(stderr, "signal failed.\n");
       exit(1);
     }
 
