@@ -34,6 +34,7 @@
 #include "compress.h"
 #include "connection_commands.h"
 #include "crypto.h"
+#include "environ.h"
 #include "format.h"
 #include "interact.h"
 #include "io.h"
@@ -135,7 +136,7 @@ make_options(struct exception_handler *handler,
 	     int *exit_code)
 {
   NEW(lsh_options, self);
-  const char *home = getenv("HOME");
+  const char *home = getenv(ENV_HOME);
   struct randomness *r = make_user_random(home);
 
   init_client_options(&self->super, 
@@ -192,7 +193,7 @@ read_known_hosts(struct lsh_options *options)
   int fd;
   struct spki_iterator i;
   struct spki_context *context;
-  const char *sexp_conv = getenv("SEXP_CONV");
+  const char *sexp_conv = getenv(ENV_SEXP_CONV);
   const char *args[] = { "sexp-conv", "-s", "canonical", NULL };
   
   context = make_spki_context(options->signature_algorithms);
@@ -235,7 +236,7 @@ read_known_hosts(struct lsh_options *options)
   lsh_string_free(tmp);
 
   if (!sexp_conv)
-    sexp_conv = PREFIX "/bin/sexp-conv";
+    sexp_conv = PATH_SEXP_CONV;
   
   contents = lsh_popen_read(sexp_conv, args, fd, 5000);
   
