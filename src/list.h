@@ -28,6 +28,8 @@
 
 #include "lsh_types.h"
 
+#include <stdarg.h>
+
 #define CLASS_DECLARE
 #include "list.h.x"
 #undef CLASS_DECLARE
@@ -66,12 +68,14 @@ struct list_header *lsh_list_alloc(struct lsh_class *class,
 #define alloc_int_list(n) \
   ((struct int_list *) lsh_list_alloc(&CLASS(int_list), (n), sizeof(int)))
      
+struct int_list *make_int_listv(unsigned length, va_list args);
 struct int_list *make_int_list(unsigned length, ...);
 
 #define alloc_object_list(n) \
   ((struct object_list *) \
    lsh_list_alloc(&CLASS(object_list), (n), sizeof(struct lsh_object *)))
 
+struct object_list *make_object_listv(unsigned length, va_list args);
 struct object_list *make_object_list(unsigned length, ...);
 
 #endif /* LSH_LIST_H_INCLUDED */

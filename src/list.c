@@ -34,15 +34,12 @@
 
 #include "xalloc.h"
 
-struct int_list *make_int_list(unsigned n, ...)
+struct int_list *make_int_listv(unsigned n, va_list args)
 {
   unsigned i;
-  va_list args;
   
   struct int_list *l = alloc_int_list(n);
 
-  va_start(args, n);
-  
   for (i=0; i<n; i++)
     {
       int atom = va_arg(args, int);
@@ -55,19 +52,41 @@ struct int_list *make_int_list(unsigned n, ...)
   return l;
 }
 
-struct object_list *make_object_list(unsigned n, ...)
+struct int_list *make_int_list(unsigned n, ...)
+{
+  va_list args;
+  struct int_list *l;
+  
+  va_start(args, n);
+  l = make_int_listv(n, args);
+  va_end(args);
+
+  return l;
+}
+
+struct object_list *make_object_listv(unsigned n, va_list args)
 {
   unsigned i;
-  va_list args;
   
   struct object_list *l = alloc_object_list(n);
 
-  va_start(args, n);
-  
   for (i=0; i<n; i++)
     LIST(l)[i] = va_arg(args, struct lsh_object *);
 
   assert(va_arg(args, int) == -1);
+
+  return l;
+}
+
+
+struct object_list *make_object_list(unsigned n, ...)
+{
+  va_list args;
+  struct object_list *l;
+
+  va_start(args, n);
+  l = make_object_listv(n, args);
+  va_end(args);
 
   return l;
 }
