@@ -28,7 +28,6 @@
 
 #include "randomness.h"
 
-#include "abstract_crypto.h"
 #include "xalloc.h"
 
 /* Random */

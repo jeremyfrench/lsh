@@ -26,7 +26,7 @@
 #ifndef LSH_RANDOMNESS_H_INCLUDED
 #define LSH_RANDOMNESS_H_INCLUDED
 
-#include "lsh_types.h"
+#include "abstract_crypto.h"
 
 struct randomness
 {
@@ -34,5 +34,8 @@ struct randomness
 };
 
 #define RANDOM(r, length, dst) ((r)->random(&(r), length, dst))
+
+struct randomness *make_poor_random(struct hash_algorithm *hash,
+				    struct lsh_string *init);
 
 #endif /* LSH_RANDOMNESS_H_INCLUDED */

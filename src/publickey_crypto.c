@@ -130,11 +130,13 @@ static struct lsh_string *do_dss_sign(struct signer *c,
   return signature;
 }
 
+#if 0
 static struct lsh_string *dss_public_key(struct signer *dss)
 {
-  struct 
-  return ssh_format("%a%n%n%n%n", ATOM_SSH_DSS, dss->p, dss->q, dss->g, dss->y);
+  return ssh_format("%a%n%n%n%n",
+		    ATOM_SSH_DSS, dss->p, dss->q, dss->g, dss->y);
 }
+#endif
 
 int do_dss_verify(struct verifier *c,
 		  UINT32 length,
