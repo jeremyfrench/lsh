@@ -25,6 +25,7 @@
 #define LSH_SPKI_COMMANDS_H_INCLUDED
 
 #include "command.h"
+#include "interact.h"
 #include "spki.h"
 
 extern struct command_simple spki_signer2verifier;
@@ -74,5 +75,10 @@ make_pkcs5_encrypt(struct randomness *r,
 		   UINT32 salt_length,
 		   struct lsh_string *password,
 		   UINT32 iterations);
+
+struct command *
+make_pkcs5_decrypt(struct alist *mac_algorithms,
+		   struct alist *crypto_algorithms,
+		   struct interact *tty);
 
 #endif /* LSH_SPKI_COMMANDS_H_INCLUDED */

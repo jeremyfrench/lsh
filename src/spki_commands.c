@@ -510,8 +510,10 @@ DEFINE_COMMAND_SIMPLE(spki_read_userkeys_command, a)
 /* Encryption of private data.
  * For PKCS#5 (version 2) key derivation, we use
  *
- * (password-encrypted LABEL (Xpkcs5v2 hmac-sha1 (salt #...#))
- *                           ("3des-cbc" (iv #...#) (data #...#)))
+ * (password-encrypted LABEL
+ *   (Xpkcs5v2 hmac-sha1 (salt #...#)
+ *                       (iterations #...#))
+ *   ("3des-cbc" (iv #...#) (data #...#)))
  *
  * where the X:s will be removed when the format is more stable.
  *
@@ -540,7 +542,9 @@ do_spki_encrypt(struct command *s,
   CAST_SUBTYPE(sexp, expr, a);
 
   struct lsh_string *iv = NULL;
+#if 0
   UINT8 noiv[1] = { 0 };
+#endif
   
   if (self->algorithm->iv_size)
     {
@@ -559,7 +563,7 @@ do_spki_encrypt(struct command *s,
 			       sexp_l(2, SA(DATA),
 				      sexp_s(NULL, crypt_string_pad
 					     (MAKE_ENCRYPT(self->algorithm,
-							   self->key->data, iv ? iv->data : noiv),
+							   self->key->data, iv ? iv->data : NULL),
 					      sexp_format(expr, SEXP_CANONICAL, 0), 1)),
 				      -1),
 			       -1),
@@ -602,11 +606,235 @@ make_pkcs5_encrypt(struct randomness *r,
   self->super.call = do_spki_encrypt;
   self->r = r;
   self->label = label;
-  self->method = sexp_l(3, SA(XPKCS5V2), sexp_a(prf_name),
+  self->method = sexp_l(4, SA(XPKCS5V2), sexp_a(prf_name),
+			sexp_l(2, SA(ITERATIONS), sexp_uint32(iterations), -1),
 			sexp_l(2, SA(SALT), sexp_s(NULL, salt), -1), -1);
   self->algorithm_name = crypto_name;
   self->algorithm = crypto;
   self->key = key;
+
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name spki_password_decrypt)
+     (super command)
+     (vars
+       (mac_algorithms object alist)
+       (crypto_algorithms object alist)
+       (tty object interact)))
+*/
+
+static void
+do_spki_decrypt(struct command *s,
+		struct lsh_object *a,
+		struct command_continuation *c,
+		struct exception_handler *e)
+{
+  CAST(spki_password_decrypt, self, s);
+  CAST_SUBTYPE(sexp, expr, a);
+
+  struct sexp_iterator *i;
+  
+  if (!sexp_check_type(expr, ATOM_PASSWORD_ENCRYPTED, &i))
+    COMMAND_RETURN(c, expr);
+
+  else
+    {
+      struct lsh_string *label;
+      struct sexp *key_info;
+      struct sexp *payload;
+
+      struct crypto_algorithm *crypto;
+      struct mac_algorithm *mac;
+      
+      struct lsh_string *salt;
+      struct lsh_string *iv;
+      struct lsh_string *data;
+      UINT32 iterations;
+      
+      if (SEXP_LEFT(i) != 3)
+	{
+	  SPKI_ERROR(e, "Invalid (password-encrypted ...) expression.",
+		     expr);
+	  return;
+	}
+	
+      /* NOTE: This is a place where it might make sense to use a sexp
+       * display type, but we don't support that for now. */
+      label = sexp2string(SEXP_GET(i));
+
+      if (!label)
+	{
+	  SPKI_ERROR(e, "Invalid label in (password-encrypted ...) expression.",
+		     expr);
+	  return;
+	}
+
+      SEXP_NEXT(i);
+      key_info = SEXP_GET(i);
+      assert(key_info);
+
+      SEXP_NEXT(i);
+      payload = SEXP_GET(i);
+      assert(payload);
+
+      /* Examine the payload expression first, before asking for a
+       * pass phrase. */
+
+      {
+	int algorithm_name = spki_get_type(payload, &i);
+	CAST_SUBTYPE(crypto_algorithm, tmp,
+		     ALIST_GET(self->crypto_algorithms, algorithm_name));
+	crypto = tmp;
+      }
+
+      if (!crypto)
+	{
+	  SPKI_ERROR(e, "Unknown encryption algorithm for pkcs5v2.", payload);
+	  return;
+	}
+
+      iv = sexp2string(sexp_assq(i, ATOM_IV));
+
+      if (crypto->iv_size)
+	{
+	  if (!iv || (iv->length != crypto->iv_size))
+	    {
+	      SPKI_ERROR(e, "Invalid IV for pkcs5v2.", payload);
+	      return;
+	    }
+	}
+      else if (iv)
+	{
+	  if (iv->length)
+	    {
+	      SPKI_ERROR(e, "Unexpected iv provided for pkcs5v2.", payload);
+	      return;
+	    }
+	  iv = NULL;
+	}
+	
+      data = sexp2string(sexp_assq(i, ATOM_DATA));
+
+      if (!data)
+	{
+	  SPKI_ERROR(e, "Payload data missing for pkcs5v2.", payload);
+	  return;
+	}
+
+      if (crypto->block_size && (data->length & crypto->block_size))
+	{
+	  SPKI_ERROR(e, "Payload data doesn't match block size for pkcs5v2.", payload);
+	  return;
+	}
+
+      /* Get key */
+      switch (spki_get_type(key_info, &i)) 
+	{
+	default:
+	  SPKI_ERROR(e, "Unknown key derivation mechanism.", key_info);
+	  return;
+
+	case ATOM_XPKCS5V2:
+	  if (SEXP_LEFT(i) != 3)
+	    {
+	      SPKI_ERROR(e, "Invalid pkcs5v2 parameters.", key_info);
+	      return;
+	    }
+	  
+	  {
+	    int algorithm_name = sexp2atom(SEXP_GET(i));
+	    
+	    CAST_SUBTYPE(mac_algorithm, tmp,
+			 ALIST_GET(self->mac_algorithms,
+				   algorithm_name));
+
+	    mac = tmp;
+	  }
+
+	  if (!mac)
+	    {
+	      SPKI_ERROR(e, "Unknown mac for pkcs5v2.", key_info);
+	      return;
+	    }
+
+	  SEXP_NEXT(i);
+	  if (!sexp2uint32(sexp_assq(i, ATOM_ITERATIONS), &iterations)
+	      || !iterations)
+	    {
+	      SPKI_ERROR(e, "Invalid iteration count for pkcs5v2.", key_info);
+	      return;
+	    }
+	    
+	  salt = sexp2string(sexp_assq(i, ATOM_SALT));
+
+	  if (!salt)
+	    {
+	      SPKI_ERROR(e, "Invalid salt for pkcs5v2.", key_info);
+	      return;
+	    }
+
+	  /* Do the work */
+
+	  {
+	    struct lsh_string *password
+	      = INTERACT_READ_PASSWORD(self->tty, 500, label, 0);
+	    struct lsh_string *clear;
+	    struct sexp *res;
+	    UINT8 *key;
+	    
+	    if (!password)
+	      {
+		SPKI_ERROR(e, "No password provided for pkcs5v2.", key_info);
+		return;
+	      }
+
+	    key = alloca(crypto->key_size);
+	    pkcs5_derive_key(mac,
+			     password->length, password->data,
+			     salt->length, salt->data,
+			     iterations,
+			     crypto->key_size, key);
+
+	    lsh_string_free(password);
+
+	    clear = crypt_string_unpad(MAKE_DECRYPT(crypto,
+						    key,
+						    iv ? iv->data : NULL),
+				       data, 0);
+
+	    if (!clear)
+	      {
+		SPKI_ERROR(e, "Bad password for pkcs5v2.", key_info);
+		return;
+	      }
+
+	    res = string_to_sexp(SEXP_CANONICAL, clear, 1);
+
+	    if (res)
+	      COMMAND_RETURN(c, res);
+	    else
+	      {
+		SPKI_ERROR(e, "Bad password for pkcs5v2.", key_info);
+		return;
+	      }
+	  }
+	}
+    }
+}
+
+struct command *
+make_pkcs5_decrypt(struct alist *mac_algorithms,
+		   struct alist *crypto_algorithms,
+		   struct interact *tty)
+{
+  NEW(spki_password_decrypt, self);
+  self->super.call = do_spki_decrypt;
+  self->mac_algorithms = mac_algorithms;
+  self->crypto_algorithms = crypto_algorithms;
+  self->tty = tty;
 
   return &self->super;
 }
