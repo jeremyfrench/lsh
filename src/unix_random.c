@@ -48,6 +48,7 @@
 #include "environ.h"
 #include "format.h"
 #include "lock_file.h"
+#include "lsh_string.h"
 #include "reaper.h"
 #include "xalloc.h"
 #include "werror.h"
@@ -146,14 +147,14 @@ read_initial_seed_file(struct yarrow256_ctx *ctx,
   if (!seed)
     return 0;
   
-  if (seed->length < YARROW256_SEED_FILE_SIZE)
+  if (lsh_string_length(seed) < YARROW256_SEED_FILE_SIZE)
     {
       werror("Seed file too short\n");
       lsh_string_free(seed);
       return 0;
     }
   
-  yarrow256_seed(ctx, seed->length, seed->data);
+  yarrow256_seed(ctx, STRING_LD(seed));
   lsh_string_free(seed);
 
   assert(yarrow256_is_seeded(ctx));
@@ -190,7 +191,7 @@ update_seed_file(struct unix_random *self)
       if (s)
 	{
 	  yarrow256_update(&self->yarrow, RANDOM_SOURCE_NEW_SEED,
-			   0, s->length, s->data);
+			   0, STRING_LD(s));
 	  lsh_string_free(s);
 	}
     }
