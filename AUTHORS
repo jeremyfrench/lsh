@@ -1,7 +1,10 @@
 lsh is written by Niels Möller, and distributed under the terms and
 conditions of the GNU General Public License (see the file COPYING for
-details). But many other people have written free code which is used
-in lsh.
+details). Several parts of lsh, in particular tcpforwarding,
+public-key user authentication, and the lsh_proxy program, were
+contributed by Balázs Scheidler.
+
+Many other people have written free code which is used in lsh.
 
 TWOFISH implementation by Ruud de Rooij. Released under the LGPL.
 
@@ -35,4 +38,5 @@ written by Sean Reifschneider, released for unlimited use.
 SEXP parsing code has some parts in common with Ron Rivest's parser.
 Distributed under the GPL with permission.
 
-getopt option parsing from the the GNU C library, released under the LGPL.
+argp and getopt option parsing from the the GNU C library, released
+under the LGPL.
