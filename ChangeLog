@@ -1,5 +1,10 @@
 2001-04-04  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* lsh-1.2 released.
+
+	* distribution-key.gpg: Updated key, more signatures and later
+	expiration date. 
+
 	* src/sftp/Makefile.am (sftp_test_client_SOURCES): Added werror.c
 	and client.c 
 
@@ -24,8 +29,6 @@
 	(do_get): Use do_open and do_close.
 
 2001-04-02  Niels Möller  <nisse@cuckoo.hack.org>
-
-	* lsh-1.2 released.
 
 	* configure.in: Bumped version to 1.2.
 
