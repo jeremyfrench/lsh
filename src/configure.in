@@ -1,9 +1,11 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(keyexchange.h)
 
-dnl AC_INIT_AUTOMAKE(lsh, 1.0)
+dnl No real versioning yet, use dated snapshots instead.
+dnl AM_INIT_AUTOMAKE(lsh, snapshot-`date +%Y-%m-%d`)
+AM_INIT_AUTOMAKE(lsh, 17)
 
-AC_CONFIG_HEADER(config.h)
+AM_CONFIG_HEADER(config.h)
 
 # We want an absolute path to the source-dir.
 case "$srcdir" in
@@ -17,9 +19,19 @@ If this does not work, please use an absolute path to the configure script. ])
     ;;
 esac
 
+# We want to compile the crypto lib for use with lsh
+CPPFLAGS="$CPPFLAGS -I$srcdir/include -DLSH"
+
+# _GNU_SOURCE is needed on some readhat glibc based systems, to get
+# proper declarations of crypt(), initgroups() and strsignal().
+# Enable it on all systems untill some harm is reported
+
+CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
+
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
+AC_PROG_RANLIB
 
 dnl Checks for libraries.
 AC_CHECK_LIB(gmp, mpz_set_d)
@@ -52,7 +64,10 @@ AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(select socket strerror strtol)
 
-AC_CONFIG_SUBDIRS(lib)
+AC_REPLACE_FUNCS(poll)
 
-AC_OUTPUT(Makefile, echo timestamp > stamp-h)
-syscmd([cd lib && autoconf])
+dnl AC_CONFIG_SUBDIRS(lib)
+
+AC_OUTPUT(Makefile lib/Makefile)
+
+dnl syscmd([cd lib && autoconf])
