@@ -1,3 +1,8 @@
+2003-02-13  Niels Möller  <niels@s3.kth.se>
+
+	* README: Wrote down an SPKI overview and some ideas on how to
+	organize the information in the file system.
+
 2003-02-12  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/check-signature-test (test_valid, test_invalid):
