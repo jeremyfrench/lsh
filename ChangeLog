@@ -1,3 +1,7 @@
+2003-02-10  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* misc/xenofarm.sh: Collect config.h files from subdirectories. 
+
 2003-02-09  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/Makefile.am (TS_PROGS): Added sockaddr2info-test.
