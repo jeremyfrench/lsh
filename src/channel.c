@@ -708,7 +708,11 @@ DEFINE_PACKET_HANDLER(static, global_failure_handler,
 
 /* FIXME: Don't store the channel here, instead have it passed as the
  * argument of the continuation. This might also allow some
- * unification with the handling of global_requests. */
+ * unification with the handling of global_requests.
+ *
+ * This won't quite work yet, because not all channel request
+ * handlers, in particular gateway_channel_request and
+ * x11_req_handler, return the channel in question. */
 
 /* GABA:
    (class
