@@ -5,6 +5,17 @@
 
 2003-09-16  Pontus Sköld  <pont@soua.net>
 
+	* src/lsh-writekey.c (main): Check that the given key isn't empty.
+
+	* src/lsh-upgrade-key: Set a restrictive umask. Encrypted keys are
+	no longer stored unencrypted in a temporary file, just piped
+	through the conversion chain like unencrypted keys are.
+ 
+	* src/lsh-writekey.c (process_private): Moved reading of
+	passphrase here.
+	(main_argp_parser): Reading of passphrase from tty is now done in
+	process_private if required.
+
 	* src/testsuite/lshd-no-auth-test: New test to verify lshd fails
 	gracefully when it may use no authentication method.
 
