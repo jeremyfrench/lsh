@@ -9,13 +9,40 @@ die () {
     exit 1
 }
 
-test_valid () {
-    ../tools/spki-check-signature "`conv "$2"`" || die "$1"
+test_valid () {    
+    name="$1"
+    shift
+    if [ $# = 2 ] ; then
+	msg="$1"
+	flags=""
+	shift
+    else
+	msg=""
+	flags="--no-data"
+    fi
+    sign="$1"
+
+    # echo $msg : ../tools/spki-check-signature $flags "`conv "$sign"`" 
+    echo "$msg" | ../tools/spki-check-signature $flags "`conv "$sign"`" \
+	|| die "$name"
 }
 
 test_invalid () {
-    if ../tools/spki-check-signature "`conv "$2"`"
-    then die "$1"
+    name="$1"
+    shift
+    if [ $# = 2 ] ; then
+	msg="$1"
+	flags=""
+	shift
+    else
+	msg=""
+	flags="--no-data"
+    fi
+    sign="$1"
+
+    # echo $msg : ../tools/spki-check-signature $flags "`conv "$sign"`" 
+    if echo "$msg" | ../tools/spki-check-signature $flags "`conv "$sign"`"
+    then die "$name"
     fi
 }
 
@@ -52,6 +79,26 @@ test_invalid "rsa, too long hash" '
 test_invalid "valid rsa, too short hash" '
 (signature (hash sha1
                  |8dLS+STphqyG/fezbJS83zK+7A==|)
+           (public-key (rsa-pkcs1-sha1 (n |CijcTD4ZSRQtpqa9nLT2rVFtkPFIu
+                                           Daxy8FShFh2LLQhSpONFObSR30MXm
+                                           KFLgi8vn7RQyqn85bLbqbkRahR|)
+                                       (e |J4NiEw==|)))
+           (rsa-pkcs1-sha1 |AsI2rx8wZmfYRGsUDfzcq3ycWWNThNP3NmU07Y7rONR2
+                            xaHDqfwpm5n+j3kzToBxyWQb+5G7mqXZBPfwlpGJ|))'
+
+test_valid "valid rsa, with message" "foo" '
+(signature (hash sha1
+                 |8dLS+STphqyG/fezbJS83zK+7BU=|)
+           (public-key (rsa-pkcs1-sha1 (n |CijcTD4ZSRQtpqa9nLT2rVFtkPFIu
+                                           Daxy8FShFh2LLQhSpONFObSR30MXm
+                                           KFLgi8vn7RQyqn85bLbqbkRahR|)
+                                       (e |J4NiEw==|)))
+           (rsa-pkcs1-sha1 |AsI2rx8wZmfYRGsUDfzcq3ycWWNThNP3NmU07Y7rONR2
+                            xaHDqfwpm5n+j3kzToBxyWQb+5G7mqXZBPfwlpGJ|))'
+
+test_invalid "rsa, with invalid message" "bar" '
+(signature (hash sha1
+                 |8dLS+STphqyG/fezbJS83zK+7BU=|)
            (public-key (rsa-pkcs1-sha1 (n |CijcTD4ZSRQtpqa9nLT2rVFtkPFIu
                                            Daxy8FShFh2LLQhSpONFObSR30MXm
                                            KFLgi8vn7RQyqn85bLbqbkRahR|)
