@@ -206,7 +206,7 @@ do_utmp_cleanup(struct exit_callback *s,
   else
     {
       /* Make a working copy of this entry that we can modify */
-
+      /* FIXME: Is this really needed??? /nisse */
       struct utmp wc = *utmp;
       utmp = &wc;
 
@@ -306,6 +306,8 @@ utmp_book_keeping(struct lsh_string *name,
   memset(&pattern, 0, sizeof(pattern));
   CP(pattern.ut_line, cleanup->line);
   CP(pattern.ut_id, cleanup->id);
+
+  /* FIXME: Initialize pattern.ut_type? */
   
   /* Rewind database */
   setutent();
