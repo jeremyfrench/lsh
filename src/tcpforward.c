@@ -152,9 +152,12 @@ do_tcpip_eof(struct ssh_channel *s)
     werror("do_tcpip_eof, shutdown() failed, (errno = %i): %z\n",
 	   errno, STRERROR(errno));
 
+#if 0
+  /* Moved to channel.c:channel_eof_handler. */
   if ( (s->flags & CHANNEL_SENT_EOF)
        && (s->flags & CHANNEL_CLOSE_AT_EOF))
     channel_close(s);
+#endif
 }
 
 /* NOTE: Adds the socket to the channel's resource list */
