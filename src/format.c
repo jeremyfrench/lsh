@@ -215,6 +215,7 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		memcpy(buffer, s->data, s->length);
 		buffer += s->length;
 		f++;
+		break;
 	      }
 	    case 'z':
 	      {
