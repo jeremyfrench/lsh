@@ -3,8 +3,7 @@ conditions of the GNU General Public License (see the file COPYING for
 details). But many other people have written free code which is used
 in lsh.
 
-CAST implementation by Steve Reid, and released into the public
-domain.
+CAST implementation by Steve Reid. Released into the public domain.
 
 DES implementation by Dana L. How. Released under the LGPL.
 
