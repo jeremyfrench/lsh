@@ -61,7 +61,11 @@
 */
 
 #define LIST(x) ((x)->elements)
+#define LIST_LENGTH(x) ((x)->super.length)
+
+#if 0
 #define LIST_LENGTH(x) (((struct list_header *) (x))->length)
+#endif
 
 struct list_header *lsh_list_alloc(struct lsh_class *class,
 				   unsigned length, size_t element_size);
