@@ -46,12 +46,6 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
-case "$GCC" in
-    yes) CFLAGS="$CFLAGS -Wall -Wmissing-prototypes \
-                 -Wmissing-declarations -Werror"
-    ;;
-esac
-
 dnl Checks for libraries.
 AC_CHECK_LIB(gmp, mpz_set_d)
 dnl Some debian systems have both gmp1 and gmp2.
@@ -85,8 +79,13 @@ AC_CHECK_FUNCS(select socket strerror strtol)
 
 AC_REPLACE_FUNCS(poll)
 
-dnl AC_CONFIG_SUBDIRS(lib)
+# Set these flags *last*, or the test programs won't compile
+case "$GCC" in
+    yes) CFLAGS="$CFLAGS -Wall -Wmissing-prototypes \
+                 -Wmissing-declarations -Werror"
+    ;;
+esac
 
-AC_OUTPUT(Makefile lib/Makefile)
+AC_OUTPUT(Makefile lib/Makefile include/Makefile)
 
 dnl syscmd([cd lib && autoconf])
