@@ -127,9 +127,9 @@ static struct command options2identities;
        (with_remote_peers . int)
 
        ; Session modifiers
-       (stdin . "const char *")
-       (stdout . "const char *")
-       (stderr . "const char *")
+       (stdin_file . "const char *")
+       (stdout_file . "const char *")
+       (stderr_file . "const char *")
        ; True if the process's stdin or pty (respectively) has been used. 
        (used_stdin . int)
        (used_pty . int)
@@ -174,9 +174,9 @@ make_options(struct alist *algorithms,
   self->known_hosts = NULL;
   /* self->known_hosts_file = NULL; */
 
-  self->stdin = NULL;
-  self->stdout = NULL;
-  self->stderr = NULL;
+  self->stdin_file = NULL;
+  self->stdout_file = NULL;
+  self->stderr_file = NULL;
   self->used_stdin = 0;
     
   self->with_pty = -1;
@@ -709,8 +709,8 @@ make_lsh_session(struct lsh_options *self)
   int out;
   int err;
 
-  if (self->stdin)
-    in = open(self->stdin, O_RDONLY);
+  if (self->stdin_file)
+    in = open(self->stdin_file, O_RDONLY);
   else
     {
       if (self->used_stdin)
@@ -729,8 +729,8 @@ make_lsh_session(struct lsh_options *self)
       return NULL;
     }
 
-  out = (self->stdout
-	 ? open(self->stdout, O_WRONLY | O_CREAT, 0666)
+  out = (self->stdout_file
+	 ? open(self->stdout_file, O_WRONLY | O_CREAT, 0666)
 	 : dup(STDOUT_FILENO));
   if (out < 0)
     {
@@ -740,8 +740,8 @@ make_lsh_session(struct lsh_options *self)
       return NULL;
     }
 
-  if (self->stderr)
-    err = open(self->stderr, O_WRONLY | O_CREAT, 0666);
+  if (self->stderr_file)
+    err = open(self->stderr_file, O_WRONLY | O_CREAT, 0666);
   else
     {
       err = dup(STDERR_FILENO);
@@ -757,7 +757,7 @@ make_lsh_session(struct lsh_options *self)
     }
 
   /* Clear options */
-  self->stdin = self->stdout = self->stderr = NULL;
+  self->stdin_file = self->stdout_file = self->stderr_file = NULL;
   
   return make_client_session
     (io_read(make_lsh_fd(self->backend, in, self->handler),
