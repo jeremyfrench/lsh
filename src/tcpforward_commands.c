@@ -59,8 +59,6 @@ static struct command tcpip_connect_io;
 static struct install_info install_direct_tcpip_handler;
 #define INSTALL_DIRECT_TCPIP (&install_direct_tcpip_handler.super.super.super)
 
-static struct install_info install_forwarded_tcpip_handler;
-
 /* FIXME: Should be static */
 struct command make_direct_tcpip_handler;
 #define DIRECT_TCPIP_HANDLER (&make_direct_tcpip_handler.super)
