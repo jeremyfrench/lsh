@@ -1,3 +1,10 @@
+2000-12-09  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/Makefile.am.in (LDADD, lshg_LDADD): Use @LIBARGP@
+
+	* misc/bootstrap.sh: Use set -e. Bootstrap in the src/argp
+	subdirectory. 
+
 2000-11-30  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/argp/argp-parse.c (match_option): Better abbreviations.
