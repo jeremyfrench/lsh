@@ -338,8 +338,8 @@ static int client_session_die(struct ssh_channel *c)
   CAST(client_session, closure, c);
   
   /* FIXME: Don't die this hard. */
-  if ( (closure->super.flags & (CHANNEL_SENT_CLOSE | CHANNEL_RECIEVED_CLOSE))
-       ==  (CHANNEL_SENT_CLOSE | CHANNEL_RECIEVED_CLOSE))
+  if ( (closure->super.flags & (CHANNEL_SENT_CLOSE | CHANNEL_RECEIVED_CLOSE))
+       ==  (CHANNEL_SENT_CLOSE | CHANNEL_RECEIVED_CLOSE))
     exit(EXIT_SUCCESS);
 
   exit(EXIT_FAILURE);
@@ -355,6 +355,7 @@ static int client_session_die(struct ssh_channel *c)
 
 static int do_exit_status(struct channel_request *c,
 			  struct ssh_channel *channel,
+			  struct ssh_connection *connection UNUSED,
 			  int want_reply,
 			  struct simple_buffer *args)
 {
@@ -386,6 +387,7 @@ static int do_exit_status(struct channel_request *c,
 
 static int do_exit_signal(struct channel_request *c,
 			  struct ssh_channel *channel,
+			  struct ssh_connection *connection UNUSED,
 			  int want_reply,
 			  struct simple_buffer *args)
 {
@@ -452,8 +454,8 @@ struct channel_request *make_handle_exit_signal(int *exit_status)
   return &self->super;
 }
 
-/* Recieve channel data */
-static int do_recieve(struct ssh_channel *c,
+/* Receive channel data */
+static int do_receive(struct ssh_channel *c,
 		      int type, struct lsh_string *data)
 {
   CAST(client_session, closure, c);
@@ -486,7 +488,7 @@ static int do_io(struct ssh_channel *channel)
 {
   CAST(client_session, closure, channel);
   
-  channel->recieve = do_recieve;
+  channel->receive = do_receive;
   
   closure->out->super.close_callback
     = closure->err->super.close_callback = make_channel_close(channel);
