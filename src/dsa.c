@@ -423,7 +423,9 @@ generic_dsa_sign(struct dsa_signer *self,
   bignum_random(k, self->random, tmp);
   mpz_add_ui(k, k, 1);
 
-  debug("generic_dsa_sign, k: %xn\n", k);
+  /* NOTE: Enabling this leaks information about the secret
+   * key to the debug output. */
+  /* debug("generic_dsa_sign, k: %xn\n", k); */
   
   /* Compute r = (g^k (mod p)) (mod q) */
   mpz_powm(r, self->verifier->g, k, self->verifier->p);
