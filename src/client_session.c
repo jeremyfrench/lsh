@@ -27,6 +27,7 @@
 #include "channel_commands.h"
 #include "client.h"
 #include "io.h"
+#include "read_data.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -46,6 +47,8 @@
        (out object lsh_fd)
        (err object lsh_fd)
 
+       ; Escape char handling
+       (escape object escape_info)
        ; Where to save the exit code.
        (exit_status . "int *")))
 */
@@ -106,20 +109,16 @@ do_send_adjust(struct ssh_channel *s,
 
 /* Escape char handling */
 
-#if 0
 static struct io_callback *
-make_channel_read_stdin(struct ssh_channel *channel)
+client_read_stdin(struct client_session_channel *session)
 {
-  /* byte      SSH_MSG_CHANNEL_DATA
-   * uint32    recipient channel
-   * string    data
-   *
-   * gives 9 bytes of overhead, including the length field. */
-    
-  return make_read_data(channel,
-			make_handle_escape(make_channel_write(channel)));
+  struct abstract_write *write = make_channel_write(&session->super);
+
+  if (session->escape)
+    write = make_handle_escape(session->escape, write);
+  
+  return make_read_data(&session->super, write);
 }
-#endif
 
 /* We have a remote shell */
 static void
@@ -156,10 +155,9 @@ do_client_io(struct command *s UNUSED,
   /* Set up the fd we read from. */
   channel->send_adjust = do_send_adjust;
 
-  /* FIXME: This is probably the right place to insert a
-   * escape-character handler. */
-  session->in->read = make_channel_read_data(channel);
-
+  /* Setup escape char handler, if appropriate. */
+  session->in->read = client_read_stdin(session);
+  
   /* FIXME: Perhaps there is some way to arrange that channel.c calls
    * the CHANNEL_SEND_ADJUST method instead? */
   if (session->super.send_window_size)
@@ -191,6 +189,7 @@ struct ssh_channel *
 make_client_session_channel(struct lsh_fd *in,
 			    struct lsh_fd *out,
 			    struct lsh_fd *err,
+			    struct escape_info *escape,
 			    UINT32 initial_window,
 			    int *exit_status)
 {
@@ -213,7 +212,8 @@ make_client_session_channel(struct lsh_fd *in,
   self->in = in;
   self->out = out;
   self->err = err;
-
+  self->escape = escape;
+  
   REMEMBER_RESOURCE(self->super.resources, &in->super);
   REMEMBER_RESOURCE(self->super.resources, &out->super);
   REMEMBER_RESOURCE(self->super.resources, &err->super);
