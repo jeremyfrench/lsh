@@ -198,6 +198,10 @@ struct command *make_command_S_2(struct command *f,
 #define GABA_APPLY_S_1(f) (make_collect_state_1(&collect_info_S_2, (f)))
 #define GABA_APPLY_S_2(f, g) (make_collect_S_2(NULL, (f), (g)))
 
+struct command *make_command_Sp_3(struct command *c,
+				  struct command *f,
+				  struct command *g);
+
 #if 0
 extern struct command_simple command_B;
 
