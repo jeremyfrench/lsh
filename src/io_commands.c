@@ -80,7 +80,11 @@ do_io_write_file(struct command *s,
     EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_WRITE, NULL, errno, NULL));
 }
 
-DEFINE_COMMAND_SIMPLE(io_write_file_command, a)
+DEFINE_COMMAND(io_write_file_command)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(io_backend, backend, a);
 
@@ -447,24 +451,32 @@ make_connect_local(struct io_backend *backend)
   return &self->super;
 }
 
-DEFINE_COMMAND_SIMPLE(connect_local_command, a)
+DEFINE_COMMAND(connect_local_command)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(io_backend, backend, a);
-  return &make_connect_local(backend)->super;
+  COMMAND_RETURN(c, make_connect_local(backend));
 }
 
 
 /* Takes a listen_value as argument, logs the peer address, and
  * returns the fd object. */
 
-DEFINE_COMMAND_SIMPLE(io_log_peer_command, a)
+DEFINE_COMMAND(io_log_peer_command)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(listen_value, lv, a);
 
   verbose("Accepting connection from %S, port %i\n",
 	  lv->peer->ip, lv->peer->port);
 
-  return &lv->super;
+  COMMAND_RETURN(c, lv);
 }
 
 

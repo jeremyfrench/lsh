@@ -46,9 +46,9 @@
 struct io_write_file_info *
 make_io_write_file_info(const char *name, int flags, int mode, UINT32 block_size);
 
-extern struct command_simple io_write_file_command;
+extern struct command io_write_file_command;
 
-#define IO_WRITE_FILE (&io_write_file_command.super.super)
+#define IO_WRITE_FILE (&io_write_file_command.super)
 
 /* Read a certain fd */
 
@@ -97,10 +97,10 @@ make_listen_local(struct io_backend *backend,
 struct command *
 make_connect_local(struct io_backend *backend);
 
-extern struct command_simple connect_local_command;
-#define CONNECT_LOCAL (&connect_local_command.super.super)
+extern struct command connect_local_command;
+#define CONNECT_LOCAL (&connect_local_command.super)
 
-extern struct command_simple io_log_peer_command;
-#define LOG_PEER (&io_log_peer_command.super.super)
+extern struct command io_log_peer_command;
+#define LOG_PEER (&io_log_peer_command.super)
 
 #endif /* LSH_IO_COMMANDS_H_INCLUDED */
