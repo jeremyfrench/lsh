@@ -51,6 +51,11 @@ AC_ARG_ENABLE(gcov,
   AC_HELP_STRING([--enable-gcov], [Instrument for gcov (requires a modern gcc)]),,
   [enable_gcov=no])
 
+AC_ARG_ENABLE(profiling,
+  AC_HELP_STRING([--enable-profiling], [Instrument for gprof profiling]),,
+  [enable_profiling=no])
+
+
 AC_ARG_WITH(zlib,
   AC_HELP_STRING([--without-zlib], [Don't use zlib compression]),,
   [with_zlib=yes])
@@ -491,6 +496,10 @@ AH_TEMPLATE([WITH_GCOV], [Use gcov])
 if test "x$enable_gcov" = "xyes"; then
   CFLAGS="$CFLAGS -ftest-coverage -fprofile-arcs"
   AC_DEFINE(WITH_GCOV)
+fi
+
+if test "x$enable_profiling" = "xyes"; then
+  CFLAGS="$CFLAGS -pg"
 fi
 
 # Checks for typedefs, structures, and compiler characteristics.
