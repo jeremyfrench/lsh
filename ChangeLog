@@ -1,3 +1,8 @@
+2004-10-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* .bootstrap: Link install-sh, texinfo.tex, COPYING and INSTALL
+	into the nettle subdir.
+
 2004-10-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): New macro.
