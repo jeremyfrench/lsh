@@ -373,11 +373,18 @@ DEFINE_COMMAND(connect_local_command)
       struct exception_handler *e UNUSED)
 {
   CAST(local_info, info, a);
-
-  io_connect_local(info,
-		   make_connect_continuation(NULL, c),
-		   e);
+  
+  static struct exception gateway_exception =
+    STATIC_EXCEPTION(EXC_IO_CONNECT, "no usable gateway socket found");
+  
+  struct lsh_fd *fd = io_connect_local(info,
+				       make_connect_continuation(NULL, c),
+				       e);
+  
+  if (!fd)
+    EXCEPTION_RAISE(e, &gateway_exception);
 }
+
 
 
 /* Takes a listen_value as argument, logs the peer address, and
