@@ -108,7 +108,7 @@ do_tcpip_start_io(struct command *s UNUSED,
 		  struct command_continuation *c,
 		  struct exception_handler *e UNUSED)
 {
-  CAST_SUBTYPE(ssh_channel, channel, x);
+  CAST(channel_forward, channel, x);
 
   assert(channel);
   
@@ -159,7 +159,7 @@ new_tcpip_channel(struct channel_open_command *c,
 
   debug("tcpforward_commands.c: new_tcpip_channel\n");
 
-  channel = make_channel_forward(self->peer->fd, TCPIP_WINDOW_SIZE);
+  channel = &make_channel_forward(self->peer->fd, TCPIP_WINDOW_SIZE)->super;
   channel->write = connection->write;
 
   *request = format_channel_open(self->type, local_channel_number,

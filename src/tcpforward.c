@@ -150,7 +150,7 @@ do_open_forwarded_tcpip_continuation(struct command_continuation *s,
 				     struct lsh_object *x)
 {
   CAST(open_forwarded_tcpip_continuation, self, s);
-  CAST_SUBTYPE(ssh_channel, channel, x);
+  CAST(channel_forward, channel, x);
 
   assert(channel);
 
