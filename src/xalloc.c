@@ -115,6 +115,28 @@ static void *xalloc(size_t size)
 }
 
 #if DEBUG_ALLOC
+#undef lsh_string_alloc
+static
+#endif
+
+struct lsh_string *
+lsh_string_alloc(UINT32 length)
+{
+  /* NOTE: The definition of the struct contains a char array of
+   * length 1, so the below includes space for a terminating NUL. */
+  
+  struct lsh_string *s
+    = xalloc(sizeof(struct lsh_string) + length);
+
+  s->length = length;
+  s->data[length] = '\0';
+  s->sequence_number = 0;
+  
+  return s;
+}
+
+#if DEBUG_ALLOC
+
 unsigned number_of_strings = 0;
 struct lsh_string *all_strings = NULL;
 
@@ -143,11 +165,7 @@ static void sanity_check_string_list(void)
 struct lsh_string *
 lsh_string_alloc_clue(UINT32 length, const char *clue)
 {
-  /* NOTE: The definition of the struct contains a char array of
-   * length 1, so the below includes space for a terminating NUL. */
-  
-  struct lsh_string *s
-    = xalloc(sizeof(struct lsh_string) + length);
+  struct lsh_string *s = lsh_string_alloc(length);
 
   sanity_check_string_list();
   
@@ -163,10 +181,6 @@ lsh_string_alloc_clue(UINT32 length, const char *clue)
 
   sanity_check_string_list();
 
-  s->length = length;
-  s->data[length] = '\0';
-  s->sequence_number = 0;
-  
   return s;
 }
 #endif
