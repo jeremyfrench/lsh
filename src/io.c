@@ -523,7 +523,7 @@ do_buffered_read(struct io_callback *s,
 	{
 	  UINT32 done;
 
-	  /* FIXME: What to do if want_read is false? To improve the
+	  /* NOTE: What to do if want_read is false? To improve the
 	   * connection_lock mechanism, it must be possible to
 	   * temporarily stop reading, which means that fd->want_read
 	   * has to be cleared.
@@ -1870,51 +1870,6 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)
 }
 
 
-/* Socket workround */
-#ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
-
-/* There's an how++ missing in the af_unix shutdown implementation of
- * some linux versions. Try an ugly workaround. */
-#ifdef linux
-
-/* From src/linux/include/net/sock.h */
-#define RCV_SHUTDOWN	1
-#define SEND_SHUTDOWN	2
-
-#undef SHUT_RD
-#undef SHUT_WR
-#undef SHUT_RD_WR
-
-#define SHUT_RD RCV_SHUTDOWN
-#define SHUT_WR SEND_SHUTDOWN
-#define SHUT_RD_WR (RCV_SHUTDOWN | SEND_SHUTDOWN)
-
-#else /* !linux */
-
-/* Don't know how to work around the broken shutdown. So disable it
- * completely. */
-
-#define SHUTDOWN(fd, how) 0
-
-#endif /* !linux */
-#endif /* !SHUTDOWN_WORKS_WITH_UNIX_SOCKETS */
-
-#ifndef SHUTDOWN
-#define SHUTDOWN(fd, how) (shutdown((fd), (how)))
-#endif
-
-#ifndef SHUT_RD
-#define SHUT_RD 0
-#endif
-
-#ifndef SHUT_WR
-#define SHUT_WR 1
-#endif
-
-#ifndef SHUT_RD_WR
-#define SHUT_RD_WR 2
-#endif
-
 /* Creates a one-way socket connection. Returns 1 on success, 0 on
  * failure. fds[0] is for reading, fds[1] for writing (like for the
  * pipe system call). */
@@ -1928,14 +1883,14 @@ lsh_make_pipe(int *fds)
     }
   debug("Created socket pair. Using fd:s %i <-- %i\n", fds[0], fds[1]);
 
-  if (SHUTDOWN(fds[0], SHUT_WR) < 0)
+  if (SHUTDOWN_UNIX(fds[0], SHUT_WR_UNIX) < 0)
     {
-      werror("shutdown(%i, SEND) failed: %z\n", fds[0], STRERROR(errno));
+      werror("shutdown(%i, SHUT_WR) failed: %z\n", fds[0], STRERROR(errno));
       goto fail;
     }
-  if (SHUTDOWN(fds[1], SHUT_RD) < 0)
+  if (SHUTDOWN_UNIX(fds[1], SHUT_RD_UNIX) < 0)
     {
-      werror("shutdown(%i, REC) failed: %z\n", fds[0], STRERROR(errno));
+      werror("shutdown(%i, SHUT_RD_UNIX) failed: %z\n", fds[0], STRERROR(errno));
     fail:
       {
 	int saved_errno = errno;
