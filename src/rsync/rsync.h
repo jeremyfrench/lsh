@@ -46,13 +46,15 @@
 /* Size of block count, block size, tail */
 #define RSYNC_HEADER_SIZE 12
 
-/* Size of weak sum, md5 sume */
+/* Size of weak sum, md5 sum */
 #define RSYNC_ENTRY_SIZE 20
+
+#define RSYNC_TOKEN_SIZE 4
 
 /* Initial checksum calculations (by the receiver) */
 
 /* NOTE: Unlike zlib, we want to know the file size before we start.
- * This could be relxed, but requires some modifications to the
+ * This could be relaxed, but requires some modifications to the
  * protocol. */
 struct rsync_generate_state
 {
@@ -111,7 +113,7 @@ int rsync_generate_init(struct rsync_generate_state *state,
  *
  * -1 on failure (and it has to check INDEX and OFFSET for validity).
  * 0 if copying succeeds, but not all of the block was copied.
- * 1 if copying succeeds, and the final octet of the data swas copied.
+ * 1 if copying succeeds, and the final octet of the data was copied.
  *
  * On success, the function should set *DONE to the amount of data copied.
  */
@@ -134,16 +136,17 @@ struct rsync_receive_state
   rsync_lookup_read_t lookup;
   void *opaque;
   
-  struct md5_ctx full_sum; /* Sum of all input data */
+  struct md5_ctx full_sum; /* Sum of all the output data */
 
   /* Private state */
 
+  /* This is really an enum rsync_receive_mode */
   int state;
   
   UINT32 token; 
   UINT32 i;
 
-  UINT8 buf[MD5_DIGESTSIZE];
+  UINT8 buf[RSYNC_SUM_LENGTH];
 };
 
 int rsync_receive(struct rsync_receive_state *state);
@@ -204,8 +207,11 @@ struct rsync_send_state
   /* Length of literal to output. */
   UINT32 literal;
 
-  UINT8 token_buf[4];
-  UINT32 token_length;
+  UINT8 token_buf[RSYNC_TOKEN_SIZE];
+  UINT8 length_buf[RSYNC_TOKEN_SIZE];
+
+  /* Non-zero if the final EOF-token has been buffered for output. */
+  int final;
   
   unsigned sum_a;
   unsigned sum_b;

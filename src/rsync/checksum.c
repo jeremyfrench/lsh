@@ -21,7 +21,7 @@
  *   b_k = \sum_0^k (l-i) x_i
  *
  * But in fact, we don't calculate all b_k, only the final
- * value b_{l-1}, and we have the identity (by changing order of summation(
+ * value b_{l-1}, and we have the identity (by changing order of summation)
  *
  *   b_{l-1} = \sum_0^{l-1} (l-i) x_i = \sum_0^{l-1} a_i
  *

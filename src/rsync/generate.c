@@ -48,20 +48,7 @@ rsync_output_block(struct rsync_generate_state *s)
   rsync_init_block(s);
 }
 
-/* Update checksums.
- *
- * For input x_i, i = 0, ..., l-1, we calculate (modulo 2^16)
- *
- *   a_k = \sum_0^k x_i,
- *   b_k = \sum_0^k (l-i) x_i
- *
- * But in fact, we don't calculate all b_k, only the final
- * value b_{l-1}, and we have the identity (by changing order of summation(
- *
- *   b_{l-1} = \sum_0^{l-1} (l-i) x_i = \sum_0^{l-1} a_i
- *
- * So we keep track of the numbers c_k = \sum_0^k a_k rather than b_k.
- */
+/* Update checksums. */
 
 static void
 rsync_update(struct rsync_generate_state *s,
@@ -81,9 +68,10 @@ rsync_update(struct rsync_generate_state *s,
 
 #define DONE (s->offset == s->total_length)
 
-int rsync_generate(struct rsync_generate_state *s)
+int
+rsync_generate(struct rsync_generate_state *s)
 {
-  /* Have we maid any progress? */
+  /* Have we made any progress? */
   int progress = 0;
   
   for (;;)
@@ -110,7 +98,7 @@ int rsync_generate(struct rsync_generate_state *s)
 	    }
 	}
       if (!s->avail_out && s->buf_length)
-	/* We have buffered date, but no output space */
+	/* We have buffered data, but no output space */
 	return progress ? RSYNC_PROGRESS : RSYNC_BUF_ERROR;
 
       /* Here, the internal buffer should be flushed. */
