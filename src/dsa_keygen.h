@@ -32,4 +32,7 @@
 void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l);
 void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q);
 
+struct sexp *
+dsa_generate_key(struct randomness *r, unsigned level);
+
 #endif /* LSH_DSA_KEYGEN_H_INCLUDED */

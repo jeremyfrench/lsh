@@ -27,14 +27,17 @@
 #include "dsa_keygen.h"
 
 #include "randomness.h"
-
+#include "sexp.h"
 #include "sha.h"
+#include "werror.h"
 
 #if !HAVE_MEMXOR
 #include "memxor.h"
 #endif
 
 #include <assert.h>
+
+#define SA(x) sexp_a(ATOM_##x)
 
 /* The (slow) NIST method of generating DSA primes. Algorithm 4.56 of
  * Handbook of Applied Cryptography. */
@@ -179,3 +182,67 @@ void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q)
     }
 }
 
+struct sexp *
+dsa_generate_key(struct randomness *r, unsigned level)
+{
+  struct sexp *key = NULL;
+  
+  mpz_t p; mpz_t q;
+  mpz_t g; mpz_t y;
+  mpz_t x;
+  mpz_t t;
+
+  mpz_init(p); mpz_init(q);
+  mpz_init(g); mpz_init(y);
+  mpz_init(x);
+  mpz_init(t);
+
+  dsa_nist_gen(p, q, r, level);
+
+  debug("p = %xn\nq = %xn\n", p, q);
+
+  /* Sanity check. */
+  if (!mpz_probab_prime_p(p, 10))
+    {
+      werror("p not a prime!\n");
+      goto done;
+    }
+
+  if (!mpz_probab_prime_p(q, 10))
+    {
+      werror("q not a prime!\n");
+      goto done;
+    }
+
+  mpz_fdiv_r(t, p, q);
+  if (mpz_cmp_ui(t, 1))
+    {
+      fatal("q doesn't divide p-1 !\n");
+      goto done;
+    }
+
+  mpz_set(t, q);
+  mpz_sub_ui(t, t, 2);
+  bignum_random(x, r, t);
+  
+  mpz_add_ui(x, x, 1);
+    
+  mpz_powm(y, g, x, p);
+
+  key = sexp_l(2, SA(PRIVATE_KEY),
+	       sexp_l(6, SA(DSA),
+		      sexp_l(2, SA(P), sexp_un(p), -1),
+		      sexp_l(2, SA(Q), sexp_un(q), -1),
+		      sexp_l(2, SA(G), sexp_un(g), -1),
+		      sexp_l(2, SA(Y), sexp_un(y), -1),
+		      sexp_l(2, SA(X), sexp_un(x), -1), -1), -1);
+
+ done:
+
+  mpz_clear(p); mpz_clear(q);
+  mpz_clear(g); mpz_clear(y);
+  mpz_clear(x);
+  mpz_clear(t);
+
+  return key;
+}
