@@ -139,7 +139,7 @@ do_decode_key(struct abstract_write *s,
   else
     {
       struct simple_buffer buffer;
-      UINT32 type;
+      int type;
 
       simple_buffer_init(&buffer, contents->length, contents->data);
 

@@ -99,7 +99,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (signature_algorithms object alist)
        (r object randomness)
        
-       (crypto_name . UINT32)
+       (crypto_name . int)
        (crypto object crypto_algorithm)
        (iterations . UINT32)))
 */
