@@ -381,7 +381,7 @@ do_tcpip_forward_request(struct global_request *s,
 	  COMMAND_RETURN(c, NULL);
 	  return;
 	}
-      
+
       if (lookup_forward(&connection->table->local_ports,
 			 STRING_LD(bind_host), bind_port))
 	{
