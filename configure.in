@@ -10,7 +10,10 @@ AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
 AM_CONFIG_HEADER(config.h)
 
-AM_MAINTAINER_MODE
+dnl This macro turns of a the Makefile.in: Makefile.am dependencies, unless
+dnl --enable-maintainer-mode is passed to ./configure. But I want
+dnl maintainermode to be *on* by default.
+dnl AM_MAINTAINER_MODE
 
 # We want an absolute path to the source-dir.
 case "$srcdir" in
