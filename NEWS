@@ -1,3 +1,11 @@
+NEWS for the 1999-03-17 snapshot
+
+	CAST and TWFOFISH seem to work now.
+
+	Includes a lambda->SK compiler.
+
+	Bugfixes.
+
 NEWS for the 1999-03-08 snapshot
 
 	No user visible changes. Added a instance variable to keep

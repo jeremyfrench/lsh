@@ -1,4 +1,17 @@
+Wed Mar 17 00:07:07 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/algorithms.c: Enable CAST. Bug fixes.
+
 Tue Mar 16 03:36:20 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/publickey_crypto.c (dh_process_server_msg,
+ 	dh_process_client_msg): Use GROUP_MEMBER to determine if dh-values
+ 	are valid. Currently, this method checks the size of the number,
+ 	but doesn't check that is indeed a member of the cyclic subgroup
+ 	used.
+
+	* src/read_packet.c (do_read_packet): Handle the case where the
+	first block contains an entire ssh packet (happens with twofish).
 
 	* src/tcpforward.c (tcpforward_foo): Use COMMAND_UNIMPLEMENTED, so
 	that the expression compiles.
