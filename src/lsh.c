@@ -1332,7 +1332,7 @@ do_lsh_default_handler(struct exception_handler *s,
     switch(e->type)
       {
       case EXC_RESOLVE:
-      case EXC_AUTH:
+      case EXC_USERAUTH:
       case EXC_SERVICE:
       case EXC_SEXP_SYNTAX:
       case EXC_SPKI_TYPE:
