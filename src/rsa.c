@@ -311,6 +311,12 @@ do_rsa_public_spki_key(struct verifier *s)
 		-1);
 }
 
+/* NOTE: To initialize an rsa verifier, one must
+ *
+ * 1. Call this function.
+ * 2. Initialize the modulo n and exponent e.
+ * 3. Call rsa_check_size.
+ */
 static void
 init_rsa_verifier(struct rsa_verifier *self, struct rsa_algorithm *params)
 {
@@ -320,6 +326,8 @@ init_rsa_verifier(struct rsa_verifier *self, struct rsa_algorithm *params)
    * automatically. */
   mpz_init(self->n);
   mpz_init(self->e);
+
+  self->size = 0;
 
   self->super.verify = do_rsa_verify;
   self->super.verify_spki = do_rsa_verify_spki;
@@ -360,7 +368,8 @@ parse_ssh_rsa_public(struct simple_buffer *buffer)
       && parse_bignum(buffer, res->n, RSA_MAX_SIZE)
       && (mpz_sgn(res->n) == 1)
       && (mpz_cmp(res->e, res->n) < 0)
-      && parse_eod(buffer))
+      && parse_eod(buffer)
+      && rsa_check_size(res))
     return &res->super;
 
   else
