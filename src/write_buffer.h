@@ -78,6 +78,5 @@ make_write_buffer(struct lsh_fd *fd, UINT32 size);
 
 int write_buffer_pre_write(struct write_buffer *buffer);
 void write_buffer_consume(struct write_buffer *buffer, UINT32 size);
-void write_buffer_close(struct write_buffer *buffer);
 
 #endif /* LSH_WRITE_BUFFER_H_INCLUDED */

@@ -154,15 +154,6 @@ void write_buffer_consume(struct write_buffer *buffer, UINT32 size)
     FLOW_CONTROL_REPORT(buffer->report, size);
 }
 
-/* FIXME: Delete this function, move the logic to close_fd_nicely or
- * something instead. */
-void write_buffer_close(struct write_buffer *buffer)
-{
-  buffer->closed = 1;
-  if (buffer->empty)
-    close_fd(buffer->fd);
-}
-
 struct write_buffer *
 make_write_buffer(struct lsh_fd *fd, UINT32 size)
 {
