@@ -719,6 +719,30 @@ safe_close(int fd)
     werror("close failed %e\n", errno);
 }
 
+/* FIXME: We need some way to report errors when the child process
+ * tries to start the child.
+ *
+ * One simple approach is to reuse the sync pipe for this. Have
+ * do_spawn read a limited amount (say 200 bytes or so) from the pipe.
+ * If it gets exactly zero, then everything is ok. If it get's some
+ * data, that should be returned to the caller in some way.
+ *
+ * In the child process, exec_shell can report errors on that fd. If
+ * it exec's the shell directly, it should first set the close-on-exec
+ * flag. If it uses the lsh-execuv mechanism, it can keep the
+ * close-on-exec-flag cleared, and pass a new command line option
+ * --error-fd to lsh-execuv. lsh-execuv can write error messages
+ * there, and then it has the responsibility of setting the close-on-exec flag.
+ *
+ * A potential problem with this approach is that the lshd server will
+ * hang until lsh-execuv is finished. One can either step back and let
+ * lsh-execuv report errors on the ordinary stderr (simplest), or use
+ * non-blocking mode for reading the syncronization pipe (probably too
+ * complex). Some non-blocking behaviour might be needed anyway,
+ * though, because of the xauth bug that results in channel data being
+ * sent before the reply to a shell request.
+ */
+
 static struct lsh_process *
 do_spawn(struct lsh_user *u,
 	 struct spawn_info *info,
