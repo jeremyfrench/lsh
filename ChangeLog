@@ -1,3 +1,10 @@
+2004-04-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_pty.c (pty_open_slave): More verbose messages on failure.
+
+	* src/write_packet.c (do_write_packet): Deleted debug output that
+	may contain passwords.
+
 2004-03-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use AC_CONFIG_AUX_DIR([.]).
