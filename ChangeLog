@@ -1,3 +1,20 @@
+2000-01-22  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/channel.c (exc_finish_channel_handler): New attribute dead,
+	to keep track of channels that have already been deallocated.
+	Reported by Markus.
+
+	* src/channel.c: Deleted some old commented-out definitions.
+
+	* src/scm/gaba.scm (type->mark): Handle space-variables with an
+	optional third argument just like pointer-variables with three
+	arguments. I.e. use the third arg as the name of a field holding
+	the current size of an array. Reported by Bazsi. For now, doesn't
+	try to free array elements (which is ok as long as the arrays are
+	used for objects subject to gc).
+
+	* configure.in: Bumped version to 0.2.5.
+
 2000-01-20  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Prefer guile if both guile and scsh are installed. 
