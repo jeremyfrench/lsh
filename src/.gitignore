@@ -26,10 +26,12 @@
 /digit_table.h
 /lsh
 /lsh-decode-key
+/lsh-execuv
 /lsh-export-key
 /lsh-keygen
 /lsh-krb-checkpw
 /lsh-make-seed
+/lsh-pam-checkpw
 /lsh-writekey
 /lsh_proxy
 /lshd
