@@ -59,6 +59,7 @@ dnl Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS(fcntl.h strings.h sys/time.h unistd.h)
 AC_CHECK_HEADERS(gmp.h)
+AC_CHECK_HEADERS(shadow.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -76,15 +77,93 @@ AC_FUNC_ALLOCA
 AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(select socket strerror strtol)
+AC_CHECK_FUNCS(getspnam)
 
 AC_REPLACE_FUNCS(poll)
 
-# Set these flags *last*, or the test programs won't compile
-case "$GCC" in
-    yes) CFLAGS="$CFLAGS -Wall -Wmissing-prototypes \
+dnl Check for broken shutdown
+AC_MSG_CHECKING(for working shutdown on AF_UNIX sockets)
+AC_CACHE_VAL(lsh_shutdown_on_unix_sockets,
+[
+AC_TRY_RUN([
+#include <stdio.h>
+
+#include <errno.h>
+
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <signal.h>
+
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+/* Creates a one-way socket connection. Returns 1 on success, 0 on
+ * failure. fds[0] is for reading, fds[1] for writing (like for the
+ * pipe() system call). */
+static int make_pipe(int *fds)
+{
+
+#ifndef SHUT_RD
+#define SHUT_RD 0
+#define SHUT_WR 1
+#define SHUT_RDWR 2
+#endif
+
+  if (socketpair(AF_LOCAL, SOCK_STREAM, 0, fds) < 0)
+    {
+      fprintf(stderr, "socketpair() failed: %s\n", strerror(errno));
+      return 0;
+    }
+  fprintf(stderr, "Created socket pair. Using fd:s %d <-- %d\n", fds[0], fds[1]);
+
+  if(shutdown(fds[0], SHUT_WR) < 0)
+    {
+      fprintf(stderr, "shutdown(%d, SHUT_WR) failed: %s\n", fds[0], strerror(errno));
+      return 0;
+    }
+  if (shutdown(fds[1], SHUT_RD) < 0)
+    {
+      fprintf(stderr, "shutdown(%d, SHUT_RD) failed: %s\n", fds[1], strerror(errno));
+      return 0;
+    }
+
+  return 1;
+}
+
+int main(int argc, char **argv)
+{
+  int fds[2];
+  
+  if (!make_pipe(fds))
+    exit(1);
+
+  if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+    {
+      fprintf("signal failed.\n");
+      exit(1);
+    }
+
+  if ( (write(fds[1], "foo", 3) < 0)
+       && (errno == EPIPE))
+    exit(1);
+
+  exit(0);
+}
+], lsh_shutdown_on_unix_sockets=yes, lsh_shutdown_on_unix_sockets=no,
+   lsh_shutdown_on_unix_sockets=yes)])
+
+AC_MSG_RESULT($lsh_shutdown_on_unix_sockets)
+if test x$lsh_shutdown_on_unix_sockets = xyes ; then
+    AC_DEFINE(SHUTDOWN_WORKS_WITH_UNIX_SOCKETS)
+fi
+
+# Set these flags *last*, or else the test programs won't compile
+if test x$GCC = xyes ; then
+    CFLAGS="$CFLAGS -Wall -Wmissing-prototypes \
                  -Wmissing-declarations -Werror"
-    ;;
-esac
+fi
 
 AC_OUTPUT(Makefile lib/Makefile include/Makefile)
 
