@@ -274,3 +274,5 @@ have not been sent already, but instead check the appropriate flags
 and do the right thing.
 
 The supplied argp is compiled even if it isn't used.
+
+Make lshd switch into deamon mode.
