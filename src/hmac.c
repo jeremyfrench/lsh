@@ -110,7 +110,7 @@ static struct mac_instance *make_hmac_instance(struct mac_algorithm *s,
   instance->houter = MAKE_HASH(self->hash);
 
   memset(pad, OPAD, self->hash->block_size);
-  memxor(pad, key, self->hash->block_size);
+  memxor(pad, key, self->hash->hash_size);
   
   HASH_UPDATE(instance->houter, self->hash->block_size, pad);
 
