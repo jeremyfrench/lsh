@@ -44,6 +44,7 @@
 #include "service.h"
 #include "sexp.h"
 #include "spki_commands.h"
+#include "srp.h" 
 #include "ssh.h"
 #include "tcpforward_commands.h"
 #include "tty.h"
@@ -199,7 +200,10 @@ make_options(struct io_backend *backend,
   self->with_publickey = 1;
 
   self->with_srp_keyexchange = 0;
-  self->with_dh_keyexchange = 1;
+
+  /* By default, enable only one of dh and srp. */
+  self->with_dh_keyexchange = -1;
+  
   self->kex_algorithms = NULL;
   
   return self;
@@ -973,9 +977,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    break;
 	  }
 
+	if (self->with_dh_keyexchange < 0)
+	  self->with_dh_keyexchange = !self->with_srp_keyexchange;
+      
 	if (self->with_dh_keyexchange || self->with_srp_keyexchange)
 	  {
-	    struct dh_method *dh = make_dh1(self->random);
 	    int i = 0;
 	    self->kex_algorithms 
 	      = alloc_int_list(self->with_dh_keyexchange + self->with_srp_keyexchange);
@@ -986,7 +992,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->kex_algorithms)[i++] = ATOM_SRP_GROUP1_SHA1;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_SRP_GROUP1_SHA1,
-			  make_srp_client(dh, ssh_format("%lz", self->user)));
+			  make_srp_client(make_srp1(self->random),
+					  ssh_format("%lz", self->user)));
 	      }
 #endif /* WITH_SRP */
 	    if (self->with_dh_keyexchange)
@@ -994,7 +1001,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			  make_dh_client(dh));
+			  make_dh_client(make_dh1(self->random)));
 	      }
 	  }
 	else
