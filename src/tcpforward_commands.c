@@ -58,8 +58,16 @@ static struct command make_tcpip_forward_handler;
 #define DIRECT_TCPIP_HANDLER (&make_direct_tcpip_handler.super)
 #define INSTALL_DIRECT_TCPIP (&install_direct_tcpip_handler.super.super.super)
 
+static struct catch_report_collect catch_channel_open;
+#define CATCH_CHANNEL_OPEN (&catch_channel_open.super.super.super)
+
 #include "tcpforward_commands.c.x"
 
+static struct report_exception_info open_tcpip_report =
+STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_OPEN, "Failed to open tcpip channel");
+
+static struct catch_report_collect catch_channel_open
+= STATIC_CATCH_REPORT(&open_tcpip_report);
 
 /* Takes a socket as argument, and returns a tcpip channel. Used by
  * the party receiving a open-tcp request, when a channel to the
@@ -74,7 +82,7 @@ do_tcpip_connect_io(struct command *ignored UNUSED,
 		    struct command_continuation *c,
 		    struct exception_handler *e UNUSED)
 {
-  CAST(io_fd, socket, x);
+  CAST(lsh_fd, socket, x);
 
   assert(socket);
 
@@ -371,7 +379,9 @@ STATIC_COLLECT_1(&collect_info_remote_listen_2);
      (expr
        (lambda (connection)
          (listen (lambda (peer)
-	           (tcpip_start_io (open_direct_tcpip target peer connection)))
+	           (tcpip_start_io
+		     (catch_channel_open 
+		       (open_direct_tcpip target peer) connection)))
 		 backend
 	         local))))
 */
@@ -526,10 +536,11 @@ STATIC_COLLECT_1(&install_tcpip_forward_info_2.super);
 	   (handler (lambda (port)
 	     ;; Called when the client requests remote forwarding
              (listen (lambda (peer)
-	               ;; Called when someone connects to the
-		       ;; forwarded port.
-                       (tcpip_start_io (open_forwarded_tcpip port peer
-		                                       connection)))
+  		       ;; Called when someone connects to the
+  		       ;; forwarded port.
+  		       (tcpip_start_io
+			 (catch_channel_open 
+			   (open_forwarded_tcpip port peer) connection)))
 	             backend port)))))))
 */
 
