@@ -31,38 +31,34 @@
 #include "xalloc.h"
 
 /* Prototypes */
-void do_mark_resources(struct resource_node *n,
+void do_mark_resources(struct lsh_queue *q,
 		       void (*mark)(struct lsh_object *o));
 
-void do_free_resources(struct resource_node *n);
+void do_free_resources(struct lsh_queue *q);
 void dont_free_live_resource(int alive);
 
 #define CLASS_DEFINE
 #include "resource.h.x"
 #undef CLASS_DEFINE
 
-void do_mark_resources(struct resource_node *n,
+void do_mark_resources(struct lsh_queue *q,
 		       void (*mark)(struct lsh_object *o))
 {
-  for(; n; n = n->next)
+  FOR_QUEUE(q, struct resource_node *, n)
     mark(&n->resource->super);
 }
 
-void do_free_resources(struct resource_node *n)
+void do_free_resources(struct lsh_queue *q)
 {
-  while(n)
-    {
-      struct resource_node *old = n;
-
-      n = n->next;
-      lsh_space_free(old);
-    }
+  FOR_QUEUE(q, struct resource_node *, n)
+    lsh_space_free(n);
 }
 
 void dont_free_live_resource(int alive)
 {
   if (alive)
-    fatal("dont_free_live_resource: About to garbage collect a live resource!\n");
+    fatal("dont_free_live_resource: "
+	  "About to garbage collect a live resource!\n");
 }
 
 static struct resource_node *do_remember_resource(struct resource_list *self,
@@ -73,32 +69,24 @@ static struct resource_node *do_remember_resource(struct resource_list *self,
   NEW_SPACE(n);
   n->resource = r;
 
-  /* Add at head of list */
-  n->next = self->head;
-  n->prev = NULL;
-  self->head = n;
-
-  if (n->next)
-    n->next->prev = n;
-  else
-    self->tail = n;
+  lsh_queue_add_head(&self->q, &n->header);
 
   return n;
 }
 
 static void do_kill_all(struct resource_list *self)
 {
-  /* FIXME: Doesn't deallocate any nodes */
-  struct resource_node *n;
+  /* FIXME: Doesn't deallocate any nodes (but gc should do that
+   * later). */
 
-  for (n = self->head; n; n = n->next)
+  FOR_QUEUE(&self->q, struct resource_node *, n)
     KILL_RESOURCE(n->resource);
 }
   
 struct resource_list *empty_resource_list(void)
 {
   NEW(resource_list, self);
-  self->head = self->tail = NULL;
+  lsh_queue_init(&self->q);
 
   self->remember = do_remember_resource;
   self->kill_all = do_kill_all;

@@ -26,25 +26,24 @@
 #include "write_buffer.h"
 
 #include "xalloc.h"
+#include "werror.h"
 
 #include <assert.h>
 #include <string.h>
 
 /* Prototype */
-static void do_free_buffer(struct buffer_node *n);
+static void do_free_buffer(struct lsh_queue *q);
 
 #define CLASS_DEFINE
 #include "write_buffer.h.x"
 #undef CLASS_DEFINE
 
-static void do_free_buffer(struct buffer_node *n)
+static void do_free_buffer(struct lsh_queue *q)
 {
-  while(n)
+  FOR_QUEUE(q, struct buffer_node *, n)
     {
-      struct buffer_node *old = n;
       lsh_string_free(n->packet);
-      n = n->next;
-      lsh_space_free(old);
+      lsh_space_free(n);
     }
 }
 
@@ -53,7 +52,9 @@ static int do_write(struct abstract_write *w,
 {
   CAST(write_buffer, closure, w);
   struct buffer_node *new;
-  
+
+  debug("write_buffer: do_write length = %i\n",
+	packet->length);
   if (!packet->length)
     {
       lsh_string_free(packet);
@@ -69,7 +70,9 @@ static int do_write(struct abstract_write *w,
   /* Enqueue packet */
   NEW_SPACE(new);
   new->packet = packet;
-  
+
+  lsh_queue_add_tail(&closure->q, &new->header);
+#if 0
   new->next = 0;
   
   if (closure->tail)
@@ -83,7 +86,8 @@ static int do_write(struct abstract_write *w,
       closure->head = new;
     }
   closure->tail = new;
-
+#endif
+  
 #if 0
   if (closure->try_write)
     {
@@ -92,7 +96,11 @@ static int do_write(struct abstract_write *w,
 #endif
 
   closure->empty = 0;
+  closure->length += packet->length;
 
+  debug("write_buffer: do_write closure->length = %i\n",
+	closure->length);
+  
   return LSH_OK | LSH_GOON;
 }
 
@@ -153,16 +161,14 @@ int write_buffer_pre_write(struct write_buffer *buffer)
       else
 	{
 	  /* Dequeue a packet, if possible */
-	  struct buffer_node *n = buffer->head;
-	  if (n)
-	    {
+	  if (!lsh_queue_is_empty(&buffer->q))
+	    {	    
+	      struct buffer_node *n =
+		(struct buffer_node *) lsh_queue_remove_head(&buffer->q);
+	      
 	      buffer->partial = n->packet;
 	      buffer->pos = 0;
-	      buffer->head = n->next;
-	      if (buffer->head)
-		buffer->head->prev = 0;
-	      else
-		buffer->tail = 0;
+
 	      lsh_space_free(n);
 	    }
 	  else
@@ -171,6 +177,13 @@ int write_buffer_pre_write(struct write_buffer *buffer)
     }
   buffer->empty = !length;
   return !buffer->empty;
+}
+
+void write_buffer_consume(struct write_buffer *buffer, UINT32 size)
+{
+  buffer->start += size;
+  assert(buffer->start <= buffer->end);
+  buffer->length -= size;
 }
 
 void write_buffer_close(struct write_buffer *buffer)
@@ -189,13 +202,15 @@ struct write_buffer *write_buffer_alloc(UINT32 size)
   res->buffer = lsh_space_alloc(2 * size);
   
   res->empty = 1;
+  res->length = 0;
+  
   res->closed = 0;
   
 #if 0
   res->try_write = try; 
 #endif
   
-  res->head = res->tail = 0;
+  lsh_queue_init(&res->q);
 
   res->pos = 0;
   res->partial = NULL;
@@ -204,3 +219,5 @@ struct write_buffer *write_buffer_alloc(UINT32 size)
 
   return res;
 }
+
+  

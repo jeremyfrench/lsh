@@ -28,7 +28,7 @@
 #ifndef LSH_RESOURCE_H_INCLUDED
 #define LSH_RESOURCE_H_INCLUDED
 
-#include "lsh.h"
+#include "queue.h"
 
 #define CLASS_DECLARE
 #include "resource.h.x"
@@ -49,15 +49,10 @@
 
 /* For the resource list. It is doubly linked to make removing
  * elements easy. */
-/* NOTE: No object header */
-/* NOTE: This list is very similar to the packet queue in
- * write_buffer.h. It may be a good idea to write a more general
- * doubly linked list. */
 
 struct resource_node
 {
-  struct resource_node *next;
-  struct resource_node *prev;
+  struct lsh_queue_node header;
   struct resource *resource;
 };
 
@@ -67,9 +62,8 @@ struct resource_node
    (class
      (name resource_list)
      (vars
-       (head special "struct resource_node *"
-                     do_mark_resources do_free_resources)
-       (tail simple "struct resource_node *")
+       (q special-struct "struct lsh_queue"
+                         do_mark_resources do_free_resources)
 
        ; Returns the node.
        ; NOTE: This pointer should only be stored together with

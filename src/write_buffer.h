@@ -27,6 +27,7 @@
 #define LSH_WRITE_BUFFER_H_INCLUDED
 
 #include "abstract_io.h"
+#include "queue.h"
 
 #define CLASS_DECLARE
 #include "write_buffer.h.x"
@@ -36,8 +37,7 @@
 /* NOTE: No object header */
 struct buffer_node
 {
-  struct buffer_node *next;
-  struct buffer_node *prev;
+  struct lsh_queue_node header;
   struct lsh_string *packet;
 };
 
@@ -50,15 +50,17 @@ struct buffer_node
        (buffer space UINT8)        ; Size is twice the blocksize 
        (empty simple int)
 
+       ; Total amount of data currently in the buffer)
+       (length . UINT32)
+       
        ; If non-zero, don't accept any more data. The i/o-channel
        ; should be closed once the current buffers are flushed. 
        (closed simple int)
 
        ;; (try_write simple int)
 
-       (head special "struct buffer_node *"
+       (q special-struct "struct lsh_queue"
                      #f do_free_buffer)
-       (tail simple "struct buffer_node *")
 
        (pos simple UINT32)        ; Partial packet
        (partial string)
@@ -69,6 +71,7 @@ struct buffer_node
 
 struct write_buffer *write_buffer_alloc(UINT32 size);
 int write_buffer_pre_write(struct write_buffer *buffer);
+void write_buffer_consume(struct write_buffer *buffer, UINT32 size);
 void write_buffer_close(struct write_buffer *buffer);
 
 #endif /* LSH_WRITE_BUFFER_H_INCLUDED */
