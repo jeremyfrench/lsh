@@ -68,17 +68,17 @@
 #include "lsh_argp.h"
 
 /* Forward declarations */
-struct command_simple lsh_verifier_command;
+struct command_2 lsh_verifier_command;
 #define OPTIONS2VERIFIER (&lsh_verifier_command.super.super)
 
-struct command_simple lsh_login_command;
+struct command_2 lsh_login_command;
 #define LSH_LOGIN (&lsh_login_command.super.super)
 
 static struct command options2known_hosts;
 #define OPTIONS2KNOWN_HOSTS (&options2known_hosts.super)
 
-struct command_simple options2service;
-#define OPTIONS2SERVICE (&options2service.super.super)
+struct command options2service;
+#define OPTIONS2SERVICE (&options2service.super)
 
 static struct command options2identities;
 #define OPTIONS2IDENTITIES (&options2identities.super)
@@ -180,10 +180,14 @@ make_options(struct io_backend *backend,
 
 /* Request ssh-userauth or ssh-connection service, as appropriate,
  * and pass the options as a first argument. */
-DEFINE_COMMAND_SIMPLE(options2service, a)
+DEFINE_COMMAND(options2service)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(lsh_options, options, a);
-  return &options->service->super;
+  COMMAND_RETURN(c, options->service);
 }
 
 /* Open hostkey database. By default, "~/.lsh/known_hosts". */
@@ -278,27 +282,6 @@ do_options2identities(struct command *ignored UNUSED,
 static struct command options2identities =
 STATIC_COMMAND(do_options2identities);
 
-/* GABA:
-   (class
-     (name options_command)
-     (super command)
-     (vars
-       (options object lsh_options)))
-*/
-
-static struct command *
-make_options_command(struct lsh_options *options,
-		     void (*call)(struct command *s,
-				  struct lsh_object *a,
-				  struct command_continuation *c,
-				  struct exception_handler *e))
-{
-  NEW(options_command, self);
-  self->super.call = call;
-  self->options = options;
-
-  return &self->super;
-}
 
 /* Maps a host key to a (trusted) verifier object. */
 
@@ -492,49 +475,43 @@ make_lsh_host_db(struct spki_context *db,
   return &res->super;
 }
 
-/* Takes an spki_context as argument and returns a lookup_verifier */
-static void
-do_lsh_verifier(struct command *s,
-		struct lsh_object *a,
-		struct command_continuation *c,
-		struct exception_handler *e UNUSED)
+/* Takes options and an spki_context as argument and returns a
+ * lookup_verifier */
+
+DEFINE_COMMAND2(lsh_verifier_command)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
-  CAST(options_command, self, s);
-  CAST_SUBTYPE(spki_context, db, a);
+  CAST(lsh_options, options, a1);
+  CAST_SUBTYPE(spki_context, db, a2);
   COMMAND_RETURN(c, make_lsh_host_db(db,
-				     self->options->super.tty,
-				     self->options->super.remote,
-				     self->options->sloppy,
-				     self->options->capture_file));
+				     options->super.tty,
+				     options->super.remote,
+				     options->sloppy,
+				     options->capture_file));
 }
 
-/* Takes an options object as argument and returns a lookup_verifier */
 
-DEFINE_COMMAND_SIMPLE(lsh_verifier_command, a)
+/* (login options public-keys connection) */
+DEFINE_COMMAND2(lsh_login_command)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
-  CAST(lsh_options, options, a);
-
-  return
-    & make_options_command(options,
-			   do_lsh_verifier)->super;
-}
-
-/* list-of-public-keys -> login-command */
-static void
-do_lsh_login(struct command *s,
-	     struct lsh_object *a,
-	     struct command_continuation *c,
-	     struct exception_handler *e UNUSED)
-{
-  CAST(options_command, self, s);
-  CAST_SUBTYPE(object_list, keys, a);
+  CAST(lsh_options, options, a1);
+  CAST_SUBTYPE(object_list, keys, a2);
 
   struct client_userauth_method *password
-    = make_client_password_auth(self->options->super.tty);
+    = make_client_password_auth(options->super.tty);
   
   COMMAND_RETURN(c,
 		 make_client_userauth
-		 (ssh_format("%lz", self->options->super.user),
+		 (ssh_format("%lz", options->super.user),
 		  ATOM_SSH_CONNECTION,
 		  (LIST_LENGTH(keys)
 		   ? make_object_list
@@ -545,17 +522,8 @@ do_lsh_login(struct command *s,
 		   : make_object_list(1, password, -1))));
 }
 
-/* (login options public-keys connection) */
-DEFINE_COMMAND_SIMPLE(lsh_login_command, a)
-{
-  CAST(lsh_options, options, a);
 
-  return
-    &make_options_command(options,
-			  do_lsh_login)->super;
-}
-
-/* NOTE: options2identities is a command_simple, so it must not be
+/* NOTE: options2identities can block for reading, so it must not be
  * invoked directly. */
 
 /* Requests the ssh-userauth service, log in, and request connection
@@ -569,8 +537,8 @@ DEFINE_COMMAND_SIMPLE(lsh_login_command, a)
        (lambda (connection)
          (lsh_login options
 	   
-	   ; The prog1 delay is needed because options2identities is
-	   ; not a command_simple.
+	   ; The prog1 delay is needed because options2identities
+	   ; may not return immediately.
 	   (options2identities (prog1 options connection))
 
 	   ; Request the userauth service
