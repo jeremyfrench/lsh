@@ -56,7 +56,12 @@
 	((null? (cdr list)) list)
 	(else `(,(car list) ,separator ,@(implode (cdr list) separator)))))
 
-(define (atom? x) (or (symbol? x) (string? x)))
+(define (list-prefix l n)
+  (if (zero? n) '()
+      (cons (car l) (list-prefix (cdr l) (- n 1)))))
+
+(define (atom? o) (not (list? o)))
+;; (define (atom? x) (or (symbol? x) (string? x)))
 
 ;; Variables are describes as lists (name . type)
 ;; Known types (and corresponding C declarations) are
@@ -92,7 +97,8 @@
       (type->category `(simple ,type))
       (let ((tag (car type)))
 	(case tag
-	  ((string object simple special special-struct space bignum struct) tag)
+	  ((string object simple special special-struct
+	    space bignum struct) tag)
 	  ((array var-array pointer) (type->category (cadr type)))
 	  
 	  (else (error "make_class: type->category: Invalid type" type))))))
@@ -143,7 +149,8 @@
 	((special) (let ((mark-fn (caddr type)))
 		     (and mark-fn (list mark-fn "(" expr ", mark);\n"))))
 	((special-struct) (let ((mark-fn (caddr type)))
-			    (and mark-fn (list mark-fn "(&(" expr "), mark);\n"))))
+			    (and mark-fn (list mark-fn "(&(" expr
+					       "), mark);\n"))))
 	
 	;; FIXME: Doesn't handle nested arrays
 	((array)
@@ -213,39 +220,10 @@
 		      "}\n"))))
 
 	(else (error "make_class: type->init: Invalid type" type)))))
-!#  
-  
-#!
-(define var-category car)
-(define var-type cadr)
-(define var-name caddr)
-(define var-extra cdddr)
-(define var-args var-extra)
-(define (var-marker x) (car (var-extra x)))
-(define (var-freer x) (cadr (var-extra x)))
-
-(define (c-declare type name)
-  (if (pair? type)
-      (let ((modifier (car type))
-	    (base (cadr type))
-	    (args (cddr type)))
-	(case modifier
-	  ((pointer)
-	   (c-declare base (list "(* (" name "))")))
-	  ((array)
-	   (c-declare base (list "(" name ")[" (car args) "]")))
-	  ((function)
-	   (c-declare base (list "(" name ")(" (implode args ", ") ")")))
-	  (else (list "#error UNKNOWN MODIFIER " modifier))))
-      (list type " " name)))
 !#
 
 (define var-name car)
 (define var-type cdr)
-
-;; FIXME: Method declarations could be made more friendly. For instance
-;; (method int name ("struct foo *arg")) rather than
-;; (method (function int "struct this_type *self struct foo *arg") name)
 
 (define (fix-method name var)
   (let ((type (var-type var))
@@ -254,10 +232,12 @@
 	var
 	(case (car type)
 	  ((method)
-	   `(,variable pointer (function ,(cadr type) ("struct " ,name " *self")
+	   `(,variable pointer (function ,(cadr type)
+					 ("struct " ,name " *self")
 					 ,@(cddr type))))
 	  ((indirect-method)
-	   `(,variable pointer (function ,(cadr type) ("struct " ,name " **self")
+	   `(,variable pointer (function ,(cadr type)
+					 ("struct " ,name " **self")
 					 ,@(cddr type))))
 	  (else var)))))
 
@@ -387,80 +367,156 @@
       (list "struct lsh_class " name "_class =\n"
 	    initializer ";\n")))
 
-(define (process-class exp)
-  (let ((type (car exp))
-	(attributes (cdr exp)))
-    ; (werror "process-class: type = ~S\n" type)
-    (case type
-      ((class)
-       (let ((name (get 'name attributes cadr))
-	     (super (get 'super attributes cadr))
-	     (raw-vars (get 'vars attributes cdr))
-	     (meta (get 'meta attributes cadr))
-	     (methods (get 'methods attributes cdr)))
-	 (werror "Processing class ~S\n" name)
-	 ; (werror "foo\n")
-	 (let ((vars (map (lambda (var) (fix-method name var))
-			  raw-vars)))
-	   (let ((mark-function (do-mark-function name vars))
-		 (free-function (do-free-function name vars)))
-	     ; (werror "baar\n")
-	     (list "#ifndef CLASS_DEFINE\n"	
-		   (do-instance-struct name super vars)
-		   (if meta
-		       (list "extern struct " meta "_meta "
-			     name "_class_extended;\n")
-		       (list "extern struct lsh_class " name "_class;\n"))
-		   "#endif /* !CLASS_DEFINE */\n\n"
-		   "#ifndef CLASS_DECLARE\n"
-		   (or mark-function "")
-		   (or free-function "")
-		   (do-class name super mark-function free-function
-			     meta methods)
-		   "#endif /* !CLASS_DECLARE */\n\n")))))
-      ((meta)
-       (let ((name (get 'name attributes cadr))
-	     (methods (get 'methods attributes cdr)))
-	 (werror "Processing meta ~S\n" name)
-	 (list "#ifndef CLASS_DEFINE\n"
-	       "struct " name "_meta\n"
-	       "{\n"
-	       "  struct lsh_class super;\n"
-	       (map (lambda (m) (list "  " m ";\n"))
-		    methods)
-	       "};\n"
-	       "#endif /* !CLASS_DEFINE */\n\n")))
-      ((struct)
-       (let ((name (get 'name attributes cadr))
-	     (super (get 'super attributes cadr))
-	     (raw-vars (get 'vars attributes cdr))
-	     (meta (get 'meta attributes cadr))
-	     (methods (get 'methods attributes cdr)))
-	 (werror "Processing struct ~S\n" name)
-	 ; (werror "foo\n")
-	 ;; FIXME: Is this really needed?
-	 (let ((vars (map (lambda (var) (fix-method name var))
-			  raw-vars)))
-	   ; (werror "baar\n")
-	   (list "#ifndef CLASS_DEFINE\n"	
-		 (do-struct name super vars)
-		 "extern " (declare-struct-mark-function name) ";\n"
-		 "extern " (declare-struct-free-function name) ";\n"
-		 "#endif /* !CLASS_DEFINE */\n\n"
-		 "#ifndef CLASS_DECLARE\n"
-		 (do-struct-mark-function name vars)
-		 (do-struct-free-function name vars)
-		 "#endif /* !CLASS_DECLARE */\n\n"))))
+(define (process-class attributes)
+  (let ((name (get 'name attributes cadr))
+	(super (get 'super attributes cadr))
+	(raw-vars (get 'vars attributes cdr))
+	(meta (get 'meta attributes cadr))
+	(methods (get 'methods attributes cdr)))
+    (werror "Processing class ~S\n" name)
+    ; (werror "foo\n")
+    (let ((vars (map (lambda (var) (fix-method name var))
+		     raw-vars)))
+      (let ((mark-function (do-mark-function name vars))
+	    (free-function (do-free-function name vars)))
+	; (werror "baar\n")
+	(list "#ifndef CLASS_DEFINE\n"	
+	      (do-instance-struct name super vars)
+	      (if meta
+		  (list "extern struct " meta "_meta "
+			name "_class_extended;\n")
+		  (list "extern struct lsh_class " name "_class;\n"))
+	      "#endif /* !CLASS_DEFINE */\n\n"
+	      "#ifndef CLASS_DECLARE\n"
+	      (or mark-function "")
+	      (or free-function "")
+	      (do-class name super mark-function free-function
+			meta methods)
+	      "#endif /* !CLASS_DECLARE */\n\n")))))
 
+(define (process-meta attributes)
+  (let ((name (get 'name attributes cadr))
+	(methods (get 'methods attributes cdr)))
+    (werror "Processing meta ~S\n" name)
+    (list "#ifndef CLASS_DEFINE\n"
+	  "struct " name "_meta\n"
+	  "{\n"
+	  "  struct lsh_class super;\n"
+	  (map (lambda (m) (list "  " m ";\n"))
+	       methods)
+	  "};\n"
+	  "#endif /* !CLASS_DEFINE */\n\n")))
+
+(define (process-struct attributes)
+  (let ((name (get 'name attributes cadr))
+	(super (get 'super attributes cadr))
+	(raw-vars (get 'vars attributes cdr))
+	(meta (get 'meta attributes cadr))
+	(methods (get 'methods attributes cdr)))
+    (werror "Processing struct ~S\n" name)
+    ; (werror "foo\n")
+    ;; FIXME: Is this really needed?
+    (let ((vars (map (lambda (var) (fix-method name var))
+		     raw-vars)))
+      ; (werror "baar\n")
+      (list "#ifndef CLASS_DEFINE\n"	
+	    (do-struct name super vars)
+	    "extern " (declare-struct-mark-function name) ";\n"
+	    "extern " (declare-struct-free-function name) ";\n"
+	    "#endif /* !CLASS_DEFINE */\n\n"
+	    "#ifndef CLASS_DECLARE\n"
+	    (do-struct-mark-function name vars)
+	    (do-struct-free-function name vars)
+	    "#endif /* !CLASS_DECLARE */\n\n"))))
+
+;;;; Expression compiler
+
+(load 'compiler)
+
+;; Constants is an alist of (name value call_1 call_2 ... call_n)
+;; where value is a C expression representing the value. call_i is
+;; present, it is a function that can be called to apply the value to
+;; i arguments directly.
+(define (make-output constants)
+  ;; OP and ARGS are C expressons
+  (define (apply-generic op args)
+    (werror "(apply-generic ~S)\n" (cons op args))
+    (if (null? args) op
+	(apply-generic (list "A(" op ", " (car args) ")")
+		       (cdr args))))
+  ;; INFO is the (value [n]) associated with a constant,
+  ;; and ARGS is a list of C expressions
+  (define (apply-constant info args)
+    (werror "apply-constant : ~S\n" info)
+    (werror "          args : ~S\n" args)
+    (let ((calls (cdr info)))
+      (if (null? calls)
+	(apply-generic (car info) args)
+	(let ((n (min (length calls) (length args))))
+	  (werror "n: ~S\n" n)
+	  (apply-generic (list (nth info n)
+			       "(" (implode (list-prefix args n) ", ") ")")
+			 (list-tail args n))))))
+  (define (lookup-global v)
+    (cond ((assq v constants) => cdr)
+	  (else (error "make_class: undefined global" v))))
+
+  (define (output-expression expr)
+    (werror "output-expression ~S\n" expr)
+    (if (atom? expr)
+	(car (lookup-global expr))
+	(let ((op (application-op expr))
+	      (args (map output-expression (application-args expr))))
+	  (if (atom? op)
+	      (apply-constant (cdr (lookup-global op)) args)
+	      (apply-generic op args)))))
+  output-expression)
+
+(define (process-expr attributes)
+  (werror "foo\n")
+  (let ((name (get 'name attributes cadr))
+	(globals (or (get 'globals attributes cdr) '()))
+	(expr (get 'expr attributes cadr)))
+    (werror "Processing expression ~S\n" name)
+    (list "struct lsh_object *" name "(void)\n{\n"
+	  "#define A GABA_APPLY\n"
+	  "#define S GABA_VALUE_S\n"
+	  "#define S1 GABA_APPLY_S_1\n"
+	  "#define S2 GABA_APPLY_S_2\n"
+	  "#define K GABA_VALUE_K\n"
+	  "#define K1 GABA_APPLY_K_1\n"
+	  "  return\n    "
+	  ((make-output (append '( (S S S1 S2)
+				   (K K K1))
+				globals))
+	   (translate expr))
+	  ";\n"
+	  "#undef A\n"
+	  "#undef S\n"
+	  "#undef S1\n"
+	  "#undef S2\n"
+	  "#undef K\n"
+	  "#undef K1\n"
+	  "}\n")))
+
+(define (process-input exp)
+  (let ((type (car exp))
+	(body (cdr exp)))
+    (werror "process-class: type = ~S\n" type)
+    (case type
+      ((class) (process-class body))
+      ((meta) (process-meta body))
+      ((struct) (process-struct body))
+      ((expr) (process-expr body))
       (else (list "#error Unknown expression type " type "\n")))))
 
 (define main
-  (let ((test (lambda (s) (string-prefix? "/* CLASS:" s))))
+  (let ((test (lambda (s) (string-prefix? "/* GABA:" s))))
     (lambda args
       (let ((exp (read-expression test)))
 	(if (not (eof-object? exp))
 	    (begin
-	      (display (append-deep (process-class exp)))
+	      (display (append-deep (process-input exp)))
 	      (main)))))))
 
 ; (main)
