@@ -1,5 +1,23 @@
 2001-01-31  Niels Möller  <nisse@ehand.com>
 
+	* src/server_publickey.c (do_authenticate): Include algorithm atom
+	in "Unknown publickey algorithm"-message.
+
+	* src/process_atoms (table): Fixed first reverse entry, {
+	"UNKNOWN", 7}.
+
+	* src/lsh-authorize: Redirect output from the type command to
+	/dev/null. 
+
+	* src/server_password.c (do_authenticate): Don't free the username
+	twice.
+
+	* src/server_authorization.c (do_key_lookup): Support ssh-rsa
+	keys.
+
+	* src/lshd.c (main_argp_parser): Support RSA keys for publickey
+	userauth.
+
 	* src/io.c (io_iter): Changed POLLHUP handling some more. Now
 	POLLHUP && !POLLIN is treated as EOF.
 
