@@ -1,3 +1,10 @@
+2000-07-31  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/server_publickey.c (do_authenticate): Fail nicely if key is
+	not authorized.
+
+	* src/lsh-authorize: Fixed broken references to sexp_conv. 
+
 2000-07-28  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Bumped version to 1.0.2.
