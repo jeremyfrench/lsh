@@ -39,37 +39,27 @@
 
 #define EMPTYP(q) ((q)->tailprev == (struct lsh_queue_node *) (q))
 
-#if 1
+#if DEBUG_ALLOC
 static void sanity_check_queue(struct lsh_queue *q)
 {
   struct lsh_queue_node *n;
 
+#if 0
   debug("sanity_check_queue: q = %xi\n", (UINT32) q);
+#endif
   if (q->tail)
     fatal("sanity_check_queue: q->tail not NULL!\n");
 
   n = q->head;
 
-#if 0
-  if (EMPTYP(q))
-    {
-      debug("  queue is empty\n");
-      if (n->prev)
-	fatal("sanity_check_queue: "
-	      "Queue looks empty, but n->prev not NULL!\n");
-      if (q->tail != (struct lsh_queue_node *) q)
-	fatal("sanity_check_queue: "
-	      "Queue looks empty, but q->tail != q !\n");
-      return;
-    }
-#endif
   if (n->prev != (struct lsh_queue_node *) q)
     fatal("sanity_check_queue: head->next != &q->head !\n");
 
   while (n->next)
     {
+#if 0
       debug("  n = %xi\n", (UINT32) n);
-      
+#endif 
       if (n->prev->next != n)
 	fatal("n->prev->next != n !\n");
 
