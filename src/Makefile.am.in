@@ -43,6 +43,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	client.c client_keyexchange.c client_password.c client_pty.c \
 	client_userauth.c \
 	combinators.c command.c compress.c connection.c connection_commands.c \
+	daemon.c \
 	debug.c des.c digits.c disconnect.c dsa.c dsa_keygen.c encrypt.c \
 	exception.c \
 	format.c gc.c hmac.c idea.c io.c io_commands.c keyexchange.c \
@@ -122,7 +123,6 @@ EXTRA_DIST = atoms.in process_atoms \
 	$(generated_sources) \
 	sexp_chars.in \
 	getopt.h getopt.c getopt1.c \
-	mempcpy.h strndup.h \
 	jpoll.h jpoll.c \
 	$(cvs_headers) $(dist_x_files) Makefile.am.in 
 
