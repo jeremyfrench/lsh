@@ -1,3 +1,43 @@
+Mon Jun 21 19:11:57 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_session.c (make_server_connection_service):
+	Reorganized the commands to initialize a connection.
+
+	* src/lshd.c: Use the "hook"-mechanism to install handlers on the
+	connection. 
+
+	* src/lsh.c (main): Don't use the old function
+ 	make_connection_service.
+
+	* src/io_commands.c (connect_port): Renamed from
+	connect_connection.
+	(connect_connection): New command.
+
+	* src/connection_commands.c (do_connection_remember): Commented
+	out this unused function.
+
+	* src/channel_commands.h (STATIC_INSTALL_GLOBAL_HANDLER): New
+	macro. Currently broken.
+	(STATIC_INSTALL_OPEN_HANDLER): -"-
+
+	* src/channel_commands.c (make_install_fix_channel_open_handler):
+	New function.
+	(make_install_fix_global_request_handler): -"-
+
+	* src/channel.c: Keep information about channel_types and
+	global_requests in the channel_table, rather than in the packet
+	handlers. 
+	(make_connection_service): Removed this function. The command is
+	now statically allocated.
+
+1999-06-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/command.h (STATIC_COLLECT_1_FINAL): Commented out this
+	redundant macro.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added
+	tcpforward_commands.c. 
+
 1999-06-17  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/tcpforward.c, src/tcpforward_commands.c: Reorganization.
