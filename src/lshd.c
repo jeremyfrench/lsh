@@ -111,12 +111,17 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_NO_PIDFILE (OPT_PIDFILE | OPT_NO)
 #define OPT_CORE 0x207
 
-#define OPT_PUBLICKEY 0x208
+#define OPT_SRP 0x210
+#define OPT_NO_SRP (OPT_SRP | OPT_NO)
+#define OPT_DH 0x211
+#define OPT_NO_DH (OPT_DH | OPT_NO)
+
+#define OPT_PUBLICKEY 0x220
 #define OPT_NO_PUBLICKEY (OPT_PUBLICKEY | OPT_NO)
-#define OPT_PASSWORD 0x209
+#define OPT_PASSWORD 0x221
 #define OPT_NO_PASSWORD (OPT_PASSWORD | OPT_NO)
 
-#define OPT_ROOT_LOGIN 0x20A
+#define OPT_ROOT_LOGIN 0x222
 #define OPT_NO_ROOT_LOGIN (OPT_ROOT_LOGIN | OPT_NO)
 
 /* GABA:
@@ -125,6 +130,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (super algorithms_options)
      (vars
        (backend object io_backend)
+       (random object randomness)
        (signature_algorithms object alist)
        (style . sexp_argp_state)
        (interface . "char *")
@@ -132,6 +138,12 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (hostkey . "char *")
        (local object address_info)
 
+       (with_srp_keyexchange . int)
+       (with_dh_keyexchange . int)
+
+       ;; (kexinit object make_kexinit)
+       (kex_algorithms object int_list)
+       
        (with_publickey . int)
        (with_password . int)
        (allow_root . int)
@@ -151,18 +163,18 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 */
 
 static struct lshd_options *
-make_lshd_options(struct io_backend *backend,
-		  struct randomness *random,
-		  struct alist *algorithms)
+make_lshd_options(struct io_backend *backend)
 {
   NEW(lshd_options, self);
 
-  init_algorithms_options(&self->super, algorithms);
+  init_algorithms_options(&self->super, many_algorithms(0, -1));
 
   self->backend = backend;
+  self->random = make_reasonably_random();
+  
   self->signature_algorithms
     = make_alist(1,
-		 ATOM_DSA, make_dsa_algorithm(random), -1);
+		 ATOM_DSA, make_dsa_algorithm(self->random), -1);
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
 
@@ -174,6 +186,11 @@ make_lshd_options(struct io_backend *backend,
   self->hostkey = "/etc/lsh_host_key";
   self->local = NULL;
 
+  self->with_dh_keyexchange = 1;
+  self->with_srp_keyexchange = 0;
+
+  self->kex_algorithms = NULL;
+  
   self->with_publickey = 1;
   self->with_password = 1;
   self->with_tcpip_forward = 1;
@@ -244,6 +261,14 @@ main_options[] =
   { "port", 'p', "Port", 0, "Listen on this port.", 0 },
   { "host-key", 'h', "Key file", 0, "Location of the server's private key.", 0},
 
+#if WITH_SRP
+  { "srp-keyexchange", OPT_SRP, NULL, 0, "Enable experimental SRP support.", 0 },
+  { "no-srp-keyexchange", OPT_NO_SRP, NULL, 0, "Disable experimental SRP support (default).", 0 },
+#endif /* WITH_SRP */
+
+  { "dh-keyexchange", OPT_DH, NULL, 0, "Enable DH support (default).", 0 },
+  { "no-dh-keyexchange", OPT_NO_DH, NULL, 0, "Disable DH support.", 0 },
+  
 #if WITH_SSH1_FALLBACK
   { "ssh1-fallback", OPT_SSH1_FALLBACK, "File name", OPTION_ARG_OPTIONAL,
     "Location of the sshd1 program, for falling back to version 1 of the Secure Shell protocol.", 0 },
@@ -314,54 +339,99 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 #endif  
     case ARGP_KEY_END:
-      if (self->port)
-	self->local = make_address_info_c(arg, self->port, 0);
-      else
-	self->local = make_address_info_c(arg, "ssh", 22);
-      
-      if (!self->local)
-	argp_error(state, "Invalid interface, port or service, %s:%s'.",
-		   self->interface ? self->interface : "ANY",
-		   self->port);
-      if (self->use_pid_file < 0)
-	self->use_pid_file = self->daemonic;
-
-      if (self->with_password || self->with_publickey)
-	{
-	  int i = 0;
-	  struct user_db *db = make_unix_user_db(self->backend, self->allow_root);
+      {
+	struct user_db *db = NULL;
+	
+	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
+	  db = make_unix_user_db(self->backend, self->allow_root);
 	  
-	  self->userauth_methods
-	    = alloc_int_list(self->with_password + self->with_publickey);
-	  self->userauth_algorithms = make_alist(0, -1);
+	if (self->with_dh_keyexchange || self->with_srp_keyexchange)
+	  {
+	    struct dh_method *dh = make_dh1(self->random);
+	    int i = 0;
+	    self->kex_algorithms 
+	      = alloc_int_list(self->with_dh_keyexchange + self->with_srp_keyexchange);
+	    
+	    if (self->with_dh_keyexchange)
+	      {
+		LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
+		ALIST_SET(self->super.algorithms,
+			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+			  make_dh_server(dh));
+	      }
+#if WITH_SRP	    
+	    if (self->with_srp_keyexchange)
+	      {
+		assert(db);
+		LIST(self->kex_algorithms)[i++] = ATOM_SRP_GROUP1_SHA1;
+		ALIST_SET(self->super.algorithms,
+			  ATOM_SRP_GROUP1_SHA1,
+			  make_srp_server(dh, db));
+	      }
+#endif /* WITH_SRP */
+	    
+#if 0
+	    self->kexinit
+	      = make_simple_kexinit(self->random,
+				    kex_algorithms,
+				    make_int_list(1, ATOM_SSH_DSS, -1),
+				    self->super.crypto_algorithms,
+				    self->super.mac_algorithms,
+				    self->super.compression_algorithms,
+				    make_int_list(0, -1));
+#endif
+	  }
+	else
+	  argp_error(state, "All keyexchange algorithms disabled.");
 
-	  if (self->with_password)
-	    {
-	      LIST(self->userauth_methods)[i++] = ATOM_PASSWORD;
-	      ALIST_SET(self->userauth_algorithms,
-			ATOM_PASSWORD, make_userauth_password(db));
-	    }
-	  if (self->with_publickey)
-	    {
-	      /* Doesn't use spki */
-	      LIST(self->userauth_methods)[i++] = ATOM_PUBLICKEY;
-	      ALIST_SET(self->userauth_algorithms,
-			ATOM_PUBLICKEY,
-			make_userauth_publickey
-			(db,
-			 make_alist(1,
-				    ATOM_SSH_DSS,
-				    make_authorization_db(ssh_format("authorized_keys_sha1"),
-							  &sha1_algorithm),
-				    
-				    -1)));
-	    }
-	}
-      else
-	argp_error(state, "All user authentication methods disabled.");
+	if (self->port)
+	  self->local = make_address_info_c(arg, self->port, 0);
+	else
+	  self->local = make_address_info_c(arg, "ssh", 22);
       
-      break;
-      
+	if (!self->local)
+	  argp_error(state, "Invalid interface, port or service, %s:%s'.",
+		     self->interface ? self->interface : "ANY",
+		     self->port);
+
+	if (self->use_pid_file < 0)
+	  self->use_pid_file = self->daemonic;
+
+	if (self->with_password || self->with_publickey)
+	  {
+	    int i = 0;
+	    
+	    self->userauth_methods
+	      = alloc_int_list(self->with_password + self->with_publickey);
+	    self->userauth_algorithms = make_alist(0, -1);
+	    
+	    if (self->with_password)
+	      {
+		LIST(self->userauth_methods)[i++] = ATOM_PASSWORD;
+		ALIST_SET(self->userauth_algorithms,
+			  ATOM_PASSWORD, make_userauth_password(db));
+	      }
+	    if (self->with_publickey)
+	      {
+		/* Doesn't use spki */
+		LIST(self->userauth_methods)[i++] = ATOM_PUBLICKEY;
+		ALIST_SET(self->userauth_algorithms,
+			  ATOM_PUBLICKEY,
+			  make_userauth_publickey
+			  (db,
+			   make_alist(1,
+				      ATOM_SSH_DSS,
+				      make_authorization_db(ssh_format("authorized_keys_sha1"),
+							    &sha1_algorithm),
+				      
+				      -1)));
+	      }
+	  }
+	else
+	  argp_error(state, "All user authentication methods disabled.");
+	
+	break;
+      }
     case 'p':
       self->port = arg;
       break;
@@ -380,6 +450,22 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 #endif
 
+    case OPT_SRP:
+      self->with_srp_keyexchange = 1;
+      break;
+
+    case OPT_NO_SRP:
+      self->with_srp_keyexchange = 0;
+      break;
+      
+    case OPT_DH:
+      self->with_dh_keyexchange = 1;
+      break;
+
+    case OPT_NO_DH:
+      self->with_dh_keyexchange = 0;
+      break;
+      
     case OPT_PASSWORD:
       self->with_password = 1;
       break;
@@ -522,9 +608,6 @@ int main(int argc, char **argv)
   
   struct reap *reaper;
   
-  struct randomness *r;
-  struct alist *algorithms;
-  
   NEW(io_backend, backend);
   init_backend(backend);
 
@@ -535,14 +618,7 @@ int main(int argc, char **argv)
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
-  r = make_reasonably_random();
-  
-  algorithms = many_algorithms(1,
-			       ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			       make_dh_server(make_dh1(r)),
-			       -1);
-  
-  options = make_lshd_options(backend, r, algorithms);
+  options = make_lshd_options(backend);
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -625,17 +701,16 @@ int main(int argc, char **argv)
 			     "lsh - a free ssh",
 			     NULL,
 			     SSH_MAX_PACKET,
-			     r,
-			     algorithms,
-			     make_simple_kexinit(
-			       r,
-			       make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-					     -1),
-			       make_int_list(1, ATOM_SSH_DSS, -1),
-			       options->super.crypto_algorithms,
-			       options->super.mac_algorithms,
-			       options->super.compression_algorithms,
-			       make_int_list(0, -1)),
+			     options->random,
+			     options->super.algorithms,
+			     make_simple_kexinit
+			     (options->random,
+			      options->kex_algorithms,
+			      make_int_list(1, ATOM_SSH_DSS, -1),
+			      options->super.crypto_algorithms,
+			      options->super.mac_algorithms,
+			      options->super.compression_algorithms,
+			      make_int_list(0, -1)),
 			     options->sshd1),
 	 make_offer_service
 	 (make_alist
