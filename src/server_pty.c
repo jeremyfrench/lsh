@@ -210,8 +210,9 @@ int tty_setctty(struct pty_info *pty)
     fd = open(pty->tty_name->data, O_RDWR);
     if (fd < 0)
       {
-	werror("tty_setctty: unlockpt() failed,\n"
-	       "   (errno = %i): %z\n", errno, strerror(errno));
+	werror("tty_setctty: open(\"%z\") failed,\n"
+	       "   (errno = %i): %z\n",
+	       pty->tty_name->data, errno, strerror(errno));
 	return 0;
       }
     close(fd);
