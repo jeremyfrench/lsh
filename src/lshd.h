@@ -49,17 +49,21 @@ enum service_state
 # include "lshd.h.x"
 #undef GABA_DECLARE
 
+/* FIXME: Could turn into a more general transport_read_state by
+   moving the current decrypt and uncompress objects here, replacing
+   the connection pointer. */
 /* GABA:
    (class
      (name lshd_read_state)
      (super ssh_read_state)
      (vars
+       (connection object lshd_connection)
        (sequence_number . uint32_t);
        (padding . uint8_t)))
 */
 
 struct lshd_read_state *
-make_lshd_read_state(struct header_callback *process,
+make_lshd_read_state(struct lshd_connection *connection,
 		     struct error_callback *error);
 
 /* GABA:
@@ -69,9 +73,6 @@ make_lshd_read_state(struct header_callback *process,
      (vars
        (connection object lshd_connection)))
 */
-
-struct header_callback *
-make_lshd_process_ssh_header(struct lshd_connection *connection);
 
 void
 lshd_handle_packet(struct abstract_write *s, struct lsh_string *packet);
