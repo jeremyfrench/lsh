@@ -1,3 +1,12 @@
+Thu Jan  7 16:25:50 1999    <nisse@puck>
+
+	* sexp_streamed_parser.c: Added base 64 decoder.
+
+	* sexp.c (encode_base64): Bug fix (don't use several ++ in an
+	expression without sequence points).
+
+	* read_scan.h (TOKEN_NONE): New constant (used by the base64 decoder).
+
 Tue Jan  5 05:54:34 1999    <nisse@puck>
 
 	* keyexchange.c (kex_make_key): Fixed key expansion.
