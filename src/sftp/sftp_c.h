@@ -35,14 +35,6 @@
 
 #include <sys/types.h>
 
-#ifdef HAVE_INTTYPES_H
-#include <inttypes.h>
-#endif
-
-#ifdef HAVE_STDINT_H
-#include <stdint.h>
-#endif
-
 #include <netinet/in.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -52,6 +44,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
+
 #include "sftp.h"
 #include "buffer.h"
 #include "xmalloc.h"
