@@ -1,3 +1,14 @@
+2003-02-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* testsuite/check-signature-test: Made function definitions
+	sh-compatible.  
+
+	* process-types (length): New function. Solaris' expr seems not to
+	understand length.
+
+	* acinclude.m4, configure.ac: Copied handling of --with-lib-path,
+	--with-include-path, and -R flags, from Nettle.
+
 2003-01-30  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (TS_SH): Added check-signature-test.
