@@ -118,6 +118,10 @@ AC_ARG_ENABLE(kerberos,
   AC_HELP_STRING([--disable-kerberos], [Don't support kerberos]),,
   [enable_kerberos=yes])
 
+AC_ARG_ENABLE(pam,
+  AC_HELP_STRING([--disable-pam], [Don't support PAM]),,
+  [enable_pam=yes])
+
 AH_TEMPLATE([WITH_SRP], [Define if SRP should be supported])
 if test x$enable_srp = xyes ; then
   AC_DEFINE(WITH_SRP)
@@ -314,6 +318,10 @@ if test x$enable_kerberos = xyes; then
   AC_CHECK_HEADERS(krb5.h,, [enable_kerberos=no])
 fi
 
+if test x$enable_pam = xyes; then
+  AC_CHECK_HEADERS(security/pam_appl.h,, [enable_pam=no])
+fi
+
 # Some systems (in particular, Unixware) doesn't have socklen_t, but
 # uses size_t. Falling back to int will cause some warnings.
 
@@ -388,6 +396,14 @@ fi
 
 AC_SUBST(KRB_LIBS)
 AC_SUBST(KRB_PROGRAM)
+
+AH_TEMPLATE([WITH_PAM], [For PAM])
+if test x$enable_pam = xyes; then
+  AC_DEFINE(WITH_PAM)
+  PAM_PROGRAM=lsh-pam-checkpw
+fi
+
+AC_SUBST(PAM_PROGRAM)
 
 AH_TEMPLATE([WITH_GCOV], [Use gcov])
 if test "x$enable_gcov" = "xyes"; then
