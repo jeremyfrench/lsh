@@ -92,6 +92,7 @@
 /* GABA:
    (class
      (name io_backend)
+     (super resource)
      (vars
        ; Linked list of fds. 
        (files object lsh_fd)
@@ -180,7 +181,7 @@ int io_iter(struct io_backend *b)
      *
      * FIXME: How can we improve this? We could keep a stack of closed
      * files, but that will require backpointers from the fd:s to the
-     * backend (so that kill_fd can find the top of the stack). */
+     * backend (so that close_fd can find the top of the stack). */
 
     do
       {
@@ -208,7 +209,7 @@ int io_iter(struct io_backend *b)
 			LSH_CALLBACK(fd->close_callback);
 			need_close = 1;
 		      }
-		    trace("io.c: Closing fd %i.\n", fd->fd);
+		    trace("io.c: Closing fd %i: %z\n", fd->fd, fd->label);
 		
 		    if (close(fd->fd) < 0)
 		      {
@@ -278,11 +279,11 @@ int io_iter(struct io_backend *b)
 
   if (!res)
     {
-      gc_maybe(&b->super, 0);
+      gc_maybe(&b->super.super, 0);
       res = poll(fds, nfds, -1);
     }
   else
-    gc_maybe(&b->super, 1);
+    gc_maybe(&b->super.super, 1);
   
   if (!res)
     {
@@ -326,7 +327,7 @@ int io_iter(struct io_backend *b)
 	    werror("io.c: poll request on fd %i, for events of type %xi\n"
 		   "      return POLLNVAL, revents = %xi\n",
 		   fds[i].fd, fds[i].events, fds[i].revents);
-	    kill_fd(fd);
+	    close_fd(fd);
 	    continue;
 	  }
 #endif /* POLLNVAL */
@@ -418,7 +419,6 @@ int io_iter(struct io_backend *b)
 
   return 1;
 }
-
   
 void
 io_run(struct io_backend *b)
@@ -437,16 +437,71 @@ io_run(struct io_backend *b)
     ;
 }
 
+static void
+do_kill_io_backend(struct resource *s)
+{
+  CAST(io_backend, backend, s);
+
+  if (backend->super.alive)
+    {
+      struct lsh_fd *fd;
+      struct lsh_signal_handler *signal;
+  
+      for (fd = backend->files, backend->files = NULL;
+	   fd; fd = fd->next)
+	{
+	  close_fd(fd);
+      
+	  if (fd->fd < 0)
+	    /* Unlink silently. */
+	    ;
+	  else
+	    {
+	      if (fd->write_close)
+		FD_WRITE_CLOSE(fd);
+	  
+	      if (fd->close_callback)
+		LSH_CALLBACK(fd->close_callback);
+	  
+	      if (close(fd->fd) < 0)
+		{
+		  werror("io.c: close failed, (errno = %i): %z\n",
+			 errno, STRERROR(errno));
+		  EXCEPTION_RAISE(fd->e,
+				  make_io_exception(EXC_IO_CLOSE, fd,
+						    errno, NULL));
+		}
+	    }
+	}
+      /* Check that no callback has opened new files. */
+      assert(!backend->files);
+
+      for (signal = backend->signals, backend->signals = NULL;
+	   signal; signal = signal->next)
+	signal->super.alive = 0;
+
+      backend->super.alive = 0;
+    }
+}
+
 struct io_backend *
 make_io_backend(void)
 {
   NEW(io_backend, b);
 
+  resource_init(&b->super, do_kill_io_backend);
+  
   b->files = NULL;
   b->signals = NULL;
   b->callouts = NULL;
 
   return b;
+}
+
+void
+io_final(struct io_backend *b)
+{
+  KILL_RESOURCE(&b->super);
 }
 
 struct resource *
@@ -779,7 +834,7 @@ do_listen_callback(struct io_callback *s,
   trace("io.c: accept on fd %i\n", conn);
   COMMAND_RETURN(self->c,
 		 make_listen_value(make_lsh_fd(self->backend,
-					       conn, self->e),
+					       conn, "accepted socket", self->e),
 				   sockaddr2info(addr_len,
 						 (struct sockaddr *) &peer)));
 }
@@ -817,7 +872,8 @@ do_listen_callback_no_peer(struct io_callback *s,
     }
   trace("io.c: accept on fd %i\n", conn);
   COMMAND_RETURN(self->c, make_lsh_fd(self->backend,
-				      conn, self->e));
+				      conn, "accepted socket",
+				      self->e));
 }
 
 struct io_callback *
@@ -859,12 +915,13 @@ do_connect_callback(struct io_callback *s,
       debug("io.c: connect_callback: Connect failed.\n");
       EXCEPTION_RAISE(fd->e,
 		      make_io_exception(EXC_IO_CONNECT, fd, 0, "connect failed."));
-      kill_fd(fd);
+      close_fd(fd);
     }
   else
     {
       fd->write = NULL;
       fd->want_write = 0;
+      fd->label = "connected socket";
       COMMAND_RETURN(self->c, fd);
     }
 }
@@ -916,12 +973,14 @@ do_exc_io_handler(struct exception_handler *self,
 /* Initializes a file structure, and adds it to the backend's list. */
 static void
 init_file(struct io_backend *b, struct lsh_fd *f, int fd,
+	  const char *label,
 	  struct exception_handler *e)
 {
   resource_init(&f->super, do_kill_fd);
 
   f->fd = fd;
-
+  f->label = label;
+  
   f->e = make_exception_handler(do_exc_io_handler, e, HANDLER_CONTEXT);
   
   f->close_callback = NULL;
@@ -1355,13 +1414,13 @@ void io_init_fd(int fd)
 
 struct lsh_fd *
 make_lsh_fd(struct io_backend *b,
-	    int fd,
+	    int fd, const char *label,
 	    struct exception_handler *e)
 {
   NEW(lsh_fd, f);
 
   io_init_fd(fd);
-  init_file(b, f, fd, e);
+  init_file(b, f, fd, label, e);
 
   return f;
 }
@@ -1403,7 +1462,7 @@ io_connect(struct io_backend *b,
       return NULL;
     }
 
-  fd = make_lsh_fd(b, s, e);
+  fd = make_lsh_fd(b, s, "connecting socket", e);
   
   fd->want_write = 1;
   fd->write = make_connect_callback(c);
@@ -1445,7 +1504,7 @@ io_listen(struct io_backend *b,
       return NULL;
     }
 
-  fd = make_lsh_fd(b, s, e);
+  fd = make_lsh_fd(b, s, "listening socket", e);
 
   fd->want_read = 1;
   fd->read = callback;
@@ -1749,7 +1808,8 @@ io_write_file(struct io_backend *backend,
   if (fd < 0)
     return NULL;
 
-  return io_write(make_lsh_fd(backend, fd, e), block_size, c);
+  return io_write(make_lsh_fd(backend, fd, "write-only file", e),
+		  block_size, c);
 }
 
 struct lsh_fd *
@@ -1761,18 +1821,14 @@ io_read_file(struct io_backend *backend,
   if (fd < 0)
     return NULL;
 
-  return make_lsh_fd(backend, fd, e);
-}
-
-void kill_fd(struct lsh_fd *fd)
-{
-  fd->super.alive = 0;
+  return make_lsh_fd(backend, fd, "read-only file", e);
 }
 
 void close_fd(struct lsh_fd *fd)
 {
-  trace("io.c: Marking fd %i for closing.\n", fd->fd);
-  kill_fd(fd);
+  trace("io.c: Marking fd %i: %z, for closing.\n",
+	fd->fd, fd->label);
+  fd->super.alive = 0;
 }
 
 void close_fd_nicely(struct lsh_fd *fd)
@@ -1787,7 +1843,7 @@ void close_fd_nicely(struct lsh_fd *fd)
     FD_WRITE_CLOSE(fd);
   else
     /* There's no data buffered for write. */
-    kill_fd(fd);
+    close_fd(fd);
 }
 
 /* Stop reading, but if the fd has a write callback, keep it open. */
@@ -1798,7 +1854,7 @@ void close_fd_read(struct lsh_fd *fd)
   
   if (!fd->write)
     /* We won't be writing anything on this fd, so close it. */
-    kill_fd(fd);
+    close_fd(fd);
 }
 
 /* Responsible for handling the EXC_FINISH_READ exception. It should
