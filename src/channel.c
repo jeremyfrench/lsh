@@ -324,6 +324,7 @@ int alloc_channel(struct channel_table *table)
 
   table->next_channel = table->used_channels = i+1;
 
+  table->in_use[i] = 1;
   return i;
 }
 
