@@ -187,9 +187,15 @@ do_exc_finish_channel_handler(struct exception_handler *s,
 	werror("channel.c: EXC_FINISH_PENDING on dead channel.\n");
 
       self->connection->table->pending_close = 1;
-      
-      if (!self->connection->table->next_channel)
+
+      /* NOTE: We don't need to raise a EXC_FINISH_READ here. Only
+       * code in a live channel is supposed to raise
+       * EXC_FINISH_PENDING. The typical caller is a channel's
+       * CHANNEL_CLOSE callback that is called below. */
+#if 0
+      if (!self->connection->table->channel_count)
 	EXCEPTION_RAISE(self->connection->e, &finish_read_exception);
+#endif
       break;
       
     case EXC_FINISH_CHANNEL:
@@ -223,7 +229,7 @@ do_exc_finish_channel_handler(struct exception_handler *s,
 	  self->dead = 1;
 
 	  if (self->connection->table->pending_close &&
-	      !self->connection->table->next_channel)
+	      !self->connection->table->channel_count)
 	    {
 	      /* FIXME: Send a SSH_DISCONNECT_BY_APPLICATION message? */
 	      EXCEPTION_RAISE(self->connection->e, &finish_read_exception);
@@ -270,8 +276,10 @@ make_channel_table(void)
   table->in_use = lsh_space_alloc(INITIAL_CHANNELS);
   
   table->allocated_channels = INITIAL_CHANNELS;
-  table->next_channel = 0;
   table->used_channels = 0;
+  table->next_channel = 0;
+  table->channel_count = 0;
+  
   table->max_channels = MAX_CHANNELS;
 
   table->pending_close = 0;
@@ -306,8 +314,7 @@ alloc_channel(struct channel_table *table)
 	  table->in_use[i] = CHANNEL_RESERVED;
 	  table->next_channel = i+1;
 
-	  verbose("Allocated local channel number %i\n", i);
-	  return i;
+	  goto success;
 	}
     }
   if (i == table->max_channels)
@@ -338,6 +345,9 @@ alloc_channel(struct channel_table *table)
   table->next_channel = table->used_channels = i+1;
 
   table->in_use[i] = CHANNEL_RESERVED;
+
+ success:
+  table->channel_count++;
   verbose("Allocated local channel number %i\n", i);
 
   return i;
@@ -348,10 +358,13 @@ dealloc_channel(struct channel_table *table, int i)
 {
   assert(i >= 0);
   assert( (unsigned) i < table->used_channels);
-
+  assert(table->channel_count);
+  
   verbose("Deallocating local channel %i\n", i);
   table->channels[i] = NULL;
   table->in_use[i] = CHANNEL_FREE;
+
+  table->channel_count--;
   
   if ( (unsigned) i < table->next_channel)
     table->next_channel = i;
