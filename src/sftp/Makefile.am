@@ -1,3 +1,5 @@
+SUBDIRS = . testsuite
+
 AUTOMAKE_OPTIONS = foreign
 
 bin_PROGRAMS = sftp-server
