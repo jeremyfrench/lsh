@@ -1,5 +1,8 @@
 2000-06-27  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/server_session.c (do_spawn_exec): Avoid array
+	initialization, as the HPUX compiler doesn't like that.
+
 	* src/algorithms.h, src/channel.c, src/debug.h,
 	src/parse_macros.h, src/server.c, src/erver_pty.c,
 	src/server_session.c, xalloc.c: Minor bugfixes, reported by David
