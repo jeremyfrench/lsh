@@ -25,7 +25,7 @@
 #define LSH_CONNECTION_H_INCLUDED
 
 #include "abstract_io.h"
-#include "abstract_compress.h"
+#include "compress.h"
 #include "queue.h"
 #include "resource.h"
 #include "randomness.h"

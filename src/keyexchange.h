@@ -25,8 +25,8 @@
 #define LSH_KEYEXCHANGE_H_INCLUDED
 
 #include "abstract_crypto.h"
-#include "abstract_compress.h"
 #include "alist.h"
+#include "compress.h"
 
 /* NOTE: The only thing in this file that needs bignum.h is the
  * declaration of kex_build_secret(). Perhaps, that indicates that the

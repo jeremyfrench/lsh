@@ -7,8 +7,8 @@
 #ifndef LSH_ALGORITHMS_H_INCLUDED
 #define LSH_ALGORITHMS_H_INCLUDED
 
-#include "abstract_compress.h"
 #include "alist.h"
+#include "compress.h"
 #include "lsh_argp.h"
 #include "randomness.h"
 
