@@ -1,5 +1,7 @@
 2004-11-17  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/unix_random.c (do_trivia_source): Check HAVE_GETRUSAGE.
+
 	* src/lsh-writekey.c (main_argp_parser): Fixed C99-ism.
 
 2004-11-16  Niels Möller  <nisse@lysator.liu.se>
