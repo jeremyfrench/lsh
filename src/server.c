@@ -189,7 +189,6 @@ read_host_key(const char *file,
 {
   int fd = open(file, O_RDONLY);
   struct lsh_string *contents;
-  struct sexp *expr;
   struct signer *s;
   struct verifier *v;
   struct lsh_string *spki_public;
@@ -211,16 +210,9 @@ read_host_key(const char *file,
     }
   close(fd);
 
-  expr = string_to_sexp(SEXP_TRANSPORT, contents, 1);
-  if (!expr)
-    {
-      werror("S-expression syntax error in hostkey.\n");
-      return 0;
-    }
-
-  s = spki_sexp_to_signer(signature_algorithms,
-                          expr,
-                          &algorithm_name);
+  s = spki_make_signer(signature_algorithms,
+		       contents,
+		       &algorithm_name);
   if (!s)
     {
       werror("Invalid host key\n");
@@ -230,8 +222,7 @@ read_host_key(const char *file,
   v = SIGNER_GET_VERIFIER(s);
   assert(v);
 
-  spki_public = sexp_format(spki_make_public_key(v),
-                            SEXP_CANONICAL, 0);
+  spki_public = PUBLIC_SPKI_KEY(v, 0);
   
   switch (algorithm_name)
     {
