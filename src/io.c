@@ -1358,18 +1358,6 @@ void io_set_nonblocking(int fd)
     handle_nonblock_error("io_set_nonblocking: fcntl(F_SETFL) failed");
 }
 
-/* The only use of this function is by ssh1_fallback.c. */
-void io_set_blocking(int fd)
-{
-  int old = fcntl(fd, F_GETFL);
-
-  if (old < 0)
-    fatal("io_set_blocking: fcntl(F_GETFL) failed %e\n", errno);
-  
-  if (fcntl(fd, F_SETFL, old & ~O_NONBLOCK) < 0)
-    handle_nonblock_error("io_set_blocking: fcntl(F_SETFL) failed");
-}
-
 void io_set_close_on_exec(int fd)
 {
   /* NOTE: There's only one documented flag bit, so reading the old
