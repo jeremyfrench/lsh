@@ -1,5 +1,31 @@
 2001-04-08  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/lsh.c (main_argp_parser): Deleted old -L handling (moved to
+	client.c).  
+
+	* src/sexp_commands.c (do_print_raw_hash_simple): Deleted unused
+	function. 
+
+	* src/sexp.c (sexp_sn): Deleted unused function.
+
+	* src/io.c (make_listen_callback_no_peer): Deleted unused function.
+
+	* src/gc.c (gc): Display number of strings.
+
+	* src/client_session.c (do_client_session_eof): Deleted old code
+	that closed stdin here.
+
+	* src/client.c (do_exit_status): Deleted old code sending
+	CHANNEL_EOF here.
+	(do_exit_signal): Likewise. 
+	(do_exit_signal): Signals in the exit-signal message are no longer
+	encoded as integers. XXX Fix in 1.2 branch?
+
+	* src/channel.c (do_exc_finish_channel_handler): Deleted old
+	(#if:ed out) code for raising EXC_FINISH_READ.
+	(channel_close_handler): Deleted old code calling the channel's
+	EOF handler here.
+
 	* src/lsh.c (main): Call io_final.
 
 	* src/io.h (lsh_fd): Added label attribute. 
