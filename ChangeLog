@@ -1,3 +1,16 @@
+2001-04-02  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/sftp/sftp-server.c (sftp_process_realpath): Fixed invocation
+	of pathconf().
+	Include stdarg.h.
+
+	* src/sftp/testsuite: Adapted shell scripts to /bin/sh. Removed
+	uses of the "function" keyword, and use a full path when sourcing
+	common.sh.
+
+	* src/sftp/testsuite/run-tests: Use /bin/bash, as we use
+	bash-specific parameter expansion.
+
 2001-04-01  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/sftp/Makefile.am (sftp_server_SOURCES,

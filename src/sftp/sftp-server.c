@@ -58,6 +58,7 @@
 #include "xmalloc.h"
 
 #include <assert.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -714,7 +715,7 @@ sftp_process_realpath(struct sftp_ctx *ctx)
 #ifdef PATH_MAX
   path_max = PATH_MAX;
 #else
-  path_max = pathconf (path, _PC_PATH_MAX);
+  path_max = pathconf (name, _PC_PATH_MAX);
   if (path_max <= 0)
     path_max = 4096;
 #endif
