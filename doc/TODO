@@ -253,3 +253,5 @@ Change the COMMAND_SIMPLE and COMMAND_STATIC macros to take argument
 names as arguments, making them more hygienig. Perhaps also rename
 them in the process.
 
+Make connection_unlock install a callout that calls
+connection_handle_pending(). 
