@@ -44,6 +44,7 @@
 #define TOKEN_EOF -1
 #define TOKEN_EOS -2
 #define TOKEN_ERROR -3
+#define TOKEN_NONE -4
 
 #define SCAN(s, t) ((s)->scan(&(s), (t)))
 
