@@ -244,6 +244,38 @@ lsh_oop_cancel_write_fd(struct lsh_fd *fd)
     }
 }
 
+static void *
+lsh_oop_time_callback(oop_source *source UNUSED,
+                      struct timeval time UNUSED, void *data)
+{
+  CAST(lsh_callout, callout, (struct lsh_object *) data);
+
+  assert(callout->super.alive);
+
+  trace("lsh_oop_time_callback: action: %t\n",
+        callout->action);
+  
+  callout->super.alive = 0;
+
+  LSH_CALLBACK(callout->action);
+
+  return OOP_CONTINUE;
+}
+
+static void
+lsh_oop_register_callout(struct lsh_callout *callout)
+{
+  if (callout->super.alive)
+    source->on_time(source, OOP_TIME_NOW, lsh_oop_time_callback, callout);
+}
+
+static void
+lsh_oop_cancel_callout(struct lsh_callout *callout)
+{
+  if (callout->super.alive)
+    source->cancel_time(source, OOP_TIME_NOW, lsh_oop_time_callback, callout);
+}
+
 
 /* Calls trigged by a signal handler. */
 /* GABA:
@@ -261,9 +293,7 @@ lsh_oop_cancel_write_fd(struct lsh_fd *fd)
      (name lsh_callout)
      (super resource)
      (vars
-       (next object lsh_callout)
        (action object lsh_callback)))
-       ;; (when . time_t)
 */
 
 /* FIXME: With liboop, we should not need this object, we'd only need
@@ -634,16 +664,29 @@ io_signal_handler(int signum,
   return &handler->super;
 }
 
+static void
+do_kill_callout(struct resource *s)
+{
+  CAST(lsh_callout, self, s);
+
+  if (self->super.alive)
+    {
+      lsh_oop_cancel_callout(self);
+      self->super.alive = 0;
+    }
+}
+
 /* Delays not implemented. */
 struct resource *
-io_callout(UINT32 delay UNUSED,
-	   struct lsh_callback *action)
+io_callout(struct lsh_callback *action)
 {
   NEW(lsh_callout, self);
-  init_resource(&self->super, NULL);
+  init_resource(&self->super, do_kill_callout);
 
   self->action = action;
 
+  lsh_oop_register_callout(self);
+  
   gc_global(&self->super);
   return &self->super;
 }
