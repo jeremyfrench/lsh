@@ -198,6 +198,9 @@ do_authenticate(struct userauth *s,
     }
   else 
     {
+      lsh_string_free(username);
+      lsh_string_free(keyblob);
+      
       werror("Badly formatted publickey authentication request\n");
       PROTOCOL_ERROR(e, "Invalid publickey authentication request");
     }
