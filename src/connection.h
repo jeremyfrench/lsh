@@ -102,10 +102,10 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        ; Connection flags
        (flags . "enum connection_flag")
 
+       ; Key exchange 
        (kex struct kexinit_state)
+       (kexinit object make_kexinit)
        
-       ; Sent and received version strings
-       ; (versions array (string) 2)
        (session_id string)
        
        ; Connection description, used for debug messages.
@@ -122,6 +122,7 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        (user object lsh_user)
 
        ; The chained connection in the proxy, or gateway.
+       ; FIXME: Somewhat duplicated in the channel_table class.
        (chain object ssh_connection)
 
        ; Cleanup
@@ -133,9 +134,6 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        (peer object address_info)
        (local object address_info)
 
-       ; Keyexchange
-       (kexinit object make_kexinit)
-       
        ; Receiving
        (rec_max_packet . uint32_t)
        (rec_mac    object mac_instance)
@@ -163,9 +161,6 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        (paused . int)
        (pending struct string_queue)
        
-       ; Key exchange 
-       ; (read_kex_state . "enum kex_state")
-
        ; While in the middle of a key exchange, messages of most types
        ; must be queued up waiting for the key exchange to complete.
        (send_kex_only . int)
@@ -183,9 +178,6 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        ; write buffer shrinks anough to allow more channel data.
        (wakeup object command_continuation)
        
-       ; (kexinits array (object kexinit) 2)
-       ; (literal_kexinits array (string) 2)
-
        ; Table of all known message types 
        (dispatch array (object packet_handler) "0x100")
        
