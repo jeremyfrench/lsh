@@ -34,6 +34,10 @@
 #include "client.h.x"
 #undef GABA_DECLARE
 
+/* The argp option group for actions. */
+#define CLIENT_ARGP_ACTION_GROUP 100
+
+#define CLIENT_ARGP_MODIFIER_GROUP 200
 
 struct packet_handler *
 make_accept_service_handler(UINT32 service,
@@ -70,13 +74,87 @@ extern struct channel_request_command request_shell;
 extern struct command client_io;
 #define CLIENT_START_IO (&client_io.super)
 
-struct ssh_channel *make_client_session(struct lsh_fd *in,
-					struct lsh_fd *out,
-					struct lsh_fd *err,
-					UINT32 initial_window,
-					int *exit_status);
+struct ssh_channel *
+make_client_session_channel(struct lsh_fd *in,
+			    struct lsh_fd *out,
+			    struct lsh_fd *err,
+			    UINT32 initial_window,
+			    int *exit_status);
 
 struct command *
 make_exec_request(struct lsh_string *command);
-     
+
+/* GABA:
+   (class
+     (name client_options)
+     (vars
+       (backend object io_backend)
+
+       (tty object interact)
+
+       ; For i/o exceptions 
+       (handler object exception_handler)
+
+       (exit_code . "int *")
+
+       (not . int)
+       (port . "char *")
+       (remote object address_info)
+
+       (local_user . "char *")
+       (user . "char *")
+
+       (with_remote_peers . int)
+       
+       ; -1 means default behaviour
+       (with_pty . int)
+       
+       ; Session modifiers
+       (stdin_file . "const char *")
+       (stdout_file . "const char *")
+       (stderr_file . "const char *")
+
+       ; fork() extra processes for handling stdio file-descriptors,
+       ; to avoid setting them in non-blocking mode.
+       (stdin_fork . int)
+       (stdout_fork . int)
+       (stderr_fork . int)
+
+       ; True if the process's stdin or pty (respectively) has been used. 
+       (used_stdin . int)
+       (used_pty . int)
+
+       (start_shell . int)
+       ;; (remote_forward . int)
+       (actions struct object_queue)))
+*/
+
+void
+init_client_options(struct client_options *options,
+		    struct io_backend *backend,
+		    struct exception_handler *handler,
+		    int *exit_code);
+
+struct client_options *
+make_client_options(struct io_backend *backend,
+		    struct exception_handler *handler,
+		    int *exit_code);
+
+struct command *
+client_add_action(struct client_options *options,
+		  struct command *action);
+
+int
+client_parse_forward_arg(char *arg,
+			 UINT32 *listen_port,
+			 struct address_info **target);
+
+extern struct command_simple client_options2remote;
+#define OPTIONS2REMOTE (&client_options2remote.super.super)
+
+extern struct command_simple client_options2actions;
+#define OPTIONS2ACTIONS (&client_options2actions.super.super)
+
+extern const struct argp client_argp;
+
 #endif /* LSH_CLIENT_H_INCLUDED */
