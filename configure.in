@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 0.1.20)
+AM_INIT_AUTOMAKE(lsh, 000.2)
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
@@ -225,61 +225,25 @@ if test x$have_utmp_h = xyes; then
   AC_CHECK_MEMBER([#include <utmp.h>], [utmp], [ut_addr_v6])
 fi
 
-dnl  if test x$have_utmp_h = xyes; then
-dnl    AC_CACHE_CHECK(
-dnl  	 [if struct utmp has a ut_host member],
-dnl  	 lsh_cv_decl_utmp_have_ut_host,
-dnl  dnl AC_CHECK_MEMBER(lsh_cv_decl_utmp_have_ut_host,
-dnl  dnl		    [#include <utmp.h>],
-dnl  dnl		    struct utmp, [ut_host[0]])
-dnl  
-dnl  dnl Are the changequote calls really necessary?
-dnl  	 AC_TRY_COMPILE([#include <utmp.h>],
-dnl  	   [ 
-dnl  changequote(<<, >>)dnl
-dnl  	      int foo() { struct utmp u; u.ut_host[0] = 'X'; return 0; }
-dnl  changequote([, ])dnl
-dnl  	   ],
-dnl  	   lsh_cv_decl_utmp_have_ut_host=yes,
-dnl  	   lsh_cv_decl_utmp_have_ut_host=no))
-dnl  	   
-dnl    if test x$lsh_cv_decl_utmp_have_ut_host = xyes; then
-dnl  	 AC_DEFINE(HAVE_UT_HOST)
-dnl    fi
-dnl    AC_CACHE_CHECK(
-dnl  	 [if struct utmp has a ut_addr member],
-dnl  	 lsh_cv_decl_utmp_have_ut_addr,
-dnl  	 AC_TRY_COMPILE([#include <utmp.h>],
-dnl  	   [ 
-dnl  changequote(<<, >>)dnl
-dnl  	      int foo() { struct utmp u; u.ut_addr[0] = 0; return 0; } 
-dnl  changequote([, ])dnl
-dnl  	   ],
-dnl  	   lsh_cv_decl_utmp_have_ut_addr=yes,
-dnl  	   lsh_cv_decl_utmp_have_ut_addr=no))
-dnl  
-dnl    if test x$lsh_cv_decl_utmp_have_ut_addr = xyes; then
-dnl  	 AC_DEFINE(HAVE_UT_ADDR)
-dnl    fi
-dnl    AC_CACHE_CHECK(
-dnl  	 [if struct utmp has a ut_addr_v6 member],
-dnl  	 lsh_cv_decl_utmp_have_ut_addr_v6,
-dnl  	 AC_TRY_COMPILE([#include <utmp.h>],
-dnl  	   [ 
-dnl  changequote(<<, >>)dnl
-dnl  	      int foo() { struct utmp u; u.ut_addr_v6[0] = 0; return 0; }
-dnl  changequote([, ])dnl
-dnl  	   ],
-dnl  	   lsh_cv_decl_utmp_have_ut_addr_v6=yes,
-dnl  	   lsh_cv_decl_utmp_have_ut_addr_v6=no))
-dnl  
-dnl    if test x$lsh_cv_decl_utmp_have_ut_addr_v6 = xyes; then
-dnl  	 AC_DEFINE(HAVE_UT_ADDR_V6)
-dnl    fi
-dnl  fi
-
 AC_CHECK_HEADERS(utmpx.h)
 
+dnl Some systems (in particular, Unixware) doesn't have socklen_t, but
+dnl uses size_t. Falling back to int will cause some warnings.
+
+dnl AC_CHECK_TYPE doesn't work, probably because the type in
+dnl question is not defined in sys/types.h.
+
+AC_CACHE_CHECK([for socklen_t in sys/socket.h],
+  lsh_cv_type_socklen_t,
+  [ AC_EGREP_HEADER(socklen_t, sys/socket.h,
+		    lsh_cv_type_socklen_t=yes,
+		    lsh_cv_type_socklen_t=no]))
+
+if test x$lsh_cv_type_socklen_t = xno ; then
+  AC_DEFINE(socklen_t, int)
+fi
+
+  
 dnl Should we use zlib?
 
 if test x$with_zlib = xyes ; then
@@ -381,13 +345,21 @@ dnl AC_REPLACE_GNU_GETOPT
 dnl AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o $LIBOBJS"])
 AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
 
-dnl FIXME: If the system already has argp, it's unnecessary to build our own.
+# Use system argp only if we can actually link with it.
 if test x$with_system_argp = xyes ; then
-  AC_CHECK_FUNCS(argp_parse,, [LIBOBJS="$LIBOBJS argp/libargp.a"])
-else
-  LIBOBJS="$LIBOBJS argp/libargp.a"
+  AC_CHECK_FUNCS(argp_parse,, with_system_argp=no)
 fi
 
+# FIXME: If the system already has argp, it's unnecessary to build our own.
+# As we want to load the objects into liblsh.a, we list all the objects
+# rather than libargp.a.
+##  LIBOBJS="$LIBOBJS argp/libargp.a"
+
+if test x$with_system_argp = xno ; then
+  LIBOBJS="$LIBOBJS argp-ba.o argp-fmtstream.o \
+		    argp-help.o argp-parse.o argp-pin.o argp-pv.o \
+		    argp-pvh.o argp-eexst.o"
+fi
 
 dnl Check for broken shutdown
 AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
