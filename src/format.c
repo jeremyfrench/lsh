@@ -2,23 +2,24 @@
  *
  */
 
-#include "format.h"
-#include "werror.h"
-
 #include <assert.h>
 #include <string.h>
 
-struct simple_packet *ssh_format(char *format, ...)
+#include "format.h"
+#include "werror.h"
+#include "xalloc.h"
+
+struct lsh_string *ssh_format(char *format, ...)
 {
   va_list args;
   UINT32 length;
-  struct simple_packet *packet;
+  struct lsh_string *packet;
 
   va_start(args, format);
   length = ssh_vformat_length(format, args);
   va_end(args);
 
-  packet = simple_packet_alloc(length);
+  packet = lsh_string_alloc(length);
 
   va_start(args, format);
   ssh_vformat(format, packet->data, args);
@@ -81,6 +82,13 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 	      if (!literal)
 		length += 4;
 	      
+	      break;
+	    case 'z':
+	      length += strlen(va_arg(args, char*));
+	      f++;
+
+	      if (!literal)
+		length += 4;
 	      break;
 	    case 'r':
 	      length += va_arg(args, struct lsh_string *)->length;
@@ -207,6 +215,21 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		memcpy(buffer, s->data, s->length);
 		buffer += s->length;
 		f++;
+	      }
+	    case 'z':
+	      {
+		char *s = va_arg(args, char *);
+		UINT32 length = strlen(s);
+		if (!literal)
+		  {
+		    WRITE_UINT32(buffer, length);
+		    buffer += 4;
+		  }
+
+		memcpy(buffer, s, length);
+		buffer += length;
+		f++;
+		break;
 	      }
 	    case 'r':
 	      {

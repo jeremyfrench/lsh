@@ -24,15 +24,17 @@
  *
  * %S  Insert a string, given as a struct lsh_string pointer.
  *
+ * %z  Insert a string, using a null-terminated argument.
+ *
+ * %r  Reserves space in the string, and stores a pointer to this space
+ * into the given UINT8 ** argument.
+ *
  * %a  Insert a string containing one atom.
  *
  * %A  Insert a string containing a list of atoms. The corresponding
  *     argument sublist should be terminated with a zero.
  *
  * %n  Insert a string containing a bignum.
- *
- * %r  Reserves space in the string, and stores a pointer to this space
- * into the given UINT8 ** argument.
  *
  * There is one valid modifier:
  *
