@@ -480,7 +480,7 @@ get_inaddr(struct sockaddr_in	* addr,
     {
       /* First check for numerical ip-number */
       addr->sin_addr.s_addr = inet_addr(host);
-      if (addr->sin_addr.s_addr == (unsigned long)-1)
+      if (addr->sin_addr.s_addr == INADDR_NONE)
 	{
 	  struct hostent * hp;
 	  
@@ -512,7 +512,7 @@ get_inaddr(struct sockaddr_in	* addr,
 	{
 	  struct servent	* serv;
 
-	  serv = getservbyname(service, "tcp");
+	  serv = getservbyname(service, protocol);
 	  if (serv == NULL)
 	    return 0;
 	  addr->sin_port = serv->s_port;
