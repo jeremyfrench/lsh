@@ -79,7 +79,6 @@ struct close_callback *make_connection_close_handler(struct ssh_connection *c)
      (vars
        (connection object ssh_connection)
        (mode . int)
-       (c object command_continuation)
        ;; Needed for fallback.
        (fd . int)
        (fallback object ssh1_fallback)))
@@ -144,7 +143,7 @@ static int do_line(struct line_handler **h,
 		  closure->connection->versions[CONNECTION_SERVER]);
 
 	  *r = new;
-	  return COMMAND_RETURN(closure->c, closure->connection);
+	  return LSH_OK | LSH_GOON;
 	}
 #if WITH_SSH1_FALLBACK      
       else if (closure->fallback
@@ -182,8 +181,7 @@ static int do_line(struct line_handler **h,
 static struct read_handler *
 make_connection_read_line(struct ssh_connection *connection, int mode,
 			  int fd,
-			  struct ssh1_fallback *fallback,
-			  struct command_continuation *c)
+			  struct ssh1_fallback *fallback)
 {
   NEW(connection_line_handler, closure);
 
@@ -192,7 +190,6 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
   closure->mode = mode;
   closure->fd = fd;
   closure->fallback = fallback;
-  closure->c = c;
   return make_read_line(&closure->super);
 }
 
@@ -208,6 +205,7 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
        (block_size simple UINT32)
        (id_comment simple "const char *")
 
+       (random object randomness)
        (algorithms object alist)
        
        (init object make_kexinit)
@@ -257,12 +255,15 @@ static int do_connection(struct command *s,
       fatal("do_connection: Internal error\n");
     }
 
-  io_read_write(fd,
-		make_connection_read_line(connection, self->mode,
-					  fd->super.fd, self->fallback, 
-					  c),
-		self->block_size,
-		make_connection_close_handler(connection));
+  connection_init_io
+    (connection, 
+     &io_read_write(fd,
+		    make_connection_read_line(connection, self->mode,
+					      fd->super.fd, self->fallback),
+		    self->block_size,
+		    make_connection_close_handler(connection))
+     ->buffer->super,
+     self->random);
 
   connection->versions[self->mode] = version;
   connection->kexinits[self->mode] = MAKE_KEXINIT(self->init); 
@@ -292,14 +293,16 @@ struct command *
 make_handshake_command(int mode,
 		       const char *id,
 		       UINT32 block_size,
+		       struct randomness *r,
 		       struct alist *algorithms,
 		       struct make_kexinit *init,
 		       struct ssh1_fallback *fallback)
 {
   NEW(connection_command, self);
   self->mode = mode;
-  self->block_size = block_size;
   self->id_comment = id;
+  self->block_size = block_size;
+  self->random = r;
   self->algorithms = algorithms;
   self->init = init;
   self->fallback = fallback;
