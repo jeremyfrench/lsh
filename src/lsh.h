@@ -123,6 +123,7 @@ struct command;
 struct command_2;
 struct command_3;
 struct command_4;
+struct catch_report_collect;
 
 /* connection.h */
 struct ssh_connection;
