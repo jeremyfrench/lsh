@@ -48,15 +48,15 @@
  * doesn't matter much if we guess wrong on some platforms, as this
  * affects only optionalal debug code. */
 
-#define UNIT long
+#define UNIT unsigned long 
 
 #define SIZE_IN_UNITS(x) (((x) + sizeof(UNIT)-1) / sizeof(UNIT))
 
 static void *debug_malloc(size_t real_size)
 {
   static int count = 4711;
-  int *res;
-  int size = SIZE_IN_UNITS(real_size);
+  UNIT *res;
+  UNIT size = SIZE_IN_UNITS(real_size);
   
   res = malloc((size + 3)*sizeof(UNIT));
 
@@ -77,9 +77,9 @@ static void debug_free(void *m)
 {
   if (m)
     {
-      int *p = (int *) m;
-      int real_size = p[-1];
-      int size = SIZE_IN_UNITS(real_size);
+      UNIT *p = (UNIT *) m;
+      UNIT real_size = p[-1];
+      UNIT size = SIZE_IN_UNITS(real_size);
       
       if (~p[-2] != p[size])
 	fatal("Memory corrupted!\n");
