@@ -258,11 +258,6 @@ int blocking_read(int fd, struct read_handler *r);
 int get_portno(const char *service, const char *protocol);
 
 struct address_info *
-make_address_info_c(const char *host,
-		    const char *port,
-		    int def);
-
-struct address_info *
 make_address_info(struct lsh_string *host, 
 		  uint32_t port);
 

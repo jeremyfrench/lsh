@@ -1019,31 +1019,6 @@ int get_portno(const char *service, const char *protocol)
     }
 }
 
-
-/* If def != 0, use that value as a fallback if the lookup fails. */
-struct address_info *
-make_address_info_c(const char *host,
-		    const char *port,
-		    int def)
-{
-  int portno = get_portno(port, "tcp");
-  if (!portno)
-    portno = def;
-
-  if (!portno)
-    return NULL;
-
-  else
-    {
-      NEW(address_info, info);
-      
-      info->port = portno;
-      info->ip = host ? ssh_format("%lz", host) : NULL;
-      
-      return info;
-    }
-}
-
 struct address_info *
 make_address_info(struct lsh_string *host, uint32_t port)
 {
