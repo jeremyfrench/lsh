@@ -52,7 +52,7 @@
 struct compat_info
 {
   const char *prefix;
-  UINT32 flags;
+  enum peer_flag flags;
 };
 
 static const struct compat_info
@@ -64,10 +64,11 @@ compat[] =
 	       | PEER_X11_OPEN_KLUDGE) },
     { "2.1.0", (PEER_SSH_DSS_KLUDGE
 		| PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG) },
+    { "3.0", PEER_SEND_NO_DEBUG },
     { NULL, 0 }
   };
     
-static UINT32
+static enum peer_flag
 compat_peer_flags(UINT32 length, UINT8 *software)
 {
   unsigned i;
@@ -284,7 +285,7 @@ make_connection_read_line(struct ssh_connection *connection,
 
 
 struct handshake_info *
-make_handshake_info(UINT32 flags,
+make_handshake_info(enum connection_flag flags,
 		    const char *id_comment,
 		    const char *debug_comment,
 		    UINT32 block_size,

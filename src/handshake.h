@@ -27,6 +27,7 @@
 
 #include "alist.h"
 #include "command.h"
+#include "connection.h"
 #include "ssh1_fallback.h"
 
 #define GABA_DECLARE
@@ -39,7 +40,7 @@
      (vars
        ; Initial value for the connection flags. Usually
        ; CONNECTION_SERVER or CONNECTION_CLIENT
-       (flags . UINT32)
+       (flags . "enum connection_flag")
        
        (block_size . UINT32)
        (id_comment . "const char *")
@@ -53,7 +54,7 @@
 */
 
 struct handshake_info *
-make_handshake_info(UINT32 flags,
+make_handshake_info(enum connection_flag flags,
 		    const char *id_comment,
 		    const char *debug_comment,
 		    UINT32 block_size,
