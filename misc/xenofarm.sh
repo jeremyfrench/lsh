@@ -33,8 +33,13 @@ do
   esac
 done
 
+pfx=`pwd`/pfx
+
+cfgargs="-C --with-include-path=/usr/local/include --with-lib-path=/usr/local/lib --prefix=$pfx $cfgargs"
+
 # Fix PATH for system where the default environment is broken
 
+# FIXME: Should we really insist on using GNU make?
 # We may need /usr/local/bin to get GNU make
 if make --version 2>/dev/null | grep GNU >/dev/null ; then : ; else
     if /usr/local/bin/make --version 2>/dev/null | grep GNU >/dev/null ; then
@@ -90,7 +95,8 @@ dotask() {
     task="$2"
     warnfunc="$3"
     cmd="$4"
-    if test $status = good
+    var=${5:-status}
+    if test `eval $var` = $condition
     then
 	logstart $task
         timeecho Begin $task
@@ -106,12 +112,12 @@ dotask() {
 	    timeecho FAIL: $task
 	    if [ $important = 1 ]
 	    then
-	        status=${task}-failed
+	        eval $var=${task}-failed
 	    fi
 	    logfail
 	fi
     else
-	echo status $status makes it impossible to perform this step \
+	echo status $status makes it impossible/unnecessary to perform this step \
 	    > r/${task}log.txt
     fi
 }
@@ -166,8 +172,6 @@ ckprgwarn () {
 }
 
 
-pfx=`pwd`/pfx
-
 status=good
 
 echo 'FORMAT 2' > r/mainlog.txt
@@ -175,7 +179,7 @@ echo 'FORMAT 2' > r/mainlog.txt
 dotask 1 "unzip" "" "gzip -d $BASE.tar.gz"
 dotask 1 "unpack" "" "tar xf $BASE.tar"
 dotask 1 "cfg" "cfgwarn" \
-    "cd $BASE && ./configure -C --with-include-path=/usr/local/include --with-lib-path=/usr/local/lib --prefix=$pfx $cfgargs"
+    "cd $BASE && ./configure $cfgargs"
 dotask 1 "make" "makewarn" "cd $BASE && make $makeargs"
 
 #
@@ -185,13 +189,26 @@ dotask 1 "make" "makewarn" "cd $BASE && make $makeargs"
 dotask 0 "ckprg" "" "cd $BASE && make check"
 
 # FIXME: run distcheck.
-# FIXME: compare the contents of the distcheck-generated tar file
-# with the one we distributed.
 # A problem is that make distcheck leaves some write-protected directories that
 # can't be deleted with rm -rf
 
 # dotask 0 "ckdist" "" "cd $BASE && make distcheck"
 dotask 1 "install" "" "cd $BASE && make install"
+
+if test $status = cfg-failed
+then
+    argpstatus=good
+    nettlestatus=good
+else
+    argpstatus=skip
+    nettlestatus=skip
+fi
+
+dotask 1 "argpcfg" "cfgwarn" "cd $BASE/src/argp && ./configure $cfgargs" argpstatus
+dotask 1 "argpmake" "makewarn" "cd $BASE/src/argp && make $makeargs argpstatus
+
+dotask 1 "nettlecfg" "cfgwarn" "cd $BASE/src/nettle && ./configure $cfgargs" nettlestatus
+dotask 1 "nettlemake" "makewarn" "cd $BASE/src/nettle && make $makeargs nettlestatus
 
 find pfx -type f -print | sort > r/installedfiles.txt
 if test `wc -l < r/installedfiles.txt` -eq 0
