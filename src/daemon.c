@@ -8,7 +8,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1999 raf, Niels Möller
+ * Copyright (C) 1999, 2002, raf, Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -45,8 +45,10 @@
 #include <signal.h>
 #include <fcntl.h>
 
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 #ifndef PID_DIR
 #define PID_DIR "/var/run"
@@ -307,6 +309,8 @@ int daemon_init(void)
 
   if (mode == DAEMON_NORMAL)
     {
+      pid_t child;
+      
       /*
       ** Background the process.
       ** Lose process group leadership.
@@ -320,7 +324,7 @@ int daemon_init(void)
 	  /* Child */
 	  break;
 	default:
-	  /* Parant */
+	  /* Parent */
 	  exit(0);
 	}
       /*
@@ -330,28 +334,41 @@ int daemon_init(void)
       if (setsid() < 0)
 	fatal("daemon_init: setsid failed.\n");
 
-      /* This should not be needed. All potential tty:s should be
-       * opened with O_NOCTTY. FIXME: What if a user links, say,
-       * ~/.lsh/authorized_keys to a tty? Perhaps we have to make sure
-       * that we never ever call open without the O_NOCTTY flag? */
-#if 0
-#ifdef SVR4
       /*
       ** Lose process session leadership
       ** to prevent gaining a controlling
       ** terminal in SVR4.
       */
-      switch (fork())
+      switch (child = fork())
 	{
 	case -1:
 	  return 0;
 	case 0:
 	  break;
 	default:
-	  exit(0);
+	  {
+	    int status;
+	    int res;
+
+	    do {
+	      res = waitpid(child, &status, 0);
+	    } while (res < 0 && errno == EINTR);
+
+	    if (!res < 0)
+	      werror("deamon.c: waitpid failed %e\n", errno);
+	    else if (WIFEXITED(status))
+	      werror("deamon.c: process exited with status %i\n",
+		     WEXITSTATUS(status));
+	    else if (WIFSIGNALED(status))
+	      werror("deamon.c: process died from signal %i\n",
+		     WTERMSIG(status));
+	    else
+	      werror("deamon.c: process died, wait status: %i\n",
+		     status);
+
+	    _exit(0);
+	  }
 	}
-#endif
-#endif
     }
 
   /*
