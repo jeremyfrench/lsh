@@ -23,7 +23,33 @@
 
 #include "userauth.h"
 
+#include "format.h"
+#include "ssh.h"
+#include "xalloc.h"
+
 #define GABA_DEFINE
 #include "userauth.h.x"
 #undef GABA_DEFINE
+
+struct lsh_string *format_userauth_failure(struct int_list *methods,
+					   int partial)
+{
+  return ssh_format("%c%A%c", SSH_MSG_USERAUTH_FAILURE, methods, partial);
+}
+
+struct lsh_string *format_userauth_success(void)
+{
+  return ssh_format("%c", SSH_MSG_USERAUTH_SUCCESS);
+}
+
+struct exception *
+make_userauth_special_exception(struct lsh_string *reply, const char *msg)
+{
+  NEW(userauth_special_exception, self);
+  self->super.type = EXC_USERAUTH_SPECIAL;
+  self->super.msg = msg ? msg : "userauth special reply";
+  self->reply = reply;
+
+  return &self->super;
+}
 
