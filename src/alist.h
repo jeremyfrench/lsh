@@ -37,9 +37,6 @@ struct alist;
 #include "alist.h.x"
 #undef GABA_DECLARE
 
-/* Not supported anymore */
-/* #define ALIST_USE_SIZE 0 */
-
 /* Abstract interface allows for multiple implementations ("real"
  * alists, linear tables, hash tables */
 
@@ -68,10 +65,6 @@ struct alist;
 
 #define ALIST_SET(alist, atom, value) \
      (ALIST_CLASS(alist)->set((alist), (atom), (value)))
-
-#if 0
-#define ALIST_KEYS(alist) ((alist)->keys((alist)))
-#endif
 
 struct alist *alist_addv(struct alist *a, unsigned n, va_list args);
 struct alist *alist_add(struct alist *a, unsigned n, ...);
