@@ -36,7 +36,6 @@
 
 /* The argp option group for actions. */
 #define CLIENT_ARGP_ACTION_GROUP 100
-
 #define CLIENT_ARGP_MODIFIER_GROUP 200
 
 struct packet_handler *
