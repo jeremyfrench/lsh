@@ -32,12 +32,12 @@ noinst_LIBRARIES = liblsh.a
 # compiled or dependency checked independently.
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
-	prime_table.h sexp_table.h digit_table.h # typdescr.h
+	prime_table.h sexp_table.h digit_table.h packet_types.h
 
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	algorithms.c alist.c arcfour.c atoms.c \
 	bignum.c blocking_write.c blowfish.c \
-	cascade.c cast.c cbc.c channel.c charset.c \
+	cascade.c cast.c cbc.c channel.c channel_commands.c charset.c \
 	client.c client_keyexchange.c client_password.c client_userauth.c \
 	combinators.c command.c compress.c connection.c connection_commands.c \
 	debug.c des.c disconnect.c  dsa_keygen.c encrypt.c \
@@ -86,9 +86,13 @@ digit_table.h: digit_table
 	./digit_table >$@T
 	test -s $@T && mv -f $@T $@
 
-typedescr.h: ssh.h $(top_srcdir)/misc/mk-reverse-table
-	$(PERL) $(top_srcdir)/misc/mk-reverse-table ssh.h >$@T
-	if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
+packet_types.h: ssh.h invert-defs
+	$(srcdir)/invert-defs <ssh.h >$@T
+	test -s $@T && mv -f $@T $@
+
+# typedescr.h: ssh.h $(top_srcdir)/misc/mk-reverse-table
+# 	  $(PERL) $(top_srcdir)/misc/mk-reverse-table ssh.h >$@T
+# 	  if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
 
 LDADD = @LIBOBJS@ liblsh.a symmetric/libsymmetric.a 
 
