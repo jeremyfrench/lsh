@@ -654,8 +654,8 @@ do_userauth_pk_ok(struct packet_handler *s,
 						ATOM_SSH_USERAUTH,
 						key->type,
 						key->public);
-#endif  
 	  else
+#endif /* DATAFELLOWS_WORKAROUNDS */ 
 	    request = format_userauth_publickey(local_to_utf8(self->state->userauth->username, 0),
 						self->state->userauth->service_name,
 						key->type,
