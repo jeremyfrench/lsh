@@ -6,6 +6,8 @@
 #include <unistd.h>
 #endif
 
+#warning blocking_write.c is obsolete
+
 static int do_write(struct abstract_write **w,
 		    struct lsh_string *packet)
 {
@@ -37,8 +39,9 @@ static int do_write(struct abstract_write **w,
 
 struct abstract_write *make_blocking_write_procesor(int fd)
 {
-  struct blocking_write_processor *closure
-    = xalloc(sizeof(struct blocking_write_processor_processor));
+  struct blocking_write_processor *closure;
+
+  NEW(closure);
 
   closure->p->f = do_write;
   closure->fd = fd;
