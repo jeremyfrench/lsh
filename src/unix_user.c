@@ -803,8 +803,16 @@ do_spawn(struct lsh_user *u,
       trace("do_spawn: child process\n");
       if (!chdir_home(user))
 	_exit(EXIT_FAILURE);
-
+      
       trace("do_spawn: child after chdir\n");
+
+      /* We want to be a process group leader */
+      if (setsid() < 0)
+	{
+	  werror("unix_user: setsid failed, already process group leader?\n"
+		 "   %e\n", errno);
+	  _exit(EXIT_FAILURE);
+	}
       
 #if WITH_PTY_SUPPORT
       if (info->pty)
