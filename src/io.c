@@ -279,6 +279,9 @@ static void
 lsh_oop_register_callout(struct lsh_callout *callout)
 {
   assert(source);
+  trace("lsh_oop_register_callout: action: %t\n",
+        callout->action);
+
   if (callout->super.alive)
     source->on_time(source, callout->when, lsh_oop_time_callback, callout);
 }
@@ -287,6 +290,8 @@ static void
 lsh_oop_cancel_callout(struct lsh_callout *callout)
 {
   assert(source);
+  trace("lsh_oop_cancel_callout: action: %t\n",
+        callout->action);
   if (callout->super.alive)
     source->cancel_time(source, callout->when, lsh_oop_time_callback, callout);
 }
