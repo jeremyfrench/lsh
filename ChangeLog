@@ -1,3 +1,15 @@
+2001-09-05  Niels Möller  <nisse@ehand.com>
+
+	* src/crypto.h: Deleted last traces of idea support.
+	* src/atoms.in: Likewise.
+	* src/algorithms.c: Likewise.
+	* src/Makefile.am.in: Likewise.
+
+	* src/testsuite/lsh-6-test: New test, exercising the various -c
+	options. 
+
+	* configure.in: Bumped version to 1.3.5.
+
 2001-09-04  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.3.4.
