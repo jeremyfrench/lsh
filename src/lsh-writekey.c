@@ -406,7 +406,7 @@ main(int argc, char **argv)
   struct lsh_string *input;
   struct lsh_string *output;
   const struct exception *e;
-  
+
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   if (! (check_file(options->private_file)
@@ -418,6 +418,12 @@ main(int argc, char **argv)
   if (!input)
     {
       werror("Failed to read key from stdin %e\n", errno);
+      return EXIT_FAILURE;
+    }
+  
+  if (!input->length)
+    {
+      werror("Empty key on input, giving up.\n");
       return EXIT_FAILURE;
     }
   
