@@ -35,8 +35,10 @@ int tty_makeraw(int fd);
 int tty_getwinsize(int fd, UINT32 *w, UINT32 *h, UINT32 *wp, UINT32 *hp);
 int tty_setwinsize(int fd, UINT32 w, UINT32 h, UINT32 wp, UINT32 hp);
 
-struct lsh_string *tty_encode_term_mode(struct termios *ios);
-int tty_decode_term_mode(struct termios *ios, UINT32 t_len, UINT8 *t_modes);
+struct lsh_string *
+tty_encode_term_mode(struct termios *ios);
+int
+tty_decode_term_mode(struct termios *ios, UINT32 t_len, const UINT8 *t_modes);
 
 #if HAVE_CFMAKERAW
 #define CFMAKERAW cfmakeraw

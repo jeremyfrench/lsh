@@ -324,10 +324,10 @@ do_userauth_banner(struct packet_handler *self UNUSED,
 
   unsigned msg_number;
   UINT32 length;
-  UINT8 *msg;
+  const UINT8 *msg;
 
   UINT32 language_length;
-  UINT8 *language;
+  const UINT8 *language;
   
   CHECK_TYPE(packet_handler, self);
 
@@ -618,7 +618,7 @@ do_userauth_pk_ok(struct packet_handler *s,
   unsigned msg_number;
   int algorithm;
   UINT32 keyblob_length;
-  UINT8 *keyblob;
+  const UINT8 *keyblob;
 
   simple_buffer_init(&buffer, packet->length, packet->data);
 

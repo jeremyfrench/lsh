@@ -41,8 +41,8 @@
 #endif
 #endif
 
-void bignum_parse_s(mpz_t n, UINT32 length, UINT8 *data);
-void bignum_parse_u(mpz_t n, UINT32 length, UINT8 *data);
+void bignum_parse_s(mpz_t n, UINT32 length, const UINT8 *data);
+void bignum_parse_u(mpz_t n, UINT32 length, const UINT8 *data);
 
 UINT32 bignum_format_s(const mpz_t n, UINT8 *data);
 UINT32 bignum_format_s_length(const mpz_t n);

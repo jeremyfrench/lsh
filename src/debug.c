@@ -114,7 +114,7 @@ do_rec_debug(struct packet_handler *self UNUSED,
   unsigned msg_number;
   unsigned always_display;
   UINT32 length;
-  UINT8 *msg;
+  const UINT8 *msg;
   int language;
   
   simple_buffer_init(&buffer, packet->length, packet->data);

@@ -48,7 +48,7 @@ do_disconnect(struct packet_handler *closure UNUSED,
   unsigned msg_number;
   UINT32 length;
   UINT32 reason;
-  UINT8 *msg;
+  const UINT8 *msg;
   
   static const struct exception disconnect_exception =
     STATIC_EXCEPTION(EXC_FINISH_IO, "Received disconnect message.");

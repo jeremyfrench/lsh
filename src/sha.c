@@ -39,16 +39,18 @@
        (ctx simple "struct sha_ctx")))
 */
 
-static void do_sha_update(struct hash_instance *s,
-			  UINT32 length, UINT8 *data)
+static void
+do_sha_update(struct hash_instance *s,
+	      UINT32 length, const UINT8 *data)
 {
   CAST(sha_instance, self, s);
 
   sha_update(&self->ctx, data, length);
 }
 
-static void do_sha_digest(struct hash_instance *s,
-			  UINT8 *dst)
+static void
+do_sha_digest(struct hash_instance *s,
+	      UINT8 *dst)
 {
   CAST(sha_instance, self, s);
 
@@ -57,7 +59,8 @@ static void do_sha_digest(struct hash_instance *s,
   sha_init(&self->ctx);
 }
 
-static struct hash_instance *do_sha_copy(struct hash_instance *s)
+static struct hash_instance *
+do_sha_copy(struct hash_instance *s)
 {
   return &CLONE(sha_instance, s)->super;
 }

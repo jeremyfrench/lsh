@@ -38,18 +38,19 @@ struct simple_buffer
 {
   UINT32 capacity;
   UINT32 pos;
-  UINT8 *data;
+  const UINT8 *data;
 };
 
-void simple_buffer_init(struct simple_buffer *buffer,
-			UINT32 capacity, UINT8 *data);
+void
+simple_buffer_init(struct simple_buffer *buffer,
+		  UINT32 capacity, const UINT8 *data);
 
 /* Returns 1 on success, 0 on failure */
 int parse_uint32(struct simple_buffer *buffer, UINT32 *result);
 
 /* Only records length and start pointer */
 int parse_string(struct simple_buffer *buffer,
-		 UINT32 *length, UINT8 **start);
+		 UINT32 *length, const UINT8 **start);
 
 /* Copies a given number of octets, without any length header */
 int parse_octets(struct simple_buffer *buffer,

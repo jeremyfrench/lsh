@@ -846,7 +846,7 @@ do_spawn_exec(struct channel_request *c,
   CAST(server_session, session, channel);
 
   UINT32 command_len;
-  UINT8 *command;
+  const UINT8 *command;
 
   struct lsh_string *command_line;
   
@@ -945,7 +945,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	     struct exception_handler *e)
 {
   UINT32 width, height, width_p, height_p;
-  UINT8 *mode;
+  const UINT8 *mode;
   UINT32 mode_length;
   struct lsh_string *term = NULL;
 

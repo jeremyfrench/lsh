@@ -265,10 +265,10 @@ do_exit_signal(struct channel_request *c,
   UINT32 signal;
   int core;
 
-  UINT8 *msg;
+  const UINT8 *msg;
   UINT32 length;
 
-  UINT8 *language;
+  const UINT8 *language;
   UINT32 language_length;
   
   if (!want_reply

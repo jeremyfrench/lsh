@@ -91,7 +91,7 @@ struct lsh_string *
 format_cstring(const char *s);
 
 struct lsh_string *
-make_cstring_l(UINT32 length, UINT8 *data);
+make_cstring_l(UINT32 length, const UINT8 *data);
 
 struct lsh_string *
 make_cstring(struct lsh_string *s, int free);

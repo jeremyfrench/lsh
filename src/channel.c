@@ -1496,10 +1496,10 @@ do_channel_open_failure(struct packet_handler *closure UNUSED,
   UINT32 channel_number;
   UINT32 reason;
 
-  UINT8 *msg;
+  const UINT8 *msg;
   UINT32 length;
 
-  UINT8 *language;
+  const UINT8 *language;
   UINT32 language_length;
   
   simple_buffer_init(&buffer, packet->length, packet->data);

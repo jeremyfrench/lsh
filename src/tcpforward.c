@@ -67,7 +67,7 @@ make_remote_port(struct address_info *listen,
 
 static struct forwarded_port *
 lookup_forward(struct object_queue *q,
-	       UINT32 length, UINT8 *ip, UINT32 port)
+	       UINT32 length, const UINT8 *ip, UINT32 port)
 {
   FOR_OBJECT_QUEUE(q, n)
     {
@@ -82,7 +82,7 @@ lookup_forward(struct object_queue *q,
 
 static struct local_port *
 remove_forward(struct object_queue *q, int null_ok,
-	       UINT32 length, UINT8 *ip, UINT32 port)
+	       UINT32 length, const UINT8 *ip, UINT32 port)
 {
   FOR_OBJECT_QUEUE(q, n)
     {
@@ -296,7 +296,7 @@ do_channel_open_direct_tcpip(struct channel_open *s,
 
   struct lsh_string *dest_host;
   UINT32 dest_port;
-  UINT8 *orig_host;
+  const UINT8 *orig_host;
   UINT32 orig_host_length;
   UINT32 orig_port;
   
@@ -530,7 +530,7 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
 			struct exception_handler *e)
 {
   UINT32 bind_host_length;
-  UINT8 *bind_host;
+  const UINT8 *bind_host;
   UINT32 bind_port;
   
   if (parse_string(args, &bind_host_length, &bind_host) &&
@@ -590,7 +590,7 @@ do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
 				struct exception_handler *e)
 {
   UINT32 listen_ip_length;
-  UINT8 *listen_ip;
+  const UINT8 *listen_ip;
   UINT32 listen_port;
   struct lsh_string *peer_host = NULL;
   UINT32 peer_port;

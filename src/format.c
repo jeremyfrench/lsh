@@ -138,7 +138,7 @@ end_options:
 	    case 's':
 	      {
 		UINT32 l = va_arg(args, UINT32); /* String length */ 
-		(void) va_arg(args, UINT8 *);    /* data */
+		(void) va_arg(args, const UINT8 *);    /* data */
 
 		length += l;
 
@@ -169,7 +169,7 @@ end_options:
 	      }
 	    case 'z':
 	      {
-		unsigned l = strlen(va_arg(args, char*));
+		unsigned l = strlen(va_arg(args, const char *));
 		length += l;
 
 		if (decimal)
@@ -351,7 +351,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	    case 's':
 	      {
 		UINT32 size = va_arg(args, UINT32);
-		UINT8 *data = va_arg(args, UINT8 *);
+		const UINT8 *data = va_arg(args, const UINT8 *);
 
 		UINT32 length = hex ? (2*size) : size;
 
@@ -403,7 +403,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	      }
 	    case 'z':
 	      {
-		char *s = va_arg(args, char *);
+		const char *s = va_arg(args, const char *);
 		UINT32 length = strlen(s);
 
 		if (decimal)
@@ -616,7 +616,7 @@ format_cstring(const char *s)
 }
 
 struct lsh_string *
-make_cstring_l(UINT32 length, UINT8 *data)
+make_cstring_l(UINT32 length, const UINT8 *data)
 {
   struct lsh_string *res;
   
@@ -640,13 +640,16 @@ make_cstring(struct lsh_string *s, int free)
   return res;
 }
 
-int lsh_string_eq(const struct lsh_string *a, const struct lsh_string *b)
+int
+lsh_string_eq(const struct lsh_string *a, const struct lsh_string *b)
 {
   return ( (a->length == b->length)
 	   && !memcmp(a->data, b->data, a->length));
 }
 
-int lsh_string_eq_l(const struct lsh_string *a, UINT32 length, const UINT8 *b)
+int
+lsh_string_eq_l(const struct lsh_string *a,
+		UINT32 length, const UINT8 *b)
 {
   return ( (a->length == length)
 	   && !memcmp(a->data, b, length));

@@ -38,16 +38,18 @@
        (ctx simple "struct md5_ctx")))
 */
 
-static void do_md5_update(struct hash_instance *s,
-			  UINT32 length, UINT8 *data)
+static void
+do_md5_update(struct hash_instance *s,
+	      UINT32 length, const UINT8 *data)
 {
   CAST(md5_instance, self, s);
 
   md5_update(&self->ctx, data, length);
 }
 
-static void do_md5_digest(struct hash_instance *s,
-			  UINT8 *dst)
+static void
+do_md5_digest(struct hash_instance *s,
+	      UINT8 *dst)
 {
   CAST(md5_instance, self, s);
 
@@ -56,7 +58,8 @@ static void do_md5_digest(struct hash_instance *s,
   md5_init(&self->ctx);
 }
 
-static struct hash_instance *do_md5_copy(struct hash_instance *s)
+static struct hash_instance *
+do_md5_copy(struct hash_instance *s)
 {
   return &CLONE(md5_instance, s)->super;
 }

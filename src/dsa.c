@@ -65,7 +65,7 @@
        (random object randomness)))
 */
 
-static void dsa_hash(mpz_t h, UINT32 length, UINT8 *msg)
+static void dsa_hash(mpz_t h, UINT32 length, const UINT8 *msg)
 {
   /* Compute hash */
   struct hash_instance *hash = MAKE_HASH(&sha1_algorithm);
@@ -81,7 +81,7 @@ static void dsa_hash(mpz_t h, UINT32 length, UINT8 *msg)
 }
 
 static void generic_dsa_sign(struct dsa_signer *closure,
-			     UINT32 length, UINT8 *msg,
+			     UINT32 length, const UINT8 *msg,
 			     mpz_t r, mpz_t s)
 {
   mpz_t k, tmp;
@@ -129,7 +129,8 @@ static void generic_dsa_sign(struct dsa_signer *closure,
   mpz_clear(tmp);
 }
 
-static UINT32 dsa_blob_length(mpz_t r, mpz_t s)
+static UINT32
+dsa_blob_length(mpz_t r, mpz_t s)
 {
   UINT32 r_length = bignum_format_u_length(r);
   UINT32 s_length = bignum_format_u_length(s);
@@ -137,7 +138,8 @@ static UINT32 dsa_blob_length(mpz_t r, mpz_t s)
   return MAX(r_length, s_length);
 }
 
-static void dsa_blob_write(mpz_t r, mpz_t s, UINT32 length, UINT8 *buf)
+static void
+dsa_blob_write(mpz_t r, mpz_t s, UINT32 length, UINT8 *buf)
 {
   bignum_write(r, length, buf);
   bignum_write(s, length, buf + length);
@@ -146,7 +148,7 @@ static void dsa_blob_write(mpz_t r, mpz_t s, UINT32 length, UINT8 *buf)
 static struct lsh_string *
 do_dsa_sign(struct signer *c,
 	    UINT32 msg_length,
-	    UINT8 *msg)
+	    const UINT8 *msg)
 {
   CAST(dsa_signer, closure, c);
   mpz_t r, s;
@@ -172,7 +174,7 @@ static struct sexp *
 do_dsa_sign_spki(struct signer *c,
 		 struct sexp *hash, struct sexp *principal,
 		 UINT32 msg_length,
-		 UINT8 *msg)
+		 const UINT8 *msg)
 {
   CAST(dsa_signer, closure, c);
   mpz_t r, s;
@@ -211,7 +213,7 @@ do_dsa_public_key(struct signer *s)
 static struct lsh_string *
 do_dsa_sign_kludge(struct signer *c,
 		   UINT32 msg_length,
-		   UINT8 *msg)
+		   const UINT8 *msg)
 {
   CAST(dsa_signer_variant, self, c);
   mpz_t r, s;
@@ -235,7 +237,8 @@ do_dsa_sign_kludge(struct signer *c,
   return signature;
 }
 
-struct signer *make_dsa_signer_kludge(struct signer *s)
+struct signer *
+make_dsa_signer_kludge(struct signer *s)
 {
   NEW(dsa_signer_variant, self);
   CAST(dsa_signer, dsa, s);
@@ -254,10 +257,11 @@ struct signer *make_dsa_signer_kludge(struct signer *s)
 
 /* The caller should make sure that r and s are non-negative.
  * That they are less than q is checked here. */
-static int generic_dsa_verify(struct dsa_public *key,
-			      UINT32 length,
-			      UINT8 *msg,
-			      mpz_t r, mpz_t s)
+static int
+generic_dsa_verify(struct dsa_public *key,
+		   UINT32 length,
+		   const UINT8 *msg,
+		   mpz_t r, mpz_t s)
 {
   mpz_t w, tmp, v;
   int res;
@@ -324,11 +328,12 @@ static int generic_dsa_verify(struct dsa_public *key,
   return res;
 }
 
-static int do_dsa_verify(struct verifier *c,
-			 UINT32 length,
-			 UINT8 *msg,
-			 UINT32 signature_length,
-			 UINT8 * signature_data)
+static int
+do_dsa_verify(struct verifier *c,
+	      UINT32 length,
+	      const UINT8 *msg,
+	      UINT32 signature_length,
+	      const UINT8 *signature_data)
 {
   CAST(dsa_verifier, closure, c);
   struct simple_buffer buffer;
@@ -339,7 +344,7 @@ static int do_dsa_verify(struct verifier *c,
   mpz_t r, s;
 
   UINT32 buf_length;
-  UINT8 *buf;
+  const UINT8 *buf;
   
   simple_buffer_init(&buffer, signature_length, signature_data);
   if (!(parse_atom(&buffer, &atom)
@@ -364,10 +369,11 @@ static int do_dsa_verify(struct verifier *c,
   return res;
 }
 
-static int do_dsa_verify_spki(struct verifier *c,
-			      UINT32 length,
-			      UINT8 *msg,
-			      struct sexp_iterator *i)
+static int
+do_dsa_verify_spki(struct verifier *c,
+		   UINT32 length,
+		   const UINT8 *msg,
+		   struct sexp_iterator *i)
 {
   CAST(dsa_verifier, closure, c);
 
@@ -395,9 +401,9 @@ static int do_dsa_verify_spki(struct verifier *c,
 static int
 do_dsa_verify_kludge(struct verifier *c,
 		     UINT32 length,
-		     UINT8 *msg,
+		     const UINT8 *msg,
 		     UINT32 signature_length,
-		     UINT8 * signature_data)
+		     const UINT8 *signature_data)
 {
   CAST(dsa_verifier_variant, self, c);
 
@@ -428,7 +434,8 @@ do_dsa_verify_kludge(struct verifier *c,
   return res;
 }
 
-struct verifier *make_dsa_verifier_kludge(struct verifier *v)
+struct verifier *
+make_dsa_verifier_kludge(struct verifier *v)
 {
   NEW(dsa_verifier_variant, self);
   CAST(dsa_verifier, dsa, v);
@@ -546,7 +553,7 @@ int parse_dsa_public(struct simple_buffer *buffer,
 
 struct dsa_verifier *
 make_ssh_dss_verifier(UINT32 public_length,
-		      UINT8 *public)
+		      const UINT8 *public)
 {
   NEW(dsa_verifier, res);
   struct simple_buffer buffer;

@@ -64,7 +64,7 @@ do_authenticate(struct userauth *s,
   struct lsh_string *keyblob = NULL;
   struct lookup_verifier *lookup;
   struct verifier *v;
-  UINT8 *signature_blob;
+  const UINT8 *signature_blob;
   UINT32 signature_length;
   UINT32 signature_start = 0;
   UINT32 algorithm;

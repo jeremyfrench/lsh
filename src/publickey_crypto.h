@@ -93,7 +93,7 @@ struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
 /* Non spki keys */
 struct dsa_verifier *
 make_ssh_dss_verifier(UINT32 public_length,
-		      UINT8 *public);
+		      const UINT8 *public);
 
 struct lsh_string *
 ssh_dss_public_key(struct signer *s);

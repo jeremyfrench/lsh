@@ -32,8 +32,9 @@
 
 #include "prime_table.h"
 
-static void limbs_to_octets(const mpz_t n, UINT32 length,
-			    UINT8 pad, UINT8 *data)
+static void
+limbs_to_octets(const mpz_t n, UINT32 length,
+		UINT8 pad, UINT8 *data)
 {
   UINT8 *dst = data + length - 1;
 	
@@ -63,7 +64,8 @@ static void limbs_to_octets(const mpz_t n, UINT32 length,
 }
 
 /* Formatting of signed numbers */
-void bignum_parse_s(mpz_t n, UINT32 length, UINT8 *data)
+void
+bignum_parse_s(mpz_t n, UINT32 length, const UINT8 *data)
 {
   int negative = length && (*data & 0x80);
   size_t i;
@@ -86,7 +88,8 @@ void bignum_parse_s(mpz_t n, UINT32 length, UINT8 *data)
   mpz_clear(digit);
 }
 
-static int mpz_size_of_complement(const mpz_t n)
+static int
+mpz_size_of_complement(const mpz_t n)
 {
   int bits;
 	
@@ -119,7 +122,8 @@ UINT32 bignum_format_s_length(const mpz_t n)
     }
 }
   
-UINT32 bignum_format_s(const mpz_t n, UINT8 *data)
+UINT32
+bignum_format_s(const mpz_t n, UINT8 *data)
 {
   switch(mpz_sgn(n))
     {
@@ -158,7 +162,8 @@ UINT32 bignum_format_s(const mpz_t n, UINT8 *data)
 }
 
 /* Formatting of unsigned numbers */
-void bignum_parse_u(mpz_t n, UINT32 length, UINT8 *data)
+void
+bignum_parse_u(mpz_t n, UINT32 length, const UINT8 *data)
 {
   size_t i;
   mpz_t digit;
@@ -174,7 +179,8 @@ void bignum_parse_u(mpz_t n, UINT32 length, UINT8 *data)
   mpz_clear(digit);
 }
 
-UINT32 bignum_format_u_length(const mpz_t n)
+UINT32
+bignum_format_u_length(const mpz_t n)
 {
   switch(mpz_sgn(n))
     {
@@ -187,12 +193,14 @@ UINT32 bignum_format_u_length(const mpz_t n)
     }
 }
 
-void bignum_write(mpz_t n, unsigned length, UINT8 *data)
+void
+bignum_write(mpz_t n, unsigned length, UINT8 *data)
 {
   limbs_to_octets(n, length, 0, data);
 }
 
-UINT32 bignum_format_u(const mpz_t n, UINT8 *data)
+UINT32
+bignum_format_u(const mpz_t n, UINT8 *data)
 {
   switch(mpz_sgn(n))
     {
@@ -211,7 +219,8 @@ UINT32 bignum_format_u(const mpz_t n, UINT8 *data)
 }
 
 /* Returns a random number, 0 <= x < 2^bits. */
-void bignum_random_size(mpz_t x, struct randomness *random, unsigned bits)
+void
+bignum_random_size(mpz_t x, struct randomness *random, unsigned bits)
 {
   unsigned length = (bits + 7) / 8;
   UINT8 *data = alloca(length);
@@ -222,7 +231,8 @@ void bignum_random_size(mpz_t x, struct randomness *random, unsigned bits)
 }
 
 /* Returns a random number, 0 <= x < n. */
-void bignum_random(mpz_t x, struct randomness *random, mpz_t n)
+void
+bignum_random(mpz_t x, struct randomness *random, mpz_t n)
 {
   /* Add a few bits extra, to decrease the bias from the final modulo
    * operation. */

@@ -38,12 +38,14 @@
 
 #if WITH_PTY_SUPPORT
 
-int tty_getattr(int fd, struct termios *ios)
+int
+tty_getattr(int fd, struct termios *ios)
 {
   return tcgetattr(fd, ios) != -1 ? 1 : 0;
 }
 
-int tty_setattr(int fd, struct termios *ios)
+int
+tty_setattr(int fd, struct termios *ios)
 {
   return tcsetattr(fd, TCSADRAIN, ios) != -1 ? 1 : 0;
 }
@@ -60,7 +62,8 @@ int tty_makeraw(int fd)
   return 0;
 }
 
-int tty_getwinsize(int fd, UINT32 *w, UINT32 *h, UINT32 *wp, UINT32 *hp)
+int
+tty_getwinsize(int fd, UINT32 *w, UINT32 *h, UINT32 *wp, UINT32 *hp)
 {
   struct winsize ws;
   int rc;
@@ -77,7 +80,8 @@ int tty_getwinsize(int fd, UINT32 *w, UINT32 *h, UINT32 *wp, UINT32 *hp)
   return 0;
 }
 
-int tty_setwinsize(int fd, UINT32 w, UINT32 h, UINT32 wp, UINT32 hp)
+int
+tty_setwinsize(int fd, UINT32 w, UINT32 h, UINT32 wp, UINT32 hp)
 {
   struct winsize ws;
   
@@ -393,7 +397,8 @@ static int cc_lflags[] = {
       }								\
 } while(0)
      
-struct lsh_string *tty_encode_term_mode(struct termios *ios)
+struct lsh_string *
+tty_encode_term_mode(struct termios *ios)
 {
   unsigned int i;
   struct lsh_string *new;
@@ -453,7 +458,8 @@ do {							\
 } while(0)
       
 /* Interpret ssh:s terminal description */
-int tty_decode_term_mode(struct termios *ios, UINT32 t_len, UINT8 *t_modes)
+int
+tty_decode_term_mode(struct termios *ios, UINT32 t_len, const UINT8 *t_modes)
 {
   struct simple_buffer buffer;
   
