@@ -20,6 +20,7 @@ digit_table
 digit_table.h
 lsh
 lsh_keygen
+lsh_proxy
 lsh_writekey
 lshd
 packet_types.h

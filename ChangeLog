@@ -1,5 +1,58 @@
 1999-11-29  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/client_userauth.h (format_userauth_password,
+	make_client_userauth, make_client_password_auth,
+	make_client_publickey_auth): Moved from userauth.h.	
+
+	* src/userauth.h: Moved stuff to server_userauth.h.
+
+	* src/userauth.c (format_userauth_failure,
+	format_userauth_success): Moved to server_userauth.c.
+
+	* src/server_session.c (server_connection_service): Removed
+	backend attribute.
+	(make_server_connection_service): Removed backend argument.
+
+	* src/server_password.c (do_authenticate): Added service
+	argument. 
+
+	* src/server_publickey.c (do_authenticate): Added service
+	argument. 
+
+	* src/connection.h (ssh_connection): Added chain attribute, needed
+	for proxying.
+
+	* src/lshd.c (main): Don't pass backend to
+	make_server_connection_service. 
+
+	* src/lsh.c: #include client_userauth.h
+
+	* src/server_userauth.c (make_userauth_handler): New function. 
+	(format_userauth_failure): Moved here.
+	(format_userauth_success): Moved here.
+	(do_userauth): Use make_userauth_handler().
+	(userauth_service): Moved to header file.
+	
+	* src/server_userauth.h (userauth_service): Moved from
+	server_userauth.c. 
+	(userauth): Moved from userauth.h. 
+
+	* src/client_userauth.c (format_userauth_password): Made non-static.
+
+	* src/proxy.c, src/proxy.h, src/proxy_session.c,
+	src/proxy_session.h, src/proxy_userauth.h, src/proxy_userauth.c:
+	New files (Bazsi)
+
+	* src/lsh_proxy.c: New program (Bazsi). 
+
+	* src/Makefile.am.in (sbin_PROGRAMS): Added lsh_proxy.
+	(liblsh_a_SOURCES): Added proxy.c proxy_session.c
+	and proxy_userauth.c. 
+
+	* configure.in: Bumped version to 0.1.17.
+
+	* AUTHORS: Added Bazsi to the list of authors.
+
 	* src/sexp.c (sexp_assq): Bug fix.
 
 	* src/lshd.c (main): Changed invocation of read_spki_key_file. 

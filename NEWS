@@ -1,3 +1,13 @@
+News for the lsh-0.1.17 release
+
+	More support for host authentication and SPKI.
+
+	First version that includes Bazsi's work on an ssh-proxy (i.e.
+	a program that implements the traditional Man-in-the-middle
+	attack on the ssh2 protocol). Could be useful for people
+	running firewalls, and also for those of us who want to point
+	out that it's a bad idea to use unauthenticated hostkeys.
+
 News for the lsh-0.1.16 release
 
 	Some preparations for real host authentication.
