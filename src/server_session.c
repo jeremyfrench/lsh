@@ -523,9 +523,9 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
   info->argc = argc;
   info->argv = argv;
   
-  assert(env_length >= 3);
+  assert(env_length >= 5);
 
-  /* FIXME: Set SSH_TTY, SSH_CLIENT and SSH_ORIGINAL_COMMAND */
+  /* FIXME: Set SSH_ORIGINAL_COMMAND */
   if (session->term)
     {
       env[i].name ="TERM";
@@ -558,6 +558,18 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
       i++;
     }
 
+#if WITH_X11_FORWARD
+  if (session->x11)
+    {
+      env[i].name = "DISPLAY";
+      env[i].value = session->x11->display;
+      i++;
+
+      env[i].name = "XAUTHORITY";
+      env[i].value = session->x11->xauthority;
+      i++;
+    }
+#endif /* WITH_X11_FORWARD */
   assert(i <= env_length);
   info->env_length = i;
   info->env = env;
@@ -573,7 +585,7 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
 {
   CAST(server_session, session, channel);
   struct spawn_info spawn;
-  struct env_value env[3];
+  struct env_value env[5];
   
   static const struct exception shell_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
@@ -588,7 +600,7 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
     /* Already spawned a shell or command */
     goto fail;
 
-  init_spawn_info(&spawn, session, 0, NULL, 3, env);
+  init_spawn_info(&spawn, session, 0, NULL, 5, env);
   spawn.login = 1;
     
   if (spawn_process(session, channel->connection->user, &spawn))
@@ -634,11 +646,11 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
     {
       struct spawn_info spawn;
       const char *args[2];
-      struct env_value env[3];
+      struct env_value env[5];
 
       struct lsh_string *s = ssh_format("%ls", command_len, command);
       
-      init_spawn_info(&spawn, session, 2, args, 3, env);
+      init_spawn_info(&spawn, session, 2, args, 5, env);
       spawn.login = 0;
       
       args[0] = "-c";
@@ -723,7 +735,7 @@ do_spawn_subsystem(struct channel_request *s,
     {
       struct spawn_info spawn;
       const char *args[2];
-      struct env_value env[3];
+      struct env_value env[5];
 
       /* Don't use any pty */
       if (session->pty)
@@ -734,7 +746,7 @@ do_spawn_subsystem(struct channel_request *s,
 
       args[0] = "-c"; args[1] = program;
       
-      init_spawn_info(&spawn, session, 2, args, 3, env);
+      init_spawn_info(&spawn, session, 2, args, 5, env);
       spawn.login = 0;
 
       if (spawn_process(session, channel->connection->user, &spawn))
@@ -868,6 +880,8 @@ window_change_request_handler =
 
 #if WITH_X11_FORWARD
 
+/* FIXME: We must delay the handling of any shell request until
+ * we have responded to the x11-req message. */
 static void
 do_x11_req(struct channel_request *s UNUSED,
 	   struct ssh_channel *channel,
@@ -884,13 +898,13 @@ do_x11_req(struct channel_request *s UNUSED,
   const UINT8 *cookie;
   UINT32 cookie_length;
   UINT32 screen;
-  UINT32 single;
+  unsigned single;
   
   CAST(server_session, session, channel);
 
   verbose("Client requesting x11 forwarding...\n");
 
-  if (parse_uint32(args, &single)
+  if (parse_uint8(args, &single)
       && parse_string(args, &protocol_length, &protocol)
       && parse_string(args, &cookie_length, &cookie)
       && parse_uint32(args, &screen))
