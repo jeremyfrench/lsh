@@ -158,8 +158,7 @@ struct resource *make_process_resource(pid_t pid, int signal)
        ; User information
        (user object user)
 
-       ; Non-zero if a shell or command has been started. 
-       ;; (running simple int)
+       (initial_window . UINT32)
 
        ; Resource to kill when the channel is closed. 
        (process object resource)
@@ -242,14 +241,15 @@ do_close(struct ssh_channel *c)
 
 struct ssh_channel *
 make_server_session(struct user *user,
-		    UINT32 max_window,
+		    UINT32 initial_window,
 		    struct alist *request_types)
 {
   NEW(server_session, self);
 
   init_channel(&self->super);
 
-  self->super.max_window = max_window;
+  self->initial_window = initial_window;
+
   /* We don't want to receive any data before we have forked some
    * process to receive it. */
   self->super.rec_window_size = 0;
@@ -288,7 +288,8 @@ static void
 do_open_session(struct channel_open *s,
 		struct ssh_connection *connection UNUSED,
 		UINT32 type UNUSED,
-		UINT32 max_packet UNUSED,
+		UINT32 send_window_size UNUSED,
+		UINT32 send_max_packet UNUSED,
 		struct simple_buffer *args,
 		struct command_continuation *c,
 		struct exception_handler *e)
@@ -818,7 +819,7 @@ do_spawn_shell(struct channel_request *c,
     case 1: /* Parent */
       /* NOTE: The return value is not used. */
       COMMAND_RETURN(s, channel);
-      channel_start_receive(channel);
+      channel_start_receive(channel, session->initial_window);
       return;
     case 0:
       { /* Child */
@@ -927,7 +928,7 @@ do_spawn_exec(struct channel_request *c,
 
       /* NOTE: The return value is not used. */
       COMMAND_RETURN(s, channel);
-      channel_start_receive(channel);
+      channel_start_receive(channel, session->initial_window);
       return;
     case 0:
       { /* Child */
