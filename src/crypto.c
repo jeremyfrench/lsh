@@ -44,6 +44,7 @@ static void do_crypt_none(struct crypto_instance *ignored,
 
 struct crypto_instance crypto_none_instance =
 {
+  STATIC_HEADER
   8,
   do_crypt_none
 };
@@ -55,10 +56,12 @@ struct rc4_instance
 };
 
 static void do_crypt_rc4(struct crypto_instance *s,
-			  UINT32 length, UINT8 *dst, UINT8 *src)
+			 UINT32 length, UINT8 *dst, UINT8 *src)
 {
   struct rc4_instance *self = (struct rc4_instance *) s;
 
+  MDEBUG(self);
+  
   if (length % 8)
     fatal("Internal error\n");
 
@@ -79,7 +82,8 @@ make_rc4_instance(struct crypto_algorithm *ignored, int mode, UINT8 *key)
 }
 
 struct crypto_algorithm crypto_rc4_algorithm =
-{ 8, 16, make_rc4_instance };
+{ STATIC_HEADER
+  8, 16, make_rc4_instance };
 
 /* SHA1 hash */
 struct sha_instance
@@ -92,6 +96,9 @@ static void do_sha_update(struct hash_instance *s,
 			  UINT32 length, UINT8 *data)
 {
   struct sha_instance *self = (struct sha_instance *) s;
+
+  MDEBUG(self);
+  
   sha_update(&self->ctx, data, length);
 }
 
@@ -99,6 +106,9 @@ static void do_sha_digest(struct hash_instance *s,
 			  UINT8 *dst)
 {
   struct sha_instance *self = (struct sha_instance *) s;
+
+  MDEBUG(self);
+  
   sha_final(&self->ctx);
   sha_digest(&self->ctx, dst);
   sha_init(&self->ctx);
@@ -108,6 +118,9 @@ static struct hash_instance *do_sha_copy(struct hash_instance *s)
 {
   struct sha_instance *self = (struct sha_instance *) s;
   struct sha_instance *new = xalloc(sizeof(struct sha_instance));
+
+  MDEBUG(self);
+
   memcpy(new, self, sizeof(*self));
   return &new->super;
 }
@@ -127,7 +140,8 @@ static struct hash_instance *make_sha_instance(struct hash_algorithm *ignored)
 }
 
 struct hash_algorithm sha_algorithm =
-{ SHA_DATASIZE, SHA_DIGESTSIZE, make_sha_instance };
+{ STATIC_HEADER
+  SHA_DATASIZE, SHA_DIGESTSIZE, make_sha_instance };
 
 /* HMAC (rfc-2104) */
 
@@ -152,6 +166,9 @@ static void do_hmac_update(struct mac_instance *s,
 			   UINT32 length, UINT8 *data)
 {
   struct hmac_instance *self = (struct hmac_instance *) s;
+
+  MDEBUG(self);
+
   HASH_UPDATE(self->state, length, data);
 }
 
@@ -160,6 +177,8 @@ static void do_hmac_digest(struct mac_instance *s,
 {
   struct hmac_instance *self = (struct hmac_instance *) s;
   struct hash_instance *h = self->state;
+
+  MDEBUG(self);
   
   HASH_DIGEST(h, data);   /* Inner hash */
   lsh_free(h);
@@ -176,6 +195,8 @@ static struct mac_instance *do_hmac_copy(struct mac_instance *s)
   struct hmac_instance *self = (struct hmac_instance *) s;
   struct hmac_instance *new = xalloc(sizeof(struct hmac_instance));
 
+  MDEBUG(self);
+  
   memcpy(&new->super, &self->super, sizeof(self->super));
 
   /* FIXME: Sharing hinner and houter objects makes gc more difficult */
@@ -196,6 +217,8 @@ static struct mac_instance *make_hmac_instance(struct mac_algorithm *s,
   struct hmac_instance *instance = xalloc(sizeof(struct hmac_instance));
   UINT8 *pad = alloca(self->hash->block_size);
   int i;
+
+  MDEBUG(self);
   
   instance->super.hash_size = self->super.hash_size;
   instance->super.update = do_hmac_update;
