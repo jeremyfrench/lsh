@@ -2,9 +2,10 @@
  *
  */
 
-#include "parse.h"
-#include "xalloc.h"
 #include "format.h"
+#include "parse.h"
+#include "werror.h"
+#include "xalloc.h"
 
 void simple_buffer_init(struct simple_buffer *buffer,
 			UINT32 capacity, UINT8 *data)
@@ -60,7 +61,7 @@ struct lsh_string *parse_string_copy(struct simple_buffer *buffer)
   UINT32 length;
   UINT8 *start;
   
-  if (!parse_string(buffer, &length, &data))
+  if (!parse_string(buffer, &length, &start))
     return NULL;
 
   return ssh_format("%ls", length, start);
@@ -107,7 +108,7 @@ int parse_bignum(struct simple_buffer *buffer, mpz_t result)
   if (!parse_string(buffer, &length, &digits))
     return 0;
 
-  bignum_parse(result, length, digits);
+  bignum_parse_s(result, length, digits);
 
   return 1;
 }
@@ -121,7 +122,7 @@ int parse_atom(struct simple_buffer *buffer, int *result)
        || length > 64)
     return 0;
 
-  *result = lookup_atom(data, start);
+  *result = lookup_atom(length, start);
 
   return 1;
 }
@@ -148,7 +149,7 @@ int parse_next_atom(struct simple_buffer *buffer, int *result)
 	return 0;
     }
   
-  *result = lookup_atom(HERE, i);
+  *result = lookup_atom(i, HERE);
   ADVANCE(i+1);  /* If the atom was terminated at the end of the
 		  * buffer, rather than by a comma, this points beyond
 		  * the end of the buffer */

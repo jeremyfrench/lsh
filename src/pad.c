@@ -2,9 +2,11 @@
  *
  */
 
-#include "pad.h"
-#include "xalloc.h"
 #include <assert.h>
+
+#include "pad.h"
+#include "randomness.h"
+#include "xalloc.h"
 
 static int do_pad(struct abstract_write **w,
 		  struct lsh_string *packet)

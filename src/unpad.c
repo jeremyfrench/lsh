@@ -33,13 +33,14 @@ static int do_unpad(struct abstract_write **w,
 
   lsh_string_free(packet);
 
-  return A_WRITE(closure->super.next, new);
+  return A_WRITE(closure->next, new);
 }
 
 struct abstract_write *
 make_packet_unpad(struct abstract_write *continuation)
 {
-  struct packet_unpad *closure = xalloc(sizeof(struct packet_unpad));
+  struct abstract_write_pipe *closure =
+    xalloc(sizeof(struct abstract_write_pipe));
 
   closure->super.write = do_unpad;
   closure->next = continuation;

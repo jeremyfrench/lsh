@@ -181,7 +181,7 @@ UINT32 bignum_format_u(mpz_t n, UINT8 *data)
 void bignum_random(mpz_t x, struct randomness *random, mpz_t n)
 {
   /* Add a few bits extra */
-  int length = (mpz_sizeinbase(n) + 17) / 8;
+  int length = (mpz_sizeinbase(n, 2) + 17) / 8;
   UINT8 *data = alloca(length);
 
   RANDOM(random, length, data);

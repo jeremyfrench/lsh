@@ -6,6 +6,7 @@
 #define LSH_KEYEXCHANGE_H_INCLUDED
 
 #include "lsh_types.h"
+#include "abstract_io.h"
 
 struct kexinit
 {
@@ -22,13 +23,13 @@ struct kexinit
   int *languages_client_to_server;
   int *languages_server_to_client;
   int first_kex_packet_follows;
-}
+};
 
 struct handle_kexinit
 {
   int (*f)(struct handle_kexinit *closure,
 	   struct kexinit *msg);
-}
+};
 
 #define HANDLE_KEXINIT(handler, msg) ((handler)->f((handler), (msg)))
 

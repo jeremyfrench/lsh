@@ -6,8 +6,9 @@
 #define LSH_PUBLICKEY_CRYPTO_H_INCLUDED
 
 #include "abstract_crypto.h"
+#include "connection.h"
 
-struct make_dss_algorithm(struct randomness *random);
+struct signature_algorithm *make_dss_algorithm(struct randomness *random);
 
 /* Groups. For now, assume that all group elements are represented by
  * bignums. */
@@ -28,7 +29,7 @@ struct group
 #define GROUP_COMBINE(group, res, a, b) \
 ((group)->combine((group), (res), (a), (b)))
 #define GROUP_POWER(group, res, g, e) \
-((group)->POWER((group), (res), (g), (e)))
+((group)->power((group), (res), (g), (e)))
 
 /* DH key exchange, with authentication */
 struct diffie_hellman_method
@@ -64,7 +65,7 @@ void dh_hash_update(struct diffie_hellman_instance *self,
 
 /* Creates server message */
 struct lsh_string *dh_make_server_msg(struct diffie_hellman_instance *self,
-				      struct signer s);
+				      struct signer *s);
 
 /* Decodes server message, but does not verify its signature */
 int dh_process_server_msg(struct diffie_hellman_instance *self,
@@ -81,8 +82,10 @@ make_diffie_hellman_method(struct group *group,
 			   struct randomness *r);
 #endif
 
+struct diffie_hellman_method *make_dh1(struct randomness *r);
+
 struct diffie_hellman_instance *
 make_diffie_hellman_instance(struct diffie_hellman_method *m,
-				    struct connection *c);
+			     struct ssh_connection *c);
 
 #endif /* LSH_PUBLICKEY_CRYPTO_H_INCLUDED */

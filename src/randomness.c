@@ -2,8 +2,13 @@
  *
  */
 
+#include <sys/types.h>
+#include <time.h>
+
 #include "randomness.h"
+
 #include "abstract_crypto.h"
+#include "xalloc.h"
 
 /* Random */
 struct poor_random

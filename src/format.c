@@ -118,9 +118,10 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 	    case 'A':
 	      {
 		int *atom = va_arg(args, int *);
+		int i;
 		
-		while (*atom > 0)
-		  length += get_atom_length(atom++) + 1;
+		for(i = 0; atom[i] > 0; i++)
+		  length += get_atom_length(atom[i]) + 1;
 
 		/* One ','-character less than the number of atoms */
 		length--;
@@ -149,10 +150,10 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 #endif
 	    case 'n':
 	      {
-		bignum *n = va_arg(args, bignum *);
+		MP_INT *n = va_arg(args, MP_INT*);
 
 		/* Calculate length of written number */
-		length += bignum_format_length(n);
+		length += bignum_format_s_length(n);
 
 		if (!literal)
 		  length += 4;
@@ -296,8 +297,9 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		memcpy(buffer, get_atom_name(atom), length);
 		buffer += length;
 		f++;
+		break;
 	      }
-	    break;
+#if 0
 	    case 'A':
 	      {
 		int atom;
@@ -330,29 +332,29 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		f++;
 		break;
 	      }
-#if 0
+#endif
 	    case 'A':
 	      {
 		int *atom = va_arg(args, int *);
 		UINT8 *start = buffer; /* Where to store the length */
+		int i;
 		
 		if (!literal)
 		  buffer += 4;
 
-		if (*atom > 0)
+		if (atom[0] > 0)
 		  {
 		    UINT32 length = get_atom_length(*atom);
 		    memcpy(buffer, get_atom_name(*atom), length);
 		    buffer += length;
 		    atom ++;
 		    
-		    while (*atom > 0)
+		    for (i = 1; atom[i] > 0; i++)
 		      {
 			*buffer++ = ',';
-			length = get_atom_length(atom);
-			memcpy(buffer, get_atom_name(atom), length);
+			length = get_atom_length(atom[i]);
+			memcpy(buffer, get_atom_name(atom[i]), length);
 			buffer += length;
-			atom++;
 		      }
 		  }
 				
@@ -364,11 +366,10 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		f++;
 		break;
 	      }
-#endif
 	    case 'n':
 	      {
-		bignum *n = va_arg(args, bignum *);
-		UINT32 length = bignum_format(n, buffer);
+		MP_INT *n = va_arg(args, MP_INT *);
+		UINT32 length = bignum_format_s(n, buffer);
 
 		buffer += length;
 

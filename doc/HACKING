@@ -83,7 +83,7 @@ implementation of this type looks as follows:
    
      lsh_string_free(packet);
    
-     return A_WRITE(closure->super.next, new);
+     return A_WRITE(closure->next, new);
    }
 
 Note the last line; the function passes a newly created packet on to

@@ -60,6 +60,11 @@ struct client_line_handler
   struct ssh_connection *connection;
 };
 
+struct abstract_write *make_client_dispatch(struct ssh_connection *c)
+{ /* FIXME: HERE */
+  return make_packet_void();
+}
+
 static struct read_handler *do_line(struct line_handler **h,
 				    UINT32 length,
 				    UINT8 *line)
@@ -76,7 +81,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  struct read_handler *new
 	    = make_read_packet
 	    (make_packet_debug
-	     (make_packet_unpad(make_client_dispatch(connection)),
+	     (make_packet_unpad(make_client_dispatch(closure->connection)),
 	      stderr),
 	     closure->connection->max_packet);
 	  

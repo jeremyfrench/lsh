@@ -22,7 +22,7 @@ UINT32 get_atom_length(int atom)
 UINT8 *get_atom_name(int atom)
 { return atom_table[atom].name; }
   
-UINT32 lookup_atom(UINT8 *name, UINT32 length)
+UINT32 lookup_atom(UINT32 length, UINT8 *name)
 {
   struct atom_assoc *pair = gperf_atom(name, length);
 

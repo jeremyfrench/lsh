@@ -102,16 +102,14 @@ struct verifier
   
 struct signature_algorithm
 {
-  struct signer *
-  (struct make_signer *)(struct signature_algorithm *closure,
-			 UINT32 public_length,
-			 UINT8 *public,
-			 UINT32 secret_length,
-			 UINT8 *secret);
-  struct verifier *
-  (struct make_verifier *)(struct signature_algorithm *closure,
-			   UINT32 public_length,
-			   UINT8 *public);
+  struct signer * (*make_signer)(struct signature_algorithm *closure,
+				 UINT32 public_length,
+				 UINT8 *public,
+				 UINT32 secret_length,
+				 UINT8 *secret);
+  struct verifier * (*make_verifier)(struct signature_algorithm *closure,
+				     UINT32 public_length,
+				     UINT8 *public);
 };
 
 #endif /* LSH_ABSTRACT_CRYPTO_H_INCLUDED */

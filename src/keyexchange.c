@@ -2,9 +2,13 @@
  *
  */
 
+#include "abstract_io.h"
+#include "connection.h"
+#include "format.h"
 #include "keyexchange.h"
 #include "parse.h"
-
+#include "ssh.h"
+#include "xalloc.h"
 
 #define NLISTS 10
 
@@ -25,9 +29,9 @@ struct kexinit *parse_kexinit(struct lsh_string *packet)
       || (msg_number != SSH_MSG_KEXINIT) )
     return 0;
 
-  res = xalloc(sizeof(keyexinit));
+  res = xalloc(sizeof(struct kexinit));
 
-  if (!parse_octets(&buffer, 16, &res->cookie))
+  if (!parse_octets(&buffer, 16, res->cookie))
     {
       lsh_free(res);
       return NULL;
@@ -53,16 +57,16 @@ struct kexinit *parse_kexinit(struct lsh_string *packet)
       return NULL;
     }
   
-  res->kex_algorithms = list[0];
+  res->kex_algorithms = lists[0];
   res->server_host_key_algorithms = lists[1];
-  res->encryption_algorithms_client_to_server = list[2];
-  res->encryption_algorithms_server_to_client = list[3];
-  res->mac_algorithms_client_to_server = list[4];
-  res->mac_algorithms_server_to_client = list[5];
-  res->compression_algorithms_client_to_server = list[6];
-  res->compression_algorithms_server_to_client = list[7];
-  res->languages_client_to_server = list[8];
-  res->languages_server_to_client = list[9];
+  res->encryption_algorithms_client_to_server = lists[2];
+  res->encryption_algorithms_server_to_client = lists[3];
+  res->mac_algorithms_client_to_server = lists[4];
+  res->mac_algorithms_server_to_client = lists[5];
+  res->compression_algorithms_client_to_server = lists[6];
+  res->compression_algorithms_server_to_client = lists[7];
+  res->languages_client_to_server = lists[8];
+  res->languages_server_to_client = lists[9];
 
   return res;
 }

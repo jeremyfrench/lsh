@@ -2,10 +2,16 @@
  *
  */
 
-#include "bignum.h"
-#include "sha.h"
 #include "atoms.h"
+#include "bignum.h"
+#include "crypto.h"
+#include "format.h"
+#include "parse.h"
 #include "publickey_crypto.h"
+#include "sha.h"
+#include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
 
 /* DSS signatures */
 
@@ -22,7 +28,7 @@ struct dss_signer
   struct signer super;
   struct randomness *random;
   struct dss_public public;
-  mpz_t a;
+  mpz_t a; 		/* Private key */
 };
 
 struct dss_verifier
@@ -40,24 +46,22 @@ struct dss_algorithm
 static void dss_hash(mpz_t h, UINT32 length, UINT8 *msg)
 {
   /* Compute hash */
-  hash = MAKE_HASH(&sha_algorithm);
-  digest = alloca(hash->hash_size);
-  HASH_UPDATE(hash, length, data);
+  struct hash_instance *hash = MAKE_HASH(&sha_algorithm);
+  UINT8 *digest = alloca(hash->hash_size);
+  HASH_UPDATE(hash, length, msg);
   HASH_DIGEST(hash, digest);
 
-  bignum_parse_u(h, digest, hash->hash_size);
+  bignum_parse_u(h, hash->hash_size, digest);
 
   lsh_free(hash);
 }
 
-static struct lsh_string *do_dss_sign(struct signer *s,
+static struct lsh_string *do_dss_sign(struct signer *c,
 				      UINT32 length,
 				      UINT8 *msg)
 {
-  struct dss_signer *closure = (struct dss_signer *) s;
+  struct dss_signer *closure = (struct dss_signer *) c;
   mpz_t k, r, s, tmp;
-  struct hash_instance *hash;
-  UINT8 *digest;
   struct lsh_string *signature;
   
   /* Select k, 0<k<q, randomly */
@@ -65,7 +69,7 @@ static struct lsh_string *do_dss_sign(struct signer *s,
   mpz_sub_ui(tmp, tmp, 1);
 
   mpz_init(k);
-  bignum_random(k, closure.random, tmp);
+  bignum_random(k, closure->random, tmp);
   mpz_add_ui(k, k, 1);
 
   /* Compute r = (g^k (mod p)) (mod q) */
@@ -88,7 +92,7 @@ static struct lsh_string *do_dss_sign(struct signer *s,
 
   /* Compute signature s = k^-1(h + ar) (mod q) */
   mpz_init(s);
-  mpz_mul(s, r, closure->secret);
+  mpz_mul(s, r, closure->a);
   mpz_tdiv_r(s, s, closure->public.q);
   mpz_add(s, s, tmp);
   mpz_mul(s, s, k);
@@ -105,13 +109,13 @@ static struct lsh_string *do_dss_sign(struct signer *s,
   return signature;
 }
 
-ind do_dss_verify(struct verifier *closure,
+int do_dss_verify(struct verifier *c,
 		  UINT32 length,
 		  UINT8 *msg,
 		  UINT32 signature_length,
 		  UINT8 * signature_data)
 {
-  struct dss_signer *closure = (struct dss_signer *) s;
+  struct dss_signer *closure = (struct dss_signer *) c;
   struct simple_buffer buffer;
 
   int res;
@@ -119,7 +123,7 @@ ind do_dss_verify(struct verifier *closure,
   int atom;
   mpz_t r, s;
 
-  mpz_t w, tmp, u, v;
+  mpz_t w, tmp, v;
   
   simple_buffer_init(&buffer, signature_length, signature_data);
   if (!parse_atom(&buffer, &atom)
@@ -143,7 +147,7 @@ ind do_dss_verify(struct verifier *closure,
 
   /* Compute w = s^-1 (mod q) */
   mpz_init(w);
-  if (!mpz_invert(s, closure->public.q))
+  if (!mpz_invert(w, s, closure->public.q))
     {
       werror("do_dss_verify: s non-invertible.\n");
       mpz_clear(r);
@@ -194,16 +198,16 @@ int parse_dss_public(struct simple_buffer *buffer, struct dss_public *public)
   mpz_init(public->y);
 #endif
   
-  return (parse_bignum(&buffer, public.p)
-	  && parse_bignum(&buffer, public->p)
+  return (parse_bignum(buffer, public->p)
+	  && parse_bignum(buffer, public->p)
 	  && (mpz_sgn(public->p) == 1)
-	  && parse_bignum(&buffer, public->q)
+	  && parse_bignum(buffer, public->q)
 	  && (mpz_sgn(public->q) == 1)
 	  && (mpz_cmp(public->q, public->p) < 0) /* q < p */ 
-	  && parse_bignum(&buffer, public->g)
+	  && parse_bignum(buffer, public->g)
 	  && (mpz_sgn(public->g) == 1)
 	  && (mpz_cmp(public->g, public->p) < 0) /* g < p */ 
-	  && parse_bignum(&buffer, public->y) 
+	  && parse_bignum(buffer, public->y) 
 	  && (mpz_sgn(public->y) == 1)
 	  && (mpz_cmp(public->y, public->p) < 0) /* y < p */  );
 #if 0
@@ -220,17 +224,20 @@ int parse_dss_public(struct simple_buffer *buffer, struct dss_public *public)
 struct signer *make_dss_signer(struct signature_algorithm *closure,
 			       UINT32 public_length,
 			       UINT8 *public,
-			       UINT32 secret_length,
-			       UINT8 *secret)
+			       UINT32 private_length,
+			       UINT8 *private)
 {
   struct dss_signer *res;
-  struct simple_buffer buffer;
+  struct simple_buffer public_buffer;
+  struct simple_buffer private_buffer;  
   int atom;
 
-  simple_buffer_init(&buffer, signature_length, signature_data);
-  if (!parse_atom(&buffer, &atom)
+  simple_buffer_init(&public_buffer, public_length, public);
+  if (!parse_atom(&public_buffer, &atom)
       || (atom != ATOM_SSH_DSS) )
     return 0;
+  
+  simple_buffer_init(&private_buffer, private_length, private);
 
   res = xalloc(sizeof(struct dss_signer));
 
@@ -238,18 +245,19 @@ struct signer *make_dss_signer(struct signature_algorithm *closure,
   mpz_init(res->public.q);
   mpz_init(res->public.g);
   mpz_init(res->public.y);
-  mpz_init(res->secret);
+  mpz_init(res->a);
   
-  if (! (parse_dss_public(&buffer, &res->public)
-  	 && parse_bignum(&buffer, res->secret)
+  if (! (parse_dss_public(&public_buffer, &res->public)
+  	 && parse_bignum(&private_buffer, res->a)
 	 /* FIXME: Perhaps do some more sanity checks? */
-	 && mpz_sign(res->secret) == 1))
+	 && (mpz_sgn(res->a) == 1)
+	 && parse_eod(&private_buffer) ))
     {
       mpz_clear(res->public.p);
       mpz_clear(res->public.q);
       mpz_clear(res->public.g);
       mpz_clear(res->public.y);
-      mpz_clear(res->secret);
+      mpz_clear(res->a);
       lsh_free(res);
       return NULL;
     }
@@ -293,9 +301,9 @@ struct verifier *make_dss_verifier(struct signature_algorithm *closure,
   return &res->super;
 }
 
-struct make_dss_algorithm(struct randomness *random)
+struct signature_algorithm *make_dss_algorithm(struct randomness *random)
 {
-  struct dss_algorithm *res = xalloc(sizeof(struct dss_algorithm));
+  struct dss_algorithm *dss = xalloc(sizeof(struct dss_algorithm));
 
   dss->super.make_signer = make_dss_signer;
   dss->super.make_verifier = make_dss_verifier;
@@ -352,8 +360,9 @@ struct group *make_zn(mpz_t p)
   res->super.combine = zn_combine;
   res->super.power = zn_power;     /* Pretty Mutation! Magical Recall! */
   
-  mpz_init_set(res->modulo, n);
-  mpz_init_set(res->super.order, n);
+  mpz_init_set(res->modulo, p);
+  mpz_init_set(res->super.order, p);
+  mpz_sub_ui(res->super.order, res->super.order, 1);
   return &res->super;
 }
 
@@ -361,7 +370,7 @@ struct group *make_zn(mpz_t p)
 
 struct diffie_hellman_instance *
 make_diffie_hellman_instance(struct diffie_hellman_method *m,
-				    struct connection *c)
+			     struct ssh_connection *c)
 {
   struct diffie_hellman_instance *res
     = xalloc(sizeof(struct diffie_hellman_instance));
@@ -371,7 +380,7 @@ make_diffie_hellman_instance(struct diffie_hellman_method *m,
   mpz_init(res->secret);
   
   res->method = m;
-  res->hash = make_hash(m->H);
+  res->hash = MAKE_HASH(m->H);
   HASH_UPDATE(res->hash,
 	      c->client_version->length,
 	      c->client_version->data);
@@ -381,7 +390,7 @@ make_diffie_hellman_instance(struct diffie_hellman_method *m,
   return res;
 }
 
-struct group *make_dh1(struct randomness *r)
+struct diffie_hellman_method *make_dh1(struct randomness *r)
 {
   struct diffie_hellman_method *res
     = xalloc(sizeof(struct diffie_hellman_method));
@@ -401,7 +410,7 @@ struct group *make_dh1(struct randomness *r)
 
   mpz_init_set_ui(res->generator, 2);
 
-  res->hash_algorithm = &sha_algorithm;
+  res->H = &sha_algorithm;
   res->random = r;
   
   return res;
@@ -412,14 +421,14 @@ void dh_generate_secret(struct diffie_hellman_instance *self,
 {
   mpz_t tmp;
 
-  /* Generate a random number, 1 < x < O(G) */
-  mpz_init_set(tmp, self->method->G->order);
-  mpz_sub_ui(tmp, tmp, 2);
-  bignum_random(self->secret, tmp);
-  mpz_add_ui(self->secret, self->secret, 2);
+  /* Generate a random number, 1 < x <= p-1 = O(G) */
+  mpz_init_set(tmp, self->method->G->order);  
+  mpz_sub_ui(tmp, tmp, 1);
+  bignum_random(self->secret, self->method->random, tmp);
+  mpz_add_ui(self->secret, self->secret, 1);
   mpz_clear(tmp);
 
-  GROUP_POWER(self->methog->G, r, self->method->generator, self->secret);
+  GROUP_POWER(self->method->G, r, self->method->generator, self->secret);
 }
 
 struct lsh_string *dh_make_client_msg(struct diffie_hellman_instance *self)
@@ -440,7 +449,7 @@ int dh_process_client_msg(struct diffie_hellman_instance *self,
 	  && (msg_number == SSH_MSG_KEXDH_INIT)
 	  && parse_bignum(&buffer, self->e)
 	  && (mpz_cmp_ui(self->e, 1) > 0)
-	  && (mpz_cmp(self->e, self->method->G->order) < 0)
+	  && (mpz_cmp(self->e, self->method->G->order) <= 0)
 	  && parse_eod(&buffer) );
 }
 
@@ -453,14 +462,14 @@ void dh_hash_update(struct diffie_hellman_instance *self,
 /* Hashes server key, e and f */
 void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
 {
-  struct lsh_string s = ssh_format("%S%n%n",
+  struct lsh_string *s = ssh_format("%S%n%n",
 				   self->server_key,
 				   self->e, self->f);
 
   HASH_UPDATE(self->hash, s->length, s->data);
   lsh_string_free(s);
 
-  HASH_DIGEST(hash, digest);
+  HASH_DIGEST(self->hash, digest);
 }
 
 struct lsh_string *dh_make_server_msg(struct diffie_hellman_instance *self,
@@ -471,7 +480,7 @@ struct lsh_string *dh_make_server_msg(struct diffie_hellman_instance *self,
   dh_generate_secret(self, self->f);
 
   digest = alloca(self->hash->hash_size);
-  dh_digest(self, digest);
+  dh_hash_digest(self, digest);
 
   return ssh_format("%c%S%n%fS",
 		    SSH_MSG_KEXDH_REPLY,
@@ -489,11 +498,11 @@ int dh_process_server_msg(struct diffie_hellman_instance *self,
 
   return (parse_uint8(&buffer, &msg_number)
 	  && (msg_number == SSH_MSG_KEXDH_REPLY)
-	  && (res->server_key = parse_string_copy(&buffer))
-	  && (parse_bignum(&buffer, res->f))
+	  && (self->server_key = parse_string_copy(&buffer))
+	  && (parse_bignum(&buffer, self->f))
 	  && (mpz_cmp_ui(self->f, 1) > 0)
-	  && (mpz_cmp(self->f, self->method->G->order) < 0)
-	  && (res->signature = parse_string_copy(&buffer))
+	  && (mpz_cmp(self->f, self->method->G->order) <= 0)
+	  && (self->signature = parse_string_copy(&buffer))
 	  && parse_eod(&buffer));
 }
 	  
@@ -503,7 +512,7 @@ int dh_verify_server_msg(struct diffie_hellman_instance *self,
   UINT8 *digest;
   
   digest = alloca(self->hash->hash_size);
-  dh_digest(self, digest);
+  dh_hash_digest(self, digest);
 
   return VERIFY(v, self->hash->hash_size, digest,
 		self->signature->length, self->signature->data);
