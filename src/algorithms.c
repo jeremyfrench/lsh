@@ -45,10 +45,8 @@
 struct alist *
 all_symmetric_algorithms()
 {
-  return make_alist(9
-#if WITH_IDEA
-		    +1
-#endif
+  struct crypto_algorithm *aes = crypto_cbc(&rijndael256_algorithm);
+  return make_alist(10
 #if WITH_ZLIB
 		    +1
 #endif
@@ -56,7 +54,8 @@ all_symmetric_algorithms()
 		    ATOM_ARCFOUR, &crypto_arcfour_algorithm,
 		    ATOM_BLOWFISH_CBC, crypto_cbc(&blowfish_algorithm),
 		    ATOM_TWOFISH_CBC, crypto_cbc(&twofish256_algorithm),
-		    ATOM_RIJNDAEL_CBC_LOCAL, crypto_cbc(&rijndael256_algorithm),
+                    ATOM_AES256_CBC, aes,
+		    ATOM_RIJNDAEL_CBC_LOCAL, aes,
 		    ATOM_SERPENT_CBC_LOCAL, crypto_cbc(&serpent256_algorithm),
 		    ATOM_3DES_CBC, crypto_cbc(make_des3()),
 		    ATOM_CAST128_CBC, crypto_cbc(&cast128_algorithm),
@@ -107,6 +106,7 @@ all_crypto_algorithms(struct alist *algorithms)
 			     ATOM_TWOFISH_CBC, 			   
 			     ATOM_CAST128_CBC,
 			     ATOM_SERPENT_CBC_LOCAL,
+                             ATOM_AES256_CBC,
 			     ATOM_RIJNDAEL_CBC_LOCAL,
 			     ATOM_IDEA_CBC,
 			     ATOM_BLOWFISH_CBC,
@@ -173,6 +173,8 @@ lookup_crypto(struct alist *algorithms, const char *name, struct crypto_algorith
     atom = ATOM_BLOWFISH_CBC;
   else if (strcasecmp_list(name, "3des-cbc", "3des", NULL))
     atom = ATOM_3DES_CBC;
+  else if (strcasecmp_list(name, "aes256-cbc", "aes-cbc", "aes", NULL))
+    atom = ATOM_AES256_CBC;
   else if (strcasecmp_list(name, "rijndael-cbc@lysator.liu.se",
 			   "rijndael-cbc", "rijndael", NULL))
     atom = ATOM_RIJNDAEL_CBC_LOCAL;
