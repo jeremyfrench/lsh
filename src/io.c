@@ -236,14 +236,22 @@ int io_iter(struct io_backend *b)
 	    continue;
 	  }
 
-	/* FIXME: POLLHUP is mutually exclusive with POLLOUT, but
-	 * orthogonal to POLLIN. */
+	/* FIXME: According to Solaris' man page, POLLHUP is mutually
+	 * exclusive with POLLOUT, but orthogonal to POLLIN.
+	 *
+	 * However, on my system (sparc-linux) POLLHUP is set when we
+	 * get EOF on an fd we are reading. This will cause an i/o
+	 * exception to be raised rather than the ordinary EOF
+	 * handling. */
 	if (fds[i].revents & POLLHUP)
 	  {
-	    if (fd->want_read)
-	      READ_FD(fd);
-	    else if (fd->want_write)
+	    if (fd->want_write)
+	      /* Will raise an i/o error */
 	      WRITE_FD(fd);
+	    else if (fd->want_read)
+	      /* Ought to behave like EOF, but might raise an i/o
+	       * error instead. */
+	      READ_FD(fd);
 	    else
 	      {
 		werror("io.c: poll said POLLHUP on an inactive fd.\n");
