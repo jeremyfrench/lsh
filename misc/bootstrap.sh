@@ -18,7 +18,12 @@ autoconf
 
 (cd src/nettle && ./.bootstrap)
 
+(cd src/sftp && aclocal)
+(cd src/sftp && autoconf)
+(cd src/sftp && autoheader)
+
 automake -a Makefile src/Makefile
 
 (cd src/argp && automake -a)
 (cd src/nettle && automake -a)
+(cd src/sftp && automake -a)
