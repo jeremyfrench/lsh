@@ -1,3 +1,12 @@
+2002-06-27  Pontus Sköld  <pont@soua.net>
+
+	* sftp_bind.c (lsftp_do_cd): Pass a char** to lsftp_do_realpath.
+
+	* sftp_bind.h: lsftp_do_realpath takes a char** destptr, not const
+	char**.
+
+	* sftp_bind.c (lsftp_do_realpath): Dito.
+	
 2002-06-27  Pontus Sköld  <Pontus.Skold@dis.uu.se>
 
 	* commands.c (com_umask): Do an explicit cast of the parameter to

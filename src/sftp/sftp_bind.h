@@ -140,8 +140,8 @@ int lsftp_do_stat(const char* file, struct stat* st);
 int lsftp_handle_stat(struct sftp_callback *s,
 		      const struct lsftp_callback *l);
 
-int lsftp_do_realpath(const char* file, const char **destptr );
-int lsftp_handle_realpath(struct sftp_callback *s,
+int lsftp_do_realpath(const char* file, char** destptr );
+int lsftp_handle_realpath(struct sftp_callback* s,
 			  const struct lsftp_callback *l);
 
 int lsftp_do_mv(const char *src, const char *dst, const char *command);

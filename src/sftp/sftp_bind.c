@@ -1190,7 +1190,7 @@ char* lsftp_pwd()
 int
 lsftp_do_cd(const char *dir)
 {
-  const char* real = 0;
+  char* real = 0;
   int id = -1;
 
   if( !dir ) /* dir == NULL? */
@@ -2130,7 +2130,7 @@ lsftp_do_stat(const char *file, struct stat *st )
 }
 
 int
-lsftp_do_realpath(const char* file, const char **destptr )
+lsftp_do_realpath(const char* file, char **destptr )
 {
   int id = -1;
   
