@@ -181,10 +181,10 @@ static int do_read_key(struct sexp_handler *h, struct sexp *private)
 #endif
 	  
 	  verbose("lshd: Using (public) hostkey:\n"
-		  "  p=%hn\n"
-		  "  q=%hn\n"
-		  "  g=%hn\n"
-		  "  y=%hn\n",
+		  "  p=%xn\n"
+		  "  q=%xn\n"
+		  "  g=%xn\n"
+		  "  y=%xn\n",
 		  p, q, g, y);
 		  
 	  res = LSH_OK | LSH_CLOSE;

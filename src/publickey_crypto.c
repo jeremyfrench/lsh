@@ -89,7 +89,7 @@ static void dsa_hash(mpz_t h, UINT32 length, UINT8 *msg)
 
   bignum_parse_u(h, hash->hash_size, digest);
 
-  debug("DSA hash: %hn\n", h);
+  debug("DSA hash: %xn\n", h);
   
   KILL(hash);
 }
@@ -110,16 +110,16 @@ static void generic_dsa_sign(struct dsa_signer *closure,
   bignum_random(k, closure->random, tmp);
   mpz_add_ui(k, k, 1);
 
-  debug("generic_dsa_sign, k: %hn\n", k);
+  debug("generic_dsa_sign, k: %xn\n", k);
   
   /* Compute r = (g^k (mod p)) (mod q) */
   mpz_powm(r, closure->public.g, k, closure->public.p);
 
-  debug("do_dsa_sign, group element: %hn\n", r);
+  debug("do_dsa_sign, group element: %xn\n", r);
   
   mpz_fdiv_r(r, r, closure->public.q);
 
-  debug("do_dsa_sign, r: %hn\n", r);
+  debug("do_dsa_sign, r: %xn\n", r);
 
   /* Compute hash */
   dsa_hash(tmp, length, msg);
@@ -137,7 +137,7 @@ static void generic_dsa_sign(struct dsa_signer *closure,
   mpz_mul(s, s, k);
   mpz_fdiv_r(s, s, closure->public.q);
 
-  debug("generic_dsa_sign, s: %hn\n", s);
+  debug("generic_dsa_sign, s: %xn\n", s);
   
   mpz_clear(k);
   mpz_clear(tmp);
@@ -231,8 +231,8 @@ static int do_dsa_verify(struct verifier *c,
       return 0;
     }
   
-  debug("do_dsa_verify, r: %hn\n"
-	"               s: %hn\n", r, s);
+  debug("do_dsa_verify, r: %xn\n"
+	"               s: %xn\n", r, s);
   
   /* Compute w = s^-1 (mod q) */
   mpz_init(w);
@@ -247,7 +247,7 @@ static int do_dsa_verify(struct verifier *c,
       return 0;
     }
 
-  debug("do_dsa_verify, w: %hn\n", w);
+  debug("do_dsa_verify, w: %xn\n", w);
 
   /* Compute hash */
   mpz_init(tmp);
@@ -260,7 +260,7 @@ static int do_dsa_verify(struct verifier *c,
   mpz_mul(tmp, tmp, w);
   mpz_fdiv_r(tmp, tmp, closure->public.q);
 
-  debug("u1: %hn\n", tmp);
+  debug("u1: %xn\n", tmp);
   
   mpz_powm(v, closure->public.g, tmp, closure->public.p);
 
@@ -268,7 +268,7 @@ static int do_dsa_verify(struct verifier *c,
   mpz_mul(tmp, r, w);
   mpz_fdiv_r(tmp, tmp, closure->public.q);
 
-  debug("u2: %hn\n", tmp);
+  debug("u2: %xn\n", tmp);
 
   mpz_powm(tmp, closure->public.y, tmp, closure->public.p);
   
@@ -276,11 +276,11 @@ static int do_dsa_verify(struct verifier *c,
   mpz_mul(v, v, tmp);
   mpz_fdiv_r(v, v, closure->public.p);
 
-  debug("do_dsa_verify, group element: %hn\n", v);
+  debug("do_dsa_verify, group element: %xn\n", v);
   
   mpz_fdiv_r(v, v, closure->public.q);
 
-  debug("do_dsa_verify, v: %hn\n", v);
+  debug("do_dsa_verify, v: %xn\n", v);
 
   res = mpz_cmp(v, r);
 

@@ -134,8 +134,8 @@ int main(int argc, char **argv)
   r = make_poor_random(&sha_algorithm, NULL);
   dsa_nist_gen(public.p, public.q, r, l);
 
-  debug("%hn\n"
-	"%hn\n", public.p, public.q);
+  debug("%xn\n"
+	"%xn\n", public.p, public.q);
 
   /* Sanity check. */
   if (!mpz_probab_prime_p(public.p, 10))
