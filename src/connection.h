@@ -70,7 +70,11 @@ enum peer_flag
 
     /* Don't include the originator port in X11 channel open messages,
      * for compatibility with SSH Inc's ssh version 2.0.x */
-    PEER_X11_OPEN_KLUDGE         = 0x00000010
+    PEER_X11_OPEN_KLUDGE         = 0x00000010,
+
+    /* Sun's SSH version 1.0 sends an entire list of locales
+     * in the language field of its KEXINIT message. */
+    PEER_KEXINIT_LANGUAGE_KLUDGE = 0x00000020,    
   };
 
 /* State affecting incoming keyexchange packets */
