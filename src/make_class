@@ -23,7 +23,10 @@
   (let ((l (string-length prefix)))
     (and (<= l (string-length s))
 	 (string=? prefix (substring s 0 l)))))
-    
+
+(define (string-upcase s)
+  (list->string (map char-upcase (string->list s))))
+
 (define (read-expression p)
   (let ((line (read-line)))
     ; (werror "read line: '~s'\n" (if (eof-object? line) "<EOF>" line))
@@ -434,6 +437,7 @@
 ;; Can't use load; it writes messages to stdout.
 ;;(load 'compiler)
 
+
 ;; Constants is an alist of (name value call_1 call_2 ... call_n)
 ;; where value is a C expression representing the value. call_i is
 ;; present, it is a function that can be called to apply the value to
@@ -460,7 +464,7 @@
 			 (list-tail args n))))))
   (define (lookup-global v)
     (cond ((assq v constants) => cdr)
-	  (else (error "make_class: undefined global" v))))
+	  (else (list (string-upcase (symbol->string v))))))
   
   (define (output-expression expr)
     ;; (werror "output-expression ~S\n" expr)
