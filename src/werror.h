@@ -55,6 +55,7 @@ void set_error_syslog(const char *id);
 /* Format specifiers:
  *
  * %%  %-character
+ * %e  an errno value, formated numerically and with strerror
  * %i  UINT32
  * %c  int, interpreted as a single character to output
  * %n  mpz_t

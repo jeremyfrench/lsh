@@ -536,6 +536,16 @@ werror_vformat(const char *f, va_list args)
 		
 		break;
 	      }
+	    case 'e':
+	      { /* errno specifier */
+		int e = va_arg(args, int);
+		werror_cstring("(errno = ");
+		werror_decimal(e);
+		werror_cstring("): ");
+		werror_cstring(STRERROR(errno));
+
+		break;
+	      }
 	    default:
 	      fatal("werror_vformat: bad format string!\n");
 	      break;
