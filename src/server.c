@@ -34,6 +34,8 @@
 #include "read_line.h"
 #include "read_packet.h"
 #include "reaper.h"
+#include "sexp.h"
+#include "spki.h"
 #include "ssh.h"
 #include "unpad.h"
 #include "werror.h"
@@ -43,6 +45,8 @@
 #include <string.h>
 #include <errno.h>
 
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "server.c.x"
 
@@ -167,4 +171,93 @@ struct command *make_offer_service(struct alist *services)
   return &self->super;
 }
 
+/* Read server's private key */
+/* Used by both lshd.c and lsh_proxy.c */
 
+static void
+add_key(struct alist *keys,
+        struct keypair *key)
+{
+  if (ALIST_GET(keys, key->type))
+    werror("Multiple host keys for algorithm %a\n", key->type);
+  ALIST_SET(keys, key->type, &key->super);
+}
+
+int
+read_host_key(const char *file,
+              struct alist *signature_algorithms,
+              struct alist *keys)
+{
+  int fd = open(file, O_RDONLY);
+  struct lsh_string *contents;
+  struct sexp *expr;
+  struct signer *s;
+  struct verifier *v;
+  struct lsh_string *spki_public;
+  
+  int algorithm_name;
+
+    if (fd < 0)
+    {
+      werror("Failed to open `%z' for reading: %z\n",
+             file, STRERROR(errno));
+      return 0;
+    }
+
+  contents = io_read_file_raw(fd, 5000);
+  if (!contents)
+    {
+      werror("Failed to read host key file `%z': %z\n",
+             file, STRERROR(errno));
+      close(fd);
+      return 0;
+    }
+  close(fd);
+
+  expr = string_to_sexp(SEXP_TRANSPORT, contents, 1);
+  if (!expr)
+    {
+      werror("S-expression syntax error in hostkey.\n");
+      return 0;
+    }
+
+  s = spki_sexp_to_signer(signature_algorithms,
+                          expr,
+                          &algorithm_name);
+  if (!s)
+    {
+      werror("Invalid host key\n");
+      return 0;
+    }
+
+  v = SIGNER_GET_VERIFIER(s);
+  assert(v);
+
+  spki_public = sexp_format(spki_make_public_key(v),
+                            SEXP_CANONICAL, 0);
+  
+  switch (algorithm_name)
+    {
+    case ATOM_DSA:
+      add_key(keys,
+              make_keypair(ATOM_SSH_DSS, PUBLIC_KEY(v), s));
+      add_key(keys,
+              make_keypair(ATOM_SPKI_SIGN_DSS, spki_public, s));
+      break;
+
+    case ATOM_RSA_PKCS1_SHA1:
+      add_key(keys,
+              make_keypair(ATOM_SSH_RSA, PUBLIC_KEY(v), s));
+      /* Fall through */
+
+    case ATOM_RSA_PKCS1_MD5:
+      add_key(keys,
+              make_keypair(ATOM_SPKI_SIGN_RSA, spki_public, s));
+      break;
+
+    default:
+      werror("read_host_key: Unexpected algorithm %a.\n", algorithm_name);
+      lsh_string_free(spki_public);
+    }
+  return 1;
+}

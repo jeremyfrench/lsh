@@ -29,4 +29,9 @@
 
 struct command *make_offer_service(struct alist *services);
 
+int
+read_host_key(const char *file,
+              struct alist *signature_algorithms,
+              struct alist *keys);
+
 #endif /* LSH_SERVER_H_INCLUDED */
