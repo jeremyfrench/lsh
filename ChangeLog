@@ -1,5 +1,7 @@
 2002-02-19  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* configure.in (CPPFLAGS): Don't zap old value.
+
 	* src/crypto.c (make_aes_cbc_instance): Use aes_set_encrypt_key
 	and aes_set_decrypt_key. aes_set_key is obsolete.
 
