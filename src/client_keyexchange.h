@@ -31,10 +31,10 @@
 #include "publickey_crypto.h"
 
 struct keyexchange_algorithm *
-make_dh_client(struct dh_method *dh);
+make_dh_client(const struct dh_method *dh);
 
 struct keyexchange_algorithm *
-make_srp_client(struct dh_method *dh,
+make_srp_client(const struct dh_method *dh,
 		struct interact *tty, struct lsh_string *name);
 
 #endif /* LSH_CLIENT_KEYEXCHANGE_H_INCLUDED */

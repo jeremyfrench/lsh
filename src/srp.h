@@ -48,7 +48,7 @@ make_srp_entry(const struct lsh_string *name,
 
 /* Consumes the salt */
 struct lsh_string *
-srp_make_verifier(struct abstract_group *G,
+srp_make_verifier(const struct zn_group *G,
 		  const struct hash_algorithm *H,
 		  struct lsh_string *salt,
 		  struct lsh_string *name,

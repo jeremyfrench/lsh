@@ -71,7 +71,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (tty object interact)
        
        (e object exception_handler)
-       (G object abstract_group)
+       (G const object zn_group)
        (H const object hash_algorithm)
        
        (file string)

@@ -46,7 +46,7 @@
      (name dh_client_exchange)
      (super keyexchange_algorithm)
      (vars
-       (dh object dh_method)))
+       (dh const object dh_method)))
 */
 
 /* Handler for the kex_dh_reply message */
@@ -154,7 +154,7 @@ do_init_client_dh(struct keyexchange_algorithm *c,
 
 
 struct keyexchange_algorithm *
-make_dh_client(struct dh_method *dh)
+make_dh_client(const struct dh_method *dh)
 {
   NEW(dh_client_exchange, self);
 
@@ -301,7 +301,7 @@ make_srp_reply_handler(struct srp_client_instance *srp)
      (name srp_client_exchange)
      (super keyexchange_algorithm)
      (vars
-       (dh object dh_method)
+       (dh const object dh_method)
        (tty object interact)
        (name string)))
 */
@@ -333,13 +333,10 @@ do_init_client_srp(struct keyexchange_algorithm *s,
 }
 
 struct keyexchange_algorithm *
-make_srp_client(struct dh_method *dh, struct interact *tty,
+make_srp_client(const struct dh_method *dh, struct interact *tty,
 		struct lsh_string *name)
 {
   NEW(srp_client_exchange, self);
-
-  assert(dh->G->add);
-  assert(dh->G->subtract);
 
   self->super.init = do_init_client_srp;
   self->dh = dh;

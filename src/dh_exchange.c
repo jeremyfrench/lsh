@@ -41,7 +41,7 @@
 #include "xalloc.h"
 
 void
-init_dh_instance(struct dh_method *m,
+init_dh_instance(const struct dh_method *m,
 		 struct dh_instance *self,
 		 struct ssh_connection *c)
 {
@@ -75,7 +75,7 @@ init_dh_instance(struct dh_method *m,
 }
 
 struct dh_method *
-make_dh(struct abstract_group *G,
+make_dh(const struct zn_group *G,
 	const struct hash_algorithm *H,
 	struct randomness *r)
 {
@@ -99,19 +99,19 @@ make_dh1(struct randomness *r)
 
 /* R is set to a random, secret, exponent, and V set to is g^r */
 void
-dh_generate_secret(struct dh_method *self,
+dh_generate_secret(const struct dh_method *self,
 		   mpz_t r, mpz_t v)
 {
   mpz_t tmp;
 
-  /* Generate a random number, 1 < x <= p-1 = O(G) */
+  /* Generate a random number, 1 < x < O(G) = (p-1)/2 */
   mpz_init_set(tmp, self->G->order);  
   mpz_sub_ui(tmp, tmp, 1);
   nettle_mpz_random(r, self->random, lsh_random, tmp);
   mpz_add_ui(r, r, 1);
   mpz_clear(tmp);
 
-  GROUP_POWER(self->G, v, self->G->generator, r);
+  zn_exp(self->G, v, self->G->generator, r);
 }
 
 struct lsh_string *
@@ -135,13 +135,13 @@ dh_process_client_msg(struct dh_instance *self,
 	 && (msg_number == SSH_MSG_KEXDH_INIT)
 	 && parse_bignum(&buffer, self->e, 0)
 	 && (mpz_cmp_ui(self->e, 1) > 0)
-	 && GROUP_RANGE(self->method->G, self->e)
+	 && zn_range(self->method->G, self->e)
 	 && parse_eod(&buffer) ))
     return 0;
 
   mpz_init(tmp);
   
-  GROUP_POWER(self->method->G, tmp, self->e, self->secret);
+  zn_exp(self->method->G, tmp, self->e, self->secret);
   self->K = ssh_format("%ln", tmp);
 
   mpz_clear(tmp);
@@ -216,7 +216,7 @@ dh_process_server_msg(struct dh_instance *self,
 	 /* FIXME: Pass a more restrictive limit to parse_bignum. */
 	 && (parse_bignum(&buffer, self->f, 0))
 	 && (mpz_cmp_ui(self->f, 1) > 0)
-	 && GROUP_RANGE(self->method->G, self->f)
+	 && zn_range(self->method->G, self->f)
 	 && (s = parse_string_copy(&buffer))
 	 && parse_eod(&buffer)))
     {
@@ -227,7 +227,7 @@ dh_process_server_msg(struct dh_instance *self,
 
   mpz_init(tmp);
   
-  GROUP_POWER(self->method->G, tmp, self->f, self->secret);
+  zn_exp(self->method->G, tmp, self->f, self->secret);
   self->K = ssh_format("%ln", tmp);
 
   mpz_clear(tmp);

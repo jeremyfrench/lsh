@@ -97,7 +97,7 @@ make_srp_entry(const struct lsh_string *name,
 
 /* Consumes the salt */
 struct lsh_string *
-srp_make_verifier(struct abstract_group *G,
+srp_make_verifier(const struct zn_group *G,
 		  const struct hash_algorithm *H,
 		  struct lsh_string *salt,
 		  struct lsh_string *name,
@@ -109,7 +109,7 @@ srp_make_verifier(struct abstract_group *G,
   mpz_init(x);
 
   srp_hash_password(x, H, salt, name, passwd);  
-  GROUP_POWER(G, x, G->generator, x);
+  zn_exp(G, x, G->generator, x);
 
   expr = lsh_string_format_sexp(0, "(srp-verifier ssh-ring1%s%b)",
 				STRING_LD(salt),
@@ -192,7 +192,7 @@ srp_process_init_msg(struct dh_instance *self, struct lsh_string *packet)
       /* FIXME: Pass a more restrictive limit to parse_bignum. */
       && parse_bignum(&buffer, self->e, 0)
       && (mpz_cmp_ui(self->e, 1) > 0)
-      && GROUP_RANGE(self->method->G, self->e)
+      && zn_range(self->method->G, self->e)
       && parse_eod(&buffer) )
     {
       debug("srp_process_init_msg: e = %xn\n", self->e);
@@ -237,7 +237,7 @@ srp_make_reply_msg(struct dh_instance *dh, struct srp_entry *entry)
 
       debug("srp_make_reply_msg: f - v = %xn\n", dh->f);
       
-      if (!GROUP_ADD(dh->method->G, dh->f, dh->f, entry->verifier))
+      if (!zn_add(dh->method->G, dh->f, dh->f, entry->verifier))
 	{
 	  werror("srp_exchange.c: Found cleartext password by mistake!\n");
 	  continue;
@@ -253,9 +253,9 @@ srp_make_reply_msg(struct dh_instance *dh, struct srp_entry *entry)
   /* Compute (e v^u) ^ b */
   mpz_init(tmp);
   
-  GROUP_SMALL_POWER(dh->method->G, tmp, entry->verifier, u);
-  GROUP_COMBINE(dh->method->G, tmp, dh->e, tmp);
-  GROUP_POWER(dh->method->G, tmp, tmp, dh->secret);
+  zn_exp_ui(dh->method->G, tmp, entry->verifier, u);
+  zn_mul(dh->method->G, tmp, dh->e, tmp);
+  zn_exp(dh->method->G, tmp, tmp, dh->secret);
 
   debug("srp_make_reply_msg: K = %xn\n", tmp);
 
@@ -287,7 +287,7 @@ srp_process_reply_msg(struct dh_instance *dh, struct lsh_string *packet)
       /* FIXME: Pass a more restrictive limit to parse_bignum. */
       && parse_bignum(&buffer, dh->f, 0)
       && (mpz_cmp_ui(dh->f, 1) > 0)
-      && GROUP_RANGE(dh->method->G, dh->f)
+      && zn_range(dh->method->G, dh->f)
       && parse_eod(&buffer))
     {
       debug("srp_process_reply_msg: f = %xn\n", dh->f);
@@ -328,11 +328,11 @@ srp_make_client_proof(struct dh_instance *dh,
   mpz_init(v);
 
   /* Compute the verifier */
-  GROUP_POWER(dh->method->G, v, dh->method->G->generator, x);
+  zn_exp(dh->method->G, v, dh->method->G->generator, x);
 
   debug("srp_make_client_proof: v = %xn\n", v);
   
-  if (!GROUP_SUBTRACT(dh->method->G, v, dh->f, v))
+  if (!zn_sub(dh->method->G, v, dh->f, v))
     {
       mpz_clear(v);
       return NULL;
@@ -346,7 +346,7 @@ srp_make_client_proof(struct dh_instance *dh,
   mpz_mul_ui(tmp, x, u);
   mpz_add(tmp, tmp, dh->secret);
 
-  GROUP_POWER(dh->method->G, v, v, tmp);
+  zn_exp(dh->method->G, v, v, tmp);
 
   debug("srp_make_client_proof: K = %xn\n", v);
   dh->K = ssh_format("%ln", v);

@@ -35,7 +35,7 @@ struct keyexchange_algorithm *
 make_dh_server(struct dh_method *dh);
 
 struct keyexchange_algorithm *
-make_srp_server(struct dh_method *dh,
+make_srp_server(const struct dh_method *dh,
 		struct user_db *db);
 
 #endif /* LSH_SERVER_KEYEXCHANGE_H_INCLUDED */

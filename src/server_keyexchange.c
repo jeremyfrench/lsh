@@ -334,7 +334,7 @@ make_srp_init_handler(struct srp_server_instance *srp)
      (name srp_server_exchange)
      (super keyexchange_algorithm)
      (vars
-       (dh object dh_method)
+       (dh const object dh_method)
        (db object user_db)))
 */
 
@@ -362,14 +362,11 @@ do_init_server_srp(struct keyexchange_algorithm *s,
 }
 
 struct keyexchange_algorithm *
-make_srp_server(struct dh_method *dh,
+make_srp_server(const struct dh_method *dh,
 		struct user_db *db)
 {
   NEW(srp_server_exchange, self);
 
-  assert(dh->G->add);
-  assert(dh->G->subtract);
-  
   self->super.init = do_init_server_srp;
   self->dh = dh;
   self->db = db;
