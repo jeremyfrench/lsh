@@ -1,3 +1,7 @@
+2004-02-19  Niels Möller  <niels@s3.kth.se>
+
+	* src/scm/make-char-classes.scm: Deleted obsolete file.
+
 2004-02-18  Niels Möller  <niels@s3.kth.se>
 
 	* src/Makefile.am (prime_table.h, sexp_table.h, digit_table.h):
@@ -5,7 +9,7 @@
 
 2004-02-18  Pontus Sköld  <pont@soua.net>
 
-	* src/process_atoms: Fixed bashims. 
+	* src/process_atoms: Converted script from bash to /bin/sh.
 
 2004-02-17  Niels Möller  <nisse@lysator.liu.se>
 
