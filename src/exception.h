@@ -94,6 +94,7 @@ void exception_raise(struct exception_handler *e,
 #define EXC_IO_OPEN_WRITE 0x2006
 #define EXC_IO_OPEN_READ 0x2007
 #define EXC_IO_LISTEN 0x2008
+#define EXC_IO_CLOSE 0x2009
 
 /* Authorization errors */
 #define EXC_AUTH 0x4000
@@ -140,8 +141,16 @@ void exception_raise(struct exception_handler *e,
 /* Unexpected or unsupported expression type */
 #define EXC_SPKI_TYPE 0x80001
 
+/* Pausing, used to temporarily stop reading packets on a connection. */
+#define EXC_PAUSE 0x100000
+
+#define EXC_PAUSE_READ 0x100001
+#define EXC_PAUSE_START_READ 0x100002
+#define EXC_PAUSE_CONNECTION 0x100003
+#define EXC_PAUSE_START_CONNECTION 0x100004
+
 /* Application specific exceptions */
-#define EXC_APP 0x100000
+#define EXC_APP 0x200000
 
 #define EXC_ALL (~0)
 
