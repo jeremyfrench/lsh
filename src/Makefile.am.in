@@ -24,9 +24,10 @@ Makefile.am: Makefile.am.in
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
-bin_PROGRAMS = lsh lsh_keygen lsh_writekey
+bin_PROGRAMS = lsh lsh_keygen lsh_writekey sexp_conv
 sbin_PROGRAMS = lshd
-noinst_PROGRAMS = prime_table digit_table sexp_conv
+bin_SCRIPTS = lsh-authorize
+noinst_PROGRAMS = prime_table digit_table 
 noinst_LIBRARIES = liblsh.a
 # noinst_HEADERS = $(dist_x_files) $(cvs_headers)
 
@@ -118,7 +119,8 @@ LDADD = liblsh.a @LIBOBJS@ symmetric/libsymmetric.a
 # symmetric:
 # 	  (cd lib && $(MAKE) libsymmetric.a)
 
-EXTRA_DIST = atoms.in process_atoms \
+EXTRA_DIST = lsh-authorize \
+	atoms.in process_atoms \
 	invert-defs \
 	$(generated_sources) \
 	sexp_chars.in \
