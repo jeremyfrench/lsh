@@ -278,6 +278,8 @@ main(int argc, char **argv)
   }
 
   io_run(backend);
+
+  gc_final();
   
   return exit_code;
 }
