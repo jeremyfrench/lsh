@@ -54,7 +54,8 @@ do_debug(struct abstract_write *w,
   else
     {
       uint8_t type = lsh_string_data(packet)[0];
-      if (type == SSH_MSG_USERAUTH_REQUEST)
+      if (type == SSH_MSG_USERAUTH_REQUEST
+	  || type == SSH_MSG_USERAUTH_INFO_RESPONSE)
 	debug("DEBUG: %S %z *****\n",
 	      closure->prefix, packet_types[type]);
       else
