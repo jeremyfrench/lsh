@@ -1152,6 +1152,12 @@ connects to the remote hosts, the server will inform the local
 @command{lsh}. The local @command{lsh} then connects to @var{target-port} on
 @var{target-host}.
 
+@item -D
+Requests SOCKS-style forwarding. It takes one optional argument, the
+port number to use for the SOCKS proxy (default is 1080). Other
+applications can then use socks version 4 or version 5, to open
+outgoing connections which are forwarded via the SSH connection.
+ 
 @item -E
 This option takes one mandatory argument, which is a command line to be
 executed on the remote machine.
@@ -1223,11 +1229,11 @@ Analogous to the @option{--stdout} option.
 
 @item -g
 Remote peers, aka global forwarding. This option applies to the
-forwarding actions, i.e. @option{-L} and @option{-R}. By default, only
-connections to the loopback interface, ip 127.0.0.1, are forwared. This
-implies that only processes on the same machine can use the forwarded
-tunnel directly. If the -g modifier is in effect, the forwarding party
-will listen on @emph{all} network interfaces.
+forwarding actions, i.e. @option{-L}, @option{-R} and @option{-D}. By
+default, only connections to the loopback interface, ip 127.0.0.1, are
+forwarded. This implies that only processes on the same machine can use
+the forwarded tunnel directly. If the -g modifier is in effect, the
+forwarding party will listen on @emph{all} network interfaces.
 
 @end table
 
