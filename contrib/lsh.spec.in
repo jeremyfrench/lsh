@@ -91,7 +91,7 @@ fi
 
 %changelog
 
-* Thu Jan 06 1999 Thayne Harbaugh <thayne@northsky.com>
+* Thu Jan 06 2000 Thayne Harbaugh <thayne@northsky.com>
 - lshd.rhlinux.init is now in contrib dir - removed Source1
 - fixed preun $1 comparision - was [ "$1" -eq 1 ]
 
