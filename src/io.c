@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 
 #include "io.h"
 #include "werror.h"
@@ -52,11 +53,12 @@ static int do_read(struct fd_read *closure, UINT8 *buffer, UINT32 length)
 {								\
   type **(_fd);							\
   type *(fd);							\
-  for(_fd = &(list); ((fd) = *_fd); _fd = &(*_fd)->next, (extra))	
+  for(_fd = &(list); ((fd) = *_fd); (extra)) {
 
 
-#define END_FOR_FDS } 
-     
+#define END_FOR_FDS _fd = &(*_fd)->next; } }
+
+/* UNLINK_FD must be followed by a continue, to avoid updating _fd */
 #define UNLINK_FD (*_fd = (*_fd)->next)
     
 void io_run(struct io_backend *b)
@@ -170,13 +172,15 @@ void io_run(struct io_backend *b)
 		      case EAGAIN:
 			break;
 		      default:
+			werror("io.c: write failed, %s\n", strerror(errno));
 			CALLBACK(fd->close_callback);
-			/* FIXME: Must do this later. Perhaps add a
-			 * closed flag to th io_fd struct? */
+
 			fd->please_close = 1;
 
 			break;
 		      }
+		  else if (!res)
+		    fatal("What now?");
 		  else
 		    fd->buffer->start += res;
 		}
@@ -211,6 +215,7 @@ void io_run(struct io_backend *b)
 		  UNLINK_FD;
 		  free(fd->buffer);
 		  free(fd);
+		  continue;
 		}
 	    }
 	  END_FOR_FDS;
@@ -221,8 +226,10 @@ void io_run(struct io_backend *b)
 		{
 		  /* FIXME: Do something with the peer address? */
 		  struct sockaddr_in peer;
+		  size_t addr_len = sizeof(peer);
 		  
-		  int conn = accept(fd->fd, &peer, sizeof(peer));
+		  int conn = accept(fd->fd,
+				    (struct sockaddr *) &peer, &addr_len);
 		  if (conn < 0)
 		    {
 		      werror("io.c: accept() failed, %s", strerror(errno));
@@ -233,6 +240,7 @@ void io_run(struct io_backend *b)
 		      /* FIXME: Should fd be closed here? */
 		      UNLINK_FD;
 		      free(fd);
+		      continue;
 		    }
 		}
 	    }
@@ -240,12 +248,14 @@ void io_run(struct io_backend *b)
 	  
 	  FOR_FDS(struct connect_fd, fd, b->connect, i++)
 	    {
-	      if (fds[i]->revents & POLLOUT)
+	      if (fds[i].revents & POLLOUT)
 		{
 		  if (!FD_CALLBACK(fd->callback, fd->fd))
 		    fatal("What now?");
+		  b->nconnect--;
 		  UNLINK_FD;
 		  free(fd);
+		  continue;
 		}
 	    }
 	  END_FOR_FDS;
@@ -363,7 +373,7 @@ struct connect_fd *io_connect(struct io_backend *b,
   
   fd = xalloc(sizeof(struct connect_fd));
   fd->fd = s;
-  fd->callback = callback;
+  fd->callback = f;
 
   fd->next = b->connect;
   b->connect = fd;
@@ -416,22 +426,22 @@ struct listen_fd *io_listen(struct io_backend *b,
 
 struct abstract_write *io_read_write(struct io_backend *b,
 				     int fd,
-				     struct read_callback *read_callback,
+				     struct read_handler *read_callback,
 				     UINT32 block_size,
 				     struct callback *close_callback)
 {
-  struct io_fd = xalloc(sizeof(struct io_fd));
+  struct io_fd *f= xalloc(sizeof(struct io_fd));
   struct write_buffer *buffer = write_buffer_alloc(block_size);
   
-  fd->fd = fd;
-  fd->please_close = 0;
+  f->fd = fd;
+  f->please_close = 0;
   
-  fd->read_callback = read_callback;
-  fd->close_callback = close_callback;
-  fd->buffer = buffer;
+  f->handler = read_callback;
+  f->close_callback = close_callback;
+  f->buffer = buffer;
 
-  fd->next = b->io;
-  b->io = fd;
+  f->next = b->io;
+  b->io = f;
   b->nio++;
 
   return (struct abstract_write *) buffer;
