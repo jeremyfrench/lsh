@@ -66,6 +66,17 @@ do_ignore_exception_handler(struct exception_handler *self UNUSED,
 struct exception_handler ignore_exception_handler =
 { STATIC_HEADER, do_ignore_exception_handler };
 
+struct exception_handler *
+make_exception_handler(void (*raise)(struct exception_handler *s,
+				     const struct exception *x),
+		       struct exception_handler *parent)
+{
+  NEW(exception_handler, self);
+  self->raise = raise;
+  self->parent = parent;
+
+  return self;
+}
 
 struct exception *make_simple_exception(UINT32 type, const char *msg)
 {
