@@ -81,8 +81,8 @@ static int do_read_data(struct read_handler **h,
       return LSH_OK | LSH_GOON;
     case A_FAIL:
       /* Send a channel close, and prepare the channel for closing */      
-      channel_close(closure->channel);
-      return LSH_FAIL | LSH_DIE;
+      return channel_close(closure->channel)
+	| LSH_FAIL | LSH_DIE;
     case A_EOF:
       if (!--closure->channel->sources)
 	/* Send eof (but no close). */
