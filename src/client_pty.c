@@ -23,6 +23,26 @@
 
 #include "client_pty.h"
 
+#warning client_pty.c is currently not used.
+
+/* CLASS:
+   (class
+     (name pty_request)
+     (super request_info)
+     (vars
+       (term string)
+       (width . UINT32)
+       (height . UINT32)
+       (width_p . UINT32)
+       (height_p . UINT32)
+       (modes string)))
+*/
+
+struct do_format_pty_request(struct request_info *r)
+{
+  CAST(pty_request, req, r);
+}
+
 struct lsh_string *
 format_pty_req(struct ssh_channel *channel, int want_reply, 
 	       UINT8 *term, UINT32 width, UINT32 height, UINT32 width_p, 
