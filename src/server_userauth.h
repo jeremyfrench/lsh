@@ -95,6 +95,8 @@ format_userauth_success(void);
 
 /* authentication methods */
 
+extern struct userauth server_userauth_none;
+
 struct userauth *
 make_userauth_password(struct user_db *db);
 

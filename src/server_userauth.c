@@ -23,6 +23,7 @@
 
 #include "server_userauth.h"
 
+#include "charset.h"
 #include "connection.h"
 #include "format.h"
 #include "ssh.h"
@@ -368,3 +369,42 @@ make_userauth_service(struct int_list *advertised_methods,
   
   return &self->super;
 }
+
+
+/* None service (which works like external-keyexchange) */
+static void
+do_none_authenticate(struct userauth *s UNUSED,
+                     struct ssh_connection *connection UNUSED,
+                     struct lsh_string *username,
+                     UINT32 service UNUSED,
+                     struct simple_buffer *args,
+                     struct command_continuation *c,
+                     struct exception_handler *e)
+{
+  username = utf8_to_local(username, 1, 1);
+  if (!username)
+    {
+      PROTOCOL_ERROR(e, "Invalid utf8 in username.");
+      return;
+    }
+
+  if (parse_eod(args))
+    {
+      static const struct exception wrong_user
+        = STATIC_EXCEPTION(EXC_USERAUTH,
+                           "User needs to authenticate properly");
+
+      if (connection->user
+          && lsh_string_eq(username, connection->user->name))
+        COMMAND_RETURN(c, connection->user);
+      else
+        EXCEPTION_RAISE(e, &wrong_user);
+    }
+  else
+    PROTOCOL_ERROR(e, "Invalid none USERAUTH message.");
+    
+  lsh_string_free(username);
+}
+
+struct userauth server_userauth_none =
+  { STATIC_HEADER, do_none_authenticate };
