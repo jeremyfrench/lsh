@@ -98,6 +98,7 @@ exec_lsh () {
 	--capture-to /dev/null -z -p $PORT localhost "$@"
 }
 
+# FIXME: Use -B
 spawn_lsh () {
     # echo spawn_lsh "$@"
     ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \

@@ -1,3 +1,21 @@
+2001-10-23  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/lshg-1-test: New test program.
+
+	* src/client.c (make_subsystem_request): New function, contributed
+	by Pontus Sköld.
+	(client_options): New option --subsystem.
+	(client_subsystem_session): New function.
+	(client_command_session): Don't ask for a pty by default.
+	(client_maybe_pty): New argument default_pty.
+	(client_argp_parser): Handle subsystem option.
+
+2001-10-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* Makefile.am.in (MAINTAINERCLEANFILES): Don't use += for
+	assigning this variable.
+	* src/Makefile.am.in (MAINTAINERCLEANFILES): Likewise.
+
 2001-10-15  Niels Möller  <nisse@ehand.com>
 
 	* src/testsuite/cast128-test.m4: New cast-128 cbc testcase.
