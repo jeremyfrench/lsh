@@ -1,3 +1,12 @@
+2001-09-18  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io.c (lsh_oop_glue): New class.
+	(make_lsh_oop_glue): New function.
+	(lsh_oop_signal_callback): New function.
+	(lsh_oop_register_signal): New function.
+	(lsh_oop_fd_callback): New function.
+	(lsh_oop_register_fd): New function.
+
 2001-09-17  Niels Möller  <nisse@ehand.com>
 
 	* src/io.c: Started experimental conversion to use liboop.
