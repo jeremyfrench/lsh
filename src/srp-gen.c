@@ -26,6 +26,7 @@
 #include "srp.h"
 
 #include "crypto.h"
+#include "environ.h"
 #include "format.h"
 #include "interact.h"
 #include "io.h"
@@ -91,11 +92,11 @@ make_srp_gen_options(struct exception_handler *e)
   self->file = NULL;
   self->dest = NULL;
 
-  self->name = getenv("LOGNAME");
+  self->name = getenv(ENV_LOGNAME);
   self->passwd = NULL;
 
   /* We use this only for generating the salt. */
-  self->r = make_user_random(getenv("HOME"));
+  self->r = make_user_random(getenv(ENV_HOME));
 
   return self;
 }

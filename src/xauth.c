@@ -310,10 +310,10 @@ xauth_lookup(struct sockaddr *address,
   struct resource *lock;
   int fd;
   
-  const char *fname = getenv("XAUTHORITY");
+  const char *fname = getenv(ENV_XAUTHORITY);
   if (!fname)
     {
-      const char *home = getenv("HOME");
+      const char *home = getenv(ENV_HOME);
       if (!home)
 	return 0;
 

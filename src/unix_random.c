@@ -27,6 +27,7 @@
 #include "randomness.h"
 
 #include "crypto.h"
+#include "environ.h"
 #include "format.h"
 #include "lock_file.h"
 #include "reaper.h"
@@ -418,7 +419,7 @@ make_user_random(const char *home)
   struct lsh_string *file_name;
   const char *env_name;
 
-  env_name = getenv("LSH_YARROW_SEED_FILE");
+  env_name = getenv(ENV_SEED_FILE);
   if (env_name)
     file_name = make_string(env_name);
   else
@@ -446,7 +447,7 @@ make_system_random(void)
   
   const char *env_name;
 
-  env_name = getenv("LSH_YARROW_SEED_FILE");
+  env_name = getenv(ENV_SEED_FILE);
 
   /* FIXME: What's a proper place for this? */
   file_name = make_string(env_name ? env_name

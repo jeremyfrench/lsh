@@ -27,6 +27,7 @@
 
 #include "channel_commands.h"
 #include "channel_forward.h"
+#include "environ.h"
 #include "format.h"
 #include "reaper.h"
 #include "resource.h"
@@ -456,7 +457,7 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
   if (!socket)
     return NULL;
 
-  tmp = getenv("TMPDIR");
+  tmp = getenv(ENV_TMPDIR);
   if (!tmp)
     tmp = "/tmp";
   

@@ -25,6 +25,7 @@
 #include "server_session.h"
 
 #include "channel_commands.h"
+#include "environ.h"
 #include "format.h"
 #include "read_data.h"
 #include "reaper.h"
@@ -531,14 +532,14 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
   /* FIXME: Set SSH_ORIGINAL_COMMAND */
   if (session->term)
     {
-      env[i].name ="TERM";
+      env[i].name = ENV_TERM;
       env[i].value = session->term;
       i++;
     }
 
   if (info->pty && info->pty->tty_name)
     {
-      env[i].name ="SSH_TTY";
+      env[i].name = ENV_SSH_TTY;
       env[i].value = info->pty->tty_name;
       i++;
     }
@@ -559,7 +560,7 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
 				     info->peer->ip,
 				     info->peer->port
 				     );
-      env[i].name ="SSH_CLIENT";
+      env[i].name = ENV_SSH_CLIENT;
       env[i].value = session->client;
 
       i++;
@@ -568,11 +569,11 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
 #if WITH_X11_FORWARD
   if (session->x11)
     {
-      env[i].name = "DISPLAY";
+      env[i].name = ENV_DISPLAY;
       env[i].value = session->x11->display;
       i++;
 
-      env[i].name = "XAUTHORITY";
+      env[i].name = ENV_XAUTHORITY;
       env[i].value = session->x11->xauthority;
       i++;
     }
