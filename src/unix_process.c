@@ -426,8 +426,9 @@ utmp_book_keeping(struct lsh_string *name,
    * i.e. the lesser of the length of peer->ip+1 and available storage 
    */
 
-  entry.ut_syslen = MIN(sizeof(entry.ut_host), peer->ip->length + 1);
- 
+  entry.ut_syslen = MIN(sizeof(entry.ut_host),
+			lsh_string_length(peer->ip) + 1);
+
 #endif /* UTMPX_UT_SYSLEN */
 #endif /* UTMPX_UT_HOST */
 
