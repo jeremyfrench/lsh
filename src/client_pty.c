@@ -67,7 +67,7 @@ make_client_tty_resource(struct interact *tty,
 			 struct terminal_attributes *attr)
 {
   NEW(client_tty_resource, self);
-  resource_init(&self->super, do_kill_client_tty_resource);
+  init_resource(&self->super, do_kill_client_tty_resource);
 
   self->tty = tty;
   self->attr = attr;
@@ -212,8 +212,8 @@ make_pty_request(struct interact *tty)
     req->dims.char_width = req->dims.char_height
       = req->dims.pixel_width = req->dims.pixel_height = 0;
 
-  req->super.format_request = do_format_pty_request;
   req->super.super.call = do_channel_request_command;
+  req->super.format_request = do_format_pty_request;
   
   req->tty = tty;
   req->term = term ? make_string(term) : ssh_format("");

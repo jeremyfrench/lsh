@@ -80,7 +80,7 @@ do_resource_kill(struct resource *self)
 { self->alive = 0; }
 
 void
-resource_init(struct resource *self,
+init_resource(struct resource *self,
 	      void (*k)(struct resource *))
 {
   self->alive = 1;
@@ -188,7 +188,7 @@ struct resource_list *
 empty_resource_list(void)
 {
   NEW(concrete_resource_list, self);
-  resource_init(&self->super.super, do_kill_all);
+  init_resource(&self->super.super, do_kill_all);
 
   trace("empty_resource_list: created %xi\n", self);
   self->super.remember = do_remember_resource;

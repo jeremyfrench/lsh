@@ -304,7 +304,7 @@ unix_window_change_subscribe(struct interact *s,
   CAST(unix_interact, self, s);
 
   NEW(window_subscriber, subscriber);
-  resource_init(&subscriber->super, NULL);
+  init_resource(&subscriber->super, NULL);
 
   subscriber->next = self->subscribers;
   subscriber->callback = callback;

@@ -224,7 +224,7 @@ static struct lsh_process *
 make_process_resource(pid_t pid, int signal)
 {
   NEW(process_resource, self);
-  resource_init(&self->super.super, do_kill_process);
+  init_resource(&self->super.super, do_kill_process);
   self->super.signal = do_signal_process;
   
   self->pid = pid;

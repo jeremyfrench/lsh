@@ -119,7 +119,7 @@ xauth_lock(const char *name)
   NEW(xauth_lock, self);
   int f;
   
-  resource_init(&self->super, do_xauth_lock_kill);
+  init_resource(&self->super, do_xauth_lock_kill);
 
   self->c_name = ssh_format("%lz-c", name);
   self->l_name = ssh_format("%lz-l", name);

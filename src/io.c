@@ -429,7 +429,7 @@ make_io_backend(void)
 {
   NEW(io_backend, b);
 
-  resource_init(&b->super, do_kill_io_backend);
+  init_resource(&b->super, do_kill_io_backend);
   
   b->files = NULL;
   b->signals = NULL;
@@ -450,7 +450,7 @@ io_signal_handler(struct io_backend *b,
 		  struct lsh_callback *action)
 {
   NEW(lsh_signal_handler, handler);
-  resource_init(&handler->super, NULL);
+  init_resource(&handler->super, NULL);
 
   handler->next = b->signals;
   handler->flag = flag;
@@ -468,7 +468,7 @@ io_callout(struct io_backend *b,
 	   struct lsh_callback *action)
 {
   NEW(lsh_callout, callout);
-  resource_init(&callout->super, NULL);
+  init_resource(&callout->super, NULL);
 
   callout->next = b->callouts;
   callout->action = action;
@@ -883,7 +883,7 @@ init_file(struct io_backend *b, struct lsh_fd *f, int fd,
 	  const char *label,
 	  struct exception_handler *e)
 {
-  resource_init(&f->super, do_kill_fd);
+  init_resource(&f->super, do_kill_fd);
 
   f->fd = fd;
   f->label = label;

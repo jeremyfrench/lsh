@@ -77,7 +77,7 @@ make_pty_info(void)
 {
   NEW(pty_info, pty);
 
-  resource_init(&pty->super, do_kill_pty_info);
+  init_resource(&pty->super, do_kill_pty_info);
   pty->tty_name = NULL;
   pty->master = pty->slave = -1;
   return pty;
