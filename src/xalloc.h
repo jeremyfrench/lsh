@@ -65,9 +65,8 @@ lsh_var_alloc(struct lsh_class *class,
 struct lsh_object *
 lsh_object_alloc(struct lsh_class *class);
 
-
-/* FIXME: Should take a const struct lsh_object. */
-void lsh_object_free(struct lsh_object *o);
+void
+lsh_object_free(const struct lsh_object *o);
 
 /* NOTE: This won't work for if there are strings or other instance
  * variables that can't be shared. */

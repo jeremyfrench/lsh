@@ -275,7 +275,7 @@ lsh_object_clone(struct lsh_object *o)
 
 /* Should be called *only* by the gc */
 void
-lsh_object_free(struct lsh_object *o)
+lsh_object_free(const struct lsh_object *o)
 {
   if (!o)
     return;
