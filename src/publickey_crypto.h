@@ -29,15 +29,22 @@
 #include "abstract_crypto.h"
 #include "bignum.h"
 #include "connection.h"
+#include "parse.h"
 
 #define GABA_DECLARE
 #include "publickey_crypto.h.x"
 #undef GABA_DECLARE
 
+/* parse an ssh keyblob */
+int parse_dsa_public(struct simple_buffer *buffer,
+		     struct dsa_public *public);
+
 struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
-#if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
+
+#if DATAFELLOWS_WORKAROUNDS
 struct signer *make_dsa_signer_kludge(struct signer *dsa);
 struct verifier *make_dsa_verifier_kludge(struct verifier *v);
+struct signature_algorithm *make_dsa_kludge_algorithm(struct randomness *random);
 #endif
 
 struct signer *make_dsa_signer_classic(struct signer *s);
