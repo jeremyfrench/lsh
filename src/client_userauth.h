@@ -48,6 +48,9 @@ struct client_userauth_method *
 make_client_password_auth(struct interact *tty);
 
 struct client_userauth_method *
+make_client_kbdinteract_auth(struct interact *tty);
+
+struct client_userauth_method *
 make_client_publickey_auth(struct object_list *);
 
 struct client_userauth_method *

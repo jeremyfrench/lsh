@@ -103,6 +103,54 @@ format_userauth_publickey(struct lsh_string *name,
 		    public);
 }
 
+static struct lsh_string *
+format_userauth_kbdinteract(struct lsh_string *name, uint32_t service)
+{
+  struct lsh_string *s;
+  s = ssh_format("%c%S%a%a%i%i",
+		 SSH_MSG_USERAUTH_REQUEST,
+		 name, service,
+		 /* Empty language tag and submethods */
+		 ATOM_KEYBOARD_INTERACTIVE, 0, 0);
+  debug("format_userauth_kbdinteract %xS\n", s);
+  return s;
+}
+
+static struct lsh_string *
+format_userauth_info_response(struct interact_dialog *dialog)
+{
+  uint32_t length;
+  unsigned i;
+  struct lsh_string *msg;
+  uint32_t p;
+
+  /* We need to format a message containing a variable number of
+     strings. */
+
+  /* First convert to utf8 */
+  for (i = 0; i < dialog->nprompt; i++)
+    dialog->response[i] = local_to_utf8(dialog->response[i], 1);
+  
+  for (i = length = 0; i < dialog->nprompt; i++)
+    length += lsh_string_length(dialog->response[i]);
+
+  msg = ssh_format("%c%i%lr", SSH_MSG_USERAUTH_INFO_RESPONSE, dialog->nprompt,
+		   length + 4 * dialog->nprompt, &p);
+
+  for (i = 0; i < dialog->nprompt; i++)
+    {
+      struct lsh_string *r = dialog->response[i];
+      uint32_t rlength = lsh_string_length(r);
+      lsh_string_write_uint32(msg, p, rlength);
+      p += 4;
+      lsh_string_write(msg, p, rlength, lsh_string_data(r));
+      p += rlength;
+    }
+  assert (p == lsh_string_length(msg));
+  
+  return msg;
+}
+
 /* Called when we receive a USERAUTH_FAILURE message. It will
  * typically either try again, or raise EXC_USERAUTH. */
 
@@ -693,9 +741,10 @@ make_client_password_state(struct client_userauth *userauth,
   return self;
 }
 
+/* Used for both "password" and "keyboard-interactive" */
 /* GABA:
    (class
-     (name client_password_method)
+     (name client_userauth_interactive_method)
      (super client_userauth_method)
      (vars
        (tty object interact)))
@@ -708,7 +757,7 @@ do_password_login(struct client_userauth_method *s,
 		  struct ssh_connection *connection,
 		  struct exception_handler *e)
 {
-  CAST(client_password_method, self, s);
+  CAST(client_userauth_interactive_method, self, s);
   
   struct client_password_state *state
     = make_client_password_state(userauth, self->tty,
@@ -724,7 +773,7 @@ do_password_login(struct client_userauth_method *s,
 struct client_userauth_method *
 make_client_password_auth(struct interact *tty)
 {
-  NEW(client_password_method, self);
+  NEW(client_userauth_interactive_method, self);
 
   self->super.type = ATOM_PASSWORD;
   self->super.login = do_password_login;
@@ -790,7 +839,7 @@ client_publickey_next(struct client_publickey_state *state)
 	 * SSH_MSG_USERAUTH_PK_OK */
 	return;
 
-      /* We have got a response on the final query request. */
+      /* We have got a resposne on the final query request. */
       state->connection->dispatch[SSH_MSG_USERAUTH_PK_OK]
 	= &connection_fail_handler;
     }
@@ -846,7 +895,7 @@ make_client_publickey_state(struct client_userauth *userauth,
 static void 
 do_userauth_pk_ok(struct packet_handler *s,
 		  struct ssh_connection *connection,
-		  struct lsh_string *packet UNUSED)
+		  struct lsh_string *packet)
 {
   CAST(userauth_pk_ok_handler, self, s);
 
@@ -955,6 +1004,204 @@ make_client_publickey_auth(struct object_list *keys)
   self->super.type = ATOM_PUBLICKEY;
   self->super.login = do_publickey_login;
   self->keys = keys;
+  
+  return &self->super;
+}
+
+
+/* "keyboard-interact" authentication
+ *
+ * Problems with the spec (draft-ietf-secsh-auth-kbdinteract-06.txt):
+ *
+ *  * The deprecated language tags.
+ *
+ *  * Use of the type int, which is undefined (should be uint32_t).
+ *
+ *  * The supplied name. What is it supposed to mean if that differs
+ *    from the name in the USERAUTH_REQUEST?
+ *
+ * *  The submethods list use utf8. Should be ordinary ssh-names, in
+ *    ascii and with the @domain convention for non-standard methods.
+ */
+
+/* GABA:
+   (class
+     (name client_kbdinteract_state)
+     (super client_userauth_failure)
+     (vars
+       (tty object interact)
+       (connection object ssh_connection)
+       (e object exception_handler)))
+*/
+
+/* GABA:
+   (class
+     (name userauth_info_request_handler)
+     (super packet_handler)
+     (vars 
+       (state object client_kbdinteract_state)))
+*/
+
+#define KBDINTERACT_MAX_PROMPTS 17
+#define KBDINTERACT_MAX_LENGTH 200
+
+/* FIXME: Doesn't get control character filtering right. */
+
+static void 
+do_userauth_info_request(struct packet_handler *s,
+			 struct ssh_connection *connection,
+			 struct lsh_string *packet)
+{
+  CAST(userauth_info_request_handler, self, s);
+
+  struct simple_buffer buffer;
+
+  unsigned msg_number;
+  /* What is the name used for anyway??? For now, we ignore it. */
+  const uint8_t *name;
+  uint32_t name_length;
+
+  const uint8_t *instruction;
+  uint32_t instruction_length;
+  /* Deprecated and ignored */
+  const uint8_t *language;
+  uint32_t language_length;
+  
+  uint32_t nprompt; /* Typed as "int" in the spec. Hope that means uint32_t? */
+  
+  simple_buffer_init(&buffer, STRING_LD(packet));
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_USERAUTH_INFO_REQUEST)
+      && parse_string(&buffer, &name_length, &name)
+      && parse_string(&buffer, &instruction_length, &instruction)
+      && parse_string(&buffer, &language_length, &language)
+      && parse_uint32(&buffer, &nprompt))
+    {
+      struct interact_dialog *dialog;
+      unsigned i;
+      
+      if (nprompt > KBDINTERACT_MAX_PROMPTS)
+	{
+	  static const struct exception bad_info_request =
+	    STATIC_EXCEPTION(EXC_USERAUTH, "Too large USERAUTH_INFO_RQUEST");
+	beyond_limit:
+
+	  EXCEPTION_RAISE(self->state->e, &bad_info_request);
+	  return;
+	}
+
+      dialog = make_interact_dialog(nprompt);
+
+      for (i = 0; i < nprompt; i++)
+	{
+	  const uint8_t *prompt;
+	  uint32_t prompt_length;
+	  
+	  if (! (parse_string(&buffer, &prompt_length, &prompt)
+		 && parse_boolean(&buffer, &dialog->echo[i])))
+	    {
+	      KILL(dialog);
+	      goto error;
+	    }
+
+	  if (prompt_length > KBDINTERACT_MAX_LENGTH)
+	    {
+	      KILL(dialog);
+	      goto beyond_limit;
+	    }
+	  dialog->prompt[i] = low_utf8_to_local(prompt_length, prompt,
+						utf8_replace | utf8_paranoid);
+	}
+      
+      if (!INTERACT_DIALOG(self->state->tty,
+			   low_utf8_to_local(instruction_length, instruction,
+					     utf8_replace | utf8_paranoid),
+			   dialog))
+	{
+	  static const struct exception bad_info_request =
+	    STATIC_EXCEPTION(EXC_USERAUTH, "No user response");
+
+	  EXCEPTION_RAISE(self->state->e, &bad_info_request);
+	  return;
+	}
+
+      connection_send(connection, format_userauth_info_response(dialog));
+      KILL(dialog);
+      return;
+    }
+  else
+    {
+    error:
+      PROTOCOL_ERROR(self->state->e, "Invalid USERAUTH_INFO_REQUEST message");
+    }
+}
+
+static struct packet_handler *
+make_userauth_info_request_handler(struct client_kbdinteract_state *state)
+{
+  NEW(userauth_info_request_handler, self);
+  self->super.handler = do_userauth_info_request;
+  self->state = state;
+
+  return &self->super;
+}
+
+static void
+do_kbdinteract_failure(struct client_userauth_failure *s, int again UNUSED)
+{
+  CAST(client_kbdinteract_state, self, s);
+
+  /* FIXME: We never try again. How do we know if the user wants to
+     move on? */
+  static const struct exception kbdinteract_fail =
+    STATIC_EXCEPTION(EXC_USERAUTH, "keyboard-interact authentication failed.");
+
+  EXCEPTION_RAISE(self->e, &kbdinteract_fail);  
+}
+
+static struct client_kbdinteract_state *
+make_client_kbdinteract_state(struct interact *tty,
+			      struct ssh_connection *connection,
+			      struct exception_handler *e)
+{
+  NEW(client_kbdinteract_state, self);
+  self->super.failure = do_kbdinteract_failure;
+  self->tty = tty;
+  self->connection = connection;
+  self->e = e;
+
+  return self;
+}
+
+static struct client_userauth_failure *
+do_kbdinteract_login(struct client_userauth_method *s,
+		     struct client_userauth *userauth,
+		     struct ssh_connection *connection,
+		     struct exception_handler *e)
+{
+  CAST(client_userauth_interactive_method, self, s);
+  struct client_kbdinteract_state *state
+    = make_client_kbdinteract_state(self->tty, connection, e);
+
+  verbose("Requesting authentication using the `keyboard-interactive' method.\n");
+  
+  connection_send(connection,
+		  format_userauth_kbdinteract(userauth->username, userauth->service_name));
+
+  connection->dispatch[SSH_MSG_USERAUTH_INFO_REQUEST]
+    = make_userauth_info_request_handler(state);
+
+  return &state->super;
+}
+
+struct client_userauth_method *
+make_client_kbdinteract_auth(struct interact *tty)
+{
+  NEW(client_userauth_interactive_method, self);
+
+  self->super.type = ATOM_KEYBOARD_INTERACTIVE;
+  self->super.login = do_kbdinteract_login;
+  self->tty = tty;
   
   return &self->super;
 }
