@@ -12,4 +12,4 @@ fi
 
 rm -f foo foo.pub
 ../lsh-keygen -a rsa -l 777 | ../lsh-writekey -o foo \
-  && ../sexp-conv < foo && [ -s foo -a -s foo.pub ] && test_success
+  && "$SEXP_CONV" < foo && [ -s foo -a -s foo.pub ] && test_success
