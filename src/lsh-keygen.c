@@ -29,6 +29,7 @@
 /* FIXME: Incorporate code from dsa_keygen and rsa_keygen */
 
 #include "crypto.h"
+#include "environ.h"
 #include "format.h"
 #include "io.h"
 #include "publickey_crypto.h"
@@ -197,8 +198,8 @@ main(int argc, char **argv)
 
   r = (options->server
        ? make_system_random()
-       : make_user_random(getenv("HOME")));
-
+       : make_user_random(getenv(ENV_HOME)));
+  
   if (!r)
     {
       werror("Failed to initialize randomness generator.\n");
