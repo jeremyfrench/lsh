@@ -32,7 +32,6 @@
 #include "io.h"
 #include "publickey_crypto.h"
 #include "randomness.h"
-#include "rsa.h"
 #include "sexp.h"
 #include "version.h"
 #include "werror.h"

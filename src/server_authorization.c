@@ -27,7 +27,7 @@
 
 #include "dsa.h"
 #include "format.h"
-#include "rsa.h"
+#include "publickey_crypto.h"
 #include "server_userauth.h"
 #include "sexp.h"
 #include "spki.h"

@@ -12,7 +12,6 @@
 #include "lsh_argp.h"
 #include "publickey_crypto.h"
 #include "read_file.h"
-#include "rsa.h"
 #include "sexp.h"
 #include "spki.h"
 #include "version.h"

@@ -29,7 +29,7 @@
 #include "format.h"
 #include "io_commands.h"
 #include "interact.h"
-#include "rsa.h"
+#include "publickey_crypto.h"
 #include "sexp.h"
 #include "spki.h"
 #include "version.h"

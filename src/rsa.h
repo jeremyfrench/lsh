@@ -22,22 +22,22 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning rsa.h is obsolete
+
 #ifndef LSH_RSA_H_INCLUDED
 #define LSH_RSA_H_INCLUDED
 
 #include "bignum.h"
 #include "publickey_crypto.h"
 
+#if 0
 #define GABA_DECLARE
 #include "rsa.h.x"
 #undef GABA_DECLARE
+#endif
 
-/* We don't allow keys larger than 5000 bits (i.e. 625 octets). Note
- * that allowing really large keys opens for Denial-of-service
- * attacks. */
 
-#define RSA_MAX_SIZE 625
-
+#if 0
 /* GABA:
    (class
      (name rsa_algorithm)
@@ -58,6 +58,7 @@ make_rsa_algorithm(struct hash_algorithm *hash,
 		   int name,
 		   UINT32 prefix_length,
 		   const UINT8 *prefix);
+#endif
 
 extern struct rsa_algorithm rsa_md5_algorithm;
 extern struct rsa_algorithm rsa_sha1_algorithm;

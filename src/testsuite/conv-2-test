@@ -24,12 +24,12 @@ ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEApUmWhj0f4TD/XcDW88zcKo1ZYBn09jT0RzP1aoPwKuzF
 EOF
 
 cat >test.out2 <<EOF
-(public-key (rsa-pkcs1-sha1 (n |pUmWhj0f4TD/XcDW88zcKo1ZYBn09jT0RzP1aoPw
-                                KuzFbvupfbvKjPB3SC6r8cXTH0OY60EdfcQs1Ymt
-                                eIJNMEnWEvV9ZHPJYanU6dVSlajnbKwEhqrFMLlR
-                                uS4UKJQ67A5NFt0WV9DjYaLIzY5RmPJYci/C8bo+
-                                Pawj8r/j1As=|)
-                            (e "#")))
+(public-key (rsa-pkcs1 (n |pUmWhj0f4TD/XcDW88zcKo1ZYBn09jT0RzP1aoPw
+                           KuzFbvupfbvKjPB3SC6r8cXTH0OY60EdfcQs1Ymt
+                           eIJNMEnWEvV9ZHPJYanU6dVSlajnbKwEhqrFMLlR
+                           uS4UKJQ67A5NFt0WV9DjYaLIzY5RmPJYci/C8bo+
+                           Pawj8r/j1As=|)
+                       (e "#")))
 EOF
 
 compare_output "conv-2-test"
