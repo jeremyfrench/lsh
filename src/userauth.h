@@ -1,5 +1,6 @@
 /* userauth.h
  *
+ * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -42,5 +43,13 @@
 struct exception *make_userauth_special_exception(struct lsh_string *reply,
 						  const char *msg);
 
+/* GABA:
+   (class
+     (name user)
+     (vars
+       ; These string include a terminating NUL-character, for
+       ; compatibility with library and system calls.
+       (name string)))
+*/
 
 #endif /* LSH_USERAUTH_H_INCLUDED */
