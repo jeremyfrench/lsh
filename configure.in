@@ -537,6 +537,6 @@ fi
 
 AC_OUTPUT(Makefile doc/Makefile misc/Makefile
 	  src/Makefile src/argp/Makefile src/scm/Makefile
-	  src/testsuite/Makefile
+	  src/testsuite/Makefile src/rsync/Makefile
 	  src/symmetric/Makefile src/symmetric/include/Makefile
 	  contrib/Makefile contrib/lsh.spec)
