@@ -13,7 +13,7 @@
 #include "publickey_crypto.h"
 #include "read_file.h"
 #include "rsa.h"
-#include "sexp_commands.h"
+#include "sexp.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
