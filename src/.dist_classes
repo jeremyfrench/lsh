@@ -47,6 +47,7 @@ dist_classes = \
     lock_file.h.x \
     lookup_verifier.h.x \
     lsh-decode-key.c.x \
+    lsh-decrypt-key.c.x \
     lsh-export-key.c.x \
     lsh-keygen.c.x \
     lsh-make-seed.c.x \
