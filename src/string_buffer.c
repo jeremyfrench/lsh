@@ -54,7 +54,7 @@ void string_buffer_clear(struct string_buffer *buffer)
   struct string_node *n;
 
   lsh_string_free(buffer->partial);
-  for (n = n->prev; n; )
+  for (n = buffer->tail; n; )
     {
       struct string_node *old = n;
       n = old->prev;
