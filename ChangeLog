@@ -1,3 +1,15 @@
+2005-02-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (lshd_read_state): New class. Moved definition super
+	class ssh_read_state to ssh_read.h and ssh_read.c.
+
+	* src/exception.h (PROTOCOL_ERROR_DISCONNECT): New macro.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed oop-line-file.c.
+	(lshd_SOURCES): Include ssh_read.c.
+
+	* src/ssh_read.c, src/ssh_read.h: New files.
+
 2005-02-03  Niels Möller  <niels@s3.kth.se>
 
 	* src/resource.c (resource_list_is_empty): New function.
