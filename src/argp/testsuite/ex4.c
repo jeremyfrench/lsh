@@ -24,7 +24,7 @@
    current locale. */
 
 #include <stdlib.h>
-#include <error.h>
+#include <stdio.h>
 #include <argp.h>
 
 const char *argp_program_version =
@@ -148,7 +148,12 @@ int main (int argc, char **argv)
   argp_parse (&argp, argc, argv, 0, 0, &arguments);
 
   if (arguments.abort)
-    error (10, 0, "ABORTED");
+    {
+      /* The glibc example used error (10, 0, "ABORTED"), but that's
+	 not portable. */
+      fprintf(stderr, "ex4: ABORTED\n");
+      exit(10);
+    }
 
   for (i = 0; i < arguments.repeat_count; i++)
     {
