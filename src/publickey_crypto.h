@@ -214,7 +214,27 @@ struct verifier *
 make_ssh_rsa_verifier(UINT32 public_length,
 		      const UINT8 *public);
 
-struct sexp *
+struct lsh_string *
 rsa_generate_key(struct randomness *r, UINT32 bits);
+
+
+/* DSA signatures */
+
+struct signature_algorithm *
+make_dsa_algorithm(struct randomness *random);
+
+/* Non spki keys */
+struct verifier *
+parse_ssh_dss_public(struct simple_buffer *buffer);
+
+struct verifier *
+make_ssh_dss_verifier(UINT32 public_length,
+		      const UINT8 *public);
+
+void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l);
+void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q);
+
+struct lsh_string *
+dsa_generate_key(struct randomness *r, unsigned level);
 
 #endif /* LSH_PUBLICKEY_CRYPTO_H_INCLUDED */
