@@ -1,7 +1,7 @@
 # Testsuite
 
 # Tests that can be used without any special setup
-TS_PROGS = des-test twofish-test spki-tag-test
+TS_PROGS = des-test twofish-test md5-test sha1-test spki-tag-test
 TS_SH = keygen-test
 
 TS_SOME = $(TS_PROGS) $(TS_SH)
