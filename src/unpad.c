@@ -9,7 +9,7 @@
 static int do_unpad(struct abstract_write **w,
 		    struct lsh_string *packet)
 {
-  struct packet_unpad *closure = (struct packet_unpad *) *w;
+  struct abstract_write_pipe *closure = (struct abstract_write_pipe *) *w;
   
   UINT8 padding_length;
   UINT32 payload_length;
@@ -41,8 +41,8 @@ make_packet_unpad(struct abstract_write *continuation)
 {
   struct packet_unpad *closure = xalloc(sizeof(struct packet_unpad));
 
-  closure->super.super.write = do_unpad;
-  closure->super.next = continuation;
+  closure->super.write = do_unpad;
+  closure->next = continuation;
 
-  return &closure->super.super;
+  return &closure->super;
 }
