@@ -36,25 +36,31 @@
 
 #include <pwd.h>
 #include <grp.h>
-    
+
+#include "server_password.c.x"
+
 /* NOTE: Calls functions using the *disgusting* convention of returning
  * pointers to static buffers. */
 struct unix_user *lookup_user(struct lsh_string *name, int free)
 {
   struct passwd *passwd;
-  struct unix_user *res;
+  NEW(unix_user, res);
 
   name = make_cstring(name, free);
 
   if (!name)
-    return 0;
+    {
+      KILL(res);
+      return 0;
+    }
   
   if (!(passwd = getpwnam(name->data)))
     {
       lsh_string_free(name);
+      KILL(res);
       return 0;
     }
-  NEW(res);
+
   res->uid = passwd->pw_uid;
   res->gid = passwd->pw_gid;
   res->name = name;
@@ -98,6 +104,17 @@ int verify_password(struct unix_user *user,
   return 1;
 }
 
+/* CLASS:
+   (class
+     (name unix_authentication)
+     (super userauth)
+     (vars
+       ;; (login object login_method)
+       ; Services allowed. Maps names to struct unix_service.
+       (services object alist)))
+*/
+     
+#if 0
 struct unix_authentication
 {
   struct userauth super;
@@ -108,6 +125,7 @@ struct unix_authentication
   /* Services allowed. Maps names to struct unix_service */
   struct alist *services; 
 };
+#endif
 
 static int do_authenticate(struct userauth *c,
 			   struct lsh_string *username,
@@ -115,13 +133,11 @@ static int do_authenticate(struct userauth *c,
 			   struct simple_buffer *args,
 			   struct ssh_service **result)
 {
-  struct unix_authentication *closure = (struct unix_authentication *) c;
+  CAST(unix_authentication, closure, c);
   struct lsh_string *password = NULL;
   struct unix_service *service;
   int change_passwd;
   
-  MDEBUG(closure);
-
   if (!( (service = ALIST_GET(closure->services, requested_service))))
     {
       lsh_string_free(username);
@@ -187,9 +203,8 @@ static int do_authenticate(struct userauth *c,
   
 struct userauth *make_unix_userauth(struct alist *services)
 {
-  struct unix_authentication *closure;
+  NEW(unix_authentication, closure);
 
-  NEW(closure);
   closure->super.authenticate = do_authenticate;
 #if 0
   closure->login = login;
@@ -250,6 +265,8 @@ int change_dir(struct unix_user *user)
   return 1;  
 }
 
+#if 0
+
 struct setuid_service
 {
   struct ssh_service super;
@@ -259,19 +276,15 @@ struct setuid_service
   struct ssh_service *service;
 };
 
-#if 0
-
 /* NOTE: This is used only if early forking (i.e., for directly after
  * user autentication) is enabled. */
 static int do_setuid(struct ssh_service *c,
 		     struct ssh_connection *connection)
 {
-  struct setuid_service *closure  = (struct setuid_service *) c;  
+  CAST(setuid_service, closure, c);  
   uid_t server_uid = getuid();
   int res = 0;
 
-  MDEBUG(closure);
-  
   if (server_uid != closure->user->uid)
     {
       if (server_uid)

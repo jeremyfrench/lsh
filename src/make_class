@@ -67,7 +67,11 @@
 ;; (simple c-type)   c-type
 ;; (special c-type mark-fn free-fn)
 ;;
+;; (struct tag)
+;;
 ;; (array type size) type name[size]
+;; Variable size array (must be last) */
+;; (var-array type size-field)  type name[1]
 ;;
 ;; (pointer type)    type *name
 ;; (space type)      Like pointer, but should be freed
@@ -87,8 +91,8 @@
       (type->category `(simple ,type))
       (let ((tag (car type)))
 	(case tag
-	  ((string object simple special space bignum) tag)
-	  ((array pointer) (type->category (cadr type)))
+	  ((string object simple special space bignum struct) tag)
+	  ((array var-array pointer) (type->category (cadr type)))
 	  
 	  (else (error "make_class: type->category: Invalid type" type))))))
 
@@ -98,12 +102,15 @@
       (case (car type)
 	((string) (list "struct lsh_string *" expr))
 	((object) (list "struct " (cadr type) " *" expr))
+	((struct) (list "struct " (cadr type) " " expr)) 
 	((bignum) (list "mpz_t " expr))
 	((simple special) (list (cadr type) " " expr))
 	((pointer space) (type->declaration (cadr type)
 					    (list "(*(" expr "))")))
 	((array)  (type->declaration (cadr type)
 				     (list "((" expr ")[" (caddr type) "])")))
+	((var-array)  (type->declaration (cadr type)
+				     (list "((" expr ")[1])")))
 	((function) (type->declaration (cadr type)
 				       (list expr
 					     "(" (implode (cddr type) ", ")
@@ -116,6 +123,7 @@
       (case (car type)
 	((string simple function space bignum) #f)
 	((object) (list "mark((struct lsh_object *) " expr ");\n"))
+	((struct) (list (cadr type) "_mark(&" expr ", mark);\n"))
 	((pointer) (if (null? (cddr type))
 		       (type->mark (cadr type) (list "*(" expr ")"))
 
@@ -142,7 +150,14 @@
 		      "  for (k=0; k<" (caddr type) "; k++)\n"
 		      "    " mark-k
 		      "}\n"))))
-	
+	((var-array)
+	 (let ((mark-k (type->mark (cadr type) (list "(" expr ")[k]"))))
+	   (and mark-k
+		(list "{\n  unsigned k;\n"
+		      "  for (k=0; k<i->" (caddr type) "; k++)\n"
+		      "    " mark-k
+		      "}\n"))))
+	 
 	(else (error "make_class: type->mark: Invalid type" type)))))
 
 (define (type->free type expr)
@@ -153,6 +168,7 @@
       (type->free `(simple ,type) expr)
       (case (car type)
 	((object simple function pointer) #f)
+	((struct) (list (cadr type) "_free(&" expr ");\n"))
 	((string) (free/f "lsh_string_free"))
 	((bignum) (free/f "mpz_clear"))
 	((space) (free/f "lsh_space_free"))
@@ -165,9 +181,17 @@
 		      "  for (k=0; k<" (caddr type) "; k++)\n"
 		      "    " free-k
 		      "}\n"))))
+	((var-array)
+	 (let ((free-k (type->free (cadr type) (list "(" expr ")[k]"))))
+	   (and free-k
+		(list "{\n  unsigned k;\n"
+		      "  for (k=0; k<i->" (caddr type) "; k++)\n"
+		      "    " free-k
+		      "}\n"))))
     
 	(else (error "make_class: type->free: Invalid type" type)))))
 
+#!
 (define (type->init type expr)
   (if (atom? type)
       (type->init `(simple ,type) expr)
@@ -183,7 +207,7 @@
 		      "}\n"))))
 
 	(else (error "make_class: type->init: Invalid type" type)))))
-    
+!#  
   
 #!
 (define var-category car)
@@ -218,13 +242,17 @@
 ;; (method (function int "struct this_type *self struct foo *arg") name)
 
 (define (fix-method name var)
-  (if (eq? 'method (cadr var))
-      `(,(car var) pointer (function ,(caddr var) ("struct " ,name " *self")
-				     ,@(cdddr var)))
-      var))
+  (case (cadr var)
+    ((method)
+     `(,(car var) pointer (function ,(caddr var) ("struct " ,name " *self")
+				     ,@(cdddr var))))
+    ((indirect-method)
+     `(,(car var) pointer (function ,(caddr var) ("struct " ,name " **self")
+				     ,@(cdddr var))))
+    (else var)))
 
-(define (do-struct name super vars)
-  (werror "do-struct\n")
+(define (do-instance-struct name super vars)
+  ; (werror "do-instance-struct\n")
   (list "struct " name 
 	"\n{\n"
 	"  struct " (or super "lsh_object") " super;\n"
@@ -234,14 +262,24 @@
 	     vars)
 	"};\n"))
 
+(define (do-struct name super vars)
+  ; (werror "do-struct\n")
+  (list "struct " name 
+	"\n{\n"
+	(map (lambda (var)
+	       (list "  " (type->declaration (var-type var)
+					     (var-name var)) ";\n"))
+	     vars)
+	"};\n"))
+
 (define (do-mark-function name vars)
-  (werror "do-mark-function\n")
+  ; (werror "do-mark-function\n")
   (let ((markers (filter identity
 			 (map (lambda (var)
 				(type->mark (var-type var)
 					    (list "i->" (var-name var))))
 			      vars))))
-    (werror "gazonk\n")
+    ; (werror "gazonk\n")
     (and (not (null? markers))
 	 (list "static void do_"
 	       name "_mark(struct lsh_object *o, \n"
@@ -253,14 +291,14 @@
 	       "}\n\n"))))
 
 (define (do-free-function name vars)
-  (werror "do-free-function\n")
+  ; (werror "do-free-function\n")
   (let ((freers (filter identity
 			(map (lambda (var)
 			       (type->free (var-type var) 
 					   (list "i->" (var-name var))))
 			     
 			     vars))))
-    (werror "gazonk\n")
+    ; (werror "gazonk\n")
 
     (and (not (null? freers))
 	 (list "static void do_"
@@ -270,6 +308,43 @@
 	       (map (lambda (x) (list "  " x))
 		    freers)
 	       "}\n\n"))))
+
+(define (declare-struct-mark-function name)
+  (list "void "	name "_mark(struct " name " *i, \n"
+	"    void (*mark)(struct lsh_object *o))"))
+
+(define (do-struct-mark-function name vars)
+  ; (werror "do-struct-mark-function\n")
+  (let ((markers (filter identity
+			 (map (lambda (var)
+				(type->mark (var-type var)
+					    (list "i->" (var-name var))))
+			      vars))))
+    ; (werror "gazonk\n")
+    (list (declare-struct-mark-function name)
+	  "\n{\n"
+	  (map (lambda (x) (list "  " x))
+	       markers)
+	  "}\n\n")))
+
+(define (declare-struct-free-function name)
+  (list "void " name "_free(struct " name " *i)"))
+
+(define (do-struct-free-function name vars)
+  ; (werror "do-struct-free-function\n")
+  (let ((freers (filter identity
+			(map (lambda (var)
+			       (type->free (var-type var) 
+					   (list "i->" (var-name var))))
+			     
+			     vars))))
+    ; (werror "gazonk\n")
+
+    (list (declare-struct-free-function name)
+	  "\n{\n"
+	  (map (lambda (x) (list "  " x))
+	       freers)
+	  "}\n\n")))
 
 (define (do-class name super mark-function free-function meta methods)
   (define initializer
@@ -286,7 +361,7 @@
 	  (if mark-function (list "do_" name "_mark") "NULL") ",\n  "
 	  (if free-function (list "do_" name "_free") "NULL") "\n"
 	  "}"))
-  (werror "do-class\n")
+  ; (werror "do-class\n")
   (if meta
       (list "struct " meta "_meta " name "_class_extended =\n"
 	    "{ " initializer 
@@ -301,7 +376,7 @@
 (define (process-class exp)
   (let ((type (car exp))
 	(attributes (cdr exp)))
-    (werror "process-class: type = ~S\n" type)
+    ; (werror "process-class: type = ~S\n" type)
     (case type
       ((class)
        (let ((name (get 'name attributes cadr))
@@ -309,14 +384,15 @@
 	     (raw-vars (get 'vars attributes cdr))
 	     (meta (get 'meta attributes cadr))
 	     (methods (get 'methods attributes cdr)))
-	 (werror "foo\n")
+	 (werror "Processing class ~S\n" name)
+	 ; (werror "foo\n")
 	 (let ((vars (map (lambda (var) (fix-method name var))
 			  raw-vars)))
 	   (let ((mark-function (do-mark-function name vars))
 		 (free-function (do-free-function name vars)))
-	     (werror "baar\n")
+	     ; (werror "baar\n")
 	     (list "#ifndef CLASS_DEFINE\n"	
-		   (do-struct name super vars)
+		   (do-instance-struct name super vars)
 		   (if meta
 		       (list "extern struct " meta "_meta "
 			     name "_class_extended;\n")
@@ -331,6 +407,7 @@
       ((meta)
        (let ((name (get 'name attributes cadr))
 	     (methods (get 'methods attributes cdr)))
+	 (werror "Processing meta ~S\n" name)
 	 (list "#ifndef CLASS_DEFINE\n"
 	       "struct " name "_meta\n"
 	       "{\n"
@@ -339,9 +416,29 @@
 		    methods)
 	       "};\n"
 	       "#endif /* !CLASS_DEFINE */\n\n")))
+      ((struct)
+       (let ((name (get 'name attributes cadr))
+	     (super (get 'super attributes cadr))
+	     (raw-vars (get 'vars attributes cdr))
+	     (meta (get 'meta attributes cadr))
+	     (methods (get 'methods attributes cdr)))
+	 (werror "Processing struct ~S\n" name)
+	 ; (werror "foo\n")
+	 ;; FIXME: Is this really needed?
+	 (let ((vars (map (lambda (var) (fix-method name var))
+			  raw-vars)))
+	   ; (werror "baar\n")
+	   (list "#ifndef CLASS_DEFINE\n"	
+		 (do-struct name super vars)
+		 "extern " (declare-struct-mark-function name) ";\n"
+		 "extern " (declare-struct-free-function name) ";\n"
+		 "#endif /* !CLASS_DEFINE */\n\n"
+		 "#ifndef CLASS_DECLARE\n"
+		 (do-struct-mark-function name vars)
+		 (do-struct-free-function name vars)
+		 "#endif /* !CLASS_DECLARE */\n\n"))))
+
       (else (list "#error Unknown expression type " type "\n")))))
-
-
 
 (define main
   (let ((test (lambda (s) (string-prefix? "/* CLASS:" s))))

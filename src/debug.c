@@ -32,20 +32,29 @@
 #include "xalloc.h"
 #include "werror.h"
 
+#include "debug.c.x"
+
+/* CLASS:
+   (class
+     (name packet_debug)
+     (super abstract_write_pipe)
+     (vars
+       (prefix simple "char *")))
+*/
+
+#if 0
 struct packet_debug
 {
   struct abstract_write_pipe super;
   char *prefix;
 };
+#endif
 
 static int do_debug(struct abstract_write *w,
 		    struct lsh_string *packet)
 {
-  struct packet_debug *closure
-    = (struct packet_debug *) w;
+  CAST(packet_debug, closure, w);
   
-  MDEBUG(closure);
-
   debug("DEBUG: recieved packet");
   debug_hex(packet->length, packet->data);
   debug("\n");
@@ -56,9 +65,7 @@ static int do_debug(struct abstract_write *w,
 struct abstract_write *
 make_packet_debug(struct abstract_write *continuation, char *prefix)
 {
-  struct packet_debug *closure;
-
-  NEW(closure);
+  NEW(packet_debug, closure);
 
   closure->super.super.write = do_debug;
   closure->super.next = continuation;
@@ -135,9 +142,7 @@ static int do_rec_debug(struct packet_handler *self,
 
 struct packet_handler *make_rec_debug_handler(void)
 {
-  struct packet_handler *self;
-
-  NEW(self);
+  NEW(packet_handler, self);
 
   self->handler = do_rec_debug;
 

@@ -40,6 +40,34 @@
 #define WAIT_CONTENTS 2
 #define WAIT_MAC 3
 
+#include "read_packet.c.x"
+
+/* CLASS:
+   (class
+     (name read_packet)
+     (super read_handler)
+     (vars
+       (state simple int)
+  
+       ; Attached to read packets
+       (sequence_number simple UINT32)
+  
+       ; Buffer partial headers and packets.
+       (pos simple UINT32)
+
+       ; NOTE: This buffer should hold one block, and must be
+       ; reallocated when the crypto algorithms is changed. 
+       (buffer string)
+       (crypt_pos simple "UINT8 *")
+
+       ; Must point to an area large enough to hold a mac 
+       (recieved_mac string) 
+  
+       (handler object abstract_write)
+       (connection object ssh_connection)))
+*/
+     
+#if 0
 struct read_packet
 {
   struct read_handler super; /* Super type */
@@ -62,6 +90,7 @@ struct read_packet
   struct abstract_write *handler;
   struct ssh_connection *connection;
 };
+#endif
 
 static struct lsh_string *
 lsh_string_realloc(struct lsh_string *s, UINT32 length)
@@ -86,11 +115,9 @@ lsh_string_realloc(struct lsh_string *s, UINT32 length)
 static int do_read_packet(struct read_handler **h,
 			  struct abstract_read *read)
 {
-  struct read_packet *closure = (struct read_packet *) *h;
+  CAST(read_packet, closure, *h);
   int total = 0;
   
-  MDEBUG(closure);
-
   while (total < QUANTUM)
     switch(closure->state)
       {
@@ -303,9 +330,7 @@ static int do_read_packet(struct read_handler **h,
 struct read_handler *make_read_packet(struct abstract_write *handler,
 				      struct ssh_connection *connection)
 {
-  struct read_packet *closure;
-
-  NEW(closure);
+  NEW(read_packet, closure);
 
   closure->super.handler = do_read_packet;
 

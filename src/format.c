@@ -23,12 +23,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <assert.h>
-#include <string.h>
-
 #include "format.h"
+
+#include "list.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include <assert.h>
+#include <string.h>
 
 struct lsh_string *ssh_format(char *format, ...)
 {
@@ -167,15 +169,15 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 	      }
 	    case 'A':
 	      {
-		int *atom = va_arg(args, int *);
-		int n;
+		struct int_list *l = va_arg(args, struct int_list *);
+		int n, i;
 
-		for(n = 0; *atom >= 0; atom++)
+		for(n = i =0; i < LIST_LENGTH(l); i++)
 		  {
-		    if (*atom)
+		    if (LIST(l)[i])
 		      {
 			n++;
-			length += get_atom_length(*atom);
+			length += get_atom_length(LIST(l)[i]);
 		      }
 		  }
 		if (n)
@@ -355,24 +357,24 @@ void ssh_vformat_write(char *f, UINT32 size, UINT8 *buffer, va_list args)
 	      }
 	    case 'A':
 	      {
-		int *atom = va_arg(args, int *);
+		struct int_list *l = va_arg(args, struct int_list *);
 		UINT8 *start = buffer; /* Where to store the length */
-		int n;
+		int n, i;
 		
 		if (!literal)
 		  buffer += 4;
 		
-		for(n = 0; *atom >= 0; atom++)
+		for(n = i = 0; i < LIST_LENGTH(l); i++)
 		  {
-		    if (*atom)
+		    if (LIST(l)[i])
 		      {
-			UINT32 length = get_atom_length(*atom);
+			UINT32 length = get_atom_length(LIST(l)[i]);
 			
 			if (n)
 			  /* Not the first atom */
 			  *buffer++ = ',';
 
-			memcpy(buffer, get_atom_name(atom[0]), length);
+			memcpy(buffer, get_atom_name(LIST(l)[i]), length);
 			buffer += length;
 
 			n++;

@@ -1,8 +1,5 @@
-/* session.h
+/* userauth.h
  *
- * Manage the ssh-connection service.
- *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -24,23 +21,9 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef LSH_SESSION_H_INCLUDED
-#define LSH_SESSION_H_INCLUDED
+#include "userauth.h"
 
-#warning session.h should not be used (yet?).
+#define CLASS_DEFINE
+#include "userauth.h.x"
+#undef CLASS_DEFINE
 
-#include "alist.h"
-#include "connection.h"
-#include "channel.h"
-#include "parse.h"
-
-struct ssh_session
-{
-  struct channel super;
-};
-
-struct lsh_string *format_session_open(UINT32 channel,
-				       UINT32 window_size, UINT32 max_packet);
-
-				       
-#endif /* LSH_SESSION_H_INCLUDED */

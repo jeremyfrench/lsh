@@ -61,6 +61,8 @@ lssh_space_alloc.
 Make lists of integers (usually atoms) its own type. Can this be done
 in such a way that they can also be allocated statically? 
 
+Have the allocator initialize all objects automatically.
+
 
 CHANNELS
 

@@ -72,9 +72,7 @@ static int do_disconnect(struct packet_handler *closure,
 
 struct packet_handler *make_disconnect_handler(void)
 {
-  struct packet_handler *res;
-
-  NEW(res);
+  NEW(packet_handler, res);
 
   res->handler = do_disconnect;
   return res;

@@ -26,9 +26,29 @@
 #include <string.h>
 
 #include "read_line.h"
+
 #include "werror.h"
 #include "xalloc.h"
 
+#define CLASS_DEFINE
+#include "read_line.h.x"
+#undef CLASS_DEFINE
+
+#include "read_line.c.x"
+
+/* CLASS:
+   (class
+     (name read_line)
+     (super read_handler)
+     (vars
+       (handler object line_handler)
+
+       ; Line buffer       
+       (pos simple UINT32)
+       (buffer array UINT8 MAX_LINE)))
+*/
+
+#if 0
 struct read_line
 {
   struct read_handler super; /* Super type */
@@ -37,25 +57,34 @@ struct read_line
   UINT32 pos;   /* Line buffer */
   UINT8 buffer[MAX_LINE];
 };
+#endif
 
+/* CLASS:
+   (class
+     (name string_read)
+     (super abstract_read)
+     (vars
+       (line object read_line)
+       (index simple UINT32)))
+*/
+
+#if 0
 struct string_read
 {
   struct abstract_read super;
   struct read_line *line;
   UINT32 index;
 };
+#endif
 
 static int do_string_read(struct abstract_read **r,
 			  UINT32 length, UINT8 *buffer)
 {
-  struct string_read *closure
-    = (struct string_read *) *r;
+  CAST(string_read, closure, *r);
   
   UINT32 left = closure->line->pos - closure->index;
   UINT32 to_read = MIN(length, left);
 
-  MDEBUG(closure);
-  
   memcpy(buffer, closure->line->buffer + closure->index, to_read);
   closure->index += to_read;
 
@@ -65,15 +94,13 @@ static int do_string_read(struct abstract_read **r,
 static int do_read_line(struct read_handler **h,
 			struct abstract_read *read)
 {
-  struct read_line *closure = (struct read_line *) *h;
+  CAST(read_line, closure, *h);
   
   UINT8 *eol;
   UINT32 length;
   struct read_handler *next;
   int n;
 
-  MDEBUG(closure);
-  
   n = A_READ(read, MAX_LINE - closure->pos, closure->buffer);
 
   switch(n)
@@ -136,7 +163,7 @@ static int do_read_line(struct read_handler **h,
 		}
 	    }
 	  /* No data left */
-	  lsh_object_free(closure);
+	  KILL(closure);
 	  *h = next;
 	  return LSH_OK | LSH_GOON;
 	}
@@ -159,9 +186,7 @@ static int do_read_line(struct read_handler **h,
 
 struct read_handler *make_read_line(struct line_handler *handler)
 {
-  struct read_line *closure;
-
-  NEW(closure);
+  NEW(read_line, closure);
 
   closure->super.handler = do_read_line;
   closure->pos = 0;

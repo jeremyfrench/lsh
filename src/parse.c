@@ -23,8 +23,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "format.h"
 #include "parse.h"
+
+#include "format.h"
+#include "list.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -239,33 +241,33 @@ int parse_next_atom(struct simple_buffer *buffer, int *result)
   return 1;
 }
 
-int *parse_atom_list(struct simple_buffer *buffer)
+struct int_list *parse_atom_list(struct simple_buffer *buffer)
 {
   int count;
   int i;
-  int *res;
+  struct int_list *res;
   
   /* Count commas (no commas means one atom) */
   for (i = buffer->pos, count = 1; i < buffer->capacity; i++)
     if (buffer->data[i] == ',')
       count++;
 
-  res = lsh_space_alloc(sizeof(int) * (count+1));
+  res = alloc_int_list(count);
 
   for (i = 0; i < count; i++)
     {
-      switch(parse_next_atom(buffer, res+i))
+      switch(parse_next_atom(buffer, LIST(res)+i))
 	{
 	case 1:
 	  continue;
 	case 0:
-	  lsh_space_free(res);
+	  KILL(res);
 	  return NULL;
 	default:
 	  fatal("Internal error\n");
 	}
     }
-  res[i] = -1;
+
   return res;
 }
 

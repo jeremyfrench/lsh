@@ -29,14 +29,30 @@
 
 #include <assert.h>
 
+/* Prototype */
+static void do_free_buffer(struct buffer_node *n);
+
+#define CLASS_DEFINE
+#include "write_buffer.h.x"
+#undef CLASS_DEFINE
+
+static void do_free_buffer(struct buffer_node *n)
+{
+  while(n)
+    {
+      struct buffer_node *old = n;
+      lsh_string_free(n->packet);
+      n = n->next;
+      lsh_space_free(old);
+    }
+}
+
 static int do_write(struct abstract_write *w,
 		    struct lsh_string *packet)
 {
-  struct write_buffer *closure = (struct write_buffer *) w;
+  CAST(write_buffer, closure, w);
   struct buffer_node *new;
   
-  MDEBUG(closure);
-
   if (!packet->length)
     {
       lsh_string_free(packet);
@@ -163,9 +179,7 @@ void write_buffer_close(struct write_buffer *buffer)
 
 struct write_buffer *write_buffer_alloc(UINT32 size)
 {
-  struct write_buffer *res;
-
-  NEW(res);
+  NEW(write_buffer, res);
   
   res->super.write = do_write;
   

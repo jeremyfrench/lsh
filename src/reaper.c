@@ -38,6 +38,12 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#define CLASS_DEFINE
+#include "reaper.h.x"
+#undef CLASS_DEFINE
+
+#include "reaper.c.x"
+
 static sig_atomic_t halloween;
 
 static void child_handler(int signum)
@@ -47,6 +53,17 @@ static void child_handler(int signum)
   halloween = 1;
 }
 
+/* CLASS:
+   (class
+     (name reaper)
+     (super reap)
+     (vars
+       ; Mapping of from pids to exit-callbacks. 
+       ; NOTE: This assumes that a pid_t fits in an int. 
+       (children object alist)))
+*/
+
+#if 0
 struct reaper
 {
   struct reap super;
@@ -55,13 +72,12 @@ struct reaper
   /* NOTE: This assumes that a pid_t fits in an int. */
   struct alist *children;
 };
+#endif
 
 static void do_reap(struct reap *c,
 		    pid_t pid, struct exit_callback *callback)
 {
-  struct reaper *closure = (struct reaper *) c;
-
-  MDEBUG(closure);
+  CAST(reaper, closure, c);
 
   assert(!ALIST_GET(closure->children, pid));
 
@@ -138,9 +154,8 @@ static void reap(struct reaper *r)
 
 struct reap *make_reaper(void)
 {
-  struct reaper *closure;
+  NEW(reaper, closure);
 
-  NEW(closure);
   closure->super.reap = do_reap;
   closure->children = make_linked_alist(0, -1);
 
@@ -150,13 +165,11 @@ struct reap *make_reaper(void)
 /* FIXME: Prehaps this function should return a suitable exit code? */
 void reaper_run(struct reap *r, struct io_backend *b)
 {
-  struct reaper *self  = (struct reaper *) r;
+  CAST(reaper, self, r);
   
   struct sigaction pipe;
   struct sigaction chld;
 
-  MDEBUG(self);
-  
   pipe.sa_handler = SIG_IGN;
   sigemptyset(&pipe.sa_mask);
   pipe.sa_flags = 0;

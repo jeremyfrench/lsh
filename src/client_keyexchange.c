@@ -30,14 +30,43 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#define CLASS_DEFINE
+#include "client_keyexchange.h.x"
+#undef CLASS_DEFINE
+
+#include "client_keyexchange.c.x"
+
+/* CLASS:
+   (class
+     (name dh_client_exchange)
+     (super keyexchange_algorithm)
+     (vars
+       (dh object diffie_hellman_method)
+       (verifier object lookup_verifier)))
+*/
+
+#if 0     
 struct dh_client_exchange
 {
   struct keyexchange_algorithm super;
   struct diffie_hellman_method *dh;
   struct lookup_verifier *verifier;
 };
+#endif
 
 /* Handler for the kex_dh_reply message */
+/* CLASS:
+   (class
+     (name dh_client)
+     (super packet_handler)
+     (vars
+       (dh struct diffie_hellman_instance)
+       (verifier object lookup_verifier)
+       (install object install_keys)
+       (finished object ssh_service)))
+*/
+
+#if 0
 struct dh_client
 {
   struct packet_handler super;
@@ -47,19 +76,18 @@ struct dh_client
   
   struct ssh_service *finished;
 };
-
+#endif
+    
 static int do_handle_dh_reply(struct packet_handler *c,
 			      struct ssh_connection *connection,
 			      struct lsh_string *packet)
 {
-  struct dh_client *closure = (struct dh_client *) c;
+  CAST(dh_client, closure, c);
   struct verifier *v;
   struct hash_instance *hash;
   struct lsh_string *s;
   int res;
 
-  MDEBUG(closure);
-  
   verbose("handle_dh_reply()\n");
   
   if (!dh_process_server_msg(&closure->dh, packet))
@@ -105,7 +133,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
   /* FIXME: Return value is ignored */
   (void) INSTALL_KEYS(closure->install, connection, hash);
 
-  lsh_object_free(hash);
+  KILL(hash);
 
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = connection->fail;
   connection->kex_state = KEX_STATE_NEWKEYS;
@@ -122,18 +150,15 @@ static int do_init_dh(struct keyexchange_algorithm *c,
 		      struct ssh_service *finished,
 		      int hostkey_algorithm_atom,
 		      struct signature_algorithm *ignored,
-		      void **algorithms)
+		      struct object_list *algorithms)
 {
-  struct dh_client_exchange *closure = (struct dh_client_exchange *) c;
-  struct dh_client *dh;
+  CAST(dh_client_exchange, closure, c);
+  NEW(dh_client, dh);
 
   int res;
 
-  MDEBUG(closure);
-  MDEBUG_SUBTYPE(connection);
-  MDEBUG_SUBTYPE(ignored);
-
-  NEW(dh);
+  CHECK_SUBTYPE(ssh_connection, connection);
+  CHECK_SUBTYPE(signature_algorithm, ignored);
 
   /* FIXME: Use this value to choose a verifier function */
   if (hostkey_algorithm_atom != ATOM_SSH_DSS)
@@ -171,11 +196,9 @@ struct keyexchange_algorithm *
 make_dh_client(struct diffie_hellman_method *dh,
 	       struct lookup_verifier *verifier)
 {
-  struct dh_client_exchange *self;
+  NEW(dh_client_exchange, self);
 
-  NEW(self);
-
-  MDEBUG(dh);
+  CHECK_TYPE(diffie_hellman_method, dh);
   
   self->super.init = do_init_dh;
   self->dh = dh;
@@ -184,11 +207,24 @@ make_dh_client(struct diffie_hellman_method *dh,
   return &self->super;
 }
 
+/* FIXME: This is identical to the server_install_keys structure in
+ * server_keyexchange.c. It should probably be moved somewhere else. */
+
+/* CLASS:
+   (class
+     (name client_install_keys)
+     (super install_keys)
+     (vars
+       (algorithms object object_list)))
+*/
+
+#if 0
 struct client_install_keys
 {
   struct install_keys super;
-  void **algorithms;
+  struct object_list *algorithms;
 };
+#endif
 
 static int do_install(struct install_keys *c,
 		      struct ssh_connection *connection,
@@ -198,9 +234,7 @@ static int do_install(struct install_keys *c,
    * happens to be weak. */
   /* FIXME: No IV:s */
 
-  struct client_install_keys *closure = (struct client_install_keys *) c;
-
-  MDEBUG(closure);
+  CAST(client_install_keys, closure, c);
 
   /* Keys for recieving */
   connection->dispatch[SSH_MSG_NEWKEYS] = make_newkeys_handler
@@ -223,11 +257,9 @@ static int do_install(struct install_keys *c,
   return 1;
 }
 
-struct install_keys *make_client_install_keys(void **algorithms)
+struct install_keys *make_client_install_keys(struct object_list *algorithms)
 {
-  struct client_install_keys *self;
-
-  NEW(self);
+  NEW(client_install_keys, self);
 
   self->super.install = do_install;
   self->algorithms = algorithms;

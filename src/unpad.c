@@ -31,14 +31,12 @@
 static int do_unpad(struct abstract_write *w,
 		    struct lsh_string *packet)
 {
-  struct abstract_write_pipe *closure = (struct abstract_write_pipe *) w;
+  CAST(abstract_write_pipe, closure, w);
   
   UINT8 padding_length;
   UINT32 payload_length;
   struct lsh_string *new;
   
-  MDEBUG(closure);
-
   if (packet->length < 1)
     return 0;
   
@@ -63,9 +61,7 @@ static int do_unpad(struct abstract_write *w,
 struct abstract_write *
 make_packet_unpad(struct abstract_write *continuation)
 {
-  struct abstract_write_pipe *closure;
-
-  NEW(closure);
+  NEW(abstract_write_pipe, closure);
 
   closure->super.write = do_unpad;
   closure->next = continuation;

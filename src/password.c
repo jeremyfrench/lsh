@@ -1,6 +1,6 @@
-/* session.h
+/* password.c
  *
- * Manage the ssh-connection service.
+ * System dependant password related functions.
  *
  * $Id$
  */
@@ -24,23 +24,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef LSH_SESSION_H_INCLUDED
-#define LSH_SESSION_H_INCLUDED
+#include "password.h"
 
-#warning session.h should not be used (yet?).
+#include "xalloc.h"
 
-#include "alist.h"
-#include "connection.h"
-#include "channel.h"
-#include "parse.h"
+#define CLASS_DEFINE
+#include "password.h.x"
+#undef CLASS_DEFINE
 
-struct ssh_session
-{
-  struct channel super;
-};
 
-struct lsh_string *format_session_open(UINT32 channel,
-				       UINT32 window_size, UINT32 max_packet);
-
-				       
-#endif /* LSH_SESSION_H_INCLUDED */

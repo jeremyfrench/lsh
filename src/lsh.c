@@ -50,6 +50,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include "lsh.c.x"
+
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
 
@@ -60,28 +62,34 @@ void usage(void)
   exit(1);
 }
 
+/* CLASS:
+   (class
+     (name fake_host_db)
+     (super lookup_verifier)
+     (vars
+       (algorithm object signature_algorithm)))
+*/
+
+#if 0
 struct fake_host_db
 {
   struct lookup_verifier super;
 
   struct signature_algorithm *algorithm;
 };
+#endif
 
 static struct verifier *do_host_lookup(struct lookup_verifier *c,
 				       struct lsh_string *key)
 {
-  struct fake_host_db *closure = (struct fake_host_db *) c;
+  CAST(fake_host_db, closure, c);
 
-  MDEBUG(closure);
-  
   return MAKE_VERIFIER(closure->algorithm, key->length, key->data);
 }
 
 static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
 {
-  struct fake_host_db *res;
-
-  NEW(res);
+  NEW(fake_host_db, res);
 
   res->super.lookup = do_host_lookup;
   res->algorithm = a;

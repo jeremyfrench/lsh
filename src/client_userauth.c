@@ -46,9 +46,26 @@
  * the lock and turning it around).
  *
  * If none of the keys were recognized, or if no keys were available
- *from the start, we ask the user for a password and attempts to log
- *in using that. */
+ * from the start, we ask the user for a password and attempts to log
+ * in using that. */
 
+#include "client_userauth.c.x"
+
+/* CLASS:
+   (class
+     (name client_userauth)
+     (super ssh_service)
+     (vars
+       (username string)            ; Remote user name to authenticate as.
+
+       (service_name simple int)    ; Service we want to access .
+       (service object ssh_service)
+  
+       ; FIXME: Keys to try
+       ))
+*/
+
+#if 0
 struct client_userauth
 {
   struct ssh_service super;
@@ -59,20 +76,41 @@ struct client_userauth
   
   /* FIXME: Keys to try */
 };
+#endif
 
+/* CLASS:
+   (class
+     (name success_handler)
+     (super packet_handler)
+     (vars
+       (service object ssh_service)))
+*/
+
+#if 0
 struct success_handler
 {
   struct packet_handler super;
 
   struct ssh_service *service;
 };
+#endif
 
+/* CLASS:
+   (class
+     (name failure_handler)
+     (super packet_handler)
+     (vars
+       (userauth object client_userauth)))
+*/
+
+#if 0
 struct failure_handler
 {
   struct packet_handler super;
 
   struct client_userauth *userauth;
 };
+#endif
 
 static struct lsh_string *format_userauth_password(struct lsh_string *name,
 						   int service,
@@ -112,13 +150,11 @@ static int do_userauth_success(struct packet_handler *c,
 				struct ssh_connection *connection,
 				struct lsh_string *packet)
 {
-  struct success_handler *closure = (struct success_handler *) c;
+  CAST(success_handler, closure, c);
   struct simple_buffer buffer;
 
   int msg_number;
     
-  MDEBUG(closure);
-
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
@@ -144,15 +180,13 @@ static int do_userauth_failure(struct packet_handler *c,
 			       struct ssh_connection *connection,
 			       struct lsh_string *packet)
 {
-  struct failure_handler *closure = (struct failure_handler *) c;
+  CAST(failure_handler, closure, c);
   struct simple_buffer buffer;
 
   int msg_number;
-  int *methods = NULL;
+  struct int_list *methods = NULL;
   int partial_success;
     
-  MDEBUG(closure);
-
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
@@ -169,24 +203,24 @@ static int do_userauth_failure(struct packet_handler *c,
 	{ /* Doesn't help us */
 	  werror("Recieved SSH_MSH_USERAUTH_FAILURE "
 		 "indicating partial success.\n");
-	  lsh_space_free(methods);
+	  KILL(methods);
 
 	  return LSH_FAIL | LSH_DIE;
 	}
-      for(i = 0; methods[i] >= 0; i++)
-	if (methods[i] == ATOM_PASSWORD)
+
+      for(i = 0; i < LIST_LENGTH(methods); i++)
+	if (LIST(methods)[i] == ATOM_PASSWORD)
 	  {
 	    /* Try again */
-	    lsh_space_free(methods);
+	    KILL(methods);
 	    return send_passwd(closure->userauth, connection);
 	  }
       /* No methods that we can use */
-      lsh_space_free(methods);
+      KILL(methods);
       return LSH_FAIL | LSH_DIE;
     }
 
-  if (methods)
-    lsh_space_free(methods);
+  KILL(methods);
   
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
@@ -205,7 +239,7 @@ static int do_userauth_banner(struct packet_handler *closure,
   UINT32 language_length;
   UINT8 *language;
   
-  MDEBUG(closure);
+  CHECK_TYPE(packet_handler, closure);
 
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -227,9 +261,8 @@ static int do_userauth_banner(struct packet_handler *closure,
 
 static struct packet_handler *make_success_handler(struct ssh_service *service)
 {
-  struct success_handler *self;
+  NEW(success_handler, self);
 
-  NEW(self);
   self->super.handler = do_userauth_success;
   self->service = service;
 
@@ -239,9 +272,8 @@ static struct packet_handler *make_success_handler(struct ssh_service *service)
 static struct packet_handler *
 make_failure_handler(struct client_userauth *userauth)
 {
-  struct failure_handler *self;
+  NEW(failure_handler, self);
 
-  NEW(self);
   self->super.handler = do_userauth_failure;
   self->userauth = userauth;
 
@@ -250,9 +282,8 @@ make_failure_handler(struct client_userauth *userauth)
 
 static struct packet_handler *make_banner_handler()
 {
-  struct packet_handler *self;
+  NEW(packet_handler, self);
 
-  NEW(self);
   self->handler = do_userauth_banner;
   
   return self;
@@ -261,9 +292,7 @@ static struct packet_handler *make_banner_handler()
 static int init_client_userauth(struct ssh_service *c,
 				struct ssh_connection *connection)
 {
-  struct client_userauth *closure = (struct client_userauth *) c;
-
-  MDEBUG(closure);
+  CAST(client_userauth, closure, c);
 
   connection->dispatch[SSH_MSG_USERAUTH_SUCCESS]
     = make_success_handler(closure->service);
@@ -279,9 +308,7 @@ struct ssh_service *make_client_userauth(struct lsh_string *username,
 					 int service_name,
 					 struct ssh_service *service)
 {
-  struct client_userauth *closure;
-
-  NEW(closure);
+  NEW(client_userauth, closure);
 
   closure->super.init = init_client_userauth;
   closure->username = username;

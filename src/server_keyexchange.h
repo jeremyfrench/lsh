@@ -34,6 +34,6 @@ make_dh_server(struct diffie_hellman_method *dh,
 	       struct lsh_string *server_key,
 	       struct signer *signer);
 
-struct install_keys *make_server_install_keys(void **algorithms);
+struct install_keys *make_server_install_keys(struct object_list *algorithms);
 
 #endif /* LSH_SERVER_KEYEXCHANGE_H_INCLUDED */

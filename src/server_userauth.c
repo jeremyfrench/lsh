@@ -11,9 +11,21 @@
 
 #include <assert.h>
 
+#include "server_userauth.c.x"
+
 /* FIXME: Supports only password authentication so far. There should
  * be some abstraction for handling several authentication methods. */
 
+/* CLASS:
+   (class
+     (name userauth_service)
+     (super ssh_service)
+     (vars
+       (advertised_methods object int_list)
+       (methods object alist)))
+*/
+
+#if 0
 struct userauth_service
 {
   struct ssh_service super;
@@ -23,6 +35,7 @@ struct userauth_service
 
   struct alist *methods; /* Maps authentication method names to methods */
 };
+#endif
 
 /* Max number of attempts */
 #define AUTH_ATTEMPTS 20
@@ -31,11 +44,26 @@ struct userauth_service
  * io.c could be used for timeouts, but it's not clear how the timeout
  * handler can close the right connection. */
 
+/* CLASS:
+   (class
+     (name userauth_handler)
+     (super packet_handler)
+     (vars
+       ; Attempts left 
+       (attempts simple int)
+
+       ; Methods advertised in failure messages
+       (advertised_methods object int_list)
+
+       (methods object alist)))
+*/
+
+#if 0
 struct userauth_handler
 {
   struct packet_handler super;
 
-  /* Attempts left */  
+  /* Attempts left */
   int attempts;
 
   /* Methods advertised in failure messages */
@@ -43,8 +71,10 @@ struct userauth_handler
   
   struct alist *methods;
 };
+#endif
 
-struct lsh_string *format_userauth_failure(int *methods, int partial)
+struct lsh_string *format_userauth_failure(struct int_list *methods,
+					   int partial)
 {
   return ssh_format("%c%A%c", SSH_MSG_USERAUTH_FAILURE, methods, partial);
 }
@@ -64,7 +94,7 @@ static int do_handle_userauth(struct packet_handler *c,
 			      struct ssh_connection *connection,
 			      struct lsh_string *packet)
 {
-  struct userauth_handler * closure = (struct userauth_handler *) c;
+  CAST(userauth_handler,  closure, c);
   struct simple_buffer buffer;
 
   int msg_number;
@@ -73,8 +103,6 @@ static int do_handle_userauth(struct packet_handler *c,
   int method;
   int res;
   
-  MDEBUG(closure);
-
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
@@ -133,12 +161,9 @@ static int do_handle_userauth(struct packet_handler *c,
 static int init_userauth(struct ssh_service *s, /* int name, */
 			 struct ssh_connection *c)
 {
-  struct userauth_service *self = (struct userauth_service *) s;
-  struct userauth_handler *auth;
+  CAST(userauth_service, self, s);
+  NEW(userauth_handler, auth);
   
-  MDEBUG(self);
-
-  NEW(auth);
   auth->super.handler = do_handle_userauth;
   auth->advertised_methods = self->advertised_methods;
   auth->methods = self->methods;
@@ -149,12 +174,10 @@ static int init_userauth(struct ssh_service *s, /* int name, */
   return 1;
 }
 
-struct ssh_service *make_userauth_service(int *advertised_methods,
+struct ssh_service *make_userauth_service(struct int_list *advertised_methods,
 					  struct alist *methods)
 {
-  struct userauth_service *self;
-
-  NEW(self);
+  NEW(userauth_service, self);
 
   self->super.init = init_userauth;
   self->advertised_methods = advertised_methods;

@@ -29,6 +29,18 @@
 
 #include "io.h"
 
+#define CLASS_DECLARE
+#include "reaper.h.x"
+#undef CLASS_DECLARE
+
+/* CLASS:
+   (class
+     (name exit_callback)
+     (vars
+       (exit method void "int signaled" "int core" "int value")))
+*/
+
+#if 0
 struct exit_callback
 {
   struct lsh_object header;
@@ -36,15 +48,25 @@ struct exit_callback
   void (*exit)(struct exit_callback *closure,
 	       int signaled, int core, int value);
 };
+#endif
 
 #define EXIT_CALLBACK(e, s, c, v) ((e)->exit((e), (s), (c), (v)))
 
+/* CLASS:
+   (class
+     (name reap)
+     (vars
+       (reap method void "pid_t pid" "struct exit_callback *callback")))
+*/
+
+#if 0
 struct reap
 {
   struct lsh_object header;
 
   void (*reap)(struct reap *closure, pid_t pid, struct exit_callback *callback);
 };
+#endif
 
 #define REAP(r, p, c) ((r)->reap((r), (p), (c)))
 

@@ -30,7 +30,24 @@
 
 #include "xalloc.h"
 
+#define CLASS_DEFINE
+#include "randomness.h.x"
+#undef CLASS_DEFINE
+
+#include "randomness.c.x"
+
 /* Random */
+/* CLASS:
+   (class
+     (name poor_random)
+     (super randomness)
+     (vars
+       (hash object hash_instance)
+       (pos simple UINT32)
+       (buffer space UINT8)))
+*/
+
+#if 0
 struct poor_random
 {
   struct randomness super;
@@ -38,13 +55,12 @@ struct poor_random
   UINT32 pos;
   UINT8 *buffer;
 };
+#endif
 
-static void do_poor_random(struct randomness **r, UINT32 length, UINT8 *dst)
+static void do_poor_random(struct randomness *r, UINT32 length, UINT8 *dst)
 {
-  struct poor_random *self = (struct poor_random *) *r;
+  CAST(poor_random, self, r);
 
-  MDEBUG(self);
-  
   while(length)
     {
       UINT32 available = self->hash->hash_size - self->pos;
@@ -73,11 +89,9 @@ static void do_poor_random(struct randomness **r, UINT32 length, UINT8 *dst)
 struct randomness *make_poor_random(struct hash_algorithm *hash,
 				    struct lsh_string *init)
 {
-  struct poor_random *self;
+  NEW(poor_random, self);
   time_t now = time(NULL); /* To avoid cycles */
 
-  NEW(self);
-  
   self->super.random = do_poor_random;
   self->hash = MAKE_HASH(hash);
   self->buffer = lsh_space_alloc(hash->hash_size);

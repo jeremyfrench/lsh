@@ -46,6 +46,12 @@
 #include "write_buffer.h"
 #include "xalloc.h"
 
+#define CLASS_DEFINE
+#include "io.h.x"
+#undef CLASS_DEFINE
+
+#include "io.c.x"
+
 /* If there's nothing to do for this amount of time (ms), do
  * spontaneous gc. */
 
@@ -197,19 +203,26 @@ int io_iter(struct io_backend *b)
   return 1;
 }
 
+/* CLASS:
+   (class
+     (name fd_read)
+     (super abstract_read)
+       (vars
+         (fd simple int)))
+*/
+
+#if 0
 struct fd_read
 {
   struct abstract_read super;
   int fd;
 };
+#endif
 
 static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 {
-  struct fd_read *closure
-    = (struct fd_read *) *r;
+  CAST(fd_read, closure, *r);
 
-  MDEBUG(closure);
-  
   while(1)
     {
       int res = read(closure->fd, buffer, length);
@@ -240,14 +253,12 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 
 static void read_callback(struct lsh_fd *fd)
 {
-  struct io_fd *self = (struct io_fd *) fd;
+  CAST(io_fd, self, fd);
   int res;
 
   struct fd_read r =
   { { STACK_HEADER, do_read }, fd->fd };
 
-  MDEBUG(self);
-  
   /* The handler function may install a new handler */
   res = READ_HANDLER(self->handler,
 		     &r.super);
@@ -299,12 +310,10 @@ static void read_callback(struct lsh_fd *fd)
 
 static void write_callback(struct lsh_fd *fd)
 {
-  struct io_fd *self = (struct io_fd *) fd;
+  CAST(io_fd, self, fd);
   UINT32 size;
   int res;
   
-  MDEBUG(self);
-
   size = MIN(self->buffer->end - self->buffer->start,
 	     self->buffer->block_size);
   assert(size);
@@ -339,14 +348,12 @@ static void write_callback(struct lsh_fd *fd)
 
 static void listen_callback(struct lsh_fd *fd)
 {
-  struct listen_fd *self = (struct listen_fd *) fd;
+  CAST(listen_fd, self, fd);
   struct sockaddr_in peer;
   size_t addr_len = sizeof(peer);
   int res;
   int conn;
 
-  MDEBUG(self);
-  
   /* FIXME: Do something with the peer address? */
 
   conn = accept(fd->fd,
@@ -369,11 +376,9 @@ static void listen_callback(struct lsh_fd *fd)
 
 static void connect_callback(struct lsh_fd *fd)
 {
-  struct connect_fd *self = (struct connect_fd *) fd;
+  CAST(connect_fd, self, fd);
   int res;
   
-  MDEBUG(self);
-
   res = FD_CALLBACK(self->callback, fd->fd);
 
   if (LSH_ACTIONP(res))
@@ -536,7 +541,6 @@ struct connect_fd *io_connect(struct io_backend *b,
 			      struct sockaddr_in *local,
 			      struct fd_callback *f)
 {
-  struct connect_fd *fd;
   int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   
   if (s<0)
@@ -562,22 +566,24 @@ struct connect_fd *io_connect(struct io_backend *b,
       errno = saved_errno;
       return NULL;
     }
-  
-  NEW(fd);
-  init_file(b, &fd->super, s);
 
-  fd->super.want_write = 1;
-  fd->super.write = connect_callback;
-  fd->callback = f;
+  {
+    NEW(connect_fd, fd);
 
-  return fd;
+    init_file(b, &fd->super, s);
+
+    fd->super.want_write = 1;
+    fd->super.write = connect_callback;
+    fd->callback = f;
+    
+    return fd;
+  }
 }
 
 struct listen_fd *io_listen(struct io_backend *b,
 			    struct sockaddr_in *local,
 			    struct fd_callback *callback)
 {
-  struct listen_fd *fd;
   int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   
   if (s<0)
@@ -604,22 +610,22 @@ struct listen_fd *io_listen(struct io_backend *b,
       return NULL;
     }
 
-  NEW(fd);
+  {
+    NEW(listen_fd, fd);
 
-  init_file(b, &fd->super, s);
-
-  fd->super.want_read = 1;
-  fd->super.read = listen_callback;
-  fd->callback = callback;
-
-  return fd;
+    init_file(b, &fd->super, s);
+    
+    fd->super.want_read = 1;
+    fd->super.read = listen_callback;
+    fd->callback = callback;
+    
+    return fd;
+  }
 }
 
 static void really_close(struct lsh_fd *fd)
 {
-  struct io_fd *self = (struct io_fd *) fd;
-
-  MDEBUG(self);
+  CAST(io_fd, self, fd);
 
   assert(self->buffer);
 
@@ -628,9 +634,7 @@ static void really_close(struct lsh_fd *fd)
 
 static void prepare_write(struct lsh_fd *fd)
 {
-  struct io_fd *self = (struct io_fd *) fd;
-
-  MDEBUG(self);
+  CAST(io_fd, self, fd);
 
   assert(self->buffer);
 
@@ -645,14 +649,13 @@ struct abstract_write *io_read_write(struct io_backend *b,
 				     UINT32 block_size,
 				     struct close_callback *close_callback)
 {
-  struct io_fd *f;
+  NEW(io_fd, f);
   struct write_buffer *buffer = write_buffer_alloc(block_size);
 
   debug("io.c: Preparing fd %d for reading and writing\n", fd);
   
   io_init_fd(fd);
   
-  NEW(f);
   init_file(b, &f->super, fd);
   
   /* Reading */
@@ -677,13 +680,11 @@ struct io_fd *io_read(struct io_backend *b,
 		      struct read_handler *handler,
 		      struct close_callback *close_callback)
 {
-  struct io_fd *f;
+  NEW(io_fd, f);
 
   debug("io.c: Preparing fd %d for reading\n", fd);
   
   io_init_fd(fd);
-
-  NEW(f);
 
   init_file(b, &f->super, fd);
 
@@ -702,14 +703,13 @@ struct io_fd *io_write(struct io_backend *b,
 		       UINT32 block_size,
 		       struct close_callback *close_callback)
 {
-  struct io_fd *f;
+  NEW(io_fd, f);
   struct write_buffer *buffer = write_buffer_alloc(block_size);
 
   debug("io.c: Preparing fd %d for writing\n", fd);
   
   io_init_fd(fd);
   
-  NEW(f);
   init_file(b, &f->super, fd);
 
   /* Writing */

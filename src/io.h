@@ -33,12 +33,16 @@
 #include <netdb.h>
 #include <netinet/in.h>
 
+#define CLASS_DECLARE
+#include "io.h.x"
+#undef CLASS_DECLARE
+
 /* A closed function with a file descriptor as argument */
 /* CLASS:
    (class
      (name fd_callback)
      (vars
-       (f method int "int fd")))
+       (f indirect-method int "int fd")))
 */
 
 #if 0
@@ -95,24 +99,24 @@ struct close_callback
      (name lsh_fd)
      (vars
        (next object lsh_fd)
-       (fd int)
+       (fd simple int)
 
        ; User's close callback
-       (close_reason int)
+       (close_reason simple int)
        (close_callback object close_callback)
 
        ; Called before poll
        (prepare method void)
 
-       (want_read int)
+       (want_read simple int)
        ; Called if poll indicates that data can be read. 
        (read method void)
 
-       (want_write int)
+       (want_write simple int)
        ; Called if poll indicates that data can be written.
        (write method void)
 
-       (close_now int)
+       (close_now simple int)
        (really_close method void)))
 */
 
@@ -175,7 +179,7 @@ struct io_fd
 
 /* CLASS:
    (class
-     (name io_fd)
+     (name listen_fd)
      (super lsh_fd)
      (vars
        (callback object fd_callback)))
@@ -210,7 +214,8 @@ struct callout
        ; Linked list of fds. 
        (files object lsh_fd)
        ; Callouts
-       ;; (callouts object callout)))
+       ;; (callouts object callout)
+       ))
 */
 
 #if 0

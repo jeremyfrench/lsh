@@ -29,6 +29,10 @@
 #include "keyexchange.h"
 #include "publickey_crypto.h"
 
+#define CLASS_DECLARE
+#include "client_keyexchange.h.x"
+#undef CLASS_DECLARE
+
 /* Maps a key blob to a signature verifier, using some signature
  * algorithm and some method to determine the authenticity of the key.
  * Returns NULL If the key is invalid or not trusted. */
@@ -57,6 +61,6 @@ struct keyexchange_algorithm *
 make_dh_client(struct diffie_hellman_method *dh,
 	       struct lookup_verifier *verifier);
 
-struct install_keys *make_client_install_keys(void **algorithms);
+struct install_keys *make_client_install_keys(struct object_list *algorithms);
 
 #endif /* LSH_CLIENT_KEYEXCHANGE_H_INCLUDED */

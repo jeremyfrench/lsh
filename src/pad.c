@@ -30,6 +30,18 @@
 #include "format.h"
 #include "xalloc.h"
 
+#include "pad.c.x"
+
+/* CLASS:
+   (class
+     (name packet_pad)
+     (super abstract_write_pipe)
+     (vars
+       (connection object ssh_connection)
+       (random object randomness)))
+*/
+
+#if 0
 struct packet_pad
 {
   struct abstract_write_pipe super;
@@ -38,12 +50,12 @@ struct packet_pad
 
   struct randomness *random;
 };
+#endif
 
 static int do_pad(struct abstract_write *w,
 		  struct lsh_string *packet)
 {
-  struct packet_pad *closure
-    = (struct packet_pad *) w;
+  CAST(packet_pad, closure, w);
   struct ssh_connection *connection = closure->connection;
 
   struct lsh_string *new;
@@ -53,8 +65,6 @@ static int do_pad(struct abstract_write *w,
 
   UINT8 *data;
   UINT32 block_size;
-
-  MDEBUG(closure);
 
   block_size = connection->send_crypto
     ? connection->send_crypto->block_size : 8;
@@ -85,9 +95,7 @@ make_packet_pad(struct abstract_write *continuation,
 		struct ssh_connection *connection,
 		struct randomness *random)
 {
-  struct packet_pad *closure;
-
-  NEW(closure);
+  NEW(packet_pad, closure);
 
   closure->super.super.write = do_pad;
   closure->super.next = continuation;

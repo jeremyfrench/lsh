@@ -41,7 +41,7 @@
 static int handle_connection(struct abstract_write *w,
 			     struct lsh_string *packet)
 {
-  CAST(closure, ssh_connection, w);
+  CAST(ssh_connection, closure, w);
   UINT8 msg;
 
   if (!packet->length)

@@ -36,6 +36,32 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
+
+#define CLASS_DEFINE
+#include "keyexchange.h.x"
+#undef CLASS_DEFINE
+
+#include "keyexchange.c.x"
+
+/* CLASS:
+   (class
+     (name kexinit_handler)
+     (super packet_handler)
+     (vars
+       (type simple int)
+       (init object make_kexinit)
+
+       ; Maps names to algorithms. It's dangerous to lookup random atoms
+       ; in this table, as not all objects have the same type. This
+       ; mapping is used only on atoms that have appeared in *both* the
+       ; client's and the server's list of algorithms (of a certain
+       ; type), and therefore the remote side can't screw things up.
+       (algorithms object alist)
+
+       (finished object ssh_service)))
+*/
+#if 0
 struct kexinit_handler
 {
   struct packet_handler super;
@@ -53,31 +79,34 @@ struct kexinit_handler
 
   struct ssh_service *finished;
 };
+#endif
 
 #define NLISTS 10
 
 static struct kexinit *parse_kexinit(struct lsh_string *packet)
 {
-  struct kexinit *res;
+  NEW(kexinit, res);
   struct simple_buffer buffer;
   struct simple_buffer sub_buffer;
   int msg_number;
   UINT32 reserved;
   
-  int *lists[NLISTS];
+  struct int_list *lists[NLISTS];
   int i;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (!parse_uint8(&buffer, &msg_number)
       || (msg_number != SSH_MSG_KEXINIT) )
-    return 0;
+    {
+      KILL(res);
+      return 0;
+    }
 
-  NEW(res);
 
   if (!parse_octets(&buffer, 16, res->cookie))
     {
-      lsh_object_free(res);
+      KILL(res);
       return NULL;
     }
   
@@ -96,8 +125,8 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
       /* Bad format */
       int j;
       for (j = 0; j<i; j++)
-	lsh_space_free(lists[i]);
-      lsh_object_free(res);
+	KILL(lists[i]);
+      KILL(res);
       return NULL;
     }
   
@@ -156,20 +185,22 @@ int initiate_keyexchange(struct ssh_connection *connection,
     return res;
 }
 
-static int select_algorithm(int *server_list, int *client_list)
+static int select_algorithm(struct int_list *server_list,
+			    struct int_list *client_list)
 {
   /* FIXME: This quadratic complexity algorithm should do as long as
    * the lists are short. */
   int i, j;
 
-  for(i = 0; client_list[i] >= 0; i++)
+  for(i = 0; i < LIST_LENGTH(client_list) >= 0; i++)
     {
-      if (!client_list[i])
+      int a = LIST(client_list)[i];
+      if (!a)
 	/* Unknown algorithm */
 	continue;
-      for(j = 0; server_list[j] > 0; j++)
-	if (client_list[i] == server_list[j])
-	  return client_list[i];
+      for(j = 0; j < LIST_LENGTH(server_list); j++)
+	if (a == LIST(server_list)[j])
+	  return a;
     }
 
   return 0;
@@ -186,21 +217,18 @@ static int do_handle_kexinit(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
 {
-  struct kexinit_handler *closure = (struct kexinit_handler *) c;
+  CAST(kexinit_handler, closure, c);
   struct kexinit *msg = parse_kexinit(packet);
 
   int kex_algorithm;
   int hostkey_algorithm;
 
   int parameters[KEX_PARAMETERS];
-  void **algorithms;
+  struct object_list *algorithms;
 
   int i;
   int res = 0;
 
-  MDEBUG(closure);
-  MDEBUG(msg);
-  
   if (!msg)
     return LSH_FAIL | LSH_DIE;
 
@@ -225,11 +253,11 @@ static int do_handle_kexinit(struct packet_handler *c,
 
   /* Select key exchange algorithms */
 
-  if (connection->kexinits[0]->kex_algorithms[0]
-      == connection->kexinits[1]->kex_algorithms[0])
+  if (LIST(connection->kexinits[0]->kex_algorithms)[0]
+      == LIST(connection->kexinits[1]->kex_algorithms)[0])
     {
       /* Use this algorithm */
-      kex_algorithm = connection->kexinits[0]->kex_algorithms[0];
+      kex_algorithm = LIST(connection->kexinits[0]->kex_algorithms)[0];
     }
   else
     {
@@ -238,7 +266,8 @@ static int do_handle_kexinit(struct packet_handler *c,
 	  /* Wrong guess */
 	  connection->kex_state = KEX_STATE_IGNORE;
 	}
-      /* FIXME: Ignores that some keyechange algorithms require
+
+      /* FIXME: Ignores that some keyexchange algorithms require
        * certain features of the host key algorithms. */
       
       kex_algorithm
@@ -256,7 +285,7 @@ static int do_handle_kexinit(struct packet_handler *c,
   hostkey_algorithm
     = select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
 		       connection->kexinits[1]->server_hostkey_algorithms);
-  
+
   for(i = 0; i<KEX_PARAMETERS; i++)
     {
       parameters[i]
@@ -270,10 +299,10 @@ static int do_handle_kexinit(struct packet_handler *c,
 	}
     }
   
-  algorithms = lsh_space_alloc(KEX_PARAMETERS*sizeof(void *));
+  algorithms = alloc_object_list(KEX_PARAMETERS);
   
   for (i = 0; i<KEX_PARAMETERS; i++)
-    algorithms[i] = ALIST_GET(closure->algorithms, parameters[i]);
+    LIST(algorithms)[i] = ALIST_GET(closure->algorithms, parameters[i]);
       
   return res
     | KEYEXCHANGE_INIT( (struct keyexchange_algorithm *)
@@ -290,9 +319,7 @@ struct packet_handler *make_kexinit_handler(int type,
 					    struct alist *algorithms,
 					    struct ssh_service *finished)
 {
-  struct kexinit_handler *self;
-
-  NEW(self);
+  NEW(kexinit_handler, self);
 
   self->super.handler = do_handle_kexinit;
 
@@ -335,21 +362,24 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
     fatal("Not implemented\n");
 
   memcpy(key->data, digest, key_length);
-  lsh_object_free(hash);
+  KILL(hash);
 
   debug_hex(key->length, key->data);
   return key;
 }
   
 struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
-					 void **algorithms,
+					 struct object_list *algorithms,
 					 int type,
 					 struct ssh_connection *connection)
 {
-  struct crypto_algorithm *algorithm = algorithms[type];
+  CAST_SUBTYPE(crypto_algorithm, algorithm, LIST(algorithms)[type]);
+    
   struct lsh_string *key;
   struct crypto_instance *crypto;
-  
+
+  assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
+
   if (!algorithm)
     return NULL;
 
@@ -365,14 +395,17 @@ struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
 }
 
 struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
-					 void **algorithms,
+					 struct object_list *algorithms,
 					 int type,
 					 struct ssh_connection *connection)
 {
-  struct crypto_algorithm *algorithm = algorithms[type];
+  CAST_SUBTYPE(crypto_algorithm, algorithm, LIST(algorithms)[type]);
+
   struct lsh_string *key;
   struct crypto_instance *crypto;
-  
+
+  assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
+
   if (!algorithm)
     return NULL;
   
@@ -388,14 +421,17 @@ struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
 }
 
 struct mac_instance *kex_make_mac(struct hash_instance *secret,
-				  void **algorithms,
+				  struct object_list *algorithms,
 				  int type,
 				  struct ssh_connection *connection)
 {
-  struct mac_algorithm *algorithm = algorithms[type];
+  CAST(mac_algorithm, algorithm, LIST(algorithms)[type]);
+
   struct mac_instance *mac;
   struct lsh_string *key;
 
+  assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
+  
   if (!algorithm)
     return NULL;
 
@@ -408,23 +444,32 @@ struct mac_instance *kex_make_mac(struct hash_instance *secret,
   return mac;
 }
 
+/* CLASS:
+   (class
+     (name newkeys_handler)
+     (super packet_handler)
+     (vars
+       (crypto object crypto_instance)
+       (mac object mac_instance)))
+*/
+
+#if 0
 struct newkeys_handler
 {
   struct packet_handler super;
   struct crypto_instance *crypto;
   struct mac_instance *mac;
 };
+#endif
 
 static int do_handle_newkeys(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
 {
-  struct newkeys_handler *closure = (struct newkeys_handler *) c;
+  CAST(newkeys_handler, closure, c);
   struct simple_buffer buffer;
   int msg_number;
 
-  MDEBUG(closure);
-  
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
@@ -438,7 +483,7 @@ static int do_handle_newkeys(struct packet_handler *c,
 
       connection->dispatch[SSH_MSG_NEWKEYS] = NULL;
 
-      lsh_object_free(closure);
+      KILL(closure);
       return LSH_OK | LSH_GOON;
     }
   else
@@ -449,9 +494,7 @@ struct packet_handler *
 make_newkeys_handler(struct crypto_instance *crypto,
 		     struct mac_instance *mac)
 {
-  struct newkeys_handler *self;
-
-  NEW(self);
+  NEW(newkeys_handler,self);
 
   self->super.handler = do_handle_newkeys;
   self->crypto = crypto;
@@ -460,6 +503,80 @@ make_newkeys_handler(struct crypto_instance *crypto,
   return &self->super;
 }
 
+/* Uses the same algorithms for both directions */
+/* CLASS:
+   (class
+     (name simple_kexinit)
+     (super make_kexinit)
+     (vars
+       (r object randomness)
+       (kex_algorithms object int_list)
+       (hostkey_algorithms object int_list)
+       (crypto_algorithms object int_list)
+       (mac_algorithms object int_list)
+       (compression_algorithms object int_list)
+       (languages object int_list)))
+*/
+
+static struct kexinit *do_make_simple_kexinit(struct make_kexinit *c)
+{
+  CAST(simple_kexinit, closure, c);
+  NEW(kexinit, res);
+
+  RANDOM(closure->r, 16, res->cookie);
+
+  res->kex_algorithms = closure->kex_algorithms;
+  res->server_hostkey_algorithms = closure->hostkey_algorithms;
+  res->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER] = closure->crypto_algorithms;
+  res->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT] = closure->crypto_algorithms;
+  res->parameters[KEX_MAC_CLIENT_TO_SERVER] = closure->mac_algorithms;
+  res->parameters[KEX_MAC_SERVER_TO_CLIENT] = closure->mac_algorithms;
+  res->parameters[KEX_COMPRESSION_CLIENT_TO_SERVER]
+    = closure->compression_algorithms;
+  res->parameters[KEX_COMPRESSION_SERVER_TO_CLIENT]
+    = closure->compression_algorithms;
+  res->languages_client_to_server = closure->languages;
+  res->languages_server_to_client = closure->languages;
+  res->first_kex_packet_follows = 0;
+
+  return res;
+}
+
+struct make_kexinit *make_simple_kexinit(struct randomness *r,
+					 struct int_list *kex_algorithms,
+					 struct int_list *hostkey_algorithms,
+					 struct int_list *crypto_algorithms,
+					 struct int_list *mac_algorithms,
+					 struct int_list *compression_algorithms,
+					 struct int_list *languages)
+{
+  NEW(simple_kexinit, res);
+
+  res->super.make = do_make_simple_kexinit;
+  res->r = r;
+  res->kex_algorithms = kex_algorithms;
+  res->hostkey_algorithms = hostkey_algorithms;
+  res->crypto_algorithms = crypto_algorithms;
+  res->mac_algorithms = mac_algorithms;
+  res->compression_algorithms = compression_algorithms;
+  res->languages = languages;
+
+  return &res->super;
+}
+
+struct make_kexinit *make_test_kexinit(struct randomness *r)
+{
+  return make_simple_kexinit
+    (r,
+     make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1),
+     make_int_list(1, ATOM_SSH_DSS, -1),
+     make_int_list(2, ATOM_ARCFOUR, ATOM_NONE, -1),
+     make_int_list(1, ATOM_HMAC_SHA1, -1),
+     make_int_list(1, ATOM_NONE, -1),
+     make_int_list(0, -1));
+}
+
+#if 0
 struct test_kexinit
 {
   struct make_kexinit super;
@@ -468,8 +585,8 @@ struct test_kexinit
 
 static struct kexinit *do_make_kexinit(struct make_kexinit *c)
 {
-  struct test_kexinit *closure = (struct test_kexinit *) c;
-  struct kexinit *res;
+  CAST(test_kexinit, closure, c);
+  NEW(kexinit, res);
 
   static int kex_algorithms[] = { ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1 };
   static int server_hostkey_algorithms[] = { ATOM_SSH_DSS, -1 };
@@ -478,10 +595,6 @@ static struct kexinit *do_make_kexinit(struct make_kexinit *c)
   static int compression_algorithms[] = { ATOM_NONE, -1 };
   static int languages[] = { -1 };
 
-  MDEBUG(closure);
-
-  NEW(res);
-  
   RANDOM(closure->r, 16, res->cookie);
   res->kex_algorithms = kex_algorithms;
   res->server_hostkey_algorithms = server_hostkey_algorithms;
@@ -500,12 +613,13 @@ static struct kexinit *do_make_kexinit(struct make_kexinit *c)
 
 struct make_kexinit *make_test_kexinit(struct randomness *r)
 {
-  struct test_kexinit *res;
-
-  NEW(res);
+  NEW(test_kexinit, res);
 
   res->super.make = do_make_kexinit;
   res->r = r;
 
   return &res->super;
 }
+
+#endif
+

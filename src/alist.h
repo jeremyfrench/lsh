@@ -28,6 +28,13 @@
 
 #include "lsh_types.h"
 
+/* Forward declaration */
+struct alist;
+
+#define CLASS_DECLARE
+#include "alist.h.x"
+#undef CLASS_DECLARE
+
 /* Not supported anymore */
 /* #define ALIST_USE_SIZE 0 */
 
@@ -87,7 +94,5 @@ struct alist *make_linear_alist(int n, ...);
 struct alist *make_linked_alist(int n, ...);
 
 #define make_alist make_linear_alist
-
-#include "alist.h.x"
 
 #endif /* LSH_ALIST_H_INCLUDED */

@@ -31,50 +31,46 @@
 #include <assert.h>
 
 /* Global variables */
-static struct lsh_object *all_objects;
-unsigned number_of_objects;
-unsigned live_objects;
+static struct lsh_object *all_objects = NULL;
+unsigned number_of_objects = 0;
+unsigned live_objects = 0;
 
+/* FIXME: This function recurses heavily. One could use some trickery
+ * to emulate tail recursion, which would help marking linked list. Or
+ * one could use some more efficient datastructures than the C stack
+ * for keeping track of the marked but not yet traced objects. */
 static void gc_mark(struct lsh_object *o)
 {
-  while(o)
-    switch(o->alloc_method)
-      {
-      case LSH_ALLOC_STACK:
-	fatal("gc_mark: Unexpected stack object!\n");
+  if (!o)
+    return;
+  
+  switch(o->alloc_method)
+    {
+    case LSH_ALLOC_STACK:
+      fatal("gc_mark: Unexpected stack object!\n");
 
-      case LSH_ALLOC_HEAP:
-	if (o->marked)
-	  return;
-	o->marked = 1;
-	/* Fall through */
-      case LSH_ALLOC_STATIC:
-	/* Can't use mark bit on static objects, as there's no way to
-	 * reset all the bits */
-	assert(!o->dead);
-	{
-	  struct lsh_object *instance = o;
-	  struct lsh_class *class;
+    case LSH_ALLOC_HEAP:
+      if (o->marked)
+	return;
+      o->marked = 1;
+      /* Fall through */
+    case LSH_ALLOC_STATIC:
+      /* Can't use mark bit on static objects, as there's no way to
+       * reset all the bits */
+      assert(!o->dead);
+      {
+	struct lsh_class *class;
 	
-	  for (class = o->isa, o = NULL; class; class = class->super_class)
-	    {
-	      if (class->mark_instance)
-		{
-		  struct lsh_object *p = MARK_INSTANCE(class, instance, gc_mark);
-		  if (o)
-		    {
-		      if (p)
-			gc_mark(p);
-		    }
-		  else
-		    o = p;
-		}
-	    }
-	}
-	break;
-      default:
-	fatal("gc_mark: Memory corrupted!\n");
+	for (class = o->isa, o = NULL; class; class = class->super_class)
+	  {
+	    if (class->mark_instance)
+	      MARK_INSTANCE(class, o, gc_mark);
+	  }
       }
+      break;
+    default:
+      fatal("gc_mark: Memory corrupted!\n");
+    }
 }
 
 static void gc_sweep(void)
@@ -125,6 +121,9 @@ void gc_register(struct lsh_object *o)
  * references to killed objects. */
 void gc_kill(struct lsh_object *o)
 {
+  if (!o)
+    return;
+  
   assert(!o->dead);
 
   o->dead = 1;

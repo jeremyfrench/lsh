@@ -34,14 +34,44 @@
 
 /* CLASS:
    (class
-     (name lsh_list)
+     (name list_header)
      (vars
-       (length simple unsigned)
+       (length simple unsigned)))
+*/
+
+/* CLASS:
+   (class
+     (name int_list)
+     (super list_header)
+     (vars
        ; This is really of variable size
-       (elements array int 1)))
+       (elements var-array int "super.length")))
+*/
+
+/* CLASS:
+   (class
+     (name object_list)
+     (super list_header)
+     (vars
+       ; This is really of variable size
+       (elements var-array (object lsh_object) "super.length")))
 */
 
 #define LIST(x) ((x)->elements)
-struct lsh_list *make_list(unsigned length, ...);
+#define LIST_LENGTH(x) (((struct list_header *) (x))->length)
+
+struct list_header *lsh_list_alloc(struct lsh_class *class,
+				   unsigned length, size_t element_size);
+
+#define alloc_int_list(n) \
+  ((struct int_list *) lsh_list_alloc(&CLASS(int_list), (n), sizeof(int)))
+     
+struct int_list *make_int_list(unsigned length, ...);
+
+#define alloc_object_list(n) \
+  ((struct object_list *) \
+   lsh_list_alloc(&CLASS(object_list), (n), sizeof(struct lsh_object *)))
+
+struct object_list *make_object_list(unsigned length, ...);
 
 #endif /* LSH_LIST_H_INCLUDED */

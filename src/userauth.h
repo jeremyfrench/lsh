@@ -24,14 +24,33 @@
 #ifndef LSH_USERAUTH_H_INCLUDED
 #define LSH_USERAUTH_H_INCLUDED
 
+#include "list.h"
 #include "parse.h"
 #include "service.h"
+
+#define CLASS_DECLARE
+#include "userauth.h.x"
+#undef CLASS_DECLARE
 
 /* Returns 0 if the request is somehow invalid. Otheerwise, returns 1,
  * and sets SERVICE non-NULL iff access is granted. */
 
 /* FIXME: Something more general is needed for authentication methods
  * which send additional messages. */
+
+/* CLASS:
+   (class
+     (name userauth)
+     (vars
+       (authenticate method int
+		     ; The name is consumed by this function
+		     "struct lsh_string *username"
+		     "int requested_service"
+		     "struct simple_buffer *args"
+		     "struct ssh_service **service")))
+*/
+       
+#if 0
 struct userauth
 {
   struct lsh_object header;
@@ -43,15 +62,17 @@ struct userauth
 		      struct simple_buffer *args,
 		      struct ssh_service **service);
 };
+#endif
 
 #define AUTHENTICATE(s, u, r, a, g) \
 ((s)->authenticate((s), (u), (r), (a), (g)))
 
-struct lsh_string *format_userauth_failure(int *methods, int partial);
+struct lsh_string *format_userauth_failure(struct int_list *methods,
+					   int partial);
 struct lsh_string *format_userauth_success(void);
 
 /* Server functions */     
-struct ssh_service *make_userauth_service(int *advertised_methods,
+struct ssh_service *make_userauth_service(struct int_list *advertised_methods,
 					  struct alist *methods);
 
 /* Client functions */

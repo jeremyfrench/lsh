@@ -28,6 +28,18 @@
 #include "format.h"
 #include "xalloc.h"
 
+#include "encrypt.c.x"
+
+/* CLASS:
+   (class
+     (name packet_encrypt)
+     (super abstract_write_pipe)
+     (vars
+       (sequence_number simple UINT32)
+       (connection object ssh_connection)))
+*/
+
+#if 0
 struct packet_encrypt
 {
   struct abstract_write_pipe super;
@@ -35,17 +47,16 @@ struct packet_encrypt
 
   struct ssh_connection *connection;
 };
+#endif
 
 static int do_encrypt(struct abstract_write *w,
 		      struct lsh_string *packet)
 {
-  struct packet_encrypt *closure = (struct packet_encrypt *) w;
+  CAST(packet_encrypt, closure, w);
   struct ssh_connection *connection = closure->connection;
   struct lsh_string *new;
   UINT8 *mac;
 
-  MDEBUG(closure);
-  
   new = ssh_format("%lr%lr", packet->length, NULL,
 		   connection->send_mac ? connection->send_mac->mac_size : 0,
 		   &mac);
@@ -75,9 +86,7 @@ struct abstract_write *
 make_packet_encrypt(struct abstract_write *continuation,
 		    struct ssh_connection *connection)
 {
-  struct packet_encrypt *closure;
-
-  NEW(closure);
+  NEW(packet_encrypt, closure);
 
   closure->super.super.write = do_encrypt;
   closure->super.next = continuation;

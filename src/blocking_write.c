@@ -11,13 +11,11 @@
 static int do_write(struct abstract_write *w,
 		    struct lsh_string *packet)
 {
-  struct packet_blocking_write *closure
-    = (struct packet_blocking_write *) w;
+  CAST(packet_blocking_write, closure, w);
   
   UINT32 left = packet->length;
   UINT8 *p = packet->data;
 
-  MDEBUG(closure);
   while(left)
     {
       int written = write(closure->fd, p, left);

@@ -50,7 +50,23 @@
 #include <string.h>
 #include <assert.h>
 
+#include "client.c.x"
+
 /* Handle connection and initial handshaking. */
+/* CLASS:
+   (class
+     (name client_callback)
+     (super fd_callback)
+     (vars
+       (backend object io_backend)
+       (block_size simple UINT32)
+       (id_comment simple "char *")
+       (random object randomness)
+       (init object make_kexinit)
+       (kexinit_handler object packet_handler)))
+*/
+
+#if 0     
 struct client_callback
 {
   struct fd_callback super;
@@ -62,6 +78,7 @@ struct client_callback
   struct make_kexinit *init;
   struct packet_handler *kexinit_handler;
 };
+#endif
 
 static int client_initiate(struct fd_callback **c,
 			   int fd)
@@ -71,7 +88,6 @@ static int client_initiate(struct fd_callback **c,
 
   int res;
   
-
   struct ssh_connection *connection
     = make_ssh_connection(closure->kexinit_handler);
 
@@ -98,21 +114,28 @@ static int client_initiate(struct fd_callback **c,
 				    NULL);
 }
 
+/* CLASS:
+   (class
+     (name client_line_handler)
+     (super line_handler)
+     (vars
+       (connection object ssh_connection)))
+*/
+
+#if 0
 struct client_line_handler
 {
   struct line_handler super;
   struct ssh_connection *connection;
 };
+#endif
 
 static struct read_handler *do_line(struct line_handler **h,
 				    UINT32 length,
 				    UINT8 *line)
 {
-  struct client_line_handler *closure
-    = (struct client_line_handler *) *h;
+  CAST(client_line_handler, closure, *h);
 
-  MDEBUG(closure);
-  
   if ( (length >= 4) && !memcmp(line, "SSH-", 4))
     {
       /* Parse and remember format string */
@@ -138,7 +161,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  verbose("\n");
 	  
 	  /* FIXME: Cleanup properly. */
-	  lsh_object_free(closure);
+	  KILL(closure);
 
 	  return new;
 	}
@@ -149,7 +172,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  werror("\n");
 
 	  /* FIXME: Clean up properly */
-	  lsh_object_free(closure);
+	  KILL(closure);
 	  *h = NULL;
 		  
 	  return 0;
@@ -167,9 +190,7 @@ static struct read_handler *do_line(struct line_handler **h,
 
 struct read_handler *make_client_read_line(struct ssh_connection *c)
 {
-  struct client_line_handler *closure;
-
-  NEW(closure);
+  NEW(client_line_handler, closure);
 
   closure->super.handler = do_line;
   closure->connection = c;
@@ -186,9 +207,7 @@ make_client_callback(struct io_backend *b,
 		     struct packet_handler *kexinit_handler)
   
 {
-  struct client_callback *connected;
-
-  NEW(connected);
+  NEW(client_callback, connected);
 
   connected->super.f = client_initiate;
   connected->backend = b;
@@ -214,9 +233,7 @@ static int client_close_die(struct close_callback *closure, int reason)
 
 struct close_callback *make_client_close_handler(void)
 {
-  struct close_callback *c;
-
-  NEW(c);
+  NEW(close_callback, c);
 
   c->f = client_close_die;
 
@@ -224,6 +241,16 @@ struct close_callback *make_client_close_handler(void)
 }
 
 /* Start a service that the server has accepted (for instance ssh-userauth). */
+/* CLASS:
+   (class
+     (name accept_service_handler)
+     (super packet_handler)
+     (vars
+       (service_name simple int)
+       (service object ssh_service)))
+*/
+
+#if 0
 struct accept_service_handler
 {
   struct packet_handler super;
@@ -231,18 +258,17 @@ struct accept_service_handler
   int service_name;
   struct ssh_service *service;
 };
+#endif
 
 static int do_accept_service(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
 {
-  struct accept_service_handler *closure = (struct accept_service_handler *) c;
+  CAST(accept_service_handler, closure, c);
 
   struct simple_buffer buffer;
   int msg_number;
   int name;
-
-  MDEBUG(closure);
 
   simple_buffer_init(&buffer, packet->length, packet->data);
   
@@ -265,9 +291,8 @@ static int do_accept_service(struct packet_handler *c,
 struct packet_handler *make_accept_service_handler(int service_name,
 						   struct ssh_service *service)
 {
-  struct accept_service_handler *closure;
+  NEW(accept_service_handler, closure);
 
-  NEW(closure);
   closure->super.handler = do_accept_service;
   closure->service_name = service_name;
   closure->service = service;
@@ -275,6 +300,16 @@ struct packet_handler *make_accept_service_handler(int service_name,
   return &closure->super;
 }
 
+/* CLASS:
+   (class
+     (name service_request)
+     (super ssh_service)
+     (vars
+       (service_name simple int)
+       (service object ssh_service)))
+*/
+
+#if 0
 struct service_request
 {
   struct ssh_service super;
@@ -282,14 +317,13 @@ struct service_request
   int service_name;
   struct ssh_service *service;
 };
+#endif
 
 static int do_request_service(struct ssh_service *c,
 			      struct ssh_connection *connection)
 {
-  struct service_request *closure = (struct service_request *) c;
+  CAST(service_request, closure, c);
   
-  MDEBUG(closure);
-
   connection->dispatch[SSH_MSG_SERVICE_ACCEPT]
     = make_accept_service_handler(closure->service_name,
 				  closure->service);
@@ -300,9 +334,8 @@ static int do_request_service(struct ssh_service *c,
 struct ssh_service *request_service(int service_name,
 				    struct ssh_service *service)
 {
-  struct service_request *closure;
+  NEW(service_request, closure);
 
-  NEW(closure);
   closure->super.init = do_request_service;
   closure->service_name = service_name;
   closure->service = service;
@@ -311,6 +344,25 @@ struct ssh_service *request_service(int service_name,
 }
 
 /* Initiate and manage a session */
+/* CLASS:
+   (class
+     (name client_session)
+     (super ssh_channel)
+     (vars
+       ; Exec or shell request. 
+       (final_request simple int)
+       (args string)
+  
+       ; To access stdio
+       (in object io_fd)
+       (out object io_fd)
+       (err object io_fd)
+
+       ; Where to save the exit code.
+       (exit_status simple "int *")))
+*/
+
+#if 0
 struct client_session
 {
   struct ssh_channel super;
@@ -327,13 +379,12 @@ struct client_session
   /* Where to save the exit code. */
   int *exit_status;
 };
+#endif
 
 static int close_client_session(struct ssh_channel *c)
 {
-  struct client_session *session = (struct client_session *) c;
+  CAST(client_session, session, c);
   
-  MDEBUG(session);
-
   close_fd(&session->in->super, 0);
 #if 0
   close_fd(&session->out->super, 0);
@@ -345,10 +396,8 @@ static int close_client_session(struct ssh_channel *c)
 
 static int client_session_die(struct ssh_channel *c)
 {
-  struct client_session *closure = (struct client_session *) c;
+  CAST(client_session, closure, c);
   
-  MDEBUG(closure);
-
   /* FIXME: Don't die this hard. */
   if ( (closure->super.flags & (CHANNEL_SENT_CLOSE | CHANNEL_RECIEVED_CLOSE))
        ==  (CHANNEL_SENT_CLOSE | CHANNEL_RECIEVED_CLOSE))
@@ -357,23 +406,31 @@ static int client_session_die(struct ssh_channel *c)
   exit(EXIT_FAILURE);
 }
 
+/* CLASS:
+   (class
+     (name exit_handler)
+     (super channel_request)
+     (vars
+       (exit_status simple "int *")))
+*/
+
+#if 0
 struct exit_handler
 {
   struct channel_request super;
 
   int *exit_status;
 };
+#endif
 
 static int do_exit_status(struct channel_request *c,
 			  struct ssh_channel *channel,
 			  int want_reply,
 			  struct simple_buffer *args)
 {
-  struct exit_handler *closure = (struct exit_handler *) c;
+  CAST(exit_handler, closure, c);
   int status;
 
-  MDEBUG(closure);
-  
   if (!want_reply
       && parse_uint32(args, &status)
       && parse_eod(args))
@@ -395,6 +452,8 @@ static int do_exit_signal(struct channel_request *c,
 			  int want_reply,
 			  struct simple_buffer *args)
 {
+  CAST(exit_handler, closure, c);
+
   int signal;
   int core;
 
@@ -403,10 +462,6 @@ static int do_exit_signal(struct channel_request *c,
 
   UINT8 *language;
   UINT32 language_length;
-  
-  struct exit_handler *closure = (struct exit_handler *) c;
-
-  MDEBUG(closure);
   
   if (!want_reply
       && parse_uint32(args, &signal)
@@ -440,9 +495,8 @@ static int do_exit_signal(struct channel_request *c,
 
 struct channel_request *make_handle_exit_status(int *exit_status)
 {
-  struct exit_handler *self;
+  NEW(exit_handler, self);
 
-  NEW(self);
   self->super.handler = do_exit_status;
 
   self->exit_status = exit_status;
@@ -452,9 +506,8 @@ struct channel_request *make_handle_exit_status(int *exit_status)
 
 struct channel_request *make_handle_exit_signal(int *exit_status)
 {
-  struct exit_handler *self;
+  NEW(exit_handler, self);
 
-  NEW(self);
   self->super.handler = do_exit_signal;
 
   self->exit_status = exit_status;
@@ -466,10 +519,8 @@ struct channel_request *make_handle_exit_signal(int *exit_status)
 static int do_recieve(struct ssh_channel *c,
 		      int type, struct lsh_string *data)
 {
-  struct client_session *closure = (struct client_session *) c;
+  CAST(client_session, closure, c);
   
-  MDEBUG(closure);
-
   switch(type)
     {
     case CHANNEL_DATA:
@@ -484,9 +535,7 @@ static int do_recieve(struct ssh_channel *c,
 /* We may send more data */
 static int do_send(struct ssh_channel *c)
 {
-  struct client_session *closure = (struct client_session *) c;
-
-  MDEBUG(closure);
+  CAST(client_session, closure, c);
 
   assert(closure->in->super.read);
   assert(closure->in->handler);
@@ -498,10 +547,8 @@ static int do_send(struct ssh_channel *c)
 /* We have a remote shell */
 static int do_io(struct ssh_channel *channel)
 {
-  struct client_session *closure = (struct client_session *) channel;
+  CAST(client_session, closure, channel);
   
-  MDEBUG(closure);
-
   channel->recieve = do_recieve;
   
   closure->out->super.close_callback
@@ -523,11 +570,9 @@ static int do_io(struct ssh_channel *channel)
 /* We have opened a channel of type "session" */
 static int do_open_confirm(struct ssh_channel *c)
 {
-  struct client_session *closure = (struct client_session *) c;
+  CAST(client_session, closure, c);
   struct lsh_string *args;
   
-  MDEBUG(closure);
-
   closure->super.open_confirm = NULL;
   closure->super.open_failure = NULL;
 
@@ -550,9 +595,7 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
 					       struct lsh_string *args,
 					       int *exit_status)
 {
-  struct client_session *self;
-
-  NEW(self);
+  NEW(client_session, self);
 
   init_channel(&self->super);
 
@@ -577,6 +620,25 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
   return &self->super;
 }
 
+/* CLASS:
+   (class
+     (name client_startup)
+     (super connection_startup)
+     (vars
+       (session object ssh_channel)
+       
+       ; Exec or shell request. 
+       ;; (final_request simple int)
+       ;; (args string)
+  
+       ; To access stdio 
+       ;; (in object io_fd)
+       ;; (out object io_fd)
+       ;; (err object io_fd)
+       ))
+*/
+
+#if 0
 struct client_startup
 {
   struct connection_startup super;
@@ -593,16 +655,15 @@ struct client_startup
   struct io_fd *err;
 #endif
 };
+#endif
 
 static int do_client_startup(struct connection_startup *c,
 			     struct channel_table *table,
 			     struct abstract_write *write)
 {
-  struct client_startup *closure = (struct client_startup *) c;
+  CAST(client_startup, closure, c);
   struct lsh_string *s;
   
-  MDEBUG(closure);
-
   closure->session->write = write;
   
   closure->session->open_confirm = do_open_confirm;
@@ -626,9 +687,8 @@ struct connection_startup *make_client_startup(struct io_fd *in,
 					       struct lsh_string *args,
 					       int *exit_status)
 {
-  struct client_startup *closure;
+  NEW(client_startup, closure);
   
-  NEW(closure);
   closure->super.start = do_client_startup;
   closure->session = make_client_session(in, out, err,
 					 WINDOW_SIZE,

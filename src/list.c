@@ -25,18 +25,21 @@
 
 #include "list.h"
 
+#include <assert.h>
+#include <stdarg.h>
+
 #define CLASS_DEFINE
 #include "list.h.x"
 #undef CLASS_DEFINE
 
 #include "xalloc.h"
 
-struct lsh_list *make_list(unsigned n, ...);
+struct int_list *make_int_list(unsigned n, ...)
 {
   int i;
   va_list args;
   
-  struct lsh_list *l = lsh_list_alloc(n);
+  struct int_list *l = alloc_int_list(n);
 
   va_start(args, n);
   
@@ -51,3 +54,21 @@ struct lsh_list *make_list(unsigned n, ...);
 
   return l;
 }
+
+struct object_list *make_object_list(unsigned n, ...)
+{
+  int i;
+  va_list args;
+  
+  struct object_list *l = alloc_object_list(n);
+
+  va_start(args, n);
+  
+  for (i=0; i<n; i++)
+    LIST(l)[i] = va_arg(args, struct lsh_object *);
+
+  assert(va_arg(args, int) == -1);
+
+  return l;
+}
+

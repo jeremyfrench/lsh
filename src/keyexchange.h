@@ -29,6 +29,7 @@
 #include "abstract_crypto.h"
 #include "abstract_io.h"
 #include "alist.h"
+#include "list.h"
 #include "connection.h"
 #include "service.h"
 
@@ -55,6 +56,10 @@
  * nothing else. */
 #define KEX_STATE_NEWKEYS 3
 
+#define CLASS_DECLARE
+#include "keyexchange.h.x"
+#undef CLASS_DECLARE
+
 #if 0
 /* Use the service struct instead */
 struct keyexchange_finished
@@ -73,12 +78,12 @@ struct keyexchange_finished
      (name keyexchange_algorithm)
      (vars
        ; Algorithms is an array indexed by the KEX_* values above
-       (init method void
+       (init method int
 	     "struct ssh_connection *connection"
 	     "struct ssh_service *finished"
 	     "int hostkey_algorithm_atom"
 	     "struct signature_algorithm *hostkey_algorithm"
-	     "void **algorithms")))
+	     "struct object_list *algorithms")))
 */
 #if 0
 struct keyexchange_algorithm
@@ -90,7 +95,7 @@ struct keyexchange_algorithm
 	      struct ssh_service *finished,
 	      int hostkey_algorithm_atom,
 	      struct signature_algorithm *hostkey_algorithm,
-	      void **algorithms);
+	      struct object_list *algorithms);
 };
 #endif
 
@@ -103,11 +108,11 @@ struct keyexchange_algorithm
      (vars
        (cookie array UINT8 16);
        ; Lists of atoms
-       (kex_algorithms object lsh_list)
-       (server_hostkey_algorithms object lsh_list)
-       (parameters array (object lsh_list) KEX_PARAMETERS)
-       (languages_client_to_server object lsh_list)
-       (languages_server_to_client object lsh_list)
+       (kex_algorithms object int_list)
+       (server_hostkey_algorithms object int_list)
+       (parameters array (object int_list) KEX_PARAMETERS)
+       (languages_client_to_server object int_list)
+       (languages_server_to_client object int_list)
        (first_kex_packet_follows simple int)))
 */
      
@@ -207,19 +212,27 @@ struct lsh_string *format_kex(struct kexinit *kex);
 int disconnect_kex_failed(struct ssh_connection *connection, char *msg);
 
 struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
-					 void **algorithms,
+					 struct object_list *algorithms,
 					 int type,
 					 struct ssh_connection *connection);
 
 struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
-					 void **algorithms,
+					 struct object_list *algorithms,
 					 int type,
 					 struct ssh_connection *connection);
 
 struct mac_instance *kex_make_mac(struct hash_instance *secret,
-				  void **algorithms,
+				  struct object_list *algorithms,
 				  int type,
 				  struct ssh_connection *connection);
+
+struct make_kexinit *make_simple_kexinit(struct randomness *r,
+					 struct int_list *kex_algorithms,
+					 struct int_list *hostkey_algorithms,
+					 struct int_list *crypto_algorithms,
+					 struct int_list *mac_algorithms,
+					 struct int_list *compression_algorithms,
+					 struct int_list *languages);
 
 struct make_kexinit *make_test_kexinit(struct randomness *r);
 

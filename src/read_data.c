@@ -30,6 +30,25 @@
 
 #include <assert.h>
 
+#include "read_data.c.x"
+
+/* CLASS:
+   (class
+     (name read_data)
+     (super read_handler)
+     (vars
+       ; Where to send the data 
+       (write object abstract_write)
+
+       ; For flow control. 
+   
+       ; FIXME: Perhaps the information that is needed for flow
+       ; control should be abstracted out from the channel struct? 
+
+       (channel object ssh_channel)))
+*/
+
+#if 0
 struct read_data
 {
   struct read_handler super; /* Super type */
@@ -44,17 +63,16 @@ struct read_data
 
   struct ssh_channel *channel;
 };
+#endif
 
 static int do_read_data(struct read_handler **h,
 			struct abstract_read *read)
 {
-  struct read_data *closure = (struct read_data *) *h;
+  CAST(read_data, closure, *h);
   int to_read;
   int n;
   struct lsh_string *packet;
   
-  MDEBUG_SUBTYPE(closure);
-
   assert(closure->channel->sources);
   
   if (closure->channel->flags &
@@ -100,9 +118,7 @@ static int do_read_data(struct read_handler **h,
 struct read_handler *make_read_data(struct ssh_channel *channel,
 				    struct abstract_write *write)
 {
-  struct read_data *closure;
-
-  NEW(closure);
+  NEW(read_data, closure);
 
   closure->super.handler = do_read_data;
   closure->channel = channel;

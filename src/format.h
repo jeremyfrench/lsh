@@ -50,9 +50,8 @@
  *
  * %a  Insert a string containing one atom.
  *
- * %A  Insert a string containing a list of atoms. The corresponding
- *     argument sublist should be a int* pointing to a list of atoms,
- *     terminated with -1. Zero elements are allowed and ignored.
+ * %A  Insert a string containing a list of atoms. The input is an
+ *     int_list object. Zero elements are allowed and ignored.
  *
  * %X  Insert a string containing a list of atoms. The corresponding
  *     argument sublist should be terminated with a zero. (Not used)

@@ -28,6 +28,10 @@
 
 #include "abstract_io.h"
 
+#define CLASS_DECLARE
+#include "write_buffer.h.x"
+#undef CLASS_DECLARE
+
 /* For the packet queue */
 /* NOTE: No object header */
 struct buffer_node
@@ -37,6 +41,33 @@ struct buffer_node
   struct lsh_string *packet;
 };
 
+/* CLASS:
+   (class
+     (name write_buffer)
+     (super abstract_write)
+     (vars
+       (block_size simple UINT32)
+       (buffer space UINT8)        ; Size is twice the blocksize 
+       (empty simple int)
+
+       ; If non-zero, don't accept any more data. The i/o-channel
+       ; should be closed once the current buffers are flushed. 
+       (closed simple int)
+
+       ;; (try_write simple int)
+
+       (head special "struct buffer_node *"
+                     #f do_free_buffer)
+       (tail simple "struct buffer_node *")
+
+       (pos simple UINT32)        ; Partial packet
+       (partial string)
+
+       (start simple UINT32)
+       (end simple UINT32)))
+*/
+
+#if 0
 struct write_buffer
 {
   struct abstract_write super;
@@ -62,6 +93,7 @@ struct write_buffer
   UINT32 start;
   UINT32 end;
 };
+#endif
 
 struct write_buffer *write_buffer_alloc(UINT32 size);
 int write_buffer_pre_write(struct write_buffer *buffer);

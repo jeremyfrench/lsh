@@ -37,9 +37,7 @@ static int do_ignore(struct packet_handler *closure,
 
 struct packet_handler *make_ignore_handler(void)
 {
-  struct packet_handler *res;
-
-  NEW(res);
+  NEW(packet_handler, res);
 
   res->handler = do_ignore;
   return res;

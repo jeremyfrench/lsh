@@ -26,7 +26,7 @@
 #ifndef LSH_XALLOC_H_INCLUDED
 #define LSH_XALLOC_H_INCLUDED
 
-#include "list.h"
+#include "gc.h"
 
 #include <stdlib.h>
 
@@ -53,8 +53,6 @@ void lsh_object_free(struct lsh_object *o);
 
 void *lsh_space_alloc(size_t size);
 void lsh_space_free(void *p);
-
-struct lsh_list *lsh_list_alloc(unsigned length);
 
 #ifdef DEBUG_ALLOC
 
@@ -103,6 +101,6 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
 #define NEW_SPACE(x) ((x) = lsh_space_alloc(sizeof(*(x))))
 
 #include "gc.h"
-#define KILL(x) gc_kill((x))
+#define KILL(x) gc_kill((struct lsh_object *) (x))
 
 #endif /* LSH_XALLOC_H_INCLUDED */

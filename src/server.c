@@ -70,6 +70,31 @@
 #include <signal.h>
 #include <unistd.h>
 
+#define CLASS_DEFINE
+#include "server.h.x"
+#undef CLASS_DEFINE
+
+#include "server.c.x"
+
+/* CLASS:
+   (class
+     (name server_callback)
+     (super fd_callback)
+     (vars
+       (backend object io_backend)
+
+        (secret object signer) ; Secret key
+	(host_key string)      ; Public key 
+
+	(block_size simple UINT32)
+	(id_comment simple "char *")
+
+	(random object randomness)
+	(init object make_kexinit)
+	(kexinit_handler object packet_handler)))
+*/
+     
+#if 0
 struct server_callback
 {
   struct fd_callback super;
@@ -84,6 +109,7 @@ struct server_callback
   struct make_kexinit *init;
   struct packet_handler *kexinit_handler;
 };
+#endif
 
 static int server_initiate(struct fd_callback **c,
 			   int fd)
@@ -121,19 +147,27 @@ static int server_initiate(struct fd_callback **c,
 				    NULL);
 }
 
+/* CLASS:
+   (class
+     (name server_line_handler)
+     (super line_handler)
+     (vars
+       (connection object ssh_connection)))
+*/
+
+#if 0
 struct server_line_handler
 {
   struct line_handler super;
   struct ssh_connection *connection;
 };
+#endif
 
 static struct read_handler *do_line(struct line_handler **h,
 				    UINT32 length,
 				    UINT8 *line)
 {
-  struct server_line_handler *closure = (struct server_line_handler *) *h;
-  
-  MDEBUG(closure);
+  CAST(server_line_handler, closure, *h);
   
   if ( (length >= 4) && !memcmp(line, "SSH-", 4))
     {
@@ -155,7 +189,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  verbose("\n");
 	  
 	  /* FIXME: Cleanup properly. */
-	  lsh_object_free(closure);
+	  KILL(closure);
 
 	  return new;
 	}
@@ -166,7 +200,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  werror("\n");
 
 	  /* FIXME: Clean up properly */
-	  lsh_object_free(closure);
+	  KILL(closure);
 	  *h = 0;
 		  
 	  return 0;
@@ -184,10 +218,8 @@ static struct read_handler *do_line(struct line_handler **h,
 
 struct read_handler *make_server_read_line(struct ssh_connection *c)
 {
-  struct server_line_handler *closure;
+  NEW(server_line_handler, closure);
 
-  NEW(closure);
-  
   closure->super.handler = do_line;
   closure->connection = c;
   
@@ -202,9 +234,7 @@ make_server_callback(struct io_backend *b,
 		     struct make_kexinit *init,
 		     struct packet_handler *kexinit_handler)
 {
-  struct server_callback *connected;
-
-  NEW(connected);
+  NEW(server_callback, connected);
 
   connected->super.f = server_initiate;
   connected->backend = b;
@@ -229,9 +259,7 @@ static int server_die(struct close_callback *closure, int reason)
 
 struct close_callback *make_server_close_handler(void)
 {
-  struct close_callback *c;
-
-  NEW(c);
+  NEW(close_callback, c);
 
   c->f = server_die;
 
@@ -239,6 +267,24 @@ struct close_callback *make_server_close_handler(void)
 }
 
 /* Session */
+/* CLASS:
+   (class
+     (name server_session)
+     (super ssh_channel)
+     (vars
+       ; User information
+       (user object unix_user)
+
+       ; Non-zero if a shell or command has been started. 
+       (running simple int)
+
+       ; Child process's stdio 
+       (in object io_fd)
+       (out object io_fd)
+       (err object io_fd)))
+*/
+
+#if 0
 struct server_session
 {
   struct ssh_channel super;
@@ -254,15 +300,14 @@ struct server_session
   struct io_fd *out;
   struct io_fd *err;
 };
+#endif
 
 /* Recieve channel data */
 static int do_recieve(struct ssh_channel *c,
 		      int type, struct lsh_string *data)
 {
-  struct server_session *closure = (struct server_session *) c;
+  CAST(server_session, closure, c);
   
-  MDEBUG(closure);
-
   switch(type)
     {
     case CHANNEL_DATA:
@@ -279,9 +324,7 @@ static int do_recieve(struct ssh_channel *c,
 /* We may send more data */
 static int do_send(struct ssh_channel *c)
 {
-  struct server_session *closure = (struct server_session *) c;
-
-  MDEBUG(closure);
+  CAST(server_session, closure, c);
 
   assert(closure->out->super.read);
   assert(closure->out->handler);
@@ -298,9 +341,7 @@ struct ssh_channel *make_server_session(struct unix_user *user,
 					UINT32 max_window,
 					struct alist *request_types)
 {
-  struct server_session *self;
-
-  NEW(self);
+  NEW(server_session, self);
 
   init_channel(&self->super);
 
@@ -322,6 +363,16 @@ struct ssh_channel *make_server_session(struct unix_user *user,
   return &self->super;
 }
 
+/* CLASS:
+   (class
+     (name open_session)
+     (super channel_open)
+     (vars
+       (user object unix_user)
+       (session_requests object alist)))
+*/
+
+#if 0
 struct open_session
 {
   struct channel_open super;
@@ -329,6 +380,7 @@ struct open_session
   struct unix_user *user;
   struct alist *session_requests;
 };
+#endif
 
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
 
@@ -338,10 +390,8 @@ static struct ssh_channel *do_open_session(struct channel_open *c,
 					   char **error_msg,
 					   struct lsh_string **data)
 {
-  struct open_session *closure = (struct open_session *) c;
+  CAST(open_session, closure, c);
   
-  MDEBUG(closure);
-
   debug("server.c: do_open_session()\n");
   
   if (!parse_eod(args))
@@ -354,9 +404,7 @@ static struct ssh_channel *do_open_session(struct channel_open *c,
 struct channel_open *make_open_session(struct unix_user *user,
 				       struct alist *session_requests)
 {
-  struct open_session *closure;
-
-  NEW(closure);
+  NEW(open_session, closure);
 
   closure->super.handler = do_open_session;
   closure->user = user;
@@ -365,6 +413,22 @@ struct channel_open *make_open_session(struct unix_user *user,
   return &closure->super;
 }
 
+/* CLASS:
+   (class
+     (name server_connection_service)
+     (super unix_service)
+     (vars
+       (global_requests object alist)
+
+       ; Requests specific to session channels 
+       (session_requests object alist)
+
+       ; FIXME: Doesn't support any channel types but "session". This
+       ; must be fixed to support for "direct-tcpip" channels.
+       ))
+*/
+
+#if 0
 struct server_connection_service
 {
   struct unix_service super;
@@ -377,15 +441,13 @@ struct server_connection_service
   /* FIXME: Doesn't support any channel types but "session".
    * This must be fixed to support for "direct-tcpip" channels. */
 };
+#endif
 
 /* Start an authenticated ssh-connection service */
 static struct ssh_service *do_login(struct unix_service *c,
 				    struct unix_user *user)
 {
-  struct server_connection_service *closure
-    = (struct server_connection_service *) c;
-
-  MDEBUG(closure);
+  CAST(server_connection_service, closure, c);
 
   debug("server.c: do_login()\n");
   
@@ -401,9 +463,7 @@ static struct ssh_service *do_login(struct unix_service *c,
 struct unix_service *make_server_session_service(struct alist *global_requests,
 						 struct alist *session_requests)
 {
-  struct server_connection_service *closure;
-
-  NEW(closure);
+  NEW(server_connection_service, closure);
 
   closure->super.login = do_login;
   closure->global_requests = global_requests;
@@ -433,23 +493,32 @@ struct lsh_string *format_exit(struct ssh_channel *channel, int value)
 				0,
 				"%i", value);
 }
-      
+
+/* CLASS:
+   (class
+     (name exit_shell)
+     (super exit_callback)
+     (vars
+       (session object server_session)))
+*/
+
+#if 0
 struct exit_shell
 {
   struct exit_callback super;
 
   struct server_session *session;
 };
+#endif
 
 static void do_exit_shell(struct exit_callback *c, int signaled,
 			  int core, int value)
 {
-  struct exit_shell *closure = (struct exit_shell *) c;
+  CAST(exit_shell, closure, c);
   struct server_session *session = closure->session;
   struct ssh_channel *channel = &session->super;
   
-  MDEBUG(closure);
-  MDEBUG(session);
+  CHECK_TYPE(server_session, session);
 
   /* FIXME: Should we explicitly mark these files for closing?
    * The io-backend should notice EOF anyway. */
@@ -494,9 +563,7 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
 
 static struct exit_callback *make_exit_shell(struct server_session *session)
 {
-  struct exit_shell *self;
-
-  NEW(self);
+  NEW(exit_shell, self);
 
   self->super.exit = do_exit_shell;
   self->session = session;
@@ -504,6 +571,16 @@ static struct exit_callback *make_exit_shell(struct server_session *session)
   return &self->super;
 }
 
+/* CLASS:
+   (class
+     (name shell_request)
+     (super channel_request)
+     (vars
+       (backend object io_backend)
+       (reap object reap)))
+*/
+
+#if 0
 struct shell_request
 {
   struct channel_request super;
@@ -511,6 +588,7 @@ struct shell_request
   struct io_backend *backend;
   struct reap *reap;
 };
+#endif
 
 /* Creates a one-way socket connection. Returns 1 on successm 0 on
  * failure. fds[0] is for reading, fds[1] for writing (like for the
@@ -553,15 +631,14 @@ static int do_spawn_shell(struct channel_request *c,
 			  int want_reply,
 			  struct simple_buffer *args)
 {
-  struct shell_request *closure = (struct shell_request *) c;
+  CAST(shell_request, closure, c);
   struct server_session *session = (struct server_session *) channel;
 
   int in[2];
   int out[2];
   int err[2];
 
-  MDEBUG(closure);
-  MDEBUG(session);
+  CHECK_TYPE(server_session, session);
 
   if (!parse_eod(args))
     return LSH_FAIL | LSH_DIE;
@@ -761,9 +838,8 @@ static int do_spawn_shell(struct channel_request *c,
 struct channel_request *make_shell_handler(struct io_backend *backend,
 					   struct reap *reap)
 {
-  struct shell_request *closure;
+  NEW(shell_request, closure);
 
-  NEW(closure);
   closure->super.handler = do_spawn_shell;
   closure->backend = backend;
   closure->reap = reap;

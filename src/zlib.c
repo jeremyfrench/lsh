@@ -27,14 +27,12 @@
 
 #error zlib.c not working at all
 
-static int do_deflate(struct abstract_write **c,
+static int do_deflate(struct abstract_write *w,
 		      struct lsh_string *packet)
 {
-  struct zlib_processor *closure = (struct zlib_processor *) *c;
+  CAST(zlib_processor, closure, w);
   
   struct lsh_string *new;
-
-  MDEBUG(closure);
 
   /* call deflate, copy into new packet */
 

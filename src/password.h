@@ -34,6 +34,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define CLASS_DECLARE
+#include "password.h.x"
+#undef CLASS_DECLARE
+
 struct lsh_string *
 read_password(int max_length, struct lsh_string *prompt, int free);
 

@@ -28,6 +28,12 @@
 
 #include "lsh_types.h"
 
+/* Use the same instance struct for both hash functions and macs. This
+ * is a little ugly. */
+#define mac_instance_class hash_instance_class
+#define mac_instance hash_instance
+#define mac_size hash_size
+
 #define CLASS_DECLARE
 #include "abstract_crypto.h.x"
 #undef CLASS_DECLARE
@@ -65,7 +71,7 @@ struct crypto_instance
        (block_size simple UINT32)
        (key_size simple UINT32)
        (make_crypt method (object crypto_instance)
-                   "int mode" "UIINT8 *key")))
+                   "int mode" "UINT8 *key")))
 */
      
 #if 0
@@ -87,6 +93,8 @@ struct crypto_algorithm
 #define MAKE_DECRYPT(crypto, key) \
 ((crypto)->make_crypt((crypto), CRYPTO_DECRYPT, (key)))
 
+/* FIXME: Hashes could use non-virtual methods. */
+     
 /* CLASS:
    (class
      (name hash_instance)
@@ -119,10 +127,6 @@ struct hash_instance
 ((instance)->digest((instance), (result)))
 
 #define HASH_COPY(instance) ((instance)->copy((instance)))
-
-/* Used for both hash functions ad macs */
-#define mac_instance hash_instance
-#define mac_size hash_size
 
 /* CLASS:
    (class

@@ -25,9 +25,11 @@
 
 #include "xalloc.h"
 
+#include "list.h"
 #include "werror.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef DEBUG_ALLOC
 
@@ -93,6 +95,15 @@ static void *xalloc(size_t size)
   void *res = lsh_malloc(size);
   if (!res)
     fatal("Virtual memory exhausted");
+
+  /* FIXME: The gc can't handle uninitialized pointers. The simple way
+   * is to zero-fill all memory as it is allocated. But initialization
+   * is only necessary for objects, strings need no initialization. By
+   * moving initializing to some higher level, we could avoid
+   * unnecessary clearing, and also initialize mpz objects
+   * automatically. */
+  memset(res, 0, size);
+
   return res;
 }
 
@@ -128,11 +139,11 @@ struct lsh_object *lsh_object_alloc(struct lsh_class *class)
   return instance;
 }
 
-struct lsh_list *lsh_list_alloc(unsigned length)
+struct list_header *lsh_list_alloc(struct lsh_class *class,
+				   unsigned length, size_t element_size)
 {
-  struct lsh_class *class = &CLASS(lsh_list);
-  struct lsh_list *list = xalloc(class->size
-				 + sizeof(int) * (length - 1));
+  struct list_header *list = xalloc(class->size
+				    + element_size * (length - 1));
   list->super.isa = class;
   list->super.alloc_method = LSH_ALLOC_HEAP;
 
@@ -146,6 +157,9 @@ struct lsh_list *lsh_list_alloc(unsigned length)
 /* Should be called *only* by the gc */
 void lsh_object_free(struct lsh_object *o)
 {
+  if (!o)
+    return;
+  
   if (o->alloc_method != LSH_ALLOC_HEAP)
     fatal("lsh_object_free: Object not allocated on the heap!\n");
 
@@ -179,6 +193,9 @@ void lsh_object_free(void *p)
 struct lsh_object *lsh_object_check(struct lsh_class *class,
 				    struct lsh_object *instance)
 {
+  if (!instance)
+    return instance;
+  
   if (instance->marked)
     fatal("lsh_object_check: Unexpected marked object!\n");
 
@@ -196,6 +213,9 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
 {
   struct lsh_class *type;
   
+  if (!instance)
+    return instance;
+
   if (instance->marked)
     fatal("lsh_object_check: Unexpected marked object!\n");
 
@@ -222,7 +242,12 @@ void *lsh_space_alloc(size_t size)
 
 void lsh_space_free(void *p)
 {
-  int *m = ((int *) p) - 1;
+  int *m;
+  
+  if (!p)
+    return;
+  
+  m = ((int *) p) - 1;
 
   if (*m != -1919)
     fatal("lsh_free_space: Type error!\n");

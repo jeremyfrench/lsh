@@ -1,3 +1,17 @@
+Fri Dec  4 02:30:28 1998    <nisse@puck>
+
+	* (practically every file): Adapted to new gc and object system.
+
+	* xalloc.c (lsh_object_check_subtype): Allow NULL pointers. They
+	are occasionally permissible (for instance, the NULL crypto
+	algorithm), and when they aren't the error will be detected early
+	anyway. 
+	(lsh_object_check): -"-
+
+	* keyexchange.c (do_handle_kexinit): Use an object_list for
+ 	passing around the selected algorithms. The void ** that was used
+ 	earlier was unfriendly to the gc.
+
 Sun Nov 22 00:57:16 1998    <nisse@puck>
 
 	* lsh.c (main): Bug fix (pass *address* of crypto_rc4_algorithm).

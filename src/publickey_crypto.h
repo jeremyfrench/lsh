@@ -30,7 +30,13 @@
 #include "bignum.h"
 #include "connection.h"
 
+#define CLASS_DECLARE
+#include "publickey_crypto.h.x"
+#undef CLASS_DECLARE
+
 struct signature_algorithm *make_dss_algorithm(struct randomness *random);
+
+/* FIXME: Groups could use "non-virtual" methods */
 
 /* Groups. For now, assume that all group elements are represented by
  * bignums. */

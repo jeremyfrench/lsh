@@ -46,7 +46,7 @@
    (class
      (name abstract_read)
      (vars
-       (read method int
+       (read indirect-method int
              "UINT32 length" "UINT8 *buffer")))
 */
 #if 0
@@ -67,7 +67,7 @@ struct abstract_read
    (class
      (name read_handler)
      (vars
-       (handler method int "struct abstract_read *read")))
+       (handler indirect-method int "struct abstract_read *read")))
 */
 
 #if 0

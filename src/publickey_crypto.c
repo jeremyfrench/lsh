@@ -36,8 +36,23 @@
 #include "werror.h"
 #include "xalloc.h"
 
-/* DSS signatures */
+#define CLASS_DEFINE
+#include "publickey_crypto.h.x"
+#undef CLASS_DEFINE
 
+#include "publickey_crypto.c.x"
+
+/* DSS signatures */
+/* CLASS:
+   (class
+     (name dss_signer)
+     (super signer)
+     (vars
+       (random object randomness)
+       (public struct dss_public)
+       (a bignum)))
+*/
+#if 0
 struct dss_signer
 {
   struct signer super;
@@ -45,18 +60,38 @@ struct dss_signer
   struct dss_public public;
   mpz_t a; 		/* Private key */
 };
+#endif
 
+/* CLASS:
+   (class
+     (name dss_verifier)
+     (super verifier)
+     (vars
+       (public struct dss_public)))
+*/
+
+#if 0
 struct dss_verifier
 {
   struct verifier super;
   struct dss_public public;
 };
-  
+#endif
+
+/* CLASS:
+   (class
+     (name dss_algorithm)
+     (super signature_algorithm)
+     (vars
+       (random object randomness)))
+*/
+#if 0
 struct dss_algorithm
 {
   struct signature_algorithm super;
   struct randomness *random;
 };
+#endif
 
 static void dss_hash(mpz_t h, UINT32 length, UINT8 *msg)
 {
@@ -72,19 +107,17 @@ static void dss_hash(mpz_t h, UINT32 length, UINT8 *msg)
   debug_mpz(h);
   debug("\n");
   
-  lsh_object_free(hash);
+  KILL(hash);
 }
 
 static struct lsh_string *do_dss_sign(struct signer *c,
 				      UINT32 length,
 				      UINT8 *msg)
 {
-  struct dss_signer *closure = (struct dss_signer *) c;
+  CAST(dss_signer, closure, c);
   mpz_t k, r, s, tmp;
   struct lsh_string *signature;
 
-  MDEBUG(closure);
-  
   /* Select k, 0<k<q, randomly */
   mpz_init_set(tmp, closure->public.q);
   mpz_sub_ui(tmp, tmp, 1);
@@ -161,7 +194,7 @@ static int do_dss_verify(struct verifier *c,
 			 UINT32 signature_length,
 			 UINT8 * signature_data)
 {
-  struct dss_verifier *closure = (struct dss_verifier *) c;
+  CAST(dss_verifier, closure, c);
   struct simple_buffer buffer;
 
   int res;
@@ -171,8 +204,6 @@ static int do_dss_verify(struct verifier *c,
 
   mpz_t w, tmp, v;
 
-  MDEBUG(closure);
-  
   simple_buffer_init(&buffer, signature_length, signature_data);
   if (!parse_atom(&buffer, &atom)
       || (atom != ATOM_SSH_DSS) )
@@ -270,7 +301,8 @@ static int do_dss_verify(struct verifier *c,
   return !res;
 }
 
-static int parse_dss_public(struct simple_buffer *buffer, struct dss_public *public)
+static int parse_dss_public(struct simple_buffer *buffer,
+			    struct dss_public *public)
 {
   return (parse_bignum(buffer, public->p)
 	  && (mpz_sgn(public->p) == 1)
@@ -293,42 +325,37 @@ static struct signer *make_dss_signer(struct signature_algorithm *c,
 				      UINT32 private_length,
 				      UINT8 *private)
 {
-  struct dss_algorithm *closure = (struct dss_algorithm *) c;
+  CAST(dss_algorithm, closure, c);
+  NEW(dss_signer, res);
   
-  struct dss_signer *res;
   struct simple_buffer public_buffer;
   struct simple_buffer private_buffer;  
   int atom;
 
-  MDEBUG(closure);
-  
-  simple_buffer_init(&public_buffer, public_length, public);
-  if (!parse_atom(&public_buffer, &atom)
-      || (atom != ATOM_SSH_DSS) )
-    return 0;
-  
-  simple_buffer_init(&private_buffer, private_length, private);
-
-  NEW(res);
-
+  /* FIXME: The allocator could do this kind of initialization
+   * automatically. */
   mpz_init(res->public.p);
   mpz_init(res->public.q);
   mpz_init(res->public.g);
   mpz_init(res->public.y);
   mpz_init(res->a);
   
+  simple_buffer_init(&public_buffer, public_length, public);
+  if (!parse_atom(&public_buffer, &atom)
+      || (atom != ATOM_SSH_DSS) )
+    {
+      KILL(res);
+      return 0;
+    }
+  simple_buffer_init(&private_buffer, private_length, private);
+
   if (! (parse_dss_public(&public_buffer, &res->public)
   	 && parse_bignum(&private_buffer, res->a)
 	 /* FIXME: Perhaps do some more sanity checks? */
 	 && (mpz_sgn(res->a) == 1)
 	 && parse_eod(&private_buffer) ))
     {
-      mpz_clear(res->public.p);
-      mpz_clear(res->public.q);
-      mpz_clear(res->public.g);
-      mpz_clear(res->public.y);
-      mpz_clear(res->a);
-      lsh_object_free(res);
+      KILL(res);
       return NULL;
     }
   
@@ -342,30 +369,29 @@ static struct verifier *make_dss_verifier(struct signature_algorithm *closure,
 					  UINT32 public_length,
 					  UINT8 *public)
 {
-  struct dss_verifier *res;
+  NEW(dss_verifier, res);
   struct simple_buffer buffer;
   int atom;
 
-  simple_buffer_init(&buffer, public_length, public);
-  if (!parse_atom(&buffer, &atom)
-      || (atom != ATOM_SSH_DSS) )
-    return 0;
-
-  NEW(res);
-
+  /* FIXME: The allocator could do this kind of initialization
+   * automatically. */
   mpz_init(res->public.p);
   mpz_init(res->public.q);
   mpz_init(res->public.g);
   mpz_init(res->public.y);
   
+  simple_buffer_init(&buffer, public_length, public);
+  if (!parse_atom(&buffer, &atom)
+      || (atom != ATOM_SSH_DSS) )
+    {
+      KILL(res);
+      return 0;
+    }
+  
   if (!parse_dss_public(&buffer, &res->public))
     /* FIXME: Perhaps do some more sanity checks? */
     {
-      mpz_clear(res->public.p);
-      mpz_clear(res->public.q);
-      mpz_clear(res->public.g);
-      mpz_clear(res->public.y);
-      lsh_object_free(res);
+      KILL(res);
       return NULL;
     }
 
@@ -375,9 +401,7 @@ static struct verifier *make_dss_verifier(struct signature_algorithm *closure,
 
 struct signature_algorithm *make_dss_algorithm(struct randomness *random)
 {
-  struct dss_algorithm *dss;
-
-  NEW(dss);
+  NEW(dss_algorithm, dss);
 
   dss->super.make_signer = make_dss_signer;
   dss->super.make_verifier = make_dss_verifier;
@@ -387,23 +411,31 @@ struct signature_algorithm *make_dss_algorithm(struct randomness *random)
 }
     
 /* Groups */
-
+/* CLASS:
+   (class
+     (name group_zn)
+     (super group)
+     (vars
+       (modulo bignum)))
+*/
+#if 0
 struct group_zn  /* Z_n^* */
 {
   struct group super;
   mpz_t modulo;
 };
+#endif
 
 static int zn_member(struct group *c, mpz_t x)
 {
-  struct group_zn *closure = (struct group_zn *) c;
+  CAST(group_zn, closure, c);
 
   return ( (mpz_sgn(x) == 1) && (mpz_cmp(x, closure->modulo) < 0) );
 }
 
 static void zn_invert(struct group *c, mpz_t res, mpz_t x)
 {
-  struct group_zn *closure = (struct group_zn *) c;
+  CAST(group_zn, closure, c);
 
   if (!mpz_invert(res, x, closure->modulo))
     fatal("zn_invert: element is non-invertible\n");
@@ -413,7 +445,7 @@ static void zn_invert(struct group *c, mpz_t res, mpz_t x)
 
 static void zn_combine(struct group *c, mpz_t res, mpz_t a, mpz_t b)
 {
-  struct group_zn *closure = (struct group_zn *) c;
+  CAST(group_zn, closure, c);
 
   mpz_mul(res, a, b);
   mpz_fdiv_r(res, res, closure->modulo);
@@ -421,7 +453,7 @@ static void zn_combine(struct group *c, mpz_t res, mpz_t a, mpz_t b)
 
 static void zn_power(struct group *c, mpz_t res, mpz_t g, mpz_t e)
 {
-  struct group_zn *closure = (struct group_zn *) c;
+  CAST(group_zn, closure, c);
 
   mpz_powm(res, g, e, closure->modulo);
 }
@@ -429,9 +461,7 @@ static void zn_power(struct group *c, mpz_t res, mpz_t g, mpz_t e)
 /* Assumes p is a prime number */
 struct group *make_zn(mpz_t p)
 {
-  struct group_zn *res;
-
-  NEW(res);
+  NEW(group_zn, res);
 
   res->super.member = zn_member;
   res->super.invert = zn_invert;
@@ -450,6 +480,8 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
 				  struct diffie_hellman_instance *self,
 				  struct ssh_connection *c)
 {
+  /* FIXME: The allocator could do this kind of initialization
+   * automatically. */
   mpz_init(self->e);
   mpz_init(self->f);
   mpz_init(self->secret);
@@ -495,10 +527,8 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
 
 struct diffie_hellman_method *make_dh1(struct randomness *r)
 {
-  struct diffie_hellman_method *res;
+  NEW(diffie_hellman_method, res);
   mpz_t p;
-  
-  NEW(res);
   
   mpz_init_set_str(p,
 		   "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"

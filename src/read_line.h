@@ -28,10 +28,23 @@
 
 #include "abstract_io.h"
 
+#define CLASS_DECLARE
+#include "read_line.h.x"
+#undef CLASS_DECLARE
+
 /* This limit follows the ssh specification */
 #define MAX_LINE 255
 
 /* May store a new handler into *h. */
+/* CLASS:
+   (class
+     (name line_handler)
+     (vars
+       (handler indirect-method "struct read_handler *"
+		"UINT32 length" "UINT8 *line")))
+*/
+
+#if 0
 struct line_handler
 {
   struct lsh_object header;
@@ -40,6 +53,7 @@ struct line_handler
 				   UINT32 length,
 				   UINT8 *line);
 };
+#endif
 
 #define PROCESS_LINE(h, length, line) \
 ((h)->handler(&(h), (length), (line)))

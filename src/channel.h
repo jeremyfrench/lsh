@@ -93,6 +93,7 @@
        ; Reply from SSH_MSG_CHANNEL_REQUEST 
        (channel_success method int)
        (channel_failure method int)))
+*/
 
 #if 0
 struct ssh_channel

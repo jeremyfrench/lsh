@@ -33,6 +33,10 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#define CLASS_DEFINE
+#include "alist.h.x"
+#undef CLASS_DEFINE
+
 struct alist_node
 {
   struct alist_node *next;
