@@ -342,12 +342,47 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
   HASH_UPDATE(hash, session_id->length, session_id->data);
   HASH_DIGEST(hash, digest);
 
-  if (key_length > hash->hash_size)
-    fatal("Not implemented\n");
-
-  memcpy(key->data, digest, key_length);
+#if 0
+  /* This is the simplest special case */
+  if (key_length <= hash->hash_size)
+    memcpy(key->data, digest, key_length);
+#endif
+  {
+    /* FIXME: This code could probably be simplified a little, but
+     * it should do for now. */
+    
+    int key_ofs, max;
+    
+    max = MIN(key_length, hash->hash_size);
+    
+    memcpy(key->data, digest, max);
+    if (max != key_length)
+      {
+	struct hash_instance *prev_hash = HASH_COPY(secret);
+	  
+	key_ofs = max;
+	while (key_length - key_ofs > 0)
+	  {
+	    KILL(hash);
+	      
+	    hash = prev_hash;
+	    HASH_UPDATE(hash, hash->hash_size, digest);
+	      
+	    KILL(prev_hash);
+	    prev_hash = HASH_COPY(hash);
+	    HASH_DIGEST(hash, digest);
+	      
+	    max = MIN(key_length - key_ofs, hash->hash_size);
+	    memcpy(key->data + key_ofs, digest, max);
+	      
+	    key_ofs += max;
+	  }
+	KILL(prev_hash);
+      }
+  }
   KILL(hash);
 
+  debug("Expanded key: ", type);
   debug_hex(key->length, key->data);
   return key;
 }

@@ -1,3 +1,8 @@
+Mon Dec 28 14:14:57 1998    <nisse@puck>
+
+	* keyexchange.c (kex_make_key): Expand keys, when the required key
+	length is longer than tha hash output. (Baszi).
+
 Sun Dec 27 06:37:40 1998    <nisse@puck>
 
 	* compress.c (packet_compressor): Removed the mode variable.
