@@ -20,7 +20,7 @@ SUBDIRS = lib include
 Makefile.am: Makefile.am.in
 	./make_am
 
-bin_PROGRAMS = lsh lshd # lsh_keygen
+bin_PROGRAMS = lsh lshd lsh_keygen
 noinst_PROGRAMS = prime_table
 noinst_LIBRARIES = liblsh.a
 
@@ -30,14 +30,14 @@ noinst_LIBRARIES = liblsh.a
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c prime_table.h
 
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c alist.c arcfour.c atoms.c \
-	bignum.c blowfish.c \
+	bignum.c blocking_write.c blowfish.c \
 	cascade.c cbc.c channel.c charset.c connection.c crypto.c \
 	debug.c des.c disconnect.c  dss_keygen.c encrypt.c \
 	format.c gc.c getopt.c hmac.c io.c keyexchange.c \
 	list.c md5.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
 	randomness.c \
 	read_data.c read_line.c read_packet.c resource.c \
-	sha.c service.c \
+	sexp.c sha.c service.c \
 	translate_signal.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c 
 
@@ -47,7 +47,7 @@ lsh_SOURCES = lsh.c client.c client_keyexchange.c \
 lshd_SOURCES = lshd.c reaper.c server.c server_keyexchange.c \
 	server_password.c server_userauth.c
 
-# lsh_keygen_SOURCES = lsh_keygen.c
+lsh_keygen_SOURCES = lsh_keygen.c
 
 atoms_defines.h: atoms.in process_atoms
 	bash $(srcdir)/process_atoms header <$(srcdir)/atoms.in >$@
@@ -66,9 +66,11 @@ prime_table.h: prime_table
 
 lsh_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
 lshd_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
+lsh_keygen_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
 
 lsh_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
 lshd_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
+lsh_keygen_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
 
 .PHONY: symmetric
 symmetric:
