@@ -16,6 +16,8 @@
 /config.status
 /configure
 /configure.scan
+/digit_table
+/digit_table.h
 /lsh
 /lsh_keygen
 /lshd

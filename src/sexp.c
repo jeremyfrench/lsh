@@ -36,7 +36,7 @@
 #include "sexp.h.x"
 #undef CLASS_DEFINE
 
-/* Defines int char_classes[0x100] */
+/* Defines int sexp_char_classes[0x100] */
 #define CHAR_CLASSES_TABLE sexp_char_classes
 #include "sexp_table.h"
 #undef CHAR_CLASSES_TABLE
