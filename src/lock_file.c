@@ -94,7 +94,7 @@ do_lsh_file_lock(struct lsh_file_lock_info *self, unsigned retries)
   if (fd < 0)
     {
       if (errno != EEXIST)
-	werror("Could not create lock file `%S' (errno = %i): %z",
+	werror("Could not create lock file `%S' (errno = %i): %z\n",
 	       self->lockname, errno, STRERROR(errno));
       return NULL;
     }
