@@ -33,7 +33,8 @@
 #include "format.h"
 #include "io.h"
 #include "io_commands.h"
-#include "password.h"
+#include "server_password.h"
+#include "server_session.h"
 #include "randomness.h"
 #include "reaper.h"
 #include "server.h"
@@ -235,15 +236,28 @@ static int read_host_key(const char *name,
     }
 }
 
+/* Invoked when the client requests the userauth service. */
 /* GABA:
    (expr
-     (name make_server_listen)
+     (name lshd_services)
+     (params 
+       (userauth object command) )
+     (expr
+       (lambda (connection)
+         ((userauth connection) connection))))
+*/
+
+/* GABA:
+   (expr
+     (name lshd_listen)
      (globals
        (log "&io_log_peer_command.super.super"))
      (params
        (listen object command)
-       (handshake object command) )
-     (expr (lambda (port) (handshake (log (listen port))))))
+       (handshake object command)
+       (services object command) )
+     (expr (lambda (port)
+             (services (handshake (log (listen port)))))))
 */
 
 int main(int argc, char **argv)
@@ -274,7 +288,6 @@ int main(int argc, char **argv)
   struct keyexchange_algorithm *kex;
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
-  struct packet_handler *kexinit_handler;
 
   NEW(io_backend, backend);
 
@@ -460,7 +473,7 @@ int main(int argc, char **argv)
 #endif
   
   {
-    struct lsh_object *o = make_server_listen
+    struct lsh_object *o = lshd_listen
       (make_simple_listen(backend, NULL),
        make_handshake_command(CONNECTION_SERVER,
 			      "lsh - a free ssh",
@@ -471,8 +484,25 @@ int main(int argc, char **argv)
 #if WITH_SSH1_FALLBACK
 			      sshd1 ? make_ssh1_fallback (sshd1) :
 #endif /* WITH_SSH1_FALLBACK */
-			      NULL
-			      ));
+			      NULL),
+       make_offer_service
+       (make_alist
+	(1, ATOM_SSH_USERAUTH,
+	 lshd_services(make_userauth_service
+		       (make_int_list(1, ATOM_PASSWORD, -1),
+			make_alist(1, ATOM_PASSWORD,
+				   &unix_userauth.super, -1),
+			make_alist(1, ATOM_SSH_CONNECTION,
+				   make_server_connection_service
+				   (make_alist(0, -1),
+				    make_alist(1,
+					       ATOM_SHELL,
+					       make_shell_handler(backend,
+								  reaper),
+					       -1),
+				    backend),
+				   -1))),
+	 -1)));
     
     CAST_SUBTYPE(command, server_listen, o);
     
