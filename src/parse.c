@@ -210,7 +210,7 @@ parse_bignum(struct simple_buffer *buffer, mpz_t result)
 }
 
 int
-parse_atom(struct simple_buffer *buffer, UINT32 *result)
+parse_atom(struct simple_buffer *buffer, int *result)
 {
   UINT32 length;
   const UINT8 *start;
@@ -227,11 +227,13 @@ parse_atom(struct simple_buffer *buffer, UINT32 *result)
 /* Returns 1 on success, 0 on failure, and -1 at end of buffer.
  * Unknown atoms sets result to zero. */
 
+/* NOTE: The end of buffer indication is never actually used. */
+
 /* NOTE: This functions record the fact that it has read to the end of
  * the buffer by setting the position to *beyond* the end of the
  * buffer. */
-int
-parse_next_atom(struct simple_buffer *buffer, UINT32 *result)
+static int
+parse_next_atom(struct simple_buffer *buffer, int *result)
 {
   UINT32 i;
 
@@ -276,7 +278,6 @@ parse_atoms(struct simple_buffer *buffer, unsigned limit)
 
   for (i = 0; i < count; i++)
     {
-      /* FIXME: Uses int * for UINT32 * argument. */
       switch(parse_next_atom(buffer, LIST(res)+i))
 	{
 	case 1:
