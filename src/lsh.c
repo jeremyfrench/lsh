@@ -1074,11 +1074,13 @@ int main(int argc, char **argv)
 #endif
   
   io_run(backend);
+
+  /* Close all files and other resources associated with the backend. */
+  io_final(backend);
   
+  gc_final();
+
   /* FIXME: Perhaps we have to reset the stdio file descriptors to
    * blocking mode? */
-
-  gc_final();
-  
   return lsh_exit_code;
 }
