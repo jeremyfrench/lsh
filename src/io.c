@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <signal.h>
 
 #include "io.h"
 #include "werror.h"
@@ -66,7 +67,8 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
       switch(errno)
 	{
 	case EINTR:
-	  continue;
+	  continue;  /* FIXME: Is it really worth looping here,
+		      * instead of in the select loop? */
 	case EWOULDBLOCK:  /* aka EAGAIN */
 	  return 0;
 	default:
@@ -110,9 +112,13 @@ static void close_fd(struct io_fd *fd)
 #if 0
   lsh_object_free(fd->buffer);
 #endif
+
+  /* There may be pointers to fd objects. So don't free them here. */
+#if 0
   /* Handlers are not shared, so it should be ok to free them. */
   lsh_object_free(fd->handler);
   lsh_object_free(fd);
+#endif
 }
 
 static int io_iter(struct io_backend *b)
@@ -232,6 +238,11 @@ static int io_iter(struct io_backend *b)
 		  case EINTR:
 		  case EAGAIN:
 		    break;
+		  case EPIPE:
+		    werror("Broken pipe\n");
+		    fd->close_reason = CLOSE_WRITE_FAILED;
+		    fd->close_now = 1;
+		    break;
 		  default:
 		    werror("io.c: write failed, %s\n", strerror(errno));
 
@@ -311,7 +322,7 @@ static int io_iter(struct io_backend *b)
 		    struct io_fd *p;
 		    struct io_fd *next;
 		    
-		    for (p = b->io; (p = next) ; )
+		    for (p = b->io; p; p = next)
 		      {
 			next = p->next;
 			
@@ -341,7 +352,8 @@ static int io_iter(struct io_backend *b)
 		  }{
 		    struct listen_fd *p;
 		    struct listen_fd *next;
-		    for (p = b->listen; (p = next); )
+
+		    for (p = b->listen; p; p = next)
 		      {
 			next = p->next;
 			close(p->fd);
@@ -352,7 +364,8 @@ static int io_iter(struct io_backend *b)
 		  }{
 		    struct connect_fd *p;
 		    struct connect_fd *next;
-		    for (p = b->connect; (p = next); )
+
+		    for (p = b->connect; p; p = next)
 		      {
 			next = p->next;
 			close(p->fd);
@@ -363,7 +376,8 @@ static int io_iter(struct io_backend *b)
 		  }{
 		    struct callout *p;
 		    struct callout *next;
-		    for (p = b->callouts; (p = next); )
+
+		    for (p = b->callouts; p; p = next)
 		      {
 			next = p->next;
 			lsh_space_free(p);
@@ -444,6 +458,8 @@ static int io_iter(struct io_backend *b)
 /* FIXME: Prehaps this function should return a suitable exit code? */
 void io_run(struct io_backend *b)
 {
+  signal(SIGPIPE, SIG_IGN);
+  
   while(io_iter(b))
     ;
 }
@@ -564,6 +580,8 @@ struct connect_fd *io_connect(struct io_backend *b,
   if (s<0)
     return NULL;
 
+  debug("io.c: connecting using fd %d\n", s);
+  
   io_init_fd(s);
 
   if (local  &&  bind(s, (struct sockaddr *)local, sizeof *local) < 0)
@@ -605,6 +623,8 @@ struct listen_fd *io_listen(struct io_backend *b,
   if (s<0)
     return NULL;
 
+  debug("io.c: listening on fd %d\n", s);
+  
   io_init_fd(s);
 
   {
@@ -645,6 +665,8 @@ struct abstract_write *io_read_write(struct io_backend *b,
   struct io_fd *f;
   struct write_buffer *buffer = write_buffer_alloc(block_size);
 
+  debug("io.c: Preparing fd %d for reading and writing\n", fd);
+  
   io_init_fd(fd);
   
   NEW(f);
@@ -675,6 +697,8 @@ struct io_fd *io_read(struct io_backend *b,
 {
   struct io_fd *f;
 
+  debug("io.c: Preparing fd %d for reading\n", fd);
+  
   io_init_fd(fd);
 
   NEW(f);
@@ -707,6 +731,8 @@ struct io_fd *io_write(struct io_backend *b,
   struct io_fd *f;
   struct write_buffer *buffer = write_buffer_alloc(block_size);
 
+  debug("io.c: Preparing fd %d for writing\n", fd);
+  
   io_init_fd(fd);
   
   NEW(f);
