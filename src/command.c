@@ -69,8 +69,14 @@ static int do_command_I(struct command *ignored UNUSED,
   return COMMAND_RETURN(c, arg);
 }
 
-struct command command_I =
-{ STATIC_HEADER, do_command_I };
+static struct lsh_object *do_simple_I(struct command_simple *ignored UNUSED,
+				      struct lsh_object *arg)
+{
+  return arg;
+}
+
+struct command_simple command_I =
+{ { STATIC_HEADER, do_command_I} do_simple_I };
 
 /* ((S f) g)x == (f x)(g x) */
 

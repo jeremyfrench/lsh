@@ -53,8 +53,19 @@
                         "struct command_continuation *c")))
 */
 
+/* CLASS:
+   (class
+     (name command_simple)
+     (super command)
+     (vars
+       ;; Like call, but returns the value immediately rather than
+       ;; using a continuation function
+       (call_simple method "struct lsh_object *" "struct lsh_object *")))
+*/
+
 #define COMMAND_CALL(f, a, c) ((f)->call((f), (a), (c)))
 #define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v))) 
+#define COMMAND_SIMPLE(f, a) ((f)->call_simple((f), (a)))
 
 /* CLASS:
    (class
