@@ -26,6 +26,7 @@
 #ifndef LSH_CLIENT_KEYEXCHANGE_H_INCLUDED
 #define LSH_CLIENT_KEYEXCHANGE_H_INCLUDED
 
+#include "interact.h"
 #include "keyexchange.h"
 #include "publickey_crypto.h"
 
@@ -33,6 +34,7 @@ struct keyexchange_algorithm *
 make_dh_client(struct dh_method *dh);
 
 struct keyexchange_algorithm *
-make_srp_client(struct dh_method *dh, struct lsh_string *name);
+make_srp_client(struct dh_method *dh,
+		struct interact *tty, struct lsh_string *name);
 
 #endif /* LSH_CLIENT_KEYEXCHANGE_H_INCLUDED */

@@ -29,7 +29,10 @@
 #include "dsa.h"
 #include "format.h"
 #include "lookup_verifier.h"
+#if 0
 #include "password.h"
+#endif
+
 #include "srp.h"
 #include "ssh.h"
 #include "werror.h"
@@ -180,6 +183,7 @@ make_dh_client(struct dh_method *dh)
      (name srp_client_instance)
      (vars
        (dh struct dh_instance)
+       (tty object interact)
        (name string)
        (m2 string)
        (algorithms object object_list)))
@@ -260,9 +264,9 @@ do_handle_srp_reply(struct packet_handler *s,
     }
 
   /* Ask for SRP password */
-  passwd = read_password(MAX_PASSWD,
-			 ssh_format("SRP password for %lS: ",
-				    self->srp->name), 1);
+  passwd = INTERACT_READ_PASSWORD(self->srp->tty, MAX_PASSWD,
+				  ssh_format("SRP password for %lS: ",
+					     self->srp->name), 1);
   if (!passwd)
     {
       lsh_string_free(salt);
@@ -306,6 +310,7 @@ make_srp_reply_handler(struct srp_client_instance *srp)
      (super keyexchange_algorithm)
      (vars
        (dh object dh_method)
+       (tty object interact)
        (name string)))
 */
 
@@ -323,6 +328,7 @@ do_init_client_srp(struct keyexchange_algorithm *s,
   /* Initialize */
   init_dh_instance(self->dh, &srp->dh, connection);
 
+  srp->tty = self->tty;
   srp->algorithms = algorithms;
   srp->name = self->name;
   srp->m2 = NULL;
@@ -335,7 +341,8 @@ do_init_client_srp(struct keyexchange_algorithm *s,
 }
 
 struct keyexchange_algorithm *
-make_srp_client(struct dh_method *dh, struct lsh_string *name)
+make_srp_client(struct dh_method *dh, struct interact *tty,
+		struct lsh_string *name)
 {
   NEW(srp_client_exchange, self);
 
@@ -344,6 +351,7 @@ make_srp_client(struct dh_method *dh, struct lsh_string *name)
 
   self->super.init = do_init_client_srp;
   self->dh = dh;
+  self->tty = tty;
   self->name = name;
   
   return &self->super;
