@@ -1,5 +1,8 @@
 2002-10-23  Pontus Sköld  <pont@soua.net>
 
+	* src/client_x11.c (parse_display): Handle special case
+	DISPLAY=unix:x.y for local delivery.
+
 	* src/client.c (do_detach_cb): New function replacing
 	do_detach_cb_first and do_detach_cb_second.
 	(do_detach_cb_first): Deleted.

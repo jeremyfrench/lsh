@@ -507,8 +507,12 @@ parse_display(struct client_x11_display *self, const char *display)
 	return 0;
 
       length = separator - display;
-      host = ssh_format("%ls", length, display);
-      
+
+      if (!strncmp("unix", display, length)) /* Special name unix? */
+	host = NULL; /* Local transport */
+      else
+ 	host = ssh_format("%ls", length, display);
+
       display = separator + 1;
     }
   
