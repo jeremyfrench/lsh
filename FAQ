@@ -1,18 +1,13 @@
 × Is there anonymous CVS access to LSH?
 
-No. The main repository for LSH's source code is a Lysator-internal
-CVS repository. A read-only mirror on a public CVS server would be
-nice, but has not been set up for various reasons.
+Yes. To check out the latest version, try
 
-However, there is a read-only HTTP-gateway to the CVS repository,
-located at <URL: http://www.lysator.liu.se/~nisse/lsh>. Running wget
-against that URL will give you the latest code that is checked in, and
-if you know tha right magic you can also get older versions, diffs
-etc.
+  cvs -d :pserver:anonymous@cvs.lysator.liu.se:/cvsroot/lsh login
+  [ empty password ]
+  cvs -d :pserver:anonymous@cvs.lysator.liu.se:/cvsroot/lsh co lsh
 
-If you want to add code to LSH, you have to mail me, either directly
-to <nisse@lysator.liu.se> or via the psst mailing list at
-<psst@net.lut.ac.uk>.
+You can also try the ViewCVS interface at <URL:
+http://cvs.lysator.liu.se/viewcvs/viewcvs.cgi/lsh/?cvsroot=lsh>.
 
 
 × Out of curiosity, what's the relationship between LSH and OpenSSH?
@@ -26,22 +21,15 @@ for version 2 of the protocols was added later on, in May 2000.
 I think the implementations share very little source code; perhaps
 things like the implementations of blowfish or SHA1 has common
 ancestors. OpenSSH uses the OpenSSL library for low-level
-cryptographic operations. LSH uses its own library for symmetric
+cryptographic operations. LSH uses the Nettle library for symmetric
 cryptographic operations, and GMP for its bignum calculations.
 
-OpenSSH supports both version 1 and version 2 of the protocols, and
-supports RSA and DSA keys. LSH only supports version 2 of the protocol
-with DSA keys because of the RSA patent.
-
-It is illegal in the United States to use RSA without paying for a
-license. The RSA patents expire on September 20, 2000. As these expire,
-LSH will add RSA support.
+OpenSSH supports both version 1 and version 2 of the protocols, LSH
+only supports version 2 of the protocol.
 
 LSH and OpenSSH have been tested together with positive results. LSH
-and OpenSSH use different file formats for storing DSA keys; some
+and OpenSSH use different file formats for storing DSA and RSA keys; some
 conversion tools are included in the LSH dist.
-
-[Faq entry heavily modified: Jeff Bailey <jbailey@gnu.org>]
 
 
 × Why use a gc?
@@ -79,7 +67,8 @@ that you don't have to mess with memory deallocation. But that's no
 reason why we should have to do that in C; a gc should take care of
 most of it in one place, in a few hundred lines of code.
 
-× I don't see the value in lsh_writekey. Why not have lsh_keygen
+
+× I don't see the value in lsh-writekey. Why not have lsh-keygen
   do the writing?
 
 I like the approach to have each program do one thing, and do it well.
@@ -87,23 +76,22 @@ And I'm a little tired of programs like ssh and pgp which include a
 good key generator, but only generates keys in some specialized,
 internal format, which are difficult to extract for other uses.
 
-My intention is that lsh_keygen should be general program for
+My intention is that lsh-keygen should be general program for
 generating key pairs for public key cryptography. It outputs keys as
 "s-expressions", and should use the formats defined by SPKI. It
 supports all of canonical, transport and advanced flavors of
 s-expressions. 
 
-On the other hand, lsh_writekey is responsible for two things: to
-split out the public part of the kay, and for storing the private part
-securely. lsh_writekey need not support the advanced s-expression
-syntax. (When I think of it, perhaps it would be better to have
-lsh_writekey send the public key to stdout...).
+On the other hand, lsh-writekey is responsible for two things: to
+split out the public part of the key, and for storing the private part
+securely. lsh-writekey need not support the advanced s-expression
+syntax.
 
 Furthermore, if you ever want to import a dss key from some other
 program (say, pgp-5), I suspect that it will be easier to find or
 write up a converter that outputs an unencrypted SPKI style key, than a
 program that can create the files under ~/.lsh directly. Then, the
-separate lsh_writekey program may come in handy.
+separate lsh-writekey program may come in handy.
 
 This said, I understand that we also need a more user friendly
 interface that does all the work with a single command. But I'd rather
