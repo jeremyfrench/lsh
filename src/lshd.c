@@ -59,19 +59,6 @@
 
 #include "lsh_argp.h"
 
-/* Forward declarations */
-struct command options2local;
-#define OPTIONS2LOCAL (&options2local.super)
-
-struct command options2keys;
-#define OPTIONS2KEYS (&options2keys.super)
-
-struct command options2tcp_wrapper;
-#define OPTIONS2TCP_WRAPPER (&options2tcp_wrapper.super)
-
-struct command_2 close_on_sighup;
-#define CLOSE_ON_SIGHUP (&close_on_sighup.super.super)
-
 #include "lshd.c.x"
 
 #include <assert.h>
@@ -276,45 +263,6 @@ make_lshd_options(void)
   return self;
 }
 
-/* Port(s) to listen on */
-DEFINE_COMMAND(options2local)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(lshd_options, options, a);
-  /* FIXME: Call bind already here? */
-  assert(options->local);
-  COMMAND_RETURN(c, options->local);
-}
-
-/* alist of signature algorithms */
-DEFINE_COMMAND(options2signature_algorithms)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(lshd_options, options, a);
-  COMMAND_RETURN(c, options->signature_algorithms);
-}
-
-
-/* FIXME: Call read_host_key directly from main instead. */
-DEFINE_COMMAND(options2keys)
-     (struct command *ignored UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(lshd_options, options, a);
-
-  struct alist *keys = make_alist(0, -1);
-  read_host_key(options->hostkey, options->signature_algorithms, keys);
-  COMMAND_RETURN(c, keys);
-}
-
 /* GABA:
    (class
      (name pid_file_resource)
@@ -378,48 +326,6 @@ make_sighup_close_callback(struct resource *resource)
 
   return &self->super;
 }
-
-# if 0
-/* (close_on_sighup options file) */
-DEFINE_COMMAND2(close_on_sighup)
-     (struct command_2 *ignored UNUSED,
-      struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(lshd_options, options, a1);
-  CAST_SUBTYPE(resource, fds, a2);
-
-  remember_resource(options->resources, fds);
-
-  COMMAND_RETURN(c, a2);
-}
-
-
-DEFINE_COMMAND(options2tcp_wrapper)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-#if WITH_TCPWRAPPERS
-  CAST(lshd_options, options, a);
-
-  if (options->tcp_wrapper_name) 
-    COMMAND_RETURN(c, 
-		   make_tcp_wrapper(
-				    make_string(options->tcp_wrapper_name),
-				    options->tcp_wrapper_message ? 
-				    ssh_format("%lz\n", options->tcp_wrapper_message ) :
-				    ssh_format("")
-				    )
-		   ); 
-  else
-#endif /* WITH_TCPWRAPPERS */
-    COMMAND_RETURN(c, &io_log_peer_command);
-}
-#endif
 
 static const struct argp_option
 main_options[] =
@@ -912,26 +818,6 @@ main_argp =
 };
 
 
-/* ;; GABA:
-   (expr
-     (name make_lshd_listen)
-     (params
-       (handshake object handshake_info)
-       (init object make_kexinit)
-       (services object command) )
-     (expr (lambda (options)
-             (let ((keys (options2keys options)))
-	       (close_on_sighup options
-	         (listen_list
-	           (lambda (lv)
-    	             (services (connection_handshake
-    	           		  handshake
-    	           		  (kexinit_filter init keys)
-    	           		  keys 
-				  (options2tcp_wrapper options lv))))
-	           (options2local options) ))))))
-*/
-
 /* GABA:
    (expr
      (name lshd_listen_callback)
@@ -1079,12 +965,14 @@ make_lshd_listen_callback(struct lshd_options *options,
 				options->super.compression_algorithms,
 				make_int_list(0, -1));
 
+#if WITH_TCPWRAPPERS
   if (options->tcp_wrapper_name)
     logger = make_tcp_wrapper
       (make_string(options->tcp_wrapper_name),
        make_string(options->tcp_wrapper_message
 		   ? options->tcp_wrapper_message : ""));
   else
+#endif /* WITH_TCPWRAPPERS */
     logger = &io_log_peer_command;
   
   {
