@@ -279,6 +279,7 @@ make_channel_table(void)
 
   table->global_requests = make_alist(0, -1);
   table->channel_types = make_alist(0, -1);
+  table->open_fallback = NULL;
   
   object_queue_init(&table->local_ports);
   object_queue_init(&table->remote_ports);
@@ -598,12 +599,18 @@ DEFINE_PACKET_HANDLER(static, global_request_handler, connection, packet)
       && parse_atom(&buffer, &name)
       && parse_boolean(&buffer, &want_reply))
     {
-      struct global_request *req;
+      struct global_request *req = NULL;
       struct command_continuation *c = &discard_continuation;
       struct exception_handler *e = connection->e;
-      
-      if (!name || !(req = ALIST_GET(connection->table->global_requests,
-				     name)))
+
+      if (name && connection->table->global_requests)
+	{
+	  CAST_SUBTYPE(global_request, r,
+		       ALIST_GET(connection->table->global_requests,
+				 name));
+	  req = r;
+	}
+      if (!req)
 	{
 	  lsh_string_free(packet);
 
@@ -833,12 +840,17 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
 
       if (channel)
 	{
-	  struct channel_request *req;
+	  struct channel_request *req = NULL;
 	  struct command_continuation *c = &discard_continuation;
 	  struct exception_handler *e = channel->e;
 
-	  if (type && channel->request_types 
-	      && ( (req = ALIST_GET(channel->request_types, type)) ))
+	  if (type && channel->request_types)
+	    {
+	      CAST_SUBTYPE(channel_request, r,
+			   ALIST_GET(channel->request_types, type));
+	      req = r;
+	    }
+	  if (req)
 	    {
 	      if (want_reply)
 		{
@@ -892,8 +904,8 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
        (connection object ssh_connection)
        (local_channel_number . UINT32)
        (remote_channel_number . UINT32)
-       (window_size . UINT32)
-       (max_packet . UINT32)))
+       (send_window_size . UINT32)
+       (send_max_packet . UINT32)))
 */
 
 static void
@@ -908,8 +920,8 @@ do_channel_open_continue(struct command_continuation *c,
   /* FIXME: This copying could just as well be done by the
    * CHANNEL_OPEN handler? Then we can remove the corresponding fields
    * from the closure as well. */
-  channel->send_window_size = self->window_size;
-  channel->send_max_packet = self->max_packet;
+  channel->send_window_size = self->send_window_size;
+  channel->send_max_packet = self->send_max_packet;
   channel->channel_number = self->remote_channel_number;
 
   /* FIXME: Is the channel->write field really needed? */
@@ -930,8 +942,8 @@ static struct command_continuation *
 make_channel_open_continuation(struct ssh_connection *connection,
 			       UINT32 local_channel_number,
 			       UINT32 remote_channel_number,
-			       UINT32 window_size,
-			       UINT32 max_packet)
+			       UINT32 send_window_size,
+			       UINT32 send_max_packet)
 {
   NEW(channel_open_continuation, self);
 
@@ -939,8 +951,8 @@ make_channel_open_continuation(struct ssh_connection *connection,
   self->connection = connection;
   self->local_channel_number = local_channel_number;
   self->remote_channel_number = remote_channel_number;
-  self->window_size = window_size;
-  self->max_packet = max_packet;
+  self->send_window_size = send_window_size;
+  self->send_max_packet = send_max_packet;
 
   return &self->super;
 }
@@ -1002,26 +1014,61 @@ make_exc_channel_open_handler(struct ssh_connection *connection,
   return &self->super;
 }
 
+static int
+parse_channel_open(struct simple_buffer *buffer,
+		   struct channel_open_info *info)
+{
+  unsigned msg_number;
+
+  if (parse_uint8(buffer, &msg_number)
+      && (msg_number == SSH_MSG_CHANNEL_OPEN)
+      && parse_string(buffer, &info->type_length, &info->type_string)
+#if 0
+      && parse_atom(&buffer, &type)
+#endif
+      && parse_uint32(buffer, &info->remote_channel_number)
+      && parse_uint32(buffer, &info->send_window_size)
+      && parse_uint32(buffer, &info->send_max_packet))
+    {
+      info->type = lookup_atom(info->type_length, info->type_string);
+
+      /* We don't support larger packets than the default,
+       * SSH_MAX_PACKET. The fuzz factor is because the
+       * channel's max sizes refer to the data string inside the
+       * packet, while the SSH_PACKET limit refers to the complete
+       * packet including some overhead (9 octets for
+       * SSH_MSG_CHANNEL_DATA and 13 octets for
+       * SSH_MSG_CHANNEL_EXTENDED_DATA). */
+      if (info->send_max_packet > (SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ))
+	{
+	  werror("do_channel_open: The remote end asked for really large packets.\n");
+	  info->send_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
+	}
+
+      return 1;
+    }
+  else
+    return 0;
+}
+
+
 DEFINE_PACKET_HANDLER(static, channel_open_handler,
 		      connection, packet)
 {
   struct simple_buffer buffer;
+  struct channel_open_info info;
+  
+#if 0
   unsigned msg_number;
   int type;
   UINT32 remote_channel_number;
   UINT32 window_size;
   UINT32 max_packet;
-  
+#endif
   simple_buffer_init(&buffer, packet->length, packet->data);
-
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_OPEN)
-      && parse_atom(&buffer, &type)
-      && parse_uint32(&buffer, &remote_channel_number)
-      && parse_uint32(&buffer, &window_size)
-      && parse_uint32(&buffer, &max_packet))
+  if (parse_channel_open(&buffer, &info))
     {
-      struct channel_open *open;
+      struct channel_open *open = NULL;
 
       /* NOTE: We can't free the packet yet, as the buffer is passed
        * to the CHANNEL_OPEN method later. */
@@ -1031,56 +1078,55 @@ DEFINE_PACKET_HANDLER(static, channel_open_handler,
 	  /* We are waiting for channels to close. Don't open any new ones. */
 
 	  C_WRITE(connection,
-		  format_open_failure(remote_channel_number,
+		  format_open_failure(info.remote_channel_number,
 				      SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
 				      "Waiting for channels to close.", ""));
 	}
-      else if (!type || !(open = ALIST_GET(connection->table->channel_types,
-					   type)))
-	{
-	  C_WRITE(connection,
-		  format_open_failure(remote_channel_number,
-				      SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
-				      "Unknown channel type", ""));
-	}
       else
 	{
-      	  int local_number = alloc_channel(connection->table);
-
-	  if (local_number < 0)
-	    C_WRITE(connection,
-		    format_open_failure(remote_channel_number,
-					SSH_OPEN_RESOURCE_SHORTAGE,
-					"Unknown channel type", ""));
-
-	  /* We don't support larger packets than the default,
-	   * SSH_MAX_PACKET. The fuzz factor is because the
-	   * channel's max sizes refer to the data string inside the
-	   * packet, while the SSH_PACKET limit refers to the complete
-	   * packet including some overhead (9 octets for
-	   * SSH_MSG_CHANNEL_DATA and 13 octets for
-	   * SSH_MSG_CHANNEL_EXTENDED_DATA). */
-	  if (max_packet > (SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ))
+	  if (info.type)
 	    {
-	      werror("do_channel_open: The remote end asked for really large packets.\n");
-	      max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
+	      CAST_SUBTYPE(channel_open, o,
+			   ALIST_GET(connection->table->channel_types,
+				     info.type));
+	      open = o;
 	    }
-	    
-	  CHANNEL_OPEN(open, connection,
-		       type,
-		       window_size,
-		       max_packet,
-		       &buffer,
-		       make_channel_open_continuation(connection,
-						      local_number,
-						      remote_channel_number,
-						      window_size,
-						      max_packet),
-		       make_exc_channel_open_handler(connection,
-						     local_number,
-						     remote_channel_number,
-						     connection->e,
-						     HANDLER_CONTEXT));
+
+	  if (!open)
+	    open = connection->table->open_fallback;
+	  
+	  if (!open)
+	    {
+	      C_WRITE(connection,
+		      format_open_failure(info.remote_channel_number,
+					  SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
+					  "Unknown channel type", ""));
+	    }
+	  else
+	    {
+	      int local_number = alloc_channel(connection->table);
+
+	      if (local_number < 0)
+		C_WRITE(connection,
+			format_open_failure(info.remote_channel_number,
+					    SSH_OPEN_RESOURCE_SHORTAGE,
+					    "Channel limit exceeded.", ""));
+
+	      CHANNEL_OPEN(open, connection,
+			   &info,
+			   &buffer,
+			   make_channel_open_continuation(connection,
+							  local_number,
+							  info.remote_channel_number,
+							  info.send_window_size,
+							  info.send_max_packet),
+			   make_exc_channel_open_handler(connection,
+							 local_number,
+							 info.remote_channel_number,
+							 connection->e,
+							 HANDLER_CONTEXT));
+
+	    }
 	}
     }
   else
@@ -1984,6 +2030,32 @@ make_channel_io_exception_handler(struct ssh_channel *channel,
 
   return &self->super;
 }
+
+struct lsh_string *
+format_channel_open_s(UINT32 type_length, UINT8 *type,
+		      UINT32 local_channel_number,
+		      struct ssh_channel *channel,
+		      struct lsh_string *args)
+{
+  return ssh_format("%c%s%i%i%i%lS", SSH_MSG_CHANNEL_OPEN,
+		    type_length, type, local_channel_number, 
+		    channel->rec_window_size, channel->rec_max_packet,
+ 		    args);
+}
+
+#if 0
+struct lsh_string *
+format_channel_open_a(int type,
+		      UINT32 local_channel_number,
+		      struct ssh_channel *channel,
+		      struct lsh_string *args)
+{
+  return ssh_format("%c%a%i%i%i%lS", SSH_MSG_CHANNEL_OPEN,
+		    type, local_channel_number, 
+		    channel->rec_window_size, channel->rec_max_packet,
+ 		    args);
+}
+#endif
 
 struct lsh_string *
 format_channel_open(int type, UINT32 local_channel_number,
