@@ -1,3 +1,17 @@
+2004-11-19  Pontus Freyhult  <pont@soua.net>
+
+	* doc/lsh.1: Updated for lsh 2.0.
+	
+	* doc/lshd.8: Updated for lsh 2.0.
+	
+	* doc/lshg.1: New man page.
+
+	* doc/lsh-authorize.1: New man page.
+
+	* doc/lsh-upgrade.1: New man page.
+
+	* doc/lsh-upgrade-key.1: New man page.
+
 2004-11-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): Use [!...] instead of
