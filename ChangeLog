@@ -1,3 +1,46 @@
+2000-10-10  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/symmetric/serpent.c (serpent_setup): Reworked key padding.
+
+	* src/unix_user.c (make_unix_user_db): Added pw_helper argument.
+	(make_unix_user): Likewise.
+	(kerberos_check_pw): New function.
+	(do_verify_password): Kerberos support.
+
+	* src/lshd.c: New options --kerberos-passwords and
+	--no-kerberos-passwords. 
+
+	* src/io.c (io_iter): Fixed format string (should use %z, not %s).
+	(address_info2sockaddr): Likewise.
+	(lsh_make_pipe): Moved the make_pipe() function from
+	server_session.c, made it public and renamed it to
+	lsh_make_pipe().
+
+	* src/Makefile.am.in (EXTRA_PROGRAMS): Uses for lsh-krb-checkpw.
+	Added rules using @KRB_PROGRAM@ and @KRB_LIBS@.
+
+	* configure.in: New option --disable-kerberos.
+	Check for kerberos libraries (currently for heimdal).
+	(PREFIX): New define.
+	(KRB_LIBS, KRB_PROGRAM): New substitutions. 
+
+	* acinclude.m4 (AC_CHECK_KRB_LIB): New macro to add libraries to
+	KRB_LIBS. 
+
+	* acconfig.h (PREFIX): New define.
+	(WITH_KERBEROS): Likewise.
+
+	* src/gateway_commands.c: New file.
+
+	* src/lsh-krb-checkpw.c: New program.
+
+	* src/testsuite/Makefile.am (TS_PROGS): Added rijndael tests.
+	Removed serpent tests (they don't work yet).
+
+2000-10-09  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Bumped version to 1.0.6.
+
 2000-10-07  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/symmetric/serpent.c (serpent_setup): Added key_size

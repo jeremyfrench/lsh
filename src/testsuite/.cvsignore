@@ -7,8 +7,11 @@ dsa-test
 dsa-test.c
 foo
 foo.pub
+large-dir
 md5-test
 md5-test.c
+rijndael-test
+rijndael-test.c
 rsa-test
 rsa-test.c
 serpent-test

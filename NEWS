@@ -1,3 +1,18 @@
+News for the 1.0.6 release
+
+	Fixed bug in ssh-dss bug-compatibility.
+	
+	Experimental kerberos support. New lshd option
+	--kerberos-passwords. Compiles with heimdal, MIT kerberos not yet
+	tested. 
+
+	Improved handling of serialized userauth requests (not yet
+	used by kerberos password functions).
+
+	Hacked serpent code to support variable size keys.
+
+	Added rijndael test cases. No working serpent testcases yet.
+	
 News for the 1.0.5 release
 
 	Experimental support for RSA, using spki-style keys and

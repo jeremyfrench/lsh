@@ -21,6 +21,7 @@
 /lsh
 /lsh-decode-key
 /lsh-keygen
+/lsh-krb-checkpw
 /lsh-writekey
 /lsh_proxy
 /lshd
