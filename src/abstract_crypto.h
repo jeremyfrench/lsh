@@ -135,13 +135,17 @@
        (sign_spki method (object sexp)
        	     ;; "struct sexp *hash" "struct sexp *principal"
        	     "UINT32 length" "const UINT8 *data")
+
        ;; FIXME: Perhaps this should be a method of the algorithm object instead?
-       (public_key method (object sexp) )))
-*/
+
+       ; Returns ( <pub-sig-alg-id> <s-expr>* ), i.e. the same
+       ; structure that is expected by spki_make_verifier().
+       
+       (public_key method (object sexp) ))) */
 
 #define SIGN(signer, algorithm, length, data) \
 ((signer)->sign((signer), (algorithm), (length), (data)))
-#define SIGN_SPKI(signer, length, data) ((signer)->sign((signer), (length), (data)))
+#define SIGN_SPKI(signer, length, data) ((signer)->sign_spki((signer), (length), (data)))
 #define SIGNER_PUBLIC(signer) ((signer)->public_key((signer)))
 
 /* GABA:
@@ -162,7 +166,7 @@
 ((verifier)->verify((verifier), (algorithm), (length), (data), (slength), (sdata)))
 
 #define VERIFY_SPKI(verifier, length, data, e) \
-((verifier)->verify((verifier), (length), (data), (e)))
+((verifier)->verify_spki((verifier), (length), (data), (e)))
 
 /* GABA:
    (class

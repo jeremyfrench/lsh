@@ -55,7 +55,7 @@
  * to indicate our role in the protocol.
  * For instance,
  *
- *   connection->versions[connection & CONNECTION_MODE]
+ *   connection->versions[connection->flags & CONNECTION_MODE]
  *
  * is the version string we sent. Furthermore, install_keys() depends
  * on the numerical values of CONNECTION_SERVER and CONNECTION_CLIENT. */
