@@ -17,6 +17,10 @@
 	(do_format_sexp_vector): Implemented pretty printing.
 	(encode_base64): Implemented line folding.
 
+2000-06-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/ssh-conv: Handle a different, one-line, key format.
+
 2000-06-10  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/ssh-conv: New script.
