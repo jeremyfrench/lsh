@@ -26,6 +26,7 @@
 #include "sexp_commands.h"
 
 #include "format.h"
+#include "io.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -215,14 +216,14 @@ do_read_sexp_continue(struct command_continuation *s,
 }
 
 static struct command_continuation*
-make_read_sexp_continuation(struct io_fd *fd,
+make_read_sexp_continuation(struct lsh_fd *fd,
 			    struct command_continuation *up)
 {
   NEW(read_sexp_continuation, self);
 
   trace("make_read_sexp_continuation\n");
   self->super.c =do_read_sexp_continue;
-  self->fd = &fd->super;
+  self->fd = fd;
   self->up = up;
 
   return &self->super;
@@ -248,7 +249,7 @@ do_read_sexp_exception_handler(struct exception_handler *s,
 }
 
 static struct exception_handler *
-make_read_sexp_exception_handler(struct io_fd *fd,
+make_read_sexp_exception_handler(struct lsh_fd *fd,
 				 struct exception_handler *e,
 				 const char *context)
 {
@@ -260,7 +261,7 @@ make_read_sexp_exception_handler(struct io_fd *fd,
   self->super.parent = e;
   self->super.context = context;
   
-  self->fd = &fd->super;
+  self->fd = fd;
 
   return &self->super;
 }
@@ -274,7 +275,7 @@ do_read_sexp(struct command *s,
 	     struct exception_handler *e)
 {
   CAST(read_sexp_command, self, s);
-  CAST_SUBTYPE(io_fd, fd, a);
+  CAST_SUBTYPE(lsh_fd, fd, a);
 
   trace("do_read_sexp\n");
   

@@ -251,14 +251,14 @@ int main(int argc, char **argv)
 		   make_read_sexp_command(options->input, !options->once),
 		   options->transform,
 		   options->print,
-		   &(io_write(make_io_fd(backend,
+		   &(io_write(make_lsh_fd(backend,
 					 STDOUT_FILENO,
 					 e),
 			      SEXP_BUFFER_SIZE,
 			      NULL)
 		     ->write_buffer->super)));
 
-    struct io_fd *in = make_io_fd(backend, STDIN_FILENO, e);
+    struct lsh_fd *in = make_lsh_fd(backend, STDIN_FILENO, e);
 
     /* Fixing the exception handler creates a circularity */
     e->parent = make_exc_finish_read_handler(&in->super,

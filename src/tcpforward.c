@@ -109,7 +109,7 @@ remove_forward(struct object_queue *q, int null_ok,
      (name tcpip_channel)
      (super ssh_channel)
      (vars
-       (socket object io_fd)))
+       (socket object lsh_fd)))
 */
 
 static void
@@ -138,7 +138,7 @@ do_tcpip_send(struct ssh_channel *s,
 {
   CAST(tcpip_channel, self, s);
   
-  self->socket->super.want_read = 1;
+  self->socket->want_read = 1;
 }
 
 static void
@@ -155,10 +155,11 @@ do_tcpip_channel_die(struct ssh_channel *c)
   CAST(tcpip_channel, channel, c);
 
   if (channel->socket)
-    close_fd(&channel->socket->super, 0);
+    close_fd(channel->socket, 0);
 }
 
-struct ssh_channel *make_tcpip_channel(struct io_fd *socket, UINT32 max_window)
+struct ssh_channel *
+make_tcpip_channel(struct lsh_fd *socket, UINT32 max_window)
 {
   NEW(tcpip_channel, self);
   assert(socket);

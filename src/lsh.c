@@ -195,7 +195,7 @@ do_options2known_hosts(struct command *ignored UNUSED,
   
   struct lsh_string *tmp = NULL;
   const char *s = NULL;
-  struct io_fd *f;
+  struct lsh_fd *f;
   
   if (options->known_hosts)
     s = options->known_hosts;
@@ -236,7 +236,7 @@ do_options2identities(struct command *ignored UNUSED,
   
   struct lsh_string *tmp = NULL;
   const char *s = NULL;
-  struct io_fd *f = NULL;
+  struct lsh_fd *f = NULL;
 
   trace("do_options2identities\n");
   
@@ -731,14 +731,15 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    }
 	  if (s)
 	    {
-	      struct io_fd *f
+	      struct lsh_fd *f
 		= io_write_file(self->backend, s,
 				O_CREAT | O_APPEND | O_WRONLY,
 				0600, 500, NULL,
-				make_report_exception_handler(EXC_IO, EXC_IO,
-							      "Writing new ACL: ",
-							      &default_exception_handler,
-							      HANDLER_CONTEXT));
+				make_report_exception_handler
+				(make_report_exception_info(EXC_IO, EXC_IO,
+							    "Writing new ACL: "),
+				 &default_exception_handler,
+				 HANDLER_CONTEXT));
 	      if (f)
 		self->capture_file = &f->write_buffer->super;
 	      else
@@ -817,11 +818,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      (&self->actions,
 	       make_start_session
 	       (make_open_session_command(make_client_session
-					  (io_read(make_io_fd(self->backend, in, self->handler),
+					  (io_read(make_lsh_fd(self->backend, in, self->handler),
 						   NULL, NULL),
-					   io_write(make_io_fd(self->backend, out, self->handler),
+					   io_write(make_lsh_fd(self->backend, out, self->handler),
 						    BLOCK_SIZE, NULL),
-					   io_write(make_io_fd(self->backend, err, self->handler),
+					   io_write(make_lsh_fd(self->backend, err, self->handler),
 						    BLOCK_SIZE, NULL),
 					   WINDOW_SIZE,
 					   self->exit_code)),
@@ -994,12 +995,8 @@ do_lsh_default_handler(struct exception_handler *s,
       case EXC_SEXP_SYNTAX:
       case EXC_SPKI_TYPE:
       case EXC_CHANNEL_REQUEST:
-
-	/* FIXME: There's no handler specifically for CHANNEL_OPEN
-	 * failures for locally forwarded ports. That means that if a
-	 * locally forwarded connection failes, lsh will exit (at some
-	 * later time) with a non-zero exit status. */
       case EXC_CHANNEL_OPEN:
+
 	werror("lsh: %z\n", e->msg);
 	*self->status = EXIT_FAILURE;
 	break;
