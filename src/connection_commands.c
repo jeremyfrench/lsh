@@ -437,9 +437,7 @@ STATIC_COLLECT_2_FINAL(collect_handshake_2);
 struct collect_info_1 handshake_command =
 STATIC_COLLECT_1(&collect_info_handshake_2);
 
-#if 0
-
-/* ;; GABA:
+/* GABA:
    (class
      (name connection_remember_command)
      (super command)
@@ -447,9 +445,11 @@ STATIC_COLLECT_1(&collect_info_handshake_2);
        (connection object ssh_connection)))
 */
 
-static int do_connection_remember(struct command *s,
-				  struct lsh_object *x,
-				  struct command_continuation *c)
+static void
+do_connection_remember(struct command *s,
+		       struct lsh_object *x,
+		       struct command_continuation *c,
+		       struct exception_handler *e UNUSED)
 {
   CAST(connection_remember_command, self, s);
   CAST_SUBTYPE(resource, resource, x);
@@ -457,17 +457,13 @@ static int do_connection_remember(struct command *s,
   if (resource)
     REMEMBER_RESOURCE(self->connection->resources, resource);
 
-  return COMMAND_RETURN(c, resource);
+  COMMAND_RETURN(c, resource);
 }
 
-static struct lsh_object *
-collect_connection_remember(struct collect_info_1 *info,
-			     struct lsh_object *x)
+COMMAND_SIMPLE(connection_remember)
 {
-  CAST(ssh_connection, connection, x);
+  CAST(ssh_connection, connection, a);
   NEW(connection_remember_command, self);
-
-  assert(!info->next);
 
   self->super.call = do_connection_remember;
   self->connection = connection;
@@ -475,8 +471,4 @@ collect_connection_remember(struct collect_info_1 *info,
   return &self->super.super;
 }
 
-struct command connection_remember_command =
-STATIC_COMMAND(collect_connection_remember);
-
-#endif
 

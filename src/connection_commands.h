@@ -68,4 +68,7 @@ struct collect_info_1 handshake_command;
 
 struct close_callback *make_connection_close_handler(struct ssh_connection *c);
 
+struct command_simple connection_remember;
+#define CONNECTION_REMEMBER (&connection_remember.super.super)
+
 #endif /* LSH_CONNECTION_COMMANDS_H_INCLUDED */
