@@ -164,7 +164,7 @@ fi
 
 AC_ARG_ENABLE(x11_forward,
   AC_HELP_STRING([--disable-x11-forward], [Disable x11 forwarding (proxy only)]),,
-  [eanble_x11_forward=yes])
+  [enable_x11_forward=yes])
 
 AH_TEMPLATE([WITH_X11_FORWARD], [Define to enable x11 forwarding])
 if test x$enable_x11_forward = xyes ; then
