@@ -1,3 +1,8 @@
+2000-05-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/unix_user.c (do_fork_process): Check HAVE_UT_NAME and
+	HAVE_UT_USER. 
+
 2000-05-08  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* acconfig.h (HAVE_UT_NAME): Added.
