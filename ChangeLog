@@ -1,3 +1,10 @@
+2002-03-19  Pontus Sköld  <pont@docs.uu.se>
+
+	* src/sftp/testsuite/*-test: grep -q is XPG4, which not all
+	greps (notably Solaris /bin/grep) are.
+
+	* src/sftp/testsuite/run-tests: Replaced bashims.
+	
 2002-03-19  Pontus Sköld  <pont@it.uu.se>
 
 	* src/testsuite/seed-test: Fixed bashism.
