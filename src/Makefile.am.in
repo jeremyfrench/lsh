@@ -59,7 +59,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	combinators.c command.c compress.c connection.c connection_commands.c \
 	crypto.c \
 	daemon.c \
-	debug.c des.c digits.c disconnect.c dh_exchange.c \
+	debug.c digits.c disconnect.c dh_exchange.c \
 	dsa.c dsa_keygen.c encrypt.c \
 	exception.c \
 	format.c gc.c \
