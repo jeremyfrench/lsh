@@ -98,6 +98,10 @@ do_install_global_request_handler(struct collect_info_2 *info,
   CAST_SUBTYPE(global_request, handler, b);
 
   assert(!info->next);
+  assert(handler);
+  
+  trace("do_install_global_request_handler(%d)\n", self->name);
+  
   ALIST_SET(connection->channels->global_requests,
 	    self->name,
 	    handler);
@@ -115,6 +119,10 @@ do_install_channel_open_handler(struct collect_info_2 *info,
   CAST_SUBTYPE(channel_open, handler, b);
 
   assert(!info->next);
+  assert(handler);
+  
+  trace("do_install_channel_open_handler(%d)\n", self->name);
+
   ALIST_SET(connection->channels->channel_types,
 	    self->name,
 	    handler);
@@ -142,6 +150,8 @@ do_install_fix_global_request_handler(struct command *s,
   CAST(install_global_request_handler, self, s);
   CAST(ssh_connection, connection, x);
 
+  trace("do_install_fix_global_request_handler(%d)\n", self->name);
+  
   ALIST_SET(connection->channels->global_requests,
 	    self->name,
 	    self->handler);
@@ -152,8 +162,11 @@ do_install_fix_global_request_handler(struct command *s,
 struct command *
 make_install_fix_global_request_handler(UINT32 name,
 					struct global_request *handler)
-{
+{  
   NEW(install_global_request_handler, self);
+
+  assert(handler);
+  
   self->super.call = do_install_fix_global_request_handler;
   self->name = name;
   self->handler = handler;
@@ -179,6 +192,8 @@ do_install_fix_channel_open_handler(struct command *s,
   CAST(install_channel_open_handler, self, s);
   CAST(ssh_connection, connection, x);
 
+  trace("do_install_fix_channel_open_handler(%d)\n", self->name);
+  
   ALIST_SET(connection->channels->channel_types,
 	    self->name,
 	    self->handler);
@@ -191,6 +206,9 @@ make_install_fix_channel_open_handler(UINT32 name,
 				      struct channel_open *handler)
 {
   NEW(install_channel_open_handler, self);
+
+  assert(handler);
+  
   self->super.call = do_install_fix_channel_open_handler;
   self->name = name;
   self->handler = handler;
