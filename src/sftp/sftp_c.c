@@ -1614,12 +1614,32 @@ sftp_ls_main(struct sftp_callback *next,
 
       /* Write string length before. Explicit casts */
 
-      sftp_store( &next->mem, &fnamelen, sizeof( UINT32 ) );
-      sftp_store( &next->mem, fname, fnamelen );
+      if( fname ) /* sftp_get_string succedeed */
+	{
+	  sftp_store( &next->mem, &fnamelen, sizeof( UINT32 ) );
+	  sftp_store( &next->mem, fname, fnamelen );
+	}
+      else
+	{
+	  UINT32 zero = 0;
+	  sftp_store( &next->mem, &zero, sizeof( UINT32 ) );
+	  sftp_store( &next->mem, &zero, 0 );
+	}
 
-      /* Write string length before */
-      sftp_store( &next->mem, &longnamelen, sizeof( UINT32 ) );
-      sftp_store( &next->mem, longname, longnamelen );
+
+      if( longname ) /* sftp_get_string succedeed */
+	{
+	  /* Write string length before */
+	  sftp_store( &next->mem, &longnamelen, sizeof( UINT32 ) );
+	  sftp_store( &next->mem, longname, longnamelen );
+	}
+      else
+	{
+	  UINT32 zero = 0;
+	  sftp_store( &next->mem, &zero, sizeof( UINT32 ) );
+	  sftp_store( &next->mem, &zero, 0 );
+	}
+
 
       /* Write length before */
       sftp_store( &next->mem, &attriblen, sizeof( UINT32 ) );

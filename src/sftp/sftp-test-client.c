@@ -98,22 +98,11 @@ fork_server(char *name,
       FATAL("fork failed.");
     default: /* Parent */
       {
-	FILE *i;
-	FILE *o;
-
 	close(stdin_pipe[0]);
 	close(stdout_pipe[1]);
 	
-	i = fdopen(stdout_pipe[0], "r");
-	if (!i)
-	  FATAL("fdopen stdout_pipe failed.");
-
-	o = fdopen(stdin_pipe[1], "w");
-	if (!o)
-	  FATAL("fdopen stdin_pipe failed.");
-
-	ctx->i = sftp_make_input(i);
-	ctx->o = sftp_make_output(o);
+	ctx->i = sftp_make_input(stdout_pipe[0]);
+	ctx->o = sftp_make_output(stdin_pipe[1]);
 
 	return;
       }

@@ -31,6 +31,8 @@
 #include <assert.h>
 #include <stdarg.h>
 #include <string.h>
+#include <unistd.h>
+#include <errno.h>
 
 #define FATAL(x) do { fputs("sftp-server: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
 
@@ -55,7 +57,7 @@ do {						\
 
 struct sftp_input
 {
-  FILE *f;
+  int fd;
   UINT32 left;
 
   /* Strings that we own */
@@ -65,7 +67,7 @@ struct sftp_input
 
 struct sftp_output
 {
-  FILE *f;
+  int fd;
 
   /* The message type is the first byte of a message, after the
    * length. */
@@ -93,10 +95,26 @@ sftp_get_data(struct sftp_input *i, UINT32 length, UINT8 *data)
 {
   if (sftp_check_input(i, length))
     {
-      i->left -= length;
-      return (fread(data, 1, length, i->f) == length);
+      UINT8* buf = data;
+      int j;
+
+      while (length) 
+	{
+	  j = read(i->fd, buf, length);
+      
+	  while (-1==j && EINTR==errno)  /* Loop over EINTR */
+	    j = read(i->fd, buf, length);
+	  
+	  if (-1==j) /* Error, and not EINTR */
+	    return -1; /* Error */
+
+	  buf += j; /* Move counters accordingly */
+	  length -= j;
+	  i->left -= j;
+	}
+      return 1; /* Success */
     }
-  return 0;
+  return 0; /* FIXME: Return code? */
 }
 
 #define GET_DATA(i, buf) \
@@ -172,11 +190,11 @@ sftp_get_eod(struct sftp_input *i)
 
 /* Input */
 struct sftp_input *
-sftp_make_input(FILE *f)
+sftp_make_input(int fd)
 {
   struct sftp_input *i = xmalloc(sizeof(struct sftp_input));
 
-  i->f = f;
+  i->fd = fd;
   i->left = 0;
   i->used_strings = 0;
 
@@ -200,8 +218,9 @@ sftp_read_packet(struct sftp_input *i)
 {
   UINT8 buf[4];
   int done;
+  int bytesread = 0;
 
-  if (i->left)
+  if (i->left) /* Unread data? */
     {
       UINT8 d;
 
@@ -224,24 +243,23 @@ sftp_read_packet(struct sftp_input *i)
 
   /* First, deallocate the strings. */
   sftp_input_clear_strings(i);
-  
-  done = fread(buf, 1, sizeof(buf), i->f);
 
-  switch (done)
+  while (bytesread < sizeof(buf))
     {
-    case 0:
-      {
-	int err =  feof(i->f) ? -1 : 0;
-	clearerr( i->f );
-	return err;
-      }
+      int j = read(i->fd, buf+bytesread, sizeof(buf)-bytesread);
 
-    case 4:
-      i->left = READ_UINT32(buf);
-      return 1;
-    default:
-      return 0;
+      while(-1==j && EINTR==errno)   /* Loop over EINTR */
+	j = read(i->fd, buf+bytesread, sizeof(buf)-bytesread);
+  
+      if (-1==j) /* Not EINTR but a real error */
+	return -1;
+
+      bytesread += j;
     }
+  
+  i->left = READ_UINT32(buf); /* Store packet size */
+  return 1;
+
 }
 
 /* Output */
@@ -267,6 +285,7 @@ sftp_put_data(struct sftp_output *o, UINT32 length, const UINT8 *data)
   memcpy(o->data + o->i, data, length);
   o->i += length;
 }
+
 
 #define PUT_DATA(o, buf) \
 (sftp_put_data((o), sizeof((buf)), (buf)))
@@ -467,11 +486,11 @@ sftp_put_uint64(struct sftp_output *o, off_t value)
  */
 
 struct sftp_output *
-sftp_make_output(FILE *f)
+sftp_make_output(int fd)
 {
   struct sftp_output *o = xmalloc(sizeof(struct sftp_output));
 
-  o->f = f;
+  o->fd = fd;
   o->data = NULL;
   o->size = 0;
   o->i = 0;
@@ -494,6 +513,8 @@ sftp_set_id(struct sftp_output *o, UINT32 id)
 int
 sftp_write_packet(struct sftp_output *o)
 {
+  int j;
+  int written = 0;
   UINT32 length = o->i + 5;
   UINT8 buf[9];
 
@@ -501,16 +522,39 @@ sftp_write_packet(struct sftp_output *o)
   buf[4] = o->msg;
   WRITE_UINT32(buf + 5, o->first);
 
-  if (fwrite(buf, 1, 9, o->f) != 9)
-    return 0;
-  if (fwrite(o->data, 1, o->i, o->f) != o->i)
-    return 0;
+  /* Write 9 bytes from buf */
+
+  while (written<9) 
+    {
+      j = write(o->fd, buf+written, 9-written);
+      
+      while (-1==j && errno==EINTR)  /* Loop over EINTR */
+	j =  write(o->fd, buf+written, 9-written);;
+      
+      if (-1==j) /* Error, and not EINTR */
+	return -1; /* Error */
+      
+      written += j; /* Move counters accordingly */      
+    }
+
+  /* Write o->i bytes from data */
+
+  written = 0; /* Reset counter */
+
+  while (written<o->i) 
+    {
+      j = write(o->fd, o->data+written, o->i-written);
+      
+      while (-1==j && errno==EINTR)  /* Loop over EINTR */
+	j =  write(o->fd, o->data+written, o->i-written);;
+      
+      if (-1==j) /* Error, and not EINTR */
+	return -1; /* Error */
+      
+      written += j; /* Move counters accordingly */      
+    }
 
   o->i = 0;
-
-  /* FIXME: Flushing after each packet is sub-optimal. */
-  if (fflush(o->f))
-    return 0;
 
   return 1;
 }

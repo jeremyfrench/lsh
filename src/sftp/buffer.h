@@ -188,14 +188,14 @@ int
 sftp_skip_extension(struct sftp_input *i);
 
 
-/* Simple input and output objects based on FILE * */
+/* Simple input and output objects */
 #include <stdio.h>
 
 struct sftp_input *
-sftp_make_input(FILE *f);
+sftp_make_input(int fd);
 
 struct sftp_output *
-sftp_make_output(FILE *f);
+sftp_make_output(int fd);
 
 int
 sftp_packet_size(struct sftp_output* out);

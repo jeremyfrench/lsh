@@ -29,9 +29,6 @@
 
 #include "sftp_bind.h"
 
-static FILE* to_transport;
-static FILE* from_transport;
-
 static int transport_pid = 0;
 
 static int sftp_callbacks = 0;
@@ -132,23 +129,10 @@ int lsftp_open_connection(char** argv, int argc)
       FATAL("fork failed.");
     default: /* Parent */
       {
-	FILE *i;
-	FILE *o;
 	void* err;
 
 	close(stdin_pipe[0]); /* Close those ends of the pipe we won't use */
 	close(stdout_pipe[1]);
-	
-	i = fdopen(stdout_pipe[0], "r");
-	if (!i)
-	  FATAL("fdopen stdout_pipe failed.");
-	
-	o = fdopen(stdin_pipe[1], "w");
-	if (!o)
-	  FATAL("fdopen stdin_pipe failed.");
-
-	from_transport = i;
-	to_transport = o;
 	
 	fd_from_transport = stdout_pipe[0];
 	fd_to_transport = stdin_pipe[1];
@@ -368,12 +352,12 @@ int lsftp_close_connection()
 
   signal( SIGCHLD, SIG_DFL ); /* Restore original signal handler before quitting */
 
-  i = fclose( to_transport ); /* Close outgoing */
+  i = close( fd_to_transport ); /* Close outgoing */
 
   /* FIXME: Read what we can here */
   /* FIXME: Should we report any errors here? */
 
-  i = i || fclose( from_transport );
+  i = i || close( fd_from_transport );
 
   if( -1 != kill( transport_pid, SIGTERM ) ) /* Signal sent OK? */
     {
@@ -398,8 +382,8 @@ int lsftp_close_connection()
   alarm( 0 ); /* Cancel any alarm */
 
   transport_pid = 0; /* Make invalid */
-  to_transport = 0;
-  from_transport = 0;
+  fd_to_transport = 0;
+  fd_from_transport = 0;
 
   /* FIXME: Free memory used by sftp_input in and sftp_output out? */
 
@@ -420,8 +404,8 @@ int lsftp_handshake()
 {
   int failed;
 
-  in = sftp_make_input( from_transport ); 
-  out = sftp_make_output( to_transport );
+  in = sftp_make_input( fd_from_transport ); 
+  out = sftp_make_output( fd_to_transport );
 
   failed = sftp_handshake( in, out );
 
@@ -436,7 +420,7 @@ int lsftp_handshake()
       while( readok )
 	{
 	  char x;
-	  readok = fread( &x, 1, 1, from_transport ); /* Try to read one byte */
+	  readok = read( fd_from_transport, &x, 1 ); /* Try to read one byte */
 	  fprintf( stderr, "%c", x);
 	}
 
