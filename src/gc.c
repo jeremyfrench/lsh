@@ -35,6 +35,27 @@ static struct lsh_object *all_objects = NULL;
 unsigned number_of_objects = 0;
 unsigned live_objects = 0;
 
+#ifdef DEBUG_ALLOC
+static void sanity_check_object_list(void)
+{
+  unsigned i = 0;
+  struct lsh_object *o;
+
+#if 0
+  werror("sanity_check_object_list: Objects on list:\n");
+  for(o = all_objects; o; o = o->next)
+    werror("  %p, class: %s\n", (void *) o, o->isa ? o->isa->name : "UNKNOWN");
+#endif
+  
+  for(o = all_objects; o; o = o->next)
+    i++;
+
+  if (i != number_of_objects)
+    fatal("sanity_check_object_list: Found %d objects, expected %d.\n",
+	  i, number_of_objects);
+}
+#endif
+
 /* FIXME: This function recurses heavily. One could use some trickery
  * to emulate tail recursion, which would help marking linked list. Or
  * one could use some more efficient datastructures than the C stack
@@ -60,8 +81,11 @@ static void gc_mark(struct lsh_object *o)
       assert(!o->dead);
       {
 	struct lsh_class *class;
+
+	debug("gc_mark: Marking object of class '%s'\n",
+	      o->isa ? o->isa->name : "UNKNOWN");
 	
-	for (class = o->isa, o = NULL; class; class = class->super_class)
+	for (class = o->isa; class; class = class->super_class)
 	  {
 	    if (class->mark_instance)
 	      MARK_INSTANCE(class, o, gc_mark);
@@ -84,19 +108,22 @@ static void gc_sweep(void)
     {
       if (o->marked)
 	{
-	  /* Keep objct */
+	  /* Keep object */
 	  live_objects++;
 	  o->marked = 0;
 	}
       else
 	{
 	  struct lsh_class *class;
-	
+
+	  debug("gc_sweep: Freeing object of class '%s'\n",
+		o->isa->name);
+	  
 	  for (class = o->isa; class; class = class->super_class)
 	    if (class->free_instance)
 	      FREE_INSTANCE(class, o);
 
-	  /* Unlink ubject */
+	  /* Unlink object */
 	  *o_p = o->next;
 	  number_of_objects--;
 	  
@@ -105,15 +132,22 @@ static void gc_sweep(void)
 	}
       o_p = &o->next;
     }
+  assert(live_objects == number_of_objects);
 }
 
 void gc_register(struct lsh_object *o)
 {
+#ifdef DEBUG_ALLOC
+  sanity_check_object_list();
+#endif
   o->marked = o->dead = 0;
   o->next = all_objects;
   all_objects = o;
 
   number_of_objects ++;
+#ifdef DEBUG_ALLOC
+  sanity_check_object_list();
+#endif
 }
 
 /* FIXME: This function should really deallocate and forget the object
@@ -121,22 +155,41 @@ void gc_register(struct lsh_object *o)
  * references to killed objects. */
 void gc_kill(struct lsh_object *o)
 {
+#ifdef DEBUG_ALLOC
+  sanity_check_object_list();
+#endif
+
   if (!o)
     return;
   
   assert(!o->dead);
 
   o->dead = 1;
+
+#ifdef DEBUG_ALLOC
+  sanity_check_object_list();
+#endif
 }
 
 void gc(struct lsh_object *root)
 {
+  unsigned before = number_of_objects;
+
   gc_mark(root);
   gc_sweep();
+  verbose("Objects alive: %d, garbage collected: %d\n", live_objects,
+	  before - live_objects);
 }
 
 void gc_maybe(struct lsh_object *root, int busy)
 {
+#ifdef DEBUG_ALLOC
+  sanity_check_object_list();
+#endif
+
   if (number_of_objects > (100 + live_objects*(2+busy)))
-    gc(root);
+    {
+      verbose("Garbage collecting while %s...\n", busy ? "busy" : "idle");
+      gc(root);
+    }
 }
