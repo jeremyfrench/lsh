@@ -24,16 +24,14 @@
  */
 
 #include "server_authorization.h"
-#include "xalloc.h"
-#include "sexp.h"
-#include "spki.h"
+
 #include "format.h"
 #include "server_userauth.h"
+#include "sexp.h"
+#include "spki.h"
+#include "xalloc.h"
 
 #include <assert.h>
-
-#include <sys/stat.h>
-#include <unistd.h>
 
 #include "server_authorization.c.x"
 
@@ -57,13 +55,11 @@ do_key_lookup(struct lookup_verifier *c,
 	      struct lsh_string *key)
 {
   CAST(authorization_db, closure, c);
-  CAST(unix_user, user, keyholder);
   struct lsh_string *filename;
 
-  struct stat st;
   struct dsa_verifier *v;
 
-  assert(user);
+  assert(keyholder);
   
   if (method != ATOM_SSH_DSS)
     return NULL;
@@ -78,8 +74,7 @@ do_key_lookup(struct lookup_verifier *c,
   
   /* FIXME: Proper spki acl reading should go here. */
   
-  filename = ssh_format("%lS/.lsh/%lS/%lxfS%c", 
-			user->home,
+  filename = ssh_format(".lsh/%lS/%lxfS%c", 
 			closure->index_name,
 			hash_string(closure->hashalgo,
 				    sexp_format(dsa_to_spki_public_key(&v->public),
@@ -87,11 +82,9 @@ do_key_lookup(struct lookup_verifier *c,
 				    1),				    
 			0);
 
-  if (stat(filename->data, &st) == 0)
-    {
-      lsh_string_free(filename);
-      return &v->super;
-    }
+  if (USER_FILE_EXISTS(keyholder, filename, 1))
+    return &v->super;
+
   lsh_string_free(filename);
   return NULL;
 }
