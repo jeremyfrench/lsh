@@ -43,14 +43,34 @@ struct lsh_string *ssh_format(char *format, ...)
   packet = lsh_string_alloc(length);
 
   va_start(args, format);
-  length = ssh_vformat(format, packet->data, args);
+  ssh_vformat_write(format, length, packet->data, args);
   va_end(args);
 
-  assert(length == packet->length);
-  
   return packet;
 }
- 
+
+UINT32 ssh_format_length(char *format, ...)
+{
+  va_list args;
+  UINT32 length;
+
+  va_start(args, format);
+  length = ssh_vformat_length(format, args);
+  va_end(args);
+
+  return length;
+}
+
+void ssh_format_write(char *format, UINT32 length, UINT8 *buffer, ...)
+{
+  va_list args;
+  
+  va_start(args, buffer);
+  assert(length == ssh_vformat_write(format, buffer, args));
+  va_end(args);
+}
+     
+
 UINT32 ssh_vformat_length(char *f, va_list args)
 {
   UINT32 length = 0;
@@ -190,7 +210,7 @@ UINT32 ssh_vformat_length(char *f, va_list args)
   return length;
 }
 
-UINT32 ssh_vformat(char *f, UINT8 *buffer, va_list args)
+void ssh_vformat_write(char *f, UINT32 size, UINT8 *buffer, va_list args)
 {
   UINT8 *start = buffer;
   
@@ -218,7 +238,7 @@ UINT32 ssh_vformat(char *f, UINT8 *buffer, va_list args)
 	  switch(*f)
 	    {
 	    default:
-	      fatal("ssh_vformat: bad format string");
+	      fatal("ssh_vformat_write: bad format string");
 	      break;
 
 	    case 'c':
@@ -393,5 +413,6 @@ UINT32 ssh_vformat(char *f, UINT8 *buffer, va_list args)
 	  *buffer++ = *f++;
 	}
     }
-  return buffer - start;
+  
+  assert(buffer == start + size);
 }
