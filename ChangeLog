@@ -1,3 +1,40 @@
+2000-05-08  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* acconfig.h (HAVE_UT_NAME): Added.
+	(HAVE_UT_USER) Added.
+
+	* configure.in: Bumped version to 0.9.9.
+	Added --with-lib-path option, RPATH handling, and checks for
+	libutil.h, ut_name and ut_user. Fixed gmp check to recognize
+	gmp-3.x. 
+
+	* src/unix_user.c: Include libutil.h if available (reported by
+	Jonathan McDowell).
+	(lsh_make_utmp): Use ut_user if ut_name is not available.
+	(reported by Jonathan McDowell).
+
+	* src/server_session.c: Include signal.h (reported by Jonathan
+	McDowell). 
+
+	* src/symmetric/desTest.c: Eliminate warnings.
+
+	* src/io.c (address_info2sockaddr) [!HAVE_GETADDRINFO]: Initialize
+	addr->sin_family properly (reported by Jonathan McDowell).
+
+	* acinclude.m4 (LSH_RPATH_INIT): New macro.
+	(LSH_RPATH_FIX): Likewise.
+	(AC_SEARCH_LIBGMP): Likewise.
+
+2000-05-07  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh_types.h: Include stddef.h.
+
+	* configure.in: Fixes for recognizing gmp-3.x.
+
+	* acinclude.m4 (AC_CHECK_LIBGMP): New macro.
+
+	* acconfig.h: Added HAVE_LIBGMP
+
 2000-05-06  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Bumped version to 0.9.8.
