@@ -41,7 +41,6 @@
 #include "translate_signal.h"
 #include "tty.h"
 #include "unpad.h"
-#include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 #include "compress.h"
