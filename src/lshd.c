@@ -1049,14 +1049,12 @@ make_lshd_login_service(struct lshd_options *options)
      (name lshd_listen_callback)
      (params
        (handshake object handshake_info)
-       (kexinit object make_kexinit)
        (keys object alist)
        (logger object command)
        (services object command))
      (expr (lambda (lv)
-    	      (services (connection_handshake
+    	      (services (connection_handshake NULL
 	                   handshake
-			   kexinit
 			   keys
 			   (logger lv))))))
 */
@@ -1126,8 +1124,8 @@ make_lshd_listen_callback(struct lshd_options *options,
 					SSH_MAX_PACKET,
 					options->random,
 					options->super.algorithms,
+					kexinit,
 				        banner_text),
-		  kexinit,
 		  keys,
 		  logger,
 		  make_offer_service
