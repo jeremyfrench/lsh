@@ -58,19 +58,6 @@
 
 #define X11_COOKIE_LENGTH 16
 
-/* ;; GABA:
-   (class
-     (name client_x11_auth_info)
-     (vars
-       ; Fake MIT-COOKIE-1
-       (fake string)
-
-       ; Real authentication info
-       (name string)
-       (auth string)))
-*/
-
-/* FIXME: Perhaps merge auth_info directly into this struct. */
 /* GABA:
    (class
      (name client_x11_display)
@@ -312,8 +299,8 @@ do_client_channel_x11_receive(struct ssh_channel *s,
                       WRITE_UINT16(lengths + 2, self->display->auth_data->length);
                     }
 
-                  /* FIXME: Perhaps it would be easier to build the message by hand than
-                   * using ssh_format? */
+                  /* FIXME: Perhaps it would be easier to build the
+                   * message by hand than using ssh_format? */
                   /* Construct the real setup message. */
                   msg = ssh_format("%ls%ls%c%c%ls%ls%ls%ls",
                                    X11_SETUP_VERSION_LENGTH, self->buffer->data,
