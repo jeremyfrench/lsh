@@ -224,7 +224,10 @@ unpad.h
 
   Move declaration?
   
-userauth.h done
+userauth.h
+
+  Make struct env_value simply be a pair of const char *.
+  
 version.h done
 werror.h done
 write_buffer.h
