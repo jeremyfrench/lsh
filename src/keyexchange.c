@@ -635,6 +635,7 @@ struct make_kexinit *make_simple_kexinit(struct randomness *r,
 }
 
 
+
 /* GABA:
    (class
      (name install_new_keys)
@@ -715,4 +716,24 @@ struct keypair_info *make_keypair_info(struct lsh_string *public,
   self->private = private;
   return self;
 }
+
+/* Returns a hash instance for generating various session keys. NOTE:
+ * This mechanism changed in the transport-05 draft. Before this, the
+ * exchange hash was not included at this point. */
+struct hash_instance *
+kex_build_secret(struct hash_algorithm *H,
+		 struct lsh_string *exchange_hash,
+		 mpz_t K)
+{
+  struct hash_instance *hash = MAKE_HASH(H);
+  struct lsh_string *s = ssh_format("%n", K);
+
+  HASH_UPDATE(hash, s->length, s->data);
+  lsh_string_free(s);
+  
+  HASH_UPDATE(hash, exchange_hash->length, exchange_hash->data);
+
+  return hash;
+}
+
 
