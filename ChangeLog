@@ -1,3 +1,25 @@
+2001-09-26  Niels Möller  <nisse@ehand.com>
+
+	* src/server_session.c (shell_request_handler,
+	exec_request_handler): Defined as static objects using
+	DEFINE_CHANNEL_REQUEST. Updated users.
+
+	* src/io_commands.c (connect_simple_comand,
+	connect_connection_command): New static commands, replacing
+	make_simple_connect and make_connect_connection. Updated users.
+
+	* src/client_x11.c (channel_open_x11): Define as a static object
+	using DEFINE_CHANNEL_OPEN. Updated users.
+
+	* src/channel.h (DEFINE_CHANNEL_OPEN): New macro.
+	(DEFINE_CHANNEL_REQUEST): New macro.
+
+	* src/zlib.c (zlib_deflate): Bugfix: Call deflateEnd, not
+	inflateEnd, when deleting a deflate object. FIX copied from 1.2
+	branch. 
+
+	* src/sftp/xmalloc.c: Include string.h.
+
 2001-09-25  Niels Möller  <nisse@ehand.com>
 
 	* src/gc.c (gc_register): Set gc_scheduled flag before creating
