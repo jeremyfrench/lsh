@@ -6,6 +6,7 @@
 #include "algorithms.h"
 #include "crypto.h"
 #include "format.h"
+#include "werror.h"
 
 #include <inttypes.h>
 #include <stdlib.h>
