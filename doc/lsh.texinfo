@@ -86,8 +86,8 @@ translation approved by the Free Software Foundation.
 @comment  node-name,  next,  previous,  up
 @top
 
-This document describes @command{lsh} and related programs. The @command{lsh} suit
-of programs is intended as a free replacement for the @command{ssh} suit of
+This document describes @command{lsh} and related programs. The @command{lsh} suite
+of programs is intended as a free replacement for the @command{ssh} suite of
 programs. In turn, @command{ssh} was intended as a secure replacement for
 the @command{rsh} and @command{rlogin} programs for remote login over the
 Internet.
@@ -165,7 +165,7 @@ eavesdrop on the same criminals.
 
 The enemy can be a criminal, or a competitor, or your boss who's trying
 to find out how much you tell collegues at competing firms. It may be
-yours or somebody elses national security officials. Or your
+your own or somebody else's national security officials. Or your
 ex-boyfriend who happens to be too curious.
 
 So what can the enemy do to your communications and your privacy?
@@ -189,7 +189,7 @@ may be under enemy attack.
 
 @table @dfn
 @item Local attacks
-The enemy controls your local environment. He or her may be looking over
+The enemy controls your local environment. He or she may be looking over
 your shoulder. Your local machine might be cracked. Or there may be some
 device planted inside your keyboard transmitting everything you type to
 the attacker. About the same problems occur if the attacker has taken
@@ -331,7 +331,7 @@ man-in-the-middle attacks.
 @comment  node-name,  next,  previous,  up
 @subsection @code{ssh-1.x}
 
-The first of the Secure shell programs was Tatu Ylonen's @command{ssh}.
+The first of the Secure shell programs was Tatu Ylönen's @command{ssh}.
 The latest of the version 1 series is @code{ssh-1.27} which speaks
 version 1.5 of the protocol. The ``free'' version of @code{ssh-1.27}
 does not allow commercial use without additional licensing, which makes
@@ -344,7 +344,7 @@ back, for security reasons.
 
 There also exists free implementations of @code{ssh-1}, for both Unix
 and Windows. @command{ossh} and later OpenSSH are derived from earlier
-version av Tatu Ylonen's @command{ssh}, and are free software.
+version av Tatu Ylönen's @command{ssh}, and are free software.
 
 Until @command{lsh} becomes stable and well tested, I would recommend using
 some implementation of the @code{ssh-1} protocol.
@@ -357,7 +357,7 @@ some implementation of the @code{ssh-1} protocol.
 protocol, the development of which is supervised by the @acronym{IETF}
 secsh Working Group. @command{lsh} implements the required subset of
 this protocol. It is intended to be compatible with the @command{ssh2}
-series of programs distributed by Datafellows.
+series of programs distributed by F-Secure Corporation.
 
 However, the existing versions of @command{ssh2} gets some details of the
 protocol wrong (probably because it predates the protocol
@@ -367,7 +367,7 @@ Interoperability between independently developed implementations is one
 necessary condition for the @code{ssh-2} protocol to become a Proposed
 Standard.
 
-The license for Datafellow's @command{ssh2} programs is similar to that
+The license for F-Secure's @command{ssh2} programs is similar to that
 for recent versions of @command{ssh1}, but with a narrower definition of
 ``non-commercial use''.
 
@@ -408,7 +408,7 @@ some other program in the ssh family is likely easier than to get the
 operators to spend time and attention. So @command{lsh} should be easier to
 use in an anarchistic grass-roots environment.
 
-Another perspective is to combine ssh-features like @acronym{X} and
+Another perspective is to combine ssh features like @acronym{X} and
 @acronym{TCP/IP} forwarding with authentication based on Kerberos. Such
 an arrangement may provide the best of two worlds for those who happen
 to have an account at a suitable ticket-granting server.
@@ -417,9 +417,9 @@ to have an account at a suitable ticket-granting server.
 @comment  node-name,  next,  previous,  up
 @subsection @acronym{IPSEC}
 
-@acronym{IPSEC} is a set of protocols for protecting general ip-traffic.
-It is developed by another @acronym{IETF} working group, and is also a
-required part of @acronym{IP} version 6.
+@acronym{IPSEC} is a set of protocols for protecting general
+@acronym{IP} traffic. It is developed by another @acronym{IETF} working
+group, and is also a required part of @acronym{IP} version 6.
 
 Again, the main difference between @acronym{IPSEC} and Kerberos and ssh
 is the set of machines that have to be secure and the keys that have to
@@ -479,7 +479,7 @@ LD_LIBRARY_PATH to the right values instead.
 @comment  node-name,  next,  previous,  up
 @chapter Getting started
 This section tells you how to perform some common tasks using the
-@command{lsh} suit of programs, without covering all options and
+@command{lsh} suite of programs, without covering all options and
 possibilities.
 
 @menu
@@ -641,7 +641,7 @@ lsh -g -R 8080:localhost:80 sara.lysator.liu.se
 @end example
 
 @noindent
-This ask the remote machine to listen on port 8080 (note that you are
+This asks the remote machine to listen on port 8080 (note that you are
 probably not authorized to listen on port 80). Whenever someone
 connects, the connection is tunnelled to your local machine, and
 directed to port 80 on the same machine. Note the use of @option{-g};
@@ -835,7 +835,7 @@ base64.
 
 @item
 The advanced syntax, which is intended for humans to read and write, and
-bears some resemblance to List expressions.
+bears some resemblance to Lisp expressions.
 @end itemize
 
 To see what your @file{~/.lsh/known_hosts} file really contains, try
@@ -951,7 +951,7 @@ prefers not to use it.
   @tab @code{3dec-cbc}, @code{blowfish-cbc}, @code{cast128-cbc},
 @code{twofish-cbc}, @code{arcfour}
 
-  @tab The default encryption algorithm is tripple-DES in CBC mode. This
+  @tab The default encryption algorithm is triple-DES in CBC mode. This
 seems to be the algorithm of choice among conservative cryptographers.
 
 @item @option{-m} @tab Message Authentication
@@ -966,7 +966,7 @@ algorithm list to @code{zlib}, @code{none}, which means that you want to
 use @code{zlib} if the other end supports it. This is different from
 @option{-zzlib} which causes the negotiation to fail if the other end
 doesn't support @code{zlib}. A somewhat unobvious consequence of
-@option{-z} having an @em{optional} argument is that if you provide an
+@option{-z} having an @emph{optional} argument is that if you provide an
 argument, it must follow directly after the option letter, no spaces
 allowed. 
 
@@ -1191,7 +1191,7 @@ when the systems boots, and runs with root privileges. However, it is
 also possible to start @command{lshd} manually, and with user
 privileges.
 
-There is currently no configuration files. Instead, command line options
+There are currently no configuration files. Instead, command line options
 are used to tell @command{lshd} what to do. Many options have @option{--foo}
 and @option{--no-foo} variants. Options specifying the default behaviour
 are not listed here.
@@ -1225,7 +1225,7 @@ implement version 1 of the Secure Shell Protocol. But it can fork an
 @command{ssh1} server when an old client connects. Falling back to
 @command{ssh1} is inefficient, and requires some special features of the
 server fallen back to. It should work with the @command{sshd} daemon
-supplied with reasonably new versions of Datafellow's @command{sshd1},
+supplied with reasonably new versions of F-Secure's @command{sshd1},
 and with OpenSSH.
 
 The optional argument provides the filename of the ssh1 daemon to use.
