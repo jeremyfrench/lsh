@@ -161,10 +161,11 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        ; Cleanup
        (resources object resource_list)
 
-       ; Connected peer
+       ; Connected peer and local
        ; FIXME: Perhaps this should be a sockaddr or some other object
        ; that facilitates reverse lookups?
-       (peer object address_info);
+       (peer object address_info)
+       (local object address_info)
 
        ; Keyexchange
        (kexinit object make_kexinit)
@@ -233,6 +234,7 @@ do_##NAME(struct packet_handler *s UNUSED,		\
 struct ssh_connection *
 make_ssh_connection(enum connection_flag flags,
 		    struct address_info *peer,
+		    struct address_info *local,
 		    const char *id_comment,
 		    struct exception_handler *e);
 
