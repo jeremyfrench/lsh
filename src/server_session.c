@@ -946,7 +946,7 @@ static int do_alloc_pty(struct channel_request *c UNUSED,
     {
       struct pty_info *pty = make_pty_info();
 
-      if (pty_allocate(pty))
+      if (pty_allocate(pty, session->user->uid))
         {
           struct termios ios;
 
