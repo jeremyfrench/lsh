@@ -612,7 +612,6 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
   spawn.login = 1;
     
   if (spawn_process(session, channel->connection->user, &spawn))
-    /* NOTE: The return value is not used. */
     COMMAND_RETURN(c, channel);
   else
     {
@@ -665,7 +664,6 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
       args[1] = lsh_get_cstring(s);
 
       if (spawn_process(session, channel->connection->user, &spawn))
-	/* NOTE: The return value is not used. */
 	COMMAND_RETURN(c, channel);
       else
 	EXCEPTION_RAISE(e, &exec_request_failed);
@@ -824,8 +822,8 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	  session->pty = pty;
 	  remember_resource(channel->resources, &pty->super);
 
-	  verbose(" granted.\n");
-	  COMMAND_RETURN(s, NULL);
+	  verbose(" ... granted.\n");
+	  COMMAND_RETURN(s, channel);
 
 	  /* Success */
 	  return;
@@ -872,7 +870,7 @@ do_window_change_request(struct channel_request *c UNUSED,
       if (session->pty && session->in && session->in->super.alive
           && tty_setwinsize(session->in->fd, &dims))
         /* Success. Rely on the terminal driver sending SIGWINCH */
-        COMMAND_RETURN(s, NULL);
+        COMMAND_RETURN(s, channel);
       else
         EXCEPTION_RAISE(e, &winch_request_failed);
     }
