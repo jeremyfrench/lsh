@@ -80,6 +80,10 @@ struct lsh_class
 struct lsh_string_header
 {
   int magic; /* For a sentinel value */
+  /* Where/how the string was allocated */
+  const char *clue;
+  struct lsh_string *prev;
+  struct lsh_string *next;
 };
 
 #else   /* !DEBUG_ALLOC */
