@@ -60,6 +60,7 @@ int handle_command(const unsigned char *s);
 /* Internal below */
 
 int com_help(const char *arg, const char *command);
+int com_longhelp(const char *arg, const char *command);
 int com_about(const char *arg, const char *command);
 int com_escape(const char* arg, const char *command);
 int com_quit(const char *arg, const char *command);
