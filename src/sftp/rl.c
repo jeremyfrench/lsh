@@ -383,17 +383,16 @@ char* lsftp_rl_remotefile_generator( char* text, int state )
     {
       char* tmp;
       char* tmp2;
-      char* name;
+      char* nfree = strdup( glob[list_index++] );
+      char* name = nfree; 
 
       if( unqualify )
-	name = lsftp_unqualify_path( glob[list_index++] );
-      else
-	name = strdup( glob[list_index++] );
+	name = lsftp_unqualify_path( nfree );
 
       if( !lsftp_dc_r_isdir( name ) )
 	{
 	  char* s = lsftp_quote( name );
-	  free( name );
+	  free( nfree );
 	  return s;
 	}
 
@@ -403,7 +402,7 @@ char* lsftp_rl_remotefile_generator( char* text, int state )
 
       tmp = lsftp_concat( name, "/" ); 
       
-      free( name );
+      free( nfree );
 
       if( !tmp ) /* concat failed? */ 
 	return 0;
