@@ -60,6 +60,9 @@
 
 #undef PTY_BSD_SCHEME
 
+/* Define if GMP is available */
+#undef HAVE_LIBGMP
+
 /* syslog() available? */
 #undef HAVE_SYSLOG
 
