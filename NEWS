@@ -1,3 +1,17 @@
+NEWS for the 1999-03-07 snapshot
+
+	Improved CFMAKERAW. Ugly fix for the UNIX98-style pty:s
+	support.
+
+	Twofish support (not quite working).
+
+	Started on tcp forwarding (Bazsi).
+
+	Some support for broken ssh2 signatures (Baszi). Needs some
+	more work.
+
+	Various bugfixes.
+
 NEWS for the 1999-02-28 snapshot
 
 	Portability fixes for Solaris.

@@ -1,3 +1,33 @@
+Sun Mar  7 15:21:43 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/werror.c (werror_decimal): Bug fix.
+
+	* src/server.c (do_open_session): Adapted to the new CHANNEL_OPEN
+ 	convention.
+	(make_server_connection_service): Renamed (was
+ 	make_server_session_Service).
+	(server_connection_service): New instance variable, backend.
+	Needed for tcp forwarding.
+
+	* src/io.c (io_read_write): Changed return type to struct io_fd *
+	(Bazsi). 
+
+	* src/tty.h (CFMAKERAW): Set the VMIN and VTIME attributes.
+
+	* src/tcpforward.c, src/tcpforward.h: New files (Bazsi). 
+
+	* src/channel.h (channel_open_callback): New class, for
+	opening new channels asyncronously.
+	* (channel_open): Handler method now takes a channel_open_callback
+	argument.
+
+	* src/channel.c (channel_open_response): New class.
+	(format_global_success): New function.
+	(do_channel_open_response): New function. 
+	(make_channel_open_response): New function.
+	(do_channel_open): Moved most processing into do_channel_open
+	response. 
+
 Fri Mar  5 03:23:06 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/symmetric/twofish.c, src/symmetric/twofish.h
