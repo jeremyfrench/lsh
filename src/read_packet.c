@@ -35,6 +35,7 @@
 #include "crypto.h"
 #include "format.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -69,12 +70,13 @@
 
        ; Holds the packet payload
        (packet_buffer string)
-       ; Amount of padding
-       (padding_length . uint8_t)
+
+       ; Length without padding
+       (payload_length . uint32_t)
        
        ; Position in the buffer after the first,
        ; already decrypted, block.
-       (crypt_pos . "uint8_t *")
+       (crypt_pos . uint32_t)
   
        (handler object abstract_write)
        (connection object ssh_connection)))
@@ -86,7 +88,7 @@ lsh_string_realloc(struct lsh_string *s, uint32_t length)
   if (!s)
     return lsh_string_alloc(length);
 
-  if (s->length < length)
+  if (lsh_string_length(s) < length)
     {
       lsh_string_free(s);
       return lsh_string_alloc(length);
@@ -97,7 +99,7 @@ lsh_string_realloc(struct lsh_string *s, uint32_t length)
 
 
 #define READ(n, dst) do {				\
-  memcpy((dst)->data + closure->pos, data, (n));	\
+  lsh_string_write((dst), closure->pos, (n), data);	\
   closure->pos += (n);					\
   data += (n);						\
   total += (n);						\
@@ -172,16 +174,19 @@ do_read_packet(struct read_handler **h,
 	    {
 	      /* We have read a complete block */
 	      uint32_t length;
+	      const uint8_t *block;
+	      uint8_t pad_length;
 
 	      READ(left, closure->block_buffer);
 	    
 	      if (closure->connection->rec_crypto)
 		CRYPT(closure->connection->rec_crypto,
 		      block_size,
-		      closure->block_buffer->data,
-		      closure->block_buffer->data);
-		
-	      length = READ_UINT32(closure->block_buffer->data);
+		      closure->block_buffer, 0,
+		      closure->block_buffer, 0);
+
+	      block = lsh_string_data(closure->block_buffer);
+	      length = READ_UINT32(block);
 
 	      /* NOTE: We don't implement a limit at _exactly_
 	       * rec_max_packet, as we don't include the length field
@@ -221,27 +226,28 @@ do_read_packet(struct read_handler **h,
 		{
 		  uint8_t s[4];
 		  WRITE_UINT32(s, closure->sequence_number);
-#if 0
-		  debug("read_packet: MAC input: sequence_number = %i, data = %xs\n",
-			closure->sequence_number, block_size, closure->block_buffer->data);
-#endif	    
 		  MAC_UPDATE(closure->connection->rec_mac, 4, s);
 		  MAC_UPDATE(closure->connection->rec_mac,
-			      block_size,
-			      closure->block_buffer->data);
+			     block_size, block);
 		}
 
 	      /* Extract padding length */
-	      closure->padding_length = closure->block_buffer->data[4];
+	      pad_length = block[4];
+
+	      debug("do_read_packet: length = %i, pad_length = %i\n",
+		    length, pad_length);
+	      
 	      length--;
 
-	      if ( (closure->padding_length < 4)
-		   || (closure->padding_length >= length) )
+	      if ( (pad_length < 4)
+		   || (pad_length >= length) )
 		{
 		  PROTOCOL_ERROR(closure->connection->e,
 				 "Bogus padding length.");
 		  return total;
 		}
+
+	      closure->payload_length = length - pad_length;
 	      
 	      /* Allocate full packet */
 	      {
@@ -251,16 +257,15 @@ do_read_packet(struct read_handler **h,
 		
 		closure->packet_buffer
 		  = ssh_format("%ls%lr",
-			       done,
-			       closure->block_buffer->data + 5,
-			       length - done,
-			       &closure->crypt_pos);
+			       done, block + 5,
+			       length - done, &closure->crypt_pos);
 
-		assert(closure->packet_buffer->length == length);
+		assert(lsh_string_length(closure->packet_buffer) == length);
 		
 		/* The sequence number is needed by the handler for
 		 * unimplemented message types. */
-		closure->packet_buffer->sequence_number = closure->sequence_number ++;
+		lsh_string_set_sequence_number(closure->packet_buffer,
+					       closure->sequence_number ++);
 		closure->pos = done;
 
 		if (done == length)
@@ -284,7 +289,8 @@ do_read_packet(struct read_handler **h,
 	
       case WAIT_CONTENTS:
 	{
-	  uint32_t left = closure->packet_buffer->length - closure->pos;
+	  uint32_t length = lsh_string_length(closure->packet_buffer);
+	  uint32_t left = length - closure->pos;
 
 	  assert(left);
 
@@ -299,25 +305,20 @@ do_read_packet(struct read_handler **h,
 	      /* Read a complete packet */
 	      READ(left, closure->packet_buffer);
 
-	      left = ( (closure->packet_buffer->length + closure->packet_buffer->data)
-		       - closure->crypt_pos );
+	      left = length - closure->crypt_pos;
 
 	      if (closure->connection->rec_crypto)
 		CRYPT(closure->connection->rec_crypto,
 		      left,
-		      closure->crypt_pos,
-		      closure->crypt_pos);		      
+		      closure->packet_buffer, closure->crypt_pos,
+		      closure->packet_buffer, closure->crypt_pos);		      
 
 	      if (closure->connection->rec_mac)
-		{
-#if 0
-		  debug("read_packet: MAC input: data = %xs\n",
-			left, closure->crypt_pos);
-#endif
-		  MAC_UPDATE(closure->connection->rec_mac,
-			     left,
-			     closure->crypt_pos);
-		}
+		MAC_UPDATE(closure->connection->rec_mac,
+			   left,
+			   lsh_string_data(closure->packet_buffer)
+			   + closure->crypt_pos);
+
 	      goto do_mac;
 	    }
 	}
@@ -346,30 +347,24 @@ do_read_packet(struct read_handler **h,
 	      {
 		/* Read a complete MAC */
 
-		uint8_t *mac;
+		struct lsh_string *mac;
 
 		READ(left, closure->mac_buffer);
 
-		mac = alloca(closure->connection->rec_mac->mac_size);
-		MAC_DIGEST(closure->connection->rec_mac, mac);
-#if 0
-		debug("read_packet: Received MAC: %xS\n"
-		      "             Computed MAC: %xs\n",
-		      closure->mac_buffer,
-		      closure->connection->rec_mac->mac_size,
-		      mac);
-#endif	
-		if (memcmp(mac,
-			   closure->mac_buffer->data,
-			   closure->connection->rec_mac->mac_size))
+		/* FIXME: Allocating this temporary string seems a
+		   little inefficient */
+		mac = MAC_DIGEST_STRING(closure->connection->rec_mac);
+
+		if (!lsh_string_eq(mac, closure->mac_buffer))
 		  {
 		    static const struct protocol_exception mac_error =
 		      STATIC_PROTOCOL_EXCEPTION(SSH_DISCONNECT_MAC_ERROR,
 						"MAC error");
-
+		    lsh_string_free(mac);
 		    EXCEPTION_RAISE(closure->connection->e, &mac_error.super);
 		    return total;
 		  }
+		lsh_string_free(mac);
 	      }
 	  }
 	
@@ -381,11 +376,11 @@ do_read_packet(struct read_handler **h,
 	  closure->state = WAIT_START;
 
 	  /* Strip padding */
-	  lsh_string_trunc(packet, packet->length - closure->padding_length);
+	  lsh_string_trunc(packet, closure->payload_length);
 	  
 	  if (closure->connection->rec_compress)
 	    {
-	      uint32_t sequence_number = packet->sequence_number;
+	      uint32_t sequence_number = lsh_string_sequence_number(packet);
 	      packet = CODEC(closure->connection->rec_compress, packet, 1);
 
 	      if (!packet)
@@ -399,7 +394,7 @@ do_read_packet(struct read_handler **h,
 		  return total;
 		}
 	      /* Keep sequence number */
-	      packet->sequence_number = sequence_number;
+	      lsh_string_set_sequence_number(packet, sequence_number);
 	    }
 	      
 	  A_WRITE(closure->handler, packet);
