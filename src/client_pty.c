@@ -24,6 +24,7 @@
 #include "client.h"
 
 #include "channel_commands.h"
+#include "environ.h"
 #include "format.h"
 #include "interact.h"
 #include "tty.h"
@@ -194,7 +195,7 @@ struct command *
 make_pty_request(struct interact *tty)
 {
   NEW(pty_request, req);
-  char *term = getenv("TERM");
+  char *term = getenv(ENV_TERM);
 
   req->attr = INTERACT_GET_ATTRIBUTES(tty);
 
