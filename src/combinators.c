@@ -36,17 +36,6 @@
 
 COMMAND_SIMPLE(command_I) { return a; }
 
-#if 0
-static struct lsh_object *
-do_simple_command_I(struct command_simple *ignored UNUSED,
-		    struct lsh_object *arg)
-{
-  return a;
-}
-
-struct command_simple command_I =
-STATIC_COMMAND_SIMPLE(do_simple_command_I);
-#endif
 
 /* ((K x) y) == x */
 
@@ -80,16 +69,6 @@ struct command *make_command_K_1(struct lsh_object *x)
 COMMAND_SIMPLE(command_K)
 { return &make_command_K_1(a)->super; }
 
-#if 0
-static struct lsh_object *
-do_simple_command_K(struct command_simple *ignored UNUSED,
-		    struct lsh_object *a)
-{
-  return &make_command_K_1(a)->super;
-}
-
-struct command_simple command_K = STATIC_COMMAND_SIMPLE(do_simple_command_K);
-#endif
 
 /* ((S f) g)x == (f x)(g x) */
 
