@@ -1,3 +1,46 @@
+2000-10-17  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/spki.c (spki_make_public_key): Take a verifier as argument.
+	(dsa_to_spki_public_key): #if:ed out.
+	(parse_private_key): Use new publickey-related functions and
+	methods.
+
+	* src/rsa.c (rsa_public): Deleted this struct; use rsa_verifier
+	instead. 
+	(make_rsa_verifier_internal): New function, used by
+	make_rsa_verifier and make_rsa_signer.
+	Added new methods.
+	(rsa_signer): Added pointer to a corresponding verifier object.
+	Replaces the rsa_public struct.
+
+	* src/lsh_proxy.c (do_host_lookup): Adapt to the changed
+	make_ssh_dss_verifier function.
+
+	* src/lsh-decode-key.c (do_decode_key): Use new publickey-related
+	functions and methods.
+	* src/lsh.c (do_lsh_lookup): Likewise.
+	* src/server_authorization.c (do_key_lookup): Likewise.
+
+	* src/dsa.c (make_ssh_dss_verifier): Changed return type.
+	(ssh_dss_public_key): Obsoleted by the SIGNER_GET_VERIFIER and
+	PUBLIC_KEY methods.
+	(parse_ssh_dss_public): Renamed (was parse_dsa_public), and
+	changed the return type.
+	(make_dsa_verifier_internal): New method used by make_dsa_verifier
+	and make_dsa_signer.
+	(dsa_signer): Added pointer to a corresponding verifier object.
+	Replaces the dsa_public struct.
+	Also deleted some old code. 
+
+	* src/dsa.h: Moved definitions of the dsa_verifier and dsa_signer
+	classes to dsa.c, and deleted the struct dsa_public.
+
+	* src/atoms.in (ssh-rsa-pkcs1@lysator.liu.se): New atom.
+
+	* src/abstract_crypto.h (signer): Added method SIGNER_GET_VERIFIER, and
+	removed the SIGNER_PUBLIC_KEY method.
+	(verifier): Added methods PUBLIC_KEY and PUBLIC_SPKI_KEY.
+
 2000-10-16  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/Makefile.am.in (bin_PROGRAMS): Added lsh-export-key.
