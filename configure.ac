@@ -205,7 +205,7 @@ AC_ARG_WITH(lib-path,
   [with_lib_path=''])
 
 if test x$with_lib_path != x ; then
-  LDFLAGS="-L `echo $with_lib_path | sed 's/:/ -L /g'`"
+  LDFLAGS="$LDFLAGS -L `echo $with_lib_path | sed 's/:/ -L /g'`"
 fi
 
 LSH_RPATH_INIT([`echo $with_lib_path | sed 's/:/ /g'` \

@@ -1,5 +1,8 @@
 2003-01-24  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* configure.ac: --with-lib-path should add to LDFLAGS, not replace
+	it. 
+
 	* misc/xenofarm.sh (dotask cfg): Pass --with-include-path and
 	--with-lib-path to configure. On some systems /usr/local/lib and
 	/usr/local/include are not searched by default.
