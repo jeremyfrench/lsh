@@ -218,7 +218,7 @@ MAINTAINERCLEANFILES = $(dist_classes) $(DEP_FILES)
 .PHONY: gcov-list
 gcov-list:
 	for f in *.c; do gcov "$$f"; done
-	grep -c '##' *.gcov | sort -t : -k 2 -nr >gcov-list
+	grep -c '##' *.gcov | grep -v ':0$$' | sort -t : -k 2 -nr >gcov-list
 
 .PHONY: depend
 depend:
