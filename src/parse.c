@@ -95,15 +95,18 @@ int parse_next_atom(struct simple_buffer *buffer, int *result)
     return -1;
 
   for(i = 0; i < LEFT; i++)
-    if (HERE[i] == ',')
-      {
-	*result = lookup_atom(HERE, i);
-	ADVANCE(i+1);
-	return 1;
-      }
-
+    {
+      if (HERE[i] == ',')
+	break;
+      if (i == 64)
+	/* Atoms can be no larger than 64 characters */
+	return 0;
+    }
+  
   *result = lookup_atom(HERE, i);
-  ADVANCE(i+1);  /* Beyond end of buffer */
+  ADVANCE(i+1);  /* If the atom was terminated at the end of the
+		  * buffer, rather than by a comma, this points beyond
+		  * the end of the buffer */
   return 1;
 }
 
