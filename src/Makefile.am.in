@@ -70,7 +70,9 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	handshake.c \
 	hmac.c interact.c io.c io_commands.c \
 	keyexchange.c \
-	list.c lookup_verifier.c md5.c \
+	list.c lookup_verifier.c \
+	lock_file.c \
+	md5.c \
 	pad.c parse.c \
 	pkcs5.c \
 	proxy.c proxy_agentforward.c proxy_session.c \
