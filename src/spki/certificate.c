@@ -26,6 +26,7 @@
 
 #include "certificate.h"
 #include "parse.h"
+#include "tag.h"
 
 #include "nettle/md5.h"
 #include "nettle/sha.h"
@@ -246,6 +247,57 @@ spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i)
   return spki_parse_end(i);
 }
 
+
+/* Iterating through the acls that delegate the requested authorization. */
+static const struct spki_5_tuple *
+acl_by_auth(const struct spki_5_tuple *acl,
+	    unsigned authorization_length,
+	    const uint8_t *authorization)
+{
+  for (; acl; acl = acl->next)
+    {
+      struct sexp_iterator delegated;
+      struct sexp_iterator request;
+
+      if (!sexp_iterator_first(&delegated, acl->tag_length, acl->tag))
+	/* If syntax errors weren't detected when the acl was parsed,
+	 * somthing is very wrong. */
+	abort();
+      if (!sexp_iterator_first(&request, authorization_length, authorization))
+	return NULL;
+      
+      if (spki_tag_includes(&delegated, &request))
+	{
+	  assert(delegated.type == SEXP_END);
+	  return (request.type == SEXP_END) ? acl: NULL;
+	}
+    }
+  return NULL;
+}
+
+const struct spki_5_tuple *
+spki_acl_by_authorization_next(struct spki_acl_db *db,
+			       const struct spki_5_tuple *acl,
+			       unsigned authorization_length,
+			       const uint8_t *authorization)
+{
+  (void) db;
+  
+  return acl
+    ? acl_by_auth(acl->next, authorization_length, authorization)
+    : NULL;
+}
+
+const struct spki_5_tuple *
+spki_acl_by_authorization_first(struct spki_acl_db *db,
+				unsigned authorization_length,
+				uint8_t *authorization)
+{
+  return acl_by_auth(db->first_acl, authorization_length, authorization);
+}
+
+
+/* Certificates */
 void
 spki_5_tuple_free_chain(struct spki_acl_db *db,
 			struct spki_5_tuple *chain)

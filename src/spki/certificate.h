@@ -157,27 +157,27 @@ spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest);
 int
 spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i);
 
-struct spki_acl *
+const struct spki_5_tuple *
 spki_acl_by_principal_first(struct spki_acl_db *,
 			    unsigned principal_length,
 			    uint8_t *principal);
 
-struct spki_acl *
-spki_acl_by_principal_next(struct spki_acl_db *,
-			   struct spki_acl *acl,
+const struct spki_5_tuple *
+spki_acl_by_principal_next(struct spki_acl_db *db,
+			   const struct spki_5_tuple *acl,
 			   unsigned principal_length,
 			   uint8_t *principal);
 
-struct spki_acl *
-spki_acl_by_authorization_first(struct spki_acl_db *,
-			    unsigned authorization_length,
-			    uint8_t *authorization);
+const struct spki_5_tuple *
+spki_acl_by_authorization_first(struct spki_acl_db *db,
+				unsigned authorization_length,
+				uint8_t *authorization);
 
-struct spki_acl *
-spki_acl_by_authorization_next(struct spki_acl_db *,
-			       struct spki_acl *acl,
+const struct spki_5_tuple *
+spki_acl_by_authorization_next(struct spki_acl_db *db,
+			       const struct spki_5_tuple *acl,
 			       unsigned authorization_length,
-			       uint8_t *authorization);
+			       const uint8_t *authorization);
 
 
 /* Certificates */
