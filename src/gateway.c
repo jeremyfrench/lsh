@@ -24,6 +24,7 @@
 
 #include "gateway.h"
 
+#include "environ.h"
 #include "format.h"
 #include "io.h"
 
@@ -78,7 +79,7 @@ struct local_info *
 make_gateway_address(char *local_user, char *remote_user,
 		     struct address_info *target)
 {
-  char *tmp = getenv("TMPDIR");
+  char *tmp = getenv(ENV_TMPDIR);
   if (!tmp)
     tmp = "/tmp";
   
