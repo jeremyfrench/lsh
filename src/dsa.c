@@ -29,6 +29,7 @@
 #include "crypto.h"
 #include "format.h"
 #include "parse.h"
+#include "sexp.h"
 #include "sha.h"
 #include "ssh.h"
 #include "werror.h"
@@ -44,28 +45,10 @@
 
 /* GABA:
    (class
-     (name dsa_signer)
-     (super signer)
-     (vars
-       (random object randomness)
-       (public struct dsa_public)
-       (a bignum)))
-*/
-
-/* GABA:
-   (class
      (name dsa_signer_variant)
      (super signer)
      (vars
        (dsa object dsa_signer)))
-*/
-
-/* GABA:
-   (class
-     (name dsa_verifier)
-     (super verifier)
-     (vars
-       (public struct dsa_public)))
 */
 
 /* GABA:
@@ -188,9 +171,38 @@ do_dsa_sign(struct signer *c,
 }
 
 #if DATAFELLOWS_WORKAROUNDS
-static struct lsh_string *do_dsa_sign_kludge(struct signer *c,
-					     UINT32 msg_length,
-					     UINT8 *msg)
+#if 0
+struct lsh_string *dsa_sign_kludge(struct signer *c,
+					  UINT32 msg_length,
+					  UINT8 *msg)
+{
+  CAST(dsa_signer, self, c);
+  mpz_t r, s;
+  struct lsh_string *signature;
+  UINT32 buf_length;
+  UINT8 *p;
+
+  mpz_init(r); mpz_init(s);
+  generic_dsa_sign(self, msg_length, msg, r, s);
+
+  /* Build signature */
+  buf_length = dsa_blob_length(r, s);
+
+  /* NOTE: This doesn't include any length field. Is that right? */
+  signature = ssh_format("%lr", buf_length * 2, &p);
+  dsa_blob_write(r, s, buf_length, p);
+
+  mpz_clear(r);
+  mpz_clear(s);
+
+  return signature;
+}
+#endif
+
+static struct lsh_string *
+do_dsa_sign_kludge(struct signer *c,
+		   UINT32 msg_length,
+		   UINT8 *msg)
 {
   CAST(dsa_signer_variant, self, c);
   mpz_t r, s;
@@ -224,48 +236,14 @@ struct signer *make_dsa_signer_kludge(struct signer *s)
   self->dsa = dsa;
   return &self->super;
 }
+
 #endif /* DATAFELLOWS_WORKAROUNDS */
-
-#if WITH_DSA_CLASSIC
-/* Uses the (better) format from an obsoleted draft */
-static struct lsh_string *
-do_dsa_sign_classic(struct signer *c,
-		    UINT32 length,
-		    UINT8 *msg)
-{
-  CAST(dsa_signer_variant, self, c);
-  mpz_t r, s;
-  struct lsh_string *signature;
-
-  mpz_init(r); mpz_init(s);
-  generic_dsa_sign(self->dsa, length, msg, r, s);
-      
-  /* Build signature */
-
-  signature = ssh_format("%a%n%n", ATOM_SSH_DSS, r, s);
-  mpz_clear(r);
-  mpz_clear(s);
-
-  return signature;
-}
-
-struct signer *make_dsa_signer_classic(struct signer *s)
-{
-  NEW(dsa_signer_variant, self);
-  CAST(dsa_signer, dsa, s);
-	
-  self->super.sign = do_dsa_sign_classic;
-  
-  self->dsa = dsa;
-  return &self->super;
-}
-#endif /* WITH_DSA_CLASSIC */
 
 
 /* Verifying DSA signatures */
 
 /* The caller should make sure that r and s are non-negative.
- * That tyey are less than q is checked here. */
+ * That they are less than q is checked here. */
 static int generic_dsa_verify(struct dsa_public *key,
 			      UINT32 length,
 			      UINT8 *msg,
@@ -377,11 +355,50 @@ static int do_dsa_verify(struct verifier *c,
 }
 
 #if DATAFELLOWS_WORKAROUNDS
-static int do_dsa_verify_kludge(struct verifier *c,
-				UINT32 length,
-				UINT8 *msg,
-				UINT32 signature_length,
-				UINT8 * signature_data)
+
+#if 0
+int dsa_verify_kludge(struct verifier *c,
+		      UINT32 length,
+		      UINT8 *msg,
+		      UINT32 signature_length,
+		      UINT8 * signature_data)
+{
+  CAST(dsa_verifier, self, c);
+
+  int res;
+  
+  mpz_t r, s;
+
+  UINT32 buf_length;
+
+  /* NOTE: This doesn't include any length field. Is that right? */
+
+  if (signature_length % 2)
+    return 0;
+
+  buf_length = signature_length / 2;
+
+  mpz_init(r);
+  mpz_init(s);
+
+  bignum_parse_u(r, buf_length, signature_data);
+  bignum_parse_u(s, buf_length, signature_data + buf_length);
+    
+  res = generic_dsa_verify(&self->public, length, msg, r, s);
+  
+  mpz_clear(r);
+  mpz_clear(s);
+
+  return res;
+}
+#endif
+
+static int
+do_dsa_verify_kludge(struct verifier *c,
+		     UINT32 length,
+		     UINT8 *msg,
+		     UINT32 signature_length,
+		     UINT8 * signature_data)
 {
   CAST(dsa_verifier_variant, self, c);
 
@@ -424,58 +441,6 @@ struct verifier *make_dsa_verifier_kludge(struct verifier *v)
 }
 #endif /* DATAFELLOWS_WORKAROUNDS */
      
-#if WITH_DSA_CLASSIC
-static int do_dsa_verify_classic(struct verifier *c,
-				 UINT32 length,
-				 UINT8 *msg,
-				 UINT32 signature_length,
-				 UINT8 * signature_data)
-{
-  CAST(dsa_verifier_variant, self, c);
-  struct simple_buffer buffer;
-
-  int res;
-  
-  int atom;
-  mpz_t r, s;
-
-  simple_buffer_init(&buffer, signature_length, signature_data);
-  if (!parse_atom(&buffer, &atom)
-      || (atom != ATOM_SSH_DSS) )
-    return 0;
-
-  mpz_init(r);
-  mpz_init(s);
-  if (! (parse_bignum(&buffer, r)
-	 && parse_bignum(&buffer, s)
-	 && parse_eod(&buffer)
-	 && (mpz_sgn(r) == 1)
-	 && (mpz_sgn(s) == 1) ))
-    {
-      mpz_clear(r);
-      mpz_clear(s);
-      return 0;
-    }
-  
-  res = generic_dsa_verify(&self->dsa->public, length, msg, r, s);
-  
-  mpz_clear(r);
-  mpz_clear(s);
-
-  return res;
-}
-
-struct verifier *make_dsa_verifier_classic(struct verifier *v)
-{
-  NEW(dsa_verifier_variant, self);
-  CAST(dsa_verifier, dsa, v);
-	
-  self->super.verify = do_dsa_verify_classic;
-  
-  self->dsa = dsa;
-  return &self->super;
-}
-#endif /* WITH_DSA_CLASSIC */
 
 /* FIXME: The allocator could do this kind of initialization
  * automatically. */
@@ -505,11 +470,12 @@ int parse_dsa_public(struct simple_buffer *buffer,
 
 /* FIXME: Outside of the protocol transactions, keys should be stored
  * in SPKI-style S-expressions. */
-static struct signer *make_dsa_signer(struct signature_algorithm *c,
-				      UINT32 public_length,
-				      UINT8 *public,
-				      UINT32 private_length,
-				      UINT8 *private)
+static struct signer *
+make_dsa_signer(struct signature_algorithm *c,
+		UINT32 public_length,
+		UINT8 *public,
+		UINT32 private_length,
+		UINT8 *private)
 {
   CAST(dsa_algorithm, closure, c);
   NEW(dsa_signer, res);
@@ -557,10 +523,7 @@ make_dsa_verifier(struct signature_algorithm *closure UNUSED,
 
   /* FIXME: The allocator could do this kind of initialization
    * automatically. */
-  mpz_init(res->public.p);
-  mpz_init(res->public.q);
-  mpz_init(res->public.g);
-  mpz_init(res->public.y);
+  init_dsa_public(&res->public);
   
   simple_buffer_init(&buffer, public_length, public);
   if (!parse_atom(&buffer, &atom)
@@ -590,6 +553,62 @@ struct signature_algorithm *make_dsa_algorithm(struct randomness *random)
   dsa->random = random;
 
   return &dsa->super;
+}
+
+int
+spki_init_dsa_public(struct dsa_public *key,
+		     struct sexp_iterator *i)
+{
+  return (sexp_get_un(i, ATOM_P, key->p)
+	  && sexp_get_un(i, ATOM_Q, key->q)
+	  && sexp_get_un(i, ATOM_G, key->g)
+	  && sexp_get_un(i, ATOM_Y, key->y) );
+}
+
+/* Create a usual ssh-dss verifier from an spki key */
+struct dsa_verifier *
+make_dsa_spki_verifier(struct sexp_iterator *i)
+{
+  NEW(dsa_verifier, res);
+  init_dsa_public(&res->public);
+
+  /* FIXME: Should we check the length? */
+  
+  if (spki_init_dsa_public(&res->public, i))
+    {
+      res->super.verify = do_dsa_verify;
+      return res;
+    }
+  else
+    {
+      KILL(res);
+      return NULL;
+    }
+}
+
+/* Create a usual ssh-dss signer from an spki key */
+struct dsa_signer *
+make_dsa_spki_signer(struct sexp_iterator *i,
+		     struct randomness *random)
+{
+  NEW(dsa_signer, res);
+  init_dsa_public(&res->public);
+  mpz_init(res->a);
+
+  /* FIXME: Should we check the length? */
+  
+  if (spki_init_dsa_public(&res->public, i)
+      && sexp_get_un(i, ATOM_X, res->a) )
+    {
+      res->random = random;
+      res->super.sign = do_dsa_sign;
+      return res;
+    }
+  else
+    {
+      KILL(res);
+      return NULL;
+    }
 }
 
 #if 0
