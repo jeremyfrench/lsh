@@ -44,7 +44,7 @@
      (vars
        (block_size simple UINT32)
        ; Length must be a multiple of the block size.
-       ; NOTE: src == dst is allowed.
+       ; NOTE: src == dst is allowed, but no other overlaps.
        (crypt method void
               "UINT32 length" "const UINT8 *src" "UINT8 *dst")))
 */

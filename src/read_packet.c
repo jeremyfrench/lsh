@@ -139,7 +139,7 @@ static int do_read_packet(struct read_handler **h,
 	  closure->pos += n;
 	  total += n;
 	  
-	  /* Read a complete block? */
+	  /* Read a complete header? */
 	  if ( (unsigned) n == left)
 	    {
 	      UINT32 length;

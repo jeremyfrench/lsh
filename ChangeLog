@@ -1,3 +1,18 @@
+Tue Jan  5 05:54:34 1999    <nisse@puck>
+
+	* keyexchange.c (kex_make_key): Fixed key expansion.
+
+	* des.c (make_des_instance): Fix _odd_ parity.
+
+	* cbc.c (do_cbc_encrypt): Bug fix.
+	(do_cbc_decrypt): Handle the case src == dst correctly.
+
+	* cascade.c (do_make_cascade): Make sure keys are applied in the
+	right (i.e. reversed) order when decrypting.
+
+	* Makefile.am.in (depend): Disabled the rule to explicitly build
+ 	dependency files.
+
 Sun Jan  3 16:54:29 1999    <ray@zensunni>
 
 	* digit_table.c: Fixed declaration of main.

@@ -292,11 +292,14 @@ int main(int argc, char **argv)
       werror("lsh: Connection failed: %s\n", strerror(errno));
       return 1;
     }
-  
+
   /* Exit code if no session is established */
   lsh_exit_code = 17;
   
   io_run(backend);
+
+  /* FIXME: Perhaps we have to reset the stdio file descriptors to
+   * blocking mode? */
 
   return lsh_exit_code;
 }

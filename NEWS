@@ -1,3 +1,10 @@
+NEWS for the 1999-01--5 snapshot:
+
+	Command lien options to select which algorithms to use.
+
+	Various bug fixes. The 3des and blowfish support seems do work
+	now. 
+
 NEWS for the 1999-01-01 snapshot:
 
 	ZLIB support. (Bazsi)
