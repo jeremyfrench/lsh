@@ -24,11 +24,14 @@
 
 cfgargs=
 makeargs=
+MAKE=make
+
 while [ $# -gt 0 ]
 do
   case "$1" in
       --cfg)    shift; cfgargs="$1"; shift;;
       --make)   shift; makeargs="$1"; shift;;
+      --make-program)   shift; MAKE="$1"; shift;;
       *)        echo $0: unsupported argument $1 >&2; exit 1;;
   esac
 done
@@ -198,28 +201,28 @@ fi
 dotask 1 "oopunzip" "" "gzip -d $LIBOOPBASE.tar.gz" liboopstatus
 dotask 1 "oopunpack" "" "tar xf $LIBOOPBASE.tar" liboopstatus
 dotask 1 "oopcfg" "cfgwarn" "cd $LIBOOPBASE && ./configure $oopcfgargs" liboopstatus
-dotask 1 "oopmake" "makewarn" "cd $LIBOOPBASE && make" liboopstatus
-dotask 0 "oopcheck" "makewarn" "cd $LIBOOPBASE && make check" liboopstatus
-dotask 1 "oopinstall" "makewarn" "cd $LIBOOPBASE && make install" liboopstatus
+dotask 1 "oopmake" "makewarn" "cd $LIBOOPBASE && $MAKE" liboopstatus
+dotask 0 "oopcheck" "makewarn" "cd $LIBOOPBASE && $MAKE check" liboopstatus
+dotask 1 "oopinstall" "makewarn" "cd $LIBOOPBASE && $MAKE install" liboopstatus
 
 dotask 1 "unzip" "" "gzip -d $BASE.tar.gz"
 dotask 1 "unpack" "" "tar xf $BASE.tar"
 dotask 1 "cfg" "cfgwarn" \
     "cd $BASE && ./configure $cfgargs"
-dotask 1 "make" "makewarn" "cd $BASE && make $makeargs"
+dotask 1 "make" "makewarn" "cd $BASE && $MAKE $makeargs"
 
 #
 # "make check" requirements
 #
 
-dotask 1 "ckprg" "" "cd $BASE && make check"
+dotask 1 "ckprg" "" "cd $BASE && $MAKE check"
 
 # FIXME: run distcheck.
 # A problem is that make distcheck leaves some write-protected directories that
 # can't be deleted with rm -rf
 
-# dotask 0 "ckdist" "" "cd $BASE && make distcheck"
-dotask 1 "install" "" "cd $BASE && make install"
+# dotask 0 "ckdist" "" "cd $BASE && $MAKE distcheck"
+dotask 1 "install" "" "cd $BASE && $MAKE install"
 
 if test $status = cfg-failed
 then
@@ -231,12 +234,12 @@ else
 fi
 
 dotask 1 "argpcfg" "cfgwarn" "cd $BASE/src/argp && ./configure $cfgargs" argpstatus
-dotask 1 "argpmake" "makewarn" "cd $BASE/src/argp && make $makeargs" argpstatus
-dotask 1 "ckargp" "" "cd $BASE/src/argp && make check" argpstatus
+dotask 1 "argpmake" "makewarn" "cd $BASE/src/argp && $MAKE $makeargs" argpstatus
+dotask 1 "ckargp" "" "cd $BASE/src/argp && $MAKE check" argpstatus
 
 dotask 1 "nettlecfg" "cfgwarn" "cd $BASE/src/nettle && ./configure $cfgargs" nettlestatus
-dotask 1 "nettlemake" "makewarn" "cd $BASE/src/nettle && make $makeargs" nettlestatus
-dotask 1 "cknettle" "" "cd $BASE/src/nettle && make check" nettlestatus
+dotask 1 "nettlemake" "makewarn" "cd $BASE/src/nettle && $MAKE $makeargs" nettlestatus
+dotask 1 "cknettle" "" "cd $BASE/src/nettle && $MAKE check" nettlestatus
 
 find pfx -type f -print | sort > r/installedfiles.txt
 if test `wc -l < r/installedfiles.txt` -eq 0
@@ -275,8 +278,8 @@ echo $PATH > r/path.txt
 makeinfo --version > r/makeinfo.txt
 type makeinfo >> r/makeinfo.txt 2>&1
 
-make --version > r/makeversion.txt 2>&1 
-type make >> r/makeversion.txt
+$MAKE --version > r/makeversion.txt 2>&1 
+type $MAKE >> r/makeversion.txt
 
 cp buildid.txt r/buildid.txt
 
