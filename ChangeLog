@@ -1,5 +1,12 @@
 2004-11-14  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/environ.h.in (USER_NAME_FROM_ENV): New macro, which consults
+	both $LOGNAME and $USER.
+	* src/client.c (init_client_options): Use it.
+	* src/srp-gen.c (make_srp_gen_options): Likewise.
+	* src/lshd.c (main_argp_parser): Likewise.
+	* src/lsh-writekey.c (main_argp_parser): Likewise.
+
 	* src/server_pty.c: When using snprintf, NUL-terminate the strings
 	explicitly.
 
