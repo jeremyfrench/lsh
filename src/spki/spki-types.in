@@ -1,8 +1,11 @@
 acl
 entry
 hash
+md5
 name
 propagate
+public-key
+sha1
 subject
 tag
 version
