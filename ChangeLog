@@ -1,3 +1,8 @@
+2004-02-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io.c (address_info2sockaddr) [!HAVE_GETADDRINFO]: Updated
+	code to work with new string abstraction.
+
 2004-02-12  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: No space between "-I" and include directories.
