@@ -22,9 +22,10 @@
  */
 #include "crypto.h"
 
-#include "rijndael.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include "nettle/aes.h"
 
 #include <assert.h>
 
@@ -64,7 +65,7 @@ make_rijndael_instance(struct crypto_algorithm *algorithm, int mode,
 {
   NEW(rijndael_instance, self);
 
-  self->super.block_size = RIJNDAEL_BLOCKSIZE;
+  self->super.block_size = AES_BLOCK_SIZE;
   self->super.crypt = ( (mode == CRYPTO_ENCRYPT)
 			? do_rijndael_encrypt
 			: do_rijndael_decrypt);
@@ -82,7 +83,7 @@ make_rijndael_algorithm(UINT32 key_size)
   assert(key_size <= AES_MAX_KEY_SIZE);
   assert(key_size >= AES_MIN_KEY_SIZE);
 
-  algorithm->block_size = AES_BLOCKSIZE;
+  algorithm->block_size = AES_BLOCK_SIZE;
   algorithm->key_size = key_size;
   algorithm->iv_size = 0;
   algorithm->make_crypt = make_rijndael_instance;
@@ -91,10 +92,10 @@ make_rijndael_algorithm(UINT32 key_size)
 }
 
 struct crypto_algorithm rijndael128_algorithm =
-{ STATIC_HEADER, AES_BLOCKSIZE, 16, 0, make_rijndael_instance};
+{ STATIC_HEADER, AES_BLOCK_SIZE, 16, 0, make_rijndael_instance};
 
 struct crypto_algorithm rijndael192_algorithm =
-{ STATIC_HEADER, AES_BLOCKSIZE, 24, 0, make_rijndael_instance};
+{ STATIC_HEADER, AES_BLOCK_SIZE, 24, 0, make_rijndael_instance};
 
 struct crypto_algorithm rijndael256_algorithm =
-{ STATIC_HEADER, AES_BLOCKSIZE, 32, 0, make_rijndael_instance};
+{ STATIC_HEADER, AES_BLOCK_SIZE, 32, 0, make_rijndael_instance};

@@ -60,7 +60,7 @@ hash(mpz_t x, UINT8 *digest)
   mpz_clear(t);
 
   sha1_init(&ctx);
-  sha1_update(&ctx, data, SEED_LENGTH);
+  sha1_update(&ctx, SEED_LENGTH, data);
   sha1_final(&ctx);
   sha1_digest(&ctx, SHA1_DIGEST_SIZE, digest);
 }
@@ -96,12 +96,12 @@ dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
 	
 	hash(t, h2);
 	
-	memxor(h1, h2, SHA_DIGESTSIZE);
+	memxor(h1, h2, SHA1_DIGEST_SIZE);
 	
 	h1[0] |= 0x80;
-	h1[SHA_DIGESTSIZE - 1] |= 1;
+	h1[SHA1_DIGEST_SIZE - 1] |= 1;
 	
-	bignum_parse_u(q, SHA_DIGESTSIZE, h1);
+	bignum_parse_u(q, SHA1_DIGEST_SIZE, h1);
 	
 	if (bignum_small_factor(q, 1000)
 	    || !mpz_probab_prime_p(q, 18))
@@ -111,7 +111,7 @@ dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
       /* q is a prime, with overwelming probability. */
 
       {
-	unsigned size = (n+1) * SHA_DIGESTSIZE;
+	unsigned size = (n+1) * SHA1_DIGEST_SIZE;
 	UINT8 *buffer = alloca(size);
 	unsigned i, j;
 	
@@ -123,7 +123,7 @@ dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
 	      {
 		mpz_set(t, s);
 		mpz_add_ui(t, t, j + k);
-		hash(t, buffer + ( (n-k) * SHA_DIGESTSIZE));
+		hash(t, buffer + ( (n-k) * SHA1_DIGEST_SIZE));
 	      }
 	    bignum_parse_u(p, size, buffer);
 
