@@ -1,3 +1,8 @@
+2003-05-24  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/server_x11.c (server_x11_setup): Don't use non-constant
+	initializer. Sun cc doesn't support it.
+
 2003-05-22  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/Makefile.am: Don't use -O0 in AM_CFLAGS, as it
