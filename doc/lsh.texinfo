@@ -10,7 +10,7 @@
 * LSH: (lsh).           Secure Shell and related utilities.
 @end direntry
 
-@set UPDATED-FOR 1.5.6
+@set UPDATED-FOR 2.0
 
 @c Latin-1 doesn't work with tex output.
 @c Also look out for é characters.
