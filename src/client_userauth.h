@@ -24,6 +24,8 @@
 #ifndef LSH_CLIENT_USERAUTH_H_INCLUDED
 #define LSH_CLIENT_USERAUTH_H_INCLUDED
 
+#warning client_userauth.h is obsolete
+
 #include "userauth.h"
 
 #endif /* LSH_CLIENT_USERAUTH_H_INCLUDED */
