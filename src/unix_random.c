@@ -569,8 +569,8 @@ background_poll(struct hash_instance *hash)
 		  if (WIFEXITED(status))
 		    {
 		      if (WEXITSTATUS(status))
-			werror("unix_random.c: background_poll: %z exited unsuccessfully.\n",
-			       state[j].source->path);
+			debug("unix_random.c: background_poll: %z exited unsuccessfully.\n",
+			      state[j].source->path);
 		    }
 		  else if (WIFSIGNALED(status))
 		    {
@@ -619,8 +619,8 @@ start_background_poll(struct unix_random *self)
       self->pid = pid;
       self->status = POLL_RUNNING;
 
-      werror("unix_random.c: Started background poll. pid = %i.\n",
-	     pid);
+      verbose("unix_random.c: Started background poll. pid = %i.\n",
+	      pid);
       
       return;
 
