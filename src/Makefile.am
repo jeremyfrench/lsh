@@ -55,7 +55,6 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	list.c lookup_verifier.c \
 	lock_file.c \
 	lsh_string.c parse.c \
-	oop-line-file.c \
 	pkcs5.c \
 	publickey_crypto.c queue.c \
 	randomness.c \
@@ -127,6 +126,8 @@ LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 
 lshg_SOURCES = lshg.c dummy.c
 lshg_LDADD = liblsh.a @LIBARGP@
+
+lshd_SOURCES = lshd.c ssh_read.c
 
 class-map: $(srcdir)/make-class-map $(dist_classes)
 	cat $(dist_classes) | grep '^CLASS:' \
