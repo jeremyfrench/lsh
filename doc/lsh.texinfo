@@ -132,12 +132,13 @@ Related programs and techniques
 
 Getting started
 
+* lsh-make-seed ::              
 * lsh basics::                  Connection with lsh
 * tcpip forwarding::            Forwarding @acronym{TCP/IP} ports
 * lshd basics::                 Starting the lshd deamon
 * public-key::                  Using public-keys
 * srp::                         Using SRP authentication
-* sexp::                        Examining keys and other S-exp files.
+* sexp::                        Examining keys and other S-exp files
 * Converting keys::             
 
 Invoking @command{lsh}
@@ -500,16 +501,40 @@ This section tells you how to perform some common tasks using the
 possibilities.
 
 @menu
+* lsh-make-seed ::              
 * lsh basics::                  Connection with lsh
 * tcpip forwarding::            Forwarding @acronym{TCP/IP} ports
 * lshd basics::                 Starting the lshd deamon
 * public-key::                  Using public-keys
 * srp::                         Using SRP authentication
-* sexp::                        Examining keys and other S-exp files.
+* sexp::                        Examining keys and other S-exp files
 * Converting keys::             
 @end menu
 
-@node lsh basics, tcpip forwarding, Getting started, Getting started
+@node lsh-make-seed , lsh basics, Getting started, Getting started
+@comment  node-name,  next,  previous,  up
+@section Initializing the randomness generator
+
+Several of the lsh programs requires a good pseudorandomness generator
+for secure operation. The first thing you need to do is to create a
+seed file for the generator. To create a personal seed file, stored as
+@file{~/.lsh/yarrow-seed-file}, run
+
+@example
+lsh-make-seed
+@end example
+
+To create a seed file for use by @command{lshd}, run
+
+@example
+lsh-make-seed --server
+@end example
+
+as root. The seed file is stored as
+@file{/var/spool/lsh/yarrow-seed-file}.
+
+
+@node lsh basics, tcpip forwarding, lsh-make-seed , Getting started
 @comment  node-name,  next,  previous,  up
 @section @command{lsh} basics
 
@@ -885,6 +910,11 @@ ssh-conv <openssh-key.pub >new-key.pub
 
 You can then use the usual @command{lsh-authorize} on the converted
 keys. @command{ssh-conv} supports both @acronym{DSA} and @command{RSA} keys.
+
+Conversion of keys the other way is also possible, by using the
+@command{lsh-export-key} program. It reads a public key in
+@command{lsh}'s @acronym{SPKI} format on stdin, and writes the key in
+@command{ssh2}/OpenSSH format on stdout.
 
 There are currently no tools for converting private keys.
 
@@ -1354,6 +1384,11 @@ remote systems. Set by @command{lshd} when starting new processes.
 If set, it points out the location of the seed-file for the randomness
 generator. Recognized both by @command{lshd} and the client programs.
 
+@item SHELL
+User's login shell. When @command{lshd} starts a user process, it sets
+@env{SHELL} to the value in @file{/etc/passwd}, unless overridden by
+the @option{--login-shell} command line option.
+
 @item TERM
 The type of the local terminal. If the client requests a pty for a
 remote process, the value of @env{TERM} is transferred from client to
@@ -1370,10 +1405,58 @@ this variable from the server.
 @c used by xlib @item XAUTHORITY
 @end table
 
-Files used by the lsh client: (XXX Not yet written)
+Files used by the lsh client, stored in the @file{~/lsh} directory:
 
 @table @file
+@item captured_keys
+Keys for remote hosts, saved when running @samp{lsh
+--sloppy-host-authentication}. Or more precicely, each key is stored
+together with an as SPKI (Simple Public Key Intrastructure) ACL:s
+(Access Control Lists).
+
+@item identity
+Your private key file. Usually created by @samp{lsh-keygen |
+lsh-writekey}. Read by @command{lsh}. Should be kept secret.
+
+@item identity.pub
+The corresponding public key. You can copy this file to other systems
+in order to authorize the private key to login (@pxref{Converting
+keys}). 
+
+@item known_hosts
+Host keys (or more precisely, ACL:s) that lsh considers authentic.
+Entries have the same format as in @file{captured_keys}.
+
+@item yarrow-seed-file
+The seed file for the randomness generator. Should be kept secret.
+
 @end table
+
+Files used by @command{lshd}, some of which are read from user home
+directories:
+
+@table @file
+@item /etc/lsh_host_key
+The server's private host key.
+
+@item /etc/lsh_host_key.pub
+The corresponding public key.
+
+@item /var/spool/lsh/yarrow-seed-file
+The seed-file for @command{lshd}'s randomness generator.
+
+@item ~/.lsh/authorized_keys
+This is a directory that keeps a ``database'' of keys authorized for
+login. With the current implementation, a key is authorized for login
+if and only if this directory contains a file with a name which is the
+SHA1 hash of the key. The usual way to create files is by running the
+script @command{lsh-authorize}.
+
+@item ~/.lsh/srp-verifier
+If you use the experimental support for @acronym{SRP} (@pxref{srp}),
+the server reads a user's @acronym{SRP} verifier from this file.
+@end table
+
 
 @node Terminology, Concept Index, Files and environment variables, Top
 @comment  node-name,  next,  previous,  up
