@@ -42,6 +42,7 @@ struct write_buffer
   struct abstract_write super;
   
   UINT32 block_size;
+  UINT8 *buffer; /* Size is twice the blocksize */
 
   int empty;
 
@@ -60,7 +61,6 @@ struct write_buffer
 
   UINT32 start;
   UINT32 end;
-  UINT8 buffer[1]; /* Real size is twice the blocksize */
 };
 
 struct write_buffer *write_buffer_alloc(UINT32 size);

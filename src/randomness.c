@@ -36,7 +36,7 @@ struct poor_random
   struct randomness super;
   struct hash_instance *hash;
   UINT32 pos;
-  UINT8 buffer[1];
+  UINT8 *buffer;
 };
 
 static void do_poor_random(struct randomness **r, UINT32 length, UINT8 *dst)
@@ -80,7 +80,8 @@ struct randomness *make_poor_random(struct hash_algorithm *hash,
   
   self->super.random = do_poor_random;
   self->hash = MAKE_HASH(hash);
-
+  self->buffer = lsh_space_alloc(hash->hash_size);
+  
   HASH_UPDATE(self->hash, sizeof(now), (UINT8 *) &now);
   HASH_UPDATE(self->hash, init->length, init->data);
   HASH_DIGEST(self->hash, self->buffer);
