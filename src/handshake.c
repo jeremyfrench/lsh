@@ -109,9 +109,9 @@ compat_peer_flags(uint32_t length, uint8_t *software)
        (fallback object ssh1_fallback)))
 */
 
-/* Returns -1 if the line is not the start of a SSH handshake,
- * 0 if the line appears to be an SSH handshake, but with bogus version fields,
- * or 1 if the line was parsed sucessfully. */
+/* Returns -1 if the line is not the start of a SSH handshake, 0 if
+ * the line appears to be an SSH handshake, but with bogus version
+ * fields, or 1 if the line was parsed sucessfully. */
 static int
 split_version_string(uint32_t length, uint8_t *line,
 		     uint32_t *protover_len, uint8_t **protover,
