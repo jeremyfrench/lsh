@@ -84,9 +84,10 @@ read_spki_key_file(const char *name,
 		   struct exception_handler *e);
 
 
+#if 0
 /* Signature algorithms in spki */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name spki_algorithm)
      (vars
@@ -107,29 +108,43 @@ spki_signer(struct sexp *e, struct alist *algorithms, int *type);
 
 struct verifier *
 spki_verifier(struct sexp *e, struct alist *algorithms, int *type);
+#endif
 
 
 /* At a point in time, not all fields are known; fields may be added
  * later, or computed as needed. This information is not automatically
- * trusted in any way, except that anu non-NULL attributes must be
+ * trusted in any way, except that any non-NULL attributes must be
  * consistent with each other. */
 
 /* GABA:
    (class
      (name spki_subject)
      (vars
-       ; (public-key ...) expression
+       ; (public-key ...) expression.
        (key object sexp)
 
        ; Verifier
-       ;; FIXME: We need a new verifier type, that represents
-       ;; signatures as s-expressions.
-       ;; (verifier object verifier)
+       (verifier object verifier)
        (sha1 string)
        (md5 string)))
 */
 
-/* Keeps track of spki_subjects and their keys. */
+struct spki_subject *
+make_spki_subject(struct sexp *key,
+		  struct verifier *verifier,
+		  struct lsh_string *sha1,
+		  struct lsh_string *md5);
+
+/* Keeps track of spki_subjects and their keys.
+ *
+ * We try to make sure that subjects within one context can be
+ * compared pointer-wise. I.e. if we get several (public-key ...) and
+ * (hash ...) expressions representing the same principal, we merge
+ * them into a single spki_subject object. However, there is one case
+ * in which this failes: If we encounter several (hash ...)
+ * expressions with different hash algorithms, before we encounter the
+ * non-hashed (public-key ...) expression. */
+
 /* GABA:
    (class
      (name spki_context)
@@ -137,11 +152,17 @@ spki_verifier(struct sexp *e, struct alist *algorithms, int *type);
        ; Looks up a public-key or hash.
        (lookup method (object spki_subject)
                       "struct sexp *e")
-       (clone method (object spki_context))))
+       (authorized method int
+                          "struct spki_subject *subject"
+			  "struct sexp *access")))
+       ;; (clone method (object spki_context))))
 */
 
 #define SPKI_LOOKUP(c, e) ((c)->lookup((c), (e)))
 #define SPKI_CLONE(c) ((c)->clone((c)))
+
+struct spki_context *
+make_spki_context(struct alist *algorithms);
 
 /* 5-tuples */
 
