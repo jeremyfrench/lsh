@@ -38,6 +38,7 @@
 #include "xalloc.h"
 
 #include <assert.h>
+#include <string.h>
 
 #include "connection_commands.c.x"
 
@@ -84,6 +85,53 @@ struct close_callback *make_connection_close_handler(struct ssh_connection *c)
        (fallback object ssh1_fallback)))
 */
 
+/* Returns -1 if the line is not the start of a SSH handshake,
+ * 0 if the line appears to be an SSH handshake, but with bogus version fields,
+ * or 1 if the line was parsed sucessfully. */
+static int
+split_version_string(UINT32 length, UINT8 *line,
+		     UINT32 *protover_len, UINT8 **protover,
+		     UINT32 *swver_len, UINT8 **swver,
+		     UINT32 *comment_len, UINT8 **comment)
+{
+  UINT8 *sep;
+
+  if (length < 4 || memcmp(line, "SSH-", 4) != 0)
+    {
+      /* not an ssh identification string */
+      return -1;
+    }
+  line += 4; length -= 4;
+  sep = memchr(line, '-', length);
+  if (!sep)
+    {
+      return 0;
+    }
+  *protover_len = sep - line;
+  *protover = line;
+  
+  line = sep + 1;
+  length -= *protover_len + 1;
+
+  /* FIXME: The spec is not clear about the separator here. Can there
+   * be other white space than a single space character? */
+  sep = memchr(line, ' ', length);
+  if (!sep)
+    {
+      *swver_len = length;
+      *swver = line;
+      *comment = NULL;
+      *comment_len = 0;
+      return 1;
+    }
+
+  *swver_len = sep - line;
+  *swver = line;
+  *comment = sep + 1;
+  *comment_len = length - *swver_len - 1;
+  return 1;
+}
+
 static void
 do_line(struct line_handler **h,
 	struct read_handler **r,
@@ -92,65 +140,75 @@ do_line(struct line_handler **h,
 	struct exception_handler *e)
 {
   CAST(connection_line_handler, closure, *h);
+  UINT32 protover_len, swver_len, comment_len;
+  UINT8 *protover, *swver, *comment;
   
-  if ( (length >= 4) && !memcmp(line, "SSH-", 4))
+  switch(split_version_string(length, line, 
+			      &protover_len, &protover, 
+			      &swver_len, &swver,
+			      &comment_len, &comment))
     {
-      /* Parse and remember format string */
-      /* NOTE: According to the spec, there's no reason for the server
-       * to accept a client that wants version 1.99. But Datafellow's
-       * ssh2 client does exactly that, so we have to support it. And
-       * I don't think it causes any harm. */
-      if ( ((length >= 8) && !memcmp(line + 4, "2.0-", 4))
-	   || ((length >= 9) && !memcmp(line + 4, "1.99-", 5)) )
-	{
-	  struct read_handler *new;	  
+    case 1:
+      {
+	/* Parse and remember format string */
+	/* NOTE: According to the spec, there's no reason for the server
+	 * to accept a client that wants version 1.99. But Datafellow's
+	 * ssh2 client does exactly that, so we have to support it. And
+	 * I don't think it causes any harm. */
+	
+	if ( ((protover_len >= 3) && !memcmp(protover, "2.0", 3))
+	     || ((protover_len == 4) && !memcmp(protover, "1.99", 4)) )
+	  {
+	    struct read_handler *new;	  
 #if WITH_SSH1_FALLBACK
-	  if (closure->fallback)
-	    {
-	      assert(closure->mode == CONNECTION_SERVER);
+	    if (closure->fallback)
+	      {
+		assert(closure->mode == CONNECTION_SERVER);
 	      
-	      /* Sending keyexchange packet was delayed. Do it now */
-	      initiate_keyexchange(closure->connection,
-				   closure->mode);
-	      
-#if 0
-	      if (LSH_CLOSEDP(res))
-		{
-		  werror("server.c: do_line: "
-			 "Delayed initiate_keyexchange() failed.\n");
-		  *h = NULL;
-		  return;
-		}
-#endif
-	    }
+		/* Sending keyexchange packet was delayed. Do it now */
+		initiate_keyexchange(closure->connection,
+				     closure->mode);
+	      }
 #endif /* WITH_SSH1_FALLBACK */
-	  new = 
-	    make_read_packet(
-	      make_packet_unpad(
-		closure->connection,
-		make_packet_inflate(
-		  make_packet_debug(&closure->connection->super, "received"),
-		  closure->connection
-		  )
-		),
-	      closure->connection
-	      );
-	  
-	  closure->connection->versions[!closure->mode]
-	    = ssh_format("%ls", length, line);
 
-	  verbose("Client version: %pS\n"
-		  "Server version: %pS\n",
-		  closure->connection->versions[CONNECTION_CLIENT],
-		  closure->connection->versions[CONNECTION_SERVER]);
+#if DATAFELLOWS_WORKAROUNDS
+	    if ( (swver_len > 6) && !memcmp(swver, "2.0.", 4)
+		 /* FIXME: Perhaps do a numerical comparison here? */
+		 && (memcmp(swver + 4, "13", 2) <= 0) )
+	      {
+		closure->connection->peer_flags
+		  |= (PEER_SSH_DSS_KLUDGE | PEER_SERVICE_ACCEPT_KLUDGE
+		      | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG);
+	      }
+#endif	    
+	    
+	    new = 
+	      make_read_packet(
+		make_packet_unpad(
+		  closure->connection,
+		  make_packet_inflate(
+		    make_packet_debug(&closure->connection->super, "received"),
+		    closure->connection
+		    )
+		  ),
+		closure->connection
+		);
+	    
+	    closure->connection->versions[!closure->mode]
+	      = ssh_format("%ls", length, line);
 
-	  *r = new;
-	  return;
-	}
+	    verbose("Client version: %pS\n"
+		    "Server version: %pS\n",
+		    closure->connection->versions[CONNECTION_CLIENT],
+		    closure->connection->versions[CONNECTION_SERVER]);
+
+	    *r = new;
+	    return;
+	  }
 #if WITH_SSH1_FALLBACK      
       else if (closure->fallback
-	       && (length >= 6)
-	       && !memcmp(line + 4, "1.", 2))
+	       && (protover_len >= 2)
+	       && !memcmp(protover, "1.", 2))
 	{
 	  *h = NULL;
 	  SSH1_FALLBACK(closure->fallback,
@@ -176,13 +234,25 @@ do_line(struct line_handler **h,
 			   NULL));
 	  return;
 	}
-    }
-  else
-    {
+	fatal("Internal error!\n");
+      }
+    case 0:
+      werror("Incorrectly formatted version string: %s\n", length, line);
+      KILL(closure);
+      *h = NULL;
+      
+      PROTOCOL_ERROR(closure->connection->e,
+		     "Incorrectly version string.");
+      
+      return;
+    case -1:
       /* Display line */
       werror("%ps\n", length, line);
 
       /* Read next line */
+      break;
+    default:
+      fatal("Internal error!\n");
     }
 }
 
