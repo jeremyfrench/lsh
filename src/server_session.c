@@ -46,8 +46,8 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
-/* #include <pwd.h> */
 
+#if WITH_UTMP
 #if HAVE_UTMP_H
 #include <utmp.h>
 #endif
@@ -55,6 +55,7 @@
 #if HAVE_UTMPX_H
 #include <utmpx.h>
 #endif
+#endif /* WITH_UTMP */
 
 /* Socket workround */
 #ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
@@ -113,6 +114,9 @@
      (super resource)
      (vars
        (pid . pid_t)
+       ; For utmp/wtmp logging
+       (tty string)
+       ; Signal used for killing the process.
        (signal . int)))
 */
 
@@ -133,15 +137,29 @@ static void do_kill_process(struct resource *r)
 	  werror("do_kill_process: kill() failed (errno = %i): %z\n",
 		 errno, STRERROR(errno));
 	}
+#if WITH_UTMP && HAVE_LOGWTMP
+      if (self->tty)
+	{
+#if HAVE_LOGOUT
+	  logout(self->tty->data);
+#else /* !HAVE_LOGOUT */
+	  /* FIXME: Should we pass NULL:s or empty strings for the
+	   * ut_name and ut_host fields? */
+	  logwtmp(self->tty->data, NULL, NULL);
+#endif /* !HAVE_LOGOUT */
+	}
+#endif /* WITH_UTMP && HAVE_LOGWTMP */
     }
 }
           
-struct resource *make_process_resource(pid_t pid, int signal)
+struct resource *
+make_process_resource(pid_t pid, struct lsh_string *tty, int signal)
 {
   NEW(process_resource, self);
   self->super.alive = 1;
 
   self->pid = pid;
+  self->tty = tty;
   self->signal = signal;
 
   self->super.kill = do_kill_process;
@@ -614,6 +632,25 @@ static int make_pty(struct pty_info *pty UNUSED,
 { return 0; }
 #endif /* !WITH_PTY_SUPPORT */
 
+/* Strips any directory part of s. Both argument must be NUL
+ * terminated. */
+static const char *
+lsh_basename(struct lsh_string *s)
+{
+  UINT8 *base;
+  unsigned i;
+
+  assert(NUL_TERMINATED(s));
+
+  for (i = 0,  base = s->data; i < s->length; i++)
+    {
+      if (s->data[i] == '/')
+	base = s->data + i + 1;
+    };
+
+  return base;
+}
+  
 /* Returns -1 on failure, 0 for child and +1 for parent */
 static int
 spawn_process(struct server_session *session,
@@ -624,7 +661,7 @@ spawn_process(struct server_session *session,
   int out[2];
   int err[2];
 
-  int using_pty = 0;
+  const char *tty = NULL;
   
   if (session->process)
     /* Already spawned a shell or command */
@@ -634,20 +671,22 @@ spawn_process(struct server_session *session,
    * {in|out|err}[1] for writing. */
 
   if (make_pty(session->pty, in, out, err))
-    using_pty = 1;
+    tty = lsh_basename(session->pty->tty_name);
 
   else if (!make_pipes(in, out, err))
     return -1;
   {
     pid_t child;
-
-    if (USER_FORK(session->user, &child))
+    
+    if (USER_FORK(session->user, &child, tty))
       {
 	if (child)
 	  { /* Parent */
 	    struct ssh_channel *channel = &session->super;
-	    
 	    debug("Parent process\n");
+
+	    session->process
+	      = make_process_resource(child, format_cstring(tty), SIGHUP);
 	    REAP(reap, child, make_exit_shell(session));
 	  
 	    /* Close the child's fd:s */
@@ -694,9 +733,6 @@ spawn_process(struct server_session *session,
 	    channel->send_adjust = do_send_adjust;
 	    channel->eof = do_eof;
 	  
-	    session->process
-	      = make_process_resource(child, SIGHUP);
-
 	    /* Make sure that the process and it's stdio is
 	     * cleaned up if the channel or connection dies. */
 	    REMEMBER_RESOURCE
@@ -725,7 +761,7 @@ spawn_process(struct server_session *session,
 	      }
 	    
 #if WITH_PTY_SUPPORT
-	    if (using_pty)
+	    if (tty)
 	      {
 		debug("lshd: server.c: Setting controlling tty...\n");
 		if (!tty_setctty(session->pty))
