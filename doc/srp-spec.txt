@@ -105,14 +105,14 @@ exchange hash H, as the HASH of the concatenation of the following:
   mpint     f, exchange value sent by the server
   mpint     K, the shared secret
 
-The client computes m1 = HASH(H), and sends it to the server, to prove
-that it knows the shared key. It sends
+The client computes m1 = H, and sends it to the server, to prove that
+it knows the shared key. It sends
 
   byte SSH_MSG_KEXSRP_PROOF
   string m1
 
-(FIXME: Would it be better to send the exchange hash in the clear,
-i.e. use m1 = H?)
+(FIXME: Would it be better not to send the exchange hash in the clear,
+e.g. use m1 = HASH(H)?)
 
 The server verifies that m is correct using its own K. If they don't
 match, the keyexchange fails, and the server MUST NOT send any proof

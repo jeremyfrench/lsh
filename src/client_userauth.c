@@ -312,8 +312,6 @@ do_userauth_banner(struct packet_handler *self UNUSED,
   UINT32 language_length;
   const UINT8 *language;
   
-  CHECK_TYPE(packet_handler, self);
-
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)

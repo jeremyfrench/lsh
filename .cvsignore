@@ -8,5 +8,6 @@ config.h.in
 config.log
 config.status
 configure
+old
 stamp-h
 stamp-h.in

@@ -136,8 +136,6 @@ do_fail(struct packet_handler *closure UNUSED,
 	struct ssh_connection *connection,
 	struct lsh_string *packet)
 {
-  CHECK_TYPE(packet_handler, closure);
-
   lsh_string_free(packet);
 
   PROTOCOL_ERROR(connection->e, NULL);
@@ -151,8 +149,6 @@ do_unimplemented(struct packet_handler *closure UNUSED,
 		 struct ssh_connection *connection,
 		 struct lsh_string *packet)
 {
-  CHECK_TYPE(packet_handler, closure);
-
   werror("Received packet of unimplemented type %i.\n",
 	 packet->data[0]);
 
