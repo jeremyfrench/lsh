@@ -581,23 +581,6 @@ COMMAND_SIMPLE(lsh_login_command)
 	   ; Request the userauth service
 	   (request_userauth_service connection))))) */
 
-#if 0
-/* Requests the ssh-connection service right away.
- * This function is essentially (prog1 request_connection_service):
- *
- * (prog1 request_connection_service options connection)
- * --> (request_connection_service connection)
- */
-/* ;; GABA:
-   (expr
-     (name make_lsh_no_userauth)
-     (expr
-       (lambda (options connection)
-	 ; Request the connection service immediately
-	 (request_connection_service connection)))))
-*/
-#endif
-
 /* GABA:
    (expr
      (name make_lsh_connect)
@@ -738,6 +721,10 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_SRP 0x207
 #define OPT_USERAUTH 0x208
 
+#define OPT_STDIN 0x210
+#define OPT_STDOUT 0x211
+#define OPT_STDERR 0x212
+
 static const struct argp_option
 main_options[] =
 {
@@ -783,8 +770,16 @@ main_options[] =
   { "remote-peers", 'g', NULL, 0, "Allow remote access to forwarded ports", 0 },
   { "no-remote-peers", 'g' | ARG_NOT, NULL, 0, 
     "Disallow remote access to forwarded ports (default).", 0 },
-#if WITH_PTY_SUPPORT
+
   { NULL, 0, NULL, 0, "Modifiers that apply to remote execution:", 0 },
+  { "stdin", OPT_STDIN, "Filename", 0, "Redirect stdin", 0},
+  { "no-stdin", OPT_STDIN | ARG_NOT, NULL, 0, "Redirect stdin from /dev/null", 0}, 
+  { "stdout", OPT_STDOUT, "Filename", 0, "Redirect stdout", 0},
+  { "no-stdout", OPT_STDOUT | ARG_NOT, NULL, 0, "Redirect stdout to /dev/null", 0}, 
+  { "stderr", OPT_STDERR, "Filename", 0, "Redirect stderr", 0},
+  { "no-stderr", OPT_STDERR | ARG_NOT, NULL, 0, "Redirect stderr to /dev/null", 0}, 
+  
+#if WITH_PTY_SUPPORT
   { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
   { "no-pty", 't' | ARG_NOT, NULL, 0, "Don't request a remote pty.", 0 },
 #endif /* WITH_PTY_SUPPORT */
@@ -995,6 +990,20 @@ rebuild_command_line(unsigned argc, char **argv)
   return r;
 }
 
+#define CASE_ARG(opt, attr, none)		\
+  case opt:					\
+    if (self->not)				\
+      {						\
+        self->not = 0;				\
+						\
+      case opt | ARG_NOT:			\
+        self->attr = none;			\
+        break;					\
+      }						\
+      						\
+    self->attr = arg;				\
+    break
+
 #define CASE_FLAG(opt, flag)			\
   case opt:					\
     if (self->not)				\
@@ -1006,8 +1015,8 @@ rebuild_command_line(unsigned argc, char **argv)
         break;					\
       }						\
       						\
-      self->flag = 1;				\
-      break
+    self->flag = 1;				\
+    break
 
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
@@ -1285,7 +1294,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     CASE_FLAG('t', with_pty);
 #endif /* WITH_PTY_SUPPORT */
 
-    case 'n':
+    CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
+    CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
+    CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
+
+      case 'n':
       self->not = !self->not;
       break;
     }
