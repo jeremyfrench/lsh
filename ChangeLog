@@ -1,5 +1,7 @@
 1999-10-13  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/scm/Makefile.am.in (EXTRA_DIST): Added Makefile.am.in.
+
 	* src/argp/argp.h: Use PRINTF_STYLE() instead of explicit
 	__attribute__:s in declarations.
 
