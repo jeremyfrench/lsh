@@ -464,9 +464,9 @@ static struct ssh_channel *
 do_open_session(struct channel_open *c,
 		struct ssh_connection *connection UNUSED,
 		struct simple_buffer *args,
-		UINT32 *error,
-		char **error_msg,
-		struct lsh_string **data)
+		UINT32 *error UNUSED,
+		char **error_msg UNUSED,
+		struct lsh_string **data UNUSED)
 {
   CAST(open_session, closure, c);
   
