@@ -38,13 +38,19 @@ static int do_unpad(struct abstract_write *w,
   struct lsh_string *new;
   
   if (packet->length < 1)
-    return 0;
+    {
+      lsh_string_free(packet);
+      return LSH_FAIL | LSH_DIE;
+    }
   
   padding_length = packet->data[0];
 
   if ( (padding_length < 4)
        || (padding_length >= packet->length) )
-    return 0;
+    {
+      lsh_string_free(packet);
+      return LSH_FAIL | LSH_DIE;
+    }
 
   payload_length = packet->length - 1 - padding_length;
   
