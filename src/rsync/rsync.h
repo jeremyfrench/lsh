@@ -34,7 +34,7 @@
 # endif
 #endif
 
-#include <stdint.h>
+#include <inttypes.h>
 
 #include <nettle/md5.h>
 
