@@ -516,7 +516,7 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
   info->argc = argc;
   info->argv = argv;
   
-  assert(env_length >= 1);
+  assert(env_length >= 3);
 
   /* FIXME: Set SSH_TTY, SSH_CLIENT and SSH_ORIGINAL_COMMAND */
   if (session->term)
@@ -525,6 +525,32 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
       env[i].value = session->term;
       i++;
     }
+
+  if (info->pty && info->pty->tty_name)
+    {
+      env[i].name ="SSH_TTY";
+      env[i].value = info->pty->tty_name;
+      i++;
+    }
+
+  if (info->peer)
+    {
+      env[i].name ="SSH_CLIENT";
+      
+      if (session->super.connection->local)
+	env[i].value = ssh_format("%lS %di %di", 
+				  info->peer->ip,
+				  info->peer->port,
+				  session->super.connection->local->port
+				  );
+      else
+	env[i].value = ssh_format("%lS %di UNKNOWN", 
+				  info->peer->ip,
+				  info->peer->port
+				  );	
+      i++;
+    }
+
   assert(i <= env_length);
   info->env_length = i;
   info->env = env;
@@ -540,7 +566,7 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
 {
   CAST(server_session, session, channel);
   struct spawn_info spawn;
-  struct env_value env;
+  struct env_value env[3];
   
   static const struct exception shell_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
@@ -555,7 +581,7 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
     /* Already spawned a shell or command */
     goto fail;
 
-  init_spawn_info(&spawn, session, 0, NULL, 1, &env);
+  init_spawn_info(&spawn, session, 0, NULL, 3, env);
   spawn.login = 1;
     
   if (spawn_process(session, channel->connection->user, &spawn))
@@ -601,11 +627,11 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
     {
       struct spawn_info spawn;
       const char *args[2];
-      struct env_value env;
+      struct env_value env[3];
 
       struct lsh_string *s = ssh_format("%ls", command_len, command);
       
-      init_spawn_info(&spawn, session, 2, args, 1, &env);
+      init_spawn_info(&spawn, session, 2, args, 3, env);
       spawn.login = 0;
       
       args[0] = "-c";
@@ -690,7 +716,7 @@ do_spawn_subsystem(struct channel_request *s,
     {
       struct spawn_info spawn;
       const char *args[2];
-      struct env_value env;
+      struct env_value env[3];
 
       /* Don't use any pty */
       if (session->pty)
@@ -701,7 +727,7 @@ do_spawn_subsystem(struct channel_request *s,
 
       args[0] = "-c"; args[1] = program;
       
-      init_spawn_info(&spawn, session, 2, args, 1, &env);
+      init_spawn_info(&spawn, session, 2, args, 3, env);
       spawn.login = 0;
 
       if (spawn_process(session, channel->connection->user, &spawn))
