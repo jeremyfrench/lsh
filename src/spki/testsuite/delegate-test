@@ -74,8 +74,6 @@ EOF
 ../tools/spki-reduce < testhome/.spki/certificates > test.out \
     --acl-file=testhome/.spki/acls || die "Reduction failed."
 
-# Where's the tag?
-
 check_sexp test.out <<EOF "Reduction differs"
 (acl (entry (public-key (rsa-pkcs1-sha1 (n |CHhQGpcTr5NRPa3P0oVru7buX6i7
                                             DmrwY753vx2i/16sLlAiZqfu/d8k
