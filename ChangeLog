@@ -1,5 +1,15 @@
 2000-05-06  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* configure.in: Bumped version to 0.9.8.
+
+	* src/sexp.c (sexp_argp_parser): Renamed output-format option from
+	-o to -f.
+
+	* src/lsh_writekey.c (main_options): #if:ed out the -f alias.
+
+	* doc/lsh.texinfo (Getting started): Updated example on using
+	lsh_writekey. 
+
 	* src/tcpforward_commands.c (do_remote_port_install_continuation):
 	Handle only the successful case here.
 
