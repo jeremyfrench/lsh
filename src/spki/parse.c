@@ -172,8 +172,9 @@ enum spki_type
 spki_parse_hash(struct spki_iterator *i,
 		struct spki_hash_value *hash)
 {
-  if ( (hash->type = spki_intern(i))
-       && (hash->digest = spki_parse_string(i, &hash->length)))
+  if (i->type == SPKI_TYPE_HASH
+      && (hash->type = spki_intern(i))
+      && (hash->digest = spki_parse_string(i, &hash->length)))
     return spki_parse_end(i);
   else
     return spki_parse_fail(i);
