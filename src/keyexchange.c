@@ -605,6 +605,7 @@ struct make_kexinit *make_simple_kexinit(struct randomness *r,
   return &res->super;
 }
 
+#if 0
 /* FIXME: This function should be replaced by something more
  * configurable. Perhaps greating the algorithm alist should be
  * handled by the same function. */
@@ -626,6 +627,7 @@ struct make_kexinit *make_test_kexinit(struct randomness *r)
      
      make_int_list(0, -1));
 }
+#endif
 
 /* CLASS:
    (class
