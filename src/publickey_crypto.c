@@ -389,6 +389,39 @@ struct group *make_zn(mpz_t p)
 
 /* diffie-hellman */
 
+void init_diffie_hellman_instance(struct diffie_hellman_method *m,
+				  struct diffie_hellman_instance *self,
+				  struct ssh_connection *c)
+{
+  mpz_init(self->e);
+  mpz_init(self->f);
+  mpz_init(self->secret);
+  mpz_init(self->K);
+  
+  self->method = m;
+  self->hash = MAKE_HASH(m->H);
+  HASH_UPDATE(self->hash,
+	      c->client_version->length,
+	      c->client_version->data);
+  HASH_UPDATE(self->hash,
+	      c->server_version->length,
+	      c->server_version->data);
+  HASH_UPDATE(self->hash,
+	      c->literal_kexinits[CONNECTION_CLIENT]->length,
+	      c->literal_kexinits[CONNECTION_CLIENT]->data);
+  HASH_UPDATE(self->hash,
+	      c->literal_kexinits[CONNECTION_SERVER]->length,
+	      c->literal_kexinits[CONNECTION_SERVER]->data);
+  
+  lsh_string_free(c->literal_kexinits[CONNECTION_CLIENT]);
+  lsh_string_free(c->literal_kexinits[CONNECTION_SERVER]);
+
+  c->literal_kexinits[CONNECTION_SERVER] = NULL;
+  c->literal_kexinits[CONNECTION_CLIENT] = NULL;
+	      
+  return self;
+}
+
 struct diffie_hellman_instance *
 make_diffie_hellman_instance(struct diffie_hellman_method *m,
 			     struct ssh_connection *c)
@@ -396,18 +429,8 @@ make_diffie_hellman_instance(struct diffie_hellman_method *m,
   struct diffie_hellman_instance *res
     = xalloc(sizeof(struct diffie_hellman_instance));
 
-  mpz_init(res->e);
-  mpz_init(res->f);
-  mpz_init(res->secret);
-  
-  res->method = m;
-  res->hash = MAKE_HASH(m->H);
-  HASH_UPDATE(res->hash,
-	      c->client_version->length,
-	      c->client_version->data);
-  HASH_UPDATE(res->hash,
-	      c->server_version->length,
-	      c->server_version->data);
+  init_diffie_hellman_instance(m, res, c);
+
   return res;
 }
 
@@ -466,12 +489,16 @@ int dh_process_client_msg(struct diffie_hellman_instance *self,
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
-  return (parse_uint8(&buffer, &msg_number)
-	  && (msg_number == SSH_MSG_KEXDH_INIT)
-	  && parse_bignum(&buffer, self->e)
-	  && (mpz_cmp_ui(self->e, 1) > 0)
-	  && (mpz_cmp(self->e, self->method->G->order) <= 0)
-	  && parse_eod(&buffer) );
+  if (! (parse_uint8(&buffer, &msg_number)
+	 && (msg_number == SSH_MSG_KEXDH_INIT)
+	 && parse_bignum(&buffer, self->e)
+	 && (mpz_cmp_ui(self->e, 1) > 0)
+	 && (mpz_cmp(self->e, self->method->G->order) <= 0)
+	 && parse_eod(&buffer) ))
+    return 0;
+
+  GROUP_POWER(self->method->G, self->K, self->e, self->secret);
+  return 1;
 }
 
 void dh_hash_update(struct diffie_hellman_instance *self,
@@ -483,9 +510,10 @@ void dh_hash_update(struct diffie_hellman_instance *self,
 /* Hashes server key, e and f */
 void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
 {
-  struct lsh_string *s = ssh_format("%S%n%n",
-				   self->server_key,
-				   self->e, self->f);
+  struct lsh_string *s = ssh_format("%S%n%n%n",
+				    self->server_key,
+				    self->e, self->f,
+				    self->K);
 
   HASH_UPDATE(self->hash, s->length, s->data);
   lsh_string_free(s);
@@ -517,14 +545,18 @@ int dh_process_server_msg(struct diffie_hellman_instance *self,
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
-  return (parse_uint8(&buffer, &msg_number)
-	  && (msg_number == SSH_MSG_KEXDH_REPLY)
-	  && (self->server_key = parse_string_copy(&buffer))
-	  && (parse_bignum(&buffer, self->f))
-	  && (mpz_cmp_ui(self->f, 1) > 0)
-	  && (mpz_cmp(self->f, self->method->G->order) <= 0)
-	  && (self->signature = parse_string_copy(&buffer))
-	  && parse_eod(&buffer));
+  if (!(parse_uint8(&buffer, &msg_number)
+	&& (msg_number == SSH_MSG_KEXDH_REPLY)
+	&& (self->server_key = parse_string_copy(&buffer))
+	&& (parse_bignum(&buffer, self->f))
+	&& (mpz_cmp_ui(self->f, 1) > 0)
+	&& (mpz_cmp(self->f, self->method->G->order) <= 0)
+	&& (self->signature = parse_string_copy(&buffer))
+	&& parse_eod(&buffer)))
+    return 0;
+
+  GROUP_POWER(self->method->G, self->K, self->f, self->secret);
+  return 1;
 }
 	  
 int dh_verify_server_msg(struct diffie_hellman_instance *self,
