@@ -1,19 +1,19 @@
 #! /bin/sh
 
-function conv () {
+conv () {
     echo "$1" | ../../nettle/tools/sexp-conv -s transport | tee test.in
 }
 
-function die () {
+die () {
     echo "Test failed:" "$@"
     exit 1
 }
 
-function test_valid () {
+test_valid () {
     ../tools/spki-check-signature "`conv "$2"`" || die "$1"
 }
 
-function test_invalid () {
+test_invalid () {
     if ../tools/spki-check-signature "`conv "$2"`"
     then die "$1"
     fi
