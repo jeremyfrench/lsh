@@ -360,7 +360,7 @@ main_options[] =
   { "password-helper", OPT_PASSWORD_HELPER, "Program", 0,
     "Use the named helper program for password verification. "
     "(Experimental).", 0 },
-  
+
   { NULL, 0, NULL, 0, "Offered services:", 0 },
 
 #if WITH_PTY_SUPPORT
@@ -489,7 +489,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 			  ->super);
 	      }
 	  }
-	else
+        if (self->with_srp_keyexchange)
+          ALIST_SET(self->userauth_algorithms,
+                    ATOM_NONE,
+                    &server_userauth_none.super);
+
+        if (!self->userauth_algorithms->size)
 	  argp_error(state, "All user authentication methods disabled.");
 
 	break;
@@ -835,7 +840,7 @@ int main(int argc, char **argv)
 		     make_int_list(0, -1)),
 		    make_offer_service
 		    (make_alist
-		     (2, ATOM_SSH_CONNECTION, connection_service,
+		     (1,
 		      ATOM_SSH_USERAUTH,
 		      make_userauth_service(options->userauth_methods,
 					    options->userauth_algorithms,
