@@ -198,4 +198,13 @@ make_protocol_exception(uint32_t reason, const char *msg);
   EXCEPTION_RAISE((e), &_exc.super);		\
 }
 
+/* Always a static message */
+#define PROTOCOL_ERROR_DISCONNECT(e, reason, msg)			\
+{						\
+  static const struct protocol_exception _exc	\
+    = { { STATIC_HEADER, EXC_PROTOCOL, (msg) },	\
+        (reason) };	\
+  EXCEPTION_RAISE((e), &_exc.super);		\
+}
+
 #endif /* LSH_EXCEPTION_H_INCLUDED */
