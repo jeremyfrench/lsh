@@ -123,10 +123,7 @@ argp_default_parser (int key, char *arg, struct argp_state *state)
 
       /* Update what we use for messages.  */
 
-      {
-	char *short_name = strrchr (arg, '/');
-	state->name = short_name ? short_name + 1 : arg;
-      }
+      state->name = __argp_basename(arg);
       
 #if HAVE_PROGRAM_INVOCATION_SHORT_NAME
       program_invocation_short_name = state->name;
@@ -243,6 +240,35 @@ struct parser
 {
   const struct argp *argp;
 
+  const char *posixly_correct;
+
+  /* Describe how to deal with options that follow non-option ARGV-elements.
+
+     If the caller did not specify anything, the default is
+     REQUIRE_ORDER if the environment variable POSIXLY_CORRECT is
+     defined, PERMUTE otherwise.
+
+     REQUIRE_ORDER means don't recognize them as options; stop option
+     processing when the first non-option is seen. This is what Unix
+     does. This mode of operation is selected by either setting the
+     environment variable POSIXLY_CORRECT, or using `+' as the first
+     character of the list of option characters.
+
+     PERMUTE is the default. We permute the contents of ARGV as we
+     scan, so that eventually all the non-options are at the end. This
+     allows options to be given in any order, even with programs that
+     were not written to expect this.
+
+     RETURN_IN_ORDER is an option available to programs that were
+     written to expect options and other ARGV-elements in any order
+     and that care about the ordering of the two. We describe each
+     non-option ARGV-element as if it were the argument of an option
+     with character code 1. Using `-' as the first character of the
+     list of option characters selects this mode of operation.
+
+  */
+  enum { REQUIRE_ORDER, PERMUTE, RETURN_IN_ORDER } ordering;
+  
   /* String of all recognized short options. Needed for ARGP_LONG_ONLY. */
   char *short_opts;
 
@@ -308,7 +334,7 @@ match_option(const char *arg, const char *name,
       else if (!name[i])
 	/* The argument is longer than the option name */
 	return MATCH_NO;
-      else if (!arg[i] != name[i])
+      else if (arg[i] != name[i])
 	{
 	  *quality = i;
 	  return MATCH_PARTIAL;
@@ -397,8 +423,7 @@ convert_options (const struct argp *argp,
 
   if (opt || argp->parser)
     {
-      /* This parser needs a group. FIXME: Do we really need a group
-	 if argp->parser if NULL? */
+      /* This parser needs a group. */
       if (cvt->short_end)
 	{
 	  /* Record any short options. */
@@ -486,7 +511,7 @@ calc_sizes (const struct argp *argp,  struct parser_sizes *szs)
 
   if (opt || argp->parser)
     {
-      /* FIXME: Do we really need a group if argp->parser if NULL? */
+      /* This parser needs a group. */
       szs->num_groups++;
       if (opt)
 	{
@@ -512,6 +537,17 @@ parser_init (struct parser *parser, const struct argp *argp,
   struct group *group;
   struct parser_sizes szs;
 
+  parser->posixly_correct = getenv ("POSIXLY_CORRECT");
+
+  if (flags & ARGP_IN_ORDER)
+    parser->ordering = RETURN_IN_ORDER;
+  else if (flags & ARGP_NO_ARGS)
+    parser->ordering = REQUIRE_ORDER;
+  else if (parser->posixly_correct)
+    parser->ordering = REQUIRE_ORDER;
+  else
+    parser->ordering = PERMUTE;
+  
   szs.short_len = 0;
   szs.num_groups = 0;
   szs.num_child_inputs = 0;
@@ -591,8 +627,7 @@ parser_init (struct parser *parser, const struct argp *argp,
   if (argv[0] && !(parser->state.flags & ARGP_PARSE_ARGV0))
     /* There's an argv[0]; use it for messages.  */
     {
-      char *short_name = strrchr (argv[0], '/');
-      parser->state.name = short_name ? short_name + 1 : argv[0];
+      parser->state.name = __argp_basename(argv[0]);
 
       /* Don't parse it as an argument. */
       parser->state.next = 1;
@@ -602,10 +637,11 @@ parser_init (struct parser *parser, const struct argp *argp,
 #if HAVE_PROGRAM_INVOCATION_SHORT_NAME
     parser->state.name = program_invocation_short_name;
 #elif HAVE_PROGRAM_INVOCATION_NAME
-    char *short_name = strrchr (program_invocation_name, '/');
-    parser->state.name = short_name ? short_name + 1 : program_invocation_name;
+    parser->state.name = __argp_basename(program_invocation_name);
 #else
-    /* FIXME: What to do now? */
+    /* FIXME: What now? Miles suggests that it is better to use NULL,
+       but currently the value is passed on directly to
+       fputs_unlocked(), so that requires more changes. */
     parser->state.name = "";
 #endif
   }
@@ -819,7 +855,9 @@ parser_parse_opt (struct parser *parser, int opt, char *val UNUSED)
 }
 #endif
 
-enum arg_type { ARG_ARG, ARG_SHORT_OPTION, ARG_LONG_OPTION, ARG_QUOTE };
+enum arg_type { ARG_ARG, ARG_SHORT_OPTION,
+		ARG_LONG_OPTION, ARG_LONG_ONLY_OPTION,
+		ARG_QUOTE };
 
 static enum arg_type
 classify_arg(struct parser *parser, char *arg, char **opt)
@@ -864,7 +902,7 @@ classify_arg(struct parser *parser, char *arg, char **opt)
 	    assert(parser->short_opts);
 	    
 	    if (arg[2] || !strchr(parser->short_opts, arg[1]))
-	      return ARG_LONG_OPTION;
+	      return ARG_LONG_ONLY_OPTION;
 	  }
 
 	return ARG_SHORT_OPTION;
@@ -892,15 +930,32 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
     /* Deal with short options. */
     {
       struct group *group;
+      char c;
       const struct argp_option *option;
       char *value = NULL;;
 
       assert(!parser->state.quoted);
-	  
-      option = find_short_option(parser, *parser->nextchar++, &group);
+
+      c = *parser->nextchar++;
+      
+      option = find_short_option(parser, c, &group);
       if (!option)
-	/* FIXME: What now? */
-	abort();
+	{
+	  if (parser->posixly_correct)
+	    /* 1003.2 specifies the format of this message.  */
+	    fprintf (parser->state.err_stream,
+		     dgettext(parser->state.root_argp->argp_domain,
+			      "%s: illegal option -- %c\n"),
+		     parser->state.name, c);
+	  else
+	    fprintf (parser->state.err_stream,
+		     dgettext(parser->state.root_argp->argp_domain,
+			      "%s: invalid option -- %c\n"),
+		     parser->state.name, c);
+
+	  *arg_ebadkey = 0;
+	  return EBADKEY;
+	}
 
       if (!*parser->nextchar)
 	parser->nextchar = NULL;
@@ -916,9 +971,16 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
 	    {
 	      if (parser->state.next == parser->state.argc)
 		/* Missing argument */
-		/* FIXME: What now? */
-		abort();
-			
+		{
+		  /* 1003.2 specifies the format of this message.  */
+		  fprintf (parser->state.err_stream,
+			   dgettext(parser->state.root_argp->argp_domain,
+				    "%s: option requires an argument -- %c\n"),
+			   parser->state.name, c);
+
+		  *arg_ebadkey = 0;
+		  return EBADKEY;
+		}
 	      value = parser->state.argv[parser->state.next++];
 	    }
 	}
@@ -947,30 +1009,56 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
 	/* Look for options. */
 	{
 	  char *optstart;
-
-	  switch (classify_arg(parser, arg, &optstart))
+	  enum arg_type token = classify_arg(parser, arg, &optstart);
+	  
+	  switch (token)
 	    {
 	    case ARG_ARG:
-	      /* FIXME: Permute arguments, unless ARGP_IN_ORDER is
-	       * used. */
-	      *arg_ebadkey = 1;
-	      return parser_parse_arg(parser, arg);
+	      switch (parser->ordering)
+		{
+		case PERMUTE:
+		  /* FIXME: Permute arguments, unless ARGP_IN_ORDER is
+		   * used. */
+		  *arg_ebadkey = 1;
+		  return parser_parse_arg(parser, arg);
+		case REQUIRE_ORDER:
+		  /* Implicit quote before the first argument.
+		   *
+		   * It would make more sense to set quoted = next - 1
+		   * (i.e. say that this is the first quoted argument),
+		   * but that may cause quoted = 0, which would be wrong. */
+		  parser->state.quoted = parser->state.next;
 
+		  /* Fall through */
+		case RETURN_IN_ORDER:
+		  *arg_ebadkey = 1;
+		  return parser_parse_arg(parser, arg);
+		default:
+		  abort();
+		}
 	    case ARG_QUOTE:
 	      parser->state.quoted = parser->state.next;
 	      return 0;
 
+	    case ARG_LONG_ONLY_OPTION:
 	    case ARG_LONG_OPTION:
 	      {
 		struct group *group;
 		const struct argp_option *option;
 		char *value;
 		      
-		option = find_long_option(parser, arg, &group);
+		option = find_long_option(parser, optstart, &group);
 		
 		if (!option)
-		  /* FIXME: What now? */
-		  abort();
+		  {
+		    /* NOTE: This includes any "=something" in the output. */
+		    fprintf (parser->state.err_stream,
+			     dgettext(parser->state.root_argp->argp_domain,
+				      "%s: unrecognized option `%s'\n"),
+			     parser->state.name, arg);
+		    *arg_ebadkey = 0;
+		    return EBADKEY;
+		  }
 
 		value = strchr(optstart, '=');
 		if (value)
@@ -978,17 +1066,47 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
 		
 		if (value && !option->arg)
 		  /* Unexpected argument. */
-		  /* FIXME: What now? */
-		  abort();
-			  
+		  {
+		    if (token == ARG_LONG_OPTION)
+		      /* --option */
+		      fprintf (parser->state.err_stream,
+			       dgettext(parser->state.root_argp->argp_domain,
+					"%s: option `--%s' doesn't allow an argument\n"),
+			       parser->state.name, option->name);
+		    else
+		      /* +option or -option */
+		      fprintf (parser->state.err_stream,
+			       dgettext(parser->state.root_argp->argp_domain,
+					"%s: option `%c%s' doesn't allow an argument\n"),
+			       parser->state.name, arg[0], option->name);
+
+		    *arg_ebadkey = 0;
+		    return EBADKEY;
+		  }
+		
 		if (option->arg && !value
 		    && !(option->flags & OPTION_ARG_OPTIONAL))
 		  /* We need an mandatory argument. */
 		  {
 		    if (parser->state.next == parser->state.argc)
 		      /* Missing argument */
-		      /* FIXME: What now? */
-		      abort();
+		      {
+			if (token == ARG_LONG_OPTION)
+			  /* --option */
+			  fprintf (parser->state.err_stream,
+				   dgettext(parser->state.root_argp->argp_domain,
+					    "%s: option `--%s' requires an argument\n"),
+				 parser->state.name, option->name);
+			else
+			  /* +option or -option */
+			  fprintf (parser->state.err_stream,
+				   dgettext(parser->state.root_argp->argp_domain,
+					    "%s: option `%c%s' requires an argument\n"),
+				   parser->state.name, arg[0], option->name);
+
+			*arg_ebadkey = 0;
+			return EBADKEY;
+		      }
 
 		    value = parser->state.argv[parser->state.next++];
 		  }
@@ -1100,10 +1218,8 @@ __option_is_short (__const struct argp_option *__opt) __THROW
   else
     {
       int __key = __opt->key;
-      /* FIXME: The docs say that isascii() is the right name.
-       * In any case, whether or not a particular key
-       * implies a short option ought not to be
-       * locale dependent. */
+      /* FIXME: whether or not a particular key implies a short option
+       * ought not to be locale dependent. */
       return __key > 0 && isprint (__key);
     }
 }
