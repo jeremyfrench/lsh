@@ -1,6 +1,8 @@
 /* channel.h
  *
- * Information about one ssh channel.
+ * Information about ssh channels.
+ *
+ * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -26,6 +28,7 @@
 #define LSH_CHANNEL_H_INCLUDED
 
 #include "alist.h"
+#include "command.h"
 #include "connection.h"
 #include "parse.h"
 #include "server_pty.h"
@@ -103,8 +106,9 @@
        (eof method int)
   
        ; Reply from SSH_MSG_CHANNEL_OPEN_REQUEST
-       (open_confirm method int)
-       (open_failure method int)
+       ;; (open_confirm method int)
+       ;; (open_failure method int)
+       (open_continuation object command_continuation)
 
        ; Reply from SSH_MSG_CHANNEL_REQUEST 
        (channel_success method int)
