@@ -72,6 +72,7 @@
 #define EXC_IO_BLOCKING_WRITE 0x2003
 #define EXC_IO_READ 0x2004
 #define EXC_IO_WRITE 0x2005
+#define EXC_IO_OPEN_WRITE 0x2006
 
 /* Not really errors */
 /* EOF was read */
@@ -80,6 +81,9 @@
 /* Authorization errors */
 #define EXC_AUTH 0x4000
 #define EXC_USERAUTH 0x4001
+
+/* Implies an exception struct with a reply packet in it. */
+#define EXC_USERAUTH_SPECIAL 0x4002
 
 /* Services */
 #define EXC_SERVICE 0x8000
@@ -133,6 +137,12 @@ extern struct exception dummy_exception;
 
 struct exception *
 make_simple_exception(UINT32 type, const char *msg);
+
+/* Create a simple exception handler, with no internal state */
+struct exception_handler *
+make_exception_handler(void (*raise)(struct exception_handler *s,
+				     const struct exception *x),
+		       struct exception_handler *parent);
 
 /* A protocol exception, that normally terminates the connection */
 /* GABA:
