@@ -325,7 +325,8 @@ alloc_channel(struct channel_table *table)
   table->next_channel = table->used_channels = i+1;
 
   table->in_use[i] = CHANNEL_RESERVED;
-
+  table->channels[i] = NULL;
+  
  success:
   table->channel_count++;
   verbose("Allocated local channel number %i\n", i);
