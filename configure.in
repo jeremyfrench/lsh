@@ -438,6 +438,8 @@ if test "$lsh_cv_c_attribute" = "yes"; then
 fi
 
 AC_MSG_CHECKING(for BSD pty names)
+
+dnl FIXME: What is most portable, tr -d '\n' or tr -d '\012' ?
 AC_DEFINE_UNQUOTED(PTY_BSD_SCHEME_FIRST_CHARS, "`ls /dev/pty* | cut -c 9-9 | uniq | tr -d '\n'`")
 AC_DEFINE_UNQUOTED(PTY_BSD_SCHEME_SECOND_CHARS, "`ls /dev/pty* | cut -c 10-10 | sort | uniq | tr -d '\n'`")
 
