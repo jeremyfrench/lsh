@@ -282,7 +282,7 @@ get_dev_random(struct yarrow256_ctx *ctx, enum source_type source)
 
   for (i = 0; names[i]; i++)
     {
-      fd = open("/dev/random", O_RDONLY);
+      fd = open(names[i], O_RDONLY);
       if (fd >= 0)
 	break;
     }
