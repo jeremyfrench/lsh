@@ -1,3 +1,50 @@
+2001-02-04  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* doc/lsh.texinfo (Action options): Edited the description of the
+	-g, not calling it "gateway mode", as the word "gateway" is
+	associated with the '-G' option.
+	(Invoking lshd): Documented --kerberos-passwords,
+	--password-helper and --login-shell.
+	Changed UPDATED-FOR to 1.1.6.
+
+	* configure.in: Bumped version to 1.1.6.
+
+	* src/testsuite/Makefile.am (TS_SH, TS_MORE_SH): Added a few more
+	tests. 
+
+	* src/testsuite/functions.sh: New variable HOSTKEY for configuring
+	which hostkey to use.
+
+	* src/unix_user.c (unix_user_db): New attribute login_shell.
+	(do_lookup_user): Let self->login_shell, if non-NULL, override the
+	login shell in the passwd database.
+	(make_unix_user_db): New argument login_shell.
+
+	* src/rsa_keygen.c (rsa_generate_key): Changed "e not invertible"
+	message from werror() to debug().
+
+	* src/lshd.c (main_options): New option --login-shell.
+
+	* src/lsh-keygen.c (main): When generating an rsa key, display a
+	better message before trying again.
+
+	* src/client_keyexchange.c (do_handle_dh_reply): If the server's
+	signature doesn't verify, display a warning message before
+	disconnecting.
+
+	* src/rsa.c (parse_ssh_rsa_public): Call rsa_check_size, to make
+	sure that the ->size attribute is initialized.
+
+	* src/testsuite/key-2.private: Created an RSA testkey.
+
+	* src/testsuite/write-key-1-test, src/testsuite/write-key-2-test:
+	Renamed keygen-test and keygen-2-test. 
+
+	* src/testsuite/conv-2-test: New test for reading an openssh rsa
+	key.
+
+	* src/testsuite/conv-1-test: Renamed conv-test.
+
 2001-01-31  Niels Möller  <nisse@ehand.com>
 
 	* src/server_publickey.c (do_authenticate): Include algorithm atom

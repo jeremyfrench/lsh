@@ -1,3 +1,27 @@
+News for the 1.1.6 release:
+
+	Fixed a bug in the testsuite framework, and discovered and
+	fixed a few new and old bugs (mostly related to the EOF and
+	channel close logic).
+
+	Improved handling of POLLHUP on Linux.
+	
+	Fixed bug in lshd password authentication, which sometimes
+	crashed lshd.
+
+	Support for RSA keys, according to
+	draft-ietf-secsh-transport-09.txt. Wrote a test case for RSA
+	hostkeys, and fixed a bug in the ssh-rsa public key decoder.
+
+	Added support for OpenSSH style RSA keys to ssh-conv.
+
+	Changed unix_random.c to be more quiet.
+
+	Changed tcpip forwarding code to call shutdown() when it
+	receives an SSH_MSG_CHANNEL_EOF.
+
+	Updated the manual.
+	
 News for the 1.1.5 release:
 
 	Fixed bug in random generator seeding (spotted by jps).
