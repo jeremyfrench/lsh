@@ -97,6 +97,12 @@
 	* misc/xenofarm.sh (cfgargs): Add the flags we want to use to cfgargs.
 	(dotask): New optional argument with the name of the status variable.
 
+2004-02-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/process_atoms: Fixes to make it work with Solaris /bin/sh.
+	Replaced uses of echo -n with printf(1), and ${#foo} with `expr
+	$foo : '.*'`.
+
 2004-02-20  Niels Möller  <niels@s3.kth.se>
 
 	* src/scm/Makefile.am (EXTRA_DIST): Deleted make-char-classes.
