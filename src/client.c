@@ -4,7 +4,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998, 1999, 2000 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,20 +27,13 @@
 #include "channel.h"
 #include "channel_commands.h"
 #include "connection.h"
-#include "crypto.h"
-#include "debug.h"
-#include "encrypt.h"
-#include "format.h"
+#include "format.h" 
 #include "pad.h"
 #include "parse.h"
-#include "service.h"
 #include "ssh.h"
 #include "translate_signal.h"
-#include "tty.h"
-#include "unpad.h"
 #include "werror.h"
 #include "xalloc.h"
-#include "compress.h"
 
 #include <signal.h>
 
@@ -52,6 +45,12 @@
 #undef GABA_DEFINE
 
 #include "client.c.x"
+
+static struct lsh_string *
+format_service_request(int name)
+{
+  return ssh_format("%c%a", SSH_MSG_SERVICE_REQUEST, name);
+}
 
 /* Start a service that the server has accepted (for instance
  * ssh-userauth). */
@@ -143,43 +142,6 @@ make_request_service(int service)
   closure->service = service;
 
   return &closure->super;
-}
-
-/* FIXME: Perhaps move this class and its methods to client_session.c? */
-/* Initiate and manage a session */
-/* GABA:
-   (class
-     (name client_session)
-     (super ssh_channel)
-     (vars
-       ; List of requests
-       ;; (requests object request_info)
-  
-       ; To access stdio
-       (in object lsh_fd)
-       (out object lsh_fd)
-       (err object lsh_fd)
-
-       ; Where to save the exit code.
-       (exit_status . "int *")))
-*/
-
-/* Callback used when the server sends us eof */
-static void
-do_client_session_eof(struct ssh_channel *c)
-{
-  CAST(client_session, session, c);
-  
-  close_fd(session->in);
-}  
-
-static void
-do_client_session_close(struct ssh_channel *c)
-{
-  static const struct exception finish_exception
-    = STATIC_EXCEPTION(EXC_FINISH_PENDING, "Session closed.");
-
-  EXCEPTION_RAISE(c->e, &finish_exception);
 }
 
 
@@ -304,138 +266,6 @@ make_handle_exit_signal(int *exit_status)
   return &self->super;
 }
 
-/* Receive channel data */
-static void
-do_receive(struct ssh_channel *c,
-	   int type, struct lsh_string *data)
-{
-  CAST(client_session, closure, c);
-  
-  switch(type)
-    {
-    case CHANNEL_DATA:
-      A_WRITE(&closure->out->write_buffer->super, data);
-      break;
-    case CHANNEL_STDERR_DATA:
-      A_WRITE(&closure->err->write_buffer->super, data);
-      break;
-    default:
-      fatal("Internal error!\n");
-    }
-}
-
-/* We may send more data */
-static void
-do_send_adjust(struct ssh_channel *s,
-	       UINT32 i UNUSED)
-{
-  CAST(client_session, self, s);
-
-  assert(self->in->read);
-
-  self->in->want_read = 1;
-}
-
-/* We have a remote shell */
-static void
-do_client_io(struct command *s UNUSED,
-	     struct lsh_object *x,
-	     struct command_continuation *c,
-	     struct exception_handler *e UNUSED)
-
-{
-  CAST(client_session, session, x);
-  struct ssh_channel *channel = &session->super;
-  assert(x);
-
-  /* Set up write fd:s. */
-  
-  channel->receive = do_receive;
-
-  /* FIXME: It seems a little kludgy to modify
-   * exception handlers here; it would be better to create the
-   * fd-objects at a point where the right exception handlers can be
-   * installed from the start. */
-  session->out->e
-    = make_channel_io_exception_handler(channel,
-					"lsh: I/O error on stdout",
-					session->out->e,
-					HANDLER_CONTEXT);
-
-  session->err->e
-    = make_channel_io_exception_handler(channel,
-					"lsh: I/O error on stderr",
-					session->err->e,
-					HANDLER_CONTEXT);
-
-  /* Set up the fd we read from. */
-  channel->send_adjust = do_send_adjust;
-
-  session->in->read = make_channel_read_data(channel);
-
-  /* FIXME: Perhaps there is some way to arrange that channel.c calls
-   * the CHANNEL_SEND_ADJUST method instead? */
-  if (session->super.send_window_size)
-    session->in->want_read = 1;
-  
-  session->in->close_callback
-    = make_channel_read_close_callback(channel);
-
-  /* Make sure stdio is closed properly if the channel or connection dies */
-  REMEMBER_RESOURCE(channel->resources, &session->in->super);
-  REMEMBER_RESOURCE(channel->resources, &session->out->super);
-  REMEMBER_RESOURCE(channel->resources, &session->err->super);
-  
-  ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
-	    make_handle_exit_status(session->exit_status));
-  ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
-	    make_handle_exit_signal(session->exit_status));
-
-  channel->eof = do_client_session_eof;
-      
-  COMMAND_RETURN(c, channel);
-}
-
-struct command client_io =
-{ STATIC_HEADER, do_client_io };
-
-
-struct ssh_channel *
-make_client_session(struct lsh_fd *in,
-		    struct lsh_fd *out,
-		    struct lsh_fd *err,
-		    UINT32 initial_window,
-		    int *exit_status)
-{
-  NEW(client_session, self);
-
-  init_channel(&self->super);
-
-  /* Makes sure the pending_close bit is set whenever this session
-   * dies, no matter when or how. */
-  self->super.close = do_client_session_close;
-  
-  self->super.rec_window_size = initial_window;
-
-  /* FIXME: Make maximum packet size configurable */
-  self->super.rec_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
-
-  self->super.request_types = make_alist(0, -1);
-
-  /* self->expect_close = 0; */
-  self->in = in;
-  self->out = out;
-  self->err = err;
-
-  /* Flow control */
-  out->write_buffer->report = &self->super.super;
-  err->write_buffer->report = &self->super.super;
-  
-  self->exit_status = exit_status;
-  
-  return &self->super;
-}
-
 /* GABA:
    (class
      (name session_open_command)
@@ -525,3 +355,166 @@ make_exec_request(struct lsh_string *command)
 
   return &req->super.super;
 }
+
+#if 0
+/* ;; GABA:
+   (class
+     (name client_options)
+     (vars
+       (backend object io_backend)
+
+       ; For i/o exceptions 
+       (handler object exception_handler)
+
+       (tty object interactive)
+       
+       ; -1 means default behaviour
+       (with_pty . int)
+       
+       ; Session modifiers
+       (stdin_file . "const char *")
+       (stdout_file . "const char *")
+       (stderr_file . "const char *")
+
+       ; True if the process's stdin or pty (respectively) has been used. 
+       (used_stdin . int)
+       (used_pty . int)
+       (actions struct object_queue)))
+
+*/
+
+static struct client_options *
+make_client_options(void)
+{
+  return NULL;
+}
+
+/* Create a session object. stdout and stderr are shared (although
+ * with independent lsh_fd objects). stdin can be used by only one
+ * session (until something "session-control"/"job-control" is added).
+ * */
+static struct ssh_channel *
+make_lsh_session(struct client_options *self)
+{
+  int in;
+  int out;
+  int err;
+
+  if (self->stdin_file)
+    in = open(self->stdin_file, O_RDONLY);
+  else
+    {
+      if (self->used_stdin)
+	in = open("/dev/null", O_RDONLY);
+      else
+	{
+	  in = dup(STDIN_FILENO);
+	  self->used_stdin = 1;
+	}
+    }
+    
+  if (in < 0)
+    {
+      werror("client.c: Can't dup/open stdin (errno = %i): %z!\n",
+	     errno, strerror(errno));
+      return NULL;
+    }
+
+  out = (self->stdout_file
+	 ? open(self->stdout_file, O_WRONLY | O_CREAT, 0666)
+	 : dup(STDOUT_FILENO));
+  if (out < 0)
+    {
+      werror("lsh: Can't dup/open stdout (errno = %i): %z!\n",
+	     errno, strerror(errno));
+      close(in);
+      return NULL;
+    }
+
+  if (self->stderr_file)
+    err = open(self->stderr_file, O_WRONLY | O_CREAT, 0666);
+  else
+    {
+      err = dup(STDERR_FILENO);
+      set_error_stream(STDERR_FILENO, 1);
+    }
+
+  if (err < 0) 
+    {
+      werror("client.c: Can't dup/open stderr!\n");
+      close(in);
+      close(out);
+      return NULL;
+    }
+
+  /* Clear options */
+  self->stdin_file = self->stdout_file = self->stderr_file = NULL;
+  
+  return make_client_session
+    (io_read(make_lsh_fd(self->backend, in, self->handler),
+	     NULL, NULL),
+     io_write(make_lsh_fd(self->backend, out, self->handler),
+	      BLOCK_SIZE, NULL),
+     io_write(make_lsh_fd(self->backend, err, self->handler),
+	      BLOCK_SIZE, NULL),
+     WINDOW_SIZE,
+     self->exit_code);
+}
+
+/* Create an interactive session */
+static struct command *
+client_shell_session(struct client_options *self)
+{
+  struct command *get_pty = NULL;
+  struct command *get_shell;
+  
+  struct object_list *session_requests;
+  struct ssh_channel *session = make_lsh_session(self);
+
+  if (!session)
+    return NULL;
+  
+#if WITH_PTY_SUPPORT
+  if (self->with_pty && !self->used_pty)
+    {
+      self->used_pty = 1;
+
+      if (self->tty && INTERACT_IS_TTY(self->tty))
+	{
+	  if (! (remember_tty(tty_fd)
+		 && (get_pty = make_pty_request(tty_fd))))
+	    {
+	      werror("lsh: Can't use tty (probably getattr or atexit() failed.\n");
+	    }
+	}
+      else
+	{
+	  werror("client.c: No tty available.\n");
+	}
+      
+    }
+
+  get_shell = make_lsh_start_session(&request_shell.super);
+  
+  /* FIXME: We need a non-varargs constructor for lists. */
+  if (get_pty)
+    session_requests
+      = make_object_list(2,
+			 /* Ignore EXC_CHANNEL_REQUEST for the pty allocation call. */
+			 make_catch_apply
+			 (make_catch_handler_info(EXC_ALL, EXC_CHANNEL_REQUEST,
+						  0, NULL),
+			  get_pty),
+			 get_shell, -1);
+  else
+#endif /* WITH_PTY_SUPPORT */
+    session_requests = make_object_list(1, get_shell, -1);
+
+  {
+    CAST_SUBTYPE(command, r,
+		 make_start_session
+		 (make_open_session_command(session), session_requests));
+    return r;
+  }
+}
+#endif
