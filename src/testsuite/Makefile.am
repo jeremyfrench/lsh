@@ -30,10 +30,11 @@ TS_ALL = $(TS_PROGS) $(TS_SH) $(TS_MORE_PROGS) $(TS_MORE_SH)
 # SUFFIXES = .c .o
 noinst_PROGRAMS = $(TS_PROGS)
 
-LDADD = ../liblsh.a ../nettle/libnettle.a $(addprefix ../,@LIBARGP@)
+LDADD = testutils.o ../liblsh.a ../nettle/libnettle.a \
+	$(addprefix ../,@LIBARGP@)
 
-EXTRA_DIST = macros.m4 $(SOURCES:.c=.m4) $(TS_SH) $(TS_MORE_SH) \
-	functions.sh runtests key-1.private
+EXTRA_DIST = testutils.c testutils.h $(TS_SH) $(TS_MORE_SH) \
+	functions.sh run-tests key-1.private
 
 # FIXME: Get a rm -rf temphome somewhere?
 CLEANFILES = foo foo.pub test-seed-1 test-seed-2 test.out1 test.out2 \
@@ -45,10 +46,10 @@ DISTCLEANFILES = yarrow-seed-file
 all:
 	@echo make check to build testprograms.
 
-M4FLAGS = -P #-s
-%.c: macros.m4 %.m4
-	$(M4) $(M4FLAGS) $^ > $@T
-	test -s $@T && mv -f $@T $@
+# M4FLAGS = -P #-s
+# %.c: macros.m4 %.m4
+# 	$(M4) $(M4FLAGS) $^ > $@T
+# 	test -s $@T && mv -f $@T $@
 
 
 .PHONY: check-some check-more
