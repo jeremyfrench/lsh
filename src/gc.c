@@ -172,7 +172,7 @@ gc_register(struct lsh_object *o)
   if (!gc_scheduled && (number_of_objects > 100 + 2 * live_objects))
     {
       gc_scheduled = 1;
-      io_callout(&gc_callback);
+      io_callout(&gc_callback, 0);
     }
   
   sanity_check_object_list();
