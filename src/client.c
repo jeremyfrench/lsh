@@ -24,7 +24,7 @@
  */
 
 /* FIXME: Why include stdio? */
-#include <stdio.h>
+/* #include <stdio.h> */
 
 #include "client.h"
 
@@ -254,6 +254,19 @@ static int do_accept_service(struct packet_handler *c,
   return LSH_FAIL | LSH_DIE;
 }
 
+struct ssh_service *make_accept_service_handler(int service_name,
+						struct ssh_service *service)
+{
+  struct accept_service_handler *closure;
+
+  NEW(closure);
+  closure->super.handler = do_accept_service;
+  closure->service_name = service_name;
+  closure->service = service;
+
+  return &closure->super;
+}
+
 struct service_request
 {
   struct ssh_service super;
@@ -262,19 +275,6 @@ struct service_request
   struct ssh_service *service;
 };
 
-/* FIXME: This should be a packet handler */
-struct ssh_service *make_accept_service_handler(int service_name,
-						struct ssh_service *service)
-{
-  struct service_request *closure;
-
-  NEW(closure);
-  closure->super.init = do_accept_service;
-  closure->service_name = service_name;
-  closure->service = service;
-
-  return &closure->super;
-}
 
 static int do_request_service(struct ssh_service *c,
 			      struct ssh_connection *connection)
@@ -283,8 +283,10 @@ static int do_request_service(struct ssh_service *c,
   
   MDEBUG(c);
 
-  connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = make_accept_service_handler(...);
-
+  connection->dispatch[SSH_MSG_SERVICE_ACCEPT]
+    = make_accept_service_handler(closure->service_name,
+				  closure->service);
+  
   return A_WRITE(connection->write, format_service_request(closure->service_name));
 }
 
@@ -301,6 +303,7 @@ struct ssh_service *request_service(int service_name,
   return &closure->super;
 }
 
+/* Initiate and manage a session */
 struct session
 {
   struct ssh_channel super;
@@ -330,6 +333,7 @@ static int client_session_die(struct ssh_channel *c, struct abstract_write *writ
   exit(EXIT_FAILURE);
 }
 
+/* Recieve channel data */
 static int do_recieve(struct ssh_channel *c, struct abstract_write *write,
 		      int type, struct lsh_string *data)
 {
@@ -357,15 +361,16 @@ static int do_recieve(struct ssh_channel *c, struct abstract_write *write,
       fatal("Internal error!\n");
     }
 }
-		     
+
 /* We have a remote shell */
-static int do_start_session(struct ssh_channel *c, struct abstract_write *write)
+static int do_shell(struct ssh_channel *c, struct abstract_write *write)
 {
   struct session *closure = (struct session *) c;
 
   MDEBUG(closure);
-
+  
   closure->super.recieve = do_recieve;
+  closure->in->handler = read_data
 }
 
 /* We have opened a channel of type "session" */
@@ -384,6 +389,30 @@ static int do_open_confirm(struct ssh_channel *c, struct abstract_write *write)
   return A_WRITE(write, format_channel_request(ATOM_SHELL, c, 1, ""));
 }
 
+struct ssh_channel *make_session(struct io_fd *in,
+				 abstract_write *out, abstract_write *err)
+{
+  struct session *self;
+
+  NEW(self);
+
+  self->super.request_types = make_alist(0, -1);
+  self->super.recieve = NULL;
+  self->super.close = NULL;
+  self->super.eof = NULL;
+  self->super.open_confirm = do_open_confirm;
+  self->super.open_failure = client_session_die;
+  self->super.channel_success = NULL;
+  self->super.channel_failure = NULL;
+  
+  self->expect_close = 0;
+  self->in = in;
+  self->out = out;
+  self->err = err;
+
+  return &self->super;
+}
+
 struct client_startup
 {
   struct connection_startup super;
@@ -393,23 +422,30 @@ struct client_startup
 };
 
 static int do_client_startup(struct connection_startup *c,
-			   struct channel_table *table,
-			   struct abstract_write *write)
+			     struct channel_table *table,
+			     struct abstract_write *write)
 {
   struct client_startup *closure = (struct client_startup *) c;
 
   MDEBUG(closure);
 
+  A_WRITE(write, prepare_channel_open(table, ATOM_SESSION,
   
 }
 
 /* Request opening a session. */
-struct connection_startup *make_client_startup(int want_shell)
+struct connection_startup *make_client_startup(struct io_fd in,
+					       struct abstract_write out,
+					       struct abstract_write err,
+					       int want_shell)
 {
   struct client_startup *closure;
-
+  struct ssh_channel *session;
+  
   NEW(closure);
   closure->super.start = do_client_startup;
+  closure->session = make_session(in, out, err);
+  
   closure->shell = want_shell;
 
   return &closure->super;
