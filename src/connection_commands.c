@@ -319,6 +319,7 @@ make_handshake_command(int mode,
        (connection object ssh_connection)))
 */
 
+#if 0
 static int do_connection_remember(struct command *s,
 				  struct lsh_object *x,
 				  struct command_continuation *c)
@@ -347,7 +348,8 @@ collect_connection_remember(struct collect_info_1 *info,
   return &self->super.super;
 }
 
-struct collect_info_1 connection_remember_command =
-STATIC_COLLECT_1_FINAL(collect_connection_remember);
+struct command connection_remember_command =
+STATIC_COMMAND(collect_connection_remember);
 
-  
+#endif
+
