@@ -104,6 +104,11 @@ main alternatives are Werner Koch's code in GnuPG, and Peter Gutmann's
 libcrypt. Even on systems with /dev/random, it might be suboptimal to
 use it directly.
 
+Look at prngd,
+http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/prngd.html
+(recommended by Oystein Viggen <oysteivi@tihlde.org>), and perhaps
+also at egd.
+
 
 DENIAL OF SERVICE
 
