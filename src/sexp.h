@@ -40,7 +40,7 @@ struct sexp_iterator;
      (name sexp)
      (vars
        ;; NULL for non-lists
-       (iter method "struct sexp_iter *")
+       (iter method "struct sexp_iterator *")
        (format method "struct lsh_string *" "int style")))
 */
 
@@ -89,19 +89,19 @@ struct sexp_iterator;
 struct lsh_string *sexp_format(struct sexp *e, int style);
 
 struct lsh_string *encode_base64(struct lsh_string *s,
-				 char *delimiters,
+				 const char *delimiters,
 				 int free);
 
 /* Creating sexps */
 /* atom->sexp */
-struct sexp *sexp_a(int a);
+struct sexp *sexp_a(const int a);
 
 /* cstring->sexp */
-struct sexp *sexp_z(char *s);
+struct sexp *sexp_z(const char *s);
 
 /* mpz->atom */
-struct sexp *sexp_n(mpz_t n);
-struct sexp *sexp_sn(mpz_t n);
+struct sexp *sexp_n(const mpz_t n);
+struct sexp *sexp_sn(const mpz_t n);
 
 /* cons */
 struct sexp *sexp_c(struct sexp *car, struct sexp_cons *cdr);
@@ -116,20 +116,20 @@ struct sexp *sexp_l(unsigned n, ...);
 int sexp_consp(struct sexp *e);
 
 /* For lists */
-struct sexp *sexp_car(struct sexp *e);
-struct sexp *sexp_cdr(struct sexp *e);
+struct sexp *sexp_car(const struct sexp *e);
+struct sexp *sexp_cdr(const struct sexp *e);
 #endif
 
-int sexp_nullp(struct sexp *e);
-int sexp_atomp(struct sexp *e);
+int sexp_nullp(const struct sexp *e);
+int sexp_atomp(const struct sexp *e);
 
 /* int sexp_null_cdr(struct sexp *e); */
 
-struct lsh_string *sexp_contents(struct sexp *e);
-struct lsh_string *sexp_display(struct sexp *e);
-int sexp_atom(struct sexp *e);
-int sexp_bignum_u(struct sexp *e, mpz_t n);
-int sexp_bignum_s(struct sexp *e, mpz_t n);
+struct lsh_string *sexp_contents(const struct sexp *e);
+struct lsh_string *sexp_display(const struct sexp *e);
+int sexp_atom(const struct sexp *e);
+int sexp_bignum_u(const struct sexp *e, mpz_t n);
+int sexp_bignum_s(const struct sexp *e, mpz_t n);
 
 
 /* Parsing sexp */
@@ -138,8 +138,7 @@ int sexp_bignum_s(struct sexp *e, mpz_t n);
    (class
      (name sexp_handler)
      (vars
-       ;; Called when a complete sexpression has been read,
-       ;; on error e == NULL.
+       ;; Called when a complete sexpression has been read.
        (handler method int "struct sexp *e")))
 */
 
