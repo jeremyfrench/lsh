@@ -104,7 +104,7 @@ kill_lshd_connection(struct resource *s)
       global_oop_source->cancel_fd(global_oop_source,
 				   self->ssh_input, OOP_READ);
       close(self->ssh_input);
-      
+
       global_oop_source->cancel_fd(global_oop_source,
 				   self->ssh_output, OOP_WRITE);
 
@@ -135,12 +135,12 @@ make_lshd_connection(struct configuration *config, int input, int output)
   self->session_id = NULL;
 
   self->service_state = SERVICE_DISABLED;
-  
+
   self->kexinit_handler = &lshd_kexinit_handler;
   self->newkeys_handler = NULL;
   self->kex_handler = NULL;
   self->service_handler = &lshd_service_request_handler;
-  
+
   self->reader = make_lshd_read_state(make_lshd_process_ssh_header(self),
 				      make_lshd_read_error(self));
 
@@ -154,7 +154,7 @@ make_lshd_connection(struct configuration *config, int input, int output)
   self->send_crypto = NULL;
   self->send_compress = NULL;
   self->send_seqno = 0;
-  
+
   self->service_fd = -1;
 
   return self;
@@ -164,7 +164,7 @@ static void
 connection_write_data(struct lshd_connection *connection,
 		      struct lsh_string *data)
 {
-  /* FIXME: Proper error handling */  
+  /* FIXME: Proper error handling */
   if (ssh_write_data(connection->writer,
 		     global_oop_source, connection->ssh_output, data) < 0)
     fatal("Write failed.\n");
@@ -189,7 +189,7 @@ connection_disconnect(struct lshd_connection *connection,
 {
   if (reason)
     connection_write_packet(connection, format_disconnect(reason, msg, ""));
-  
+
   KILL_RESOURCE(&connection->super);
 };
 
@@ -210,7 +210,7 @@ lshd_handle_line(struct abstract_write *s, struct lsh_string *line)
   CAST(lshd_read_handler, self, s);
   const uint8_t *version;
   uint32_t length;
-  
+
   verbose("Client version string: %pS\n", line);
 
   length = lsh_string_length(line);
@@ -224,9 +224,9 @@ lshd_handle_line(struct abstract_write *s, struct lsh_string *line)
     }
 
   self->connection->kex.version[0] = line;
-  
+
   self->super.write = lshd_handle_packet;
-  
+
   ssh_read_packet(&self->connection->reader->super,
 		  global_oop_source, self->connection->ssh_input,
 		  &self->super);
@@ -246,7 +246,9 @@ DEFINE_PACKET_HANDLER(lshd_service_handler, connection, packet)
 {
   if (ssh_write_data(connection->service_writer,
 		     global_oop_source, connection->service_fd,
-		     ssh_format("%i%fS", lsh_string_sequence_number(packet), packet)) < 0)
+		     ssh_format("%i%S",
+				lsh_string_sequence_number(packet),
+				packet)) < 0)
     fatal("lshd_service_handler: Write failed.\n");
 }
 
@@ -264,12 +266,12 @@ lshd_process_service_header(struct header_callback *s, struct ssh_read_state *st
 {
   CAST(lshd_process_service_header, self, s);
   struct lshd_connection *connection = self->connection;
-  
+
   uint32_t seqno;
   uint32_t length;
   struct lsh_string *packet;
   const uint8_t *header;
-  
+
   header = lsh_string_data(state->header);
 
   seqno = READ_UINT32(header);
@@ -280,7 +282,7 @@ lshd_process_service_header(struct header_callback *s, struct ssh_read_state *st
       werror("lshd_process_service_header: Receiving too large packet.\n"
 	     "  %i octets, limit is %i\n",
 	     length, connection->rec_max_packet);
-		  
+
       connection_disconnect(connection, SSH_DISCONNECT_BY_APPLICATION,
 			    "Received too large packet from service layer.");
       return NULL;
@@ -314,7 +316,7 @@ lshd_service_read_handler(struct abstract_write *s, struct lsh_string *packet)
     {
       /* EOF */
       connection_disconnect(connection, SSH_DISCONNECT_BY_APPLICATION,
-			    "Service layer died");      
+			    "Service layer died");
     }
   else if (!lsh_string_length(packet))
     connection_disconnect(connection, SSH_DISCONNECT_BY_APPLICATION,
@@ -358,6 +360,12 @@ lookup_service(const char **services,
   return NULL;
 }
 
+static struct lsh_string *
+format_service_accept(uint32_t name_length, const uint8_t *name)
+{
+  return ssh_format("%c%s", SSH_MSG_SERVICE_ACCEPT, name_length, name);
+};
+
 DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 {
   struct simple_buffer buffer;
@@ -367,7 +375,7 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
   uint32_t name_length;
 
   assert(connection->service_state == SERVICE_ENABLED);
-  
+
   simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
@@ -382,7 +390,7 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 	{
 	  int pipe[2];
 	  pid_t child;
-	  
+
 	  if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
 	    {
 	      werror("lshd_service_request_handler: socketpair failed: %e\n", errno);
@@ -398,7 +406,7 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 	      close(pipe[1]);
 	      connection_disconnect(connection, SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
 				    "Service could not be started");
-	      return;	      
+	      return;
 	    }
 	  if (child)
 	    {
@@ -418,7 +426,10 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 	      ssh_read_start(connection->service_reader,
 			     global_oop_source, connection->service_fd);
 
-	      connection->service_writer = make_ssh_write_state();	      
+	      connection->service_writer = make_ssh_write_state();
+
+	      connection_write_packet(connection,
+				      format_service_accept(name_length, name));
 	    }
 	  else
 	    {
@@ -428,7 +439,7 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 	      dup2(pipe[1], STDOUT_FILENO);
 	      close(pipe[1]);
 	      execl(program, program, NULL);
-	      
+
 	      werror("lshd_service_request_handler: exec failed: %e\n", errno);
 	      _exit(EXIT_FAILURE);
 	    }
@@ -440,16 +451,15 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
     }
   else
     connection_error(connection, "Invalid SERVICE_REQUEST");
-    
 }
 
-/* Handles decrypted packets. */ 
+/* Handles decrypted packets. */
 void
 lshd_handle_ssh_packet(struct lshd_connection *connection, struct lsh_string *packet)
 {
   uint32_t length = lsh_string_length(packet);
   uint8_t msg;
-  
+
   werror("Received packet: %xS\n", packet);
   if (!length)
     {
@@ -466,7 +476,7 @@ lshd_handle_ssh_packet(struct lshd_connection *connection, struct lsh_string *pa
       lsh_string_free(packet);
       return;
     }
-  
+
   msg = lsh_string_data(packet)[0];
 
   werror("handle_connection: Received packet of type %i (%z)\n",
@@ -493,7 +503,7 @@ lshd_handle_ssh_packet(struct lshd_connection *connection, struct lsh_string *pa
     case KEX_STATE_IGNORE:
       connection->kex.state = KEX_STATE_IN_PROGRESS;
       break;
-      
+
     case KEX_STATE_IN_PROGRESS:
       if (msg < SSH_FIRST_KEYEXCHANGE_SPECIFIC
 	  || msg >= SSH_FIRST_USERAUTH_GENERIC)
@@ -545,10 +555,10 @@ lshd_handshake(struct lshd_connection *connection)
 
   ssh_read_line(&connection->reader->super, 256,
 		global_oop_source, connection->ssh_input,
-		make_lshd_handle_line(connection));  
+		make_lshd_handle_line(connection));
   ssh_read_start(&connection->reader->super,
 		 global_oop_source, connection->ssh_input);
-		 
+
   connection_write_data(connection,
 			ssh_format("%lS\r\n", connection->kex.version[1]));
   lshd_send_kexinit(connection);
@@ -583,7 +593,7 @@ make_lshd_port(struct configuration *config, int fd)
   init_resource(&self->super, kill_port);
   self->config = config;
   self->fd = fd;
-  
+
   return self;
 }
 
@@ -596,7 +606,7 @@ lshd_port_accept(oop_source *source UNUSED,
   struct sockaddr_in peer;
   socklen_t peer_length = sizeof(peer);
   int s;
-  
+
   assert(event == OOP_READ);
   assert(self->fd == fd);
 
@@ -607,14 +617,14 @@ lshd_port_accept(oop_source *source UNUSED,
       return OOP_CONTINUE;
     }
 
-  connection = make_lshd_connection(self->config, s, s); 
+  connection = make_lshd_connection(self->config, s, s);
   gc_global(&connection->super);
 
   lshd_handshake(connection);
 
   return OOP_CONTINUE;
 }
-		 
+
 static struct resource_list *
 open_ports(struct configuration *config, int port_number)
 {
@@ -623,7 +633,7 @@ open_ports(struct configuration *config, int port_number)
   struct lshd_port *port;
   int yes = 1;
   int s;
-  
+
   s = socket(AF_INET, SOCK_STREAM, 0);
   if (s < 0)
     fatal("socket failed: %e\n", errno);
@@ -633,7 +643,7 @@ open_ports(struct configuration *config, int port_number)
 
   if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof (yes)) <0)
     fatal("setsockopt SO_REUSEADDR failed: %e\n", errno);
-  
+
   memset(&sin, 0, sizeof(sin));
   sin.sin_family = AF_INET;
   sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -663,9 +673,9 @@ make_configuration(const char *hostkey)
   NEW(configuration, self);
   static const char *services[] =
     { "ssh-userauth", "lshd-userauth", NULL };
-  
+
   self->random = make_system_random();
-  
+
   self->algorithms = all_symmetric_algorithms();
   ALIST_SET(self->algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
 	    &make_lshd_dh_handler(make_dh14(self->random))->super);
@@ -673,7 +683,7 @@ make_configuration(const char *hostkey)
   self->keys = make_alist(0, -1);
   if (!read_host_key(hostkey, all_signature_algorithms(self->random), self->keys))
     werror("No host key.\n");
-  
+
   self->kexinit = make_simple_kexinit(self->random,
 				      make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
 				      filter_algorithms(self->keys, default_hostkey_algorithms()),
@@ -682,8 +692,8 @@ make_configuration(const char *hostkey)
 				      default_compression_algorithms(self->algorithms),
 				      make_int_list(0, -1));
   self->services = services;
-  
-  return self;  
+
+  return self;
 }
 
 int
@@ -693,7 +703,7 @@ main(int argc UNUSED, char **argv UNUSED)
 
   open_ports(make_configuration("testsuite/key-1.private"),
 	     4711);
-  
+
   io_run();
 
   return EXIT_SUCCESS;
