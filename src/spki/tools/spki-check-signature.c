@@ -137,7 +137,7 @@ main(int argc, char **argv)
 
 	digest = hash_file(hash_algorithm, stdin);
 	if (!digest)
-	 die("Reading stdin failed.\n");
+	  die("Reading stdin failed.\n");
 
 	if (memcmp(digest, hash.digest, hash_algorithm->digest_size))
 	  die("Hash value doesn't match input.\n");
