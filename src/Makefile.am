@@ -29,8 +29,6 @@ noinst_LIBRARIES = liblsh.a
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 	packet_types.h
 
-# BUILT_SOURCES = config_parse.c
-
 .PHONY: bootstrap
 
 # Not all potential .x files can be generated
@@ -96,33 +94,6 @@ environ.h: environ.h.in Makefile
 	  < $(srcdir)/environ.h.in) >environ.hT
 	test -s environ.hT && mv -f environ.hT environ.h
 
-# # FIXME: Generate these dependencies in some other way.
-# client.o: environ.h
-# 
-# client_pty.o: environ.h
-# 
-# gateway.o: environ.h
-# 
-# lshd.o: environ.h
-# 
-# lsh-keygen.o: environ.h
-# 
-# lsh-make-seed.o: environ.h
-# 
-# lsh.o: environ.h
-# 
-# lsh-writekey.o: environ.h
-# 
-# server_session.o: environ.h
-# 
-# server_x11.o: environ.h
-# 
-# srp-gen.o: environ.h
-# 
-# unix_random: environ.h
-# 
-# unix_user: environ.h
-
 atoms_defines.h: atoms.in process_atoms
 	$(srcdir)/process_atoms header <$< >$@T
 	test -s $@T && mv -f $@T $@
@@ -146,14 +117,16 @@ lsh_krb_checkpw_LDADD=@KRB_LIBS@
 
 lsh_execuv_LDADD=
 
-# typedescr.h: ssh.h $(top_srcdir)/misc/mk-reverse-table
-# 	  $(PERL) $(top_srcdir)/misc/mk-reverse-table ssh.h >$@T
-# 	  if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
-
 LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 
-# lshg needs ssh_format, which need bignum functions from nettle.
-# lshg_LDADD = liblsh.a @LIBARGP@
+# To avoid having to link lshg with nettle, link with dummy.o.
+
+# FIXME: We still link with gmp and zlib, to avoid that we'd need to
+# remove them from LIBS. The only libraries really needed for lshg is
+# liboop and perhaps libXau.
+
+lshg_SOURCES = lshg.c dummy.c
+lshg_LDADD = liblsh.a @LIBARGP@
 
 class-map: $(srcdir)/make-class-map $(dist_classes)
 	cat $(dist_classes) | grep '^CLASS:' \
