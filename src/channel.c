@@ -276,10 +276,13 @@ make_exc_finish_channel_handler(struct channel_table *table,
 #define MAX_CHANNELS (1L<<17)
 
 struct channel_table *
-make_channel_table(void)
+make_channel_table(struct abstract_write *write
+		   /* , struct exception_handler *e */)
 {
   NEW(channel_table, table);
-
+  table->write = write;
+  table->e = NULL; /* FIXME: XXX */
+  
   table->channels = lsh_space_alloc(sizeof(struct ssh_channel *)
 				      * INITIAL_CHANNELS);
   table->in_use = lsh_space_alloc(INITIAL_CHANNELS);

@@ -352,11 +352,16 @@ struct channel_request name =                                   \
                                                                 \
 static void do_##name
 
-void init_channel(struct ssh_channel *channel);
+void
+init_channel(struct ssh_channel *channel);
 
-struct channel_table *make_channel_table(void);
-int alloc_channel(struct channel_table *table);
-void dealloc_channel(struct channel_table *table, int i);
+struct channel_table *
+make_channel_table(struct abstract_write *write);
+
+int
+alloc_channel(struct channel_table *table);
+void
+dealloc_channel(struct channel_table *table, int i);
 
 void
 use_channel(struct channel_table *table,
