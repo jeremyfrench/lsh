@@ -397,7 +397,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			  make_dh_server(make_dh1(&self->random->super)));
+			  &make_dh_server(make_dh1(&self->random->super))
+			  ->super);
 	      }
 #if WITH_SRP	    
 	    if (self->with_srp_keyexchange)
@@ -406,7 +407,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_SRP_RING1_SHA1_LOCAL,
-			  make_srp_server(make_srp1(&self->random->super), db));
+			  &make_srp_server(make_srp1(&self->random->super), db)
+			  ->super);
 	      }
 #endif /* WITH_SRP */
 	  }
@@ -438,7 +440,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      {
 		LIST(self->userauth_methods)[i++] = ATOM_PASSWORD;
 		ALIST_SET(self->userauth_algorithms,
-			  ATOM_PASSWORD, make_userauth_password(db));
+			  ATOM_PASSWORD,
+			  &make_userauth_password(db)->super);
 	      }
 	    if (self->with_publickey)
 	      {
@@ -446,14 +449,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->userauth_methods)[i++] = ATOM_PUBLICKEY;
 		ALIST_SET(self->userauth_algorithms,
 			  ATOM_PUBLICKEY,
-			  make_userauth_publickey
+			  &make_userauth_publickey
 			  (db,
 			   make_alist(1,
 				      ATOM_SSH_DSS,
 				      make_authorization_db(ssh_format("authorized_keys_sha1"),
 							    &sha1_algorithm),
-				      
-				      -1)));
+				      -1))
+			  ->super);
 	      }
 	  }
 	else
@@ -693,7 +696,7 @@ int main(int argc, char **argv)
 #if WITH_PTY_SUPPORT
     if (options->with_pty)
       ALIST_SET(supported_channel_requests,
-		ATOM_PTY_REQ, &pty_request_handler);
+		ATOM_PTY_REQ, &pty_request_handler.super);
 #endif /* WITH_PTY_SUPPORT */
 
     session_setup = make_install_fix_channel_open_handler

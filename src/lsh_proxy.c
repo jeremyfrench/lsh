@@ -690,10 +690,10 @@ int main(int argc, char **argv)
 
   ALIST_SET(algorithms_server, 
 	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-	    make_dh_server(make_dh1(&r->super)));
+	    &make_dh_server(make_dh1(&r->super))->super);
   ALIST_SET(algorithms_client, 
 	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-	    make_dh_client(make_dh1(&r->super)));
+	    &make_dh_client(make_dh1(&r->super))->super);
   
   make_kexinit
     = make_simple_kexinit(&r->super,
