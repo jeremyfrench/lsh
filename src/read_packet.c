@@ -23,6 +23,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include <assert.h>
 #include <errno.h>
 #include <string.h>
 
@@ -52,14 +53,30 @@ struct read_packet
   /* FIXME: This buffer should hold one block, and must be reallocated
    * when the crypto algorithms is changed. */
   struct lsh_string *buffer;
-  UINT32 crypt_pos;
-  
-  UINT8 *computed_mac; /* Must point to an area large enough to hold a mac */
+  UINT8 *crypt_pos;
+
+  /* Must point to an area large enough to hold a mac */
+  struct lsh_string *computed_mac; 
 
   struct abstract_write *handler;
   struct ssh_connection *connection;
 };
 
+static struct lsh_string *
+lsh_string_realloc(struct lsh_string *s, UINT32 length)
+{
+  if (!s)
+    return lsh_string_alloc(length);
+
+  if (s->length < length)
+    {
+      lsh_string_free(s);
+      return lsh_string_alloc(length);
+    }
+  else
+    return s;
+}
+    
 static int do_read_packet(struct read_handler **h,
 			  struct abstract_read *read)
 {
@@ -79,13 +96,9 @@ static int do_read_packet(struct read_handler **h,
 	      ? closure->connection->rec_crypto->block_size : 8;
 	    UINT32 left;
 	    int n;
-	
-	    if (!closure->buffer)
-	      {
-		closure->buffer
-		  = lsh_string_alloc(block_size);
-		closure->pos = 0;
-	      }
+
+	    closure->buffer = lsh_string_realloc(closure->buffer,
+						 block_size);
 
 	    left = block_size - closure->pos;
 	    
@@ -188,18 +201,25 @@ static int do_read_packet(struct read_handler **h,
 	    /* Read a complete packet? */
 	    if (n == left)
 	      {
+		assert(left == ((closure->buffer->length
+				 + closure->buffer->data)
+				- closure->crypt_pos));
 		if (closure->connection->rec_crypto)
 		  CRYPT(closure->connection->rec_crypto,
-			closure->buffer->length - closure->crypt_pos,
-			closure->buffer->data + closure->crypt_pos,
-			closure->buffer->data + closure->crypt_pos);		      
+			left,
+			closure->crypt_pos,
+			closure->crypt_pos);		      
 		if (closure->connection->rec_mac)
 		  {
+		    closure->computed_mac = lsh_string_realloc
+		      (closure->computed_mac,
+		       closure->connection->rec_mac->hash_size);
+
 		    HASH_UPDATE(closure->connection->rec_mac,
-				closure->buffer->length - closure->crypt_pos,
-				closure->buffer->data + closure->crypt_pos);
+				left,
+				closure->crypt_pos);
 		    HASH_DIGEST(closure->connection->rec_mac,
-				closure->computed_mac);
+				closure->computed_mac->data);
 		  }
 		closure->state = WAIT_MAC;
 		closure->pos = 0;
@@ -279,5 +299,7 @@ struct read_handler *make_read_packet(struct abstract_write *handler,
   closure->buffer = NULL;
   /* closure->crypt_pos = 0; */
 
+  closure->computed_mac = NULL;
+  
   return &closure->super;
 }
