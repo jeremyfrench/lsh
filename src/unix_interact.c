@@ -44,6 +44,7 @@
 
 #include "format.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "resource.h"
 #include "suspend.h"
 #include "tty.h"
@@ -278,7 +279,7 @@ unix_yes_or_no(struct interact *s,
       uint8_t buffer[TTY_BUFSIZE];
       const struct exception *e;
   
-      e = write_raw(self->tty_fd, prompt->length, prompt->data);
+      e = write_raw(self->tty_fd, STRING_LD(prompt));
 
       if (free)
 	lsh_string_free(prompt);
