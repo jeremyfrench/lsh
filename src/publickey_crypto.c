@@ -220,13 +220,6 @@ int do_dss_verify(struct verifier *c,
 
 int parse_dss_public(struct simple_buffer *buffer, struct dss_public *public)
 {
-#if 0
-  mpz_init(public->p);
-  mpz_init(public->q);
-  mpz_init(public->g);
-  mpz_init(public->y);
-#endif
-  
   return (parse_bignum(buffer, public->p)
 	  && parse_bignum(buffer, public->p)
 	  && (mpz_sgn(public->p) == 1)
@@ -239,13 +232,6 @@ int parse_dss_public(struct simple_buffer *buffer, struct dss_public *public)
 	  && parse_bignum(buffer, public->y) 
 	  && (mpz_sgn(public->y) == 1)
 	  && (mpz_cmp(public->y, public->p) < 0) /* y < p */  );
-#if 0
-      mpz_clear(public->p);
-      mpz_clear(public->q);
-      mpz_clear(public->g);
-      mpz_clear(public->y);
-      return 0;
-#endif
 }
 
 /* FIXME: Outside of the protocol transactions, keys should be stored

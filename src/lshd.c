@@ -41,11 +41,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#if 0
-#include "crypto.h"
-#include "publickey_crypto.h"
-#endif
-
 #define BLOCK_SIZE 32768
 
 /* Global variable */

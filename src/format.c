@@ -163,23 +163,6 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 		f++;
 		break;
 	      }
-#if 0
-	    case 'A':
-	      {
-		int atom;
-
-		while ( (atom = va_arg(args, int)) )
-		  length += get_atom_length(atom) + 1;
-
-		/* One ','-character less than the number of atoms */
-		length--;
-		
-		if (!literal)
-		  length += 4;
-		f++;
-		break;
-	      }
-#endif
 	    case 'n':
 	      {
 		MP_INT *n = va_arg(args, MP_INT*);
@@ -346,40 +329,6 @@ UINT32 ssh_vformat(char *f, UINT8 *buffer, va_list args)
 
 		break;
 	      }
-#if 0
-	    case 'A':
-	      {
-		int atom;
-		UINT8 *start = buffer; /* Where to store the length */
-		
-		if (!literal)
-		  buffer += 4;
-
-		atom = va_arg(args, int);
-		if (atom)
-		  {
-		    UINT32 length = get_atom_length(atom);
-		    memcpy(buffer, get_atom_name(atom), length);
-		    buffer += length;
-
-		    while ( (atom = va_arg(args, int)) )
-		      {
-			*buffer++ = ',';
-			length = get_atom_length(atom);
-			memcpy(buffer, get_atom_name(atom), length);
-			buffer += length;
-		      }
-		  }
-				
-		if (!literal)
-		  {
-		    UINT32 total = buffer - start - 4;
-		    WRITE_UINT32(start, total);
-		  }
-		f++;
-		break;
-	      }
-#endif
 	    case 'A':
 	      {
 		int *atom = va_arg(args, int *);

@@ -51,12 +51,5 @@ make_client_callback(struct io_backend *b,
 
 struct read_handler *make_client_read_line(struct ssh_connection *c);
 struct callback *make_client_close_handler(void);
-
-#if 0
-struct client_session
-{
-  struct read_handler handler;
-  UINT32 *
-#endif
   
 #endif /* LSH_CLIENT_H_INCLUDED */

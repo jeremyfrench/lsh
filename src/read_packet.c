@@ -48,11 +48,6 @@ int do_read_packet(struct read_handler **h,
   while(1)
     {
 #endif
-#if 0
-      struct crypto_instance *crypto = connection->rec_crypto;
-      if (!crypto)
-	crypto = &crypto_none_instance;
-#endif 
       switch(closure->state)
       {
 	case WAIT_HEADER:
@@ -77,9 +72,6 @@ int do_read_packet(struct read_handler **h,
 	      case 0:
 		return 1;
 	      case A_FAIL:
-#if 0
-		werror("do_read_packet: read() failed, %s\n", strerror(errno));
-#endif
 		/* Fall through */
 	      case A_EOF:
 		/* FIXME: Free associated resources! */
