@@ -115,14 +115,14 @@ do_send_adjust(struct ssh_channel *s,
     {
       assert(session->out->read);
 
-      session->out->want_read = 1;
+      lsh_oop_register_read_fd(session->out);
     }
   
   if (session->err && session->err->super.alive)
     {
       assert(session->err->read);
   
-      session->err->want_read = 1;
+      lsh_oop_register_read_fd(session->err);
     }
 }
 
