@@ -1,0 +1,34 @@
+× Why use a gc?
+
+I'll try to explain how I think about gc, as I'm afraid some may find
+it a little unorthodox.
+
+The reasoning behind the decision to use a gc is that the explicitly
+deallocating an object is a very global operation. The requirement to
+do this makes it *MUCH* more painful to modularize the code. On the
+other hand, most of the data in lsh (i.e. all strings) can be managed
+quite easily in a producer/consumer fashion. So we only need to use
+the gc for objects such as packet handlers, instances of
+cryptoalgorithms, and other closures. These are quite few, perhaps one
+or two dozen of objects per connection.
+
+Thus, the cost of doing automatic gc on this will be small, while it
+makes coding the objects much more straight-forward. And as a simple
+mark&sweep algorithm should be adequate, implementation is almost
+trivial (what makes the implementation a little more interesting is
+that I want to describe the object types in such a way that I can
+generate the gc glue needed for proper marking and deallocation
+automatically. As a side effect, this should also make the sanity
+checks (basically run-time type checking) more reliable).
+
+Tools like checker and purify may be great for *detecting* memory
+leaks (I've used purify a little, and it's really a great tool). But
+they *don't* solve the problem of deciding exactly when each object
+can be freed, and it is this problem that makes explicit memory
+management destroy modularity boundaries.
+
+Personally I think that the *single* most important advantage of using
+higher level languages like python or scheme rather than plain C is
+that you don't have to mess with memory deallocation. But that's no
+reason why we should have to do that in C; a gc should take care of
+most of it in one place, in a few hundred lines of code.

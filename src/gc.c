@@ -1,0 +1,143 @@
+/* gc.c
+ *
+ * Simple mark&sweep garbage collector.
+ *
+ * $Id$ */
+
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 1998 Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#include "gc.h"
+
+#include "werror.h"
+#include "xalloc.h"
+
+#include <assert.h>
+
+/* Global variables */
+static struct lsh_object *all_objects;
+unsigned number_of_objects;
+unsigned live_objects;
+
+static void gc_mark(struct lsh_object *o)
+{
+  while(o)
+    switch(o->alloc_method)
+      {
+      case LSH_ALLOC_STACK:
+	fatal("gc_mark: Unexpected stack object!\n");
+
+      case LSH_ALLOC_HEAP:
+	if (o->marked)
+	  return;
+	o->marked = 1;
+	/* Fall through */
+      case LSH_ALLOC_STATIC:
+	/* Can't use mark bit on static objects, as there's no way to
+	 * reset all the bits */
+	assert(!o->dead);
+	{
+	  struct lsh_object *instance = o;
+	  struct lsh_class *class;
+	
+	  for (class = o->isa, o = NULL; class; class = class->super_class)
+	    {
+	      if (class->mark_instance)
+		{
+		  struct lsh_object *p = MARK_INSTANCE(class, instance, gc_mark);
+		  if (o)
+		    {
+		      if (p)
+			gc_mark(p);
+		    }
+		  else
+		    o = p;
+		}
+	    }
+	}
+	break;
+      default:
+	fatal("gc_mark: Memory corrupted!\n");
+      }
+}
+
+static void gc_sweep(void)
+{
+  struct lsh_object *o;
+  struct lsh_object **o_p;
+
+  live_objects = 0;
+  
+  for(o_p = &all_objects; (o = *o_p); )
+    {
+      if (o->marked)
+	{
+	  /* Keep objct */
+	  live_objects++;
+	  o->marked = 0;
+	}
+      else
+	{
+	  struct lsh_class *class;
+	
+	  for (class = o->isa; class; class = class->super_class)
+	    if (class->free_instance)
+	      FREE_INSTANCE(class, o);
+
+	  /* Unlink ubject */
+	  *o_p = o->next;
+	  number_of_objects--;
+	  
+	  lsh_object_free(o);
+	  continue;
+	}
+      o_p = &o->next;
+    }
+}
+
+void gc_register(struct lsh_object *o)
+{
+  o->marked = o->dead = 0;
+  o->next = all_objects;
+  all_objects = o;
+
+  number_of_objects ++;
+}
+
+/* FIXME: This function should really deallocate and forget the object
+ * early. But we keep it until the next gc, in order to catch any
+ * references to killed objects. */
+void gc_kill(struct lsh_object *o)
+{
+  assert(!o->dead);
+
+  o->dead = 1;
+}
+
+void gc(struct lsh_object *root)
+{
+  gc_mark(root);
+  gc_sweep();
+}
+
+void gc_maybe(struct lsh_object *root, int busy)
+{
+  if (number_of_objects > (100 + live_objects*(2+busy)))
+    gc(root);
+}
