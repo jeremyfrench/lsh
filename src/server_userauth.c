@@ -264,6 +264,13 @@ do_exc_userauth_handler(struct exception_handler *s,
     default:
       EXCEPTION_RAISE(self->super.parent, x);
       break;
+
+    case EXC_PROTOCOL:
+      /* Protocol errors should be handled by the connection's
+       * exception handler, not our parent's. */
+      EXCEPTION_RAISE(self->connection->e, x);
+      break;
+
     case EXC_USERAUTH:
       {
 	/* Unlock connection */
