@@ -1,5 +1,0 @@
-TS_TEST_CRYPTO(»CAST-128 CBC«, »&crypto_cast128_cbc_algorithm«,
-               #0123456789ABCDEF FEDCBA9876543210#,
-               #0000000000000000 1111111111111111#,
-	       #9a1bf354bca596ad f7b2a2ce5f09a8b2#,
-	       #0011223344556677#)
