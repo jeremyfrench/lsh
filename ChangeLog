@@ -1,5 +1,10 @@
 Wed Mar 17 00:07:07 1999  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/compiler.scm (let-and): New macro.
+	(match): Simple pattern matcher for optimizations.
+	(optimize): New optimizer.
+	(preprocess): Use the formal arguments in the right order.
+
 	* src/algorithms.c: Enable CAST. Bug fixes.
 
 Tue Mar 16 03:36:20 1999  Niels Möller  <nisse@lysator.liu.se>

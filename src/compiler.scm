@@ -49,31 +49,6 @@
 	 (or (free-variable? v (application-op expr))
 	     (free-variable? v (application-arg expr))))))
 
-#!
-(define (translate-lambda v expr)
-  (if (not (free-variable? v expr))
-      (make-combine 'K (translate-expression expr))
-      (cond ((atom? expr)
-	     (if (eq? v expr) 'I
-		 (error "translate normal: unexpected bound variable")))
-	    ((lambda? expr)
-	     ;; Depth first
-	     (translate-lambda v
-			       (translate-lambda (lambda-formal expr)
-						 (lambda-body expr))))
-	    ;; Must be an application
-	    (else
-	     (let ((op (application-op expr))
-		   (arg (application-arg expr)))
-	       (if (and (eq? v arg)
-			(not (free-variable? v op)))
-		   (translate-expression op)
-		   (make-combine 'S
-				 (translate-lambda v op)
-				 (translate-lambda v arg))))))))
-
-!#
-
 (define (match pattern expr)
   (if (atom? pattern)
       (if (eq? '* pattern) (list expr)
@@ -90,33 +65,39 @@
 
 (define (make-K e) (make-combine 'K e))
 (define (make-S p q) (make-combine 'S p q))
-(define (make-B p q) (make-combine 'B p q))
-(define (make-C p q) (make-combine 'C p q))
-(define (make-S* p q r) (make-combine 'S* p q r))
-(define (make-B* p q r) (make-combine 'B* p q r))
-(define (make-C* p q r) (make-combine 'C* p q r))
+;; (define (make-B p) (make-combine 'B p))
+;; (define (make-C p q) (make-combine 'C p q))
+;; (define (make-S* p q) (make-combine 'S* p q))
+;; (define (make-B* p q) (make-combine 'B* p q))
+;; (define (make-C* p q) (make-combine 'C* p q))
 
 (define optimizations
   (list (rule '(S (K *) (K *)) (lambda (p q) (make-K (make-appliction p q))))
 	(rule '(S (K *) I) (lambda (p) p))
-	(rule '(S (K *) (B * *)) make-B*)
-	(rule '(S (K *) *) make-B)
-	;; (rule '(S (B * *) (K *)) make-C*)
-	(rule '(C (B * *) *) make-C*)
-	(rule '(S * (K *)) make-C)
-	(rule '(S (B * * ) *) make-S*)))
+	;; (rule '(B K I) (lambda () 'K))
+	(rule '(S (K *) (B * *)) (lambda (p q r) (make-combine 'B* p q r)))
+	(rule '(S (K *) *) (lambda (p q) (make-combine 'B p q)))
+	(rule '(S (B * *) (K *))  (lambda (p q r) (make-combine 'C* p q r)))
+	;; (rule '(C (B * *) *) (lambda (p q r) (make-combine 'C* p q r)))
+	(rule '(S * (K *)) (lambda (p q) (make-combine 'C p q)))
+	(rule '(S (B * * ) r) (lambda (p q r) (make-combine 'S* p q r)))))
 
 (define (optimize expr)
-  (werror "optimize ~S\n" expr)
+  ;; (werror "optimize ~S\n" expr)
   (let loop ((rules optimizations))
-    (if (not (null? rules)) (werror "trying pattern ~S\n" (caar rules)) )
+    ;; (if (not (null? rules)) (werror "trying pattern ~S\n" (caar rules)) )
     (cond ((null? rules) expr)
 	  ((match (caar rules) expr)
 	   => (lambda (parts) (apply (cdar rules) parts)))
 	  (else (loop (cdr rules))))))
 
+(define (optimize-application op args)
+  (if (null? args) op
+      (optimize-application (optimize (make-appliction op (car args)))
+			    (cdr args))))
+
 (define (make-combine op . args)
-  (optimize (normalize-application op args)))
+  (optimize-application op args))
 
 (define (translate-expression expr)
   (cond ((atom? expr) expr)
@@ -149,3 +130,14 @@
   (flatten-application (translate-expression (preprocess expr))))
 
 ;;; Test cases
+;; (translate '(lambda (port connection)
+;;                 (start-io (listen port connection)
+;;                 (open-direct-tcpip connection))))
+;;  ===> (C (B* S (B start-io) listen) open-direct-tcpip)
+;; 
+;; (translate '(lambda (f) ((lambda (x) (f (lambda (z) ((x x) z))))
+;; 			    (lambda (x) (f (lambda (z) ((x x) z)))) )))
+;; ===> (S (C B (S I I)) (C B (S I I)))
+;; 
+;; (translate '(lambda (r) (lambda (x) (if (= x 0) 1 (* x (r (- x 1)))))))
+;; ===> (B* (S (C* if (C = 0) 1)) (S *) (C B (C - 1)))
