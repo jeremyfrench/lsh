@@ -286,6 +286,7 @@ struct ssh_channel *make_server_session(struct unix_user *user,
 static void
 do_open_session(struct channel_open *s,
 		struct ssh_connection *connection UNUSED,
+		UINT32 type UNUSED,
 		struct simple_buffer *args,
 		struct command_continuation *c,
 		struct exception_handler *e)
