@@ -1,3 +1,79 @@
+2002-08-26  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/tcpforward_commands.c (tcpip_connect_io_command): Renamed,
+	was tcpip_connect_io.
+	(do_tcpip_start_io): Deleted, replaced by channel_forward_start_io.
+
+	* src/tcpforward.c: No need to include string.h and errno.h.
+	* src/tty.c: Likewise.
+
+	* src/server_userauth.c: No need to include string.h.
+
+	* src/randomness.c: No need to include errno.h.
+	* src/read_packet.c: Likewise.
+
+	* src/io_commands.h (make_listen_local, make_connect_local):
+	Deleted prototypes.
+
+	* src/werror.c (werror_vformat): Added %e specifier. Updated all
+	errno printing functions to use it.
+	(werror_format): New function.
+	(fatal): Compile time flag to display pid and hang, instead of
+	aborting. Useful for debugging.
+
+2002-08-25  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/server_x11.c (new_x11_channel): New function.
+	(open_forwarded_x11): New command.
+
+	* src/lsh.c (main_argp_parser): Updated call of
+	make_gateway_setup. 
+
+	* src/io_commands.c (bind_local_command): New command.
+	(do_listen_local): Deleted function.
+	(make_listen_local): Deleted function.
+	(do_connect_local): Deleted old #if:ed out function.
+	(make_connect_local): Deleted old #if:ed out function.
+
+	* src/gateway_commands.c (make_gateway_setup): Take a local_info
+	as argument. Use the new bind_local command.
+
+	* src/lsh.h: Added forward declarations for structs in command.h.
+	Removed the inclusion of command.h from other header files.
+
+	* src/channel_forward.c (start_io_command): New command, to
+	replace tcpip_start_io.
+
+	* src/lsh_proxy.c (lsh_proxy_listen): Replaced listen_callback
+	with new bind and listen commands.
+
+2002-08-24  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io_commands.c (do_listen): Deleted function.
+	(listen_with_callback): Deleted command.
+
+	* src/lshd.c (make_lshd_listen): Replaced listen_callback with new
+	bind and listen commands.
+
+	* src/io_commands.c (listen_command): New command, to replace
+	listen_with_callback. 
+	(bind_address_command): New command.
+
+	* src/io.c (make_listen_callback): Use a command, not a
+	continuation, to represent the callback. Updated callers.
+
+	* src/io_commands.c (do_listen): Use io_bind_sockaddr.
+	(do_listen_local): Use io_bind_local.
+
+	* src/io.c (io_bind_sockaddr): New function.
+	(io_listen_fd): Take a struct lsh_fd * as argument, instead of an
+	int. 
+	(io_listen): Use io_bind_sockaddr.
+	(io_listen, io_listen_fd): Deleted function io_listen. Renamed
+	io_listen_fd to io_listen. 
+	(io_bind_local): New function replacing io_listen_local. Updated
+	callers. 
+
 2002-08-11  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/unix_user.c (do_read_file): Use seteuid, not setuid.
