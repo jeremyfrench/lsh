@@ -64,16 +64,31 @@
 #define RANDOM_POLL_FAST(p, h) ((p)->fast((p), (h)))
 #define RANDOM_POLL_BACKGROUND(p) ((p)->background((p)))
 
+/* GABA:
+   (class
+     (name randomness_with_poll)
+     (super randomness)
+     (vars
+       ; Object that gets randomness from the environment
+       (poller object random_poll)))
+*/
+
 /* Consumes the init string (which may be NULL). */
 struct randomness *make_poor_random(struct hash_algorithm *hash,
 				    struct lsh_string *init);
 
+struct randomness *make_bad_random(void);
+
 struct randomness *make_device_random(const char *device);
 struct randomness *make_reasonably_random(void);
 
-struct randomness *
+struct randomness_with_poll *
 make_arcfour_random(struct random_poll *poller,
 		    struct hash_algorithm *hash,
+		    struct exception_handler *e);
+
+struct randomness_with_poll *
+make_default_random(struct reap *reaper,
 		    struct exception_handler *e);
 
 struct random_poll *
