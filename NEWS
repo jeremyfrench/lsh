@@ -1,4 +1,4 @@
-News for the 1.5.6 release
+News for the 2.0 release
 
 	Several programs have new default behaviour:
 
@@ -9,6 +9,8 @@ News for the 1.5.6 release
 	* lsh-writekey encrypts the private key by default, using
 	  aes256-cbc. Unless the --server flag is used.
 
+	Improved the lcp script. It is now installed by default.
+	
 	Implemented the client side of "keyboard-interactive" user
 	authentication.
 	

@@ -1,5 +1,7 @@
 2004-11-18  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/Makefile.am (bin_SCRIPTS): Install the lcp script.
+
 	* src/lsh-export-key.c (enum output_mode): New enum.
 	(encode_base64_line): New function.
 	(sexp_to_ssh2_key): Alternative output formats, fingerprint and
