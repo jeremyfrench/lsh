@@ -60,7 +60,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	randomness.c \
 	read_base64.c read_data.c read_file.c read_line.c read_packet.c \
 	reaper.c resource.c \
-	rsa.c rsa_keygen.c \
+	rijndael.c rsa.c rsa_keygen.c serpent.c \
 	server.c server_authorization.c server_keyexchange.c \
 	server_password.c server_publickey.c \
 	server_pty.c server_session.c server_userauth.c \

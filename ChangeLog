@@ -1,3 +1,19 @@
+2000-09-05  Rafael R. Sevilla  <dido@pacific.net.ph>
+
+	* src/symmetric/rijndael.c, src/symmetric/include/rijndael.h: New. 
+	LGPLed Rijndael implementation by me.
+	* src/rijndael.c: New.  Adds support for Rijndael.
+	* src/symmetric/serpent.c, src/symmetric/serpentsboxes.h,
+	src/symmetric/include/serpent.h: New.  LGPLed Serpent implementation
+	by Ross Anderson, Eli Biham, and Lars Knudsen.
+	* src/serpent.c: New.  Adds support for Serpent.
+	* src/symmetric/Makefile.am.in, src/atoms_in, src/Makefile.am.in,
+	src/algorithms.c, src/crypto.h: updated for Rijndael and Serpent.
+
+000-09-10  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* FAQ: Added a question on anonymous cvs access.
+
 2000-09-04  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* doc/lsh.texinfo: Updated references to lsh-keygen and

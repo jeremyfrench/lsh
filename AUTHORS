@@ -26,8 +26,13 @@ released under the LPGL.
 MD5 implementation by Colin Plumb, somewhat hacked by Andrew Kuchling.
 Released into the public domain.
 
+RIJNDAEL implementation by Rafael Sevilla.  Released under the LGPL.
+
 SHA implementation by Peter Gutmann, somewhat hacked by Andrew
 Kuchling. Released into the public domain.
+
+SERPENT implementation by Ross Anderson, Eli Biham, and Lars Knudsen,
+somewhat hacked by Rafael Sevilla.  Released under the GPL.
 
 TCPUTILS networking code by Thomas Bellman. Released into the public
 domain.

@@ -11,6 +11,8 @@ zlib
 3des-cbc         REQUIRED          three-key 3DES in CBC mode
 blowfish-cbc     RECOMMENDED       Blowfish in CBC mode
 twofish-cbc      RECOMMENDED       TwoFish cipher in CBC mode
+rijndael-cbc     RECOMMENDED       Rijndael cipher in CBC mode
+serpent-cbc      RECOMMENDED       Serpent cipher in CBC mode
 arcfour          OPTIONAL          the ARCFOUR stream cipher
 idea-cbc         OPTIONAL          IDEA in CBC mode
 cast128-cbc      OPTIONAL          CAST-128 in CBC mode
@@ -36,6 +38,12 @@ cast128-cbc      OPTIONAL          CAST-128 in CBC mode
 #twofish-ecb      OPTIONAL          TwoFish cipher in ECB mode
 #twofish-cfb      OPTIONAL          TwoFish cipher in CFB mode
 #twofish-ofb      OPTIONAL          TwoFish cipher in OFB mode
+#rijndael-ecb     OPTIONAL          Rijndael cipher in ECB mode
+#rijndael-cfb     OPTIONAL          Rijndael cipher in CFB mode
+#rijndael-ofb     OPTIONAL          Rijndael cipher in OFB mode
+#serpent-ecb      OPTIONAL          Serpent cipher in ECB mode
+#serpent-cfb      OPTIONAL          Serpent cipher in CFB mode
+#serpent-ofb      OPTIONAL          Serpent cipher in OFB mode
 ## Others (I don't know why SSH supports them)
 #des-ecb          OPTIONAL          DES cipher in ECB mode
 #des-cfb          OPTIONAL          DES cipher in CFB mode

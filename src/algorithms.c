@@ -46,7 +46,7 @@ many_algorithms(unsigned n, ...)
   va_list args;
   
   struct alist *a
-    = make_alist(7
+    = make_alist(9
 #if WITH_IDEA
 		 +1
 #endif
@@ -57,6 +57,8 @@ many_algorithms(unsigned n, ...)
 		 ATOM_ARCFOUR, &crypto_arcfour_algorithm,
 		 ATOM_BLOWFISH_CBC, crypto_cbc(make_blowfish()),
 		 ATOM_TWOFISH_CBC, crypto_cbc(make_twofish()),
+		 ATOM_RIJNDAEL_CBC, crypto_cbc(make_rijndael()),
+		 ATOM_SERPENT_CBC, crypto_cbc(make_serpent()),
 		 ATOM_3DES_CBC, crypto_cbc(make_des3()),
 		 ATOM_CAST128_CBC, crypto_cbc(make_cast()),
 #if WITH_IDEA
@@ -118,6 +120,10 @@ lookup_crypto(struct alist *algorithms, const char *name,
     atom = ATOM_BLOWFISH_CBC;
   else if (strcmp_list(name, "3des-cbc", "3des", NULL))
     atom = ATOM_3DES_CBC;
+  else if (strcmp_list(name, "rijndael-cbc", "rijndael", NULL))
+    atom = ATOM_RIJNDAEL_CBC;
+  else if (strcmp_list(name, "serpent-cbc", "serpent", NULL))
+    atom = ATOM_SERPENT_CBC;
   else if (strcmp_list(name, "idea-cbc", "idea", NULL))
     atom = ATOM_IDEA_CBC;
   else if (strcmp_list(name, "cast128-cbc", "cast",
@@ -244,7 +250,7 @@ lookup_hash(struct alist *algorithms, const char *name,
 
 struct int_list *default_crypto_algorithms(void)
 {
-  return make_int_list(5
+  return make_int_list(7
 #if WITH_IDEA
 		       + 1
 #endif
@@ -254,6 +260,8 @@ struct int_list *default_crypto_algorithms(void)
 #endif
 		       ATOM_BLOWFISH_CBC,
 		       ATOM_CAST128_CBC,
+		       ATOM_RIJNDAEL_CBC,
+		       ATOM_SERPENT_CBC,
 		       ATOM_TWOFISH_CBC, ATOM_ARCFOUR, -1);
 }
 
@@ -330,9 +338,10 @@ list_crypto_algorithms(const struct argp_state *state,
 		       struct alist *algorithms)
 {
   list_algorithms(state, algorithms,
-		  "Supported crypto algorithms: ", 7,
+		  "Supported crypto algorithms: ", 9,
 		  ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
-		  ATOM_TWOFISH_CBC, ATOM_ARCFOUR,
+		  ATOM_TWOFISH_CBC, ATOM_RIJNDAEL_CBC, ATOM_SERPENT_CBC,
+		  ATOM_ARCFOUR,
 		  ATOM_IDEA_CBC, ATOM_CAST128_CBC,
 		  ATOM_NONE, -1);
 }
