@@ -1,3 +1,38 @@
+2001-07-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/combinators.c (command_I): Redefined using DEFINE_COMMAND.
+	Updated users as the type was changed in the process.
+	(command_K): Redefined using DEFINE_COMMAND2.
+	(command_S): Redefined using DEFINE_COMMAND3.
+	
+
+	* src/command.c: New class.
+	(make_command_2_invoke): New function.
+	(command_3_invoke_2): New class.
+	(make_command_3_invoke_2): New function.
+	(command_3_invoke): New class.
+	(make_command_3_invoke): New function.
+	(progn_command): Use DEFINE_COMMAND isntead of
+	DEFINE_COMMAND_SIMPLE. 
+
+	* src/command.h: Started replacing command_simple and the
+	collect_info_n classes with simpler schemes.
+	(command_2): New class.
+	(DEFINE_COMMAND2): New macro.
+	(command_3): New class.
+	(DEFINE_COMMAND3): New macro.
+
+	* src/connection_commands.c (connection_require_userauth): Changed
+	invocation of DEFINE_COMMAND.
+	* src/gateway_commands.c (gateway_init): Likewise.
+
+	* src/command.h (DEFINE_COMMAND): Changed macro to not take the
+	function arguments as arguments.
+
+	* src/command.c (gaba_apply): Rewrote to not use
+	COMMAND_SIMPLE_CALL. 
+	(do_command_unimplemented): Deleted function.
+
 2001-06-27  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* acinclude.m4: Added template for socklen_t definition.
