@@ -143,7 +143,8 @@ make_options(struct exception_handler *handler,
   self->algorithms = make_algorithms_options(all_symmetric_algorithms());
   self->home = home;
 
-  self->signature_algorithms = all_signature_algorithms(r); /* OK to init with NULL */
+  /* OK to init with NULL */  
+  self->signature_algorithms = all_signature_algorithms(r);
 
   self->sloppy = 0;
   self->capture = NULL;
@@ -184,33 +185,49 @@ static struct spki_context *
 read_known_hosts(struct lsh_options *options)
 {
   struct lsh_string *tmp = NULL;
+  const char *s;
   struct lsh_string *contents;
-  const char *s = NULL;
   int fd;
   struct sexp_iterator i;
   struct spki_context *context;
-
+  const char *sexp_conv = getenv("SEXP_CONV");
+  const char *args[] = { "sexp-conv", "-s", "canonical", NULL };
+  
   context = make_spki_context(options->signature_algorithms);
   
   if (options->known_hosts)
-    s = options->known_hosts;
+    {
+      s = options->known_hosts;
+      fd = open(s, O_RDONLY);
+    }
   else
     {
-      tmp = ssh_format("%lz/.lsh/known_hosts", options->home);
+      tmp = ssh_format("%lz/.lsh/host-acls", options->home);
       s = lsh_get_cstring(tmp);
+      fd = open(s, O_RDONLY);
+      
+      if (fd < 0)
+	{
+	  lsh_string_free(tmp);
+	  tmp = ssh_format("%lz/.lsh/known_hosts", options->home);
+	  s = lsh_get_cstring(tmp);
+	  fd = open(lsh_get_cstring(tmp), O_RDONLY);
+	}
     }
 
-  fd = open(s, O_RDONLY);
   if (fd < 0)
     {
-      lsh_string_free(tmp);
       werror("Failed to open `%z' for reading %e\n", s, errno);
+      lsh_string_free(tmp);
       return context;
     }
 
   lsh_string_free(tmp);
 
-  contents = io_read_file_raw(fd, 5000);
+  if (!sexp_conv)
+    sexp_conv = PREFIX "/bin/sexp-conv";
+  
+  contents = lsh_popen_read(sexp_conv, args, fd, 5000);
   
   if (!contents)
   {
@@ -221,8 +238,9 @@ read_known_hosts(struct lsh_options *options)
 
   close(fd);
 
-  /* NOTE: Modifies contents in place */
-  if (!sexp_transport_iterator_first(&i, contents->length, contents->data))
+  /* We could use transport syntax instead. That would have the
+   * advantage that we can read and process one entry at a time. */
+  if (!sexp_iterator_first(&i, contents->length, contents->data))
     werror("read_known_hosts: S-expression syntax error.\n");
     
   else
@@ -403,14 +421,13 @@ do_lsh_lookup(struct lookup_verifier *c,
 	      struct lsh_string *key)
 {
   CAST(lsh_host_db, self, c);
-  struct spki_subject *subject;
+  struct spki_principal *subject;
 
   switch (method)
     {
     case ATOM_SSH_DSS:
       {	
 	struct lsh_string *spki_key;
-	struct sexp_iterator i;
 	struct verifier *v = make_ssh_dss_verifier(key->length, key->data);
 
 	if (!v)
@@ -421,10 +438,8 @@ do_lsh_lookup(struct lookup_verifier *c,
 
 	/* FIXME: It seems like a waste to pick apart the sexp again */
 	spki_key = PUBLIC_SPKI_KEY(v, 0);
-	if (!sexp_iterator_first(&i, spki_key->length, spki_key->data))
-	  fatal("Internal error.\n");
-	
-	subject = SPKI_LOOKUP(self->db, &i, v);
+
+	subject = spki_lookup(self->db, spki_key->length, spki_key->data, v);
 	assert(subject);
 	assert(subject->verifier);
 
@@ -434,7 +449,6 @@ do_lsh_lookup(struct lookup_verifier *c,
     case ATOM_SSH_RSA:
       {
 	struct lsh_string *spki_key;
-	struct sexp_iterator i;
 	struct verifier *v = make_ssh_rsa_verifier(key->length, key->data);
 
 	if (!v)
@@ -445,10 +459,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 
 	/* FIXME: It seems like a waste to pick apart the sexp again */
 	spki_key = PUBLIC_SPKI_KEY(v, 0);
-	if (!sexp_iterator_first(&i, spki_key->length, spki_key->data))
-	  fatal("Internal error.\n");
-
-	subject = SPKI_LOOKUP(self->db, &i, v);
+	subject = spki_lookup(self->db, spki_key->length, spki_key->data, v);
 	assert(subject);
 	assert(subject->verifier);
 
@@ -479,15 +490,7 @@ do_lsh_lookup(struct lookup_verifier *c,
     case ATOM_SPKI_SIGN_RSA:
     case ATOM_SPKI_SIGN_DSS:
       {
-	struct sexp_iterator i;
-
-	if (!sexp_iterator_first(&i, key->length, key->data))
-	  {
-	    werror("do_lsh_lookup: Invalid spki s-expression.\n");
-	    return NULL;
-	  }
-	  
-	subject = SPKI_LOOKUP(self->db, &i, NULL);
+	subject = spki_lookup(self->db, key->length, key->data, NULL);
 	if (!subject)
 	  {
 	    werror("do_lsh_lookup: Invalid spki key.\n");
@@ -509,7 +512,7 @@ do_lsh_lookup(struct lookup_verifier *c,
   
   /* Check authorization */
 
-  if (SPKI_AUTHORIZE(self->db, subject, self->access))
+  if (spki_authorize(self->db, subject, time(NULL), self->access))
     {
       verbose("SPKI host authorization successful!\n");
     }
@@ -529,10 +532,12 @@ do_lsh_lookup(struct lookup_verifier *c,
       if (!quiet_flag)
 	{
 	  /* Display fingerprint */
-
+	  /* FIXME: Rewrite to use libspki subject */
+#if 0
 	  struct lsh_string *spki_fingerprint = 
 	    hash_string(self->hash, subject->key, 0);
-
+#endif
+	  
 	  struct lsh_string *fingerprint = 
 	    lsh_string_colonize( 
 				ssh_format( "%lfxS", 
@@ -558,15 +563,15 @@ do_lsh_lookup(struct lookup_verifier *c,
 			  "Key details:\n"
 			  "Bubble Babble: %lfS\n"
 			  "Fingerprint:   %lfS\n"
-			  "SPKI SHA1:     %lfxS\n"
+			  /* "SPKI SHA1:     %lfxS\n" */
 			  "Do you trust this key? (y/n) ",
-			  self->host->ip, babble, fingerprint, spki_fingerprint), 0, 1))
+			  self->host->ip, babble, fingerprint /* , spki_fingerprint */), 0, 1))
 	    return NULL;
 	}
 
       acl = lsh_sexp_format(0, "(%0s(%0s%l(%0s%s)))",
 			    "acl", "entry",
-			    subject->key->length, subject->key->data,
+			    subject->key_length, subject->key,
 			    "tag", self->access->length, self->access->data);
       
       /* FIXME: Seems awkward to pick the acl apart again. */
