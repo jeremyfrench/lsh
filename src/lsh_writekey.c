@@ -134,9 +134,6 @@ main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { "output-file", 'o', "Filename", 0, "Default is ~/.lsh/identity", 0 },
-#if 0
-  { NULL, 'f', NULL, OPTION_ALIAS, NULL, 0 },
-#endif
   { "iteration-count", 'i', "PKCS#5 iteration count", 0, "Default is 1500", 0 },
   { "crypto", 'c', "Algorithm", 0, "Encryption algorithm for the private key file.", 0 },
   { "label", 'l', "Text", 0, "Unencrypted label for the key.", 0 },
@@ -181,14 +178,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    }
 	  else
 	    {
-	      s = ssh_format("%lz/.lsh%c", home, 0);
+	      s = ssh_cformat("%lz/.lsh", home);
 	      if (mkdir(s->data, 0755) < 0)
 		{
 		  if (errno != EEXIST)
 		    argp_failure(state, EXIT_FAILURE, errno, "Creating directory %s failed.", s->data);
 		}
 	      lsh_string_free(s);
-	      self->file = ssh_format("%lz/.lsh/identity%c", home, 0);
+	      self->file = ssh_cformat("%lz/.lsh/identity", home);
 	    }
 	}
       if (self->crypto)
@@ -239,9 +236,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case 'o':
-#if 0
-    case 'f':
-#endif
       self->file = format_cstring(arg);
       break;
 
@@ -354,7 +348,7 @@ COMMAND_SIMPLE(lsh_writekey_options2transform)
 COMMAND_SIMPLE(lsh_writekey_options2public_file)
 {
   CAST(lsh_writekey_options, options, a);
-  struct lsh_string *public = ssh_format("%lS.pub%c", options->file, 0);
+  struct lsh_string *public = ssh_cformat("%lS.pub", options->file);
 
   return
     &make_io_write_file_info(public->data,
@@ -394,8 +388,34 @@ static void
 do_lsh_writekey_handler(struct exception_handler *s UNUSED,
 			const struct exception *e)
 {
-  werror("lsh_writekey: %z\n", e->msg);
-
+  /* NOTE: This is quite a complicated way to just write a friendlier
+   * message if we fail because the output files already exists. This
+   * way, it is easier to handle other kinds of errors later, as the
+   * need arises. */
+  
+  switch (e->type)
+    {
+    case EXC_IO_OPEN_WRITE:
+      {
+	CAST_SUBTYPE(io_exception, x, e);
+	switch(x->error)
+	  {
+	  case EEXIST:
+	    werror("\nlsh_writekey doesn't overwrite existing key files.\n"
+		   "If you *really* want to do that, you should delete\n"
+		   "the existing files \"FOO\" and \"FOO.pub\" first\n"
+		   "(where \"FOO\" usually is \"~/.lsh/identity\").\n");
+	    break;
+	    
+	  default:
+	    goto outer_default;
+	  }
+	break;
+      }
+    outer_default:
+    default:
+      werror("lsh_writekey: %z\n", e->msg);
+    }
   exit(EXIT_FAILURE);
 }
 
