@@ -118,16 +118,23 @@
 
 #define MAKE_MAC(m, key) ((m)->make_mac((m), (key)))
 
+
 /* GABA:
    (class
     (name signer)
     (vars
-      ; Returns a signature string, *without* the length field
+      ; Returns a non-spki signature
       (sign method (string)
-            "UINT32 length" "UINT8 *data")))
+            "UINT32 length" "UINT8 *data")
+      ; Returns a signature sexp
+      (sign_spki method (object sexp)
+                 "struct sexp *hash" "struct sexp *principal"
+                 "UINT32 length" "UINT8 *data")))
 */
 
 #define SIGN(signer, length, data) ((signer)->sign((signer), (length), (data)))
+
+#define SIGN_SPKI(signer, length, data) ((signer)->sign((signer), (length), (data)))
 
 /* GABA:
    (class
@@ -135,29 +142,36 @@
      (vars
        (verify method int
        	       "UINT32 length" "UINT8 *data"
-	       "UINT32 signature_length" "UINT8 * signature_data")))
+	       "UINT32 signature_length" "UINT8 * signature_data")
+       ; Iterator points past the signature-tag
+       (verify_spki method int
+       	       "UINT32 length" "UINT8 *data"
+	       "struct sexp_iterator *i")))
 */
 
-#define VERIFY(verifier, length, data, slength, sdata)\
+#define VERIFY(verifier, length, data, slength, sdata) \
 ((verifier)->verify((verifier), (length), (data), (slength), (sdata)))
+
+#define VERIFY_SPKI(verifier, length, data, i) \
+((verifier)->verify((verifier), (length), (data), (i)))
 
 /* GABA:
    (class
      (name signature_algorithm)
      (vars
+       ; Iterators should point past the algorithm tag
        (make_signer method (object signer)
-                    "UINT32 public_length" "UINT8 *public"
-		    "UINT32 secret_length" "UINT8 *secret")
+                    "struct sexp_iterator *i")
 		    
        (make_verifier method (object verifier)
-                    "UINT32 public_length" "UINT8 *public")))
+                      "struct sexp_iterator *i")))
 */
 
-#define MAKE_SIGNER(a, pl, p, sl, s) \
-((a)->make_signer((a), (pl), (p), (sl), (s)))
+#define MAKE_SIGNER(a, i) \
+((a)->make_signer((a), (i)))
 
-#define MAKE_VERIFIER(a, pl, p) \
-((a)->make_verifier((a), (pl), (p)))
+#define MAKE_VERIFIER(a, i) \
+((a)->make_verifier((a), (i)))
 
 
 /* Combining block cryptos */
@@ -178,5 +192,11 @@ struct crypto_algorithm *crypto_cascade(unsigned n, ...);
 /* Utility functions */
 UINT32 gcd(UINT32 x, UINT32 y);
 UINT32 lcm(UINT32 x, UINT32 y);
+
+/* Simple hashing */
+struct lsh_string *
+hash_string(struct hash_algorithm *a,
+	    struct lsh_string *in,
+	    int free);
 
 #endif /* LSH_ABSTRACT_CRYPTO_H_INCLUDED */
