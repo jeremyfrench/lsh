@@ -8,6 +8,8 @@ fi
 
 . $srcdir/functions.sh
 
+need_tcputils
+
 spawn_lshd --ssh1-fallback=$srcdir/fake-sshd1 \
   && echo "SSH-1.5-ssh1-fallback-test" \
      | tcpconnect localhost $PORT \

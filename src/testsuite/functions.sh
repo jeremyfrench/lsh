@@ -55,6 +55,12 @@ check_x11_support () {
     ../lsh --help | grep 'x11-forward' >/dev/null || test_skip
 }
 
+need_tcputils () {
+    if type tcpconnect >/dev/null 2>&1 ; then : ; else
+	exit 77
+    fi
+}
+
 trap 'eval "$ATEXIT ; exit \$test_result"' 0
 
 at_exit () {
