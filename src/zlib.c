@@ -34,8 +34,6 @@
 
 #if HAVE_ZLIB_H
 #include <zlib.h>
-#else
-#warning zlib.h not present
 #endif
 
 #include <assert.h>
@@ -297,7 +295,8 @@ make_zlib_instance(struct compress_algorithm *c, int mode)
 	res->f = deflate;
         res->super.codec = do_zlib;
 
-	/* Maximum expansion is 0.1% + 12 bytes. We use 1% + 12, to be conservative.
+	/* Maximum expansion is 0.1% + 12 bytes. We use 1% + 12, to be
+	 * conservative.
 	 *
 	 * FIXME: These figures are documented for the entire stream,
 	 * does they really apply to all segments, separated by
@@ -306,7 +305,13 @@ make_zlib_instance(struct compress_algorithm *c, int mode)
 	res->max = SSH_MAX_PACKET + SSH_MAX_PACKET / 100 + 12;
 	res->rate = RATE_UNIT;
 	
-        deflateInit(&res->z, closure->level);
+        if (deflateInit(&res->z, closure->level) != Z_OK)
+          {
+            werror("deflateInit failed: %z\n",
+                   res->z.msg ? res->z.msg : "No error(?)");
+            KILL(res);
+            return NULL;
+          }
         break;
 
     case COMPRESS_INFLATE:
@@ -319,7 +324,13 @@ make_zlib_instance(struct compress_algorithm *c, int mode)
 	res->max = SSH_MAX_PACKET;
 	res->rate = 2 * RATE_UNIT;
 	
-        inflateInit(&res->z);
+        if (inflateInit(&res->z) != Z_OK)
+          {
+            werror("inflateInit failed: %z\n",
+                   res->z.msg ? res->z.msg : "No error(?)");
+            KILL(res);
+            return NULL;
+          }
         break;
     }
   return &res->super;
