@@ -26,7 +26,6 @@
 #include "abstract_io.h"
 #include "channel.h"
 #include "channel_commands.h"
-#include "client_pty.h"
 #include "connection.h"
 #include "format.h"
 #include "interact.h"

@@ -30,7 +30,6 @@
 #include "charset.h"
 #include "client.h"
 #include "client_keyexchange.h"
-#include "client_pty.h"
 #include "client_userauth.h"
 #include "compress.h"
 #include "connection_commands.h"
