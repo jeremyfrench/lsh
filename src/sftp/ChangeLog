@@ -1,3 +1,8 @@
+2003-03-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* buffer.c (sftp_put_uint64): Fixed WRITE_UINT32 search&replace
+	bug. 
+
 2003-02-26  Pontus Sköld  <pont@soua.net>
 
 	* sftp_bind.c (lsftp_handle_packet): Only free(a) if free_a is

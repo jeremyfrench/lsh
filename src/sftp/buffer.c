@@ -227,7 +227,7 @@ sftp_put_uint64(struct sftp_output *o, off_t value)
 {
   uint8_t buf[8];
 
-  WRITE_uint64_t(buf, value);
+  WRITE_UINT64(buf, value);
   PUT_DATA(o, buf);
 }
 
