@@ -1,0 +1,10 @@
+#! /bin/sh
+
+# Checks that run-tests picks up failures.
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+test_fail
