@@ -40,9 +40,6 @@
 
 /* For debug */
 
-#if 0
-#include <signal.h>
-#endif
 #include <string.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -51,17 +48,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#if 0
-#if WITH_UTMP
-#if HAVE_UTMP_H
-#include <utmp.h>
-#endif
-
-#if HAVE_UTMPX_H
-#include <utmpx.h>
-#endif
-#endif /* WITH_UTMP */
-#endif
 
 /* Socket workround */
 #ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
@@ -114,71 +100,6 @@
 
 #include "server_session.c.x"
 
-#if 0
-/* ;; GABA:
-   (class
-     (name process_resource)
-     (super resource)
-     (vars
-       (pid . pid_t)
-       ; For utmp/wtmp logging
-       (tty string)
-       ; Signal used for killing the process.
-       (signal . int)))
-*/
-
-static void do_kill_process(struct resource *r)
-{
-  CAST(process_resource, self, r);
-
-  if (self->super.alive)
-    {
-      self->super.alive = 0;
-      /* NOTE: This function only makes one attempt at killing the
-       * process. An improvement would be to install a callout handler
-       * which will kill -9 the process after a delay, if it hasn't died
-       * voluntarily. */
-
-      /* NOTE: Our exit callback sets signal to zero if the process
-       * has already been reaped. */
-      if (self->signal)
-	{
-	  if (kill(self->pid, self->signal) < 0)
-	    {
-	      werror("do_kill_process: kill() failed (errno = %i): %z\n",
-		     errno, STRERROR(errno));
-	    }
-	}
-#if WITH_UTMP && HAVE_LOGWTMP
-      if (self->tty)
-	{
-#if 0 && HAVE_LOGOUT
-	  logout(self->tty->data);
-#else /* !HAVE_LOGOUT */
-	  /* FIXME: Should we pass NULL:s or empty strings for the
-	   * ut_name and ut_host fields? */
-	  logwtmp(self->tty->data, NULL, NULL);
-#endif /* !HAVE_LOGOUT */
-	}
-#endif /* WITH_UTMP && HAVE_LOGWTMP */
-    }
-}
-          
-static struct process_resource *
-make_process_resource(pid_t pid, struct lsh_string *tty, int signal)
-{
-  NEW(process_resource, self);
-  self->super.alive = 1;
-
-  self->pid = pid;
-  self->tty = tty;
-  self->signal = signal;
-
-  self->super.kill = do_kill_process;
-
-  return self;
-}
-#endif
 
 /* Session */
 /* GABA:
@@ -447,24 +368,6 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
   struct ssh_channel *channel = &session->super;
   
   CHECK_TYPE(server_session, session);
-
-#if 0
-  if (! session->process->super.alive)
-    {
-      /* The process was killed by a the resource callback (most
-       * likely because the connection died. Keep silent. */
-      debug("do_exit_shell: Process already flagged as dead.\n");
-      return;
-    }
-  
-  /* No need to signal the process. */
-  session->process->signal = 0;
-  
-  /* Even if the process need not be signalled, we call the KILL
-   * method for book-keeping purposes. For instance, the lastlog
-   * is updated. */
-  KILL_RESOURCE(&session->process->super);
-#endif
   
   /* FIXME: Should we explicitly mark these files for closing? The
    * io-backend should notice EOF anyway. And the client should send
@@ -650,18 +553,6 @@ static int make_pty(struct pty_info *pty UNUSED,
 { return 0; }
 #endif /* !WITH_PTY_SUPPORT */
 
-#if 0
-/* "/dev/" part of s. s must be NUL terminated. */
-static const char *
-lsh_tty_name(struct lsh_string *s)
-{
-  assert(NUL_TERMINATED(s));
-
-  return ( ((s->length > 5) && !memcmp(s->data, "/dev/", 5))
-	   ? s->data + 5
-	   : s->data);
-}
-#endif
 /* Returns -1 on failure, 0 for child and +1 for parent */
 static int
 spawn_process(struct server_session *session,
@@ -684,12 +575,7 @@ spawn_process(struct server_session *session,
 
   if (make_pty(session->pty, in, out, err))
     using_pty = 1;
-#if 0
-    {
-      tty = lsh_tty_name(session->pty->tty_name);
-      debug("spawn_process: tty-name '%z'\n", tty);
-    }
-#endif
+
   else if (!make_pipes(in, out, err))
     return -1;
 
@@ -706,10 +592,7 @@ spawn_process(struct server_session *session,
 	    debug("Parent process\n");
 
 	    session->process = child;
-#if 0
-	      = make_process_resource(child, format_cstring(tty), SIGHUP);
-	    REAP(reap, child, make_exit_shell(session));
-#endif  
+
 	    /* Close the child's fd:s */
 	    close(in[0]);
 	    close(out[1]);

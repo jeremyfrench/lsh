@@ -242,17 +242,6 @@ void io_run(struct io_backend *b);
 
 int blocking_read(int fd, struct read_handler *r);
 
-#if 0
-int get_inaddr(struct sockaddr_in	* addr,
-	       const char		* host,
-	       const char		* service,
-	       const char		* protocol);
-
-int tcp_addr(struct sockaddr_in *sin,
-	     UINT32 length,
-	     UINT8 *addr,
-	     UINT32 port);
-#endif
 int get_portno(const char *service, const char *protocol);
 
 struct address_info *
@@ -306,14 +295,6 @@ io_listen(struct io_backend *b,
 	  socklen_t length,
 	  struct io_callback *callback,
 	  struct exception_handler *e);
-
-#if 0
-struct lsh_fd *
-io_listen(struct io_backend *b,
-	  struct sockaddr_in *local,
-	  struct io_callback *callback,
-	  struct exception_handler *e);
-#endif
 
 struct lsh_fd *
 io_listen_local(struct io_backend *b,

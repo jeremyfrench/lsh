@@ -685,29 +685,6 @@ do_global_request_failure(struct packet_handler *s UNUSED,
   END(packet);
 }
 
-#if 0
-static void 
-do_connection_sent(struct ssh_connection *connection,
-		   UINT32 length UNUSED)
-{
-  UINT32 i;
-  
-  for (i = 0; i < connection->table->used_channels; i++)
-    {
-      if (connection->table->in_use[i] == CHANNEL_IN_USE)
-        {
-          struct ssh_channel *channel = connection->table->channels[i];
-          
-          if (! (channel->flags & (CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF)))
-	    {
-	      if (channel->send_window_size && channel->send)
-		CHANNEL_SEND(channel, connection);
-	    }
-        }
-    }
-}
-#endif
-
 /* FIXME: Don't store the channel here, instead have it passed as the
  * argument of the continuation. This might also allow some
  * unification with the handling of global_requests. */

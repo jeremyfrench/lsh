@@ -31,8 +31,4 @@ struct lsh_string *format_disconnect(int code, const char *msg,
 
 extern struct packet_handler disconnect_handler;
 
-#if 0
-struct packet_handler *make_disconnect_handler(void);
-#endif
-
 #endif /* LSH_DISCONNECT_H_INCLUDED */

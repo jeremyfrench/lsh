@@ -329,12 +329,6 @@ void
 channel_start_receive(struct ssh_channel *channel,
 		      UINT32 initial_window_size);
 
-#if 0
-struct lsh_string *prepare_channel_open(struct ssh_connection *connection,
-					int type,
-					struct ssh_channel *channel,
-					const char *format, ...);
-#endif
 struct lsh_string *
 format_channel_open(int type, UINT32 local_channel_number,
 		    struct ssh_channel *channel,

@@ -357,23 +357,6 @@ do_tcpip_forward_request_continuation(struct command_continuation *c,
   assert(self->forward);
   assert(fd);
 
-#if 0
-  if (!fd)
-    {
-      struct local_port *port
-	= remove_forward(&self->connection->table->local_ports,
-			 1,
-			 self->forward->super.listen->ip->length,
-			 self->forward->super.listen->ip->data,
-			 self->forward->super.listen->port);
-      assert(port);
-      assert(port == self->forward);
-      
-      COMMAND_RETURN(self->c, NULL);
-    }
-  REMEMBER_RESOURCE(self->connection->resources, &fd->super);
-#endif
-
   self->forward->socket = fd;
 
   COMMAND_RETURN(self->c, &self->forward->super.super);

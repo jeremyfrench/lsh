@@ -21,10 +21,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#if 0
-#include "sexp_parser.h" 
-#endif
-
 #include "abstract_io.h"
 #include "command.h"
 #include "digits.h"

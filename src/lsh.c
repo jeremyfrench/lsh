@@ -994,48 +994,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	/* Add shell action */
 	if (object_queue_is_empty(&self->actions) && self->start_shell)
 	  lsh_add_action(self, lsh_shell_session(self));
-
-#if 0
-	{
-	  struct object_list *session_requests;
-      
-#if WITH_PTY_SUPPORT
-	    if (self->with_pty)
-	      {
-		if (tty_fd < 0)
-		  {
-		    werror("lsh: No tty available.\n");
-		  }
-		else
-		  {
-		    if (! (remember_tty(tty_fd)
-			   && (get_pty = make_pty_request(tty_fd))))
-		      {
-			werror("lsh: Can't use tty (probably getattr or atexit() failed.\n");
-		      }
-		  }
-	      }
-	    /* FIXME: We need a non-varargs constructor for lists. */
-	    if (get_pty)
-	      session_requests
-		= make_object_list(2,
-				   /* Ignore EXC_CHANNEL_REQUEST for the pty allocation call. */
-				   make_catch_apply
-				   (make_catch_handler_info(EXC_ALL, EXC_CHANNEL_REQUEST,
-							    0, NULL),
-				    get_pty),
-				   start_shell(), -1);
-	    else
-#endif /* WITH_PTY_SUPPORT */
-	      session_requests = make_object_list(1, start_shell(), -1);
-	    
-	    object_queue_add_tail
-	      (&self->actions,
-	       make_start_session
-	       (make_open_session_command(make_lsh_session(self)),
-		session_requests));
-	  }
-#endif
 	
 	if (object_queue_is_empty(&self->actions))
 	  {
@@ -1195,10 +1153,6 @@ do_lsh_default_handler(struct exception_handler *s,
   if (e->type & EXC_IO)
     {
       CAST_SUBTYPE(io_exception, exc, e);
-#if 0
-      if (exc->fd)
-	close_fd_nicely(exc->fd);
-#endif 
       *self->status = EXIT_FAILURE;
       
       werror("lsh: %z, (errno = %i)\n", e->msg, exc->error);

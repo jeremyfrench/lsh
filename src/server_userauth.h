@@ -78,20 +78,8 @@
 
 #define USER_LOOKUP(db, n, f) ((db)->lookup((db), (n), (f)))
 
-#if 0
-struct unix_user *lookup_user(struct lsh_string *name, int free);
-#endif
-
 struct user_db *
 make_unix_user_db(int allow_root);
-
-#if 0
-int verify_password(struct unix_user *user,
-		    struct lsh_string *password, int free);
-
-int change_uid(struct unix_user *user);
-int change_dir(struct unix_user *user);
-#endif
 
 /* GABA:
    (class
@@ -136,9 +124,6 @@ make_userauth_handler(struct alist *methods,
 
 
 /* authentication methods */
-#if 0
-extern struct userauth unix_userauth;
-#endif
 
 struct userauth *
 make_userauth_password(struct user_db *db);

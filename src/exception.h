@@ -135,13 +135,6 @@ void exception_raise(struct exception_handler *e,
 /* Unexpected or unsupported expression type */
 #define EXC_SPKI_TYPE 0x80001
 
-#if 0
-/* Serialization */
-#define EXC_CONNECTION_SERIALIZE 0x100000
-#define EXC_CONNECTION_LOCK 0x100001
-#define EXC_CONNECTION_UNLOCK 0x100002
-#endif
-
 #define EXC_ALL (~0)
 
 extern struct exception_handler default_exception_handler;

@@ -351,18 +351,6 @@ do_userauth_banner(struct packet_handler *self UNUSED,
 static struct packet_handler userauth_banner_handler =
 { STATIC_HEADER, do_userauth_banner };
 
-#if 0
-/* FIXME: Could use a static object instead. */
-static struct packet_handler *
-make_banner_handler(void)
-{
-  NEW(packet_handler, self);
-
-  self->handler = do_userauth_banner;
-  
-  return self;
-}
-#endif
 
 /* GABA:
    (class

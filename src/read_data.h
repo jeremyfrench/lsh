@@ -32,11 +32,4 @@ struct io_callback *
 make_read_data(struct ssh_channel *channel,
 	       struct abstract_write *write);
 
-#if 0
-struct exception_handler *
-make_exc_read_eof_channel_handler(struct ssh_channel *channel,
-				  struct exception_handler *e,
-				  const char *context);
-#endif
-
 #endif /* LSH_READ_DATA_H_INCLUDED */

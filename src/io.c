@@ -1225,19 +1225,6 @@ address_info2sockaddr(socklen_t *length,
 #endif /* !HAVE_GETADDRINFO */  
 }
 
-#if 0
-int address_info2sockaddr(struct sockaddr_in *sin,
-			  struct address_info *a)
-{
-  if (a->ip)
-    return tcp_addr(sin,
-		    a->ip->length, a->ip->data,
-		    a->port);
-  else
-    return tcp_addr(sin, 0, NULL, a->port);
-}
-#endif
-
 
 void io_set_nonblocking(int fd)
 {
@@ -1376,58 +1363,8 @@ io_listen(struct io_backend *b,
   return fd;
 }
 
-#if 0
-struct lsh_fd *
-io_listen(struct io_backend *b,
-	  struct sockaddr_in *local,
-	  struct io_callback *callback,
-	  struct exception_handler *e)
-{
-  assert(local->sin_family == AF_INET);
-  return io_listen_sockaddr(b, (struct sockaddr *) local, sizeof(*local), callback, e);
-  
-#if 0
-  
-  int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
-  struct lsh_fd *fd;
-  
-  if (s<0)
-    return NULL;
-
-  trace("io.c: Listening on fd %i\n", s);
-  
-  io_init_fd(s);
-
-  {
-    int yes = 1;
-    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof yes);
-  }
-
-  if (bind(s, (struct sockaddr *)local, sizeof *local) < 0)
-    {
-      close(s);
-      return NULL;
-    }
-
-  if (listen(s, 256) < 0) 
-    {
-      close(s);
-      return NULL;
-    }
-
-  /* FIXME: What handler to use? */
-  fd = make_lsh_fd(b, s, e);
-
-  fd->want_read = 1;
-  fd->read = callback;
-
-  return fd;
-#endif
-}
-#endif
 
 /* AF_LOCAL sockets */
-
 
 /* This isn't needed if we have fchdir */
 #if 0

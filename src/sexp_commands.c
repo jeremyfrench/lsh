@@ -278,18 +278,7 @@ do_read_sexp(struct command *s,
   CAST(lsh_fd, fd, a);
 
   trace("do_read_sexp\n");
-  
-#if 0
-  if (self->goon && !fd)
-    {
-      /* NOTE: fd == NULL is allowed if and only goon is true. This way,
-       * non-existant and empty files can be treated the same way. */
-
-      EXCEPTION_RAISE(e, make_simple_exception(EXC_SEXP_EOF, "Non-existant file."));
-      return;
-    }
-#endif
-  
+    
   assert(fd);
   
   if (!self->goon)

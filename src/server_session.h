@@ -32,27 +32,6 @@
 #include <assert.h>
 #include <string.h>
 
-#if 0
-#define GABA_DECLARE
-#include "server_session.h.x"
-#undef GABA_DECLARE
-
-/* ;; GABA:
-   (class
-     (name process_resource)
-     (super resource)
-     (vars
-       (pid . pid_t)
-       ; Signal used for killing the process.
-       (signal . int)
-       ; Cleanup, an alternative to KILL_RESOURCE
-       ; that performs any needed book-keeping,
-       ; but doesn't try to send any signal
-       ; to the process.
-       (note_dead method void)
-*/
-#endif
-
 struct ssh_channel *
 make_server_session(struct lsh_user *user,
 		    UINT32 initial_window,
@@ -77,11 +56,6 @@ format_exit_signal(struct ssh_channel *channel,
 		   int core, int signal);
 struct lsh_string *
 format_exit(struct ssh_channel *channel, int value);
-
-#if 0
-struct resource *
-make_process_resource(pid_t pid, struct lsh_string *tty, int signal);
-#endif
 
 struct channel_request *
 make_pty_handler(void);

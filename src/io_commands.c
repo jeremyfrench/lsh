@@ -116,42 +116,6 @@ void do_io_read_fd(struct command *s,
 struct io_read_fd io_read_stdin
 = STATIC_IO_READ_FD(STDIN_FILENO);
 
-#if 0
-/* ;; GABA:
-   (class
-     (name listen_command_callback)
-     (super fd_listen_callback)
-     (vars
-       (backend object io_backend)
-       (c object command_continuation)
-       (e object exception_handler)))
-*/
-
-static void
-do_listen_continue(struct fd_listen_callback *s, int fd,
-		   struct address_info *peer)
-{
-  CAST(listen_command_callback, self, s);
-
-  COMMAND_RETURN(self->c,
-		 make_listen_value(make_lsh_fd(self->backend, fd, self->e),
-				   peer));
-}
-
-static struct fd_listen_callback *
-make_listen_command_callback(struct io_backend *backend,
-			     struct command_continuation *c,
-			     struct exception_handler *e)
-{
-  NEW(listen_command_callback, closure);
-  closure->backend = backend;
-  closure->c = c;
-  closure->e = e;
-  closure->super.f = do_listen_continue;
-  
-  return &closure->super;
-}
-#endif
 
 /* GABA:
    (class
@@ -268,34 +232,6 @@ do_listen_with_callback(struct command *s,
 	    c,
 	    make_apply(self->callback,
 		       &discard_continuation, e), e);
-#if 0
-  struct sockaddr *addr;
-  socklen_t addr_length;
-
-  /* Doesn't do any dns lookups. */
-  addr = address_info2sockaddr(&addr_length, address, NULL, 0);
-  if (!addr)
-    {
-      EXCEPTION_RAISE(e, &resolve_exception);
-      return;
-    }
-
-  /* FIXME: Asyncronous dns lookups should go here */
-  fd = io_listen(self->backend,
-		 addr, addr_length,
-		 make_listen_callback
-		 (self->backend,
-		  make_apply(self->callback,
-			     &discard_continuation, e), e), e);
-  lsh_space_free(addr);
-
-  if (fd)
-    COMMAND_RETURN(c, fd);
-  else
-    EXCEPTION_RAISE(e,
-		    make_io_exception(EXC_IO_LISTEN, NULL,
-				      errno, NULL));
-#endif
 }
 
 struct command *
@@ -396,46 +332,6 @@ STATIC_COLLECT_2_FINAL(collect_listen_connection);
 struct collect_info_1 listen_with_connection =
 STATIC_COLLECT_1(&collect_info_listen_connection_2);
 
-
-#if 0
-/* FIXME: This could perhaps be merged with io_connect in io.c? */ 
-/* ;; GABA:
-   (class
-     (name connect_command_callback)
-     (super fd_callback)
-     (vars
-       (backend object io_backend)
-       (c object command_continuation)
-       (e object exception_handler)))
-*/
-
-/* FIXME: The new fd object should be added to the same resource list
- * as the old one. Perhaps the connection code in io.c should reuse
- * the fd object in some way? */
-static void
-do_connect_continue(struct fd_callback **s, int fd)
-{
-  CAST(connect_command_callback, self, *s);
-
-  assert(fd >= 0);
-
-  COMMAND_RETURN(self->c, make_lsh_fd(self->backend, fd, self->e));
-}
-
-static struct fd_callback *
-make_connect_command_callback(struct io_backend *backend,
-			      struct command_continuation *c,
-			      struct exception_handler *e)
-{
-  NEW(connect_command_callback, closure);
-  closure->backend = backend;
-  closure->c = c;
-  closure->e = e;
-  closure->super.f = do_connect_continue;
-  
-  return &closure->super;
-}
-#endif
 
 /* GABA:
    (class

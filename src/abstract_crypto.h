@@ -178,10 +178,6 @@
 #define MAKE_VERIFIER(a, i) \
 ((a)->make_verifier((a), (i)))
 
-#if 0
-#define MAKE_PUBLIC(a, i) \
-((a)->private2public((a), (i)))
-#endif
 
 /* Combining block cryptos */
 

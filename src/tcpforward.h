@@ -84,10 +84,6 @@ extern struct channel_open channel_open_forwarded_tcpip;
 
 struct global_request *make_tcpip_forward_request(struct command *callback);
 
-#if 0
-struct global_request *make_cancel_tcpip_forward_request(void);
-#endif
-
 extern struct global_request tcpip_cancel_forward;
 
 #endif /* LSH_TCPFORWARD_H_INCLUDED */

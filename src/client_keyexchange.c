@@ -34,12 +34,6 @@
 
 #include <assert.h>
 
-#if 0
-#define GABA_DEFINE
-#include "client_keyexchange.h.x"
-#undef GABA_DEFINE
-#endif
-
 #include "client_keyexchange.c.x"
 
 /* GABA:

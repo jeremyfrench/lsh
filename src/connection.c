@@ -143,17 +143,6 @@ do_fail(struct packet_handler *closure UNUSED,
   PROTOCOL_ERROR(connection->e, NULL);
 }
 
-#if 0
-/* FIXME: Could use a static object instead. */
-struct packet_handler *make_fail_handler(void)
-{
-  NEW(packet_handler, res);
-
-  res->handler = do_fail;
-  return res;
-}
-#endif
-
 static struct packet_handler fail_handler =
 { STATIC_HEADER, do_fail };
 
@@ -174,17 +163,6 @@ do_unimplemented(struct packet_handler *closure UNUSED,
   
   lsh_string_free(packet);
 }
-
-#if 0
-/* FIXME: Could use a static object instead. */
-struct packet_handler *make_unimplemented_handler(void)
-{
-  NEW(packet_handler, res);
-
-  res->handler = do_unimplemented;
-  return res;
-}
-#endif
 
 static struct packet_handler unimplemented_handler =
 { STATIC_HEADER, do_unimplemented };
@@ -215,17 +193,7 @@ do_exc_protocol_handler(struct exception_handler *s,
 	EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
       }
       break;
-#if 0
-    case EXC_CONNECTION_LOCK:
-      assert(!self->connection->busy);
-      self->connection->busy = 1;
-      break;
 
-    case EXC_CONNECTION_UNLOCK:
-      assert(self->connection->busy);
-      self->connection->busy = 0;
-      break;
-#endif 
     default:
       EXCEPTION_RAISE(self->super.parent, e);
     }
