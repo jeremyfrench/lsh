@@ -40,28 +40,33 @@ struct unix_user
   struct lsh_object header;
   
   uid_t uid;
-#if 0
+  gid_t gid;
+  
+  /* These strings include a terminating NUL-character,
+   * for compatibility with library and system calls. */
   struct lsh_string *username;
-#endif
   struct lsh_string *passwd; /* Crypted passwd */
   struct lsh_string *home;
 };
 
-struct unix_user *lookup_user(struct lsh_string *name);
-int verify_password(struct unix_user *user, struct lsh_string *password);
+struct unix_user *lookup_user(struct lsh_string *name, int free);
+int verify_password(struct unix_user *user, struct lsh_string *password, int free);
 
 struct userauth *make_password_userauth(void);
 
-struct unix_service
+struct login_method
 {
   struct lsh_object header;
 
-  struct ssh_service * (*login)(struct unix_service *closure,
-				struct unix_user *user);
+  struct ssh_service * (*login)(struct login_method *closure,
+				struct unix_user *user,
+				struct ssh_service *service);
 };
 
-#define LOGIN(s, u) ((s)->login((s), (u)))
+#define LOGIN(m, u, s) ((m)->login((m), (u), (s)))
 
-struct userauth *make_unix_userauth(struct alist *services);
+struct userauth *make_unix_userauth(struct login_method *login,
+				    struct alist *services);
+struct login_method *make_unix_login(void);
 
 #endif /* LSH_PASSWORD_H_INCLUDED */
