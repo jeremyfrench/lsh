@@ -1,5 +1,5 @@
 ## Process this file with make_am to produce Makefile.am -*-makefile-*-
-SUBDIRS: argp rsync nettle scm . testsuite
+SUBDIRS: argp rsync nettle scm sftp . testsuite
 CVS_HEADERS: cvs_headers
 CLASS_FILES: dist_x_files
 BODY:
