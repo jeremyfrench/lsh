@@ -121,6 +121,10 @@ struct object_list;
 /* randomness.h */
 struct randomness;
 
+/* reaper.h */
+struct exit_callback;
+struct reap;
+
 /* sexp.h */
 struct sexp;
 struct sexp_iterator;
