@@ -1,3 +1,18 @@
+2000-05-22  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/io.c (do_kill_fd): Call close_fd_nicely(). This fixes a
+	problem, where output from for instance "lsh host echo foo" loses
+	output because the channel is closed before the output is flushed
+	from the write buffer.
+
+	* src/channel.c (adjust_rec_window): Check the state of the
+	channel, and send the SSH_MSG_CHANNEL_WINDOW_ADJUST message only
+	if it makes sense.
+
+	* src/dsa.c (do_dsa_verify): Removed the extra length field, as it
+	seems it will disappear in the next draft.
+	(do_dsa_sign): Likewise.
+
 2000-05-21  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Bumped version to 0.9.10.
