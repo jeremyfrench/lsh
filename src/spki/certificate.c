@@ -51,9 +51,27 @@ spki_dup(struct spki_acl_db *db,
   return n;
 }
 
-struct spki_principal *
+#define HASH(result, method, length, data)			\
+do {								\
+  struct method##_ctx ctx;					\
+  method##_init(&ctx);						\
+  method##_update(&ctx, length, data);				\
+  method##_digest(&ctx, sizeof(result->method), result->method);	\
+} while (0)
+  
+static void
+hash_data(struct spki_hashes *hashes,
+	  unsigned length, const uint8_t *data)
+{
+  HASH(hashes, md5, length, data);
+  HASH(hashes, sha1, length, data);
+}
+#undef HASH
+
+static struct spki_principal *
 spki_principal_add_key(struct spki_acl_db *db,
-		     unsigned key_length,  const uint8_t *key)
+		       unsigned key_length,  const uint8_t *key,
+		       const struct spki_hashes *hashes)
 {
   NEW (db, struct spki_principal, principal);
   if (!principal)
@@ -66,21 +84,52 @@ spki_principal_add_key(struct spki_acl_db *db,
     }
 
   principal->key_length = key_length;
+
+  if (hashes)
+    principal->hashes = *hashes;
+  else
+    hash_data(&principal->hashes, key_length, key);
+
+  principal->flags = SPKI_PRINCIPAL_MD5 | SPKI_PRINCIPAL_SHA1;
   
-  {
-    struct sha1_ctx ctx;
-    sha1_init(&ctx);
-    sha1_update(&ctx, key_length, key);
-    sha1_digest(&ctx, sizeof(principal->sha1), principal->sha1);
-  }
+  principal->next = db->first_principal;
+  db->first_principal = principal;
+  
+  return principal;
+}
 
-  {
-    struct md5_ctx ctx;
-    md5_init(&ctx);
-    md5_update(&ctx, key_length, key);
-    md5_digest(&ctx, sizeof(principal->md5), principal->md5);
-  }
+static struct spki_principal *
+spki_principal_add_md5(struct spki_acl_db *db,
+		       const uint8_t *md5)
+{
+  NEW (db, struct spki_principal, principal);
+  if (!principal)
+    return NULL;
 
+  principal->key = NULL;
+
+  memcpy(principal->hashes.md5, md5, sizeof(principal->hashes.md5));
+  principal->flags = SPKI_PRINCIPAL_MD5;
+  
+  principal->next = db->first_principal;
+  db->first_principal = principal;
+  
+  return principal;
+}
+
+static struct spki_principal *
+spki_principal_add_sha1(struct spki_acl_db *db,
+			const uint8_t *sha1)
+{
+  NEW (db, struct spki_principal, principal);
+  if (!principal)
+    return NULL;
+
+  principal->key = NULL;
+
+  memcpy(principal->hashes.sha1, sha1, sizeof(principal->hashes.sha1));
+  principal->flags = SPKI_PRINCIPAL_SHA1;
+  
   principal->next = db->first_principal;
   db->first_principal = principal;
   
@@ -89,17 +138,40 @@ spki_principal_add_key(struct spki_acl_db *db,
 
 struct spki_principal *
 spki_principal_by_key(struct spki_acl_db *db,
-		    unsigned key_length, const uint8_t *key)
+		      unsigned key_length, const uint8_t *key)
 {
-  /* FIXME: Doesn't check hashes. */
   struct spki_principal *s;
+  struct spki_hashes hashes;
 
-  for (s = db->first_principal; s; s = s->next)
-    if (s->key_length == key_length
-	&& !memcmp(s->key, key, key_length))
-      return s;
+  hash_data(&hashes, key_length, key);
   
-  return NULL;
+  for (s = db->first_principal; s; s = s->next)
+    {
+      if (s->key)
+	{
+	  /* The key is known */
+	  if (s->key_length == key_length
+	      && !memcmp(s->key, key, key_length))
+	    return s;
+	}
+      else
+	/* Check hashes, exactly one should be present */
+	if ( (s->flags == SPKI_PRINCIPAL_MD5
+	      && !memcmp(s->hashes.md5, hashes.md5, sizeof(hashes.md5)))
+	     || (s->flags == SPKI_PRINCIPAL_SHA1
+		 && !memcmp(s->hashes.sha1, hashes.sha1, sizeof(hashes.sha1))))
+	  {
+	    s->key = spki_dup(db, key_length, key);
+	    if (!s->key)
+	      return NULL;
+	    s->key_length = key_length;
+	    s->hashes = hashes;
+	    s->flags |= (SPKI_PRINCIPAL_MD5 | SPKI_PRINCIPAL_SHA1);
+	  }
+    }
+
+  /* Add a new entry */
+  return spki_principal_add_key(db, key_length, key, &hashes);
 }
 
 struct spki_principal *
@@ -108,10 +180,11 @@ spki_principal_by_md5(struct spki_acl_db *db, const uint8_t *digest)
   struct spki_principal *s;
 
   for (s = db->first_principal; s; s = s->next)
-    if (!memcmp(s->md5, digest, sizeof(s->md5)))
+    if ( (s->flags & SPKI_PRINCIPAL_MD5)
+	 && !memcmp(s->hashes.md5, digest, sizeof(s->hashes.md5)))
       return s;
-  
-  return NULL;
+
+  return spki_principal_add_md5(db, digest);
 }
 
 struct spki_principal *
@@ -120,10 +193,11 @@ spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest)
   struct spki_principal *s;
 
   for (s = db->first_principal; s; s = s->next)
-    if (!memcmp(s->sha1, digest, sizeof(s->sha1)))
+    if ( (s->flags & SPKI_PRINCIPAL_SHA1)
+	 && !memcmp(s->hashes.sha1, digest, sizeof(s->hashes.sha1)))
       return s;
   
-  return NULL;
+  return spki_principal_add_sha1(db, digest);
 }
 
 
@@ -163,7 +237,7 @@ spki_check_type(struct sexp_iterator *i, enum spki_type type)
       && !memcmp(i->atom,
 		 spki_type_names[type].name,
 		 spki_type_names[type].length))
-    return 1;
+    return sexp_iterator_next(i);
 
   *i = before;
   return 0;    
@@ -176,7 +250,6 @@ static struct spki_principal *
 parse_principal(struct spki_acl_db *db, struct sexp_iterator *i)
 {
   struct sexp_iterator before = *i;
-  struct spki_principal *principal;
 
   switch (spki_get_type(i))
     {
@@ -191,54 +264,60 @@ parse_principal(struct spki_acl_db *db, struct sexp_iterator *i)
 	*i = before;
 	key = sexp_iterator_subexpr(i, &key_length);
 
-	if (!key || i->type != SEXP_END)
-	  return NULL;
+	if (key)
+	  return spki_principal_by_key(db, key_length, key);
 
-	principal = spki_principal_by_key(db, key_length, key);
-	if (!principal)
-	  principal = spki_principal_add_key(db, key_length, key);
-
-	return principal;
+	return NULL;
       }
-    case SPKI_TYPE_HASH:
-      /* The key must be known already. */
-      switch (spki_get_type(i))
-	{
-	default:
-	  return NULL;
-	  
-	case SPKI_TYPE_MD5:
-	  if (i->type == SEXP_ATOM
-	      && !i->display
-	      && i->atom_length == MD5_DIGEST_SIZE)
-	    {
-	      principal = spki_principal_by_md5(db, i->atom);
-	    hash_done:
-	      if (principal
-		  && sexp_iterator_next(i)
-		  && i->type == SEXP_END
-		  && sexp_iterator_exit_list(i))
-		return principal;
-	    }
-	  break;
 
-	case SPKI_TYPE_SHA1:
-	  if (i->type == SEXP_ATOM
-	      && !i->display
-	      && i->atom_length == SHA1_DIGEST_SIZE)
-	    {
-	      principal = spki_principal_by_sha1(db, i->atom);
-	      goto hash_done;
-	    }
-	  break;
-	}
-      return NULL;
+    case SPKI_TYPE_HASH:
+      {
+	enum spki_type type = spki_intern(i);
+	
+	if (type
+	    && i->type == SEXP_ATOM
+	    && !i->display)
+	  {
+	    unsigned digest_length = i->atom_length;
+	    const uint8_t *digest = i->atom;
+
+	    if (sexp_iterator_next(i)
+		&& i->type == SEXP_END
+		&& sexp_iterator_exit_list(i))
+	      {
+		if (type == SPKI_TYPE_MD5
+		    && digest_length == MD5_DIGEST_SIZE)
+		  return spki_principal_by_md5(db, digest);
+
+		else if (type == SPKI_TYPE_SHA1
+			 && digest_length == SHA1_DIGEST_SIZE)
+		  return spki_principal_by_sha1(db, digest);
+	      }
+	  }
+	return NULL;
+      }
     }
+}
+
+static int
+parse_tag(struct spki_acl_db *db, struct spki_5_tuple *tuple,
+	  struct sexp_iterator *i)
+{
+  const uint8_t *tag;
+
+  return (spki_check_type(i, SPKI_TYPE_TAG)
+	  && (tag = sexp_iterator_subexpr(i, &tuple->tag_length))
+	  && i->type == SEXP_END
+	  && sexp_iterator_exit_list(i)
+	  && (tuple->tag = spki_dup(db, tuple->tag_length, tag)));
 }
 
 static struct spki_5_tuple *
 parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i)
 {
+  /* Syntax:
+   *
+   * ("entry" <principal> <delegate>? <tag> <valid>? <comment>?) */
   if (!spki_check_type(i, SPKI_TYPE_ENTRY))
     return NULL;
   else
@@ -249,65 +328,43 @@ parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i)
 	return NULL;
 
       acl->issuer = NULL;
-      acl->subject = NULL;
       acl->flags = 0;
       acl->tag = NULL;
 
-      while (i->type != SEXP_END)
+      acl->subject = parse_principal(db, i);
+      if (!acl->subject)
+	goto fail;
+
+      if (spki_check_type(i, SPKI_TYPE_PROPAGATE))
 	{
-	  enum spki_type type = spki_get_type(i);
+	  if (i->type != SEXP_END
+	      || !sexp_iterator_exit_list(i))
+	    goto fail;
 
-	  switch(type)
-	    {
-	    default:
-	      goto fail;
-	      
-	    case SPKI_TYPE_SUBJECT:
-	      if (acl->subject)
-		goto fail;
-	      acl->subject = parse_principal(db, i);
-	      if (!acl->subject)
-		goto fail;
-
-	      
-	      break;
-
-	    case SPKI_TYPE_PROPAGATE:
-	      if (i->type != SEXP_END
-		  || (acl->flags & SPKI_PROPAGATE)
-		  || !sexp_iterator_exit_list(i))
-		goto fail;
-
-	      acl->flags |= SPKI_PROPAGATE;
-	      break;
-
-	    case SPKI_TYPE_TAG:
-	      {
-		const uint8_t *tag;
-		if (acl->tag)
-		  goto fail;
-		
-		tag = sexp_iterator_subexpr(i, &acl->tag_length);
-		if (!tag || i->type != SEXP_END)
-		  goto fail;
-		
-		tag = spki_dup(db, acl->tag_length, tag);
-		if (!tag)
-		  goto fail;
-		break;
-	      }
-	    }
+	  acl->flags |= SPKI_PROPAGATE;
 	}
-      if (!sexp_iterator_exit_list(i))
-	{
-	fail:
-	  if (acl->tag)
-	    FREE(db, acl->tag);
-	  FREE(db, acl);
-	  return NULL;
-	}
-      return acl;
-    }      
+
+      if (!parse_tag(db, acl, i))
+	goto fail;
+
+      if (spki_check_type(i, SPKI_TYPE_COMMENT)
+	  && !sexp_iterator_exit_list(i))
+	goto fail;
+
+      if (spki_check_type(i, SPKI_TYPE_VALID))
+	/* Not implemented */
+	goto fail;
+
+      if (i->type == SEXP_END
+	  && sexp_iterator_exit_list(i))
+	return acl;
+
+    fail:
+      if (acl->tag)
+	FREE(db, acl->tag);
+      FREE(db, acl);
+      return NULL;
+    }
 }
 
 int
@@ -323,16 +380,11 @@ spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
   if (spki_check_type(i, SPKI_TYPE_VERSION))
     {
       uint32_t version;
-      if (sexp_iterator_get_uint32(i, &version)
-	  && i->type != SEXP_END
-	  && sexp_iterator_exit_list(i)
-	  && !version)
-	{
-	  if (i->type == SEXP_END)
-	    /* Empty acl */
-	    return 1;
-	}
-      return 0;
+      if (! (sexp_iterator_get_uint32(i, &version)
+	     && i->type == SEXP_END
+	     && sexp_iterator_exit_list(i)
+	     && !version))
+	return 0;
     }
   
   while (i->type != SEXP_END)
