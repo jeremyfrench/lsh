@@ -76,8 +76,8 @@ struct command *
 make_listen_with_callback(struct command *callback,
 			  struct io_backend *backend);
 
-extern struct collect_info_1 listen_with_callback;
-#define LISTEN_CALLBACK (&listen_with_callback.super.super.super)
+extern struct command_3 listen_with_callback;
+#define LISTEN_CALLBACK (&listen_with_callback.super.super)
 
 struct command *
 make_connect_port(struct io_backend *backend,

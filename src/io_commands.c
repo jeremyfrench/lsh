@@ -165,61 +165,24 @@ do_listen(struct io_backend *backend,
  * Suitable for handling forwarding requests. NOTE: The calling
  * function has to do all remembering of the fd:s. */
 
-/* GABA:
-   (class
-     (name listen_with_callback)
-     (super command)
-     (vars
-       (callback object command)
-       (backend object io_backend)))
-*/
-
-static void
-do_listen_with_callback(struct command *s,
-			struct lsh_object *x,
-			struct command_continuation *c,
-			struct exception_handler *e)
+DEFINE_COMMAND3(listen_with_callback)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct lsh_object *a3,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  CAST(listen_with_callback, self, s);
-  CAST(address_info, address, x);
+  CAST_SUBTYPE(command, callback, a1);
+  CAST(io_backend, backend, a2);
+  CAST(address_info, address, a3);
 
   /* No dns lookups */
-  do_listen(self->backend, address,
+  do_listen(backend, address,
 	    c,
-	    make_apply(self->callback,
+	    make_apply(callback,
 		       &discard_continuation, e), e);
 }
 
-struct command *
-make_listen_with_callback(struct command *callback,
-			  struct io_backend *backend)
-{
-  NEW(listen_with_callback, self);
-  self->callback = callback;
-  self->backend = backend;
-
-  self->super.call = do_listen_with_callback;
-
-  return &self->super;
-}
-
-static struct lsh_object *
-collect_listen_callback(struct collect_info_2 *info,
-			struct lsh_object *a,
-			struct lsh_object *b)
-{
-  CAST_SUBTYPE(command, callback, a);
-  CAST(io_backend, backend, b);
-  assert(!info->next);
-
-  return &make_listen_with_callback(callback, backend)->super;
-}
-
-static struct collect_info_2 collect_info_listen_callback_2 =
-STATIC_COLLECT_2_FINAL(collect_listen_callback);
-
-struct collect_info_1 listen_with_callback =
-STATIC_COLLECT_1(&collect_info_listen_callback_2);
 
 /* GABA:
    (class
