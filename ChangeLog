@@ -1,3 +1,15 @@
+2001-10-26  Niels Möller  <nisse@ehand.com>
+
+	* src/sftp/sftp-server.c (sftp_process_read): Use the same type
+	for done as for length, UINT32.
+
+	* src/xauth.c (xauth_lookup): Bugfix for ipv6 addresses.
+
+2001-10-25  Niels Möller  <nisse@ehand.com>
+
+	* src/sftp/buffer.c (READ_UINT64): Use off_t instead of UINT64,
+	which isn't defined.
+
 2001-10-24  Niels Möller  <nisse@ehand.com>
 
 	* src/read_packet.c (do_read_packet): If we get EOF on a packet
