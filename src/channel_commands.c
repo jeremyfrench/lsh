@@ -116,16 +116,17 @@ do_channel_global_command(struct command *s,
   C_WRITE(connection, request);
 }
 
-struct lsh_object *
-do_install_global_request_handler(struct collect_info_2 *info,
-				  struct lsh_object *a,
-				  struct lsh_object *b)
+void
+do_install_global_request_handler(struct command_2 *s,
+				  struct lsh_object *a1,
+				  struct lsh_object *a2,
+				  struct command_continuation *c,
+				  struct exception_handler *e UNUSED)
 {
-  CAST(install_info, self, info);
-  CAST(ssh_connection, connection, a);
-  CAST_SUBTYPE(global_request, handler, b);
+  CAST(install_info, self, s);
+  CAST(ssh_connection, connection, a1);
+  CAST_SUBTYPE(global_request, handler, a2);
 
-  assert(!info->next);
   assert(handler);
 
   trace("Installing global request handler for '%a'\n", self->name);
@@ -134,19 +135,20 @@ do_install_global_request_handler(struct collect_info_2 *info,
 	    self->name,
 	    &handler->super);
 
-  return a;
+  COMMAND_RETURN(c, connection);
 }
 
-struct lsh_object *
-do_install_channel_open_handler(struct collect_info_2 *info,
-				struct lsh_object *a,
-				struct lsh_object *b)
+void
+do_install_channel_open_handler(struct command_2 *s,
+				struct lsh_object *a1,
+				struct lsh_object *a2,
+				struct command_continuation *c,
+				struct exception_handler *e UNUSED)
 {
-  CAST(install_info, self, info);
-  CAST(ssh_connection, connection, a);
-  CAST_SUBTYPE(channel_open, handler, b);
+  CAST(install_info, self, s);
+  CAST(ssh_connection, connection, a1);
+  CAST_SUBTYPE(channel_open, handler, a2);
 
-  assert(!info->next);
   assert(handler);
   
   trace("Installing channel open handler for '%a'\n", self->name);
@@ -155,8 +157,9 @@ do_install_channel_open_handler(struct collect_info_2 *info,
 	    self->name,
 	    &handler->super);
 
-  return a;
+  COMMAND_RETURN(c, connection);
 }
+
 
 /* Special cases, when the handler is known early */
  
