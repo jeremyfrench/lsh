@@ -1,3 +1,20 @@
+2003-04-14  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/functions.sh: Use INTERFACE=localhost, as we now
+	support non-numerical interface names.
+	(spawn_lshd): Must put -p option before --interface.
+
+	* src/lshd.c (parse_interface): New function.
+	(main_argp_parser): Implemented multiple --interface options.
+	(make_lshd_listen): Use listen_list, to list on severala ddresses
+	in parallel. Don't use the bind command.
+
+	* src/io.c (io_resolv_address): Changed return type, now returns
+	the number of resolved addresses.
+
+	* doc/lsh.texinfo (Invoking lshd): Document the use of multiple
+	--interface options.
+
 2003-04-13  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/Makefile.am (EXTRA_PROGRAMS): Added testutils, as

@@ -1,8 +1,12 @@
 News for the 1.5.2 release
 
-	New escape sequence RET ~ ?, which lists all available escape
-	sequences. Also fixed the werror functions so that they use
-	\r\n to terminate lines when writing to a tty in raw mode.
+	New client escape sequence RET ~ ?, which lists all available
+	escape sequences. Also fixed the werror functions so that they
+	use \r\n to terminate lines when writing to a tty in raw mode.
+
+	Implemented handling of multiple --interface options to lshd.
+	As a side effect, The -p option must now be given before
+	--interface to have any effect.
 
 News for the 1.5.1 release
 
