@@ -19,7 +19,7 @@ exec 1>&2
 
 echo "conv-1-test: Testing ssh-conv and sexp-conv"
 
-($srcdir/../ssh-conv --decode-with ../lsh-decode-key | ../sexp-conv |tee test.out1) <<EOF
+($srcdir/../ssh-conv --decode-with ../lsh-decode-key | "$SEXP_CONV" -w 61 |tee test.out1) <<EOF
 ---- BEGIN SSH2 PUBLIC KEY ----
 Subject: markus
 Comment: "1024-bit dsa, markus@openssh.com"

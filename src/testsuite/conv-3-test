@@ -8,6 +8,9 @@ fi
 
 . $srcdir/functions.sh
 
+# Current sexp-conv doesn't support hex output.
+test_skip
+
 # Keep silent unless -v is used.
 
 if [ x$1 != x-v ]; then
@@ -20,7 +23,7 @@ exec 1>&2
 echo "conv-3-test: Testing ssh-conv and sexp-conv with hex output"
 
 ($srcdir/../ssh-conv --decode-with ../lsh-decode-key | \
-    ../sexp-conv -f advanced-hex |tee test.out1) <<EOF
+    "$SEXP_CONV" -f advanced-hex |tee test.out1) <<EOF
 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEApUmWhj0f4TD/XcDW88zcKo1ZYBn09jT0RzP1aoPwKuzFbvupfbvKjPB3SC6r8cXTH0OY60EdfcQs1YmteIJNMEnWEvV9ZHPJYanU6dVSlajnbKwEhqrFMLlRuS4UKJQ67A5NFt0WV9DjYaLIzY5RmPJYci/C8bo+Pawj8r/j1As= markus@cvs.openssh.com
 EOF
 

@@ -19,7 +19,7 @@ exec 1>&2
 
 echo "conv-2-test: Testing ssh-conv and sexp-conv"
 
-($srcdir/../ssh-conv --decode-with ../lsh-decode-key | ../sexp-conv |tee test.out1) <<EOF
+($srcdir/../ssh-conv --decode-with ../lsh-decode-key | "$SEXP_CONV" |tee test.out1) <<EOF
 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEApUmWhj0f4TD/XcDW88zcKo1ZYBn09jT0RzP1aoPwKuzFbvupfbvKjPB3SC6r8cXTH0OY60EdfcQs1YmteIJNMEnWEvV9ZHPJYanU6dVSlajnbKwEhqrFMLlRuS4UKJQ67A5NFt0WV9DjYaLIzY5RmPJYci/C8bo+Pawj8r/j1As= markus@cvs.openssh.com
 EOF
 
