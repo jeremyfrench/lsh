@@ -49,6 +49,7 @@
 */
 
 static struct verifier *do_key_lookup(struct lookup_verifier *c,
+				      int method,
 				      struct lsh_string *keyholder,
 				      struct lsh_string *key)
 {
@@ -64,6 +65,9 @@ static struct verifier *do_key_lookup(struct lookup_verifier *c,
   if (!user)
     return NULL;
 
+  if (method != ATOM_SSH_DSS)
+    return NULL;
+  
   pubkey_spki = keyblob2spki(key);
   if (!pubkey_spki)
     return NULL;
