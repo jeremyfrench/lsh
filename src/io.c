@@ -1324,6 +1324,7 @@ make_lsh_fd(int fd, const char *label,
 
   self->fd = fd;
   self->label = label;
+  self->type = 0;
   
   self->e = make_exception_handler(do_exc_io_handler, e, HANDLER_CONTEXT);
   
@@ -1337,6 +1338,14 @@ make_lsh_fd(int fd, const char *label,
 
   gc_global(&self->super);
   return self;
+}
+
+void
+io_set_type(struct lsh_fd *fd, enum io_type type)
+{
+  trace("io_set_type: fd %i, type %i\n",
+	fd->fd, type);
+  fd->type = type;
 }
 
 unsigned
@@ -1756,7 +1765,7 @@ close_fd(struct lsh_fd *fd)
        * buffer fails. */
       if (fd->write_buffer)
 	fd->write_buffer->closed = 1;
-  
+      
       if (fd->close_callback)
 	LSH_CALLBACK(fd->close_callback);
       
@@ -1784,21 +1793,17 @@ close_fd_nicely(struct lsh_fd *fd)
 
   trace("io.c: close_fd_nicely called on fd %i: %z\n",
 	fd->fd, fd->label);
-  
+
+  /* Stop reading */
   fd->read = NULL;
-
   lsh_oop_cancel_read_fd(fd);
-  
-  if (fd->write_buffer)
-    {
-      /* Mark the write_buffer as closed */
-      fd->write_buffer->closed = 1;
-      if (!fd->write_buffer->empty)
-	return;
-    }
 
-  /* There's no data buffered for write. */
-  close_fd(fd);
+  if (fd->write_buffer)
+    /* Close after currently buffered data is written out. */
+    close_fd_write(fd);
+  else
+    /* There's no data buffered for write. */
+    close_fd(fd);
 }
 
 /* Stop reading, but if the fd has a write callback, keep it open. */
@@ -1822,6 +1827,19 @@ close_fd_write(struct lsh_fd *fd)
     {
       /* Mark the write_buffer as closed */
       fd->write_buffer->closed = 1;
+
+      if (fd->type == IO_PTY)
+	{
+	  debug("Writing ^D to pty.\n");
+	  /* Is there any better way to signal EOF on a pty? This is
+	   * what emacs does. */
+	  A_WRITE(&fd->write_buffer->super,
+		  ssh_format("%lc", /* C-d */ 4));
+
+	  /* No need to repeat this. */
+	  fd->type = 0;
+	}
+      
       if (fd->write_buffer->empty)
 	{
           if (!fd->read)

@@ -1,3 +1,19 @@
+2002-06-18  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/server_session.c (spawn_process): Call io_set_type, if stdin
+	is a pty.
+	(do_eof): Removed the pty ^D hack,a s it's now taken care of by
+	close_fd_write. 
+	
+2002-06-17  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io.c (io_set_type): New function.
+	(close_fd_nicely): Call close_fd_write, for handling the
+	write-related work.
+	(close_fd_write): If the fd is a pty, write a EOF (^D) character. 
+
+	* src/io.h (lsh_fd): New attribute TYPE.
+
 2002-06-05  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Bumped version to 1.4.1. New option

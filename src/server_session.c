@@ -67,8 +67,9 @@
        ; Resource to kill when the channel is closed. 
        (process object lsh_process)
 
-       ; pty
+       ; An allocated but not yet used pty
        (pty object pty_info)
+       
        ; value of the TERM environment variable
        (term string)
 
@@ -132,15 +133,7 @@ do_eof(struct ssh_channel *channel)
   CAST(server_session, session, channel);
 
   trace("server_session.c: do_eof\n");
-
-  if (session->pty)
-    /* Is there any better way to signal EOF on a pty? This is what
-     * emacs does. */
-    /* FIXME: This should be handled specially by close_fd_write, so
-     * that we can ignore EPIPE errors. */
-    A_WRITE(&session->in->write_buffer->super,
-            ssh_format("%lc", /* C-d */ 4));
-
+  
   close_fd_write(session->in);
 }
 
@@ -166,6 +159,9 @@ make_server_session(UINT32 initial_window,
    * is taken care of automatically. */
   
   self->process = NULL;
+
+  self->pty = NULL;
+  self->term = NULL;
   
   self->in = NULL;
   self->out = NULL;
@@ -458,7 +454,10 @@ spawn_process(struct server_session *session,
     = io_write(make_lsh_fd(info->in[1], "child stdin",
 			   io_exception_handler),
 	       SSH_MAX_PACKET, NULL);
-	  
+
+  if (session->pty)
+    io_set_type(session->in, IO_PTY);
+  
   /* Flow control */
   session->in->write_buffer->report = &session->super.super;
   

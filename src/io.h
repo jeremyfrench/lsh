@@ -39,6 +39,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+enum io_type { IO_PTY = 1 };
 
 #define GABA_DECLARE
 #include "io.h.x"
@@ -73,7 +74,9 @@
      (vars
        (next object lsh_fd)
        (fd . int)
-
+       ; PTY:s need special treatment, as sutdown doesn't work.
+       (type . "enum io_type")
+       
        ; For debugging purposes
        (label . "const char *")
        
@@ -287,6 +290,8 @@ void io_init_fd(int fd);
 struct lsh_fd *
 make_lsh_fd(int fd, const char *label,
 	    struct exception_handler *e);
+void
+io_set_type(struct lsh_fd *fd, enum io_type type);
 
 struct exception_handler *
 make_exc_finish_read_handler(struct lsh_fd *fd,
