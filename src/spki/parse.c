@@ -164,3 +164,59 @@ spki_parse_tag(struct spki_acl_db *db, struct sexp_iterator *i,
 	  && (tuple->tag = spki_dup(db, tuple->tag_length, tag)))
     ? next : 0;
 }
+
+enum spki_type
+spki_parse_date(struct sexp_iterator *i,
+		struct spki_date *d)
+{
+  if (i->type == SEXP_ATOM
+      && i->atom_length == SPKI_DATE_SIZE
+      && !i->display
+      && i->atom[4] == '-'
+      && i->atom[7] == '-'
+      && i->atom[10] == '_'
+      && i->atom[13] == ':'
+      && i->atom[16] == ':')
+    {
+      memcpy(d->date, i->atom, SPKI_DATE_SIZE);
+      if (sexp_iterator_next(i))
+	return spki_parse_end(i);
+    }
+  return 0;
+}
+
+enum spki_type
+spki_parse_valid(struct sexp_iterator *i,
+		 struct spki_5_tuple *tuple)
+{
+  enum spki_type type = spki_parse_type(i);
+
+  if (type == SPKI_TYPE_NOT_BEFORE)
+    {
+      type = spki_parse_date(i, &tuple->not_before);
+      if (type)
+	tuple->flags |= SPKI_NOT_BEFORE;
+    }
+
+  if (type == SPKI_TYPE_NOT_AFTER)
+    {
+      type = spki_parse_date(i, &tuple->not_after);
+      if (type)
+	tuple->flags |= SPKI_NOT_AFTER;
+    }
+
+  /* Online tests not supported. */
+  return spki_parse_end(i);  
+}
+
+/* Requires that the version number be zero. */
+enum spki_type
+spki_parse_version(struct sexp_iterator *i)
+{
+  uint32_t version;
+  
+  return (sexp_iterator_get_uint32(i, &version)
+	  && version == 0)
+    ? spki_parse_end(i) : 0;
+}
+		   

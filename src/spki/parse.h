@@ -45,4 +45,15 @@ enum spki_type
 spki_parse_tag(struct spki_acl_db *db, struct sexp_iterator *i,
 	       struct spki_5_tuple *tuple);
 
+enum spki_type
+spki_parse_date(struct sexp_iterator *i,
+		struct spki_date *d);
+
+enum spki_type
+spki_parse_valid(struct sexp_iterator *i,
+		 struct spki_5_tuple *tuple);
+
+enum spki_type
+spki_parse_version(struct sexp_iterator *i);
+
 #endif /* LIBSPKI_PARSE_H_INCLUDED */
