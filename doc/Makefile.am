@@ -29,9 +29,10 @@ all-local: srp-spec.txt lsh.html
 # 	$(GROFF) -Tps -mandoc $< > $@
 # 
 # 
-# %.txt : %.nroff
-# 	$(GROFF) -ms -Tlatin1 $< | perl $(srcdir)/fixff.pl >$@T
-# 	test -s $@T && mv -f $@T $@
+
+%.txt : %.nroff
+	$(GROFF) -ms -Tlatin1 $< | perl $(srcdir)/fixff.pl >$@T
+	test -s $@T && mv -f $@T $@
 
 %.html : %.texinfo
 	(cd $(srcdir) \
