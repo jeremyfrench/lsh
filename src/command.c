@@ -364,7 +364,8 @@ struct command *make_parallell_progn(struct object_list *body)
 COMMAND_SIMPLE(progn_command)
 {
   CAST(object_list, body, a);
-  return &make_parallell_progn(body)->super;
+  return LIST_LENGTH(body) ? &make_parallell_progn(body)->super
+    : &command_I.super.super;
 }
 
 
@@ -470,10 +471,11 @@ make_delay_continuation(struct command *f,
        (mask . UINT32)
        (value . UINT32)
        (ignore_value . int)
+       ; NULL handler means ignore all caught exceptions.
        (handler object command)))
 */
 
-static struct catch_handler_info *
+struct catch_handler_info *
 make_catch_handler_info(UINT32 mask, UINT32 value,
 			int ignore_value,
 			struct command *handler)
@@ -503,7 +505,14 @@ do_catch_handler(struct exception_handler *s,
   CAST(catch_handler, self, s);
   
   if ((e->type & self->info->mask) == self->info->value)
-    COMMAND_CALL(self->info->handler, e, self->c, self->super.parent);
+    {
+      if (self->info->handler)
+	COMMAND_CALL(self->info->handler,
+		     e, self->c, self->super.parent);
+      else
+	trace("do_catch_handler: Ignoring exception: %z.\n",
+	      e->msg);
+    }
   else
     EXCEPTION_RAISE(self->super.parent, e);
 }
@@ -550,7 +559,7 @@ do_catch_apply(struct command *s,
 				  HANDLER_CONTEXT));
 }
 
-static struct command *
+struct command *
 make_catch_apply(struct catch_handler_info *info,
 		 struct command *body)
 {
