@@ -389,10 +389,16 @@ do_client_io(struct command *s UNUSED,
   channel->receive = do_receive;
   
   session->out->super.close_callback
-    = session->err->super.close_callback = make_channel_close(channel);
+    = session->err->super.close_callback
+    = make_channel_close_callback(channel);
   
   session->in->super.read = make_channel_read_data(channel);
 
+#if 0
+  session->in->super.close_callback
+    = make_channel_read_close_callback(channel);
+#endif
+  
   channel->send = do_send_first;
 
   ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
