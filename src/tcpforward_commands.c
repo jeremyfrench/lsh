@@ -139,6 +139,7 @@ struct command tcpip_start_io =
 static struct ssh_channel *
 new_tcpip_channel(struct channel_open_command *c,
 		  struct ssh_connection *connection,
+		  UINT32 local_channel_number,
 		  struct lsh_string **request)
 {
   CAST(open_tcpip_command, self, c);
@@ -152,13 +153,13 @@ new_tcpip_channel(struct channel_open_command *c,
   channel = make_tcpip_channel(self->peer->fd, TCPIP_WINDOW_SIZE);
   channel->write = connection->write;
 
-  REMEMBER_RESOURCE(channel->resources, &self->peer->fd->super.super);
+  REMEMBER_RESOURCE(channel->resources, &self->peer->fd->super);
 
-  *request = prepare_channel_open(connection, self->type, 
-  				  channel, 
-  				  "%S%i%S%i",
-				  self->port->ip, self->port->port,
-				  self->peer->peer->ip, self->peer->peer->port);
+  *request = format_channel_open(self->type, local_channel_number,
+				 channel, 
+				 "%S%i%S%i",
+				 self->port->ip, self->port->port,
+				 self->peer->peer->ip, self->peer->peer->port);
   
   return channel;
 }
