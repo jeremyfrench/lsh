@@ -1,3 +1,15 @@
+1999-10-25  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/werror.c (set_error_syslog): Call openlog(). Added id
+	argument. 
+
+	* src/lshd.c (main): Daemonization support and options.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added daemon.c.
+	(EXTRA_DIST): Removed mempcpy.h and strndup.h.
+
+	* configure.in: Bumped version to 0.1.14.
+
 1999-10-24  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/werror.c (werror_vformat): Added %a format specifier.
