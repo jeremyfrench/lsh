@@ -2,6 +2,7 @@
 /Makefile
 /Makefile.in
 /date-test
+/lookup-acl-test
 /principal-test
 /read-acl-test
 /read-cert-test

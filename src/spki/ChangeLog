@@ -1,3 +1,20 @@
+2002-11-19  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* Makefile.am (libspki_a_SOURCES): Added tag.c.
+
+	* certificate.c (acl_by_auth, spki_acl_by_authorization_next) 
+	(spki_acl_by_authorization_first): New functions.
+
+	* tag.c, tag.h: New files.
+
+	* testsuite/Makefile.am (TS_PROGS): Added lookup-acl-test.
+
+	* testsuite/lookup-acl-test.c: New test program, for the
+	spki_acl_by_authorization functions.
+
+	* testsuite/testutils.c (read_acl): New function.
+	* testsuite/read-acl-test.c (test_main): Use it.
+
 2002-11-18  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/testutils.h: Don't include spki-types.h.
