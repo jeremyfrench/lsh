@@ -76,7 +76,7 @@ static struct catch_report_collect catch_channel_open
 
 #define TCPIP_WINDOW_SIZE 10000
 
-/* NOTE: This command does not do any remembering. */
+/* NOTE: make_tcpip_channel() adds the fd to the channel's resource list. */
 static void
 do_tcpip_connect_io(struct command *ignored UNUSED,
 		    struct lsh_object *x,
@@ -150,14 +150,13 @@ new_tcpip_channel(struct channel_open_command *c,
   struct ssh_channel *channel;
 
   /* NOTE: All accepted fd:s must end up in this function, so it
-   * should be ok to delay the REMEMBER() call until here. */
+   * should be ok to delay the REMEMBER() call until here. It is done
+   * by make_tcpip_channel(). */
 
   debug("tcpforward_commands.c: new_tcpip_channel()\n");
 
   channel = make_tcpip_channel(self->peer->fd, TCPIP_WINDOW_SIZE);
   channel->write = connection->write;
-
-  REMEMBER_RESOURCE(channel->resources, &self->peer->fd->super);
 
   *request = format_channel_open(self->type, local_channel_number,
 				 channel, 

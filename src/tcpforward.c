@@ -149,6 +149,7 @@ do_tcpip_eof(struct ssh_channel *c)
     channel_close(c);
 }
 
+/* NOTE: Add's the socket to the channel's resource list */
 struct ssh_channel *
 make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
 {
@@ -168,6 +169,8 @@ make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
   self->super.rec_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
   
   self->socket = socket;
+
+  REMEMBER_RESOURCE(self->super.resources, socket);
   
   return &self->super;
 }
@@ -178,7 +181,8 @@ make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
  * (channel_open_continuation has not yet done its work), and we can't
  * send any packets. */
 
-void tcpip_channel_start_io(struct ssh_channel *c)
+void
+tcpip_channel_start_io(struct ssh_channel *c)
 {
   CAST(tcpip_channel, channel, c);
 
