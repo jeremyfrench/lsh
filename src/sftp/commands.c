@@ -920,8 +920,6 @@ get_file_or_folder(const char *arg, const char *command,
 
   ret = lsftp_dc_l_isdir( tmp );
 
-  printf( "Arg: %s, tmp: %s\n", arg, tmp );
-
   if( !ret )       /* Exists, but not a dir? */
     {
       printf( 
