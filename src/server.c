@@ -52,6 +52,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+/* Datafellows workaround.
+ *
+ * It seems that Datafellows' ssh2 client says it want to use protocol
+ * version 1.99 in its greeting to the server. This behaviour is not
+ * allowed by the specification. Define this to support it anyway. */
+
+#define DATAFELLOWS_SSH2_GREETING_WORKAROUND
+
 /* Socket workround */
 #ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
 
@@ -174,7 +182,11 @@ static struct read_handler *do_line(struct line_handler **h,
   if ( (length >= 4) && !memcmp(line, "SSH-", 4))
     {
       /* Parse and remember format string */
-      if ((length >= 8) && !memcmp(line + 4, "2.0-", 4))
+      if ( ((length >= 8) && !memcmp(line + 4, "2.0-", 4))
+#ifdef DATAFELLOWS_SSH2_GREETING_WORKAROUND
+	   || ((length >= 9) && !memcmp(line + 4, "1.99-", 5))
+#endif
+	   )
 	{
 	  struct read_handler *new = make_read_packet
 	    (make_packet_unpad
