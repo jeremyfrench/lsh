@@ -19,8 +19,7 @@ exec 1>&2
 
 echo "export-1-test: Testing lsh-export-key"
 
-# FIXME: Use $srcdir? 
-($srcdir/../lsh-export-key -s Test |tee test.out1) <<EOF
+(../lsh-export-key -s Test |tee test.out1) <<EOF
 {KDEwOnB1YmxpYy1rZXkoMzpkc2EoMTpwMTI4OoPZ
 p8LOKpF59DzbO//n3g8O7ybdXfrkTVMbwN5FY00s
 B8uSmw2+ENpYAHDmq/u4QVxEv/VwuK13nfZTqtl9
