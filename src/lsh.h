@@ -24,9 +24,10 @@
 #ifndef LSH_H_INCLUDED
 #define LSH_H_INCLUDED
 
-#include <inttypes.h>
 #include <stddef.h>
 #include <stdlib.h>
+
+#include <nettle/nettle-types.h>
 
 /* Useful macros. */
 #define MIN(a, b) (((a)>(b)) ? (b) : (a))
