@@ -1,0 +1,13 @@
+Sun Nov 22 00:57:16 1998    <nisse@puck>
+
+	* lsh.c (main): Bug fix (pass *address* of crypto_rc4_algorithm).
+ 	Thanks to Keresztfalvi Gabor Agoston <kg230@hszk.bme.hu>.
+
+	* lshd.c (main): -"-
+
+	* lsh_types.h: Moved definitions of UINT* to
+	include/crypto_types.h.
+
+	* io.c: Use Sean Reifschneider's poll-by-select emulation if
+	poll() is unavailable.
+
