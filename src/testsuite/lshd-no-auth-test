@@ -23,5 +23,4 @@ if [ "$excode" -ne 0 -a "$excode" -lt 128 ]; then
   test_success
 fi
 
-test_fail
-
+test_done

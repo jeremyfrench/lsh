@@ -17,6 +17,5 @@ at_connect $SERVERPORT 1 'echo foo' \
     && spawn_lshg -L $PROXYPORT:localhost:$SERVERPORT \
     && tcpconnect -r </dev/null localhost $PROXYPORT | grep foo \
     && test_success
-    
 
-
+test_done

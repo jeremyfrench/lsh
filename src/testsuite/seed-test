@@ -12,7 +12,7 @@ fi
 
 for f in test-seed-1 test-seed-2 ; do
     rm -f "$f"
-    ../lsh-make-seed --sloppy -q -o "$f" && [ -s "$f" ] || test_fail
+    ../lsh-make-seed --sloppy -q -o "$f" && [ -s "$f" ] || die "lsh-make-seed failed"
 done
 
 # Seeds should be different, so that cmp returns the exit code 1.
@@ -26,3 +26,4 @@ else
   fi
 fi
 
+test_done

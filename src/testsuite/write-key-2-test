@@ -13,3 +13,5 @@ fi
 rm -rf temphome && mkdir temphome
 HOME="`pwd`/temphome" ../lsh-writekey -c none < $srcdir/key-1.private \
   && [ -s "temphome/.lsh/identity" -a -s "temphome/.lsh/identity.pub" ] && test_success
+
+test_done

@@ -13,3 +13,5 @@ fi
 rm -f foo foo.pub
 ../lsh-keygen -a rsa -l 777 | ../lsh-writekey -c none -o foo \
   && "$SEXP_CONV" < foo && [ -s foo -a -s foo.pub ] && test_success
+
+test_done

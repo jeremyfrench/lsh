@@ -15,3 +15,5 @@ spawn_lshd && \
   else
     test_success
   fi
+
+test_done

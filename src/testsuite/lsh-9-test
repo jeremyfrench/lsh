@@ -13,4 +13,4 @@ export LSHFLAGS
 
 spawn_lshd && HOME=$TEST_HOME  ../lsh localhost true && test_success
 
-test_fail
+test_done

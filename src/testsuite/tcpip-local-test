@@ -16,3 +16,5 @@ at_connect $SERVERPORT 1 'grep bar && echo foo' \
     && spawn_lsh -L $PROXYPORT:localhost:$SERVERPORT \
     && echo bar | tcpconnect localhost $PROXYPORT | grep foo \
     && test_success
+
+test_done

@@ -10,3 +10,4 @@ fi
 
 spawn_lshd && run_lsh "echo Hello world. ; exit" && test_success
 
+test_done

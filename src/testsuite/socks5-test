@@ -22,3 +22,5 @@ at_connect $SERVERPORT 1 'grep bar && echo foo' \
     && spawn_lsh -D$SOCKSPORT \
     && echo bar | tsocks tcpconnect localhost $SERVERPORT | grep foo \
     && test_success
+
+test_done

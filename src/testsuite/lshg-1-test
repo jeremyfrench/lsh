@@ -10,3 +10,5 @@ fi
 
 spawn_lshd && spawn_lsh -G && \
   echo foo | exec_lshg cat | grep foo > /dev/null && test_success
+
+test_done

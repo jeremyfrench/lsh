@@ -19,3 +19,4 @@ at_connect $SERVERPORT 1 'echo foo' \
        | grep bar \
     && test_success
     
+test_done

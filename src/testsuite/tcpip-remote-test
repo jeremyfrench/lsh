@@ -21,4 +21,4 @@ at_connect $SERVERPORT 1 'echo foo' \
     && tcpconnect </dev/null localhost $PROXYPORT | grep foo \
     && test_success
 
-
+test_done
