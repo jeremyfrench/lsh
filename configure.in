@@ -109,7 +109,10 @@ AC_ARG_ENABLE(kerberos,
   
 if test x$enable_srp = xyes ; then
   AC_DEFINE(WITH_SRP)
+  SRP_PROGRAM=srp-gen
 fi
+
+AC_SUBST(SRP_PROGRAM)
 
 AC_ARG_ENABLE(datafellows_workarounds,
   [--disable-datafellows-workarounds    Disable bug-compatibility with SSH Inc's clients and servers],,
