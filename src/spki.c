@@ -551,6 +551,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 	lsh_string_free(iv);
 	lsh_string_free(password);
 	lsh_string_free(salt);
+	lsh_string_free(label);
 	    	    
 	if (!clear)
 	  werror("Bad password for pkcs5v2.\n");

@@ -184,6 +184,8 @@ unix_read_password(struct interact *s,
   if (self->askpass)
     {
       const char *argv[3];
+      struct lsh_string *password;
+      
       int null = open("/dev/null", O_RDONLY);
       
       if (null < 0)
@@ -201,9 +203,15 @@ unix_read_password(struct interact *s,
 	  close(null);
 	  if (free)
 	    lsh_string_free(prompt);
+	  return NULL;
 	}
       argv[2] = NULL;
-      return lsh_popen_read(self->askpass, argv, null, 100);
+      password = lsh_popen_read(self->askpass, argv, null, 100);
+
+      if (free)
+	lsh_string_free(prompt);
+      
+      return password;
     }
   else
     {
