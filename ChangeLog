@@ -1,3 +1,8 @@
+2003-02-27  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/rapid7-lsh-test: Skip test if tcputils is missing.
+	* src/testsuite/rapid7-lshd-test: Likewise.	
+
 2003-02-27  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/rapid7-lshd-test: Use $srdir for locating the test
