@@ -475,7 +475,7 @@ kex_make_encrypt(struct hash_instance *secret,
     return NULL;
 
   key = kex_make_key(secret, algorithm->key_size,
-					type, session_id);
+		     type, session_id);
 
   if (algorithm->iv_size)
     iv = kex_make_key(secret, algorithm->iv_size,
@@ -723,11 +723,14 @@ do_kexinit_filter(struct command *s,
   self->init->hostkey_algorithms
     = filter_algorithms(keys, self->init->hostkey_algorithms);
 
-  if (!LIST_LENGTH(self->init->hostkey_algorithms))
+  if (!self->init->hostkey_algorithms)
     {
       werror("No hostkey algorithms advertised.\n");
       self->init->hostkey_algorithms = make_int_list(1, ATOM_NONE, -1);
     }
+
+  assert(LIST_LENGTH(self->init->hostkey_algorithms));
+
   COMMAND_RETURN(c, self->init);
 }
 
