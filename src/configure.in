@@ -74,7 +74,7 @@ dnl Some debian systems have both gmp1 and gmp2.
 AC_CHECK_LIB(z, inflate, [], [with_zlib=no])
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
-AC_CHECK_LIB(nsl, hostbyname)
+AC_CHECK_LIB(nsl, gethostbyname)
 AC_CHECK_LIB(socket, setsockopt)
 
 dnl Checks for header files.
@@ -114,7 +114,7 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(select socket strerror strtol)
 AC_CHECK_FUNCS(getspnam)
 
-AC_REPLACE_FUNCS(poll)
+AC_CHECK_FUNCS(poll,,[LIBOBJS = jpoll.c $LIBOBJS])
 
 dnl Check for broken shutdown
 AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
