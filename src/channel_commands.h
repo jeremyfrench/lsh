@@ -84,7 +84,7 @@ int do_channel_request_command(struct command *s,
 		       "struct command_continuation **c")))
 */
 
-#define FORMAT_GLOBAL_REQUEST(r, conn, c)
+#define FORMAT_GLOBAL_REQUEST(r, conn, c) \
 ((r)->format_request((r), (conn), (c)))
 
 int do_channel_global_command(struct command *s,
