@@ -1,0 +1,190 @@
+#! /bin/sh
+
+function conv () {
+    echo "$1" | ../../nettle/tools/sexp-conv -s transport
+}
+
+function die () {
+    echo "Test failed:" "$@"
+    exit 1
+}
+
+function test_valid () {
+    ../tools/spki-check-signature "`conv "$2"`" || die "$1"
+}
+
+function test_invalid () {
+    if ../tools/spki-check-signature "`conv "$2"`"
+    then die "$1"
+    fi
+}
+
+# Test cases taken from draft-ietf-spki-cert-structure-06.txt
+test_valid "valid rsa" '
+   (signature
+    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJPA=|)
+    (public-key
+     (rsa-pkcs1-sha1
+      (e #11#)
+      (n
+       |AMC7wEqs+AjILPsUmS+R1PV9OihhqSTfmdLo9Y2hdj7+2f31qxXsMpx
+       ZedTxmcW9RKsf7dRjnRTxY51/MOIn0isY3DV3fMiaT8NUrjf+jEjF91V
+       1HtCPn7+MHTv/quWToc9/n4BhVDxH1IspFteoW0RHtZqOUfQcSQNswt7
+       yrXFN|)))
+    (rsa-pkcs1-sha1
+     |UN0g7krgm6Xq6vvws+oDZes9hy0pwDV9gVjuUV+uRC8Y7TDh1JPfv2dhX
+     BXqgERa3q99GHxgyjoDgfFgl/fAOplwz3vySmnATInrtCMxGdXgZlQ/SQ5
+     xFXz3VlKQHgak0rK4xpZEbsR6YMggcGK7NjZWTfNK0q8v4FSSD9UDkxk=|
+     ))'
+
+test_valid "valid dsa" '
+   (signature
+    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJPA=|)
+    (public-key
+     (dsa-sha1
+      (p
+       |AMxZt4PXzxBFGaF5r+cGpXQzNXCHjjk1awgnr4LCzXYbC97QVXi/Xes
+       1k28t0YcDlon56Yut0lTz39fziBpHbGBfc1LvOgW1P5MIa1W8eM3UXi4
+       dzWjWtjCn/QM2s33qyELDsCmgAeKg3sVygjKavNgZiSxf44R7RcIEnZB
+       xkcN/|)
+      (g
+       |fbT/lMbMgBWb81X2kRyklLLO/TamsDbLCyp2esdrf/3771RKgsI1RZT
+       WMxIpR51D6maNNpEywxhy4L8isXFXplysrAMCfDjpaUCowhQNSDRT8Yz
+       ygxZHJpZIU8it+QtLc4fIxA/qSqFL4N3fTIe7xApQlmmG9bI2lgBlZbi
+       1/OU=|)
+      (q |AP9n7Cy++blLMxOaB0ML3Z3Cc+qh|)
+      (y
+       |ALpgrX32c8zRlqBSBMtvJzYwrXXpCj3oqeevPna/9zND2LX7wVZd1c9
+       K6ZxmQCqxDqGl/anDVToNAnlzr2btlS32cymsxpEm8bIlAJ6Jk4clT3N
+       rxuTDRft/W+rgvndiK8fEmtNZ2iaYgAKoM2M3zbij6Ts1H0FfjODHZrt
+       ULyNB|)))
+    (dsa-sha1
+     (r |APyNegTrlzLMCCcMRWoMlnKAOHIu|)
+     (s |AIPV/423068nuoNmoQQupyW3x+S1|)))'
+
+test_invalid "rsa, different hash" '
+   (signature
+    (hash sha1 |UNGhcpNFWg6UhtoV2yxV6wPMJPA=|)
+    (public-key
+     (rsa-pkcs1-sha1
+      (e #11#)
+      (n
+       |AMC7wEqs+AjILPsUmS+R1PV9OihhqSTfmdLo9Y2hdj7+2f31qxXsMpx
+       ZedTxmcW9RKsf7dRjnRTxY51/MOIn0isY3DV3fMiaT8NUrjf+jEjF91V
+       1HtCPn7+MHTv/quWToc9/n4BhVDxH1IspFteoW0RHtZqOUfQcSQNswt7
+       yrXFN|)))
+    (rsa-pkcs1-sha1
+     |UN0g7krgm6Xq6vvws+oDZes9hy0pwDV9gVjuUV+uRC8Y7TDh1JPfv2dhX
+     BXqgERa3q99GHxgyjoDgfFgl/fAOplwz3vySmnATInrtCMxGdXgZlQ/SQ5
+     xFXz3VlKQHgak0rK4xpZEbsR6YMggcGK7NjZWTfNK0q8v4FSSD9UDkxk=|
+     ))'
+
+test_invalid "rsa, too long hash" '
+   (signature
+    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJPAB|)
+    (public-key
+     (rsa-pkcs1-sha1
+      (e #11#)
+      (n
+       |AMC7wEqs+AjILPsUmS+R1PV9OihhqSTfmdLo9Y2hdj7+2f31qxXsMpx
+       ZedTxmcW9RKsf7dRjnRTxY51/MOIn0isY3DV3fMiaT8NUrjf+jEjF91V
+       1HtCPn7+MHTv/quWToc9/n4BhVDxH1IspFteoW0RHtZqOUfQcSQNswt7
+       yrXFN|)))
+    (rsa-pkcs1-sha1
+     |UN0g7krgm6Xq6vvws+oDZes9hy0pwDV9gVjuUV+uRC8Y7TDh1JPfv2dhX
+     BXqgERa3q99GHxgyjoDgfFgl/fAOplwz3vySmnATInrtCMxGdXgZlQ/SQ5
+     xFXz3VlKQHgak0rK4xpZEbsR6YMggcGK7NjZWTfNK0q8v4FSSD9UDkxk=|
+     ))'
+
+# Too short hash
+test_invalid "rsa, too short hash" '
+   (signature
+    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJP==|)
+    (public-key
+     (rsa-pkcs1-sha1
+      (e #11#)
+      (n
+       |AMC7wEqs+AjILPsUmS+R1PV9OihhqSTfmdLo9Y2hdj7+2f31qxXsMpx
+       ZedTxmcW9RKsf7dRjnRTxY51/MOIn0isY3DV3fMiaT8NUrjf+jEjF91V
+       1HtCPn7+MHTv/quWToc9/n4BhVDxH1IspFteoW0RHtZqOUfQcSQNswt7
+       yrXFN|)))
+    (rsa-pkcs1-sha1
+     |UN0g7krgm6Xq6vvws+oDZes9hy0pwDV9gVjuUV+uRC8Y7TDh1JPfv2dhX
+     BXqgERa3q99GHxgyjoDgfFgl/fAOplwz3vySmnATInrtCMxGdXgZlQ/SQ5
+     xFXz3VlKQHgak0rK4xpZEbsR6YMggcGK7NjZWTfNK0q8v4FSSD9UDkxk=|
+     ))'
+
+test_valid "dsa, different hash" '
+   (signature
+    (hash sha1 |UNGhcpNFWg5UhtoV3yxV6wPMJPA=|)
+    (public-key
+     (dsa-sha1
+      (p
+       |AMxZt4PXzxBFGaF5r+cGpXQzNXCHjjk1awgnr4LCzXYbC97QVXi/Xes
+       1k28t0YcDlon56Yut0lTz39fziBpHbGBfc1LvOgW1P5MIa1W8eM3UXi4
+       dzWjWtjCn/QM2s33qyELDsCmgAeKg3sVygjKavNgZiSxf44R7RcIEnZB
+       xkcN/|)
+      (g
+       |fbT/lMbMgBWb81X2kRyklLLO/TamsDbLCyp2esdrf/3771RKgsI1RZT
+       WMxIpR51D6maNNpEywxhy4L8isXFXplysrAMCfDjpaUCowhQNSDRT8Yz
+       ygxZHJpZIU8it+QtLc4fIxA/qSqFL4N3fTIe7xApQlmmG9bI2lgBlZbi
+       1/OU=|)
+      (q |AP9n7Cy++blLMxOaB0ML3Z3Cc+qh|)
+      (y
+       |ALpgrX32c8zRlqBSBMtvJzYwrXXpCj3oqeevPna/9zND2LX7wVZd1c9
+       K6ZxmQCqxDqGl/anDVToNAnlzr2btlS32cymsxpEm8bIlAJ6Jk4clT3N
+       rxuTDRft/W+rgvndiK8fEmtNZ2iaYgAKoM2M3zbij6Ts1H0FfjODHZrt
+       ULyNB|)))
+    (dsa-sha1
+     (r |APyNegTrlzLMCCcMRWoMlnKAOHIu|)
+     (s |AIPV/423068nuoNmoQQupyW3x+S1|)))'
+
+test_valid "dsa, too long hash" '
+   (signature
+    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJPAB|)
+    (public-key
+     (dsa-sha1
+      (p
+       |AMxZt4PXzxBFGaF5r+cGpXQzNXCHjjk1awgnr4LCzXYbC97QVXi/Xes
+       1k28t0YcDlon56Yut0lTz39fziBpHbGBfc1LvOgW1P5MIa1W8eM3UXi4
+       dzWjWtjCn/QM2s33qyELDsCmgAeKg3sVygjKavNgZiSxf44R7RcIEnZB
+       xkcN/|)
+      (g
+       |fbT/lMbMgBWb81X2kRyklLLO/TamsDbLCyp2esdrf/3771RKgsI1RZT
+       WMxIpR51D6maNNpEywxhy4L8isXFXplysrAMCfDjpaUCowhQNSDRT8Yz
+       ygxZHJpZIU8it+QtLc4fIxA/qSqFL4N3fTIe7xApQlmmG9bI2lgBlZbi
+       1/OU=|)
+      (q |AP9n7Cy++blLMxOaB0ML3Z3Cc+qh|)
+      (y
+       |ALpgrX32c8zRlqBSBMtvJzYwrXXpCj3oqeevPna/9zND2LX7wVZd1c9
+       K6ZxmQCqxDqGl/anDVToNAnlzr2btlS32cymsxpEm8bIlAJ6Jk4clT3N
+       rxuTDRft/W+rgvndiK8fEmtNZ2iaYgAKoM2M3zbij6Ts1H0FfjODHZrt
+       ULyNB|)))
+    (dsa-sha1
+     (r |APyNegTrlzLMCCcMRWoMlnKAOHIu|)
+     (s |AIPV/423068nuoNmoQQupyW3x+S1|)))'
+
+test_invalid "dsa, too short hash" '
+   (signature
+    (hash sha1 |UNGhcpNFWg5UhtoV2yxV6wPMJP==|)
+    (public-key
+     (dsa-sha1
+      (p
+       |AMxZt4PXzxBFGaF5r+cGpXQzNXCHjjk1awgnr4LCzXYbC97QVXi/Xes
+       1k28t0YcDlon56Yut0lTz39fziBpHbGBfc1LvOgW1P5MIa1W8eM3UXi4
+       dzWjWtjCn/QM2s33qyELDsCmgAeKg3sVygjKavNgZiSxf44R7RcIEnZB
+       xkcN/|)
+      (g
+       |fbT/lMbMgBWb81X2kRyklLLO/TamsDbLCyp2esdrf/3771RKgsI1RZT
+       WMxIpR51D6maNNpEywxhy4L8isXFXplysrAMCfDjpaUCowhQNSDRT8Yz
+       ygxZHJpZIU8it+QtLc4fIxA/qSqFL4N3fTIe7xApQlmmG9bI2lgBlZbi
+       1/OU=|)
+      (q |AP9n7Cy++blLMxOaB0ML3Z3Cc+qh|)
+      (y
+       |ALpgrX32c8zRlqBSBMtvJzYwrXXpCj3oqeevPna/9zND2LX7wVZd1c9
+       K6ZxmQCqxDqGl/anDVToNAnlzr2btlS32cymsxpEm8bIlAJ6Jk4clT3N
+       rxuTDRft/W+rgvndiK8fEmtNZ2iaYgAKoM2M3zbij6Ts1H0FfjODHZrt
+       ULyNB|)))
+    (dsa-sha1
+     (r |APyNegTrlzLMCCcMRWoMlnKAOHIu|)
+     (s |AIPV/423068nuoNmoQQupyW3x+S1|)))'
