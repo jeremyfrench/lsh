@@ -129,25 +129,33 @@ parse_uint8(struct simple_buffer *buffer, unsigned *result)
 }
 
 int
-parse_utf8(struct simple_buffer *buffer, uint32_t *result)
+parse_utf8(struct simple_buffer *buffer, uint32_t *result, unsigned *utf8_length)
 {
-  uint32_t first;
+  static const uint32_t min_value[7] =
+    {
+      0, 0,
+      0x80, 0x20, 0x10, 0x08, 0x04,
+    };
+
+  uint32_t c;
+  uint32_t value;
   unsigned length;
   unsigned i;
   
   if (!LEFT)
     return -1;
 
-  first = HERE[0];
+  c = HERE[0];
 
-  if (first < 0x80)
+  if (c < 0x80)
     {
-      *result = first;
+      *result = c;
+      *utf8_length = 1;
       ADVANCE(1);
       return 1;
     }
 
-  switch(first & 0xF0)
+  switch(c & 0xF0)
     {
     default:
       return 0;
@@ -155,46 +163,67 @@ parse_utf8(struct simple_buffer *buffer, uint32_t *result)
     case 0xD0:
       /* Format 110y yyyy 10xx xxxx, 11 bits */
       length = 2;
-      *result = first & 0x1F;
+      value = c & 0x1F;      
       break;
     case 0xE0:
       /* Format 1110 zzzz 10yy yyyy 10xx xxxx, 16 bits */
       length = 3;
-      *result = first & 0x0F;
+      value = c & 0x0F;
       break;
     case 0xF0:
-      switch(first & 0x0E)
+      switch(c & 0x0E)
 	{
 	case 0: case 2: case 4: case 6:
 	  /* Format 1111 0www 10zz zzzz 10yy yyyy 10xx xxxx, 21 bits */
 	  length = 4;
-	  *result = first & 0x07;
+	  value = c & 0x07;
 	  break;
 	case 8: case 0xA:
 	  /* Format 1111 10xx 10ww wwww 10zz zzzz 10yy yyyy 10xx xxxx, 26 bits */
 	  length = 5;
-	  *result = first & 0x03;
+	  value = c & 0x03;
 	  break;
 	case 0xC:
 	  /* Format 1111 110y 10xx xxxx 10ww wwww 10zz zzzz 10yy yyyy 10xx xxxx, 31 bits */
 	  length = 6;
-	  *result = first & 0x01;
+	  value = c & 0x01;
 	  break;
 	default:
-	  fatal("Internal error!\n");
+	  /* Invalid format 1111 111x */ 
+	  return 0;
 	}
       break;
     }
   if (LEFT < length)
     return 0;
+
+  c = HERE[1];
   
-  for(i = 1; i<length; i++)
+  if ( (c & 0xC0) != 0x80)
+    return 0;  
+
+  value = (value << 6) | (c & 0x3f);
+
+  /* Check for overlong sequences */
+  if (value < min_value[length])
+    return 0;
+
+  for(i = 2; i<length; i++)
     {
-      uint32_t c = HERE[i];
+      c = HERE[i];
       if ( (c & 0xC0) != 0x80)
 	return 0;
-      *result = (*result << 6) | (c & 0x3f);
+      value = (value << 6) | (c & 0x3f);
     }
+
+  /* Surrogates and non-characters should not appear in utf8 text. */
+  if ( (value >= 0xd800 && value <0xe000)
+       || value == 0xfffe || value == 0xffff)
+    return 0;
+  
+  *result = value;
+  *utf8_length = length;
+  
   ADVANCE(length);
   return 1;
 }  

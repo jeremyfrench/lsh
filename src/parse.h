@@ -72,7 +72,7 @@ parse_uint8(struct simple_buffer *buffer, unsigned *result);
 
 /* Returns 1 on success, 0 on error, and -1 at end of buffer */
 int
-parse_utf8(struct simple_buffer *buffer, uint32_t *result);
+parse_utf8(struct simple_buffer *buffer, uint32_t *result, unsigned *utf8_length);
 
 int parse_boolean(struct simple_buffer *buffer, int *result);
 
