@@ -1,4 +1,4 @@
-/* abstract_io.c
+/* abstract_crypto.c
  *
  * $Id$ */
 
@@ -75,6 +75,25 @@ struct crypto_algorithm *crypto_invert(struct crypto_algorithm *inner)
 }
 
 
+struct lsh_string *
+hash_string(struct hash_algorithm *a,
+	    struct lsh_string *in,
+	    int free)
+{
+  struct hash_instance *hash = MAKE_HASH(a);
+  struct lsh_string *out = lsh_string_alloc(hash->hash_size);
+
+  HASH_UPDATE(hash, in->length, in->data);
+  HASH_DIGEST(hash, out->data);
+
+  KILL(hash);
+  if (free)
+    lsh_string_free(in);
+
+  return out;
+}
+
+
 /* FIXME: These functions don't really belong here. */
 
 UINT32 gcd(UINT32 x, UINT32 y)
@@ -121,7 +140,7 @@ UINT32 gcd(UINT32 x, UINT32 y)
 	}
     }
 }
-	  
+
 UINT32 lcm(UINT32 x, UINT32 y)
 {
   UINT32 g = gcd(x, y);
