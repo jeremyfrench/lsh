@@ -111,8 +111,6 @@ UINT32 gcd(UINT32 x, UINT32 y)
   while (1)
     {
       /* During this loop, x is always odd */
-      UINT32 d;
-
       assert(x % 2);
       
       if (!y)
@@ -121,14 +119,12 @@ UINT32 gcd(UINT32 x, UINT32 y)
       while (!(y % 2))
 	y /= 2;
       
-      d = x-y;
 
-      if (d<0)
-	{ /* x < y */
-	  y = - d;
-	}
+      if (x < y)
+        y -= x;
       else
 	{ /* x >= y */
+          UINT32 d = x-y;
 	  x = y;
 	  y = d;
 	}
