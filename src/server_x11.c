@@ -470,13 +470,15 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
   {
     struct spawn_info spawn;
     const char *args[2] = { "-c", XAUTH_PROGRAM };
-    const struct env_value env[1] =
-      { {"XAUTHORITY", xauthority } };
+    struct env_value env;
 
     struct lsh_process *process;
 
     int null;
 
+    env.name = "XAUTHORITY";
+    env.value = xauthority;
+    
     memset(&spawn, 0, sizeof(spawn));
     /* FIXME: Arrange that stderr data (and perhaps stdout data as
      * well) is sent as extended data on the channel. To do that, we
@@ -505,7 +507,7 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
     spawn.argc = 2;
     spawn.argv = args;
     spawn.env_length = 1;
-    spawn.env = env;
+    spawn.env = &env;
 
     process = USER_SPAWN(user, &spawn, make_xauth_exit_callback(c, e));
     if (process)
