@@ -36,6 +36,13 @@
 #include "server_userauth.h.x"
 #undef GABA_DECLARE
 
+/* FIXME: Could abstract some of this information into methods, for example
+ *
+ * o  verifying a password
+ * o  reading files in ~/.lsh
+ * o  cd:ing to the home directory
+ */
+
 /* GABA:
    (class
      (name unix_user)
@@ -49,7 +56,14 @@
        (passwd string)  ; Crypted passwd
        (home string)
        (shell string)))
-       
+*/
+
+/* GABA:
+   (class
+     (name user_db)
+     (vars
+       (lookup method "struct unix_user *"
+                      "struct lsh_string *name" "int free")))
 */
 
 struct unix_user *lookup_user(struct lsh_string *name, int free);
