@@ -97,16 +97,10 @@ do_write_packet(struct abstract_write *s,
       uint8_t s[4];
       assert(new_size == mac);      
 
-      debug("write_packet: MAC input: sequence_number = %i, data = %xs\n",
-	    self->sequence_number, new_size, lsh_string_data(packet));
-
       WRITE_UINT32(s, self->sequence_number);
       MAC_UPDATE(connection->send_mac, 4, s);
       MAC_UPDATE(connection->send_mac, new_size, lsh_string_data(packet));
       MAC_DIGEST(connection->send_mac, packet, mac);
-
-      debug("write_packet: MAC output: %xs\n", connection->send_mac->mac_size,
-	    lsh_string_data(packet) + mac);
     }
   if (connection->send_crypto)
     CRYPT(connection->send_crypto, new_size, packet, 0, packet, 0);
