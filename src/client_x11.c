@@ -600,7 +600,7 @@ make_client_x11_display(const char *display, struct lsh_string *fake)
   
   if (!parse_display(self, display))
     {
-      werror("Can't parse X11 display: `%s'\n", display);
+      werror("Can't parse X11 display: `%z'\n", display);
       KILL(self);
       return NULL;
     }
