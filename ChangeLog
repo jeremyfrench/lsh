@@ -1,5 +1,39 @@
 2001-07-06  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/io_commands.c (io_write_file_command): Bugfix.
+
+	* src/command.h (command_simple): Deleted class.
+	(STATIC_COMMAND_SIMPLE): Deleted macro.
+	(DEFINE_COMMAND_SIMPLE): Deleted macro.
+	(catch_command): Inherit command, not command_simple.
+
+	* src/command.c (do_call_simple_command): Deleted.
+	(catch_collect_body): Inherit command, not command_simple.
+
+	* src/sexp_commands.h (sexp_print_command): Inherit command_2.
+
+	* src/lsh_proxy.c (proxy_destination): Use DEFINE_COMMAND2.
+
+	* src/lsh-writekey.c: Don't use DEFINE_COMMAND_SIMPLE.
+	* src/lsh.c: Likewise.
+	* src/lshd.c: Likewise.
+	* src/lshg.c: Likewise.
+	* src/proxy.c: Likewise.
+	* src/spki_commands.c: Likewise.
+
+	* src/keyexchange.c (kexinit_filter): Redefined using
+	DEFINE_COMMAND2. 
+
+	* src/io_commands.c (io_write_file_command): Use DEFINE_COMMAND.
+	(connect_local_command): Likewise.
+	(io_log_peer_command): Likewise.
+	
+	* src/gateway_commands.c (gateway_setup_command): Use
+	DEFINE_COMMAND.  
+	(gateway_accept): Use DEFINE_COMMAND2. 
+
+	* src/lsh-writekey.c: Don't use command_simple.
+
 	* src/connection_commands.c (connection_remember): Redefined using
 	DEFINE_COMMAND2.
 
