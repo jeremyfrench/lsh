@@ -1,3 +1,8 @@
+2003-01-08  Niels Möller  <niels@s3.kth.se>
+
+	* src/Makefile.am.in (environ.h): New rule for creating environ.h
+	from environ.h.in.
+
 2003-01-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/Makefile.am.in (SUBDIRS): Compile in spki subdir.
