@@ -1,3 +1,7 @@
+2003-01-20  Niels Möller  <niels@s3.kth.se>
+
+	* Makefile.am (EXTRA_DIST): Distribute process-types.
+
 2003-01-16  Niels Möller  <niels@s3.kth.se>
 
 	* Makefile.am (libspki_a_SOURCES): Added header files, to get them

@@ -26,7 +26,8 @@ $(srcdir)/spki-gperf.h: spki-types.in process-types
 		> $@T
 	test -s $@T && mv -f $@T $@
 
-EXTRA_DIST = spki-types.in spki-types.h spki-gperf.h spki-type-names.h
+EXTRA_DIST = process-types \
+	spki-types.in spki-types.h spki-gperf.h spki-type-names.h
 
 .PHONY: bootstrap
 bootstrap: spki-types.h spki-gperf.h spki-type-names.h
