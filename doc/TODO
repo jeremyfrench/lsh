@@ -244,3 +244,5 @@ such device).
 
 Add some workaround for the poll()-bug in linux/glibc-2.07 reported by
 Bazsi.
+
+Write a configure test for strsignal.
