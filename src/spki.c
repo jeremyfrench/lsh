@@ -1164,6 +1164,13 @@ do_spki_lookup(struct spki_context *s,
 	struct spki_subject *subject;
 	struct lsh_string *sha1;
 	struct lsh_string *md5;
+	struct sexp *key = SEXP_GET(i);
+
+	if (!key)
+	  {
+	    werror("do_spki_lookup: Invalid (public-key ...) expression.\n");
+	    return NULL;
+	  }
 
 	/* We first se if we can find the key by hash */
 	{
@@ -1182,20 +1189,14 @@ do_spki_lookup(struct spki_context *s,
 	      {
 		assert(!subject->verifier);
 		subject->key = e;
-		
+
 		subject->verifier
-		  = v ? v : spki_make_verifier(self->algorithms, i);
+		  = v ? v : spki_make_verifier(self->algorithms, key);
 	      }
 	  }
 	else
 	  {
 	    /* New subject */
-	    struct sexp *key = SEXP_GET(i);
-	    if (!key)
-	      {
-		werror("do_spki_lookup: Invalid (public-key ...) expression.\n");
-		return NULL;
-	      }
 	    subject = make_spki_subject(e,
 					v ? v : spki_make_verifier(self->algorithms, key),
 					sha1, md5);
