@@ -44,6 +44,8 @@
 # include "jpoll.h"
 #endif
 
+#include <oop.h>
+
 /* Workaround for some version of FreeBSD. */
 #ifdef POLLRDNORM
 # define MY_POLLIN (POLLIN | POLLRDNORM)
@@ -69,190 +71,148 @@
 
 /* Glue to liboop */
 
-struct oop_state
+/* Because of signal handlers, there can be only one oop object. */
+oop_source_sys *the_oop = NULL;
+
+void
+io_init(void)
 {
-  oop_sys_source *sys;
-  oop_signal_source *signal;
-  oop_source *source;
-};
+  assert(!the_oop);
+  the_oop = oop_sys_new();
+  if (!the_oop)
+    fatal("Failed to initialize liboop.\n");
+}
 
-/* GABA:
-   (class
-     (name lsh_oop_glue)
-     (super resource)
-     (vars
-       (oop indirect-special "struct oop_state"
-            #f do_free_oop_state)))
-*/
-
-static void
-do_free_oop_state(struct oop_state *state)
+void
+io_finish(void)
 {
   /* There mustn't be any outstanding callbacks left. */
-  oop_signal_delete(state->signal);
-  oop_sys_delete(state->sys);
+  oop_sys_delete(the_oop);
+  the_oop = NULL;
 }
 
-/* Because of signal handlers, there can be only one oop object. */
-static struct lsh_oop_glue *the_oop = NULL;
-
-static struct lsh_oop_glue *
-make_lsh_oop_glue(void)
-{
-  /* FIXME: make liboop use lsh_space_alloc. But to do that, we also
-   * need a realloc function. */
-  NEW(lsh_oop_glue, self);
-
-  assert(!the_oop);
-  
-  self->oop->sys = oop_sys_new();
-  if (!self->oop->sys)
-    fatal("Virtual memory exhausted.\n");
-  self->oop->signals = oop_signal_new(self->oop->sys);
-  if (!self->oop->signals)
-    fatal("Virtual memory exhausted.\n");
-
-  the_oop = self;
-  
-  return self;
-}
 
 /* OOP Callbacks */
-static void
-lsh_oop_register_signal(oop_source *source, struct lsh_signal_handler *handler);
-
 static void *
-lsh_oop_signal_callback(oop_source *source, int sig, void *data)
+lsh_oop_signal_callback(oop_source *source UNUSED, int sig, void *data)
 {
   CAST(lsh_signal_handler, self, (struct lsh_object *) data);
 
   assert(sig == self->signum);
   
-  LSH_CALLBACK(self);
-
-  lsh_oop_register_signal(source, self);
+  LSH_CALLBACK(self->action);
 
   return NULL;
 }
 
 static void
-lsh_oop_register_signal(oop_source *source, struct lsh_signal_handler *handler)
+lsh_oop_register_signal(struct lsh_signal_handler *handler)
 {
-  source->on_signal(source, handler->sig, lsh_oop_signal_callback, handler);
+  if (handler->super.alive)
+    {
+      oop_source *source = oop_sys_source(the_oop);
+  
+      source->on_signal(source, handler->signum, lsh_oop_signal_callback, handler);
+    }
 }
 
 static void
-lsh_oop_cancel_signal(oop_source *source, struct lsh_signal_handler *handler)
+lsh_oop_cancel_signal(struct lsh_signal_handler *handler)
 {
-  source->cancel_signal(source, handler->signum, lsh_oop_signal_callback, handler);
-}
+  if (handler->super.alive)
+    {
+      oop_source *source = oop_sys_source(the_oop);
 
-static void
-lsh_oop_register_fd(oop_source *source, oop_event event, struct lsh_fd *fd);
+      source->cancel_signal(source, handler->signum, lsh_oop_signal_callback, handler);
+    }
+}
 
 static void *
-lsh_oop_fd_callback(oop_source *source, int fileno, oop_event event, void *data)
+lsh_oop_fd_read_callback(oop_source *source UNUSED, int fileno, oop_event event, void *data)
 {
   CAST(lsh_fd, fd, (struct lsh_object *) data);
 
   assert(fileno == fd->fd);
+  assert(event == OOP_READ);
+  assert(fd->super.alive);
 
-  debug("lsh_oop_fd_callback: event %i on fd %i: %z\n",
-	event, fd->fd, fd->label);
-  
-  if (!f->super.alive)
-    {
-      debug("lsh_oop_fd_callback: fd is dead\n");
-      return NULL;
-    }
-  
-  switch(event)
-    {
-    case OOP_READ:
-      FD_READ(fd);
+  debug("lsh_oop_fd_read_callback: fd %i: %z\n",
+	fd->fd, fd->label);
 
-      if (fd->super.alive && fd->want_read)
-	lsh_oop_register_fd(source, event, fd);
-      break;
-      
-    case OOP_WRITE:
-      FD_WRITE(fd);
+  FD_READ(fd);
 
-      /* FIXME: If want write is false, where can we set it to true?
-       * write_buffer:do_write doesn't have any reference to the fd.
-       *
-       * With the old io_iter code, an lsh_fd included a pointer to
-       * the write_buffer. Perhaps that should be the other way round?
-       */
-      
-      if (fd->super.alive && fd->want_write)
-	lsh_oop_register_fd(source, event, fd);
-      break;
-      
-    default:
-      fatal("lsh_oop_fd_callback: Internal error.\n");
-    }
   return NULL;
 }
 
-static void
-lsh_oop_register_fd(oop_source *source, oop_event event, struct lsh_fd *fd)
+void
+lsh_oop_register_read_fd(struct lsh_fd *fd)
 {
-  source->on_fd(source, fd->fd, event, lsh_oop_fd_callback, fd);  
+  if (fd->super.alive)
+    {
+      oop_source *source = oop_sys_source(the_oop);
+
+      assert(fd->read);
+      
+      source->on_fd(source, fd->fd, OOP_READ, lsh_oop_fd_read_callback, fd);
+      fd->want_read = 1;
+    }
 }
 
-static void
-lsh_oop_cancel_fd(oop_source *source, oop_event event, struct lsh_fd *fd)
+void
+lsh_oop_cancel_read_fd(struct lsh_fd *fd)
 {
-  source->cancel_fd(source, event, lsh_oop_fd_callback, fd);
+  if (fd->super.alive)
+    {
+      oop_source *source = oop_sys_source(the_oop);
+
+      source->cancel_fd(source, fd->fd, OOP_READ);
+      fd->want_read = 0;
+    }
 }
-
-
-#if 0
-static void
-lsh_oop_register_read(oop_source *source, struct lsh_fd *fd);
 
 static void *
-lsh_oop_read_callback(oop_source *source, int fd, oop_event event, void *data)
+lsh_oop_fd_write_callback(oop_source *source UNUSED, int fileno, oop_event event, void *data)
 {
-  CAST(lsh_fd, f, (struct lsh_object *) data);
+  CAST(lsh_fd, fd, (struct lsh_object *) data);
 
+  assert(fileno == fd->fd);
   assert(event == OOP_READ);
+  assert(fd->super.alive);
+  
+  debug("lsh_oop_fd_callback: fd %i: %z\n",
+	fd->fd, fd->label);
 
-  FD_READ(f);
+  FD_WRITE(fd);
 
-  if (f->super.alive && f->want_read)
-    lsh_oop_register_read(source, f);
+  return NULL;
 }
 
-static void
-lsh_oop_register_read(oop_source *source, struct lsh_fd *fd)
+void
+lsh_oop_register_write_fd(struct lsh_fd *fd)
 {
-  source->on_fd(source, fd->fd, OOP_READ, lsh_oop_read_callback, fd);
+  if (fd->super.alive)
+    {
+      oop_source *source = oop_sys_source(the_oop);
+
+      assert(fd->write);
+      
+      source->on_fd(source, fd->fd, OOP_WRITE, lsh_oop_fd_write_callback, fd);
+      fd->want_write = 1;
+    }
 }
 
-static void
-lsh_oop_register_write(oop_source *source, struct lsh_fd *fd);
-
-static void *
-lsh_oop_write_callback(oop_source *source, int fd, oop_event event, void *data)
+void
+lsh_oop_cancel_write_fd(struct lsh_fd *fd)
 {
-  CAST(lsh_fd, f, (struct lsh_object *) data);
+  if (fd->super.alive)
+    {
+      oop_source *source = oop_sys_source(the_oop);
 
-  assert(event == OOP_WRITE);
-
-  FD_WRITE(f);
-
-  if (f->super.alive && f->want_write)
-    lsh_oop_register_write(source, f);
+      source->cancel_fd(source, fd->fd, OOP_WRITE);
+      fd->want_write = 0;
+    }
 }
 
-static void
-lsh_oop_register_write(oop_source *source, struct lsh_fd *fd)
-{
-  source->on_fd(source, fd->fd, OOP_WRITE, lsh_oop_write_callback, fd);
-}
-#endif
 
 /* Calls trigged by a signal handler. */
 /* GABA:
@@ -276,14 +236,13 @@ lsh_oop_register_write(oop_source *source, struct lsh_fd *fd)
        ;; (when . time_t)
 */
 
+/* FIXME: With liboop, we should not need this object, we'd only need
+ * a resource_list owned by the gc. */
 /* GABA:
    (class
      (name io_backend)
      (super resource)
      (vars
-       (source_sys . "oop_source_sys *")
-       (source_signal . "oop_adapter_signal *")
-       
        ; Linked list of fds. 
        (files object lsh_fd)
 
@@ -584,7 +543,7 @@ io_run(struct io_backend *b)
   if (sigaction(SIGPIPE, &pipe, NULL) < 0)
     fatal("Failed to ignore SIGPIPE.\n");
 
-  oop_sys_run(b->oop->sys);
+  oop_sys_run(the_oop);
 }
 
 static void
@@ -608,10 +567,6 @@ do_kill_io_backend(struct resource *s)
       for (signal = backend->signals, backend->signals = NULL;
 	   signal; signal = signal->next)
 	KILL_RESOURCE(&signal->super);
-
-      /* FIXME: Should be done by a free-function. */
-      oop_signal_delete(backend->source_signal);
-      oop_sys_delete(backend->source_sys);
       
       backend->super.alive = 0;
     }
@@ -624,17 +579,13 @@ make_io_backend(void)
 
   assert(!the_oop);
 
-  the_oop = b->oop = make_lsh_oop_glue();
-
-  
+  io_init();
   init_resource(&b->super, do_kill_io_backend);
     
   b->files = NULL;
   b->signals = NULL;
   b->callouts = NULL;
 
-  the_backend = b;
-  
   return b;
 }
 
@@ -651,7 +602,7 @@ do_kill_signal_handler(struct resource *s)
 
   if (self->super.alive)
     {
-      lsh_oop_cancel_signal(the_backend->oop->source, self);
+      lsh_oop_cancel_signal(self);
       self->super.alive = 0;
     }
 }
@@ -661,7 +612,6 @@ io_signal_handler(struct io_backend *b,
 		  int signum,
 		  struct lsh_callback *action)
 {
-  oop_source *source = oop_signal_source(b->source_signal);
   NEW(lsh_signal_handler, handler);
 
   init_resource(&handler->super, do_kill_signal_handler);
@@ -672,7 +622,7 @@ io_signal_handler(struct io_backend *b,
 
   b->signals = handler;
 
-  lsh_oop_register_signal(b->oop->source, handler);
+  lsh_oop_register_signal(handler);
   
   return &handler->super;
 }
@@ -710,7 +660,7 @@ do_buffered_read(struct io_callback *s,
   res = fd->hanged_up ? 0 : read(fd->fd, buffer, self->buffer_size);
 #endif
 
-  read(fd->fd, buffer, self->buffer_size);
+  res = read(fd->fd, buffer, self->buffer_size);
   
   if (res < 0)
     switch(errno)
@@ -774,7 +724,7 @@ do_buffered_read(struct io_callback *s,
 	    {
 	      werror("do_buffered_read: Handler disappeared! Ignoring %i bytes\n",
 		     left);
-	      fd->want_read = 0;
+	      lsh_oop_cancel_read_fd(fd);
 	      return;
 	    }
 	}
@@ -829,7 +779,7 @@ do_consuming_read(struct io_callback *c,
   
   if (!wanted)
     {
-      fd->want_read = 0;
+      lsh_oop_cancel_read_fd(fd);
     }
   else
     {
@@ -893,11 +843,12 @@ do_write_callback(struct io_callback *s UNUSED,
   UINT32 size;
   int res;
 
+  /* FIXME: Delete this useless indirection. */
   FD_PREPARE(fd);
 
   if (! (fd->super.alive && fd->want_write))
     {
-      lsh_oop_cancel_fd(the_oop->source, OOP_WRITE, fd);
+      lsh_oop_cancel_write_fd(fd);
       return;
     }
   
@@ -1055,7 +1006,7 @@ do_connect_callback(struct io_callback *s,
   else
     {
       fd->write = NULL;
-      fd->want_write = 0;
+      lsh_oop_cancel_write_fd(fd);
       fd->label = "connected socket";
       COMMAND_RETURN(self->c, fd);
     }
@@ -1610,7 +1561,7 @@ io_connect(struct io_backend *b,
 
   fd = make_lsh_fd(b, s, "connecting socket", e);
   
-  fd->want_write = 1;
+  lsh_oop_register_write_fd(fd);
   fd->write = make_connect_callback(c);
     
   return fd;
@@ -1652,7 +1603,7 @@ io_listen(struct io_backend *b,
 
   fd = make_lsh_fd(b, s, "listening socket", e);
 
-  fd->want_read = 1;
+  lsh_oop_register_read_fd(fd);
   fd->read = callback;
 
   return fd;
@@ -1893,10 +1844,11 @@ io_read_write(struct lsh_fd *fd,
   
   /* Reading */
   fd->read = read;
-  fd->want_read = !!read;
+  if (read)
+    lsh_oop_register_read_fd(fd);
   
   /* Writing */
-  fd->write_buffer = make_write_buffer(block_size);
+  fd->write_buffer = make_write_buffer(fd, block_size);
   fd->write = &io_write_callback;
 
   fd->prepare = do_write_prepare;
@@ -1916,8 +1868,9 @@ io_read(struct lsh_fd *fd,
   trace("io.c: Preparing fd %i for reading\n", fd->fd);
   
   /* Reading */
-  fd->want_read = !!read;
   fd->read = read;
+  if (fd->read)
+    lsh_oop_register_read_fd(fd);
   
   fd->close_callback = close_callback;
 
@@ -1932,7 +1885,7 @@ io_write(struct lsh_fd *fd,
   trace("io.c: Preparing fd %i for writing\n", fd->fd);
   
   /* Writing */
-  fd->write_buffer = make_write_buffer(block_size);
+  fd->write_buffer = make_write_buffer(fd, block_size);
   fd->write = &io_write_callback;
 
   fd->prepare = do_write_prepare;
@@ -1992,8 +1945,8 @@ void close_fd(struct lsh_fd *fd)
       if (fd->close_callback)
 	LSH_CALLBACK(fd->close_callback);
 
-      lsh_oop_cancel_fd(the_backend->oop->source, OOP_READ, fd);
-      lsh_oop_cancel_fd(the_backend->oop->source, OOP_WRITE, fd);
+      lsh_oop_cancel_read_fd(fd);
+      lsh_oop_cancel_write_fd(fd);
       
       if (close(fd->fd) < 0)
 	{
@@ -2015,10 +1968,9 @@ void close_fd_nicely(struct lsh_fd *fd)
   trace("io.c: close_fd_nicely called on fd %i: %z\n",
 	fd->fd, fd->label);
   
-  fd->want_read = 0;
   fd->read = NULL;
 
-  lsh_oop_cancel_fd(the_oop->source, OOP_READ, fd);
+  lsh_oop_cancel_read_fd(fd);
   
   if (fd->write_close)
     /* Mark the write_buffer as closed */
@@ -2031,10 +1983,9 @@ void close_fd_nicely(struct lsh_fd *fd)
 /* Stop reading, but if the fd has a write callback, keep it open. */
 void close_fd_read(struct lsh_fd *fd)
 {
-  fd->want_read = 0;
   fd->read = NULL;
 
-  lsh_oop_cancel_fd(the_oop->source, OOP_READ, fd);
+  lsh_oop_cancel_read_fd(fd);
   
   if (!fd->write)
     /* We won't be writing anything on this fd, so close it. */
@@ -2067,11 +2018,11 @@ do_exc_finish_read_handler(struct exception_handler *s,
       close_fd(self->fd);
       break;
     case EXC_PAUSE_READ:
-      self->fd->want_read = 0;
+      lsh_oop_cancel_read_fd(self->fd);
       break;
     case EXC_PAUSE_START_READ:
       if (self->fd->read)
-	self->fd->want_read = 1;
+	lsh_oop_register_read_fd(self->fd);
       break;
     default:
       EXCEPTION_RAISE(self->super.parent, e);
