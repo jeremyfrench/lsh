@@ -31,6 +31,7 @@
 #include "publickey_crypto.h"
 #include "resource.h"
 #include "ssh_read.h"
+#include "ssh_write.h"
 
 struct lshd_connection;
 
@@ -148,7 +149,7 @@ do_##NAME(struct lshd_packet_handler *s UNUSED,		\
        ; Sending encrypted packets
        ; Output fd for the ssh connection, ; may equal ssh_input
        (ssh_output . int)
-       ; (writer object ...)
+       (writer object ssh_write_state)
 
        (send_mac object mac_instance)
        (send_crypto object crypto_instance)
@@ -158,7 +159,8 @@ do_##NAME(struct lshd_packet_handler *s UNUSED,		\
        ; Communication with service on top of the transport layer.
        ; This is a bidirectional pipe
        (service_fd . int)
-       (service_reader object ssh_read_state)))
+       (service_reader object ssh_read_state)
+       (service_writer object ssh_write_state)))
 */
 
 void
