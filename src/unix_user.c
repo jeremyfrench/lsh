@@ -390,7 +390,12 @@ do_fork_process(struct lsh_user *u,
       if (log)
 	  /* FIXME: It should be safe to perform a blocking reverse dns lookup here,
 	   * as we have forked. */
+#if HAVE_UT_NAME
+	  logwtmp(log->ut_line, log->ut_name, log->ut_host);
+#elif HAVE_UT_USER
 	  logwtmp(log->ut_line, log->ut_user, log->ut_host);
+#endif
+
 #endif /* WITH_UTMP && HAVE_LOGWTMP */
       
       if (getuid() != user->super.uid)
