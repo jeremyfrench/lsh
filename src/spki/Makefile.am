@@ -1,7 +1,7 @@
 SUBDIRS = . tools testsuite
 
 # FIXME: Create a link to nettle directory instead?
-AM_CPPFLAGS = -I$(srcdir)/..
+AM_CPPFLAGS = -I$(srcdir)/.. -I../nettle
 
 noinst_LIBRARIES = libspki.a
 # libspkiincludedir = $(includedir)/nettle
