@@ -1,3 +1,8 @@
+2002-04-04  Pontus Sköld  <pont@soua.net>
+
+	* src/lsh.c (do_lsh_lookup): Cosmetic changes of unauthenticated
+	key fingerprint text.
+
 2002-04-03  Pontus Sköld  <pont@soua.net>
 
 	* src/format.c (lsh_string_bubblebabble_c): New function to define
