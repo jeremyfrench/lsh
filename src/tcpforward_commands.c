@@ -75,8 +75,9 @@ static struct catch_report_collect catch_channel_open;
 
 #include "tcpforward_commands.c.x"
 
-static struct report_exception_info open_tcpip_report =
-STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_OPEN, "Failed to open tcpip channel");
+static const struct report_exception_info open_tcpip_report =
+STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_OPEN,
+			     "Failed to open tcpip channel");
 
 static struct catch_report_collect catch_channel_open
 = STATIC_CATCH_REPORT(&open_tcpip_report);
