@@ -33,6 +33,7 @@ dist_headers = \
     lookup_verifier.h \
     lsh.h \
     lsh_argp.h \
+    lsh_string.h \
     parse.h \
     parse_config.h \
     parse_macros.h \
