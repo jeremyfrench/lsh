@@ -23,6 +23,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#warning read_data obsolete. See channel.c: do_read_channel()
+
 #ifndef LSH_READ_DATA_H_INCLUDED
 #define LSH_READ_DATA_H_INCLUDED
 
