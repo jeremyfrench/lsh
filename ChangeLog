@@ -1,3 +1,19 @@
+2001-08-12  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/client.c (do_exit): New callback function.
+	(make_client_session): Bind the sequence <escape> . to exit. 
+	(client_options): New action option -B, --background.
+	(background_process): New command.
+	(client_argp_parser): Implement -B.
+
+	* src/lshg.c (main_argp_parser): Check that make_gateway_address
+	doesn't return NULL. XXX: Fix in 1.2 branch.
+	(options2info): Use self->gateway. XXX: Fix in 1.2 branch.
+
+2001-07-30  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/export-1-test: Fixed invocation of compare_output. 
+
 2001-07-06  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io_commands.c (io_write_file_command): Bugfix.
