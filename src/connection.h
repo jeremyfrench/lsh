@@ -46,10 +46,12 @@ struct ssh_connection
 
   struct lsh_string *session_id;
 
-  /* Reading */
-  struct mac_instance *mac;
-  struct crypto_instance *crypto;
+  /* Recieveing */
+  UINT32 rec_max_packet;
+  struct mac_instance *rec_mac;
+  struct crypto_instance *rec_crypto;
 
+  /* Sending */
   struct abstract_write *raw;   /* Socket connected to the other end */
 
   struct abstract_write *write; /* Where to send packets through the
@@ -63,8 +65,6 @@ struct ssh_connection
   struct packet_handler *unimplemented;
   struct packet_handler *fail;
   
-  UINT32 max_packet;
-
   /* Key exchange */
   /* int kex_state; */
   
@@ -74,9 +74,10 @@ struct ssh_connection
   struct newkeys_info *newkeys; /* Negotiated algorithms */ 
   
   int ignore_one_packet;
-  
+#if 0  
   int provides_privacy;
   int provides_integrity;
+#endif
 };
 
 struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler);

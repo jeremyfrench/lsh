@@ -52,7 +52,10 @@ static void do_handle_dh_reply(struct packet_handler *c,
 
   /* Record session id */
   if (!connection->session_id)
-    connection->session_id = closure->dh.exchange_hash;
+    {
+      connection->session_id = closure->dh.exchange_hash;
+      closure->dh.exchange_hash = NULL; /* For gc */
+    }
   
   /* A hash instance initialized with the key, to be used for key generation */
   
@@ -61,6 +64,7 @@ static void do_handle_dh_reply(struct packet_handler *c,
   HASH_UPDATE(hash, s->length, s->data);
   lsh_string_free(s);
 
+  /* FIXME: Must use some object which knows what algorithms to use */
   res = prepare_keys(connection, hash);
   lsh_free(hash);
 
@@ -101,7 +105,8 @@ int prepare_keys_client(struct hash_instance *secret,
   /* FIXME: No IV:s */
 
   struct crypto_instance *crypt_client_to_server
-    = kex_make_encrypt(secret, KEX_ENCRYPTION_CLIENT_TO_SERVER, connection);
+    = kex_make_encrypt(secret, /* FIXME: algorithm */,
+		       KEX_ENCRYPTION_CLIENT_TO_SERVER, connection);
   struct crypto_instance *crypt_server_to_client
     = kex_make_decrypt(secret, KEX_ENCRYPTION_SERVER_TO_CLIENT, connection);
   
@@ -110,5 +115,7 @@ int prepare_keys_client(struct hash_instance *secret,
   struct mac_instance *mac_server_to_client
     = kex_make_mac(secret, KEX_MAC_SERVER_TO_CLIENT, connection);
 
+  
+  
   
   
