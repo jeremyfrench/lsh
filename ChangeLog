@@ -1,3 +1,20 @@
+2002-05-06  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/gateway_channel.c (do_gateway_channel_open): Undid previous
+	change. Let channel.c:check_rec_max_packet adjust the
+	rec_max_packet size if needed, when it gets to the channel.
+	(do_gateway_channel_open_continuation): Likewise.
+
+	* src/channel.c (check_rec_max_packet): New function, that adjusts
+	our advertised rec_window_size so that we won't exceed the
+	connection's packet size limit.
+	(format_open_confirmation): Call check_rec_max_packet.
+	(format_channel_open_s): Likewise.
+	(format_channel_open): Likewise.
+
+	* src/read_data.c (do_read_data_query): Undid previous change. Now
+	look at only send_window_size and send_max_packet.
+
 2002-05-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/argp/acconfig.h: Deleted file.
