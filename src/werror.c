@@ -131,6 +131,7 @@ static int error_fd = STDERR_FILENO;
 #define BUF_SIZE 500
 static uint8_t error_buffer[BUF_SIZE];
 static uint32_t error_pos = 0;
+static int error_raw = 0;
 
 static const struct exception *
 (*error_write)(int fd, uint32_t length, const uint8_t *data) = write_raw;
@@ -186,6 +187,18 @@ set_error_nonblocking(int fd)
     error_write = write_raw_with_poll;
 }
 
+void
+set_error_raw(int raw)
+{
+  /* If the tty is set to raw mode, and we use the same tty for error
+   * messages, we need to send some extra \r characters. */
+     
+  if (raw && (error_fd == STDERR_FILENO) && isatty(STDERR_FILENO))
+    error_raw = 1;
+  else
+    error_raw = 0;
+}
+    
 int
 dup_error_stream(void)
 {
@@ -236,6 +249,10 @@ werror_flush(void)
 static void
 werror_putc(uint8_t c)
 {
+  if (error_raw && c == '\n')
+    /* We need a carriage return first. */
+    werror_putc('\r');
+  
   if (error_pos == BUF_SIZE)
     werror_flush();
 
@@ -243,7 +260,7 @@ werror_putc(uint8_t c)
 }
 
 static void
-werror_write(uint32_t length, const uint8_t *msg)
+werror_write_raw(uint32_t length, const uint8_t *msg)
 {
   if (error_pos + length <= BUF_SIZE)
     {
@@ -255,6 +272,25 @@ werror_write(uint32_t length, const uint8_t *msg)
       werror_flush();
       WERROR(length, msg);
     }
+}
+
+static void
+werror_write(uint32_t length, const uint8_t *msg)
+{
+  if (error_raw)
+    {
+      const uint8_t *eol;
+      while ((eol = memchr(msg, '\n', length)))
+	{
+	  werror_write_raw(eol - msg, msg);
+	  werror_putc('\n');
+
+	  eol++;
+	  length -= (eol - msg);
+	  msg = eol;
+	}
+    }
+  werror_write_raw(length, msg);
 }
 
 static void

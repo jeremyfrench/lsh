@@ -40,6 +40,7 @@ extern const struct argp werror_argp;
 void set_error_stream(int fd);
 void set_error_nonblocking(int fd);
 void set_error_ignore(void);
+void set_error_raw(int raw);
 
 /* Tries to dup any error fd to something higher than STDERR_FILENO.
  * Used to be able to print any error messages while forking a child
