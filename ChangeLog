@@ -1,3 +1,7 @@
+2000-10-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.in: Check for endianness (needed by memcmp.c).
+
 2000-10-18  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/abstract_crypto.h, src/dsa.c, src/dsa.h, src/rsa.c: Cleanup. 
