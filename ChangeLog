@@ -1,3 +1,38 @@
+1999-11-25  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/spki.h (spki_context): Added verifier argument to
+	the lookup-method. 
+
+	* src/spki.c (make_ssh_hostkey_tag): New function.
+	(dsa_to_spki_public_key): New function.
+	(do_spki_hash): Simplified.
+	(parse_dsa_private_key): #ifdef'd out.
+	(parse_private_key): Use an algorithm alist.
+	(read_spki_key_file): Take algorithm alist as argument.
+	(make_spki_subject): New function.
+	(subject_match_hash): New function.
+	(spki_state): New class.
+	(spki_subject_by_hash): New function.
+	(spki_make_verifier): New function.
+	(do_spki_lookup): New function.
+	(do_spki_authorize): New function.
+	(make_spki_context): New function.
+
+	* src/lsh.h: Forward declare various structs.
+
+	* src/Makefile.am.in (atoms_gperf.c): Changed the flags to gperf,
+	to avoid collision between "name" and "none". Allso added -C, to
+	make the tables const.
+
+1999-11-24  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/sexp.c (sexp_assq): Check length.
+
+	* src/spki.h (make_spki_subject, make_spki_context): New
+	functions. 	
+
+	* src/atoms.in: Added signature and name.
+
 1999-11-22  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/spki.h (spki_subject): New class. 
