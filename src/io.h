@@ -234,7 +234,7 @@ io_signal_handler(int signum,
 		  struct lsh_callback *action);
 
 struct resource *
-io_callout(struct lsh_callback *action);
+io_callout(struct lsh_callback *action, unsigned seconds);
 
 int blocking_read(int fd, struct read_handler *r);
 

@@ -280,7 +280,7 @@ lsh_oop_register_callout(struct lsh_callout *callout)
 {
   assert(source);
   if (callout->super.alive)
-    source->on_time(source, OOP_TIME_NOW, lsh_oop_time_callback, callout);
+    source->on_time(source, callout->when, lsh_oop_time_callback, callout);
 }
 
 static void
@@ -288,7 +288,7 @@ lsh_oop_cancel_callout(struct lsh_callout *callout)
 {
   assert(source);
   if (callout->super.alive)
-    source->cancel_time(source, OOP_TIME_NOW, lsh_oop_time_callback, callout);
+    source->cancel_time(source, callout->when, lsh_oop_time_callback, callout);
 }
 
 
@@ -308,6 +308,7 @@ lsh_oop_cancel_callout(struct lsh_callout *callout)
      (name lsh_callout)
      (super resource)
      (vars
+       (when . "struct timeval")
        (action object lsh_callback)))
 */
 
@@ -353,15 +354,25 @@ do_kill_callout(struct resource *s)
     }
 }
 
-/* Delays not implemented. */
 struct resource *
-io_callout(struct lsh_callback *action)
+io_callout(struct lsh_callback *action, unsigned seconds)
 {
   NEW(lsh_callout, self);
   init_resource(&self->super, do_kill_callout);
 
+  if (seconds)
+    {
+      /* NOTE: Using absolute times, like oop does, is a little
+       * dangerous if the system time is changed abruptly. */
+      if (gettimeofday(&self->when, NULL) < 0)
+	fatal("io_callout: gettimeofday failed!\n");
+      self->when.tv_sec += seconds;
+    }
+  else
+    self->when = OOP_TIME_NOW;
+  
   self->action = action;
-
+      
   lsh_oop_register_callout(self);
   
   gc_global(&self->super);
@@ -398,7 +409,7 @@ do_buffered_read(struct io_callback *s,
       case EPIPE:
 	/* Getting EPIPE from read seems strange, but appearantly
 	 * it happens sometimes. */
-	werror("Unexpected EPIPE.\n");
+	werror("Unexpected EPIPE from read.\n");
       default:
 	EXCEPTION_RAISE(fd->e, 
 			make_io_exception(EXC_IO_READ, fd,
