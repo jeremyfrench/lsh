@@ -7,6 +7,7 @@
 
 #include "buffer.h"
 
+#include "xmalloc.h"
 #include "sftp.h"
 
 #include <assert.h>
@@ -107,9 +108,7 @@ sftp_get_string(struct sftp_input *i, UINT32 *length)
   if (!(sftp_get_uint32(i, length) && sftp_check_input(i, *length)))
     return NULL;
 
-  data = malloc(*length + 1);
-  if (!data)
-    return NULL;
+  data = xmalloc(*length + 1);
 
   if (!sftp_get_data(i, *length, data))
     {
@@ -156,13 +155,12 @@ sftp_get_eod(struct sftp_input *i)
 struct sftp_input *
 sftp_make_input(FILE *f)
 {
-  struct sftp_input *i = malloc(sizeof(struct sftp_input));
-  if (i)
-    {
-      i->f = f;
-      i->left = 0;
-      i->used_strings = 0;
-    }
+  struct sftp_input *i = xmalloc(sizeof(struct sftp_input));
+
+  i->f = f;
+  i->left = 0;
+  i->used_strings = 0;
+
   return i;
 }
 
@@ -212,13 +210,9 @@ sftp_check_output(struct sftp_output *o, UINT32 length)
   UINT32 needed = o->i + length;
   if (!o->data || (needed > o->size))
   {
-    UINT8 *p;
     UINT32 size = 2 * needed + 40;
-    p = realloc(o->data, size);
-    if (!p)
-      FATAL("Virtual memory exhausted");
+    o->data = xrealloc(o->data, size);
 
-    o->data = p;
     o->size = size;
   }
 }
@@ -433,14 +427,13 @@ sftp_put_uint64(struct sftp_output *o, off_t value)
 struct sftp_output *
 sftp_make_output(FILE *f)
 {
-  struct sftp_output *o = malloc(sizeof(struct sftp_output));
-  if (o)
-    {
-      o->f = f;
-      o->data = NULL;
-      o->size = 0;
-      o->i = 0;
-    }
+  struct sftp_output *o = xmalloc(sizeof(struct sftp_output));
+
+  o->f = f;
+  o->data = NULL;
+  o->size = 0;
+  o->i = 0;
+
   return o;
 }
 
