@@ -56,7 +56,7 @@ int trace_flag = 0;
 int debug_flag = 0;
 int quiet_flag = 0;
 int verbose_flag = 0;
-int syslog_flag = 0;
+int logfile_flag = 0;
 
 static const char *program_name = NULL;
 
@@ -111,7 +111,10 @@ werror_argp_parser(int key, char *arg,
 	if (fd < 0)
 	  argp_error(state, "Failed to open log file `%s'.", arg);
 	else
-	  set_error_stream(fd);
+          {
+            set_error_stream(fd);
+            logfile_flag = 1;
+          }
       }
     }
   return 0;
