@@ -6,15 +6,16 @@
 ((lower . "abcdefghijklmnopqrstuvwxyz")
  (upper . "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
  (alpha . (lower upper))
- (digits . "0123456789")
- (hex . (digits "abcdefABCDEF"))
+ (digit . "0123456789")
+ (hex . (digit "abcdefABCDEF"))
  ;; base 64 digits, including the '=' pad character
- (base64 . (alpha digits "+/="))
+ (base64 . (alpha digit "+/="))
  (control . ( (0 . #x1f) (#x80 . #x9f) #x7f))
  ;; SPC, TAB, LF, CR
  (space . (#x20 #x9 #xa #xd))
- ;; \b \t \n \v \f \r
- (escapable . (#x8 0x9 0xa 0xb 0xc 0xd))
+ ;; Characters that can (and must!) be escaped in quoted strings:
+ ;; \b \t \n \v \f \r \" \\
+ (escapable . (#x8 #x9 #xa #xb #xc #xd #x22 #x5c))
  (punctuation . "-./_:*+=")
  ;; Non-ascii characters defined by most iso-8859-1 character sets
  (international . (#xa0 . #xff)))
