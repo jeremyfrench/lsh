@@ -1,5 +1,7 @@
 Fri Jan  1 04:20:10 1999    <nisse@puck>
 
+	* lsh_types.h (LSH_PARSED_OBJECT): New status code.
+
 	* io.c: Include lsh headers *before* system headers.
 	Use jpoll.h, not poll.h.
 

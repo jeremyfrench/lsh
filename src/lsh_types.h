@@ -208,6 +208,9 @@ struct callback
 /* Syntax error (used in the sexp parser) */
 #define LSH_SYNTAX 0x400
 
+/* Used to indicate that an sexp have been parsed successfully */
+#define LSH_PARSED_OBJECT 0x800
+
 /* Non-zero if no messages can be sent over the connection. Used when
  * processing error codes from in the middle of the processing a
  * messages. If this is true, processing should stop, and most likely
