@@ -216,8 +216,8 @@ do_format_sexp_nil(struct sexp *ignored UNUSED, int style UNUSED,
 
 /* For assoc */
 struct sexp_iterator *
-sexp_check_type(struct sexp *e, UINT32 length,
-		const UINT8 *name)
+sexp_check_type_l(struct sexp *e, UINT32 length,
+		  const UINT8 *name)
 {
   if (!sexp_atomp(e))
     {
@@ -232,6 +232,26 @@ sexp_check_type(struct sexp *e, UINT32 length,
 	KILL(i);
     }  
   return NULL;
+}
+
+/* Returns 1 if the type matches.
+ *
+ * FIXME: Do we relly need this interface, that allows res == NULL? */
+int
+sexp_check_type(struct sexp *e, int type, struct sexp_iterator **res)
+{
+  struct sexp_iterator *i =
+    sexp_check_type_l(e, get_atom_length(type), get_atom_name(type));
+
+  if (i)
+    {
+      if (res)
+	*res = i;
+      else
+	KILL(i);
+      return 1;
+    }
+  return 0;
 }
 
 /* Forward declaration */
@@ -277,7 +297,7 @@ do_cons_assoc(struct sexp_iterator *s, UINT32 length,
 
   for (p = self->p; p != &sexp_nil; p = p->cdr)
     {
-      struct sexp_iterator *inner = sexp_check_type(p->car, length, name);
+      struct sexp_iterator *inner = sexp_check_type_l(p->car, length, name);
       if (inner)
 	{
 	  if (i)
@@ -457,7 +477,7 @@ do_vector_assoc(struct sexp_iterator *s, UINT32 length,
   for (j = self->i; j < LIST_LENGTH(self->l); j++)
     {
       CAST_SUBTYPE(sexp, e, LIST(self->l)[j]);
-      struct sexp_iterator *inner = sexp_check_type(e, length, name);
+      struct sexp_iterator *inner = sexp_check_type_l(e, length, name);
       
       if (inner)
 	{
@@ -767,6 +787,20 @@ sexp2atom(struct sexp *e)
 }
 
 int
+sexp2bignum_u(struct sexp *e, mpz_t n)
+{
+  struct lsh_string *s = sexp2string(e);
+
+  if (s)
+    {
+      bignum_parse_u(n, s->length, s->data);
+      return 1;
+    }
+  else
+    return 0;
+}
+
+int
 sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name)
 {
   struct lsh_string *c = sexp2string(e);
@@ -774,9 +808,19 @@ sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name)
   return c && lsh_string_eq_l(c, length, name);
 }
 
+/* NOTE: sexp_atom_eq() compares an sexp to a given atom, while
+ *       sexp_atoms_eq() compares two atomic sexps.
+ *
+ * This naming seems a little confusing. */
+int
+sexp_atom_eq(struct sexp *e, int atom)
+{
+  return sexp_eq(e, get_atom_length(atom), get_atom_name(atom));
+}
+
 /* Assumes that both expressions are atoms */
 int
-sexp_atom_eq(struct sexp *a, struct sexp *b)
+sexp_atoms_eq(struct sexp *a, struct sexp *b)
 {
   struct lsh_string *ac = sexp_contents(a);
   struct lsh_string *ad = sexp_display(a);
@@ -803,8 +847,8 @@ sexp_eqz(const struct sexp *e, const char *s)
 }
 
 int
-sexp_check_type(struct sexp *e, const char *type,
-		    struct sexp_iterator **res)
+sexp_check_type_z(struct sexp *e, const char *type,
+		  struct sexp_iterator **res)
 {
   struct sexp_iterator *i;
   
@@ -835,7 +879,7 @@ sexp_assz(struct sexp_iterator *i, const char *name)
   struct sexp_iterator *inner;
   struct sexp *e;
   
-  if (!l || !(sexp_check_type(l, name, &inner)))
+  if (!l || !(sexp_check_type_z(l, name, &inner)))
     return 0;
 
   e = SEXP_GET(inner);
@@ -874,13 +918,7 @@ sexp_assq(struct sexp_iterator *i, int atom)
 int
 sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n)
 {
-  struct lsh_string *s = sexp2string(sexp_assq(i, atom));
-
-  if (!s)
-    return 0;
-  
-  bignum_parse_u(n, s->length, s->data);
-  return 1;
+  return sexp2bignum_u(sexp_assq(i, atom), n);
 }
 
 /* Command line options */

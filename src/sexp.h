@@ -155,6 +155,9 @@ struct lsh_string *sexp2string(struct sexp *e);
  * corresponding to an atom. Or zero if that is not the case. */
 int sexp2atom(struct sexp *e);
 
+int
+sexp2bignum_u(struct sexp *e, mpz_t n);
+
 /* int sexp_null_cdr(struct sexp *e); */
 
 struct lsh_string *sexp_contents(const struct sexp *e);
@@ -165,13 +168,25 @@ int sexp_bignum_s(const struct sexp *e, mpz_t n);
 
 /* Utility functions for parsing spki objects. */
 
-int sexp_atom_eq(struct sexp *a, struct sexp *b);
-int sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name);
-struct sexp *sexp_assq(struct sexp_iterator *i, int atom);
+int
+sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name);
+
+int
+sexp_atom_eq(struct sexp *e, int atom);
+
+int
+sexp_atoms_eq(struct sexp *a, struct sexp *b);
+
+struct sexp *
+sexp_assq(struct sexp_iterator *i, int atom);
 
 struct sexp_iterator *
-sexp_check_type(struct sexp *e, UINT32 length,
-		const UINT8 *name);
+sexp_check_type_l(struct sexp *e, UINT32 length,
+		  const UINT8 *name);
+
+int
+sexp_check_type(struct sexp *e, int type, struct sexp_iterator **res);
+
 
 int sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n);
 

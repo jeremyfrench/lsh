@@ -143,7 +143,10 @@ int spki_get_type(struct sexp *e, struct sexp_iterator **res)
   return type;
 }
 
-/* Returns 1 if the type matches. */
+#if 0
+/* Returns 1 if the type matches.
+ *
+ * FIXME: Do we relly need this interface, that allows res == NULL? */
 int
 spki_check_type(struct sexp *e, int type, struct sexp_iterator **res)
 {
@@ -160,7 +163,7 @@ spki_check_type(struct sexp *e, int type, struct sexp_iterator **res)
     }
   return 0;
 }
-
+#endif
 
 COMMAND_SIMPLE(spki_signer2public)
 {
@@ -239,7 +242,7 @@ do_spki_sexp2signer(struct command *s,
   
   struct sexp_iterator *i;
   
-  if (spki_check_type(key, ATOM_PRIVATE_KEY, &i)) 
+  if (sexp_check_type(key, ATOM_PRIVATE_KEY, &i)) 
     {
       struct sexp *expr = SEXP_GET(i);
       struct sexp_iterator *inner;
@@ -460,14 +463,14 @@ make_spki_5_tuple(struct spki_subject *issuer,
 
 static int
 do_spki_tag_atom_match(struct spki_tag *s,
-			 struct sexp *e)
+		       struct sexp *e)
 {
   CAST(spki_tag_atom, self, s);
 
   assert(sexp_atomp(self->resource));
   
   return sexp_atomp(e)
-    && sexp_atom_eq(self->resource, e);
+    && sexp_atoms_eq(self->resource, e);
 }
 
 static struct spki_tag *
@@ -684,7 +687,7 @@ spki_sexp_to_tag(struct sexp *e,
 	  return NULL;
 	}
       
-      if (spki_check_type(e, ATOM_STAR, &i))
+      if (sexp_check_type(e, ATOM_STAR, &i))
 	{
 	  struct sexp *magic = SEXP_GET(i);
 	  
@@ -757,7 +760,7 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
   if (!e)
     return NULL;
 
-  if (spki_check_type(e, ATOM_PROPAGATE, &j))
+  if (sexp_check_type(e, ATOM_PROPAGATE, &j))
     {
       if (SEXP_GET(j))
 	{
@@ -769,7 +772,7 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
       e = SEXP_GET(i);
     }
 
-  if (spki_check_type(e, ATOM_TAG, &j))
+  if (sexp_check_type(e, ATOM_TAG, &j))
     {
       struct sexp *tag = SEXP_GET(j);
       SEXP_NEXT(j);
@@ -816,14 +819,14 @@ spki_add_acl(struct spki_context *ctx,
 #if 0
   struct object_queue q;
 #endif
-  if (!spki_check_type(e, ATOM_ACL, &i))
+  if (!sexp_check_type(e, ATOM_ACL, &i))
     {
       werror("spki_read_acls: Invalid acl\n");
       return 0;
     }
 
   /* FIXME: Accept at least (version "0") */
-  if (spki_check_type(SEXP_GET(i), ATOM_VERSION, NULL))
+  if (sexp_check_type(SEXP_GET(i), ATOM_VERSION, NULL))
     {
       werror("spki_read_acls: Unsupported acl version\n");
       return 0;
@@ -835,7 +838,7 @@ spki_add_acl(struct spki_context *ctx,
   for (; (e = SEXP_GET(i)); SEXP_NEXT(i))
     {
       struct sexp_iterator *j;
-      if (spki_check_type(e, ATOM_ENTRY, &j))
+      if (sexp_check_type(e, ATOM_ENTRY, &j))
 	{
 	  struct spki_5_tuple *acl = spki_acl_entry_to_5_tuple(ctx, j);
 	  if (acl)
