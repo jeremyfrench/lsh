@@ -220,3 +220,44 @@ make_collect_state_3(struct collect_info_3 *info,
   return &self->super.super.super;
 }
 
+/* GABA:
+   (class
+     (name parallell_progn)
+     (super command)
+     (vars
+       (body object object_list)))
+*/
+
+static int do_parallell_progn(struct command *s,
+			      struct lsh_object *x,
+			      struct command_continuation *c)
+{
+  CAST(parallell_progn, self, s);
+  unsigned i;
+  int res = 0;
+  
+  for (i=0; i < LIST_LENGTH(self->body) - 1; i++)
+    {
+      CAST_SUBTYPE(command, command, LIST(self->body)[i]);
+      res |= COMMAND_CALL(command, x, NULL);
+      if (LSH_CLOSEDP(res))
+	return res;
+    }
+  {
+    CAST_SUBTYPE(command, command, LIST(self->body)[i]);
+    
+    return res | COMMAND_CALL(command, x, c);
+  }
+}
+
+struct command *make_parallell_progn(struct object_list *body)
+{
+  assert(LIST_LENGTH(body));
+  {
+    NEW(parallell_progn, self);
+    self->body = body;
+    self->super.call = do_parallell_progn;
+
+    return &self->super;
+  }
+}
