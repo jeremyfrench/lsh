@@ -34,6 +34,11 @@
 #include "server_pty.h"
 #include "write_buffer.h"
 
+/* FIXME: Reorder definitions so that we don't need this forward
+ * declaration. */
+struct channel_open_handler;
+struct channel_open_info;
+
 #define GABA_DECLARE
 #include "channel.h.x"
 #undef GABA_DECLARE
@@ -53,7 +58,7 @@
 
 /* Means that we should send close when we have both sent and received EOF. */
 #define CHANNEL_CLOSE_AT_EOF 0x10
-
+  
 
 /* GABA:
    (class
@@ -99,6 +104,9 @@
   
        (request_types object alist)
 
+       ; FIXME: Add a fallback, to be used for unknown requests.
+       ; (request_fallback object ...)
+       
        (flags . int)
 
        ; Number of files connected to this channel. For instance,
@@ -171,6 +179,11 @@
        (global_requests object alist)
        ; Channel types that we can open
        (channel_types object alist)
+
+       ; FIXME: Add fallbacks, to be used for unknown requests
+       ; and channel types.
+       ; (global_fallback object ...)
+       (open_fallback object channel_open)
        
        ; Allocation of local channel numbers is managed using the same
        ; method as is traditionally used for allocation of unix file 
@@ -222,6 +235,21 @@
 
 /* SSH_MSG_CHANNEL_OPEN */
 
+struct channel_open_info
+{
+  UINT32 type_length;
+
+  /* NOTE: This is a pointer into the packet, so if it is needed later
+   * it must be copied. */
+  const UINT8 *type_string;
+  
+  int type;
+
+  UINT32 remote_channel_number;
+  UINT32 send_window_size;
+  UINT32 send_max_packet;
+};
+  
 /* Raised if opening of a channel fails. Used both on the client and
  * the server side.*/
 /* GABA:
@@ -242,18 +270,30 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
      (vars
        (handler method void
                 "struct ssh_connection *connection"
-		"UINT32 type"
-		"UINT32 send_window_size"
-		"UINT32 send_max_packet"
+		"struct channel_open_info *info"
+		;; "UINT32 type"
+		;; "UINT32 send_window_size"
+		;; "UINT32 send_max_packet"
                 "struct simple_buffer *data"
                 "struct command_continuation *c"
 		"struct exception_handler *e")))
 */
 
-#define CHANNEL_OPEN(o, c, t, w, m, d, r, e) \
-((o)->handler((o), (c), (t), (w), (m), (d), (r), (e)))
+#define CHANNEL_OPEN(o, c, i, d, r, e) \
+((o)->handler((o), (c), (i), (d), (r), (e)))
 
 /* SSH_MSG_CHANNEL_REQUEST */
+
+#if 0
+struct channel_request_info
+{
+  UINT32 type_length;
+  const UINT8 *type_string;
+  
+  int type;
+};
+#endif
+
 /* GABA:
    (class
      (name channel_request)
@@ -318,6 +358,18 @@ struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 void
 channel_start_receive(struct ssh_channel *channel,
 		      UINT32 initial_window_size);
+
+struct lsh_string *
+format_channel_open_s(UINT32 type_length, UINT8 *type,
+		      UINT32 local_channel_number,
+		      struct ssh_channel *channel,
+		      struct lsh_string *args);
+
+struct lsh_string *
+format_channel_open_a(int type,
+		      UINT32 local_channel_number,
+		      struct ssh_channel *channel,
+		      struct lsh_string *args);
 
 struct lsh_string *
 format_channel_open(int type, UINT32 local_channel_number,
