@@ -1,3 +1,12 @@
+2001-11-14  Niels Möller  <nisse@ehand.com>
+
+	* src/Makefile.am.in (bin_PROGRAMS): Added lsh-make-seed.
+
+	* src/lsh-make-seed.c: New program, for creating the initial seed
+	file. 
+
+	* src/testsuite/seed-test: New file, testing lsh-make-seed.
+
 2001-11-06  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* configure.in: Bumped version to 1.3.6.

@@ -1,10 +1,10 @@
 *-old
-*.d
-*.x
 *.bb
 *.bbg
+*.d
 *.da
 *.gcov
+*.x
 .deps
 .dist_classes
 .dist_headers
@@ -29,6 +29,7 @@ lsh-decode-key
 lsh-export-key
 lsh-keygen
 lsh-krb-checkpw
+lsh-make-seed
 lsh-writekey
 lsh_proxy
 lshd
