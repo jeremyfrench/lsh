@@ -63,7 +63,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
   if (!dh_process_server_msg(&closure->dh, packet))
     {
       disconnect_kex_failed(connection, "Bad dh-reply\r\n");
-      return LSH_FAILURE | LSH_CLOSE;
+      return LSH_FAIL | LSH_CLOSE;
     }
     
   v = LOOKUP_VERIFIER(closure->verifier, closure->dh.server_key);
@@ -72,7 +72,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
     /* FIXME: Use a more appropriate error code? */
     {
       disconnect_kex_failed(connection, "Bad server host key\r\n");
-      return LSH_FAILURE | LSH_CLOSE;
+      return LSH_FAIL | LSH_CLOSE;
     }
   
   if (!dh_verify_server_msg(&closure->dh, v))

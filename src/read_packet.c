@@ -194,7 +194,7 @@ static int do_read_packet(struct read_handler **h,
 	switch(n)
 	  {
 	  case 0:
-	    RETURN LSH_OK | LSH_GOON;
+	    return LSH_OK | LSH_GOON;
 	  case A_FAIL:
 	    /* Fall through */
 	  case A_EOF:
@@ -261,7 +261,7 @@ static int do_read_packet(struct read_handler **h,
 		      closure->computed_mac + closure->pos,
 		      n))
 	    /* FIXME: Free resources */
-	    return 0;
+	    return LSH_FAIL | LSH_DIE;
 
 	  closure->pos += n;
 

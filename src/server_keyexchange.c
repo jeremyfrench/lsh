@@ -64,7 +64,7 @@ static int do_handle_dh_init(struct packet_handler *c,
   if (!dh_process_client_msg(&closure->dh, packet))
     {
       disconnect_kex_failed(connection, "Bad dh-init\r\n");
-      return LSH_FAIL | LSSH_CLOSE;
+      return LSH_FAIL | LSH_CLOSE;
     }
   
   /* Send server's message, to complete key exchange */

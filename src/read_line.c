@@ -75,11 +75,18 @@ static int do_read_line(struct read_handler **h,
   MDEBUG(closure);
   
   n = A_READ(read, MAX_LINE - closure->pos, closure->buffer);
-  
-  if (n<0)
+
+  switch(n)
     {
-      return 0;
+    case 0:
+      return LSH_OK | LSH_GOON;
+    case A_FAIL:
+      /* Fall throw */
+    case A_EOF:
+      /* FIXME: Free associated resources! */
+      return LSH_FAIL | LSH_DIE;
     }
+
   closure->pos += n;
 
   /* Loop over all recieved lines */
@@ -112,37 +119,42 @@ static int do_read_line(struct read_handler **h,
       if (next)
 	{
 	  /* Read no more lines. Instead, pass remaining data to next,
-	   * and return a new read-handler. */
+	   * and install the new read-handler. */
 	  if (closure->pos)
 	    {
+	      int res;
+	      
 	      struct string_read read =
 	      { { STATIC_HEADER do_string_read },
 		closure,
 		0 };
 	      while(next && (read.index < closure->pos))
-		if (!READ_HANDLER(next, &read.super))
-		  return 0;
+		{
+		  res = READ_HANDLER(next, &read.super);
+		  if (LSH_PROBLEMP(res))
+		    return res;
+		}
 	    }
 	  /* No data left */
 	  lsh_free(closure);
 	  *h = next;
-	  return 1;
+	  return LSH_OK | LSH_GOON;
 	}
       else
 	if (!closure->handler)
 	  {
 	    /* Fail */
-	    return 0;
+	    return LSH_FAIL | LSH_DIE;
 	  }
     }     
   
   /* Partial line */
   if (closure->pos == MAX_LINE)
     {
-      werror("Too long line from server\n");
-      return 0;
+      werror("Recieved too long a line\n");
+      return LSH_FAIL | LSH_DIE;
     }
-  return 1;
+  return LSH_OK | LSH_GOON;
 }
 
 struct read_handler *make_read_line(struct line_handler *handler)

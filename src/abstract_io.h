@@ -55,6 +55,8 @@ struct abstract_read
 #define LSH_OK 0
 #define LSH_FAIL 1
 
+#define LSH_FAILUREP(x) ((x) & 1)
+
 /* Actions */
 #define LSH_GOON 0
 #define LSH_CLOSE 2
