@@ -876,18 +876,10 @@ do_userauth_pk_ok(struct packet_handler *s,
 
 	  verbose("Sending `publickey' signature.\n");
   
-#if DATAFELLOWS_WORKAROUNDS
-	  if (connection->peer_flags & PEER_USERAUTH_REQUEST_KLUDGE)
-	    request = format_userauth_publickey(self->state->userauth->username,
-						ATOM_SSH_USERAUTH,
-						key->type,
-						key->public);
-	  else
-#endif /* DATAFELLOWS_WORKAROUNDS */ 
-	    request = format_userauth_publickey(self->state->userauth->username,
-						self->state->userauth->service_name,
-						key->type,
-						key->public);
+	  request = format_userauth_publickey(self->state->userauth->username,
+					      self->state->userauth->service_name,
+					      key->type,
+					      key->public);
 
 	  signed_data = ssh_format("%S%lS", connection->session_id, request);
 	  request = ssh_format("%flS%fS", 
@@ -944,8 +936,6 @@ do_publickey_login(struct client_userauth_method *s,
 
 	verbose("Requesting authentication using the `publickey' method.\n");
 	
-	/* NOTE: The PEER_USERAUTH_REQUEST_KLUDGE only applies to the
-	 * signed data. */
 	connection_send(connection, 
 			format_userauth_publickey_query
 			  (userauth->username,
