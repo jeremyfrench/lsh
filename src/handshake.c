@@ -311,16 +311,6 @@ make_handshake_info(enum connection_flag flags,
  * private keys (for the server) or a hostkey database (for the
  * client). */
 
-/* GABA:
-   (class
-     (name handshake_command_2)
-     (super command)
-     (vars
-       (info object handshake_info)
-       (init object make_kexinit)
-       (extra object lsh_object)))
-*/
-
 /* Buffer size when reading from the socket */
 #define BUF_SIZE (1<<14)
 
@@ -408,10 +398,9 @@ DEFINE_COMMAND4(handshake_command)
 			 "Handshake timed out");
   
   connection->versions[mode] = version;
-  connection->kexinits[mode] = MAKE_KEXINIT(init); 
+  connection->kexinit = init; 
   connection->dispatch[SSH_MSG_KEXINIT]
-    = make_kexinit_handler(init,
-			   extra, info->algorithms);
+    = make_kexinit_handler(extra, info->algorithms);
 
 #if WITH_SSH1_FALLBACK
   /* In this mode the server SHOULD NOT send carriage return character (ascii
