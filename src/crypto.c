@@ -38,6 +38,8 @@
 
 #include "nettle/cbc.h"
 
+#include "nettle/hmac.h"
+
 #include <assert.h>
 #include <string.h>
 
@@ -400,3 +402,130 @@ struct crypto_algorithm crypto_serpent256_cbc_algorithm =
 { STATIC_HEADER,
   SERPENT_BLOCK_SIZE, SERPENT_KEY_SIZE, SERPENT_BLOCK_SIZE,
   make_serpent_cbc_instance};
+
+
+/* HMAC */
+/* GABA:
+   (class
+     (name hmac_sha1_instance)
+     (super mac_instance)
+     (vars
+       (ctx . "struct hmac_sha1_ctx")))
+*/
+
+static void
+do_hmac_sha1_update(struct mac_instance *s,
+		    UINT32 length, const UINT8 *data)
+{
+  CAST(hmac_sha1_instance, self, s);
+
+  hmac_sha1_update(&self->ctx, length, data);
+}
+
+static void
+do_hmac_sha1_digest(struct mac_instance *s,
+		    UINT8 *data)
+{
+  CAST(hmac_sha1_instance, self, s);
+
+  hmac_sha1_digest(&self->ctx, SHA1_DIGEST_SIZE, data);
+}
+
+#if 0
+/* Not actually used anywhere */
+static struct mac_instance *
+do_hmac_sha1_copy(struct mac_instance *s)
+{
+  CAST(hmac_sha1_instance, self, s);
+  CLONED(hmac_sha1_instance, new, self);
+
+  return &new->super;
+}
+#endif
+
+static struct mac_instance *
+make_hmac_sha1_instance(struct mac_algorithm *self,
+			UINT32 key_length,
+			const UINT8 *key)
+{
+  NEW(hmac_sha1_instance, hash);
+
+  hmac_sha1_set_key(&hash->ctx, key_length, key);
+
+  hash->super.hash_size = self->hash_size;
+  hash->super.update = do_hmac_sha1_update;
+  hash->super.digest = do_hmac_sha1_digest;
+  hash->super.copy = NULL;
+
+  return &hash->super;
+}
+
+/* RFC-2104 recommends using key_size = hash_size */
+struct mac_algorithm
+crypto_hmac_sha1_algorithm =
+  { STATIC_HEADER, SHA1_DIGEST_SIZE, SHA1_DIGEST_SIZE,
+    make_hmac_sha1_instance };
+
+/* GABA:
+   (class
+     (name hmac_md5_instance)
+     (super mac_instance)
+     (vars
+       (ctx . "struct hmac_md5_ctx")))
+*/
+
+static void
+do_hmac_md5_update(struct mac_instance *s,
+		    UINT32 length, const UINT8 *data)
+{
+  CAST(hmac_md5_instance, self, s);
+
+  hmac_md5_update(&self->ctx, length, data);
+}
+
+static void
+do_hmac_md5_digest(struct mac_instance *s,
+		    UINT8 *data)
+{
+  CAST(hmac_md5_instance, self, s);
+
+  hmac_md5_digest(&self->ctx, MD5_DIGEST_SIZE, data);
+}
+
+static struct mac_instance *
+make_hmac_md5_instance(struct mac_algorithm *self,
+		       UINT32 key_length,
+		       const UINT8 *key)
+{
+  NEW(hmac_md5_instance, hash);
+
+  hmac_md5_set_key(&hash->ctx, key_length, key);
+
+  hash->super.hash_size = self->hash_size;
+  hash->super.update = do_hmac_md5_update;
+  hash->super.digest = do_hmac_md5_digest;
+  hash->super.copy = NULL;
+
+  return &hash->super;
+}
+
+struct mac_algorithm
+crypto_hmac_md5_algorithm =
+  { STATIC_HEADER, MD5_DIGEST_SIZE, MD5_DIGEST_SIZE,
+    make_hmac_md5_instance };
+
+/* FIXME: This is a ugly.
+ *
+ * The right way to do things is probably to add a pointer to a struct
+ * nettle_hash in our hash_algorithm class, and make hash_instance and
+ * mac_instance variable size objects where the context comes last. */
+struct mac_algorithm *
+make_hmac_algorithm(struct hash_algorithm *h)
+{
+  if (h == &sha1_algorithm)
+    return &crypto_hmac_sha1_algorithm;
+  else if (h == &md5_algorithm)
+    return &crypto_hmac_md5_algorithm;
+
+  fatal("make_hmac_algorithm: Unknown hash algorithm\n");
+}
