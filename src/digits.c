@@ -24,6 +24,7 @@
 #include "digits.h"
 
 #include "digit_table.h"
+#include "format.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -128,6 +129,6 @@ decode_base64(UINT32 length, const UINT8 *in)
 	  out->data[j++] = digit;
 	}
     }
-  out->length = j;
+  lsh_string_trunc(out, j);
   return out;
 }
