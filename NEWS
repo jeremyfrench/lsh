@@ -1,3 +1,9 @@
+NEWS for the 1999-01-14 snapshot
+
+	Fixed off-by-one bug in dss_keygen.
+
+	Some portability fixes (sys/poll.h, crypt.h, unistd.h).
+
 NEWS for the 1999-01-08 snapshot:
 
 	New program lsh_writekey.
