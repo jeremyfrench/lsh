@@ -1951,19 +1951,18 @@ make_channel_read_stderr(struct ssh_channel *channel)
 /* GABA:
    (class
      (name channel_close_callback)
-     (super close_callback)
+     (super lsh_callback)
      (vars
        (channel object ssh_channel))) */
 
 /* Close callback for files we are reading from. */
 
 static void
-channel_read_close_callback(struct close_callback *c, int reason)
+channel_read_close_callback(struct lsh_callback *c)
 {
   CAST(channel_close_callback, closure, c);
 
-  debug("channel_read_close_callback: File closed for reason %i.\n",
-	reason);
+  trace("channel_read_close_callback: File closed.\n");
 
   assert(closure->channel->sources);
   
@@ -1974,7 +1973,7 @@ channel_read_close_callback(struct close_callback *c, int reason)
     }
 }
 
-struct close_callback *
+struct lsh_callback *
 make_channel_read_close_callback(struct ssh_channel *channel)
 {
   NEW(channel_close_callback, closure);

@@ -339,7 +339,7 @@ struct lsh_string *format_channel_eof(struct ssh_channel *channel);
 void channel_close(struct ssh_channel *channel);
 void channel_eof(struct ssh_channel *channel);
 
-struct close_callback *
+struct lsh_callback *
 make_channel_read_close_callback(struct ssh_channel *channel);
 
 struct exception_handler *
