@@ -23,19 +23,28 @@ export LSH_YARROW_SEED_FILE SEXP_CONV
 PORT=11147
 ATEXIT='set +e'
 
-# Starting with EXIT_FAILURE and changing it to EXIT_SUCCESS on
-# success is right, as long as each test script only performs one
-# test. If there are several tests, it would be better to set it to
-# EXIT_SUCCESS and change it as soon as one test fails.
+# We start with EXIT_FAILURE, and changing it to EXIT_SUCCESS only if
+# test_success is invoked.
 
 test_result=1
 
 test_fail () {
     test_result=1
+    exit
 }
 
 test_success () {
     test_result=0
+    exit
+}
+
+test_skip () {
+    test_result=77
+    exit
+}
+
+check_x11_support () {
+    ../lsh --help | grep 'x11-forward' >/dev/null || test_skip
 }
 
 trap 'eval "$ATEXIT ; exit \$test_result"' 0
