@@ -106,6 +106,9 @@ struct lsh_string
 
 /* abstract_crypto.h */
 
+/* client_x11.c */
+struct client_x11_display;
+
 /* connection.h */
 struct ssh_connection;
 
