@@ -198,20 +198,12 @@ do_line(struct line_handler **h,
 
 	    connection->peer_flags = compat_peer_flags(swver_len, swver);
 
-	    new = 
-	      make_read_packet(
-		make_packet_unpad(
-		  connection,
-		  make_packet_inflate(
+	    new = make_read_packet(
 		    make_packet_debug(&connection->super,
 				      (connection->debug_comment
 				       ? ssh_format("%lz received", connection->debug_comment)
 				       : ssh_format("Received"))),
-		    connection
-		    )
-		  ),
-		connection
-		);
+		    connection);
 	    
 	    connection->versions[!mode]
 	      = ssh_format("%ls", length, line);
