@@ -103,7 +103,6 @@ tokenizer_init(struct tokenizer *self,
 static enum token_type
 next_token(struct tokenizer *self)
 {
-  /* FIXME: Share a char-class table with sexp_parser.c. */
   static const char char_class[0x100] =
     {
       /* HT, LF, VT, FF, CR */
