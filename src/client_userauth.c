@@ -27,7 +27,9 @@
 #include "command.h"
 #include "format.h"
 #include "parse.h"
+#if 0
 #include "password.h"
+#endif
 #include "publickey_crypto.h"
 #include "ssh.h"
 #include "werror.h"
@@ -515,6 +517,7 @@ make_client_userauth(struct lsh_string *username,
      (super client_userauth_failure)
      (vars
        (userauth object client_userauth)
+       (tty object interact)
        ; Have we tried the empty password already?
        (tried_empty_passwd . int)
        (connection object ssh_connection)
@@ -525,9 +528,9 @@ static void
 send_password(struct client_password_state *state)
 {
   struct lsh_string *passwd
-    = read_password(MAX_PASSWD,
-                    ssh_format("Password for %lS: ",
-                               state->userauth->username), 1);
+    = INTERACT_READ_PASSWORD(state->tty, MAX_PASSWD,
+			     ssh_format("Password for %lS: ",
+					state->userauth->username), 1);
 
   if (passwd)
     {
@@ -593,6 +596,7 @@ do_password_failure(struct client_userauth_failure *s, int again)
 
 static struct client_password_state *
 make_client_password_state(struct client_userauth *userauth,
+			   struct interact *tty,
 			   struct ssh_connection *connection,
 			   struct exception_handler *e)
 {
@@ -602,6 +606,7 @@ make_client_password_state(struct client_userauth *userauth,
 
   self->super.failure = do_password_failure;
   self->userauth = userauth;
+  self->tty = tty;
   self->tried_empty_passwd = 0;
   self->connection = connection;
   self->e = e;
@@ -609,14 +614,25 @@ make_client_password_state(struct client_userauth *userauth,
   return self;
 }
 
+/* GABA:
+   (class
+     (name client_password_method)
+     (super client_userauth_method)
+     (vars
+       (tty object interact)))
+*/
+
 static struct client_userauth_failure *
-do_password_login(struct client_userauth_method *s UNUSED,
+do_password_login(struct client_userauth_method *s,
 		  struct client_userauth *userauth,
 		  struct ssh_connection *connection,
 		  struct exception_handler *e)
 {
+  CAST(client_password_method, self, s);
+  
   struct client_password_state *state
-    = make_client_password_state(userauth, connection, e);
+    = make_client_password_state(userauth, self->tty,
+				 connection, e);
 
   trace("client_userauth.c: do_password_login\n");
 
@@ -626,13 +642,14 @@ do_password_login(struct client_userauth_method *s UNUSED,
 }
 
 struct client_userauth_method *
-make_client_password_auth(void)
+make_client_password_auth(struct interact *tty)
 {
-  NEW(client_userauth_method, self);
-  self->type = ATOM_PASSWORD;
-  self->login = do_password_login;
+  NEW(client_password_method, self);
+  self->super.type = ATOM_PASSWORD;
+  self->super.login = do_password_login;
+  self->tty = tty;
   
-  return self;
+  return &self->super;
 }
 
 

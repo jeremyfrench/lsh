@@ -27,6 +27,7 @@
 #include "alist.h"
 #include "command.h"
 #include "connection.h"
+#include "interact.h"
 #include "list.h"
 #include "parse.h"
 #include "userauth.h"
@@ -44,7 +45,7 @@ struct command *make_client_userauth(struct lsh_string *username,
 				     struct object_list *methods);
 
 struct client_userauth_method *
-make_client_password_auth(void);
+make_client_password_auth(struct interact *tty);
 
 struct client_userauth_method *
 make_client_publickey_auth(struct object_list *);
