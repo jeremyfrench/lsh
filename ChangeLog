@@ -1,5 +1,7 @@
 2004-06-22  Niels Möller  <niels@s3.kth.se>
 
+	* src/parse.c (parse_utf8): Use unsigned variables.
+
 	* src/testsuite/inetd-test: New test case, not yet enabled.
 
 2004-06-15  Niels Möller  <niels@s3.kth.se>
