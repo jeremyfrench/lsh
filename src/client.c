@@ -382,6 +382,8 @@ static struct request_info *skip_silent_requests(struct request_info *req)
   return req;
 }
 
+#if 0
+
 static int do_channel_success(struct ssh_channel *c);
 static int do_channel_failure(struct ssh_channel *c);
 
@@ -416,7 +418,6 @@ static int do_channel_success(struct ssh_channel *c)
   return res;
 }
 
-#if 0
 static int do_channel_failure(struct ssh_channel *c)
 {
   CAST(client_session, closure, c);
