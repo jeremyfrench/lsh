@@ -1092,14 +1092,16 @@ address_info2sockaddr(socklen_t *length,
 		      const int *preference,
 		      int lookup)
 {
-  char *host;
+  const char *host;
 
   if (a->ip)
     {
-      host = alloca(a->ip->length + 1);
-  
-      memcpy(host, a->ip->data, a->ip->length);
-      host[a->ip->length] = '\0';
+      host = lsh_get_cstring(a->ip);
+      if (!host)
+	{
+	  debug("address_info2sockaddr: hostname contains NUL characters.\n");
+	  return NULL;
+	}
     }
   else
     host = NULL;
@@ -1115,7 +1117,7 @@ address_info2sockaddr(socklen_t *length,
     struct sockaddr *res;
     const int default_preference
 #if WITH_IPV6
-      [3] = { AF_INET6, AF_INET }
+      [3] = { AF_INET, AF_INET6 }
 #else
       [2] = { AF_INET, 0 }
 #endif      
