@@ -45,7 +45,7 @@
 #define TOKEN_EOS -2
 #define TOKEN_ERROR -3
 
-#define SCAN(s, t) ((s)-(&(s), (t)))
+#define SCAN(s, t) ((s)->scan(&(s), (t)))
 
 struct read_handler *make_read_scan(size_t buffer_size, struct scanner *scanner);
 
