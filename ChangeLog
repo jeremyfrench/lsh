@@ -1,5 +1,7 @@
 2002-06-04  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* Released lsh-1.4.
+
 	* src/rsa.c (do_rsa_public_spki_key): Reverted the 2001-01-24
 	change "rsa-pkcs1-sha1" -> "rsa-pkcs1".
 	* src/testsuite/conv-2-test, src/testsuite/conv-3-test: Updated
