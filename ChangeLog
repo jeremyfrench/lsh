@@ -1,5 +1,8 @@
 2003-05-20  Niels Möller  <niels@s3.kth.se>
 
+	* src/unix_interact.c (unix_read_password): Fixed argv bug for the
+	askpass program.
+
 	* src/client.c: Implemented --askpass option.
 
 	* src/unix_interact.c (unix_read_password): Use any specified
