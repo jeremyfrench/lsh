@@ -186,6 +186,7 @@ struct command_3 cname =				\
 static void						\
 do_##cname
 
+
 /* A command taking 4 arguments */
 /* GABA:
    (class
@@ -236,6 +237,7 @@ struct command_4 cname =				\
 							\
 static void						\
 do_##cname
+
 
 void do_call_simple_command(struct command *s,
 			    struct lsh_object *arg,
@@ -465,53 +467,25 @@ extern struct command_4 command_Bp;
 #define GABA_APPLY_Bp_3(c, f, g) \
 ((struct lsh_object *) make_command_4_invoke_3(&command_Bp, (c), (f), (g)))
 
+extern struct command_3 command_C;
+
+#define GABA_VALUE_C (&command_C.super.super)
+#define GABA_APPLY_C_1(f) \
+((struct lsh_object *) make_command_3_invoke(&command_C, (f)))
+#define GABA_APPLY_C_2(f, g) \
+((struct lsh_object *) make_command_3_invoke_2(&command_C, (f), (g)))
+
 #if 0
-extern struct collect_info_1 command_B;
-extern struct collect_info_2 collect_info_B_2; 
+extern struct command_4 command_Cp;
 
-struct command *make_command_B_2(struct command *f,
-				 struct command *g);
-struct lsh_object *collect_B_2(struct collect_info_2 *info,
-			       struct lsh_object *f,
-			       struct lsh_object *g);
-
-#define GABA_VALUE_B (&command_B.super.super.super)
-#define GABA_APPLY_B_1(f) (make_collect_state_1(&command_B, (f)))
-#define GABA_APPLY_B_2(f, g) (collect_B_2(&collect_info_B_2, (f), (g)))
-
-extern struct collect_info_1 command_Bp;
-extern struct collect_info_2 collect_info_Bp_2;
-extern struct collect_info_3 collect_info_Bp_3;
-
-struct command *make_command_Bp_3(struct command *c,
-				  struct command *f,
-				  struct command *g);
-struct lsh_object *collect_Bp_3(struct collect_info_3 *info,
-				struct lsh_object *c,
-				struct lsh_object *f,
-				struct lsh_object *g);
-
-#define GABA_VALUE_Bp (&command_Bp.super.super.super)
-#define GABA_APPLY_Bp_1(c) (make_collect_state_1(&command_Bp, (c)))
-#define GABA_APPLY_Bp_2(c, f) \
-  (make_collect_state_2(&collect_info_Bp_2, (c), (f)))
-#define GABA_APPLY_Bp_3(c, f, g) (collect_Bp_3(&collect_info_Bp_3, (c), (f), (g)))
+#define GABA_VALUE_Cp (&command_Cp.super.super)
+#define GABA_APPLY_Cp_1(c) \
+((struct lsh_object *) make_command_4_invoke(&command_Cp, (c)))
+#define GABA_APPLY_Cp_2(c, f) \
+((struct lsh_object *) make_command_4_invoke_2(&command_Cp, (c), (f)))
+#define GABA_APPLY_Cp_3(c, f, g) \
+((struct lsh_object *) make_command_4_invoke_3(&command_Cp, (c), (f), (g)))
 #endif
-
-extern struct collect_info_1 command_C;
-extern struct collect_info_2 collect_info_C_2; 
-
-struct command *
-make_command_C_2(struct command *f,
-		 struct lsh_object *y);
-struct lsh_object *
-collect_C_2(struct collect_info_2 *info,
-	    struct lsh_object *f,
-	    struct lsh_object *y);
-
-#define GABA_VALUE_C (&command_C.super.super.super)
-#define GABA_APPLY_C_1(f) (make_collect_state_1(&command_C, (f)))
-#define GABA_APPLY_C_2(f, y) (collect_C_2(&collect_info_C_2, (f), (y)))
 
 extern struct collect_info_1 command_Cp;
 extern struct collect_info_2 collect_info_Cp_2;
@@ -532,6 +506,5 @@ collect_Cp_3(struct collect_info_3 *info,
 #define GABA_APPLY_Cp_2(c, f) \
   (make_collect_state_2(&collect_info_Cp_2, (c), (f)))
 #define GABA_APPLY_Cp_3(c, f, y) (collect_Cp_3(&collect_info_Cp_3, (c), (f), (y)))
-
 
 #endif /* LSH_COMMAND_H_INCLUDED */ 
