@@ -196,11 +196,20 @@ int io_iter(struct io_backend *b)
 	assert(i<nfds);
 
 	debug("io.c: poll for fd %i: events = 0x%xi, revents = 0x%xi.\n",
- 	      fds[i].fd, fds[i].events,fds[i].revents);
+ 	      fds[i].fd, fds[i].events, fds[i].revents);
 	
 	if (!fd->super.alive)
 	  continue;
 
+	if (fds[i].revents & POLLNVAL)
+	  {
+	    werror("io.c: poll request on fd %i, for events of type %xi\n"
+		   "      return POLLNVAL, revents = %xi\n",
+		   fds[i].fd, fds[i].events, fds[i].revents);
+	    kill_fd(fd);
+	    continue;
+	  }
+	
 	if (fds[i].revents & POLLHUP)
 	  {
 	    if (fd->want_read)
@@ -344,8 +353,20 @@ static void do_buffered_read(struct io_read_callback *s,
 		left);
     }
   else
-    EXCEPTION_RAISE(fd->e,
-		    make_io_exception(EXC_IO_EOF, fd, 0, "EOF")) ;
+    {
+#if 0
+      EXCEPTION_RAISE(fd->e,
+		      make_io_exception(EXC_IO_EOF, fd, 0, "EOF")) ;
+#endif
+      /* We have read EOF. Pass available == 0 to the handler */
+      assert(fd->super.alive);
+      assert(fd->read);
+      assert(fd->want_read);
+      assert(self->handler);
+
+      READ_HANDLER(self->handler, 0, NULL);
+    }
+	
 }
 
 struct io_read_callback *
@@ -398,6 +419,7 @@ static void do_consuming_read(struct io_read_callback *c,
 	  A_WRITE(self->consumer, s);
 	}
       else
+	/* FIXME: Perhaps pass NULL to the consumer instead? */
 	EXCEPTION_RAISE(fd->e, make_io_exception(EXC_IO_EOF, fd, 0, "EOF")) ;
     }
 }
