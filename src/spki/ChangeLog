@@ -1,3 +1,24 @@
+2002-11-14  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* certificate.h (struct spki_5_tuple): Renamed (was spki_acl), and
+	added issuer field.
+
+2002-11-13  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* certificate.c: Include automatically generated files.
+	(spki_intern): New function.
+	(spki_get_type): New function.
+	(spki_check_type): New function.
+	(parse_principal): Placeholder for needed function.
+	(parse_acl_entry): New function.
+	(spki_acl_parse): Use parse_acl_entry.
+
+	* Makefile.am: Added rules for process-types and related files.
+
+	* spki-types.in: New file, containing listing spki's magic words.
+
+	* process-types: New file, similar to lsh's process_atoms.
+
 2002-11-13  Niels Möller  <niels@s3.kth.se>
 
 	* certificate.c (spki_acl_parse): New function (not done yet).

@@ -8,4 +8,8 @@
 /config.log
 /config.status
 /configure
+/spki-gperf.h
+/spki-gperf.in
+/spki-type-names.h
+/spki-types.h
 /stamp-h1
