@@ -523,9 +523,9 @@ parse_display(struct client_x11_display *self, const char *display)
   
   /* Get display number */
   {
+    char *end;
     num = display;
     
-    char *end;
     display_num = strtol(display, &end, 0);
 
     num_length = end - num;
