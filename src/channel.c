@@ -1053,7 +1053,7 @@ static void do_channel_open(struct packet_handler *c UNUSED,
 				      "Waiting for channels to close.", ""));
 	}
       else if (!type || !(open = ALIST_GET(connection->table->channel_types,
-				      type)))
+					   type)))
 	{
 	  C_WRITE(connection,
 		  format_open_failure(remote_channel_number,
@@ -1070,14 +1070,23 @@ static void do_channel_open(struct packet_handler *c UNUSED,
 					SSH_OPEN_RESOURCE_SHORTAGE,
 					"Unknown channel type", ""));
 
-	  
-	  
+	  /* We don't support larger packets than the default,
+	   * SSH_MAX_PACKET. The fuzz factor is because the
+	   * channel's max sizes refer to the data string inside the
+	   * packet, while the SSH_PACKET limit refers to the complete
+	   * packet including some overhead (9 octets for
+	   * SSH_MSG_CHANNEL_DATA and 13 octets for
+	   * SSH_MSG_CHANNEL_EXTENDED_DATA). */
+	  if (max_packet > (SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ))
+	    {
+	      werror("do_channel_open: The remote end asked for really large packets.\n");
+	      max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
+	    }
+	    
 	  CHANNEL_OPEN(open, connection,
 		       type,
 		       window_size,
-		       /* We don't support larger packets than the
-			* default, SSH_MAX_PACKET */
-		       MIN(max_packet, SSH_MAX_PACKET),
+		       max_packet,
 		       &buffer,
 		       make_channel_open_continuation(connection,
 						      local_number,
@@ -1921,7 +1930,7 @@ make_channel_read_data(struct ssh_channel *channel)
    *
    * gives 9 bytes of overhead, including the length field. */
     
-  return make_read_data(channel, 9, make_channel_write(channel)); }
+  return make_read_data(channel, make_channel_write(channel)); }
 
 struct io_callback *
 make_channel_read_stderr(struct ssh_channel *channel)
@@ -1933,7 +1942,7 @@ make_channel_read_stderr(struct ssh_channel *channel)
    *
    * gives 13 bytes of overhead, including the length field for the string. */
 
-  return make_read_data(channel, 13,
+  return make_read_data(channel,
 			make_channel_write_extended(channel,
 						    SSH_EXTENDED_DATA_STDERR));
 }    

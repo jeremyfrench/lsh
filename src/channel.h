@@ -81,12 +81,9 @@
        ; put onto the connections resource list.
        (resources object resource_list)
        
-       ; We try to keep the rec_window_size between max_window / 2
-       ; and max_window. 
-       ;; (max_window simple UINT32) 
-
-       ; FIXME: Does the maximum packet sizes apply to complete ssh
-       ; packets, or the data payload?
+       ; NOTE: The channels maximum packet sizes refer to the packet
+       ; payload, i.e. the DATA string in SSH_CHANNEL_DATA and
+       ; SSH_MSG_CHANNEL_EXTENDED_DATA.
 
        (rec_window_size simple UINT32)
        (rec_max_packet simple UINT32)
@@ -212,12 +209,8 @@
        (pending_global_requests struct object_queue)
        
        ; If non-zero, close connection after all active channels have
-       ; died.
-       (pending_close simple int)
-
-       ; FIXME: Perhaps we should use an flag to indicate whether or
-       ; not new channels can be opened?
-       ))
+       ; died, and don't allow any new channels to be opened.
+       (pending_close simple int)))
 */
 
 /* SSH_MSG_GLOBAL_REQUEST */

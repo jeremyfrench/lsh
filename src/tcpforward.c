@@ -173,7 +173,7 @@ make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
   self->super.rec_window_size = initial_window;
 
   /* FIXME: Make maximum packet size configurable. */
-  self->super.rec_max_packet = SSH_MAX_PACKET;
+  self->super.rec_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
   
   self->socket = socket;
   
