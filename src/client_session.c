@@ -104,6 +104,23 @@ do_send_adjust(struct ssh_channel *s,
   self->in->want_read = 1;
 }
 
+/* Escape char handling */
+
+#if 0
+static struct io_callback *
+make_channel_read_stdin(struct ssh_channel *channel)
+{
+  /* byte      SSH_MSG_CHANNEL_DATA
+   * uint32    recipient channel
+   * string    data
+   *
+   * gives 9 bytes of overhead, including the length field. */
+    
+  return make_read_data(channel,
+			make_handle_escape(make_channel_write(channel)));
+}
+#endif
+
 /* We have a remote shell */
 static void
 do_client_io(struct command *s UNUSED,
@@ -139,6 +156,8 @@ do_client_io(struct command *s UNUSED,
   /* Set up the fd we read from. */
   channel->send_adjust = do_send_adjust;
 
+  /* FIXME: This is probably the right place to insert a
+   * escape-character handler. */
   session->in->read = make_channel_read_data(channel);
 
   /* FIXME: Perhaps there is some way to arrange that channel.c calls
