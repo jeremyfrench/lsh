@@ -37,5 +37,12 @@ atoms_table.c: atoms.in process_atoms
 
 LDADD = @LIBOBJS@ lib/libsymmetric.a
 
+lsh_DEPENDENCIES = @LIBOBJS@ symmetric
+lshd_DEPENDENCIES = @LIBOBJS@ symmetric
+
+.PHONY: symmetric
+symmetric:
+	(cd lib && $(MAKE) libsymmetric.a)
+
 EXTRA_DIST = atoms.in process_atoms $(generated_sources) HACKING
 
