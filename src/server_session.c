@@ -170,11 +170,11 @@ struct resource *make_process_resource(pid_t pid, int signal)
        (term string)
 
        ; Child process's stdio 
-       (in object io_fd)
-       (out object io_fd)
+       (in object lsh_fd)
+       (out object lsh_fd)
        ;; err may be NULL, if there's no separate stderr channel.
        ;; This happens if we use a pty, and the bash workaround
-       (err object io_fd)))
+       (err object lsh_fd)))
 */
 
 /* Receive channel data */
@@ -205,17 +205,17 @@ do_send(struct ssh_channel *s,
 {
   CAST(server_session, session, s);
 
-  assert(session->out->super.read);
+  assert(session->out->read);
   /* assert(session->out->handler); */
 
-  session->out->super.want_read = 1;
+  session->out->want_read = 1;
 
   if (session->err)
     {
-      assert(session->err->super.read);
+      assert(session->err->read);
       /* assert(session->err->handler); */
   
-      session->err->super.want_read = 1;
+      session->err->want_read = 1;
     }
 }
 
@@ -856,7 +856,7 @@ do_spawn_shell(struct channel_request *c,
 	    = make_channel_read_close_callback(channel);
 
 	  session->in
-	    = io_write(make_io_fd(closure->backend, in[1],
+	    = io_write(make_lsh_fd(closure->backend, in[1],
 				  io_exception_handler),
 		       SSH_MAX_PACKET, NULL);
 	  
@@ -867,12 +867,12 @@ do_spawn_shell(struct channel_request *c,
 	   * which will close the channel on read errors, or is it
 	   * better to just send EOF on read errors? */
 	  session->out
-	    = io_read(make_io_fd(closure->backend, out[0], io_exception_handler),
+	    = io_read(make_lsh_fd(closure->backend, out[0], io_exception_handler),
 		      make_channel_read_data(channel),
 		      read_close_callback);
 	  session->err 
 	    = ( (err[0] != -1)
-		? io_read(make_io_fd(closure->backend, err[0], io_exception_handler),
+		? io_read(make_lsh_fd(closure->backend, err[0], io_exception_handler),
 			  make_channel_read_stderr(channel),
 			  read_close_callback)
 		: NULL);
@@ -892,12 +892,12 @@ do_spawn_shell(struct channel_request *c,
 	/* FIXME: How to do this properly if in and out may use the
 	 * same fd? */
 	REMEMBER_RESOURCE
-	  (channel->resources, &session->in->super.super);
+	  (channel->resources, &session->in->super);
 	REMEMBER_RESOURCE
-	  (channel->resources, &session->out->super.super);
+	  (channel->resources, &session->out->super);
 	if (session->err)
 	  REMEMBER_RESOURCE
-	    (channel->resources, &session->err->super.super);
+	    (channel->resources, &session->err->super);
 
 	if (want_reply)
 	  A_WRITE(channel->write,

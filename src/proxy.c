@@ -91,7 +91,7 @@ do_chain_connections(struct command *s,
   int salen = sizeof(sa);
 
   /* FIXME: support non AF_INET address families */
-  if (getsockname(self->lv->fd->super.fd, (struct sockaddr *) &sa, &salen) != -1)
+  if (getsockname(self->lv->fd->fd, (struct sockaddr *) &sa, &salen) != -1)
     {
       struct address_info *a;
 
