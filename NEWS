@@ -8,6 +8,10 @@ News for the 1.x.y release
 	terminates as soon as the authentication is finished (this of
 	course goes for environment variables too).
 
+	lsh and and lshg now parses options from LSHFLAGS and
+	LSHGFLAGS, these are parsed before and can be overridden by
+	the command line.
+
 News for the 1.5 release
 
 	Implemented the server side of X11 forwarding. Try lshd

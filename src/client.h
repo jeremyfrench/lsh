@@ -162,6 +162,9 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
        ; True if the client should detach when a session closes (useful for gateways)
        (detach_end . int)
 
+       ; Inhibit actions, used to not create actions from environment parsing.
+       (inhibit_actions . int)
+
        (start_shell . int)
        (remote_forward . int)
        (actions struct object_queue)))
@@ -176,7 +179,6 @@ init_client_options(struct client_options *options,
 struct command *
 client_add_action(struct client_options *options,
 		  struct command *action);
-
 int
 client_parse_forward_arg(char *arg,
 			 UINT32 *listen_port,
@@ -189,5 +191,13 @@ extern struct command client_options2actions;
 #define OPTIONS2ACTIONS (&client_options2actions.super)
 
 extern const struct argp client_argp;
+
+
+void
+envp_parse(const struct argp *argp,
+           const char** envp,
+           const char* name,
+           unsigned flags,
+           void *input);
 
 #endif /* LSH_CLIENT_H_INCLUDED */

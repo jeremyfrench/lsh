@@ -1,3 +1,22 @@
+2002-11-01  Pontus Sköld  <pont@soua.net>
+
+	* src/testsuite/Makefile.am (TS_SH): New test lsh-9-test.
+
+	* src/testsuite/lsh-9-test: Test for LSHFLAGS.
+	
+	* src/client.h (client_options): New attribute, inhibit_actions.
+	Declaration of envp_parse.
+
+	* src/client.c (envp_parse): New function envp_parse.
+	(client_argp_parser): Honour inhibit_actions.
+	(init_client_options): Initialize inhibit_actions.
+
+	* src/lshg.c (main_argp_parser): Honour inhibit_actions.
+	(main): Use envp_parse.
+
+	* src/lsh.c (main_argp_parser): Honour inhibit_actions.
+	(main): Use envp_parse.
+
 2002-10-23  Pontus Sköld  <pont@soua.net>
 
 	* src/client_x11.c (parse_display): Handle special case

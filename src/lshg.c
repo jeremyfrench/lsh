@@ -199,6 +199,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case ARGP_KEY_END:
+      if (self->super.inhibit_actions)
+	break;
+
       if (!self->super.local_user)
 	{
 	  argp_error(state, "You have to set LOGNAME in the environment.");
@@ -295,7 +298,7 @@ make_lshg_exception_handler(struct exception_handler *parent,
 }
 
 int
-main(int argc, char **argv)
+main(int argc, char **argv, const char** envp)
 {
   struct lshg_options *options;
 
@@ -316,7 +319,8 @@ main(int argc, char **argv)
 			  NULL,
 			  0),
 			 &exit_code);
-  
+
+  envp_parse(&main_argp, envp, "LSHGFLAGS=", ARGP_IN_ORDER, options);
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
 
   {

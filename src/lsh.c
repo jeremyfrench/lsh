@@ -825,6 +825,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case ARGP_KEY_END:
+      if (self->super.inhibit_actions)
+	break;
+
       if (!self->home)
 	{
 	  argp_error(state, "No home directory. Please set HOME in the environment.");
@@ -1065,7 +1068,7 @@ make_lsh_default_handler(int *status, struct exception_handler *parent,
 }
 
 
-int main(int argc, char **argv)
+int main(int argc, char **argv, const char** envp)
 {
   struct lsh_options *options;
   struct spki_context *spki;
@@ -1091,6 +1094,7 @@ int main(int argc, char **argv)
   if (!options)
     return EXIT_FAILURE;
   
+  envp_parse(&main_argp, envp, "LSHFLAGS=", ARGP_IN_ORDER, options);
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
 
   if (!options->super.random)

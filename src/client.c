@@ -567,6 +567,8 @@ init_client_options(struct client_options *self,
   self->start_shell = 1;
   self->remote_forward = 0;
 
+  self->inhibit_actions = 0;
+
   object_queue_init(&self->actions);  
 }
 
@@ -1127,6 +1129,60 @@ make_client_session(struct client_options *options)
 }
 
 
+/* Treat environment variables as sources for options */
+
+void
+envp_parse(const struct argp *argp,
+	   const char** envp,
+	   const char* name,
+	   unsigned flags, 
+	   void *input)
+{
+  CAST_SUBTYPE(client_options, options, input);
+  int nlen = strlen(name);
+
+  while (*envp)
+    {
+      if (!strncmp(*envp, name, nlen)) 	  /* Matching environment entry */
+	{
+	  char** sim_argv;
+	  char* entry;
+
+	  /* Make a copy we can modify */
+	  
+	  entry = strdup(*envp+nlen); 	  /* Skip variable name */
+
+	  if (entry)
+	    {
+	      /* Extra space doesn't hurt */
+	      sim_argv = malloc(sizeof(char*) * (strlen(entry)+2));
+
+	      if (sim_argv)
+		{
+		  int sim_argc = 1;
+		  char *token = strtok(entry, " \n\t");
+		  
+		  sim_argv[0] = "";
+
+		  while (token) /* For all tokens in variable */
+		    {
+		      sim_argv[sim_argc++] = token;
+		      token = strtok( NULL, " \n\t");
+		    }
+
+		  sim_argv[sim_argc] = NULL;
+	
+		  options->inhibit_actions = 1; /* Disable nnormal actions performed at end */
+		  argp_parse(argp, sim_argc, sim_argv, flags | ARGP_PARSE_ARGV0, NULL, input);
+		  options->inhibit_actions = 0; /* Reenable */
+		}
+	    }
+	}
+
+      envp++; 
+   }
+}
+
 /* Parse the argument for -R and -L */
 int
 client_parse_forward_arg(char *arg,
@@ -1235,6 +1291,9 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case ARGP_KEY_END:
+      if (options->inhibit_actions)
+	break;
+
       if (!options->user)
 	{
 	  argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
