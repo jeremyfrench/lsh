@@ -85,9 +85,6 @@
        ; User's close callback
        (close_callback object lsh_callback)
 
-       ; Called before poll
-       (prepare method void)
-
        ; This flag is set by the backend if it detects that a
        ; connection is hanged up. 
        
@@ -108,7 +105,6 @@
        (write_buffer object write_buffer)))
 */
 
-#define FD_PREPARE(fd) ((fd)->prepare(fd))
 #define FD_READ(fd) IO_CALLBACK((fd)->read, (fd))
 #define FD_WRITE(fd) IO_CALLBACK((fd)->write, (fd))
 
