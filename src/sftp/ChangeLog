@@ -1,3 +1,44 @@
+2002-03-25  Pontus Sköld  <pont@soua.net>
+
+	* buffer.c (sftp_read_packet): Loop to read data.
+	(sftp_get_data): Likewise.
+	(sftp_write_packet): Loop to write data.
+
+	* sftp_c.c (sftp_ls_main): Check return values from
+	sftp_get_string.
+
+	* sftp-test-client.c (fork_server): Use fds, not FILE*s.
+
+	* sftp-server.c (sftp_init): Use fds, not FILE*s.
+	(main): Use fds STDIN_FILENO and STDOUT_FILENO instead of FILE*s
+	stdin and stdout.
+
+	* buffer.c: We need unistd.h to have read and write defined. And
+	we want errno to, so we need errno.h
+	(sftp_make_input): Use fd, not FILE*
+	(sftp_make_output): Likewise.	
+
+	* sftp_bind.c (lsftp_close_connection): Use fd_to_transport and
+	fd_from_transport instead of to_transport and from_transport.
+
+	* configure.ac (CPPFLAGS): use AC_DEFINE_UNQUOTED instead of
+	putting options for before and after in CPPFLAGS. Solves problem
+	with spaces in before- and after-opts.
+ 
+	* sftp_bind.c (lsftp_open_connection): Dont't use FILE* but fds
+	directly.
+	(lsftp_handshake): Use read instead of fread, and pass fds to
+	sftp_make_input and sftp_make_output.
+
+	* buffer.c (struct sftp_input): Use fd instead of FILE*.
+	(struct sftp_output): Likewise.
+	(sftp_get_data): Use read instead of fread.
+	(sftp_read_packet): Likewise.
+	(sftp_write_packet): Use write instead of fwrite.
+
+	* buffer.h: Changed prototype of sftp_make_input and
+	sftp_make_output to use fds instead of files.
+
 2002-03-24  Pontus Sköld  <pont@soua.net>
 
 	* configure.ac: Added --no-pty to default options if we're using
