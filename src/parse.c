@@ -149,7 +149,7 @@ int parse_utf8(struct simple_buffer *buffer, UINT32 *result)
 	  length = 4;
 	  *result = first & 0x07;
 	  break;
-	case 8: case 0xA;
+	case 8: case 0xA:
 	  length = 5;
 	  *result = first & 0x03;
 	  break;

@@ -34,7 +34,7 @@ binprefix =
 
 LOADLIBES = $(LIBS) lib/algorithms.a
 
-COMMON_SRCS = alist.c atoms.c bignum.c connection.c crypto.c \
+COMMON_SRCS = alist.c atoms.c bignum.c charset.c connection.c crypto.c \
 	debug.c disconnect.c encrypt.c format.c getopt.c io.c keyexchange.c \
 	packet_ignore.c pad.c parse.c publickey_crypto.c \
 	randomness.c \

@@ -26,6 +26,10 @@
 
 #include "charset.h"
 
+#include "parse.h"
+#include "werror.h"
+#include "xalloc.h"
+
 #include <assert.h>
 
 static int local_charset;
@@ -39,7 +43,7 @@ UINT32 local_to_ucs4(int c)
 {
   switch (local_charset)
     {
-    case CHARSET_US_ASCII:
+    case CHARSET_USASCII:
     case CHARSET_LATIN1:
       return (UINT32) c;
     default:
@@ -52,7 +56,7 @@ int ucs4_to_local(UINT32 c)
 {
   switch (local_charset)
     {
-    case CHARSET_US_ASCII:
+    case CHARSET_USASCII:
       return (c < 0x80) ? c : -1;
     case CHARSET_LATIN1:
       return (c < 0x100) ? c : -1;
@@ -61,7 +65,7 @@ int ucs4_to_local(UINT32 c)
     };
 }
 
-struct lsh_string *local_to_utf8(struct lsh_string s, int free)
+struct lsh_string *local_to_utf8(struct lsh_string *s, int free)
 {
   switch (local_charset)
     {
@@ -108,13 +112,13 @@ struct lsh_string *local_to_utf8(struct lsh_string s, int free)
 	    }
 	}
 	{
-	  struct lsh_string res = lsh_string_alloc(total);
+	  struct lsh_string *res = lsh_string_alloc(total);
 	  int i, j;
 
 	  for(i = j = 0; i<s->length; i++)
 	    {
-	      static const UINT8 *prefix
-		= {0, 0xC0, 0xE0, 0xF0, 0xF8, 0xFc };
+	      static const UINT8 prefix[]
+		= {0, 0xC0, 0xE0, 0xF0, 0xF8, 0XFC };
 	      
 	      UINT32 c = chars[i];
 	      unsigned char l = lengths[i] - 1;
@@ -142,7 +146,7 @@ struct lsh_string *local_to_utf8(struct lsh_string s, int free)
 }
   
   
-struct lsh_string *utf8_to_local(struct lsh_string s, int free)
+struct lsh_string *utf8_to_local(struct lsh_string *s, int free)
 {
   int i;
   struct lsh_string *res;

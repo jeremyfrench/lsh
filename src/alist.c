@@ -41,30 +41,30 @@ struct alist_linear
 
 static void *do_linear_get(struct alist *c, int atom)
 {
-  struct alist_linear *closure = (struct alist_linear *) c;
+  struct alist_linear *self = (struct alist_linear *) c;
 
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
   
-  MDEBUG(closure); 
+  MDEBUG(self); 
 
-  return closure->table[atom];
+  return self->table[atom];
 }
 
 static void do_linear_set(struct alist *c, int atom, void *value)
 {
-  struct alist_linear *closure = (struct alist_linear *) c;
+  struct alist_linear *self = (struct alist_linear *) c;
   
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
 
-  MDEBUG(closure);
+  MDEBUG(self);
   
 #if ALIST_USE_SIZE
-  size += !closure->table[atom] - !value; 
+  size += !self->table[atom] - !value; 
 #endif
   
-  closure->table[atom] = value;
+  self->table[atom] = value;
 }
 
 struct alist *make_linear_alist(int n, ...)
@@ -119,15 +119,15 @@ struct alist_linked
 
 static void *do_linked_get(struct alist *c, int atom)
 {
-  struct alist_linked *closure = (struct alist_linked *) c;
+  struct alist_linked *self = (struct alist_linked *) c;
   struct node *p;
   
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
   
-  MDEBUG(closure); 
+  MDEBUG(self); 
 
-  for (p = self->first; p; p = p->next)
+  for (p = self->head; p; p = p->next)
     if (p->atom == atom)
       return p->value;
   
@@ -136,18 +136,18 @@ static void *do_linked_get(struct alist *c, int atom)
 
 static void do_linked_set(struct alist *c, int atom, void *value)
 {
-  struct alist_linked *closure = (struct alist_linked *) c;
+  struct alist_linked *self = (struct alist_linked *) c;
   
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
 
-  MDEBUG(closure);
+  MDEBUG(self);
 
   if (value)
     {
       struct node *p;
 
-      for (p = self->first; p; p = p->next)
+      for (p = self->head; p; p = p->next)
 	if (p->atom == atom)
 	  {
 	    p->value = value;
@@ -155,11 +155,11 @@ static void do_linked_set(struct alist *c, int atom, void *value)
 	  }
       
       p = xalloc(sizeof(struct node));
-      p->next = self->first;
+      p->next = self->head;
       p->atom = atom;
       p->value = value;
 
-      self->first = p;
+      self->head = p;
 #if ALIST_USE_SIZE
       self->size++;
 #endif
@@ -168,15 +168,17 @@ static void do_linked_set(struct alist *c, int atom, void *value)
     { /* Remove atom */
       struct node **p;
 
-      for(p = &self->first; *p; )
+      for(p = &self->head; *p; )
 	{
 	  struct node *o = *p;
-	  if (o->atom = atom)
+	  if (o->atom == atom)
 	    {
 	      *p = o->next;
 	      lsh_free(o);
 
+#if ALIST_USE_SIZE
 	      self->size--;
+#endif
 	      return;
 	    }
 	  p = &o->next;
@@ -192,12 +194,14 @@ struct alist *make_linked_alist(int n, ...)
   
   struct alist_linked *self = xalloc(sizeof(struct alist_linked));
   struct alist *res = &self->super;
+
+  struct node *p;
   
 #if ALIST_USE_SIZE
   self->size = 0;
 #endif
 
-  self->first = NULL;
+  self->head = NULL;
 
   va_start(args, n);
 

@@ -50,6 +50,8 @@ struct kexinit_handler
    * and therefore the remote side can't screw things up. */
 
   struct alist *algorithms;
+
+  struct ssh_service *finished;
 };
 
 #define NLISTS 10
@@ -276,6 +278,7 @@ static int do_handle_kexinit(struct packet_handler *c,
   return KEYEXCHANGE_INIT( (struct keyexchange_algorithm *)
 			   ALIST_GET(closure->algorithms, kex_algorithm),
 			   connection,
+			   closure->finished,
 			   hostkey_algorithm,
 			   ALIST_GET(closure->algorithms, hostkey_algorithm),
 			   algorithms);

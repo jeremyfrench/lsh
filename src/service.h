@@ -31,7 +31,7 @@
 /* The init function only returns 1 on success, 0 on failure. */
 struct ssh_service
 {
-  int (init *)(struct ssh_service *self, struct ssh_connection *c);
+  int (*init)(struct ssh_service *self, struct ssh_connection *c);
 };
 
 #define SERVICE_INIT(s, c) ((s)->init((s), (c)))

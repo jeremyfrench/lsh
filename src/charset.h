@@ -40,7 +40,7 @@ void set_local_charset(int charset);
 UINT32 local_to_ucs4(int c);
 int ucs4_to_local(UINT32 c);
 
-struct lsh_string *local_to_utf8(struct lsh_string s, int free);
-struct lsh_string *utf8_to_local(struct lsh_string s, int free);
+struct lsh_string *local_to_utf8(struct lsh_string *s, int free);
+struct lsh_string *utf8_to_local(struct lsh_string *s, int free);
 
 #endif /* LSH_CHARSET_H_INCLUDED */

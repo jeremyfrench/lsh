@@ -75,7 +75,7 @@ struct keyexchange_algorithm
   
   int (*init)(struct keyexchange_algorithm *closure,
 	      struct ssh_connection *connection,
-	      struct ssh_service *finished;
+	      struct ssh_service *finished,
 	      int hostkey_algorithm_atom,
 	      struct signature_algorithm *hostkey_algorithm,
 	      void **algorithms);

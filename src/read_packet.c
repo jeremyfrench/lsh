@@ -222,7 +222,7 @@ static int do_read_packet(struct read_handler **h,
 	    {
 	      UINT32 left
 		= ( (closure->buffer->length + closure->buffer->data)
-		    - closure->crypt_pos) );
+		    - closure->crypt_pos );
 	      if (closure->connection->rec_crypto)
 		CRYPT(closure->connection->rec_crypto,
 		      left,

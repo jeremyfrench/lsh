@@ -26,6 +26,7 @@
 #include "werror.h"
 
 #include "charset.h"
+#include "parse.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -125,8 +126,8 @@ void verbose_safe(UINT32 length, UINT8 *msg)
 static void write_utf8(UINT32 length, UINT8 *msg)
 {
   struct simple_buffer buffer;
-
-  simple_buffer_init(&buffer, lengthm msg);
+  
+  simple_buffer_init(&buffer, length, msg);
   
   while(1)
     {
