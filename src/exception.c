@@ -71,12 +71,14 @@ STATIC_EXCEPTION_HANDLER(do_ignore_exception_handler, NULL);
 struct exception_handler *
 make_exception_handler(void (*raise)(struct exception_handler *s,
 				     const struct exception *x),
-		       struct exception_handler *parent)
+		       struct exception_handler *parent,
+		       const char *context)
 {
   NEW(exception_handler, self);
   self->raise = raise;
   self->parent = parent;
-
+  self->context = context;
+  
   return self;
 }
 
@@ -105,11 +107,14 @@ do_report_exception_handler(struct exception_handler *s,
 struct exception_handler *
 make_report_exception_handler(UINT32 mask, UINT32 value,
 			      const char *prefix,
-			      struct exception_handler *parent)
+			      struct exception_handler *parent,
+			      const char *context)
 {
   NEW(report_exception_handler, self);
   self->super.raise = do_report_exception_handler;
   self->super.parent = parent;
+  self->super.context = context;
+
   self->mask = mask;
   self->value = value;
   self->prefix = prefix;
@@ -155,4 +160,12 @@ make_protocol_exception(UINT32 reason, const char *msg)
   self->reason = reason;
 
   return &self->super;
+}
+
+void exception_raise(struct exception_handler *h,
+		     const struct exception *e)
+{
+  trace ("Raising exception %z (type %d), using handler installed by %z\n",
+	 e->msg, e->type, h->context);
+  h->raise(h, e);
 }

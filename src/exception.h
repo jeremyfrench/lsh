@@ -46,13 +46,26 @@
      (name exception_handler)
      (vars
        (raise method void "const struct exception *")
-       (parent object exception_handler)))
+       (parent object exception_handler)
+
+       ; Provide some context for debugging unhandled exceptions
+       (context . "const char *")))
 */
 
-#define EXCEPTION_RAISE(h, e)  ((h)->raise((h), (e)))
+void exception_raise(struct exception_handler *e,
+		     const struct exception *h);
+
+#if DEBUG_TRACE
+#  define EXCEPTION_RAISE exception_raise
+#else /* !DEBUG_TRACE */
+#  define EXCEPTION_RAISE(h, e)  ((h)->raise((h), (e)))
+#endif /* !DEBUG_TRACE */
 
 #define STATIC_EXCEPTION_HANDLER(r, p) \
-{ STATIC_HEADER, (r), (p) }
+{ STATIC_HEADER, (r), (p), __FILE__ ":" STRING_LINE ": Static" }
+
+#define HANDLER_CONTEXT   (__FILE__ ":" STRING_LINE ": " FUNCTION_NAME)
+
 
 /* Exception types. */
 
@@ -74,12 +87,6 @@
 #define EXC_IO_WRITE 0x2005
 #define EXC_IO_OPEN_WRITE 0x2006
 #define EXC_IO_LISTEN 0x2007
-
-#if 0
-/* Not really errors */
-/* EOF was read */
-#define EXC_IO_EOF 0x2010
-#endif
 
 /* Authorization errors */
 #define EXC_AUTH 0x4000
@@ -133,15 +140,8 @@ extern struct exception dummy_exception;
 struct exception_handler *
 make_report_exception_handler(UINT32 mask, UINT32 value,
 			      const char *prefix,
-			      struct exception_handler *parent);
-     
-/* ;;GABA:
-   (class
-     (name exception_frame)
-     (super exception_handler)
-     (vars
-       (parent object exception_handler)))
-*/
+			      struct exception_handler *parent,
+			      const char *context);
 
 struct exception *
 make_simple_exception(UINT32 type, const char *msg);
@@ -150,7 +150,8 @@ make_simple_exception(UINT32 type, const char *msg);
 struct exception_handler *
 make_exception_handler(void (*raise)(struct exception_handler *s,
 				     const struct exception *x),
-		       struct exception_handler *parent);
+		       struct exception_handler *parent,
+		       const char *context);
 
 /* A protocol exception, that normally terminates the connection */
 /* GABA:
