@@ -1,0 +1,379 @@
+\input texinfo          @c -*-texinfo-*-
+
+@c %**start of header
+@setfilename lsh.info
+@settitle lsh
+@c %**end of header
+
+@ifinfo
+Draft manual for LSH.
+
+Copyright 2000 Niels Möller.
+
+Permission is granted to make and distribute verbatim
+copies of this manual provided the copyright notice and
+this permission notice are preserved on all copies.
+
+@ignore
+Permission is granted to process this file through TeX
+and print the results, provided the printed document
+carries a copying permission notice identical to this
+one except for the removal of this paragraph (this
+paragraph not being relevant to the printed manual).
+
+@end ignore
+Permission is granted to copy and distribute modified
+versions of this manual under the conditions for
+verbatim copying, provided also that the sections
+entitled ``Copying'' and ``GNU General Public License''
+are included exactly as in the original, and provided
+that the entire resulting derived work is distributed
+under the terms of a permission notice identical to this
+one.
+
+Permission is granted to copy and distribute
+translations of this manual into another language,
+under the above conditions for modified versions,
+except that this permission notice may be stated in a
+translation approved by the Free Software Foundation.
+
+@end ifinfo
+
+@titlepage
+@sp 10
+@center @titlefont{Draft LSH Manual}
+
+@c  @title{Draft LSH Manual}
+@c  @author{Niels Möller}
+
+@c The following two commands start the copyright page.
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 2000 Niels Möller.
+
+Permission is granted to make and distribute verbatim
+copies of this manual provided the copyright notice and
+this permission notice are preserved on all copies.
+
+Permission is granted to copy and distribute modified
+versions of this manual under the conditions for
+verbatim copying, provided also that the sections
+entitled ``Copying'' and ``GNU General Public License''
+are included exactly as in the original, and provided
+that the entire resulting derived work is distributed
+under the terms of a permission notice identical to this
+one.
+
+Permission is granted to copy and distribute
+translations of this manual into another language,
+under the above conditions for modified versions,
+except that this permission notice may be stated in a
+translation approved by the Free Software Foundation.
+
+@end titlepage
+
+@node     Top,, (dir), (dir)
+@top
+@comment  node-name,  next,  previous,  up
+This document describes @code{lsh} and related programs. @code{lsh} suit
+of programs is intended as a free replacement for the @code{ssh} suit of
+programs. In turn, @code{ssh} was intended as a secure replacement for
+the @code{rsh} and @code{rlogin} programs for remote login over the
+internet.
+
+This manual explains how to use and hack @code{lsh}.
+
+@node Introduction
+@comment  node-name,  next,  previous,  up
+@chapter Introduction
+
+What is this thing called computer security anyway? Why would you want
+to use a program like @code{lsh}?
+
+This chapter explains the threats @code{lsh} tries to protect you from,
+and some of the threats that remain. It also describes some of the
+technologies used in @code{lsh}.
+
+From time to time in this manual, I will speak about the @dfn{enemy}.
+This means anybody who is trying to eavesdrop or disturb your private
+communication. This usage is technical, and it does not imply that the
+enemy is somehow morally inferior to you: The enemy may be some awful
+criminals trying to eavesdrop on you, or it may be the police trying to
+eavesdrop the same criminals.
+
+The enemy can be a criminal, or a competitor, or your boss who's trying
+to find out how much you tell collegues at competing firms. It may be
+yours or somebody elses national security officials. Or your
+ex-boyfriend who happens to be too curious.
+
+So what can the enemy do to your communications and your privacy?
+Remember that just because your paranoid that doesn't mean that nobody
+is trying to get you @dots{}
+
+
+@node Threats
+@comment  node-name,  next,  previous,  up
+@section Threats
+
+When logging in to some other machine via the internet, either in the
+same building or e few continents away, there are several things that
+may be under enemy attack.
+
+@table @asis
+@item @dfn{Local attacks}
+The enemy controls your local environment. He or her may be looking over
+your shoulder. Your local machine might be cracked. Or there may be some
+device planted inside your keyboard transmitting everything you type to
+the attacker. About the same problems occur if the attacker has taken
+control over your target machine, i.e. the remote machine you have
+logged in to.
+
+@item @dfn{Denial of service}
+The enemy has cut your network cable, effectively stopping your
+communication. Even without doing physical damage, the enemy may be able
+to flood and overload computers or network equipment. Or disrupt network
+traffic by sending fake packets to hangup your @code{tcp/ip}
+connections.
+
+@item @dfn{Passive eavesdropping}
+The enemy may be able to listen to your communication somewhere along
+its path. With the global internet, it's difficult to predict who might
+be able to listen. Internet traffic between buildings just a few hundred
+meters apart have been observed temporarily being routed through half a
+dozen countries, perhaps a few thousand kilometers.
+
+And even without routing anomalies, it is possible that the enemy has
+been able to take control of some nearby machine, and can listen in from
+there. Of course, passive eavesdropping is most dangerous if you
+transmit cleartext passwords. This is the main reason not to use vanilla
+telnet to login to remote systems. Use a telnet with support for
+@acronym{SSL} or Kerberos, or use a program like @code{lsh} or
+@code{ssh}. 
+
+A passive eavesdropper is assumed not to do anything nasty with your
+packets beyond listening to them.
+
+@item Name resolution attacks
+The translation from symbolic @acronym{DNS} names to numeric
+ip-addresses may be controlled by the attacker. In this case, you may
+think that you are connecting to a friendly machine, when in fact you
+are connecting somewhere else.
+
+@item Fake packets
+It is fairly easy to fake the source address of an @acronym{IP}-packet,
+although it is more difficult to get hold on the replies to the faked
+packets. But even without any replies, this cause cause serious
+problems. 
+
+@item @dfn{Man-in-the-middle} attack
+In this attack, the enemy sits between you and the target. When
+communicating with you, he pretends to be the target. When communicating
+with the target, he pretends to be you. He also passes all information
+on more or less unmodified, so that he is invisible to you and the
+target. To mount this attack, the enemy either needs physical access to
+some network equipment on the path between you and the target, or he has
+been able to fool you to connect to him rather than to the target, for
+example by manipulating the @acronym{DNS}-system.
+
+@end table
+
+@code{lsh} makes no attempt to protect you from local attacks. You have
+to trust the endpoint machines. It seems really difficult to uphold any
+security if the local machine is compromised. This is important to keep
+in mind in the ``visitor''-scenario, where you visit a friend or perhaps an
+internet café and want to connect to some of the machines at home or at
+work. If the enemy has been able to compromize your friend's or the
+café's equipment, you may well be in trouble.
+
+Protection from denial of service attacks is also a very difficult
+problem, and @dfn{lsh} makes no attempt to protect you from that.
+
+Instead, the aim of @dfn{lsh}, and most serious tools for cryptographic
+protection of commucations across the net, is to isolate the
+vulnerabilities to the communication endpoints. If you know that the
+endpoints are safe, the enemy should not be able to compromize you
+privacy or communications. Except for denial of service attacks (which
+at least can't be performed without you noticing it).
+
+First of all, @dfn{lsh} provides protection against passive
+eavesdropping. In addition, if you take the appropriate steps to make
+sure that hostkeys are properly authenticated, @dfn{lsh} also protects
+against man-in-the-middle attacks and in particular against attacks on
+the name resolution. In short, you need only trust the security at the
+end points: Even if the enemy controls all other network equipment, name
+resolution and routing infrastructure, etc, he can't do anything beyond
+the denial of service attack.
+
+And at last, remember that there is no such thing as absolute security.
+You have to estimate the value of that which you are protecting, and
+adjust the security measures so that your enemies will not find it worth
+the effort to break them.
+
+
+@node Features
+@comment  node-name,  next,  previous,  up
+@section Other convenient features
+
+@code{lsh} does not only provide for more Secure replacements of @code{telnet},
+@code{rsh} and @code{rlogin}, it also provides some other feature to
+make it convenient to communicate securely. But @code{lsh} is still in
+an early stage of development, so this section is expected to grow with
+time. One goal for @code{lsh} is to make it reasonable easy to extend it,
+without messing with the core security functionality.
+
+lsh can be configured to allow login based on a personal key-pair
+consisting of a private and a public key, so that you can execute remote
+commands without typing your password every time. Other user
+authentication methods on the wish list include Kerberos support and
+authentication using Thomas Wu's Secure Remote Password Protocol (SRP).
+
+The public-key authnetication methods should also be extended to support
+Simple Public Key Infrastructure (SPKI) certificates, including some
+mechanism to delegate restricted logins.
+
+Forwarding of arbitrary tcp/ip connections is provided. This is useful
+for tunneling otherwise insecure protocols, like telnet and pop, through
+an encrypted @code{lsh} connection.
+
+Convenient tunneling of X is one of the most impressive features of the
+original @code{ssh} prgrams. @code{lsh} doesn't do this yet. Other kind
+of tunneling that may turn out to be useful include authentication (i.e.
+@code{ssh-agent}), general forwarding of @acronym{UDP}, and why not also
+general ip-tunneling.
+
+
+@node Related techniques
+@comment  node-name,  next,  previous,  up
+@section Related programs and techniques
+
+This sections describes some other programs and techniques related to
+@code{lsh}. The ssh family of programs use mostly the same kind of
+security as @code{lsh}. Kerberos and @acronym{IPSEC} operate quite
+differently, in particular when it comes to protection against
+Man-in-the-middle attacks.
+
+@node ssh1
+@comment  node-name,  next,  previous,  up
+@subsection ssh-1.x
+
+The first of the Secure shell programs was Tatu Ylonen's @code{ssh}. The
+latest of the version 1 series is @code{ssh-1.27} which speaks version
+1.5 of the protocol. The ``free'' version of ssh-1.27 does not allow
+commercial use without additional licensing, which makes ssh-1.27
+non-free software according to the Debian's Free Software Guidelines and
+the Open Source Definition.
+
+The version 1 protocol has some minor weaknesses, in particular, all
+support for using stream ciphers was disabled by default a few versions
+back, for security reasons.
+
+There also exists free implementations of ssh-1, for both Unix and
+Windows.
+
+Until @code{lsh} becomes stable and well tested, I would recommend using
+some implementation of the ssh-1 protocol.
+
+@node ssh2
+@comment  node-name,  next,  previous,  up
+@subsection ssh-2.x
+
+@code{ssh-2} implements the next generation of the Secure Shell
+protocol, the development of which is supervised by the @acronym{IETF}
+secsh Working Group, although that working groups doesn't seem to be
+very active now. @code{lsh} implements the required subset of this
+protocol. It is intended to be compatible with the @code{ssh-2} series
+of programs distributed by Datafellows.
+
+However, the existing versions of @code{ssh-2} gets some details of the
+protocol wrong (probably because it predates the protocol
+specification), so there is some amount of bug-compatibility required.
+
+Interoperability between independenly developed implementations is one
+necessary condition for the ssh-2 protocol to become a Proposed
+Standard.
+
+The license for Datafellow's @code{ssh-2} programs is similar to that
+for recent versions of @code{ssh-1}, but with a narrower definition of
+``non-commercial use''.
+
+@node Kerberos
+@comment  node-name,  next,  previous,  up
+@subsection Kerberos
+
+Kerberos is a key distribution system originally developed in the late
+1980:s as a part of Project Athena at @acronym{MIT}. Recent development
+have been done at The Royal Institute of Technology, Stockholm
+(@acronym{KTH}).
+
+Kerberos uses a central trusted ticket-granting server, and requires
+less trust on the local machines in the system. It does not use
+public-key technology.
+
+Usually, Kerberos support is compiled into applications such as telnet,
+ftp and X-clients. The ssh family of programs, on the other hand, tries
+to do all needed magic, for instance to forward X securely, and then
+provides general tcp forwarding as a kitchen sink.
+
+I think Kerberos' and @code{lsh}'s protection against passive
+eavesdropping is mostly equivalent. The difference is in the set of
+machines and assumptions you have to trust in order to be safe from a
+Man-in-the-middle attack.
+
+I think the main advantage of @code{lsh} over Kerberos is that it is
+easier to install and use for on ordinary mortal user. In order to set
+up key exchange between two different Kerberos systems (or @dfn{Kerberos
+realms}), the respective system operators need to exchange keys. In the
+case of two random users at two random sites, setting up @code{lsh} or
+some other program in the ssh family is likely easier thaan to get the
+operators to spend time and attention. So @code{lsh} should be easier to
+use in a anarchistic grass-roots environment.
+
+Another perspective is to combine ssh-features like X and @acronym{TCP}
+forwarding with authentication based on Kerberos. Such an arrangement
+may provide the best of two worlds for those who happen to have an
+account at a suitable ticket-granting server.
+
+@node ipsec
+@comment  node-name,  next,  previous,  up
+@subsection @acronym{IPSEC}
+
+@acronym{IPSEC} is a set of protocols for protecting general ip-traffic.
+It is developed by anotheer @acronym{IETF} working group, and is also a
+required part of IP version 6.
+
+Again, the main difference between @acronym{IETF} and Kerberos and ssh
+is the set of machines that have to be secure and the keys that have to
+be exchanged in order to avoid Man-in-the-middle attacks.
+
+Current protocols and implementations of @acronym{IPSEC} only provide
+authentication of machines; there's nothing analogous to the user
+authentication in ssh or Kerberos.
+
+On the other hand, @acronym{IPSEC} provides one distinct advantage over
+application level encryption. Because @acronym{IP} and @acronym{TCP}
+headers are authenticated, it provides protection against some
+denial-of-service attacks. In particular, it makes attacks that cause
+hangup of a @acronym{TCP} connection considerably more difficult.
+
+So it makes sense to use both @acronym{IPSEC} and some application
+level cryptographic protocol.
+
+Also note that it is possible to use the @dfn{Point-to-Point} PPP
+protocol to tunnel arbitrary ip traffic accross an ssh connection. This
+arrangement provides some of the functionality of @acronym{IPSEC}, and
+is some times referred to as ``a poor man's Virtual Private Network''.
+
+@node Terminology
+@comment  node-name,  next,  previous,  up
+Chapter Terminology
+
+@node    Concept Index,    ,  Overview, Top
+@comment  node-name,  next,  previous,  up
+@unnumbered Concept Index
+
+@printindex cp
+
+@contents
+
+     
+@bye
