@@ -640,7 +640,7 @@ DEFINE_PACKET_HANDLER(static, global_request_handler, connection, packet)
 	  else
 	    {
 	      /* We should ignore failures. */
-	      static struct report_exception_info global_req_ignore =
+	      static const struct report_exception_info global_req_ignore =
 		STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_GLOBAL_REQUEST,
 					     "Ignored:");
 	      
@@ -880,7 +880,8 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
 	      else
 		{
 		  /* We should ignore failures. */
-		  static struct report_exception_info channel_req_ignore =
+		  static const struct report_exception_info
+		    channel_req_ignore =
 		    STATIC_REPORT_EXCEPTION_INFO(EXC_ALL, EXC_CHANNEL_REQUEST,
 						 "Ignored:");
 		  
