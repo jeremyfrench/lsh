@@ -9,6 +9,8 @@ if [ -z "$srcdir" ] ; then
   srcdir=.
 fi
 
+export srcdir
+
 for t in "$@"; do
   if [ -s $t ]; then
     dir=.
