@@ -1,8 +1,23 @@
 /* certificate.h */
 
 #include "nettle/sexp.h"
+#include "nettle/md5.h"
+#include "nettle/sha.h"
 
 #include <time.h>
+
+struct spki_hashes
+{
+  /* Include the flags in this struct? */
+  uint8_t md5[MD5_DIGEST_SIZE];
+  uint8_t sha1[SHA1_DIGEST_SIZE];
+};
+
+enum spki_principal_flags
+  {
+    SPKI_PRINCIPAL_MD5 = 1,
+    SPKI_PRINCIPAL_SHA1 = 2
+  };
 
 struct spki_principal
 {
@@ -14,8 +29,9 @@ struct spki_principal
   /* NULL if only hash is known */
   uint8_t *key;
 
-  uint8_t md5[MD5_DIGEST_SIZE];
-  uint8_t sha[SHA1_DIGEST_SIZE];
+  /* A flag is set iff the corresponding hash value is known. */
+  enum spki_principal_flags flags;
+  struct spki_hashes hashes;
 
   /* Information needed to verify signatures for this key. */
   void *verifier;
@@ -38,7 +54,7 @@ struct spki_authorization
 };
 #endif
   
-enum spki_flags
+enum spki_5_tuple_flags
 {
   SPKI_PROPAGATE = 1,
   SPKI_NOT_BEFORE = 2,
@@ -56,7 +72,7 @@ struct spki_5_tuple
   /* For now, support only subjects that are principals (i.e. no
    * names) */
   struct spki_principal *subject;
-  enum spki_flags flags;
+  enum spki_5_tuple_flags flags;
 
   /* Checked if the corresponding flag is set. */
   time_t not_before;
@@ -80,11 +96,9 @@ struct spki_acl_db
 void
 spki_acl_init(struct spki_acl_db *db);
 
-/* Internal functions for looking up a principal. */
 
-struct spki_principal *
-spki_principal_add_key(struct spki_acl_db *db,
-		       unsigned key_length,  const uint8_t *key);
+/* Looks up a principal by key or by hash, and creates new principals
+ * when needed. */
 
 struct spki_principal *
 spki_principal_by_key(struct spki_acl_db *db,
