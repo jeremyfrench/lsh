@@ -3,12 +3,12 @@
 #include "algorithms.h"
 #include "format.h"
 #include "randomness.h"
-#include "sexp.h"
 #include "spki.h"
 #include "werror.h"
 #include "xalloc.h"
 
 #include "nettle/knuth-lfib.h"
+#include "nettle/sexp.h"
 
 /* -1 means invalid */
 static const signed char hex_digits[0x100] =
@@ -174,15 +174,16 @@ do_bad_random(struct randomness *r, UINT32 length, UINT8 *dst)
 
 void
 test_sign(const char *name,
-	  const struct lsh_string *key_exp,
+	  const struct lsh_string *key,
 	  struct lsh_string *msg,
 	  const struct lsh_string *signature)
 {
   struct alist *algorithms;
-  struct sexp *key;
   struct lsh_string *sign;
   struct signer *s;
   struct verifier *v;
+  struct sexp_iterator i;
+  UINT8 *decoded;  
 
   struct knuth_lfib_ctx ctx;
   struct bad_random r = { { STACK_HEADER, RANDOM_GOOD /* a lie */,
@@ -194,16 +195,14 @@ test_sign(const char *name,
   algorithms = all_signature_algorithms(&r.super);
   (void) name;
 
-#if 0
-  werror("%xi\n", key_exp);
-  werror("%S\n", key_exp);
-#endif
+  decoded = alloca(key->length);
+  memcpy(decoded, key->data, key->length);
   
-  key = string_to_sexp(SEXP_TRANSPORT, key_exp, 0);
-  if (!key)
+  if (!sexp_transport_iterator_first(&i, key->length, decoded))
     FAIL();
-  
-  s = spki_make_signer(algorithms, key, NULL);
+
+  /* Can't use spki_make_signer, because private-key tag is missing. */
+  s = spki_sexp_to_signer(algorithms, &i, NULL);
   if (!s)
     FAIL();
 
@@ -238,7 +237,6 @@ test_sign(const char *name,
   
   KILL(v);
   KILL(s);
-  KILL(key);
 }
 
 static int
@@ -246,15 +244,22 @@ test_spki_match(const char *name,
 		const struct lsh_string *resource,
 		const struct lsh_string *access)
 {
-  struct spki_tag *tag = spki_sexp_to_tag
-    (string_to_sexp(SEXP_CANONICAL, resource, 0),
-     17);
+  struct sexp_iterator i;
+  struct spki_tag *tag;
 
-  struct sexp *access_expr
-    = string_to_sexp(SEXP_CANONICAL, access, 0);
+  if (!sexp_iterator_first(&i, resource->length, resource->data))
+    return 0;
+  
+  tag = spki_sexp_to_tag(&i, 17);
 
+  if (!tag)
+    return 0;
+
+  if (!sexp_iterator_first(&i, access->length, access->data))
+    return 0;
+  
   (void) name;
-  return SPKI_TAG_MATCH(tag, access_expr);
+  return SPKI_TAG_MATCH(tag, &i);
 }
 
 void
