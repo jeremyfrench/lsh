@@ -1,5 +1,14 @@
 2001-09-24  Niels Möller  <nisse@ehand.com>
 
+	* src/scm/gaba.scm (process-expr): Handle empty parameter list.
+
+	* src/io.c: Deleted class io_backend. Register signal handlers and
+	files with gc_global() instead. Deleted all references to
+	io_backend in the rest of the source files. Doesn't quite work yet.
+
+	* src/gc.c (gc_global): New function.
+	(root_set): New global variable.
+
 	* Liboop code (without gc) seems to work now. Tagging as
 	MILESTONE_LIBOOP_20010924. 
 
