@@ -629,9 +629,9 @@ do_catch_simple(struct command_simple *s,
    
 static void
 do_catch_report_apply(struct command *s,
-			  struct lsh_object *a,
-			  struct command_continuation *c,
-			  struct exception_handler *e)
+		      struct lsh_object *a,
+		      struct command_continuation *c,
+		      struct exception_handler *e)
 {
   CAST(catch_report_apply, self, s);
 

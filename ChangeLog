@@ -1,4 +1,51 @@
+2000-02-06  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/tcpforward_commands.c (new_tcpip_channel): Use
+	format_channel_open(). 
+
+	* src/proxy_session.c (do_proxy_open_channel): Use
+	format_channel_open(). 
+
+	* src/lsh-authorize: Tried to remove bash-isms. 
+
+	* src/client.c (new_session): Use format_channel_open.
+
+	* src/channel_commands.h (channel_open_command): Added
+	local_channel_number argument to NEW_CHANNEL. 
+
+	* src/channel_commands.c (do_channel_open_command): Call
+	alloc_channel() and register_channel(), rather than delegating it
+	to the NEW_CHANNEL method. Set the channel's exception handler
+	properly. 
+
+	* src/channel.c (use_channel): New function to take a channel in
+	use. 
+	(register_channel): New argument take_into_use.
+	(lookup_channel_reserved): New function that returns channels that
+	are marked as reserved, but not in use.
+	(do_channel_open_continue): Call register_channel with
+	take_in_use=1. 
+	(do_channel_open_confirm): Use lookup_channel_reserved(). Call
+	use_channel(). 
+	(do_channel_open_failure): Use lookup_channel_reserved().
+	(format_channel_open): Renamed from prepare_channel_open. Don't
+	call alloc_channel() or register_channel().
+
+	* src/channel.h (CHANNEL_FREE, CHANNEL_RESERVED, CHANNEL_IN_USE):
+	New three-level classification for the in_use table.
+
+	* src/channel.c (exc_finish_channel_handler): Use pointer to
+	connection rather than to its channel table. 
+
 2000-02-05  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/client.c (do_exit_status, do_exit_signal): Use the
+	connection's exception handler for protocol errors.
+
+	* src/channel.c (do_exc_finish_channel_handler): Raise
+	EXC_FINISH_READ using the connection's exception handler.
+	(make_exc_finish_channel_handler): Take a connection, rather than
+	a channel_table, as argument.
 
 	* src/io.c, src/io.h: Reorganized, and deleted all subclasses of
 	lsh_fd.  

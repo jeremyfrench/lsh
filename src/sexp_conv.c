@@ -261,7 +261,7 @@ int main(int argc, char **argv)
     struct lsh_fd *in = make_lsh_fd(backend, STDIN_FILENO, e);
 
     /* Fixing the exception handler creates a circularity */
-    e->parent = make_exc_finish_read_handler(&in->super,
+    e->parent = make_exc_finish_read_handler(in,
 					     &default_exception_handler,
 					     HANDLER_CONTEXT);
     

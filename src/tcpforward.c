@@ -446,7 +446,9 @@ do_tcpip_forward_request(struct global_request *s,
 		     a,
 		     make_tcpip_forward_request_continuation
 		     (connection, forward, c),
-		     /* FIXME: Use a better exception handler */
+		     /* FIXME: Use a better exception handler.
+		      * We should handle EXC_RESOLVE and EXC_LISTEN, and
+		      * report or ignore i/o-errors. */
 		     &default_exception_handler
 		     /* make_tcpip_forward_request_raise
 			(connection, forward) */ );
