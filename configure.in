@@ -190,24 +190,6 @@ Latest version is available at <URL: http://www.seindal.dk/rene/gnu/>])
   M4="false --"
 fi
 
-dnl Checks for libraries.
-AC_CHECK_LIB(gmp, mpz_set_d,,
-dnl Some debian systems have both gmp1 and gmp2.
-    [AC_CHECK_LIB(gmp2, mpz_set_d,,
-	AC_ERROR([GMP is missing (ftp://ftp.gnu.org/pub/gnu/gmp/gmp-2.0.2.tar.gz)]))])
-
-if test x$with_zlib = xyes; then
-  AC_CHECK_LIB(z, inflate,, [with_zlib=no])
-fi
-AC_CHECK_LIB(crypt, crypt)
-AC_CHECK_LIB(xnet, inet_addr)
-AC_CHECK_LIB(nsl, gethostbyname)
-AC_CHECK_LIB(socket, setsockopt)
-dnl logwtmp is also in libutil
-AC_CHECK_LIB(util, openpty)
-dnl This macro is new in autoconf-2.13
-AC_SEARCH_LIBS(syslog, bsd socket inet, AC_DEFINE(HAVE_SYSLOG))
-
 dnl Checks for header files.
 AC_HEADER_STDC
 
@@ -258,12 +240,6 @@ if test x$lsh_cv_type_socklen_t = xno ; then
   AC_DEFINE(socklen_t, int)
 fi
 
-  
-dnl Should we use zlib?
-
-if test x$with_zlib = xyes ; then
-  AC_DEFINE(WITH_ZLIB)
-fi
 
 dnl Find the SSH1 daemon; try 'sshd1' first; if it fails, look for 'sshd'
 dnl ## if test x$with_sshd1 = xyes ; then
@@ -305,6 +281,31 @@ dnl ## SSH1 daemon (ftp://ftp.cs.hut.fi/pub/ssh/), or configure --without-sshd1 
 dnl ## 	 fi
 dnl ## 	 AC_DEFINE_UNQUOTED(SSHD1,"$SSHD1BIN")
 dnl ## fi
+
+
+dnl Checks for libraries.
+AC_CHECK_LIBGMP(gmp,,
+dnl Some debian systems have both gmp1 and gmp2.
+    [AC_CHECK_LIBGMP(gmp2,,
+	AC_ERROR([GMP is missing (ftp://ftp.gnu.org/pub/gnu/gmp/gmp-2.0.2.tar.gz)]))])
+
+if test x$with_zlib = xyes; then
+  AC_CHECK_LIB(z, inflate,, [with_zlib=no])
+fi
+
+AC_CHECK_LIB(crypt, crypt)
+AC_CHECK_LIB(xnet, inet_addr)
+AC_CHECK_LIB(nsl, gethostbyname)
+AC_CHECK_LIB(socket, setsockopt)
+dnl logwtmp is also in libutil
+AC_CHECK_LIB(util, openpty)
+dnl This macro is new in autoconf-2.13
+AC_SEARCH_LIBS(syslog, bsd socket inet, AC_DEFINE(HAVE_SYSLOG))
+
+dnl Should we use zlib?
+if test x$with_zlib = xyes ; then
+  AC_DEFINE(WITH_ZLIB)
+fi
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -551,7 +552,8 @@ dnl FIXME: This is usually defined in stddef.h
 AC_CACHE_CHECK(for offsetof,
 	       lsh_cv_c_offsetof,
   [ AC_TRY_COMPILE(,
-      [ struct s { int a; int b; };
+      [ #include <stddef.h>
+	struct s { int a; int b; };
         int foo(void) { return offsetof(struct s, b); }	],
       lsh_cv_c_offsetof=yes,
       lsh_cv_c_offsetof=no)])
