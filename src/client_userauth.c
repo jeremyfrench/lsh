@@ -202,7 +202,7 @@ do_userauth_success(struct packet_handler *c,
       
       lsh_string_free(packet);
 
-      werror("User authentication successful.\n");
+      verbose("User authentication successful.\n");
 
       for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
 	connection->dispatch[i] = &connection_fail_handler;
