@@ -94,8 +94,8 @@ extern unsigned number_of_strings;
 
 #else   /* !DEBUG_ALLOC */
 
-#define CHECK_TYPE(c, o) (struct lsh_object *)(o)
-#define CHECK_SUBTYPE(c, o) (struct lsh_object *)(o)
+#define CHECK_TYPE(c, o) ((struct lsh_object *)(o))
+#define CHECK_SUBTYPE(c, o) ((struct lsh_object *)(o))
      
 #define CAST(class, var, o) \
    struct class *(var) = (struct class *) (o)
