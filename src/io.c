@@ -2138,7 +2138,7 @@ close_fd(struct lsh_fd *fd)
       lsh_oop_cancel_write_fd(fd);
 
       fd->super.alive = 0;
-  
+      /* FIXME: Is this still used? */
       if (fd->fd < 0)
 	/* Unlink the file object, but don't close any
 	 * underlying file. */
