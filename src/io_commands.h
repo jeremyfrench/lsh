@@ -50,6 +50,8 @@ extern struct collect_info_1 listen_command;
 
 struct command *make_simple_connect(struct io_backend *backend,
 				    struct resource_list *resources);
+struct command *make_connect_command(struct io_backend *backend);
+
 struct command *
 make_simple_listen(struct io_backend *backend,
 		   struct resource_list *resources);
