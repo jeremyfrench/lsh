@@ -175,6 +175,8 @@ int pty_allocate(struct pty_info *pty,
   struct lsh_string *name = NULL;
   if ((pty->master = open("/dev/ptmx", O_RDWR | O_NOCTTY)) < 0)
     {
+      werror("pty_allocate: Opening /dev/ptmx failed (errno = %i): %z\n",
+	     errno, strerror(errno));
       return 0;
     }
   
