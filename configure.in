@@ -425,13 +425,6 @@ dnl  AC_CHECK_VAR(program_invocation_short_name, [char *])
 
 AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
 
-dnl This macro is mentioned in the automake manual, but where is it
-dnl supposed to be defined?
-dnl AC_REPLACE_GNU_GETOPT
-
-dnl dnl AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o $LIBOBJS"])
-dnl AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
-
 # Test if the libc includes a good enough argp.
 if test x$with_system_argp = xyes ; then
 dnl  AC_CHECK_FUNCS(argp_parse,, with_system_argp=no)
