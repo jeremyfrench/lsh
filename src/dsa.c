@@ -264,8 +264,10 @@ make_dsa_signer_kludge(struct signer *s)
 
 /* Verifying DSA signatures */
 
-/* The caller should make sure that r and s are non-negative.
- * That they are less than q is checked here. */
+#define DSA_MAX_QSIZE SHA_DIGESTSIZE
+
+/* The caller should make sure that r and s are non-negative, and not
+ * extremely large. That they are less than q is checked here. */
 static int
 generic_dsa_verify(struct dsa_public *key,
 		   UINT32 length,
@@ -285,7 +287,7 @@ generic_dsa_verify(struct dsa_public *key,
   /* Compute w = s^-1 (mod q) */
   mpz_init(w);
 
-  /* NOTE: mpz_invert somtimes generates negative inverses. */
+  /* NOTE: mpz_invert sometimes generates negative inverses. */
   if (!mpz_invert(w, s, key->q))
     {
       werror("generic_dsa_verify: s non-invertible.\n");
@@ -362,7 +364,8 @@ do_dsa_verify(struct verifier *c,
   if (!(parse_atom(&buffer, &atom)
 	&& (atom == ATOM_SSH_DSS)
 	&& parse_string(&buffer, &buf_length, &buf)
-	&& !(buf_length % 2)) )
+	&& !(buf_length % 2)
+	&& (buf_length <= (2 * DSA_MAX_QSIZE)) ))
     return 0;
 
   mpz_init(r);
@@ -398,8 +401,8 @@ do_dsa_verify_spki(struct verifier *c,
   /* NOTE: With the current definition of sexp_get_un, there are no
    * requirements on the order in which r and s occur. */
   res = (SEXP_LEFT(i) == 2)
-    && sexp_get_un(i, ATOM_R, r)
-    && sexp_get_un(i, ATOM_S, s)
+    && sexp_get_un(i, ATOM_R, r, DSA_MAX_QSIZE)
+    && sexp_get_un(i, ATOM_S, s, DSA_MAX_QSIZE)
     && generic_dsa_verify(&closure->public, length, msg, r, s);
 
   mpz_clear(r);
@@ -427,7 +430,8 @@ do_dsa_verify_kludge(struct verifier *c,
 
   /* NOTE: This doesn't include any length field. Is that right? */
 
-  if (signature_length % 2)
+  if ( (signature_length % 2)
+       || (signature_length > (2 * DSA_MAX_QSIZE)) )
     return 0;
 
   buf_length = signature_length / 2;
@@ -474,10 +478,10 @@ static int
 spki_init_dsa_public(struct dsa_public *key,
 		     struct sexp_iterator *i)
 {
-  return (sexp_get_un(i, ATOM_P, key->p)
-	  && sexp_get_un(i, ATOM_Q, key->q)
-	  && sexp_get_un(i, ATOM_G, key->g)
-	  && sexp_get_un(i, ATOM_Y, key->y) );
+  return (sexp_get_un(i, ATOM_P, key->p, DSA_MAX_SIZE)
+	  && sexp_get_un(i, ATOM_Q, key->q, DSA_MAX_QSIZE)
+	  && sexp_get_un(i, ATOM_G, key->g, DSA_MAX_SIZE)
+	  && sexp_get_un(i, ATOM_Y, key->y, DSA_MAX_SIZE) );
 }
 
 static struct signer *
@@ -497,7 +501,7 @@ make_dsa_signer(struct signature_algorithm *c,
   
   if ( (SEXP_LEFT(i) == 5)
        && spki_init_dsa_public(&res->public, i)
-       && sexp_get_un(i, ATOM_X, res->a) )
+       && sexp_get_un(i, ATOM_X, res->a, DSA_MAX_QSIZE) )
     {
       res->random = closure->random;
       res->super.sign = do_dsa_sign;
@@ -551,15 +555,15 @@ make_dsa_algorithm(struct randomness *random)
 int parse_dsa_public(struct simple_buffer *buffer,
 		     struct dsa_public *public)
 {
-  return (parse_bignum(buffer, public->p)
+  return (parse_bignum(buffer, public->p, DSA_MAX_SIZE)
 	  && (mpz_sgn(public->p) == 1)
-	  && parse_bignum(buffer, public->q)
+	  && parse_bignum(buffer, public->q, DSA_MAX_QSIZE)
 	  && (mpz_sgn(public->q) == 1)
 	  && (mpz_cmp(public->q, public->p) < 0) /* q < p */ 
-	  && parse_bignum(buffer, public->g)
+	  && parse_bignum(buffer, public->g, DSA_MAX_SIZE)
 	  && (mpz_sgn(public->g) == 1)
 	  && (mpz_cmp(public->g, public->p) < 0) /* g < p */ 
-	  && parse_bignum(buffer, public->y) 
+	  && parse_bignum(buffer, public->y, DSA_MAX_SIZE) 
 	  && (mpz_sgn(public->y) == 1)
 	  && (mpz_cmp(public->y, public->p) < 0) /* y < p */  );
 }
