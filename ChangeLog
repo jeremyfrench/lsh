@@ -1,3 +1,8 @@
+2002-09-02  Pontus Sköld  <pont@soua.net>
+
+	* src/testsuite/lsh-8-test: New test. Check whatever unencrypted
+	sessions work.
+
 2002-08-30  Pontus Sköld  <pont@soua.net>
 
 	* src/testsuite/functions.sh: Defaults need to be quoted if they
