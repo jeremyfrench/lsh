@@ -12,7 +12,7 @@ werror "Testing lshd"
 
 spawn_lshd
 
-for f in rapid7-ssh-pdu/*.pdu ; do
+for f in $srcdir/rapid7-ssh-pdu/*.pdu ; do
     werror "Testing $f"
     tcpconnect $INTERFACE $PORT < "$f" > /dev/null \
 	|| die "Connect failed"

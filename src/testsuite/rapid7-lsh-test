@@ -15,7 +15,7 @@ at_exit "kill $pid; rm -f current" 0
 
 werror "Testing lsh"
 
-for f in rapid7-ssh-pdu/*.pdu ; do
+for f in $srcdir/rapid7-ssh-pdu/*.pdu ; do
     echo 1>&2 "Testing $f"
     ln -sf $f current || die "Creating symlink current -> $f failed"
 
