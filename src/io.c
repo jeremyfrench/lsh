@@ -1213,12 +1213,11 @@ io_resolv_address(const char *host, const char *service,
 	    {
 	      struct hostent *hp;
 	      unsigned i;
-	      if (! (lookup 
-		     && (hp = gethostbyname(host))
-		     && (hp->h_addrtype == AF_INET)))
+	      if (! ( (hp = gethostbyname(host))
+		      && (hp->h_addrtype == AF_INET)))
 		{
 		  lsh_space_free(addr);
-		  return tail;
+		  return 0;
 		}
 	      assert(hp->h_length == sizeof(addr.sin_addr));
 	      
@@ -1227,7 +1226,7 @@ io_resolv_address(const char *host, const char *service,
 		  struct sockaddr *n;
 		  memcpy(&addr.sin_addr, hp->h_addr_list[i], hp->h_length);
 		  n = addr_queue_add_tail(q, sizeof(addr));
-		  memcpy(n, &addr, sizeof(addr)(;
+		  memcpy(n, &addr, sizeof(addr));
 		  naddresses++;
 		}
 	    }
