@@ -824,6 +824,8 @@ sftp_process_realpath(struct sftp_ctx *ctx)
   else
     sftp_put_filename(ctx, &st, resolved);
 
+  DEBUG (("sftp_process_realpath: Resolved %s to %s\n", name, resolved));
+
   sftp_set_msg( ctx->o, SSH_FXP_NAME );
   return 1;
 }
@@ -1231,6 +1233,8 @@ sftp_process_symlink(struct sftp_ctx *ctx)
 	  && (targetpath = sftp_get_name(ctx->i))) )
     return sftp_bad_message(ctx);
   
+  DEBUG (("sftp_process_symlink: Linkpath: %s Targetpat: %s\n", linkpath, targetpath));
+
   if (symlink(targetpath, linkpath) < 0)
     return sftp_send_errno(ctx, errno);
   else
@@ -1262,6 +1266,8 @@ sftp_process(sftp_process_func **dispatch,
 
   if (!sftp_get_uint32(ctx->i, &id))
     FATAL("Invalid packet.");
+
+  DEBUG (("sftp_process: msg: %d, id: %d\n", msg, id));
 
   /* Every reply starts with the id, so copy it through */
   sftp_set_id(ctx->o, id);
