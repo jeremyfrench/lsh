@@ -185,7 +185,23 @@ void init_consuming_read(struct io_consuming_read *self,
        ; The port number here is always in host byte order
        (port . UINT32))) */
 
-/* Returned by listen. And also by connect, so this is an improper name. */
+/* Used for listening and connecting to local sockets.
+ * Both strings have to be NUL-terminated. */
+
+/* GABA:
+   (class
+     (name local_info)
+     (vars
+       (directory string)
+       (name string)))
+*/
+
+struct local_info *
+make_local_info(struct lsh_string *directory,
+		struct lsh_string *name);
+     
+/* Returned by listen. And also by connect, so this is an improper name.
+ * Functions related to AF_UNIX sockets leave the peer field as NULL. */
 /* GABA:
    (class
      (name listen_value)
@@ -311,15 +327,13 @@ io_listen(struct io_backend *b,
 
 struct lsh_fd *
 io_listen_local(struct io_backend *b,
-		struct lsh_string *directory,
-		struct lsh_string *name,
+		struct local_info *info,
 		struct io_callback *callback,
 		struct exception_handler *e);
 
 struct lsh_fd *
 io_connect_local(struct io_backend *b,
-		 struct lsh_string *directory,
-		 struct lsh_string *name,
+		 struct local_info *info,
 		 struct command_continuation *c,
 		 struct exception_handler *e);
 
@@ -327,6 +341,12 @@ struct io_callback *
 make_listen_callback(struct io_backend *backend,
 		     struct command_continuation *c,
 		     struct exception_handler *e);
+
+#if 0
+struct io_callback *
+make_listen_callback_no_peer(struct io_backend *backend,
+			     struct command_continuation *c);
+#endif
 
 struct lsh_fd *io_read_write(struct lsh_fd *fd,
 			     struct io_callback *read,
@@ -362,12 +382,14 @@ io_read_file(struct io_backend *backend,
 	     const char *fname, 
 	     struct exception_handler *e);
 
+#if 0
 struct lsh_fd *
 io_read_user_file(struct io_backend *backend,
 		  const char *fname,
 		  uid_t uid, int secret,
 		  const struct exception **x,
 		  struct exception_handler *e);
+#endif
 
 int
 lsh_make_pipe(int *fds);
