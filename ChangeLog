@@ -16,6 +16,11 @@
 	* src/testsuite/lshd-random-input-test: New test case that
 	connects to lshd and sends some random data.
 
+2003-09-18  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/read_line.c (do_read_line): Fixed buffer overrun bug,
+	initially reported by Bennett Todd. Fixed also in stable branch.
+
 2003-09-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* distribution-key.gpg: Updated key, new signatures and new expire
