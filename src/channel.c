@@ -315,7 +315,7 @@ alloc_channel(struct channel_table *table)
 
   if (i == table->allocated_channels) 
     {
-      int new_size = table->allocated_channels * 2;
+      UINT32 new_size = table->allocated_channels * 2;
       struct ssh_channel **new_channels;
       UINT8 *new_in_use;
 
