@@ -1,5 +1,23 @@
 2003-02-12  Niels Möller  <niels@s3.kth.se>
 
+	* testsuite/check-signature-test (test_valid, test_invalid):
+	Optionally take three arguments, where the second is the data
+	being signed. Added two new tests, with correct and incorrect
+	input for the RSA signature verification.
+
+	* tools/spki-check-signature.c (parse_options): New function.
+	(main): By default, read and hash stdin, and compare with the hash
+	in the signature. New option --no-data to omit this check.
+
+	* tools/spki-make-signature.c (die, xalloc): Moved functions to
+	misc.c. 
+
+	* tools/Makefile.am (LDADD): Added misc.o
+	(EXTRA_DIST): List misc.c and mish.h.
+
+	* tools/misc.c: Renamed io.c to misc.c. New function xalloc.
+	Changed function hash_file, updated callers.
+
 	* tools/Makefile.am (spki_make_signature_SOURCES): Added io.h.
 
 2003-02-11  Niels Möller  <nisse@cuckoo.hack.org>

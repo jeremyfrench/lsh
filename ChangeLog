@@ -1,5 +1,7 @@
 2003-02-12  Niels Möller  <niels@s3.kth.se>
 
+	* src/unix_user.c (do_spawn): Added FIXME on error reporting.
+
 	* misc/xenofarm.sh (cfgwarn): Delete warning about using an
 	absolute path for srcdir.
 
