@@ -1,3 +1,9 @@
+2001-02-28  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/client.c (init_client_options): Initialize stderr_fork = 1.
+	(client_options): New option --no-cvs-workaround.
+	(client_argp_parser): Handle --no-cvs-workaround.
+
 2001-02-25  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* Refer to a function foo as "foo", not "foo()", in messages and
