@@ -246,7 +246,7 @@ make_ssh_connection(struct address_info *peer,
   
   connection->resources = empty_resource_list();
   
-  connection->rec_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
+  connection->rec_max_packet = SSH_MAX_PACKET;
   connection->rec_mac = NULL;
   connection->rec_crypto = NULL;
 
