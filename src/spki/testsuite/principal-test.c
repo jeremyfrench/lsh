@@ -12,11 +12,11 @@ main(int argc, char **argv)
   
   spki_acl_init(&db);
   
-  s = spki_principal_add_key(&db, 5, "3:foo");
+  s = spki_principal_by_key(&db, 5, "3:foo");
   ASSERT(s);
 
   ASSERT(spki_principal_by_key(&db, 5, "3:foo") == s);
-  ASSERT(spki_principal_by_key(&db, 5, "3:bar") == NULL);
+  ASSERT(spki_principal_by_key(&db, 5, "3:bar") != s);
 
   return 0;
 }
