@@ -38,9 +38,9 @@ LSH_GCC_ATTRIBUTES
 # Checks for library functions.
 AC_FUNC_ALLOCA
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS(strerror, sleep, getpid)
+AC_CHECK_FUNCS(strerror sleep getpid)
 
-AC_REPLACE_FUNCS(mempcpy strndup strchrnul)
+AC_REPLACE_FUNCS(mempcpy strndup strchrnul strcasecmp)
 
 dnl ARGP_CHECK_FUNC(includes, function-call [, if-found [, if-not-found]])
 AC_DEFUN([ARGP_CHECK_FUNC],
