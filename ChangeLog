@@ -1,3 +1,11 @@
+2000-06-27  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* doc/lsh.texinfo: Bumped "updated-for" to 1.0.
+
+	* configure.in: Bumped version to 0.9.15.
+
+	* src/server_session.c (do_spawn_exec): Fixed declaration order.
+
 2000-06-27  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_session.c (do_spawn_exec): Avoid array
