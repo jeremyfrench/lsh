@@ -21,7 +21,7 @@ LDFLAGS = @LDFLAGS@
 
 LOADLIBES = $(LIBS)
 
-CPPFLAGS = 
+CPPFLAGS = -DDEBUG_ALLOC
 
 prefix = @prefix@
 exec_prefix = $(prefix)
@@ -34,28 +34,38 @@ binprefix =
 
 #### End of system configuration section. ####
 
-SRCS = atoms.c atoms_gperf.c atoms_table.c bignum.c client.c connection.c \
-	debug.c encrypt.c format.c io.c lsh.c packet_dispatch.c \
+COMMON_SRCS = atoms.c bignum.c connection.c crypto.c \
+	debug.c encrypt.c format.c io.c packet_dispatch.c \
 	pad.c parse.c read_data.c read_line.c read_packet.c \
-	server_keyexchange.c transport.c unpad.c void.c \
+	server_keyexchange.c unpad.c void.c \
 	werror.c write_buffer.c xalloc.c
 
+CLIENT_SRCS = lsh.c client.c 
+SERVER_SRCS = lshd.c server.c
+SRCS = $(COMMON_SRCS) $(CLIENT_SRCS) $(SERVER_SRCS)
+
+COMMON_OBJS = $(COMMON_SRCS:.c=.o)
+CLIENT_OBJS = $(CLIENT_SRCS:.c=.o)
+SERVER_OBJS = $(SERVER_SRCS:.c=.o)
 OBJS = $(SRCS:.c=.o)
-all: lsh
+
+all: lsh lshd
+
 .PHONY: all
 
 .c.o:
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
 
-lsh: lsh.o client.o read_packet.o read_line.o debug.o werror.o \
-     xalloc.o io.o void.o write_buffer.o format.o bignum.o atoms.o connection.o
-#	$(CC) -o lsh $(CFLAGS) $<
+lsh: $(CLIENT_OBJS) $(COMMON_OBJS)
+
+lshd: $(SERVER_OBJS) $(COMMON_OBJS)
 
 atoms_defines.h: atoms.in process_atoms
 	bash process_atoms header <atoms.in >atoms_defines.h
 
 atoms_gperf.c: atoms.in process_atoms
-	bash process_atoms gperf <atoms.in |gperf -t -k1,7,$$ -N gperf_atom >atoms_gperf.c
+	bash process_atoms gperf <atoms.in \
+             | gperf -t -k1,7,$$ -N gperf_atom >atoms_gperf.c
 
 atoms_table.c: atoms.in process_atoms
 	bash process_atoms table <atoms.in >atoms_table.c
