@@ -1,3 +1,13 @@
+CORRECT USE OF TYPES
+
+In channel.c and readpacket.c there are logical problems with the code: the
+channel numbers are of type UINT32, but are often assigned to ints for which 
+negative values are used to signal error conditions. These negative values
+can well be valid channel numbers! Either the signalling of errors needs to
+be done through a separate mechanism (this is probably the cleanest
+solution), or a (signed) INT64 should be made for "channel number or error".
+
+
 ERROR HANDLING
 
 Consider return values from handlers. A return value has several
@@ -28,6 +38,9 @@ KEYS
 Code is needed to generate, store and read dss keys. Preferably in a
 SPKI/s-expression form.
 
+DSS == Digital Signature Standard; the algorithm in it is DSA (Digital
+Signature Algorithm); the GNU Privacy Guard contains a DSA implementation
+(cipher/dsa.[ch]); is that implementation suitable?
 
 USERS
 
@@ -36,7 +49,7 @@ Functions to lookup users, their passwords and .lsh/authorized_keys.
 
 CHARSETS
 
-Usernames and passwords must be translated from the systems charset
+User names and passwords must be translated from the systems charset
 (default iso-8859-1) to UTF8.
 
 
@@ -50,7 +63,7 @@ ALLOCATION
 Not all packet consumers free processed packets properly.
 
 Use separate allocation function for objects that are subject to gc,
-and thos (for instance, strings and atom lists) which are deallocated
+and those (for instance, strings and atom lists) which are deallocated
 explicitly). 
 
 Implement a mark&sweep gc.
@@ -58,7 +71,7 @@ Implement a mark&sweep gc.
 Use separate "storage-types" for lsh_string_alloc and
 lssh_space_alloc.
 
-Make lists of integers (usually atoms) its own type. Can this be done
+Make lists of integers (usually atoms) their own type. Can this be done
 in such a way that they can also be allocated statically? 
 
 Have the allocator initialize all objects automatically.
@@ -120,7 +133,7 @@ PROCESSES
 Dying children must be handled. For example like this: Use a signal
 handler to set a flag when a child dies. Let the backend loop (io.c)
 look at this flag, wait() to get status from dying children. Use an
-alist pid->callback to report childrens exit status back to the remote
+alist pid->callback to report children's exit status back to the remote
 end. Another issue are process groups... Are they relevant? 
 
 Kill child processes if its channel or its connection is closed
@@ -131,8 +144,39 @@ MISC
 
 Try to find out why read() sometimes returns -1 and sets errno==EPIPE,
 on sparc-linux, 2.0.33, redhat-5.1, glibc.
+Note: Debian's sparc port uses glibc2.1, rather than 2.0; maybe Red Hat does
+too? Quite a lot of things have changed between 2.0 and 2.1; this might well
+be a documented feature of 2.1.
+
+"lsh" is already used as the name of a shell (include in Debian;
+Description: Baby Shell for Novices with DOS compatible commands). Perhaps
+we need to change our name?
+
+Get a decent source of random; most likely, reusing the rand* from GPG's g10
+is the best option. Werner Koch is now working on making a libgcrypt out of
+GPG's random and crypto code.
+
+Clearly isolate patent-encumbered code (e.g. IDEA), and modify the build
+process not to use it by default.
+
+According to Bruce Schneier, "Applied Cryptography", 2nd edition (1996), p.
+398, "The name" (RC4) "is trademarked, so anyone who writes his own
+code has to call it something else.". 
+draft-ietf-secsh-transport-04.txt (and SSH1) calls it ARCFOUR: 
+`The "arcfour" is the Arcfour stream cipher with 128 bit keys.  The
+ Arcfour cipher is believed to be compatible with the RC4 cipher
+ [Schneier]. RC4 is a registered trademark of RSA Data Security Inc.'
+
+CAST is probably not patent encumbered (Schneier doesn't mention patents);
+check what RFC 2144 (CAST-128) says on this subject.
+
+Adapt GPG's blowfish code to lsh.
+
+Use UNUSED where parameters are unused intentionally.
 
 Fix shadow passwd support.
+
+Make it cleaner wrt. more gcc warnings.
 
 Don't use stdio for werror and similar functions. The non-blocking
 stderr sometime causes the C library to lose data.
