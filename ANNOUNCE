@@ -5,7 +5,19 @@ scripts and utility programs.
 
 FEATURES
 
-Some of the LSH-1.0 features are
+The most notable new features in LSH-1.2 are
+
+o  Support for RSA keys, for both host and user authentication.
+
+o  The "gateway" mode of operation, implemented by lsh -G and lshg.
+
+o  Limited Kerberos support, similar to that available for the
+   original sshd.
+
+o  An improved randomness generator that works also on sysmtems that
+   lack /dev/random.
+   
+Some of the older (LSH-1.0) features are
 
 o  Strong encryption and data authentication.
 
@@ -16,11 +28,15 @@ o  User authentication by either ordinary UN*X passwords
 
 o  Spawning of remote shells and commands, including pseudo tty support.
 
+o  A "gateway" interface, that lets you create a single SSH connection
+   to a remote host, and reuse that connection for later commands.
+   Ideal for applications like remote CVS.
+
 o  Forwarding of TCP connections, in both directions.
 
 o  Zlib compression.
 
-o  Experimental support for Secure REmote Password (SRP) authentication.
+o  Experimental support for Secure Remote Password (SRP) authentication.
 
 o  Experimental support for IPv6.
 
@@ -33,7 +49,7 @@ LSH implements the secsh protocol as defined by the latest drafts from
 the IETF secsh working group. It interoperates with both SSH Inc's
 SSH2 products and OpenSSH. Note that LSH is *not* compatible with
 SSH1, although the lshd deamon can fall back to an SSH1 implementation
-(e.g. OpenSSH or Datafellow's) when an ssh1 client connects.
+(e.g. OpenSSH or SSH Inc's) when an ssh1 client connects.
 
 LSH is reported to have worked at least once on GNU/Linux on Sparc,
 Intel, PPC and Alpha, FreeBSD, Solaris and IRIX. There may well be
@@ -42,19 +58,13 @@ portability problems left, please report them to me.
 
 QUALITY
 
-However, LSH does *NOT* try to provide any security on systems that
-lack a good /dev/random. LSH is provided AS IS, ABSOLUTELY no
-GUARANTEES, etc. Please report any bugs you find.
+LSH is provided AS IS, ABSOLUTELY no GUARANTEES, etc. Please report
+any bugs you find.
 
 
 PLANNED FEATURES
 
 Some features that are planned but not yet implemented are
-
-o  A good, portable, (pseudo) randomness source.
-
-o  A "gateway" interface, to let external programs access an LSH
-   connection easily and securely.
 
 o  Forwarding of X, ssh-agent, UDP.
 
