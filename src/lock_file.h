@@ -37,12 +37,16 @@ struct lsh_file_lock_info;
      (name lsh_file_lock_info)
      (vars
        (lockname string)
-       (lock method "struct resource *")
+       (lock method "struct resource *" "unsigned retries")
        (lock_p method int)))
 */
 
-#define LSH_FILE_LOCK(i) ((i)->lock((i)))
+#define LSH_FILE_LOCK(i, r) ((i)->lock((i), (r)))
 #define LSH_FILE_LOCK_P(i) ((i)->lock_p((i)))
 
+/* Takes the name of the lock-file as argument.
+ *
+ * FIXME: Perhaps it would be better to take just the filename,
+ * without ".lock"-suffix? */
 struct lsh_file_lock_info *
 make_lsh_file_lock_info(struct lsh_string *name);
