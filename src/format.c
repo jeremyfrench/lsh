@@ -3,6 +3,10 @@
  */
 
 #include "format.h"
+#include "werror.h"
+
+#include <assert.h>
+#include <string.h>
 
 struct simple_packet *ssh_format(char *format, ...)
 {
@@ -23,7 +27,7 @@ struct simple_packet *ssh_format(char *format, ...)
   return packet;
 }
  
-UINT32 *ssh_vformat_length(char *f, va_list args)
+UINT32 ssh_vformat_length(char *f, va_list args)
 {
   UINT32 length = 0;
 
@@ -60,9 +64,9 @@ UINT32 *ssh_vformat_length(char *f, va_list args)
 
 	    case 's':
 	      {
-		UINT32 length += va_arg(args, UINT32); /* String length */
+		length += va_arg(args, UINT32); /* String length */
 
-		(void) va_arg(args, UIN8 *);    /* data */
+		(void) va_arg(args, UINT8 *);    /* data */
 
 		f++;
 		
@@ -87,7 +91,7 @@ UINT32 *ssh_vformat_length(char *f, va_list args)
 	      {
 		int atom;
 
-		while(atom = va_arg(args, int))
+		while ( (atom = va_arg(args, int)) )
 		  length += get_atom_length(atom) + 1;
 
 		/* One ','-character less than the number of atoms */
@@ -100,7 +104,7 @@ UINT32 *ssh_vformat_length(char *f, va_list args)
 	    break;
 	    case 'n':
 	      {
-		bignum n = va_arg(args, bignum);
+		bignum *n = va_arg(args, bignum *);
 
 		/* Calculate length of written number */
 		length += bignum_format_length(n);
@@ -121,7 +125,7 @@ UINT32 *ssh_vformat_length(char *f, va_list args)
   return length;
 }
 
-void ssh_vformat(char *f, UINT *buffer, va_list args)
+void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 {
   while(*f)
     {
@@ -159,8 +163,8 @@ void ssh_vformat(char *f, UINT *buffer, va_list args)
 	    break;
 	    case 's':
 	      {
-		UINT32 length += va_arg(args, UINT32);
-		UINT8 *data = va_arg(args, UIN8 *);
+		UINT32 length = va_arg(args, UINT32);
+		UINT8 *data = va_arg(args, UINT8 *);
 
 		if (!literal)
 		  {
@@ -175,11 +179,12 @@ void ssh_vformat(char *f, UINT *buffer, va_list args)
 	    break;
 	    case 'a':
 	      {
+		UINT32 length;
 		int atom = va_arg(args, int);
-
+		
 		assert(atom);
 
-		length += get_atom_length(atom);
+		length = get_atom_length(atom);
 
 		if (!literal)
 		  {
@@ -195,7 +200,6 @@ void ssh_vformat(char *f, UINT *buffer, va_list args)
 	    case 'A':
 	      {
 		int atom;
-		int first = 1;
 		UINT8 *start = buffer; /* Where to store the length */
 		
 		if (!literal)
@@ -208,7 +212,7 @@ void ssh_vformat(char *f, UINT *buffer, va_list args)
 		    memcpy(buffer, get_atom_name(atom), length);
 		    buffer += length;
 
-		    while(atom = va_arg(args, int))
+		    while ( (atom = va_arg(args, int)) )
 		      {
 			*buffer++ = ',';
 			length = get_atom_length(atom);
@@ -219,7 +223,7 @@ void ssh_vformat(char *f, UINT *buffer, va_list args)
 				
 		if (!literal)
 		  {
-		    total = buffer - start - 4;
+		    UINT32 total = buffer - start - 4;
 		    WRITE_UINT32(start, total);
 		  }
 		f++;
@@ -227,7 +231,7 @@ void ssh_vformat(char *f, UINT *buffer, va_list args)
 	    break;
 	    case 'n':
 	      {
-		bignum n = va_arg(args, bignum);
+		bignum *n = va_arg(args, bignum *);
 		UINT32 length = bignum_format(n, buffer);
 
 		buffer += length;

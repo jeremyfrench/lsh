@@ -6,9 +6,7 @@
 #ifndef LSH_TRANSPORT_H_INCLUDED
 #define LSH_TRANSPORT_H_INCLUDED
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include "lsh_types.h"
 
 /* Reads a 32-bit integer, in network byte order */
 #define READ_UINT32(p)				\
@@ -30,7 +28,7 @@ struct simple_packet
 {
   UINT32 length;
   UINT8 data[1];
-}
+};
 
 #if 0
 struct ssh_packet
@@ -68,6 +66,8 @@ void simple_packet_free(struct simple_packet *packet);
  * such as the process parameters, next processor, output socket, etc.
  * */
 
+struct packet_processor;  /* Forward declaration */
+
 /* This function returns 0 if there's some fatal protocol error
  * (implying immediate shutdown of (this direction of) a connection.
  * Otherwise returns 1. */
@@ -85,7 +85,7 @@ int apply_processor(struct packet_processor *closure,
 struct chained_processor
 {
   struct packet_processor p;
-  struct *packet_processor *next;
+  struct packet_processor *next;
 };
 
 

@@ -2,13 +2,18 @@
  *
  */
 
-#include "decrypt.c"
+#include "decrypt.h"
+#include "werror.h"
+#include "xalloc.h"
 
 #define WAIT_HEADER 0
 #define WAIT_CONTENTS 1
 #define WAIT_MAC 2
 
-static int do_decrypt(struct encrypt_processor *closure,
+#define MIN(a, b) ( ((a)<(b)) ? (a) : (b) )
+#define MAX(a, b) ( ((a)>(b)) ? (a) : (b) )
+
+static int do_decrypt(struct decrypt_processor *closure,
 		      struct simple_packet *packet)
 {
   /* Number of octets n the input packet that have been processed */
@@ -36,10 +41,10 @@ static int do_decrypt(struct encrypt_processor *closure,
 
 	      /* Decrypt the first block */
 	      closure->decrypt_function(closure->decrypt_state,
-					block_size, closure->block_buffer,
+					closure->block_size, closure->block_buffer,
 					closure->block_buffer);
 
-	      length = READ_INT32(closure->block_buffer);
+	      length = READ_UINT32(closure->block_buffer);
 
 	      if (length > closure->max_packet)
 		return 0;
@@ -92,6 +97,7 @@ static int do_decrypt(struct encrypt_processor *closure,
 
 	      closure->decrypt_function(closure->decrypt_state,
 					closure->recieved->length,
+					closure->recieved->data,
 					new->data + left_overs);
 
 	      simple_packet_free(closure->recieved);
@@ -135,7 +141,7 @@ static int do_decrypt(struct encrypt_processor *closure,
 	  }
 	/* MAC was ok, pass packet on */
 	
-	if (!apply_continuation(closure->next, closure->recieved))
+	if (!apply_processor(closure->c.next, closure->recieved))
 	  return 0;
 	
 	closure->recieved = NULL;
@@ -151,20 +157,20 @@ static int do_decrypt(struct encrypt_processor *closure,
 }
   
 struct packet_processor *
-make_encrypt_processor(struct packet_processor *continuation,
+make_decrypt_processor(struct packet_processor *continuation,
 		       UINT32 max_packet,
 		       unsigned mac_size,
 		       transform_function mac_function,
 		       void *mac_state,
 		       unsigned block_size,
-		       transform_function encrypt_function,
-		       void *encrypt_state)
+		       transform_function decrypt_function,
+		       void *decrypt_state)
 {
-  struct pad_processor *closure = xalloc(sizeof(struct pad_processor)
+  struct decrypt_processor *closure = xalloc(sizeof(struct decrypt_processor)
 					 + MAX(block_size, mac_size) - 1);
   
-  closure->c->p->f = (raw_processor_function) do_encrypt;
-  closure->c->next = continuation;
+  closure->c.p.f = (raw_processor_function) do_decrypt;
+  closure->c.next = continuation;
 
   /* state */
   closure->state = WAIT_HEADER;
@@ -177,8 +183,8 @@ make_encrypt_processor(struct packet_processor *continuation,
   closure->mac_function = mac_function;
   closure->mac_state = mac_state;
   closure->block_size = block_size;
-  closure->encrypt_function = encrypt_function;
-  closure->encrypt_state = encrypt_state;
+  closure->decrypt_function = decrypt_function;
+  closure->decrypt_state = decrypt_state;
 
   return (struct packet_processor *) closure;
 }

@@ -1,8 +1,91 @@
+#### Start of system configuration section. ####
+
+srcdir = @srcdir@
+VPATH = $(srcdir)
+
+CC = @CC@
+SCHEME = @SCHEME@
+@SET_MAKE@
+
+# INSTALL = @INSTALL@
+# INSTALL_PROGRAM = @INSTALL_PROGRAM@
+# INSTALL_DATA = @INSTALL_DATA@
+# MAKEINFO = makeinfo
+# TEXI2DVI = texi2dvi
+
+DEFS = @DEFS@
+LIBS = @LIBS@
+
+CFLAGS = -g -Wall # -O2 -fomit-frame-pointer
+LDFLAGS = -g
+
+CPPFLAGS = 
+
+prefix = @prefix@
+exec_prefix = $(prefix)
+
+bindir = $(exec_prefix)/bin
+infodir = $(prefix)/info
+
+# Prefix to be prepended to each installed program, normally empty or `g'.
+binprefix = 
+
+#### End of system configuration section. ####
+
+SRCS = atoms.c bignum.c debug.c decrypt.c encrypt.c format.c packet_dispatch.c \
+       pad.c parse.c server_keyexchange.c transport.c unpad.c void.c werror.c \
+       xalloc.c
+
+OBJS = $(SRCS:.c=.o)
+all: $(OBJS)
+.PHONY: all
+
+.c.o:
+	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
+
 atoms_defines.h: atoms.in process_atoms
 	bash process_atoms header <atoms.in >atoms_defines.h
 
 atoms_gperf.c: atoms.in process_atoms
-	bash process_atoms gperf <atoms.in |gperf -t -k1,7,$$ >atoms_gperf.c
+	bash process_atoms gperf <atoms.in |gperf -t -k1,7,$$ -N gperf_atom >atoms_gperf.c
 
 atoms_table.c: atoms.in process_atoms
 	bash process_atoms table <atoms.in >atoms_table.c
+
+clean:
+	rm -f *.o 
+
+very_clean: clean
+	rm *.d
+
+%.d: %.c
+	$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $(DEFS) $< \
+		| sed '\''s/\($*\)\.o:/\1\.o $@ : /g'\'' > $@'
+
+include $(SRCS:.c=.d)
+
+#### Remaking the Makefile and configure scripts. ####
+
+#${srcdir}/configure: configure.in aclocal.m4
+${srcdir}/configure: configure.in
+	cd ${srcdir} && autoconf
+
+# autoheader might not change config.h.in, so touch a stamp file.
+${srcdir}/config.h.in: stamp-h.in
+
+#${srcdir}/stamp-h.in: configure.in aclocal.m4 acconfig.h \
+#    config.h.top config.h.bot
+
+${srcdir}/stamp-h.in: configure.in 
+	cd ${srcdir} && autoheader
+	echo timestamp > ${srcdir}/stamp-h.in
+
+config.h: stamp-h
+stamp-h: config.h.in config.status
+	./config.status
+
+Makefile: Makefile.in config.status
+	./config.status
+
+config.status: configure
+	./config.status --recheck

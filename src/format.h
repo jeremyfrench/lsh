@@ -8,6 +8,10 @@
 
 #include <stdarg.h>
 
+#include "atoms.h"
+#include "bignum.h"
+#include "transport.h"
+
 /* Format strings can contain the following %-specifications:
  *
  * %%  Insert a %-sign
@@ -31,7 +35,7 @@
  */
 
 UINT32 ssh_vformat_length(char *format, va_list args);
-void ssh_vformat(char *format, UINT *buffer, va_list args);
+void ssh_vformat(char *format, UINT8 *buffer, va_list args);
 struct simple_packet *ssh_format(char *format, ...);
 
 #endif /* LSH_FORMAT_H_INCLUDED */

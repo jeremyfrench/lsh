@@ -5,7 +5,10 @@
 
 #ifndef LSH_PARSE_H_INCLUDED
 #define LSH_PARSE_H_INCLUDED
-  
+
+#include "atoms.h"
+#include "bignum.h"
+
 /* Simple buffer */
 struct simple_buffer
 {
@@ -27,7 +30,7 @@ int parse_sub_buffer(struct simple_buffer *buffer,
 int parse_uint8(struct simple_buffer *buffer, uint8 *result);
 #define parse_boolean parse_uint8
 
-int parse_bignum(struct simple_buffer *buffer, bignum result);
+int parse_bignum(struct simple_buffer *buffer, bignum *result);
 
 /* Returns 1 on success, 0 on failure, and -1 at end of buffer.
  * Unknown atoms sets result to zero. */

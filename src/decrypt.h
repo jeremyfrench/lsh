@@ -5,6 +5,9 @@
 #ifndef LSH_DECRYPT_H_INCLUDED
 #define LSH_DECRYPT_H_INCLUDED
 
+#include "transport.h"
+#include "crypto_common.h"
+
 /* The input packets to this processor are arbitrary octet strings,
  * for instance as returned by read(). The data is collected,
  * decrypted, and the (padded) payload is passed on to the next packet

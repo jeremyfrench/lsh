@@ -3,8 +3,9 @@
  */
 
 #include "bignum.h"
+#include "werror.h"
 
-void parse_bignum(bignum n, UINT32 length, UINT8 *data)
+void parse_bignum(bignum *n, UINT32 length, UINT8 *data)
 {
   int negative = length && (*data & 0x80);
   int i;
@@ -21,7 +22,7 @@ void parse_bignum(bignum n, UINT32 length, UINT8 *data)
   if (negative)
     {
       mpz_set_ui(digit, 1);
-      mpz_mul2exp(digit, digit, length*8);
+      mpz_mul_2exp(digit, digit, length*8);
       mpz_sub(n, n, digit);
     }
   mpz_clear(digit);
@@ -45,7 +46,7 @@ int mpz_size_of_complement(mpz_t n)
 }
 
 /* This function should handle both positive and negative numbers */
-UINT32 bignum_format_length(bignum n)
+UINT32 bignum_format_length(bignum *n)
 {
   switch(mpz_sgn(n))
     {
@@ -54,18 +55,22 @@ UINT32 bignum_format_length(bignum n)
     case 1:
       return mpz_sizeinbase(n, 2)/8 + 1;
     case -1:
-      return mpz_size_of_complement(mpz_t n)/8 + 1;
+      return mpz_size_of_complement(n)/8 + 1;
+    default:
+      fatal("Internal error");
     }
 }
 
-void limbs_to_octets(n, length, UINT8 pad, UINT8 *data)
+void limbs_to_octets(bignum *n, UINT32 length, UINT8 pad, UINT8 *data)
 {
-  UINT32 *dst = data + length - 1;
+  UINT8 *dst = data + length - 1;
 	
-  mp_limb_t *l = n->_md_d;  /* Starts at the least significant limb */
-  int left = n->_mp_size;
+  mp_limb_t *l = n->_mp_d;  /* Starts at the least significant limb */
+  int left;
 	
-  while( (len > 0) && (left  > 0) )
+  for (left = n->_mp_size;
+      (length > 0) && (left  > 0);
+      left--)
     {
       int i;
       mp_limb_t word = *l++;
@@ -73,19 +78,19 @@ void limbs_to_octets(n, length, UINT8 pad, UINT8 *data)
 	{
 	  *dst-- = word & 0xff;
 	  word >>= 8;
-	  len--;
-	  if (!len)
+	  length--;
+	  if (!length)
 	    break;
 	}
     }
-  while (len > 0)
+  while (length > 0)
     {
       *dst-- = pad;
-      len--;
+      length--;
     }
 }
   
-UINT32 bignum_format(bignum n, UINT8 *data)
+UINT32 bignum_format(bignum *n, UINT8 *data)
 {
   switch(mpz_sgn(n))
     {
@@ -95,7 +100,7 @@ UINT32 bignum_format(bignum n, UINT8 *data)
       {
 	int length = mpz_sizeinbase(n, 2)/8 + 1;
 
-	limbs_to_octets(n, length, 0, *data);
+	limbs_to_octets(n, length, 0, data);
 	return length;
       }
     case -1:
@@ -108,16 +113,18 @@ UINT32 bignum_format(bignum n, UINT8 *data)
 	mpz_com(complement, n);
 
 	/* Note that mpz_sizeinbase(0) == 0.*/
-	length = sizeinbase(complement, 2)/8 + 1;
+	length = mpz_sizeinbase(complement, 2)/8 + 1;
 	
 	for (i = 0; i<complement->_mp_size; i++)
 	  complement->_mp_d[i] = ~complement->_mp_d[i];
 	
-	limbs_to_octets(complement, length, 0xff, *data);
+	limbs_to_octets(complement, length, 0xff, data);
 
 	mpz_clear(complement);
 	return length;
       }
+    default:
+      fatal("Internal error");
     }
 }
 

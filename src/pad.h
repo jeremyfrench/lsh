@@ -6,6 +6,8 @@
 #ifndef LSH_PAD_H_INCLUDED
 #define LSH_PAD_H_INCLUDED
 
+#include "transport.h"
+
 typedef (*random_function)(void *state, UINT32 length, UINT8 *dst);
 
 /* Input to the processor is a packet with the payload. Output is a

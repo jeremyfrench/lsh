@@ -57,7 +57,7 @@ case $1 in
 	header
 	echo '%}'
 
-	echo 'struct atom { char *name; int id; };'
+	echo 'struct atom_assoc { char *name; int id; };'
 	echo '%%'
 	    
 	while getatom; do

@@ -66,7 +66,7 @@ int parse_uint8(struct simple_buffer *buffer, uint8 *result)
   return 1;
 }
 
-int parse_bignum(struct simple_buffer *buffer, bignum result)
+int parse_bignum(struct simple_buffer *buffer, bignum *result)
 {
   UINT32 length;
   UINT8 *digits;

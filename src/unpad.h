@@ -6,6 +6,8 @@
 #ifndef LSH_UNPAD_H_INCLUDED
 #define LSH_UNPAD_H_INCLUDED
 
+#include "tranport.h"
+
 /* Input to the processor is a padded payload. */
 struct unpad_processor
 {
