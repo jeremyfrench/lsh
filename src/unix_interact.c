@@ -161,23 +161,26 @@ unix_read_password(struct interact *s UNUSED,
 		   struct lsh_string *prompt, int free)
 {
   /* NOTE: Ignores max_length; instead getpass's limit applies. */
-
-  char *password;
   
-  prompt = make_cstring(prompt, free);
+  char *password;
+  const char *cprompt = lsh_get_cstring(prompt);
 
-  if (!prompt)
-    return NULL;
-
+  if (!cprompt)
+    {
+      if (free)
+	lsh_string_free(prompt);
+      return NULL;
+    }
   /* NOTE: This function uses a static buffer. */
-  password = getpass(prompt->data);
+  password = getpass(cprompt);
 
-  lsh_string_free(prompt);
-
+  if (free)
+    lsh_string_free(prompt);
+  
   if (!password)
     return NULL;
   
-  return format_cstring(password);
+  return make_string(password);
 }
 
 
