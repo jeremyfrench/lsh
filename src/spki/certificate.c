@@ -1,27 +1,43 @@
 /* SPKI functions */
 
+/* libspki
+ *
+ * Copyright (C) 2002 Niels Möller
+ *  
+ * The nettle library is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation; either version 2.1 of the License, or (at your
+ * option) any later version.
+ * 
+ * The nettle library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public
+ * License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with the nettle library; see the file COPYING.LIB.  If not, write to
+ * the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
+ * MA 02111-1307, USA.
+ */
+
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include "certificate.h"
+#include "parse.h"
+#include "spki-types.h"
 
 #include "nettle/md5.h"
 #include "nettle/sha.h"
-
 #include "nettle/sexp.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-/* Automatically generated files */
-
-/* FIXME: Is there any way to get gperf to declare this function
- * static? */
-const struct spki_assoc *
-spki_gperf (const char *str, unsigned int len);
-
-#include "spki-gperf.h"
-#include "spki-type-names.h"
 
 static void *
-spki_realloc(struct spki_acl_db *db, void *p, unsigned size)
+spki_realloc(struct spki_acl_db *db UNUSED, void *p, unsigned size)
 {
   return realloc(p, size);
 }
@@ -201,31 +217,9 @@ spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest)
 }
 
 
-enum spki_type
-spki_intern(struct sexp_iterator *i)
-{  
-  if (i->type == SEXP_ATOM
-      && !i->display)
-    {
-      const struct spki_assoc *assoc = spki_gperf(i->atom, i->atom_length);
 
-      if (assoc && sexp_iterator_next(i))
-	return assoc->id;
-    }
-  
-  return 0;
-}
-
-/* NOTE: Uses SPKI_TYPE_UNKNOWN (= 0) for both unknown types and
- * syntax errors. */
-enum spki_type
-spki_get_type(struct sexp_iterator *i)
-{
-  if (i->type == SEXP_END)
-    return SPKI_TYPE_END_OF_EXPR;
-
-  return sexp_iterator_enter_list(i) ? spki_intern(i) : 0;
-}
+/* Automatically generated table. */
+#include "spki-type-names.h"
 
 /* If the type doesn't match, don't move the iterator. */
 /* FIXME: static because enum spki_type isn't defined in the header
@@ -234,7 +228,7 @@ static int
 spki_check_type(struct sexp_iterator *i, enum spki_type type)
 {
   struct sexp_iterator before = *i;
-  
+
   if (sexp_iterator_enter_list(i)
       && i->type == SEXP_ATOM
       && !i->display
@@ -251,59 +245,6 @@ spki_check_type(struct sexp_iterator *i, enum spki_type type)
 
 /* ACL database */
 
-static struct spki_principal *
-parse_principal(struct spki_acl_db *db, struct sexp_iterator *i)
-{
-  struct sexp_iterator before = *i;
-
-  switch (spki_get_type(i))
-    {
-    default:
-      return NULL;
-
-    case SPKI_TYPE_PUBLIC_KEY:
-      {
-	const uint8_t *key;
-	unsigned key_length;
-	
-	*i = before;
-	key = sexp_iterator_subexpr(i, &key_length);
-
-	if (key)
-	  return spki_principal_by_key(db, key_length, key);
-
-	return NULL;
-      }
-
-    case SPKI_TYPE_HASH:
-      {
-	enum spki_type type = spki_intern(i);
-	
-	if (type
-	    && i->type == SEXP_ATOM
-	    && !i->display)
-	  {
-	    unsigned digest_length = i->atom_length;
-	    const uint8_t *digest = i->atom;
-
-	    if (sexp_iterator_next(i)
-		&& i->type == SEXP_END
-		&& sexp_iterator_exit_list(i))
-	      {
-		if (type == SPKI_TYPE_MD5
-		    && digest_length == MD5_DIGEST_SIZE)
-		  return spki_principal_by_md5(db, digest);
-
-		else if (type == SPKI_TYPE_SHA1
-			 && digest_length == SHA1_DIGEST_SIZE)
-		  return spki_principal_by_sha1(db, digest);
-	      }
-	  }
-	return NULL;
-      }
-    }
-}
-
 static int
 parse_tag_body(struct spki_acl_db *db, struct sexp_iterator *i,
 	       struct spki_5_tuple *tuple)
@@ -317,15 +258,8 @@ parse_tag_body(struct spki_acl_db *db, struct sexp_iterator *i,
 }
 
 static int
-parse_tag(struct spki_acl_db *db, struct sexp_iterator *i,
-	  struct spki_5_tuple *tuple)
-{
-  return spki_check_type(i, SPKI_TYPE_TAG)
-    && parse_tag_body(db, i, tuple);
-}
-
-static int
-parse_valid(struct sexp_iterator *i, struct spki_5_tuple *tuple)
+parse_valid(struct sexp_iterator *i UNUSED,
+	    struct spki_5_tuple *tuple UNUSED)
 {
   /* FIXME: Not implemented */
   return sexp_iterator_exit_list(i);
@@ -352,7 +286,8 @@ parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i)
   else
     {
       NEW(db, struct spki_5_tuple, acl);
-
+      enum spki_type type;
+      
       if (!acl)
 	return NULL;
 
@@ -360,20 +295,22 @@ parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i)
       acl->flags = 0;
       acl->tag = NULL;
 
-      acl->subject = parse_principal(db, i);
-      if (!acl->subject)
+      type = spki_parse_principal(db, i, &acl->subject);
+      if (!type)
 	goto fail;
 
-      if (spki_check_type(i, SPKI_TYPE_PROPAGATE))
+      if (type == SPKI_TYPE_PROPAGATE)
 	{
-	  if (i->type != SEXP_END
-	      || !sexp_iterator_exit_list(i))
+	  type = spki_parse_end(i);
+	  if (!type)
 	    goto fail;
 
 	  acl->flags |= SPKI_PROPAGATE;
 	}
 
-      if (!parse_tag(db, i, acl))
+      if (type != SPKI_TYPE_TAG)
+	goto fail;
+      if (!parse_tag_body(db, i, acl))
 	goto fail;
 
       if (spki_check_type(i, SPKI_TYPE_COMMENT)
@@ -425,7 +362,7 @@ spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
 static enum spki_type
 parse_skip_optional(struct sexp_iterator *i)
 {
-  return sexp_iterator_exit_list(i) ? spki_get_type(i) : SPKI_TYPE_UNKNOWN;
+  return sexp_iterator_exit_list(i) ? spki_parse_type(i) : 0;
 }
 
 #define SKIP(t) do				\
@@ -434,22 +371,13 @@ parse_skip_optional(struct sexp_iterator *i)
     type = parse_skip_optional(i);		\
 } while (0)
 
-#define PRINCIPAL(p)				\
-(						\
-  p = parse_principal(db, i),			\
-  p = (p && i->type == SEXP_END			\
-       && sexp_iterator_exit_list(i)		\
-       && (type = spki_get_type(i)))		\
-      ? p : NULL				\
-)
-
 /* Should be called with the iterator pointing just after the "cert"
  * type tag. */
 int
 spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
 		     struct spki_5_tuple *cert)
 {
-  enum spki_type type = spki_get_type(i);
+  enum spki_type type = spki_parse_type(i);
 
   cert->flags = 0;
   
@@ -458,7 +386,7 @@ spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
       if (!parse_version(i))
 	return 0;
       
-      type == spki_get_type(i);
+      type == spki_parse_type(i);
     }
 
   SKIP(SPKI_TYPE_DISPLAY);
@@ -466,13 +394,14 @@ spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
   if (type != SPKI_TYPE_ISSUER)
     return 0;
 
-  if (!PRINCIPAL(cert->issuer))
+  type = spki_parse_principal(db, i, &cert->issuer);
+  if (!type || !(type = spki_parse_end(i)))
     return 0;
 
   SKIP(SPKI_TYPE_ISSUER_INFO);
 
-  /* For now, support only subjects of type public-key and hash. */
-  if (!PRINCIPAL(cert->subject))
+  type = spki_parse_principal(db, i, &cert->subject);
+  if (!type || !(type = spki_parse_end(i)))
     return 0;
   
   SKIP(SPKI_TYPE_SUBJECT_INFO);
@@ -491,14 +420,14 @@ spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
   if (!parse_tag_body(db, i, cert))
     return 0;
 
-  type = spki_get_type(i);
+  type = spki_parse_type(i);
 
   if (type == SPKI_TYPE_VALID)
     {
       if (!parse_valid(i, cert))
 	return 0;
 
-      type = spki_get_type(i);
+      type = spki_parse_type(i);
     }
 
   SKIP(SPKI_TYPE_COMMENT);
