@@ -55,9 +55,9 @@ all_symmetric_algorithms()
 		    ATOM_TWOFISH_CBC, &crypto_twofish256_cbc_algorithm,
                     ATOM_AES256_CBC, &crypto_aes256_cbc_algorithm,
 		    ATOM_RIJNDAEL_CBC_LOCAL, &crypto_aes256_cbc_algorithm,
-		    ATOM_SERPENT_CBC_LOCAL, crypto_cbc(&serpent256_algorithm),
+		    ATOM_SERPENT_CBC_LOCAL, &crypto_serpent256_cbc_algorithm,
 		    ATOM_3DES_CBC, &crypto_des3_cbc_algorithm,
-		    ATOM_CAST128_CBC, crypto_cbc(&cast128_algorithm),
+		    ATOM_CAST128_CBC, &crypto_cast128_cbc_algorithm,
 		    ATOM_HMAC_SHA1, make_hmac_algorithm(&sha1_algorithm),
 		    ATOM_HMAC_MD5, make_hmac_algorithm(&md5_algorithm),
 #if WITH_ZLIB

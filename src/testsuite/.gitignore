@@ -6,11 +6,14 @@
 /.deps
 /Makefile
 /Makefile.in
+/aes-test
 /aes-test.c
 /arcfour-test
 /arcfour-test.c
 /blowfish-test
 /blowfish-test.c
+/cast128-test
+/cast128-test.c
 /des-test
 /des-test.c
 /dsa-test

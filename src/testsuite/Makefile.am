@@ -3,7 +3,9 @@
 CFLAGS = @CFLAGS@ -O0
 
 # Tests that can be used without any special setup.
-TS_PROGS = arcfour-test aes-test blowfish-test des-test twofish-test \
+TS_PROGS = arcfour-test aes-test blowfish-test cast128-test
+	   des-test \
+	   serpent-test twofish-test \
            md5-test sha1-test rsa-test dsa-test spki-tag-test \
            string-test
 TS_SH = conv-1-test conv-2-test export-1-test keygen-1-test keygen-2-test \
