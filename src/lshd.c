@@ -74,8 +74,6 @@
 #include "srp.h"
 #include "ssh.h"
 #include "tcpforward.h"
-#include "tcpforward_commands.h"
-#include "tcpforward_commands.h"
 #include "server_userauth.h"
 #include "version.h"
 #include "werror.h"
