@@ -1,3 +1,38 @@
+Fri Jan  1 04:20:10 1999    <nisse@puck>
+
+	* io.c: Include lsh headers *before* system headers.
+	Use jpoll.h, not poll.h.
+
+	* io.c: (get_inaddr): Use inet_aton. How portable is that?
+
+	* poll.h, poll.c, pollemu.h, pollemu.c: Use the names jpoll (that
+ 	is the names used originally by Sean Reifschneider
+ 	<jafo@tummy.com>).
+
+Thu Dec 31 15:29:59 1998    <ray@penguin.wi.leidenuniv.nl>
+
+	* PORTS: new file.
+
+	* io.c: #include "config.h" so the #ifdef HAVE_POLL works.
+
+	* poll.h, pollemu.h: Renamed poll.h to pollemu.h; thus it will not be
+	found instead of a system poll.h whith -I. or -I$(srcdir) .
+	* pollemu.c, pollemu.h: Renamed too.
+	* io.c, pollemu.c: Changed #include accordingly.
+	* configure.in: Changed accordingly.
+
+	* configure.in: check for `gethostbyname' instead of `hostbyname'.
+
+	* io.c: define INADDR_NONE if the system doesn't provide it (e.g.
+	Solaris).
+
+	* io.c: #include <netinet/in.h> for struct in_addr.
+
+Wed Dec 30 17:38:03 1998    <ray@penguin.wi.leidenuniv.nl>
+
+        * io.c (get_inaddr): use symbolic constant to check inet_addr
+        result; fixes name resolving on Linux/Alpha.
+
 Thu Dec 31 00:06:43 1998    <nisse@puck>
 
 	* server.c (do_open_session): Mark arguments as UNUSED.
@@ -11,7 +46,7 @@ Thu Dec 31 00:06:43 1998    <nisse@puck>
 
 	* make_class (do-struct-free-function, do-struct-mark-function):
 	Avoid warnings about unused parameters when the generated
-	functions are empty functions. 
+	functions are empty functions.
 
 	* keyexchange.c (kex_make_key): Signedness fix.
 
@@ -26,13 +61,13 @@ Thu Dec 31 00:06:43 1998    <nisse@puck>
 	* connection.c (do_fail): Marked connection argument UNUSED.
 
 	* configure.in (CPPFLAGS): Add more warning flags. But *not*
-	-Wcast-align. 
+	-Wcast-align.
 
 	* client_userauth.c (do_userauth_banner): Marked connection
 	argument UNUSED.
 
 	* client_password.c (read_password): Marked max_length argument
-	UNUSED. 
+	UNUSED.
 
 	* client.c (client_close_die): Marked closure argument UNUSED.
 
@@ -46,7 +81,7 @@ Thu Dec 31 00:06:43 1998    <nisse@puck>
 	(do_channel_success): -"-
 	(do_channel_failure): -"-
 
-	* arcfour.c (make_arcfour_instance): Mark mode argument UNUSED. 
+	* arcfour.c (make_arcfour_instance): Mark mode argument UNUSED.
 
 	* io.c (get_inaddr): use symbolic constant to check inet_addr
  	result; fixes name resolving on Linux/Alpha.
@@ -56,11 +91,11 @@ Wed Dec 30 11:57:28 1998    <ray@zensunni>
 	* atoms.in: added algorithms names used by SSH 2.0.11 (commented
  	out).
 
-	* configure.in: Enable a few more warnings. 
+	* configure.in: Enable a few more warnings.
 
 	* lib/desTest.c (method, encode, decode): ANSIfied function
 	declarations.
-      
+
 	* include/des.h, desCode.h, desKerb.c, desQuick.c, desTest.c,
  	desUtil.c, desdata.c, desinfo.h: The DES code's copyright notice
  	is distributed in descore.README rather than plain README.
@@ -117,7 +152,7 @@ Sun Dec 27 06:37:40 1998    <nisse@puck>
 	* client.c (do_exit_signal): Send CHANNEL_EOF.
 
 	* configure.in: Fixed the configure test for shutdown. Check for
-	zlib. 
+	zlib.
 
 Sat Dec 26 02:37:18 1998    <nisse@puck>
 
@@ -168,7 +203,7 @@ Fri Dec 18 01:53:22 1998    <nisse@puck>
  	closed write_buffer has been flushed successfully.
 
 	* io.c (write_callback): Report EPIPE and other write failures
-	differently. 
+	differently.
 	
 
 	* crypto.c: Added md5 support by Balazs Scheidler.
@@ -200,12 +235,12 @@ Wed Dec 16 01:33:25 1998    <nisse@puck>
 	
 	* channel.h (CHANNEL_CLOSE_AT_EOF): This flag now means that
 	the channel should be closed when EOF have been both sent and
-	received. 
+	received.
 	* channel.c (channel_eof): New meaning of CHANNEL_CLOSE_AT_EOF
-	flag. 
+	flag.
 
 	* client.c (do_exit_status): Send eof, if we haven't done that
-	already. 
+	already.
 
 	* channel.c (do_channel_eof): Don't initiate close automatically
 	when eof has been both sent and received.
@@ -297,7 +332,7 @@ Tue Dec  8 10:29:50 1998    <nisse@puck>
  	passwords, by Keresztg <kg230@hszk.bme.hu>.
 
 	* server.c (do_exit_shell): Close channel, if we have already sent
-	EOF. 
+	EOF.
 
 	* xalloc.c (lsh_object_clone): New function.
 
@@ -315,7 +350,7 @@ Fri Dec  4 02:30:28 1998    <nisse@puck>
 	* xalloc.c (lsh_object_check_subtype): Allow NULL pointers. They
 	are occasionally permissible (for instance, the NULL crypto
 	algorithm), and when they aren't the error will be detected early
-	anyway. 
+	anyway.
 	(lsh_object_check): -"-
 
 	* keyexchange.c (do_handle_kexinit): Use an object_list for
