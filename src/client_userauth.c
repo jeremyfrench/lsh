@@ -32,6 +32,7 @@
 #include "charset.h"
 #include "command.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "parse.h"
 #include "publickey_crypto.h"
 #include "ssh.h"
@@ -209,7 +210,7 @@ do_userauth_success(struct packet_handler *c,
 
   trace("client_userauth.c: do_userauth_success\n");
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_SUCCESS)
@@ -292,7 +293,7 @@ do_userauth_failure(struct packet_handler *c,
   trace("client_userauth.c: do_userauth_failure\n");
   assert(self->state->current < self->state->next);
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_FAILURE)
@@ -347,7 +348,7 @@ do_userauth_banner(struct packet_handler *self UNUSED,
   uint32_t language_length;
   const uint8_t *language;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_BANNER)
@@ -611,7 +612,7 @@ send_password(struct client_password_state *state)
   if (passwd)
     {
       /* Password empty? */
-      if (!passwd->length)
+      if (!lsh_string_length(passwd))
 	{
 	  /* NOTE: At least on some systems, the getpass function
 	   * sets the tty to raw mode, disabling ^C, ^D and the like.
@@ -856,7 +857,7 @@ do_userauth_pk_ok(struct packet_handler *s,
   uint32_t keyblob_length;
   const uint8_t *keyblob;
 
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_PK_OK)
@@ -891,7 +892,9 @@ do_userauth_pk_ok(struct packet_handler *s,
 	  signed_data = ssh_format("%S%lS", connection->session_id, request);
 	  request = ssh_format("%flS%fS", 
 			       request, 
-			       SIGN(key->private, key->type, signed_data->length, signed_data->data));
+			       SIGN(key->private, key->type,
+				    lsh_string_length(signed_data),
+				    lsh_string_data(signed_data)));
 	  lsh_string_free(signed_data);
 	  connection_send(connection, request);
 	  self->state->pending++;
