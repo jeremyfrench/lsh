@@ -523,7 +523,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 	    return NULL;
 	}
 
-      acl = lsh_sexp_format(0, "(acl(entry(subject%l%l)))",
+      acl = lsh_sexp_format(0, "(acl(entry(subject%l)%l))",
 			    subject->key_length, subject->key,
 			    self->access->length, self->access->data);
       
