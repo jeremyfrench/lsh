@@ -69,8 +69,8 @@
 struct command options2local;
 #define OPTIONS2LOCAL (&options2local.super)
 
-struct command options2keyfile;
-#define OPTIONS2KEYFILE (&options2keyfile.super)
+struct command options2keys;
+#define OPTIONS2KEYS (&options2keys.super)
 
 struct command options2signature_algorithms;
 #define OPTIONS2SIGNATURE_ALGORITHMS \
@@ -202,27 +202,21 @@ DEFINE_COMMAND(options2signature_algorithms)
 }
 
 /* Read server's private key */
-DEFINE_COMMAND(options2keyfile)
+/* FIXME: Call read_host_key directly from main instead. */
+DEFINE_COMMAND(options2keys)
      (struct command *ignored UNUSED,
       struct lsh_object *a,
       struct command_continuation *c,
-      struct exception_handler *e)
+      struct exception_handler *e UNUSED)
 {
   CAST(lsh_proxy_options, options, a);
-  
-  struct lsh_fd *f;
 
-  f = io_read_file(options->hostkey, e);
+  struct alist *keys = make_alist(0, -1);
+  read_host_key(options->hostkey, options->signature_algorithms, keys);
 
-  if (f)
-    COMMAND_RETURN(c, f);
-  else
-    {
-      werror("Failed to open '%z' (errno = %i): %z.\n",
-	     options->hostkey, errno, STRERROR(errno));
-      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
-    }
+  COMMAND_RETURN(c, keys);
 }
+
 
 static const struct argp_option
 main_options[] =
@@ -504,8 +498,7 @@ DEFINE_COMMAND2(proxy_destination)
        (lambda (options client_addr)
          (connection_handshake    ; handshake on the client side
             handshake init
-	    (spki_read_hostkeys (options2signature_algorithms options)
-	                        (options2keyfile options)) 
+            (options2keys options)
 	    (log_peer client_addr)))))
 
 */
