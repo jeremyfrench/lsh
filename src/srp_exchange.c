@@ -128,7 +128,7 @@ srp_hash_password(mpz_t x,
 				hash_string(H, ssh_format("%S%S", name, passwd), 1)),
 		  1);
 
-  bignum_parse_u(x, h->length, h->data);
+  nettle_mpz_set_str_256_u(x, h->length, h->data);
   lsh_string_free(h);
 }
 
