@@ -114,7 +114,10 @@ do_handle_dh_init(struct packet_handler *c,
   connection->kex_state = KEX_STATE_NEWKEYS;
   connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
 
-  send_verbose(connection, "Key exchange successful!", 0);
+#if DATAFELLOWS_WORKAROUNDS
+  if (! (connection->peer_flags & PEER_SEND_NO_DEBUG))
+#endif
+    send_verbose(connection, "Key exchange successful!", 0);
 
   if (connection->established)
     {
