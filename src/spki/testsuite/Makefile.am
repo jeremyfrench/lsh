@@ -3,14 +3,14 @@
 AM_CFLAGS = -O0 -I$(top_srcdir) -I$(top_srcdir)/..
 AM_LDFLAGS = -L../../nettle
 
-TS_PROGS = principal-test read-acl-test
+TS_PROGS = principal-test read-acl-test read-cert-test
 TS_SH =
 
 TS_ALL = $(TS_PROGS) $(TS_SH)
 
 noinst_PROGRAMS = $(TS_PROGS)
 
-LDADD = ../libspki.a -lnettle
+LDADD = testutils.o ../libspki.a -lnettle
 
 EXTRA_DIST = testutils.c testutils.h $(TS_SH) \
 	functions.sh run-tests setup-env key-1.private key-2.private \
