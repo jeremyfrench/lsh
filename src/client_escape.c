@@ -123,9 +123,12 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
   UINT32 done;
   
   if (!packet)
-    /* EOF. Pass it on */
-    A_WRITE(self->super.next, packet);
-
+    {
+      /* EOF. Pass it on */
+      A_WRITE(self->super.next, packet);
+      return;
+    }
+  
   assert(packet->length);
 
   /* done is the length of the prefix of the data that is already
