@@ -21,6 +21,9 @@
 	* src/lsh.c (make_lsh_login): Use keyboard-interactive, if the
 	other methods fail.
 
+	* src/scm/gaba.scm (make-freer): Free elements of allocated
+	arrays, i.e. variables of type "space".
+
 	* src/interact.h (interact_dialog): New class. 
 	(INTERACT_DIALOG): New method.
 
