@@ -24,6 +24,9 @@
 
 #include "channel_commands.h"
 
+#include "werror.h"
+#include "xalloc.h"
+
 #define GABA_DEFINE
 #include "channel_commands.h.x"
 #undef GABA_DEFINE
