@@ -194,6 +194,7 @@ make_client_session_channel(struct lsh_fd *in,
 {
   NEW(client_session_channel, self);
 
+  trace("make_client_session_channel\n");
   init_channel(&self->super);
 
   /* Makes sure the pending_close bit is set whenever this session
