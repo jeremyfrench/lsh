@@ -33,7 +33,7 @@ esac
 
 # FIXME: Should be obsoleted by the nettle library
 # We want to compile the crypto lib for use with lsh
-CPPFLAGS="$CPPFLAGS -I$srcdir -I$srcdir/src -I$srcdir/src/symmetric/include -DLSH"
+# CPPFLAGS="$CPPFLAGS -I$srcdir -I$srcdir/src -I$srcdir/src/symmetric/include -DLSH"
 
 # GNU libc defaults to supplying the ISO C library functions only. 
 # initgroups() and strsignal() are extensions; the _GNU_SOURCE define
@@ -671,6 +671,6 @@ fi
 AC_CONFIG_FILES([Makefile doc/Makefile misc/Makefile
 	  src/Makefile src/scm/Makefile
 	  src/testsuite/Makefile src/rsync/Makefile
-	  src/symmetric/Makefile src/symmetric/include/Makefile
+	  src/nettle/Makefile src/symmetric/include/Makefile
 	  contrib/Makefile contrib/lsh.spec])
 AC_OUTPUT
