@@ -449,7 +449,7 @@ do_tcp_wrapper(struct command *s UNUSED,
       
       io_write(lv->fd, 1024, NULL);
       A_WRITE(&lv->fd->write_buffer->super, 
-	      self->msg);
+	      lsh_string_dup(self->msg));
 
       close_fd_nicely(lv->fd);
 
