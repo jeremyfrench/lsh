@@ -577,22 +577,6 @@ sexp_un(const mpz_t n)
   return sexp_s(NULL, s);
 }
 
-#if 0
-struct sexp *
-sexp_sn(const mpz_t n)
-{
-  struct lsh_string *s;
-  UINT32 l = bignum_format_s_length(n);
-
-  s = lsh_string_alloc(l);
-  l -= bignum_format_s(n, s->data);
-
-  assert(!l);
-  
-  return sexp_s(NULL, s);
-}
-#endif
-
 /* Small unsigned int -> sexp */
 struct sexp *
 sexp_uint32(UINT32 n)
