@@ -82,7 +82,7 @@ struct spawn_info
   /* {in|out|err}[0] is for reading,
    * {in|out|err}[1] for writing. */
 
-  /* Negative values for the child fd:smeans that the slave tty should
+  /* Negative values for the child fd:s means that the slave tty should
    * be used. */
   int in[2]; int out[2]; int err[2];
 
@@ -129,6 +129,8 @@ struct spawn_info
        ; chdir to the user's home directory
        (chdir_home method int)
 
+       ; Spawns a user process executing the user's login shell.
+       ; Also closes the appropriate fd:s in info.
        (spawn method "struct lsh_process *"
               "struct spawn_info *info"
               "struct exit_callback *c")
