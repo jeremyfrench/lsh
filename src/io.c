@@ -712,7 +712,7 @@ do_listen_callback(struct io_callback *s,
 #if WITH_IPV6
   struct sockaddr_storage peer;
 #else
-  struct sockaddr peer;
+  struct sockaddr_in peer;
 #endif
 
   socklen_t addr_len = sizeof(peer);
@@ -1073,7 +1073,7 @@ fd2info(struct lsh_fd *fd, int side)
 #if WITH_IPV6
   struct sockaddr_storage sock;
 #else
-  struct sockaddr sock;
+  struct sockaddr_in sock;
 #endif
   
   socklen_t s_len = sizeof(sock);
