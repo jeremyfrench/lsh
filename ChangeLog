@@ -1,3 +1,24 @@
+2001-03-16  Niels Möller  <nisse@ehand.com>
+
+	* ANNOUNCE: Updated, preparing for lsh-1.2.
+
+	* src/server_session.c (format_exit_signal): Represent a signal
+	as a string, not an integer.
+	* src/translate_signal.c: Likewise.
+
+	* src/client.c (do_exit_signal): Don't use the signal name from
+	the packet, only the message.
+
+	* src/atoms.in: Added standard signals.
+
+	* src/resource.c (do_remember_resource): Bugfix: Use
+	KILL_RESOURCE, not KILL.
+
+2001-03-15  Niels Möller  <nisse@ehand.com>
+
+	* doc/srp-spec.nroff: Fixed definition of m2, pointed out by Tom
+	Holroyd. 
+
 2001-03-14  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/Makefile.am.in (class-map): Added rule for generating
