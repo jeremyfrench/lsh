@@ -685,7 +685,7 @@ static void do_kill_fd(struct resource *r)
 
   /* FIXME: Should we use close_fd() or close_fd_nicely() ? */
   if (r->alive)
-    close_fd(fd, 0);
+    close_fd_nicely(fd, 0);
 }
 
 /* Closes the file on i/o errors, and passes the exception on */
