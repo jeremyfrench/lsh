@@ -559,7 +559,7 @@ struct make_kexinit *make_test_kexinit(struct randomness *r)
      make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1),
      make_int_list(1, ATOM_SSH_DSS, -1),
      make_int_list(2, ATOM_ARCFOUR, ATOM_NONE, -1),
-     make_int_list(2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5 -1),
+     make_int_list(2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1),
      make_int_list(1, ATOM_NONE, -1),
      make_int_list(0, -1));
 }
