@@ -44,8 +44,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if 0
 #if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #endif
 
 #include "lsh-keygen.c.x"
@@ -99,7 +101,7 @@ main_argp_children[] =
 };
 
 static error_t
-main_argp_parser(int key, char *arg UNUSED, struct argp_state *state)
+main_argp_parser(int key, char *arg, struct argp_state *state)
 {
   CAST(lsh_keygen_options, self, state->input);
 
@@ -136,7 +138,7 @@ main_argp_parser(int key, char *arg UNUSED, struct argp_state *state)
     case 'l':
 	{
 	  char *end;
-	  long l = strtol(optarg, &end, 0);
+	  long l = strtol(arg, &end, 0);
 	      
 	  if (!*arg || *end)
 	    {
