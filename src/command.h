@@ -79,9 +79,9 @@
 { STATIC_COMMAND(do_call_simple_command), f}
 
 
-#define COMMAND_SIMPLE(cname)				\
+#define DEFINE_COMMAND_SIMPLE(cname, ARG)		\
 static struct lsh_object *				\
-do_simple_##cname(struct command_simple *s UNUSED,	\
+do_simple_##cname(struct command_simple *,		\
 		  struct lsh_object *a);		\
 							\
 struct command_simple cname =				\
@@ -89,23 +89,23 @@ STATIC_COMMAND_SIMPLE(do_simple_##cname);		\
 							\
 static struct lsh_object *				\
 do_simple_##cname(struct command_simple *s UNUSED,	\
-		  struct lsh_object *a)
+		  struct lsh_object *ARG)
 
-#define COMMAND_STATIC(cname)			\
+#define DEFINE_COMMAND(cname, ARG, CC, EXC)	\
 static void					\
 do_##cname(struct command *s UNUSED,		\
-	   struct lsh_object *a,		\
-           struct command_continuation *c,	\
-           struct exception_handler *e);	\
+	   struct lsh_object *ARG,		\
+           struct command_continuation *CC,	\
+           struct exception_handler *EXC);	\
 						\
 struct command cname =				\
 STATIC_COMMAND(do_##cname);			\
 						\
 static void					\
 do_##cname(struct command *s UNUSED,		\
-	   struct lsh_object *a,		\
-           struct command_continuation *c,	\
-           struct exception_handler *e)
+	   struct lsh_object *ARG,		\
+           struct command_continuation *CC,	\
+           struct exception_handler *EXC)
 
 
 void do_call_simple_command(struct command *s,
