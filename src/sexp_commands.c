@@ -35,7 +35,7 @@
 
 /* Forward declarations */
 static struct catch_command catch_sexp_exceptions;
-#define CATCH_SEXP (&catch_sexp_exceptions.super.super.super)
+#define CATCH_SEXP (&catch_sexp_exceptions.super.super)
 
 static struct read_sexp_command read_sexp;
 #define READ_SEXP (&read_sexp.super.super)

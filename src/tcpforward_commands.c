@@ -63,7 +63,7 @@ struct command make_tcpip_forward_handler;
 #define INSTALL_DIRECT_TCPIP (&install_direct_tcpip_handler.super.super.super)
 
 static struct catch_report_collect catch_channel_open;
-#define CATCH_CHANNEL_OPEN (&catch_channel_open.super.super.super)
+#define CATCH_CHANNEL_OPEN (&catch_channel_open.super.super)
 
 #include "tcpforward_commands.c.x"
 
