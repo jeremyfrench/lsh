@@ -183,7 +183,7 @@ static int do_read_packet(struct read_handler **h,
 
 	      /* Allocate full packet */
 	      {
-		int done = block_size - 4;
+		unsigned done = block_size - 4;
 
 		closure->buffer
 		  = ssh_format("%ls%lr",
@@ -279,7 +279,6 @@ static int do_read_packet(struct read_handler **h,
 	    break;
 	}
       case WAIT_MAC:
-      mac_state:
 	if (closure->connection->rec_mac)
 	  {
 	    UINT32 left = (closure->connection->rec_mac->mac_size
