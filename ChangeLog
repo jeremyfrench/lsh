@@ -1,3 +1,13 @@
+2003-09-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/gateway_channel.c (do_channel_open_forward): Moved creation
+	of ORIGIN channel object from here...
+	(do_gateway_channel_open_continuation): ... to here.
+	(make_gateway_channel_open_continuation): Deleted ORIGIN argument.
+
+	* src/channel.c (channel_open_handler): Bugfix for the case that
+	alloc_channel fails.
+
 2003-09-26  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/channel.c (login_service_command): Deleted redundant command.
