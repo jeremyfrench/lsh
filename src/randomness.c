@@ -55,7 +55,7 @@
      (super randomness)
      (vars
        (hash object hash_instance)
-       (pos simple UINT32)
+       (pos . UINT32)
        (buffer space UINT8)))
 */
 

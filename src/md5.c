@@ -35,7 +35,7 @@
      (name md5_instance)
      (super hash_instance)
      (vars
-       (ctx simple "struct md5_ctx")))
+       (ctx . "struct md5_ctx")))
 */
 
 static void

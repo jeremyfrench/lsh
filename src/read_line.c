@@ -46,7 +46,7 @@
        (e object exception_handler)
        
        ; Line buffer       
-       (pos simple UINT32)
+       (pos . UINT32)
        (buffer array UINT8 MAX_LINE)))
 */
 

@@ -43,8 +43,8 @@
      (name pty_info)
      (super resource)
        (vars
-         (master simple int)
-	 (slave simple int)
+         (master . int)
+	 (slave . int)
 	 ; Name of slave tty.
 	 ; Needed for SysV pty-handling (where opening the tty
 	 ; makes it the controlling terminal). Perhaps handy also for
@@ -52,7 +52,7 @@
 	 ; This string should be NUL-terminated
 	 (tty_name string)
 	 ; (tty_name array (simple char) MAX_TTY_NAME)
-	 ;; (saved_ios simple "struct termios")
+	 ;; (saved_ios . "struct termios")
 	 ));
 */
 

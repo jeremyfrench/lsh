@@ -39,7 +39,7 @@
      (name idea_instance)
      (super crypto_instance)
      (vars
-       (ctx array (simple UINT16) IDEA_KEYLEN)))
+       (ctx array UINT16 IDEA_KEYLEN)))
 */
 
 static void do_idea_crypt(struct crypto_instance *s,

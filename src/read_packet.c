@@ -49,17 +49,17 @@
      (name read_packet)
      (super read_handler)
      (vars
-       (state simple int)
+       (state . int)
   
        ; This is usually initialized from the command
        ; that created the fd.
        ;; (e object exception_handler)
 
        ; Attached to read packets
-       (sequence_number simple UINT32)
+       (sequence_number . UINT32)
   
        ; Buffer index, used for all the buffers
-       (pos simple UINT32)
+       (pos . UINT32)
 
        ; NOTE: This buffer should hold one block, and must be
        ; reallocated when the crypto algorithms is changed. 
@@ -73,7 +73,7 @@
 
        ; Position in the buffer after the first,
        ; already decrypted, block.
-       (crypt_pos simple "UINT8 *")
+       (crypt_pos . "UINT8 *")
   
        (handler object abstract_write)
        (connection object ssh_connection)))

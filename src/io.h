@@ -87,7 +87,7 @@
      (super resource)
      (vars
        (next object lsh_fd)
-       (fd simple int)
+       (fd . int)
 
        ;; (backend object io_backend)
        ;; (next_closed object lsh_fd)
@@ -99,17 +99,17 @@
        
        ;; FIXME: Can the close handlers be replaced by exceptions?
        ; User's close callback
-       (close_reason simple int)
+       (close_reason . int)
        (close_callback object close_callback)
 
        ; Called before poll
        (prepare method void)
 
-       (want_read simple int)
+       (want_read . int)
        ; Called if poll indicates that data can be read. 
        (read object io_callback)
 
-       (want_write simple int)
+       (want_write . int)
        ; Called if poll indicates that data can be written.
        (write object io_callback)
 

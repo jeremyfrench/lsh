@@ -38,7 +38,7 @@
    (class
      (name list_header)
      (vars
-       (length simple unsigned)))
+       (length . unsigned)))
 */
 
 /* FIXME: Should this be a list of unsigned ints? */
@@ -63,12 +63,10 @@
 #define LIST(x) ((x)->elements)
 #define LIST_LENGTH(x) ((x)->super.length)
 
-#if 0
-#define LIST_LENGTH(x) (((struct list_header *) (x))->length)
-#endif
 
-struct list_header *lsh_list_alloc(struct lsh_class *class,
-				   unsigned length, size_t element_size);
+struct list_header *
+lsh_list_alloc(struct lsh_class *class,
+	       unsigned length, size_t element_size);
 
 #define alloc_int_list(n) \
   ((struct int_list *) lsh_list_alloc(&CLASS(int_list), (n), sizeof(int)))
