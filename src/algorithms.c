@@ -33,6 +33,7 @@
 
 #include "lsh_argp.h"
 
+#include <assert.h>
 #include <stdarg.h>
 
 #define GABA_DEFINE
@@ -214,6 +215,86 @@ struct int_list *default_compression_algorithms(void)
 #endif
 }
 
+static void
+vlist_algorithms(const struct argp_state *state,
+		 struct alist *algorithms,
+		 unsigned n,
+		 va_list args)
+{
+  unsigned i;
+  int atom;
+  int separate = 0;
+
+  for (i = 0; i<n; i++)
+    {
+      atom = va_arg(args, int);
+      assert(atom > 0);
+      
+      if ( (atom == ATOM_NONE) || ALIST_GET(algorithms, atom))
+	{
+	  fprintf(state->out_stream, "%s%s",
+		  (separate ? ", " : ""),
+		  /* NOTE: This is the only place where we use that
+		   * atom names are NUL-terminated. */
+		  get_atom_name(atom));
+	  separate = 1;
+	}
+    }
+  putc('\n', state->out_stream);
+  atom = va_arg(args, int);
+  assert(atom == -1);
+}
+
+static void
+list_algorithms(const struct argp_state *state,
+		struct alist *algorithms,
+		char *prefix,
+		unsigned n, ...)
+{
+  va_list args;
+  
+  fprintf(state->out_stream, "%s", prefix);
+  
+  va_start(args, n);
+  vlist_algorithms(state, algorithms, n, args);
+  va_end(args);
+}
+
+static void
+list_crypto_algorithms(const struct argp_state *state,
+		       struct alist *algorithms)
+{
+  list_algorithms(state, algorithms,
+		  "Supported crypto algorithms: ", 7,
+		  ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
+		  ATOM_TWOFISH_CBC, ATOM_ARCFOUR,
+		  ATOM_IDEA_CBC, ATOM_CAST128_CBC,
+		  ATOM_NONE, -1);
+}
+
+static void
+list_mac_algorithms(const struct argp_state *state,
+		    struct alist *algorithms)
+{
+  list_algorithms(state, algorithms,
+		  "Supported crypto algorithms: ", 5,
+		  ATOM_HMAC_SHA1, ATOM_HMAC_SHA_96,
+		  ATOM_HMAC_MD5, ATOM_HMAC_MD5_96,
+		  ATOM_NONE, -1);
+}
+
+static void
+list_compression_algorithms(const struct argp_state *state,
+			    struct alist *algorithms)
+{
+  list_algorithms(state, algorithms,
+		  "Supported MAC algorithms: ", 2,
+		  ATOM_ZLIB, ATOM_NONE, -1);
+}
+
+
+#define OPT_LIST_ALGORITHMS 0x100
+
 static const struct argp_option
 algorithms_options[] =
 {
@@ -223,6 +304,8 @@ algorithms_options[] =
   { "compression", 'z', "Algorithm",
     OPTION_ARG_OPTIONAL, "Default is zlib.", 0 },
   { "mac", 'm', "Algorithm", 0, "", 0 },
+  { "list-algorithms", OPT_LIST_ALGORITHMS, NULL, 0,
+    "List supported algorithms.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }  
 };
 
@@ -259,8 +342,10 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
 	if (crypto)
 	  self->crypto_algorithms = make_int_list(1, crypto, -1);
 	else
-	  argp_error(state, "Unknown crypto algorithm '%s'.", arg);
-
+	  {
+	    list_crypto_algorithms(state, self->algorithms);
+	    argp_error(state, "Unknown crypto algorithm '%s'.", arg);
+	  }
 	break;
       }
     case 'm':
@@ -269,8 +354,10 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
 	if (mac)
 	  self->mac_algorithms = make_int_list(1, mac, -1);
 	else
-	  argp_error(state, "Unknown message authentication algorithm '%s'.", arg);
-	
+	  {
+	    list_mac_algorithms(state, self->algorithms);
+	    argp_error(state, "Unknown message authentication algorithm '%s'.", arg);
+	  }	
 	break;
       }
     case 'z':
@@ -283,10 +370,19 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
 	if (compression)
 	  self->compression_algorithms = make_int_list(1, compression, -1);
 	else
+	{
+	  list_compression_algorithms(state, self->algorithms);
 	  argp_error(state, "Unknown compression algorithm '%s'.", arg);
-
+	}
 	break;
-      }      
+      }
+    case OPT_LIST_ALGORITHMS:
+      list_crypto_algorithms(state, self->algorithms);
+      list_compression_algorithms(state, self->algorithms);
+      list_mac_algorithms(state, self->algorithms);
+
+      if (! (state->flags & ARGP_NO_EXIT))
+	exit (0);
     }
   return 0;
 }
