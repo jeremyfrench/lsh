@@ -24,6 +24,7 @@
 #include "client_keyexchange.h"
 
 #include "atoms.h"
+#include "command.h"
 #include "debug.h"
 #include "format.h"
 #include "ssh.h"
@@ -54,7 +55,6 @@
        (dh struct diffie_hellman_instance)
        (verifier object lookup_verifier)
        (install object install_keys)))
-       ;;; (finished object ssh_service)))
 */
     
 static int do_handle_dh_reply(struct packet_handler *c,
@@ -65,8 +65,9 @@ static int do_handle_dh_reply(struct packet_handler *c,
   struct verifier *v;
   struct hash_instance *hash;
   struct lsh_string *s;
+  struct command_continuation *continuation;
   int res;
-
+  
   verbose("handle_dh_reply()\n");
   
   if (!dh_process_server_msg(&closure->dh, packet))
@@ -126,7 +127,10 @@ static int do_handle_dh_reply(struct packet_handler *c,
   if (LSH_CLOSEDP(res) || !connection->established)
     return res;
 
-  return res | COMMAND_RETURN(connection->established, connection);
+  continuation = connection->established;
+  connection->established = NULL;
+  
+  return res | COMMAND_RETURN(continuation, connection);
 }
 
 static int do_init_client_dh(struct keyexchange_algorithm *c,

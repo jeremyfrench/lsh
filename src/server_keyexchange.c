@@ -24,6 +24,7 @@
 #include "server_keyexchange.h"
 
 #include "atoms.h"
+#include "command.h"
 #include "debug.h"
 #include "format.h"
 #include "ssh.h"
@@ -52,8 +53,7 @@
        (dh struct diffie_hellman_instance)
        ;; (server_key string)
        (signer object signer)
-       (install object install_keys)
-       (finished object ssh_service)))
+       (install object install_keys)))
 */
 
 static int do_handle_dh_init(struct packet_handler *c,
@@ -63,6 +63,7 @@ static int do_handle_dh_init(struct packet_handler *c,
   CAST(dh_server, closure, c);
   struct hash_instance *hash;
   struct lsh_string *s;
+  struct command_continuation *continuation;
   int res;
 
   verbose("handle_dh_init()\n");
@@ -115,15 +116,17 @@ static int do_handle_dh_init(struct packet_handler *c,
   connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
 
   res |= send_verbose(connection->write, "Key exchange successful!", 0);
-  if (LSH_CLOSEDP(res))
+  if (LSH_CLOSEDP(res) || !connection->established)
     return res;
+
+  continuation = connection->established;
+  connection->established = NULL;
   
-  return res | SERVICE_INIT(closure->finished, connection);
+  return res | COMMAND_RETURN(continuation, connection);
 }
 
 static int do_init_server_dh(struct keyexchange_algorithm *c,
 		             struct ssh_connection *connection,
-		             struct ssh_service *finished,
 		             int hostkey_algorithm_atom,
 		             struct signature_algorithm *ignored,
 		             struct object_list *algorithms)
@@ -134,9 +137,7 @@ static int do_init_server_dh(struct keyexchange_algorithm *c,
   NEW(dh_server, dh);
 
   CHECK_TYPE(ssh_connection, connection);
-  CHECK_SUBTYPE(ssh_service, finished);
   CHECK_SUBTYPE(signature_algorithm, ignored);
-  
   
   if (!keypair)
     {
@@ -151,7 +152,6 @@ static int do_init_server_dh(struct keyexchange_algorithm *c,
   dh->dh.server_key = lsh_string_dup(keypair->public);
   dh->signer = keypair->private;
   dh->install = make_install_new_keys(1, algorithms);
-  dh->finished = finished;
   
   /* Generate server's secret exponent */
   dh_make_server_secret(&dh->dh);
