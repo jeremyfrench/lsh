@@ -17,3 +17,5 @@ autoconf
 (cd src/argp && autoheader)
 
 automake -a
+
+(cd src/argp && automake -a)
