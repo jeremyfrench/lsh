@@ -5,6 +5,8 @@
 #ifndef LSH_BLOCKING_WRITE_H_INCLUDED
 #define LSH_BLOCKING_WRITE_H_INCLUDED
 
+#warning blocking_write is not used
+
 struct packet_blocking_write
 {
   struct abstract_write super;
