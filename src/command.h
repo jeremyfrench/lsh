@@ -24,18 +24,21 @@
 #ifndef LSH_COMMAND_H_INCLUDED
 #define LSH_COMMAND_H_INCLUDED
 
-#include "lsh_object.h"
+#include "lsh.h"
 
 #include "list.h"
+#include "io.h"
 
 #include <stdarg.h>
 
+#define CLASS_DECLARE
 #include "command.h.x"
+#undef CLASS_DECLARE
 
 /* Continuation based command execution. A command can take one object
  * as argument, and returns one object. */
 
-/* CLASS
+/* CLASS:
    (class
      (name command_continuation)
      (vars
@@ -46,13 +49,33 @@
    (class
      (name command)
      (vars
-       (do method int "struct command_continuation *c"
-                      "struct lsh_object *arg")))
+       (call method int "struct lsh_object *arg"
+                        "struct command_continuation *c")))
 */
 
-#define COMMAND_CALL(f, c) ((f)->do((f), (c)))
-#define COMMAND_RETURN(c, v) ((c)->c((c), (struct lsh_object *) (v))) 
+#define COMMAND_CALL(f, a, c) ((f)->call((f), (a), (c)))
+#define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v))) 
 
+/* CLASS:
+   (class
+     (name command_frame)
+     (super command_continuation)
+     (vars
+       (up object command_continuation)))
+*/
+
+struct command_continuation *
+make_apply(struct command *f, struct command_continuation *c);  
+
+extern struct command command_I;
+extern struct command command_S;
+extern struct command command_B;
+
+struct command *make_listen_command(struct io_backend *backend,
+				    struct lsh_string *interface,
+				    UINT32 port);
+
+#if 0
 /* (lambda (x) (f (g x))) */
 struct command *command_compose(struct command *f, struct command *g);
 
@@ -61,5 +84,6 @@ struct command *command_andl(struct object_list *args);
 
 /* (lambda (x) (or (f1 x) (f2 x) ...)) */
 struct command *command_orl(struct object_list *args);
+#endif
 
 #endif /* LSH_COMMAND_H_INCLUDED */ 
