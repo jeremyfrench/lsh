@@ -1,5 +1,8 @@
 2003-02-16  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/.dist_classes: Deleted read_base64.c.x.
+	* src/.dist_headers: Deleted digits.h
+
 	* src/debug.c (send_debug, send_verbose): Deleted unused funtions.
 
 	* .bootstrap: New file, to replace misc/bootstrap.sh.
