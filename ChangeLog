@@ -1,12 +1,24 @@
+2001-10-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/spki.c (spki_hash_sexp): New function.
+
+	* src/spki_commands.c (make_spki_hash): Deleted function.
+	(spki_hash): Deleted class.
+	(spki_hash_md5): Deleted command.
+	(spki_hash_sha1): Deleted command.
+
+	* src/lsh-decode-key.c (do_decode_key): Free CONTENTS properly.
+
 2001-10-02  Niels Möller  <nisse@ehand.com>
 
 	* src/lsh-export-key.c (main): Rewrote to use io_read_file_raw and
 	write_raw, without using any commands or io_run.
+	* src/sexp-conv.c (main): Likewise.
 
 	* src/io.c (io_read_file_raw): New function, for reading an entire
 	file into a string. Uses string_buffer.
 
-	* src/gc.c (gc_final): Chekc that root_set is non-null before
+	* src/gc.c (gc_final): Check that root_set is non-null before
 	calling KILL_RESOURCE_LIST.
 
 2001-09-30  Niels Möller  <nisse@cuckoo.hack.org>

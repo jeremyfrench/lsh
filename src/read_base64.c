@@ -50,8 +50,8 @@
 
 static UINT32
 do_read_base64(struct read_handler **h,
-	     UINT32 available,
-	     UINT8 *data)
+	       UINT32 available,
+	       UINT8 *data)
 {
   CAST(read_base64, self, *h);
 
