@@ -9,6 +9,8 @@ Makefile.in
 aes-test.c
 arcfour-test
 arcfour-test.c
+blowfish-test
+blowfish-test.c
 des-test
 des-test.c
 dsa-test
