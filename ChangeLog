@@ -1,3 +1,7 @@
+2001-08-31  Niels Möller  <nisse@ehand.com>
+
+	* src/client.c (client_argp_parser): Implemented -X flag.
+
 2001-08-30  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/xauth.c: New file.
