@@ -37,9 +37,11 @@
 #include "crypto.h"
 #include "format.h"
 #include "io.h"
+#include "password.h"
 #include "randomness.h"
 #include "server.h"
 #include "server_keyexchange.h"
+#include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -196,12 +198,11 @@ int main(int argc, char **argv)
 			make_userauth_service
 			(make_alist(1, ATOM_PASSWORD,
 				    make_unix_userauth
-				    (make_alist(1,
+				    (make_unix_login(),
+				     make_alist(1,
 						ATOM_SSH_CONNECTION,
-						service)))
-		       /* FIXME: Initialize some service */
-					 );
-    
+						service)))))));
+  
   if (!io_listen(&backend, &local, 
 	    make_server_callback(&backend,
 				 "lsh - a free ssh",
