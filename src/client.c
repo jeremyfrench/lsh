@@ -698,21 +698,6 @@ fork_output(int out)
     }
 }
 
-static struct escape_info *
-client_escape_info(struct client_options *options)
-{
-  struct escape_info *info = NULL;
-
-  if (!options->escape)
-    return NULL;
-
-  info = make_escape_info(options->escape);
-
-  /* C-z */
-  info->dispatch[26] = &suspend_callback;
-
-  return info;
-}
 
 /* Create a session object. stdout and stderr are shared (although
  * with independent lsh_fd objects). stdin can be used by only one
@@ -724,6 +709,8 @@ make_client_session(struct client_options *options)
   int in;
   int out;
   int err;
+  int is_tty = 0;
+  
   struct escape_info *escape = NULL;
   
   debug("lsh.c: Setting up stdin\n");
@@ -737,14 +724,12 @@ make_client_session(struct client_options *options)
       else 
 	{
 	  in = (options->stdin_fork ? fork_input : dup)(STDIN_FILENO);
-
-	  /* Attach the escape char handler. */
-	  escape = client_escape_info(options);
-
+	  is_tty = isatty(STDIN_FILENO);
+	  
 	  options->used_stdin = 1;
 	}
     }
-    
+
   if (in < 0)
     {
       werror("lsh: Can't dup/open stdin (errno = %i): %z!\n",
@@ -752,6 +737,20 @@ make_client_session(struct client_options *options)
       return NULL;
     }
 
+  /* Attach the escape char handler, if appropriate. */
+  if (options->escape > 0)
+    {
+      verbose("Enabling explicit escape character `%pc'\n",
+	      options->escape);
+      escape = make_escape_info(options->escape);
+    }
+  else if ( (options->escape < 0) && is_tty)
+    {
+      verbose("Enabling default escape character `%pc'\n",
+	      DEFAULT_ESCAPE_CHAR);
+      escape = make_escape_info(DEFAULT_ESCAPE_CHAR);
+    }
+  
   debug("lsh.c: Setting up stdout\n");
 
   if (options->stdout_file)
@@ -932,17 +931,6 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       if (options->start_shell)
 	client_add_action(options, client_shell_session(options));
 
-      if (options->escape < 0)
-	{
-	  /* FIXME: This check is wrong. We should test whether or not
-	   * stdin is a tty. */
-	  /* Default behaviour */
-	  if (options->tty && INTERACT_IS_TTY(options->tty))
-	    options->escape = DEFAULT_ESCAPE_CHAR;
-	  else
-	    options->escape = 0;
-	}
-      
       /* Install suspend-handler */
       suspend_install_handler();
       break;
