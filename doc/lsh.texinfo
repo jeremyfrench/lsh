@@ -1000,11 +1000,13 @@ prefers not to use it.
   @tab @code{3dec-cbc}, @code{blowfish-cbc}, @code{arcfour}
 @code{arcfour}
 
-  @tab The default encryption algorithm is triple-DES in CBC mode. This
-seems to be the algorithm of choice among conservative cryptographers.
-The default list includes only quite old and well studied algorithms.
-There is a special algorithm name @code{all} to enable all supported
-encryption algorithms (except @code{none}). 
+  @tab The default encryption algorithm is aes256. This is a newer
+algorithm than e.g. triple DES, which might be a problem for a
+conservative cryptographer, but it has been studied carefully by many
+competent cryptographers, and it seems to be secure. The default list
+includes only quite old and well studied algorithms. There is a special
+algorithm name @code{all} to enable all supported encryption algorithms
+(except @code{none}).
 
 @item @option{-m} @tab Message Authentication
   @tab @code{hmac-sha1}, @code{hmac-md5}
