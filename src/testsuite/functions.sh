@@ -5,15 +5,18 @@ if [ -z "$srcdir" ] ; then
 fi
 
 if [ -z "$SERVERFLAGS" ] ; then
-    SERVERFLAGS=-q
+    SERVERFLAGS='-q --enable-core'
 fi
 
 if [ -z "$CLIENTFLAGS" ] ; then
     CLIENTFLAGS=-q
 fi
 
+# Any error count as failure.
+set -e
+
 PORT=11147
-ATEXIT="res=$?"
+ATEXIT="res=$? ; set +e"
 
 trap 'eval "$ATEXIT ; exit \$res"' 0
 
