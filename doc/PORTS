@@ -1,0 +1,28 @@
+This file lists systems/architectures on which versions of lsh has been
+tested.
+
+
+lsh version:	CVS 1998-12-30 with patches
+uname -a:	Linux penguin.wi.leidenuniv.nl 2.0.36 #2 Mon Nov 16 15:28:56 CET 1998 i586 unknown
+libc:		libc6 2.0.7v-1
+Status:		Compiles quite cleanly; both client and server work.
+
+
+lsh version:	CVS 1998-12-30 with patches
+uname -a:	Linux alpha-quadrant 2.0.30 #1 Wed Nov 12 12:40:59 EST 1997 alpha unknown
+libc:		libc6.1 2.0.7u-5
+Status:		Client works fine when compiled without zlib support; with
+		zlib, it segfaults inside zlib (in inflate_blocks_reset
+		after about the fifth call to zlib_alloc).
+
+
+lsh version:	CVS 1998-12-30 with patches
+uname -a:	Linux tervola 2.1.115 #1 Tue Aug 11 08:05:32 UTC 1998 ppc unknown
+libc:		libc6 2.0.100-2
+Status:		Simple test connection to Linux/i386 lshd works.
+
+
+lsh version:	CVS 1998-12-30 with patches
+uname -a:	SunOS ultra5 5.5 Generic_103093-14 sun4u sparc SUNW,Ultra-1
+Status:		Compiles reasonably clean.
+		Simple test connection to Linux/i386 lshd works.
