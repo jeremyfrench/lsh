@@ -301,8 +301,7 @@ make_exit_shell(struct server_session *session)
      (name shell_request)
      (super channel_request)
      (vars
-       (backend object io_backend)
-       (reaper object reap)))
+       (backend object io_backend)))
 */
 
 static int
@@ -601,20 +600,20 @@ spawn_process(struct server_session *session,
   return -1;
 }
 
-static struct exception shell_request_failed =
-STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
-
 static void
-do_spawn_shell(struct channel_request *c,
+do_spawn_shell(struct channel_request *s,
 	       struct ssh_channel *channel,
 	       struct ssh_connection *connection,
 	       struct channel_request_info *info UNUSED,
 	       struct simple_buffer *args,
-	       struct command_continuation *s,
+	       struct command_continuation *c,
 	       struct exception_handler *e)
 {
-  CAST(shell_request, closure, c);
+  CAST(shell_request, closure, s);
   CAST(server_session, session, channel);
+
+  static struct exception shell_request_failed =
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
 
   if (!parse_eod(args))
     {
@@ -632,13 +631,13 @@ do_spawn_shell(struct channel_request *c,
     {
     case 1: /* Parent */
       /* NOTE: The return value is not used. */
-      COMMAND_RETURN(s, channel);
+      COMMAND_RETURN(c, channel);
       channel_start_receive(channel, session->initial_window);
       return;
     case 0:
       { /* Child */
 #define MAX_ENV 1
-	/* No args, end the USER_EXEC method fills in argv[0]. */
+	/* No args, and the USER_EXEC method fills in argv[0]. */
 	const char *argv[] = { NULL, NULL };
 	
 	struct env_value env[MAX_ENV];
@@ -697,21 +696,22 @@ make_shell_handler(struct io_backend *backend)
   return &closure->super;
 }
 
-static struct exception exec_request_failed =
-STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Exec request failed");
 
 static void
-do_spawn_exec(struct channel_request *c,
+do_spawn_exec(struct channel_request *s,
 	      struct ssh_channel *channel,
 	      struct ssh_connection *connection,
 	      struct channel_request_info *info UNUSED,
 	      struct simple_buffer *args,
-	      struct command_continuation *s,
+	      struct command_continuation *c,
 	      struct exception_handler *e)
 {
-  CAST(shell_request, closure, c);
+  CAST(shell_request, closure, s);
   CAST(server_session, session, channel);
 
+  static struct exception exec_request_failed =
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Exec request failed");
+  
   UINT32 command_len;
   const UINT8 *command;
 
@@ -740,7 +740,7 @@ do_spawn_exec(struct channel_request *c,
 	  lsh_string_free(command_line);
 	  
 	  /* NOTE: The return value is not used. */
-	  COMMAND_RETURN(s, channel);
+	  COMMAND_RETURN(c, channel);
 	  channel_start_receive(channel, session->initial_window);
 	  return;
 	case 0:
@@ -762,8 +762,10 @@ do_spawn_exec(struct channel_request *c,
 	    argv[3] = NULL;
 	
 	    debug("do_spawn_shell: Child process\n");
+
 	    assert(getuid() == connection->user->uid);
-	    	    
+	    assert(argv[2]);
+	    
 	    if (session->term)
 	      {
 		env[env_length].name ="TERM";
@@ -802,6 +804,128 @@ make_exec_handler(struct io_backend *backend)
   
   return &closure->super;
 }
+
+/* For simplicity, represent a subsystem simply as a name of the
+ * executable. */
+
+/* GABA:
+   (class
+     (name subsystem_request)
+     (super shell_request)
+     (vars
+       ;(subsystems object alist)
+       ; A list { name, program, name, program, NULL }
+       (subsystems . "const char **")))
+*/
+
+/* ;; GABA:
+   (class
+     (name sybsystem_info)
+     (vars
+       (name "const char *")))
+*/
+
+static const char *
+lookup_subsystem(struct subsystem_request *self,
+		 UINT32 length, const UINT8 *name)
+{
+  unsigned i;
+  if (memchr(name, 0, length))
+    return NULL;
+
+  for (i = 0; self->subsystems[i]; i+=2)
+    {
+      assert(self->subsystems[i+1]);
+      if ((length == strlen(self->subsystems[i]))
+	  && !memcmp(name, self->subsystems[i], length))
+	return self->subsystems[i + 1];
+    }
+  return NULL;
+}
+
+static void
+do_spawn_subsystem(struct channel_request *s,
+		   struct ssh_channel *channel,
+		   struct ssh_connection *connection,
+		   struct channel_request_info *info UNUSED,
+		   struct simple_buffer *args,
+		   struct command_continuation *c,
+		   struct exception_handler *e)
+{
+  CAST(subsystem_request, self, s);
+  CAST(server_session, session, channel);
+
+  static struct exception subsystem_request_failed =
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Subsystem request failed");
+
+  const UINT8 *name;
+  UINT32 name_length;
+
+  const char *program;
+      
+  if (! (parse_string(args, &name_length, &name) && parse_eod(args)))
+    {
+      PROTOCOL_ERROR(e, "Invalid subsystem CHANNEL_REQUEST message.");
+      return;
+    }
+  
+  program = lookup_subsystem(self, name_length, name);
+  
+  if (!session->process && program)
+    {
+      /* Don't use any pty */
+      if (session->pty)
+	{
+	  KILL_RESOURCE(&session->pty->super);
+	  session->pty = NULL;
+	}
+      
+      switch (spawn_process(session, connection->user,
+			    connection->peer,
+			    self->super.backend))
+	{
+	case 1: /* Parent */
+	  /* NOTE: The return value is not used. */
+	  COMMAND_RETURN(c, channel);
+	  channel_start_receive(channel, session->initial_window);
+	  return;
+
+	case 0: /* Child */
+	  {
+	    /* No args, and the USER_EXEC method fills in argv[0]. */
+	    const char *argv[] = { NULL, NULL };
+
+	    debug("do_spawn_subsystem: Child process\n");
+	  
+	    USER_EXEC(connection->user, 1, argv, 0, NULL);
+
+	    werror("server_session: subsystem exec failed (errno = %i): %z\n",
+		   errno, STRERROR(errno));
+	    _exit(EXIT_FAILURE);
+	  }
+	case -1: /* Error */
+	  break;
+
+	default:
+	  fatal("Internal error!");
+	}
+    }
+  EXCEPTION_RAISE(e, &subsystem_request_failed);
+}
+
+struct channel_request *
+make_subsystem_handler(struct io_backend *backend,
+		       const char **subsystems)
+{
+  NEW(subsystem_request, self);
+
+  self->super.super.handler = do_spawn_subsystem;
+  self->super.backend = backend;
+  self->subsystems = subsystems;
+  
+  return &self->super.super;
+}
+
 
 #if WITH_PTY_SUPPORT
 
