@@ -743,11 +743,12 @@ AC_CONFIG_SUBDIRS(src/sftp)
 if test x$GCC = xyes ; then
     CFLAGS="$CFLAGS -Wall -W \
  -Wmissing-prototypes -Wmissing-declarations -Wstrict-prototypes \
- -Waggregate-return \
  -Wpointer-arith -Wbad-function-cast -Wnested-externs"
 
 # Don't enable -Wcast-align as it results in tons of warnings in the
 # DES code. And when using stdio.
+# Don't enable -Waggregate-return, as that causes warnings for glibc
+# inttypes.h.
 
 fi
 

@@ -325,7 +325,6 @@ AC_CHECK_FUNCS([getcwd getwd strcoll strdup  getenv fnmatch dup2])
 if test x$GCC = xyes ; then
     CFLAGS="$CFLAGS -ggdb3 -Wall -W \
  -Wmissing-prototypes -Wmissing-declarations -Wstrict-prototypes \
- -Waggregate-return \
  -Wpointer-arith -Wbad-function-cast -Wnested-externs -Wcast-align"
 fi
 
