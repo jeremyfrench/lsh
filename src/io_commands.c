@@ -118,6 +118,51 @@ DEFINE_COMMAND2(listen_command)
 					 NULL, errno, NULL));
 }
 
+/* (listen callback sockaddr-list) */
+/* Listens on all the addresses. Returns a resource list for the
+ * corresponding fd:s */
+DEFINE_COMMAND2(listen_list_command)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(command, f, a1);
+  CAST(sockaddr_list, list, a2);
+  unsigned nbound;
+  struct resource_list *resources = make_resource_list();
+  struct io_callback *callback = make_listen_callback(f, e);
+  
+  for (nbound = 0; list; list = list->next)
+    {
+      struct lsh_fd *fd;
+      debug("listen_list_command: Trying to bind address of type %i\n",
+	    list->addr->sa_family);
+      
+      fd = io_bind_sockaddr(list->addr, list->length, e);
+      if (fd)
+	{
+	  if (io_listen(fd, callback))
+	    {
+	      remember_resource(resources, &fd->super);
+	      nbound++;
+	    }
+	  else
+	    close_fd(fd);
+	}
+    }
+  if (nbound)
+    COMMAND_RETURN(c, resources);
+  else
+    {
+      KILL_RESOURCE(&resources->super);
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
+					   NULL, 0,
+					   "No addresses could be bound"));
+    }
+}
+
 static struct exception resolve_exception =
 STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
 

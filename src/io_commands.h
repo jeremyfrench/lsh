@@ -51,6 +51,9 @@ extern struct command io_write_file_command;
 extern struct command_2 listen_command;
 #define LISTEN (&listen_command.super.super)
 
+extern struct command_2 listen_list_command;
+#define LISTEN_LIST (&listen_list_command.super.super)
+
 extern struct command bind_address_command;
 #define BIND (&bind_address_command.super)
 
