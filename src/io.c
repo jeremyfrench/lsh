@@ -341,7 +341,7 @@ static void write_callback(struct lsh_fd *fd)
 	break;
       }
   else
-    self->buffer->start += res;
+    write_buffer_consume(self->buffer, res);
 }  
 
 static void listen_callback(struct lsh_fd *fd)
