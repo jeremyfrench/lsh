@@ -49,7 +49,7 @@ do_default_handler(struct exception_handler *ignored UNUSED,
     }
   else
 #endif
-    fatal("Unhandled exception of type: %z\n", e->type, e->msg);
+    fatal("Unhandled exception of type %xi: %z\n", e->type, e->msg);
 }
 
 struct exception_handler default_exception_handler =
