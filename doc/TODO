@@ -141,13 +141,10 @@ Scheme scripts so that they are as portable between Scheme implementations
 as possible, or switch to a free Scheme implementation, like Guile. This is
 not urgent however.
 
-CAST is probably not patent encumbered (Schneier doesn't mention patents);
-check what RFC 2144 (CAST-128) says on this subject.
-
 
 CONTROL
 
-Continue on the cpmmand evaluation mechanism i command.h and
+Continue on the command evaluation mechanism in command.h and
 command.c. Write commands for opening connections, channels and
 sending global requests and chanel requests. In short, for doing
 everything that the client and server need to do.
@@ -224,5 +221,5 @@ Integrate tcp-forward support.
  * request (in this case, a CHANNEL_OPEN for a forwarded-tcp channel,
  * and wait for client to respond). The problem is similar to the
  * request_info mechanism in client.c. The command.h mechanism may be
- * able to solve the problem in a general way, but tat is currently in
+ * able to solve the problem in a general way, but that is currently in
  * the design phase. */
