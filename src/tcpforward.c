@@ -343,7 +343,6 @@ make_channel_open_direct_tcpip(struct command *callback)
      (name tcpip_forward_request_continuation)
      (super command_continuation)
      (vars
-       (connection object ssh_connection)
        (forward object local_port)
        (c object command_continuation)))
 */
@@ -356,7 +355,9 @@ do_tcpip_forward_request_continuation(struct command_continuation *c,
   CAST_SUBTYPE(lsh_fd, fd, x);
 
   assert(self->forward);
-  
+  assert(fd);
+
+#if 0
   if (!fd)
     {
       struct local_port *port
@@ -370,8 +371,8 @@ do_tcpip_forward_request_continuation(struct command_continuation *c,
       
       COMMAND_RETURN(self->c, NULL);
     }
-  
   REMEMBER_RESOURCE(self->connection->resources, &fd->super);
+#endif
 
   self->forward->socket = fd;
 
@@ -379,13 +380,11 @@ do_tcpip_forward_request_continuation(struct command_continuation *c,
 }
 
 static struct command_continuation *
-make_tcpip_forward_request_continuation(struct ssh_connection *connection,
-					struct local_port *forward,
+make_tcpip_forward_request_continuation(struct local_port *forward,
 					struct command_continuation *c)
 {
   NEW(tcpip_forward_request_continuation, self);
 
-  self->connection = connection;
   self->forward = forward;
   self->c = c;
   
@@ -394,19 +393,39 @@ make_tcpip_forward_request_continuation(struct ssh_connection *connection,
   return &self->super;
 }
 
+/* GABA:
+   (class
+     (name tcpip_forward_request_handler)
+     (super exception_handler)
+     (vars
+       (connection object ssh_connection)
+       (forward object local_port)))
+*/
 
 static void
-do_tcpip_forward_request_exc(struct exception_handler *self,
+do_tcpip_forward_request_exc(struct exception_handler *s,
 			     const struct exception *e)
 {
+  CAST(tcpip_forward_request_handler, self, s);
+  
   switch(e->type)
     {
     case EXC_IO_LISTEN:
     case EXC_RESOLVE:
-      EXCEPTION_RAISE(self->parent,
-		      make_simple_exception(EXC_GLOBAL_REQUEST,
-					    e->msg));
-      break;
+      {
+	struct local_port *port
+	  = remove_forward(&self->connection->table->local_ports,
+			   1,
+			   self->forward->super.listen->ip->length,
+			   self->forward->super.listen->ip->data,
+			   self->forward->super.listen->port);
+	assert(port);
+	assert(port == self->forward);
+	EXCEPTION_RAISE(s->parent,
+			make_simple_exception(EXC_GLOBAL_REQUEST,
+					      e->msg));
+	break;
+      }
     default:
       if (e->type & EXC_IO)
 	{
@@ -414,16 +433,25 @@ do_tcpip_forward_request_exc(struct exception_handler *self,
 		 e->msg);
 	}
       else
-	EXCEPTION_RAISE(self->parent, e);
+	EXCEPTION_RAISE(self->super.parent, e);
     }
 }
 
 static struct exception_handler *
-make_tcpip_forward_request_exc(struct exception_handler *parent,
+make_tcpip_forward_request_exc(struct ssh_connection *connection,
+			       struct local_port *forward,
+			       struct exception_handler *parent,
 			       const char *context)
 {
-  return make_exception_handler(do_tcpip_forward_request_exc,
-				parent, context);
+  NEW(tcpip_forward_request_handler, self);
+  self->super.raise = do_tcpip_forward_request_exc;
+  self->super.parent = parent;
+  self->super.context = context;
+
+  self->connection = connection;
+  self->forward = forward;
+
+  return &self->super;
 }
 
 /* GABA:
@@ -431,8 +459,12 @@ make_tcpip_forward_request_exc(struct exception_handler *parent,
      (name tcpip_forward_request)
      (super global_request)
      (vars
+       ;; The callback is invoked for each request, with the port as
+       ;; argument. If successful, it should return the fd object
+       ;; associated with the listening port. It need not remember the port;
+       ;; the continuation installed by do_tcpip_forward_request()
+       ;; takes care of that.
        (callback object command)))
-       ;; (backend object io_backend)))
 */
 
 static void
@@ -481,9 +513,9 @@ do_tcpip_forward_request(struct global_request *s,
       {
 	COMMAND_CALL(self->callback,
 		     a,
-		     make_tcpip_forward_request_continuation
-		     (connection, forward, c),
-		     make_tcpip_forward_request_exc(e, HANDLER_CONTEXT));
+		     make_tcpip_forward_request_continuation(forward, c),
+		     make_tcpip_forward_request_exc(connection, forward,
+						    e, HANDLER_CONTEXT));
 	
 	return;
       }
