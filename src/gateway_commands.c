@@ -37,6 +37,7 @@
 #include "format.h"
 #include "gateway_channel.h"
 #include "io_commands.h"
+#include "lsh_string.h"
 #include "read_packet.h"
 #include "ssh.h"
 #include "werror.h"
@@ -80,7 +81,7 @@ make_gateway_pad(struct abstract_write *next)
      (vars
        ; Buffer index, used for all the buffers
        (pos . uint32_t)
-       (header array "uint8_t" HEADER_SIZE)
+       (header string)
        (payload string)
        (handler object abstract_write)
        (connection object ssh_connection)))
@@ -118,14 +119,14 @@ do_read_gateway(struct read_handler **h,
 
       if (available < left)
 	{
-	  memcpy(self->header + self->pos, data, available);
+	  lsh_string_write(self->header, self->pos, available, data);
 	  self->pos += available;
 	  return available;
 	}
 
-      memcpy(self->header + self->pos, data, left);
+      lsh_string_write(self->header, self->pos, left, data);
 
-      length = READ_UINT32(self->header);
+      length = READ_UINT32(lsh_string_data(self->header));
       if (length > self->connection->rec_max_packet)
 	{
 	  static const struct protocol_exception too_large =
@@ -150,16 +151,16 @@ do_read_gateway(struct read_handler **h,
   else
     {
       uint32_t left;
-      left = self->payload->length - self->pos;
+      left = lsh_string_length(self->payload) - self->pos;
 
       if (available < left)
 	{
-	  memcpy(self->payload->data + self->pos, data, available);
+	  lsh_string_write(self->payload, self->pos, available, data);
 	  self->pos += available;
 	  return available;
 	}
 
-      memcpy(self->payload->data + self->pos, data, left);
+      lsh_string_write(self->payload, self->pos, left, data);
 
       A_WRITE(self->handler, self->payload);
       self->payload = NULL;
@@ -179,6 +180,7 @@ make_read_gateway(struct abstract_write *handler,
   self->connection = connection;
   self->handler = handler;
 
+  self->header = lsh_string_alloc(HEADER_SIZE);
   self->pos = 0;
   self->payload = NULL;
 
