@@ -1,3 +1,17 @@
+2004-10-08  Niels Möller  <niels@s3.kth.se>
+
+	* src/client_userauth.c (do_userauth_info_request): Enforce limits
+	on the length of name and instruction. Prepend the name and a
+	newline to the instruction.
+
+	* src/unix_interact.c (unix_dialog): Deleted instruction argument,
+	display dialog->instruction instead.
+
+	* src/interact.h (interact_dialog): New instruction attribute.
+	(INTERACT_DIALOG): Deleted instruction argument.
+	* src/interact.c (make_interact_dialog): Initialize
+	self->instruction to NULL.
+
 2004-10-07  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh-writekey.c (main_argp_parser): When --server is given,
