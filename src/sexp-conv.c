@@ -36,6 +36,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -49,12 +50,13 @@ int exit_code = EXIT_SUCCESS;
      (name make_sexp_conv)
      (params
        (read object command)
+       (select object command)
        (transform object command)
        (print object command)
        (dest object abstract_write))
      (expr
        (lambda (in)
-         (print dest (transform (read in))))))
+         (print dest (transform (select (read in)))))))
 */
 
 
@@ -89,6 +91,130 @@ do_exc_sexp_conv_handler(struct exception_handler *self,
     }
 }
 
+enum sexp_select_ops { OP_CAR, OP_CDR, OP_RETURN_CAR };
+
+/* GABA:
+   (class
+     (name sexp_select_command)
+     (super command)
+     (vars
+       (ops object int_list)))
+*/
+
+static void
+do_sexp_select(struct command *s,
+	       struct lsh_object *x,
+	       struct command_continuation *c,
+	       struct exception_handler *e)
+{
+  CAST(sexp_select_command, self, s);
+  CAST_SUBTYPE(sexp, expr, x);
+  struct sexp_iterator *i;
+  unsigned j;
+
+  static const struct exception non_list =
+    STATIC_EXCEPTION(EXC_SEXP_SYNTAX,
+		     "Attemt to select in a non-list expression.");
+
+  static const struct exception list_exhausted =
+    STATIC_EXCEPTION(EXC_SEXP_SYNTAX,
+		     "List exhausted while selecting.");
+
+  if (sexp_atomp(expr))
+    {
+      EXCEPTION_RAISE(e, &non_list);
+      return;
+    }
+
+  i = SEXP_ITER(expr);
+
+  for (j = 0; j < LIST_LENGTH(self->ops); j++)
+    switch (LIST(self->ops)[j])
+      {
+      case OP_RETURN_CAR:
+	{
+	  struct sexp *expr = SEXP_GET(i);
+	  if (!expr)
+	    EXCEPTION_RAISE(e, &list_exhausted);
+	  else
+	    COMMAND_RETURN(c, expr);
+
+	  return;
+	}
+      case OP_CAR:
+	{
+	  struct sexp *expr = SEXP_GET(i);
+	  if (!expr)
+	    {
+	      EXCEPTION_RAISE(e, &list_exhausted);
+	      return;
+	    }
+	    
+	  if (sexp_atomp(expr))
+	    {
+	      EXCEPTION_RAISE(e, &non_list);
+	      return;
+	    }
+	  i = SEXP_ITER(expr);
+
+	  break;
+	}
+      case OP_CDR:
+	SEXP_NEXT(i);
+	if (!SEXP_LEFT(i))
+	  {
+	    EXCEPTION_RAISE(e, &list_exhausted);
+	    return;
+	  }
+	break;
+      }
+  
+  fatal("do_sexp_select: Internal error!\n");
+}
+     
+static struct command *
+make_sexp_select_command(const char *arg)
+{
+  unsigned len = strlen(arg);
+
+  /* Check syntax */
+  if ( (len >= 3)
+       && (arg[0] == 'c')
+       && (arg[1] == 'a')
+       && (arg[len-1] == 'r'))
+    {
+      struct int_list *ops = alloc_int_list(len - 2);
+      unsigned i;
+      
+      for (i = 0; i < len - 3; i++)
+	switch(arg[len - i - 2])
+	  {
+	  case 'a':
+	    LIST(ops)[i] = OP_CAR;
+	    break;
+	  case 'd':
+	    LIST(ops)[i] = OP_CDR;
+	    break;
+	  default:
+	    KILL(ops);
+	    return NULL;
+	  }
+
+      LIST(ops)[i++] = OP_RETURN_CAR;
+      assert (i == LIST_LENGTH(ops));
+      
+      {
+	NEW(sexp_select_command, self);
+	self->super.call = do_sexp_select;
+	self->ops = ops;
+
+	return &self->super;
+      }
+    }
+  else
+    return NULL;
+}
+
 /* Option parsing */
 
 const char *argp_program_version
@@ -100,6 +226,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_SPKI_HASH 0x201
 #define OPT_RAW_HASH 0x202
 #define OPT_ONCE 0x203
+#define OPT_SELECT 0x204
 
 static const struct argp_option
 main_options[] =
@@ -109,6 +236,8 @@ main_options[] =
   { "raw-hash", OPT_RAW_HASH, NULL, 0, "Output the hash for the canonical "
     "representation of the object, in hexadecimal.", 0 },
   { "hash", OPT_HASH, "Algorithm", 0, "Hash algorithm (default sha1).", 0 },
+  { "select", OPT_SELECT, "Operator", 0, "Select a subexpression "
+    "(e.g \"caddr\") for processing.", 0 },
   { "once", OPT_ONCE, NULL, 0, "Process at most one s-expression.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
@@ -127,6 +256,7 @@ main_options[] =
     (mode . int)
     (algorithms object alist)
     (hash . int)
+    (select object command)
     (transform object command)
     (print object command)
 ))
@@ -139,6 +269,7 @@ static struct sexp_conv_options *make_options(void)
   self->output = SEXP_ADVANCED;
   self->once = 0;
   self->mode = MODE_VANILLA;
+  self->select = &command_I.super;
   self->transform = &command_I.super;
   self->algorithms = make_alist(2,
 				ATOM_MD5, &md5_algorithm,
@@ -216,6 +347,16 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case OPT_RAW_HASH:
       self->mode = MODE_RAW_HASH;
       break;
+    case OPT_SELECT:
+      {
+	struct command *sel = make_sexp_select_command(arg);
+	if (sel)
+	  self->select = sel;
+	else
+	  argp_error(state, "Unsupported select operator '%s' (the supported "
+		     "ones are ca[ad]*r).", arg);
+	break;
+      }
     case OPT_ONCE:
       self->once = 1;
       break;
@@ -255,6 +396,7 @@ int main(int argc, char **argv)
     CAST_SUBTYPE(command, work,
 		 make_sexp_conv(
 		   make_read_sexp_command(options->input, !options->once),
+		   options->select,
 		   options->transform,
 		   options->print,
 		   &(io_write(make_lsh_fd(backend,
