@@ -25,6 +25,7 @@ lshd
 packet_types.h
 prime_table
 prime_table.h
+sexp_conv
 sexp_table.h
 sexp_test
 stamp-h
