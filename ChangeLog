@@ -1,3 +1,27 @@
+1999-10-18  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in (AC_CHECK_MEMBER): New macro.
+	(AC_CHECK_VAR): New macro.
+	Check for program_invocation_name and
+	program_invocation_short_name. 
+	Check for thread-safe i/o functions.
+
+	* src/argp/argp.h: Don't include argp-comp.h. lsh-specific
+	handling of getopt.h and PRINTF_STYLE.
+
+	* src/argp/argp-help.c (strndup): Defined, if needed.
+	(mempcpy): -"-
+
+	* src/argp/argp-fmtstream.h: Removed inclusion of argp-comp.h. 
+	Include argp.h. Use PRINTF_STYLE for prototypes.
+
+	* src/argp/Makefile.am (libargp_a_SOURCES): Added arp-pin.c. 
+
+	* acconfig.h: Added HAVE_PROGRAM_INVOCATION_NAME and
+	HAVE_PROGRAM_INVOCATION_SHORT_NAME.
+
+	* Makefile.am.in (MAKEFILESAM): Removed src/argp/Makefile.am. 
+
 Thu Oct 14 20:35:43 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/argp/argp-fmtstream.h: #include argp-comp.h.
