@@ -1,3 +1,14 @@
+2000-05-06  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/tcpforward_commands.c (do_remote_port_install_continuation):
+	Handle only the successful case here.
+
+	* src/connection.c (make_ssh_connection): Bugfix: Don't apply
+	SSH_CHANNEL_MAX_PACKET_FUZZ here.
+
+	* src/client_userauth.c (client_publickey_next): Fixes for the
+	case where we send complete signatures for several keys.
+
 2000-05-01  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/keygen-test: Use -o flag to lsh_writekey.
