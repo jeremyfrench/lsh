@@ -39,7 +39,7 @@
      (name packet_debug)
      (super abstract_write_pipe)
      (vars
-       (prefix simple "const char *")))
+       (prefix string)))
 */
 
 static void
@@ -49,15 +49,15 @@ do_debug(struct abstract_write *w,
   CAST(packet_debug, closure, w);
 
   if (!packet->length)
-    debug("DEBUG: %z empty packet\n", closure->prefix);
+    debug("DEBUG: %S empty packet\n", closure->prefix);
   else
     {
       UINT8 type = packet->data[0];
       if (type == SSH_MSG_USERAUTH_REQUEST)
-	debug("DEBUG: %z %z *****\n",
+	debug("DEBUG: %S %z *****\n",
 	      closure->prefix, packet_types[type]);
       else
-	debug("DEBUG: %z %z %xS\n",
+	debug("DEBUG: %S %z %xS\n",
 	      closure->prefix, packet_types[type],
 	      packet);
     }
@@ -66,7 +66,7 @@ do_debug(struct abstract_write *w,
 
 struct abstract_write *
 make_packet_debug(struct abstract_write *next,
-		  const char *prefix)
+		  struct lsh_string *prefix)
 {
   NEW(packet_debug, closure);
 

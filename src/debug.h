@@ -31,7 +31,8 @@
 #include "connection.h"
 
 struct abstract_write *
-make_packet_debug(struct abstract_write *continuation, const char *prefix);
+make_packet_debug(struct abstract_write *continuation,
+		  struct lsh_string *prefix);
 
 void send_debug_message(struct abstract_write *write, const char *msg, int always_display);
 void send_debug(struct abstract_write *write, const char *msg, int always_display);
