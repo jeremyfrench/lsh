@@ -221,7 +221,7 @@ The server verifies that m1 is correct using its own K. If they
 don't match, the keyexchange fails, and the server MUST NOT send any
 proof back to the client.
 
-Finally, the server computes m2 as the HMAC(K, e | m1 | K) and sends
+Finally, the server computes m2 as the HMAC(K, e | m1 | H) and sends
 
   byte SSH_MSG_KEXSRP_PROOF
   string m2
