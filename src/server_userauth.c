@@ -2,14 +2,32 @@
  *
  * Server side user authentication. */
 
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 1998, 1999 Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
 #include "server_userauth.h"
 
-#include "userauth.h"
 #include "connection.h"
 #include "format.h"
 #include "ssh.h"
-#include "xalloc.h"
 #include "werror.h"
+#include "xalloc.h"
 
 #include <string.h>
 #include <assert.h>
@@ -166,18 +184,19 @@ int change_dir(struct unix_user *user)
   return 1;  
 }
 
-/* FIXME: Supports only password authentication so far. There should
- * be some abstraction for handling several authentication methods. */
+struct lsh_string *
+format_userauth_failure(struct int_list *methods,
+					   int partial)
+{
+  return ssh_format("%c%A%c", SSH_MSG_USERAUTH_FAILURE, methods, partial);
+}
 
-/* GABA:
-   (class
-     (name userauth_service)
-     (super command)
-     (vars
-       (advertised_methods object int_list)
-       (methods object alist)
-       (services object alist)))
-*/
+struct lsh_string *
+format_userauth_success(void)
+{
+  return ssh_format("%c", SSH_MSG_USERAUTH_SUCCESS);
+}
+
 
 /* Max number of attempts */
 #define AUTH_ATTEMPTS 20
@@ -255,7 +274,7 @@ do_handle_userauth(struct packet_handler *c,
 	  return;
 	}
 
-      AUTHENTICATE(auth, connection, user, &buffer,
+      AUTHENTICATE(auth, connection, user, requested_service, &buffer,
 		   make_delay_continuation(service, closure->c),
 		   closure->e);
     }
@@ -263,6 +282,23 @@ do_handle_userauth(struct packet_handler *c,
     PROTOCOL_ERROR(connection->e, "Invalid USERAUTH message.");
 
   lsh_string_free(packet);
+}
+
+struct packet_handler *
+make_userauth_handler(struct alist *methods,
+                      struct alist *services,
+                      struct command_continuation *c,
+                      struct exception_handler *e)
+{
+  NEW(userauth_handler, auth);
+
+  auth->super.handler = do_handle_userauth;
+  auth->methods = methods;
+  auth->services = services;
+  auth->c = c;
+  auth->e = e;
+
+  return &auth->super;
 }
 
 
@@ -406,28 +442,21 @@ static void do_userauth(struct command *s,
 {
   CAST(userauth_service, self, s);
   CAST(ssh_connection, connection, x);
-  NEW(userauth_handler, auth);
-  
-  auth->super.handler = do_handle_userauth;
-  /* auth->advertised_methods = self->advertised_methods; */
-  auth->methods = self->methods;
-  auth->services = self->services;
-  /* auth->attempts = AUTH_ATTEMPTS; */
-  
-  auth->c = make_once_continuation(NULL,
-				   make_userauth_continuation(connection,
-							      c, e));
-  auth->e = make_exc_userauth_handler(connection,
-				      self->advertised_methods,
-				      AUTH_ATTEMPTS, e,
-				      HANDLER_CONTEXT);
-  
-  connection->dispatch[SSH_MSG_USERAUTH_REQUEST] = &auth->super;
+
+  connection->dispatch[SSH_MSG_USERAUTH_REQUEST] =
+    make_userauth_handler(self->methods, self->services,
+                          make_once_continuation(NULL,
+						 make_userauth_continuation(connection, c, e)),
+                          make_exc_userauth_handler(connection,
+                                                    self->advertised_methods,
+                                                    AUTH_ATTEMPTS, e,
+                                                    HANDLER_CONTEXT));
 }
 
-struct command *make_userauth_service(struct int_list *advertised_methods,
-				      struct alist *methods,
-				      struct alist *services)
+struct command *
+make_userauth_service(struct int_list *advertised_methods,
+		      struct alist *methods,
+		      struct alist *services)
 {
   NEW(userauth_service, self);
 
