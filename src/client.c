@@ -934,6 +934,8 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 
       if (options->escape < 0)
 	{
+	  /* FIXME: This check is wrong. We should test whether or not
+	   * stdin is a tty. */
 	  /* Default behaviour */
 	  if (options->tty && INTERACT_IS_TTY(options->tty))
 	    options->escape = DEFAULT_ESCAPE_CHAR;
