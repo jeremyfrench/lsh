@@ -1,3 +1,7 @@
+2004-02-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* filemode.h: Always use prototypes.
+
 2004-02-15  Niels Möller  <nisse@lysator.liu.se>
 
 	* Makefile.am (AM_CPPFLAGS): Added -I.., needed for inclusion of
