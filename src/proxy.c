@@ -22,18 +22,20 @@
  */
 
 #include "proxy.h"
-#include "proxy_channel.h"
+
+#include "channel_commands.h"
+#include "command.h"
+#include "connection.h"
+#include "exception.h"
+#include "format.h"
+#include "gateway_channel.h"
+#include "io_commands.h"
 #include "proxy_session.h"
 #include "proxy_userauth.h"
-#include "channel_commands.h"
-#include "exception.h"
-#include "xalloc.h"
-#include "connection.h"
-#include "command.h"
-#include "format.h"
-#include "io_commands.h"
 #include "ssh.h"
 #include "werror.h"
+#include "xalloc.h"
+
 #include <assert.h>
 #include <arpa/inet.h>
 

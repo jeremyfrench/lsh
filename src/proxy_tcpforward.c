@@ -22,7 +22,8 @@
  */
 
 #include "proxy_tcpforward.h"
-#include "proxy_channel.h"
+
+#include "gateway_channel.h"
 #include "xalloc.h"
 #include "ssh.h"
 #include "werror.h"
@@ -35,6 +36,7 @@ static void
 do_proxy_open_direct_tcpip(struct channel_open *s UNUSED,
 			   struct ssh_connection *connection,
 			   UINT32 type,
+			   UINT32 send_window_size,
 			   UINT32 send_max_packet,
 			   struct simple_buffer *args,
 			   struct command_continuation *c,
@@ -51,26 +53,24 @@ do_proxy_open_direct_tcpip(struct channel_open *s UNUSED,
       parse_uint32(args, &orig_port) &&
       parse_eod(args))
     {
-      struct proxy_channel *server
-	= make_proxy_channel(WINDOW_SIZE,
-			     /* FIXME: We should adapt to the other
-			      * end's max packet size. Parhaps should
-			      * be done by
-			      * do_proxy_channel_open_continuation() ?
-			      * */
-			     SSH_MAX_PACKET,
-			     NULL, 0);
-      struct command *o
-	= make_proxy_channel_open_command(type,
-					  send_max_packet,
-					  ssh_format("%S%i%S%i",
-						     host, port, 
-						     orig_host, orig_port), NULL);
+      struct gateway_channel *server
+	= make_gateway_channel(NULL);
 
-      werror("direct-tcpip open request: host to connect=%S:%i, originator=%S:%i", host, port, orig_host, orig_port);
+      /* NOTE: The origin's rec_window_size and rec_max_packet becomes the target's
+       * send_window_size and send_max_packet. */
+
+      struct command *o
+	= make_gateway_channel_open_command(type,
+					    send_window_size, send_max_packet,
+					    ssh_format("%S%i%S%i",
+						       host, port, 
+						       orig_host, orig_port), NULL);
+
+      werror("direct-tcpip open request: host to connect=%S:%i, originator=%S:%i",
+	     host, port, orig_host, orig_port);
       COMMAND_CALL(o,
 		   connection->chain,
-		   make_proxy_channel_open_continuation(c, server),
+		   make_gateway_channel_open_continuation(c, server),
 		   e);
 
     }
@@ -95,6 +95,7 @@ static void
 do_proxy_open_forwarded_tcpip(struct channel_open *s UNUSED,
 			      struct ssh_connection *connection,
 			      UINT32 type,
+			      UINT32 send_window_size,
 			      UINT32 send_max_packet, 
 			      struct simple_buffer *args,
 			      struct command_continuation *c,
@@ -111,26 +112,22 @@ do_proxy_open_forwarded_tcpip(struct channel_open *s UNUSED,
       parse_uint32(args, &orig_port) &&
       parse_eod(args))
     {
-      struct proxy_channel *server
-	= make_proxy_channel(WINDOW_SIZE,
-			     /* FIXME: We should adapt to the other
-			      * end's max packet size. Parhaps should
-			      * be done by
-			      * do_proxy_channel_open_continuation() ?
-			      * */
-			     SSH_MAX_PACKET,
-			     NULL, 0);
+      struct gateway_channel *server
+	= make_gateway_channel(NULL);
+
+      /* NOTE: The origin's rec_window_size and rec_max_packet becomes the target's
+       * send_window_size and send_max_packet. */
       struct command *o
-	= make_proxy_channel_open_command(type, 
-					  send_max_packet,
-					  ssh_format("%S%i%S%i", 
-						     host, port, 
-						     orig_host, orig_port), NULL);
+	= make_gateway_channel_open_command(type, 
+					    send_window_size, send_max_packet,
+					    ssh_format("%S%i%S%i", 
+						       host, port, 
+						       orig_host, orig_port), NULL);
 
       werror("direct-tcpip open request: address where connection was accepted=%S:%i, originator=%S:%i", host, port, orig_host, orig_port);
       COMMAND_CALL(o,
 		   connection->chain,
-		   make_proxy_channel_open_continuation(c, server),
+		   make_gateway_channel_open_continuation(c, server),
 		   e);
 
     }

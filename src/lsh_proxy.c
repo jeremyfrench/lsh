@@ -35,12 +35,12 @@
 #include "crypto.h"
 #include "daemon.h"
 #include "format.h"
+#include "gateway_channel.h"
 #include "io.h"
 #include "io_commands.h"
 #include "lookup_verifier.h"
 #include "proxy.h"
 #include "proxy_agentforward.h"
-#include "proxy_channel.h"
 #include "proxy_session.h"
 #include "proxy_tcpforward.h"
 #include "proxy_userauth.h"
@@ -683,23 +683,23 @@ int main(int argc, char **argv)
 
     server_session_requests = make_alist
       (4,
-       ATOM_SHELL, &proxy_channel_request, 
-       ATOM_PTY_REQ, &proxy_channel_request,
-       ATOM_EXIT_STATUS, &proxy_channel_request,
-       ATOM_EXIT_SIGNAL, &proxy_channel_request,
+       ATOM_SHELL, &gateway_channel_request, 
+       ATOM_PTY_REQ, &gateway_channel_request,
+       ATOM_EXIT_STATUS, &gateway_channel_request,
+       ATOM_EXIT_SIGNAL, &gateway_channel_request,
        -1);
     client_session_requests = make_alist(0, -1);
 
 #if WITH_X11_FORWARD
     if (options->with_x11_forward)
       {
-	ALIST_SET(server_session_requests, ATOM_X11_REQ, &proxy_channel_request);
+	ALIST_SET(server_session_requests, ATOM_X11_REQ, &gateway_channel_request);
       }
 #endif
 #if WITH_AGENT_FORWARD
     if (options->with_agent_forward)
       {
-	ALIST_SET(server_session_requests, ATOM_AUTH_AGENT_REQ, &proxy_channel_request);
+	ALIST_SET(server_session_requests, ATOM_AUTH_AGENT_REQ, &gateway_channel_request);
       }
 #endif
 
@@ -717,10 +717,10 @@ int main(int argc, char **argv)
       {
 	object_queue_add_tail(&connection_server_hooks,
 			      &make_install_fix_global_request_handler
-			      (ATOM_TCPIP_FORWARD, &proxy_global_request)->super);
+			      (ATOM_TCPIP_FORWARD, &gateway_global_request)->super);
 	object_queue_add_tail(&connection_server_hooks,
 			      &make_install_fix_global_request_handler
-			      (ATOM_CANCEL_TCPIP_FORWARD, &proxy_global_request)->super);
+			      (ATOM_CANCEL_TCPIP_FORWARD, &gateway_global_request)->super);
 	object_queue_add_tail(&connection_server_hooks,
 			      &make_install_fix_channel_open_handler
 			      (ATOM_DIRECT_TCPIP,

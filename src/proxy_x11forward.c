@@ -22,7 +22,8 @@
  */
 
 #include "proxy_x11forward.h"
-#include "proxy_channel.h"
+
+#include "gateway_channel.h"
 #include "xalloc.h"
 #include "ssh.h"
 #include "werror.h"
@@ -35,6 +36,7 @@ static void
 do_proxy_open_x11(struct channel_open *s UNUSED,
 		  struct ssh_connection *connection,
 		  UINT32 type,
+		  UINT32 send_window_size,
 		  UINT32 send_max_packet,
 		  struct simple_buffer *args,
 		  struct command_continuation *c,
@@ -52,38 +54,33 @@ do_proxy_open_x11(struct channel_open *s UNUSED,
 #endif
       parse_eod(args))
     {
-      struct proxy_channel *server
-	= make_proxy_channel(WINDOW_SIZE,
-			     /* FIXME: We should adapt to the other
-			      * end's max packet size. Parhaps should
-			      * be done by
-			      * do_proxy_channel_open_continuation() ?
-			      * */
-			     SSH_MAX_PACKET,
-			     NULL, 0);
+      struct gateway_channel *server
+	= make_gateway_channel(NULL);
 
       struct command *o;
-
+ 
+      /* NOTE: The origin's rec_window_size and rec_max_packet becomes the target's
+       * send_window_size and send_max_packet. */
       if (connection->chain->peer_flags & PEER_X11_OPEN_KLUDGE)
-	o = make_proxy_channel_open_command(type, 
-					    send_max_packet,
-					    ssh_format("%S",
-						       host), 
-					    NULL);
+	o = make_gateway_channel_open_command(type, 
+					      send_window_size, send_max_packet,
+					      ssh_format("%S",
+							 host), 
+					      NULL);
       else
 	/* FIXME: maybe parse the sent string to get the port value */
-	o = make_proxy_channel_open_command(type, 
-					    send_max_packet,
-					    ssh_format("%S%i",
-						       host, port), 
-					    NULL);
+	o = make_gateway_channel_open_command(type, 
+					      send_window_size, send_max_packet,
+					      ssh_format("%S%i",
+							 host, port), 
+					      NULL);
       if (port)
 	werror("x11 open request: host=%S:%i\n", host, port);
       else
 	werror("datafellows compatible x11 open request: %S\n", host);
       COMMAND_CALL(o,
 		   connection->chain,
-		   make_proxy_channel_open_continuation(c, server),
+		   make_gateway_channel_open_continuation(c, server),
 		   e);
 
     }

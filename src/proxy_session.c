@@ -25,7 +25,7 @@
 
 #include "channel_commands.h"
 #include "format.h"
-#include "proxy_channel.h"
+#include "gateway_channel.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -51,6 +51,7 @@ static void
 do_proxy_open_session(struct channel_open *s,
 		      struct ssh_connection *connection,
 		      UINT32 type,
+		      UINT32 send_window_size,
 		      UINT32 send_max_packet,
 		      struct simple_buffer *args,
 		      struct command_continuation *c,
@@ -62,22 +63,18 @@ do_proxy_open_session(struct channel_open *s,
 
   if (parse_eod(args))
     {
-      struct proxy_channel *server
-	= make_proxy_channel(WINDOW_SIZE,
-			     /* FIXME: We should adapt to the other
-			      * end's max packet size. Parhaps should
-			      * be done by
-			      * do_proxy_channel_open_continuation() ?
-			      * */
-			     SSH_MAX_PACKET,
-			     closure->server_requests, 0);
+      struct gateway_channel *server
+	= make_gateway_channel(closure->server_requests);
+
+      /* NOTE: The origin's rec_window_size and rec_max_packet becomes the target's
+       * send_window_size and send_max_packet. */
       struct command *o =
-	make_proxy_channel_open_command(type, send_max_packet,
-					ssh_format(""), closure->client_requests);
+	make_gateway_channel_open_command(type, send_window_size, send_max_packet,
+					  ssh_format(""), closure->client_requests);
 
       COMMAND_CALL(o,
 		   connection->chain,
-		   make_proxy_channel_open_continuation(c, server),
+		   make_gateway_channel_open_continuation(c, server),
 		   e);
 
     }
