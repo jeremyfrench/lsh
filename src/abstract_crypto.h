@@ -34,7 +34,7 @@ struct crypto_instance
   UINT32 block_size;
   /* Length must be a multiple of the block size */
   void (*crypt)(struct crypto_instance *self,
-		UINT32 length, UINT8 *dst, UINT8 *src);
+		UINT32 length, UINT8 *src, UINT8 *dst);
 };
 
 #define CRYPT(instance, length, src, dst) \

@@ -56,7 +56,7 @@ struct rc4_instance
 };
 
 static void do_crypt_rc4(struct crypto_instance *s,
-			 UINT32 length, UINT8 *dst, UINT8 *src)
+			 UINT32 length, UINT8 *src, UINT8 *dst)
 {
   struct rc4_instance *self = (struct rc4_instance *) s;
 
