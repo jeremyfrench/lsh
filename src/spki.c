@@ -32,6 +32,7 @@
 #include "list.h"
 #include "parse.h"
 #include "publickey_crypto.h"
+#include "randomness.h"
 #include "sexp.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -134,7 +135,7 @@ spki_make_verifier(struct alist *algorithms,
   return v;
 }
 
-
+/* FIXME: Merge spki_make_signer and spki_sexp_to_signer? */
 /* Returns the algorithm type, or zero on error. */
 struct signer *
 spki_make_signer(struct alist *algorithms,
@@ -177,6 +178,39 @@ spki_make_signer(struct alist *algorithms,
     *type = algorithm_name;
 
   return s;
+}
+
+/* Reading keys */
+
+struct signer *
+spki_sexp_to_signer(struct alist *algorithms,
+                    struct sexp *key)
+{
+  struct sexp_iterator *i;
+  
+  if ((i = sexp_check_type(key, ATOM_PRIVATE_KEY)))
+    {
+      struct sexp *expr = SEXP_GET(i);
+      struct signer *s;
+      
+      if (!expr)
+        {
+          werror("sexp_to_signer: Invalid key\n");
+          return NULL;
+        }
+      
+      s = spki_make_signer(algorithms, expr, NULL);
+      
+      if (s)
+	/* Test key here? */
+	;
+      else
+	werror("sexp_to_signer: Invalid key.", expr);
+
+      return s;
+    }
+  werror("sexp_to_signer: Expected private-key expression.");
+  return NULL;
 }
 
 struct sexp *
@@ -921,4 +955,80 @@ make_spki_context(struct alist *algorithms)
   object_queue_init(&self->db);
 
   return &self->super;
+}
+
+
+/* PKCS-5 handling */
+
+/* Encryption of private data.
+ * For PKCS#5 (version 2) key derivation, we use
+ *
+ * (password-encrypted LABEL
+ *   (Xpkcs5v2 hmac-sha1 (salt #...#)
+ *                       (iterations #...#))
+ *   ("3des-cbc" (iv #...#) (data #...#)))
+ *
+ * where the X:s will be removed when the format is more stable.
+ *
+ */
+
+struct sexp *
+spki_pkcs5_encrypt(struct randomness *r,
+                   struct lsh_string *label,
+		   UINT32 prf_name,
+		   struct mac_algorithm *prf,
+		   int crypto_name,
+		   struct crypto_algorithm *crypto,
+		   UINT32 salt_length,
+		   struct lsh_string *password,
+		   UINT32 iterations,
+                   struct lsh_string *data)
+{
+  struct lsh_string *key;
+  struct lsh_string *salt;
+  struct lsh_string *iv;
+  struct sexp *method;
+  
+  assert(crypto);
+  assert(prf);
+
+  salt = lsh_string_alloc(salt_length);
+  RANDOM(r, salt->length, salt->data);
+    
+  key = lsh_string_alloc(crypto->key_size);
+
+  pkcs5_derive_key(prf,
+		   password->length, password->data,
+		   salt->length, salt->data,
+		   iterations,
+		   key->length, key->data);
+
+  method = sexp_l(4, SA(XPKCS5V2), sexp_a(prf_name),
+                  sexp_l(2, SA(ITERATIONS), sexp_uint32(iterations), -1),
+                  sexp_l(2, SA(SALT), sexp_s(NULL, salt), -1), -1);
+
+  if (crypto->iv_size)
+    {
+      iv = lsh_string_alloc(crypto->iv_size);
+      RANDOM(r, iv->length, iv->data);
+    }
+  else
+    iv = NULL;
+
+  return sexp_l(4,
+                SA(PASSWORD_ENCRYPTED),
+                sexp_s(NULL, lsh_string_dup(label)),
+                method,
+                sexp_l(3,
+                       sexp_a(crypto_name),
+                       sexp_l(2, SA(IV), sexp_s(NULL, iv), -1),
+                       sexp_l(2, SA(DATA),
+                              sexp_s(NULL, crypt_string_pad
+                                     (MAKE_ENCRYPT(crypto,
+                                                   key->data,
+                                                   iv ? iv->data : NULL),
+                                      data, 0)),
+                              -1),
+                       -1),
+                -1);
 }
