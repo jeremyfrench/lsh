@@ -1,3 +1,32 @@
+News for the 1.4.2 release
+
+	Fixed minor bug in bubble-babble key display.
+
+	Fixed support for encrypted private keys.
+
+	Tweaks to the handling of disabled accounts, and shadow
+	passwords.
+
+	  * Shadow records are looked up only if there's a single "x"
+	    in the passwd entry.
+
+	  * A passwd entry with a single "*" is interpreted as an
+	    account that is open but with ordinary password
+	    authentication disabled.
+
+	  * A passwd entry that starts with "*" but is longer than one
+            character is interpreted as a disabled account.
+
+	  * It is recommended that all disabled accounts have their
+            login shells set to something harmless, e.g. /bin/false.
+
+	Disabled the "I/O error" message that was printed to the
+	server log every time a session logged out.
+
+	Improved the server's EOF-handling on pty:s.
+
+	Other minor bug fixes.
+	
 News for the 1.4.1 release
 
 	Added --enable-initgroups-workaround option to the configure
