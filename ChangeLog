@@ -1,3 +1,7 @@
+2004-10-06  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.am (EXTRA_DIST): Added UTF-8-test.txt.
+
 2004-10-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am (GPERF_FLAGS): Added -k21, to distinguish
