@@ -388,8 +388,11 @@ do_string_queue_free(struct lsh_queue *q)
 static struct addr_queue_node *
 make_addr_queue_node(socklen_t size)
 {
-  return lsh_space_alloc(offsetof(struct addr_queue_node, addr)
-			 + size);
+  struct addr_queue_node *n
+    = lsh_space_alloc(offsetof(struct addr_queue_node, addr)
+		      + size);
+  n->size = size;
+  return n;
 }
 
 struct sockaddr *
