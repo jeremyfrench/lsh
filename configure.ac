@@ -102,6 +102,10 @@ AC_ARG_ENABLE(srp,
   AC_HELP_STRING([--disable-srp], [Disable the (experimental) support for SRP]),,
   [enable_srp=yes])
 
+AC_ARG_ENABLE(gss,
+  AC_HELP_STRING([--disable-gss], [Disable the (experimental) support for GSS]),,
+  [enable_gss=yes])
+
 AC_ARG_ENABLE(kerberos,
   AC_HELP_STRING([--disable-kerberos], [Don't support kerberos]),,
   [enable_kerberos=yes])
@@ -343,7 +347,35 @@ if test x$have_utmpx_h = xyes; then
 ])
 fi
 
-
+AH_TEMPLATE([WITH_GSS_K5], [Whether to use gss K5 authorization (Heimdal/MIT)])
+if test x$enable_gss != xno; then
+  if test x$enable_gss = xk5; then
+    AC_CHECK_PROG(KRB5CONFIG, krb5-config, krb5-config, no)
+    if test x$KRB5CONFIG != xno; then
+      CPPFLAGS="$CPPFLAGS `$KRB5CONFIG --cflags gssapi`"
+      LIBS="$LIBS `$KRB5CONFIG --libs gssapi`"
+      AC_CHECK_HEADERS([gssapi.h gssapi/gssapi.h gssapi/gssapi_generic.h])
+      AC_DEFINE(WITH_GSS_K5)
+      AC_CHECK_DECL(GSS_C_NT_HOSTBASED_SERVICE,, [
+	AC_DEFINE(GSS_C_NT_HOSTBASED_SERVICE,
+		gss_nt_service_name,
+		[Work around buggy MIT library])], [
+#ifdef HAVE_GSSAPI_H
+#include <gssapi.h>
+#endif
+#ifdef HAVE_GSSAPI_GSSAPI_H
+#include <gssapi/gssapi.h>
+#endif
+#ifdef HAVE_GSSAPI_GSSAPI_GENERIC_H
+#include <gssapi/gssapi_generic.h>
+#endif
+])
+    fi
+  else
+    AC_CHECK_HEADERS(gss.h,, [enable_gss=no])
+    AC_CHECK_LIB(gss, gss_check_version,, [enable_gss=no])
+  fi
+fi
 
 if test x$enable_kerberos = xyes; then
   AC_CHECK_HEADERS(krb5.h,, [enable_kerberos=no])
@@ -457,6 +489,12 @@ AH_TEMPLATE([WITH_ZLIB], [Define if zlib should be used])
 # Should we use zlib?
 if test x$with_zlib = xyes ; then
   AC_DEFINE(WITH_ZLIB)
+fi
+
+AH_TEMPLATE([WITH_GSS], [Define if gss should be used])
+# Should we use gss?
+if test x$enable_gss != xno ; then
+  AC_DEFINE(WITH_GSS)
 fi
 
 # The kerberos libraries are needed only to support the
