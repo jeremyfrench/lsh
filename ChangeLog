@@ -1,5 +1,7 @@
 2001-08-27  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* buffer.c, buffer.h, client.c, client.h: Added copyright notices. 
+
 	* src/sftp/testsuite/Makefile.am: New file.
 
 	* src/sftp/sftp-server.c (struct sftp_file): New struct with fd
