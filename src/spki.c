@@ -718,7 +718,7 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
 
 /* Takes an spki_context and an ACL s-expression, and adds
  * corresponding 5-tuples to the context. Returns 1 if all entries
- * were correct, 0 on any error. However, it tries to gon on if some
+ * were correct, 0 on any error. However, it tries to go on if some
  * sub-expression is invalid. */
 
 int
