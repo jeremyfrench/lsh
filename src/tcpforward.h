@@ -39,13 +39,15 @@
 
 /* GABA:
    (class
-     (name forwarded_tcpip)
-     ; (inherit resource)
+     (name forwarded_port)
+     (super resource)
      (vars
-       (next object forwarded_tcpip)
-       (bind_host string)
-       (bind_port simple UINT32)
-       (listen object listen_fd)))
+       ; this could store the type of this forward
+       ; tcp, udp etc. Or we could invent relevant methods
+       ; and subclasses.
+       ; (type simple UINT32)
+       (socket object lsh_fd)
+       (local object address_info)))
 */
 
 struct channel_open *make_open_direct_tcpip(struct io_backend *backend);
@@ -54,4 +56,4 @@ struct global_request *make_tcpip_forward_request(struct io_backend *backend);
 
 struct global_request *make_cancel_tcpip_forward_request(void);
 
-#endif
+#endif /* LSH_TCPFORWARD_H_INCLUDED */
