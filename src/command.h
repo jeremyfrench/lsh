@@ -74,31 +74,6 @@ int do_call_simple_command(struct command *s,
 #define STATIC_COMMAND_SIMPLE(f) \
 { { STATIC_HEADER, do_call_simple_command }, f}
 
-struct lsh_object *
-do_collect_1(struct command_simple *s, struct lsh_object *a);
-
-#define STATIC_COLLECT_1(next) \
-{ { { STATIC_HEADER, do_call_simple_command }, do_collect_1}, \
-  make_collect_state_1, next }
-
-#if 0
-#define STATIC_COLLECT_1_FINAL(f) \
-{ { { STATIC_HEADER, do_call_simple_command }, do_collect_1}, \
-  f, NULL }
-#endif
-
-#define STATIC_COLLECT_2(next) \
-{ STATIC_HEADER, make_collect_state_2, next }
-
-#define STATIC_COLLECT_2_FINAL(f) \
-{ STATIC_HEADER, f, NULL }
-
-#define STATIC_COLLECT_3(next) \
-{ STATIC_HEADER, make_collect_state_3, next }
-
-#define STATIC_COLLECT_3_FINAL(f) \
-{ STATIC_HEADER, f, NULL }
-
 /* GABA:
    (class
      (name command_frame)
@@ -155,6 +130,9 @@ do_collect_1(struct command_simple *s, struct lsh_object *a);
 */
 
 struct lsh_object *
+do_collect_1(struct command_simple *s, struct lsh_object *a);
+
+struct lsh_object *
 make_collect_state_1(struct collect_info_1 *info,
 		     struct lsh_object *a);
 
@@ -169,8 +147,26 @@ make_collect_state_3(struct collect_info_3 *info,
 		     struct lsh_object *b,
 		     struct lsh_object *c);
 
+#define STATIC_COLLECT_1(next) \
+{ { { STATIC_HEADER, do_call_simple_command }, do_collect_1}, \
+  make_collect_state_1, next }
+
+#define STATIC_COLLECT_2(next) \
+{ STATIC_HEADER, make_collect_state_2, next }
+
+#define STATIC_COLLECT_2_FINAL(f) \
+{ STATIC_HEADER, f, NULL }
+
+#define STATIC_COLLECT_3(next) \
+{ STATIC_HEADER, make_collect_state_3, next }
+
+#define STATIC_COLLECT_3_FINAL(f) \
+{ STATIC_HEADER, f, NULL }
+
 extern struct command_simple command_unimplemented;
 #define COMMAND_UNIMPLEMENTED (&command_unimplemented.super.super)
+
+/* The GABA_* macros are used by automatically generated evaluation code */
 
 struct command_continuation *
 make_apply(struct command *f, struct command_continuation *c);  
@@ -189,19 +185,105 @@ struct command *make_command_K_1(struct lsh_object *x);
 #define GABA_VALUE_K (&command_K.super.super)
 #define GABA_APPLY_K_1(x) ((struct lsh_object *) make_command_K_1(x))
 
-/* The macros are used by automatically generated evaluation code */
 extern struct collect_info_1 command_S;
+/* extern struct collect_info_2 collect_info_S_2; */
+
 struct command *make_command_S_2(struct command *f,
 				 struct command *g);
 
 #define GABA_VALUE_S (&command_S.super.super)
-#define GABA_APPLY_S_1(f) (make_collect_state_1(&collect_info_S_2, (f)))
-#define GABA_APPLY_S_2(f, g) (make_collect_S_2(NULL, (f), (g)))
+#define GABA_APPLY_S_1(f) (make_collect_state_1(&command_S, (f)))
+#define GABA_APPLY_S_2(f, g) (collect_S_2(NULL, (f), (g)))
+
+extern struct collect_info_1 command_Sp;
+extern struct collect_info_2 collect_info_Sp_2;
+/* extern struct collect_info_3 collect_info_Sp_3; */
 
 struct command *make_command_Sp_3(struct command *c,
 				  struct command *f,
 				  struct command *g);
 
+struct lsh_object *collect_S_2(struct collect_info_2 *info,
+			       struct lsh_object *f,
+			       struct lsh_object *g);
+struct lsh_object *collect_Sp_3(struct collect_info_3 *info,
+				struct lsh_object *c,
+				struct lsh_object *f,
+				struct lsh_object *g);
+
+#define GABA_VALUE_Sp (&command_Sp.super.super)
+#define GABA_APPLY_Sp_1(c) (make_collect_state_1(&command_Sp, (c)))
+#define GABA_APPLY_Sp_2(c, f) \
+  (make_collect_state_2(&collect_info_Sp_2, (c), (f)))
+#define GABA_APPLY_Sp_3(c, f, g) (collect_Sp_3(NULL, (c), (f), (g)))
+
+extern struct collect_info_1 command_B;
+/* extern struct collect_info_2 collect_info_B_2; */
+
+struct command *make_command_B_2(struct command *f,
+				 struct command *g);
+struct lsh_object *collect_B_2(struct collect_info_2 *info,
+			       struct lsh_object *f,
+			       struct lsh_object *g);
+
+#define GABA_VALUE_B (&command_B.super.super)
+#define GABA_APPLY_B_1(f) (make_collect_state_1(&command_B, (f)))
+#define GABA_APPLY_B_2(f, g) (collect_B_2(NULL, (f), (g)))
+
+extern struct collect_info_1 command_Bp;
+extern struct collect_info_2 collect_info_Bp_2;
+extern struct collect_info_3 collect_info_Bp_3;
+
+struct command *make_command_Bp_3(struct command *c,
+				  struct command *f,
+				  struct command *g);
+struct lsh_object *collect_Bp_3(struct collect_info_3 *info,
+				struct lsh_object *c,
+				struct lsh_object *f,
+				struct lsh_object *g);
+
+#define GABA_VALUE_Bp (&command_Bp.super.super)
+#define GABA_APPLY_Bp_1(c) (make_collect_state_1(&command_Bp, (c)))
+#define GABA_APPLY_Bp_2(c, f) \
+  (make_collect_state_2(&collect_info_Bp_2, (c), (f)))
+#define GABA_APPLY_Bp_3(c, f, g) (collect_Bp_3(NULL, (c), (f), (g)))
+
+extern struct collect_info_1 command_C;
+/* extern struct collect_info_2 collect_info_C_2; */
+
+struct command *
+make_command_C_2(struct command *f,
+		 struct lsh_object *y);
+struct lsh_object *
+collect_C_2(struct collect_info_2 *info,
+	    struct lsh_object *f,
+	    struct lsh_object *y);
+
+#define GABA_VALUE_C (&command_C.super.super)
+#define GABA_APPLY_C_1(f) (make_collect_state_1(&command_C, (f)))
+#define GABA_APPLY_C_2(f, y) (collect_C_2(NULL, (f), (y)))
+
+extern struct collect_info_1 command_Cp;
+extern struct collect_info_2 collect_info_Cp_2;
+/* extern struct collect_info_3 collect_info_Cp_3; */
+
+struct command *
+make_command_Cp_3(struct command *c,
+		  struct command *f,
+		  struct lsh_object *y);
+struct lsh_object *
+collect_Cp_3(struct collect_info_3 *info,
+	     struct lsh_object *c,
+	     struct lsh_object *f,
+	     struct lsh_object *y);
+
+#define GABA_VALUE_Cp (&command_Cp.super.super)
+#define GABA_APPLY_Cp_1(c) (make_collect_state_1(&command_Cp, (c)))
+#define GABA_APPLY_Cp_2(c, f) \
+  (make_collect_state_2(&collect_info_Cp_2, (c), (f)))
+#define GABA_APPLY_Cp_3(c, f, y) (collect_Cp_3(NULL, (c), (f), (y)))
+     
+     
 #if 0
 extern struct command_simple command_B;
 
