@@ -30,6 +30,7 @@
 #include "lsh_types.h"
 
 void *xalloc(size_t size);
+#define NEW(x) ((x) = xalloc(sizeof(*(x))))
 
 /* Allocation */
 
