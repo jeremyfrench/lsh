@@ -1,3 +1,7 @@
+2001-03-12  Niels Möller  <nisse@ehand.com>
+
+	* src/io.c (io_iter): Handle POLLERR.
+
 2001-03-07  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* doc/TODO: scsh-0.5.2 is truly free software! Removed paragraph
