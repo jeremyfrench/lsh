@@ -250,7 +250,7 @@ do_handle_kexinit(struct packet_handler *c,
 #if 0
   debug("do_handle_kexinit: Storing literal_kexinits[%i]\n", !mode);
 #endif
-  connection->literal_kexinits[!mode] = packet;
+  connection->literal_kexinits[!mode] = lsh_string_dup(packet);
   
   connection->kexinits[!mode] = msg;
   
@@ -611,7 +611,6 @@ do_handle_newkeys(struct packet_handler *c,
     }
   else
     PROTOCOL_ERROR(connection->e, "Invalid NEWKEYS message");
-  lsh_string_free(packet);
 }
 
 struct packet_handler *
