@@ -1,3 +1,8 @@
+2002-03-19  Pontus Sköld  <pont@it.uu.se>
+
+	* Makefile.am: sftp-server should go to sbin (or should it go to
+	libexec? Not bin anyway).
+
 2002-03-18  Niels Möller  <nisse@lysator.liu.se>
 
 	* commands.c (com_umask): Use unsigned char.
