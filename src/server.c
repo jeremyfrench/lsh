@@ -35,6 +35,7 @@
 #include "reaper.h"
 #include "server_pty.h"
 #include "ssh.h"
+#include "tcpforward.h"
 #include "translate_signal.h"
 #include "tty.h"
 #include "unpad.h"
@@ -158,12 +159,12 @@ static int server_initiate(struct fd_callback **c,
   verbose("server_initiate()\n");
 
   connection_init_io(connection,
-		     io_read_write(closure->backend, fd,
+		     &(io_read_write(closure->backend, fd,
 				   make_server_read_line(connection,
 							 fd,
 							 closure->fallback),
 				   closure->block_size,
-				   make_server_close_handler(connection)),
+				   make_server_close_handler(connection)))->buffer->super,
 		     closure->random);
 
   
@@ -549,23 +550,30 @@ struct ssh_channel *make_server_session(struct unix_user *user,
 
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
 
-static struct ssh_channel *
-do_open_session(struct channel_open *c,
-		struct ssh_connection *connection UNUSED,
-		struct simple_buffer *args,
-		UINT32 *error UNUSED,
-		char **error_msg UNUSED,
-		struct lsh_string **data UNUSED)
+static int do_open_session(struct channel_open *c,
+                           struct ssh_connection *connection UNUSED,
+                           struct simple_buffer *args,
+                           struct channel_open_callback *response)
 {
   CAST(open_session, closure, c);
-  
+  struct ssh_channel *session = NULL;
+  UINT32 error;
+  char *error_msg;
+
   debug("server.c: do_open_session()\n");
-  
-  if (!parse_eod(args))
-    return 0;
-  
-  return make_server_session(closure->user, WINDOW_SIZE,
-			     closure->session_requests);
+
+  if (parse_eod(args))
+    {
+      session = make_server_session(closure->user, WINDOW_SIZE, closure->session_requests);
+      error = 0;
+      error_msg = NULL;
+    }
+  else
+    {
+      error = SSH_OPEN_UNKNOWN_CHANNEL_TYPE;
+      error_msg = "trailing garbage in open message";
+    }
+   return CHANNEL_OPEN_CALLBACK(response, session, error, error_msg, NULL); 
 }
 
 struct channel_open *make_open_session(struct unix_user *user,
@@ -590,8 +598,8 @@ struct channel_open *make_open_session(struct unix_user *user,
        ; Requests specific to session channels 
        (session_requests object alist)
 
-       ; FIXME: Doesn't support any channel types but "session". This
-       ; must be fixed to support for "direct-tcpip" channels.
+       ; io_backend, needed for direct_tcpip
+       (backend object io_backend)
        ))
 */
 
@@ -605,22 +613,25 @@ static struct ssh_service *do_login(struct unix_service *c,
   
   return
     make_connection_service(closure->global_requests,
-			    make_alist(1, ATOM_SESSION,
-				       make_open_session(user,
-							 closure->session_requests),
-				       -1),
+			    make_alist(2, 
+			      ATOM_SESSION, make_open_session(user, closure->session_requests),
+			      ATOM_DIRECT_TCPIP, make_open_direct_tcpip(closure->backend), 
+			      -1),
 			    NULL);
 }
 
-struct unix_service *make_server_session_service(struct alist *global_requests,
-						 struct alist *session_requests)
+struct unix_service *
+make_server_connection_service(struct alist *global_requests,
+			       struct alist *session_requests,
+			       struct io_backend *backend)
 {
   NEW(server_connection_service, closure);
 
   closure->super.login = do_login;
   closure->global_requests = global_requests;
   closure->session_requests = session_requests;
-  
+  closure->backend = backend;
+
   return &closure->super;
 }
 
