@@ -95,10 +95,12 @@ format_userauth_publickey(struct lsh_string *name,
    (class
      (name client_userauth_failure)
      (vars
-       (failure method void)))
+       ; again is true if the server says that
+       ; the current method is still useful.
+       (failure method void "int again")))
 */
 
-#define CLIENT_USERAUTH_FAILURE(f) ((f)->failure((f)))
+#define CLIENT_USERAUTH_FAILURE(f, c) ((f)->failure((f), (c)))
 
 /* Almost like a command, but returns a failure handler. */
 /* GABA:
@@ -139,7 +141,12 @@ format_userauth_publickey(struct lsh_string *name,
        (userauth object client_userauth)
        (connection object ssh_connection)
        (failure object client_userauth_failure)
-       (current . unsigned)))       ; Current method
+
+       ; Current method
+       (current . unsigned)
+
+       ; The next method that the server has indicated is useful.
+       (next . unsigned)))
 */
 
 static struct client_userauth_state *
@@ -153,7 +160,8 @@ make_client_userauth_state(struct client_userauth *userauth,
   self->userauth = userauth;
   self->failure = NULL;
   self->current = 0;
-
+  self->next = 1;
+  
   return self;
 }
 
@@ -234,6 +242,23 @@ make_success_handler(struct command_continuation *c)
 /* Arbitrary limit on list length */
 #define USERAUTH_MAX_METHODS 47
 
+static int
+userauth_method_is_useful(struct client_userauth *userauth,
+			  struct int_list *advertised,
+			  unsigned n)
+{
+  CAST_SUBTYPE(client_userauth_method, method,
+	       LIST(userauth->methods)[n]);
+
+  unsigned i;
+
+  for(i = 0; i < LIST_LENGTH(advertised); i++)
+    if (LIST(advertised)[i] == method->type)
+      return 1;
+
+  return 0;
+}
+
 static void
 do_userauth_failure(struct packet_handler *c,
 		    struct ssh_connection *connection,
@@ -247,6 +272,7 @@ do_userauth_failure(struct packet_handler *c,
   int partial_success;
 
   trace("client_userauth.c: do_userauth_failure\n");
+  assert(self->state->current < self->state->next);
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -256,8 +282,6 @@ do_userauth_failure(struct packet_handler *c,
       && parse_boolean(&buffer, &partial_success)
       && parse_eod(&buffer))
     {
-      unsigned i;
-
       lsh_string_free(packet);
       
       if (partial_success)
@@ -265,23 +289,14 @@ do_userauth_failure(struct packet_handler *c,
 	werror("Received SSH_MSH_USERAUTH_FAILURE "
 	       "indicating partial success.\n");
 
-      while (self->state->current < LIST_LENGTH(self->state->userauth->methods))
-	{
-	  CAST_SUBTYPE(client_userauth_method, method,
-		       LIST(self->state->userauth->methods)[self->state->current]);
-	  
-	  for(i = 0; i < LIST_LENGTH(methods); i++)
-	    {
-	      if (LIST(methods)[i] == method->type)
-		goto done;
-	    }
+      while ( (self->state->next < LIST_LENGTH(self->state->userauth->methods))
+	      && !userauth_method_is_useful(self->state->userauth,
+					    methods, self->state->next))
+	self->state->next++;
 
-	  /* Skip this method */
-	  self->state->current++;
-	}
-      
-    done:
-      CLIENT_USERAUTH_FAILURE(self->state->failure);
+      CLIENT_USERAUTH_FAILURE(self->state->failure,
+			      userauth_method_is_useful(self->state->userauth,
+							methods, self->state->current));
     }
   else
     {
@@ -342,29 +357,32 @@ static struct packet_handler userauth_banner_handler =
 
 /* GABA:
    (class
-     (name client_exc_userauth)
+     (name exc_client_userauth)
      (super exception_handler)
      (vars
        (state object client_userauth_state)))
 */
 
+/* Skip to the next useful userauth method, or reraise the exception
+ * if there are no more methods to try. */
+
 static void
-do_client_exc_userauth(struct exception_handler *s,
+do_exc_client_userauth(struct exception_handler *s,
 		       const struct exception *e)
 {
-  CAST(client_exc_userauth, self, s);
+  CAST(exc_client_userauth, self, s);
 
-  trace("client_userauth.c: do_client_exc_userauth\n");
-  
-  if ( (e->type == EXC_USERAUTH) 
-       && (self->state->current < LIST_LENGTH(self->state->userauth->methods)))
+  trace("client_userauth.c: do_exc_client_userauth\n");
+  assert(self->state->current < self->state->next);
+
+  if ( (e->type == EXC_USERAUTH)
+       && (self->state->next < LIST_LENGTH(self->state->userauth->methods)))
     {
       CAST_SUBTYPE(client_userauth_method, method,
 		   LIST(self->state->userauth->methods)[self->state->current]);
-
-      /* FIXME: We should not do this if current was incremented
-       * previously, in do_userauth_failure(). */
-      self->state->current++;
+      
+      self->state->current = self->state->next;
+      self->state->next++;
       
       self->state->failure
 	= CLIENT_USERAUTH_LOGIN(method, self->state->userauth,
@@ -375,20 +393,63 @@ do_client_exc_userauth(struct exception_handler *s,
 }
 
 static struct exception_handler *
-make_client_exc_userauth(struct client_userauth_state *state,
+make_exc_client_userauth(struct client_userauth_state *state,
 			 struct exception_handler *parent,
 			 const char *context)
 {
-  NEW(client_exc_userauth, self);
+  NEW(exc_client_userauth, self);
 
-  trace("client_userauth.c: make_client_exc_userauth\n");
+  trace("client_userauth.c: make_exc_client_userauth\n");
 
   self->super.parent = parent;
-  self->super.raise = do_client_exc_userauth;
+  self->super.raise = do_exc_client_userauth;
   self->super.context = context;
 
   self->state = state;
 
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name exc_userauth_disconnect)
+     (super exception_handler)
+     (vars
+       (connection object ssh_connection)))
+*/
+
+/* Disconnects the connection if user authentication fails. */
+static void
+do_exc_userauth_disconnect(struct exception_handler *s,
+			   const struct exception *e)
+{
+  CAST(exc_userauth_disconnect, self, s);
+  
+  if (e->type == EXC_USERAUTH)
+    {
+      werror("User authentication failed.\n");
+      EXCEPTION_RAISE(self->connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE,
+					      NULL));
+    }
+
+  EXCEPTION_RAISE(s->parent, e);
+}
+
+static struct exception_handler *
+make_exc_userauth_disconnect(struct ssh_connection *connection,
+			     struct exception_handler *parent,
+			     const char *context)
+{
+  NEW(exc_userauth_disconnect, self);
+
+  trace("client_userauth.c: make_exc_userauth_disconnect\n");
+
+  self->super.parent = parent;
+  self->super.raise = do_exc_userauth_disconnect;
+  self->super.context = context;
+
+  self->connection = connection;
   return &self->super;
 }
 
@@ -417,10 +478,14 @@ do_client_userauth(struct command *s,
   {
     CAST_SUBTYPE(client_userauth_method, method,
 		 LIST(self->methods)[0]);
-    state->failure = CLIENT_USERAUTH_LOGIN(method, self,
-					   connection,
-					   make_client_exc_userauth(state, e,
-								    HANDLER_CONTEXT));
+    state->failure
+      = CLIENT_USERAUTH_LOGIN(method, self,
+			      connection,
+			      make_exc_client_userauth
+			      (state,
+			       make_exc_userauth_disconnect
+			       (connection, e, HANDLER_CONTEXT),
+			       HANDLER_CONTEXT));
   }
 }
 
@@ -476,25 +541,21 @@ send_password(struct client_password_state *state)
 	   * To be a little friendlier, we stop asking if the users
 	   * gives us the empty password twice.
 	   */
-	  if (state->tried_empty_passwd)
-	    {
-	      /* Stop trying. */
-	      lsh_string_free(passwd);
-	      passwd = NULL;
-	    }
-	  else
-	    state->tried_empty_passwd = 1;
+	  state->tried_empty_passwd++;
 	}
+
+      C_WRITE(state->connection,
+	      format_userauth_password(local_to_utf8(state->userauth->username, 0),
+				       state->userauth->service_name,
+				       local_to_utf8(passwd, 1),
+				       1));
     }
-  if (passwd)
-    C_WRITE(state->connection,
-	    format_userauth_password(local_to_utf8(state->userauth->username, 0),
-				     state->userauth->service_name,
-				     local_to_utf8(passwd, 1),
-				     1));
-  
   else
     {
+      /* If the user aborts the password dialogue (by pressing ^D at
+       * the terminal, or by closing a password popup window,
+       * whatever), read_password() should return NULL, and we should
+       * skip to the next authentication method. */
       static const struct exception no_passwd =
 	STATIC_EXCEPTION(EXC_USERAUTH, "No password supplied.");
 
@@ -504,13 +565,31 @@ send_password(struct client_password_state *state)
 
 
 static void
-do_password_failure(struct client_userauth_failure *s)
+do_password_failure(struct client_userauth_failure *s, int again)
 {
   CAST(client_password_state, self, s);
 
   trace("client_userauth.c: do_password_failure\n");
 
-  send_password(self);
+  if (again)
+    {
+      if (self->tried_empty_passwd >= 2)
+	{
+	  static const struct exception no_passwd =
+	    STATIC_EXCEPTION(EXC_USERAUTH, "No password supplied.");
+	  
+	  EXCEPTION_RAISE(self->e, &no_passwd);
+	}
+      else
+	send_password(self);
+    }
+  else
+    {
+      static const struct exception passwd_not_useful =
+	STATIC_EXCEPTION(EXC_USERAUTH, "password authentication not useful.");
+
+      EXCEPTION_RAISE(self->e, &passwd_not_useful);
+    }
 }
 
 static struct client_password_state *
@@ -632,10 +711,13 @@ client_publickey_next(struct client_publickey_state *state)
 }
 
 static void
-do_publickey_failure(struct client_userauth_failure *s)
+do_publickey_failure(struct client_userauth_failure *s, int again UNUSED)
 {
   CAST(client_publickey_state, self, s);
 
+  /* NOTE: We have several pending requests, so we have to get all the
+   * replies before skipping to the next method. That's why the again
+   * argument must be ignored. */
   client_publickey_next(self);
 }
   
