@@ -485,14 +485,6 @@ do_consuming_read(struct io_callback *c,
   UINT32 wanted = READ_QUERY(self);
 
   assert(fd->want_read);
-
-#if 0
-  if (fd->hanged_up)
-    {
-      /* If hanged_up is set, pretend that read returned 0 */
-      goto eof;
-    }
-#endif
   
   if (!wanted)
     {
@@ -534,7 +526,7 @@ do_consuming_read(struct io_callback *c,
       else
 	{
 	  lsh_string_free(s);
-	eof:
+
 	  /* Close the fd, unless it has a write callback. */
 	  A_WRITE(self->consumer, NULL);
 	  close_fd_read(fd);
@@ -558,61 +550,56 @@ do_write_callback(struct io_callback *s UNUSED,
 		  struct lsh_fd *fd)
 {
   /* CAST(io_write_callback, self, s); */
-  UINT32 size;
-  int res;
-
-  /* FIXME: Delete this useless indirection. */
-  FD_PREPARE(fd);
-
-  if (! (fd->super.alive && fd->want_write))
+  assert(fd->super.alive);
+  
+  if (!write_buffer_pre_write(fd->write_buffer))
     {
-      lsh_oop_cancel_write_fd(fd);
-      return;
-    }
-  
-  size = MIN(fd->write_buffer->end - fd->write_buffer->start,
-	     fd->write_buffer->block_size);
-  assert(size);
-  
-  res = write(fd->fd,
-	      fd->write_buffer->buffer + fd->write_buffer->start,
-	      size);
-  if (!res)
-    fatal("Closed?");
-  if (res < 0)
-    switch(errno)
-      {
-      case EINTR:
-      case EAGAIN:
-	break;
-      case EPIPE:
-	debug("io.c: Broken pipe.\n");
-	
-	/* Fall through */
-      default:
-	werror("io.c: write failed, %z\n", STRERROR(errno));
-	EXCEPTION_RAISE(fd->e,
-			make_io_exception(EXC_IO_WRITE, fd, errno, NULL));
+      /* Buffer is empty */
+      if (fd->write_buffer->closed)
 	close_fd(fd);
-	
-	break;
-      }
+      else
+	lsh_oop_cancel_write_fd(fd);
+    }
   else
-    write_buffer_consume(fd->write_buffer, res);
-}  
+    {
+      UINT32 size;
+      int res;
+
+      size = MIN(fd->write_buffer->end - fd->write_buffer->start,
+		 fd->write_buffer->block_size);
+      assert(size);
+  
+      res = write(fd->fd,
+		  fd->write_buffer->buffer + fd->write_buffer->start,
+		  size);
+      if (!res)
+	fatal("Closed?");
+      if (res < 0)
+	switch(errno)
+	  {
+	  case EINTR:
+	  case EAGAIN:
+	    break;
+	  case EPIPE:
+	    debug("io.c: Broken pipe.\n");
+	
+	    /* Fall through */
+	  default:
+	    werror("io.c: write failed, %z\n", STRERROR(errno));
+	    EXCEPTION_RAISE(fd->e,
+			    make_io_exception(EXC_IO_WRITE, fd, errno, NULL));
+	    close_fd(fd);
+	
+	    break;
+	  }
+      else
+	write_buffer_consume(fd->write_buffer, res);
+    }
+}
 
 static struct io_callback io_write_callback =
 { STATIC_HEADER, do_write_callback };
 
-static void
-do_write_prepare(struct lsh_fd *fd)
-{
-  assert(fd->write_buffer);
-
-  if (! (fd->want_write = write_buffer_pre_write(fd->write_buffer))
-      && fd->write_buffer->closed)
-    close_fd(fd);
-}
 
 struct listen_value *
 make_listen_value(struct lsh_fd *fd,
@@ -1202,8 +1189,6 @@ make_lsh_fd(int fd, const char *label,
   
   self->close_callback = NULL;
 
-  self->prepare = NULL;
-
   self->want_read = 0;
   self->read = NULL;
 
@@ -1539,8 +1524,6 @@ io_read_write(struct lsh_fd *fd,
   fd->write_buffer = make_write_buffer(fd, block_size);
   fd->write = &io_write_callback;
 
-  fd->prepare = do_write_prepare;
-  
   /* Closing */
   fd->close_callback = close_callback;
 
@@ -1574,8 +1557,6 @@ io_write(struct lsh_fd *fd,
   /* Writing */
   fd->write_buffer = make_write_buffer(fd, block_size);
   fd->write = &io_write_callback;
-
-  fd->prepare = do_write_prepare;
 
   fd->close_callback = close_callback;
 
