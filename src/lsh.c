@@ -132,13 +132,14 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
        (progn "&progn_command.super.super")
        ;; FIXME: Use some function that also displays an error message
        ;; if connect() fails.
+       (init_connection "&connection_service.super")
        (die_on_null "&command_die_on_null.super"))
      (params
        (connect object command)
        (handshake object command)
        (userauth_service object command)
        (login object command)
-       (init_connection object command)
+       ; (init_connection object command)
        (requests object object_list))
      (expr (lambda (port)
              ((progn requests) (init_connection
@@ -498,7 +499,6 @@ int main(int argc, char **argv)
 			      make_request_service(ATOM_SSH_USERAUTH),
 			      make_client_userauth(ssh_format("%lz", user),
 						   ATOM_SSH_CONNECTION),
-			      &connection_service,
 			      queue_to_list(&actions));
 
 	CAST_SUBTYPE(command, client_connect, o);
