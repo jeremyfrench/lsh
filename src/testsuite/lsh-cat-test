@@ -14,5 +14,5 @@ fi
 
 . $srcdir/functions.sh
 
-spawn_lshd && exec_lsh "cat `pwd`/../lshd" >/dev/null
+spawn_lshd && exec_lsh "cat `pwd`/../lshd" | diff - ../lshd
 
