@@ -28,6 +28,7 @@
 #include "connection_commands.h"
 #include "debug.h"
 #include "format.h"
+#include "gateway_channel.h"
 #include "io_commands.h"
 #include "read_packet.h"
 #include "ssh.h"
@@ -129,10 +130,12 @@ gateway_make_connection(struct listen_value *lv,
 			make_gateway_pad(connection->raw),
 			ssh_format("%lz sent", connection->debug_comment));
 
+  init_connection_service(connection);
+
+  connection->table->open_fallback = &gateway_channel_open_forward;
+
   connection->dispatch[SSH_MSG_DEBUG] = &connection_forward_handler;
   connection->dispatch[SSH_MSG_IGNORE] = &connection_forward_handler;
-
-  init_connection_service(connection);
 
   return connection;
 }
@@ -218,3 +221,10 @@ DEFINE_COMMAND_SIMPLE(gateway_setup_command, a)
   return &res->super;
 }
 
+#if 0
+DEFINE_PACKET_HANDLER(static, forward_channel_open_handler,
+		      connection, packet)
+{
+  
+}
+#endif
