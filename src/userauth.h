@@ -60,6 +60,16 @@ make_userauth_special_exception(struct lsh_string *reply,
 
 /* GABA:
    (class
+     (name lsh_process)
+     (super resource)
+     (vars
+       (signal method int int)))
+*/
+
+#define SIGNAL_PROCESS(p, s) ((p)->signal((p), (s)))
+
+/* GABA:
+   (class
      (name lsh_user)
      (vars
        ; This string include a terminating NUL-character, for
@@ -95,8 +105,10 @@ make_userauth_special_exception(struct lsh_string *reply,
        ; an object containing the stdin file objects and perhaps some
        ; other info.
 
+       ; This function also returns the pid.
+
        ; The tty argument is for utmp/wtmp logging
-       (fork_process method int "struct resource **child"
+       (fork_process method int "struct lsh_process **child"
                      "struct exit_callback *c"
                      "struct address_info * peer" "struct lsh_string *tty")
 
