@@ -3,6 +3,7 @@
  */
 
 #include "xalloc.h"
+#include "write_buffer.h"
 
 static int do_write(struct write_buffer *closure,
 		    struct lsh_string *packet)
@@ -37,7 +38,7 @@ static int do_write(struct write_buffer *closure,
     }
 #endif
 
-  buffer->empty = 0;
+  closure->empty = 0;
 
   return 1;
 }
@@ -58,7 +59,7 @@ int write_buffer_pre_write(struct write_buffer *buffer)
   if (buffer->start > buffer->block_size)
     {
       /* Copy contents to the start of the buffer */
-      memcpy(buffer->data, buffer->data + buffer->start, length);
+      memcpy(buffer->buffer, buffer->buffer + buffer->start, length);
       buffer->start = 0;
       buffer->end = length;
     }
@@ -73,7 +74,7 @@ int write_buffer_pre_write(struct write_buffer *buffer)
 	  if (partial_left <= buffer_left)
 	    {
 	      /* The rest of the partial packet fits in the buffer */
-	      memcpy(buffer->data + length,
+	      memcpy(buffer->buffer + length,
 		     buffer->partial->data + buffer->pos,
 		     partial_left);
 
@@ -85,7 +86,7 @@ int write_buffer_pre_write(struct write_buffer *buffer)
 	    }
 	  else
 	    {
-	      memcpy(buffer->data + length,
+	      memcpy(buffer->buffer + length,
 		     buffer->partial->data + buffer->pos,
 		     buffer_left);
 
@@ -104,9 +105,10 @@ int write_buffer_pre_write(struct write_buffer *buffer)
 	      buffer->pos = 0;
 	      buffer->head = n->next;
 	      if (buffer->head)
-		buffer->head->->next = 0;
+		buffer->head->prev = 0;
 	      else
 		buffer->tail = 0;
+	      free(n);
 	    }
 	  else
 	    break;
@@ -116,9 +118,9 @@ int write_buffer_pre_write(struct write_buffer *buffer)
   return !buffer->empty;
 }
 
-struct abstract_write *write_buffer_alloc(UINT32 size)
+struct write_buffer *write_buffer_alloc(UINT32 size)
 {
-  struct write_buffer *res = xalloc(sizeof(write_callback) - 1 + size*2);
+  struct write_buffer *res = xalloc(sizeof(struct write_buffer) - 1 + size*2);
   
   res->a.write = (abstract_write_f) do_write;
   
@@ -133,7 +135,7 @@ struct abstract_write *write_buffer_alloc(UINT32 size)
   res->head = res->tail = 0;
 
   res->pos = 0;
-  res->packet = NULL;
+  res->partial = NULL;
 
   res->start = res->end = 0;
 

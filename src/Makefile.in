@@ -17,7 +17,9 @@ DEFS = @DEFS@
 LIBS = @LIBS@
 
 CFLAGS = -g -Wall # -O2 -fomit-frame-pointer
-LDFLAGS = -g
+LDFLAGS = @LDFLAGS@
+
+LOADLIBES = $(LIBS)
 
 CPPFLAGS = 
 
@@ -32,10 +34,10 @@ binprefix =
 
 #### End of system configuration section. ####
 
-SRCS = atoms.c atoms_gperf.c atoms_table.c bignum.c client.c debug.c \
-	encrypt.c format.c io.c lsh.c packet_dispatch.c \
+SRCS = atoms.c atoms_gperf.c atoms_table.c bignum.c client.c connection.c \
+	debug.c encrypt.c format.c io.c lsh.c packet_dispatch.c \
 	pad.c parse.c read_data.c read_line.c read_packet.c \
-	server_keyexchange.c session.c transport.c unpad.c void.c \
+	server_keyexchange.c transport.c unpad.c void.c \
 	werror.c write_buffer.c xalloc.c
 
 OBJS = $(SRCS:.c=.o)
@@ -46,7 +48,7 @@ all: lsh
 	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
 
 lsh: lsh.o client.o read_packet.o read_line.o debug.o werror.o \
-     xalloc.o io.o void.o write_buffer.o
+     xalloc.o io.o void.o write_buffer.o format.o bignum.o atoms.o connection.o
 #	$(CC) -o lsh $(CFLAGS) $<
 
 atoms_defines.h: atoms.in process_atoms
@@ -65,7 +67,7 @@ very_clean: clean
 	rm *.d
 
 %.d: %.c
-	$(SHELL) -ec '$(CC) -MM $(CPPFLAGS) $(DEFS) $< \
+	$(SHELL) -ec '$(CC) -MM -MG $(CPPFLAGS) $(DEFS) $< \
 		| sed '\''s/\($*\)\.o:/\1\.o $@ : /g'\'' > $@'
 
 include $(SRCS:.c=.d)

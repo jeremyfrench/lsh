@@ -58,7 +58,7 @@ void werror_washed(UINT32 length, UINT8 *msg)
 	    }
 	  /* Fall through */
 	case '\n':
-	  putc('\n', stderr);
+	  putc(msg[i], stderr);
 	  break;
 	}
     }

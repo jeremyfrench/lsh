@@ -10,5 +10,6 @@ config.log
 config.status
 configure
 configure.scan
+lsh
 stamp-h
 stamp-h.in

@@ -6,7 +6,7 @@
 #ifndef LSH_READ_DATA_H_INCLUDED
 #define LSH_READ_DATA_H_INCLUDED
 
-#include "abstract_read.h"
+#include "abstract_io.h"
 
 struct read_data
 {

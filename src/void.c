@@ -4,6 +4,7 @@
 
 #include "void.h"
 #include "xalloc.h"
+#include "abstract_io.h"
 
 static int do_ignore(struct abstract_write *closure,
 		     struct lsh_string *packet)
@@ -12,7 +13,7 @@ static int do_ignore(struct abstract_write *closure,
   return 1;
 }
 
-struct abstract_write *make_void()
+struct abstract_write *make_packet_void()
 {
   struct abstract_write *closure = xalloc(sizeof(struct abstract_write));
 

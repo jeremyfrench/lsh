@@ -60,12 +60,14 @@ int main(int argc, char **argv)
 
   if (!get_inaddr(&remote, host, port, "tcp"))
     {
-      fprintf(stderr, "No such host or service");
+      fprintf(stderr, "No such host or service\n");
       exit(1);
     }
 
   io_connect(&backend, &remote, NULL,
-	     make_client_callback(&backend, BLOCK_SIZE));
+	     make_client_callback(&backend,
+				  "lsh - a free ssh",
+				  BLOCK_SIZE));
   
   io_run(&backend);
 

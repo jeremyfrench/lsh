@@ -16,6 +16,8 @@
 #define UINT32 unsigned int
 #elif SIZEOF_LONG >= 4
 #define UINT32 unsigned long
+#else
+#error Ledsen error
 #endif
 
 #define UINT8 unsigned char

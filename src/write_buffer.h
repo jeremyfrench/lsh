@@ -38,13 +38,15 @@ struct write_buffer
   UINT8 buffer[1]; /* Real size is twice the blocksize */
 };
 
+#if 0
 struct write_callback
 {
   struct callback c;
   struct write_buffer buffer;
 };
+#endif
 
-struct write_callback *write_buffer_alloc(UINT32 size);
+struct write_buffer *write_buffer_alloc(UINT32 size);
 int write_buffer_pre_write(struct write_buffer *buffer);
 
 #endif /* LSH_WRITE_BUFFER_H_INCLUDED */

@@ -12,10 +12,11 @@ struct client_callback
   struct fd_callback c;
   struct io_backend *backend;
   UINT32 block_size;
-  struct lsh_string *id_comment;
+  char *id_comment;
 };
 
 struct fd_callback *make_client_callback(struct io_backend *b,
+					 char *comment,
 					 UINT32 block_size);
 
 #if 0
