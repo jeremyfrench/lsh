@@ -130,16 +130,17 @@
      (vars
        ; Returns a non-spki signature
        (sign method (string)
-             "UINT32 length" "const UINT8 *data")
-       ; Returns a signature sexp
+             "int algorithm" "UINT32 length" "const UINT8 *data")
+       ; Returns a <sig-val> sexp
        (sign_spki method (object sexp)
-                  "struct sexp *hash" "struct sexp *principal"
-                  "UINT32 length" "const UINT8 *data")
+       	     ;; "struct sexp *hash" "struct sexp *principal"
+       	     "UINT32 length" "const UINT8 *data")
        ;; FIXME: Perhaps this should be a method of the algorithm object instead?
        (public_key method (object sexp) )))
 */
 
-#define SIGN(signer, length, data) ((signer)->sign((signer), (length), (data)))
+#define SIGN(signer, algorithm, length, data) \
+((signer)->sign((signer), (algorithm), (length), (data)))
 #define SIGN_SPKI(signer, length, data) ((signer)->sign((signer), (length), (data)))
 #define SIGNER_PUBLIC(signer) ((signer)->public_key((signer)))
 
@@ -148,19 +149,20 @@
      (name verifier)
      (vars
        (verify method int
+               "int algorithm"
        	       "UINT32 length" "const UINT8 *data"
 	       "UINT32 signature_length" "const UINT8 *signature_data")
        ; Iterator points past the signature-tag
        (verify_spki method int
-       	       "UINT32 length" "const UINT8 *data"
-	       "struct sexp_iterator *i")))
+       	  "UINT32 length" "const UINT8 *data"
+       	  "struct sexp *e")))
 */
 
-#define VERIFY(verifier, length, data, slength, sdata) \
-((verifier)->verify((verifier), (length), (data), (slength), (sdata)))
+#define VERIFY(verifier, algorithm, length, data, slength, sdata) \
+((verifier)->verify((verifier), (algorithm), (length), (data), (slength), (sdata)))
 
-#define VERIFY_SPKI(verifier, length, data, i) \
-((verifier)->verify((verifier), (length), (data), (i)))
+#define VERIFY_SPKI(verifier, length, data, e) \
+((verifier)->verify((verifier), (length), (data), (e)))
 
 /* GABA:
    (class
