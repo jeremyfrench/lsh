@@ -1,3 +1,10 @@
+2003-05-19  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/unix_user.c (do_read_file): Set the process gid, and reset
+	the supplimentary groups list, before opening the file.
+
+	* configure.ac: Check for seteuid and setresuid.
+
 2003-05-16  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Check for struct utmp.ut_exit.e_termination and
