@@ -30,12 +30,53 @@
 
 #include <assert.h>
 
+/* NOTE: The PKCS#5 v2 spec doesn't recommend or specify any
+ * particular value of the iteration count.
+ *
+ * To get a feeling for reasonable ranges, I've done some benchmarking
+ * on my system, an old SparcStation 4 with a bogomips rating of about
+ * 110. For testing, I'm using SHA1-HMAC with the password = "gazonk",
+ * salt = "pepper", and I generate a 32 octet key, suitable for
+ * triple-DES CBC.
+ *
+ * Measured timings:
+ *
+ *    Iterations    Elapsed time (seconds)
+ *             1            0.02
+ *            10            0.02
+ *           100            0.06
+ *          1000            0.35
+ *        10 000            3.27
+ *       100 000           33.36
+ *      1000 000          330.84
+ *
+ * What is reasonable?
+ *
+ * With 1000 iterations, key derivation is still doable (and probably
+ * almost bearable) on slow machines. A real slow i386 could be 50
+ * times slower than my machine, and 1000 iterations might take 20
+ * seconds.
+ *
+ * On the other hand, the key derivation involved in a small
+ * dictionary attack trying 10000 passwords would take about an hour
+ * on my machine. And perhaps only a few minutes on a modern office
+ * machine.
+ *
+ * FIXME: What is the conclusion?
+ *
+ * Based on this, 1000 iterations seems like a reasonable default
+ * (today, April 2000). On one hand, key derivation can still be
+ * doable on a really old machine (25 seconds on an old 386, assuming
+ * that it is 50 times slower. On the other hand, trying 10000
+ * passwords (which is quite a small dictionary for a dictionary
+ * attack) would take 9 hours on my machine. */
+
 void
-pkcs5_key_derivation(struct mac_algorithm *prf,
-		     UINT32 password_length, UINT8 *password,
-		     UINT32 salt_length, UINT8 *salt,
-		     UINT32 iterations,
-		     UINT32 key_length, UINT8 *key)
+pkcs5_derive_key(struct mac_algorithm *prf,
+		 UINT32 password_length, UINT8 *password,
+		 UINT32 salt_length, UINT8 *salt,
+		 UINT32 iterations,
+		 UINT32 key_length, UINT8 *key)
 {
   struct mac_instance *m = MAKE_MAC(prf, password_length, password);
   UINT32 left = key_length;
