@@ -31,7 +31,7 @@
 #include "alist.h"
 
 /* Needed by spki.h.x */
-/* SPKI validity. No validity tests supported. */
+/* SPKI validity. No online validity tests supported. */
 struct spki_validity
 {
   char before_limit; /* Nonzero if not_before was supplied */
@@ -110,6 +110,27 @@ spki_verifier(struct sexp *e, struct alist *algorithms, int *type);
 
 /* 5-tuples */
 
+#define SPKI_TAG_ATOM 1
+#define SPKI_TAG_LIST 2
+#define SPKI_TAG_SET 3
+#define SPKI_TAG_PREFIX 4
+#define SPKI_TAG_ANY 5
+
+/* GABA:
+   (class
+     (name spki_tag)
+     (vars
+       ; Explicit type field is needed only for computing
+       ; intersections
+       (type . int)
+       ; Returns true iff the resources described by the tag
+       ; include the resource described by the sexp.
+       (match method int "struct sexp *")))
+*/
+
+#define SPKI_TAG_TYPE(t) ((t)->type)
+#define SPKI_TAG_MATCH(t, e) ((t)->match((t), (e)))
+
 /* GABA:
    (class
      (name spki_5_tuple)
@@ -121,7 +142,7 @@ spki_verifier(struct sexp *e, struct alist *algorithms, int *type);
        ; Non-zero to allow delegation
        (propagate . int)
        ; Authorization, (tag ...) expression
-       (authorization object sexp)
+       (authorization object spki_tag)
        ; Validity period
        (validity . "struct spki_validity")))
        
