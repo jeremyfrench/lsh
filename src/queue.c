@@ -35,6 +35,7 @@
 static void do_object_queue_mark(struct lsh_queue *q,
 				 void (*mark)(struct lsh_object *o));
 static void do_object_queue_free(struct lsh_queue *q);
+static void do_string_queue_free(struct lsh_queue *q);
 
 #define GABA_DEFINE
 #include "queue.h.x"
@@ -302,4 +303,90 @@ void object_queue_kill(struct object_queue *q)
   do_object_queue_free(&q->q);
 }
 
+
+/* String queues */
+
+static struct string_queue_node *
+make_string_queue_node(struct lsh_string *s)
+{
+  struct string_queue_node *n;
+
+  NEW_SPACE(n);
+  n->s = s;
+
+  return n;
+}
+
+void string_queue_init(struct string_queue *q)
+{
+  lsh_queue_init(&q->q);
+  q->length = 0;
+}
+
+int string_queue_is_empty(struct string_queue *q)
+{
+  assert(EMPTYP(&q->q) == !q->length);
+
+  return !q->length;
+}
+
+void string_queue_add_head(struct string_queue *q, struct lsh_string *s)
+{
+  lsh_queue_add_head(&q->q, &make_string_queue_node(s)->header);
+  q->length++;
+}
+
+void string_queue_add_tail(struct string_queue *q, struct lsh_string *s)
+{
+  lsh_queue_add_tail(&q->q, &make_string_queue_node(s)->header);
+  q->length++;
+}
+
+static struct lsh_string *
+string_queue_get_contents(struct lsh_queue_node *l)
+{
+  struct string_queue_node *n = (struct string_queue_node *) l;
   
+  struct lsh_string *res = n->s;
+  lsh_space_free(n);
+
+  return res;
+}
+
+static struct lsh_string *
+string_queue_peek(struct lsh_queue_node *n)
+{
+  return ( (struct string_queue_node *) n)->s;
+}
+
+struct lsh_string *string_queue_remove_head(struct string_queue *q)
+{
+  q->length--;
+  return string_queue_get_contents(lsh_queue_remove_head(&q->q));
+}
+
+struct lsh_string *string_queue_remove_tail(struct string_queue *q)
+{
+  q->length--;
+  return string_queue_get_contents(lsh_queue_remove_tail(&q->q));
+}
+
+struct lsh_string *string_queue_peek_head(struct string_queue *q)
+{
+  return EMPTYP(&q->q) ? NULL : string_queue_peek(q->q.head);
+}
+
+struct lsh_string *string_queue_peek_tail(struct string_queue *q)
+{
+  return EMPTYP(&q->q) ? NULL : string_queue_peek(q->q.tailprev);
+}
+
+static void do_string_queue_free(struct lsh_queue *q)
+{
+  FOR_QUEUE(q, struct string_queue_node *, n)
+    {
+      lsh_string_free(n->s);
+      lsh_space_free(n);
+    }
+}
+

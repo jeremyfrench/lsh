@@ -128,4 +128,31 @@ struct object_list *queue_to_list_and_kill(struct object_queue *q);
 #define FOR_OBJECT_QUEUE_REMOVE(q, n) \
 do { (q)->length--; lsh_queue_remove(n##_this); } while(0)
 
+/* String queue */
+struct string_queue_node
+{
+  struct lsh_queue_node header;
+  struct lsh_string *s;
+};
+
+/* GABA:
+   (struct
+     (name string_queue)
+     (vars
+       (length . UINT32)
+       (q indirect-special "struct lsh_queue"
+          #f do_string_queue_free)))
+*/
+
+void string_queue_init(struct string_queue *q);
+int string_queue_is_empty(struct string_queue *q);
+
+void string_queue_add_head(struct string_queue *q, struct lsh_string *o);
+void string_queue_add_tail(struct string_queue *q, struct lsh_string *o);
+struct lsh_string *string_queue_remove_head(struct string_queue *q);
+struct lsh_string *string_queue_remove_tail(struct string_queue *q);
+
+struct lsh_string *string_queue_peek_head(struct string_queue *q);
+struct lsh_string *string_queue_peek_tail(struct string_queue *q);
+
 #endif /* LSH_QUEUE_H_INCLUDED */
