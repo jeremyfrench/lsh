@@ -34,6 +34,8 @@
 #include "exception.h.x"
 #undef GABA_DEFINE
 
+#include "exception.c.x"
+
 static void
 do_default_handler(struct exception_handler *ignored UNUSED,
 		   const struct exception *e)
@@ -49,7 +51,7 @@ do_default_handler(struct exception_handler *ignored UNUSED,
     }
   else
 #endif
-    fatal("Unhandled exception of type %xi: %z\n", e->type, e->msg);
+    fatal("Unhandled exception of type 0x%xi: %z\n", e->type, e->msg);
 }
 
 struct exception_handler default_exception_handler =
@@ -76,6 +78,43 @@ make_exception_handler(void (*raise)(struct exception_handler *s,
   self->parent = parent;
 
   return self;
+}
+
+/* GABA:
+   (class
+     (name report_exception_handler)
+     (super exception_handler)
+     (vars
+       (mask . UINT32)
+       (value . UINT32)
+       (prefix . "const char *")))
+*/
+
+static void
+do_report_exception_handler(struct exception_handler *s,
+			    const struct exception *x)
+{
+  CAST(report_exception_handler, self, s);
+
+  if ( (x->type & self->mask) == self->value)
+    werror("%z exception: %z", self->prefix, x->msg);
+  else
+    EXCEPTION_RAISE(self->super.parent, x);
+}
+
+struct exception_handler *
+make_report_exception_handler(UINT32 mask, UINT32 value,
+			      const char *prefix,
+			      struct exception_handler *parent)
+{
+  NEW(report_exception_handler, self);
+  self->super.raise = do_report_exception_handler;
+  self->super.parent = parent;
+  self->mask = mask;
+  self->value = value;
+  self->prefix = prefix;
+
+  return &self->super;
 }
 
 struct exception *make_simple_exception(UINT32 type, const char *msg)

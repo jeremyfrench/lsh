@@ -73,6 +73,7 @@
 #define EXC_IO_READ 0x2004
 #define EXC_IO_WRITE 0x2005
 #define EXC_IO_OPEN_WRITE 0x2006
+#define EXC_IO_LISTEN 0x2007
 
 /* Not really errors */
 /* EOF was read */
@@ -127,6 +128,11 @@ extern struct exception_handler default_exception_handler;
 struct exception_handler ignore_exception_handler;
 extern struct exception dummy_exception;
 
+struct exception_handler *
+make_report_exception_handler(UINT32 mask, UINT32 value,
+			      const char *prefix,
+			      struct exception_handler *parent);
+     
 /* ;;GABA:
    (class
      (name exception_frame)
