@@ -87,9 +87,10 @@ struct command_simple options2signature_algorithms;
 #include <unistd.h>
 #endif
 
+#if 0
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
-
+#endif
 
 /* Option parsing */
 
@@ -139,8 +140,12 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (super algorithms_options)
      (vars
        (backend object io_backend)
+       (e object exception_handler)
+       
        (reaper object reap)
+       (random_poll object random_poll)
        (random object randomness)
+       
        (signature_algorithms object alist)
        (style . sexp_argp_state)
        (interface . "char *")
@@ -173,6 +178,29 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (use_pid_file . int)))
 */
 
+static void
+do_exc_lshd_handler(struct exception_handler *s,
+		    const struct exception *e)
+{
+  switch(e->type)
+    {
+    case EXC_SEXP_SYNTAX:
+    case EXC_SPKI_TYPE:
+    case EXC_RANDOMNESS_LOW_ENTROPY:
+      werror("lshd: %z\n", e->msg);
+      exit(EXIT_FAILURE);
+    default:
+      EXCEPTION_RAISE(s->parent, e);
+    }
+}
+
+static struct exception_handler *
+make_lshd_exception_handler(struct exception_handler *parent,
+			    const char *context)
+{
+  return make_exception_handler(do_exc_lshd_handler, parent, context);
+}
+
 static struct lshd_options *
 make_lshd_options(struct io_backend *backend)
 {
@@ -181,8 +209,12 @@ make_lshd_options(struct io_backend *backend)
   init_algorithms_options(&self->super, all_symmetric_algorithms());
 
   self->backend = backend;
+  self->e = make_lshd_exception_handler(&default_exception_handler,
+					HANDLER_CONTEXT);
   self->reaper = make_reaper();
-  self->random = make_reasonably_random();
+  self->random_poll = make_unix_random(self->reaper);
+  self->random = make_arcfour_random(self->random_poll,
+				     &sha1_algorithm, self->e);
 
   /* FIXME: We don't support rsa yet in the rest of the code! */
   self->signature_algorithms = all_signature_algorithms(self->random);
@@ -596,27 +628,6 @@ main_argp =
 	      (connection_require_userauth connection)))))))
 */
 
-static void
-do_lshd_default_handler(struct exception_handler *s,
-			const struct exception *e)
-{
-  switch(e->type)
-    {
-    case EXC_SEXP_SYNTAX:
-    case EXC_SPKI_TYPE:
-      werror("lshd: %z\n", e->msg);
-      exit(EXIT_FAILURE);
-    default:
-      EXCEPTION_RAISE(s->parent, e);
-    }
-}
-
-static struct exception_handler *
-make_lshd_exception_handler(struct exception_handler *parent,
-			    const char *context)
-{
-  return make_exception_handler(do_lshd_default_handler, parent, context);
-}
 
 int main(int argc, char **argv)
 {
@@ -672,7 +683,9 @@ int main(int argc, char **argv)
       werror("lshd seems to be running already.\n");
       return EXIT_FAILURE;
     }
-    
+
+  RANDOM_POLL_BACKGROUND(options->random_poll);
+  
   {
     /* Commands to be invoked on the connection */
     struct object_list *connection_hooks;
@@ -747,8 +760,7 @@ int main(int argc, char **argv)
 		   &discard_continuation,
 		   make_report_exception_handler
 		   (make_report_exception_info(EXC_IO, EXC_IO, "lshd: "),
-		    make_lshd_exception_handler(&default_exception_handler,
-						HANDLER_CONTEXT),
+		    options->e,
 		    HANDLER_CONTEXT));
     }
   }
