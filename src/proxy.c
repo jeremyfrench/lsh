@@ -39,9 +39,8 @@
 #include <assert.h>
 #include <arpa/inet.h>
 
-#define CHAINED_CONNECTION (&chained_connection.super.super)
-
-struct command_simple chained_connection;
+struct command chained_connection;
+#define CHAINED_CONNECTION (&chained_connection.super)
 
 #include "proxy.c.x" 
 
@@ -209,10 +208,14 @@ DEFINE_COMMAND3(chain_connections)
        (client_hooks object object_list)))
 */
 
-DEFINE_COMMAND_SIMPLE(chained_connection, a)
+DEFINE_COMMAND(chained_connection)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(ssh_connection, connection, a);
-  return &connection->chain->super.super;
+  COMMAND_RETURN(c, connection->chain);
 }
 
 /* GABA:
