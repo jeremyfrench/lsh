@@ -3,9 +3,13 @@
 failed=0
 all=0
 
+if [ -z "$srcdir" ] ; then
+    srcdir=.
+fi
+
 env_program () {
-  if [ -x ./"$1" ] ; then
-    if ./"$1"; then : ; else
+  if [ -x "$srcdir/$1" ] ; then
+    if "$srcdir/$1"; then : ; else
       echo FAIL: $1
       exit 1
     fi
@@ -13,7 +17,7 @@ env_program () {
 }
 
 test_program () {
-  if "./$1" ; then
+  if "$srcdir/$1" ; then
     echo PASS: ${1%-test}
   else
     echo FAIL: ${1%-test}
@@ -25,7 +29,7 @@ test_program () {
 env_program setup-env
 
 if [ $# -eq 0 ] ; then
-  for f in *-test; do test_program "$f"; done
+  for f in `cd $srcdir && echo *-test`; do test_program "$f"; done
 else
   for f in "$@" ; do test_program "$f"; done
 fi
