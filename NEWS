@@ -7,6 +7,13 @@ News for the 1.5.3 release
 	failure in the handling of channel_open, and in the
 	experimental client SRP code.
 
+	lshd now has a mode similar to telnet, where it accepts the
+	'none' authentication method and automatically disables
+	services such as X and TCP forwarding. This can be where it's 
+	required that /bin/login or some other program handle
+	authentication and session setup (e.g. handle security
+	contexts and so on).
+
 News for the 1.5.2 release
 
 	Encrypted private keys works again.
