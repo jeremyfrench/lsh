@@ -1,5 +1,8 @@
 2004-01-08  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/rsync/rsync.h: Don't include inttypes.h, just let
+	<nettle/md5.h> define uint8_t and other types.
+
 	* src/Makefile.am (AM_CPPFLAGS): Added -I./nettle. Needed to find
 	the nettle-types.h include file when building outside of the
 	source directory.
