@@ -32,7 +32,9 @@ relative_symlink misc/run-tests \
     src/sftp/testsuite src/spki/testsuite
 
 relative_symlink acinclude.m4 \
-    src/argp src/nettle src/spki src/sftp
+    src/argp src/spki src/sftp
+
+(cd src/nettle && ln -s ../../acinclude.m4 aclocal.m4)
     
 # relative_symlink misc/memxor.c \
 #     src src/nettle
