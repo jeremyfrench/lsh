@@ -1,7 +1,5 @@
 /* server.c
  *
- *
- *
  * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
@@ -40,10 +38,7 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#ifndef _GNU_SOURCE
-#warning _GNU_SOURCE undefined
-#endif
+#include "compress.h"
 
 #include <assert.h>
 #include <string.h>
@@ -188,11 +183,16 @@ static struct read_handler *do_line(struct line_handler **h,
 #endif
 	   )
 	{
-	  struct read_handler *new = make_read_packet
-	    (make_packet_unpad
-	     (make_packet_debug(&closure->connection->super,
-				"received")),
-	     closure->connection);
+	  struct read_handler *new = 
+	    make_read_packet(
+	      make_packet_unpad(
+	        make_packet_inflate(
+	          make_packet_debug(&closure->connection->super, "received"),
+	          closure->connection
+	        )
+	      ),
+	      closure->connection
+	    );
 	  
 	  closure->connection->client_version
 	    = ssh_format("%ls", length, line);
