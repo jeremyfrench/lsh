@@ -143,8 +143,6 @@ do_init_server_dh(struct keyexchange_algorithm *c,
   
       /* Install handler */
       connection->dispatch[SSH_MSG_KEXDH_INIT] = &dh->super;
-
-      connection->kex_state = KEX_STATE_IN_PROGRESS;
     }
 }
 
@@ -356,8 +354,6 @@ do_init_server_srp(struct keyexchange_algorithm *s,
   
   /* Install handler */
   connection->dispatch[SSH_MSG_KEXSRP_INIT] = make_srp_init_handler(srp);
-
-  connection->kex_state = KEX_STATE_IN_PROGRESS;
 }
 
 struct keyexchange_algorithm *
