@@ -26,7 +26,7 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 EXTRA_PROGRAMS = lsh-krb-checkpw
 
-bin_PROGRAMS = lsh lsh-keygen lsh-writekey lsh-decode-key sexp-conv srp-gen @KRB_PROGRAM@
+bin_PROGRAMS = lsh lsh-keygen lsh-writekey lsh-decode-key lsh-export-key sexp-conv srp-gen @KRB_PROGRAM@
 sbin_PROGRAMS = lshd lsh_proxy
 bin_SCRIPTS = lsh-authorize ssh-conv
 noinst_PROGRAMS = prime_table digit_table pkcs5-test
