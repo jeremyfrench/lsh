@@ -1,7 +1,7 @@
 #! /bin/sh
 
 function conv () {
-    echo "$1" | ../../nettle/tools/sexp-conv -s transport
+    echo "$1" | ../../nettle/tools/sexp-conv -s transport | tee test.in
 }
 
 function die () {
