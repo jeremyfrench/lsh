@@ -1,3 +1,7 @@
+2003-03-10  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* index.css: Stylesheet for index.html.
+
 2003-03-10  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/delegate-test (check_sexp): Use full path to
