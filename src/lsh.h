@@ -173,6 +173,11 @@ struct callback
 /* Used to indicate that an sexp have been parsed successfully */
 #define LSH_PARSED_OBJECT 0x2000
 
+/* Some commands indicate errors by returning NULL to its
+ * continuation. Other, e.g. listen, returns this error code when they
+ * fail early. */
+#define LSH_COMMAND_FAILED 0x4000
+
 /* Non-zero if no messages can be sent over the connection. Used when
  * processing error codes from in the middle of the processing a
  * messages. If this is true, processing should stop, and most likely
