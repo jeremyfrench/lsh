@@ -709,7 +709,9 @@ int main(int argc, char **argv)
 
   options = make_lshd_options(backend);
   
+  trace("Parsing options...\n");
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
+  trace("Parsing options...\n");  
 
   if (!options->corefile && !daemon_disable_core())
     {
