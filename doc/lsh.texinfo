@@ -665,7 +665,7 @@ To run @command{lshd}, you must first create a hostkey, usually stored in
 @file{/etc/lsh_host_key}. To do this, run
 
 @example
-lsh_keygen | lsh_writekey -o /etc/lsh_host_key
+lsh-keygen | lsh-writekey -o /etc/lsh_host_key
 @end example
 
 @noindent
@@ -697,7 +697,7 @@ to log in.
 To create a keypair, run
 
 @example
-lsh_keygen | lsh_writekey
+lsh-keygen | lsh-writekey
 @end example
 
 @noindent
@@ -737,7 +737,7 @@ key in any way. That means that you can lose it if a backup tape gets
 into the wrong hands, and if you use NFS it will likely be sent in the
 clear across your local network. (Actually, you can encrypt the key
 using a pass phrase, by passing the @option{-c 3des} option to
-@command{lsh_writekey}, but @command{lsh} doesn't yet support decrypting
+@command{lsh-writekey}, but @command{lsh} doesn't yet support decrypting
 it).
 
 
