@@ -125,14 +125,16 @@ static int do_init_dh(struct keyexchange_algorithm *c,
 		      void **algorithms)
 {
   struct dh_client_exchange *closure = (struct dh_client_exchange *) c;
-  struct dh_client *dh = xalloc(sizeof(struct dh_client));
+  struct dh_client *dh;
 
   int res;
 
-  MDEBUG(c);
-  MDEBUG(connection);
-  MDEBUG(ignored);
-  
+  MDEBUG(closure);
+  MDEBUG_SUBTYPE(connection);
+  MDEBUG_SUBTYPE(ignored);
+
+  NEW(dh);
+
   /* FIXME: Use this value to choose a verifier function */
   if (hostkey_algorithm_atom != ATOM_SSH_DSS)
     fatal("Internal error\n");
@@ -169,7 +171,9 @@ struct keyexchange_algorithm *
 make_dh_client(struct diffie_hellman_method *dh,
 	       struct lookup_verifier *verifier)
 {
-  struct dh_client_exchange *self = xalloc(sizeof(struct dh_client_exchange));
+  struct dh_client_exchange *self;
+
+  NEW(self);
 
   MDEBUG(dh);
   
@@ -221,7 +225,9 @@ static int do_install(struct install_keys *c,
 
 struct install_keys *make_client_install_keys(void **algorithms)
 {
-  struct client_install_keys *self = xalloc(sizeof(struct client_install_keys));
+  struct client_install_keys *self;
+
+  NEW(self);
 
   self->super.install = do_install;
   self->algorithms = algorithms;
