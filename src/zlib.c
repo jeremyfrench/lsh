@@ -29,7 +29,11 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#if HAVE_ZLIB_H
 #include <zlib.h>
+#else
+#error zlib.h not present
+#endif
 
 static void do_free_zstream(z_stream *z);
   
@@ -42,7 +46,7 @@ static void do_free_zstream(z_stream *z);
      (vars
        ;; Fail before producing larger packets than this
        (max . UINT32)
-       (f (pointer (function int "z_stream *" int))) 
+       (f pointer (function int "z_stream *" int))
        (z special-struct z_stream
           #f do_free_zstream)))
 */
@@ -54,6 +58,11 @@ static void do_free_zstream(z_stream *z);
      (vars
        (level . int)))
 */
+
+/* I'm reworking the zlib stuff a little. So it doesn't work at all now.
+ * /nisse */
+
+#if 0 && WITH_ZLIB
 
 /* zlib memory functions */
 static void *zlib_alloc(void *opaque UNUSED, unsigned int items, unsigned int size)
@@ -71,7 +80,7 @@ static void do_free_zstream(z_stream *z)
   /* Call deflateEnd() or inflateEnd(). But which? We use the opague
    * pointer, as we don't use that for anything else. */
 
-  int (*free)(struct zstream *z) = z->opaque;
+  int (*free)(z_stream *z) = z->opaque;
   int res = free(z);
 
   if (res != Z_OK)
@@ -341,3 +350,5 @@ struct compress_algorithm *make_zlib(void)
 {
   return make_zlib_algorithm(Z_DEFAULT_COMPRESSION);
 }
+
+#endif /* 0 */
