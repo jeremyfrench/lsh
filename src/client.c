@@ -145,36 +145,15 @@ make_request_service(int service)
   return &closure->super;
 }
 
-/* ;; GABA:
-   (class
-     (name request_info)
-     (vars
-       ; Next request
-       (next object request_info)
-       (want_reply . int)
-       ; If true, close the channel if the request fails
-       (essential . int)
-
-       (format method "struct lsh_string *" "struct ssh_channel *c")
-       ; Called with a success/fail indication
-       (result method int "struct ssh_channel *c" int)))
-*/
-
-#define REQUEST_FORMAT(r, c) ((r)->format((r), (c)))
-#define REQUEST_RESULT(r, c, i) ((r)->result((r), (c), (i)))
-
+/* FIXME: Perhaps move this class and its methods to client_session.c? */
 /* Initiate and manage a session */
 /* GABA:
    (class
      (name client_session)
      (super ssh_channel)
      (vars
-       ; Exec or shell request. 
-       ;(final_request . int)
-       ;(args string)
-
        ; List of requests
-       (requests object request_info)
+       ;; (requests object request_info)
   
        ; To access stdio
        (in object lsh_fd)
@@ -301,7 +280,8 @@ do_exit_signal(struct channel_request *c,
     PROTOCOL_ERROR(e, "Invalid exit-signal message");
 }
 
-struct channel_request *make_handle_exit_status(int *exit_status)
+struct channel_request *
+make_handle_exit_status(int *exit_status)
 {
   NEW(exit_handler, self);
 
@@ -312,7 +292,8 @@ struct channel_request *make_handle_exit_status(int *exit_status)
   return &self->super;
 }
 
-struct channel_request *make_handle_exit_signal(int *exit_status)
+struct channel_request *
+make_handle_exit_signal(int *exit_status)
 {
   NEW(exit_handler, self);
 
@@ -488,7 +469,8 @@ new_session(struct channel_open_command *s,
   return res;
 }
 
-struct command *make_open_session_command(struct ssh_channel *session)
+struct command *
+make_open_session_command(struct ssh_channel *session)
 {
   NEW(session_open_command, self);
   self->super.super.call = do_channel_open_command;
