@@ -217,7 +217,6 @@ int
 sftp_read_packet(struct sftp_input *i)
 {
   UINT8 buf[4];
-  int done;
   int bytesread = 0;
 
   if (i->left) /* Unread data? */
@@ -225,7 +224,7 @@ sftp_read_packet(struct sftp_input *i)
       UINT8 d;
 
       while (i->left &&                         /* Data remaining? */
-	     sftp_get_data(i, 1, &d)            /* Read OK? */
+	     0<sftp_get_data(i, 1, &d)         /* Read OK? */
 	     )
 	;
 
@@ -235,7 +234,7 @@ sftp_read_packet(struct sftp_input *i)
        * error).
        */
 
-      if (i->left)    /* i->left non-zero => sftp_get_data returned zero => error  */
+      if (i->left)    /* i->left non-zero => sftp_get_data failed => error  */
 	return -1; 
 
       return 0;
