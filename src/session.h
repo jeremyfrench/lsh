@@ -27,14 +27,22 @@
 #ifndef LSH_SESSION_H_INCLUDED
 #define LSH_SESSION_H_INCLUDED
 
+#warning session.h should not be used (yet?).
+
 #include "alist.h"
 #include "connection.h"
 #include "channel.h"
 #include "parse.h"
 
-#if 0
-struct ssh_service *make_session_service(struct alist *global_requests,
-					 struct alist *channel_requests);
-#endif
+struct ssh_session
+{
+  struct channel super;
 
+  
+};
+
+struct lsh_string *format_session_open(UINT32 channel,
+				       UINT32 window_size, UINT32 max_packet);
+
+				       
 #endif /* LSH_SESSION_H_INCLUDED */

@@ -40,3 +40,11 @@ struct ssh_service *make_session_service(struct alist *global_requests,
   return &self->super;
 }
 #endif
+
+struct lsh_string *format_session_open(UINT32 channel,
+				       UINT32 window_size, UINT32 max_packet)
+{
+  return ssh_format("%c%a%i%i%i",
+		    SSH_MSG_CHANNEL_OPEN, ATOM_SESSION,
+		    channel, window_size, max_packet);
+}
