@@ -1117,7 +1117,7 @@ address_info2sockaddr(socklen_t *length,
     struct sockaddr *res;
     const int default_preference
 #if WITH_IPV6
-      [3] = { AF_INET, AF_INET6 }
+      [3] = { AF_INET, AF_INET6, 0 }
 #else
       [2] = { AF_INET, 0 }
 #endif      
