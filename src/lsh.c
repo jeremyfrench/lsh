@@ -236,7 +236,8 @@ COMMAND_SIMPLE(options2remote)
   return &options->remote->super;
 }
 
-/* Request ssh-userauth or ssh-connection service, as appropriate. */
+/* Request ssh-userauth or ssh-connection service, as appropriate,
+ * and pass the options as a first argument. */
 COMMAND_SIMPLE(options2service)
 {
   CAST(lsh_options, options, a);
@@ -555,11 +556,15 @@ COMMAND_SIMPLE(lsh_login_command)
   CAST(lsh_options, options, a);
 
   return
-    & make_options_command(options,
-			   do_lsh_login)->super;
+    &make_options_command(options,
+			  do_lsh_login)->super;
 }
 
-/* Requests the userauth service, log in, and request connection service. */
+/* NOTE: options2identities a command_simple, so it must not be
+ * invoked directly. */
+
+/* Requests the ssh-userauth service, log in, and request connection
+ * service. */
 /* GABA:
    (expr
      (name make_lsh_userauth)
@@ -567,10 +572,31 @@ COMMAND_SIMPLE(lsh_login_command)
        (options object lsh_options))
      (expr
        (lambda (connection)
-         (lsh_login options (options2identities options)
+         (lsh_login options
+	   
+	   ; The prog1 delay is needed because options2identities is
+	   ; not a command_simple.
+	   (options2identities (prog1 options connection))
+
 	   ; Request the userauth service
-	   (request_userauth_service connection)))))
+	   (request_userauth_service connection))))) */
+
+#if 0
+/* Requests the ssh-connection service right away.
+ * This function is essentially (prog1 request_connection_service):
+ *
+ * (prog1 request_connection_service options connection)
+ * --> (request_connection_service connection)
+ */
+/* ;; GABA:
+   (expr
+     (name make_lsh_no_userauth)
+     (expr
+       (lambda (options connection)
+	 ; Request the connection service immediately
+	 (request_connection_service connection)))))
 */
+#endif
 
 /* GABA:
    (expr
@@ -1068,43 +1094,52 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	else
 	  argp_error(state, "All keyexchange algorithms disabled.");
 
-	if (self->with_userauth < 0)
-	  {
-	    /* Make the decision  early, if possible. */
-	    if (!self->with_srp_keyexchange)
-	      /* We're not using SRP, so we request the
-	       * ssh-userauth-service */
-	      self->with_userauth = 1;
-	    else if (!self->with_dh_keyexchange)
-	      /* We're using SRP, and should not need any extra
-	       * user authentication. */
-	      self->with_userauth = 0;
-	  }
-	switch (self->with_userauth)
-	  {
-	  case 0:
-	    self->service = &request_connection_service.super;
-	    break;
-	  case 1:
+	{
+	  struct command *perform_userauth = NULL;
+
+	  /* NOTE: The default, self->with_userauth < 0, means that we
+	   * should figure out the right thing automatically. */
+
+	  if (self->with_userauth < 0)
 	    {
-	      CAST(command, perform_userauth, make_lsh_userauth(self));
+	      /* Make the decision  early, if possible. */
+	      if (!self->with_srp_keyexchange)
+		/* We're not using SRP, so we request the
+		 * ssh-userauth-service */
+		self->with_userauth = 1;
+
+	      else if (!self->with_dh_keyexchange)
+		/* We're using SRP, and should not need any extra
+		 * user authentication. */
+		self->with_userauth = 0;
+	    }
+	   
+	  if (self->with_userauth)
+	    {
+	      CAST_SUBTYPE(command, o, make_lsh_userauth(self));
+	      perform_userauth = o;
+	    }
+
+	  switch(self->with_userauth)
+	    {
+	    case 0:
+	      self->service = &request_connection_service.super;
+	      break;
+	    case 1:
 	      self->service = perform_userauth;
 	      break;
-	    }
-	  case -1:
-	    {
+	    case -1:
 	      /* Examine the CONNECTION_SRP flag, later. */
-	      CAST(command, perform_userauth, make_lsh_userauth(self));
-
 	      self->service
 		= make_connection_if_srp(&request_connection_service.super,
 					 perform_userauth);
-	      break;
+	    default:
+	      fatal("Internal error.\n");
 	    }
-	  default:
-	    fatal("Internal error.\n");
-	  }
-	      
+	  
+	  assert(self->service);
+	}
+	
 	{
 	  struct lsh_string *tmp = NULL;
 	  const char *s = NULL;
