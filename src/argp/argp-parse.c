@@ -1021,6 +1021,8 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
 	  *arg_ebadkey = 1;
 	  if (parser->first_nonopt != parser->last_nonopt)
 	    {
+	      exchange(parser);
+	      
 	      /* Start processing the arguments we skipped previously. */
 	      parser->state.next = parser->first_nonopt;
 	      
