@@ -29,8 +29,11 @@
 #include "lsh_types.h"
 #include "atoms_defines.h"
 
+/* Atoms are represented as plain (small) ints. Zero is used for all
+ * atoms we don't know about. */
+
 UINT32 get_atom_length(int atom);
 const UINT8 *get_atom_name(int atom);
-UINT32 lookup_atom(UINT32 length, const UINT8 *name);
+int lookup_atom(UINT32 length, const UINT8 *name);
 
 #endif /* LSH_ATOMS_H_INCLUDED */

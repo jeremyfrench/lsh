@@ -48,12 +48,13 @@ UINT32 get_atom_length(int atom)
 const UINT8 *get_atom_name(int atom)
 { return atom_table[atom].name; }
   
-UINT32
+int
 lookup_atom(UINT32 length, const UINT8 *name)
 {
-  const struct atom_assoc *pair = gperf_atom(name, length);
+  /* NOTE: The automatically generated code uses const char *, and
+   * some compilers signal a fatal error on char * / unsigned char *
+   * mismatch. */
+  const struct atom_assoc *pair = gperf_atom( (const char *) name, length);
 
   return pair ? pair->id : 0;
 }
-
-
