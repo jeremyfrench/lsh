@@ -187,14 +187,6 @@ do_exit_status(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
-#if 0
-      /* Send EOF, if we haven't done that already. */
-      /* FIXME: Make this behaviour configurable, there may be some
-       * child process alive that we could talk to. */
-
-      channel_eof(channel);
-#endif
-      
       COMMAND_RETURN(s, NULL);
     }
   else
@@ -223,7 +215,7 @@ do_exit_signal(struct channel_request *c,
   UINT32 language_length;
   
   if (!info->want_reply
-      && parse_uint32(args, &signal)
+      && parse_atom(args, &signal)
       && parse_boolean(args, &core)
       && parse_string(args, &length, &msg)
       && parse_string(args, &language_length, &language)
@@ -234,11 +226,6 @@ do_exit_signal(struct channel_request *c,
 
       *closure->exit_status = 7;
 
-#if 0
-      signal = signal_network_to_local(signal);
-
-      werror("%ups", length, msg);
-#endif
       werror("Remote process was killed by signal: %ups %z\n",
 	     length, msg,
 	     core ? "(core dumped remotely)\n": "");
@@ -246,13 +233,6 @@ do_exit_signal(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
-#if 0
-      /* Send EOF, if we haven't done that already. */
-      /* FIXME: Make this behaviour configurable, there may be some
-       * child process alive that we could talk to. */
-
-      channel_eof(channel);
-#endif
       COMMAND_RETURN(s, NULL);
     }
   else
