@@ -163,15 +163,16 @@ const char *argp_program_version
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
-#define ARG_NOT 0x400
+#define ARG_SEND_DEBUG 0x200
+#define ARG_SEND_IGNORE 0x201
 
 static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
-  { "send-debug", 'D', "Message", 0, "Send a debug message "
+  { "send-debug", ARG_SEND_DEBUG, "Message", 0, "Send a debug message "
     "to the remote machine.", CLIENT_ARGP_ACTION_GROUP },
-  { "send-ignore", 'I', "Message", 0, "Send an ignore message "
+  { "send-ignore", ARG_SEND_IGNORE, "Message", 0, "Send an ignore message "
     "to the remote machine.", 0 },
   { NULL, 'G', 0, 0, "If no usable gateway is found, "
     "launch lsh instead", 0 },
@@ -231,13 +232,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	}
       break;
 
-    case 'D':
+    case ARG_SEND_DEBUG:
       client_add_action(&self->super, make_lshg_send_debug(arg));
       break;
 
-    case 'I':
+    case ARG_SEND_IGNORE:
       client_add_action(&self->super, make_lshg_send_ignore(arg));
       break;
+      
     case 'G':
       self->fallback_lsh = 1;
       break;
