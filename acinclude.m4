@@ -1,3 +1,4 @@
+dnl (progn (modify-syntax-entry ?' "'") (modify-syntax-entry ?` "'"))
 dnl AC_CHECK_MEMBER(includes, struct, field)
 AC_DEFUN(AC_CHECK_MEMBER,
 [ AC_CACHE_CHECK([if $2 has member $3],
@@ -226,3 +227,23 @@ dnl echo LDFLAGS = $LDFLAGS
   fi
 fi
 ])
+
+dnl Like AC_CHECK_LIB, but uses $KRB_LIBS rather than $LIBS.
+dnl AC_CHECK_KRB_LIB(LIBRARY, FUNCTION, [, ACTION-IF-FOUND [,
+dnl                  ACTION-IF-NOT-FOUND [, OTHER-LIBRARIES]]])
+
+AC_DEFUN(AC_CHECK_KRB_LIB,
+[AC_CHECK_LIB([$1], [$2],
+  ifelse([$3], ,
+      [ changequote(, )dnl
+ 	  ac_tr_lib=HAVE_LIB`echo $1 | sed -e 's/[^a-zA-Z0-9_]/_/g' \
+     	    -e 'y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/'`
+        changequote([, ])dnl
+        AC_DEFINE_UNQUOTED($ac_tr_lib)
+        KRB_LIBS="-l$1 $KRB_LIBS"
+      ], [$3]),
+  ifelse([$4], , , [$4
+])dnl
+, [$5 $KRB_LIBS])
+])
+
