@@ -30,6 +30,28 @@ continuation for errors; that would be similar to a primitive
 exception system.
 
 
+EXCEPTIONS
+
+When using exceptions in commands like do_request_service, when should
+we use the passed in exception handler, and when should we use the
+handler in the connection struct? Perhaps we should not have any
+connection->e handler at all?
+
+What about A_WRITE()? Perhaps it would make things simpler if this
+method doesn't get any exception handler argument? If the destination
+is dead, the function should either call fatal() or ignore the data.
+If the data is somehow bogus, an error could be signalled to
+connection->e or something like that.
+
+Non-trivial handlers to write:
+
+* The connection-error handler, which should recognize protocol errors,
+  send a disconnect message, and close the fd for reading.
+
+* The channel-exception handler, which should take care of channel
+  close events, instead of the channel_process_status function.
+
+  
 KEYS
 
 Code is needed to generate, store and read dss keys. Preferably in a
@@ -42,6 +64,8 @@ fields and the encoding of numbers needs updating.
 S-EXPRESSIONS
 
 Add newlines and pretty printing to the sexp formatter.
+Rewrite the sexp parser so that the scanner class inherits
+read_handler.
 
 
 USERS
@@ -146,6 +170,8 @@ CONTROL LANGUAGE
 
 Implement some kind of tracing in the command language (the current
 attempt is broken). Implement and use exceptions.
+
+Improve the tail recursiveness of builtin functions.
 
 
 FORWARDING
