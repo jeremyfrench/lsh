@@ -4,21 +4,64 @@ function quote ()
 {
   echo '"'"$1"'"'
 }
+
+function bar ()
+{
+  echo $1 | IFS=":" read a file
+  # echo a: $a
+  # echo file: $file
   
+  if [ -z "$file" ]; then
+    echo '=>' `quote "$a"`
+  else
+    echo $a | IFS="@" read user host
+    # echo user: $user
+    # echo host: $host
+    if [ -z "$host" ]; then
+      echo '=>' `quote "$user"` ":" `quote "$file"`
+    else
+      echo '=>' `quote "$user"` "@" `quote "$host"` ":" `quote "$file"`
+    fi
+  fi
+}
+
+function split_spec ()
+{
+  host=''
+  user=''
+  file="$1"
+  case "$file" in
+    *:*)
+      host=${1%:*}
+      file=${1#*:}
+	  case "$host" in
+	    *@*)
+	      user=${host%@*}
+	      host=${host#*@}
+	    ;;
+	  esac
+    ;;
+  esac
+}
+
 function foo ()
 {
-  echo $1 | (IFS=":" read a file
-  if [ -z "$file" ]; then
-    quote "$a"
-  else
-    echo $a | (IFS="@" read user host
-    if [ -z "$host" ]; then
-      echo `quote $user` ":" `quote $file`
-    else
-      echo `quote $user` "@" `quote $host` ":" `quote $file`
-    fi)
-  fi)
+  split_spec "$1"
+  echo user: `quote "$user"`
+  echo host: `quote "$host"`
+  echo file: `quote "$file"`
 }
+
+# function spec2file () {
+#   echo $1 | (IFS=":" read a file
+# 	
+#   if [ -z "$file" ]; then
+#     echo "$a"
+#   else
+#     echo "$file")
+# } 
+# 
+# function spec2host () {
 
 foo "file foo"
 foo "sture:index.html"
