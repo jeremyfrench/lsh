@@ -1,3 +1,11 @@
+2001-02-20  Niels Möller  <nisse@ehand.com>
+
+	* src/io.c, src/io.h, src/reaper.c, src/unix_interact.c: Added
+	volatile modifier to all uses of sig_atomic_t. 
+
+	* src/client_userauth.c (do_userauth_success): Use verbose, not
+	werror, for success message.
+
 2001-02-19  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/Makefile.am (TS_MORE_PROGS): Added
