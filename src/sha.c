@@ -54,9 +54,7 @@ do_sha_digest(struct hash_instance *s,
 {
   CAST(sha_instance, self, s);
 
-  sha1_final(&self->ctx);
   sha1_digest(&self->ctx, SHA1_DIGEST_SIZE, dst);
-  sha1_init(&self->ctx);
 }
 
 static struct hash_instance *
