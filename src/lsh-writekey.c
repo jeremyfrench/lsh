@@ -308,11 +308,11 @@ open_public_file(const struct lsh_string *file)
                 0644);
 
   if (fd < 0)
-    werror("Failed to open `%z'for writing: %z\n"
+    werror("Failed to open `%S'for writing: %z\n"
            "lsh-writekey doesn't overwrite existing key files.\n"
            "If you *really* want to do that, you should delete\n"
            "the existing files first\n",
-           file, STRERROR(errno));
+           s, STRERROR(errno));
 
   lsh_string_free(s);
   
