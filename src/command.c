@@ -116,6 +116,9 @@ gaba_apply(struct lsh_object *f,
   { { STATIC_HEADER, do_gaba_continuation }, NULL };
 
   COMMAND_CALL(cf, x, &c.super, &default_exception_handler);
+
+  assert(c.value);
+  
   return c.value;
 }
 
