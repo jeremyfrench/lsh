@@ -60,6 +60,15 @@ do_read_data_query(struct io_consuming_read *s)
       return 0;
     }
 
+  /* If a keyexchange is in progress, we should stop reading. We rely
+   * on channels_after_keyexchange to restart reading. */
+  if (self->channel->connection->send_kex_only)
+    {
+      trace
+	("read_data: Data arrived during key exchange. Won't read it now.\n");
+      return 0;
+    }
+
   return MIN(self->channel->send_max_packet,
 	     self->channel->send_window_size);
 }
