@@ -50,10 +50,6 @@ struct unix_user *lookup_user(struct lsh_string *name, int free)
 {
   struct passwd *passwd;
 
-#ifdef HAVE_GETSPNAM
-  struct spwd *shadowpwd=NULL;
-#endif
-
   NEW(unix_user, res);
 
   name = make_cstring(name, free);
@@ -78,6 +74,8 @@ struct unix_user *lookup_user(struct lsh_string *name, int free)
 #ifdef HAVE_GETSPNAM
   if (passwd->pw_passwd && !strcmp(passwd->pw_passwd, "x"))
   {
+    struct spwd *shadowpwd;
+    
     if (!(shadowpwd = getspnam(name->data)))
     {
       KILL(res);
