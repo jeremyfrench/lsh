@@ -108,6 +108,41 @@ spki_signer(struct sexp *e, struct alist *algorithms, int *type);
 struct verifier *
 spki_verifier(struct sexp *e, struct alist *algorithms, int *type);
 
+
+/* At a point in time, not all fields are known; fields may be added
+ * later, or computed as needed. This information is not automatically
+ * trusted in any way, except that anu non-NULL attributes must be
+ * consistent with each other. */
+
+/* GABA:
+   (class
+     (name spki_subject)
+     (vars
+       ; (public-key ...) expression
+       (key object sexp)
+
+       ; Verifier
+       ;; FIXME: We need a new verifier type, that represents
+       ;; signatures as s-expressions.
+       ;; (verifier object verifier)
+       (sha1 string)
+       (md5 string)))
+*/
+
+/* Keeps track of spki_subjects and their keys. */
+/* GABA:
+   (class
+     (name spki_context)
+     (vars
+       ; Looks up a public-key or hash.
+       (lookup method (object spki_subject)
+                      "struct sexp *e")
+       (clone method (object spki_context))))
+*/
+
+#define SPKI_LOOKUP(c, e) ((c)->lookup((c), (e)))
+#define SPKI_CLONE(c) ((c)->clone((c)))
+
 /* 5-tuples */
 
 #define SPKI_TAG_ATOM 1
@@ -131,14 +166,19 @@ spki_verifier(struct sexp *e, struct alist *algorithms, int *type);
 #define SPKI_TAG_TYPE(t) ((t)->type)
 #define SPKI_TAG_MATCH(t, e) ((t)->match((t), (e)))
 
+/* The data in a 5-tuple is always trusted, to the extent a non-NULL
+ * issuer field implies that the tuple was derived from a certificate
+ * that was properly signed by that issuer. However, no trust in the
+ * issuer is assumed. */
+
 /* GABA:
    (class
      (name spki_5_tuple)
      (vars
-       ; Key or hash, or NULL for self.
-       (issuer object sexp)
-       ; Key, hash or name (n-to-k not yet supported)
-       (subject object sexp)
+       ; Principal
+       (issuer object spki_subject)
+       ; Principal (n-to-k not yet supported)
+       (subject object spki_subject)
        ; Non-zero to allow delegation
        (propagate . int)
        ; Authorization, (tag ...) expression
@@ -147,5 +187,27 @@ spki_verifier(struct sexp *e, struct alist *algorithms, int *type);
        (validity . "struct spki_validity")))
        
 */
+
+struct spki_5_tuple *
+make_spki_5_tuple(struct spki_subject *issuer,
+		  struct spki_subject *subject,
+		  int propagate,
+		  struct spki_tag *authorization,
+		  int before_limit, time_t not_before,
+		  int after_limit, time_t not_after);
+
+
+struct spki_tag *
+spki_sexp_to_tag(struct sexp *e,
+		 /* Some limit on the recursion */
+		 unsigned limit);
+
+struct spki_5_tuple *
+spki_acl_entry_to_5_tuple(struct spki_context *ctx,
+			  struct sexp_iterator *i);
+
+struct object_list *
+spki_read_acls(struct spki_context *ctx,
+	       struct sexp *e);
 
 #endif /* LSH_SPKI_H_INCLUDED */
