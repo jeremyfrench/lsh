@@ -63,4 +63,8 @@ make_handshake_info(enum connection_flag flags,
 extern struct command_4 handshake_command;
 #define CONNECTION_HANDSHAKE (&handshake_command.super.super)
 
+void init_connection_service(struct ssh_connection *connection);
+extern struct command connection_service_command;
+#define INIT_CONNECTION_SERVICE (&connection_service_command.super)
+
 #endif /* HANDSHAKE_H_INCLUDED */

@@ -30,6 +30,10 @@
 
 #include "handshake.h"
 
+/* FIXME: When init_connection_service is moved from handshake.c,
+   this include should no longer be needed. */
+#include "channel.h"
+
 #include "command.h"
 #include "compress.h"
 #include "connection.h"
@@ -385,4 +389,177 @@ DEFINE_COMMAND4(handshake_command)
 	  ssh_format("%lS\r\n", version));
   
   send_kexinit(connection);
+}
+
+/* FIXME: These don't really belong here, and this placement breaks
+   lshg.  */ 
+DEFINE_PACKET_HANDLER(static, global_request_handler, connection, packet)
+{
+  handle_global_request(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, global_success_handler, connection, packet)
+{
+  handle_global_success(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, global_failure_handler, connection, packet)
+{
+  handle_global_failure(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, channel_request_handler, connection, packet)
+{
+  handle_channel_request(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, channel_open_handler, connection, packet)
+{
+  handle_channel_open(connection->table, packet);
+}
+
+
+DEFINE_PACKET_HANDLER(static, window_adjust_handler,
+		      connection, packet)
+{
+  handle_adjust_window(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, channel_data_handler,
+		      connection, packet)
+{
+  handle_channel_data(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, channel_extended_data_handler,
+		      connection, packet)
+{
+  handle_channel_extended_data(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, channel_eof_handler,
+		      connection, packet)
+{
+  handle_channel_eof(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, channel_close_handler,
+		      connection, packet)
+{
+  handle_channel_close(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, channel_open_confirm_handler,
+		      connection, packet)
+{
+  handle_open_confirm(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, channel_open_failure_handler,
+		      connection, packet)
+{
+  handle_open_failure(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, channel_success_handler,
+		      connection, packet)
+{
+  handle_channel_success(connection->table, packet);
+}
+
+DEFINE_PACKET_HANDLER(static, channel_failure_handler,
+		      connection, packet)
+{
+  handle_channel_failure(connection->table, packet);
+}
+
+/* During keyexchange, and when the connection's write buffer gets
+   full, we do not allow more channel data. This function is called
+   when data is reallowed. */
+static void
+do_channels_wakeup(struct command_continuation *s UNUSED,
+		   struct lsh_object *x)
+{
+  CAST(ssh_connection, connection, x);
+  struct channel_table *table = connection->table;
+  uint32_t i;
+  
+  /* Iterate over all channels, and call CHANNEL_SEND_ADJUST to get
+   * them started again. */
+
+  for (i = 0; i<table->used_channels; i++)
+    {
+      struct ssh_channel *channel = lookup_channel(table, i);
+      if (channel
+	  && !(channel->flags & (CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
+	  && channel->send_adjust)
+	CHANNEL_SEND_ADJUST(channel, 0);
+    }
+}
+
+static struct command_continuation
+channels_wakeup =
+  { STATIC_HEADER, do_channels_wakeup };
+
+void
+init_connection_service(struct ssh_connection *connection)
+{
+  struct channel_table *table = make_channel_table();
+  
+  debug("channel.c: do_connection_service\n");
+  
+  connection->table = table;
+
+  /* Cancel handshake timeout */
+  connection_clear_timeout(connection);
+
+  /* Unfreeze channels after key exchange */
+  connection_wakeup(connection, &channels_wakeup);
+  
+  connection->dispatch[SSH_MSG_GLOBAL_REQUEST]
+    = &global_request_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN]
+    = &channel_open_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_REQUEST]
+    = &channel_request_handler;
+  
+  connection->dispatch[SSH_MSG_CHANNEL_WINDOW_ADJUST]
+    = &window_adjust_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_DATA]
+    = &channel_data_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_EXTENDED_DATA]
+    = &channel_extended_data_handler;
+
+  connection->dispatch[SSH_MSG_CHANNEL_EOF]
+    = &channel_eof_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_CLOSE]
+    = &channel_close_handler;
+
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN_CONFIRMATION]
+    = &channel_open_confirm_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN_FAILURE]
+    = &channel_open_failure_handler;
+  
+  connection->dispatch[SSH_MSG_CHANNEL_SUCCESS]
+    = &channel_success_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_FAILURE]
+    = &channel_failure_handler;
+
+  connection->dispatch[SSH_MSG_REQUEST_SUCCESS]
+    = &global_success_handler;
+  connection->dispatch[SSH_MSG_REQUEST_FAILURE]
+    = &global_failure_handler;
+}
+
+DEFINE_COMMAND(connection_service_command)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+  CAST(ssh_connection, connection, a);
+
+  init_connection_service(connection);
+
+  COMMAND_RETURN(c, connection);
 }
