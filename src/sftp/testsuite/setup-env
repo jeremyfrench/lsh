@@ -2,6 +2,9 @@
 
 . common.sh
 
+# Clean up first.
+rm -rf $TESTHOME
+
 # Create a directory to play with
 mkdir $TESTHOME
 cd $TESTHOME
