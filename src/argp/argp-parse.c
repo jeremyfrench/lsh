@@ -513,7 +513,7 @@ parser_init (struct parser *parser, const struct argp *argp,
 #define CLEN (szs.num_child_inputs * sizeof (void *))
 #define LLEN ((szs.long_len + 1) * sizeof (struct option))
 #define SLEN (szs.short_len + 1)
-#define STORAGE(offset) (((char *) parser->storage) + (offset))
+#define STORAGE(offset) ((void *) (((char *) parser->storage) + (offset)))
   
   parser->storage = malloc (GLEN + CLEN + LLEN + SLEN);
   if (! parser->storage)
@@ -959,3 +959,29 @@ __argp_input (const struct argp *argp, const struct argp_state *state)
 #ifdef weak_alias
 weak_alias (__argp_input, _argp_input)
 #endif
+
+/* Defined here, in case a user is not inlining the definitions in
+ * argp.h */
+void
+__argp_usage (__const struct argp_state *__state) __THROW
+{
+  __argp_state_help (__state, stderr, ARGP_HELP_STD_USAGE);
+}
+
+int
+__option_is_short (__const struct argp_option *__opt) __THROW
+{
+  if (__opt->flags & OPTION_DOC)
+    return 0;
+  else
+    {
+      int __key = __opt->key;
+      return __key > 0 && isprint (__key);
+    }
+}
+
+int
+__option_is_end (__const struct argp_option *__opt) __THROW
+{
+  return !__opt->key && !__opt->name && !__opt->doc && !__opt->group;
+}
