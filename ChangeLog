@@ -1,4 +1,31 @@
+2001-09-03  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/client_x11.c: Added comment about observed X11 packets (that
+	seem contrary to the documentation in RFC 1013.
+	(do_client_channel_x11_receive): Print received cookie, for
+	debugging purposes.
+	(make_forward_x11): Print generated fake cookie, for debugging
+	purposes. 
+	(parse_display): Fixed ssh_format invocation creating the local
+	socket name.
+	(do_channel_open_x11): Fixed invocation of verbose().
+	(do_format_request_x11_forward): Get the connection from the
+	channel, now that the connection pointer is available there.
+	(do_format_request_x11_forward): Hex encode the cookie. That's
+	ugly, but needed for compatibility.
+
+	* src/client_pty.c: Dropped lsh:-prefix on messages, it's added
+	automatically in werror.c.
+
+	* src/client.c (client_maybe_x11): Write a message if DISPLAY not
+	set or it's value doesn't make sense.
+
 2001-09-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/client.c (make_client_session): Added escape sequences q, v
+	and d, for controlling the verbosity flags.
+	(client_argp_parser): Look at used_x11 after setting up the shell
+	session. 
 
 	* src/lshg.c (make_options): Pass NULL random to
 	init_client_options. 
