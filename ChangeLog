@@ -1,5 +1,18 @@
 2001-09-03  Niels Möller  <nisse@ehand.com>
 
+	* src/xauth.c: Rewrote to use libXau.
+
+	* src/client_x11.c (client_x11_auth_info): Deleted class; merged
+	with client_x11_display.
+	(parse_display): Take a client_x11_display as argument. Do xauth lookup.
+	(get_client_x11_auth_info): Deleted function.
+
+	* src/client.c (DEFINE_CALLBACK): Declare self argument as UNUSED.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added xauth.c.
+
+	* configure.in: Check for X, libXau and XauGetAuthByAddr.
+
 	* src/client_x11.c (client_x11_channel): New fields auth_length
 	and name_length, for recording the decoded lengths in the setup
 	message.  
