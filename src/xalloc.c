@@ -226,10 +226,13 @@ lsh_string_free(const struct lsh_string *s)
   lsh_free(s);
 }
 
+/* General allocator that can handle variable size objects */
 struct lsh_object *
-lsh_object_alloc(struct lsh_class *class)
+lsh_var_alloc(struct lsh_class *class,
+	      size_t size)
 {
-  struct lsh_object *instance = xalloc(class->size);
+  struct lsh_object *instance = xalloc(size);
+
   instance->isa = class;
   instance->alloc_method = LSH_ALLOC_HEAP;
 
@@ -239,14 +242,20 @@ lsh_object_alloc(struct lsh_class *class)
 }
 
 struct lsh_object *
-lsh_object_clone(struct lsh_object *o)
+lsh_object_alloc(struct lsh_class *class)
 {
-  struct lsh_object *i = xalloc(o->isa->size);
+  return lsh_var_alloc(class, class->size);
+}
+
+struct lsh_object *
+lsh_var_clone(struct lsh_object *o, size_t size)
+{
+  struct lsh_object *i = xalloc(size);
 
   /* Copy header and all instance variables. Note that the header is
    * now invalid, as the next pointer can't be copied directly. This
    * is fixed by the gc_register call below. */
-  memcpy(i, o, o->isa->size);
+  memcpy(i, o, size);
 
   i->alloc_method = LSH_ALLOC_HEAP;
   gc_register(i);
@@ -254,27 +263,13 @@ lsh_object_clone(struct lsh_object *o)
   return i;
 }
 
-struct list_header *
-lsh_list_alloc(struct lsh_class *class,
-	       unsigned length, size_t element_size)
+struct lsh_object *
+lsh_object_clone(struct lsh_object *o)
 {
-  struct list_header *list = xalloc(class->size
-				    + element_size * length
-				    - element_size);
-
-  assert(element_size < 1024);
-  /* assert(length < 65536); */
-  
-  list->super.isa = class;
-  list->super.alloc_method = LSH_ALLOC_HEAP;
-
-  list->length = length;
-  
-  gc_register(&list->super);
-
-  return list;
+  return lsh_var_clone(o, o->isa->size);
 }
-    
+
+
 /* Should be called *only* by the gc */
 void
 lsh_object_free(struct lsh_object *o)
