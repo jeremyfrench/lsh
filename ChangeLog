@@ -1,3 +1,46 @@
+2001-09-24  Niels Möller  <nisse@ehand.com>
+
+	* Liboop code (without gc) seems to work now. Tagging as
+	MILESTONE_LIBOOP_20010924. 
+
+	* src/write_buffer.c (write_buffer_close): Call close_fd if buffer
+	is empty. 
+
+	* src/unix_interact.c (window_subscriber): Added attribute
+	interact, which points to the corresponding unix_interact.
+	(do_kill_window_subscriber): New function, which updates the
+	number of subscribers and removes the SIGWINCH handler if there
+	are no subscribers left.
+	(unix_interact): Added attributes backend, winch_handler and
+	nsubscribers. 
+	(unix_window_change_subscribe): Keep track of number of
+	subscribers, and install the signal handler if it is needed.
+	(make_unix_interact): Don't install any signal handler yet.
+
+	* src/lshd.c (main): Changed the behaviour of the --no-syslog
+	option. Now --daemon --no-syslog puts the process into the
+	background without the rest of the daemonic setup. These option
+	names should be changed to something more correct, but it is used
+	only be the testsuite.
+
+	* src/io.c (lsh_oop_signal_callback): Better trace message.
+	(lsh_oop_signal_callback): Return OOP_CONTINUE.
+	(lsh_oop_fd_read_callback): Return OOP_CONTINUE.
+	(lsh_oop_register_read_fd): Check want_read, so we don't try to
+	register the callback twice.
+	(lsh_oop_fd_write_callback): Fixed assertion.
+	(lsh_oop_fd_write_callback): Return OOP_CONTINUE.
+	(lsh_oop_register_write_fd): Check want_write, so we don't try to
+	register the callback twice.
+	(io_run): Print a trace message if/when oop_sys_run returns.
+	(do_connect_callback): Improved trace messages.
+	(io_connect): Initialize fd->write before calling
+	lsh_oop_register_write_fd. 
+	(io_listen): Initialize fd->read before calling
+	lsh_oop_register_read_fd. 
+	(close_fd): Call lsh_oop_cancel_read_fd and
+	lsh_oop_cancel_write_fd before clearing the alive flag.
+
 2001-09-23  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io.c: Added trace messages to liboop-related functions.
