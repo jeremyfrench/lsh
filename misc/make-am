@@ -16,14 +16,6 @@ cvs_headers () {
     sed -e 's%^/\([^/]*\.h\)/.*$%\1%' -e t -e d CVS/Entries | sort
 }
 
-environ_deps () {
-    for f in .deps/*.Po ; do
-	if grep 'environ\.h' "$f" >/dev/null ; then
-	    echo "`basename $f .Po`.o : environ.h"
-	fi
-    done
-}
-
 make_include () {
     (
 	name="$1"
@@ -47,13 +39,9 @@ case "${1:-all}" in
     classes)
         classes
     ;;
-    environ)
-        environ_deps
-    ;;
     all)
         headers > .dist_headers
 	classes > .dist_classes
-	environ_deps > .dist_deps
     ;;
     *)
         exit 1
