@@ -60,6 +60,8 @@ do_channel_open_command(struct command *s,
 		      make_channel_open_exception(
 			SSH_OPEN_RESOURCE_SHORTAGE,
 			"Allocating a local channel number failed."));
+
+      return;
     }
 
   channel = NEW_CHANNEL(self, connection, index, &request);
