@@ -132,12 +132,10 @@ do_listen_continue(struct fd_listen_callback *s, int fd,
 		   struct address_info *peer)
 {
   CAST(listen_command_callback, self, s);
-  NEW(listen_value, res);
 
-  res->fd = make_lsh_fd(self->backend, fd, self->e);
-  res->peer = peer;
-
-  COMMAND_RETURN(self->c, res);
+  COMMAND_RETURN(self->c,
+		 make_listen_value(make_lsh_fd(self->backend, fd, self->e),
+				   peer));
 }
 
 static struct fd_listen_callback *
@@ -158,6 +156,8 @@ make_listen_command_callback(struct io_backend *backend,
 static struct exception resolve_exception =
 STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
 
+/* FIXME: This is used only by do_simple_listen. Could be partially
+ * unified with do_listen_connection. */
 static void
 do_listen(struct io_backend *backend,
 	  struct address_info *a,
@@ -165,21 +165,25 @@ do_listen(struct io_backend *backend,
 	  struct command_continuation *c,
 	  struct exception_handler *e)
 {
-  /* FIXME: Add ipv6 support somewhere */
-  struct sockaddr_in sin;
-  struct lsh_fd *fd;
+  struct sockaddr *addr;
+  socklen_t addr_length;
   
-  if (!address_info2sockaddr_in(&sin, a))
+  struct lsh_fd *fd;
+
+  /* Performs a dns lookup, if needed. */
+  addr = address_info2sockaddr(&addr_length, a, 1);
+  if (!addr)
     {
       EXCEPTION_RAISE(e, &resolve_exception);
       return;
     }
   
   fd = io_listen(backend,
-		 (struct sockaddr *) &sin, sizeof(sin),
+		 addr, addr_length,
 		 make_listen_callback(backend, c, e),
 		 e);
-
+  lsh_space_free(addr);
+  
   if (!fd)
     {
       /* NOTE: Will never invoke the continuation. */
@@ -217,10 +221,12 @@ do_listen_connection(struct command *s,
   CAST(address_info, address, x);
   struct lsh_fd *fd;
   
-  /* FIXME: Add ipv6 support somewhere */
-  struct sockaddr_in sin;
-  
-  if (!address_info2sockaddr_in(&sin, address))
+  struct sockaddr *addr;
+  socklen_t addr_length;
+
+  /* Doesn't do any dns lookups. */
+  addr = address_info2sockaddr(&addr_length, address, 0);
+  if (!addr)
     {
       EXCEPTION_RAISE(e, &resolve_exception);
       return;
@@ -228,11 +234,13 @@ do_listen_connection(struct command *s,
 
   /* FIXME: Asyncronous dns lookups should go here */
   fd = io_listen(self->backend,
-		 (struct sockaddr *) &sin, sizeof(sin),
+		 addr, addr_length,
 		 make_listen_callback
 		 (self->backend,
 		  make_apply(self->callback,
 			     &discard_continuation, e), e), e);
+  lsh_space_free(addr);
+
   if (fd)
     COMMAND_RETURN(c, fd);
   else
@@ -318,21 +326,24 @@ do_connect(struct io_backend *backend,
 	   struct command_continuation *c,
 	   struct exception_handler *e)
 {
-  /* FIXME: Add ipv6 support somewhere */
-  struct sockaddr_in sin;
+  struct sockaddr *addr;
+  socklen_t addr_length;
   struct lsh_fd *fd;
 
   /* Address must specify a host */
   assert(a->ip);
-  
-  if (!address_info2sockaddr_in(&sin, a))
+
+  /* Performs dns lookups */
+  addr = address_info2sockaddr(&addr_length, a, 1);
+  if (!addr)
     {
       EXCEPTION_RAISE(e, &resolve_exception);
       return;
     }
 
-  fd = io_connect(backend, &sin, NULL,
+  fd = io_connect(backend, addr, addr_length, 
 		  c, e);
+  lsh_space_free(addr);
 
   if (!fd)
     {
