@@ -92,9 +92,9 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
 int main(int argc, char **argv)
 {
   char *host = NULL;
+  char *user = NULL;
   char *port = "ssh";
   int option;
-  char *user;
   
   struct sockaddr_in remote;
 
@@ -199,8 +199,8 @@ int main(int argc, char **argv)
     (make_alist(0, -1),
      make_alist(0, -1),
      make_client_startup(io_read(&backend, in, NULL, NULL),
-			 &io_write(&backend, out, BLOCK_SIZE, NULL)->buffer->super,
-			 &io_write(&backend, err, BLOCK_SIZE, NULL)->buffer->super,
+			 io_write(&backend, out, BLOCK_SIZE, NULL),
+			 io_write(&backend, err, BLOCK_SIZE, NULL),
 			 ATOM_SHELL, ssh_format("")));
   
   kexinit_handler = make_kexinit_handler
