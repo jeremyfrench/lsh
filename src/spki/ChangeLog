@@ -1,5 +1,42 @@
 2002-11-22  Niels Möller  <niels@s3.kth.se>
 
+	* testsuite/tag-test.c (test_main): Enabled more tests, for
+	set/set inclusions.
+
+	* testsuite/lookup-acl-test.c (test_main): Adapted to changed
+	spki_acl_by_authorization_first and
+	spki_acl_by_authorization_next. 
+
+	* testsuite/testutils.c (make_tag, release_tag): New functions.
+
+	* certificate.h (struct spki_acl_db): Use nettle_realloc_func for
+	custom allocation.
+
+	* certificate.c (spki_realloc): Deleted function.
+	(spki_acl_init): Use nettle_realloc.
+	(acl_by_auth): Take a struct spki_tag argument.
+	(spki_acl_by_authorization_next): Likewise.
+	(spki_acl_by_authorization_first): Likewise.
+	(spki_5_tuple_free_chain): Use spki_tag_release.
+
+	* parse.c (spki_check_type): Deleted function.
+	(spki_next_subexpr): Deleted function.
+	(spki_parse_tag): Use spki_tag_compile to convert tag to internal
+	representation. 
+
+	* tag.c (string_equal, string_prefix): New functions.
+	(tag_list, tag_atom, tag_range): New functions, isolating type
+	casts. Replaced typecasts in the rest of the code with function
+	calls.
+	(spki_tag_set_new): Normalize sets with a single element. 
+	(spki_tag_compile): Get the tag expressions in a list in the right
+	order. 
+	(spki_tag_from_sexp): New function.
+	(atom_prefix): New function.
+	(atom_equal): Change dto use new string type.
+	(set_includes, list_includes, spki_tag_includes): Rewrote to work
+	with the tree representation of tags, rather than with plain strings.
+
 	* tag.c (struct spki_tag_range): Removed const.
 	(spki_tag_compile): Removed const.
 	(spki_tag_compile): Cast &spki_tag_any to a non-const pointer when
