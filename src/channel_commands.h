@@ -39,7 +39,8 @@
        ;; This method should return a partially filled in channel,
        ;; and create a channel open request by calling
        ;; prepare_channel_open.
-       (new_channel method "struct ssh_connection *"
+       (new_channel method "struct ssh_channel *"
+                    "struct ssh_connection *connection"
                     "struct lsh_string **request")))
 */
 
