@@ -1,3 +1,14 @@
+News for the 0.9.10 release
+
+	Fixed bug that caused buffered output to be lost at channel
+	close.
+
+	Experimental SRP support.
+
+	New program srp-gen.
+	
+	Improved the hex dumps in debug output.
+
 News for the 0.9.9 release
 
 	autoconf fixes. Add -R-flags when appropriate. Recognize

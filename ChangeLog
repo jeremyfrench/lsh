@@ -1,5 +1,21 @@
 2000-05-28  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/werror.c (werror_hexdump): Include an ascii column in the
+	output. 
+
+	* src/unix_user.c (do_read_file): Fixed call to ssh_format.
+
+	* src/publickey_crypto.h (make_dh): Added prototype.
+
+	* src/dh_exchange.c (init_dh_instance): Use hex in debug output. 
+
+	* src/client_keyexchange.c (srp_client_instance): Removed salt
+	attribute. 
+	(do_handle_srp_reply): Bug fixes.
+
+	* doc/Makefile.am.in: Added pattern rule for RFC-like nroff
+	formatting. 
+
 	* src/srp_exchange.c (srp_make_verifier): New function.
 	(srp_hash_password): Fixed call to ssh_format.
 	(srp_make_init_msg): Likewise.
@@ -9,6 +25,7 @@
 
 	* src/lshd.c: Added SRP support. New options --srp-keyexchange,
 	--no-srp-keyexchange, --dh-keyexchange, --no-dh-keyexchange.
+	* src/lsh.c: Likewise.
 
 	* src/dh_exchange.c (make_dh): New function.
 	(make_dh1): Use make_dh() and make_ssh_group1().
