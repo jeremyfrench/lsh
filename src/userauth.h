@@ -90,9 +90,11 @@ make_userauth_special_exception(struct lsh_string *reply,
        ; Open a file in the user's "~/.lsh" directory. File must be
        ; owned by the user and not writable for other users. If SECRET is 1,
        ; it must also not be readable by other users.
-       (read_file method void
+       (read_file method "const struct exception *"
                   "const char *name" "int secret"
-                  "struct command_continuation *c" "struct exception_handler *e")
+		  "UINT32 limit"
+		  ; Get's the contents of the file
+		  "struct abstract_write *c")
 		  
        ; chdir to the user's home directory
        (chdir_home method int)
@@ -126,7 +128,7 @@ make_userauth_special_exception(struct lsh_string *reply,
 
 #define USER_VERIFY_PASSWORD(u, p, c, e) ((u)->verify_password((u), (p), (c), (e)))
 #define USER_FILE_EXISTS(u, n, f) ((u)->file_exists((u), (n), (f)))
-#define USER_READ_FILE(u, n, s, x, e) ((u)->read_file((u), (n), (s), (x), (e)))
+#define USER_READ_FILE(u, n, s, l, c) ((u)->read_file((u), (n), (s), (l), (c)))
 #define USER_CHDIR_HOME(u) ((u)->chdir_home((u)))
 #define USER_FORK(u, c, e, p, t) \
   ((u)->fork_process((u), (c), (e), (p), (t)))
