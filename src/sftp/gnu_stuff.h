@@ -37,4 +37,10 @@ void version_option(void);
 void lsftp_welcome(void); 
 
 void do_gnu_stuff( const char** argv );
+
+
+#ifndef HAVE_CANONICALIZE_FILE_NAME
+char* canonicalize_file_name (const char* name);
 #endif
+
+#endif /* LSFTP_GNU_STUFF_H */

@@ -158,7 +158,7 @@ int lsftp_open_connection(char** argv, int argc)
 	int j = 0;
 	int i;
 
-	char tmp[PATH_MAX];	
+	char* tmp;	
 	char* lsh_name=NULL;
 	char** new_argv=NULL;
 	const char* before_string;
@@ -182,12 +182,14 @@ int lsftp_open_connection(char** argv, int argc)
 		lsftp_s_strtok( 
 			       cur_string,        /* Old startat */
 			       " \r\n\t",         /* Separators */
-			       tmp,               /* Store in */
-			       PATH_MAX           /* Storage length */
+			       &tmp               /* Storage adress */
 			       )
 		)
 	       ) 
-	  k++;
+	  {
+	    k++;
+	    free( tmp );
+	  }
 	
 	/* And also after */
 
@@ -199,18 +201,18 @@ int lsftp_open_connection(char** argv, int argc)
 	
 	 cur_string = after_string;
 	 
-	 while( (
-		 cur_string =  
-		  lsftp_s_strtok( 
-				 cur_string,        /* Old startat */
-				 " \r\n\t",         /* Separators */
-				 tmp,               /* Store in */
-				 PATH_MAX           /* Storage length */
-				 )
-		 )
-		) 
-	   k++;
-	
+	 while( 
+	       cur_string =  
+	       lsftp_s_strtok( 
+			      cur_string,        /* Old startat */
+			      " \r\n\t",         /* Separators */
+			      &tmp               /* Storage */
+			      )
+	       ) 
+	   {
+	     k++;
+	     free( tmp );
+	   }
 	 
 	new_argv = malloc( ( argc + k + 1 ) * sizeof( char* ) ); /* k new
 								    arguments,
@@ -223,18 +225,16 @@ int lsftp_open_connection(char** argv, int argc)
 
 	cur_string = before_string;
 	
-	while( (
-		cur_string =  
-		lsftp_s_strtok( 
-			       cur_string,        /* Old startat */
-			       " \r\n\t",         /* Separators */
-			       tmp,               /* Store in */
-			       PATH_MAX           /* Storage length */
-			       )
-		)
-	       ) 
-	  /* Make a copy of the string and pass it as an argument */
-	  new_argv[ ++j ] = strdup(tmp);          
+	while( 
+	      cur_string =  
+	      lsftp_s_strtok( 
+			     cur_string,        /* Old startat */
+			     " \r\n\t",         /* Separators */
+			     &tmp               /* Storage */
+			     )		
+	      ) 
+	  /* Pass it as an argument */
+	  new_argv[ ++j ] = tmp;          
      	
 	i = 1;                             /* argv[0] doesn't interest us */
 	
@@ -252,13 +252,12 @@ int lsftp_open_connection(char** argv, int argc)
 		lsftp_s_strtok( 
 			       cur_string,        /* Old startat */
 			       " \r\n\t",         /* Separators */
-			       tmp,               /* Store in */
-			       PATH_MAX           /* Storage length */
+			       &tmp               /* Storage */
 			       )
 		)
 	       ) 
 	  /* Make a copy of the string and pass it as an argument */
-	  new_argv[ j++ ] = strdup(tmp);
+	  new_argv[ j++ ] = tmp;
 	
 	new_argv[ j++ ] = 0;  
       

@@ -41,7 +41,7 @@ char* lsftp_unquote( const char* s );
 
 /* Given a string and a set of tokens, place in store (is of size storelen) */
 const char *lsftp_s_strtok(const char *s, const char* tok,
-			   char *store, int storelen); 
+			   char **store); 
 
 const char *lsftp_s_skip(const char *s, const char *sep);
 const char* lsftp_s_skipn(const char *s, const char *sep );

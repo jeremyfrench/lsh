@@ -208,48 +208,52 @@ n   */
   else
     {
       /* We're not completing the command */
-      char tmp[256];
+      char* tmp;
       int i=0;
       char* cmdname;
 
       /* Get the first word from the line (the command) */
 
-      lsftp_s_strtok( rl_line_buffer+s," \n\t\r", tmp, 256 );
+      lsftp_s_strtok( rl_line_buffer+s," \n\t\r", &tmp );
 
       while( (cmdname = commands[i].name) )
-	if ( ! strncmp( cmdname, tmp, commands[i++].uniquelen ) )       /* We've got the command? */
-	  switch ( commands[i-1].arg_type )
-	    {
+	{
+	  if ( ! strncmp( cmdname, tmp, commands[i++].uniquelen ) )       /* We've got the command? */
+	    switch ( commands[i-1].arg_type )
+	      {
+		
+	      case COMMAND: /* Command takes a command as argument? */
+		matches = RL_COMPLETION_MATCHES( 
+						text, 
+						lsftp_rl_command_generator
+						);
+		break;
 
-	    case COMMAND: /* Command takes a command as argument? */
-	      matches = RL_COMPLETION_MATCHES( 
-					      text, 
-					      lsftp_rl_command_generator
-					      );
-	      break;
-
-	    case REMOTEFILE:  /* Remote file or dir as argument? */
-	      matches = RL_COMPLETION_MATCHES( 
-					      text, 
-					      lsftp_rl_remotefile_generator
-					      );
-	      break;
-
-	    case LOCALFILE:
-	      matches = RL_COMPLETION_MATCHES(
+	      case REMOTEFILE:  /* Remote file or dir as argument? */
+		matches = RL_COMPLETION_MATCHES( 
+						text, 
+						lsftp_rl_remotefile_generator
+						);
+		break;
+		
+	      case LOCALFILE:
+		matches = RL_COMPLETION_MATCHES(
 					      text, 
 					      RL_FILENAME_COMPLETION_FUNCTION
 					      );
 	      break;
-
-	    default:
-	    case NOARG:  /* Doesn't take any argument? */
-	      matches = RL_COMPLETION_MATCHES(
-					      text, 
-					      lsftp_rl_no_generator 
-					      ); 
-	      break;
-	    }
+	      
+	      default:
+	      case NOARG:  /* Doesn't take any argument? */
+		matches = RL_COMPLETION_MATCHES(
+						text, 
+						lsftp_rl_no_generator 
+						); 
+		break;
+	      }
+	  
+	  free( tmp );
+	}
 
       if( !matches ) /* No matching command? */
 	  {

@@ -240,7 +240,7 @@ int
 com_longhelp(const char *arg, const char *command UNUSED) 
 {
   const char *s;
-  char tmp[PATH_MAX];
+  char* tmp;
   char* cmdname;
   int i=0;
   
@@ -267,10 +267,10 @@ com_longhelp(const char *arg, const char *command UNUSED)
 
       i=0;
       /* Get the first word from the line (the command) */
-      s = lsftp_s_strtok(s," \n\t\r", tmp, PATH_MAX); 
+      s = lsftp_s_strtok(s," \n\t\r", &tmp ); 
 
   
-      if( !s ) /* No more? */
+      if( !tmp ) /* No more? */
 	return 0;
 
       while( ( cmdname = commands[i++].name) )
@@ -288,6 +288,8 @@ com_longhelp(const char *arg, const char *command UNUSED)
   
       if( !known ) /* If no command matched, say so */
 	printf("Unknown command %s\n", tmp);
+      
+      free( tmp );
     }
 
   return 0; /* Placeholder to stop complaints from compilers*/
@@ -303,12 +305,12 @@ com_mail(const char *arg UNUSED, const char *command)
 int
 com_umask(const char *arg, const char *command UNUSED) 
 {
-  unsigned char tmp[PATH_MAX];
+  char* tmp;
   int given = 0;
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
     {
       int newmask = 0;
@@ -323,6 +325,7 @@ com_umask(const char *arg, const char *command UNUSED)
       else
 	printf( "Sorry, only numeric masks allowed\n" );
 
+      free( tmp );
     }
 
   if( !given )
@@ -397,8 +400,8 @@ com_open(const char *arg, const char *command UNUSED)
 {
   char** myargv;
   char** freeargv;
-  const char *s;
-  char tmp[PATH_MAX]; /* Used for arguments */
+  char *s;
+  char* tmp; /* Used for arguments */
 
   int argcount = 0;
   int maxargs;
@@ -420,9 +423,9 @@ com_open(const char *arg, const char *command UNUSED)
       while( argcount < maxargs &&  /* Still room in our array */
 	     arg && 
 	     *arg && 
-	     ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	     ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	     )
-	myargv[argcount++] = strdup( tmp );
+	myargv[argcount++] = tmp;
 
       if( argcount < maxargs )      /* Exited not because the array was full */
 	myargv[argcount] = 0;
@@ -440,7 +443,7 @@ com_open(const char *arg, const char *command UNUSED)
 
       while( (s = *(freeargv++) ) )
 	/* Free doesn't take const pointers */
-	free((void *) s );
+	free( s );
       
       free( myargv );
 
@@ -462,7 +465,7 @@ com_open(const char *arg, const char *command UNUSED)
 int
 com_cd(const char *arg, const char *command UNUSED) 
 {
-  char tmp[PATH_MAX];
+  char* tmp;
 
   int didcd = 0;
 
@@ -473,12 +476,14 @@ com_cd(const char *arg, const char *command UNUSED)
 	 !didcd &&
 	 arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
     {
       const char **mglob;
       const char *ptr = 0;
       char* tmp2 = lsftp_qualify_path( tmp );
+
+      free( tmp );
 
       if( !tmp2 )
 	return -1;
@@ -512,7 +517,7 @@ com_cd(const char *arg, const char *command UNUSED)
 
 int com_mkdir(const char *arg, const char *command) 
 {
-  char tmp[PATH_MAX];
+  char* tmp;
 
   int id;
   int mode = 0755;
@@ -524,11 +529,13 @@ int com_mkdir(const char *arg, const char *command)
   while( !fail &&
 	 arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
     {
       id = lsftp_do_mkdir( tmp, mode, command ); /* FIXME: Default mode? */
       fail = ( -1 == lsftp_await_command( id ) );
+
+      free( tmp );
     }
 
   return 0;
@@ -642,7 +649,7 @@ rm_file_or_folder(const char *path, const char *command, int recursive )
 int
 com_rm(const char *arg, const char *command) 
 {
-  char tmp[PATH_MAX];
+  char* tmp;
 
   int recurse = 0;
   int globbing = 0;
@@ -652,51 +659,55 @@ com_rm(const char *arg, const char *command)
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
-    if( lsftp_get_opts( "rg", tmp )  )
-      switch( lsftp_get_opts( "rg", tmp ) )
-	{
-	case 3: /* Both set? */
-	  recurse = !recurse;
-	  globbing = !globbing;
-	  break;
-	case 2: /* -r */
-	  recurse = !recurse;
-	  break;
-	case 1: /* -g */
-	  globbing = !globbing;
-	  break;
-	default:
-	  printf( "Unknown option(s) %s\n", tmp );
-	}
-    else 
-      {
-	if( !globbing )
-	  rm_file_or_folder( tmp, command, recurse );
-	else      /* Globbing desired */
+    {
+      if( lsftp_get_opts( "rg", tmp )  )
+	switch( lsftp_get_opts( "rg", tmp ) )
 	  {
-	    const char **mglob;
-	    const char **orgglob;
-	    const char *ptr;
-	    
-	    char* tmp2 = lsftp_qualify_path( tmp );
-
-	    if( !tmp2 )
-	      return -1;
-
-
-	    mglob = lsftp_dc_r_startglob( tmp2, 0, 1 );
-	    free( tmp2 );
-	    orgglob = mglob;
-
-	    if( mglob ) /* Glob returned allright? */		
-	      while( (ptr = *mglob++) ) 
-		rm_file_or_folder( ptr, command, recurse );
-	    
-	    lsftp_dc_endglob( orgglob );
+	  case 3: /* Both set? */
+	    recurse = !recurse;
+	    globbing = !globbing;
+	    break;
+	  case 2: /* -r */
+	    recurse = !recurse;
+	    break;
+	  case 1: /* -g */
+	    globbing = !globbing;
+	    break;
+	  default:
+	    printf( "Unknown option(s) %s\n", tmp );
 	  }
-      }
+      else 
+	{
+	  if( !globbing )
+	    rm_file_or_folder( tmp, command, recurse );
+	  else      /* Globbing desired */
+	    {
+	      const char **mglob;
+	      const char **orgglob;
+	      const char *ptr;
+	    
+	      char* tmp2 = lsftp_qualify_path( tmp );
+
+	      if( !tmp2 )
+		return -1;
+
+
+	      mglob = lsftp_dc_r_startglob( tmp2, 0, 1 );
+	      free( tmp2 );
+	      orgglob = mglob;
+
+	      if( mglob ) /* Glob returned allright? */		
+		while( (ptr = *mglob++) ) 
+		  rm_file_or_folder( ptr, command, recurse );
+	    
+	      lsftp_dc_endglob( orgglob );
+	    }
+	}
+
+      free( tmp );
+    }
 
 
   return 0;
@@ -705,7 +716,7 @@ com_rm(const char *arg, const char *command)
 int
 com_ls(const char *arg, const char *command) 
 {
-  char tmp[PATH_MAX];
+  char* tmp;
 
   int didls = 0;
   int longlist = ls_longlist;
@@ -717,7 +728,7 @@ com_ls(const char *arg, const char *command)
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
     {
       if( lsftp_get_opts( "la", tmp )  ) 
@@ -742,9 +753,9 @@ com_ls(const char *arg, const char *command)
 	  didls++;
 	  
 	  lsftp_await_command( id );
-
-/*  	  printf( "Returned from command\n" ); */
 	} 
+
+      free( tmp );
     }
   
   if( !didls ) /* No argument given? */
@@ -760,13 +771,13 @@ com_ls(const char *arg, const char *command)
 int
 com_set(const char *arg, const char *command UNUSED) 
 {
-  char tmp[PATH_MAX];
+  char* tmp;
 
   int show = 1;
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
     {
       if( !strncmp( "sloppy_complete", tmp, strlen( "sloppy_complete" ) ) )
@@ -848,6 +859,8 @@ com_set(const char *arg, const char *command UNUSED)
 
       if( show ) /* Obviously something was given, but we didn't recognise it */
 	printf( "Unknown command or variable: %s\n", tmp );
+
+      free( tmp );
     }
   
   if( show ) /* No argument given? */
@@ -874,7 +887,6 @@ get_file_or_folder(const char *arg, const char *command,
   const char *remotewd;
 
   const char *tmp;
-  char buffer[PATH_MAX+1];
 
   struct stat st;
   int id;
@@ -964,7 +976,7 @@ get_file_or_folder(const char *arg, const char *command,
       return ret;
     }
   
-  localwd = realpath( tmp, buffer ); /* FIXME: Should check boundary in configure somehow */  
+  localwd = canonicalize_file_name( tmp );
 
   if( !destname ) /* No destination given => likely first call,
 		   * make sure arg is an absolute path.
@@ -999,14 +1011,13 @@ get_file_or_folder(const char *arg, const char *command,
   /* Place trailing slashes after both paths */
 
   tmp = lsftp_concat( localwd, "/" );
+  free( localwd );
 
   if( !tmp )
     {
       perror( "Concat failed\n" );
       return -1;
     }
-
-  /* localwd is a static buffer, so don't free it */
 
   localwd = tmp;
 
@@ -1084,46 +1095,49 @@ int
 com_get(const char *arg, const char *command) 
 {
   int cont = gp_cont;
-  char tmp[PATH_MAX];
+  char* tmp;
 
   if( !lsftp_connected() )   /* Bail out if not connected */
     return com_disconnected();
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
-    if( lsftp_get_opts( "c", tmp )  ) 
-      switch( lsftp_get_opts( "c", tmp ) )
+    {
+      if( lsftp_get_opts( "c", tmp )  ) 
+	switch( lsftp_get_opts( "c", tmp ) )
+	  {
+	  case 1:
+	    cont = !cont;
+	    break;
+	  default:
+	    printf( "Unknown option(s) %s\n", tmp );
+	  }
+      else
 	{
-	case 1:
-	  cont = !cont;
-	  break;
-	default:
-	  printf( "Unknown option(s) %s\n", tmp );
-	}
-    else
-      {
-	const char **glob;
-	const char **orgglob;
-	const char *ptr;
-
-	char* tmp2 = lsftp_qualify_path( tmp );
-
-	if( !tmp2 )
-	  return -1;
-
-	glob = lsftp_dc_r_startglob( tmp2, 0, 1 );
-	free( tmp2 );
-
-	orgglob = glob;
-	
-	while( (ptr = *glob++) ) 
-	  get_file_or_folder( ptr, command, cont, 0 );
+	  const char **glob;
+	  const char **orgglob;
+	  const char *ptr;
 	  
-	lsftp_dc_endglob( orgglob );
-      }
- 
+	  char* tmp2 = lsftp_qualify_path( tmp );
+	  
+	  if( !tmp2 )
+	    return -1;
+	  
+	  glob = lsftp_dc_r_startglob( tmp2, 0, 1 );
+	  free( tmp2 );
+	  
+	  orgglob = glob;
+	  
+	  while( (ptr = *glob++) ) 
+	    get_file_or_folder( ptr, command, cont, 0 );
+	  
+	  lsftp_dc_endglob( orgglob );
+	}
+      
+      free( tmp );
+    }
   return 0;
 }
 
@@ -1138,7 +1152,6 @@ put_file_or_folder(const char *arg, const char *command,
   const char *remotewd;
 
   const char *tmp;
-  char buffer[PATH_MAX];
 
   struct stat st;
   int id;
@@ -1217,7 +1230,7 @@ put_file_or_folder(const char *arg, const char *command,
 
   }
 
-  localwd = realpath( arg, buffer );
+  localwd = canonicalize_file_name( arg );
 
   if( !destname ) /* No destination given => Make path absolute */
     {
@@ -1253,14 +1266,13 @@ put_file_or_folder(const char *arg, const char *command,
   /* Place trailing slashes after both paths */
 
   tmp = lsftp_concat( localwd, "/" );
+  free( tmp );
 
   if( !tmp )
     {
       perror( "Concat failed\n" );
       return -1;
     }
-
-  /* localwd is a static buffer, so don't free it */
 
   localwd = tmp;
 
@@ -1336,7 +1348,7 @@ put_file_or_folder(const char *arg, const char *command,
 
 int com_put(const char *arg, const char *command) 
 {
-  char tmp[PATH_MAX];
+  char* tmp;
   int cont = gp_cont;
 
   if( !lsftp_connected() )   /* Bail out if not connected */
@@ -1344,40 +1356,43 @@ int com_put(const char *arg, const char *command)
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
-    if( lsftp_get_opts( "c", tmp )  ) 
-      switch( lsftp_get_opts( "c", tmp ) )
+    {
+      if( lsftp_get_opts( "c", tmp )  ) 
+	switch( lsftp_get_opts( "c", tmp ) )
+	  {
+	  case 1:
+	    cont = !cont;
+	    break;
+	  default:
+	    printf( "Unknown option(s) %s\n", tmp );
+	  }
+      else
 	{
-	case 1:
-	  cont = !cont;
-	  break;
-	default:
-	  printf( "Unknown option(s) %s\n", tmp );
-	}
-    else
-      {
-	const char **glob;
-	const char **orgglob;
-	const char *ptr;
-	
-	glob = lsftp_dc_l_startglob( tmp, 1 );
-	orgglob = glob;
-	
-	while( (ptr = *glob++) ) 
-	  put_file_or_folder( ptr, command, cont, 0 );
+	  const char **glob;
+	  const char **orgglob;
+	  const char *ptr;
 	  
-	lsftp_dc_endglob( orgglob );
-      }
+	  glob = lsftp_dc_l_startglob( tmp, 1 );
+	  orgglob = glob;
+	  
+	  while( (ptr = *glob++) ) 
+	    put_file_or_folder( ptr, command, cont, 0 );
+	  
+	  lsftp_dc_endglob( orgglob );
+	}
+      
+      free( tmp );
+    }
   
- 
   return 0;
 }
 
 
 int com_chown(const char *arg, const char *command) 
 {
-  unsigned char tmp[PATH_MAX];
+  char* tmp;
   int gotuid = 0;
   int enough_parameters = 0;
   long newuid = 0;
@@ -1388,60 +1403,63 @@ int com_chown(const char *arg, const char *command)
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
-    if( !gotuid ) 
-      {
-	if( isdigit( tmp[0] ) ) /* Numeric GID? FIXME: Better check? */
-	  newuid = atol( tmp );
-	else
-	  {
-	    struct passwd* pwd;
+    {
+      if( !gotuid ) 
+	{
+	  if( isdigit( tmp[0] ) ) /* Numeric GID? FIXME: Better check? */
+	    newuid = atol( tmp );
+	  else
+	    {
+	      struct passwd* pwd;
 
-	    printf( "Warning: performing LOCAL lookup of user %s\n", tmp ); /* Warn user */
+	      printf( "Warning: performing LOCAL lookup of user %s\n", tmp ); /* Warn user */
 	    
-	    pwd = getpwnam( tmp );
+	      pwd = getpwnam( tmp );
 
-	    if( pwd ) /* OK? */
-	      newuid = pwd->pw_uid; /* get uid */
-	    else
-	      {
-		printf( "Lookup failed!\n" );
-		return -1; /* Signal failure */
-	      }
-	  }
+	      if( pwd ) /* OK? */
+		newuid = pwd->pw_uid; /* get uid */
+	      else
+		{
+		  printf( "Lookup failed!\n" );
+		  return -1; /* Signal failure */
+		}
+	    }
 
-	gotuid = 1;
-      }
-    else
-      {
-	int id;
+	  gotuid = 1;
+	}
+      else
+	{
+	  int id;
 	
-	const char **glob;
-	const char **orgglob;
-	const char *ptr;
+	  const char **glob;
+	  const char **orgglob;
+	  const char *ptr;
 
-	enough_parameters++;
+	  enough_parameters++;
 	
-	glob = lsftp_dc_l_startglob( tmp, 1 );
-	orgglob = glob;
+	  glob = lsftp_dc_l_startglob( tmp, 1 );
+	  orgglob = glob;
 	
-	while( (ptr = *glob++) )
-	  {
-	    id = lsftp_do_stat( ptr, &st );
+	  while( (ptr = *glob++) )
+	    {
+	      id = lsftp_do_stat( ptr, &st );
 
-       	    if( id > 0) /* Not a failure? */
-	      {
-		lsftp_await_command( id );
-		lsftp_do_chown( ptr, newuid, st.st_gid, command );
-	      }
+	      if( id > 0) /* Not a failure? */
+		{
+		  lsftp_await_command( id );
+		  lsftp_do_chown( ptr, newuid, st.st_gid, command );
+		}
 	    
-	    free( (void *) ptr );
-	  }
+	      free( (void *) ptr );
+	    }
 	
-	free( orgglob );
-      }
+	  free( orgglob );
+	}
 	
+      free( tmp );
+    }
 
   if( !enough_parameters )
     {
@@ -1455,7 +1473,7 @@ int com_chown(const char *arg, const char *command)
 
 int com_chgrp(const char *arg, const char *command) 
 {
-  unsigned char tmp[PATH_MAX];
+  char* tmp;
   int gotgid = 0;
   long newgid = 0;
   int enough_parameters = 0;
@@ -1466,45 +1484,49 @@ int com_chgrp(const char *arg, const char *command)
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
-    if( !gotgid )  /* First time? */
-      {
-	if( isdigit( tmp[0] ) ) /* Numeric GID? FIXME: Better check? */
-	  newgid = atol( tmp );
-	else
-	  {
-	    struct group* gr;
+    {
+      if( !gotgid )  /* First time? */
+	{
+	  if( isdigit( tmp[0] ) ) /* Numeric GID? FIXME: Better check? */
+	    newgid = atol( tmp );
+	  else
+	    {
+	      struct group* gr;
 
-	    printf("Warning: performing LOCAL lookup of group %s\n", tmp ); /* Warn user */
+	      printf("Warning: performing LOCAL lookup of group %s\n", tmp ); /* Warn user */
 	    
-	    gr = getgrnam( tmp );
+	      gr = getgrnam( tmp );
 
-	    if( gr ) /* OK? */
-	      newgid = gr->gr_gid; /* Get gid */
-	    else
-	      {
-		printf("Lookup failed!\n");
-		return -1; /* Signal failure */
-	      }
-	  }
+	      if( gr ) /* OK? */
+		newgid = gr->gr_gid; /* Get gid */
+	      else
+		{
+		  printf("Lookup failed!\n");
+		  return -1; /* Signal failure */
+		}
+	    }
 
-	gotgid = 1;
-      }
-    else
-      {
-	int id;
+	  gotgid = 1;
+	}
+      else
+	{
+	  int id;
 
-	enough_parameters++;
-	id = lsftp_do_stat( tmp, &st );
+	  enough_parameters++;
+	  id = lsftp_do_stat( tmp, &st );
 
-	if( id > 0) /* Not a failure? */
-	  {
-	    lsftp_await_command( id );
+	  if( id > 0) /* Not a failure? */
+	    {
+	      lsftp_await_command( id );
 	  
-	    lsftp_do_chown( tmp, st.st_uid, newgid, command );
-	  }
-      }
+	      lsftp_do_chown( tmp, st.st_uid, newgid, command );
+	    }
+	}
+
+      free( tmp );
+    }
 
   if( !enough_parameters )
     {
@@ -1519,11 +1541,11 @@ int
 com_jobs(const char *arg, const char *command UNUSED)
 {
   int listjobs = 0;
-  char tmp[PATH_MAX];
+  char* tmp;
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
     {
       int jobid;
@@ -1531,6 +1553,8 @@ com_jobs(const char *arg, const char *command UNUSED)
       jobid = atoi( tmp );
       lsftp_cb_status( jobid ); 
       listjobs++;
+
+      free( tmp );
     }
 
   if( !listjobs )
@@ -1558,24 +1582,26 @@ com_pwd(const char *arg UNUSED, const char *command UNUSED)
 int
 com_mv(const char *arg, const char *command) 
 {
-  char tmp[PATH_MAX];
-  char dst[PATH_MAX+1];
+  char* tmp;
+  char* dst = NULL;
   const char* orgarg = arg;
   int i = 0;
   int j = 0;
-  const char **glob;
-  const char **orgglob;
-  const char *ptr;  
+  const char** glob;
+  const char** orgglob;
+  const char* ptr;  
+  const char* lastptr = NULL;
 
   if( !lsftp_connected() )   /* Bail out if not connected */
     return com_disconnected();
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
     {
       char* tmp2 = lsftp_qualify_path( tmp );
+      free( tmp );
 
       if( !tmp2 )
 	return -1;
@@ -1584,15 +1610,25 @@ com_mv(const char *arg, const char *command)
       free( tmp2 );
 
       orgglob = glob;
-      
+      lastptr = NULL;
+
       while( (ptr = *glob++) ) 
 	{
-	  strncpy( dst, ptr, PATH_MAX );
+	  lastptr = ptr;
 	  i++;
 	}
 
+      if( lastptr ) /* Anything matched? */
+	{
+	  
+	  if( dst )
+	    free( dst );
+	  
+	  dst = strdup( lastptr ); /* dst should be a copy of the last argument */	 
+	}
+      
       lsftp_dc_endglob( orgglob );
-      }
+    }
   
   if( i <= 1 ) /* To few arguments */
     {
@@ -1600,14 +1636,19 @@ com_mv(const char *arg, const char *command)
       return -1;
     }
   
+  if( !dst ) /* Found no destination? */
+    return -1;
+  
   arg = orgarg;
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
     {
       char* tmp2 = lsftp_qualify_path( tmp );
+
+      free( tmp );
 
       if( !tmp2 )
 	return -1;
@@ -1652,14 +1693,16 @@ com_mv(const char *arg, const char *command)
       free( orgglob );
       }
 
+  free( dst );
+
   return 0;
 }
 
 int
 com_ln(const char *arg, const char *command) 
 {
-  char link[PATH_MAX];
-  char tmp[PATH_MAX];
+  char* link = NULL;
+  char* tmp;
 
   const char *orgarg = arg;
   int i = 0;
@@ -1667,27 +1710,47 @@ com_ln(const char *arg, const char *command)
   const char **glob;
   const char **orgglob;
   const char *ptr;  
+  const char *lastptr;
 
   if( !lsftp_connected() )   /* Bail out if not connected */
     return com_disconnected();
 
-
-
-
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
     {
-      glob = lsftp_dc_r_startglob( tmp, 0, 1 );
+      char* tmp2 = lsftp_qualify_path( tmp );
+
+      free( tmp );
+
+      if( !tmp2 )
+	return -1;
+
+      glob = lsftp_dc_r_startglob( tmp2, 0, 1 );
+      free( tmp2 );
+
       orgglob = glob;
-      
+
+      if( !glob )
+	return -1;
+
+      lastptr = NULL;
+
       while( (ptr = *glob++) ) 
 	{
-	  strncpy( link, ptr, PATH_MAX );
+	  lastptr = ptr;
 	  i++;
 	}
-      
+
+      if( lastptr )
+	{
+	  if( link )
+	    free( link );
+
+	  link = strdup( lastptr);
+	}
+
       lsftp_dc_endglob( orgglob );
     }
   
@@ -1707,7 +1770,7 @@ com_ln(const char *arg, const char *command)
        */
 
       lsftp_do_ln( filename_part( link ), link, command );
-
+      free( link );
       return 0;
    }
 
@@ -1721,7 +1784,7 @@ com_ln(const char *arg, const char *command)
 
   while( arg && 
 	 *arg && 
-	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
+	 ( arg = lsftp_s_strtok( arg," \n\t\r", &tmp ) ) 
 	 )
     {
       glob = lsftp_dc_r_startglob( tmp, 0, 1 );
@@ -1751,11 +1814,13 @@ com_ln(const char *arg, const char *command)
 	      else
 		lsftp_do_ln( link, ptr, command );
 	    }
-	  free( (void *) ptr );
 	}
 
-      free( orgglob );
-      }
+      lsftp_dc_endglob( orgglob );
+
+      free( tmp );
+    }
+
 
   return 0;
 }
@@ -1763,31 +1828,35 @@ com_ln(const char *arg, const char *command)
 int
 com_lcd(const char *arg, const char *command UNUSED) 
 {
-  char tmp[PATH_MAX];
-  const char **gldata = 0;
+  char* tmp;
+  const char **gldata = NULL;
   int ret;
+  
 
-  while( 
-	( arg =
-	  lsftp_s_strtok( arg, " \n\t\r", tmp, PATH_MAX )
-	  )
-	) /* Get argument */    
+  arg = lsftp_s_strtok( arg, " \n\t\r", &tmp );  /* Get argument */    
+   
+  if( tmp )
     gldata = lsftp_dc_l_contglob( tmp, gldata, 1 );
+  
+  free( tmp );
+
+  if( !gldata ) /* glob failed? */
+    return -1;
 
   switch( lsftp_dc_numglob( gldata )  )
     {
     case 0:        /* No path given, go home */
       ret = chdir("~");
       break;
-      
+	
     case 1:
       ret = chdir( gldata[0] );
       break;
       
     default:
-      printf( "lcd: To many arguments (expected one, got %d)\n", 
-	      lsftp_dc_numglob( gldata )
-	      );
+	printf( "lcd: To many arguments (expected one, got %d)\n", 
+		lsftp_dc_numglob( gldata )
+		);
     }
   
   lsftp_dc_endglob( gldata );
@@ -1838,7 +1907,7 @@ gidstring( int gid )
 int
 com_lls(const char *arg, const char *command UNUSED) 
 {
-  char tmp[PATH_MAX];
+  char* tmp;
   const char **gldata = 0;
   struct stat st;
   int i = 0;
@@ -1851,7 +1920,7 @@ com_lls(const char *arg, const char *command UNUSED)
 
   while( 
 	( arg =
-	  lsftp_s_strtok( arg, " \n\t\r", tmp, PATH_MAX )
+	  lsftp_s_strtok( arg, " \n\t\r", &tmp )
 	  )
 	) /* Get argument */    
     {
@@ -1876,6 +1945,8 @@ com_lls(const char *arg, const char *command UNUSED)
 	  gldata = lsftp_dc_l_contglob( tmp, gldata, 1 );
 	  args++;
 	}
+
+      free( tmp );
     }
 
   if( !args )
@@ -1988,10 +2059,31 @@ int
 com_lpwd(const char *arg UNUSED, const char *command UNUSED) 
 {
   char* pwd;
-  pwd = getcwd( NULL, PATH_MAX ); /* Get where we are now */
+  char* ret;
+  int size;
 
-  if( !pwd )            /* Failed? */
+#ifdef PATH_MAX
+  size = PATH_MAX;
+#else
+  size = 8192;
+#endif
+
+  /* FIXME: Detect and use if getcwd can allocate the buffer by itself */
+
+  pwd = malloc( size+1 );
+
+  if( !pwd )
     return -1;
+
+  ret = getcwd( pwd, size ); /* Get where we are now */
+  pwd[ size ] = 0; /* Make certain it is NULL-terminated*/
+
+  if( !ret )            /* Failed? */
+    {
+      perror( "getcwd failed" );
+      free( pwd );
+      return -1;
+    }
 
   printf( "%s\n",pwd ); /*  Print it */
   free( pwd );
@@ -2012,7 +2104,7 @@ int
 handle_command(const unsigned char *s)
 {
   const char *entered_cmd = s;
-  char tmp[WORDLENMAX];
+  char* tmp;
   char *cmdname;
   int i=0;
     
@@ -2032,7 +2124,7 @@ handle_command(const unsigned char *s)
 
   /* Get the first word from the line (the command) */
 
-  s = lsftp_s_strtok(s," \n\t\r", tmp, WORDLENMAX); 
+  s = lsftp_s_strtok(s," \n\t\r", &tmp );
   
   if(!s) /* s equals null ? */
     return NOCOMMAND;
@@ -2047,14 +2139,20 @@ handle_command(const unsigned char *s)
       if( neededlen <= tmplen  &&  /* Sufficiently long string? */
 	  !strncmp( cmdname, tmp, tmplen )  /* Matching command? */                
 	  )          
-	return commands[i-1].func( 
-				lsftp_s_skip(s," \n\t\r"), 
-				entered_cmd 
-				);
-	
+	{
+	  free( tmp );
+
+	  return commands[i-1].func( 
+				    lsftp_s_skip(s," \n\t\r"), 
+				    entered_cmd 
+				    );
+	}
     }
 
+  
   printf("Unknown command %s\n", tmp);
+  
+  free( tmp );
   return -UNKNOWNCOMMAND;
 
 }

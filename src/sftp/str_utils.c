@@ -139,17 +139,18 @@ lsftp_unqoute( char* s )
 
 const char *
 lsftp_s_strtok(const char* s, const char* sep,
-	       char *store, int storelen )
+	       char **store )
 {
   /* TODO: should we do this different to support char-types with more than eight bits? */
 
   int copychars;
   char* tend;
+  char* scopy;
 
+  *store = NULL;
 
   if( !s )   /* NULL-address given? */
     return NULL;
-
 
   /* Skip any starting separators */
 
@@ -159,15 +160,16 @@ lsftp_s_strtok(const char* s, const char* sep,
   if( !s || !(*s) ) /* No string or ended without a token (only contained separators) */
 	return NULL;
 
-  tend = lsftp_s_skipn( s, sep );    /* Find the first separator in our new s */
+  tend = lsftp_s_skipn( s, sep );    /* Find the first separator in our new s (or it's end) */
+ 
+  scopy = strndup(s, tend-s); /* Put the token in store */
 
-  copychars = ( tend-s > storelen-1 ? storelen-1 : tend-s );
- /* The number of bytes to copy is min(tend-tstart,storelen-1) */
+  if( !scopy )
+    return NULL;
 
-  strncpy(store, s, copychars); /* Put the token in store */
+  scopy[tend-s] = 0;                /* Make sure it is null-terminated */
 
-  store[copychars]=0;                /* Make sure it is null-terminated */
-
+  *store = scopy;
   return tend;                 /* Return a pointer to where we haven't yet looked */
     
 }

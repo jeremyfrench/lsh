@@ -1,3 +1,33 @@
+2002-06-06  Pontus Sköld  <pont@soua.net>
+
+	* commands.c (com_lpwd): Don't assume getcwd with extended
+	functionality, use 8192 as a fallback if PATH_MAX is undefined.
+
+	* configure.ac: Check for canonicalize_file_name.
+
+	* commands.c (get_file_or_folder): Use canonicalize_file_name
+	instead of realpath.
+	(put_file_or_folder): Dito.
+
+	* gnu_stuff.c: Added compability function for systems without
+	canonicalize_file_name.
+
+	* gnu_stuff.h: Declaration of compability function.
+
+2002-06-05  Pontus Sköld  <pont@soua.net>
+
+	* str_utils.h: Changed declaration of lsftp_s_strtok, take a
+	char** to fill in with a new allocated string instead of a buffer
+	and it's length.
+
+	* str_utils.c (lsftp_s_strtok): See above.
+
+	* commands.c: Changed to use the new lsftp_s_strtok.
+
+	* rl.c (lsftp_rl_completion): Dito.
+
+	* sftp_bind.c (lsftp_open_connection): Dito.
+
 2002-05-26  Pontus Sköld  <pont@soua.net>
 
 	* rl.c (lsftp_rl_remotefile_generator):

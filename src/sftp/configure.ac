@@ -316,7 +316,7 @@ AC_HEADER_TIME
 
 
 
-AC_CHECK_FUNCS([getcwd getwd strcoll strdup  getenv fnmatch dup2])
+AC_CHECK_FUNCS([getcwd getwd strcoll strdup  getenv fnmatch dup2 canonicalize_file_name])
 
 
 

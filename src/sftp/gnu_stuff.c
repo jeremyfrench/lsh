@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 void lsftp_welcome()
 {
@@ -113,3 +114,39 @@ void do_gnu_stuff( const char** argv )
 }
 
 
+#ifndef HAVE_CANONICALIZE_FILE_NAME
+
+/* Compability function, taken from a parted patch */
+
+char*
+canonicalize_file_name (const char* name)
+{
+  char* buf;
+  int size;
+  char* result;
+  
+#ifdef PATH_MAX
+  size = PATH_MAX;
+#else
+  /* Bigger is better; realpath has no way todo bounds checking.  */
+  size = 4096;
+#endif
+
+  /* Just in case realpath does not NULL terminate the string
+   * or it just fits in SIZE without a NULL terminator.  */
+  buf = calloc( size + 1, 1 );
+ 
+  if( !buf ) 
+    {
+      errno = ENOMEM;
+      return NULL;
+    }
+
+  result = realpath(name, buf);
+
+  if (! result)
+    free (buf);
+
+  return result;
+}
+#endif /* !HAVE_CANONICALIZE_FILE_NAME */
