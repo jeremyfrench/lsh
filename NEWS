@@ -1,3 +1,14 @@
+News for the 1.1.0 release:
+
+	First, note that the 1.1.x series should be considered
+	experimental.
+
+	New program lsh-export-key (contributed by jps, and then
+	hacked some more by me).
+
+	Some of the methods for public-key operations have been
+	improved and generalized.
+	
 News for the 1.0.6 release
 
 	Fixed bug in ssh-dss bug-compatibility.

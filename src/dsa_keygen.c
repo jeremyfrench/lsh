@@ -45,7 +45,8 @@
 #define SEED_LENGTH SHA_DIGESTSIZE
 #define SEED_BITS (SEED_LENGTH * 8)
 
-static void hash(mpz_t x, UINT8 *digest)
+static void
+hash(mpz_t x, UINT8 *digest)
 {
   mpz_t t;
   UINT8 data[SEED_LENGTH];
@@ -63,7 +64,8 @@ static void hash(mpz_t x, UINT8 *digest)
   sha_digest(&ctx, digest);
 }
 
-void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
+void
+dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
 {
   unsigned L;
   unsigned n, b;
@@ -151,7 +153,8 @@ void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
     }
 }
 
-void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q)
+void
+dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q)
 {
   mpz_t e;
   mpz_t n;

@@ -1,3 +1,19 @@
+2000-10-18  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/abstract_crypto.h, src/dsa.c, src/dsa.h, src/rsa.c: Cleanup. 
+
+	* src/sexp-conv.c: #include spki_commands.h
+
+	* src/spki_commands.c (spki_signer2verifier,
+	spki_verifier2public):  New commands, that replace the old
+	spki_signer2public. 
+
+	* src/lsh-writekey.c (make_writekey): Use verifier2public and
+	signer2verifier. 
+
+	* src/spki.c, src/spki_commands.c: Moved definitions of commands
+	out of spki.c.
+
 2000-10-17  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/spki.c (spki_make_public_key): Take a verifier as argument.

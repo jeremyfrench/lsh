@@ -248,3 +248,8 @@ Replace most defines with enums, for improved type checking.
 Write more testcases for rsa.
 
 Perhaps change the LOOKUP_VERIFIER method to return an spki_subject?
+
+Change the COMMAND_SIMPLE and COMMAND_STATIC macros to take argument
+names as arguments, making them more hygienig. Perhaps also rename
+them in the process.
+
