@@ -39,9 +39,32 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(strerror)
 
 AC_REPLACE_FUNCS(mempcpy strndup strchrnul)
-# FIXME: Need to include stdio.h when testing for these functions.
-# At least on freebsd, putc_unlocked is a macro.
-AC_CHECK_FUNCS(flockfile putc_unlocked)
+
+dnl ARGP_CHECK_FUNC(includes, function-call [, if-found [, if-not-found]])
+AC_DEFUN([ARGP_CHECK_FUNC],
+  [AS_VAR_PUSHDEF([ac_func], m4_substr([$2], 0, m4_index([$2], [(])))
+   AS_VAR_PUSHDEF([ac_var], [ac_cv_func_call_]ac_func)
+   AC_CACHE_CHECK([for $2], ac_var,
+     [AC_TRY_LINK([$1], [$2],
+		  [AS_VAR_SET(ac_var, yes)],
+		  [AS_VAR_SET(ac_var, no)])])
+   if test ac_var = yes ; then
+     ifelse([$3],,
+               [AC_DEFINE_UNQUOTED([AS_TR_CPP([HAVE_$ac_func])])],
+	       [$3
+])
+   else
+     ifelse([$4],, true, [$4])
+   fi
+   AS_VAR_POPDEF([ac_var])
+   AS_VAR_POPDEF([ac_func])
+   ])
+
+# At least on freebsd, putc_unlocked is a macro, so the standard
+# AC_CHECK_FUNCS doesn't work well.
+ARGP_CHECK_FUNC([#include <stdio.h>], [putc_unlocked('x', stdout)])
+
+AC_CHECK_FUNCS(flockfile)
 AC_CHECK_FUNCS(fputs_unlocked fwrite_unlocked)
 
 # Used only by argp-test.c, so don't use AC_REPLACE_FUNCS.
