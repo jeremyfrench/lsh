@@ -528,6 +528,8 @@ LSH_FUNC_STRSIGNAL
 AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(select socket strtol alarm)
+# HP-UX doesn't have seteuid
+AC_CHECK_FUNCS(seteuid setresuid)
 AC_CHECK_FUNCS(getrusage gettimeofday)
 AC_CHECK_FUNCS(getspnam)
 AC_CHECK_FUNCS(vsnprintf inet_aton)
