@@ -190,7 +190,8 @@ DEFINE_COMMAND2(spki_sexp2keypair_command)
 
 /* Reading of ACL:s
  * ****************/
- 
+
+#if 0
 /* Adds an ACL s-expression to an SPKI-context. Returns the context. */
 
 static void
@@ -224,6 +225,7 @@ DEFINE_COMMAND(spki_add_acl_command)
 
   COMMAND_RETURN(c, self);
 }
+#endif
 
 DEFINE_COMMAND(spki_make_context_command)
      (struct command *s UNUSED,
@@ -235,36 +237,6 @@ DEFINE_COMMAND(spki_make_context_command)
   trace("spki_make_context_command\n");
   
   COMMAND_RETURN(c, make_spki_context(algorithms));
-}
-
-/* Reads a file of ACL:s, and returns an spki_context. */
-
-/* GABA:
-   (expr
-     (name spki_read_acl)
-     (params
-       (algorithms object alist))
-     (expr
-       (lambda (file)
-         (let ((ctx (spki_make_context
-	              ;; Delay call, so that we really
-		      ;; create one context for each file.
-	              (prog1 algorithms file))))
-	   (for_sexp
-	     (lambda (e) ctx) ; Return ctx
-  	     ;; Keep on reading until an SEXP_EOF or
-	     ;; SEXP_SYNTAX exception is raised. 
-	     (spki_add_acl ctx)
-	     file)))))
-*/
-
-struct command *
-make_spki_read_acls(struct alist *algorithms)
-{
-  CAST_SUBTYPE(command, res, spki_read_acl(algorithms));
-
-  trace("make_spki_read_acl\n");
-  return res;
 }
 
 
