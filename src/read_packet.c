@@ -133,11 +133,14 @@ static int do_read_packet(struct read_handler **h,
 	      /* FIXME: Free associated resources! */
 	      return LSH_OK | LSH_CLOSE;
 	    }
+
+	  assert(n > 0);
+	  
 	  closure->pos += n;
 	  total += n;
 	  
 	  /* Read a complete block? */
-	  if (n == left)
+	  if ( (unsigned) n == left)
 	    {
 	      UINT32 length;
 
@@ -216,11 +219,14 @@ static int do_read_packet(struct read_handler **h,
 	      /* FIXME: Free associated resources! */
 	      return LSH_FAIL | LSH_DIE;
 	    }
+
+	  assert(n > 0);
+	  
 	  closure->pos += n;
 	  total += n;
 
 	  /* Read a complete packet? */
-	  if (n == left)
+	  if ( (unsigned) n == left)
 	    {
 	      UINT32 left
 		= ( (closure->buffer->length + closure->buffer->data)
@@ -262,11 +268,14 @@ static int do_read_packet(struct read_handler **h,
 		/* FIXME: Free associated resources! */
 		return LSH_FAIL | LSH_DIE;
 	      }
+
+	    assert(n > 0);
+	  
 	    closure->pos += n;
 	    total += n;
 	    
 	    /* Read complete mac? */
-	    if (n == left)
+	    if ( (unsigned) n == left)
 	      {
 		mac = alloca(closure->connection->rec_mac->hash_size);
 		HASH_DIGEST(closure->connection->rec_mac, mac);
