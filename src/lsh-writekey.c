@@ -25,10 +25,12 @@
 
 #include "algorithms.h"
 #include "crypto.h"
+#include "dsa.h"
 #include "format.h"
 #include "io_commands.h"
 /* For read_password() */
 #include "password.h"
+#include "rsa.h"
 #include "sexp_commands.h"
 #include "spki_commands.h"
 #include "version.h"
@@ -118,8 +120,11 @@ make_lsh_writekey_options(void)
 
   self->crypto_algorithms = many_algorithms(0, -1);
   self->signature_algorithms
-    = make_alist(1,
-		 ATOM_DSA, make_dsa_algorithm(NULL), -1);
+    = make_alist(3,
+		 ATOM_DSA, make_dsa_algorithm(NULL),
+		 ATOM_RSA_PKCS1_SHA1, &rsa_sha1_algorithm.super,
+		 ATOM_RSA_PKCS1_MD5, &rsa_md5_algorithm.super,
+		 -1);
   /* We use this only for salt and iv generation. */
   self->r = make_reasonably_random();
 
