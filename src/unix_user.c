@@ -749,7 +749,11 @@ do_spawn(struct lsh_user *u,
 
       safe_close(info->in[0]);  safe_close(info->in[1]);
       safe_close(info->out[0]); safe_close(info->out[1]);
-      safe_close(info->err[0]); safe_close(info->err[1]);
+      safe_close(info->err[0]);
+      /* Allow the client's stdout and stderr to be the same fd, e.g.
+       * both /dev/null. */
+      if (info->err[1] != info->out[1])
+	safe_close(info->err[1]);
 
       return NULL;
     }
@@ -765,7 +769,11 @@ do_spawn(struct lsh_user *u,
       /* Close the child's fd:s, except ones that are -1 */
       safe_close(info->in[0]);
       safe_close(info->out[1]);
-      safe_close(info->err[1]);
+
+      /* Allow the client's stdout and stderr to be the same fd, e.g.
+       * both /dev/null. */
+      if (info->err[1] != info->out[1])
+	safe_close(info->err[1]);
 
       safe_close(sync[1]);
 
@@ -864,7 +872,11 @@ do_spawn(struct lsh_user *u,
       safe_close(info->out[0]);
       safe_close(info->out[1]);
       safe_close(info->err[0]);
-      safe_close(info->err[1]);
+      /* Allow the client's stdout and stderr to be the same fd, e.g.
+       * both /dev/null. */
+      if (info->err[1] != info->out[1])
+	safe_close(info->err[1]);
+
       safe_close(tty);
       
       exec_shell(user, info);
