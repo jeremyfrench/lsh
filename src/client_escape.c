@@ -32,26 +32,11 @@
 #include <assert.h>
 #include <string.h>
 
-#include <unistd.h>
+/* This must be defined before including the .x file. */
+
+enum escape_state { GOT_NONE, GOT_NEWLINE, GOT_ESCAPE };
 
 #include "client_escape.c.x"
-
-static void
-do_suspend(struct lsh_callback *self UNUSED)
-{
-  pid_t group = getpgid(0);
-
-  if (group < 0)
-    werror("do_suspend: getpgid failed (errno = %i): %z\n",
-	   errno, STRERROR(errno));
-  else if (kill(getpgid(0), SIGTSTP) < 0)
-    werror("do_suspend: kill failed (errno = %i): %z\n",
-	   errno, STRERROR(errno));
-}
-
-/* FIXME: Use const? */
-static struct lsh_callback
-escape_suspend = { STATIC_HEADER, do_suspend };
   
 struct escape_info *
 make_escape_info(UINT8 escape)
@@ -64,9 +49,6 @@ make_escape_info(UINT8 escape)
   for (i = 0; i<0x100; i++)
     self->dispatch[i] = NULL;
 
-  /* C-z */
-  self->dispatch[26] = &escape_suspend;
-
   return self;
 }
 
@@ -78,12 +60,8 @@ make_escape_info(UINT8 escape)
        (info object escape_info)
        ; Number of characters of the prefix NL escape
        ; that have been read.
-       (state . int)))
+       (state . "enum escape_state")))
 */
-
-#define GOT_NONE 0
-#define GOT_NEWLINE 1
-#define GOT_ESCAPE 2
 
 /* Search for NEWLINE ESCAPE, starting at pos. If successful, returns
  * 1 and returns the index of the escape char. Otherwise, returns
@@ -186,6 +164,10 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
 	done = 0;
       else
 	done = 1;
+      break;
+
+    case GOT_NONE:
+      /* No special processing needed. */
       break;
     }
   
