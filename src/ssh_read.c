@@ -32,7 +32,6 @@
 
 #include "ssh_read.h"
 
-#include "exception.h"
 #include "io.h"
 #include "lsh_string.h"
 #include "xalloc.h"
@@ -41,7 +40,9 @@
 # include "ssh_read.h.x"
 #undef GABA_DEFINE
 
-static const struct exception *
+/* Returns zero on success. OTherwise returns errno, using EPIPE for
+   an unexpected EOF. */
+static int
 ssh_read(struct lsh_string *data, uint32_t start, int fd, uint32_t length,
 	 int allow_eof, uint32_t *done)
 {
@@ -54,23 +55,21 @@ ssh_read(struct lsh_string *data, uint32_t start, int fd, uint32_t length,
   while (res < 0 && errno == EINTR);
 
   if (res < 0)
-    return make_io_exception(EXC_IO_READ, NULL,
-			     errno, NULL);
+    return errno;
+  
   else if (res == 0)
     {
       if (allow_eof)
 	{
 	  *done = 0;
-	  return NULL;
+	  return 0;
 	}
-      else
-	return make_io_exception(EXC_IO_READ, NULL,
-				 0, "Unexpected EOF");
+      else return EPIPE;
     }
   else
     {
       *done = res;
-      return NULL;
+      return 0;
     }
 }
 
@@ -85,7 +84,7 @@ static void *
 oop_ssh_read_line(oop_source *source, int fd, oop_event event, void *state)
 {
   CAST_SUBTYPE(ssh_read_state, self, (struct lsh_object *) state);
-  const struct exception *e;
+  int e;
   uint32_t to_read;
   uint32_t done;
   
@@ -104,7 +103,7 @@ oop_ssh_read_line(oop_source *source, int fd, oop_event event, void *state)
     {
     error:
       source->cancel_fd(source, fd, OOP_READ);
-      EXCEPTION_RAISE(self->e, e);
+      ERROR_CALLBACK(self->error, e);
       return OOP_CONTINUE;
     }
   else
@@ -140,8 +139,7 @@ oop_ssh_read_line(oop_source *source, int fd, oop_event event, void *state)
 
 	  if (self->pos == lsh_string_length(self->data))
 	    {
-	      e = make_io_exception(EXC_IO_READ, NULL,
-				    0, "Line too long");
+	      e = EOVERFLOW;
 	      goto error;
 	    }
 	}
@@ -150,44 +148,13 @@ oop_ssh_read_line(oop_source *source, int fd, oop_event event, void *state)
 }
 
 static void *
-oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state)
-{
-  CAST_SUBTYPE(ssh_read_state, self, (struct lsh_object *) state);
-  const struct exception *e;
-  uint32_t to_read;
-  uint32_t done;
-  
-  assert(event == OOP_READ);
-  to_read = lsh_string_length(self->data) - self->pos;
-
-  e = ssh_read(self->data, self->pos, fd, to_read, 0, &done);
-  if (e)
-    {
-      source->cancel_fd(source, fd, OOP_READ);
-      EXCEPTION_RAISE(self->e, e);
-      return OOP_CONTINUE;
-    }  
-
-  self->pos += done;
-  assert(self->pos <= lsh_string_length(self->data));
-  if (self->pos == lsh_string_length(self->data))
-    {
-      struct lsh_string *packet = self->data;
-
-      self->pos = 0;
-      self->data = NULL;
-      source->cancel_fd(source, fd, OOP_READ);
-	  
-      A_WRITE(self->handler, packet);
-    }
-  return OOP_CONTINUE; 
-}
+oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state);
 
 static void *
 oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
 {
   CAST_SUBTYPE(ssh_read_state, self, (struct lsh_object *) state);
-  const struct exception *e;
+  int e;
   uint32_t to_read;
   uint32_t done;
   
@@ -199,7 +166,7 @@ oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
   if (e)
     {
       source->cancel_fd(source, fd, OOP_READ);
-      EXCEPTION_RAISE(self->e, e);
+      ERROR_CALLBACK(self->error, e);
       return OOP_CONTINUE;
     }
 
@@ -231,11 +198,48 @@ oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
   return OOP_CONTINUE;      
 }
 
+static void *
+oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state)
+{
+  CAST_SUBTYPE(ssh_read_state, self, (struct lsh_object *) state);
+  int e;
+  uint32_t to_read;
+  uint32_t done;
+  
+  assert(event == OOP_READ);
+  to_read = lsh_string_length(self->data) - self->pos;
+
+  e = ssh_read(self->data, self->pos, fd, to_read, 0, &done);
+  if (e)
+    {
+      source->cancel_fd(source, fd, OOP_READ);
+      ERROR_CALLBACK(self->error, e);
+      return OOP_CONTINUE;
+    }  
+
+  self->pos += done;
+  assert(self->pos <= lsh_string_length(self->data));
+  if (self->pos == lsh_string_length(self->data))
+    {
+      struct lsh_string *packet = self->data;
+
+      self->pos = 0;
+      self->data = NULL;
+      /* Prepare to read next packet. */      
+      source->cancel_fd(source, fd, OOP_READ);
+      source->on_fd(source, fd, OOP_READ, oop_ssh_read_header, self);
+	  
+      A_WRITE(self->handler, packet);
+    }
+  return OOP_CONTINUE; 
+}
+
+
 void
 init_ssh_read_state(struct ssh_read_state *self,
 		    uint32_t max_header, uint32_t header_length,
 		    struct header_callback *process,
-		    struct exception_handler *e)
+		    struct error_callback *error)
 {
   self->pos = 0;
   
@@ -245,16 +249,16 @@ init_ssh_read_state(struct ssh_read_state *self,
   self->data = NULL;
   self->process = process;
   self->handler = NULL;
-  self->e = e;
+  self->error = error;
 }
 
 struct ssh_read_state *
 make_ssh_read_state(uint32_t max_header, uint32_t header_length,
 		    struct header_callback *process,
-		    struct exception_handler *e)
+		    struct error_callback *error)
 {
   NEW(ssh_read_state, self);
-  init_ssh_read_state(self, max_header, header_length, process, e);
+  init_ssh_read_state(self, max_header, header_length, process, error);
 
   return self;
 }
@@ -278,8 +282,6 @@ ssh_read_header(struct ssh_read_state *self,
 		oop_source *source, int fd,
 		struct abstract_write *handler)
 {
-  /* assert(header_length <= lsh_string_length(self->header)); */
-
   self->handler = handler;
 
   source->on_fd(source, fd, OOP_READ, oop_ssh_read_header, self);

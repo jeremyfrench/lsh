@@ -43,8 +43,16 @@ struct ssh_read_state;
                        "struct ssh_read_state *" "uint32_t *done")))
 */
 
-#define HEADER_CALLBACK(c, s, p) \
-((c)->process((c), (s), (p)))
+#define HEADER_CALLBACK(c, s, p) ((c)->process((c), (s), (p)))
+
+/* GABA:
+   (class
+     (name error_callback)
+     (vars
+       (error method void "int error")))
+*/
+
+#define ERROR_CALLBACK(s, e) ((s)->error((s), (e)))
 
 /* GABA:
    (class
@@ -65,7 +73,7 @@ struct ssh_read_state;
        (process object header_callback)
        ; Called for each complete line or packet
        (handler object abstract_write)
-       (e object exception_handler)))
+       (error object error_callback)))
 */  
 
 void
@@ -82,11 +90,11 @@ void
 init_ssh_read_state(struct ssh_read_state *state,
 		    uint32_t max_header, uint32_t header_length,
 		    struct header_callback *process,
-		    struct exception_handler *e);
+		    struct error_callback *error);
 
 struct ssh_read_state *
 make_ssh_read_state(uint32_t max_header, uint32_t header_length,
 		    struct header_callback *process,
-		    struct exception_handler *e);
+		    struct error_callback *error_callback);
 
 #endif /* LSH_SSH_READ_H_INCLUDED */
