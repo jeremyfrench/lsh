@@ -1275,7 +1275,7 @@ do_read_file_fail(struct lsh_user *u UNUSED,
 		  uint32_t limit UNUSED,
 		  struct abstract_write *c UNUSED)
 {
-  make_io_exception(EXC_IO_OPEN_READ, NULL, 0, "Access denied.");  
+  return make_io_exception(EXC_IO_OPEN_READ, NULL, 0, "Access denied.");  
 }
 
 static struct lsh_process *
