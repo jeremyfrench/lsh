@@ -53,7 +53,8 @@
 #define USER_LOOKUP(db, n, f) ((db)->lookup((db), (n), (f)))
 
 struct user_db *
-make_unix_user_db(struct io_backend *backend, const char *pw_helper, int allow_root);
+make_unix_user_db(struct io_backend *backend, struct reap *reaper,
+		  const char *pw_helper, int allow_root);
 
 /* GABA:
    (class

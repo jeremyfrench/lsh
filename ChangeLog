@@ -1,6 +1,46 @@
+2000-10-15  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/server_session.c: Don't need to know about any reaper
+	anymore (as that is handled by the unix_user object).
+
+	* src/unix_user.c (unix_user): Replaced backend and pw_helper
+	attributes with a pointer to the unix_user_db object.
+	(pwhelper_callback): New class.
+	(do_pwhelper_callback): New function.
+	(make_pwhelper_callback): Likewise.
+	(kerberos_check_pw): Made non-blocking.
+	(do_verify_password): Try ordinary unix passwords first, and use
+	pw_helper only if ordinary password fails.
+	(unix_user_db): Added reaper attribute.
+
+	* src/userauth.h (lsh_user): Changed arguments for
+	password_verify, now take a continuation and an exception handler.
+	Removed reaper argument from fork_process.
+
+	* configure.in: Bumped version to 1.1.0.
+
+	* src/server_password.c (do_authenticate): Pass continuation and
+	exception handler to USER_VERIFY_PASSWORD.
+
+	* src/lshd.c: New option --password-helper. Changed
+	--kerberos-passwords to not take any argument. Updated handling of
+	reaper; pass it to make_unix_user_db() but not to
+	make_shell_handler() and make_exec_handler().
+
+	* src/sexp-conv.c (main_argp): Changed usage message to mention
+	fingerprinting. Still not very good.
+
+	* src/rsa.c: Include <string.h>.
+
 2000-10-13  Niels Möller  <nisse@lysator.liu.se>
 
 	* README: Fixed references to lsh-writekey and lsh-keygen. 
+
+2000-10-11  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/Makefile.am.in: Try to create all machine independent files
+	in $(srcdir).
+	* src/testsuite/Makefile.am: Likewise.
 
 2000-10-11  Niels Möller  <nisse@cuckoo.localdomain>
 
