@@ -73,6 +73,7 @@ void ssh_format_write(const char *format, UINT32 length, UINT8 *buffer, ...)
 }
      
 static int write_decimal_length(UINT8 *buffer, UINT32 n);
+static void format_hex_string(UINT8 *buffer, UINT32 length, const UINT8 *data);
 
 UINT32 ssh_vformat_length(const char *f, va_list args)
 {
@@ -85,6 +86,7 @@ UINT32 ssh_vformat_length(const char *f, va_list args)
 	  int literal = 0;
 	  int decimal = 0;
 	  int unsigned_form = 0;
+	  int hex = 0;
 	  
 	  while(*++f)
 	    {
@@ -101,6 +103,9 @@ UINT32 ssh_vformat_length(const char *f, va_list args)
 		  break;
 		case 'u':
 		  unsigned_form = 1;
+		  break;
+		case 'x':
+		  hex = 1;
 		  break;
 		default:
 		  goto end_options;
@@ -135,8 +140,10 @@ end_options:
 		UINT32 l = va_arg(args, UINT32); /* String length */ 
 		(void) va_arg(args, UINT8 *);    /* data */
 
-
 		length += l;
+
+		if (hex)
+		  length += l;
 
 		if (decimal)
 		  length += format_size_in_decimal(l) + 1;
@@ -149,6 +156,9 @@ end_options:
 	      {
 		struct lsh_string *s = va_arg(args, struct lsh_string *);
 		length += s->length;
+
+		if (hex)
+		  length += s->length;
 		
 		if (decimal)
 		  length += format_size_in_decimal(s->length) + 1;
@@ -279,6 +289,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	  int literal = 0;
 	  int do_free = 0;
 	  int decimal = 0;
+	  int hex = 0;
 	  int unsigned_form = 0;
 	  
 	  while(*++f)
@@ -296,6 +307,9 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 		  break;
 		case 'u':
 		  unsigned_form = 1;
+		  break;
+		case 'x':
+		  hex = 1;
 		  break;
 		default:
 		  goto end_options;
@@ -336,8 +350,32 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 
 	    case 's':
 	      {
-		UINT32 length = va_arg(args, UINT32);
+		UINT32 size = va_arg(args, UINT32);
 		UINT8 *data = va_arg(args, UINT8 *);
+
+		UINT32 length = hex ? (2*size) : size;
+
+		if (decimal)
+		  buffer += write_decimal_length(buffer, length);
+		else if (!literal)
+		  {
+		    WRITE_UINT32(buffer, length);
+		    buffer += 4;
+		  }
+
+		if (hex)
+		  format_hex_string(buffer, size, data);
+		else
+		  memcpy(buffer, data, size);
+		
+		buffer += length;
+
+		break;
+	      }
+	    case 'S':
+	      {
+		struct lsh_string *s = va_arg(args, struct lsh_string *);
+		UINT32 length = hex ? (2*size) : size;
 
 		if (decimal)
 		  buffer += write_decimal_length(buffer, length);
@@ -348,26 +386,12 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 		    buffer += 4;
 		  }
 
-		memcpy(buffer, data, length);
+		if (hex)
+		  format_hex_string(buffer, s->length, s->data);
+		else
+		  memcpy(buffer, s->data, s->length);
+
 		buffer += length;
-
-		break;
-	      }
-	    case 'S':
-	      {
-		struct lsh_string *s = va_arg(args, struct lsh_string *);
-
-		if (decimal)
-		  buffer += write_decimal_length(buffer, s->length);
-
-		else if (!literal)
-		  {
-		    WRITE_UINT32(buffer, s->length);
-		    buffer += 4;
-		  }
-
-		memcpy(buffer, s->data, s->length);
-		buffer += s->length;
 
 		if (do_free)
 		  lsh_string_free(s);
@@ -536,6 +560,19 @@ unsigned format_size_in_decimal(UINT32 n)
 #undef SIZE
   
   return e+1;
+}
+
+
+static void format_hex_string(UINT8 *buffer, UINT32 length, const UINT8 *data)
+{
+  static const UINT8 hexchars[16] = "0123456789abcdef";
+  UINT32 i;
+
+  for (i = 0; i < length; i++)
+    {
+      *buffer++ = hexchars[ (data[i] & 0xf0) >> 4 ];
+      *buffer++ = hexchars[ data[i] & 0x0f ];
+    }
 }
 
 void format_decimal(unsigned length, UINT8 *buffer, UINT32 n)

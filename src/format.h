@@ -67,6 +67,10 @@
  * digits. For strings, format the input string using sexp syntax;
  * i.e. prefixed with the length in decimal.
  *
+ * "x" (as in heXadecimal). For strings, format each character as two
+ * hexadecimal digits. Does not currently mean any thing for numbers.
+ * Note that this modifier is orthogonal to the decimal modifier.
+ * 
  * "f" (as in free). Frees the input string after it has been copied.
  * Applicable to %S only.
  *
