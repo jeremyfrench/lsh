@@ -25,10 +25,17 @@
 
 #include "server_x11.h"
 
+#include "format.h"
 #include "reaper.h"
+#include "resource.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include <string.h>
+
+#include <unistd.h>
+#include <fcntl.h>
 
 #define GABA_DEFINE
 #include "server_x11.h.x"
@@ -50,7 +57,8 @@
 */
 
 static void
-do_xauth_exit(struct exit_callback *s, int signaled, int core, int value)
+do_xauth_exit(struct exit_callback *s, int signaled,
+	      int core UNUSED, int value)
 {
   CAST(xauth_exit_callback, self, s);
   
@@ -63,7 +71,7 @@ do_xauth_exit(struct exit_callback *s, int signaled, int core, int value)
     }
   else
     /* NOTE: Return value is ignored. */
-    COMMAND_RETURN(c, NULL);
+    COMMAND_RETURN(self->c, NULL);
 }
 
 static struct exit_callback *
@@ -74,14 +82,28 @@ make_xauth_exit_callback(struct command_continuation *c,
   self->super.exit = do_xauth_exit;
   self->c = c;
   self->e = e;
+
+  return &self->super;
+}
+
+/* NOTE: We don't check the arguments for spaces or other magic
+ * characters. The xauth process in unprivileged, and the user is
+ * properly authenticated to call it with arbitrary commands. We still
+ * check for NUL characters, though. */
+static int
+bad_string(UINT32 length, const UINT8 *data)
+{
+  return !!memchr(data, '\0', length);
 }
 
 /* On success, returns 1 and sets *DISPLAY and *XAUTHORITY */
 struct server_x11_info *
 server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
-		 const struct lsh_string *protocol,
-		 const struct lsh_string *cookie,
-		 UINT32 screen)
+		 UINT32 protocol_length, const UINT8 *protocol,
+		 UINT32 cookie_length, const UINT8 *cookie,
+		 UINT32 screen,
+		 struct command_continuation *c,
+		 struct exception_handler *e)
 {
   /* Get a free socket under /tmp/.X11-unix/ */
   UINT32 display_number = 17;
@@ -89,32 +111,30 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
   struct lsh_string *display;
   struct lsh_string *xauthority;
   
-  struct server_x11_info *info;
-  
   const char *tmp;
 
   /* FIXME: Bind socket, set up forwarding */
   struct lsh_fd *socket = NULL;
 
-  if (!lsh_get_cstring(protocol))
+  if (bad_string(protocol_length, protocol))
     {
       werror("server_x11_setup: Bogus protocol name.\n");
       return NULL;
     }
   
-  if (!lsh_get_cstring(cookie))
+  if (bad_string(cookie_length, cookie))
     {
       werror("server_x11_setup: Bogus cookie.\n");
       return NULL;
     }
   
-  if (cookie->length < X11_MIN_COOKIE_LENGTH)
+  if (cookie_length < X11_MIN_COOKIE_LENGTH)
     {
       werror("server_x11_setup: Cookie too small.\n");
       return NULL;
     }
 
-  tmp = getenv(TMPDIR);
+  tmp = getenv("TMPDIR");
   if (!tmp)
     tmp = "tmp";
   
@@ -123,36 +143,73 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
 
   {
     struct spawn_info spawn;
-    const char *args[5] = { "-c", "xauth $0 $1 $2",
-			    lsh_get_cstring(*display),
-			    lsh_get_cstring(protocol),
-			    lsh_get_cstring(cookie) };
+    const char *args[2] = { "-c", "xauth" };
     const struct env_value env[1] =
-      { {"XAUTHORITY", lsh_get_cstring(*xauthority) } };
+      { {"XAUTHORITY", xauthority } };
 
     struct lsh_process *process;
-    
+
+    int null;
+
     memset(&spawn, 0, sizeof(spawn));
-    spawn->peer = NULL;
-    spawn->pty = NULL;
-    spawn->login = 0;
-    spawn->argc = 5;
-    spawn->argv = args;
-    spawn->env_length = 1;
-    spawn->env = env;
+    
+    null = open("/dev/null", O_WRONLY);
+    if (null < 0)
+      goto fail;
+
+    /* [0] for reading, [1] for writing */
+    if (!lsh_make_pipe(spawn.in))
+      {
+	close(null);
+	goto fail;
+      }
+    spawn.out[0] = -1; spawn.out[1] = null;
+    spawn.err[0] = -1; spawn.err[1] = null;
+    
+    spawn.peer = NULL;
+    spawn.pty = NULL;
+    spawn.login = 0;
+    spawn.argc = 2;
+    spawn.argv = args;
+    spawn.env_length = 1;
+    spawn.env = env;
 
     process = USER_SPAWN(user, &spawn, make_xauth_exit_callback(c, e));
     if (process)
       {
-	REMEMBER_RESOURCE(channel->resources, &process->super);
 	NEW(server_x11_info, info);
+	static const struct report_exception_info report =
+	  STATIC_REPORT_EXCEPTION_INFO(EXC_IO, EXC_IO, "writing xauth stdin");
+
+	struct lsh_fd *in
+	  = io_write(make_lsh_fd(spawn.in[1],
+				 "xauth stdin",
+				 make_report_exception_handler
+				 (&report, e, HANDLER_CONTEXT)),
+		     1024, NULL);
+
+	A_WRITE(&in->write_buffer->super,
+		/* NOTE: We pass arbitrary data to the xauth process,
+		 * if the user so wish. */
+		 ssh_format("add %lS %ls %ls",
+			   display,
+			   protocol_length, protocol,
+			   cookie_length, cookie));
+	close_fd_write(in);
+
+	remember_resource(channel->resources, &process->super);
+	remember_resource(channel->resources, &in->super);	
+	
 	info->display = display;
 	info->xauthority = xauthority;
-
+	
 	return info;
       }
     else
       {
+	close(spawn.in[0]);
+	close(spawn.in[1]);
+      fail:
 	lsh_string_free(display);
 	lsh_string_free(xauthority);
 	return NULL;

@@ -44,9 +44,11 @@
 
 struct server_x11_info *
 server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
-		 const struct lsh_string *protocol,
-		 const struct lsh_string *cookie,
-		 UINT32 screen);
+		 UINT32 protocol_length, const UINT8 *protocol,
+		 UINT32 cookie_length, const UINT8 *cookie,
+		 UINT32 screen,
+		 struct command_continuation *c,
+		 struct exception_handler *e);
 
 #if 0
 /* Returns the display */
