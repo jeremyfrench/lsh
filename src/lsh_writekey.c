@@ -43,7 +43,7 @@
 #endif
 
 static struct read_sexp_command read_sexp
-= STATIC_READ_SEXP(SEXP_CANONICAL, 0);
+= STATIC_READ_SEXP(SEXP_TRANSPORT, 0);
 
 #define READ_SEXP (&read_sexp.super.super)
 
@@ -61,13 +61,14 @@ static struct print_sexp_command write_transport
    (expr
      (name make_writekey)
      (globals
-       (prog1 PROG1)
-       (private2public PRIVATE2PUBLIC)
+       ;; (prog1 PROG1)
+       ;; (private2public PRIVATE2PUBLIC)
        (open IO_WRITE_FILE)
        (stdin IO_READ_STDIN)
        (read READ_SEXP)
-       (transport TRANSPORT)
-       (canonical CANONICAL))
+       ;; (transport TRANSPORT)
+       ;; (canonical CANONICAL)
+       )
      (params
        (private object io_write_file_info)
        (public object io_write_file_info))
