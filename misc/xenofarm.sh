@@ -49,6 +49,9 @@ if type ar >/dev/null ; then : ; else
     fi
 fi
 
+# Export new value
+export PATH
+
 rm -rf r
 mkdir r
 exec > r/shlog.txt 2>&1
