@@ -19,8 +19,9 @@
 # include <config.h>
 #endif
 
+#include "idcache.h"
+
 #include <stdio.h>
-#include <sys/types.h>
 #include <pwd.h>
 #include <grp.h>
 
@@ -34,6 +35,7 @@
 # include <unistd.h>
 #endif
 
+#if 0
 #ifndef _POSIX_VERSION
 struct passwd *getpwuid ();
 struct passwd *getpwnam ();
@@ -43,6 +45,7 @@ struct group *getgrnam ();
 
 char *xmalloc ();
 char *xstrdup ();
+#endif
 
 #ifdef __DJGPP__
 static char digits[] = "0123456789";
@@ -61,8 +64,10 @@ struct userid
 
 static struct userid *user_alist;
 
+#if 0
 /* The members of this list have names not in the local passwd file.  */
 static struct userid *nouser_alist;
+#endif
 
 /* Translate UID to a login name, with cache, or NULL if unresolved.  */
 
@@ -77,9 +82,11 @@ getuser (uid_t uid)
       return tail->name;
 
   pwent = getpwuid (uid);
-  tail = (struct userid *) xmalloc (sizeof (struct userid));
+  tail = (struct userid *) malloc (sizeof (struct userid));
+  if (!tail)
+    return NULL;
   tail->id.u = uid;
-  tail->name = pwent ? xstrdup (pwent->pw_name) : NULL;
+  tail->name = pwent ? strdup (pwent->pw_name) : NULL;
 
   /* Add to the head of the list, so most recently used is first.  */
   tail->next = user_alist;
@@ -87,6 +94,7 @@ getuser (uid_t uid)
   return tail->name;
 }
 
+#if 0
 /* Translate USER to a UID, with cache.
    Return NULL if there is no such user.
    (We also cache which user names have no passwd entry,
@@ -135,10 +143,13 @@ getuidbyname (const char *user)
   nouser_alist = tail;
   return 0;
 }
+#endif
 
 /* Use the same struct as for userids.  */
 static struct userid *group_alist;
+#if 0
 static struct userid *nogroup_alist;
+#endif
 
 /* Translate GID to a group name, with cache, or NULL if unresolved.  */
 
@@ -153,9 +164,11 @@ getgroup (gid_t gid)
       return tail->name;
 
   grent = getgrgid (gid);
-  tail = (struct userid *) xmalloc (sizeof (struct userid));
+  tail = (struct userid *) malloc (sizeof (struct userid));
+  if (!tail)
+    return NULL;
   tail->id.g = gid;
-  tail->name = grent ? xstrdup (grent->gr_name) : NULL;
+  tail->name = grent ? strdup (grent->gr_name) : NULL;
 
   /* Add to the head of the list, so most recently used is first.  */
   tail->next = group_alist;
@@ -163,6 +176,7 @@ getgroup (gid_t gid)
   return tail->name;
 }
 
+#if 0
 /* Translate GROUP to a GID, with cache.
    Return NULL if there is no such group.
    (We also cache which group names have no group entry,
@@ -211,3 +225,4 @@ getgidbyname (const char *group)
   nogroup_alist = tail;
   return 0;
 }
+#endif
