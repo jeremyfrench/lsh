@@ -2353,7 +2353,8 @@ lsh_make_pipe(int *fds)
   return 1;
 }
 
-/* Forks a filtering process, and reads the output. */
+/* Forks a filtering process, and reads the output. Always closes
+   the IN fd. */
 int
 lsh_popen(const char *program, const char **argv, int in,
 	  pid_t *child)
@@ -2428,7 +2429,7 @@ lsh_popen_read(const char *program, const char **argv, int in,
     }
 
   if (!s)
-    return s;
+    return NULL;
 
   if (WIFEXITED(status))
     {
@@ -2436,11 +2437,12 @@ lsh_popen_read(const char *program, const char **argv, int in,
 	/* Success. */
 	return s;
 
-      werror("sexp-conv exited with status %i.\n", WEXITSTATUS(status));
+      werror("Program `%z' exited with status %i.\n",
+	     program, WEXITSTATUS(status));
     }
   else
-    werror("sexp-conv terminated by signal %i (%z).\n",
-	   WTERMSIG(status), STRSIGNAL(WTERMSIG(status)));
+    werror("Program `%z' terminated by signal %i (%z).\n",
+	   program, WTERMSIG(status), STRSIGNAL(WTERMSIG(status)));
 
   lsh_string_free(s);
   return NULL;
