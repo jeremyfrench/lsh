@@ -1,4 +1,4 @@
-dist-rapid7 = \
+dist_rapid7 = \
 	rapid7-ssh-pdu/0000001.pdu \
 	rapid7-ssh-pdu/0000002.pdu \
 	rapid7-ssh-pdu/0000003.pdu \
