@@ -368,14 +368,14 @@ static int do_exit_status(struct channel_request *c,
     {
       *closure->exit_status = status;
 
-      ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);;
-      ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);;
+      ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
+      ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
       /* Sent EOF, if we haven't done that already. */
       /* FIXME: Make this behaviour configurable, there may be some
        * child process alive that we could talk to. */
 
-      if (!(channel->flags && CHANNEL_SENT_EOF))
+      if (!(channel->flags & CHANNEL_SENT_EOF))
 	return channel_eof(channel);
       
       return LSH_OK | LSH_GOON;
@@ -422,8 +422,8 @@ static int do_exit_signal(struct channel_request *c,
       if (core)
 	werror("(core dumped remotely)\n");
 
-      ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);;
-      ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);;
+      ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
+      ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
       return close_client_session(channel);
     }
