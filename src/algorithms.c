@@ -60,7 +60,7 @@ struct alist *many_algorithms(unsigned n, ...)
 #if WITH_IDEA
 		 ATOM_IDEA_CBC, crypto_cbc(&idea_algorithm),
 #endif
-		 ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
+		 ATOM_HMAC_SHA1, make_hmac_algorithm(&sha1_algorithm),
 		 ATOM_HMAC_MD5, make_hmac_algorithm(&md5_algorithm),
 #if WITH_ZLIB
 		 ATOM_ZLIB, make_zlib(),
@@ -74,7 +74,7 @@ struct alist *many_algorithms(unsigned n, ...)
 }
 
 /* This is not really efficient, but it doesn't matter. */
-static int strcmp_list(char *name, ...)
+static int strcmp_list(const char *name, ...)
 {
   va_list args;
   char *s;
@@ -94,7 +94,7 @@ static int strcmp_list(char *name, ...)
   return res;
 }
     
-int lookup_crypto(struct alist *algorithms, char *name)
+int lookup_crypto(struct alist *algorithms, const char *name)
 {
   int atom;
 
@@ -124,7 +124,7 @@ int lookup_crypto(struct alist *algorithms, char *name)
     return 0;
 }
 
-int lookup_mac(struct alist *algorithms, char *name)
+int lookup_mac(struct alist *algorithms, const char *name)
 {
   int atom;
 
@@ -145,7 +145,7 @@ int lookup_mac(struct alist *algorithms, char *name)
     return 0;
 }
 
-int lookup_compression(struct alist *algorithms, char *name)
+int lookup_compression(struct alist *algorithms, const char *name)
 {
   int atom;
 
@@ -164,6 +164,26 @@ int lookup_compression(struct alist *algorithms, char *name)
     return 0;
 }
 
+int lookup_hash(struct alist *algorithms, const char *name, int none_is_valid)
+{
+  int atom;
+
+  if (none_is_valid && !strcmp(name, "none"))
+    return ATOM_NONE;
+  
+  if (strcmp_list(name, "md5", NULL))
+    atom = ATOM_MD5;
+  else if (strcmp_list(name, "sha1", NULL))
+    atom = ATOM_SHA1;
+  else
+    return 0;
+
+  /* Is this hash algorithm supported? */
+  if (ALIST_GET(algorithms, atom))
+    return atom;
+  else
+    return 0;
+}
 
 struct int_list *default_crypto_algorithms(void)
 {

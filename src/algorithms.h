@@ -26,9 +26,10 @@
 */
 
 struct alist *many_algorithms(unsigned count, ...);
-int lookup_crypto(struct alist *algorithms, char *name);
-int lookup_mac(struct alist *algorithms, char *name);
-int lookup_compression(struct alist *algorithms, char *name);
+int lookup_crypto(struct alist *algorithms, const char *name);
+int lookup_mac(struct alist *algorithms, const char *name);
+int lookup_compression(struct alist *algorithms, const char *name);
+int lookup_hash(struct alist *algorithms, const char *name, int none_is_valid);
 
 struct int_list *default_crypto_algorithms(void);
 struct int_list *default_mac_algorithms(void);
