@@ -44,14 +44,16 @@ dnl ARGP_CHECK_FUNC(includes, function-call [, if-found [, if-not-found]])
 AC_DEFUN([ARGP_CHECK_FUNC],
   [AS_VAR_PUSHDEF([ac_func], m4_substr([$2], 0, m4_index([$2], [(])))
    AS_VAR_PUSHDEF([ac_var], [ac_cv_func_call_]ac_func)
+   AH_TEMPLATE(AS_TR_CPP(HAVE_[]ac_func),
+               [Define to 1 if you have the `]ac_func[' function.])
    AC_CACHE_CHECK([for $2], ac_var,
      [AC_TRY_LINK([$1], [$2],
 		  [AS_VAR_SET(ac_var, yes)],
 		  [AS_VAR_SET(ac_var, no)])])
-   if test ac_var = yes ; then
+   if test AS_VAR_GET(ac_var) = yes ; then
      ifelse([$3],,
-               [AC_DEFINE_UNQUOTED([AS_TR_CPP([HAVE_$ac_func])])],
-	       [$3
+	    [AC_DEFINE_UNQUOTED(AS_TR_CPP(HAVE_[]ac_func))],
+	    [$3
 ])
    else
      ifelse([$4],, true, [$4])
