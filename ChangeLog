@@ -1,5 +1,11 @@
 2003-04-22  Niels Möller  <niels@s3.kth.se>
 
+	* src/tcpforward_commands.c (forward_local_port): Use prog1 to
+	delay bind call until the connection is established.
+
+	* src/testsuite/tcpip-local-in-use-test: New test case, to check
+	the error handling for "address already in use".
+
 	* src/unix_user.c (exec_shell): Build the argument list for
 	lsh-execuv only if we need to change uid. Include the name of the
 	exec:ed program if exec fails.
