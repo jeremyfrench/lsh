@@ -1,3 +1,47 @@
+2000-04-21  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/testsuite/lsh-cat-test: Use diff to check result.
+
+	* src/userauth.h: Added more arguments to the USER_FORK method. 
+
+	* src/unix_user.c (make_logout_cleanup): New function.
+	(lsh_strncpy): New funtion.
+	(lsh_strncpy_tty): Kew function.
+	(lsh_make_utmp): New function.
+	(process_resource): Class moved here from server_session.c. 
+	(do_fork_process): Added utmp/wtmp support, and some more
+	arguments. 
+
+	* src/tcpforward_commands.c (do_tcpip_connect_io): Take a
+	listen_value as argument, not an lsh_fd.
+
+	* src/sexp_commands.c (do_read_sexp): Changed
+	CAST_SUBTYPE(lsh_fd...) to CAST(lsh_fd...)
+	* src/tcpforward.c (do_tcpip_forward_request_continuation):
+	Likewise. 
+
+	* src/server_session.c (spawn_process): Added peer argument, and
+	updated callers.
+	(spawn_process): Adapted to the changed USER_FORK method.
+
+	* src/lsh.h: Added forward declarations for struct reap and struct
+	exit_callback. 
+
+	* src/io_commands.c (make_connect_continuation): New function. 
+	(do_connect): Return a listen_value, not an lsh_fd. Now,
+	"listen_value" is an inappropriate name.
+
+	* src/io_commands.c (io_log_peer_command): Don't strip peer
+	information.  
+
+	* src/io.c (io_listen_local): Use fchdir().
+	(io_connect_local): New function.
+
+	* src/connection_commands.c (do_handshake): Take a listen_value
+	as argument, not an lsh_fd.
+
+	* src/connection.c (make_ssh_connection): Added peer argument. 
+
 2000-04-20  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/tcpforward_commands.c: Changed uses of listen_command to
