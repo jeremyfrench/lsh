@@ -46,27 +46,80 @@ static void usage(void) NORETURN;
 
 static void usage(void)
 {
-  fprintf(stderr, "Usage: lsh_keygen nist-level\n");
+  werror("Usage: lsh_keygen [-o style] [-l nist-level] [-a dss] [-q] [-d] [-v]\n");
   exit(1);
 }
 
 int main(int argc, char **argv)
 {
-  int l;
+  int option;
+  long l = 4;
+  int style = SEXP_TRANSPORT;
+  
   struct dss_public public;
   mpz_t x;
   
   mpz_t t;
   struct randomness *r;
+
+  while((option = getopt(argc, argv, "a:dl:o:qv")) != -1)
+    switch(option)
+      {
+      case 'l':
+	{
+	  char *end;
+
+	  l = strtol(optarg, &end, 0);
+	      
+	  if (!*optarg || *end)
+	    usage();
+
+	  if ( (l<0) || (l > 8))
+	    {
+	      werror("lsh_keygen: nist-level should be in the range 0-8.\n");
+	      usage();
+	    }
+	  break;
+	}
+      case 'a':
+	if (strcmp(optarg, "dss"))
+	  {
+	    werror("lsh_keygen: Sorry, doesn't support any algorithm but dss.\n");
+	    usage();
+	  }
+	break;
+      case 'o':
+	if (!strcmp(optarg, "transport"))
+	  style = SEXP_TRANSPORT;
+	else if (!strcmp(optarg, "canonical"))
+	  style = SEXP_CANONICAL;
+	else if (!strcmp(optarg, "advanced"))
+	  style = SEXP_ADVANCED;
+	else if (!strcmp(optarg, "international"))
+	  style = SEXP_INTERNATIONAL;
+	else
+	  {
+	    werror("lsh_keygen: Style must be one of\n"
+		   "  'transport', 'canonical', 'advanced' or 'international'\n");
+	    usage();
+	  }
+	break;
+      case 'q':
+	quiet_flag = 1;
+	break;
+      case 'd':
+	debug_flag = 1;
+	break;
+      case 'v':
+	verbose_flag = 1;
+	break;
+      default:
+	usage();
+      }
   
-  if (argc != 2)
+  if (argc != optind)
     usage();
   
-  l = atoi(argv[1]);
-
-  if ( (l<0) || (l > 8))
-    usage();
-
   mpz_init(public.p);
   mpz_init(public.q);
   mpz_init(public.g);
@@ -127,7 +180,7 @@ int main(int argc, char **argv)
 		     sexp_l(2, sexp_z("g"), sexp_n(public.g), -1),
 		     sexp_l(2, sexp_z("y"), sexp_n(public.y), -1),
 		     sexp_l(2, sexp_z("x"), sexp_n(x), -1), -1), -1),
-       SEXP_CANONICAL);
+       style);
 
     return LSH_FAILUREP(A_WRITE(output, key))
       ? 1 : 0;
