@@ -989,9 +989,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 #if WITH_SRP	    
 	    if (self->with_srp_keyexchange)
 	      {
-		LIST(self->kex_algorithms)[i++] = ATOM_SRP_GROUP1_SHA1;
+		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1;
 		ALIST_SET(self->super.algorithms,
-			  ATOM_SRP_GROUP1_SHA1,
+			  ATOM_SRP_RING1_SHA1,
 			  make_srp_client(make_srp1(self->random),
 					  ssh_format("%lz", self->user)));
 	      }
