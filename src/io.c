@@ -1569,7 +1569,7 @@ io_listen_local(struct io_backend *b,
    * In particular, it should not be an absolute filename. */
   assert(!memchr(info->name->data, '/', info->name->length));
 
-  local_length = OFFSETOF(struct sockaddr_un, sun_path) + info->name->length;
+  local_length = offsetof(struct sockaddr_un, sun_path) + info->name->length;
   local = alloca(local_length);
 
   local->sun_family = AF_UNIX;
@@ -1633,7 +1633,7 @@ io_connect_local(struct io_backend *b,
    * In particular, it should not be an absolute filename. */
   assert(!memchr(info->name->data, '/', info->name->length));
 
-  addr_length = OFFSETOF(struct sockaddr_un, sun_path) + info->name->length;
+  addr_length = offsetof(struct sockaddr_un, sun_path) + info->name->length;
   addr = alloca(addr_length);
 
   addr->sun_family = AF_UNIX;
