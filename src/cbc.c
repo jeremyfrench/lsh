@@ -30,6 +30,10 @@
 
 #include "cbc.c.x"
 
+#if !HAVE_MEMXOR
+#include "memxor.h"
+#endif
+
 /* CLASS:
    (class
      (name cbc_algorithm)

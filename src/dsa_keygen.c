@@ -30,6 +30,10 @@
 
 #include "sha.h"
 
+#if !HAVE_MEMXOR
+#include "memxor.h"
+#endif
+
 #include <assert.h>
 
 /* The (slow) NIST method of generating DSA primes. Algorithm 4.56 of
