@@ -1,5 +1,9 @@
 /* socks.c
  *
+ * References:
+ *
+ * Socks4 is described in http://archive.socks.permeo.com/protocol/socks4.protocol.
+ * Socks5 is described in RFC 1928.
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -81,12 +85,15 @@ enum {
 enum {
   SOCKS_HEADER_SIZE = 2,
   SOCKS_COMMAND_SIZE = 5,
+  SOCKS4_COMMAND_SIZE = 9, /* FIXME: For now we support only empty usernames */
   SOCKS_MAX_SIZE = 262,
 };
 
 enum socks_state {
   SOCKS_VERSION_HEADER, SOCKS_VERSION_METHODS,
-  SOCKS_COMMAND_HEADER, SOCKS_COMMAND_ADDR, SOCKS_COMMAND_WAIT,
+  SOCKS_COMMAND_HEADER, SOCKS_COMMAND_ADDR,
+  SOCKS4_COMMAND,
+  SOCKS_COMMAND_WAIT,
 };
 
 struct command_2 socks_handshake;
@@ -135,10 +142,27 @@ socks_reply(struct socks_connection *self,
 	    const uint8_t *addr,
 	    uint16_t port)
 {
-  socks_write(self, ssh_format("%c%c%c%c%ls%c%c",
-			       self->version, status, 0, atype,
-			       alength, addr,
-			       port >> 8, port & 0xff));
+  switch (self->version)
+    {
+    default:
+      fatal("socks_reply: Internal error\n");
+      
+    case 5:
+      socks_write(self, ssh_format("%c%c%c%c%ls%c%c",
+				   self->version, status, 0, atype,
+				   alength, addr,
+				   port >> 8, port & 0xff));
+      break;
+    case 4:
+      assert(atype == SOCKS_IP4);
+      assert(alength == 4);
+
+      socks_write(self, ssh_format("%c%c%c%c%ls",
+				   0, status ? 91 : 90,
+				   port >> 8, port & 0xff,
+				   alength, addr));
+      break;
+    }
 }
 
 static struct address_info *
@@ -339,30 +363,46 @@ do_read_socks(struct read_handler **h,
     {
     default:
       abort();
-      
-      /* Version exchange is:
 
-         byte     version ; 4 or 5
+      /* For socks 4, the command is sent directly,
+
+         byte     version ; 4
+	 byte     command
+	 uint16   port
+	 uint32   ip
+	 byte[n]  NUL-terminated userid	 
+      */
+      
+      /* For socks 5, the initial version exchange is:
+
+         byte     version ; 5
 	 byte     n; >= 1
 	 byte[n]  methods
       */
       
     case SOCKS_VERSION_HEADER:
-      if (p[0] < 4  || p[0] > 5)
+      self->socks->version = p[0];
+      verbose("Socks version %i connection.\n", self->socks->version);
+
+      switch (self->socks->version)
 	{
+	default:
 	  werror("Socks connection of unknown version %i.\n", p[0]);
 	  socks_fail(self->socks);
-	}
-      else
-	{
-	  self->socks->version = p[0];
+	  break;
+	  
+	case 4:
+	  self->length = SOCKS4_COMMAND_SIZE;
+	  self->state = SOCKS4_COMMAND;
+	  break;
+	  
+	case 5:
 	  self->length = 2 + p[1];
 	  self->state = SOCKS_VERSION_METHODS;
-
-	  verbose("Socks version %i connection.\n", self->socks->version);
+	  break;
 	}
       break;
-
+      
     case SOCKS_VERSION_METHODS:
       /* We support only method 0 */
       if (memchr(p+2, SOCKS_NOAUTH, p[1]))
@@ -439,7 +479,30 @@ do_read_socks(struct read_handler **h,
       self->buffer = NULL;
       *h = NULL;
       break;
+      
+    case SOCKS4_COMMAND:
+      if (p[SOCKS4_COMMAND_SIZE - 1] != 0)
+	/* FIXME: We should read and ignore the user name. If we are
+	 * lucky, it's already in the i/o buffer and will be
+	 * discarded. */
+	werror("Socks 4 usernames not yet supported. May or may not work.\n");
+      
+      if (socks_command(self->socks, p[1], SOCKS_IP4, p+4,
+			READ_UINT16(p + 2)))
+	{
+	  self->state = SOCKS_COMMAND_WAIT;
+	}
+      else
+	{
+	  socks_fail(self->socks);
+	}
+
+      lsh_string_free(self->buffer);
+      self->buffer = NULL;
+      *h = NULL;
+      break;
     }
+  
   return available;
 }
   
