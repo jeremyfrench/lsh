@@ -63,6 +63,7 @@ struct crypto_algorithm
 struct hash_instance
 {
   struct lsh_object header;
+
   UINT32 hash_size;
   void (*update)(struct hash_instance *self,
 		 UINT32 length, UINT8 *data);

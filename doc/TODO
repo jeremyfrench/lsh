@@ -45,7 +45,7 @@ CONFIGURATION
 Read configuration files. Better command line options.
 
 
-LEAKS
+ALLOCATION
 
 Not all packet consumers free processed packets properly.
 
@@ -54,6 +54,9 @@ and thos (for instance, strings and atom lists) which are deallocated
 explicitly). 
 
 Implement a mark&sweep gc.
+
+Use separate "storage-types" for lsh_string_alloc and
+lssh_space_alloc.
 
 
 CHANNELS
