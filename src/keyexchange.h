@@ -102,14 +102,16 @@
 struct lsh_string *format_kex(struct kexinit *kex);
 void disconnect_kex_failed(struct ssh_connection *connection, const char *msg);
 
-struct crypto_instance *
-kex_make_encrypt(struct hash_instance *secret,
+int
+kex_make_encrypt(struct crypto_instance **c,
+		 struct hash_instance *secret,
 		 struct object_list *algorithms,
 		 int type,
 		 struct lsh_string *session_id);
 
-struct crypto_instance *
-kex_make_decrypt(struct hash_instance *secret,
+int
+kex_make_decrypt(struct crypto_instance **c,
+		 struct hash_instance *secret,
 		 struct object_list *algorithms,
 		 int type,
 		 struct lsh_string *session_id);

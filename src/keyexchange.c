@@ -461,41 +461,44 @@ kex_make_key(struct hash_instance *secret,
   return key;
 }
   
-struct crypto_instance *
-kex_make_encrypt(struct hash_instance *secret,
+int
+kex_make_encrypt(struct crypto_instance **c,
+		 struct hash_instance *secret,
 		 struct object_list *algorithms,
 		 int type,
 		 struct lsh_string *session_id)
 {
   CAST_SUBTYPE(crypto_algorithm, algorithm, LIST(algorithms)[type]);
-    
+  
   struct lsh_string *key;
   struct lsh_string *iv = NULL;
-  struct crypto_instance *crypto;
-
+  
   assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
+  
+  *c = NULL;
 
   if (!algorithm)
-    return NULL;
+    return 1;
 
   key = kex_make_key(secret, algorithm->key_size,
 		     type, session_id);
-
+  
   if (algorithm->iv_size)
     iv = kex_make_key(secret, algorithm->iv_size,
 		      IV_TYPE(type), session_id);
   
-  crypto = MAKE_ENCRYPT(algorithm, key->data,
-			iv ? iv->data : NULL);
+  *c = MAKE_ENCRYPT(algorithm, key->data,
+		    iv ? iv->data : NULL);
 
   lsh_string_free(key);
   lsh_string_free(iv);
   
-  return crypto;
+  return *c != NULL;
 }
 
-struct crypto_instance *
-kex_make_decrypt(struct hash_instance *secret,
+int
+kex_make_decrypt(struct crypto_instance **c,
+		 struct hash_instance *secret,
 		 struct object_list *algorithms,
 		 int type,
 		 struct lsh_string *session_id)
@@ -504,26 +507,27 @@ kex_make_decrypt(struct hash_instance *secret,
 
   struct lsh_string *key;
   struct lsh_string *iv = NULL;
-  struct crypto_instance *crypto;
 
   assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
 
+  *c = NULL;
+
   if (!algorithm)
-    return NULL;
-  
+    return 1;
+
   key = kex_make_key(secret, algorithm->key_size,
 		     type, session_id);
-
+    
   if (algorithm->iv_size)
     iv = kex_make_key(secret, algorithm->iv_size,
 		      IV_TYPE(type), session_id);
   
-  crypto = MAKE_DECRYPT(algorithm, key->data, iv ? iv->data : NULL);
+  *c = MAKE_DECRYPT(algorithm, key->data, iv ? iv->data : NULL);
 
   lsh_string_free(key);
   lsh_string_free(iv);
-  
-  return crypto;
+    
+  return *c != NULL;
 }
 
 struct mac_instance *
@@ -806,18 +810,16 @@ install_keys(struct object_list *algorithms,
   int is_server = connection->flags & CONNECTION_SERVER;
 
   assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
-  
-  rec = kex_make_decrypt(secret, algorithms,
+
+  if (!kex_make_decrypt(&rec, secret, algorithms,
 			 KEX_ENCRYPTION_SERVER_TO_CLIENT ^ is_server,
-			 connection->session_id);
-  if (!rec)
+			connection->session_id))
     /* Weak or invalid key */
     return 0;
 
-  send = kex_make_encrypt(secret, algorithms,
-			  KEX_ENCRYPTION_CLIENT_TO_SERVER ^ is_server,
-			  connection->session_id);
-  if (!send)
+  if (!kex_make_encrypt(&send, secret, algorithms,
+			KEX_ENCRYPTION_CLIENT_TO_SERVER ^ is_server,
+			connection->session_id))
     {
       KILL(rec);
       return 0;
