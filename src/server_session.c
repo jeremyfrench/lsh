@@ -183,9 +183,7 @@ make_server_session(UINT32 initial_window,
 static void
 do_open_session(struct channel_open *s,
 		struct ssh_connection *connection UNUSED,
-		UINT32 type UNUSED,
-		UINT32 send_window_size UNUSED,
-		UINT32 send_max_packet UNUSED,
+		struct channel_open_info *info UNUSED,
 		struct simple_buffer *args,
 		struct command_continuation *c,
 		struct exception_handler *e)
