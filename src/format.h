@@ -37,7 +37,9 @@
  *
  * %c  Insert an 8-bit character
  *
- * %i  Insert an 32-bit integer, in network byte order
+ * %i  Insert a 32-bit integer, in network byte order
+ *
+ * %d  Insert a 32-bit integer, in decimal
  *
  * %s  Insert a string, given by a length and a pointer.
  *
@@ -58,13 +60,17 @@
  *
  * %n  Insert a string containing a bignum.
  *
- * There are two valid modifiers:
+ * There are three valid modifiers:
  *
  * "l" (as in literal). It is applicable to the s, a, A, n and r
  * specifiers, and outputs strings *without* a length field.
  *
+ * "e" (as in expression). Formats the input string using sexp syntax;
+ * i.e. prefixed with the length in decimal.
+ *
  * "f" (as in free). Frees the input string after it has been copied.
- * Applicable to %S only. */
+ * Applicable to %S only.
+ */
 
 struct lsh_string *ssh_format(const char *format, ...);
 UINT32 ssh_format_length(const char *format, ...);
