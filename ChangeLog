@@ -1,3 +1,8 @@
+Tue Apr  6 21:17:15 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/compiler.scm: Added support for let and let*.
+	(make-preprocess): New function.
+	
 Mon Apr  5 11:43:12 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/werror.c (werror_hex): Bugfix.
