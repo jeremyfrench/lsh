@@ -1,8 +1,10 @@
 /.deps
 /Makefile
 /Makefile.in
+/cdsa-reduce-test
 /date-test
 /lookup-acl-test
 /principal-test
 /read-acl-test
 /read-cert-test
+/tag-test

@@ -1,3 +1,16 @@
+2002-12-04  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/dsa.c (do_dsa_sign): Use %0s, not %z, when formatting
+	s-expressions. 
+	(do_dsa_public_spki_key): Likewise.
+	* src/spki.c (spki_pkcs5_encrypt): Likewise.
+	(make_ssh_hostkey_tag): Likewise.
+	(spki_hash_data): Likewise.
+	* src/rsa_keygen.c (rsa_generate_key): Likewise.
+	* src/rsa.c (do_rsa_public_spki_key): Likewise.
+	* src/lsh.c (do_lsh_lookup): Likewise.
+	* src/dsa_keygen.c (dsa_generate_key): Likewise.
+
 2002-11-16  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/key-1.private, src/testsuite/key-2.private:

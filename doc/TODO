@@ -482,3 +482,10 @@ connections.
 
 According to rms, lsh is significantly slower than ssh when logging in
 over a slow connection. Figure out why.
+
+
+Cleanup following files after sexp changes:
+
+  spki.c
+  dsa.c lsh-keygen.c dsa_keygen.c rsa_keygen.c
+  srp-gen.c bignum.c
