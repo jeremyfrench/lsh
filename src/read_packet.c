@@ -24,7 +24,6 @@
  */
 
 #include <assert.h>
-#include <errno.h>
 #include <string.h>
 
 #include "read_packet.h"
