@@ -116,17 +116,20 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
    (expr
      (name make_client_connect)
      (globals
-       (progn "&progn_command.super.super"))
+       (progn "&progn_command.super.super")
+       (die_on_null "&command_die_on_null.super"))
      (params
        (connect object command)
        (handshake object command)
        (userauth_service object command)
        (login object command)
+       (init_connection object command)
        (open_session object command)
        (requests object object_list))
      (expr (lambda (port)
-             ((progn requests) (open_session (login (userauth_service
-	         (handshake (connect port)))))))))
+             ((progn requests) (open_session (init_connection
+	         (login (userauth_service
+	           (handshake (die_on_null (connect port)))))))))))
 */
 
 /* Requests a shell, and connects the channel to our stdio. */
@@ -256,7 +259,7 @@ int main(int argc, char **argv)
 	  if (!preferred_crypto)
 	    {
 	      werror("lsh: Unknown crypto algorithm '%z'.\n", optarg);
-	      exit(1);
+	      return EXIT_FAILURE;
 	    }
 	  break;
 	case 'z':
@@ -267,7 +270,7 @@ int main(int argc, char **argv)
 	  if (!preferred_compression)
 	    {
 	      werror("lsh: Unknown compression algorithm '%z'.\n", optarg);
-	      exit(1);
+	      return EXIT_FAILURE;
 	    }
 	  break;
 	case 'm':
@@ -276,7 +279,7 @@ int main(int argc, char **argv)
 	    {
 	      werror("lsh: Unknown message authentication algorithm '%z'.\n",
 		      optarg);
-	      exit(1);
+	      return EXIT_FAILURE;
 	    }
 	  break;
 	case '?':
@@ -297,14 +300,14 @@ int main(int argc, char **argv)
     {
       werror("lsh: No user name.\n"
 	     "Please use the -l option, or set LOGNAME in the environment\n");
-      exit(EXIT_FAILURE);
+      return EXIT_FAILURE;
     }
   
   remote = make_address_info_c(host, port);
   if (!remote)
     {
       werror("lsh: Invalid port or service\n");
-      exit (EXIT_FAILURE);
+      return EXIT_FAILURE;
     }
 
 #if WITH_PTY_SUPPORT
@@ -384,7 +387,7 @@ int main(int argc, char **argv)
 				       kexinit_handler)))
     {
       werror("lsh: Connection failed: %z\n", strerror(errno));
-      return 1;
+      return EXIT_FAILURE;
     }
 #endif
   
@@ -413,6 +416,8 @@ int main(int argc, char **argv)
 			  make_request_service(ATOM_SSH_USERAUTH),
 			  make_client_userauth(ssh_format("%lz", user),
 					       ATOM_SSH_CONNECTION),
+			  make_connection_service(make_alist(0, -1),
+						  make_alist(0, -1)),
 			  make_open_session_command
 			  (make_client_session
 			   (io_read(make_io_fd(backend, in), NULL, NULL),
@@ -428,8 +433,8 @@ int main(int argc, char **argv)
     int res = COMMAND_CALL(client_connect, remote, NULL);
     if (res)
       {
-	werror("foo: %d\n", res);
-	exit(17);
+	werror("lsh.c: connection failed, res = %i\n", res);
+	return 17;
       }
   }
   io_run(backend);
