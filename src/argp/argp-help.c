@@ -79,6 +79,7 @@ char *alloca ();
 
 #if !_LIBC
 # if !HAVE_STRNDUP
+
 static char *strndup (const char *s, size_t size)
 {
   char *r;
@@ -88,7 +89,7 @@ static char *strndup (const char *s, size_t size)
     /* Length + 1 */
     size = end - s + 1;
   
-  *r = malloc(size);
+  r = malloc(size);
 
   if (size)
     {
