@@ -78,9 +78,9 @@ int exit_code = EXIT_SUCCESS;
      (name ssh2_print_to)
      (super command)
      (vars
-       (format . int)
-       (subject . "char *")
-       (comment . "char *")
+       (algorithms object alist)
+       (subject . "const char *")
+       (comment . "const char *")
        (dest object abstract_write)))
 */
 
@@ -89,55 +89,18 @@ int exit_code = EXIT_SUCCESS;
      (name ssh2_print_command)
      (super command_simple)
      (vars
-       (format . int)
-       (subject . "char *")
-       (comment . "char *")))
+       (algorithms object alist)
+       (subject . "const char *")
+       (comment . "const char *")))
 */
 
-#if 0
-#ifndef GABA_DEFINE
-struct ssh2_print_command
-{
-  struct command_simple super;
-  int format;
-  char *subject;
-  char *comment;
-};
-extern struct lsh_class ssh2_print_command_class;
-#endif /* !GABA_DEFINE */
-
-#ifndef GABA_DECLARE
-struct lsh_class ssh2_print_command_class =
-{ STATIC_HEADER,
-  &command_simple_class, "ssh2_print_command", sizeof(struct ssh2_print_command),
-  NULL,
-  NULL
-};
-#endif /* !GABA_DECLARE */
-#endif
-
-#if 0
 static struct lsh_string *
-insert_newlines(struct lsh_string *input, unsigned width, int free)
+make_header(const char *name, const char *value)
 {
-  unsigned out = input->length + ((input->length > width) ? input->length / width + 1 : 1);
-  struct lsh_string *output = lsh_string_alloc(out);
-  unsigned in = 0;
-  out = 0;
-  while ( in < input->length )
-    {
-      int len = (input->length - in < width) ? input->length - in : width;
-      memcpy(output->data + out, input->data + in, len );
-      in += len;
-      out += len;
-      output->data[out++] = '\n';
-    }
-  if (free)
-    lsh_string_free(input);
-  return output;
+  return value
+    ? ssh_format("%lz: %lz\n", name, value)
+    : ssh_format("");
 }
-#endif
-
 
 static void
 do_ssh2_print(struct command *s,
@@ -146,23 +109,32 @@ do_ssh2_print(struct command *s,
 	      struct exception_handler *e UNUSED)
 {
   CAST(ssh2_print_to, self, s);
-  CAST_SUBTYPE(sexp, o, a);
+  CAST_SUBTYPE(sexp, expr, a);
 
   struct sexp_iterator *i;
   struct verifier *v;
-  struct lsh_string *packet;
   
-  if (!sexp_check_type(o, ATOM_PUBLICKEY, &i))
+  if (!sexp_check_type(expr, ATOM_PUBLIC_KEY, &i))
     {
       EXCEPTION_RAISE
 	(e, make_simple_exception
 	 (EXC_APP,
-	  "Only conversion of public keys implemented."));
+	  "Only conversion of public keys implemented.\n"));
       return;
     }
 
-#if 0
-  v = spki_make_verifier(self->algorithms, e);
+  expr = SEXP_GET(i);
+
+  if (!expr)
+    {
+      EXCEPTION_RAISE
+	(e, make_simple_exception
+	 (EXC_APP,
+	  "Invalid (empty) public key expression.\n"));
+      return;
+    }
+      
+  v = spki_make_verifier(self->algorithms, expr);
   if (!v)
     {
       EXCEPTION_RAISE
@@ -171,118 +143,25 @@ do_ssh2_print(struct command *s,
 	  "Unsupported algorithm."));
     }
 
-  packet = PUBLIC_KEY(v);
-#endif
-#if 0  
-  struct lsh_string *packet = sexp_format(o, self->format, 0);
-  unsigned i, state, found, key, len;
-  char *p[4];
-  unsigned l[4];
-
-  i = state = found = key = len = 0;
-  while (i < packet->length && state != 99 && found != 0x0f)
-    {
-      char inchar = packet->data[i];
-      switch (state)
-        {
-  	case 0: if (inchar == 'd') state = 1; break;
-  	case 1: if (inchar == 's') state = 2; else state = 0; break;
-  	case 2: if (inchar == 'a') state = 3; else state = 0; break;
-  	case 3: if (inchar == '(') state = 4; else state = 0; break;
-  	case 4: if (inchar == '1') state = 5; else state = 0; break;
-  	case 5: if (inchar == ':') state = 6; else state = 0; break;
-  	case 6:
-  	  len = 0;
-  	  state = 7;
-  	  switch (inchar)
-  	    {
-  	    case 'p': key = 0; if ((found & 1)) state = 99; break;
-  	    case 'q': key = 1; if ((found & 2)) state = 99; break;
-  	    case 'g': key = 2; if ((found & 4)) state = 99; break;
-  	    case 'y': key = 3; if ((found & 8)) state = 99; break;
-  	    default: key = 99; break;
-  	    }
-	  break;
-  	case 7:
-	  if (inchar == ':' && len)
-	    {
-	      if (len < packet->length - (i + 1))
-	        {
-	          if (key < 4)
-		    {
-		      p[key] = (char *)packet->data + i + 1;
-		      l[key] = len;
-		    }
-	          i += len;
-  	          state = 8;
-  	        }
-  	      else
-		state = 99;
-  	    }
-  	  else if (inchar >= '0' && inchar <= '9')
-  	    len = 10 * len + (inchar - '0');
-  	  else
-  	    state = 99;
-	  break;
-  	case 8:
-  	  if (inchar == ')')
-  	    {
-  	      if ( key < 4 )
-  	  	found |= 1 << key;
-	      state = 3;
-	    }
-	  else
-	    state = 99;
-	  break;
-	}
-      i += 1;
-    }
-  if ( found == 0x0f && state != 99 )
-    {
-      struct lsh_string *ssh2_key;
-      struct lsh_string *subject;
-      struct lsh_string *comment;
-#if 0
-      ssh2_key = ssh_format("%lissh-dss%i%ls%i%ls%i%ls%i%ls",
-                             7, l[0], l[0], p[0],
-                                l[1], l[1], p[1],
-                                l[2], l[2], p[2],
-                                l[3], l[3], p[3]);
-#else
-      /* ssh2 inserts a zero byte before p and q ??? */
-      ssh2_key = ssh_format("%lissh-dss%i%c%ls%i%c%ls%i%ls%i%ls",
-                       7, l[0] + 1, 0, l[0], p[0],
-                          l[1] + 1, 0, l[1], p[1],
-                          l[2], l[2], p[2],
-                          l[3], l[3], p[3]);
-#endif
-      ssh2_key = encode_base64(ssh2_key, NULL, 0, 1);
-      ssh2_key = insert_newlines(ssh2_key, 70, 1);
-      if (self->subject)
-	subject = ssh_format("Subject: %lz\n", self->subject);
-      else
-        subject = lsh_string_alloc(0);
-      if (self->comment)
-	comment = ssh_format("Comment: %lz\n", self->comment);
-      else
-	comment = ssh_format("Comment: \"%di-bit dsa\"\n", l[0] * 8);
-      A_WRITE(self->dest, ssh_format("---- BEGIN SSH2 PUBLIC KEY ----\n"
-				     "%lfS"
-				     "%lfS"
-				     "%lfS"
-				     "---- END SSH2 PUBLIC KEY ----\n",
-				     subject, comment, ssh2_key));
-    }
+  A_WRITE(self->dest, ssh_format("---- BEGIN SSH2 PUBLIC KEY ----\n"
+				 "%lfS"
+				 "%lfS"
+				 "\n%lfS\n"
+				 "---- END SSH2 PUBLIC KEY ----\n",
+				 make_header("Subject", self->subject),
+				 make_header("Comment", self->comment),
+				 encode_base64(PUBLIC_KEY(v), NULL, 1, 0, 1)));
   COMMAND_RETURN(c, a);
-#endif
 }
 
 static struct command *
-make_ssh2_print_to(int format, char *s, char *c, struct abstract_write *dest)
+make_ssh2_print_to(struct alist *algorithms,
+		   const char *s, const char *c,
+		   struct abstract_write *dest)
 {
   NEW(ssh2_print_to, self);
   self->super.call = do_ssh2_print;
-  self->format = format;
+  self->algorithms = algorithms;
   self->subject = s;
   self->comment = c;
   self->dest = dest;
@@ -297,16 +176,18 @@ do_ssh2_print_simple(struct command_simple *s,
   CAST(ssh2_print_command, self, s);
   CAST_SUBTYPE(abstract_write, dest, a);
 
-  return &make_ssh2_print_to(self->format, self->subject, self->comment, dest)->super;
+  return &make_ssh2_print_to(self->algorithms,
+			     self->subject, self->comment, dest)->super;
 }
 
 static struct command_simple *
-make_ssh2_print_command(int format, char *s, char *c)
+make_ssh2_print_command(struct alist *algorithms,
+			const char *s, const char *c)
 {
   NEW(ssh2_print_command, self);
   self->super.super.call = do_call_simple_command;
   self->super.call_simple = do_ssh2_print_simple;
-  self->format = format;
+  self->algorithms = algorithms;
   self->subject = s;
   self->comment = c;
   return &self->super;
@@ -318,12 +199,11 @@ make_ssh2_print_command(int format, char *s, char *c)
      (name make_export_key)
      (params
        (read object command)
-       (transform object command)
        (print object command)
        (dest object abstract_write))
      (expr
        (lambda (in)
-         (print dest (transform (read in))))))
+         (print dest (read in)))))
 */
 
 
@@ -335,6 +215,9 @@ do_exc_export_key_handler(struct exception_handler *self,
   
   switch (x->type)
     {
+    case EXC_APP:
+      werror("%z", x->msg);
+      break;
     case EXC_SEXP_SYNTAX:
       werror("Invalid SEXP input.\n");
       exit_code = EXIT_FAILURE;
@@ -386,13 +269,11 @@ main_options[] =
   (name export_key_options)
   (vars
     (input . sexp_argp_state)
-    (output . sexp_argp_state)
     (algorithms object alist)
-    (infile . "char *")
-    (outfile . "char *")
-    (subject . "char *")
-    (comment . "char *")
-    (transform object command)
+    (infile . "const char *")
+    (outfile . "const char *")
+    (subject . "const char *")
+    (comment . "const char *")
     (print object command)
 ))
 */
@@ -401,16 +282,10 @@ static struct export_key_options *make_options(void)
 {
   NEW(export_key_options, self);
   self->input = SEXP_TRANSPORT;
-  self->output = SEXP_ADVANCED;
   self->infile = NULL;
-  self->outfile = NULL;
   self->subject = NULL;
   self->comment = NULL;
-  self->transform = &command_I.super;
-  self->algorithms = make_alist(2,
-				ATOM_MD5, &md5_algorithm,
-				ATOM_SHA1, &sha1_algorithm,
-				-1);
+  self->algorithms = all_signature_algorithms(NULL);
 
   return self;
 }
@@ -419,7 +294,6 @@ static const struct argp_child
 main_argp_children[] =
 {
   { &sexp_input_argp, 0, NULL, 0 },
-  { &sexp_output_argp, 0, NULL, 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -435,12 +309,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
       state->child_inputs[0] = &self->input;
-      state->child_inputs[1] = &self->output;
-      state->child_inputs[2] = NULL;
+      // state->child_inputs[1] = &self->output;
+      state->child_inputs[1] = NULL;
       break;
     case ARGP_KEY_END:
-      self->transform = &command_I.super;
-      self->print = &(make_ssh2_print_command(SEXP_CANONICAL,
+      self->print = &(make_ssh2_print_command(self->algorithms,
                                               self->subject,
                                               self->comment)->super);
       break;
@@ -499,14 +372,24 @@ int main(int argc, char **argv)
 			     NULL, HANDLER_CONTEXT);
 
   if (options->infile)
-    in = make_lsh_fd(backend, open(options->infile, O_RDONLY), e);
+    {
+      in = io_read_file(backend, options->infile, e);
+      if (!in)
+	{
+	  werror("Failed to open '%z': %z\n",
+		 options->infile, STRERROR(errno));
+	  return EXIT_FAILURE;
+	}
+    }
   else
     in = make_lsh_fd(backend, STDIN_FILENO, e);
-
+      
   if (options->outfile)
-    out = io_write_file(backend, options->outfile,
-			O_WRONLY | O_CREAT, 0666,
-			SEXP_BUFFER_SIZE, NULL, e);
+    {
+      out = io_write_file(backend, options->outfile,
+			  O_WRONLY | O_CREAT, 0666,
+			  SEXP_BUFFER_SIZE, NULL, e);
+    }
   else
     out = io_write(make_lsh_fd(backend, STDOUT_FILENO, e),
 		   SEXP_BUFFER_SIZE, NULL);
@@ -515,7 +398,6 @@ int main(int argc, char **argv)
     CAST_SUBTYPE(command, work,
 		 make_export_key(
 		   make_read_sexp_command(options->input, 0),
-		   options->transform,
 		   options->print,
 		   &(out->write_buffer->super)));
 
@@ -528,6 +410,7 @@ int main(int argc, char **argv)
 		 &discard_continuation, e);
   }
   io_run(backend);
-
+  
   return exit_code;
-}
+    }
+  
