@@ -10,6 +10,7 @@
 #include "lsh_argp.h"
 #include "publickey_crypto.h"
 #include "read_file.h"
+#include "rsa.h"
 #include "sexp_commands.h"
 #include "spki.h"
 #include "version.h"
@@ -156,7 +157,7 @@ do_decode_key(struct abstract_write *s,
 	    {
 	      struct verifier *v;
 	    
-	      werror("Reading key of type ssh-dss...\n");
+	      werror("lsh-decode-key: Reading key of type ssh-dss...\n");
 
 	      if (! ( (v = parse_ssh_dss_public(&buffer)) ))
 		{
@@ -173,7 +174,7 @@ do_decode_key(struct abstract_write *s,
 	    {
 	      struct verifier *v;
 	    
-	      werror("Reading key of type ssh-rsa...\n");
+	      werror("lsh-decode-key: Reading key of type ssh-rsa...\n");
 
 	      if (! ( (v = parse_ssh_rsa_public(&buffer)) ))
 		{
