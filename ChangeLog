@@ -1,3 +1,12 @@
+2003-10-23  Niels Möller  <niels@s3.kth.se>
+
+	* src/dsa_keygen.c, src/rsa_keygen.c: Deleted files. Moved the
+	dsa_generate_key and rsa_generate_key functions to ...
+	* src/lsh-keygen.c: ... here.
+
+	* src/dsa.c (generic_dsa_verify): Deleted function.
+	(generic_dsa_sign): Likewise.
+
 2003-10-22  Niels Möller  <niels@s3.kth.se>
 
 	* src/client_x11.c (client_x11_auth_info): Deleted commented out
