@@ -217,8 +217,9 @@ AC_CACHE_CHECK([if m4 can handle eight-bit quote characters],
 
 if test x$lsh_cv_prog_m4_quote_8bit = xno; then
   AC_MSG_WARN(  
-[Upgrade to a better version than GNU m4 1.4,
-or recompile it with CFLAGS=-funsigned-char.
+[To get the testsuite to work properly, you may need to
+upgrade to a better version than GNU m4 1.4, or recompile
+it with CFLAGS=-funsigned-char.
 Latest version is available at <URL: http://www.seindal.dk/rene/gnu/>])
   M4="false --"
 fi
