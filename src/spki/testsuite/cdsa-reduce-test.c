@@ -102,7 +102,7 @@ filter_by_subject(struct spki_acl_db *db,
   struct spki_5_tuple **pp;
   struct spki_5_tuple *p;
 
-  ASSERT(spki_parse_principal(db, iterator, SPKI_TYPE_SUBJECT, &subject));
+  ASSERT(spki_parse_subject(db, iterator, &subject));
 
   for (pp = &acl; (p = *pp); )
     {
