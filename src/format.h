@@ -100,9 +100,4 @@ int lsh_string_eq_l(const struct lsh_string *a, UINT32 length, const UINT8 *b);
 int lsh_string_prefixp(const struct lsh_string *prefix,
 		       const struct lsh_string *s);
 
-#if 0
-int lsh_string_cmp(const struct lsh_string *a, const struct lsh_string *b);
-int lsh_string_cmp_l(const struct lsh_string *a, UINT32 length, const UINT8 *b);
-#endif
-
 #endif /* LSH_FORMAT_H_INCLUDED */

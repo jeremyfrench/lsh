@@ -209,33 +209,6 @@ do_dsa_public_key(struct signer *s)
 }
 
 #if DATAFELLOWS_WORKAROUNDS
-#if 0
-struct lsh_string *dsa_sign_kludge(struct signer *c,
-				   UINT32 msg_length,
-				   UINT8 *msg)
-{
-  CAST(dsa_signer, self, c);
-  mpz_t r, s;
-  struct lsh_string *signature;
-  UINT32 buf_length;
-  UINT8 *p;
-
-  mpz_init(r); mpz_init(s);
-  generic_dsa_sign(self, msg_length, msg, r, s);
-
-  /* Build signature */
-  buf_length = dsa_blob_length(r, s);
-
-  /* NOTE: This doesn't include any length field. Is that right? */
-  signature = ssh_format("%lr", buf_length * 2, &p);
-  dsa_blob_write(r, s, buf_length, p);
-
-  mpz_clear(r);
-  mpz_clear(s);
-
-  return signature;
-}
-#endif
 
 static struct lsh_string *
 do_dsa_sign_kludge(struct signer *c,
@@ -421,43 +394,6 @@ static int do_dsa_verify_spki(struct verifier *c,
 
 #if DATAFELLOWS_WORKAROUNDS
 
-#if 0
-int dsa_verify_kludge(struct verifier *c,
-		      UINT32 length,
-		      UINT8 *msg,
-		      UINT32 signature_length,
-		      UINT8 * signature_data)
-{
-  CAST(dsa_verifier, self, c);
-
-  int res;
-  
-  mpz_t r, s;
-
-  UINT32 buf_length;
-
-  /* NOTE: This doesn't include any length field. Is that right? */
-
-  if (signature_length % 2)
-    return 0;
-
-  buf_length = signature_length / 2;
-
-  mpz_init(r);
-  mpz_init(s);
-
-  bignum_parse_u(r, buf_length, signature_data);
-  bignum_parse_u(s, buf_length, signature_data + buf_length);
-    
-  res = generic_dsa_verify(&self->public, length, msg, r, s);
-  
-  mpz_clear(r);
-  mpz_clear(s);
-
-  return res;
-}
-#endif
-
 static int
 do_dsa_verify_kludge(struct verifier *c,
 		     UINT32 length,
@@ -642,35 +578,6 @@ make_ssh_dss_verifier(UINT32 public_length,
   
   return res;
 }
-
-
-#if 0
-#if DATAFELLOWS_WORKAROUNDS
-
-/* FIXME: name clash, by convention this should have been
- * make_dsa_verifier_kludge, but it has already been used above */
-
-static struct verifier *
-do_make_dsa_verifier_kludge(struct signature_algorithm *closure UNUSED,
-			    UINT32 public_length,
-			    UINT8 *public)
-{
-	struct verifier *dsa = make_dsa_verifier(closure, public_length, public);
-	return make_dsa_verifier_kludge(dsa);
-}
-
-/* FIXME: This algorithm can only create verifiers. */
-struct signature_algorithm *make_dsa_kludge_algorithm(struct randomness *random)
-{
-  NEW(dsa_algorithm, dsa);
-
-  dsa->super.make_verifier = do_make_dsa_verifier_kludge;
-  dsa->random = random;
-
-  return &dsa->super;
-}
-#endif /* DATAFELLOWS_WORKAROUNDS */
-#endif
 
 struct lsh_string *
 ssh_dss_public_key(struct signer *s)

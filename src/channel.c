@@ -1413,11 +1413,6 @@ COMMAND_SIMPLE(connection_service_command)
   return a;
 }
 
-#if 0
-struct command
-connection_service = STATIC_COMMAND(do_connection_service);
-#endif
-
 struct lsh_string *format_channel_close(struct ssh_channel *channel)
 {
   return ssh_format("%c%i",
@@ -1615,46 +1610,7 @@ make_channel_read_stderr(struct ssh_channel *channel)
        (channel object ssh_channel)))
 */
 
-#if 0
-/* Close callback for files we are writing to. */
-static void
-channel_close_write_callback(struct close_callback *c, int reason)
-{
-  CAST(channel_close_callback, closure, c);
-
-  switch (reason)
-    {
-    case CLOSE_EOF:
-      /* Expected close: Do nothing */
-      debug("channel_close_callback: Closing after EOF.\n");
-      break;
-
-    default:
-      if (closure->channel->flags & CHANNEL_SENT_CLOSE)
-	/* Do nothing */
-	break;
-      /* Fall through to send CHANNEL_CLOSE message */
-    case CLOSE_WRITE_FAILED:
-    case CLOSE_BROKEN_PIPE:
-      channel_close(closure->channel);
-      break;
-    }
-}
-
-struct close_callback *
-make_channel_write_close_callback(struct ssh_channel *channel)
-{
-  NEW(channel_close_callback, closure);
-  
-  closure->super.f = channel_close_write_callback;
-  closure->channel = channel;
-
-  return &closure->super;
-}
-#endif
-
-/* Close callback for files we are reading from, writing to (files we read from
- * doesn't need any special callback, as we'll get EOF from them).
+/* Close callback for files we are reading from.
  *
  * FIXME: I don't know how we should catch POLLERR on files we read;
  * perhaps we need this callback, or perhaps we'll install an

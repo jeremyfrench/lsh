@@ -87,11 +87,6 @@ void init_dsa_public(struct dsa_public *public);
 /* parse an ssh keyblob */
 int parse_dsa_public(struct simple_buffer *buffer,
 		     struct dsa_public *public);
-#if 0
-int
-spki_init_dsa_public(struct dsa_public *key,
-		     struct sexp_iterator *i);
-#endif
 
 struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
 
@@ -103,31 +98,7 @@ make_ssh_dss_verifier(UINT32 public_length,
 struct lsh_string *
 ssh_dss_public_key(struct signer *s);
 
-#if 0
-/* Some support for spki style keys */
-struct dsa_verifier *
-make_dsa_spki_verifier(struct sexp_iterator *i);
-
-struct dsa_signer *
-make_dsa_spki_signer(struct sexp_iterator *i,
-		     struct randomness *random);
-#endif
-
-
 #if DATAFELLOWS_WORKAROUNDS
-
-#if 0
-static struct lsh_string *dsa_sign_kludge(struct signer *c,
-					  UINT32 msg_length,
-					  UINT8 *msg);
-
-
-int dsa_verify_kludge(struct verifier *c,
-		      UINT32 length,
-		      UINT8 *msg,
-		      UINT32 signature_length,
-		      UINT8 * signature_data);
-#endif
 
 struct verifier *make_dsa_verifier_kludge(struct verifier *v);
 struct signer *make_dsa_signer_kludge(struct signer *dsa);

@@ -366,18 +366,6 @@ COMMAND_SIMPLE(progn_command)
   CAST(object_list, body, a);
   return &make_parallell_progn(body)->super;
 }
-     
-#if 0
-static struct lsh_object *do_progn(struct command_simple *s UNUSED,
-				   struct lsh_object *x)
-{
-  CAST(object_list, body, x);
-  return &make_parallell_progn(body)->super;
-}
-
-struct command_simple progn_command =
-STATIC_COMMAND_SIMPLE(do_progn);
-#endif
 
 
 /* A continuation that passes on its value only the first time it is
@@ -615,36 +603,3 @@ do_catch_simple(struct command_simple *s,
 							   self->value, self->ignore_value, f))
 	   ->super);
 }
-
-
-#if 0    
-static void
-do_catch_apply(struct command *s,
-	       struct lsh_object *a,
-	       struct command_continuation *c,
-	       struct exception_handler *e)
-{
-  CAST(catch_apply, self, s);
-  COMMAND_CALL(self->f, a, c, self->handler);
-}
-
-static struct command
-make_catch_apply(struct command *f,
-		 struct exception_handler *handler)
-{
-  NEW(catch_apply, self);
-  self->super.call = do_catch_apply;
-  self->f = f;
-  self->handler = handler;
-}
-
-static void
-do_catch_simple(struct simple_command *s,
-		struct lsh_object *a)
-{
-  CAST(catch_command, self, s);
-  CAST_SUBTYPE(command, f, a);
-
-  return make_catch_apply(f, make_catch_handler);
-}
-#endif

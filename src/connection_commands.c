@@ -429,30 +429,7 @@ STATIC_COLLECT_2_FINAL(collect_handshake_2);
 struct collect_info_1 handshake_command =
 STATIC_COLLECT_1(&collect_info_handshake_2);
 
-
-#if 0				       
-struct command *
-make_handshake_command(int mode,
-		       const char *id,
-		       UINT32 block_size,
-		       struct randomness *r,
-		       struct alist *algorithms,
-		       struct make_kexinit *init,
-		       struct ssh1_fallback *fallback)
-{
-  NEW(connection_command, self);
-  self->mode = mode;
-  self->id_comment = id;
-  self->block_size = block_size;
-  self->random = r;
-  self->algorithms = algorithms;
-  self->init = init;
-  self->fallback = fallback;
-
-  self->super.call = do_connection;
-  return &self->super;
-}
-#endif
+#if 0
 
 /* ;; GABA:
    (class
@@ -462,7 +439,6 @@ make_handshake_command(int mode,
        (connection object ssh_connection)))
 */
 
-#if 0
 static int do_connection_remember(struct command *s,
 				  struct lsh_object *x,
 				  struct command_continuation *c)

@@ -61,11 +61,6 @@ int spki_get_type(struct sexp *e, struct sexp_iterator **res);
 
 int spki_check_type(struct sexp *e, int type, struct sexp_iterator **res);
 
-#if 0
-/* FIXME: should support keyblobs other than ssh-dss */
-struct sexp *keyblob2spki(struct lsh_string *keyblob);
-#endif
-
 struct sexp *
 make_ssh_hostkey_tag(struct address_info *host);
 
@@ -92,38 +87,12 @@ make_spki_hash(int name, struct hash_algorithm *algorithm);
 struct command *
 make_spki_parse_key(struct alist *algorithms);
 
+#if 0
 struct keypair *
 read_spki_key_file(const char *name,
 		   struct alist *algorithms,
 		   struct exception_handler *e);
-
-
-#if 0
-/* Signature algorithms in spki */
-
-/* ;; GABA:
-   (class
-     (name spki_algorithm)
-     (vars
-       ;; Called with i pointing to the expression after the algorithm name
-       (make_signer method (object signer)
-                    "struct sexp_iterator *i")
-       (make_verifier method (object verifier)
-                      "struct sexp_iterator *i")))
-*/
-
-#define SPKI_SIGNER(a, i) ((a)->make_signer((a), (i)))
-#define SPKI_VERIFIER(a, i) ((a)->make_verifier((a), (i)))
-
-struct signer *
-spki_signer(struct sexp *e, struct alist *algorithms, int *type);
-
-/* FIXME: Currently doesn't handle (hash ...) expressions. */
-
-struct verifier *
-spki_verifier(struct sexp *e, struct alist *algorithms, int *type);
 #endif
-
 
 /* At a point in time, not all fields are known; fields may be added
  * later, or computed as needed. This information is not automatically

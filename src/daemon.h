@@ -30,14 +30,6 @@
 
 #include "lsh.h"
 
-#if 0
-#ifdef BUILD_PROG
-#include "sig.h"
-#else
-#include <prog/sig.h>
-#endif
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif

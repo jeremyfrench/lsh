@@ -797,10 +797,7 @@ do_spawn_shell(struct channel_request *c,
 	    argv0[0] = '-';
 	    strncpy (argv0 + 1, p, session->user->shell->length);
 	    debug("lshd: server.c: fixing up name of shell... done.\n");
-#if 0
-	    /* Not needed; shell and p should be NUL-terminated properly. */
-	    argv0[sizeof (argv0) - 1] = '\0';
-#endif	      
+
 	    execle(shell, argv0, NULL, env);
 	  }
 #else /* !USE_LOGIN_DASH_CONVENTION */

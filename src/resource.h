@@ -60,30 +60,6 @@
 #define REMEMBER_RESOURCE(l, r) ((l)->remember((l), (r)))
 #define KILL_RESOURCE_LIST(l) KILL_RESOURCE(&(l)->super)
 
-
-#if 0
-/* ;;GABA:
-   (class
-     (name resource_list)
-     (vars
-       ;; (q struct object_queue)
-       ;;(q special-struct "struct lsh_queue"
-       ;;                  do_mark_resources do_free_resources)
-
-       (q special "struct resource_node *"
-                  do_mark_resources do_free_resources)       
-       (remember method void "struct resource *r")
-
-       ; Kills the resource and unlinks and deallocates the node.
-       ;; (kill_resource method void "struct resource_node *n")
-       
-       (kill_all method void)))
-*/
-#endif
-
-/* #define KILL_RESOURCE_NODE(l, n) ((l)->kill_resource((l), (n))) */
-
-
 /* Allocates an empty list. */
 struct resource_list *empty_resource_list(void);
 

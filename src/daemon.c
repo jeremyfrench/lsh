@@ -47,27 +47,6 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 
-
-#if 0
-#include "msg.h"
-#include "prog.h"
-#include "sig.h"
-#include "mem.h"
-#include "err.h"
-#include "lim.h"
-#include "fifo.h"
-
-#ifdef NEEDS_SNPRINTF
-#include "snprintf.h"
-#endif
-
-static struct
-{
-	char *lock; /* Name of the locked pid file */
-}
-g;
-#endif
-
 #ifndef PID_DIR
 #define PID_DIR "/var/run"
 #endif

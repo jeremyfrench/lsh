@@ -174,13 +174,6 @@ struct sexp_iterator *
 sexp_check_type(struct sexp *e, UINT32 length,
 		const UINT8 *name);
 
-#if 0
-int sexp_eqz(const struct sexp *e, const char *s);
-int sexp_check_type(struct sexp *e, const char *type,
-		    struct sexp_iterator **res);
-struct sexp *sexp_assz(struct sexp_iterator *i, const char *name);
-#endif
-
 int sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n);
 
 extern int sexp_char_classes[];

@@ -98,20 +98,6 @@ struct lsh_string
   UINT8 data[1];
 };
 
-#if 0
-/* A closed function with no arguments */
-struct callback;
-typedef int (*callback_f)(struct callback *closure);
-struct callback
-{
-  struct lsh_object header;
-  
-  int (*f)(struct callback *closure);
-};
-
-#define CALLBACK(c) ((c)->f(c))
-#endif
-
 
 /* Forward declarations of various structures */
 

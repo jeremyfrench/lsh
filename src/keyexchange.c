@@ -278,16 +278,6 @@ do_handle_kexinit(struct packet_handler *c,
       return;
     }
   
-#if 0
-#if DATAFELLOWS_WORKAROUNDS
-  if ( (hostkey_algorithm_atom == ATOM_SSH_DSS)
-       && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
-    {
-      hostkey_algorithm_atom = ATOM_SSH_DSS_KLUDGE;
-    }
-#endif /* DATAFELLOWS_WORKAROUNDS */
-#endif
-  
   for(i = 0; i<KEX_PARAMETERS; i++)
     {
       parameters[i]
@@ -310,11 +300,6 @@ do_handle_kexinit(struct packet_handler *c,
     CAST_SUBTYPE(keyexchange_algorithm, kex_algorithm,
 		 ALIST_GET(closure->algorithms, kex_algorithm_atom));
 
-#if 0
-    CAST_SUBTYPE(signature_algorithm, hostkey_algorithm,
-		 ALIST_GET(closure->algorithms,
-			   hostkey_algorithm_atom));
-#endif
     KEYEXCHANGE_INIT( kex_algorithm,
 		      connection,
 		      hostkey_algorithm_atom,
@@ -720,18 +705,6 @@ struct install_keys *make_install_new_keys(int is_server,
 
   return &self->super;
 }
-
-#if 0
-struct keypair_info *make_keypair_info(struct lsh_string *public,
-				       struct signer *private)
-{
-  NEW(keypair_info, self);
-  
-  self->public = public;
-  self->private = private;
-  return self;
-}
-#endif
 
 /* Returns a hash instance for generating various session keys. NOTE:
  * This mechanism changed in the transport-05 draft. Before this, the

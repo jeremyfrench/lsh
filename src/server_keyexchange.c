@@ -146,9 +146,6 @@ do_init_server_dh(struct keyexchange_algorithm *c,
   NEW(dh_server, dh);
 
   CHECK_TYPE(ssh_connection, connection);
-#if 0
-  CHECK_SUBTYPE(signature_algorithm, ignored);
-#endif
   
   /* FIXME: No spki-style signatures for host keys. */
   assert(hostkey_algorithm_atom == ATOM_SSH_DSS);

@@ -328,10 +328,6 @@ static void do_buffered_read(struct io_read_callback *s,
     }
   else
     {
-#if 0
-      EXCEPTION_RAISE(fd->e,
-		      make_io_exception(EXC_IO_EOF, fd, 0, "EOF")) ;
-#endif
       /* We have read EOF. Pass available == 0 to the handler */
       assert(fd->super.alive);
       assert(fd->read);
@@ -395,10 +391,6 @@ static void do_consuming_read(struct io_read_callback *c,
 	}
       else
 	{
-	  /* FIXME: Perhaps pass NULL to the consumer instead? */
-#if 0
-	  EXCEPTION_RAISE(fd->e, make_io_exception(EXC_IO_EOF, fd, 0, "EOF")) ;
-#endif
 	  close_fd_nicely(fd, 0);
 	  A_WRITE(self->consumer, NULL);
 	}
@@ -553,18 +545,8 @@ do_exc_io_handler(struct exception_handler *self,
     {
       CAST_SUBTYPE(io_exception, e, x);
 
-      switch(x->type)
-	{
-#if 0
-	case EXC_IO_EOF:
-	  close_fd_nicely(e->fd, 0);
-	  break;
-#endif
-	default:
-	  if (e->fd)
-	    close_fd(e->fd, 0);
-	  break;
-	}
+      if (e->fd)
+	close_fd(e->fd, 0);
     }
   EXCEPTION_RAISE(self->parent, x);
   return;

@@ -90,24 +90,6 @@ COMMAND_SIMPLE(io_write_file_command)
   return &self->super.super;
 }
 
-#if 0
-static struct lsh_object *
-do_io_write_file_collect(struct command_simple *s UNUSED,
-			 struct lsh_object *a)
-{
-  CAST(io_backend, backend, a);
-
-  NEW(backend_command, self);
-  self->super.call = do_io_write_file;
-  self->backend = backend;
-
-  return &self->super.super;
-}
-
-struct command_simple io_write_file_command
-= STATIC_COMMAND_SIMPLE(do_io_write_file_collect);
-#endif
-
 struct io_write_file_info *
 make_io_write_file_info(const char *name, int flags, int mode, UINT32 block_size)
 {
@@ -521,22 +503,6 @@ COMMAND_SIMPLE(io_log_peer_command)
   return &lv->fd->super.super.super;
 }
 
-#if 0
-static struct lsh_object *
-do_simple_log_peer(struct command_simple *s UNUSED,
-		   struct lsh_object *x)
-{
-  CAST(listen_value, a, x);
-
-  verbose("Accepting connection from %S, port %i\n",
-	  a->peer->ip, a->peer->port);
-
-  return &a->fd->super.super.super;
-}
-
-struct command_simple io_log_peer_command =
-STATIC_COMMAND_SIMPLE(do_simple_log_peer);
-#endif
 
 /* ***
  *

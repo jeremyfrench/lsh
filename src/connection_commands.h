@@ -66,19 +66,4 @@ struct collect_info_1 handshake_command;
 
 struct close_callback *make_connection_close_handler(struct ssh_connection *c);
 
-#if 0
-struct command *
-make_handshake_command(int mode,
-		       const char *id,
-		       UINT32 block_size,
-		       struct randomness *r,
-		       struct alist *algorithms,
-		       struct make_kexinit *init,
-		       struct ssh1_fallback *fallback);
-
-extern struct command connection_remember_command;
-
-#define CONNECTION_REMEMBER (&connection_remember_command.super)
-#endif
-
 #endif /* LSH_CONNECTION_COMMANDS_H_INCLUDED */

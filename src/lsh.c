@@ -82,12 +82,6 @@ static struct command options2known_hosts;
 
 static struct command options2identities;
 #define OPTIONS2IDENTITIES (&options2identities.super)
-
-#if 0
-static struct catch_command catch_open_exceptions =
-STATIC_CATCH_COMMAND(EXC_IO_OPEN_READ, EXC_IO_OPEN_READ, 0);
-#define CATCH_OPEN (&catch_open_exceptions.super.super.super)
-#endif
 		    
 #include "lsh.c.x"
 
