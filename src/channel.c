@@ -1121,8 +1121,7 @@ do_window_adjust(struct packet_handler *closure UNUSED,
       lsh_string_free(packet);
       
       if (channel
-	  && !(channel->flags & (CHANNEL_RECEIVED_EOF
-				 | CHANNEL_RECEIVED_CLOSE)))
+	  && !(channel->flags & CHANNEL_RECEIVED_CLOSE))
 	{
 	  if (! (channel->flags & (CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF)))
 	    {
