@@ -1,3 +1,8 @@
+2001-01-23  Niels Möller  <nisse@ehand.com>
+
+	* src/tcpforward.c (do_tcpip_eof): Call shutdown(socket, SHUT_WR),
+	to signal to the local peer that there's no more data.
+
 2001-01-15  Niels Möller  <nisse@ehand.com>
 
 	* misc/bootstrap.sh: Fixed comment.
