@@ -1,5 +1,4 @@
 dnl -*- mode: shell-script; sh-indentation: 2; -*-
-dnl $Id$
 
 dnl Process this file with autoconf to produce a configure script.
 
