@@ -321,6 +321,11 @@ lookup_hash(struct alist *algorithms, const char *name,
 }
 
 /* FIXME: Perhaps this function belongs in list.c or alist.c? */
+
+/* Return an int list containing the elements of CANDIDATES
+ * that have associated values in ALGORITHMS.
+ * Returns a non-empty list or NULL. */
+ 
 struct int_list *
 filter_algorithms(struct alist *algorithms,
 		  const struct int_list *candidates)
