@@ -309,7 +309,7 @@ static struct signer *make_dss_signer(struct signature_algorithm *c,
   
   simple_buffer_init(&private_buffer, private_length, private);
 
-  res = xalloc(sizeof(struct dss_signer));
+  NEW(res);
 
   mpz_init(res->public.p);
   mpz_init(res->public.q);
@@ -351,7 +351,7 @@ static struct verifier *make_dss_verifier(struct signature_algorithm *closure,
       || (atom != ATOM_SSH_DSS) )
     return 0;
 
-  res = xalloc(sizeof(struct dss_verifier));
+  NEW(res);
 
   mpz_init(res->public.p);
   mpz_init(res->public.q);
@@ -375,7 +375,9 @@ static struct verifier *make_dss_verifier(struct signature_algorithm *closure,
 
 struct signature_algorithm *make_dss_algorithm(struct randomness *random)
 {
-  struct dss_algorithm *dss = xalloc(sizeof(struct dss_algorithm));
+  struct dss_algorithm *dss;
+
+  NEW(dss);
 
   dss->super.make_signer = make_dss_signer;
   dss->super.make_verifier = make_dss_verifier;
@@ -427,7 +429,9 @@ static void zn_power(struct group *c, mpz_t res, mpz_t g, mpz_t e)
 /* Assumes p is a prime number */
 struct group *make_zn(mpz_t p)
 {
-  struct group_zn *res = xalloc(sizeof(struct group_zn));
+  struct group_zn *res;
+
+  NEW(res);
 
   res->super.member = zn_member;
   res->super.invert = zn_invert;
@@ -491,11 +495,11 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
 
 struct diffie_hellman_method *make_dh1(struct randomness *r)
 {
-  struct diffie_hellman_method *res
-    = xalloc(sizeof(struct diffie_hellman_method));
-
+  struct diffie_hellman_method *res;
   mpz_t p;
   
+  NEW(res);
+
   mpz_init_set_str(p,
 		   "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
 		   "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"

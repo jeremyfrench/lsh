@@ -85,10 +85,12 @@ make_packet_pad(struct abstract_write *continuation,
 		struct ssh_connection *connection,
 		struct randomness *random)
 {
-  struct packet_pad *closure = xalloc(sizeof(struct packet_pad));
+  struct packet_pad *closure;
 
   MDEBUG(closure);
   
+  NEW(closure);
+
   closure->super.super.write = do_pad;
   closure->super.next = continuation;
   closure->connection = connection;

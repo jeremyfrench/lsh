@@ -78,7 +78,9 @@ struct read_handler *make_read_data(struct abstract_write *handler,
 				    struct callback *close_callback,
 				    UINT32 block_size)
 {
-  struct read_data *closure = xalloc(sizeof(struct read_data));
+  struct read_data *closure;
+
+  NEW(closure);
 
   closure->super.handler = do_read_data;
   closure->block_size = block_size;

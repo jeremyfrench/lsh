@@ -159,7 +159,9 @@ static int do_read_line(struct read_handler **h,
 
 struct read_handler *make_read_line(struct line_handler *handler)
 {
-  struct read_line *closure = xalloc(sizeof(struct read_line));
+  struct read_line *closure;
+
+  NEW(closure);
 
   closure->super.handler = do_read_line;
   closure->pos = 0;

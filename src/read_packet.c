@@ -303,7 +303,9 @@ static int do_read_packet(struct read_handler **h,
 struct read_handler *make_read_packet(struct abstract_write *handler,
 				      struct ssh_connection *connection)
 {
-  struct read_packet *closure = xalloc(sizeof(struct read_packet));
+  struct read_packet *closure;
+
+  NEW(closure);
 
   closure->super.handler = do_read_packet;
 

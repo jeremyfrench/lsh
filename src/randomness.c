@@ -73,10 +73,11 @@ static void do_poor_random(struct randomness **r, UINT32 length, UINT8 *dst)
 struct randomness *make_poor_random(struct hash_algorithm *hash,
 				    struct lsh_string *init)
 {
-  struct poor_random *self
-    = xalloc(sizeof(struct poor_random) - 1 + hash->hash_size);
+  struct poor_random *self;
   time_t now = time(NULL); /* To avoid cycles */
-    
+
+  NEW(self);
+  
   self->super.random = do_poor_random;
   self->hash = MAKE_HASH(hash);
 

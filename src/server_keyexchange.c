@@ -120,9 +120,14 @@ static int do_init_dh(struct keyexchange_algorithm *c,
 		      void **algorithms)
 {
   struct dh_server_exchange *closure = (struct dh_server_exchange *) c;
-  struct dh_server *dh = xalloc(sizeof(struct dh_server));
+  struct dh_server *dh;
 
   MDEBUG(closure);
+  MDEBUG(connection);
+  MDEBUG_SUBTYPE(finished);
+  MDEBUG_SUBTYPE(ignored);
+  
+  NEW(dh);
   
   /* FIXME: Use this value to choose a signer function */
   if (hostkey_algorithm_atom != ATOM_SSH_DSS)
@@ -159,7 +164,9 @@ make_dh_server(struct diffie_hellman_method *dh,
 	       struct lsh_string *server_key,
 	       struct signer *signer)
 {
-  struct dh_server_exchange *self = xalloc(sizeof(struct dh_server_exchange));
+  struct dh_server_exchange *self;
+
+  NEW(self);
 
   self->super.init = do_init_dh;
   self->dh = dh;
@@ -210,7 +217,9 @@ static int do_install(struct install_keys *c,
 
 struct install_keys *make_server_install_keys(void **algorithms)
 {
-  struct server_install_keys *self = xalloc(sizeof(struct server_install_keys));
+  struct server_install_keys *self;
+
+  NEW(self);
 
   self->super.install = do_install;
   self->algorithms = algorithms;

@@ -151,8 +151,9 @@ static struct read_handler *do_line(struct line_handler **h,
 
 struct read_handler *make_server_read_line(struct ssh_connection *c)
 {
-  struct server_line_handler *closure
-    = xalloc(sizeof(struct server_line_handler));
+  struct server_line_handler *closure;
+
+  NEW(closure);
   
   closure->super.handler = do_line;
   closure->connection = c;
@@ -168,7 +169,9 @@ make_server_callback(struct io_backend *b,
 		     struct make_kexinit *init,
 		     struct packet_handler *kexinit_handler)
 {
-  struct server_callback *connected = xalloc(sizeof(struct server_callback));
+  struct server_callback *connected;
+
+  NEW(connected);
 
   connected->super.f = server_initiate;
   connected->backend = b;
@@ -193,7 +196,9 @@ static int server_die(struct close_callback *closure, int reason)
 
 struct close_callback *make_server_close_handler(void)
 {
-  struct close_callback *c = xalloc(sizeof(struct close_callback));
+  struct close_callback *c;
+
+  NEW(c);
 
   c->f = server_die;
 

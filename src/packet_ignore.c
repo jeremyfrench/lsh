@@ -37,7 +37,9 @@ static int do_ignore(struct packet_handler *closure,
 
 struct packet_handler *make_ignore_handler(void)
 {
-  struct packet_handler *res =  xalloc(sizeof(struct packet_handler));
+  struct packet_handler *res;
+
+  NEW(res);
 
   res->handler = do_ignore;
   return res;
