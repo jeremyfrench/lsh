@@ -3,13 +3,9 @@
 # Extract the names of all header files in this directory (or the
 # directory given on the command line) which are known to CVS.
 
-if [ x$1 != x -a -d ''$1 ]; then
+if [ x$1 != x -a -d "$1" ]; then
     cd $1
 fi
 if [ -d CVS ]; then
-    sed -f - CVS/Entries <<'EOF' | sort
-	s%^/\([^/]\+\.h\)/.*$%\1%
-	t
-	d
-EOF
+    sed -e 's%^/\([^/]*\.h\)/.*$%\1%' -e t -e d CVS/Entries | sort
 fi

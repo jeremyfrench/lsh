@@ -17,8 +17,8 @@ shift
 	cat $d/.deps/*.P
     fi
 done) | tr ' ' '\n' \
-      | grep `echo "$extension"'$' |sed 's/\./\\\\./'` \
-      | sed 's%^.*/\([^/]\+\)$%\1%' \
+      | grep `echo "$extension"'$' |sed 's/\./\\./'` \
+      | sed 's%^.*/\([^/]*\)$%\1%' \
       | sort | uniq
 
 # To ignore absolute paths, use the command grep '^[^/].*\.h$' above.
