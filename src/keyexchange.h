@@ -5,6 +5,8 @@
 #ifndef LSH_KEYEXCHANGE_H_INCLUDED
 #define LSH_KEYEXCHANGE_H_INCLUDED
 
+#include "lsh_types.h"
+
 struct kexinit
 {
   UINT8 cookie[16];
@@ -21,8 +23,15 @@ struct kexinit
   int *languages_server_to_client;
   int first_kex_packet_follows;
 }
-    
+
 struct handle_kexinit
+{
+  int (*f)(struct handle_kexinit *closure,
+	   struct kexinit *msg);
+}
+  
+
+struct handle_kexinit_packet
 {
   struct abstract_write super;
 };

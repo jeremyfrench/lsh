@@ -36,6 +36,8 @@ void debug_free(void *m)
   if (~p[-2] != p[size])
     fatal("Memory currupted!\n");
 
+  p[-2] = p[size] = 0;
+  
   free(p-2);
 }
 
