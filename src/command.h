@@ -191,7 +191,7 @@ extern struct collect_info_1 command_S;
 struct command *make_command_S_2(struct command *f,
 				 struct command *g);
 
-#define GABA_VALUE_S (&command_S.super.super)
+#define GABA_VALUE_S (&command_S.super.super.super)
 #define GABA_APPLY_S_1(f) (make_collect_state_1(&command_S, (f)))
 #define GABA_APPLY_S_2(f, g) (collect_S_2(NULL, (f), (g)))
 
