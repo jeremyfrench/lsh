@@ -335,6 +335,7 @@ make_exc_connection_handler(struct ssh_connection *connection,
 struct ssh_connection *
 make_ssh_connection(enum connection_flag flags,
 		    struct address_info *peer,
+		    struct address_info *local,
 		    const char *debug_comment,
 		    struct exception_handler *e)
 {
@@ -344,6 +345,7 @@ make_ssh_connection(enum connection_flag flags,
 
   connection->flags = flags;
   connection->peer = peer;
+  connection->local = local;
   
   connection->debug_comment = debug_comment;
   connection->super.write = do_handle_connection;
