@@ -28,6 +28,11 @@
 #include <assert.h>
 #include <string.h>
 
+#include "nettle/bignum.h"
+#include "nettle/rsa.h"
+#include "nettle/sexp.h"
+#include "nettle/sha.h"
+
 #include "publickey_crypto.h"
 
 #include "atoms.h"
@@ -36,11 +41,6 @@
 #include "sexp.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include "nettle/bignum.h"
-#include "nettle/rsa.h"
-#include "nettle/sexp.h"
-#include "nettle/sha.h"
 
 #include "rsa.c.x"
 

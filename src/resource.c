@@ -25,13 +25,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "resource.h"
 
 #include "gc.h"
 #include "werror.h"
 #include "xalloc.h"
 
-#include <assert.h>
 
 /* Forward declarations */
 void dont_free_live_resource(int alive);

@@ -29,14 +29,14 @@
 
 #include <assert.h>
 
+#include "nettle/buffer.h"
+#include "nettle/sexp.h"
+
 #include "sexp.h"
 
 #include "atoms.h"
 #include "format.h"
 #include "xalloc.h"
-
-#include "nettle/buffer.h"
-#include "nettle/sexp.h"
 
 
 /* Formatting s-expressions */

@@ -23,6 +23,24 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
+#include <errno.h>
+#include <locale.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #include "algorithms.h"
 #include "alist.h"
 #include "atoms.h"
@@ -76,22 +94,8 @@ struct command options2signature_algorithms;
 struct command_2 proxy_destination;
 #define PROXY_DESTINATION (&proxy_destination.super.super)
 
-
 #include "lsh_proxy.c.x"
 
-#include <assert.h>
-
-#include <errno.h>
-#include <locale.h>
-#include <stdio.h>
-#include <string.h>
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 
 /* Option parsing */
 

@@ -23,11 +23,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "suspend.h"
-
-#include "client.h" /* For escape_callback */
-#include "tty.h"
-#include "werror.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <assert.h>
 #include <errno.h>
@@ -42,6 +40,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+
+#include "suspend.h"
+
+#include "client.h" /* For escape_callback */
+#include "tty.h"
+#include "werror.h"
 
 static struct termios original_mode;
 

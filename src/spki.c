@@ -30,6 +30,11 @@
 #include <assert.h>
 #include <string.h>
 
+#include "nettle/sexp.h"
+
+#include "spki/parse.h"
+#include "spki/tag.h"
+
 #include "spki.h"
 
 #include "atoms.h"
@@ -45,11 +50,6 @@
 #include "werror.h"
 #include "xalloc.h"
 #include "alist.h"
-
-#include "nettle/sexp.h"
-
-#include "spki/parse.h"
-#include "spki/tag.h"
 
 
 /* Forward declarations */

@@ -2,7 +2,9 @@
  *
  */
 
-#include "crypto.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 /* FIXME: In which include file can getopt be found? Solaris man page
  * says stdlib.h, linux's says unistd.h. */
@@ -11,6 +13,8 @@
 
 #include <stdio.h>
 #include <string.h>
+
+#include "crypto.h"
 
 static void
 usage(void)

@@ -1,6 +1,10 @@
 #ifndef LSH_TESTUTILS_H_INCLUDED
 #define LSH_TESTUTILS_H_INCLUDED
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "lsh.h"
 
 #include "algorithms.h"

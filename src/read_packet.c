@@ -28,6 +28,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include "nettle/macros.h"
+
 #include "read_packet.h"
 
 #include "crypto.h"

@@ -30,11 +30,6 @@
 #include <assert.h>
 #include <string.h>
 
-#include "crypto.h"
-
-#include "werror.h"
-#include "xalloc.h"
-
 #include "nettle/arcfour.h"
 #include "nettle/aes.h"
 #include "nettle/blowfish.h"
@@ -45,6 +40,11 @@
 
 #include "nettle/cbc.h"
 #include "nettle/hmac.h"
+
+#include "crypto.h"
+
+#include "werror.h"
+#include "xalloc.h"
 
 #include "crypto.c.x"
 

@@ -13,7 +13,9 @@
  *					If it breaks, you get to keep both parts.
  */
 
-#include "jpoll.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <sys/time.h>
 #include <sys/types.h>
@@ -21,6 +23,8 @@
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
+#include "jpoll.h"
 
 int poll(struct pollfd *fdlist, nfds_t count, int timeoutInMS)
 {

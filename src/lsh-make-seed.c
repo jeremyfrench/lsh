@@ -75,6 +75,8 @@
 #include <zlib.h>
 #endif
 
+#include "nettle/yarrow.h"
+
 #include "environ.h"
 #include "format.h"
 #include "io.h"
@@ -82,8 +84,6 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include "nettle/yarrow.h"
 
 
 /* FIXME: Duplicated in zlib.c */

@@ -24,8 +24,6 @@
 #ifndef LSH_VERSION_H_INCLUDED
 #define LSH_VERSION_H_INCLUDED
 
-#include "lsh_types.h"
-
 #define CLIENT_PROTOCOL_VERSION "2.0"
 #define SERVER_PROTOCOL_VERSION "2.0"
 

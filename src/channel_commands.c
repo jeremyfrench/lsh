@@ -21,6 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "channel_commands.h"
 
 #include "ssh.h"
@@ -32,8 +38,6 @@
 #undef GABA_DEFINE
 
 #include "channel_commands.c.x"
-
-#include <assert.h>
 
 void
 do_channel_open_command(struct command *s,

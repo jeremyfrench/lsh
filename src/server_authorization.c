@@ -23,6 +23,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "server_authorization.h"
 
 #include "format.h"
@@ -31,8 +37,6 @@
 #include "sexp.h"
 #include "spki.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 #include "server_authorization.c.x"
 

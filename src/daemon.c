@@ -24,11 +24,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "daemon.h"
-
-#include "format.h"
-#include "werror.h"
-#include "xalloc.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -48,6 +46,13 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+
+#include "daemon.h"
+
+#include "format.h"
+#include "werror.h"
+#include "xalloc.h"
+
 
 #ifndef PID_DIR
 #define PID_DIR "/var/run"

@@ -21,6 +21,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <locale.h>
+#include <unistd.h>
+
 #include "charset.h"
 #include "client.h"
 #include "connection.h"
@@ -34,10 +42,6 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <locale.h>
-#include <unistd.h>
 
 #include "lsh_argp.h"
 

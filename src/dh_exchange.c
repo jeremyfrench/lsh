@@ -21,6 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "publickey_crypto.h"
 
 #include "connection.h"
@@ -30,8 +36,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 void
 init_dh_instance(struct dh_method *m,

@@ -21,16 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "bignum.h"
-#include "randomness.h"
-#include "werror.h"
-
-#include "nettle/bignum.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
 
+#include "nettle/bignum.h"
+
+#include "bignum.h"
+#include "randomness.h"
+#include "werror.h"
 
 /* Returns a random number, 0 <= x < 2^bits. */
 static void

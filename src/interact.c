@@ -23,11 +23,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "interact.h"
-
-#include "io.h"
-#include "werror.h"
-#include "xalloc.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <string.h>
 
@@ -37,6 +35,12 @@
 
 #include <errno.h>
 #include <fcntl.h>
+
+#include "interact.h"
+
+#include "io.h"
+#include "werror.h"
+#include "xalloc.h"
 
 #define GABA_DEFINE
 #include "interact.h.x"

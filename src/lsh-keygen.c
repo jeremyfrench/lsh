@@ -28,6 +28,19 @@
 
 /* FIXME: Incorporate code from dsa_keygen and rsa_keygen */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #include "crypto.h"
 #include "environ.h"
 #include "format.h"
@@ -39,15 +52,6 @@
 #include "xalloc.h"
 
 #include "lsh_argp.h"
-
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 
 #include "lsh-keygen.c.x"
 

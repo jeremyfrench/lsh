@@ -23,6 +23,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "compress.h"
 
 #include "exception.h"
@@ -30,8 +36,6 @@
 #include "xalloc.h"
 
 #include "compress.c.x"
-
-#include <assert.h>
 
 /* GABA:
    (class

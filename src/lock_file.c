@@ -24,15 +24,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "lock_file.h"
-
-#include "format.h"
-#include "resource.h"
-#include "werror.h"
-#include "xalloc.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <errno.h>
-/* #include <string.h> */
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -42,6 +38,13 @@
 #include <sys/stat.h>
 
 #include <fcntl.h>
+
+#include "lock_file.h"
+
+#include "format.h"
+#include "resource.h"
+#include "werror.h"
+#include "xalloc.h"
 
 #define GABA_DEFINE
 #include "lock_file.h.x"

@@ -26,8 +26,6 @@
 #ifndef LSH_LSH_ARGP_H_INCLUDED
 #define LSH_LSH_ARGP_H_INCLUDED
 
-#include "lsh_types.h"
-
 #if HAVE_ARGP_PARSE
 /* We're using the system's argp implementation */
 # if HAVE_ARGP_H

@@ -21,6 +21,16 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <errno.h>
+
+#include <unistd.h>
+#include <fcntl.h>
+
 #include "server.h"
 
 #include "abstract_io.h"
@@ -39,13 +49,6 @@
 #include "unpad.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-/* #include <string.h> */
-#include <errno.h>
-
-#include <unistd.h>
-#include <fcntl.h>
 
 #include "server.c.x"
 

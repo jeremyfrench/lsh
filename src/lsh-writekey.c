@@ -39,6 +39,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "nettle/sexp.h"
 
 #include "algorithms.h"
 #include "crypto.h"
@@ -51,8 +52,6 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include "nettle/sexp.h"
 
 #include "lsh-writekey.c.x"
 

@@ -28,13 +28,14 @@
 #include <assert.h>
 #include <string.h>
 
+#include "nettle/bignum.h"
+#include "nettle/macros.h"
+
 #include "format.h"
 
 #include "list.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include "nettle/bignum.h"
 
 struct lsh_string *ssh_format(const char *format, ...)
 {

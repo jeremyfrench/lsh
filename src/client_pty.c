@@ -21,6 +21,12 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "client.h"
 
 #include "channel_commands.h"
@@ -30,8 +36,6 @@
 #include "tty.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 #include "client_pty.c.x"
 

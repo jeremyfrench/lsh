@@ -30,9 +30,10 @@
 #include <assert.h>
 #include <string.h>
 
+#include "nettle/memxor.h"
+
 #include "crypto.h"
 
-#include "memxor.h"
 #include "xalloc.h"
 
 /* NOTE: The PKCS#5 v2 spec doesn't recommend or specify any

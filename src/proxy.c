@@ -21,6 +21,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <arpa/inet.h>
+
 #include "proxy.h"
 
 #include "channel_commands.h"
@@ -35,9 +42,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <arpa/inet.h>
 
 struct command chained_connection;
 #define CHAINED_CONNECTION (&chained_connection.super)

@@ -29,6 +29,10 @@
 
 #include <assert.h>
 
+#include "nettle/bignum.h"
+#include "nettle/macros.h"
+#include "nettle/sexp.h"
+
 #include "srp.h"
 
 #include "crypto.h"
@@ -37,9 +41,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include "nettle/bignum.h"
-#include "nettle/sexp.h"
 
 #define GABA_DEFINE
 #include "srp.h.x"

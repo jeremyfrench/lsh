@@ -29,6 +29,8 @@
 
 #include <assert.h>
 
+#include "nettle/rsa.h"
+
 #include "publickey_crypto.h"
 
 #include "format.h"
@@ -36,9 +38,6 @@
 #include "sexp.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include "nettle/rsa.h"
-
 
 #define SA(x) sexp_a(ATOM_##x)
 

@@ -23,16 +23,20 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
+#include "nettle/dsa.h"
+
 #include "publickey_crypto.h"
 
 #include "format.h"
 #include "randomness.h"
 #include "sexp.h"
 #include "werror.h"
-
-#include "nettle/dsa.h"
-
-#include <assert.h>
 
 
 /* FIXME: Let caller supply the progress function. */

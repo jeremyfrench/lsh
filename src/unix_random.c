@@ -40,6 +40,8 @@
 #include <sys/resource.h>
 #include <sys/stat.h>
 
+#include "nettle/yarrow.h"
+
 #include "randomness.h"
 
 #include "crypto.h"
@@ -49,9 +51,6 @@
 #include "reaper.h"
 #include "xalloc.h"
 #include "werror.h"
-
-#include "nettle/yarrow.h"
-
 
 #include "unix_random.c.x"
 

@@ -37,6 +37,17 @@ B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
 ---- END SSH2 PUBLIC KEY ----
 */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <fcntl.h>
+/* #include <string.h> */
+#include <unistd.h>
+
+#include "nettle/base64.h"
+#include "nettle/sexp.h"
 
 #include "algorithms.h"
 #include "alist.h"
@@ -50,14 +61,6 @@ B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include "nettle/base64.h"
-#include "nettle/sexp.h"
-
-#include <assert.h>
-#include <fcntl.h>
-/* #include <string.h> */
-#include <unistd.h>
 
 #include "lsh-export-key.c.x"
 

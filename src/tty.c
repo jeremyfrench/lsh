@@ -30,6 +30,8 @@
 
 #include <sys/ioctl.h>
 
+#include "nettle/macros.h"
+
 #include "tty.h"
 
 #include "format.h"

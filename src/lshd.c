@@ -23,6 +23,30 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
+#include <errno.h>
+#include <locale.h>
+#include <stdio.h>
+/* #include <string.h> */
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#if TIME_WITH_SYS_TIME && HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+#if HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #include "algorithms.h"
 #include "alist.h"
 #include "atoms.h"
@@ -60,26 +84,6 @@
 #include "lsh_argp.h"
 
 #include "lshd.c.x"
-
-#include <assert.h>
-
-#include <errno.h>
-#include <locale.h>
-#include <stdio.h>
-/* #include <string.h> */
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#if TIME_WITH_SYS_TIME && HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-#if HAVE_SYS_RESOURCE_H
-#include <sys/resource.h>
-#endif
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 
 
 /* Option parsing */

@@ -27,6 +27,11 @@
 
 #include <assert.h>
 
+#include "nettle/bignum.h"
+#include "nettle/dsa.h"
+#include "nettle/sexp.h"
+#include "nettle/sha.h"
+
 #include "publickey_crypto.h"
 
 #include "atoms.h"
@@ -37,11 +42,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include "nettle/bignum.h"
-#include "nettle/dsa.h"
-#include "nettle/sexp.h"
-#include "nettle/sha.h"
 
 #include "dsa.c.x" 
 

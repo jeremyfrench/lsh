@@ -28,6 +28,9 @@
 #include <assert.h>
 #include <string.h>
 
+#include "nettle/bignum.h"
+#include "nettle/macros.h"
+
 #include "parse.h"
 
 #include "format.h"
@@ -36,8 +39,6 @@
 #include "xalloc.h"
 
 #include "parse_macros.h"
-
-#include "nettle/bignum.h"
 
 void
 simple_buffer_init(struct simple_buffer *buffer,

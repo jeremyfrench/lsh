@@ -23,16 +23,20 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "list.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <assert.h>
 #include <stdarg.h>
 
+#include "list.h"
+
+#include "xalloc.h"
+
 #define GABA_DEFINE
 #include "list.h.x"
 #undef GABA_DEFINE
-
-#include "xalloc.h"
 
 struct list_header *
 lsh_list_alloc(struct lsh_class *class,

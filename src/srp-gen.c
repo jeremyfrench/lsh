@@ -23,6 +23,21 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <errno.h>
+
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #include "srp.h"
 
 #include "crypto.h"
@@ -35,17 +50,6 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <errno.h>
-
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 
 #define BLOCK_SIZE 2000
 #define SALT_SIZE 20
