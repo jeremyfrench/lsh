@@ -1,4 +1,4 @@
-/* srp-gen.h
+/* srp-gen.c
  *
  * Create an SRP verifier
  *
