@@ -26,8 +26,8 @@
 #ifndef LSH_SPKI_H_INCLUDED
 #define LSH_SPKI_H_INCLUDED
 
+#include "publickey_crypto.h"
 #include "exception.h"
-#include "sexp.h"
 #include "alist.h"
 
 /* Needed by spki.h.x */
@@ -59,8 +59,16 @@ int spki_get_type(struct sexp *e, struct sexp_iterator **res);
 
 int spki_check_type(struct sexp *e, int type, struct sexp_iterator **res);
 
+#if 0
 /* FIXME: should support keyblobs other than ssh-dss */
 struct sexp *keyblob2spki(struct lsh_string *keyblob);
+#endif
+
+struct sexp *
+make_ssh_hostkey_tag(struct address_info *host);
+
+struct sexp *
+dsa_to_spki_public_key(struct dsa_public *p);
 
 extern struct command spki_public2private;
 #define PRIVATE2PUBLIC (&spki_public2private.super)
@@ -76,11 +84,11 @@ struct command *
 make_spki_hash(int name, struct hash_algorithm *algorithm);
 
 struct command *
-make_spki_parse_key(struct randomness *random);
+make_spki_parse_key(struct alist *algorithms);
 
 struct keypair *
 read_spki_key_file(const char *name,
-		   struct randomness *r,
+		   struct alist *algorithms,
 		   struct exception_handler *e);
 
 
@@ -151,14 +159,18 @@ make_spki_subject(struct sexp *key,
      (vars
        ; Looks up a public-key or hash.
        (lookup method (object spki_subject)
-                      "struct sexp *e")
-       (authorized method int
-                          "struct spki_subject *subject"
-			  "struct sexp *access")))
+                      "struct sexp *e"
+		      ; If non-NULL, use this verifier for
+		      ; the subject. Useful for non-SPKI keys.
+		      "struct verifier *v")
+       (authorize method int
+                         "struct spki_subject *subject"
+			 "struct sexp *access")))
        ;; (clone method (object spki_context))))
 */
 
-#define SPKI_LOOKUP(c, e) ((c)->lookup((c), (e)))
+#define SPKI_LOOKUP(c, e, v) ((c)->lookup((c), (e), (v)))
+#define SPKI_AUTHORIZE(c, s, a) ((c)->authorize((c), (s), (a)))
 #define SPKI_CLONE(c) ((c)->clone((c)))
 
 struct spki_context *
