@@ -1,3 +1,43 @@
+2000-10-03  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/spki.c (spki_make_signer): New function. Used in
+	do_spki_sexp2signer() and parse_private_key().
+	(spki_make_public_key): New function. Used in spki_signer2public()
+	and parse_private_key().
+
+	* src/lsh-decode-key.c (do_decode_key): Build
+	<public-key>-expression. 
+
+	* src/interact.h: New class abstract_interact (not yet used). 
+	* src/interact.c: New class interact_unix, still #if:ed out.
+
+	* src/abstract_crypto.h (signer): Changed the conventions for
+	SIGNER_PUBLIC(). Now returns ( <pub-sig-alg-id> <s-expr>* ), not
+	<public-key>. 
+	* src/dsa.c (make_dsa_public_key): Updated for the new convention. 
+	* src/rsa.c (do_rsa_public_key): Likewise.
+
+	* src/testsuite/Makefile.am (TS_PROGS): Added tests for rsa and
+	dsa. 
+
+	* src/sexp-conv.c (do_sexp_select): Bugfix in OP_CAR. 
+
+2000-10-01  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/sexp-conv.c: New option --select.
+	(do_sexp_select): New function.
+	(make_sexp_select_command): New function.
+
+	* src/testsuite/macros.m4 (TS_TEST_SIGN): Bug fixes.
+	(main): Recognize options -v, --debug etc.
+
+	* src/rsa.c (rsa_compute_root): Fixed bug in CRT calculation.
+
+	* src/keyexchange.c (select_algorithm): Reversed order of
+	arguments. (Fixes a bug reported by jps).
+	(do_handle_kexinit): Use symbolic constants when indexing
+	connection->kexinits. 
+
 2000-09-26  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/dsa_keygen.c (dsa_generate_key): Added lost
