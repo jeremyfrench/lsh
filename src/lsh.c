@@ -40,6 +40,7 @@
 #include "werror.h"
 #include "xalloc.h"
 #include "compress.h"
+#include "tty.h"
 
 #include <errno.h>
 #include <locale.h>
@@ -50,6 +51,10 @@
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "getopt.h"
 
@@ -68,6 +73,8 @@ void usage(void)
 	 " -c,  --crypto=ALGORITHM\n"
 	 " -z,  --compression=ALGORITHM\n"
 	 "      --mac=ALGORITHM\n"
+	 " -t   Request a remote pty\n"
+	 " -nt  Don't request a remote tty\n"
 	 " -q,  --quiet\n"
 	 " -v,  --verbose\n"
 	 "      --debug\n");
@@ -108,12 +115,14 @@ int main(int argc, char **argv)
   int preferred_crypto = 0;
   int preferred_compression = 0;
   int preferred_mac = 0;
-  
+  /* int term_width, term_height, term_width_pix, term_height_pix; */
   int not;
-  
+  int use_pty = -1; /* Means default */
   int option;
 
   int lsh_exit_code;
+
+  int tty;
   
   struct sockaddr_in remote;
 
@@ -126,6 +135,8 @@ int main(int argc, char **argv)
   struct lookup_verifier *lookup;
   struct ssh_service *service;
 
+  struct request_info *requests;
+  
   int in, out, err;
 
   NEW(io_backend, backend);
@@ -150,7 +161,7 @@ int main(int argc, char **argv)
 
   not = 0;
   
-  while(1)
+  for (;;)
     {
       static struct option options[] =
       {
@@ -165,7 +176,7 @@ int main(int argc, char **argv)
 	{ NULL }
       };
       
-      option = getopt_long(argc, argv, "+c:l:np:qvz::", options, NULL);
+      option = getopt_long(argc, argv, "+c:l:np:qtvz::", options, NULL);
       switch(option)
 	{
 	case -1:
@@ -181,6 +192,9 @@ int main(int argc, char **argv)
 	  break;
 	case 'q':
 	  quiet_flag = 1;
+	  break;
+	case 't':
+	  use_pty = !not;
 	  break;
 	case 'v':
 	  verbose_flag = 1;
@@ -240,6 +254,25 @@ int main(int argc, char **argv)
       exit(1);
     }
 
+  /* This is the final request. */
+  requests = make_shell_request(NULL);
+
+  if (use_pty < 0)
+    use_pty = 1;
+
+  if (use_pty)
+    {
+      tty = open("/dev/tty", O_RDWR);
+      
+      if (tty < 0)
+	{
+	  werror("lsh: Failed to open tty (errno = %d): %s\n",
+		 errno, strerror(errno));
+	  use_pty = 0;
+	}
+      else
+	requests = make_pty_request(tty, 0, 1, requests);
+    }
   in = STDIN_FILENO;
   out = STDOUT_FILENO;
   
@@ -252,8 +285,8 @@ int main(int argc, char **argv)
   init_backend(backend);
   
   set_error_stream(STDERR_FILENO, 1);
-  
-  make_kexinit
+
+    make_kexinit
     = make_simple_kexinit(r,
 			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1),
 			  make_int_list(1, ATOM_SSH_DSS, -1),
@@ -267,14 +300,15 @@ int main(int argc, char **argv)
 			   ? make_int_list(1, preferred_compression, -1)
 			   : default_compression_algorithms()),
 			  make_int_list(0, -1));
-  
+
   service = make_connection_service
     (make_alist(0, -1),
      make_alist(0, -1),
      make_client_startup(io_read(backend, in, NULL, NULL),
 			 io_write(backend, out, BLOCK_SIZE, NULL),
 			 io_write(backend, err, BLOCK_SIZE, NULL),
-			 ATOM_SHELL, ssh_format(""), &lsh_exit_code));
+			 requests,
+			 &lsh_exit_code));
   
   kexinit_handler = make_kexinit_handler
     (CONNECTION_CLIENT,
@@ -305,5 +339,3 @@ int main(int argc, char **argv)
 
   return lsh_exit_code;
 }
-
-  
