@@ -1,0 +1,50 @@
+#! /bin/sh
+
+: ${LSH:=lsh}
+
+werror () {
+    echo 1>&2 "$1"
+}
+
+die () {
+    werror "$1"
+    exit 1
+}
+
+LSH_YARROW_SEED_FILE=yarrow-seed-file
+
+if [ -s "$LSH_YARROW_SEED_FILE" ] ; then : ; else
+    werror "Generating seed"
+    lsh-make-seed -o "$LSH_YARROW_SEED_FILE" --sloppy
+fi
+
+export LSH_YARROW_SEED_FILE
+
+mini-inetd -- 5556 /bin/sh /bin/sh -c 'cat current' & 
+pid=$?
+
+trap "kill $pid; rm -f current" 0
+
+werror "Testing $LSH"
+
+for f in rapid7-ssh-pdu/*.pdu ; do
+    echo 1>&2 "Testing $f"
+    ln -sf $f current || die "Creating symlink current -> $f failed"
+
+    "$LSH" -q --sloppy --capture-to=/dev/null -p 5556 localhost exit 0
+    status="$?"
+    # Should be either 1 or 17 (not sure exactly when
+    # which of these are returned)
+    case "$status" in
+	1|17)
+	    :
+	;;
+	*)
+	    die "Strange exit code $status from client"
+	;;
+    esac
+done
+
+werror "Test done"
+
+exit 0
