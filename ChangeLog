@@ -1,3 +1,25 @@
+1999-10-19  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/mempcpy.c, src/mempcpy.h, src/strndup.c, src/strndup.h:
+	Removed (definitions incorporated where needed in the files in
+	src/argp/) 
+
+	* src/server_authorization.c (do_key_lookup): Some cleanup
+	(Bazsi). Uses new instance variable index_name to construct the
+	file name.
+	(make_authorization_db): Added argument index_name (Bazsi).
+
+	* src/server_publickey.c (do_authenticate): Fixed type (Bazsi).
+	(do_authenticate): Include session id length field in the
+	signature data. 
+
+	* src/lshd.c (main): Pass "keys_md5" to make_authorization_db().
+	(Bazsi). 
+
+	* src/format.c (format_hex_string): New function (Bazsi).
+	(ssh_vformat_length): Added hex 'x' modifier. (Bazsi).
+	(ssh_vformat_write): -"-
+
 1999-10-18  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in (AC_CHECK_MEMBER): New macro.
