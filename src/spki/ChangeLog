@@ -1,3 +1,9 @@
+2003-04-08  Niels Möller  <niels@s3.kth.se>
+
+	* testsuite/delegate-test: Use $srcdir when referring to the test
+	keys. 
+	* testsuite/make-signature-test: Likewise.
+
 2003-03-11  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* testsuite/Makefile.am (TS_SH): Added reduce-test.
