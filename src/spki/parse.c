@@ -191,7 +191,7 @@ spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 	assert(key);
 	
 	if ( (*principal = spki_principal_by_key(db, key_length, key)) )
-	  return spki_parse_end(i);
+	  return i->type;
 	else
 	  return spki_parse_fail(i);
       }
@@ -216,7 +216,7 @@ spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 	    else
 	      return spki_parse_fail(i);
 
-	    return spki_parse_end(i);
+	    return i->type;
 	  }
 	return spki_parse_fail(i);
       }
@@ -227,25 +227,24 @@ enum spki_type
 spki_parse_subject(struct spki_acl_db *db, struct spki_iterator *i,
 		   struct spki_principal **principal)
 {
-  if (!spki_check_type(i, SPKI_TYPE_SUBJECT))
+  if (!spki_check_type(i, SPKI_TYPE_SUBJECT)
+      || !spki_parse_principal(db, i, principal))
     return spki_parse_fail(i);
 
-  return spki_parse_principal(db, i, principal);
+  return spki_parse_end(i);
 }
 
 enum spki_type
 spki_parse_issuer(struct spki_acl_db *db, struct spki_iterator *i,
 		  struct spki_principal **principal)
 {
-  if (i->type != SPKI_TYPE_ISSUER)
+  if (!spki_check_type(i, SPKI_TYPE_ISSUER)
+      || !spki_parse_principal(db, i, principal))
     return spki_parse_fail(i);
 
-  spki_parse_type(i);
-  return spki_parse_principal(db, i, principal);
+  return spki_parse_end(i);
 }
 
-/* FIXME: Perhaps the other parser functions should handle type
- * mismatches in the same way as spki_parse_tag. */
 enum spki_type
 spki_parse_tag(struct spki_acl_db *db, struct spki_iterator *i,
 	       struct spki_tag **tag)
