@@ -24,12 +24,11 @@
  */
 
 #include "algorithms.h"
-#include "blocking_write.h"
-/* For read_password() */
-#include "password.h"
 #include "crypto.h"
 #include "format.h"
 #include "io_commands.h"
+/* For read_password() */
+#include "password.h"
 #include "sexp_commands.h"
 #include "spki_commands.h"
 #include "version.h"
@@ -54,16 +53,6 @@ static struct read_sexp_command read_sexp
 = STATIC_READ_SEXP(SEXP_TRANSPORT, 0);
 
 #define READ_SEXP (&read_sexp.super.super)
-
-#if 0
-static struct sexp_print_command write_canonical
-= STATIC_PRINT_SEXP(SEXP_CANONICAL);
-#define CANONICAL (&write_canonical.super.super.super)
-
-static struct sexp_print_command write_transport
-= STATIC_PRINT_SEXP(SEXP_TRANSPORT);
-#define TRANSPORT (&write_transport.super.super.super)
-#endif
 
 struct lsh_writekey_options;
 
@@ -151,7 +140,7 @@ main_options[] =
   { "iteration-count", 'i', "PKCS#5 iteration count", 0, "Default is 1500", 0 },
   { "crypto", 'c', "Algorithm", 0, "Encryption algorithm for the private key file.", 0 },
   { "label", 'l', "Text", 0, "Unencrypted label for the key.", 0 },
-  { "pass phrase", 'p', "Password", 0, NULL, 0 },
+  { "passphrase", 'p', "Password", 0, NULL, 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -250,7 +239,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case 'o':
+#if 0
     case 'f':
+#endif
       self->file = format_cstring(arg);
       break;
 
