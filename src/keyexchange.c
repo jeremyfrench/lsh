@@ -502,7 +502,7 @@ struct mac_instance *kex_make_mac(struct hash_instance *secret,
   key = kex_make_key(secret, algorithm->key_size,
 		     type, session_id);
 
-  mac = MAKE_MAC(algorithm, key->data);
+  mac = MAKE_MAC(algorithm, algorithm->key_size, key->data);
 
   lsh_string_free(key);
   return mac;
