@@ -347,8 +347,13 @@ int io_iter(struct io_backend *b)
 	 * other systems, poll() sets POLLHUP and subsequent read()
 	 * calls will return -1, not 0.
 	 *
+	 * But to complicate things some more, we can (also on Linux)
+	 * get both POLLHUP and POLLIN set. In that case, we do an
+	 * ordinary read.
+	 *
 	 * We set the hanged_up flag before calling FD_READ, which
 	 * tells the io_callback that it should avoid calling read(). */
+
 	if (fds[i].revents & POLLHUP)
 	  {
 	    if (fd->want_write)
@@ -356,8 +361,13 @@ int io_iter(struct io_backend *b)
 	      FD_WRITE(fd);
 	    else if (fd->want_read)
 	      {
-		/* Ought to behave like EOF. */
-		fd->hanged_up = 1;
+		if (!fd->super.alive)
+		  continue;
+
+		/* If reading is not possible, treat this as EOF. */ 
+		if (!(fds[i].revents & MY_POLLIN))
+		  fd->hanged_up = 1;
+
 		FD_READ(fd);
 	      }
 	    else
