@@ -28,6 +28,7 @@
 #include "xalloc.h"
 
 #include <assert.h>
+#include <string.h>
 
 /* Prototype */
 static void do_free_buffer(struct buffer_node *n);

@@ -25,6 +25,7 @@
 
 #include <sys/types.h>
 #include <time.h>
+#include <string.h>
 
 #include "randomness.h"
 
