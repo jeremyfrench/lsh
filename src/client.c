@@ -96,11 +96,12 @@ static struct read_handler *do_line(struct line_handler **h,
 	   || ((length >= 9) && !memcmp(line + 4, "1.99-", 5)))
 	{
 	  struct read_handler *new = make_read_packet
-	    (make_packet_debug
-	     (make_packet_unpad(&closure->connection->super),
-	      stderr),
+	    (make_packet_unpad
+	     (make_packet_debug
+	      (&closure->connection->super,
+	       stderr)),
 	     closure->connection);
-	  
+	     
 	  closure->connection->server_version
 	    = ssh_format("%ls", length, line);
 

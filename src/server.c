@@ -32,6 +32,7 @@
 #include "keyexchange.h"
 #include "read_line.h"
 #include "read_packet.h"
+#include "unpad.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -89,10 +90,11 @@ static struct read_handler *do_line(struct line_handler **h,
       /* Parse and remember format string */
       if ((length >= 8) && !memcmp(line + 4, "2.0-", 4))
 	{
-	  struct read_handler *new
-	    = make_read_packet(make_packet_debug(&closure->connection->super,
-						 stderr),
-			       closure->connection);
+	  struct read_handler *new = make_read_packet
+	    (make_packet_unpad
+	     (make_packet_debug(&closure->connection->super,
+				stderr)),
+	     closure->connection);
 	  
 	  closure->connection->client_version
 	    = ssh_format("%ls", length, line);
