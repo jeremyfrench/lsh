@@ -6,13 +6,13 @@
 #define LSH_IO_H_INCLUDED
 
 #include "abstract_io.h"
-#include "write_buffer"
+#include "write_buffer.h"
 
 struct input_fd
 {
   struct input_fd *next;
   int fd;
-  struct read_handler *callback;
+  struct read_handler *handler;
   int on_hold; /* For flow control */
 };
 
@@ -21,27 +21,37 @@ struct output_fd
   struct output_fd *next;
   int fd;
   struct write_buffer *buffer;
-  struct callback close_callback;
+  struct callback *close_callback;
 };
+
+/* A closed function with a file descriptor as argument */
+struct fd_callback;
+typedef int (*fd_callback_f)(struct callback *closure, int fd);
+struct fd_callback
+{
+  callback_f f;
+};
+
+#define FD_CALLBACK(c, fd) ((c)->f(c, (fd)))
 
 struct listen_fd
 {
   struct listen_fd *next;
   int fd;
-  struct callback *callback;
+  struct fd_callback *callback;
 };
 
 struct connect_fd
 {
   struct connect_fd *next;
   int fd;
-  struct callback *callback;
+  struct fd_callback *callback;
 
 };
   
 struct callout
 {
-  struct callout_info *next;
+  struct callout *next;
   struct callback *callout;
   time_t when;
   /* callback */
