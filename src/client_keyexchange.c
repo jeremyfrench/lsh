@@ -136,7 +136,7 @@ do_handle_dh_reply(struct packet_handler *c,
 #if DATAFELLOWS_WORKAROUNDS
   if (! (connection->peer_flags & PEER_SEND_NO_DEBUG))
 #endif
-    send_verbose(connection, "Key exchange successful!", 0);
+    send_verbose(connection->write, "Key exchange successful!", 0);
   
   if (connection->established)
     {
