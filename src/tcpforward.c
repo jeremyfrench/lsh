@@ -35,6 +35,8 @@
 #include "io_commands.h"
 #include "lsh_string.h"
 #include "ssh.h"
+/* For connection->user->name */
+#include "userauth.h"
 #include "werror.h"
 
 
@@ -204,7 +206,8 @@ do_channel_open_direct_tcpip(struct channel_open *s,
        && parse_uint32(args, &orig_port) 
        && parse_eod(args))
     {
-      verbose("direct-tcpip connection attempt\n");
+      werror("direct-tcp to %S:%i for user %S.\n",
+	     dest_host, dest_port, connection->user->name);
 
       COMMAND_CALL(closure->callback,
 		   make_address_info(dest_host, dest_port),
@@ -378,7 +381,7 @@ do_tcpip_forward_request(struct global_request *s,
 	  COMMAND_RETURN(c, NULL);
 	  return;
 	}
-
+      
       if (lookup_forward(&connection->table->local_ports,
 			 STRING_LD(bind_host), bind_port))
 	{
@@ -389,8 +392,10 @@ do_tcpip_forward_request(struct global_request *s,
 	  EXCEPTION_RAISE(e, &again);
 	  return;
 	}
-      
-      verbose("Adding forward-tcpip\n");
+
+      werror("forward-tcpip request for port %i by user %S.\n",
+	     bind_port, connection->user->name);
+
       forward = make_local_port(a, NULL);
       object_queue_add_head(&connection->table->local_ports,
 			    &forward->super.super);
