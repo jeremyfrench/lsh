@@ -1,5 +1,21 @@
 Mon Apr 19 16:23:22 1999  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/lsh.c: Adapted to the command language.
+
+	* src/command.c (do_progn): Bug fix.
+
+	* src/client_pty.c (make_pty_request): New function.
+
+	* src/client.c (do_client_io): Renamed the do_io function, and
+	turned it into the client_io command.
+	(make_client_session): Removed the requests argument.
+	(do_format_shell_request): New function.
+	(request_shell): New command.
+	#if:ed out a lot of old code. pty handling moved to client_pty.h. 
+
+	* src/channel_commands.c (do_channel_request_command): Pass
+	continuation pointer to the FORMAT_CHANNEL_REQUEST method.
+
 	* src/invert-defs: Don't use echo "\n" (Bazsi).
 
 Sun Apr 18 23:03:20 1999  Niels Möller  <nisse@lysator.liu.se>
