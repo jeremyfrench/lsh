@@ -46,6 +46,7 @@
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
+#include "compress.h"
 
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
@@ -182,6 +183,7 @@ int main(int argc, char **argv)
   dh = make_dh1(r);
   init_host_key(r); /* Initializes public_key and secret_key */
   kex = make_dh_server(dh, public_key, secret_key);
+
   algorithms = make_alist(7,
 			  ATOM_ARCFOUR, &crypto_arcfour_algorithm,
 			  ATOM_BLOWFISH_CBC, crypto_cbc(make_blowfish()),
@@ -189,7 +191,17 @@ int main(int argc, char **argv)
 			  ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
 			  ATOM_HMAC_MD5, make_hmac_algorithm(&md5_algorithm),
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
-			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
+			  ATOM_SSH_DSS, make_dss_algorithm(r),
+			  -1);
+
+#if WITH_ZLIB
+  ALIST_SET(algorithms, ATOM_ZLIB, make_zlib());
+#endif
+
+#if WITH_IDEA
+  ALIST_SET(algorithms, ATOM_IDEA_CBC, crypto_cbc(&idea_algorithm));
+#endif
+
   make_kexinit = make_test_kexinit(r);
 
   kexinit_handler = make_kexinit_handler
