@@ -1,5 +1,9 @@
 2004-02-24  Niels Möller  <nisse@lysator.liu.se>
 
+	* misc/xenofarm.sh (dotask): Fixed handling of $var.
+	(cfgwarn, makewarn, ckprgwarn): Use $task when constructing
+	filenames.
+
 	* misc/xenofarm.sh: Fixed tasks argpmake and nettlemake. New tasks
 	ckargp and cknettle.
 

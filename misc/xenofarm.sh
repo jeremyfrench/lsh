@@ -96,7 +96,7 @@ dotask() {
     warnfunc="$3"
     cmd="$4"
     var=${5:-status}
-    if test `eval $var` = $condition
+    if test `eval echo '${'$var'}'` = good
     then
 	logstart $task
         timeecho Begin $task
@@ -123,50 +123,58 @@ dotask() {
 }
 
 cfgwarn () {
-    egrep -i 'warning|\(w\)' r/cfglog.txt \
+    log="r/${task}log.txt"
+    warn="r/${task}warn.txt"
+    egrep -i 'warning|\(w\)' "$log" \
     | sed -e '/configure: WARNING:  Converted \. to /d' \
-    > r/cfgwarn.txt
-    warnings=`wc -l < r/cfgwarn.txt`
+    > "$warn"
+    warnings=`wc -l < $warn`
     if test $warnings -gt 0
     then
 	logwarn $warnings
     else
-	rm r/cfgwarn.txt
+	rm "$warn"
 	logpass
     fi
 }
 
 makewarn () {
+    log="r/${task}log.txt"
+    warn="r/${task}warn.txt"
     # Use sed -e /RX/d to get rid of selected warnings.
-    egrep -i 'warning|\(w\)' r/makelog.txt \
-    > r/makewarn.txt
-    warnings=`wc -l < r/makewarn.txt`
+    egrep -i 'warning|\(w\)' "$log" \
+    > "$warn"
+    warnings=`wc -l < $warn`
     if test $warnings -gt 0
     then
 	logwarn $warnings
     else
-	rm r/makewarn.txt
+	rm "$warn"
 	logpass
     fi
 }
 
 ckprgwarn () {
-    egrep -i 'warning|\(w\)|error' r/ckprglog.txt \
-    > r/ckprgwarn.txt
-    warnings=`wc -l < r/ckprgwarn.txt`
+    log="r/${task}log.txt"
+    warn="r/${task}warn.txt"
+    fail="r/${task}fail.txt"
+
+    egrep -i 'warning|\(w\)|error' "$log" \
+    > "$warn"
+    warnings=`wc -l < $warn`
     if test $warnings -gt 0
     then
-	egrep -i 'error' r/ckprgwarn.txt \
-	> r/ckprgfail.txt
-	if test `wc -l < r/ckprgfail.txt` -gt 0
+	egrep -i 'error' "$warn" \
+	> "$fail"
+	if test `wc -l < $fail` -gt 0
 	then
 	    logfail
 	else
-	    rm r/ckprgfail.txt
+	    rm "$fail"
 	    logwarn $warnings
 	fi
     else
-	rm r/ckprgwarn.txt
+	rm "$warn"
 	logpass
     fi
 }
