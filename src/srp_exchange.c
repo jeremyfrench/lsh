@@ -54,7 +54,7 @@ make_srp_entry(struct lsh_string *name, struct sexp *e)
 {
   struct sexp_iterator *i;
 
-  if (sexp_check_type(e, ATOM_SRP_VERIFIER, &i)
+  if ((i = sexp_check_type(e, ATOM_SRP_VERIFIER))
       && (SEXP_LEFT(i) == 3)
       && sexp_atom_eq(SEXP_GET(i), ATOM_SSH_RING1) )
     {
