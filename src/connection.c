@@ -374,7 +374,7 @@ make_ssh_connection(enum connection_flag flags,
 
   connection->literal_kexinits[CONNECTION_CLIENT]
     = connection->literal_kexinits[CONNECTION_SERVER] = NULL;
-  
+
   for (i = 0; i < 0x100; i++)
     connection->dispatch[i] = &connection_unimplemented_handler;
 
@@ -426,16 +426,10 @@ connection_init_io(struct ssh_connection *connection,
   /* Initialize i/o hooks */
   connection->raw = raw;
   connection->write_packet =
-    make_packet_debug(
-      make_packet_deflate(
-	make_packet_pad(
-	  make_packet_encrypt(raw, connection), 
-	  connection,
-	  r),
-	connection),
-      (connection->debug_comment
-       ? ssh_format("%lz sent", connection->debug_comment)
-       : ssh_format("Sent")));
+    make_packet_debug(make_write_packet(connection, r, raw),
+		      (connection->debug_comment
+		       ? ssh_format("%lz sent", connection->debug_comment)
+		       : ssh_format("Sent")));
 }
 
 void
