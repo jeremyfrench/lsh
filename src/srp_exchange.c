@@ -25,6 +25,7 @@
 
 #include "srp.h"
 
+#include "crypto.h"
 #include "format.h"
 #include "sexp.h"
 #include "ssh.h"
@@ -208,7 +209,7 @@ srp_make_reply_msg(struct dh_instance *dh, struct srp_entry *entry)
       /* Loop, in case f or u turns out to be zero */
       dh_generate_secret(dh->method, dh->secret, dh->f);
 
-      zn_ring_add(dh->method->G, dh->f, dh->f, entry->verifier);
+      GROUP_ADD(dh->method->G, dh->f, dh->f, entry->verifier);
 
       if (!mpz_sgn(dh->f))
 	{
@@ -287,7 +288,7 @@ srp_make_client_proof(struct dh_instance *dh,
   /* Compute the verifier */
   GROUP_POWER(dh->method->G, v, dh->method->G->generator, x);
 
-  zn_ring_subtract(dh->method->G, dh->K, dh->f, v);
+  GROUP_SUBTRACT(dh->method->G, dh->K, dh->f, v);
 
   /* Compute the exponent */
   mpz_mul_ui(tmp, x, u);
@@ -368,6 +369,12 @@ srp_process_server_proof(struct dh_instance *dh, struct lsh_string *packet)
       return 1;
     }
   return 0;
+}
+
+struct dh_method *
+make_srp1(struct randomness *r)
+{
+  return make_dh(make_ssh_ring_srp_1(), &sha1_algorithm, r);
 }
 
 #endif /* WITH_SRP */
