@@ -103,6 +103,8 @@ struct spawn_info
        ; This string include a terminating NUL-character, for
        ; compatibility with library and system calls.
        (name string)
+       ; This doesn't really belong here, but there are a few
+       ; functions that need it. 
        (uid . uid_t)
        
        ; Verify a password. Consumes the password string.
