@@ -140,8 +140,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (name lshd_options)
      (super algorithms_options)
      (vars
-       (e object exception_handler)
-       
        (reaper object reaper)
        (random object randomness)
        
@@ -182,27 +180,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (use_pid_file . int)))
 */
 
-static void
-do_exc_lshd_handler(struct exception_handler *s,
-		    const struct exception *e)
-{
-  switch(e->type)
-    {
-    case EXC_RESOLVE:
-    case EXC_RANDOMNESS_LOW_ENTROPY:
-      werror("lshd: %z\n", e->msg);
-      exit(EXIT_FAILURE);
-    default:
-      EXCEPTION_RAISE(s->parent, e);
-    }
-}
-
-static struct exception_handler *
-make_lshd_exception_handler(struct exception_handler *parent,
-			    const char *context)
-{
-  return make_exception_handler(do_exc_lshd_handler, parent, context);
-}
 
 static struct lshd_options *
 make_lshd_options(void)
@@ -211,8 +188,6 @@ make_lshd_options(void)
 
   init_algorithms_options(&self->super, all_symmetric_algorithms());
 
-  self->e = make_lshd_exception_handler(&default_exception_handler,
-					HANDLER_CONTEXT);
   self->reaper = make_reaper();
   self->random = make_system_random();
 
@@ -818,40 +793,6 @@ main_argp =
 };
 
 
-/* GABA:
-   (expr
-     (name lshd_listen_callback)
-     (params
-       (handshake object handshake_info)
-       (kexinit object make_kexinit)
-       (keys object alist)
-       (logger object command)
-       (services object command) )
-     (expr (lambda (lv)
-    	      (services (connection_handshake
-	                   handshake
-			   kexinit
-			   keys 
-			   (logger lv))))))
-*/
-
-
-/* Invoked when starting the ssh-connection service */
-/* GABA:
-   (expr
-     (name lshd_connection_service)
-     (params
-       (hooks object object_list))
-     (expr
-       (lambda (connection)
-         ((progn hooks)
-	    ; We have to initialize the connection
-	    ; before adding handlers.
-	    (init_connection_service
-	      ; Disconnect if connection->user is NULL
-	      (connection_require_userauth connection)))))))
-*/
-
 static void
 do_terminate_callback(struct lsh_callback *s UNUSED)
 {
@@ -875,6 +816,23 @@ install_signal_handlers(struct resource *resource)
   io_signal_handler(SIGHUP,
 		    make_sighup_close_callback(resource));
 }
+
+
+/* Invoked when starting the ssh-connection service */
+/* GABA:
+   (expr
+     (name lshd_connection_service)
+     (params
+       (hooks object object_list))
+     (expr
+       (lambda (connection)
+         ((progn hooks)
+	    ; We have to initialize the connection
+	    ; before adding handlers.
+	    (init_connection_service
+	      ; Disconnect if connection->user is NULL
+	      (connection_require_userauth connection)))))))
+*/
 
 static struct command *
 make_lshd_connection_service(struct lshd_options *options)
@@ -937,6 +895,24 @@ make_lshd_connection_service(struct lshd_options *options)
   }
 }
 
+
+/* GABA:
+   (expr
+     (name lshd_listen_callback)
+     (params
+       (handshake object handshake_info)
+       (kexinit object make_kexinit)
+       (keys object alist)
+       (logger object command)
+       (services object command) )
+     (expr (lambda (lv)
+    	      (services (connection_handshake
+	                   handshake
+			   kexinit
+			   keys 
+			   (logger lv))))))
+*/
+
 static struct io_callback *
 make_lshd_listen_callback(struct lshd_options *options,
 			  struct alist *keys,
@@ -998,7 +974,8 @@ make_lshd_listen_callback(struct lshd_options *options,
 						     service,-1)),
 		    -1))));
 
-    return make_listen_callback(server_callback, options->e);
+    /* There should be no exceptions raised on the fd:s we listen on */
+    return make_listen_callback(server_callback, &default_exception_handler);
   }
 }
 
@@ -1079,7 +1056,7 @@ main(int argc, char **argv)
 		       make_lshd_listen_callback
 		       (options, keys,
 			make_lshd_connection_service(options)),
-		       options->e);
+		       &default_exception_handler);
   if (!fds)
     {
       werror("Could not bind any address.\n");
