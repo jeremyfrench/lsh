@@ -1695,7 +1695,7 @@ init_connection_service(struct ssh_connection *connection)
   connection->dispatch[SSH_MSG_REQUEST_FAILURE]
     = &global_failure_handler;
 }
- 
+
 DEFINE_COMMAND(connection_service_command)
      (struct command *s UNUSED,
       struct lsh_object *a,
@@ -1705,6 +1705,68 @@ DEFINE_COMMAND(connection_service_command)
   CAST(ssh_connection, connection, a);
 
   init_connection_service(connection);
+
+  COMMAND_RETURN(c, connection);
+}
+
+void
+init_login_service(struct ssh_connection *connection)
+{
+  struct channel_table *table = make_channel_table();
+  
+  debug("channel.c: do_connection_service\n");
+  
+  connection->table = table;
+
+  /* Cancel handshake timeout */
+  connection_clear_timeout(connection);
+
+  /* Unfreeze channels after key exchange */
+  connection_after_keyexchange(connection, &channels_after_keyexchange);
+  
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN]
+    = &channel_open_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_REQUEST]
+    = &channel_request_handler;
+  
+  connection->dispatch[SSH_MSG_CHANNEL_WINDOW_ADJUST]
+    = &window_adjust_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_DATA]
+    = &channel_data_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_EXTENDED_DATA]
+    = &channel_extended_data_handler;
+
+  connection->dispatch[SSH_MSG_CHANNEL_EOF]
+    = &channel_eof_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_CLOSE]
+    = &channel_close_handler;
+
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN_CONFIRMATION]
+    = &channel_open_confirm_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN_FAILURE]
+    = &channel_open_failure_handler;
+  
+  connection->dispatch[SSH_MSG_CHANNEL_SUCCESS]
+    = &channel_success_handler;
+  connection->dispatch[SSH_MSG_CHANNEL_FAILURE]
+    = &channel_failure_handler;
+
+  connection->dispatch[SSH_MSG_REQUEST_SUCCESS]
+    = &global_success_handler;
+  connection->dispatch[SSH_MSG_REQUEST_FAILURE]
+    = &global_failure_handler;
+}
+
+ 
+DEFINE_COMMAND(login_service_command)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+  CAST(ssh_connection, connection, a);
+
+  init_login_service(connection);
 
   COMMAND_RETURN(c, connection);
 }
