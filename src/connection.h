@@ -26,6 +26,7 @@
 
 #include "abstract_io.h"
 #include "compress.h"
+#include "keyexchange.h"
 #include "queue.h"
 #include "resource.h"
 #include "randomness.h"
@@ -53,25 +54,6 @@ enum connection_flag
 enum peer_flag
   {
     PEER_NONE = 0,
-  };
-
-/* State affecting incoming keyexchange packets */
-enum kex_state
-  {
-    /* A KEX_INIT msg can be accepted. This is true, most of the
-     * time. */
-    KEX_STATE_INIT,
-
-    /* Ignore next packet, whatever it is. */
-    KEX_STATE_IGNORE,
-
-    /* Key exchange is in progress. Neither KEX_INIT or NEWKEYS
-     * messages, nor upper-level messages can be received. */
-    KEX_STATE_IN_PROGRESS,
-
-    /* Key exchange is finished. A NEWKEYS message should be received,
-     * and nothing else. */
-    KEX_STATE_NEWKEYS
   };
 
 #define GABA_DECLARE
@@ -120,8 +102,10 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        ; Connection flags
        (flags . "enum connection_flag")
 
+       (kex struct kexinit_state)
+       
        ; Sent and received version strings
-       (versions array (string) 2)
+       ; (versions array (string) 2)
        (session_id string)
        
        ; Connection description, used for debug messages.
@@ -180,7 +164,7 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        (pending struct string_queue)
        
        ; Key exchange 
-       (read_kex_state . "enum kex_state")
+       ; (read_kex_state . "enum kex_state")
 
        ; While in the middle of a key exchange, messages of most types
        ; must be queued up waiting for the key exchange to complete.
@@ -199,8 +183,8 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        ; write buffer shrinks anough to allow more channel data.
        (wakeup object command_continuation)
        
-       (kexinits array (object kexinit) 2)
-       (literal_kexinits array (string) 2)
+       ; (kexinits array (object kexinit) 2)
+       ; (literal_kexinits array (string) 2)
 
        ; Table of all known message types 
        (dispatch array (object packet_handler) "0x100")

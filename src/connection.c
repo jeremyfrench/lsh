@@ -81,7 +81,7 @@ connection_handle_packet(struct ssh_connection *closure,
   debug("handle_connection: Received packet of type %i (%z)\n",
 	msg, packet_types[msg]);
   
-  switch(closure->read_kex_state)
+  switch(closure->kex.state)
     {
     case KEX_STATE_INIT:
       if (msg == SSH_MSG_NEWKEYS)
@@ -99,7 +99,7 @@ connection_handle_packet(struct ssh_connection *closure,
        * wants to switch to the NEWKEYS state immediately. But for
        * now, we always switch to the IN_PROGRESS state, to wait for a
        * KEXDH_INIT or KEXDH_REPLY message. */
-      closure->read_kex_state = KEX_STATE_IN_PROGRESS;
+      closure->kex.state = KEX_STATE_IN_PROGRESS;
       lsh_string_free(packet);
       return;
 
@@ -253,16 +253,6 @@ DEFINE_PACKET_HANDLER(, connection_disconnect_handler, connection, packet)
        (connection object ssh_connection)))
 */
 
-static struct lsh_string *
-format_disconnect(int code, const char *msg, 
-		  const char *language)
-{
-  return ssh_format("%c%i%z%z",
-		    SSH_MSG_DISCONNECT,
-		    code,
-		    msg, language);
-}
-
 static void
 do_exc_connection_handler(struct exception_handler *s,
 			  const struct exception *e)
@@ -375,10 +365,10 @@ make_ssh_connection(enum connection_flag flags,
 
   connection->keyexchange_done = NULL;
   connection->wakeup = NULL;
-  
-  connection->versions[CONNECTION_SERVER]
-    = connection->versions[CONNECTION_CLIENT]
-    = connection->session_id = NULL;
+
+  init_kexinit_state(&connection->kex);
+
+  connection->session_id = NULL;
 
   connection->peer_flags = 0;
 
@@ -399,8 +389,6 @@ make_ssh_connection(enum connection_flag flags,
   connection->paused = 0;
   string_queue_init(&connection->pending);
   
-  connection->read_kex_state = KEX_STATE_INIT;
-
   connection->key_expire = NULL;
   connection->sent_data = 0;
 
@@ -409,12 +397,6 @@ make_ssh_connection(enum connection_flag flags,
   connection->soft_limit = WRITE_BUFFER_MAX;
   connection->hard_limit = 0;
   
-  connection->kexinits[CONNECTION_CLIENT]
-    = connection->kexinits[CONNECTION_SERVER] = NULL;
-
-  connection->literal_kexinits[CONNECTION_CLIENT]
-    = connection->literal_kexinits[CONNECTION_SERVER] = NULL;
-
   for (i = 0; i < 0x100; i++)
     connection->dispatch[i] = &connection_unimplemented_handler;
 
