@@ -60,9 +60,6 @@ do_client_session_eof(struct ssh_channel *c)
 
   close_fd_nicely(session->out);
   close_fd_nicely(session->err);
-#if 0
-  close_fd(session->in);
-#endif
 }  
 
 static void
