@@ -706,46 +706,28 @@ make_simple_kexinit(struct randomness *r,
  * Destructively modifies the simple_kexinit to include only hostkey
  * algorithms that have keys in alist. */
 
-/* GABA:
-   (class
-     (name kexinit_filter_command)
-     (super command)
-     (vars
-       (init object simple_kexinit)))
-*/
-
-static void
-do_kexinit_filter(struct command *s,
-		  struct lsh_object *x,
-		  struct command_continuation *c,
-		  struct exception_handler *e UNUSED)
+DEFINE_COMMAND2(kexinit_filter)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
-  CAST(kexinit_filter_command, self, s);
-  CAST_SUBTYPE(alist, keys, x);
+  CAST(simple_kexinit, init, a1);
+  CAST_SUBTYPE(alist, keys, a2);
 
-  self->init->hostkey_algorithms
-    = filter_algorithms(keys, self->init->hostkey_algorithms);
+  init->hostkey_algorithms
+    = filter_algorithms(keys, init->hostkey_algorithms);
 
-  if (!self->init->hostkey_algorithms)
+  if (!init->hostkey_algorithms)
     {
       werror("No hostkey algorithms advertised.\n");
-      self->init->hostkey_algorithms = make_int_list(1, ATOM_NONE, -1);
+      init->hostkey_algorithms = make_int_list(1, ATOM_NONE, -1);
     }
 
-  assert(LIST_LENGTH(self->init->hostkey_algorithms));
+  assert(LIST_LENGTH(init->hostkey_algorithms));
 
-  COMMAND_RETURN(c, self->init);
-}
-
-DEFINE_COMMAND_SIMPLE(kexinit_filter, a)
-{
-  CAST(simple_kexinit, init, a);
-  NEW(kexinit_filter_command, self);
-
-  self->super.call = do_kexinit_filter;
-  self->init = init;
-
-  return &self->super.super;
+  COMMAND_RETURN(c, init);
 }
 
 
