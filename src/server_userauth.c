@@ -49,10 +49,22 @@
 
 #include "server_userauth.c.x"
 
+/* GABA:
+   (class
+     (name unix_user_db)
+     (super user_db)
+     (vars
+       (allow_root . int)))
+*/
+   
 /* NOTE: Calls functions using the disgusting convention of returning
  * pointers to static buffers. */
-struct unix_user *lookup_user(struct lsh_string *name, int free)
+static struct unix_user *
+do_lookup_user(struct user_db *s,
+	       struct lsh_string *name, int free)
 {
+  CAST(unix_user_db, self, s);
+  
   struct passwd *passwd;
 
   NEW(unix_user, res);
@@ -62,42 +74,56 @@ struct unix_user *lookup_user(struct lsh_string *name, int free)
   if (!name)
     {
       KILL(res);
-      return 0;
+      return NULL;
     }
   
-  if (!(passwd = getpwnam(name->data)))
-    {
-      lsh_string_free(name);
-      KILL(res);
-      return 0;
-    }
-
-  res->uid = passwd->pw_uid;
-  res->gid = passwd->pw_gid;
-  res->name = name;
+  if ((passwd = getpwnam(name->data))
+      /* Check for root login */
+      && (passwd->pw_uid || self->allow_root))
+    {      
+      res->uid = passwd->pw_uid;
+      res->gid = passwd->pw_gid;
+      res->super.name = name;
   
 #if HAVE_GETSPNAM
-  /* FIXME: What's the most portable way to test for shadow passwords?
-   * A single character in the passwd field should cover most variants. */
-  if (passwd->pw_passwd && (strlen(passwd->pw_passwd) == 1))
-  {
-    struct spwd *shadowpwd;
+      /* FIXME: What's the most portable way to test for shadow passwords?
+       * A single character in the passwd field should cover most variants. */
+      if (passwd->pw_passwd && (strlen(passwd->pw_passwd) == 1))
+	{
+	  struct spwd *shadowpwd;
     
-    if (!(shadowpwd = getspnam(name->data)))
-    {
-      KILL(res);
-      return 0;
-    }
-    res->passwd = format_cstring(shadowpwd->sp_pwdp);
-  }
-  else
-#endif /* HAVE_GETSPNAM */
-    res->passwd = format_cstring(passwd->pw_passwd);
+	  if (!(shadowpwd = getspnam(name->data)))
+	    goto fail;
 
-  res->home = format_cstring(passwd->pw_dir);
-  res->shell = format_cstring(passwd->pw_shell);
+	  res->passwd = format_cstring(shadowpwd->sp_pwdp);
+	}
+      else
+#endif /* HAVE_GETSPNAM */
+	res->passwd = format_cstring(passwd->pw_passwd);
+
+      res->home = format_cstring(passwd->pw_dir);
+      res->shell = format_cstring(passwd->pw_shell);
   
-  return res;
+      return res;
+    }
+  else
+    {
+    fail:
+      lsh_string_free(name);
+      KILL(res);
+      return NULL;
+    }
+}
+
+struct user_db *
+make_unix_user_db(int allow_root)
+{
+  NEW(unix_user_db, self);
+
+  self->super.lookup = do_lookup_user;
+  self->allow_root = allow_root;
+
+  return &self->super;
 }
 
 /* NOTE: Calls functions using the *disgusting* convention of returning
@@ -139,7 +165,7 @@ int change_uid(struct unix_user *user)
    * wrong, the server will think that the user is logged in
    * under his or her user id, while in fact the process is
    * still running as root. */
-  if (initgroups(user->name->data, user->gid) < 0)
+  if (initgroups(user->super.name->data, user->gid) < 0)
     {
       werror("initgroups failed: %z\n", STRERROR(errno));
       return 0;
@@ -277,6 +303,7 @@ do_handle_userauth(struct packet_handler *c,
 	  return;
 	}
 
+      /* FIXME: Do the user_db lookup here? */
       AUTHENTICATE(auth, connection, user, requested_service, &buffer,
 		   make_delay_continuation(service, closure->c),
 		   closure->e);
