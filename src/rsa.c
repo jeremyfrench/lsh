@@ -166,7 +166,7 @@ spki_init_rsa_public(struct rsa_public *key,
 */
 
 
-#define RSA_CRT 0
+#define RSA_CRT 1
 
 /* Compute x, the d:th root of m. Calling it with x == m is allowed. */
 static void
@@ -184,19 +184,43 @@ rsa_compute_root(struct rsa_signer *self, mpz_t x, mpz_t m)
 
     mpz_init(xp); mpz_init(xq);    
 
+#if 0
+    debug("rsa_compute_root: p = %xn\n"
+	  "                  q = %xn\n",
+	  self->p, self->q);
+
+    debug("rsa_compute_root: d = %xn\n"
+	  "                  a = %xn\n"
+	  "                  b = %xn\n"
+	  "                  c = %xn\n",
+	  self->d, self->a, self->b, self->c);
+#endif
+    
     /* Compute xq = m^d % q = (m%q)^b % q */
-    mpz_fdiv_r(xp, m, self->q);
+    mpz_fdiv_r(xq, m, self->q);
     mpz_powm(xq, xq, self->b, self->q);
 
+#if 0
+    debug("rsa_compute_root: xq = %xn\n", xq);
+#endif
+    
     /* Compute xp = m^d % p = (m%p)^a % p */
     mpz_fdiv_r(xp, m, self->p);
     mpz_powm(xp, xp, self->a, self->p);
 
+#if 0
+    debug("rsa_compute_root: xp = %xn\n", xp);
+#endif
+    
     /* Set xp' = (xp - xq) c % p. */
     mpz_sub(xp, xp, xq);
     mpz_mul(xp, xp, self->c);
     mpz_fdiv_r(xp, xp, self->p);
 
+#if 0
+    debug("rsa_compute_root: xp' = %xn\n", xp);
+#endif
+    
     /* Finally, compute x = xq + q xp'
      *
      * To prove that this works, note that
@@ -312,11 +336,10 @@ do_rsa_public_key(struct signer *s)
 {
   CAST(rsa_signer, self, s);
 
-  return sexp_l(2, SA(PUBLIC_KEY),
-		sexp_l(3, sexp_a(self->public.params->name),
-		       sexp_l(2, SA(N), sexp_un(self->public.n), -1),
-		       sexp_l(2, SA(E), sexp_un(self->public.e), -1),
-		       -1), -1);
+  return sexp_l(3, sexp_a(self->public.params->name),
+		sexp_l(2, SA(N), sexp_un(self->public.n), -1),
+		sexp_l(2, SA(E), sexp_un(self->public.e), -1),
+		-1);
 }
 
 static int
