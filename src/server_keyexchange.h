@@ -31,8 +31,8 @@
 
 /* This function consumes the server key */
 struct keyexchange_algorithm *
-make_dh_server(struct diffie_hellman_method *dh,
-	       struct alist *keys);
+make_dh_server(struct diffie_hellman_method *dh);
+     /* struct alist *keys); */
 
 struct install_keys *make_server_install_keys(struct object_list *algorithms);
 

@@ -40,8 +40,9 @@
      (name dh_server_exchange)
      (super keyexchange_algorithm)
      (vars
-       (dh object diffie_hellman_method)
-       (keys object alist)))
+       (dh object diffie_hellman_method)))
+       ;; Remove this?
+       ;; (keys object alist)))
 */
 
 /* Handler for the kex_dh_reply message */
@@ -132,18 +133,27 @@ static void
 do_init_server_dh(struct keyexchange_algorithm *c,
 		  struct ssh_connection *connection,
 		  int hostkey_algorithm_atom,
-		  struct signature_algorithm *ignored,
+		  /* struct signature_algorithm *ignored, */
+		  /* struct keypair *key, */
+		  struct lsh_object *extra,
 		  struct object_list *algorithms)
 {
   CAST(dh_server_exchange, closure, c);
-  CAST(keypair, keypair, ALIST_GET(closure->keys,
-				   hostkey_algorithm_atom));
+  CAST_SUBTYPE(alist, keys, extra);
+  CAST(keypair, key, ALIST_GET(keys,
+			       hostkey_algorithm_atom));
+
   NEW(dh_server, dh);
 
   CHECK_TYPE(ssh_connection, connection);
+#if 0
   CHECK_SUBTYPE(signature_algorithm, ignored);
+#endif
   
-  if (!keypair)
+  /* FIXME: No spki-style signatures for host keys. */
+  assert(hostkey_algorithm_atom == ATOM_SSH_DSS);
+  
+  if (!key)
     {
       werror("Keypair for for selected signature-algorithm not found!\n");
       EXCEPTION_RAISE(connection->e,
@@ -151,22 +161,22 @@ do_init_server_dh(struct keyexchange_algorithm *c,
 					      "Configuration error"));
       return;
     }
-  
+
   /* Initialize */
   dh->super.handler = do_handle_dh_init;
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
-  dh->dh.server_key = lsh_string_dup(keypair->public);
+  dh->dh.server_key = lsh_string_dup(key->public);
 
 #if DATAFELLOWS_WORKAROUNDS
   if ( (hostkey_algorithm_atom == ATOM_SSH_DSS)
        && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
     {
-      dh->signer = make_dsa_signer_kludge(keypair->private);
+      dh->signer = make_dsa_signer_kludge(key->private);
     }
   else
 #endif
-    dh->signer = keypair->private;
+    dh->signer = key->private;
 
   dh->install = make_install_new_keys(1, algorithms);
   
@@ -181,14 +191,14 @@ do_init_server_dh(struct keyexchange_algorithm *c,
 
 
 struct keyexchange_algorithm *
-make_dh_server(struct diffie_hellman_method *dh,
-	       struct alist *keys)
+make_dh_server(struct diffie_hellman_method *dh)
+     /* struct alist *keys) */
 {
   NEW(dh_server_exchange, self);
 
   self->super.init = do_init_server_dh;
   self->dh = dh;
-  self->keys = keys;
+  /* self->keys = keys;  */
 
   return &self->super;
 }
