@@ -30,11 +30,15 @@
 
 #include "getopt.h"
 
-#include "io.h"
-#include "werror.h"
+#include "alist.h"
+#include "atoms.h"
 #include "client.h"
-#include "format.h"
+#include "client_keyexchange.h"
 #include "crypto.h"
+#include "format.h"
+#include "io.h"
+#include "randomness.h"
+#include "werror.h"
 #include "xalloc.h"
 
 #define BLOCK_SIZE 32768
@@ -49,16 +53,48 @@ void usage()
   exit(1);
 }
 
+struct fake_host_db
+{
+  struct lookup_verifier super;
+
+  struct signature_algorithm *algorithm;
+};
+
+static struct verifier *do_host_lookup(struct lookup_verifier *c,
+				struct lsh_string *key)
+{
+  struct fake_host_db *closure = (struct fake_host_db *) c;
+  
+  return MAKE_VERIFIER(closure->algorithm, key->length, key->data);
+}
+
+static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
+{
+  struct fake_host_db *res = xalloc(sizeof(struct fake_host_db));
+
+  res->super.lookup = do_host_lookup;
+  res->algorithm = a;
+
+  return &res->super;
+}
+
 int main(int argc, char **argv)
 {
   char *host = NULL;
   char *port = "ssh";
   int option;
 
-  struct lsh_string *random_seed;
-  
   struct sockaddr_in remote;
 
+  struct lsh_string *random_seed;
+  struct randomness *r;
+  struct diffie_hellman_method *dh;
+  struct keyexchange_algorithm *kex;
+  struct alist *algorithms;
+  struct make_kexinit *make_kexinit;
+  struct packet_handler *kexinit_handler;
+  struct lookup_verifier *lookup;
+  
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
   setlocale(LC_CTYPE, "");
@@ -87,20 +123,33 @@ int main(int argc, char **argv)
 
   host = argv[optind];
 
+  random_seed = ssh_format("%z", "gazonk");
+  r = make_poor_random(&sha_algorithm, random_seed);
+  dh = make_dh1(r);
+  /* No randomness is needed for verifying signatures */
+  lookup = make_fake_host_db(make_dss_algorithm(NULL)); 
+  kex = make_dh_client(dh, lookup);
+  algorithms = make_alist(4,
+			  ATOM_ARCFOUR, crypto_rc4_algorithm,
+			  ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
+			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
+			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
+  make_kexinit = make_test_kexinit(r);
+  kexinit_handler = make_kexinit_handler(CONNECTION_CLIENT,
+					 make_kexinit, algorithms);
+
   if (!get_inaddr(&remote, host, port, "tcp"))
     {
       fprintf(stderr, "No such host or service\n");
       exit(1);
     }
 
-  random_seed = ssh_format("%z", "gazonk");
-  
   if (!io_connect(&backend, &remote, NULL,
 		  make_client_callback(&backend,
 				       "lsh - a free ssh",
 				       BLOCK_SIZE,
-				       make_poor_random(&sha_algorithm,
-							random_seed))))
+				       r, make_kexinit,
+				       kexinit_handler)))
     {
       werror("lsh: Connection failed: %s\n", strerror(errno));
       return 1;

@@ -116,47 +116,6 @@ static void init_host_key(struct randomness *r)
   mpz_clear(a);
 }
 
-struct simple_kexinit
-{
-  struct make_kexinit super;
-  struct randomness *r;
-};
-
-static struct kexinit *do_make_kexinit(struct make_kexinit *c)
-{
-  struct simple_kexinit *closure = (struct simple_kexinit *) c;
-  struct kexinit *res = xalloc(sizeof(struct kexinit));
-
-  static int kex_algorithms[] = { ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, 0 };
-  static int server_hostkey_algorithms[] = { ATOM_SSH_DSS, 0 };
-  static int crypto_algorithms[] = { ATOM_ARCFOUR, ATOM_NONE, 0 };
-  static int mac_algorithms[] = { ATOM_HMAC_SHA1, 0 };
-  static int compression_algorithms[] = { ATOM_NONE, 0 };
-  
-  RANDOM(closure->r, 16, res->cookie);
-  res->kex_algorithms = kex_algorithms;
-  res->server_hostkey_algorithms = server_hostkey_algorithms;
-  res->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER] = crypto_algorithms;
-  res->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT] = crypto_algorithms;
-  res->parameters[KEX_MAC_CLIENT_TO_SERVER] = mac_algorithms;
-  res->parameters[KEX_MAC_SERVER_TO_CLIENT] = mac_algorithms;
-  res->parameters[KEX_COMPRESSION_CLIENT_TO_SERVER] = compression_algorithms;
-  res->parameters[KEX_COMPRESSION_SERVER_TO_CLIENT] = compression_algorithms;
-  res->first_kex_packet_follows = 0;
-
-  return res;
-}
-
-struct make_kexinit *make_simple_kexinit(struct randomness *r)
-{
-  struct simple_kexinit *res = xalloc(sizeof(struct simple_kexinit));
-
-  res->super.make = do_make_kexinit;
-  res->r = r;
-
-  return &res->super;
-}
-
 int main(int argc, char **argv)
 {
   char *host = NULL;  /* Interface to bind */
@@ -165,10 +124,12 @@ int main(int argc, char **argv)
 
   struct sockaddr_in local;
 
+  struct lsh_string *random_seed;
   struct randomness *r;
   struct diffie_hellman_method *dh;
   struct keyexchange_algorithm *kex;
   struct alist *algorithms;
+  struct make_kexinit *make_kexinit;
   struct packet_handler *kexinit_handler;
   
   /* For filtering messages. Could perhaps also be used when converting
@@ -200,7 +161,9 @@ int main(int argc, char **argv)
   if ( (argc - optind) != 0)
     usage();
 
-  r = make_poor_random(&sha_algorithm, ssh_format("%z", "gazonk"));
+  random_seed = ssh_format("%z", "foobar");
+
+  r = make_poor_random(&sha_algorithm, random_seed);
   dh = make_dh1(r);
   init_host_key(r); /* Initializes public_key and secret_key */
   kex = make_dh_server(dh, public_key, secret_key);
@@ -209,7 +172,9 @@ int main(int argc, char **argv)
 			  ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
-  kexinit_handler = make_kexinit_handler(make_simple_kexinit(r), algorithms);
+  make_kexinit = make_test_kexinit(r);
+  kexinit_handler = make_kexinit_handler(CONNECTION_SERVER,
+					 make_kexinit, algorithms);
     
   if (!get_inaddr(&local, host, port, "tcp"))
     {
@@ -221,6 +186,7 @@ int main(int argc, char **argv)
 	    make_server_callback(&backend,
 				 "lsh - a free ssh",
 				 BLOCK_SIZE,
+				 r, make_kexinit,
 				 kexinit_handler)))
     {
       werror("lsh: Connection failed: %s\n", strerror(errno));
