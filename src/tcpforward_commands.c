@@ -359,7 +359,8 @@ struct command *forward_local_port(struct io_backend *backend,
 				   struct address_info *local,
 				   struct address_info *target)
 {
-  CAST(command, res, make_forward_local_port(backend, local, target));
+  CAST_SUBTYPE(command, res,
+	       make_forward_local_port(backend, local, target));
 
   return res;
 }
