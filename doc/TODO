@@ -47,6 +47,18 @@ Update utmp (users currently logged in), wtmp (record of logins) and lastlog
 Use tcpwrapper's libwrap to log connections and perform access control.
 
 
+SERVER ISSUES
+
+For compatibility with other sshd:s and bash, lshd should set some
+more environment variables when starting user processes.
+
+  SSH_CLIENT=<client-ip> <client-port> <server-port>
+  SSH_TTY=<tty-name> (if a pty was allocated)
+  SSH_ORIGINAL_COMMAND
+
+bash looks at SSH_CLIENT, and reads .bashrc if it is set.
+
+
 ALLOCATION
 
 Have the allocator initialize all objects automatically.
@@ -91,13 +103,6 @@ file,
 The file is 0x614ef9 bytes, but only 0x610000 bytes gets through.
 Looking at the lshg log, the final SSH_MSG_DATA packet(s) is missing,
 so the data is lost either in lsh, or in the remote opensshd.
-
-
-FREENESS
-
-It might be safer to remove patent-encumbered code like IDEA code from the
-regular lsh distribution, and make it available separately (this approach is
-taken with GnuPG).
 
 
 CONTROL LANGUAGE
