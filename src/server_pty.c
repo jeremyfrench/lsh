@@ -221,13 +221,15 @@ pty_open_master(struct pty_info *pty,
         {
 	  snprintf(master, sizeof(master),
 		   PTY_BSD_SCHEME_MASTER, first[i], second[j]);
-			
+	  master[sizeof(master) - 1] = 0;
+
 	  pty->master = open(master, O_RDWR | O_NOCTTY);
 	  if (pty->master != -1) 
 	    {
 	      /* master succesfully opened */
 	      snprintf(slave, sizeof(slave),
 		       PTY_BSD_SCHEME_SLAVE, first[i], second[j]);
+	      slave[sizeof(slave) - 1] = 0;
 
 	      /* NOTE: As there is no locking, setting the permissions
 	       * properly does not guarantee that nobody else has the
