@@ -131,7 +131,7 @@
 */
 
 struct lsh_string *format_kex(struct kexinit *kex);
-int disconnect_kex_failed(struct ssh_connection *connection, char *msg);
+int disconnect_kex_failed(struct ssh_connection *connection, const char *msg);
 
 struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
 					 struct object_list *algorithms,

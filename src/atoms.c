@@ -29,11 +29,11 @@
 
 struct atom_rassoc
 {
-  UINT8 *name;
+  CONST UINT8 *name;
   UINT32 length;
 };
 
-struct atom_assoc *gperf_atom (const char *str, unsigned int len);
+struct atom_assoc *gperf_atom (CONST char *str, unsigned int len);
 
 #include "atoms_gperf.c"
 

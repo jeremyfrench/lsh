@@ -32,7 +32,9 @@
 #include <assert.h>
 #include <string.h>
 
-struct lsh_string *ssh_format(char *format, ...)
+struct lsh_string *ssh_format(const char *format, ...);
+
+struct lsh_string *ssh_format(const char *format, ...)
 {
   va_list args;
   UINT32 length;
@@ -51,7 +53,7 @@ struct lsh_string *ssh_format(char *format, ...)
   return packet;
 }
 
-UINT32 ssh_format_length(char *format, ...)
+UINT32 ssh_format_length(const char *format, ...)
 {
   va_list args;
   UINT32 length;
@@ -63,7 +65,7 @@ UINT32 ssh_format_length(char *format, ...)
   return length;
 }
 
-void ssh_format_write(char *format, UINT32 length, UINT8 *buffer, ...)
+void ssh_format_write(const char *format, UINT32 length, UINT8 *buffer, ...)
 {
   va_list args;
   
@@ -73,7 +75,7 @@ void ssh_format_write(char *format, UINT32 length, UINT8 *buffer, ...)
 }
      
 
-UINT32 ssh_vformat_length(char *f, va_list args)
+UINT32 ssh_vformat_length(const char *f, va_list args)
 {
   UINT32 length = 0;
 
@@ -170,7 +172,7 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 	    case 'A':
 	      {
 		struct int_list *l = va_arg(args, struct int_list *);
-		int n, i;
+		UINT32 n, i;
 
 		for(n = i =0; i < LIST_LENGTH(l); i++)
 		  {
@@ -212,7 +214,7 @@ UINT32 ssh_vformat_length(char *f, va_list args)
   return length;
 }
 
-void ssh_vformat_write(char *f, UINT32 size, UINT8 *buffer, va_list args)
+void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 {
   UINT8 *start = buffer;
   
@@ -359,7 +361,7 @@ void ssh_vformat_write(char *f, UINT32 size, UINT8 *buffer, va_list args)
 	      {
 		struct int_list *l = va_arg(args, struct int_list *);
 		UINT8 *start = buffer; /* Where to store the length */
-		int n, i;
+		UINT32 n, i;
 		
 		if (!literal)
 		  buffer += 4;
@@ -423,7 +425,7 @@ void ssh_vformat_write(char *f, UINT32 size, UINT8 *buffer, va_list args)
  * (not included in the length), to make it possible to pass the
  * string directly to C library functions. */
 
-struct lsh_string *format_cstring(char *s)
+struct lsh_string *format_cstring(const char *s)
 {
   if (s)
     {

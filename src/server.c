@@ -230,7 +230,7 @@ struct read_handler *make_server_read_line(struct ssh_connection *c)
 
 struct fd_callback *
 make_server_callback(struct io_backend *b,
-		     char *comment,
+		     const char *comment,
 		     UINT32 block_size,
 		     struct randomness *random,
 		     struct make_kexinit *init,
@@ -574,12 +574,12 @@ static int make_pipe(int *fds)
   return 1;
 }
 
-static char *make_env_pair(char *name, struct lsh_string *value)
+static char *make_env_pair(const char *name, struct lsh_string *value)
 {
   return ssh_format("%lz=%lS%c", name, value, 0)->data;
 }
 
-static char *make_env_pair_c(char *name, char *value)
+static char *make_env_pair_c(const char *name, char *value)
 {
   return ssh_format("%lz=%lz%c", name, value, 0)->data;
 }

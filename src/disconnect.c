@@ -30,7 +30,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
-struct lsh_string *format_disconnect(int code, char *msg, char *language)
+struct lsh_string *format_disconnect(int code, const char *msg, 
+                                     const char *language)
 {
   return ssh_format("%c%i%z%z",
 		    SSH_MSG_DISCONNECT,

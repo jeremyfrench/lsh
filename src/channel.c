@@ -33,6 +33,7 @@
 #include "xalloc.h"
 
 #include <assert.h>
+#include <string.h>
 
 #define CLASS_DEFINE
 #include "channel.h.x"
@@ -87,7 +88,7 @@ struct lsh_string *format_global_failure(void)
 
 struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
 					    UINT32 channel_number,
-					    char *format, ...)
+					    const char *format, ...)
 {
   va_list args;
   UINT32 l1, l2;
@@ -117,7 +118,7 @@ struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
 }
 
 struct lsh_string *format_open_failure(UINT32 channel, UINT32 reason,
-				       char *msg, char *language)
+				       const char *msg, const char *language)
 {
   return ssh_format("%c%i%i%z%z", SSH_MSG_CHANNEL_OPEN_FAILURE,
 		    channel, reason, msg, language);
@@ -168,7 +169,8 @@ struct channel_table *make_channel_table(void)
 /* Returns -1 if allocation fails */
 int alloc_channel(struct channel_table *table)
 {
-  int i;
+  /* FIXME: Use int  here? */
+  UINT32 i;
   for(i = table->next_channel; i < table->used_channels; i++)
     {
       if (!table->channels[i])
@@ -1224,7 +1226,7 @@ struct close_callback *make_channel_close(struct ssh_channel *channel)
 
 struct lsh_string *prepare_channel_open(struct channel_table *table,
 					int type, struct ssh_channel *channel,
-					char *format, ...)
+					const char *format, ...)
 {
   int index;
     
@@ -1260,7 +1262,8 @@ struct lsh_string *prepare_channel_open(struct channel_table *table,
 }
 		   
 struct lsh_string *format_channel_request(int type, struct ssh_channel *channel,
-					  int want_reply, char *format, ...)
+					  int want_reply, const char *format, 
+					  ...)
 {
   va_list args;
   UINT32 l1, l2;

@@ -178,7 +178,7 @@ struct read_handler *make_client_read_line(struct ssh_connection *c)
   
 struct fd_callback *
 make_client_callback(struct io_backend *b,
-		     char *comment,
+		     CONST char *comment,
 		     UINT32 block_size,
 		     struct randomness *random,
 		     struct make_kexinit *init,

@@ -213,10 +213,10 @@ struct read_handler *make_channel_read_stderr(struct ssh_channel *channel);
 struct lsh_string *format_global_failure(void);
 
 struct lsh_string *format_open_failure(UINT32 channel, UINT32 reason,
-				       char *msg, char *language);
+				       const char *msg, const char *language);
 struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
 					    UINT32 channel_number,
-					    char *format, ...);
+					    const char *format, ...);
 
 struct lsh_string *format_channel_success(UINT32 channel);
 struct lsh_string *format_channel_failure(UINT32 channel);
@@ -226,10 +226,11 @@ struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 
 struct lsh_string *prepare_channel_open(struct channel_table *table,
 					int type, struct ssh_channel *channel,
-					char *format, ...);
+					const char *format, ...);
 
 struct lsh_string *format_channel_request(int type, struct ssh_channel *channel,
-					  int want_reply, char *format, ...);
+					  int want_reply, const char *format, 
+					  ...);
 
 struct lsh_string *format_channel_close(struct ssh_channel *channel);
 struct lsh_string *format_channel_eof(struct ssh_channel *channel);

@@ -26,7 +26,8 @@
 
 #include "lsh_types.h"
 
-struct lsh_string *format_disconnect(int code, char *msg, char *language);
+struct lsh_string *format_disconnect(int code, const char *msg, 
+                                     const char *language);
 struct packet_handler *make_disconnect_handler(void);
 
 #endif /* LSH_DISCONNECT_H_INCLUDED */

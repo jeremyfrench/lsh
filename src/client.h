@@ -31,7 +31,7 @@
 
 struct fd_callback *
 make_client_callback(struct io_backend *b,
-		     char *comment,
+		     CONST char *comment,
 		     UINT32 block_size,
 		     struct randomness *random,
 		     struct make_kexinit *init,

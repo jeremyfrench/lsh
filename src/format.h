@@ -66,17 +66,17 @@
  * "f" (as in free). Frees the input string after it has been copied.
  * Applicable to %S only. */
 
-struct lsh_string *ssh_format(char *format, ...);
-UINT32 ssh_format_length(char *format, ...);
-void ssh_format_write(char *format, UINT32 length, UINT8 *buffer, ...);
+struct lsh_string *ssh_format(const char *format, ...);
+UINT32 ssh_format_length(const char *format, ...);
+void ssh_format_write(const char *format, UINT32 length, UINT8 *buffer, ...);
 
-UINT32 ssh_vformat_length(char *format, va_list args);
-void ssh_vformat_write(char *format, UINT32 length, UINT8 *buffer, va_list args);
+UINT32 ssh_vformat_length(const char *format, va_list args);
+void ssh_vformat_write(const char *format, UINT32 length, UINT8 *buffer, va_list args);
 
 /* Short cut */
 #define lsh_string_dup(s) (ssh_format("%lS", (s)))
 
-struct lsh_string *format_cstring(char *s);
+struct lsh_string *format_cstring(const char *s);
 struct lsh_string *make_cstring(struct lsh_string *s, int free);
 
 #endif /* LSH_FORMAT_H_INCLUDED */

@@ -30,10 +30,10 @@
 #include "abstract_io.h"
 
 struct abstract_write *
-make_packet_debug(struct abstract_write *continuation, char *prefix);
+make_packet_debug(struct abstract_write *continuation, const char *prefix);
 
-int send_debug(struct abstract_write *write, char *msg, int always_display);
-int send_verbose(struct abstract_write *write, char *msg, int always_display);
+int send_debug(struct abstract_write *write, const char *msg, int always_display);
+int send_verbose(struct abstract_write *write, const char *msg, int always_display);
 
 
 struct packet_handler *make_rec_debug_handler(void);

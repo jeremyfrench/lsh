@@ -55,7 +55,7 @@ static int do_debug(struct abstract_write *w,
 }
 
 struct abstract_write *
-make_packet_debug(struct abstract_write *continuation, char *prefix)
+make_packet_debug(struct abstract_write *continuation, const char *prefix)
 {
   NEW(packet_debug, closure);
 
@@ -66,7 +66,7 @@ make_packet_debug(struct abstract_write *continuation, char *prefix)
   return &closure->super.super;
 }
 
-static struct lsh_string *make_debug_packet(char *msg, int always_display)
+static struct lsh_string *make_debug_packet(const char *msg, int always_display)
 {
   return ssh_format("%c%c%z%z",
 		    SSH_MSG_DEBUG,
@@ -77,7 +77,7 @@ static struct lsh_string *make_debug_packet(char *msg, int always_display)
 }
 
 /* Send a debug message to the other end. */
-int send_debug(struct abstract_write *write, char *msg, int always_display)
+int send_debug(struct abstract_write *write, const char *msg, int always_display)
 {
   return (debug_flag)
     ? A_WRITE(write, make_debug_packet(msg, always_display))
@@ -85,7 +85,7 @@ int send_debug(struct abstract_write *write, char *msg, int always_display)
   
 }
 
-int send_verbose(struct abstract_write *write, char *msg, int always_display)
+int send_verbose(struct abstract_write *write, const char *msg, int always_display)
 {
   return (verbose_flag)
     ? A_WRITE(write, make_debug_packet(msg, always_display))
