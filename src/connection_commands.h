@@ -49,7 +49,7 @@
        (random object randomness)
        (algorithms object alist)
        
-       (init object make_kexinit)
+       ;; (init object make_kexinit)
        
        ;; Used only on the server
        (fallback object ssh1_fallback)))
@@ -62,7 +62,6 @@ make_handshake_info(UINT32 flags,
 		    UINT32 block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,
-		    struct make_kexinit *init,
 		    struct ssh1_fallback *fallback);
 
 extern struct collect_info_1 handshake_command;

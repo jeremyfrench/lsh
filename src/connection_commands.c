@@ -295,7 +295,6 @@ make_handshake_info(UINT32 flags,
 		    UINT32 block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,
-		    struct make_kexinit *init,
 		    struct ssh1_fallback *fallback)
 {
   NEW(handshake_info, self);
@@ -305,13 +304,12 @@ make_handshake_info(UINT32 flags,
   self->block_size = block_size;
   self->random = r;
   self->algorithms = algorithms;
-  self->init = init;
   self->fallback = fallback;
 
   return self;
 }
 
-/* (handshake handshake_info extra file) -> connection 
+/* (handshake handshake_info make_kexinit extra listen_value) -> connection 
  *
  * extra is passed on to KEYEXCHANGE_INIT, it is typically a set of
  * private keys (for the server) or a hostkey database (for the
@@ -323,6 +321,7 @@ make_handshake_info(UINT32 flags,
      (super command)
      (vars
        (info object handshake_info)
+       (init object make_kexinit)
        (extra object lsh_object)))
 */
 
@@ -401,9 +400,9 @@ do_handshake(struct command *s,
      self->info->random);
 
   connection->versions[mode] = version;
-  connection->kexinits[mode] = MAKE_KEXINIT(self->info->init); 
+  connection->kexinits[mode] = MAKE_KEXINIT(self->init); 
   connection->dispatch[SSH_MSG_KEXINIT]
-    = make_kexinit_handler(self->info->init,
+    = make_kexinit_handler(self->init,
 			   self->extra, self->info->algorithms);
 
 #if WITH_SSH1_FALLBACK
@@ -427,24 +426,30 @@ do_handshake(struct command *s,
 }
 
 static struct lsh_object *
-collect_handshake_2(struct collect_info_2 *info,
+collect_handshake_3(struct collect_info_3 *info,
+		    struct lsh_object *h,
 		    struct lsh_object *i,
 		    struct lsh_object *extra)
 {
-  CAST(handshake_info, cinfo, i);
+  CAST(handshake_info, hinfo, h);
+  CAST_SUBTYPE(make_kexinit, init, i);
   NEW(handshake_command_2, self);
 
   assert(!info->next);
   
   self->super.call = do_handshake;
-  self->info = cinfo;
+  self->info = hinfo;
+  self->init = init;
   self->extra = extra;
 
   return &self->super.super;
 }
 
+static struct collect_info_3 collect_info_handshake_3 =
+STATIC_COLLECT_3_FINAL(collect_handshake_3);
+
 static struct collect_info_2 collect_info_handshake_2 =
-STATIC_COLLECT_2_FINAL(collect_handshake_2);
+STATIC_COLLECT_2(&collect_info_handshake_3);
 
 struct collect_info_1 handshake_command =
 STATIC_COLLECT_1(&collect_info_handshake_2);
