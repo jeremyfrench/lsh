@@ -1,5 +1,8 @@
 1999-11-18  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* configure.in (SCHEME_PROGRAM): Use AC_PATH_PROGS, not
+	AC_PATH_PROG. Reported by Kalle Olavi Niemitalo.
+
 	* src/xalloc.c (number_of_strings): Global variable to keep track
 	of the number of allocated strings.
 
