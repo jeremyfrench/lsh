@@ -44,8 +44,8 @@ POTENTIAL_X_FILES = $(addsuffix .x,$(wildcard $(srcdir)/*.[ch]))
 
 .PHONY: bootstrap
 
+# Not all potential .x files can be generated
 bootstrap: $(generated_sources)
-	# Not all potential .x files can be generated
 	-$(MAKE) -k $(POTENTIAL_X_FILES)
 	@rm -f $(addsuffix T,$(POTENTIAL_X_FILES))
 
@@ -153,7 +153,7 @@ EXTRA_DIST = lsh-authorize ssh-conv lcp \
 	$(cvs_headers) $(dist_x_files) Makefile.am.in
 
 CLEANFILES = *.hT *.cT *.xT
-MAINTAINERCLEANFILES += $(dist_x_files)
+MAINTAINERCLEANFILES = $(dist_x_files) $(DEP_FILES)
 
 # Class files
 # SUFFIXES = .xh .xc
@@ -162,8 +162,6 @@ MAINTAINERCLEANFILES += $(dist_x_files)
 depend:
 	rm -f $(DEP_FILES)
 	make $(DEP_FILES)
-
-MAINTAINERCLEANFILES += $(DEP_FILES)
 
 # This is GNU make specific
 
