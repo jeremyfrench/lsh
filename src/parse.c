@@ -249,7 +249,7 @@ int *parse_atom_list(struct simple_buffer *buffer)
     if (buffer->data[i] == ',')
       count++;
 
-  res = xalloc(sizeof(int) * (count+1));
+  res = lsh_space_alloc(sizeof(int) * (count+1));
 
   for (i = 0; i < count; i++)
     {
