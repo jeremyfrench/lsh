@@ -387,6 +387,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case OPT_NO_PUBLICKEY:
       self->with_publickey = 0;
       break;
+
+    case OPT_ROOT_LOGIN:
+      self->allow_root = 1;
+      break;
       
 #if WITH_TCP_FORWARD
     case OPT_TCPIP_FORWARD:
