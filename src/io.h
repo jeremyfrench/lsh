@@ -118,13 +118,23 @@
        (buffer object write_buffer)))
 */
 
+/* Passed to the listen callback, and to other functions and commands
+ * dealing with addresses. */
+/* GABA:
+   (class
+     (name address_info)
+     (vars
+       (address string)
+       (port . UINT32)))
+*/
+
 /* GABA:
    (class
      (name fd_listen_callback)
      (vars
-       (f method int int "size_t" "struct sockaddr *")))
+       (f method int int "struct address_info *")))
 */
-#define FD_LISTEN_CALLBACK(c, fd, s, a) ((c)->f((c), (fd), (s), (a)))
+#define FD_LISTEN_CALLBACK(c, fd, a) ((c)->f((c), (fd), (a)))
 
 /* GABA:
    (class
