@@ -27,7 +27,6 @@
 #include "format.h"
 #include "io.h"
 #include "read_data.h"
-#include "service.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -44,7 +43,7 @@
 /* GABA:
    (class
      (name connection_service)
-     (super ssh_service)
+     (super command)
      (vars
        ; Supported global requests 
        (global_requests object alist)
@@ -1006,10 +1005,12 @@ static int do_channel_failure(struct packet_handler *closure UNUSED,
   return LSH_FAIL | LSH_DIE;
 }
 
-static int init_connection_service(struct ssh_service *s,
-				   struct ssh_connection *connection)
+static int do_connection_service(struct command *s,
+				 struct lsh_object *x,
+				 struct command_continuation *c)
 {
   CAST(connection_service, self, s);
+  CAST(ssh_connection, connection, x);
 
   struct channel_table *table;
   
@@ -1077,13 +1078,13 @@ static int init_connection_service(struct ssh_service *s,
     : LSH_OK | LSH_GOON;
 }
 
-struct ssh_service *make_connection_service(struct alist *global_requests,
-					    struct alist *channel_types,
-					    struct connection_startup *start)
+struct command *make_connection_service(struct alist *global_requests,
+					struct alist *channel_types,
+					struct connection_startup *start)
 {
   NEW(connection_service, self);
 
-  self->super.init = init_connection_service;
+  self->super.call = do_connection_service;
   self->global_requests = global_requests;
   self->channel_types = channel_types;
   self->start = start;

@@ -35,6 +35,7 @@
 #include "read_packet.h"
 #include "reaper.h"
 #include "server_pty.h"
+#include "service.h"
 #include "ssh.h"
 #include "tcpforward.h"
 #include "translate_signal.h"
@@ -431,10 +432,11 @@ struct channel_open *make_open_session(struct unix_user *user,
   return &closure->super;
 }
 
+/* A command taking two arguments: unix_user, connection */
 /* GABA:
    (class
      (name server_connection_service)
-     (super unix_service)
+     (super command)
      (vars
        (global_requests object alist)
 
