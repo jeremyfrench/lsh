@@ -46,6 +46,7 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
+#include "compress.h"
 
 #include <string.h>
 #include <assert.h>
@@ -120,13 +121,17 @@ static struct read_handler *do_line(struct line_handler **h,
       if ( ((length >= 8) && !memcmp(line + 4, "2.0-", 4))
 	   || ((length >= 9) && !memcmp(line + 4, "1.99-", 5)))
 	{
-	  struct read_handler *new = make_read_packet
-	    (make_packet_unpad
-	     (make_packet_debug
-	      (&closure->connection->super,
-	       "")),
-	     closure->connection);
-	     
+	  struct read_handler *new = 
+	    make_read_packet(
+	      make_packet_unpad(
+	        make_packet_inflate(
+	          make_packet_debug(&closure->connection->super, ""),
+	          closure->connection
+		  )
+		),
+	      closure->connection
+	      );
+	  
 	  closure->connection->server_version
 	    = ssh_format("%ls", length, line);
 
@@ -320,6 +325,7 @@ struct ssh_service *request_service(int service_name,
        (exit_status simple "int *")))
 */
 
+/* Callback used when the server sends us eof */
 static int close_client_session(struct ssh_channel *c)
 {
   CAST(client_session, session, c);
@@ -425,7 +431,17 @@ static int do_exit_signal(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
+      /* Sent EOF, if we haven't done that already. */
+      /* FIXME: Make this behaviour configurable, there may be some
+       * child process alive that we could talk to. */
+
+      if (!(channel->flags & CHANNEL_SENT_EOF))
+	return channel_eof(channel);
+
+      return LSH_OK | LSH_GOON;
+#if 0
       return close_client_session(channel);
+#endif
     }
   
   /* Invalid request */
