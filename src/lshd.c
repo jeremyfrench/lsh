@@ -47,6 +47,7 @@
 #include "sexp.h"
 #include "sexp_commands.h"
 #include "spki_commands.h"
+#include "srp.h"
 #include "ssh.h"
 #include "tcpforward.h"
 #include "tcpforward_commands.h"
@@ -347,7 +348,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  
 	if (self->with_dh_keyexchange || self->with_srp_keyexchange)
 	  {
-	    struct dh_method *dh = make_dh1(self->random);
 	    int i = 0;
 	    self->kex_algorithms 
 	      = alloc_int_list(self->with_dh_keyexchange + self->with_srp_keyexchange);
@@ -357,7 +357,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			  make_dh_server(dh));
+			  make_dh_server(make_dh1(self->random)));
 	      }
 #if WITH_SRP	    
 	    if (self->with_srp_keyexchange)
@@ -366,7 +366,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->kex_algorithms)[i++] = ATOM_SRP_GROUP1_SHA1;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_SRP_GROUP1_SHA1,
-			  make_srp_server(dh, db));
+			  make_srp_server(make_srp1(self->random), db));
 	      }
 #endif /* WITH_SRP */
 	    
