@@ -214,7 +214,8 @@ do_listen_connection(struct command *s,
 {
   CAST(listen_connection, self, s);
   CAST(address_info, address, x);
-
+  struct lsh_fd *fd;
+  
   /* FIXME: Add ipv6 support somewhere */
   struct sockaddr_in sin;
   
@@ -225,12 +226,17 @@ do_listen_connection(struct command *s,
     }
 
   /* FIXME: Asyncronous dns lookups should go here */
-  COMMAND_RETURN(c, io_listen
-		 (self->backend, &sin,
-		  make_listen_callback
-		  (self->backend,
-		   make_apply(self->callback,
-			      &discard_continuation, e), e), e));
+  fd = io_listen(self->backend, &sin,
+		 make_listen_callback
+		 (self->backend,
+		  make_apply(self->callback,
+			     &discard_continuation, e), e), e);
+  if (fd)
+    COMMAND_RETURN(c, fd);
+  else
+    EXCEPTION_RAISE(e,
+		    make_io_exception(EXC_IO_LISTEN, NULL,
+				      errno, NULL));
 }
 
 struct command *make_listen_command(struct command *callback,
