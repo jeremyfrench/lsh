@@ -233,6 +233,9 @@ static int channel_process_status(struct channel_table *table,
     {
       /* Clear this bit */
       status &= ~LSH_CHANNEL_FINISHED;
+
+      if (table->channels[channel]->close)
+	CHANNEL_CLOSE(table->channels[channel]);
       
       dealloc_channel(table, channel);
 
@@ -653,6 +656,8 @@ static int do_channel_eof(struct packet_handler *c,
 
       if (channel)
 	{
+	  int res = 0;
+	  
 	  if (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_RECIEVED_CLOSE))
 	    {
 	      werror("Recieving EOF on channel on closed channel.\n");
@@ -660,24 +665,23 @@ static int do_channel_eof(struct packet_handler *c,
 	    }
 
 	  channel->flags |= CHANNEL_RECIEVED_EOF;
-	  
-	  if (channel->flags & CHANNEL_SENT_CLOSE)
-	    /* Do nothing */
-	    return LSH_OK | LSH_GOON;
 
-	  if (channel->flags & CHANNEL_SENT_EOF)
+	  if (channel->eof)
+	    res = CHANNEL_EOF(channel);
+
+	  if (!LSH_CLOSEDP(res)
+	      && ! (channel->flags & CHANNEL_SENT_CLOSE)
+	      && (channel->flags & CHANNEL_SENT_EOF))
 	    {
 	      /* Both parties have sent EOF. Initiate close, if we
 	       * havn't done that already. */
-
-	      if (channel->flags & CHANNEL_SENT_CLOSE)
-		return LSH_OK | LSH_GOON;
-	      else
-		return channel_process_status(
-		  closure->table, channel_number,
-		  channel_close(channel));
+	      
+	      res |= channel_close(channel);
 	    }
-	  return LSH_OK | LSH_GOON;
+	      
+	  return channel_process_status(closure->table, channel_number,
+					res);
+
 	}
       werror("EOF on non-existant channel %d\n",
 	     channel_number);
@@ -726,6 +730,10 @@ static int do_channel_close(struct packet_handler *c,
 	    {
 	      werror("Unexpected channel CLOSE.\n");
 	    }
+
+	  if (! (channel->flags & (CHANNEL_RECIEVED_EOF))
+	      && channel->eof)
+	    CHANNEL_EOF(channel);
 	  
 	  return channel_process_status(
 	    closure->table, channel_number,
@@ -1049,7 +1057,7 @@ int channel_eof(struct ssh_channel *channel)
   if (LSH_CLOSEDP(res))
     return res;
 
-  if (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_CLOSE_AT_END_OF_FILE))
+  if (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_CLOSE_AT_EOF))
     {
       /* Initiate close */
       res |= channel_close(channel);
@@ -1069,10 +1077,10 @@ void init_channel(struct ssh_channel *channel)
   channel->request_types = NULL;
   channel->recieve = NULL;
   channel->send = NULL;
-#if 0
+
   channel->close = NULL;
   channel->eof = NULL;
-#endif
+
   channel->open_confirm = NULL;
   channel->open_failure = NULL;
   channel->channel_success = NULL;

@@ -31,7 +31,7 @@
 #define CHANNEL_RECIEVED_EOF 8
 
 /* Means that we should send close immediately after sending eof. */
-#define CHANNEL_CLOSE_AT_END_OF_FILE 0x10
+#define CHANNEL_CLOSE_AT_EOF 0x10
 
 struct ssh_channel
 {
@@ -71,10 +71,12 @@ struct ssh_channel
   /* Called when we are allowed to send data on the channel. */
   int (*send)(struct ssh_channel *self);
 
-#if 0
-  int (*close)(struct ssh_channel *self);
+  /* Called when the channel is closed */
+  void (*close)(struct ssh_channel *self);
+
+  /* Called when eof is recieved on the channel (or when it is closed,
+   * whatever happens first). */
   int (*eof)(struct ssh_channel *self);
-#endif
   
   /* Reply from SSH_MSG_CHANNEL_OPEN_REQUEST */
   int (*open_confirm)(struct ssh_channel *self);
