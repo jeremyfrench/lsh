@@ -44,6 +44,8 @@ struct dh_client
   struct diffie_hellman_instance dh;
   struct lookup_verifier *verifier;
   struct install_keys *install;
+  
+  struct ssh_service *finished;
 };
 
 static int do_handle_dh_reply(struct packet_handler *c,
@@ -100,18 +102,24 @@ static int do_handle_dh_reply(struct packet_handler *c,
   HASH_UPDATE(hash, s->length, s->data);
   lsh_string_free(s);
   
-  res = INSTALL_KEYS(closure->install, connection, hash);
+  /* FIXME: Return value is ignored */
+  (void) INSTALL_KEYS(closure->install, connection, hash);
 
   lsh_free(hash);
 
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = connection->fail;
   connection->kex_state = KEX_STATE_NEWKEYS;
   
-  return send_verbose(connection->write, "Key exchange successful!", 0);
+  res = send_verbose(connection->write, "Key exchange successful!", 0);
+  if (LSH_PROBLEMP(res))
+    return res;
+  
+  return SERVICE_INIT(closure->finished, connection);
 }
 
 static int do_init_dh(struct keyexchange_algorithm *c,
 		      struct ssh_connection *connection,
+		      struct ssh_service *finished,
 		      int hostkey_algorithm_atom,
 		      struct signature_algorithm *ignored,
 		      void **algorithms)
@@ -134,8 +142,8 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
   dh->verifier = closure->verifier;
-
   dh->install = make_client_install_keys(algorithms);
+  dh->finished = finished;
   
   /* Send client's message */
   res = A_WRITE(connection->write, dh_make_client_msg(&dh->dh));

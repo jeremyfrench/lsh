@@ -30,6 +30,7 @@
 #include "abstract_io.h"
 #include "alist.h"
 #include "connection.h"
+#include "service.h"
 
 #define KEX_ENCRYPTION_CLIENT_TO_SERVER 0
 #define KEX_ENCRYPTION_SERVER_TO_CLIENT 1
@@ -54,6 +55,19 @@
  * nothing else. */
 #define KEX_STATE_NEWKEYS 3
 
+#if 0
+/* Use the service struct instead */
+struct keyexchange_finished
+{
+  struct lsh_object header;
+
+  int (*finished)(struct keyexchange_finished *closure,
+		  struct ssh_connection *connection);
+};
+
+#define KEYEXCHANGE_FINISHED(f, c) ((f)->finished((f), (c)))
+#endif
+
 /* algorithms is an array indexed by the KEX_* values above */
 struct keyexchange_algorithm
 {
@@ -61,13 +75,14 @@ struct keyexchange_algorithm
   
   int (*init)(struct keyexchange_algorithm *closure,
 	      struct ssh_connection *connection,
+	      struct ssh_service *finished;
 	      int hostkey_algorithm_atom,
 	      struct signature_algorithm *hostkey_algorithm,
 	      void **algorithms);
 };
 
-#define KEYEXCHANGE_INIT(kex, connection, ha, h, a) \
-((kex)->init((kex), (connection), (ha), (h), (a)))
+#define KEYEXCHANGE_INIT(kex, connection, f, ha, h, a) \
+((kex)->init((kex), (connection), (f), (ha), (h), (a)))
 
 struct kexinit
 {

@@ -46,6 +46,8 @@ struct dh_server
   /* struct lsh_string *server_key; */
   struct signer *signer;
   struct install_keys *install;
+  
+  struct ssh_service *finished;
 };
 
 static int do_handle_dh_init(struct packet_handler *c,
@@ -94,19 +96,25 @@ static int do_handle_dh_init(struct packet_handler *c,
   s = ssh_format("%n", closure->dh.K);
   HASH_UPDATE(hash, s->length, s->data);
   lsh_string_free(s);
-  
-  res = INSTALL_KEYS(closure->install, connection, hash);
+
+  /* FIXME: Return value is ignored */
+  (void) INSTALL_KEYS(closure->install, connection, hash);
 
   lsh_free(hash);
 
   connection->kex_state = KEX_STATE_NEWKEYS;
   connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
+
+  res = send_verbose(connection->write, "Key exchange successful!", 0);
+  if (LSH_PROBLEMP(res))
+    return res;
   
-  return send_verbose(connection->write, "Key exchange successful!", 0);
+  return SERVICE_INIT(closure->finished, connection);
 }
 
 static int do_init_dh(struct keyexchange_algorithm *c,
 		      struct ssh_connection *connection,
+		      struct ssh_service *finished,
 		      int hostkey_algorithm_atom,
 		      struct signature_algorithm *ignored,
 		      void **algorithms)
@@ -126,9 +134,9 @@ static int do_init_dh(struct keyexchange_algorithm *c,
 
   dh->dh.server_key = closure->server_key;
   dh->signer = closure->signer;
-
   dh->install = make_server_install_keys(algorithms);
-
+  dh->finished = finished;
+  
   /* Generate server's secret exponent */
   dh_make_server_secret(&dh->dh);
   
