@@ -41,7 +41,8 @@ BASE=`echo lsh-*.tar.gz | sed 's/.tar.gz$//'`
 VERS=`echo "$BASE" | sed 's/^lsh-//'`
 
 timeecho () {
-    echo `TZ=UTC date '+%Y-%m-%d %H:%M:%S'`: "$@"
+    FIXME: Don't depend on GNU date
+    echo `LC_ALL=C TZ=UTC date '+%Y-%m-%d %H:%M:%S'`: "$@"
 }
 
 log () {
