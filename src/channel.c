@@ -310,6 +310,80 @@ static int channel_process_status(struct channel_table *table,
 #define END(s) foo_finish: do { lsh_string_free((s)); return foo_res; } while(0)
 
 /* Channel related messages */
+
+/* GABA:
+   (class
+     (name global_request_status)
+     (vars
+       ; -1 for still active requests,
+       ; 0 for failure,
+       ; 1 for success
+       (status . int)))
+*/
+
+static struct global_request_status *make_global_request_status(void)
+{
+  NEW(global_request_status, self);
+  self->status = -1;
+
+  return self;
+}
+
+/* GABA:
+   (class
+     (name global_request_response)
+     (super global_request_callback)
+     (vars
+       (active object global_request_status)))
+*/
+
+static int
+do_global_request_response(struct global_request_callback *c,
+			   int success)
+{
+  CAST(global_request_response, self, c);
+  struct object_queue *q = self->super.connection->channels->active_global_requests;
+
+  int res = 0;
+  
+  assert( self->active->status == -1);
+  assert( (success == 0) || (success == 1) );
+  assert( !object_queue_is_empty(q));
+	  
+  self->active->status = success;
+
+  for (;;)
+    {
+      CAST(global_request_status, n, object_queue_peek_head(q));
+      if (!n || (n->status < 0))
+	return res;
+
+      object_queue_remove_head(q);
+      
+      res |= A_WRITE(self->super.connection->write,
+		     (n->status
+		      ? format_global_success()
+		      : format_global_failure()));
+      
+      if (LSH_CLOSEDP(res))
+	return res;
+    }
+}
+
+static struct global_request_callback *
+make_global_request_response(struct ssh_connection *connection,
+			     struct global_request_status *active)
+{
+  NEW(global_request_response, self);
+
+  self->super.connection = connection;
+  self->super.response = do_global_request_response;
+
+  self->active = active;
+
+  return &self->super;
+}
+     
 static int do_global_request(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
@@ -330,12 +404,22 @@ static int do_global_request(struct packet_handler *c,
       && parse_boolean(&buffer, &want_reply))
     {
       struct global_request *req;
-
+      struct global_request_callback *c = NULL;
+      
       if (!name || !(req = ALIST_GET(closure->global_requests, name)))
 	RETURN (A_WRITE(connection->write,
 		       format_global_failure()));
 
-      RETURN (GLOBAL_REQUEST(req, connection, want_reply, &buffer));
+      if (want_reply)
+	{
+	  struct global_request_status *a = make_global_request_status();
+
+	  object_queue_add_tail(connection->channels->active_global_requests,
+				&a->super);
+	  
+	  c = make_global_request_response(connection, a);
+	}
+      RETURN (GLOBAL_REQUEST(req, connection, &buffer, c));
     }
   RETURN (LSH_FAIL | LSH_DIE);
 
@@ -374,7 +458,7 @@ static int do_channel_open_response(struct channel_open_callback *c,
                                          "(shouldn't happen...)", ""));
     }
 
-  /* FIXME: This copying could just as wel be done by the
+  /* FIXME: This copying could just as well be done by the
    * CHANNEL_OPEN handler? Then we can remove the corresponding fields
    * from the closure as well. */
   channel->send_window_size = closure->window_size;
