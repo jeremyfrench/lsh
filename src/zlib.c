@@ -78,7 +78,7 @@ static const struct zlib_type
 zlib_inflate = {  inflateEnd, "inflate" };
 
 static const struct zlib_type
-zlib_deflate = {  inflateEnd, "deflate" };
+zlib_deflate = {  deflateEnd, "deflate" };
 
 /* zlib memory functions */
 static void *
