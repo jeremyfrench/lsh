@@ -39,6 +39,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include "nettle/base16.h"
 #include "nettle/macros.h"
 
 #include "charset.h"
@@ -327,7 +328,7 @@ get_verifier(struct lshd_user *user, int algorithm,
     return NULL;
 
   /* FIXME: We should have proper spki support */
-  file = ssh_format("%z/.lsh/" AUTHORIZATION_DIR "/%lxfS",
+  file = ssh_format("%lz/.lsh/" AUTHORIZATION_DIR "/%lxfS",
 		    user->home,
 		    hash_string(&crypto_sha1_algorithm,
 				PUBLIC_SPKI_KEY(v, 0),
@@ -346,7 +347,9 @@ get_verifier(struct lshd_user *user, int algorithm,
 /* Returns 1 on success, 0 on failure, and -1 if we have sent an
    USERAUTH_PK_OK reply. */
 static int
-handle_publickey(struct simple_buffer *buffer, struct lshd_user *user)
+handle_publickey(struct simple_buffer *buffer,
+		 struct lshd_user *user,
+		 const struct lsh_string *session_id)
 {
   int check_key;
   int algorithm;
@@ -355,20 +358,24 @@ handle_publickey(struct simple_buffer *buffer, struct lshd_user *user)
   uint32_t signature_start;
   uint32_t signature_length;
   const uint8_t *signature;
+  struct lsh_string *signed_data;
+  int res;
+  
   struct verifier *v;
   
   if (! (parse_boolean(buffer, &check_key)
 	 && parse_atom(buffer, &algorithm)
 	 && parse_string(buffer, &key_length, &key)))
     protocol_error("Invalid USERAUTH_REQUEST \"publickey\"");
-  
+
+  signature_start = buffer->pos;
+
   if (check_key)
     {
-      signature_start = buffer->pos;
       if (!parse_string(buffer, &signature_length, &signature))
 	protocol_error("Invalid USERAUTH_REQUEST \"publickey\"");
     }
-
+  
   if (!parse_eod(buffer))
     protocol_error("Invalid USERAUTH_REQUEST \"publickey\"");
 
@@ -382,17 +389,25 @@ handle_publickey(struct simple_buffer *buffer, struct lshd_user *user)
       return -1;
     }
 
-  /* FIXME: Verify signature. Top do that, we need the session id from
-     the transport layer. */
-  KILL(v);
-  
-  return 0;	
+  /* The signature is on the session id, followed by the userauth
+     request up to the actual signature. To avoid collisions, the
+     length field for the session id is included. */
+  signed_data = ssh_format("%S%ls", session_id, 
+			   signature_start, buffer->data);
+
+  res = VERIFY(v, algorithm,
+	       lsh_string_length(signed_data), lsh_string_data(signed_data),
+	       signature_length, signature);
+  lsh_string_free(signed_data);
+  KILL(v);  
+
+  return res;
 }
 
 #define MAX_ATTEMPTS 10
 
 static int
-handle_userauth(struct lshd_user *user)
+handle_userauth(struct lshd_user *user, const struct lsh_string *session_id)
 {
   struct int_list *methods
     = make_int_list(1, ATOM_PUBLICKEY, -1);
@@ -446,7 +461,7 @@ handle_userauth(struct lshd_user *user)
       if (!lookup_user(user, user_length, user_utf8))
 	goto fail;
 
-      switch(handle_publickey(&buffer, user))
+      switch(handle_publickey(&buffer, user, session_id))
 	{
 	default:
 	  fatal("Internal error!\n");
@@ -473,7 +488,7 @@ format_env_pair(const char *name, const char *value)
 /* Change persona, set up new environment, and exec
    the service process. */
 static void
-start_service(struct lshd_user *user, int argc, char **argv)
+start_service(struct lshd_user *user, char **argv)
 {
   /* We need place for SHELL, HOME, USER, LOGNAME, TZ, PATH and a
      terminating NULL */
@@ -496,8 +511,11 @@ start_service(struct lshd_user *user, int argc, char **argv)
   /* To allow for a relative path, even when we cd to $HOME. */
   argv[0] = canonicalize_file_name(argv[0]);
   if (!argv[0])
-    service_error("Failed to start service process");
-  
+    {
+      werror("start_service: canonicalize_file_name failed: %e\n", errno);
+      service_error("Failed to start service process");
+    }
+
   if (user->uid != getuid())
     {
       if (initgroups(cname, user->gid) < 0)
@@ -528,15 +546,58 @@ start_service(struct lshd_user *user, int argc, char **argv)
   werror("start_service: exec failed: %e", errno);
 }
 
+static struct lsh_string *
+decode_hex(const char *hex)
+{
+  struct base16_decode_ctx ctx;
+  struct lsh_string *s;
+  unsigned length = strlen(hex);
+  unsigned i;
+  
+  s = lsh_string_alloc(BASE16_DECODE_LENGTH(length));
+  
+  base16_decode_init(&ctx);
+  for (i = 0; *hex; hex++)
+    {
+      uint8_t octet;
+      switch(base16_decode_single(&ctx, &octet, *hex))
+	{
+	case -1:
+	  lsh_string_free(s);
+	  return NULL;
+	case 0:
+	  break;
+	case 1:
+	  lsh_string_putc(s, i++, octet);
+	}
+    }
+  if (!base16_decode_final(&ctx))
+    {
+      lsh_string_free(s);
+      return NULL;
+    }
+  lsh_string_trunc(s, i);
+  return s;      
+}
+
 int
 main(int argc, char **argv)
 {
   struct lshd_user user;
+  struct lsh_string *session_id;
   
+  if (argc < 3 || strcmp(argv[1], "--session-id"))
+    service_error("Bad arguments to lshd-userauth");
+
+  session_id = decode_hex(argv[2]);
+  if (!session_id)
+    service_error("Bad session-id to lshd-userauth");
+    
   werror("Started userauth service.\n");
+
   lshd_user_init(&user);
 
-  if (!handle_userauth(&user))
+  if (!handle_userauth(&user, session_id))
     {
       write_packet(format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
 				     "Access denied", ""));
@@ -545,7 +606,7 @@ main(int argc, char **argv)
 
   {
     char *args[3] = { "lshd-connection", "lshd-connection", NULL };
-    start_service(&user, 2, args);
+    start_service(&user, args);
     
     service_error("Failed to start service process");
   }
