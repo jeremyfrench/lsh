@@ -26,6 +26,7 @@
 #include "read_data.h"
 
 #include "io.h"
+#include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -69,8 +70,17 @@ do_read_data_query(struct io_consuming_read *s)
       return 0;
     }
 
-  return MIN(self->channel->send_max_packet,
-	     self->channel->send_window_size);
+  if ( (self->channel->send_window_size + SSH_MAX_PACKET_FUZZ)
+       < self->channel->send_max_packet)
+    return self->channel->send_window_size;
+
+  else if (self->channel->send_max_packet > SSH_MAX_PACKET_FUZZ)
+    return self->channel->send_max_packet - SSH_MAX_PACKET_FUZZ;
+
+  else
+    /* Ridiculously small max packet size. Send some 50 characters at
+     * a time and hope the receiver can cope. */
+    return SSH_MAX_PACKET_FUZZ / 2;
 }
 
 
