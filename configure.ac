@@ -521,7 +521,7 @@ AC_CHECK_SIZEOF(long, 4)
 AC_FUNC_ALLOCA
 AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS(select socket strerror strsignal strtol)
+AC_CHECK_FUNCS(select socket strerror strsignal strtol alarm)
 AC_CHECK_FUNCS(getrusage gettimeofday)
 AC_CHECK_FUNCS(getspnam)
 AC_CHECK_FUNCS(vsnprintf inet_aton)
