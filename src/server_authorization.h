@@ -30,7 +30,8 @@
 #include "publickey_crypto.h"
 
 struct lookup_verifier *
-make_authorization_db(struct signature_algorithm *s,
+make_authorization_db(struct lsh_string *index_name, 
+		      struct signature_algorithm *s,
 		      struct hash_algorithm *h);
 
 #endif /* LSH_SERVER_AUTHORIZATION_H_INCLUDED */

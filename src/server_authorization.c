@@ -43,6 +43,7 @@
      (name authorization_db)
      (super lookup_verifier)
      (vars
+       (index_name string)
        (signalgo object signature_algorithm)
        (hashalgo object hash_algorithm)))
 */
@@ -54,10 +55,9 @@ static struct verifier *do_key_lookup(struct lookup_verifier *c,
   CAST(authorization_db, closure, c);
   struct sexp *pubkey_spki;
   struct lsh_string *pubkey_spki_blob, *filename;
-  UINT8 *pubkey_spki_hash, *hash_hex;
+  UINT8 *pubkey_spki_hash;
   struct hash_instance *h;
   struct stat st;
-  UINT32 i;
   struct unix_user *user;
 
   user = lookup_user(keyholder, 0);
@@ -79,16 +79,12 @@ static struct verifier *do_key_lookup(struct lookup_verifier *c,
   KILL(h);
   lsh_string_free(pubkey_spki_blob);
   
-  filename = ssh_format("%lS/.lsh/authorization/%lr%c", 
+  filename = ssh_format("%lS/.lsh/%S/%lxs%c", 
 			user->home,
-			closure->hashalgo->hash_size * 2, &hash_hex,
+			closure->index_name,
+			closure->hashalgo->hash_size, pubkey_spki_hash,
 			0);
-  for (i = 0; i < closure->hashalgo->hash_size; i++)
-    {
-      UINT8 hexchars[] = "0123456789abcdef";
-      hash_hex[i * 2] = hexchars[(pubkey_spki_hash[i] & 0xf0) >> 4];
-      hash_hex[i * 2 + 1] = hexchars[(pubkey_spki_hash[i] & 0x0f)];
-    }
+
   if (stat(filename->data, &st) == 0)
     {
       lsh_string_free(filename);
@@ -100,12 +96,14 @@ static struct verifier *do_key_lookup(struct lookup_verifier *c,
 }
 
 struct lookup_verifier *
-make_authorization_db(struct signature_algorithm *s,
+make_authorization_db(struct lsh_string *index_name, 
+		      struct signature_algorithm *s,
 		      struct hash_algorithm *h)
 {
   NEW(authorization_db, res);
 
   res->super.lookup = do_key_lookup;
+  res->index_name = index_name;
   res->signalgo = s;
   res->hashalgo = h;
 
