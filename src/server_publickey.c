@@ -40,6 +40,7 @@
      (name userauth_publickey)
      (super userauth)
      (vars
+       (db object user_db)
        (verifiers object alist)))
 */
 
@@ -85,7 +86,8 @@ do_authenticate(struct userauth *s,
 	  && parse_eod(args))
        : parse_eod(args))) 
     {
-
+      struct unix_user *user;
+      
       lookup = ALIST_GET(self->verifiers, algorithm);
 
       if (!lookup) 
@@ -94,19 +96,28 @@ do_authenticate(struct userauth *s,
 	    = STATIC_EXCEPTION(EXC_USERAUTH,
 			       "Unsupported public key algorithm.");
 	  
-	  lsh_string_free(keyblob); 
-	  lsh_string_free(username);
 	  verbose("Unknown publickey algorithm\n");
 	  EXCEPTION_RAISE(e, &unsupported_publickey_algorithm);
+
+	fail:
+	  lsh_string_free(keyblob); 
+	  lsh_string_free(username);
 	  return;
 	}
-      v = LOOKUP_VERIFIER(lookup, algorithm, username, keyblob);
 
-#if DATAFELLOWS_WORKAROUNDS
-      if ( v && (algorithm == ATOM_SSH_DSS)
-	   && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
-	v = make_dsa_verifier_kludge(v);
-#endif
+      user = USER_LOOKUP(self->db, username, 0);
+
+      if (!user)
+	{
+	  static const struct exception unknown_user
+	    = STATIC_EXCEPTION(EXC_USERAUTH,
+			       "Unknown user.");
+	  
+	  EXCEPTION_RAISE(e, &unknown_user);
+	  goto fail;
+	}
+      
+      v = LOOKUP_VERIFIER(lookup, algorithm, &user->super, keyblob);
 
       if (!check_key)
 	{
@@ -115,9 +126,11 @@ do_authenticate(struct userauth *s,
 	    {
 	      struct lsh_string *reply = format_userauth_pk_ok(algorithm, keyblob);
 	      lsh_string_free(keyblob);
+
+	      /* FIXME: This is ok for all current LOOKUP_VERIFIER-methods,
+	       * but perhaps not in general. */
 	      KILL(v);
 	      EXCEPTION_RAISE(e, make_userauth_special_exception(reply, NULL));
-	      return;
 	    }
 	  else
 	    {
@@ -127,14 +140,18 @@ do_authenticate(struct userauth *s,
 	      
 	      lsh_string_free(keyblob);
 	      EXCEPTION_RAISE(e, &unauthorized_key);
-	      return;
 	    }
+	  return;
 	}
       else 
 	{
 	  struct lsh_string *signed_data;
 
 #if DATAFELLOWS_WORKAROUNDS
+	  if ( v && (algorithm == ATOM_SSH_DSS)
+	       && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
+	    v = make_dsa_verifier_kludge(v);
+	  
 	  if (connection->peer_flags & PEER_USERAUTH_REQUEST_KLUDGE)
 	    {
 	      signed_data = ssh_format("%lS%c%S%a%a%c%a%S", 
@@ -148,7 +165,7 @@ do_authenticate(struct userauth *s,
 				       keyblob);
 	    }
 	  else
-#endif
+#endif /* DATAFELLOWS_WORKAROUNDS */
 	    /* The signature is on the session id, followed by the
 	     * userauth request up to the actual signature. To avoid collisions,
 	     * the length field for the session id is included. */
@@ -158,9 +175,8 @@ do_authenticate(struct userauth *s,
 	  lsh_string_free(keyblob); 
 	  if (VERIFY(v, signed_data->length, signed_data->data, signature_length, signature_blob))
 	    {
-	      werror("user %S has authenticated\n", username);
-	      /* FIXME: We should have done this lookup already */
-	      COMMAND_RETURN(c, lookup_user(username, 0));
+	      werror("publickey authentication for user %S succeeded.\n", username);
+	      COMMAND_RETURN(c, user);
 	    }
 	  else
 	    {
@@ -182,11 +198,13 @@ do_authenticate(struct userauth *s,
 }
 
 struct userauth *
-make_userauth_publickey(struct alist *verifiers)
+make_userauth_publickey(struct user_db *db,
+			struct alist *verifiers)
 {
   NEW(userauth_publickey, self);
 
   self->super.authenticate = do_authenticate;
+  self->db = db;
   self->verifiers = verifiers;
   return &self->super;
 }
