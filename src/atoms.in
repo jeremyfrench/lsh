@@ -10,52 +10,33 @@ zlib
 
 3des-cbc         REQUIRED          three-key 3DES in CBC mode
 blowfish-cbc     RECOMMENDED       Blowfish in CBC mode
-twofish-cbc      RECOMMENDED       TwoFish cipher in CBC mode
+twofish256-cbc   OPTIONAL          Twofish in CBC mode, with 256-bit key
+twofish-cbc      OPTIONAL          alias for "twofish256-cbc"
+twofish192-cbc   OPTIONAL          Twofish with 192-bit key
+twofish128-cbc   RECOMMENDED       Twofish with 128-bit key
+aes256-cbc       OPTIONAL          AES (Rijndael) in CBC mode, with 256-bit key
+aes192-cbc       OPTIONAL          AES with 192-bit key
+aes128-cbc       RECOMMENDED       AES with 128-bit key
+serpent256-cbc   OPTIONAL          Serpent in CBC mode, with 256-bit key
+serpent192-cbc   OPTIONAL          Serpent with 192-bit key
+serpent128-cbc   OPTIONAL          Serpent with 128-bit key
+
+# Old lsh aliases
 rijndael-cbc@lysator.liu.se     EXPERIMENTAL      Rijndael cipher in CBC mode
 serpent-cbc@lysator.liu.se      EXPERIMENTAL      Serpent cipher in CBC mode
+
 arcfour          OPTIONAL          the ARCFOUR stream cipher
 idea-cbc         OPTIONAL          IDEA in CBC mode
 cast128-cbc      OPTIONAL          CAST-128 in CBC mode
 # none           OPTIONAL          no encryption; NOT RECOMMENDED
 
-## The following are not in the current secsh draft, but are in SSH 2.0.11;
-## some of them will probably be included in an updated secsh draft. 
-##
-
-#des-cbc          OPTIONAL          DES cipher in CBC mode
-
-## NOTE: Is there any reason to ever use any chaining mode but cbc in
-## the ssh protocol?
-## 
-## Mode variants:
-#3des-ecb         OPTIONAL          three-key 3DES in ECB mode
-#3des-cfb         OPTIONAL          three-key 3DES in CFB mode
-#3des-ofb         OPTIONAL          three-key 3DES in OFB mode
-#blowfish-ecb     OPTIONAL          Blowfish in ECB mode
-#blowfish-cfb     OPTIONAL          Blowfish in CFB mode
-#blowfish-ofb     OPTIONAL          Blowfish in OFB mode
-## New algorithms, AES candidates
-#twofish-ecb      OPTIONAL          TwoFish cipher in ECB mode
-#twofish-cfb      OPTIONAL          TwoFish cipher in CFB mode
-#twofish-ofb      OPTIONAL          TwoFish cipher in OFB mode
-#rijndael-ecb     OPTIONAL          Rijndael cipher in ECB mode
-#rijndael-cfb     OPTIONAL          Rijndael cipher in CFB mode
-#rijndael-ofb     OPTIONAL          Rijndael cipher in OFB mode
-#serpent-ecb      OPTIONAL          Serpent cipher in ECB mode
-#serpent-cfb      OPTIONAL          Serpent cipher in CFB mode
-#serpent-ofb      OPTIONAL          Serpent cipher in OFB mode
-## Others (I don't know why SSH supports them)
-#des-ecb          OPTIONAL          DES cipher in ECB mode
-#des-cfb          OPTIONAL          DES cipher in CFB mode
-#des-ofb          OPTIONAL          DES cipher in OFB mode
-
 # MAC algorithms
 
-hmac-sha1   REQUIRED         HMAC-SHA1 (length = 20)
-hmac-sha-96 RECOMMENDED      first 96 bits of HMAC-SHA1 (length = 12)
-hmac-md5    OPTIONAL         HMAC-MD5 (length = 16)
-hmac-md5-96 OPTIONAL         first 96 bits of HMAC-MD5 (length = 12)
-# none        OPTIONAL         no MAC; NOT RECOMMENDED
+hmac-sha1         REQUIRED         HMAC-SHA1 (length = 20)
+hmac-sha1-96      RECOMMENDED      first 96 bits of HMAC-SHA1 (length = 12)
+hmac-md5          OPTIONAL         HMAC-MD5 (length = 16)
+hmac-md5-96       OPTIONAL         first 96 bits of HMAC-MD5 (length = 12)
+# none            OPTIONAL         no MAC; NOT RECOMMENDED
 
 # Key exchange methods
 
@@ -64,11 +45,23 @@ diffie-hellman-group1-sha1       REQUIRED
 # Key and certificate types
 
 ssh-dss              REQUIRED     sign      Simple DSS
-ssh-rsa-pkcs1@lysator.liu.se 
-x509v3               RECOMMENDED  sign      X.509 certificates
-spki                 OPTIONAL     sign      SPKI certificates
+ssh-rsa              RECOMMENDED  sign      Simple RSA
+
+x509v3-sign-rsa      RECOMMENDED  sign    X.509 certificates (RSA key)
+x509v3-sign-dss      RECOMMENDED  sign    X.509 certificates (DSS key)
+spki-sign-rsa        OPTIONAL     sign    SPKI certificates (RSA key)
+spki-sign-dss        OPTIONAL     sign    SPKI certificates (DSS key)
+pgp-sign-rsa         OPTIONAL     sign    OpenPGP certificates (RSA key)
+pgp-sign-dss         OPTIONAL     sign    OpenPGP certificates (DSS key)
+
+# Old variants
+
+# spki
+# ssh-rsa-pkcs1@lysator.liu.se 
+# x509v3               RECOMMENDED  sign      X.509 certificates
+# spki                 OPTIONAL     sign      SPKI certificates
 # spki-rsa@lysator.liu.se 
-pgp                  OPTIONAL     sign      OpenPGP certificates
+# pgp                  OPTIONAL     sign      OpenPGP certificates
 
 # Bug compatibility with old SSH2 versions
 ssh-dss-kludge@lysator.liu.se
@@ -125,7 +118,6 @@ s
 # spki rsa keys p, q already defined above
 # rsa-pkcs1
 rsa-pkcs1-sha1
-rsa-pkcs1-sha1@lysator.liu.se
 rsa-pkcs1-md5
 n
 e
