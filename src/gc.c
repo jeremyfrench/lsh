@@ -25,6 +25,7 @@
 
 #include "gc.h"
 
+#include "io.h"
 #include "resource.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -36,6 +37,8 @@ static struct lsh_object *all_objects = NULL;
 static unsigned number_of_objects = 0;
 static unsigned live_objects = 0;
 static struct resource_list *root_set = NULL;
+
+static int gc_scheduled = 0;
 
 #if DEBUG_ALLOC
 static void sanity_check_object_list(void)
@@ -143,7 +146,20 @@ static void gc_sweep(void)
   assert(live_objects == number_of_objects);
 }
 
-void gc_register(struct lsh_object *o)
+static void
+do_gc(struct lsh_callback *s UNUSED)
+{
+  assert(gc_scheduled);
+  gc_scheduled = 0;
+
+  gc();
+}
+
+struct lsh_callback
+gc_callback = { STATIC_HEADER, do_gc };
+
+void
+gc_register(struct lsh_object *o)
 {
   sanity_check_object_list();
 
@@ -151,8 +167,14 @@ void gc_register(struct lsh_object *o)
   o->next = all_objects;
   all_objects = o;
 
-  number_of_objects ++;
+  number_of_objects++;
 
+  if (!gc_scheduled && (number_of_objects > 100 + 2 * live_objects))
+    {
+      gc_scheduled = 1;
+      io_callout(&gc_callback);
+    }
+  
   sanity_check_object_list();
 }
 
@@ -231,6 +253,7 @@ void gc(void)
 #endif
 }
 
+#if 0
 void gc_maybe(int busy)
 {
   sanity_check_object_list();
@@ -241,6 +264,7 @@ void gc_maybe(int busy)
       gc();
     }
 }
+#endif
 
 /* Deallocate all objects. */
 
