@@ -38,7 +38,7 @@
      (name twofish_instance)
      (super crypto_instance)
      (vars
-       (ctx pointer "TWOFISH_context")))
+       (ctx . "TWOFISH_context")))
 */
 
 static void do_twofish_encrypt(struct crypto_instance *s,
@@ -72,12 +72,8 @@ make_twofish_instance(struct crypto_algorithm *algorithm, int mode,
 
   /* We don't have to deal with weak keys - being an AES candidate, Twofish was
    * designed to have none. */
-  self->ctx = twofish_setup(algorithm->key_size, key);
-  if (!self->ctx) {
-      werror("Twofish key setup failed!\n");
-      KILL(self);
-      return NULL;
-  }
+  twofish_setup(&self->ctx, algorithm->key_size, key);
+
   return &self->super;
 }
 
