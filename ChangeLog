@@ -1,3 +1,74 @@
+2004-11-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshg.c (make_lshg_connect): New argument, resource.
+	(main): Pass options->super.resources to make_lshg_connect.
+
+	* src/gateway_commands.c (gateway_make_connection): New argument,
+	a resource to be adopted by the connection.
+	(gateway_init): Likewise.
+	(gateway_accept): Pass a NULL-resource to gateway_make_connection.
+
+2004-11-22  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (init_client_options): Init the resources list.
+	(make_client_session): Use IO_STDERR. Add the session resources to
+	options->resources, instead of calling gc_global.
+
+	* src/client.h (client_options): New attribute, resources.
+
+	* src/srp-gen.c (main_argp_parser): Updated for changes to
+	io_write_file. 
+
+	* src/lshd.c: Updated for changes to handshake_command. Pass a
+	NULL resource.
+	(make_lshd_listen_callback): Updated for changes to
+	make_handshake_info. 
+
+	* src/lsh.c (do_lsh_lookup): Use a single A_WRITE to write the
+	acl-entry to a file.
+	(make_lsh_connect): New argument resource. Deleted kexinit
+	argument (it's now part of handshake_info). Use the new protect
+	command, to pass the resource to handshake, and destroy it on
+	exceptions.
+	(main_argp_parser): Updated for changes io_write_file.
+	(main): Updated for changes to make_lsh_connect and
+	make_handshake_info. Pass options->super.resources to the
+	handshake command.
+
+	* src/io.c (WITH_LIBOOP_SIGNAL_ADAPTER): Compile time choice of
+	whether or not to use the liboop signal adapter.
+	(io_init) [WITH_LIBOOP_SIGNAL_ADAPTER]: Create signal adapter.
+	(io_final) [WITH_LIBOOP_SIGNAL_ADAPTER]: Destroy signal adapter.
+	(make_lsh_fd): Files of both types IO_STDIO and IO_STDERR are
+	shared. Bugfix: Don't reset type to zero.	
+	(write_only_file): New class.
+	(do_write_only_file, make_io_write_file): New function.
+	(io_write_file): Don't create a lsh_fd. Instead, use the simpler
+	write_only_file, and return a struct abstract_write *. These files
+	are never closed.
+	(close_fd): Don't close files of type IO_STDERR. For files of type
+	IO_STDIO, close them, and map the fd to /dev/null.
+
+	* src/io.h (io_type): New enum constant IO_STDERR.
+
+	* src/handshake.c (make_handshake_info): New argument kexinit.
+	(handshake_command): New first argument, a resource to be adopted
+	by the connection. Deleted the kexinit argument, kexinit is now
+	passed as an attribute of handshake_info.
+
+	* src/handshake.h (handshake_info): New attribute kexinit.
+
+	* src/gc.c (gc_iterate_objects): New function (#if:ed out), for
+	debugging purposes.
+
+	* src/command.c (catch_collect_body): Deleted unused class.
+	(do_catch_collect_body, make_catch_collect_body, do_catch_simple):
+	Deleted functions. 
+	(protect_handler): New class.
+	(protect_command)): New command.
+
+	* src/command.h (catch_command): Deleted unused class.
+
 2004-11-20  Pontus Freyhult  <pont@soua.net>
 
 	* doc/Makefile.am (man_MANS): Added new manpages so they'll
