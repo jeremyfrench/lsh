@@ -25,6 +25,7 @@
 #include "channel.h"
 
 #include "format.h"
+#include "read_data.h"
 #include "service.h"
 #include "ssh.h"
 #include "werror.h"
@@ -331,17 +332,20 @@ static int do_window_adjust(struct packet_handler *c,
 
       lsh_string_free(packet);
       
-      if (channel)
+      if (channel
+	  && !(channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_RECIEVED_CLOSE)))
 	{
-	  channel->send_window_size += size;
-	  if (channel->send_window_size && channel->send)
-	    CHANNEL_SEND(channel);
-	  
+	  if (! (channel->flags & CHANNEL_SENT_CLOSE))
+	    {
+	      channel->send_window_size += size;
+	      if (channel->send_window_size && channel->send)
+		CHANNEL_SEND(channel);
+	    }
 	  return LSH_OK | LSH_GOON;
 	}
       /* FIXME: What to do now? Should unknown channel numbers be
        * ignored silently? */
-      werror("SSH_MSG_CHANNEL_WINDOW_ADJUST on nonexistant channel %d\n",
+      werror("SSH_MSG_CHANNEL_WINDOW_ADJUST on nonexistant or closed channel %d\n",
 	     channel_number);
       return LSH_FAIL | LSH_DIE;
     }
@@ -375,17 +379,27 @@ static int do_channel_data(struct packet_handler *c,
 
       lsh_string_free(packet);
       
-      if (channel && channel->recieve)
+      if (channel && channel->recieve
+	  && !(channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_RECIEVED_CLOSE)))
 	{
-	  if (data->length > channel->rec_window_size)
+	  if (channel->flags & CHANNEL_SENT_CLOSE)
 	    {
-	      /* Truncate data to fit window */
-	      werror("Channel data overflow. Extra data ignored.\n"); 
-	      data->length = channel->rec_window_size;
+	      werror("Ignoring data on channel which is closing\n");
+	      return LSH_OK | LSH_GOON;
 	    }
-	  channel->rec_window_size -= data->length; 
-	  return CHANNEL_RECIEVE(channel, 
-				 CHANNEL_DATA, data);
+	  else
+	    {
+	      if (data->length > channel->rec_window_size)
+		{
+		  /* Truncate data to fit window */
+		  werror("Channel data overflow. Extra data ignored.\n"); 
+		  data->length = channel->rec_window_size;
+		}
+	      channel->rec_window_size -= data->length; 
+	      return CHANNEL_RECIEVE(channel, 
+				     CHANNEL_DATA, data);
+	    }
+	  return LSH_OK | LSH_GOON;
 	}
 	  
       werror("Data on closed or non-existant channel %d\n",
@@ -425,26 +439,36 @@ static int do_channel_extended_data(struct packet_handler *c,
 
       lsh_string_free(packet);
       
-      if (channel && channel->recieve)
+      if (channel && channel->recieve
+	  && !(channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_RECIEVED_CLOSE)))
 	{
-	  if (data->length > channel->rec_window_size)
+	  if (channel->flags & CHANNEL_SENT_CLOSE)
 	    {
-	      /* Truncate data to fit window */
-	      werror("Channel extended data overflow. "
-		     "Extra data ignored.\n");
-	      data->length = channel->rec_window_size;
+	      werror("Ignoring extended data on channel which is closing\n");
+	      return LSH_OK | LSH_GOON;
 	    }
-	  channel->rec_window_size -= data->length;
-	  switch(type)
+	  else
 	    {
-	    case SSH_EXTENDED_DATA_STDERR:
-	      return CHANNEL_RECIEVE(channel, 
-				     CHANNEL_DATA, data);
-	    default:
-	      werror("Unknown type %d of extended data.\n",
-		     type);
-	      lsh_string_free(data);
-	      return LSH_FAIL | LSH_DIE;
+	      if (data->length > channel->rec_window_size)
+		{
+		  /* Truncate data to fit window */
+		  werror("Channel extended data overflow. "
+			 "Extra data ignored.\n");
+		  data->length = channel->rec_window_size;
+		}
+	      
+	      channel->rec_window_size -= data->length;
+	      switch(type)
+		{
+		case SSH_EXTENDED_DATA_STDERR:
+		  return CHANNEL_RECIEVE(channel, 
+					 CHANNEL_DATA, data);
+		default:
+		  werror("Unknown type %d of extended data.\n",
+			 type);
+		  lsh_string_free(data);
+		  return LSH_FAIL | LSH_DIE;
+		}
 	    }
 	}
       werror("Extended data on closed or non-existant channel %d\n",
@@ -480,9 +504,35 @@ static int do_channel_eof(struct packet_handler *c,
 
       lsh_string_free(packet);
 
-      if (channel && channel->eof)
-	return CHANNEL_EOF(channel);
+      if (channel)
+	{
+	  if (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_RECIEVED_CLOSE))
+	    {
+	      werror("Recieving EOF on channel on closed channel.\n");
+	      return LSH_FAIL | LSH_DIE;
+	    }
+
+	  channel->flags |= CHANNEL_RECIEVED_EOF;
+	  
+	  if (channel->flags & CHANNEL_SENT_CLOSE)
+	    /* Do nothing */
+	    return LSH_OK | LSH_GOON;
+
+	  if (channel->flags & CHANNEL_SENT_EOF)
+	    {
+	      /* Both parties have sent EOF. Initiate close, if we
+	       * havn't done that already. */
+
+	      return (channel->flags & CHANNEL_SENT_CLOSE)
+		? LSH_OK | LSH_GOON
+		: channel_close(channel);
+	    }
+	}
+      werror("EOF on non-existant channel %d\n",
+	     channel_number);
+      return LSH_FAIL | LSH_DIE;
     }
+      
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
 }
@@ -510,8 +560,28 @@ static int do_channel_close(struct packet_handler *c,
 
       lsh_string_free(packet);
       
-      if (channel && channel->close)
-	return CHANNEL_CLOSE(channel);
+      if (channel)
+	{
+	  if (channel->flags & CHANNEL_RECIEVED_CLOSE)
+	    {
+	      werror("Recieving multiple CLOSE on channel.\n");
+	      return LSH_FAIL | LSH_DIE;
+	    }
+
+	  channel->flags |= CHANNEL_RECIEVED_CLOSE;
+	  
+	  if (channel->flags & (CHANNEL_RECIEVED_EOF | CHANNEL_SENT_EOF))
+	    {
+	      werror("Unexpected channel CLOSE.\n");
+	    }
+	  
+	  return (channel->flags & (CHANNEL_SENT_CLOSE))
+	    ? LSH_OK | LSH_CHANNEL_FINISHED
+	    : LSH_OK | LSH_GOON;
+	}
+      werror("CLOSE on non-existant channel %d\n",
+	     channel_number);
+      return LSH_FAIL | LSH_DIE;
       
     }
   lsh_string_free(packet);
@@ -789,6 +859,68 @@ struct ssh_service *make_connection_service(struct alist *global_requests,
   return &self->super;
 }
 
+struct lsh_string *format_channel_close(struct ssh_channel *channel)
+{
+  return ssh_format("%c%i",
+		    SSH_MSG_CHANNEL_CLOSE,
+		    channel->channel_number);
+}
+
+int channel_close(struct ssh_channel *channel)
+{
+  channel->flags |= CHANNEL_SENT_CLOSE;
+
+  return A_WRITE(channel->write, format_channel_close(channel))
+    | ( (channel->flags & CHANNEL_RECIEVED_CLOSE)
+	? LSH_CHANNEL_FINISHED : 0);
+}
+
+struct lsh_string *format_channel_eof(struct ssh_channel *channel)
+{
+  return ssh_format("%c%i",
+		    SSH_MSG_CHANNEL_EOF,
+		    channel->channel_number);
+}
+
+int channel_eof(struct ssh_channel *channel)
+{
+  int res ;
+  
+  channel->flags |= CHANNEL_SENT_CLOSE;
+  res =  A_WRITE(channel->write, format_channel_eof(channel));
+
+  if (LSH_CLOSEDP(res))
+    return res;
+
+  if (channel->flags & CHANNEL_RECIEVED_EOF)
+    {
+      /* Initiate close */
+      res |= channel_close(channel);
+    }
+
+  return res;
+}
+
+void init_channel(struct ssh_channel *channel)
+{
+  /* channel->super.handler = do_read_channel; */
+  channel->write = NULL;
+
+  channel->flags = 0;
+  
+  channel->request_types = NULL;
+  channel->recieve = NULL;
+  channel->send = NULL;
+#if 0
+  channel->close = NULL;
+  channel->eof = NULL;
+#endif
+  channel->open_confirm = NULL;
+  channel->open_failure = NULL;
+  channel->channel_success = NULL;
+  channel->channel_failure = NULL;
+}
+
 struct lsh_string *channel_transmit_data(struct ssh_channel *channel,
 					 struct lsh_string *data)
 {
@@ -815,64 +947,76 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
 		    data);
 }
 
-static int do_read_channel(struct read_handler **h,
-			   struct abstract_read *read)
+/* Writing data to a channel */
+struct channel_write
 {
-  struct ssh_channel *closure = (struct ssh_channel *) *h;
-  int to_read;
-  int n;
-  struct lsh_string *packet;
-  
-  MDEBUG_SUBTYPE(closure);
+  struct abstract_write super;
+  struct ssh_channel *channel;
+};
 
-  to_read = MIN(closure->send_max_packet, closure->send_window_size);
+struct channel_write_extended
+{
+  struct channel_write super;
+  UINT32 type;
+};
 
-  if (!to_read)
-    {
-      /* Stop reading */
-      *h = NULL;
-      return LSH_OK | LSH_GOON;
-    }
-  
-  packet = lsh_string_alloc(to_read);
-  n = A_READ(read, to_read, packet->data);
+static int do_channel_write(struct abstract_write **c,
+			    struct lsh_string *packet)
+{
+  struct channel_write *closure = (struct channel_write *) *c;
 
-  switch(n)
-    {
-    case 0:
-      lsh_string_free(packet);
-      return LSH_OK | LSH_GOON;
-    case A_FAIL:
-      /* Send a channel close, and prepare the channel for closing */      
-      channel_close(channel);
-      return LSH_FAIL | LSH_DIE;
-    case A_EOF:
-      /* Send eof (but no close). */
-      channel_eof(channel);
-      return LSH_OK | LSH_DIE;
-    default:
-      packet->length = n;
-
-      /* FIXME: Should we consider the error code here? */
-      return A_WRITE(closure->write, channel_transmit_data(closure, packet));
-    }
+  return A_WRITE(closure->channel->write,
+		 channel_transmit_data(closure->channel, packet));
 }
 
-void init_channel(struct ssh_channel *channel, struct abstract_write *write)
+static int do_channel_write_extended(struct abstract_write **c,
+				struct lsh_string *packet)
 {
-  channel->super.handler = do_read_channel;
-  channel->write = write;
-  
-  channel->request_types = NULL;
-  channel->recieve = NULL;
-  channel->send = NULL;
-  channel->close = NULL;
-  channel->eof = NULL;
-  channel->open_confirm = NULL;
-  channel->open_failure = NULL;
-  channel->channel_success = NULL;
-  channel->channel_failure = NULL;
+  struct channel_write_extended *closure = (struct channel_write_extended *) *c;
+
+  return A_WRITE(closure->super.channel->write,
+		 channel_transmit_extended(closure->super.channel,
+					   closure->type,
+					   packet));
 }
+
+struct abstract_write *make_channel_write(struct ssh_channel *channel)
+{
+  struct channel_write *closure;
+
+  NEW(closure);
+
+  closure->super.write = do_channel_write;
+  closure->channel = channel;
+
+  return &closure->super;
+}
+
+struct abstract_write *make_channel_write_extended(struct ssh_channel *channel,
+						   UINT32 type)
+{
+  struct channel_write_extended *closure;
+
+  NEW(closure);
+
+  closure->super.super.write = do_channel_write_extended;
+  closure->super.channel = channel;
+  closure->type = type;
+  
+  return &closure->super.super;
+}
+
+struct read_handler *make_channel_read_data(struct ssh_channel *channel)
+{
+  return make_read_data(channel, make_channel_write(channel));
+}
+
+struct read_handler *make_channel_read_stderr(struct ssh_channel *channel)
+{
+  return make_read_data(channel,
+			make_channel_write_extended(channel,
+						    SSH_EXTENDED_DATA_STDERR));
+}    
 
 struct lsh_string *prepare_channel_open(struct channel_table *table,
 					int type, struct ssh_channel *channel,
