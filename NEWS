@@ -1,3 +1,15 @@
+News for the lsh-0.1.2 release
+
+	First user visible tcpforwarding (-L option). Not tested
+	yet...
+
+	Fixed flow control.
+
+	DSA signatures should conform better both to the draft andd to
+	the ssh-2.x implementations.
+
+	Better handling of POLLHUP.
+	
 News for the lsh-0.1 release
 
 	Added compiler.scm to the dist.
