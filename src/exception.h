@@ -67,10 +67,10 @@ void exception_raise(struct exception_handler *e,
  * ignore_exception_handler, and perhaps some others with NULL parent.
  * */
 #define STATIC_EXCEPTION_HANDLER(r, p) \
-{ STATIC_HEADER, (r), (p), __FILE__ ":" STRING_LINE ": Static" }
+{ STATIC_HEADER, (r), (p), __FILE__ ":" STRING_LINE }
 
 
-#define HANDLER_CONTEXT   (__FILE__ ":" STRING_LINE ": " FUNCTION_NAME)
+#define HANDLER_CONTEXT   (__FILE__ ":" STRING_LINE)
 
 
 /* Exception types. */

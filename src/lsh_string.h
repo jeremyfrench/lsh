@@ -54,7 +54,7 @@ struct lsh_string *
 lsh_string_alloc_clue(uint32_t size, const char *clue);
 
 #define lsh_string_alloc(size) \
-  (lsh_string_alloc_clue((size), (__FILE__ ":" STRING_LINE ": " FUNCTION_NAME)))
+  (lsh_string_alloc_clue((size), (__FILE__ ":" STRING_LINE)))
 
 void
 lsh_string_final_check(void);
