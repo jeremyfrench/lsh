@@ -1,3 +1,11 @@
+2001-11-20  Niels Möller  <nisse@ehand.com>
+
+	* src/zlib.c (make_zlib_instance): Check return valus from
+	inflateInit and deflateInit.
+
+	* src/lsh-make-seed.c (update_zlib): New function.
+	(get_dev_mem): Implemented reading of /dev/mem.
+
 2001-11-14  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/lsh-make-seed.c (get_dev_random): Implement reading of
