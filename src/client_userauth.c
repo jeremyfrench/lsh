@@ -127,7 +127,7 @@ format_userauth_publickey(struct lsh_string *name,
      (super command)
      (vars
        (username string)            ; Remote user name to authenticate as.
-       (service_name simple int)    ; Service we want to access.
+       (service_name . int)         ; Service we want to access.
        (methods object object_list) ; Authentication methods, in order.
        ))
 */
@@ -148,6 +148,7 @@ make_client_userauth_state(struct client_userauth *userauth,
 {
   NEW(client_userauth_state, self);
 
+  trace("client_userauth.c: make_client_userauth_state()\n");
   self->connection = connection;
   self->userauth = userauth;
   self->failure = NULL;
@@ -182,7 +183,9 @@ do_userauth_success(struct packet_handler *c,
   struct simple_buffer buffer;
 
   unsigned msg_number;
-    
+
+  trace("client_userauth.c: do_userauth_success\n");
+  
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
@@ -242,7 +245,9 @@ do_userauth_failure(struct packet_handler *c,
   unsigned msg_number;
   struct int_list *methods = NULL;
   int partial_success;
-    
+
+  trace("client_userauth.c: do_userauth_failure\n");
+  
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
@@ -291,6 +296,8 @@ static struct packet_handler *
 make_failure_handler(struct client_userauth_state *state)
 {
   NEW(userauth_packet_handler, self);
+
+  trace("client_userauth.c: make_failure_handler\n");
 
   self->super.handler = do_userauth_failure;
   self->state = state;
@@ -347,12 +354,16 @@ do_client_exc_userauth(struct exception_handler *s,
 {
   CAST(client_exc_userauth, self, s);
 
+  trace("client_userauth.c: do_client_exc_userauth\n");
+  
   if ( (e->type == EXC_USERAUTH) 
        && (self->state->current < LIST_LENGTH(self->state->userauth->methods)))
     {
       CAST_SUBTYPE(client_userauth_method, method,
 		   LIST(self->state->userauth->methods)[self->state->current]);
 
+      /* FIXME: We should not do this if current was incremented
+       * previously, in do_userauth_failure(). */
       self->state->current++;
       
       self->state->failure
@@ -369,6 +380,9 @@ make_client_exc_userauth(struct client_userauth_state *state,
 			 const char *context)
 {
   NEW(client_exc_userauth, self);
+
+  trace("client_userauth.c: make_client_exc_userauth\n");
+
   self->super.parent = parent;
   self->super.raise = do_client_exc_userauth;
   self->super.context = context;
@@ -389,6 +403,8 @@ do_client_userauth(struct command *s,
   
   struct client_userauth_state *state
     = make_client_userauth_state(self, connection);
+
+  trace("client_userauth.c: do_client_userauth\n");
 
   connection->dispatch[SSH_MSG_USERAUTH_SUCCESS]
     = make_success_handler(c);
@@ -492,6 +508,8 @@ do_password_failure(struct client_userauth_failure *s)
 {
   CAST(client_password_state, self, s);
 
+  trace("client_userauth.c: do_password_failure\n");
+
   send_password(self);
 }
 
@@ -501,6 +519,9 @@ make_client_password_state(struct client_userauth *userauth,
 			   struct exception_handler *e)
 {
   NEW(client_password_state, self);
+
+  trace("client_userauth.c: make_client_password_state\n");
+
   self->super.failure = do_password_failure;
   self->userauth = userauth;
   self->tried_empty_passwd = 0;
@@ -518,6 +539,9 @@ do_password_login(struct client_userauth_method *s UNUSED,
 {
   struct client_password_state *state
     = make_client_password_state(userauth, connection, e);
+
+  trace("client_userauth.c: do_password_login\n");
+
   send_password(state);
   
   return &state->super;
