@@ -80,6 +80,8 @@
 # define UTMPX utmpx
 # define UTMPX_UT_EXIT    HAVE_STRUCT_UTMPX_UT_EXIT
 # define UTMPX_UT_EXIT_E_TERMINATION HAVE_STRUCT_UTMPX_UT_EXIT_E_TERMINATION
+# define UTMPX_UT_EXIT___E_TERMINATION HAVE_STRUCT_UTMPX_UT_EXIT___E_TERMINATION
+# define UTMPX_UT_EXIT_UT_TERMINATION HAVE_STRUCT_UTMPX_UT_EXIT_UT_TERMINATION
 # define UTMPX_UT_PID     HAVE_STRUCT_UTMPX_UT_PID
 # define UTMPX_UT_USER    HAVE_STRUCT_UTMPX_UT_USER
 # define UTMPX_UT_TV      HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
@@ -101,6 +103,8 @@
 #  define UTMPX utmp
 #  define UTMPX_UT_EXIT    HAVE_STRUCT_UTMP_UT_EXIT
 #  define UTMPX_UT_EXIT_E_TERMINATION HAVE_STRUCT_UTMP_UT_EXIT_E_TERMINATION
+#  define UTMPX_UT_EXIT___E_TERMINATION HAVE_STRUCT_UTMP_UT_EXIT___E_TERMINATION
+#  define UTMPX_UT_EXIT_UT_TERMINATION HAVE_STRUCT_UTMP_UT_EXIT_UT_TERMINATION
 #  define UTMPX_UT_PID     HAVE_STRUCT_UTMP_UT_PID
 #  define UTMPX_UT_USER    HAVE_STRUCT_UTMP_UT_USER
 #  define UTMPX_UT_TV      HAVE_STRUCT_UTMP_UT_TV_TV_SEC
@@ -195,7 +199,7 @@ do_logout_notice(struct exit_callback *s,
   self->process->alive = 0;
 
   EXIT_CALLBACK(self->c, signaled, core, value);
-};
+}
 
 static struct exit_callback *
 make_logout_notice(struct resource *process,
@@ -267,10 +271,16 @@ do_utmp_cleanup(struct exit_callback *s,
 # if UTMPX_UT_EXIT_E_TERMINATION
   entry.ut_exit.e_exit = signaled ? 0 : value;
   entry.ut_exit.e_termination = signaled ? value : 0;
-# else
+# elif UTMPX_UT_EXIT_UT_TERMINATION
+  /* Names use on tru64 */
+  entry.ut_exit.ut_exit = signaled ? 0 : value;
+  entry.ut_exit.ut_termination = signaled ? value : 0;
+# elif UTMPX_UT_EXIT___E_TERMINATION
   /* HPUX uses these odd names in struct utmpx */
   entry.ut_exit.__e_exit = signaled ? 0 : value;
   entry.ut_exit.__e_termination = signaled ? value : 0;
+# elif __GNUC__
+#  warning utmp.ut_exit exists, but no known sub attributes  
 # endif
 #endif
 
