@@ -242,10 +242,10 @@ struct parser
 
   const char *posixly_correct;
   
-  /* True if there are only no-option arguments left, which are are
-     just passed verbatim with ARGP_KEY_ARG. This is set if we
-     encounter a quote, or the end of options, but may be cleared
-     again if the user moves the next argument pointer backwards. */
+  /* True if there are only no-option arguments left, which are just
+     passed verbatim with ARGP_KEY_ARG. This is set if we encounter a
+     quote, or the end of the proper options, but may be cleared again
+     if the user moves the next argument pointer backwards. */
   int args_only;
 
   /* Describe how to deal with options that follow non-option ARGV-elements.
@@ -288,6 +288,7 @@ struct parser
   int last_nonopt;
   
   /* String of all recognized short options. Needed for ARGP_LONG_ONLY. */
+  /* FIXME: Perhaps change to a pointer to a suitable bitmap instead? */
   char *short_opts;
 
   /* For parsing combined short options. */
@@ -333,7 +334,7 @@ find_short_option(struct parser *parser, int key, struct group **p)
 enum match_result { MATCH_EXACT, MATCH_PARTIAL, MATCH_NO };
 
 /* If defined, allow complete.el-like abbreviations of long options. */
-#ifndef
+#ifndef ARGP_COMPLETE
 #define ARGP_COMPLETE 0
 #endif
 
