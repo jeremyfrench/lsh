@@ -28,7 +28,13 @@
 #include "sexp.h"
 
 struct sexp *sexp_parse_canonical(struct simple_buffer *buffer);
+
+struct sexp *
+string_to_sexp(struct lsh_string *src, int free);
+
+#if 0
 struct sexp *sexp_parse_transport(struct simple_buffer *buffer);
 struct sexp *sexp_parse_advanced(struct simple_buffer *buffer);
+#endif
 
 #endif */ LSH_SEXP_PARSER_H_INCLUDED */
