@@ -143,6 +143,7 @@ sha1
 password-encrypted
 # label
 Xpkcs5v2
+iterations
 salt
 data
 iv
