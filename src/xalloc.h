@@ -51,6 +51,10 @@ void lsh_string_free(struct lsh_string *packet);
 struct lsh_object *lsh_object_alloc(struct lsh_class *class);
 void lsh_object_free(struct lsh_object *o);
 
+/* NOTE: This won't work for if there are strings or other instance
+ * variables that can't be shared. */
+struct lsh_object *lsh_object_clone(struct lsh_object *o);
+
 void *lsh_space_alloc(size_t size);
 void lsh_space_free(void *p);
 
@@ -100,6 +104,12 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
   struct class *(var) = (struct class *) lsh_object_alloc(&CLASS(class))
 #define NEW_SPACE(x) ((x) = lsh_space_alloc(sizeof(*(x))))
 
+#define CLONE(class, i) \
+  ((struct class *) lsh_object_clone(CHECK_TYPE(class, (i))))
+
+#define CLONED(class, var, i) \
+  struct class *(var) = CLONE(class, i)
+     
 #include "gc.h"
 #define KILL(x) gc_kill((struct lsh_object *) (x))
 

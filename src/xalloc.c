@@ -56,14 +56,15 @@ static void *debug_malloc(size_t real_size)
 
   if (!res)
     return NULL;
+
+  res += 2;
   
-  res[0] = count;
-  res[1] = real_size;
-  /* ((struct lsh_object *) (res + 2))->type = real_size; */
-  res[size+2] = ~count;
+  res[-2] = count;
+  res[-1] = real_size;
+  res[size] = ~count;
   count++;
 
-  return (void *) (res + 2);
+  return (void *) res;
 }
 
 static void debug_free(void *m)
@@ -121,6 +122,11 @@ struct lsh_string *lsh_string_alloc(UINT32 length)
 
 void lsh_string_free(struct lsh_string *s)
 {
+  if (!s)
+    return;
+
+  debug("lsh_string_free: freeing %p,\n", (void *) s);
+  
 #ifdef DEBUG_ALLOC
   if (s->header.magic != -1717)
     fatal("lsh_string_free: Not string!\n");
@@ -137,6 +143,21 @@ struct lsh_object *lsh_object_alloc(struct lsh_class *class)
   gc_register(instance);
 
   return instance;
+}
+
+struct lsh_object *lsh_object_clone(struct lsh_object *o)
+{
+  struct lsh_object *i = xalloc(o->isa->size);
+
+  /* Copy header and all instance variables. Note that the header is
+   * now invalid, as the next pointer can't be copied directly. This
+   * is fixed by the gc_register call below. */
+  memcpy(i, o, o->isa->size);
+
+  i->alloc_method = LSH_ALLOC_HEAP;
+  gc_register(i);
+
+  return i;
 }
 
 struct list_header *lsh_list_alloc(struct lsh_class *class,
@@ -163,8 +184,10 @@ void lsh_object_free(struct lsh_object *o)
   if (o->alloc_method != LSH_ALLOC_HEAP)
     fatal("lsh_object_free: Object not allocated on the heap!\n");
 
+#if 0
   if (o->isa->free_instance)
     o->isa->free_instance(o);
+#endif
   
   lsh_free(o);
 };
@@ -202,7 +225,8 @@ struct lsh_object *lsh_object_check(struct lsh_class *class,
   if (instance->dead)
     fatal("lsh_object_check: Reference to dead object!\n");
 
-  if (instance->isa != class)
+  if ( (instance->alloc_method == LSH_ALLOC_HEAP)
+       && (instance->isa != class))
     fatal("lsh_object_check: Type error!\n");
 
   return instance;
@@ -222,11 +246,23 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
   if (instance->dead)
     fatal("lsh_object_check: Reference to dead object!\n");
 
+  /* Only heap allocated objects have a valid isa-pointer */
+  switch (instance->alloc_method)
+    {
+    case LSH_ALLOC_STATIC:
+    case LSH_ALLOC_STACK:
+      return instance;
+    case LSH_ALLOC_HEAP:
+      break;
+    default:
+      fatal("lsh_object_check_subtype: Memory corrupted!\n");
+    }
+  
   for (type = instance->isa; type; type=type->super_class)
     if (type == class)
       return instance;
 
-  fatal("lsh_object_check_subtype: Unexpected marked object!\n");
+  fatal("lsh_object_check_subtype: Type error!\n");
 }
 #endif /* DEBUG_ALLOC */
 
