@@ -28,6 +28,7 @@
 #include "alist.h"
 #include "command.h"
 #include "connection.h"
+#include "io.h"
 #include "parse.h"
 #include "userauth.h"
 
@@ -52,7 +53,7 @@
 #define USER_LOOKUP(db, n, f) ((db)->lookup((db), (n), (f)))
 
 struct user_db *
-make_unix_user_db(int allow_root);
+make_unix_user_db(struct io_backend *backend, int allow_root);
 
 /* GABA:
    (class
