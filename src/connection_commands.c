@@ -82,7 +82,6 @@ struct close_callback *make_connection_close_handler(struct ssh_connection *c)
      (super line_handler)
      (vars
        (connection object ssh_connection)
-       (mode . int)
        ;; Needed for fallback.
        (fd . int)
        (fallback object ssh1_fallback)))
@@ -147,6 +146,7 @@ do_line(struct line_handler **h,
   UINT8 *protover, *swver, *comment;
 
   struct ssh_connection *connection = closure->connection;
+  int mode = connection->flags & CONNECTION_MODE;
   
   switch(split_version_string(length, line, 
 			      &protover_len, &protover, 
@@ -168,11 +168,10 @@ do_line(struct line_handler **h,
 #if WITH_SSH1_FALLBACK
 	    if (closure->fallback)
 	      {
-		assert(closure->mode == CONNECTION_SERVER);
+		assert(mode == CONNECTION_SERVER);
 	      
 		/* Sending keyexchange packet was delayed. Do it now */
-		initiate_keyexchange(connection,
-				     closure->mode);
+		initiate_keyexchange(connection);
 	      }
 #endif /* WITH_SSH1_FALLBACK */
 
@@ -214,7 +213,7 @@ do_line(struct line_handler **h,
 		connection
 		);
 	    
-	    connection->versions[!closure->mode]
+	    connection->versions[!mode]
 	      = ssh_format("%ls", length, line);
 
 	    verbose("Client version: %pS\n"
@@ -275,7 +274,7 @@ do_line(struct line_handler **h,
 }
 
 static struct read_handler *
-make_connection_read_line(struct ssh_connection *connection, int mode,
+make_connection_read_line(struct ssh_connection *connection, 
 			  int fd,
 			  struct ssh1_fallback *fallback)
 {
@@ -283,7 +282,6 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
 
   closure->super.handler = do_line;
   closure->connection = connection;
-  closure->mode = mode;
   closure->fd = fd;
   closure->fallback = fallback;
   return make_read_line(&closure->super, connection->e);
@@ -291,7 +289,7 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
 
 
 struct handshake_info *
-make_handshake_info(int mode,
+make_handshake_info(UINT32 flags,
 		    const char *id_comment,
 		    const char *debug_comment,
 		    UINT32 block_size,
@@ -301,7 +299,7 @@ make_handshake_info(int mode,
 		    struct ssh1_fallback *fallback)
 {
   NEW(handshake_info, self);
-  self->mode = mode;
+  self->flags = flags;
   self->id_comment = id_comment;
   self->debug_comment = debug_comment;
   self->block_size = block_size;
@@ -341,10 +339,11 @@ do_handshake(struct command *s,
   CAST(listen_value, lv, x);
   struct lsh_string *version;
   struct ssh_connection *connection;
-
+  int mode = self->info->flags & CONNECTION_MODE;
+  
   verbose("Initiating handshake with %S\n", lv->peer->ip);
   
-  switch (self->info->mode)
+  switch (mode)
     {
     case CONNECTION_CLIENT:
       version = ssh_format("SSH-%lz-%lz %lz",
@@ -373,7 +372,7 @@ do_handshake(struct command *s,
     default:
       fatal("do_handshake: Internal error\n");
     }
-
+  
   /* Installing the right exception handler is a little tricky. The
    * passed in handler is typically the top-level handler provided by
    * lsh.c or lshd.c. On top of this, we add the io_exception_handler
@@ -384,7 +383,8 @@ do_handshake(struct command *s,
    * EXC_FINISH_READ exception. */
   
   connection = make_ssh_connection
-    (lv->peer, self->info->debug_comment, 
+    (self->info->flags,
+     lv->peer, self->info->debug_comment, 
      c,
      make_exc_finish_read_handler(lv->fd, e, HANDLER_CONTEXT));
   
@@ -393,17 +393,17 @@ do_handshake(struct command *s,
      &io_read_write(lv->fd,
 		    make_buffered_read
 		    (BUF_SIZE,
-		     make_connection_read_line(connection, self->info->mode,
+		     make_connection_read_line(connection, 
 					       lv->fd->fd, self->info->fallback)),
 		    self->info->block_size,
 		    make_connection_close_handler(connection))
      ->write_buffer->super,
      self->info->random);
 
-  connection->versions[self->info->mode] = version;
-  connection->kexinits[self->info->mode] = MAKE_KEXINIT(self->info->init); 
+  connection->versions[mode] = version;
+  connection->kexinits[mode] = MAKE_KEXINIT(self->info->init); 
   connection->dispatch[SSH_MSG_KEXINIT]
-    = make_kexinit_handler(self->info->mode, self->info->init,
+    = make_kexinit_handler(self->info->init,
 			   self->extra, self->info->algorithms);
 
 #if WITH_SSH1_FALLBACK
@@ -423,7 +423,7 @@ do_handshake(struct command *s,
   A_WRITE(connection->raw,
 	  ssh_format("%lS\r\n", version));
   
-  initiate_keyexchange(connection, self->info->mode);
+  initiate_keyexchange(connection);
 }
 
 static struct lsh_object *
