@@ -93,15 +93,22 @@ struct command_simple options2signature_algorithms;
 #define OPT_NO 0x400
 #define OPT_SSH1_FALLBACK 0x200
 #define OPT_INTERFACE 0x201
+
 #define OPT_TCPIP_FORWARD 0x202
 #define OPT_NO_TCPIP_FORWARD (OPT_TCPIP_FORWARD | OPT_NO)
 #define OPT_PTY 0x203
 #define OPT_NO_PTY (OPT_PTY | OPT_NO)
+
 #define OPT_DAEMONIC 0x204
 #define OPT_NO_DAEMONIC (OPT_DAEMONIC | OPT_NO)
 #define OPT_PIDFILE 0x205
 #define OPT_NO_PIDFILE (OPT_PIDFILE | OPT_NO)
 #define OPT_CORE 0x207
+
+#define OPT_PUBLICKEY 0x208
+#define OPT_NO_PUBLICKEY (OPT_PUBLICKEY | OPT_NO)
+#define OPT_PASSWORD 0x209
+#define OPT_NO_PASSWORD (OPT_PASSWORD | OPT_NO)
 
 /* GABA:
    (class
@@ -115,8 +122,15 @@ struct command_simple options2signature_algorithms;
        (port . "char *")
        (hostkey . "char *")
        (local object address_info)
+
+       (with_publickey . int)
+       (with_password . int)
        (with_tcpip_forward . int)
        (with_pty . int)
+
+       (userauth_methods object int_list)
+       (userauth_algorithms object alist)
+       
        (sshd1 object ssh1_fallback)
        (daemonic . int)
        (corefile . int)
@@ -145,8 +159,13 @@ make_lshd_options(struct io_backend *backend,
   self->hostkey = "/etc/lsh_host_key";
   self->local = NULL;
 
+  self->with_publickey = 1;
+  self->with_password = 1;
   self->with_tcpip_forward = 1;
   self->with_pty = 1;
+
+  self->userauth_methods = NULL;
+  self->userauth_algorithms = NULL;
   
   self->sshd1 = NULL;
   self->daemonic = 0;
@@ -214,6 +233,16 @@ main_options[] =
     "Location of the sshd1 program, for falling back to version 1 of the Secure Shell protocol.", 0 },
 #endif /* WITH_SSH1_FALLBACK */
 
+  { "password", OPT_PASSWORD, NULL, 0,
+    "Enable password user authentication (default).", 0},
+  { "no-password", OPT_NO_PASSWORD, NULL, 0,
+    "Disable password user authentication.", 0},
+
+  { "publickey", OPT_PUBLICKEY, NULL, 0,
+    "Enable publickey user authentication (default).", 0},
+  { "no-publickey", OPT_NO_PUBLICKEY, NULL, 0,
+    "Disable publickey user authentication.", 0},
+  
 #if WITH_TCP_FORWARD
   { "tcp-forward", OPT_TCPIP_FORWARD, NULL, 0, "Enable tcpip forwarding (default).", 0 },
   { "no-tcp-forward", OPT_NO_TCPIP_FORWARD, NULL, 0, "Disable tcpip forwarding.", 0 },
@@ -223,7 +252,7 @@ main_options[] =
   { "pty-support", OPT_PTY, NULL, 0, "Enable pty allocation (default).", 0 },
   { "no-pty-support", OPT_NO_PTY, NULL, 0, "Disable pty allocation.", 0 },
 #endif /* WITH_PTY_SUPPORT */
-    
+  
   { NULL, 0, NULL, 0, "Daemonic behaviour", 0 },
   { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, redirect stdio to /dev/null, and chdir to /.", 0 },
   { "no-daemonic", OPT_NO_DAEMONIC, NULL, 0, "Run in the foreground, with messages to stderr (default).", 0 },
@@ -264,12 +293,44 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       
     case ARGP_KEY_END:
       self->local = make_address_info_c(self->interface, self->port);
+
       if (!self->local)
 	argp_error(state, "Invalid interface, port or service, %s:%s'.",
 		   self->interface ? self->interface : "ANY",
 		   self->port);
       if (self->use_pid_file < 0)
 	self->use_pid_file = self->daemonic;
+
+      if (self->with_password || self->with_publickey)
+	{
+	  int i = 0;
+	  self->userauth_methods
+	    = alloc_int_list(self->with_password + self->with_publickey);
+	  self->userauth_algorithms = make_alist(0, -1);
+
+	  if (self->with_password)
+	    {
+	      LIST(self->userauth_methods)[i++] = ATOM_PASSWORD;
+	      ALIST_SET(self->userauth_algorithms,
+			ATOM_PASSWORD, &unix_userauth.super);
+	    }
+	  if (self->with_publickey)
+	    {
+	      /* Doesn't use spki */
+	      LIST(self->userauth_methods)[i++] = ATOM_PUBLICKEY;
+	      ALIST_SET(self->userauth_algorithms,
+			ATOM_PUBLICKEY,
+			make_userauth_publickey
+			(make_alist(1,
+				    ATOM_SSH_DSS,
+				    make_authorization_db(ssh_format("authorized_keys_sha1"),
+							  &sha1_algorithm),
+				    
+				    -1)));
+	    }
+	}
+      else
+	argp_error(state, "All user authentication methods disabled.");
       
       break;
       
@@ -284,13 +345,29 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case OPT_INTERFACE:
       self->interface = arg;
       break;
- 
+
 #if WITH_SSH1_FALLBACK
     case OPT_SSH1_FALLBACK:
       self->sshd1 = make_ssh1_fallback(arg ? arg : SSHD1);
       break;
 #endif
 
+    case OPT_PASSWORD:
+      self->with_password = 1;
+      break;
+      
+    case OPT_NO_PASSWORD:
+      self->with_password = 0;
+      break;
+
+    case OPT_PUBLICKEY:
+      self->with_publickey = 1;
+      break;
+      
+    case OPT_NO_PUBLICKEY:
+      self->with_publickey = 0;
+      break;
+      
 #if WITH_TCP_FORWARD
     case OPT_TCPIP_FORWARD:
       self->with_tcpip_forward = 1;
@@ -415,7 +492,6 @@ int main(int argc, char **argv)
   
   struct randomness *r;
   struct alist *algorithms;
-  struct alist *authorization_lookup;
   
   /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
@@ -475,25 +551,7 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
   
-  /* FIXME: We should check that we have at least one host key.
-   * We should also extract the host-key algorithms for which we have keys,
-   * instead of hardcoding ssh-dss below. */
- 
   reaper = make_reaper();
-
-  /* Doesn't use spki */
-  authorization_lookup
-    = make_alist(1,
-		 ATOM_SSH_DSS, make_authorization_db(ssh_format("authorized_keys_sha1"),
-						     /* make_dsa_algorithm(NULL), */
-						     &sha1_algorithm),
-		 
-		 -1);
-
-  
-#if 0
-  ALIST_SET(algorithms, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex);
-#endif
   
   {
     /* Commands to be invoked on the connection */
@@ -525,6 +583,10 @@ int main(int argc, char **argv)
 		ATOM_PTY_REQ, make_pty_handler());
 #endif /* WITH_PTY_SUPPORT */
     {
+      /* FIXME: We should check that we have at least one host key.
+       * We should also extract the host-key algorithms for which we have keys,
+       * instead of hardcoding ssh-dss below. */
+ 
       struct lsh_object *o = lshd_listen
 	(make_simple_listen(backend, NULL),
 	 make_handshake_info(CONNECTION_SERVER,
@@ -546,13 +608,8 @@ int main(int argc, char **argv)
 	 (make_alist
 	  (1, ATOM_SSH_USERAUTH,
 	   lshd_services(make_userauth_service
-			 (make_int_list(2,
-					ATOM_PASSWORD,
-					ATOM_PUBLICKEY, -1),
-			  make_alist(2,
-				     ATOM_PASSWORD, &unix_userauth.super,
-				     ATOM_PUBLICKEY, make_userauth_publickey(authorization_lookup),
-				     -1),
+			 (options->userauth_methods,
+			  options->userauth_algorithms,
 			  make_alist(1, ATOM_SSH_CONNECTION,
 				     lshd_connection_service
 				     (make_server_connection_service(supported_channel_requests),
