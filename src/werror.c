@@ -10,6 +10,7 @@
 
 int debug_flag = 0;
 int quiet_flag = 0;
+int verbose_flag = 0;
 
 void werror(char *format, ...) 
 {
@@ -35,6 +36,18 @@ void debug(char *format, ...)
     }
 }
 
+void verbose(char *format, ...) 
+{
+  va_list args;
+
+  if (verbose_flag)
+    {
+      va_start(args, format);
+      vfprintf(stderr, format, args);
+      va_end(args);
+    }
+}
+
 /* Escape non-printable characters. */
 void werror_washed(UINT32 length, UINT8 *msg)
 {
@@ -53,7 +66,7 @@ void werror_washed(UINT32 length, UINT8 *msg)
 	default:
 	  if (!isprint(msg[i]))
 	    {
-	      fprintf(stderr, "\\x%2x", msg[i]);
+	      fprintf(stderr, "\\x%02x", msg[i]);
 	      break;
 	    }
 	  /* Fall through */
@@ -74,6 +87,12 @@ void werror_safe(UINT32 length, UINT8 *msg)
 void debug_safe(UINT32 length, UINT8 *msg)
 {
   if (debug_flag)
+    werror_washed(length, msg);
+}
+
+void verbose_safe(UINT32 length, UINT8 *msg)
+{
+  if (verbose_flag)
     werror_washed(length, msg);
 }
 
