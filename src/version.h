@@ -36,4 +36,7 @@
 #define SOFTWARE_CLIENT_VERSION ("lsh_" VERSION)
 #define SOFTWARE_SERVER_VERSION ("lshd_" VERSION)
 
+/* Use "psst@net.lut.ac.uk" ? */
+#define BUG_ADDRESS "<bug-lsh@gnu.org>"
+
 #endif /* LSH_VERSION_H_INCLUDED */
