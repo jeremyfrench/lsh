@@ -58,23 +58,23 @@ static struct read_sexp_command read_sexp
 
 struct lsh_writekey_options;
 
-extern struct command_simple lsh_writekey_print_public;
-#define PRINT_PUBLIC (&lsh_writekey_print_public.super.super)
+extern struct command lsh_writekey_print_public;
+#define PRINT_PUBLIC (&lsh_writekey_print_public.super)
 
-extern struct command_simple lsh_writekey_print_private;
-#define PRINT_PRIVATE (&lsh_writekey_print_private.super.super)
+extern struct command lsh_writekey_print_private;
+#define PRINT_PRIVATE (&lsh_writekey_print_private.super)
 
-extern struct command_simple lsh_writekey_options2algorithms;
-#define OPTIONS2ALGORITHMS (&lsh_writekey_options2algorithms.super.super)
+extern struct command lsh_writekey_options2algorithms;
+#define OPTIONS2ALGORITHMS (&lsh_writekey_options2algorithms.super)
 
-extern struct command_simple lsh_writekey_options2transform;
-#define TRANSFORM (&lsh_writekey_options2transform.super.super)
+extern struct command lsh_writekey_options2transform;
+#define TRANSFORM (&lsh_writekey_options2transform.super)
 
-extern struct command_simple lsh_writekey_options2public_file;
-#define OPTIONS2PUBLIC_FILE (&lsh_writekey_options2public_file.super.super)
+extern struct command lsh_writekey_options2public_file;
+#define OPTIONS2PUBLIC_FILE (&lsh_writekey_options2public_file.super)
 
-extern struct command_simple lsh_writekey_options2private_file;
-#define OPTIONS2PRIVATE_FILE (&lsh_writekey_options2private_file.super.super)
+extern struct command lsh_writekey_options2private_file;
+#define OPTIONS2PRIVATE_FILE (&lsh_writekey_options2private_file.super)
 
 #include "lsh-writekey.c.x"
 
@@ -310,72 +310,101 @@ main_argp =
   NULL, NULL
 };
 
-DEFINE_COMMAND_SIMPLE(lsh_writekey_print_public, a)
+DEFINE_COMMAND(lsh_writekey_print_public)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(lsh_writekey_options, options, a);
 
-  return &make_sexp_print_command
-    ((options->style > 0) ? options->style : SEXP_TRANSPORT)->super.super;
+  COMMAND_RETURN(c,
+		 make_sexp_print_command
+		 ((options->style > 0)
+		  ? options->style : SEXP_TRANSPORT));
 }
 
-DEFINE_COMMAND_SIMPLE(lsh_writekey_print_private, a)
+DEFINE_COMMAND(lsh_writekey_print_private)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(lsh_writekey_options, options, a);
 
-  return &make_sexp_print_command
-    ((options->style > 0) ? options->style : SEXP_CANONICAL)->super.super;
+  COMMAND_RETURN(c,
+		 make_sexp_print_command
+		 ((options->style > 0)
+		  ? options->style : SEXP_CANONICAL));
 }
 
-DEFINE_COMMAND_SIMPLE(lsh_writekey_options2algorithms, a)
+DEFINE_COMMAND(lsh_writekey_options2algorithms)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(lsh_writekey_options, options, a);
-  return &options->signature_algorithms->super;
+  COMMAND_RETURN(c, options->signature_algorithms);
 }
 
-DEFINE_COMMAND_SIMPLE(lsh_writekey_options2transform, a)
+DEFINE_COMMAND(lsh_writekey_options2transform)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(lsh_writekey_options, options, a);
   if (!options->crypto)
-    return &command_I.super;
+    COMMAND_RETURN(c, &command_I);
   else
     {
       CAST_SUBTYPE(mac_algorithm, hmac,
 		   ALIST_GET(options->crypto_algorithms, ATOM_HMAC_SHA1));
       assert(hmac);
       
-      return
-	&make_pkcs5_encrypt(options->r,
-			    lsh_string_dup(options->label),
-			    ATOM_HMAC_SHA1,
-			    hmac,
-			    options->crypto_name,
-			    options->crypto,
-			    10, /* Salt length */
-			    lsh_string_dup(options->passphrase),
-			    options->iterations)->super;
+      COMMAND_RETURN(c,
+		     make_pkcs5_encrypt(options->r,
+					lsh_string_dup(options->label),
+					ATOM_HMAC_SHA1,
+					hmac,
+					options->crypto_name,
+					options->crypto,
+					10, /* Salt length */
+					lsh_string_dup(options->passphrase),
+					options->iterations));
     }
 }
 
-DEFINE_COMMAND_SIMPLE(lsh_writekey_options2public_file, a)
+DEFINE_COMMAND(lsh_writekey_options2public_file)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(lsh_writekey_options, options, a);
   struct lsh_string *public = ssh_format("%lS.pub", options->file);
 
-  return
-    &make_io_write_file_info(lsh_get_cstring(public),
-			     O_CREAT | O_EXCL | O_WRONLY,
-			     0644,
-			     BLOCK_SIZE)->super;
+  COMMAND_RETURN(c,
+		 make_io_write_file_info(lsh_get_cstring(public),
+					 O_CREAT | O_EXCL | O_WRONLY,
+					 0644,
+					 BLOCK_SIZE));
 }
 
-DEFINE_COMMAND_SIMPLE(lsh_writekey_options2private_file, a)
+DEFINE_COMMAND(lsh_writekey_options2private_file)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(lsh_writekey_options, options, a);
-  return
-    &make_io_write_file_info(lsh_get_cstring(options->file),
-			     O_CREAT | O_EXCL | O_WRONLY,
-			     0600,
-			     BLOCK_SIZE)->super;
+
+  COMMAND_RETURN(c,
+		 make_io_write_file_info(lsh_get_cstring(options->file),
+					 O_CREAT | O_EXCL | O_WRONLY,
+					 0600,
+					 BLOCK_SIZE));
 }
 
 /* GABA:
