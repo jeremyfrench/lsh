@@ -40,4 +40,3 @@
        (local object abstract_write)))
 */
 
-     
