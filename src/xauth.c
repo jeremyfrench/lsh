@@ -36,14 +36,56 @@
 #include <netinet/in.h>
 
 #if HAVE_LIBXAU
+
+static int xauth_process(const char *filename,
+			 unsigned family,
+			 unsigned address_length, const char *address,
+			 unsigned number_length, const char *number,
+			 struct lsh_string **name,
+			 struct lsh_string **data)
+{
+  FILE *f = fopen(filename, "rb");
+  Xauth *xa;
+
+  if (!f)
+    return 0;
+
+  while ( (xa = XauReadAuth(f)) )
+    {
+      debug("xauth: family: %i\n", xa->family);
+      debug("       address: %ps\n", xa->address_length, xa->address);
+      debug("       display: %s\n", xa->number_length, xa->number);
+      debug("       name: %s\n", xa->name_length, xa->name);
+      debug("       data length: %i\n", xa->data_length);
+      
+      if ( (xa->family == family)
+	   && (xa->address_length == address_length)
+	   && (xa->number_length == number_length)
+	   && !memcmp(xa->address, address, address_length)
+	   && !memcmp(xa->number, number, number_length) )
+	{
+	  *name = ssh_format("%ls", xa->name_length, xa->name);
+	  *data = ssh_format("%ls", xa->data_length, xa->data);
+
+	  XauDisposeAuth(xa);
+	  fclose(f);
+
+	  return 1;
+	}
+    }
+  XauDisposeAuth(xa);
+  fclose(f);
+  
+  return 0;
+}
+
 int
 xauth_lookup(struct sockaddr *sa,
-             unsigned display_length,
-             const char *display,
+             unsigned number_length,
+             const char *number,
              struct lsh_string **name,
              struct lsh_string **data)
 {
-  Xauth *xa = NULL;
   int res = 0;
   unsigned family;
 
@@ -98,26 +140,12 @@ xauth_lookup(struct sockaddr *sa,
   if (XauLockAuth(filename, 5, 1, 0) != LOCK_SUCCESS)
     return 0;
 
-  /* What's the right ptototype? The Solaris man-page includes only 5 arguments. */
-  xa = XauGetAuthByAddr(family,
-			address_length, address,
-			display_length, display,
-			18, "MIT-MAGIC-COOKIE-1");
-        
-  if (xa)
-    {
-      debug("xauth: family: %i\n", xa->family);
-      debug("       address: %ps\n", xa->address_length, xa->address);
-      debug("       display: %s\n", xa->number_length, xa->number);
-      debug("       name: %s\n", xa->name_length, xa->name);
-      debug("       data length: %i\n", xa->data_length);
-      
-      res = 1;
-      *name = ssh_format("%ls", xa->name_length, xa->name);
-      *data = ssh_format("%ls", xa->data_length, xa->data);
-      XauDisposeAuth(xa);
-    }
-
+  res = xauth_process(filename,
+		      family,
+		      address_length, address,
+		      number_length, number,
+		      name, data);
+    
   XauUnlockAuth(filename);
 
   return res;
