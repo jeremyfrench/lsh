@@ -26,6 +26,7 @@
 
 #include "atoms.h"
 #include "channel_commands.h"
+#include "channel_forward.h"
 #include "connection_commands.h"
 #include "format.h"
 #include "io_commands.h"
@@ -79,7 +80,7 @@ static struct catch_report_collect catch_channel_open
 
 #define TCPIP_WINDOW_SIZE 10000
 
-/* NOTE: make_tcpip_channel adds the fd to the channel's resource list. */
+/* NOTE: make_channel_forward adds the fd to the channel's resource list. */
 static void
 do_tcpip_connect_io(struct command *ignored UNUSED,
 		    struct lsh_object *x,
@@ -91,7 +92,7 @@ do_tcpip_connect_io(struct command *ignored UNUSED,
   assert(lv);
   assert(lv->fd);
   
-  COMMAND_RETURN(c, make_tcpip_channel(lv->fd, TCPIP_WINDOW_SIZE));
+  COMMAND_RETURN(c, make_channel_forward(lv->fd, TCPIP_WINDOW_SIZE));
 }
 
 struct command tcpip_connect_io = STATIC_COMMAND(do_tcpip_connect_io);
@@ -111,7 +112,7 @@ do_tcpip_start_io(struct command *s UNUSED,
 
   assert(channel);
   
-  tcpip_channel_start_io(channel);
+  channel_forward_start_io(channel);
 
   COMMAND_RETURN(c, channel);
 }
@@ -154,11 +155,11 @@ new_tcpip_channel(struct channel_open_command *c,
 
   /* NOTE: All accepted fd:s must end up in this function, so it
    * should be ok to delay the REMEMBER call until here. It is done
-   * by make_tcpip_channel. */
+   * by make_channel_forward. */
 
   debug("tcpforward_commands.c: new_tcpip_channel\n");
 
-  channel = make_tcpip_channel(self->peer->fd, TCPIP_WINDOW_SIZE);
+  channel = make_channel_forward(self->peer->fd, TCPIP_WINDOW_SIZE);
   channel->write = connection->write;
 
   *request = format_channel_open(self->type, local_channel_number,
