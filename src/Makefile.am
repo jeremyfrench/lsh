@@ -200,7 +200,8 @@ class-map: $(srcdir)/make-class-map $(dist_classes)
 # Is this rule needed?
 # all-recursive check-recursive: config.h
 
-EXTRA_DIST = lsh-authorize ssh-conv lsh-upgrade lcp \
+EXTRA_DIST = lsh-authorize ssh-conv lcp \
+	lsh-upgrade lsh-upgrade-key \
 	atoms.in process_atoms \
 	environ.h.in \
 	invert-defs \
