@@ -201,7 +201,7 @@ static int do_userauth_failure(struct packet_handler *c,
 }
 
 static int do_userauth_banner(struct packet_handler *closure,
-			      struct ssh_connection *connection,
+			      struct ssh_connection *connection UNUSED,
 			      struct lsh_string *packet)
 {
   struct simple_buffer buffer;
