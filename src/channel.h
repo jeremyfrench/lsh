@@ -32,7 +32,7 @@
 
 struct ssh_channel
 {
-  /* struct read_handler super; */
+  struct lsh_object header;
   
   UINT32 channel_number;  /* Remote channel number */
 
@@ -222,6 +222,8 @@ struct lsh_string *format_channel_eof(struct ssh_channel *channel);
 
 int channel_close(struct ssh_channel *channel);
 int channel_eof(struct ssh_channel *channel);
+
+struct close_callback *make_channel_close(struct ssh_channel *channel);
 
 struct lsh_string *channel_transmit_data(struct ssh_channel *channel,
 					 struct lsh_string *data);
