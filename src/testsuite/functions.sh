@@ -57,6 +57,11 @@ run_lsh () {
 
 }
 
+exec_lsh () {
+    ../lsh $CLIENTFLAGS -nt --sloppy-host-authentication \
+	--capture-to /dev/null -z -p $PORT localhost "$@"
+}
+
 spawn_lsh () {
     # echo spawn_lsh "$@"
     ../lsh $CLIENTFLAGS -nt --sloppy-host-authentication \
