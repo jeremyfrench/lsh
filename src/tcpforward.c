@@ -33,6 +33,7 @@
 #include "channel_forward.h"
 #include "format.h"
 #include "io_commands.h"
+#include "lsh_string.h"
 #include "ssh.h"
 #include "werror.h"
 
@@ -301,8 +302,7 @@ do_tcpip_forward_request_exc(struct exception_handler *s,
 	struct local_port *port
 	  = remove_forward(&self->connection->table->local_ports,
 			   1,
-			   self->forward->super.listen->ip->length,
-			   self->forward->super.listen->ip->data,
+			   STRING_LD(self->forward->super.listen->ip),
 			   self->forward->super.listen->port);
 	assert(port);
 	assert(port == self->forward);
@@ -380,7 +380,7 @@ do_tcpip_forward_request(struct global_request *s,
 	}
 
       if (lookup_forward(&connection->table->local_ports,
-			 bind_host->length, bind_host->data, bind_port))
+			 STRING_LD(bind_host), bind_port))
 	{
 	  static const struct exception again = 
 	    STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, "An already requested tcp-forward requested again");
