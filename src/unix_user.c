@@ -587,7 +587,7 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
 {
   const char **envp;
   const char **argv;
-  const char **shell_argv;
+  const char *program;
   const char *argv0;
 
   char *tz = getenv(ENV_TZ);
@@ -664,35 +664,45 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
 
   debug("exec_shell: argv0 = '%z'.\n", argv0);
 
-  /* Build argument list for lsh-execuv. We need place for
-   *
-   * lsh-execuv -u uid -g gid -n name -i -- $SHELL argv0 <user args> NULL
-   */
-#define MAX_ARG 11
-#define NUMBER(x) lsh_get_cstring(ssh_format("%di", (x)))
-  
-  argv = alloca(sizeof(char *) * (MAX_ARG + info->argc + 1));
   i = 0;
-  argv[i++] = "lsh-execuv";
-  argv[i++] = "-u";
-  trace("exec_shell: After -u\n");
-  argv[i++] = NUMBER(user->super.uid);
-  argv[i++] = "-g";
-  trace("exec_shell: After -g\n");
-  argv[i++] = NUMBER(user->gid);
-  argv[i++] = "-n";
-  argv[i++] = lsh_get_cstring(user->super.name);
-  argv[i++] = "-i";
-  trace("exec_shell: After -i\n");
-  argv[i++] = "--";
-  argv[i++] = lsh_get_cstring(user->shell);
-  shell_argv = argv + i;
-  
-  argv[i++] = argv0;
 
-  assert(i <= MAX_ARG);
+  /* Use lsh-execuv only if we need to change our uid. */
+  if (user->super.uid != getuid())
+    {
+      /* Build argument list for lsh-execuv. We need place for
+       *
+       * lsh-execuv -u uid -g gid -n name -i -- $SHELL argv0 <user args> NULL
+       */
+#define MAX_ARG 10
+#define NUMBER(x) lsh_get_cstring(ssh_format("%di", (x)))
+
+      program = PATH_EXECUV;
+      
+      argv = alloca(sizeof(char *) * (MAX_ARG + info->argc + 2));
+      argv[i++] = "lsh-execuv";
+      argv[i++] = "-u";
+      trace("exec_shell: After -u\n");
+      argv[i++] = NUMBER(user->super.uid);
+      argv[i++] = "-g";
+      trace("exec_shell: After -g\n");
+      argv[i++] = NUMBER(user->gid);
+      argv[i++] = "-n";
+      argv[i++] = lsh_get_cstring(user->super.name);
+      argv[i++] = "-i";
+      trace("exec_shell: After -i\n");
+      argv[i++] = "--";
+      argv[i++] = lsh_get_cstring(user->shell);
+      assert(i <= MAX_ARG);
 #undef MAX_ARG
 #undef NUMBER
+    }
+  else
+    {
+      program = lsh_get_cstring(user->shell);
+      argv = alloca(sizeof(char *) * (info->argc + 2));
+    }
+  argv[i++] = argv0;
+  
   for (j = 0; j<info->argc; j++)
     argv[i++] = info->argv[j];
   argv[i++] = NULL;
@@ -706,13 +716,9 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
   
   trace("exec_shell: before exec\n");
 
-  /* Use lsh-execuv only if we need to change our uid. */
-  if (user->super.uid == getuid())
-    execve(lsh_get_cstring(user->shell), (char **) shell_argv, (char **) envp);
-  else
-    execve(PATH_EXECUV, (char **) argv, (char **) envp);
+  execve(program, (char **) argv, (char **) envp);
 
-  werror("unix_user: exec failed %e\n", errno);
+  werror("unix_user: exec of `%z' failed %e\n", program, errno);
   _exit(EXIT_FAILURE);
 }
 
