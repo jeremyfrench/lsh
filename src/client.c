@@ -427,7 +427,7 @@ init_client_options(struct client_options *self,
   self->exit_code = exit_code;
   
   self->not = 0;
-  self->port = "ssh";
+  self->port = NULL;
   self->remote = NULL;
 
   self->local_user = self->user = getenv("LOGNAME");
@@ -1082,8 +1082,9 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	    options->remote = make_address_info_c(arg, "ssh", 22);
 	  
 	  if (!options->remote)
-	    argp_error(state, "Invalid port or service '%s'.", options->port);
-
+	    argp_error(state, "Invalid port or service '%s'.",
+		       options->port ? options->port : "22");
+	  
 	  break;
 	}
       else
