@@ -1,3 +1,13 @@
+2001-10-24  Niels Möller  <nisse@ehand.com>
+
+	* src/read_packet.c (do_read_packet): If we get EOF on a packet
+	boundary, raise EXC_FINISH_READ, not EXC_PROTOCOL.
+
+	* src/connection.c (do_exc_connection_handler): Added a comment
+	for the EXC_FINISH_READ case.
+
+	* configure.in (BASH): Unset BASH if it has the value "/bin/sh".
+
 2001-10-23  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/lshg-1-test: New test program.
