@@ -152,6 +152,11 @@
 	(make_channel_read_data, make_channel_read_stderr): Changed return
 	type to io_callback. 
 
+2000-02-03  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client.c (make_accept_service_handler): Use UINT32 for the
+	service name.
+
 2000-02-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.in: Added check for inline.
