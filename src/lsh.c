@@ -367,7 +367,7 @@ int main(int argc, char **argv)
 	{ "forward-remote-port", required_argument, NULL, 'R'},
 #endif /* WITH_TCP_FORWARD */
 	{ "nop", no_argument, NULL, 'N' },
-	{ NULL }
+	{ NULL, 0, NULL, 0 }
       };
       
       option = getopt_long(argc, argv, "+c:l:np:qgtvz:L:R:N", options, NULL);
