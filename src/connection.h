@@ -24,9 +24,14 @@ struct packet_handler
 #define HANDLE_PACKET(closure, connection, packet) \
 ((closure)->handler((closure), (connection), (packet)))
 
+#define CONNECTION_SERVER 0
+#define CONNECTION_CLIENT 1
+     
 struct ssh_connection
 {
   struct abstract_write super;
+
+  int type; /* CONNECTION_SERVER or CONNECTION_CLIENT */
   
   /* Sent and recieved version strings */
   struct lsh_string *client_version;
@@ -49,9 +54,12 @@ struct ssh_connection
   UINT32 max_packet;
 
   /* Key exchange */
-  struct kexinit *recieved_kexinit;
-  struct kexinit *sent_kexinit;
-
+  int kex_state;
+  
+  /* First element is the kexinit sent by the server */
+  struct kexinit *kexinits[2];
+  int ignore_one_packet;
+  
   int provides_privacy;
   int provides_integrity;
 };

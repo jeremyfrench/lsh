@@ -1,5 +1,26 @@
 /* keyexchange.c
  *
+ *
+ *
+ * $Id$ */
+
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 1998 Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
 #include "abstract_io.h"
@@ -59,32 +80,17 @@ struct kexinit *parse_kexinit(struct lsh_string *packet)
   
   res->kex_algorithms = lists[0];
   res->server_host_key_algorithms = lists[1];
-  res->encryption_algorithms_client_to_server = lists[2];
-  res->encryption_algorithms_server_to_client = lists[3];
-  res->mac_algorithms_client_to_server = lists[4];
-  res->mac_algorithms_server_to_client = lists[5];
-  res->compression_algorithms_client_to_server = lists[6];
-  res->compression_algorithms_server_to_client = lists[7];
+
+  for (i=0; i<KEX_PARAMETERS; i++)
+    res->parameters[i] = lists[2 + i];
+
   res->languages_client_to_server = lists[8];
   res->languages_server_to_client = lists[9];
 
   return res;
 }
 
-static int do_handle_kexinit(struct abstract_write **w,
-			     struct lsh_string *packet)
-{
-  struct handle_kexinit_packet *closure = (struct handle_kexinit_packet *) *w;
-  struct kexinit *msg = parse_kexinit(packet);
-
-  if (!msg)
-    return 0;
-
-  lsh_free(packet);
-
-  return HANDLE_KEXINIT(closure->handler, msg);
-}
-
+#if 0
 struct abstract_write *make_packet_kexinit(struct handle_kexinit *handler)
 {
   struct handle_kexinit_packet *closure
@@ -95,6 +101,7 @@ struct abstract_write *make_packet_kexinit(struct handle_kexinit *handler)
 
   return &closure->super;
 }
+#endif
 
 struct lsh_string *format_kex(struct kexinit *kex)
 {
@@ -103,12 +110,12 @@ struct lsh_string *format_kex(struct kexinit *kex)
 		    16, kex->cookie,
 		    kex->kex_algorithms,
 		    kex->server_host_key_algorithms,
-		    kex->encryption_algorithms_client_to_server,
-		    kex->encryption_algorithms_server_to_client,
-		    kex->mac_algorithms_client_to_server,
-		    kex->mac_algorithms_server_to_client,
-		    kex->compression_algorithms_client_to_server,
-		    kex->compression_algorithms_server_to_client,
+		    kex->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER],
+		    kex->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT],
+		    kex->parameters[KEX_MAC_CLIENT_TO_SERVER],
+		    kex->parameters[KEX_MAC_SERVER_TO_CLIENT],
+		    kex->parameters[KEX_COMPRESSION_CLIENT_TO_SERVER],
+		    kex->parameters[KEX_COMPRESSION_SERVER_TO_CLIENT],
 		    kex->languages_client_to_server,
 		    kex->languages_server_to_client,
 		    kex->first_kex_packet_follows, 0);
@@ -132,4 +139,126 @@ int initiate_keyexchange(struct ssh_connection *connection,
     return res;
 }
 
-    
+int select_algorithm(int *server_list, int *client_list)
+{
+  /* FIXME: This quadratic complexity algorithm should do as long as
+   * the lists are short. */
+  int i, j;
+
+  for(i = 0; client_list[i] >= 0; i++)
+    {
+      if (!client_list[i])
+	/* Unknown algorithm */
+	continue;
+      for(j = 0; server_list[j] > 0; j++)
+	if (client_list[i] = server_list[j])
+	  return client_list[i];
+    }
+
+  return 0;
+}
+
+int send_disconnect(struct ssh_conection, char *msg)
+{
+  return A_WRITE(connection->write,
+		 ssh_format("%c%i%z%z",
+			    SSH_MSG_DISCONNECT,
+			    SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
+			    msg, ""));
+}
+
+static int do_handle_kexinit(struct packet_hander *c,
+			     struct ssh_connection *connection,
+			     struct lsh_string *packet)
+{
+  struct handle_kexinit *closure = (struct handle_kexinit_packet *) c;
+  struct kexinit *msg = parse_kexinit(packet);
+
+  int kex_algorithm;
+  int hostkey_algorithm;
+
+  int parameters[KEX_PARAMETERS];
+  void **algorithms;
+
+  struct packet_handler newkeys;
+
+  int i;
+  
+  if (!msg)
+    return 0;
+  
+  lsh_free(packet);
+
+  connection->kexinits[!connection->type] = msg;
+  
+  /* Have we sent a kexinit message? */
+  if (!connection->kexinits[connection->type])
+    {
+      int res;
+      struct kexinit *sent =  GENERATE_KEXINIT(closure->init);
+      connection->kexinits[connection->type] = sent;
+      res = A_WRITE(connection->write, format_kex(sent));
+      if (res != WRITE_OK)
+	return res;
+    }
+
+  /* Select key exchange algorithms */
+
+  if (connection->kexinits[0]->kex_algorithms[0]
+      == connection->kexinits[1]->kex_algorithms[1])
+    {
+      /* Use this algorithm */
+      kex_algorithm = connection->sent_kexinit->kex_algorithms[0];
+    }
+  else
+    {
+      if (msg->first_kex_packet_follows)
+	{
+	  /* Wrong guess */
+	  connection->ignore_one_packet = 1;
+	}
+      /* FIXME: Ignores that some keyechange algorithms require
+       * certain features of the host key algorithms. */
+      
+      kex_algorithm = select_algorithm(connection->kexinits[0]->kex_algorithm,
+				       connection->kexinits[1]->kex_algorithm);
+      if  (!kex_algorithm)
+	{
+	  send_disconnect(connection, "No common key exchange method.\r\n");
+
+	  /* FIXME: We want the disconnect message to be sent
+	   * before the socket is closed. How? */
+	  return WRITE_CLOSED;
+	}
+
+      hostkey_algorithm
+	= select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
+			   connection->kexinits[1]->server_hostkey_algorithms);
+      for(i = 0; i<KEX_PARAMETERS; i++)
+	{
+	  parameters[i]
+	    = select_algorithm(connection->kexinits[0]->parameters[i],
+			       connection->kexinits[1]->parameters[i]);
+
+	  if (!parameters[i])
+	    {
+	      send_disconnect(connection, "");
+	      return wRITE_CLOSED;
+	    }
+	}
+
+      algorithms = xalloc(KEX_PARAMETERS*sizeof(void *));
+
+      for (i = 0; i<KEX_PARAMETERS; i++)
+	algorithms[i] = ALIST_GET(closure->algorithms, parameters[i]);
+      
+      newkeys = make_newkeys_handler(ALIST_GET(closure->alist, hostkey_algorithm),
+				     algorithms);
+
+      return KEYEXCHANGE_INIT(ALIST_GET(algorithms, kex_algorithm), connection);
+      
+    }
+}
+
+
+  
