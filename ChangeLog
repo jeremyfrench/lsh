@@ -1,3 +1,14 @@
+2003-02-05  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/keyexchange.c (KEXINIT_MAX_ALGORITMS_SUN): New constant.
+	(parse_kexinit): Added argument peer_flag. Use larger list limit
+	than parsing the language lists from Sun's sshd.
+	(do_handle_kexinit): Updated call to parse_kexinit.
+
+	* src/handshake.c: Added workaround for "Sun_SSH_1.0".
+
+	* src/connection.h: New constant PEER_KEXINIT_LANGUAGE_KLUDGE.
+
 2003-02-04  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* Moved argp-related entries from this file to src/argp/ChangeLog. 
