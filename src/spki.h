@@ -80,6 +80,11 @@ extern struct command_simple spki_sexp2signer_command;
 extern struct command_simple spki_sexp2keypair_command;
 #define SEXP2KEYPAIR (&spki_sexp2keypair_command.super.super)
 
+struct sexp *
+spki_hash_data(struct hash_algorithm *algorithm,
+	       int algorithm_name,
+	       UINT32 length, UINT8 *data);
+
 struct command *
 make_spki_hash(int name, struct hash_algorithm *algorithm);
 

@@ -149,6 +149,24 @@ COMMAND_SIMPLE(spki_signer2public)
   return &SIGNER_PUBLIC(private)->super;
 }
 
+struct sexp *
+spki_hash_data(struct hash_algorithm *algorithm,
+	       int algorithm_name,
+	       UINT32 length, UINT8 *data)
+{
+  struct hash_instance *hash = MAKE_HASH(algorithm);
+  struct lsh_string *out = lsh_string_alloc(hash->hash_size);
+
+  HASH_UPDATE(hash, length, data);
+  HASH_DIGEST(hash, out->data);
+
+  return sexp_l(3,
+		SA(HASH),
+		sexp_a(algorithm_name),
+		sexp_s(NULL, out), -1);
+}  
+
+
 /* Create an SPKI hash from an s-expression. */
 /* GABA:
    (class
@@ -159,22 +177,23 @@ COMMAND_SIMPLE(spki_signer2public)
        (algorithm object hash_algorithm)))
 */
 
-static void do_spki_hash(struct command *s,
-			 struct lsh_object *a,
-			 struct command_continuation *c,
-			 struct exception_handler *e UNUSED)
+static void
+do_spki_hash(struct command *s,
+	     struct lsh_object *a,
+	     struct command_continuation *c,
+	     struct exception_handler *e UNUSED)
 {
   CAST(spki_hash, self, s);
   CAST_SUBTYPE(sexp, o, a);
 
-  COMMAND_RETURN(c, sexp_l(3,
-			   SA(HASH),
-			   sexp_a(self->name),
-			   sexp_s(NULL,
-				  hash_string(self->algorithm,
-					      sexp_format(o, SEXP_CANONICAL, 0),
-					      1)),
-			   -1));
+  struct lsh_string *tmp = hash_string(self->algorithm,
+				       sexp_format(o, SEXP_CANONICAL, 0),
+				       1);
+  struct sexp *hash = spki_hash_data(self->algorithm, self->name, 
+				     tmp->length, tmp->data);
+  lsh_string_free(tmp);
+  
+  COMMAND_RETURN(c, hash);
 }
 
 struct command *
