@@ -31,6 +31,7 @@
 #include "des.h"
 #include "rc4.h"
 #include "sha.h"
+#include "md5.h"
 
 #include <assert.h>
 #include <string.h>
@@ -86,39 +87,6 @@ struct crypto_algorithm crypto_rc4_algorithm =
        (ctx simple "BLOWFISH_context")))
 */
 
-#if 0
-static int  (*bf_setkey)( void *c, const byte *key, unsigned keylen ) = NULL;
-static void (*bf_encrypt)( void *c, byte *outbuf, const byte *inbuf ) = NULL;
-static void (*bf_decrypt)( void *c, byte *outbuf, const byte *inbuf ) = NULL;
-
-static void bf_init(void) {
-	size_t keylen, blocksize, contextsize;
-	if (!bf_setkey) {
-		blowfish_get_info(
-					CIPHER_ALGO_BLOWFISH,
-					&keylen,
-					&blocksize,
-					&contextsize,
-					&bf_setkey,
-					&bf_encrypt,
-					&bf_decrypt
-				);
-	}
-}
-
-static void blowfish_set_key(BLOWFISH_context *ctx, const UINT8 *key, 
-			UINT32 len) {
-	bf_setkey((void *) ctx, key, len );
-}
-
-
-static void blowfish_crypt(BLOWFISH_context *ctx, UINT8 *dest,
-	       		const UINT8 *src, UINT32 len) {
-	bf_encrypt((void *) ctx, dest, src);
-}
-
-#endif
-
 static void do_blowfish_encrypt(struct crypto_instance *s,
 				UINT32 length, const UINT8 *src, UINT8 *dst)
 {
@@ -158,12 +126,6 @@ make_blowfish_instance(struct crypto_algorithm *algorithm, int mode,
       return NULL;
     }
 }
-
-#if 0
-struct crypto_algorithm crypto_blowfish_algorithm =
-{ STATIC_HEADER,
-  BLOWFISH_BLOCKSIZE, BLOWFISH_KEYSIZE, 0, make_blowfish_instance };
-#endif
 
 struct crypto_algorithm *make_blowfish_algorithm(UINT32 key_size)
 {
@@ -312,4 +274,56 @@ make_sha_instance(struct hash_algorithm *ignored UNUSED)
 struct hash_algorithm sha_algorithm =
 { STATIC_HEADER,
   SHA_DATASIZE, SHA_DIGESTSIZE, make_sha_instance };
+
+
+/* MD5 hash */
+/* CLASS:
+   (class
+     (name md5_instance)
+     (super hash_instance)
+     (vars
+       (ctx simple "struct md5_ctx")))
+*/
+
+static void do_md5_update(struct hash_instance *s,
+			  UINT32 length, UINT8 *data)
+{
+  CAST(md5_instance, self, s);
+
+  md5_update(&self->ctx, data, length);
+}
+
+static void do_md5_digest(struct hash_instance *s,
+			  UINT8 *dst)
+{
+  CAST(md5_instance, self, s);
+
+  md5_final(&self->ctx);
+  md5_digest(&self->ctx, dst);
+  md5_init(&self->ctx);
+}
+
+static struct hash_instance *do_md5_copy(struct hash_instance *s)
+{
+  return &CLONE(md5_instance, s)->super;
+}
+
+static struct hash_instance *
+make_md5_instance(struct hash_algorithm *ignored UNUSED)
+{
+  NEW(md5_instance, res);
+
+  res->super.hash_size = 16;
+  res->super.update = do_md5_update;
+  res->super.digest = do_md5_digest;
+  res->super.copy = do_md5_copy;
+
+  md5_init(&res->ctx);
+
+  return &res->super;
+}
+
+struct hash_algorithm md5_algorithm =
+{ STATIC_HEADER,
+  MD5_DATASIZE, MD5_DIGESTSIZE, make_md5_instance };
 

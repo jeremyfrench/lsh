@@ -41,6 +41,7 @@ struct crypto_algorithm *make_blowfish(void);
 struct crypto_algorithm *make_des3(void);
 
 extern struct hash_algorithm sha_algorithm;
+extern struct hash_algorithm md5_algorithm;
 
 struct mac_algorithm *make_hmac_algorithm(struct hash_algorithm *h);
 
