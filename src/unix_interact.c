@@ -305,7 +305,6 @@ unix_yes_or_no(struct interact *s,
    responsibility to sanity check them. */
 static int
 unix_dialog(struct interact *s,
-	    const struct lsh_string *instruction,
 	    const struct interact_dialog *dialog)
 {
 #define DIALOG_BUFSIZE 150
@@ -313,8 +312,7 @@ unix_dialog(struct interact *s,
   const struct exception *e;
   unsigned i;
   
-  e = write_raw(self->tty_fd, STRING_LD(instruction));
-  lsh_string_free(instruction);
+  e = write_raw(self->tty_fd, STRING_LD(dialog->instruction));
 
   if (e)
     return 0;
