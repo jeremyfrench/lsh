@@ -1,3 +1,34 @@
+2000-09-02  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/atoms.in: Added more rsa-related atoms.
+
+	* src/Makefile.am.in: Renamed lsh_keygen and lsh_writekey. Added
+	rsa_keygen.c. 
+
+	* src/lsh-keygen.c: Renamed lsh_keygen.c.
+
+	* src/lsh-writekey.c: Renamed lsh_writekey.c.
+
+2000-09-01  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh_keygen.c: Moved most dsa-specific code to dsa_keygen.
+	Added support for rsa keys.
+
+	* src/rsa.c (compute_rsa_root): Implemented CRT optimization.
+	Constness fixes.
+
+	* src/sexp_parser.c (sexp_parse_transport): New function.
+	(string_to_sexp): Added style argument. Updated all callers. 
+
+	* src/digits.c (decode_base64): New function.
+	(simple_decode_base64): New function.
+
+2000-08-29  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added rsa.c.
+
+	* misc/make-dist: Keep rsa files.
+
 2000-08-29  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.in: Improved message about upgrading m4.
