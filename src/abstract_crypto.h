@@ -78,11 +78,35 @@ struct mac_algorithm
 
 #define MAKE_MAC(m, key) ((m)->make_mac((m), (key)))
 
-struct randomness
+struct signer
 {
-  void (*random)(struct randomness **closure, UINT32 length, UINT8 *dst);
+  /* Returns a signature string, *without* the length field */
+  struct lsh_string * (*sign)(struct signer *closure,
+			      UINT32 length,
+			      UINT8 *data);
 };
 
-#define RANDOM(r, length, dst) ((r)->random(&(r), length, dst))
+struct verifier
+{
+  int (*verify)(struct verifier *closure,
+		UINT32 length,
+		UINT8 *data,
+		UINT32 signature_length,
+		UINT8 * signature_data);
+};
+		
+struct signature_algorithm
+{
+  struct signer *
+  (struct make_signer *)(struct signature_algorithm *closure,
+			 UINT32 public_length,
+			 UINT8 *public,
+			 UINT32 secret_length,
+			 UINT8 *secret);
+  struct verifier *
+  (struct make_verifier *)(struct signature_algorithm *closure,
+			   UINT32 public_length,
+			   UINT8 *public);
+};
 
 #endif /* LSH_ABSTRACT_CRYPTO_H_INCLUDED */
