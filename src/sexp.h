@@ -39,9 +39,6 @@
 #include "sexp.h.x"
 #undef GABA_DECLARE
 
-/* FIXME: Do some constification. Strings inside sexpressions should
- * always be const. */
-
 /* GABA:
    (class
      (name sexp)
@@ -94,46 +91,61 @@ encode_base64(const struct lsh_string *s,
 /* Creating sexps */
 
 /* Consumes its args (display may be NULL) */
-struct sexp *sexp_s(struct lsh_string *d, struct lsh_string *c);
+struct sexp *
+sexp_s(const struct lsh_string *d, const struct lsh_string *c);
 
 /* atom->sexp */
-struct sexp *sexp_a(const int a);
+struct sexp *
+sexp_a(const int a);
 
 /* cstring->sexp */
-struct sexp *sexp_z(const char *s);
+struct sexp *
+sexp_z(const char *s);
 
 /* mpz->sexp */
-struct sexp *sexp_un(const mpz_t n);
-struct sexp *sexp_sn(const mpz_t n);
+struct sexp *
+sexp_un(const mpz_t n);
+
+struct sexp *
+sexp_sn(const mpz_t n);
 
 /* Small unsigned int -> sexp */
-struct sexp *sexp_uint32(UINT32 n);
+struct sexp *
+sexp_uint32(UINT32 n);
 
 /* list */
-struct sexp *sexp_l(unsigned n, ...);
+struct sexp *
+sexp_l(unsigned n, ...);
 
 /* vector */
-struct sexp *sexp_v(struct object_list *l);
+struct sexp *
+sexp_v(struct object_list *l);
 
 int sexp_nullp(const struct sexp *e);
 int sexp_atomp(const struct sexp *e);
 
 /* Checks that the sexp is a simple string (i.e. no display part).
  * e == NULL is allowed. */
-const struct lsh_string *sexp2string(struct sexp *e);
+const struct lsh_string *
+sexp2string(const struct sexp *e);
 
 /* Returns an ATOM_FOO constant if e is a simple sexp string
  * corresponding to an atom. Or zero if that is not the case. */
-int sexp2atom(struct sexp *e);
+int
+sexp2atom(const struct sexp *e);
 
 int
-sexp2bignum_u(struct sexp *e, mpz_t n, UINT32 limit);
+sexp2bignum_u(const struct sexp *e, mpz_t n, UINT32 limit);
 
 int
-sexp2uint32(struct sexp *e, UINT32 *n);
+sexp2uint32(const struct sexp *e, UINT32 *n);
 
-const struct lsh_string *sexp_contents(const struct sexp *e);
-const struct lsh_string *sexp_display(const struct sexp *e);
+const struct lsh_string *
+sexp_contents(const struct sexp *e);
+
+const struct lsh_string *
+sexp_display(const struct sexp *e);
+
 int sexp_atom(const struct sexp *e);
 int sexp_bignum_u(const struct sexp *e, mpz_t n);
 int sexp_bignum_s(const struct sexp *e, mpz_t n);
@@ -141,13 +153,13 @@ int sexp_bignum_s(const struct sexp *e, mpz_t n);
 /* Utility functions for parsing spki objects. */
 
 int
-sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name);
+sexp_eq(const struct sexp *e, UINT32 length, const UINT8 *name);
 
 int
-sexp_atom_eq(struct sexp *e, int atom);
+sexp_atom_eq(const struct sexp *e, int atom);
 
 int
-sexp_atoms_eq(struct sexp *a, struct sexp *b);
+sexp_atoms_eq(const struct sexp *a, const struct sexp *b);
 
 struct sexp *
 sexp_assq(struct sexp_iterator *i, int atom);
@@ -156,8 +168,8 @@ struct sexp_iterator *
 sexp_check_type_l(struct sexp *e, UINT32 length,
 		  const UINT8 *name);
 
-int
-sexp_check_type(struct sexp *e, int type, struct sexp_iterator **res);
+struct sexp_iterator *
+sexp_check_type(struct sexp *e, int type);
 
 
 int sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n, UINT32 limit);
@@ -179,15 +191,6 @@ sexp_parse(int style, struct simple_buffer *buffer);
 struct sexp *
 string_to_sexp(int style, const struct lsh_string *src, int free);
 
-
-#if 0
-/* Streamed parser */
-
-struct read_handler *
-make_read_sexp(int style, int goon,
-	       struct command_continuation *c,
-	       struct exception_handler *e);
-#endif
 
 extern const struct argp sexp_input_argp;
 extern const struct argp sexp_output_argp;

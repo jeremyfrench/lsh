@@ -177,7 +177,7 @@ do_format_sexp_string(struct sexp *s,
 
 /* Consumes its args (display may be NULL) */
 struct sexp *
-sexp_s(struct lsh_string *d, struct lsh_string *c)
+sexp_s(const struct lsh_string *d, const struct lsh_string *c)
 {
   NEW(sexp_string, s);
   assert(c);
@@ -270,24 +270,11 @@ sexp_check_type_l(struct sexp *e, UINT32 length,
   return NULL;
 }
 
-/* Returns 1 if the type matches.
- *
- * FIXME: Do we relly need this interface, that allows res == NULL? */
-int
-sexp_check_type(struct sexp *e, int type, struct sexp_iterator **res)
+/* Returns i if the type matches, or NULL if it doesn't. */
+struct sexp_iterator *
+sexp_check_type(struct sexp *e, int type)
 {
-  struct sexp_iterator *i =
-    sexp_check_type_l(e, get_atom_length(type), get_atom_name(type));
-
-  if (i)
-    {
-      if (res)
-	*res = i;
-      else
-	KILL(i);
-      return 1;
-    }
-  return 0;
+  return sexp_check_type_l(e, get_atom_length(type), get_atom_name(type));
 }
 
 static int
@@ -715,7 +702,7 @@ sexp_atomp(const struct sexp *e)
 
 /* Checks that the sexp is a simple string (i.e. no display part) */
 const struct lsh_string *
-sexp2string(struct sexp *e)
+sexp2string(const struct sexp *e)
 {
   return ( (e && sexp_atomp(e) && !sexp_display(e))
 	   ? sexp_contents(e) : NULL);
@@ -723,7 +710,7 @@ sexp2string(struct sexp *e)
   
 
 int
-sexp2atom(struct sexp *e)
+sexp2atom(const struct sexp *e)
 {
   const struct lsh_string *s = sexp2string(e);
   return s ? lookup_atom(s->length, s->data) : 0;
@@ -731,7 +718,7 @@ sexp2atom(struct sexp *e)
 
 /* If limit is nonzero, at most that number of octets are allowed. */
 int
-sexp2bignum_u(struct sexp *e, mpz_t n, UINT32 limit)
+sexp2bignum_u(const struct sexp *e, mpz_t n, UINT32 limit)
 {
   const struct lsh_string *s = sexp2string(e);
 
@@ -748,7 +735,7 @@ sexp2bignum_u(struct sexp *e, mpz_t n, UINT32 limit)
 }
 
 int
-sexp2uint32(struct sexp *e, UINT32 *n)
+sexp2uint32(const struct sexp *e, UINT32 *n)
 {
   const struct lsh_string *digits = sexp2string(e);
   
@@ -789,7 +776,7 @@ sexp2uint32(struct sexp *e, UINT32 *n)
 }
 
 int
-sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name)
+sexp_eq(const struct sexp *e, UINT32 length, const UINT8 *name)
 {
   const struct lsh_string *c = sexp2string(e);
 
@@ -801,14 +788,14 @@ sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name)
  *
  * This naming seems a little confusing. */
 int
-sexp_atom_eq(struct sexp *e, int atom)
+sexp_atom_eq(const struct sexp *e, int atom)
 {
   return sexp_eq(e, get_atom_length(atom), get_atom_name(atom));
 }
 
 /* Assumes that both expressions are atoms */
 int
-sexp_atoms_eq(struct sexp *a, struct sexp *b)
+sexp_atoms_eq(const struct sexp *a, const struct sexp *b)
 {
   const struct lsh_string *ac = sexp_contents(a);
   const struct lsh_string *ad = sexp_display(a);
