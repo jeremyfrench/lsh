@@ -176,16 +176,14 @@ make_options(struct io_backend *backend,
 {
   NEW(lsh_options, self);
 
-  init_algorithms_options(&self->super, many_algorithms(0, -1));
+  init_algorithms_options(&self->super, all_symmetric_algorithms());
   
   self->backend = backend;
   self->random = make_reasonably_random();
   
   self->home = getenv("HOME");
   
-  self->signature_algorithms
-    = make_alist(1,
-		 ATOM_DSA, make_dsa_algorithm(self->random), -1);
+  self->signature_algorithms = all_signature_algorithms(self->random);
   
   self->handler = handler;
   self->exit_code = exit_code;
@@ -402,6 +400,23 @@ do_lsh_lookup(struct lookup_verifier *c,
 	assert(subject->verifier);
 	break;
       }
+#if 0
+    case ATOM_RSA_PKCS1_SHA1_LOCAL:
+      {
+	struct rsa_verifier *v = make_ssh_rsa_verifier(key->length, key->data);
+	if (!v)
+	  {
+	    werror("do_lsh_lookup: Invalid ssh-rsa key.\n");
+	    return NULL;
+	  }
+	subject = SPKI_LOOKUP(self->db,
+			      rsa_to_spki_public_key(&v->public),
+			      &v->super);
+	assert(subject);
+	assert(subject->verifier);
+	break;
+      }
+#endif
     case ATOM_SPKI:
       {
 	struct sexp *e = string_to_sexp(SEXP_CANONICAL, key, 0);
@@ -588,6 +603,7 @@ COMMAND_SIMPLE(lsh_login_command)
      (params
        (connect object command)
        (handshake object handshake_info)
+       (init object make_kexinit)
        (requests object object_list))
      (expr (lambda (options)
                ; What to do with the service
@@ -599,7 +615,7 @@ COMMAND_SIMPLE(lsh_login_command)
 		   (options2service options
 		     ; Start the ssh transport protocol
 	             (connection_handshake
-		       handshake
+		       handshake init
 		       (options2verifier options
 				         (options2known_hosts options))
  		       ; Connect using tcp
@@ -1086,9 +1102,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 #if WITH_SRP	    
 	    if (self->with_srp_keyexchange)
 	      {
-		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1;
+		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
 		ALIST_SET(self->super.algorithms,
-			  ATOM_SRP_RING1_SHA1,
+			  ATOM_SRP_RING1_SHA1_LOCAL,
 			  make_srp_client(make_srp1(self->random),
 					  ssh_format("%lz", self->user)));
 	      }
@@ -1415,15 +1431,14 @@ int main(int argc, char **argv)
 			    SSH_MAX_PACKET,
 			    options->random,
 			    options->super.algorithms,
-			    make_simple_kexinit(
-			      options->random,
-			      options->kex_algorithms,
-			      make_int_list(1, ATOM_SSH_DSS, -1),
-			      options->super.crypto_algorithms,
-			      options->super.mac_algorithms,
-			      options->super.compression_algorithms,
-			      make_int_list(0, -1)),
 			    NULL),
+	make_simple_kexinit(options->random,
+			    options->kex_algorithms,
+			    options->super.hostkey_algorithms,
+			    options->super.crypto_algorithms,
+			    options->super.mac_algorithms,
+			    options->super.compression_algorithms,
+			    make_int_list(0, -1)),
 	queue_to_list(&options->actions));
     
     CAST_SUBTYPE(command, lsh_connect, o);

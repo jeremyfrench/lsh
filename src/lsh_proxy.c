@@ -406,13 +406,17 @@ main_argp =
 
 static struct verifier *
 do_host_lookup(struct lookup_verifier *c UNUSED,
-	       int method UNUSED,
+	       int method,
                struct lsh_user *user UNUSED,
                struct lsh_string *key)
 {
-  assert(method == ATOM_SSH_DSS);
-
-  return &make_ssh_dss_verifier(key->length, key->data)->super;
+  switch(method)
+    {
+      case ATOM_SSH_DSS:
+	return &make_ssh_dss_verifier(key->length, key->data)->super;
+    default:
+      return NULL;
+    }
 }
 
 static struct lookup_verifier *
@@ -510,11 +514,12 @@ COMMAND_SIMPLE(proxy_destination)
    (expr
      (name lsh_proxy_handshake_client)
      (params
-       (handshake object handshake_info))
+       (handshake object handshake_info)
+       (init object make_kexinit))
      (expr
        (lambda (options client_addr)
          (connection_handshake    ; handshake on the client side
-            handshake 
+            handshake init
 	    (spki_read_hostkeys (options2signature_algorithms options)
 	                        (options2keyfile options)) 
 	    (log_peer client_addr)))))
@@ -527,12 +532,13 @@ COMMAND_SIMPLE(proxy_destination)
      (params
        (connect object command)
        (verifier object lookup_verifier)
-       (handshake object handshake_info))
+       (handshake object handshake_info)
+       (init object make_kexinit))
      (expr 
        (lambda (options client_addr)
          (init_connection_service 
 	   (connection_handshake 
-             handshake 
+             handshake init
              verifier 
              (connect (proxy_destination options client_addr)))))))
 */
@@ -576,7 +582,10 @@ int main(int argc, char **argv)
   
   struct randomness *r;
   struct alist *algorithms_server, *algorithms_client;
+  struct alist *signature_algorithms;
+  
   struct make_kexinit *make_kexinit;
+
   
   NEW(io_backend, backend);
   init_backend(backend);
@@ -594,15 +603,13 @@ int main(int argc, char **argv)
   set_local_charset(CHARSET_LATIN1);
 
   r = make_reasonably_random();
-  
-  algorithms_server = many_algorithms(1,
-				      ATOM_SSH_DSS, make_dsa_algorithm(r),
-				      -1);
-  /* FIXME: copy algorithms_server */
-  algorithms_client = many_algorithms(1,
-				      ATOM_SSH_DSS, make_dsa_algorithm(r),
-				      -1);
 
+  algorithms_server = all_symmetric_algorithms();
+  /* FIXME: copy algorithms_server */
+  algorithms_client = all_symmetric_algorithms();
+  
+  signature_algorithms = all_signature_algorithms(r);
+  
   options = make_lsh_proxy_options(backend, r, algorithms_server);
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
@@ -668,17 +675,17 @@ int main(int argc, char **argv)
 			   ATOM_SSH_DSS, make_fake_host_db(),
 			   -1);
 #endif
-  
+
   ALIST_SET(algorithms_server, 
 	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, make_dh_server(make_dh1(r)));
   ALIST_SET(algorithms_client, 
 	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, make_dh_client(make_dh1(r)));
-
+  
   make_kexinit
     = make_simple_kexinit(r,
 			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
 					-1),
-			  make_int_list(1, ATOM_SSH_DSS, -1),
+			  options->super.hostkey_algorithms,
 			  options->super.crypto_algorithms,
 			  options->super.mac_algorithms,
 			  options->super.compression_algorithms,
@@ -791,9 +798,8 @@ int main(int argc, char **argv)
 						       SSH_MAX_PACKET,
 						       r,
 						       algorithms_client,
-						       make_kexinit,
-						       NULL)
-						      ),
+						       NULL),
+						      make_kexinit),
 	 (struct command *)lsh_proxy_handshake_client(make_handshake_info
 						      (CONNECTION_SERVER,
 						       "lsh_proxy_server - a free ssh",
@@ -801,8 +807,8 @@ int main(int argc, char **argv)
 						       SSH_MAX_PACKET,
 						       r,
 						       algorithms_server,
-						       make_kexinit,
-						       NULL)));
+						       NULL),
+						      make_kexinit));
 
 
     
