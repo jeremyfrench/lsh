@@ -1,3 +1,8 @@
+Tue Jan 19 03:20:29 1999    <nisse@puck>
+
+	* make_am: Recurse to find all subdirectories *before* invoking
+	the used_headers script. 
+
 Thu Jan 14 04:36:41 1999    <nisse@puck>
 
 	* dss_keygen.c (dss_nist_gen): Fixed off-by-one bug, discovered by
