@@ -27,6 +27,7 @@
 #include "channel.h"
 #include "channel_commands.h"
 #include "connection.h"
+#include "environ.h"
 #include "format.h"
 #include "interact.h"
 #include "io.h"
@@ -545,7 +546,7 @@ init_client_options(struct client_options *self,
   self->port = NULL;
   self->remote = NULL;
 
-  self->local_user = self->user = getenv("LOGNAME");
+  self->local_user = self->user = getenv(ENV_LOGNAME);
 
   self->with_remote_peers = 0; 
   self->with_pty = -1;
@@ -733,7 +734,7 @@ client_maybe_x11(struct client_options *options,
 {
   if (options->with_x11)
     {
-      char *display = getenv("DISPLAY");
+      char *display = getenv(ENV_DISPLAY);
       struct command *request = NULL;
       
       assert(options->random);
