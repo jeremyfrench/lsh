@@ -33,7 +33,7 @@
 #include "command.h"
 #include "format.h"
 #include "lookup_verifier.h"
-
+#include "lsh_string.h"
 #include "srp.h"
 #include "ssh.h"
 #include "werror.h"
@@ -106,8 +106,9 @@ do_handle_dh_reply(struct packet_handler *c,
     algorithm = closure->hostkey_algorithm;
   
   res = VERIFY(v, algorithm,
-	       closure->dh.exchange_hash->length, closure->dh.exchange_hash->data,
-	       signature->length, signature->data);
+	       lsh_string_length(closure->dh.exchange_hash),
+	       lsh_string_data(closure->dh.exchange_hash),
+	       lsh_string_length(signature), lsh_string_data(signature));
   lsh_string_free(signature);
 
   if (!res)
