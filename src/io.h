@@ -113,7 +113,7 @@
        ; Called if poll indicates that data can be written.
        (write object io_callback)
 
-       ; FIXME: We could put write_buffer inside the write callback,
+       ; NOTE: We could put write_buffer inside the write callback,
        ; but it seems simpler to keep it here, as it is needed by the
        ; prepare and write_close methods.
        (write_buffer object write_buffer)
@@ -271,6 +271,7 @@ sockaddr2info(size_t addr_len,
 struct sockaddr *
 address_info2sockaddr(socklen_t *length,
 		      struct address_info *a,
+		      const int *preference,
 		      int lookup);
 
 /* Returns an exception, if anything went wrong */

@@ -1072,9 +1072,30 @@ sockaddr2info(size_t addr_len UNUSED,
     }
 }
 
+#if HAVE_GETADDRINFO
+static struct addrinfo *
+choose_address(struct addrinfo *list,
+	       const int *preference)
+{
+  int i;
+  for (i = 0; preference[i]; i++)
+    {
+      struct addrinfo *p;
+      for (p = list; p; p = p->ai_next)
+	if (preference[i] == p->ai_family)
+	  return p;
+    }
+  return NULL;
+}
+#endif /* HAVE_GETADDRINFO */
+
+/* FIXME: Perhaps this function should be changed to return a list of
+ * sockaddr:s? */
 struct sockaddr *
 address_info2sockaddr(socklen_t *length,
 		      struct address_info *a,
+		      /* Preferred address families. Zero-terminated array. */
+		      const int *preference,
 		      int lookup)
 {
   char *host;
@@ -1093,12 +1114,19 @@ address_info2sockaddr(socklen_t *length,
   {
     struct addrinfo hints;
     struct addrinfo *list;
+    struct addrinfo *chosen;
     struct sockaddr *res;
-    
+    const int default_preference
+#if WITH_IPV6
+      [3] = { AF_INET6, AF_INET }
+#else
+      [2] = { AF_INET, 0 }
+#endif      
+      ;
     int err;
     /* FIXME: It seems ugly to have to convert the port number to a
      * string. */
-    struct lsh_string *service = ssh_format("%d%c", a->port, 0);
+    struct lsh_string *service = ssh_format("%di%c", a->port, 0);
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = PF_UNSPEC;
@@ -1118,10 +1146,18 @@ address_info2sockaddr(socklen_t *length,
 	return NULL;
       }
 
-    *length = list->ai_addrlen;
+    chosen = choose_address(list,
+			    preference ? preference : default_preference);
+    if (!chosen)
+      {
+	freeaddrinfo(list);
+	return NULL;
+      }
+    
+    *length = chosen->ai_addrlen;
     
     res = lsh_space_alloc(*length);
-    memcpy(res, list->ai_addr, *length);
+    memcpy(res, chosen->ai_addr, *length);
     freeaddrinfo(list);
 
     return res;

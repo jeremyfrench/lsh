@@ -171,7 +171,7 @@ do_listen(struct io_backend *backend,
   struct lsh_fd *fd;
 
   /* Performs a dns lookup, if needed. */
-  addr = address_info2sockaddr(&addr_length, a, 1);
+  addr = address_info2sockaddr(&addr_length, a, NULL, 1);
   if (!addr)
     {
       EXCEPTION_RAISE(e, &resolve_exception);
@@ -225,7 +225,7 @@ do_listen_connection(struct command *s,
   socklen_t addr_length;
 
   /* Doesn't do any dns lookups. */
-  addr = address_info2sockaddr(&addr_length, address, 0);
+  addr = address_info2sockaddr(&addr_length, address, NULL, 0);
   if (!addr)
     {
       EXCEPTION_RAISE(e, &resolve_exception);
@@ -334,7 +334,7 @@ do_connect(struct io_backend *backend,
   assert(a->ip);
 
   /* Performs dns lookups */
-  addr = address_info2sockaddr(&addr_length, a, 1);
+  addr = address_info2sockaddr(&addr_length, a, NULL, 1);
   if (!addr)
     {
       EXCEPTION_RAISE(e, &resolve_exception);
