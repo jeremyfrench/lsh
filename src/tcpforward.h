@@ -39,13 +39,18 @@
 
 /* GABA:
    (class
-     (name forwarded_port)
+   (name forwarded_port)
+     ;; FIXME: Should this really be a resource?
+     ;; Isn't it good enough that the socket is a resource?
      (super resource)
      (vars
        ; this could store the type of this forward
        ; tcp, udp etc. Or we could invent relevant methods
        ; and subclasses.
        ; (type simple UINT32)
+
+       ; socket == NULL means that we are setting up a forward for this port,
+       ; but are not done yet.
        (socket object lsh_fd)
        (local object address_info)))
 */
