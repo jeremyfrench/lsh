@@ -1,3 +1,30 @@
+2005-02-17  Niels Möller  <niels@s3.kth.se>
+
+	* src/lshd-connection.c: Implemented reading and writing of
+	packets for the ssh-connection service.
+
+	* src/service_read.c (service_process_header): New file and
+	function. Used to be lshd.c:lshd_process_service_header.
+
+	* src/lshd.h (lshd_read_state): Include a connection attribute.
+
+	* src/lshd_read.c (lshd_process_ssh_header): Deleted class.
+	(lshd_process_ssh_header): This function nowacts as a method for
+	the lshd_read_state class.
+
+	* src/ssh_read.h (class header_callback): Deleted. Instead, use a
+	method on the ssh_read_state class._
+
+	* src/handshake.c (init_connection_service): Pass a dummy argument
+	to make_channel_table.
+
+	* src/channel.c (make_channel_table): New argument write, saying
+	where to output ssh messages. For now, initialize the exception
+	handler to NULL.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Moved ssh_read.c and
+	ssh_write.c here.
+
 2005-02-16  Niels Möller  <niels@s3.kth.se>
 
 	* src/handshake.c (init_connection_service): Moved function here,
