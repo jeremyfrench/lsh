@@ -6,19 +6,17 @@
  */
 
 #include "digits.h"
-#include "dsa.h"
 #include "format.h"
 #include "io.h"
 #include "lsh_argp.h"
 #include "publickey_crypto.h"
 #include "read_file.h"
-#include "sexp.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
-/* #include <string.h> */
+#include "nettle/sexp.h"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -40,8 +38,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (file string)
 
        ; Assume input is base64
-       (base64 . int)
-       (style . sexp_argp_state)))
+       (base64 . int)))
 */
 
 static struct lsh_decode_key_options *
@@ -50,7 +47,6 @@ make_lsh_decode_key_options(void)
   NEW(lsh_decode_key_options, self);
   self->file = NULL;
   self->base64 = 0;
-  self->style = -1;
 
   return self;
 }
@@ -67,7 +63,6 @@ main_options[] =
 static const struct argp_child
 main_argp_children[] =
 {
-  { &sexp_output_argp, 0, NULL, 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -82,13 +77,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
 
-    case ARGP_KEY_INIT:
-      state->child_inputs[0] = &self->style;
-      break;
-
     case ARGP_KEY_END:
-      if (self->style < 0)
-	self->style = self->file ? SEXP_CANONICAL : SEXP_TRANSPORT;
       break;
       
     case 'b':
@@ -113,7 +102,7 @@ main_argp =
 };
 
 
-static struct sexp *
+static struct lsh_string *
 lsh_decode_key(struct lsh_string *contents)
 {
   struct simple_buffer buffer;
@@ -143,7 +132,7 @@ lsh_decode_key(struct lsh_string *contents)
             return NULL;
           }
         else
-          return spki_make_public_key(v);
+          return PUBLIC_SPKI_KEY(v, 1);
       }
       
     case ATOM_SSH_RSA:
@@ -160,7 +149,7 @@ lsh_decode_key(struct lsh_string *contents)
               return NULL;
             }
           else
-            return spki_make_public_key(v);
+            return PUBLIC_SPKI_KEY(v, 1);
       }      
     default:
       werror("Unknown key type.");
@@ -175,7 +164,6 @@ int main(int argc, char **argv)
   const struct exception *e;
   struct lsh_string *input;
   struct lsh_string *output;
-  struct sexp *expr;
   
   int out = STDOUT_FILENO;
   
@@ -213,15 +201,9 @@ int main(int argc, char **argv)
         }
     }
 
-  expr = lsh_decode_key(input);
-
+  output = lsh_decode_key(input);
   lsh_string_free(input);
   
-  if (!expr)
-    return EXIT_FAILURE;
-
-  output = sexp_format(expr, options->style, 0);
-
   e = write_raw(out, output->length, output->data);
   lsh_string_free(output);
   

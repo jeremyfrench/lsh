@@ -26,13 +26,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/* FIXME: Incorporate code from dsa_keygen and rsa_keygen */
+
 #include "crypto.h"
-#include "dsa.h"
 #include "format.h"
 #include "io.h"
 #include "publickey_crypto.h"
 #include "randomness.h"
-#include "sexp.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -63,7 +63,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
    (class
      (name lsh_keygen_options)
      (vars
-       (style . sexp_argp_state)
        (server . int)
        ; 'd' means dsa, 'r' rsa
        (algorithm . int)
@@ -74,7 +73,6 @@ static struct lsh_keygen_options *
 make_lsh_keygen_options(void)
 {
   NEW(lsh_keygen_options, self);
-  self->style = SEXP_TRANSPORT;
   self->server = 0;
   self->level = -1;
   self->algorithm = 'd';
@@ -98,7 +96,6 @@ main_options[] =
 static const struct argp_child
 main_argp_children[] =
 {
-  { &sexp_output_argp, 0, NULL, 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -113,8 +110,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = &self->style;
-      state->child_inputs[1] = NULL;
+      state->child_inputs[0] = NULL;
       break;
 
     case ARGP_KEY_END:
@@ -192,10 +188,9 @@ main(int argc, char **argv)
   struct lsh_keygen_options * options
     = make_lsh_keygen_options();
 
-  struct sexp *key;
+  struct lsh_string *key;
   struct randomness *r;
 
-  struct lsh_string *out;
   const struct exception *e;
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
@@ -228,8 +223,7 @@ main(int argc, char **argv)
 
   /* Now, output a private key spki structure. */
 
-  out = sexp_format(key, options->style, 0);
-  e = write_raw(STDOUT_FILENO, out->length, out->data);
+  e = write_raw(STDOUT_FILENO, key->length, key->data);
 
   if (e)
     {
@@ -239,5 +233,3 @@ main(int argc, char **argv)
   
   return EXIT_SUCCESS;
 }
-
-  

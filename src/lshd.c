@@ -33,7 +33,6 @@
 #include "connection_commands.h"
 #include "crypto.h"
 #include "daemon.h"
-#include "dsa.h"
 #include "format.h"
 #include "handshake.h"
 #include "io.h"
@@ -46,7 +45,6 @@
 #include "server_keyexchange.h"
 #include "server_pty.h"
 #include "server_session.h"
-#include "sexp.h"
 #include "spki.h"
 #include "srp.h"
 #include "ssh.h"
@@ -167,7 +165,6 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (random object randomness)
        
        (signature_algorithms object alist)
-       (style . sexp_argp_state)
        (interface . "char *")
        (port . "char *")
        (hostkey . "char *")
@@ -245,7 +242,6 @@ make_lshd_options(void)
 
   self->signature_algorithms = all_signature_algorithms(self->random); /* OK to initialize with NULL */
 
-  self->style = SEXP_TRANSPORT;
   self->interface = NULL;
 
   /* Default behaviour is to lookup the "ssh" service, and fall back
@@ -538,7 +534,6 @@ main_options[] =
 static const struct argp_child
 main_argp_children[] =
 {
-  { &sexp_input_argp, 0, "", 0 },
   { &algorithms_argp, 0, "", 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
@@ -603,9 +598,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = &self->style;
-      state->child_inputs[1] = &self->super;
-      state->child_inputs[2] = NULL;
+      state->child_inputs[0] = &self->super;
+      state->child_inputs[1] = NULL;
       break;
     case ARGP_KEY_END:
       {
