@@ -57,13 +57,17 @@ const char *argp_program_version
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
+#define OPT_SERVER 0x200
+
 /* GABA:
    (class
      (name lsh_writekey_options)
      (vars
        ; Base filename
-       (file string)
+       (public_file string)
+       (private_file string)
 
+       (server . int)
        (tty object interact)
        
        (label string)
@@ -72,6 +76,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
        (crypto_algorithms object alist)
        (signature_algorithms object alist)
+       ; We use this only for salt and iv generation.
        (r object randomness)
        
        (crypto_name . int)
@@ -83,8 +88,10 @@ static struct lsh_writekey_options *
 make_lsh_writekey_options(void)
 {
   NEW(lsh_writekey_options, self);
-  self->file = NULL;
-
+  self->public_file = NULL;
+  self->private_file = NULL;
+  self->server = 0;
+  
   /* We don't need window change tracking. */
   self->tty = make_unix_interact();
     
@@ -100,8 +107,7 @@ make_lsh_writekey_options(void)
    * anything. */
   self->signature_algorithms = all_signature_algorithms(NULL);
 
-  /* We use this only for salt and iv generation. */
-  self->r = make_user_random(getenv("HOME"));
+  self->r = NULL;
   
   /* A better default would be crypto_cbc(make_des3()) */
   self->crypto = NULL;
@@ -114,6 +120,9 @@ main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { "output-file", 'o', "Filename", 0, "Default is ~/.lsh/identity", 0 },
+  { "server", OPT_SERVER, NULL, 0,
+    "Use the server's seed-file, and change the default output file "
+    "to /etc/lsh_host_key'.", 0 },
   { "iteration-count", 'i', "PKCS#5 iteration count", 0, "Default is 1500", 0 },
   { "crypto", 'c', "Algorithm", 0, "Encryption algorithm for the private key file.", 0 },
   { "label", 'l', "Text", 0, "Unencrypted label for the key.", 0 },
@@ -146,28 +155,35 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case ARGP_KEY_END:
-      if (!self->file)
+      if (!self->private_file)
 	{
-	  char *home = getenv("HOME");
-	  struct lsh_string *s;
-	  
-	  if (!home)
-	    {
-	      argp_failure(state, EXIT_FAILURE, 0, "$HOME not set.");
-	      return EINVAL;
-	    }
+	  if (self->server)
+	    self->private_file = make_string("/etc/lsh_host_key");
 	  else
 	    {
-	      s = ssh_format("%lz/.lsh", home);
-	      if (mkdir(lsh_get_cstring(s), 0755) < 0)
+	      char *home = getenv("HOME");
+	      struct lsh_string *s;
+	  
+	      if (!home)
 		{
-		  if (errno != EEXIST)
-		    argp_failure(state, EXIT_FAILURE, errno, "Creating directory %s failed.", s->data);
+		  argp_failure(state, EXIT_FAILURE, 0, "$HOME not set.");
+		  return EINVAL;
 		}
-	      lsh_string_free(s);
-	      self->file = ssh_format("%lz/.lsh/identity", home);
+	      else
+		{
+		  s = ssh_format("%lz/.lsh", home);
+		  if (mkdir(lsh_get_cstring(s), 0755) < 0)
+		    {
+		      if (errno != EEXIST)
+			argp_failure(state, EXIT_FAILURE, errno,
+				     "Creating directory %s failed.", s->data);
+		    }
+		  lsh_string_free(s);
+		  self->private_file = ssh_format("%lz/.lsh/identity", home);
+		}
 	    }
 	}
+      self->public_file = ssh_format("%lS.pub", self->private_file);
       if (self->crypto)
 	{
 	  if (!self->label)
@@ -197,6 +213,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      struct lsh_string *pw;
 	      struct lsh_string *again;
 
+	      /* FIXME: Move to process_private */
 	      pw = INTERACT_READ_PASSWORD(self->tty, 500,
 					  ssh_format("Enter new passphrase: "), 1);
 	      if (!pw)
@@ -214,13 +231,23 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		  
 	      lsh_string_free(again);
 	    }
+	  self->r = (self->server
+		     ? make_system_random()
+		     : make_user_random(getenv("HOME")));
+	  if (!self->r)
+	    argp_failure(state, EXIT_FAILURE, 0, 
+			 "Failed to initialize randomness generator.");
 	}
       break;
       
     case 'o':
-      self->file = make_string(arg);
+      self->private_file = make_string(arg);
       break;
 
+    case OPT_SERVER:
+      self->server = 1;
+      break;
+      
     case 'i':
       {
 	long i;
@@ -282,40 +309,40 @@ main_argp =
 };
 
 static int
-open_private_file(const struct lsh_string *file)
+file_exists(const struct lsh_string *file)
+{
+  struct stat sbuf;
+  return (stat(lsh_get_cstring(file), &sbuf) == 0
+	  || errno != ENOENT);
+}
+
+/* Returns 1 for success, 0 for errors. */
+static int
+check_file(const struct lsh_string *file)
+{
+  if (file_exists(file))
+    {
+      werror("File `%S' already exists.\n"
+	     "lsh-writekey doesn't overwrite existing key files.\n"
+	     "If you *really* want to do that, you should delete\n"
+	     "the existing files first\n",
+	     file);
+      return 0;
+    }
+  return 1;
+}
+
+static int
+open_file(const struct lsh_string *file)
 {
   int fd = open(lsh_get_cstring(file),
                 O_CREAT | O_EXCL | O_WRONLY,
                 0600);
 
   if (fd < 0)
-    werror("Failed to open `%S'for writing: %z\n"
-           "lsh-writekey doesn't overwrite existing key files.\n"
-           "If you *really* want to do that, you should delete\n"
-           "the existing files first\n",
+    werror("Failed to open `%S'for writing: %z\n",
            file, STRERROR(errno));
 
-  return fd;
-}
-
-static int
-open_public_file(const struct lsh_string *file)
-{
-  struct lsh_string *s = ssh_format("%lS.pub", file);
-  
-  int fd = open(lsh_get_cstring(s),
-                O_CREAT | O_EXCL | O_WRONLY,
-                0644);
-
-  if (fd < 0)
-    werror("Failed to open `%S'for writing: %z\n"
-           "lsh-writekey doesn't overwrite existing key files.\n"
-           "If you *really* want to do that, you should delete\n"
-           "the existing files first\n",
-           s, STRERROR(errno));
-
-  lsh_string_free(s);
-  
   return fd;
 }
 
@@ -381,14 +408,10 @@ main(int argc, char **argv)
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
-  private_fd = open_private_file(options->file);
-  if (private_fd < 0)
+  if (! (check_file(options->private_file)
+	 && check_file(options->public_file)))
     return EXIT_FAILURE;
-
-  public_fd = open_public_file(options->file);
-  if (public_fd < 0)
-    return EXIT_FAILURE;
-
+  
   input = io_read_file_raw(STDIN_FILENO, 2000);
 
   if (!input)
@@ -397,7 +420,7 @@ main(int argc, char **argv)
              STRERROR(errno));
       return EXIT_FAILURE;
     }
-
+  
   key = string_to_sexp(SEXP_TRANSPORT, input, 1);
 
   if (!key)
@@ -408,6 +431,10 @@ main(int argc, char **argv)
 
   output = process_private(key, options);
   if (!output)
+    return EXIT_FAILURE;
+
+  private_fd = open_file(options->private_file);
+  if (private_fd < 0)
     return EXIT_FAILURE;
 
   e = write_raw(private_fd, output->length, output->data);
@@ -424,6 +451,10 @@ main(int argc, char **argv)
   if (!output)
     return EXIT_FAILURE;
 
+  public_fd = open_file(options->public_file);
+  if (public_fd < 0)
+    return EXIT_FAILURE;
+  
   e = write_raw(public_fd, output->length, output->data);
   lsh_string_free(output);
   
