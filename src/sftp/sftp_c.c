@@ -265,9 +265,9 @@ sftp_rename_init(struct sftp_callback *state,
 		 int op_id,
 		 struct sftp_input *in UNUSED, 
 		 struct sftp_output *out,
-		 UINT8 *srcname,
+		 const UINT8 *srcname,
 		 UINT32 srclen,
-		 UINT8 *dstname,
+		 const UINT8 *dstname,
 		 UINT32 dstlen)
 {
   UINT32 id;
@@ -294,9 +294,9 @@ sftp_symlink_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in UNUSED, 
 		  struct sftp_output *out, 
-		  UINT8 *linkname,
+		  const UINT8 *linkname,
 		  UINT32 linklen,
-		  UINT8 *targetname,
+		  const UINT8 *targetname,
 		  UINT32 targetlen)
 {
   UINT32 id;
@@ -321,7 +321,7 @@ sftp_remove_init(struct sftp_callback *state,
 		 int op_id,
 		 struct sftp_input *in UNUSED, 
 		 struct sftp_output *out,
-		 UINT8 *name,
+		 const UINT8 *name,
 		 UINT32 namelen)
 {
   UINT32 id;
@@ -346,7 +346,7 @@ sftp_mkdir_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in UNUSED, 
 		struct sftp_output *out,
-		UINT8 *name,
+		const UINT8 *name,
 		UINT32 namelen,
 		struct sftp_attrib *a)
 {
@@ -379,7 +379,7 @@ sftp_realpath_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in UNUSED, 
 		   struct sftp_output *out,
-		   UINT8 *name,
+		   const UINT8 *name,
 		   UINT32 namelen)
 {
   UINT32 id;
@@ -404,7 +404,7 @@ sftp_readlink_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in UNUSED, 
 		   struct sftp_output *out,
-		   UINT8 *name,
+		   const UINT8 *name,
 		   UINT32 namelen)
 {
   UINT32 id;
@@ -429,7 +429,7 @@ sftp_rmdir_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in UNUSED, 
 		struct sftp_output *out,
-		UINT8 *name,
+		const UINT8 *name,
 		UINT32 namelen)
 {
   UINT32 id;
@@ -454,7 +454,7 @@ sftp_stat_init(struct sftp_callback *state,
 	       int op_id,
 	       struct sftp_input *in UNUSED,
 	       struct sftp_output *out,
-	       UINT8 *name,
+	       const UINT8 *name,
 	       UINT32 namelen)
 {
   UINT32 id;
@@ -481,7 +481,7 @@ sftp_lstat_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in UNUSED,
 		struct sftp_output *out,
-		UINT8 *name,
+		const UINT8 *name,
 		UINT32 namelen)
 {
   UINT32 id;
@@ -506,7 +506,7 @@ sftp_fstat_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in UNUSED,
 		struct sftp_output *out,
-		UINT8 *handle,
+		const UINT8 *handle,
 		UINT32 handlelen)
 {
   UINT32 id;
@@ -530,7 +530,7 @@ sftp_setstat_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in UNUSED,
 		  struct sftp_output *out,
-		  UINT8 *name,
+		  const UINT8 *name,
 		  UINT32 namelen,
 		  struct sftp_attrib* attrib)
 {
@@ -556,7 +556,7 @@ sftp_fsetstat_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input* in UNUSED,
 		   struct sftp_output* out,
-		   UINT8 *handle,
+		   const UINT8 *handle,
 		   UINT32 handlelen,
 		   struct sftp_attrib* attrib)
 {
@@ -585,7 +585,7 @@ sftp_get_mem_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in UNUSED,
 		  struct sftp_output *out,
-		  UINT8 *name, 
+		  const UINT8 *name, 
 		  UINT32 namelen,
 		  struct sftp_mem *mem,
 		  off_t startat)
@@ -735,7 +735,7 @@ sftp_put_mem_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in UNUSED,
 		  struct sftp_output *out,
-		  UINT8 *name, 
+		  const UINT8 *name, 
 		  UINT32 namelen,
 		  struct sftp_mem *mem,
 		  off_t startat,
@@ -920,9 +920,9 @@ sftp_get_file_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in,
 		   struct sftp_output *out,
-		   UINT8 *name, 
+		   const UINT8 *name, 
 		   UINT32 namelen,
-		   UINT8 *fname,
+		   const UINT8 *fname,
 		   /* FIXME: fnamelen not used??? */
 		   UINT32 fnamelen,
 		   int cont)
@@ -1217,9 +1217,9 @@ sftp_put_file_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in,
 		   struct sftp_output *out,
-		   UINT8 *name,
+		   const UINT8 *name,
 		   UINT32 namelen,
-		   UINT8 *fname,
+		   const UINT8 *fname,
 		   /* FIXME: fnamelen not used??? */
 		   UINT32 fnamelen,
 		   int cont)
@@ -1515,7 +1515,7 @@ sftp_ls_init(struct sftp_callback *state,
 	     int op_id,
 	     struct sftp_input *in UNUSED,
 	     struct sftp_output *out,
-	     UINT8 *dir,
+	     const UINT8 *dir,
 	     UINT32 dirlen)
 {
   sftp_null_state(state);
