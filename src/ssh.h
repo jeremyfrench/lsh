@@ -55,6 +55,14 @@
 #define SSH_MSG_USERAUTH_PK_OK 60
 #define SSH_MSG_USERAUTH_PASSWD_CHANGEREQ 60
 
+/* The following message numbers have been defined for use with the
+ * 'gssapi' user authentication method: */
+
+#define SSH_MSG_USERAUTH_GSSAPI_RESPONSE 60
+#define SSH_MSG_USERAUTH_GSSAPI_TOKEN 61
+#define SSH_MSG_USERAUTH_GSSAPI_EXCHANGE_COMPLETE 63
+#define SSH_MSG_USERAUTH_GSSAPI_ERROR 64
+
 /* 80-89 Connection protocol generic */
 
 #define SSH_FIRST_CONNECTION_GENERIC 80
