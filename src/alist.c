@@ -24,18 +24,47 @@
  */
  
 
-#include <assert.h>
-#include <stdarg.h>
-
 #include "alist.h"
 
 #include "atoms.h"
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
+
 #define CLASS_DEFINE
 #include "alist.h.x"
 #undef CLASS_DEFINE
+
+struct alist *alist_addv(struct alist *a, unsigned n, va_list args)
+{
+  unsigned i;
+  
+  for (i=0; i<n; i++)
+    {
+      int atom = va_arg(args, int);
+      struct lsh_object *value = va_arg(args, struct lsh_object *);
+
+      if (atom < 0)
+	fatal("Internal error!\n");
+      ALIST_SET(a, atom, value);
+    }
+
+  assert(va_arg(args, int) == -1);
+
+  return a;
+}
+
+struct alist *alist_add(struct alist *a, unsigned n, ...)
+{
+  va_list args;
+
+  va_start(args, n);
+  alist_addv(a, n, args);
+  va_end(args);
+
+  return a;
+}
 
 struct alist_node
 {
@@ -93,7 +122,7 @@ static void do_linear_set(struct alist *c, int atom, void *value)
   self->table[atom] = value;
 }
 
-struct alist *make_linear_alist(int n, ...)
+struct alist *make_linear_alist(unsigned n, ...)
 {
   int i;
   va_list args;
@@ -106,7 +135,8 @@ struct alist *make_linear_alist(int n, ...)
     res->table[i] = NULL;
 
   va_start(args, n);
-  
+
+#if 0
   for (i=0; i<n; i++)
     {
       int atom = va_arg(args, int);
@@ -119,7 +149,11 @@ struct alist *make_linear_alist(int n, ...)
     }
 
   assert(va_arg(args, int) == -1);
+#endif
 
+  alist_addv(&res->super, n, args);
+  va_end(args);
+  
   return &res->super;
 }
 
@@ -215,9 +249,8 @@ static void do_linked_set(struct alist *c, int atom, void *value)
     }
 }
 
-struct alist *make_linked_alist(int n, ...)
+struct alist *make_linked_alist(unsigned n, ...)
 {
-  int i;
   va_list args;
   
   struct alist *res;
@@ -231,6 +264,7 @@ struct alist *make_linked_alist(int n, ...)
 
   va_start(args, n);
 
+#if 0
   for (i=0; i<n; i++)
     {
       int atom = va_arg(args, int);
@@ -242,12 +276,11 @@ struct alist *make_linked_alist(int n, ...)
     }
 
   assert(va_arg(args, int) == -1);
-
-#if 0
-  res->get = do_linked_get;
-  res->set = do_linked_set;
 #endif
-  
+
+  alist_addv(res, n, args);
+  va_end(args);
+    
   return res;
 }
 
