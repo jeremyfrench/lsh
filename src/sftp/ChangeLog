@@ -1,3 +1,8 @@
+2002-03-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* commands.c (com_umask): Use unsigned char.
+	(handle_command): Unsigned char argument.
+
 2002-03-14  Pontus  <pont@it.uu.se>
 
 	* configure.ac: Changed version number from 1.0 to 1.0-pre to make
