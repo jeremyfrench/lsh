@@ -39,6 +39,17 @@ struct client_userauth;
 
 #include "client_userauth.c.x"
 
+static struct lsh_string *
+format_userauth_none(struct lsh_string *name,
+                     int service)
+{
+  return ssh_format("%c%S%a%a",
+		    SSH_MSG_USERAUTH_REQUEST,
+		    name,
+		    service,
+		    ATOM_NONE);
+}
+
 /* The last parameters says whether or not to free the password. */
 struct lsh_string *
 format_userauth_password(struct lsh_string *name,
@@ -493,7 +504,71 @@ make_client_userauth(struct lsh_string *username,
   return &self->super;
 }
 
-   
+
+/* None authentication */
+/* GABA:
+   (class
+     (name client_none_state)
+     (super client_userauth_failure)
+     (vars
+       (e object exception_handler)))
+*/
+
+static void
+do_none_failure(struct client_userauth_failure *s, int again)
+{
+  CAST(client_none_state, self, s);
+  
+  static const struct exception need_auth =
+    STATIC_EXCEPTION(EXC_USERAUTH, "Need real authentication.");
+
+  trace("client_userauth.c: do_none_failure\n");
+
+  if (again)
+    werror("Odd. Server says we should try the `none'authentication method again.\n");
+
+  EXCEPTION_RAISE(self->e, &need_auth);
+}
+
+static struct client_userauth_failure *
+make_client_none_state(struct exception_handler *e)
+{
+  NEW(client_none_state, self);
+
+  trace("client_userauth.c: make_client_none_state\n");
+
+  self->super.failure = do_none_failure;
+  self->e = e;
+
+  return &self->super;
+}
+
+static struct client_userauth_failure *
+do_none_login(struct client_userauth_method *s UNUSED,
+              struct client_userauth *userauth,
+              struct ssh_connection *connection,
+              struct exception_handler *e)
+{
+  trace("client_userauth.c: do_none_login\n");
+
+  C_WRITE(connection,
+          format_userauth_none(userauth->username,
+                               userauth->service_name));
+  
+  return make_client_none_state(e);
+}
+
+static struct client_userauth_method
+client_userauth_none =
+  { STATIC_HEADER, ATOM_NONE, do_none_login };
+
+struct client_userauth_method *
+make_client_none_auth(void)
+{
+  return &client_userauth_none;
+}
+
+
 /* Password authentication */
 
 #define MAX_PASSWD 100
@@ -608,6 +683,7 @@ make_client_password_state(struct client_userauth *userauth,
      (vars
        (tty object interact)))
 */
+
 
 static struct client_userauth_failure *
 do_password_login(struct client_userauth_method *s,

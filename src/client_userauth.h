@@ -51,5 +51,8 @@ make_client_password_auth(struct interact *tty);
 struct client_userauth_method *
 make_client_publickey_auth(struct object_list *);
 
+struct client_userauth_method *
+make_client_none_auth(void);
+
 #endif /* LSH_CLIENT_USERAUTH_H_INCLUDED */
 
