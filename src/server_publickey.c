@@ -181,7 +181,8 @@ do_authenticate(struct userauth *s,
     }
 }
 
-struct userauth *make_userauth_publickey(struct alist *verifiers)
+struct userauth *
+make_userauth_publickey(struct alist *verifiers)
 {
   NEW(userauth_publickey, self);
 

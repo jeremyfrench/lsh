@@ -1,3 +1,11 @@
+1999-12-14  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lshd.c: General cleanup.
+	* src/lsh.c: General cleanup.
+
+	* src/client.h (REQUEST_SHELL): New macro.
+	(CLIENT_START_IO): New macro.
+
 1999-12-12  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/spki.h: Removed old code.
