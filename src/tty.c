@@ -410,7 +410,7 @@ tty_encode_term_mode(struct termios *ios)
     goto fail;
   
   new->data[p++] = 0;
-  new->length = p;
+  lsh_string_trunc(new, p);
   
   return new;
 
