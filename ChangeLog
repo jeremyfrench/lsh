@@ -1,5 +1,15 @@
 2000-01-09  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/unpad.c (do_unpad): Check payload length.
+
+	* src/connection.c (make_ssh_connection): Use
+	SSH_MAX_PACKET_FUZZ. 
+
+	* src/ssh.h (SSH_MAX_PACKET_FUZZ): New constant.
+
+	* src/read_packet.c (do_read_packet): Added comment on the packet
+	size limit.
+
 	* src/lsh_types.h: Include alloca.h, where appropriate.
 
 	* src/io.c (io_set_nonblocking): Leave other flags unmodified.
@@ -14,7 +24,7 @@
 	listing selected algorithms.
 
 	* src/zlib.c (make_zlib_instance): Initialize deflate/inflate
-	pointer properly. (Reported by Kerezstg).
+	pointer properly. (Reported by Keresztg).
 
 2000-01-08  Niels Möller  <nisse@cuckoo.localdomain>
 
