@@ -826,6 +826,37 @@ write_raw_with_poll(int fd, UINT32 length, const UINT8 *data)
   return NULL;
 }
 
+/* For fd:s in blocking mode. */
+const struct exception *
+read_raw(int fd, UINT32 length, UINT8 *data)
+{
+  while(length)
+    {
+      int done = read(fd, data, length);
+
+      if (done < 0)
+	switch(errno)
+	  {
+	  case EINTR:
+	  case EAGAIN:
+	    continue;
+	  default:
+	    return make_io_exception(EXC_IO_BLOCKING_READ,
+				     NULL, errno, NULL);
+	  }
+      else if (done == 0)
+	{
+	  /* EOF. */
+	  /* FIXME: Indicate the amount of data read, somehow. */
+	  return make_io_exception(EXC_IO_BLOCKING_READ,
+				   NULL, 0, NULL);
+	}
+	
+      length -= done;
+      data += done;
+    }
+  return NULL;
+}
 
 /* Network utility functions */
 
