@@ -166,7 +166,7 @@ do_install_channel_open_handler(struct collect_info_2 *info,
      (name install_global_request_handler)
      (super command)
      (vars
-       (name . UINT32)
+       (name . int)
        (handler object global_request)))
 */
 
@@ -209,7 +209,7 @@ make_install_fix_global_request_handler(UINT32 name,
      (name install_channel_open_handler)
      (super command)
      (vars
-       (name . UINT32)
+       (name . int)
        (handler object channel_open)))
 */
 

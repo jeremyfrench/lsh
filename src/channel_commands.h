@@ -106,7 +106,7 @@ make_install_global_request_handler(UINT32 name,
      (name install_info)
      (super collect_info_2)
      (vars
-       (name . UINT32)))
+       (name . int)))
 */
 
 struct lsh_object *
