@@ -36,6 +36,10 @@
 
 enum escape_state { GOT_NONE, GOT_NEWLINE, GOT_ESCAPE };
 
+/* The terminal is typically in raw mode, so we should look for CR
+ * <escape> rather than NL <escape>. */
+#define NEWLINE '\r'
+
 #include "client_escape.c.x"
   
 struct escape_info *
@@ -81,7 +85,7 @@ scan_escape(struct lsh_string *packet, UINT32 pos, UINT8 escape)
 
       assert(left >= 2);
 
-      p = memchr(packet->data + pos, '\n', left - 1);
+      p = memchr(packet->data + pos, NEWLINE, left - 1);
       if (!p)
 	return 0;
       else
@@ -119,6 +123,11 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
   CAST(escape_handler, self, s);
   UINT32 pos;
   UINT32 done;
+
+#if 0
+  trace("do_escape_handler: state = %i, packet length = %i\n",
+        self->state, packet->length);
+#endif
   
   if (!packet)
     {
@@ -141,9 +150,9 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
       /* We already got newline. Is the next character the escape? */
       if (packet->data[0] == self->info->escape)
 	{
-	  self->state = GOT_ESCAPE;
 	  if (packet->length == 1)
 	    {
+              self->state = GOT_ESCAPE;
 	      lsh_string_free(packet);
 	      return;
 	    }
@@ -155,7 +164,7 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
 		done = 1;
 	      else
 		done = 2;
-	    }
+            }
 	}
       break;
     case GOT_ESCAPE:
@@ -165,6 +174,7 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
 	done = 0;
       else
 	done = 1;
+
       break;
 
     case GOT_NONE:
@@ -202,7 +212,7 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
   if (done < packet->length)
     {
       /* Rember if the last character is a newline. */
-      if (packet->data[packet->length - 1] == '\n')
+      if (packet->data[packet->length - 1] == NEWLINE)
 	self->state = GOT_NEWLINE;
       else
 	self->state = GOT_NONE;
@@ -220,7 +230,10 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
 	A_WRITE(self->super.next, packet);
     }
   else
-    lsh_string_free(packet);
+    {
+      self->state = GOT_NONE;
+      lsh_string_free(packet);
+    }
 }
 
 struct abstract_write *
