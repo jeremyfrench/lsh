@@ -102,6 +102,7 @@ make_io_write_file_info(const char *name, int flags, int mode, UINT32 block_size
   return self;
 }
 
+/* FIXME: Used only by lsh-writekey. Delete? */
 void do_io_read_fd(struct command *s,
 		   struct lsh_object *a,
 		   struct command_continuation *c,
