@@ -6,7 +6,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Mˆller
+ * Copyright (C) 1998 Niels MÅˆller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -85,6 +85,12 @@ struct command_2 close_on_sighup;
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#if TIME_WITH_SYS_TIME && HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
+#if HAVE_SYS_RESOURCE_H
+#include <sys/resource.h>
+#endif
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -925,6 +931,17 @@ main(int argc, char **argv)
 {
   struct lshd_options *options;
 
+#if HAVE_SETRLIMIT && HAVE_SYS_RESOURCE_H
+  /* Try to increase max number of open files, ignore any error */
+
+  struct rlimit r;
+
+  r.rlim_max = RLIM_INFINITY;
+  r.rlim_cur = RLIM_INFINITY;
+
+  setrlimit(RLIMIT_NOFILE, &r);
+#endif
+
   io_init();
   
   /* For filtering messages. Could perhaps also be used when converting
@@ -933,6 +950,7 @@ main(int argc, char **argv)
 
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
+
 
   options = make_lshd_options();
 
