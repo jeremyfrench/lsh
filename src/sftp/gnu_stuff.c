@@ -77,7 +77,7 @@ void help_option()
   printf( "\n");
   printf( "$LSFTP_RSH $LSFTP_BEFORE_ARGS <anything on the command line> $LSFTP_AFTER_ARGS\n");
   printf( "\n");
-  printf( "Report bugs to <bug-lsh@gnu.org>.\n", );
+  printf( "Report bugs to <bug-lsh@gnu.org>.\n" );
   printf( "\n");
 
   exit(0); /* Exit successfully */
