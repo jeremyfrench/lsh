@@ -129,12 +129,12 @@ static int do_handle_dh_reply(struct packet_handler *c,
   return res | SERVICE_INIT(closure->finished, connection);
 }
 
-static int do_init_dh(struct keyexchange_algorithm *c,
-		      struct ssh_connection *connection,
-		      struct ssh_service *finished,
-		      int hostkey_algorithm_atom,
-		      struct signature_algorithm *ignored,
-		      struct object_list *algorithms)
+static int do_init_client_dh(struct keyexchange_algorithm *c,
+		             struct ssh_connection *connection,
+		             struct ssh_service *finished,
+		             int hostkey_algorithm_atom,
+		             struct signature_algorithm *ignored,
+		             struct object_list *algorithms)
 {
   CAST(dh_client_exchange, closure, c);
   NEW(dh_client, dh);
@@ -184,7 +184,7 @@ make_dh_client(struct diffie_hellman_method *dh,
 
   CHECK_TYPE(diffie_hellman_method, dh);
   
-  self->super.init = do_init_dh;
+  self->super.init = do_init_client_dh;
   self->dh = dh;
   self->verifier = verifier;
 
