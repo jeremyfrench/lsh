@@ -92,14 +92,14 @@
 		      (filter (invert-predicate integer-or-char?) o))))
 	(else (my-error "Bad char set specification ~s" o))))
 
-;; Depends on charsets implemented as strings
-(define char-set=? string=?)
 
-(define char-set-empty?
-  (let ((empty (chars->char-set '())))
-    (lambda (o) (char-set=? o empty))))
+(define (char-set-empty? o)
+  (char-set= o char-set:empty))
 
-(define char-set-assoc assoc)
+(define (char-set-assoc set alist)
+  (cond ((null? alist) #f)
+	((char-set= set (caar alist)) (car alist))
+	(else (char-set-assoc set (cdr alist)))))
 
 ;; We use an acyclic graph, where the input char-sets are used as
 ;; roots, and two intersecting nodes will branch into three childen,
