@@ -1,0 +1,3 @@
+server = localhost
+server_port = 10080
+server_type = 5
