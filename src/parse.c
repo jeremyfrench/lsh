@@ -30,6 +30,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include "parse_macros.h"
+
 #include <assert.h>
 #include <string.h>
 
@@ -40,10 +42,6 @@ void simple_buffer_init(struct simple_buffer *buffer,
   buffer->pos = 0;
   buffer->data = data;
 }
-
-#define LEFT (buffer->capacity - buffer->pos)
-#define HERE (buffer->data + buffer->pos)
-#define ADVANCE(n) (buffer->pos  += (n))
 
 int parse_uint32(struct simple_buffer *buffer, UINT32 *result)
 {
