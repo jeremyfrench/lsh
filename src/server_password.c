@@ -22,12 +22,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "server_userauth.h"
 #include "charset.h"
 #include "format.h"
 #include "parse.h"
 #include "ssh.h"
-#include "userauth.h"
+#include "server_userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -35,6 +34,7 @@ static void
 do_authenticate(struct userauth *ignored UNUSED,
 		struct ssh_connection *connection UNUSED,
 		struct lsh_string *username,
+		UINT32 service UNUSED,
 		struct simple_buffer *args,
 		struct command_continuation *c,
 		struct exception_handler *e)
