@@ -1,6 +1,7 @@
 2003-03-09  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* tools/Makefile.am (noinst_PROGRAMS): Added spki-delegate.
+	(EXTRA_DIST): Added sign.h.
 
 	* tools/spki-delegate.c: New program.
 
