@@ -175,7 +175,8 @@ do_listen(struct io_backend *backend,
       return;
     }
   
-  fd = io_listen(backend, &sin,
+  fd = io_listen(backend,
+		 (struct sockaddr *) &sin, sizeof(sin),
 		 make_listen_callback(backend, c, e),
 		 e);
 
@@ -226,7 +227,8 @@ do_listen_connection(struct command *s,
     }
 
   /* FIXME: Asyncronous dns lookups should go here */
-  fd = io_listen(self->backend, &sin,
+  fd = io_listen(self->backend,
+		 (struct sockaddr *) &sin, sizeof(sin),
 		 make_listen_callback
 		 (self->backend,
 		  make_apply(self->callback,
