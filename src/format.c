@@ -22,7 +22,7 @@ struct simple_packet *ssh_format(char *format, ...)
 
   return packet;
 }
-
+ 
 UINT32 *ssh_vformat_length(char *f, va_list args)
 {
   UINT32 length = 0;
@@ -100,10 +100,10 @@ UINT32 *ssh_vformat_length(char *f, va_list args)
 	    break;
 	    case 'n':
 	      {
-		mpz_t n = va_arg(args, mpz_t);
+		bignum n = va_arg(args, bignum);
 
 		/* Calculate length of written number */
-#error foo
+		length += bignum_format_length(n);
 
 		if (!literal)
 		  length += 4;
@@ -123,7 +123,7 @@ UINT32 *ssh_vformat_length(char *f, va_list args)
 
 void ssh_vformat(char *f, UINT *buffer, va_list args)
 {
-    while(*f)
+  while(*f)
     {
       if (*f == '%')
 	{
@@ -227,10 +227,10 @@ void ssh_vformat(char *f, UINT *buffer, va_list args)
 	    break;
 	    case 'n':
 	      {
-		mpz_t n = va_arg(args, mpz_t);
-		UINT32 length;
-		/* Calculate length of written number */
-#error foo
+		bignum n = va_arg(args, bignum);
+		UINT32 length = bignum_format(n, buffer);
+
+		buffer += length;
 
 		if (!literal)
 		  {
@@ -238,7 +238,6 @@ void ssh_vformat(char *f, UINT *buffer, va_list args)
 		    buffer += 4;
 		  }
 
-		/* Write digits */
 		f++;
 	      }
 	    break;
@@ -246,3 +245,4 @@ void ssh_vformat(char *f, UINT *buffer, va_list args)
 	}
       *buffer++ = *f++;
     }
+}

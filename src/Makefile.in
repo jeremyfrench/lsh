@@ -1,5 +1,5 @@
-atoms.h: atoms.in process_atoms
-	bash process_atoms header <atoms.in >atoms.h
+atoms_defines.h: atoms.in process_atoms
+	bash process_atoms header <atoms.in >atoms_defines.h
 
 atoms_gperf.c: atoms.in process_atoms
 	bash process_atoms gperf <atoms.in |gperf -t -k1,7,$$ >atoms_gperf.c

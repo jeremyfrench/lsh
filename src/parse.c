@@ -66,16 +66,17 @@ int parse_uint8(struct simple_buffer *buffer, uint8 *result)
   return 1;
 }
 
-int parse_bignum(struct simple_buffer *buffer, mpz_t result)
+int parse_bignum(struct simple_buffer *buffer, bignum result)
 {
   UINT32 length;
   UINT8 *digits;
 
-  if (!parse_string(buffer, &length, &data))
+  if (!parse_string(buffer, &length, &digits))
     return 0;
 
-  /* init mpz */
-#error
+  parse_bignum(result, length, digits);
+
+  return 1;
 }
 
 /* Returns 1 on success, 0 on failure, and -1 at end of buffer.
