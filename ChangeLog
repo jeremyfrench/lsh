@@ -1,5 +1,10 @@
 Tue Dec  8 10:29:50 1998    <nisse@puck>
 
+	* xalloc.c (lsh_object_clone): New function.
+
+	* server_keyexchange.c (do_init_dh): Copy the server key (as
+	strings can't be shared).
+
 	* crypto.c (do_sha_copy, ): Use the CLONE macro instead of memcpy to
 	copy instances.
 	(do_hmac_copy): -"-
