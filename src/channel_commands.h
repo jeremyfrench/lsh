@@ -73,5 +73,22 @@ int do_channel_open_command(struct command *s,
 int do_channel_request_command(struct command *s,
 			       struct lsh_object *x,
 			       struct command_continuation *c);
-     
+
+/* GABA:
+   (class
+     (name global_request_command)
+     (super command)
+     (vars
+       (format_request method "struct lsh_string *"
+                       "struct ssh_connection *connection"
+		       "struct command_continuation **c")))
+*/
+
+#define FORMAT_GLOBAL_REQUEST(r, conn, c)
+((r)->format_request((r), (conn), (c)))
+
+int do_channel_global_command(struct command *s,
+			      struct lsh_object *x,
+			      struct command_continuation *c);
+
 #endif /* LSH_CHANNEL_COMMANDS_H_INCLUDED */
