@@ -58,10 +58,6 @@ struct client_userauth;
 
 #include "client_userauth.c.x"
 
-#if 0
-static struct packet_handler *make_banner_handler(void);
-#endif
-
 struct lsh_string *
 format_userauth_password(struct lsh_string *name,
 			 int service,
@@ -733,37 +729,6 @@ do_publickey_login(struct client_userauth_method *s,
       return &state->super;
     }
 }
-
-#if 0
-static void
-do_cleanup_publickey(struct client_userauth_method *c,
-		     struct client_userauth *userauth UNUSED,
-		     struct ssh_connection *connection)
-{
-  CAST(client_publickey_method, self, c);
-
-  self->current_key++;
-  connection->dispatch[SSH_MSG_USERAUTH_PK_OK] = connection->fail;
-}
-
-static void
-do_send_publickey(struct client_userauth_method *c, 
-		  struct client_userauth *userauth,
-		  struct ssh_connection *connection)
-{
-  CAST(client_publickey_method, self, c);
-
-  if (LIST_LENGTH(self->keys) > self->current_key)
-    {
-      CAST(keypair, key, LIST(self->keys)[self->current_key]);
-
-      C_WRITE(connection, 
-	      format_userauth_publickey_query(local_to_utf8(userauth->username, 0),
-					      userauth->service_name,
-					      key->type, key->public));
-    }
-}
-#endif
 
 struct client_userauth_method *
 make_client_publickey_auth(struct object_list *keys)
