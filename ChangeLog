@@ -1,3 +1,8 @@
+2004-11-18  Niels Möller  <niels@s3.kth.se>
+
+	* misc/xenofarm.sh (oopcfgargs): Build liboop with
+	--disable-shared.
+
 2004-11-17  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/unix_random.c (do_trivia_source): Check HAVE_GETRUSAGE.
