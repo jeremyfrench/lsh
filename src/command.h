@@ -66,7 +66,7 @@
 */
 
 #define COMMAND_CALL(f, a, c, e) \
-  ((f)->call((f), (struct lsh_object *) (a), (c), (e)))
+  ((void)&(f), ((f)->call((f), (struct lsh_object *) (a), (c), (e))))
 
 #define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v)))
 
