@@ -1,3 +1,8 @@
+2003-02-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/rapid7-lsh-test: ln -sf is not portable, so delete
+	the symlink "current" explicitly using rm.
+
 2003-02-27  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/rapid7-lsh-test: Skip test if tcputils is missing.
