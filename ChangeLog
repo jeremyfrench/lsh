@@ -1,3 +1,16 @@
+Sun Jan 31 04:25:30 1999    <nisse@puck>
+
+	* src/werror.c (werror_vformat): New function, with different
+ 	format specifiers than standard printf. Many more specialized
+ 	public functions removed.
+
+	* src/format.c (format_size_in_decimal): Renamed and exported the
+	size_in_decimal() function.
+
+	* src/charset.c: New function.
+	(low_utf8_to_local): New function.
+	(utf8_to_local): New argument STRICT.
+
 Thu Jan 28 08:51:18 1999    <nisse@puck>
 
 	* src/tty.c (tty_encode_term_mode): New function (dummy).
