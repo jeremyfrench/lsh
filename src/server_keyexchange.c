@@ -53,6 +53,7 @@
      (super packet_handler)
      (vars
        (dh struct dh_instance)
+       (hostkey_algorithm . int)
        (server_key string)
        (signer object signer)
        (algorithms object object_list)))
@@ -81,6 +82,7 @@ do_handle_dh_init(struct packet_handler *c,
   C_WRITE(connection,
 	  dh_make_server_msg(&closure->dh,
 			     closure->server_key,
+			     closure->hostkey_algorithm,
 			     closure->signer));
 
   connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
@@ -101,14 +103,14 @@ do_handle_dh_init(struct packet_handler *c,
 static void
 do_init_server_dh(struct keyexchange_algorithm *c,
 		  struct ssh_connection *connection,
-		  int hostkey_algorithm_atom,
+		  int hostkey_algorithm,
 		  struct lsh_object *extra,
 		  struct object_list *algorithms)
 {
   CAST(dh_server_exchange, closure, c);
   CAST_SUBTYPE(alist, keys, extra);
   CAST(keypair, key, ALIST_GET(keys,
-			       hostkey_algorithm_atom));
+			       hostkey_algorithm));
 
   if (!key)
     {
@@ -125,16 +127,17 @@ do_init_server_dh(struct keyexchange_algorithm *c,
       init_dh_instance(closure->dh, &dh->dh, connection);
 
       dh->server_key = lsh_string_dup(key->public);
+      dh->signer = key->private;
 
 #if DATAFELLOWS_WORKAROUNDS
-      if ( (hostkey_algorithm_atom == ATOM_SSH_DSS)
+      if ( (hostkey_algorithm == ATOM_SSH_DSS)
 	   && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
 	{
-	  dh->signer = make_dsa_signer_kludge(key->private);
+	  hostkey_algorithm = ATOM_SSH_DSS_KLUDGE_LOCAL;
 	}
       else
 #endif
-	dh->signer = key->private;
+	dh->hostkey_algorithm = hostkey_algorithm;
 
       dh->algorithms = algorithms;
   
@@ -336,7 +339,7 @@ make_srp_init_handler(struct srp_server_instance *srp)
 static void
 do_init_server_srp(struct keyexchange_algorithm *s,
 		   struct ssh_connection *connection,
-		   int hostkey_algorithm_atom UNUSED,
+		   int hostkey_algorithm UNUSED,
 		   struct lsh_object *extra UNUSED,
 		   struct object_list *algorithms)
 {
