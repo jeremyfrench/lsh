@@ -47,6 +47,11 @@
 
 #include "keyexchange.c.x"
 
+/* Define this to get very frequent re-exchanges */
+#ifndef STRESS_KEYEXCHANGE
+# define STRESS_KEYEXCHANGE 0
+#endif
+
 /* GABA:
    (class
      (name kexinit_handler)
@@ -613,10 +618,15 @@ set_reexchange_timeout(struct ssh_connection *connection,
 /* Maximum lifetime for the session keys. Use longer timeout on
  * the server side. */
 
+#if STRESS_KEYEXCHANGE
+# define SESSION_KEY_LIFETIME_CLIENT 4
+# define SESSION_KEY_LIFETIME_SERVER 14
+#else
 /* 40 minutes */
-#define SESSION_KEY_LIFETIME_CLIENT 2400
+# define SESSION_KEY_LIFETIME_CLIENT 2400
 /* 90 minutes */
-#define SESSION_KEY_LIFETIME_SERVER 5400
+# define SESSION_KEY_LIFETIME_SERVER 5400
+#endif
 
 static void
 do_handle_newkeys(struct packet_handler *c,
@@ -905,26 +915,4 @@ keyexchange_finish(struct ssh_connection *connection,
   connection_send_kex_end(connection);
   
   connection->read_kex_state = KEX_STATE_NEWKEYS;
-
-#if 0
-  /* This message is rather pointless, and some implementations don't
-   * handle it properly. */
-#if DATAFELLOWS_WORKAROUNDS
-  if (! (connection->peer_flags & PEER_SEND_NO_DEBUG))
-#endif
-    send_verbose(connection->write, "Key exchange successful!", 0);
-#endif
-  
-  /* FIXME: If we have stopped readin channel sources during the key
-   * exchange, we must get them started again, perhaps by calling
-   * CHANNEL_ADJUST(channel, 0) for all channels. Can we reuse the
-   * connection->established hook for that? */
-  
-  if (connection->established)
-    {
-      struct command_continuation *c = connection->established;
-      connection->established = NULL;
-  
-      COMMAND_RETURN(c, connection);
-    }
 }

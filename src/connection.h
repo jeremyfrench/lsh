@@ -202,9 +202,11 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        (key_expire object resource)
        (sent_data . UINT32)
        
-       ; What to do once the connection is established
-       (established object command_continuation)
-       
+       ; Invoked at the end of keyexchange.
+       ; Automatically reset to zero after each invocation.
+       ; Gets the connection as argument.
+       (keyexchange_done object command_continuation)
+              
        (kexinits array (object kexinit) 2)
        (literal_kexinits array (string) 2)
 
@@ -232,12 +234,16 @@ struct ssh_connection *
 make_ssh_connection(enum connection_flag flags,
 		    struct address_info *peer,
 		    const char *id_comment,
-		    struct command_continuation *c,
 		    struct exception_handler *e);
 
 void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,
 			struct randomness *r);
+
+
+void
+connection_after_keyexchange(struct ssh_connection *self,
+			     struct command_continuation *c);
 
 struct lsh_callback *
 make_connection_close_handler(struct ssh_connection *c);

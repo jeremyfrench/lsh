@@ -336,7 +336,6 @@ struct ssh_connection *
 make_ssh_connection(enum connection_flag flags,
 		    struct address_info *peer,
 		    const char *debug_comment,
-		    struct command_continuation *c,
 		    struct exception_handler *e)
 {
   int i;
@@ -353,7 +352,7 @@ make_ssh_connection(enum connection_flag flags,
    * protocol errors */
   connection->e = make_exc_connection_handler(connection, e, HANDLER_CONTEXT);
 
-  connection->established = c;
+  connection->keyexchange_done = NULL;
   
   /* Initialize instance variables */
 
@@ -457,6 +456,13 @@ connection_init_io(struct ssh_connection *connection,
        : ssh_format("Sent")));
 }
 
+void
+connection_after_keyexchange(struct ssh_connection *self,
+			     struct command_continuation *c)
+{
+  assert(!self->keyexchange_done);
+  self->keyexchange_done = c;
+}
 
 /* GABA:
    (class
@@ -522,7 +528,13 @@ connection_send_kex_end(struct ssh_connection *self)
 
   self->send_kex_only = 0;
 
-  /* FIXME: Restart channels */
+  if (self->keyexchange_done)
+    {
+      struct command_continuation *c = self->keyexchange_done;
+      self->keyexchange_done = NULL;
+  
+      COMMAND_RETURN(c, self);
+    }
 }
 
 /* Serialization. */
