@@ -23,16 +23,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#warning read_data obsolete. See channel.c: do_read_channel()
-
 #ifndef LSH_READ_DATA_H_INCLUDED
 #define LSH_READ_DATA_H_INCLUDED
 
-#include "abstract_io.h"
+#include "channel.h"
 
-struct read_handler *make_read_data(struct abstract_write *handler,
-				    struct callback *close_callback,
-				    UINT32 block_size);
+struct read_handler *make_read_data(struct ssh_channel *channel,
+				    struct abstract_write *write);
 
 #endif /* LSH_READ_DATA_H_INCLUDED */
 

@@ -31,62 +31,75 @@ struct read_data
 {
   struct read_handler super; /* Super type */
 
-  UINT32 block_size;
-
   /* Where to send the data */
-  struct abstract_write *handler;
+  struct abstract_write *write;
 
-  struct callback *close_callback;
+  /* For flow control. */
+   
+  /* FIXME: Perhaps the information that is needed for flow control
+   * should be abstracted out from the channel struct? */
+
+  struct ssh_channel *channel;
 };
 
 static int do_read_data(struct read_handler **h,
 			struct abstract_read *read)
 {
   struct read_data *closure = (struct read_data *) *h;
-
-  MDEBUG(closure);
+  int to_read;
+  int n;
+  struct lsh_string *packet;
   
-#if 0
-  while(1)
-#endif
-    {
-      struct lsh_string *packet = lsh_string_alloc(closure->block_size);
-      int n = A_READ(read, packet->length, packet->data);
-      
-      switch(n)
-	{
-	case 0:
-	  lsh_string_free(packet);
-	  break;
-	case A_FAIL:
-	  /* Fall through */
-	case A_EOF:
-	  CALLBACK(closure->close_callback);
-	  return LSH_OK | LSH_CLOSE;
-	default:
-	  {
-	    packet->length = n;
+  MDEBUG_SUBTYPE(closure);
 
-	    return A_WRITE(closure->handler, packet);
-	  }
-	}
+  if (closure->channel->flags &
+      (CHANNEL_RECIEVED_CLOSE | CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
+    return LSH_FAIL | LSH_DIE;
+      
+  to_read = MIN(closure->channel->send_max_packet,
+		closure->channel->send_window_size);
+
+  if (!to_read)
+    {
+      /* Stop reading */
+      return LSH_OK | LSH_HOLD;
     }
-  return LSH_OK | LSH_GOON;
+  
+  packet = lsh_string_alloc(to_read);
+  n = A_READ(read, to_read, packet->data);
+
+  switch(n)
+    {
+    case 0:
+      lsh_string_free(packet);
+      return LSH_OK | LSH_GOON;
+    case A_FAIL:
+      /* Send a channel close, and prepare the channel for closing */      
+      channel_close(closure->channel);
+      return LSH_FAIL | LSH_DIE;
+    case A_EOF:
+      /* Send eof (but no close). */
+      channel_eof(closure->channel);
+      return LSH_OK | LSH_DIE;
+    default:
+      packet->length = n;
+
+      /* FIXME: Should we consider the error code here? Probably not;
+       * an error here means that the fd connected to the channel will be closed.
+       * Cleaning up the channel itself should be taken care of later. */
+      return A_WRITE(closure->write, packet);
+    }
 }
 
-struct read_handler *make_read_data(struct abstract_write *handler,
-				    struct callback *close_callback,
-				    UINT32 block_size)
+struct read_handler *make_read_data(struct ssh_channel *channel,
+				    struct abstract_write *write)
 {
   struct read_data *closure;
 
   NEW(closure);
 
   closure->super.handler = do_read_data;
-  closure->block_size = block_size;
-
-  closure->handler = handler;
-  closure->close_callback = close_callback;
+  closure->write = write;
 
   return &closure->super;
 }
