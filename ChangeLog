@@ -1,3 +1,21 @@
+2002-07-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/unix_user.c (do_spawn): Allow err[1] and out[1] to be the
+	same fd.
+
+	* src/server_x11.c (do_xauth_exit): Log a message if xauth failed. 
+	(server_x11_setup): Fixed format of display string.
+	(server_x11_setup): Use an absolute filename for the xauth program.
+	(server_x11_setup): Added missing new line on the xauth command
+	line. 
+
+	* src/server_session.c (init_spawn_info): Set DISPLAY and
+	XAUTHORITY, if x11 forwarding was requested. Updated callers, as
+	the size of env changed.
+	(do_x11_req): Bugfix, the single flag is one byte, not four.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added server_x11.c.
+
 2002-06-28  Niels Möller  <niels@s3.kth.se>
 
 	* src/lshd.c (main_options): New options, --tcpip-forward,
