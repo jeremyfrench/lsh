@@ -145,14 +145,6 @@ do_authenticate(struct userauth *ignored UNUSED,
   struct lsh_string *password = NULL;
   /* struct unix_service *service; */
   int change_passwd;
-
-#if 0
-  if (!( (service = ALIST_GET(closure->services, requested_service))))
-    {
-      lsh_string_free(username);
-      return LSH_AUTH_FAILED;
-    }
-#endif
   
   username = utf8_to_local(username, 1, 1);
   if (!username)

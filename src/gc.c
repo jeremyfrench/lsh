@@ -35,9 +35,6 @@ static struct lsh_object *all_objects = NULL;
 static unsigned number_of_objects = 0;
 static unsigned live_objects = 0;
 
-#if 0
-static struct lsh_object *globals = NULL;
-#endif
 
 #if DEBUG_ALLOC
 static void sanity_check_object_list(void)

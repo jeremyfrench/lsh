@@ -31,8 +31,4 @@
 struct lsh_string *format_service_request(int name);
 struct lsh_string *format_service_accept(int name);
 
-#if 0
-struct ssh_service *make_meta_service(struct alist *services);
-#endif
-
 #endif /* LSH_SERVICE_H_INCLUDED */

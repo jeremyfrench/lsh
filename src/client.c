@@ -382,37 +382,27 @@ do_client_io(struct command *s UNUSED,
 	     struct exception_handler *e UNUSED)
 
 {
+  CAST(client_session, session, x);
+  struct ssh_channel *channel = &session->super;
   assert(x);
-#if 0
-  if (!x)
-    {
-      werror("do_client_io: Starting shell failed.\n");
-      return LSH_CHANNEL_CLOSE | LSH_FAIL;
-    }
-  else
-#endif
-    {
-      CAST(client_session, session, x);
-      struct ssh_channel *channel = &session->super;
 
-      channel->receive = do_receive;
+  channel->receive = do_receive;
   
-      session->out->super.close_callback
-	= session->err->super.close_callback = make_channel_close(channel);
+  session->out->super.close_callback
+    = session->err->super.close_callback = make_channel_close(channel);
   
-      session->in->super.read = make_channel_read_data(channel);
+  session->in->super.read = make_channel_read_data(channel);
 
-      channel->send = do_send_first;
+  channel->send = do_send_first;
 
-      ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
-		make_handle_exit_status(session->exit_status));
-      ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
-		make_handle_exit_signal(session->exit_status));
+  ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
+	    make_handle_exit_status(session->exit_status));
+  ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
+	    make_handle_exit_signal(session->exit_status));
 
-      channel->eof = do_client_session_eof;
+  channel->eof = do_client_session_eof;
       
-      COMMAND_RETURN(c, channel);
-    }
+  COMMAND_RETURN(c, channel);
 }
 
 struct command client_io =

@@ -77,14 +77,6 @@ do_tcpip_connect_io(struct command *ignored UNUSED,
 
   assert(socket);
 
-#if 0
-  debug("tcpforward_commands.c: do_tcpip_connect_io, socket is %z\n",
-	socket ? "valid" : "invalid");
-  
-  if (!socket)
-    COMMAND_RETURN(c, NULL);
-#endif
-  
   COMMAND_RETURN(c, make_tcpip_channel(socket, TCPIP_WINDOW_SIZE));
 }
 
@@ -104,17 +96,6 @@ do_tcpip_start_io(struct command *s UNUSED,
   CAST_SUBTYPE(ssh_channel, channel, x);
 
   assert(channel);
-
-#if 0
-  debug("tcpforward_commands.c: do_tcpip_start_io, channel is %z\n",
-	channel ? "valid" : "invalid");
-
-  if (!channel)
-    {
-      verbose("Error opening channel.\n");
-      COMMAND_RETURN(c, NULL);
-    }
-#endif
   
   tcpip_channel_start_io(channel);
 

@@ -86,48 +86,6 @@ static int lookup_sexp_format(const char *name)
          (write (read in)))))
 */
 
-#if 0
-static void
-do_exc_sexp_conv_io_handler(struct exception_handler *self,
-			    const struct exception *x)
-{
-  if (x->type & EXC_IO)
-    {
-      CAST_SUBTYPE(io_exception, e, x);
-
-      switch(x->type)
-	{
-	case EXC_IO_EOF:
-	  close_fd_nicely(e->fd, 0);
-	  break;
-	case EXC_IO_READ:
-	case EXC_IO_WRITE:
-	  if (e->fd)
-	    close_fd(e->fd, 0);
-	  exit_code = EXIT_FAILURE;
-	  break;
-	default:
-	  exit_code = EXIT_FAILURE;
-	  EXCEPTION_RAISE(self->parent, x);
-	  return;
-	}
-      werror("lsh: %z, (errno = %i)\n", x->msg, e->error);
-    }
-  else
-    EXCEPTION_RAISE(self->parent, x);
-}
-
-static struct exception_handler exc_io_handler
-= STATIC_EXCEPTION_HANDLER(do_exc_sexp_conv_io_handler, &default_exception_handler);
-#endif
-
-/* ;; GABA:
-   (class
-     (name exc_sexp_conv_handler)
-     (super exception_handler)
-     (vars
-       (in object io_fd)))
-*/
 
 static void
 do_exc_sexp_conv_handler(struct exception_handler *self,
@@ -160,18 +118,6 @@ do_exc_sexp_conv_handler(struct exception_handler *self,
     }
 }
 
-#if 0
-static struct exception_handler *
-make_exc_sexp_conv_handler(struct io_fd *in)
-{
-  NEW(exc_sexp_conv_handler, self);
-  self->super.raise = do_exc_sexp_conv_handler;
-  self->super.parent = &default_exception_handler;
-  self->in = in;
-
-  return &self->super;
-}
-#endif
 
 #define SEXP_BUFFER_SIZE 1024
 

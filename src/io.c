@@ -265,61 +265,6 @@ int io_iter(struct io_backend *b)
 }
 
 
-/* ;;GABA:
-   (class
-     (name fd_read)
-     (super abstract_read)
-       (vars
-         (fd object lsh_fd)))
-*/
-
-#if 0
-static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
-{
-  CAST(fd_read, closure, *r);
-
-  if (!length)
-    {
-      werror("io.c: do_read(): Zero length read was requested.\n");
-      return 0;
-    }
-
-  for (;;)
-    {
-      int res;
-
-      if (! (closure->fd->super.alive && closure->fd->want_read) )
-	return 0;
-      
-      if (! (res = read(closure->fd->fd, buffer, length)) )
-	{
-	  debug("Read EOF on fd %i.\n", closure->fd->fd);
-	  return A_EOF;
-	}
-      if (res > 0)
-	return res;
-
-      switch(errno)
-	{
-	case EINTR:
-	  continue;  /* FIXME: Is it really worth looping here,
-		      * instead of in the select loop? */
-	case EWOULDBLOCK:  /* aka EAGAIN */
-	  return 0;
-	case EPIPE:
-	  werror("io.c: read() returned EPIPE! Treating it as EOF.\n");
-	  return A_EOF;
-	default:
-	  werror("io.c: do_read: read() failed (errno %i), %z\n",
-		 errno, STRERROR(errno));
-	  debug("  fd = %i, buffer = %xi, length = %i\n",
-		closure->fd, buffer, length);
-	  return A_FAIL;
-	}
-    }
-}
-#endif
-
 static void do_buffered_read(struct io_read_callback *s,
 			     struct lsh_fd *fd)
 {
@@ -455,103 +400,6 @@ void init_consuming_read(struct io_consuming_read *self,
   self->consumer = consumer;
 }
 			 
-#if 0
-static void read_callback(struct lsh_fd *fd)
-{
-  CAST(io_fd, self, fd);
-  int res;
-  
-  assert(self->read_buffer);
-
-  res = read_buffer_fill_fd(self->read_buffer_fill_fd, fd->fd);
-
-  if (res < 0)
-    switch(errno)
-      {
-      case EINTR:
-	return;
-      case EWOULDBLOCK:
-	werror("io.c: read_callback: Unexpected EWOULDBLOCK\n");
-      case EPIPE:
-	fatal("EPIPE should probably be handled as EOF. Not implemented.\n");
-      default:
-	EXCEPTION_RAISE(fd->e, fd,
-			make_io_exception(EXC_IO_READ),
-			errno, NULL);
-      }
-
-  
-  while (fd->super.alive && fd->want_read)
-    {
-      if (!read_buffer_flush())
-	{
-	  EXCEPTION_RAISE(fd->e, make_io_exception(EXC_IO_EOF, fd, 0, "EOF"));
-	  break;
-	}
-    }
-
-  read_buffer_justify(self->read_buffer);
-
-  assert(!(self->read_buffer->start
-	   && fd->super.alive && fd->want_read));
-}
-
-static void read_callback(struct lsh_fd *fd)
-{
-  CAST(io_fd, self, fd);
-  int res;
-
-  struct fd_read r =
-  { { STACK_HEADER, do_read }, fd->fd };
-
-  /* The handler function may install a new handler */
-  res = READ_HANDLER(self->handler,
-		     &r.super);
-
-  /* NOTE: These flags are not mutually exclusive. All combinations
-   * must be handled correctly. */
-  
-  /* NOTE: (i) If LSH_DIE is set, LSH_CLOSE is ignored. (ii) If the fd
-   * is read_only, LSH_CLOSE is the same as LSH_DIE. */
-
-  /* This condition must be taken care of earlier. */
-  assert(!(res & LSH_CHANNEL_FINISHED));
-
-  /* Not implemented */
-  assert(!(res & LSH_KILL_OTHERS));
-
-  if (res & LSH_HOLD)
-    {
-      /* This flag should not be combined with anything else */
-      assert(res == LSH_HOLD);
-      fd->want_read = 0;
-    }
-  if (res & LSH_DIE)
-    {
-      if (self->buffer)
-	write_buffer_close(self->buffer);
-
-      close_fd(fd,
-	       LSH_FAILUREP(res) ? CLOSE_PROTOCOL_FAILURE : 0);
-    }
-  else if (res & LSH_CLOSE)
-    {
-      if (self->buffer)
-	{
-	  write_buffer_close(self->buffer);
-	  /* Don't attempt to read any further. */
-	  /* FIXME: Is it safe to free the handler here? */
-	  self->super.want_read = 0;
-	  self->handler = NULL;
-	}
-      else
-	kill_fd(fd);
-		  
-      fd->close_reason
-	= LSH_FAILUREP(res) ? CLOSE_PROTOCOL_FAILURE : CLOSE_EOF;
-    }
-}
-#endif
 
 static void write_callback(struct lsh_fd *fd)
 {
@@ -743,36 +591,11 @@ static void init_file(struct io_backend *b, struct lsh_fd *f, int fd,
  * used to read key-files, so that change probably has to wait until
  * the parser is rewritten. */
 
-#if 0
-/* ;; GABA:
-   (class
-     (name blocking_read_exception_handler)
-     (super exception_handler)
-     (vars
-       (flag . int)))
-*/
-
-static void
-do_blocking_read_handler(struct exception_handler *s,
-			 const struct exception *e UNUSED)
-{
-  CAST(blocking_read_exception_handler, self, s);
-  self->flag = 1;
-}
-#endif
 
 #define BLOCKING_READ_SIZE 4096
 
 int blocking_read(int fd, struct read_handler *handler)
-{
-#if 0
-  struct blocking_read_exception_handler exc_handler =
-  {
-    { STACK_HEADER, do_blocking_read_handler },
-    0
-  };
-#endif
-  
+{  
   char *buffer = alloca(BLOCKING_READ_SIZE);
   
   for (;;)
@@ -1252,10 +1075,6 @@ struct io_fd *io_read_write(struct io_fd *fd,
   /* Reading */
   fd->super.read = read;
   fd->super.want_read = !!read;
-#if 0
-  fd->handler = handler; 
-  fd->read_buffer = make_fd_read_buffer(READ_BUFFER_SIZE); 
-#endif
   
   /* Writing */
   fd->super.prepare = prepare_write;
@@ -1278,10 +1097,6 @@ struct io_fd *io_read(struct io_fd *fd,
   /* Reading */
   fd->super.want_read = !!read;
   fd->super.read = read;
-#if 0
-  fd->handler = handler;
-  fd->read_buffer = make_fd_read_buffer(READ_BUFFER_SIZE);
-#endif
   
   fd->super.close_callback = close_callback;
 

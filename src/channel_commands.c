@@ -24,6 +24,7 @@
 
 #include "channel_commands.h"
 
+#include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
 

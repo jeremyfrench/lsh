@@ -391,61 +391,6 @@ void channel_start_receive(struct ssh_channel *channel)
 	  (channel, channel->max_window - channel->rec_window_size));
 }
 
-#if 0
-/* Process channel-related status codes. Used by the packet handlers,
- * before returning. */
-static int channel_process_status(struct channel_table *table,
-				  int channel,
-				  int status)
-{
-  struct ssh_channel *c = table->channels[channel];
-  
-  while (!LSH_CLOSEDP(status))
-    {
-      if (status & LSH_CHANNEL_CLOSE)
-	{ /* Close the channel now */ 
-	  if (!c->flags & CHANNEL_SENT_CLOSE)
-	    status |= channel_close(c);
-	  break;
-	}
-      
-      if (status & LSH_CHANNEL_READY_SEND)
-	{
-	  status &= ~ LSH_CHANNEL_READY_SEND;
-	  if (c->send_window_size)
-	    status |= CHANNEL_SEND(c);
-	}
-      else if (status & LSH_CHANNEL_READY_REC)
-	{
-	  status &= ~ LSH_CHANNEL_READY_REC;
-	  status |= channel_start_receive(c);
-	}
-      else
-	break;
-    }
-	
-  if (status & LSH_CHANNEL_FINISHED)
-    {
-      /* Clear this bit */
-      status &= ~LSH_CHANNEL_FINISHED;
-
-      if (c->close)
-	status |= CHANNEL_CLOSE(c);
-      
-      dealloc_channel(table, channel);
-    }
-
-  if (status & LSH_CHANNEL_PENDING_CLOSE)
-    table->pending_close = 1;
-  
-  /* If this was the last channel, close connection */
-  if (table->pending_close && !table->next_channel)
-    status |= LSH_CLOSE;
-
-  return status;
-}
-#endif
-
 
 /* Ugly macros to make it a little simpler to free the input packet at
  * the right time. */
@@ -455,11 +400,6 @@ static int channel_process_status(struct channel_table *table,
                     lsh_string_free((s)); \
                     return; } while(0)
 
-#if 0
-#define ERROR(e, msg) \
-  EXCEPTION_RAISE(e, make_protocol_exception \
-    (SSH_DISCONNECT_PROTOCOL_ERROR, msg))
-#endif
 
 /* Channel related messages */
 
@@ -639,81 +579,6 @@ do_global_request_failure(struct packet_handler *s UNUSED,
   END(packet);
 }
 
-#if 0
-/* HERE!!! */
-/* FIXME: Split into a continuation and an exception handler */
-/* Callback given to the CHANNEL_OPEN method */
-static int do_channel_open_response(struct channel_open_callback *c,
-                                    struct ssh_channel *channel,
-                                    UINT32 error, char *error_msg,
-                                    struct lsh_string *args)
-{
-  CAST(channel_open_response, closure, c);
-  
-  int local_channel_number;
-
-  if (!channel)
-    {
-      if (error)
-        C_WRITE(closure->super.connection->write,
-		format_open_failure(closure->remote_channel_number,
-				    error, error_msg, ""));
-      else
-	EXCEPTION_RAISE(closure->super.connection->e,
-			make_protocol_exception())
-      return LSH_FAIL | LSH_DIE;
-    }
-
-  /* FIXME: It would be better to allocate or at least reserve a channel number earlier,
-   * so that we can't fail at this point.
-   */
-  if ( (local_channel_number
-            = register_channel(closure->super.connection,
-			       channel)) < 0)
-    {
-      werror("Could not allocate a channel number for opened channel!\n");
-      return A_WRITE(closure->super.connection->write,
-                     format_open_failure(closure->remote_channel_number,
-                                         SSH_OPEN_RESOURCE_SHORTAGE,
-                                         "Could not allocate a channel number "
-                                         "(shouldn't happen...)", ""));
-    }
-
-  /* FIXME: This copying could just as well be done by the
-   * CHANNEL_OPEN handler? Then we can remove the corresponding fields
-   * from the closure as well. */
-  channel->send_window_size = closure->window_size;
-  channel->send_max_packet = closure->max_packet;
-  channel->channel_number = closure->remote_channel_number;
-
-  /* FIXME: Is the channel->write field really needed? */
-  channel->write = closure->super.connection->write;
-
-  return A_WRITE(closure->super.connection->write,
-                 args
-                 ? format_open_confirmation(channel, local_channel_number,
-                                            "%lfS", args)
-                 : format_open_confirmation(channel, local_channel_number,
-                                            ""));
-}
-
-static struct channel_open_response *
-make_channel_open_response(struct ssh_connection* connection,
-			   UINT32 remote_channel_number,
-			   UINT32 window_size,
-			   UINT32 max_packet)
-{
-  NEW(channel_open_response, closure);
-
-  closure->super.response = do_channel_open_response;
-  closure->super.connection = connection;
-  closure->remote_channel_number = remote_channel_number;
-  closure->window_size = window_size;
-  closure->max_packet = max_packet;
-
-  return closure;
-}
-#endif
 
 /* GABA:
    (class
@@ -1543,19 +1408,6 @@ do_connection_service(struct command *s UNUSED,
   COMMAND_RETURN(c, connection);
 }
 
-#if 0
-struct command *make_connection_service(struct alist *global_requests,
-					struct alist *channel_types)
-{
-  NEW(connection_service, self);
-
-  self->super.call = do_connection_service;
-  self->global_requests = global_requests;
-  self->channel_types = channel_types;
-  
-  return &self->super;
-}
-#endif
 
 struct command
 connection_service = STATIC_COMMAND(do_connection_service);

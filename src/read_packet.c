@@ -43,25 +43,6 @@
 
 #include "read_packet.c.x"
 
-#if 0
-/* ;;GABA:
-   (class
-     (name flag_exception)
-     (super exception_frame)
-     (vars
-       (flag . int)))
-*/
-
-static void
-do_flag_exception(struct exception_handler *s,
-		  struct exception *e)
-{
-  CAST(flag_exception, self, s);
-  self->flag = 1;
-
-  EXCEPTION_RAISE(self->super.parent, e);
-}
-#endif
 
 /* GABA:
    (class
@@ -113,19 +94,6 @@ lsh_string_realloc(struct lsh_string *s, UINT32 length)
     return s;
 }
 
-#if 0
-
-/* For efficiency, allow reading several packets at a time. But in
- * order not to starve other channels, return when this much data has
- * been read. */
-#define QUANTUM 1024
-
-static const struct io_exception read_exception =
-STATIC_IO_EXCEPTION(EXC_IO, "read_packet: i/o error");
-
-static const struct io_exception read_eof =
-STATIC_IO_EXCEPTION(EXC_IO_EOF, "read_packet: Read EOF");
-#endif
 
 #define READ(n, dst) do {				\
   memcpy((dst)->data + closure->pos, data, (n));	\

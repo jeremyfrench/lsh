@@ -50,29 +50,6 @@
        (next object abstract_write)))
 */
 
-#if 0
-/* A read-function returning n means:
- *
- * n > 0: n bytes were read successfully.
- * n = 0: No more data available, without blocking.
- * n = -1: Read failed.
- * n = -2: EOF.
- */
-#define A_FAIL -1
-#define A_EOF -2
-
-/* ;; GABA:
-   (class
-     (name abstract_read)
-     (vars
-       ;; FIXME: Should we allow that the read method is called with
-       ;; length = 0? I think so.
-       (read indirect-method int
-             "UINT32 length" "UINT8 *buffer")))
-*/
-
-#define A_READ(f, length, buffer) (f)->read(&(f), (length), (buffer))
-#endif
 
 /* May store a new handler into *h. */
 
@@ -94,43 +71,5 @@
 */
 
 #define READ_HANDLER(h, l, d) ((h)->handler(&(h), (l), (d)))
-
-/* ;;GABA:
-   (class
-     (name read_consumer)
-     (vars
-       ; Returns the maximum number of octets that
-       ; can be consumed immediately.
-       (query method UINT32)
-       (consume object abstract_write)))
-*/
-#if 0
-#define READ_QUERY(c) ((c)->query((c)))
-#define READ_CONSUME(c, s) A_WRITE(c->consume, s)
-#endif
-
-#if 0
-/* ;; GABA:
-   (class
-     (name read_handler)
-     (vars
-       (handler indirect-method void "struct abstract_read *read")))
-                                     ;; "struct exception_handler *io")))
-*/
-
-#define READ_HANDLER(h, read) ((h)->handler(&(h), (read)))
-#endif
-#if 0
-/* Return values */
-/* Everything's fine */
-#define READ_OK 0
-/* Can't process any more data right now; please hold */
-#define READ_HOLD 1
-/* Close nicely, after flushing the write buffer */
-#define READ_CLOSE 2
-/* Close immediately */
-#define READ_DIE 3
-#endif
-
 
 #endif /*LSH_ABSTRACT_IO_H_INCLUDED */

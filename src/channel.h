@@ -197,9 +197,6 @@
        ))
 */
 
-#if 0
-#define CHANNEL_EXC_HANDLER(c) (&((c)->table.super))
-#endif
 
 /* SSH_MSG_GLOBAL_REQUEST */
 
@@ -239,25 +236,6 @@
 
 struct exception *make_channel_open_exception(UINT32 error_code, char *msg);
 
-#if 0
-/* Callback function, used to report success or failure for a
- * requested channel open. */
-  
-/* ;;GABA:
-   (class
-     (name channel_open_callback)
-     (vars
-       (response method int
-                "struct ssh_channel *channel"
-                "UINT32 error"
-                "char *error_msg"
-                "struct lsh_string *args")
-       (connection object ssh_connection)))
-*/
-
-#define CHANNEL_OPEN_CALLBACK(c, ch, e, m, a) \
-  (c)->response((c), (ch), (e), (m), (a))
-#endif
 
 /* GABA:
    (class
@@ -361,9 +339,5 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
 
 extern struct command connection_service;
 
-#if 0
-struct command *make_connection_service(struct alist *global_requests,
-					struct alist *channel_types);
-#endif
 
 #endif /* LSH_CHANNEL_H_INCLUDED */

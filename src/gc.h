@@ -28,10 +28,6 @@
 
 #include "lsh.h"
 
-#if 0
-void gc_register_global(struct lsh_object *o);
-#endif
-
 void gc_register(struct lsh_object *o);
 void gc_kill(struct lsh_object *o);
 

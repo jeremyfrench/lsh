@@ -536,17 +536,6 @@ int main(int argc, char **argv)
     
       COMMAND_CALL(server_listen, local,
 		   &discard_continuation, &default_exception_handler);
-#if 0
-      if (res)
-	{
-	  if (res & LSH_COMMAND_FAILED)
-	    werror("lshd: Failed to bind port. (errno = %i) %z\n",
-		   errno, STRERROR(errno));
-	  else
-	    werror("lshd: Unexpected failure from listen: %i\n", res);
-	  return EXIT_FAILURE;
-	}
-#endif
     }
   }
   

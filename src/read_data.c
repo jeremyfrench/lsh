@@ -62,45 +62,6 @@ static UINT32 do_read_data_query(struct io_consuming_read *s)
 	     self->channel->send_window_size);
 }
 
-#if 0
-{
-  if (!to_read)
-    {
-      return 
-      /* FIXME: Do this in some other way */
-      /* Stop reading */
-      return LSH_OK | LSH_HOLD;
-    }
-  
-  packet = lsh_string_alloc(to_read);
-  n = A_READ(read, to_read, packet->data);
-
-  switch(n)
-    {
-    case 0:
-      lsh_string_free(packet);
-      return;
-    case A_FAIL:
-      /* Send a channel close, and prepare the channel for closing */
-      lsh_string_free(packet);
-
-      /* FIXME: Raise some appropriate exception */
-      channel_close(closure->channel);
-      return;
-      
-    case A_EOF:
-      if (!--closure->channel->sources)
-	/* Send eof (but no close). */
-	channel_eof(closure->channel);
-      *h = NULL;
-      return;
-    default:
-      packet->length = n;
-
-      A_WRITE(closure->write, packet);
-    }
-}
-#endif
 
 struct io_read_callback *make_read_data(struct ssh_channel *channel,
 					struct abstract_write *write)
@@ -162,9 +123,6 @@ do_exc_read_eof_channel_handler(struct exception_handler *s,
 	  /* Close channel */
 	  channel_close(self->channel);
 
-#if 0
-	close_fd(exc->fd, 0);
-#endif
 	break;
       }
 	

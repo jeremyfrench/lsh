@@ -162,24 +162,6 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *c)
   return &make_trace(name, real)->super;
 }
 
-#if 0
-/* This command should be obsoleted by the exception mechanism */
-/* Fail if NULL. This commands returns its argument unchanged. Unless
- * it is NULL, in which case it doesn't return at all, but instead
- * returns an LSH_FAIL status to the mainloop. */
-
-static int
-do_command_die_on_null(struct command *s UNUSED,
-		       struct lsh_object *x,
-		       struct command_continuation *c,
-		       struct exception_handler *e)
-{
-  return x ? COMMAND_RETURN(c, x) : LSH_FAIL | LSH_DIE;
-}
-
-struct command command_die_on_null =
-{ STATIC_HEADER, do_command_die_on_null};
-#endif
 
 /* Collecting arguments */
 struct lsh_object *

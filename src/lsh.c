@@ -235,15 +235,6 @@ do_lsh_default_handler(struct exception_handler *s,
 	case EXC_IO_EOF:
 	  close_fd_nicely(exc->fd, 0);
 	  break;
-#if 0
-	case EXC_IO_CONNECT:
-	case EXC_IO_READ:
-	case EXC_IO_WRITE:
-	  if (exc->fd)
-	    close_fd(exc->fd, 0);
-	  *self->status = EXIT_FAILURE;
-	  break;
-#endif
 	default:
 	  *self->status = EXIT_FAILURE;
 	  EXCEPTION_RAISE(self->super.parent, e);

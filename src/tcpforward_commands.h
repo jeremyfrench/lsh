@@ -27,33 +27,6 @@
 
 #include "tcpforward.h"
 
-#if 0
-#define GABA_DECLARE
-#include "tcpforward_commands.h.x"
-#undef GABA_DECLARE
-#endif
-
-#if 0
-/* ;;GABA:
-   (class
-     (name remote_listen_value)
-     (vars
-       (c object channel_open_callback)
-       (peer object address_info)))
-*/
-
-static struct remote_listen_value *
-make_remote_listen_value(struct channel_open_callback *c,
-			 struct address_info *peer)
-{
-  NEW(remote_listen_value, res);
-  res->c = c;
-  res->peer = peer;
-
-  return res;
-}
-#endif
-
 struct command *
 make_forward_local_port(struct io_backend *backend,
 			struct address_info *local,

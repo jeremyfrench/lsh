@@ -437,17 +437,6 @@ sexp_parse_hex(struct simple_buffer *buffer)
   return res;
 }
 
-#if 0
-struct base64_state
-{
-  /* Bits are shifted into the buffer from the right, 6 at a time */
-  unsigned buffer;
-  /* Bits currently in the buffer */
-  unsigned bits;
-
-  UINT8 terminator;
-};
-#endif
 
 /* Extracts one octet from the base64 encoded input. */
 static int sexp_decode_base64(struct simple_buffer *buffer,
