@@ -36,6 +36,7 @@
 
 #include "format.h"
 #include "parse.h"
+#include "lsh_string.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -372,18 +373,18 @@ static int cc_lflags[] = {
 
 #define PARSE_FLAGS(cc, bits, offset) do {			\
   debug("tty_encode_term_mode: termios bits %xi (offset %i)\n",	\
-        (bits), (offset));					\
+	(bits), (offset));					\
   for (i=0; i<SIZE(cc); i++)					\
     if (cc[i])							\
       {								\
-      	uint32_t r;						\
-      	if ( (new->length - p) < 5)				\
-      	  goto fail;						\
+	uint32_t r;						\
+	if (p + 5 > length)					\
+	  goto fail;						\
 								\
-      	r = ((bits) & (cc)[i]) ? 1 : 0;				\
-      	new->data[p++] = i + (offset);				\
-      	WRITE_UINT32(new->data + p, r);				\
-      	p += 4;							\
+	r = ((bits) & (cc)[i]) ? 1 : 0;				\
+	lsh_string_putc(new, p++, i+(offset));			\
+	lsh_string_write_uint32(new, p, r);			\
+	p += 4;							\
       }								\
 } while(0)
      
@@ -393,18 +394,18 @@ tty_encode_term_mode(struct termios *ios)
   unsigned int i;
   struct lsh_string *new;
   uint32_t p = 0;
-  
-  new = lsh_string_alloc(650);
+  const uint32_t length = 650;
+  new = lsh_string_alloc(length);
 
   for (i=0; i<SIZE(cc_ndx); i++)
     {
       if (cc_ndx[i] != -1)
 	{
-	  if ( (new->length - p) < 5)
+	  if (p + 5 > length)
 	    goto fail;
-	  
-	  new->data[p++] = i + 1;
-	  WRITE_UINT32(new->data + p, ios->c_cc[cc_ndx[i]]);
+
+	  lsh_string_putc(new, p++, i+1);
+	  lsh_string_write_uint32(new, p, ios->c_cc[cc_ndx[i]]);
 	  p += 4;
 	}
     }
@@ -413,10 +414,10 @@ tty_encode_term_mode(struct termios *ios)
   PARSE_FLAGS(cc_oflags, ios->c_oflag, 70);
   PARSE_FLAGS(cc_cflags, ios->c_cflag, 90);
 
-  if ( (new->length - p) < 1)
+  if (p + 1 > length)
     goto fail;
-  
-  new->data[p++] = 0;
+
+  lsh_string_putc(new, p++, 0);
   lsh_string_trunc(new, p);
   
   return new;
@@ -425,6 +426,8 @@ fail:
   lsh_string_free(new);
   return NULL;
 }
+
+#undef PARSE_FLAGS
 
 #define TTY_SET_VALUE(target, param, table, index)	\
 do {							\
