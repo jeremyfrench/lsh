@@ -89,8 +89,7 @@ session, are even more subtle. The basic rules are:
 
 2. When SSH_MSG_CHANNEL_EOF is both sent and received,
    SSH_MSG_CHANNEL_CLOSE is sent. This is a rule with a few
-   exceptions, controlled by the CHANNEL_CLOSE_AT_EOF, see below.
-   gatewaying channels).
+   exceptions, controlled by the CHANNEL_CLOSE_AT_EOF flag, see below.
 
 These two rules are sufficient for most channel types.
 

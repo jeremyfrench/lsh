@@ -1,3 +1,81 @@
+2001-03-14  Niels Möller  <nisse@ehand.com>
+
+	* src/tcpforward.h (remote_port): Deleted c attribute.
+
+	* src/string_buffer.c (string_buffer_length): Deleted.
+
+	* src/spki_commands.h (make_spki_parse_key): Deleted. 
+
+	* src/spki_commands.c (spki_read_acls_command): Deleted.  
+
+	* src/sexp.h (sexp_iterator): Deleted set method. 
+	(SEXP_SET): Deleted.
+
+	* src/sexp.c (do_nil_get): New function.
+	(do_nil_assoc): New function.
+	(do_nil_left): New function.
+	(do_nil_next): New function.
+	(make_iter_nil): New function.
+	(do_format_nil): New function.
+	(sexp_nil): New definition, that isn't a cons.
+	(do_vector_set): Deleted.
+	(sexp_iter_cons): deleted.
+	(do_cons_get): Deleted.
+	(do_cons_set): Deleted.
+	(do_cons_assoc): Deleted.
+	(do_cons_left): Deleted.
+	(do_cons_next): Deleted.
+	(make_iter_cons): Deleted.
+	(do_format_sexp_tail): Deleted.
+	(do_format_sexp_cons): Deleted.
+	(sexp_c): Deleted.
+
+	* src/server_session.h (make_server_connection_service): Deleted. 
+
+	* src/proxy_userauth.c (do_userauth_proxy): Don't use
+	make_once_continuation. 
+
+	* src/lsh.c (do_lsh_default_handler): Don't use EXC_SERVICE.
+
+	* src/keyexchange.h (make_install_new_keys: Deleted. 
+
+	* src/io_commands.c (collect_connect_port): Deleted.
+	(connect_with_port): Deleted.
+
+	* src/handshake.c: Adapted to change in collect_info_3. 
+
+	* src/gateway.c (gateway): Disabled unused class. 
+
+	* src/exception.c (dummy_exception): Deleted. 
+
+	* src/digits.c (simple_decode_base64): Deleted.
+
+	* src/command.h (collect_info_4): Deleted.
+
+	* src/combinators.c: Adapted to change in collect_info_3. 
+
+	* src/command.c (do_collect_4): Deleted.
+	(make_collect_state_3): Deleted.
+	(make_once_continuation): Deleted.
+	(make_catch_report_collect_body): Deleted.
+	(collect_state_2): Deleted attribute next.
+
+	* src/client.c (make_client_options): Deleted, as it wasn't used.
+
+	* src/channel_commands.h (channel_command): Deleted, it wasn't
+	used.  
+
+	* src/channel.h: Deleted old code (CONNECTION_START and
+	format_channel_open_a).
+
+	* src/alist.h: Deleted ALIST_KEYS.
+
+2001-03-13  Niels Möller  <nisse@ehand.com>
+
+	* src/dsa_keygen.h, src/packet_ignore.c, src/packet_ignore.h,
+	src/password.c, src/password.h, src/proxy_channel.h,
+	src/session.c, src/session.h:Removed obsolete files.
+
 2001-03-12  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Bumped version to 1.1.8.
