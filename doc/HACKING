@@ -89,6 +89,16 @@ implementation of this type looks as follows:
 Note the last line; the function passes a newly created packet on to
 the next handler in the pipe.
 
+There's no central place where all important state is stored; I have
+tried to delegate details to the releant places. However, some things
+that didn't fit anywhere else, and information that is needed by many
+modules, is kept in the ssh_connection structure (in connection.[hc]).
+
+Connection objects are also the point where packet are dispatched to
+various handlers (key exchange, channels, debug, etc). Handlers are similar
+to the abstract write handlers described above, but they get one extra
+argument: a pointer to the connection object.
+
 
 MEMORY ALLOCATION
 
