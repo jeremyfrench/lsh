@@ -58,6 +58,9 @@ Implement a mark&sweep gc.
 Use separate "storage-types" for lsh_string_alloc and
 lssh_space_alloc.
 
+Make lists of integers (usually atoms) its own type. Can this be done
+in such a way that they can also be allocated statically? 
+
 
 CHANNELS
 
@@ -88,3 +91,13 @@ handler to set a flag when a child dies. Let the backend loop (io.c)
 look at this flag, wait() to get status from dying children. Use an
 alist pid->callback to report childrens exit status back to the remote
 end. Another issue are process groups... Are they relevant? 
+
+
+MISC
+
+Try to find out why read() sometimes returns -1 and sets errno==EPIPE,
+on sparc-linux, 2.0.33, redhat-5.1, glibc.
+
+Figure out why signal(SIGPIPE, SIG_IGN); in io.c doesn't stop SIGPIPE
+from killing the process.
+
