@@ -258,7 +258,48 @@ static void werror_hex(UINT32 n)
     }
 }
 
-static void werror_hexdump(UINT32 length, UINT8 *data)
+static void
+werror_hexdump(UINT32 length, UINT8 *data)
+{
+  UINT32 i = 0;
+  
+  werror("(size %i = 0x%xi)\n", length, length);
+
+  for (i = 0; i<length; i+= 16)
+    {
+      unsigned j = format_size_in_hex(i);
+      unsigned r = length - i;
+      
+      for ( ; j < 8; j++)
+	werror_putc('0');
+
+      werror_hex(i);
+      werror_cstring(": ");
+
+      if (r > 16)
+	r = 16;
+
+      for (j = 0; j<r; j++)
+	werror_hex_putc(data[i+j]);
+
+      for (; j<17; j++)
+	werror_cstring("  ");
+
+      for (j = 0; j<r; j++)
+	{
+	  UINT8 c = data[i+j];
+	  if ( (c < 32) || (c > 126) )
+	    c = '.';
+	  werror_putc(c);
+	}
+
+      werror_cstring("\n");
+    }
+}
+
+#if 0
+static void
+werror_hexdump(UINT32 length, UINT8 *data)
 {
   UINT32 i;
   werror("(size %i = 0x%xi)", length, length);
@@ -282,6 +323,7 @@ static void werror_hexdump(UINT32 length, UINT8 *data)
   }
   werror_putc('\n');
 }
+#endif
 
 static void werror_paranoia_putc(UINT8 c)
 {
