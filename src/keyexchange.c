@@ -330,7 +330,7 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
   
   key = lsh_string_alloc(key_length);
 
-  debug("Constructing session key of type %d\n", type);
+  debug("\nConstructing session key of type %d\n", type);
   
   if (!key_length)
     return key;
@@ -342,44 +342,53 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
   HASH_UPDATE(hash, session_id->length, session_id->data);
   HASH_DIGEST(hash, digest);
 
-#if 0
-  /* This is the simplest special case */
+  /* Is one digest large anough? */
   if (key_length <= hash->hash_size)
     memcpy(key->data, digest, key_length);
-#endif
-  {
-    /* FIXME: This code could probably be simplified a little, but
-     * it should do for now. */
-    
-    unsigned key_ofs, max;
-    
-    max = MIN(key_length, hash->hash_size);
-    
-    memcpy(key->data, digest, max);
-    if (max != key_length)
-      {
-	struct hash_instance *prev_hash = HASH_COPY(secret);
+
+  else
+    {
+      unsigned left = key_length;
+      UINT8 *dst = key->data;
+      
+      KILL(hash);
+      hash = HASH_COPY(secret);
+      
+      while (1)
+	{
+	  /* The n:th time we enter this loop, digest holds K_n (using
+	   * the notation of section 5.2 of the ssh "transport"
+	   * specification), and hash contains the hash state
+	   * corresponding to
+	   *
+	   * H(secret | K_1 | ... | K_{n-1}) */
+
+	  struct hash_instance *tmp;
 	  
-	key_ofs = max;
-	while (key_length - key_ofs > 0)
-	  {
-	    KILL(hash);
-	      
-	    hash = prev_hash;
-	    HASH_UPDATE(hash, hash->hash_size, digest);
-	      
-	    KILL(prev_hash);
-	    prev_hash = HASH_COPY(hash);
-	    HASH_DIGEST(hash, digest);
-	      
-	    max = MIN(key_length - key_ofs, hash->hash_size);
-	    memcpy(key->data + key_ofs, digest, max);
-	      
-	    key_ofs += max;
-	  }
-	KILL(prev_hash);
-      }
-  }
+	  /* Append digest to the key data. */
+	  memcpy(dst, digest, hash->hash_size);
+	  dst += hash->hash_size;
+	  left -= hash->hash_size;
+
+	  /* And to the hash state */
+	  HASH_UPDATE(hash, hash->hash_size, digest);
+
+	  if (left <= hash->hash_size)
+	    break;
+	  
+	  /* Get a new digest, without disturbing the hash object (as
+	   * we'll need it again). We use another temporary hash for
+	   * extracting the digest. */
+
+	  tmp = HASH_COPY(hash);
+	  HASH_DIGEST(tmp, digest);
+	  KILL(tmp);
+	}
+
+      /* Get the final digest, and use some of it for the key. */
+      HASH_DIGEST(hash, digest);
+      memcpy(dst, digest, left);
+    }
   KILL(hash);
 
   debug("Expanded key: ");
