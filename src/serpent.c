@@ -65,7 +65,7 @@ make_serpent_instance(struct crypto_algorithm *algorithm, int mode,
 {
   NEW(serpent_instance, self);
 
-  self->super.block_size = SERPENT_BLOCKSIZE;
+  self->super.block_size = SERPENT_BLOCK_SIZE;
   self->super.crypt = ( (mode == CRYPTO_ENCRYPT)
 			? do_serpent_encrypt
 			: do_serpent_decrypt);
