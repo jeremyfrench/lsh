@@ -50,13 +50,13 @@
      (name sexp_string)
      (super sexp)
      (vars
-       (display string)
-       (contents string)))
+       (display const string)
+       (contents const string)))
 */
 
 /* For advanced format */
 static struct lsh_string *
-do_format_simple_string(struct lsh_string *s,
+do_format_simple_string(const struct lsh_string *s,
 			int style,
 			unsigned indent)
 {
@@ -191,14 +191,14 @@ sexp_s(struct lsh_string *d, struct lsh_string *c)
   return &s->super;
 }
 
-struct lsh_string *
+const struct lsh_string *
 sexp_contents(const struct sexp *e)
 {
   CAST(sexp_string, self, e);
   return self->contents;
 }
 
-struct lsh_string *
+const struct lsh_string *
 sexp_display(const struct sexp *e)
 {
   CAST(sexp_string, self, e);
@@ -624,7 +624,7 @@ encode_base64_group(UINT32 n, UINT8 *dest)
 #define GROUPS_PER_LINE 10
 
 struct lsh_string *
-encode_base64(struct lsh_string *s,
+encode_base64(const struct lsh_string *s,
 	      const char *delimiters,
 	      int break_lines,
 	      unsigned indent,
@@ -713,7 +713,7 @@ sexp_atomp(const struct sexp *e)
 }
 
 /* Checks that the sexp is a simple string (i.e. no display part) */
-struct lsh_string *
+const struct lsh_string *
 sexp2string(struct sexp *e)
 {
   return ( (e && sexp_atomp(e) && !sexp_display(e))
@@ -724,7 +724,7 @@ sexp2string(struct sexp *e)
 int
 sexp2atom(struct sexp *e)
 {
-  struct lsh_string *s = sexp2string(e);
+  const struct lsh_string *s = sexp2string(e);
   return s ? lookup_atom(s->length, s->data) : 0;
 }
 
@@ -732,7 +732,7 @@ sexp2atom(struct sexp *e)
 int
 sexp2bignum_u(struct sexp *e, mpz_t n, UINT32 limit)
 {
-  struct lsh_string *s = sexp2string(e);
+  const struct lsh_string *s = sexp2string(e);
 
   if (s)
     {
@@ -749,7 +749,7 @@ sexp2bignum_u(struct sexp *e, mpz_t n, UINT32 limit)
 int
 sexp2uint32(struct sexp *e, UINT32 *n)
 {
-  struct lsh_string *digits = sexp2string(e);
+  const struct lsh_string *digits = sexp2string(e);
   
   if (!digits)
     return 0;
@@ -790,7 +790,7 @@ sexp2uint32(struct sexp *e, UINT32 *n)
 int
 sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name)
 {
-  struct lsh_string *c = sexp2string(e);
+  const struct lsh_string *c = sexp2string(e);
 
   return c && lsh_string_eq_l(c, length, name);
 }
@@ -809,10 +809,10 @@ sexp_atom_eq(struct sexp *e, int atom)
 int
 sexp_atoms_eq(struct sexp *a, struct sexp *b)
 {
-  struct lsh_string *ac = sexp_contents(a);
-  struct lsh_string *ad = sexp_display(a);
-  struct lsh_string *bc = sexp_contents(b);
-  struct lsh_string *bd = sexp_display(b);
+  const struct lsh_string *ac = sexp_contents(a);
+  const struct lsh_string *ad = sexp_display(a);
+  const struct lsh_string *bc = sexp_contents(b);
+  const struct lsh_string *bd = sexp_display(b);
 
   return lsh_string_eq(ac, bc)
     && (ad ? (bd && lsh_string_eq(ad, bd))
