@@ -4,8 +4,12 @@
 
 #include <time.h>
 
+/* FIXME: Terminology: Should this be a "subject" or a "principal"? */
 struct spki_subject
 {
+  /* Subjects linked into a list. */
+  struct spki_subject *next;
+  
   /* An s-expression */
   unsigned key_length;
   /* NULL if only hash is known */
@@ -64,13 +68,37 @@ struct spki_acl
 struct spki_acl_db
 {
   /* For custom memory allocation. */
-  void (*realloc)(struct spki_acl_db *, unsigned size, void *);
-  
-  struct spki_acl *first;
+  void *(*realloc)(struct spki_acl_db *, void *, unsigned);
+
+  struct spki_subject *first_subject;
+  struct spki_acl *first_acl;
 };
 
+void
+spki_acl_init(struct spki_acl_db *db);
+
+/* Internal functions for looking up a subject. */
+
+struct spki_subject *
+spki_subject_add_key(struct spki_acl_db *db,
+		     unsigned key_length,  const uint8_t *key);
+
+struct spki_subject *
+spki_subject_by_key(struct spki_acl_db *db,
+		    unsigned key_length, const uint8_t *key);
+
+struct spki_subject *
+spki_subject_by_md5(struct spki_acl_db *db,
+		    unsigned key_length, const uint8_t *key);
+
+struct spki_subject *
+spki_subject_by_sha1(struct spki_acl_db *db,
+		     unsigned key_length, const uint8_t *key);
+
+
+/* Handling the acl database */
 struct spki_acl *
-spki_acl_parse(struct spki_acl_db, struct sexp_iterator *i);
+spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i);
 
 struct spki_acl *
 spki_acl_by_principal_first(struct spki_acl_db *,
