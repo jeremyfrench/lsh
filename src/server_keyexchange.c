@@ -48,22 +48,6 @@ static int do_handle_dh_init(struct packet_handler *c,
       return WRITE_CLOSED;
     }
   
-#if 0
-  signer = LOOKUP_SIGNER(closure->signer, closure->dh.server_host_key);
-
-  if (!signer)
-    /* FIXME: Use a more appropriate error code. Should probably have
-     * a separate file for sending and recieving various types of
-     * disconnects. */
-    return disconnect_kex_failed(connection, "Bad server host key\r\n");
-#endif
-  
-#if 0
-  if (!dh_verify_server_msg(&closure->dh, v))
-    /* FIXME: Same here */
-    return disconnect_kex_failed(connection, "Bad server host key\r\n");
-#endif
-
   /* Send server's message, to complete key exchange */
   res = A_WRITE(connection->write, dh_make_server_msg(&closure->dh,
 						      closure->signer));
@@ -96,8 +80,8 @@ static int do_handle_dh_init(struct packet_handler *c,
 
   lsh_free(hash);
 
-  /* Reinstall keyexchange handler */
-  connection->dispatch[SSH_MSG_KEXINIT] = closure->saved_kexinit_handler;
+  connection->kex_state = KEX_STATE_NEWKEYS;
+  connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
   
   return res;
 }
@@ -124,16 +108,10 @@ static int do_init_dh(struct keyexchange_algorithm *c,
 
   dh->install = make_server_install_keys(algorithms);
 
-#if 0
-  /* Send server's message */
-  A_WRITE(connection->write, dh_make_server_msg(&dh->dh));
-#endif
   /* Install handler */
   connection->dispatch[SSH_MSG_KEXDH_INIT] = &dh->super;
 
-  /* Disable kexinit handler */
-  dh->saved_kexinit_handler = connection->dispatch[SSH_MSG_KEXINIT];
-  connection->dispatch[SSH_MSG_KEXINIT] = connection->fail;
+  connection->kex_state = KEX_STATE_IN_PROGRESS;
 
   return WRITE_OK;
 }

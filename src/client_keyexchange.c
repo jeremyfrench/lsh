@@ -87,8 +87,8 @@ static int do_handle_dh_reply(struct packet_handler *c,
 
   lsh_free(hash);
 
-  /* Reinstall keyexchange handler */
-  connection->dispatch[SSH_MSG_KEXINIT] = closure->saved_kexinit_handler;
+  connection->dispatch[SSH_MSG_KEXDH_REPLY] = connection->fail;
+  connection->kex_state = KEX_STATE_NEWKEYS;
   
   return res;
 }
@@ -124,11 +124,9 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   
   /* Install handler */
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = &dh->super;
-
-  /* Disable kexinit handler */
-  dh->saved_kexinit_handler = connection->dispatch[SSH_MSG_KEXINIT];
-  connection->dispatch[SSH_MSG_KEXINIT] = connection->fail;
-
+  
+  connection->kex_state = KEX_STATE_IN_PROGRESS;
+  
   return WRITE_OK;
 }
 

@@ -40,6 +40,20 @@
 
 #define KEX_PARAMETERS 6
 
+/* A KEX_INIT msg can be accepted. This is true, most of the time. */
+#define KEX_STATE_INIT 0
+
+/* Ignore next packet */
+#define KEX_STATE_IGNORE 1
+
+/* Key exchange is in progress. Neither KEX_INIT or NEWKEYS messages
+ * can be recieved */
+#define KEX_STATE_IN_PROGRESS 2
+
+/* Key exchange is finished. A NEWKEYS message should be recieved, and
+ * nothing else. */
+#define KEX_STATE_NEWKEYS 3
+
 /* algorithms is an array indexed by the KEX_* values above */
 struct keyexchange_algorithm
 {

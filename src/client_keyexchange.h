@@ -56,7 +56,6 @@ struct dh_client
   struct diffie_hellman_instance dh;
   struct lookup_verifier *verifier;
   struct install_keys *install;
-  struct packet_handler *saved_kexinit_handler;
 };
 
 struct keyexchange_algorithm *

@@ -45,7 +45,6 @@ struct dh_server
   struct lsh_string *server_key;
   struct signer *signer;
   struct install_keys *install;
-  struct packet_handler *saved_kexinit_handler;
 };
 
 struct keyexchange_algorithm *

@@ -95,19 +95,6 @@ struct kexinit *parse_kexinit(struct lsh_string *packet)
   return res;
 }
 
-#if 0
-struct abstract_write *make_packet_kexinit(struct handle_kexinit *handler)
-{
-  struct handle_kexinit_packet *closure
-    = xalloc(sizeof(struct handle_kexinit_packet));
-
-  closure->super.write = do_handle_kexinit;
-  closure->handler = handler;
-
-  return &closure->super;
-}
-#endif
-
 struct lsh_string *format_kex(struct kexinit *kex)
 {
   return ssh_format("%c%ls%A%A%A%A%A%A%A%A%A%A%c%i",
@@ -228,7 +215,7 @@ static int do_handle_kexinit(struct packet_handler *c,
       if (msg->first_kex_packet_follows)
 	{
 	  /* Wrong guess */
-	  connection->ignore_one_packet = 1;
+	  connection->kex_state = KEX_STATE_IGNORE;
 	}
       /* FIXME: Ignores that some keyechange algorithms require
        * certain features of the host key algorithms. */
@@ -415,6 +402,8 @@ static int do_handle_newkeys(struct packet_handler *c,
     {
       connection->rec_crypto = closure->crypto;
       connection->rec_mac = closure->mac;
+
+      connection->kex_state = KEX_STATE_INIT;
 
       connection->dispatch[SSH_MSG_NEWKEYS] = NULL;
 
