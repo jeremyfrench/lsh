@@ -344,6 +344,7 @@ fi
 # Check for alloca, and include the standard blurb in config.h
 AC_DEFUN([LSH_FUNC_ALLOCA],
 [AC_FUNC_ALLOCA
+AC_CHECK_HEADERS([malloc.h])
 AH_BOTTOM(
 [/* AIX requires this to be the first thing in the file.  */
 #ifndef __GNUC__
@@ -362,6 +363,10 @@ char *alloca ();
 # if HAVE_ALLOCA_H
 #  include <alloca.h>
 # endif
+#endif
+/* Needed for alloca on windows */
+#if HAVE_MALLOC_H
+# include <malloc.h>
 #endif
 ])])
 
