@@ -36,8 +36,7 @@
      (super abstract_write_pipe)
      (vars
        (compressor object compress_instance)
-       (connection object ssh_connection)
-       (mode simple int)))
+       (connection object ssh_connection)))
 */
 
 static int do_packet_deflate(struct abstract_write *closure,
