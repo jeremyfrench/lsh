@@ -188,4 +188,10 @@
 /* Subtract this to get a reasonable max_packet value for a channel. */
 #define SSH_CHANNEL_MAX_PACKET_FUZZ 100
 
+/* Largest block size we support (NOTE: This is not a protocol limit) */
+#define SSH_MAX_BLOCK_SIZE 16
+
+/* Largest MAC digest size we support  (NOTE: This is not a protocol limit) */
+#define SSH_MAX_MAC_SIZE 20
+
 #endif /* LSH_SSH_H_INCLUDED */
