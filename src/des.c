@@ -23,6 +23,8 @@
 
 #include "crypto.h"
 
+#warning des.c is obsolete
+
 #include "werror.h"
 #include "xalloc.h"
 

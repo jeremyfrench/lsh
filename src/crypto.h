@@ -36,8 +36,13 @@
 		  (dst) += (blocksize)) )
 
 extern struct crypto_algorithm crypto_arcfour_algorithm;
+
+#if 0
 extern struct crypto_algorithm crypto_des_algorithm;
 struct crypto_algorithm *make_des3(void);
+#endif
+
+extern struct crypto_algorithm crypto_des3_cbc_algorithm;
 
 struct crypto_algorithm *make_cast_algorithm(UINT32 key_size);
 extern struct crypto_algorithm cast128_algorithm;
@@ -57,7 +62,7 @@ extern struct crypto_algorithm rijndael192_algorithm;
 extern struct crypto_algorithm rijndael256_algorithm;
 #endif
 
-extern struct crypto_algorithm aes256_cbc_algorithm;
+extern struct crypto_algorithm crypto_aes256_cbc_algorithm;
 
 struct crypto_algorithm *make_serpent_algorithm(UINT32 key_size);
 extern struct crypto_algorithm serpent128_algorithm;
