@@ -24,6 +24,7 @@
 #include "io.h"
 
 #include "format.h"
+#include "string_buffer.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -850,6 +851,43 @@ read_raw(int fd, UINT32 length, UINT8 *data)
       data += done;
     }
   return NULL;
+}
+
+struct lsh_string *
+io_read_file_raw(int fd, UINT32 guess)
+{
+  struct string_buffer buffer;
+  string_buffer_init(&buffer, guess);
+
+  for (;;)
+    {
+      int res;
+      
+      if (!buffer.left)
+        /* Roughly double the size of the buffer */
+        string_buffer_grow(&buffer,
+                           buffer.partial->length + buffer.total + 100);
+      
+      res = read(fd, buffer.current, buffer.left);
+      
+      if (res < 0)
+        {
+          if (errno == EINTR)
+            continue;
+          
+          string_buffer_clear(&buffer);
+          return NULL;
+        }
+      else if (!res)
+        {
+          /* EOF */
+          return string_buffer_final(&buffer, buffer.left);
+        }
+      assert( (unsigned) res <= buffer.left);
+      
+      buffer.current += res;
+      buffer.left -= res;
+    }
 }
 
 /* Network utility functions */

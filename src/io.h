@@ -268,6 +268,9 @@ write_raw_with_poll(int fd, UINT32 length, const UINT8 *data);
 const struct exception *
 read_raw(int fd, UINT32 length, UINT8 *data);
 
+struct lsh_string *
+io_read_file_raw(int fd, UINT32 guess);
+
 void io_set_nonblocking(int fd);
 void io_set_blocking(int fd);
 void io_set_close_on_exec(int fd);
