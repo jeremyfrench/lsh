@@ -39,30 +39,6 @@
 
 /* GABA:
    (class
-     (name sexp_print_command)
-     (super command_2)
-     (vars
-       (format . int)))
-*/
-
-#define STATIC_PRINT_SEXP(format) \
-{{ STATIC_HEADER, do_command_2}, format }
-
-struct command_2 *
-make_sexp_print_command(int format);
-
-struct command *
-make_sexp_print_to(int format, struct abstract_write *dest);
-
-struct command *
-make_sexp_print_raw_hash(struct hash_algorithm *algorithm);
-
-struct command *
-make_sexp_print_raw_hash_to(struct hash_algorithm *algorithm,
-			    struct abstract_write *dest);
-
-/* GABA:
-   (class
      (name read_sexp_command)
      (super command)
      (vars
