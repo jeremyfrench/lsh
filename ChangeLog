@@ -1,3 +1,47 @@
+2004-06-09  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/fake-sshd1, src/testsuite/ssh1-fallback-test:
+	Deleted files.
+
+	* src/version.h (SSH1_SERVER_PROTOCOL_VERSION): Deleted.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed ssh1_fallback.c.
+
+	* src/lshd.c: Removed the ssh1-fallback option.
+
+	* src/handshake.c (do_line): Made the server disallow banner lines
+	from clients.
+
+	* configure.ac: Deleted option --with-sshd1.
+
+	* src/io.c (io_set_blocking): Deleted function.
+
+	* src/handshake.c (connection_line_handler): Deleted fd and
+	fallback attributes.
+	(make_connection_read_line): Deleted fd and fallback arguments.
+	(make_handshake_info): Deleted fallback argument. Updated callers.
+	(do_line): Deleted ssh1-fallback handling.
+	
+	* src/ssh1_fallback.h, src/ssh1_fallback.c: Deleted file.
+
+	* src/handshake.h (handshake_info): Deleted fallback attribute.
+
+	* doc/lsh.texinfo (Invoking lshd): Deleted --ssh1-fallback.
+
+	* src/keyexchange.c (KEXINIT_MAX_ALGORITMS): Increased limit to
+	500.
+	(parse_kexinit): Deleted code handling of
+	PEER_KEXINIT_LANGUAGE_KLUDGE.
+
+	* src/handshake.c (compat_peer_flags): #if:ed out function.
+
+	* src/connection.h (enum peer_flags): Deleted constants.
+
+	* configure.ac: Deleted option --disable-datafellows-workarounds.
+
+	* src/proxy_x11forward.c (do_proxy_open_x11): Deleted code
+	handling PEER_X11_OPEN_KLUDGE.
+
 2004-06-08  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client.c (client_prepend_action): New function.
