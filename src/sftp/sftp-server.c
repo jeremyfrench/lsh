@@ -148,7 +148,7 @@ struct sftp_ctx
 };
 
 static void
-sftp_init(struct sftp_ctx *ctx, FILE *in, FILE *out)
+sftp_init(struct sftp_ctx *ctx, int in, int out)
 {
   unsigned i;
   
@@ -1356,7 +1356,7 @@ main(int argc, char **argv)
   if (!parse_options(argc, argv))
     return EXIT_FAILURE;
   
-  sftp_init(&ctx, stdin, stdout);
+  sftp_init(&ctx, STDIN_FILENO, STDOUT_FILENO);
 
   if (!sftp_handshake(&ctx))
     return EXIT_FAILURE;
