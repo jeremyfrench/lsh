@@ -30,6 +30,11 @@
 #include <config.h>
 #endif
 
+#ifdef LSH
+/* Portability stuff */
+#include "argp-comp.h"
+#endif
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
