@@ -361,6 +361,7 @@ do_send(struct ssh_channel *s,
   self->in->super.want_read = 1;
 }
 
+#if 0
 /* Used for the first callback, to register stdin as a resource. */
 static void
 do_send_first(struct ssh_channel *s,
@@ -368,11 +369,12 @@ do_send_first(struct ssh_channel *s,
 {
   CAST(client_session, self, s);
 
-  REMEMBER_RESOURCE(connection->resources, &self->in->super.super);
+  REMEMBER_RESOURCE(channel->resources, &self->in->super.super);
   s->send = do_send;
 
   do_send(s, connection);
 }
+#endif
 
 /* We have a remote shell */
 static void
@@ -386,21 +388,37 @@ do_client_io(struct command *s UNUSED,
   struct ssh_channel *channel = &session->super;
   assert(x);
 
+  /* Set up write fd:s. */
+  
   channel->receive = do_receive;
-  
-  session->out->super.close_callback
-    = session->err->super.close_callback
-    = make_channel_close_callback(channel);
-  
-  session->in->super.read = make_channel_read_data(channel);
 
-#if 0
+  /* FIXME: It seems a little kludgy to modify
+   * exception handlers here; it would be better to create the
+   * fd-objects at a point where the right exception handlers can be
+   * installed from the start. */
+  session->out->super.e
+    = make_channel_io_exception_handler(channel,
+					"lsh: I/O error on stdout",
+					session->out->super.e);
+
+  session->err->super.e
+    = make_channel_io_exception_handler(channel,
+					"lsh: I/O error on stderr",
+					session->err->super.e);
+
+  /* Set up the fd we read from. */
+  channel->send = do_send;
+
+  session->in->super.read = make_channel_read_data(channel);
+  
   session->in->super.close_callback
     = make_channel_read_close_callback(channel);
-#endif
-  
-  channel->send = do_send_first;
 
+  /* Make sure stdio is closed properly if the channel or connection dies */
+  REMEMBER_RESOURCE(channel->resources, &session->in->super.super);
+  REMEMBER_RESOURCE(channel->resources, &session->out->super.super);
+  REMEMBER_RESOURCE(channel->resources, &session->err->super.super);
+  
   ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
 	    make_handle_exit_status(session->exit_status));
   ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
