@@ -32,7 +32,7 @@ all:
 	@echo make check to build testprograms.
 
 M4FLAGS = -P #-s
-$(srcdir)/%.c: macros.m4 %.m4
+%.c: macros.m4 %.m4
 	$(M4) $(M4FLAGS) $^ > $@T
 	test -s $@T && mv -f $@T $@
 
