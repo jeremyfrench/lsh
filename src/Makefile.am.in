@@ -113,7 +113,8 @@ LDADD = @LIBOBJS@ liblsh.a symmetric/libsymmetric.a
 # symmetric:
 # 	  (cd lib && $(MAKE) libsymmetric.a)
 
-EXTRA_DIST = atoms.in process_atoms make_class invert-defs \
+EXTRA_DIST = atoms.in process_atoms make_class compiler.scm \
+	invert-defs \
 	$(generated_sources) \
 	make_char_classes sexp_chars.in \
 	getopt.h getopt.c getopt1.c \
