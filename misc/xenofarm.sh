@@ -39,8 +39,10 @@ done
 pfx=`pwd`/pfx
 
 # Disable the liboop shared libraries, to avoid libtool-related
-# problems on AIX.
-oopcfgargs="-C --prefix=$pfx --disable-shared $cfgargs"
+# problems on AIX. And disable all extra adapters, to workaround the
+# broken --disable-shared handling in liboop-1.0.
+
+oopcfgargs="-C --prefix=$pfx --disable-shared --without-adns --without-readline --without-glib --without-tcl --without-www $cfgargs"
 
 cfgargs="-C --with-include-path=/usr/local/include:$pfx/include --with-lib-path=/usr/local/lib:$pfx/lib --prefix=$pfx $cfgargs"
 
