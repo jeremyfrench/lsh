@@ -553,12 +553,16 @@ fi
 # We don't use LIBOBJS for this, as the LIBOBJS are added to
 # liblsh.a, and we can't add an archive to an archive.
 LIBARGP=""
+DOTDOT_LIBARGP=""
 if test x$with_system_argp = xno ; then
   # FIXME: Perhaps it's better to use an absolute path?
   LIBARGP="argp/libargp.a"
+  # Needed for linking in src/testsuite.
+  DOTDOT_LIBARGP="../argp/libargp.a"
 fi
 
 AC_SUBST(LIBARGP)
+AC_SUBST(DOTDOT_LIBARGP)
 
 # Check for broken shutdown
 AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
