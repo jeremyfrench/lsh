@@ -159,10 +159,10 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (random object randomness)
        
        (signature_algorithms object alist)
-       (interface . "char *")
+       ;; Addresses to bind
+       (local object sockaddr_list)
        (port . "char *")
        (hostkey . "char *")
-       (local object address_info)
        (tcp_wrapper_name . "char *")
        (tcp_wrapper_message . "char *")
 
@@ -232,18 +232,18 @@ make_lshd_options(void)
   self->reaper = make_reaper();
   self->random = make_system_random();
 
-  self->signature_algorithms = all_signature_algorithms(self->random); /* OK to initialize with NULL */
+  /* OK to initialize with NULL */
+  self->signature_algorithms = all_signature_algorithms(self->random);
 
-  self->interface = NULL;
-
+  self->local = NULL;
+  
   /* Default behaviour is to lookup the "ssh" service, and fall back
    * to port 22 if that fails. */
   self->port = NULL;
   
   /* FIXME: this should perhaps use sysconfdir */  
   self->hostkey = "/etc/lsh_host_key";
-  self->local = NULL;
-
+  
   self->with_dh_keyexchange = 1;
   self->with_srp_keyexchange = 0;
 
@@ -284,7 +284,7 @@ make_lshd_options(void)
   return self;
 }
 
-/* Port to listen on */
+/* Port(s) to listen on */
 DEFINE_COMMAND(options2local)
      (struct command *s UNUSED,
       struct lsh_object *a,
@@ -293,6 +293,7 @@ DEFINE_COMMAND(options2local)
 {
   CAST(lshd_options, options, a);
   /* FIXME: Call bind already here? */
+  assert(options->local);
   COMMAND_RETURN(c, options->local);
 }
 
@@ -395,9 +396,9 @@ DEFINE_COMMAND2(close_on_sighup)
       struct exception_handler *e UNUSED)
 {
   CAST(lshd_options, options, a1);
-  CAST(lsh_fd, fd, a2);
+  CAST_SUBTYPE(resource, fds, a2);
 
-  remember_resource(options->resources, &fd->super);
+  remember_resource(options->resources, fds);
 
   COMMAND_RETURN(c, a2);
 }
@@ -580,6 +581,58 @@ parse_subsystem_list(char *arg)
   return subsystems;
 }
 
+static struct address_info *
+parse_interface(const char *interface, const char *port)
+{
+  struct lsh_string *ip;
+  struct address_info *a;
+  
+  if (interface[0] == '[')
+    {
+      /* A literal address */
+      const char *end;
+      interface++;
+      
+      end = strchr(interface, ']');
+      if (!end)
+	return NULL;
+
+      switch (end[1])
+	{
+	case ':':
+	  port = end + 2;
+	  break;
+	case 0:
+	  break;
+	default:
+	  return NULL;
+	}
+      
+      ip = ssh_format("%ls", end - interface, interface);
+    }
+  else
+    {
+      const char *end = strchr(interface, ':');
+      if (end)
+	{
+	  ip = ssh_format("%ls", end - interface, interface);
+	  port = end + 1;
+	}
+      else
+	ip = ssh_format("%lz", interface);
+    }
+
+  if (port)
+    a = make_address_info_c(NULL, port, 0);
+  else
+    a = make_address_info_c(NULL, "ssh", 22);
+
+  if (!a)
+    lsh_string_free(ip);
+
+  return a;
+}
+
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
 {
@@ -635,16 +688,22 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	else
 	  argp_error(state, "All keyexchange algorithms disabled.");
 
-	if (self->port)
-	  self->local = make_address_info_c(self->interface, self->port, 0);
-	else
-	  self->local = make_address_info_c(self->interface, "ssh", 22);
-      
 	if (!self->local)
-	  argp_error(state, "Invalid interface, port or service, %s:%s'.",
-		     self->interface ? self->interface : "ANY",
-		     self->port);
+	  {
+	    /* Default interface */
+	    struct address_info *a;
+	    
+	    if (self->port)
+	      a = make_address_info_c(NULL, self->port, 0);
+	    else
+	      a = make_address_info_c(NULL, "ssh", 22);
 
+	    if (!io_resolv_address(a, &self->local))
+	      argp_failure(state, EXIT_FAILURE, 0,
+			   "Strange. Could not resolve the ANY address.");
+	  }
+	assert(self->local);
+	
 	if (self->use_pid_file < 0)
 	  self->use_pid_file = self->daemonic;
 
@@ -693,6 +752,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	break;
       }
     case 'p':
+      /* FIXME: Interpret multiple -p:s as a request to listen on
+       * several ports. */
       self->port = arg;
       break;
 
@@ -701,7 +762,20 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_INTERFACE:
-      self->interface = arg;
+      {
+	struct address_info *a = parse_interface(arg, self->port);
+	
+	if (!a)
+	  argp_error(state, "Invalid intarface, port or service: %s.", arg);
+
+	if (!io_resolv_address(a, &self->local))
+	  argp_failure(state, EXIT_FAILURE, 0,
+		       "Address %s:%d could not be resolved.\n",
+		       lsh_get_cstring(a->ip), a->port);
+
+	KILL(a);
+      }
+	
       break;
 
 #if WITH_SSH1_FALLBACK
@@ -861,14 +935,14 @@ main_argp =
      (expr (lambda (options)
              (let ((keys (options2keys options)))
 	       (close_on_sighup options
-	         (listen
+	         (listen_list
 	           (lambda (lv)
     	             (services (connection_handshake
     	           		  handshake
     	           		  (kexinit_filter init keys)
     	           		  keys 
 				  (options2tcp_wrapper options lv))))
-	           (bind (options2local options)) ))))))
+	           (options2local options) ))))))
 */
 
 
