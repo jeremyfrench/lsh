@@ -7,6 +7,7 @@ Makefile.am: Makefile.am.in
 # FIXME: Make this less GNU-make specific
 
 MANPAGES = $(wildcard *.[1-9])
+info_TEXINFOS = lsh.texinfo
 
 EXTRA_DIST = HACKING NOTES PORTS TASKLIST configuration.txt \
 	Makefile.am.in $(MANPAGES)
