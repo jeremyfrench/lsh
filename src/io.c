@@ -384,10 +384,11 @@ static void connect_callback(struct lsh_fd *fd)
 {
   CAST(connect_fd, self, fd);
   int socket_error;
-
+  size_t len = sizeof(socket_error);
+  
   /* Check if the connection was successful */
-  if ((getsockopt(fd, SOL_SOCKET, SO_ERROR,
-		  &socket_error, sizeof(socket_error)) < 0)
+  if ((getsockopt(fd->fd, SOL_SOCKET, SO_ERROR,
+		  (char *) &socket_error, &len) < 0)
       || socket_error)
     {
       debug("io.c: connect_callback: Connect failed.\n");
