@@ -1,6 +1,5 @@
 #include "certificate.h"
 #include "parse.h"
-#include "spki-types.h"
 
 #include "nettle/sexp.h"
 
