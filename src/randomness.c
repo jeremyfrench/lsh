@@ -51,7 +51,7 @@
 #include "randomness.c.x"
 
 /* Random */
-/* ;; GABA:
+/* GABA:
    (class
      (name poor_random)
      (super randomness)
@@ -61,7 +61,6 @@
        (buffer space UINT8)))
 */
 
-#if 0
 static void
 do_poor_random(struct randomness *r, UINT32 length, UINT8 *dst)
 {
@@ -120,7 +119,11 @@ make_poor_random(struct hash_algorithm *hash,
 
   return &self->super;
 }
-#endif
+
+struct randomness *make_bad_random()
+{
+  return make_poor_random(&sha1_algorithm, NULL);
+}
 
 /* GABA:
    (class
@@ -195,16 +198,13 @@ make_device_random(const char *device)
 /* GABA:
    (class
      (name arcfour_random)
-     (super randomness)
+     (super randomness_with_poll)
      (vars
        (e object exception_handler)
        
        ; The pool that is used to create the output bytes
        (pool . "struct arcfour_ctx")
 
-       ; Object that gets randomness from the environment
-       (poller object random_poll)
-       
        ; Accumulate randomness here before it is added to the main
        ; pool
        (staging_area object hash_instance)
@@ -218,7 +218,7 @@ do_arcfour_random(struct randomness *r, UINT32 length, UINT8 *dst)
 {
   CAST(arcfour_random, self, r);
   
-  self->staging_count += RANDOM_POLL_FAST(self->poller, self->staging_area);
+  self->staging_count += RANDOM_POLL_FAST(self->super.poller, self->staging_area);
 
   if (self->staging_count > STAGE_THRESHOLD)
     {
@@ -247,7 +247,7 @@ do_arcfour_random_slow(struct randomness *r, UINT32 length, UINT8 *dst)
 {
   CAST(arcfour_random, self, r);
 
-  unsigned count = RANDOM_POLL_SLOW(self->poller, self->staging_area);
+  unsigned count = RANDOM_POLL_SLOW(self->super.poller, self->staging_area);
 
   debug("arcfour_random: entropy estimate for initialization: %i bits.\n",
 	count);
@@ -260,7 +260,7 @@ do_arcfour_random_slow(struct randomness *r, UINT32 length, UINT8 *dst)
       EXCEPTION_RAISE(self->e, &low_entropy);
     }
   else
-    self->super.quality = 1;
+    self->super.super.quality = 1;
   
   {
     /* Initialize the pool. */
@@ -273,21 +273,22 @@ do_arcfour_random_slow(struct randomness *r, UINT32 length, UINT8 *dst)
     self->staging_count = 0;
   }
   
-  self->super.random = do_arcfour_random;
+  self->super.super.random = do_arcfour_random;
 
   arcfour_stream(&self->pool, length, dst);
 }
 
-struct randomness *
+struct randomness_with_poll *
 make_arcfour_random(struct random_poll *poller,
 		    struct hash_algorithm *hash,
 		    struct exception_handler *e)
 {
   NEW(arcfour_random, self);
-  self->poller = poller;
+  self->super.super.random = do_arcfour_random_slow;
+  self->super.super.quality = 0;
+
+  self->super.poller = poller;
   self->e = e;
-  self->super.random = do_arcfour_random_slow;
-  self->super.quality = 0;
   
   self->staging_area = MAKE_HASH(hash);
   self->staging_count = 0;
@@ -295,6 +296,7 @@ make_arcfour_random(struct random_poll *poller,
   return &self->super;
 }
 
+#if 0
 struct randomness *
 make_reasonably_random(void)
 {
@@ -312,3 +314,15 @@ make_reasonably_random(void)
 #endif
   return r;
 }
+#endif
+
+struct randomness_with_poll *
+make_default_random(struct reap *reaper,
+		    struct exception_handler *e)
+{
+  struct random_poll *poller = make_unix_random(reaper);
+
+  /* FIXME: Move away from using rc4. */
+  return make_arcfour_random(poller, &sha1_algorithm, e);
+}
+
