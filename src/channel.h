@@ -53,6 +53,7 @@
 /* Means that we should send close when we have both sent and received EOF. */
 #define CHANNEL_CLOSE_AT_EOF 0x10
 
+
 /* GABA:
    (class
      (name ssh_channel)
@@ -60,7 +61,7 @@
        ; Remote channel number 
        (channel_number simple UINT32)
 
-       ; We try to keep the rec_window_size ; between max_window / 2
+       ; We try to keep the rec_window_size between max_window / 2
        ; and max_window.
        (max_window simple UINT32)       
 
@@ -110,9 +111,13 @@
        ;; (open_failure method int)
        (open_continuation object command_continuation)
 
+       ;; Queue of channel requests that we expect replies on
+       (pending_requests struct object_queue)))
+       
        ; Reply from SSH_MSG_CHANNEL_REQUEST 
-       (channel_success method int)
-       (channel_failure method int))) */
+       ;; (channel_success method int)
+       ;; (channel_failure method int)))
+*/
 
 #define CHANNEL_RECEIVE(s, t, d) \
 ((s)->receive((s), (t), (d)))
@@ -131,11 +136,13 @@
 #define CHANNEL_OPEN_FAILURE(s) \
 ((s)->open_failure((s)))
 
+#if 0
 #define CHANNEL_SUCCESS(s) \
 ((s)->channel_success((s)))
 
 #define CHANNEL_FAILURE(s) \
 ((s)->channel_failure((s)))
+#endif
      
 /* FIXME: Perhaps, this information is better kept in the connection
  * object? */

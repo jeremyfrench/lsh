@@ -980,18 +980,20 @@ static int do_channel_success(struct packet_handler *closure UNUSED,
       && parse_uint32(&buffer, &channel_number)
       && parse_eod(&buffer)
       && (channel = lookup_channel(connection->channels, channel_number)))
-    
     {
       lsh_string_free(packet);
 
-      if (!channel->channel_failure)
+      if (object_queue_is_empty(&channel->pending_requests))
 	{
-	  werror("do_channel_success: No handler. Ignoring.\n");
+	  werror("do_channel_success: Unexpected message. Ignoring.\n");
 	  return LSH_OK | LSH_GOON;
 	}
-
-      return channel_process_status(connection->channels, channel_number,
-				    CHANNEL_SUCCESS(channel));
+      {
+	CAST(command_continuation, c,
+	     object_queue_remove_head(&channel->pending_requests));
+	return channel_process_status(connection->channels, channel_number,
+				      COMMAND_RETURN(c, channel));
+      }
     }
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
@@ -1016,14 +1018,18 @@ static int do_channel_failure(struct packet_handler *closure UNUSED,
     {
       lsh_string_free(packet);
       
-
-      if (!channel->channel_failure)
+      if (object_queue_is_empty(&channel->pending_requests))
 	{
 	  werror("do_channel_failure: No handler. Ignoring.\n");
 	  return LSH_OK | LSH_GOON;
 	}
-      return channel_process_status(connection->channels, channel_number,
-					CHANNEL_FAILURE(channel));
+      {
+	CAST(command_continuation, c,
+	     object_queue_remove_head(&channel->pending_requests));
+
+	return channel_process_status(connection->channels, channel_number,
+				      COMMAND_RETURN(c, NULL));
+      }
     }
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
@@ -1175,8 +1181,13 @@ void init_channel(struct ssh_channel *channel)
   channel->eof = NULL;
 
   channel->open_continuation = NULL;
+
+  object_queue_init(&channel->pending_requests);
+  
+#if 0
   channel->channel_success = NULL;
   channel->channel_failure = NULL;
+#endif
 }
 
 struct lsh_string *channel_transmit_data(struct ssh_channel *channel,
