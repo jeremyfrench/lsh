@@ -36,7 +36,7 @@
 struct crypto_algorithm *make_cast_algorithm(UINT32 key_size);
 
 /* Cast */
-/* CLASS:
+/* GABA:
    (class
      (name cast_instance)
      (super crypto_instance)
