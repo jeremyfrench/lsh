@@ -32,6 +32,8 @@
 
 #include "parse_macros.h"
 
+#include "nettle/bignum.h"
+
 #include <assert.h>
 #include <string.h>
 
@@ -209,8 +211,8 @@ parse_bignum(struct simple_buffer *buffer, mpz_t result, UINT32 limit)
    * sometimes required to resolve signedness. */
   if (limit && (length > (limit + 1)))
     return 0;
-  
-  bignum_parse_s(result, length, digits);
+
+  nettle_mpz_set_str_256_s(result, length, digits);
 
   return 1;
 }
