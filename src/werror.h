@@ -39,7 +39,8 @@ extern int verbose_flag;
 
 extern const struct argp werror_argp;
 
-void set_error_stream(int fd, int with_poll);
+void set_error_stream(int fd);
+void set_error_nonblocking(int fd);
 void set_error_ignore(void);
 
 /* Tries to dup any error fd to something higher than STDERR_FILENO.

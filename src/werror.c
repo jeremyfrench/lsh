@@ -43,6 +43,10 @@
 #include <unistd.h>
 #endif
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #if HAVE_SYSLOG_H
 #include <syslog.h>
 #endif
@@ -58,6 +62,7 @@ static const char *program_name = NULL;
 
 #define WERROR_TRACE -1
 #define WERROR_DEBUG -2
+#define WERROR_LOG -3
 
 static const struct argp_option
 werror_options[] =
@@ -66,11 +71,13 @@ werror_options[] =
   { "verbose", 'v', NULL, 0, "Verbose diagnostic messages", 0},
   { "trace", WERROR_TRACE, NULL, 0, "Detailed trace", 0 },
   { "debug", WERROR_DEBUG, NULL, 0, "Print huge amounts of debug information", 0 },
+  { "log-file", WERROR_LOG, "File name", 0,
+    "Append messages to this file.", 0},
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
 static error_t
-werror_argp_parser(int key, char *arg UNUSED,
+werror_argp_parser(int key, char *arg,
 		   struct argp_state *state)
 {
   switch(key)
@@ -92,6 +99,19 @@ werror_argp_parser(int key, char *arg UNUSED,
     case WERROR_DEBUG:
       debug_flag = 1;
       break;
+    case WERROR_LOG:
+      {
+	/* FIXME: For clients, this is right: We only get lsh-related
+	 * messages to the log file, and child processes are not
+	 * affected. But for the server, perhaps we should also dup
+	 * the logfile over stderr? */
+	
+	int fd = open(arg, O_WRONLY | O_CREAT | O_APPEND, 0666);
+	if (fd < 0)
+	  argp_error(state, "Failed to open log file `%s'.", arg);
+	else
+	  set_error_stream(fd);
+      }
     }
   return 0;
 }
@@ -149,11 +169,18 @@ write_ignore(int fd UNUSED,
 { return NULL; }
 
 void
-set_error_stream(int fd, int with_poll)
+set_error_stream(int fd)
 {
   error_fd = fd;
 
-  error_write = with_poll ? write_raw_with_poll : write_raw;
+  error_write = write_raw;
+}
+
+void
+set_error_nonblocking(int fd)
+{
+  if (error_fd == fd)
+    error_write = write_raw_with_poll;
 }
 
 int
