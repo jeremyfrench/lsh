@@ -1,13 +1,35 @@
+2002-11-11  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/digit_table.c: Deleted file.
+	* src/prime_table.c: Deleted file.
+	* src/sexp_parser.c: Deleted file.
+	
+	* src/bignum.c (bignum_small_factor): Deleted function.
+	(bignum_next_prime): Deleted function.
+	(bignum_random_prime): Deleted function.
+
+	* src/lsh-decode-key.c (main): Use nettle's functions for base64
+	decoding. 
+
+	* src/Makefile.am.in: Don't build digit_table.h.
+	(liblsh_a_SOURCES): Removed digits.c.
+
 2002-11-10  Niels Möller  <nisse@cuckoo.hack.org>
 
-	* src/srp_exchange.c (srp_make_verifier): Adapted to new sexp code.
+	* src/lsh.c (do_lsh_default_handler): Deleted handling of obsolete
+	exception types EXC_SEXP_SYNTAX and EXC_SPKI_TYPE.
+	* src/lshd.c (do_exc_lshd_handler): Likewise.
+
+	* src/srp_exchange.c (srp_make_verifier): Adapted to new sexp
+	code.
 	(make_srp_entry): Likewise.
 	* src/srp-gen.c: Adapted to new sexp code.
-	* src/server_keyexchange.c (do_server_srp_read_verifier): Adapted
-	to new sexp code.
-	* src/server_authorization.c (do_key_lookup): Adapted to new sexp code.
+	* src/server_keyexchange.c (do_server_srp_read_verifier):
+	Adapted to new sexp code.
+	* src/server_authorization.c (do_key_lookup): Adapted to new sexp
+	code.
 	* src/server.c (read_host_key): Adapted to new sexp code.
-	* src/rsa_keygen.c (rsa_generate_key): Adapted to new sexp code. 
+	* src/rsa_keygen.c (rsa_generate_key): Adapted to new sexp code.
 	* src/lshd.c: Adapted to new sexp code.
 	* src/lsh.c (read_known_hosts): Adapted to new sexp code.
 	(read_user_keys): Likewise.
