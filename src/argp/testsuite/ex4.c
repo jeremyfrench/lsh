@@ -48,18 +48,18 @@ static char args_doc[] = "ARG1 [STRING...]";
 
 /* The options we understand. */
 static struct argp_option options[] = {
-  {"verbose",  'v', 0,       0, "Produce verbose output" },
-  {"quiet",    'q', 0,       0, "Don't produce any output" },
-  {"silent",   's', 0,       OPTION_ALIAS },
+  {"verbose",  'v', 0,       0, "Produce verbose output", 0},
+  {"quiet",    'q', 0,       0, "Don't produce any output", 0},
+  {"silent",   's', 0,       OPTION_ALIAS, 0, 0},
   {"output",   'o', "FILE",  0,
-   "Output to FILE instead of standard output" },
+   "Output to FILE instead of standard output", 0},
 
-  {0,0,0,0, "The following options should be grouped together:" },
+  {0,0,0,0, "The following options should be grouped together:", 0},
   {"repeat",   'r', "COUNT", OPTION_ARG_OPTIONAL,
-   "Repeat the output COUNT (default 10) times"},
-  {"abort",    OPT_ABORT, 0, 0, "Abort before showing any output"},
+   "Repeat the output COUNT (default 10) times", 0},
+  {"abort",    OPT_ABORT, 0, 0, "Abort before showing any output", 0},
 
-  { 0 }
+  {0, 0, 0, 0, 0, 0}
 };
 
 /* Used by `main' to communicate with `parse_opt'. */
@@ -129,7 +129,7 @@ parse_opt (int key, char *arg, struct argp_state *state)
 }
 
 /* Our argp parser. */
-static struct argp argp = { options, parse_opt, args_doc, doc };
+static struct argp argp = { options, parse_opt, args_doc, doc, 0, 0, 0};
 
 int main (int argc, char **argv)
 {
