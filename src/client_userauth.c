@@ -207,7 +207,7 @@ do_userauth_success(struct packet_handler *c,
       werror("User authentication successful.\n");
 
       for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
-	connection->dispatch[i] = connection->fail;
+	connection->dispatch[i] = &connection_fail_handler;
       
       COMMAND_RETURN(self->c, connection);
     }
@@ -695,7 +695,7 @@ client_publickey_next(struct client_publickey_state *state)
 
       /* We have got a response on the final query request. */
       state->connection->dispatch[SSH_MSG_USERAUTH_PK_OK]
-	= state->connection->fail;
+	= &connection_fail_handler;
     }
   else
     {

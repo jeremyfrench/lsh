@@ -117,7 +117,7 @@ do_handle_dh_reply(struct packet_handler *c,
   
   /* Key exchange successful! */
 
-  connection->dispatch[SSH_MSG_KEXDH_REPLY] = connection->fail;
+  connection->dispatch[SSH_MSG_KEXDH_REPLY] = &connection_fail_handler;
 
   keyexchange_finish(connection, closure->algorithms,
 		     closure->dh.method->H,
@@ -204,7 +204,7 @@ do_srp_client_proof_handler(struct packet_handler *s,
 				     packet);
   lsh_string_free(packet);
 
-  connection->dispatch[SSH_MSG_KEXSRP_PROOF] = connection->fail;
+  connection->dispatch[SSH_MSG_KEXSRP_PROOF] = &connection_fail_handler;
   
   if (res)
     {
@@ -251,7 +251,7 @@ do_handle_srp_reply(struct packet_handler *s,
   
   mpz_t x;
   
-  connection->dispatch[SSH_MSG_KEXSRP_REPLY] = connection->fail;
+  connection->dispatch[SSH_MSG_KEXSRP_REPLY] = &connection_fail_handler;
     
   if (!salt)
     {

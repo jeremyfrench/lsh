@@ -92,7 +92,7 @@ do_accept_service(struct packet_handler *c,
       && parse_eod(&buffer))
     {
       lsh_string_free(packet);
-      connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = connection->fail;
+      connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = &connection_fail_handler;
       
       COMMAND_RETURN(closure->c, connection);
     }
