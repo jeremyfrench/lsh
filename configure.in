@@ -83,12 +83,12 @@ if test x$with_idea = xyes ; then
   AC_DEFINE(WITH_IDEA)
 fi
 
-AC_ARG_WITH(ssh2_dsa_kludge,
-  [--with-ssh2-dsa-kludge    Support buggy ssh2 clients/servers],,
-  [with_ssh2_dsa_kludge=yes])
+AC_ARG_WITH(datafellows_workarounds,
+  [--with-datafellows-workarounds    Bug-compatibility with DataFellows ssh2 clients and servers],,
+  [with_datafellows_workarounds=yes])
 
-if test x$with_ssh2_dsa_kludge = xyes ; then
-  AC_DEFINE(DATAFELLOWS_SSH2_SSH_DSA_KLUDGE)
+if test x$with_datafellows_workarounds = xyes ; then
+  AC_DEFINE(DATAFELLOWS_WORKAROUNDS)
 fi
 
 AC_ARG_WITH(tcp_forward,
