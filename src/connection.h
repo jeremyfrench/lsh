@@ -284,4 +284,10 @@ extern struct packet_handler connection_fail_handler;
 extern struct packet_handler connection_forward_handler;
 extern struct packet_handler connection_disconnect_handler;
 
+/* Implemented in write_packet.h */
+struct abstract_write *
+make_write_packet(struct ssh_connection *connection,
+		  struct randomness *random,
+		  struct abstract_write *next);
+
 #endif /* LSH_CONNECTION_H_INCLUDED */
