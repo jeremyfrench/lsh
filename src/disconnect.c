@@ -39,8 +39,8 @@ struct lsh_string *format_disconnect(int code, const char *msg,
 		    msg, language);
 }
 
-static int do_disconnect(struct packet_handler *closure,
-			 struct ssh_connection *connection,
+static int do_disconnect(struct packet_handler *closure UNUSED,
+			 struct ssh_connection *connection UNUSED,
 			 struct lsh_string *packet)
 {
   struct simple_buffer buffer;
