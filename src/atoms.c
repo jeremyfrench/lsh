@@ -25,6 +25,8 @@
 
 #include "atoms.h"
 
+#include <strings.h>
+
 #include "atoms_gperf.c"
 
 struct atom_rassoc
