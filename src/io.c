@@ -54,8 +54,6 @@
 
 #include <arpa/inet.h>
 
-#include <oop.h>
-
 #include "io.h"
 
 #include "command.h"
@@ -311,7 +309,7 @@ list_files(void)
 }
 #endif
 
-void
+oop_source *
 io_init(void)
 {
   struct sigaction pipe;
@@ -335,8 +333,10 @@ io_init(void)
     fatal("Failed to initialize liboop oop_signal.\n");
   source = oop_signal_source(global_oop_signal);
 #else
-   source = oop_sys_source(global_oop_sys);
+  source = oop_sys_source(global_oop_sys);
 #endif
+  
+  return source;
 }
 
 void

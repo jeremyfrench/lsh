@@ -32,6 +32,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include <oop.h>
+
 #include "abstract_io.h"
 #include "queue.h"
 #include "resource.h"
@@ -224,7 +226,7 @@ make_io_exception(uint32_t type, struct lsh_fd *fd, int error, const char *msg);
 extern const struct exception finish_read_exception;
 extern const struct exception finish_io_exception;
 
-void
+oop_source *
 io_init(void);
 
 void
