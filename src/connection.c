@@ -25,13 +25,13 @@
 
 #include "compress.h"
 #include "debug.h"
-#include "disconnect.h"
 #include "encrypt.h"
 #include "exception.h"
 #include "format.h"
 #include "io.h"
 #include "keyexchange.h"
 #include "pad.h"
+#include "parse.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -77,7 +77,7 @@ connection_handle_packet(struct ssh_connection *closure,
   debug("handle_connection: Received packet of type %i (%z)\n",
 	msg, packet_types[msg]);
   
-  switch(closure->kex_state)
+  switch(closure->read_kex_state)
     {
     case KEX_STATE_INIT:
       if (msg == SSH_MSG_NEWKEYS)
@@ -95,28 +95,49 @@ connection_handle_packet(struct ssh_connection *closure,
        * wants to switch to the NEWKEYS state immediately. But for
        * now, we always switch to the IN_PROGRESS state, to wait for a
        * KEXDH_INIT or KEXDH_REPLY message. */
-      closure->kex_state = KEX_STATE_IN_PROGRESS;
+      closure->read_kex_state = KEX_STATE_IN_PROGRESS;
       lsh_string_free(packet);
       return;
 
     case KEX_STATE_IN_PROGRESS:
-      if ( (msg == SSH_MSG_NEWKEYS)
-	   || (msg == SSH_MSG_KEXINIT))
+      switch (msg)
 	{
-	  werror("Unexpected KEXINIT or NEWKEYS message!\n");
-	  PROTOCOL_ERROR(closure->e, "Unexpected KEXINIT or NEWKEYS message!");
-	  lsh_string_free(packet);
-	  return;
+	case SSH_MSG_IGNORE:
+	case SSH_MSG_DEBUG:
+	case SSH_MSG_DISCONNECT:
+	  /* These message types are allowed */
+	  break;
+	default:
+	  if ( (msg < SSH_FIRST_KEYEXCHANGE_SPECIFIC)
+	       || (msg >= SSH_FIRST_USERAUTH_GENERIC) )
+	    {
+	      /* Disallowed messages */
+	    case SSH_MSG_NEWKEYS:
+	    case SSH_MSG_KEXINIT:
+	      {
+		werror("Unexpected message of type %i (%z)!\n",
+		       msg, packet_types[msg]);
+		
+		PROTOCOL_ERROR(closure->e,
+			       "Unexpected message during key exchange");
+		lsh_string_free(packet);
+		return;
+	      }
+	    }
 	}
       break;
     case KEX_STATE_NEWKEYS:
-      if (! ((msg == SSH_MSG_NEWKEYS)
-	     || (msg == SSH_MSG_DISCONNECT)
-	     || (msg == SSH_MSG_IGNORE)
-	     || (msg == SSH_MSG_DEBUG)))
+      switch(msg)
 	{
-	  werror("Expected NEWKEYS message, but received message %i!\n",
-		 msg);
+	case SSH_MSG_NEWKEYS:
+	case SSH_MSG_DISCONNECT:
+	case SSH_MSG_IGNORE:
+	case SSH_MSG_DEBUG:
+	  /* Allowed */
+	  break;
+	default:
+	  werror("Expected NEWKEYS message, but received message %i (%z)!\n",
+		 msg, packet_types[msg]);
 	  PROTOCOL_ERROR(closure->e, "Expected NEWKEYS message");
 	  lsh_string_free(packet);
 	  return;
@@ -181,10 +202,44 @@ DEFINE_PACKET_HANDLER(, connection_unimplemented_handler, connection, packet)
 DEFINE_PACKET_HANDLER(, connection_forward_handler, connection, packet)
 {
   assert(connection->chain);
+  /* FIXME: Packets of certain types (IGNORE, DEBUG, DISCONNECT)
+   * could be sent with C_WRITE_NOW. */
   C_WRITE(connection->chain, packet);
 }
 
+DEFINE_PACKET_HANDLER(, connection_disconnect_handler, connection, packet)
+{
+  struct simple_buffer buffer;
+  unsigned msg_number;
+  UINT32 reason;
 
+  UINT32 length;
+  const UINT8 *msg;
+
+  const UINT8 *language;
+  UINT32 language_length;
+  
+  static const struct exception disconnect_exception =
+    STATIC_EXCEPTION(EXC_FINISH_IO, "Received disconnect message.");
+    
+  simple_buffer_init(&buffer, packet->length, packet->data);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_DISCONNECT)
+      && (parse_uint32(&buffer, &reason))
+      && (parse_string(&buffer, &length, &msg))
+      && (parse_string(&buffer, &language_length, &language))
+      && parse_eod(&buffer))
+    {
+      /* FIXME: Display a better message */
+      werror("Disconnect for reason %i: %ups\n", reason, length, msg);
+    }
+  else
+    werror("Invalid disconnect message!\n");
+  
+  EXCEPTION_RAISE(connection->e, &disconnect_exception);
+}
+     
 /* GABA:
    (class
      (name exc_connection_handler)
@@ -193,6 +248,16 @@ DEFINE_PACKET_HANDLER(, connection_forward_handler, connection, packet)
        (backend object io_backend)
        (connection object ssh_connection)))
 */
+
+static struct lsh_string *
+format_disconnect(int code, const char *msg, 
+		  const char *language)
+{
+  return ssh_format("%c%i%z%z",
+		    SSH_MSG_DISCONNECT,
+		    code,
+		    msg, language);
+}
 
 static void
 do_exc_connection_handler(struct exception_handler *s,
@@ -209,7 +274,8 @@ do_exc_connection_handler(struct exception_handler *s,
         werror("Protocol error: %z\n", e->msg);
         
 	if (exc->reason)
-	  C_WRITE(self->connection, format_disconnect(exc->reason, exc->super.msg, ""));
+	  C_WRITE_NOW(self->connection,
+		      format_disconnect(exc->reason, exc->super.msg, ""));
 	
 	EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
       }
@@ -267,7 +333,7 @@ make_exc_connection_handler(struct ssh_connection *connection,
 }
 
 struct ssh_connection *
-make_ssh_connection(UINT32 flags,
+make_ssh_connection(enum connection_flag flags,
 		    struct address_info *peer,
 		    const char *debug_comment,
 		    struct command_continuation *c,
@@ -283,7 +349,8 @@ make_ssh_connection(UINT32 flags,
   connection->debug_comment = debug_comment;
   connection->super.write = do_handle_connection;
 
-  /* Exception handler that sends a proper disconnect message on protocol errors */
+  /* Exception handler that sends a proper disconnect message on
+   * protocol errors */
   connection->e = make_exc_connection_handler(connection, e, HANDLER_CONTEXT);
 
   connection->established = c;
@@ -311,8 +378,14 @@ make_ssh_connection(UINT32 flags,
   connection->paused = 0;
   string_queue_init(&connection->pending);
   
-  connection->kex_state = KEX_STATE_INIT;
+  connection->read_kex_state = KEX_STATE_INIT;
 
+  connection->key_expire = NULL;
+  connection->sent_data = 0;
+
+  connection->send_kex_only = 0;
+  string_queue_init(&connection->send_queue);
+  
   connection->kexinits[CONNECTION_CLIENT]
     = connection->kexinits[CONNECTION_SERVER] = NULL;
 
@@ -323,7 +396,7 @@ make_ssh_connection(UINT32 flags,
     connection->dispatch[i] = &connection_unimplemented_handler;
 
   connection->dispatch[0] = &connection_fail_handler;
-  connection->dispatch[SSH_MSG_DISCONNECT] = &disconnect_handler;
+  connection->dispatch[SSH_MSG_DISCONNECT] = &connection_disconnect_handler;
   connection->dispatch[SSH_MSG_IGNORE] = &connection_ignore_handler;
 
   /* So far, all messages we send have to be supported. */ 
@@ -369,7 +442,7 @@ connection_init_io(struct ssh_connection *connection,
 {
   /* Initialize i/o hooks */
   connection->raw = raw;
-  connection->write =
+  connection->write_packet =
     make_packet_debug(
       make_packet_deflate(
 	make_packet_pad(
@@ -412,6 +485,41 @@ make_connection_close_handler(struct ssh_connection *c)
   return &closure->super;
 }
 
+
+/* Sending ordinary (non keyexchange) packets */
+void
+connection_send(struct ssh_connection *self,
+		struct lsh_string *message)
+{
+  /* FIXME: Constify? Then we need to constify the string queue as
+   * well. */
+  if (self->send_kex_only)
+    string_queue_add_tail(&self->send_queue, message);
+  else
+    {
+      assert(string_queue_is_empty(&self->send_queue));
+      C_WRITE_NOW(self, message);
+    }
+}
+
+void
+connection_send_kex_start(struct ssh_connection *self)
+{
+  assert(!self->send_kex_only);
+  assert(string_queue_is_empty(&self->send_queue));
+  self->send_kex_only = 1;
+}
+
+void
+connection_send_kex_end(struct ssh_connection *self)
+{
+  assert(self->send_kex_only);
+
+  while (!string_queue_is_empty(&self->send_queue))
+    C_WRITE_NOW(self, string_queue_remove_head(&self->send_queue));
+
+  self->send_kex_only = 0;
+}
 
 /* Serialization. */
 
