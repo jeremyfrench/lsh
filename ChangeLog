@@ -1,3 +1,19 @@
+2002-05-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/gateway_channel.c (do_gateway_channel_open): Limit
+	rec_max_packet to SSH_MAX_PACKET.
+	(do_gateway_channel_open_continuation): Likewise.
+
+	* src/channel.c (parse_channel_open): Don't subtract
+	SSH_MAX_PACKET_FUZZ here, it's handled in read_data.c.
+	* src/server_session.c (make_server_session): Likewise.
+	* src/client_session.c (make_client_session_channel): Likewise.
+	* src/channel_forward.c (init_channel_forward): Likewise.
+
+	* src/read_data.c (do_read_data_query): Don't read more than
+	send_max_packet - SSH_MAX_PACKET_FUZZ, as to not exceed the
+	receivers maximum packet size. 
+
 2002-04-04  Pontus Sköld  <pont@soua.net>
 
 	* src/lsh.c (do_lsh_lookup): Cosmetic changes of unauthenticated
