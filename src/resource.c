@@ -53,11 +53,26 @@ void do_free_resources(struct resource_node **q);
 
 
 /* Sanity check */
-void dont_free_live_resource(int alive)
+void
+dont_free_live_resource(int alive)
 {
   if (alive)
     fatal("dont_free_live_resource: "
 	  "About to garbage collect a live resource!\n");
+}
+
+/* For resources that are only marked as dead, and taken care of
+ * later. */
+static void
+do_resource_kill(struct resource *self)
+{ self->alive = 0; }
+
+void
+resource_init(struct resource *self,
+	      void (*k)(struct resource *))
+{
+  self->alive = 1;
+  self->kill = k ? k : do_resource_kill;
 }
 
 /* The behaviour of a resource list is somewhat similar to
@@ -80,8 +95,9 @@ struct resource_node
 */
 
 /* Loop over the resources, mark the living and unlink the dead. */
-void do_mark_resources(struct resource_node **q,
-		       void (*mark)(struct lsh_object *o))
+void
+do_mark_resources(struct resource_node **q,
+		  void (*mark)(struct lsh_object *o))
 {
   struct resource_node *n;
   
@@ -101,7 +117,8 @@ void do_mark_resources(struct resource_node **q,
 }
 
 /* Free the list. */
-void do_free_resources(struct resource_node **q)
+void
+do_free_resources(struct resource_node **q)
 {
   struct resource_node *n;
 
@@ -129,7 +146,8 @@ do_remember_resource(struct resource_list *s,
   self->q = n;
 }
 
-static void do_kill_all(struct resource *s)
+static void
+do_kill_all(struct resource *s)
 {
   CAST(concrete_resource_list, self, s);
   struct resource_node *n;
@@ -148,11 +166,11 @@ static void do_kill_all(struct resource *s)
   self->super.super.alive = 0;
 }
   
-struct resource_list *empty_resource_list(void)
+struct resource_list *
+empty_resource_list(void)
 {
   NEW(concrete_resource_list, self);
-  self->super.super.kill = do_kill_all;
-  self->super.super.alive = 1;
+  resource_init(&self->super.super, do_kill_all);
 
   self->super.remember = do_remember_resource;
   
