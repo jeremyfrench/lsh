@@ -1426,12 +1426,12 @@ io_listen(struct io_backend *b,
 }
 #endif
 
-#if 0
 /* AF_LOCAL sockets */
 
-#define HAVE_GNU_GETCWD 1
-#define HAVE_FCHDIR 1
+
+/* This isn't needed if we have fchdir */
 #if 0
+#define HAVE_GNU_GETCWD 1
 
 /* We have to set and reset the cwd */
 #if HAVE_GNU_GETCWD
@@ -1462,11 +1462,8 @@ io_listen_local(struct io_backend *b,
 		struct io_callback *callback,
 		struct exception_handler *e)
 {
-#if HAVE_FCHDIR
   int old_cd;
-#else
-  char *old_cd;
-#endif
+
   mode_t old_umask;
   struct stat sbuf;
   struct sockaddr_un *local;
@@ -1496,20 +1493,20 @@ io_listen_local(struct io_backend *b,
     }
 
   /* cd to it, but first save old cwd */
-#if HAVE_FCHDIR
-  old_cd = open(".", O_RDWR); gnu_getcwd();
+
+  old_cd = open(".", O_RDONLY);
   if (old_cd < 0)
     {
-      werror("io.c: open(".") failed.\n");
+      werror("io.c: open(\".\") failed.\n");
       return NULL;
     }
-#else /* !HAVE_FCHDIR */
-  old_cd = gnu_getcwd();
-  assert(old_cd);
-#endif /* !HAVE_FCHDIR */
   
-  if (chdir(directory->data) < 0)
-    goto free_cd;
+  while ( (chdir(directory->data) < 0) )
+    if (errno != EINTR)
+      {
+	close(old_cd);
+	return NULL;
+      }
 
   /* Check that it has reasonable permissions */
   if (stat(".", &sbuf) < 0)
@@ -1518,21 +1515,11 @@ io_listen_local(struct io_backend *b,
 	     "  (errno = %i): %z\n", directory, errno, STRERROR(errno));
 
     fail:
-      if (
-#if HAVE_FCHDIR
-	  fchdir(old_cd) < 0
-#else
-	  chdir(old_cd) < 0
-#endif
-	  )
-	fatal("io.c: Failed to cd back to %z (errno = %i): %z\n",
-	      old_cd, errno, STRERROR(errno));
-       free_cd:
-#if HAVE_FCHDIR
+      if (fchdir(old_cd) < 0)
+	fatal("io_listen_local: Failed to cd back from %S (errno = %i): %z\n",
+	      directory, errno, STRERROR(errno));
+    
       close(old_cd);
-#else
-      lsh_space_free(old_cd);
-#endif
       return NULL;
     }
   
@@ -1571,15 +1558,124 @@ io_listen_local(struct io_backend *b,
   /* Ok, now we restore umask and cwd */
   umask(old_umask);
 
-  if (chdir(old_cd) < 0)
-    fatal("io.c: Failed to cd back to %z (errno = %i): %z\n",
-	  old_cd, errno, STRERROR(errno));
-  
-  lsh_space_free(old_cd);
+  while (fchdir(old_cd) < 0)
+    if (errno != EINTR)
+      fatal("io_listen_local: Failed to cd back from %S (errno = %i): %z\n",
+	    directory, errno, STRERROR(errno));
+
+  close(old_cd);
 
   return fd;
 }
-#endif
+
+/* Requires DIRECTORY and NAME to be NUL-terminated */
+struct lsh_fd *
+io_connect_local(struct io_backend *b,
+		 struct lsh_string *directory,
+		 struct lsh_string *name,
+		 struct command_continuation *c,
+		 struct exception_handler *e)
+{
+  int old_cd;
+
+  struct stat sbuf;
+  struct sockaddr_un *addr;
+  socklen_t addr_length;
+
+  struct lsh_fd *fd;
+  
+  assert(directory && NUL_TERMINATED(directory));
+  assert(name && NUL_TERMINATED(name));
+
+  /* NAME should not be a plain filename, with no directory separators.
+   * In particular, it should not be an absolute filename. */
+  assert(!memchr(name->data, '/', name->length));
+
+  addr_length = OFFSETOF(struct sockaddr_un, sun_path) + name->length;
+  addr = alloca(addr_length);
+
+  addr->sun_family = AF_LOCAL;
+  memcpy(addr->sun_path, name->data, name->length);
+
+  /* cd to it, but first save old cwd */
+
+  old_cd = open(".", O_RDONLY);
+  if (old_cd < 0)
+    {
+      werror("io.c: open(\".\") failed.\n");
+      return NULL;
+    }
+  
+  while ( (chdir(directory->data) < 0) )
+    if (errno != EINTR)
+      {
+	close(old_cd);
+	return NULL;
+      }
+  
+  /* Check that the directory has reasonable permissions */
+  if (stat(".", &sbuf) < 0)
+    {
+      werror("io.c: Failed to stat() \".\" (supposed to be %S).\n"
+	     "  (errno = %i): %z\n", directory, errno, STRERROR(errno));
+
+    fail:
+      if (fchdir(old_cd) < 0)
+	fatal("io_connect_local: Failed to cd back from %S (errno = %i): %z\n",
+	      directory, errno, STRERROR(errno));
+
+      close(old_cd);
+      return NULL;
+    }
+  
+  if (sbuf.st_uid != getuid())
+    {
+      werror("io.c: Socket directory %S not owned by user.\n", directory);
+      goto fail;
+    }
+
+  if (sbuf.st_mode & (S_IRWXG | S_IRWXO))
+    {
+      werror("io.c: Permission bits on %S are too loose.\n", directory);
+      goto fail;
+    }
+
+  /* Check that the socket is owned by the right user */
+  if (stat(name->data, &sbuf) < 0)
+    {
+      werror("io.c: Failed to stat() \"%S/%S\".\n"
+	     "  (errno = %i): %z\n", directory, name, errno, STRERROR(errno));
+
+      goto fail;
+    }
+  if (sbuf.st_uid != getuid())
+    {
+      werror("io.c: Socket %S/%S not owned by user.\n",
+	     directory, name);
+      goto fail;
+    }
+
+  if (sbuf.st_mode & (S_IRWXG | S_IRWXO))
+    {
+      werror("io.c: Permission bits on %S/%S are too loose.\n",
+	     directory, name);
+      goto fail;
+    }
+
+  fd = io_connect(b, (struct sockaddr *) addr, addr_length, c, e);
+
+  while (fchdir(old_cd) < 0)
+    if (errno != EINTR)
+      fatal("io_connect_local: Failed to cd back from %S (errno = %i): %z\n",
+	    directory, errno, STRERROR(errno));
+
+  close(old_cd);
+
+  return fd;
+ 
+  
+  
+}
 
 /* Constructors */
 

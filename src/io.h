@@ -176,7 +176,7 @@ void init_consuming_read(struct io_consuming_read *self,
        ; The port number here is always in host byte order
        (port . UINT32))) */
 
-/* Returned by listen */
+/* Returned by listen. And also by connect, so this is an improper name. */
 /* GABA:
    (class
      (name listen_value)
@@ -321,6 +321,13 @@ io_listen_local(struct io_backend *b,
 		struct lsh_string *name,
 		struct io_callback *callback,
 		struct exception_handler *e);
+
+struct lsh_fd *
+io_connect_local(struct io_backend *b,
+		 struct lsh_string *directory,
+		 struct lsh_string *name,
+		 struct command_continuation *c,
+		 struct exception_handler *e);
 
 struct io_callback *
 make_listen_callback(struct io_backend *backend,
