@@ -92,6 +92,12 @@ look at this flag, wait() to get status from dying children. Use an
 alist pid->callback to report childrens exit status back to the remote
 end. Another issue are process groups... Are they relevant? 
 
+Channels need some live-ness status. For instance, a remote process
+may close its stdout and stderr, but still keep on running. In this
+case, the local process should close it's stdout and stderr, but not
+close the channel until it has recieved a close message and possibly
+an exit status.
+
 
 MISC
 
@@ -100,4 +106,5 @@ on sparc-linux, 2.0.33, redhat-5.1, glibc.
 
 Figure out why signal(SIGPIPE, SIG_IGN); in io.c doesn't stop SIGPIPE
 from killing the process.
+
 
