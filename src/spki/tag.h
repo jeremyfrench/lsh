@@ -28,6 +28,7 @@
 struct sexp_iterator;
 
 #include "nettle/realloc.h"
+#include "nettle/buffer.h"
 
 struct spki_tag;
 
@@ -55,6 +56,9 @@ struct spki_tag *
 spki_tag_intersect(void *ctx, nettle_realloc_func *ralloc,
 		   struct spki_tag *a,
 		   struct spki_tag *b);
+
+unsigned
+spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer);
 
 #endif /* LIBSPKI_TAG_H_INCLUDED */
 

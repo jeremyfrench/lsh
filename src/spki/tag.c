@@ -45,6 +45,9 @@ type *var = MALLOC(ctx, realloc, sizeof(type))
 /* Strings */
 struct spki_string
 {
+  /* FIXME: Do we really need references here? It seems to be enough
+   * to referencecount the tags. Then we don't need the string type at
+   * all. */
   unsigned refs;
   unsigned length;
   const uint8_t *data;
@@ -901,5 +904,87 @@ spki_tag_intersect(void *ctx, nettle_realloc_func *realloc,
 	return spki_tag_dup(b);
 
       return NULL;
+    }
+}
+
+
+/* Formatting a tag as an S-expression. */
+
+static unsigned
+list_format(struct spki_cons *c, struct nettle_buffer *buffer)
+{
+  unsigned done = 0;
+  for ( ; c; c = c->cdr)
+    {
+      unsigned length = spki_tag_format(c->car, buffer);
+      if (!length)
+	return 0;
+      
+      done += length;
+    }
+  
+  return sexp_format(buffer, "%l", 1, ")") ? done + 1 : 0;
+}
+
+unsigned
+spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
+{
+  switch(tag->type)
+    {
+    default:
+      abort();
+      
+    case SPKI_TAG_ANY:
+      return sexp_format(buffer, "(%0s)", "*");
+
+    case SPKI_TAG_SET:
+      {
+	struct spki_tag_list *self = tag_list(tag);
+	unsigned length;
+	unsigned prefix;
+
+	prefix = sexp_format(buffer, "%0l", "(3:set");
+	if (!prefix)
+	  return 0;
+
+	length = list_format(self->children, buffer);
+
+	return length ? length + prefix : 0;
+      }
+
+    case SPKI_TAG_LIST:
+      {
+	struct spki_tag_list *self = tag_list(tag);
+	unsigned length;
+
+	if (!sexp_format(buffer, "%l", 1, "1"))
+	  return 0;
+
+	assert(self->children);
+	
+	length = list_format(self->children, buffer);
+
+	return length ? length + 1 : 0;
+      }
+
+    case SPKI_TAG_PREFIX:
+      {
+	struct spki_tag_atom *self = tag_atom(tag);
+	return sexp_format(buffer, "(%0s%t%s)", "prefix",
+			   self->display->length, self->display->data,
+			   self->atom->length, self->atom->data);
+      }
+      
+    case SPKI_TAG_RANGE:
+      /* Not implemented. */
+      abort();
+      
+    case SPKI_TAG_ATOM:
+      {
+	struct spki_tag_atom *self = tag_atom(tag);
+	return sexp_format(buffer, "%t%s",
+			   self->display->length, self->display->data,
+			   self->atom->length, self->atom->data);
+      }
     }
 }
