@@ -110,6 +110,7 @@ do_handle_dh_reply(struct packet_handler *c,
 
   if (!res)
     {
+      werror("Invalid server signature. Disconnecting.\n");
       /* FIXME: Use a more appropriate error code? */
       disconnect_kex_failed(connection, "Invalid server signature\r\n");
       return;
