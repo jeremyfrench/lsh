@@ -58,14 +58,6 @@ format_service_accept(int name)
   return ssh_format("%c%a", SSH_MSG_SERVICE_ACCEPT, name);
 }
 
-#if DATAFELLOWS_WORKAROUNDS	      
-static struct lsh_string *
-format_service_accept_kludge(void)
-{
-  return ssh_format("%c", SSH_MSG_SERVICE_ACCEPT);
-}
-#endif /* DATAFELLOWS_WORKAROUNDS */
-
 
 /* GABA:
    (class
@@ -105,12 +97,7 @@ do_service_request(struct packet_handler *c,
 		= &connection_fail_handler;
 
 	      /* Start service */
-#if DATAFELLOWS_WORKAROUNDS
-	      if (connection->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE)
-		connection_send(connection, format_service_accept_kludge());
-	      else
-#endif /* DATAFELLOWS_WORKAROUNDS */
-		connection_send(connection, format_service_accept(name));
+	      connection_send(connection, format_service_accept(name));
 	      
 	      COMMAND_CALL(service, connection,
 			   closure->c, closure->e);
