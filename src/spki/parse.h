@@ -56,6 +56,10 @@ spki_iterator_first(struct spki_iterator *i,
 		    unsigned length, const uint8_t *expr);
 
 enum spki_type
+spki_iterator_first_sexp(struct spki_iterator *i,
+			 const struct sexp_iterator *sexp);
+
+enum spki_type
 spki_intern(struct spki_iterator *i);
 
 const uint8_t *

@@ -95,6 +95,16 @@ spki_iterator_first(struct spki_iterator *i,
 }
 
 enum spki_type
+spki_iterator_first_sexp(struct spki_iterator *i,
+			 const struct sexp_iterator *sexp)
+{
+  i->start = 0;
+  i->sexp = *sexp;
+
+  return spki_parse_type(i);
+}
+
+enum spki_type
 spki_parse_end(struct spki_iterator *i)
 {
   return (i->type && i->sexp.type == SEXP_END
@@ -266,7 +276,8 @@ spki_parse_version(struct spki_iterator *i)
 	  && version == 0)
     ? spki_parse_end(i) : 0;
 }
-		   
+
+/* The acl must already be initialized. */
 enum spki_type
 spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
 		     struct spki_5_tuple *acl)
@@ -276,13 +287,18 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
    * ("entry" <principal> <delegate>? <tag> <valid>? <comment>?) */
 
   assert(i->type == SPKI_TYPE_ENTRY);
-  
-  acl->issuer = NULL;
-  acl->subject = NULL;
-  acl->flags = 0;
-  acl->tag = NULL;
 
-  spki_parse_principal(db, i, &acl->subject);
+  spki_parse_type(i);
+  
+  /* NOTE: draft-ietf-spki-cert-structure-06.txt has a raw <subj-obj>,
+   * but that should be changed. */
+  if (i->type != SPKI_TYPE_SUBJECT)
+    return 0;
+
+  /* FIXME: Write an spki_parse_subject function. */
+  if (! (spki_parse_principal(db, i, &acl->subject)
+	 && spki_parse_end(i)))
+    return 0;
 
   if (i->type == SPKI_TYPE_PROPAGATE)
     {
@@ -304,17 +320,13 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
   return spki_parse_end(i);
 }
 
+/* The cert must already be initialized. */
 enum spki_type
 spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
 		struct spki_5_tuple *cert)
 {
   assert(i->type == SPKI_TYPE_CERT);
   
-  cert->issuer = NULL;
-  cert->subject = NULL;
-  cert->flags = 0;
-  cert->tag = NULL;
-
   spki_parse_type(i);
   
   if (i->type == SPKI_TYPE_VERSION)
@@ -333,6 +345,10 @@ spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
   if (i->type == SPKI_TYPE_ISSUER_INFO)
     spki_parse_skip(i);    
 
+  if (i->type != SPKI_TYPE_SUBJECT)
+    return 0;
+  
+  /* FIXME: Write an spki_parse_subject function. */
   if (! (spki_parse_principal(db, i, &cert->subject)
 	 && spki_parse_end(i)))
     return 0;
