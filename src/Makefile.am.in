@@ -1,5 +1,5 @@
 ## Process this file with make_am to produce Makefile.am -*-makefile-*-
-SUBDIRS: argp symmetric scm
+SUBDIRS: argp symmetric scm testsuite
 CVS_HEADERS: cvs_headers
 CLASS_FILES: dist_x_files
 BODY:
@@ -59,10 +59,12 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	server_password.c server_publickey.c \
 	server_pty.c server_session.c server_userauth.c \
 	sexp.c sexp_commands.c sexp_parser.c sexp_streamed_parser.c \
-	sha.c service.c spki.c ssh1_fallback.c \
+	sha.c service.c spki.c spki_commands.c ssh1_fallback.c \
 	string_buffer.c tcpforward.c tcpforward_commands.c \
 	translate_signal.c tty.c twofish.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c zlib.c
+
+liblsh_a_LIBADD = @LIBOBJS@
 
 atoms_defines.h: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms header <$(srcdir)/atoms.in >$@T
@@ -104,7 +106,7 @@ packet_types.h: ssh.h invert-defs
 # 	  $(PERL) $(top_srcdir)/misc/mk-reverse-table ssh.h >$@T
 # 	  if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
 
-LDADD = liblsh.a @LIBOBJS@ symmetric/libsymmetric.a 
+LDADD = liblsh.a symmetric/libsymmetric.a 
 
 # Is this rule needed?
 # all-recursive check-recursive: config.h
