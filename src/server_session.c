@@ -24,6 +24,7 @@
 
 #include "server_session.h"
 
+#include "channel_commands.h"
 #include "format.h"
 #include "server_password.h"
 #include "server_pty.h"
@@ -322,20 +323,20 @@ struct channel_open *make_open_session(struct unix_user *user,
   return &closure->super;
 }
 
-/* A command taking two arguments: unix_user, connection */
+/* A command taking two arguments: unix_user, connection,
+ * returns the connection. */
 /* GABA:
    (class
      (name server_connection_service)
      (super command)
      (vars
-       (global_requests object alist)
+       ;; (global_requests object alist)
 
        ; Requests specific to session channels 
        (session_requests object alist)
 
        ; io_backend, needed for direct_tcpip
-       (backend object io_backend) ))
-*/
+       (backend object io_backend) )) */
 
 /* Start an authenticated ssh-connection service */
 static int do_login(struct command *s,
@@ -346,21 +347,22 @@ static int do_login(struct command *s,
   CAST(unix_user, user, x);
   
   debug("server.c: do_login()\n");
+
+  /* FIXME: It would be better to take one more alists as arguments,
+   * and cons the ATOM_SESSION service at the head of it. But that
+   * won't work as long as an alist doesn't consists of independent
+   * cons-objects. */
   
   return COMMAND_RETURN
-    (c, make_connection_service
-     (closure->global_requests,
-      /* FIXME: It would be better to take one more alists as
-       * arguments, and cons the ATOM_SESSION service at the head of
-       * it. But that won't work as long as an alist doesn't consists
-       * of independent cons-objects. */
-      make_alist(2, 
-		 ATOM_SESSION, make_open_session(user,
-						 closure->session_requests),
-		 /* FIXME: Make direct-tcpip support configurable */
-		 ATOM_DIRECT_TCPIP,
-		 make_channel_open_direct_tcpip(closure->backend), 
-		 -1)));
+    (c, make_install_fix_channel_open_handler
+     (ATOM_SESSION, make_open_session(user,
+				      closure->session_requests)));
+#if 0
+  /* FIXME: Move enabling of direct tcp somewhere else */
+  (ATOM_DIRECT_TCPIP,
+    make_channel_open_direct_tcpip(closure->backend), 
+    -1);
+#endif
 }
 
 /* FIXME: To make this more flexible, we need to have some argument
@@ -368,14 +370,12 @@ static int do_login(struct command *s,
  * CHANNEL_OPEN, and (ii) for each channel type, the types of
  * channel_requests we want to support. */
 struct command *
-make_server_connection_service(struct alist *global_requests,
-			       struct alist *session_requests,
+make_server_connection_service(struct alist *session_requests,
 			       struct io_backend *backend)
 {
   NEW(server_connection_service, closure);
 
   closure->super.call = do_login;
-  closure->global_requests = global_requests;
   closure->session_requests = session_requests;
   closure->backend = backend;
 

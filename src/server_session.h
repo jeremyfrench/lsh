@@ -37,8 +37,7 @@ struct ssh_channel *make_server_session(struct unix_user *user,
 					UINT32 max_window,
 					struct alist *request_types);
 struct command *
-make_server_connection_service(struct alist *global_requests,
-			       struct alist *session_requests,
+make_server_connection_service(struct alist *session_requests,
 			       struct io_backend *backend);
 
 struct channel_open *make_open_session(struct unix_user *user,
