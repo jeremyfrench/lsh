@@ -1,3 +1,26 @@
+2000-05-21  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Bumped version to 0.9.10.
+
+	* acinclude.m4 (AC_SEARCH_LIBGMP): Use HAVE_GMP_H and
+	HAVE_GMP2_GMP_H. 
+
+	* configure.in (gmp_header_found): Changed "no gmp" error message
+	not to refer to a particular version.
+
+	* src/dsa.c (do_dsa_verify): Require outer length field.
+	(do_dsa_sign): Add outer length field.
+
+	* src/ssh.h (SSH_DISCONNECT_TOO_MANY_CONNECTIONS): Updated for
+	draft-ietf-secsh-transport-07.txt.
+	(SSH_DISCONNECT_AUTH_CANCELLED_BY_USER): Likewise.
+	(SSH_DISCONNECT_NO_MORE_AUTH_METHODS_AVAILABLE): Likewise.
+	(SSH_DISCONNECT_ILLEGAL_USER_NAME): Likewise.
+	(SSH_DISCONNECT_RESERVED): Likewise.
+
+	* src/client.c (do_exit_signal): Use control character filtering
+	on the message.
+
 2000-05-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client_userauth.c (do_userauth_pk_ok): Moved else across
