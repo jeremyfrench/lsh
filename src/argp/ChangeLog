@@ -1,3 +1,7 @@
+2004-03-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* testsuite/Makefile.am (AM_CPPFLAGS): Add -I$(top_srcdir). 
+
 2004-03-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* vsnprintf.c (dopr): Use unsigned char for the argument to
