@@ -37,12 +37,6 @@ B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
 ---- END SSH2 PUBLIC KEY ----
 */
 
-#if 0
-#if macintosh
-#include "lshprefix.h"
-#include "lsh_context.h"
-#endif
-#endif
 
 #include "algorithms.h"
 #include "alist.h"
@@ -52,11 +46,13 @@ B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
 #include "io.h"
 #include "lsh.h"
 #include "lsh_argp.h"
-#include "sexp.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include "nettle/base64.h"
+#include "nettle/sexp.h"
 
 #include <assert.h>
 #include <fcntl.h>
@@ -73,28 +69,68 @@ make_header(const char *name, const char *value)
     : ssh_format("");
 }
 
+#define BLOCKS 10
+#define LINE_LENGTH (BASE64_TEXT_BLOCK_SIZE * BLOCKS)
+#define BINARY_LENGTH (BASE64_BINARY_BLOCK_SIZE * BLOCKS)
+
+/* Includes a newline at the end. */
 static struct lsh_string *
-sexp_to_ssh2_key(struct sexp *expr,
+encode_base64(const struct lsh_string *s,
+	      int free)
+{
+  unsigned encoded_length = BASE64_ENCODE_RAW_LENGTH(s->length);
+  unsigned lines = (encoded_length + LINE_LENGTH - 1) / LINE_LENGTH;
+  struct base64_encode_ctx ctx;
+  unsigned length = encoded_length + lines;
+  unsigned line;
+  unsigned final;
+  unsigned out;
+  
+  struct lsh_string *res = lsh_string_alloc(length);
+
+  base64_encode_init(&ctx);
+  for (out = 0, line = 0; line + 1 < lines; line++)
+    {
+      base64_encode_update(&ctx,
+			   res->data + out,
+			   BINARY_LENGTH, s->data + line * BINARY_LENGTH);
+      out += LINE_LENGTH;
+      res->data[out++] = '\n';
+    }
+  final = base64_encode_update(&ctx,
+			       res->data + out,
+			       s->length - line * BINARY_LENGTH,
+			       s->data + line * BINARY_LENGTH);
+  final += base64_encode_final(&ctx, res->data + out + final);
+  
+  if (final)
+    {
+      out += final;
+      res->data[out++] = '\n';
+    }
+  assert(out == res->length);
+
+  if (free)
+    lsh_string_free(s);
+  
+  return res;
+}
+
+static struct lsh_string *
+sexp_to_ssh2_key(struct lsh_string *expr,
                  struct export_key_options *options)
 {
-  struct sexp_iterator *i;
+  struct sexp_iterator i;
   struct verifier *v;
   
-  if (!(i = sexp_check_type(expr, ATOM_PUBLIC_KEY)))
+  if (!(sexp_transport_iterator_first(&i, expr->length, expr->data)
+	&& sexp_iterator_check_type(&i, "public-key")))
     {
       werror("Only conversion of public keys implemented.\n");
       return NULL;
     }
 
-  expr = SEXP_GET(i);
-
-  if (!expr)
-    {
-      werror("Invalid (empty) public key expression.\n");
-      return NULL;
-    }
-      
-  v = spki_make_verifier(options->algorithms, expr);
+  v = spki_make_verifier(options->algorithms, &i);
   if (!v)
     {
       werror("Unsupported algorithm\n");
@@ -104,11 +140,11 @@ sexp_to_ssh2_key(struct sexp *expr,
   return ssh_format("---- BEGIN SSH2 PUBLIC KEY ----\n"
                     "%lfS"
                     "%lfS"
-                    "\n%lfS\n"
+                    "\n%lfS"
                     "---- END SSH2 PUBLIC KEY ----\n",
                     make_header("Subject", options->subject),
                     make_header("Comment", options->comment),
-                    encode_base64(PUBLIC_KEY(v), NULL, 1, 0, 1));
+                    encode_base64(PUBLIC_KEY(v), 1));
 }
 
 /* Option parsing */
@@ -138,7 +174,6 @@ main_options[] =
 (class
   (name export_key_options)
   (vars
-    (input . sexp_argp_state)
     (algorithms object alist)
     (infile . "const char *")
     (outfile . "const char *")
@@ -150,7 +185,6 @@ static struct export_key_options *
 make_options(void)
 {
   NEW(export_key_options, self);
-  self->input = SEXP_TRANSPORT;
   self->infile = NULL;
   self->subject = NULL;
   self->comment = NULL;
@@ -162,7 +196,6 @@ make_options(void)
 static const struct argp_child
 main_argp_children[] =
 {
-  { &sexp_input_argp, 0, NULL, 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -177,9 +210,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = &self->input;
-      // state->child_inputs[1] = &self->output;
-      state->child_inputs[1] = NULL;
+      state->child_inputs[0] = NULL;
       break;
     case ARGP_KEY_END:
       break;
@@ -231,7 +262,6 @@ int main(int argc, char **argv)
   int out = STDOUT_FILENO;
   
   struct lsh_string *input;
-  struct sexp *expr;
   struct lsh_string *output;
     
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
@@ -269,26 +299,20 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  expr = string_to_sexp(options->input, input, 1);
-  if (!expr)
-    {
-      werror("Invalid S-expression\n");
-      return EXIT_FAILURE;
-    }
-
-  output = sexp_to_ssh2_key(expr, options);
+  output = sexp_to_ssh2_key(input, options);
+  lsh_string_free(input);
+  
   if (!output)
     return EXIT_FAILURE;
 
   e = write_raw(out, output->length, output->data);
+  lsh_string_free(output);
 
   if (e)
     {
       werror("%z\n", e->msg);
       return EXIT_FAILURE;
     }
-
-  lsh_string_free(output);
 
   gc_final();
   
