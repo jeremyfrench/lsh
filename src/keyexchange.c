@@ -277,7 +277,11 @@ do_handle_kexinit(struct packet_handler *c,
       disconnect_kex_failed(connection, "No common hostkey algorithm.\r\n");
       return;
     }
-  
+
+  verbose("Selected keyexchange algorithm: %a\n"
+	  "  with hostkey algorithm:       %a\n",
+	  kex_algorithm_atom, hostkey_algorithm_atom);
+    
   for(i = 0; i<KEX_PARAMETERS; i++)
     {
       parameters[i]
@@ -290,6 +294,14 @@ do_handle_kexinit(struct packet_handler *c,
 	  return;
 	}
     }
+
+  verbose("Selected bulk algorithms: (client to server, server to client)\n"
+	  "  Encryption:             (%a, %a)\n"
+	  "  Message authentication: (%a, %a)\n"
+	  "  Compression:            (%a, %a)\n",
+	  parameters[0], parameters[1],
+	  parameters[2], parameters[3], 
+	  parameters[4], parameters[5]);
   
   algorithms = alloc_object_list(KEX_PARAMETERS);
   
