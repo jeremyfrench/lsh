@@ -42,7 +42,7 @@ spki_acl_init(struct spki_acl_db *db)
   db->realloc_ctx = NULL;
   db->realloc = nettle_realloc;
   db->first_principal = NULL;
-  db->first_acl = NULL;
+  db->acls = NULL;
 }
 
 void
@@ -50,8 +50,8 @@ spki_acl_clear(struct spki_acl_db *db)
 {
   spki_principal_free_chain(db, db->first_principal);
   db->first_principal = NULL;
-  spki_5_tuple_free_chain(db, db->first_acl);
-  db->first_acl = NULL;
+  spki_5_tuple_list_release(db, db->acls);
+  db->acls = NULL;
 }
 
 uint8_t *
@@ -273,7 +273,8 @@ spki_principal_normalize(const struct spki_principal *principal)
 void
 spki_5_tuple_init(struct spki_5_tuple *tuple)
 {
-  tuple->next = NULL;
+  /* NOTE: Created with no references */
+  tuple->refs = 0;
   tuple->issuer = NULL;
   tuple->subject = NULL;
   tuple->flags = 0;
@@ -283,132 +284,234 @@ spki_5_tuple_init(struct spki_5_tuple *tuple)
   tuple->not_after = spki_date_for_ever;
 }
 
-#if 0
-static void
-spki_5_tuple_fix_aliases(struct spki_5_tuple *tuple)
+/* FIXME: It's somewhat unfortunate to have both spki_tag_release and
+ * spki_tag_free. The first function is a lower leve one. */
+void
+spki_tag_free(struct spki_acl_db *db,
+	      struct spki_tag *tag)
 {
-  for ( ; tuple; tuple = tuple->next)
+  spki_tag_release(db->realloc_ctx, db->realloc, tag);
+}
+
+struct spki_5_tuple *
+spki_5_tuple_cons_new(struct spki_acl_db *db,
+		      struct spki_5_tuple_list **list)
+{
+  SPKI_NEW(db, struct spki_5_tuple, tuple);
+  if (tuple)
     {
-      if (tuple->issuer)
-	while (tuple->issuer->alias)
-	  tuple->issuer = tuple->issuer->alias;
+      SPKI_NEW(db, struct spki_5_tuple_list, cons);
+      if (cons)
+	{
+	  spki_5_tuple_init(tuple);
+	  tuple->refs++;
+	  cons->car = tuple;
+	  cons->cdr = *list;
+	  *list = cons;
+	  return tuple;
+	}
+      else
+	SPKI_FREE(db, tuple);
+    }
+  return NULL;
+}
 
-      assert(tuple->subject);
+void
+spki_5_tuple_list_release(struct spki_acl_db *db,
+			  struct spki_5_tuple_list *list)
+{
+  while (list)
+    {
+      struct spki_5_tuple_list *cdr = list->cdr;
+      struct spki_5_tuple *car = list->car;
 
-      while (tuple->subject->alias)
-	tuple->subject = tuple->subject->alias;
+      assert(car->refs);
+
+      if (!--car->refs)
+	{
+	  spki_tag_free(db, car->tag);
+	  SPKI_FREE(db, car);
+	}
+      SPKI_FREE(db, list);
+
+      list = cdr;
     }
 }
-#endif
+
+struct spki_5_tuple_list *
+spki_5_tuple_list_nappend(struct spki_5_tuple_list *a,
+			  struct spki_5_tuple_list *b)
+{  
+  if (!a)
+    return b;
+
+  if (!b)
+    return a;
+
+  {
+    struct spki_5_tuple_list *p;
+    
+    for (p = a; p->cdr; p = p->cdr)
+      ;
+    
+    assert(p);
+    assert(!p->cdr);
+    
+    p->cdr = b;
+  }
+  return a;
+}
+
+/* NOTE: More or less a copy of tag.c:spki_cons_nreverse */
+struct spki_5_tuple_list *
+spki_5_tuple_list_nreverse(struct spki_5_tuple_list *c)
+{
+  struct spki_5_tuple_list *head = NULL;
+  
+  while (c)
+    {
+      struct spki_5_tuple_list *next = c->cdr;
+      
+      /* Link current node at head */
+      c->cdr = head;
+      head = c;
+
+      c = next;
+    }
+
+  return head;
+}
+
+/* Copies a list (if filter == NULL) or a sublist. */
+/* FIXME: Use one function for plain copying, and another for
+   destructive filtering. */
+struct spki_5_tuple_list *
+spki_5_tuple_list_filter(struct spki_acl_db *db,
+			 struct spki_5_tuple_list *list,
+			 void *ctx, spki_5_tuple_filter_func *filter)
+{
+  struct spki_5_tuple_list *head;
+  struct spki_5_tuple_list *tail;
+  
+  for (head = tail = NULL; list; list = list->cdr)
+    {
+      if (!filter || filter(db, ctx, list->car))
+	{
+	  SPKI_NEW(db, struct spki_5_tuple_list, cons);
+	  if (!cons)
+	    {
+	      spki_5_tuple_list_release(db, head);
+	      return NULL;
+	    }
+	  list->car->refs++;
+	  
+	  cons->car = list->car;
+	  cons->cdr = NULL;
+
+	  if (tail)	    
+	    tail->cdr = cons;
+	  else
+	    {
+	      assert(!head);
+	      head = cons;
+	    }
+	  tail = cons;
+	}
+    }
+  return head;
+}
 
 const struct spki_5_tuple *
-spki_5_tuple_by_subject(const struct spki_5_tuple *list,
-			const struct spki_principal *subject)
+spki_5_tuple_by_subject_next(const struct spki_5_tuple_list **i,
+			     const struct spki_principal *subject)
 {
+  const struct spki_5_tuple_list *p;
   subject = spki_principal_normalize(subject);
 
   assert(!subject->alias);
   
-  for ( ; list; list = list->next)
+  for (p = *i ; p; p = p->cdr)
     {
-      assert(list->subject);
+      struct spki_5_tuple *tuple = p->car;
+      assert(tuple->subject);
       
-      if (spki_principal_normalize(list->subject) == subject)
-	return list;
+      if (spki_principal_normalize(tuple->subject) == subject)
+	{
+	  *i = p->cdr;
+	  return tuple;
+	}
     }
   return NULL;
 }
 
 /* ACL database */
 
-int
-spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i)
-{
-  if (!spki_check_type(i,  SPKI_TYPE_ACL))
-    return 0;
-
-  if (i->type == SPKI_TYPE_VERSION)
-    spki_parse_version(i);
-  
-  while (i->type == SPKI_TYPE_ENTRY)
-    {
-      SPKI_NEW(db, struct spki_5_tuple, acl);
-      if (!acl)
-	{
-	fail:
-	  /* Do this also on failure, as we may have added some acl:s
-	   * already. */
-#if 0
-	  spki_5_tuple_fix_aliases(db->first_acl);
-#endif
-	  return 0;
-	}
-
-      spki_5_tuple_init(acl);
-      if (!spki_parse_acl_entry(db, i, acl))
-	{
-	  SPKI_FREE(db, acl);
-	  goto fail;
-	}
-      
-      acl->next = db->first_acl;
-      db->first_acl = acl;
-    }
-#if 0
-  spki_5_tuple_fix_aliases(db->first_acl);
-#endif
-  return spki_parse_end(i);
-}
-
-
 const struct spki_5_tuple *
 spki_acl_by_subject_first(struct spki_acl_db *db,
+			  const struct spki_5_tuple_list **i,
 			  const struct spki_principal *subject)
 {
-  return spki_5_tuple_by_subject(db->first_acl, subject);
+  *i = db->acls;
+  return spki_5_tuple_by_subject_next(i, subject);
+}
+
+/* FIXME: Delete? Could just as well be a macro. */
+const struct spki_5_tuple *
+spki_acl_by_subject_next(const struct spki_5_tuple_list **i,
+			 const struct spki_principal *subject)
+{
+  return spki_5_tuple_by_subject_next(i, subject);
 }
 
 const struct spki_5_tuple *
-spki_acl_by_subject_next(struct spki_acl_db *db UNUSED,
-			 const struct spki_5_tuple *acl,
-			 const struct spki_principal *subject)
+spki_5_tuple_by_authorization_next(const struct spki_5_tuple_list **i,
+				   struct spki_tag *request)
 {
-  return spki_5_tuple_by_subject(acl->next, subject);
-}
-
-/* Iterating through the acls that delegate the requested authorization. */
-static const struct spki_5_tuple *
-acl_by_auth(const struct spki_5_tuple *acl,
-	    struct spki_tag *request)
-{
-  for (; acl; acl = acl->next)
-    if (spki_tag_includes(acl->tag, request))
-      return acl;
-
+  const struct spki_5_tuple_list *p;
+  const struct spki_5_tuple *acl;
+  
+  for (p = *i; p; p = p->cdr)
+    {
+      acl = p->car;
+      if (spki_tag_includes(acl->tag, request))
+	{
+	  *i = p->cdr;
+	  return acl;
+	}
+    }
   return NULL;
 }
 
 const struct spki_5_tuple *
-spki_acl_by_authorization_next(struct spki_acl_db *db,
-			       const struct spki_5_tuple *acl,
-			       struct spki_tag *request)
+spki_acl_by_authorization_first(struct spki_acl_db *db,
+				const struct spki_5_tuple_list **i,
+				struct spki_tag *request)
 {
-  (void) db;
-  
-  return acl
-    ? acl_by_auth(acl->next, request)
-    : NULL;
+  *i = db->acls;
+  return spki_5_tuple_by_authorization_next(i, request);
 }
 
 const struct spki_5_tuple *
-spki_acl_by_authorization_first(struct spki_acl_db *db,
-				struct spki_tag *request)
+spki_acl_by_authorization_next(const struct spki_5_tuple_list **i,
+			       struct spki_tag *request)
 {
-  return acl_by_auth(db->first_acl, request);
+  return spki_5_tuple_by_authorization_next(i, request);
+}
+
+int
+spki_acl_process(struct spki_acl_db *db,
+		 struct spki_iterator *i)
+{
+  struct spki_5_tuple_list *acl = spki_parse_acl(db, i);
+  if (!acl)
+    return 0;
+
+  db->acls = spki_5_tuple_list_nappend(db->acls, acl);
+  return 1;
 }
 
 static unsigned
-format_valid(struct spki_5_tuple *tuple,
+format_valid(const struct spki_5_tuple *tuple,
 	     struct nettle_buffer *buffer)
 {
   unsigned done = sexp_format(buffer, "%0l", "(5:valid");
@@ -439,7 +542,7 @@ format_valid(struct spki_5_tuple *tuple,
 
 /* Formats an acl from a sequence of 5 tuples. */
 unsigned
-spki_acl_format(struct spki_5_tuple *acl,
+spki_acl_format(const struct spki_5_tuple_list *list,
 		struct nettle_buffer *buffer)
 {
   unsigned done = sexp_format(buffer, "%0l", "(3:acl");
@@ -448,9 +551,11 @@ spki_acl_format(struct spki_5_tuple *acl,
 
   /* No version field */
   
-  for ( ; acl; acl = acl->next)
+  for (; list; list = list->cdr)
     {
       unsigned length;
+      const struct spki_5_tuple *acl = list->car;
+      
       assert(!acl->issuer);
       assert(acl->subject);
       
@@ -498,36 +603,15 @@ spki_acl_format(struct spki_5_tuple *acl,
 
 /* Certificates */
 
-/* FIXME: It's somewhat unfortunate to have both spki_tag_release and
- * spki_tag_free. The first function is a lower leve one. */
-void
-spki_tag_free(struct spki_acl_db *db,
-	      struct spki_tag *tag)
+struct spki_5_tuple_list *
+spki_parse_sequence_no_signatures(struct spki_acl_db *db,
+				  struct spki_iterator *i,
+				  struct spki_principal **subject)
 {
-  spki_tag_release(db->realloc_ctx, db->realloc, tag);
-}
-
-void
-spki_5_tuple_free_chain(struct spki_acl_db *db,
-			struct spki_5_tuple *chain)
-{
-  while (chain)
-    {
-      struct spki_5_tuple *next = chain->next;
-      spki_tag_free(db, chain->tag);
-      
-      SPKI_FREE(db, chain);
-
-      chain = next;
-    }
-}
-
-struct spki_5_tuple *
-spki_process_sequence_no_signatures(struct spki_acl_db *db,
-				    struct spki_iterator *i)
-{
-  struct spki_5_tuple *chain = NULL;
-
+  struct spki_5_tuple_list *list = NULL;
+  
+  *subject = NULL;
+  
   if (!spki_check_type(i, SPKI_TYPE_SEQUENCE))
     return NULL;
   
@@ -536,37 +620,29 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
       switch (i->type)
 	{
 	case SPKI_TYPE_END_OF_EXPR:
-	  if (spki_parse_end(i))
-	    {
-#if 0
-	      spki_5_tuple_fix_aliases(db->first_acl);
-	      spki_5_tuple_fix_aliases(chain);
-#endif
-	      return chain;
-	    }
+	  if (spki_parse_end(i) && *subject)
+	    return list;
+	  
 	  /* Fall through */
 	default:
 	fail:
-#if 0
-	  spki_5_tuple_fix_aliases(db->first_acl);
-	  spki_5_tuple_free_chain(db, chain);
-#endif
+	  spki_5_tuple_list_release(db, list);
+	  *subject = NULL;
 	  return NULL;
 	  
 	case SPKI_TYPE_CERT:
 	  {
-	    SPKI_NEW(db, struct spki_5_tuple, cert);
-
+	    struct spki_5_tuple *cert = spki_5_tuple_cons_new(db, &list);
+	    
 	    if (!cert)
 	      goto fail;
 
-	    spki_5_tuple_init(cert);
-	    cert->next = chain;
-	    chain = cert;
-	    
 	    if (!spki_parse_cert(db, i, cert))
 	      goto fail;
 
+	    assert(cert->subject);
+	    *subject = cert->subject;
+	    
 	    break;
 	  }
 	case SPKI_TYPE_PUBLIC_KEY:
@@ -581,7 +657,9 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
 	      {
 		key = spki_parse_prevexpr(i, start, &key_length);
 		assert(key);
-		spki_principal_by_key(db, key_length, key);
+		*subject = spki_principal_by_key(db, key_length, key);
+		if (!*subject)
+		  goto fail;
 	      }
 	    break;
 	  }
