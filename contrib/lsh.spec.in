@@ -66,7 +66,7 @@ chkconfig --add lshd
 if [ ! -e /etc/lsh_host_key -o ! -e /etc/lsh_host_key.pub ]
 then
         rm -f /etc/lsh_host_key*
-        /usr/bin/lsh_keygen -l 8 | /usr/bin/lsh_writekey /etc/lsh_host_key
+        /usr/bin/lsh_keygen -l 8 | /usr/bin/lsh_writekey -o /etc/lsh_host_key
 fi
 
 
