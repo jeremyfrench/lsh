@@ -63,6 +63,9 @@
 /* struct utmp has a ut_addr_v6 member */
 #undef HAVE_UT_ADDR_V6
 
+/* Length type used by getsockopt() */
+#undef socklen_t
+
 /* Define to support non-standard packets of ssh2 */
 #undef DATAFELLOWS_WORKAROUNDS
 
