@@ -10,6 +10,8 @@ AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
 AM_CONFIG_HEADER(config.h)
 
+AM_MAINTAINER_MODE
+
 # We want an absolute path to the source-dir.
 case "$srcdir" in
     /*)
@@ -157,8 +159,14 @@ if test x$have_utmp_h = xyes; then
 dnl AC_CHECK_MEMBER(lsh_cv_decl_utmp_have_ut_host,
 dnl		    [#include <utmp.h>],
 dnl		    struct utmp, [ut_host[0]])
+
+dnl Are the changequote calls really necessary?
     AC_TRY_COMPILE([#include <utmp.h>],
-      [ int foo() { struct utmp u; u.ut_host[0] = 'X'; return 0; } ],
+      [ 
+changequote(<<, >>)dnl
+         int foo() { struct utmp u; u.ut_host[0] = 'X'; return 0; }
+changequote([, ])dnl
+      ],
       lsh_cv_decl_utmp_have_ut_host=yes,
       lsh_cv_decl_utmp_have_ut_host=no))
       
@@ -169,7 +177,11 @@ dnl		    struct utmp, [ut_host[0]])
     [if struct utmp has a ut_addr member],
     lsh_cv_decl_utmp_have_ut_addr,
     AC_TRY_COMPILE([#include <utmp.h>],
-      [ int foo() { struct utmp u; u.ut_addr[0] = 'X'; return 0; } ],
+      [ 
+changequote(<<, >>)dnl
+         int foo() { struct utmp u; u.ut_addr[0] = 0; return 0; } 
+changequote([, ])dnl
+      ],
       lsh_cv_decl_utmp_have_ut_addr=yes,
       lsh_cv_decl_utmp_have_ut_addr=no))
 
@@ -180,7 +192,11 @@ dnl		    struct utmp, [ut_host[0]])
     [if struct utmp has a ut_addr_v6 member],
     lsh_cv_decl_utmp_have_ut_addr_v6,
     AC_TRY_COMPILE([#include <utmp.h>],
-      [ int foo() { struct utmp u; u.ut_addr_v6[0] = 'X'; return 0; } ],
+      [ 
+changequote(<<, >>)dnl
+         int foo() { struct utmp u; u.ut_addr_v6[0] = 0; return 0; }
+changequote([, ])dnl
+      ],
       lsh_cv_decl_utmp_have_ut_addr_v6=yes,
       lsh_cv_decl_utmp_have_ut_addr_v6=no))
 
@@ -268,6 +284,7 @@ dnl This macro is mentioned in the automake manual, but where is it
 dnl supposed to be defined?
 dnl AC_REPLACE_GNU_GETOPT
 
+# AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o $LIBOBJS"])
 AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
 
 dnl Check for broken shutdown
