@@ -876,6 +876,7 @@ There is currently no tools for converting private keys.
 @node Invoking lsh, Invoking lshd, Getting started, Top
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @command{lsh}
+@anchor{lsh-usage}
 
 You use @command{lsh} to login to a remote machine. Basic usage is
 
@@ -1179,6 +1180,7 @@ do that automatically.
 @node Invoking lshd, Terminology, Invoking lsh, Top
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @command{lshd}
+@anchor{lshd-usage}
 
 @command{lshd} is a server that accepts connections from clients
 speaking the Secure Shell Protocol. It is usually started automatically
