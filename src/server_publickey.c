@@ -47,7 +47,8 @@
        (verifiers object alist)))
 */
 
-static struct lsh_string *format_userauth_pk_ok(int algorithm, struct lsh_string *keyblob)
+static struct lsh_string *
+format_userauth_pk_ok(int algorithm, struct lsh_string *keyblob)
 {
   return ssh_format("%c%a%S", SSH_MSG_USERAUTH_PK_OK, 
 		    algorithm, keyblob);
@@ -103,7 +104,7 @@ do_authenticate(struct userauth *s,
 	    = STATIC_EXCEPTION(EXC_USERAUTH,
 			       "Unsupported public key algorithm.");
 	  
-	  verbose("Unknown publickey algorithm\n");
+	  verbose("Unknown publickey algorithm %a\n", algorithm);
 	  EXCEPTION_RAISE(e, &unsupported_publickey_algorithm);
 
 	fail:
