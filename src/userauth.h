@@ -58,7 +58,7 @@ make_userauth_special_exception(struct lsh_string *reply,
 
 /* GABA:
    (class
-     (name user)
+     (name lsh_user)
      (vars
        ; This string include a terminating NUL-character, for
        ; compatibility with library and system calls.

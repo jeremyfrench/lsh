@@ -64,6 +64,9 @@ instance, writing to a file associated with a channel may fail. In
 that case, the channel should be closed, but the connection should not
 die. 
 
+Implement window-change requests.
+
+
 FREENESS
 
 It might be safer to remove patent-encumbered code like IDEA code from the
