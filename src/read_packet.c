@@ -184,7 +184,7 @@ static int do_read_packet(struct read_handler **h,
 	      /* Allocate full packet */
 	      {
 		int done = block_size - 4;
-		  
+
 		closure->buffer
 		  = ssh_format("%ls%lr",
 			       done,
@@ -197,7 +197,33 @@ static int do_read_packet(struct read_handler **h,
 		  = closure->sequence_number++;
 
 		closure->pos = done;
-		closure->state = WAIT_CONTENTS;
+
+		if (done == length)
+		  {
+		    /* A complete ssh packet fitted in the first
+		     * encryption block. */
+		    debug("read_packet.c: "
+			  "Going directly to the WAIT_MAC state\n");
+		    closure->state = WAIT_MAC;
+		    closure->pos = 0;
+		    
+		    /* FIXME: Consider using explicit gotos. We could
+		     * have a label like
+		     *
+		     *   mac_state:
+		     *      closure->pos = 0;
+		     *      closure->state = WAIT_MAC;
+		     *   case WAIT_MAC:
+		     *      ...
+		     *
+		     * and use that when jumping to a new state.
+		     * Having the initialization of the state in one
+		     * place could make the code clearer. */
+		    
+		    break; /* Goto next state */
+		  }
+		else
+		  closure->state = WAIT_CONTENTS;
 	      }
 	      /* Fall through */
 	    }
@@ -210,7 +236,8 @@ static int do_read_packet(struct read_handler **h,
 	  UINT32 left = closure->buffer->length - closure->pos;
 	  int n;
 
-	  assert(left > 0);
+	  assert(left);
+	  
 	  n = A_READ(read, left, closure->buffer->data + closure->pos);
 	  switch(n)
 	    {
@@ -252,14 +279,18 @@ static int do_read_packet(struct read_handler **h,
 	    break;
 	}
       case WAIT_MAC:
+      mac_state:
 	if (closure->connection->rec_mac)
 	  {
 	    UINT32 left = (closure->connection->rec_mac->mac_size
 			   - closure->pos);
 	    UINT8 *mac;
+	    int n;
+
+	    assert(left);
 	    
-	    int n = A_READ(read, left,
-			   closure->received_mac->data + closure->pos);
+	    n = A_READ(read, left,
+		       closure->received_mac->data + closure->pos);
 
 	    switch(n)
 	      {
