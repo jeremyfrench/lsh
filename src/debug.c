@@ -47,9 +47,20 @@ do_debug(struct abstract_write *w,
 	 struct lsh_string *packet)
 {
   CAST(packet_debug, closure, w);
-  
-  debug("DEBUG: %z packet %xS\n", closure->prefix, packet);
-  
+
+  if (!packet->length)
+    debug("DEBUG: %z empty packet\n", closure->prefix);
+  else
+    {
+      UINT8 type = packet->data[0];
+      if (type == SSH_MSG_USERAUTH_REQUEST)
+	debug("DEBUG: %z %z *****\n",
+	      closure->prefix, packet_types[type]);
+      else
+	debug("DEBUG: %z %z %xS\n",
+	      closure->prefix, packet_types[type],
+	      packet);
+    }
   A_WRITE(closure->super.next, packet);
 }
 
