@@ -114,8 +114,8 @@ void dss_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
 	      {
 		mpz_set(t, s);
 		mpz_add_ui(t, t, j + k);
-
-		hash(t, buffer + ( (n+1-k) *SHA_DIGESTSIZE));
+		/* FIXME: See galb's bug report */
+		hash(t, buffer + ( (n+1-k) * SHA_DIGESTSIZE));
 	      }
 	    bignum_parse_u(p, size, buffer);
 
