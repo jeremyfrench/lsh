@@ -26,12 +26,12 @@
 #ifndef LSH_IO_H_INCLUDED
 #define LSH_IO_H_INCLUDED
 
+#include "abstract_io.h"
+#include "write_buffer.h"
+
 #include <time.h>
 #include <netdb.h>
 #include <netinet/in.h>
-
-#include "abstract_io.h"
-#include "write_buffer.h"
 
 struct io_fd
 {
@@ -128,6 +128,7 @@ struct io_backend
 
 void init_backend(struct io_backend *b);
 
+int io_iter(struct io_backend *b);
 void io_run(struct io_backend *b);
 
 int get_inaddr(struct sockaddr_in	* addr,
@@ -164,5 +165,7 @@ struct io_fd *io_write(struct io_backend *b,
 		       int fd,
 		       UINT32 block_size,
 		       struct close_callback *close_callback);
+
+void close_fd(struct io_fd *fd);
 
 #endif /* LSH_IO_H_INCLUDED */

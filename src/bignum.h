@@ -26,13 +26,13 @@
 #ifndef LSH_BIGNUM_H_INCLUDED
 #define LSH_BIGNUM_H_INCLUDED
 
+#include "lsh_types.h"
+#include "randomness.h"
+
 /* Needed for the declaration of mpz_out_str */
 #include <stdio.h>
 
 #include <gmp.h>
-
-#include "lsh_types.h"
-#include "randomness.h"
 
 void bignum_parse_s(mpz_t n, UINT32 length, UINT8 *data);
 void bignum_parse_u(mpz_t n, UINT32 length, UINT8 *data);
