@@ -1,3 +1,31 @@
+2000-01-06  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/io.c (MY_POLLIN): poll kludge, use both POLLIN and
+	POLLRDNORM. 
+
+	* configure.in (LIBOBJS): Use correct path to the argp object
+	files.
+
+	* README: Document dependency on GU make. Recommend running
+	configure with bash. Say that guile in the build environment is
+	suppported.
+
+	* src/channel.c (alloc_channel): Added verbose messages.
+	(dealloc_channel): d:o.
+	(register_channel): d:o.
+	(do_channel_eof): d:o.
+	(do_channel_close): d:o.
+	(channel_close): d:o.
+	(channel_eof): d:o.
+
+	* doc/lsh.texinfo: Updated nodes and menus.
+
+	* doc/Makefile.am.in (info_TEXINFOS): Added lsh-texinfo.
+
+	* Makefile.am.in (EXTRA_DIST): Added ChangeLog.1.
+
+	* configure.in: Bumped version to 0.2.1.
+
 1999-12-31  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/daemon.c: Include sys/time.h.
