@@ -1498,7 +1498,7 @@ io_connect(struct sockaddr *remote,
   if (s<0)
     return NULL;
 
-  trace("io.c: Connecting using fd %i\n", s);
+  trace("io_connect: Connecting using fd %i\n", s);
   
   io_init_fd(s);
 
@@ -1666,6 +1666,8 @@ make_connect_list_callback(struct connect_list_state *state,
  * successful connection (if any) is returned.
  *
  * Addresses are removed from the list as we go. */
+
+/* FIXME: The returned value is never used */
 struct resource *
 io_connect_list(struct connect_list_state *state,
 		struct command_continuation *c,
@@ -1679,6 +1681,16 @@ io_connect_list(struct connect_list_state *state,
        i++)
     connect_attempt(make_connect_list_callback(state, i, c, e));
 
+  if (!state->nfds)
+    {
+      /* All addresses failed */
+      EXCEPTION_RAISE(e,
+		      make_io_exception(EXC_IO_CONNECT, NULL,
+					0, "Connect failed"));
+      KILL_RESOURCE(&state->super);
+      return NULL;
+    }
+  
   return &state->super;
 }
 
