@@ -1,5 +1,11 @@
 1999-06-11    <nisse@cuckoo.localdomain>
 
+	* src/tcpforward.c (direct_tcp_server_start_io): Renamed class,
+	and related functions. Was forward_server_start_io.
+	(do_forward_start_io): Renamed. Was do_forward_client_io.
+
+	* src/io_commands.h (LISTEN_COMMAND): New define.
+
 	* src/tcpforward.c (do_tcpip_forward_request): Use GLOBAL_REQUEST_CALLBACK().
 	(do_tcp_forward_continuation): -"-
 	Various bug fixes.
