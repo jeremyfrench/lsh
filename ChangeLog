@@ -1,3 +1,8 @@
+2002-05-05  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* doc/lsh.texinfo (Algorithm options): Updated description of the
+	default cipher. We now use AES, not triple-DES.
+
 2002-05-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/gateway_channel.c (do_gateway_channel_open): Limit
