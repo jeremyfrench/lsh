@@ -43,8 +43,8 @@
 #include "lsh_argp.h"
 
 /* Forward declarations */
-struct command_simple options2info;
-#define OPTIONS2INFO (&options2info.super.super)
+struct command options2info;
+#define OPTIONS2INFO (&options2info.super)
 
 
 #include "lshg.c.x"
@@ -70,12 +70,17 @@ make_options(struct io_backend *backend,
   return self;
 }
 
-DEFINE_COMMAND_SIMPLE(options2info, a)
+DEFINE_COMMAND(options2info)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(lshg_options, self, a);
-  return &make_gateway_address(self->super.local_user,
-			       self->super.user,
-			       self->super.remote)->super;
+  COMMAND_RETURN(c,
+		 make_gateway_address(self->super.local_user,
+				      self->super.user,
+				      self->super.remote));
 }
 
 
