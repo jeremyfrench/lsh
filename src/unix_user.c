@@ -68,7 +68,7 @@
 #  include <utmpx.h>
 # endif
 #else /* !WITH_UTMP */
-# struct utmp;
+  struct utmp;
 #endif
 
 #if HAVE_LIBUTIL_H
