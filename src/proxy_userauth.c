@@ -222,6 +222,8 @@ do_handle_userauth(struct packet_handler *c,
       CAST_SUBTYPE(proxy_userauth, auth, ALIST_GET(closure->methods, method));
       CAST_SUBTYPE(command, service,
 		   ALIST_GET(closure->services, requested_service));
+
+      connection_lock(connection);
       
       if (auth && service)
 	{
@@ -282,6 +284,8 @@ do_proxy_userauth_continuation(struct command_continuation *c,
   CAST(proxy_userauth_continuation, self, c);
   CAST(delayed_apply, action, x);
   int i;
+
+  connection_unlock(self->connection);
 
   /* Ignore any further userauth messages. */
   for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
