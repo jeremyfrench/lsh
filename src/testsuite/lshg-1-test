@@ -15,4 +15,4 @@ fi
 . $srcdir/functions.sh
 
 spawn_lshd && spawn_lsh -G && sleep 20 && \
-  echo foo | exec_lshg cat | grep -q foo && test_success
+  echo foo | exec_lshg cat | grep foo > /dev/null && test_success
