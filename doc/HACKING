@@ -306,6 +306,9 @@ Currently, all memory is zeroed on allocation, which is overkill (and
 also doesn't take care of initializing bignums). I'm considering
 extending the object system to initialize objects more intelligently.
 
+For some notes about memory allocation conventions when using struct
+simple_buffer and the parse_* functions, se the NOTES file.
+
 
 ROAD MAP
 

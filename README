@@ -35,6 +35,17 @@ This creates the configure script and a Makefile.in. Now you can try
 file foo.h.x, try creating it with make foo.h.x or ./make_class <foo.h
 >foo.h.x, and similarly for missing foo.c.x files.
 
+It seems you also need GNU-sed; at least Solaris' sed doesn't
+understand the construction "sed -f -" construction to read a script
+on stdin.
+
+
+NEEDED LIBRARIES
+
+GMP-2.0.2 can be found at ftp.gnu.org, or some of its mirrors.
+ZLIB. I don't know what the canonical location of ZLIB is. I use
+a zlib-1.0.1 I found using http://ftpsearch.unit.no.
+
 
 GETTING STARTED
 
