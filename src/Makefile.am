@@ -35,7 +35,6 @@ bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey lsh-decrypt-key \
 
 sbin_PROGRAMS = lshd lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
 bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key
-noinst_PROGRAMS = pkcs5-test
 noinst_SCRIPTS = lcp
 noinst_LIBRARIES = liblsh.a
 
@@ -73,7 +72,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	keyexchange.c \
 	list.c lookup_verifier.c \
 	lock_file.c \
-	parse.c \
+	lsh_string.c parse.c \
 	pkcs5.c \
 	publickey_crypto.c queue.c \
 	randomness.c \
