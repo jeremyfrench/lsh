@@ -20,7 +20,6 @@ dist_classes = \
     combinators.c.x \
     command.c.x \
     command.h.x \
-    compress.c.x \
     compress.h.x \
     connection.c.x \
     connection.h.x \
@@ -91,7 +90,6 @@ dist_classes = \
     unix_process.c.x \
     unix_random.c.x \
     unix_user.c.x \
-    unpad.c.x \
     userauth.h.x \
     write_buffer.h.x \
     write_packet.c.x \
