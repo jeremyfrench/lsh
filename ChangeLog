@@ -1,5 +1,19 @@
 2002-03-16  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/unix_user.c (do_fork_process): Deleted function.
+	(do_exec_shell): Deleted function.
+
+	* src/userauth.h (USER_CHDIR_HOME): Deleted method.
+	(USER_FORK): Deleted method.
+	(USER_EXEC): Deleted method.
+
+	* src/unix_user.c (make_process_resource): Deleted old code.
+
+	* src/server_session.c (spawn_process): Deleted old code.
+	(shell_request_handler): Likewise.
+	(exec_request_handler): Likewise.
+	(do_spawn_subsystem): Likewise.
+
 	* src/server_session.c (format_exit_signal): Removed "Process
 	killed by" from the message.
 	(spawn_process): Rewrote function, using USER_SPAWN and struct
@@ -51,7 +65,7 @@
 2002-03-14  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/resource.h (REMEMBER_RESOURCE): Deleted method, use an
-	ordinary fucntion remember_Resource instead. Updated all callers.
+	ordinary fucntion remember_resource instead. Updated all callers.
 
 	* src/resource.c (concrete_resource_list): Deleted class, put all
 	information directly in the resource_lsit class.
