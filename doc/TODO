@@ -54,8 +54,8 @@ Functions to lookup users, their passwords and .lsh/authorized_keys.
 
 CHARSETS
 
-User names and passwords must be translated from the systems charset
-(default iso-8859-1) to UTF8.
+The conversion from UTF8->unicode->latin1 doesn't handle accented
+characters properly. Probably needs a complete rewrite.
 
 
 CONFIGURATION
