@@ -1,5 +1,9 @@
 2002-05-26  Pontus Sköld  <pont@soua.net>
 
+	* rl.c (lsftp_rl_remotefile_generator):
+	Bugfix. lsftp_unqualify_path returns a pointer into the given
+	string. We can't free that.
+
 	* commands.c (com_cd): Glob absolute paths only.
 	(com_rm): Dito.
 	(com_get): Dito.
