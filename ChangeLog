@@ -1,3 +1,37 @@
+2003-04-22  Niels Möller  <niels@s3.kth.se>
+
+	* src/unix_user.c (exec_shell): Build the argument list for
+	lsh-execuv only if we need to change uid. Include the name of the
+	exec:ed program if exec fails.
+
+	* src/lsh.c (main): Use addr_queue instead of sockaddr_list.
+	* src/lshd.c: Likewise.
+
+	* src/io_commands.c (connect_list_command): Take a
+	connect_list_state as argument.
+
+	* src/io.h (connect_list_state): Moved class definition to the
+	header file.
+
+	* src/io.c (sockaddr_cons): Deleted function.
+	(io_resolv_address) Use addr_queue instead of sockaddr_list.
+	(io_listen_list): Likewise.
+	(connect_attempt): Likewise.
+	(make_connect_list_state): Made non-static.
+	(connect_list_callback): Moved c and e attributes here, from
+	connect_list_state.
+	(io_connect_list): Take a connect_list_state as argument.
+
+	* src/queue.c (make_addr_queue_node): Initialize the size field. 
+
+	* src/queue.h (struct lsh_queue): Added length field.
+
+	* src/queue.c: New queue type addr_queue, for handling lists of
+	sockaddr:esses. Let lsh_queue keep track of the length.
+
+	* src/lsh.c (do_lsh_lookup): Deleted old code handling the
+	ssh-rsa-pkcs1@lysator.liu.se algorithm id.
+
 2003-04-21  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (make_lsh_connect): Take actions as a parameter.
