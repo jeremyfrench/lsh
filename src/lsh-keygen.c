@@ -197,16 +197,16 @@ int main(int argc, char **argv)
     = make_lsh_keygen_options();
 
   struct sexp *key;
-  struct randomness *r;
+  struct randomness_with_poll *r;
 
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
-  r = make_reasonably_random();
+  r = make_default_random(NULL, &handler);
 
   switch (options->algorithm)
     {
     case 'd':
-      key = dsa_generate_key(r, options->level);
+      key = dsa_generate_key(&r->super, options->level);
       break;
     case 'r':
       {
@@ -217,11 +217,11 @@ int main(int argc, char **argv)
 	  {
 	    /* Use a reasonably small random e, and make sure that at
 	     * it is odd and has at most one more one bit. */
-	    bignum_random_size(e, r, 30);
+	    bignum_random_size(e, &r->super, 30);
 	    mpz_setbit(e, 0);
 	    mpz_setbit(e, 17);
 	    
-	    key = rsa_generate_key(e, r, options->level);
+	    key = rsa_generate_key(e, &r->super, options->level);
 	  }
 	while (!key);
 
