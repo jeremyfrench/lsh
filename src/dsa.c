@@ -34,7 +34,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include "nettle/sha1.h"
+#include "nettle/sha.h"
 
 #include <assert.h>
 

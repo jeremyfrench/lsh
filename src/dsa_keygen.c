@@ -30,7 +30,7 @@
 #include "sexp.h"
 #include "werror.h"
 
-#include "nettle/sha1.h"
+#include "nettle/sha.h"
 
 #if !HAVE_MEMXOR
 #include "nettle/memxor.h"
