@@ -67,3 +67,11 @@ symmetric:
 EXTRA_DIST = atoms.in process_atoms $(generated_sources) HACKING \
 	$(cvs_headers) Makefile.am.in
 
+# Class files
+# SUFFIXES = .xh .xc
+
+# This is GNU make specific
+
+%.x: % $(srcdir)/make_class
+	$(srcdir)/make_class <$< >$@
+
