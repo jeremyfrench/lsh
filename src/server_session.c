@@ -531,17 +531,17 @@ spawn_process(struct server_session *session,
 	  
 	  /* Make sure that the process and it's stdio is
 	   * cleaned up if the channel or connection dies. */
-	  REMEMBER_RESOURCE
+	  remember_resource
 	    (channel->resources, &child->super);
 
 	  /* FIXME: How to do this properly if in and out may use the
 	   * same fd? */
-	  REMEMBER_RESOURCE
+	  remember_resource
 	    (channel->resources, &session->in->super);
-	  REMEMBER_RESOURCE
+	  remember_resource
 	    (channel->resources, &session->out->super);
 	  if (session->err)
-	    REMEMBER_RESOURCE
+	    remember_resource
 	      (channel->resources, &session->err->super);
 
 	  /* Don't close channel immediately at EOF, as we want to
@@ -984,7 +984,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	   * on the master pty? */
 	  session->term = term;
 	  session->pty = pty;
-	  REMEMBER_RESOURCE(channel->resources, &pty->super);
+	  remember_resource(channel->resources, &pty->super);
 
 	  verbose(" granted.\n");
 	  COMMAND_RETURN(s, NULL);

@@ -166,7 +166,7 @@ DEFINE_COMMAND2(gateway_accept)
   struct ssh_connection *gateway = gateway_make_connection(lv, e);
   
   /* Kill gateway connection if the main connection goes down. */
-  REMEMBER_RESOURCE(connection->resources, &lv->fd->super);
+  remember_resource(connection->resources, &lv->fd->super);
   
   gateway->chain = connection;
 

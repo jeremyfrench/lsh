@@ -455,7 +455,7 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
 			 make_exc_x11_connect_handler(e, HANDLER_CONTEXT));
 
 	  if (fd)
-	    REMEMBER_RESOURCE(connection->resources, &fd->super);
+	    remember_resource(connection->resources, &fd->super);
 	  else
 	    EXCEPTION_RAISE(e, 
 		      make_channel_open_exception(SSH_OPEN_CONNECT_FAILED,
@@ -670,7 +670,7 @@ do_request_x11_continuation(struct command_continuation *s,
 
   self->connection->table->x11_display = self->display;
 
-  REMEMBER_RESOURCE(channel->resources,
+  remember_resource(channel->resources,
 		    make_client_x11_display_resource(self->connection,
 						     self->display));
 

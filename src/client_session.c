@@ -168,9 +168,9 @@ do_client_io(struct command *s UNUSED,
     = make_channel_read_close_callback(channel);
 
   /* Make sure stdio is closed properly if the channel or connection dies */
-  REMEMBER_RESOURCE(channel->resources, &session->in->super);
-  REMEMBER_RESOURCE(channel->resources, &session->out->super);
-  REMEMBER_RESOURCE(channel->resources, &session->err->super);
+  remember_resource(channel->resources, &session->in->super);
+  remember_resource(channel->resources, &session->out->super);
+  remember_resource(channel->resources, &session->err->super);
   
   ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
 	    &make_handle_exit_status(session->exit_status)->super);
@@ -220,9 +220,9 @@ make_client_session_channel(struct lsh_fd *in,
   self->err = err;
   self->escape = escape;
   
-  REMEMBER_RESOURCE(self->super.resources, &in->super);
-  REMEMBER_RESOURCE(self->super.resources, &out->super);
-  REMEMBER_RESOURCE(self->super.resources, &err->super);
+  remember_resource(self->super.resources, &in->super);
+  remember_resource(self->super.resources, &out->super);
+  remember_resource(self->super.resources, &err->super);
   
   /* Flow control */
   out->write_buffer->report = &self->super.super;

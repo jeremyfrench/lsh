@@ -232,7 +232,7 @@ gc_global(struct resource *o)
   
   assert(root_set->super.alive);
 
-  REMEMBER_RESOURCE(root_set, o);
+  remember_resource(root_set, o);
 }
 
 void gc(void)

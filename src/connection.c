@@ -597,5 +597,5 @@ connection_set_timeout(struct ssh_connection *connection,
   
   connection->timer = io_callout(&timeout->super,
 				 seconds);
-  REMEMBER_RESOURCE(connection->resources, connection->timer);
+  remember_resource(connection->resources, connection->timer);
 }

@@ -33,24 +33,17 @@
 
 #include <assert.h>
 
-/* Prototypes */
-
-void dont_free_live_resource(int alive);
-
-#define GABA_DEFINE
-#include "resource.h.x"
-#undef GABA_DEFINE
-
 /* Forward declarations */
-
-struct resource_node;
+void dont_free_live_resource(int alive);
 
 void do_mark_resources(struct resource_node **q,
 		       void (*mark)(struct lsh_object *o));
 
 void do_free_resources(struct resource_node **q);
 
-#include "resource.c.x"
+#define GABA_DEFINE
+#include "resource.h.x"
+#undef GABA_DEFINE
 
 
 /* Sanity check */
@@ -86,16 +79,6 @@ struct resource_node
   struct resource_node *next;
   struct resource *resource;
 };
-
-/* Works as a weak list of resources. */
-/* GABA:
-   (class
-     (name concrete_resource_list)
-     (super resource_list)
-     (vars
-       (q indirect-special "struct resource_node *"
-                           do_mark_resources do_free_resources)))
-*/
 
 /* Loop over the resources, mark the living and unlink the dead. */
 void
@@ -134,16 +117,15 @@ do_free_resources(struct resource_node **q)
 }
 
 
-static void
-do_remember_resource(struct resource_list *s,
-		     struct resource *resource)
+void
+remember_resource(struct resource_list *self,
+		  struct resource *resource)
 {
-  CAST(concrete_resource_list, self, s);
   struct resource_node *n;
 
   assert(resource);
   
-  if (!self->super.super.alive)
+  if (!self->super.alive)
     {
       werror("do_remember_resource: resource list is already dead.\n");
       KILL_RESOURCE(resource);
@@ -160,35 +142,39 @@ do_remember_resource(struct resource_list *s,
 static void
 do_kill_all(struct resource *s)
 {
-  CAST(concrete_resource_list, self, s);
-  struct resource_node *n;
+  CAST(resource_list, self, s);
 
   trace("do_kill_all: resource_list %xi\n", self);
-  
-  for (n = self->q; n; )
+
+  if (self->super.alive)
     {
-      CAST_SUBTYPE(resource, r, n->resource);
-      struct resource_node *old = n;
+      struct resource_node *n;
+      
+      self->super.alive = 0;
 
-      KILL_RESOURCE(r);
-      n = n->next;
-
-      lsh_space_free(old);
+      for (n = self->q; n; )
+	{
+	  CAST_SUBTYPE(resource, r, n->resource);
+	  struct resource_node *old = n;
+	  
+	  KILL_RESOURCE(r);
+	  n = n->next;
+	  
+	  lsh_space_free(old);
+	}
+      self->q = NULL;
     }
-  self->q = NULL;
-  self->super.super.alive = 0;
 }
-  
+
 struct resource_list *
 make_resource_list(void)
 {
-  NEW(concrete_resource_list, self);
-  init_resource(&self->super.super, do_kill_all);
+  NEW(resource_list, self);
+  init_resource(&self->super, do_kill_all);
 
   trace("make_resource_list: created %xi\n", self);
-  self->super.remember = do_remember_resource;
   
   self->q = NULL;
 
-  return &self->super;
+  return self;
 }

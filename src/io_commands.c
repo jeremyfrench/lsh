@@ -212,7 +212,7 @@ do_connect(struct address_info *a,
     }
 
   if (resources)
-    REMEMBER_RESOURCE(resources,
+    remember_resource(resources,
 		      &fd->super);
 }
 

@@ -30,6 +30,9 @@
 
 #include "lsh.h"
 
+/* Forward declarations */
+struct resource_node;
+
 #define GABA_DECLARE
 #include "resource.h.x"
 #undef GABA_DECLARE
@@ -51,18 +54,21 @@ void
 init_resource(struct resource *self,
 	      void (*k)(struct resource *));
 
-/* For the resource list. */
 
+/* Works as a weak list of resources. */
 /* GABA:
    (class
      (name resource_list)
      (super resource)
      (vars
-       (remember method void "struct resource *r")))
+       (q indirect-special "struct resource_node *"
+                           do_mark_resources do_free_resources)))
 */
 
-#define REMEMBER_RESOURCE(l, r) ((l)->remember((l), (r)))
 #define KILL_RESOURCE_LIST(l) KILL_RESOURCE(&(l)->super)
+
+void remember_resource(struct resource_list *self,
+		       struct resource *resource);
 
 /* Allocates an empty list. */
 struct resource_list *make_resource_list(void);

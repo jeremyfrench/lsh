@@ -59,7 +59,7 @@ init_channel_forward(struct channel_forward *self,
   
   self->socket = socket;
 
-  REMEMBER_RESOURCE(self->super.resources, &socket->super);
+  remember_resource(self->super.resources, &socket->super);
 }
 
 struct channel_forward *

@@ -393,7 +393,7 @@ register_channel(UINT32 local_channel_number,
   if (take_into_use)
     use_channel(channel->connection, local_channel_number);
   
-  REMEMBER_RESOURCE(channel->connection->resources,
+  remember_resource(channel->connection->resources,
 		    &channel->resources->super);
 }
 

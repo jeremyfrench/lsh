@@ -602,7 +602,7 @@ set_reexchange_timeout(struct ssh_connection *connection,
   connection->key_expire = io_callout(&timeout->super,
 				      seconds);
   
-  REMEMBER_RESOURCE(connection->resources, connection->key_expire); 
+  remember_resource(connection->resources, connection->key_expire); 
 }
 
 /* GABA:

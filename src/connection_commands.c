@@ -47,7 +47,7 @@ DEFINE_COMMAND2(connection_remember)
   CAST_SUBTYPE(resource, resource, a2);
   
   if (resource)
-    REMEMBER_RESOURCE(connection->resources, resource);
+    remember_resource(connection->resources, resource);
 
   COMMAND_RETURN(c, resource);
 }

@@ -146,11 +146,11 @@ do_pty_continuation(struct command_continuation *s,
 	     "Setting the attributes of the local terminal failed.\n");
     }
 
-  REMEMBER_RESOURCE(channel->resources,
+  remember_resource(channel->resources,
 		    make_client_tty_resource(self->req->tty,
 					     self->req->attr));
   
-  REMEMBER_RESOURCE(channel->resources,
+  remember_resource(channel->resources,
 		    INTERACT_WINDOW_SUBSCRIBE
 		    (self->req->tty,
 		     make_client_winch_handler(channel)));
