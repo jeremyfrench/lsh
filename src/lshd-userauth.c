@@ -541,6 +541,7 @@ start_service(struct lshd_user *user, char **argv)
     }
   assert(user->uid == getuid());
 
+  /* FIXME: We should use the user's login shell */
   execve(argv[0], (char **) argv, (char **) env);
 
   werror("start_service: exec failed: %e", errno);

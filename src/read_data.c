@@ -41,7 +41,7 @@
      (super io_consuming_read)
      (vars
        ; For flow control. 
-   
+
        ; FIXME: Perhaps the information that is needed for flow
        ; control should be abstracted out from the channel struct? 
        
@@ -62,22 +62,25 @@ do_read_data_query(struct io_consuming_read *s)
       return 0;
     }
 
+  /* FIXME: XXX Need some other mechanism ot put channels to sleep. */
+#if 0
   /* If a keyexchange is in progress, we should stop reading. We rely
    * on channels_wakeup to restart reading. */
-  if (self->channel->connection->send_kex_only)
+  if (self->connection->send_kex_only)
     {
       trace
 	("read_data: Data arrived during key exchange. Won't read it now.\n");
       return 0;
     }
 
-  if (self->channel->connection->hard_limit)
+  if (self->connection->hard_limit)
     {
       trace
 	("read_data: Data arrived, but connection' write_buffer is full.\n");
       return 0;
     }
-  
+#endif
+
   /* There are three numbers that limit the amount of data we can read:
    *
    *   1 The current send_window_size.

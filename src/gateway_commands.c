@@ -36,6 +36,11 @@
 #include "connection_commands.h"
 #include "format.h"
 #include "gateway_channel.h"
+
+/* FIXME: When init_connection_service is moved from handshake.c,
+   this include should no longer be needed. */
+#include "handshake.h"
+
 #include "io_commands.h"
 #include "lsh_string.h"
 #include "read_packet.h"

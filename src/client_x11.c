@@ -45,6 +45,7 @@
 #include "channel_forward.h"
 #include "format.h"
 #include "lsh_string.h"
+#include "randomness.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -422,7 +423,7 @@ make_exc_x11_connect_handler(struct exception_handler *parent,
 
 DEFINE_CHANNEL_OPEN(channel_open_x11)
      (struct channel_open *s UNUSED,
-      struct ssh_connection *connection,
+      struct channel_table *table,
       struct channel_open_info *info UNUSED,
       struct simple_buffer *args,
       struct command_continuation *c,
@@ -436,12 +437,11 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
       && parse_uint32(args, &originator_port) 
       && parse_eod(args))
     {
-      struct client_x11_display *display = connection->table->x11_display;
+      struct client_x11_display *display = table->x11_display;
       
       verbose("x11 connection attempt, originator: %s:%i\n",
 	      originator_length, originator, originator_port);
 
-      
       if (display)
 	{
 	  struct lsh_fd *fd
@@ -453,7 +453,7 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
 			 make_exc_x11_connect_handler(e, HANDLER_CONTEXT));
 
 	  if (fd)
-	    remember_resource(connection->resources, &fd->super);
+	    remember_resource(table->resources, &fd->super);
 	  else
 	    EXCEPTION_RAISE(e, 
 		      make_channel_open_exception(SSH_OPEN_CONNECT_FAILED,
@@ -470,7 +470,7 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
   else
     {
       werror("do_channel_open_x11: Invalid message!\n");
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_OPEN x11 message.");
+      PROTOCOL_ERROR(table->e, "Invalid CHANNEL_OPEN x11 message.");
     }
 }
 
@@ -616,7 +616,7 @@ make_client_x11_display(const char *display, struct lsh_string *fake)
      (name client_x11_display_resource)
      (super resource)
      (vars
-       (connection object ssh_connection)
+       (table object channel_table)
        (display object client_x11_display)))
 */
 
@@ -629,21 +629,21 @@ do_kill_x11_display(struct resource *s)
     {
       self->super.alive = 0;
 
-      if (self->connection->table->x11_display == self->display)
-	self->connection->table->x11_display = NULL;
+      if (self->table->x11_display == self->display)
+	self->table->x11_display = NULL;
       else
 	werror("do_kill_x11_display: Display has been replaced.\n");
     }
 }
 
 static struct resource *
-make_client_x11_display_resource(struct ssh_connection *connection,
+make_client_x11_display_resource(struct channel_table *table,
 				 struct client_x11_display *display)
 {
   NEW(client_x11_display_resource, self);
   init_resource(&self->super, do_kill_x11_display);
 
-  self->connection = connection;
+  self->table = table;
   self->display = display;
 
   return &self->super;
@@ -654,7 +654,7 @@ make_client_x11_display_resource(struct ssh_connection *connection,
      (name request_x11_continuation)
      (super command_continuation)
      (vars
-       (connection object ssh_connection)
+       (table object channel_table)
        (display object client_x11_display)
        (up object command_continuation)))
 */
@@ -668,27 +668,27 @@ do_request_x11_continuation(struct command_continuation *s,
 
   verbose("X11 request succeeded\n");
 
-  if (self->connection->table->x11_display)
+  if (self->table->x11_display)
     werror("client_x11.c: Replacing old x11 forwarding.\n");
 
-  self->connection->table->x11_display = self->display;
+  self->table->x11_display = self->display;
 
   remember_resource(channel->resources,
-		    make_client_x11_display_resource(self->connection,
+		    make_client_x11_display_resource(self->table,
 						     self->display));
 
   COMMAND_RETURN(self->up, a);
 }
 
 static struct command_continuation *
-make_request_x11_continuation(struct ssh_connection *connection,
+make_request_x11_continuation(struct channel_table *table,
 			      struct client_x11_display *display,
 			      struct command_continuation *up)
 {
   NEW(request_x11_continuation, self);
   self->super.c = do_request_x11_continuation;
 
-  self->connection = connection;
+  self->table = table;
   self->display = display;
   self->up = up;
 
@@ -713,7 +713,7 @@ do_format_request_x11_forward(struct channel_request_command *s,
 
   verbose("Requesting X11 forwarding.\n");
   
-  *c = make_request_x11_continuation(channel->connection,
+  *c = make_request_x11_continuation(channel->table,
 				     self->display, *c);
 
   /* NOTE: The cookie is hex encoded, appearantly so that it can be

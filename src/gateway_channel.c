@@ -68,13 +68,13 @@ do_receive(struct ssh_channel *c,
   switch(type)
     {
     case CHANNEL_DATA:
-      connection_send(channel->chain->super.connection,
-		      channel_transmit_data(&channel->chain->super, data));
+      A_WRITE(channel->chain->super.table->write,
+	      channel_transmit_data(&channel->chain->super, data));
       break;
     case CHANNEL_STDERR_DATA:
-      connection_send(channel->chain->super.connection,
-		      channel_transmit_extended(&channel->chain->super,
-						CHANNEL_STDERR_DATA, data));
+      A_WRITE(channel->chain->super.table->write,
+	      channel_transmit_extended(&channel->chain->super,
+					CHANNEL_STDERR_DATA, data));
       break;
     default:
       fatal("Internal error!\n");
@@ -157,7 +157,7 @@ make_gateway_channel(struct alist *request_types)
 
 static struct ssh_channel *
 do_gateway_channel_open(struct channel_open_command *c,
-			struct ssh_connection *connection,
+			struct channel_table *table,
 			uint32_t local_channel_number,
 			struct lsh_string **request)
 {
@@ -169,7 +169,7 @@ do_gateway_channel_open(struct channel_open_command *c,
   target->super.rec_window_size = closure->rec_window_size;
   target->super.rec_max_packet = closure->rec_max_packet;
   
-  target->super.connection = connection;
+  target->super.table = table;
 
   *request = format_channel_open_s(closure->type,
 				   local_channel_number,
@@ -261,7 +261,6 @@ do_gateway_channel_request(struct channel_request *s UNUSED,
 struct channel_request gateway_channel_request =
 { STATIC_HEADER, do_gateway_channel_request };
 
-
 /* GABA:
    (class
      (name general_global_request_command)
@@ -272,7 +271,7 @@ struct channel_request gateway_channel_request =
 
 static struct lsh_string *
 do_format_general_global_request(struct global_request_command *s,
-			  	 struct ssh_connection *connection UNUSED,
+			  	 struct channel_table *table UNUSED,
 				 struct command_continuation **c UNUSED)
 {
   CAST(general_global_request_command, self, s);
@@ -295,7 +294,7 @@ make_general_global_request_command(struct lsh_string *request)
 
 static void
 do_gateway_global_request(struct global_request *s UNUSED,
-			  struct ssh_connection *connection,
+			  struct channel_table *table,
 			  uint32_t type,
 			  int want_reply,
 			  struct simple_buffer *args,
@@ -308,7 +307,7 @@ do_gateway_global_request(struct global_request *s UNUSED,
 
   struct command *send = make_general_global_request_command(request);
 
-  COMMAND_CALL(send, connection->chain, c, e);
+  COMMAND_CALL(send, table->chain, c, e);
 }
 
 struct global_request gateway_global_request = 
@@ -373,7 +372,7 @@ make_gateway_channel_open_continuation(struct command_continuation *up,
 
 static void
 do_channel_open_forward(struct channel_open *s UNUSED,
-			struct ssh_connection *connection,
+			struct channel_table *table,
 			struct channel_open_info *info,
 			struct simple_buffer *args,
 			struct command_continuation *c,
@@ -383,7 +382,7 @@ do_channel_open_forward(struct channel_open *s UNUSED,
     = make_gateway_channel_open_command(info, parse_rest_copy(args), NULL);
 
   COMMAND_CALL(command,
-	       connection->chain,
+	       table->chain,
 	       make_gateway_channel_open_continuation
 	         (c, &gateway_channel_request),
 	       /* FIXME: Install a new exception handler that will

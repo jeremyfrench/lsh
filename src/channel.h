@@ -28,10 +28,11 @@
 
 #include "alist.h"
 #include "command.h"
-#include "connection.h"
 #include "parse.h"
 #include "server_pty.h"
 #include "write_buffer.h"
+
+struct channel_table;
 
 struct channel_open_info
 {
@@ -118,7 +119,7 @@ struct channel_request_info
        (send_window_size . uint32_t)
        (send_max_packet . uint32_t)
 
-       (connection object ssh_connection)
+       (table object channel_table)
        
        (request_types object alist)
 
@@ -182,10 +183,25 @@ struct channel_request_info
 #define CHANNEL_RESERVED 1
 #define CHANNEL_IN_USE 2
 
+/* FIXME: If/when lsh is more clearly separated into transport and
+   service layer, this class ought to be renamed to ssh_connection,
+   since it is the core of the implementation of the "ssh-connection"
+   service. */
 /* GABA:
    (class
      (name channel_table)
      (vars
+       ; Communication with the transport layer
+       (e object exception_handler)
+       (write object abstract_write)
+
+       ; The chained connection, when using a gateway.
+       ; FIXME: Move to a sub-class? 
+       (chain object channel_table)
+       
+       ; Contains the resource lists for all channels
+       (resources object resource_list)
+       
        ; Channels are indexed by local number
        (channels space (object ssh_channel) used_channels)
        
@@ -249,7 +265,7 @@ struct channel_request_info
    (class
      (name global_request)
      (vars
-       (handler method void "struct ssh_connection *connection"
+       (handler method void "struct channel_table *table"
                             "uint32_t type"
 			    ; want-reply is needed only by
 			    ; do_gateway_global_request.
@@ -259,8 +275,8 @@ struct channel_request_info
 			    "struct exception_handler *e")))
 */
 
-#define GLOBAL_REQUEST(r, c, t, w, a, n, e) \
-((r)->handler((r), (c), (t), (w), (a), (n), (e)))
+#define GLOBAL_REQUEST(r, table, t, w, a, n, e) \
+((r)->handler((r), (table), (t), (w), (a), (n), (e)))
 
 /* SSH_MSG_CHANNEL_OPEN */
   
@@ -283,27 +299,27 @@ make_channel_open_exception(uint32_t error_code, const char *msg);
      (name channel_open)
      (vars
        (handler method void
-                "struct ssh_connection *connection"
+                "struct channel_table *table"
 		"struct channel_open_info *info"
                 "struct simple_buffer *data"
                 "struct command_continuation *c"
 		"struct exception_handler *e")))
 */
 
-#define CHANNEL_OPEN(o, c, i, d, r, e) \
-((o)->handler((o), (c), (i), (d), (r), (e)))
+#define CHANNEL_OPEN(o, t, i, d, r, e) \
+((o)->handler((o), (t), (i), (d), (r), (e)))
 
-#define DEFINE_CHANNEL_OPEN(name)                       \
-static void do_##name(struct channel_open *s,           \
-		     struct ssh_connection *connection, \
-		     struct channel_open_info *info,    \
-		     struct simple_buffer *args,        \
-		     struct command_continuation *c,    \
-		     struct exception_handler *e);      \
-                                                        \
-struct channel_open name =                              \
-{ STATIC_HEADER, do_##name };                           \
-                                                        \
+#define DEFINE_CHANNEL_OPEN(name)			\
+static void do_##name(struct channel_open *s,		\
+		      struct channel_table *table,	\
+		      struct channel_open_info *info,	\
+		      struct simple_buffer *args,	\
+		      struct command_continuation *c,	\
+		      struct exception_handler *e);	\
+							\
+struct channel_open name =				\
+{ STATIC_HEADER, do_##name };				\
+							\
 static void do_##name
 
 /* SSH_MSG_CHANNEL_REQUEST */
@@ -343,11 +359,12 @@ int alloc_channel(struct channel_table *table);
 void dealloc_channel(struct channel_table *table, int i);
 
 void
-use_channel(struct ssh_connection *connection,
+use_channel(struct channel_table *table,
 	    uint32_t local_channel_number);
 
 void
-register_channel(uint32_t local_channel_number,
+register_channel(struct channel_table *table,
+		 uint32_t local_channel_number,
 		 struct ssh_channel *channel,
 		 int take_into_use);
 
@@ -360,8 +377,10 @@ struct abstract_write *make_channel_write(struct ssh_channel *channel);
 struct abstract_write *make_channel_write_extended(struct ssh_channel *channel,
 						   uint32_t type);
 
-struct io_callback *make_channel_read_data(struct ssh_channel *channel);
-struct io_callback *make_channel_read_stderr(struct ssh_channel *channel);
+struct io_callback *
+make_channel_read_data(struct ssh_channel *channel);
+struct io_callback *
+make_channel_read_stderr(struct ssh_channel *channel);
 
 struct lsh_string *format_global_failure(void);
 struct lsh_string *format_global_success(void);
@@ -424,21 +443,69 @@ make_channel_io_exception_handler(struct ssh_channel *channel,
 				  struct exception_handler *parent,
 				  const char *context);
 
-struct lsh_string *channel_transmit_data(struct ssh_channel *channel,
-					 struct lsh_string *data);
+struct lsh_string *
+channel_transmit_data(struct ssh_channel *channel,
+		      struct lsh_string *data);
 
-struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
-					     uint32_t type,
-					     struct lsh_string *data);
+struct lsh_string *
+channel_transmit_extended(struct ssh_channel *channel,
+			  uint32_t type,
+			  struct lsh_string *data);
 
-void init_connection_service(struct ssh_connection *connection);
-extern struct command connection_service_command;
-#define INIT_CONNECTION_SERVICE (&connection_service_command.super)
+void
+handle_global_request(struct channel_table *table,
+		      struct lsh_string *packet);
 
-#if 0
-void init_login_service(struct ssh_connection *connection);
-extern struct command login_service_command;
-#define INIT_LOGIN_SERVICE (&login_service_command.super)
-#endif
+void
+handle_global_success(struct channel_table *table,
+		      struct lsh_string *packet);
+
+void
+handle_global_failure(struct channel_table *table,
+		      struct lsh_string *packet);
+
+void
+handle_channel_request(struct channel_table *table,
+			struct lsh_string *packet);
+
+void
+handle_channel_open(struct channel_table *table,
+		    struct lsh_string *packet);
+
+void
+handle_adjust_window(struct channel_table *table,
+		     struct lsh_string *packet);
+
+void
+handle_channel_data(struct channel_table *table,
+		    struct lsh_string *packet);
+
+void
+handle_channel_extended_data(struct channel_table *table,
+			     struct lsh_string *packet);
+
+void
+handle_channel_eof(struct channel_table *table,
+		   struct lsh_string *packet);
+
+void
+handle_channel_close(struct channel_table *table,
+		     struct lsh_string *packet);
+
+void
+handle_open_confirm(struct channel_table *table,
+		    struct lsh_string *packet);
+
+void
+handle_open_failure(struct channel_table *table,
+		    struct lsh_string *packet);
+
+void
+handle_channel_success(struct channel_table *table,
+		       struct lsh_string *packet);
+
+void
+handle_channel_failure(struct channel_table *table,
+		       struct lsh_string *packet);
 
 #endif /* LSH_CHANNEL_H_INCLUDED */

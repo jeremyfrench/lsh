@@ -83,7 +83,7 @@ struct command open_forwarded_x11;
 
 static struct ssh_channel *
 new_x11_channel(struct channel_open_command *c,
-		struct ssh_connection *connection,
+		struct channel_table *table,
 		uint32_t local_channel_number,
 		struct lsh_string **request)
 {
@@ -97,7 +97,7 @@ new_x11_channel(struct channel_open_command *c,
   debug("server_x11.c: new_x11_channel\n");
 
   channel = &make_channel_forward(self->peer->fd, X11_WINDOW_SIZE)->super;
-  channel->connection = connection;
+  channel->table = table;
 
   /* NOTE: The request ought to include some reference to the
    * corresponding x11 request, but no such id is specified in the
@@ -133,14 +133,14 @@ DEFINE_COMMAND(open_forwarded_x11)
    (expr
      (name server_x11_callback)
      (params
-       (connection object ssh_connection))
+       (table object channel_table))
      (expr
        ;; FIXME: This is a common construction for all types of
        ;; forwardings.
        (lambda (peer)
 	 (start_io
 	   (catch_channel_open 
-       	     (open_forwarded_x11 peer) connection)))))
+       	     (open_forwarded_x11 peer) table)))))
 */
 	     
 #define XAUTH_DEBUG_TO_STDERR 0
@@ -278,7 +278,7 @@ open_x11_socket(struct ssh_channel *channel)
 			    *
 			    * FIXME: How does that handle i/o errors?
 			    */
-			   channel->connection->e);
+			   channel->table->e);
       if (s)
 	{
 	  /* Store name */
@@ -300,10 +300,10 @@ open_x11_socket(struct ssh_channel *channel)
     }
 
   {
-    CAST_SUBTYPE(command, callback, server_x11_callback(channel->connection));
+    CAST_SUBTYPE(command, callback, server_x11_callback(channel->table));
     
     if (!io_listen(s, make_listen_callback(callback,
-					   channel->connection->e)))
+					   channel->table->e)))
       {
 	close(dir);
 	close_fd(s);
@@ -329,7 +329,10 @@ static struct server_x11_socket *
 server_x11_listen(struct ssh_channel *channel)
 {
   struct server_x11_socket *s;
-  
+
+  return NULL;
+  /* FIXME: User handling should not be needed in lshd-connection */
+#if 0
   uid_t me = geteuid();
   uid_t user = channel->connection->user->uid;
   
@@ -356,6 +359,7 @@ server_x11_listen(struct ssh_channel *channel)
       assert(geteuid() == me);
     }
   return s;
+#endif
 }
 
 /* GABA:

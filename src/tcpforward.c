@@ -142,8 +142,7 @@ make_exc_tcpip_connect_handler(struct exception_handler *parent,
      (name open_forwarded_tcpip_continuation)
      (super command_continuation)
      (vars
-       (up object command_continuation)
-       (connection object ssh_connection)))
+       (up object command_continuation)))
 */
 
 /* NOTE: This continuation should not duplicate the work done by
@@ -164,13 +163,11 @@ do_open_forwarded_tcpip_continuation(struct command_continuation *s,
 }
 
 static struct command_continuation *
-make_open_forwarded_tcpip_continuation(struct ssh_connection *connection,
-				       struct command_continuation *c)
+make_open_forwarded_tcpip_continuation(struct command_continuation *c)
 {
   NEW(open_forwarded_tcpip_continuation, self);
   self->super.c = do_open_forwarded_tcpip_continuation;
   self->up = c;
-  self->connection = connection;
 
   return &self->super;
 }
@@ -186,7 +183,7 @@ make_open_forwarded_tcpip_continuation(struct ssh_connection *connection,
 
 static void
 do_channel_open_direct_tcpip(struct channel_open *s,
-			     struct ssh_connection *connection,
+			     struct channel_table *table,
 			     struct channel_open_info *info UNUSED,
 			     struct simple_buffer *args,
 			     struct command_continuation *c,
@@ -206,12 +203,13 @@ do_channel_open_direct_tcpip(struct channel_open *s,
        && parse_uint32(args, &orig_port) 
        && parse_eod(args))
     {
+#if 0
       werror("direct-tcp to %S:%i for user %S.\n",
 	     dest_host, dest_port, connection->user->name);
-
+#endif      
       COMMAND_CALL(closure->callback,
 		   make_address_info(dest_host, dest_port),
-		   make_open_forwarded_tcpip_continuation(connection, c), 
+		   make_open_forwarded_tcpip_continuation(c), 
 		   /* NOTE: This exception handler will be associated with the
 		    * fd for its entire lifetime. */
 		   make_exc_tcpip_connect_handler(e, HANDLER_CONTEXT));
@@ -221,7 +219,7 @@ do_channel_open_direct_tcpip(struct channel_open *s,
       lsh_string_free(dest_host);
       
       werror("do_channel_open_direct_tcpip: Invalid message!\n");
-      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_OPEN direct-tcp message.");
+      PROTOCOL_ERROR(table->e, "Invalid CHANNEL_OPEN direct-tcp message.");
     }
 }
 
@@ -244,7 +242,7 @@ make_channel_open_direct_tcpip(struct command *callback)
      (super command_continuation)
      (vars
        (forward object local_port)
-       (connection object ssh_connection)
+       (table object channel_table)
        (c object command_continuation)))
 */
 
@@ -260,21 +258,21 @@ do_tcpip_forward_request_continuation(struct command_continuation *c,
   assert(fd);
 
   self->forward->socket = fd;
-  remember_resource(self->connection->resources, &fd->super);
+  remember_resource(self->table->resources, &fd->super);
   
   COMMAND_RETURN(self->c, &self->forward->super.super);
 }
 
 static struct command_continuation *
 make_tcpip_forward_request_continuation(struct local_port *forward,
-					struct ssh_connection *connection,
+					struct channel_table *table,
 					struct command_continuation *c)
 {
   NEW(tcpip_forward_request_continuation, self);
 
   trace("make_tcpip_forward_request_continuation\n");
   self->forward = forward;
-  self->connection = connection;
+  self->table = table;
   self->c = c;
   
   self->super.c = do_tcpip_forward_request_continuation;
@@ -287,7 +285,7 @@ make_tcpip_forward_request_continuation(struct local_port *forward,
      (name tcpip_forward_request_handler)
      (super exception_handler)
      (vars
-       (connection object ssh_connection)
+       (table object channel_table)
        (forward object local_port)))
 */
 
@@ -303,7 +301,7 @@ do_tcpip_forward_request_exc(struct exception_handler *s,
     case EXC_RESOLVE:
       {
 	struct local_port *port
-	  = remove_forward(&self->connection->table->local_ports,
+	  = remove_forward(&self->table->local_ports,
 			   1,
 			   STRING_LD(self->forward->super.listen->ip),
 			   self->forward->super.listen->port);
@@ -326,7 +324,7 @@ do_tcpip_forward_request_exc(struct exception_handler *s,
 }
 
 static struct exception_handler *
-make_tcpip_forward_request_exc(struct ssh_connection *connection,
+make_tcpip_forward_request_exc(struct channel_table *table,
 			       struct local_port *forward,
 			       struct exception_handler *parent,
 			       const char *context)
@@ -336,7 +334,7 @@ make_tcpip_forward_request_exc(struct ssh_connection *connection,
   self->super.parent = parent;
   self->super.context = context;
 
-  self->connection = connection;
+  self->table = table;
   self->forward = forward;
 
   return &self->super;
@@ -357,7 +355,7 @@ make_tcpip_forward_request_exc(struct ssh_connection *connection,
 
 static void
 do_tcpip_forward_request(struct global_request *s, 
-			 struct ssh_connection *connection,
+			 struct channel_table *table,
 			 uint32_t type UNUSED,
 			 int want_reply UNUSED,
 			 struct simple_buffer *args,
@@ -382,7 +380,7 @@ do_tcpip_forward_request(struct global_request *s,
 	  return;
 	}
 
-      if (lookup_forward(&connection->table->local_ports,
+      if (lookup_forward(&table->local_ports,
 			 STRING_LD(bind_host), bind_port))
 	{
 	  static const struct exception again = 
@@ -393,20 +391,22 @@ do_tcpip_forward_request(struct global_request *s,
 	  return;
 	}
 
+#if 0
       werror("forward-tcpip request for port %i by user %S.\n",
 	     bind_port, connection->user->name);
+#endif
 
       forward = make_local_port(a, NULL);
-      object_queue_add_head(&connection->table->local_ports,
+      object_queue_add_head(&table->local_ports,
 			    &forward->super.super);
 
       {
 	COMMAND_CALL(self->callback,
 		     a,
 		     make_tcpip_forward_request_continuation(forward,
-							     connection,
+							     table,
 							     c),
-		     make_tcpip_forward_request_exc(connection, forward,
+		     make_tcpip_forward_request_exc(table, forward,
 						    e, HANDLER_CONTEXT));
 	
 	return;
@@ -419,7 +419,8 @@ do_tcpip_forward_request(struct global_request *s,
     }
 }
 
-struct global_request *make_tcpip_forward_request(struct command *callback)
+struct global_request *
+make_tcpip_forward_request(struct command *callback)
 {
   NEW(tcpip_forward_request, self);
   
@@ -431,7 +432,7 @@ struct global_request *make_tcpip_forward_request(struct command *callback)
 
 static void
 do_tcpip_cancel_forward(struct global_request *s UNUSED, 
-			struct ssh_connection *connection,
+			struct channel_table *table,
 			uint32_t type UNUSED,
 			int want_reply UNUSED,
 			struct simple_buffer *args,
@@ -453,7 +454,7 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
        * cancelling fails and the client has to try again later. */
 
       struct local_port *port
-	= remove_forward(&connection->table->local_ports, 0,
+	= remove_forward(&table->local_ports, 0,
 			 bind_host_length,
 			 bind_host,
 			 bind_port);
@@ -482,7 +483,7 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
   else
     {
       werror("Incorrectly formatted cancel-tcpip-forward request\n");
-      PROTOCOL_ERROR(connection->e, "Invalid cancel-tcpip-forward message.");
+      PROTOCOL_ERROR(table->e, "Invalid cancel-tcpip-forward message.");
     }
 }
 
@@ -494,7 +495,7 @@ struct global_request tcpip_cancel_forward =
 
 static void
 do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
-				struct ssh_connection *connection,
+				struct channel_table *table,
 				struct channel_open_info *info UNUSED,
 				struct simple_buffer *args,
 				struct command_continuation *c,
@@ -513,14 +514,14 @@ do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
       && parse_eod(args))
     {
       CAST(remote_port, port,
-	   lookup_forward(&connection->table->remote_ports,
+	   lookup_forward(&table->remote_ports,
 			  listen_ip_length, listen_ip, listen_port));
 	   
       if (port && port->callback)
 	{
 	  COMMAND_CALL(port->callback,
 		       make_address_info(peer_host, peer_port),
-		       make_open_forwarded_tcpip_continuation(connection, c),
+		       make_open_forwarded_tcpip_continuation(c),
 		       /* NOTE: This exception handler will be
 			* associated with the fd for its entire
 			* lifetime. */

@@ -46,11 +46,11 @@ do_channel_open_command(struct command *s,
 			struct exception_handler *e)
 {
   CAST_SUBTYPE(channel_open_command, self, s);
-  CAST(ssh_connection, connection, x);
+  CAST(channel_table, table, x);
   struct lsh_string *request;
   struct ssh_channel *channel;
 
-  int index = alloc_channel(connection->table);
+  int index = alloc_channel(table);
 
   if (index < 0)
     {
@@ -64,12 +64,12 @@ do_channel_open_command(struct command *s,
       return;
     }
 
-  channel = NEW_CHANNEL(self, connection, index, &request);
+  channel = NEW_CHANNEL(self, table, index, &request);
 
   if (!channel)
     {
       werror("do_channel_open_command: NEW_CHANNEL failed\n");
-      dealloc_channel(connection->table, index);
+      dealloc_channel(table, index);
     }
   else
     {
@@ -77,9 +77,9 @@ do_channel_open_command(struct command *s,
        * perhaps we need not pass the connection to NEW_CHANNEL. */
       channel->open_continuation = c;
       channel->e = e;
-      register_channel(index, channel, 0);
+      register_channel(table, index, channel, 0);
 
-      connection_send(connection, request);
+      A_WRITE(table->write, request);
     }
 }
 
@@ -99,7 +99,7 @@ do_channel_request_command(struct command *s,
     object_queue_add_tail(&channel->pending_requests,
 			  &make_command_context(c, e)->super);
   
-  connection_send(channel->connection, request);
+  A_WRITE(channel->table->write, request);
 }
 
 void
@@ -109,16 +109,16 @@ do_channel_global_command(struct command *s,
 			  struct exception_handler *e)
 {
   CAST_SUBTYPE(global_request_command, self, s);
-  CAST_SUBTYPE(ssh_connection, connection, x);
+  CAST_SUBTYPE(channel_table, table, x);
 
   struct lsh_string *request
-    = FORMAT_GLOBAL_REQUEST(self, connection, &c);
+    = FORMAT_GLOBAL_REQUEST(self, table, &c);
 
   if (CONTINUATION_USED_P(c))
-    object_queue_add_tail(&connection->table->pending_global_requests,
+    object_queue_add_tail(&table->pending_global_requests,
 			  &make_command_context(c, e)->super);
 
-  connection_send(connection, request);
+  A_WRITE(table->write, request);
 }
 
 void
@@ -129,18 +129,18 @@ do_install_global_request_handler(struct command_2 *s,
 				  struct exception_handler *e UNUSED)
 {
   CAST(install_info, self, s);
-  CAST(ssh_connection, connection, a1);
+  CAST(channel_table, table, a1);
   CAST_SUBTYPE(global_request, handler, a2);
 
   assert(handler);
 
   trace("Installing global request handler for '%a'\n", self->name);
   
-  ALIST_SET(connection->table->global_requests,
+  ALIST_SET(table->global_requests,
 	    self->name,
 	    &handler->super);
 
-  COMMAND_RETURN(c, connection);
+  COMMAND_RETURN(c, table);
 }
 
 void
@@ -151,18 +151,18 @@ do_install_channel_open_handler(struct command_2 *s,
 				struct exception_handler *e UNUSED)
 {
   CAST(install_info, self, s);
-  CAST(ssh_connection, connection, a1);
+  CAST(channel_table, table, a1);
   CAST_SUBTYPE(channel_open, handler, a2);
 
   assert(handler);
   
   trace("Installing channel open handler for '%a'\n", self->name);
 
-  ALIST_SET(connection->table->channel_types,
+  ALIST_SET(table->channel_types,
 	    self->name,
 	    &handler->super);
 
-  COMMAND_RETURN(c, connection);
+  COMMAND_RETURN(c, table);
 }
 
 
@@ -185,11 +185,11 @@ do_install_fix_global_request_handler(struct command *s,
 				      struct exception_handler *e UNUSED)
 {
   CAST(install_global_request_handler, self, s);
-  CAST(ssh_connection, connection, x);
+  CAST(channel_table, table, x);
 
   trace("Installing fix global request handler for '%a'\n", self->name);
   
-  ALIST_SET(connection->table->global_requests,
+  ALIST_SET(table->global_requests,
 	    self->name,
 	    &self->handler->super);
 
@@ -228,16 +228,15 @@ do_install_fix_channel_open_handler(struct command *s,
 				    struct exception_handler *e UNUSED)
 {
   CAST(install_channel_open_handler, self, s);
-  CAST(ssh_connection, connection, x);
+  CAST(channel_table, table, x);
 
   trace("Installing fix channel open handler for type '%a'\n", self->name);
   
-  ALIST_SET(connection->table
-	    ->channel_types,
+  ALIST_SET(table->channel_types,
 	    self->name,
 	    &self->handler->super);
 
-  COMMAND_RETURN(c, connection);
+  COMMAND_RETURN(c, table);
 }
 
 struct command *

@@ -193,7 +193,7 @@ make_server_session(uint32_t initial_window,
 
 static void
 do_open_session(struct channel_open *s,
-		struct ssh_connection *connection UNUSED,
+		struct channel_table *table UNUSED,
 		struct channel_open_info *info UNUSED,
 		struct simple_buffer *args,
 		struct command_continuation *c,
@@ -203,8 +203,6 @@ do_open_session(struct channel_open *s,
 
   debug("server.c: do_open_session\n");
 
-  assert(connection->user);
-  
   if (parse_eod(args))
     {
       COMMAND_RETURN(c,
@@ -279,10 +277,10 @@ do_exit_shell(struct exit_callback *c, int signaled,
 	      signaled ? ATOM_EXIT_SIGNAL : ATOM_EXIT_STATUS,
 	      channel->channel_number);
       
-      connection_send(channel->connection,
-		      (signaled
-		       ? format_exit_signal(channel, core, value)
-		       : format_exit(channel, value)) );
+      A_WRITE(channel->table->write,
+	      (signaled
+	       ? format_exit_signal(channel, core, value)
+	       : format_exit(channel, value)) );
 
       /* We want to close the channel as soon as all stdout and stderr
        * data has been sent. In particular, we don't wait for EOF from
@@ -520,7 +518,12 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
   unsigned i = 0;
   
   memset(info, 0, sizeof(*info));
+#if 0
+  /* FIXME: lshd needs the peer information from somewhere */
   info->peer = session->super.connection->peer;
+#else
+  info->peer = NULL;
+#endif
   info->pty = session->pty;
 
   info->argc = argc;
@@ -548,13 +551,16 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
       /* Save string in the session object, so that it can be garbage
        * collected properly. */
       assert(!session->client);
-      
+
+#if 0
+      /* FIXME: lshd needs this information from somewhere */
       if (session->super.connection->local)
 	session->client = ssh_format("%lS %di %di", 
 				      info->peer->ip,
 				      info->peer->port,
 				      session->super.connection->local->port);
       else
+#endif
 	session->client = ssh_format("%lS %di UNKNOWN", 
 				     info->peer->ip,
 				     info->peer->port
@@ -609,10 +615,13 @@ DEFINE_CHANNEL_REQUEST(shell_request_handler)
 
   init_spawn_info(&spawn, session, 0, NULL, 5, env);
   spawn.login = 1;
-    
+
+#if 0
+  /* FIXME: lshd-connection shouldn't need any user information */
   if (spawn_process(session, channel->connection->user, &spawn))
     COMMAND_RETURN(c, channel);
   else
+#endif
     {
     fail:
       EXCEPTION_RAISE(e, &shell_request_failed);
@@ -662,9 +671,11 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
       args[0] = "-c";
       args[1] = lsh_get_cstring(s);
 
+#if 0
       if (spawn_process(session, channel->connection->user, &spawn))
 	COMMAND_RETURN(c, channel);
       else
+#endif
 	EXCEPTION_RAISE(e, &exec_request_failed);
 
       lsh_string_free(s);
@@ -754,11 +765,13 @@ do_spawn_subsystem(struct channel_request *s,
       init_spawn_info(&spawn, session, 2, args, 5, env);
       spawn.login = 0;
 
+#if 0
       if (spawn_process(session, channel->connection->user, &spawn))
 	{
 	  COMMAND_RETURN(c, channel);
 	  return;
-	}  
+	}
+#endif
     }
   EXCEPTION_RAISE(e, &subsystem_request_failed);
 }
@@ -807,12 +820,16 @@ do_alloc_pty(struct channel_request *c UNUSED,
     {
       /* The client may only request one tty, and only before
        * starting a process. */
+
+#if 0
       if (session->pty || session->process
 	  || !pty_open_master(pty, channel->connection->user->uid))
+#endif
 	{
 	  verbose("Pty allocation failed.\n");
 	  EXCEPTION_RAISE(e, &pty_request_failed);
 	}
+#if 0
       else
 	{
 	  /* FIXME: Perhaps we can set the window dimensions directly
@@ -827,7 +844,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	  /* Success */
 	  return;
 	}
-
+#endif
     }
   else
     {
@@ -874,7 +891,7 @@ do_window_change_request(struct channel_request *c UNUSED,
         EXCEPTION_RAISE(e, &winch_request_failed);
     }
   else
-    PROTOCOL_ERROR(channel->connection->e, "Invalid window-change request.");
+    PROTOCOL_ERROR(channel->e, "Invalid window-change request.");
 }
 
 struct channel_request
@@ -914,6 +931,7 @@ do_x11_req(struct channel_request *s UNUSED,
       && parse_string(args, &cookie_length, &cookie)
       && parse_uint32(args, &screen))
     {
+#if 0
       /* The client may only request one x11-forwarding, and only
        * before starting a process. */
       if (session->x11 || session->process
@@ -923,14 +941,17 @@ do_x11_req(struct channel_request *s UNUSED,
 					       protocol_length, protocol,
 					       cookie_length, cookie,
 					       screen, c, e)))
+#endif
 	{
 	  verbose("X11 request failed.\n");
 	  EXCEPTION_RAISE(e, &x11_request_failed);
 	}
+#if 0
       else
 	{	  
 	  return;
 	}
+#endif
     }
   else
     {

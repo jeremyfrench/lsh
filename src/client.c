@@ -379,14 +379,14 @@ make_handle_exit_signal(int *exit_status)
 
 static struct ssh_channel *
 new_session(struct channel_open_command *s,
-	    struct ssh_connection *connection,
+	    struct channel_table *table,
 	    uint32_t local_channel_number,
 	    struct lsh_string **request)
 {
   CAST(session_open_command, self, s);
   struct ssh_channel *res;
 
-  self->session->connection = connection;
+  self->session->table = table;
   
   *request = format_channel_open(ATOM_SESSION,
 				 local_channel_number,

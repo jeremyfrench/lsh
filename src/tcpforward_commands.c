@@ -122,7 +122,7 @@ DEFINE_COMMAND(tcpip_connect_io_command)
 
 static struct ssh_channel *
 new_tcpip_channel(struct channel_open_command *c,
-		  struct ssh_connection *connection,
+		  struct channel_table *table,
 		  uint32_t local_channel_number,
 		  struct lsh_string **request)
 {
@@ -136,7 +136,7 @@ new_tcpip_channel(struct channel_open_command *c,
   debug("tcpforward_commands.c: new_tcpip_channel\n");
 
   channel = &make_channel_forward(self->peer->fd, TCPIP_WINDOW_SIZE)->super;
-  channel->connection = connection;
+  channel->table = table;
 
   *request = format_channel_open(self->type, local_channel_number,
 				 channel, 
@@ -264,7 +264,7 @@ make_remote_port_install_continuation(struct remote_port *port,
 
 static struct lsh_string *
 do_format_request_tcpip_forward(struct global_request_command *s,
-				struct ssh_connection *connection,
+				struct channel_table *table,
 				struct command_continuation **c)
 {
   CAST(request_tcpip_forward_command, self, s);
@@ -287,7 +287,7 @@ do_format_request_tcpip_forward(struct global_request_command *s,
       want_reply = 0;
     }
   
-  object_queue_add_tail(&connection->table->remote_ports,
+  object_queue_add_tail(&table->remote_ports,
 			&port->super.super);
   
   return format_global_request(ATOM_TCPIP_FORWARD, want_reply, "%S%i",
