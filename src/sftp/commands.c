@@ -478,9 +478,14 @@ com_cd(const char *arg, const char *command UNUSED)
     {
       const char **mglob;
       const char *ptr = 0;
-      
-      mglob = lsftp_dc_r_startglob( tmp, 0, 1 );
-      
+      const char* tmp2 = lsftp_qualify_path( tmp );
+
+      if( !tmp2 )
+	return -1;
+
+      mglob = lsftp_dc_r_startglob( tmp2, 0, 1 );
+      free( tmp2 );
+
       if( mglob ) /* Glob returned allright? */
 	ptr = *mglob;
       
@@ -675,7 +680,14 @@ com_rm(const char *arg, const char *command)
 	    const char **orgglob;
 	    const char *ptr;
 	    
-	    mglob = lsftp_dc_r_startglob( tmp, 0, 1 );
+	    const char* tmp2 = lsftp_qualify_path( tmp );
+
+	    if( !tmp2 )
+	      return -1;
+
+
+	    mglob = lsftp_dc_r_startglob( tmp2, 0, 1 );
+	    free( tmp2 );
 	    orgglob = mglob;
 
 	    if( mglob ) /* Glob returned allright? */		
@@ -1096,7 +1108,14 @@ com_get(const char *arg, const char *command)
 	const char **orgglob;
 	const char *ptr;
 
-	glob = lsftp_dc_r_startglob( tmp, 0, 1 );
+	const char* tmp2 = lsftp_qualify_path( tmp );
+
+	if( !tmp2 )
+	  return -1;
+
+	glob = lsftp_dc_r_startglob( tmp2, 0, 1 );
+	free( tmp2 );
+
 	orgglob = glob;
 	
 	while( (ptr = *glob++) ) 
@@ -1556,7 +1575,14 @@ com_mv(const char *arg, const char *command)
 	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
 	 )
     {
-      glob = lsftp_dc_r_startglob( tmp, 0, 1 );
+      const char* tmp2 = lsftp_qualify_path( tmp );
+
+      if( !tmp2 )
+	return -1;
+
+      glob = lsftp_dc_r_startglob( tmp2, 0, 1 );
+      free( tmp2 );
+
       orgglob = glob;
       
       while( (ptr = *glob++) ) 
@@ -1581,7 +1607,14 @@ com_mv(const char *arg, const char *command)
 	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
 	 )
     {
-      glob = lsftp_dc_r_startglob( tmp, 0, 1 );
+      const char* tmp2 = lsftp_qualify_path( tmp );
+
+      if( !tmp2 )
+	return -1;
+
+      glob = lsftp_dc_r_startglob( tmp2, 0, 1 );
+      free( tmp2 );
+
       orgglob = glob;
       
       while( (ptr = *glob++) ) 
