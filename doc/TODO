@@ -32,6 +32,8 @@ DSS == Digital Signature Standard; the algorithm in it is DSA (Digital
 Signature Algorithm); the GNU Privacy Guard contains a DSA implementation
 (cipher/dsa.[ch]); is that implementation suitable?
 
+Implement the last paragraph of section 5.2 of the transport layer
+specification.
 
 S-EXPRESSIONS
 
