@@ -42,6 +42,7 @@
 #include "dc.h"
 #include "str_utils.h"
 #include "misc_fun.h"
+#include "gnu_stuff.h"
 
 #define NOCOMMAND -4710
 #define UNKNOWNCOMMAND -4711
