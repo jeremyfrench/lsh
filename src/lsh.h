@@ -112,4 +112,27 @@ struct callback
 #define CALLBACK(c) ((c)->f(c))
 #endif
 
+
+/* Forward declarations of various structures */
+
+/* abstract_crypto.h */
+
+/* connection.h */
+struct ssh_connection;
+
+/* io.h */
+struct lsh_fd;
+struct address_info;
+
+/* list.h */
+struct int_list;
+struct object_list;
+
+/* randomness.h */
+struct randomness;
+
+/* sexp.h */
+struct sexp;
+struct sexp_iterator;
+
 #endif /* LSH_H_INCLUDED */
