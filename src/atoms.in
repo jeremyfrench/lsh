@@ -96,7 +96,6 @@ forwarded-tcpip
 direct-tcpip
 
 # Used in spki keys
-
 private-key
 public-key
 dsa
@@ -106,8 +105,11 @@ g
 y
 x
 
-# hashed spki keys
+# spki dsa signatures
+r
+s
 
+# hashed spki keys
 hash
 md5
 sha1
