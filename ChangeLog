@@ -1,3 +1,43 @@
+2003-04-20  Niels Möller  <niels@s3.kth.se>
+
+	* src/spki.c (make_ssh_hostkey_tag): USe a plain NUL-terminated
+	string to identify the host.
+	(spki_pkcs5_decrypt): Fixed string leak. The label string wasn't
+	freed properly on failure.
+
+	* src/lshd.c (do_exc_lshd_handler): It seems we need an exception
+	handler after all, which catches and logs i/o errors.
+
+	* src/lsh.c (options2identities): Deleted command.
+	(lsh_host_db): Use a NUL-terminated string to identify the host.
+	(do_lsh_lookup): Likewise.
+	(make_lsh_host_db): Likewise.
+	(make_lsh_userauth): Take keys as a parameter. Don't use
+	options2identities. 
+	(make_lsh_connect): Take options as a parameter, and the remote
+	address list as argument. Use connect_list.
+	(main): Call io_resolv_address, read_known_hosts, read_user_keys
+	and make_lsh_userauth here.
+
+	* src/io_commands.c (connect_list_command): New command.
+
+	* src/io.c (do_connect_list_callback): Update fd->label.
+
+	* src/handshake.c (handshake_command): Allow a NULL lv->peer.
+
+	* src/gateway.c (make_gateway_address): Take a plain
+	NUL-termianted string to identify the target.
+
+	* src/client.c (client_options2remote): Deleted command.
+	(client_argp_parser): Don't call make_address_info_c.
+
+	* src/client.h (client_options): Replaced remote attribute with a
+	plain NUL-termianted string, and renamed to target.
+	* src/lshg.c: Updated for the struct client_options renaming
+	remote->target. 
+
+	* src/testsuite/functions.sh (spawn_lshd): Reduced sleep.
+
 2003-04-16  Niels Möller  <niels@s3.kth.se>
 
 	* src/lshd.c (main): No need to check for make_lshd_options
