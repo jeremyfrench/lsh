@@ -28,23 +28,13 @@
 #include "bignum.h"
 #include "publickey_crypto.h"
 
-#define GABA_DECLARE
-#include "dsa.h.x"
-#undef GABA_DECLARE
-
 /* DSA signatures */
-
-/* The standard says that DSA public keys are at most 1024 bits, i.e.
- * 128 octets. We are a little more liberal than that. Note that
- * allowing really large keys opens for Denial-of-service attacks. */
-
-#define DSA_MAX_SIZE 300
 
 /* NOTE: These definitions should not really be public. But the
  * structures are needed for both plain ssh-dss and spki-style dsa. */
 
 /* DSA definitions */
-/* GABA:
+/* ;; GABA:
    (struct
      (name dsa_public)
      (vars
@@ -56,7 +46,7 @@
        (y bignum)))
 */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name dsa_signer)
      (super signer)
@@ -66,7 +56,7 @@
        (a bignum)))
 */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name dsa_verifier)
      (super verifier)
@@ -74,6 +64,7 @@
        (public struct dsa_public)))
 */
 
+#if 0
 void init_dsa_public(struct dsa_public *public);
 
 /* parse an ssh keyblob */
@@ -82,26 +73,24 @@ int parse_dsa_public(struct simple_buffer *buffer,
 
 struct sexp *
 make_dsa_public_key(struct dsa_public *dsa);
+#endif
 
 struct signature_algorithm *
 make_dsa_algorithm(struct randomness *random);
 
 /* Non spki keys */
-struct dsa_verifier *
+struct verifier *
+parse_ssh_dss_public(struct simple_buffer *buffer);
+
+struct verifier *
 make_ssh_dss_verifier(UINT32 public_length,
 		      const UINT8 *public);
 
+
+#if 0
 struct lsh_string *
 ssh_dss_public_key(struct signer *s);
-
-#if DATAFELLOWS_WORKAROUNDS
-
-struct verifier *
-make_dsa_verifier_kludge(struct verifier *v);
-struct signer *
-make_dsa_signer_kludge(struct signer *dsa);
-
-#endif /* DATAFELLOWS_WORKAROUNDS */
+#endif
 
 void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l);
 void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q);
