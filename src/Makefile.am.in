@@ -72,7 +72,6 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	keyexchange.c \
 	list.c lookup_verifier.c \
 	lock_file.c \
-	md5.c \
 	pad.c parse.c \
 	pkcs5.c \
 	proxy.c proxy_agentforward.c proxy_session.c \
@@ -86,7 +85,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	server_password.c server_publickey.c \
 	server_pty.c server_session.c server_userauth.c \
 	sexp.c sexp_parser.c \
-	sha.c spki.c srp_exchange.c ssh1_fallback.c \
+	spki.c srp_exchange.c ssh1_fallback.c \
 	string_buffer.c suspend.c \
 	tcpforward.c tcpforward_commands.c \
 	translate_signal.c tty.c \
