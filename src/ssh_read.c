@@ -73,6 +73,39 @@ ssh_read(struct lsh_string *data, uint32_t start, int fd, uint32_t length,
     }
 }
 
+/* If STATE is NULL, any callback is removed */
+static void
+ssh_read_set_callback(struct ssh_read_state *self,
+		      oop_source *source, int fd, oop_call_fd state)
+{
+  if (self->state && self->active)
+    source->cancel_fd(source, fd, OOP_READ);
+
+  self->state = state;
+
+  if (self->state && self->active)
+    source->on_fd(source, fd, OOP_READ, state, self);
+}
+
+void
+ssh_read_stop(struct ssh_read_state *self, oop_source *source, int fd)
+{
+  if (self->state && self->active)
+    source->cancel_fd(source, fd, OOP_READ);
+
+  self->active = 0;
+}
+
+void
+ssh_read_start(struct ssh_read_state *self, oop_source *source, int fd)
+{
+  if (!self->active && self->state)
+    source->on_fd(source, fd, OOP_READ, self->state, self);
+
+  self->active = 1;
+}
+
+
 /* NOTE: All the ssh_read_* functions cancel the liboop callback
    before invoking any of it's own callbacks. */
 
@@ -102,7 +135,7 @@ oop_ssh_read_line(oop_source *source, int fd, oop_event event, void *state)
   if (e)
     {
     error:
-      source->cancel_fd(source, fd, OOP_READ);
+      ssh_read_set_callback(self, source, fd, NULL);
       ERROR_CALLBACK(self->error, e);
       return OOP_CONTINUE;
     }
@@ -123,7 +156,7 @@ oop_ssh_read_line(oop_source *source, int fd, oop_event event, void *state)
 	    lsh_string_write(self->header, 0, left_over, eol + 1);
 	  self->pos = left_over;
 
-	  source->cancel_fd(source, fd, OOP_READ);
+	  ssh_read_set_callback(self, source, fd, NULL);
 	  
 	  /* Ignore any carriage return character */
 	  if (length > 0 && s[length-1] == 0x0d)
@@ -165,7 +198,7 @@ oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
 	       self->pos == 0, &done);
   if (e)
     {
-      source->cancel_fd(source, fd, OOP_READ);
+      ssh_read_set_callback(self, source, fd, NULL);
       ERROR_CALLBACK(self->error, e);
       return OOP_CONTINUE;
     }
@@ -173,7 +206,7 @@ oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
   if (done == 0)
     {
       assert(self->pos == 0);
-      source->cancel_fd(source, fd, OOP_READ);
+      ssh_read_set_callback(self, source, fd, NULL);
 
       A_WRITE(self->handler, NULL);
       return OOP_CONTINUE;
@@ -184,7 +217,7 @@ oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
   if (self->pos == self->header_length)
     {
       struct lsh_string *packet;
-      source->cancel_fd(source, fd, OOP_READ);
+      ssh_read_set_callback(self, source, fd, NULL);
       self->pos = 0;
       
       packet = HEADER_CALLBACK(self->process, self, &self->pos);
@@ -192,7 +225,8 @@ oop_ssh_read_header(oop_source *source, int fd, oop_event event, void *state)
 	{
 	  assert(!self->data);
 	  self->data = packet;
-	  source->on_fd(source, fd, OOP_READ, oop_ssh_read_packet, self);
+
+	  ssh_read_set_callback(self, source, fd, oop_ssh_read_packet);
 	}
     }
   return OOP_CONTINUE;      
@@ -212,7 +246,7 @@ oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state)
   e = ssh_read(self->data, self->pos, fd, to_read, 0, &done);
   if (e)
     {
-      source->cancel_fd(source, fd, OOP_READ);
+      ssh_read_set_callback(self, source, fd, NULL);
       ERROR_CALLBACK(self->error, e);
       return OOP_CONTINUE;
     }  
@@ -226,8 +260,7 @@ oop_ssh_read_packet(oop_source *source, int fd, oop_event event, void *state)
       self->pos = 0;
       self->data = NULL;
       /* Prepare to read next packet. */      
-      source->cancel_fd(source, fd, OOP_READ);
-      source->on_fd(source, fd, OOP_READ, oop_ssh_read_header, self);
+      ssh_read_set_callback(self, source, fd, oop_ssh_read_header);
 	  
       A_WRITE(self->handler, packet);
     }
@@ -241,6 +274,9 @@ init_ssh_read_state(struct ssh_read_state *self,
 		    struct header_callback *process,
 		    struct error_callback *error)
 {
+  self->state = NULL;
+  self->active = 0;
+  
   self->pos = 0;
   
   self->header = lsh_string_alloc(max_header);
@@ -273,34 +309,16 @@ ssh_read_line(struct ssh_read_state *self, uint32_t max_length,
   self->pos = 0;
   self->handler = handler;
 
-  source->on_fd(source, fd, OOP_READ, oop_ssh_read_line, self);
+  ssh_read_set_callback(self, source, fd, oop_ssh_read_line);
 }
 
 /* NOTE: Depends on the previous value of pos */
 void
-ssh_read_header(struct ssh_read_state *self,
-		oop_source *source, int fd,
-		struct abstract_write *handler)
-{
-  self->handler = handler;
-
-  source->on_fd(source, fd, OOP_READ, oop_ssh_read_header, self);
-}
-
-#if 0
-/* NOTE: Usually invoked by the header_callback. */
-static void
 ssh_read_packet(struct ssh_read_state *self,
-		struct lsh_string *data, uint32_t pos,
 		oop_source *source, int fd,
 		struct abstract_write *handler)
 {
-  assert(pos < lsh_string_length(data));
-  self->pos = pos;
-  self->data = data;
-
   self->handler = handler;
-  
-  source->on_fd(source, fd, OOP_READ, oop_ssh_read_packet, self);
+
+  ssh_read_set_callback(self, source, fd, oop_ssh_read_header);
 }
-#endif

@@ -25,11 +25,11 @@
 #ifndef LSH_SSH_READ_H_INCLUDED
 #define LSH_SSH_READ_H_INCLUDED
 
-struct ssh_read_state;
-
 #include <oop.h>
 
 #include "lsh.h"
+
+struct ssh_read_state;
 
 #define GABA_DECLARE
 # include "ssh_read.h.x"
@@ -58,8 +58,12 @@ struct ssh_read_state;
    (class
      (name ssh_read_state)
      (vars
+       ; A callback is installed iff both STATE and ACTIVE are non-null
+       (state . "oop_call_fd *")
+       (active . int)
+
        (pos . uint32_t)
-       
+
        ; Fix buffer space of size SSH_MAX_BLOCK_SIZE       
        (header string)
        ; Current header length
@@ -77,12 +81,18 @@ struct ssh_read_state;
 */  
 
 void
+ssh_read_stop(struct ssh_read_state *self, oop_source *source, int fd);
+
+void
+ssh_read_start(struct ssh_read_state *self, oop_source *source, int fd);
+
+void
 ssh_read_line(struct ssh_read_state *self, uint32_t max_length,
 	      oop_source *source, int fd,
 	      struct abstract_write *handler);
 
 void
-ssh_read_header(struct ssh_read_state *self,
+ssh_read_packet(struct ssh_read_state *self,
 		oop_source *source, int fd,
 		struct abstract_write *handler);
 
