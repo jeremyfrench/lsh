@@ -52,29 +52,39 @@ TS_DEFINE(»TS_TEST_HMAC«, »
   }
 «)
 
-m4_dnl TS_TEST_CRYPTO(name, algorithm, key, clear, cipher)
+m4_dnl TS_TEST_CRYPTO(name, algorithm, key, clear, cipher [, iv])
 TS_DEFINE(»TS_TEST_CRYPTO«, »
   {
+    struct crypto_instance *c;
     struct crypto_algorithm *algorithm = »$2«;
     struct lsh_string *key = TS_STRING(»$3«);
     struct lsh_string *plain = TS_STRING(»$4«);
     struct lsh_string *cipher = TS_STRING(»$5«);
-    struct crypto_instance *c;
 
-    assert(key->length == algorithm->key_size);
+m4_ifelse(»$6«,,»
+    UINT8 *iv = NULL;
     assert(!algorithm->iv_size);
+«,»
+    struct lsh_string *ivs = TS_STRING(»$6«);
+    UINT8 *iv = ivs->data;
+    assert(ivs->length == algorithm->iv_size);
+«)
+    assert(key->length == algorithm->key_size);
 
-    c = MAKE_ENCRYPT(algorithm, key->data, NULL);
+    c = MAKE_ENCRYPT(algorithm, key->data, iv);
     TS_TEST_STRING_EQ(»Encrypting with $1«,
 	  	      »crypt_string(c, plain, 0)«,
 		      »lsh_string_dup(cipher)«)
     KILL(c);
-    c = MAKE_DECRYPT(algorithm, key->data, NULL);
+    c = MAKE_DECRYPT(algorithm, key->data, iv);
     TS_TEST_STRING_EQ(»Decrypting with $1«,
          	      »crypt_string(c, cipher, 0)«,
 		      »plain«)
     KILL(c);
     
+m4_ifelse(»$6«,,,»
+    lsh_string_free(ivs);
+«)
     lsh_string_free(key);
     lsh_string_free(cipher);
   }
