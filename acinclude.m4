@@ -54,7 +54,11 @@ AC_DEFUN(AC_CHECK_LIBGMP,
 [ac_save_libs="$LIBS"
 LIBS="-l$1 $LIBS"
 AC_TRY_LINK(dnl
-[#include <gmp.h>
+[#if HAVE_GMP_H
+#include <gmp.h>
+#elif HAVE_GMP2_GMP_H
+#include <gmp2/gmp.h>
+#endif
 ],
 [mpz_get_d(0);],
 ac_cv_lib_$1_mpz_get_d=yes,
@@ -80,9 +84,13 @@ AC_DEFUN(AC_SEARCH_LIBGMP,
 [ac_search_save_LIBS="$LIBS"
 ac_cv_search_mpz_get_d="no"
 for i in $1; do
-LIBS="-l$i $LIBS"
+LIBS="-l$i $ac_search_save_LIBS"
 AC_TRY_LINK(dnl
-[#include <gmp.h>
+[#if HAVE_GMP_H
+#include <gmp.h>
+#elif HAVE_GMP2_GMP_H
+#include <gmp2/gmp.h>
+#endif
 ],
 [mpz_get_d(0);],
 [ac_cv_search_mpz_get_d=-l$i
