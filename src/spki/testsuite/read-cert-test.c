@@ -17,7 +17,8 @@ test_main(void)
   struct spki_5_tuple cert;
   
   spki_acl_init(&db);
-
+  spki_5_tuple_init(&cert);
+  
   read_cert(&db, &cert,
 	    LDATA("(4:cert(6:issuer(10:public-key2:k1))"
 		  "(7:subject(10:public-key2:k2))"
