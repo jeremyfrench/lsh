@@ -374,11 +374,9 @@ client.c		Client specific processing.
 server.c		Server specific processing, including forking
 			of subprocesses.
 
-lib/			Free implementations of hash functions and
+nettle/			Free implementations of hash functions and
 			symmetric cryptographic algorithms. See the
 			file AUTHORS for credits.
-
-include/		Corresponding include files.
 
 crypto.[hc]		lsh's interface to those algorithms.
 
