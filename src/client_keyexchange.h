@@ -27,7 +27,6 @@
 #define LSH_CLIENT_KEYEXCHANGE_H_INCLUDED
 
 #include "keyexchange.h"
-/* #include "lookup_verifier.h" */
 #include "publickey_crypto.h"
 
 struct keyexchange_algorithm *
