@@ -60,7 +60,6 @@ dist_headers = \
     string_buffer.h \
     suspend.h \
     tcpforward.h \
-    tcpforward_commands.h \
     translate_signal.h \
     tty.h \
     userauth.h \

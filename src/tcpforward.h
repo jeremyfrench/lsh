@@ -80,4 +80,26 @@ make_tcpip_forward_request(struct command *callback);
 
 extern struct global_request tcpip_cancel_forward;
 
+struct command *
+make_open_tcpip_command(int type,
+			struct address_info *port,
+			struct listen_value *peer);
+
+struct command *
+make_forward_local_port(struct address_info *local,
+			struct address_info *target);
+
+struct command *
+make_forward_remote_port(struct address_info *local,
+			 struct address_info *target);
+
+struct command *
+make_direct_tcpip_hook(void);
+
+struct command *
+make_tcpip_forward_hook(void);
+
+struct command *
+make_socks_server(struct address_info *local);
+
 #endif /* LSH_TCPFORWARD_H_INCLUDED */

@@ -21,6 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning tcpforward_commands.h is obsolete
+
 #ifndef LSH_TCPFORWARD_COMMANDS_H_INCLUDED
 #define LSH_TCPFORWARD_COMMANDS_H_INCLUDED
 
@@ -39,8 +41,5 @@ make_direct_tcpip_hook(void);
 
 struct command *
 make_tcpip_forward_hook(void);
-
-struct command_2 open_direct_tcpip;
-#define OPEN_DIRECT_TCPIP (&open_direct_tcpip.super.super)
 
 #endif /* LSH_TCPFORWARD_COMMANDS_H_INCLUDED */
