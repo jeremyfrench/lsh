@@ -202,7 +202,11 @@ make_client_session_channel(struct lsh_fd *in,
   /* Makes sure the pending_close bit is set whenever this session
    * dies, no matter when or how. */
   self->super.close = do_client_session_close;
-  
+
+  /* FIXME: We make rec_window_size non-zero here, but we don't setup
+   * the receive pointer until later, in do_client_io. That's bad. Do
+   * something similar to server_session.c: Add an inital_window
+   * attribute, and call channel_start_receive from client_io. */
   self->super.rec_window_size = initial_window;
 
   /* FIXME: Make maximum packet size configurable */
