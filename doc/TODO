@@ -292,3 +292,9 @@ automatically.
 
 Add -f, to fork and exit when userauthentication is done and any
 tunneling is set up.
+
+Consider using dynamically allocated strings for exception messages.
+Without this, it is impossible to use non-constant messages, for
+instance messages supplied by the peer.
+
+See if we can do without the "reason" argument to close callbacks. 
