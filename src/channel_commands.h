@@ -56,10 +56,12 @@ int do_channel_open_command(struct command *s,
      (name channel_request_command)
      (super command)
      (vars
-       ;; This method should return a formatted request
+       ;; This method should return a formatted request. The
+       ;; want_reply field in the request should be non_zero iff *c is
+       ;; non-NULL on return.  
        (format_request method "struct lsh_string *"
                        "struct ssh_channel *channel"
-		       "int want_reply")))
+		       "struct command_continuation **c")))
 */
 
 #define FORMAT_CHANNEL_REQUEST(r, c, w) \
