@@ -423,23 +423,31 @@ init_client_options(struct client_options *self,
 }
 
 /* Host to connect to */
-DEFINE_COMMAND_SIMPLE(client_options2remote, a)
+DEFINE_COMMAND(client_options2remote)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(client_options, options, a);
   trace("client.c: client_options2remote\n");
   
-  return &options->remote->super;
+  COMMAND_RETURN(c, options->remote);
 }
 
 /* Host to connect to */
-DEFINE_COMMAND_SIMPLE(client_options2actions, a)
+DEFINE_COMMAND(client_options2actions)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(client_options, options, a);
 
   trace("client.c: client_options2actions, %i actions\n",
 	options->actions.length);
   
-  return &queue_to_list(&options->actions)->super.super;
+  COMMAND_RETURN(c, queue_to_list(&options->actions));
 }
 
 static const struct argp_option

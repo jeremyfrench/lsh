@@ -165,11 +165,11 @@ client_parse_forward_arg(char *arg,
 			 UINT32 *listen_port,
 			 struct address_info **target);
 
-extern struct command_simple client_options2remote;
-#define OPTIONS2REMOTE (&client_options2remote.super.super)
+extern struct command client_options2remote;
+#define OPTIONS2REMOTE (&client_options2remote.super)
 
-extern struct command_simple client_options2actions;
-#define OPTIONS2ACTIONS (&client_options2actions.super.super)
+extern struct command client_options2actions;
+#define OPTIONS2ACTIONS (&client_options2actions.super)
 
 extern const struct argp client_argp;
 
