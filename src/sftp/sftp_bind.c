@@ -1259,8 +1259,25 @@ lsftp_do_cd(const char *dir)
   return 0;
 }
 
+
+int 
+lsftp_path_is_absolute( const char* path )
+{
+  /* Return 0 if the path given is not absolute */
+
+  /* FIXME: Assumes the path is absolute iff it begins with / */
+
+  if( path && 
+      ( path[0] == '/' )
+      )
+    return 1;
+
+  return 0;
+}
+
+
 const char *
-lsftp_unqualify_path(const char *path )
+lsftp_unqualify_path( const char *path )
 {
   /*
    * Returns the part that was passed to lsftp_qualify_path 
@@ -1299,7 +1316,7 @@ lsftp_qualify_path(const char *path)
    * side (no operation on absoulte paths, adds pwd/ to relative paths
    */
 
-  if( '/' == path[0] ||
+  if( lsftp_path_is_absolute( path ) ||
       !curpath ||
       !curpath[0]
       )
