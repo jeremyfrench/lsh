@@ -1,6 +1,10 @@
 /Makefile
 /Makefile.am
 /Makefile.in
+/lsh.aux
+/lsh.dvi
 /lsh.html
 /lsh.info
+/lsh.log
+/lsh.toc
 /srp-spec.txt
