@@ -38,6 +38,14 @@
 	* src/lsh.c (do_lsh_lookup): Deleted old code handling the
 	ssh-rsa-pkcs1@lysator.liu.se algorithm id.
 
+2003-04-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh.c (lsh_verifier_command): Deleted command.
+	(make_lsh_login): New function, replacing lsh_login_command.
+	(make_lsh_userauth): Deleted GABA-expression.
+	(make_lsh_connect): Take a login command as a parameter.
+	(main): Updated calls to make_lsh_connect and make_lsh_login.
+
 2003-04-21  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (make_lsh_connect): Take actions as a parameter.
