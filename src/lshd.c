@@ -399,7 +399,7 @@ int main(int argc, char **argv)
   authorization_lookup
     = make_alist(1,
 		 ATOM_SSH_DSS, make_authorization_db(ssh_format("authorized_keys_sha1"),
-						     make_dsa_algorithm(NULL),
+						     /* make_dsa_algorithm(NULL), */
 						     &sha1_algorithm),
 		 
 		 -1);
