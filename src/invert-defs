@@ -9,7 +9,7 @@ echo
 echo "{"
 
 sed -e 's/^#define \(SSH_MSG_[A-Z_0-9][A-Z_0-9]*\)[ \t][ \t]*\([1-9][0-9]*\)[ \t]*$/\2 \1/' -e t -e d \
-   | sort -n \
+   | sort -nu \
    | awk 'BEGIN{i=0;}
           { for(j=$1;i<j;i++) print "\"Unknown\"," ;
 		print "\"" $2 "\","; i++;}
