@@ -384,6 +384,9 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 	    break;
 	    }
 	}
-      *buffer++ = *f++;
+      else
+	{
+	  *buffer++ = *f++;
+	}
     }
 }
