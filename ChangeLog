@@ -1,5 +1,18 @@
 2003-10-22  Niels Möller  <niels@s3.kth.se>
 
+	* src/parse.h: Include nettle/bignum.h instead of bignum.h.
+
+	* src/format.h: Don't include bignum.h.
+	* src/keyexchange.h: Likewise.
+	* src/publickey_crypto.c: Likewise.
+	* src/werror.h: Likewise.
+
+	* src/dh_exchange.c (dh_generate_secret): Use nettle_mpz_random.
+	Needs inclusion of nettle/bignum.h.
+
+	* src/bignum.c, src/bignum.h: Deleted files.
+	* src/Makefile.am (liblsh_a_SOURCES): Deleted bignum.c
+
 	* configure.ac: Bumped version to 1.5.4.
 
 	* src/interact.h (INTERACT_READ_PASSWORD): Deleted the forth
