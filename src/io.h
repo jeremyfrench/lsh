@@ -182,12 +182,14 @@ make_local_info(struct lsh_string *directory,
      (name listen_value)
      (vars
        (fd object lsh_fd)
-       (peer object address_info)))
+       (peer object address_info)
+       (local object address_info)))
 */
 
 struct listen_value *
 make_listen_value(struct lsh_fd *fd,
-		  struct address_info *peer);
+		  struct address_info *peer,
+		  struct address_info *local);
 
 /* I/O exceptions */
 /* GABA:
@@ -251,6 +253,9 @@ make_address_info_c(const char *host,
 struct address_info *
 make_address_info(struct lsh_string *host, 
 		  UINT32 port);
+
+struct address_info *
+fd2info(struct lsh_fd *fd, int side);
 
 struct address_info *
 sockaddr2info(size_t addr_len,
