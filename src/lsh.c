@@ -199,8 +199,8 @@ int main(int argc, char **argv)
     (make_alist(0, -1),
      make_alist(0, -1),
      make_client_startup(io_read(&backend, in, NULL, NULL),
-			 io_write(&backend, out, BLOCK_SIZE, NULL),
-			 io_write(&backend, err, BLOCK_SIZE, NULL),
+			 &io_write(&backend, out, BLOCK_SIZE, NULL)->buffer->super,
+			 &io_write(&backend, err, BLOCK_SIZE, NULL)->buffer->super,
 			 ATOM_SHELL, ssh_format("")));
   
   kexinit_handler = make_kexinit_handler

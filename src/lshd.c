@@ -41,6 +41,7 @@
 #include "randomness.h"
 #include "server.h"
 #include "server_keyexchange.h"
+#include "ssh.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -134,7 +135,6 @@ int main(int argc, char **argv)
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
   struct packet_handler *kexinit_handler;
-  struct ssh_service *service;
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -188,24 +188,22 @@ int main(int argc, char **argv)
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
   make_kexinit = make_test_kexinit(r);
 
-  service = make_connection_service
-    (make_alist(0, -1),
-     /* make_alist(1, ATOM_SESSION, make_session_service(...)) */
-     make_alist(0, -1));
-  
   kexinit_handler = make_kexinit_handler
     (CONNECTION_SERVER,
      make_kexinit, algorithms,
-     make_meta_service(make_alist
-		       (1, ATOM_SSH_USERAUTH,
-			make_userauth_service
-			(make_alist(1, ATOM_PASSWORD,
-				    make_unix_userauth
-				    (make_unix_login(),
-				     make_alist(1,
-						ATOM_SSH_CONNECTION,
-						service)))))));
-  
+     make_meta_service
+     (make_alist
+      (1, ATOM_SSH_USERAUTH,
+       make_userauth_service
+       (make_alist(1, ATOM_PASSWORD,
+		   make_unix_userauth
+		   (make_alist(1,
+			       ATOM_SSH_CONNECTION,
+			       make_server_session_service
+			       (make_alist(0, -1),
+				make_alist(1, ATOM_SHELL,
+					   make_shell_handler(&backend))))))))));
+     
   if (!io_listen(&backend, &local, 
 	    make_server_callback(&backend,
 				 "lsh - a free ssh",
