@@ -69,6 +69,10 @@
        
        ; Where to pass errors
        (e object exception_handler)
+
+       ; Resources associated with the channel. This object is also
+       ; put onto the connections resource list.
+       (resources object resource_list)
        
        ; We try to keep the rec_window_size between max_window / 2
        ; and max_window.
@@ -329,7 +333,12 @@ void channel_close(struct ssh_channel *channel);
 void channel_eof(struct ssh_channel *channel);
 
 struct close_callback *
-make_channel_close_callback(struct ssh_channel *channel);
+make_channel_read_close_callback(struct ssh_channel *channel);
+
+struct exception_handler *
+make_channel_io_exception_handler(struct ssh_channel *channel,
+				  const char *prefix,
+				  struct exception_handler *parent);
 
 struct lsh_string *channel_transmit_data(struct ssh_channel *channel,
 					 struct lsh_string *data);

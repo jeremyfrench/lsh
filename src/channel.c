@@ -217,9 +217,12 @@ static void do_exc_finish_channel_handler(struct exception_handler *s,
 	  = self->table->channels[self->channel_number];
 
 	assert(channel);
-	
+	assert(channel->resources->super.alive);
+
 	if (channel->close)
 	  CHANNEL_CLOSE(channel);
+
+	KILL_RESOURCE_LIST(channel->resources);
 	
 	dealloc_channel(self->table, self->channel_number);
 
@@ -359,6 +362,8 @@ register_channel(struct ssh_connection *connection,
   channel->e = make_exc_finish_channel_handler(table,
 					       local_channel_number,
 					       connection->e);
+
+  REMEMBER_RESOURCE(connection->resources, &channel->resources->super);
 }
 
 struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i)
@@ -1424,14 +1429,15 @@ void channel_close(struct ssh_channel *channel)
   static const struct exception finish_exception =
     STATIC_EXCEPTION(EXC_FINISH_CHANNEL, "Closing channel");
 
-  assert(! (channel->flags & CHANNEL_SENT_CLOSE));
-  
-  channel->flags |= CHANNEL_SENT_CLOSE;
+  if (! (channel->flags & CHANNEL_SENT_CLOSE))
+    {
+      channel->flags |= CHANNEL_SENT_CLOSE;
+      
+      A_WRITE(channel->write, format_channel_close(channel) );
 
-  A_WRITE(channel->write, format_channel_close(channel) );
-
-  if (channel->flags & CHANNEL_RECEIVED_CLOSE)
-    EXCEPTION_RAISE(channel->e, &finish_exception);
+      if (channel->flags & CHANNEL_RECEIVED_CLOSE)
+	EXCEPTION_RAISE(channel->e, &finish_exception);
+    }
 }
 
 struct lsh_string *format_channel_eof(struct ssh_channel *channel)
@@ -1443,16 +1449,18 @@ struct lsh_string *format_channel_eof(struct ssh_channel *channel)
 
 void channel_eof(struct ssh_channel *channel)
 {
-  assert(! (channel->flags & CHANNEL_SENT_EOF));
-  
-  channel->flags |= CHANNEL_SENT_EOF;
-  A_WRITE(channel->write, format_channel_eof(channel) );
-
-  if ( (channel->flags & CHANNEL_CLOSE_AT_EOF)
-       && (channel->flags & CHANNEL_RECEIVED_EOF))
+  if (! (channel->flags &
+	 (CHANNEL_SENT_EOF | CHANNEL_SENT_CLOSE | CHANNEL_RECEIVED_CLOSE)))
     {
-      /* Initiate close */
-      channel_close(channel);
+      channel->flags |= CHANNEL_SENT_EOF;
+      A_WRITE(channel->write, format_channel_eof(channel) );
+
+      if ( (channel->flags & CHANNEL_CLOSE_AT_EOF)
+	   && (channel->flags & CHANNEL_RECEIVED_EOF))
+	{
+	  /* Initiate close */
+	  channel_close(channel);
+	}
     }
 }
 
@@ -1474,6 +1482,8 @@ void init_channel(struct ssh_channel *channel)
 
   channel->open_continuation = NULL;
 
+  channel->resources = empty_resource_list();
+  
   object_queue_init(&channel->pending_requests);
 }
 
@@ -1644,7 +1654,7 @@ make_channel_write_close_callback(struct ssh_channel *channel)
 }
 #endif
 
-/* Close callback for files we are writing to (files we read from
+/* Close callback for files we are reading from, writing to (files we read from
  * doesn't need any special callback, as we'll get EOF from them).
  *
  * FIXME: I don't know how we should catch POLLERR on files we read;
@@ -1652,31 +1662,80 @@ make_channel_write_close_callback(struct ssh_channel *channel)
  * i/o-exception handler do the work. */
 
 static void
-channel_close_callback(struct close_callback *c, int reason)
+channel_read_close_callback(struct close_callback *c, int reason)
 {
   CAST(channel_close_callback, closure, c);
 
-  debug("channel_close_callback: File closed for reason %i.\n",
+  debug("channel_read_close_callback: File closed for reason %i.\n",
 	reason);
+
+  assert(closure->channel->sources);
   
   if (!--closure->channel->sources)
-    /* Close channel */
     {
-      debug("channel_close_callback: Closing down channel.\n");
-      if (! (closure->channel->flags & CHANNEL_SENT_CLOSE) )
-	channel_close(closure->channel);
+      /* Send eof, unless already done */
+      channel_eof(closure->channel);
     }
 }
 
 struct close_callback *
-make_channel_close_callback(struct ssh_channel *channel)
+make_channel_read_close_callback(struct ssh_channel *channel)
 {
   NEW(channel_close_callback, closure);
   
-  closure->super.f = channel_close_callback;
+  closure->super.f = channel_read_close_callback;
   closure->channel = channel;
 
   return &closure->super;
+}
+
+/* Exception handler that closes the channel on I/O errors.
+ * Primarily used for write fd:s that the channel is fed into.
+ *
+ * FIXME: Ideally, I'd like to pass something like broken pipe to the
+ * other end, on write errors, but I don't see how to do that. */
+
+/* GABA:
+   (class
+     (name channel_io_exception_handler)
+     (super exception_handler)
+     (vars
+       (channel object ssh_channel)
+       (prefix . "const char *")))
+*/
+
+static void
+do_channel_io_exception_handler(struct exception_handler *s,
+				const struct exception *x)
+{
+  CAST(channel_io_exception_handler, self, s);
+  if (x->type & EXC_IO)
+    {
+      werror("channel.c: I/O error on write, %z\n", x->msg);
+#if 0
+      send_debug_message(self->channel->write,
+			 ssh_format("%z I/O error: %z\n",
+				    self->prefix, x->msg),
+			 1);
+#endif
+      channel_close(self->channel);
+    }
+  else
+    EXCEPTION_RAISE(s->parent, x);
+}
+
+struct exception_handler *
+make_channel_io_exception_handler(struct ssh_channel *channel,
+				  const char *prefix,
+				  struct exception_handler *parent)
+{
+  NEW(channel_io_exception_handler, self);
+  self->super.raise = do_channel_io_exception_handler;
+  self->super.parent = parent;
+  self->channel = channel;
+  self->prefix = prefix;
+
+  return &self->super;
 }
 
 struct lsh_string *
