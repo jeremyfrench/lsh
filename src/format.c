@@ -599,8 +599,8 @@ static int write_decimal_length(UINT8 *buffer, UINT32 n)
   return length + 1;
 }
 
-char *
-lsh_get_cstring(struct lsh_string *s)
+const char *
+lsh_get_cstring(const struct lsh_string *s)
 {
   return (s && !memchr(s->data, '\0', s->length) ? s->data : NULL);
 }

@@ -84,10 +84,11 @@ void ssh_format_write(const char *format, UINT32 length, UINT8 *buffer, ...);
 UINT32 ssh_vformat_length(const char *format, va_list args);
 void ssh_vformat_write(const char *format, UINT32 length, UINT8 *buffer, va_list args);
 
+/* FIXME: Do we need a variant that handles non-const strings? */
 /* Returns an ordinary NUL-terminated string, or NULL if the string
  * contains any NUL-character. */
-char *
-lsh_get_cstring(struct lsh_string *s);
+const char *
+lsh_get_cstring(const struct lsh_string *s);
      
 /* Short cuts */
 #define lsh_string_dup(s) (ssh_format("%lS", (s)))
