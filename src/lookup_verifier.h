@@ -49,7 +49,7 @@
      (vars
        (lookup method (object verifier)
                       "int method"
-                      "struct lsh_string *keyholder"
+                      "struct user *user"
 		      "struct lsh_string *key")))
 */
 
