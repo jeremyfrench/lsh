@@ -53,7 +53,6 @@ do_authenticate(struct userauth *s,
 {
   CAST(userauth_password, self, s);
   
-  struct lsh_string *password = NULL;
   int change_passwd;
   
   username = utf8_to_local(username, 1, 1);
@@ -65,6 +64,8 @@ do_authenticate(struct userauth *s,
 
   if (parse_boolean(args, &change_passwd))
     {
+      struct lsh_string *password = NULL;
+      
       if (change_passwd)
 	{
 	  static const struct exception passwd_change_not_implemented
@@ -103,15 +104,15 @@ do_authenticate(struct userauth *s,
 	    }
 
 	  USER_VERIFY_PASSWORD(user, password, c, e);
+	  return;
 	}
+      if (password)
+	lsh_string_free(password);
     }
   
   /* Request was invalid */
   lsh_string_free(username);
-
-  if (password)
-    lsh_string_free(password);
-
+  
   PROTOCOL_ERROR(e, "Invalid password USERAUTH message.");
 }
 
