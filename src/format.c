@@ -34,6 +34,7 @@
 
 #include "list.h"
 #include "lsh_string.h"
+#include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -603,6 +604,27 @@ write_decimal_length(struct lsh_string *buffer, uint32_t start, uint32_t n)
   return length + 1;
 }
 
+struct lsh_string *
+format_disconnect(int code, const char *msg, 
+		  const char *language)
+{
+  return ssh_format("%c%i%z%z",
+		    SSH_MSG_DISCONNECT,
+		    code,
+		    msg, language);
+}
+
+struct lsh_string *
+format_unimplemented(uint32_t seqno)
+{
+  return ssh_format("%c%i", SSH_MSG_UNIMPLEMENTED, seqno);
+}
+
+struct lsh_string *
+format_newkeys(void)
+{
+  return ssh_format("%c", SSH_MSG_NEWKEYS);
+}
 
 
 struct lsh_string *

@@ -100,13 +100,25 @@ void
 format_decimal(struct lsh_string *buffer, uint32_t pos,
 	       uint32_t length, uint32_t n);
 
-/* FIXME: These functions don't really belong here */
 
+/* Helper functions for formatting particular ssh messages */
+struct lsh_string *
+format_disconnect(int code, const char *msg, 
+		  const char *language);
+
+struct lsh_string *
+format_unimplemented(uint32_t seqno);
+
+struct lsh_string *
+format_newkeys(void);
+
+/* FIXME: These functions don't really belong here */
 
 struct lsh_string *
 lsh_string_colonize(const struct lsh_string *s, int every, int freeflag);
 
 struct lsh_string *
 lsh_string_bubblebabble(const struct lsh_string *s, int freeflag);
+
 
 #endif /* LSH_FORMAT_H_INCLUDED */
