@@ -25,6 +25,7 @@
 
 #include "connection.h"
 #include "io.h"
+#include "werror.h"
 #include "xalloc.h"
 
 #define GABA_DEFINE
@@ -336,6 +337,21 @@ do_simple_command_B(struct command_simple *ignored UNUSED,
 }
 
 struct command_simple command_B = STATIC_COMMAND_SIMPLE(do_simple_command_B);
+
+/* Unimplemented command */
+static int
+do_command_unimplemented(struct command *s UNUSED,
+			 struct lsh_object *o UNUSED,
+			 struct command_continuation *c UNUSED)
+{ fatal("command.c: Unimplemented command.\n"); }
+
+static struct lsh_object *
+do_command_simple_unimplemented(struct command_simple *s UNUSED,
+				struct lsh_object *o UNUSED)
+{ fatal("command.c: Unimplemented simple command.\n"); }
+
+struct command_simple command_unimplemented =
+{ { STATIC_HEADER, do_command_unimplemented}, do_command_simple_unimplemented};
 
 /* Returned by listen */
 /* GABA:

@@ -114,9 +114,10 @@ extern struct command_simple command_I;
 #define GABA_VALUE_I (&command_I.super.super)
 #define GABA_APPLY_I_1(x) (x)
 
-#if 0
-extern struct command command_B;
-#endif
+extern struct command_simple command_B;
+
+extern struct command_simple command_unimplemented;
+#define COMMAND_UNIMPLEMENTED (&command_unimplemented.super.super)
 
 struct command *make_listen_command(struct io_backend *backend,
 				    struct lsh_string *interface,
