@@ -38,7 +38,7 @@
      (name serpent_instance)
      (super crypto_instance)
      (vars
-       (ctx . "SERPENT_context")))
+       (ctx . "struct serpent_ctx")))
 */
 
 static void
@@ -47,8 +47,7 @@ do_serpent_encrypt(struct crypto_instance *s,
 {
   CAST(serpent_instance, self, s);
 
-  FOR_BLOCKS(length, src, dst, SERPENT_BLOCKSIZE)
-    serpent_encrypt(&self->ctx, src, dst);
+  serpent_encrypt(&self->ctx, length, dst, src);
 }
 
 static void
@@ -57,8 +56,7 @@ do_serpent_decrypt(struct crypto_instance *s,
 {
   CAST(serpent_instance, self, s);
 
-  FOR_BLOCKS(length, src, dst, SERPENT_BLOCKSIZE)
-    serpent_decrypt(&self->ctx, src, dst);
+  serpent_decrypt(&self->ctx, length, dst, src);
 }
 
 static struct crypto_instance *
@@ -72,7 +70,7 @@ make_serpent_instance(struct crypto_algorithm *algorithm, int mode,
 			? do_serpent_encrypt
 			: do_serpent_decrypt);
 
-  serpent_setup(&self->ctx, algorithm->key_size, key);
+  serpent_set_key(&self->ctx, algorithm->key_size, key);
 
   return(&self->super);
 }
@@ -82,10 +80,10 @@ make_serpent_algorithm(UINT32 key_size)
 {
   NEW(crypto_algorithm, algorithm);
 
-  assert(key_size >= SERPENT_MIN_KEYSIZE);
-  assert(key_size <= SERPENT_MAX_KEYSIZE);
+  assert(key_size >= SERPENT_MIN_KEY_SIZE);
+  assert(key_size <= SERPENT_MAX_KEY_SIZE);
   
-  algorithm->block_size = SERPENT_BLOCKSIZE;
+  algorithm->block_size = SERPENT_BLOCK_SIZE;
   algorithm->key_size = key_size;
   algorithm->iv_size = 0;
   algorithm->make_crypt = make_serpent_instance;
@@ -94,10 +92,10 @@ make_serpent_algorithm(UINT32 key_size)
 }
 
 struct crypto_algorithm serpent128_algorithm =
-{ STATIC_HEADER, SERPENT_BLOCKSIZE, 16, 0, make_serpent_instance};
+{ STATIC_HEADER, SERPENT_BLOCK_SIZE, 16, 0, make_serpent_instance};
 
 struct crypto_algorithm serpent192_algorithm =
-{ STATIC_HEADER, SERPENT_BLOCKSIZE, 24, 0, make_serpent_instance};
+{ STATIC_HEADER, SERPENT_BLOCK_SIZE, 24, 0, make_serpent_instance};
 
 struct crypto_algorithm serpent256_algorithm =
-{ STATIC_HEADER, SERPENT_BLOCKSIZE, 32, 0, make_serpent_instance};
+{ STATIC_HEADER, SERPENT_BLOCK_SIZE, 32, 0, make_serpent_instance};
