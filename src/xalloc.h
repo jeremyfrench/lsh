@@ -30,33 +30,24 @@
 
 /* Allocation */
 
-/* The memory allocation model (for strings) is as follows:
- *
- * Packets are allocated when they are needed. A packet may be passed
- * through a chain of processing functions, until it is finally
- * discarded or transmitted, at which time it is deallocated.
- * Processing functions may deallocate their input packets and
- * allocate fresh packets to pass on; therefore, any data from a
- * packet that is needed later must be copied into some other storage.
- *
- * At any time, each packet is own by a a particular processing
- * function. Pointers into a packet are valid only while you own it.
- * */
-
 #if DEBUG_ALLOC
-extern struct lsh_string *all_strings;
+#define lsh_free debug_free
+#define lsh_malloc debug_malloc
 
-struct lsh_string *lsh_string_alloc_clue(uint32_t size, const char *clue);
-
-#define lsh_string_alloc(size) \
-  (lsh_string_alloc_clue((size), (__FILE__ ":" STRING_LINE ": " FUNCTION_NAME)))
-
-#else /* !DEBUG_ALLOC */
-struct lsh_string *lsh_string_alloc(uint32_t size);
-#endif /* !DEBUG_ALLOC */
+void *
+debug_malloc(size_t real_size);
 
 void
-lsh_string_free(const struct lsh_string *packet);
+debug_free(const void *m);
+#else /* !DEBUG_ALLOC */
+
+/* ANSI-C free doesn't allow const pointers to be freed. (That is one
+ * of the few things that C++ gets right). */
+#define lsh_free(p) free((void *) (p))
+#define lsh_malloc malloc
+
+#endif /* !DEBUG_ALLOC */
+
 
 struct lsh_object *
 lsh_var_alloc(struct lsh_class *class,
