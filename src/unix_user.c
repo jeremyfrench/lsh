@@ -301,7 +301,7 @@ kerberos_check_pw(const char *helper, struct unix_user *user, struct lsh_string 
 	close(in[1]);
 	close(null_fd);
 
-	execl(helper, helper, user->super.name->data);
+	execl(helper, helper, user->super.name->data, NULL);
 	_exit(EXIT_FAILURE);
       }
     default:
