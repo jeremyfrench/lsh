@@ -27,7 +27,7 @@
 
 #include <assert.h>
 
-#include "tcpforward_commands.h"
+#include "tcpforward.h"
 
 #include "atoms.h"
 #include "channel_commands.h"
@@ -40,6 +40,10 @@
 #include "xalloc.h"
 
 /* Forward declarations */
+
+/* FIXME: Should be static */
+struct command_2 open_direct_tcpip;
+#define OPEN_DIRECT_TCPIP (&open_direct_tcpip.super.super)
 
 /* FIXME: Should be static */
 struct command_2 remote_listen_command;
@@ -143,7 +147,7 @@ new_tcpip_channel(struct channel_open_command *c,
   return channel;
 }
 
-static struct command *
+struct command *
 make_open_tcpip_command(int type,
 			struct address_info *port,
 			struct listen_value *peer)
@@ -185,12 +189,12 @@ DEFINE_COMMAND2(open_direct_tcpip)
       struct command_continuation *c,
       struct exception_handler *e UNUSED)
 {
-  CAST(address_info, local, a1);
+  CAST(address_info, target, a1);
   CAST(listen_value, peer, a2);
   
   COMMAND_RETURN(c,
 		 make_open_tcpip_command(ATOM_DIRECT_TCPIP,
-					 local, peer));
+					 target, peer));
 }
 
 
