@@ -1,0 +1,61 @@
+#! /bin/bash
+
+used_headers () {
+    (
+	extension=${1:-h}
+
+	cat .deps/*.Po \
+	    | tr ' ' '\n' \
+	    | grep `echo "\\.$extension"'$'` \
+	    | sed 's%^.*/\([^/]*\)$%\1%' \
+	    | sort | uniq
+    )
+}
+
+cvs_headers () {
+    sed -e 's%^/\([^/]*\.h\)/.*$%\1%' -e t -e d CVS/Entries | sort
+}
+
+environ_deps () {
+    for f in .deps/*.Po ; do
+	if grep 'environ\.h' "$f" >/dev/null ; then
+	    echo "`basename $f .Po`.o : environ.h"
+	fi
+    done
+}
+
+make_include () {
+    (
+	name="$1"
+	echo "$1 = \\"
+	sed -e '$! s%$% \\%' -e 's%^%    %'
+    )
+}
+
+headers () {
+    comm -12 <(cvs_headers) <(used_headers) | make_include dist_headers
+}
+
+classes () {
+    used_headers x | make_include dist_classes
+}
+
+case "${1:-all}" in
+    headers)
+        headers
+    ;;
+    classes)
+        classes
+    ;;
+    environ)
+        environ_deps
+    ;;
+    all)
+        headers > .dist_headers
+	classes > .dist_classes
+	environ_deps > .dist_deps
+    ;;
+    *)
+        exit 1
+    ;;
+esac
