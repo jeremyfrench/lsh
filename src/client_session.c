@@ -104,7 +104,7 @@ do_send_adjust(struct ssh_channel *s,
 
   assert(self->in->read);
 
-  self->in->want_read = 1;
+  lsh_oop_register_read_fd(self->in);
 }
 
 /* Escape char handling */
@@ -161,7 +161,7 @@ do_client_io(struct command *s UNUSED,
   /* FIXME: Perhaps there is some way to arrange that channel.c calls
    * the CHANNEL_SEND_ADJUST method instead? */
   if (session->super.send_window_size)
-    session->in->want_read = 1;
+    lsh_oop_register_read_fd(session->in);
   
   session->in->close_callback
     = make_channel_read_close_callback(channel);
