@@ -432,8 +432,12 @@ adjust_rec_window(struct flow_controlled *f, UINT32 written)
 {
   CAST_SUBTYPE(ssh_channel, channel, f);
 
-  A_WRITE(channel->write,
-	  prepare_window_adjust(channel, written));
+  /* NOTE: The channel object (referenced as a flow-control callback)
+   * may live longer than the actual channel. */
+  if (! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE
+			   | CHANNEL_SENT_CLOSE)))
+    A_WRITE(channel->write,
+	    prepare_window_adjust(channel, written));
 }
 
 void
