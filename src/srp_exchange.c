@@ -32,6 +32,9 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include "nettle/bignum.h"
+#include "nettle/sexp.h"
+
 #include <assert.h>
 
 #define GABA_DEFINE
@@ -50,48 +53,43 @@
 
 /* Copies the name, rather than consuming it. */
 struct srp_entry *
-make_srp_entry(struct lsh_string *name, struct sexp *e)
+make_srp_entry(const struct lsh_string *name,
+	       const struct lsh_string *expr)
 {
-  struct sexp_iterator *i;
+  struct sexp_iterator i;
 
-  if ((i = sexp_check_type(e, ATOM_SRP_VERIFIER))
-      && (SEXP_LEFT(i) == 3)
-      && sexp_atom_eq(SEXP_GET(i), ATOM_SSH_RING1) )
+  if (sexp_iterator_first(&i, expr->length, expr->data)
+      && sexp_iterator_check_type(&i, "srp-verifier")
+      && sexp_iterator_check_type(&i, "ssh-ring1"))
     {
       NEW(srp_entry, res);
       const struct lsh_string *salt;
 
       mpz_init(res->verifier);
-      
-      SEXP_NEXT(i);
 
-      salt = sexp2string(SEXP_GET(i));
-      if (!salt)
+      if (i.type == SEXP_ATOM && !i.display)
+	salt = ssh_format("%ls", i.atom_length, i.atom);
+      else goto fail;
+
+      /* FIXME: Pass a more restrictive limit to nettle_mpz_set_sexp. */      
+      if (sexp_iterator_next(&i)
+	  && nettle_mpz_set_sexp(res->verifier, 0, &i)
+	  && sexp_iterator_exit_list(&i))
 	{
-	  KILL(res);
-	  return NULL;
+	  res->name = lsh_string_dup(name);
+
+	  return res;
 	}
-      res->salt = lsh_string_dup(salt);
-
-      SEXP_NEXT(i);
-
-      /* FIXME: Pass a more restrictive limit to sexp2bignum_u. */
-      if (!sexp2bignum_u(SEXP_GET(i), res->verifier, 0))
-	{
-	  KILL(res);
-	  return NULL;
-	}
-      
-      res->name = lsh_string_dup(name);
-
-      return res;
+    fail:
+      KILL(res);
+      return NULL;
     }
   else
     return NULL;
 }
 
 /* Consumes the salt */
-struct sexp *
+struct lsh_string *
 srp_make_verifier(struct abstract_group *G,
 		  const struct hash_algorithm *H,
 		  struct lsh_string *salt,
@@ -99,22 +97,21 @@ srp_make_verifier(struct abstract_group *G,
 		  struct lsh_string *passwd)
 {
   mpz_t x;
-  struct sexp *e;
+  struct lsh_string *expr;
   
   mpz_init(x);
 
   srp_hash_password(x, H, salt, name, passwd);  
   GROUP_POWER(G, x, G->generator, x);
 
-  e = sexp_l(4,
-	     sexp_a(ATOM_SRP_VERIFIER), sexp_a(ATOM_SSH_RING1),
-	     sexp_s(NULL, salt),
-	     sexp_un(x),
-	     -1);
+  expr = lsh_sexp_format(0, "(%z%z%s%b)",
+			 "srp-verifier", "ssh-ring1",
+			 salt->length, salt->data,
+			 x);
 
   mpz_clear(x);
 
-  return e;
+  return expr;
 }
 
 /* Thomas Wu's Secure Remote Password Protocol, with a fixed group. */
