@@ -186,7 +186,7 @@ do_handle_userauth(struct packet_handler *s,
   struct simple_buffer buffer;
 
   unsigned msg_number;
-  struct lsh_string *user;
+  struct lsh_string *user = NULL;
   int requested_service;
   int method;
   
@@ -212,6 +212,8 @@ do_handle_userauth(struct packet_handler *s,
 			       "Unknown auth method or service.");
 	  
 	  EXCEPTION_RAISE(self->auth_e, &userauth_failed);
+
+	  lsh_string_free(user);
 	  return;
 	}
 
@@ -222,7 +224,10 @@ do_handle_userauth(struct packet_handler *s,
 		   self->auth_e);
     }
   else
-    PROTOCOL_ERROR(connection->e, "Invalid USERAUTH message.");
+    {
+      lsh_string_free(user);
+      PROTOCOL_ERROR(connection->e, "Invalid USERAUTH message.");
+    }
 }
 
 static struct packet_handler *
