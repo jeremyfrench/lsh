@@ -202,9 +202,13 @@ timeecho Collecting results
 mv $BASE/config.cache r/configcache.txt
 mv $BASE/config.log r/configlog.txt
 mv $BASE/src/argp/config.log r/argpconfig.log
+mv $BASE/src/argp/config.h r/argpconfig-h.txt
 mv $BASE/src/nettle/config.log r/nettleconfig.log
+mv $BASE/src/nettle/config.h r/nettleconfig-h.txt
 mv $BASE/src/sftp/config.log r/sftpconfig.log
+mv $BASE/src/sftp/config.h r/sftpconfig-h.txt
 mv $BASE/src/spki/config.log r/spkiconfig.log
+mv $BASE/src/spki/config.h r/spkiconfig-h.txt
 mv $BASE/config.h r/config-h.txt
 
 find $BASE -name core -print > r/corefiles.txt
