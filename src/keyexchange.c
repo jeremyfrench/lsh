@@ -117,7 +117,7 @@ parse_kexinit(struct lsh_string *packet)
       /* Bad format */
       int j;
       for (j = 0; j<i; j++)
-	KILL(lists[i]);
+	KILL(lists[j]);
       KILL(res);
       return NULL;
     }
