@@ -40,6 +40,7 @@
 #include "randomness.h"
 #include "service.h"
 #include "ssh.h"
+#include "tcpforward.h"
 #include "tty.h"
 #include "userauth.h"
 #include "werror.h"
@@ -77,12 +78,24 @@ void usage(void)
 	 " -z,  --compression=ALGORITHM\n"
 	 "      --mac=ALGORITHM\n"
 #if WITH_PTY_SUPPORT
-	 " -t   Request a remote pty\n"
-	 " -nt  Don't request a remote tty\n"
+	 " -t,  Request a remote pty\n"
+	 " -nt, Don't request a remote tty\n"
+	 " -g,  Allow remote access to forwarded ports\n"
+	 " -ng, Disallow remote access to forwarded ports (default)\n"
 #endif /* WITH_PTY_SUPPORT */
 	 " -q,  --quiet\n"
 	 " -v,  --verbose\n"
-	 "      --debug\n");
+	 "      --debug\n"
+#if WITH_TCP_FORWARD
+	 " -L   listen-port:host:port    Forward local port\n"
+	 " --forward-local-port listen-port:host:port\n"
+#if 0
+	 " -R,  listen-port_host:port   Forward remote port\n"
+	   " --forward-remote-port listen-port_host:port\n"
+#endif
+#endif /* WITH_TCP_FORWARD */
+	 " -N,  --nop   Don't start a remote shell\n"
+	 );
   exit(1);
 }
 
@@ -126,12 +139,23 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
        (userauth_service object command)
        (login object command)
        (init_connection object command)
-       (open_session object command)
        (requests object object_list))
      (expr (lambda (port)
-             ((progn requests) (open_session (init_connection
+             ((progn requests) (init_connection
 	         (login (userauth_service
-	           (handshake (die_on_null (connect port)))))))))))
+	           (handshake (die_on_null (connect port))))))))))
+*/
+
+/* GABA:
+   (expr
+     (name make_start_session)
+     (globals
+       (progn "&progn_command.super.super"))
+     (params
+       (open_session object command)
+       (requests object object_list))
+     (expr (lambda (connection)
+       ((progn requests) (open_session connection)))))
 */
 
 /* Requests a shell, and connects the channel to our stdio. */
@@ -147,16 +171,41 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
           (client_io (request_shell session)))))
 */
 
-/* ;; GABA
-   (expr
-     (name do_pty)
-     (super command)
-     (params
-       (pty object ...))
-     (expr
-       (lambda (session)
-         (raw_mode (request_pty session)))))
-*/
+static int parse_forward_arg(char *arg,
+			     UINT32 *listen_port, struct address_info **target)
+{
+  char *first;
+  char *second;
+  char *end;
+  long port;
+  
+  first = strchr(arg, ':');
+  if (!first)
+    return 0;
+
+  second = strchr(first + 1, ':');
+  if (!second || (second == first + 1))
+    return 0;
+
+  if (strchr(second + 1, ':'))
+    return 0;
+
+  port = strtol(arg, &end, 0);
+  if ( (end == arg)  || (end != first)
+       || (port < 0) || (port > 0xffff) )
+    return 0;
+
+  *listen_port = port;
+
+  port = strtol(second + 1, &end, 0);
+  if ( (end == second + 1) || (*end != '\0')
+       || (port < 0) || (port > 0xffff) )
+    return 0;
+
+  *target = make_address_info(ssh_format("%ls", second - first - 1, first + 1), port);
+  
+  return 1;
+}
 
 /* Window size for the session channel */
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
@@ -172,16 +221,21 @@ int main(int argc, char **argv)
   /* int term_width, term_height, term_width_pix, term_height_pix; */
   int not;
 #if WITH_PTY_SUPPORT
-  int tty;
-  int reset_tty;
+  int tty = -1;
+  int reset_tty = 0;
   struct termios tty_mode;
   
   int use_pty = -1; /* Means default */
 #endif /* WITH_PTY_SUPPORT */
+
+  struct object_queue actions;
+
+  int shell_flag = 1;
+  int forward_gateway = 0;
   
   int option;
 
-  int lsh_exit_code;
+  int lsh_exit_code = 0;
 
   struct address_info *remote;
   
@@ -193,9 +247,8 @@ int main(int argc, char **argv)
   struct lookup_verifier *lookup;
 
   struct command *get_pty = NULL;
-  struct object_list *requests;
   
-  int in, out, err;
+  /* int in, out, err; */
 
   NEW(io_backend, backend);
 
@@ -218,10 +271,12 @@ int main(int argc, char **argv)
 			       -1);
 
   not = 0;
+
+  object_queue_init(&actions);
   
   for (;;)
     {
-      static struct option options[] =
+      struct option options[] =
       {
 	{ "verbose", no_argument, NULL, 'v' },
 	{ "quiet", no_argument, NULL, 'q' },
@@ -231,10 +286,17 @@ int main(int argc, char **argv)
 	{ "crypto", required_argument, NULL, 'c' },
 	{ "compression", optional_argument, NULL, 'z'},
 	{ "mac", required_argument, NULL, 'm' },
+#if WITH_TCP_FORWARD
+	{ "forward-local-port", required_argument, NULL, 'L'},
+#if 0
+	{ "forward-remote-port", required_argument, NULL, 'R'},
+#endif
+#endif /* WITH_TCP_FORWARD */
+	{ "nop", no_argument, &shell_flag, 0 },
 	{ NULL }
       };
       
-      option = getopt_long(argc, argv, "+c:l:np:qtvz::", options, NULL);
+      option = getopt_long(argc, argv, "+c:l:np:qgtvz:L:", options, NULL);
       switch(option)
 	{
 	case -1:
@@ -255,6 +317,9 @@ int main(int argc, char **argv)
 #if WITH_PTY_SUPPORT
 	  use_pty = !not;
 #endif /* WITH_PTY_SUPPORT */
+	  break;
+	case 'g':
+	  forward_gateway = !not;
 	  break;
 	case 'v':
 	  verbose_flag = 1;
@@ -287,6 +352,24 @@ int main(int argc, char **argv)
 	      return EXIT_FAILURE;
 	    }
 	  break;
+	case 'L':
+	  {
+	    UINT32 listen_port;
+	    struct address_info *target;
+
+	    if (!parse_forward_arg(optarg, &listen_port, &target))
+	      usage();
+
+	    object_queue_add_tail(&actions,
+				  &forward_local_port
+				  (make_address_info((forward_gateway
+						      ? NULL
+						      : ssh_format("%lz", "127.0.0.1")),
+						     listen_port),
+				   target)->super);
+	  }
+	  break;
+	  
 	case '?':
 	  usage();
 	}
@@ -315,108 +398,127 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-#if WITH_PTY_SUPPORT
-  if (use_pty < 0)
-    use_pty = 1;
-
-  if (use_pty)
-    {
-      tty = open("/dev/tty", O_RDWR);
-      
-      if (tty < 0)
-	{
-	  werror("lsh: Failed to open tty (errno = %i): %z\n",
-		 errno, STRERROR(errno));
-	  use_pty = 0;
-	}
-      else
-	{
-	  reset_tty = tty_getattr(tty, &tty_mode);
-	  get_pty = make_pty_request(tty);
-	}
-    }
-#endif /* WITH_PTY_SUPPORT */
-
-  in = STDIN_FILENO;
-  out = STDOUT_FILENO;
-  
-  if ( (err = dup(STDERR_FILENO)) < 0)
-    {
-      werror("Can't dup stderr: %z\n", STRERROR(errno));
-      return EXIT_FAILURE;
-    }
-
   init_backend(backend);
   
-  set_error_stream(STDERR_FILENO, 1);
+  if (shell_flag)
+    {
+      int in;
+      int out;
+      int err;
 
-  make_kexinit
-    = make_simple_kexinit(r,
-			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-					-1),
-			  make_int_list(1, ATOM_SSH_DSS, -1),
-			  (preferred_crypto
-			   ? make_int_list(1, preferred_crypto, -1)
-			   : default_crypto_algorithms()),
-			  (preferred_mac
-			   ? make_int_list(1, preferred_mac, -1)
-			   : default_mac_algorithms()),
-			  (preferred_compression
-			   ? make_int_list(1, preferred_compression, -1)
-			   : default_compression_algorithms()),
-			  make_int_list(0, -1));
-  
-  /* Exit code if no session is established */
-
-  lsh_exit_code = 17;
-
-  /* FIXME: We need a non-varargs constructor for lists. */
+      struct object_list *session_requests;
+      
 #if WITH_PTY_SUPPORT
-  if (get_pty)
-    requests = make_object_list(2, get_pty, start_shell(), -1);
-  else
+      if (use_pty < 0)
+	use_pty = 1;
+
+      if (use_pty)
+	{
+	  tty = open("/dev/tty", O_RDWR);
+      
+	  if (tty < 0)
+	    {
+	      werror("lsh: Failed to open tty (errno = %i): %z\n",
+		     errno, STRERROR(errno));
+	      use_pty = 0;
+	    }
+	  else
+	    {
+	      reset_tty = tty_getattr(tty, &tty_mode);
+	      get_pty = make_pty_request(tty);
+	    }
+	}
+#endif /* WITH_PTY_SUPPORT */
+      /* FIXME: We need a non-varargs constructor for lists. */
+#if WITH_PTY_SUPPORT
+      if (get_pty)
+	session_requests = make_object_list(2, get_pty, start_shell(), -1);
+      else
 #endif
-    requests = make_object_list(1, start_shell(), -1);
+	session_requests = make_object_list(1, start_shell(), -1);
 
-  {
-    struct lsh_object *o =
-      make_client_connect(make_simple_connect(backend, NULL),
-			  make_handshake_command(CONNECTION_CLIENT,
-						 "lsh - a free ssh",
-						 SSH_MAX_PACKET,
-						 r,
-						 algorithms,
-						 make_kexinit,
-						 NULL),
-			  make_request_service(ATOM_SSH_USERAUTH),
-			  make_client_userauth(ssh_format("%lz", user),
-					       ATOM_SSH_CONNECTION),
-			  make_connection_service(make_alist(0, -1),
-						  make_alist(0, -1)),
-			  make_open_session_command
-			  (make_client_session
-			   (io_read(make_io_fd(backend, in), NULL, NULL),
-			    io_write(make_io_fd(backend, out),
-				     BLOCK_SIZE, NULL),
-			    io_write(make_io_fd(backend, err),
-				     BLOCK_SIZE, NULL),
-			    WINDOW_SIZE,
-			    &lsh_exit_code)),
-			  requests);
-    
-    CAST_SUBTYPE(command, client_connect, o);
-    int res = COMMAND_CALL(client_connect, remote, NULL);
-    if (res)
+      in = STDIN_FILENO;
+      out = STDOUT_FILENO;
+  
+      if ( (err = dup(STDERR_FILENO)) < 0)
+	{
+	  werror("Can't dup stderr: %z\n", STRERROR(errno));
+	  return EXIT_FAILURE;
+	}
+
+      set_error_stream(STDERR_FILENO, 1);
+  
+      /* Exit code if no session is established */
+      lsh_exit_code = 17;
+
+      object_queue_add_tail
+	(&actions,
+	 make_start_session
+	 (make_open_session_command(make_client_session
+				    (io_read(make_io_fd(backend, in), NULL, NULL),
+				     io_write(make_io_fd(backend, out),
+					      BLOCK_SIZE, NULL),
+				     io_write(make_io_fd(backend, err),
+					      BLOCK_SIZE, NULL),
+				     WINDOW_SIZE,
+				     &lsh_exit_code)),
+	  session_requests));
+    }
+  
+  if (object_queue_is_empty(&actions))
+    werror("lsh: No actions given. Exiting.\n");
+  else
+    {
+      make_kexinit
+	= make_simple_kexinit(r,
+			      make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+					    -1),
+			      make_int_list(1, ATOM_SSH_DSS, -1),
+			      (preferred_crypto
+			       ? make_int_list(1, preferred_crypto, -1)
+			       : default_crypto_algorithms()),
+			      (preferred_mac
+			       ? make_int_list(1, preferred_mac, -1)
+			       : default_mac_algorithms()),
+			      (preferred_compression
+			       ? make_int_list(1, preferred_compression, -1)
+			       : default_compression_algorithms()),
+			      make_int_list(0, -1));
       {
-	werror("lsh.c: connection failed, res = %i\n", res);
-	return 17;
+	struct lsh_object *o =
+	  make_client_connect(make_simple_connect(backend, NULL),
+			      make_handshake_command(CONNECTION_CLIENT,
+						     "lsh - a free ssh",
+						     SSH_MAX_PACKET,
+						     r,
+						     algorithms,
+						     make_kexinit,
+						     NULL),
+			      make_request_service(ATOM_SSH_USERAUTH),
+			      make_client_userauth(ssh_format("%lz", user),
+						   ATOM_SSH_CONNECTION),
+			      make_connection_service(make_alist(0, -1),
+						      make_alist(0, -1)),
+			      queue_to_list(&actions));
+
+	CAST_SUBTYPE(command, client_connect, o);
+	int res = COMMAND_CALL(client_connect, remote, NULL);
+
+	/* We can free the queue nodes now */
+	KILL_OBJECT_QUEUE(&actions);
+
+	if (res)
+	  {
+	    werror("lsh.c: connection failed, res = %i\n", res);
+	    return 17;
+	  }
       }
-  }
-  io_run(backend);
+      io_run(backend);
 
-  /* FIXME: Perhaps we have to reset the stdio file descriptors to
-   * blocking mode? */
-
+      /* FIXME: Perhaps we have to reset the stdio file descriptors to
+       * blocking mode? */
+    }
+  
 #if WITH_PTY_SUPPORT
   if (reset_tty)
     tty_setattr(tty, &tty_mode);
