@@ -27,10 +27,24 @@
 #include "werror.h"
 #include "xalloc.h"
 
+struct read_data
+{
+  struct read_handler super; /* Super type */
+
+  UINT32 block_size;
+
+  /* Where to send the data */
+  struct abstract_write *handler;
+
+  struct callback *close_callback;
+};
+
 static int do_read_data(struct read_handler **h,
 			struct abstract_read *read)
 {
   struct read_data *closure = (struct read_data *) *h;
+
+  MDEBUG(closure);
   
   while(1)
     {

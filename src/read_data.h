@@ -28,17 +28,9 @@
 
 #include "abstract_io.h"
 
-struct read_data
-{
-  struct read_handler super; /* Super type */
-
-  UINT32 block_size;
-
-  /* Where to send the data */
-  struct abstract_write *handler;
-
-  struct callback *close_callback;
-};
+struct read_handler *make_read_data(struct abstract_write *handler,
+				    struct callback *close_callback,
+				    UINT32 block_size);
 
 #endif /* LSH_READ_DATA_H_INCLUDED */
 
