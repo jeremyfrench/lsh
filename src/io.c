@@ -67,6 +67,180 @@
 
 #include "io.c.x"
 
+/* Glue to liboop */
+
+struct oop_state
+{
+  oop_sys_source *sys;
+  oop_signal_source *signal;
+  oop_source *source;
+};
+
+/* GABA:
+   (class
+     (name lsh_oop_glue)
+     (super resource)
+     (vars
+       (oop indirect-special "struct oop_state"
+            #f do_free_oop_state)))
+*/
+
+static void
+do_free_oop_state(struct oop_state *state)
+{
+  /* There mustn't be any outstanding callbacks left. */
+  oop_signal_delete(state->signal);
+  oop_sys_delete(state->sys);
+}
+
+/* Because of signal handlers, there can be only one oop object. */
+static struct lsh_oop_glue *the_oop = NULL;
+
+static struct lsh_oop_glue *
+make_lsh_oop_glue(void)
+{
+  /* FIXME: make liboop use lsh_space_alloc. But to do that, we also
+   * need a realloc function. */
+  NEW(lsh_oop_glue, self);
+
+  assert(!the_oop);
+  
+  self->oop->sys = oop_sys_new();
+  if (!self->oop->sys)
+    fatal("Virtual memory exhausted.\n");
+  self->oop->signals = oop_signal_new(self->oop->sys);
+  if (!self->oop->signals)
+    fatal("Virtual memory exhausted.\n");
+
+  the_oop = self;
+  
+  return self;
+}
+
+/* OOP Callbacks */
+static void
+lsh_oop_register_signal(oop_source *source, struct lsh_signal_handler *handler);
+
+static void *
+lsh_oop_signal_callback(oop_source *source, int sig, void *data)
+{
+  CAST(lsh_signal_handler, self, (struct lsh_object *) data);
+
+  assert(sig == self->signum);
+  
+  LSH_CALLBACK(self);
+
+  lsh_oop_register_signal(source, self);
+
+  return NULL;
+}
+
+static void
+lsh_oop_register_signal(oop_source *source, struct lsh_signal_handler *handler)
+{
+  source->on_signal(source, handler->sig, lsh_oop_signal_callback, handler);
+}
+
+static void
+lsh_oop_register_fd(oop_source *source, oop_event event, struct lsh_fd *fd);
+
+static void *
+lsh_oop_fd_callback(oop_source *source, int fileno, oop_event event, void *data)
+{
+  CAST(lsh_fd, fd, (struct lsh_object *) data);
+
+  assert(fileno == fd->fd);
+
+  debug("lsh_oop_fd_callback: event %i on fd %i: %z\n",
+	event, fd->fd, fd->label);
+  
+  if (!f->super.alive)
+    {
+      debug("lsh_oop_fd_callback: fd is dead\n");
+      return NULL;
+    }
+  
+  switch(event)
+    {
+    case OOP_READ:
+      FD_READ(fd);
+
+      if (fd->super.alive && fd->want_read)
+	lsh_oop_register_fd(source, event, fd);
+      break;
+      
+    case OOP_WRITE:
+      FD_WRITE(fd);
+
+      /* FIXME: If want write is false, where can we set it to true?
+       * write_buffer:do_write doesn't have any reference to the fd.
+       *
+       * With the old io_iter code, an lsh_fd included a pointer to
+       * the write_buffer. Perhaps that should be the other way round?
+       */
+      
+      if (fd->super.alive && fd->want_write)
+	lsh_oop_register_fd(source, event, fd);
+      break;
+      
+    default:
+      fatal("lsh_oop_fd_callback: Internal error.\n");
+    }
+  return NULL;
+}
+
+static void
+lsh_oop_register_fd(oop_source *source, oop_event event, struct lsh_fd *fd)
+{
+  source->on_fd(source, fd->fd, event, lsh_oop_fd_callback, fd);  
+}
+
+#if 0
+static void
+lsh_oop_register_read(oop_source *source, struct lsh_fd *fd);
+
+static void *
+lsh_oop_read_callback(oop_source *source, int fd, oop_event event, void *data)
+{
+  CAST(lsh_fd, f, (struct lsh_object *) data);
+
+  assert(event == OOP_READ);
+
+  FD_READ(f);
+
+  if (f->super.alive && f->want_read)
+    lsh_oop_register_read(source, f);
+}
+
+static void
+lsh_oop_register_read(oop_source *source, struct lsh_fd *fd)
+{
+  source->on_fd(source, fd->fd, OOP_READ, lsh_oop_read_callback, fd);
+}
+
+static void
+lsh_oop_register_write(oop_source *source, struct lsh_fd *fd);
+
+static void *
+lsh_oop_write_callback(oop_source *source, int fd, oop_event event, void *data)
+{
+  CAST(lsh_fd, f, (struct lsh_object *) data);
+
+  assert(event == OOP_WRITE);
+
+  FD_WRITE(f);
+
+  if (f->super.alive && f->want_write)
+    lsh_oop_register_write(source, f);
+}
+
+static void
+lsh_oop_register_write(oop_source *source, struct lsh_fd *fd)
+{
+  source->on_fd(source, fd->fd, OOP_WRITE, lsh_oop_write_callback, fd);
+}
+#endif
+
 /* Calls trigged by a signal handler. */
 /* GABA:
    (class
@@ -74,7 +248,7 @@
      (super resource)
      (vars
        (next object lsh_signal_handler)
-       (flag . "volatile sig_atomic_t *")
+       (signum . int)
        (action object lsh_callback)))
 */
 
@@ -94,8 +268,8 @@
      (name io_backend)
      (super resource)
      (vars
-       (oop_sys . "oop_source_sys *")
-       (oop_signal . "oop_adapter_signal *")
+       (source_sys . "oop_source_sys *")
+       (source_signal . "oop_adapter_signal *")
        
        ; Linked list of fds. 
        (files object lsh_fd)
@@ -397,7 +571,7 @@ io_run(struct io_backend *b)
   if (sigaction(SIGPIPE, &pipe, NULL) < 0)
     fatal("Failed to ignore SIGPIPE.\n");
 
-  oop_sys_run(b->oop);
+  oop_sys_run(b->oop->sys);
 }
 
 static void
@@ -405,7 +579,6 @@ do_kill_io_backend(struct resource *s)
 {
   CAST(io_backend, backend, s);
 
-  fatal("Not implemented\n");
   if (backend->super.alive)
     {
       struct lsh_fd *fd;
@@ -418,10 +591,15 @@ do_kill_io_backend(struct resource *s)
       /* Check that no callback has opened new files. */
       assert(!backend->files);
 
+      /* FIXME: Use a resource list instead? */
       for (signal = backend->signals, backend->signals = NULL;
 	   signal; signal = signal->next)
-	signal->super.alive = 0;
+	KILL_RESOURCE(&signal->super);
 
+      /* FIXME: Should be done by a free-function. */
+      oop_signal_delete(backend->source_signal);
+      oop_sys_delete(backend->source_sys);
+      
       backend->super.alive = 0;
     }
 }
@@ -431,17 +609,21 @@ make_io_backend(void)
 {
   NEW(io_backend, b);
 
+  assert(!the_backend);
+
   init_resource(&b->super, do_kill_io_backend);
   
-  b->oop_sys = oop_sys_new();
-  assert(b->oop_sys);
-  b->oop_signal = oop_signal_new(oop_sys_source(oop_sys));
+  b->source_sys = oop_sys_new();
+  assert(b->source_sys);
+  b->oop_signal = oop_signal_new(oop_sys_source(source_sys));
   assert(b->oop_signal);
   
   b->files = NULL;
   b->signals = NULL;
   b->callouts = NULL;
 
+  the_backend = b;
+  
   return b;
 }
 
@@ -451,19 +633,37 @@ io_final(struct io_backend *b)
   KILL_RESOURCE(&b->super);
 }
 
+static void
+do_kill_signal_handler(struct resource *s)
+{
+  CAST(lsh_signal_handler, self, s);
+
+  if (self->super.alive)
+    {
+      oop_source *source = oop_signal_source(the_backend->source_signal);
+
+      source->cancel_signal(source, self->signum, oop_signal_callback, self);
+      self->super.alive = 0;
+    }
+}
+
 struct resource *
 io_signal_handler(struct io_backend *b,
-		  volatile sig_atomic_t *flag,
+		  int signum,
 		  struct lsh_callback *action)
 {
+  oop_source *source = oop_signal_source(b->source_signal);
   NEW(lsh_signal_handler, handler);
-  init_resource(&handler->super, NULL);
+
+  init_resource(&handler->super, do_kill_signal_handler);
 
   handler->next = b->signals;
-  handler->flag = flag;
+  handler->signum = signum;
   handler->action = action;
 
   b->signals = handler;
+
+  source->on_signal(source, signum, oop_signal_callback, handler);
   
   return &handler->super;
 }
