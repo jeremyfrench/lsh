@@ -46,6 +46,7 @@
 #include "environ.h"
 #include "format.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "publickey_crypto.h"
 #include "randomness.h"
 #include "sexp.h"
@@ -218,9 +219,11 @@ dsa_generate_key(struct randomness *r, unsigned level)
 			   NULL, progress,
 			   512 + 64 * level))
     {
-      key = lsh_sexp_format(0, "(private-key(dsa(p%b)(q%b)(g%b)(y%b)(x%b)))",
-			    public.p, public.q, public.g, public.y,
-			    private.x);
+      key =
+	lsh_string_format_sexp(0,
+			       "(private-key(dsa(p%b)(q%b)(g%b)(y%b)(x%b)))",
+			       public.p, public.q, public.g, public.y,
+			       private.x);
     }
 
   dsa_public_key_clear(&public);
@@ -248,11 +251,11 @@ rsa_generate_key(struct randomness *r, uint32_t bits)
       /* FIXME: Use rsa-pkcs1 or rsa-pkcs1-sha1? */
       /* FIXME: Some code duplication with
 	 rsa.c:do_rsa_public_spki_key */
-      key = lsh_sexp_format(0, "(private-key(rsa-pkcs1(n%b)(e%b)"
-			    "(d%b)(p%b)(q%b)(a%b)(b%b)(c%b)))",
-			    public.n, public.e,
-			    private.d, private.p, private.q,
-			    private.a, private.b, private.c);
+      key = lsh_string_format_sexp(0, "(private-key(rsa-pkcs1(n%b)(e%b)"
+				   "(d%b)(p%b)(q%b)(a%b)(b%b)(c%b)))",
+				   public.n, public.e,
+				   private.d, private.p, private.q,
+				   private.a, private.b, private.c);
     }
   rsa_public_key_clear(&public);
   rsa_private_key_clear(&private);
@@ -299,7 +302,7 @@ main(int argc, char **argv)
 
   /* Now, output a private key spki structure. */
 
-  e = write_raw(STDOUT_FILENO, key->length, key->data);
+  e = write_raw(STDOUT_FILENO, STRING_LD(key));
 
   if (e)
     {
