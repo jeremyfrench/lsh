@@ -1,3 +1,58 @@
+2001-04-01  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/sftp/testsuite/setup-env: Clean up first.
+
+	* src/sftp/testsuite/get-1-test: New testcase.
+	* src/sftp/testsuite/ls-1-test: Likewise.
+	* src/sftp/testsuite/ls-2-test: Likewise
+	
+	* src/sftp/testsuite/common.sh (PROGRAMDIR): New variable, holding
+	an absolute path to the directory where the programs are.
+
+	* src/sftp/sftp-test-client.c (sftp_client_get_id): New function. 
+	(do_ls): Fixes and some simplification.
+	(do_get): Simplified. The old more featureful implementation left
+	#if:ed out.
+
+	* src/sftp/sftp-server.c (debug): New function.
+	(sftp_get_name): New function.
+	(struct sftp_dir): New struct.
+	(sftp_lstat_in_dir): New function.
+	(sftp_process_readdir): Handle directories that are not our
+	current working directory.  
+	(parse_options): New function, currently only handling -d.
+
+	* src/sftp/buffer.c (sftp_check_input): Don't modify i->left here.
+	(sftp_get_data): ...but do it here instead.
+	(sftp_free_string): Reintroduced this function.
+	(sftp_get_string): This function now requires the user to
+	deallocate the string.
+	(sftp_get_string_auto): Simpler function, that deallocates strings
+	automatically. 
+	(sftp_read_packet): Return failure (0), rather than crashing, if
+	there is data leftover from the previous packet.
+	(sftp_put_final_length): Calculate the length correctly.
+	(sftp_put_reset): Fixed assertion.
+	(sftp_put_attrib): Likewise.
+
+	* src/sftp/Makefile.am (noinst_PROGRAMS): Added dump-hex.
+
+	* src/sftp/sftp.h: Converted from #define:s to enums.
+
+	* src/sftp/dump-hex.c: New program that copies data from stdin to
+	stdout, and writes a hex dump to stderr in the process.
+
+	* src/sftp/debug-server: New script to dump communication between
+	sftp-server and sftp-test-client.
+
+	* src/sftp/configure.in: Added to cvs.
+
+2001-03-31  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/sftp/acconfig.h: Added HAVE_GCC_ATTRIBUTE.
+
+	* src/sftp/.bootstrap: New file.
+
 2001-03-28  Niels Möller  <nisse@ehand.com>
 
 	* src/lcp (split spec): New function for splitting arguments. 
