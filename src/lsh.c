@@ -6,7 +6,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998, 1999, 2000 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -40,6 +40,8 @@
 #include "interact.h"
 #include "io.h"
 #include "io_commands.h"
+#include "gateway.h"
+#include "gateway_commands.h"
 #include "lookup_verifier.h"
 #include "randomness.h"
 #include "service.h"
@@ -128,6 +130,7 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_CONNECTION);
        (port . "char *")
        (remote object address_info)
 
+       (local_user . "char *")
        (user . "char *")
        (identity . "char *")
        (with_publickey . int)
@@ -164,6 +167,7 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_CONNECTION);
        (used_pty . int)
        
        (start_shell . int)
+       (start_gateway . int)
        (remote_forward . int)
        (actions struct object_queue)))
 */
@@ -179,7 +183,7 @@ make_options(struct io_backend *backend,
   init_algorithms_options(&self->super, all_symmetric_algorithms());
   
   self->backend = backend;
-  self->random = make_reasonably_random();
+  self->random = make_device_random("/dev/urandom");
   
   self->home = getenv("HOME");
   
@@ -190,7 +194,7 @@ make_options(struct io_backend *backend,
   
   self->not = 0;
   self->remote = NULL;
-  self->user = getenv("LOGNAME");
+  self->local_user = self->user = getenv("LOGNAME");
 
   /* Default behaviour is to lookup the "ssh" service, and fall back
    * to port 22 if that fails. */
@@ -211,6 +215,8 @@ make_options(struct io_backend *backend,
   self->with_pty = -1;
   self->start_shell = 1;
   self->with_remote_peers = 0;
+  self->start_gateway = 0;
+  
   object_queue_init(&self->actions);
 
   self->with_publickey = 1;
@@ -229,7 +235,7 @@ make_options(struct io_backend *backend,
 
 
 /* Host to connect to */
-COMMAND_SIMPLE(options2remote)
+DEFINE_COMMAND_SIMPLE(options2remote, a)
 {
   CAST(lsh_options, options, a);
   return &options->remote->super;
@@ -237,7 +243,7 @@ COMMAND_SIMPLE(options2remote)
 
 /* Request ssh-userauth or ssh-connection service, as appropriate,
  * and pass the options as a first argument. */
-COMMAND_SIMPLE(options2service)
+DEFINE_COMMAND_SIMPLE(options2service, a)
 {
   CAST(lsh_options, options, a);
   return &options->service->super;
@@ -534,7 +540,7 @@ do_lsh_verifier(struct command *s,
 
 /* Takes an options object as argument and returns a lookup_verifier */
 
-COMMAND_SIMPLE(lsh_verifier_command)
+DEFINE_COMMAND_SIMPLE(lsh_verifier_command, a)
 {
   CAST(lsh_options, options, a);
 
@@ -567,7 +573,7 @@ do_lsh_login(struct command *s,
 }
 
 /* (login options public-keys connection) */
-COMMAND_SIMPLE(lsh_login_command)
+DEFINE_COMMAND_SIMPLE(lsh_login_command, a)
 {
   CAST(lsh_options, options, a);
 
@@ -783,6 +789,7 @@ main_options[] =
     "which is to spawn a remote shell)", 0 },
   { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },
   { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
+  { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 },
   { NULL, 0, NULL, 0, "Modifiers that apply to port forwarding:", 0 },
   { "remote-peers", 'g', NULL, 0, "Allow remote access to forwarded ports", 0 },
   { "no-remote-peers", 'g' | ARG_NOT, NULL, 0, 
@@ -1074,150 +1081,173 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		     lsh_command_session(self,
 					 rebuild_command_line(state->argc - state->next,
 							      state->argv + state->next)));
+      self->start_shell = 0;
       break;
 
     case ARGP_KEY_END:
-      {
-	if (!self->home)
-	  {
-	    argp_error(state, "No home directory. Please set HOME in the environment.");
-	    break;
-	  }
+      if (!self->home)
+	{
+	  argp_error(state, "No home directory. Please set HOME in the environment.");
+	  break;
+	}
 	  
-	if (!self->user)
-	  {
-	    argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
-	    break;
-	  }
-
-	if (self->with_dh_keyexchange < 0)
-	  self->with_dh_keyexchange = !self->with_srp_keyexchange;
+      if (!self->user)
+	{
+	  argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
+	  break;
+	}
+	    
+      if (self->with_dh_keyexchange < 0)
+	self->with_dh_keyexchange = !self->with_srp_keyexchange;
       
-	if (self->with_dh_keyexchange || self->with_srp_keyexchange)
-	  {
-	    int i = 0;
-	    self->kex_algorithms 
-	      = alloc_int_list(self->with_dh_keyexchange + self->with_srp_keyexchange);
+      if (self->with_dh_keyexchange || self->with_srp_keyexchange)
+	{
+	  int i = 0;
+	  self->kex_algorithms 
+	    = alloc_int_list(self->with_dh_keyexchange + self->with_srp_keyexchange);
 	    
 #if WITH_SRP	    
-	    if (self->with_srp_keyexchange)
-	      {
-		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
-		ALIST_SET(self->super.algorithms,
-			  ATOM_SRP_RING1_SHA1_LOCAL,
-			  make_srp_client(make_srp1(self->random),
-					  ssh_format("%lz", self->user)));
-	      }
+	  if (self->with_srp_keyexchange)
+	    {
+	      LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
+	      ALIST_SET(self->super.algorithms,
+			ATOM_SRP_RING1_SHA1_LOCAL,
+			make_srp_client(make_srp1(self->random),
+					ssh_format("%lz", self->user)));
+	    }
 #endif /* WITH_SRP */
-	    if (self->with_dh_keyexchange)
+	  if (self->with_dh_keyexchange)
+	    {
+	      LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
+	      ALIST_SET(self->super.algorithms,
+			ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+			make_dh_client(make_dh1(self->random)));
+	    }
+	}
+      else
+	argp_error(state, "All keyexchange algorithms disabled.");
+
+      {
+	struct command *perform_userauth = NULL;
+
+	/* NOTE: The default, self->with_userauth < 0, means that we
+	 * should figure out the right thing automatically. */
+
+	if (self->with_userauth < 0)
+	  {
+	    /* Make the decision  early, if possible. */
+	    if (!self->with_srp_keyexchange)
+	      /* We're not using SRP, so we request the
+	       * ssh-userauth-service */
+	      self->with_userauth = 1;
+
+	    else if (!self->with_dh_keyexchange)
+	      /* We're using SRP, and should not need any extra
+	       * user authentication. */
+	      self->with_userauth = 0;
+	  }
+	   
+	if (self->with_userauth)
+	  {
+	    CAST_SUBTYPE(command, o, make_lsh_userauth(self));
+	    perform_userauth = o;
+	  }
+
+	switch(self->with_userauth)
+	  {
+	  case 0:
+	    self->service = &request_connection_service.super;
+	    break;
+	  case 1:
+	    self->service = perform_userauth;
+	    break;
+	  case -1:
+	    /* Examine the CONNECTION_SRP flag, later. */
+	    self->service
+	      = make_connection_if_srp(&request_connection_service.super,
+				       perform_userauth);
+	  default:
+	    fatal("Internal error.\n");
+	  }
+	  
+	assert(self->service);
+      }
+	
+      {
+	struct lsh_string *tmp = NULL;
+	const char *s = NULL;
+	  
+	if (self->capture)
+	  s = self->capture;
+	else if (self->sloppy)
+	  {
+	    tmp = ssh_cformat("%lz/.lsh/captured_keys", self->home);
+	    s = tmp->data;
+	  }
+	if (s)
+	  {
+	    struct lsh_fd *f
+	      = io_write_file(self->backend, s,
+			      O_CREAT | O_APPEND | O_WRONLY,
+			      0600, 500, NULL,
+			      make_report_exception_handler
+			      (make_report_exception_info(EXC_IO, EXC_IO,
+							  "Writing new ACL: "),
+			       &default_exception_handler,
+			       HANDLER_CONTEXT));
+	    if (f)
+	      self->capture_file = &f->write_buffer->super;
+	    else
 	      {
-		LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
-		ALIST_SET(self->super.algorithms,
-			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			  make_dh_client(make_dh1(self->random)));
+		werror("Failed to open '%z' (errno = %i): %z.\n",
+		       s, errno, STRERROR(errno));
 	      }
 	  }
-	else
-	  argp_error(state, "All keyexchange algorithms disabled.");
-
-	{
-	  struct command *perform_userauth = NULL;
-
-	  /* NOTE: The default, self->with_userauth < 0, means that we
-	   * should figure out the right thing automatically. */
-
-	  if (self->with_userauth < 0)
-	    {
-	      /* Make the decision  early, if possible. */
-	      if (!self->with_srp_keyexchange)
-		/* We're not using SRP, so we request the
-		 * ssh-userauth-service */
-		self->with_userauth = 1;
-
-	      else if (!self->with_dh_keyexchange)
-		/* We're using SRP, and should not need any extra
-		 * user authentication. */
-		self->with_userauth = 0;
-	    }
-	   
-	  if (self->with_userauth)
-	    {
-	      CAST_SUBTYPE(command, o, make_lsh_userauth(self));
-	      perform_userauth = o;
-	    }
-
-	  switch(self->with_userauth)
-	    {
-	    case 0:
-	      self->service = &request_connection_service.super;
-	      break;
-	    case 1:
-	      self->service = perform_userauth;
-	      break;
-	    case -1:
-	      /* Examine the CONNECTION_SRP flag, later. */
-	      self->service
-		= make_connection_if_srp(&request_connection_service.super,
-					 perform_userauth);
-	    default:
-	      fatal("Internal error.\n");
-	    }
-	  
-	  assert(self->service);
-	}
-	
-	{
-	  struct lsh_string *tmp = NULL;
-	  const char *s = NULL;
-	  
-	  if (self->capture)
-	    s = self->capture;
-	  else if (self->sloppy)
-	    {
-	      tmp = ssh_cformat("%lz/.lsh/captured_keys", self->home);
-	      s = tmp->data;
-	    }
-	  if (s)
-	    {
-	      struct lsh_fd *f
-		= io_write_file(self->backend, s,
-				O_CREAT | O_APPEND | O_WRONLY,
-				0600, 500, NULL,
-				make_report_exception_handler
-				(make_report_exception_info(EXC_IO, EXC_IO,
-							    "Writing new ACL: "),
-				 &default_exception_handler,
-				 HANDLER_CONTEXT));
-	      if (f)
-		self->capture_file = &f->write_buffer->super;
-	      else
-		{
-		  werror("Failed to open '%z' (errno = %i): %z.\n",
-			 s, errno, STRERROR(errno));
-		}
-	    }
-	  lsh_string_free(tmp);
-	}
+	lsh_string_free(tmp);
+      }
 	
 #if WITH_TCP_FORWARD
-	if (self->remote_forward)
-	  lsh_add_action(self,
-			 make_install_fix_channel_open_handler
-			 (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip));
+      if (self->remote_forward)
+	lsh_add_action(self,
+		       make_install_fix_channel_open_handler
+		       (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip));
 #endif /* WITH_TCP_FORWARD */
       
-	/* Add shell action */
-	if (object_queue_is_empty(&self->actions) && self->start_shell)
-	  lsh_add_action(self, lsh_shell_session(self));
-	
-	if (object_queue_is_empty(&self->actions))
-	  {
-	    argp_error(state, "No actions given.");
-	    break;
-	  }
+      /* Add shell action */
+      if (self->start_shell)
+	lsh_add_action(self, lsh_shell_session(self));
 
-	break;
-      }
+      if (self->start_gateway)
+	{
+	  struct local_info *gateway;
+	  if (!self->local_user)
+	    {
+	      argp_error(state, "You have to set LOGNAME in the environment, "
+			 " if you want to use the gateway feature.");
+	      break;
+	    }
+	  gateway = make_gateway_address(self->local_user, self->user,
+					 self->remote);
+
+	  if (!gateway)
+	    {
+	      argp_error(state, "Local or remote user name, or the target host name, are too "
+			 "strange for the gateway socket name construction.");
+	      break;
+	    }
+	      
+	  lsh_add_action(self,
+			 make_gateway_setup
+			 (make_listen_local(self->backend, gateway)));
+	}
+	
+      if (object_queue_is_empty(&self->actions))
+	{
+	  argp_error(state, "No actions given.");
+	  break;
+	}
+
+      break;
 
     case 'p':
       self->port = arg;
@@ -1231,7 +1261,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->identity = optarg;
       break;
 
-    CASE_FLAG(OPT_PUBLICKEY, with_publickey);
+      CASE_FLAG(OPT_PUBLICKEY, with_publickey);
 
     case OPT_HOST_DB:
       self->known_hosts = optarg;
@@ -1249,10 +1279,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->capture = arg;
       break;
 
-    CASE_FLAG(OPT_DH, with_dh_keyexchange);
-    CASE_FLAG(OPT_SRP, with_srp_keyexchange);
+      CASE_FLAG(OPT_DH, with_dh_keyexchange);
+      CASE_FLAG(OPT_SRP, with_srp_keyexchange);
 
-    CASE_FLAG(OPT_USERAUTH, with_userauth);
+      CASE_FLAG(OPT_USERAUTH, with_userauth);
 
     case 'E':
       lsh_add_action(self, lsh_command_session(self, ssh_format("%lz", arg)));
@@ -1270,14 +1300,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	if (!parse_forward_arg(arg, &listen_port, &target))
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
-	object_queue_add_tail(&self->actions,
-			      &make_forward_local_port
-			      (self->backend,
-			       make_address_info((self->with_remote_peers
-						  ? NULL
-						  : ssh_format("%lz", "127.0.0.1")),
-						 listen_port),
-			       target)->super);
+	lsh_add_action(self, make_forward_local_port
+		       (self->backend,
+			make_address_info((self->with_remote_peers
+					   ? NULL
+					   : ssh_format("%lz", "127.0.0.1")),
+					  listen_port),
+			target));
 	break;
       }      
 
@@ -1289,14 +1318,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	if (!parse_forward_arg(arg, &listen_port, &target))
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
-	object_queue_add_tail(&self->actions,
-			      &make_forward_remote_port
-			      (self->backend,
-			       make_address_info((self->with_remote_peers
-						  ? ssh_format("%lz", "0.0.0.0")
-						  : ssh_format("%lz", "127.0.0.1")),
-						 listen_port),
-			       target)->super);
+	lsh_add_action(self, make_forward_remote_port
+		       (self->backend,
+			make_address_info((self->with_remote_peers
+					   ? ssh_format("%lz", "0.0.0.0")
+					   : ssh_format("%lz", "127.0.0.1")),
+					  listen_port),
+			target));
 	self->remote_forward = 1;
 	break;
       }      
@@ -1305,17 +1333,18 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->start_shell = 0;
       break;
 
-    CASE_FLAG('g', with_remote_peers);
+      CASE_FLAG('G', start_gateway);
+      CASE_FLAG('g', with_remote_peers);
 
 #if WITH_PTY_SUPPORT
-    CASE_FLAG('t', with_pty);
+      CASE_FLAG('t', with_pty);
 #endif /* WITH_PTY_SUPPORT */
 
-    CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
-    CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
-    CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
+      CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
+      CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
+      CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
 
-      case 'n':
+    case 'n':
       self->not = !self->not;
       break;
     }
