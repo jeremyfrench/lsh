@@ -24,4 +24,53 @@
 #include "digits.h"
 
 #include "digit_table.h"
+#include "werror.h"
 
+#include <assert.h>
+
+void
+base64_init(struct base64_state *state, UINT8 terminator)
+{
+  state->buffer = 0;
+  state->bits = 0;
+  state->terminator = terminator;
+}
+
+int
+base64_decode(struct base64_state *state, UINT8 c)
+{
+  unsigned res;
+  int digit;
+  
+  assert(state->bits < 8);
+  if (c == state->terminator)
+    {
+      /* Check for unused bits */
+      if (state->bits && ( ( (1<<state->bits) - 1) & state->buffer))
+	{
+	  werror("base64_decode: Base64 terminated with %i leftover bits.\n",
+		 state->bits);
+	  return BASE64_INVALID;
+	}
+      return BASE64_END;
+    }
+
+  digit = base64_digits[c];
+  switch(digit)
+    {
+    case BASE64_SPACE:
+    case BASE64_INVALID:
+      return digit;
+    default:
+      assert(digit >= 0);
+      state->buffer = (state->buffer << 6) | (unsigned) digit;
+      state->bits += 6;
+    }
+  if (state->bits < 8)
+    return BASE64_PARTIAL;
+
+  res = (state->buffer >> (state->bits - 8)) & 0xff;
+  state->bits -= 8;
+  
+  return res;
+}
