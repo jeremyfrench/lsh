@@ -572,6 +572,7 @@ int main(int argc, char **argv)
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
+  /* FIXME: Use STATIC_REPORT_EXCEPTION_INFO */
   handler = make_report_exception_handler
     (make_report_exception_info(EXC_IO, EXC_IO, "lsh_proxy: "),
      &default_exception_handler,
@@ -689,7 +690,7 @@ int main(int argc, char **argv)
 #if WITH_X11_FORWARD
     if (options->with_x11_forward)
       {
-	ALIST_SET(server_session_requests, ATOM_X11_REQ, &gateway_channel_request);
+	ALIST_SET(server_session_requests, ATOM_X11_REQ, &gateway_channel_request.super);
       }
 #endif
 #if WITH_AGENT_FORWARD
