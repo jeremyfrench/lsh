@@ -32,6 +32,8 @@
 
 #include "include/crypto_types.h"
 
+#include <stdlib.h>
+
 #ifdef __GNUC__
 #define NORETURN __attribute__ ((noreturn))
 #define PRINTF_STYLE(f, a) __attribute__ ((format(printf, f, a)))
@@ -76,11 +78,20 @@ struct lsh_object
   
   char alloc_method;
   char marked;
+  char dead;
 };
+
+/* NOTE: Static objects have a NULL isa-pointer, and can therefore not
+ * contain any references to non-static objects. This could be fixed,
+ * by using an argument to the STATIC_HEADER macro, but then one must
+ * use some class for lsh_class objects... */
+
+#define STATIC_HEADER { NULL, NULL, LSH_ALLOC_STATIC, 0, 0 }
+#define STACK_HEADER  { NULL, NULL, LSH_ALLOC_STACK, 0, 0 }
 
 struct lsh_class
 {
-  struct lsh_object *super;
+  struct lsh_object super;
   struct lsh_class *super_class;
   size_t size;
   
@@ -90,6 +101,9 @@ struct lsh_class
 
   /* Particular classes may add their own methods here */
 };
+
+#define MARK_INSTANCE(c, i, f) ((c)->mark_instance((i), (f)))
+#define FREE_INSTANCE(c, i) ((c)->free_instance((i)))
 
 #ifdef DEBUG_ALLOC
 
@@ -107,9 +121,6 @@ struct lsh_string_header
   int magic;
 };
 
-#define STATIC_HEADER { 0, LSH_ALLOC_STATIC, 0 }
-#define STACK_HEADER { 0, LSH_ALLOC_STACK, 0 }
-
 #else   /* !DEBUG_ALLOC */
 struct lsh_object
 {
@@ -118,9 +129,6 @@ struct lsh_object
 };
 
 struct lsh_string_header {};
-
-#define STATIC_HEADER { LSH_ALLOC_STATIC, 0 }
-#define STACK_HEADER { LSH_ALLOC_STACK, 0 }
 
 #endif  /* !DEBUG_ALLOC */
 

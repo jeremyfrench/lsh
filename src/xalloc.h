@@ -47,8 +47,8 @@
 struct lsh_string *lsh_string_alloc(UINT32 size);
 void lsh_string_free(struct lsh_string *packet);
 
-void *lsh_object_alloc(size_t size);
-void lsh_object_free(void *p);
+struct lsh_object *lsh_object_alloc(struct lsh_class *class);
+void lsh_object_free(struct lsh_object *o);
 
 void *lsh_space_alloc(size_t size);
 void lsh_space_free(void *p);
@@ -56,21 +56,47 @@ void lsh_space_free(void *p);
 
 #ifdef DEBUG_ALLOC
 
-void lsh_object_check(void *m, size_t size);
-void lsh_object_check_subtype(void *m, size_t size);
+struct lsh_object *lsh_object_check(struct lsh_object *instance,
+				    struct lsh_class *class);
+struct lsh_object *lsh_object_check_subtype(struct lsh_object *instance,
+					    struct lsh_class *class);
 
+#if 0
 #define MDEBUG(x) lsh_object_check((x), sizeof(*(x)))
 #define MDEBUG_SUBTYPE(x) lsh_object_check_subtype((x), sizeof(*(x)))
 
+#define CHECK_TYPE(c, i) lsh_object_check((c), (struct lsh_object *) (i))
+#define CHECK_SUBTYPE(c, i) \
+  lsh_object_check_subtype((c), (struct lsh_object *) (i))
+#endif
+
+#define CAST(class, var, o) \
+     struct class *(var) = (struct class *) \
+  (lsh_check_object(class##_class, (struct lsh_object *) (o))
+
+#define CAST_SUBTYPE(class, var, o) \
+     struct class *(var) = (struct class *) \
+  (lsh_check_object_subtype(class##_class, (struct lsh_object *) (o))
+   
+
 #else   /* !DEBUG_ALLOC */
 
+#if 0
 #define MDEBUG(x)
 #define MDEBUG_SUBTYPE(x)
+#endif
 
+#define CAST(class, var, o) \
+   struct class *(var) = (struct class *) (o)
+
+#define CAST_SUBTYPE(class, var, o) CAST(class, var, o)
+   
 #endif  /* !DEBUG_ALLOC */
 
-#define NEW(x) ((x) = lsh_object_alloc(sizeof(*(x))))
+#define NEW(class, var) struct (class) * (var) = lsh_object_alloc(class##_class)
 #define NEW_SPACE(x) ((x) = lsh_space_alloc(sizeof(*(x))))
 
+#include "gc.h"
+#define KILL(x) gc_kill((x))
 
 #endif /* LSH_XALLOC_H_INCLUDED */
