@@ -3,7 +3,6 @@
  */
 
 #include "parse.h"
-#include "transport.h"
 
 void simple_buffer_init(struct simple_buffer *buffer,
 			UINT32 capacity, UINT8 *data)

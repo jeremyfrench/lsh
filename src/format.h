@@ -10,7 +10,6 @@
 
 #include "atoms.h"
 #include "bignum.h"
-#include "transport.h"
 
 /* Format strings can contain the following %-specifications:
  *

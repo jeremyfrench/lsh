@@ -6,7 +6,7 @@
 #ifndef LSH_VOID_H_INCLUDED
 #define LSH_VOID_H_INCLUDED
 
-#include "transport.h"
+#include "abstract_io.h"
 
 struct abstract_write *make_packet_void();
 
