@@ -89,8 +89,7 @@ spki_verify_dsa(const uint8_t *digest,
 
 int
 spki_verify(void *ctx UNUSED,
-	    enum spki_type digest_type,
-	    const uint8_t *digest,
+	    const struct spki_hash_value *hash,
 	    struct spki_principal *principal,
 	    struct spki_iterator *signature)
 {
@@ -112,17 +111,19 @@ spki_verify(void *ctx UNUSED,
   switch (spki_parse_type(&key))
     {
     case SPKI_TYPE_RSA_PKCS1_MD5:
-      return (digest_type == SPKI_TYPE_MD5
+      return (hash->type == SPKI_TYPE_MD5
+	      && hash->length == MD5_DIGEST_SIZE
 	      && signature_type == SPKI_TYPE_RSA_PKCS1_MD5
 	      && spki_verify_rsa(rsa_md5_verify_digest,
-				 digest,
+				 hash->digest,
 				 &key, signature));
 
     case SPKI_TYPE_RSA_PKCS1_SHA1:
-      return (digest_type == SPKI_TYPE_SHA1
+      return (hash->type == SPKI_TYPE_SHA1
+	      && hash->length == SHA1_DIGEST_SIZE
 	      && signature_type == SPKI_TYPE_RSA_PKCS1_SHA1
 	      && spki_verify_rsa(rsa_sha1_verify_digest, 
-				 digest,
+				 hash->digest,
 				 &key, signature));
 #if 0
     case SPKI_TYPE_RSA_PKCS1:
@@ -143,8 +144,9 @@ spki_verify(void *ctx UNUSED,
 #endif
       
     case SPKI_TYPE_DSA_SHA1:
-      return (digest_type == SPKI_TYPE_SHA1
-	      && spki_verify_dsa(digest, &key, signature));
+      return (hash->type == SPKI_TYPE_SHA1
+	      && hash->length == SHA1_DIGEST_SIZE
+	      && spki_verify_dsa(hash->digest, &key, signature));
 
     default:
       return 0;

@@ -34,8 +34,9 @@
 
 #include <time.h>
 
-/* Real declaration in parse.h */
+/* Real declarations in parse.h */
 struct spki_iterator;
+struct spki_hash_value;
 
 /* Real declaration in tag.c */
 struct spki_tag;
@@ -274,8 +275,7 @@ spki_5_tuple_reduce(struct spki_acl_db *db,
 /* Signature verification */
 int
 spki_verify(void *ctx,
-	    enum spki_type digest_type,
-	    const uint8_t *digest,
+	    const struct spki_hash_value *hash,
 	    struct spki_principal *principal,
 	    struct spki_iterator *signature);
 
