@@ -1,3 +1,7 @@
+2003-09-20  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* misc/mkdiff: Copied mkdiff script from the old lsh_1_2_BRANCH.
+
 2003-09-19  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.5.3.
