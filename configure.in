@@ -154,6 +154,14 @@ if test x$enable_utmp = xyes ; then
   AC_DEFINE(WITH_UTMP)
 fi
 
+AC_ARG_WITH(include-path,
+  [--with-include-path        A colon-separated list of directories to search for include files.],,
+  [with_include_path=''])
+
+if test x$with_include_path != x ; then
+  CPPFLAGS="$CPPFLAGS -I `echo $with_include_path | sed 's/:/ -I /g'`"
+fi
+
 AC_ARG_WITH(lib-path,
   [--with-lib-path            A colon-separated list of directories to search for libraries.],,
   [with_lib_path=''])
@@ -175,7 +183,7 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AM_PROG_CC_STDC
 
-if test x$am_cv_prog_cc_stdc = xno ; then
+if test "x$am_cv_prog_cc_stdc" = xno ; then
   AC_ERROR([the C compiler doesn't handle ANSI-C])
 fi
 
@@ -371,10 +379,23 @@ AC_CHECK_FUNCS(vsnprintf inet_aton)
 AC_CHECK_FUNCS(openpty)
 AC_CHECK_FUNCS(cfmakeraw)
 AC_CHECK_FUNCS(logwtmp login logout)
-AC_CHECK_FUNCS(getaddrinfo getnameinfo)
+AC_CHECK_FUNCS(getaddrinfo getnameinfo gai_strerror)
 AC_FUNC_GETPGRP
 AC_CHECK_FUNCS(syslog)
 AC_REPLACE_FUNCS(memxor)
+
+AC_CACHE_CHECK([if netdb.h defines AI_NUMERICHOST],
+  lsh_cv_sys_ai_numerichost,
+  [AC_EGREP_CPP(yes,
+    [#include <netdb.h>
+     #ifdef AI_NUMERICHOST
+     yes
+     #endif
+    ], lsh_cv_sys_ai_numerichost=yes,
+       lsh_cv_sys_ai_numerichost=no)])
+if test x$lsh_cv_sys_ai_numerichost = xyes ; then
+  AC_DEFINE(HAVE_AI_NUMERICHOST)
+fi
 
 dnl Needed by argp
 AC_CHECK_FUNCS(mempcpy strndup)
@@ -615,8 +636,9 @@ AC_DEFINE(PTY_BSD_SCHEME)
 AC_MSG_RESULT([done])
 
 dnl IPv6 support
-if test x$enableipv6 = xyes ; then
-  AC_CACHE_CHECK([if ipv6 is supported],
+
+if test x$enable_ipv6 = xyes ; then
+  AC_CACHE_CHECK([if IPv6 is supported],
     lsh_cv_sys_ipv6,
     [AC_TRY_RUN([/* AF_INET6 avalable check */
   #include <sys/types.h>
@@ -632,9 +654,22 @@ if test x$enableipv6 = xyes ; then
      lsh_cv_sys_ipv6=no,
      lsh_cv_sys_ipv6=no)])
   
-  if test x$lsh_cv_sys_ipv6 = xyes ; then
-    AC_DEFINE(WITH_IPV6)
+  if test x$lsh_cv_sys_ipv6 != xyes ; then
+    enable_ipv6=no
+  elif test x$ac_cv_func_getaddrinfo != yes ; then
+    AC_MSG_WARN([getaddrinfo not found. Disabling IPv6 support])
+    enable_ipv6=no
+  elif test x$ac_cv_func_gai_strerror != yes ; then
+    AC_MSG_WARN([gai_strerror not found. Disabling IPv6 support])
+    enable_ipv6=no
+  elif test x$lsh_cv_sys_ai_numerichost != yes ; then
+    AC_MSG_WARN([AI_NUMERICHOST not defined. Disabling IPv6 support])
+    enable_ipv6=no
   fi
+fi
+
+if test x$enable_ipv6 = yes ; then
+  AC_DEFINE(WITH_IPV6)
 fi
 
 # Set these flags *last*, or else the test programs won't compile
