@@ -39,7 +39,7 @@ CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
 
 dnl Check options
 AC_ARG_WITH(debug_alloc,
-  [--with-debug-alloc    sanity check memory allocation and casts],,
+  [--without-debug-alloc    sanity check memory allocation and casts],,
   [with_debug_alloc=yes])
 
 if test x$with_debug_alloc = xyes ; then
@@ -47,7 +47,7 @@ if test x$with_debug_alloc = xyes ; then
 fi
 
 AC_ARG_WITH(debug_trace,
-  [--with-debug-trace    support for tracing],,
+  [--without-debug-trace    support for tracing],,
   [with_debug_trace=yes])
 
 if test x$with_debug_trace = xyes ; then
@@ -55,7 +55,7 @@ if test x$with_debug_trace = xyes ; then
 fi
 
 AC_ARG_WITH(zlib,
-  [--with-zlib    use zlib compression],,
+  [--without-zlib    use zlib compression],,
   [with_zlib=yes])
 
 dnl Checking this variable is delayed until we have checked if zlib is
@@ -92,7 +92,7 @@ if test x$with_idea = xyes ; then
 fi
 
 AC_ARG_WITH(datafellows_workarounds,
-  [--with-datafellows-workarounds    Bug-compatibility with DataFellows ssh2 clients and servers],,
+  [--without-datafellows-workarounds    Bug-compatibility with DataFellows ssh2 clients and servers],,
   [with_datafellows_workarounds=yes])
 
 if test x$with_datafellows_workarounds = xyes ; then
@@ -100,7 +100,7 @@ if test x$with_datafellows_workarounds = xyes ; then
 fi
 
 AC_ARG_WITH(tcp_forward,
-  [--with-tcp-forward        Support tcp forwarding],,
+  [--without-tcp-forward        Support tcp forwarding],,
   [with_tcp_forward=yes])
 
 if test x$with_tcp_forward = xyes ; then
