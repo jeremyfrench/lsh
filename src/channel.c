@@ -1704,10 +1704,6 @@ channel_eof(struct ssh_channel *channel)
 void
 init_channel(struct ssh_channel *channel)
 {
-  /* channel->super.handler = do_read_channel; */
-#if 0
-  channel->write = NULL;
-#endif
   channel->connection = NULL;
   
   channel->super.report = adjust_rec_window;

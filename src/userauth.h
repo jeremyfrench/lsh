@@ -105,6 +105,8 @@ make_userauth_special_exception(struct lsh_string *reply,
        ; an object containing the stdin file objects and perhaps some
        ; other info.
 
+       ; Perhaps POSIX process_spawn is suitable?
+
        ; This function also returns the pid.
 
        ; The tty argument is for utmp/wtmp logging

@@ -131,7 +131,7 @@ static UINT32 estimate_update(UINT32 rate, UINT32 input, UINT32 output)
   /* Decay old estimate */
   rate = rate * 15 / 16;
 
-  /* FIXME: Following the envelope is suboptimal for small inputs. We
+  /* NOTE: Following the envelope is suboptimal for small inputs. We
    * do it only for input packets of reasonable size. This method
    * could be improved.
    *

@@ -1,3 +1,21 @@
+2001-09-27  Niels Möller  <nisse@ehand.com>
+
+	* src/tcpforward_commands.c: Made some more objects static.
+
+	* src/spki_commands.c (spki_parse_key): Deleted class.
+	(spki_sexp2signer_command): Define using DEFINE_COMMAND2.
+	(spki_sexp2keypair_command): Likewise.
+	
+	* src/sexp.c: Use const struct sexp * in more places.
+
+	* src/resource.c (dont_free_live_resource): Check that resource is
+	dead. Don't look at gc_final_p.
+
+	* src/lsh-export-key.c (do_ssh2_print_command): Updated for new
+	sexp_check_type prototype.
+	* src/spki.c: Likewise.
+	* src/srp_exchange.c (make_srp_entry): Likewise.
+
 2001-09-27  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/resource.c (make_resource_list): Renamed functions, was
