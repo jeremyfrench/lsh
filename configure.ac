@@ -7,18 +7,6 @@ AC_CONFIG_SRCDIR([src/lsh_types.h])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER(config.h)
 
-# AH_TEMPLATE([PACKAGE], [The name of this software distribution])
-# AH_TEMPLATE([VERSION], [The version of this software distribution])
-
-# FIXME: Move this to the Makefile, as recommended by the autoconf manual.
-
-AH_TEMPLATE([PREFIX], [The installation prefix])
-AC_DEFINE_UNQUOTED(PREFIX, "`echo $prefix | sed "s@^NONE@$ac_default_prefix@"`")
-
-AH_TEMPLATE([SBINDIR], [sbin directory])
-# NOTE: The definition below is broken.
-AC_DEFINE_UNQUOTED(SBINDIR, "`echo $sbindir | sed "s@^NONE@$prefix/sbin@" | sed "s@^NONE@$ac_default_prefix@"`")
-
 # We want an absolute path to the source-dir.
 case "$srcdir" in
     /*)
