@@ -123,7 +123,7 @@ int io_iter(struct io_backend *b)
   /* Fill out fds-array */
   {
     struct lsh_fd *fd;
-    int i;
+    unsigned long i;
     int all_events = 0;
     
     for (fd = b->files, i = 0; fd; fd = fd->next, i++)
@@ -179,7 +179,7 @@ int io_iter(struct io_backend *b)
      * head of the list, or set the close_now flag on any fd. */
 
     struct lsh_fd *fd;
-    int i;
+    unsigned long i;
     
     for(fd = b->files, i=0; fd; fd = fd->next, i++)
       {
@@ -393,11 +393,11 @@ static void connect_callback(struct lsh_fd *fd)
 void io_run(struct io_backend *b)
 {
   struct sigaction pipe;
+  memset(&pipe, 0, sizeof(pipe));
 
   pipe.sa_handler = SIG_IGN;
   sigemptyset(&pipe.sa_mask);
   pipe.sa_flags = 0;
-  pipe.sa_restorer = NULL;
   
   if (sigaction(SIGPIPE, &pipe, NULL) < 0)
     fatal("Failed to ignore SIGPIPE.\n");
@@ -473,7 +473,7 @@ get_inaddr(struct sockaddr_in	* addr,
 	  hp = gethostbyname(host);
 	  if (hp == NULL)
 	    return 0;
-	  memcpy(&addr->sin_addr, hp->h_addr, hp->h_length);
+	  memcpy(&addr->sin_addr, hp->h_addr, (size_t) (hp->h_length));
 	  addr->sin_family = hp->h_addrtype;
 	}
     }

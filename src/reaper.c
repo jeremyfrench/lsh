@@ -158,16 +158,17 @@ void reaper_run(struct reap *r, struct io_backend *b)
   
   struct sigaction pipe;
   struct sigaction chld;
+  
+  memset(&pipe, 0, sizeof(pipe));
+  memset(&chld, 0, sizeof(chld));
 
   pipe.sa_handler = SIG_IGN;
   sigemptyset(&pipe.sa_mask);
   pipe.sa_flags = 0;
-  pipe.sa_restorer = NULL;
 
   chld.sa_handler = child_handler;
   sigemptyset(&chld.sa_mask);
   chld.sa_flags = SA_NOCLDSTOP;
-  chld.sa_restorer = NULL;
   
   if (sigaction(SIGPIPE, &pipe, NULL) < 0)
     fatal("Failed to ignore SIGPIPE.\n");
