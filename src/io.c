@@ -1215,10 +1215,8 @@ io_resolv_address(const char *host, const char *service,
 	      unsigned i;
 	      if (! ( (hp = gethostbyname(host))
 		      && (hp->h_addrtype == AF_INET)))
-		{
-		  lsh_space_free(addr);
-		  return 0;
-		}
+		return 0;
+
 	      assert(hp->h_length == sizeof(addr.sin_addr));
 	      
 	      for (i = 0; hp->h_addr_list[i]; i++)
