@@ -60,7 +60,7 @@ int do_channel_request_command(struct command *s,
   CAST_SUBTYPE(ssh_channel, channel, x);
 
   struct lsh_string *request
-    = FORMAT_CHANNEL_REQUEST(self, channel, !!c);
+    = FORMAT_CHANNEL_REQUEST(self, channel, &c);
 
   if (c)
     object_queue_add_tail(&channel->pending_requests, &c->super);
