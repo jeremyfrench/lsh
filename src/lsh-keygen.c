@@ -86,7 +86,7 @@ make_lsh_keygen_options(void)
   NEW(lsh_keygen_options, self);
   self->server = 0;
   self->level = -1;
-  self->algorithm = 'd';
+  self->algorithm = 'r';
   return self;
 }
 
@@ -95,7 +95,7 @@ main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { "algorithm", 'a', "Algorithm", 0, "DSA or RSA. "
-    "Default is to generate DSA keys", 0 },
+    "Default is to generate RSA keys", 0 },
   { "server", OPT_SERVER, NULL, 0, "Use the server's seed-file", 0 },
   { "nist-level", 'l', "Security level", 0, "For DSA keys, this is the "
     "NIST security level: Level 0 uses 512-bit primes, level 8 uses "
