@@ -8,6 +8,8 @@
 
 #include "abstract_io.h"
 
+#warning packet_dispatch.h is obsolete
+
 struct dispatch_assoc
 {
   int msg;
