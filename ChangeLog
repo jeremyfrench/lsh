@@ -1,5 +1,22 @@
 2002-04-03  Pontus Sköld  <pont@soua.net>
 
+	* src/format.c (lsh_string_bubblebabble_c): New function to define
+	the che bubble babble checksum series, used by
+	lsh_string_bubblebabble.
+
+	* src/lsh.c (do_lsh_lookup): Rearranged the unauthenticated key
+	fingerprint display somewhat and added bubble babble SHA1 of
+	keyblob (which seems to be what OpenSSH is using at least).
+
+	* src/format.c (lsh_string_bubblebabble): New function to
+	bubblebabble a string.
+
+	* src/format.h (lsh_string_bubblebabble): New function to
+	bubblebabble a string.
+
+	* src/testsuite/string-test.c (test_main): Added checks for
+	lsh_string_bubblebabble.
+
 	* src/lsh.c (do_lsh_lookup): Output the fingerprint of the remote
 	host according to draft-ietf-secsh-fingerprint-00.txt (and keep
 	the old way of outputing).
