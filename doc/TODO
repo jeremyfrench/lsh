@@ -28,7 +28,8 @@ KEYS
 Code is needed to generate, store and read dss keys. Preferably in a
 SPKI/s-expression form.
 
-Check SPKI:s definitions of DSS keys, and make sure we are compatible.
+Fix compliance with the (next) SPKI draft. In particular, the order of
+fields and the encoding of numbers needs updating.
 
 
 S-EXPRESSIONS
@@ -171,9 +172,6 @@ Fix shadow passwd support.
 
 Make it cleaner wrt. more gcc warnings.
 
-Don't use stdio for werror and similar functions. The non-blocking
-stderr sometime causes the C library to lose data.
-
 Handling of user authentication failures seems broken.
 
 Fix desTest.c to use proper declarations of its function pointers, and
@@ -192,5 +190,9 @@ connect() failed; poll() indicates that both reading and writing is
 possible, but write failes (with EPIPE/SIGPIPE) later. Perhaps a
 linux-problem?
 
-Key expansion in keyexchenge.c is broken (uses a KILL()ed hash
-instance).
+Extract handling of hex and base 64 encodings into a separate file.
+
+Include length fields when hashing in
+publickey_crypto.c:init_diffie_hellman_instance(). Perhaps some of
+this code should be moved to keyexchange.c? Similar considerations
+apply also to other hashes.
