@@ -1,3 +1,8 @@
+Wed Oct 13 22:40:49 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/argp/argp-comp.h: Added ugly hack for fwrite_unlocked and
+	fputs_unlocked. 
+
 1999-10-13  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/scm/Makefile.am.in (EXTRA_DIST): Added Makefile.am.in.
