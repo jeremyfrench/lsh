@@ -3,6 +3,6 @@
 noinst_LIBRARIES = librsync.a
 noinst_HEADERS = rsync.h
 
-librsync_a_SOURCES = generate.c receive.c
+librsync_a_SOURCES = generate.c receive.c checksum.c
 
 
