@@ -129,7 +129,7 @@ LDADD = liblsh.a symmetric/libsymmetric.a
 # symmetric:
 # 	  (cd lib && $(MAKE) libsymmetric.a)
 
-EXTRA_DIST = lsh-authorize \
+EXTRA_DIST = lsh-authorize ssh-conv \
 	atoms.in process_atoms \
 	invert-defs \
 	$(generated_sources) \
