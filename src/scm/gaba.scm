@@ -542,7 +542,8 @@
   ;; (werror "foo\n")
   (let ((name (get 'name attributes cadr))
 	(globals (or (get 'globals attributes cdr) '()))
-	(params (preprocess-vars #f (get 'params attributes cdr)))
+	(params (preprocess-vars #f
+				 (or (get 'params attributes cdr) '())))
 	(expr (get 'expr attributes cadr)))
     (werror "Processing expression ~S\n" name)
     (let ((translated (translate expr)))
