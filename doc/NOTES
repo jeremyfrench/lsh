@@ -91,6 +91,51 @@ the server). In this case, the client should be considered not to send
 EOF until it detects EOF on stdin.
 
 
+PARSING USING STRUCT SIMPLE_BUFFER
+
+I view the simple_buffer objects as bookkeeping objects only. They
+don't own any storage. They are *always* allocated on the stack, and
+are therefore short-lived and not garbage collected.
+
+The idea is that you initialize a simple_buffer to parse some data, and do
+all the parsing more or less immediately. When parsing is done, forget
+the buffer object, and free the underlying data if appropriate.
+
+In most cases, parsing looks like
+
+  simple_buffer_init(&buffer, packet->length, packet->data);
+  if (parse_*(&buffer, ...) && parse_*(&buffer, ...))
+  {
+    lsh_string_free(packet);
+
+    /* No more uses of buffer, and no more calls to parse_* */
+
+    return...
+  }
+  lsh_string_free(packet);
+  return LSH_FAIL;
+
+This usage pattern should be safe.
+
+The do_channel_request() function is an exception, in that it
+delegates some of the parsing to another method. It must therefore
+keep the packet data around until that method has returned.
+Conversely, the called method, CHANNEL_REQUEST, must assume that the
+data associated with its buffer argument will disappear as soon as the
+method returns; any data that is needed later must be copied.
+
+The do_alloc_pty function in server.c observes this; it doesn't use a
+copying method when extracting the mode string, *but* the string is
+used only in the call to tty_decode_term_mode. If the method needed to
+remember the string for later use, it would have to use
+parse_string_copy instead.
+
+In some cases some data from the buffer is needed later, and in those
+cases, it should be copied out of the buffer using parse_string_copy.
+But most parsing extracts integers from the buffer, in various ways,
+and do not need to do any extra copying.
+
+
 PTY REFERENCES (from Keresztg)
 
 the code of tnlited
