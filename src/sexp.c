@@ -742,10 +742,10 @@ int sexp_eq(struct sexp *e, UINT32 length, const UINT8 *name)
 /* Assumes that both expressions are atoms */
 int sexp_atom_eq(struct sexp *a, struct sexp *b)
 {
-  struct lsh_string ac = sexp_contents(a);
-  struct lsh_string ad = sexp_display(a);
-  struct lsh_string bc = sexp_contents(a);
-  struct lsh_string bd = sexp_display(a);
+  struct lsh_string *ac = sexp_contents(a);
+  struct lsh_string *ad = sexp_display(a);
+  struct lsh_string *bc = sexp_contents(b);
+  struct lsh_string *bd = sexp_display(b);
 
   return lsh_string_eq(ac, bc)
     && (ad ? (bd && lsh_string_eq(ad, bd))
