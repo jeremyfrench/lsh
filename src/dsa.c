@@ -422,7 +422,8 @@ do_dsa_verify(struct verifier *c, int algorithm,
 
 	break;
       }
-      
+
+#if DATAFELLOWS_WORKAROUNDS
     case ATOM_SSH_DSS_KLUDGE_LOCAL:
       {
 	UINT32 buf_length;
@@ -435,10 +436,11 @@ do_dsa_verify(struct verifier *c, int algorithm,
 
 	buf_length = signature_length / 2;
 
-	bignum_parse_u(s, buf_length, signature_data + buf_length);
+	bignum_parse_u(r, buf_length, signature_data);
 	bignum_parse_u(s, buf_length, signature_data + buf_length);
 	break;
       }
+#endif
     case ATOM_SPKI:
       {
 	struct simple_buffer buffer;
