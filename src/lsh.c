@@ -898,26 +898,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     CASE_FLAG(OPT_SRP, with_srp_keyexchange);
 
     CASE_FLAG(OPT_USERAUTH, with_userauth);
-
-#if 0
-    case 'L':
-      {
-	UINT32 listen_port;
-	struct address_info *target;
-
-	if (!client_parse_forward_arg(arg, &listen_port, &target))
-	  argp_error(state, "Invalid forward specification '%s'.", arg);
-
-	client_add_action(&self->super, make_forward_local_port
-			  (self->super.backend,
-			   make_address_info((self->super.with_remote_peers
-					      ? NULL
-					      : ssh_format("%lz", "127.0.0.1")),
-					     listen_port),
-			   target));
-	break;
-      }      
-#endif
       
     case 'R':
       {
