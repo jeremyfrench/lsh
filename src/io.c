@@ -1182,6 +1182,22 @@ io_listen(struct io_backend *b,
   return fd;
 }
 
+
+#if 0
+/* AF_LOCAL sockets */
+
+struct lsh_fd *
+io_listen_local(struct io_backend *b,
+		struct lsh_string *directory,
+		struct lsh_string *name,
+		struct io_callback *callback,
+		struct exception_handler *e)
+{
+  char *old_cd = NULL;
+  mode_t old_umask = umask(); HERE!!!
+}
+#endif
+
 /* Constructors */
 
 struct lsh_fd *
