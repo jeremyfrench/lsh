@@ -156,7 +156,7 @@ struct resource *make_process_resource(pid_t pid, int signal)
      (super ssh_channel)
      (vars
        ; User information
-       (user object unix_user)
+       (user object user)
 
        ; Non-zero if a shell or command has been started. 
        ;; (running simple int)
@@ -240,9 +240,10 @@ do_close(struct ssh_channel *c)
     KILL_RESOURCE(session->process);
 }
 
-struct ssh_channel *make_server_session(struct unix_user *user,
-					UINT32 max_window,
-					struct alist *request_types)
+struct ssh_channel *
+make_server_session(struct user *user,
+		    UINT32 max_window,
+		    struct alist *request_types)
 {
   NEW(server_session, self);
 
@@ -277,7 +278,7 @@ struct ssh_channel *make_server_session(struct unix_user *user,
      (name open_session)
      (super channel_open)
      (vars
-       (user object unix_user)
+       (user object user)
        (session_requests object alist)))
 */
 
@@ -291,15 +292,15 @@ do_open_session(struct channel_open *s,
 		struct command_continuation *c,
 		struct exception_handler *e)
 {
-  CAST(open_session, closure, s);
+  CAST(open_session, self, s);
 
   debug("server.c: do_open_session()\n");
 
   if (parse_eod(args))
     {
       COMMAND_RETURN(c,
-		     make_server_session(closure->user,
-					 WINDOW_SIZE, closure->session_requests));
+		     make_server_session(self->user,
+					 WINDOW_SIZE, self->session_requests));
     }
   else
     {
@@ -307,8 +308,9 @@ do_open_session(struct channel_open *s,
     }
 }
 
-struct channel_open *make_open_session(struct unix_user *user,
-				       struct alist *session_requests)
+struct channel_open *
+make_open_session(struct user *user,
+		  struct alist *session_requests)
 {
   NEW(open_session, closure);
 
@@ -340,9 +342,10 @@ do_login(struct command *s,
 	 struct exception_handler *e UNUSED)
 {
   CAST(server_connection_service, closure, s);
-  CAST(unix_user, user, x);
+  CAST_SUBTYPE(user, user, x);
   
-  werror("User %pS authenticated for ssh-connection service.\n");
+  werror("User %pS authenticated for ssh-connection service.\n",
+	 user->name);
 
   /* FIXME: It would be better to take one more alists as arguments,
    * and cons the ATOM_SESSION service at the head of it. But that
@@ -451,7 +454,8 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
     }
 }
 
-static struct exit_callback *make_exit_shell(struct server_session *session)
+static struct exit_callback *
+make_exit_shell(struct server_session *session)
 {
   NEW(exit_shell, self);
 
@@ -503,16 +507,6 @@ static int make_pipe(int *fds)
     }
   
   return 1;
-}
-
-static char *make_env_pair(const char *name, struct lsh_string *value)
-{
-  return ssh_format("%lz=%lS%c", name, value, 0)->data;
-}
-
-static char *make_env_pair_c(const char *name, char *value)
-{
-  return ssh_format("%lz=%lz%c", name, value, 0)->data;
 }
 
 static int make_pipes(int *in, int *out, int *err)
@@ -620,6 +614,239 @@ static int make_pty(struct pty_info *pty UNUSED,
 static struct exception shell_request_failed =
 STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Shell request failed");
 
+static void
+do_spawn_shell(struct channel_request *c,
+	       struct ssh_channel *channel,
+	       struct ssh_connection *connection UNUSED,
+	       UINT32 type UNUSED,
+	       int want_reply UNUSED,
+	       struct simple_buffer *args,
+	       struct command_continuation *s,
+	       struct exception_handler *e)
+{
+  CAST(shell_request, closure, c);
+  struct server_session *session = (struct server_session *) channel;
+
+  int in[2];
+  int out[2];
+  int err[2];
+
+  int using_pty = 0;
+  
+  CHECK_TYPE(server_session, session);
+
+  if (!parse_eod(args))
+    {
+      PROTOCOL_ERROR(e, "Invalid shell CHANNEL_REQUEST message.");
+      return;
+    }
+    
+  if (session->process)
+    /* Already spawned a shell or command */
+    goto fail;
+  
+  /* {in|out|err}[0] is for reading,
+   * {in|out|err}[1] for writing. */
+
+  if (make_pty(session->pty, in, out, err))
+    using_pty = 1;
+
+  else if (!make_pipes(in, out, err))
+    goto fail;
+  {
+    pid_t child;
+
+    if (USER_FORK(session->user, &child))
+      {
+	if (child)
+	  { /* Parent */
+	    debug("Parent process\n");
+	    REAP(closure->reap, child, make_exit_shell(session));
+	  
+	    /* Close the child's fd:s */
+	    close(in[0]);
+	    close(out[1]);
+	    close(err[1]);
+
+	    {
+	      /* Exception handlers */
+	      struct exception_handler *io_exception_handler
+		= make_channel_io_exception_handler(channel,
+						    "lshd: Child stdio: ",
+						    &default_exception_handler,
+						    HANDLER_CONTEXT);
+
+	      /* Close callback for stderr and stdout */
+	      struct close_callback *read_close_callback
+		= make_channel_read_close_callback(channel);
+
+	      session->in
+		= io_write(make_lsh_fd(closure->backend, in[1],
+				       io_exception_handler),
+			   SSH_MAX_PACKET, NULL);
+	  
+	      /* Flow control */
+	      session->in->write_buffer->report = &session->super.super;
+
+	      /* FIXME: Should we really use the same exception handler,
+	       * which will close the channel on read errors, or is it
+	       * better to just send EOF on read errors? */
+	      session->out
+		= io_read(make_lsh_fd(closure->backend, out[0], io_exception_handler),
+			  make_channel_read_data(channel),
+			  read_close_callback);
+	      session->err 
+		= ( (err[0] != -1)
+		    ? io_read(make_lsh_fd(closure->backend, err[0], io_exception_handler),
+			      make_channel_read_stderr(channel),
+			      read_close_callback)
+		    : NULL);
+	    }
+	
+	    channel->receive = do_receive;
+	    channel->send = do_send;
+	    channel->eof = do_eof;
+	  
+	    session->process
+	      = make_process_resource(child, SIGHUP);
+
+	    /* Make sure that the process and it's stdio is
+	     * cleaned up if the channel or connection dies. */
+	    REMEMBER_RESOURCE
+	      (channel->resources, session->process);
+	    /* FIXME: How to do this properly if in and out may use the
+	     * same fd? */
+	    REMEMBER_RESOURCE
+	      (channel->resources, &session->in->super);
+	    REMEMBER_RESOURCE
+	      (channel->resources, &session->out->super);
+	    if (session->err)
+	      REMEMBER_RESOURCE
+		(channel->resources, &session->err->super);
+
+	    /* NOTE: The return value is not used. */
+	    COMMAND_RETURN(s, channel);
+
+	    channel_start_receive(channel);
+	    return;
+	  }
+	else
+	  { /* Child */
+#define MAX_ENV 1
+	    /* No args, end the USER_EXEC method fills in argv[0]. */
+	    char *argv[] = { NULL, NULL };
+	    
+	    struct env_value env[MAX_ENV];
+	    int env_length = 0;
+
+	    debug("do_spawn_shell: Child process\n");
+	    assert(getuid() == session->user->uid);
+	    
+	    if (!USER_CHDIR_HOME(session->user))
+	      {
+		werror("Could not change to home (or root) directory!\n");
+		_exit(EXIT_FAILURE);
+	      }
+	    
+	    if (session->term)
+	      {
+		env[env_length].name ="TERM";
+		env[env_length].value = session->term;
+		env_length++;
+	      }
+	    assert(env_length <= MAX_ENV);
+#undef MAX_ENV
+
+	    /* We do this before closing fd:s, because the sysv version
+	     * of tty_setctty depends on the master pty fd still open.
+	     * It would be cleaner if we could pass the slave fd only
+	     * (i.e. STDIN_FILENO) to tty_setctty(). */
+#if WITH_PTY_SUPPORT
+	    if (using_pty)
+	      {
+		debug("lshd: server.c: Setting controlling tty...\n");
+		if (!tty_setctty(session->pty))
+		  {
+		    debug("lshd: server.c: "
+			  "Setting controlling tty... Failed!\n");
+		    werror("lshd: Can't set controlling tty for child!\n");
+		    _exit(EXIT_FAILURE);
+		  }
+		else
+		  debug("lshd: server.c: Setting controlling tty... Ok.\n");
+	      }
+#endif /* WITH_PTY_SUPPORT */
+	  
+	    /* Close all descriptors but those used for
+	     * communicationg with parent. We rely on the
+	     * close-on-exec flag for all fd:s handled by the
+	     * backend. */
+	    
+	    if (dup2(in[0], STDIN_FILENO) < 0)
+	      {
+		werror("Can't dup stdin!\n");
+		_exit(EXIT_FAILURE);
+	      }
+	    close(in[0]);
+	    close(in[1]);
+	    
+	    if (dup2(out[1], STDOUT_FILENO) < 0)
+	      {
+		werror("Can't dup stdout!\n");
+		_exit(EXIT_FAILURE);
+	      }
+	    close(out[0]);
+	    close(out[1]);
+
+	    if (!dup_error_stream())
+	      {
+		werror("server_session: Failed to dup old stderr. Bye.\n");
+		set_error_ignore();
+	      }
+
+	    if (dup2(err[1], STDERR_FILENO) < 0)
+	      {
+		werror("Can't dup stderr!\n");
+		_exit(EXIT_FAILURE);
+	      }
+	    close(err[0]);
+	    close(err[1]);
+
+#if 1
+	    USER_EXEC(session->user, 1, argv, env_length, env);
+
+	    /* exec failed! */
+	    verbose("server_session: exec() failed (errno = %i): %z\n",
+		    errno, STRERROR(errno));
+	    _exit(EXIT_FAILURE);
+
+#else
+# define GREETING "Hello world!\n"
+	    if (write(STDOUT_FILENO, GREETING, strlen(GREETING)) < 0)
+	      _exit(errno);
+	    kill(getuid(), SIGSTOP);
+	    if (write(STDOUT_FILENO, shell, strlen(shell)) < 0)
+	      _exit(125);
+	    _exit(126);
+# undef GREETING
+#endif
+	  }
+      }
+    /* fork() failed */
+    /* Close and return channel_failure */
+
+    close(err[0]);
+    close(err[1]);
+    close(out[0]);
+    close(out[1]);
+    close(in[0]);
+    close(in[1]);
+  }
+ fail:
+  EXCEPTION_RAISE(e, &shell_request_failed);
+}
+
+#if 0
 static void
 do_spawn_shell(struct channel_request *c,
 	       struct ssh_channel *channel,
@@ -920,9 +1147,11 @@ do_spawn_shell(struct channel_request *c,
  fail:
   EXCEPTION_RAISE(e, &shell_request_failed);
 }
+#endif
 
-struct channel_request *make_shell_handler(struct io_backend *backend,
-					   struct reap *reap)
+struct channel_request *
+make_shell_handler(struct io_backend *backend,
+		   struct reap *reap)
 {
   NEW(shell_request, closure);
 
@@ -983,7 +1212,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
 	      if (!term->length)
 		{
 		  lsh_string_free(term);
-		  term = 0;
+		  term = NULL;
 		}
 	      
               session->term = term;
