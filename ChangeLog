@@ -1,5 +1,14 @@
 2004-10-05  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/Makefile.am (GPERF_FLAGS): Added -k21, to distinguish
+	diffie-hellman-group1-sha1 and diffie-hellman-group2-sha1.
+
+	* src/lsh.c (main_argp_parser): Support "diffie-hellman-group2-sha1".
+	* src/lshd.c (main_argp_parser): Likewise.
+
+	* src/atoms.in (diffie-hellman-group2-sha1): New name, for now an
+	alias to diffie-hellman-group14-sha1.
+
 	* src/testsuite/inetd-test: Start lshd with --daemon --no-syslog.
 	Note that this test is not yet enabled, and inetd mode not working.
 
