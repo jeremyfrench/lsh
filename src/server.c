@@ -121,6 +121,8 @@
        (block_size simple UINT32)
        (id_comment simple "const char *")
 
+       (fallback object ssh1_fallback)
+       
        (random object randomness)
        (init object make_kexinit)
        (kexinit_handler object packet_handler)))
@@ -140,7 +142,9 @@ static int server_initiate(struct fd_callback **c,
 
   connection_init_io(connection,
 		     io_read_write(closure->backend, fd,
-				   make_server_read_line(connection),
+				   make_server_read_line(connection,
+							 fd,
+							 closure->fallback),
 				   closure->block_size,
 				   make_server_close_handler(connection)),
 		     closure->random);
@@ -152,10 +156,14 @@ static int server_initiate(struct fd_callback **c,
 		 SOFTWARE_SERVER_VERSION,
 		 closure->id_comment);
 #ifdef SSH1_FALLBACK
-  /* "In this mode the server SHOULD NOT send carriage return character (ascii
-   * 13) after the version identification string." */
-  res = A_WRITE(connection->raw,
-		 ssh_format("%lS\n", connection->server_version));
+  /* In this mode the server SHOULD NOT send carriage return character (ascii
+   * 13) after the version identification string.
+   *
+   * Furthermore, it should not send any data after the identification string,
+   * until the client's identification string is received. */
+  if (closure->fallback)
+    return A_WRITE(connection->raw,
+		   ssh_format("%lS\n", connection->server_version));
 #else
   res = A_WRITE(connection->raw,
 		 ssh_format("%lS\r\n", connection->server_version));
@@ -168,17 +176,22 @@ static int server_initiate(struct fd_callback **c,
 				    NULL);
 }
 
+
 /* CLASS:
    (class
      (name server_line_handler)
      (super line_handler)
      (vars
-       (connection object ssh_connection)))
+       (connection object ssh_connection)
+       ;; Needed for fallback.
+       (fd . int)
+       (fallback object ssh1_fallback)))
 */
 
-static struct read_handler *do_line(struct line_handler **h,
-				    UINT32 length,
-				    UINT8 *line)
+static int do_line(struct line_handler **h,
+	       struct read_handler **r,
+	       UINT32 length,
+	       UINT8 *line)
 {
   CAST(server_line_handler, closure, *h);
   
@@ -191,7 +204,27 @@ static struct read_handler *do_line(struct line_handler **h,
 #endif
 	   )
 	{
-	  struct read_handler *new = 
+	  struct read_handler *new;	  
+#if SSH1_FALLBACK
+	  if (closure->fallback)
+	    {
+	      /* Sending keyexchange packet was delayed. Do it now */
+	      int res
+		= initiate_keyexchange(closure->connection, CONNECTION_SERVER,
+				       connection
+				       ->literal_kexinits[CONNECTION_SERVER],
+				       NULL);
+	      if (LSH_CLOSEDP(res))
+		{
+		  werror("server.c: do_line: "
+			 "Delayed initiate_keyexchange() failed.\n");
+		  *h = NULL;
+		  
+		  return res | LSH_DIE;
+		}
+	    }
+#endif /* SSH1_FALLBACK */
+	  new = 
 	    make_read_packet(
 	      make_packet_unpad(
 	        make_packet_inflate(
@@ -201,7 +234,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	      ),
 	      closure->connection
 	    );
-	  
+
 	  closure->connection->client_version
 	    = ssh_format("%ls", length, line);
 
@@ -213,17 +246,21 @@ static struct read_handler *do_line(struct line_handler **h,
 	  /* FIXME: Cleanup properly. */
 	  KILL(closure);
 
-	  return new;
+	  *r = new;
+	  return LSH_OK | LSH_GOON;
 	}
-      else 
 #ifdef SSH1_FALLBACK      
-        if ( ((length >= 6) && !memcmp(line + 4, "1.", 2)) )
+      else if (closure->fallback
+	       && (length >= 6)
+	       && !memcmp(line + 4, "1.", 2))
 	{
-	  /* TODO: fork a SSH1 server to handle this connection */
-	  werror("Falling back to ssh1 not implemented.\n");
-        }
-      else
+	  *h = NULL;
+	  return SSH1_FALLBACK(closure->fallback,
+			       closure->fd
+			       line, length);
+	}
 #endif /* SSH1_FALLBACK */
+      else
 	{
 	  wwrite("Unsupported protocol version: ");
 	  werror_safe(length, line);
@@ -231,9 +268,9 @@ static struct read_handler *do_line(struct line_handler **h,
 
 	  /* FIXME: Clean up properly */
 	  KILL(closure);
-	  *h = 0;
-		  
-	  return 0;
+	  *h = NULL;
+	  
+	  return LSH_FAIL | LSH_DIE;
 	}
     }
   else
@@ -242,16 +279,20 @@ static struct read_handler *do_line(struct line_handler **h,
       werror_safe(length, line);
 
       /* Read next line */
-      return 0;
+      return LSH_OK | LSH_GOON;
     }
 }
 
-struct read_handler *make_server_read_line(struct ssh_connection *c)
+struct read_handler *make_server_read_line(struct ssh_connection *c,
+					   int fd,
+					   struct ssh1_fallback *fallback)
 {
   NEW(server_line_handler, closure);
 
   closure->super.handler = do_line;
   closure->connection = c;
+  closure->fd = fd;
+  closure->fallback = fallback;
   
   return make_read_line(&closure->super);
 }
@@ -259,6 +300,8 @@ struct read_handler *make_server_read_line(struct ssh_connection *c)
 struct fd_callback *
 make_server_callback(struct io_backend *b,
 		     const char *comment,
+		     /* NULL if no falling back should be attempted. */
+		     struct ssh1_fallback *fallback,
 		     UINT32 block_size,
 		     struct randomness *random,
 		     struct make_kexinit *init,
@@ -270,7 +313,8 @@ make_server_callback(struct io_backend *b,
   connected->backend = b;
   connected->block_size = block_size;
   connected->id_comment = comment;
-
+  connected->fallback = fallback;
+  
   connected->random = random;  
   connected->init = init;
   connected->kexinit_handler = kexinit_handler;
