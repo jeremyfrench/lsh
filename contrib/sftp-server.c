@@ -1,5 +1,6 @@
-/*
- * Copyright (c) 2000 Markus Friedl.  All rights reserved.
+/* -*- mode: c; c-style: bsd; c-basic-offset: 8 -*-
+ *
+ * Copyright (c) 2000 Markus Friedl, Niels Möller.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -21,6 +22,10 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#include <errno.h>
+
+#ifdef OPENSSH
 #include "includes.h"
 RCSID("$OpenBSD: sftp-server.c,v 1.10 2001/01/10 22:56:22 markus Exp $");
 
@@ -30,17 +35,177 @@ RCSID("$OpenBSD: sftp-server.c,v 1.10 2001/01/10 22:56:22 markus Exp $");
 #include "getput.h"
 #include "xmalloc.h"
 
-#include "sftp.h"
+#define INPUT_BUFFER Buffer *
+#define OUTPUT_BUFFER Buffer *
 
 /* helper */
+#define GET_UINT32(b, v) (*(v) = buffer_get_int((b)))
+#define GET_UINT64(b, v) (*(v) = buffer_get_int64((b)))
+#define GET_STRING(b, l, d) (*(d) = buffer_get_string((b), (l)))
+
+#define FREE xfree
+
+#if 0
 #define get_int64()			buffer_get_int64(&iqueue);
 #define get_int()			buffer_get_int(&iqueue);
 #define get_string(lenp)		buffer_get_string(&iqueue, lenp);
+#endif
 #define TRACE				debug
 
+#else /* !OPENSSH */
+
+#include <stdio.h>
+
+struct file_input {
+	FILE * f;
+	uint32_t left;
+};
+
+#define INPUT_BUFFER struct file_input *
+#define OUTPUT_BUFFER FILE *
+
+/* FIXME: Ought to use autoconf */
+#define u_int64_t unsigned long long
+#define u_int32_t unsigned
+#define u_int8_t unsigned char
+
+/* Copied from lsh_types.h */
+/* Reads a 32-bit integer, in network byte order */
+#define READ_UINT32(p)				\
+((((u_int32_t) (p)[0]) << 24)			\
+ | (((u_int32_t) (p)[1]) << 16)			\
+ | (((u_int32_t) (p)[2]) << 8)			\
+ | ((u_int32_t) (p)[3]))
+
+#define WRITE_UINT32(p, i)			\
+do {						\
+  (p)[0] = ((i) >> 24) & 0xff;			\
+  (p)[1] = ((i) >> 16) & 0xff;			\
+  (p)[2] = ((i) >> 8) & 0xff;			\
+  (p)[3] = (i) & 0xff;				\
+} while(0)
+
+#define READ_UINT64(p)				\
+(  (((u_int64_t) (p)[0]) << 56)
+ | (((u_int64_t) (p)[1]) << 48)			\
+ | (((u_int64_t) (p)[2]) << 40)			\
+ | (((u_int64_t) (p)[3]) << 32)			\
+ | (((u_int64_t) (p)[4]) << 24)			\
+ | (((u_int64_t) (p)[5]) << 16)			\
+ | (((u_int64_t) (p)[6]) << 8)			\
+ |  ((u_int64_t) (p)[7]))
+
+#define WRITE_UINT64(p, i)			\
+do {						\
+  (p)[0] = ((i) >> 56) & 0xff;			\
+  (p)[1] = ((i) >> 48) & 0xff;			\
+  (p)[2] = ((i) >> 40) & 0xff;			\
+  (p)[3] = ((i) >> 32) & 0xff;			\
+  (p)[4] = ((i) >> 24) & 0xff;			\
+  (p)[5] = ((i) >> 16) & 0xff;			\
+  (p)[6] = ((i) >> 8) & 0xff;			\
+  (p)[7] =  (i) & 0xff;				\
+} while(0)
+
+static int check_left(struct file_input *i, u_int32_t len)
+{
+	if (i->left < len)
+		return 0;
+
+	i->left -= len;
+	return 1;
+}
+
+define READ_DATA(buf)					\
+do {							\
+	if (!check_left(i, sizeof(buf)))		\
+		return 0;				\
+							\
+	if (fread(buf, 1, sizeof(buf), i->f) != 4)	\
+		return 0;				\
+} while(0)
+	
+static int GET_UINT32(struct file_input *i, u_int32_t *result)
+{
+	u_int8_t buf[4];
+
+	READ_DATA(buf);
+
+	*result = READ_UINT32(buf);
+	return 1;
+}
+
+static int GET_UINT64(struct file_input *i, u_int64_t *result)
+{
+	u_int8_t buf[8];
+
+	READ_DATA(buf);
+
+	*result = READ_UINT64(buf);
+	return 1;
+}
+
+static int GET_STRING(struct file_input *i, u_int32_t *length,
+		      u_int8_t **data)
+{
+	if (!GET_UINT32(i, length))
+		return 0;
+
+	if (!check_left(i, length))
+		return 0;
+
+	*data = malloc(length);
+	if (!*data)
+		return 0;
+
+	if (fread(*data, 1, length, i) != length)
+	{
+		free(*data);
+		return 0;
+	}
+	return 1;
+}
+
+#define FREE free
+
+#define WRITE_DATA(buf) \
+(fwrite(buf, 1, sizeof(buf), o) == sizeof(buf))
+	
+static int PUT_UINT32(FILE *o, u_int32_t value)
+{
+	u_int8_t buf[4];
+	WRITE_UINT32(buf, value);
+
+	return WRITE_DATA(buf);
+}
+
+static int PUT_UINT64(FILE *o, u_int64_t value)
+{
+	u_int8_t buf[8];
+	WRITE_UINT64(buf, value);
+
+	return WRITE_DATA(buf);
+}
+
+static int PUT_STRING(FILE *o, u_int32_t length, u_int8_t *data)
+{
+	return PUT_UINT32(o, length)
+		&& (fwrite(data, 1, length, o) == length);
+}
+	
+/* GCC extension */
+#define TRACE(format, ... args) fprintf(stderr, format, ## args)
+
+
+#endif /* !OPENSSH */
+
+#include "sftp.h"
+
+#if 0
 /* input and output queue */
 Buffer iqueue;
 Buffer oqueue;
+#endif
 
 /* portable attibutes, etc. */
 
@@ -99,13 +264,21 @@ int
 flags_from_portable(int pflags)
 {
 	int flags = 0;
-	if (pflags & SSH2_FXF_READ &&
-	    pflags & SSH2_FXF_WRITE) {
-		flags = O_RDWR;
-	} else if (pflags & SSH2_FXF_READ) {
+	switch (pflags && (SSH2_FXF_READ & SSH2_FXF_WRITE))
+	{
+	case SSH2_FXF_READ:
 		flags = O_RDONLY;
-	} else if (pflags & SSH2_FXF_WRITE) {
+		break;
+	case SSH2_FXF_WRITE:
 		flags = O_WRONLY;
+		break;
+	case SSH_FXP_READ | SSH_FXP_WRITE:
+		flags = O_RDWR;
+		break;
+	default:
+		/* FIXME: Can't do this on unix. We have to report an
+		 * error somehow */
+		abort();
 	}
 	if (pflags & SSH2_FXF_CREAT)
 		flags |= O_CREAT;
@@ -128,101 +301,132 @@ attrib_clear(Attrib *a)
 	a->mtime = 0;
 }
 
-Attrib *
-decode_attrib(Buffer *b)
+/* FIXME: Should perhaps be renamed to get_attrib */
+int
+decode_attrib(INPUT_BUFFER b, Attrib *a)
 {
-	static Attrib a;
-	attrib_clear(&a);
-	a.flags = buffer_get_int(b);
-	if (a.flags & SSH2_FILEXFER_ATTR_SIZE) {
-		a.size = buffer_get_int64(b);
-	}
-	if (a.flags & SSH2_FILEXFER_ATTR_UIDGID) {
-		a.uid = buffer_get_int(b);
-		a.gid = buffer_get_int(b);
-	}
-	if (a.flags & SSH2_FILEXFER_ATTR_PERMISSIONS) {
-		a.perm = buffer_get_int(b);
-	}
-	if (a.flags & SSH2_FILEXFER_ATTR_ACMODTIME) {
-		a.atime = buffer_get_int(b);
-		a.mtime = buffer_get_int(b);
-	}
+	attrib_clear(a);
+	if (!GET_UINT32(b, &a->flags))
+		return 0;
+	
+	if ((a->flags & SSH2_FILEXFER_ATTR_SIZE)
+	    && !GET_UINT64(b, &a->size))
+		return 0;
+
+	if ((a->flags & SSH2_FILEXFER_ATTR_UIDGID)
+	    && !(GET_UINT32(b, &a->uid)
+		 && GET_UINT32(b, &a->gid)))
+		return 0;
+
+	if ((a->flags & SSH2_FILEXFER_ATTR_PERMISSIONS)
+	    && !GET_UINT32(b, &a->perm))
+		return 0;
+	
+	if ((a->flags & SSH2_FILEXFER_ATTR_ACMODTIME)
+	    && !(GET_UINT32(b, &a->atime)
+		 && GET_UINT32(b, &a->mtime)))
+		return 0;
+
 	/* vendor-specific extensions */
-	if (a.flags & SSH2_FILEXFER_ATTR_EXTENDED) {
-		char *type, *data;
-		int i, count;
-		count = buffer_get_int(b);
-		for (i = 0; i < count; i++) {
-			type = buffer_get_string(b, NULL);
-			data = buffer_get_string(b, NULL);
-			xfree(type);
-			xfree(data);
+	if (a->flags & SSH2_FILEXFER_ATTR_EXTENDED)
+	{
+		/* Ignore all extensions */
+		u_int32_t count;
+		u_int32_t i;
+		u_int32_t type_length;
+		u_int8_t *type;
+		u_int32_t data_length;
+		u_int8_t *data;
+
+		if (!GET_UINT32(b, &count))
+			return 0;
+		
+		for (i = 0; i < count; i++)
+		{
+			if (!GET_STRING(b, &type_length, &type))
+				return 0;
+			FREE(type);
+			
+			if (!GET_STRING(b, &data_length, &data))
+				return 0;
+
+			FREE(data);
 		}
 	}
-	return &a;
+	return 1;
 }
 
 void
-encode_attrib(Buffer *b, Attrib *a)
+encode_attrib(OUPUT_BUFFER b, Attrib *a)
 {
-	buffer_put_int(b, a->flags);
-	if (a->flags & SSH2_FILEXFER_ATTR_SIZE) {
-		buffer_put_int64(b, a->size);
-	}
-	if (a->flags & SSH2_FILEXFER_ATTR_UIDGID) {
-		buffer_put_int(b, a->uid);
-		buffer_put_int(b, a->gid);
-	}
-	if (a->flags & SSH2_FILEXFER_ATTR_PERMISSIONS) {
-		buffer_put_int(b, a->perm);
-	}
-	if (a->flags & SSH2_FILEXFER_ATTR_ACMODTIME) {
-		buffer_put_int(b, a->atime);
-		buffer_put_int(b, a->mtime);
-	}
+	if (!PUT_UINT32(b, a->flags))
+		return 0;
+
+	if ((a->flags & SSH2_FILEXFER_ATTR_SIZE)
+	    && !PUT_UINT64(b, a->size))
+		return 0;
+
+	if ((a->flags & SSH2_FILEXFER_ATTR_SIZE)
+	    && !(PUT_UINT32(b, a->uid)
+		 && PUT_UINT32(b, a->gid)))
+		return 0;
+
+	if ((a->flags & SSH2_FILEXFER_ATTR_PERMISSIONS)
+	    && !PUT_UINT32(b, a->perm))
+		return 0;
+
+	/* FIXME: Use a better representation of times. */
+	if ((a->flags & SSH2_FILEXFER_ATTR_ACMODTIME)
+	    && !(PUT_UINT32(b, a->atime)
+		 && PUT_UINT32(b, a->mtime)))
+		return 0;
+
+	return 1;
 }
 
-Attrib *
-stat_to_attrib(struct stat *st)
+void
+stat_to_attrib(struct stat *st, Attrib *a)
 {
-	static Attrib a;
-	attrib_clear(&a);
-	a.flags = 0;
-	a.flags |= SSH2_FILEXFER_ATTR_SIZE;
-	a.size = st->st_size;
-	a.flags |= SSH2_FILEXFER_ATTR_UIDGID;
-	a.uid = st->st_uid;
-	a.gid = st->st_gid;
-	a.flags |= SSH2_FILEXFER_ATTR_PERMISSIONS;
-	a.perm = st->st_mode;
-	a.flags |= SSH2_FILEXFER_ATTR_ACMODTIME;
-	a.atime = st->st_atime;
-	a.mtime = st->st_mtime;
-	return &a;
+	attrib_clear(a);
+	a->flags |= SSH2_FILEXFER_ATTR_SIZE;
+	a->size = st->st_size;
+	a->flags |= SSH2_FILEXFER_ATTR_UIDGID;
+	a->uid = st->st_uid;
+	a->gid = st->st_gid;
+	a->flags |= SSH2_FILEXFER_ATTR_PERMISSIONS;
+	a->perm = st->st_mode;
+	a->flags |= SSH2_FILEXFER_ATTR_ACMODTIME;
+	a->atime = st->st_atime;
+	a->mtime = st->st_mtime;
 }
 
+#if 0
 Attrib *
 get_attrib(void)
 {
 	return decode_attrib(&iqueue);
 }
+#endif
 
 /* handle handles */
 
-typedef struct Handle Handle;
-struct Handle {
-	int use;
-	DIR *dirp;
-	int fd;
-	char *name;
-};
-enum {
+enum handle_type {
 	HANDLE_UNUSED,
 	HANDLE_DIR,
 	HANDLE_FILE
 };
-Handle	handles[100];
+
+typedef struct Handle Handle;
+struct Handle {
+	enum handle_type use;
+	DIR *dirp;
+	int fd;
+	char *name;
+};
+
+#define HANDLES_MAX 100
+/* FIXME: Allocate this dynamically */
+Handle	handles[HANDLES_MAX];
 
 void
 handle_init(void)
@@ -233,9 +437,11 @@ handle_init(void)
 }
 
 int
-handle_new(int use, char *name, int fd, DIR *dirp)
+handle_new(enum handle_type use, char *name, int fd, DIR *dirp)
 {
 	int i;
+	assert(use != HANDLE_UNUSED);
+	
 	for(i = 0; i < sizeof(handles)/sizeof(Handle); i++) {
 		if (handles[i].use == HANDLE_UNUSED) {
 			handles[i].use = use;
@@ -249,12 +455,42 @@ handle_new(int use, char *name, int fd, DIR *dirp)
 }
 
 int
-handle_is_ok(int i, int type)
+handle_is_ok(int i, enum handle_type type)
 {
-	return i >= 0 && i < sizeof(handles)/sizeof(Handle) &&
+	return i >= 0 && i < HANDLES_MAX &&
 	    handles[i].use == type;
 }
 
+int
+handle_is_used(int i)
+{
+	return i >= 0 && i < HANDLES_MAX &&
+	    handles[i].use != HANDLE_UNUSED;
+}
+
+int
+put_handle(OUTPUT_BUFFER o, int handle)
+{
+	return PUT_UINT32(b, 4)
+		&& PUT_UINT32(b, handle);
+}
+
+int get_handle(INPUT_BUFFER i, int *handle)
+{
+	u_int32_t length;
+	u_int32_t value;
+	
+	if (GET_UINT32(i, &length)
+	    && (length == 4)
+	    && GET_UINT32(i, &value))
+	{
+		*handle = value;
+		return 1;
+	}
+	return 0;
+}
+
+#if 0
 int
 handle_to_string(int handle, char **stringp, int *hlenp)
 {
@@ -281,7 +517,10 @@ handle_from_string(char *handle, u_int hlen)
 		return val;
 	return -1;
 }
+#endif
 
+/* FIXME: This is used only by process_readdir, which could use fchdir
+ * instead. */
 char *
 handle_to_name(int handle)
 {
@@ -323,6 +562,7 @@ handle_close(int handle)
 	return ret;
 }
 
+#if 0
 int
 get_handle(void)
 {
@@ -335,8 +575,11 @@ get_handle(void)
 	xfree(handle);
 	return val;
 }
+#endif
 
 /* send replies */
+
+/* XXX */
 
 void
 send_msg(Buffer *m)
