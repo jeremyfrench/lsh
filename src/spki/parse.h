@@ -69,8 +69,11 @@ spki_parse_prevexpr(struct spki_iterator *i,
 enum spki_type
 spki_parse_type(struct spki_iterator *i);
 
+/* FIXME: Implement and make use of this function. */
+#if 0
 int
 spki_check_type(struct spki_iterator *i, enum spki_type type);
+#endif
 
 enum spki_type
 spki_parse_end(struct spki_iterator *i);
@@ -80,8 +83,15 @@ spki_parse_skip(struct spki_iterator *i);
 
 enum spki_type
 spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
-		     enum spki_type type,
 		     struct spki_principal **principal);
+
+enum spki_type
+spki_parse_subject(struct spki_acl_db *db, struct spki_iterator *i,
+		   struct spki_principal **principal);
+
+enum spki_type
+spki_parse_issuer(struct spki_acl_db *db, struct spki_iterator *i,
+		  struct spki_principal **principal);
 
 enum spki_type
 spki_parse_tag(struct spki_acl_db *db, struct spki_iterator *i,

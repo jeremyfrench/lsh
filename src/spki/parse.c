@@ -158,13 +158,9 @@ spki_parse_string(struct spki_iterator *i,
 
 enum spki_type
 spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
-		     enum spki_type type,
 		     struct spki_principal **principal)
-{
-  if (i->type != type)
-    return spki_parse_fail(i);
-  
-  switch (spki_parse_type(i))
+{  
+  switch (i->type)
     {
     default:
       return spki_parse_fail(i);
@@ -214,6 +210,29 @@ spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 	return spki_parse_fail(i);
       }
     } 
+}
+
+enum spki_type
+spki_parse_subject(struct spki_acl_db *db, struct spki_iterator *i,
+		   struct spki_principal **principal)
+{
+  /* FIXME: Use spki_check_type() */
+  if (i->type != SPKI_TYPE_SUBJECT)
+    return spki_parse_fail(i);
+
+  spki_parse_type(i);
+  return spki_parse_principal(db, i, principal);
+}
+
+enum spki_type
+spki_parse_issuer(struct spki_acl_db *db, struct spki_iterator *i,
+		  struct spki_principal **principal)
+{
+  if (i->type != SPKI_TYPE_ISSUER)
+    return spki_parse_fail(i);
+
+  spki_parse_type(i);
+  return spki_parse_principal(db, i, principal);
 }
 
 /* FIXME: Perhaps the other parser functions should handle type
@@ -312,7 +331,7 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
   /* NOTE: draft-ietf-spki-cert-structure-06.txt has a raw <subj-obj>,
    * but that should be changed. */
 
-  spki_parse_principal(db, i, SPKI_TYPE_SUBJECT, &acl->subject);
+  spki_parse_subject(db, i, &acl->subject);
 
   if (i->type == SPKI_TYPE_PROPAGATE)
     {
@@ -346,12 +365,12 @@ spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
   if (i->type == SPKI_TYPE_DISPLAY)
     spki_parse_skip(i);
 
-  spki_parse_principal(db, i, SPKI_TYPE_ISSUER, &cert->issuer);
+  spki_parse_issuer(db, i, &cert->issuer);
 
   if (i->type == SPKI_TYPE_ISSUER_INFO)
     spki_parse_skip(i);    
 
-  spki_parse_principal(db, i, SPKI_TYPE_SUBJECT, &cert->subject);
+  spki_parse_subject(db, i, &cert->subject);
   
   if (i->type == SPKI_TYPE_SUBJECT_INFO)
     spki_parse_skip(i);    
