@@ -56,8 +56,12 @@ struct ssh_channel
   int (*eof)(struct ssh_channel *self, struct abstract_write *write);
 
   /* Reply from SSH_MSG_CHANNEL_OPEN_REQUEST */
-  int (*confirm)(struct ssh_channel *self, struct abstract_write *write);
-  int (*fail)(struct ssh_channel *self, struct abstract_write *write);
+  int (*open_confirm)(struct ssh_channel *self, struct abstract_write *write);
+  int (*open_failure)(struct ssh_channel *self, struct abstract_write *write);
+
+  /* Reply from SSH_MSG_CHANNEL_REQUEST */
+  int (*channel_success)(struct ssh_channel *self, struct abstract_write *write);
+  int (*channel_failure)(struct ssh_channel *self, struct abstract_write *write);
 };
 
 #define CHANNEL_RECIEVE(s, w, t, d) \
@@ -69,12 +73,18 @@ struct ssh_channel
 #define CHANNEL_EOF(s, w) \
 ((s)->eof((s), (w)))
 
-#define CHANNEL_CONFIRM(s, w) \
-((s)->confirm((s), (w)))
+#define CHANNEL_OPEN_CONFIRM(s, w) \
+((s)->open_confirm((s), (w)))
 
-#define CHANNEL_FAIL(s, w) \
-((s)->fail((s), (w)))
+#define CHANNEL_OPEN_FAILURE(s, w) \
+((s)->open_failure((s), (w)))
 
+#define CHANNEL_SUCCESS(s, w) \
+((s)->channel_success((s), (w)))
+
+#define CHANNEL_FAILURE(s, w) \
+((s)->channel_failure((s), (w)))
+     
 /* FIXME: Perhaps, this information is better kept in the connection
  * object? */
 struct channel_table
@@ -160,6 +170,28 @@ struct lsh_string *format_global_failure(void);
 struct lsh_string *format_open_failure(UINT32 channel, UINT32 reason,
 				       char *msg, char *language);
 struct lsh_string *format_channel_failure(UINT32 channel);
+
+struct lsh_string *prepare_channel_open(struct channel_table *table,
+					int type, struct ssh_channel *channel,
+					char *format, ...);
+
+struct lsh_string *format_channel_request(int type, struct ssh_channel *channel,
+					  int want_reply, char *format, ...);
+
+struct lsh_string *channel_transmit_header(struct ssh_channel *channel,
+					   struct abstract_write *write,
+					   struct lsh_string *header,
+					   struct lsh_string *data);
+
+struct lsh_string *channel_transmit(struct ssh_channel *channel,
+				    struct abstract_write *write,
+				    struct lsh_string *data);
+
+struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
+					     struct abstract_write *write,
+					     UINT32 type,
+					     struct lsh_string *data);
+
 
 struct ssh_service *make_connection_service(struct alist *global_requests,
 					    struct alist *channel_types);
