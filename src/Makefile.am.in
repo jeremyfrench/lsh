@@ -1,5 +1,5 @@
 ## Process this file with make_am to produce Makefile.am -*-makefile-*-
-SUBDIRS: symmetric
+SUBDIRS: symmetric scm
 CVS_HEADERS: cvs_headers
 CLASS_FILES: dist_x_files
 BODY:
@@ -21,6 +21,8 @@ AUTOMAKE_OPTIONS = foreign
 
 Makefile.am: Makefile.am.in
 	(cd $(top_srcdir) && $(MAKE) src/Makefile.am)
+
+SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
 bin_PROGRAMS = lsh lsh_keygen lsh_writekey
 sbin_PROGRAMS = lshd
@@ -79,8 +81,8 @@ prime_table.h: prime_table
 
 prime_table_LDADD =
 
-sexp_table.h: sexp_chars.in $(srcdir)/make_char_classes
-	$(SCHEME) -e main -s $(srcdir)/make_char_classes <$< >$@T
+sexp_table.h: sexp_chars.in $(srcdir)/scm/make-char-classes.scm
+	$(SCHEME) -e main -s $(srcdir)/scm/make-char-classes.scm <$< >$@T
 	test -s $@T && mv -f $@T $@
 
 digit_table_LDADD =
@@ -152,9 +154,9 @@ MAINTAINERCLEANFILES += $(DEP_FILES)
 
 # This is GNU make specific
 
-%.x: % $(srcdir)/make_class $(srcdir)/compiler.scm
+%.x: % $(srcdir)/scm/gaba.scm $(srcdir)/compiler.scm
 	$(SCHEME) -e main -l $(srcdir)/compiler.scm \
-		  -s $(srcdir)/make_class <$< >$@T
+		  -s $(srcdir)/scm/gaba.scm <$< >$@T
 	test -s $@T && mv -f $@T $@
 
 include $(top_srcdir)/misc/ctags.mk
