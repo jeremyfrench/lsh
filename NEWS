@@ -1,3 +1,11 @@
+News for the 1.1.5 release:
+
+	Fixed bug in random generator seeding (spotted by jps).
+
+	More argp fixes.
+
+	Work on rsync, but still not used.
+	
 News for the 1.1.4 release:
 
 	Fixes for encrypted private keys (thanks to jps).

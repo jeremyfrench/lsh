@@ -1,4 +1,12 @@
+2001-01-10  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* Released lsh-1.1.5.
+
+	* configure.in: Bumped version to 1.1.5.
+
 2001-01-09  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/rsync/send.c: Deleted old code.
 
 	* src/rsync/send.c (rsync_send_init): Rewrote. Allocates a
 	slightly larger buffer.
