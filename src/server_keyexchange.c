@@ -134,9 +134,8 @@ do_init_server_dh(struct keyexchange_algorithm *c,
 	{
 	  hostkey_algorithm = ATOM_SSH_DSS_KLUDGE_LOCAL;
 	}
-      else
 #endif
-	dh->hostkey_algorithm = hostkey_algorithm;
+      dh->hostkey_algorithm = hostkey_algorithm;
 
       dh->algorithms = algorithms;
   
