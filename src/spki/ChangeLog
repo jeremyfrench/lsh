@@ -1,5 +1,29 @@
 2003-03-11  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* testsuite/Makefile.am (TS_SH): Added reduce-test.
+
+	* testsuite/reduce-test: Use advanced syntax for the input.
+
+	* testsuite/reduce-test: New testcase.
+
+	* certificate.c (parse_sequence): Changed return type to int.
+	Instead use a new struct spki_5_tuple_list ** argument for
+	returning the list. The pint is to support sequences of the form
+	(sequence (public-key ...)) that implies a subject, but result in
+	an empty 5-tuple list.
+	(spki_parse_sequence): Likewise.
+	(spki_parse_sequence_no_signatures): Likewise.
+	* testsuite/cdsa-reduce-test.c (test_main): Adapted to new
+	spki_parse_sequence_no_signatures.
+	* tools/spki-delegate.c (process_sequence): Adapted to new
+	spki_parse_sequence.
+	* tools/spki-reduce.c (process_sequence): Likewise.
+
+	* certificate.c (parse_sequence): New helper function, dealing
+	with both the signature and non signature cases.
+	(spki_parse_sequence, spki_parse_sequence_no_signatures): Wrappers
+	around parse_sequence.
+
 	* index.html: Updated JSDSI link.
 
 	* testsuite/Makefile.am (EXTRA_DIST): Added the setup-env script.
