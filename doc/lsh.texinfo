@@ -10,7 +10,7 @@
 * LSH: (lsh).           Secure Shell and related utilities.
 @end direntry
 
-@set UPDATED-FOR 1.3.4
+@set UPDATED-FOR 1.4
 
 @c Latin-1 doesn't work with tex output.
 @c Also lookout for é characters.
@@ -93,11 +93,11 @@ translation approved by the Free Software Foundation.
 @comment  node-name,  next,  previous,  up
 @top
 
-This document describes @command{lsh} and related programs. The @command{lsh} suite
-of programs is intended as a free replacement for the @command{ssh} suite of
-programs. In turn, @command{ssh} was intended as a secure replacement for
-the @command{rsh} and @command{rlogin} programs for remote login over the
-Internet.
+This document describes @command{lsh} and related programs. The
+@command{lsh} suite of programs is intended as a free replacement for
+the @command{ssh} suite of programs. In turn, @command{ssh} was intended
+as a secure replacement for the @command{rsh} and @command{rlogin}
+programs for remote login over the Internet.
 
 @command{lsh} is a component of the @acronym{GNU} system.
 
@@ -599,7 +599,7 @@ Copies a directory from the remote machine, by executing one remote and
 one local @command{tar} process and piping them together.
 
 @example
-CVS_RSH=lsh cvs -d sara.lysator.liu.se:/lysator/cvsroot co lsh
+CVS_RSH=lsh cvs -d cvs.lysator.liu.se:/cvsroot/lsh co lsh
 @end example
 
 @noindent
@@ -941,6 +941,7 @@ of supported options, use @samp{lsh --help}.
 Note that for many of the options to @command{lsh}, the ordering of the
 options on the command line is important.
 
+@c FIXME: Say something about the escape char mechanism here
 @menu
 * Algorithms: Algorithm options.  Selecting algorithms.
 * Hostauth options::            
@@ -997,13 +998,9 @@ algorithm negotiation will fail because the peer doesn't support
 prefers not to use it. 
 
 @item @option{-c} @tab Encryption
-  @tab @code{3dec-cbc}, @code{blowfish-cbc}, @code{arcfour}
-@code{arcfour}
+  @tab @code{aes256-cbs}, @code{3dec-cbc}, @code{blowfish-cbc}, @code{arcfour}
 
-  @tab The default encryption algorithm is aes256. This is a newer
-algorithm than e.g. triple DES, which might be a problem for a
-conservative cryptographer, but it has been studied carefully by many
-competent cryptographers, and it seems to be secure. The default list
+  @tab The default encryption algorithm is aes256. The default list
 includes only quite old and well studied algorithms. There is a special
 algorithm name @code{all} to enable all supported encryption algorithms
 (except @code{none}).
@@ -1379,7 +1376,7 @@ latter case, the new process inherits @command{lsh}'s own value of
 @env{HOME}.
  
 @item LOGNAME
-The users log in name. USed as the default name for logging into
+The users log in name. Used as the default name for logging into
 remote systems. Set by @command{lshd} when starting new processes.
 
 @item LSH_YARROW_SEED_FILE
