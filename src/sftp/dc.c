@@ -70,9 +70,8 @@ void lsftp_dc_uninit()
   return;
 }
 
-
-
-int lsftp_dc_index( char* name )
+int
+lsftp_dc_index(const char* name)
 {
   int h;
   int i;
@@ -91,11 +90,8 @@ int lsftp_dc_index( char* name )
   return -1;   /* No match */
 }
 
-
-
-
-
-int lsftp_dc_free_index()
+static int
+lsftp_dc_free_index(void)
 {
   int i;
 
@@ -111,8 +107,8 @@ int lsftp_dc_free_index()
   return -1;   /* No match */
 }
 
-
-int lsftp_dc_make_index()
+static int
+lsftp_dc_make_index(void)
 {
   static int nextexpire = 0; /* FIXME: How choose which to expire? */
   int i = nextexpire++;
@@ -184,27 +180,16 @@ int lsftp_dc_remove( char* name )
   return 1;
 }
 
-
-int lsftp_dc_hash( char* name )
+int
+lsftp_dc_hash(const char* name UNUSED)
 {
   /* FIXME: Calculate */
 
   return 5;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-int lsftp_dc_l_isdir( char* name )
+int
+lsftp_dc_l_isdir(const char *name)
 {
   /*
    * Check whatever a local name is a directory 
@@ -224,14 +209,8 @@ int lsftp_dc_l_isdir( char* name )
   return S_ISDIR( st.st_mode ); 
 }
 
-
-
-
-
-
-
-
-int lsftp_dc_r_isdir( char* name )
+int
+lsftp_dc_r_isdir(const char* name)
 {
   /*
    * Check whatever a remote name is a directory 
@@ -251,6 +230,7 @@ int lsftp_dc_r_isdir( char* name )
       i = lsftp_dc_index( name );
       
       if( -1 != i &&                            /* Found it? */
+	  /* FIXME: posixperms is a mode_t, and can't be compared to -1 */
 	  -1 != lsftp_dircache[i].posixperms && /* Has permissions? */
 	  !(lsftp_dircache[i].posixperms & S_IFLNK)
 	  )
@@ -270,6 +250,7 @@ int lsftp_dc_r_isdir( char* name )
     {
       lsftp_await_command( id );
 
+      /* FIXME: A mode_t can't be compared to -1. */
       if( -1 != st.st_mode )           /* We've got permissions? */
 /*  	{ */
 /*  	  printf( "%d\n",  S_ISDIR( st.st_mode ) ); */
@@ -283,16 +264,8 @@ int lsftp_dc_r_isdir( char* name )
 
 }
 
-
-
-
-
-
-
-
-
-
-int lsftp_dc_glob_matches( char* fname, char* glob, int period )
+int
+lsftp_dc_glob_matches(const char *fname, const char *glob, int period)
 {
   /*
    * Return 0 if filename doesn't match glob, 1 if it matches.
@@ -463,11 +436,11 @@ int lsftp_dc_glob_matches( char* fname, char* glob, int period )
 }
 
 
-
-char** lsftp_dc_r_sloppy_glob( char* glob, int nocheck )
+static const char **
+lsftp_dc_r_sloppy_glob(const char* glob, int nocheck UNUSED)
 {
-  char** retval;
-  char** mem;
+  const char **retval;
+  const char **mem;
   int count = 0;
   int i;
 
@@ -505,10 +478,10 @@ char** lsftp_dc_r_sloppy_glob( char* glob, int nocheck )
     return mem;
 
   return retval;
-
 }
 
-char* lsftp_dc_path_no_glob( char* glob )
+static char *
+lsftp_dc_path_no_glob(const char *glob)
 {
   /* Returns the part of a string leading up to the glob */
 
@@ -557,10 +530,8 @@ char* lsftp_dc_path_no_glob( char* glob )
 }
 
 
-
-
-
-char* lsftp_dc_path_first_glob( char* glob )
+static char *
+lsftp_dc_path_first_glob(const char* glob)
 {
   /* Returns the first string up to and including the first glob */
 
@@ -614,18 +585,16 @@ char* lsftp_dc_path_first_glob( char* glob )
   return tmp;
 }
 
-
-
-
-char** lsftp_dc_r_startglob( char* glob, int sloppy, int nocheck )
+const char **
+lsftp_dc_r_startglob(const char *glob, int sloppy, int nocheck )
 {
-  char** mem = 0;
-  char** orgmem;
-  char* tmp;
+  const char **mem = NULL;
+  const char **orgmem;
+  const char* tmp;
   char* mglob;
-  char* restglob;
-  char** retval;
-  char** globbed;
+  const char *restglob;
+  const char **retval;
+  const char **globbed;
   int count = 0;
   int i;
   int id;
@@ -671,7 +640,7 @@ char** lsftp_dc_r_startglob( char* glob, int sloppy, int nocheck )
 
   id = lsftp_internal_ls( tmp, "Internal command", &mem );
 
-  free( tmp );
+  free( (void *) tmp );
 
   if( id > 0) /* Not a failure? */
     lsftp_await_command( id );      
@@ -689,7 +658,7 @@ char** lsftp_dc_r_startglob( char* glob, int sloppy, int nocheck )
   if( !retval ) /* malloc failed? */
     {
       while( mem[i] )  /* free mem used by ls before bailing out */
-	free( mem[i++] );
+	free( (void *) mem[i++] );
       
       free( orgmem );
 
@@ -709,14 +678,14 @@ char** lsftp_dc_r_startglob( char* glob, int sloppy, int nocheck )
       /* At least, we have a partial match */
       if( !deeper ) /* No more levels => full match */
 	{
-	  char* tmp;
+	  const char *tmp;
 
 	  tmp = strdup( lsftp_unqualify_path( mem[i] ) );
 
 	  if( tmp )
 	    {
 	      globbed[count++] = tmp; /* Match - use it */
-	      free( mem[i++] );
+	      free( (void *) mem[i++] );
 	    }
 	  else
 	    globbed[count++] = mem[i++]; /* Match - use it */
@@ -724,8 +693,8 @@ char** lsftp_dc_r_startglob( char* glob, int sloppy, int nocheck )
       else
 	{
 	  char* newglob = lsftp_concat( mem[i++], restglob );
-	  char** more = 0;
-	  char** moretmp = 0;
+	  const char **more = NULL;
+	  const char **moretmp = NULL;
 	  
 	  if( newglob )
 	    {
@@ -753,13 +722,14 @@ char** lsftp_dc_r_startglob( char* glob, int sloppy, int nocheck )
 		  
 		  /* If it failed globbed is left unharmed */
 
-		  if( !reccount || !moretmp ) /* realloc returned zero or reccount was zero */
+		  if( !reccount || !moretmp )
+		    /* realloc returned zero or reccount was zero */
 		    {
 		      /* Throw away what we got */
 		      moretmp = more;
 		      
-		      while( tmp = *(moretmp++) )
-			free( tmp );
+		      while( (tmp = *moretmp++) )
+			free( (void *) tmp );
 		    }
 
 		  free( more );
@@ -767,7 +737,7 @@ char** lsftp_dc_r_startglob( char* glob, int sloppy, int nocheck )
 	    }
 	}
     else
-      free( mem[i++] );       /* Not a match - free it */
+      free( (void *) mem[i++] );       /* Not a match - free it */
 
   free( orgmem ); /* We're done with the ls-thing */
       
@@ -785,12 +755,12 @@ char** lsftp_dc_r_startglob( char* glob, int sloppy, int nocheck )
   return globbed;
 }
 
-
-char** lsftp_dc_l_startglob( char* name, int nocheck )
+const char **
+lsftp_dc_l_startglob(const char *name, int nocheck )
 {
   glob_t gl;
-  int i;
-  char** retval;
+  size_t i; /* Use the same type as gl.pathc */
+  const char** retval;
 
   gl.gl_pathc=0; /* Set a sensible value in case no parameters were passed */
 
@@ -821,12 +791,13 @@ char** lsftp_dc_l_startglob( char* name, int nocheck )
   return retval;
 }
 
-char** lsftp_dc_l_contglob( char* name, char** globdata, int nocheck )
+const char **
+lsftp_dc_l_contglob(const char *name, const char **globdata, int nocheck)
 {
-  char** curglob;
-  char** retval;
+  const char** curglob;
+  const char** retval;
   
-  int i,j,k;
+  int i,k;
 
   if( ! globdata )         /* No globdata given? Well, start anew */
     return lsftp_dc_l_startglob( name, nocheck );
@@ -872,14 +843,13 @@ char** lsftp_dc_l_contglob( char* name, char** globdata, int nocheck )
 }
 
 
-
-
-char** lsftp_dc_r_contglob( char* name, char** globdata, int nocheck )
+const char **
+lsftp_dc_r_contglob(const char *name, const char **globdata, int nocheck)
 {
-  char** curglob;
-  char** retval;
+  const char **curglob;
+  const char **retval;
   
-  int i,j,k;
+  int i,k;
 
   if( ! globdata )         /* No globdata given? Well, start anew */
     return lsftp_dc_r_startglob( name, 0, nocheck );
@@ -924,10 +894,8 @@ char** lsftp_dc_r_contglob( char* name, char** globdata, int nocheck )
   return retval;
 }
 
-
-
-
-int lsftp_dc_numglob( char** globdata )
+int
+lsftp_dc_numglob(const  char **globdata)
 {
   int i = 0;
 
@@ -940,16 +908,17 @@ int lsftp_dc_numglob( char** globdata )
   return i-1;
 }
 
-void lsftp_dc_endglob( char** globdata )
+void
+lsftp_dc_endglob(const char **globdata)
 {
-  char* curmem;
-  char** curptr = globdata;
+  const char *curmem;
+  const char **curptr = globdata;
 
   if( ! globdata )
     return;
 
-  while( curmem = *(curptr++) )
-    free( curmem );
+  while( (curmem = *curptr++) )
+    free( (void *) curmem );
 
   free( globdata );
 }

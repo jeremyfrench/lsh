@@ -48,25 +48,27 @@
 int lsftp_dc_notice( char* name, struct sftp_attrib* a );
 int lsftp_dc_remove( char* name );
 
-int lsftp_dc_hash( char* name );
+int lsftp_dc_hash(const char* name );
 
 
-int lsftp_dc_glob_matches( char* fname, char* glob, int period );
+int lsftp_dc_glob_matches(const char *fname, const char *glob, int period);
 
-int lsftp_dc_l_isdir( char* name );
-int lsftp_dc_r_isdir( char* name );
+int lsftp_dc_l_isdir(const char* name);
+int lsftp_dc_r_isdir(const char* name);
 
-int lsftp_dc_index( char* name );
+int lsftp_dc_index(const char *name);
 int lsftp_dc_init( int new_dc_entries );
-void lsftp_dc_uninit();
+void lsftp_dc_uninit(void);
 
-char** lsftp_dc_r_startglob( char* fname, int sloppy, int nocheck );
-char** lsftp_dc_r_contglob( char* fname, char** globdata, int nocheck );
+const char** lsftp_dc_r_startglob(const char *fname, int sloppy, int nocheck);
+const char** lsftp_dc_r_contglob(const char *fname,
+				 const char** globdata, int nocheck);
 
-char** lsftp_dc_l_startglob( char* fname, int nocheck );
-char** lsftp_dc_l_contglob( char* fname, char** globdata, int nocheck );
-void lsftp_dc_endglob( char** globdata );
-int lsftp_dc_numglob( char** globdata );
+const char** lsftp_dc_l_startglob(const char *fname, int nocheck);
+const char** lsftp_dc_l_contglob(const char *fname,
+				 const char** globdata, int nocheck);
+void lsftp_dc_endglob(const char** globdata);
+int lsftp_dc_numglob(const char** globdata);
 
 struct lsftp_dc_s { 
   char* name;
