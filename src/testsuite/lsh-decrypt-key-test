@@ -26,7 +26,7 @@ chmod u+rx $fname
 
 ../lsh-keygen > $keyname.origkey 
 ../lsh-writekey -o $keyname -caes256-cbc -pbar <$keyname.origkey || test_fail
-../lsh-writekey -o $keyname.nevercrypted <$keyname.origkey || test_fail
+../lsh-writekey -o $keyname.nevercrypted -c none <$keyname.origkey || test_fail
 
 ../lsh-decrypt-key --in=$keyname --out=$keyname.decrypted --askpass=$fname || test_fail
 

@@ -11,5 +11,5 @@ fi
 . $srcdir/functions.sh
 
 rm -rf temphome && mkdir temphome
-HOME="`pwd`/temphome" ../lsh-writekey < $srcdir/key-1.private \
+HOME="`pwd`/temphome" ../lsh-writekey -c none < $srcdir/key-1.private \
   && [ -s "temphome/.lsh/identity" -a -s "temphome/.lsh/identity.pub" ] && test_success
