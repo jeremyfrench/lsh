@@ -10,12 +10,6 @@
 #include <assert.h>
 #include <string.h>
 
-/* block count, blocksize, tail */
-#define HEADER_SIZE 12
-
-/* weak sum, md5 sum */
-#define ENTRY_SIZE 20
-
 static void
 rsync_init_block(struct rsync_generate_state *s)
 {
@@ -39,17 +33,17 @@ rsync_output_block(struct rsync_generate_state *s)
 {
   assert(!s->buf_length);
 
-  if (s->avail_out < ENTRY_SIZE)
+  if (s->avail_out < RSYNC_ENTRY_SIZE)
   {
     rsync_end_block(s, s->buf);
-    s->buf_length = ENTRY_SIZE;
+    s->buf_length = RSYNC_ENTRY_SIZE;
     s->buf_pos = 0;
   }
   else
   {
     rsync_end_block(s, s->next_out);
-    s->avail_out -= ENTRY_SIZE;
-    s->next_out += ENTRY_SIZE;
+    s->avail_out -= RSYNC_ENTRY_SIZE;
+    s->next_out += RSYNC_ENTRY_SIZE;
   }
   rsync_init_block(s);
 }
@@ -73,20 +67,10 @@ static void
 rsync_update(struct rsync_generate_state *s,
 	     UINT32 length)
 {
-  unsigned i;
-
   assert(length <= s->avail_in);
 
   md5_update(&s->block_sum, s->next_in, length);
-
-  for (i = 0; i<length; i++)
-  {
-    s->a_sum += s->next_in[i] + RSYNC_CHAR_OFFSET;
-    s->c_sum += s->a_sum;
-  }
-
-  s->a_sum &= 0xffff;
-  s->c_sum &= 0xffff;
+  rsync_update_1(&s->a_sum, &s->c_sum, length, s->next_in);
 
   s->offset += length;
   s->next_in += length;
@@ -186,7 +170,7 @@ rsync_generate_init(struct rsync_generate_state *s,
   WRITE_UINT32(s->buf + 4, block_size);
   WRITE_UINT32(s->buf + 8, tail);
 
-  s->buf_length = HEADER_SIZE;
+  s->buf_length = RSYNC_HEADER_SIZE;
   s->buf_pos = 0;
 
   s->left = block_size;
