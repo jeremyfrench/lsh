@@ -15,6 +15,32 @@ idea-cbc         OPTIONAL          IDEA in CBC mode
 cast128-cbc      OPTIONAL          CAST-128 in CBC mode
 # none             OPTIONAL          no encryption; NOT RECOMMENDED
 
+## The following are not in the current secsh draft, but are in SSH 2.0.11;
+## some of them will probably be included in an updated secsh draft. 
+##
+
+#twofish-cbc      OPTIONAL          TwoFish cipher in CBC mode
+#des-cbc          OPTIONAL          DES cipher in CBC mode
+
+## NOTE: Is there any reason to ever use any chaining mode but cbc in
+## the ssh protocol?
+## 
+## Mode variants:
+#3des-ecb         OPTIONAL          three-key 3DES in ECB mode
+#3des-cfb         OPTIONAL          three-key 3DES in CFB mode
+#3des-ofb         OPTIONAL          three-key 3DES in OFB mode
+#blowfish-ecb     OPTIONAL          Blowfish in ECB mode
+#blowfish-cfb     OPTIONAL          Blowfish in CFB mode
+#blowfish-ofb     OPTIONAL          Blowfish in OFB mode
+## New algorithms, AES candidates
+#twofish-ecb      OPTIONAL          TwoFish cipher in ECB mode
+#twofish-cfb      OPTIONAL          TwoFish cipher in CFB mode
+#twofish-ofb      OPTIONAL          TwoFish cipher in OFB mode
+## Others (I don't know why SSH supports them)
+#des-ecb          OPTIONAL          DES cipher in ECB mode
+#des-cfb          OPTIONAL          DES cipher in CFB mode
+#des-ofb          OPTIONAL          DES cipher in OFB mode
+
 # MAC algorithms
 
 hmac-sha1   REQUIRED         HMAC-SHA1 (length = 20)
