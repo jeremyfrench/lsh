@@ -46,7 +46,8 @@
        (channel object ssh_channel)))
 */
 
-static UINT32 do_read_data_query(struct io_consuming_read *s)
+static UINT32
+do_read_data_query(struct io_consuming_read *s)
 {
   CAST(read_data, self, s);
   
