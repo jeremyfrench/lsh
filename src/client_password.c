@@ -24,12 +24,20 @@
 
 #include "password.h"
 
-#include <stdarg.h>
+#include "xalloc.h"
+#include "werror.h"
+
+#include <stdio.h>
 #include <string.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include <termios.h>
 
-int echo_on(int fd)
+static int echo_on(int fd)
 {
   struct termios t;
 
@@ -39,7 +47,7 @@ int echo_on(int fd)
       return 0;
     }
 
-  t->c_lflag |= ECHO;
+  t.c_lflag |= ECHO;
 
   if (tcsetattr(fd, TCSANOW, &t) < 0)
     {
@@ -50,7 +58,7 @@ int echo_on(int fd)
   return 1;
 }
 
-int echo_off(int fd)
+static int echo_off(int fd)
 {
   struct termios t;
 
@@ -60,7 +68,7 @@ int echo_off(int fd)
       return 0;
     }
 
-  t->c_lflag &= ~ECHO;
+  t.c_lflag &= ~ECHO;
 
   if (tcsetattr(fd, TCSAFLUSH, &t) < 0)
     {
@@ -72,9 +80,8 @@ int echo_off(int fd)
 }
 
 /* FIXME: Perhaps it is better to avoid using stdio functions? */
-struct lsh_string *read_password(int max_length, char *format, ...)
+struct lsh_string *read_password(int max_length, struct lsh_string *prompt)
 {
-  va_list args;
   int fd;
   FILE *tty;
 
@@ -98,9 +105,7 @@ struct lsh_string *read_password(int max_length, char *format, ...)
   /* Ignore errors */
   (void) echo_off(fd);
 
-  va_start(args, format);
-  vfprintf(tty, format, format, args);
-  va_end(args);
+  fwrite(prompt->data, 1, prompt->length, tty);
 
   fflush(tty);
 
