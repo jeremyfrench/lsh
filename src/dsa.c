@@ -206,7 +206,7 @@ do_dsa_public_spki_key(struct verifier *s, int transport)
   CAST(dsa_verifier, self, s);
 
   return lsh_sexp_format(transport,
-			 "(%z(%z(%z%b)(%z%b)(%z%b)(%z%b)))",
+			 "(%0s(%0s(%0s%b)(%0s%b)(%0s%b)(%0s%b)))",
 			 "public-key",  "dsa",
 			 "p", self->key.p,
 			 "q", self->key.q,
@@ -338,7 +338,7 @@ do_dsa_sign(struct signer *c,
     case ATOM_SPKI_SIGN_DSS:
     case ATOM_SPKI:
       /* Format: "((1:r20:<r>)(1:s20:<s>))". */
-      signature = lsh_sexp_format(0, "((%z%b)(%z%b))",
+      signature = lsh_sexp_format(0, "((%0s%b)(%0s%b))",
 				  "r", sv.r, "s", sv.s);
 	
       break;

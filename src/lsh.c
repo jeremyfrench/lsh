@@ -564,7 +564,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 	    return NULL;
 	}
 
-      acl = lsh_sexp_format(0, "(%z(%z%l(%z%s)))",
+      acl = lsh_sexp_format(0, "(%0s(%0s%l(%0s%s)))",
 			    "acl", "entry",
 			    subject->key->length, subject->key->data,
 			    "tag", self->access->length, self->access->data);

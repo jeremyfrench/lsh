@@ -69,7 +69,8 @@ rsa_generate_key(struct randomness *r, UINT32 bits)
 			   NULL, progress,
 			   bits, E_SIZE))
     {
-      key = lsh_sexp_format(0, "(%z(%z(%z%b)(%z%b)(%z%b)(%z%b)(%z%b)(%z%b)(%z%b)(%z%b)))",
+      key = lsh_sexp_format(0, "(%0s(%0s(%0s%b)(%0s%b)"
+			    "(%0s%b)(%0s%b)(%0s%b)(%0s%b)(%0s%b)(%0s%b)))",
 			    "private-key", "rsa-pkcs1",
 			    "n", public.n,
 			    "e", public.e,
