@@ -136,17 +136,13 @@
        	     ;; "struct sexp *hash" "struct sexp *principal"
        	     "UINT32 length" "const UINT8 *data")
 
-       ;; FIXME: Perhaps this should be a method of the algorithm object instead?
-
-       ; Returns ( <pub-sig-alg-id> <s-expr>* ), i.e. the same
-       ; structure that is expected by spki_make_verifier().
-       
-       (public_key method (object sexp) ))) */
+       (get_verifier method (object verifier))))
+*/
 
 #define SIGN(signer, algorithm, length, data) \
 ((signer)->sign((signer), (algorithm), (length), (data)))
 #define SIGN_SPKI(signer, length, data) ((signer)->sign_spki((signer), (length), (data)))
-#define SIGNER_PUBLIC(signer) ((signer)->public_key((signer)))
+#define SIGNER_GET_VERIFIER(signer) ((signer)->get_verifier((signer)))
 
 /* GABA:
    (class
@@ -156,10 +152,17 @@
                "int algorithm"
        	       "UINT32 length" "const UINT8 *data"
 	       "UINT32 signature_length" "const UINT8 *signature_data")
-       ; Iterator points past the signature-tag
+
        (verify_spki method int
        	  "UINT32 length" "const UINT8 *data"
-       	  "struct sexp *e")))
+       	  "struct sexp *e")
+
+       ;; FIXME: Perhaps these methods belong to the algorithm object?
+       (public_key method (string))
+       
+       ; Returns ( <pub-sig-alg-id> <s-expr>* ), i.e. the same
+       ; structure that is expected by spki_make_verifier().
+       (public_spki_key method (object sexp))))
 */
 
 #define VERIFY(verifier, algorithm, length, data, slength, sdata) \
@@ -167,6 +170,9 @@
 
 #define VERIFY_SPKI(verifier, length, data, e) \
 ((verifier)->verify_spki((verifier), (length), (data), (e)))
+
+#define PUBLIC_KEY(signer) ((signer)->public_key((signer)))
+#define PUBLIC_SPKI_KEY(signer) ((signer)->public_spki_key((signer)))
 
 /* GABA:
    (class
