@@ -314,13 +314,12 @@ do_channel_open_direct_tcpip(struct channel_open *s,
     {
       verbose("direct-tcpip connection attempt\n");
 
-      COMMAND_CALL
-	(closure->callback,
-	 make_address_info(dest_host, dest_port),
-	 make_open_forwarded_tcpip_continuation(connection, c), 
-	 /* NOTE: This exception handler will be associated with the
-	  * fd for its entire lifetime. */
-	 make_exc_tcpip_connect_handler(e, HANDLER_CONTEXT));
+      COMMAND_CALL(closure->callback,
+		   make_address_info(dest_host, dest_port),
+		   make_open_forwarded_tcpip_continuation(connection, c), 
+		   /* NOTE: This exception handler will be associated with the
+		    * fd for its entire lifetime. */
+		   make_exc_tcpip_connect_handler(e, HANDLER_CONTEXT));
     }
   else
     {
