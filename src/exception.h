@@ -148,9 +148,24 @@ extern struct exception_handler default_exception_handler;
 struct exception_handler ignore_exception_handler;
 extern struct exception dummy_exception;
 
+/* GABA:
+   (class
+     (name report_exception_info)
+     (vars
+       (mask . UINT32)
+       (value . UINT32)
+       (prefix . "const char *")))
+*/
+
+struct report_exception_info *
+make_report_exception_info(UINT32 mask, UINT32 value,
+			   const char *prefix);
+
+#define STATIC_REPORT_EXCEPTION_INFO(m, v, p) \
+{ STATIC_HEADER, m, v, p }
+
 struct exception_handler *
-make_report_exception_handler(UINT32 mask, UINT32 value,
-			      const char *prefix,
+make_report_exception_handler(struct report_exception_info *info,
 			      struct exception_handler *parent,
 			      const char *context);
 

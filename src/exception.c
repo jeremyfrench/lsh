@@ -71,14 +71,25 @@ make_exception_handler(void (*raise)(struct exception_handler *s,
   return self;
 }
 
+struct report_exception_info *
+make_report_exception_info(UINT32 mask, UINT32 value,
+			   const char *prefix)
+{
+  NEW(report_exception_info, self);
+
+  self->mask = mask;
+  self->value = value;
+  self->prefix = prefix;
+
+  return self;
+}
+
 /* GABA:
    (class
      (name report_exception_handler)
      (super exception_handler)
      (vars
-       (mask . UINT32)
-       (value . UINT32)
-       (prefix . "const char *")))
+       (info object report_exception_info)))
 */
 
 static void
@@ -86,16 +97,16 @@ do_report_exception_handler(struct exception_handler *s,
 			    const struct exception *x)
 {
   CAST(report_exception_handler, self, s);
-
-  if ( (x->type & self->mask) == self->value)
-    werror("%z exception: %z\n", self->prefix, x->msg);
+  struct report_exception_info *info = self->info;
+  
+  if ( (x->type & info->mask) == info->value)
+    werror("%z exception: %z\n", info->prefix, x->msg);
   else
     EXCEPTION_RAISE(self->super.parent, x);
 }
 
 struct exception_handler *
-make_report_exception_handler(UINT32 mask, UINT32 value,
-			      const char *prefix,
+make_report_exception_handler(struct report_exception_info *info,
 			      struct exception_handler *parent,
 			      const char *context)
 {
@@ -104,12 +115,19 @@ make_report_exception_handler(UINT32 mask, UINT32 value,
   self->super.parent = parent;
   self->super.context = context;
 
-  self->mask = mask;
-  self->value = value;
-  self->prefix = prefix;
+  self->info = info;
 
   return &self->super;
 }
+
+#if 0
+/* Command to report and ignore an exception given as argument. */
+COMMAND_SIMPLE(report_exception_command)
+{
+  CAST_SUBTYPE(exception, x, a);
+  werror("%z\n", x->msg);
+}
+#endif
 
 struct exception *make_simple_exception(UINT32 type, const char *msg)
 {
