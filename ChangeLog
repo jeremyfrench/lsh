@@ -1,5 +1,16 @@
 2003-05-20  Niels Möller  <niels@s3.kth.se>
 
+	* src/client.c: Implemented --askpass option.
+
+	* src/unix_interact.c (unix_read_password): Use any specified
+	askpass program. Deleted the password_fd code.
+	(unix_set_askpass): New function.
+	(make_unix_interact): Initialize askpass and set_askpass.
+
+	* src/interact.h (INTERACT_SET_ASKPASS): New method.
+
+	* src/io.c (lsh_popen_read): Improved warning messages.
+
 	* configure.ac: If seteuid is not available, but setresuid is,
 	let config.h #define seteuid in terms of setresuid.
 
