@@ -50,11 +50,12 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	debug.c des.c digits.c disconnect.c dh_exchange.c \
 	dsa.c dsa_keygen.c encrypt.c \
 	exception.c \
-	format.c gc.c gateway_channel.c \
+	format.c gc.c \
+	gateway.c gateway_channel.c gateway_commands.c \
 	hmac.c idea.c interact.c io.c io_commands.c \
 	keyexchange.c \
 	list.c lookup_verifier.c md5.c \
-	packet_ignore.c pad.c parse.c \
+	pad.c parse.c \
 	pkcs5.c \
 	proxy.c proxy_agentforward.c proxy_session.c \
 	proxy_tcpforward.c proxy_userauth.c proxy_x11forward.c \
@@ -69,7 +70,8 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	sexp.c sexp_commands.c sexp_parser.c sexp_streamed_parser.c \
 	sha.c service.c spki.c spki_commands.c srp_exchange.c ssh1_fallback.c \
 	string_buffer.c tcpforward.c tcpforward_commands.c \
-	translate_signal.c tty.c twofish.c unix_user.c unpad.c userauth.c \
+	translate_signal.c tty.c twofish.c \
+	unix_random.c unix_user.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c zlib.c
 
 liblsh_a_LIBADD = @LIBOBJS@
