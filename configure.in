@@ -320,6 +320,11 @@ AC_SEARCH_LIBGMP(gmp gmp2,
   [LSH_RPATH_FIX],
   [AC_MSG_ERROR([GMP is missing. Get gmp-2.0.2 or better from ftp://ftp.gnu.org/pub/gnu/gmp]) ])
 
+AC_CHECK_LIB([oop], [oop_sys_new],,
+  [AC_MSG_ERROR([liboop is missing. Get liboop from http://www.liboop.org])])
+
+LSH_RPATH_FIX
+
 if test x$with_zlib = xyes; then
   AC_CHECK_LIB(z, inflate,, [with_zlib=no])
 fi
