@@ -1,5 +1,11 @@
 Sat Dec 25 18:18:45 1999  Niels Möller  <nisse@lysator.liu.se>
 
+	* configure.in: Quote fallback definition of M4.
+
+	* acconfig.h: Use more standard #undef's for VERSION and PACKAGE. 
+
+	* src/process_atoms (atom2define): Bug fix.
+
 	* src/argp/argp-help.c (strndup): Bug fix.
 
 	* src/process_atoms (atom2define): Workaround for seds that can't

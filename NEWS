@@ -1,3 +1,7 @@
+News for the lsh-0.1.20 release
+
+	Bugfixes. New test script for lsh_writekey.
+
 News for the lsh-0.1.19 release
 
 	Lots of bugfixes. Reading of ~/.lsh/known_hosts and
