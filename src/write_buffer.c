@@ -23,15 +23,20 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "xalloc.h"
 #include "write_buffer.h"
+
+#include "xalloc.h"
+
+#include <assert.h>
 
 static int do_write(struct abstract_write **w,
 		    struct lsh_string *packet)
 {
   struct write_buffer *closure = (struct write_buffer *) *w;
-  
   struct node *new;
+  
+  MDEBUG(closure);
+
   if (!packet->length)
     {
       lsh_string_free(packet);
@@ -95,11 +100,11 @@ int write_buffer_pre_write(struct write_buffer *buffer)
       if (buffer->partial)
 	{
 	  UINT32 partial_left = buffer->partial->length - buffer->pos;
-	  UINT32 buffer_left = 2*buffer->block_size - length;
+	  UINT32 buffer_left = 2*buffer->block_size - buffer->end;
 	  if (partial_left <= buffer_left)
 	    {
 	      /* The rest of the partial packet fits in the buffer */
-	      memcpy(buffer->buffer + length,
+	      memcpy(buffer->buffer + buffer->end,
 		     buffer->partial->data + buffer->pos,
 		     partial_left);
 
@@ -111,13 +116,15 @@ int write_buffer_pre_write(struct write_buffer *buffer)
 	    }
 	  else
 	    {
-	      memcpy(buffer->buffer + length,
+	      memcpy(buffer->buffer + buffer->end,
 		     buffer->partial->data + buffer->pos,
 		     buffer_left);
 
 	      buffer->end += buffer_left;
 	      length += buffer_left;
 	      buffer->pos += buffer_left;
+
+	      assert(length >= buffer->block_size);
 	    }
 	}
       else
