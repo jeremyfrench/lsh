@@ -23,14 +23,26 @@
 #ifndef LIBSPKI_CERTIFICATE_H_INCLUDED
 #define LIBSPKI_CERTIFICATE_H_INCLUDED
 
-/* This should be the only file ever including spki-types.h
- * directly. */
-#include "spki-types.h"
 
 #include "nettle/md5.h"
 #include "nettle/sha.h"
 #include "nettle/realloc.h"
 #include "nettle/buffer.h"
+
+/* This should be the only file ever including spki-types.h
+ * directly. */
+#include "spki-types.h"
+
+/* Move this to a separate file? */
+struct spki_type_name
+{
+  unsigned length;
+  const uint8_t *name;
+};
+
+extern struct spki_type_name
+spki_type_names[];
+
 
 #include <time.h>
 
