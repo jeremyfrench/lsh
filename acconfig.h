@@ -36,6 +36,9 @@
 /* For Ipv6 support */
 #undef WITH_IPV6
 
+/* Define if AI_NUMERICHOST exists */
+#undef HAVE_AI_NUMERICHOST
+
 /* For utmp support */
 #undef WITH_UTMP
 
