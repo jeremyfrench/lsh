@@ -6,7 +6,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1999 Balazs Scheidler
+ * Copyright (C) 1999 Balázs Scheidler
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as

@@ -1,3 +1,63 @@
+1999-11-16  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* Changed "Balazs" to "Balázs" in many files.
+	
+	* src/spki.h (spki_5_tuple): New class. Not used for anything yet. 
+
+	* src/spki.c (spki_check_type): Use sexp_check_type().
+	(dsa_private2public): Use sexp_assq().
+	(parse_dsa_private_key): Use make_dsa_spki_signer().
+
+	* src/sexp_streamed_parser.c (do_skip_comment): New function.
+	(make_parse_comment): New function.
+	(make_parse_advanced_sexp: New function. Implements only some
+	features of the advanced syntax.
+
+	* src/sexp.c (sexp_check_type): New function.
+	(do_cons_assoc): New function.
+	(do_cons_left): New function.
+	(do_vector_assoc): New function.
+	(do_vector_left): New function.
+	(make_iter_vector): Return SEXP_NIL for empty vectors.  
+	(sexp_eq): New function.
+	(sexp_assq): New function.
+
+	* src/sexp.h (sexp_iterator): Added methods left and assoc. 
+
+	* src/lsh.c (do_sloppy_lookup): Works now (but doesn't save any
+	keys). 
+	(main): Call lsh_open_tty.
+
+	* src/lookup_verifier.h (lookup_verifier): Added method-argument. 
+	* src/server_authorization.c (do_key_lookup): Added method
+	argument. 
+	* src/server_publickey.c (do_authenticate): Pass algorithm to
+	lookup function.
+
+	* src/io.c (write_raw_with_poll): Return an exception on error.
+	(write_raw): -"-
+
+	* src/format.c (lsh_string_eq, lsh_string_eq_l): Replaces
+	lsh_string_cmp() and lsh_string_cmp_l(). 
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added interact.c
+
+	* src/interact.h: New file.
+
+	* src/interact.c: New file.
+
+1999-11-10  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/dsa.c (spki_init_dsa_public): New function.
+	(make_dsa_spki_verifier): New function.
+	(make_dsa_spki_signer): New function.
+
+	* src/atoms.in: Added "x".
+
+1999-11-09  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/dsa.c: Removed dsa_classic functions.
+
 1999-11-08  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/lsh.c (sloppy_host_db): Renamed from fake_host_db. 
@@ -80,7 +140,7 @@
 	* src/lsh.c (main_argp_parser): Move reading of ~/.lsh/identity
 	here, and check for getenv("HOME") being NULL.
 
-1999-11-03  Balazs Scheidler  <bazsi@balabit.hu>
+1999-11-03  Balázs Scheidler  <bazsi@balabit.hu>
 
 	* src/atoms.in: removed ssh-dss-kludge atom, 
 
@@ -567,7 +627,7 @@ Tue Sep 21 22:41:47 1999  Niels Möller  <nisse@lysator.liu.se>
 	* src/sexp_streamed_parser.c (do_parse_base64): Bugfix: Increase
 	done at the start of the loop.
 
-1999-09-09  Balazs Scheidler  <bazsi@balabit.hu>
+1999-09-09  Balázs Scheidler  <bazsi@balabit.hu>
 
 	* src/lsh.c, src/lshd.c, src/sexp_conv.c: added some uninitialized
  	fields to structure inits to avoid warning
@@ -713,7 +773,7 @@ Tue Sep 21 22:41:47 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (main): Create an authorization_db class (Bazsi).
 
-1999-07-23  Balazs Scheidler  <bazsi@balabit.hu>
+1999-07-23  Balázs Scheidler  <bazsi@balabit.hu>
 
 	* configure.in: merged different DATAFELLOWS workaround defines to
 	a simple DATAFELLOWS_WORKAROUNDS, this affects a few files, for a
@@ -734,7 +794,7 @@ Tue Sep 21 22:41:47 1999  Niels Möller  <nisse@lysator.liu.se>
 	* src/server_authorization.c: new file, some public key checking
 	is done
 	
-1999-07-22  Balazs Scheidler  <bazsi@balabit.hu>
+1999-07-22  Balázs Scheidler  <bazsi@balabit.hu>
 
 	* src/lookup_verifier.{c,h}: new files. moved lookup_verifier
 	class from client_keyexchange.h to separate files. It is also used
@@ -744,7 +804,7 @@ Tue Sep 21 22:41:47 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/dsa.c: do_dsa_verify_kludge() cleaned up
 	
-1999-07-11  Balazs Scheidler  <bazsi@balabit.hu>
+1999-07-11  Balázs Scheidler  <bazsi@balabit.hu>
 
 	* src/client.c: added DataFellows workaround for
 	SSH_MSG_SERVICE_ACCEPT, compiled in conditionally if
@@ -2545,7 +2605,7 @@ Fri Dec 18 01:53:22 1998    <nisse@puck>
 	differently.
 	
 
-	* crypto.c: Added md5 support by Balazs Scheidler.
+	* crypto.c: Added md5 support by Balázs Scheidler.
 
 	* client.c (do_exit_status): Bugfix: Changed && to &.
 

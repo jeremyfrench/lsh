@@ -223,7 +223,7 @@ TASKLIST and NOTES files now included in the snapshot.
 
 NEWS since the 1998-12-17 snapshot:
 
-Support for md5 (by Balazs Scheidler).
+Support for md5 (by Balázs Scheidler).
 
 Various bugfixes.
 
@@ -240,4 +240,4 @@ together (crypto_cascade()).
 Some untested support for blowfish and 3DES. A -c command line option
 is needed.
 
-A few bugfixes. Thanks to J.H.M. Dassen (Ray) and Balazs Scheidler.
+A few bugfixes. Thanks to J.H.M. Dassen (Ray) and Balázs Scheidler.
