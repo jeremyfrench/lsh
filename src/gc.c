@@ -155,19 +155,40 @@ void gc_register(struct lsh_object *o)
   sanity_check_object_list();
 }
 
-/* FIXME: This function should really deallocate and forget the object
- * early. But we keep it until the next gc, in order to catch any
- * references to killed objects. */
+/* NOTE: If the object is close to the start of the object list, it is
+ * deallocated and forgotten immedietely. If the object is not found,
+ * we don't search the entire list, but instead defer deallocation to
+ * gc_sweep(). */
 void gc_kill(struct lsh_object *o)
 {
   sanity_check_object_list();
 
   if (!o)
     return;
-  
+
   assert(!o->dead);
 
   o->dead = 1;
+
+  debug("gc_kill: Killing object of type %z.\n",
+	o->isa ? o->isa->name : "UNKNOWN");
+  
+  if (o == all_objects)
+    {
+      struct lsh_class *class;
+      
+      debug("gc_kill:   Deallocating immediately.\n");
+
+      for (class = o->isa; class; class = class->super_class)
+	if (class->free_instance)
+	  FREE_INSTANCE(class, o);
+
+      all_objects = o->next;
+      number_of_objects--;
+      lsh_object_free(o);
+    }
+  else
+    debug("gc_kill:   Deferring deallocation to gc_sweep()\n");
 
   sanity_check_object_list();
 }
