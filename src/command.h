@@ -60,39 +60,8 @@
 #define COMMAND_CALL(f, a, c, e) \
   ((void)&(f), ((f)->call((f), (struct lsh_object *) (a), (c), (e))))
 
-
-/* GABA:
-   (class
-     (name command_simple)
-     (super command)
-     (vars
-       ; Like call, but returns the value immediately rather than
-       ; using a continuation function.
-       (call_simple method "struct lsh_object *" "struct lsh_object *")))
-*/
-
-
-#define COMMAND_SIMPLE_CALL(f, a) \
-  ((f)->call_simple((f), (struct lsh_object *)(a)))
-
-/* FIXME: Delete, use DEFINE_COMMAND instead */
+/* NOTE: Except when inheriting command, use DEFINE_COMMAND instead. */
 #define STATIC_COMMAND(f) { STATIC_HEADER, f }
-
-#define STATIC_COMMAND_SIMPLE(f) \
-{ STATIC_COMMAND(do_call_simple_command), f}
-
-
-#define DEFINE_COMMAND_SIMPLE(cname, ARG)		\
-static struct lsh_object *				\
-do_simple_##cname(struct command_simple *,		\
-		  struct lsh_object *a);		\
-							\
-struct command_simple cname =				\
-STATIC_COMMAND_SIMPLE(do_simple_##cname);		\
-							\
-static struct lsh_object *				\
-do_simple_##cname(struct command_simple *s UNUSED,	\
-		  struct lsh_object *ARG)
 
 #define DEFINE_COMMAND(cname)			\
 static void					\
@@ -288,14 +257,14 @@ make_command_context(struct command_continuation *c,
 /* GABA:
    (class
      (name catch_command)
-     (super command_simple)
+     (super command)
      (vars
        (mask . UINT32)
        (value . UINT32)
 
        ; Ignore return values from body. This means that the catch
        ; will return *only* if some exception is raised. Useful for
-       ; reading until some EOF exception ir raised.
+       ; reading until some EOF exception is raised.
        (ignore_value . int))) */
 
 struct catch_handler_info *
@@ -307,18 +276,20 @@ struct command *
 make_catch_apply(struct catch_handler_info *info,
 		 struct command *body);
 
-struct lsh_object *
-do_catch_simple(struct command_simple *s,
-		struct lsh_object *a);
+void
+do_catch_simple(struct command *s,
+		struct lsh_object *a,
+		struct command_continuation *c,
+		struct exception_handler *e);
 
 #define STATIC_CATCH_COMMAND(m, v, i) \
-{ STATIC_COMMAND_SIMPLE(do_catch_simple), (m), (v), (i) }
+{ STATIC_COMMAND(do_catch_simple), (m), (v), (i) }
 
 
 /* GABA:
    (class
      (name catch_report_collect)
-     (super command_simple)
+     (super command)
      (vars
        (info object report_exception_info)))
 */
@@ -327,12 +298,14 @@ struct command *
 make_catch_report_apply(struct report_exception_info *info,
 			struct command *body);
 
-struct lsh_object *
-do_catch_report_collect(struct command_simple *s,
-			struct lsh_object *a);
+void
+do_catch_report_collect(struct command *s,
+			struct lsh_object *a,
+			struct command_continuation *c,
+			struct exception_handler *e);
 
 #define STATIC_CATCH_REPORT(i) \
-{ STATIC_COMMAND_SIMPLE(do_catch_report_collect), i }
+{ STATIC_COMMAND(do_catch_report_collect), i }
 
 
 #if DEBUG_TRACE
