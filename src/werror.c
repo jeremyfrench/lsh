@@ -41,9 +41,14 @@
 #include <unistd.h>
 #endif
 
+#ifdef HAVE_SYSLOG
+#include <syslog.h>
+#endif
+
 int debug_flag = 0;
 int quiet_flag = 0;
 int verbose_flag = 0;
+int syslog_flag = 0;
 
 int error_fd = STDERR_FILENO;
 
@@ -52,6 +57,36 @@ static UINT8 error_buffer[BUF_SIZE];
 static UINT32 error_pos = 0;
 
 static int (*error_write)(int fd, UINT32 length, UINT8 *data) = write_raw;
+
+#ifdef HAVE_SYSLOG
+static int write_syslog(int fd UNUSED, UINT32 length, UINT8 *data)
+{
+  UINT8 string_buffer[BUF_SIZE];
+  
+  /* Make sure the message is properly terminated with \0. */
+  snprintf(string_buffer, (BUF_SIZE > length) ? BUF_SIZE : length, "%s", data);
+
+  /* FIXME: Should we use different log levels for werror, verbose and
+   * debug? */
+  
+  syslog(LOG_NOTICE, "%s", string_buffer);
+
+  return 0; /* FIXME */
+}
+
+void set_error_syslog(void)
+{
+  error_write = write_syslog;
+  error_fd = -1;
+}
+#endif /* HAVE_SYSLOG */
+
+void set_error_stream(int fd, int with_poll)
+{
+  error_fd = fd;
+
+  error_write = with_poll ? write_raw_with_poll : write_raw;
+}
 
 #define WERROR(l, d) (error_write(error_fd, (l), (d)))
 
@@ -188,37 +223,6 @@ static void werror_paranoia_putc(UINT8 c)
       break;
     }
 }
-
-void set_error_stream(int fd, int with_poll)
-{
-  error_fd = fd;
-
-  error_write = with_poll ? write_raw_with_poll : write_raw;
-}
-
-#if 0
-void wwrite(char *msg)
-{
-  if (!quiet_flag)
-    {
-      UINT32 size = strlen(msg);
-
-      if (error_pos + size <= BUF_SIZE)
-	{
-	  memcpy(error_buffer + error_pos, msg, size);
-	  error_pos += size;
-      
-	  if (size && (msg[size-1] == '\n'))
-	    werror_flush();	
-	}
-      else
-	{
-	  werror_flush();
-	  WERROR(size, msg);
-	}
-    }
-}
-#endif
 
 void werror_vformat(const char *f, va_list args)
 {

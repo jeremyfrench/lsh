@@ -35,6 +35,10 @@ extern int verbose_flag;
 
 void set_error_stream(int fd, int with_poll);
 
+#ifdef HAVE_SYSLOG
+void set_error_syslog(void);
+#endif
+
 /* Format specifiers:
  *
  * %%  %-charqacter
@@ -61,25 +65,5 @@ void debug(const char *format, ...);
 void verbose(const char *format, ...);
 
 void fatal(const char *format, ...) NORETURN;
-
-#if 0
-/* For outputting data received from the other end */
-void werror_safe(UINT32 length, UINT8 *msg);
-void debug_safe(UINT32 length, UINT8 *msg);
-void verbose_safe(UINT32 length, UINT8 *msg);
-
-void werror_utf8(UINT32 length, UINT8 *msg);
-void debug_utf8(UINT32 length, UINT8 *msg);
-void verbose_utf8(UINT32 length, UINT8 *msg);
-
-
-void werror_hex(UINT32 length, UINT8 *data);
-void debug_hex(UINT32 length, UINT8 *data);
-void verbose_hex(UINT32 length, UINT8 *data);
-
-void werror_mpz(mpz_t n);
-void debug_mpz(mpz_t n);
-void verbose_mpz(mpz_t n);
-#endif
 
 #endif /* LSH_ERROR_H_INCLUDED */
