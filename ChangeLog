@@ -1,8 +1,11 @@
 2004-12-07  Pontus Freyhult  <pont@soua.net>
 
-	* doc/lsh.texinfo (Action options): Added --detach option.
+	* doc/lsh.texinfo (Action options): Added --detach and
+	--write-pid options.
 	(Features): Added section about gateway mode.
 	(Invoking lshg): New node.
+	(Action options): Added --subsystem option.
+	(Invoking lshd): Added --subsystems option.
 
 2004-12-06  Niels Möller  <nisse@lysator.liu.se>
 

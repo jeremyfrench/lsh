@@ -1220,6 +1220,11 @@ want to set up a few forwarded tunnels or a gateway, and nothing more.
 @item -B
 Put the client into the background after key exchange and
 user authentication. Implies @option{-N}
+
+@item --subsystem
+Specifies a subsystem to connect to, implies @option{--no-pty}. Example usage:
+@samp{--subsystem=sftp}
+
 @end table
 
 If there are trailing arguments after the name of the remote system,
@@ -1546,6 +1551,11 @@ Disable support for pseudo terminals.
 
 @item --no-tcp-forward
 Disable support for tcp forwarding, in both directions.
+
+@item --subsystems
+Specifies a list of subsystems and corresponding
+programs. 
+Example usage: @samp{--subsystems=sftp=/usr/sbin/sftp-server,foosystem=/usr/bin/foo}
 
 @end table
 
