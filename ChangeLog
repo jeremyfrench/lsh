@@ -1,3 +1,17 @@
+2001-05-17  Niels Möller  <nisse@ehand.com>
+
+	* configure.in: Set SRP_PROGRAM.
+
+	* src/Makefile.am.in (EXTRA_PROGRAMS): Added srp-gen.
+	(bin_PROGRAMS): Use SRP_PROGRAM, don't compile srp-gen if
+	SRP-support is disabled.
+
+	* src/testsuite/write-key-2-test: Fixed test; check for output
+	files in the testhome directory.
+
+	* src/unix_user.c: Fixed dummy definition of struct utmp (spotted
+	by Tomi Ollila).
+
 2001-05-15  Niels Möller  <nisse@ehand.com>
 
 	* src/scm/gaba.scm: Some more cleanup.
