@@ -1,3 +1,50 @@
+2000-11-27  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* Released lsh-1.1.3.
+
+	* src/client.c (client_argp_parser): Handle remote_forward
+	properly, and install a channel_open_forwarded_tcpip handler if
+	needed (recovered from an earlier lsh.c). Some other cleanup.
+
+	* src/abstract_crypto.h: Some cleanup.
+	* src/abstract_io.h: Likewise.
+	* src/channel.c: Likewise.
+	* src/channel.h: Likewise.
+	* src/channel_commands.h: Likewise.
+	* src/connection.h: Likewise.
+	* src/connection_commands.c: Likewise.
+	* src/dh_exchange.c: Likewise.
+	* src/exception.h: Likewise.
+	* src/gateway.c: Likewise.
+	* src/gateway_channel.c: Likewise.
+	* src/gateway_commands.c: Likewise.
+	* src/handshake.c: Likewise.
+	* src/handshake.h: Likewise.
+	* src/io.h: Likewise.
+	* src/io_commands.c: Likewise.
+	* src/io_commands.h: Likewise.
+	* src/keyexchange.h: Likewise.
+	* src/lsh.c: Likewise.
+	* src/lsh_proxy.c: Likewise.
+	* src/lshg.c: Likewise.
+	* src/publickey_crypto.h: Likewise.
+	* src/randomness.c: Likewise.
+	* src/randomness.h: Likewise.
+	* src/read_packet.c: Likewise.
+	* src/rsa.c: Likewise.
+	* src/server_pty.h: Likewise.
+	* src/server_session.c: Likewise.
+	* src/sexp.h: Likewise.
+	* src/sexp_parser.c: Likewise.
+	* src/sexp_streamed_parser.c: Likewise.
+	* src/sexp_test.c: Likewise.
+	* src/spki_commands.c: Likewise.
+	* src/spki_commands.h: Likewise.
+	* src/ssh1_fallback.c: Likewise.
+	* src/tcpforward.c: Likewise.
+	* src/unix_random.c: Likewise.
+	* src/zlib.c: Likewise.
+
 2000-11-26  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/parse.c (parse_rest, parse_rest_copy): Renamed parse_rest to
