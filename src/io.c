@@ -100,8 +100,9 @@ io_init(void)
 void
 io_final(void)
 {
+  assert(source);
   gc_final();
-  
+
   /* There mustn't be any outstanding callbacks left. */
   oop_sys_delete(global_oop_sys);
   global_oop_sys = NULL;
@@ -146,6 +147,7 @@ lsh_oop_register_signal(struct lsh_signal_handler *handler)
   trace("lsh_oop_register_signal: signal: %i, handler: %t\n",
 	handler->signum, handler);
   
+  assert(source);
   if (handler->super.alive)
     source->on_signal(source, handler->signum, lsh_oop_signal_callback, handler);
 }
@@ -156,6 +158,7 @@ lsh_oop_cancel_signal(struct lsh_signal_handler *handler)
   trace("lsh_oop_cancel_signal: signal: %i, handler: %t\n",
 	handler->signum, handler);
 
+  assert(source);
   if (handler->super.alive)
     source->cancel_signal(source, handler->signum, lsh_oop_signal_callback, handler);
 }
@@ -183,6 +186,7 @@ lsh_oop_register_read_fd(struct lsh_fd *fd)
   trace("lsh_oop_register_read_fd: fd: %i, %z\n",
 	fd->fd, fd->label);
   
+  assert(source);
   if (fd->super.alive && !fd->want_read)
     {
       assert(fd->read);
@@ -198,6 +202,7 @@ lsh_oop_cancel_read_fd(struct lsh_fd *fd)
   trace("lsh_oop_cancel_read_fd: fd: %i, %z\n",
 	fd->fd, fd->label);
   
+  assert(source);
   if (fd->super.alive)
     {
       source->cancel_fd(source, fd->fd, OOP_READ);
@@ -228,6 +233,7 @@ lsh_oop_register_write_fd(struct lsh_fd *fd)
   trace("lsh_oop_register_write_fd: fd: %i, %z\n",
 	fd->fd, fd->label);
   
+  assert(source);
   if (fd->super.alive && !fd->want_write)
     {
       assert(fd->write);
@@ -243,6 +249,7 @@ lsh_oop_cancel_write_fd(struct lsh_fd *fd)
   trace("lsh_oop_cancel_write_fd: fd: %i, %z\n",
 	fd->fd, fd->label);
 
+  assert(source);
   if (fd->super.alive)
     {
       source->cancel_fd(source, fd->fd, OOP_WRITE);
@@ -271,6 +278,7 @@ lsh_oop_time_callback(oop_source *source UNUSED,
 static void
 lsh_oop_register_callout(struct lsh_callout *callout)
 {
+  assert(source);
   if (callout->super.alive)
     source->on_time(source, OOP_TIME_NOW, lsh_oop_time_callback, callout);
 }
@@ -278,6 +286,7 @@ lsh_oop_register_callout(struct lsh_callout *callout)
 static void
 lsh_oop_cancel_callout(struct lsh_callout *callout)
 {
+  assert(source);
   if (callout->super.alive)
     source->cancel_time(source, OOP_TIME_NOW, lsh_oop_time_callback, callout);
 }
