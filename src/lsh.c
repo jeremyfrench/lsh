@@ -250,36 +250,32 @@ static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
-  { "port", 'p', "Port number", 0, "Connect to this port." },
-  { "user", 'l', "User name", 0, "Login as this user." },
-  { NULL, 0, NULL, 0, "Algorithm selection:"},
-  { "crypto", 'c', "Algorithm", 0, "" },
-  { "compression", 'z', "Algorithm", OPTION_ARG_OPTIONAL, "Default is zlib." },
-  { "mac", 'm', "Algorithm", 0, "" },
-  { NULL, 0, NULL, 0, "Actions:" },
-  { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "" },
-  { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "" },
+  { "port", 'p', "Port", 0, "Connect to this port.", 0 },
+  { "user", 'l', "User name", 0, "Login as this user.", 0 },
+  { NULL, 0, NULL, 0, "Actions:", 0 },
+  { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
+  { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
   { "nop", 'N', NULL, 0, "No operation (supresses the default action, "
-    "which is to spawn a remote shell)" },
-  { NULL, 0, NULL, 0, "Modifiers that apply to port forwarding:" },
-  { "remote-peers", 'g', NULL, 0, "Allow remote access to forwarded ports" },
+    "which is to spawn a remote shell)", 0 },
+  { NULL, 0, NULL, 0, "Modifiers that apply to port forwarding:", 0 },
+  { "remote-peers", 'g', NULL, 0, "Allow remote access to forwarded ports", 0 },
   { "no-remote-peers", 'g' | ARG_NOT, NULL, 0, 
-    "Disallow remote access to forwarded ports (default)." },
+    "Disallow remote access to forwarded ports (default).", 0 },
 #if WITH_PTY_SUPPORT
-  { NULL, 0, NULL, 0, "Modifiers that apply to remote execution:" },
-  { "pty", 't', NULL, 0, "Request a remote pty (default)." },
-  { "no-pty", 't' | ARG_NOT, NULL, 0, "Don't request a remote pty." },
+  { NULL, 0, NULL, 0, "Modifiers that apply to remote execution:", 0 },
+  { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
+  { "no-pty", 't' | ARG_NOT, NULL, 0, "Don't request a remote pty.", 0 },
 #endif /* WITH_PTY_SUPPORT */
-  { NULL, 0, NULL, 0, "Universal not:" },
-  { "no", 'n', NULL, 0, "Inverts the effect of the next modifier" },
+  { NULL, 0, NULL, 0, "Universal not:", 0 },
+  { "no", 'n', NULL, 0, "Inverts the effect of the next modifier", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
 /* GABA:
    (class
      (name lsh_options)
+     (super algorithms_options)
      (vars
-       (algorithms object alist)
        (backend object io_backend)
 
        ; For i/o exceptions 
@@ -292,11 +288,6 @@ main_options[] =
        (remote object address_info)
 
        (user . "char *")
-
-       ; 0 means default
-       (preferred_crypto . int)
-       (preferred_compression . int)
-       (preferred_mac . int)
 
        ; -1 means default behaviour
        (with_pty . int)
@@ -315,7 +306,8 @@ make_options(struct alist *algorithms, struct io_backend *backend,
 {
   NEW(lsh_options, self);
 
-  self->algorithms = algorithms;
+  init_algorithms_options(&self->super, algorithms);
+  
   self->backend = backend;
   self->handler = handler;
   self->exit_code = exit_code;
@@ -324,9 +316,7 @@ make_options(struct alist *algorithms, struct io_backend *backend,
   self->remote = NULL;
   self->user = getenv("LOGNAME");
   self->port = "ssh";
-  self->preferred_crypto = 0;
-  self->preferred_compression = 0;
-  self->preferred_mac = 0;
+
   self->with_pty = -1;
   self->start_shell = 1;
   self->with_remote_peers = 0;
@@ -338,6 +328,7 @@ make_options(struct alist *algorithms, struct io_backend *backend,
 static const struct argp_child
 main_argp_children[] =
 {
+  { &algorithms_argp, 0, "", 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
@@ -352,7 +343,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = &self->super;
+      state->child_inputs[1] = NULL;
       break;
     case ARGP_KEY_NO_ARGS:
       argp_usage(state);
@@ -474,27 +466,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
     case 'l':
       self->user = arg;
-      break;
-      
-    case 'c':
-      self->preferred_crypto = lookup_crypto(self->algorithms, arg);
-      if (!self->preferred_crypto)
-	argp_error(state, "Unknown crypto algorithm '%s'.", arg);
-
-      break;
-    case 'z':
-      if (!arg)
-	arg = "zlib";
-	
-      self->preferred_compression = lookup_compression(self->algorithms, arg);
-      if (!self->preferred_compression)
-	argp_error(state, "Unknown compression algorithm '%s'.", arg);
-
-      break;
-    case 'm':
-      self->preferred_mac = lookup_mac(self->algorithms, arg);
-      if (!self->preferred_mac)
-	argp_error(state, "Unknown message authentication algorithm '%s'.", arg);
       break;
       
     case 'L':
@@ -636,11 +607,14 @@ do_lsh_default_handler(struct exception_handler *s,
 }
 
 static struct exception_handler *
-make_lsh_default_handler(int *status, struct exception_handler *parent)
+make_lsh_default_handler(int *status, struct exception_handler *parent,
+			 const char *context)
 {
   NEW(lsh_default_handler, self);
   self->super.parent = parent;
   self->super.raise = do_lsh_default_handler;
+  self->super.context = context;
+  
   self->status = status;
 
   return &self->super;
@@ -686,9 +660,10 @@ int main(int argc, char **argv)
   /* FIXME: A single exception handler everywhere seems a little to
    * crude. */
   struct exception_handler *handler
-    = make_lsh_default_handler(&lsh_exit_code, &default_exception_handler);
+    = make_lsh_default_handler(&lsh_exit_code, &default_exception_handler,
+			       HANDLER_CONTEXT);
 
-  /* FIXME: Why not allcoate backend statically? */
+  /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
   init_backend(backend);
   
@@ -954,15 +929,9 @@ int main(int argc, char **argv)
 			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
 					-1),
 			  make_int_list(1, ATOM_SSH_DSS, -1),
-			  (options->preferred_crypto
-			   ? make_int_list(1, options->preferred_crypto, -1)
-			   : default_crypto_algorithms()),
-			  (options->preferred_mac
-			   ? make_int_list(1, options->preferred_mac, -1)
-			   : default_mac_algorithms()),
-			  (options->preferred_compression
-			   ? make_int_list(1, options->preferred_compression, -1)
-			   : default_compression_algorithms()),
+			  options->super.crypto_algorithms,
+			  options->super.mac_algorithms,
+			  options->super.compression_algorithms,
 			  make_int_list(0, -1));
   {
     struct lsh_object *o =

@@ -35,8 +35,9 @@
 #include "randomness.h"
 #include "sexp.h"
 #include "werror.h"
+#include "xalloc.h"
 
-#include "getopt.h"
+#include "lsh_argp.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,6 +46,105 @@
 #include <unistd.h>
 #endif
 
+#include "lsh_keygen.c.x"
+
+/* Option parsing */
+
+/* GABA:
+   (class
+     (name lsh_keygen_options)
+     (vars
+       (style . sexp_argp_state)
+       ; (algorithm . int)
+       (level . int)))
+*/
+
+struct lsh_keygen_options *
+make_lsh_keygen_options(void)
+{
+  NEW(lsh_keygen_options, self);
+  self->style = SEXP_TRANSPORT;
+  self->level = 8;
+
+  return self;
+}
+
+static const struct argp_option
+main_options[] =
+{
+  /* Name, key, arg-name, flags, doc, group */
+  { "algorithm", 'a', "Algorithm", 0, "Default is to generate dsa keys", 0 },
+  { "nist-level", 'l', "Security level", 0, "Level 0 uses 512-bit primes, "
+    "level 8 uses 1024 bit primes. Default is 8.", 0 },
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+static const struct argp_child
+main_argp_children[] =
+{
+  { &sexp_output_argp, 0, NULL, 0 },
+  { &werror_argp, 0, "", 0 },
+  { NULL, 0, NULL, 0}
+};
+
+static error_t
+main_argp_parser(int key, char *arg UNUSED, struct argp_state *state)
+{
+  CAST(lsh_keygen_options, self, state->input);
+
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_INIT:
+      state->child_inputs[0] = &self->style;
+      state->child_inputs[1] = NULL;
+      break;
+    case ARGP_KEY_ARG:
+      argp_error(state, "Spurious arguments.");
+      break;
+    case 'l':
+	{
+	  char *end;
+	  long l = strtol(optarg, &end, 0);
+	      
+	  if (!*arg || *end)
+	    {
+	      argp_error(state, "Invalid security level.");
+	      break;
+	    }
+	  if ( (l<0) || (l > 8))
+	    {
+	      argp_error(state, "Security level should be in the range 0-8.");
+	      break;
+	    }
+	  self->level = l;
+	  break;
+	}
+
+    case 'a':
+      if (strcmp(arg, "dsa"))
+	argp_error(state, "Sorry, doesn't support any algorithm but dsa.");
+
+      break;
+      
+    }
+  return 0;
+}
+
+static const struct argp
+main_argp =
+{ main_options, main_argp_parser, 
+  "[-l LEVEL] [-a dsa]",
+  ( "Generates a new private key for the given algorithm and security level.\v"
+    "You will usually want to pipe the new key into a program like lsh_writekey, "
+    "to split it into its private and public parts, and optionally encrypt "
+    "the private information."),
+  main_argp_children,
+  NULL
+};
+
+#if 0
 static void usage(void) NORETURN;
 
 static void usage(void)
@@ -52,6 +152,7 @@ static void usage(void)
   werror("Usage: lsh_keygen [-o style] [-l nist-level] [-a dsa] [-q] [-d] [-v]\n");
   exit(1);
 }
+#endif
 
 static void
 do_lsh_keygen_handler(struct exception_handler *s UNUSED,
@@ -67,9 +168,8 @@ STATIC_EXCEPTION_HANDLER(do_lsh_keygen_handler, NULL);
 
 int main(int argc, char **argv)
 {
-  int option;
-  long l = 4;
-  int style = SEXP_TRANSPORT;
+  struct lsh_keygen_options * options
+    = make_lsh_keygen_options();
   
   struct dsa_public public;
   mpz_t x;
@@ -77,6 +177,9 @@ int main(int argc, char **argv)
   mpz_t t;
   struct randomness *r;
 
+  argp_parse(&main_argp, argc, argv, 0, NULL, options);
+  
+#if 0
   while((option = getopt(argc, argv, "a:dl:o:qv")) != -1)
     switch(option)
       {
@@ -134,6 +237,7 @@ int main(int argc, char **argv)
   
   if (argc != optind)
     usage();
+#endif
   
   mpz_init(public.p);
   mpz_init(public.q);
@@ -145,7 +249,7 @@ int main(int argc, char **argv)
   mpz_init(t);
 
   r = make_poor_random(&sha_algorithm, NULL);
-  dsa_nist_gen(public.p, public.q, r, l);
+  dsa_nist_gen(public.p, public.q, r, options->level);
 
   debug("%xn\n"
 	"%xn\n", public.p, public.q);
@@ -166,7 +270,7 @@ int main(int argc, char **argv)
   mpz_fdiv_r(t, public.p, public.q);
   if (mpz_cmp_ui(t, 1))
     {
-      werror("q doesn't divide p-1 !\n");
+      fatal("q doesn't divide p-1 !\n");
       return 1;
     }
 
@@ -193,7 +297,7 @@ int main(int argc, char **argv)
 		     sexp_l(2, sexp_z("g"), sexp_un(public.g), -1),
 		     sexp_l(2, sexp_z("y"), sexp_un(public.y), -1),
 		     sexp_l(2, sexp_z("x"), sexp_un(x), -1), -1), -1),
-       style, 0);
+       options->style, 0);
 
     A_WRITE(output, key);
 

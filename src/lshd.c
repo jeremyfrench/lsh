@@ -53,7 +53,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include "getopt.h"
+#include "lsh_argp.h"
 
 #include "lshd.c.x"
 
@@ -74,9 +74,9 @@
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
 
+#if 0
 void usage(void) NORETURN;
 
-#define OPT_SSH1_FALLBACK -2
 
 void usage(void)
 {
@@ -97,7 +97,134 @@ void usage(void)
 	 "      --debug\n");
   exit(1);
 }
+#endif
 
+/* Option parsing */
+
+#define OPT_SSH1_FALLBACK 0x200
+#define OPT_INTERFACE 0x201
+#define OPT_TCPIP_FORWARD 0x202
+#define OPT_NO_TCPIP_FORWARD 0x203
+
+/* GABA:
+   (class
+     (name lshd_options)
+     (super algorithms_options)
+     (vars
+       (style . sexp_argp_state)
+       (interface . "char *")
+       (port . "char *")
+       (hostkey . "char *")
+       (local object address_info)
+       (with_tcpip_forward . int)
+       (sshd1 object ssh1_fallback)))
+*/
+
+struct lshd_options *make_lshd_options(struct alist *algorithms)
+{
+  NEW(self, lshd_options);
+
+  init_algorithms_options(&self->super, algorithms);
+  
+  self->style = SEXP_TRANSPORT;
+  self->interface = NULL;
+  self->port = "ssh";
+  /* FIXME: this should perhaps use sysconfdir */  
+  self->hostkey = "/etc/lsh_host_key";
+  self->local = NULL;
+
+  self->with_tcpip_forward = 1;
+  
+  self->sshd1 = NULL;
+  
+  return self;
+}
+
+static const struct argp_option
+main_options[] =
+{
+  /* Name, key, arg-name, flags, doc, group */
+  { "interface", OPT_INTERFACE, "interface", 0,
+    "Listen on this network interface", 0 }, 
+  { "port", 'p', "Port", 0, "Listen on this port.", 0 },
+  { "host-key", 'h', "Key file", 0, "Location of the server's private key.", 0},
+
+#if WITH_SSH1_FALLBACK
+  { "ssh1-fallback", OPT_SSH1_FALLBACK, "File name", OPTION_ARG_OPTIONAL,
+    "Location of the sshd1 program, for falling back to version 1 of the Secure Shell protocol.", 0 },
+#endif /* WITH_SSH1_FALLBACK */
+
+#if WITH_TCP_FORWARD
+  { "tcp-forward", OPT_TCPIP_FORWARD, NULL, 0, "Enable tcpip forwarding (default).", 0 },
+  { "no-tcp-forward", OPT_NO_TCPIP_FORWARD, NULL, 0, "Disable tcpip forwarding.", 0 },
+#endif /* WITH_TCP_FORWARD */
+
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+static const struct argp_child
+main_argp_children[] =
+{
+  { &sexp_input_argp, 0, "", 0 },
+  { &algorithms_argp, 0, "", 0 },
+  { &werror_argp, 0, "", 0 },
+  { NULL, 0, NULL, 0}
+};
+
+static error_t
+main_argp_parser(int key, char *arg, struct argp_state *state)
+{
+  CAST(lshd_options, self, state->input);
+  
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_INIT:
+      state->child_inputs[0] = &self->style;
+      state->child_inputs[1] = &self->super;
+      state->child_inputs[1] = NULL;
+      break;
+    case ARGP_KEY_ARG:
+      argp_error(state, "Spurious arguments.");
+      break;
+      
+    case ARGP_KEY_END:
+      self->local = make_address_info_c(self->interface, self->port);
+      if (!self->local)
+	argp_error(state, "Invalid interface, port or service, %s:%s'.",
+		   self->interface ? self->interface : "ANY",
+		   self->port);
+      break;
+      
+    case 'p':
+      self->port = arg;
+      break;
+
+    case 'h':
+      self->hostkey = arg;
+      break;
+
+    case OPT_INTERFACE:
+      self->interface = arg;
+      break;
+ 
+#if WITH_SSH1_FALLBACK
+    case OPT_SSH1_FALLBACK:
+      self->sshd1 = make_ssh1_fallback(arg ? arg : SSHD1);
+      break;
+#endif
+
+    case OPT_TCPIP_FORWARD:
+      self->with_tcpip_forward = 1;
+      break;
+
+    case OPT_NO_TCPIP_FORWARD:
+      self->with_tcpip_forward = 0;
+      break;
+    }
+  return 0;
+}
 
 /* FIXME: We should have some more general functions for reading
  * private keys. */
@@ -277,6 +404,9 @@ static int read_host_key(const char *name,
 
 int main(int argc, char **argv)
 {
+  struct lshd_options *options;
+
+#if 0
   char *host = NULL;  /* Interface to bind */
   char *port = "ssh";
   /* TODO: this should probably use sysconfdir */  
@@ -285,20 +415,14 @@ int main(int argc, char **argv)
 #if WITH_SSH1_FALLBACK
   char *sshd1 = NULL;
 #endif
+  
 #if WITH_TCP_FORWARD
   int forward_flag = 1;
+#endif
 #endif
   
   struct alist *keys;
   
-  int option;
-
-  int preferred_crypto = 0;
-  int preferred_compression = 0;
-  int preferred_mac = 0;
-
-  struct address_info *local;
-
   struct reap *reaper;
   
   struct randomness *r;
@@ -308,7 +432,9 @@ int main(int argc, char **argv)
   struct make_kexinit *make_kexinit;
   struct alist *authorization_lookup;
   
+  /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
+  init_backend(backend);
 
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -322,7 +448,11 @@ int main(int argc, char **argv)
   algorithms = many_algorithms(1,
 			       ATOM_SSH_DSS, make_dsa_algorithm(r),
 			       -1);
+  options = make_lshd_options(algorithms);
+  
+  argp_parse(&main_argp, argc, argv, options);
 
+#if 0
   for (;;)
     {
       struct option options[] =
@@ -405,9 +535,11 @@ int main(int argc, char **argv)
   if ( (argc - optind) != 0)
     usage();
 
+#endif
+  
   /* Read the hostkey */
   keys = make_alist(0, -1);
-  if (!read_host_key(hostkey, keys, r))
+  if (!read_host_key(options->hostkey, keys, r))
     {
       werror("lshd: Could not read hostkey.\n");
       return EXIT_FAILURE;
@@ -415,13 +547,6 @@ int main(int argc, char **argv)
   /* FIXME: We should check that we have at aleast one host key.
    * We should also extract the host-key algorithms for which we have keys,
    * instead of hardcoding ssh-dss below. */
-
-  local = make_address_info_c(host, port);
-  if (!local)
-    {
-      werror("lshd: Invalid port or service\n");
-      exit (EXIT_FAILURE);
-    }
   
 #if 0
 #if HAVE_SYSLOG
@@ -437,7 +562,6 @@ int main(int argc, char **argv)
 #endif /* HAVE_SYSLOG */
 #endif
  
-  init_backend(backend);
   reaper = make_reaper();
 
   kex = make_dh_server(dh, keys);
@@ -463,15 +587,9 @@ int main(int argc, char **argv)
 			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
 					-1),
 			  make_int_list(1, ATOM_SSH_DSS, -1),
-			  (preferred_crypto
-			   ? make_int_list(1, preferred_crypto, -1)
-			   : default_crypto_algorithms()),
-			  (preferred_mac
-			   ? make_int_list(1, preferred_mac, -1)
-			   : default_mac_algorithms()),
-			  (preferred_compression
-			   ? make_int_list(1, preferred_compression, -1)
-			   : default_compression_algorithms()),
+			  options->crypto_algorithms,
+			  options->mac_algorithms,
+			  options->compression_algorithms,
 			  make_int_list(0, -1));
   
   {
@@ -479,7 +597,7 @@ int main(int argc, char **argv)
     struct object_list *connection_hooks;
 
 #if WITH_TCP_FORWARD
-    if (forward_flag)
+    if (options->with_tcpip_forward)
       connection_hooks = make_object_list
 	(3,
 	 make_tcpip_forward_hook(backend),
@@ -499,10 +617,7 @@ int main(int argc, char **argv)
 				r,
 				algorithms,
 				make_kexinit,
-#if WITH_SSH1_FALLBACK
-				sshd1 ? make_ssh1_fallback (sshd1) :
-#endif /* WITH_SSH1_FALLBACK */
-				NULL),
+				options->sshd1),
 	 make_offer_service
 	 (make_alist
 	  (1, ATOM_SSH_USERAUTH,
