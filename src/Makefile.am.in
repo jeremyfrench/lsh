@@ -68,7 +68,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	format.c gc.c \
 	gateway.c gateway_channel.c gateway_commands.c \
 	handshake.c \
-	hmac.c interact.c io.c io_commands.c \
+	interact.c io.c io_commands.c \
 	keyexchange.c \
 	list.c lookup_verifier.c \
 	lock_file.c \
