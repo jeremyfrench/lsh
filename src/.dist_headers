@@ -20,7 +20,6 @@ crypto.h
 daemon.h
 debug.h
 digits.h
-dsa.h
 encrypt.h
 exception.h
 format.h

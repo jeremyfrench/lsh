@@ -89,10 +89,8 @@ server_userauth.h.x
 server_x11.c.x
 server_x11.h.x
 sexp-conv.c.x
-sexp.c.x
 sexp.h.x
 sha.c.x
-spki.c.x
 spki.h.x
 srp-gen.c.x
 srp.h.x
