@@ -28,7 +28,6 @@
 
 #include "lsh.h"
 
-#include "list.h"
 
 /* Layout taken from AmigaOS lists... The first node uses a prev
  * pointer that points to the queue's HEAD. The last node uses a next
@@ -87,7 +86,7 @@ struct object_queue_node
      (name object_queue)
      (vars
        (length . UINT32)
-       (q special-struct "struct lsh_queue"
+       (q indirect-special "struct lsh_queue"
           do_object_queue_mark do_object_queue_free)))
 */
 

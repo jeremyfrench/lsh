@@ -76,7 +76,7 @@
 ;; (bignum)          mpz_t name
 ;; (simple c-type)   c-type
 ;; (special c-type mark-fn free-fn)
-;; (special-struct c-type mark-fn free-fn)
+;; (indirect-special c-type mark-fn free-fn)
 ;;
 ;; (struct tag)
 ;;
@@ -102,7 +102,7 @@
       (type->category `(simple ,type))
       (let ((tag (car type)))
 	(case tag
-	  ((string object simple special special-struct
+	  ((string object simple special indirect-special
 	    space bignum struct) tag)
 	  ((array var-array pointer) (type->category (cadr type)))
 	  
@@ -116,7 +116,7 @@
 	((object) (list "struct " (cadr type) " *" expr))
 	((struct) (list "struct " (cadr type) " " expr)) 
 	((bignum) (list "mpz_t " expr))
-	((simple special special-struct) (list (cadr type) " " expr))
+	((simple special indirect-special) (list (cadr type) " " expr))
 	((pointer space) (type->declaration (cadr type)
 					    (list "(*(" expr "))")))
 	((array)  (type->declaration (cadr type)
@@ -153,9 +153,9 @@
 
 	((special) (let ((mark-fn (caddr type)))
 		     (and mark-fn (list mark-fn "(" expr ", mark);\n"))))
-	((special-struct) (let ((mark-fn (caddr type)))
-			    (and mark-fn (list mark-fn "(&(" expr
-					       "), mark);\n"))))
+	((indirect-special) (let ((mark-fn (caddr type)))
+			      (and mark-fn (list mark-fn "(&(" expr
+						 "), mark);\n"))))
 	
 	;; FIXME: Doesn't handle nested arrays
 	((array)
@@ -188,9 +188,9 @@
 	((bignum) (free/f "mpz_clear"))
 	((space) (free/f "lsh_space_free"))
 	((special) (free/f (cadddr type)))
-	((special-struct) (let ((free-fn (cadddr type)))
-			    (and free-fn
-				 (list free-fn "(&(" expr "));\n")))) 
+	((indirect-special) (let ((free-fn (cadddr type)))
+			      (and free-fn
+				   (list free-fn "(&(" expr "));\n")))) 
 	
 	((array)
 	 (let ((free-k (type->free (cadr type) (list "(" expr ")[k]"))))

@@ -72,8 +72,8 @@ struct buffer_node
 
        ;; (try_write simple int)
 
-       (q special-struct "struct lsh_queue"
-                     #f do_free_buffer)
+       (q indirect-special "struct lsh_queue"
+                           #f do_free_buffer)
 
        (pos simple UINT32)        ; Partial packet
        (partial string)

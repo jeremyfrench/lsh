@@ -50,7 +50,7 @@ static void do_free_zstream(z_stream *z);
        (max . UINT32)
        (rate . UINT32)
        (f pointer (function int "z_stream *" int))
-       (z special-struct z_stream
+       (z indirect-special z_stream
           #f do_free_zstream)))
 */
 
