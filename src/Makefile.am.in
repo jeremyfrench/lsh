@@ -24,7 +24,9 @@ Makefile.am: Makefile.am.in
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
-bin_PROGRAMS = lsh lsh-keygen lsh-writekey lsh-decode-key sexp-conv srp-gen
+EXTRA_PROGRAMS = lsh-krb-checkpw
+
+bin_PROGRAMS = lsh lsh-keygen lsh-writekey lsh-decode-key sexp-conv srp-gen @KRB_PROGRAM@
 sbin_PROGRAMS = lshd lsh_proxy
 bin_SCRIPTS = lsh-authorize ssh-conv
 noinst_PROGRAMS = prime_table digit_table pkcs5-test
@@ -109,6 +111,8 @@ packet_types.h: ssh.h invert-defs
 	$(srcdir)/invert-defs <ssh.h >$@T
 	test -s $@T && mv -f $@T $@
 
+lsh_krb_checkpw_LDADD=@KRB_LIBS@
+
 # typedescr.h: ssh.h $(top_srcdir)/misc/mk-reverse-table
 # 	  $(PERL) $(top_srcdir)/misc/mk-reverse-table ssh.h >$@T
 # 	  if test -s $@T ; then mv -f $@T $@ ; else touch $@ ; fi
@@ -138,7 +142,7 @@ EXTRA_DIST = lsh-authorize ssh-conv \
 	sexp_chars.in \
 	getopt.h getopt.c getopt1.c \
 	jpoll.h jpoll.c \
-	$(cvs_headers) $(dist_x_files) Makefile.am.in 
+	$(cvs_headers) $(dist_x_files) Makefile.am.in
 
 CLEANFILES = *.hT *.cT *.xT
 MAINTAINERCLEANFILES += $(dist_x_files)
