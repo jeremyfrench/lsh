@@ -58,7 +58,7 @@ do_key_lookup(struct lookup_verifier *c,
   CAST(authorization_db, closure, c);
   struct lsh_string *filename;
 
-  struct dsa_verifier *v;
+  struct verifier *v;
 
   assert(keyholder);
   
@@ -78,12 +78,12 @@ do_key_lookup(struct lookup_verifier *c,
   filename = ssh_cformat(".lsh/%lS/%lxfS", 
 			 closure->index_name,
 			 hash_string(closure->hashalgo,
-				     sexp_format(dsa_to_spki_public_key(&v->public),
+				     sexp_format(spki_make_public_key(v),
 						 SEXP_CANONICAL, 0),
 				     1));
   
   if (USER_FILE_EXISTS(keyholder, filename, 1))
-    return &v->super;
+    return v;
 
   return NULL;
 }
