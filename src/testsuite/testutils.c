@@ -60,8 +60,8 @@ struct lsh_string *
 decode_hex(const char *h)
 {  
   const unsigned char *hex = (const unsigned char *) h;
-  UINT32 length = decode_hex_length(h);
-  UINT8 *dst;
+  uint32_t length = decode_hex_length(h);
+  uint8_t *dst;
   
   unsigned i = 0;
   struct lsh_string *s = ssh_format("%lr", length, &dst);
@@ -170,7 +170,7 @@ struct bad_random
 };
 
 static void
-do_bad_random(struct randomness *r, UINT32 length, UINT8 *dst)
+do_bad_random(struct randomness *r, uint32_t length, uint8_t *dst)
 {
   struct bad_random *self = (struct bad_random *) r;
   knuth_lfib_random(self->ctx, length, dst);
@@ -187,7 +187,7 @@ test_sign(const char *name,
   struct signer *s;
   struct verifier *v;
   struct sexp_iterator i;
-  UINT8 *decoded;  
+  uint8_t *decoded;  
 
   struct knuth_lfib_ctx ctx;
   struct bad_random r = { { STACK_HEADER, RANDOM_GOOD /* a lie */,
