@@ -83,6 +83,10 @@ struct int_list *parse_atoms(struct simple_buffer *buffer, unsigned limit);
  * read. Returns a NULL pointer on error. */
 struct int_list *parse_atom_list(struct simple_buffer *buffer, unsigned limit);
 
+/* Copies the rest of the buffer into a string. */
+struct lsh_string *
+parse_rest(struct simple_buffer *buffer);
+
 /* Returns success (i.e. 1) iff there is no data left */
 int parse_eod(struct simple_buffer *buffer);
 

@@ -306,6 +306,18 @@ parse_atom_list(struct simple_buffer *buffer, unsigned limit)
   return parse_atoms(&sub_buffer, limit);
 }
 
+struct lsh_string *
+parse_rest(struct simple_buffer *buffer)
+{
+  UINT32 length = LEFT;
+  struct lsh_string *s = ssh_format("%ls", length, HERE);
+
+  ADVANCE(length);
+  assert(!LEFT);
+
+  return s;
+}
+
 /* Returns success (i.e. 1) iff there is no data left */
 int
 parse_eod(struct simple_buffer *buffer)
