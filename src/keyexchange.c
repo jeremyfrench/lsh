@@ -195,15 +195,6 @@ void disconnect_kex_failed(struct ssh_connection *connection, const char *msg)
 			     msg));
 }
 
-#if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
-static int invoke_ssh2_dsa_kludge_p(struct lsh_string *s)
-{
-  /* FIXME: Improve the version string test. */
-  return( (s->length >= 15)
-	  && !memcmp(s, "SSH-1.99-2.0.11", 15));
-}
-#endif DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
-
 static void
 do_handle_kexinit(struct packet_handler *c,
 		  struct ssh_connection *connection,
@@ -278,13 +269,13 @@ do_handle_kexinit(struct packet_handler *c,
     = select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
 		       connection->kexinits[1]->server_hostkey_algorithms);
 
-#if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
+#if DATAFELLOWS_WORKAROUNDS
   if ( (hostkey_algorithm_atom == ATOM_SSH_DSS)
-       && invoke_ssh2_dsa_kludge_p(connection->versions[!closure->type]))
+       && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
     {
       hostkey_algorithm_atom = ATOM_SSH_DSS_KLUDGE;
     }
-#endif
+#endif /* DATAFELLOWS_WORKAROUNDS */
 
   for(i = 0; i<KEX_PARAMETERS; i++)
     {
