@@ -38,7 +38,7 @@
 /* Initiate and manage a session */
 /* GABA:
    (class
-     (name client_session)
+     (name client_session_channel)
      (super ssh_channel)
      (vars
        ; To access stdio
@@ -54,7 +54,7 @@
 static void
 do_client_session_eof(struct ssh_channel *c)
 {
-  CAST(client_session, session, c);
+  CAST(client_session_channel, session, c);
   
   close_fd(session->in);
 }  
@@ -74,7 +74,7 @@ static void
 do_receive(struct ssh_channel *c,
 	   int type, struct lsh_string *data)
 {
-  CAST(client_session, closure, c);
+  CAST(client_session_channel, closure, c);
   
   switch(type)
     {
@@ -94,7 +94,7 @@ static void
 do_send_adjust(struct ssh_channel *s,
 	       UINT32 i UNUSED)
 {
-  CAST(client_session, self, s);
+  CAST(client_session_channel, self, s);
 
   assert(self->in->read);
 
@@ -109,7 +109,7 @@ do_client_io(struct command *s UNUSED,
 	     struct exception_handler *e UNUSED)
 
 {
-  CAST(client_session, session, x);
+  CAST(client_session_channel, session, x);
   struct ssh_channel *channel = &session->super;
   assert(x);
 
@@ -152,9 +152,9 @@ do_client_io(struct command *s UNUSED,
   REMEMBER_RESOURCE(channel->resources, &session->err->super);
   
   ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
-	    make_handle_exit_status(session->exit_status));
+	    &make_handle_exit_status(session->exit_status)->super);
   ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
-	    make_handle_exit_signal(session->exit_status));
+	    &make_handle_exit_signal(session->exit_status)->super);
 
   channel->eof = do_client_session_eof;
       
@@ -166,13 +166,13 @@ struct command client_io =
 
 
 struct ssh_channel *
-make_client_session(struct lsh_fd *in,
-		    struct lsh_fd *out,
-		    struct lsh_fd *err,
-		    UINT32 initial_window,
-		    int *exit_status)
+make_client_session_channel(struct lsh_fd *in,
+			    struct lsh_fd *out,
+			    struct lsh_fd *err,
+			    UINT32 initial_window,
+			    int *exit_status)
 {
-  NEW(client_session, self);
+  NEW(client_session_channel, self);
 
   init_channel(&self->super);
 
