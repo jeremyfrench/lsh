@@ -37,6 +37,7 @@
 
 #include "crypto.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "sexp.h"
 #include "ssh.h"
 #include "werror.h"
@@ -63,7 +64,7 @@ make_srp_entry(const struct lsh_string *name,
 {
   struct sexp_iterator i;
 
-  if (sexp_iterator_first(&i, expr->length, expr->data)
+  if (sexp_iterator_first(&i, STRING_LD(expr))
       && sexp_iterator_check_type(&i, "srp-verifier")
       && sexp_iterator_check_type(&i, "ssh-ring1"))
     {
@@ -110,9 +111,9 @@ srp_make_verifier(struct abstract_group *G,
   srp_hash_password(x, H, salt, name, passwd);  
   GROUP_POWER(G, x, G->generator, x);
 
-  expr = lsh_sexp_format(0, "(srp-verifier ssh-ring1%s%b)",
-			 salt->length, salt->data,
-			 x);
+  expr = lsh_string_format_sexp(0, "(srp-verifier ssh-ring1%s%b)",
+				STRING_LD(salt),
+				x);
 
   mpz_clear(x);
 
@@ -133,7 +134,7 @@ srp_hash_password(mpz_t x,
 				hash_string(H, ssh_format("%S%S", name, passwd), 1)),
 		  1);
 
-  nettle_mpz_set_str_256_u(x, h->length, h->data);
+  nettle_mpz_set_str_256_u(x, STRING_LD(h));
   lsh_string_free(h);
 }
 
@@ -146,20 +147,18 @@ srp_format_proofs(struct dh_instance *dh,
     = make_hmac_algorithm(dh->method->H);
   struct mac_instance *hmac
     = MAKE_MAC(mac_algorithm,
-	       dh->K->length, dh->K->data);
+	       lsh_string_length(dh->K), lsh_string_data(dh->K));
   struct lsh_string *s;
   
-  *m1 = lsh_string_alloc(hmac->mac_size);
-  *m2 = lsh_string_alloc(hmac->mac_size);
-  
   MAC_UPDATE(hmac,
-	      dh->exchange_hash->length, dh->exchange_hash->data);
-  MAC_DIGEST(hmac, (*m1)->data);
+	     lsh_string_length(dh->exchange_hash),
+	     lsh_string_data(dh->exchange_hash));
+  *m1 = MAC_DIGEST_STRING(hmac);
 
   s = ssh_format("%n%S%S", dh->e, *m1, dh->exchange_hash);
 
-  MAC_UPDATE(hmac, s->length, s->data);
-  MAC_DIGEST(hmac, (*m2)->data);
+  MAC_UPDATE(hmac, lsh_string_length(s), lsh_string_data(s));
+  *m2 = MAC_DIGEST_STRING(hmac);
 
   lsh_string_free(s);
   KILL(hmac);
@@ -185,7 +184,7 @@ srp_process_init_msg(struct dh_instance *self, struct lsh_string *packet)
 
   struct lsh_string *name;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_KEXSRP_INIT)
@@ -215,7 +214,7 @@ srp_select_u(struct dh_instance *dh)
   
   h = hash_string(dh->method->H, ssh_format("%ln", dh->f), 1);
 
-  u = READ_UINT32(h->data);
+  u = READ_UINT32(lsh_string_data(h));
   lsh_string_free(h);
 
   debug("srp_select_u: u = %xi\n", u);
@@ -280,7 +279,7 @@ srp_process_reply_msg(struct dh_instance *dh, struct lsh_string *packet)
   unsigned msg_number;
   struct lsh_string *salt;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_KEXSRP_REPLY)
@@ -370,7 +369,7 @@ srp_process_client_proof(struct dh_instance *dh, struct lsh_string *packet)
   uint32_t length;
   const uint8_t *client_m1;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_KEXSRP_PROOF)
@@ -407,7 +406,7 @@ srp_process_server_proof(struct lsh_string *m2,
   uint32_t length;
   const uint8_t *server_m2;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_KEXSRP_PROOF)
