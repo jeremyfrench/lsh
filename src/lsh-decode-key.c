@@ -164,10 +164,10 @@ do_decode_key(struct abstract_write *s,
 		  EXCEPTION_RAISE(self->e,
 				  make_simple_exception(EXC_APP_BAD_KEY,
 							"Invalid dsa key.\n"));
-		  return;
 		}
+	      else
+		COMMAND_RETURN(self->c, spki_make_public_key(v));
 
-	      COMMAND_RETURN(self->c, spki_make_public_key(v));
 	      break;
 	    }
 	  case ATOM_SSH_RSA:
@@ -181,10 +181,10 @@ do_decode_key(struct abstract_write *s,
 		  EXCEPTION_RAISE(self->e,
 				  make_simple_exception(EXC_APP_BAD_KEY,
 							"Invalid rsa key.\n"));
-		  return;
 		}
-
-	      COMMAND_RETURN(self->c, spki_make_public_key(v));
+	      else
+		COMMAND_RETURN(self->c, spki_make_public_key(v));
+	      
 	      break;
 	    }	    
 	  default:
@@ -192,8 +192,8 @@ do_decode_key(struct abstract_write *s,
 			    make_simple_exception(EXC_APP_BAD_KEY,
 						  "Unknown key type."));
 	  }
-
     }
+  lsh_string_free(contents);
 }
 
 static struct abstract_write *
