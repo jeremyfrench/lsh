@@ -68,7 +68,6 @@ static void do_reap(struct reap *c,
   ALIST_SET(closure->children, pid, callback);
 }
   
-/* FIXME: Use an alist of pids->callbacks */
 static void reap(struct reaper *r)
 {
   pid_t pid;
@@ -137,7 +136,7 @@ static void reap(struct reaper *r)
     }
 }
 
-struct reaper *make_reaper(void)
+struct reap *make_reaper(void)
 {
   struct reaper *closure;
 
@@ -145,15 +144,19 @@ struct reaper *make_reaper(void)
   closure->super.reap = do_reap;
   closure->children = make_linked_alist(0, -1);
 
-  return closure;
+  return &closure->super;
 }
 
 /* FIXME: Prehaps this function should return a suitable exit code? */
-void reaper_run(struct reaper *r, struct io_backend *b)
+void reaper_run(struct reap *r, struct io_backend *b)
 {
+  struct reaper *self  = (struct reaper *) r;
+  
   struct sigaction pipe;
   struct sigaction chld;
 
+  MDEBUG(self);
+  
   pipe.sa_handler = SIG_IGN;
   sigemptyset(&pipe.sa_mask);
   pipe.sa_flags = 0;
@@ -172,5 +175,5 @@ void reaper_run(struct reaper *r, struct io_backend *b)
   halloween = 0;
   while(io_iter(b))
     if (halloween)
-      reap(r);
+      reap(self);
 }

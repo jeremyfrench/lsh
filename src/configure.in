@@ -44,7 +44,8 @@ AC_HEADER_TIME
 AC_CHECK_SIZEOF(short, 2)
 AC_CHECK_SIZEOF(int, 4)
 AC_CHECK_SIZEOF(long, 4)
-
+dnl FIXME: We should check that a pid_t fits in an int
+	
 dnl Checks for library functions.
 AC_FUNC_ALLOCA
 AC_FUNC_MEMCMP

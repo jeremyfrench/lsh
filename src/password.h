@@ -35,7 +35,7 @@
 #include <unistd.h>
 
 struct lsh_string *
-read_password(int max_length, struct lsh_string *prompt);
+read_password(int max_length, struct lsh_string *prompt, int free);
 
 struct unix_user
 {

@@ -29,6 +29,7 @@
 #include "io.h"
 #include "keyexchange.h"
 #include "password.h"
+#include "reaper.h"
 
 struct fd_callback *
 make_server_callback(struct io_backend *b,
@@ -51,6 +52,11 @@ struct unix_service *make_server_session_service(struct alist *global_requests,
 struct channel_open *make_open_session(struct unix_user *user,
 				       struct alist *session_requests);
 
-struct channel_request *make_shell_handler(struct io_backend *backend);
+struct channel_request *make_shell_handler(struct io_backend *backend,
+					   struct reap *reap);
+
+struct lsh_string *format_exit_signal(struct ssh_channel *channel,
+				      int core, int signal);
+struct lsh_string *format_exit(struct ssh_channel *channel, int value);
 
 #endif /* LSH_SERVER_H_INCLUDED */

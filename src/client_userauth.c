@@ -94,8 +94,9 @@ static int send_passwd(struct client_userauth *userauth,
 		       struct ssh_connection *connection)
 {
   struct lsh_string *passwd
-    = read_password(MAX_PASSWD, ssh_format("Password for %lS: ",
-					   userauth->username));
+    = read_password(MAX_PASSWD,
+		    ssh_format("Password for %lS: ",
+			       userauth->username), 1);
   
   if (!passwd)
     return LSH_FAIL | LSH_DIE;
