@@ -924,12 +924,6 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       if (options->start_shell)
 	client_add_action(options, client_shell_session(options));
 
-      if (object_queue_is_empty(&options->actions))
-	{
-	  argp_error(state, "No actions given.");
-	  break;
-	}
-
       break;
 
     case 'p':
