@@ -29,7 +29,9 @@ dotdists: $(DOTDISTS)
 # FIXME: Have to figure out how to create dependency files recursively.
 # dist-hook: $(DOTDISTS)
 
-MAINTAINERCLEANFILES += $(DOTDISTS) $(MAKEFILESAM)
+MAINTAINERCLEANFILES += aclocal.m4 configure \
+	config.status config.log config.cache \
+	$(DOTDISTS) $(MAKEFILESAM)
 
 # Is this rule needed?
 all-recursive check-recursive: config.h
