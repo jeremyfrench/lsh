@@ -1,8 +1,9 @@
 LSH - a GNU implementation of the Secure Shell protocols.
 
 
-LSH IS A WORK IN PROGRESS. DON'T EXPECT THE CURRENT VERSION TO WORK,
-AND *DON'T* EXPECT IT TO PROVIDE ANY SECURITY WHATSOEVER.
+LSH IS A WORK IN PROGRESS. IT WILL NOT PROVIDE ANY SECURITY ON SYSTEMS
+THAT LACK /dev/random. THERE MAY BE OTHER SERIOUS BUGS THAT MAKE IT
+TOTALLY INSECURE.
 
 
 COPYRIGHT
@@ -75,7 +76,8 @@ log in as USER:
 
 MORE INFORMATION
 
-For an introduction to the inner workings of LSH, see the file HACKING.
+For an introduction to the inner workings of LSH, see the file
+HACKING.
 
 Several people have contributed to LSH, see the AUTHORS file for
 details.
