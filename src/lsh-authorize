@@ -48,11 +48,14 @@ if type "$SEXP_CONV" >/dev/null 2>&1 ; then : ; else
 fi
 
 while [ $# != 0 ]; do
-    hash=`"$SEXP_CONV" < $1 --once --hash sha1 --raw-hash`
+    hash=`"$SEXP_CONV" < $1 --once --hash=sha1`
     if [ -z $hash ] ; then
 	echo $0: File $1 not found.
+	exit 1
     else
-        "$SEXP_CONV" < $1 -f canonical --once > "$HOME/.lsh/authorized_keys_sha1/$hash"
+        "$SEXP_CONV" < $1 -s canonical --once \
+	    > "$HOME/.lsh/authorized_keys_sha1/$hash" \
+	    || exit 1
     fi
     shift
 done
