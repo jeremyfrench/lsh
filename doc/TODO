@@ -36,6 +36,8 @@ CHARSETS
 The conversion from UTF8->unicode->latin1 doesn't handle accented
 characters properly. Probably needs a complete rewrite.
 
+Check out  GNU libidn.
+
 
 CONFIGURATION
 
