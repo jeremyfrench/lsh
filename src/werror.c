@@ -696,10 +696,15 @@ fatal(const char *format, ...)
     sleep(4711);
 #endif
 #if WITH_GCOV
-  exit(255);
-#else
-  abort();
+  /* We want the process to exit, so that it writes profiling data,
+     but we also want it to dump core. So let's fork. */
+  if (fork())
+    /* Let the parent process exit (we also exit if fork fails, but
+       that case doesn't really matter here) */
+    exit(255);
 #endif
+  
+  abort();
 }
 
 static unsigned
