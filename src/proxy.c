@@ -281,35 +281,13 @@ do_proxy_accept_service(struct packet_handler *c,
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_SERVICE_ACCEPT)
-      && (
-#if DATAFELLOWS_WORKAROUNDS
-	  (connection->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE)
-#else
-	  0
-#endif
-	  || (parse_atom(&buffer, &name)
-	      && (name == closure->name)))
+      && parse_atom(&buffer, &name)
+      && (name == closure->name)
       && parse_eod(&buffer))
     {
-      struct lsh_string *new_packet;
-
       connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = &connection_fail_handler;
-#if DATAFELLOWS_WORKAROUNDS
-      if ((connection->chain->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE) ==
-	  (connection->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE))
-	new_packet = packet;
-      else
-	{
-	  if (connection->chain->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE)
-	    new_packet = ssh_format("%c", SSH_MSG_SERVICE_ACCEPT);
-	  else
-	    new_packet = ssh_format("%c%a", SSH_MSG_SERVICE_ACCEPT, closure->name);
-	}
-#else
-      new_packet = packet;
-#endif
 
-      connection_send(connection->chain, new_packet);
+      connection_send(connection->chain, packet);
       COMMAND_CALL(closure->service,
 		   connection->chain,
 		   closure->c, closure->e);
