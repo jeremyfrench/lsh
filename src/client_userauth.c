@@ -677,7 +677,7 @@ do_userauth_pk_ok(struct packet_handler *s,
       verbose("SSH_MSG_USERAUTH_PK_OK received\n");
 	  
       if ( (key->type == algorithm)
-	   && !lsh_string_cmp_l(key->public, keyblob_length, keyblob) )
+	   && lsh_string_eq_l(key->public, keyblob_length, keyblob) )
 	{
 	  struct lsh_string *request;
 	  struct lsh_string *signed_data;

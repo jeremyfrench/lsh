@@ -94,7 +94,12 @@ unsigned format_size_in_decimal(UINT32 n);
 void format_decimal(unsigned length, UINT8 *buffer, UINT32 n);
 
 /* FIXME: This function doesn't really belong here */
+int lsh_string_eq(const struct lsh_string *a, const struct lsh_string *b);
+int lsh_string_eq_l(const struct lsh_string *a, UINT32 length, const UINT8 *b);
+
+#if 0
 int lsh_string_cmp(const struct lsh_string *a, const struct lsh_string *b);
 int lsh_string_cmp_l(const struct lsh_string *a, UINT32 length, const UINT8 *b);
+#endif
 
 #endif /* LSH_FORMAT_H_INCLUDED */

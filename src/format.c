@@ -633,6 +633,19 @@ struct lsh_string *make_cstring(struct lsh_string *s, int free)
   return res;
 }
 
+int lsh_string_eq(const struct lsh_string *a, const struct lsh_string *b)
+{
+  return ( (a->length == b->length)
+	   && !memcmp(a->data, b->data, a->length));
+}
+
+int lsh_string_eq_l(const struct lsh_string *a, UINT32 length, const UINT8 *b)
+{
+  return ( (a->length == length)
+	   && !memcmp(a->data, b, length));
+}
+
+#if 0
 /* FIXME: These functions don't really belong here */
 int lsh_string_cmp(const struct lsh_string *a, const struct lsh_string *b)
 {
@@ -653,3 +666,4 @@ int lsh_string_cmp_l(const struct lsh_string *a, UINT32 length, const UINT8 *b)
   else
     return memcmp(a->data, b, length);
 }
+#endif
