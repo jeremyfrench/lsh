@@ -32,6 +32,7 @@
 #include "connection.h"
 #include "format.h"
 #include "lookup_verifier.h"
+#include "lsh_string.h"
 #include "parse.h"
 #include "publickey_crypto.h"
 #include "server_userauth.h"
@@ -181,7 +182,7 @@ do_authenticate(struct userauth *s,
 
 	  lsh_string_free(keyblob); 
 	  if (VERIFY(v, algorithm,
-		     signed_data->length, signed_data->data,
+		     lsh_string_length(signed_data), lsh_string_data(signed_data),
 		     signature_length, signature_blob))
 	    {
 	      werror("publickey authentication for user %S succeeded.\n", username);
