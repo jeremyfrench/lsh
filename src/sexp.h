@@ -29,9 +29,6 @@
 /* Forward declaration, real declaration in nettle/sexp.h. */
 struct sexp_iterator;
 
-struct lsh_string *
-lsh_sexp_format(int transport, const char *format, ...);
-
 int
 lsh_sexp_to_atom(struct sexp_iterator *i);
 

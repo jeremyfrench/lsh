@@ -36,36 +36,6 @@
 
 #include "atoms.h"
 #include "format.h"
-#include "xalloc.h"
-
-
-/* Formatting s-expressions */
-struct lsh_string *
-lsh_sexp_format(int transport, const char *format, ...)
-{
-  struct lsh_string *s;
-  va_list args;
-  unsigned length;
-  struct nettle_buffer buffer;
-
-  unsigned (*vformat)(struct nettle_buffer *, const char *, va_list)
-    = transport ? sexp_transport_vformat : sexp_vformat;
-  
-  va_start(args, format);
-  length = vformat(NULL, format, args);
-  va_end(args);
-
-  s = lsh_string_alloc(length);
-  nettle_buffer_init_size(&buffer, s->length, s->data);
-
-  va_start(args, format);
-  length = vformat(&buffer, format, args);
-  va_end(args);
-
-  assert(length == s->length);
-
-  return s;
-}
 
 
 /* Conversions */
