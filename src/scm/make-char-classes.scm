@@ -205,7 +205,7 @@
 			      ; Both differences ar non-empty, so split both
 			      (let ((common (cache intersection)))
 				(tree/split! t1 common (cache diff1))
-			    (tree/split! t2 common (cache diff2))))))
+				(tree/split! t2 common (cache diff2))))))
 		    ; t1 is a leaf, but not t2. Recurse.
 		    (for-children (lambda (c)
 				    (tree-intersect! cache t1 c))
