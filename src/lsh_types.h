@@ -95,10 +95,14 @@ char *alloca ();
 #endif
 
 #if HAVE_STRSIGNAL
-#define STRSIGNAL strsignal
-#else
-#define STRSIGNAL(x) (sys_siglist[x])
-#endif
+# define STRSIGNAL strsignal
+#else /* !HAVE_STRSIGNAL */
+# ifdef _sgi
+#  define STRSIGNAL(x) (_sys_siglist[x])
+# else /* !_sgi */
+#  define STRSIGNAL(x) (sys_siglist[x])
+# endif /* !_sgi */
+#endif /* !HAVE_STRSIGNAL */
 
 /* Some macros */
 
