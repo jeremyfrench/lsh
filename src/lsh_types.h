@@ -121,6 +121,17 @@ do {						\
   (p)[3] = (i) & 0xff;				\
 } while(0)
 
+/* Same, for 16-bit quantities */
+#define READ_UINT16(p)				\
+((((UINT32) (p)[0]) << 16)			\
+ | ((UINT32) (p)[1]))
+
+#define WRITE_UINT16(p, i)			\
+do {						\
+  (p)[0] = ((i) >> 8) & 0xff;			\
+  (p)[1] = (i) & 0xff;				\
+} while(0)
+
 /* Useful macros. */
 #define MIN(a, b) (((a)>(b)) ? (b) : (a))
 #define MAX(a, b) (((a)<(b)) ? (b) : (a))
