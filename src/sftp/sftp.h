@@ -69,4 +69,7 @@ enum sftp_status {
   SSH_FX_OP_UNSUPPORTED    = 8,
 };
 
+/* Servers are required to support packets up to this size. */
+#define SFTP_MAX_PACKET 34000
+
 #endif /* SFTP_SFTP_H_INCLUDED */
