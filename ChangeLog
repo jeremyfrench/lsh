@@ -29,6 +29,11 @@
 	* src/server_x11.c (do_xauth_exit): Fixed format strings for error
 	messages. 
 
+2002-08-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/server_x11.c (server_x11_setup): Bugfix, really call
+	server_x11_listen.
+
 2002-08-26  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/server_x11.c (OPEN_FORWARDED_X11): Added forward
