@@ -419,8 +419,7 @@ sftp_send_handle(struct sftp_ctx *ctx, UINT32 handle)
   return 1;
 }
 
-/* NOTE: The status message should be expanded with a human-readable
- * message and a language tag. */
+/* FIXME: Add an argument for the the human-readable message. */
 static int
 sftp_send_status(struct sftp_ctx *ctx, UINT32 status)
 {
@@ -428,6 +427,45 @@ sftp_send_status(struct sftp_ctx *ctx, UINT32 status)
   
   sftp_set_msg(ctx->o, SSH_FXP_STATUS);
   sftp_put_uint32(ctx->o, status);
+
+  switch(status)
+    {
+    case SSH_FX_OK:
+      sftp_put_string(ctx->o, strlen("Success"), "Success");
+      break;
+
+    case SSH_FX_EOF:
+      sftp_put_string(ctx->o, strlen("End of file"), "End of file");
+      break;
+    case SSH_FX_NO_SUCH_FILE:
+      sftp_put_string(ctx->o, strlen("No such file"), "No such file");
+      break;
+    case SSH_FX_PERMISSION_DENIED:
+      sftp_put_string(ctx->o, strlen("Permission denied"), "Permission denied");
+      break;    
+    case SSH_FX_BAD_MESSAGE:
+      sftp_put_string(ctx->o, strlen("Bad message"), "Bad message");
+      break;
+#if 0
+    case SSH_FX_NO_CONNECTION:
+      /* We must never send this */
+      FATAL( "Status SSH_FX_NO_CONNECTION" );
+      break;
+    case SSH_FX_CONNECTION_LOST:
+      /* We must never send this */
+      FATAL( "Status SSH_FX_CONNECTION_LOST" );
+      break;
+#endif
+    case SSH_FX_OP_UNSUPPORTED:    
+      sftp_put_string(ctx->o, strlen("Operation unsupported"), "Operation unsupported");
+      break;
+    case SSH_FX_FAILURE:
+    default:
+      sftp_put_string(ctx->o, strlen("Failure"), "Failure");
+      break;
+    }
+
+  sftp_put_string(ctx->o, strlen("en"), "en");    /* Send english language tag */
   return 1;
 }
 
@@ -703,12 +741,24 @@ static int
 sftp_process_mkdir(struct sftp_ctx *ctx)
 {
   const UINT8 *name;
+  struct sftp_attrib a;
+  int fail;
 
-  if (! (name = sftp_get_name(ctx->i)))
+  if ( !((name = sftp_get_name(ctx->i))
+         && sftp_get_attrib(ctx->i, &a) ))
     return sftp_bad_message(ctx);
 
-  /* FIXME: default permissions ? */   
-  if(mkdir(name, 0755) < 0 )
+  if (a.flags & SSH_FILEXFER_ATTR_PERMISSIONS)
+    {
+      mode_t old = umask(0);
+
+      fail = mkdir(name, a.permissions & 0777);
+      umask(old);
+    }
+  else
+    fail = mkdir(name, 0755); /* FIXME: Default permissions? */
+
+  if (fail < 0 )
     return sftp_send_errno(ctx, errno);
   else
     return sftp_send_status(ctx, SSH_FX_OK);   
@@ -1116,6 +1166,76 @@ sftp_process_write(struct sftp_ctx *ctx)
   return sftp_send_status(ctx, SSH_FX_OK); 
 }
 
+static int
+sftp_process_readlink(struct sftp_ctx *ctx)
+{
+  const UINT8 *name;
+  UINT8 *linktarget;
+  struct stat st;
+  int path_max;
+  int link_len;
+
+  if (! (name = sftp_get_name(ctx->i)))
+    return sftp_bad_message(ctx);
+
+  /* Code below from the manpage for realpath on my debian system.
+   * /Pontus */
+
+  /* It's not quite POSIX compliant, and will not do the right thing
+   * on the Hurd. /Niels */
+#ifdef PATH_MAX
+  path_max = PATH_MAX;
+#else
+  path_max = pathconf (name, _PC_PATH_MAX);
+  if (path_max <= 0)
+    path_max = 4096;
+#endif
+
+  linktarget = alloca(path_max);
+  link_len = readlink(name, linktarget, path_max);
+
+  if (link_len < 0)
+    return sftp_send_errno(ctx, errno);
+
+  sftp_put_uint32(ctx->o, 1); /* Count */  
+  
+  /* FIXME: The draft says we should return "just one name and dummy
+   * attributes", but I figure we might as well pass the real attributes,
+   * if we can get them. */
+  
+  if (lstat(linktarget, &st ) < 0)
+    {
+      /* Return dummy attributes. */
+      sftp_put_string(ctx->o, link_len, linktarget);
+
+      /* Leave the "long name" field empty. */
+      sftp_put_uint32(ctx->o, 0);
+
+      /* ATTRS data, containing only a zer flags field. */
+      sftp_put_uint32(ctx->o, 0);
+    }
+  else
+    sftp_put_filename(ctx, &st, linktarget);
+
+  sftp_set_msg( ctx->o, SSH_FXP_NAME );
+  return 1;
+}
+
+static int
+sftp_process_symlink(struct sftp_ctx *ctx)
+{
+  const UINT8 *linkpath;
+  const UINT8 *targetpath;
+
+  if (! ( (linkpath = sftp_get_name(ctx->i))
+	  && (targetpath = sftp_get_name(ctx->i))) )
+    return sftp_bad_message(ctx);
+  
+  if (symlink(targetpath, linkpath) < 0)
+    return sftp_send_errno(ctx, errno);
+  else
+    return sftp_send_status(ctx, SSH_FX_OK);   
+}
 
 static void
 sftp_process(sftp_process_func **dispatch,
@@ -1254,6 +1374,8 @@ main(int argc, char **argv)
   dispatch[SSH_FXP_OPENDIR] = sftp_process_opendir;
   dispatch[SSH_FXP_READDIR] = sftp_process_readdir;
   dispatch[SSH_FXP_REALPATH] = sftp_process_realpath;
+  dispatch[SSH_FXP_READLINK] = sftp_process_readlink;
+  dispatch[SSH_FXP_SYMLINK] = sftp_process_symlink;
 
   for(;;)
     sftp_process(dispatch, &ctx);
