@@ -1,3 +1,7 @@
+NEWS for the 1998-12-26 snapshot:
+
+	New lsh_keygen program.
+
 NEWS for the 1998-12-21 snapshot:
 
 Moved most objects in crypto.c and abstract_crypto.c into separate
