@@ -5,7 +5,7 @@
 #include "bignum.h"
 #include "werror.h"
 
-static void limbs_to_octets(bignum *n, UINT32 length,
+static void limbs_to_octets(mpz_t n, UINT32 length,
 			    UINT8 pad, UINT8 *data)
 {
   UINT8 *dst = data + length - 1;
@@ -36,7 +36,7 @@ static void limbs_to_octets(bignum *n, UINT32 length,
 }
 
 /* Formatting of signed numbers */
-void bignum_parse_s(bignum *n, UINT32 length, UINT8 *data)
+void bignum_parse_s(mpz_t n, UINT32 length, UINT8 *data)
 {
   int negative = length && (*data & 0x80);
   int i;
@@ -77,7 +77,7 @@ int mpz_size_of_complement(mpz_t n)
 }
 
 /* This function should handle both positive and negative numbers */
-UINT32 bignum_format_s_length(bignum *n)
+UINT32 bignum_format_s_length(mpz_t n)
 {
   switch(mpz_sgn(n))
     {
@@ -92,7 +92,7 @@ UINT32 bignum_format_s_length(bignum *n)
     }
 }
   
-UINT32 bignum_format_s(bignum *n, UINT8 *data)
+UINT32 bignum_format_s(mpz_t n, UINT8 *data)
 {
   switch(mpz_sgn(n))
     {
@@ -131,7 +131,7 @@ UINT32 bignum_format_s(bignum *n, UINT8 *data)
 }
 
 /* Formatting of unsigned numbers */
-void bignum_parse_u(bignum *n, UINT32 length, UINT8 *data)
+void bignum_parse_u(mpz_t n, UINT32 length, UINT8 *data)
 {
   int i;
   mpz_t digit;
@@ -147,7 +147,7 @@ void bignum_parse_u(bignum *n, UINT32 length, UINT8 *data)
   mpz_clear(digit);
 }
 
-UINT32 bignum_format_u_length(bignum *n)
+UINT32 bignum_format_u_length(mpz_t n)
 {
   switch(mpz_sgn(n))
     {
@@ -160,7 +160,7 @@ UINT32 bignum_format_u_length(bignum *n)
     }
 }
 
-UINT32 bignum_format_u(bignum *n, UINT8 *data)
+UINT32 bignum_format_u(mpz_t n, UINT8 *data)
 {
   switch(mpz_sgn(n))
     {
@@ -178,7 +178,7 @@ UINT32 bignum_format_u(bignum *n, UINT8 *data)
     }
 }
 
-void bignum_random(bignum *x, struct randomness *random, bignum *n)
+void bignum_random(mpz_t x, struct randomness *random, mpz_t n)
 {
   /* Add a few bits extra */
   int length = (mpz_sizeinbase(n) + 17) / 8;
