@@ -31,78 +31,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum spki_tag_type
-  {
-    SPKI_TAG_ERROR = 0,
-    SPKI_TAG_ATOM,
-    SPKI_TAG_LIST,
-    SPKI_TAG_ANY,
-    SPKI_TAG_SET,
-    SPKI_TAG_PREFIX,
-    SPKI_TAG_RANGE
-  };
-
-struct spki_tag
-{
-  enum spki_tag_type type;
-  unsigned refs;
-};
-
-/* Note: We can't use const, due to the refs fields. */
-struct spki_cons
-{
-  struct spki_tag *car;
-  struct spki_cons *cdr;
-};
-
-struct spki_string
-{
-  unsigned refs;
-  unsigned length;
-  const uint8_t *data;
-};
-
-static const struct spki_tag
-spki_tag_any = { SPKI_TAG_ANY, 0 };
-
-/* For SPKI_TAG_SET and SPKI_TAG_LIST */
-struct spki_tag_list
-{
-  struct spki_tag super;
-  struct spki_cons *children;
-};
-
-/* For SPKI_TAG_ATOM and SPKI_TAG_PREFIX */
-struct spki_tag_atom
-{
-  struct spki_tag super;
-  struct spki_string *display;
-  struct spki_string *atom;
-};
-
-enum spki_range_type
-  {
-    SPKI_RANGE_TYPE_ALPHA,
-    SPKI_RANGE_TYPE_NUMERIC,
-    SPKI_RANGE_TYPE_TIME,
-    SPKI_RANGE_TYPE_BINARY,
-    SPKI_RANGE_TYPE_DATE,
-    /* Indicates if the upper or lower limit is inclusive. */
-    SPKI_RANGE_GTE = 0x10,
-    SPKI_RANGE_LTE = 0x20
-  };
-
-/* For SPKI_TAG_RANGE */
-struct spki_tag_range
-{
-  struct spki_tag super;
-  enum spki_range_type flags;
-  
-  struct spki_string *display;
-  struct spki_string *lower;
-  struct spki_string *upper;
-};
-
+
+/* Memory allocation */
 #define MALLOC(ctx, realloc, size) realloc((ctx), NULL, (size))
 
 /* Cast needed because realloc doesn't like const pointers. */
@@ -110,6 +40,15 @@ struct spki_tag_range
 
 #define NEW(ctx, realloc, type, var) \
 type *var = MALLOC(ctx, realloc, sizeof(type))
+
+
+/* Strings */
+struct spki_string
+{
+  unsigned refs;
+  unsigned length;
+  const uint8_t *data;
+};
 
 static struct spki_string *
 spki_string_new(void *ctx, nettle_realloc_func *realloc,
@@ -158,31 +97,27 @@ spki_string_dup(struct spki_string *s)
   return s;
 }
 
-static void
-spki_tag_init(struct spki_tag *tag,
-	      enum spki_tag_type type)
-{
-  tag->type= type;
-  tag->refs = 1;
-}
 
-static struct spki_tag *
-spki_tag_dup(struct spki_tag *tag)
+/* Lists */
+struct spki_cons
 {
-  assert(tag);
-  if (tag != &spki_tag_any)
-    tag->refs++;
-  return tag;
-}
+  struct spki_tag *car;
+  struct spki_cons *cdr;
+};
 
-/* Consumes the reference to CAR */
+/* Consumes the reference to CAR. Deallocates both CAR and CDR on
+ * failure. */
 static struct spki_cons *
 spki_cons(void *ctx, nettle_realloc_func *realloc,
 	  struct spki_tag *car, struct spki_cons *cdr)
 {
   NEW(ctx, realloc, struct spki_cons, c);
   if (!c)
-    return NULL;
+    {
+      spki_tag_release(ctx, realloc, car);
+      spki_cons_release(ctx, realloc, cdr);
+      return NULL;
+    }
   c->car = car;
   c->cdr = cdr;
 
@@ -200,6 +135,103 @@ spki_cons_release(void *ctx, nettle_realloc_func *realloc,
       FREE(ctx, realloc, c);
       c = cdr;
     }
+}
+
+/* Reverses a list destructively. */
+static void
+spki_cons_nreverse(struct spki_cons *c)
+{
+  struct spki_cons head = NULL;
+  
+  while (c)
+    {
+      struct spki_cons *next = c->cdr;
+      
+      /* Link current node at head */
+      c->cdr = head;
+      head = c;
+
+      c = next;
+    }
+
+  return head;
+}      
+
+
+/* Tags abstraction */
+enum spki_tag_type
+  {
+    SPKI_TAG_ERROR = 0,
+    SPKI_TAG_ATOM,
+    SPKI_TAG_LIST,
+    SPKI_TAG_ANY,
+    SPKI_TAG_SET,
+    SPKI_TAG_PREFIX,
+    SPKI_TAG_RANGE
+  };
+
+struct spki_tag
+{
+  enum spki_tag_type type;
+  unsigned refs;
+};
+
+static const struct spki_tag
+spki_tag_any = { SPKI_TAG_ANY, 0 };
+
+/* For SPKI_TAG_SET and SPKI_TAG_LIST */
+struct spki_tag_list
+{
+  struct spki_tag super;
+  struct spki_cons *children;
+};
+
+/* For SPKI_TAG_ATOM and SPKI_TAG_PREFIX */
+struct spki_tag_atom
+{
+  struct spki_tag super;
+  struct spki_string *display;
+  struct spki_string *atom;
+};
+
+enum spki_range_type
+  {
+    SPKI_RANGE_TYPE_ALPHA,
+    SPKI_RANGE_TYPE_NUMERIC,
+    SPKI_RANGE_TYPE_TIME,
+    SPKI_RANGE_TYPE_BINARY,
+    SPKI_RANGE_TYPE_DATE,
+    /* Indicates if the upper or lower limit is inclusive. */
+    SPKI_RANGE_GTE = 0x10,
+    SPKI_RANGE_LTE = 0x20
+  };
+
+/* For SPKI_TAG_RANGE */
+struct spki_tag_range
+{
+  struct spki_tag super;
+  enum spki_range_type flags;
+  
+  struct spki_string *display;
+  struct spki_string *lower;
+  struct spki_string *upper;
+};
+
+static void
+spki_tag_init(struct spki_tag *tag,
+	      enum spki_tag_type type)
+{
+  tag->type= type;
+  tag->refs = 1;
+}
+
+static struct spki_tag *
+spki_tag_dup(struct spki_tag *tag)
+{
+  assert(tag);
+  if (tag != &spki_tag_any)
+    tag->refs++;
+  return tag;
 }
 
 static struct spki_tag *
@@ -341,6 +373,53 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
   FREE(ctx, realloc, tag);
 }
 
+/* Normalizes set expressions so that we always get
+ *
+ * (* set a b) rather than (* set (* set a) b)
+ *
+ * Requires that the children elements passet in are already
+ * normalized.
+ */
+
+/* FIXME: A destructive function could be more efficient */
+static struct spki_tag *
+spki_tag_set_new(void *ctx, nettle_realloc_func *realloc,
+		 struct sexp_cons *c)
+{
+  struct sexp_cons *subsets = NULL;
+  struct sexp_tag *tag;
+  
+  for (; c; c = c->cdr)
+    {
+      if (c->car->type != SPKI_TAG_SET)
+	{
+	  subsets = spki_cons(ctx, realloc, spki_tag_dup(c->car), subsets);
+	  if (!subsets)
+	    return NULL;
+	}
+      else
+	{
+	  struct spki_tag_list *set = (struct spki_tag_list *) c->car;
+	  struct spki_cons *p;
+	  for (p = set->children; p; p = p->cdr)
+	    {
+	      /* Inner sets must be normalized. */
+	      assert (p->car->type != SPKI_TAG_SET);
+	      subsets = spki_cons(ctx, realloc, spki_tag_dup(p->car), subsets);
+	      if (!subsets)
+		return NULL;
+	    }
+	}
+    }
+  tag = spki_tag_list_alloc(ctx, realloc, SPKI_TAG_SET,
+			    subsets);
+  if (tag)
+    return tag;
+
+  spki_cons_release(ctx, realloc, subsets);
+  return NULL;
+}
+
 
 /* Converting a tag into internal form */
 
@@ -420,20 +499,31 @@ spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
 				 SPKI_TAG_ATOM, i);
 
     case SPKI_TAG_SET:
-      /* Empty sets are allowed, but not empty lists. */
-      if (i->type == SEXP_END)
-	return spki_tag_list_alloc(ctx, realloc, SPKI_TAG_SET, NULL);
+      {
+	struct spki_tag *tag;
+	struct spki_cons *children;
+	
+	/* Empty sets are allowed, but not empty lists. */
+	if (i->type == SEXP_END)
+	  return spki_tag_set_new(ctx, realloc, NULL);
 
-      /* Fall through */
+	children = spki_tag_compile_list(ctx, realloc, i);
+
+	if (!children)
+	  return NULL;
+
+	tag = spki_tag_set_new(ctx, realloc, children);
+	spki_cons_release(ctx, realloc, children);
+
+	return tag;
+      }
+
     case SPKI_TAG_LIST:
       {
 	struct spki_tag *tag;
 	
 	struct spki_cons *children
 	  = spki_tag_compile_list(ctx, realloc, i);
-
-	if (!children)
-	  return NULL;
 	
 	tag = spki_tag_list_alloc(ctx, realloc, type,
 				  children);
@@ -472,6 +562,7 @@ spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
 
 }
 
+/* NOTE: Conses the list up in reverse order. */
 static struct spki_cons *
 spki_tag_compile_list(void *ctx, nettle_realloc_func *realloc,
 		      struct sexp_iterator *i)
@@ -490,11 +581,8 @@ spki_tag_compile_list(void *ctx, nettle_realloc_func *realloc,
 	}
       n = spki_cons(ctx, realloc, tag, c);
       if (!n)
-	{
-	  spki_tag_release(ctx, realloc, tag);
-	  spki_cons_release(ctx, realloc, c);
-	  return NULL;
-	}
+	/* spki_cons has already released both tag and c */
+	return NULL;
 	
       c = n;
     }
@@ -504,10 +592,11 @@ spki_tag_compile_list(void *ctx, nettle_realloc_func *realloc,
       spki_cons_release(ctx, realloc, c);
       return NULL;
     }
-  return  c;
+  return c;
 }
 
 
+/* Tag operations */
 
 static int
 display_equal(struct sexp_iterator *a, struct sexp_iterator *b)

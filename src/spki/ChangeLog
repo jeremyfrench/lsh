@@ -1,3 +1,14 @@
+2002-11-22  Niels Möller  <niels@s3.kth.se>
+
+	* tag.c (struct spki_tag_range): Removed const.
+	(spki_tag_compile): Removed const.
+	(spki_tag_compile): Cast &spki_tag_any to a non-const pointer when
+	returning it. 
+	(spki_cons_nreverse): New function.
+	(spki_tag_set_new): New function, normalizing sets inside sets.
+	Also reordered functions, putting operations on strings and lists
+	first. 
+
 2002-11-21  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/testutils.h: Include tag.h.
