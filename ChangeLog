@@ -19,6 +19,10 @@
 
 2002-03-20  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/functions.sh (at_connect): Put -- between the
+	options and the arguments, as that is the correct place according
+	to POSIX. 
+
 	* src/testsuite/lsh-7-test: Rewrote !command-expressions as an if
 	expression, to work with /bin/sh.
 
