@@ -364,15 +364,17 @@ UINT32 ssh_vformat(char *f, UINT8 *buffer, va_list args)
 	    case 'n':
 	      {
 		MP_INT *n = va_arg(args, MP_INT *);
-		UINT32 length = bignum_format_s(n, buffer);
+		UINT32 length;
+		UINT8 *start = buffer; /* Where to store the length */
+		
+		if (!literal)
+		  buffer += 4;
 
+		length = bignum_format_s(n, buffer);
 		buffer += length;
 
 		if (!literal)
-		  {
-		    WRITE_UINT32(buffer, length);
-		    buffer += 4;
-		  }
+		  WRITE_UINT32(start, length);
 
 		f++;
 
