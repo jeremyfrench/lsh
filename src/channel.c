@@ -1108,11 +1108,14 @@ DEFINE_PACKET_HANDLER(static, channel_open_handler,
 	      int local_number = alloc_channel(connection->table);
 
 	      if (local_number < 0)
-		C_WRITE(connection,
-			format_open_failure(info.remote_channel_number,
-					    SSH_OPEN_RESOURCE_SHORTAGE,
-					    "Channel limit exceeded.", ""));
-
+		{
+		  C_WRITE(connection,
+			  format_open_failure(info.remote_channel_number,
+					      SSH_OPEN_RESOURCE_SHORTAGE,
+					      "Channel limit exceeded.", ""));
+		  return;
+		}
+	      
 	      CHANNEL_OPEN(open, connection,
 			   &info,
 			   &buffer,
