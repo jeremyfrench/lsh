@@ -30,7 +30,7 @@ function getatom() {
 }
 
 function atom2define () {
-    echo -n `echo ATOM_$1 | tr -- -a-z _A-Z \
+    echo -n `echo ATOM_$1 | tr [a-z]- [A-Z]_ \
        | sed -e 's/\*/STAR/' -e 's/@.*$/_LOCAL/'`
 }
 
