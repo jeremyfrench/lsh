@@ -49,7 +49,10 @@ void do_channel_open_command(struct command *s,
     {
       /* Probably, we have run out of channel numbers. */
       werror("do_channel_open_command: NEW_CHANNEL failed\n");
-      EXCEPTION_RAISE(e, &dummy_exception);
+      EXCEPTION_RAISE(e,
+		      make_channel_open_exception(
+			SSH_OPEN_RESOURCE_SHORTAGE,
+			"Allocating a local channel number failed."));
     }
   else
     {
