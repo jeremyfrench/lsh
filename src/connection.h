@@ -58,6 +58,8 @@ struct ssh_connection
   
   /* First element is the kexinit sent by the server */
   struct kexinit *kexinits[2];
+  struct lsh_string *literal_kexinits[2];
+  
   int ignore_one_packet;
   
   int provides_privacy;
