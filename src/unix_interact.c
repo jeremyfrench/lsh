@@ -156,6 +156,7 @@ do_kill_window_subscriber(struct resource *s)
      (super interact)
      (vars
        (tty_fd . int)
+       (password_fd . int)
        ; Signal handler
        (winch_handler object resource)
        (nsubscribers . unsigned)
@@ -174,31 +175,64 @@ unix_is_tty(struct interact *s)
 
 /* FIXME: Rewrite to operate on tty_fd. */
 static struct lsh_string *
-unix_read_password(struct interact *s UNUSED,
-		   uint32_t max_length UNUSED,
+unix_read_password(struct interact *s,
+		   uint32_t max_length,
 		   const struct lsh_string *prompt, int free)
 {
-  /* NOTE: Ignores max_length; instead getpass's limit applies. */
+  CAST(unix_interact, self, s);
   
-  char *password;
-  const char *cprompt = lsh_get_cstring(prompt);
-
-  if (!cprompt)
+  if (self->password_fd >= 0)
     {
+      /* No prompts */
+      struct lsh_string *password;
+      int length;
+
       if (free)
 	lsh_string_free(prompt);
-      return NULL;
-    }
-  /* NOTE: This function uses a static buffer. */
-  password = getpass(cprompt);
 
-  if (free)
-    lsh_string_free(prompt);
+      password = lsh_string_alloc(max_length);
+
+      /* NOTE: It's not entirely clear that this will work right if
+       * password_fd is a pipe, and more than one password is written
+       * to it. There's no buffering saving leftover data between
+       * reads. */
+      length = read_line(self->password_fd, max_length, password->data);
+      
+      if (length)
+	{
+	  lsh_string_trunc(password, length);
+	  return password;
+	}
+      else
+	{
+	  lsh_string_free(password);
+	  return NULL;
+	}
+    }
+  else
+    {
+      /* NOTE: Ignores max_length; instead getpass's limit applies. */
+      
+      char *password;
+      const char *cprompt = lsh_get_cstring(prompt);
+      
+      if (!cprompt)
+	{
+	  if (free)
+	    lsh_string_free(prompt);
+	  return NULL;
+	}
+      /* NOTE: This function uses a static buffer. */
+      password = getpass(cprompt);
+
+      if (free)
+	lsh_string_free(prompt);
   
-  if (!password)
-    return NULL;
+      if (!password)
+	return NULL;
   
-  return make_string(password);
+      return make_string(password);
+    }
 }
 
 
@@ -410,6 +444,7 @@ make_unix_interact(void)
   self->super.window_change_subscribe = unix_window_change_subscribe;
 
   self->tty_fd = -1;
+  self->password_fd = -1;
   
 #if HAVE_STDTTY_FILENO
   if (isatty(STDTTY_FILENO))
