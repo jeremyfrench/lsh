@@ -57,7 +57,7 @@ spawn_lshd () {
     # local delay
     
     ../lshd -h $HOSTKEY --interface=localhost \
-	-p $PORT $LSHD_FLAGS --pid-file lshd.$$.pid "$@" &
+	-p $PORT $LSHD_FLAGS --pid-file lshd.$$.pid --daemon "$@"
 
     # lshd may catch the ordinary TERM signal, leading to timing
     # problems when the next lshd process tries to bind the port.
