@@ -1562,6 +1562,127 @@ io_connect(struct sockaddr *remote,
   return fd;
 }
 
+#if 0
+/* Max number of simultaneous connection attempts */
+#define CONNECT_LIMIT 3
+
+/* ;; GABA:
+   (class
+     (name connect_list_state)
+     (super resource)
+     (vars
+       (done object command_continuation)
+       (remaining object sockaddr_info)
+       (in_progress array (object lsh_fd) CONNECT_LIMIT)))
+*/
+
+static void
+do_connect_list_kill(struct resource *s)
+{
+  CAST(connect_list_state, self, s);
+
+  if (self->super.alive)
+    {
+      unsigned i;
+      self->super.alive = 0;
+      for (i = 0; i < CONNECT_LIMIT; i++)
+	{
+	  struct lsh_fd *fd = self->in_progress[i];
+	  if (fd)
+	    KILL_RESOURCE(&fd->super);
+	}
+    }
+}
+
+static struct connect_list_state *
+make_connect_list_state(struct sockaddr_list *list)
+{
+  NEW(connect_list_state, self);
+  unsigned i;
+
+  init_resource(&self->super, do_connect_list_kill);
+  self->remaining = list;
+
+  for (i = 0; i < CONNECT_LIMIT; i++)
+    self->in_progress[i] = NULL;
+
+  returns self;
+}
+
+/* GABA:
+   (class
+     (name connect_list_callback)
+     (super io_callback)
+     (vars
+       (state object connect_list_state)
+       (index . unsigned)))
+*/
+
+static void
+do_connect_list_callback(struct io_callback *s,
+			 struct lsh_fd *fd)
+{
+  CAST(connect_list_callback, self, s);
+  int socket_error;
+  socklen_t len = sizeof(socket_error);
+  
+  assert(self->index < CONNECT_LIMIT);
+  assert(fd = self->state->in_progress[self->index]);
+
+  /* Check if the connection was successful */
+  if ((getsockopt(fd->fd, SOL_SOCKET, SO_ERROR,
+		  (char *) &socket_error, &len) < 0)
+      || socket_error)
+    {
+      trace("io.c: connect_callback: Connect on fd %i failed.\n", fd->fd);
+      if (!self->state->remaining XXX);
+    }
+}
+
+struct resource *
+io_connect_list(struct sockaddr *remote,
+	   socklen_t remote_length,
+	   struct command_continuation *c,
+	   struct exception_handler *e)
+{
+  int s = socket(remote->sa_family, SOCK_STREAM, 0);
+  struct lsh_fd *fd;
+  
+  if (s<0)
+    return NULL;
+
+  trace("io.c: Connecting using fd %i\n", s);
+  
+  io_init_fd(s);
+
+#if 0
+  if (local  &&  bind(s, (struct sockaddr *)local, sizeof *local) < 0)
+    {
+      int saved_errno = errno;
+      close(s);
+      errno = saved_errno;
+      return NULL;
+    }
+#endif
+  
+  if ( (connect(s, remote, remote_length) < 0)
+       && (errno != EINPROGRESS) )       
+    {
+      int saved_errno = errno;
+      close(s);
+      errno = saved_errno;
+      return NULL;
+    }
+
+  fd = make_lsh_fd(s, "connecting socket", e);
+  
+  fd->write = make_connect_callback(c);
+  lsh_oop_register_write_fd(fd);
+    
+  return fd;
+}
+#endif
+
 struct lsh_fd *
 io_bind_sockaddr(struct sockaddr *local,
 		 socklen_t length,
