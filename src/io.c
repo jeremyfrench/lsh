@@ -151,18 +151,21 @@ static int io_iter(struct io_backend *b)
     {
       fds[i].fd = fd->fd;
       fds[i].events = 0;
-      if (!fd->on_hold)
+      if (fd->read_callback && !fd->on_hold)
 	fds[i].events |= POLLIN;
 
       /* pre_write returns 0 if the buffer is empty */
-      if (write_buffer_pre_write(fd->buffer))
-	fds[i].events |= POLLOUT;
-      else
-	/* Buffer is empty. Should we close? */
-	if (fd->buffer->closed)
-	  {
-	    fd->close_now = 1;
-	  }
+      if (fd->buffer)
+	{
+	  if (write_buffer_pre_write(fd->buffer))
+	    fds[i].events |= POLLOUT;
+	  else
+	    /* Buffer is empty. Should we close? */
+	    if (fd->buffer->closed)
+	      {
+		fd->close_now = 1;
+	      }
+	}
     }
   END_FOR_FDS;
 
@@ -618,3 +621,61 @@ struct abstract_write *io_read_write(struct io_backend *b,
 
   return &buffer->super;
 }
+
+struct io_fd *io_read(struct io_backend *b,
+		      int fd,
+		      struct read_handler *read_callback,
+		      struct close_callback *close_callback)
+{
+  struct io_fd *f;
+
+  NEW(f);
+  f->fd = fd;
+  
+  f->close_reason = -1; /* Invalid reason */
+  f->close_now = 0;
+
+  /* Reading */
+  f->handler = read_callback;
+  f->on_hold = 0;
+
+  /* Writing */
+  f->buffer = NULL;
+
+  f->close_callback = close_callback;
+
+  f->next = b->io;
+  b->io = f;
+  b->nio++;
+
+  return f;
+}
+
+struct io_fd *io_write(struct io_backend *b,
+		       int fd,
+		       UINT32 block_size,
+		       struct close_callback *close_callback)
+{
+  struct io_fd *f;
+  struct write_buffer *buffer = write_buffer_alloc(block_size);
+
+  NEW(f);
+  f->fd = fd;
+  
+  f->close_reason = -1; /* Invalid reason */
+  f->close_now = 0;
+
+  /* Reading */
+  f->handler = NULL;
+
+  /* Writing */
+  f->buffer = buffer;
+  f->close_callback = close_callback;
+
+  f->next = b->io;
+  b->io = f;
+  b->nio++;
+
+  return &buffer->super;
+}
+     
