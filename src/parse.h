@@ -79,7 +79,7 @@ int parse_next_atom(struct simple_buffer *buffer, int *result);
 
 /* Creates a list of integers. The 0 atom means an unknown atom was
  * read. Returns a NULL pointer on error. */
-struct int_list *parse_atom_list(struct simple_buffer *buffer);
+struct int_list *parse_atom_list(struct simple_buffer *buffer, unsigned limit);
 
 /* Returns success (i.e. 1) iff there is no data left */
 int parse_eod(struct simple_buffer *buffer);
