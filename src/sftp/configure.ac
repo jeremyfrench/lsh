@@ -136,6 +136,7 @@ AC_MSG_NOTICE([Using $transport_prog as secsh-client, adding $before_opts in fro
 
 dnl Checks for header files.
 AC_HEADER_STDC
+AC_CHECK_HEADERS(stdarg.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST

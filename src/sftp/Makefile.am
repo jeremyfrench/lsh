@@ -16,11 +16,12 @@ EXTRA_DIST = buffer.h client.h filemode.h idcache.h sftp.h werror.h xmalloc.h
 shared_src = buffer.c buffer.h io_input.c io_output.c io.h \
 	     xmalloc.c werror.h werror.c
 
+LDADD = $(LIBOBJS)
+
 sftp_server_SOURCES = sftp-server.c $(shared_src) filemode.c idcache.c
 
 sftp_test_client_SOURCES = sftp-test-client.c $(shared_src) client.c
 
-lsftp_LDADD = $(LIBOBJS)
 lsftp_SOURCES = commands.c commands.h lsftp.c rl.c rl.h \
 	sftp_c.c sftp_c.h sftp.h sftp_bind.h sftp_bind.c \
 	str_utils.c str_utils.h lsftp.h dc.c dc.h \
