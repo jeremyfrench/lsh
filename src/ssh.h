@@ -27,6 +27,8 @@
 
 /* 50-59 User authentication generic */
 
+#define SSH_FIRST_USERAUTH_GENERIC 50
+
 #define SSH_MSG_USERAUTH_REQUEST 50 
 #define SSH_MSG_USERAUTH_FAILURE 51 
 #define SSH_MSG_USERAUTH_SUCCESS 52 
@@ -35,16 +37,22 @@
 /* 60-79 User authentication method specific (numbers can be reused
  * for different authentication methods) */
 
+#define SSH_FIRST_USERAUTH_SPECIFIC 60
+
 #define SSH_MSG_USERAUTH_PK_OK 60
 #define SSH_MSG_USERAUTH_PASSWD_CHANGEREQ 60
 
 /* 80-89 Connection protocol generic */
+
+#define SSH_FIRST_CONNECTION_GENERIC 80
 
 #define SSH_MSG_GLOBAL_REQUEST 80 
 #define SSH_MSG_REQUEST_SUCCESS 81 
 #define SSH_MSG_REQUEST_FAILURE 82 
 
 /* 90-127 Channel related messages */
+
+#define SSH_FIRST_CONNECTION_CHANNELS 90
 
 #define SSH_MSG_CHANNEL_OPEN 90 
 #define SSH_MSG_CHANNEL_OPEN_CONFIRMATION 91 
@@ -59,7 +67,11 @@
 #define SSH_MSG_CHANNEL_FAILURE 100
 
 /* 128-191 Reserved */
+
+#define SSH_FIRST_RESERVED 128
+
 /* 192-255 Local extensions */
+#define SSH_FIRST_LOCAL 192
 
 /* Disconnecting */
 
