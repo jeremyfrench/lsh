@@ -112,7 +112,7 @@ gateway_init_io(struct gateway_channel *channel)
 /* NOTE: We don't initialize the rec_window_size and rec_max_packet fields here.
  *
  * The origin's rec_window_size and rec_max_packet are filled in
- * later, by do_gateway_channel_open_continuation(). The target's
+ * later, by do_gateway_channel_open_continuation. The target's
  * rec_window_size, on the other hand, must be filled in manually. */
 
 struct gateway_channel *

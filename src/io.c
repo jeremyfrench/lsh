@@ -180,7 +180,7 @@ int io_iter(struct io_backend *b)
      *
      * FIXME: How can we improve this? We could keep a stack of closed
      * files, but that will require backpointers from the fd:s to the
-     * backend (so that kill_fd() can find the top of the stack). */
+     * backend (so that kill_fd can find the top of the stack). */
 
     do
       {
@@ -212,7 +212,7 @@ int io_iter(struct io_backend *b)
 		
 		    if (close(fd->fd) < 0)
 		      {
-			werror("io.c: close() failed, (errno = %i): %z\n",
+			werror("io.c: close failed, (errno = %i): %z\n",
 			       errno, STRERROR(errno));
 			EXCEPTION_RAISE(fd->e,
 					make_io_exception(EXC_IO_CLOSE, fd,
@@ -318,8 +318,8 @@ int io_iter(struct io_backend *b)
 	if (!fd->super.alive)
 	  continue;
 
-	/* On systems without poll(), we use jpoll.c to emulate some
-	 * of poll(), but we lack POLLNVAL, POLLPRI and POLLHUP. */
+	/* On systems without poll, we use jpoll.c to emulate some
+	 * of poll, but we lack POLLNVAL, POLLPRI and POLLHUP. */
 #ifdef POLLNVAL
 	if (fds[i].revents & POLLNVAL)
 	  {
@@ -332,7 +332,7 @@ int io_iter(struct io_backend *b)
 #endif /* POLLNVAL */
 
 #ifdef POLLHUP
-	/* NOTE: The behaviour of poll() at EOF varies quite a lot
+	/* NOTE: The behaviour of poll at EOF varies quite a lot
 	 * between systems.
 	 *
 	 * According to Solaris' man page, POLLHUP is mutually
@@ -341,10 +341,10 @@ int io_iter(struct io_backend *b)
 	 * However, on my system (sparc-linux) POLLHUP is set when we
 	 * get EOF on an fd we are reading.
 	 *
-	 * I.e. on some systems, EOF is indicated by poll() setting
-	 * POLLIN and read() returning 0 (in particular, this happens
+	 * I.e. on some systems, EOF is indicated by poll setting
+	 * POLLIN and read returning 0 (in particular, this happens
 	 * if the poll-by-select-code in jpoll.c is used), while on
-	 * other systems, poll() sets POLLHUP and subsequent read()
+	 * other systems, poll sets POLLHUP and subsequent read
 	 * calls will return -1, not 0.
 	 *
 	 * But to complicate things some more, we can (also on Linux)
@@ -352,7 +352,7 @@ int io_iter(struct io_backend *b)
 	 * ordinary read.
 	 *
 	 * We set the hanged_up flag before calling FD_READ, which
-	 * tells the io_callback that it should avoid calling read(). */
+	 * tells the io_callback that it should avoid calling read. */
 
 	if (fds[i].revents & POLLHUP)
 	  {
@@ -481,7 +481,7 @@ do_buffered_read(struct io_callback *s,
 
   assert(fd->want_read);   
 
-  /* If hanged_up is set, pretend that read() returned 0 */
+  /* If hanged_up is set, pretend that read returned 0 */
   res = fd->hanged_up ? 0 : read(fd->fd, buffer, self->buffer_size);
 
   if (res < 0)
@@ -493,7 +493,7 @@ do_buffered_read(struct io_callback *s,
 	werror("io.c: read_callback: Unexpected EWOULDBLOCK\n");
 	break;
       case EPIPE:
-	/* Getting EPIPE from read() seems strange, but appearantly
+	/* Getting EPIPE from read seems strange, but appearantly
 	 * it happens sometimes. */
 	werror("Unexpected EPIPE.\n");
       default:
@@ -511,7 +511,7 @@ do_buffered_read(struct io_callback *s,
 	  UINT32 done;
 
 	  /* FIXME: What to do if want_read is false? To improve the
-	   * connection_lock() mechanism, it must be possible to
+	   * connection_lock mechanism, it must be possible to
 	   * temporarily stop reading, which means that fd->want_read
 	   * has to be cleared.
 	   *
@@ -549,7 +549,7 @@ do_buffered_read(struct io_callback *s,
 	}
 
       if (left)
-	verbose("read_buffered(): fd died, %i buffered bytes discarded\n",
+	verbose("read_buffered: fd died, %i buffered bytes discarded\n",
 		left);
     }
   else
@@ -592,7 +592,7 @@ do_consuming_read(struct io_callback *c,
 
   if (fd->hanged_up)
     {
-      /* If hanged_up is set, pretend that read() returned 0 */
+      /* If hanged_up is set, pretend that read returned 0 */
       goto eof;
     }
   
@@ -756,10 +756,10 @@ do_listen_callback(struct io_callback *s,
 		(struct sockaddr *) &peer, &addr_len);
   if (conn < 0)
     {
-      werror("io.c: accept() failed, %z", STRERROR(errno));
+      werror("io.c: accept failed, %z", STRERROR(errno));
       return;
     }
-  trace("io.c: accept() on fd %i\n", conn);
+  trace("io.c: accept on fd %i\n", conn);
   COMMAND_RETURN(self->c,
 		 make_listen_value(make_lsh_fd(self->backend,
 					       conn, self->e),
@@ -795,10 +795,10 @@ do_listen_callback_no_peer(struct io_callback *s,
 		(struct sockaddr *) &peer, &addr_len);
   if (conn < 0)
     {
-      werror("io.c: accept() failed, %z", STRERROR(errno));
+      werror("io.c: accept failed, %z", STRERROR(errno));
       return;
     }
-  trace("io.c: accept() on fd %i\n", conn);
+  trace("io.c: accept on fd %i\n", conn);
   COMMAND_RETURN(self->c, make_lsh_fd(self->backend,
 				      conn, self->e));
 }
@@ -841,7 +841,7 @@ do_connect_callback(struct io_callback *s,
     {
       debug("io.c: connect_callback: Connect failed.\n");
       EXCEPTION_RAISE(fd->e,
-		      make_io_exception(EXC_IO_CONNECT, fd, 0, "connect() failed."));
+		      make_io_exception(EXC_IO_CONNECT, fd, 0, "connect failed."));
       kill_fd(fd);
     }
   else
@@ -924,7 +924,7 @@ init_file(struct io_backend *b, struct lsh_fd *f, int fd,
   b->files = f;
 }
 
-/* These functions are used by werror() and friends */
+/* These functions are used by werror and friends */
 
 /* For fd:s in blocking mode. */
 const struct exception *
@@ -1138,7 +1138,7 @@ sockaddr2info(size_t addr_len UNUSED,
        * connects. */
       return NULL;
     default:
-      werror("io.c: sockaddr2info(): Unsupported address family.\n");
+      werror("io.c: sockaddr2info: Unsupported address family.\n");
       return NULL;
     }
 }
@@ -1181,7 +1181,7 @@ address_info2sockaddr(socklen_t *length,
   else
     host = NULL;
 
-/* Some systems have getaddrinfo(), but still doesn't implement all of
+/* Some systems have getaddrinfo, but still doesn't implement all of
  * RFC 2553 */
 #if defined(HAVE_GETADDRINFO) && \
     defined(HAVE_GAI_STRERROR) && defined(HAVE_AI_NUMERICHOST)
@@ -1241,7 +1241,7 @@ address_info2sockaddr(socklen_t *length,
      defined(HAVE_GAI_STRERROR) && defined(HAVE_AI_NUMERICHOST) */ 
 
 #if WITH_IPV6
-#error IPv6 enabled, but getaddrinfo() and friends were not found. 
+#error IPv6 enabled, but getaddrinfo and friends were not found. 
 #endif
 
   if (a->ip && memchr(a->ip->data, ':', a->ip->length))
@@ -1524,7 +1524,7 @@ safe_pushd(const char *directory,
   /* Check that it has reasonable permissions */
   if (stat(".", &sbuf) < 0)
     {
-      werror("io.c: Failed to stat() \".\" (supposed to be %z).\n"
+      werror("io.c: Failed to stat \".\" (supposed to be %z).\n"
 	     "  (errno = %i): %z\n", directory, errno, STRERROR(errno));
 
       safe_popd(old_cd, directory);
@@ -1598,7 +1598,7 @@ io_listen_local(struct io_backend *b,
     }
 
   /* We have to change the umask, as that's the only way to control
-   * the permissions that bind() uses. */
+   * the permissions that bind uses. */
 
   old_umask = umask(0077);
 
@@ -1878,7 +1878,7 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)
 
 #else /* !linux */
 
-/* Don't know how to work around the broken shutdown(). So disable it
+/* Don't know how to work around the broken shutdown. So disable it
  * completely. */
 
 #define SHUTDOWN(fd, how) 0
@@ -1904,13 +1904,13 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)
 
 /* Creates a one-way socket connection. Returns 1 on success, 0 on
  * failure. fds[0] is for reading, fds[1] for writing (like for the
- * pipe() system call). */
+ * pipe system call). */
 int
 lsh_make_pipe(int *fds)
 {
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
     {
-      werror("socketpair() failed: %z\n", STRERROR(errno));
+      werror("socketpair failed: %z\n", STRERROR(errno));
       return 0;
     }
   debug("Created socket pair. Using fd:s %i <-- %i\n", fds[0], fds[1]);

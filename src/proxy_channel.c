@@ -93,7 +93,7 @@ do_init_io(struct proxy_channel *self)
 
 /* NOTE: It seems most calls doesn't provide the correct value for
  * rec_max_packet. In these cases, it should probably be filled in
- * later, by do_proxy_channel_open_continuation() fill it in later. */
+ * later, by do_proxy_channel_open_continuation fill it in later. */
 struct proxy_channel *
 make_proxy_channel(UINT32 window_size,
 		   UINT32 rec_max_packet,

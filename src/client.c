@@ -564,7 +564,7 @@ client_shell_session(struct client_options *options)
 	  get_pty = make_pty_request(options->tty);
 	  if (!get_pty)
 	    {
-	      werror("lsh: Can't use tty (probably getattr or atexit() failed.\n");
+	      werror("lsh: Can't use tty (probably getattr or atexit failed).\n");
 	    }
 	}
       else

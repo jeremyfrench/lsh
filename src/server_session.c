@@ -132,7 +132,7 @@ do_eof(struct ssh_channel *channel)
 {
   CAST(server_session, session, channel);
 
-  trace("server_session.c: do_eof()\n");
+  trace("server_session.c: do_eof\n");
 
   write_buffer_close(session->in->write_buffer);
 
@@ -195,7 +195,7 @@ do_open_session(struct channel_open *s,
 {
   CAST(open_session, self, s);
 
-  debug("server.c: do_open_session()\n");
+  debug("server.c: do_open_session\n");
 
   assert(connection->user);
   
@@ -263,7 +263,7 @@ do_exit_shell(struct exit_callback *c, int signaled,
   struct server_session *session = closure->session;
   struct ssh_channel *channel = &session->super;
   
-  trace("server_session.c: do_exit_shell()\n");
+  trace("server_session.c: do_exit_shell\n");
   
   /* NOTE: We don't close the child's stdio here. The io-backend
    * should notice EOF anyway, and the client should send EOF when it
@@ -591,7 +591,7 @@ spawn_process(struct server_session *session,
 	    return 0;
 	  }
       }
-    /* fork() failed */
+    /* fork failed */
     /* Close and return channel_failure */
 
     close(err[0]);
@@ -663,7 +663,7 @@ do_spawn_shell(struct channel_request *c,
 	USER_EXEC(connection->user, 1, argv, env_length, env);
 	
 	/* exec failed! */
-	verbose("server_session: exec() failed (errno = %i): %z\n",
+	verbose("server_session: exec failed (errno = %i): %z\n",
 		errno, STRERROR(errno));
 	_exit(EXIT_FAILURE);
 
@@ -679,7 +679,7 @@ do_spawn_shell(struct channel_request *c,
 #endif
       }
     case -1:
-      /* fork() failed */
+      /* fork failed */
 
       break;
     default:
@@ -780,12 +780,12 @@ do_spawn_exec(struct channel_request *c,
 	USER_EXEC(connection->user, 0, argv, env_length, env);
 	
 	/* exec failed! */
-	verbose("server_session: exec() failed (errno = %i): %z\n",
+	verbose("server_session: exec failed (errno = %i): %z\n",
 		errno, STRERROR(errno));
 	_exit(EXIT_FAILURE);
       }
     case -1:
-      /* fork() failed */
+      /* fork failed */
       lsh_string_free(command_line);
 
       break;

@@ -1689,7 +1689,7 @@ void init_connection_service(struct ssh_connection *connection)
 {
   struct channel_table *table = make_channel_table();
   
-  debug("channel.c: do_connection_service()\n");
+  debug("channel.c: do_connection_service\n");
   
   connection->table = table;
 
@@ -1853,7 +1853,7 @@ channel_transmit_extended(struct ssh_channel *channel,
 
 /* NOTE: Flow control when sending data on a channel works as follows:
  * When the i/o backend wants to read from one of the channel's
- * sources, it first calls do_read_data_query() (in read_data.c),
+ * sources, it first calls do_read_data_query (in read_data.c),
  * which looks at the current value of send_window_size to determine
  * how much data can be sent right now. The backend reads at most that
  * amount of data, and then calls do_channel_write or
@@ -2072,7 +2072,7 @@ make_channel_io_exception_handler(struct ssh_channel *channel,
   return &self->super;
 }
 
-/* Used by do_gateway_channel_open() */
+/* Used by do_gateway_channel_open */
 struct lsh_string *
 format_channel_open_s(struct lsh_string *type,
 		      UINT32 local_channel_number,
