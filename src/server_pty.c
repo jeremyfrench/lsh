@@ -57,17 +57,13 @@
 static void
 do_kill_pty_info(struct resource *r)
 {
-  CAST(pty_info, closure, r);
+  CAST(pty_info, pty, r);
 
-  if (closure->super.alive)
+  if (pty->super.alive)
     {
-      closure->super.alive = 0;
-      if ( (closure->master >= 0) && (close(closure->master) < 0) )
+      pty->super.alive = 0;
+      if ( (pty->master >= 0) && (close(pty->master) < 0) )
 	werror("do_kill_pty_info: closing master failed (errno = %i): %z\n",
-	       errno, STRERROR(errno));
-
-      if ( (closure->slave >= 0) && (close(closure->slave) < 0) )
-	werror("do_kill_pty_info: closing slave failed (errno = %i): %z\n",
 	       errno, STRERROR(errno));
     }
 }
@@ -79,7 +75,8 @@ make_pty_info(void)
 
   init_resource(&pty->super, do_kill_pty_info);
   pty->tty_name = NULL;
-  pty->master = pty->slave = -1;
+  pty->mode = NULL;
+  pty->master = -1;
   return pty;
 }
 
@@ -163,16 +160,15 @@ pty_grantpt_uid(int master, uid_t user)
       return (pty_check_permissions(name, user)
 	      ? make_string(name)
 	      : NULL);
-      
     }
 }
 #endif /* HAVE_UNIX98_PTYS */
 
 int
-pty_allocate(struct pty_info *pty,
-	     uid_t user
+pty_open_master(struct pty_info *pty,
+		uid_t user
 #if !HAVE_UNIX98_PTYS
-	     UNUSED
+		UNUSED
 #endif
 	     )
 {
@@ -180,36 +176,18 @@ pty_allocate(struct pty_info *pty,
   struct lsh_string *name = NULL;
   if ((pty->master = open("/dev/ptmx", O_RDWR | O_NOCTTY)) < 0)
     {
-      werror("pty_allocate: Opening /dev/ptmx failed (errno = %i): %z\n",
+      werror("pty_open_master: Opening /dev/ptmx failed (errno = %i): %z\n",
 	     errno, STRERROR(errno));
       return 0;
     }
   
-  if (! (name = pty_grantpt_uid(pty->master, user)))
-    goto close_master;
-  
-  if (unlockpt(pty->master) < 0)
-    goto close_master;
-
-  pty->slave = open(name->data, O_RDWR | O_NOCTTY);
-  if (pty->slave == -1)
-    goto close_master;
-
-# ifdef HAVE_STROPTS_H
-  if (isastream(pty->slave))
+  if ((name = pty_grantpt_uid(pty->master, user))
+      && (unlockpt(pty->master) == 0))
     {
-      if (ioctl(pty->slave, I_PUSH, "ptem") < 0
-          || ioctl(pty->slave, I_PUSH, "ldterm") < 0)
-        goto close_slave;
+      pty->tty_name = name;
+      return 1;
     }
-#  endif /* HAVE_STROPTS_H */
 
-  pty->tty_name = name;
-  return 1;
-
-close_slave:
-  close (pty->slave); pty->slave = -1;
-close_master:
   close (pty->master); pty->master = -1;
   
   if (name)
@@ -222,15 +200,13 @@ close_master:
 #define PTY_BSD_SCHEME_SLAVE  "/dev/tty%c%c"
   char first[] = PTY_BSD_SCHEME_FIRST_CHARS;
   char second[] = PTY_BSD_SCHEME_SECOND_CHARS;
-  char master[MAX_TTY_NAME], slave[MAX_TTY_NAME];
+  char master[MAX_TTY_NAME];
+  char slave[MAX_TTY_NAME];
   unsigned int i, j;
-  int saved_errno;
 
-#define CONST_STRLEN(s) (sizeof((s)) - sizeof(""))
-  
-  for (i = 0; i < CONST_STRLEN(first); i++)
+  for (i = 0; first[i]; i++)
     {
-      for (j = 0; j < CONST_STRLEN(second); j++) 
+      for (j = 0; second[j]; j++) 
         {
 	  snprintf(master, sizeof(master),
 		   PTY_BSD_SCHEME_MASTER, first[i], second[j]);
@@ -241,15 +217,7 @@ close_master:
 	      /* master succesfully opened */
 	      snprintf(slave, sizeof(slave),
 		       PTY_BSD_SCHEME_SLAVE, first[i], second[j]);
-				
-	      pty->slave = open(slave, O_RDWR | O_NOCTTY);
-	      if (pty->slave == -1) 
-	        {
-		  saved_errno = errno;
-		  close(pty->master); pty->master = -1;
-		  errno = saved_errno;
-		  return 0;
-	        }
+
 	      /* NOTE: As there is no locking, setting the permissions
 	       * properly does not guarantee that nobody else has the
 	       * pty open, and can snoop the traffic on it. But it
@@ -262,94 +230,85 @@ close_master:
 		  pty->tty_name = make_string(slave);
 		  return 1;
 		}
-	      saved_errno = errno;
 	      close(pty->master); pty->master = -1;
-	      close(pty->slave); pty->slave = -1;
 	      return 0;
 	    }
         }
     }
   return 0;
-#elif HAVE_OPENPTY
-  /* FIXME: openpty may not work properly, when called with the
-   * wrong uid. */
-#error The openpty scheme is not currently supported.
-  return (openpty(&pty->master, &pty->slave, NULL, NULL, NULL) == 0)
-    && pty_check_permissions(ptsname..., user);
-
-#else /* !HAVE_OPENPTY */
+  /* FIXME: Figure out if we can use openpty. Probably not, as we're
+   * not running with the right uid. */
+#else /* PTY_BSD_SCHEME */
   /* No pty:s */
   return 0;
 #endif
 }
 
-/* NOTE: This function also makes the current process a process group
- * leader. */
+/* Opens the slave side of the tty, intitializes it, and makes it our
+ * controlling terminal. Should be called by the child process.
+ *
+ * Also makes the current process a session leader.
+ *
+ * Returns an fd, or -1 on error. */
 int
-tty_setctty(struct pty_info *pty)
+pty_open_slave(struct pty_info *pty)
 {
-  debug("tty_setctty\n");
+  struct termios ios;
+  int fd;
+  
+  trace("pty_open_slave\n");
   if (setsid() < 0)
     {
       werror("tty_setctty: setsid failed, already process group leader?\n"
 	     "   (errno = %i): %z\n", errno, STRERROR(errno));
-      return 0;
+      return -1;
     }
-#if HAVE_UNIX98_PTYS
-  {
-    int fd;
-    
-    /* Open the slave, to make it our controlling tty */
 
-    /* FIXME: According to carson@tla.org, there's a cleaner POSIX way
-     * to make a tty the process's controlling tty, but I haven't
-     * found out how. */
+  /* Open the slave. On Sys V, that also makes it our controlling tty. */
+  fd = open(lsh_get_cstring(pty->tty_name), O_RDWR);
 
-    debug("setctty: Attempting open\n");
-    fd = open(pty->tty_name->data, O_RDWR);
-    if (fd < 0)
-      {
-	werror("tty_setctty: open(\"%z\") failed,\n"
+  if (fd < 0)
+    {
+      werror("pty_open_slave: open(\"%S\") failed,\n"
 	       "   (errno = %i): %z\n",
-	       pty->tty_name->data, errno, STRERROR(errno));
-	return 0;
-      }
-    close(fd);
+	     pty->tty_name, errno, STRERROR(errno));
+      return -1;
+    }
 
-    return 1;
-  }
-#elif PTY_BSD_SCHEME
-  {
-    /* Is this really needed? setsid should unregister the
-     * controlling tty */
-#if 0
-    int oldtty;
-  
-    oldtty = open("/dev/tty", O_RDWR | O_NOCTTY);
-    if (oldtty >= 0)
+  /* For Sys V and Solaris, push some streams modules.
+   * This seems to also have the side effect of making the
+   * tty become our controlling terminal. */
+# ifdef HAVE_STROPTS_H
+  if (isastream(fd))
+    if (ioctl(fd, I_PUSH, "ptem") < 0
+	|| ioctl(fd, I_PUSH, "ldterm") < 0)
       {
-	ioctl(oldtty, TIOCNOTTY, NULL);
-	close(oldtty);
-	oldtty = open("/dev/tty", O_RDWR | O_NOCTTY);
-	if (oldtty >= 0)
-	  {
-	    werror("pty_setctty: Error disconnecting from controlling tty.\n");
-	    close(oldtty);
-	    return 0;
-	  }
+	close(fd);
+	return -1;
       }
-#endif
-    
-    if (ioctl(pty->slave, TIOCSCTTY, NULL) == -1)
-      {
-	werror("tty_setctty: Failed to set the controlling tty.\n"
-	       "   (errno = %i): %z\n", errno, STRERROR(errno));
-	return 0;
-      }
-    
-    return 1;
-  }
-#else /* !PTY_BSD_SCHEME */
-#error Dont know how to register a controlling tty
-#endif
+# endif /* HAVE_STROPTS_H */
+
+  /* On BSD systems, use TIOCSCTTY. */
+
+#ifdef TIOCSCTTY
+  if (ioctl(fd, TIOCSCTTY, NULL) < 0)
+    {
+      werror("pty_open_slave: Failed to set the controlling tty.\n"
+	     "   (errno = %i): %z\n", errno, STRERROR(errno));
+      close(fd);
+      return -1;
+    }
+#endif /* defined(TIOCSCTTY) */
+
+  /* Set terminal modes */
+  if (tty_getattr(fd, &ios))
+    {
+      tty_decode_term_mode(&ios, pty->mode->length, pty->mode->data); 
+
+      if (tty_setattr(fd, &ios)
+	  && tty_setwinsize(fd, &pty->dims))
+	return fd;
+    }
+  close(fd);
+  return -1;
 }
