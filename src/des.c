@@ -59,7 +59,7 @@ static void do_des_decrypt(struct crypto_instance *s,
 }
 
 static struct crypto_instance *
-make_des_instance(struct crypto_algorithm *algorithm, int mode, 
+make_des_instance(struct crypto_algorithm *algorithm UNUSED, int mode, 
 		  const UINT8 *key, const UINT8 *iv UNUSED)
 {
   NEW(des_instance, self);
