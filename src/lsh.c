@@ -45,6 +45,7 @@
 #include "handshake.h"
 #include "lookup_verifier.h"
 #include "randomness.h"
+#include "rsa.h"
 #include "sexp.h"
 #include "spki_commands.h"
 #include "srp.h" 
@@ -343,6 +344,22 @@ do_lsh_lookup(struct lookup_verifier *c,
 	assert(subject->verifier);
 	break;
       }
+    case ATOM_SSH_RSA:
+      {
+	struct verifier *v = make_ssh_rsa_verifier(key->length, key->data);
+	if (!v)
+	  {
+	    werror("do_lsh_lookup: Invalid ssh-rsa key.\n");
+	    return NULL;
+	  }
+	subject = SPKI_LOOKUP(self->db,
+			      spki_make_public_key(v),
+			      v);
+	assert(subject);
+	assert(subject->verifier);
+	break;
+      }
+      
 #if 0
     case ATOM_RSA_PKCS1_SHA1_LOCAL:
       {
@@ -359,8 +376,12 @@ do_lsh_lookup(struct lookup_verifier *c,
 	assert(subject->verifier);
 	break;
       }
-#endif
+      
     case ATOM_SPKI:
+#endif
+      /* It doesn't matter here which flavour of SPKI is used. */
+    case ATOM_SPKI_SIGN_RSA:
+    case ATOM_SPKI_SIGN_DSS:
       {
 	struct sexp *e = string_to_sexp(SEXP_CANONICAL, key, 0);
 	if (!e)
