@@ -5,7 +5,38 @@
 #include "bignum.h"
 #include "werror.h"
 
-void bignum_parse(bignum *n, UINT32 length, UINT8 *data)
+static void limbs_to_octets(bignum *n, UINT32 length,
+			    UINT8 pad, UINT8 *data)
+{
+  UINT8 *dst = data + length - 1;
+	
+  mp_limb_t *l = n->_mp_d;  /* Starts at the least significant limb */
+  int left;
+	
+  for (left = n->_mp_size;
+      (length > 0) && (left  > 0);
+      left--)
+    {
+      int i;
+      mp_limb_t word = *l++;
+      for(i = 0; i<sizeof(mp_limb_t); i++)
+	{
+	  *dst-- = word & 0xff;
+	  word >>= 8;
+	  length--;
+	  if (!length)
+	    break;
+	}
+    }
+  while (length > 0)
+    {
+      *dst-- = pad;
+      length--;
+    }
+}
+
+/* Formatting of signed numbers */
+void bignum_parse_s(bignum *n, UINT32 length, UINT8 *data)
 {
   int negative = length && (*data & 0x80);
   int i;
@@ -46,7 +77,7 @@ int mpz_size_of_complement(mpz_t n)
 }
 
 /* This function should handle both positive and negative numbers */
-UINT32 bignum_format_length(bignum *n)
+UINT32 bignum_format_s_length(bignum *n)
 {
   switch(mpz_sgn(n))
     {
@@ -60,37 +91,8 @@ UINT32 bignum_format_length(bignum *n)
       fatal("Internal error");
     }
 }
-
-void limbs_to_octets(bignum *n, UINT32 length, UINT8 pad, UINT8 *data)
-{
-  UINT8 *dst = data + length - 1;
-	
-  mp_limb_t *l = n->_mp_d;  /* Starts at the least significant limb */
-  int left;
-	
-  for (left = n->_mp_size;
-      (length > 0) && (left  > 0);
-      left--)
-    {
-      int i;
-      mp_limb_t word = *l++;
-      for(i = 0; i<sizeof(mp_limb_t); i++)
-	{
-	  *dst-- = word & 0xff;
-	  word >>= 8;
-	  length--;
-	  if (!length)
-	    break;
-	}
-    }
-  while (length > 0)
-    {
-      *dst-- = pad;
-      length--;
-    }
-}
   
-UINT32 bignum_format(bignum *n, UINT8 *data)
+UINT32 bignum_format_s(bignum *n, UINT8 *data)
 {
   switch(mpz_sgn(n))
     {
@@ -128,6 +130,63 @@ UINT32 bignum_format(bignum *n, UINT8 *data)
     }
 }
 
-	
-	
-    
+/* Formatting of unsigned numbers */
+void bignum_parse_u(bignum *n, UINT32 length, UINT8 *data)
+{
+  int i;
+  mpz_t digit;
+
+  mpz_init(digit);
+  mpz_set_ui(n, 0);
+  for (i = 0; i < length; i++)
+    {
+      mpz_set_ui(digit, data[i]);
+      mpz_mul_2exp(digit, digit, (length - i - 1) * 8);
+      mpz_ior(n, n, digit);
+    }
+  mpz_clear(digit);
+}
+
+UINT32 bignum_format_u_length(bignum *n)
+{
+  switch(mpz_sgn(n))
+    {
+    case 0:
+      return 0;
+    case 1:
+      return (mpz_sizeinbase(n, 2) + 7) / 8;
+    default:
+      fatal("Internal error: Negative number to bignum_format_u_length()\n");
+    }
+}
+
+UINT32 bignum_format_u(bignum *n, UINT8 *data)
+{
+  switch(mpz_sgn(n))
+    {
+    case 0:
+      return 0;
+    case 1:
+      {
+	int length = (mpz_sizeinbase(n, 2) + 7) / 8;
+
+	limbs_to_octets(n, length, 0, data);
+	return length;
+      }
+    default:
+      fatal("Internal error: Negative number to bignum_format_u()\n");
+    }
+}
+
+void bignum_random(bignum *x, struct randomness *random, bignum *n)
+{
+  /* Add a few bits extra */
+  int length = (mpz_sizeinbase(n) + 17) / 8;
+  UINT8 *data = alloca(length);
+
+  RANDOM(random, length, data);
+
+  bignum_parse_u(x, length, data);
+
+  mpz_tdiv_r(x, x, n);
+}
