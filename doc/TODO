@@ -32,6 +32,17 @@ DSS == Digital Signature Standard; the algorithm in it is DSA (Digital
 Signature Algorithm); the GNU Privacy Guard contains a DSA implementation
 (cipher/dsa.[ch]); is that implementation suitable?
 
+
+S-EXPRESSIONS
+
+Write a sexp-parser, at least for the canonical and transport forms.
+Should probably be implemented as a read handler. Perhaps we can use
+Ron Rivest's code at <URL:
+http://theory.lcs.mit.edu/~rivest/sexp.html>.
+
+Add newlines and pretty printing to the sexp formatter.
+
+
 USERS
 
 Functions to lookup users, their passwords and .lsh/authorized_keys.
