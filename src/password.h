@@ -24,6 +24,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning password.h is obsolete
+
 #ifndef LSH_PASSWORD_H_INCLUDED
 #define LSH_PASSWORD_H_INCLUDED
 
