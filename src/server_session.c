@@ -422,7 +422,6 @@ spawn_process(struct server_session *session,
 	       * already */
 	      struct spawn_info *info)
 {
-  struct exception_handler *io_exception_handler;
   struct lsh_callback *read_close_callback;
   
   assert(!session->process);
@@ -443,20 +442,17 @@ spawn_process(struct server_session *session,
   if (!session->process)
     return 0;
   
-  /* Exception handlers */
-  io_exception_handler
-    = make_channel_io_exception_handler(&session->super,
-					"lshd: Child stdio: ",
-					&default_exception_handler,
-					HANDLER_CONTEXT);
-
   /* Close callback for stderr and stdout */
   read_close_callback
     = make_channel_read_close_callback(&session->super);
   
   session->in
-    = io_write(make_lsh_fd(info->in[1], "child stdin",
-			   io_exception_handler),
+    = io_write(make_lsh_fd
+	       (info->in[1], "child stdin",
+		make_channel_io_exception_handler(&session->super,
+						  "Child stdin: ", 0,
+						  &default_exception_handler,
+						  HANDLER_CONTEXT)),
 	       SSH_MAX_PACKET, NULL);
 
   if (session->pty)
@@ -469,14 +465,22 @@ spawn_process(struct server_session *session,
    * which will close the channel on read errors, or is it
    * better to just send EOF on read errors? */
   session->out
-    = io_read(make_lsh_fd(info->out[0], "child stdout",
-			  io_exception_handler),
+    = io_read(make_lsh_fd
+	      (info->out[0], "child stdout",
+	       make_channel_io_exception_handler(&session->super,
+						 "Child stdout: ", 1,
+						 &default_exception_handler,
+						 HANDLER_CONTEXT)),
 	      make_channel_read_data(&session->super),
 	      read_close_callback);
   session->err 
     = ( (info->err[0] != -1)
-	? io_read(make_lsh_fd(info->err[0], "child stderr",
-			      io_exception_handler),
+	? io_read(make_lsh_fd
+		  (info->err[0], "child stderr",
+		   make_channel_io_exception_handler(&session->super,
+						     "Child stderr: ", 0,
+						     &default_exception_handler,
+						     HANDLER_CONTEXT)),
 		  make_channel_read_stderr(&session->super),
 		  read_close_callback)
 	: NULL);
