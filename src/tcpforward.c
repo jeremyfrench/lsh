@@ -224,6 +224,17 @@ struct channel_open *make_open_direct_tcpip(struct io_backend *backend)
   return &self->super;
 }
 
+/* GABA:
+   (expr
+     (name tcpforward-foo)
+     (globals
+        (start-io foo_start)
+        (listen foo_listen)
+	(open-direct-tcpip foo_open))
+     (expr (lambda (port connection)
+              (start-io (listen port connection)
+	                (open-direct-tcpip connection)))))
+*/
 #if 0
 /* FIXME: This code requires some mechanism for the server to send a
  * request (in this case, a CHANNEL_OPEN for a forwarded-tcp channel,
