@@ -60,6 +60,7 @@
 
 #include "command.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "string_buffer.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -443,6 +444,7 @@ do_buffered_read(struct io_callback *s,
 
   assert(fd->want_read);   
 
+  /* FIXME: Use a string and lsh_string_read instead? */
   res = read(fd->fd, buffer, self->buffer_size);
   
   if (res < 0)
@@ -561,7 +563,7 @@ do_consuming_read(struct io_callback *c,
   else
     {
       struct lsh_string *s = lsh_string_alloc(wanted);
-      int res = read(fd->fd, s->data, wanted);
+      int res = lsh_string_read(s, 0, fd->fd, wanted);
 
       if (res < 0)
 	{
@@ -638,7 +640,7 @@ do_write_callback(struct io_callback *s UNUSED,
       assert(size);
   
       res = write(fd->fd,
-		  fd->write_buffer->buffer + fd->write_buffer->start,
+		  lsh_string_data(fd->write_buffer->buffer) + fd->write_buffer->start,
 		  size);
       if (!res)
 	fatal("Closed?");
@@ -948,9 +950,10 @@ io_read_file_raw(int fd, uint32_t guess)
       if (!buffer.left)
         /* Roughly double the size of the buffer */
         string_buffer_grow(&buffer,
-                           buffer.partial->length + buffer.total + 100);
-      
-      res = read(fd, buffer.current, buffer.left);
+                           lsh_string_length(buffer.partial) + buffer.total + 100);
+
+      res = lsh_string_read(buffer.partial, buffer.pos,
+			    fd, buffer.left);
       
       if (res < 0)
         {
@@ -967,7 +970,7 @@ io_read_file_raw(int fd, uint32_t guess)
         }
       assert( (unsigned) res <= buffer.left);
       
-      buffer.current += res;
+      buffer.pos += res;
       buffer.left -= res;
     }
 }
@@ -1045,15 +1048,9 @@ sockaddr2info(size_t addr_len,
 	struct sockaddr_in6 *in = (struct sockaddr_in6 *) addr;
 
 	info->port = ntohs(in->sin6_port);
-	info->ip = lsh_string_alloc(INET6_ADDRSTRLEN + 1);
+	info->ip = lsh_string_ntop(addr->sa_family, INET6_ADDRSTRLEN,
+				   &in->sin6_addr);
 
-	/* Does inet_ntop always use lower case letters? If not, we
-	 * should perhaps lowercase the result explicitly. */
-	if (!inet_ntop(addr->sa_family, &in->sin6_addr,
-		       info->ip->data, info->ip->length))
-	  fatal("inet_ntop failed for IPv6 address.\n");
-
-	lsh_string_trunc(info->ip, strlen(info->ip->data));
       }
       return info;
 #endif /* WITH_IPV6 */
@@ -1783,7 +1780,8 @@ struct local_info *
 make_local_info(struct lsh_string *directory,
 		struct lsh_string *name)
 {
-  if (!directory || !name || memchr(name->data, '/', name->length))
+  if (!directory || !name
+      || memchr(lsh_string_data(name), '/', lsh_string_length(name)))
     return NULL;
 
   assert(lsh_get_cstring(directory));
@@ -1962,19 +1960,20 @@ io_bind_local(struct local_info *info,
 
   const char *cdir = lsh_get_cstring(info->directory);
   const char *cname = lsh_get_cstring(info->name);
+  uint32_t length = lsh_string_length(info->name);
   
   assert(cdir);
   assert(cname);
 
   /* NAME should not be a plain filename, with no directory separators.
    * In particular, it should not be an absolute filename. */
-  assert(!memchr(info->name->data, '/', info->name->length));
+  assert(!memchr(cname, '/', length));
 
-  local_length = offsetof(struct sockaddr_un, sun_path) + info->name->length;
+  local_length = offsetof(struct sockaddr_un, sun_path) + length;
   local = alloca(local_length);
 
   local->sun_family = AF_UNIX;
-  memcpy(local->sun_path, info->name->data, info->name->length);
+  memcpy(local->sun_path, cname, length);
 
   /* cd to it, but first save old cwd */
 
@@ -2007,7 +2006,7 @@ io_bind_local(struct local_info *info,
   /* Ok, now we restore umask and cwd */
   umask(old_umask);
 
-  lsh_popd(old_cd, info->directory->data);
+  lsh_popd(old_cd, cdir);
 
   return fd;
 }
@@ -2026,19 +2025,21 @@ io_connect_local(struct local_info *info,
   struct lsh_fd *fd;
   
   const char *cdir = lsh_get_cstring(info->directory);
-  
+  const char *cname = lsh_get_cstring(info->name);
+  uint32_t length = lsh_string_length(info->name);
+
+  assert(cname);
   assert(cdir);
-  assert(lsh_get_cstring(info->name));
 
   /* NAME should not be a plain filename, with no directory separators.
    * In particular, it should not be an absolute filename. */
-  assert(!memchr(info->name->data, '/', info->name->length));
+  assert(!memchr(cname, '/', length));
 
-  addr_length = offsetof(struct sockaddr_un, sun_path) + info->name->length;
+  addr_length = offsetof(struct sockaddr_un, sun_path) + length;
   addr = alloca(addr_length);
 
   addr->sun_family = AF_UNIX;
-  memcpy(addr->sun_path, info->name->data, info->name->length);
+  memcpy(addr->sun_path, cname, length);
 
   /* cd to it, but first save old cwd */
 
