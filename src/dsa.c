@@ -592,6 +592,7 @@ struct signature_algorithm *make_dsa_algorithm(struct randomness *random)
   return &dsa->super;
 }
 
+#if 0
 #if DATAFELLOWS_WORKAROUNDS
 
 /* FIXME: name clash, by convention this should have been
@@ -617,6 +618,7 @@ struct signature_algorithm *make_dsa_kludge_algorithm(struct randomness *random)
   return &dsa->super;
 }
 #endif /* DATAFELLOWS_WORKAROUNDS */
+#endif
 
 #if 0
 static struct lsh_string *dsa_public_key(struct signer *dsa)
