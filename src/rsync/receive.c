@@ -122,7 +122,6 @@ rsync_receive(struct rsync_receive_state *s)
       do_checksum:
 	/* i is number of octets read */
 	s->i = 0;
-	md5_final(&s->sum_md5);
 	md5_digest(&s->sum_md5, MD5_DIGEST_SIZE, s->buf);
 	s->state = RSYNC_READ_CHECKSUM;
       case RSYNC_READ_CHECKSUM:

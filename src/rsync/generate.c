@@ -24,7 +24,6 @@ rsync_end_block(struct rsync_generate_state *s,
 {
   WRITE_UINT16(dst, s->a_sum);
   WRITE_UINT16(dst + 2, s->c_sum);
-  md5_final(&s->block_sum);
   md5_digest(&s->block_sum, MD5_DIGEST_SIZE, dst + 4);
 }
 

@@ -131,7 +131,6 @@ rsync_lookup_block(struct rsync_send_state *s,
 	    {
 	      md5_init(&m);
 	      md5_update(&m, s->table->block_size, s->buf + start);
-	      md5_final(&m);
 	      md5_digest(&m, MD5_DIGEST_SIZE, digest);
 
 	      if (!memcmp(s->guess->sum_md5, digest, RSYNC_SUM_SIZE))
@@ -149,7 +148,6 @@ rsync_lookup_block(struct rsync_send_state *s,
 		{
 		  md5_init(&m);
 		  md5_update(&m, s->table->block_size, s->buf + start);
-		  md5_final(&m);
 		  md5_digest(&m, MD5_DIGEST_SIZE, digest);
 
 		  n = rsync_lookup_2(n, weak, digest);
@@ -183,7 +181,6 @@ rsync_lookup_block(struct rsync_send_state *s,
 
 	      md5_init(&m);
 	      md5_update(&m, size, s->buf + start);
-	      md5_final(&m);
 	      md5_digest(&m, MD5_DIGEST_SIZE, digest);
 
 	      if (!memcmp(n->sum_md5, digest, RSYNC_SUM_SIZE))
@@ -340,7 +337,6 @@ rsync_send_eof(struct rsync_send_state *s)
   end += 4;
 
   /* And final hash of the entire file */
-  md5_final(&s->sum_md5);
   md5_digest(&s->sum_md5, MD5_DIGEST_SIZE, s->buf + end);
 
   end += RSYNC_SUM_SIZE;
@@ -450,7 +446,6 @@ rsync_send_search(struct rsync_send_state *s)
 		     s->table->block_size - done,
                      BUF + start);
 	  md5_update(&m, done, s->next_in);
-	  md5_final(&m);
 	  md5_digest(&m, MD5_DIGEST_SIZE, digest);
 
 	  n = rsync_lookup_2(n, weak, digest);
