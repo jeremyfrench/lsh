@@ -485,9 +485,13 @@ werror_vformat(const char *f, va_list args)
 
 		struct lsh_string *u = NULL; 
 
-		if (do_utf8 && !local_is_utf8())
+		if (do_utf8)
 		  {
-		    u = low_utf8_to_local(length, s, 0);
+		    enum utf8_flag flags = utf8_replace;
+		    if (do_paranoia)
+		      flags |= utf8_paranoid;
+		    
+		    u = low_utf8_to_local(length, s, flags);
 		    if (!u)
 		      {
 			werror_cstring("<Invalid utf-8 string>");
@@ -520,7 +524,11 @@ werror_vformat(const char *f, va_list args)
 
 		if (do_utf8)
 		  {
-		    s = utf8_to_local(s, 0, do_free);
+		    enum utf8_flag flags = utf8_replace;
+		    if (do_paranoia)
+		      flags |= utf8_paranoid;
+
+		    s = utf8_to_local(s, flags, do_free);
 		    if (!s)
 		      {
 			werror_cstring("<Invalid utf-8 string>");
