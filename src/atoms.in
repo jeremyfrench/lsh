@@ -105,9 +105,14 @@ q
 g
 y
 
+# hashed spki keys
+
+hash
+md5
+sha1
+
 # spki password encrypted data
 password-encrypted
-sha1
 pkcs5v2
 salt
 label
