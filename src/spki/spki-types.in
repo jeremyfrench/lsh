@@ -3,6 +3,7 @@ cert
 comment
 display
 do
+dsa-sha1
 entry
 hash
 issuer
@@ -13,6 +14,8 @@ not-after
 not-before
 propagate
 public-key
+rsa-pkcs1-md5
+rsa-pkcs1-sha1
 sequence
 sha1
 signature
