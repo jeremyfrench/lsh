@@ -1,0 +1,88 @@
+I'd like to announce a new version of LSH, the GNU implementation of
+the secure shell protocols. LSH includes a client, a server, and a few
+scripts and utility programs.
+
+
+FEATURES
+
+Some of the LSH-0.9 features are
+
+o  Strong encryption and data authentication.
+
+o  Strong host authentication using public key techniques.
+
+o  Spawning of remote shells, including pseudo tty support.
+
+o  Forwarding of TCP connections, in both directions.
+
+o  User authentication by either ordinary UN*X passwords
+   or public key techniques.
+
+o  Zlib compression.
+
+o  A draft manual.
+
+
+COMPATIBILITY AND PORTABILITY
+
+LSH implements the secsh protocol as defined by the latest drafts from
+the IETF secsh working group. It is also bug-compatible with
+Datafellow's SSH2 products. Note that LSH is *not* compatible with
+SSH1, although the lshd deamon can fall back to an SSH1 implementation
+(e.g. OpenSSH or Datafellow's) when an ssh1 client connects.
+
+LSH is reported to have worked at least once on GNU/Linux on Sparc and
+Intel, FreeBSD, Solaris and IRIX. There may well be portability
+problems left, please report them to me.
+
+
+QUALITY
+
+However, LSH does *NOT* try to provide any security on systems that
+lack a good /dev/random. LSH-0.9 should be considered a beta release;
+use on production systems is not recommended. LSH is provided AS IS,
+ABSOLUTELY no GUARANTEES, etc. Please report any bugs you find.
+
+
+PLANNED FEATURES
+
+Some features that are planned but not yet implemented are
+
+o  Execution of remote commands (like rsh).
+
+o  A "gateway" interface, to let external programs access an LSH
+   connection easily and securely.
+
+o  Forwarding of X, ssh-agent, UDP.
+
+o  Support for SPKI certificates, for both authorization and host
+   authentication. 
+
+o  Support for the Secure Remote Password (SRP) protocol.
+
+o  Kerberos authentication.
+
+o  A file transfer service.
+
+o  IPv6 support.
+
+
+COPYRIGHT
+
+LSH is distributed under the terms and conditions of the GNU General
+Public License. Unlike other secsh implementations, you can use LSH
+freely for any purpose.
+
+
+AVAILABILITY AND FURTHER INFORMATION
+
+The main LSH archive is located at
+
+  ftp://www.lysator.liu.se
+
+Discussions about LSH takes place on the psst mailing list. See the
+psst home page, http://www.net.lut.ac.uk/psst, for details.
+
+
+Happy hacking,
+/Niels Möller, <nisse@lysator.liu.se>

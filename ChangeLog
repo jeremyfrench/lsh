@@ -1,3 +1,18 @@
+2000-02-17  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* README: Updated disclaimer to be a little less pessimistic.  
+
+	* doc/TODO, doc/TASKLIST: Updated.
+
+	* doc/lsh.texinfo (Top): Added GNU reference.
+
+	* Makefile.am.in (EXTRA_DIST): Added ANNOUNCE file.
+
+	* configure.in: Bumped version to 0.9.
+
+	* src/zlib.c (do_free_zstream): Only output message about problems
+	when freeing the z stream when in debug mode.
+
 2000-02-17  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/zlib.c (do_zlib): Z_BUF_ERROR is normal.
