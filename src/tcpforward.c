@@ -192,7 +192,7 @@ void tcpip_channel_start_io(struct ssh_channel *c)
 		make_channel_read_data(&channel->super),
 		/* FIXME: Make this configurable */
 		SSH_MAX_PACKET * 10, /* self->block_size, */
-		make_channel_close(&channel->super));
+		make_channel_close_callback(&channel->super));
 
   /* Start receiving */
   channel_start_receive(&channel->super);

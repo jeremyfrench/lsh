@@ -87,7 +87,7 @@ CHANNELS
 
 Create some generic methods for connecting a channel to one or more
 files. The data shuffling and error handling should be very similar
-for most channel types.
+for most channel types. 
 
 Fix the handling of EOF on fd:s associated with channels. Related
 stuff functions: make_channel_read_data,
@@ -268,3 +268,6 @@ NULL?
 
 Figure out why -nt doesn't work.
 
+In channel_eof() and channel_close(), don't assert() that close or eof
+have not been sent already, but instead check the appropriate flags
+and do the right thing.
