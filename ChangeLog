@@ -1,3 +1,10 @@
+2000-07-14  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* doc/lsh.texinfo: Spelling and grammar fixes by Johan
+	Myreen. 
+
+	* configure.in: IPv6 fixes by Johan Myreen.
+
 2000-07-09  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in (SCHEME_PROGRAM): Edited warning message displayed
