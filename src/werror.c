@@ -85,6 +85,7 @@ werror_argp_parser(int key, char *arg,
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_END:
+    case ARGP_KEY_INIT:
       program_name = state->name;
       break;
     case 'q':
