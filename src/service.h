@@ -44,8 +44,12 @@
 
 #define SERVICE_INIT(s, c) ((s)->init((s), (c)))
 
+#if 0
 /* services is an alist mapping names to service objects */
-struct packet_handler *make_service_handler(struct alist *services); 
+struct packet_handler *
+make_service_request_handler(struct alist *services,
+			     struct command_continuation *c);
+#endif
 
 #if 0
 int request_service(int name, struct ssh_service * service);

@@ -1,5 +1,25 @@
 Mon Apr  5 11:43:12 1999  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/werror.c (werror_hex): Bugfix.
+
+	* src/service.c: Moved server-specific functionality to server.c. 
+
+	* src/server.c (make_service_request_handler): New function
+	(replaces make_service_handler in service.c).
+	(make_offer_service): New function (replaces the meta_service in
+	service.c). 
+
+	* src/lsh.c (make_client_connect): Invoke commands to perform user
+ 	authentication.
+
+	* src/connection.c (handle_connection): Display packet type in
+	debug messages. Uses packet_types.h.
+
+	* src/command.h (COMMAND_RETURN, COMMAND_CALL, COMMAND_SIMPLE):
+	Cast arguments to struct lsh_object *.
+
+	* src/Makefile.am.in: Added packet_types.h and channel_commands.c.
+	
 	* src/client_userauth.c: Bent the user authentication mechanism
  	into a command.
 

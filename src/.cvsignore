@@ -22,6 +22,7 @@ lsh
 lsh_keygen
 lsh_writekey
 lshd
+packet_types.h
 prime_table
 prime_table.h
 sexp_table.h

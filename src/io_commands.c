@@ -56,7 +56,7 @@ static int do_listen_continue(struct fd_listen_callback *s, int fd,
   res->fd = make_io_fd(self->backend, fd);
   res->peer = peer;
 
-  return COMMAND_RETURN(self->c, &res->super);
+  return COMMAND_RETURN(self->c, res);
 }
 
 static struct fd_listen_callback *
