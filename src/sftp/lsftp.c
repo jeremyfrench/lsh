@@ -26,8 +26,12 @@
 
 #include "lsftp.h"
 
+#include "werror.h"
+
 int mainloop;    /* "Continue run" flag */
 int interactive; /* Interactive mode flag */
+
+const char *werror_program_name = "lsftp";
 
 
 
