@@ -51,189 +51,15 @@
 
 #include "client.c.x"
 
-#if 0
-/* Handle connection and initial handshaking. */
-/* ;; GABA:
-   (class
-     (name client_callback)
-     (super fd_callback)
-     (vars
-       (backend object io_backend)
-       (block_size simple UINT32)
-       (id_comment simple "const char *")
-       (random object randomness)
-       (init object make_kexinit)
-       (kexinit_handler object packet_handler)))
-*/
-
-static int client_initiate(struct fd_callback **c,
-			   int fd)
-{
-  CAST(client_callback, *closure, *c);
-
-  int res;
-  
-  struct ssh_connection *connection
-    = make_ssh_connection(closure->kexinit_handler);
-
-  connection_init_io(connection,
-		     &io_read_write(closure->backend, fd,
-				    make_client_read_line(connection),
-				    closure->block_size,
-				    make_client_close_handler())
-		     ->buffer->super,
-		     closure->random);
-  
-  connection->versions[CONNECTION_CLIENT]
-    = ssh_format("SSH-%lz-%lz %lz",
-		 CLIENT_PROTOCOL_VERSION,
-		 SOFTWARE_CLIENT_VERSION,
-		 closure->id_comment);
-  
-  res = A_WRITE(connection->raw,
-		ssh_format("%lS\r\n",
-			   connection->versions[CONNECTION_CLIENT]));
-  if (LSH_CLOSEDP(res))
-    return res;
-
-  return res | initiate_keyexchange(connection, CONNECTION_CLIENT,
-				    MAKE_KEXINIT(closure->init),
-				    NULL);
-}
-
-/* ;; GABA:
-   (class
-     (name client_line_handler)
-     (super line_handler)
-     (vars
-       (connection object ssh_connection)))
-*/
-
-static int do_line(struct line_handler **h,
-		   struct read_handler **r,
-		   UINT32 length,
-		   UINT8 *line)
-{
-  CAST(client_line_handler, closure, *h);
-
-  if ( (length >= 4) && !memcmp(line, "SSH-", 4))
-    {
-      /* Parse and remember format string */
-      if ( ((length >= 8) && !memcmp(line + 4, "2.0-", 4))
-	   || ((length >= 9) && !memcmp(line + 4, "1.99-", 5)))
-	{
-	  struct read_handler *new = 
-	    make_read_packet(
-	      make_packet_unpad(
-	        make_packet_inflate(
-	          make_packet_debug(&closure->connection->super, ""),
-	          closure->connection
-		  )
-		),
-	      closure->connection
-	      );
-	  
-	  closure->connection->versions[CONNECTION_SERVER]
-	    = ssh_format("%ls", length, line);
-
-	  verbose("Client version: %ps\n"
-		  "Server version: %ps\n",
-		  closure->connection->versions[CONNECTION_CLIENT]->length,
-		  closure->connection->versions[CONNECTION_CLIENT]->data,
-		  closure->connection->versions[CONNECTION_SERVER]->length,
-		  closure->connection->versions[CONNECTION_SERVER]->data);
-	  
-	  /* FIXME: Cleanup properly. */
-	  KILL(closure);
-
-	  *r = new;
-	  return LSH_OK | LSH_GOON;
-	}
-      else
-	{
-	  werror("Unsupported protocol version: %ps\n",
-		 length, line);
-
-	  /* FIXME: Clean up properly */
-	  KILL(closure);
-	  *h = NULL;
-		  
-	  return LSH_FAIL | LSH_DIE;
-	}
-    }
-  else
-    {
-      /* Display line */
-      werror("%ps\n", length, line);
-
-      /* Read next line */
-      return LSH_OK | LSH_GOON;
-    }
-}
-
-struct read_handler *make_client_read_line(struct ssh_connection *c)
-{
-  NEW(client_line_handler, closure);
-
-  closure->super.handler = do_line;
-  closure->connection = c;
-  
-  return make_read_line(&closure->super);
-}
-  
-struct fd_callback *
-make_client_callback(struct io_backend *b,
-		     const char *comment,
-		     UINT32 block_size,
-		     struct randomness *random,
-		     struct make_kexinit *init,
-		     struct packet_handler *kexinit_handler)
-  
-{
-  NEW(client_callback, connected);
-
-  connected->super.f = client_initiate;
-  connected->backend = b;
-  connected->block_size = block_size;
-  connected->id_comment = comment;
-
-  connected->random = random;
-  connected->init = init;
-  connected->kexinit_handler = kexinit_handler;
-
-  return &connected->super;
-}
-
-static int client_close_die(struct close_callback *closure UNUSED,
-			    int reason)
-{
-  verbose("Connection died, for reason %i.\n", reason);
-  if (reason != CLOSE_EOF)
-    werror("Connection died.\n");
-
-  /* FIXME: Return value is not used. */
-  return 4711;
-}
-
-struct close_callback *make_client_close_handler(void)
-{
-  NEW(close_callback, c);
-
-  c->f = client_close_die;
-
-  return c;
-}
-
-#endif
-
-/* Start a service that the server has accepted (for instance ssh-userauth). */
+/* Start a service that the server has accepted (for instance
+ * ssh-userauth). */
 /* GABA:
    (class
      (name accept_service_handler)
      (super packet_handler)
      (vars
-       (service_name simple int)
-       (service object ssh_service)))
+       (service simple int)
+       (c object command_continuation)))
 */
 
 static int do_accept_service(struct packet_handler *c,
@@ -252,58 +78,59 @@ static int do_accept_service(struct packet_handler *c,
       && (msg_number == SSH_MSG_SERVICE_ACCEPT)
       && parse_atom(&buffer, &name)
       && parse_eod(&buffer)
-      && (name == closure->service_name))
+      && (name == closure->service))
     {
       lsh_string_free(packet);
       connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = connection->fail;
       
-      return SERVICE_INIT(closure->service, connection);
+      return COMMAND_RETURN(closure->c, connection);
     }
 
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
 }
 
-struct packet_handler *make_accept_service_handler(int service_name,
-						   struct ssh_service *service)
+struct packet_handler *
+make_accept_service_handler(int service,
+			    struct command_continuation *c)
 {
   NEW(accept_service_handler, closure);
 
   closure->super.handler = do_accept_service;
-  closure->service_name = service_name;
   closure->service = service;
+  closure->c = c;
 
   return &closure->super;
 }
 
 /* GABA:
    (class
-     (name service_request)
-     (super ssh_service)
+     (name request_service)
+     (super command)
      (vars
-       (service_name simple int)
-       (service object ssh_service)))
+       (service simple int)))
+       ;; (service object ssh_service)))
 */
 
-static int do_request_service(struct ssh_service *c,
-			      struct ssh_connection *connection)
+static int do_request_service(struct command *s,
+			      struct lsh_object *x,
+			      struct command_continuation *c)
 {
-  CAST(service_request, closure, c);
+  CAST(request_service, self, s);
+  CAST(ssh_connection, connection, x);
   
   connection->dispatch[SSH_MSG_SERVICE_ACCEPT]
-    = make_accept_service_handler(closure->service_name,
-				  closure->service);
+    = make_accept_service_handler(self->service, c);
   
-  return A_WRITE(connection->write, format_service_request(closure->service_name));
+  return A_WRITE(connection->write,
+		 format_service_request(self->service));
 }
 
-struct ssh_service *request_service(int service_name,
-				    struct ssh_service *service)
+struct command *make_request_service(int service)
 {
-  NEW(service_request, closure);
+  NEW(request_service, closure);
 
-  closure->super.init = do_request_service;
-  closure->service_name = service_name;
+  closure->super.call = do_request_service;
   closure->service = service;
 
   return &closure->super;
