@@ -32,24 +32,6 @@
 #include <string.h>
 
 
-static const struct spki_5_tuple *
-spki_5_tuple_by_subject(const struct spki_5_tuple *list,
-			const struct spki_principal *subject)
-{
-  subject = spki_principal_normalize(subject);
-
-  assert(!subject->alias);
-  
-  for ( ; list; list = list->next)
-    {
-      assert(list->subject);
-      
-      if (spki_principal_normalize(list->subject) == subject)
-	return list;
-    }
-  return NULL;
-}
-
 static void
 validity_sanity_check(const struct spki_5_tuple *tuple)
 {
