@@ -240,6 +240,7 @@ make_channel_open_direct_tcpip(struct command *callback)
      (super command_continuation)
      (vars
        (forward object local_port)
+       (connection object ssh_connection)
        (c object command_continuation)))
 */
 
@@ -250,21 +251,26 @@ do_tcpip_forward_request_continuation(struct command_continuation *c,
   CAST(tcpip_forward_request_continuation, self, c);
   CAST(lsh_fd, fd, x);
 
+  trace("do_tcpip_forward_request_continuation\n");
   assert(self->forward);
   assert(fd);
 
   self->forward->socket = fd;
-
+  remember_resource(self->connection->resources, &fd->super);
+  
   COMMAND_RETURN(self->c, &self->forward->super.super);
 }
 
 static struct command_continuation *
 make_tcpip_forward_request_continuation(struct local_port *forward,
+					struct ssh_connection *connection,
 					struct command_continuation *c)
 {
   NEW(tcpip_forward_request_continuation, self);
 
+  trace("make_tcpip_forward_request_continuation\n");
   self->forward = forward;
+  self->connection = connection;
   self->c = c;
   
   self->super.c = do_tcpip_forward_request_continuation;
@@ -392,7 +398,9 @@ do_tcpip_forward_request(struct global_request *s,
       {
 	COMMAND_CALL(self->callback,
 		     a,
-		     make_tcpip_forward_request_continuation(forward, c),
+		     make_tcpip_forward_request_continuation(forward,
+							     connection,
+							     c),
 		     make_tcpip_forward_request_exc(connection, forward,
 						    e, HANDLER_CONTEXT));
 	
