@@ -27,11 +27,13 @@
 #include <string.h>
 
 #include "read_packet.h"
-#include "werror.h"
-#include "format.h"
-#include "xalloc.h"
-#include "io.h"
+
+#include "connection.h"
 #include "crypto.h"
+#include "format.h"
+#include "io.h"
+#include "werror.h"
+#include "xalloc.h"
 
 #define WAIT_HEADER 0
 #define WAIT_CONTENTS 1
@@ -52,10 +54,10 @@ int do_read_packet(struct read_handler **h,
 	crypto = &crypto_none_instance;
 #endif 
       switch(closure->state)
-	{
+      {
 	case WAIT_HEADER:
 	  {
-	    UINT32 block_size = connection->rec_crypto
+	    UINT32 block_size = closure->connection->rec_crypto
 	      ? closure->connection->rec_crypto->block_size : 8;
 	    UINT32 left = block_size - closure->pos;
 	    int n;
@@ -110,7 +112,7 @@ int do_read_packet(struct read_handler **h,
 		  }
 
 		/* Process this block before the length field is lost. */
-		if (closure->mac)
+		if (closure->connection->rec_mac)
 		  {
 		    UINT8 s[4];
 		    WRITE_UINT32(s, closure->sequence_number);
@@ -123,7 +125,7 @@ int do_read_packet(struct read_handler **h,
 
 		/* Allocate full packet */
 		closure->buffer = ssh_format("%ls%lr",
-					     closure->crypto->block_size - 4,
+					     block_size - 4,
 					     closure->buffer->data + 4,
 					     length, &closure->crypt_pos);
 
@@ -164,7 +166,7 @@ int do_read_packet(struct read_handler **h,
 			closure->buffer->length - closure->crypt_pos,
 			closure->buffer->data + closure->crypt_pos,
 			closure->buffer->data + closure->crypt_pos);		      
-		if (closure->mac)
+		if (closure->connection->rec_mac)
 		  {
 		    HASH_UPDATE(closure->connection->rec_mac,
 				closure->buffer->length - closure->crypt_pos,
@@ -215,7 +217,7 @@ int do_read_packet(struct read_handler **h,
 		break;
 	    }
 	  /* MAC was ok, send packet on */
-	  if (connection_handle_packet(closure->connection, closure->buffer)
+	  if (A_WRITE(closure->handler, closure->buffer)
 	      != WRITE_OK)
 	    /* FIXME: What now? */
 	    return 0;
@@ -230,6 +232,7 @@ int do_read_packet(struct read_handler **h,
 #if 0
     }
 #endif
+  return 1;
 }
 
 struct read_handler *make_read_packet(struct abstract_write *handler,
@@ -240,6 +243,7 @@ struct read_handler *make_read_packet(struct abstract_write *handler,
   closure->super.handler = do_read_packet;
 
   closure->connection = connection;
+  closure->handler = handler;
 
   closure->state = WAIT_HEADER;
   closure->sequence_number = 0;
@@ -247,11 +251,6 @@ struct read_handler *make_read_packet(struct abstract_write *handler,
   /* closure->pos = 0; */
   closure->buffer = NULL;
   /* closure->crypt_pos = 0; */
-
-  closure->mac = 0;
-  closure->crypto = &crypto_none_instance;
-
-  closure->handler = handler;
 
   return &closure->super;
 }

@@ -24,30 +24,37 @@
  */
 
 #include "encrypt.h"
+
+#include "format.h"
 #include "xalloc.h"
 
 static int do_encrypt(struct abstract_write **w,
 		      struct lsh_string *packet)
 {
-  struct packet_encrypt *closure
-    = (struct packet_encrypt *) *w;
+  struct packet_encrypt *closure = (struct packet_encrypt *) *w;
+  struct ssh_connection *connection = closure->connection;
+  struct lsh_string *new;
+  UINT8 *mac;
+
+  new = ssh_format("%lr%lr", packet->length, NULL,
+		   connection->send_mac ? connection->send_mac->mac_size : 0,
+		   &mac);
+
+  if (connection->send_crypto)
+    CRYPT(connection->send_crypto, packet->length, packet->data, new->data);
+  else
+    memcpy(new->data, packet->data, packet->length);
   
-  /* FIXME: Use ssh_format() */
-  struct lsh_string *new
-    = lsh_string_alloc(packet->length + closure->mac->mac_size);
-
-  CRYPT(closure->crypto, packet->length, packet->data, new->data);
-
-  if (closure->mac->mac_size)
+  if (connection->send_mac)
   {
     UINT8 s[4];
     WRITE_UINT32(s, closure->sequence_number);
 
     closure->sequence_number++;
     
-    HASH_UPDATE(closure->mac, 4, s);
-    HASH_UPDATE(closure->mac, packet->length, packet->data);
-    HASH_DIGEST(closure->mac, new->data + packet->length);
+    HASH_UPDATE(connection->send_mac, 4, s);
+    HASH_UPDATE(connection->send_mac, packet->length, packet->data);
+    HASH_DIGEST(connection->send_mac, mac);
   }
   lsh_string_free(packet);
 
@@ -56,16 +63,14 @@ static int do_encrypt(struct abstract_write **w,
 
 struct abstract_write *
 make_packet_encrypt(struct abstract_write *continuation,
-		    struct mac_instance *mac,
-		    struct crypto_instance *crypto)
+		    struct ssh_connection *connection)
 {
   struct packet_encrypt *closure = xalloc(sizeof(struct packet_encrypt));
 
   closure->super.super.write = do_encrypt;
   closure->super.next = continuation;
   closure->sequence_number = 0;
-  closure->mac = mac;
-  closure->crypto = crypto;
+  closure->connection = connection;
 
   return &closure->super.super;
 }

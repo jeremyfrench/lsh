@@ -34,10 +34,6 @@ struct read_packet
   struct read_handler super; /* Super type */
 
   int state;
-
-#if 0
-  UINT32 max_packet;
-#endif
   
   UINT32 sequence_number; /* Attached to read packets */
   
@@ -48,9 +44,7 @@ struct read_packet
   
   UINT8 *computed_mac; /* Must point to an area large enough to hold a mac */
 
-#if 0
   struct abstract_write *handler;
-#endif
   struct ssh_connection *connection;
 };
 

@@ -26,20 +26,21 @@
 #include <stdio.h>
 
 #include "client.h"
-#include "version.h"
-#include "connection.h"
+
 #include "abstract_io.h"
+#include "connection.h"
+#include "crypto.h"
+#include "debug.h"
+#include "encrypt.h"
+#include "format.h"
+#include "pad.h"
 #include "read_line.h"
 #include "read_packet.h"
-#include "debug.h"
-#include "format.h"
-#include "werror.h"
-#include "void.h"
-#include "xalloc.h"
-#include "encrypt.h"
-#include "pad.h"
-#include "crypto.h"
 #include "unpad.h"
+#include "version.h"
+#include "void.h"
+#include "werror.h"
+#include "xalloc.h"
 
 struct read_handler *make_client_read_line();
 struct callback *make_client_close_handler();
@@ -51,26 +52,21 @@ static int client_initiate(struct fd_callback **c,
     = (struct client_callback *) *c;
 
   /* FIXME: Should pass a key exchange handler, not NULL! */
-  struct ssh_connection *connection = make_ssh_connection(NULL);
-  connection->raw =
-    io_read_write(closure->backend, fd,
-		  make_client_read_line(),
-		  closure->block_size,
-		  make_client_close_handler());
+  struct ssh_connection *connection
+    = make_ssh_connection(NULL);
+
+  connection_init_io(connection,
+		     io_read_write(closure->backend, fd,
+				   make_client_read_line(c),
+				   closure->block_size,
+				   make_client_close_handler()),
+		     closure->random);
   
   connection->client_version
     = ssh_format("SSH-%lz-%lz %lz",
 		 PROTOCOL_VERSION,
 		 SOFTWARE_CLIENT_VERSION,
 		 closure->id_comment);
-
-  /* Link in padding and encryption */
-  connection->write
-    = make_packet_pad(make_packet_encrypt(connection->raw,
-					  NULL,
-					  &crypto_none_instance),
-		      crypto_none_instance.block_size,
-		      closure->random);
   
   return A_WRITE(connection->raw,
 		 ssh_format("%lS\r\n", connection->client_version));
@@ -95,12 +91,11 @@ static struct read_handler *do_line(struct line_handler **h,
       if ( ((length >= 8) && !memcmp(line + 4, "2.0-", 4))
 	   || ((length >= 9) && !memcmp(line + 4, "1.99-", 5)))
 	{
-	  struct read_handler *new
-	    = make_read_packet
+	  struct read_handler *new = make_read_packet
 	    (make_packet_debug
 	     (make_packet_unpad(&closure->connection->super),
 	      stderr),
-	     closure->connection->max_packet);
+	     closure->connection);
 	  
 	  closure->connection->server_version
 	    = ssh_format("%ls", length, line);

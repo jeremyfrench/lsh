@@ -26,6 +26,9 @@
 #include <assert.h>
 
 #include "pad.h"
+
+#include "connection.h"
+#include "format.h"
 #include "randomness.h"
 #include "xalloc.h"
 
@@ -34,20 +37,23 @@ static int do_pad(struct abstract_write **w,
 {
   struct packet_pad *closure
     = (struct packet_pad *) *w;
+  struct ssh_connection *connection = closure->connection;
+
+  struct lsh_string *new;
   
   UINT32 new_size;
   UINT8 padding;
 
-  struct lsh_string *new;
+  UINT32 block_size = connection->send_crypto
+    ? connection->send_crypto->block_size : 8;
 
-  new_size = 1 + closure->block_size
-    * ( (8 + packet->length) / closure->block_size);
+  new_size = 1 + block_size
+    * ( (8 + packet->length) / block_size);
 
   padding = new_size - packet->length - 5;
   assert(padding >= 4);
 
-  /* FIXME: Use ssh_format() */
-  new = lsh_string_alloc(new_size);
+  new = ssh_format("%lr", new_size, NULL);
 
   WRITE_UINT32(new->data, new_size - 4);
   new->data[4] = padding;
@@ -62,14 +68,14 @@ static int do_pad(struct abstract_write **w,
   
 struct abstract_write *
 make_packet_pad(struct abstract_write *continuation,
-		unsigned block_size,
+		struct ssh_connection *connection,
 		struct randomness *random)
 {
   struct packet_pad *closure = xalloc(sizeof(struct packet_pad));
 
   closure->super.super.write = do_pad;
   closure->super.next = continuation;
-  closure->block_size = block_size;
+  closure->connection = connection;
   closure->random = random;
 
   return &closure->super.super;

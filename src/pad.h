@@ -36,15 +36,13 @@ struct packet_pad
 {
   struct abstract_write_pipe super;
 
-  unsigned block_size; /* At least 8, even for stream ciphers */
+  struct ssh_connection *connection;
 
   struct randomness *random;
-  void *state;
 };
 
-struct abstract_write *
-make_packet_pad(struct abstract_write *continuation,
-		unsigned block_size,
-		struct randomness *random);
+struct abstract_write *make_packet_pad(struct abstract_write *continuation,
+				       struct ssh_connection *connection,
+				       struct randomness *random);
 
 #endif /* LSH_PAD_H_INCLUDED */
