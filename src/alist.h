@@ -28,9 +28,31 @@
 
 #include "lsh_types.h"
 
-#define ALIST_USE_SIZE 0
+/* Not supported anymore */
+/* #define ALIST_USE_SIZE 0 */
+
 /* Abstract interface allows for multiple implementations ("real"
  * alists, linear tables, hash tables */
+
+/* CLASS:
+   (meta
+     (name alist)
+     (methods
+       "void * (*get)(struct alist *self, int atom)"
+       "void (*set)(struct alist *self, int atom, void *value)"))
+*/
+
+/* CLASS:
+   (class
+     (name alist)
+     (meta alist)
+     (vars
+       (simple unsigned size))
+     ; Only subclasses has methods 
+     (methods NULL NULL))
+*/
+
+#if 0
 struct alist
 {
   struct lsh_object header;
@@ -44,11 +66,17 @@ struct alist
   void (*set)(struct alist *self, int atom, void *value);
 
 };
+#endif
 
-#define ALIST_GET(alist, atom) ((alist)->get((alist), (atom)))
-#define ALIST_SET(alist, atom, value) ((alist)->set((alist), (atom), (value)))
+#define ALIST_CLASS(l) ((struct alist_class_extended *) (l))
 
-#if ALIST_USE_SIZE
+#define ALIST_GET(alist, atom) \
+     (ALIST_CLASS(alist)->get((alist), (atom)))
+
+#define ALIST_SET(alist, atom, value) \
+     (ALIST_CLASS(alist)->set((alist), (atom), (value)))
+
+#if 0
 #define ALIST_KEYS(alist) ((alist)->keys((alist)))
 #endif
 
@@ -59,5 +87,7 @@ struct alist *make_linear_alist(int n, ...);
 struct alist *make_linked_alist(int n, ...);
 
 #define make_alist make_linear_alist
+
+#include "alist.h.x"
 
 #endif /* LSH_ALIST_H_INCLUDED */

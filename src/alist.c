@@ -33,39 +33,82 @@
 #include "werror.h"
 #include "xalloc.h"
 
+struct alist_node
+{
+  struct alist_node *next;
+  int atom;
+  struct lsh_object *value;
+};
+
+/* Prototypes */
+static struct lsh_object *do_mark_table(struct lsh_object **table,
+					void (*mark)(struct lsh_object *o));
+
+static void *do_linear_get(struct alist *c, int atom);
+static void do_linear_set(struct alist *c, int atom, void *value);
+
+static struct lsh_object *do_mark_list(struct alist_node *n,
+				       void (*mark)(struct lsh_object *o));
+static void do_free_list(struct alist_node *n);
+
+static void *do_linked_get(struct alist *c, int atom);
+static void do_linked_set(struct alist *c, int atom, void *value);
+
+#include "alist.c.x"
+
 /* NOTE: For a linear alist, all keys must be non-negative and less
  * than NUMBER_OF_ATOMS. */
+
+/* CLASS:
+   (class
+     (name alist_linear)
+     (super alist)
+     (meta alist)
+     (vars
+       (special (array "struct lsh_object *" NUMBER_OF_ATOMS)
+                table
+                do_mark_table #f))
+     (methods do_linear_get do_linear_set))
+*/
+
+#if 0
 struct alist_linear
 {
   struct alist super;
 
   void *table[NUMBER_OF_ATOMS];
 };
+#endif
+
+static struct lsh_object *do_mark_table(struct lsh_object **table,
+					void (*mark)(struct lsh_object *o))
+{
+  unsigned i;
+
+  for (i = 0; i<NUMBER_OF_ATOMS; i++)
+    mark(table[i]);
+
+  return NULL;
+}
 
 static void *do_linear_get(struct alist *c, int atom)
 {
-  struct alist_linear *self = (struct alist_linear *) c;
+  CAST(alist_linear, self, c);
 
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
   
-  MDEBUG(self); 
-
   return self->table[atom];
 }
 
 static void do_linear_set(struct alist *c, int atom, void *value)
 {
-  struct alist_linear *self = (struct alist_linear *) c;
+  CAST(alist_linear, self, c);
   
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
-
-  MDEBUG(self);
   
-#if ALIST_USE_SIZE
-  size += !self->table[atom] - !value; 
-#endif
+  self->super.size += !self->table[atom] - !value; 
   
   self->table[atom] = value;
 }
@@ -75,13 +118,9 @@ struct alist *make_linear_alist(int n, ...)
   int i;
   va_list args;
   
-  struct alist_linear *res;
+  NEW(alist_linear, res);
 
-  NEW(res);
-
-#if ALIST_USE_SIZE
-  res->size = 0;
-#endif
+  res->super.size = 0;
   
   for (i = 0; i<NUMBER_OF_ATOMS; i++)
     res->table[i] = NULL;
@@ -91,47 +130,74 @@ struct alist *make_linear_alist(int n, ...)
   for (i=0; i<n; i++)
     {
       int atom = va_arg(args, int);
-      void *value = va_arg(args, void *);
+      struct lsh_object *value = va_arg(args, struct lsh_object *);
 
-#if ALIST_USE_SIZE
       if (!value)
-	res->size ++;
-#endif
+	res->super.size++;
+
       res->table[atom] = value;
     }
 
   assert(va_arg(args, int) == -1);
 
-  res->super.get = do_linear_get;
-  res->super.set = do_linear_set;
-  
   return &res->super;
 }
 
-struct alist_node
-{
-  struct alist_node *next;
-  int atom;
-  void *value;
-};
-
 /* NOTE: A linked alist does not have any limit on the size of its keys. */
+
+/* CLASS:
+   (class
+     (name alist_linked)
+     (super alist)
+     (meta alist)
+     (vars
+       (special "struct alist_node *"
+                head
+                do_mark_list do_free_list))
+     (methods do_linked_get do_linked_set))
+*/
+
+#if 0
 struct alist_linked
 {
   struct alist super;
 
   struct alist_node *head;
 };
+#endif
+
+static struct lsh_object *do_mark_list(struct alist_node *n,
+				       void (*mark)(struct lsh_object *o))
+{
+  if (!n)
+    return NULL;
+
+  while(n->next)
+    {
+      mark(n->value);
+      n = n->next;
+    }
+
+  return n;
+}
+
+static void do_free_list(struct alist_node *n)
+{
+  while(n)
+    {
+      struct alist_node *old = n;
+      n = n->next;
+      lsh_space_free(old);
+    }
+}
 
 static void *do_linked_get(struct alist *c, int atom)
 {
-  struct alist_linked *self = (struct alist_linked *) c;
+  CAST(alist_linked, self, c);
   struct alist_node *p;
   
   assert(atom >= 0);
   
-  MDEBUG(self); 
-
   for (p = self->head; p; p = p->next)
     if (p->atom == atom)
       return p->value;
@@ -141,15 +207,8 @@ static void *do_linked_get(struct alist *c, int atom)
 
 static void do_linked_set(struct alist *c, int atom, void *value)
 {
-  struct alist_linked *self = (struct alist_linked *) c;
-
-#if 0
-  assert(atom >= 0);
-  assert(atom < NUMBER_OF_ATOMS);
-#endif
+  CAST(alist_linked, self, c);
   
-  MDEBUG(self);
-
   if (value)
     {
       struct alist_node *p;
@@ -167,9 +226,8 @@ static void do_linked_set(struct alist *c, int atom, void *value)
       p->value = value;
 
       self->head = p;
-#if ALIST_USE_SIZE
+
       self->size++;
-#endif
     }
   else
     { /* Remove atom */
@@ -183,9 +241,7 @@ static void do_linked_set(struct alist *c, int atom, void *value)
 	      *p = o->next;
 	      lsh_space_free(o);
 
-#if ALIST_USE_SIZE
 	      self->size--;
-#endif
 	      return;
 	    }
 	  p = &o->next;
@@ -199,15 +255,12 @@ struct alist *make_linked_alist(int n, ...)
   int i;
   va_list args;
   
-  struct alist_linked *self;
   struct alist *res;
   
-  NEW(self);
+  NEW(alist_linked, self);
   res = &self->super;
 
-#if ALIST_USE_SIZE
-  self->size = 0;
-#endif
+  res->size = 0;
 
   self->head = NULL;
 
@@ -216,7 +269,7 @@ struct alist *make_linked_alist(int n, ...)
   for (i=0; i<n; i++)
     {
       int atom = va_arg(args, int);
-      void *value = va_arg(args, void *);
+      struct lsh_object *value = va_arg(args, struct lsh_object *);
 
       if (atom < 0)
 	fatal("Internal error!\n");
@@ -231,5 +284,3 @@ struct alist *make_linked_alist(int n, ...)
   return res;
 }
 
-
-  

@@ -31,7 +31,9 @@
  * in a SSH_MSG_SERVICE_REQUEST or SSH_MSG_USERAUTH_REQUEST) and for
  * any other stuff that needs initialization at some later time. */
 
+#define CLASS_DECLARE
 #include "service.h.x"
+#undef CLASS_DECLARE
 
 #if 0
 struct ssh_service
@@ -43,10 +45,11 @@ struct ssh_service
 #endif
 
 /* CLASS:
-   ((name ssh_service)
-    (vars
-       (method
-         int "(*init)(struct ssh_service *self, struct ssh_connection *c)")))
+   (class
+     (name ssh_service)
+     (vars
+        (method
+          int (function "struct ssh_service *self, struct ssh_connection *c"))))
 */
 
 #define SERVICE_INIT(s, c) ((s)->init((s), (c)))

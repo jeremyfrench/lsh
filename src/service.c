@@ -30,11 +30,28 @@
 #include "ssh.h"
 #include "xalloc.h"
 
+#define CLASS_DEFINE
+#include "service.h.x"
+#undef CLASS_DEFINE
+
+#include "service.c.x"
+
+/* CLASS:
+   (class
+     (name service_handler)
+     (super packet_handler)
+     (vars
+       (object alist services)))
+*/
+
+#if 0
 struct service_handler
 {
   struct packet_handler super;
   struct alist *services;
 };
+#endif
+
 
 struct lsh_string *format_service_request(int name)
 {
@@ -50,14 +67,12 @@ static int do_service(struct packet_handler *c,
 		      struct ssh_connection *connection,
 		      struct lsh_string *packet)
 {
-  struct service_handler *closure = (struct service_handler *) c;
+  CAST(service_handler, closure, c);
 
   struct simple_buffer buffer;
   int msg_number;
   int name;
   
-  MDEBUG(closure);
-
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
@@ -99,17 +114,27 @@ struct packet_handler *make_service_handler(struct alist *services)
   return &self->super;
 }
 
+/* CLASS:
+   (class
+     (name meta_service)
+     (super ssh_service)
+     (vars
+       (object packet_handler service_handler)))
+*/
+
+#if 0
 struct meta_service
 {
   struct ssh_service super;
 
   struct packet_handler *service_handler;
 };
+#endif
 
 static int init_meta_service(struct ssh_service *c,
 			     struct ssh_connection *connection)
 {
-  struct meta_service *closure = (struct meta_service *) c;
+  CAST(meta_service, closure, c);
 
   MDEBUG(closure);
   
