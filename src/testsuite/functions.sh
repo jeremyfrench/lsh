@@ -1,8 +1,6 @@
 # Helper functions for the test scripts.
 
-if [ -z "$srcdir" ] ; then
-  srcdir=`pwd`
-fi
+# echo srcdir = $srcdir
 
 if [ -z "$LSHD_FLAGS" ] ; then
     LSHD_FLAGS='-q --enable-core'
@@ -65,8 +63,8 @@ spawn_lshd () {
     # Note that --daemon not only forks into the background, it also changes
     # the cwd, uses syslog, etc.
     
-    ../lshd -h $HOSTKEY --interface=$INTERFACE \
-	-p $PORT $LSHD_FLAGS --pid-file $PIDFILE --daemon "$@"
+    ../lshd -h $HOSTKEY --interface=$INTERFACE -p $PORT $LSHD_FLAGS \
+	--pid-file $PIDFILE --daemon --log-file="`pwd`/lshd.log" "$@"
 
     # lshd may catch the ordinary TERM signal, leading to timing
     # problems when the next lshd process tries to bind the port.
