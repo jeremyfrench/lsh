@@ -3,18 +3,13 @@ dnl $Id$
 
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT([lsh], [1.4], [bug-lsh@gnu.org]) 
-
 AC_PREREQ(2.50)
-
 AC_CONFIG_SRCDIR([src/lsh_types.h])
+AM_INIT_AUTOMAKE([dist-gzip])
+AM_CONFIG_HEADER([config.h])
 
-AM_INIT_AUTOMAKE(lsh, 1.4)
-
-AM_CONFIG_HEADER(config.h)
-# AC_CONFIG_HEADERS(config.h)
-
-AH_TEMPLATE([PACKAGE], [The name of this software distribution])
-AH_TEMPLATE([VERSION], [The version of this software distribution])
+# AH_TEMPLATE([PACKAGE], [The name of this software distribution])
+# AH_TEMPLATE([VERSION], [The version of this software distribution])
 
 # FIXME: Move this to the Makefile, as recommended by the autoconf manual.
 
@@ -480,7 +475,7 @@ if test x$lsh_cv_sys_ai_numerichost = xyes ; then
   AC_DEFINE(HAVE_AI_NUMERICHOST)
 fi
 
-AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
+AC_CHECK_FUNCS(poll,,[AC_LIBOBJ([jpoll])])
 
 # Test if the libc includes a good enough argp.
 if test x$with_system_argp = xyes ; then
