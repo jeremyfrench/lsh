@@ -1,4 +1,4 @@
-/* digits_table.c
+/* digit_table.c
  *
  * Generate the tables for reading hex and base64.
  *
