@@ -141,13 +141,13 @@ do_client_io(struct command *s UNUSED,
    * start. */
   session->out->e
     = make_channel_io_exception_handler(channel,
-					"lsh: I/O error on stdout",
+					"stdout: ", 0,
 					session->out->e,
 					HANDLER_CONTEXT);
 
   session->err->e
     = make_channel_io_exception_handler(channel,
-					"lsh: I/O error on stderr",
+					"stderr: ", 0,
 					session->err->e,
 					HANDLER_CONTEXT);
 
