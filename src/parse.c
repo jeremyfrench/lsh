@@ -249,11 +249,20 @@ parse_next_atom(struct simple_buffer *buffer, int *result)
 	return 0;
     }
 
-  /* No empty atoms. */
+  /* NOTE: ssh-2.0.13, server string "SSH-1.99-2.0.13
+   * (non-commercial)", sends USERAUTH_FAILURE messages with strings
+   * like "publickey,password,". It's not entirely clear to me if that
+   * is allowed for the spec, but it seems safe and straightforward to
+   * treat empty atoms as any other unknown atom. */
   if (!i)
-    return 0;
+    {
+      verbose("parse_next_atom: Received an empty atom.\n");
+      /* Treat empty atoms as unknown */
+      *result = 0;
+    }
+  else
+    *result = lookup_atom(i, HERE);
 
-  *result = lookup_atom(i, HERE);
   ADVANCE(i+1);  /* If the atom was terminated at the end of the
 		  * buffer, rather than by a comma, this points beyond
 		  * the end of the buffer */
