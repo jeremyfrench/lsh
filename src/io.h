@@ -81,7 +81,7 @@ extern struct lsh_class io_backend_class;
        ;; (backend object io_backend)
        ;; (next_closed object lsh_fd)
        
-       ; Used for raising i/o- and eof-exceptions.
+       ; Used for raising i/o-exceptions.
        ; Also passed on to readers of the consuming type,
        ; which seems kind of bogus.
        (e object exception_handler)
@@ -92,6 +92,11 @@ extern struct lsh_class io_backend_class;
        ; Called before poll
        (prepare method void)
 
+       ; This flag is set by the backend if it detects that a
+       ; connection is hanged up. 
+       
+       (hanged_up . int)
+       
        (want_read . int)
        ; Called if poll indicates that data can be read. 
        (read object io_callback)
