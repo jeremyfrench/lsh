@@ -8,6 +8,16 @@
 # to run configure and make bootstrap from your build directory.
 
 set -e
+
+relative_symlink() {
+    (
+	target="$1"
+	dir="$2"
+	dotdots="`echo "$dir" | sed 's%[^/][^/]*%..%g'`"
+	cd "$dir" && ln -s "$dotdots/$target" .
+    )
+}
+    
 bash make_am
 aclocal
 autoheader
