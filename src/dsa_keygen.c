@@ -62,7 +62,7 @@ void dss_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
   unsigned n, b;
   mpz_t s, t, c;
   
-  assert( (0 <= l) && (l <= 8) );
+  assert(l <= 8);
 
   L = 512 + 64*l;
   n = (L-1) / 160; b = (L-1) % 160;
