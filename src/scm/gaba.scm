@@ -432,6 +432,7 @@
 
 (define (process-struct attributes)
   (let ((name (get 'name attributes cadr))
+	;; FIXME: Do we really handle super?
 	(super (get 'super attributes cadr))
 	(raw-vars (get 'vars attributes cdr))
 	(meta (get 'meta attributes cadr))
