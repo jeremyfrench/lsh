@@ -26,6 +26,8 @@
 
 #include "command.h"
 #include "connection.h"
+/* For lsh_get_cstring */
+#include "format.h"
 #include "io.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -66,7 +68,7 @@ DEFINE_COMMAND(io_write_file_command)
 {
   CAST(io_write_file_info, info, a);
 
-  struct lsh_fd *fd = io_write_file(info->name,
+  struct lsh_fd *fd = io_write_file(lsh_get_cstring(info->name),
 				    info->flags,
 				    info->mode,
 				    info->block_size,
@@ -96,7 +98,7 @@ DEFINE_COMMAND(io_write_file_command)
 #endif
 
 struct io_write_file_info *
-make_io_write_file_info(const char *name, int flags, int mode, UINT32 block_size)
+make_io_write_file_info(struct lsh_string *name, int flags, int mode, UINT32 block_size)
 {
   NEW(io_write_file_info, self);
   self->name = name;

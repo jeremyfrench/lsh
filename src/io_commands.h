@@ -37,14 +37,14 @@
    (class
      (name io_write_file_info)
      (vars
-       (name . "const char *")
+       (name string)
        (flags . int)
        (mode . int)
        (block_size . UINT32)))
 */
 
 struct io_write_file_info *
-make_io_write_file_info(const char *name, int flags, int mode, UINT32 block_size);
+make_io_write_file_info(struct lsh_string *name, int flags, int mode, UINT32 block_size);
 
 extern struct command io_write_file_command;
 
