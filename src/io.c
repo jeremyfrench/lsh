@@ -692,6 +692,18 @@ make_listen_value(struct lsh_fd *fd,
   return self;
 }
 
+struct sockaddr_list *
+sockaddr_cons(socklen_t length, const struct sockaddr *addr,
+	      struct sockaddr_list *tail)
+{
+  NEW(sockaddr_list, self);
+  self->next = tail;
+  self->length = length;
+  self->addr = lsh_space_alloc(length);
+  memcpy(self->addr, addr, length);
+
+  return self;
+}
 
 /* Listen callback */
 
@@ -1138,6 +1150,125 @@ choose_address(struct addrinfo *list,
 }
 #endif /* HAVE_GETADDRINFO */
 
+struct sockaddr_list *
+io_resolv_address(struct address_info *a,
+		  struct sockaddr_list *tail)
+{
+  const char *host;
+  
+  if (a->ip)
+    {
+      host = lsh_get_cstring(a->ip);
+      if (!host)
+	{
+	  werror("io_resolv_address: hostname contains NUL characters.\n");
+	  return tail;
+	}
+    }
+  else
+    host = NULL;
+
+  /* Some systems have getaddrinfo, but still doesn't implement all of
+   * RFC 2553 */
+#if defined(HAVE_GETADDRINFO) && \
+    defined(HAVE_GAI_STRERROR) && defined(HAVE_AI_NUMERICHOST)
+  {
+    struct addrinfo hints;
+    struct addrinfo *list;
+    struct addrinfo *p;
+    int err;
+
+    /* FIXME: It seems ugly to have to convert the port number to a
+     * string. */
+    struct lsh_string *service = ssh_format("%di", a->port);
+
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = PF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    err = getaddrinfo(host, lsh_get_cstring(service), &hints, &list);
+    lsh_string_free(service);
+
+    if (err)
+      {
+	debug("io_listen_address: getaddrinfo failed (err = %i): %z\n",
+	      err, gai_strerror(err));
+	return tail;
+      }
+
+    for (p = list; p; p = p->ai_next)
+      /* FIXME: Do we need to filter out some address families? */
+      tail = sockaddr_cons(p->ai_addrlen, p->ai_addr, tail);
+
+    freeaddrinfo(list);
+  }
+#else
+  /* !(defined(HAVE_GETADDRINFO) &&
+     defined(HAVE_GAI_STRERROR) && defined(HAVE_AI_NUMERICHOST) */ 
+
+#if WITH_IPV6
+#error IPv6 enabled, but getaddrinfo and friends were not found. 
+#endif
+
+  if (a->ip && memchr(a->ip->data, ':', a->ip->length))
+    {
+      debug("io_resolv_address: Literal IPv6 used. Failing.\n");
+      return tail;
+    }
+  else
+    {
+      struct sockaddr_in addr;
+      addr.sin_port = htons(a->port);
+
+      /* Use IPv4 only */
+      addr.sin_family = AF_INET;
+    
+      if (!host)
+	/* Any interface */
+	addr.sin_addr.s_addr = INADDR_ANY;
+
+      else
+	{
+	  /* First check for numerical ip-number */
+#if HAVE_INET_ATON
+	  if (!inet_aton(host, &addr.sin_addr))
+#else /* !HAVE_INET_ATON */
+	    /* NOTE: It is wrong to work with ((unsigned long int) -1)
+	     * directly, as this breaks Linux/Alpha systems. But
+	     * INADDR_NONE isn't portable. That's what inet_aton is for;
+	     * see the GNU libc documentation. */
+# ifndef INADDR_NONE
+# define INADDR_NONE ((unsigned long int) -1)
+# endif /* !INADDR_NONE */
+	  addr.sin_addr.s_addr = inet_addr(host);
+	  if (addr.sin_addr.s_addr == INADDR_NONE)
+#endif  /* !HAVE_INET_ATON */
+	    {
+	      struct hostent *hp;
+	      unsigned i;
+	      if (! (lookup 
+		     && (hp = gethostbyname(host))
+		     && (hp->h_addrtype == AF_INET)))
+		{
+		  lsh_space_free(addr);
+		  return tail;
+		}
+	      assert(hp->h_length == sizeof(addr.sin_addr));
+	      
+	      for (i = 0; hp->h_addr_list[i]; i++)
+		{
+		  memcpy(&addr.sin_addr, hp->h_addr_list[i], hp->h_length);
+		  tail = sockaddr_cons(sizeof(addr), &addr, tail);
+		}
+	    }
+	}
+    }
+#endif /* !HAVE_GETADDRINFO */
+  return tail;
+}
+
+
 /* FIXME: Perhaps this function should be changed to return a list of
  * sockaddr:s? */
 struct sockaddr *
@@ -1455,7 +1586,6 @@ io_bind_sockaddr(struct sockaddr *local,
   return make_lsh_fd(s, "bound socket", e);
 }
 
-/* FIXME: Rename to io_listen. */
 struct lsh_fd *
 io_listen(struct lsh_fd *fd,
 	  struct io_callback *callback)
