@@ -147,6 +147,7 @@ static void write_utf8(UINT32 length, UINT8 *msg)
 	      fputs("\\?", stderr);
 	    else
 	      wash_char(local);
+	    break;
 	  }
 	default:
 	  fatal("Internal error");
