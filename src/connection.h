@@ -55,6 +55,11 @@ struct ssh_connection;
 #define CONNECTION_SERVER 0
 #define CONNECTION_CLIENT 1
 
+#define PEER_SSH_DSS_KLUDGE           0x00000001
+#define PEER_SERVICE_ACCEPT_KLUDGE    0x00000002
+#define PEER_USERAUTH_REQUEST_KLUDGE  0x00000004
+#define PEER_SEND_NO_DEBUG            0x00000008
+
 /* GABA:
    (class
      (name ssh_connection)
@@ -66,10 +71,11 @@ struct ssh_connection;
        (e object exception_handler)
 
        ; Sent and received version strings
-       ;;(client_version string)
-       ;;(server_version string)
        (versions array (string) 2)
        (session_id string)
+
+       ; Features or bugs peculiar to the peer
+       (peer_flags simple UINT32)
 
        ; Cleanup
        (resources object resource_list)

@@ -217,6 +217,8 @@ struct ssh_connection *make_ssh_connection(struct command_continuation *c)
     = connection->versions[CONNECTION_CLIENT]
     = connection->session_id = NULL;
 
+  connection->peer_flags = 0;
+  
   connection->resources = empty_resource_list();
   
   connection->rec_max_packet = 0x8000;
@@ -290,13 +292,15 @@ void connection_init_io(struct ssh_connection *connection,
 {
   /* Initialize i/o hooks */
   connection->raw = raw;
-  connection->write = make_packet_deflate(
-                        make_packet_pad(
-                          make_packet_encrypt(raw, connection), 
-                          connection,
-                          r),
-		        connection
-		      );
+  connection->write =
+    make_packet_debug(
+      make_packet_deflate(
+	make_packet_pad(
+	  make_packet_encrypt(raw, connection), 
+	  connection,
+	  r),
+	connection),
+      "Sent");
 
   /* Exception handler that sends a proper disconnect message on protocol errors */
   connection->e = make_exc_protocol_handler(connection, e);
