@@ -13,7 +13,7 @@
 
 #define LEFT (BUFFER->capacity - BUFFER->pos)
 #define HERE (BUFFER->data + BUFFER->pos)
-#define ADVANCE(n) (BUFFER->pos  += (n))
+#define ADVANCE(n) (BUFFER->pos += (n))
 #define GET() (BUFFER->data[BUFFER->pos++])
 
 #endif /* LSH_PARSE_MACROS_H_INCLUDED */
