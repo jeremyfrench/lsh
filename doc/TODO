@@ -56,13 +56,6 @@ explicitly).
 Implement a mark&sweep gc.
 
 
-IO
-
-Add flow control to the generic io class. Associate a "window size"
-with each read fd, and refuse to accept any more data. That seems
-cleaner than doing all flow control at the channel level.
-
-
 CHANNELS
 
 Create some generic methods for connecting a channel to one or more
@@ -73,5 +66,22 @@ Consider which errors can occur in the channel callback functions;
 they are probably somewhat different from errors in higher levels. For
 instance, a writing to a file associated with a channel may fail. In
 that case, the channel should be closed, but the connection should not
-die. Perhaps a few special error codes like LSH_CHANNEL_DIE and
-LSH_CHANNEL_CLOSED would do the trick?
+die. Handle the LSH_CHANNEL_FINISHED code properly.
+
+
+USER INFO
+
+Where should the user information (name, home directory, login shell,
+etc), be stored? Is there any reasonable place but the connection
+structure? Perhaps the channel_open handler for the session is a
+reasonable place? Then we only have to figure out when to install that
+information.
+
+
+PROCESSES
+
+Dying children must be handled. For example like this: Use a signal
+handler to set a flag when a child dies. Let the backend loop (io.c)
+look at this flag, wait() to get status from dying children. Use an
+alist pid->callback to report childrens exit status back to the remote
+end. Another issue are process groups... Are they relevant? 
