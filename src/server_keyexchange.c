@@ -130,13 +130,6 @@ do_init_server_dh(struct keyexchange_algorithm *c,
       dh->server_key = lsh_string_dup(key->public);
       dh->signer = key->private;
 
-#if DATAFELLOWS_WORKAROUNDS
-      if ( (hostkey_algorithm == ATOM_SSH_DSS)
-	   && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
-	{
-	  hostkey_algorithm = ATOM_SSH_DSS_KLUDGE_LOCAL;
-	}
-#endif
       dh->hostkey_algorithm = hostkey_algorithm;
 
       dh->algorithms = algorithms;
