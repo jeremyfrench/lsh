@@ -212,7 +212,8 @@ make_exc_protocol_handler(struct ssh_connection *connection,
 }
 
 struct ssh_connection *
-make_ssh_connection(struct address_info *peer,
+make_ssh_connection(UINT32 flags,
+		    struct address_info *peer,
 		    const char *debug_comment,
 		    struct command_continuation *c,
 		    struct exception_handler *e)
@@ -221,6 +222,7 @@ make_ssh_connection(struct address_info *peer,
 
   NEW(ssh_connection, connection);
 
+  connection->flags = flags;
   connection->peer = peer;
   
   connection->debug_comment = debug_comment;
@@ -232,13 +234,13 @@ make_ssh_connection(struct address_info *peer,
   connection->established = c;
   
   /* Initialize instance variables */
-  /* connection->mode = mode; */
 
   connection->versions[CONNECTION_SERVER]
     = connection->versions[CONNECTION_CLIENT]
     = connection->session_id = NULL;
 
   connection->peer_flags = 0;
+  connection->user = NULL;
   
   connection->resources = empty_resource_list();
   
