@@ -23,13 +23,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <sys/types.h>
-#include <time.h>
-#include <string.h>
-
 #include "randomness.h"
 
+#include "werror.h"
+
+#include "crypto.h"
 #include "xalloc.h"
+
+#include <errno.h>
+
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
+
+#include <string.h>
 
 #define CLASS_DEFINE
 #include "randomness.h.x"
@@ -81,17 +90,109 @@ struct randomness *make_poor_random(struct hash_algorithm *hash,
 				    struct lsh_string *init)
 {
   NEW(poor_random, self);
-  time_t now = time(NULL); /* To avoid cycles */
-
+  time_t now = time(NULL); 
+  pid_t pid = getpid();
+  
   self->super.random = do_poor_random;
+  self->super.quality = 0;
+  
   self->hash = MAKE_HASH(hash);
   self->buffer = lsh_space_alloc(hash->hash_size);
   
   HASH_UPDATE(self->hash, sizeof(now), (UINT8 *) &now);
-  HASH_UPDATE(self->hash, init->length, init->data);
-  HASH_DIGEST(self->hash, self->buffer);
+  HASH_UPDATE(self->hash, sizeof(pid), (UINT8 *) &pid);
   
+  if (init)
+    {
+      HASH_UPDATE(self->hash, init->length, init->data);
+      lsh_string_free(init);
+    }
+  HASH_DIGEST(self->hash, self->buffer);
+
   self->pos = 0;
 
   return &self->super;
+}
+
+/* CLASS:
+   (class
+     (name device_random)
+     (super randomness)
+     (vars
+       (fd . int)))
+*/
+
+static void do_device_random(struct randomness *r, UINT32 length, UINT8 *dst)
+{
+  CAST(device_random, self, r);
+
+  while(length)
+    {
+      int n = read(self->fd, dst, length);
+
+      if (!n)
+	fatal("do_device_random: EOF on random source.\n");
+
+      if (n<0)
+	switch(errno)
+	  {
+	  case EINTR:
+	    break;
+	  default:
+	    fatal("Read from random device failed (errno = %d): %s\n",
+		  errno, strerror(errno));
+	  }
+      else
+	{
+	  length -= n;
+	  dst += n;
+	}
+    }
+}
+
+/* NOTE: In most cases, blocking while waiting for more entropy to
+ * arrive is not acceptable. So use /dev/urandom, not /dev/random. The
+ * alternative is to read a smaller seed from /dev/random at startup,
+ * and use an internal pseudorandom generator. That
+ * would be friendlier to other applications, but would not buy as
+ * more security, as /dev/urandom should degenerate to a fairly strong
+ * pseudorandom generator when it runs out of entropy. */
+
+struct randomness *make_device_random(const char *device)
+{
+  int fd = open(device, O_RDONLY);
+
+  if (fd < 0)
+    {
+      werror("make_device_random: Failed to open '%s' (errno = %d): %s\n",
+	     device, errno, strerror(errno));
+      return NULL;
+    }
+  else
+    {
+      NEW(device_random, self);
+      
+      self->super.random = do_device_random;
+
+      /* The quality depends on the used device. */
+      self->super.quality = 0;
+      self->fd = fd;
+      
+      return &self->super;
+    }
+}
+
+struct randomness *make_reasonably_random(void)
+{
+  struct randomness *r = make_device_random("/dev/urandom");
+
+  if (r)
+    r->quality = 1;
+  else
+    {
+      werror("Warning: Falling back to an insecure pseudorandom generator.\n");
+      r = make_poor_random(&sha_algorithm, NULL);
+    }
+
+  return r;
 }

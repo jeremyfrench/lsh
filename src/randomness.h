@@ -36,12 +36,17 @@
    (class
      (name randomness)
      (vars
+       (quality . int)
        (random method void "UINT32 length" "UINT8 *dst")))
 */
 
 #define RANDOM(r, length, dst) ((r)->random((r), length, dst))
 
+/* Consumes the init string (which may be NULL). */
 struct randomness *make_poor_random(struct hash_algorithm *hash,
 				    struct lsh_string *init);
+
+struct randomness *make_device_random(const char *device);
+struct randomness *make_reasonably_random(void);
 
 #endif /* LSH_RANDOMNESS_H_INCLUDED */
