@@ -2,6 +2,11 @@
 
 	* gnu_stuff.c (help_option): Deleted spuriuos comma.
 
+2002-06-25  Pontus Sköld  <pont@soua.net>
+
+        * gnu_stuff.c (help_option): Added note about where to report
+        bugs.
+
 2002-06-06  Pontus Sköld  <pont@soua.net>
 
 	* commands.c (com_lpwd): Don't assume getcwd with extended
