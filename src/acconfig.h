@@ -6,5 +6,11 @@
 /* Define to enable sanity checking on memory allocation and casting */
 #undef DEBUG_ALLOC
 
+/* Define if zlib should be used */
+#undef WITH_ZLIB
+
+/* Define if IDEA should be used */
+#undef WITH_IDEA
+
 /* Define to indicate that shutdown seems to work properly */
 #undef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
