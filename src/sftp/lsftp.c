@@ -31,7 +31,8 @@ int interactive; /* Interactive mode flag */
 
 
 
-int lsftp_num_commands( int argc, char** argv )
+static int
+lsftp_num_commands(int argc, char **argv)
 {
   /* 
    * Returns how many trailing parameters to skip when
@@ -53,9 +54,8 @@ int lsftp_num_commands( int argc, char** argv )
   return 0;
 }
 
-
-
-void lsftp_interactive_mainloop()
+static void
+lsftp_interactive_mainloop(void)
 {
   char* current_line;
   int fail = 0;
@@ -138,7 +138,8 @@ void lsftp_interactive_mainloop()
 
 }
 
-void lsftp_noninteractive_mainloop( int startat, char** argv)
+static void
+lsftp_noninteractive_mainloop(int startat, char **argv)
 {
   int done = 0;
   int fail = 0;
