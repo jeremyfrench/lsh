@@ -49,9 +49,9 @@
 #define UINT8 unsigned char
 
 #if __GNUC__ && HAVE_GCC_ATTRIBUTE
-#define NORETURN __attribute__ ((noreturn))
-#define PRINTF_STYLE(f, a) __attribute__ ((format(printf, f, a)))
-#define UNUSED __attribute__ ((unused))
+#define NORETURN __attribute__ ((__noreturn__))
+#define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
+#define UNUSED __attribute__ ((__unused__))
 #else
 #define NORETURN
 #define PRINTF_STYLE(f, a)

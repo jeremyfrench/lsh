@@ -27,9 +27,38 @@
 
 #include "lsh_types.h"
 
+/* Missing declarations. */
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
-#define __THROW NORETURN
+void
+_argp_unlock_xxx (void);
+
+#ifndef __THROW
+#define __THROW
+#endif
+
+#if !HAVE_MEMPCPY
+#include "mempcpy.h"
+#endif
+
+#if !HAVE_STRNDUP
+#include "strndup.h"
+#endif
+
+#include <string.h>
+
+#ifndef __mempcpy
+#define __mempcpy mempcpy
+#endif
+
+/* For some reason, I can't get this to interact correctly with the header files on my glibc system.
+ * So instead, I edited the code in argp-help.c that tried to use __strndup. */
+
+#if 0
+#ifndef __strndup
+#define __strndup strndup
+#endif
+#endif
 
 #endif /* LSH_ARGP_COMP_H_INCLUDED */

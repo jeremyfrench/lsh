@@ -1,3 +1,20 @@
+1999-10-13  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/argp/argp.h: Use PRINTF_STYLE() instead of explicit
+	__attribute__:s in declarations.
+
+	* src/argp/argp-parse.c (parser_init): Added cast to void * to
+	STORAGE macro.
+	(__argp_usage, __option_is_short, __option_is_end ): Replicated
+	definitons from argp.h.
+
+	* src/argp/argp-help.c (argp_doc): Use strndup() instead of
+	__strndup(). I couldn't get preprocessor hackery to work.
+
+	* src/Makefile.am.in (EXTRA_DIST): Added mempcpy.h and strndup.h. 
+
+	* configure.in (gmp_header_found): Check for mempcpy and strndup. 
+
 Wed Oct 13 17:59:24 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/argp/argp.h: #include argp-comp.h.
