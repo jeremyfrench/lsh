@@ -76,6 +76,7 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
 #define CAST_SUBTYPE(class, var, o) \
   struct class *(var) = (struct class *) CHECK_SUBTYPE(class, o)
    
+extern unsigned number_of_strings;
 
 #else   /* !DEBUG_ALLOC */
 

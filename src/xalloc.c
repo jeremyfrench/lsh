@@ -114,43 +114,54 @@ static void *xalloc(size_t size)
   return res;
 }
 
-static unsigned number_of_strings = 0;
+#if DEBUG_ALLOC
+unsigned number_of_strings = 0;
+#endif
 
-struct lsh_string *lsh_string_alloc(UINT32 length)
+struct lsh_string *
+lsh_string_alloc(UINT32 length)
 {
+  /* NOTE: The definition of the struct contains a char array of
+   * length 1, so the below includes space for a terminating NUL. */
+  
   struct lsh_string *s
-    = xalloc(sizeof(struct lsh_string) - 1 + length);
+    = xalloc(sizeof(struct lsh_string) + length);
 #if DEBUG_ALLOC
   s->header.magic = -1717;
+  number_of_strings++;
 #endif
   s->length = length;
+  s->data[length] = '\0';
   s->sequence_number = 0;
-  number_of_strings++;
   
   return s;
 }
 
-void lsh_string_free(struct lsh_string *s)
+void
+lsh_string_free(struct lsh_string *s)
 {
   if (!s)
     return;
 
+#if DEBUG_ALLOC
   assert(number_of_strings);
-
   number_of_strings--;
+
+  if (s->header.magic != -1717)
+    fatal("lsh_string_free: Not string!\n");
+  if (s->data[s->length])
+    fatal("lsh_string_free: String not NUL-terminated.\n");
+#endif
 
 #if 0
   debug("lsh_string_free: freeing %xi,\n", (UINT32) s);
 #endif
   
-#if DEBUG_ALLOC
-  if (s->header.magic != -1717)
-    fatal("lsh_string_free: Not string!\n");
-#endif
   lsh_free(s);
 }
 
-struct lsh_object *lsh_object_alloc(struct lsh_class *class)
+struct lsh_object *
+lsh_object_alloc(struct lsh_class *class)
 {
   struct lsh_object *instance = xalloc(class->size);
   instance->isa = class;
@@ -161,7 +172,8 @@ struct lsh_object *lsh_object_alloc(struct lsh_class *class)
   return instance;
 }
 
-struct lsh_object *lsh_object_clone(struct lsh_object *o)
+struct lsh_object *
+lsh_object_clone(struct lsh_object *o)
 {
   struct lsh_object *i = xalloc(o->isa->size);
 
@@ -176,8 +188,9 @@ struct lsh_object *lsh_object_clone(struct lsh_object *o)
   return i;
 }
 
-struct list_header *lsh_list_alloc(struct lsh_class *class,
-				   unsigned length, size_t element_size)
+struct list_header *
+lsh_list_alloc(struct lsh_class *class,
+	       unsigned length, size_t element_size)
 {
   struct list_header *list = xalloc(class->size
 				    + element_size * length
@@ -197,7 +210,8 @@ struct list_header *lsh_list_alloc(struct lsh_class *class,
 }
     
 /* Should be called *only* by the gc */
-void lsh_object_free(struct lsh_object *o)
+void
+lsh_object_free(struct lsh_object *o)
 {
   if (!o)
     return;
