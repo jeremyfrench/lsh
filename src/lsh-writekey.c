@@ -351,19 +351,19 @@ process_private(struct lsh_string *key,
                    ALIST_GET(options->crypto_algorithms, ATOM_HMAC_SHA1));
       assert(hmac);
       
-      key = spki_pkcs5_encrypt(options->r,
-			       options->label,
-			       ATOM_HMAC_SHA1,
-			       hmac,
-			       options->crypto_name,
-			       options->crypto,
-			       10, /* Salt length */
-			       options->passphrase,
-			       options->iterations,
-			       key);
+      return spki_pkcs5_encrypt(options->r,
+				options->label,
+				ATOM_HMAC_SHA1,
+				hmac,
+				options->crypto_name,
+				options->crypto,
+				10, /* Salt length */
+				options->passphrase,
+				options->iterations,
+				key);
     }
-
-  return key;
+  else
+    return lsh_string_dup(key);
 }
 
 static struct lsh_string *
@@ -427,6 +427,8 @@ main(int argc, char **argv)
     }
 
   output = process_public(input, options);
+  lsh_string_free(input);
+  
   if (!output)
     return EXIT_FAILURE;
 
