@@ -30,6 +30,7 @@
 #include "charset.h"
 #include "client.h"
 #include "client_keyexchange.h"
+#include "client_pty.h"
 #include "compress.h"
 #include "connection_commands.h"
 #include "crypto.h"
@@ -115,14 +116,13 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
    (expr
      (name make_client_connect)
      (globals
-       (connect connect_command)
-       (progn "&progn_command->super"))
-     
+       (progn "&progn_command.super.super"))
      (params
        (connect object command)
        (handshake object command)
        (userauth_service object command)
        (login object command)
+       (open_session object command)
        (requests object object_list))
      (expr (lambda (port)
              ((progn requests) (open_session (login (userauth_service
@@ -134,14 +134,15 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
    (expr
      (name start_shell)
      (super command)
-     (globals  )
-     (params  )
+     (globals
+       (client_io "&client_io.super")
+       (request_shell "&request_shell.super.super"))
      (expr
        (lambda (session)
-          (start_io (shell_request session)))))
+          (client_io (request_shell session)))))
 */
 
-/* GABA
+/* ;; GABA
    (expr
      (name do_pty)
      (super command)
@@ -151,6 +152,9 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
        (lambda (session)
          (raw_mode (request_pty session)))))
 */
+
+/* Window size for the session channel */
+#define WINDOW_SIZE (SSH_MAX_PACKET << 3)
 
 int main(int argc, char **argv)
 {
@@ -178,11 +182,10 @@ int main(int argc, char **argv)
   struct keyexchange_algorithm *kex;
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
-  struct packet_handler *kexinit_handler;
   struct lookup_verifier *lookup;
-  struct ssh_service *service;
 
-  struct request_info *requests;
+  struct command *get_pty = NULL;
+  struct object_list *requests;
   
   int in, out, err;
 
@@ -304,9 +307,6 @@ int main(int argc, char **argv)
       exit (EXIT_FAILURE);
     }
 
-  /* This is the final request. */
-  requests = make_shell_request(NULL);
-
 #if WITH_PTY_SUPPORT
   if (use_pty < 0)
     use_pty = 1;
@@ -322,10 +322,10 @@ int main(int argc, char **argv)
 	  use_pty = 0;
 	}
       else
-	requests = make_pty_request(tty, 0, 1, requests);
+	get_pty = make_pty_request(tty);
     }
 #endif /* WITH_PTY_SUPPORT */
-  
+
   in = STDIN_FILENO;
   out = STDOUT_FILENO;
   
@@ -355,7 +355,7 @@ int main(int argc, char **argv)
 			   : default_compression_algorithms()),
 			  make_int_list(0, -1));
 
-  #if 0
+#if 0
   service = make_connection_service
     (make_alist(0, -1),
      make_alist(0, -1),
@@ -392,6 +392,14 @@ int main(int argc, char **argv)
 
   lsh_exit_code = 17;
 
+  /* FIXME: We need a non-varargs constructor for lists. */
+#if WITH_PTY_SUPPORT
+  if (get_pty)
+    requests = make_object_list(2, get_pty, start_shell(), -1);
+  else
+#endif
+    requests = make_object_list(1, start_shell(), -1);
+
   {
     struct lsh_object *o =
       make_client_connect(make_simple_connect(backend, NULL),
@@ -404,7 +412,17 @@ int main(int argc, char **argv)
 						 NULL),
 			  make_request_service(ATOM_SSH_USERAUTH),
 			  make_client_userauth(ssh_format("%lz", user),
-					       ATOM_SSH_CONNECTION));
+					       ATOM_SSH_CONNECTION),
+			  make_open_session_command
+			  (make_client_session
+			   (io_read(make_io_fd(backend, in), NULL, NULL),
+			    io_write(make_io_fd(backend, out),
+				     BLOCK_SIZE, NULL),
+			    io_write(make_io_fd(backend, err),
+				     BLOCK_SIZE, NULL),
+			    WINDOW_SIZE,
+			    &lsh_exit_code)),
+			  requests);
     
     CAST_SUBTYPE(command, client_connect, o);
     int res = COMMAND_CALL(client_connect, remote, NULL);
