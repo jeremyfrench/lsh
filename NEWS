@@ -4,6 +4,15 @@ News for the 1.1.8 release:
 	free software; the "non-commercial use" restrictions were
 	removed in the 0.5.2 release.
 
+	Updated the channel close logic to be compatible with other
+	ssh implementations.
+
+	Handle POLLERR; the previous version went into a busy loop if
+	poll set the POLLERR flag on any fd.
+
+	--cvs-workaround=e is now on by default. New option
+        --no-cvs-workaround to disable it.
+
 News for the 1.1.7 release:
 
 	More bug fixes, most of them related to the EOF handling.

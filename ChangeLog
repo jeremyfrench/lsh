@@ -1,3 +1,43 @@
+2001-03-12  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Bumped version to 1.1.8.
+
+	* src/client_session.c (do_client_session_eof): Close stdout and
+	stderr, not stdin.
+
+	* src/client.c (do_exit_status): Don't call channel_eof. This way,
+	the behavior is more similar to other ssh clients.
+
+	* src/channel.c (channel_request_handler): Display more info about
+	unexpected packets.
+	(channel_close_handler): Don't display the "unexpected channel
+	close" message if CHANNEL_NO_WAIT_FOR_EOF is set.
+	Don't invoke the CHANNEL_EOF callback.
+	(channel_eof): Use the new CHANNEL_NO_WAIT_FOR_EOF flag.
+	(init_channel): Set CHANNEL_CLOSE_AT_EOF by default.
+	(channel_read_close_callback): Improved comment.
+
+	* src/channel.h (CHANNEL_NO_WAIT_FOR_EOF): New flag.
+
+	* src/tcpforward.c (do_tcpip_eof): Use the SHUT_WR constant, which
+	is defined in io.h if needed.
+
+	* src/server_session.c (spawn_process): Clear
+	CHANNEL_CLOSE_AT_EOF.
+	(do_exit_shell): Set CHANNEL_CLOSE_AT_EOF and
+	CHANNEL_NO_WAIT_FOR_EOF. 
+
+	* src/gateway_channel.c (make_gateway_channel): Clear
+	CHANNEL_CLOSE_AT_EOF. 
+
+	* src/io.h (SHUTDOWN_UNIX): Moved shutdown workaround from io.c,
+	and added a _UNIX-suffix on the macros to indicate that they are
+	for AF_UNIX sockets only. 
+
+	* src/scm/gaba.scm (string-upcase): Moved definition to
+	guile-compat.scm. scsh already provides string-upcase, and the
+	definition here trigs a bug in string->list in scsh-0.5.2. 
+
 2001-03-12  Niels Möller  <nisse@ehand.com>
 
 	* src/io.c (io_iter): Handle POLLERR.
