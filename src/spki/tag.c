@@ -105,6 +105,19 @@ struct spki_cons
   struct spki_cons *cdr;
 };
 
+static void
+spki_cons_release(void *ctx, nettle_realloc_func *realloc,
+		  struct spki_cons *c)
+{
+  while (c)
+    {
+      struct spki_cons *cdr = c->cdr;
+      spki_tag_release(ctx, realloc, c->car);
+      FREE(ctx, realloc, c);
+      c = cdr;
+    }
+}
+
 /* Consumes the reference to CAR. Deallocates both CAR and CDR on
  * failure. */
 static struct spki_cons *
@@ -124,24 +137,11 @@ spki_cons(void *ctx, nettle_realloc_func *realloc,
   return c;
 }
 
-static void
-spki_cons_release(void *ctx, nettle_realloc_func *realloc,
-		  struct spki_cons *c)
-{
-  while (c)
-    {
-      struct spki_cons *cdr = c->cdr;
-      spki_tag_release(ctx, realloc, c->car);
-      FREE(ctx, realloc, c);
-      c = cdr;
-    }
-}
-
 /* Reverses a list destructively. */
-static void
+static struct spki_cons *
 spki_cons_nreverse(struct spki_cons *c)
 {
-  struct spki_cons head = NULL;
+  struct spki_cons *head = NULL;
   
   while (c)
     {
@@ -384,10 +384,10 @@ spki_tag_release(void *ctx, nettle_realloc_func *realloc,
 /* FIXME: A destructive function could be more efficient */
 static struct spki_tag *
 spki_tag_set_new(void *ctx, nettle_realloc_func *realloc,
-		 struct sexp_cons *c)
+		 struct spki_cons *c)
 {
-  struct sexp_cons *subsets = NULL;
-  struct sexp_tag *tag;
+  struct spki_cons *subsets = NULL;
+  struct spki_tag *tag;
   
   for (; c; c = c->cdr)
     {
