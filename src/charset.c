@@ -194,7 +194,7 @@ low_utf8_to_local(uint32_t length, const uint8_t *s, int strict)
 	      }
 	    else if (!strict)
 	      {
-		/* Replace unkonwn characters. */
+		/* Replace unknown characters. */
 		lsh_string_putc(res, i, '?');
 		break;
 	      }
