@@ -13,6 +13,7 @@ struct packet_encrypt
 {
   struct abstract_write_pipe super;
 
+  UINT32 sequence_number;
   struct mac_instance *mac;
   struct crypto_instance *crypto;
 };

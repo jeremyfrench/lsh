@@ -19,9 +19,14 @@ static int do_encrypt(struct abstract_write **w,
 
   if (closure->mac->mac_size)
   {
-    /* FIXME: Sequence number */
-    UPDATE(closure->mac, packet->length, packet->data);
-    DIGEST(closure->mac, new->data + packet->length);
+    UINT8 s[4];
+    WRITE_UINT32(s, closure->sequence_number);
+
+    closure->sequence_number++;
+    
+    HASH_UPDATE(closure->mac, 4, s);
+    HASH_UPDATE(closure->mac, packet->length, packet->data);
+    HASH_DIGEST(closure->mac, new->data + packet->length);
   }
   lsh_string_free(packet);
 
@@ -37,6 +42,7 @@ make_packet_encrypt(struct abstract_write *continuation,
 
   closure->super.super.write = do_encrypt;
   closure->super.next = continuation;
+  closure->sequence_number = 0;
   closure->mac = mac;
   closure->crypto = crypto;
 
