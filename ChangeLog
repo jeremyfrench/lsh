@@ -1,5 +1,9 @@
 2004-11-19  Pontus Freyhult  <pont@soua.net>
 
+	* doc/lsh-authorize.1, doc/lsh-upgrade-key.1, doc/lsh-upgrade.1,
+	doc/lsh.1, doc/lshd.8, doc/lshg.1: Added missing dot in AUTHOR
+	sentence.
+
 	* doc/lsh.texinfo (Converting keys): Added example for sshd host.
 	(Features): Added bit about SOCKS proxy feature.
 
