@@ -3,7 +3,7 @@ conditions of the GNU General Public License (see the file COPYING for
 details). But many other people have written free code which is used
 in lsh.
 
-BLOWFISH implementetion from Werner Koch's and FSF's GNU Privacy
+BLOWFISH implementation from Werner Koch's and FSF's GNU Privacy
 Guard. Released under the GPL.
 
 CAST implementation by Steve Reid. Released into the public domain.
@@ -29,3 +29,6 @@ domain.
 
 POLL emulation code (for systems that have select(), but not poll())
 written by Sean Reifschneider, released for unlimited use.
+
+SEXP parsing code have some parts in common with Ron Rivest's parser.
+Distributed under the GPL with permission.

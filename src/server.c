@@ -146,12 +146,18 @@ static int server_initiate(struct fd_callback **c,
   
   connection->server_version
     = ssh_format("SSH-%lz-%lz %lz",
-		 PROTOCOL_VERSION,
+		 SERVER_PROTOCOL_VERSION,
 		 SOFTWARE_SERVER_VERSION,
 		 closure->id_comment);
-
+#ifdef SSH1_FALLBACK
+  /* "In this mode the server SHOULD NOT send carriage return character (ascii
+   * 13) after the version identification string." */
+  res = A_WRITE(connection->raw,
+		 ssh_format("%lS\n", connection->server_version));
+#else
   res = A_WRITE(connection->raw,
 		 ssh_format("%lS\r\n", connection->server_version));
+#endif
   if (LSH_CLOSEDP(res))
     return res;
 
@@ -207,7 +213,15 @@ static struct read_handler *do_line(struct line_handler **h,
 
 	  return new;
 	}
+      else 
+#ifdef SSH1_FALLBACK      
+        if ( ((length >= 6) && !memcmp(line + 4, "1.", 2)) )
+	{
+	  /* TODO: fork a SSH1 server to handle this connection */
+	  werror("Falling back to ssh1 not implemented.\n");
+        }
       else
+#endif /* SSH1_FALLBACK */
 	{
 	  wwrite("Unsupported protocol version: ");
 	  werror_safe(length, line);

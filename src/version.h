@@ -21,6 +21,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#define PROTOCOL_VERSION "2.0"
+#define CLIENT_PROTOCOL_VERSION "2.0"
+
+#ifdef SSH1_FALLBACK
+#  define SERVER_PROTOCOL_VERSION "1.99"
+#else
+#  define SERVER_PROTOCOL_VERSION "2.0"
+#endif
+
 #define SOFTWARE_CLIENT_VERSION "lsh_0.0"
 #define SOFTWARE_SERVER_VERSION "lshd_0.0"

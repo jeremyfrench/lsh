@@ -87,7 +87,7 @@ static int client_initiate(struct fd_callback **c,
   
   connection->client_version
     = ssh_format("SSH-%lz-%lz %lz",
-		 PROTOCOL_VERSION,
+		 CLIENT_PROTOCOL_VERSION,
 		 SOFTWARE_CLIENT_VERSION,
 		 closure->id_comment);
   

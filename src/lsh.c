@@ -127,7 +127,6 @@ int main(int argc, char **argv)
   int in, out, err;
 
   NEW(io_backend, backend);
-  gc_register_global(&backend->super);
 
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */

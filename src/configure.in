@@ -25,9 +25,10 @@ esac
 # We want to compile the crypto lib for use with lsh
 CPPFLAGS="$CPPFLAGS -I$srcdir/include -DLSH"
 
-# _GNU_SOURCE is needed on some readhat glibc based systems, to get
-# proper declarations of crypt(), initgroups() and strsignal().
-# Enable it on all systems untill some harm is reported
+# GNU libc defaults to supplying the ISO C library functions only. 
+# initgroups() and strsignal() are extensions; the _GNU_SOURCE define
+# enables these extensions.
+# Enable it on all systems; no problems have been reported with it so far.
 
 CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
 
@@ -46,6 +47,12 @@ AC_ARG_WITH(zlib,
 
 dnl Checking this variable is delayed until we have checked if zlib is
 dnl actually available.
+
+AC_ARG_WITH(sshd1,
+  [--with-sshd1[=PROGRAM]    support fallback to SSH1 daemon (broken)])
+
+dnl Checking this variable is delayed until we have checked if an SSH1
+dnl server is actually available.
 
 AC_ARG_WITH(idea,
   [--with-idea    support the patent-encumbered IDEA algorithm],,
@@ -96,6 +103,47 @@ if test x$with_zlib = xyes ; then
   AC_DEFINE(WITH_ZLIB)
 fi
 
+dnl Find the SSH1 daemon; try 'sshd1' first; if it fails, look for 'sshd'
+if test x$with_sshd1 = xyes ; then
+  AC_DEFINE(SSH1_FALLBACK)
+  dnl We have to provide an additional path: regular users seldomly have
+  dnl the sbin directories in their $PATH.
+  AC_PATH_PROG(SSHD1BIN, sshd1, [],
+    $PATH:/usr/local/sbin:/usr/local/etc:/usr/sbin:/usr/etc:/sbin:/etc)
+  if test x$SSHD1BIN = x ; then
+    AC_PATH_PROG(SSHD1BIN, sshd, [],
+      $PATH:/usr/local/sbin:/usr/local/etc:/usr/sbin:/usr/etc:/sbin:/etc)
+  fi
+  if test x$SSHD1BIN = x ; then
+    AC_MSG_ERROR([
+You requested SSH1 fallback support (--with-sshd1), but no sshd1 could be found.
+You can
+- supply the location of sshd1, i.e. --with-sshd1=/home/foo/sbin/sshd ,
+- install sshd1 (ftp://ftp.cs.hut.fi/pub/ssh/); note that it is not free
+  software, or
+- configure --without-sshd1 .
+])
+  fi
+
+  dnl OK. We've found an SSH1 daemon. Now we need to make sure it is
+  dnl recent enough to be used as a fallback daemon. This means it has to
+  dnl support the -V option, which tells it not to read the client version 
+  dnl string as lshd has already done that, and which supplies that version
+  dnl string.
+  AC_MSG_CHECKING(if $SSHD1BIN has the -V compatibility flag)
+changequote(<<, >>)dnl
+  if ($SSHD1BIN -h 2>&1 ; true) | grep '^[ \t]*-V' > /dev/null ; then
+changequote([, ])dnl
+    AC_MSG_RESULT(yes)
+  else
+    AC_MSG_ERROR([
+Found SSH1 daemon ]$SSHD1BIN[, but it does not support the -V option.
+This means we cannot use it as a fallback daemon. Please install a more recent 
+SSH1 daemon (ftp://ftp.cs.hut.fi/pub/ssh/), or configure --without-sshd1 .])
+  fi
+  AC_DEFINE_UNQUOTED(SSHD1,"$SSHD1BIN")
+fi
+
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_TYPE_UID_T
@@ -113,6 +161,7 @@ AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(select socket strerror strtol)
 AC_CHECK_FUNCS(getspnam)
+AC_CHECK_FUNCS(vsnprintf)
 
 AC_CHECK_FUNCS(poll,,[LIBOBJS = jpoll.c $LIBOBJS])
 
@@ -231,8 +280,8 @@ if test x$GCC = xyes ; then
       -Waggregate-return \
       -Wpointer-arith -Wbad-function-cast -Wnested-externs"
 
-# Don't enable -Wcast-align results in tons of warnings in the DES
-# code. And when using stdio.
+# Don't enable -Wcast-align as it results in tons of warnings in the
+# DES code. And when using stdio.
 
 fi
 

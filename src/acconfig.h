@@ -9,6 +9,12 @@
 /* Define if zlib should be used */
 #undef WITH_ZLIB
 
+/* Define to enable fallback to SSH1 */
+#undef SSH1_FALLBACK
+
+/* Location of the SSH1 daemon*/
+#undef SSHD1
+
 /* Define if IDEA should be used */
 #undef WITH_IDEA
 

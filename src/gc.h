@@ -28,12 +28,14 @@
 
 #include "lsh.h"
 
+#if 0
 void gc_register_global(struct lsh_object *o);
+#endif
 
 void gc_register(struct lsh_object *o);
 void gc_kill(struct lsh_object *o);
 
-void gc(void);
-void gc_maybe(int busy);
+void gc(struct lsh_object *root);
+void gc_maybe(struct lsh_object *root, int busy);
 
 #endif /* LSH_GC_H_INCLUDED */

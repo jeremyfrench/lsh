@@ -3,7 +3,7 @@ A Hacker's Guide to LSH
 This document contains some notes, which I hope will make it easier
 for you to understand and hack lsh. It is divided into four main
 sections: Abstraction, Object system, Memory allocation, and a Source
-roadmap.
+road map.
 
 
 ABSTRACTION
@@ -125,7 +125,7 @@ OO-language. In fact, it's primary purpose is not to help with object
 orientation (I could do that fairly well with plain C before
 introducing the class language), but to provide the information needed
 for garbage collection. The syntax is scheme s-expressions, and the
-files are preprocessed by make_class, a scheme schell script a few
+files are preprocessed by make_class, a scheme shell script a few
 hundred lines long.
 
 Classes are written inside C comments. For each definition the source
@@ -198,7 +198,7 @@ sure that it is deallocated when *all* pointers to it are gone.
 The method keyword defines a method, implemented as an instance
 variable holding a function pointer. Keeping the pointer in an
 instance variable rather than in the class is flexible; it's easy to
-ocerride it in a subclass or even in a single object. So these methods
+override it in a subclass or even in a single object. So these methods
 are as virtual as one can get.
 
 It is possible to use the meta-feature to place method pointers in the
@@ -288,7 +288,7 @@ are no longer needed.
 × Other objects and closures, which references each other in some
 complex fashion. Except places where it is *obvious* that an object
 can be freed, these objects are not freed explicitly, but are handled
-by the garbage collector. The gc overhead should be farily small;
+by the garbage collector. The gc overhead should be fairly small;
 almost all allocated memory are strings, which *are* freed explicitly
 when they are no longer used. The objects handled by the gc things
 like pipes of write handlers, keyexchange state objects, etc, which
@@ -298,7 +298,7 @@ Objects are allocated using the NEW() macro. Objects that won't be
 needed anymore can be deleted explicitly by using the KILL() macro.
 
 For the gc to work properly, it is important that there be no bogus or
-uninititialized pointers. Pointers should either be NULL, or point at
+uninitialized pointers. Pointers should either be NULL, or point at
 some valid data, and all bignums should be initialized. Note that this
 rule applies to all objects, including those KILL()ed explicitly.
 

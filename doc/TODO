@@ -35,11 +35,6 @@ Signature Algorithm); the GNU Privacy Guard contains a DSA implementation
 
 S-EXPRESSIONS
 
-Write a sexp-parser, at least for the canonical and transport forms.
-Should probably be implemented as a read handler. Perhaps we can use
-Ron Rivest's code at <URL:
-http://theory.lcs.mit.edu/~rivest/sexp.html>.
-
 Add newlines and pretty printing to the sexp formatter.
 
 
@@ -57,6 +52,14 @@ User names and passwords must be translated from the systems charset
 CONFIGURATION
 
 Read configuration files. Better command line options. 
+
+LOGGING
+
+Use syslog to log server startup, shutdown, and user authentication.
+Update utmp (users currently logged in), wtmp (record of logins) and lastlog
+(last login time).
+Use tcpwrapper's libwrap to log connections and perform access control.
+
 
 ALLOCATION
 
@@ -138,7 +141,7 @@ regular lsh distribution, and make it available separately (this approach is
 taken with GnuPG).
 
 scsh is not free software. Ask Olin Shivers and the other scsh
-copright owners to fix that, or rewrite the Scheme scripts so that
+copyright owners to fix that, or rewrite the Scheme scripts so that
 they are as portable between Scheme implementations as possible, or
 switch to a free Scheme implementation, like Guile.
 

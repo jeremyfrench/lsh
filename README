@@ -1,4 +1,4 @@
-LSH - a free implementetion of the Secure Shell protocols.
+LSH - a free implementation of the Secure Shell protocols.
 
 
 LSH IS WORK IN PROGRESS. DON'T EXPECT THE CURRENT VERSION TO WORK, AND
@@ -20,7 +20,7 @@ be found at your local GNU mirror site. scsh, Olin Shiver's Scheme
 Shell, can be downloaded from <URL:
 ftp://ftp-swiss.ai.mit.edu/pub/su/scsh/scsh.tar.gz>.
 
-If you have checked out lsh from cvs, things are more complicated. You
+If you have checked out lsh from CVS, things are more complicated. You
 must first generate Makefile.am files from the corresponding
 Makefile.am.in files. Do this by running ./make_am in the top level
 directory. Next, you need to run autoconf, autoheader and automake.

@@ -143,7 +143,6 @@ int main(int argc, char **argv)
   struct packet_handler *kexinit_handler;
 
   NEW(io_backend, backend);
-  gc_register_global(&backend->super);
 
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */

@@ -35,7 +35,7 @@ can map PAM's messages to the appropriate SSH packets. This problem
 excludes using PAM for password authentication.
 
 (iii) The PAM conversation function expects the server to ask the user
-some question, block until a response is recieved, and then return the
+some question, block until a response is received, and then return the
 result to PAM. That is very unfriendly to a server using a select()
 loop to manage many simultaneous tasks. This problem by itself does
 not exclude using PAM for a traditional accept(); fork()-style server,
@@ -66,14 +66,14 @@ in arbitrary order:
 (i) The client sends EOF on the channel.
 
 (ii) The server sends EOF on the channel (this happens when there are
-no more processe which has the files the server has opened for stdout
+no more processes which have the files the server has opened for stdout
 or stderr open).
 
 (iii) The child process created by the server dies. An exit-status or
 exit-signal message is sent to the client.
 
-lshd handles these condtions as follows: It will not send a CLOSE
-message until *all* the three events above have occured. Naturally,
+lshd handles these conditions as follows: It will not send a CLOSE
+message until *all* the three events above have occurred. Naturally,
 this could cause the channel to stay open for ever, for instance if
 the child process has started a background job that happens to keep
 its stdin open (perhaps without ever using it). In most cases this is

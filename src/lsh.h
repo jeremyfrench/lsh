@@ -136,7 +136,7 @@ struct callback
  * filedescriptor closed. */
 #define LSH_DIE  4
 
-/* Close all other filedescriptors immediately. MAinly used when forking.
+/* Close all other filedescriptors immediately. Mainly used when forking.
  * Can be combined with LSH_FAIL or LSH_DIE or both. */
 #define LSH_KILL_OTHERS 8
 

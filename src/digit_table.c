@@ -49,7 +49,7 @@ static void write_table(int *table)
   printf("\n}");
 }
 
-int main(int argc UNUSED, char *argv UNUSED)
+int main(int argc UNUSED, char **argv UNUSED)
 {
   int table[0x100];
   unsigned i;

@@ -89,7 +89,7 @@ struct resource_node
 #define KILL_RESOURCE_NODE(l, n) ((l)->kill_resource((l), (n)))
 #define KILL_RESOURCE_LIST(l) ((l)->kill_all((l)))
 
-/* Allcoates an empty list. */
+/* Allocates an empty list. */
 struct resource_list *empty_resource_list(void);
 
 #endif /* LSH_RESOURCE_H_INCLUDED */

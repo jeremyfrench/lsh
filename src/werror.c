@@ -73,6 +73,29 @@ void set_error_stream(int fd, int with_poll)
   error_write = with_poll ? write_raw_with_poll : write_raw;
 }
 
+void wwrite(char *msg)
+{
+  if (!quiet_flag)
+    {
+      UINT32 size = strlen(msg);
+
+      if (error_pos + size <= BUF_SIZE)
+	{
+	  memcpy(error_buffer + error_pos, msg, size);
+	  error_pos += size;
+      
+	  if (size && (msg[size-1] == '\n'))
+	    werror_flush();	
+	}
+      else
+	{
+	  werror_flush();
+	  WERROR(size, msg);
+	}
+    }
+}
+
+#ifdef HAVE_VSNPRINTF
 /* FIXME: Too bad we can't create a custom FILE * using werror_putc to
  * output each character. */
 static void w_vnprintf(unsigned size, const char *format, va_list args)
@@ -98,29 +121,17 @@ static void w_vnprintf(unsigned size, const char *format, va_list args)
       WERROR(size, s);
     }
 }
+#else /* !HAVE_VSNPRINTF */
 
-void wwrite(char *msg)
+#warning No vsnprintf. Some output to stderr will be lost.
+
+static void w_vnprintf(unsigned size, const char *format, va_list args)
 {
-  if (!quiet_flag)
-    {
-      UINT32 size = strlen(msg);
-
-      if (error_pos + size <= BUF_SIZE)
-	{
-	  memcpy(error_buffer + error_pos, msg, size);
-	  error_pos += size;
-      
-	  if (size && (msg[size-1] == '\n'))
-	    werror_flush();	
-	}
-      else
-	{
-	  werror_flush();
-	  WERROR(size, msg);
-	}
-    }
+  /* NOTE: This loses the interesting parts of the messages. */
+  wwrite(format);
 }
-  
+#endif /* !HAVE_VSNPRINTF */
+
 static void w_nprintf(UINT32 size, const char *format, ...)
 {
   va_list args;

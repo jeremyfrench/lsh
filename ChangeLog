@@ -1,3 +1,44 @@
+Sun Jan  3 16:54:29 1999    <ray@zensunni>
+
+	* digit_table.c: Fixed declaration of main.
+
+	* Makefile.am.in: remove .x files as part of maintainer-clean.
+
+	* Makefile.am.in, lib/Makefile.am.in, include/Makefile.am.in: added
+	support for ctags.
+
+	* configure.in: Remove superfluous spacing in compiler warnings.
+
+	* version.h, client.c (client_initiate), server.c (server_initiate):
+	Split PROTOCOL_VERSION in CLIENT_PROTOCOL_VERSION and
+	SERVER_PROTOCOL_VERSION, so the client won't report version 1.99 .
+
+	* configure.in: Look for SSH1 daemon as plain `sshd' too. Test that it
+	is usable.
+
+Sat Jan  2 18:25:16 1999    <ray@zensunni>
+
+	* TODO: Added logging; Noted we can't currently use Rivest's sexp code.
+
+	* resource.h, lsh_types.h: fixed typo.
+
+	* Makefile.am.in, lib/Makefile.am.in: Added pattern rule for
+	dependencies; added phony target `depend' to force dependencies to be
+	remade; remove dependency files (.P) as part of maintainer-clean.
+
+Fri Jan  1 18:08:03 1999    <ray@zensunni>
+
+	* acconfig.h, configure.in, server.c, version.h: Added skeleton for
+	SSH1 fallback support.
+
+	* TASKLIST: Added SSH1 fallback support.
+
+	* configure.in: Rewrote the comment about _GNU_SOURCE .
+
+	* AUTHORS, HACKING, NOTES, README, TODO: spelling, grammar fixes.
+
+	* TASKLIST: We have zlib support now.
+
 Mon Jan  4 11:25:43 1999    <nisse@puck>
 
 	* werror.c: Avoid using stdio functions.

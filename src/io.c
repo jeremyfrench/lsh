@@ -1,7 +1,5 @@
 /* io.c
  *
- *
- *
  * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
@@ -158,6 +156,8 @@ int io_iter(struct io_backend *b)
       gc_maybe(&b->super, 0);
       res = poll(fds, nfds, -1);
     }
+  else
+    gc_maybe(&b->super, 1);
   
   if (!res)
     {

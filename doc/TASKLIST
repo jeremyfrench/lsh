@@ -11,9 +11,7 @@ Port forwarding services
   UDP (not in the spec, but that's no reason why it couldn't be
        implemented).
 
-PTY support.
-
-Compression (zlib) support.
+PTY support. See NOTES.
 
 User interface. This includes command line options, configuration
 files, an escape-character mechanism and any features attached to that,
@@ -34,6 +32,9 @@ protocol.
 SSH agent (does anybody have a specification of the protocol(s) used
 by ssh-agent?)
 
+SSH1 fallback support in the daemon. This should be done through an external
+SSH1 daemon. The configure part of this is already done (SSH1_FALLBACK and
+SSH1D).
 
 Projects not to do:
 

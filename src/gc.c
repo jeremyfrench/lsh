@@ -32,10 +32,12 @@
 
 /* Global variables */
 static struct lsh_object *all_objects = NULL;
-static struct lsh_object *globals = NULL;
 static unsigned number_of_objects = 0;
 static unsigned live_objects = 0;
 
+#if 0
+static struct lsh_object *globals = NULL;
+#endif
 
 #ifdef DEBUG_ALLOC
 static void sanity_check_object_list(void)
@@ -152,7 +154,10 @@ void gc_register(struct lsh_object *o)
 #endif
 }
 
-/* FIXME: This function is utterly broken, and should be deleted. */
+#if 0
+/* FIXME: This function is utterly broken, and should be deleted. The
+ * problem is that the object must be unlinked from the all_objects
+ * list before linked into the globals list. */
 void gc_register_global(struct lsh_object *o)
 {
 #ifdef DEBUG_ALLOC
@@ -166,7 +171,8 @@ void gc_register_global(struct lsh_object *o)
   sanity_check_object_list();
 #endif
 }
-  
+#endif
+
 /* FIXME: This function should really deallocate and forget the object
  * early. But we keep it until the next gc, in order to catch any
  * references to killed objects. */
@@ -188,20 +194,18 @@ void gc_kill(struct lsh_object *o)
 #endif
 }
 
-void gc(void)
+void gc(struct lsh_object *root)
 {
   unsigned before = number_of_objects;
-  struct lsh_object *o;
 
-  for (o = globals; o; o = o->next)
-    gc_mark(o);
-  
+  gc_mark(root);  
   gc_sweep();
+  
   verbose("Objects alive: %d, garbage collected: %d\n", live_objects,
 	  before - live_objects);
 }
 
-void gc_maybe(int busy)
+void gc_maybe(struct lsh_object *root, int busy)
 {
 #ifdef DEBUG_ALLOC
   sanity_check_object_list();
@@ -210,6 +214,6 @@ void gc_maybe(int busy)
   if (number_of_objects > (100 + live_objects*(2+busy)))
     {
       verbose("Garbage collecting while %s...\n", busy ? "busy" : "idle");
-      gc();
+      gc(root);
     }
 }
