@@ -46,6 +46,7 @@ struct command *make_listen_command(struct command *callback,
 				    struct io_backend *backend);
 
 extern struct collect_info_1 listen_command;
+#define LISTEN_COMMAND (&listen_command.super.super.super)
 
 struct command *make_simple_connect(struct io_backend *backend,
 				    struct resource_list *resources);
