@@ -111,6 +111,11 @@ Related programs and techniques
 
 Invoking @code{lsh}
 
+* Algorithms: Algorithm options.  Selecting algorithms.
+* Hostauth options::            
+* Userauth options::            
+* Actions: Action options.      What to do after login.
+* Messages: Verbosity options.  Tuning the amount of messages.
 
 @end detailmenu
 @end menu
@@ -140,7 +145,7 @@ ex-boyfriend who happens to be too curious.
 
 So what can the enemy do to your communications and your privacy?
 Remember that just because your paranoid that doesn't mean that nobody
-is trying to get you @dots{}
+is trying to get you@dots{}
 
 
 @menu
@@ -227,9 +232,9 @@ Protection from denial of service attacks is also a very difficult
 problem, and @dfn{lsh} makes no attempt to protect you from that.
 
 Instead, the aim of @dfn{lsh}, and most serious tools for cryptographic
-protection of commucations across the net, is to isolate the
+protection of communications across the net, is to isolate the
 vulnerabilities to the communication endpoints. If you know that the
-endpoints are safe, the enemy should not be able to compromize you
+endpoints are safe, the enemy should not be able to compromize your
 privacy or communications. Except for denial of service attacks (which
 at least can't be performed without you noticing it).
 
@@ -252,20 +257,20 @@ the effort to break them.
 @comment  node-name,  next,  previous,  up
 @section Other convenient features
 
-@code{lsh} does not only provide for more Secure replacements of @code{telnet},
-@code{rsh} and @code{rlogin}, it also provides some other feature to
-make it convenient to communicate securely. But @code{lsh} is still in
-an early stage of development, so this section is expected to grow with
-time. One goal for @code{lsh} is to make it reasonable easy to extend it,
-without messing with the core security functionality.
+@code{lsh} does not only provide more secure replacements for
+@code{telnet}, @code{rsh} and @code{rlogin}, it also provides some other
+features to make it convenient to communicate securely. But @code{lsh} is
+still in an early stage of development, so this section is expected to
+grow with time. One goal for @code{lsh} is to make it reasonable easy to
+extend it, without messing with the core security functionality.
 
-lsh can be configured to allow login based on a personal key-pair
+@code{lsh} can be configured to allow login based on a personal key-pair
 consisting of a private and a public key, so that you can execute remote
 commands without typing your password every time. Other user
 authentication methods on the wish list include Kerberos support and
 authentication using Thomas Wu's Secure Remote Password Protocol (SRP).
 
-The public-key authnetication methods should also be extended to support
+The public-key authentication methods should also be extended to support
 Simple Public Key Infrastructure (SPKI) certificates, including some
 mechanism to delegate restricted logins.
 
@@ -274,7 +279,7 @@ for tunneling otherwise insecure protocols, like telnet and pop, through
 an encrypted @code{lsh} connection.
 
 Convenient tunneling of X is one of the most impressive features of the
-original @code{ssh} prgrams. @code{lsh} doesn't do this yet. Other kind
+original @code{ssh} programs. @code{lsh} doesn't do this yet. Other kind
 of tunneling that may turn out to be useful include authentication (i.e.
 @code{ssh-agent}), general forwarding of @acronym{UDP}, and why not also
 general ip-tunneling.
@@ -359,17 +364,17 @@ ftp and X-clients. The ssh family of programs, on the other hand, tries
 to do all needed magic, for instance to forward X securely, and then
 provides general tcp forwarding as a kitchen sink.
 
-I think Kerberos' and @code{lsh}'s protection against passive
-eavesdropping is mostly equivalent. The difference is in the set of
-machines and assumptions you have to trust in order to be safe from a
-Man-in-the-middle attack.
+I think Kerberos' and lsh's protection against passive eavesdropping are
+mostly equivalent. The difference is in the set of machines and
+assumptions you have to trust in order to be safe from a
+man-in-the-middle attack.
 
 I think the main advantage of @code{lsh} over Kerberos is that it is
 easier to install and use for on ordinary mortal user. In order to set
 up key exchange between two different Kerberos systems (or @dfn{Kerberos
 realms}), the respective system operators need to exchange keys. In the
 case of two random users at two random sites, setting up @code{lsh} or
-some other program in the ssh family is likely easier thaan to get the
+some other program in the ssh family is likely easier than to get the
 operators to spend time and attention. So @code{lsh} should be easier to
 use in a anarchistic grass-roots environment.
 
@@ -386,9 +391,9 @@ account at a suitable ticket-granting server.
 It is developed by anotheer @acronym{IETF} working group, and is also a
 required part of IP version 6.
 
-Again, the main difference between @acronym{IETF} and Kerberos and ssh
+Again, the main difference between @acronym{IPSEC} and Kerberos and ssh
 is the set of machines that have to be secure and the keys that have to
-be exchanged in order to avoid Man-in-the-middle attacks.
+be exchanged in order to avoid man-in-the-middle attacks.
 
 Current protocols and implementations of @acronym{IPSEC} only provide
 authentication of machines; there's nothing analogous to the user
@@ -457,32 +462,33 @@ It is also possible to let @code{init} start lshd, by adding in in
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @code{lsh}
 
-You use lsh to login to a remote machine. Basic usage is
+You use @code{lsh} to login to a remote machine. Basic usage is
 
 @samp{lsh [-p @var{port number}] sara.lysator.liu.se}
 
 which attempts to connect, login, and start an interactive shell on the
-remote machine. Default @var{port number} is whatever your systems
+remote machine. Default @var{port number} is whatever your system's
 @file{/etc/services} lists for @code{ssh}. Usually, that is port 22.
 
 There is a plethora of options to @code{lsh}, to let you configure where
 and how to connect, how to authenticate, and what you want to do once
-properly logged in to the remote host. For a full listing of supported
-options, use @samp{lsh --help}.
+properly logged in to the remote host. Many options have both long and
+short forms. This manual does not list all variants; for a full listing
+of supported options, use @samp{lsh --help}.
 
 @menu
-* Algorithms: Algorithm options.           Selecting algorithms.
-* Host authentication: Hostauth options.   
-* User authentication: Userauth options.   Selecting login methods.
-* Actions: Action options.                 What to do after login.
-* Messages: Verbosity options.             Tuning the amount of messages.
+* Algorithms: Algorithm options.  Selecting algorithms.
+* Hostauth options::            
+* Userauth options::            
+* Actions: Action options.      What to do after login.
+* Messages: Verbosity options.  Tuning the amount of messages.
 @end menu
 
 @node Algorithm options, Hostauth options, Invoking lsh, Invoking lsh
 @comment  node-name,  next,  previous,  up
 @section Algorithm options
 
-Before a packet is send, each packet can be compressed, encrypted
+Before a packet is sent, each packet can be compressed, encrypted
 and authenticated, in that order. When the packet is received, it is
 first decrypted, next it is checked that it is authenticated properly,
 and finally it is decompressed. The algorithms used for this are
@@ -492,7 +498,7 @@ of the initial handshake and key exchange.
 Each party provides a list of supported algorithms, and the first
 algorithm listed by the client, which is also found on the server's
 list, is selected. Algorithms of different types, e.g. data compression
-and message authentication, are negotiated independently. Further more,
+and message authentication, are negotiated independently. Furthermore,
 algorithms used for transmission from the client to the server are
 independent of the algorithms used for transmission from the server to
 the client. There are therefore no less than six different lists that
@@ -502,33 +508,37 @@ The command line options for lsh and lshd don't let you specify
 arbitrary lists. For instance, you can't specify different preferences
 for sending and receiving.
 
-There are a set of default algorithm preferences. When you use a command
+There is a set of default algorithm preferences. When you use a command
 line option to say that you want to use @var{algorithm} for one of the
 algorithms, the default list is replaced with a list containing the
 single element @var{algorithm}. For example, if you use @option{-c
 arcfour} to say that you want to use @code{arcfour} as the encryption
 algorithm, the connection will either end up using @code{arcfour}, or
 algorithm negotiation will fail because the peer doesn't support
-arcfour.
+@code{arcfour}.
 
-@multitable @columnfractions 0.1 0.15 0.15 0.6
+@multitable @columnfractions 0.1 0.2 0.2 0.5
 @item Option
   @tab Algorithm type @tab Default @tab
 @item @option{-z} @tab Data compression
   @tab @code{none}, @code{zlib}
-  @tab The default preference list supports zlib
-       compression, but don't insist. To enable compression, use
-       @option{-z}, which is a shorthand for @option{-z zlib}.
+
+  @tab The default preference list supports zlib compression, but doesn't
+insist. To enable compression, use @option{-z}, which is a shorthand for
+@option{-z zlib}.
+
 @item @option{-c} @tab Encryption
   @tab @code{3dec-cbc}, @code{blowfish-cbc}, @code{cast128-cbc},
-       @code{twofish-cbc}, @code{arcfour}
+@code{twofish-cbc}, @code{arcfour}
+
   @tab The default encryption algorithm is tripple-DES in CBC mode. This
-       seems to be the algorithm of coice among conservative
-       cryptographers.
+seems to be the algorithm of choice among conservative cryptographers.
+
 @item @option{-m} @tab Message Authentication
   @tab @code{hmac-sha1}, @code{hmac-md5}
+
   @tab Both supported message authentication algorithms are of the
-       @acronym{HMAC} family.
+@acronym{HMAC} family.
 @end multitable
 
 @node Hostauth options, Userauth options, Algorithm options, Invoking lsh
@@ -538,7 +548,7 @@ arcfour.
 As described earlier @pxref{Threats}, proper authentication of the
 remote host is crucial to protect the connection against
 Man-in-the-middle attacks. By default, @code{lsh} verifies the server's
-claimed host key against the @dfn{Acess Control Lists} in
+claimed host key against the @dfn{Access Control Lists} in
 @file{~/.lsh/known_hosts}. If the remote host cannot be authenticated,
 the connection is dropped.
 
@@ -549,28 +559,246 @@ The options that change this behaviour are
 Specifies the location of the @acronym{ACL} file.
 
 @item --sloppy-host-authentication
+Tell @code{lsh} not to drop the connection if the server's key can not
+be authenticated. Instead, it display the fingerprint of the key, and
+ask if it is trusted. The received key is also appended to the file
+@file{~/.lsh/captured_keys}. If run in quiet mode, @samp{lsh -q
+--sloppy-host-authentication}, @code{lsh} connects to any host, no
+questions asked.
+
 @item --strict-host-authentication
+Disable sloppy operation (this is the default behaviour).
+
 @item --capture-to
+Use some other file than @file{~/.lsh/captured_keys}. For example,
+@samp{--sloppy-host-authentication --capture-to ~/.lsh/known_hosts}
+makes @code{lsh} behave more like the @code{ssh} program.
 
 @end table
-
-
 
 @node Userauth options, Action options, Hostauth options, Invoking lsh
 @comment  node-name,  next,  previous,  up
 @section User authentication options
 
+@table @option
+
+@item -l
+Provide a name to use when logging in. By default, the value of the
+@env{LOGNAME} variable is used.
+
+@item -i
+Try the keys from this file to log in. By default, @code{lsh} uses
+@file{~/.lsh/identity}, if it exists. It ought to be possible to use
+several @option{-i} options to use more than one file, but that is
+currently not implemented.
+
+@item --no-publickey
+Don't attempt to log in using public key authentication.
+
+@end table
+
 @node Action options, Verbosity options, Userauth options, Invoking lsh
 @comment  node-name,  next,  previous,  up
 @section Action options
+
+There are many things @code{lsh} can do once you are logged in. There
+are two types of options that control this: @dfn{actions} and
+@dfn{action modifiers}. For short options, actions use uppercase letters
+and modifiers use lowercase.
+
+For each modifier @option{--foo} there's also a negated form
+@option{--no-foo}. Options can also be negated be preceding it with the
+special option @option{-n}. This is mainly useful for negating short
+options. For instance, use @option{-nt} to tell @code{lsh} not to
+request a remote pseudo terminal. Each modifier and its negation can be
+used several times on the command line. For each action, the latest
+previous modifier of each pair apply.
+
+First, the actions:
+
+@table @option
+
+@item -L
+Requests forwarding of a local port. This option takes mandatory
+argument of the form
+@var{listen-port}:@var{target-host}:@var{target-port}. This option tells
+@code{lsh} to listen on @var{listen-port} on the local machine. When
+someone conects to that port, @code{lsh} asks the remote server to open
+a connection to @var{target-port} on @var{target-host}, and if it
+succeeds, the two connections are joined together through an the
+@code{lsh} connection. Both port numbers should be given in decimal.
+
+@item -R
+Requests forwarding of a remote port. It takes one mandatory argument,
+just like @option{-L}. But in this case @code{lsh} asks the
+@emph{remote} server to listen on @var{listen-port}. When someone
+connects to the remote hosts, the server will inform the local
+@code{lsh}. The local @code{lsh} then connects to @var{target-port} on
+@var{target-host}.
+
+@item -E
+This option is not yet implemented. It takes one mandatory argument,
+which is a command to be executed on the remote machine.
+
+@item -S
+Start a shell on the remote machine. Currently not implemented, except
+as the default action.
+
+@item -N
+This is a no-operation action. It inhibits the default action, which is
+to start an interactive shell on the remote machine. It is useful if you
+want to set up a few forwarded tunnels, and nothing more.
+
+@end table
+
+If there are trailing arguments after the name of the remote system,
+this is equivalent to a @option{-E} option, with a command string
+constructed by taking all the remaining arguments, separated by spaces.
+This implies that the arguments are usually expanded first by the local
+shell, and then the resulting command string is interpreted again by the
+remote system. In any case, just like @option{-E}, this is not yet
+implemented.
+
+If there are no trailing arguments after the name of the remote system,
+and the @option{-N} option is not given, the default action is to start
+a shell on the remote machine. I.e. this is equivalent to the
+@option{-S} option.
+
+There are a few supported modifiers:
+
+@table @option
+
+@item -t
+Request a pseudo terminal. @code{lsh} asks the remote system to allocate
+a pseudo terminal. If it succeeds, the local terminal is set to raw
+mode. The default behaviour is to request a pty if and only if the
+local @code{lsh} process has a controlling terminal. This modifier
+applies to actions that create remote processes, i.e. @option{-E} and
+@option{-S}, as well as the default actions.
+
+Currently, this option is ignored if there is no local terminal.
+
+@item -g
+Gateway mode. This option applies to the forwarding actions, i.e.
+@option{-L} and @option{-R}. By default, only connections to the
+loopback interface, ip 127.0.0.1, are forwared. This implies that only
+processes on the same machine can use the forwarded tunnel directly. If
+the -g modifier is in effect, the forwarding party will listen on
+@emph{all} network interfaces.
+
+@end table
 
 @node Verbosity options,  , Action options, Invoking lsh
 @comment  node-name,  next,  previous,  up
 @section Verbosity options
 
+These options determines what messages @code{lsh} writes on
+its stderr.
+
+@table @option
+
+@item -q
+Quiet mode. Disables all messages and all questions. Except password
+prompts and fatal internal errors.
+
+@item -v
+Verbose mode. Makes @code{lsh} a little more verbose. The intention is
+to provide information that is useful for ordinary trouble shooting,
+and makes sense also to those not familiar with @code{lsh} internals.
+
+@item --trace
+Trace mode. Prints some internal information to aid tracking
+lsh's flow of control.
+
+@item --debug.
+Debug mode. Dumps @emph{a lot} of information, including dumps of all
+sent and received packets. It tries to avoid dumping highly sensitive data,
+such as private keys and the contents of @code{SSH_MSG_USERAUTH_REQUEST}
+messages, but you should still use it with care.
+
+@end table
+
 @node Invoking lshd, Terminology, Invoking lsh, Top
 @comment  node-name,  next,  previous,  up
 @chapter Invoking @code{lshd}
+
+@code{lshd} is a server that accepts connections from clients speaking
+the Secure Shell Protocol. It is usually started automatically when the
+systems boots, and runs with root privileges. However, it is also
+possible to start lshd manually, and with user privileges.
+
+There is currently no configuration files. Instead, command line options
+are used to tell @code{lshd} what to do. Many options have @option{--foo}
+and @option{--no-foo} variants. Options specifying the default behaviour
+are not listed here.
+
+Some of the options are the shared with @code{lsh}. In particular, see
+@ref{Algorithm options} and @ref{Verbosity options}.
+
+Options specific to the @code{lshd} server are:
+
+@table @option
+
+@item -p
+Port to listen to. The mandatory argument is a decimal port number or a
+service name. Default is "ssh", usually port 22.
+
+@item --interface
+Network interface to listen on. By default, @code{lshd} listens on all
+interfaces.
+
+@item -h
+Location of the server's private key file. By default,
+@file{/etc/lsh_host_key}.
+
+@item -i
+Variant of the s-expression syntax to use when reading the host key.
+Default is to use transport format. Not a terribly useful option.
+
+@item --ssh1-fallback
+This options enables fallback to @code{ssh1}. @code{lshd} doesn't
+implement version 1 of the Secure Shell Protocol. But it can fork an ssh1
+server when an old client connects. Falling back to ssh1 is inefficient,
+and requires some special features of the server fallen back to. It
+should work with the sshd daemon supplied with reasonably new versions of
+Datafellow's @code{sshd1}, and with @code{openssh}.
+
+The optional argument provides the filename of the ssh1 daemon to use.
+Default name is @file{/usr/local/sbin/sshd1}, unless something else was
+configured at compile time.
+
+@item --daemonic
+Enables daemonic mode. @code{lshd} forks into the background, redirects
+its stdio handles to @file{/dev/null}, changes its working directory to
+@file{/}, and redirects any diagnostic or debugging messages via syslog.
+
+@code{lshd} should be able to deal with the environment it inherits if it
+is started by @code{init} or @code{inetd}, but this is not really tested.
+
+@item --pid-file
+Creates a locked pid file, to make it easier to write start and stop
+scripts for @code{lshd}. The mandatory argument provides the filename.
+This option is enabled by default when operating in daemonic mode, and
+the default filename is @file{/var/run/lshd.pid}.
+
+@item --enable-core
+By default, @code{lshd} disables core dumps, to avoid leaking sensitive
+information. This option changes that behaviour, and allows @code{lshd}
+to dump core on fatal errors.
+
+@item --no-password
+Disable the "password" user authentication mechanism. 
+
+@item --no-publickey
+Disable the "publickey" user authentication mechanism.
+
+@item --no-pty-support
+Disable support for pseudo terminals.
+
+@item --no-tcp-forward
+Disable support for tcp forwarding, in both directions.
+
+@end table
 
 
 @node Terminology, Concept Index, Invoking lshd, Top
