@@ -814,22 +814,37 @@ make_channel_request_exception_handler(struct ssh_connection *connection,
   return &self->super;
 }
 
+static int
+parse_channel_request(struct simple_buffer *buffer,
+		      UINT32 *channel_number,
+		      struct channel_request_info *info)
+{
+  unsigned msg_number;
+
+  if (parse_uint8(buffer, &msg_number)
+      && (msg_number == SSH_MSG_CHANNEL_REQUEST)
+      && parse_uint32(buffer, channel_number)
+      && parse_string(buffer,
+		      &info->type_length, &info->type_data)
+      && parse_boolean(buffer, &info->want_reply))
+    {
+      info->type = lookup_atom(info->type_length, info->type_data);
+      return 1;
+    }
+  else
+    return 0;
+}
+
 DEFINE_PACKET_HANDLER(static, channel_request_handler,
 		      connection, packet)
 {
   struct simple_buffer buffer;
-  unsigned msg_number;
+  struct channel_request_info info;
   UINT32 channel_number;
-  int type;
-  int want_reply;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
-  if (parse_uint8(&buffer, &msg_number)
-      && (msg_number == SSH_MSG_CHANNEL_REQUEST)
-      && parse_uint32(&buffer, &channel_number)
-      && parse_atom(&buffer, &type)
-      && parse_boolean(&buffer, &want_reply))
+  if (parse_channel_request(&buffer, &channel_number, &info))
     {
       struct ssh_channel *channel = lookup_channel(connection->table,
 						   channel_number);
@@ -844,15 +859,18 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
 	  struct command_continuation *c = &discard_continuation;
 	  struct exception_handler *e = channel->e;
 
-	  if (type && channel->request_types)
+	  if (info.type && channel->request_types)
 	    {
 	      CAST_SUBTYPE(channel_request, r,
-			   ALIST_GET(channel->request_types, type));
+			   ALIST_GET(channel->request_types, info.type));
 	      req = r;
 	    }
+	  if (!req)
+	    req = channel->request_fallback;
+	  
 	  if (req)
 	    {
-	      if (want_reply)
+	      if (info.want_reply)
 		{
 		  struct request_status *a = make_request_status();
 		  
@@ -861,7 +879,6 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
 		  
 		  c = make_channel_request_response(connection, channel, a);
 		  e = make_channel_request_exception_handler(connection, channel, a, e, HANDLER_CONTEXT);
-		  
 		}
 	      else
 		{
@@ -874,11 +891,11 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
 						    e, HANDLER_CONTEXT);
 		}
 	      
-	      CHANNEL_REQUEST(req, channel, connection, type, want_reply, &buffer, c, e);
+	      CHANNEL_REQUEST(req, channel, connection, &info, &buffer, c, e);
 	    }
 	  else
 	    {
-	      if (want_reply)
+	      if (info.want_reply)
 		C_WRITE(connection,
 			format_channel_failure(channel->channel_number));
 	    }
@@ -1022,7 +1039,7 @@ parse_channel_open(struct simple_buffer *buffer,
 
   if (parse_uint8(buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_OPEN)
-      && parse_string(buffer, &info->type_length, &info->type_string)
+      && parse_string(buffer, &info->type_length, &info->type_data)
 #if 0
       && parse_atom(&buffer, &type)
 #endif
@@ -1030,7 +1047,7 @@ parse_channel_open(struct simple_buffer *buffer,
       && parse_uint32(buffer, &info->send_window_size)
       && parse_uint32(buffer, &info->send_max_packet))
     {
-      info->type = lookup_atom(info->type_length, info->type_string);
+      info->type = lookup_atom(info->type_length, info->type_data);
 
       /* We don't support larger packets than the default,
        * SSH_MAX_PACKET. The fuzz factor is because the
@@ -1775,6 +1792,8 @@ init_channel(struct ssh_channel *channel)
   channel->sources = 0;
   
   channel->request_types = NULL;
+  channel->request_fallback = NULL;
+  
   channel->receive = NULL;
   channel->send_adjust = NULL;
 
@@ -2031,14 +2050,15 @@ make_channel_io_exception_handler(struct ssh_channel *channel,
   return &self->super;
 }
 
+/* Used by do_gateway_channel_open() */
 struct lsh_string *
-format_channel_open_s(UINT32 type_length, UINT8 *type,
+format_channel_open_s(struct lsh_string *type,
 		      UINT32 local_channel_number,
 		      struct ssh_channel *channel,
 		      struct lsh_string *args)
 {
-  return ssh_format("%c%s%i%i%i%lS", SSH_MSG_CHANNEL_OPEN,
-		    type_length, type, local_channel_number, 
+  return ssh_format("%c%S%i%i%i%lS", SSH_MSG_CHANNEL_OPEN,
+		    type, local_channel_number, 
 		    channel->rec_window_size, channel->rec_max_packet,
  		    args);
 }
@@ -2093,7 +2113,19 @@ format_channel_open(int type, UINT32 local_channel_number,
 #undef OPEN_FORMAT
 #undef OPEN_ARGS
 }
-		   
+
+struct lsh_string *
+format_channel_request_i(struct channel_request_info *info,
+			 struct ssh_channel *channel,
+			 UINT32 args_length, const UINT8 *args_data)
+{
+  return ssh_format("%c%i%s%c%ls", SSH_MSG_CHANNEL_REQUEST,
+		    channel->channel_number,
+		    info->type_length, info->type_data,
+		    info->want_reply,
+		    args_length, args_data);
+}
+
 struct lsh_string *
 format_channel_request(int type, struct ssh_channel *channel,
 		       int want_reply, const char *format, 
