@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 1.1.0)
+AM_INIT_AUTOMAKE(lsh, 1.1.1)
 
 AM_CONFIG_HEADER(config.h)
 
@@ -408,6 +408,7 @@ AC_FUNC_ALLOCA
 AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(select socket strerror strsignal strtol)
+AC_CHECK_FUNCS(getrusage gettimeofday)
 AC_CHECK_FUNCS(getspnam)
 AC_CHECK_FUNCS(vsnprintf inet_aton)
 AC_CHECK_FUNCS(openpty)
