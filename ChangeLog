@@ -1,5 +1,8 @@
 2004-06-15  Niels Möller  <niels@s3.kth.se>
 
+	* src/version.h (SOFTWARE_SLOGAN): New macro; string appended to
+	the software version in the initial handshake.
+
 	* src/lsh.c (main_argp_parser): Added support for
 	diffie-hellman-group14-sha1. 
 	* src/lshd.c (main_argp_parser): Likewise.
