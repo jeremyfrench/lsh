@@ -56,10 +56,9 @@ automatically. As a side effect, this should also make the sanity
 checks (basically run-time type checking) more reliable).
 
 Tools like checker and purify may be great for *detecting* memory
-leaks (I've used purify a little, and it's really a great tool). But
-they *don't* solve the problem of deciding exactly when each object
-can be freed, and it is this problem that makes explicit memory
-management destroy modularity boundaries.
+leaks. But they *don't* solve the problem of deciding exactly when
+each object can be freed, and it is this problem that makes explicit
+memory management destroy modularity boundaries.
 
 Personally I think that the *single* most important advantage of using
 higher level languages like python or scheme rather than plain C is
