@@ -346,7 +346,7 @@ void dealloc_channel(struct channel_table *table, int i)
   assert(i >= 0);
   assert( (unsigned) i < table->used_channels);
 
-  verbose("Deallocating local channel %i\n");
+  verbose("Deallocating local channel %i\n", i);
   table->channels[i] = NULL;
   table->in_use[i] = 0;
   
