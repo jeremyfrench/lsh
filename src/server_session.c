@@ -812,7 +812,8 @@ do_spawn_exec(struct channel_request *c,
     /* Already spawned a shell or command */
     goto fail;
 
-  command_line = make_cstring_l(command_len, command);
+  command_line = ssh_cformat("%ls", command_len, command);
+  
   if (!command_line)
     EXCEPTION_RAISE(e, &exec_request_failed);
   else

@@ -290,8 +290,8 @@ do_file_exists(struct lsh_user *u,
       return 0;
     }
   
-  path = ssh_format(free ? "%lS/%lfS%c" : "%lS/%lS%c",
-		    user->home, name, 0);
+  path = ssh_cformat(free ? "%lS/%lfS" : "%lS/%lS",
+		     user->home, name);
 
   if (stat(path->data, &st) == 0)
     {
@@ -323,7 +323,7 @@ do_read_file(struct lsh_user *u,
       return;
     }
   
-  f = ssh_format("%lS/.lsh/%lz%c", user->home, name, 0);
+  f = ssh_cformat("%lS/.lsh/%lz", user->home, name);
 
   fd = io_read_user_file(user->backend, f->data, user->super.uid, secret, &x, e);
   lsh_string_free(f);
@@ -454,13 +454,13 @@ do_fork_process(struct lsh_user *u,
 static char *
 format_env_pair(const char *name, struct lsh_string *value)
 {
-  return ssh_format("%lz=%lS%c", name, value, 0)->data;
+  return ssh_cformat("%lz=%lS", name, value)->data;
 }
 
 static char *
 format_env_pair_c(const char *name, const char *value)
 {
-  return ssh_format("%lz=%lz%c", name, value, 0)->data;
+  return ssh_cformat("%lz=%lz", name, value)->data;
 }
 
 static void

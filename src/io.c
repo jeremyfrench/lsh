@@ -973,7 +973,7 @@ address_info2sockaddr(socklen_t *length,
     int err;
     /* FIXME: It seems ugly to have to convert the port number to a
      * string. */
-    struct lsh_string *service = ssh_format("%di%c", a->port, 0);
+    struct lsh_string *service = ssh_cformat("%di", a->port);
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = PF_UNSPEC;

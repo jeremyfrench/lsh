@@ -74,14 +74,13 @@ do_key_lookup(struct lookup_verifier *c,
   
   /* FIXME: Proper spki acl reading should go here. */
   
-  filename = ssh_format(".lsh/%lS/%lxfS%c", 
-			closure->index_name,
-			hash_string(closure->hashalgo,
-				    sexp_format(dsa_to_spki_public_key(&v->public),
-						SEXP_CANONICAL, 0),
-				    1),				    
-			0);
-
+  filename = ssh_cformat(".lsh/%lS/%lxfS", 
+			 closure->index_name,
+			 hash_string(closure->hashalgo,
+				     sexp_format(dsa_to_spki_public_key(&v->public),
+						 SEXP_CANONICAL, 0),
+				     1));
+  
   if (USER_FILE_EXISTS(keyholder, filename, 1))
     return &v->super;
 
