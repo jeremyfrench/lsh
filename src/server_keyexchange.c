@@ -64,7 +64,7 @@ do_handle_dh_init(struct packet_handler *c,
   CAST(dh_server, closure, c);
   struct hash_instance *hash;
 
-  verbose("handle_dh_init()\n");
+  trace("handle_dh_init()\n");
   
   if (!dh_process_client_msg(&closure->dh, packet))
     {
