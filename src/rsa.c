@@ -127,7 +127,7 @@ rsa_check_size(struct rsa_verifier *key)
   key->size = (mpz_sizeinbase(key->n, 2) + 7) / 8;
 
   /* For PKCS#1 to make sense, the size of the modulo, in octets, must
-   * be at least 1 + the length of the DER-encoded Digest Info.
+   * be at least 11 + the length of the DER-encoded Digest Info.
    *
    * And a DigestInfo is 34 octets for md5, and 35 octets for sha1.
    * 46 octets is 368 bits. */
