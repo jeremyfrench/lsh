@@ -89,11 +89,34 @@ make_apply(struct command *f,
   return &res->super.super;
 }
 
-struct lsh_object *gaba_apply(struct lsh_object *f,
-			      struct lsh_object *x)
+/* GABA:
+   (class
+     (name gaba_continuation)
+     (super command_continuation)
+     (vars
+       (value object lsh_object)))
+*/
+
+static void
+do_gaba_continuation(struct command_continuation *c,
+		     struct lsh_object *x)
 {
-  CAST_SUBTYPE(command_simple, cf, f);
-  return COMMAND_SIMPLE_CALL(cf, x);
+  CAST(gaba_continuation, self, c);
+
+  assert(!self->value);
+  self->value = x;
+}
+
+struct lsh_object *
+gaba_apply(struct lsh_object *f,
+	   struct lsh_object *x)
+{
+  CAST_SUBTYPE(command, cf, f);
+  struct gaba_continuation c =
+  { { STATIC_HEADER, do_gaba_continuation }, NULL };
+
+  COMMAND_CALL(cf, x, &c.super, &default_exception_handler);
+  return c.value;
 }
 
 void
@@ -105,23 +128,6 @@ do_call_simple_command(struct command *s,
   CAST_SUBTYPE(command_simple, self, s);
   COMMAND_RETURN(c, COMMAND_SIMPLE_CALL(self, arg));
 }
-
-
-/* Unimplemented command */
-static void
-do_command_unimplemented(struct command *s UNUSED,
-			 struct lsh_object *o UNUSED,
-			 struct command_continuation *c UNUSED,
-			 struct exception_handler *e UNUSED)
-{ fatal("command.c: Unimplemented command.\n"); }
-
-static struct lsh_object *
-do_command_simple_unimplemented(struct command_simple *s UNUSED,
-				struct lsh_object *o UNUSED)
-{ fatal("command.c: Unimplemented simple command.\n"); }
-
-struct command_simple command_unimplemented =
-{ { STATIC_HEADER, do_command_unimplemented}, do_command_simple_unimplemented};
 
 
 /* Tracing */
