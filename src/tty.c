@@ -29,9 +29,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <errno.h>
-#include <string.h>
-
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
