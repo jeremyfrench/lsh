@@ -336,10 +336,12 @@ do_handshake(struct command *s,
 	     struct exception_handler *e)
 {
   CAST(handshake_command_2, self, s);
-  CAST(lsh_fd, fd, x);
+  CAST(listen_value, lv, x);
   struct lsh_string *version;
   struct ssh_connection *connection;
-    
+
+  verbose("Initiating handshake with %S\n", lv->peer->ip);
+  
   switch (self->info->mode)
     {
     case CONNECTION_CLIENT:
@@ -380,17 +382,17 @@ do_handshake(struct command *s,
    * EXC_FINISH_READ exception. */
   
   connection = make_ssh_connection
-    (self->info->debug_comment, 
+    (lv->peer, self->info->debug_comment, 
      c,
-     make_exc_finish_read_handler(fd, e, HANDLER_CONTEXT));
+     make_exc_finish_read_handler(lv->fd, e, HANDLER_CONTEXT));
   
   connection_init_io
     (connection, 
-     &io_read_write(fd,
+     &io_read_write(lv->fd,
 		    make_buffered_read
 		    (BUF_SIZE,
 		     make_connection_read_line(connection, self->info->mode,
-					       fd->fd, self->info->fallback)),
+					       lv->fd->fd, self->info->fallback)),
 		    self->info->block_size,
 		    make_connection_close_handler(connection))
      ->write_buffer->super,
