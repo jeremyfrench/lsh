@@ -1,9 +1,11 @@
 /* lsh_keygen.c
  *
- * Generate dss key pairs..
+ * Generic key-generation program. Writes a spki-packages private key
+ * on stdout. You would usually pipe this to some other program to
+ * extract the public key, encrypt the private key, and save the
+ * results in two separate files.
  *
- * $Id$
- */
+ * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -26,14 +28,19 @@
 
 #include "dss_keygen.h"
 
+#include "blocking_write.h"
 #include "crypto.h"
 #include "format.h"
 #include "publickey_crypto.h"
 #include "randomness.h"
+#include "sexp.h"
+#include "werror.h"
 
 #include "getopt.h"
 
 #include <stdio.h>
+
+#include <unistd.h>
 
 static void usage(void) NORETURN;
 
@@ -72,52 +79,59 @@ int main(int argc, char **argv)
   r = make_poor_random(&sha_algorithm, NULL);
   dss_nist_gen(public.p, public.q, r, l);
 
-  mpz_out_str(stderr, 16, public.p);
-  printf("\n");
-  mpz_out_str(stderr, 16, public.q);
-  printf("\n");
+  debug_mpz(public.p);
+  debug("\n");
+  debug_mpz(public.q);
+  debug("\n");
 
   /* Sanity check. */
-  if (!mpz_probab_prime_p(q, 10))
+  if (!mpz_probab_prime_p(public.p, 10))
     {
-      fprintf(stderr, "p not a prime!\n");
+      werror("p not a prime!\n");
       return 1;
     }
 
-  if (!mpz_probab_prime_p(q, 10))
+  if (!mpz_probab_prime_p(public.q, 10))
     {
-      fprintf(stderr, "p not a prime!\n");
+      werror("q not a prime!\n");
       return 1;
     }
 
-  mpz_fdiv_r(t, p, q);
+  mpz_fdiv_r(t, public.p, public.q);
   if (mpz_cmp_ui(t, 1))
     {
-      fprintf(stderr, "q doesn't divide p-1 !\n");
+      werror("q doesn't divide p-1 !\n");
       return 1;
     }
 
   dss_find_generator(public.g, r, public.p, public.q);
 
   r = make_reasonably_random();
-  mpz_set(t, q);
+  mpz_set(t, public.q);
   mpz_sub_ui(t, t, 2);
   bignum_random(x, r, t);
 
   mpz_add_ui(x, x, 1);
-  
-  /* Now, output a private key spki structure. */
-  struct sexp *key =
-    sexp_l(2, sexp_z("private-key"),
-	   sexp_l(6, sexp_z("dss")
-		  sexp_l(2, sexp_z("p"), sexp_n(public.p), -1),
-		  sexp_l(2, sexp_z("q"), sexp_n(public.q), -1),
-		  sexp_l(2, sexp_z("g"), sexp_n(public.g), -1),
-		  sexp_l(2, sexp_z("y"), sexp_n(public.y), -1),
-		  sexp_l(2, sexp_z("p"), sexp_n(x), -1), -1), -2);
 
+  mpz_powm(public.y, public.g, x, public.p);
   
-  return 0;
+  {
+    /* Now, output a private key spki structure. */
+    struct abstract_write *output = make_blocking_write(STDOUT_FILENO);
+    
+    struct lsh_string *key = sexp_format
+      (sexp_l(2, sexp_z("private-key"),
+	      sexp_l(6, sexp_z("dss"),
+		     sexp_l(2, sexp_z("p"), sexp_n(public.p), -1),
+		     sexp_l(2, sexp_z("q"), sexp_n(public.q), -1),
+		     sexp_l(2, sexp_z("g"), sexp_n(public.g), -1),
+		     sexp_l(2, sexp_z("y"), sexp_n(public.y), -1),
+		     sexp_l(2, sexp_z("x"), sexp_n(x), -1), -1), -1),
+       SEXP_CANONICAL);
+
+    return LSH_FAILUREP(A_WRITE(output, key))
+      ? 1 : 0;
+  }
 }
 
   
