@@ -1,3 +1,22 @@
+2001-08-26  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/export-1-test: Don't use $srcdir for finding
+	lsh-export-key. 
+
+	* src/zlib.c (do_zlib): Don't print any message if Z_BUF_ERROR
+	happens with avail_in = 0.
+
+	* src/lshd.c (main_options): New experimental option --subsystems.
+	(parse_subsystem_list): New function.
+	(main_argp_parser): Handle --subsystems.
+	(main): Install a subsystems handler, if appropriate.
+
+	* src/server_session.c (shell_request): Deleted unused reaper
+	attribute. 
+	(lookup_subsystem): New function.
+	(do_spawn_subsystem): New function.
+	(make_subsystem_handler): New function.
+
 2001-08-21  Niels Möller  <nisse@ehand.com>
 
 	* src/client_userauth.c (make_client_publickey_auth): Initialize
@@ -94,7 +113,7 @@
 	* src/testsuite/Makefile.am (TS_SH): Added export-1-test.
 
 	* src/lsh-export-key.c (ssh2_print_command): Inherit command_2.
-	Donät use command_simple.
+	Don't use command_simple.
 
 2001-07-04  Niels Möller  <nisse@cuckoo.hack.org>
 
