@@ -93,6 +93,24 @@ do_command_simple_unimplemented(struct command_simple *s UNUSED,
 struct command_simple command_unimplemented =
 { { STATIC_HEADER, do_command_unimplemented}, do_command_simple_unimplemented};
 
+
+/* Fail if NULL. This commands returns its argument unchanged. Unless
+ * it is NULL, in which case it doesn't return at all, but instead
+ * returns an LSH_FAIL status to the mainloop. */
+
+static int
+do_command_die_on_null(struct command *s,
+		       struct lsh_object *x,
+		       struct command_continuation *c)
+{
+  return x ? COMMAND_RETURN(c, x) : LSH_FAIL | LSH_DIE;
+}
+
+struct command command_die_on_null =
+{ STATIC_HEADER, do_command_die_on_null};
+
+
+/* Collecting arguments */
 struct lsh_object *
 do_collect_1(struct command_simple *s, struct lsh_object *a)
 {

@@ -166,6 +166,8 @@ make_collect_state_3(struct collect_info_3 *info,
 extern struct command_simple command_unimplemented;
 #define COMMAND_UNIMPLEMENTED (&command_unimplemented.super.super)
 
+struct command command_die_on_null;
+
 /* The GABA_* macros are used by automatically generated evaluation code */
 
 struct command_continuation *
