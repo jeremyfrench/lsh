@@ -60,7 +60,7 @@
      (name accept_service_handler)
      (super packet_handler)
      (vars
-       (service simple int)
+       (service simple UINT32)
        (c object command_continuation)
        ;; Do we really need the exception handler here?
        (e object exception_handler)))
@@ -104,7 +104,7 @@ do_accept_service(struct packet_handler *c,
 }
 
 struct packet_handler *
-make_accept_service_handler(int service,
+make_accept_service_handler(UINT32 service,
 			    struct command_continuation *c,
 			    struct exception_handler *e)
 {
