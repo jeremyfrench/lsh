@@ -122,6 +122,7 @@ EXTRA_DIST = atoms.in process_atoms \
 	$(generated_sources) \
 	sexp_chars.in \
 	getopt.h getopt.c getopt1.c \
+	mempcpy.h strndup.h \
 	jpoll.h jpoll.c \
 	$(cvs_headers) $(dist_x_files) Makefile.am.in 
 
