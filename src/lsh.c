@@ -54,6 +54,8 @@
 #include "xalloc.h"
 
 #include "nettle/sexp.h"
+/* For struct spki_iterator */
+#include "spki/parse.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -179,7 +181,7 @@ DEFINE_COMMAND(options2service)
   COMMAND_RETURN(c, options->service);
 }
 
-/* Open hostkey database. By default, "~/.lsh/known_hosts". */
+/* Open hostkey database. By default, "~/.lsh/host-acls". */
 
 static struct spki_context *
 read_known_hosts(struct lsh_options *options)
@@ -188,7 +190,7 @@ read_known_hosts(struct lsh_options *options)
   const char *s;
   struct lsh_string *contents;
   int fd;
-  struct sexp_iterator i;
+  struct spki_iterator i;
   struct spki_context *context;
   const char *sexp_conv = getenv("SEXP_CONV");
   const char *args[] = { "sexp-conv", "-s", "canonical", NULL };
@@ -205,20 +207,24 @@ read_known_hosts(struct lsh_options *options)
       tmp = ssh_format("%lz/.lsh/host-acls", options->home);
       s = lsh_get_cstring(tmp);
       fd = open(s, O_RDONLY);
-      
-      if (fd < 0)
-	{
-	  lsh_string_free(tmp);
-	  tmp = ssh_format("%lz/.lsh/known_hosts", options->home);
-	  s = lsh_get_cstring(tmp);
-	  fd = open(lsh_get_cstring(tmp), O_RDONLY);
-	}
     }
 
   if (fd < 0)
     {
+      struct stat sbuf;
+      
       werror("Failed to open `%z' for reading %e\n", s, errno);
       lsh_string_free(tmp);
+
+      tmp = ssh_format("%lz/.lsh/known_hosts", options->home);
+      if (stat(lsh_get_cstring(tmp), &sbuf) == 0)
+	{
+	  werror("You have an old known-hosts file `%S'.\n"
+		 "To work with lsh-2.0, run the lsh-upgrade script,\n"
+		 "which will convert that to a new host-acls file.\n");
+	}
+      lsh_string_free(tmp);
+
       return context;
     }
 
@@ -240,11 +246,11 @@ read_known_hosts(struct lsh_options *options)
 
   /* We could use transport syntax instead. That would have the
    * advantage that we can read and process one entry at a time. */
-  if (!sexp_iterator_first(&i, contents->length, contents->data))
+  if (!spki_iterator_first(&i, contents->length, contents->data))
     werror("read_known_hosts: S-expression syntax error.\n");
     
   else
-    while (i.type != SEXP_END)
+    while (i.type != SPKI_TYPE_END_OF_EXPR)
       {
 	if (!spki_add_acl(context, &i))
 	  {
@@ -519,7 +525,7 @@ do_lsh_lookup(struct lookup_verifier *c,
   else
     {
       struct lsh_string *acl;
-      struct sexp_iterator i;
+      struct spki_iterator i;
       
       verbose("SPKI authorization failed.\n");
       if (!self->sloppy)
@@ -569,13 +575,13 @@ do_lsh_lookup(struct lookup_verifier *c,
 	    return NULL;
 	}
 
-      acl = lsh_sexp_format(0, "(%0s(%0s%l(%0s%s)))",
+      acl = lsh_sexp_format(0, "(%0s(%0s%l%l))",
 			    "acl", "entry",
 			    subject->key_length, subject->key,
-			    "tag", self->access->length, self->access->data);
+			    self->access->length, self->access->data);
       
       /* FIXME: Seems awkward to pick the acl apart again. */
-      if (!sexp_iterator_first(&i, acl->length, acl->data))
+      if (!spki_iterator_first(&i, acl->length, acl->data))
 	fatal("Internal error.\n");
       
       /* Remember this key. We don't want to ask again for key re-exchange */
