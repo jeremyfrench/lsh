@@ -1,3 +1,8 @@
+2002-01-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/scm/gaba.scm (make-class): Added FIXME:-comment about
+	offsetof. 
+
 2002-01-21  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/xalloc.h (NEW_VAR_OBJECT, CLONE_VAR_OBJECT,
