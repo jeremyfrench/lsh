@@ -233,6 +233,7 @@ int main(int argc, char **argv)
 
   int shell_flag = 1;
   int forward_gateway = 0;
+  int remote_forward = 0;
   
   int option;
 
@@ -386,9 +387,9 @@ int main(int argc, char **argv)
 						      : ssh_format("%lz", "127.0.0.1")),
 						     listen_port),
 				   target)->super);
+	    remote_forward = 1;
 	  }
 	  break;
-	  
 	case '?':
 	  usage();
 	}
@@ -483,6 +484,14 @@ int main(int argc, char **argv)
 				     &lsh_exit_code)),
 	  session_requests));
     }
+
+#if WITH_TCP_FORWARD
+  if (remote_forward)
+    object_queue_add_tail
+      (&actions,
+       &make_install_fix_channel_open_handler
+       (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip)->super);
+#endif
   
   if (object_queue_is_empty(&actions))
     werror("lsh: No actions given. Exiting.\n");
