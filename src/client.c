@@ -219,10 +219,9 @@ do_detach_cb(struct lsh_callback *c)
     {
       self->fd_flag = 1; /* Note */
       
-    if (self->channel_flag && self->fd_flag)
-      /* If the fd is closed already, asked to be called from the main loop */ 
-      io_callout(c, 0);
-
+      if (self->channel_flag && self->fd_flag)
+	/* If the fd is closed already, ask to be called from the main loop */ 
+	io_callout(c, 0);
     }
   else
     {
@@ -237,8 +236,7 @@ do_detach_cb(struct lsh_callback *c)
 	  break;
 	  
 	case 0:
-	  /* Detach, lsh doesn't actually use these fds but dup(2)s them */
-	  
+	  /* Detach */	  
 	  close(STDIN_FILENO); 
 	  close(STDOUT_FILENO); 
 	  close(STDERR_FILENO); 
@@ -251,11 +249,6 @@ do_detach_cb(struct lsh_callback *c)
 	  break;
 	  
 	default:
-	  /* It's a good idea to reset std* to blocking mode. */
-	  io_set_blocking(STDIN_FILENO);
-	  io_set_blocking(STDOUT_FILENO);
-	  io_set_blocking(STDERR_FILENO);
-	  
 	  exit(*self->exit_status);
 	}
     }
@@ -527,8 +520,6 @@ make_client_session(struct client_options *options);
 #define OPT_STDOUT 0x211
 #define OPT_STDERR 0x212
 
-#define OPT_FORK_STDIO 0x213
-
 #define OPT_SUBSYSTEM 0x214
 #define OPT_DETACH 0x215
 
@@ -562,10 +553,6 @@ init_client_options(struct client_options *self,
   self->stdin_file = NULL;
   self->stdout_file = NULL;
   self->stderr_file = NULL;
-
-  self->stdin_fork = 0;
-  self->stdout_fork = 0;
-  self->stderr_fork = 1;
 
   self->used_stdin = 0;
   self->used_pty = 0;
@@ -625,13 +612,6 @@ client_options[] =
   { "stderr", OPT_STDERR, "Filename", 0, "Redirect stderr", 0},
   { "no-stderr", OPT_STDERR | ARG_NOT, NULL, 0, "Redirect stderr to /dev/null", 0}, 
 
-  { "cvs-workaround", OPT_FORK_STDIO, "i?o?e?", OPTION_ARG_OPTIONAL,
-    "Avoid setting one or more of the stdio file descriptors into "
-    "non-blocking mode. If no argument is provided, the workaround is "
-    "applied to all three file descriptors. By default, the workaround "
-    "is applied to stderr only.", 0 },
-  { "no-cvs-workaround", OPT_FORK_STDIO | ARG_NOT, NULL, 0,
-    "Disable the cvs workaround.", 0 },
   { "detach", OPT_DETACH, NULL, 0, "Detach from terminal at session end.", 0},
   { "no-detach", OPT_DETACH | ARG_NOT, NULL, 0, "Do not detach session at end," 
     " wait for all open channels (default).", 0},
@@ -862,60 +842,6 @@ rebuild_command_line(unsigned argc, char **argv)
   return r;
 }
 
-static int
-fork_input(int in)
-{
-  /* pipe[0] for reading, pipe[1] for writing. */
-  int pipe[2];
-
-  if (!lsh_make_pipe(pipe))
-    return -1;
-
-  switch (fork())
-    {
-    case -1:
-      /* Error */
-      return -1;
-    case 0:
-      close(pipe[0]);
-      if (lsh_copy_file(in, pipe[1]))
-	_exit(EXIT_SUCCESS);
-      else
-	_exit(EXIT_FAILURE);
-    default:
-      /* Parent */
-      close(pipe[1]);
-      return pipe[0];
-    }
-}
-
-static int
-fork_output(int out)
-{
-  /* pipe[0] for reading, pipe[1] for writing. */
-  int pipe[2];
-
-  if (!lsh_make_pipe(pipe))
-    return -1;
-
-  switch (fork())
-    {
-    case -1:
-      /* Error */
-      return -1;
-    case 0:
-      close(pipe[1]);
-      if (lsh_copy_file(pipe[0], out))
-	_exit(EXIT_SUCCESS);
-      else
-	_exit(EXIT_FAILURE);
-    default:
-      /* Parent */
-      close(pipe[0]);
-      return pipe[1];
-    }
-}
-
 /* A callback that exits the process immediately. */
 DEFINE_ESCAPE(exit_callback, "Exit.")
 {
@@ -978,6 +904,10 @@ make_client_session(struct client_options *options)
   int in;
   int out;
   int err;
+  enum io_type in_type = IO_NORMAL;
+  enum io_type out_type = IO_NORMAL;
+  enum io_type err_type = IO_NORMAL;
+  
   int is_tty = 0;
   struct ssh_channel *session;
   
@@ -988,13 +918,15 @@ make_client_session(struct client_options *options)
 
   if (options->stdin_file)
     in = open(options->stdin_file, O_RDONLY);
+      
   else
     {
       if (options->used_stdin)
 	in = open("/dev/null", O_RDONLY);
       else 
 	{
-	  in = (options->stdin_fork ? fork_input : dup)(STDIN_FILENO);
+	  in = STDIN_FILENO;
+	  in_type = IO_STDIO;
 	  is_tty = isatty(STDIN_FILENO);
 	  
 	  options->used_stdin = 1;
@@ -1003,7 +935,7 @@ make_client_session(struct client_options *options)
 
   if (in < 0)
     {
-      werror("lsh: Can't dup/open stdin %e\n", errno);
+      werror("lsh: Can't open stdin %e\n", errno);
       return NULL;
     }
 
@@ -1038,14 +970,14 @@ make_client_session(struct client_options *options)
 
   if (options->stdout_file)
     out = open(options->stdout_file, O_WRONLY | O_CREAT, 0666);
-  else if (options->stdout_fork)
-    out = fork_output(STDOUT_FILENO);
   else
-    out = dup(STDOUT_FILENO);
-
+    {
+      out_type = IO_STDIO;
+      out = STDOUT_FILENO;
+    }
   if (out < 0)
     {
-      werror("lsh: Can't dup/open stdout %e\n", errno);
+      werror("lsh: Can't open stdout %e\n", errno);
       close(in);
       return NULL;
     }
@@ -1054,17 +986,14 @@ make_client_session(struct client_options *options)
   
   if (options->stderr_file)
     err = open(options->stderr_file, O_WRONLY | O_CREAT, 0666);
-  else if (options->stderr_fork)
-    err = fork_output(STDERR_FILENO);
   else
     {
-      err = dup(STDERR_FILENO);
-      set_error_nonblocking(STDERR_FILENO);
+      err_type = IO_STDIO;
+      err = STDERR_FILENO;
     }
-
   if (err < 0) 
     {
-      werror("lsh: Can't dup/open stderr!\n");
+      werror("lsh: Can't open stderr!\n");
       close(in);
       close(out);
       return NULL;
@@ -1077,13 +1006,12 @@ make_client_session(struct client_options *options)
   options->stdin_file = options->stdout_file = options->stderr_file = NULL;
 
   session = make_client_session_channel
-    (io_read(make_lsh_fd(in, "client stdin", options->handler),
+    (io_read(make_lsh_fd(in, in_type, "client stdin", options->handler),
 	     NULL, NULL),
-     io_write(make_lsh_fd(out, "client stdout", options->handler),
+     io_write(make_lsh_fd(out, out_type, "client stdout", options->handler),
 	      BLOCK_SIZE, 
-	      detach_cb
-	      ),
-     io_write(make_lsh_fd(err, "client stderr", options->handler),
+	      detach_cb),
+     io_write(make_lsh_fd(err, err_type, "client stderr", options->handler),
 	      BLOCK_SIZE, NULL),
      escape,
      WINDOW_SIZE,
@@ -1392,45 +1320,6 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
     CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
     CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
 
-    case OPT_FORK_STDIO:
-      if (options->not)
-	{
-	  options->not = 0;
-	case OPT_FORK_STDIO | ARG_NOT:
-	  options->stdin_fork = options->stdout_fork = options->stderr_fork = 0;
-	  break;
-	}
-      else if (!arg)
-	options->stdin_fork = options->stdout_fork = options->stderr_fork = 1;
-      else
-	{
-	  int i;
-
-	  options->stdin_fork = options->stdout_fork = options->stderr_fork = 0;
-
-	  for (i = 0; arg[i]; i++)
-	    switch(arg[i])
-	      {
-	      case 'i': case 'I':
-		options->stdin_fork = 1;
-		break;
-	      case 'o': case 'O':
-		options->stdout_fork = 1;
-		break;
-	      case 'e': case 'E':
-		options->stderr_fork = 1;
-		break;
-	      default:
-		argp_error(state, "The argument to --cvs-workaround should "
-			   "be one or more of the characters 'i' (stdin), "
-			   "'o' (stdout) and 'e' (stderr).");
-		goto loop_done;
-	      }
-	loop_done:
-          ;
-	}
-      break;
-		
     case 'n':
       options->not = !options->not;
       break;
