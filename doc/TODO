@@ -448,6 +448,3 @@ RANDOM_POLL_BACKGROUND.
 :   3. it tries to waitpid the process created in 1, but it's no longer
 :      the parent of that process, so waiting fails.
 
-The following lshg invocation crashes
-
-  lshg sture.lysator.liu.se:.lsh/captured_keys
