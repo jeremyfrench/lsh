@@ -1,3 +1,8 @@
+2002-12-11  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-writekey.c (process_private): If no encryption, dup the
+	input string.
+
 2002-12-04  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/dsa.c (do_dsa_sign): Use %0s, not %z, when formatting
