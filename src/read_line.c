@@ -55,7 +55,7 @@
 static uint32_t
 do_read_line(struct read_handler **h,
 	     uint32_t available,
-	     uint8_t *data /*, struct exception_handler *e */)
+	     uint8_t *data)
 {
   CAST(read_line, self, *h);
 
@@ -95,11 +95,12 @@ do_read_line(struct read_handler **h,
   tail = eol - data; /* Excludes the newline character */
   consumed = tail + 1; /* Includes newline character */
 
-  if ( (self->pos + consumed) > 255)
+  if ( (self->pos + consumed) > MAX_LINE)
     {
       /* Too long line */
       EXCEPTION_RAISE(self->e,
 		      make_protocol_exception(0, "Line too long."));
+      return available;
     }
 
   /* Ok, now we have a line. Copy it into the buffer. */
