@@ -161,8 +161,8 @@ struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
   connection->super.write = handle_connection;
 
   /* Initialize instance variables */
-  connection->client_version
-    = connection->server_version
+  connection->versions[CONNECTION_SERVER]
+    = connection->versions[CONNECTION_CLIENT]
     = connection->session_id = NULL;
 
   connection->resources = empty_resource_list();

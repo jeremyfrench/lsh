@@ -60,8 +60,9 @@ struct ssh_connection;
      (super abstract_write)
      (vars
        ; Sent and received version strings
-       (client_version string)
-       (server_version string)
+       ;;(client_version string)
+       ;;(server_version string)
+       (versions array (string) 2)
        (session_id string)
 
        ; Cleanup

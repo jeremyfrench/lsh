@@ -49,11 +49,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#ifdef HAVE_UTMP_H
+#if HAVE_UTMP_H
 #include <utmp.h>
 #endif
 
-#ifdef HAVE_UTMPX_H
+#if HAVE_UTMPX_H
 #include <utmpx.h>
 #endif
 
@@ -167,7 +167,7 @@ static int server_initiate(struct fd_callback **c,
 		     closure->random);
 
   
-  connection->server_version
+  connection->versions[CONNECTION_SERVER]
     = ssh_format("SSH-%lz-%lz %lz",
 #if WITH_SSH1_FALLBACK
 		 (closure->fallback
@@ -188,12 +188,12 @@ static int server_initiate(struct fd_callback **c,
     {
       connection->kexinits[CONNECTION_SERVER] = MAKE_KEXINIT(closure->init);      
       return A_WRITE(connection->raw,
-		     ssh_format("%lS\n", connection->server_version));
+		     ssh_format("%lS\n", connection->versions[CONNECTION_SERVER]));
     }
 #endif /* WITH_SSH1_FALLBACK */
   
   res = A_WRITE(connection->raw,
-		ssh_format("%lS\r\n", connection->server_version));
+		ssh_format("%lS\r\n", connection->versions[CONNECTION_SERVER]));
   if (LSH_CLOSEDP(res))
     return res;
 
@@ -262,11 +262,11 @@ static int do_line(struct line_handler **h,
 	      closure->connection
 	    );
 
-	  closure->connection->client_version
+	  closure->connection->versions[CONNECTION_CLIENT]
 	    = ssh_format("%ls", length, line);
 
 	  verbose("Client version: %pS\n",
-		  closure->connection->client_version);
+		  closure->connection->versions[CONNECTION_CLIENT]);
 	  
 	  /* FIXME: Cleanup properly. */
 	  KILL(closure);

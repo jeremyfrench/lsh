@@ -84,14 +84,14 @@ static int client_initiate(struct fd_callback **c,
 				   make_client_close_handler()),
 		     closure->random);
   
-  connection->client_version
+  connection->versions[CONNECTION_CLIENT]
     = ssh_format("SSH-%lz-%lz %lz",
 		 CLIENT_PROTOCOL_VERSION,
 		 SOFTWARE_CLIENT_VERSION,
 		 closure->id_comment);
   
   res = A_WRITE(connection->raw,
-		ssh_format("%lS\r\n", connection->client_version));
+		ssh_format("%lS\r\n", connection->versions[CONNECTION_CLIENT]));
   if (LSH_CLOSEDP(res))
     return res;
 
@@ -132,15 +132,15 @@ static int do_line(struct line_handler **h,
 	      closure->connection
 	      );
 	  
-	  closure->connection->server_version
+	  closure->connection->versions[CONNECTION_SERVER]
 	    = ssh_format("%ls", length, line);
 
 	  verbose("Client version: %ps\n"
 		  "Server version: %ps\n",
-		  closure->connection->client_version->length,
-		  closure->connection->client_version->data,
-		  closure->connection->server_version->length,
-		  closure->connection->server_version->data);
+		  closure->connection->versions[CONNECTION_CLIENT]->length,
+		  closure->connection->versions[CONNECTION_CLIENT]->data,
+		  closure->connection->versions[CONNECTION_SERVER]->length,
+		  closure->connection->versions[CONNECTION_SERVER]->data);
 	  
 	  /* FIXME: Cleanup properly. */
 	  KILL(closure);
