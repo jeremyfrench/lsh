@@ -21,6 +21,11 @@
 #ifndef _ARGP_H
 #define _ARGP_H
 
+#ifdef LSH
+/* Portability stuff */
+#include "argp-comp.h"
+#endif
+
 #include <stdio.h>
 #include <ctype.h>
 
@@ -53,6 +58,7 @@ typedef int error_t;
 #  define __PMT(args)	()
 # endif
 #endif
+
 
 #ifdef  __cplusplus
 extern "C" {
