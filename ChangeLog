@@ -1,3 +1,7 @@
+2004-09-22  Niels Möller  <niels@s3.kth.se>
+
+	* acinclude.m4 (LSH_CCPIC): Don't use -fpic on cygwin.
+
 2004-08-31  Niels Möller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_CCPIC): New macro.
