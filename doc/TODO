@@ -60,6 +60,9 @@ cleaned up a little.
 Consider adding "const" methods. One such method to use that for is
 ALIST_GET.
 
+Make sure that the first (self) argument to the method-like macros
+never have side effects.
+
 
 CHANNELS
 
