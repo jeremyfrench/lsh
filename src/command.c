@@ -28,6 +28,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
+
 #define GABA_DEFINE
 #include "command.h.x"
 #undef GABA_DEFINE
@@ -75,158 +77,129 @@ int do_call_simple_command(struct command *s,
   return COMMAND_RETURN(c, COMMAND_SIMPLE(self, arg));
 }
 
-/* Commands that need to collect some arguments before actually doing
- * anything. */
+
+/* Unimplemented command */
+static int
+do_command_unimplemented(struct command *s UNUSED,
+			 struct lsh_object *o UNUSED,
+			 struct command_continuation *c UNUSED)
+{ fatal("command.c: Unimplemented command.\n"); }
+
+static struct lsh_object *
+do_command_simple_unimplemented(struct command_simple *s UNUSED,
+				struct lsh_object *o UNUSED)
+{ fatal("command.c: Unimplemented simple command.\n"); }
+
+struct command_simple command_unimplemented =
+{ { STATIC_HEADER, do_command_unimplemented}, do_command_simple_unimplemented};
+
+static struct lsh_object *
+do_collect_1(struct command_simple *s, struct lsh_object *a)
+{
+  CAST(collect_info_1, self, s);
+  return self->f(self, a);
+}
 
 /* GABA:
    (class
-     (name collect_info_4)
+     (name collect_state_1)
+     (super command_simple)
      (vars
-       (f pointer function "struct lsh_object *"
-                  "struct lsh_object *" "struct lsh_object *"
-		  "struct lsh_object *" "struct lsh_object *")
-       ))
-*/
-
-/* GABA:
-   (class
-     (name collect_info_3)
-     (vars
-       (f method  "struct lsh_object *"
-                  "struct lsh_object *" "struct lsh_object *"
-		  "struct lsh_object *")
-       (next object collect_info_3)))
-*/
-
-/* GABA:
-   (class
-     (name collect_info_3)
-     (vars
-       (f method  "struct lsh_object *"
-                  "struct lsh_object *" "struct lsh_object *")
-       (next object collect_info_2)))
-*/
-   
-/* GABA:
-   (class
-     (name command_collect)
-     (inherit command_simple)
-     (vars
-       ;; Is called with the argument count (for sanity checks)
-       ;; followed by the arguments.
-       (f pointer function "struct lsh_object *" void)
-       ;; The number of additional arguments to collect before calling f.
-       (left . unsigned)))
-*/
-
-/* GABA:
-   (class
-     (name command_simple_1)
-     (inherit command_collect)
-     (vars
+       (info object collect_info_2)
        (a object lsh_object)))
 */
 
 /* GABA:
    (class
-     (name command_simple_2)
-     (inherit command_simple_0)
+     (name collect_state_2)
+     (super command_simple)
      (vars
+       (info object collect_info_3)
+       (a object lsh_object)
        (b object lsh_object)))
 */
 
 /* GABA:
    (class
-     (name command_collect_3)
-     (inherit command_collect_2)
+     (name collect_state_3)
+     (super command_simple)
      (vars
+       (info object collect_info_4)
+       (a object lsh_object)
+       (b object lsh_object)
        (c object lsh_object)))
 */
 
-static void init_command_collect(struct command_collect *self,
-				 unsigned left,
-				 void * f))(unsigned n, ...))
+static struct lsh_object *
+do_collect_2(struct command_simple *s,
+	     struct lsh_object *x)
 {
-  self->f = f;
-  self->left = left;
+  CAST(collect_state_1, self, s);
+  return self->info->f(self->info, self->a, x);
+}
 
+struct lsh_object *
+make_collect_state_1(struct collect_info_1 *info,
+		     struct lsh_object *a)
+{
+  NEW(collect_state_1, self);
+  self->info = info->next;
+  self->a = a;
+
+  self->super.call_simple = do_collect_2;
   self->super.super.call = do_call_simple_command;
+  
+  return &self->super.super.super;
 }
 
 static struct lsh_object *
-do_command_collect_3(struct command_simple *s,
-		     struct lsh_object *x)
+do_collect_3(struct command_simple *s,
+	     struct lsh_object *x)
 {
-  CAST(command_collect_3, self, s);
-  unsigned left = self->left - 1;
+  CAST(collect_state_2, self, s);
+  return self->info->f(self->info, self->a, self->b, x);
+}
+
+struct lsh_object *
+make_collect_state_2(struct collect_info_2 *info,
+		     struct lsh_object *a,
+		     struct lsh_object *b)
+{
+  NEW(collect_state_2, self);
+  self->info = info->next;
+  self->a = a;
+  self->b = b;
   
-  if (!left)
-    return self->f(3, self->super.a, self->b, x);
-  else
-    fatal("command.c: comand_collect_4 not implemented\n");
+  self->super.call_simple = do_collect_3;
+  self->super.super.call = do_call_simple_command;
+  
+  return &self->super.super.super;
 }
 
 static struct lsh_object *
-do_command_collect_2(struct command_simple *s,
-		     struct lsh_object *x)
+do_collect_4(struct command_simple *s,
+	     struct lsh_object *x)
 {
-  CAST(command_collect_2, self, s);
-  unsigned left = self->left - 1;
-  
-  if (!left)
-    return self->f(3, self->super.a, self->b, x);
-  else
-    {
-      NEW(command_collect_3, new);
-      init_command_simple(&new->super.super.super, self->f, self->left - 1);
-      new->super.a = self->a;
-      new->b = b;
-
-      new->super.super.super.call_simple = do_command_collect_3;
-
-      return (struct lsh_object *) new;
-    }
+  CAST(collect_state_3, self, s);
+  return self->info->f(self->info, self->a, self->b, self->c, x);
 }
 
-struct lsh_object *do_command_collect_1(struct command_simple *s,
-					struct lsh_object *x)
+struct lsh_object *
+make_collect_state_3(struct collect_info_3 *info,
+		     struct lsh_object *a,
+		     struct lsh_object *b,
+		     struct lsh_object *c)
 {
-  CAST(command_collect_1, self, s);
-  unsigned left = self->left - 1;
+  NEW(collect_state_3, self);
+  self->info = info->next;
+  self->a = a;
+  self->b = b;
+  self->c = c;
   
-  if (!left)
-    return self->f(2, self->a, x);
-  else
-    {
-      NEW(command_collect_2, new);
-      init_command_simple(&new->super.super, self->f, left);
-      new->super.a = self->a;
-      new->b = x;
-
-      new->super.super.call_simple = do_command_collect_2;
-      
-      return (struct lsh_object *) new;
-    }
-}
-
-struct lsh_object *do_command_collect(struct command_simple *s,
-				      struct lsh_object *x)
-{
-  CAST(command_collect, self, s);
-  unsigned left = self->left - 1;
-
-  if (!left)
-    return self->f(1, x);
-  else
-    {
-      NEW(command_collect_1, new);
-      init_command_collect(&new->super, self->f, left);
-      f->a = x;
-
-      new->super.call_simple = do_command_collect_1;
-
-      return (struct lsh_object *) new;
-    }
+  self->super.call_simple = do_collect_4;
+  self->super.super.call = do_call_simple_command;
+  
+  return &self->super.super.super;
 }
 
 /* Combinators */
@@ -243,7 +216,44 @@ do_simple_command_I(struct command_simple *ignored UNUSED,
 struct command_simple command_I =
 STATIC_COMMAND_SIMPLE(do_simple_command_I);
 
-static 
+/* ((K x) y) == x */
+
+/* Represents (K x) */
+/* GABA:
+   (class
+     (name command_K_1)
+     (super command_simple)
+     (vars
+       (x object lsh_object)))
+*/
+
+static struct lsh_object *
+do_simple_command_K_1(struct command_simple *s,
+		      struct lsh_object *ignored UNUSED)
+{
+  CAST(command_K_1, self, s);
+  return self->x;
+}
+
+struct command *make_command_K_1(struct lsh_object *x)
+{
+  NEW(command_K_1, res);
+  res->x = x;
+  res->super.super.call = do_call_simple_command;
+  res->super.call_simple = do_simple_command_K_1;
+
+  return &res->super.super;
+}
+
+static struct lsh_object *
+do_simple_command_K(struct command_simple *ignored UNUSED,
+		    struct lsh_object *a)
+{
+  return &make_command_K_1(a)->super;
+}
+
+struct command_simple command_K = STATIC_COMMAND_SIMPLE(do_simple_command_K);
+
 /* ((S f) g)x == (f x)(g x) */
 
 /* Continuation called after evaluating (f x) */
@@ -312,6 +322,24 @@ struct command *make_command_S_2(struct command *f,
   return &res->super.super;
 }
 
+static struct lsh_object *collect_S_2(struct collect_info_2 *info,
+				      struct lsh_object *f,
+				      struct lsh_object *g)
+{
+  CAST_SUBTYPE(command, cf, f);
+  CAST_SUBTYPE(command, cg, g);
+  assert(!info);
+  
+  return &make_command_S_2(cf, cg)->super;
+}
+
+struct collect_info_2 collect_info_S_2 =
+STATIC_COLLECT_2_FINAL(collect_S_2);
+
+struct collect_info_1 command_S =
+STATIC_COLLECT_1(&collect_info_S_2);
+
+#if 0
 /* Represents (S f) */
 /* GABA:
    (class
@@ -356,52 +384,8 @@ struct lsh_object *gaba_apply_S_1(struct lsh_object *f)
   CAST_SUBTYPE(command, cf, f);
   return &make_command_S_1(cf)->super;
 }
-  
-struct lsh_object *gaba_apply_S_2(struct lsh_object *f,
-				  struct lsh_object *g)
-{
-  CAST_SUBTYPE(command, cf, f);
-  CAST_SUBTYPE(command, cg, g);
-  return &make_command_S_2(cf, cg)->super;
-}
-
-/* ((K x) y) == x */
-
-/* Represents (K x) */
-/* GABA:
-   (class
-     (name command_K_1)
-     (super command_simple)
-     (vars
-       (x object lsh_object)))
-*/
-
-static struct lsh_object *
-do_simple_command_K_1(struct command_simple *s,
-		      struct lsh_object *ignored UNUSED)
-{
-  CAST(command_K_1, self, s);
-  return self->x;
-}
-
-struct command *make_command_K_1(struct lsh_object *x)
-{
-  NEW(command_K_1, res);
-  res->x = x;
-  res->super.super.call = do_call_simple_command;
-  res->super.call_simple = do_simple_command_K_1;
-
-  return &res->super.super;
-}
-
-static struct lsh_object *
-do_simple_command_K(struct command_simple *ignored UNUSED,
-		    struct lsh_object *a)
-{
-  return &make_command_K_1(a)->super;
-}
-
-struct command_simple command_K = STATIC_COMMAND_SIMPLE(do_simple_command_K);
+#endif
+#if 0
 
 /* ((B f) g) x == (f (g x)) */
 
@@ -484,20 +468,6 @@ do_simple_command_B(struct command_simple *ignored UNUSED,
 
 struct command_simple command_B = STATIC_COMMAND_SIMPLE(do_simple_command_B);
 
-/* Unimplemented command */
-static int
-do_command_unimplemented(struct command *s UNUSED,
-			 struct lsh_object *o UNUSED,
-			 struct command_continuation *c UNUSED)
-{ fatal("command.c: Unimplemented command.\n"); }
-
-static struct lsh_object *
-do_command_simple_unimplemented(struct command_simple *s UNUSED,
-				struct lsh_object *o UNUSED)
-{ fatal("command.c: Unimplemented simple command.\n"); }
-
-struct command_simple command_unimplemented =
-{ { STATIC_HEADER, do_command_unimplemented}, do_command_simple_unimplemented};
 
 /* Returned by listen */
 /* GABA:
@@ -584,7 +554,7 @@ struct command *make_listen_command(struct io_backend *backend,
 
   return &self->super;
 }
-
+#endif
 #if 0
 /* xxCLASS:
    (class
