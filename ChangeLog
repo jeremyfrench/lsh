@@ -1,3 +1,24 @@
+2004-10-05  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/inetd-test: Start lshd with --daemon --no-syslog.
+	Note that this test is not yet enabled, and inetd mode not working.
+
+	* src/parse.c (parse_utf8): Keep track of the length of invalid
+	sequences. Moved the check for overlong sequences, not it's done
+	after the complete sequence is processed.
+
+	* src/charset.c (low_utf8_to_local): If utf8_tolerant is set,
+	replace invalid utf8 sequences with '?'. Used mainly by the
+	testsuite. 
+
+	* src/charset.h (enum utf8_flag): New flag utf8_tolerant.
+
+	* src/testsuite/utf8-test.c: New test program.
+	* src/testsuite/Makefile.am (TS_PROGS): Added utf8-test.
+	* src/testsuite/UTF-8-test.txt: Markus Kuhn's utf8 testfile.
+
+	* src/testsuite/functions.sh: Added -q to LSHD_FLAGS again.
+
 2004-10-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/daemon.c (daemon_started_by_inetd): More debug output.
