@@ -347,7 +347,7 @@ do_client_exc_userauth(struct exception_handler *s,
 {
   CAST(client_exc_userauth, self, s);
 
-  if ( (e->type & EXC_USERAUTH) 
+  if ( (e->type == EXC_USERAUTH) 
        && (self->state->current < LIST_LENGTH(&self->state->userauth->methods)))
     {
       CAST_SUBTYPE(client_userauth_method, method,
