@@ -1,3 +1,9 @@
+NEWS for the 1999-04-25 snapshot:
+
+	Fixed a few bugs in pty and eof handling. Should now work
+	about as well as the 03-17 snapshot. Also removed most old
+	#if:ed out code.
+
 NEWS for the 1999-04-20 snapshot:
 
 	Internal reorganization. Implemented the "control language".

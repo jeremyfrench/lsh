@@ -1,3 +1,33 @@
+Sun Apr 25 15:47:13 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel.c, src/channel.h, src/client.c, src/client.h,
+ 	src/client_pty.c, src/client_pty.c, src/command.h,
+ 	src/connection.c, src/keyexchange.c, src/lsh.c, src/lshd.c,
+ 	src/queue.c, src/resource.c, src/server.h, src/server_password.c,
+ 	src/server_pty.h, src/server_session.c, src/service.c,
+ 	src/service.h, src/session.c, src/tcpforward.c,
+ 	src/write_buffer.c, src/zlib.c: Removed old #if:ed out code.
+
+	* src/server_session.c (do_close): Return a status code, rather
+	than void.
+
+	* src/lshd.c (main): Added pty support.
+
+	* src/client_pty.c (make_pty_request): Bugfix: Select raw mode.
+
+	* src/client.c (do_client_session_eof): Renamed the
+	close_client_session function.
+	(do_client_session_close): New function, to set the PENDING_CLOSED
+	flag when the session is closed.
+	(make_client_session): Install a close method.
+
+	* src/channel.h (ssh_channel): Let the close method return a
+	status value.
+	* src/channel.c (channel_process_status): Moved processing of
+	LSH_CHANNEL_PENDING_CLOSE after LSH_CHANNEL_FINISHED. This way, it
+	is possible for the channels close-callback to return
+	LSH_CHANNEL_PENDING_CLOSE. 
+
 Tue Apr 20 00:00:58 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/resource.c (do_kill_all): Bugfix (use CAST_SUBTYPE rather
