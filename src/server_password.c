@@ -79,7 +79,7 @@ do_authenticate(struct userauth *s,
       if ( (password = parse_string_copy(args))
 	   && parse_eod(args))
 	{
-	  struct unix_user *user;
+	  struct user *user;
 
 	  password = utf8_to_local(password, 1, 1);
 
@@ -102,7 +102,7 @@ do_authenticate(struct userauth *s,
 	      return;
 	    }
 
-	  if (verify_password(user, password, 1))
+	  if (USER_VERIFY_PASSWORD(user, password, 1))
 	    {
 	      COMMAND_RETURN(c, user);
 	      return;
