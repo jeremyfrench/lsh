@@ -1,3 +1,7 @@
+2002-06-27  Pontus Sköld  <Pontus.Skold@dis.uu.se>
+
+	* str_utils.c (lsftp_s_strtok): Don't use strndup.
+
 2002-06-27  Pontus Sköld  <pont@soua.net>
 
 	* commands.h: Include gnu_stuff.h to get declaration for

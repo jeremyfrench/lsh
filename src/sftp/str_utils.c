@@ -162,12 +162,12 @@ lsftp_s_strtok(const char* s, const char* sep,
 
   tend = lsftp_s_skipn( s, sep );    /* Find the first separator in our new s (or it's end) */
  
-  scopy = strndup(s, tend-s); /* Put the token in store */
+  scopy = strdup(s ); /* Put the token in store */
 
   if( !scopy )
     return NULL;
 
-  scopy[tend-s] = 0;                /* Make sure it is null-terminated */
+  scopy[tend-s] = 0;                /* Make sure it is null-terminated at the right place */
 
   *store = scopy;
   return tend;                 /* Return a pointer to where we haven't yet looked */
