@@ -146,18 +146,9 @@ do_tcpip_eof(struct ssh_channel *s)
 {
   CAST(tcpip_channel, self, s);
 
-  /* Tell the local peer that there's no more data.
-   * 1 is SHUT_WR.  */
-  if (shutdown (self->socket->fd, 1) < 0)
+  if (shutdown (self->socket->fd, SHUT_WR) < 0)
     werror("do_tcpip_eof, shutdown failed, (errno = %i): %z\n",
 	   errno, STRERROR(errno));
-
-#if 0
-  /* Moved to channel.c:channel_eof_handler. */
-  if ( (s->flags & CHANNEL_SENT_EOF)
-       && (s->flags & CHANNEL_CLOSE_AT_EOF))
-    channel_close(s);
-#endif
 }
 
 /* NOTE: Adds the socket to the channel's resource list */
