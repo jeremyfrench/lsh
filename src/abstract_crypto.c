@@ -160,7 +160,10 @@ crypt_string_unpad(struct crypto_instance *c,
   pad = out->data[out->length - 1];
 
   if ( (pad > 0) && (pad <= c->block_size) )
-    return out;
+    {
+      out->length -= pad;
+      return out;
+    }
   else
     {
       lsh_string_free(out);
