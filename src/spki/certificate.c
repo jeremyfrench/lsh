@@ -545,7 +545,7 @@ unsigned
 spki_acl_format(const struct spki_5_tuple_list *list,
 		struct nettle_buffer *buffer)
 {
-  unsigned done = sexp_format(buffer, "%0l", "(3:acl");
+  unsigned done = sexp_format(buffer, "%(acl");
   if (!done)
     return 0;
 
@@ -559,7 +559,7 @@ spki_acl_format(const struct spki_5_tuple_list *list,
       assert(!acl->issuer);
       assert(acl->subject);
       
-      length = sexp_format(buffer, "%0l", "(5:entry");
+      length = sexp_format(buffer, "%(entry");
       if (length)
 	done += length;
       else
@@ -584,6 +584,24 @@ spki_acl_format(const struct spki_5_tuple_list *list,
 	    return 0;
 	}
 
+      length = sexp_format(buffer, "%(tag");
+      if (length)
+	done += length;
+      else
+	return 0;
+      
+      length = spki_tag_format(acl->tag, buffer);
+      if (length)
+	done += length;
+      else
+	return 0;
+
+      length = sexp_format(buffer, "%)");
+      if (length)
+	done += length;
+      else
+	return 0;
+      
       if (acl->flags & (SPKI_NOT_BEFORE | SPKI_NOT_AFTER))
 	{
 	  length = format_valid(acl, buffer);
@@ -593,11 +611,11 @@ spki_acl_format(const struct spki_5_tuple_list *list,
 	    return 0;
 	}
 
-      if (sexp_format(buffer, "%l", 1, ")"))
+      if (sexp_format(buffer, "%)"))
 	done++;
       else return 0;
     }
-  return sexp_format(buffer, "%l", 1, ")") ? done + 1 : 0;
+  return sexp_format(buffer, "%)") ? done + 1 : 0;
 }
 
 
@@ -788,6 +806,7 @@ spki_parse_sequence(struct spki_acl_db *db,
 	    assert(cert_to_verify);
 	    
 	    *subject = cert->subject;
+	    issuer = cert->issuer;
 	    break;
 	  }
 	case SPKI_TYPE_PUBLIC_KEY:
@@ -815,8 +834,11 @@ spki_parse_sequence(struct spki_acl_db *db,
 	  {
 	    struct spki_hash_value hash;
 	    struct spki_principal *principal;
+
+	    assert(issuer);
 	    
-	    if (spki_parse_hash(i, &hash)
+	    if (spki_parse_type(i) == SPKI_TYPE_HASH
+		&& spki_parse_hash(i, &hash)
 		&& spki_hash_verify(&hash, cert_length, cert_to_verify)
 		&& spki_parse_principal(db, i, &principal)
 		&& principal == spki_principal_normalize(issuer)
