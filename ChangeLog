@@ -1,3 +1,8 @@
+2003-05-20  Niels Möller  <niels@s3.kth.se>
+
+	* configure.ac: If seteuid is not available, but setresuid is,
+	let config.h #define seteuid in terms of setresuid.
+
 2003-05-19  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/unix_user.c (do_read_file): Set the process gid, and reset
