@@ -577,19 +577,23 @@ make_lsh_login(struct lsh_options *options,
   struct client_userauth_method *password
     = make_client_password_auth(options->super.tty);
 
+  struct client_userauth_method *kbdinteract
+    = make_client_kbdinteract_auth(options->super.tty);
+  
   /* FIXME: Perhaps we should try "none" only when using SRP. */
   struct client_userauth_method *none
     = make_client_none_auth();
 
   struct object_list *methods;
   if (LIST_LENGTH(keys))
-    methods = make_object_list(3,
+    methods = make_object_list(4,
 			       none,
 			       make_client_publickey_auth(keys),
 			       password,
+			       kbdinteract,
 			       -1);
   else
-    methods = make_object_list(2, none, password, -1);
+    methods = make_object_list(3, none, password, kbdinteract, -1);
   
   return make_client_userauth
     (ssh_format("%lz", options->super.user),
