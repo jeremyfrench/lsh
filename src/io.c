@@ -1338,9 +1338,8 @@ handle_nonblock_error(const char *msg)
   /* On BSD, trying to set /dev/null in nonblocking mode fails with
    * errno 19, ENODEV. We have to ignore that.
    *
-   * FreeBSD 5 seem to have a similar problem, sometimes returning
-   * ENOTTY. Not sure for what kind of fd:s that happen, though. The
-   * choice of errno code seems pretty odd to me.
+   * And on FreeBSD 5, the error code is changed to ENOTTY, for the
+   * same problem.
    *
    * For now, still display a warning message, to keep track of when
    * and where it occurs.
