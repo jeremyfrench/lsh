@@ -1,5 +1,9 @@
 2003-06-04  Niels Möller  <niels@s3.kth.se>
 
+	* src/testsuite/lsh-encrypted-key-test: Use printf instead of echo
+	in the askpass helper program. There should be no trailing newline
+	character. 
+
 	* src/lsh-krb-checkpw.c: Include <string.h>.
 
 	* src/unix_interact.c (unix_read_password): The askpass code
