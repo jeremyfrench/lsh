@@ -1,3 +1,9 @@
+1999-06-12  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Bump version to lsh-0.1.1
+
+	* src/lsh.c (main): Reset the tty mode before return.
+
 1999-06-12    <nisse@cuckoo.localdomain>
 
 	* src/lsh_keygen.c (main): Use %xn rather than %hn for debug().
