@@ -1,0 +1,18 @@
+#! /bin/sh
+
+SSH_CONV=`PATH=$PATH:. \type -path lsh-decode-key`
+
+if [ -z $SSH_CONV ] ; then
+    echo "Can't find the lsh-decode-key program"
+    exit 1
+fi
+
+awk 'BEGIN { state = 0; }
+     state == 0 && /^---- BEGIN SSH2 PUBLIC KEY/ { state = 1; next; }
+     state == 1 && $0 ~ /^---- END SSH2 PUBLIC KEY/ { state = 2 }
+     state == 1 && $0 !~ /:/ { print }
+     state == 2 { next }' \
+  | $SSH_CONV -b
+
+     
+     
