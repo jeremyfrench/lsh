@@ -1,6 +1,57 @@
+2002-11-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* testsuite/lookup-acl-test.c (test_main): Updated for new acl
+	syntax. 
+	* testsuite/read-acl-test.c (test_main): Likewise.
+
+	* testsuite/read-cert-test.c (test_main): Need to initialize the
+	cert. 
+
+	* tag.c (list_format, spki_tag_format): New functions.
+
+	* certificate.c (spki_acl_clear): New function.
+	(spki_principal_add_keyspki_principal_add_md5,
+	spki_principal_add_sha1): Initialize alias field. 
+	(HASH_MATCH): New macro.
+	(spki_principal_fix_aliases): New function.
+	(spki_principal_by_key): Setup alias pointers if we add a key for
+	which a hash is already known.
+	(spki_principal_free_chain): New function.
+	(spki_5_tuple_init): New function.
+	(spki_5_tuple_fix_aliases): New function.
+	(spki_acl_parse): Call spki_5_tuple_fix_aliases before returning.
+	(format_valid, spki_acl_format): New functions.
+	(spki_process_sequence_no_signatures): Bug fix in looping over the
+	sequence. Call spki_5_tuple_fix_aliases before returning.
+	(spki_date_since_ever): Represent a time far ago.
+	(spki_date_for_ever): Represent a time far into the future.
+
+	* certificate.h (struct spki_principal): New field, alias.
+	(spki_date_since_ever, spki_date_for_ever): New constant globals. 
+	(SPKI_DATE_CMP): New macro.
+
+	* Makefile.am (libspki_a_SOURCES): Added reduce.c.
+
+	* reduce.c: New file.
+	(spki_5_tuple_reduce): New function.
+
+	* parse.c (spki_iterator_first_sexp): New function, an alternative
+	initializer.
+	(spki_parse_acl_entry): Deleted initialization, the caller should
+	initialize the 5-tuple. Updated the syntax to include a real
+	subject expression.
+	(spki_parse_cert): Deleted initialization, the caller should
+	initialize the 5-tuple. Fixed syntax check of subject expressions. 
+
 2002-11-27  Niels Möller  <niels@s3.kth.se>
 
 	* index.html: New file.
+
+2002-11-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* tag.c (enum spki_tag_type): Reordered types, ordered from more
+	inclusive to less inclusive.
+	(spki_tag_intersect): New function.
 
 2002-11-22  Niels Möller  <niels@s3.kth.se>
 
@@ -50,6 +101,24 @@
 	Also reordered functions, putting operations on strings and lists
 	first. 
 
+2002-11-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* testsuite/tag-test.c (test_main): Added more tests.
+
+	* tag.c (struct spki_tag, struct spki_cons, struct spki_string):
+	New structs, used for representing a tag. Strings and tags are
+	reference counted. Added a set of contructors and book-keeping
+	functions. 
+	(enum spki_range_type): New enum.
+	(spki_tag_classify): An list must start with a string.
+	(spki_tag_compile): New function.
+	(spki_tag_release): New function.
+
+	* tag.c (set_includes): Fixed recovery if matching fails in the
+	middle of one of the elements.
+	(spki_tag_includes): For SPKI_TAG_ANY, advance past the (*)
+	expression.
+
 2002-11-21  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/testutils.h: Include tag.h.
@@ -57,6 +126,21 @@
 	* testsuite/Makefile.am (TS_PROGS): Added tag-test.
 
 	* testsuite/tag-test.c: Test cases for operations on tags.
+
+2002-11-21  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* tag.c (tag_magic): Deleted function.
+	(spki_tag_classify): New function.
+	(spki_tag_intersect): Started work on intersections, far from
+	finished. 
+
+2002-11-20  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* certificate.c (spki_process_sequence_no_signatures): Process
+	public-key expressions.
+
+	* parse.c (spki_parse_prevexpr): Renamed and made non-static (was
+	spki_last_expression). 
 
 2002-11-19  Niels Möller  <nisse@cuckoo.hack.org>
 
