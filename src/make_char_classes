@@ -287,21 +287,28 @@
   (let* ((classes (prepare-input input))
 	 (roots (map cdr classes)))
     (partition! roots)
+
+    (write-string "#ifdef CHAR_CLASSES_TABLE\n")
+    (write-string "int CHAR_CLASSES_TABLE[] =\n")
+
     (let ((leafs (index-leafs! roots)))
       (werror "~s disjunct classes found.\n" (length leafs))
-      (format #t "int char_classes[] = {\n  ~a\n};\n\n"
+      (format #t
+	      "{\n  ~a\n};\n"
 	      (implode ",\n  "
 		       (map (lambda (row)
 			      (implode ", " (map bit->mask
 						 (vector->list row))))
 			    (vector->list (vector-split (build-char-table leafs)
 							32))))))
+    (write-string "#else /* !CHAR_CLASSES_TABLE */\n")
     (for-each (lambda (class)
 		(format #t "#define CHAR_~a (~a)\n"
 			(car class)
 			(implode " | " (map bit->mask (build-flags (cdr class))))))
 	      classes)
-    (format #t "#define CHAR_other 1\n")))  
+    (write-string "#define CHAR_other 1\n")
+    (write-string "#endif /* !CHAR_CLASSES_TABLE */\n")))
 
 (define test-2-input
   '((lower . "abcdefghijklmnopqrstuvwxyz")
