@@ -52,7 +52,7 @@ if test -f $srcdir/../lsh.c; then
   
   transport_prog="$bindir/lshg"
   before_opts="--subsystem=sftp"
-  after_opts="-G"
+  after_opts=""
 
   # Now, make sure these are included properly when compiling.
  
