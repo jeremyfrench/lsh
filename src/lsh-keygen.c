@@ -57,11 +57,14 @@ const char *argp_program_version
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
+#define OPT_SERVER 0x200
+
 /* GABA:
    (class
      (name lsh_keygen_options)
      (vars
        (style . sexp_argp_state)
+       (server . int)
        ; 'd' means dsa, 'r' rsa
        (algorithm . int)
        (level . int)))
@@ -72,6 +75,7 @@ make_lsh_keygen_options(void)
 {
   NEW(lsh_keygen_options, self);
   self->style = SEXP_TRANSPORT;
+  self->server = 0;
   self->level = -1;
   self->algorithm = 'd';
   return self;
@@ -83,6 +87,7 @@ main_options[] =
   /* Name, key, arg-name, flags, doc, group */
   { "algorithm", 'a', "Algorithm", 0, "DSA or RSA. "
     "Default is to generate DSA keys", 0 },
+  { "server", OPT_SERVER, NULL, 0, "Use the server's seed-file", 0 },
   { "nist-level", 'l', "Security level", 0, "For DSA keys, this is the "
     "NIST security level: Level 0 uses 512-bit primes, level 8 uses "
     "1024 bit primes, and the default is 8. For RSA keys, it's the "
@@ -162,7 +167,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		   "RSA and DSA.");
       
       break;
-      
+    case OPT_SERVER:
+      self->server = 1;
+      break;
     }
   return 0;
 }
@@ -179,20 +186,6 @@ main_argp =
   NULL, NULL
 };
 
-#if 0
-static void
-do_lsh_keygen_handler(struct exception_handler *s UNUSED,
-		      const struct exception *e)
-{
-  werror("lsh-keygen: %z\n", e->msg);
-
-  exit(EXIT_FAILURE);
-}
-
-static struct exception_handler handler =
-STATIC_EXCEPTION_HANDLER(do_lsh_keygen_handler, NULL);
-#endif
-
 int
 main(int argc, char **argv)
 {
@@ -207,7 +200,10 @@ main(int argc, char **argv)
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
-  r = make_user_random(getenv("HOME"));
+  r = (options->server
+       ? make_system_random()
+       : make_user_random(getenv("HOME")));
+
   if (!r)
     {
       werror("Failed to initialize randomness generator.\n");
