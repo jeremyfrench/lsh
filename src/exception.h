@@ -136,12 +136,6 @@ void exception_raise(struct exception_handler *e,
 #define EXC_PAUSE_CONNECTION 0x100003
 #define EXC_PAUSE_START_CONNECTION 0x100004
 
-#define EXC_RANDOMNESS 0x200000
-#define EXC_RANDOMNESS_LOW_ENTROPY 0x200001
-
-/* Application specific exceptions */
-#define EXC_APP 0x400000
-
 #define EXC_ALL (~0)
 
 extern struct exception_handler default_exception_handler;
