@@ -36,17 +36,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-static void *
-spki_realloc(struct spki_acl_db *db UNUSED, void *p, unsigned size)
-{
-  return realloc(p, size);
-}
-
 void
 spki_acl_init(struct spki_acl_db *db)
 {
-  db->realloc = spki_realloc;
+  db->realloc_ctx = NULL;
+  db->realloc = nettle_realloc;
   db->first_principal = NULL;
   db->first_acl = NULL;
 }
@@ -251,49 +245,32 @@ spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i)
 /* Iterating through the acls that delegate the requested authorization. */
 static const struct spki_5_tuple *
 acl_by_auth(const struct spki_5_tuple *acl,
-	    unsigned authorization_length,
-	    const uint8_t *authorization)
+	    struct spki_tag *request)
 {
   for (; acl; acl = acl->next)
-    {
-      struct sexp_iterator delegated;
-      struct sexp_iterator request;
+    if (spki_tag_includes(acl->tag, request))
+      return acl;
 
-      if (!sexp_iterator_first(&delegated, acl->tag_length, acl->tag))
-	/* If syntax errors weren't detected when the acl was parsed,
-	 * somthing is very wrong. */
-	abort();
-      if (!sexp_iterator_first(&request, authorization_length, authorization))
-	return NULL;
-      
-      if (spki_tag_includes(&delegated, &request))
-	{
-	  assert(delegated.type == SEXP_END);
-	  return (request.type == SEXP_END) ? acl: NULL;
-	}
-    }
   return NULL;
 }
 
 const struct spki_5_tuple *
 spki_acl_by_authorization_next(struct spki_acl_db *db,
 			       const struct spki_5_tuple *acl,
-			       unsigned authorization_length,
-			       const uint8_t *authorization)
+			       struct spki_tag *request)
 {
   (void) db;
   
   return acl
-    ? acl_by_auth(acl->next, authorization_length, authorization)
+    ? acl_by_auth(acl->next, request)
     : NULL;
 }
 
 const struct spki_5_tuple *
 spki_acl_by_authorization_first(struct spki_acl_db *db,
-				unsigned authorization_length,
-				uint8_t *authorization)
+				struct spki_tag *request)
 {
-  return acl_by_auth(db->first_acl, authorization_length, authorization);
+  return acl_by_auth(db->first_acl, request);
 }
 
 
@@ -305,8 +282,8 @@ spki_5_tuple_free_chain(struct spki_acl_db *db,
   while (chain)
     {
       struct spki_5_tuple *next = chain->next;
-      if (chain->tag)
-	SPKI_FREE(db, chain->tag);
+      spki_tag_release(db->realloc_ctx, db->realloc, chain->tag);
+      
       SPKI_FREE(db, chain);
 
       chain = next;
