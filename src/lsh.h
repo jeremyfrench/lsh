@@ -103,6 +103,8 @@ struct lsh_string
 #if DEBUG_ALLOC
   struct lsh_string_header header;
 #endif
+  /* Attached to read packets. Used only for generating proper
+     SSH_MSG_UNIMPLEMENTED replies. */
   uint32_t sequence_number;
   /* NOTE: The allocated size may be larger than the string length. */
   uint32_t length; 
