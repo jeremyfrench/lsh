@@ -1,12 +1,13 @@
-/* zlib.h
+/* abstract_compress.c
  *
- * Processor to compress packets using zlib
- *
- * $Id$ */
+ * interface to compression algorithms...
+ * 
+ * $Id$
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998 Balazs Scheidler, Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -23,17 +24,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#ifndef LSH_ZLIB_H_INCLUDED
-#define LSH_ZLIB_H_INCLUDED
+#include "abstract_compress.h"
 
-/* The input to the compressor should be a packet with payload only. */
-struct zlib_processor
-{
-  struct abstract_write_pipe c;
-  z_stream state;
-}
-
-struct packet_processor *make_zlib_processor(packet_processor *continuation,
-					     level);
-
-#endif /* LSH_ZLIB_H_INCLUDED */
+#define CLASS_DEFINE
+#include "abstract_compress.h.x"
+#undef CLASS_DEFINE
