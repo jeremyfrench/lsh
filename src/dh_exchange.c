@@ -83,6 +83,7 @@ make_dh(struct abstract_group *G, struct hash_algorithm *H,
   return res;
   
 }
+
 struct dh_method *
 make_dh1(struct randomness *r)
 {
