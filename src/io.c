@@ -1074,16 +1074,14 @@ address_info2sockaddr(socklen_t *length,
 
       *length = sizeof(*addr);
       addr->sin_port = htons(a->port);
+
+      /* Use IPv4 only */
+      addr->sin_family = AF_INET;
     
       if (!host)
-	{
-	  /* Use INADDR_ANY (and IPv4 only) */
+	/* Any interface */
+	addr->sin_addr.s_addr = INADDR_ANY;
 
-	  addr->sin_family = AF_INET;
-	  addr->sin_addr.s_addr = INADDR_ANY;
-
-	  return (struct sockaddr *) addr;
-	}
       else
 	{
 	  /* First check for numerical ip-number */
@@ -1113,8 +1111,8 @@ address_info2sockaddr(socklen_t *length,
 
 	      memcpy(&addr->sin_addr, hp->h_addr, hp->h_length);
 	    }
-	  return (struct sockaddr *) addr;
 	}
+      return (struct sockaddr *) addr;
     }
 #endif /* !HAVE_GETADDRINFO */  
 }
