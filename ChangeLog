@@ -1,3 +1,23 @@
+Wed Apr 14 00:32:34 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io_commands.c (do_connect_continue): Check for fd < 0, and
+	in this case, invoke the continuation with a NULL value.
+
+	* src/io.c (connect_callback): Check socket error status, and
+	invoke th FD_CALLBACK with -1 as argument if the connection
+	failed.
+
+	* src/resource.c, src/resource.h: Use the object_queue struct.
+	Deleted struct resource_node, and associated allocation and gc
+	functions.  
+
+	* src/queue.c (object_queue_add_head): New function.
+	(object_queue_add_tail): Likewise
+	(object_queue_remove_head): Likewise
+	(object_queue_remove_tail): Likewise
+
+	* src/queue.h (object_queue): New struct. 
+
 Tue Apr 13 21:24:08 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_pty.c (pty_grantpt_uid): Fixed pid/uid typo (Noted by
