@@ -1,3 +1,8 @@
+2003-01-16  Niels Möller  <niels@s3.kth.se>
+
+	* Makefile.am (libspki_a_SOURCES): Added header files, to get them
+	included in the dist.
+
 2003-01-14  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/Makefile.am (EXTRA_DIST): Fixed file list. Also
