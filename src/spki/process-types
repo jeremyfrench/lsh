@@ -67,9 +67,7 @@ case $1 in
 	;;
     names)
         header
-	echo 'static const struct spki_rassoc'
-	echo '  { unsigned length; const uint8_t *name; }'
-	echo 'spki_type_names[] = {'
+	echo '{'
 	echo '  { 0, NULL },'
 	while getatom; do
 	    echo "  { `length $atom`, "'"'$atom'" },'
