@@ -42,6 +42,11 @@ extern const struct argp werror_argp;
 void set_error_stream(int fd, int with_poll);
 void set_error_ignore(void);
 
+/* Tries to dup any error fd to something higher than STDERR_FILENO.
+ * Used to be able to print any error messages while forking a child
+ * process. */
+int dup_error_stream(void);
+     
 #ifdef HAVE_SYSLOG
 void set_error_syslog(const char *id);
 #endif

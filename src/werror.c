@@ -95,7 +95,7 @@ const struct argp werror_argp =
   NULL, NULL, NULL, NULL, NULL
 };
 
-int error_fd = STDERR_FILENO;
+static int error_fd = STDERR_FILENO;
 
 #define BUF_SIZE 500
 static UINT8 error_buffer[BUF_SIZE];
@@ -141,9 +141,33 @@ void set_error_stream(int fd, int with_poll)
   error_write = with_poll ? write_raw_with_poll : write_raw;
 }
 
+int dup_error_stream(void)
+{
+  if (error_fd < 0)
+    /* We're not writing error messages on any file; there's no
+     * problem. */
+    return 1;
+  else
+    {
+      int fd = dup(error_fd);
+      if (fd > STDERR_FILENO)
+	{
+	  io_set_close_on_exec(fd);
+	  error_fd = fd;
+	  return 1;
+	}
+
+      if (fd >= 0)
+	close(fd);
+      
+      return 0;
+    }
+}
+
 void set_error_ignore(void)
 {
   error_write = write_ignore;
+  error_fd = -1;
 }
 
 #define WERROR(l, d) (error_write(error_fd, (l), (d)))
