@@ -578,6 +578,13 @@ make_rsa_signer(struct signature_algorithm *s,
   CAST(rsa_algorithm, params, s);
   NEW(rsa_signer, res);
 
+  mpz_init(res->d);
+  mpz_init(res->p);
+  mpz_init(res->q);
+  mpz_init(res->a);
+  mpz_init(res->b);
+  mpz_init(res->c);
+  
   if ( (SEXP_LEFT(i) == 8)
        && ( (res->verifier = make_rsa_verifier_internal(params, i)) )
        && sexp_get_un(i, ATOM_D, res->d, RSA_MAX_SIZE)
