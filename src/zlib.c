@@ -88,8 +88,8 @@ static void do_free_zstream(z_stream *z)
   int res = free(z);
 
   if (res != Z_OK)
-    werror("do_free_zstream: Freeing failed: %z\n",
-	   z->msg ? z->msg : "No error");
+    debug("do_free_zstream: Freeing failed: %z\n",
+	  z->msg ? z->msg : "No error");
 }
 
 /* Estimates of the resulting packet sizes. We use fixnum arithmetic,
