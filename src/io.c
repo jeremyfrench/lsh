@@ -227,7 +227,10 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
     {
       int res = read(closure->fd, buffer, length);
       if (!res)
-	return A_EOF;
+	{
+	  debug("Read EOF on fd %d.\n", closure->fd);
+	  return A_EOF;
+	}
       if (res > 0)
 	return res;
 
