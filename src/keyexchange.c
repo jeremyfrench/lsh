@@ -38,6 +38,7 @@
 #include "connection.h"
 #include "format.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "parse.h"
 #include "publickey_crypto.h"
 #include "ssh.h"
@@ -90,7 +91,7 @@ parse_kexinit(struct lsh_string *packet, enum peer_flag peer_flags)
   struct int_list *lists[NLISTS];
   int i;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (!parse_uint8(&buffer, &msg_number)
       || (msg_number != SSH_MSG_KEXINIT) )
@@ -402,7 +403,7 @@ kex_make_key(struct hash_instance *secret,
   
   struct lsh_string *key;
   struct hash_instance *hash;
-  uint8_t *digest;
+  struct lsh_string *digest;
   
   key = lsh_string_alloc(key_length);
 
@@ -412,20 +413,19 @@ kex_make_key(struct hash_instance *secret,
     return key;
   
   hash = hash_copy(secret);
-  digest = alloca(HASH_SIZE(hash));
 
   hash_update(hash, 1, tags + type); 
-  hash_update(hash, session_id->length, session_id->data);
-  hash_digest(hash, digest);
+  hash_update(hash, STRING_LD(session_id));
+  digest = hash_digest_string(hash);
 
   /* Is one digest large anough? */
   if (key_length <= HASH_SIZE(hash))
-    memcpy(key->data, digest, key_length);
+    lsh_string_write(key, 0, key_length, lsh_string_data(digest));
 
   else
     {
       unsigned left = key_length;
-      uint8_t *dst = key->data;
+      uint32_t pos = 0;
       
       KILL(hash);
       hash = hash_copy(secret);
@@ -440,35 +440,39 @@ kex_make_key(struct hash_instance *secret,
 	   * H(secret | K_1 | ... | K_{n-1}) */
 
 	  struct hash_instance *tmp;
+
+	  assert(pos + left == key_length);
 	  
 	  /* Append digest to the key data. */
-	  memcpy(dst, digest, HASH_SIZE(hash));
-	  dst += HASH_SIZE(hash);
+	  lsh_string_write_string(key, pos, digest);
+	  pos += HASH_SIZE(hash);
 	  left -= HASH_SIZE(hash);
 
 	  /* And to the hash state */
-	  hash_update(hash, HASH_SIZE(hash), digest);
-
+	  hash_update(hash, HASH_SIZE(hash), lsh_string_data(digest));
+	  lsh_string_free(digest);
+	  
 	  if (left <= HASH_SIZE(hash))
 	    break;
 	  
 	  /* Get a new digest, without disturbing the hash object (as
 	   * we'll need it again). We use another temporary hash for
 	   * extracting the digest. */
-
+	  
 	  tmp = hash_copy(hash);
-	  hash_digest(tmp, digest);
+	  digest = hash_digest_string(tmp);
 	  KILL(tmp);
 	}
 
       /* Get the final digest, and use some of it for the key. */
-      hash_digest(hash, digest);
-      memcpy(dst, digest, left);
+      digest = hash_digest_string(hash);
+      lsh_string_write(key, pos, left, lsh_string_data(digest));
     }
+
+  lsh_string_free(digest);
   KILL(hash);
 
-  debug("Expanded key: %xs",
-	key->length, key->data);
+  debug("Expanded key: %xS", key);
 
   return key;
 }
@@ -499,8 +503,8 @@ kex_make_encrypt(struct crypto_instance **c,
     iv = kex_make_key(secret, algorithm->iv_size,
 		      IV_TYPE(type), session_id);
   
-  *c = MAKE_ENCRYPT(algorithm, key->data,
-		    iv ? iv->data : NULL);
+  *c = MAKE_ENCRYPT(algorithm, lsh_string_data(key),
+		    iv ? lsh_string_data(iv) : NULL);
 
   lsh_string_free(key);
   lsh_string_free(iv);
@@ -534,7 +538,8 @@ kex_make_decrypt(struct crypto_instance **c,
     iv = kex_make_key(secret, algorithm->iv_size,
 		      IV_TYPE(type), session_id);
   
-  *c = MAKE_DECRYPT(algorithm, key->data, iv ? iv->data : NULL);
+  *c = MAKE_DECRYPT(algorithm, lsh_string_data(key),
+		    iv ? lsh_string_data(iv) : NULL);
 
   lsh_string_free(key);
   lsh_string_free(iv);
@@ -561,7 +566,7 @@ kex_make_mac(struct hash_instance *secret,
   key = kex_make_key(secret, algorithm->key_size,
 		     type, session_id);
 
-  mac = MAKE_MAC(algorithm, algorithm->key_size, key->data);
+  mac = MAKE_MAC(algorithm, algorithm->key_size, lsh_string_data(key));
 
   lsh_string_free(key);
   return mac;
@@ -653,7 +658,7 @@ do_handle_newkeys(struct packet_handler *c,
   struct simple_buffer buffer;
   unsigned msg_number;
 
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   verbose("Received NEWKEYS. Key exchange finished.\n");
   
@@ -846,7 +851,7 @@ kex_build_secret(const struct hash_algorithm *H,
   struct hash_instance *hash = make_hash(H);
   struct lsh_string *s = ssh_format("%S%lS", K, exchange_hash);
 
-  hash_update(hash, s->length, s->data);
+  hash_update(hash, STRING_LD(s));
   lsh_string_free(s);
   
   return hash;
