@@ -513,10 +513,31 @@ do_read_file(struct lsh_user *u,
 	int fd;
 	close(out[0]);
 
-	if ( (me != user->super.uid) && (seteuid(user->super.uid) < 0) )
+	if (me != user->super.uid)
 	  {
-	    werror("unix_user.c: do_read_file: setuid failed %e\n", errno);
-	    _exit(EXIT_FAILURE);
+	    /* We need to change our persona. We can't change out real
+	     * uid, though, as that might let user processes send
+	     * signals to us. */
+	    if (setgid(user->gid) < 0)
+	      {
+		werror("unix_user.c: do_read_file: setgid failed %e\n", errno);
+		_exit(EXIT_FAILURE);
+	      }
+
+	    /* For simplicity, ignore the user's supplimentary groups.
+	     * They shouldn't be needed to get access to files under
+	     * ~/.lsh. */
+	    if (setgroups(0, NULL) < 0)
+	      {
+		werror("unix_user.c: do_read_file: setgroups failed %e\n", errno);
+		_exit(EXIT_FAILURE);
+	      }
+	      
+	    if (seteuid(user->super.uid) < 0)
+	      {
+		werror("unix_user.c: do_read_file: seteuid failed %e\n", errno);
+		_exit(EXIT_FAILURE);
+	      }
 	  }
 	assert(user->super.uid == geteuid());
 	
