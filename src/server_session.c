@@ -858,33 +858,34 @@ do_spawn_shell(struct channel_request *c,
 	{
 	  /* Exception handlers */
 	  struct exception_handler *io_exception_handler
-	    = make_report_exception_handler(EXC_IO, EXC_IO,
-					    "lshd: Child stdio: ",
-					    &default_exception_handler);
+	    = make_channel_io_exception_handler(channel,
+						"lshd: Child stdio: ",
+						&default_exception_handler);
 
-#if 0
 	  /* Close callback for stderr and stdout */
 	  struct close_callback *read_close_callback
 	    = make_channel_read_close_callback(channel);
-#endif  
+
 	  session->in
 	    = io_write(make_io_fd(closure->backend, in[1],
 				  io_exception_handler),
-		       SSH_MAX_PACKET,
-		       make_channel_close_callback(channel));
+		       SSH_MAX_PACKET, NULL);
 	  
 	  /* Flow control */
 	  session->in->write_buffer->report = &session->super.super;
-	  
+
+	  /* FIXME: Should we really use the same exception handler,
+	   * which will close the channel on read errors, or is it
+	   * better to just send EOF on read errors? */
 	  session->out
 	    = io_read(make_io_fd(closure->backend, out[0], io_exception_handler),
 		      make_channel_read_data(channel),
-		      NULL);
+		      read_close_callback);
 	  session->err 
 	    = ( (err[0] != -1)
 		? io_read(make_io_fd(closure->backend, err[0], io_exception_handler),
 			  make_channel_read_stderr(channel),
-			  NULL)
+			  read_close_callback)
 		: NULL);
 	}
 	
@@ -896,18 +897,18 @@ do_spawn_shell(struct channel_request *c,
 	  = make_process_resource(child, SIGHUP);
 
 	/* Make sure that the process and it's stdio is
-	 * cleaned up if the connection dies. */
+	 * cleaned up if the channel or connection dies. */
 	REMEMBER_RESOURCE
-	  (connection->resources, session->process);
+	  (channel->resources, session->process);
 	/* FIXME: How to do this properly if in and out may use the
 	 * same fd? */
 	REMEMBER_RESOURCE
-	  (connection->resources, &session->in->super.super);
+	  (channel->resources, &session->in->super.super);
 	REMEMBER_RESOURCE
-	  (connection->resources, &session->out->super.super);
+	  (channel->resources, &session->out->super.super);
 	if (session->err)
 	  REMEMBER_RESOURCE
-	    (connection->resources, &session->err->super.super);
+	    (channel->resources, &session->err->super.super);
 
 	if (want_reply)
 	  A_WRITE(channel->write,
@@ -995,7 +996,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
                   tty_setwinsize(pty->slave,
 				 width, height, width_p, height_p))
 		{
-		  REMEMBER_RESOURCE(connection->resources, &pty->super);
+		  REMEMBER_RESOURCE(channel->resources, &pty->super);
 
 		  verbose(" granted.\n");
 		  if (want_reply)
