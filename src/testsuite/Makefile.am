@@ -35,8 +35,8 @@ M4FLAGS = -P #-s
 check: check-some
 
 check-some: $(TS_SOME)
-	srcdir=$(srcdir) $(srcdir)/runtests $^
+	srcdir=$(srcdir) $(srcdir)/runtests $(TS_SOME)
 
 check-more: $(TS_ALL)
-	srcdir=$(srcdir) $(srcdir)/runtests $^
+	srcdir=$(srcdir) $(srcdir)/runtests $(TS_ALL)
 
