@@ -178,11 +178,11 @@ initiate_keyexchange(struct ssh_connection *connection)
 }
 
 static int
-select_algorithm(struct int_list *server_list,
-		 struct int_list *client_list)
+select_algorithm(struct int_list *client_list,
+		 struct int_list *server_list)
 {
   /* FIXME: This quadratic complexity algorithm should do as long as
-   * the lists are short. To avoid DOS-attacks, ther should probably
+   * the lists are short. To avoid DOS-attacks, there should probably
    * be some limit on the list lengths. */
   unsigned i, j;
 
@@ -272,11 +272,13 @@ do_handle_kexinit(struct packet_handler *c,
   /* Select key exchange algorithms */
 
   /* FIXME: Look at the hostkey algorithm as well. */
-  if (LIST(connection->kexinits[0]->kex_algorithms)[0]
-      == LIST(connection->kexinits[1]->kex_algorithms)[0])
+  if (LIST(connection->kexinits[CONNECTION_CLIENT]->kex_algorithms)[0]
+      == LIST(connection->kexinits[CONNECTION_SERVER]->kex_algorithms)[0])
     {
       /* Use this algorithm */
-      kex_algorithm_atom = LIST(connection->kexinits[0]->kex_algorithms)[0];
+      kex_algorithm_atom
+	= LIST(connection->kexinits[CONNECTION_CLIENT]->kex_algorithms)[0];
+
       connection->kex_state = KEX_STATE_IN_PROGRESS;
     }
   else
@@ -291,8 +293,8 @@ do_handle_kexinit(struct packet_handler *c,
        * certain features of the host key algorithms. */
       
       kex_algorithm_atom
-	= select_algorithm(connection->kexinits[0]->kex_algorithms,
-			   connection->kexinits[1]->kex_algorithms);
+	= select_algorithm(connection->kexinits[CONNECTION_CLIENT]->kex_algorithms,
+			   connection->kexinits[CONNECTION_SERVER]->kex_algorithms);
 
       /* FIXME: This is actually ok for SRP. */
       if  (!kex_algorithm_atom)
@@ -304,8 +306,8 @@ do_handle_kexinit(struct packet_handler *c,
     }
   
   hostkey_algorithm_atom
-    = select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
-		       connection->kexinits[1]->server_hostkey_algorithms);
+    = select_algorithm(connection->kexinits[CONNECTION_CLIENT]->server_hostkey_algorithms,
+		       connection->kexinits[CONNECTION_SERVER]->server_hostkey_algorithms);
 
   if (!hostkey_algorithm_atom)
     {
@@ -320,8 +322,8 @@ do_handle_kexinit(struct packet_handler *c,
   for(i = 0; i<KEX_PARAMETERS; i++)
     {
       parameters[i]
-	= select_algorithm(connection->kexinits[0]->parameters[i],
-			   connection->kexinits[1]->parameters[i]);
+	= select_algorithm(connection->kexinits[CONNECTION_CLIENT]->parameters[i],
+			   connection->kexinits[CONNECTION_SERVER]->parameters[i]);
       
       if (!parameters[i])
 	{
