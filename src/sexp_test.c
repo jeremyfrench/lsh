@@ -89,9 +89,9 @@ int main(int argc UNUSED, char **argv UNUSED)
   
   init_backend(backend);
 
-  /* FIXME:
-  write = io_write(backend, STDOUT_FILENO, BLOCK_SIZE, NULL)->buffer;
-  */
+  write = io_write(make_io_fd(backend, STDOUT_FILENO),
+		   BLOCK_SIZE, NULL)->buffer;
+
   out->super.handler = do_output_sexp;
   out->write = &write->super;
   out->style = SEXP_ADVANCED;
