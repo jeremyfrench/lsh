@@ -272,3 +272,5 @@ Figure out why -nt doesn't work.
 In channel_eof() and channel_close(), don't assert() that close or eof
 have not been sent already, but instead check the appropriate flags
 and do the right thing.
+
+The supplied argp is compiled even if it isn't used.

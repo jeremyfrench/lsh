@@ -1,3 +1,31 @@
+1999-10-07  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh_types.h: Use HAVE_GCC_ATTRIBUTE.
+	(FUNCTION_NAME): New define.
+
+	* src/client.c (do_exit_status): Removed test of CHANNEL_SENT_EOF flag. 
+	(do_exit_signal): -"-
+
+	* src/channel.c (do_channel_eof): Removed test of
+	CHANNEL_SENT_CLOSE flag.
+	(do_channel_write): Removed test of CHANNEL_SENT_EOF flag. 
+	(do_channel_write_extended): -"- 
+
+	* src/Makefile.am.in: Added correct path to compiler.scm.
+	(SUBDIRS): Added argp sub directory.
+
+	* configure.in: Added --with-system-argp.
+
+	* acconfig.h: Renamed HAVE_ATTRIBUTE to HAVE_GCC_ATTRIBUTE. Added
+	HAVE_GCC_FUNCTION. 
+
+1999-10-04  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/sexp_conv.c (main): Added argp support.
+	* src/sexp.c (sexp_argp): -"- 
+	* src/werror.c (werror_argp): -"-
+	
+
 1999-10-02  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/Makefile.am.in (EXTRA_DIST): Removed make_class,
