@@ -1,5 +1,14 @@
 2001-04-01  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/sftp/Makefile.am (sftp_server_SOURCES): Added idcache.c.
+
+	* src/sftp/sftp-server.c: Use the functions from idcache.c.
+
+	* src/sftp/idcache.c: #include idcache.h. #if:ed out prototypes
+	and functions that aren't needed. Use malloc instead of xmalloc.
+
+	* src/sftp/idcache.h: New file.
+
 	* src/sftp/testsuite/setup-env: Clean up first.
 
 	* src/sftp/testsuite/get-1-test: New testcase.
