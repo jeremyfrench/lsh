@@ -1,0 +1,132 @@
+It seems a little ugly to sometime return errno-values, and sometimes
+leave them in errno. Perhaps it would be cleaner to define a complete
+set of error codes?
+
+I'd like a poll friendlier interface. One way would be to have one
+function to query an (upper limit of) the number of fds adns is
+interested in, and then a second function to give it an array of
+poll-structures to fill in.
+
+adns seems to use the "exceptional" fdset. What is it used for, and
+what are the corresponding poll bits?
+
+Another more general way to handle fds would be to provide an iterator
+function, something like
+
+  void *istate = NULL;
+  int fd;
+  int (*readfn)(adns_state, int fd);
+  int (*writefn)(adns_state, int fd);
+  
+  while (adns_next_fd(&istate, &fd, &read_function, &write_function))
+  {
+    /* somehow register any non-NULL readfn and writefn in the
+     * application's backend loop */
+  }
+
+But I think we still need functions to query the number of fds (in
+order to allocate poll structures or fdsets), and to get the timeout
+value.
+
+In lsh, I have a custom object for each open fd, 
+
+  struct resource
+  {
+    struct lsh_object super;
+    int alive;
+    void (*(kill))(struct resource *self);
+  };
+  
+  struct lsh_fd
+  {
+    struct resource super;
+    struct lsh_fd *next;
+    int fd;
+    int close_reason;
+    struct close_callback *close_callback;
+    void (*(prepare))(struct lsh_fd *self);
+    int want_read;
+    void (*(read))(struct lsh_fd *self);
+    int want_write;
+    void (*(write))(struct lsh_fd *self);
+    void (*(really_close))(struct lsh_fd *self);
+  };
+
+Ideally, I'd like to create one such object for each fd adns creates,
+but I'm afraid that is too difficult (one problem is that it should be
+possible to kill my fd-objects at almost any time, or more precisely,
+my main loop closes any fd for which fd.super.alive is zero).
+
+I think I could use a continuation-style interface similar to ares's,
+i.e. to perform a lookup, I call
+
+  void ares_send(ares_channel channel, const unsigned char *qbuf, int qlen,
+	         ares_callback callback, void *arg);
+
+where <callback, arg> is a closure, which is invoked when the lookup
+is finished, with either success or failure. (I haven't used ares, I'm
+just browsing its source files trying to compare it to adns).
+
+But it should be fairly easy to emulate this using adns's adns_check function:
+
+  struct continuation
+  {
+    int (*f)(struct continuation *c,
+             adns_query q,
+	     adns_aswer *r);
+    extra data;
+  };
+
+  adns_query q = NULL;
+  adns_aswer *r = NULL;
+  struct continuation *c;
+  
+  adns_check(state, &q, &r, &c);
+
+  if (q) c->f(c, q, r);
+
+Most objects in lsh looks a lot like the continuation struct above,
+and extra data typically includes pointers to malloc()ed storage and
+to garbage collected objects.
+
+You may also want to look at the backend abstractions in glib (one of
+the gnome libraries). I haven't yet had the time to look into it
+myself, but from what I have heard about it it provides reasonably
+general mechanisms to register io-callbacks on fd:s, various timeouts,
+etc. When designing the i/o-abstractions for adns, it may be a good
+idea to make sure that it fits also with glib.
+
+Another question is memory allocation and garbage collection... If I
+understand your doc correctly, I don't have to care about query
+objects. A can create a query object, initiate an adns lookup, and
+free me original query. adns makes any copies it needs to have around,
+and keeps track of it in the adns_state object. At the end, either the
+adns_state object is disposed, and then all it's memory, including the
+copy of my query, is deallocated as well. Or the query is returned by
+some call to adns_check, and in this case it's my responsibility to
+free it when I am finished with it. Is this right?
+
+But now, there's one more problem... The context pointers. Say I use
+the context pointer to keep track of a continuation, i.e. some object
+or function that the query result should be passed to. The context
+pointer will typically point to some object which points to some other
+objects, and I'm using a garbage collector (in fact a really simple
+mark&sweep collector) to keep track of my objects. But to do the mark
+phase properly, I would _need_ to get into the adns_state, to get the
+list of all active context pointers and mark the corresponding objects
+as live.
+
+And given a solution to this problem, copying of query objects seems a
+little wasteful; I could just use the gc to sort out if any
+query-object is dead or alive.
+
+One way to do this would be to keep some kind of list outside of the
+adns to keep track of all context pointers passed into some
+adns_state. But this is still a little tricky; whenever I dispose one
+adns_state object, I have to find out which objects are disposed with
+it, and clear them from my list (so I would probably have to keep one
+list for each adns_state object).
+
+One more thing, the SIGPIPE handler. Do I understand you correctly
+that if my application makes sure that SIGPIPE is ignored, I can just
+pass adns_if_nosigpipe to adns and be happy?
