@@ -637,7 +637,10 @@ fi
 AC_CACHE_CHECK(for __FUNCTION__,
 	       lsh_cv_c_FUNCTION,
   [ AC_TRY_COMPILE(,
-      [ void foo(void) { char c = __FUNCTION__[0]; } ],
+      [ #if __GNUC__ == 3
+	#  error __FUNCTION__ is broken in gcc-3
+	#endif
+        void foo(void) { char c = __FUNCTION__[0]; } ],
       lsh_cv_c_FUNCTION=yes,
       lsh_cv_c_FUNCTION=no)])
 
