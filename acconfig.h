@@ -72,3 +72,12 @@
 /* Global variables needed by argp */
 #undef HAVE_PROGRAM_INVOCATION_NAME
 #undef HAVE_PROGRAM_INVOCATION_SHORT_NAME
+
+/* Define to enable x11 forwarding */
+#undef WITH_X11_FORWARD
+
+/* Define to enable authentication agent forwarding */
+#undef WITH_AGENT_FORWARD
+
+#undef WITH_ALF
+
