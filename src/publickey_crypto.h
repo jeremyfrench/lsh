@@ -163,6 +163,9 @@ void
 zn_ring_subtract(struct abstract_group *s,
 		 mpz_t res, mpz_t a, mpz_t b);
 
+struct abstract_group *
+make_ssh_group1(void);
+
 /* DH key exchange, with authentication */
 /* GABA:
    (class
