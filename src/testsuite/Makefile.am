@@ -53,6 +53,8 @@ all:
 
 .PHONY: check-some check-more
 
+# sexp-conv may be dynamically linked
 check: $(TS_ALL)
-	srcdir=$(srcdir) $(srcdir)/run-tests $(TS_ALL)
+	LD_LIBRARY_PATH="`pwd`/../nettle/.lib" srcdir=$(srcdir) \
+		$(srcdir)/run-tests $(TS_ALL)
 
