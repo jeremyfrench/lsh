@@ -30,14 +30,6 @@
 #include "abstract_crypto.h"
 #include "connection.h"
 
-struct packet_encrypt
-{
-  struct abstract_write_pipe super;
-  UINT32 sequence_number;
-
-  struct ssh_connection *connection;
-};
-
 struct abstract_write *
 make_packet_encrypt(struct abstract_write *continuation,
 		    struct ssh_connection *connection);		       

@@ -29,7 +29,23 @@
 #include "werror.h"
 #include "xalloc.h"
 
-struct install_keys *make_server_install_keys(void **algorithms);
+struct dh_server_exchange
+{
+  struct keyexchange_algorithm super;
+  struct diffie_hellman_method *dh;
+  struct lsh_string *server_key;
+  struct signer *signer;
+};
+
+/* Handler for the kex_dh_reply message */
+struct dh_server
+{
+  struct packet_handler super;
+  struct diffie_hellman_instance dh;
+  /* struct lsh_string *server_key; */
+  struct signer *signer;
+  struct install_keys *install;
+};
 
 static int do_handle_dh_init(struct packet_handler *c,
 			     struct ssh_connection *connection,

@@ -27,10 +27,17 @@
 
 #include "pad.h"
 
-#include "connection.h"
 #include "format.h"
-#include "randomness.h"
 #include "xalloc.h"
+
+struct packet_pad
+{
+  struct abstract_write_pipe super;
+
+  struct ssh_connection *connection;
+
+  struct randomness *random;
+};
 
 static int do_pad(struct abstract_write **w,
 		  struct lsh_string *packet)

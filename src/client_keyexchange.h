@@ -43,24 +43,10 @@ struct lookup_verifier
 
 #define LOOKUP_VERIFIER(l, key) ((l)->lookup((l), (key)))
 
-struct dh_client_exchange
-{
-  struct keyexchange_algorithm super;
-  struct diffie_hellman_method *dh;
-  struct lookup_verifier *verifier;
-};
-
-/* Handler for the kex_dh_reply message */
-struct dh_client
-{
-  struct packet_handler super;
-  struct diffie_hellman_instance dh;
-  struct lookup_verifier *verifier;
-  struct install_keys *install;
-};
-
 struct keyexchange_algorithm *
 make_dh_client(struct diffie_hellman_method *dh,
 	       struct lookup_verifier *verifier);
+
+struct install_keys *make_client_install_keys(void **algorithms);
 
 #endif /* LSH_CLIENT_KEYEXCHANGE_H_INCLUDED */

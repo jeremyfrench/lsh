@@ -37,6 +37,21 @@
 #include "werror.h"
 #include "xalloc.h"
 
+struct server_callback
+{
+  struct fd_callback super;
+  struct io_backend *backend;
+
+  struct signer *secret;        /* secret key */
+  struct lsh_string *host_key;  /* public key */
+  UINT32 block_size;
+  char *id_comment;
+
+  struct randomness *random;
+  struct make_kexinit *init;
+  struct packet_handler *kexinit_handler;
+};
+
 static int server_initiate(struct fd_callback **c,
 			   int fd)
 {

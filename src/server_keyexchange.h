@@ -29,27 +29,11 @@
 #include "keyexchange.h"
 #include "publickey_crypto.h"
 
-struct dh_server_exchange
-{
-  struct keyexchange_algorithm super;
-  struct diffie_hellman_method *dh;
-  struct lsh_string *server_key;
-  struct signer *signer;
-};
-
-/* Handler for the kex_dh_reply message */
-struct dh_server
-{
-  struct packet_handler super;
-  struct diffie_hellman_instance dh;
-  /* struct lsh_string *server_key; */
-  struct signer *signer;
-  struct install_keys *install;
-};
-
 struct keyexchange_algorithm *
 make_dh_server(struct diffie_hellman_method *dh,
 	       struct lsh_string *server_key,
 	       struct signer *signer);
+
+struct install_keys *make_server_install_keys(void **algorithms);
 
 #endif /* LSH_SERVER_KEYEXCHANGE_H_INCLUDED */

@@ -96,22 +96,6 @@ struct make_kexinit
 
 #define MAKE_KEXINIT(m) ((m)->make((m)))
 
-struct handle_kexinit
-{
-  struct packet_handler super;
-  int type;
-  
-  struct make_kexinit *init;
-  
-  /* Maps names to algorithms. It's dangerous to lookup random atoms
-   * in this table, as not all objects have the same type. This
-   * mapping is used only on atoms that have appeared in *both* the
-   * client's and the server's list of algorithms (of a certain type),
-   * and therefore the remote side can't screw things up. */
-
-  struct alist *algorithms;
-};
-
 /* Installs keys for use. */
 struct install_keys
 {

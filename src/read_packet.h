@@ -28,27 +28,7 @@
 
 #include "abstract_io.h"
 #include "abstract_crypto.h"
-
-struct read_packet
-{
-  struct read_handler super; /* Super type */
-
-  int state;
-  
-  UINT32 sequence_number; /* Attached to read packets */
-  
-  /* Buffer partial headers and packets. */
-  UINT32 pos;
-  /* FIXME: This buffer should hold one block, and must be reallocated
-   * when the crypto algorithms is changed. */
-  struct lsh_string *buffer;
-  UINT32 crypt_pos;
-  
-  UINT8 *computed_mac; /* Must point to an area large enough to hold a mac */
-
-  struct abstract_write *handler;
-  struct ssh_connection *connection;
-};
+#include "connection.h"
 
 struct read_handler *make_read_packet(struct abstract_write *handler,
 				      struct ssh_connection *connection);

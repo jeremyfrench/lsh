@@ -26,20 +26,14 @@
 #ifndef LSH_PAD_H_INCLUDED
 #define LSH_PAD_H_INCLUDED
 
-#include "abstract_io.h"
 #include "abstract_crypto.h"
+#include "abstract_io.h"
+#include "connection.h"
+#include "randomness.h"
 
 /* Input to the processor is a packet with the payload. Output is a
  * packet containing a formatted ssh packet (with correct byte order,
  * etc). */
-struct packet_pad
-{
-  struct abstract_write_pipe super;
-
-  struct ssh_connection *connection;
-
-  struct randomness *random;
-};
 
 struct abstract_write *make_packet_pad(struct abstract_write *continuation,
 				       struct ssh_connection *connection,

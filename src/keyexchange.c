@@ -36,6 +36,22 @@
 #include "werror.h"
 #include "xalloc.h"
 
+struct handle_kexinit
+{
+  struct packet_handler super;
+  int type;
+  
+  struct make_kexinit *init;
+  
+  /* Maps names to algorithms. It's dangerous to lookup random atoms
+   * in this table, as not all objects have the same type. This
+   * mapping is used only on atoms that have appeared in *both* the
+   * client's and the server's list of algorithms (of a certain type),
+   * and therefore the remote side can't screw things up. */
+
+  struct alist *algorithms;
+};
+
 #define NLISTS 10
 
 static struct kexinit *parse_kexinit(struct lsh_string *packet)

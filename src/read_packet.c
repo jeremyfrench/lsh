@@ -28,7 +28,6 @@
 
 #include "read_packet.h"
 
-#include "connection.h"
 #include "crypto.h"
 #include "format.h"
 #include "io.h"
@@ -38,6 +37,28 @@
 #define WAIT_HEADER 0
 #define WAIT_CONTENTS 1
 #define WAIT_MAC 2
+
+struct read_packet
+{
+  struct read_handler super; /* Super type */
+
+  int state;
+  
+  UINT32 sequence_number; /* Attached to read packets */
+  
+  /* Buffer partial headers and packets. */
+  UINT32 pos;
+
+  /* FIXME: This buffer should hold one block, and must be reallocated
+   * when the crypto algorithms is changed. */
+  struct lsh_string *buffer;
+  UINT32 crypt_pos;
+  
+  UINT8 *computed_mac; /* Must point to an area large enough to hold a mac */
+
+  struct abstract_write *handler;
+  struct ssh_connection *connection;
+};
 
 static int do_read_packet(struct read_handler **h,
 			  struct abstract_read *read)

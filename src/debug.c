@@ -26,6 +26,12 @@
 #include "debug.h"
 #include "xalloc.h"
 
+struct packet_debug
+{
+  struct abstract_write_pipe super;
+  FILE *output;
+};
+
 static int do_debug(struct abstract_write **w,
 		    struct lsh_string *packet)
 {

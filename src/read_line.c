@@ -29,6 +29,15 @@
 #include "werror.h"
 #include "xalloc.h"
 
+struct read_line
+{
+  struct read_handler super; /* Super type */
+  struct line_handler *handler;
+
+  UINT32 pos;   /* Line buffer */
+  UINT8 buffer[MAX_LINE];
+};
+
 struct string_read
 {
   struct abstract_read super;

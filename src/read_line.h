@@ -44,15 +44,6 @@ struct line_handler
 #define PROCESS_LINE(h, length, line) \
 ((h)->handler(&(h), (length), (line)))
 
-struct read_line
-{
-  struct read_handler super; /* Super type */
-  struct line_handler *handler;
-
-  UINT32 pos;   /* Line buffer */
-  UINT8 buffer[MAX_LINE];
-};
-
 struct read_handler *make_read_line(struct line_handler *handler);
 
 #endif /* LSH_READ_HANDLER_H_INCLUDED */

@@ -28,6 +28,14 @@
 #include "format.h"
 #include "xalloc.h"
 
+struct packet_encrypt
+{
+  struct abstract_write_pipe super;
+  UINT32 sequence_number;
+
+  struct ssh_connection *connection;
+};
+
 static int do_encrypt(struct abstract_write **w,
 		      struct lsh_string *packet)
 {
