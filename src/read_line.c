@@ -45,6 +45,8 @@ static int do_string_read(struct abstract_read **r,
   UINT32 left = closure->line->pos - closure->index;
   UINT32 to_read = MIN(length, left);
 
+  MDEBUG(closure);
+  
   memcpy(buffer, closure->line->buffer + closure->index, to_read);
   closure->index += to_read;
 
@@ -59,8 +61,11 @@ static int do_read_line(struct read_handler **h,
   UINT8 *eol;
   UINT32 length;
   struct read_handler *next;
+  int n;
 
-  int n = A_READ(read, MAX_LINE - closure->pos, closure->buffer);
+  MDEBUG(closure);
+  
+  n = A_READ(read, MAX_LINE - closure->pos, closure->buffer);
   
   if (n<0)
     {
@@ -102,7 +107,7 @@ static int do_read_line(struct read_handler **h,
 	  if (closure->pos)
 	    {
 	      struct string_read read =
-	      { { do_string_read },
+	      { { STATIC_HEADER do_string_read },
 		closure,
 		0 };
 	      while(next && (read.index < closure->pos))
