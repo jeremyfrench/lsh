@@ -5,55 +5,20 @@ set -e
 
 # echo srcdir = $srcdir
 
-if [ -z "$TEST_HOME" ] ; then
-  TEST_HOME="`pwd`/home"
-fi
-
-if [ -z "$LSH_YARROW_SEED_FILE" ] ; then
-  LSH_YARROW_SEED_FILE="$TEST_HOME/.lsh/yarrow-seed-file"
-fi
+: ${TEST_HOME:=`pwd`/home}
+: ${LSH_YARROW_SEED_FILE:="$TEST_HOME/.lsh/yarrow-seed-file"}
 
 # For lsh-authorize
-if [ -z "SEXP_CONV" ] ; then
-  SEXP_CONV="`pwd`/../sexp-conv"
-fi
+: ${SEXP_CONV:="`pwd`/../sexp-conv"}
 
 export LSH_YARROW_SEED_FILE SEXP_CONV
 
-## # Make sure we have a randomness genereetor
-## LSH_YARROW_SEED_FILE="`pwd`/yarrow-seed-file"
-## export LSH_YARROW_SEED_FILE
-## 
-## if [ -s "$LSH_YARROW_SEED_FILE" ] ; then : ; else
-##     echo "Creating seed file $LSH_YARROW_SEED_FILE"
-##     ../lsh-make-seed --sloppy -q -o "$LSH_YARROW_SEED_FILE"
-## fi
-
-if [ -z "$LSHD_FLAGS" ] ; then
-    LSHD_FLAGS='-q --enable-core'
-fi
-
-if [ -z "$LSH_FLAGS" ] ; then
-    LSH_FLAGS=-q
-fi
-
-if [ -z "$LSHG_FLAGS" ] ; then
-    LSHG_FLAGS=-q
-fi
-
-if [ -z "$HOSTKEY" ] ; then
-    HOSTKEY=$srcdir/key-1.private
-fi
-
-if [ -z "$PIDFILE" ] ; then
-    PIDFILE=`pwd`/lshd.$$.pid
-fi
-
-INTERFACE=127.0.0.1
-
-# if [ -z "$USERKEY" ] ; then
-#     USERKEY=$srcdir/key-1.private
-# fi
+: ${LSHD_FLAGS:=-q --enable-core}
+: ${LSH_FLAGS:=-q}
+: ${LSHG_FLAGS:=-q}
+: ${HOSTKEY:="$srcdir/key-1.private"}
+: ${PIDFILE:="`pwd`/lshd.$$.pid"}
+: ${INTERFACE:=127.0.0.1}
 
 PORT=11147
 ATEXIT='set +e'
