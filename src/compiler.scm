@@ -94,6 +94,17 @@
 (define (rule pattern f)
   (cons (preprocess-applications pattern) f))
 
+;;; The reduction rules for our combinators are
+
+;; I x        --> x
+;; K a b      --> b
+;; S f f x    --> (f x) (g x)
+;; B f g x    --> f (g x)
+;; C f y x    --> (f x) y
+;; S* c f g x --> c (f x) (g x)
+;; B* c f g x --> c (f (g x))
+;; C* c f g x --> c (f x) y
+
 (define (make-K e) (make-combine 'K e))
 (define (make-S p q) (make-combine 'S p q))
 ;; (define (make-B p) (make-combine 'B p))
