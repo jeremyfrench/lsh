@@ -1,3 +1,14 @@
+2003-08-17  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/scm/gaba.scm (out): Ignore #f entries.
+	(process-class): New keyword condition, for preprocessor
+	conditionals. 
+
+2003-06-28  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/zlib.c (do_zlib): Changed messages from verbose to debug, to
+	reduce clutter.
+
 2003-06-12  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* Released lsh-1.5.2
