@@ -1,3 +1,49 @@
+2004-02-08  Niels Möller  <nisse@lysator.liu.se>
+
+	Implemented flow control for the connections write_buffer. The
+	buffer is now of limited size. When it starts to get large, channel
+	i/o is disabled. If it hits the limit, the connection is closed.
+
+	* src/connection.c (WRITE_BUFFER_MAX, WRITE_BUFFER_MARGIN): New
+	constants.
+	(connection_flow_controlled): New class.
+	(do_connection_flow_controlled): Reenable channel i/o when we have
+	room in the write buffer.
+	(make_ssh_connection): Initialize ssh_connection attributes
+	wakeup, soft_limit and hard_limit.
+	(connection_init_io): Changed argument type from struct
+	abstract_write to struct lsh_fd. Install flow control on the
+	socket's write_buffer. Deleted the randomness argument, and don't
+	call make_packet_write. This way, both handshake_command and
+	gateway_make_connection can call this function.
+	(connection_wakeup): New function, which installs a wakeup
+	callback on the connection.
+	(connection_send_kex): Compare the size of the write_buffer to the
+	soft and hard limits.
+	(connection_send_kex_end): Invoke wakeup callback, if it's
+	non-NULL.
+
+	* src/connection.h (ssh_connection): New attribute socket,
+	replaces old attribute raw. New attributes hard_limit and
+	soft_limit. 
+
+	* src/read_data.c (do_read_data_query): Stop reading, if
+	connection->hard_limit is set, indicating an almost full
+	write_buffer for the connection.
+
+	* src/handshake.c (handshake_command): Adapt to changed
+	connection_init_io. Use connection->socket instead of
+	connection->raw. 
+
+	* src/gateway_commands.c (gateway_make_connection): Use
+	connection_init_io, so that flow control is set up properly.
+
+	* src/channel.c (window_adjust_handler): Deleted redundant assert.
+	(do_channels_after_keyexchange): Renamed to do_channels_wakeup. No
+	longer needs to reinstall the handler.
+	(init_connection_service): Use connection_wakeup, not
+	connection_after_keyexchange. 
+
 2004-02-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* install-sh: Removed from CVS repository. Let automake supply it.
