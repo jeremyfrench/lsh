@@ -113,8 +113,8 @@ make_lsh_writekey_options(void)
 
   self->r = NULL;
   
-  /* A better default would be crypto_cbc(make_des3()) */
-  self->crypto = NULL;
+  self->crypto_name = ATOM_AES256_CBC;
+  self->crypto = &crypto_aes256_cbc_algorithm;
   
   return self;
 }
