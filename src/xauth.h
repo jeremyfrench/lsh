@@ -32,9 +32,9 @@
 #include <sys/socket.h>
 
 int
-xauth_lookup(struct sockaddr *address,
-             unsigned display_length,
-             const char *display,
+xauth_lookup(struct sockaddr *sa,
+             unsigned number_length,
+             const char *number,
              struct lsh_string **name,
              struct lsh_string **data);
 

@@ -1,3 +1,16 @@
+2001-09-03  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/xauth.c (xauth_process): New function, using XauReadAuth.
+	(xauth_lookup): Use xauth_process instead of XauGetAuthByAddr.
+
+	* src/client_x11.c (make_client_x11_display): Initialize the fake
+	cookie properly.
+
+	* src/xauth.h: New file with the xauth_lookup prototype.
+
+	* src/xauth.c (xauth_lookup): Deleted address_length argument. Bug
+	fixes. 
+
 2001-09-03  Niels Möller  <nisse@ehand.com>
 
 	* src/xauth.c: Rewrote to use libXau.
