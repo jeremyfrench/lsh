@@ -344,7 +344,7 @@ make_channel_open_direct_tcpip(struct command *callback)
      (vars
        (connection object ssh_connection)
        (forward object local_port)
-       (c object global_request_callback)))
+       (c object command_continuation)))
 */
 
 /* FIXME: Split off an exception handler */
@@ -368,20 +368,20 @@ do_tcpip_forward_request_continuation(struct command_continuation *c,
       assert(port);
       assert(port == self->forward);
       
-      GLOBAL_REQUEST_CALLBACK(self->c, 0);
+      COMMAND_RETURN(self->c, NULL);
     }
   
   REMEMBER_RESOURCE(self->connection->resources, &fd->super);
 
   self->forward->socket = fd;
 
-  GLOBAL_REQUEST_CALLBACK(self->c, 1);
+  COMMAND_RETURN(self->c, &self->forward->super.super);
 }
 
 static struct command_continuation *
 make_tcpip_forward_request_continuation(struct ssh_connection *connection,
 					struct local_port *forward,
-					struct global_request_callback *c)
+					struct command_continuation *c)
 {
   NEW(tcpip_forward_request_continuation, self);
 
@@ -407,8 +407,11 @@ make_tcpip_forward_request_continuation(struct ssh_connection *connection,
 static void
 do_tcpip_forward_request(struct global_request *s, 
 			 struct ssh_connection *connection,
+			 UINT32 type UNUSED,
+			 int want_reply UNUSED,
 			 struct simple_buffer *args,
-			 struct global_request_callback *c)
+			 struct command_continuation *c,
+			 struct exception_handler *e)
 {
   CAST(tcpip_forward_request, self, s);
   struct lsh_string *bind_host;
@@ -424,15 +427,18 @@ do_tcpip_forward_request(struct global_request *s,
       if (bind_port < 1024)
 	{
 	  werror("Denying forwarding of privileged port %i.\n", bind_port);
-	  GLOBAL_REQUEST_CALLBACK(c, 0);
+	  COMMAND_RETURN(c, NULL);
 	  return;
 	}
 
       if (lookup_forward(&connection->table->local_ports,
 			 bind_host->length, bind_host->data, bind_port))
 	{
+	  static const struct exception again = 
+	    STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, "An already requested tcp-forward requested again");
+
 	  verbose("An already requested tcp-forward requested again\n");
-	  GLOBAL_REQUEST_CALLBACK(c, 0);
+	  EXCEPTION_RAISE(e, &again);
 	  return;
 	}
       
@@ -458,7 +464,7 @@ do_tcpip_forward_request(struct global_request *s,
   else
     {
       werror("Incorrectly formatted tcpip-forward request\n");
-      PROTOCOL_ERROR(connection->e, "Invalid tcpip-forward message.");
+      PROTOCOL_ERROR(e, "Invalid tcpip-forward message.");
     }
 }
 
@@ -475,8 +481,11 @@ struct global_request *make_tcpip_forward_request(struct command *callback)
 static void
 do_tcpip_cancel_forward(struct global_request *s UNUSED, 
 			struct ssh_connection *connection,
+			UINT32 type UNUSED,
+			int want_reply UNUSED,
 			struct simple_buffer *args,
-			struct global_request_callback *c)
+			struct command_continuation *c,
+			struct exception_handler *e)
 {
   UINT32 bind_host_length;
   UINT8 *bind_host;
@@ -502,14 +511,16 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
 	  close_fd(port->socket, 0);
 	  port->socket = NULL;
 
-	  GLOBAL_REQUEST_CALLBACK(c, 1);
+	  COMMAND_RETURN(c, NULL);
 	  return;
 	}
       else
 	{      
+	  static const struct exception notfound = 
+	    STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, "Could not find tcpip-forward to cancel");
 	  verbose("Could not find tcpip-forward to cancel\n");
 
-	  GLOBAL_REQUEST_CALLBACK(c, 0);
+	  EXCEPTION_RAISE(e, &notfound);
 	  return;
 	}
     }

@@ -130,7 +130,7 @@ struct command tcpip_start_io =
        (type . int)
        (max_window . UINT32)
        ; For forwarded-tcpip, port is the port listened to.
-       ; For direct-tcpip, poprt is the port to conect to.
+       ; For direct-tcpip, port is the port to connect to.
        ; In both cases, it's a port used on the server end.
        (port object address_info)
        (peer object listen_value)))
