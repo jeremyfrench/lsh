@@ -27,7 +27,7 @@ SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 bin_PROGRAMS = lsh lsh_keygen lsh_writekey sexp_conv
 sbin_PROGRAMS = lshd lsh_proxy
 bin_SCRIPTS = lsh-authorize
-noinst_PROGRAMS = prime_table digit_table 
+noinst_PROGRAMS = prime_table digit_table pkcs5-test
 noinst_LIBRARIES = liblsh.a
 # noinst_HEADERS = $(dist_x_files) $(cvs_headers)
 
