@@ -143,8 +143,15 @@ do_read_packet(struct read_handler **h,
   CAST(read_packet, closure, *h);
   UINT32 total = 0;
 
-  assert(available);
-
+  if (!available)
+    {
+      debug("read_packet: EOF in state %i\n", closure->state);
+      EXCEPTION_RAISE(closure->connection->e,
+		      make_protocol_exception(0, "Unexpected EOF"));
+      *h = NULL;
+      return 0;
+    }
+	  
   for (;;)
     switch(closure->state)
       {

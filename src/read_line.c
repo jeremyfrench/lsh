@@ -61,6 +61,15 @@ do_read_line(struct read_handler **h,
   UINT32 consumed;
   UINT32 tail;
   UINT32 length;
+
+  if (!available)
+    {
+      /* FIXME: Should we use some other exception type for this? */
+      EXCEPTION_RAISE(self->e,
+		      make_protocol_exception(0, "Unexpected EOF"));
+      *h = NULL;
+      return 0;
+    }
   
   eol = memchr(data, 0x0a, available);
 
