@@ -86,25 +86,26 @@ spawn_lshd () {
     
     HOME="$TEST_HOME" ../lshd -h $HOSTKEY \
 	-p $PORT --interface=$INTERFACE $LSHD_FLAGS \
-	--pid-file $PIDFILE --daemon --no-syslog "$@"
+	--pid-file $PIDFILE --daemon --no-syslog "$@" || test_fail
+    
+    # lshd should release its port after receivinf HUP, but we may get
+    # timing problems when the next lshd process tries to bind the
+    # port. So we also wait a little.
 
-    # lshd may catch the ordinary TERM signal, leading to timing
-    # problems when the next lshd process tries to bind the port.
-    # So we kill it harder.
-
-    at_exit 'kill -HUP `cat $PIDFILE`'
+    at_exit 'kill -HUP `cat $PIDFILE` ; sleep 5'
 
     # Wait a little for lshd to start
     for delay in 1 1 1 1 1 5 5 5 20 20 60 60; do
 	if [ -s $PIDFILE ]; then
 	    # And a little more for it to open its port
 	    sleep 5
+	    echo lshd pid: `cat $PIDFILE`
 	    return
 	fi
 	sleep $delay
     done
     
-    false
+    test_fail
 }
 
 run_lsh () {
@@ -126,7 +127,9 @@ spawn_lsh () {
     # echo spawn_lsh "$@"
     HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
 	--capture-to /dev/null -z -p $PORT "$@" -N localhost &
-    at_exit "kill $!"
+    lsh_pid="$!"
+    at_exit "kill $lsh_pid"
+    echo lsh pid: $lsh_pid
 }
 
 exec_lshg () {
