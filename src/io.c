@@ -503,21 +503,20 @@ get_inaddr(struct sockaddr_in	* addr,
   else
     {
       /* First check for numerical ip-number */
-#if 1
-      /* FIXME: How portable is inet_aton? */
+#if HAVE_INET_ATON
       if (!inet_aton(host, &addr->sin_addr))
-#else
+#else /* !HAVE_INET_ATON */
 	/* TODO: It is wrong to work with ((unsigned long int) -1)
 	 * directly, as this breaks Linux/Alpha systems. But
 	 * INADDR_NONE isn't portable. The clean solution is to use
 	 * inet_aton rather than inet_addr; see the GNU libc
 	 * documentation. */
-#ifndef INADDR_NONE
-#define INADDR_NONE ((unsigned long int) -1)
-#endif
+# ifndef INADDR_NONE
+# define INADDR_NONE ((unsigned long int) -1)
+# endif /* !INADDR_NONE */
       addr->sin_addr.s_addr = inet_addr(host);
       if (addr->sin_addr.s_addr == INADDR_NONE)
-#endif
+#endif  /* !HAVE_INET_ATON */
 	{
 	  struct hostent * hp;
 	  

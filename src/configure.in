@@ -164,15 +164,15 @@ AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(select socket strerror strtol)
 AC_CHECK_FUNCS(getspnam)
-AC_CHECK_FUNCS(vsnprintf)
+AC_CHECK_FUNCS(vsnprintf inet_aton)
 
-AC_CHECK_FUNCS(poll,,[LIBOBJS = jpoll.c $LIBOBJS])
+AC_CHECK_FUNCS(poll,,[LIBOBJS = jpoll.o $LIBOBJS])
 
 dnl This macro is mentioned in the automake manual, but where is it
 dnl supposed to be defined?
 dnl AC_REPLACE_GNU_GETOPT
 
-AC_CHECK_FUNCS(getopt_long,,[LIBOBJS = getopt.c getopt1.c $LIBOBJS])
+AC_CHECK_FUNCS(getopt_long,,[LIBOBJS = getopt.o getopt1.o $LIBOBJS])
 
 dnl Check for broken shutdown
 AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
