@@ -2,3 +2,4 @@ Makefile
 Makefile.am
 Makefile.in
 lsh.info
+srp-spec.txt

@@ -1,4 +1,18 @@
+2000-06-02  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/unix_user.c (do_lookup_user): Let $HOME override the
+	passwd->pw_dir, if (i) the server is not running as root, and (ii)
+	the user logging in is the same user running the server.
+
+	* src/lsh.c: Bugfixes in the userauth configuration.
+
+	* src/lsh-authorize: Updated to use sexp_conv -f rather than
+	sexp_conv -o. 
+
 2000-06-01  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/unix_user.c (do_lookup_user): When running as non-root, let
+	$HOME override pw_dir from the passwd-database.
 
 	* src/srp-gen.c (main_argp_parser): By default, use transport
 	syntax when writing to stdout, and canonical syntax when writing

@@ -26,14 +26,6 @@
 #       When porting this script, please observe the following points:
 #
 # 1)    ISI keeps perl in "/local/bin/perl";  your system may keep it
-
-
-
-Postel & Reynolds            Informational                     [Page 16]
-
-RFC 2223              Instructions to RFC Authors           October 1997
-
-
 #       elsewhere.
 # 2)    On systems with a CRLF end-of-line convention, the "\n"s below
 #       may have to be replaced with "\r\n"s.
