@@ -87,16 +87,18 @@ struct handle_keyexinit
   struct alist *algorithms;
 };
 
-struct handle_newkeys
+struct newkeys_info
 {
-  struct packet_handler super;
-  /* Algorithms for transmission */
-  struct crypto_algorithm *crypto;
-  struct mac_algorithm *mac;
+  struct crypto_algorithm *encryption_client_to_server;
+  struct crypto_algorithm *encryption_server_to_client;
+  struct mac_algorithm *mac_client_to_server;
+  struct mac_algorithm *mac_server_to_client;
 #if 0
-  struct compression_algorithm *compressor;
+  struct compression_algorithm *compression_client_to_server;
+  struct compression_algorithm *compression_server_to_client;
 #endif
 };
+
 
 struct packet_handler *make_kexinit_handler();
 struct packet_handler *make_newkeys_handler();

@@ -400,6 +400,8 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
   
   self->method = m;
   self->hash = MAKE_HASH(m->H);
+  self->exchange_hash = NULL;
+  
   HASH_UPDATE(self->hash,
 	      c->client_version->length,
 	      c->client_version->data);
@@ -524,17 +526,20 @@ void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
 struct lsh_string *dh_make_server_msg(struct diffie_hellman_instance *self,
 				      struct signer *s)
 {
-  UINT8 *digest;
+  struct lsh_string *msg;
   
   dh_generate_secret(self, self->f);
 
-  digest = alloca(self->hash->hash_size);
-  dh_hash_digest(self, digest);
+  self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
+  
+  dh_hash_digest(self, exchange_hash->data);
 
   return ssh_format("%c%S%n%fS",
 		    SSH_MSG_KEXDH_REPLY,
 		    self->server_key,
-		    self->f, SIGN(s, self->hash->hash_size, digest));
+		    self->f, SIGN(s,
+				  self->exchange_hash->length,
+				  self->exchange_hash->data));
 }
 
 int dh_process_server_msg(struct diffie_hellman_instance *self,

@@ -29,6 +29,8 @@ static void do_handle_dh_reply(struct packet_handler *c,
 {
   struct dh_client *closure = (struct dh_client *) c;
   struct verifier *v;
+  struct hash_instance *hash;;
+  struct lsh_string *s;
   
   if (!dh_process_server_msg(&closure->dh, packet))
     return send_disconnect(connection, "Bad dh-reply\r\n");
@@ -45,10 +47,24 @@ static void do_handle_dh_reply(struct packet_handler *c,
     /* FIXME: Same here */
     return send_disconnect(connection, "Bad server host key\r\n");
     
-  /* Key exchange successful! */
+  /* Key exchange successful! Send a newkeys message, and install a
+   * handler for recieving the newkeys message. */
+
+  /* Record session id */
+  if (!connection->session_id)
+    connection->session_id = closure->dh.exchange_hash;
   
+  /* A hash instance initialized with the key, to be used for key generation */
   
-  
+  hash = MAKE_HASH(closure->dh->method->hash);
+  s = ssh_format("%n", closure->dh->K);
+  HASH_UPDATE(hash, s->length, s->data);
+  lsh_string_free(s);
+
+  res = prepare_keys(connection, hash);
+  lsh_free(hash);
+
+  return res;
 }
 
 static void do_init_dh(struct keyexchange_algorithm *c,
@@ -62,8 +78,7 @@ static void do_init_dh(struct keyexchange_algorithm *c,
   dh->super.handler = do_handle_dh_reply;
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
-  dh->hash = MAKE_HASH(closure->hash);
-  dh->signature_algorithm = closure->signature_algorithm;
+  dh->verifier = closure->verifier;
 
   /* Send client's message */
   A_WRITE(connection->write, dh_make_client_msg(&dh->dh));
@@ -78,3 +93,22 @@ static void do_init_dh(struct keyexchange_algorithm *c,
   return WRITE_OK;
 }
 
+int prepare_keys_client(struct hash_instance *secret,
+			struct ssh_connection *connection)
+{
+  /* FIXME: For DES, instantiating a crypto may fail, if the key
+   * happens to be weak. */
+  /* FIXME: No IV:s */
+
+  struct crypto_instance *crypt_client_to_server
+    = kex_make_encrypt(secret, KEX_ENCRYPTION_CLIENT_TO_SERVER, connection);
+  struct crypto_instance *crypt_server_to_client
+    = kex_make_decrypt(secret, KEX_ENCRYPTION_SERVER_TO_CLIENT, connection);
+  
+  struct mac_instance *mac_client_to_server
+    = kex_make_mac(secret, KEX_MAC_CLIENT_TO_SERVER, connection);
+  struct mac_instance *mac_server_to_client
+    = kex_make_mac(secret, KEX_MAC_SERVER_TO_CLIENT, connection);
+
+  
+  

@@ -184,7 +184,7 @@ int do_read_packet(struct read_handler **h,
 		  return 0;
 	      }
 
-	      if (!memcpy(mac,
+	      if (!memcmp(mac,
 			  closure->computed_mac + closure->pos,
 			  n))
 		/* FIXME: Free resources */

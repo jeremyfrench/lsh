@@ -29,7 +29,14 @@ struct packet_handler
      
 struct ssh_connection
 {
+#if 0
   struct abstract_write super;
+  
+  struct read_packet *reader; /* Needed for changing the decryption
+			       * algorithms. Is there a better way?
+			       * Perhaps one can keep this pointer
+			       * inside the newkeys-handler? */
+#endif
 
   int type; /* CONNECTION_SERVER or CONNECTION_CLIENT */
   
@@ -38,6 +45,11 @@ struct ssh_connection
   struct lsh_string *server_version;
 
   struct lsh_string *session_id;
+
+  /* Reading */
+  struct mac_instance *mac;
+  struct crypto_instance *crypto;
+
   struct abstract_write *raw;   /* Socket connected to the other end */
 
   struct abstract_write *write; /* Where to send packets through the
@@ -54,11 +66,12 @@ struct ssh_connection
   UINT32 max_packet;
 
   /* Key exchange */
-  int kex_state;
+  /* int kex_state; */
   
   /* First element is the kexinit sent by the server */
   struct kexinit *kexinits[2];
   struct lsh_string *literal_kexinits[2];
+  struct newkeys_info *newkeys; /* Negotiated algorithms */ 
   
   int ignore_one_packet;
   

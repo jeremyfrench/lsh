@@ -268,6 +268,87 @@ static int do_handle_kexinit(struct packet_hander *c,
     }
 }
 
+/* FIXME: THis function can't handle IV:s at all */
+struct lsh_string *kex_make_key(struct hash_instance *secret,
+				UINT32 key_length,
+				int type,
+				strut lsh_string *session_id)
+{
+  /* Indexed by the KEX_* values */
+  static const char *tags = "CDEF";
+  
+  struct lsh_string *key;
+  struct hash_instance *hash;
+  UINT8 *digest;
+  
+  key = lsh_string_alloc(key_length);
+
+  if (!key_length)
+    return key;
+  
+  hash = HASH_COPY(secret);
+  digest = alloca(hash->digest_size);
+
+  HASH_UPDATE(hash, tags + type, 1); 
+  HASH_UPDATE(hash, session_id->length, session_id->data);
+  HASH_DIGEST(hash, digest);
+
+  if (key_length < hash->digest_size)
+    fatal("Not implemmented\n");
+
+  memcpy(key->data, digest, key_length);
+  lsh_free(hash);
+  return key;
+}
+  
+struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
+					 struct crypto_algorithm *algorithm,
+					 int type,
+					 struct ssh_connection *connection)
+{
+  struct lsh_string *key = kex_make_key(secret, algorithm->key_size,
+					type, connection->session_id);
+  /* FIXME: No IV. Note that for DES, instantiating the crypto can
+   * fail, if the key happens to be weak. */
+  struct crypto_instance *crypt
+    = MAKE_ENCRYPT(algorithm, key->data);
+
+  lsh_string_free(key);
+  return crypt;
+}
+
+struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
+					 struct crypto_algorithm *algorithm,
+					 int type,
+					 struct ssh_connection *connection)
+{
+  struct lsh_string *key = kex_make_key(secret, algorithm->key_size,
+					type, connection->session_id);
+  /* FIXME: No IV. Note that for DES, instantiating the crypto can
+   * fail, if the key happens to be weak. */
+  struct crypto_instance *crypt
+    = MAKE_DECRYPT(algorithm, key->data);
+
+  lsh_string_free(key);
+  return crypt;
+}
+
+struct mac_instance *kex_make_mac(struct hash_instance *secret,
+				  struct mac_algorithm *algorithm,
+				  int type,
+				  struct ssh_connection *connection)
+{
+  struct lsh_string *key = kex_make_key(secret, algorithm->key_size,
+					type, connection->session_id);
+
+  struct mac_instance *mac
+    = MAKE_MAC(algorithm, key->data);
+
+  lsh_string_free(key);
+  return mac;
+}
+
+
 static int do_handle_newkeys(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)

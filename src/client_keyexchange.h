@@ -45,7 +45,6 @@ struct dh_algorithm_client
 {
   struct keyexchange_algorithm super;
   struct diffie_hellman_method dh;
-  struct hash_algorithm *hash;
   struct lookup_verifier *verifier;
 };
 
@@ -54,7 +53,6 @@ struct dh_client
 {
   struct packet_handler super;
   struct diffie_hellman_instance dh;
-  struct hash_instance *hash;
   struct lookup_verifier *verifier;
   struct packet_handler *saved_kexinit_handler;
 };

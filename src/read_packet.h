@@ -28,14 +28,18 @@
 
 #include "abstract_io.h"
 #include "abstract_crypto.h"
+#include "newkeys.h"
 
 struct read_packet
 {
   struct read_handler super; /* Super type */
 
   int state;
-  UINT32 max_packet;
 
+#if 0
+  UINT32 max_packet;
+#endif
+  
   UINT32 sequence_number; /* Attached to read packets */
   
   /* Buffer partial headers and packets. */
@@ -43,15 +47,15 @@ struct read_packet
   struct lsh_string *buffer;
   UINT32 crypt_pos;
   
-  struct mac_instance *mac;
-  struct crypto_instance *crypto;
-
   UINT8 *computed_mac; /* Must point to an area large enough to hold a mac */
-  
+
+#if 0
   struct abstract_write *handler;
+#endif
+  struct ssh_connection *connection;
 };
 
 struct read_handler *make_read_packet(struct abstract_write *handler,
-				      UINT32 max_packet);
+				      struct ssh_connection *connection);
 
 #endif /* LSH_READ_PACKET_H_INCLUDED */

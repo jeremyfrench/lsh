@@ -71,6 +71,7 @@ struct diffie_hellman_instance
   mpz_t secret; 		/* This side's secret exponent */
   mpz_t lsh_string *K;
   struct hash_instance *hash;
+  struct lsh_string *exchange_hash;
 };
 
 /* Creates client message */
