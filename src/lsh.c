@@ -33,6 +33,7 @@
 
 #include "alist.h"
 #include "atoms.h"
+#include "channel.h"
 #include "charset.h"
 #include "client.h"
 #include "client_keyexchange.h"
@@ -41,7 +42,7 @@
 #include "io.h"
 #include "randomness.h"
 #include "service.h"
-#include "session.h"
+/* #include "session.h" */
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -174,15 +175,16 @@ int main(int argc, char **argv)
   kexinit_handler = make_kexinit_handler
     (CONNECTION_CLIENT,
      make_kexinit, algorithms,
+     4711);
+#if 0
      /* FIXME: make_service_handler is wrong function: It's for
       * the server side. */
-     
      make_service_handler(make_alist
-			  (1, ATOM_SSH_USERAUTH, 
-			   make_client_userauth(ssh_format("%lz", user),
-						ATOM_SSH_CONNECTION,
-						service))));
-  
+				 (1, ATOM_SSH_USERAUTH, 
+				  make_client_userauth(ssh_format("%lz", user),
+						       ATOM_SSH_CONNECTION,
+						       service))));
+#endif
   if (!io_connect(&backend, &remote, NULL,
 		  make_client_callback(&backend,
 				       "lsh - a free ssh",
