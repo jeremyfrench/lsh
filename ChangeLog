@@ -1,5 +1,7 @@
 2000-07-14  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* lsh-1.0.1 release.
+
 	* doc/lsh.texinfo: Spelling and grammar fixes by Johan
 	Myreen. 
 
@@ -10,7 +12,7 @@
 	* configure.in (SCHEME_PROGRAM): Edited warning message displayed
 	if no scheme is found.
 
-	* doc/lsh.texinfo (Algorithm options): Note that aany argument to
+	* doc/lsh.texinfo (Algorithm options): Note that any argument to
 	the -z option must follow directly, with no spaces.
 
 	* src/jpoll.c (poll): Use trace(), not printf, for debug messages.

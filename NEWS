@@ -1,3 +1,10 @@
+News for the 1.0.1 release
+
+	Various bug fixes. Spelling and grammar fixes in the manual,
+	contributed by Johan Myreen.
+	Hacked lsh user authentication to stop asking for a password
+	if the empty password is entered twice.
+
 News for the 0.9.15 release
 
 	Portability fixes. Fixed 32-bit bug in the memory allocation
