@@ -1138,7 +1138,6 @@ static int do_connection_service(struct command *s UNUSED,
 				 struct lsh_object *x,
 				 struct command_continuation *c)
 {
-  /* CAST(connection_service, self, s); */
   CAST(ssh_connection, connection, x);
 
   struct channel_table *table;
@@ -1160,6 +1159,8 @@ static int do_connection_service(struct command *s UNUSED,
   NEW(packet_handler, channel_success);
   NEW(packet_handler, channel_failure);
 
+  debug("channel.c: do_connection_service()\n");
+  
   table = make_channel_table();
   
   connection->channels = table;
