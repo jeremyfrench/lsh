@@ -61,17 +61,34 @@ struct terminal_dimensions;
 
 /* GABA:
    (class
+     (name interact_dialog)
+     (vars
+       (nprompt . unsigned)
+       (prompt space (string) nprompt)
+       (response space (string) nprompt)
+       (echo space int nprompt)))
+*/
+
+struct interact_dialog *
+make_interact_dialog(unsigned nprompt);
+
+/* GABA:
+   (class
      (name interact)
      (vars
        (is_tty method int)
        ; Consumes the prompt
        (read_password method (string)
                   "uint32_t max_length"
-                 "const struct lsh_string *prompt")
+		  "const struct lsh_string *prompt")
        (set_askpass method void "const char *askpass")
        (yes_or_no method int
                   "const struct lsh_string *prompt"
 		  "int def" "int free")
+       ; Consumes instruction
+       (dialog method int
+                  "const struct lsh_string *instruction"
+		  "const struct interact_dialog *dialog")
 
        (get_attributes method (object terminal_attributes) )
        (set_attributes method int "struct terminal_attributes *attr")
@@ -89,6 +106,8 @@ struct terminal_dimensions;
   ((i)->set_askpass((i), (a)))
 #define INTERACT_YES_OR_NO(i, p, d, f) \
   ((i)->yes_or_no((i), (p), (d), (f)))
+#define INTERACT_DIALOG(i, s, d) \
+  ((i)->dialog((i), (s), (d)))
 #define INTERACT_GET_ATTRIBUTES(i) \
   ((i)->get_attributes((i)))
 #define INTERACT_SET_ATTRIBUTES(i, t) \

@@ -45,3 +45,20 @@
 #define GABA_DEFINE
 #include "interact.h.x"
 #undef GABA_DEFINE
+
+struct interact_dialog *
+make_interact_dialog(unsigned nprompt)
+{
+  NEW(interact_dialog, self);
+  unsigned i;
+  
+  self->nprompt = nprompt;
+  self->prompt = lsh_space_alloc(nprompt * sizeof(struct lsh_string *));
+  self->response = lsh_space_alloc(nprompt * sizeof(struct lsh_string *));
+  self->echo = lsh_space_alloc(nprompt * sizeof(int));
+  
+  for (i = 0; i < nprompt; i++)
+    self->prompt[i] = self->response[i] = NULL;
+
+  return self;
+}
