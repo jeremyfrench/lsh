@@ -79,36 +79,6 @@ lsh_sexp_to_atom(struct sexp_iterator *i)
   return sexp_iterator_next(i) ? type : 0;
 }
 
-int
-lsh_sexp_to_uint32(struct sexp_iterator *i, UINT32 *x)
-{
-  if (i->type != SEXP_ATOM || i->display)
-    return 0;
-
-  switch (i->atom_length)
-    {
-    case 0:
-      *x = 0;
-      break;
-    case 1:
-      *x = i->atom[0];
-      break;
-    case 2:
-      *x = READ_UINT16(i->atom);
-      break;
-    case 3:
-      *x = READ_UINT24(i->atom);
-      break;
-    case 4:
-      *x = READ_UINT32(i->atom);
-      break;
-    default:
-      return 0;
-    }
-  
-  return sexp_iterator_next(i);
-}
-
 /* Returns 0 or an atom */
 int
 lsh_sexp_get_type(struct sexp_iterator *i)
