@@ -1,5 +1,15 @@
 ;; FIXME: Turn this into a scheme48 module
 
+(define-syntax let-and
+  (syntax-rules '()
+		((let-and (expr) clause clauses ...)
+		 (if expr (let-and clause clauses ...)
+		     #f))
+		((let-and (name expr) clause clauses ...)
+		 (let ((name expr))
+		   (if name (let-and clause clauses ...) #f)))
+		((let-and expr) expr)))
+
 (define (atom? o) (not (list? o)))
 (define (lambda? o) (and (pair? o) (eq? 'lambda (car o))))
 
@@ -24,7 +34,7 @@
 	(do-lambda (cdr formals) (make-lambda (car formals) body))))
   (cond ((atom? expr) expr)
 	((lambda? expr)
-	 (do-lambda (lambda-formal expr)
+	 (do-lambda (reverse (lambda-formal expr))
 		    (preprocess (lambda-body expr))))
 	(else
 	 (normalize-application (preprocess (car expr))
@@ -39,9 +49,7 @@
 	 (or (free-variable? v (application-op expr))
 	     (free-variable? v (application-arg expr))))))
 
-(define (make-combine op . args)
-  (normalize-application op args))
-
+#!
 (define (translate-lambda v expr)
   (if (not (free-variable? v expr))
       (make-combine 'K (translate-expression expr))
@@ -64,15 +72,70 @@
 				 (translate-lambda v op)
 				 (translate-lambda v arg))))))))
 
+!#
+
+(define (match pattern expr)
+  (if (atom? pattern)
+      (if (eq? '* pattern) (list expr)
+	  (and (eq? pattern expr) '()))
+      (let-and ((pair? expr))
+	       (op-matches (match (application-op pattern)
+				  (application-op expr)))
+	       (arg-matches (match (application-arg pattern)
+				   (application-arg expr)))
+	       (append op-matches arg-matches))))
+
+(define (rule pattern f)
+  (cons (preprocess pattern) f))
+
+(define (make-K e) (make-combine 'K e))
+(define (make-S p q) (make-combine 'S p q))
+(define (make-B p q) (make-combine 'B p q))
+(define (make-C p q) (make-combine 'C p q))
+(define (make-S* p q r) (make-combine 'S* p q r))
+(define (make-B* p q r) (make-combine 'B* p q r))
+(define (make-C* p q r) (make-combine 'C* p q r))
+
+(define optimizations
+  (list (rule '(S (K *) (K *)) (lambda (p q) (make-K (make-appliction p q))))
+	(rule '(S (K *) I) (lambda (p) p))
+	(rule '(S (K *) (B * *)) make-B*)
+	(rule '(S (K *) *) make-B)
+	;; (rule '(S (B * *) (K *)) make-C*)
+	(rule '(C (B * *) *) make-C*)
+	(rule '(S * (K *)) make-C)
+	(rule '(S (B * * ) *) make-S*)))
+
+(define (optimize expr)
+  (werror "optimize ~S\n" expr)
+  (let loop ((rules optimizations))
+    (if (not (null? rules)) (werror "trying pattern ~S\n" (caar rules)) )
+    (cond ((null? rules) expr)
+	  ((match (caar rules) expr)
+	   => (lambda (parts) (apply (cdar rules) parts)))
+	  (else (loop (cdr rules))))))
+
+(define (make-combine op . args)
+  (optimize (normalize-application op args)))
+
 (define (translate-expression expr)
   (cond ((atom? expr) expr)
 	((lambda? expr)
 	 (translate-lambda (lambda-formal expr)
-			   (lambda-body expr)))
+			   (translate-expression (lambda-body expr))))
 	(else
 	 (make-appliction (translate-expression (application-op expr))
 			  (translate-expression (application-arg expr))))))
 
+(define (translate-lambda v expr)
+  (cond ((atom? expr)
+	 (if (eq? v expr) 'I (make-K expr)))
+	((lambda? expr)
+	 (error "translate-lambda: Unexpected lambda" expr))
+	(else
+	 (make-S (translate-lambda v (application-op expr))
+		       (translate-lambda v (application-arg expr))))))
+  
 (define (make-flat-application op arg)
   (if (atom? op) `(,op ,arg)
       `(,@op ,arg)))
@@ -82,11 +145,7 @@
       (make-flat-application (flatten-application (application-op expr))
 			     (flatten-application (application-arg expr)))))
 
-;; Could do some rewriting
-(define (optimize expr) expr)
-
 (define (translate expr)
-  (optimize (flatten-application (translate-expression (preprocess expr)))))
+  (flatten-application (translate-expression (preprocess expr))))
 
-		   
-	
+;;; Test cases
