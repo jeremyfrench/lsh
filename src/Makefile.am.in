@@ -81,6 +81,7 @@ symmetric:
 	(cd lib && $(MAKE) libsymmetric.a)
 
 EXTRA_DIST = atoms.in process_atoms make_class $(generated_sources) \
+	make_char_classes sexp_chars.in \
 	$(cvs_headers) $(dist_x_files) Makefile.am.in make_am \
 	HACKING NOTES TASKLIST
 
