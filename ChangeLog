@@ -1,5 +1,7 @@
 2003-02-06  Niels Möller  <niels@s3.kth.se>
 
+	* src/Makefile.am.in (DISTCLEANFILES): Delete environ.h.
+
 	* src/testsuite/conv-3-test: Updated test for current sexp-conv. 
 
 	* misc/xenofarm.sh: Try to add /usr/local/bin and /usr/ccs/bin to
