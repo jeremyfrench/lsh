@@ -808,30 +808,56 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  if (options->daemonic && !options->no_syslog)
-    {
-#if HAVE_SYSLOG
-      set_error_syslog("lshd");
-#else /* !HAVE_SYSLOG */
-      werror("lshd: No syslog. Further messages will be directed to /dev/null.\n");
-#endif /* !HAVE_SYSLOG */
-    }
-
   if (options->daemonic)
-    switch (daemon_init())
-      {
-      case 0:
-	werror("lshd: Spawning into background failed.\n");
-	return EXIT_FAILURE;
-      case DAEMON_INETD:
-	werror("lshd: spawning from inetd not yet supported.\n");
-	return EXIT_FAILURE;
-      case DAEMON_INIT:
-      case DAEMON_NORMAL:
-	break;
-      default:
-	fatal("Internal error\n");
-      }
+    {
+      if (options->no_syslog)
+        {
+          /* Just put process into the background. --no-syslog is an
+           * inappropriate name */
+          switch (fork())
+            {
+            case 0:
+              /* Child */
+              /* FIXME: Should we create a new process group, close our tty
+               * and stdio, etc? */
+              trace("forked into background. New pid: %i.\n", getpid());
+              break;
+              
+            case -1:
+              /* Error */
+              werror("background_process: fork failed (errno = %i): %z\n",
+                     errno, STRERROR(errno));
+              break;
+              
+            default:
+              /* Parent */
+              _exit(EXIT_SUCCESS);
+            }
+        }
+      else
+        {
+#if HAVE_SYSLOG
+          set_error_syslog("lshd");
+#else /* !HAVE_SYSLOG */
+          werror("lshd: No syslog. Further messages will be directed to /dev/null.\n");
+#endif /* !HAVE_SYSLOG */
+
+          switch (daemon_init())
+            {
+            case 0:
+              werror("lshd: Spawning into background failed.\n");
+              return EXIT_FAILURE;
+            case DAEMON_INETD:
+              werror("lshd: spawning from inetd not yet supported.\n");
+              return EXIT_FAILURE;
+            case DAEMON_INIT:
+            case DAEMON_NORMAL:
+              break;
+            default:
+              fatal("Internal error\n");
+            }
+        }
+    }
   
   if (options->use_pid_file && !daemon_pidfile(options->pid_file))
     {
