@@ -1,5 +1,7 @@
 2004-02-07  Niels Möller  <nisse@lysator.liu.se>
 
+	* install-sh: Removed from CVS repository. Let automake supply it.
+
 	* acinclude.m4 (LSH_FUNC_ALLOCA): Include <alloca.h>, if
 	available, also when compiling with gcc.
 
