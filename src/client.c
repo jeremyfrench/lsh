@@ -408,6 +408,10 @@ struct ssh_channel *make_client_session(struct io_fd *in,
   self->out = out;
   self->err = err;
 
+  /* Flow control */
+  out->buffer->report = &self->super.super;
+  err->buffer->report = &self->super.super;
+  
   self->exit_status = exit_status;
   
   return &self->super;

@@ -357,10 +357,16 @@ static int do_login(struct command *s,
       make_alist(2, 
 		 ATOM_SESSION, make_open_session(user,
 						 closure->session_requests),
-		 ATOM_DIRECT_TCPIP, make_open_direct_tcpip(closure->backend), 
+		 /* FIXME: Make direct-tcpip support configurable */
+		 ATOM_DIRECT_TCPIP,
+		 make_channel_open_direct_tcpip(closure->backend), 
 		 -1)));
 }
 
+/* FIXME: To make this more flexible, we need to have some argument
+ * that lists (i) the channel types we want to support in
+ * CHANNEL_OPEN, and (ii) for each channel type, the types of
+ * channel_requests we want to support. */
 struct command *
 make_server_connection_service(struct alist *global_requests,
 			       struct alist *session_requests,
@@ -857,6 +863,9 @@ static int do_spawn_shell(struct channel_request *c,
 		     SSH_MAX_PACKET,
 		     /* FIXME: Use a proper close callback */
 		     make_channel_close(channel));
+	/* Flow control */
+	session->in->buffer->report = &session->super.super;
+	
 	session->out
 	  = io_read(make_io_fd(closure->backend, out[0]),
 		    make_channel_read_data(channel),
