@@ -120,19 +120,21 @@ process_acls(struct spki_acl_db *db, const char *acls)
   return res;
 }
 
-static struct spki_5_tuple_list *
-process_sequence(struct spki_acl_db *db, const struct spki_principal **subject,
+static int
+process_sequence(struct spki_acl_db *db,
+		 struct spki_5_tuple_list **sequence,
+		 const struct spki_principal **subject,
 		 FILE *f)
 {
   struct spki_iterator i;
-  struct spki_5_tuple_list *res = NULL;
+  int res = 0;
   
   unsigned length;
   char *data = read_file(f, 0, &length);
 
   if (data
       && spki_transport_iterator_first(&i, length, data))
-    res = spki_parse_sequence(db, &i, subject, NULL, spki_verify);
+    res = spki_parse_sequence(db, &i, sequence, subject, NULL, spki_verify);
 
   free(data);
 
@@ -166,7 +168,7 @@ main(int argc, char **argv)
   if (!process_acls(&db, o.acls))
     die("Invalid ACL list.\n");
      
-  if (! (sequence = process_sequence(&db, &subject, stdin)))
+  if (!process_sequence(&db, &sequence, &subject, stdin))
     die("Invalid certificate.\n");
 
   reduced = spki_5_tuple_reduce(&db, sequence);

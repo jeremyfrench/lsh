@@ -161,14 +161,14 @@ process_principal(struct spki_acl_db *db, char *expr)
     return NULL;
 }
 
-static struct spki_5_tuple_list *
+static int
 process_sequence(struct spki_acl_db *db,
+		 struct spki_5_tuple_list **sequence,
 		 const struct spki_principal **subject,
 		 struct nettle_buffer *buffer,
 		 const char *file)
 {
   struct spki_iterator i;
-  struct spki_5_tuple_list *res = NULL;
   
   unsigned length;
   char *data = read_file_by_name(file, 0, &length);
@@ -177,9 +177,8 @@ process_sequence(struct spki_acl_db *db,
       && spki_transport_iterator_first(&i, length, data))
     {
       unsigned start = i.start;
-      res = spki_parse_sequence(db, &i, subject, NULL, spki_verify);
-      
-      if (res)
+
+      if (spki_parse_sequence(db, &i, sequence, subject, NULL, spki_verify))
 	{
 	  unsigned length;
 	  const uint8_t *expr = spki_parse_prevexpr(&i, start, &length);
@@ -190,11 +189,14 @@ process_sequence(struct spki_acl_db *db,
 	   * parenthesis. */
 
 	  sexp_format(buffer, "%l", length - 1, expr);
+	  free(data);
+
+	  return 1;
 	}
     }
-  free(data);
 
-  return res;
+  free(data);
+  return 0;
 }
 
 static int
@@ -237,9 +239,11 @@ main(int argc, char **argv)
 
   if (o.chain)
     {
-      if (!process_sequence(&db, &issuer, &buffer, o.chain))
+      struct spki_5_tuple_list *sequence;
+
+      if (!process_sequence(&db, &sequence, &issuer, &buffer, o.chain))
 	die("Invalid input certificate.\n");
-      assert(issuer);
+      assert(issuer);      
     }
   else if (o.issuer)
     {
