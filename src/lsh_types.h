@@ -100,8 +100,9 @@ struct lsh_string
 {
   struct lsh_object header;
   
-  UINT32 sequence_number; 
-  UINT32 length;
+  UINT32 sequence_number;
+  /* NOTE: The allocated size may be larger than the string length. */
+  UINT32 length; 
   UINT8 data[1];
 };
 
