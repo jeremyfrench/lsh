@@ -41,8 +41,6 @@ AC_CHECK_FUNCS(fputs_unlocked fwrite_unlocked)
 dnl Used only by argp-test.c, so don't use AC_REPLACE_FUNCS.
 AC_CHECK_FUNCS(strdup asprintf)
 
-AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
-
 dnl AC_CHECK_VAR(VAR, TYPE)
 AC_DEFUN(AC_CHECK_VAR,
 [ AC_CACHE_CHECK(
