@@ -1,4 +1,17 @@
+1999-11-29  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/sexp.c (sexp_assq): Bug fix.
+
+	* src/lshd.c (main): Changed invocation of read_spki_key_file. 
+
+	* src/lsh.c (do_client_lookup): Better error messages. Write
+	hostname properly in the ACL file.
+	(main_argp_parser): Added options --strict, --sloppy and
+	--capture-to. 
+
 1999-11-28  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/dsa.c (make_dsa_signer): #if:ed out some debug output. 
 
 	* src/server_authorization.c (do_key_lookup): Some
 	simplifications. Use make_ssh_dss_verifier().

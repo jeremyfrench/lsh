@@ -396,6 +396,11 @@ parse_private_key(struct alist *algorithms,
   if (algorithm)
     {
       struct signer *s = MAKE_SIGNER(algorithm, inner);
+      if (!s)
+	{
+	  werror("parse_private_key: Invalid key.\n");
+	  return NULL;
+	}
       /* Test key here? */
       switch (type)
 	{
@@ -1022,7 +1027,7 @@ spki_read_acls(struct spki_context *ctx,
 
 static struct spki_subject *
 spki_subject_by_hash(struct spki_state *self,
-		int algorithm, struct lsh_string *hash)
+		     int algorithm, struct lsh_string *hash)
 {
   FOR_OBJECT_QUEUE(&self->keys, n)
     {

@@ -214,6 +214,89 @@ the method. Each userauth method should probably request the same
 username and service.
 
 
+SPKI SUPPORT
+
+The current interface for SPKI operations consists of two classes.
+spki_context and spki_subject.
+
+An spki_subject holds at least one of the following items:
+
+ * A public key
+ * Hashes of the key
+ * A verifier object, that can verify signatures created with a key.
+
+Subjects are not necessarily trusted, but each subject must always be
+internally consistent.
+
+An spki_context contains a list of subjects and a list of 5-tuples. It
+has two methods, lookup and authorize.
+
+The LOOKUP method takes an s-expression which is a public key or a
+hash (names should be added later). It tries to find a matching
+subject in the list, or adds a new one if needed. LOOKUP returns a
+subject, or NULL if the input s-expression was invalid.
+
+The idea is that subjects in the same context (i.e. returned by the
+LOOKUP method in the same spki_context object) can be compared by
+simple pointer comparison. If LOOKUP is first called with a hash, a
+subject will all attributes but the appropriate hash value left NULL is
+returned. If LOOKUP is called later with a public key matching the
+hash, the same subject is returned, but with the public-key and
+possibly verifier attributes modified with the new information.
+
+This should work in most cases. But consider this scenario: Assume
+that we call LOOKUP three times with (i) md5 hash, (ii) sha1 hash, and
+finally (iii) the matching public-key expression. The first two calls
+will result in two distinct subjects. With the third call, we provide
+new information, which is merged into one of the subjects. But the
+other will stay around, with a NULL verifier attribute.
+
+The AUTHORIZE method takes a subject and an "access description",
+where the latter correspond to the bodies of SPKI (tag ...)
+expressions. AUTHORIZE tries to find an ACL and certificate chain that
+grants acces for the subject. Currently, only ACL:s are supported; no
+certificates. AUTHORIZE returns 1 if access is granted and 0 if access
+is denied.
+
+For ssh hostkeys, the access description for the host
+"foo.lysator.liu.se" is the s-expression (ssh-hostkey
+"se.liu.lysator.foo"). Note that the components are in reversed order;
+this makes it easier to create certificates for a subtree in the dns,
+with a tag containing (* prefix "se.liu.lysator.").
+
+There's one function to convert an ACL to a list 5-tuple:
+
+  struct object_list *
+  spki_read_acls(struct spki_context *ctx,
+  		 struct sexp *e)
+
+Perhaps this should be turned into a method, and we also need some
+similar method for certificates. When adding a certificate, the
+certificate signature must be verified, and this will fail unless the
+issuer is already in the spki_subject-list, and with a non-NULL
+verifier attribute.
+
+Sharing spki_contexts requires consideration. Consider the server side
+of user authentication, where each user may have a file of acls and
+certificates to grant login access to his or her account. It's
+tempting to use one single spki_context to keep track of all subjects.
+
+And I think that it may be reasonable to do this for subjects and
+certificates. They are (i) more or less public, and (ii) not empowered
+unless there is an acl->certificate chain that grants power to the
+key. ACL:s are an entirely different matter, though.
+
+I could make sense to have a base context that contains names, acl:s
+and certificates that the server (or its admin) trusts. For each user
+authentication operation, first copy the base context, then add the
+user's acl:s to it, and finally add the certificates supplied by the
+remote peer. This extended context can be used for access decision,
+without the base context being modified at all. On the other hand, it
+might be a good idea to at least share the subject database.
+
+I have to think some more about this.
+
+
 PTY REFERENCES (from Keresztg)
 
 the code of tnlited
