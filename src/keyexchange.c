@@ -23,13 +23,17 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include "abstract_io.h"
-#include "connection.h"
-#include "format.h"
 #include "keyexchange.h"
+
+#include "abstract_io.h"
+#include "alist.h"
+#include "connection.h"
+#include "disconnect.h"
+#include "format.h"
 #include "parse.h"
 #include "publickey_crypto.h"
 #include "ssh.h"
+#include "werror.h"
 #include "xalloc.h"
 
 #define NLISTS 10
@@ -80,7 +84,7 @@ struct kexinit *parse_kexinit(struct lsh_string *packet)
     }
   
   res->kex_algorithms = lists[0];
-  res->server_host_key_algorithms = lists[1];
+  res->server_hostkey_algorithms = lists[1];
 
   for (i=0; i<KEX_PARAMETERS; i++)
     res->parameters[i] = lists[2 + i];
@@ -110,7 +114,7 @@ struct lsh_string *format_kex(struct kexinit *kex)
 		    SSH_MSG_KEXINIT,
 		    16, kex->cookie,
 		    kex->kex_algorithms,
-		    kex->server_host_key_algorithms,
+		    kex->server_hostkey_algorithms,
 		    kex->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER],
 		    kex->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT],
 		    kex->parameters[KEX_MAC_CLIENT_TO_SERVER],
@@ -128,7 +132,7 @@ int initiate_keyexchange(struct ssh_connection *connection,
 			 struct lsh_string *first_packet)
 {
   int res;
-  lsh_string *s;
+  struct lsh_string *s;
   
   kex->first_kex_packet_follows = !!first_packet;
   connection->kexinits[connection->type] = kex;
@@ -158,27 +162,25 @@ int select_algorithm(int *server_list, int *client_list)
 	/* Unknown algorithm */
 	continue;
       for(j = 0; server_list[j] > 0; j++)
-	if (client_list[i] = server_list[j])
+	if (client_list[i] == server_list[j])
 	  return client_list[i];
     }
 
   return 0;
 }
 
-int send_disconnect(struct ssh_conection, char *msg)
+int disconnect_kex_failed(struct ssh_connection *connection, char *msg)
 {
   return A_WRITE(connection->write,
-		 ssh_format("%c%i%z%z",
-			    SSH_MSG_DISCONNECT,
-			    SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
-			    msg, ""));
+		 format_disconnect(SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
+				   msg));
 }
 
-static int do_handle_kexinit(struct packet_hander *c,
+static int do_handle_kexinit(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
 {
-  struct handle_kexinit *closure = (struct handle_kexinit_packet *) c;
+  struct handle_kexinit *closure = (struct handle_kexinit *) c;
   struct kexinit *msg = parse_kexinit(packet);
 
   int kex_algorithm;
@@ -186,8 +188,6 @@ static int do_handle_kexinit(struct packet_hander *c,
 
   int parameters[KEX_PARAMETERS];
   void **algorithms;
-
-  struct packet_handler newkeys;
 
   int i;
   
@@ -204,10 +204,10 @@ static int do_handle_kexinit(struct packet_hander *c,
     {
       int res;
       struct lsh_string *packet;
-      struct kexinit *sent =  GENERATE_KEXINIT(closure->init);
+      struct kexinit *sent = MAKE_KEXINIT(closure->init);
       connection->kexinits[connection->type] = sent;
       packet = format_kex(sent);
-      connection->kexinits[connection->type] = lsh_string_dup(packet); 
+      connection->literal_kexinits[connection->type] = lsh_string_dup(packet); 
       
       res = A_WRITE(connection->write, packet);
       if (res != WRITE_OK)
@@ -217,10 +217,10 @@ static int do_handle_kexinit(struct packet_hander *c,
   /* Select key exchange algorithms */
 
   if (connection->kexinits[0]->kex_algorithms[0]
-      == connection->kexinits[1]->kex_algorithms[1])
+      == connection->kexinits[1]->kex_algorithms[0])
     {
       /* Use this algorithm */
-      kex_algorithm = connection->sent_kexinit->kex_algorithms[0];
+      kex_algorithm = connection->kexinits[0]->kex_algorithms[0];
     }
   else
     {
@@ -232,55 +232,68 @@ static int do_handle_kexinit(struct packet_hander *c,
       /* FIXME: Ignores that some keyechange algorithms require
        * certain features of the host key algorithms. */
       
-      kex_algorithm = select_algorithm(connection->kexinits[0]->kex_algorithm,
-				       connection->kexinits[1]->kex_algorithm);
+      kex_algorithm = select_algorithm(connection->kexinits[0]->kex_algorithms,
+				       connection->kexinits[1]->kex_algorithms);
+
       if  (!kex_algorithm)
 	{
-	  send_disconnect(connection, "No common key exchange method.\r\n");
-
+	  disconnect_kex_failed(connection, "No common key exchange method.\r\n");
+	  
 	  /* FIXME: We want the disconnect message to be sent
 	   * before the socket is closed. How? */
 	  return WRITE_CLOSED;
 	}
-
-      hostkey_algorithm
-	= select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
-			   connection->kexinits[1]->server_hostkey_algorithms);
-
-      for(i = 0; i<KEX_PARAMETERS; i++)
-	{
-	  parameters[i]
-	    = select_algorithm(connection->kexinits[0]->parameters[i],
-			       connection->kexinits[1]->parameters[i]);
-
-	  if (!parameters[i])
-	    {
-	      send_disconnect(connection, "");
-	      return WRITE_CLOSED;
-	    }
-	}
-
-      algorithms = xalloc(KEX_PARAMETERS*sizeof(void *));
-
-      for (i = 0; i<KEX_PARAMETERS; i++)
-	algorithms[i] = ALIST_GET(closure->algorithms, parameters[i]);
-      
-      newkeys = make_newkeys_handler(ALIST_GET(closure->algorithms,
-					       hostkey_algorithm),
-				     algorithms);
-
-      return KEYEXCHANGE_INIT(ALIST_GET(algorithms, kex_algorithm), connection);
     }
+  hostkey_algorithm
+    = select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
+		       connection->kexinits[1]->server_hostkey_algorithms);
+  
+  for(i = 0; i<KEX_PARAMETERS; i++)
+    {
+      parameters[i]
+	= select_algorithm(connection->kexinits[0]->parameters[i],
+			       connection->kexinits[1]->parameters[i]);
+      
+      if (!parameters[i])
+	{
+	  disconnect_kex_failed(connection, "");
+	  return WRITE_CLOSED;
+	}
+    }
+  
+  algorithms = xalloc(KEX_PARAMETERS*sizeof(void *));
+  
+  for (i = 0; i<KEX_PARAMETERS; i++)
+    algorithms[i] = ALIST_GET(closure->algorithms, parameters[i]);
+      
+  return KEYEXCHANGE_INIT( (struct keyexchange_algorithm *)
+			   ALIST_GET(closure->algorithms, kex_algorithm),
+			   connection,
+			   hostkey_algorithm,
+			   ALIST_GET(closure->algorithms, hostkey_algorithm),
+			   algorithms);
+}
+
+struct packet_handler *make_kexinit_handler(struct make_kexinit *init,
+					    struct alist *algorithms)
+{
+  struct handle_kexinit *self = xalloc(sizeof(struct handle_kexinit));
+
+  self->super.handler = do_handle_kexinit;
+  self->init = init;
+  self->algorithms = algorithms;
+
+  return &self->super;
 }
 
 /* FIXME: THis function can't handle IV:s at all */
 struct lsh_string *kex_make_key(struct hash_instance *secret,
 				UINT32 key_length,
 				int type,
-				strut lsh_string *session_id)
+				struct lsh_string *session_id)
 {
   /* Indexed by the KEX_* values */
-  static const char *tags = "CDEF";
+  static /* const */ char *tags = "CDEF";
   
   struct lsh_string *key;
   struct hash_instance *hash;
@@ -292,14 +305,14 @@ struct lsh_string *kex_make_key(struct hash_instance *secret,
     return key;
   
   hash = HASH_COPY(secret);
-  digest = alloca(hash->digest_size);
+  digest = alloca(hash->hash_size);
 
-  HASH_UPDATE(hash, tags + type, 1); 
+  HASH_UPDATE(hash, 1, tags + type); 
   HASH_UPDATE(hash, session_id->length, session_id->data);
   HASH_DIGEST(hash, digest);
 
-  if (key_length < hash->digest_size)
-    fatal("Not implemmented\n");
+  if (key_length < hash->hash_size)
+    fatal("Not implemented\n");
 
   memcpy(key->data, digest, key_length);
   lsh_free(hash);
@@ -307,62 +320,115 @@ struct lsh_string *kex_make_key(struct hash_instance *secret,
 }
   
 struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
-					 struct crypto_algorithm *algorithm,
+					 void **algorithms,
 					 int type,
 					 struct ssh_connection *connection)
 {
-  struct lsh_string *key = kex_make_key(secret, algorithm->key_size,
+  struct crypto_algorithm *algorithm = algorithms[type];
+  struct lsh_string *key;
+  struct crypto_instance *crypto;
+  
+  if (!algorithm)
+    return NULL;
+
+  key = kex_make_key(secret, algorithm->key_size,
 					type, connection->session_id);
   /* FIXME: No IV. Note that for DES, instantiating the crypto can
    * fail, if the key happens to be weak. */
-  struct crypto_instance *crypt
-    = MAKE_ENCRYPT(algorithm, key->data);
+
+  crypto = MAKE_ENCRYPT(algorithm, key->data);
 
   lsh_string_free(key);
-  return crypt;
+  return crypto;
 }
 
 struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
-					 struct crypto_algorithm *algorithm,
+					 void **algorithms,
 					 int type,
 					 struct ssh_connection *connection)
 {
-  struct lsh_string *key = kex_make_key(secret, algorithm->key_size,
-					type, connection->session_id);
+  struct crypto_algorithm *algorithm = algorithms[type];
+  struct lsh_string *key;
+  struct crypto_instance *crypto;
+  
+  if (!algorithm)
+    return NULL;
+  
+  key = kex_make_key(secret, algorithm->key_size,
+		     type, connection->session_id);
   /* FIXME: No IV. Note that for DES, instantiating the crypto can
    * fail, if the key happens to be weak. */
-  struct crypto_instance *crypt
-    = MAKE_DECRYPT(algorithm, key->data);
+
+  crypto = MAKE_DECRYPT(algorithm, key->data);
 
   lsh_string_free(key);
-  return crypt;
+  return crypto;
 }
 
 struct mac_instance *kex_make_mac(struct hash_instance *secret,
-				  struct mac_algorithm *algorithm,
+				  void **algorithms,
 				  int type,
 				  struct ssh_connection *connection)
 {
-  struct lsh_string *key = kex_make_key(secret, algorithm->key_size,
-					type, connection->session_id);
+  struct mac_algorithm *algorithm = algorithms[type];
+  struct mac_instance *mac;
+  struct lsh_string *key;
 
-  struct mac_instance *mac
-    = MAKE_MAC(algorithm, key->data);
+  if (!algorithm)
+    return NULL;
+
+  key = kex_make_key(secret, algorithm->key_size,
+		     type, connection->session_id);
+
+  mac = MAKE_MAC(algorithm, key->data);
 
   lsh_string_free(key);
   return mac;
 }
 
+struct handle_newkeys
+{
+  struct packet_handler super;
+  struct crypto_instance *crypto;
+  struct mac_instance *mac;
+};
 
 static int do_handle_newkeys(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
 {
-  
-struct packet_handler *
-make_newkeys_handler(struct signature_algorithm *hostkey_algorithm,
-		     void *parameters)
-{
-  
+  struct handle_newkeys *closure = (struct handle_newkeys *) c;
+  struct simple_buffer buffer;
+  UINT8 msg_number;
 
+  simple_buffer_init(&buffer, packet->length, packet->data);
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_NEWKEYS)
+      && (parse_eod(&buffer)))
+    {
+      connection->rec_crypto = closure->crypto;
+      connection->rec_mac = closure->mac;
+
+      connection->dispatch[SSH_MSG_NEWKEYS] = NULL;
+
+      lsh_free(closure);
+      return WRITE_OK;
+    }
+  else
+    return WRITE_CLOSED;
+}
+
+struct packet_handler *
+make_newkeys_handler(struct crypto_instance *crypto,
+		     struct mac_instance *mac)
+{
+  struct handle_newkeys *self = xalloc(sizeof(struct handle_newkeys));
+
+  self->super.handler = do_handle_newkeys;
+  self->crypto = crypto;
+  self->mac = mac;
+
+  return &self->super;
+}
   
