@@ -27,7 +27,8 @@ noinst_LIBRARIES = liblsh.a
 # Don't use BUILT_SOURCES, as all these files are #included, and can't be
 # compiled or dependency checked independently.
 
-generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c prime_table.h
+generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
+	prime_table.h sexp_table.h
 
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c alist.c arcfour.c atoms.c \
 	bignum.c blocking_write.c blowfish.c \
@@ -62,7 +63,10 @@ atoms_table.c: atoms.in process_atoms
 PRIME_LIMIT = 1024
 
 prime_table.h: prime_table
-	./prime_table $(PRIME_LIMIT) >prime_table.h
+	./prime_table $(PRIME_LIMIT) >$@
+
+sexp_table.h: sexp_chars.in
+	./make_char_classes <$< >$@
 
 lsh_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
 lshd_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
