@@ -32,7 +32,7 @@ noinst_LIBRARIES = liblsh.a
 # compiled or dependency checked independently.
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
-	prime_table.h sexp_table.h digit_table.h typdescr.h
+	prime_table.h sexp_table.h digit_table.h # typdescr.h
 
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	algorithms.c alist.c arcfour.c atoms.c \
