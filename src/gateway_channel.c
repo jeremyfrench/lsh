@@ -163,7 +163,11 @@ do_gateway_channel_open(struct channel_open_command *c,
     = make_gateway_channel(closure->requests);
 
   target->super.rec_window_size = closure->rec_window_size;
-  target->super.rec_max_packet = closure->rec_max_packet;
+
+  /* Don't advertise a larger rec_max_packet than we're willing to handle. */
+  target->super.rec_max_packet
+    = MIN(closure->rec_max_packet, SSH_MAX_PACKET);
+  
   target->super.connection = connection;
 
   *request = format_channel_open_s(closure->type,
@@ -333,7 +337,10 @@ do_gateway_channel_open_continuation(struct command_continuation *c,
   target->chain = self->origin;
 
   self->origin->super.rec_window_size = target->super.send_window_size;
-  self->origin->super.rec_max_packet = target->super.send_max_packet;
+
+  /* Don't advertise a larger rec_max_packet than we're willing to handle. */
+  self->origin->super.rec_max_packet
+    = MIN(target->super.send_max_packet, SSH_MAX_PACKET);
 
   gateway_init_io(self->origin);
   gateway_init_io(target);
@@ -371,7 +378,7 @@ do_channel_open_forward(struct channel_open *s UNUSED,
 
   struct command *command
     = make_gateway_channel_open_command(info, parse_rest_copy(args), NULL);
-  
+
   origin->super.request_fallback = &gateway_channel_request;
   
   COMMAND_CALL(command,
