@@ -1,3 +1,8 @@
+Fri Mar 19 18:15:38 1999    <nisse@idonex.se>
+
+	* src/make_class (process-expr): Generate code using more
+	combinators. 
+
 Fri Mar 19 01:03:50 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/combinators.c: New file. Implemented all of the I, K, S, B,
