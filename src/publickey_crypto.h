@@ -44,9 +44,10 @@
        (private object signer)))
 */
 
-struct keypair *make_keypair(UINT32 type,
-			     struct lsh_string *public,
-			     struct signer *private);
+struct keypair *
+make_keypair(UINT32 type,
+	     struct lsh_string *public,
+	     struct signer *private);
 
 /* DSA definitions */
 /* GABA:
@@ -114,32 +115,46 @@ make_rsa_algorithm(struct hash_algorithm *hash,
 		   UINT32 prefix_length,
 		   const UINT8 *prefix);
 
-/* FIXME: Groups could use (meta)class methods */
-
 /* Groups. For now, assume that all group elements are represented by
  * bignums. */
 /* GABA:
    (class
-     (name group)
+     (name abstract_group)
      (vars
        (order bignum)
+       (generator bignum)
        ;; We should have a generator here, as we always work within some
        ;; cyclic subgroup.
-       (member method int "mpz_t x")
+       
+       ;; Checks if a bignum is in the correct range for being a group element. 
+       (range method int "mpz_t x")
        (invert method void "mpz_t res" "mpz_t x")
        (combine method void "mpz_t res" "mpz_t a" "mpz_t b")
        ; FIXME: Doesn't handle negative exponents
-       (power method void "mpz_t res" "mpz_t g" "mpz_t e")))
+       (power method void "mpz_t res" "mpz_t g" "mpz_t e")
+       (small_power method void "mpz_t res" "mpz_t g" "UINT32 e")))
 */
 
-#define GROUP_MEMBER(group, x) ((group)->member((group), (x)))
+#define GROUP_RANGE(group, x) ((group)->range((group), (x)))
 #define GROUP_INVERT(group, res, x) ((group)->invert((group), (res), (x)))
 #define GROUP_COMBINE(group, res, a, b) \
 ((group)->combine((group), (res), (a), (b)))
 #define GROUP_POWER(group, res, g, e) \
 ((group)->power((group), (res), (g), (e)))
+#define GROUP_SMALL_POWER(group, res, g, e) \
+((group)->power((group), (res), (g), (e)))
 
-struct group *make_zn(mpz_t p, mpz_t order);
+/* Groups */
+/* GABA:
+   (class
+     (name group_zn)
+     (super abstract_group)
+     (vars
+       (modulo bignum)))
+*/
+
+struct group_zn *
+make_zn(mpz_t p, mpz_t g, mpz_t order);
 
 
 /* DH key exchange, with authentication */
@@ -147,15 +162,10 @@ struct group *make_zn(mpz_t p, mpz_t order);
    (class
      (name diffie_hellman_method)
      (vars
-       (G object group)
-       (generator bignum)
+       (G object abstract_group)
        (H object hash_algorithm)
        (random object randomness)))
 */
-
-/* NOTE: Instances are never allocated on the heap by themselves. They
- * are always embedded in other objects. Therefore there's no object
- * header. */
 
 /* GABA:
    (struct
@@ -173,11 +183,13 @@ struct group *make_zn(mpz_t p, mpz_t order);
 */
 
 /* Creates client message */
-struct lsh_string *dh_make_client_msg(struct diffie_hellman_instance *self);
+struct lsh_string *
+dh_make_client_msg(struct diffie_hellman_instance *self);
 
 /* Receives client message */
-int dh_process_client_msg(struct diffie_hellman_instance *self,
-			  struct lsh_string *packet);
+int
+dh_process_client_msg(struct diffie_hellman_instance *self,
+		      struct lsh_string *packet);
 
 #if 0
 /* Should be called with the kex_init messages, client's first */
@@ -186,29 +198,37 @@ void dh_hash_update(struct diffie_hellman_instance *self,
 #endif
 
 /* Generates server's secret exponent */
-void dh_make_server_secret(struct diffie_hellman_instance *self);
+void
+dh_make_server_secret(struct diffie_hellman_instance *self);
 
 /* Creates server message */
-struct lsh_string *dh_make_server_msg(struct diffie_hellman_instance *self,
-				      struct signer *s);
+struct lsh_string *
+dh_make_server_msg(struct diffie_hellman_instance *self,
+		   struct signer *s);
 
 /* Decodes server message, but does not verify its signature */
-int dh_process_server_msg(struct diffie_hellman_instance *self,
-			  struct lsh_string *packet);
+int
+dh_process_server_msg(struct diffie_hellman_instance *self,
+		      struct lsh_string *packet);
 
 /* Verifies server's signature */
-int dh_verify_server_msg(struct diffie_hellman_instance *self,
-			 struct verifier *v);
+int
+dh_verify_server_msg(struct diffie_hellman_instance *self,
+		     struct verifier *v);
 
-void dh_generate_secret(struct diffie_hellman_instance *self,
-			mpz_t r);
+void
+dh_generate_secret(struct diffie_hellman_method *self,
+		   mpz_t r, mpz_t v);
 
-void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest);
+void
+dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest);
 
-struct diffie_hellman_method *make_dh1(struct randomness *r);
+struct diffie_hellman_method *
+make_dh1(struct randomness *r);
 
-void init_diffie_hellman_instance(struct diffie_hellman_method *m,
-				  struct diffie_hellman_instance *self,
-				  struct ssh_connection *c);
+void
+init_diffie_hellman_instance(struct diffie_hellman_method *m,
+			     struct diffie_hellman_instance *self,
+			     struct ssh_connection *c);
 
 #endif /* LSH_PUBLICKEY_CRYPTO_H_INCLUDED */
