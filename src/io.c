@@ -1407,39 +1407,16 @@ io_connect(struct sockaddr *remote,
 }
 
 struct lsh_fd *
-io_listen_fd(int s,
-	     struct io_callback *callback,
-	     struct exception_handler *e)
-{
-  struct lsh_fd *fd;
-  
-  if (listen(s, 256) < 0) 
-    {
-      close(s);
-      return NULL;
-    }
-
-  fd = make_lsh_fd(s, "listening socket", e);
-
-  fd->read = callback;
-  lsh_oop_register_read_fd(fd);
-
-  return fd;
-}
-
-struct lsh_fd *
-io_listen(struct sockaddr *local,
-	  socklen_t length,
-	  struct io_callback *callback,
-	  struct exception_handler *e)
+io_bind_sockaddr(struct sockaddr *local,
+		 socklen_t length,
+		 struct exception_handler *e)
 {
   int s = socket(local->sa_family, SOCK_STREAM, 0);
   
   if (s<0)
     return NULL;
 
-  trace("io.c: Listening on fd %i\n", s);
-  
+  trace("io.c: Trying to bind fd %i\n", s);
   io_init_fd(s);
 
   {
@@ -1449,11 +1426,48 @@ io_listen(struct sockaddr *local,
 
   if (bind(s, (struct sockaddr *)local, length) < 0)
     {
+      trace("io.c: bind failed: (errno = %d) %z\n",
+	    errno, STRERROR(errno));
       close(s);
       return NULL;
     }
 
-  return io_listen_fd(s, callback, e);
+  return make_lsh_fd(s, "bound socket", e);
+}
+
+/* FIXME: Rename to io_listen. */
+struct lsh_fd *
+io_listen_fd(struct lsh_fd *fd,
+	     struct io_callback *callback)
+{
+  /* For convenience in nested function calls. */
+  if (!fd)
+    return NULL;
+  
+  if (listen(fd->fd, 256) < 0) 
+    {
+      /* Closes the fd and returns failure.
+       * Caller is responsible for checking the return value and raising
+       * a proper exception. */
+      close_fd(fd);
+      return NULL;
+    }
+
+  fd->read = callback;
+  lsh_oop_register_read_fd(fd);
+
+  return fd;
+}
+
+/* FIXME: Rename to io_listen_sockaddr. */
+
+struct lsh_fd *
+io_listen(struct sockaddr *local,
+	  socklen_t length,
+	  struct io_callback *callback,
+	  struct exception_handler *e)
+{
+  return io_listen_fd(io_bind_sockaddr(local, length, e), callback);
 }
 
 

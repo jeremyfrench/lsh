@@ -305,9 +305,13 @@ io_connect(struct sockaddr *remote,
 	   struct exception_handler *e);
 
 struct lsh_fd *
-io_listen_fd(int s,
-	     struct io_callback *callback,
-	     struct exception_handler *e);
+io_bind_sockaddr(struct sockaddr *local,
+		 socklen_t length,
+		 struct exception_handler *e);
+
+struct lsh_fd *
+io_listen_fd(struct lsh_fd *fd,
+	     struct io_callback *callback);
 
 struct lsh_fd *
 io_listen(struct sockaddr *local,
