@@ -451,7 +451,8 @@ AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
 
 # Use system argp only if we can actually link with it.
 if test x$with_system_argp = xyes ; then
-  AC_CHECK_FUNCS(argp_parse,, with_system_argp=no)
+dnl  AC_CHECK_FUNCS(argp_parse,, with_system_argp=no)
+  AC_LIB_ARGP(,with_system_argp=no)
 fi
 
 # FIXME: If the system already has argp, it's unnecessary to build our own.
