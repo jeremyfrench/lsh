@@ -179,10 +179,15 @@ do_init_client_dh(struct keyexchange_algorithm *c,
 
     /* FIXME: We should make sure that we never advertise hostkey
      * algorithms for which we have no verifiers. */
+
+    assert(v);
+#if 0
     if (!v)
       {
 	fatal("No verifier for the '%a' hostkey algorithm.\n", hostkey_algorithm_atom);
       }
+#endif
+    
     dh->verifier = v;
     dh->hostkey_algorithm = hostkey_algorithm_atom;
   }
