@@ -180,52 +180,8 @@ DEFINE_COMMAND2(spki_sexp2keypair_command)
     } 
 }
 
-/* GABA:
-   (class
-     (name spki_command)
-     (super command)
-     (vars
-       (ctx object spki_context)))
-*/
-
 /* Reading of ACL:s
  * ****************/
-
-#if 0
-/* Adds an ACL s-expression to an SPKI-context. Returns the context. */
-
-static void
-do_spki_add_acl(struct command *s,
-		struct lsh_object *a,
-		struct command_continuation *c,
-		struct exception_handler *e UNUSED)
-{
-  CAST(spki_command, self, s);
-  CAST_SUBTYPE(sexp, expr, a);
-
-  trace("do_spki_add_acl\n");
-  spki_add_acl(self->ctx, expr);
-
-  COMMAND_RETURN(c, self->ctx);
-}
-
-DEFINE_COMMAND(spki_add_acl_command)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST_SUBTYPE(spki_context, ctx, a);
-
-  NEW(spki_command, self);
-  self->super.call = do_spki_add_acl;
-  self->ctx = ctx;
-
-  trace("spki_add_acl_command\n");
-
-  COMMAND_RETURN(c, self);
-}
-#endif
 
 DEFINE_COMMAND(spki_make_context_command)
      (struct command *s UNUSED,
