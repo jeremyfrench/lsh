@@ -14,6 +14,5 @@ PROXYPORT=`expr $PORT + 2`
 at_connect $SERVERPORT 1 'grep bar && echo foo' \
     && spawn_lshd \
     && spawn_lsh -L $PROXYPORT:localhost:$SERVERPORT \
-    && sleep 30 \
     && echo bar | tcpconnect localhost $PROXYPORT | grep foo \
     && test_success
