@@ -8,7 +8,7 @@ fi
 
 . $srcdir/functions.sh
 
-LSHD_FLAGS="$LSHD_FLAGS --login-auth-mode --login-program=/bin/cat --no-password --no-publickey"
+LSHD_FLAGS="$LSHD_FLAGS --login-auth-mode --login-shell=/bin/cat --no-password --no-publickey"
 
 cat ../lshd > test.out1
 spawn_lshd && exec_lsh <test.out1 >test.out2
