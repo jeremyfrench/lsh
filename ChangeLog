@@ -1,3 +1,34 @@
+2001-06-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* acinclude.m4: Added template for socklen_t definition.
+
+	* acconfig.h: Deleted definitions, use AH_TEMPLATE in configure.in
+	instead. Can this file be removed completely now?
+
+	* configure.in: Added AH_TEMPLATE calls. Deleted test for
+	offsetof. 
+
+	* src/client_escape.c (newlinep): New function.
+	Treat NL and CR equivalently.
+	(scan_escape): Simplified. Also doesn't use memchr anymore. 
+
+	* src/io.c (io_listen_local): Use plain offsetof.
+	(io_connect_local): Likewise.
+
+	* src/lsh_types.h (OFFSET_OF): Deleted definition, simply trust
+	stddef.h. 
+
+	* src/server_userauth.c (do_exc_userauth_handler): Let the
+	connection's exception handler deal with EXC_PROTOCOL (fixed
+	somewhat differently in the 1.2.x branch).
+
+2001-06-26  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* configure.in: Deleted IDEA support.
+
+	* src/process_atoms (atom2define): Changed invocation of tr to be
+	compatible with the Solaris 8 tr.
+
 2001-06-26  Niels Möller  <nisse@ehand.com>
 
 	* src/client_escape.c (NEWLINE): New macro.
