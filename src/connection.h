@@ -51,6 +51,7 @@ enum connection_flag
 
 enum peer_flag
   {
+#if 0
     /* Use a different encoding of ssh-dss signatures, for
      * compatibility with SSH Inc's ssh version 2.0.x and 2.1.0 */
     PEER_SSH_DSS_KLUDGE          = 0x00000001,
@@ -67,6 +68,7 @@ enum peer_flag
     /* Never send a debug message after successful keyexchange, as SSH
      * Inc's ssh version 2.0.x and 2.1 can't handle that. */
     PEER_SEND_NO_DEBUG           = 0x00000008,
+#endif
 
     /* Don't include the originator port in X11 channel open messages,
      * for compatibility with SSH Inc's ssh version 2.0.x */
