@@ -30,14 +30,20 @@
 #include <config.h>
 #endif
 
-#ifdef LSH
-/* Portability stuff */
-#include "argp-comp.h"
-#endif
-
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "argp.h"
+
+#if !(_LIBC || \
+  (defined (HAVE_FLOCKFILE) && defined(HAVE_PUTC_UNLOCKED) \
+    && defined (HAVE_FPUTS_UNLOCKED) && defined (HAVE_FWRITE_UNLOCKED) ))
+# define flockfile(s)
+# define funlockfile(s)
+# define putc_unlocked(c, s) puts((c), (s))
+# define fwrite_unlocked(b, s, n, f) fwrite((b), (s), (n), (f))
+#endif /* No thread safe i/o */
 
 #if    (_LIBC - 0 && !defined (USE_IN_LIBIO)) \
     || (defined (__GNU_LIBRARY__) && defined (HAVE_LINEWRAP_H))
@@ -131,10 +137,10 @@ extern void argp_fmtstream_free (argp_fmtstream_t __fs);
 
 extern ssize_t __argp_fmtstream_printf (argp_fmtstream_t __fs,
 				       __const char *__fmt, ...)
-     __attribute__ ((__format__ (printf, 2, 3)));
+     PRINTF_STYLE(2.3);
 extern ssize_t argp_fmtstream_printf (argp_fmtstream_t __fs,
 				      __const char *__fmt, ...)
-     __attribute__ ((__format__ (printf, 2, 3)));
+     PRINTF_STYLE(2.3);
 
 extern int __argp_fmtstream_putc (argp_fmtstream_t __fs, int __ch);
 extern int argp_fmtstream_putc (argp_fmtstream_t __fs, int __ch);
