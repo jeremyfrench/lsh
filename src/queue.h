@@ -24,6 +24,10 @@
 #ifndef LSH_QUEUE_H_INCLUDED
 #define LSH_QUEUE_H_INCLUDED
 
+/* For socklen_t and struct sockaddr */
+#include <sys/types.h>
+#include <sys/socket.h>
+
 #include "lsh.h"
 
 /* Layout taken from AmigaOS lists... The first node uses a prev
@@ -40,6 +44,7 @@ struct lsh_queue_node
 struct lsh_queue
 {
   struct lsh_queue_node *ht_links[3];
+  unsigned length;
 };
 #define LSH_QUEUE_HEAD 0
 #define LSH_QUEUE_TAIL 1
@@ -82,13 +87,12 @@ struct object_queue_node
    (struct
      (name object_queue)
      (vars
-       (length . uint32_t)
        (q indirect-special "struct lsh_queue"
           do_object_queue_mark do_object_queue_free)))
 */
 
-void object_queue_init(struct object_queue *q);
-int object_queue_is_empty(struct object_queue *q);
+#define object_queue_init(self) lsh_queue_init(&(self)->q)
+#define object_queue_is_empty(self) lsh_queue_is_empty(&(self)->q)
 
 void object_queue_add_head(struct object_queue *q, struct lsh_object *o);
 void object_queue_add_tail(struct object_queue *q, struct lsh_object *o);
@@ -119,8 +123,8 @@ struct object_list *queue_to_list_and_kill(struct object_queue *q);
  * removing the current node. */
 /* FIXME: This name is rather ugly. */
 
-#define FOR_OBJECT_QUEUE_REMOVE(q, n) \
-do { (q)->length--; lsh_queue_remove(n##_this); } while(0)
+#define FOR_OBJECT_QUEUE_REMOVE(self, n) \
+do { (self)->q.length--; lsh_queue_remove(n##_this); } while(0)
 
 /* String queue */
 struct string_queue_node
@@ -133,13 +137,12 @@ struct string_queue_node
    (struct
      (name string_queue)
      (vars
-       (length . uint32_t)
        (q indirect-special "struct lsh_queue"
           #f do_string_queue_free)))
 */
 
-void string_queue_init(struct string_queue *q);
-int string_queue_is_empty(struct string_queue *q);
+#define string_queue_init(self) lsh_queue_init(&(self)->q)
+#define string_queue_is_empty(self) lsh_queue_is_empty(&(self)->q)
 
 void string_queue_add_head(struct string_queue *q, struct lsh_string *o);
 void string_queue_add_tail(struct string_queue *q, struct lsh_string *o);
@@ -148,5 +151,38 @@ struct lsh_string *string_queue_remove_tail(struct string_queue *q);
 
 struct lsh_string *string_queue_peek_head(struct string_queue *q);
 struct lsh_string *string_queue_peek_tail(struct string_queue *q);
+
+/* addr_queue */
+struct addr_queue_node
+{
+  struct lsh_queue_node header;
+  socklen_t size;
+  struct sockaddr addr;
+};
+
+/* GABA:
+   (struct
+     (name addr_queue)
+     (vars
+       (q indirect-special "struct lsh_queue"
+          #f do_addr_queue_free)))
+*/
+
+#define addr_queue_init(self) lsh_queue_init(&(self)->q)
+#define addr_queue_is_empty(self) lsh_queue_is_empty(&(self)->q)
+
+struct sockaddr *
+addr_queue_add_head(struct addr_queue *q, socklen_t size);
+
+struct sockaddr *
+addr_queue_add_tail(struct addr_queue *q, socklen_t size);
+
+void addr_queue_remove_head(struct addr_queue *q);
+void addr_queue_remove_tail(struct addr_queue *q);
+
+struct sockaddr *
+addr_queue_peek_head(struct addr_queue *q, socklen_t *size);
+struct sockaddr *
+addr_queue_peek_tail(struct addr_queue *q, socklen_t *size);
 
 #endif /* LSH_QUEUE_H_INCLUDED */
