@@ -39,6 +39,9 @@
 /* Define if the compiler understands __FUNCTION__ */
 #undef HAVE_GCC_FUNCTION
 
+/* Define if the compiler understands offsetof(TYPE, MEMBER) */
+#undef HAVE_C_OFFSETOF
+
 /* Define if a we have working UNIX98 pty handling */
 #undef HAVE_UNIX98_PTYS
 
