@@ -57,6 +57,7 @@ B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
 #include "io.h"
 #include "lsh.h"
 #include "lsh_argp.h"
+#include "lsh_string.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
@@ -78,10 +79,12 @@ make_header(const char *name, const char *value)
 
 /* Includes a newline at the end. */
 static struct lsh_string *
-encode_base64(const struct lsh_string *s,
-	      int free)
+encode_base64(const struct lsh_string *s)
 {
-  unsigned encoded_length = BASE64_ENCODE_RAW_LENGTH(s->length);
+  uint32_t input_length = lsh_string_length(s);
+  const uint8_t *data = lsh_string_data(s);
+
+  unsigned encoded_length = BASE64_ENCODE_RAW_LENGTH(input_length);
   unsigned lines = (encoded_length + LINE_LENGTH - 1) / LINE_LENGTH;
   struct base64_encode_ctx ctx;
   unsigned length = encoded_length + lines;
@@ -89,32 +92,32 @@ encode_base64(const struct lsh_string *s,
   unsigned final;
   unsigned out;
   
-  struct lsh_string *res = lsh_string_alloc(length);
+  struct lsh_string *res = lsh_string_alloc(length+3);
 
   base64_encode_init(&ctx);
   for (out = 0, line = 0; line + 1 < lines; line++)
     {
-      base64_encode_update(&ctx,
-			   res->data + out,
-			   BINARY_LENGTH, s->data + line * BINARY_LENGTH);
+      lsh_string_base64_encode_update(res, out,
+				      &ctx,
+				      BINARY_LENGTH, data + line * BINARY_LENGTH);
       out += LINE_LENGTH;
-      res->data[out++] = '\n';
+      lsh_string_putc(res, out++, '\n');
     }
-  final = base64_encode_update(&ctx,
-			       res->data + out,
-			       s->length - line * BINARY_LENGTH,
-			       s->data + line * BINARY_LENGTH);
-  final += base64_encode_final(&ctx, res->data + out + final);
+  final = lsh_string_base64_encode_update(res, out,
+					  &ctx,
+					  input_length - line * BINARY_LENGTH,
+					  data + line * BINARY_LENGTH);
+  final += lsh_string_base64_encode_final(res, out+final, &ctx);
   
   if (final)
     {
       out += final;
-      res->data[out++] = '\n';
+      lsh_string_putc(res, out++, '\n');
     }
-  assert(out == res->length);
-
-  if (free)
-    lsh_string_free(s);
+  assert(out == length);
+  lsh_string_trunc(res, length);
+  
+  lsh_string_free(s);
   
   return res;
 }
@@ -126,7 +129,7 @@ sexp_to_ssh2_key(struct lsh_string *expr,
   struct sexp_iterator i;
   struct verifier *v;
   
-  if (!(sexp_transport_iterator_first(&i, expr->length, expr->data)
+  if (!(lsh_string_transport_iterator_first(expr, &i)
 	&& sexp_iterator_check_type(&i, "public-key")))
     {
       werror("Only conversion of public keys implemented.\n");
@@ -147,7 +150,7 @@ sexp_to_ssh2_key(struct lsh_string *expr,
                     "---- END SSH2 PUBLIC KEY ----\n",
                     make_header("Subject", options->subject),
                     make_header("Comment", options->comment),
-                    encode_base64(PUBLIC_KEY(v), 1));
+                    encode_base64(PUBLIC_KEY(v)));
 }
 
 /* Option parsing */
@@ -308,7 +311,7 @@ int main(int argc, char **argv)
   if (!output)
     return EXIT_FAILURE;
 
-  e = write_raw(out, output->length, output->data);
+  e = write_raw(out, STRING_LD(output));
   lsh_string_free(output);
 
   if (e)
