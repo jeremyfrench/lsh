@@ -1,10 +1,31 @@
+2001-07-03  Niels Möller  <nisse@ehand.com>
+
+	* src/combinators.c (command_Sp): Redefined using
+	DEFINE_COMMAND4.
+	(command_B): Redefined using DEFINE_COMMAND3.
+	(command_Bp): Redefined using
+	DEFINE_COMMAND4.
+
+	* src/command.c (command_4_invoke_3): New class.
+	(make_command_4_invoke_3): New function.
+	(command_4_invoke_2): New class.
+	(make_command_4_invoke_2): New function.
+	(command_4_invoke): New class.
+	(make_command_4_invoke): New function.
+
+	* src/command.h (command_4): New class.
+	(DEFINE_COMMAND4): New macro.
+
+	* src/gateway_commands.c: Include string.h.
+
+	* configure.in: Bumped version to 1.3.3.
+
 2001-07-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/combinators.c (command_I): Redefined using DEFINE_COMMAND.
 	Updated users as the type was changed in the process.
 	(command_K): Redefined using DEFINE_COMMAND2.
 	(command_S): Redefined using DEFINE_COMMAND3.
-	
 
 	* src/command.c: New class.
 	(make_command_2_invoke): New function.
