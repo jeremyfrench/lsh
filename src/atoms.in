@@ -109,13 +109,16 @@ x
 r
 s
 
-# spki rsa keys
-rsa-pkcs1
+# spki rsa keys p, q already defined above
+# rsa-pkcs1
 rsa-pkcs1-sha1
 rsa-pkcs1-md5
 n
 e
 d
+a
+b
+c
 
 # hashed spki keys
 hash
