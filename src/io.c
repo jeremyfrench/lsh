@@ -220,6 +220,7 @@ int io_iter(struct io_backend *b)
 static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 {
   CAST(fd_read, closure, *r);
+  assert(length > 0);
 
   for (;;)
     {
@@ -393,7 +394,7 @@ static void connect_callback(struct lsh_fd *fd)
   kill_fd(fd);
 }
 
-/* FIXME: Prehaps this function should return a suitable exit code? */
+/* FIXME: Perhaps this function should return a suitable exit code? */
 void io_run(struct io_backend *b)
 {
   struct sigaction pipe;
