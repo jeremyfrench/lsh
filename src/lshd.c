@@ -436,15 +436,15 @@ int main(int argc, char **argv)
        -1)));
      
   if (!io_listen(backend, &local, 
-	    make_server_callback(backend,
-				 "lsh - a free ssh",
+		 make_server_callback(backend,
+				      "lsh - a free ssh",
 #if WITH_SSH1_FALLBACK
-				 sshd1 ? make_ssh1_fallback (sshd1) :
+				      sshd1 ? make_ssh1_fallback (sshd1) :
 #endif /* WITH_SSH1_FALLBACK */
-				 NULL,
-				 SSH_MAX_PACKET,
-				 r, make_kexinit,
-				 kexinit_handler)))
+				      NULL,
+				      SSH_MAX_PACKET,
+				      r, make_kexinit,
+				      kexinit_handler)))
     {
       werror("lshd: listen() failed: (errno = %i): %z\n",
 	     errno, strerror(errno));

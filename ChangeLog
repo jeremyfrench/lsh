@@ -1,3 +1,21 @@
+Tue Mar  9 22:18:40 1999    <nisse@idonex.se>
+
+	* src/command.c (make_apply): New function.
+	Implemented the S and B combinators (no idea if they will turn out
+	to be useful), and a listen function.
+
+	* src/server.c (server_initiate, make_server_callback): Use new
+ 	fd_listen_callback type.
+
+	* src/io.h (fd_listen_callback): New class.
+
+	* src/io.c (tcp_addr): Moved this function from tcpforward.c.
+	(listen_callback): Pass the peer address to the listen callback.
+
+Mon Mar  8 19:22:30 1999    <nisse@idonex.se>
+
+	* src/publickey_crypto.c (make_zn): New argument: order.
+
 Mon Mar  8 00:29:17 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/command.c: New file.
