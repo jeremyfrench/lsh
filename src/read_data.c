@@ -118,6 +118,10 @@ struct io_read_callback *make_read_data(struct ssh_channel *channel,
   return &self->super.super;
 }
 
+/* FIXME: This function will be obsoleted with the EXC_IO_EOF
+ * exception type. It would be better to move the handling to the
+ * "consumer" functions in channel.c.*/
+
 /* GABA:
    (class
      (name exc_read_eof_channel_handler)
@@ -126,42 +130,46 @@ struct io_read_callback *make_read_data(struct ssh_channel *channel,
        (channel object ssh_channel)))
 */
 
+/* FIXME: We have to make sure that this handler is invoked exactly
+ * once for each fd attached to the channel. */
 static void
 do_exc_read_eof_channel_handler(struct exception_handler *s,
-				const struct exception *e)
+				const struct exception *x)
 {
   CAST(exc_read_eof_channel_handler, self, s);
 
-  switch(e->type)
+  switch(x->type)
     {
     case EXC_IO_EOF:
       {
-	CAST_SUBTYPE(io_exception, exc, e);
+	CAST_SUBTYPE(io_exception, e, x);
 
 	if (!--self->channel->sources)
 	  /* Send eof (but no close). */
 	  channel_eof(self->channel);
 
-	close_fd_nicely(exc->fd, 0);
+	close_fd_nicely(e->fd, 0);
       }
-	break;
+      break;
     case EXC_IO_READ:
       {
-	CAST_SUBTYPE(io_exception, exc, e);
-	channel_close(self->channel);
+	CAST_SUBTYPE(io_exception, e, x);
 
-	werror("Read error on fd %d (errno = %d): %z\n",
-	       exc->fd->fd, exc->error, e->msg);
+	werror("Read error on fd %i (errno = %i): %z\n",
+	       e->fd->fd, e->error, x->msg);
 
 	if (!--self->channel->sources)
 	  /* Close channel */
 	  channel_close(self->channel);
-	
+
+#if 0
 	close_fd(exc->fd, 0);
+#endif
+	break;
       }
 	
     default:
-      EXCEPTION_RAISE(self->super.parent, e);
+      EXCEPTION_RAISE(self->super.parent, x);
     }
 }
 
