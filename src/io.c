@@ -1217,7 +1217,7 @@ address_info2sockaddr(socklen_t *length,
     int err;
     /* FIXME: It seems ugly to have to convert the port number to a
      * string. */
-    struct lsh_string *service = ssh_cformat("%di", a->port);
+    struct lsh_string *service = ssh_format("%di", a->port);
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = PF_UNSPEC;
@@ -1227,7 +1227,7 @@ address_info2sockaddr(socklen_t *length,
     if (!lookup)
       hints.ai_flags |= AI_NUMERICHOST;
     
-    err = getaddrinfo(host, service->data, &hints, &list);
+    err = getaddrinfo(host, lsh_get_cstring(service), &hints, &list);
     lsh_string_free(service);
 
     if (err)
@@ -1465,8 +1465,8 @@ make_local_info(struct lsh_string *directory,
   if (!directory || !name || memchr(name->data, '/', name->length))
     return NULL;
 
-  assert(NUL_TERMINATED(directory));
-  assert(NUL_TERMINATED(name));
+  assert(lsh_get_cstring(directory));
+  assert(lsh_get_cstring(name));
   
   {
     NEW(local_info, self);
@@ -1581,9 +1581,12 @@ io_listen_local(struct io_backend *b,
   socklen_t local_length;
 
   struct lsh_fd *fd;
+
+  const char *cdir = lsh_get_cstring(info->directory);
+  const char *cname = lsh_get_cstring(info->name);
   
-  assert(info->directory && NUL_TERMINATED(info->directory));
-  assert(info->name && NUL_TERMINATED(info->name));
+  assert(cdir);
+  assert(cname);
 
   /* NAME should not be a plain filename, with no directory separators.
    * In particular, it should not be an absolute filename. */
@@ -1597,7 +1600,7 @@ io_listen_local(struct io_backend *b,
 
   /* cd to it, but first save old cwd */
 
-  old_cd = safe_pushd(info->directory->data, 1);
+  old_cd = safe_pushd(cdir, 1);
   if (old_cd < 0)
     return NULL;
 
@@ -1605,12 +1608,12 @@ io_listen_local(struct io_backend *b,
    * creating a socket. */
 
   /* Try unlinking any existing file. */
-  if ( (unlink(info->name->data) < 0)
+  if ( (unlink(cname) < 0)
        && (errno != ENOENT))
     {
       werror("io.c: unlink '%S'/'%S' failed (errno = %i): %z\n",
 	     info->directory, info->name, errno, STRERROR(errno));
-      safe_popd(old_cd, info->directory->data);
+      safe_popd(old_cd, cdir);
       return NULL;
     }
 
@@ -1644,8 +1647,10 @@ io_connect_local(struct io_backend *b,
 
   struct lsh_fd *fd;
   
-  assert(info->directory && NUL_TERMINATED(info->directory));
-  assert(info->name && NUL_TERMINATED(info->name));
+  const char *cdir = lsh_get_cstring(info->directory);
+  
+  assert(cdir);
+  assert(lsh_get_cstring(info->name));
 
   /* NAME should not be a plain filename, with no directory separators.
    * In particular, it should not be an absolute filename. */
@@ -1659,13 +1664,13 @@ io_connect_local(struct io_backend *b,
 
   /* cd to it, but first save old cwd */
 
-  old_cd = safe_pushd(info->directory->data, 0);
+  old_cd = safe_pushd(cdir, 0);
   if (old_cd < 0)
     return NULL;
   
   fd = io_connect(b, (struct sockaddr *) addr, addr_length, c, e);
 
-  safe_popd(old_cd, info->directory->data);
+  safe_popd(old_cd, cdir);
 
   return fd;
 }
