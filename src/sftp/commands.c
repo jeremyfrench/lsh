@@ -172,25 +172,27 @@ command commands[] = {
   { "!", com_escape, "Send COMMAND to /bin/sh", 
     "Executes system(\"COMMAND\");" , OTHERARG, 1, 1 },
 
-  { (char *)NULL, NULL, (char *)NULL, (char*) NULL, 0, 0 }
+  { NULL, NULL, NULL, NULL, 0, 0, 0 }
 };
 
-int com_disconnected()
+static int
+com_disconnected(void)
 {
   printf( "This command doesn't work in disconnected mode!\n" );
   return -1;
 }
 
-int com_connected()
+static int
+com_connected(void)
 {
   printf( "This command doesn't work in connected mode!\n" );
   return -1;
 }
 
-int com_help( char* arg, char* command ) 
+int
+com_help(const char *arg, const char *command UNUSED) 
 {
-
-  char* s;
+  const char *s;
   char tmp[PATH_MAX];
   char* cmdname;
   int i=0;
@@ -246,12 +248,14 @@ int com_help( char* arg, char* command )
 
 }
 
-int com_mail( char* arg, char* command ) 
+int
+com_mail(const char *arg UNUSED, const char *command) 
 {
-  return system( command );
+  return system(command);
 }
 
-int com_umask( char* arg, char* command ) 
+int
+com_umask(const char *arg, const char *command UNUSED) 
 {
   char tmp[PATH_MAX];
   int given = 0;
@@ -285,9 +289,12 @@ int com_umask( char* arg, char* command )
       printf( "Your current umask is %o.\n", oldmask );
     }
 
+  /* FIXME: What does return value mean? */
+  return 0;
 }
 
-int com_escape( char* arg, char* command ) 
+int
+com_escape(const char *arg, const char *command UNUSED) 
 {
   int ret;
   printf( "Launching %s\n", arg );
@@ -297,7 +304,8 @@ int com_escape( char* arg, char* command )
   return ret;
 }
 
-int com_quit( char* arg, char* command ) 
+int
+com_quit(const char *arg UNUSED, const char *command UNUSED) 
 {
   com_close( "", "INTERNAL CLOSE COMMAND" );
   printf( "Bye\n" );
@@ -306,7 +314,8 @@ int com_quit( char* arg, char* command )
   return 0;
 }
 
-int com_about( char* arg, char* command )
+int
+com_about(const char *arg UNUSED, const char *command UNUSED)
 {
   printf("%s %s\n", PACKAGE, VERSION);
   printf("Copyright (C) 2001, Pontus Sköld and various contributors\n\n");
@@ -323,7 +332,8 @@ int com_about( char* arg, char* command )
 }
 
 
-int com_close( char* arg, char* command )
+int
+com_close(const char *arg UNUSED, const char *command UNUSED)
 {
   /* Close any existing connections */
 
@@ -334,11 +344,12 @@ int com_close( char* arg, char* command )
 }
 
 
-int com_open( char* arg, char* command )
+int
+com_open(const char *arg, const char *command UNUSED)
 {
   char** myargv;
   char** freeargv;
-  char* s;
+  const char *s;
   char tmp[PATH_MAX]; /* Used for arguments */
 
   int argcount = 0;
@@ -380,7 +391,8 @@ int com_open( char* arg, char* command )
       freeargv++; /* Skip first entry, we may not free that one */
 
       while( (s = *(freeargv++) ) )
-	free( s );
+	/* Free doesn't take const pointers */
+	free((void *) s );
       
       free( myargv );
 
@@ -399,7 +411,8 @@ int com_open( char* arg, char* command )
 
 
 
-int com_cd( char* arg, char* command ) 
+int
+com_cd(const char *arg, const char *command UNUSED) 
 {
   char tmp[PATH_MAX];
 
@@ -415,8 +428,8 @@ int com_cd( char* arg, char* command )
 	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
 	 )
     {
-      char** mglob;
-      char* ptr = 0;
+      const char **mglob;
+      const char *ptr = 0;
       
       mglob = lsftp_dc_r_startglob( tmp, 0, 1 );
       
@@ -438,10 +451,13 @@ int com_cd( char* arg, char* command )
 
   if( !didcd )
     return lsftp_do_cd( "" );
+
+  /* FIXME: What does return value mean? */
+  return 0;
 }
 
 
-int com_mkdir( char* arg, char* command ) 
+int com_mkdir(const char *arg, const char *command) 
 {
   char tmp[PATH_MAX];
 
@@ -465,15 +481,14 @@ int com_mkdir( char* arg, char* command )
   return 0;
 }
 
-
-
-int rm_file_or_folder( char* path, char* command, int recursive )
+static int
+rm_file_or_folder(const char *path, const char *command, int recursive )
 {
-  int isdir = lsftp_dc_r_isdir( path );
-  char* sub = 0;
-  char** subglob = 0;
-  char** orgglob = 0;
-  char* ptr;
+  int isdir = lsftp_dc_r_isdir(path);
+  char *sub = 0;
+  const char **subglob = 0;
+  const char **orgglob = 0;
+  const char *ptr;
   int err = 0;
   int id;
 
@@ -548,7 +563,7 @@ int rm_file_or_folder( char* path, char* command, int recursive )
 
   if( subglob ) /* Glob returned allright */
     while( !err && 
-	   ( ptr = *(subglob++) ) ) 
+	   ( (ptr = *subglob++) ) ) 
       err = rm_file_or_folder( ptr, command, recursive );
   
   lsftp_dc_endglob( orgglob );
@@ -571,7 +586,8 @@ int rm_file_or_folder( char* path, char* command, int recursive )
 }
 
 
-int com_rm( char* arg, char* command ) 
+int
+com_rm(const char *arg, const char *command) 
 {
   char tmp[PATH_MAX];
 
@@ -607,15 +623,15 @@ int com_rm( char* arg, char* command )
 	  rm_file_or_folder( tmp, command, recurse );
 	else      /* Globbing desired */
 	  {
-	    char** mglob;
-	    char** orgglob;
-	    char* ptr;
+	    const char **mglob;
+	    const char **orgglob;
+	    const char *ptr;
 	    
 	    mglob = lsftp_dc_r_startglob( tmp, 0, 1 );
 	    orgglob = mglob;
 
 	    if( mglob ) /* Glob returned allright? */		
-	      while( ptr = *( mglob++ ) ) 
+	      while( (ptr = *mglob++) ) 
 		rm_file_or_folder( ptr, command, recurse );
 	    
 	    lsftp_dc_endglob( orgglob );
@@ -626,10 +642,8 @@ int com_rm( char* arg, char* command )
   return 0;
 }
 
-
-
-
-int com_ls( char* arg, char* command ) 
+int
+com_ls(const char *arg, const char *command) 
 {
   char tmp[PATH_MAX];
 
@@ -683,9 +697,8 @@ int com_ls( char* arg, char* command )
   return 0;
 }
 
-
-
-int com_set( char* arg, char* command ) 
+int
+com_set(const char *arg, const char *command UNUSED) 
 {
   char tmp[PATH_MAX];
 
@@ -789,18 +802,18 @@ int com_set( char* arg, char* command )
   return 0;
 }
 
-
-
-int get_file_or_folder( char* arg, char* command, int cont, char* destname )
+static int
+get_file_or_folder(const char *arg, const char *command,
+		   int cont, const char *destname )
 {
 
-  char** dirinfo = 0;
-  char** curdirinfo;
+  const char **dirinfo = NULL;
+  const char **curdirinfo;
 
-  char* localwd;
-  char* remotewd;
+  const char *localwd;
+  const char *remotewd;
 
-  char* tmp;
+  const char *tmp;
   char buffer[PATH_MAX+1];
 
   struct stat st;
@@ -808,7 +821,6 @@ int get_file_or_folder( char* arg, char* command, int cont, char* destname )
   int mode = 0700;
   int mask;
   int isdir = lsftp_dc_r_isdir( arg );
-  int err;
   int ret;
 
   if( -1 == isdir ) /* Unable to determine dir or not? */
@@ -948,7 +960,7 @@ int get_file_or_folder( char* arg, char* command, int cont, char* destname )
       return -1;
     }
 
-  free( remotewd );
+  free( (void *) remotewd );
   remotewd = tmp;
   
   /* Do globbing */
@@ -957,12 +969,14 @@ int get_file_or_folder( char* arg, char* command, int cont, char* destname )
   
   if( tmp )
     dirinfo = lsftp_dc_r_startglob( tmp, 0, 1 );
-  free( tmp );
+  /* free doesn't accept const poitners */
+  free( (void *) tmp );
   
   tmp = lsftp_concat( remotewd, ".*" );
   if( tmp )
     dirinfo = lsftp_dc_r_contglob( tmp, dirinfo, 1 );
-  free( tmp );
+  /* free doesn't accept const pointers */
+  free( (void *) tmp );
 
   if( dirinfo )
     {
@@ -970,7 +984,7 @@ int get_file_or_folder( char* arg, char* command, int cont, char* destname )
       
       while( *curdirinfo )
 	{
-	  char* curentry = lsftp_skip_common( *curdirinfo, remotewd );   
+	  const char *curentry = lsftp_skip_common( *curdirinfo, remotewd );   
 	  
 	  if( !(                                  /* Not . or .. */
 		!strcmp( curentry, "." ) ||
@@ -978,8 +992,8 @@ int get_file_or_folder( char* arg, char* command, int cont, char* destname )
 		)
 	      )
 	    {
-	      char* src;
-	      char* dst;
+	      char *src;
+	      char *dst;
 
 	      src = lsftp_concat( remotewd, curentry );	      
 	      dst = lsftp_concat( localwd, curentry );
@@ -1001,16 +1015,15 @@ int get_file_or_folder( char* arg, char* command, int cont, char* destname )
       lsftp_dc_endglob( dirinfo );
     }
   
-  free( remotewd ); /* Free memory used by to hold remote wd */
-  free( localwd ); /* Free memory used by to hold remote wd */
+  free( (void *) remotewd ); /* Free memory used by to hold remote wd */
+  free( (void *) localwd ); /* Free memory used by to hold remote wd */
 
   return 0;
 
-}    
+}
 
-
-
-int com_get( char* arg, char* command ) 
+int
+com_get(const char *arg, const char *command) 
 {
   int cont = gp_cont;
   char tmp[PATH_MAX];
@@ -1033,14 +1046,14 @@ int com_get( char* arg, char* command )
 	}
     else
       {
-	char** glob;
-	char** orgglob;
-	char* ptr;
+	const char **glob;
+	const char **orgglob;
+	const char *ptr;
 
 	glob = lsftp_dc_r_startglob( tmp, 0, 1 );
 	orgglob = glob;
 	
-	while( ptr = *(glob++) ) 
+	while( (ptr = *glob++) ) 
 	  get_file_or_folder( ptr, command, cont, 0 );
 	  
 	lsftp_dc_endglob( orgglob );
@@ -1049,27 +1062,17 @@ int com_get( char* arg, char* command )
   return 0;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-int put_file_or_folder( char* arg, char* command, int cont, char* destname )
+static int
+put_file_or_folder(const char *arg, const char *command,
+		   int cont, const char *destname )
 {
-  char** dirinfo = 0;
-  char** curdirinfo;
+  const char **dirinfo = NULL;
+  const char **curdirinfo;
 
-  char* localwd;
-  char* remotewd;
+  const char *localwd;
+  const char *remotewd;
 
-  char* tmp;
+  const char *tmp;
   char buffer[PATH_MAX];
 
   struct stat st;
@@ -1081,7 +1084,8 @@ int put_file_or_folder( char* arg, char* command, int cont, char* destname )
 
   if( -1 == isdir ) /* Unable to determine dir or not? */
     {
-      if( !strncmp( filename_part( arg ), "*", 2 ) )  /* Empty directory will make globbing fail => * */
+      if( !strncmp( filename_part( arg ), "*", 2 ) )
+	/* Empty directory will make globbing fail => * */
 	return 0;
       
       printf( "Unable to determine status of %s\n", arg );
@@ -1203,7 +1207,7 @@ int put_file_or_folder( char* arg, char* command, int cont, char* destname )
       return -1;
     }
 
-  free( remotewd );
+  free( (void *) remotewd );
   remotewd = tmp;
   
   /* Do globbing */
@@ -1212,12 +1216,12 @@ int put_file_or_folder( char* arg, char* command, int cont, char* destname )
   
   if( tmp )
     dirinfo = lsftp_dc_l_startglob( tmp, 1 );
-  free( tmp );
+  free( (void *) tmp );
   
   tmp = lsftp_concat( localwd, ".*" );
   if( tmp )
     dirinfo = lsftp_dc_l_contglob( tmp, dirinfo, 1 );
-  free( tmp );
+  free( (void *) tmp );
 
   if( dirinfo )
     {
@@ -1225,7 +1229,7 @@ int put_file_or_folder( char* arg, char* command, int cont, char* destname )
       
       while( *curdirinfo )
 	{
-	  char* curentry = lsftp_skip_common( *curdirinfo, localwd );   
+	  const char *curentry = lsftp_skip_common( *curdirinfo, localwd );   
 	  
 	  if( !(                                  /* Not . or .. */
 		!strcmp( curentry, "." ) ||
@@ -1233,8 +1237,8 @@ int put_file_or_folder( char* arg, char* command, int cont, char* destname )
 		)
 	      )
 	    {
-	      char* src;
-	      char* dst;
+	      char *src;
+	      char *dst;
 	      
 	      src = lsftp_concat( localwd, curentry );
 	      dst = lsftp_concat( remotewd, curentry );
@@ -1257,15 +1261,15 @@ int put_file_or_folder( char* arg, char* command, int cont, char* destname )
       lsftp_dc_endglob( dirinfo );
     }
   
-  free( remotewd ); /* Free memory used by to hold remote wd */
-  free( localwd ); /* Free memory used by to hold remote wd */
+  free( (void *) remotewd ); /* Free memory used by to hold remote wd */
+  free( (void *) localwd ); /* Free memory used by to hold remote wd */
 
   return 0;
 }    
 
 
 
-int com_put( char* arg, char* command ) 
+int com_put(const char *arg, const char *command) 
 {
   char tmp[PATH_MAX];
   int cont = gp_cont;
@@ -1288,14 +1292,14 @@ int com_put( char* arg, char* command )
 	}
     else
       {
-	char** glob;
-	char** orgglob;
-	char* ptr;
+	const char **glob;
+	const char **orgglob;
+	const char *ptr;
 	
 	glob = lsftp_dc_l_startglob( tmp, 1 );
 	orgglob = glob;
 	
-	while( ptr = *(glob++) ) 
+	while( (ptr = *glob++) ) 
 	  put_file_or_folder( ptr, command, cont, 0 );
 	  
 	lsftp_dc_endglob( orgglob );
@@ -1306,7 +1310,7 @@ int com_put( char* arg, char* command )
 }
 
 
-int com_chown( char* arg, char* command ) 
+int com_chown(const char *arg, const char *command) 
 {
   char tmp[PATH_MAX];
   int gotuid = 0;
@@ -1348,16 +1352,16 @@ int com_chown( char* arg, char* command )
       {
 	int id;
 	
-	char** glob;
-	char** orgglob;
-	char* ptr;
+	const char **glob;
+	const char **orgglob;
+	const char *ptr;
 
 	enough_parameters++;
 	
 	glob = lsftp_dc_l_startglob( tmp, 1 );
 	orgglob = glob;
 	
-	while( ptr = *(glob++) )
+	while( (ptr = *glob++) )
 	  {
 	    id = lsftp_do_stat( ptr, &st );
 
@@ -1367,7 +1371,7 @@ int com_chown( char* arg, char* command )
 		lsftp_do_chown( ptr, newuid, st.st_gid, command );
 	      }
 	    
-	    free( ptr );
+	    free( (void *) ptr );
 	  }
 	
 	free( orgglob );
@@ -1384,7 +1388,7 @@ int com_chown( char* arg, char* command )
 }
 
 
-int com_chgrp( char* arg, char* command ) 
+int com_chgrp(const char *arg, const char *command) 
 {
   char tmp[PATH_MAX];
   int gotgid = 0;
@@ -1446,8 +1450,8 @@ int com_chgrp( char* arg, char* command )
   return 0;
 }
 
-
-int com_jobs( char* arg, char* command )
+int
+com_jobs(const char *arg, const char *command UNUSED)
 {
   int listjobs = 0;
   char tmp[PATH_MAX];
@@ -1471,7 +1475,8 @@ int com_jobs( char* arg, char* command )
 }
 
 
-int com_pwd( char* arg, char* command ) 
+int
+com_pwd(const char *arg UNUSED, const char *command UNUSED) 
 {
   char* pwd;
 
@@ -1480,24 +1485,22 @@ int com_pwd( char* arg, char* command )
   if( pwd )
     printf( "%s\n", pwd );
   else
-    printf( "Current working directory not available\n", pwd );
+    printf( "Current working directory not available\n" );
 
   return 0;
 }
 
-
-
-
-int com_mv( char* arg, char* command ) 
+int
+com_mv(const char *arg, const char *command) 
 {
   char tmp[PATH_MAX];
   char dst[PATH_MAX+1];
-  char* orgarg = arg;
+  const char* orgarg = arg;
   int i = 0;
   int j = 0;
-  char** glob;
-  char** orgglob;
-  char* ptr;  
+  const char **glob;
+  const char **orgglob;
+  const char *ptr;  
 
   if( !lsftp_connected() )   /* Bail out if not connected */
     return com_disconnected();
@@ -1510,7 +1513,7 @@ int com_mv( char* arg, char* command )
       glob = lsftp_dc_r_startglob( tmp, 0, 1 );
       orgglob = glob;
       
-      while( ptr = *(glob++) ) 
+      while( (ptr = *glob++) ) 
 	{
 	  strncpy( dst, ptr, PATH_MAX );
 	  i++;
@@ -1532,19 +1535,18 @@ int com_mv( char* arg, char* command )
 	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
 	 )
     {
-      
       glob = lsftp_dc_r_startglob( tmp, 0, 1 );
       orgglob = glob;
       
-      while( ptr = *(glob++) ) 
+      while( (ptr = *glob++) ) 
 	{
 	  j++;
 	  if( j != i ) /* Not the last argument? */
 	    {
 	      if( 2 != i || lsftp_dc_r_isdir( dst ) ) /* More than one source and one destination => we should append src to dst/ */
 		{
-		  char* tmp1 = lsftp_concat( dst, "/" );
-		  char* tmp2 = 0;
+		  char *tmp1 = lsftp_concat( dst, "/" );
+		  char *tmp2 = NULL;
 
 		  if( tmp1 )
 		    tmp2 = lsftp_concat( tmp1, filename_part( ptr ) );          /* And make the new path for ptr (dst/ptr or so) */
@@ -1560,7 +1562,7 @@ int com_mv( char* arg, char* command )
 	      else
 		lsftp_do_mv( ptr, dst, command );
 	    }
-	    free( ptr );
+	  free( (void *) ptr );
 	}
 
       free( orgglob );
@@ -1569,19 +1571,18 @@ int com_mv( char* arg, char* command )
   return 0;
 }
 
-
-
-int com_ln( char* arg, char* command ) 
+int
+com_ln(const char *arg, const char *command) 
 {
   char link[PATH_MAX];
   char tmp[PATH_MAX];
 
-  char* orgarg = arg;
+  const char *orgarg = arg;
   int i = 0;
   int j = 0;
-  char** glob;
-  char** orgglob;
-  char* ptr;  
+  const char **glob;
+  const char **orgglob;
+  const char *ptr;  
 
   if( !lsftp_connected() )   /* Bail out if not connected */
     return com_disconnected();
@@ -1597,7 +1598,7 @@ int com_ln( char* arg, char* command )
       glob = lsftp_dc_r_startglob( tmp, 0, 1 );
       orgglob = glob;
       
-      while( ptr = *(glob++) ) 
+      while( (ptr = *glob++) ) 
 	{
 	  strncpy( link, ptr, PATH_MAX );
 	  i++;
@@ -1639,19 +1640,18 @@ int com_ln( char* arg, char* command )
 	 ( arg = lsftp_s_strtok( arg," \n\t\r", tmp, PATH_MAX ) ) 
 	 )
     {
-      
       glob = lsftp_dc_r_startglob( tmp, 0, 1 );
       orgglob = glob;
       
-      while( ptr = *(glob++) ) 
+      while( (ptr = *glob++) ) 
 	{
 	  j++;
 	  if( j != i ) /* Not the last argument? */
 	    {
 	      if( 1 == lsftp_dc_r_isdir( link ) ) /* Link is a directory?  */
 		{
-		  char* tmp1 = lsftp_concat( link, "/" );
-		  char* tmp2 = 0;
+		  char *tmp1 = lsftp_concat( link, "/" );
+		  char *tmp2 = NULL;
 
 		  if( tmp1 ) /* And make the new path for ptr (link/ptr or so) */
 		    tmp2 = lsftp_concat( tmp1, filename_part( ptr ) ); 
@@ -1667,7 +1667,7 @@ int com_ln( char* arg, char* command )
 	      else
 		lsftp_do_ln( link, ptr, command );
 	    }
-	    free( ptr );
+	  free( (void *) ptr );
 	}
 
       free( orgglob );
@@ -1676,10 +1676,11 @@ int com_ln( char* arg, char* command )
   return 0;
 }
 
-int com_lcd( char* arg, char* command ) 
+int
+com_lcd(const char *arg, const char *command UNUSED) 
 {
   char tmp[PATH_MAX];
-  char** gldata = 0;
+  const char **gldata = 0;
   int ret;
 
   while( 
@@ -1710,7 +1711,8 @@ int com_lcd( char* arg, char* command )
   return 0;
 }
 
-int com_lrm( char* arg, char* command ) 
+int
+com_lrm(const char *arg UNUSED, const char *command UNUSED) 
 {
   printf("lrm\n");
 
@@ -1720,8 +1722,9 @@ int com_lrm( char* arg, char* command )
   return 0;
 }
 
-
-char* uidstring( int uid )
+/* FIXME: Use idcache.c? */
+static const char *
+uidstring( int uid )
 {
   static char uids[10];
   struct passwd* p = getpwuid( uid );
@@ -1734,8 +1737,8 @@ char* uidstring( int uid )
   return uids;
 }
 
-
-char* gidstring( int gid )
+static const char *
+gidstring( int gid )
 {
   static char gids[10];
   struct group* g = getgrgid( gid );
@@ -1747,13 +1750,12 @@ char* gidstring( int gid )
   return gids;
 }
 
-
-
-
-int com_lls( char* arg, char* command ) 
+/* FIXME: Use filemode.c? */
+int
+com_lls(const char *arg, const char *command UNUSED) 
 {
   char tmp[PATH_MAX];
-  char** gldata = 0;
+  const char **gldata = 0;
   struct stat st;
   int i = 0;
 
@@ -1806,8 +1808,9 @@ int com_lls( char* arg, char* command )
 
 	if( err )
 	  printf( "%s: not found\n", gldata[i] );
-	else
-	  if( all || ( gldata[i][0] != '.' ) )  /* Show all files or not staring with . */
+	else if( all || ( gldata[i][0] != '.' ) )
+	  {
+	    /* Show all files or not staring with . */
 	    if( ! longlist )
 	      printf( "%s\n", gldata[i] );
 	    else
@@ -1852,37 +1855,42 @@ int com_lls( char* arg, char* command )
 		  modestring[9] = 'x';
 
 		if( st.st_mode & S_ISUID )
-		  if( st.st_mode & S_IXUSR )
-		    modestring[3] = 's';
-		  else
-		    modestring[3] = 'S';
-
-		if( st.st_mode & S_ISGID )
-		  if( st.st_mode & S_IXGRP )
-		    modestring[6] = 's';
-		  else
-		    modestring[6] = 'S';
-
-		if( st.st_mode & S_ISVTX )
-		  if( st.st_mode & S_IXOTH )
-		    modestring[6] = 't';
-		  else
-		    modestring[6] = 'T';
-
-
+		  {
+		    if( st.st_mode & S_IXUSR )
+		      modestring[3] = 's';
+		    else
+		      modestring[3] = 'S';
+		  }
 		
+		if( st.st_mode & S_ISGID )
+		  {
+		    if( st.st_mode & S_IXGRP )
+		      modestring[6] = 's';
+		    else
+		      modestring[6] = 'S';
+		  }
+		
+		if( st.st_mode & S_ISVTX )
+		  {
+		    if( st.st_mode & S_IXOTH )
+		      modestring[6] = 't';
+		    else
+		      modestring[6] = 'T';
+		  }
+		/* FIXME: Doesn't handle off_t larger than long */
 		printf( 
-		       "%s %4d %-8s %-8s %8d ", 
+		       "%s %4d %-8s %-8s %8ld ", 
 		       modestring, 
 		       st.st_nlink, 
 		       uidstring( st.st_uid ), 
 		       gidstring( st.st_gid ),
-		       st.st_size 
+		       (long) st.st_size 
 		       );
 		
 		printf( "%s\n", gldata[i] );
 
 	      }
+	  }
 	i++;
       }
   
@@ -1891,7 +1899,8 @@ int com_lls( char* arg, char* command )
   return 0;
 }
 
-int com_lpwd( char* arg, char* command ) 
+int
+com_lpwd(const char *arg UNUSED, const char *command UNUSED) 
 {
   char* pwd;
   pwd = getcwd( NULL, PATH_MAX ); /* Get where we are now */
@@ -1905,7 +1914,8 @@ int com_lpwd( char* arg, char* command )
   
 }
 
-int com_lmv( char* arg, char* command ) 
+int
+com_lmv(const char *arg UNUSED, const char *command UNUSED) 
 {
   printf("lmv\n");
 
@@ -1913,12 +1923,12 @@ int com_lmv( char* arg, char* command )
 }
 
 
-
-int handle_command( char* s )
+int
+handle_command(const char *s)
 {
-  char* entered_cmd = s;
+  const char *entered_cmd = s;
   char tmp[WORDLENMAX];
-  char* cmdname;
+  char *cmdname;
   int i=0;
     
   s = lsftp_s_skip(s," \n\t\r"); /* Skip any initial whitespace */
