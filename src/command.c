@@ -240,6 +240,124 @@ do_command_3(struct command *s,
 }
 
 
+/* A command taking 4 arguments */
+/* GABA:
+   (class
+     (name command_4_invoke_3)
+     (super command)
+     (vars
+       (f object command_4)
+       (a1 object lsh_object)
+       (a2 object lsh_object)
+       (a3 object lsh_object)))
+*/
+
+static void
+do_command_4_invoke_3(struct command *s,
+		      struct lsh_object *a4,
+		      struct command_continuation *c,
+		      struct exception_handler *e)
+{
+  CAST(command_4_invoke_3, self, s);
+  self->f->invoke(self->a1, self->a2, self->a3, a4, c, e);
+}
+
+struct command *
+make_command_4_invoke_3(struct command_4 *f,
+			struct lsh_object *a1,
+			struct lsh_object *a2,
+			struct lsh_object *a3)
+{
+  NEW(command_4_invoke_3, self);
+
+  self->super.call = do_command_4_invoke_3;
+  self->f = f;
+  self->a1 = a1;
+  self->a2 = a2;
+  self->a3 = a3;
+
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name command_4_invoke_2)
+     (super command)
+     (vars
+       (f object command_4)
+       (a1 object lsh_object)
+       (a2 object lsh_object)))
+*/
+
+static void
+do_command_4_invoke_2(struct command *s,
+		      struct lsh_object *a3,
+		      struct command_continuation *c,
+		      struct exception_handler *e UNUSED)
+{
+  CAST(command_4_invoke_2, self, s);
+  COMMAND_RETURN(c, make_command_4_invoke_3(self->f, self->a1, self->a2, a3));
+}
+
+struct command *
+make_command_4_invoke_2(struct command_4 *f,
+			struct lsh_object *a1,
+			struct lsh_object *a2)
+{
+  NEW(command_4_invoke_2, self);
+
+  self->super.call = do_command_4_invoke_2;
+  self->f = f;
+  self->a1 = a1;
+  self->a2 = a2;
+
+  return &self->super;
+}
+
+
+/* GABA:
+   (class
+     (name command_4_invoke)
+     (super command)
+     (vars
+       (f object command_4)
+       (a1 object lsh_object)))
+*/
+
+static void
+do_command_4_invoke(struct command *s,
+		    struct lsh_object *a2,
+		    struct command_continuation *c,
+		    struct exception_handler *e UNUSED)
+{
+  CAST(command_4_invoke, self, s);
+  COMMAND_RETURN(c, make_command_4_invoke_2(self->f, self->a1, a2));
+}
+
+struct command *
+make_command_4_invoke(struct command_4 *f,
+		      struct lsh_object *a1)
+{
+  NEW(command_4_invoke, self);
+
+  self->super.call = do_command_4_invoke;
+  self->f = f;
+  self->a1 = a1;
+
+  return &self->super;
+}
+
+void
+do_command_4(struct command *s,
+	     struct lsh_object *a1,
+	     struct command_continuation *c,
+	     struct exception_handler *e UNUSED)
+{
+  CAST(command_4, self, s);
+  COMMAND_RETURN(c, make_command_4_invoke(self, a1));
+}
+
+
 void
 do_call_simple_command(struct command *s,
 		       struct lsh_object *arg,
