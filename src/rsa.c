@@ -41,19 +41,6 @@
 
 #include "rsa.c.x"
 
-/* ;; GABA:
-   (class
-     (name rsa_algorithm)
-     (super signature_algorithm)
-     (vars
-       (hash object hash_algorithm)
-
-       ; The complete prefix for a DigestInfo, including the algorithm
-       ; identifier for the hash function. A DigestInfo is formed by
-       ; cetenating this prefix with the raw hash value.
-       (prefix_length . UINT32)
-       (prefix . "const UINT8 *")))
-*/
 
 static void
 pkcs1_encode(mpz_t m,
@@ -286,7 +273,7 @@ do_rsa_public_key(struct signer *s)
   CAST(rsa_signer, self, s);
 
   return sexp_l(2, sexp_a(ATOM_PUBLIC_KEY),
-		sexp_l(3, sexp_a(ATOM_RSA_PKCS1_SHA1),
+		sexp_l(3, sexp_a(self->public.params->name),
 		       sexp_l(2, sexp_a(ATOM_N), sexp_un(self->public.n), -1),
 		       sexp_l(2, sexp_a(ATOM_E), sexp_un(self->public.e), -1),
 		       -1), -1);
@@ -420,6 +407,7 @@ make_rsa_verifier(struct signature_algorithm *s,
 
 struct signature_algorithm *
 make_rsa_algorithm(struct hash_algorithm *hash,
+		   int name,
 		   UINT32 prefix_length,
 		   const UINT8 *prefix)
 {
@@ -427,6 +415,7 @@ make_rsa_algorithm(struct hash_algorithm *hash,
   self->super.make_signer = make_rsa_signer;
   self->super.make_verifier = make_rsa_verifier;
   self->hash = hash;
+  self->name = name;
   
   self->prefix_length = prefix_length;
   self->prefix = prefix;
@@ -434,9 +423,9 @@ make_rsa_algorithm(struct hash_algorithm *hash,
   return &self->super;
 }
 
-#define STATIC_RSA_ALGORITHM(a, l, id) \
+#define STATIC_RSA_ALGORITHM(a, n, l, id) \
 { { STATIC_HEADER, make_rsa_signer, make_rsa_verifier }, \
-  (a), (l), (id) }
+  (a), (n), (l), (id) }
 
 /* From pkcs-1v2
  *
@@ -461,7 +450,7 @@ static const UINT8 md5_prefix[] =
 };
 
 struct rsa_algorithm rsa_md5_algorithm =
-STATIC_RSA_ALGORITHM(&md5_algorithm, 18, md5_prefix);
+STATIC_RSA_ALGORITHM(&md5_algorithm, ATOM_RSA_PKCS1_MD5, 18, md5_prefix);
 
 /* From pkcs-1v2
  *
@@ -486,5 +475,5 @@ static const UINT8 sha1_prefix[] =
 };
 
 struct rsa_algorithm rsa_sha1_algorithm =
-STATIC_RSA_ALGORITHM(&sha1_algorithm, 15, sha1_prefix);
+STATIC_RSA_ALGORITHM(&sha1_algorithm, ATOM_RSA_PKCS1_SHA1, 15, sha1_prefix);
 

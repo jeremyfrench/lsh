@@ -44,7 +44,8 @@
      (super signature_algorithm)
      (vars
        (hash object hash_algorithm)
-
+       ; SPKI name for the algorithm
+       (name . int)
        ; The complete prefix for a DigestInfo, including the algorithm
        ; identifier for the hash function. A DigestInfo is formed by
        ; cetenating this prefix with the raw hash value.
@@ -54,6 +55,7 @@
 
 struct signature_algorithm *
 make_rsa_algorithm(struct hash_algorithm *hash,
+		   int name,
 		   UINT32 prefix_length,
 		   const UINT8 *prefix);
 
