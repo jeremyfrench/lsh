@@ -1,4 +1,26 @@
+2002-01-24  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/sexp.c (sexp_format): Add a newline at the end of
+	expressions in transport syntax.
+
+	* src/sexp-conv.c (process_replace): New function.
+	(parse_replace): New function.
+	(main_options): New option --replace.
+	(main_argp_parser): Handle OPT_REPLACE.
+	(main): Call io_init and io_final. Needed to get the callback
+	registered by the gc to work.
+	(main): Call process_replace.
+	(main): Don't add trailing newlines; let sexp_format do that.
+
+	* src/io.c: Added assert checking that source is non-NULL, in
+	functions that need it. 
+
+	* src/gc.c (gc): Print a verbose message at the start of gc. 
+
 2002-01-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/unix_interact.c (do_make_raw): Added FIXME: about tty TIME
+	and VMIN settings.
 
 	* src/scm/gaba.scm (make-class): Added FIXME:-comment about
 	offsetof. 
