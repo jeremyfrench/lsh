@@ -73,6 +73,7 @@ ssh-connection
 publickey
 password
 hostbased
+keyboard-interactive
 gssapi
 
 # Channel related
