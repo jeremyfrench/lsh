@@ -42,6 +42,7 @@
        (mode . int)
        (block_size simple UINT32)
        (id_comment simple "const char *")
+       (debug_comment simple "const char *")
 
        (random object randomness)
        (algorithms object alist)
@@ -54,7 +55,8 @@
 
 struct handshake_info *
 make_handshake_info(int mode,
-		    const char *id,
+		    const char *id_comment,
+		    const char *debug_comment,
 		    UINT32 block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,

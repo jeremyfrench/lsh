@@ -145,6 +145,8 @@ do_line(struct line_handler **h,
   CAST(connection_line_handler, closure, *h);
   UINT32 protover_len, swver_len, comment_len;
   UINT8 *protover, *swver, *comment;
+
+  struct ssh_connection *connection = closure->connection;
   
   switch(split_version_string(length, line, 
 			      &protover_len, &protover, 
@@ -169,7 +171,7 @@ do_line(struct line_handler **h,
 		assert(closure->mode == CONNECTION_SERVER);
 	      
 		/* Sending keyexchange packet was delayed. Do it now */
-		initiate_keyexchange(closure->connection,
+		initiate_keyexchange(connection,
 				     closure->mode);
 	      }
 #endif /* WITH_SSH1_FALLBACK */
@@ -179,7 +181,7 @@ do_line(struct line_handler **h,
 		 /* FIXME: Perhaps do a numerical comparison here? */
 		 && (memcmp(swver + 4, "13", 2) <= 0) )
 	      {
-		closure->connection->peer_flags
+		connection->peer_flags
 		  |= (PEER_SSH_DSS_KLUDGE | PEER_SERVICE_ACCEPT_KLUDGE
 		      | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG);
 	      }
@@ -188,22 +190,25 @@ do_line(struct line_handler **h,
 	    new = 
 	      make_read_packet(
 		make_packet_unpad(
-		  closure->connection,
+		  connection,
 		  make_packet_inflate(
-		    make_packet_debug(&closure->connection->super, "received"),
-		    closure->connection
+		    make_packet_debug(&connection->super,
+				      (connection->debug_comment
+				       ? ssh_format("%lz received", connection->debug_comment)
+				       : ssh_format("Received"))),
+		    connection
 		    )
 		  ),
-		closure->connection
+		connection
 		);
 	    
-	    closure->connection->versions[!closure->mode]
+	    connection->versions[!closure->mode]
 	      = ssh_format("%ls", length, line);
 
 	    verbose("Client version: %pS\n"
 		    "Server version: %pS\n",
-		    closure->connection->versions[CONNECTION_CLIENT],
-		    closure->connection->versions[CONNECTION_SERVER]);
+		    connection->versions[CONNECTION_CLIENT],
+		    connection->versions[CONNECTION_SERVER]);
 
 	    *r = new;
 	    return;
@@ -231,7 +236,7 @@ do_line(struct line_handler **h,
 	  KILL(closure);
 	  *h = NULL;
 
-	  EXCEPTION_RAISE(closure->connection->e,
+	  EXCEPTION_RAISE(connection->e,
 			  make_protocol_exception
 			  (SSH_DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED,
 			   NULL));
@@ -244,7 +249,7 @@ do_line(struct line_handler **h,
       KILL(closure);
       *h = NULL;
       
-      PROTOCOL_ERROR(closure->connection->e,
+      PROTOCOL_ERROR(connection->e,
 		     "Incorrectly version string.");
       
       return;
@@ -277,7 +282,8 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
 
 struct handshake_info *
 make_handshake_info(int mode,
-		    const char *id,
+		    const char *id_comment,
+		    const char *debug_comment,
 		    UINT32 block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,
@@ -286,7 +292,8 @@ make_handshake_info(int mode,
 {
   NEW(handshake_info, self);
   self->mode = mode;
-  self->id_comment = id;
+  self->id_comment = id_comment;
+  self->debug_comment = debug_comment;
   self->block_size = block_size;
   self->random = r;
   self->algorithms = algorithms;
@@ -365,7 +372,9 @@ do_handshake(struct command *s,
    * EXC_FINISH_READ exception. */
   
   connection = make_ssh_connection
-    (c, make_exc_finish_read_handler(fd, e, HANDLER_CONTEXT));
+    (self->info->debug_comment, 
+     c,
+     make_exc_finish_read_handler(fd, e, HANDLER_CONTEXT));
   
   connection_init_io
     (connection, 
