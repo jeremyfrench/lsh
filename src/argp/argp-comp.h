@@ -55,10 +55,19 @@ _argp_unlock_xxx (void);
 /* For some reason, I can't get this to interact correctly with the header files on my glibc system.
  * So instead, I edited the code in argp-help.c that tried to use __strndup. */
 
-#if 0
+#if 1
 #ifndef __strndup
 #define __strndup strndup
 #endif
+#endif
+
+/* Ugly hack. lsh doesn't use threads, nor stdio */
+#if !HAVE_FWRITE_UNLOCKED
+#define fwrite_unlocked fwrite
+#endif
+
+#if !HAVE_FPUTS_UNLOCKED
+#define fputs_unlocked fputs
 #endif
 
 #endif /* LSH_ARGP_COMP_H_INCLUDED */
