@@ -1,5 +1,4 @@
 dist_classes = \
-    abstract_compress.h.x \
     abstract_crypto.h.x \
     abstract_io.h.x \
     algorithms.h.x \
@@ -22,6 +21,7 @@ dist_classes = \
     command.c.x \
     command.h.x \
     compress.c.x \
+    compress.h.x \
     connection.c.x \
     connection.h.x \
     connection_commands.h.x \
