@@ -307,7 +307,9 @@ com_escape(const char *arg, const char *command UNUSED)
 int
 com_quit(const char *arg UNUSED, const char *command UNUSED) 
 {
-  com_close( "", "INTERNAL CLOSE COMMAND" );
+  if( lsftp_connected() )   /* If connected */
+    com_close( "", "INTERNAL CLOSE COMMAND" ); /* Close connection */
+
   printf( "Bye\n" );
 
   mainloop=0;
