@@ -75,9 +75,11 @@ do {						\
   (p)[3] = (i) & 0xff;				\
 } while(0)
 
+/* Useful macros. */
 #define MIN(a, b) (((a)>(b)) ? (b) : (a))
 #define MAX(a, b) (((a)>(b)) ? (b) : (a))
-
+#define SQR(x) ((x)*(x))
+     
 /* Generic object */
 
 #define LSH_ALLOC_HEAP 0
