@@ -315,6 +315,36 @@ parse_atom_list(struct simple_buffer *buffer, unsigned limit)
   return parse_atoms(&sub_buffer, limit);
 }
 
+/* Used by client_x11.c, for parsing xauth */
+int
+parse_uint16(struct simple_buffer *buffer, UINT32 *result)
+{
+  if (LEFT < 2)
+    return 0;
+
+  *result = READ_UINT16(HERE);
+  ADVANCE(2);
+  return 1;
+}
+
+int
+parse_string16(struct simple_buffer *buffer,
+	       UINT32 *length, const UINT8 **start)
+{
+  UINT32 l;
+
+  if (!parse_uint16(buffer, &l))
+    return 0;
+
+  if (LEFT < l)
+    return 0;
+
+  *length = l;
+  *start = HERE;
+  ADVANCE(l);
+  return 1;
+}
+
 void
 parse_rest(struct simple_buffer *buffer,
 	   UINT32 *length, const UINT8 **start)
