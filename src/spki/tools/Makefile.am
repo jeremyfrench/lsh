@@ -8,6 +8,6 @@ AM_LDFLAGS = -L.. -L../../nettle/
 # programs depend on it. It seems there's no DEPENDENCIES variable
 # that affects all programs.
 
-LDADD = -lspki -lnettle ../libspki.a ../../nettle/libnettle.a
+LDADD = misc.o -lspki -lnettle ../libspki.a ../../nettle/libnettle.a
 
-spki_make_signature_SOURCES = spki-make-signature.c io.c io.h
+EXTRA_DIST = misc.c misc.h
