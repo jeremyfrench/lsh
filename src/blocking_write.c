@@ -33,8 +33,8 @@
      (vars
        (fd . int)
        (e object exception_handler)
-       (write . (pointer (function void
-                          int UINT32 "const UINT8 *" "struct exception_handler *e")))))
+       (write . (pointer (function "const struct exception *"
+                          int UINT32 "const UINT8 *")))))
 */
 
 #include "blocking_write.c.x"
@@ -44,7 +44,11 @@ static void do_blocking_write(struct abstract_write *w,
 {
   CAST(blocking_write, closure, w);
 
-  closure->write(closure->fd, packet->length, packet->data, closure->e);
+  const struct exception *e =
+    closure->write(closure->fd, packet->length, packet->data);
+
+  if (e)
+    EXCEPTION_RAISE(closure->e, e);
   
   lsh_string_free(packet);
 }
