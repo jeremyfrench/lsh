@@ -68,8 +68,6 @@ static void do_reap(struct reap *c,
 {
   CAST(reaper, closure, c);
 
-  assert(!ALIST_GET(closure->children, pid));
-
   ALIST_SET(closure->children, pid, callback);
 }
   
