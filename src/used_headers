@@ -4,12 +4,20 @@
 # files. Headers with absolute paths are ignored, leading directories
 # of relative file names are deleted.
 
+if [ $# = 0 ]; then
+    echo Usage: $0 suffix directories...
+    exit 1
+fi
+
+extension=$1
+shift
+
 (for d in "$@"; do
     if [ -d $d/.deps ]; then
 	cat $d/.deps/*.P
     fi
 done) | tr ' ' '\n' \
-      | grep '\.h$' \
+      | grep `echo "$extension"'$' |sed 's/\./\\\\./'` \
       | sed 's%^.*/\([^/]\+\)$%\1%' \
       | sort | uniq
 
