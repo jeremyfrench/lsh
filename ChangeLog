@@ -1,3 +1,9 @@
+2003-09-25  Pontus Sköld  <pont@soua.net>
+
+	* src/channel.c (login_service_command): Use
+	init_connection_service instead of init_login_service.
+	(init_login_service): Removed redundant function.
+	
 2003-09-22  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* README: Updated the instructions for building from CVS. List
