@@ -33,6 +33,7 @@
 #include "connection_commands.h"
 #include "crypto.h"
 #include "daemon.h"
+#include "environ.h"
 #include "format.h"
 #include "handshake.h"
 #include "io.h"
@@ -100,13 +101,6 @@ const char *argp_program_version
 = "lshd-" VERSION ", secsh protocol version " SERVER_PROTOCOL_VERSION;
 
 const char *argp_program_bug_address = BUG_ADDRESS;
-
-/* The definition of SBINDIR is currently broken */
-#if 0
-# define KERBEROS_HELPER SBINDIR "/lsh-krb-checkpw"
-#else
-# define KERBEROS_HELPER PREFIX "/sbin/lsh-krb-checkpw"
-#endif
 
 #define OPT_NO 0x400
 #define OPT_SSH1_FALLBACK 0x200
@@ -486,7 +480,7 @@ main_options[] =
   
   { "kerberos-passwords", OPT_KERBEROS_PASSWD, NULL, 0,
     "Recognize kerberos passwords, using the helper program "
-    "\"" KERBEROS_HELPER "\". This option is experimental.", 0 },
+    "\"" PATH_KERBEROS_HELPER "\". This option is experimental.", 0 },
   { "no-kerberos-passwords", OPT_NO_KERBEROS_PASSWD, NULL, 0,
     "Don't recognize kerberos passwords (default behaviour).", 0 },
 
@@ -753,7 +747,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_KERBEROS_PASSWD:
-      self->pw_helper = KERBEROS_HELPER;
+      self->pw_helper = PATH_KERBEROS_HELPER;
       break;
 
     case OPT_NO_KERBEROS_PASSWD:
