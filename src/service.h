@@ -21,6 +21,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning service.h is obsolete
 #ifndef LSH_SERVICE_H_INCLUDED
 #define LSH_SERVICE_H_INCLUDED
 
