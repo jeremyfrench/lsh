@@ -80,31 +80,6 @@ struct exception *make_channel_open_exception(UINT32 error_code, char *msg)
        ; (start object connection_startup)))
 */
 
-/* ;; GABA:
-   (class
-     (name global_request_handler)
-     (super packet_handler)
-     (vars
-       (global_requests object alist)))
-*/
-
-/* ;; GABA:
-   (class
-     (name channel_open_handler)
-     (super packet_handler)
-     (vars
-       (channel_types object alist)))
-*/
-
-/* ;; GABA:
-   (class
-     (name channel_open_response)
-     (super channel_open_callback)
-     (vars
-       (remote_channel_number simple UINT32)
-       (window_size simple UINT32)
-       (max_packet simple UINT32)))
-*/
 
 struct lsh_string *format_global_failure(void)
 {
@@ -175,21 +150,14 @@ struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 		    channel->channel_number, add);
 }
 
-/* ;; GABA:
-   (class
-     (name channel_exception)
-     (super exception)
-     (vars
-       (channel object ssh_channel)
-       (pending_close . int)))
-*/
-
 /* GABA:
    (class
      (name exc_finish_channel_handler)
      (super exception_handler)
      (vars
        (table object channel_table)
+       ; Non-zero if the channel has already been deallocated.
+       (dead . int)
        ; Local channel number 
        (channel_number . UINT32)))
 */
@@ -202,36 +170,51 @@ static void do_exc_finish_channel_handler(struct exception_handler *s,
   switch (e->type)
     {
     case EXC_FINISH_PENDING:
-      self->table->pending_close = 1;
+      if (self->dead)
+	werror("channel.c: EXC_FINISH_PENDING on dead channel.\n");
 
+      self->table->pending_close = 1;
+      
       if (!self->table->next_channel)
 	EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
       break;
       
     case EXC_FINISH_CHANNEL:
       /* NOTE: This type of exception must be handled only once.
-       * Perhaps we must add a liveness flag in the ssh_channel struct
-       * to avoid deallocating dead channels? */
-      {
-	struct ssh_channel *channel
-	  = self->table->channels[self->channel_number];
+       * However, there is at least one case where it is difficult to
+       * ensure that the exception is raised only once.
+       *
+       * For instance, in do_channel_close, the CHANNEL_EOF callback
+       * can decide to call close_channel, which might raise this
+       * exception. When control gets back to do_channel_close, and
+       * CHANNEL_SENT_CLOSE is true, it raises the exception again.
+       *
+       * To get this right, we set a flag when the channel is
+       * deallocated. */
+      if (self->dead)
+	debug("EXC_FINISH_CHANNEL on dead channel.\n");
+      else
+	{
+	  struct ssh_channel *channel
+	    = self->table->channels[self->channel_number];
 
-	assert(channel);
-	assert(channel->resources->super.alive);
+	  assert(channel);
+	  assert(channel->resources->super.alive);
 
-	if (channel->close)
-	  CHANNEL_CLOSE(channel);
-
-	KILL_RESOURCE_LIST(channel->resources);
+	  if (channel->close)
+	    CHANNEL_CLOSE(channel);
 	
-	dealloc_channel(self->table, self->channel_number);
+	  KILL_RESOURCE_LIST(channel->resources);
+	
+	  dealloc_channel(self->table, self->channel_number);
+	  self->dead = 1;
 
-	if (self->table->pending_close && !self->table->next_channel)
-	  {
-	    /* FIXME: Send a SSH_DISCONNECT_BY_APPLICATION message? */
-	    EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
-	  }
-      }
+	  if (self->table->pending_close && !self->table->next_channel)
+	    {
+	      /* FIXME: Send a SSH_DISCONNECT_BY_APPLICATION message? */
+	      EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
+	    }
+	}
       break;
     default:
       EXCEPTION_RAISE(self->super.parent, e);
@@ -251,6 +234,7 @@ make_exc_finish_channel_handler(struct channel_table *table,
 
   self->table = table;
   self->channel_number = channel_number;
+  self->dead = 0;
   
   return &self->super;
 }
