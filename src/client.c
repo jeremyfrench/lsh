@@ -750,6 +750,10 @@ make_client_session(struct client_options *options)
 	      DEFAULT_ESCAPE_CHAR);
       escape = make_escape_info(DEFAULT_ESCAPE_CHAR);
     }
+
+  /* Bind ^Z to suspend */
+  if (escape)
+    escape->dispatch[26] = &suspend_callback;
   
   debug("lsh.c: Setting up stdout\n");
 
@@ -1048,6 +1052,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 		goto loop_done;
 	      }
 	loop_done:
+          ;
 	}
       break;
 		
