@@ -39,6 +39,7 @@
 #include "connection.h"
 #include "format.h"
 #include "keyexchange.h"
+#include "lsh_string.h"
 #include "read_line.h"
 #include "read_packet.h"
 #include "reaper.h"
@@ -87,7 +88,7 @@ do_service_request(struct packet_handler *c,
   unsigned msg_number;
   int name;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_SERVICE_REQUEST)
