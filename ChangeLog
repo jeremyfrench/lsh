@@ -1,3 +1,29 @@
+Sun Dec 27 06:37:40 1998    <nisse@puck>
+
+	* server.c (do_line): Compression support.
+
+	* make_class: New type special-struct.
+
+	* lsh.c (main): Zlib support.
+	* lshd.c (main): Zlib support.
+
+	* keyexchange.c (kex_make_deflate): New function.
+	(kex_make_inflate): New function.
+	(do_handle_newkeys): Compression support.
+	(make_newkeys_handler): -"-
+	(do_install): -"-
+
+	* compress.h, compress.c, abstract_compress.c,
+	abstract_compress.h, zlib.h, zlib.c: New files (by Baszi).
+	
+	* connection.c (connection_init_io): Compression support.
+	* client.c (do_line): Compression support.
+
+	* client.c (do_exit_signal): Send CHANNEL_EOF.
+
+	* configure.in: Fixed the configure test for shutdown. Check for
+	zlib. 
+
 Sat Dec 26 02:37:18 1998    <nisse@puck>
 
 	* keyexchange.c (do_install): Bugfix: Look at closure->is_server
