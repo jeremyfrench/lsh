@@ -33,6 +33,7 @@
 #include "abstract_io.h"
 
 #include "format.h"
+#include "lsh_string.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -75,10 +76,10 @@ do_read_file(struct read_handler **h,
     }
   else    
     {
-      uint32_t left = self->buffer->length - self->pos;
+      uint32_t left = lsh_string_length(self->buffer) - self->pos;
       if (available >= left)
 	{
-	  memcpy(self->buffer->data + self->pos, data, left);
+	  lsh_string_write(self->buffer, self->pos, left, data);
 	  A_WRITE(self->c, self->buffer);
 	  self->buffer = NULL;
 
@@ -87,7 +88,7 @@ do_read_file(struct read_handler **h,
 	}
       else
 	{
-	  memcpy(self->buffer->data + self->pos, data, available);
+	  lsh_string_write(self->buffer, self->pos, available, data);
 	  self->pos += available;
 	  return available;
 	}
