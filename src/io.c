@@ -81,10 +81,25 @@ int io_iter(struct io_backend *b)
   struct pollfd *fds;
   struct lsh_fd **active_fds;
   
-  /* FIXME: Callouts not implemented */
+  /* FIXME: Real scheduling of callouts not implemented */
   /* int timeout; */
   int res;
 
+  /* Invoke all callouts. Clear the list first; if any callout
+   * installs another one, that will not be invoked until the next
+   * iteration. */
+  if (b->callouts)
+    {
+      struct callout *p = b->callouts;
+      b->callouts = NULL;
+      
+      while (p)
+	{
+	  LSH_CALLBACK(p->action);
+	  p = p->next;
+	}
+    }
+      
   {
     struct lsh_fd *fd;
     int need_close;
@@ -129,12 +144,19 @@ int io_iter(struct io_backend *b)
 		
 		    if (fd->close_callback)
 		      {
-			CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
+			LSH_CALLBACK(fd->close_callback);
 			need_close = 1;
 		      }
 		    trace("io.c: Closing fd %i.\n", fd->fd);
 		
-		    close(fd->fd);
+		    if (close(fd->fd) < 0)
+		      {
+			werror("io.c: close() failed, (errno = %i): %s\n",
+			       errno, STRERROR(errno));
+			EXCEPTION_RAISE(fd->e,
+					make_io_exception(EXC_IO_CLOSE, fd,
+							  errno, NULL));
+		      }
 		  }
 		/* Unlink this fd */
 		*fd_p = fd->next;
@@ -268,7 +290,7 @@ int io_iter(struct io_backend *b)
 	    else
 	      {
 		werror("io.c: poll said POLLHUP on an inactive fd.\n");
-		close_fd(fd, CLOSE_EOF);
+		close_fd(fd);
 	      }
 	    continue;
 	  }
@@ -281,7 +303,7 @@ int io_iter(struct io_backend *b)
 
 	    /* FIXME: Should we raise any exception here? */
 
-	    close_fd(fd, CLOSE_PROTOCOL_FAILURE); 
+	    close_fd(fd); 
 
 	    continue;
 	  }
@@ -301,7 +323,7 @@ int io_iter(struct io_backend *b)
   return 1;
 }
 
-
+  
 void io_run(struct io_backend *b)
 {
   struct sigaction pipe;
@@ -321,9 +343,7 @@ void io_run(struct io_backend *b)
 void init_backend(struct io_backend *b)
 {
   b->files = NULL;
-#if 0
-  b->callouts = 0;
-#endif
+  b->callouts = NULL;
 }
 
 
@@ -335,7 +355,11 @@ do_buffered_read(struct io_callback *s,
 {
   CAST(io_buffered_read, self, s);
   UINT8 *buffer = alloca(self->buffer_size);
-  int res = read(fd->fd, buffer, self->buffer_size);
+  int res;
+
+  assert(fd->want_read);   
+  
+  res = read(fd->fd, buffer, self->buffer_size);
 
   if (res < 0)
     switch(errno)
@@ -378,16 +402,21 @@ do_buffered_read(struct io_callback *s,
 	   * could keep a queue of waiting packets, but it would still
 	   * have to clear the want_read flag, to prevent that queue
 	   * from growing arbitrarily large.
+	   *
+	   * We now go with the second alternative. 
 	   */
 
-	  assert(fd->want_read); assert(self->handler);
+	  assert(self->handler);
 
 	  /* NOTE: This call may replace self->handler */
 	  done = READ_HANDLER(self->handler, left, buffer);
-
+	  
 	  buffer += done;
 	  left -= done;
 
+	  if (!fd->want_read)
+	    debug("do_buffered_read: want_read = 0; handler needs a pause.\n");
+	  
 	  if (fd->want_read && !self->handler)
 	    {
 	      werror("do_buffered_read: Handler disappeared! Ignoring %i bytes\n",
@@ -409,7 +438,7 @@ do_buffered_read(struct io_callback *s,
       assert(fd->want_read);
       assert(self->handler);
 
-      close_fd_nicely(fd, 0);
+      close_fd_nicely(fd);
       READ_HANDLER(self->handler, 0, NULL);
     }
 	
@@ -470,7 +499,7 @@ do_consuming_read(struct io_callback *c,
 	}
       else
 	{
-	  close_fd_nicely(fd, 0);
+	  close_fd_nicely(fd);
 	  A_WRITE(self->consumer, NULL);
 	}
       
@@ -513,13 +542,13 @@ do_write_callback(struct io_callback *s UNUSED,
 	break;
       case EPIPE:
 	debug("io.c: Broken pipe.\n");
-	close_fd(fd, CLOSE_BROKEN_PIPE);
+	close_fd(fd);
 	break;
       default:
 	werror("io.c: write failed, %z\n", STRERROR(errno));
 	EXCEPTION_RAISE(fd->e,
 			make_io_exception(EXC_IO_WRITE, fd, errno, NULL));
-	close_fd(fd, CLOSE_WRITE_FAILED);
+	close_fd(fd);
 	
 	break;
       }
@@ -533,13 +562,11 @@ static struct io_callback io_write_callback =
 static void
 do_write_prepare(struct lsh_fd *fd)
 {
-  /* CAST(io_write_callback, self, s); */
-
   assert(fd->write_buffer);
 
   if (! (fd->want_write = write_buffer_pre_write(fd->write_buffer))
       && fd->write_buffer->closed)
-    close_fd(fd, CLOSE_EOF);
+    close_fd(fd);
 }
 
 static void
@@ -679,13 +706,9 @@ static void do_kill_fd(struct resource *r)
 {
   CAST_SUBTYPE(lsh_fd, fd, r);
 
-  /* NOTE: We use the zero close reason for files killed this way.
-   * Close callbacks are still called, but they should probably not do
-   * anything if reason == 0. */
-
   /* FIXME: Should we use close_fd() or close_fd_nicely() ? */
   if (r->alive)
-    close_fd_nicely(fd, 0);
+    close_fd_nicely(fd);
 }
 
 /* Closes the file on i/o errors, and passes the exception on */
@@ -699,7 +722,7 @@ do_exc_io_handler(struct exception_handler *self,
       CAST_SUBTYPE(io_exception, e, x);
 
       if (e->fd)
-	close_fd(e->fd, 0);
+	close_fd(e->fd);
     }
   EXCEPTION_RAISE(self->parent, x);
   return;
@@ -714,7 +737,6 @@ init_file(struct io_backend *b, struct lsh_fd *f, int fd,
 
   f->e = make_exception_handler(do_exc_io_handler, e, HANDLER_CONTEXT);
   
-  f->close_reason = -1; /* Invalid reason */
   f->close_callback = NULL;
 
   f->prepare = NULL;
@@ -1415,7 +1437,7 @@ struct lsh_fd *
 io_read_write(struct lsh_fd *fd,
 	      struct io_callback *read,
 	      UINT32 block_size,
-	      struct close_callback *close_callback)
+	      struct lsh_callback *close_callback)
 {
   trace("io.c: Preparing fd %i for reading and writing\n",
 	fd->fd);
@@ -1440,7 +1462,7 @@ io_read_write(struct lsh_fd *fd,
 struct lsh_fd *
 io_read(struct lsh_fd *fd,
 	struct io_callback *read,
-	struct close_callback *close_callback)
+	struct lsh_callback *close_callback)
 {
   trace("io.c: Preparing fd %i for reading\n", fd->fd);
   
@@ -1456,7 +1478,7 @@ io_read(struct lsh_fd *fd,
 struct lsh_fd *
 io_write(struct lsh_fd *fd,
 	 UINT32 block_size,
-	 struct close_callback *close_callback)
+	 struct lsh_callback *close_callback)
 {
   trace("io.c: Preparing fd %i for writing\n", fd->fd);
   
@@ -1476,7 +1498,7 @@ struct lsh_fd *
 io_write_file(struct io_backend *backend,
 	      const char *fname, int flags, int mode,
 	      UINT32 block_size,
-	      struct close_callback *c,
+	      struct lsh_callback *c,
 	      struct exception_handler *e)
 {
   int fd = open(fname, flags, mode);
@@ -1588,14 +1610,13 @@ void kill_fd(struct lsh_fd *fd)
   fd->super.alive = 0;
 }
 
-void close_fd(struct lsh_fd *fd, int reason)
+void close_fd(struct lsh_fd *fd)
 {
   trace("io.c: Marking fd %i for closing.\n", fd->fd);
-  fd->close_reason = reason;
   kill_fd(fd);
 }
 
-void close_fd_nicely(struct lsh_fd *fd, int reason)
+void close_fd_nicely(struct lsh_fd *fd)
 {
   /* Don't attempt to read any further. */
 
@@ -1608,8 +1629,6 @@ void close_fd_nicely(struct lsh_fd *fd, int reason)
   else
     /* There's no data buffered for write. */
     kill_fd(fd);
-
-  fd->close_reason = reason;
 }
 
 
@@ -1633,11 +1652,16 @@ do_exc_finish_read_handler(struct exception_handler *s,
   switch(e->type)
     {
     case EXC_FINISH_READ:
-      /* FIXME: What to do about the reason argument? */
-      close_fd_nicely(self->fd, 0);
+      close_fd_nicely(self->fd);
       break;
     case EXC_FINISH_IO:
-      close_fd(self->fd, 0);
+      break;
+    case EXC_PAUSE_READ:
+      self->fd->want_read = 0;
+      break;
+    case EXC_PAUSE_START_READ:
+      if (self->fd->read)
+	self->fd->want_read = 1;
       break;
     default:
       EXCEPTION_RAISE(self->super.parent, e);

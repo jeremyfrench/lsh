@@ -42,7 +42,7 @@
 #include "io.h.x"
 #undef GABA_DECLARE
 
-
+#if 0
 /* Close callbacks are called with a reason as argument. */
 
 /* End of file while reading.
@@ -60,7 +60,7 @@
 
 #define CLOSE_PROTOCOL_FAILURE 5
 
-/* GABA:
+/* ;; GABA:
    (class
      (name close_callback)
      (vars
@@ -68,6 +68,16 @@
 */
 
 #define CLOSE_CALLBACK(c, r) ((c)->f((c), (r)))
+#endif
+
+/* GABA:
+   (class
+     (name lsh_callback)
+     (vars
+       (f method void)))
+*/
+
+#define LSH_CALLBACK(c) ((c)->f((c)))
 
 /* The fd io callback is a closure, in order to support different
  * reading styles (buffered and consuming). Also used for writing. */
@@ -97,10 +107,9 @@
        ; which seems kind of bogus.
        (e object exception_handler)
        
-       ;; FIXME: Can the close handlers be replaced by exceptions?
+       ;;(close_reason . int)
        ; User's close callback
-       (close_reason . int)
-       (close_callback object close_callback)
+       (close_callback object lsh_callback)
 
        ; Called before poll
        (prepare method void)
@@ -189,13 +198,14 @@ struct listen_value *
 make_listen_value(struct lsh_fd *fd,
 		  struct address_info *peer);
 
-/* ;; GABA:
+/* Scheduled calls. FIXME: For now, no scheduling in time. */
+/* GABA:
    (class
      (name callout)
      (vars
        (next object callout)
-       (action object callback)
-       (when . time_t)))
+       (action object lsh_callback)))
+       ;; (when . time_t)
 */
 
 /* GABA:
@@ -209,8 +219,7 @@ make_listen_value(struct lsh_fd *fd,
        ;; (closed object lsh_fd)
        
        ; Callouts
-       ;; (callouts object callout)
-       ))
+       (callouts object callout)))
 */
 
 /* I/O exceptions */
@@ -319,30 +328,30 @@ make_listen_callback(struct io_backend *backend,
 struct lsh_fd *io_read_write(struct lsh_fd *fd,
 			     struct io_callback *read,
 			     UINT32 block_size,
-			     struct close_callback *close_callback);
+			     struct lsh_callback *close_callback);
 
 struct lsh_fd *io_read(struct lsh_fd *fd,
 		       struct io_callback *read,
-		       struct close_callback *close_callback);
+		       struct lsh_callback *close_callback);
 
 struct lsh_fd *io_write(struct lsh_fd *fd,
 			UINT32 block_size,
-			struct close_callback *close_callback);
+			struct lsh_callback *close_callback);
 
 /* Marks a file for close, without touching the close_reason field. */
 void kill_fd(struct lsh_fd *fd);
 
-void close_fd(struct lsh_fd *fd, int reason);
+void close_fd(struct lsh_fd *fd);
 
 /* Stop reading from the fd, and close it as soon as the buffer
  * is completely written. */
-void close_fd_nicely(struct lsh_fd *fd, int reason);
+void close_fd_nicely(struct lsh_fd *fd);
 
 struct lsh_fd *io_write_file(struct io_backend *backend,
 			    const char *fname, int flags,
 			    int mode,
 			    UINT32 block_size,
-			    struct close_callback *c,
+			    struct lsh_callback *c,
 			    struct exception_handler *e);
 
 struct lsh_fd *
