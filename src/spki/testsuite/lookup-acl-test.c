@@ -7,6 +7,7 @@ test_main(void)
   const struct spki_5_tuple *acl;
   struct spki_principal *k1;
   struct spki_principal *k2;
+  struct spki_tag *tag;
   
   spki_acl_init(&db);
 
@@ -23,28 +24,38 @@ test_main(void)
   ASSERT(k2);
 
   ASSERT(k1 != k2);
-  
-  acl = spki_acl_by_authorization_first(&db, LDATA("(4:http)"));
-  ASSERT(!acl);
-  acl = spki_acl_by_authorization_next(&db, acl, LDATA("(4:http)"));
-  ASSERT(!acl);
 
-  acl = spki_acl_by_authorization_first(&db, LDATA("(3:ftp)"));
+  tag = make_tag(LDATA("(4:http)"));
+  acl = spki_acl_by_authorization_first(&db, tag);
   ASSERT(!acl);
-
-  acl = spki_acl_by_authorization_first(&db, LDATA("(3:ftp2:h5)"));
+  acl = spki_acl_by_authorization_next(&db, acl, tag);
   ASSERT(!acl);
+  release_tag(tag);
 
-  acl = spki_acl_by_authorization_first(&db, LDATA("(3:ftp2:h1)"));
+  tag = make_tag(LDATA("(3:ftp)"));
+  acl = spki_acl_by_authorization_first(&db, tag);
+  ASSERT(!acl);
+  release_tag(tag);
+
+  tag = make_tag(LDATA("(3:ftp2:h5)")); 
+  acl = spki_acl_by_authorization_first(&db, tag);
+  ASSERT(!acl);
+  release_tag(tag);
+
+  tag = make_tag(LDATA("(3:ftp2:h1)"));
+  acl = spki_acl_by_authorization_first(&db, tag);
   ASSERT(acl);
   ASSERT(acl->subject == k2);
-  acl = spki_acl_by_authorization_next(&db, acl, LDATA("(3:ftp2:h1)"));
+  acl = spki_acl_by_authorization_next(&db, acl, tag);
   ASSERT(acl);
   ASSERT(acl->subject == k1);
-  ASSERT(!spki_acl_by_authorization_next(&db, acl, LDATA("(3:ftp2:h1)")));
-  
-  acl = spki_acl_by_authorization_first(&db, LDATA("(3:ftp2:h2)"));
+  ASSERT(!spki_acl_by_authorization_next(&db, acl, tag));
+  release_tag(tag);
+
+  tag = make_tag(LDATA("(3:ftp2:h2)"));
+  acl = spki_acl_by_authorization_first(&db, tag);
   ASSERT(acl);
   ASSERT(acl->subject == k2);
-  ASSERT(!spki_acl_by_authorization_next(&db, acl, LDATA("(3:ftp2:h2)")));
+  ASSERT(!spki_acl_by_authorization_next(&db, acl, tag));
+  release_tag(tag);
 }
