@@ -74,14 +74,8 @@ int parse_bignum(struct simple_buffer *buffer, mpz_t result, UINT32 limit);
 
 int parse_atom(struct simple_buffer *buffer, int *result);
 
-#if 0
-/* Returns 1 on success, 0 on failure, and -1 at end of buffer.
- * Unknown atoms sets result to zero. */
-int parse_next_atom(struct simple_buffer *buffer, UINT32 *result);
-#endif
-
-/* Reads a list of atoms. The buffer should hold the list body; the
- * length field should already be stripped off (usually by
+/* Reads a list of zero or more atoms. The buffer should hold the list
+ * body; the length field should already be stripped off (usually by
  * parse_sub_buffer()). */
 struct int_list *parse_atoms(struct simple_buffer *buffer, unsigned limit);
 

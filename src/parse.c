@@ -230,11 +230,6 @@ parse_atom(struct simple_buffer *buffer, int *result)
   return 1;
 }
 
-/* Returns 1 on success, 0 on failure, and -1 at end of buffer.
- * Unknown atoms sets result to zero. */
-
-/* NOTE: The end of buffer indication is never actually used. */
-
 /* NOTE: This functions record the fact that it has read to the end of
  * the buffer by setting the position to *beyond* the end of the
  * buffer. */
@@ -243,8 +238,7 @@ parse_next_atom(struct simple_buffer *buffer, int *result)
 {
   UINT32 i;
 
-  if (buffer->pos > buffer->capacity)
-    return -1;
+  assert (buffer->pos <=buffer->capacity);
 
   for(i = 0; i < LEFT; i++)
     {
@@ -254,7 +248,11 @@ parse_next_atom(struct simple_buffer *buffer, int *result)
 	/* Atoms can be no larger than 64 characters */
 	return 0;
     }
-  
+
+  /* No empty atoms. */
+  if (!i)
+    return 0;
+
   *result = lookup_atom(i, HERE);
   ADVANCE(i+1);  /* If the atom was terminated at the end of the
 		  * buffer, rather than by a comma, this points beyond
@@ -270,6 +268,9 @@ parse_atoms(struct simple_buffer *buffer, unsigned limit)
   struct int_list *res;
 
   assert(limit);
+
+  if (!LEFT)
+    return make_int_list(0, -1);
   
   /* Count commas (no commas means one atom) */
   for (i = buffer->pos, count = 1; i < buffer->capacity; i++)
@@ -284,15 +285,10 @@ parse_atoms(struct simple_buffer *buffer, unsigned limit)
 
   for (i = 0; i < count; i++)
     {
-      switch(parse_next_atom(buffer, LIST(res)+i))
+      if (!parse_next_atom(buffer, LIST(res)+i))
 	{
-	case 1:
-	  continue;
-	case 0:
 	  KILL(res);
 	  return NULL;
-	default:
-	  fatal("Internal error\n");
 	}
     }
 
