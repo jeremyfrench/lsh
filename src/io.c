@@ -861,8 +861,8 @@ int address_info2sockaddr_in(struct sockaddr_in *sin,
 /* These functions are used by werror() and friends */
 
 /* For fd:s in blocking mode. */
-void write_raw(int fd, UINT32 length, const UINT8 *data,
-	       struct exception_handler *e)
+const struct exception *
+write_raw(int fd, UINT32 length, const UINT8 *data)
 {
   while(length)
     {
@@ -875,19 +875,18 @@ void write_raw(int fd, UINT32 length, const UINT8 *data,
 	  case EAGAIN:
 	    continue;
 	  default:
-	    EXCEPTION_RAISE(e,
-			    make_io_exception(EXC_IO_BLOCKING_WRITE,
-					      NULL, errno, NULL));
-	    return;
+	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
+				     NULL, errno, NULL);
 	  }
       
       length -= written;
       data += written;
     }
+  return NULL;
 }
 
-void write_raw_with_poll(int fd, UINT32 length, const UINT8 *data,
-			 struct exception_handler *e)
+const struct exception *
+write_raw_with_poll(int fd, UINT32 length, const UINT8 *data)
 {
   while(length)
     {
@@ -907,8 +906,8 @@ void write_raw_with_poll(int fd, UINT32 length, const UINT8 *data,
 	  case EAGAIN:
 	    continue;
 	  default:
-	    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_BLOCKING_WRITE,
-						 NULL, errno, NULL));
+	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
+				     NULL, errno, NULL);
 	  }
       
       written = write(fd, data, length);
@@ -920,13 +919,14 @@ void write_raw_with_poll(int fd, UINT32 length, const UINT8 *data,
 	  case EAGAIN:
 	    continue;
 	  default:
-	    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_BLOCKING_WRITE,
-						 NULL, errno, NULL));
+	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
+				     NULL, errno, NULL);
 	  }
       
       length -= written;
       data += written;
     }
+  return NULL;
 }
 
 void io_set_nonblocking(int fd)

@@ -313,10 +313,11 @@ struct address_info *sockaddr2info(size_t addr_len UNUSED,
 int address_info2sockaddr_in(struct sockaddr_in *sin,
 			     struct address_info *a);
 
-void write_raw(int fd, UINT32 length, const UINT8 *data,
-	       struct exception_handler *e);
-void write_raw_with_poll(int fd, UINT32 length, const UINT8 *data,
-			 struct exception_handler *e);
+/* Returns an exception, if anything went wrong */
+const struct exception *
+write_raw(int fd, UINT32 length, const UINT8 *data);
+const struct exception *
+write_raw_with_poll(int fd, UINT32 length, const UINT8 *data);
 
 void io_set_nonblocking(int fd);
 void io_set_close_on_exec(int fd);
