@@ -196,7 +196,7 @@ static const struct uparam_name uparam_names[] =
   { "header-col",     0, offsetof (struct uparams, header_col) },
   { "usage-indent",   0, offsetof (struct uparams, usage_indent) },
   { "rmargin",        0, offsetof (struct uparams, rmargin) },
-  { 0 }
+  { 0, 0, 0 }
 };
 
 /* Read user options from the environment, and fill in UPARAMS appropiately.  */
@@ -1742,11 +1742,11 @@ __argp_short_program_name(const struct argp_state *state)
 {
   if (state)
     return state->name;
-#if HAVE_PROGRAM_INVOCATION_SHORT_NAME
+#if HAVE_DECL_PROGRAM_INVOCATION_SHORT_NAME
   return program_invocation_short_name;
-#elif HAVE_PROGRAM_INVOCATION_NAME
+#elif HAVE_DECL_PROGRAM_INVOCATION_NAME
   return __argp_basename(program_invocation_name);
-#else /* !HAVE_PROGRAM_INVOCATION_NAME */
+#else /* !HAVE_DECL_PROGRAM_INVOCATION_NAME */
   /* FIXME: What now? Miles suggests that it is better to use NULL,
      but currently the value is passed on directly to fputs_unlocked,
      so that requires more changes. */
@@ -1754,7 +1754,7 @@ __argp_short_program_name(const struct argp_state *state)
 #  warning No reasonable value to return
   return "";
 # endif /* __GNUC__ */
-#endif /* !HAVE_PROGRAM_INVOCATION_NAME */
+#endif /* !HAVE_DECL_PROGRAM_INVOCATION_NAME */
 }
 
 /* Output, if appropriate, a usage message for STATE to STREAM.  FLAGS are
