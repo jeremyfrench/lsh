@@ -81,6 +81,30 @@ instance, a writing to a file associated with a channel may fail. In
 that case, the channel should be closed, but the connection should not
 die. Handle the LSH_CHANNEL_FINISHED code properly.
 
+Fix the flow control (it's broken on the recieving end).
+
+
+CHANNEL CLOSE
+
+Channels may need some live-ness status. For instance, a remote
+process may close its stdout and stderr, but still keep on running. In
+this case, the local process should close it's stdout and stderr, but
+not close the channel until it has recieved a close message and
+possibly an exit status.
+
+The server's close message should somehow be delayed until the dead
+process has been reaped. I think the Right way is for the server to
+initiate CHANNEL_CLOSE when all of the following conditions are true:
+
+× The process is dead (and its exit status has been send to the
+  client).
+x EOF has been detected on both stdout and stderr.
+× An EOF message has been recieved from the client.
+
+The client may want to respond to the exit-status message with an
+CHANNEL_EOF message, unless it wants to talk to any forked children
+that may still keep the stdin open.
+
 
 USER INFO
 
@@ -99,11 +123,8 @@ look at this flag, wait() to get status from dying children. Use an
 alist pid->callback to report childrens exit status back to the remote
 end. Another issue are process groups... Are they relevant? 
 
-Channels need some live-ness status. For instance, a remote process
-may close its stdout and stderr, but still keep on running. In this
-case, the local process should close it's stdout and stderr, but not
-close the channel until it has recieved a close message and possibly
-an exit status.
+Kill child processes if its channel or its connection is closed
+unexpectedly. 
 
 
 MISC
@@ -115,9 +136,3 @@ Fix shadow passwd support.
 
 Don't use stdio for werror and similar functions. The non-blocking
 stderr sometime causes the C library to lose data.
-
-Fix flow control.
-
-The server's close message should somehow be delayed until the dead
-process has been reaped. Alternatively, the client could delay sending
-close until it has recieved the status.
