@@ -255,6 +255,16 @@ spki_principal_free_chain(struct spki_acl_db *db,
     }
 }
 
+const struct spki_principal *
+spki_principal_normalize(const struct spki_principal *principal)
+{
+  assert(principal);
+  while (principal->alias)
+    principal = principal->alias;
+
+  return principal;
+}
+
 
 
 void
@@ -270,6 +280,7 @@ spki_5_tuple_init(struct spki_5_tuple *tuple)
   tuple->not_after = spki_date_for_ever;
 }
 
+#if 0
 static void
 spki_5_tuple_fix_aliases(struct spki_5_tuple *tuple)
 {
@@ -285,6 +296,7 @@ spki_5_tuple_fix_aliases(struct spki_5_tuple *tuple)
 	tuple->subject = tuple->subject->alias;
     }
 }
+#endif
 
 /* ACL database */
 
@@ -308,7 +320,9 @@ spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i)
 	fail:
 	  /* Do this also on failure, as we may have added some acl:s
 	   * already. */
+#if 0
 	  spki_5_tuple_fix_aliases(db->first_acl);
+#endif
 	  return 0;
 	}
 
@@ -322,8 +336,9 @@ spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i)
       acl->next = db->first_acl;
       db->first_acl = acl;
     }
-
+#if 0
   spki_5_tuple_fix_aliases(db->first_acl);
+#endif
   return spki_parse_end(i);
 }
 
@@ -483,15 +498,19 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
 	case SPKI_TYPE_END_OF_EXPR:
 	  if (spki_parse_end(i))
 	    {
+#if 0
 	      spki_5_tuple_fix_aliases(db->first_acl);
 	      spki_5_tuple_fix_aliases(chain);
+#endif
 	      return chain;
 	    }
 	  /* Fall through */
 	default:
 	fail:
+#if 0
 	  spki_5_tuple_fix_aliases(db->first_acl);
 	  spki_5_tuple_free_chain(db, chain);
+#endif
 	  return NULL;
 	  
 	case SPKI_TYPE_CERT:
