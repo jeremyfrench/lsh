@@ -843,7 +843,7 @@ list_intersect(void *ctx, nettle_realloc_func *realloc,
     a = b;
 
   for ( ; a; a = a->cdr)
-    if (! (head = spki_cons(ctx, realloc, a->car, head)))
+    if (! (head = spki_cons(ctx, realloc, spki_tag_dup(a->car), head)))
       return NULL;
 
   return spki_tag_list_alloc(ctx, realloc,
