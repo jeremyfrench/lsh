@@ -59,11 +59,11 @@ make_apply(struct command *f, struct command_continuation *c)
   return &res->super.super;
 }
 
-int do_call_simple_command(struct command *c,
+int do_call_simple_command(struct command *s,
 			   struct lsh_object *arg,
 			   struct command_continuation *c)
 {
-  CAST_SUBTYPE(command_simple, self, c);
+  CAST_SUBTYPE(command_simple, self, s);
   return COMMAND_RETURN(c, COMMAND_SIMPLE(self, arg));
 }
 
@@ -80,34 +80,17 @@ static int do_command_I(struct command *ignored UNUSED,
 }
 #endif
 
-static struct lsh_object *do_command_I(struct command_simple *ignored UNUSED,
-				       struct lsh_object *arg)
+static struct lsh_object *
+do_simple_command_I(struct command_simple *ignored UNUSED,
+		    struct lsh_object *arg)
 {
   return arg;
 }
 
-struct command_simple command_I = STATIC_COMMAND_SIMPLE(do_command_I);
+struct command_simple command_I =
+STATIC_COMMAND_SIMPLE(do_simple_command_I);
 
 /* ((S f) g)x == (f x)(g x) */
-
-/* Represents (S f) */
-/* CLASS:
-   (class
-     (name command_S_1)
-     (super command)
-     (vars
-       (f object command)))
-*/
-
-/* Represents ((S f) g) */
-/* CLASS:
-   (class
-     (name command_S_2)
-     (super command)
-     (vars
-       (f object command)
-       (g object command)))
-*/
 
 /* Continuation called after evaluating (f x) */
 /* CLASS:
@@ -127,6 +110,16 @@ static int do_command_S_continuation(struct command_continuation *c,
   return COMMAND_CALL(self->g, self->x, make_apply(op, self->super.up));
 }
 
+/* Represents ((S f) g) */
+/* CLASS:
+   (class
+     (name command_S_2)
+     (super command_simple)
+     (vars
+       (f object command)
+       (g object command)))
+*/
+
 static int do_command_S_2(struct command *s,
 			  struct lsh_object *x,
 			  struct command_continuation *up)
@@ -141,136 +134,150 @@ static int do_command_S_2(struct command *s,
   return COMMAND_CALL(self->f, x, &c->super.super);
 }
 
-static int do_command_S_1(struct command *s,
-			  struct lsh_object *a,
-			  struct command_continuation *c)
-			  
+static struct lsh_object *
+do_simple_command_S_2(struct command_simple *s,
+		      struct lsh_object *x)
 {
-  CAST(command_S_1, self, s);
-  CAST_SUBTYPE(command, arg, a);
-  NEW(command_S_2, res);
-  res->f = self->f;
-  res->g = arg;
+  CAST(command_S_2, self, s);
+  CAST_SUBTYPE(command_simple, fs, self->f);
+  CAST_SUBTYPE(command_simple, gs, self->g);
+  CAST_SUBTYPE(command_simple, op, COMMAND_SIMPLE(fs, x));
   
-  res->super.call = do_command_S_2;
-
-  return COMMAND_RETURN(c, &res->super.super);
+  return COMMAND_SIMPLE(op, COMMAND_SIMPLE(gs, x));
 }
 
-static int do_command_S(struct command *ignored UNUSED,
-			struct lsh_object *a,
-			struct command_continuation *c)
+static struct command *make_command_S_2(struct command *f,
+					    struct command *g)
 {
-  CAST_SUBTYPE(command, arg, a);
-  NEW(command_S_1, res);
-  res->f = arg;
-  res->super.call = do_command_S_1;
-
-  return COMMAND_RETURN(c, &res->super.super);
+  NEW(command_S_2, res);
+  res->f = f;
+  res->g = g;
+  res->super.super.call = do_command_S_2;
+  res->super.call_simple = do_simple_command_S_2;
+  
+  return &res->super.super;
 }
 
-struct command command_S = { STATIC_HEADER, do_command_S };
-
-/* ((B x) y) z == (x (y z)) */
-
-/* Represents (B x) */
+/* Represents (S f) */
 /* CLASS:
    (class
-     (name command_B_1)
-     (super command)
+     (name command_S_1)
+     (super command_simple)
      (vars
-       (x object command)))
-*/
-
-/* Represents ((B x) y) */
-/* CLASS:
-   (class
-     (name command_B_2)
-     (super command)
-     (vars
-       (x object command)
-       (y object command)))
-*/
-
-static int do_command_B_2(struct command *s,
-			  struct lsh_object *z,
-			  struct command_continuation *c)
-{
-  CAST(command_B_2, self, s);
-  return COMMAND_CALL(self->y, z, make_apply(self->x, c));
-}
-
-static int do_command_B_1(struct command *s,
-			  struct lsh_object *a,
-			  struct command_continuation *c)
-{
-  CAST(command_B_1, self, s);
-  CAST_SUBTYPE(command, y, a);
-  NEW(command_B_2, res);
-  res->x = self->x;
-  res->y = y;
-  res->super.call = do_command_B_2;
-
-  return COMMAND_RETURN(c, &res->super.super);
-}
-
-static int do_command_B(struct command *ignored UNUSED,
-			struct lsh_object *a,
-			struct command_continuation *c)
-{
-  NEW(command_B_1, res);
-  CAST_SUBTYPE(command, x, a);
-  res->x = x;
-  res->super.call = do_command_B_1;
-
-  return COMMAND_RETURN(c, &res->super.super);
-}
-
-struct command command_B = { STATIC_HEADER, do_command_B };
-
-#if 0
-/* xxCLASS:
-   (class
-     (name command_compose_continuation)
-     (super command_continuation)
-     (vars
-       (f object command)
-       (c object command_continuation)))
-*/
-
-static int do_continue_compose(struct command_continuation *c,
-			       struct lsh_object *value)
-{
-  CAST(compose_continuation, self, c);
-  return COMMAND_CALL(self->f, value, self->c);
-}
-
-static struct command_continuation *
-make_compose_continuation(struct command *f, struct command_continuation *c)
-{
-  NEW(compose_continuation, self);
-  self->f = f;
-  self->c = c;
-
-  return &self->super;
-}
-
-/* xxCLASS:
-   (class
-     (name command_compose)
-     (super command)
-     (vars
-       (arg object command)
        (f object command)))
 */
 
-int do_compose_call(struct command_continuation *c, lsh_object *value)
+static struct lsh_object *
+do_simple_command_S_1(struct command_simple *s,
+		      struct lsh_object *a)
 {
-  CAST(command_compose, self, c);
-  return COMMAND_CALL(self->arg,
-		      make_compose_continuation(self->f, c));
+  CAST(command_S_1, self, s);
+  CAST_SUBTYPE(command, arg, a);
+
+  return &make_command_S_2(self->f, arg)->super;
 }
-#endif
+
+static struct command *make_command_S_1(struct command *f)
+{
+  NEW(command_S_1, res);
+  res->f = f;
+  res->super.super.call = do_call_simple_command;
+  res->super.call_simple = do_simple_command_S_1;
+
+  return &res->super.super;
+}
+
+static struct lsh_object *
+do_simple_command_S(struct command_simple *ignored UNUSED,
+		    struct lsh_object *a)
+{
+  CAST_SUBTYPE(command, arg, a);
+  return &make_command_S_1(arg)->super;
+}
+
+struct command_simple command_S = STATIC_COMMAND_SIMPLE(do_simple_command_S);
+
+/* ((B x) y) z == (x (y z)) */
+/* ((B f) g) x == (f (g x)) */
+
+/* Represents ((B f) g) */
+/* CLASS:
+   (class
+     (name command_B_2)
+     (super command_simple)
+     (vars
+       (f object command)
+       (g object command)))
+*/
+
+static int do_command_B_2(struct command *s,
+			  struct lsh_object *x,
+			  struct command_continuation *c)
+{
+  CAST(command_B_2, self, s);
+  return COMMAND_CALL(self->g, x, make_apply(self->f, c));
+}
+
+static struct lsh_object *do_simple_command_B_2(struct command_simple *s,
+						struct lsh_object *x)
+{
+  CAST(command_B_2, self, s);
+  CAST_SUBTYPE(command_simple, fs, self->f);
+  CAST_SUBTYPE(command_simple, gs, self->g);
+  return COMMAND_SIMPLE(fs, COMMAND_SIMPLE(gs, x));
+}
+
+static struct command *
+make_command_B_2(struct command *f,
+		 struct command *g)
+{
+  NEW(command_B_2, res);
+  res->f = f;
+  res->g = g;
+  res->super.super.call = do_command_B_2;
+  res->super.call_simple = do_simple_command_B_2;
+
+  return &res->super.super;
+}
+
+/* Represents (B f) */
+/* CLASS:
+   (class
+     (name command_B_1)
+     (super command_simple)
+     (vars
+       (f object command)))
+*/
+
+static struct lsh_object *
+do_simple_command_B_1(struct command_simple *s,
+		      struct lsh_object *a)
+{
+  CAST(command_B_1, self, s);
+  CAST_SUBTYPE(command, g, a);
+
+  return &make_command_B_2(self->f, g)->super;
+}
+
+static struct command *make_command_B_1(struct command *f)
+{
+  NEW(command_B_1, res);
+  res->f = f;
+  res->super.super.call = do_call_simple_command;
+  res->super.call_simple = do_simple_command_B_1;
+
+  return &res->super.super;
+}
+
+static struct lsh_object *
+do_simple_command_B(struct command_simple *ignored UNUSED,
+		    struct lsh_object *a)
+{
+  CAST_SUBTYPE(command, f, a);
+  return &make_command_B_1(f)->super;
+}
+
+struct command_simple command_B = STATIC_COMMAND_SIMPLE(do_simple_command_B);
 
 /* Returned by listen */
 /* CLASS:
@@ -357,6 +364,47 @@ struct command *make_listen_command(struct io_backend *backend,
 
   return &self->super;
 }
-  
-  
-       
+
+#if 0
+/* xxCLASS:
+   (class
+     (name command_compose_continuation)
+     (super command_continuation)
+     (vars
+       (f object command)
+       (c object command_continuation)))
+*/
+
+static int do_continue_compose(struct command_continuation *c,
+			       struct lsh_object *value)
+{
+  CAST(compose_continuation, self, c);
+  return COMMAND_CALL(self->f, value, self->c);
+}
+
+static struct command_continuation *
+make_compose_continuation(struct command *f, struct command_continuation *c)
+{
+  NEW(compose_continuation, self);
+  self->f = f;
+  self->c = c;
+
+  return &self->super;
+}
+
+/* xxCLASS:
+   (class
+     (name command_compose)
+     (super command)
+     (vars
+       (arg object command)
+       (f object command)))
+*/
+
+int do_compose_call(struct command_continuation *c, lsh_object *value)
+{
+  CAST(command_compose, self, c);
+  return COMMAND_CALL(self->arg,
+		      make_compose_continuation(self->f, c));
+}
+#endif
