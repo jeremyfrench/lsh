@@ -135,6 +135,8 @@ int main(int argc, char **argv)
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
   struct packet_handler *kexinit_handler;
+
+  int advertised_methods[] = { ATOM_PASSWORD, -1 };
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -195,7 +197,8 @@ int main(int argc, char **argv)
      (make_alist
       (1, ATOM_SSH_USERAUTH,
        make_userauth_service
-       (make_alist(1, ATOM_PASSWORD,
+       (advertised_methods,
+	make_alist(1, ATOM_PASSWORD,
 		   make_unix_userauth
 		   (make_alist(1,
 			       ATOM_SSH_CONNECTION,
