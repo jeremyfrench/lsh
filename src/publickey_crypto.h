@@ -233,6 +233,10 @@ void
 dh_hash_digest(struct dh_instance *self);
 
 struct dh_method *
+make_dh(struct abstract_group *G, struct hash_algorithm *H,
+	struct randomness *r);
+
+struct dh_method *
 make_dh1(struct randomness *r);
 
 void
