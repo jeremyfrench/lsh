@@ -151,7 +151,7 @@ static int io_iter(struct io_backend *b)
     {
       fds[i].fd = fd->fd;
       fds[i].events = 0;
-      if (fd->read_callback && !fd->on_hold)
+      if (fd->handler && !fd->on_hold)
 	fds[i].events |= POLLIN;
 
       /* pre_write returns 0 if the buffer is empty */
@@ -252,7 +252,7 @@ static int io_iter(struct io_backend *b)
 	      int res;
 	      
 	      struct fd_read r =
-	      { { STACK_HEADER do_read }, fd->fd };
+	      { { STACK_HEADER, do_read }, fd->fd };
 
 	      /* The handler function may install a new handler */
 	      res = READ_HANDLER(fd->handler,
@@ -676,6 +676,6 @@ struct io_fd *io_write(struct io_backend *b,
   b->io = f;
   b->nio++;
 
-  return &buffer->super;
+  return f;
 }
      

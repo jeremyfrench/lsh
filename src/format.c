@@ -66,7 +66,7 @@ void ssh_format_write(char *format, UINT32 length, UINT8 *buffer, ...)
   va_list args;
   
   va_start(args, buffer);
-  assert(length == ssh_vformat_write(format, buffer, args));
+  ssh_vformat_write(format, length, buffer, args);
   va_end(args);
 }
      

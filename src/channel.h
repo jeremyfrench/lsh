@@ -171,6 +171,9 @@ struct lsh_string *format_open_failure(UINT32 channel, UINT32 reason,
 				       char *msg, char *language);
 struct lsh_string *format_channel_failure(UINT32 channel);
 
+struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
+					 UINT32 add);
+
 struct lsh_string *prepare_channel_open(struct channel_table *table,
 					int type, struct ssh_channel *channel,
 					char *format, ...);
@@ -178,19 +181,19 @@ struct lsh_string *prepare_channel_open(struct channel_table *table,
 struct lsh_string *format_channel_request(int type, struct ssh_channel *channel,
 					  int want_reply, char *format, ...);
 
-struct lsh_string *channel_transmit_header(struct ssh_channel *channel,
-					   struct abstract_write *write,
-					   struct lsh_string *header,
-					   struct lsh_string *data);
+int channel_transmit_header(struct ssh_channel *channel,
+			    struct abstract_write *write,
+			    struct lsh_string *header,
+			    struct lsh_string *data);
 
-struct lsh_string *channel_transmit(struct ssh_channel *channel,
-				    struct abstract_write *write,
-				    struct lsh_string *data);
+int channel_transmit(struct ssh_channel *channel,
+		     struct abstract_write *write,
+		     struct lsh_string *data);
 
-struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
-					     struct abstract_write *write,
-					     UINT32 type,
-					     struct lsh_string *data);
+int channel_transmit_extended(struct ssh_channel *channel,
+			      struct abstract_write *write,
+			      UINT32 type,
+			      struct lsh_string *data);
 
 
 struct ssh_service *make_connection_service(struct alist *global_requests,

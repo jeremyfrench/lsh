@@ -108,7 +108,7 @@ struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 /* Arbitrary limit */
 #define MAX_CHANNELS (1L<<17)
 
-struct channel_table *make_table()
+struct channel_table *make_channel_table(void)
 {
   struct channel_table *table;
 
@@ -636,7 +636,7 @@ static int do_channel_success(struct packet_handler *c,
 
       lsh_string_free(packet);
       
-      if (channel && channel->success)
+      if (channel && channel->channel_success)
 	return CHANNEL_SUCCESS(channel, connection->write);
       
     }
@@ -667,7 +667,7 @@ static int do_channel_failure(struct packet_handler *c,
 
       lsh_string_free(packet);
       
-      if (channel && channel->failure)
+      if (channel && channel->channel_failure)
 	return CHANNEL_FAILURE(channel, connection->write);
       
     }
@@ -676,7 +676,7 @@ static int do_channel_failure(struct packet_handler *c,
 }
 
 static int init_connection_service(struct ssh_service *s,
-				struct ssh_connection *connection)
+				   struct ssh_connection *connection)
 {
   struct connection_service *self = (struct connection_service *) s;
   struct channel_table *table;
@@ -698,7 +698,6 @@ static int init_connection_service(struct ssh_service *s,
   struct channel_handler *channel_success;
   struct channel_handler *channel_failure;
 
-  
   MDEBUG(self);
 
   table = make_channel_table();
@@ -765,15 +764,15 @@ static int init_connection_service(struct ssh_service *s,
   channel_failure->table = table;
   connection->dispatch[SSH_MSG_CHANNEL_FAILURE] = &channel_failure->super;
     
-  return closure->start
-    ? CHANNEL_START(closure->start, table, connection->write)
+  return self->start
+    ? CONNECTION_START(self->start, table, connection->write)
     : LSH_OK | LSH_GOON;
 }
 
-struct lsh_string *channel_transmit_header(struct ssh_channel *channel,
-					   struct abstract_write *write,
-					   struct lsh_string *header,
-					   struct lsh_string *data)
+int channel_transmit_header(struct ssh_channel *channel,
+			    struct abstract_write *write,
+			    struct lsh_string *header,
+			    struct lsh_string *data)
 {
   UINT32 i;
   UINT32 left;
@@ -805,32 +804,32 @@ struct lsh_string *channel_transmit_header(struct ssh_channel *channel,
   return res;
 }
 
-struct lsh_string *channel_transmit(struct ssh_channel *channel,
-				    struct abstract_write *write,
-				    struct lsh_string *data)
+int channel_transmit(struct ssh_channel *channel,
+		     struct abstract_write *write,
+		     struct lsh_string *data)
 {
   struct lsh_string *header = ssh_format("%c%i",
 					 SSH_MSG_CHANNEL_DATA,
 					 channel->channel_number);
 
-  int res = channel_transmit_header(channel, header, write, data);
+  int res = channel_transmit_header(channel, write, header, data);
 
   lsh_string_free(header);
 
   return res;
 }
 
-struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
-					     struct abstract_write *write,
-					     UINT32 type,
-					     struct lsh_string *data)
+int channel_transmit_extended(struct ssh_channel *channel,
+			      struct abstract_write *write,
+			      UINT32 type,
+			      struct lsh_string *data)
 {
   struct lsh_string *header = ssh_format("%c%i%i",
 					 SSH_MSG_CHANNEL_EXTENDED_DATA,
 					 type,
 					 channel->channel_number);
   
-  int res = channel_transmit_header(channel, header, write, data);
+  int res = channel_transmit_header(channel, write, header, data);
 
   lsh_string_free(header);
 
@@ -897,7 +896,7 @@ struct lsh_string *format_channel_request(int type, struct ssh_channel *channel,
   struct lsh_string *packet;
 
 #define REQUEST_FORMAT "%c%i%a%c"
-#define REQUEST_ARGS SSH_MSG_CHANNEL_REQUEST, channel->remote_channel_number \
+#define REQUEST_ARGS SSH_MSG_CHANNEL_REQUEST, channel->channel_number, \
   type, want_reply
     
   l1 = ssh_format_length(REQUEST_FORMAT, REQUEST_ARGS);

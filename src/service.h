@@ -29,7 +29,7 @@
 
 /* Used for both proper services (i.e. services that can be requested
  * in a SSH_MSG_SERVICE_REQUEST or SSH_MSG_USERAUTH_REQUEST) and for
- * any other stuff that needs initialization at some later time. */.
+ * any other stuff that needs initialization at some later time. */
 
 struct ssh_service
 {

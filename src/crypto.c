@@ -45,7 +45,7 @@ static void do_crypt_none(struct crypto_instance *ignored,
 
 struct crypto_instance crypto_none_instance =
 {
-  STATIC_HEADER
+  STATIC_HEADER,
   8,
   do_crypt_none
 };
@@ -85,7 +85,7 @@ make_rc4_instance(struct crypto_algorithm *ignored, int mode, UINT8 *key)
 }
 
 struct crypto_algorithm crypto_rc4_algorithm =
-{ STATIC_HEADER
+{ STATIC_HEADER,
   8, 16, make_rc4_instance };
 
 /* SHA1 hash */
