@@ -49,7 +49,8 @@
 
 #include "handshake.c.x"
 
-#if DATAFELLOWS_WORKAROUNDS
+/* At the moment, we don't have any bug-compatibility hacks. */
+#if 0
 /* Bug compatibility information. */
 struct compat_info
 {
@@ -60,9 +61,6 @@ struct compat_info
 static const struct compat_info
 compat[] =
   {
-    /* FIXME: Is there any 2.0.x without these bugs? */
-    { "2.0.", (PEER_X11_OPEN_KLUDGE) },
-    { "Sun_SSH_1.0", PEER_KEXINIT_LANGUAGE_KLUDGE },
     { NULL, 0 }
   };
     
@@ -87,9 +85,9 @@ compat_peer_flags(uint32_t length, const uint8_t *software)
   /* Default flags are 0 */
   return 0;
 }
-#else /* !DATAFELLOWS_WORKAROUNDS */
+#else
 #define compat_peer_flags(a,b) 0
-#endif /* !DATAFELLOWS_WORKAROUNDS */
+#endif
 
 /* GABA:
    (class
@@ -179,7 +177,7 @@ do_line(struct line_handler **h,
 	if ( ((protover_len >= 3) && !memcmp(protover, "2.0", 3))
 	     || ((protover_len == 4) && !memcmp(protover, "1.99", 4)) )
 	  {
-	    struct read_handler *new;	  
+	    struct read_handler *new; 
 #if WITH_SSH1_FALLBACK
 	    if (closure->fallback)
 	      {
