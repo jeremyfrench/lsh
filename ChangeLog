@@ -1,5 +1,7 @@
 2004-12-07  Niels Möller  <nisse@lysator.liu.se>
 
+	* Released lsh-2.0.
+
 	* src/environ.h.in (USER_NAME_FROM_ENV): Examine $LOGNAME before
 	$USER. This is the same behaviour as emacs and rcs.
 
