@@ -26,6 +26,7 @@
 #include "nettle/md5.h"
 #include "nettle/sha.h"
 #include "nettle/realloc.h"
+#include "nettle/buffer.h"
 
 /* Real declaration in parse.h */
 struct spki_iterator;
@@ -61,13 +62,23 @@ struct spki_principal
   enum spki_principal_flags flags;
   struct spki_hashes hashes;
 
+  /* If the lookup code sees hashes and keys in an unfortunate order,
+   * it may create several principal structs that represent the same
+   * key. In this case, we install an alias pointer when the mistake
+   * is discovered. */
+  
+  struct spki_principal *alias;
+  
+#if 0
   /* Information needed to verify signatures for this key. */
   void *verifier;
+#endif
 };
   
 enum spki_5_tuple_flags
 {
   SPKI_PROPAGATE = 1,
+  /* These redundant flags are kept for convenience. */
   SPKI_NOT_BEFORE = 2,
   SPKI_NOT_AFTER = 4,
 };
@@ -81,6 +92,11 @@ enum spki_5_tuple_flags
 struct spki_date {
   uint8_t date[SPKI_DATE_SIZE];
 };
+
+extern const struct spki_date spki_date_since_ever;
+extern const struct spki_date spki_date_for_ever;
+
+#define SPKI_DATE_CMP(a,b) memcmp((a).date, (b).date, SPKI_DATE_SIZE)
 
 void
 spki_date_from_time_t(struct spki_date *d, time_t t);
@@ -102,13 +118,17 @@ struct spki_5_tuple
   struct spki_principal *subject;
   enum spki_5_tuple_flags flags;
 
-  /* Checked if the corresponding flag is set. */
+  /* 00...00 if there's no not-before date */
   struct spki_date not_before;
+  /* ff...ff if there's no not-after date */
   struct spki_date not_after;
 
   /* Tag in internal representation. */
   struct spki_tag *tag;
 };
+
+void
+spki_5_tuple_init(struct spki_5_tuple *tuple);
 
 struct spki_acl_db
 {
@@ -124,6 +144,9 @@ struct spki_acl_db
 void
 spki_acl_init(struct spki_acl_db *db);
 
+void
+spki_acl_clear(struct spki_acl_db *db);
+
 
 /* Looks up a principal by key or by hash, and creates new principals
  * when needed. */
@@ -138,6 +161,9 @@ spki_principal_by_md5(struct spki_acl_db *db, const uint8_t *digest);
 struct spki_principal *
 spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest);
 
+void
+spki_principal_free_chain(struct spki_acl_db *db,
+			  struct spki_principal *chain);
 
 /* Handling the acl database */
 int
@@ -163,6 +189,10 @@ spki_acl_by_authorization_next(struct spki_acl_db *db,
 			       const struct spki_5_tuple *acl,
 			       struct spki_tag *authorization);
 
+unsigned
+spki_acl_format(struct spki_5_tuple *acl,
+		struct nettle_buffer *buffer);
+
 
 /* Certificates */
 
@@ -173,6 +203,10 @@ spki_5_tuple_free_chain(struct spki_acl_db *db,
 struct spki_5_tuple *
 spki_process_sequence_no_signatures(struct spki_acl_db *db,
 				    struct spki_iterator *i);
+
+struct spki_5_tuple *
+spki_5_tuple_reduce(struct spki_acl_db *db,
+		    struct spki_5_tuple *sequence);
 
 
 /* Other more or less internal functions. */

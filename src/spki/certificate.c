@@ -45,6 +45,15 @@ spki_acl_init(struct spki_acl_db *db)
   db->first_acl = NULL;
 }
 
+void
+spki_acl_clear(struct spki_acl_db *db)
+{
+  spki_principal_free_chain(db, db->first_principal);
+  db->first_principal = NULL;
+  spki_5_tuple_free_chain(db, db->first_acl);
+  db->first_acl = NULL;
+}
+
 uint8_t *
 spki_dup(struct spki_acl_db *db,
 	 unsigned length, const uint8_t *data)
@@ -83,6 +92,8 @@ spki_principal_add_key(struct spki_acl_db *db,
   if (!principal)
     return NULL;
 
+  principal->alias = NULL;
+  
   if (!(principal->key = spki_dup(db, key_length, key)))
     {
       SPKI_FREE(db, principal);
@@ -113,6 +124,7 @@ spki_principal_add_md5(struct spki_acl_db *db,
     return NULL;
 
   principal->key = NULL;
+  principal->alias = NULL;
 
   memcpy(principal->hashes.md5, md5, sizeof(principal->hashes.md5));
   principal->flags = SPKI_PRINCIPAL_MD5;
@@ -132,6 +144,7 @@ spki_principal_add_sha1(struct spki_acl_db *db,
     return NULL;
 
   principal->key = NULL;
+  principal->alias = NULL;
 
   memcpy(principal->hashes.sha1, sha1, sizeof(principal->hashes.sha1));
   principal->flags = SPKI_PRINCIPAL_SHA1;
@@ -140,6 +153,27 @@ spki_principal_add_sha1(struct spki_acl_db *db,
   db->first_principal = principal;
   
   return principal;
+}
+
+#define HASH_MATCH(flags, h1, h2)				\
+  (((flags) == SPKI_PRINCIPAL_MD5				\
+    && !memcmp((h1).md5, (h2).md5, sizeof((h1).md5)))		\
+   || ((flags) == SPKI_PRINCIPAL_SHA1				\
+       && !memcmp((h1).sha1, (h2).sha1, sizeof((h1).sha1))))
+
+static void
+spki_principal_fix_aliases(struct spki_principal *principal)
+{
+  struct spki_principal *s;
+
+  for (s = principal->next; s; s = s->next)
+    {
+      if (s->key || s->alias)
+	continue;
+
+      if (HASH_MATCH(s->flags, s->hashes, principal->hashes))
+	s->alias = principal;
+    }
 }
 
 struct spki_principal *
@@ -162,10 +196,7 @@ spki_principal_by_key(struct spki_acl_db *db,
 	}
       else
 	/* Check hashes, exactly one should be present */
-	if ( (s->flags == SPKI_PRINCIPAL_MD5
-	      && !memcmp(s->hashes.md5, hashes.md5, sizeof(hashes.md5)))
-	     || (s->flags == SPKI_PRINCIPAL_SHA1
-		 && !memcmp(s->hashes.sha1, hashes.sha1, sizeof(hashes.sha1))))
+	if (HASH_MATCH(s->flags, s->hashes, hashes))
 	  {
 	    s->key = spki_dup(db, key_length, key);
 	    if (!s->key)
@@ -173,6 +204,9 @@ spki_principal_by_key(struct spki_acl_db *db,
 	    s->key_length = key_length;
 	    s->hashes = hashes;
 	    s->flags |= (SPKI_PRINCIPAL_MD5 | SPKI_PRINCIPAL_SHA1);
+
+	    spki_principal_fix_aliases(s);
+	    return s;
 	  }
     }
 
@@ -206,7 +240,51 @@ spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest)
   return spki_principal_add_sha1(db, digest);
 }
 
+void
+spki_principal_free_chain(struct spki_acl_db *db,
+			  struct spki_principal *chain)
+{
+  while(chain)
+    {
+      struct spki_principal *next = chain->next;
+
+      SPKI_FREE(db, chain->key);
+      SPKI_FREE(db, chain);
+
+      chain = next;
+    }
+}
+
 
+
+void
+spki_5_tuple_init(struct spki_5_tuple *tuple)
+{
+  tuple->next = NULL;
+  tuple->issuer = NULL;
+  tuple->subject = NULL;
+  tuple->flags = 0;
+  tuple->tag = NULL;
+
+  tuple->not_before = spki_date_since_ever;
+  tuple->not_after = spki_date_for_ever;
+}
+
+static void
+spki_5_tuple_fix_aliases(struct spki_5_tuple *tuple)
+{
+  for ( ; tuple; tuple = tuple->next)
+    {
+      if (tuple->issuer)
+	while (tuple->issuer->alias)
+	  tuple->issuer = tuple->issuer->alias;
+
+      assert(tuple->subject);
+
+      while (tuple->subject->alias)
+	tuple->subject = tuple->subject->alias;
+    }
+}
 
 /* ACL database */
 
@@ -226,18 +304,26 @@ spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i)
     {
       SPKI_NEW(db, struct spki_5_tuple, acl);
       if (!acl)
-	return 0;
-      
+	{
+	fail:
+	  /* Do this also on failure, as we may have added some acl:s
+	   * already. */
+	  spki_5_tuple_fix_aliases(db->first_acl);
+	  return 0;
+	}
+
+      spki_5_tuple_init(acl);
       if (!spki_parse_acl_entry(db, i, acl))
 	{
 	  SPKI_FREE(db, acl);
-	  return 0;
+	  goto fail;
 	}
       
       acl->next = db->first_acl;
       db->first_acl = acl;
     }
 
+  spki_5_tuple_fix_aliases(db->first_acl);
   return spki_parse_end(i);
 }
 
@@ -273,6 +359,94 @@ spki_acl_by_authorization_first(struct spki_acl_db *db,
   return acl_by_auth(db->first_acl, request);
 }
 
+static unsigned
+format_valid(struct spki_5_tuple *tuple,
+	     struct nettle_buffer *buffer)
+{
+  unsigned done = sexp_format(buffer, "%0l", "(5:valid");
+  if (!done)
+    return 0;
+
+  if (tuple->flags & SPKI_NOT_BEFORE)
+    {
+      unsigned length = sexp_format(buffer, "(%0s%s)",
+				    "not-before",
+				    sizeof(tuple->not_before), tuple->not_before);
+      if (!length)
+	return 0;
+      done += length;
+    }
+
+  if (tuple->flags & SPKI_NOT_AFTER)
+    {
+      unsigned length = sexp_format(buffer, "(%0s%s)",
+				    "not-after",
+				    sizeof(tuple->not_after), tuple->not_after);
+      if (!length)
+	return 0;
+      done += length;
+    }
+  return sexp_format(buffer, "%l", 1, ")") ? done + 1 : 0;
+}
+
+/* Formats an acl from a sequence of 5 tuples. */
+unsigned
+spki_acl_format(struct spki_5_tuple *acl,
+		struct nettle_buffer *buffer)
+{
+  unsigned done = sexp_format(buffer, "%0l", "(3:acl");
+  if (!done)
+    return 0;
+
+  /* No version field */
+  
+  for ( ; acl; acl = acl->next)
+    {
+      unsigned length;
+      assert(!acl->issuer);
+      assert(acl->subject);
+      
+      length = sexp_format(buffer, "%0l", "(5:entry");
+      if (length)
+	done += length;
+      else
+	return 0;
+
+      /* For now, always write the entire key, not a hash. */
+      assert(acl->subject->key);
+
+      length = sexp_format(buffer, "%l",
+			   acl->subject->key_length, acl->subject->key);
+      if (length)
+	done += length;
+      else
+	return 0;
+
+      if (acl->flags & SPKI_PROPAGATE)
+	{
+	  length = sexp_format(buffer, "(%0s)", "propagate");
+	  if (length)
+	    done += length;
+	  else
+	    return 0;
+	}
+
+      if (acl->flags & (SPKI_NOT_BEFORE | SPKI_NOT_AFTER))
+	{
+	  length = format_valid(acl, buffer);
+	  if (length)
+	    done += length;
+	  else
+	    return 0;
+	}
+
+      if (sexp_format(buffer, "%l", 1, ")"))
+	done++;
+      else return 0;
+    }
+  return sexp_format(buffer, "%l", 1, ")") ? done + 1 : 0;
+}
+
 
 /* Certificates */
 void
@@ -299,6 +473,8 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
   /* FIXME: Change to an assertion? */
   if (i->type != SPKI_TYPE_SEQUENCE)
     return NULL;
+
+  spki_parse_type(i);
   
   for (;;)
     {
@@ -306,17 +482,26 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
 	{
 	case SPKI_TYPE_END_OF_EXPR:
 	  if (spki_parse_end(i))
-	    return chain;
-
+	    {
+	      spki_5_tuple_fix_aliases(db->first_acl);
+	      spki_5_tuple_fix_aliases(chain);
+	      return chain;
+	    }
 	  /* Fall through */
 	default:
 	fail:
+	  spki_5_tuple_fix_aliases(db->first_acl);
 	  spki_5_tuple_free_chain(db, chain);
 	  return NULL;
 	  
 	case SPKI_TYPE_CERT:
 	  {
 	    SPKI_NEW(db, struct spki_5_tuple, cert);
+
+	    if (!cert)
+	      goto fail;
+
+	    spki_5_tuple_init(cert);
 	    cert->next = chain;
 	    chain = cert;
 	    
@@ -339,7 +524,7 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
 		assert(key);
 		spki_principal_by_key(db, key_length, key);
 	      }
-	    /* Fall through */
+	    break;
 	  }
 	case SPKI_TYPE_SIGNATURE:
 	case SPKI_TYPE_DO:
@@ -353,6 +538,16 @@ spki_process_sequence_no_signatures(struct spki_acl_db *db,
 
 
 /* Dates */
+
+/* MUST have length SPKI_DATE_SIZE */
+const struct spki_date spki_date_since_ever =
+  { "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+    "\x00\x00\x00\x00\x00\x00\x00\x00\x00" };
+
+const struct spki_date spki_date_for_ever =
+  { "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    "\xff\xff\xff\xff\xff\xff\xff\xff\xff" };
+
 
 static void
 write_decimal(unsigned length, uint8_t *buffer, unsigned x)
