@@ -70,7 +70,6 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
 {
   NEW(kexinit, res);
   struct simple_buffer buffer;
-  struct simple_buffer sub_buffer;
   unsigned msg_number;
   UINT32 reserved;
   
@@ -94,8 +93,7 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
   
   for (i = 0; i<NLISTS; i++)
     {
-      if (!parse_sub_buffer(&buffer, &sub_buffer)
-	  || !(lists[i] = parse_atom_list(&sub_buffer, KEXINIT_MAX_ALGORITMS)))
+      if ( !(lists[i] = parse_atom_list(&buffer, KEXINIT_MAX_ALGORITMS)))
 	break;
     }
 
