@@ -27,7 +27,6 @@
 #include "channel_commands.h"
 #include "format.h"
 #include "read_data.h"
-#include "server_password.h"
 #include "server_pty.h"
 #include "ssh.h"
 #include "tcpforward.h"

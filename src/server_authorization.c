@@ -28,7 +28,7 @@
 #include "sexp.h"
 #include "spki.h"
 #include "format.h"
-#include "server_password.h"
+#include "server_userauth.h"
 
 #include <sys/stat.h>
 #include <unistd.h>

@@ -28,7 +28,7 @@
 #include "channel.h"
 #include "io.h"
 #include "reaper.h"
-#include "server_password.h"
+#include "server_userauth.h"
 
 #include <assert.h>
 #include <string.h>
