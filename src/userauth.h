@@ -26,6 +26,7 @@
 
 #include "alist.h"
 #include "command.h"
+#include "connection.h"
 #include "list.h"
 #include "parse.h"
 
@@ -44,6 +45,7 @@
      (name userauth)
      (vars
        (authenticate method void
+                     "struct ssh_connection *connection"
 		     ; The name is consumed by this function
 		     "struct lsh_string *username"
 		     "struct simple_buffer *args"
@@ -51,8 +53,19 @@
 		     "struct exception_handler *e")))
 */
 
-#define AUTHENTICATE(s, u, a, c, e) \
-((s)->authenticate((s), (u), (a), (c), (e)))
+#define AUTHENTICATE(s, n, u, a, c, e) \
+((s)->authenticate((s), (n), (u), (a), (c), (e)))
+
+/* GABA:
+   (class
+     (name userauth_special_exception)
+     (super exception)
+     (vars
+       (reply string)))
+*/
+
+struct exception *make_userauth_special_exception(struct lsh_string *reply,
+						  const char *msg);
 
 struct lsh_string *format_userauth_failure(struct int_list *methods,
 					   int partial);
