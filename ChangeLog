@@ -1,0 +1,6 @@
+1999-12-25  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/werror.h: Include stdarg.h (moved from werror.c).
+
+	* src/spki.c (do_spki_lookup): Fixed call to spki_make_verifier(). 
+
