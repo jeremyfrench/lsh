@@ -35,7 +35,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	bignum.c blocking_write.c blowfish.c \
 	cascade.c cbc.c channel.c charset.c compress.c connection.c crypto.c \
 	debug.c des.c disconnect.c  dss_keygen.c encrypt.c \
-	format.c gc.c getopt.c hmac.c io.c keyexchange.c \
+	format.c gc.c hmac.c io.c keyexchange.c \
 	list.c md5.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
 	randomness.c \
 	read_scan.c read_data.c read_line.c read_packet.c resource.c \
@@ -97,7 +97,8 @@ all-recursive check-recursive: config.h
 
 EXTRA_DIST = atoms.in process_atoms make_class $(generated_sources) \
 	make_char_classes sexp_chars.in \
-	getopt.h jpoll.h \
+ 	getopt.h getopt.c getopt1.c \
+	jpoll.h jpoll.c \
 	$(cvs_headers) $(dist_x_files) Makefile.am.in make_am \
 	FAQ HACKING NOTES TASKLIST
 
