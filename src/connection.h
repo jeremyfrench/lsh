@@ -52,8 +52,8 @@ enum connection_flag
 /* FIXME: Delete permanently? */
 enum peer_flag
   {
-    PEER_NONE = 0;
-  }
+    PEER_NONE = 0,
+  };
 
 /* State affecting incoming keyexchange packets */
 enum kex_state
