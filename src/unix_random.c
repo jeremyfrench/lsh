@@ -690,7 +690,8 @@ wait_background_poll(struct unix_random *self)
   assert(self->status == POLL_RUNNING);
   trace("unix_random.c: wait_background_poll\n");
   self->status = POLL_FAILED;
-  
+
+  /* FIXME: Check error code. */
   if (waitpid(self->pid, &status, 0) == self->pid)
     {
       if (WIFEXITED(status) && !WEXITSTATUS(status))

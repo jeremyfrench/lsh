@@ -1,3 +1,14 @@
+2001-04-25  Niels Möller  <nisse@ehand.com>
+
+	* src/keyexchange.c (do_handle_newkeys): Added verbose message
+	when receiving NEWKEYS.
+	(do_handle_kexinit): Added verbose message when receiving KEXINIT
+	message. 
+
+	* src/parse.c (parse_next_atom): Tolerate empty atoms, for
+	compatibility with "SSH-1.99-2.0.13 (non-commercial)". XXX Fix in
+	1.2 branch? 
+
 2001-04-17  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/Makefile.am (TS_MORE_SH): Added tests

@@ -152,6 +152,10 @@ PROTOCOL ISSUES
 Update the signal-related messages to conform to
 draft-ietf-secsh-connect-08.txt.
 
+Some SSH Inc sshd server sends USERAUTH_FAILURE messages with a
+trailing ",", like "publickey,password,". Consider hacking
+parse.c:parse_next_atom to allow that.
+
 
 USER INTERFACE ISSUES
 
@@ -401,3 +405,26 @@ problems. So we need to avoid setting stderr into non-blocking mode.
 
 Add a keep-alive option, which sends SSH_MSG_IGNORE at regular
 intervals.
+
+The lshd --daemonic option doesn't work with the
+RANDOM_POLL_BACKGROUND.
+
+: loic@gnu.org writes:
+: 
+: >       When I run
+: >
+: >       lshd  --daemonic --ssh1-fallback=/usr/sbin/sshd
+: > 
+: >       It dies on first connection and says :
+: >
+: > Apr 25 04:49:02 subversions lshd[25773]: Background randomness poll failed.
+: > Apr 25 04:49:02 subversions lshd[25773]: lshd: Could not get enough entropy from the environment.
+: 
+: Strange. A guess on what's happening:
+: 
+:   1. lshd starts a background process for collecting randomness,
+: 
+:   2. next it forks and exits to get into the background,
+: 
+:   3. it tries to waitpid the process created in 1, but it's no longer
+:      the parent of that process, so waiting fails.
