@@ -50,6 +50,7 @@ generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 
 # Not all potential .x files can be generated
 bootstrap: $(generated_sources) $(dist_classes)
+	(cd spki && $(MAKE) bootstrap)
 
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	algorithms.c alist.c atoms.c \
@@ -202,7 +203,7 @@ EXTRA_DIST = lsh-authorize ssh-conv lsh-upgrade lcp \
 	$(generated_sources) \
 	sexp_chars.in \
 	jpoll.h jpoll.c \
-	$(cvs_headers) $(dist_x_files) Makefile.am.in
+	$(dist_headers) $(dist_classes) Makefile.am.in
 
 CLEANFILES = *.hT *.cT *.xT
 DISTCLEANFILES = environ.h
