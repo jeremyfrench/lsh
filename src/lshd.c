@@ -133,11 +133,13 @@ make_lshd_connection(struct configuration *config, int input, int output)
 
   init_kexinit_state(&self->kex);
   self->session_id = NULL;
+
+  self->service_state = SERVICE_DISABLED;
   
   self->kexinit_handler = &lshd_kexinit_handler;
   self->newkeys_handler = NULL;
   self->kex_handler = NULL;
-  self->service_handler = NULL;
+  self->service_handler = &lshd_service_request_handler;
   
   self->reader = make_lshd_read_state(make_lshd_process_ssh_header(self),
 				      make_lshd_read_error(self));
@@ -240,6 +242,104 @@ make_lshd_handle_line(struct lshd_connection *connection)
   return &self->super;
 }
 
+/* Handles all packets to be sent to the service layer. */
+DEFINE_PACKET_HANDLER(lshd_service_handler, connection, packet)
+{
+  werror("lshd_service_handler: Throwing away packet.\n");
+}
+
+/* FIXME: Duplicates server_session.c: lookup_subsystem. */
+static const char *
+lookup_service(const char **services,
+	       uint32_t length, const uint8_t *name)
+{
+  unsigned i;
+  if (memchr(name, 0, length))
+    return NULL;
+
+  for (i = 0; services[i]; i+=2)
+    {
+      assert(services[i+1]);
+      if ((length == strlen(services[i]))
+	  && !memcmp(name, services[i], length))
+	return services[i+1];
+    }
+  return NULL;
+}
+
+DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
+{
+  struct simple_buffer buffer;
+  unsigned msg_number;
+
+  const uint8_t *name;
+  uint32_t name_length;
+
+  assert(connection->service_state == SERVICE_ENABLED);
+  
+  simple_buffer_init(&buffer, STRING_LD(packet));
+
+  if (parse_uint8(&buffer, &msg_number)
+      && (msg_number == SSH_MSG_SERVICE_REQUEST)
+      && parse_string(&buffer, &name_length, &name)
+      && parse_eod(&buffer))
+    {
+      const char *program = lookup_service(connection->config->services,
+					   name_length, name);
+
+      if (program)
+	{
+	  int pipe[2];
+	  pid_t child;
+	  
+	  if (socketpair(AF_UNIX, SOCK_STREAM, 0, pipe) < 0)
+	    {
+	      werror("lshd_service_request_handler: socketpair failed: %e\n", errno);
+	      connection_disconnect(connection, SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+				    "Service could not be started");
+	      return;
+	    }
+	  child = fork();
+	  if (child < 0)
+	    {
+	      werror("lshd_service_request_handler: fork failed: %e\n", errno);
+	      close(pipe[0]);
+	      close(pipe[1]);
+	      connection_disconnect(connection, SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+				    "Service could not be started");
+	      return;	      
+	    }
+	  if (child)
+	    {
+	      /* Parent process */
+	      close(pipe[1]);
+	      connection->service_fd = pipe[0];
+	      connection->service_handler = &lshd_service_handler;
+	      connection->service_state = SERVICE_STARTED;
+	    }
+	  else
+	    {
+	      /* Child process */
+	      close(pipe[0]);
+	      dup2(pipe[1], STDIN_FILENO);
+	      dup2(pipe[1], STDOUT_FILENO);
+	      close(pipe[1]);
+	      execl(program, program, NULL);
+	      
+	      werror("lshd_service_request_handler: exec failed: %e\n", errno);
+	      _exit(EXIT_FAILURE);
+	    }
+	}
+      else
+	connection_disconnect(connection,
+			      SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+			      "Service not available");
+    }
+  else
+    connection_error(connection, "Invalid SERVICE_REQUEST");
+    
+}
+
 /* Handles decrypted packets. */ 
 void
 lshd_handle_ssh_packet(struct lshd_connection *connection, struct lsh_string *packet)
@@ -312,13 +412,16 @@ lshd_handle_ssh_packet(struct lshd_connection *connection, struct lsh_string *pa
 	HANDLE_PACKET(connection->kexinit_handler, connection, packet);
 
       else if (msg == SSH_MSG_SERVICE_REQUEST)
-	/* FIXME: Check that keyexchange is completed. */
-	connection_disconnect(connection,
-			      SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
-			      "Not implemented");
-
+	{
+	  if (connection->service_state != SERVICE_ENABLED)
+	    connection_disconnect(connection,
+				  SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+				  "Unexpected service request");
+	  else
+	    HANDLE_PACKET(connection->service_handler, connection, packet);
+	}
       else if (msg >= SSH_FIRST_USERAUTH_GENERIC
-	       && connection->service_handler)
+	       && connection->service_state == SERVICE_STARTED)
 	HANDLE_PACKET(connection->service_handler, connection, packet);
 
       else
@@ -453,6 +556,8 @@ static struct configuration *
 make_configuration(const char *hostkey)
 {
   NEW(configuration, self);
+  static const char *services[] =
+    { "ssh-userauth", "lshd-userauth", NULL };
   
   self->random = make_system_random();
   
@@ -471,7 +576,8 @@ make_configuration(const char *hostkey)
 				      default_mac_algorithms(self->algorithms),
 				      default_compression_algorithms(self->algorithms),
 				      make_int_list(0, -1));
-
+  self->services = services;
+  
   return self;  
 }
 
