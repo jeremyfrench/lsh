@@ -37,7 +37,17 @@
 #include "resource.h"
 #include "write_buffer.h"
 
-enum io_type { IO_PTY = 1 };
+enum io_type {
+  IO_NORMAL = 0,
+
+  /* The type IO_PTY is the master side of a pty pair. It is handled
+     specially by close_fd_write. */
+  IO_PTY = 1,
+
+  /* Stdio file desciptors are special, because they're in blocking
+     mode, and they are never closed. */
+  IO_STDIO = 2,
+};
 
 /* Max number of simultaneous connection attempts */
 #define CONNECT_ATTEMPTS_LIMIT 3
@@ -75,15 +85,13 @@ enum io_type { IO_PTY = 1 };
      (vars
        (next object lsh_fd)
        (fd . int)
-       ; PTY:s need special treatment, as sutdown doesn't work.
+       ; PTY:s need special treatment, as shutdown doesn't work.
        (type . "enum io_type")
        
        ; For debugging purposes
        (label . "const char *")
        
        ; Used for raising i/o-exceptions.
-       ; Also passed on to readers of the consuming type,
-       ; which seems kind of bogus.
        (e object exception_handler)
        
        ; User's close callback
@@ -269,8 +277,6 @@ io_resolv_address(const char *host, const char *service,
 /* Returns an exception, if anything went wrong */
 const struct exception *
 write_raw(int fd, uint32_t length, const uint8_t *data);
-const struct exception *
-write_raw_with_poll(int fd, uint32_t length, const uint8_t *data);
 
 const struct exception *
 read_raw(int fd, uint32_t length, uint8_t *data);
@@ -281,13 +287,11 @@ io_read_file_raw(int fd, uint32_t guess);
 void io_set_nonblocking(int fd);
 void io_set_blocking(int fd);
 void io_set_close_on_exec(int fd);
-void io_init_fd(int fd);
+void io_init_fd(int fd, int shared);
 
 struct lsh_fd *
-make_lsh_fd(int fd, const char *label,
+make_lsh_fd(int fd, enum io_type type, const char *label,
 	    struct exception_handler *e);
-void
-io_set_type(struct lsh_fd *fd, enum io_type type);
 
 struct exception_handler *
 make_exc_finish_read_handler(struct lsh_fd *fd,

@@ -324,12 +324,6 @@ io_final(void)
   oop_sys_delete(global_oop_sys);
   global_oop_sys = NULL;
   source = NULL;
-
-  /* It's a good idea to reset std* to blocking mode. */
-
-  io_set_blocking(STDIN_FILENO);
-  io_set_blocking(STDOUT_FILENO);
-  io_set_blocking(STDERR_FILENO);
 }
 
 void
@@ -732,7 +726,8 @@ do_listen_callback(struct io_callback *s,
 
   trace("io.c: accept on fd %i\n", conn);
   COMMAND_CALL(self->c,
-	       make_listen_value(make_lsh_fd(conn, "accepted socket", self->e),
+	       make_listen_value(make_lsh_fd(conn, IO_NORMAL,
+					     "accepted socket", self->e),
 				 sockaddr2info(addr_len,
 					       (struct sockaddr *) &peer), 
 				 fd2info(fd,0)),
@@ -845,50 +840,6 @@ write_raw(int fd, uint32_t length, const uint8_t *data)
   while(length)
     {
       int written = write(fd, data, length);
-
-      if (written < 0)
-	switch(errno)
-	  {
-	  case EINTR:
-	  case EAGAIN:
-	    continue;
-	  default:
-	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
-				     NULL, errno, NULL);
-	  }
-      
-      length -= written;
-      data += written;
-    }
-  return NULL;
-}
-
-const struct exception *
-write_raw_with_poll(int fd, uint32_t length, const uint8_t *data)
-{
-  while(length)
-    {
-      struct pollfd pfd;
-      int res;
-      int written;
-      
-      pfd.fd = fd;
-      pfd.events = POLLOUT;
-
-      res = poll(&pfd, 1, -1);
-
-      if (res < 0)
-	switch(errno)
-	  {
-	  case EINTR:
-	  case EAGAIN:
-	    continue;
-	  default:
-	    return make_io_exception(EXC_IO_BLOCKING_WRITE,
-				     NULL, errno, NULL);
-	  }
-      
-      written = write(fd, data, length);
 
       if (written < 0)
 	switch(errno)
@@ -1407,6 +1358,7 @@ void io_set_nonblocking(int fd)
     handle_nonblock_error("io_set_nonblocking: fcntl(F_SETFL) failed");
 }
 
+/* The only use of this function is by ssh1_fallback.c. */
 void io_set_blocking(int fd)
 {
   int old = fcntl(fd, F_GETFL);
@@ -1433,27 +1385,31 @@ void io_set_close_on_exec(int fd)
 }
 
 
-/* ALL file descripters handled by the backend should use non-blocking mode,
- * and have the close-on-exec flag set. */
+/* *All* file descripters handled by the backend should have the
+   close-on-exec flag set, and all but shared stdio descriptors should
+   use non-blocking mode. */
 
-void io_init_fd(int fd)
+void io_init_fd(int fd, int shared)
 {
-  io_set_nonblocking(fd);
   io_set_close_on_exec(fd);
+
+  if (!shared)
+    io_set_nonblocking(fd);
 }
 
 struct lsh_fd *
-make_lsh_fd(int fd, const char *label,
+make_lsh_fd(int fd, enum io_type type, const char *label,
 	    struct exception_handler *e)
 {
   NEW(lsh_fd, self);
 
   nfiles++;
-  io_init_fd(fd);
+  io_init_fd(fd, type == IO_STDIO);
 
   init_resource(&self->super, do_kill_fd);
 
   self->fd = fd;
+  self->type = type;
   self->label = label;
   self->type = 0;
   
@@ -1469,14 +1425,6 @@ make_lsh_fd(int fd, const char *label,
 
   gc_global(&self->super);
   return self;
-}
-
-void
-io_set_type(struct lsh_fd *fd, enum io_type type)
-{
-  trace("io_set_type: fd %i, type %i\n",
-	fd->fd, type);
-  fd->type = type;
 }
 
 unsigned
@@ -1500,7 +1448,7 @@ io_connect(struct sockaddr *remote,
 
   trace("io_connect: Connecting using fd %i\n", s);
   
-  io_init_fd(s);
+  io_init_fd(s, 0);
 
 #if 0
   if (local  &&  bind(s, (struct sockaddr *)local, sizeof *local) < 0)
@@ -1521,7 +1469,7 @@ io_connect(struct sockaddr *remote,
       return NULL;
     }
 
-  fd = make_lsh_fd(s, "connecting socket", e);
+  fd = make_lsh_fd(s, IO_NORMAL, "connecting socket", e);
   
   fd->write = c;
   lsh_oop_register_write_fd(fd);
@@ -1706,7 +1654,6 @@ io_bind_sockaddr(struct sockaddr *local,
     return NULL;
 
   trace("io.c: Trying to bind fd %i\n", s);
-  io_init_fd(s);
 
   {
     int yes = 1;
@@ -1720,7 +1667,7 @@ io_bind_sockaddr(struct sockaddr *local,
       return NULL;
     }
 
-  return make_lsh_fd(s, "bound socket", e);
+  return make_lsh_fd(s, IO_NORMAL, "bound socket", e);
 }
 
 struct lsh_fd *
@@ -2138,7 +2085,7 @@ io_write_file(const char *fname, int flags, int mode,
   if (fd < 0)
     return NULL;
 
-  return io_write(make_lsh_fd(fd, "write-only file", e),
+  return io_write(make_lsh_fd(fd, IO_NORMAL, "write-only file", e),
 		  block_size, c);
 }
 
@@ -2166,13 +2113,16 @@ close_fd(struct lsh_fd *fd)
       
       if (fd->close_callback)
 	LSH_CALLBACK(fd->close_callback);
-      
-      if (close(fd->fd) < 0)
+
+      if (fd->type != IO_STDIO)
 	{
-	  werror("io.c: close failed %e\n", errno);
-	  EXCEPTION_RAISE(fd->e,
-			  make_io_exception(EXC_IO_CLOSE, fd,
-					    errno, NULL));
+	  if (close(fd->fd) < 0)
+	    {
+	      werror("io.c: close failed %e\n", errno);
+	      EXCEPTION_RAISE(fd->e,
+			      make_io_exception(EXC_IO_CLOSE, fd,
+						errno, NULL));
+	    }
 	}
       assert(nfiles);
       if (!--nfiles)
