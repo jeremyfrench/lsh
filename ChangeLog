@@ -1,3 +1,33 @@
+2003-04-11  Niels Möller  <niels@s3.kth.se>
+
+	* src/client_pty.c (do_kill_client_tty_resource): Call
+	set_error_raw. 
+	(do_pty_continuation): Likewise.
+
+	* src/client_escape.c (escape_help): New class.
+	(do_escape_help): Escape function that lists all defined escapes. 
+	(make_escape_help): New function.
+	(make_escape_info): Install help.
+	(escape_dispatch): Updated to use the escape_callback type.
+
+	* src/client.c: Use DEFINE_ESCAPE.
+	* src/suspend.c (suspend_callback): Likewise.
+
+	* src/client.h (escape_callback): New class, which inherits
+	lsh_callback and adds a help string.
+	(class escape_info): Use it.
+	(DEFINE_ESCAPE): New macro.
+
+	* src/werror.c (set_error_raw): New function, for telling the
+	werror functions when the tty is set to raw mode.
+	(werror_putc): In raw mode, add a \r before each \n.
+	(werror_write_raw): Renamed the old werror_write function.
+	(werror_write): New function that inserts \r in the output when
+	approrpriate.
+
+	* src/Makefile.am (MAINTAINERCLEANFILES, class-map): Updated to
+	use dist_classes, not dist_x_files.
+
 2003-03-24  Pontus Sköld  <pont@soua.net>
 
 	* contrib/solpkg.sh.in: Added my script to create Solaris
