@@ -316,14 +316,15 @@ struct packet_handler *make_kexinit_handler(int type,
   return &self->super;
 }
 
-/* FIXME: THis function can't handle IV:s at all */
+#define IV_TYPE(t) ((t) + 4)
+
 static struct lsh_string *kex_make_key(struct hash_instance *secret,
 				       UINT32 key_length,
 				       int type,
 				       struct lsh_string *session_id)
 {
   /* Indexed by the KEX_* values */
-  static /* const */ char *tags = "CDEF";
+  static /* const */ char *tags = "CDEFAB";
   
   struct lsh_string *key;
   struct hash_instance *hash;
@@ -356,11 +357,12 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
 struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
 					 struct object_list *algorithms,
 					 int type,
-					 struct ssh_connection *connection)
+					 struct lsh_string *session_id)
 {
   CAST_SUBTYPE(crypto_algorithm, algorithm, LIST(algorithms)[type]);
     
   struct lsh_string *key;
+  struct lsh_string *iv = NULL;
   struct crypto_instance *crypto;
 
   assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
@@ -369,24 +371,30 @@ struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
     return NULL;
 
   key = kex_make_key(secret, algorithm->key_size,
-					type, connection->session_id);
-  /* FIXME: No IV. Note that for DES, instantiating the crypto can
-   * fail, if the key happens to be weak. */
+					type, session_id);
 
-  crypto = MAKE_ENCRYPT(algorithm, key->data);
+  if (algorithm->iv_size)
+    iv = kex_make_key(secret, algorithm->iv_size,
+		      IV_TYPE(type), session_id);
+  
+  crypto = MAKE_ENCRYPT(algorithm, key->data,
+			iv ? iv->data : NULL);
 
   lsh_string_free(key);
+  lsh_string_free(iv);
+  
   return crypto;
 }
 
 struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
 					 struct object_list *algorithms,
 					 int type,
-					 struct ssh_connection *connection)
+					 struct lsh_string *session_id)
 {
   CAST_SUBTYPE(crypto_algorithm, algorithm, LIST(algorithms)[type]);
 
   struct lsh_string *key;
+  struct lsh_string *iv = NULL;
   struct crypto_instance *crypto;
 
   assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
@@ -395,20 +403,24 @@ struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
     return NULL;
   
   key = kex_make_key(secret, algorithm->key_size,
-		     type, connection->session_id);
-  /* FIXME: No IV. Note that for DES, instantiating the crypto can
-   * fail, if the key happens to be weak. */
+		     type, session_id);
 
-  crypto = MAKE_DECRYPT(algorithm, key->data);
+  if (algorithm->iv_size)
+    iv = kex_make_key(secret, algorithm->iv_size,
+		      IV_TYPE(type), session_id);
+  
+  crypto = MAKE_DECRYPT(algorithm, key->data, iv ? iv->data : NULL);
 
   lsh_string_free(key);
+  lsh_string_free(iv);
+  
   return crypto;
 }
 
 struct mac_instance *kex_make_mac(struct hash_instance *secret,
 				  struct object_list *algorithms,
 				  int type,
-				  struct ssh_connection *connection)
+				  struct lsh_string *session_id)
 {
   CAST_SUBTYPE(mac_algorithm, algorithm, LIST(algorithms)[type]);
 
@@ -421,7 +433,7 @@ struct mac_instance *kex_make_mac(struct hash_instance *secret,
     return NULL;
 
   key = kex_make_key(secret, algorithm->key_size,
-		     type, connection->session_id);
+		     type, session_id);
 
   mac = MAKE_MAC(algorithm, key->data);
 
@@ -550,4 +562,67 @@ struct make_kexinit *make_test_kexinit(struct randomness *r)
      make_int_list(1, ATOM_HMAC_SHA1, -1),
      make_int_list(1, ATOM_NONE, -1),
      make_int_list(0, -1));
+}
+
+/* CLASS:
+   (class
+     (name install_new_keys)
+     (super install_keys)
+     (vars
+       (is_server simple int)
+       (algorithms object object_list)))
+*/
+
+static int do_install(struct install_keys *c,
+		      struct ssh_connection *connection,
+		      struct hash_instance *secret)
+{
+  CAST(install_new_keys, closure, c);
+  struct crypto_instance *rec;
+  struct crypto_instance *send;
+
+  rec = kex_make_decrypt(secret, closure->algorithms,
+			 KEX_ENCRYPTION_SERVER_TO_CLIENT ^ closure->is_server,
+			 connection->session_id);
+  if (!rec)
+    /* Weak or invalid key */
+    return 0;
+
+  send = kex_make_encrypt(secret, closure->algorithms,
+			  KEX_ENCRYPTION_CLIENT_TO_SERVER ^ closure->is_server,
+			  connection->session_id);
+  if (!send)
+    {
+      KILL(rec);
+      return 0;
+    }
+  
+  /* Keys for recieving */
+  connection->dispatch[SSH_MSG_NEWKEYS] = make_newkeys_handler
+    (rec,
+     kex_make_mac(secret, closure->algorithms,
+		  KEX_MAC_SERVER_TO_CLIENT, connection->session_id));
+
+  /* Keys for sending */
+  /* NOTE: The NEWKEYS-message should have been sent before this
+   * is done. */
+  connection->send_crypto = send;
+  
+  connection->send_mac 
+    = kex_make_mac(secret, closure->algorithms,
+		   KEX_MAC_CLIENT_TO_SERVER, connection->session_id);
+
+  return 1;
+}
+
+struct install_keys *make_install_new_keys(int is_server,
+					   struct object_list *algorithms)
+{
+  NEW(install_new_keys, self);
+
+  self->super.install = do_install;
+  self->is_server = is_server;
+  self->algorithms = algorithms;
+
+  return &self->super;
 }

@@ -136,17 +136,17 @@ int disconnect_kex_failed(struct ssh_connection *connection, const char *msg);
 struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
 					 struct object_list *algorithms,
 					 int type,
-					 struct ssh_connection *connection);
+					 struct lsh_string *session_id);
 
 struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
 					 struct object_list *algorithms,
 					 int type,
-					 struct ssh_connection *connection);
+					 struct lsh_string *session_id);
 
 struct mac_instance *kex_make_mac(struct hash_instance *secret,
 				  struct object_list *algorithms,
 				  int type,
-				  struct ssh_connection *connection);
+				  struct lsh_string *session_id);
 
 struct make_kexinit *make_simple_kexinit(struct randomness *r,
 					 struct int_list *kex_algorithms,
@@ -171,5 +171,9 @@ struct packet_handler *make_kexinit_handler(int type,
 struct packet_handler *
 make_newkeys_handler(struct crypto_instance *crypto,
 		     struct mac_instance *mac);
+
+struct install_keys *
+make_install_new_keys(int is_server,
+		      struct object_list *algorithms);
 
 #endif /* LSH_KEYEXCHANGE_H_INCLUDED */
