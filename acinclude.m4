@@ -14,12 +14,12 @@ changequote([, ])dnl
   fi
 ])
 
-dnl AC_CHECK_VAR(VAR, INCLUDES)
+dnl AC_CHECK_VAR(VAR, TYPE)
 AC_DEFUN(AC_CHECK_VAR,
 [ AC_CACHE_CHECK(
     [for $1],
     lsh_cv_var_$1,
-    AC_TRY_LINK([$2], [void *p = (void *) &$1;],
+    AC_TRY_LINK(, [extern $2 $1; void *p = (void *) &$1;],
 		[lsh_cv_var_$1=yes],
 		[lsh_cv_var_$1=no]))
   if eval "test \"`echo '$lsh_cv_var_'$1`\" = yes"; then
@@ -249,10 +249,14 @@ AC_DEFUN(AC_CHECK_KRB_LIB,
 
 dnl AC_LIB_ARGP(ACTION-IF-OK, ACTION-IF-BAD)
 AC_DEFUN(AC_LIB_ARGP,
-[ AC_CACHE_CHECK([for working argp],
-    lsh_cv_lib_argp_works,
-    [ lsh_cv_lib_argp_works=no
-      AC_CHECK_FUNCS(argp_parse,
+[ ac_argp_save_LIBS="$LIBS"
+  ac_argp_save_LDFLAGS="$LDFLAGS"
+  ac_argp_ok=no
+  # First check if we can link with argp.
+  AC_SEARCH_LIBS(argp_parse, argp,
+  [ LSH_RPATH_FIX
+    AC_CACHE_CHECK([for working argp],
+      lsh_cv_lib_argp_works,
       [ AC_TRY_RUN(
 [#include <argp.h>
 #include <stdlib.h>
@@ -349,9 +353,17 @@ int main(int argc, char **argv)
 }
 ], lsh_cv_lib_argp_works=yes,
    lsh_cv_lib_argp_works=no,
-   lsh_cv_lib_argp_works=no)])])
+   lsh_cv_lib_argp_works=no)])
 
   if test x$lsh_cv_lib_argp_works = xyes ; then
+    ac_argp_ok=yes
+  else
+    # Reset link flags
+    LIBS="$ac_argp_save_LIBS"
+    LDFLAGS="$ac_argp_save_LDFLAGS"
+  fi])
+
+  if test x$ac_argp_ok = xyes ; then
     ifelse([$1],, true, [$1])
   else
     ifelse([$2],, true, [$2])
