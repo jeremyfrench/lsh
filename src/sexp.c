@@ -389,7 +389,7 @@ do_format_sexp_vector(struct sexp *e,
     {
       CAST_SUBTYPE(sexp, car, LIST(v->elements)[0]);
 
-      return ssh_format("(%lfS)", sexp_format(car, style, indent));
+      return ssh_format("(%lfS)", SEXP_FORMAT(car, style, indent));
     }
   
   switch(style)
@@ -411,7 +411,7 @@ do_format_sexp_vector(struct sexp *e,
 	 */
 	unsigned align_after = 0;
 	
-	struct lsh_string *tag = sexp_format(car, style, indent);
+	struct lsh_string *tag = SEXP_FORMAT(car, style, indent);
 
 	if (is_short(tag))
 	  {
@@ -427,7 +427,7 @@ do_format_sexp_vector(struct sexp *e,
 	  {
 	    CAST_SUBTYPE(sexp, o, LIST(v->elements)[i]);
 	    
-	    elements[i] = sexp_format(o, style, indent);
+	    elements[i] = SEXP_FORMAT(o, style, indent);
 	    size += elements[i]->length;
 	  }
 
@@ -471,7 +471,7 @@ do_format_sexp_vector(struct sexp *e,
 	  {
 	    CAST_SUBTYPE(sexp, o, LIST(v->elements)[i]);
 	    
-	    elements[i] = sexp_format(o, style, indent + 1);
+	    elements[i] = SEXP_FORMAT(o, style, indent + 1);
 	    size += elements[i]->length;
 	  }
 
@@ -583,10 +583,12 @@ sexp_format(struct sexp *e, int style, unsigned indent)
     case SEXP_TRANSPORT:
       return encode_base64(sexp_format(e, SEXP_CANONICAL, 0), "{}", 1, indent, 1);
     case SEXP_CANONICAL:
+      return SEXP_FORMAT(e, style, indent);
+
     case SEXP_ADVANCED:
     case SEXP_INTERNATIONAL:
-      /* NOTE: Check for NULL here? I don't think so. */
-      return SEXP_FORMAT(e, style, indent);
+      return ssh_format("%lfS\n", SEXP_FORMAT(e, style, indent));
+      
     default:
       fatal("sexp_format: Unknown output style.\n");
     }
