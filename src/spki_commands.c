@@ -670,16 +670,16 @@ do_spki_decrypt(struct command *s,
 
   else
     {
-      struct lsh_string *label;
+      const struct lsh_string *label;
       struct sexp *key_info;
       struct sexp *payload;
 
       struct crypto_algorithm *crypto;
       struct mac_algorithm *mac;
       
-      struct lsh_string *salt;
-      struct lsh_string *iv;
-      struct lsh_string *data;
+      const struct lsh_string *salt;
+      const struct lsh_string *iv;
+      const struct lsh_string *data;
       UINT32 iterations;
       
       if (SEXP_LEFT(i) != 3)
