@@ -309,14 +309,28 @@ char* lsftp_rl_remotefile_generator( char* text, int state )
   static int list_index;
   char* name;
   static char** glob;
+  static int unqualify = 0;
 
   /* If this is a new word to complete, initialize now. */
 
   if( !state )
     {
+      unqualify = 0;
 
       name = lsftp_concat( text, "*" ); /* Make name contain text* */ 
       
+      if( !lsftp_path_is_absolute( text ) ) /* Relative path? */
+	{
+	  char* tmp = lsftp_qualify_path( name ); /* Make absoulte */
+
+	  if( !tmp )
+	    return 0;
+
+	  free( name );
+	  name = tmp;
+	  unqualify = 1;
+	}
+
       list_index = 0;
       glob = 0;
 
@@ -369,27 +383,35 @@ char* lsftp_rl_remotefile_generator( char* text, int state )
     {
       char* tmp;
       char* tmp2;
+      char* name;
 
-      if( !lsftp_dc_r_isdir( glob[list_index] ) )
-	return lsftp_quote( glob[list_index++] );
-      
+      if( unqualify )
+	name = lsftp_unqualify_path( glob[list_index++] );
+      else
+	name = strdup( glob[list_index++] );
+
+      if( !lsftp_dc_r_isdir( name ) )
+	{
+	  char* s = lsftp_quote( name );
+	  free( name );
+	  return s;
+	}
+
       /* Directory - add trailing slash */
 
       rl_completion_append_character = 0; /* No trailing space */
 
-      tmp = lsftp_concat( glob[list_index++], "/" ); 
+      tmp = lsftp_concat( name, "/" ); 
       
+      free( name );
+
       if( !tmp ) /* concat failed? */ 
-	return lsftp_quote( glob[list_index-1] );
+	return 0;
       
       tmp2 = lsftp_quote( tmp );
-      
-      if( !tmp2 ) /* Failed ? */
-	return tmp;
-
       free( tmp );
+      
       return tmp2;
-
     }
 
   rl_attempted_completion_over = 1; /* Don't do local filename completion */
