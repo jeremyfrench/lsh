@@ -30,7 +30,6 @@
 
 struct io_callback *
 make_read_data(struct ssh_channel *channel,
-	       UINT32 overhead,
 	       struct abstract_write *write);
 
 #if 0

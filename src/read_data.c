@@ -38,9 +38,6 @@
      (name read_data)
      (super io_consuming_read)
      (vars
-       ; Subtract this from the channel's max_packet size to get the
-       ; maximum payload.
-       (overhead . UINT32)
        ; For flow control. 
    
        ; FIXME: Perhaps the information that is needed for flow
@@ -54,7 +51,6 @@ static UINT32 do_read_data_query(struct io_consuming_read *s)
   CAST(read_data, self, s);
   
   assert(self->channel->sources);
-  assert(self->overhead < self->channel->send_max_packet);
     
   if (self->channel->flags &
       (CHANNEL_RECEIVED_CLOSE | CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
@@ -63,14 +59,13 @@ static UINT32 do_read_data_query(struct io_consuming_read *s)
       return 0;
     }
 
-  return MIN(self->channel->send_max_packet - self->overhead,
+  return MIN(self->channel->send_max_packet,
 	     self->channel->send_window_size);
 }
 
 
 struct io_callback *
 make_read_data(struct ssh_channel *channel,
-	       UINT32 overhead,
 	       struct abstract_write *write)
 {
   NEW(read_data, self);
@@ -80,7 +75,6 @@ make_read_data(struct ssh_channel *channel,
   self->super.query = do_read_data_query;
   self->super.consumer = write;
 
-  self->overhead = overhead;
   self->channel = channel;
 
   channel->sources++;
