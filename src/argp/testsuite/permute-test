@@ -10,7 +10,7 @@ VERBOSE = yes
 SILENT = no
 EOF
 
-function die () {
+die () {
     echo "$@" 1>&2
     exit 1
 }
