@@ -199,7 +199,7 @@ read_file(int fd, UINT32 limit)
       else i += res;
     }
 
-  s->length = i;
+  lsh_string_trunc(s, i);
   return s;
 }
 
