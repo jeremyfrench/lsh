@@ -1,7 +1,5 @@
 /* server_userauth.h
  *
- * System dependant password related functions.
- *
  * $Id$
  */
 
@@ -28,9 +26,16 @@
 #define LSH_SERVER_USERAUTH_H_INCLUDED
 
 #include "alist.h"
+#include "command.h"
+#include "connection.h"
+#include "parse.h"
+#include "userauth.h"
 
 /* For uid_t and gid_t */
+
+#if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #define GABA_DECLARE
 #include "server_userauth.h.x"
@@ -73,8 +78,54 @@ int verify_password(struct unix_user *user,
 int change_uid(struct unix_user *user);
 int change_dir(struct unix_user *user);
 
+/* GABA:
+   (class
+     (name userauth)
+     (vars
+       (authenticate method void
+                     "struct ssh_connection *connection"
+		     ; The name is consumed by this function
+		     "struct lsh_string *username"
+		     "UINT32 service"
+		     "struct simple_buffer *args"
+		     "struct command_continuation *c"
+		     "struct exception_handler *e")))
+*/
+
+#define AUTHENTICATE(s, n, u, v, a, c, e) \
+((s)->authenticate((s), (n), (u), (v), (a), (c), (e)))
+
+/* NOTE: This class struct is used also by proxy_userauth.c. */
+
+/* GABA:
+   (class
+     (name userauth_service)
+     (super command)
+     (vars
+       (advertised_methods object int_list)
+       (methods object alist)
+       (services object alist)))
+*/
+
+struct lsh_string *
+format_userauth_failure(struct int_list *methods,
+			int partial);
+struct lsh_string *
+format_userauth_success(void);
+
+struct packet_handler *
+make_userauth_handler(struct alist *methods,
+                      struct alist *services,
+                      struct command_continuation *c,
+                      struct exception_handler *e);
+
+
 /* authentication methods */
 extern struct userauth unix_userauth;
 struct userauth *make_userauth_publickey(struct alist *verifiers);
+
+struct command *make_userauth_service(struct int_list *advertised_methods,
+				      struct alist *methods,
+				      struct alist *services);
 
 #endif /* LSH_SERVER_USERAUTH_H_INCLUDED */
