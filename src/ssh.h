@@ -159,8 +159,10 @@
 /* Limits */
 
 /* Default max length of packet payload */
-/* FIXME: When compression is implemented, the 35000 limit
- * on total packet length must also be considered. */
 #define SSH_MAX_PACKET 0x8000
+
+/* Add this to get the maximum total length, including length,
+ * padding, MAC etc */
+#define SSH_MAX_PACKET_FUZZ (35000 - SSH_MAX_PACKET)
 
 #endif /* LSH_SSH_H_INCLUDED */

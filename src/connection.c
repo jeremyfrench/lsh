@@ -230,7 +230,7 @@ make_ssh_connection(struct command_continuation *c,
   
   connection->resources = empty_resource_list();
   
-  connection->rec_max_packet = 0x8000;
+  connection->rec_max_packet = SSH_MAX_PACKET;
   connection->rec_mac = NULL;
   connection->rec_crypto = NULL;
 

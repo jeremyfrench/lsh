@@ -173,7 +173,11 @@ do_read_packet(struct read_handler **h,
 		      closure->block_buffer->data);
 		
 	      length = READ_UINT32(closure->block_buffer->data);
-	      if (length > closure->connection->rec_max_packet)
+
+	      /* NOTE: We don't implement a limit at _exactly_
+	       * rec_max_packet, as we don't include the length field
+	       * and MAC in the comparison below. */
+	      if (length > (closure->connection->rec_max_packet + SSH_MAX_PACKET_FUZZ))
 		{
 		  static const struct protocol_exception too_large =
 		    STATIC_PROTOCOL_EXCEPTION(SSH_DISCONNECT_PROTOCOL_ERROR,

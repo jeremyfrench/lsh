@@ -71,7 +71,14 @@ do_unpad(struct abstract_write *w,
     }
 
   payload_length = packet->length - 1 - padding_length;
-  
+
+  if (payload_length > closure->connection->rec_max_packet)
+    {
+      lsh_string_free(packet);
+      PROTOCOL_ERROR(closure->connection->e,
+		     "Max payload length exceeded.");
+      return;
+    }
   new = ssh_format("%ls", payload_length, packet->data + 1);
 
   /* Keep sequence number */
