@@ -38,7 +38,7 @@
 
 struct lsh_string *
 hash_string(const struct hash_algorithm *a,
-	    struct lsh_string *in,
+	    const struct lsh_string *in,
 	    int free)
 {
   struct hash_instance *hash = make_hash(a);
@@ -56,9 +56,9 @@ hash_string(const struct hash_algorithm *a,
 
 struct lsh_string *
 mac_string(struct mac_algorithm *a,
-	   struct lsh_string *key,
+	   const struct lsh_string *key,
 	   int kfree,
-	   struct lsh_string *in,
+	   const struct lsh_string *in,
 	   int ifree)
 {
   struct mac_instance *mac = MAKE_MAC(a, key->length, key->data);
