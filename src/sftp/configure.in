@@ -71,4 +71,4 @@ if test x$GCC = xyes ; then
  -Wpointer-arith -Wbad-function-cast -Wnested-externs -Wcast-align"
 fi
 
-AC_OUTPUT(Makefile)
+AC_OUTPUT([Makefile testsuite/Makefile])
