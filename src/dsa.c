@@ -144,7 +144,7 @@ generic_dsa_verify(struct dsa_verifier *key,
   /* Compute w = s^-1 (mod q) */
   mpz_init(w);
 
-  /* NOTE: mpz_invert sometimes generates negative inverses. */
+  /* NOTE: In gmp-2, mpz_invert sometimes generates negative inverses. */
   if (!mpz_invert(w, s, key->q))
     {
       werror("generic_dsa_verify: s non-invertible.\n");
