@@ -201,6 +201,8 @@ do_srp_client_proof_handler(struct packet_handler *s,
       hash = self->srp->dh.exchange_hash;
       self->srp->dh.exchange_hash = NULL; /* For gc */
 
+      connection->flags |= CONNECTION_SRP;
+      
       keyexchange_finish(connection, self->srp->algorithms,
 			 self->srp->dh.method->H,
 			 hash,
