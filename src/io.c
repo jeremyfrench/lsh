@@ -366,8 +366,8 @@ static void listen_callback(struct lsh_fd *fd)
       return;
     }
   res = FD_LISTEN_CALLBACK(self->callback, conn, 
-			   format_addr(addr_len,
-				       (struct sockaddr *) &peer));
+			   sockaddr2info(addr_len,
+					 (struct sockaddr *) &peer));
   if (LSH_ACTIONP(res))
     {
       werror("Strange: Accepted a connection, "
