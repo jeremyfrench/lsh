@@ -109,10 +109,9 @@ make_proxy_channel(UINT32 window_size,
   self->super.request_types = request_types;
   self->init_io = do_init_io;
 
-  /* FIXME: Why this? I would think it is up to each end point when
-   * they want to close the channel. /nisse */
-  if (client_side)
-    self->super.flags |= CHANNEL_CLOSE_AT_EOF;
+  /* Never initiate close; let each end point decide when it is time
+   * to send SSH_MSG_CHANNEL_CLOSE. */
+  self->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
 
   return self;
 }
