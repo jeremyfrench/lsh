@@ -1663,7 +1663,8 @@ channel_close_callback(struct close_callback *c, int reason)
     /* Close channel */
     {
       debug("channel_close_callback: Closing down channel.\n");
-      channel_close(closure->channel);
+      if (! (closure->channel->flags & CHANNEL_SENT_CLOSE) )
+	channel_close(closure->channel);
     }
 }
 
