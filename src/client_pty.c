@@ -58,6 +58,11 @@
        (req object pty_request)))
 */
 
+/* FIXME: !!! failed requests show up as an exception. /Bazsi
+ *
+ * I think that is normal. It's up to the caller to do something reasonable
+ * about the exception. /nisse
+ */
 static void
 do_pty_continuation(struct command_continuation *s,
 		    struct lsh_object *x)
@@ -65,18 +70,16 @@ do_pty_continuation(struct command_continuation *s,
   CAST(pty_request_continuation, self, s);
 
   assert(x);
-  verbose("lsh: pty request %z.\n", x ? "successful" : "failed");
+  verbose("lsh: pty request succeeded\n");
   
-  if (x)
+  CFMAKERAW(&self->req->ios);
+  if (!tty_setattr(self->req->tty, &self->req->ios))
     {
-      CFMAKERAW(&self->req->ios);
-      if (!tty_setattr(self->req->tty, &self->req->ios))
-	{
-	  werror("do_pty_continuation: "
-		 "Setting the attributes of the local terminal failed.\n");
-	}
-      COMMAND_RETURN(self->super.up, x);
+      werror("do_pty_continuation: "
+	     "Setting the attributes of the local terminal failed.\n");
     }
+
+  COMMAND_RETURN(self->super.up, x);
 }
 
 static struct command_continuation *
