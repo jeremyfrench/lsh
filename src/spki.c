@@ -125,7 +125,8 @@ spki_algorithm_lookup(struct alist *algorithms,
 
 struct verifier *
 spki_make_verifier(struct alist *algorithms,
-		   struct sexp_iterator *i)
+		   struct sexp_iterator *i,
+		   int *type)
 {
   /* Syntax: (<algorithm> <s-expr>*) */
   struct signature_algorithm *algorithm;
@@ -133,7 +134,7 @@ spki_make_verifier(struct alist *algorithms,
 
   {
     CAST_SUBTYPE(signature_algorithm, a, 
-		 spki_algorithm_lookup(algorithms, i, NULL));
+		 spki_algorithm_lookup(algorithms, i, type));
     algorithm = a;
   }
   
@@ -263,7 +264,7 @@ spki_lookup(struct spki_context *self,
       if (v)
 	principal->verifier = v;
       else
-	principal->verifier = spki_make_verifier(self->algorithms, &sexp);
+	principal->verifier = spki_make_verifier(self->algorithms, &sexp, NULL);
     }
   
   return principal;

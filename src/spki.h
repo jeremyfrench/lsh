@@ -43,7 +43,8 @@ make_ssh_hostkey_tag(const char *host);
 
 struct verifier *
 spki_make_verifier(struct alist *algorithms,
-		   struct sexp_iterator *i);
+		   struct sexp_iterator *i,
+		   int *algorithm_name);
 
 struct signer *
 spki_sexp_to_signer(struct alist *algorithms,
