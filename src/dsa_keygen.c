@@ -198,7 +198,7 @@ dsa_generate_key(struct randomness *r, unsigned level)
   mpz_init(t);
 
   dsa_nist_gen(p, q, r, level);
-
+  
   debug("p = %xn\nq = %xn\n", p, q);
 
   /* Sanity check. */
@@ -221,6 +221,8 @@ dsa_generate_key(struct randomness *r, unsigned level)
       goto done;
     }
 
+  dsa_find_generator(g, r, p, q);
+    
   mpz_set(t, q);
   mpz_sub_ui(t, t, 2);
   bignum_random(x, r, t);
