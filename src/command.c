@@ -353,7 +353,7 @@ do_once_continuation(struct command_continuation *s,
 }
 
 struct command_continuation *
-make_once_continution(const char *msg,
+make_once_continuation(const char *msg,
 		      struct command_continuation *up)
 {
   NEW(once_continuation, self);

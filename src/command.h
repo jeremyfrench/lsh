@@ -241,8 +241,8 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *real);
 #endif
 
 struct command_continuation *
-make_once_continution(const char *msg,
-		      struct command_continuation *up);
+make_once_continuation(const char *msg,
+		       struct command_continuation *up);
 
 /* extern struct command once_command; */
 
