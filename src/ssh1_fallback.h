@@ -40,6 +40,6 @@
 #define SSH1_FALLBACK(f, fd, length, line) \
 ((f)->fallback((f), (fd), (length), (line)))
      
-struct ssh1_fallback *make_ssh1_fallback(char *port, char *sshd1);
+struct ssh1_fallback *make_ssh1_fallback(char *sshd1);
 
 #endif /* LSH_SSH1_FALLBACK_H_INCLUDED */

@@ -1,7 +1,5 @@
 /* server.h
  *
- *
- *
  * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
@@ -30,12 +28,7 @@
 #include "keyexchange.h"
 #include "password.h"
 #include "reaper.h"
-
-#if SSH1_FALLBACK
-#include ssh1_fallback.h
-#else /* !SSH1_FALLBACK */
-struct ssh1_fallback;
-#endif /* !SSH1_FALLBACK */
+#include "ssh1_fallback.h"
 
 struct fd_callback *
 make_server_callback(struct io_backend *b,
@@ -70,5 +63,7 @@ struct lsh_string *format_exit_signal(struct ssh_channel *channel,
 struct lsh_string *format_exit(struct ssh_channel *channel, int value);
 
 struct resource *make_process_resource(pid_t pid, int signal);
+
+struct channel_request *make_pty_handler(void);
 
 #endif /* LSH_SERVER_H_INCLUDED */
