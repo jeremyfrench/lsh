@@ -1,4 +1,2 @@
-Write some testcases. There's one known bug reported by Akim Demaille.
-
 Figure out what to do about extern inline, as it's not supported by
 newer gcc-3.x.
