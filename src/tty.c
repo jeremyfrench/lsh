@@ -27,6 +27,7 @@
 #include "parse.h"
 #include "ssh.h"
 #include "werror.h"
+#include "xalloc.h"
 
 #include <errno.h>
 #include <string.h>
@@ -45,39 +46,6 @@ int tty_getattr(int fd, struct termios *ios)
 int tty_setattr(int fd, struct termios *ios)
 {
   return tcsetattr(fd, TCSADRAIN, ios) != -1 ? 1 : 0;
-}
-
-/* NOTE: This function also makes the current process a process group
- * leader. */
-int tty_setctty(int newtty)
-{
-  int oldtty;
-
-  oldtty = open("/dev/tty", O_RDWR | O_NOCTTY);
-  if (oldtty >= 0)
-  {
-    ioctl(oldtty, TIOCNOTTY, NULL);
-    close(oldtty);
-    oldtty = open("/dev/tty", O_RDWR | O_NOCTTY);
-    if (oldtty >= 0)
-      {
-        werror("pty_setctty: Error disconnecting from controlling tty.\n");
-        close(oldtty);
-        return 0;
-      }
-  }
-  if (setsid() < 0)
-    werror("tty_setctty: setsid() failed, already process group leader?\n"
-	   "   (errno = %i): %z\n", errno, strerror(errno));
-  
-  if (ioctl(newtty, TIOCSCTTY, NULL) == -1)
-    {
-      werror("tty_setctty: Failed to set the controlling tty.\n"
-	     "   (errno = %i): %z\n", errno, strerror(errno));
-      return 0;
-    }
-  
-  return 1;
 }
 
 int tty_makeraw(int fd)
@@ -404,10 +372,63 @@ static int cc_lflags[] = {
 #endif
 };
 
-/* FIXME: Dummy function. */
+#define SIZE(x) (sizeof((x)) / sizeof((x)[0]))
+
+/* FIXME: TTY_?SPEED not handled */
+
+#define PARSE_FLAGS(cc, bits, offset) do {			\
+  debug("tty_encode_term_mode: termios bits %xi (offset %i)\n",	\
+        (bits), (offset));					\
+  for (i=0; i<SIZE(cc); i++)					\
+    if (cc[i])							\
+      {								\
+      	UINT32 r;						\
+      	if ( (new->length - p) < 5)				\
+      	  goto fail;						\
+								\
+      	r = ((bits) & (cc)[i]) ? 1 : 0;				\
+      	new->data[p++] = i + (offset);				\
+      	WRITE_UINT32(new->data + p, r);				\
+      	p += 4;							\
+      }								\
+} while(0)
+     
 struct lsh_string *tty_encode_term_mode(struct termios *ios)
 {
-  return ssh_format("");
+  unsigned int i;
+  struct lsh_string *new;
+  UINT32 p = 0;
+  
+  new = lsh_string_alloc(650);
+
+  for (i=0; i<SIZE(cc_ndx); i++)
+    {
+      if (cc_ndx[i] != -1)
+	{
+	  if ( (new->length - p) < 5)
+	    goto fail;
+	  
+	  new->data[p++] = i + 1;
+	  WRITE_UINT32(new->data + p, ios->c_cc[cc_ndx[i]]);
+	  p += 4;
+	}
+    }
+  PARSE_FLAGS(cc_iflags, ios->c_iflag, 30);
+  PARSE_FLAGS(cc_lflags, ios->c_lflag, 50);
+  PARSE_FLAGS(cc_oflags, ios->c_oflag, 70);
+  PARSE_FLAGS(cc_cflags, ios->c_cflag, 90);
+
+  if ( (new->length - p) < 1)
+    goto fail;
+  
+  new->data[p++] = 0;
+  new->length = p;
+  
+  return new;
+
+fail:
+  lsh_string_free(new);
+  return NULL;
 }
 
 #define TTY_SET_VALUE(target, param, table, index)	\
@@ -470,7 +491,7 @@ int tty_decode_term_mode(struct termios *ios, UINT32 t_len, UINT8 *t_modes)
 	    TTY_SET_VALUE(ios->c_cc, param, cc_ndx, opcode - 1);
 	  else if (opcode < 50)
 	    TTY_SET_FLAG(ios->c_iflag, param, cc_iflags, opcode - 30);
-	  else if (opcode < 75)
+	  else if (opcode < 70)
 	    TTY_SET_FLAG(ios->c_lflag, param, cc_lflags, opcode - 50);
 	  else if (opcode < 90)
 	    TTY_SET_FLAG(ios->c_oflag, param, cc_oflags, opcode - 70);

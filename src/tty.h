@@ -31,10 +31,6 @@
 int tty_getattr(int fd, struct termios *ios);
 int tty_setattr(int fd, struct termios *ios);
 
-/* Sets the controlling tty of the callign process, and also attempts to make
- * the process a process group leader. */
-int tty_setctty(int fd);
-
 int tty_makeraw(int fd);
 int tty_getwinsize(int fd, int *w, int *h, int *wp, int *hp);
 int tty_setwinsize(int fd, int w, int h, int wp, int hp);
