@@ -46,7 +46,7 @@ struct lsh_string *local_to_utf8(struct lsh_string *s, int free);
  * the local charset. If not STRICT, non-representably charecters are
  * replaced with '?'. */
 struct lsh_string *utf8_to_local(struct lsh_string *s, int strict, int free);
-struct lsh_string *low_utf8_to_local(uint32_t length, uint8_t *s, int strict);
+struct lsh_string *low_utf8_to_local(uint32_t length, const uint8_t *s, int strict);
 int local_is_utf8(void);
 
 #endif /* LSH_CHARSET_H_INCLUDED */

@@ -31,7 +31,8 @@
 
 #include "charset.h"
 
-#include "format.h"  /* For lsh_string_dup() */
+#include "format.h"  /* For lsh_string_dup() FIXME: Should mode to lsh_string.h */
+#include "lsh_string.h"
 #include "parse.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -79,8 +80,11 @@ local_to_utf8(struct lsh_string *s, int free)
       return s;
     default:
       {
-	uint32_t *chars = alloca(s->length * sizeof(uint32_t));
-	unsigned char *lengths = alloca(s->length);
+	uint32_t length = lsh_string_length(s);
+	const uint8_t *data = lsh_string_data(s);
+	
+	uint32_t *chars = alloca(length * sizeof(uint32_t));
+	unsigned char *lengths = alloca(length);
 
 	uint32_t total = 0;
 	{
@@ -88,9 +92,9 @@ local_to_utf8(struct lsh_string *s, int free)
 	
 	  /* First convert to ucs-4, and compute the length of the corresponding
 	   * utf-8 string. */
-	  for (i = 0; i<s->length; i++)
+	  for (i = 0; i<length; i++)
 	    {
-	      uint32_t c = local_to_ucs4(s->data[i]);
+	      uint32_t c = local_to_ucs4(data[i]);
 	      unsigned char l = 1;
 
 	      if (c >= (1UL<<7))
@@ -120,7 +124,7 @@ local_to_utf8(struct lsh_string *s, int free)
 	  struct lsh_string *res = lsh_string_alloc(total);
 	  uint32_t i, j;
 
-	  for(i = j = 0; i<s->length; i++)
+	  for(i = j = 0; i<length; i++)
 	    {
 	      static const uint8_t prefix[]
 		= {0, 0xC0, 0xE0, 0xF0, 0xF8, 0XFC };
@@ -131,11 +135,11 @@ local_to_utf8(struct lsh_string *s, int free)
 	      
 	      for (k = l; k; k--)
 		{
-		  res->data[j+k] = 0x80 | (c & 0x3f);
+		  lsh_string_putc(res, j+k,  0x80 | (c & 0x3f));
 		  c >>= 6;
 		}
 	      assert( !(prefix[l] & c) );
-	      res->data[j] = prefix[l] | c;
+	      lsh_string_putc(res, j, prefix[l] | c);
 
 	      j += lengths[i];
 	    }
@@ -152,7 +156,8 @@ local_to_utf8(struct lsh_string *s, int free)
 
 int local_is_utf8(void) { return (local_charset == CHARSET_UTF8); }
 
-struct lsh_string *low_utf8_to_local(uint32_t length, uint8_t *s, int strict)
+struct lsh_string *
+low_utf8_to_local(uint32_t length, const uint8_t *s, int strict)
 {
   uint32_t i;
   struct lsh_string *res;
@@ -172,7 +177,7 @@ struct lsh_string *low_utf8_to_local(uint32_t length, uint8_t *s, int strict)
       switch(parse_utf8(&buffer, &ucs4))
 	{
 	case -1:
-	  assert(i<=res->length);
+	  assert(i<=length);
 	  
 	  lsh_string_trunc(res, i);
 
@@ -184,13 +189,13 @@ struct lsh_string *low_utf8_to_local(uint32_t length, uint8_t *s, int strict)
 
 	    if (local >= 0)
 	      {
-		res->data[i] = local;
+		lsh_string_putc(res, i, local);
 		break;
 	      }
 	    else if (!strict)
 	      {
 		/* Replace unkonwn characters. */
-		res->data[i] = '?';
+		lsh_string_putc(res, i, '?');
 		break;
 	      }
 	    /* Fall through */
@@ -207,14 +212,15 @@ struct lsh_string *low_utf8_to_local(uint32_t length, uint8_t *s, int strict)
     }
 }
 
-struct lsh_string *utf8_to_local(struct lsh_string *s, int strict, int free)
+struct lsh_string *
+utf8_to_local(struct lsh_string *s, int strict, int free)
 {
   struct lsh_string *res;
   
   if (local_is_utf8())
     return free ? s : lsh_string_dup(s);
 
-  res = low_utf8_to_local(s->length, s->data, strict);
+  res = low_utf8_to_local(STRING_LD(s), strict);
 
   if (free)
     lsh_string_free(s);
