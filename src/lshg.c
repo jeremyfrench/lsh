@@ -274,18 +274,23 @@ do_exc_lshg_handler(struct exception_handler *s,
 {
   CAST(lshg_exception_handler, self, s);
 
-  if(e->type == EXC_IO_CONNECT && 
+  if(e->type == EXC_IO_CONNECT &&
      self->fallback_lsh)
     {
       verbose("No usable gateway found, launching lsh instead.\n");
       execvp(LSH_FILENAME, self->argv); /* FIXME: filename */
-      
+
       werror("lsh launch failed, giving up.\n");
       exit(EXIT_FAILURE);
     }
 
-  werror("Exiting: %z\n", e->msg);
-  exit(EXIT_FAILURE);
+  werror("%z\n", e->msg);
+
+  if(e->type == EXC_IO_CONNECT)
+    {
+      werror("Exiting...\n");
+      exit(EXIT_FAILURE);
+    }
 }
 
 static struct exception_handler *
