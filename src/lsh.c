@@ -1066,7 +1066,7 @@ int main(int argc, char **argv)
       make_lsh_connect(
 	make_simple_connect(backend, NULL),
 	make_handshake_info(CONNECTION_CLIENT,
-			    "lsh - a free ssh",
+			    "lsh - a free ssh", NULL,
 			    SSH_MAX_PACKET,
 			    r,
 			    algorithms,

@@ -591,6 +591,7 @@ int main(int argc, char **argv)
 	(make_simple_listen(backend, NULL),
 	 make_handshake_info(CONNECTION_SERVER,
 			     "lsh - a free ssh",
+			     NULL,
 			     SSH_MAX_PACKET,
 			     r,
 			     algorithms,
