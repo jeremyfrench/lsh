@@ -280,6 +280,8 @@ make_server_srp_continuation(struct srp_server_instance *srp,
   return &self->super;
 }
 
+#define MAX_SRP_SIZE 2000
+
 static void
 do_handle_srp_init(struct packet_handler *s,
 		   struct ssh_connection *connection,
@@ -309,7 +311,7 @@ do_handle_srp_init(struct packet_handler *s,
   e = make_exception_handler(do_exc_srp, connection->e, HANDLER_CONTEXT);
   
   USER_READ_FILE(self->srp->user, "srp-verifier", 1,		 
-		 make_apply(make_read_sexp_command(SEXP_CANONICAL, 0),
+		 make_apply(make_read_sexp_command(SEXP_CANONICAL, 0, MAX_SRP_SIZE),
 			    make_server_srp_continuation(self->srp, connection),
 			    e),
 		 e);
