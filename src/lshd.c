@@ -62,15 +62,15 @@
 #include "lsh_argp.h"
 
 /* Forward declarations */
-struct command_simple options2local;
-#define OPTIONS2LOCAL (&options2local.super.super)
+struct command options2local;
+#define OPTIONS2LOCAL (&options2local.super)
 
-static struct command options2keyfile;
+struct command options2keyfile;
 #define OPTIONS2KEYFILE (&options2keyfile.super)
 
-struct command_simple options2signature_algorithms;
+struct command options2signature_algorithms;
 #define OPTIONS2SIGNATURE_ALGORITHMS \
-  (&options2signature_algorithms.super.super)
+  (&options2signature_algorithms.super)
 
 #include "lshd.c.x"
 
@@ -262,25 +262,34 @@ make_lshd_options(struct io_backend *backend)
 }
 
 /* Port to listen on */
-DEFINE_COMMAND_SIMPLE(options2local, a)
+DEFINE_COMMAND(options2local)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(lshd_options, options, a);
-  return &options->local->super;
+  COMMAND_RETURN(c, options->local);
 }
 
 /* alist of signature algorithms */
-DEFINE_COMMAND_SIMPLE(options2signature_algorithms, a)
+DEFINE_COMMAND(options2signature_algorithms)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(lshd_options, options, a);
-  return &options->signature_algorithms->super;
+  COMMAND_RETURN(c, options->signature_algorithms);
 }
 
 /* Read server's private key */
-static void
-do_options2keyfile(struct command *ignored UNUSED,
-		   struct lsh_object *a,
-		   struct command_continuation *c,
-		   struct exception_handler *e)
+
+DEFINE_COMMAND(options2keyfile)
+     (struct command *ignored UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
   CAST(lshd_options, options, a);
   
@@ -297,9 +306,6 @@ do_options2keyfile(struct command *ignored UNUSED,
       EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
     }
 }
-
-static struct command options2keyfile =
-STATIC_COMMAND(do_options2keyfile);
 
 
 static const struct argp_option
