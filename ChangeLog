@@ -1,3 +1,38 @@
+1999-12-20  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/scm/compiler.scm (split-list-at): New utility function. 
+	Fixed spelling of make-application.
+	(do-let): Invoke the preprocessor on the value list.
+	(make-flat-application): Accept a list of arguments.
+	(flatten-application): Handle applications with more than one
+	argument. 
+	(reduce-expr): New function to try to reduce expressions, mostly
+	for debugging.
+
+	* src/spki_commands.c (RETURN_USERKEYS): New macro.
+	(spki_read_acl, spki_read_hostkeys): Use prog1 for proper
+	evaluation order.
+	(make_spki_read_userkeys): New function.
+
+	* src/spki.c (do_spki_tag_list_match): Bug fix.
+	(spki_sexp_to_tag_list): Bug fix.
+	(spki_make_verifier): Take an sexp rather than an sexp_iterator as
+	argument. 
+	(do_spki_lookup): Use the right syntax for public-key-expressions. 
+
+	* src/sexp_streamed_parser.c (do_parse_base64): Less trace info.
+	(do_parse_literal_data): -"-
+
+	* src/sexp_parser.c (sexp_parse_list_canonical): Bug fix: Advance
+	buffer pointer after closing parenthesis.
+	(sexp_parse_advanced, sexp_parse_canonical): Don't advance buffer
+	pointer in the default case.
+
+
+	* src/sexp.c (sexp2string): Bug fix.
+
+	* src/lsh.c (do_options2identities): Bug fixes.
+
 1999-12-14  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/lshd.c: General cleanup.

@@ -3,3 +3,5 @@
 /Makefile.in
 /des-test
 /des-test.c
+/spki-tag-test
+/spki-tag-test.c
