@@ -231,14 +231,14 @@ extern struct command_simple command_unimplemented;
 struct command command_die_on_null;
 
 
+#if DEBUG_TRACE
 struct command *make_trace(const char *name, struct command *real);
 struct lsh_object *collect_trace(const char *name, struct lsh_object *real);
 
-#if 1
-#define MAKE_TRACE(name, real) (collect_trace((name), (real)))
-#else
+#define MAKE_TRACE collect_trace
+#else /* !DEBUG_TRACE */
 #define MAKE_TRACE(name, real) (real)
-#endif
+#endif /* !DEBUG_TRACE */
 
 struct command_continuation *
 make_once_continuation(const char *msg,

@@ -146,6 +146,7 @@ do_trace_command(struct command *s,
   COMMAND_CALL(self->real, x, c, e);
 }
 
+#if DEBUG_TRACE
 struct command *make_trace(const char *name, struct command *real)
 {
   NEW(trace_command, self);
@@ -161,7 +162,7 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *c)
   CAST_SUBTYPE(command, real, c);
   return &make_trace(name, real)->super;
 }
-
+#endif /* DEBUG_TRACE */
 
 /* Collecting arguments */
 struct lsh_object *
@@ -461,12 +462,15 @@ do_catch_handler(struct exception_handler *s,
 static struct exception_handler *
 make_catch_handler(struct catch_handler_info *info,
 		   struct command_continuation *c,
-		   struct exception_handler *e)
+		   struct exception_handler *e,
+		   const char *context)
 {
   NEW(catch_handler, self);
 
   self->super.raise = do_catch_handler;
   self->super.parent = e;
+  self->super.context = context;
+  
   self->c = c;
   self->info = info;
 
@@ -490,7 +494,8 @@ do_catch_apply(struct command *s,
 {
   CAST(catch_apply, self, s);
   COMMAND_CALL(self->body, a, c,
-	       make_catch_handler(self->info, c, e));
+	       make_catch_handler(self->info, c, e,
+				  HANDLER_CONTEXT));
 }
 
 static struct command *
