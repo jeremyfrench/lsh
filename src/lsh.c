@@ -163,6 +163,13 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_CONNECTION);
        (stdin_file . "const char *")
        (stdout_file . "const char *")
        (stderr_file . "const char *")
+
+       ; fork() extra processes for handling stdio file-descriptors,
+       ; to avoid setting them in non-blocking mode.
+       (stdin_fork . int)
+       (stdout_fork . int)
+       (stderr_fork . int)
+       
        ; True if the process's stdin or pty (respectively) has been used. 
        (used_stdin . int)
        (used_pty . int)
@@ -214,7 +221,11 @@ make_options(struct io_backend *backend,
   self->stdout_file = NULL;
   self->stderr_file = NULL;
   self->used_stdin = 0;
-    
+
+  self->stdin_fork = 0;
+  self->stdout_fork = 0;
+  self->stderr_fork = 0;
+  
   self->with_pty = -1;
   self->start_shell = 1;
   self->with_remote_peers = 0;
@@ -758,6 +769,8 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_STDOUT 0x211
 #define OPT_STDERR 0x212
 
+#define OPT_FORK_STDIO 0x213
+
 static const struct argp_option
 main_options[] =
 {
@@ -812,6 +825,9 @@ main_options[] =
   { "no-stdout", OPT_STDOUT | ARG_NOT, NULL, 0, "Redirect stdout to /dev/null", 0}, 
   { "stderr", OPT_STDERR, "Filename", 0, "Redirect stderr", 0},
   { "no-stderr", OPT_STDERR | ARG_NOT, NULL, 0, "Redirect stderr to /dev/null", 0}, 
+  { "cvs-workaround", OPT_FORK_STDIO, "i?o?e?", OPTION_ARG_OPTIONAL,
+    "fork extra processes to read one or more of the stdio file "
+    "descriptors, to avoid setting them in non-blocking mode.", 0 },
   
 #if WITH_PTY_SUPPORT
   { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
@@ -832,6 +848,60 @@ main_argp_children[] =
 };
 
 /* FIXME: Moves to client.c */
+static int
+fork_input(int in)
+{
+  /* pipe[0] for reading, pipe[1] for writing. */
+  int pipe[2];
+
+  if (!lsh_make_pipe(pipe))
+    return -1;
+
+  switch (fork())
+    {
+    case -1:
+      /* Error */
+      return -1;
+    case 0:
+      close(pipe[0]);
+      if (lsh_copy_file(in, pipe[1]))
+	_exit(EXIT_SUCCESS);
+      else
+	_exit(EXIT_FAILURE);
+    default:
+      /* Parent */
+      close(pipe[1]);
+      return pipe[0];
+    }
+}
+
+static int
+fork_output(int out)
+{
+  /* pipe[0] for reading, pipe[1] for writing. */
+  int pipe[2];
+
+  if (!lsh_make_pipe(pipe))
+    return -1;
+
+  switch (fork())
+    {
+    case -1:
+      /* Error */
+      return -1;
+    case 0:
+      close(pipe[1]);
+      if (lsh_copy_file(pipe[0], out))
+	_exit(EXIT_SUCCESS);
+      else
+	_exit(EXIT_FAILURE);
+    default:
+      /* Parent */
+      close(pipe[0]);
+      return pipe[1];
+    }
+}
+
 /* Create a session object. stdout and stderr are shared (although
  * with independent lsh_fd objects). stdin can be used by only one
  * session (until something "session-control"/"job-control" is added).
@@ -843,15 +913,17 @@ make_lsh_session(struct lsh_options *self)
   int out;
   int err;
 
+  debug("lsh.c: Setting up stdin\n");
+
   if (self->stdin_file)
     in = open(self->stdin_file, O_RDONLY);
   else
     {
       if (self->used_stdin)
 	in = open("/dev/null", O_RDONLY);
-      else
+      else 
 	{
-	  in = dup(STDIN_FILENO);
+	  in = (self->stdin_fork ? fork_input : dup)(STDIN_FILENO);
 	  self->used_stdin = 1;
 	}
     }
@@ -863,9 +935,15 @@ make_lsh_session(struct lsh_options *self)
       return NULL;
     }
 
-  out = (self->stdout_file
-	 ? open(self->stdout_file, O_WRONLY | O_CREAT, 0666)
-	 : dup(STDOUT_FILENO));
+  debug("lsh.c: Setting up stdout\n");
+
+  if (self->stdout_file)
+    out = open(self->stdout_file, O_WRONLY | O_CREAT, 0666);
+  else if (self->stdout_fork)
+    out = fork_output(STDOUT_FILENO);
+  else
+    out = dup(STDOUT_FILENO);
+
   if (out < 0)
     {
       werror("lsh: Can't dup/open stdout (errno = %i): %z!\n",
@@ -874,8 +952,12 @@ make_lsh_session(struct lsh_options *self)
       return NULL;
     }
 
+  debug("lsh.c: Setting up stderr\n");
+  
   if (self->stderr_file)
     err = open(self->stderr_file, O_WRONLY | O_CREAT, 0666);
+  else if (self->stderr_fork)
+    err = fork_output(STDERR_FILENO);
   else
     {
       err = dup(STDERR_FILENO);
@@ -1359,6 +1441,34 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
       CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
 
+    case OPT_FORK_STDIO:
+      if (!arg)
+	self->stdin_fork = self->stdout_fork = self->stderr_fork = 1;
+      else
+	{
+	  int i;
+	  for (i = 0; arg[i]; i++)
+	    switch(arg[i])
+	      {
+	      case 'i': case 'I':
+		self->stdin_fork = 1;
+		break;
+	      case 'o': case 'O':
+		self->stdout_fork = 1;
+		break;
+	      case 'e': case 'E':
+		self->stderr_fork = 1;
+		break;
+	      default:
+		argp_error(state, "The argument to --cvs-workaround should "
+			   "be one or more of the characters 'i' (stdin), "
+			   "'o' (stdout) and 'e' (stderr).");
+		goto loop_done;
+	      }
+	loop_done:
+	}
+      break;
+		
     case 'n':
       self->not = !self->not;
       break;
