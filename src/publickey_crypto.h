@@ -48,72 +48,48 @@ make_keypair(uint32_t type,
 	     struct signer *private);
 
 
-/* Groups. For now, assume that all group elements are represented by
- * bignums. */
+/* Groups. All group elements are represented by bignums. */
+
 /* GABA:
    (class
-     (name abstract_group)
+     (name zn_group)
      (vars
-       (order bignum)
+       (modulo bignum)
        (generator bignum)
-       
-       ; Checks if a bignum is in the correct range for being a group element. 
-       (range method int "mpz_t x")
+       (order bignum)))
+*/
 
-       ;; (member method int "mpz_t x")
-       
-       (invert method void "mpz_t res" "mpz_t x")
-       (combine method void "mpz_t res" "mpz_t a" "mpz_t b")
+int
+zn_range(const struct zn_group *G, const mpz_t x);
 
-       ; This provides operations G x G -> G that is unrelated to the
-       ; group operation above. It is needed by SRP. For the group Z/n,
-       ; it can simply be ring addition and subtraction.
+void
+zn_invert(const struct zn_group *G, mpz_t res, const mpz_t x);
 
-       ; The operations may fail (for instance if the result is
-       ; zero, which is not a member of the multiplicative group). In
-       ; that case, the method returns zero.
+void
+zn_mul(const struct zn_group *G, mpz_t res, const mpz_t x, const mpz_t y);
 
-       (add method int "mpz_t res" "mpz_t a" "mpz_t b")
-       (subtract method int "mpz_t res" "mpz_t a" "mpz_t b")
-       
-       ; NOTE: Doesn't handle negative exponents
-       (power method void "mpz_t res" "mpz_t g" "mpz_t e")
-       (small_power method void "mpz_t res" "mpz_t g" "uint32_t e"))) */
+void
+zn_exp(const struct zn_group *G, mpz_t res, const mpz_t x, const mpz_t e);
 
-#define GROUP_RANGE(group, x) ((group)->range((group), (x)))
-#define GROUP_INVERT(group, res, x) ((group)->invert((group), (res), (x)))
-#define GROUP_COMBINE(group, res, a, b) \
-((group)->combine((group), (res), (a), (b)))
-#define GROUP_POWER(group, res, g, e) \
-((group)->power((group), (res), (g), (e)))
-#define GROUP_SMALL_POWER(group, res, g, e) \
-((group)->small_power((group), (res), (g), (e)))
-#define GROUP_ADD(group, res, a, b) \
-((group)->add((group), (res), (a), (b)))
-#define GROUP_SUBTRACT(group, res, a, b) \
-((group)->subtract((group), (res), (a), (b)))
+void
+zn_exp_ui(const struct zn_group *G, mpz_t res, const mpz_t x, uint32_t e);
 
-struct abstract_group *
-make_group_zn(mpz_t p, mpz_t g, mpz_t order);
+/* Ring structure needed by SRP */
+int
+zn_add(const struct zn_group *G,
+       mpz_t res, const mpz_t a, const mpz_t b);
 
-struct abstract_group *
-make_ring_zn(mpz_t p, mpz_t g);
+int 
+zn_sub(const struct zn_group *G,
+       mpz_t res, const mpz_t a, const mpz_t b);
 
-/* NOTE: The object system is not powerful enough for a proper ring
- * class, as we would like
- *
- *   abstract_ring inherits abstract_group,
- *   group_zn      inherits abstract_group
- *   ring_zn       inherits abstract_ring, group_zn
- *
- * and we don't have multiple inheritance.
- */
-
-
-struct abstract_group *
+const struct zn_group *
 make_ssh_group1(void);
 
-struct abstract_group *
+const struct zn_group *
+make_ssh_group14(void);
+
+const struct zn_group *
 make_ssh_ring_srp_1(void);
 
 /* DH key exchange, with authentication */
@@ -121,7 +97,7 @@ make_ssh_ring_srp_1(void);
    (class
      (name dh_method)
      (vars
-       (G object abstract_group)
+       (G const object zn_group)
        (H const object hash_algorithm)
        (random object randomness)))
 */
@@ -132,7 +108,7 @@ make_ssh_ring_srp_1(void);
    (struct
      (name dh_instance)
      (vars
-       (method object dh_method)
+       (method const object dh_method)
        (e bignum)       ; Client value
        (f bignum)       ; Server value
 
@@ -182,14 +158,14 @@ dh_verify_server_msg(struct dh_instance *self,
 		     struct verifier *v);
 
 void
-dh_generate_secret(struct dh_method *self,
+dh_generate_secret(const struct dh_method *self,
 		   mpz_t r, mpz_t v);
 
 void
 dh_hash_digest(struct dh_instance *self);
 
 struct dh_method *
-make_dh(struct abstract_group *G,
+make_dh(const struct zn_group *G,
 	const struct hash_algorithm *H,
 	struct randomness *r);
 
@@ -197,7 +173,7 @@ struct dh_method *
 make_dh1(struct randomness *r);
 
 void
-init_dh_instance(struct dh_method *m,
+init_dh_instance(const struct dh_method *m,
 		 struct dh_instance *self,
 		 struct ssh_connection *c);
 
