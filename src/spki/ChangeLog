@@ -1,5 +1,9 @@
 2003-03-09  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* tools/Makefile.am (noinst_PROGRAMS): Added spki-delegate.
+
+	* tools/spki-delegate.c: New program.
+
 	* testsuite/Makefile.am (TS_SH): Added make-signature-test.
 
 	* testsuite/key-1, testsuite/key-1.pub: Key used by testsuite.

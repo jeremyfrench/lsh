@@ -113,7 +113,7 @@ created. --key-file specifies the private key to use (by default, it
 is looked up in ~/.spki/sha1-keys). --propgate creates a delegation
 that can be delegated further.
 
-FIXME: Change terminology, with could talk of the source of the
+FIXME: Change terminology, we could talk of the source of the
 delegation (--issuer or --chain).
 
 
