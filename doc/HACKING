@@ -8,7 +8,7 @@ roadmap.
 
 ABSTRACTION
 
-All sent and recieved data are represented as a struct lsh_string.
+All sent and received data are represented as a struct lsh_string.
 This is a simple string type, with a length field and a sequence of
 unsigned octets. The NUL character does *not* have any special status.
 
@@ -270,7 +270,7 @@ classified by allocation strategy into three classes:
 allocated in various places, usually by reading a packet from some
 socket, or by calling ssh_format(). They are passed on to some
 consumer function, which has to deallocate the string when it is
-finished procesing it, usually by throwing it a way, transforming it
+finished processing it usually by throwing it away, transforming it
 into a new string, or writing it to some socket. If you want to *both*
 pass a string to a consumer, and keep it for later reference, you have
 to copy it.
@@ -285,7 +285,7 @@ only one place. Examples are the queue nodes that write_buffer.c uses
 to link packets together. These are freed explicitly when they
 are no longer needed.
 
-× Other objects and closures, which references eachother in some
+× Other objects and closures, which references each other in some
 complex fashion. Except places where it is *obvious* that an object
 can be freed, these objects are not freed explicitly, but are handled
 by the garbage collector. The gc overhead should be farily small;
@@ -307,7 +307,7 @@ also doesn't take care of initializing bignums). I'm considering
 extending the object system to initialize objects more intelligently.
 
 
-ROADMAP
+ROAD MAP
 
 Some of the central source files are:
 
