@@ -46,17 +46,24 @@ int do_read_packet(struct read_handler **h,
   while(1)
     {
 #endif
+#if 0
+      struct crypto_instance *crypto = connection->rec_crypto;
+      if (!crypto)
+	crypto = &crypto_none_instance;
+#endif 
       switch(closure->state)
 	{
 	case WAIT_HEADER:
 	  {
-	    UINT32 left = closure->crypto->block_size - closure->pos;
+	    UINT32 block_size = connection->rec_crypto
+	      ? closure->connection->rec_crypto->block_size : 8;
+	    UINT32 left = block_size - closure->pos;
 	    int n;
 	
 	    if (!closure->buffer)
 	      {
 		closure->buffer
-		  = lsh_string_alloc(closure->crypto->block_size);
+		  = lsh_string_alloc(block_size);
 		closure->pos = 0;
 	      }
 	    n = A_READ(read, closure->buffer->data + closure->pos, left);
@@ -78,19 +85,29 @@ int do_read_packet(struct read_handler **h,
 	      {
 		UINT32 length;
 
-		CRYPT(closure->crypto,
-		      closure->crypto->block_size,
-		      closure->buffer->data,
-		      closure->buffer->data);
-
+		if (closure->connection->rec_crypto)
+		  CRYPT(closure->connection->rec_crypto,
+			block_size,
+			closure->buffer->data,
+			closure->buffer->data);
+		
 		length = READ_UINT32(closure->buffer->data);
-		if (length > closure->max_packet)
-		  return 0;
+		if (length > closure->connection->rec_max_packet)
+		  {
+		    werror("read_packet: Recieving too large packet.\n"
+			   "  %d octets, limit is %d\n",
+			   length, closure->connection->rec_max_packet);
+		    return 0;
+		  }
 
 		if ( (length < 12)
-		     || (length < (closure->crypto->block_size - 4))
-		     || ( (length + 4) % closure->crypto->block_size))
-		  return 0;
+		     || (length < (block_size - 4))
+		     || ( (length + 4) % block_size))
+		  {
+		    werror("read_packet: Bad packet length %d\n",
+			   length);
+		    return 0;
+		  }
 
 		/* Process this block before the length field is lost. */
 		if (closure->mac)
@@ -98,8 +115,8 @@ int do_read_packet(struct read_handler **h,
 		    UINT8 s[4];
 		    WRITE_UINT32(s, closure->sequence_number);
 		    
-		    HASH_UPDATE(closure->mac, 4, s);
-		    HASH_UPDATE(closure->mac,
+		    HASH_UPDATE(closure->connection->rec_mac, 4, s);
+		    HASH_UPDATE(closure->connection->rec_mac,
 				closure->buffer->length,
 				closure->buffer->data);
 		  }
@@ -142,18 +159,18 @@ int do_read_packet(struct read_handler **h,
 	    /* Read a complete packet? */
 	    if (n == left)
 	      {
-		CRYPT(closure->crypto,
-		      closure->buffer->length - closure->crypt_pos,
-		      closure->buffer->data + closure->crypt_pos,
-		      closure->buffer->data + closure->crypt_pos);		      
-
+		if (closure->connection->rec_crypto)
+		  CRYPT(closure->connection->rec_crypto,
+			closure->buffer->length - closure->crypt_pos,
+			closure->buffer->data + closure->crypt_pos,
+			closure->buffer->data + closure->crypt_pos);		      
 		if (closure->mac)
 		  {
-		    HASH_UPDATE(closure->mac,
-			   closure->buffer->length - closure->crypt_pos,
-			   closure->buffer->data + closure->crypt_pos);
-		    HASH_DIGEST(closure->mac,
-			   closure->computed_mac);
+		    HASH_UPDATE(closure->connection->rec_mac,
+				closure->buffer->length - closure->crypt_pos,
+				closure->buffer->data + closure->crypt_pos);
+		    HASH_DIGEST(closure->connection->rec_mac,
+				closure->computed_mac);
 		  }
 		closure->state = WAIT_MAC;
 		closure->pos = 0;
@@ -164,9 +181,10 @@ int do_read_packet(struct read_handler **h,
 	      break;
 	  }
 	case WAIT_MAC:
-	  if (closure->mac->mac_size)
+	  if (closure->connection->rec_mac)
 	    {
-	      UINT32 left = closure->mac->mac_size - closure->pos;
+	      UINT32 left = (closure->connection->rec_mac->mac_size
+			     - closure->pos);
 	      UINT8 *mac = alloca(left);
 
 	      int n = A_READ(read, mac, left);
@@ -197,7 +215,8 @@ int do_read_packet(struct read_handler **h,
 		break;
 	    }
 	  /* MAC was ok, send packet on */
-	  if (A_WRITE(closure->handler, closure->buffer) != WRITE_OK)
+	  if (connection_handle_packet(closure->connection, closure->buffer)
+	      != WRITE_OK)
 	    /* FIXME: What now? */
 	    return 0;
 	  
@@ -214,14 +233,15 @@ int do_read_packet(struct read_handler **h,
 }
 
 struct read_handler *make_read_packet(struct abstract_write *handler,
-				      UINT32 max_packet)
+				      struct ssh_connection *connection)
 {
   struct read_packet *closure = xalloc(sizeof(struct read_packet));
 
   closure->super.handler = do_read_packet;
 
+  closure->connection = connection;
+
   closure->state = WAIT_HEADER;
-  closure->max_packet = max_packet;
   closure->sequence_number = 0;
 
   /* closure->pos = 0; */
