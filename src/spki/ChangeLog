@@ -1,3 +1,7 @@
+2004-03-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Use AC_CONFIG_AUX_DIR([.]).
+
 2004-03-01  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Check for gmtime_r.

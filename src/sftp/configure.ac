@@ -5,6 +5,9 @@ dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT([lsh-sftp], [1.0-pre])
 AC_CONFIG_SRCDIR([sftp-server.c])
+# Needed to stop autoconf from looking for files in parent directories.
+AC_CONFIG_AUX_DIR([.])
+
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
 

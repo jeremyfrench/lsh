@@ -1,3 +1,8 @@
+2004-03-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: Use AC_CONFIG_AUX_DIR([.]). Converted to new style
+	AC_INIT and AM_INIT_AUTOMAKE.
+
 2004-03-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* argp.h: Removed leading underscores from the argument names in
