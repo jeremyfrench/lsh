@@ -86,8 +86,8 @@ static void init_host_key(struct randomness *r)
 		   "3D73C62E8E5C5F6B8E2C70217EC3B557FBCB98535BE3C6EE"
 		   "0C71DEC1FE9C6791D3780DD8D593D5030969D303A5818B01"
 		   "C4B855C07E8C4F64", 16);
-  mpz_set_str(a,
-	      "295190AEDBBD6EBD2F817F7D8CCC8B0095DCD82E", 16);
+  mpz_init_set_str(a,
+		   "295190AEDBBD6EBD2F817F7D8CCC8B0095DCD82E", 16);
 
   mpz_init_set(tmp, g);
   mpz_powm(tmp, tmp, a, p);
