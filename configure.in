@@ -320,6 +320,9 @@ AC_FUNC_GETPGRP
 AC_CHECK_FUNCS(syslog)
 AC_REPLACE_FUNCS(memxor)
 
+dnl Needed by argp
+AC_REPLACE_FUNCS(mempcpy strndup)
+
 AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
 
 dnl This macro is mentioned in the automake manual, but where is it
