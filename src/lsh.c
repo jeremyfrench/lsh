@@ -222,7 +222,7 @@ main_options[] =
   { NULL, 0, NULL, 0, "Actions:", 0 },
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
-  { "nop", 'N', NULL, 0, "No operation (supresses the default action, "
+  { "nop", 'N', NULL, 0, "No operation (suppresses the default action, "
     "which is to spawn a remote shell)", 0 },
   { NULL, 0, NULL, 0, "Modifiers that apply to port forwarding:", 0 },
   { "remote-peers", 'g', NULL, 0, "Allow remote access to forwarded ports", 0 },

@@ -861,7 +861,7 @@ int address_info2sockaddr_in(struct sockaddr_in *sin,
 /* These functions are used by werror() and friends */
 
 /* For fd:s in blocking mode. */
-void write_raw(int fd, UINT32 length, UINT8 *data,
+void write_raw(int fd, UINT32 length, const UINT8 *data,
 	       struct exception_handler *e)
 {
   while(length)
@@ -886,7 +886,7 @@ void write_raw(int fd, UINT32 length, UINT8 *data,
     }
 }
 
-void write_raw_with_poll(int fd, UINT32 length, UINT8 *data,
+void write_raw_with_poll(int fd, UINT32 length, const UINT8 *data,
 			 struct exception_handler *e)
 {
   while(length)
