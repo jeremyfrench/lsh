@@ -42,7 +42,7 @@ struct simple_buffer
 
 void
 simple_buffer_init(struct simple_buffer *buffer,
-		  uint32_t capacity, const uint8_t *data);
+		   uint32_t capacity, const uint8_t *data);
 
 /* Returns 1 on success, 0 on failure */
 int
