@@ -31,6 +31,7 @@
 
 #include "atoms.h"
 #include "command.h"
+#include "connection.h"
 #include "format.h"
 #include "lookup_verifier.h"
 #include "lsh_string.h"
@@ -138,7 +139,7 @@ do_init_client_dh(struct keyexchange_algorithm *c,
   
   /* Initialize */
   dh->super.handler = do_handle_dh_reply;
-  init_dh_instance(closure->dh, &dh->dh, connection);
+  init_dh_instance(closure->dh, &dh->dh, &connection->kex);
 
   dh->verifier = verifier;
   dh->hostkey_algorithm = hostkey_algorithm_atom;
@@ -318,7 +319,7 @@ do_init_client_srp(struct keyexchange_algorithm *s,
   NEW(srp_client_instance, srp);
 
   /* Initialize */
-  init_dh_instance(self->dh, &srp->dh, connection);
+  init_dh_instance(self->dh, &srp->dh, &connection->kex);
 
   srp->tty = self->tty;
   srp->algorithms = algorithms;

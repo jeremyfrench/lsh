@@ -31,6 +31,8 @@
 #include "publickey_crypto.h.x"
 #undef GABA_DECLARE
 
+struct kexinit_state;
+
 /* GABA:
    (class
      (name keypair)
@@ -178,7 +180,7 @@ make_dh14(struct randomness *r);
 void
 init_dh_instance(const struct dh_method *m,
 		 struct dh_instance *self,
-		 struct ssh_connection *c);
+		 struct kexinit_state *kex);
 
 /* RSA support */
 extern struct signature_algorithm rsa_sha1_algorithm;

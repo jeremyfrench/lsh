@@ -43,7 +43,7 @@
 void
 init_dh_instance(const struct dh_method *m,
 		 struct dh_instance *self,
-		 struct ssh_connection *c)
+		 struct kexinit_state *kex)
 {
   struct lsh_string *s;
   /* FIXME: The allocator could do this kind of initialization
@@ -59,16 +59,16 @@ init_dh_instance(const struct dh_method *m,
   self->exchange_hash = NULL;
 
   debug("init_dh_instance\n"
-	" V_C: %pS\n", c->versions[CONNECTION_CLIENT]);
-  debug(" V_S: %pS\n", c->versions[CONNECTION_SERVER]);
-  debug(" I_C: %xS\n", c->literal_kexinits[CONNECTION_CLIENT]);
-  debug(" I_S: %xS\n", c->literal_kexinits[CONNECTION_SERVER]);
+	" V_C: %pS\n", kex->version[CONNECTION_CLIENT]);
+  debug(" V_S: %pS\n", kex->version[CONNECTION_SERVER]);
+  debug(" I_C: %xS\n", kex->literal_kexinit[CONNECTION_CLIENT]);
+  debug(" I_S: %xS\n", kex->literal_kexinit[CONNECTION_SERVER]);
 
   s = ssh_format("%S%S%S%S",
-		 c->versions[CONNECTION_CLIENT],
-		 c->versions[CONNECTION_SERVER],
-		 c->literal_kexinits[CONNECTION_CLIENT],
-		 c->literal_kexinits[CONNECTION_SERVER]);
+		 kex->version[CONNECTION_CLIENT],
+		 kex->version[CONNECTION_SERVER],
+		 kex->literal_kexinit[CONNECTION_CLIENT],
+		 kex->literal_kexinit[CONNECTION_SERVER]);
   hash_update(self->hash, STRING_LD(s));
 
   lsh_string_free(s);  

@@ -125,7 +125,7 @@ do_init_server_dh(struct keyexchange_algorithm *c,
       
       /* Initialize */
       dh->super.handler = do_handle_dh_init;
-      init_dh_instance(closure->dh, &dh->dh, connection);
+      init_dh_instance(closure->dh, &dh->dh, &connection->kex);
 
       dh->server_key = lsh_string_dup(key->public);
       dh->signer = key->private;
@@ -350,7 +350,7 @@ do_init_server_srp(struct keyexchange_algorithm *s,
   NEW(srp_server_instance, srp);
 
   /* Initialize */
-  init_dh_instance(self->dh, &srp->dh, connection);
+  init_dh_instance(self->dh, &srp->dh, &connection->kex);
 
   srp->algorithms = algorithms;
   srp->db = self->db;
