@@ -4,9 +4,15 @@ LSH - a free implementation of the Secure Shell protocols.
 LSH IS WORK IN PROGRESS. DON'T EXPECT THE CURRENT VERSION TO WORK, AND
 *DON'T* EXPECT IT TO PROVIDE ANY SECURITY WHATSOEVER.
 
+
+COPYRIGHT
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation. See the file COPYING for details.
+
+
+INSTALLATION
 
 If you have downloaded a snapshot, you should be able to compile it
 with
@@ -29,7 +35,29 @@ This creates the configure script and a Makefile.in. Now you can try
 file foo.h.x, try creating it with make foo.h.x or ./make_class <foo.h
 >foo.h.x, and similarly for missing foo.c.x files.
 
-For an introduction to the workings of LSH, see the file HACKING.
+
+GETTING STARTED
+
+Some examples...
+
+Create a new DSS key pair, and save it in NEW_KEY and NEW_KEY.pub:
+
+  ./lsh_keygen  -l 8 | ./lsh_writekey NEW_KEY
+
+Start an lshd server on port 4711, using the key created above as the
+server host key:
+
+  ./lshd -p 4711 -h NEW_KEY
+
+Connect to an lshd server running on port 4711 on HOST, and attempt to
+log in as USER:
+
+  ./lsh -p 4711 -l USER HOST
+
+
+MORE INFORMATION
+
+For an introduction to the inner workings of LSH, see the file HACKING.
 
 Several people have contributed to LSH, see the AUTHORS file for
 details.
@@ -41,4 +69,4 @@ Current snapshots of lsh can be found at
 <URL: http://www.lysator.liu.se/~nisse/archive/>.
 
 
-
+/Niels Möller <nisse@lysator.liu.se>
