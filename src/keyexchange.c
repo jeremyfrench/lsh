@@ -601,7 +601,8 @@ static int do_install(struct install_keys *c,
   connection->dispatch[SSH_MSG_NEWKEYS] = make_newkeys_handler
     (rec,
      kex_make_mac(secret, closure->algorithms,
-		  KEX_MAC_SERVER_TO_CLIENT, connection->session_id));
+		  KEX_MAC_SERVER_TO_CLIENT ^ closure->is_server,
+		  connection->session_id));
 
   /* Keys for sending */
   /* NOTE: The NEWKEYS-message should have been sent before this
@@ -610,7 +611,8 @@ static int do_install(struct install_keys *c,
   
   connection->send_mac 
     = kex_make_mac(secret, closure->algorithms,
-		   KEX_MAC_CLIENT_TO_SERVER, connection->session_id);
+		   KEX_MAC_CLIENT_TO_SERVER ^ closure->is_server,
+		   connection->session_id);
 
   return 1;
 }
