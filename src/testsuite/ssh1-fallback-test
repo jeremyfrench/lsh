@@ -11,4 +11,4 @@ fi
 spawn_lshd --ssh1-fallback=$srcdir/fake-sshd1 \
   && echo "SSH-1.5-ssh1-fallback-test" \
      | tcpconnect localhost $PORT \
-     | grep -q a-packet && test_success
+     | grep a-packet > /dev/null && test_success
