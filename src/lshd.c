@@ -719,8 +719,12 @@ int main(int argc, char **argv)
       werror("Disabling of core dumps failed.\n");
       return EXIT_FAILURE;
     }
-  
-  if (options->daemonic)
+
+  /* Don't use syslog if there was an explicit logfile option.
+   *
+   * FIXME: This could be done in a cleaner way without the global
+   * variable. */
+  if (options->daemonic && !logfile_flag)
     {
 #if HAVE_SYSLOG
       set_error_syslog("lshd");
