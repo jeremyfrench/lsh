@@ -1,3 +1,10 @@
+2002-03-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io.c (address_info2sockaddr): Prefer AF_INET addresses over
+	AF_INET6 (as it seems common that localhost has an ipv6 address
+	that doesn't work). Even better would be to try all addresses, but
+	that has to wait for later.
+
 2002-03-19  Pontus Sköld  <pont@docs.uu.se>
 
 	* src/sftp/testsuite/*-test: grep -q is XPG4, which not all
