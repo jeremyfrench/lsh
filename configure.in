@@ -8,8 +8,8 @@ AM_INIT_AUTOMAKE(lsh, 1.1.5)
 
 AM_CONFIG_HEADER(config.h)
 
-AC_DEFINE_UNQUOTED(PREFIX, "$prefix")
-
+AC_DEFINE_UNQUOTED(PREFIX, "`echo $prefix | sed "s@^NONE@$ac_default_prefix@"`")
+AC_DEFINE_UNQUOTED(SBINDIR, "`echo $sbindir | sed "s@^NONE@$prefix/sbin@" | sed "s@^NONE@$ac_default_prefix@"`")
 
 dnl This macro turns of a the Makefile.in: Makefile.am dependencies, unless
 dnl --enable-maintainer-mode is passed to ./configure. But I want
