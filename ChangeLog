@@ -1,3 +1,7 @@
+2004-11-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* misc/xenofarm.sh (--make-program): New command line option.
+
 2004-11-09  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh-krb-checkpw.c (main): Noted that the current code seems
