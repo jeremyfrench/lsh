@@ -71,21 +71,18 @@ do_authenticate(struct userauth *s,
   username = utf8_to_local(username, 1, 1);
   if (!username)
     {
-      PROTOCOL_ERROR(e, "Invalid utf8 in password.");
+      PROTOCOL_ERROR(e, "Invalid utf8 in username.");
       return;
     }
 
   if (parse_boolean(args, &check_key) &&
       parse_atom(args, &algorithm) &&
       (keyblob = parse_string_copy(args)) &&
-      /* FIXME: Hmm. This code seems somewhat obscure. Hope it works. /nisse */
-      /* FIXME: it does :) It could be replaced by an embedded if
-       * statement /bazsi */
-      ((check_key && 
-	(signature_start = args->pos) && 
-	(parse_string(args, &signature_length, &signature_blob)) &&
-	parse_eod(args)) || 
-       (!check_key && parse_eod(args)))) 
+      (check_key
+       ? ((signature_start = args->pos)
+	  , (parse_string(args, &signature_length, &signature_blob))
+	  && parse_eod(args))
+       : parse_eod(args))) 
     {
 #if DATAFELLOWS_WORKAROUNDS
       if (algorithm == ATOM_SSH_DSS && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
@@ -152,7 +149,10 @@ do_authenticate(struct userauth *s,
 	    }
 	  else
 #endif
-	    signed_data = ssh_format("%lS%ls", connection->session_id, 
+	    /* The signature is on the session id, followed by the
+	     * userauth request up to the actual signature. To avoid collisions,
+	     * the length field for the session id is included. */
+	    signed_data = ssh_format("%S%ls", connection->session_id, 
 				     signature_start, args->data);
 
 	  lsh_string_free(keyblob); 
