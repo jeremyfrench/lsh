@@ -25,6 +25,7 @@
 
 #include "compress.h"
 #include "format.h"
+#include "string_buffer.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -39,8 +40,11 @@ static void do_free_zstream(z_stream *z);
      (name zlib_instance)
      (super compress_instance)
      (vars
-       (zstream special-struct z_stream
-                #f do_free_zstream)))
+       ;; Fail before producing larger packets than this
+       (max . UINT32)
+       (f (pointer (function int "z_stream *" int))) 
+       (z special-struct z_stream
+          #f do_free_zstream)))
 */
 
 /* CLASS:
@@ -62,29 +66,159 @@ static void zlib_free(void *opaque UNUSED, void *address)
   lsh_space_free(address);
 }
 
-static char foo_inflate[] = "inflate";
-static char foo_deflate[] = "deflate";
-
 static void do_free_zstream(z_stream *z)
 {
   /* Call deflateEnd() or inflateEnd(). But which? We use the opague
    * pointer, as we don't use that for anything else. */
 
-  int res;
-
-  if (z->opaque == foo_inflate)
-    res = inflateEnd(z);
-  else if (z->opaque == foo_deflate)
-    res = deflateEnd(z);
-  else
-    fatal("Internal error!\n");
+  int (*free)(struct zstream *z) = z->opaque;
+  int res = free(z);
 
   if (res != Z_OK)
     werror("do_free_zstream: Freeing failed: %z\n",
 	   z->msg ? z->msg : "No error");
 }
 
-/* compress incoming data */
+/* Compress incoming data */
+static struct lsh_string *do_zlib_deflate(struct compress_instance *c,
+					  struct lsh_string *packet,
+					  int free)
+{
+  CAST(zlib_instance, self, c);
+  struct string_buffer buffer;
+  UINT32 limit = self->max;
+  
+  if (!packet->length)
+    {
+      werror("do_zlib_deflate: Compressing empty packet.\n");
+      return free ? packet : lsh_string_dup(packet);
+    }
+  
+  /* FIXME: This will break if the total_* counters ever overflow. Is
+   * that a problem? */
+  float rate = (self->z->total_in
+		? (float) self->z->total_out / self->z->total_in + 0.1
+		: 1.0);
+  
+  string_buffer_init(&buffer, 
+		     /* This value is somewhat arbitrary */
+		     MIN(self->max, (UINT32) (rate * packet->length) + 100));
+
+  limit -= buffer->partial->length;
+  
+  self->z->next_in = packet->data;
+  self->z->avail_in = packet->length;
+
+  for (;;)
+    {
+      int rc;
+      
+      assert(self->z->avail_in);
+      
+      self->z->next_out = buffer.current;
+      self->z->avail_out = buffer.left;
+
+      rc = deflate(&self->z, Z_SYNC_FLUSH);
+
+      if (rc != Z_OK)
+	{
+	  werror("do_zlib_deflate: deflate() failed: %z\n",
+		 z->msg ? z->msg : "No error(?)");
+	  if (free)
+	    lsh_string_free(packet);
+
+	  return NULL;
+	}
+
+      if (!self->z->avail_in)
+	{ /* Compressed entire packet */
+	  if (free)
+	    lsh_string_free(packet);
+
+	  return string_buffer_final(&buffer, buffer->left - self->z->avail_out);
+	}
+      else
+	{ /* All output space consumed */
+	  assert(!self->z->avail_out);
+	  
+	  if (!limit)
+	    {
+	      werror("do_zlib_deflate: Packet grew too large!\n");
+	      if (free)
+		lsh_string_free(packet);
+
+	      string_buffer_vlear(buffer);
+	      return NULL;
+	    }
+
+	  string_buffer_grow(&buffer, MIN(limit, packet->length + 100));
+	  limit -= buffer->partial->length;
+	}
+    }
+}
+
+/* Decompress incoming data */
+static struct lsh_string *do_zlib_inflate(struct compress_instance *c,
+					  struct lsh_string *packet,
+					  int free)
+{
+  CAST(zlib_instance, self, c);
+  struct string_buffer buffer;
+
+  if (!packet->length)
+    {
+      werror("do_zlib_deflate: Compressing empty packet.\n");
+      return free ? packet : lsh_string_dup(packet);
+    }
+  
+  /* FIXME: This will break if the total_* counters ever overflow. Is
+   * that a problem? */
+  float rate = (self->z->total_in
+		? (float) self->z->total_out / self->z->total_in + 0.1
+		: 1.0);
+  
+  string_buffer_init(&buffer, 
+		     /* This value is somewhat arbitrary */
+		     (UINT32) (rate * packet->length) + 100);
+
+  self->z->next_in = packet->data;
+  self->z->avail_in = packet->length;
+
+  for (;;)
+    {
+      int rc;
+      
+      assert(self->z->avail_in);
+      
+      self->z->next_out = buffer.current;
+      self->z->avail_out = buffer.left;
+
+      rc = deflate(&self->z, Z_SYNC_FLUSH);
+
+      if (rc != Z_OK)
+	{
+	  werror("do_zlib_deflate: deflate() failed: %z\n",
+		 z->msg ? z->msg : "No error(?)");
+	  return NULL;
+	}
+
+      if (!self->z->avail_in)
+	{ /* Compressed entire packet */
+	  if (free)
+	    lsh_string_free(packet);
+
+	  return string_buffer_final(&buffer, buffer->left - self->z->avail_out);
+	}
+      else
+	{ /* All output space consumed */
+	  assert(!self->z->avail_out);
+
+	  string_buffer_grow(&buffer, packet->length + 100);
+	}
+    }
+}
+
+#if 0
 static struct lsh_string *do_zlib_deflate(struct compress_instance *c,
 					  struct lsh_string *data,
 					  int free)
@@ -122,6 +256,7 @@ static struct lsh_string *do_zlib_deflate(struct compress_instance *c,
   
   return compressed;
 }
+#endif
 
 /* decompress incoming data */
 static struct lsh_string *do_zlib_inflate(struct compress_instance *c,
