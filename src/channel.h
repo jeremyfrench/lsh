@@ -437,10 +437,10 @@ void init_connection_service(struct ssh_connection *connection);
 extern struct command connection_service_command;
 #define INIT_CONNECTION_SERVICE (&connection_service_command.super)
 
-
+#if 0
 void init_login_service(struct ssh_connection *connection);
 extern struct command login_service_command;
 #define INIT_LOGIN_SERVICE (&login_service_command.super)
-
+#endif
 
 #endif /* LSH_CHANNEL_H_INCLUDED */

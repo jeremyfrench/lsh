@@ -1709,20 +1709,6 @@ DEFINE_COMMAND(connection_service_command)
   COMMAND_RETURN(c, connection);
 }
 
- 
-DEFINE_COMMAND(login_service_command)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(ssh_connection, connection, a);
-
-  init_connection_service(connection);
-
-  COMMAND_RETURN(c, connection);
-}
-
 struct lsh_string *
 format_channel_close(struct ssh_channel *channel)
 {
