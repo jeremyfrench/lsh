@@ -533,8 +533,9 @@ STATIC_COLLECT_1(&install_tcpip_forward_info_2.super);
          ;; Called when the ssh-connection is established
          (install connection
 	   (handler (lambda (port)
-	     ;; Called when the client requests remote forwarding
-	     ;; FIXME: Doesn't catch all exceptions from listen.
+	     ;; Called when the client requests remote forwarding.
+	     ;; NOTE: The caller, do_tcpip_forward_request, is responsible
+	     ;; for handling I/O exceptions.
              (listen (lambda (peer)
   		       ;; Called when someone connects to the
   		       ;; forwarded port.
