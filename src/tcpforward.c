@@ -149,7 +149,7 @@ do_tcpip_eof(struct ssh_channel *c)
     channel_close(c);
 }
 
-/* NOTE: Add's the socket to the channel's resource list */
+/* NOTE: Adds the socket to the channel's resource list */
 struct ssh_channel *
 make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
 {
