@@ -49,8 +49,6 @@ EXCEPTION_RAISE(e, make_simple_exception(EXC_SEXP_EOF, msg))
      (name parser)
      (super read_handler)
      (vars
-       ;;; Where to return values
-       ;; (c object command_continuation)
        ; How to handle errors
        (e object exception_handler)
        ; What to do with the rest of the input stream
@@ -388,7 +386,6 @@ make_return_string(struct command_continuation *c)
      (super parser)
      (vars
        (expect . UINT8)))
-       ;; (value object sexp)))
 */
 
 static UINT32
@@ -513,9 +510,6 @@ make_parse_display(struct read_handler * (*make)(struct abstract_write *h,
      (name handle_element)
      (super command_continuation)
      (vars
-	 ; Scanner to restore at the end of each element
-	 ;; (location . "struct scanner **")
-	 ;; (restore object scanner)
 	 ; Number of elements collected so far
 	 (count . unsigned)
 	 (l struct object_queue)))

@@ -475,12 +475,6 @@ do_rsa_sign_spki(struct signer *s,
   rsa_compute_root(self, m, m);
 
   signature = encode_rsa_sig_val(m);
-
-#if 0
-  /* Build signature */
-  signature = sexp_l(4, SA(SIGNATURE), hash, principal,
-		     sexp_un(m), -1);
-#endif
   
   mpz_clear(m);
   return signature;

@@ -137,7 +137,6 @@
        	  "UINT32 length" "const UINT8 *data"
        	  "struct sexp *e")
 
-       ;; FIXME: Perhaps these methods belong to the algorithm object?
        (public_key method (string))
        
        ; Returns ( <pub-sig-alg-id> <s-expr>* ), i.e. the same
@@ -164,7 +163,6 @@
              "int algorithm" "UINT32 length" "const UINT8 *data")
        ; Returns a <sig-val> sexp
        (sign_spki method (object sexp)
-       	     ;; "struct sexp *hash" "struct sexp *principal"
        	     "UINT32 length" "const UINT8 *data")
 
        (get_verifier method (object verifier))))
@@ -185,10 +183,7 @@
                     "struct sexp_iterator *i")
 		    
        (make_verifier method (object verifier)
-                      "struct sexp_iterator *i")
-       ;; (private2public method (object sexp)
-       ;; 		  "struct sexp_iterator *i")
-       ))
+                      "struct sexp_iterator *i")))
 */
 
 #define MAKE_SIGNER(a, i) \

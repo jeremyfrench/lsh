@@ -270,7 +270,7 @@ struct sexp *
 string_to_sexp(int style, struct lsh_string *src, int free)
 {
   struct simple_buffer buffer;
-  struct sexp *e = NULL;;
+  struct sexp *e = NULL;
   
   simple_buffer_init(&buffer, src->length, src->data);
 

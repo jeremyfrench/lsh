@@ -199,8 +199,8 @@ make_exception_handler(void (*raise)(struct exception_handler *s,
      (name protocol_exception)
      (super exception)
      (vars
-       ;; A reason code that can be passed in a SSH_MSG_DISCONNECT message.
-       ;; Zero means terminate the connection without sending such a message.
+       ; A reason code that can be passed in a SSH_MSG_DISCONNECT message.
+       ; Zero means terminate the connection without sending such a message.
        (reason . UINT32)))
 */
 

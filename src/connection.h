@@ -179,15 +179,10 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        ; Table of all opened channels
        (table object channel_table)
        
-       ;; ; Shared handlers 
-       ;; (ignore object packet_handler)
-       ;; (unimplemented object packet_handler)
-       ;; (fail object packet_handler)
-       ;; (forward object packet_handler)
-
        ; (provides_privacy . int)
        ; (provides_integrity . int)
-       )) */
+       ))
+*/
 
 #define C_WRITE(c, s) A_WRITE((c)->write, (s) )
 

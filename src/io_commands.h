@@ -85,12 +85,8 @@ extern struct collect_info_1 listen_with_callback;
 #define LISTEN_CALLBACK (&listen_with_callback.super.super.super)
 
 #if 0
-struct command *
-make_listen_with_connection(struct io_backend *backend,
-			    struct ssh_connection *connection);
-#endif
-
 #define LISTEN_CONNECTION (&listen_with_connection.super.super.super)
+#endif
 
 extern struct collect_info_1 connect_with_port;
 #define CONNECT_PORT (&connect_with_port.super.super.super)

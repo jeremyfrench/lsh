@@ -42,7 +42,7 @@
      (name sshd1)
      (super ssh1_fallback)
      (vars
-       ;; Full path to sshd1
+       ; Full path to sshd1
        (sshd1 . "char *")))
 */
 

@@ -59,13 +59,13 @@
      (vars
        (handler indirect-method
 
-		;; The method returns the amount of data processed. 
-		;; On errors, it can set self to NULL, but only for
-		;; debugging purposes; it's the responibility of the the
-		;; exception handler to close the corresponding fd and
-		;; make sure that handler is not called again. '
+		; The method returns the amount of data processed. 
+		; On errors, it can set self to NULL, but only for
+		; debugging purposes; it's the responibility of the the
+		; exception handler to close the corresponding fd and
+		; make sure that handler is not called again. '
 
-		;; Available is 0 iff we have got EOF.
+		; Available is 0 iff we have got EOF.
 		UINT32 "UINT32 available" "UINT8 *data")))
 		"struct exception_handler *e")))
 */

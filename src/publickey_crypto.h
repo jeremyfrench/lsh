@@ -59,10 +59,10 @@ make_keypair(UINT32 type,
        (order bignum)
        (generator bignum)
        
-       ;; Checks if a bignum is in the correct range for being a group element. 
+       ; Checks if a bignum is in the correct range for being a group element. 
        (range method int "mpz_t x")
 
-       ; (member method int "mpz_t x")
+       ;; (member method int "mpz_t x")
        
        (invert method void "mpz_t res" "mpz_t x")
        (combine method void "mpz_t res" "mpz_t a" "mpz_t b")

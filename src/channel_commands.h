@@ -40,9 +40,9 @@
      (name channel_open_command)
      (super command)
      (vars
-       ;; This method should return a partially filled in channel,
-       ;; and create a channel open request by calling
-       ;; prepare_channel_open.
+       ; This method should return a partially filled in channel,
+       ; and create a channel open request by calling
+       ; prepare_channel_open.
        (new_channel method "struct ssh_channel *"
                     "struct ssh_connection *connection"
                     "UINT32 local_channel_number"
@@ -63,9 +63,9 @@ void do_channel_open_command(struct command *s,
      (name channel_request_command)
      (super command)
      (vars
-       ;; This method should return a formatted request. The
-       ;; want_reply field in the request should be non_zero iff *c is
-       ;; non-NULL on return.  
+       ; This method should return a formatted request. The
+       ; want_reply field in the request should be non_zero iff *c is
+       ; non-NULL on return.  
        (format_request method "struct lsh_string *"
                        "struct ssh_channel *channel"
 		       "struct command_continuation **c")))

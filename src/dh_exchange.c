@@ -43,9 +43,8 @@ init_dh_instance(struct dh_method *m,
   mpz_init(self->e);
   mpz_init(self->f);
   mpz_init(self->secret);
-#if 0
-  mpz_init(self->K);
-#endif
+
+  self->K = NULL;
   
   self->method = m;
   self->hash = MAKE_HASH(m->H);
@@ -228,17 +227,4 @@ dh_process_server_msg(struct dh_instance *self,
   *signature = s;
   return key;
 }
-
-#if 0
-int
-dh_verify_server_msg(struct dh_instance *self,
-		     struct verifier *v)
-{
-  dh_hash_digest(self);
-
-  return VERIFY(v,
-		self->hash->hash_size, self->exchange_hash->data,
-		self->signature->length, self->signature->data);
-}
-#endif
 

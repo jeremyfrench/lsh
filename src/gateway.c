@@ -99,7 +99,7 @@ make_gateway_address(char *local_user, char *remote_user,
    (class
      (name gateway)
      (vars
-       ;; Where to send packets
+       ; Where to send packets
        (local object abstract_write)))
 */
 

@@ -305,13 +305,10 @@ make_reasonably_random(void)
   if (r)
     r->quality = 1;
   else
-    fatal("No /dev/urandom.\n");
-#if 0
   {
-      werror("Warning: Falling back to an insecure pseudorandom generator.\n");
-      r = make_poor_random(&sha1_algorithm, NULL);
+    werror("Warning: Falling back to an insecure pseudorandom generator.\n");
+    r = make_poor_random(&sha1_algorithm, NULL);
   }
-#endif
   return r;
 }
 #endif

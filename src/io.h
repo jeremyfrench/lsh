@@ -86,7 +86,6 @@ extern struct lsh_class io_backend_class;
        ; which seems kind of bogus.
        (e object exception_handler)
        
-       ;;(close_reason . int)
        ; User's close callback
        (close_callback object lsh_callback)
 
@@ -199,9 +198,9 @@ make_listen_value(struct lsh_fd *fd,
      (name io_exception)
      (super exception)
      (vars
-       ;; NULL if no fd was involved
+       ; NULL if no fd was involved
        (fd object lsh_fd)
-       ;; errno code, or zero if not available
+       ; errno code, or zero if not available
        (error . int))))
 */
 

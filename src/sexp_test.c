@@ -73,7 +73,6 @@ do_output_sexp(struct sexp_handler *h, struct sexp *e)
      (name input_closed)
      (super lsh_callback)
      (vars
-       ;; (status . "int *")
        (output object write_buffer)))
 */
 

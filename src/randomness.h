@@ -53,8 +53,8 @@
    (class
      (name random_poll)
      (vars
-       ;; Both functions return an entropy estimate, and adds the
-       ;; randomness to the given hash instance.
+       ; Both functions return an entropy estimate, and adds the
+       ; randomness to the given hash instance.
        (slow method unsigned "struct hash_instance *")
        (fast method unsigned "struct hash_instance *")
        (background method void)))

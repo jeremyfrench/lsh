@@ -437,11 +437,11 @@ make_tcpip_forward_request_exc(struct ssh_connection *connection,
      (name tcpip_forward_request)
      (super global_request)
      (vars
-       ;; The callback is invoked for each request, with the port as
-       ;; argument. If successful, it should return the fd object
-       ;; associated with the listening port. It need not remember the port;
-       ;; the continuation installed by do_tcpip_forward_request()
-       ;; takes care of that.
+       ; The callback is invoked for each request, with the port as
+       ; argument. If successful, it should return the fd object
+       ; associated with the listening port. It need not remember the port;
+       ; the continuation installed by do_tcpip_forward_request()
+       ; takes care of that.
        (callback object command)))
 */
 

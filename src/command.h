@@ -60,8 +60,8 @@
      (name command_simple)
      (super command)
      (vars
-       ;; Like call, but returns the value immediately rather than
-       ;; using a continuation function
+       ; Like call, but returns the value immediately rather than
+       ; using a continuation function.
        (call_simple method "struct lsh_object *" "struct lsh_object *")))
 */
 
@@ -211,11 +211,10 @@ do_catch_report_collect(struct command_simple *s,
    (class
      (name collect_info_4)
      (vars
+       ; No next field
        (f method "struct lsh_object *"
                  "struct lsh_object *" "struct lsh_object *"
-		 "struct lsh_object *" "struct lsh_object *")
-       ;; No next field
-       ))
+		 "struct lsh_object *" "struct lsh_object *")))
 */
 
 /* GABA:

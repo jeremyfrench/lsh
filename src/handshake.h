@@ -48,7 +48,7 @@
        (random object randomness)
        (algorithms object alist)
        
-       ;; Used only on the server
+       ; Used only on the server
        (fallback object ssh1_fallback)))
 */
 

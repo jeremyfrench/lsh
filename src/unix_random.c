@@ -73,7 +73,7 @@ enum poll_status { POLL_NO_POLL, POLL_RUNNING, POLL_FINISHED, POLL_FAILED };
      (name unix_random)
      (super random_poll)
      (vars
-       ;; For the slow poll
+       ; For the slow poll
        (reaper object reap)
        (poll_uid . uid_t)
        (pid . pid_t)
@@ -81,7 +81,7 @@ enum poll_status { POLL_NO_POLL, POLL_RUNNING, POLL_FINISHED, POLL_FAILED };
        ; NOTE: This fd is not known to the gc. 
        (fd . int)
      
-       ;; For the fast poll, count number of slow polls per second.
+       ; For the fast poll, count number of slow polls per second.
        (previous_time . time_t)
        (time_count . unsigned)))
 */

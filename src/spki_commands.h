@@ -49,11 +49,6 @@ extern struct command_simple spki_read_acls_command;
 extern struct command_simple spki_read_hostkeys_command;
 #define SPKI_READ_HOSTKEYS (&spki_read_hostkeys_command.super.super)
 
-#if 0
-extern struct command_simple spki_read_userkeys_command;
-#define SPKI_READ_USERKEYS (&spki_read_userkeys_command.super.super)
-#endif
-
 struct command *
 make_spki_hash(int name, struct hash_algorithm *algorithm);
 

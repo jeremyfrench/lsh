@@ -49,7 +49,7 @@ static void do_free_zstream(z_stream *z);
      (name zlib_instance)
      (super compress_instance)
      (vars
-       ;; Fail before producing larger packets than this
+       ; Fail before producing larger packets than this
        (max . UINT32)
        (rate . UINT32)
        (f pointer (function int "z_stream *" int))

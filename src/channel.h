@@ -34,15 +34,30 @@
 #include "server_pty.h"
 #include "write_buffer.h"
 
-/* FIXME: Reorder definitions so that we don't need this forward
- * declaration. */
-struct channel_open_info;
+struct channel_open_info
+{
+  UINT32 type_length;
 
-#if 0
-struct channel_request;
-#endif
+  /* NOTE: This is a pointer into the packet, so if it is needed later
+   * it must be copied. */
+  const UINT8 *type_data;
+  
+  int type;
 
-struct channel_request_info;
+  UINT32 remote_channel_number;
+  UINT32 send_window_size;
+  UINT32 send_max_packet;
+};
+
+struct channel_request_info
+{
+  UINT32 type_length;
+  const UINT8 *type_data;
+  
+  int type;
+
+  int want_reply;
+};
 
 #define GABA_DECLARE
 #include "channel.h.x"
@@ -136,8 +151,6 @@ struct channel_request_info;
        (eof method void)
   
        ; Reply from SSH_MSG_CHANNEL_OPEN_REQUEST
-       ;; (open_confirm method int)
-       ;; (open_failure method int)
        (open_continuation object command_continuation)
 
        ; Queue of channel requests that we expect replies on
@@ -147,9 +160,7 @@ struct channel_request_info;
        ; in the right order
        (active_requests struct object_queue)))
        
-       ; Reply from SSH_MSG_CHANNEL_REQUEST 
-       ;; (channel_success method int)
-       ;; (channel_failure method int))) */
+*/
 
 #define CHANNEL_RECEIVE(s, t, d) \
 ((s)->receive((s), (t), (d)))
@@ -239,21 +250,6 @@ struct channel_request_info;
 #define GLOBAL_REQUEST(r, c, t, w, a, n, e) ((r)->handler((r), (c), (t), (w), (a), (n), (e)))
 
 /* SSH_MSG_CHANNEL_OPEN */
-
-struct channel_open_info
-{
-  UINT32 type_length;
-
-  /* NOTE: This is a pointer into the packet, so if it is needed later
-   * it must be copied. */
-  const UINT8 *type_data;
-  
-  int type;
-
-  UINT32 remote_channel_number;
-  UINT32 send_window_size;
-  UINT32 send_max_packet;
-};
   
 /* Raised if opening of a channel fails. Used both on the client and
  * the server side.*/
@@ -276,9 +272,6 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
        (handler method void
                 "struct ssh_connection *connection"
 		"struct channel_open_info *info"
-		;; "UINT32 type"
-		;; "UINT32 send_window_size"
-		;; "UINT32 send_max_packet"
                 "struct simple_buffer *data"
                 "struct command_continuation *c"
 		"struct exception_handler *e")))
@@ -289,17 +282,6 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
 
 /* SSH_MSG_CHANNEL_REQUEST */
 
-struct channel_request_info
-{
-  UINT32 type_length;
-  const UINT8 *type_data;
-  
-  int type;
-
-  int want_reply;
-};
-
-
 /* GABA:
    (class
      (name channel_request)
@@ -308,8 +290,6 @@ struct channel_request_info
 		"struct ssh_channel *channel"
 		"struct ssh_connection *connection"
 		"struct channel_request_info *info"
-		;; "UINT32 type"
-		;; "int want_reply"
 		"struct simple_buffer *args"
 		"struct command_continuation *c"
 		"struct exception_handler *e")))

@@ -46,10 +46,6 @@
 struct command_simple options2info;
 #define OPTIONS2INFO (&options2info.super.super)
 
-#if 0
-struct command_simple options2actions;
-#define OPTIONS2ACTIONS (&options2actions.super.super)
-#endif
 
 #include "lshg.c.x"
 
@@ -82,13 +78,6 @@ DEFINE_COMMAND_SIMPLE(options2info, a)
 			       self->super.remote)->super;
 }
 
-#if 0
-DEFINE_COMMAND_SIMPLE(options2actions, a)
-{
-  CAST(lshg_options, self, a);
-  return &queue_to_list(&self->actions)->super.super;
-}
-#endif
 
 /* GABA:
    (expr
@@ -168,13 +157,6 @@ static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
-#if 0
-  { "port", 'p', "Port", 0, "Connect to this port.", 0 },
-  { "user", 'l', "User name", 0, "Login as this user.", 0 },
-  { NULL, 0, NULL, 0, "Actions:", 0 },
-  { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },  
-  { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
-#endif
   { "send-debug", 'D', "Message", 0, "Send a debug message "
     "to the remote machine.", CLIENT_ARGP_ACTION_GROUP },
   { "send-ignore", 'I', "Message", 0, "Send an ignore message "
@@ -190,17 +172,6 @@ main_argp_children[] =
   { NULL, 0, NULL, 0}
 };
 
-#if 0
-static struct command *
-lshg_add_action(struct lshg_options *self,
-		struct command *action)
-{
-  if (action)
-    object_queue_add_tail(&self->actions, &action->super);
-
-  return action;
-}
-#endif
 
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
@@ -215,26 +186,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       state->child_inputs[0] = &self->super;
       state->child_inputs[1] = NULL;
       break;
-#if 0
-    case ARGP_KEY_NO_ARGS:
-      argp_usage(state);
-      break;
 
-    case ARGP_KEY_ARG:
-      if (!state->arg_num)
-	{
-	  self->remote = make_address_info_c(arg, "ssh", 22);
-	  assert(self->remote);
-	  break;
-	}
-      else
-	/* Let the next case parse it.  */
-	return ARGP_ERR_UNKNOWN;
-
-    case ARGP_KEY_ARGS:
-      /* Handle command line. */
-      break;
-#endif
     case ARGP_KEY_END:
       if (!self->super.local_user)
 	{
@@ -248,23 +200,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 					   self->super.user,
 					   self->super.remote);
 
-#if 0
-      if (object_queue_is_empty(&self->super.actions))
-	{
-	  argp_error(state, "No actions given.");
-	    break;
-	}
-#endif 
-      break;
-#if 0
-    case 'E':
-      lshg_add_action(self, lsh_command_session(self, ssh_format("%lz", arg)));
       break;
 
-    case 'S':
-      lshg_add_action(self, lsh_shell_session(self));
-      break;
-#endif
     case 'D':
       client_add_action(&self->super, make_lshg_send_debug(arg));
       break;
@@ -272,11 +209,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case 'I':
       client_add_action(&self->super, make_lshg_send_ignore(arg));
       break;
-#if 0
-    case 'n':
-      self->not = !self->not;
-      break;
-#endif      
     }
   return 0;
 }

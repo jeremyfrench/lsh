@@ -75,8 +75,9 @@
        ; Child process's stdio 
        (in object lsh_fd)
        (out object lsh_fd)
-       ;; err may be NULL, if there's no separate stderr channel.
-       ;; This happens if we use a pty, and the bash workaround
+
+       ; err may be NULL, if there's no separate stderr channel.
+       ; This happens if we use a pty, and the bash workaround is used.
        (err object lsh_fd)))
 */
 

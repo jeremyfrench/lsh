@@ -150,14 +150,6 @@ DEFINE_COMMAND(gateway_init, a, c, e)
 
 /* (gateway_accept main-connection gateway-connection) */
 
-/* ;; GABA:
-   (class
-     (name gateway_accept_command)
-     (super command)
-     (vars
-       (connection object ssh_connection)))
-*/
-
 static void
 do_gateway_accept(struct command *s,
 		 struct lsh_object *x,
@@ -220,11 +212,3 @@ DEFINE_COMMAND_SIMPLE(gateway_setup_command, a)
 
   return &res->super;
 }
-
-#if 0
-DEFINE_PACKET_HANDLER(static, forward_channel_open_handler,
-		      connection, packet)
-{
-  
-}
-#endif

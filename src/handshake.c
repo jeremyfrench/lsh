@@ -53,7 +53,7 @@
      (super line_handler)
      (vars
        (connection object ssh_connection)
-       ;; Needed for fallback.
+       ; Needed for fallback.
        (fd . int)
        (fallback object ssh1_fallback)))
 */

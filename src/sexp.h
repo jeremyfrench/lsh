@@ -46,7 +46,7 @@
    (class
      (name sexp)
      (vars
-       ;; NULL for non-lists
+       ; NULL for non-lists
        (iter method "struct sexp_iterator *")
        (format method "struct lsh_string *" "int style" "unsigned indent")))
 */

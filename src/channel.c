@@ -168,7 +168,6 @@ prepare_window_adjust(struct ssh_channel *channel,
      (super exception_handler)
      (vars
        (connection object ssh_connection)
-       ;; (table object channel_table)
        ; Non-zero if the channel has already been deallocated.
        (dead . int)
        ; Local channel number 
@@ -1040,9 +1039,6 @@ parse_channel_open(struct simple_buffer *buffer,
   if (parse_uint8(buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_OPEN)
       && parse_string(buffer, &info->type_length, &info->type_data)
-#if 0
-      && parse_atom(&buffer, &type)
-#endif
       && parse_uint32(buffer, &info->remote_channel_number)
       && parse_uint32(buffer, &info->send_window_size)
       && parse_uint32(buffer, &info->send_max_packet))
@@ -1075,14 +1071,8 @@ DEFINE_PACKET_HANDLER(static, channel_open_handler,
   struct simple_buffer buffer;
   struct channel_open_info info;
   
-#if 0
-  unsigned msg_number;
-  int type;
-  UINT32 remote_channel_number;
-  UINT32 window_size;
-  UINT32 max_packet;
-#endif
   simple_buffer_init(&buffer, packet->length, packet->data);
+
   if (parse_channel_open(&buffer, &info))
     {
       struct channel_open *open = NULL;
@@ -2062,20 +2052,6 @@ format_channel_open_s(struct lsh_string *type,
 		    channel->rec_window_size, channel->rec_max_packet,
  		    args);
 }
-
-#if 0
-struct lsh_string *
-format_channel_open_a(int type,
-		      UINT32 local_channel_number,
-		      struct ssh_channel *channel,
-		      struct lsh_string *args)
-{
-  return ssh_format("%c%a%i%i%i%lS", SSH_MSG_CHANNEL_OPEN,
-		    type, local_channel_number, 
-		    channel->rec_window_size, channel->rec_max_packet,
- 		    args);
-}
-#endif
 
 struct lsh_string *
 format_channel_open(int type, UINT32 local_channel_number,

@@ -522,15 +522,6 @@ make_spki_read_userkeys(struct alist *algorithms,
   }
 }
 
-#if 0
-DEFINE_COMMAND_SIMPLE(spki_read_userkeys_command, a)
-{
-  CAST_SUBTYPE(alist, algorithms, a);
-  
-  return &make_spki_read_userkeys(algorithms)->super;
-}
-#endif
-
 /* Encryption of private data.
  * For PKCS#5 (version 2) key derivation, we use
  *

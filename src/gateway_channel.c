@@ -165,14 +165,6 @@ do_gateway_channel_open(struct channel_open_command *c,
 				   &target->super,
 				   closure->args);
   
-#if 0
-  if (closure->args)
-    *request = format_channel_open(closure->type, local_channel_number,
-				   &target->super, "%lS", closure->args);
-  else
-    *request = format_channel_open(closure->type, local_channel_number,
-				   &target->super, "");
-#endif
   return &target->super;
 }
 

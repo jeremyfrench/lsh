@@ -51,10 +51,6 @@
      (vars
        (state . int)
   
-       ; This is usually initialized from the command
-       ; that created the fd.
-       ;; (e object exception_handler)
-
        ; Attached to read packets
        (sequence_number . UINT32)
   

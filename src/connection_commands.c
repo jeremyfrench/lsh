@@ -37,13 +37,6 @@
 
 #include "connection_commands.c.x"
 
-/* ;;GABA:
-   (class
-     (name connection_remember_command)
-     (super command)
-     (vars
-       (connection object ssh_connection)))
-*/
 
 static void
 do_connection_remember(struct command *s,

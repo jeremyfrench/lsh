@@ -71,6 +71,7 @@
      (vars
        ;; FIXME: Add some method or attribute describing
        ;; the requirements on the hostkey algorithm.
+
        ; Algorithms is an array indexed by the KEX_* values above
        (init method void
 	     "struct ssh_connection *connection"
@@ -94,7 +95,7 @@
        (languages_client_to_server object int_list)
        (languages_server_to_client object int_list)
        (first_kex_packet_follows . int)
-       ;; Used may be NULL. Used only for sending.
+       ; May be NULL. Used only for sending.
        (first_kex_packet string)))
 */
      
