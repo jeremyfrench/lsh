@@ -76,20 +76,20 @@ do_make_cascade(struct crypto_algorithm *s,
   CAST(crypto_cascade_algorithm, algorithm, s);
   NEW(crypto_cascade_instance, instance);
   unsigned i;
+  unsigned l = LIST_LENGTH(algorithm->cascade);
   
   instance->super.block_size = algorithm->super.block_size;
-  instance->cascade = alloc_object_list(LIST_LENGTH(algorithm->cascade));
+  instance->cascade = alloc_object_list(l);
 
-  for (i = 0; i<LIST_LENGTH(algorithm->cascade); i++)
+  for (i = 0; i<l; i++)
     {
       /* When decrypting, the crypto algorithms should be used in
        * reverse order! */
 
       unsigned j = ( (mode == CRYPTO_ENCRYPT)
-		     ? i
-		     : LIST_LENGTH(algorithm->cascade) - i - 1);
+		     ? i : l - i - 1);
       
-      CAST_SUBTYPE(crypto_algorithm, a, LIST(algorithm->cascade)[j]);
+      CAST_SUBTYPE(crypto_algorithm, a, LIST(algorithm->cascade)[i]);
       struct crypto_instance *o	= MAKE_CRYPT(a, mode, key, iv);
       
       if (!o)
@@ -98,7 +98,7 @@ do_make_cascade(struct crypto_algorithm *s,
 	  return NULL;
 	}
 
-      LIST(instance->cascade)[i] = (struct lsh_object *) o;
+      LIST(instance->cascade)[j] = (struct lsh_object *) o;
       key += a->key_size;
       iv += a->iv_size;
     }
