@@ -130,15 +130,17 @@ struct mac_instance *kex_make_mac(struct hash_instance *secret,
 				  int type,
 				  struct lsh_string *session_id);
 
-struct make_kexinit *make_simple_kexinit(struct randomness *r,
-					 struct int_list *kex_algorithms,
-					 struct int_list *hostkey_algorithms,
-					 struct int_list *crypto_algorithms,
-					 struct int_list *mac_algorithms,
-					 struct int_list *compression_algorithms,
-					 struct int_list *languages);
+struct make_kexinit *
+make_simple_kexinit(struct randomness *r,
+		    struct int_list *kex_algorithms,
+		    struct int_list *hostkey_algorithms,
+		    struct int_list *crypto_algorithms,
+		    struct int_list *mac_algorithms,
+		    struct int_list *compression_algorithms,
+		    struct int_list *languages);
 
-struct make_kexinit *make_test_kexinit(struct randomness *r);
+extern struct command_simple kexinit_filter;
+#define KEXINIT_FILTER (&kexinit_filter.super.super)
 
 void initiate_keyexchange(struct ssh_connection *connection);
 

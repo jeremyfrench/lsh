@@ -24,6 +24,8 @@
 #include "keyexchange.h"
 
 #include "abstract_io.h"
+/* For filter_algorithms */
+#include "algorithms.h"
 #include "alist.h"
 #include "command.h"
 #include "connection.h"
@@ -153,12 +155,13 @@ initiate_keyexchange(struct ssh_connection *connection)
   struct kexinit *kex = connection->kexinits[mode];
 
   assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);
-
+  assert(connection->kex_state == KEX_STATE_INIT);
+	 
   s = format_kex(kex);
 
   /* Save value for later signing */
 #if 0
-  debug("do_handle_kexinit: Storing literal_kexinits[%i]\n", mode);
+  debug("initiate_keyexchange: Storing literal_kexinits[%i]\n", mode);
 #endif
   
   connection->literal_kexinits[mode] = s; 
@@ -212,7 +215,6 @@ do_handle_kexinit(struct packet_handler *c,
 		  struct lsh_string *packet)
 {
   CAST(kexinit_handler, closure, c);
-  struct kexinit *msg = parse_kexinit(packet);
   
   int kex_algorithm_atom;
   int hostkey_algorithm_atom;
@@ -221,15 +223,29 @@ do_handle_kexinit(struct packet_handler *c,
   struct object_list *algorithms;
 
   int mode = connection->flags & CONNECTION_MODE;
+  struct kexinit *msg = parse_kexinit(packet);
   
   int i;
 
+  if (connection->kex_state != KEX_STATE_INIT)
+    {
+      PROTOCOL_ERROR(connection->e, "Unexpected KEXINIT message.");
+      return;
+    }      
+  
   if (!msg)
     {
-      PROTOCOL_ERROR(connection->e, "Invalid KEXINIT message.");
+      disconnect_kex_failed(connection, "Invalid KEXINIT message.");
       return;
     }
 
+  if (!LIST_LENGTH(msg->kex_algorithms))
+    {
+      disconnect_kex_failed(connection, "No keyexchange method.");
+      return;
+    }
+    
+    
   /* Save value for later signing */
 #if 0
   debug("do_handle_kexinit: Storing literal_kexinits[%i]\n", !mode);
@@ -238,7 +254,7 @@ do_handle_kexinit(struct packet_handler *c,
   
   connection->kexinits[!mode] = msg;
   
-  /* Have we sent a kexinit message? */
+  /* Have we sent a kexinit message already? */
   if (!connection->kexinits[mode])
     {
       struct lsh_string *packet;
@@ -261,6 +277,7 @@ do_handle_kexinit(struct packet_handler *c,
     {
       /* Use this algorithm */
       kex_algorithm_atom = LIST(connection->kexinits[0]->kex_algorithms)[0];
+      connection->kex_state = KEX_STATE_IN_PROGRESS;
     }
   else
     {
@@ -277,6 +294,7 @@ do_handle_kexinit(struct packet_handler *c,
 	= select_algorithm(connection->kexinits[0]->kex_algorithms,
 			   connection->kexinits[1]->kex_algorithms);
 
+      /* FIXME: This is actually ok for SRP. */
       if  (!kex_algorithm_atom)
 	{
 	  disconnect_kex_failed(connection,
@@ -284,6 +302,7 @@ do_handle_kexinit(struct packet_handler *c,
 	  return;
 	}
     }
+  
   hostkey_algorithm_atom
     = select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
 		       connection->kexinits[1]->server_hostkey_algorithms);
@@ -306,7 +325,7 @@ do_handle_kexinit(struct packet_handler *c,
       
       if (!parameters[i])
 	{
-	  disconnect_kex_failed(connection, "");
+	  disconnect_kex_failed(connection, "Algorithm negotiation failed.");
 	  return;
 	}
     }
@@ -575,10 +594,14 @@ do_handle_newkeys(struct packet_handler *c,
 
       connection->kex_state = KEX_STATE_INIT;
 
-      /* FIXME: Clear literal_kexinits here as well (currently that is
-       * done by init_dh_instance). */
       connection->kexinits[CONNECTION_CLIENT]
 	= connection->kexinits[CONNECTION_SERVER] = NULL;
+
+      lsh_string_free(connection->literal_kexinits[CONNECTION_CLIENT]);
+      lsh_string_free(connection->literal_kexinits[CONNECTION_SERVER]);
+      
+      connection->literal_kexinits[CONNECTION_CLIENT]
+	= connection->literal_kexinits[CONNECTION_SERVER] = NULL;
 
       connection->dispatch[SSH_MSG_NEWKEYS] = NULL;
 
@@ -672,6 +695,51 @@ make_simple_kexinit(struct randomness *r,
 }
 
 
+/* FIXME: Move this to a separate file keyexchange_commands.c? */
+/* (kexinit_filter simple_kexinit alist)
+ *
+ * Destructively modifies the simple_kexinit to include only hostkey
+ * algorithms that have keys in alist. */
+
+/* GABA:
+   (class
+     (name kexinit_filter_command)
+     (super command)
+     (vars
+       (init object simple_kexinit)))
+*/
+
+static void
+do_kexinit_filter(struct command *s,
+		  struct lsh_object *x,
+		  struct command_continuation *c,
+		  struct exception_handler *e UNUSED)
+{
+  CAST(kexinit_filter_command, self, s);
+  CAST_SUBTYPE(alist, keys, x);
+
+  self->init->hostkey_algorithms = filter_algorithms(keys, self->init->hostkey_algorithms);
+
+  if (!LIST_LENGTH(self->init->hostkey_algorithms))
+    {
+      werror("No hostkey algorithms advertised.\n");
+      self->init->hostkey_algorithms = make_int_list(1, ATOM_NONE, -1);
+    }
+  COMMAND_RETURN(c, self->init);
+}
+
+COMMAND_SIMPLE(kexinit_filter)
+{
+  CAST(simple_kexinit, init, a);
+  NEW(kexinit_filter_command, self);
+
+  self->super.call = do_kexinit_filter;
+  self->init = init;
+
+  return &self->super.super;
+}
+
+
 static int
 install_keys(struct object_list *algorithms,
 	     struct ssh_connection *connection,
@@ -746,7 +814,7 @@ kex_build_secret(struct hash_algorithm *H,
   return hash;
 }
 
-/* NOTE: Consumes both the xchange_hash and K */
+/* NOTE: Consumes both the exchange_hash and K */
 void
 keyexchange_finish(struct ssh_connection *connection,
 		   struct object_list *algorithms,
