@@ -25,6 +25,7 @@
 #define LSH_CONNECTION_H_INCLUDED
 
 #include "abstract_io.h"
+#include "abstract_compress.h"
 #include "resource.h"
 #include "randomness.h"
 
@@ -70,6 +71,7 @@ struct ssh_connection;
        (rec_max_packet simple UINT32)
        (rec_mac    object mac_instance)
        (rec_crypto object crypto_instance)
+       (rec_compress object compress_instance)
 
        ; Sending 
        (raw   object abstract_write)  ; Socket connected to the other end 
@@ -78,6 +80,7 @@ struct ssh_connection;
 
        (send_mac object mac_instance)
        (send_crypto object crypto_instance)
+       (send_compress object compress_instance)
 
        ; Key exchange 
        (kex_state simple int)

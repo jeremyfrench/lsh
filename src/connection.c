@@ -28,6 +28,7 @@
 #include "format.h"
 #include "disconnect.h"
 #include "keyexchange.h"
+#include "compress.h"
 #include "packet_ignore.h"
 #include "pad.h"
 #include "ssh.h"
@@ -233,11 +234,15 @@ void connection_init_io(struct ssh_connection *connection,
 {
   /* Initialize i/o hooks */
   connection->raw = raw;
-  connection->write = make_packet_pad(make_packet_encrypt(raw,
-							  connection),
-				      connection,
-				      r);
+  connection->write = make_packet_deflate(
+                        make_packet_pad(
+                          make_packet_encrypt(raw, connection), 
+                          connection,
+                          r),
+		        connection
+		      );
 
   connection->send_crypto = connection->rec_crypto = NULL;
   connection->send_mac = connection->rec_mac = NULL;
+  connection->send_compress = connection->rec_compress = NULL;
 }
