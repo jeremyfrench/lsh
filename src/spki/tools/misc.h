@@ -1,4 +1,4 @@
-/* io.h */
+/* misc.h */
 
 /* libspki
  *
@@ -27,8 +27,14 @@
 
 #include <stdio.h>
 
-int
-hash_file(const struct nettle_hash *hash, void *ctx, FILE *f);
+void *
+xalloc(size_t size);
+
+void
+die(const char *format, ...);
+
+uint8_t *
+hash_file(const struct nettle_hash *hash, FILE *f);
 
 /* If size is > 0, read at most that many bytes. If size == 0,
  * read until EOF. Allocates the buffer dynamically. */

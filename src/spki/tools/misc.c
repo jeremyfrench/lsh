@@ -1,4 +1,4 @@
-/* io.c */
+/* misc.c */
 
 /* libspki
  *
@@ -20,27 +20,55 @@
  * MA 02111-1307, USA.
  */
 
-#include "io.h"
+#include "misc.h"
 
+#include <stdarg.h>
 #include <stdlib.h>
+
+void *
+xalloc(size_t size)
+{
+  void *p = malloc(size);
+  if (!p)
+    die("Virtual memory exhausted.\n");
+  return p;
+}
+
+void
+die(const char *format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  exit(EXIT_FAILURE);
+}
 
 #define BUFSIZE 1000
 
 /* NOTE: More or less the same as as nettle/examples/io.c */
-int
-hash_file(const struct nettle_hash *hash, void *ctx, FILE *f)
+uint8_t *
+hash_file(const struct nettle_hash *hash, FILE *f)
 {
+  void *ctx = alloca(hash->context_size);
+  hash->init(ctx);
+  
   for (;;)
     {
       char buffer[BUFSIZE];
       size_t res = fread(buffer, 1, sizeof(buffer), f);
       if (ferror(f))
-	return 0;
+	return NULL;
       
       hash->update(ctx, res, buffer);
       if (feof(f))
-	return 1;
-    }  
+	{
+	  uint8_t *digest = xalloc(hash->digest_size);
+	  hash->digest(ctx, hash->digest_size, digest);
+	  return digest;
+	}
+    }
+  
 }
 
 /* If size is > 0, read at most that many bytes. If size == 0,
