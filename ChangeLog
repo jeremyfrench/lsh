@@ -1,3 +1,12 @@
+2003-09-19  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* Released lsh-1.5.3.
+
+	* src/channel.c (init_login_service): Added FIXME: for the purpose
+	of this function.
+
+	* src/io.c (close_fd): Added FIXME: on the fd->fd == -1 hack.
+
 2003-09-19  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Bumped version to 1.5.3.
