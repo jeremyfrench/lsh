@@ -48,7 +48,7 @@
  
 #define UINT8 unsigned char
 
-#if __GNUC__ && HAVE_ATTRIBUTE
+#if __GNUC__ && HAVE_GCC_ATTRIBUTE
 #define NORETURN __attribute__ ((noreturn))
 #define PRINTF_STYLE(f, a) __attribute__ ((format(printf, f, a)))
 #define UNUSED __attribute__ ((unused))
@@ -57,6 +57,17 @@
 #define PRINTF_STYLE(f, a)
 #define UNUSED
 #endif
+
+#if HAVE_GCC_FUNCTION
+#define FUNCTION_NAME __FUNCTION__
+#else
+#define FUNCTION_NAME "Unknown"
+#endif
+
+/* Stringizing macros */
+#define STRINGIZE1(x) #x
+#define STRINGIZE(x) STRINGIZE1(x)
+#define STRING_LINE STRINGIZE(__LINE__)
 
 #if HAVE_STRERROR
 #define STRERROR strerror
