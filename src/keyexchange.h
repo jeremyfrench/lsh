@@ -138,9 +138,6 @@ struct newkeys_info
 };
 
 
-struct packet_handler *make_kexinit_handler();
-struct packet_handler *make_newkeys_handler();
-
 struct lsh_string *format_kex(struct kexinit *kex);
 int disconnect_kex_failed(struct ssh_connection *connection, char *msg);
 

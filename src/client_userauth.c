@@ -22,7 +22,15 @@
  */
 
 #include "userauth.h"
+
+#include "charset.h"
+#include "format.h"
+#include "parse.h"
+#include "password.h"
 #include "service.h"
+#include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
 
 /* FIXME: For now, use only password authentication. A better method
  * would be to first send a set of publickey authentication requests
@@ -45,7 +53,7 @@ struct client_userauth
 {
   struct ssh_service super;
 
-  struct lsh_string username; /* Remote user name to authenticate as */
+  struct lsh_string *username; /* Remote user name to authenticate as */
   int service_name;   /* Service we want to access */
   struct ssh_service *service;
   
@@ -66,10 +74,10 @@ struct failure_handler
   struct client_userauth *userauth;
 };
 
-struct lsh_string format_userauth_password(struct lsh_string name,
-					   int service,
-					   struct lsh_string passwd
-					   int free)
+static struct lsh_string *format_userauth_password(struct lsh_string *name,
+						   int service,
+						   struct lsh_string *passwd,
+						   int free)
 {
   return ssh_format(free ? "%c%S%a%a%c%fS" : "%c%S%a%a%c%S",
 		    SSH_MSG_USERAUTH_REQUEST,
@@ -82,22 +90,20 @@ struct lsh_string format_userauth_password(struct lsh_string name,
 
 #define MAX_PASSWD 100
 
-/* FIXME: Implement proper conversions from local charset */
-#define LOCAL_TO_UTF8(x, free) (x)
-
 static int send_passwd(struct client_userauth *userauth,
 		       struct ssh_connection *connection)
 {
   struct lsh_string *passwd
-    = read_password(MAX_PASSWD, "Password for %s: ", userauth->name);
-
+    = read_password(MAX_PASSWD, ssh_format("Password for %lS: ",
+					   userauth->username));
+  
   if (!passwd)
     return LSH_FAIL | LSH_DIE;
   
   return A_WRITE(connection->write,
-		 format_userauth_password(LOCAL_TO_UTF8(userauth->name, 0),
-					  service,
-					  LOCAL_TO_UTF8(passwd, 1),
+		 format_userauth_password(local_to_utf8(userauth->username, 0),
+					  userauth->service_name,
+					  local_to_utf8(passwd, 1),
 					  1));
 }
 
@@ -130,7 +136,7 @@ static int do_userauth_success(struct packet_handler *c,
     }
   
   lsh_string_free(packet);
-  return LSH_FAIL | LSSH_DIE;
+  return LSH_FAIL | LSH_DIE;
 }
 
 static int do_userauth_failure(struct packet_handler *c,
@@ -142,7 +148,7 @@ static int do_userauth_failure(struct packet_handler *c,
 
   int msg_number;
   int *methods = NULL;
-  int partial_success:
+  int partial_success;
     
   MDEBUG(closure);
 
@@ -150,8 +156,8 @@ static int do_userauth_failure(struct packet_handler *c,
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_FAILURE)
-      && parse_atoms(&buffer, &methods)
-      && parse_boolean(&buffer, &methods)
+      && ( (methods = parse_atom_list(&buffer)) )
+      && parse_boolean(&buffer, &partial_success)
       && parse_eod(&buffer))
     {
       int i;
@@ -161,7 +167,7 @@ static int do_userauth_failure(struct packet_handler *c,
       if (partial_success)
 	{ /* Doesn't help us */
 	  werror("Recieved SSH_MSH_USERAUTH_FAILURE "
-		 "indicating partial success.\n")
+		 "indicating partial success.\n");
 	  lsh_free(methods);
 
 	  return LSH_FAIL | LSH_DIE;
@@ -182,10 +188,10 @@ static int do_userauth_failure(struct packet_handler *c,
     lsh_free(methods);
   
   lsh_string_free(packet);
-  return LSH_FAIL | LSSH_DIE;
+  return LSH_FAIL | LSH_DIE;
 }
 
-static int do_userauth_banner(struct packet_handler *closure
+static int do_userauth_banner(struct packet_handler *closure,
 			      struct ssh_connection *connection,
 			      struct lsh_string *packet)
 {
@@ -193,7 +199,7 @@ static int do_userauth_banner(struct packet_handler *closure
 
   int msg_number;
   UINT32 length;
-  UINT8 *mesg;
+  UINT8 *msg;
 
   UINT32 language_length;
   UINT8 *language;
@@ -248,7 +254,7 @@ static struct packet_handler *make_banner_handler()
   NEW(self);
   self->handler = do_userauth_banner;
   
-  return &self->super;
+  return self;
 }
 
 static int init_client_userauth(struct ssh_service *c,
@@ -268,20 +274,18 @@ static int init_client_userauth(struct ssh_service *c,
   return send_passwd(closure, connection);
 }
 
-struct ssh_service *make_client_userauth(struct lsh_string username,
+struct ssh_service *make_client_userauth(struct lsh_string *username,
 					 int service_name,
 					 struct ssh_service *service)
 {
-  struct ssh_service *closure;
+  struct client_userauth *closure;
 
   NEW(closure);
 
-  closure->super.handler = init_client_userauth;
+  closure->super.init = init_client_userauth;
   closure->username = username;
   closure->service_name = service_name;
   closure->service = service;
 
   return &closure->super;
 }
-
-
