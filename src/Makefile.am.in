@@ -1,5 +1,5 @@
 ## Process this file with make_am to produce Makefile.am -*-makefile-*-
-SUBDIRS: argp symmetric scm testsuite
+SUBDIRS: argp symmetric scm . testsuite
 CVS_HEADERS: cvs_headers
 CLASS_FILES: dist_x_files
 BODY:
