@@ -26,19 +26,33 @@
 #include "abstract_io.h"
 #include "channel.h"
 #include "channel_commands.h"
+#include "client_pty.h"
 #include "connection.h"
-#include "format.h" 
+#include "format.h"
+#include "interact.h"
+#include "io.h"
 #include "pad.h"
 #include "parse.h"
 #include "ssh.h"
+#include "tcpforward_commands.h"
 #include "translate_signal.h"
 #include "werror.h"
 #include "xalloc.h"
 
-#include <signal.h>
-
 #include <string.h>
 #include <assert.h>
+
+#include <signal.h>
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include "lsh_argp.h"
 
 #define GABA_DEFINE
 #include "client.h.x"
@@ -356,145 +370,222 @@ make_exec_request(struct lsh_string *command)
   return &req->super.super;
 }
 
+
+/* Handling of options and operations shared by the plain lsh client
+   and lshg. */
+
+/* Forward declaration */
+
+static struct ssh_channel *
+make_client_session(struct client_options *options);
+
+/* Block size for stdout and stderr buffers */
+#define BLOCK_SIZE 32768
+
+/* Window size for the session channel
+ *
+ * NOTE: Large windows seem to trig a bug in sshd2. */
+#define WINDOW_SIZE 10000
+
+#define ARG_NOT 0x400
+
 #if 0
-/* ;; GABA:
-   (class
-     (name client_options)
-     (vars
-       (backend object io_backend)
+#define OPT_PUBLICKEY 0x201
 
-       ; For i/o exceptions 
-       (handler object exception_handler)
+#define OPT_SLOPPY 0x202
+#define OPT_STRICT 0x203
+#define OPT_CAPTURE 0x204
 
-       (tty object interactive)
-       
-       ; -1 means default behaviour
-       (with_pty . int)
-       
-       ; Session modifiers
-       (stdin_file . "const char *")
-       (stdout_file . "const char *")
-       (stderr_file . "const char *")
+#define OPT_HOST_DB 0x205
 
-       ; True if the process's stdin or pty (respectively) has been used. 
-       (used_stdin . int)
-       (used_pty . int)
-       (actions struct object_queue)))
+#define OPT_DH 0x206
+#define OPT_SRP 0x207
+#define OPT_USERAUTH 0x208
+#endif
 
-*/
+#define OPT_STDIN 0x210
+#define OPT_STDOUT 0x211
+#define OPT_STDERR 0x212
 
-static struct client_options *
-make_client_options(void)
+#define OPT_FORK_STDIO 0x213
+
+void
+init_client_options(struct client_options *self,
+		    struct io_backend *backend,
+		    struct exception_handler *handler,
+		    int *exit_code)			 
 {
-  return NULL;
+  self->backend = backend;
+  self->tty = make_unix_interact(backend);
+  self->handler = handler;
+
+  self->exit_code = exit_code;
+  
+  self->not = 0;
+  self->port = "ssh";
+  self->remote = NULL;
+
+  self->local_user = self->user = getenv("LOGNAME");
+
+  self->with_remote_peers = 0; 
+  self->with_pty = -1;
+
+  self->stdin_file = NULL;
+  self->stdout_file = NULL;
+  self->stderr_file = NULL;
+
+  self->stdin_fork = 0;
+  self->stdout_fork = 0;
+  self->stderr_fork = 0;
+
+  self->used_stdin = 0;
+  self->used_pty = 0;
+
+  self->start_shell = 1;
+  /* self->remote_forward = 0; */
+
+  object_queue_init(&self->actions);  
 }
 
-/* Create a session object. stdout and stderr are shared (although
- * with independent lsh_fd objects). stdin can be used by only one
- * session (until something "session-control"/"job-control" is added).
- * */
-static struct ssh_channel *
-make_lsh_session(struct client_options *self)
+struct client_options *
+make_client_options(struct io_backend *backend,
+		    struct exception_handler *handler,
+		    int *exit_code)
 {
-  int in;
-  int out;
-  int err;
+  NEW(client_options, self);
 
-  if (self->stdin_file)
-    in = open(self->stdin_file, O_RDONLY);
-  else
-    {
-      if (self->used_stdin)
-	in = open("/dev/null", O_RDONLY);
-      else
-	{
-	  in = dup(STDIN_FILENO);
-	  self->used_stdin = 1;
-	}
-    }
-    
-  if (in < 0)
-    {
-      werror("client.c: Can't dup/open stdin (errno = %i): %z!\n",
-	     errno, strerror(errno));
-      return NULL;
-    }
+  init_client_options(self, backend, handler, exit_code);
+  return self;
+}
 
-  out = (self->stdout_file
-	 ? open(self->stdout_file, O_WRONLY | O_CREAT, 0666)
-	 : dup(STDOUT_FILENO));
-  if (out < 0)
-    {
-      werror("lsh: Can't dup/open stdout (errno = %i): %z!\n",
-	     errno, strerror(errno));
-      close(in);
-      return NULL;
-    }
-
-  if (self->stderr_file)
-    err = open(self->stderr_file, O_WRONLY | O_CREAT, 0666);
-  else
-    {
-      err = dup(STDERR_FILENO);
-      set_error_stream(STDERR_FILENO, 1);
-    }
-
-  if (err < 0) 
-    {
-      werror("client.c: Can't dup/open stderr!\n");
-      close(in);
-      close(out);
-      return NULL;
-    }
-
-  /* Clear options */
-  self->stdin_file = self->stdout_file = self->stderr_file = NULL;
+/* Host to connect to */
+DEFINE_COMMAND_SIMPLE(client_options2remote, a)
+{
+  CAST_SUBTYPE(client_options, options, a);
+  trace("client.c: client_options2remote\n");
   
-  return make_client_session
-    (io_read(make_lsh_fd(self->backend, in, self->handler),
-	     NULL, NULL),
-     io_write(make_lsh_fd(self->backend, out, self->handler),
-	      BLOCK_SIZE, NULL),
-     io_write(make_lsh_fd(self->backend, err, self->handler),
-	      BLOCK_SIZE, NULL),
-     WINDOW_SIZE,
-     self->exit_code);
+  return &options->remote->super;
+}
+
+/* Host to connect to */
+DEFINE_COMMAND_SIMPLE(client_options2actions, a)
+{
+  CAST_SUBTYPE(client_options, options, a);
+
+  trace("client.c: client_options2actions, %i actions\n",
+	options->actions.length);
+  
+  return &queue_to_list(&options->actions)->super.super;
+}
+
+static const struct argp_option
+client_options[] =
+{
+  /* Name, key, arg-name, flags, doc, group */
+  { "port", 'p', "Port", 0, "Connect to this port.", 0 },
+  { "user", 'l', "User name", 0, "Login as this user.", 0 },
+
+  { NULL, 0, NULL, 0, "Actions:", CLIENT_ARGP_ACTION_GROUP },
+#if 0
+  { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
+  { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
+#endif
+  { "nop", 'N', NULL, 0, "No operation (suppresses the default action, "
+    "which is to spawn a remote shell)", 0 },
+  { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },
+  { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
+  /* { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 }, */
+  { NULL, 0, NULL, 0, "Universal not:", 0 },
+  { "no", 'n', NULL, 0, "Inverts the effect of the next modifier", 0 },
+
+  { NULL, 0, NULL, 0, "Modifiers that apply to port forwarding:",
+    CLIENT_ARGP_MODIFIER_GROUP - 10 },
+  { "remote-peers", 'g', NULL, 0, "Allow remote access to forwarded ports", 0 },
+  { "no-remote-peers", 'g' | ARG_NOT, NULL, 0, 
+    "Disallow remote access to forwarded ports (default).", 0 },
+
+  { NULL, 0, NULL, 0, "Modifiers that apply to remote execution:", 0 },
+  { "stdin", OPT_STDIN, "Filename", 0, "Redirect stdin", 0},
+  { "no-stdin", OPT_STDIN | ARG_NOT, NULL, 0, "Redirect stdin from /dev/null", 0}, 
+  { "stdout", OPT_STDOUT, "Filename", 0, "Redirect stdout", 0},
+  { "no-stdout", OPT_STDOUT | ARG_NOT, NULL, 0, "Redirect stdout to /dev/null", 0}, 
+  { "stderr", OPT_STDERR, "Filename", 0, "Redirect stderr", 0},
+  { "no-stderr", OPT_STDERR | ARG_NOT, NULL, 0, "Redirect stderr to /dev/null", 0}, 
+  { "cvs-workaround", OPT_FORK_STDIO, "i?o?e?", OPTION_ARG_OPTIONAL,
+    "fork extra processes to read one or more of the stdio file "
+    "descriptors, to avoid setting them in non-blocking mode.", 0 },
+  
+#if WITH_PTY_SUPPORT
+  { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
+  { "no-pty", 't' | ARG_NOT, NULL, 0, "Don't request a remote pty.", 0 },
+#endif /* WITH_PTY_SUPPORT */
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+
+/* GABA:
+   (expr
+     (name make_start_session)
+     (params
+       (open_session object command)
+       (requests object object_list))
+     (expr (lambda (connection)
+       ((progn requests)
+         ; Create a "session" channel
+         (open_session connection)))))
+*/
+
+/* Requests a shell or command, and connects the channel to our stdio. */
+/* GABA:
+   (expr
+     (name client_start_session)
+     (params
+       (request object command))
+     (expr
+       (lambda (session)
+          (client_start_io (request session)))))
+*/
+
+static struct command *
+make_client_start_session(struct command *request)
+{
+  CAST_SUBTYPE(command, r, client_start_session(request));
+  return r;
 }
 
 /* Create an interactive session */
 static struct command *
-client_shell_session(struct client_options *self)
+client_shell_session(struct client_options *options)
 {
   struct command *get_pty = NULL;
   struct command *get_shell;
   
   struct object_list *session_requests;
-  struct ssh_channel *session = make_lsh_session(self);
+  struct ssh_channel *session = make_client_session(options);
 
   if (!session)
     return NULL;
   
 #if WITH_PTY_SUPPORT
-  if (self->with_pty && !self->used_pty)
+  if (options->with_pty && !options->used_pty)
     {
-      self->used_pty = 1;
-
-      if (self->tty && INTERACT_IS_TTY(self->tty))
+      options->used_pty = 1;
+      
+      if (options->tty && INTERACT_IS_TTY(options->tty))
 	{
-	  if (! (remember_tty(tty_fd)
-		 && (get_pty = make_pty_request(tty_fd))))
+	  get_pty = make_pty_request(options->tty);
+	  if (!get_pty)
 	    {
 	      werror("lsh: Can't use tty (probably getattr or atexit() failed.\n");
 	    }
 	}
       else
 	{
-	  werror("client.c: No tty available.\n");
+	  werror("lsh: No tty available.\n");
 	}
-      
     }
 
-  get_shell = make_lsh_start_session(&request_shell.super);
+  get_shell = make_client_start_session(&request_shell.super);
   
   /* FIXME: We need a non-varargs constructor for lists. */
   if (get_pty)
@@ -517,4 +608,440 @@ client_shell_session(struct client_options *self)
     return r;
   }
 }
-#endif
+
+/* Create a session executing a command line */
+static struct command *
+client_command_session(struct client_options *options,
+		       struct lsh_string *command)
+{
+  struct ssh_channel *session = make_client_session(options);
+
+  if (session)
+    {
+      CAST_SUBTYPE(command, r,
+		   make_start_session
+		   (make_open_session_command(session),
+		    make_object_list
+		    (1, make_client_start_session(make_exec_request(command)),
+		     -1)));
+      return r;
+    }
+  
+  return NULL;
+}
+
+struct command *
+client_add_action(struct client_options *options,
+		  struct command *action)
+{
+  if (action)
+    object_queue_add_tail(&options->actions, &action->super);
+
+  return action;
+}
+
+/* NOTE: Some of the original quoting is lost here. */
+static struct lsh_string *
+rebuild_command_line(unsigned argc, char **argv)
+{
+  unsigned length;
+  unsigned i;
+  unsigned pos;
+  struct lsh_string *r;
+  unsigned *alengths = alloca(sizeof(unsigned) * argc);
+  
+  assert (argc);
+  length = argc - 1; /* Number of separating spaces. */
+
+  for (i = 0; i<argc; i++)
+    {
+      alengths[i] = strlen(argv[i]);
+      length += alengths[i];
+    }
+
+  r = lsh_string_alloc(length);
+  memcpy(r->data, argv[0], alengths[0]);
+  pos = alengths[0];
+  for (i = 1; i<argc; i++)
+    {
+      r->data[pos++] = ' ';
+      memcpy(r->data + pos, argv[i], alengths[i]);
+      pos += alengths[i];
+    }
+
+  assert(pos == r->length);
+
+  return r;
+}
+
+static int
+fork_input(int in)
+{
+  /* pipe[0] for reading, pipe[1] for writing. */
+  int pipe[2];
+
+  if (!lsh_make_pipe(pipe))
+    return -1;
+
+  switch (fork())
+    {
+    case -1:
+      /* Error */
+      return -1;
+    case 0:
+      close(pipe[0]);
+      if (lsh_copy_file(in, pipe[1]))
+	_exit(EXIT_SUCCESS);
+      else
+	_exit(EXIT_FAILURE);
+    default:
+      /* Parent */
+      close(pipe[1]);
+      return pipe[0];
+    }
+}
+
+static int
+fork_output(int out)
+{
+  /* pipe[0] for reading, pipe[1] for writing. */
+  int pipe[2];
+
+  if (!lsh_make_pipe(pipe))
+    return -1;
+
+  switch (fork())
+    {
+    case -1:
+      /* Error */
+      return -1;
+    case 0:
+      close(pipe[1]);
+      if (lsh_copy_file(pipe[0], out))
+	_exit(EXIT_SUCCESS);
+      else
+	_exit(EXIT_FAILURE);
+    default:
+      /* Parent */
+      close(pipe[0]);
+      return pipe[1];
+    }
+}
+
+/* Create a session object. stdout and stderr are shared (although
+ * with independent lsh_fd objects). stdin can be used by only one
+ * session (until something "session-control"/"job-control" is added).
+ * */
+static struct ssh_channel *
+make_client_session(struct client_options *options)
+{
+  int in;
+  int out;
+  int err;
+
+  debug("lsh.c: Setting up stdin\n");
+
+  if (options->stdin_file)
+    in = open(options->stdin_file, O_RDONLY);
+  else
+    {
+      if (options->used_stdin)
+	in = open("/dev/null", O_RDONLY);
+      else 
+	{
+	  in = (options->stdin_fork ? fork_input : dup)(STDIN_FILENO);
+	  options->used_stdin = 1;
+	}
+    }
+    
+  if (in < 0)
+    {
+      werror("lsh: Can't dup/open stdin (errno = %i): %z!\n",
+	     errno, strerror(errno));
+      return NULL;
+    }
+
+  debug("lsh.c: Setting up stdout\n");
+
+  if (options->stdout_file)
+    out = open(options->stdout_file, O_WRONLY | O_CREAT, 0666);
+  else if (options->stdout_fork)
+    out = fork_output(STDOUT_FILENO);
+  else
+    out = dup(STDOUT_FILENO);
+
+  if (out < 0)
+    {
+      werror("lsh: Can't dup/open stdout (errno = %i): %z!\n",
+	     errno, strerror(errno));
+      close(in);
+      return NULL;
+    }
+
+  debug("lsh.c: Setting up stderr\n");
+  
+  if (options->stderr_file)
+    err = open(options->stderr_file, O_WRONLY | O_CREAT, 0666);
+  else if (options->stderr_fork)
+    err = fork_output(STDERR_FILENO);
+  else
+    {
+      err = dup(STDERR_FILENO);
+      set_error_stream(STDERR_FILENO, 1);
+    }
+
+  if (err < 0) 
+    {
+      werror("lsh: Can't dup/open stderr!\n");
+      close(in);
+      close(out);
+      return NULL;
+    }
+
+  /* Clear options */
+  options->stdin_file = options->stdout_file = options->stderr_file = NULL;
+  
+  return make_client_session_channel
+    (io_read(make_lsh_fd(options->backend, in, options->handler),
+	     NULL, NULL),
+     io_write(make_lsh_fd(options->backend, out, options->handler),
+	      BLOCK_SIZE, NULL),
+     io_write(make_lsh_fd(options->backend, err, options->handler),
+	      BLOCK_SIZE, NULL),
+     WINDOW_SIZE,
+     options->exit_code);
+}
+
+/* Parse the argument for -R and -L */
+int
+client_parse_forward_arg(char *arg,
+			 UINT32 *listen_port,
+			 struct address_info **target)
+{
+  char *first;
+  char *second;
+  char *end;
+  long port;
+  
+  first = strchr(arg, ':');
+  if (!first)
+    return 0;
+
+  second = strchr(first + 1, ':');
+  if (!second || (second == first + 1))
+    return 0;
+
+  if (strchr(second + 1, ':'))
+    return 0;
+
+  port = strtol(arg, &end, 0);
+  if ( (end == arg)  || (end != first)
+       || (port < 0) || (port > 0xffff) )
+    return 0;
+
+  *listen_port = port;
+
+  port = strtol(second + 1, &end, 0);
+  if ( (end == second + 1) || (*end != '\0')
+       || (port < 0) || (port > 0xffff) )
+    return 0;
+
+  *target = make_address_info(ssh_format("%ls", second - first - 1, first + 1), port);
+  
+  return 1;
+}
+
+#define CASE_ARG(opt, attr, none)		\
+  case opt:					\
+    if (options->not)				\
+      {						\
+        options->not = 0;			\
+						\
+      case opt | ARG_NOT:			\
+        options->attr = none;			\
+        break;					\
+      }						\
+      						\
+    options->attr = arg;			\
+    break
+
+#define CASE_FLAG(opt, flag)			\
+  case opt:					\
+    if (options->not)				\
+      {						\
+        options->not = 0;			\
+						\
+      case opt | ARG_NOT:			\
+        options->flag = 0;			\
+        break;					\
+      }						\
+      						\
+    options->flag = 1;				\
+    break
+
+static error_t
+client_argp_parser(int key, char *arg, struct argp_state *state)
+{
+  CAST_SUBTYPE(client_options, options, state->input);
+
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_NO_ARGS:
+      argp_usage(state);
+      break;
+    case ARGP_KEY_ARG:
+      if (!state->arg_num)
+	{
+	  if (options->port)
+	    options->remote = make_address_info_c(arg, options->port, 0);
+	  else
+	    options->remote = make_address_info_c(arg, "ssh", 22);
+	  
+	  if (!options->remote)
+	    argp_error(state, "Invalid port or service '%s'.", options->port);
+
+	  break;
+	}
+      else
+	/* Let the next case parse it.  */
+	return ARGP_ERR_UNKNOWN;
+
+      break;
+    case ARGP_KEY_ARGS:
+      client_add_action
+	(options,
+	 client_command_session
+	 (options, rebuild_command_line(state->argc - state->next,
+				     state->argv + state->next)));
+      options->start_shell = 0;
+      break;
+
+    case ARGP_KEY_END:
+      if (!options->user)
+	{
+	  argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
+	  break;
+	}
+	    
+      /* Add shell action */
+      if (options->start_shell)
+	client_add_action(options, client_shell_session(options));
+      if (object_queue_is_empty(&options->actions))
+	{
+	  argp_error(state, "No actions given.");
+	  break;
+	}
+
+      break;
+
+    case 'p':
+      options->port = arg;
+      break;
+
+    case 'l':
+      options->user = arg;
+      break;
+
+    case 'E':
+      client_add_action(options, client_command_session(options, ssh_format("%lz", arg)));
+      break;
+
+    case 'S':
+      client_add_action(options, client_shell_session(options));
+      break;
+
+#if 0
+    case 'L':
+      {
+	UINT32 listen_port;
+	struct address_info *target;
+
+	if (!parse_forward_arg(arg, &listen_port, &target))
+	  argp_error(state, "Invalid forward specification '%s'.", arg);
+
+	client_add_action(options, make_forward_local_port
+			  (options->backend,
+			   make_address_info((options->with_remote_peers
+					      ? NULL
+					      : ssh_format("%lz", "127.0.0.1")),
+					     listen_port),
+			   target));
+	break;
+      }      
+
+    case 'R':
+      {
+	UINT32 listen_port;
+	struct address_info *target;
+
+	if (!parse_forward_arg(arg, &listen_port, &target))
+	  argp_error(state, "Invalid forward specification '%s'.", arg);
+
+	client_add_action(options, make_forward_remote_port
+			  (options->backend,
+			   make_address_info((options->with_remote_peers
+					      ? ssh_format("%lz", "0.0.0.0")
+					      : ssh_format("%lz", "127.0.0.1")),
+					     listen_port),
+			   target));
+	options->remote_forward = 1;
+	break;
+      }      
+#endif 
+    case 'N':
+      options->start_shell = 0;
+      break;
+
+    CASE_FLAG('g', with_remote_peers);
+
+#if WITH_PTY_SUPPORT
+    CASE_FLAG('t', with_pty);
+#endif /* WITH_PTY_SUPPORT */
+
+    CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
+    CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
+    CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");
+
+    case OPT_FORK_STDIO:
+      if (!arg)
+	options->stdin_fork = options->stdout_fork = options->stderr_fork = 1;
+      else
+	{
+	  int i;
+	  for (i = 0; arg[i]; i++)
+	    switch(arg[i])
+	      {
+	      case 'i': case 'I':
+		options->stdin_fork = 1;
+		break;
+	      case 'o': case 'O':
+		options->stdout_fork = 1;
+		break;
+	      case 'e': case 'E':
+		options->stderr_fork = 1;
+		break;
+	      default:
+		argp_error(state, "The argument to --cvs-workaround should "
+			   "be one or more of the characters 'i' (stdin), "
+			   "'o' (stdout) and 'e' (stderr).");
+		goto loop_done;
+	      }
+	loop_done:
+	}
+      break;
+		
+    case 'n':
+      options->not = !options->not;
+      break;
+    }
+  return 0;
+}
+
+const struct argp client_argp =
+{
+  client_options,
+  client_argp_parser,
+  NULL, NULL, NULL, NULL, NULL
+};
