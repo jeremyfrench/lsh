@@ -62,6 +62,12 @@ make_keypair(UINT32 type,
 
 /* DSA signatures */
 
+/* The stadard says that DSA public keys are at most 1024 bits, i.e.
+ * 128 octets. We are a little more liberal than that. Note that
+ * allowing really large keys opens for Denial-of-service attacks. */
+
+#define DSA_MAX_SIZE 300
+
 /* NOTE: These definitions should not really be public. But the
  * structures are needed for both plain ssh-dss and spki-style dsa. */
 
@@ -113,10 +119,6 @@ struct signer *make_dsa_signer_kludge(struct signer *dsa);
 struct signer *make_dsa_signer_classic(struct signer *s);
 struct verifier *make_dsa_verifier_classic(struct verifier *v);
 
-struct signature_algorithm *
-make_rsa_algorithm(struct hash_algorithm *hash,
-		   UINT32 prefix_length,
-		   const UINT8 *prefix);
 
 /* Groups. For now, assume that all group elements are represented by
  * bignums. */
