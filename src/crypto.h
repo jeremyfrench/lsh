@@ -43,14 +43,11 @@ extern struct crypto_algorithm crypto_des3_cbc_algorithm;
 extern struct crypto_algorithm crypto_serpent256_cbc_algorithm;
 extern struct crypto_algorithm crypto_twofish256_cbc_algorithm;
 
-extern struct hash_algorithm sha1_algorithm;
-extern struct hash_algorithm md5_algorithm;
-
-extern struct mac_algorithm crypto_hmac_sha1_algorithm;
-extern struct mac_algorithm crypto_hmac_md5_algorithm;
+extern const struct hash_algorithm crypto_sha1_algorithm;
+extern const struct hash_algorithm crypto_md5_algorithm;
 
 struct mac_algorithm *
-make_hmac_algorithm(struct hash_algorithm *h);
+make_hmac_algorithm(const struct hash_algorithm *h);
 
 /* 10 million iterations would take 5 hours on my machine */
 #define PKCS5_MAX_ITERATIONS 10000000

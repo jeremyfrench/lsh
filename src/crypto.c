@@ -404,128 +404,131 @@ struct crypto_algorithm crypto_serpent256_cbc_algorithm =
   make_serpent_cbc_instance};
 
 
+/* Hashes */
+
+void
+hash_update(struct hash_instance *self,
+	    UINT32 length, const UINT8 *data)
+{
+  self->type->update(self->ctx, length, data);
+}
+
+void
+hash_digest(struct hash_instance *self,
+	    UINT8 *result)
+{
+  self->type->digest(self->ctx, self->type->digest_size, result);
+}
+
+#define HASH_INSTANCE_SIZE(type) \
+  (offsetof(struct hash_instance, ctx) + type->context_size)
+
+struct hash_instance *
+hash_copy(struct hash_instance *self)
+{
+  CLONED_VAR_OBJECT(hash_instance, copy, self,
+		    HASH_INSTANCE_SIZE(self->type));
+
+  return copy;
+}
+
+struct hash_instance *
+make_hash(const struct hash_algorithm *self)
+{
+  NEW_VAR_OBJECT(hash_instance, instance,
+		 HASH_INSTANCE_SIZE(self->type));
+
+  instance->type = self->type;
+  self->type->init(instance->ctx);
+
+  return instance;
+}
+
+const struct hash_algorithm
+crypto_md5_algorithm =
+{ STATIC_HEADER, &nettle_md5 };
+
+const struct hash_algorithm
+crypto_sha1_algorithm =
+{ STATIC_HEADER, &nettle_sha1 };
+
 /* HMAC */
-/* GABA:
-   (class
-     (name hmac_sha1_instance)
-     (super mac_instance)
-     (vars
-       (ctx . "struct hmac_sha1_ctx")))
-*/
-
-static void
-do_hmac_sha1_update(struct mac_instance *s,
-		    UINT32 length, const UINT8 *data)
-{
-  CAST(hmac_sha1_instance, self, s);
-
-  hmac_sha1_update(&self->ctx, length, data);
-}
-
-static void
-do_hmac_sha1_digest(struct mac_instance *s,
-		    UINT8 *data)
-{
-  CAST(hmac_sha1_instance, self, s);
-
-  hmac_sha1_digest(&self->ctx, SHA1_DIGEST_SIZE, data);
-}
-
-#if 0
-/* Not actually used anywhere */
-static struct mac_instance *
-do_hmac_sha1_copy(struct mac_instance *s)
-{
-  CAST(hmac_sha1_instance, self, s);
-  CLONED(hmac_sha1_instance, new, self);
-
-  return &new->super;
-}
-#endif
-
-static struct mac_instance *
-make_hmac_sha1_instance(struct mac_algorithm *self,
-			UINT32 key_length,
-			const UINT8 *key)
-{
-  NEW(hmac_sha1_instance, hash);
-
-  hmac_sha1_set_key(&hash->ctx, key_length, key);
-
-  hash->super.hash_size = self->hash_size;
-  hash->super.update = do_hmac_sha1_update;
-  hash->super.digest = do_hmac_sha1_digest;
-  hash->super.copy = NULL;
-
-  return &hash->super;
-}
-
-/* RFC-2104 recommends using key_size = hash_size */
-struct mac_algorithm
-crypto_hmac_sha1_algorithm =
-  { STATIC_HEADER, SHA1_DIGEST_SIZE, SHA1_DIGEST_SIZE,
-    make_hmac_sha1_instance };
 
 /* GABA:
    (class
-     (name hmac_md5_instance)
+     (name hmac_instance)
      (super mac_instance)
      (vars
-       (ctx . "struct hmac_md5_ctx")))
+       (type . "const struct nettle_hash *")
+       (ctx var-array char)))
 */
 
-static void
-do_hmac_md5_update(struct mac_instance *s,
-		    UINT32 length, const UINT8 *data)
-{
-  CAST(hmac_md5_instance, self, s);
+#define HMAC_OUTER(self) ((self)->ctx)
+#define HMAC_INNER(self) ((self)->ctx + (self)->type->context_size)
+#define HMAC_STATE(self) ((self)->ctx + 2 * (self)->type->context_size)
 
-  hmac_md5_update(&self->ctx, length, data);
+#define HMAC_SIZE(type) \
+  (offsetof(struct hmac_instance, ctx) + 3 * type->context_size)
+
+static void
+do_hmac_update(struct mac_instance *s,
+	       UINT32 length, const UINT8 *data)
+{
+  CAST(hmac_instance, self, s);
+  self->type->update(HMAC_STATE(self), length, data);
 }
 
 static void
-do_hmac_md5_digest(struct mac_instance *s,
-		    UINT8 *data)
+do_hmac_digest(struct mac_instance *s,
+	       UINT8 *digest)
 {
-  CAST(hmac_md5_instance, self, s);
-
-  hmac_md5_digest(&self->ctx, MD5_DIGEST_SIZE, data);
+  CAST(hmac_instance, self, s);
+  hmac_digest(HMAC_OUTER(self), HMAC_INNER(self), HMAC_STATE(self),
+	      self->type, self->super.mac_size, digest);
 }
+
+/* GABA:
+   (class
+     (name hmac_algorithm)
+     (super mac_algorithm)
+     (vars
+       (type . "const struct nettle_hash *")))
+*/
 
 static struct mac_instance *
-make_hmac_md5_instance(struct mac_algorithm *self,
-		       UINT32 key_length,
-		       const UINT8 *key)
+make_hmac_instance(struct mac_algorithm *s,
+                   UINT32 key_length,
+                   const UINT8 *key)
 {
-  NEW(hmac_md5_instance, hash);
+  CAST(hmac_algorithm, self, s);
+  NEW_VAR_OBJECT(hmac_instance, instance,
+		 HMAC_SIZE(self->type));
 
-  hmac_md5_set_key(&hash->ctx, key_length, key);
+  instance->type = self->type;
+  
+  hmac_set_key(HMAC_OUTER(instance), HMAC_INNER(instance),
+	       HMAC_STATE(instance),
+	       self->type, key_length, key);
 
-  hash->super.hash_size = self->hash_size;
-  hash->super.update = do_hmac_md5_update;
-  hash->super.digest = do_hmac_md5_digest;
-  hash->super.copy = NULL;
+  instance->super.mac_size = self->super.mac_size;
+  instance->super.update = do_hmac_update;
+  instance->super.digest = do_hmac_digest;
 
-  return &hash->super;
+  return &instance->super;
 }
 
-struct mac_algorithm
-crypto_hmac_md5_algorithm =
-  { STATIC_HEADER, MD5_DIGEST_SIZE, MD5_DIGEST_SIZE,
-    make_hmac_md5_instance };
-
-/* FIXME: This is a ugly.
- *
- * The right way to do things is probably to add a pointer to a struct
- * nettle_hash in our hash_algorithm class, and make hash_instance and
- * mac_instance variable size objects where the context comes last. */
 struct mac_algorithm *
-make_hmac_algorithm(struct hash_algorithm *h)
+make_hmac_algorithm(const struct hash_algorithm *h)
 {
-  if (h == &sha1_algorithm)
-    return &crypto_hmac_sha1_algorithm;
-  else if (h == &md5_algorithm)
-    return &crypto_hmac_md5_algorithm;
+  NEW(hmac_algorithm, self);
 
-  fatal("make_hmac_algorithm: Unknown hash algorithm\n");
+  self->super.mac_size = h->type->digest_size;
+
+  /* Recommended in RFC-2104 */
+  self->super.key_size = h->type->digest_size;
+  self->super.make_mac = make_hmac_instance;
+
+  self->type = h->type;
+
+  return &self->super;
 }
