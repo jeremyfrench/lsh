@@ -379,6 +379,7 @@ main_argp =
   
 
 #define SEXP_BUFFER_SIZE 1024
+#define MAX_SEXP_SIZE 100000
 
 int main(int argc, char **argv)
 {
@@ -395,7 +396,9 @@ int main(int argc, char **argv)
   {
     CAST_SUBTYPE(command, work,
 		 make_sexp_conv(
-		   make_read_sexp_command(options->input, !options->once),
+		   make_read_sexp_command(options->input,
+					  !options->once,
+					  MAX_SEXP_SIZE),
 		   options->select,
 		   options->transform,
 		   options->print,
