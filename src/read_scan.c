@@ -68,12 +68,16 @@ static int do_read_scan(struct read_handler **h,
   for (i = 0; i<n; i++)
     {
       int res;
+#if 0
       if (!closure->scanner)
 	return LSH_CLOSE;
-
+#endif
       res = SCAN(closure->scanner, buffer[i]);
       if (LSH_FAILUREP(res))
 	return res | LSH_DIE;
+
+      if (!closure->scanner)
+	return res | LSH_CLOSE;
     }
 
   return LSH_OK | LSH_GOON;
