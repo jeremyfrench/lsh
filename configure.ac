@@ -125,18 +125,6 @@ fi
 
 AC_SUBST(SRP_PROGRAM)
 
-AC_ARG_ENABLE(datafellows_workarounds,
-  AC_HELP_STRING([--disable-datafellows-workarounds],
-		 [Disable bug-compatibility with SSH Inc's clients and servers]),,
-  [enable_datafellows_workarounds=yes])
-
-AH_TEMPLATE([DATAFELLOWS_WORKAROUNDS],
-	    [Define to support non-standard packets of ssh2])
-if test x$enable_datafellows_workarounds = xyes ; then
-  AC_DEFINE(DATAFELLOWS_WORKAROUNDS)
-fi
-
-
 AC_ARG_ENABLE(initgroups_workaround,
   AC_HELP_STRING([--enable-initgroups-workaround],
 		 [Use a special initgroups for supporting more groups]),,
