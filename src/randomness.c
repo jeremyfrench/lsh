@@ -29,6 +29,7 @@
 
 #include "arcfour.h"
 #include "crypto.h"
+#include "exception.h"
 #include "xalloc.h"
 
 #include <errno.h>
@@ -50,7 +51,7 @@
 #include "randomness.c.x"
 
 /* Random */
-/* GABA:
+/* ;; GABA:
    (class
      (name poor_random)
      (super randomness)
@@ -60,6 +61,7 @@
        (buffer space UINT8)))
 */
 
+#if 0
 static void
 do_poor_random(struct randomness *r, UINT32 length, UINT8 *dst)
 {
@@ -118,6 +120,7 @@ make_poor_random(struct hash_algorithm *hash,
 
   return &self->super;
 }
+#endif
 
 /* GABA:
    (class
@@ -182,7 +185,7 @@ make_device_random(const char *device)
       self->super.random = do_device_random;
 
       /* The quality depends on the used device. */
-      self->super.quality = 0;
+      self->super.quality = 2;
       self->fd = fd;
       
       return &self->super;
@@ -194,12 +197,14 @@ make_device_random(const char *device)
      (name arcfour_random)
      (super randomness)
      (vars
+       (e object exception_handler)
+       
        ; The pool that is used to create the output bytes
        (pool . "struct arcfour_ctx")
 
        ; Object that gets randomness from the environment
        (poller object random_poll)
-
+       
        ; Accumulate randomness here before it is added to the main
        ; pool
        (staging_area object hash_instance)
@@ -221,8 +226,15 @@ do_arcfour_random(struct randomness *r, UINT32 length, UINT8 *dst)
       UINT8 *buf = alloca(self->staging_area->hash_size);
 
       verbose("do_arcfour_random: Pouring staging area into pool.\n");
+      
+      /* Get some data out of the pool, in order to keep any entropy
+       * their. */
+      arcfour_stream(&self->pool, self->staging_area->hash_size, buf);
+
+      HASH_UPDATE(self->staging_area, self->staging_area->hash_size, buf);
+      
       HASH_DIGEST(self->staging_area, buf);
-      arcfour_update_key(&self->pool, self->staging_area->hash_size, buf);
+      arcfour_set_key(&self->pool, self->staging_area->hash_size, buf);
 
       self->staging_count = 0;
     }
@@ -237,9 +249,19 @@ do_arcfour_random_slow(struct randomness *r, UINT32 length, UINT8 *dst)
 
   unsigned count = RANDOM_POLL_SLOW(self->poller, self->staging_area);
 
+  debug("arcfour_random: entropy estimate for initialization: %i bits.\n",
+	count);
+  
   if (count < STAGE_THRESHOLD)
-    werror("Could not get enough entropy from the environment.\n");
-
+    {
+      const struct exception low_entropy =
+	STATIC_EXCEPTION(EXC_RANDOMNESS_LOW_ENTROPY,
+			 "Could not get enough entropy from the environment.");
+      EXCEPTION_RAISE(self->e, &low_entropy);
+    }
+  else
+    self->super.quality = 1;
+  
   {
     /* Initialize the pool. */
     UINT8 *buf = alloca(self->staging_area->hash_size);
@@ -258,18 +280,21 @@ do_arcfour_random_slow(struct randomness *r, UINT32 length, UINT8 *dst)
 
 struct randomness *
 make_arcfour_random(struct random_poll *poller,
-		    struct hash_algorithm *hash)
+		    struct hash_algorithm *hash,
+		    struct exception_handler *e)
 {
   NEW(arcfour_random, self);
-  self->super.random = do_arcfour_random_slow;
-
   self->poller = poller;
+  self->e = e;
+  self->super.random = do_arcfour_random_slow;
+  self->super.quality = 0;
+  
   self->staging_area = MAKE_HASH(hash);
   self->staging_count = 0;
   
   return &self->super;
 }
-		    
+
 struct randomness *
 make_reasonably_random(void)
 {
@@ -278,11 +303,12 @@ make_reasonably_random(void)
   if (r)
     r->quality = 1;
   else
-    {
+    fatal("No /dev/urandom.\n");
+#if 0
+  {
       werror("Warning: Falling back to an insecure pseudorandom generator.\n");
       r = make_poor_random(&sha1_algorithm, NULL);
-    }
-
+  }
+#endif
   return r;
 }
-

@@ -28,6 +28,8 @@
 
 #include "abstract_crypto.h"
 
+#include "exception.h"
+
 #define GABA_DECLARE
 #include "randomness.h.x"
 #undef GABA_DECLARE
@@ -54,11 +56,13 @@
        ;; Both functions return an entropy estimate, and adds the
        ;; randomness to the given hash instance.
        (slow method unsigned "struct hash_instance *")
-       (fast method unsigned "struct hash_instance *"))) */
+       (fast method unsigned "struct hash_instance *")
+       (background method void)))
+*/
 
 #define RANDOM_POLL_SLOW(p, h) ((p)->slow((p), (h)))
 #define RANDOM_POLL_FAST(p, h) ((p)->fast((p), (h)))
-
+#define RANDOM_POLL_BACKGROUND(p) ((p)->background((p)))
 
 /* Consumes the init string (which may be NULL). */
 struct randomness *make_poor_random(struct hash_algorithm *hash,
@@ -69,6 +73,10 @@ struct randomness *make_reasonably_random(void);
 
 struct randomness *
 make_arcfour_random(struct random_poll *poller,
-		    struct hash_algorithm *hash);
+		    struct hash_algorithm *hash,
+		    struct exception_handler *e);
+
+struct random_poll *
+make_unix_random(struct reap *reaper);
 
 #endif /* LSH_RANDOMNESS_H_INCLUDED */
