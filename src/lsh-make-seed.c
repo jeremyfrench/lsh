@@ -113,11 +113,14 @@ const char *argp_program_version
 const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define OPT_SLOPPY 0x200
+#define OPT_SERVER 0x201
 
 /* GABA:
    (class
      (name lsh_make_seed_options)
      (vars
+       ; Directory that should be created if needed
+       (directory string)
        (filename string)
        (force . int)
        (sloppy . int)))
@@ -128,6 +131,7 @@ make_options(void)
 {
   NEW(lsh_make_seed_options, self);
 
+  self->directory = NULL;
   self->filename = NULL;
   self->force = 0;
   
@@ -139,9 +143,11 @@ main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { "output-file", 'o', "Filename", 0, "Default is ~/.lsh/seed-file", 0 },
+  { "server", OPT_SERVER, NULL, 0,
+    "Save seed file where the lshd server expects it", 0 },
   { "force", 'f', NULL, 0, "Overwrite any existing seed file.", 0 },
   { "sloppy", OPT_SLOPPY, NULL, 0, "Generate seed file even if we can't "
-    collect a good amount of randomness from the environment.", 0 },
+    "collect a good amount of randomness from the environment.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
   
@@ -170,7 +176,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       if (!self->filename)
 	{
 	  char *home = getenv("HOME");
-	  struct lsh_string *s;
 	  
 	  if (!home)
 	    {
@@ -179,24 +184,31 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    }
 	  else
 	    {
-	      s = ssh_format("%lz/.lsh", home);
-	      if (mkdir(lsh_get_cstring(s), 0755) < 0)
-		{
-		  if (errno != EEXIST)
-		    argp_failure(state, EXIT_FAILURE, errno, "Creating directory %s failed.", s->data);
-		}
-	      lsh_string_free(s);
+	      self->directory = ssh_format("%lz/.lsh", home);
 	      self->filename = ssh_format("%lz/.lsh/yarrow-seed-file", home);
 	    }
 	}
       break;
       
     case 'o':
-      self->filename = make_string(arg);
+      if (self->filename)
+	argp_error(state, "You can use at most one -o or --server option.");
+      else
+	self->filename = make_string(arg);
       break;
-
+      
     case OPT_SLOPPY:
       self->sloppy = 1;
+      break;
+      
+    case OPT_SERVER:
+      if (self->filename)
+	argp_error(state, "You can use at most one -o or --server option.");
+      else
+	{
+	  self->directory = make_string("/var/spool/lsh");
+	  self->filename =  make_string("/var/spool/lsh/yarrow-seed-file");
+	}
       break;
       
     case 'f':
@@ -1032,7 +1044,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 	    {
 	      unsigned entropy = 0;
 	      if (res > linux_proc_sources[i].limit)
-		entropy = linux_proc_sources[i].entropy;;
+		entropy = linux_proc_sources[i].entropy;
 
 	      verbose("Read %i bytes from %z, entropy estimate: %i bits\n",
 		      res, linux_proc_sources[i].name, entropy);
@@ -1091,7 +1103,7 @@ get_time_accuracy(void)
       werror("gettimeofday accuracy seems too bad to be useful");
       return 0;
     }
-
+  
   return diff;
 }
 
@@ -1126,7 +1138,7 @@ get_interact(struct yarrow256_ctx *ctx, enum source_type source)
       struct termios tty_mode = tty_original_mode;
 
       tty_needs_reset = 1;
-
+      
       tty_mode.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL|IXON);
       tty_mode.c_cflag &= ~(CSIZE|PARENB); tty_mode.c_cflag |= CS8;
       tty_mode.c_lflag &= ~(ECHO|ECHONL|ICANON|IEXTEN);
@@ -1173,22 +1185,22 @@ get_interact(struct yarrow256_ctx *ctx, enum source_type source)
       /* We only look at the microsecond data,  */
       entropy = yarrow_key_event_estimate(&estimator,
 					  event.c, time);
-
+      
       debug("Got char `%c', time: %i, entropy: %i\n", event.c, time, entropy);
       
       yarrow256_update(ctx, source,
 		       entropy,
 		       sizeof(event), (uint8_t *) &event);
-
+      
       count += entropy;
-
+      
       if (count >= progress)
 	{
 	  werror_progress(".");
 	  progress += 5;
 	}
     }
-
+  
   werror_progress("\n");
   werror("Got %i keystrokes, estimating %i bits of entropy.\n",
 	 keys, count);
@@ -1199,7 +1211,7 @@ get_interact(struct yarrow256_ctx *ctx, enum source_type source)
     {
       /* Wait a moment for the user to stop typing */
       sleep(1);
-
+      
       /* Reset terminal mode, and disgard buffered input. */  
       tcsetattr(STDIN_FILENO, TCSAFLUSH, &tty_original_mode);
       tty_needs_reset = 0;
@@ -1227,7 +1239,16 @@ main(int argc, char **argv)
       werror("atexit failed!?\n");
       return EXIT_FAILURE;
     }
-  
+
+  if (options->directory
+      && (mkdir(lsh_get_cstring(options->directory), 0755) < 0)
+      && (errno != EEXIST) )
+    {
+      werror("Creating `%S' failed (errno = %i): %z.\n",
+	     options->directory, errno, STRERROR(errno));
+      return EXIT_FAILURE;
+    }
+
   lock_info = make_lsh_file_lock_info(ssh_format("%lS.lock",
 						 options->filename));
 
@@ -1264,7 +1285,8 @@ main(int argc, char **argv)
 
           return EXIT_FAILURE;
         }
-      get_interact(&yarrow, SOURCE_USER);
+      if (!quiet_flag)
+	get_interact(&yarrow, SOURCE_USER);
     }
 
   if (!options->sloppy && !yarrow256_is_seeded(&yarrow))
@@ -1276,7 +1298,7 @@ main(int argc, char **argv)
 
   yarrow256_force_reseed(&yarrow);
 
-  lock = LSH_FILE_LOCK(lock_info);
+  lock = LSH_FILE_LOCK(lock_info, 5);
 
   if (!lock)
     {
