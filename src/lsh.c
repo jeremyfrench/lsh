@@ -77,8 +77,6 @@
 #include "lsh_argp.h"
 
 /* Forward declarations */
-struct command_2 lsh_verifier_command;
-#define OPTIONS2VERIFIER (&lsh_verifier_command.super.super)
 
 struct command_2 lsh_login_command;
 #define LSH_LOGIN (&lsh_login_command.super.super)
@@ -688,10 +686,11 @@ DEFINE_COMMAND2(lsh_login_command)
        (handshake object handshake_info)
        (init object make_kexinit)
        (db object lookup_verifier)
+       (actions object object_list)
        (options object lsh_options))
      (expr (lambda (remote)
                ; What to do with the service
-	       ((progn (options2actions options))
+	       ((progn actions)
 	         ; Initialize service
 		 (init_connection_service
 		   ; Either requests ssh-connection service,
@@ -1140,6 +1139,7 @@ int main(int argc, char **argv, const char** envp)
                          options->super.target,
                          options->sloppy,
                          options->capture_file),
+	queue_to_list(&options->super.actions),
 	options);
     
     CAST_SUBTYPE(command, lsh_connect, o);
