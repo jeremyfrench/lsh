@@ -23,6 +23,7 @@
 #include "buffer.h"
 #include "sftp.h"
 #include "xmalloc.h"
+#include "client.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -40,11 +41,7 @@
 #define FATAL(x) do { fputs("sftp-test-client: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
 #define _FATAL(x) do { fputs("sftp-test-client: " x "\n", stderr); _exit(EXIT_FAILURE); } while (0)
 
-struct client_ctx
-{
-  struct sftp_input *i;
-  struct sftp_output *o;
-};
+
 
 
 static UINT32 
@@ -906,6 +903,8 @@ do_stat(struct client_ctx *ctx, const char *name)
   
   return 1;
 }
+
+const char *werror_program_name = "sftp-test-client";
 
 int
 main(int argc, char **argv)
