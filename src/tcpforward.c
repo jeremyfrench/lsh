@@ -352,7 +352,7 @@ do_tcpip_forward_request_continuation(struct command_continuation *c,
 				      struct lsh_object *x)
 {
   CAST(tcpip_forward_request_continuation, self, c);
-  CAST_SUBTYPE(lsh_fd, fd, x);
+  CAST(lsh_fd, fd, x);
 
   assert(self->forward);
   assert(fd);
