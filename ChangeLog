@@ -1,5 +1,8 @@
 2001-02-11  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/sftp/sftp-server.c: Updated copyright notice to mention
+	Markus Friedl.
+
 	* src/sftp/filemode.c, src/sftp/filemode.h, src/sftp/idcache.c:
 	New files, copied from GNU Fileutils-4.0. 
 
