@@ -14,7 +14,7 @@ struct connection_service
 
   /* Supported global requests */
   struct alist *global_requests;
-  struct alist *channel_requests;
+  struct alist *channel_types;
 };
 
 struct session_handler
@@ -470,7 +470,7 @@ static int init_session_service(struct ssh_service *s,
   NEW(open);
   open->super.super.handler = do_channel_open;
   open->super.session = session;
-  open->channel_requests = self->channel_requests;
+  open->channel_types = self->channel_types;
   con->dispatch[SSH_MSG_CHANNEL_OPEN] = &open->super.super;
 
   NEW(request);
@@ -514,7 +514,7 @@ struct ssh_service make_session_service(struct alist *global_requests,
   NEW(self);
   self->super.init = init_session_service;
   self->global_requests = global_requests;
-  self->channel_requests = channel_requests;
+  self->channel_types = channel_types;
 
   return &self->super;
 }
