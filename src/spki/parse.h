@@ -109,8 +109,12 @@ enum spki_type
 spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
 		     struct spki_5_tuple *acl);
 
+struct spki_5_tuple_list *
+spki_parse_acl(struct spki_acl_db *db, struct spki_iterator *i);
+
 enum spki_type
 spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
 		struct spki_5_tuple *cert);
+
 
 #endif /* LIBSPKI_PARSE_H_INCLUDED */

@@ -357,6 +357,41 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
   return spki_parse_end(i);
 }
 
+struct spki_5_tuple_list *
+spki_parse_acl(struct spki_acl_db *db, struct spki_iterator *i)
+{
+  struct spki_5_tuple_list *list = NULL;
+
+  if (!spki_check_type(i,  SPKI_TYPE_ACL))
+    return 0;
+
+  if (i->type == SPKI_TYPE_VERSION)
+    spki_parse_version(i);
+
+  for (;;)
+    switch (i->type)
+      {
+      case SPKI_TYPE_END_OF_EXPR:
+	if (spki_parse_end(i))
+	  return list;
+
+	/* Fall through */
+      default:
+      fail:
+	spki_5_tuple_list_release(db, list);
+	return NULL;
+      case SPKI_TYPE_ENTRY:
+	{
+	  struct spki_5_tuple *acl = spki_5_tuple_cons_new(db, &list);
+	  if (!acl)
+	    goto fail;
+
+	  if (!spki_parse_acl_entry(db, i, acl))
+	    goto fail;
+	}
+    }
+}
+
 /* The cert must already be initialized. */
 enum spki_type
 spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
