@@ -78,11 +78,21 @@ do_lsh_file_lock(struct lsh_file_lock_info *self)
       NEW(lsh_file_lock, lock);
       init_resource(&lock->super, do_kill_file_lock);
 
+      lock->info = self;
+      
       close(fd);
       return &lock->super;
     }
 }
 
+/* Checks if a file is locked, without actually trying to lock it. */
+static struct resource *
+do_lsh_file_lock_p(struct lsh_file_lock_info *self)
+{
+  struct stat sbuf;
+
+  return (stat(lsh_get_cstring(self->lockname), &sbuf) == 0);
+}
 
 struct lsh_file_lock_info *
 make_lsh_file_lock_info(struct lsh_string *name)
@@ -90,6 +100,7 @@ make_lsh_file_lock_info(struct lsh_string *name)
   NEW(lsh_file_lock_info, self);
   self->lockname = name;
   self->lock = do_lsh_file_lock;
+  self->lock_p = do_lsh_file_lock_p;
 
   return self;
 }
