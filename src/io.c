@@ -343,7 +343,7 @@ static int io_iter(struct io_backend *b)
 		  }{
 		    struct callout *p;
 		    struct callout *next;
-		    for (p = io->callouts; (p = next); )
+		    for (p = b->callouts; (p = next); )
 		      {
 			next = p->next;
 			lsh_free(p);
@@ -536,7 +536,7 @@ struct connect_fd *io_connect(struct io_backend *b,
       return NULL;
     }
   
-  fd = xalloc(sizeof(struct connect_fd));
+  NEW(fd);
   fd->fd = s;
   fd->callback = f;
 
@@ -577,7 +577,7 @@ struct listen_fd *io_listen(struct io_backend *b,
       return NULL;
     }
 
-  fd = xalloc(sizeof(struct connect_fd));
+  NEW(fd);
 
   fd->fd = s;
   fd->callback = callback;
@@ -595,9 +595,10 @@ struct abstract_write *io_read_write(struct io_backend *b,
 				     UINT32 block_size,
 				     struct close_callback *close_callback)
 {
-  struct io_fd *f= xalloc(sizeof(struct io_fd));
+  struct io_fd *f;
   struct write_buffer *buffer = write_buffer_alloc(block_size);
-  
+
+  NEW(f);
   f->fd = fd;
   
   f->close_reason = -1; /* Invalid reason */
