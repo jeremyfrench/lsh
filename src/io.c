@@ -99,6 +99,8 @@ io_init(void)
 void
 io_final(void)
 {
+  gc_final();
+  
   /* There mustn't be any outstanding callbacks left. */
   oop_sys_delete(global_oop_sys);
   global_oop_sys = NULL;
