@@ -1,3 +1,8 @@
+2003-02-11  Niels Möller  <niels@s3.kth.se>
+
+	* sftp_c.c (sftp_get_file_main): Added an explicit cast to kludge
+	around a bug in the constification.
+
 2002-11-07  Pontus Sköld  <pont@soua.net>
 
 	* rl.c (lsftp_rl_completion): Bugfix: Don't free memory for every
