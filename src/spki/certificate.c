@@ -278,73 +278,78 @@ spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
   return type == SPKI_TYPE_END_OF_EXPR && spki_parse_end(i);
 }
 
-#define SKIP(t) do				\
-{						\
-  if (type == (t))				\
-    type = spki_parse_skip(i);			\
-} while (0)
 
-/* Should be called with the iterator pointing just after the "cert"
- * type tag. */
-int
-spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
-		     struct spki_5_tuple *cert)
+void
+spki_5_tuple_free_chain(struct spki_acl_db *db,
+			struct spki_5_tuple *chain)
 {
-  enum spki_type type = spki_parse_type(i);
-
-  cert->flags = 0;
-  
-  if (type == SPKI_TYPE_VERSION)
-    type = spki_parse_version(i);
-
-  SKIP(SPKI_TYPE_DISPLAY);
-
-  if (type != SPKI_TYPE_ISSUER)
-    return 0;
-
-  type = spki_parse_principal(db, i, &cert->issuer);
-  if (!type || !(type = spki_parse_end(i)))
-    return 0;
-
-  SKIP(SPKI_TYPE_ISSUER_INFO);
-
-  type = spki_parse_principal(db, i, &cert->subject);
-  if (!type || !(type = spki_parse_end(i)))
-    return 0;
-  
-  SKIP(SPKI_TYPE_SUBJECT_INFO);
-
-  if (type == SPKI_TYPE_PROPAGATE)
+  while (chain)
     {
-      if (!sexp_iterator_exit_list(i))
-	return 0;
+      struct spki_5_tuple *next = chain->next;
+      if (chain->tag)
+	SPKI_FREE(db, chain->tag);
+      SPKI_FREE(db, chain);
 
-      cert->flags |= SPKI_PROPAGATE;
+      chain = next;
+    }
+}
+
+struct spki_5_tuple *
+spki_process_sequence_no_signatures(struct spki_acl_db *db,
+				    struct sexp_iterator *i)
+{
+  struct spki_5_tuple *chain = NULL;
+  enum spki_type type;  
+
+  if (!spki_check_type(i, SPKI_TYPE_SEQUENCE))
+    return NULL;
+
+  type = spki_parse_type(i);
+  
+  for (;;)
+    {
+      switch (type)
+	{
+	default:
+	  goto fail;
+
+	case SPKI_TYPE_END_OF_EXPR:
+	  goto done;
+	  
+	case SPKI_TYPE_CERT:
+	  {
+	    SPKI_NEW(db, struct spki_5_tuple, cert);
+	    cert->next = chain;
+	    chain = cert;
+	    
+	    type = spki_parse_cert(db, i, cert);
+
+	    if (!type)
+	      goto fail;
+
+	    break;
+	  }
+	case SPKI_TYPE_PUBLIC_KEY:
+	case SPKI_TYPE_SIGNATURE:
+	case SPKI_TYPE_DO:
+	  /* Ignore */
+	  type = spki_parse_skip(i);
+	  break;
+	}
     }
 
-  if (type != SPKI_TYPE_TAG)
-    return 0;
+ done:
+
+  assert(type == SPKI_TYPE_END_OF_EXPR);
   
-  type = spki_parse_tag(db, i, cert);
-  if (!type)
-    return 0;
-
-  if (type == SPKI_TYPE_VALID)
-    type = spki_parse_valid(i, cert);
-
-  SKIP(SPKI_TYPE_COMMENT);
-
-  return (type == SPKI_TYPE_END_OF_EXPR) && sexp_iterator_exit_list(i);
+  if (sexp_iterator_exit_list(i))
+    return chain;
+  
+ fail:
+  spki_5_tuple_free_chain(db, chain);
+  return NULL;
 }
 
-int
-spki_cert_parse(struct spki_acl_db *db, struct sexp_iterator *i,
-		struct spki_5_tuple *cert)
-{
-  return spki_check_type(i, SPKI_TYPE_CERT)
-    && spki_cert_parse_body(db, i, cert);
-}
-     
 
 
 /* Dates */

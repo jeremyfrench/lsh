@@ -179,13 +179,14 @@ spki_acl_by_authorization_next(struct spki_acl_db *,
 
 
 /* Certificates */
-int
-spki_cert_parse(struct spki_acl_db *db, struct sexp_iterator *i,
-		struct spki_5_tuple *cert);
 
-int
-spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
-		     struct spki_5_tuple *cert);
+void
+spki_5_tuple_free_chain(struct spki_acl_db *db,
+			struct spki_5_tuple *chain);
+
+struct spki_5_tuple *
+spki_process_sequence_no_signatures(struct spki_acl_db *db,
+				    struct sexp_iterator *i);
 
 
 /* Other more or less internal functions. */
