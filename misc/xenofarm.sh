@@ -33,6 +33,22 @@ do
   esac
 done
 
+# Fix PATH for system where the default environment is broken
+
+# We may need /usr/local/bin to get GNU make
+if make --version | grep GNU >/dev/null ; then : ; else
+    if /usr/local/bin/make | grep GNU >/dev/null ; then
+	PATH="/usr/local/bin:$PATH"
+    fi
+fi
+
+# We may need /usr/ccs/bin for ar
+if type ar >/dev/null ; then : ; else
+    if [ -x /usr/ccs/bin/ar ] ; then
+	PATH="$PATH:/usr/ccs/bin"
+    fi
+fi
+
 rm -rf r
 mkdir r
 exec > r/shlog.txt 2>&1
