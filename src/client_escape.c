@@ -33,6 +33,7 @@
 #include "client.h"
 
 #include "format.h"
+#include "lsh_string.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -120,10 +121,13 @@ newlinep(uint8_t c)
 static uint32_t
 scan_escape(struct lsh_string *packet, uint32_t pos, uint8_t escape)
 {
-  for ( ; (pos + 2) <= packet->length; pos++)
+  uint32_t length = lsh_string_length(packet);
+  const uint8_t *data = lsh_string_data(packet);
+  
+  for ( ; (pos + 2) <= length; pos++)
     {
-      if (newlinep(packet->data[pos])
-	  && (packet->data[pos+1] == escape))
+      if (newlinep(data[pos])
+	  && (data[pos+1] == escape))
 	return pos + 1;
     }
   return 0;
@@ -154,6 +158,8 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
   CAST(escape_handler, self, s);
   uint32_t pos;
   uint32_t done;
+  uint32_t length;
+  const uint8_t *data;
 
 #if 0
   trace("do_escape_handler: state = %i, packet length = %i\n",
@@ -166,8 +172,11 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
       A_WRITE(self->super.next, packet);
       return;
     }
+
+  length = lsh_string_length(packet);
+  data = lsh_string_data(packet);
   
-  assert(packet->length);
+  assert(length);
 
   /* done is the length of the prefix of the data that is already
    * consumed in one way or the other, while pos is the next position
@@ -179,9 +188,9 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
     {
     case GOT_NEWLINE:
       /* We already got newline. Is the next character the escape? */
-      if (packet->data[0] == self->info->escape)
+      if (data[0] == self->info->escape)
 	{
-	  if (packet->length == 1)
+	  if (length == 1)
 	    {
               self->state = GOT_ESCAPE;
 	      lsh_string_free(packet);
@@ -190,7 +199,7 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
 	  else
 	    {
 	      pos = 2;
-	      if (escape_dispatch(self->info, packet->data[1]))
+	      if (escape_dispatch(self->info, data[1]))
 		/* The quote action. Keep the escape. */
 		done = 1;
 	      else
@@ -200,7 +209,7 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
       break;
     case GOT_ESCAPE:
       pos = 1;
-      if (escape_dispatch(self->info, packet->data[0]))
+      if (escape_dispatch(self->info, data[0]))
 	/* The quote action. Keep the escape. */
 	done = 0;
       else
@@ -220,18 +229,18 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
       /* First, pass on the data before the escape.  */
       assert(pos > done);
       A_WRITE(self->super.next,
-	      ssh_format("%ls", pos - done, packet->data + done));
+	      ssh_format("%ls", pos - done, data + done));
       
       /* Point to the action character. */
       pos++;
-      if (pos == packet->length)
+      if (pos == length)
 	{
 	  /* Remember how far we got. */
 	  self->state = GOT_ESCAPE;
 	  lsh_string_free(packet);
 	  return;
 	}
-      if (escape_dispatch(self->info, packet->data[pos]))
+      if (escape_dispatch(self->info, data[pos]))
 	/* Keep escape */
 	done = pos;
       else
@@ -240,10 +249,10 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
     }
 
   /* Handle any data after the final escape */
-  if (done < packet->length)
+  if (done < length)
     {
       /* Rember if the last character is a newline. */
-      if (newlinep(packet->data[packet->length - 1]))
+      if (newlinep(data[length - 1]))
 	self->state = GOT_NEWLINE;
       else
 	self->state = GOT_NONE;
@@ -253,8 +262,8 @@ do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
 	{
 	  /* Partial packet */
 	  A_WRITE(self->super.next,
-		  ssh_format("%ls", packet->length - done,
-			     packet->data + done));
+		  ssh_format("%ls", length - done,
+			     data + done));
 	  lsh_string_free(packet);
 	}
       else
