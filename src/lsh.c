@@ -210,7 +210,7 @@ int main(int argc, char **argv)
 		      optarg);
 	      exit(1);
 	    }
-	    
+	  break;
 	case '?':
 	  usage();
 	}
