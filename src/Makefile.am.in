@@ -67,9 +67,10 @@ atoms_defines.h: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms header <$(srcdir)/atoms.in >$@T
 	test -s $@T && mv -f $@T $@
 
+GPERF_FLAGS = -LANSI-C -t -c -C -l -k1,3,7,$$ -N gperf_atom 
 atoms_gperf.c: atoms.in process_atoms
 	$(BASH) $(srcdir)/process_atoms gperf <$(srcdir)/atoms.in \
-             | gperf >$@T -LANSI-C -t -c -l -k1,7,$$ -N gperf_atom 
+             | gperf >$@T $(GPERF_FLAGS)
 	test -s $@T && mv -f $@T $@
 
 atoms_table.c: atoms.in process_atoms
