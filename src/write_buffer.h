@@ -29,12 +29,11 @@
 #include "abstract_io.h"
 
 /* For the packet queue */
-struct node
+/* NOTE: No object header */
+struct buffer_node
 {
-  struct lsh_object header;
-  
-  struct node *next;
-  struct node *prev;
+  struct buffer_node *next;
+  struct buffer_node *prev;
   struct lsh_string *packet;
 };
 
@@ -53,8 +52,8 @@ struct write_buffer
   int try_write;
 #endif
   
-  struct node *head;
-  struct node *tail;
+  struct buffer_node *head;
+  struct buffer_node *tail;
 
   UINT32 pos; /* Partial packet */
   struct lsh_string *partial;
