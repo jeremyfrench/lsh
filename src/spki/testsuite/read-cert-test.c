@@ -26,8 +26,16 @@ test_main(void)
   ASSERT(cert.subject ==
 	 spki_principal_by_key(&db, LDATA("(10:public-key2:k2)")));
 
-#if 0
-  ASSERT(cert.flags == SPKI_NOT_BEFORE | SPKI_NOT_AFTER);
-#endif
+  ASSERT(cert.flags == (SPKI_NOT_BEFORE | SPKI_NOT_AFTER) );
+
+  /* $ date  +%s -u -d '2000-05-05 00:00:00'
+   * ==> 957484800.
+   *
+   * $ date  +%s -u -d '2002-01-01 00:00:00'
+   * ==> 1009843200
+   */
+
+  ASSERT(!spki_date_cmp_time_t(&cert.not_before, 957484800));
+  ASSERT(!spki_date_cmp_time_t(&cert.not_after, 1009843200));
 }
 	 
