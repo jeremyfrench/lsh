@@ -28,6 +28,7 @@
 #include "format.h"
 #include "keyexchange.h"
 #include "parse.h"
+#include "publickey_crypto.h"
 #include "ssh.h"
 #include "xalloc.h"
 
@@ -127,12 +128,18 @@ int initiate_keyexchange(struct ssh_connection *connection,
 			 struct lsh_string *first_packet)
 {
   int res;
+  lsh_string *s;
   
-  connection->sent_kexinit = kex;
   kex->first_kex_packet_follows = !!first_packet;
-   
-  res = A_WRITE(connection->write, format_kex(kex));
+  connection->kexinits[connection->type] = kex;
 
+  s = format_kex(kex);
+
+  /* Save value for later signing */
+  connection->literal_kexinits[connection->type] = s; 
+
+  res = A_WRITE(connection->write, lsh_string_dup(s));
+  
   if ( (res == WRITE_OK) && first_packet)
     return A_WRITE(connection->write, first_packet);
   else
@@ -186,9 +193,10 @@ static int do_handle_kexinit(struct packet_hander *c,
   
   if (!msg)
     return 0;
-  
-  lsh_free(packet);
 
+  /* Save value for later signing */
+  connection->literal_kexinits[connection->type] = packet;
+  
   connection->kexinits[!connection->type] = msg;
   
   /* Have we sent a kexinit message? */
@@ -252,13 +260,23 @@ static int do_handle_kexinit(struct packet_hander *c,
       for (i = 0; i<KEX_PARAMETERS; i++)
 	algorithms[i] = ALIST_GET(closure->algorithms, parameters[i]);
       
-      newkeys = make_newkeys_handler(ALIST_GET(closure->alist, hostkey_algorithm),
+      newkeys = make_newkeys_handler(ALIST_GET(closure->algorithms,
+					       hostkey_algorithm),
 				     algorithms);
 
       return KEYEXCHANGE_INIT(ALIST_GET(algorithms, kex_algorithm), connection);
-      
     }
 }
 
+static int do_handle_newkeys(struct packet_handler *c,
+			     struct ssh_connection *connection,
+			     struct lsh_string *packet)
+{
+  
+struct packet_handler *
+make_newkeys_handler(struct signature_algorithm *hostkey_algorithm,
+		     void *parameters)
+{
+  
 
   

@@ -90,13 +90,11 @@ struct handle_keyexinit
 struct handle_newkeys
 {
   struct packet_handler super;
-  struct crypto_algorithm *encryption_client_to_server;
-  struct crypto_algorithm *encryption_server_to_client;
-  struct mac_algorithm *mac_client_to_server;
-  struct mac_algorithm *mac_server_to_client;
+  /* Algorithms for transmission */
+  struct crypto_algorithm *crypto;
+  struct mac_algorithm *mac;
 #if 0
-  struct compression_algorithm *compression_client_to_server;
-  struct compression_algorithm *compression_server_to_client;
+  struct compression_algorithm *compressor;
 #endif
 };
 
