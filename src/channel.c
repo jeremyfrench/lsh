@@ -1525,9 +1525,18 @@ do_channel_write(struct abstract_write *w,
 		 struct lsh_string *packet)
 {
   CAST(channel_write, closure, w);
-  
-  A_WRITE(closure->channel->write,
-	  channel_transmit_data(closure->channel, packet) );
+
+  if (!packet)
+    {
+      /* EOF */
+      assert(closure->channel->sources);
+      if ( (closure->channel->sources == 1)
+	   && !(closure->channel->flags & CHANNEL_SENT_EOF))
+	channel_eof(closure->channel);
+    }
+  else
+    A_WRITE(closure->channel->write,
+	    channel_transmit_data(closure->channel, packet) );
 }
 
 static void
@@ -1536,24 +1545,35 @@ do_channel_write_extended(struct abstract_write *w,
 {
   CAST(channel_write_extended, closure, w);
 
-  A_WRITE(closure->super.channel->write,
-	  channel_transmit_extended(closure->super.channel,
-				    closure->type,
-				    packet));
+  if (!packet)
+    {
+      /* EOF */
+      assert(closure->super.channel->sources);
+      if ( (closure->super.channel->sources == 1)
+	   && !(closure->super.channel->flags & CHANNEL_SENT_EOF))
+	channel_eof(closure->super.channel);
+    }
+  else
+    A_WRITE(closure->super.channel->write,
+	    channel_transmit_extended(closure->super.channel,
+				      closure->type,
+				      packet));
 }
 
-struct abstract_write *make_channel_write(struct ssh_channel *channel)
+struct abstract_write *
+make_channel_write(struct ssh_channel *channel)
 {
   NEW(channel_write, closure);
-
+  
   closure->super.write = do_channel_write;
   closure->channel = channel;
 
   return &closure->super;
 }
 
-struct abstract_write *make_channel_write_extended(struct ssh_channel *channel,
-						   UINT32 type)
+struct abstract_write *
+make_channel_write_extended(struct ssh_channel *channel,
+			    UINT32 type)
 {
   NEW(channel_write_extended, closure);
 
@@ -1564,12 +1584,14 @@ struct abstract_write *make_channel_write_extended(struct ssh_channel *channel,
   return &closure->super.super;
 }
 
-struct io_read_callback *make_channel_read_data(struct ssh_channel *channel)
+struct io_read_callback *
+make_channel_read_data(struct ssh_channel *channel)
 {
   return make_read_data(channel, make_channel_write(channel));
 }
 
-struct io_read_callback *make_channel_read_stderr(struct ssh_channel *channel)
+struct io_read_callback *
+make_channel_read_stderr(struct ssh_channel *channel)
 {
   return make_read_data(channel,
 			make_channel_write_extended(channel,
@@ -1584,9 +1606,10 @@ struct io_read_callback *make_channel_read_stderr(struct ssh_channel *channel)
        (channel object ssh_channel)))
 */
 
+#if 0
 /* Close callback for files we are writing to. */
 static void
-channel_close_callback(struct close_callback *c, int reason)
+channel_close_write_callback(struct close_callback *c, int reason)
 {
   CAST(channel_close_callback, closure, c);
 
@@ -1609,7 +1632,43 @@ channel_close_callback(struct close_callback *c, int reason)
     }
 }
 
-struct close_callback *make_channel_close(struct ssh_channel *channel)
+struct close_callback *
+make_channel_write_close_callback(struct ssh_channel *channel)
+{
+  NEW(channel_close_callback, closure);
+  
+  closure->super.f = channel_close_write_callback;
+  closure->channel = channel;
+
+  return &closure->super;
+}
+#endif
+
+/* Close callback for files we are writing to (files we read from
+ * doesn't need any special callback, as we'll get EOF from them).
+ *
+ * FIXME: I don't know how we should catch POLLERR on files we read;
+ * perhaps we need this callback, or perhaps we'll install an
+ * i/o-exception handler do the work. */
+
+static void
+channel_close_callback(struct close_callback *c, int reason)
+{
+  CAST(channel_close_callback, closure, c);
+
+  debug("channel_close_callback: File closed for reason %i.\n",
+	reason);
+  
+  if (!--closure->channel->sources)
+    /* Close channel */
+    {
+      debug("channel_close_callback: Closing down channel.\n");
+      channel_close(closure->channel);
+    }
+}
+
+struct close_callback *
+make_channel_close_callback(struct ssh_channel *channel)
 {
   NEW(channel_close_callback, closure);
   
