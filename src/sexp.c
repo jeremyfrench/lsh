@@ -880,13 +880,17 @@ sexp2atom(struct sexp *e)
   return s ? lookup_atom(s->length, s->data) : 0;
 }
 
+/* If limit is nonzero, at most that number of octets are allowed. */
 int
-sexp2bignum_u(struct sexp *e, mpz_t n)
+sexp2bignum_u(struct sexp *e, mpz_t n, UINT32 limit)
 {
   struct lsh_string *s = sexp2string(e);
 
   if (s)
     {
+      if (limit && (s->length > limit))
+	return 0;
+      
       bignum_parse_u(n, s->length, s->data);
       return 1;
     }
@@ -944,9 +948,9 @@ sexp_assq(struct sexp_iterator *i, int atom)
 }
 
 int
-sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n)
+sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n, UINT32 limit)
 {
-  return sexp2bignum_u(sexp_assq(i, atom), n);
+  return sexp2bignum_u(sexp_assq(i, atom), n, limit);
 }
 
 /* Command line options */
