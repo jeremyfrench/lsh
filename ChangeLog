@@ -1,3 +1,17 @@
+Sun May  9 20:17:27 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/keyexchange.c, src/keyexchange.h (kex_build_secret): New
+ 	function, implementing the changed session key generation in the
+	transport-05 draft (pointed out by Joseph Galbraith).
+	
+	* src/server_keyexchange.c (do_handle_dh_init): Use
+ 	kex_build_secret().
+
+	* src/client_keyexchange.c (do_handle_dh_reply): Use
+ 	kex_build_secret().
+
+	* src/Makefile.am.in (EXTRA_DIST): Added compiler.scm to the dist.
+
 Sun Apr 25 15:47:13 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/channel.c, src/channel.h, src/client.c, src/client.h,
