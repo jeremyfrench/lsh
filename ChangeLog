@@ -1,7 +1,10 @@
 2004-10-07  Niels Möller  <niels@s3.kth.se>
 
+	* doc/lsh.texinfo: Updated for version 1.5.6.
+
 	* src/lshd.c (make_lshd_options): New default: Enable X11
 	forwarding.
+	(main_options): Deleted broken --login-program option.
 
 	* src/lsh-writekey.c (make_lsh_writekey_options): New default:
 	Encrypt private key using aes256-cbc.
