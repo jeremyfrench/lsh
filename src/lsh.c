@@ -53,8 +53,6 @@
 /* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
 
-struct io_backend backend = { STATIC_HEADER };
-
 void usage(void) NORETURN;
 
 void usage(void)
