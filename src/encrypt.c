@@ -61,14 +61,14 @@ static int do_encrypt(struct abstract_write *w,
     UINT8 s[4];
     WRITE_UINT32(s, closure->sequence_number);
 
-    closure->sequence_number++;
-    
     HASH_UPDATE(connection->send_mac, 4, s);
     HASH_UPDATE(connection->send_mac, packet->length, packet->data);
     HASH_DIGEST(connection->send_mac, mac);
   }
   lsh_string_free(packet);
 
+  closure->sequence_number++;
+  
   return A_WRITE(closure->super.next, new);
 }
 
