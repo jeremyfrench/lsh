@@ -52,3 +52,8 @@ for subdir in src/argp src/nettle src/sftp src/spki ; do
 done
 
 aclocal && autoconf && autoheader && automake -a
+
+relative_symlink install-sh src/nettle
+relative_symlink texinfo.tex src/nettle
+relative_symlink INSTALL src/nettle
+relative_symlink COPYING src/nettle
