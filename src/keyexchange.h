@@ -70,6 +70,7 @@
 	     "struct ssh_connection *connection"
 	     "struct ssh_service *finished"
 	     "int hostkey_algorithm_atom"
+	     ;; FIXME: The algorithm object seems unnecessary.
 	     "struct signature_algorithm *hostkey_algorithm"
 	     "struct object_list *algorithms")))
 */
@@ -131,6 +132,15 @@
        ))
 */
 
+/* FIXME: I'm considering renaming this type to simply "keypair" */ 
+/* CLASS:
+   (class
+     (name keypair_info)
+     (vars
+       (public string)
+       (private object signer)))
+*/
+
 struct lsh_string *format_kex(struct kexinit *kex);
 int disconnect_kex_failed(struct ssh_connection *connection, const char *msg);
 
@@ -177,5 +187,8 @@ make_newkeys_handler(struct crypto_instance *crypto,
 struct install_keys *
 make_install_new_keys(int is_server,
 		      struct object_list *algorithms);
+
+struct keypair_info *make_keypair_info(struct lsh_string *public,
+				       struct signer *private);
 
 #endif /* LSH_KEYEXCHANGE_H_INCLUDED */
