@@ -19,10 +19,12 @@ MAKEFILESAM = Makefile.am doc/Makefile.am src/Makefile.am \
 # FIXME: Use the BASH variable to execute the script. The problem is
 # that the script attempts to start itselt with "$0 args".
 $(MAKEFILESAM): $(addsuffix .in,$(MAKEFILESAM))
-	BASH=$(BASH) SELF="$(BASH) ./make_am" $(BASH) ./make_am
+	(cd $(srcdir) && BASH=$(BASH) \
+	    SELF="$(BASH) ./make_am" $(BASH) ./make_am)
 	
 $(DOTDISTS): depend
-	BASH=$(BASH) SELF="$(BASH) ./make_am" $(BASH) ./make_am --rethink
+	(cd $(srcdir) && BASH=$(BASH) \
+	    SELF="$(BASH) ./make_am" $(BASH) ./make_am --rethink)
 
 .PHONY: dotdists
 dotdists: $(DOTDISTS)
