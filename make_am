@@ -3,6 +3,13 @@
 # This program wants to recieve a list of needed headers on stdin. It
 # reads Makefile.am.in and creates Makefile.am.
 
+# How do we run this script again?
+if [ -z "$BASH" ]; then
+    BASH=bash
+fi
+if [ -z "$SELF" ]; then
+    SELF="$BASH make_am"
+fi
 rethink=no
 options=''
 
@@ -80,7 +87,7 @@ function add_command {
 
 function run_commands {
     echo 1>&2 "run_commands: $commands cat >/dev/null"
-    /bin/bash -c "$commands cat >/dev/null"
+    bash -c "$commands cat >/dev/null"
 }
 
 subdirs=''
@@ -92,10 +99,10 @@ while true; do
 	    # automake expands "foo \\\n\nbar" -> "foo \\\nbar". So
 	    # put all the files on one line, for simplicity.  
 	    
-	    # comm -12 - <(src/cvs_headers $dir) | sed 's/\$/ \\\\/';
+	    # comm -12 - <($BASH src/cvs_headers $dir) | sed 's/\$/ \\\\/';
 	    if [ $rethink = yes ]; then
 		add_command "( (echo $args = .dist_headers;
-		comm -12 - <(src/cvs_headers $dir) \\
+		comm -12 - <($BASH src/cvs_headers $dir) \\
 		     | tee $dir/.dist_headers ) | tr '\\n' ' ';
 		echo) 1>&4"
 		
@@ -108,7 +115,7 @@ while true; do
 	CLASS_FILES)
 	    (   ( echo $args = .dist_classes;
 		if [ $rethink = yes ]; then
-		    src/used_headers .x $dir | tee $dir/.dist_classes
+		    $BASH src/used_headers .x $dir | tee $dir/.dist_classes
 		else
 		    cat $dir/.dist_classes
 		fi) | tr '\n' ' '
@@ -118,7 +125,7 @@ while true; do
 	    subdirs=$args
 	    echo 1>&4 "SUBDIRS = $args"
 	    for d in $args; do
-		add_command "$0 $options $dir/$d"
+		add_command "$SELF $options $dir/$d"
 	    done
 	    ;;
 	BODY)
@@ -127,7 +134,7 @@ while true; do
 		    # Determining the list of used headers is a global
 		    # operation, so use find to recurse in all the
 		    # subdirs.
-		    src/used_headers .h . `find $subdirs -type d` | run_commands 
+		    $BASH src/used_headers .h . `find $subdirs -type d` | run_commands 
 		else
 		    run_commands </dev/null
 		fi

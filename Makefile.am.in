@@ -1,6 +1,6 @@
 ## Process this file with make_am to produce Makefile.am
 
-SUBDIRS: src doc
+SUBDIRS: src doc misc
 BODY:
 
 AUTOMAKE_OPTIONS = foreign
@@ -18,10 +18,13 @@ MAKEFILESAM = Makefile.am doc/Makefile.am src/Makefile.am \
 # FIXME: Use the BASH variable to execute the script. The problem is
 # that the script attempts to start itselt with "$0 args".
 $(MAKEFILESAM): $(addsuffix .in,$(MAKEFILESAM))
-	./make_am
-
+	BASH=$(BASH) SELF="$(BASH) ./make_am" $(BASH) ./make_am
+	
 $(DOTDISTS): depend
-	./make_am --rethink
+	BASH=$(BASH) SELF="$(BASH) ./make_am" $(BASH) ./make_am --rethink
+
+.PHONY: dotdists
+dotdists: $(DOTDISTS)
 
 # FIXME: Have to figure out how to create dependency files recursively.
 # dist-hook: $(DOTDISTS)
@@ -36,3 +39,4 @@ EXTRA_DIST = AUTHORS FAQ README COPYING ChangeLog NEWS FAQ \
 	Makefile.am.in make_am 
 
 
+include $(top_srcdir)/misc/ctags.mk
