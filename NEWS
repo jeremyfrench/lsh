@@ -1,5 +1,7 @@
 News for the 1.5.2 release
 
+	Encrypted private keys works again.
+	
 	New client escape sequence RET ~ ?, which lists all available
 	escape sequences. Also fixed the werror functions so that they
 	use \r\n to terminate lines when writing to a tty in raw mode.
@@ -8,8 +10,13 @@ News for the 1.5.2 release
 	As a side effect, The -p option must now be given before
 	--interface to have any effect.
 
+	Connecting to machines with multiple IP-adresses is smarter,
+	it connects to a few addresses at a time, in parallel.
+	
 	Fixed a file descriptor leak in the server tcpip forwarding
 	code.
+
+	Lots of portability fixes.
 	
 News for the 1.5.1 release
 
