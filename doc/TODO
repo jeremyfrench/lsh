@@ -99,19 +99,6 @@ this case, the local process should close it's stdout and stderr, but
 not close the channel until it has received a close message and
 possibly an exit status.
 
-The server's close message should somehow be delayed until the dead
-process has been reaped. I think the Right way is for the server to
-initiate CHANNEL_CLOSE when all of the following conditions are true:
-
-× The process is dead (and its exit status has been send to the
-  client).
-x EOF has been detected on both stdout and stderr.
-× An EOF message has been received from the client.
-
-The client may want to respond to the exit-status message with an
-CHANNEL_EOF message, unless it wants to talk to any forked children
-that may still keep the stdin open.
-
 
 USER INFO
 

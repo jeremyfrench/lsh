@@ -1,5 +1,8 @@
 Sun Dec 20 20:11:02 1998    <nisse@puck>
 
+	* arcfour.c, blowfish.c, cascade.c, cbc.c, des.c, hmac.c, md5.c,
+	sha.c: New files, extracted from crypto.c and abstract_crypto.c.
+	
 	* server.c (do_line): Accept client version 1.99, if
 	DATAFELLOWS_SSH2_GREETING_WORKAROUND is defined.
 
