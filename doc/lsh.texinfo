@@ -10,7 +10,7 @@
 * LSH: (lsh).           Secure Shell and related utilities.
 @end direntry
 
-@set UPDATED-FOR 1.1.6
+@set UPDATED-FOR 1.3.4
 
 @c Latin-1 doesn't work with tex output.
 @c Also lookout for é characters.
@@ -288,11 +288,12 @@ the effort to break them.
 @section Features
 
 @command{lsh} does not only provide more secure replacements for
-@command{telnet}, @command{rsh} and @command{rlogin}, it also provides some other
-features to make it convenient to communicate securely. But @command{lsh} is
-still in an early stage of development, so this section is expected to
-grow with time. One goal for @command{lsh} is to make it reasonable easy to
-extend it, without messing with the core security functionality.
+@command{telnet}, @command{rsh} and @command{rlogin}, it also provides
+some other features to make it convenient to communicate securely. This
+section is expected to grow with time, as more features from the
+wish-list are added to lsh. One goal for @command{lsh} is to make it
+reasonable easy to extend it, without messing with the core security
+functionality.
 
 @command{lsh} can be configured to allow login based on a personal key-pair
 consisting of a private and a public key, so that you can execute remote
@@ -308,11 +309,22 @@ Forwarding of arbitrary @acronym{TCP/IP} connections is provided. This
 is useful for tunneling otherwise insecure protocols, like telnet and
 pop, through an encrypted @command{lsh} connection.
 
-Convenient tunneling of @acronym{X} is one of the most impressive features of the
-original @command{ssh} programs. @command{lsh} doesn't do this yet. Other kind
-of tunneling that may turn out to be useful include authentication (i.e.
-@command{ssh-agent}), general forwarding of @acronym{UDP}, and why not also
-general @acronym{IP}-tunneling.
+Convenient tunneling of @acronym{X} was one of the most impressive
+features of the original @command{ssh} programs. The current version of
+@command{lsh} implements @acronym{X}-forwarding, although the
+@command{lshd} server doesn't provide that service yet.
+
+Whan @acronym{X} forwarding is in effect, the remote process is started
+in an environment where the @env{DISPLAY} variable in the environment
+points to a fake @acronym{X} server, connection to which are forwarded
+to the @acronym{X} server in your local environment. @command{lsh} also
+creates a new ``fake'' @samp{MIT-MAGIC-COOKIE-1} for controlling access
+control. Your real @acronym{X} authentication data is never sent to the
+remote machine.
+
+Other kinds of tunneling that may turn out to be useful include
+authentication (i.e. @command{ssh-agent}), general forwarding of
+@acronym{UDP}, and why not also general @acronym{IP}-tunneling.
 
 
 @node Related techniques,  , Features, Introduction
@@ -351,9 +363,6 @@ There also exists free implementations of @code{ssh-1}, for both Unix
 and Windows. @command{ossh} and later OpenSSH are derived from earlier
 version av Tatu Ylönen's @command{ssh}, and are free software.
 
-Until @command{lsh} becomes stable and well tested, I would recommend using
-some implementation of the @code{ssh-1} protocol.
-
 @node ssh2, Kerberos, ssh1, Related techniques
 @comment  node-name,  next,  previous,  up
 @subsection @code{ssh-2.x}
@@ -377,7 +386,7 @@ for recent versions of @command{ssh1}, but with a narrower definition of
 ``non-commercial use''.
 
 Besides @command{lsh} there are few free implementations of the
-@code{ssh-2} protocols, but since May 2000 it is supported also by
+@code{ssh-2} protocols. Since May 2000 it is supported also by
 OpenSSH.
 
 
@@ -633,9 +642,9 @@ the firewall in a secure way.
 @item
 Port forwarding is done in addition to anything else @command{lsh} is
 doing. In the example above, a tunnel is set up, but @command{lsh} will
-also start an interactive shell for you. Just like the @option{-L}
-option was not present. If this is not what you want, the @option{-N}
-option is for you (@pxref{Invoking lsh})
+also start an interactive shell for you. Just as if the @option{-L}
+option was not present. If this is not what you want, the @option{-N} or
+@option{-B} option is for you (@pxref{Invoking lsh})
 @end itemize
 
 Remote forwarding is similar, but asks the @emph{remote} machine to
@@ -737,13 +746,11 @@ If you have accounts on several systems, you usually create a single
 keypair on each of the systems, and on each system you authorize some or
 all of your other public keys for login.
 
-Note that @command{lsh} does @emph{not} currently encrypt your private
-key in any way. That means that you can lose it if a backup tape gets
-into the wrong hands, and if you use NFS it will likely be sent in the
-clear across your local network. (Actually, you can encrypt the key
-using a pass phrase, by passing the @option{-c 3des} option to
-@command{lsh-writekey}, but @command{lsh} doesn't yet support decrypting
-it).
+Note that @command{lsh-writekey} does @emph{not} currently encrypt your
+private key in any way. That means that you can lose it if a backup tape
+gets into the wrong hands, and if you use NFS it will likely be sent in
+the clear across your local network. To encrypt the key using a pass
+phrase, give the @option{-c 3des} option to @command{lsh-writekey}.
 
 
 @node srp, sexp, public-key, Getting started
@@ -801,18 +808,20 @@ talking to the real server, he needs to know your password as well.
 @acronym{SRP} support is disabled by default, but can be enabled by the
 @option{--srp-keyexchange} option to @command{lshd} and @command{lsh}
 (naturally, it won't be used unless enabled on both sides). At the time
-of this writing, @acronym{SRP} is too new to be trusted, at least
-according to conservative cryptographers (and remember that conservatism
-is a virtue when it comes to security).
+of this writing, @acronym{SRP} is too new to be trusted by conservative
+cryptographers (and remember that conservatism is a virtue when it comes
+to security).
 
 And even if @acronym{SRP} in itself is secure, the way @command{lsh}
 integrates it into the @code{ssh} protocol has not had much peer review.
 The bottom line of this disclaimer is that the @acronym{SRP} support in
 @command{lsh} should be considered experimental.
 
-As far as I know, @acronym{SRP} is not supported by any other @code{ssh}
-implementation. The protocol @command{lsh} uses is described in the
-@file{doc/srp-spec.txt}.
+As far as I know, using @acronym{SRP} as a host authentication mechanism
+is not supported by any other @code{ssh} implementation. The protocol
+@command{lsh} uses is described in the @file{doc/srp-spec.txt}.
+Implementations that use @acronym{SRP} only as a user authentication
+mechanism are not compatible with @command{lsh}.
 
 @node sexp, Converting keys, srp, Getting started
 @comment  node-name,  next,  previous,  up
@@ -821,7 +830,7 @@ implementation. The protocol @command{lsh} uses is described in the
 Keys and most other objects @command{lsh} needs to store on disk are
 represented as so called S-expressions or @dfn{sexps} for short.
 S-expressions have their roots in the Lisp world, and a variant of them
-are used in the Simple Public Key Infrastructure (@acronym{SPKI}).
+in used in the Simple Public Key Infrastructure (@acronym{SPKI}).
 Currently, @command{lsh}'s support for @acronym{SPKI} is quite limited,
 but it uses @acronym{SPKI}'s formats for keys and Access Control Lists
 (@acronym{ACL}:s).
@@ -872,10 +881,9 @@ ssh-conv <openssh-key.pub >new-key.pub
 @end example
 
 You can then use the usual @command{lsh-authorize} on the converted
-keys. For this to work, you must be using @acronym{DSA} keys:
-@command{lsh} doesn't support @command{RSA}.
+keys. @command{ssh-conv} supports both @acronym{DSA} and @command{RSA} keys.
 
-There is currently no tools for converting private keys.
+There are currently no tools for converting private keys.
 
 
 @node Invoking lsh, Invoking lshd, Getting started, Top
@@ -1044,11 +1052,6 @@ currently not implemented.
 @item --no-publickey
 Don't attempt to log in using public key authentication.
 
-@item --no-userauth
-Attempt to start a session without performing the user authentication
-sub-protocol at all. This is the default if @acronym{SRP} was used for
-the initial handshake, and should not make much sense otherwise.
-
 @end table
 
 @node Action options, Verbosity options, Userauth options, Invoking lsh
@@ -1100,14 +1103,16 @@ Start an interactive shell on the remote machine.
 @item -G
 Open a gateway on the local machine. A gateway is a local socket,
 located under /tmp, that can be used for controlling and using the ssh
-connection. It is protected using the ordinary file permissions. This
-feature is experimental.
+connection. It is protected using the ordinary file permissions.
 
 @item -N
 This is a no-operation action. It inhibits the default action, which is
 to start an interactive shell on the remote machine. It is useful if you
-want to set up a few forwarded tunnels, and nothing more.
+want to set up a few forwarded tunnels or a gateway, and nothing more.
 
+@iten -B
+Put the client into the background after key exchange and
+user authentication. Implies @option{-N}
 @end table
 
 If there are trailing arguments after the name of the remote system,
@@ -1136,6 +1141,10 @@ applies to actions that create remote processes, i.e. @option{-E} and
 
 Currently, this option is ignored if there is no local terminal.
 
+@item -x
+Request @acronym{X} forwarding. Applies to the @acronym{-E} and
+@option{S} and the default actions.
+
 @item --stdin
 Redirect the stdin of a remote process from a given, local, file.
 Default is to use @command{lsh}'s stdin for the first process, and
@@ -1154,7 +1163,7 @@ Redirect the stdout of a remote process to a given, local, file.
 Analogous to the @option{--stdout} option.
 
 @item -g
-Remote peers, aka Global forwarding. This option applies to the
+Remote peers, aka global forwarding. This option applies to the
 forwarding actions, i.e. @option{-L} and @option{-R}. By default, only
 connections to the loopback interface, ip 127.0.0.1, are forwared. This
 implies that only processes on the same machine can use the forwarded
@@ -1190,6 +1199,10 @@ Debug mode. Dumps @emph{a lot} of information, including dumps of all
 sent and received packets. It tries to avoid dumping highly sensitive data,
 such as private keys and the contents of @code{SSH_MSG_USERAUTH_REQUEST}
 messages, but you should still use it with care.
+
+@item --log-file
+This option redirects all messages to a file. Takes one mandatory
+argument: The name of that file.
 
 @end table
 
@@ -1293,7 +1306,7 @@ details.
 
 @item --login-shell
 Use the specified program as the login shell for all users, overriding
-the login shell in the passwd database. 
+the login shell in the passwd database. Mainly useful for testing.
 
 @item --srp-keyexchange
 Enable @acronym{SRP} keyexchange and user authentication.
