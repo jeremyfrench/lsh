@@ -49,6 +49,9 @@
                       "struct lsh_string *name" "int free")))
 */
 
+#define CURRENT_USER unix_current_user
+struct lsh_string* unix_current_user(void);
+
 #define USER_LOOKUP(db, n, f) ((db)->lookup((db), (n), (f)))
 
 struct user_db *
@@ -93,14 +96,16 @@ format_userauth_success(void);
 
 /* authentication methods */
 
-extern struct userauth server_userauth_none;
-
 struct userauth *
 make_userauth_password(struct user_db *db);
 
 struct userauth *
 make_userauth_publickey(struct user_db *db,
 			struct alist *verifiers);
+
+struct userauth *
+make_userauth_none(int ignore_user, 
+		   struct lsh_user *user);
 
 struct command *
 make_userauth_service(struct int_list *advertised_methods,
@@ -113,5 +118,6 @@ make_exc_userauth_handler(struct ssh_connection *connection,
 			  unsigned attempts,
 			  struct exception_handler *parent,
 			  const char *context);
+
 
 #endif /* LSH_SERVER_USERAUTH_H_INCLUDED */
