@@ -334,8 +334,7 @@ do_read_file(struct lsh_user *u,
     EXCEPTION_RAISE(e, x);
 }
 
-/* Change to user's home directory. FIXME: If the server is running
- * as the same user, perhaps it's better to use $HOME? */
+/* Change to user's home directory. */
 
 static int
 do_chdir_home(struct lsh_user *u)
@@ -608,6 +607,7 @@ do_lookup_user(struct user_db *s,
   CAST(unix_user_db, self, s);
   
   struct passwd *passwd;
+  const char *home;
   
   name = make_cstring(name, free);
   
@@ -677,12 +677,23 @@ do_lookup_user(struct user_db *s,
       else
 #endif /* HAVE_GETSPNAM */
 	crypted = passwd->pw_passwd;
-  
+
+      /* FIXME: If we are running as the uid of the user, it seems
+       * like a good idea to let the HOME environment variable
+       * override the passwd-database. */
+
+#if 0
+      if (! (passwd->pw_uid
+	     && (passwd->pw_uid == getuid())
+	     && (home = getenv("HOME"))))
+#endif
+	home = passwd->pw_dir;
+      
       return make_unix_user(name,
 			    passwd->pw_uid, passwd->pw_gid,
 			    self->backend,
 			    crypted,
-			    passwd->pw_dir, passwd->pw_shell);
+			    home, passwd->pw_shell);
     }
   else
     {

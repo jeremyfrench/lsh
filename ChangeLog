@@ -1,3 +1,53 @@
+2000-05-31  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh.c (main_argp_parser): Use make_srp1().
+	Changed behaviour of srp-keyexchange and dh-exchange. If only
+	--srp-keyexchange is given, dh keyexchange is disabled. 
+
+	* src/lshd.c (main_argp_parser): Use make_srp1().
+
+	* src/srp_exchange.c (make_srp1): New function.
+	(srp_make_reply_msg): Use GROUP_ADD.
+	(srp_make_client_proof): Use GROUP_SUBTRACT.
+
+	* src/srp.h (make_srp1): Added prototype.
+
+	* src/server_keyexchange.c: Adapted to changes in keyexchange.c.
+	Don't use make_install_new_keys().
+	* src/client_keyexchange.c: Likewise.
+
+	* src/publickey_crypto.h (abstract_group): Added methods GROUP_ADD
+	and GROUP_SUBTRACT, that are defined only for groups that happens
+	to have some extra structure.
+
+	* src/publickey_crypto.c (make_group_zn): Renamed from make_zn.
+	(make_ring_zn): New function.
+	(make_ssh_ring_srp_1): New function.
+
+	* src/connection_commands.c: Adapted to the changes to
+	ssh_connection and keyexchange.c.
+
+	* src/connection_commands.h (handshake_info): Replaced mode
+	attribute with flags.
+
+	* src/keyexchange.c (kexinit_handler): Deleted type attribute.
+	(initiate_keyexchange): Deleted mode argument, use
+	connection->flags instead.
+	(do_handle_kexinit): Use connection->flags.
+	(make_kexinit_handler): Deleted type argument.
+	(install_keys, install_new_keys): Deleted classes.
+	(install_keys): Made the INSTALL_KEYS method an ordinary function. 
+	(keyexchange_finish): Use install_keys().
+
+	* src/connection.c (make_ssh_connection): Added flags argument.
+	Initialize flags and user.
+
+	* src/connection.h (ssh_connection): Added flags attribute, and
+	switched the values of CONNECTION_CLIENT and CONNECTION_SERVER.
+	Added user attribute.
+	
+	* configure.in: Bumped version to 0.9.11.
+
 2000-05-30  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/invert-defs: Improved awk-code to deal with repeated message
