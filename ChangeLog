@@ -1,5 +1,26 @@
 2002-02-19  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/server_session.c (spawn_process): Let the child process open
+	the slave side of the pty.
+	(do_alloc_pty): Don't open or touch the slave side of the pty,
+	just open the master side and store the mode of the client,a nd
+	the window dimensions, in the pty_info struct for use later.
+
+	* src/server_pty.c (do_kill_pty_info): Don't touch slave tty (as
+	it's not opened yet).
+	(pty_open_master): Renamed the pty_allocate function. Now opens
+	only the master pty. Opening the slave as well has too many side
+	effects, in particular, pushing the pty-related STREAMS modules
+	on Solaris have the side effect of making the pty the controlling
+	process of the lshd server (if it's running in daemonic mode).
+	(pty_open_slave): Renamed function tty_setctty. Now responsible
+	also for opening the slave side of the pty, pushing STREAMS
+	modules, and setting the tty state.
+
+	* src/server_pty.h: Include tty.h.
+	(pty_info)): Deleted slave attribute. Added attributes dims and
+	mode. 
+
 	* configure.in (CPPFLAGS): Don't zap old value.
 
 	* src/crypto.c (make_aes_cbc_instance): Use aes_set_encrypt_key
