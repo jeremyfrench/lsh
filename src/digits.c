@@ -28,6 +28,7 @@
 #include "xalloc.h"
 
 #include <assert.h>
+#include <string.h>
 
 void
 base64_init(struct base64_state *state, UINT8 terminator)

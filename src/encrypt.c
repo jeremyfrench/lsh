@@ -28,6 +28,8 @@
 #include "format.h"
 #include "xalloc.h"
 
+#include <string.h>
+
 #include "encrypt.c.x"
 
 /* GABA:

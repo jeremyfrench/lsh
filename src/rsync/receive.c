@@ -7,6 +7,7 @@
 #include "rsync.h"
 
 #include <assert.h>
+#include <string.h>
 
 /* Reading a partial token */
 #define STATE_TOKEN 0

@@ -29,6 +29,7 @@
 #include "xalloc.h"
 
 #include <assert.h>
+#include <string.h>
 
 /* NOTE: The PKCS#5 v2 spec doesn't recommend or specify any
  * particular value of the iteration count.

@@ -29,6 +29,7 @@
 #include "xalloc.h"
 
 #include <assert.h>
+#include <string.h>
 
 struct string_node
 {

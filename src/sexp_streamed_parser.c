@@ -34,6 +34,7 @@
 #include "sexp_table.h"
 
 #include <assert.h>
+#include <string.h>
 
 #include "sexp_streamed_parser.c.x"
 

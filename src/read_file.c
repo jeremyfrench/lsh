@@ -29,6 +29,7 @@
 #include "xalloc.h"
 
 #include <assert.h>
+#include <string.h>
 
 #include "read_file.c.x"
 

@@ -33,8 +33,8 @@
 #include "xalloc.h"
 
 #include <assert.h>
-/* #include <stdio.h> */
 #include <ctype.h>
+#include <string.h>
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
