@@ -332,22 +332,34 @@ int io_iter(struct io_backend *b)
 #endif /* POLLNVAL */
 
 #ifdef POLLHUP
-	/* FIXME: According to Solaris' man page, POLLHUP is mutually
+	/* NOTE: The behaviour of poll() at EOF varies quite a lot
+	 * between systems.
+	 *
+	 * According to Solaris' man page, POLLHUP is mutually
 	 * exclusive with POLLOUT, but orthogonal to POLLIN.
 	 *
 	 * However, on my system (sparc-linux) POLLHUP is set when we
-	 * get EOF on an fd we are reading. This will cause an i/o
-	 * exception to be raised rather than the ordinary EOF
-	 * handling. */
+	 * get EOF on an fd we are reading.
+	 *
+	 * I.e. on some systems, EOF is indicated by poll() setting
+	 * POLLIN and read() returning 0 (in particular, this happens
+	 * if the poll-by-select-code in jpoll.c is used), while on
+	 * other systems, poll() sets POLLHUP and subsequent read()
+	 * calls will return -1, not 0.
+	 *
+	 * We set the hanged_up flag before calling FD_READ, which
+	 * tells the io_callback that it should avoid calling read(). */
 	if (fds[i].revents & POLLHUP)
 	  {
 	    if (fd->want_write)
 	      /* Will raise an i/o error */
 	      FD_WRITE(fd);
 	    else if (fd->want_read)
-	      /* Ought to behave like EOF, but might raise an i/o
-	       * error instead. */
-	      FD_READ(fd);
+	      {
+		/* Ought to behave like EOF. */
+		fd->hanged_up = 1;
+		FD_READ(fd);
+	      }
 	    else
 	      {
 		werror("io.c: poll said POLLHUP on an inactive fd.\n");
@@ -458,8 +470,9 @@ do_buffered_read(struct io_callback *s,
   int res;
 
   assert(fd->want_read);   
-  
-  res = read(fd->fd, buffer, self->buffer_size);
+
+  /* If hanged_up is set, pretend that read() returned 0 */
+  res = fd->hanged_up ? 0 : read(fd->fd, buffer, self->buffer_size);
 
   if (res < 0)
     switch(errno)
@@ -487,10 +500,10 @@ do_buffered_read(struct io_callback *s,
 	{
 	  UINT32 done;
 
-	  /* FIXME: What to do if want_read is false?
-	   * To improve the connection_lock() mechanism,
-	   * it must be possible to temporarily stop reading, which means that
-	   * fd->want_read has to be cleared.
+	  /* FIXME: What to do if want_read is false? To improve the
+	   * connection_lock() mechanism, it must be possible to
+	   * temporarily stop reading, which means that fd->want_read
+	   * has to be cleared.
 	   *
 	   * But when doing this, we have to keep the data that we
 	   * have read, some of which is buffered here, on the stack,
@@ -503,8 +516,7 @@ do_buffered_read(struct io_callback *s,
 	   * have to clear the want_read flag, to prevent that queue
 	   * from growing arbitrarily large.
 	   *
-	   * We now go with the second alternative. 
-	   */
+	   * We now go with the second alternative. */
 
 	  assert(self->handler);
 
@@ -567,6 +579,12 @@ do_consuming_read(struct io_callback *c,
   if (!wanted)
     {
       fd->want_read = 0;
+    }
+  else if (fd->hanged_up)
+    {
+      /* If hanged_up is set, pretend that read() returned 0 */
+      close_fd_nicely(fd);
+      A_WRITE(self->consumer, NULL);
     }
   else
     {
@@ -877,6 +895,8 @@ init_file(struct io_backend *b, struct lsh_fd *f, int fd,
 
   f->prepare = NULL;
 
+  f->hanged_up = 0;
+  
   f->want_read = 0;
   f->read = NULL;
 
