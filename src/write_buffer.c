@@ -11,7 +11,7 @@ static int do_write(struct write_buffer *closure,
   if (!packet->length)
     {
       lsh_string_free(packet);
-      return;
+      return 1;
     }
 
   /* Enqueue packet */
@@ -37,17 +37,24 @@ static int do_write(struct write_buffer *closure,
     }
 #endif
 
+  buffer->empty = 0;
+
   return 1;
 }
 
 /* Copy data as necessary, before writing.
  *
  * FIXME: Writing of large packets could probably be optimized by
- * avoiding copying it into the buffer. */
-void write_buffer_pre_write(struct write_buffer *buffer)
+ * avoiding copying it into the buffer.
+ *
+ * Returns 1 if the buffer is non-empty. */
+int write_buffer_pre_write(struct write_buffer *buffer)
 {
   UINT32 length = buffer->end - buffer->start;
 
+  if (buffer->empty)
+    return 0;
+  
   if (buffer->start > buffer->block_size)
     {
       /* Copy contents to the start of the buffer */
@@ -106,9 +113,10 @@ void write_buffer_pre_write(struct write_buffer *buffer)
 	}
     }
   buffer->empty = !length;
+  return !buffer->empty;
 }
 
-struct write_buffer *write_buffer_alloc(UINT32 size)
+struct abstract_write *write_buffer_alloc(UINT32 size)
 {
   struct write_buffer *res = xalloc(sizeof(write_callback) - 1 + size*2);
   
