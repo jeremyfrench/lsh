@@ -48,3 +48,23 @@ explicitly).
 
 Implement a mark&sweep gc.
 
+
+IO
+
+Add flow control to the generic io class. Associate a "window size"
+with each read fd, and refuse to accept any more data. That seems
+cleaner than doing all flow control at the channel level.
+
+
+CHANNELS
+
+Create some generic methods for connecting a channel to one or more
+files. The data shuffling and error handling should be very similar
+for most channel types.
+
+Consider which errors can occur in the channel callback functions;
+they are probably somewhat different from errors in higher levels. For
+instance, a writing to a file associated with a channel may fail. In
+that case, the channel should be closed, but the connection should not
+die. Perhaps a few special error codes like LSH_CHANNEL_DIE and
+LSH_CHANNEL_CLOSED would do the trick?
