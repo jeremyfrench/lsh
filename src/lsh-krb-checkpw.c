@@ -83,6 +83,14 @@ read_pw(FILE *f)
   return buf;
 }
 
+/* FIXME: Appears not to work with MIT kerberos. For a similar
+   function which works with MIT kerberos but probably not Heimdal,
+   see Pike-7.7/src/modules/Kerberos/kerberos.cmod:authenticate().
+
+   It seems hard to find authoritative documentation about these
+   kerberos functions.
+*/
+
 int
 main(int argc, char **argv)
 {
@@ -114,7 +122,7 @@ main(int argc, char **argv)
     die("krb5_init_context failed.");
 
   if (krb5_make_principal(context, &p, NULL, name, NULL))
-    die("krb5_init_context failed.");
+    die("krb5_make_principal failed.");
   
   if (!krb5_kuserok(context, p, name))
     die("krb5_kuserok doesn't know the user.");
