@@ -30,6 +30,9 @@
 
 #include "nettle/nettle-meta.h"
 
+/* Forward declaration, real declaration in nettle/sexp.h. */
+struct sexp_iterator;
+
 #define GABA_DECLARE
 #include "abstract_crypto.h.x"
 #undef GABA_DECLARE
@@ -152,16 +155,15 @@ make_hash(const struct hash_algorithm *self);
 
        (public_key method (string))
        
-       ; Returns ( <pub-sig-alg-id> <s-expr>* ), i.e. the same
-       ; structure that is expected by spki_make_verifier().
-       (public_spki_key method (object sexp))))
+       ; Returns (public-key (<pub-sig-alg-id> <s-expr>*))
+       (public_spki_key method (string) "int transport")))
 */
 
 #define VERIFY(verifier, algorithm, length, data, slength, sdata) \
 ((verifier)->verify((verifier), (algorithm), (length), (data), (slength), (sdata)))
 
-#define PUBLIC_KEY(signer) ((signer)->public_key((signer)))
-#define PUBLIC_SPKI_KEY(signer) ((signer)->public_spki_key((signer)))
+#define PUBLIC_KEY(verifier) ((verifier)->public_key((verifier)))
+#define PUBLIC_SPKI_KEY(verifier, t) ((verifier)->public_spki_key((verifier), (t)))
 
 
 /* GABA:
