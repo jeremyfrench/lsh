@@ -239,7 +239,12 @@ do_exc_connection_handler(struct exception_handler *s,
       self->connection->paused = 0;
 
       break;
-      
+
+    case EXC_FINISH_READ:
+      /* FIXME: We could check if there are any channels still open,
+       * and write a warning message if there are. */
+
+      /* Fall through */
     default:
       EXCEPTION_RAISE(self->super.parent, e);
     }
