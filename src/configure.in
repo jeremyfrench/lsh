@@ -80,8 +80,10 @@ AC_CHECK_LIB(socket, setsockopt)
 dnl Checks for header files.
 AC_HEADER_STDC
 
-dnl Some debian systems have both gmp1 and gmp2.
-AC_CHECK_HEADERS(gmp2.h gmp.h, [break], 
+dnl Some debian systems have both gmp and gmp2.
+dnl This will probably not not work right if both gmp.h and gmp2.h exists,
+dnl and gmp.h is too old (i.e GMP-1.x).
+AC_CHECK_HEADERS(gmp.h gmp2.h, [break], 
   [AC_ERROR([Neither gmp.h nor gmp2.h found])])
   
 AC_CHECK_HEADERS(fcntl.h strings.h sys/time.h unistd.h)
