@@ -20,7 +20,7 @@ SUBDIRS = lib include
 Makefile.am: Makefile.am.in
 	./make_am
 
-bin_PROGRAMS = lsh lshd lsh_keygen
+bin_PROGRAMS = lsh lshd lsh_keygen lsh_writekey
 noinst_PROGRAMS = prime_table digit_table sexp_test
 noinst_LIBRARIES = liblsh.a
 
@@ -78,18 +78,22 @@ digit_table.h: digit_table
 	./digit_table >$@
 
 LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
+
+# Is this rule needed?
+all-recursive check-recursive: config.h
+
 # lsh_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
 # lshd_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
 # lsh_keygen_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
 
-# lsh_DEPENDENCIES += symmetric
-lsh_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
-lshd_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
-lsh_keygen_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
-
-.PHONY: symmetric
-symmetric:
-	(cd lib && $(MAKE) libsymmetric.a)
+# lsh_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
+# lshd_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
+# lsh_keygen_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
+# lsh_writekey_DEPENDENCIES = @LIBOBJS@ symmetric liblsh.a
+# 
+# .PHONY: symmetric
+# symmetric:
+# 	  (cd lib && $(MAKE) libsymmetric.a)
 
 EXTRA_DIST = atoms.in process_atoms make_class $(generated_sources) \
 	make_char_classes sexp_chars.in \
