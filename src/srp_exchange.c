@@ -74,6 +74,7 @@ make_srp_entry(const struct lsh_string *name,
       /* FIXME: Pass a more restrictive limit to nettle_mpz_set_sexp. */      
       if (sexp_iterator_next(&i)
 	  && nettle_mpz_set_sexp(res->verifier, 0, &i)
+	  && mpz_sgn(res->verifier) > 0
 	  && sexp_iterator_exit_list(&i))
 	{
 	  res->name = lsh_string_dup(name);
