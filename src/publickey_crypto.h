@@ -176,19 +176,9 @@ make_ring_zn(mpz_t p, mpz_t g);
  * and we don't have multiple inheritance.
  */
 
-/* ;; GABA:
-   (class
-     (name abstract_ring)
-     ; The group refers to the multiplicative group.
-     ; For SRP, the generator should generate the entire group.
-     (super abstract_group)
-     (vars
-       (add method void "mpz_t res" "mpz_t a" "mpz_t b")))
-*/
 
 struct abstract_group *
 make_ssh_group1(void);
-
 
 struct abstract_group *
 make_ssh_ring_srp_1(void);

@@ -306,8 +306,6 @@ struct command_continuation *
 make_once_continuation(const char *msg,
 		       struct command_continuation *up);
 
-/* extern struct command once_command; */
-
 
 /* Delayed application. This is just a convenient way to record how to
  * apply a function, at some later time. Currently used only by

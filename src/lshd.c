@@ -334,11 +334,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       state->child_inputs[1] = &self->super;
       state->child_inputs[2] = NULL;
       break;
-#if 0
-    case ARGP_KEY_ARG:
-      argp_error(state, "Spurious arguments.");
-      break;
-#endif  
     case ARGP_KEY_END:
       {
 	struct user_db *db = NULL;
@@ -554,16 +549,6 @@ main_argp =
 			    (log_peer (listen (options2local options))))))))
 */
 
-/* Invoked when the client requests the userauth service. */
-/* ;; GABA:
-   (expr
-     (name lshd_services)
-     (params 
-       (userauth object command))
-     (expr
-       (lambda (connection)
-         ((userauth connection) connection))))
-*/
 
 /* Invoked when starting the ssh-connection service */
 /* GABA:

@@ -121,7 +121,8 @@ write_syslog(int fd UNUSED, UINT32 length, const UINT8 *data)
   return NULL;
 }
 
-void set_error_syslog(const char *id)
+void
+set_error_syslog(const char *id)
 {
   openlog(id, LOG_PID | LOG_CONS, LOG_DAEMON);
   error_write = write_syslog;
@@ -134,14 +135,16 @@ write_ignore(int fd UNUSED,
 	     UINT32 length UNUSED, const UINT8 *data UNUSED)
 { return NULL; }
 
-void set_error_stream(int fd, int with_poll)
+void
+set_error_stream(int fd, int with_poll)
 {
   error_fd = fd;
 
   error_write = with_poll ? write_raw_with_poll : write_raw;
 }
 
-int dup_error_stream(void)
+int
+dup_error_stream(void)
 {
   if (error_fd < 0)
     /* We're not writing error messages on any file; there's no
@@ -164,7 +167,8 @@ int dup_error_stream(void)
     }
 }
 
-void set_error_ignore(void)
+void
+set_error_ignore(void)
 {
   error_write = write_ignore;
   error_fd = -1;
@@ -172,7 +176,8 @@ void set_error_ignore(void)
 
 #define WERROR(l, d) (error_write(error_fd, (l), (d)))
 
-static void werror_flush(void)
+static void
+werror_flush(void)
 {
   if (error_pos)
     {
@@ -181,7 +186,8 @@ static void werror_flush(void)
     }
 }
 
-static void werror_putc(UINT8 c)
+static void
+werror_putc(UINT8 c)
 {
   if (error_pos == BUF_SIZE)
     werror_flush();
@@ -189,16 +195,13 @@ static void werror_putc(UINT8 c)
   error_buffer[error_pos++] = c;
 }
 
-static void werror_write(UINT32 length, const UINT8 *msg)
+static void
+werror_write(UINT32 length, const UINT8 *msg)
 {
   if (error_pos + length <= BUF_SIZE)
     {
       memcpy(error_buffer + error_pos, msg, length);
       error_pos += length;
-#if 0
-      if (length && (msg[length-1] == '\n'))
-	werror_flush();
-#endif
     }
   else
     {
@@ -207,9 +210,11 @@ static void werror_write(UINT32 length, const UINT8 *msg)
     }
 }
 
-static void werror_cstring(char *s) { werror_write(strlen(s), s); }
+static void
+werror_cstring(char *s) { werror_write(strlen(s), s); }
 
-static void werror_bignum(mpz_t n, int base)
+static void
+werror_bignum(mpz_t n, int base)
 {
   char *s = alloca(mpz_sizeinbase(n, base) + 2);
   mpz_get_str(s, 16, n);
@@ -217,7 +222,8 @@ static void werror_bignum(mpz_t n, int base)
   werror_cstring(s);
 }
 
-static void werror_decimal(UINT32 n)
+static void
+werror_decimal(UINT32 n)
 {
   unsigned length = format_size_in_decimal(n);
   UINT8 *buffer = alloca(length);
@@ -229,18 +235,21 @@ static void werror_decimal(UINT32 n)
 
 static unsigned format_size_in_hex(UINT32 n);
 
-static void werror_hex_digit(unsigned digit)
+static void
+werror_hex_digit(unsigned digit)
 {
   werror_putc("0123456789abcdef"[digit]);
 }
 
-static void werror_hex_putc(UINT8 c)
+static void
+werror_hex_putc(UINT8 c)
 {
   werror_hex_digit(c / 16);
   werror_hex_digit(c % 16);
 }
 
-static void werror_hex(UINT32 n)
+static void
+werror_hex(UINT32 n)
 {
   unsigned left = 8;
   
@@ -297,35 +306,8 @@ werror_hexdump(UINT32 length, UINT8 *data)
     }
 }
 
-#if 0
 static void
-werror_hexdump(UINT32 length, UINT8 *data)
-{
-  UINT32 i;
-  werror("(size %i = 0x%xi)", length, length);
-
-  for(i=0; i<length; i++)
-  {
-    if (! (i%16))
-      {
-	unsigned j = format_size_in_hex(i);
-
-	werror_cstring("\n0x");
-
-	for ( ; j < 8; j++)
-	  werror_putc('0');
-	
-	werror_hex(i);
-	werror_cstring(": ");
-      }
-
-    werror_hex_putc(data[i]);
-  }
-  werror_putc('\n');
-}
-#endif
-
-static void werror_paranoia_putc(UINT8 c)
+werror_paranoia_putc(UINT8 c)
 {
   switch (c)
     {
@@ -349,7 +331,8 @@ static void werror_paranoia_putc(UINT8 c)
     }
 }
 
-void werror_vformat(const char *f, va_list args)
+void
+werror_vformat(const char *f, va_list args)
 {
   while (*f)
     {
@@ -494,7 +477,8 @@ void werror_vformat(const char *f, va_list args)
     }
 }
 
-void werror(const char *format, ...) 
+void
+werror(const char *format, ...) 
 {
   va_list args;
 
@@ -507,7 +491,8 @@ void werror(const char *format, ...)
     }
 }
 
-void trace(const char *format, ...) 
+void
+trace(const char *format, ...) 
 {
   va_list args;
 
@@ -520,7 +505,8 @@ void trace(const char *format, ...)
     }
 }
 
-void debug(const char *format, ...) 
+void
+debug(const char *format, ...) 
 {
   va_list args;
 
@@ -533,7 +519,8 @@ void debug(const char *format, ...)
     }
 }
 
-void verbose(const char *format, ...) 
+void
+verbose(const char *format, ...) 
 {
   va_list args;
 
@@ -546,7 +533,8 @@ void verbose(const char *format, ...)
     }
 }
 
-void fatal(const char *format, ...) 
+void
+fatal(const char *format, ...) 
 {
   va_list args;
 
@@ -558,7 +546,8 @@ void fatal(const char *format, ...)
   abort();
 }
 
-static unsigned format_size_in_hex(UINT32 n)
+static unsigned
+format_size_in_hex(UINT32 n)
 {
   int i;
   int e;

@@ -188,18 +188,6 @@ do_eof(struct ssh_channel *channel)
     channel_close(channel);
 }
 
-#if 0
-/* Not needed; the channels resource list is taken care of automatically. */
-static void
-do_close(struct ssh_channel *c)
-{
-  CAST(server_session, session, c);
-
-  if (session->process)
-    KILL_RESOURCE(session->process);
-}
-#endif
-
 struct ssh_channel *
 make_server_session(UINT32 initial_window,
 		    struct alist *request_types)
@@ -218,9 +206,8 @@ make_server_session(UINT32 initial_window,
   self->super.rec_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
   self->super.request_types = request_types;
 
-#if 0
-  self->super.close = do_close;
-#endif
+  /* Note: We don't need a close handler; the channels resource list
+   * is taken care of automatically. */
   
   self->process = NULL;
   
@@ -278,72 +265,6 @@ make_open_session(struct alist *session_requests)
   return &closure->super;
 }
 
-#if 0
-/* A command taking two arguments: unix_user, connection,
- * returns the connection. */
-/* ;; GABA:
-   (class
-     (name server_connection_service)
-     (super command)
-     (vars
-       ;; (global_requests object alist)
-
-       ; Requests specific to session channels 
-       (session_requests object alist)))
-*/
-
-/* Start an authenticated ssh-connection service */
-static void
-do_login(struct command *s,
-	 struct lsh_object *x,
-	 struct command_continuation *c,
-	 struct exception_handler *e UNUSED)
-{
-  CAST(server_connection_service, closure, s);
-  CAST(ssh_connection, connection, x);
-
-  if (!connection->user)
-    {
-      EXCEPTION_RAISE(connection->e,
-		      make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
-					      "User authentication required."));
-      return;
-    }
-  
-  werror("Starting ssh-connection service for user %pS.\n",
-	 connection->user->name);
-
-  /* FIXME: It would be better to take one more alists as arguments,
-   * and cons the ATOM_SESSION service at the head of it. But that
-   * won't work as long as an alist doesn't consist of independent
-   * cons-objects. */
-  
-  ALIST_SET(connection->table->channel_types,
-	    ATOM_SESSION, 
-	    self->handler);
-
-  COMMAND_RETURN
-    (c, make_install_fix_channel_open_handler
-     (ATOM_SESSION, make_open_session(user,
-				      closure->session_requests)));
-  
-}
-
-/* FIXME: To make this more flexible, we need to have some argument
- * that lists (i) the channel types we want to support in
- * CHANNEL_OPEN, and (ii) for each channel type, the types of
- * channel_requests we want to support. */
-struct command *
-make_server_connection_service(struct alist *session_requests)
-{
-  NEW(server_connection_service, closure);
-
-  closure->super.call = do_login;
-  closure->session_requests = session_requests;
-
-  return &closure->super;
-}
-#endif
 
 struct lsh_string *
 format_exit_signal(struct ssh_channel *channel,

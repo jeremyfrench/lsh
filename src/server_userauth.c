@@ -233,57 +233,6 @@ make_userauth_handler(struct alist *methods,
 }
 
 
-#if 0
-
-/* ;; GABA:
-   (class
-     (name userauth_continuation)
-     (super command_frame)
-     (vars
-       (connection object ssh_connection)))
-*/
-
-static void
-do_userauth_continuation(struct command_continuation *s,
-			 struct lsh_object *value)
-{
-  CAST(userauth_continuation, self, s);
-  CAST(delayed_apply, action, value);
-
-  unsigned i;
-
-  /* Access granted. */
-
-  assert(action);
-
-  /* Unlock connection */
-  connection_unlock(self->connection);
-  
-  C_WRITE(self->connection, format_userauth_success());
-
-  /* Ignore any further userauth messages. */
-  for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
-    self->connection->dispatch[i] = self->connection->ignore;
-  
-  FORCE_APPLY(action, self->super.up, self->super.e); 
-}
-
-static struct command_continuation *
-make_userauth_continuation(struct ssh_connection *connection,
-			   struct command_continuation *c,
-			   struct exception_handler *e)
-{
-  NEW(userauth_continuation, self);
-  self->super.super.c = do_userauth_continuation;
-  self->super.up = c;
-  self->super.e = e;
-  
-  self->connection = connection;
-  return &self->super.super;
-}
-#endif
-      
-
 /* GABA:
    (class
      (name exc_userauth_handler)

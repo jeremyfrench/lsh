@@ -111,34 +111,6 @@
 */
 
 #define MAKE_KEXINIT(s) ((s)->make((s)))
-
-/* FIXME: We don't need this class. */
-/* Installs keys for use. */
-/* ;; GABA:
-   (class
-     (name install_keys)
-     (vars
-       (install method int
-		"struct ssh_connection *connection"
-		"struct hash_instance *secret")))
-*/
-
-#if 0
-#define INSTALL_KEYS(i, c, s) ((i)->install((i), (c), (s)))
-#endif
-
-/* ;; GABA:
-   (class
-     (name newkeys_info)
-     (vars
-       (encryption_client_to_server  object crypto_algorithm)
-       (encryption_server_to_client  object crypto_algorithm)
-       (mac_client_to_server         object mac_algorithm)
-       (mac_server_to_client         object mac_algorithm)
-       ;; (compression_client_to_server object compression_algorithm)
-       ;; (compression_server_to_client object compression_algorithm)
-       ))
-*/
      
 struct lsh_string *format_kex(struct kexinit *kex);
 void disconnect_kex_failed(struct ssh_connection *connection, const char *msg);
@@ -183,13 +155,6 @@ make_newkeys_handler(struct crypto_instance *crypto,
 struct install_keys *
 make_install_new_keys(int is_server,
 		      struct object_list *algorithms);
-
-#if 0
-struct hash_instance *
-kex_build_secret(struct hash_algorithm *H,
-		 struct lsh_string *exchange_hash,
-		 mpz_t K);
-#endif
 
 void
 keyexchange_finish(struct ssh_connection *connection,

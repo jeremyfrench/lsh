@@ -120,15 +120,6 @@ make_report_exception_handler(struct report_exception_info *info,
   return &self->super;
 }
 
-#if 0
-/* Command to report and ignore an exception given as argument. */
-COMMAND_SIMPLE(report_exception_command)
-{
-  CAST_SUBTYPE(exception, x, a);
-  werror("%z\n", x->msg);
-}
-#endif
-
 struct exception *make_simple_exception(UINT32 type, const char *msg)
 {
   NEW(exception, e);

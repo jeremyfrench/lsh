@@ -667,16 +667,6 @@ make_simple_kexinit(struct randomness *r,
 }
 
 
-
-/* ;; GABA:
-   (class
-     (name install_new_keys)
-     (super install_keys)
-     (vars
-       (is_server simple int)
-       (algorithms object object_list)))
-*/
-
 static int
 install_keys(struct object_list *algorithms,
 	     struct ssh_connection *connection,
@@ -730,20 +720,6 @@ install_keys(struct object_list *algorithms,
   return 1;
 }
 
-#if 0
-struct install_keys *
-make_install_new_keys(int is_server,
-		      struct object_list *algorithms)
-{
-  NEW(install_new_keys, self);
-
-  self->super.install = do_install;
-  self->is_server = is_server;
-  self->algorithms = algorithms;
-
-  return &self->super;
-}
-#endif
 
 /* Returns a hash instance for generating various session keys. NOTE:
  * This mechanism changed in the transport-05 draft. Before this, the

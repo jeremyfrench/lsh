@@ -354,11 +354,3 @@ void connection_unlock(struct ssh_connection *self)
   self->busy = 0;
 }
 
-/* ;; GABA:
-   (class
-     (name handshake_command)
-     (super command)
-     (vars
-       ; CONNECTION_SERVER or CONNECTION_CLIENT
-       (mode . int)))
-       */

@@ -143,28 +143,6 @@ int spki_get_type(struct sexp *e, struct sexp_iterator **res)
   return type;
 }
 
-#if 0
-/* Returns 1 if the type matches.
- *
- * FIXME: Do we relly need this interface, that allows res == NULL? */
-int
-spki_check_type(struct sexp *e, int type, struct sexp_iterator **res)
-{
-  struct sexp_iterator *i =
-    sexp_check_type(e, get_atom_length(type), get_atom_name(type));
-
-  if (i)
-    {
-      if (res)
-	*res = i;
-      else
-	KILL(i);
-      return 1;
-    }
-  return 0;
-}
-#endif
-
 COMMAND_SIMPLE(spki_signer2public)
 {
   CAST_SUBTYPE(signer, private, a);
@@ -343,14 +321,8 @@ do_spki_sexp2keypair(struct command *s,
         SPKI_ERROR(e, "spki.c: Expected private-key expression.", key);
         return;
       case ATOM_PRIVATE_KEY:
-	{
-	  parse_private_key(self->algorithms, i, c, e);
-	  break;
-	}
-#if 0
-      case ATOM_PUBLIC_KEY:
-        break;
-#endif
+	parse_private_key(self->algorithms, i, c, e);
+	break;
     } 
 }
 
@@ -816,9 +788,6 @@ spki_add_acl(struct spki_context *ctx,
   struct sexp_iterator *i;
   int res = 1;
   
-#if 0
-  struct object_queue q;
-#endif
   if (!sexp_check_type(e, ATOM_ACL, &i))
     {
       werror("spki_read_acls: Invalid acl\n");
@@ -831,9 +800,6 @@ spki_add_acl(struct spki_context *ctx,
       werror("spki_read_acls: Unsupported acl version\n");
       return 0;
     }
-#if 0
-  object_queue_init(&q);
-#endif
   
   for (; (e = SEXP_GET(i)); SEXP_NEXT(i))
     {

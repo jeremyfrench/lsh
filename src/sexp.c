@@ -832,72 +832,6 @@ sexp_atoms_eq(struct sexp *a, struct sexp *b)
 	: !bd);
 }
 
-#if 0
-int
-sexp_eqz(const struct sexp *e, const char *s)
-{
-  struct lsh_string *c;
-
-  if (!sexp_atomp(e) || sexp_display(e))
-    return 0;
-
-  c = sexp_contents(e);
-
-  return !strncmp(s, c->data, c->length);
-}
-
-int
-sexp_check_type_z(struct sexp *e, const char *type,
-		  struct sexp_iterator **res)
-{
-  struct sexp_iterator *i;
-  
-  if (sexp_atomp(e) || sexp_nullp(e))
-    return 0;
-
-  i = SEXP_ITER(e);
-
-  if (sexp_eqz(SEXP_GET(i), type))
-    {
-      if (res)
-	{
-	  SEXP_NEXT(i);
-	  *res = i;
-	}
-      return 1;
-    }
-
-  KILL(i);
-  return 0;
-}
-
-/* Check that the next element is a pair (name value), and return value */
-struct sexp *
-sexp_assz(struct sexp_iterator *i, const char *name)
-{
-  struct sexp *l = SEXP_GET(i);
-  struct sexp_iterator *inner;
-  struct sexp *e;
-  
-  if (!l || !(sexp_check_type_z(l, name, &inner)))
-    return 0;
-
-  e = SEXP_GET(inner);
-
-  if (e)
-    {
-      SEXP_NEXT(inner);
-      if (SEXP_GET(inner))
-	/* Too many elements */
-	e = NULL;
-      else 
-	SEXP_NEXT(i);
-    }
-  KILL(inner);
-  return e;
-}
-#endif
-
 struct sexp *
 sexp_assq(struct sexp_iterator *i, int atom)
 {
@@ -937,18 +871,6 @@ sexp_formats[] =
   { "international", SEXP_INTERNATIONAL },
   { NULL, 0 }
 };
-
-#if 0
-static void
-list_formats(void)
-{
-  int i;
-
-  werror("Available formats are:\n");
-  for (i = 0; sexp_formats[i].name; i++)
-    werror("  %z\n", sexp_formats[i].name);
-}
-#endif
 
 static int
 lookup_sexp_format(const char *name)

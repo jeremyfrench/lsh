@@ -149,18 +149,6 @@ do_tcpip_eof(struct ssh_channel *c)
     channel_close(c);
 }
 
-/* Not needed, as the channel's resource list is taken care of automatically. */
-#if 0
-static void
-do_tcpip_channel_die(struct ssh_channel *c)
-{
-  CAST(tcpip_channel, channel, c);
-
-  if (channel->socket)
-    close_fd(channel->socket, 0);
-}
-#endif
-
 struct ssh_channel *
 make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
 {
@@ -171,9 +159,8 @@ make_tcpip_channel(struct lsh_fd *socket, UINT32 initial_window)
 
   /* The rest of the callbacks are not set up until tcpip_start_io. */
 
-#if 0
-  self->super.close = do_tcpip_channel_die;
-#endif
+  /* NOTE: We don't need a close handler, as the channel's resource
+   * list is taken care of automatically. */
   
   self->super.rec_window_size = initial_window;
 

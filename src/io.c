@@ -733,57 +733,6 @@ init_file(struct io_backend *b, struct lsh_fd *f, int fd,
   b->files = f;
 }
 
-#if 0
-/* Blocking read from a file descriptor (i.e. don't use the backend).
- * The fd should *not* be in non-blocking mode. */
-
-/* FIXME: How to do this when moving from return codes to exceptions? */
-
-/* FIXME: The entire blocking_read mechanism should be replaced by
- * ordinary commands and non-blocking i/o command. Right now, it is
- * used to read key-files, so that change probably has to wait until
- * the parser is rewritten. */
-
-
-#define BLOCKING_READ_SIZE 4096
-
-int blocking_read(int fd, struct read_handler *handler)
-{  
-  UINT8 *buffer = alloca(BLOCKING_READ_SIZE);
-  
-  for (;;)
-    {
-      int res = read(fd, buffer, BLOCKING_READ_SIZE);
-      if (res < 0)
-	switch(errno)
-	  {
-	  case EINTR:
-	    break;
-	  case EWOULDBLOCK:
-	    fatal("blocking_read: Unexpected EWOULDBLOCK! fd in non-blocking mode?\n");
-	  default:
-	    werror("blocking_read: read() failed (errno = %i): %z\n",
-		   errno, strerror(errno));
-	    return 0;
-	  }
-      else if (!res)
-	return 1;
-      else
-	{
-	  UINT32 got = res;
-	  UINT32 done = 0;
-
-	  while (handler
-		 && (done < got))
-	    done += READ_HANDLER(handler, got - done, buffer + done);
-	}
-    }
-  /* FIXME: Not reached. Hmm. */
-  close(fd);
-  return !handler;
-}
-#endif
-
 /* These functions are used by werror() and friends */
 
 /* For fd:s in blocking mode. */

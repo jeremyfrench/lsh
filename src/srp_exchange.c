@@ -118,18 +118,6 @@ srp_make_verifier(struct abstract_group *G,
 
 /* Thomas Wu's Secure Remote Password Protocol, with a fixed group. */
 
-/* ;; GABA:
-   (struct
-     (name srp_instance)
-     (vars
-       ;; FIXME: Use super for the dh_instance
-       (dh struct dh_instance)
-       (user string)  ; User name
-       (salt string)
-       (u . UINT32)
-       (v bignum)))
-*/
-
 void
 srp_hash_password(mpz_t x,
 		  struct hash_algorithm *H,

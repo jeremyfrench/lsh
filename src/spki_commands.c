@@ -69,13 +69,6 @@ struct command_simple spki_add_userkey_command;
  * ****************/
  
 /* Adds an ACL s-expression to an SPKI-context. Returns the context. */
-/* ;; GABA:
-   (class
-     (name spki_add_acl_command_1)
-     (super command)
-     (vars
-       (ctx object spki_context)))
-*/
 
 static void
 do_spki_add_acl(struct command *s,
