@@ -77,8 +77,7 @@
 /* Arbitrary limit on list length */
 /* An SSH-2.0-Sun_SSH_1.0 server has been reported to list 250
  * different algorithms, or in fact a list of installed locales. */
-#define KEXINIT_MAX_ALGORITMS 47
-#define KEXINIT_MAX_ALGORITMS_SUN 300
+#define KEXINIT_MAX_ALGORITMS 500
 
 static struct kexinit *
 parse_kexinit(struct lsh_string *packet, enum peer_flag peer_flags)
@@ -105,18 +104,10 @@ parse_kexinit(struct lsh_string *packet, enum peer_flag peer_flags)
       KILL(res);
       return NULL;
     }
-  
+
   for (i = 0; i<NLISTS; i++)
-    {
-      unsigned limit = KEXINIT_MAX_ALGORITMS;
-#if DATAFELLOWS_WORKAROUNDS
-      if ( (peer_flags & PEER_KEXINIT_LANGUAGE_KLUDGE)
-	   && i >= 8)
-	limit = KEXINIT_MAX_ALGORITMS_SUN;
-#endif /* DATAFELLOWS_WORKAROUNDS */
-      if ( !(lists[i] = parse_atom_list(&buffer, limit)))
-	break;
-    }
+    if ( !(lists[i] = parse_atom_list(&buffer, KEXINIT_MAX_ALGORITMS)))
+      break;
 
   if ( (i<NLISTS)
        || !parse_boolean(&buffer, &res->first_kex_packet_follows)
