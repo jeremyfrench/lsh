@@ -23,6 +23,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "publickey_crypto.h"
+
 #include "atoms.h"
 #include "bignum.h"
 #include "crypto.h"
@@ -35,14 +37,6 @@
 #include "xalloc.h"
 
 /* DSS signatures */
-
-struct dss_public
-{
-  mpz_t p;
-  mpz_t q;
-  mpz_t g;
-  mpz_t y;
-};
 
 struct dss_signer
 {
@@ -84,6 +78,8 @@ static struct lsh_string *do_dss_sign(struct signer *c,
   struct dss_signer *closure = (struct dss_signer *) c;
   mpz_t k, r, s, tmp;
   struct lsh_string *signature;
+
+  MDEBUG(closure);
   
   /* Select k, 0<k<q, randomly */
   mpz_init_set(tmp, closure->public.q);
@@ -138,13 +134,13 @@ static struct lsh_string *dss_public_key(struct signer *dss)
 }
 #endif
 
-int do_dss_verify(struct verifier *c,
-		  UINT32 length,
-		  UINT8 *msg,
-		  UINT32 signature_length,
-		  UINT8 * signature_data)
+static int do_dss_verify(struct verifier *c,
+			 UINT32 length,
+			 UINT8 *msg,
+			 UINT32 signature_length,
+			 UINT8 * signature_data)
 {
-  struct dss_signer *closure = (struct dss_signer *) c;
+  struct dss_verifier *closure = (struct dss_verifier *) c;
   struct simple_buffer buffer;
 
   int res;
@@ -153,6 +149,8 @@ int do_dss_verify(struct verifier *c,
   mpz_t r, s;
 
   mpz_t w, tmp, v;
+
+  MDEBUG(closure);
   
   simple_buffer_init(&buffer, signature_length, signature_data);
   if (!parse_atom(&buffer, &atom)
@@ -218,10 +216,9 @@ int do_dss_verify(struct verifier *c,
   return !res;
 }
 
-int parse_dss_public(struct simple_buffer *buffer, struct dss_public *public)
+static int parse_dss_public(struct simple_buffer *buffer, struct dss_public *public)
 {
   return (parse_bignum(buffer, public->p)
-	  && parse_bignum(buffer, public->p)
 	  && (mpz_sgn(public->p) == 1)
 	  && parse_bignum(buffer, public->q)
 	  && (mpz_sgn(public->q) == 1)
@@ -236,17 +233,21 @@ int parse_dss_public(struct simple_buffer *buffer, struct dss_public *public)
 
 /* FIXME: Outside of the protocol transactions, keys should be stored
  * in SPKI-style S-expressions. */
-struct signer *make_dss_signer(struct signature_algorithm *closure,
-			       UINT32 public_length,
-			       UINT8 *public,
-			       UINT32 private_length,
-			       UINT8 *private)
+static struct signer *make_dss_signer(struct signature_algorithm *c,
+				      UINT32 public_length,
+				      UINT8 *public,
+				      UINT32 private_length,
+				      UINT8 *private)
 {
+  struct dss_algorithm *closure = (struct dss_algorithm *) c;
+  
   struct dss_signer *res;
   struct simple_buffer public_buffer;
   struct simple_buffer private_buffer;  
   int atom;
 
+  MDEBUG(closure);
+  
   simple_buffer_init(&public_buffer, public_length, public);
   if (!parse_atom(&public_buffer, &atom)
       || (atom != ATOM_SSH_DSS) )
@@ -278,12 +279,14 @@ struct signer *make_dss_signer(struct signature_algorithm *closure,
     }
   
   res->super.sign = do_dss_sign;
+  res->random = closure->random;
+
   return &res->super;
 }
 
-struct verifier *make_dss_verifier(struct signature_algorithm *closure,
-				   UINT32 public_length,
-				   UINT8 *public)
+static struct verifier *make_dss_verifier(struct signature_algorithm *closure,
+					  UINT32 public_length,
+					  UINT8 *public)
 {
   struct dss_verifier *res;
   struct simple_buffer buffer;
@@ -416,6 +419,7 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
   c->literal_kexinits[CONNECTION_CLIENT] = NULL;
 }
 
+#if 0
 struct diffie_hellman_instance *
 make_diffie_hellman_instance(struct diffie_hellman_method *m,
 			     struct ssh_connection *c)
@@ -427,6 +431,7 @@ make_diffie_hellman_instance(struct diffie_hellman_method *m,
 
   return res;
 }
+#endif
 
 struct diffie_hellman_method *make_dh1(struct randomness *r)
 {
