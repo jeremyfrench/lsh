@@ -41,6 +41,8 @@ AC_FUNC_VPRINTF
 AC_CHECK_FUNCS(strerror)
 
 AC_REPLACE_FUNCS(mempcpy strndup strchrnul)
+# FIXME: Need to include stdio.h when testing for these functions.
+# At least on freebsd, putc_unlocked is a macro.
 AC_CHECK_FUNCS(flockfile putc_unlocked)
 AC_CHECK_FUNCS(fputs_unlocked fwrite_unlocked)
 
