@@ -28,16 +28,33 @@
 
 #include "lsh.h"
 
-/* Abstract class defining methods needed to comminucate with the
-   user's terminal. */
+/* Forward declaration */
+struct abstract_interact;
+struct terminal_dimensions;
+
+#define GABA_DECLARE
+#include "interact.h.x"
+#undef GABA_DECLARE
+
+/* Abstract class defining methods needed to communicate with the
+ * user's terminal. */
 
 struct terminal_dimensions
 {
   UINT32 char_width;
   UINT32 char_height;
   UINT32 pixel_width;
-  UINT32 pixel_heght;
+  UINT32 pixel_height;
 };
+
+/* GABA:
+   (class
+     (name window_change_callback)
+     (vars
+       (f method void "struct abstract_interact *i")))
+*/
+
+#define WINDOW_CHANGE_CALLBACK(c, i) ((c)->f((c), (i)))
 
 /* GABA:
    (class
@@ -45,16 +62,28 @@ struct terminal_dimensions
      (vars
        (is_tty method int)
        ; (read_line method int "UINT32 size" "UINT8 *buffer")
-       (read_password method string
+       (read_password method (string)
                   "UINT32 max_length"
                   "struct lsh_string *prompt"
 		  "int free")
        (yes_or_no method int
                   "struct lsh_string *prompt"
 		  "int def" "int free")
-       (window_change method int
-                  "struct terminal_dimensions *d")))
+       (window_size method int "struct terminal_dimensions *")
+       (window_change_subscribe method (object resource)
+		  "struct window_change_callback *callback")))
 */
+
+#define INTERACT_IS_TTY(i) \
+  ((i)->is_tty((i)))
+#define INTERACT_READ_PASSWORD(i, l, p, f) \
+  ((i)->read_password((i), (l), (p), (f)))
+#define INTERACT_YES_OR_NO(i, p, d, f) \
+  ((i)->yes_or_no((i), (p), (d), (f)))
+#define INTERACT_WINDOW_SIZE(i, d) \
+  ((i)->window_size((i), (d)))
+#define INTERACT_WINDOW_SUBSCRIBE(i, c) \
+  ((i)->window_change_subscribe((i), (c)))
 
 extern int tty_fd;
 
