@@ -1,5 +1,5 @@
 ## Process this file with make_am to produce Makefile.am
-SUBDIRS: lib include
+SUBDIRS: lib include doc
 CVS_HEADERS: cvs_headers
 CLASS_FILES: dist_x_files
 BODY:
@@ -99,7 +99,7 @@ EXTRA_DIST = atoms.in process_atoms make_class $(generated_sources) \
 	make_char_classes sexp_chars.in \
 	getopt.h jpoll.h \
 	$(cvs_headers) $(dist_x_files) Makefile.am.in make_am \
-	HACKING NOTES TASKLIST
+	FAQ HACKING NOTES TASKLIST
 
 MAINTAINERCLEANFILES += $(dist_x_files)
 
