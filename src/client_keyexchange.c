@@ -109,8 +109,13 @@ static int do_handle_dh_reply(struct packet_handler *c,
   HASH_UPDATE(hash, s->length, s->data);
   lsh_string_free(s);
   
-  /* FIXME: Return value is ignored */
-  (void) INSTALL_KEYS(closure->install, connection, hash);
+  if (!INSTALL_KEYS(closure->install, connection, hash))
+    {
+      werror("Installing new keys failed. Hanging up.\n");
+      KILL(hash);
+      /* FIXME: Send a disconnect message */
+      return LSH_FAIL | LSH_DIE;
+    }
 
   KILL(hash);
 
@@ -148,7 +153,7 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
   dh->verifier = closure->verifier;
-  dh->install = make_client_install_keys(algorithms);
+  dh->install = make_install_new_keys(0, algorithms);
   dh->finished = finished;
   
   /* Send client's message */
@@ -186,54 +191,3 @@ make_dh_client(struct diffie_hellman_method *dh,
   return &self->super;
 }
 
-/* FIXME: This is identical to the server_install_keys structure in
- * server_keyexchange.c. It should probably be moved somewhere else. */
-
-/* CLASS:
-   (class
-     (name client_install_keys)
-     (super install_keys)
-     (vars
-       (algorithms object object_list)))
-*/
-
-static int do_install(struct install_keys *c,
-		      struct ssh_connection *connection,
-		      struct hash_instance *secret)
-{
-  /* FIXME: For DES, instantiating a crypto may fail, if the key
-   * happens to be weak. */
-  /* FIXME: No IV:s */
-
-  CAST(client_install_keys, closure, c);
-
-  /* Keys for recieving */
-  connection->dispatch[SSH_MSG_NEWKEYS] = make_newkeys_handler
-    (kex_make_encrypt(secret, closure->algorithms,
-		      KEX_ENCRYPTION_SERVER_TO_CLIENT, connection),
-     kex_make_mac(secret, closure->algorithms,
-		  KEX_MAC_SERVER_TO_CLIENT, connection));
-
-  /* Keys for sending */
-  /* NOTE: The NEWKEYS-message should have been sent before this
-   * function is called */
-  connection->send_crypto 
-    = kex_make_decrypt(secret, closure->algorithms,
-		       KEX_ENCRYPTION_CLIENT_TO_SERVER, connection);
-  
-  connection->send_mac 
-    = kex_make_mac(secret, closure->algorithms,
-		   KEX_MAC_CLIENT_TO_SERVER, connection);
-
-  return 1;
-}
-
-struct install_keys *make_client_install_keys(struct object_list *algorithms)
-{
-  NEW(client_install_keys, self);
-
-  self->super.install = do_install;
-  self->algorithms = algorithms;
-
-  return &self->super;
-}

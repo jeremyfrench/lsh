@@ -100,8 +100,13 @@ static int do_handle_dh_init(struct packet_handler *c,
   HASH_UPDATE(hash, s->length, s->data);
   lsh_string_free(s);
 
-  /* FIXME: Return value is ignored */
-  (void) INSTALL_KEYS(closure->install, connection, hash);
+  if (!INSTALL_KEYS(closure->install, connection, hash))
+    {
+      werror("Installing new keys failed. Hanging up.\n");
+      KILL(hash);
+      /* FIXME: Send a disconnect message */
+      return LSH_FAIL | LSH_DIE;
+    }
 
   KILL(hash);
 
@@ -139,7 +144,7 @@ static int do_init_dh(struct keyexchange_algorithm *c,
 
   dh->dh.server_key = lsh_string_dup(closure->server_key);
   dh->signer = closure->signer;
-  dh->install = make_server_install_keys(algorithms);
+  dh->install = make_install_new_keys(1, algorithms);
   dh->finished = finished;
   
   /* Generate server's secret exponent */
@@ -174,6 +179,7 @@ make_dh_server(struct diffie_hellman_method *dh,
   return &self->super;
 }
 
+#if 0
 /* FIXME: This is identical to the client_install_keys structure in
  * client_keyexchange.c. It should probably be moved somewhere else. */
 
@@ -225,3 +231,4 @@ struct install_keys *make_server_install_keys(struct object_list *algorithms)
 
   return &self->super;
 }
+#endif
