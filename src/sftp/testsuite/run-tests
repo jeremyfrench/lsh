@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/sh
 
 failed=0
 all=0
@@ -17,10 +17,11 @@ env_program () {
 }
 
 test_program () {
+  testname=`echo "$1" | sed -e 's/-test//'`
   if "$srcdir/$1" ; then
-    echo PASS: ${1%-test}
+    echo PASS: $testname
   else
-    echo FAIL: ${1%-test}
+    echo FAIL: $testname
     failed=`expr $failed + 1`
   fi
   all=`expr $all + 1`
