@@ -1,3 +1,72 @@
+1999-06-11    <nisse@cuckoo.localdomain>
+
+	* src/tcpforward.c (do_tcpip_forward_request): Use GLOBAL_REQUEST_CALLBACK().
+	(do_tcp_forward_continuation): -"-
+	Various bug fixes.
+
+	* src/channel.c (global_request_status): New class. 
+	(make_global_request_status): New function.
+	(global_request_response): New class.
+	(do_global_request_response): New function.
+	(make_global_request_response): New function.
+	(do_global_request): Pass a callback object to the handler.
+
+	* src/channel.h (channel_table): New attributes
+	active_global_requests and pending_global_requests.
+	(global_request_callback): New class.
+	(global_request): Let the handler method take a
+	global_request_callback as argument.
+
+	* src/channel_commands.h (global_request_command): New class. 
+	(do_channel_global_command): New function (not yet implemented).
+
+	* src/queue.c (lsh_queue_peek_head): New function.
+	(lsh_queue_peek_tail): -"-
+	(object_queue_peek_head): -"-
+	(object_queue_peek_tail): -"-
+	(object_queue_get_contents): Cast here, rather than in all calling
+	functions. 
+
+	* src/io_commands.c (listen_connection): Adapted to the needs for
+	tcp forwarding.
+	(make_listen_command): New function.
+
+	* src/make_class (process-expr): Include the compiler output in a
+	comment. 
+
+1999-06-07    <nisse@cuckoo.localdomain>
+
+	* src/werror.c (werror_vformat): Removed 'h'-modifier. Use 'x'
+	instead. 
+
+	* src/queue.h (struct object_queue_node): Made this structure public.
+	(FOR_OBJECT_QUEUE): Traverse an object_queue (Bazsi).
+	(FOR_OBJECT_QUEUE_REMOVE): Somewhat ugly macro to delete the
+	current node inside a for-loop.
+
+	* src/lshd.c (main): Added tcpforward support (Bazsi).
+
+	* src/io.h (address_info): Renamed the ADDRESS field. Is now
+	called IP.
+
+	* src/io.c (io_iter): When closing a file, always invoke its close
+	callback (if it is non-NULL). Previously, the callback was never
+	invoked if fd->close_reason was zero.
+
+	(io_iter): Some handling of POLLHUP and POLLPRI.
+
+	* src/format.h (lsh_string_cmp, lsh_string_cmp_l): New functions
+	(don't really belong in this file).
+
+1999-06-06    <nisse@cuckoo.streamserve.com>
+
+	* src/dsa_keygen.c (dsa_nist_gen): Bugfix: Removed extra mpz_init().
+
+1999-06-07    <nisse@cuckoo.localdomain>
+
+	* src/connection.h (ssh_connection): New field forwarded_ports
+	(Bazsi).  
+
 Wed May 26 18:54:43 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/client.c: #include signal.h (reported by MArtin Jabobsson).  
