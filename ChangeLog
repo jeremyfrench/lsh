@@ -1,5 +1,16 @@
 2003-02-19  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/nettle/acinclude.m4, src/spki/acinclude.m4: Deleted files,
+	let .bootstrap make links to the top-level acinclude.m4 instead.
+
+	* acinclude.m4: Renamed macros to start with the LSH_-prfix.
+	Deleted unused code. Updated configure.ac to match.
+	(LSH_TYPE_SOCKLEN_T): Moved AH_TEMPLATE into the macro body.
+
+	* .bootstrap: Link acinclude.m4 into the src/nettle and src/spki
+	directories. Added command line option "links", that skips the
+	autoconf and automake bootstrap.
+
 	* misc/Makefile.am (EXTRA_DIST): Removed bootstrap.sh. Added
 	make-am. 
 

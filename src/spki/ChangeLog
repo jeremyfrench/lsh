@@ -1,3 +1,8 @@
+2003-02-19  Niels Möller  <nisse@cuckoo.hack.org>
+
+ 	* acinclude.m4: Deleted file from cvs, use a link to lsh's
+	acinclude.m4 instead.
+
 2003-02-17  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* tools/Makefile.am (EXTRA_DIST): Added getopt.c and getopt1.c. 
