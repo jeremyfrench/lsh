@@ -74,10 +74,10 @@ int do_read_packet(struct read_handler **h,
 		    UINT8 s[4];
 		    WRITE_UINT32(s, closure->sequence_number);
 		    
-		    UPDATE(closure->mac, 4, s);
-		    UPDATE(closure->mac,
-			   closure->buffer->length,
-			   closure->buffer->data);
+		    HASH_UPDATE(closure->mac, 4, s);
+		    HASH_UPDATE(closure->mac,
+				closure->buffer->length,
+				closure->buffer->data);
 		  }
 
 		/* Allocate full packet */
@@ -125,10 +125,10 @@ int do_read_packet(struct read_handler **h,
 
 		if (closure->mac)
 		  {
-		    UPDATE(closure->mac,
+		    HASH_UPDATE(closure->mac,
 			   closure->buffer->length - closure->crypt_pos,
 			   closure->buffer->data + closure->crypt_pos);
-		    DIGEST(closure->mac,
+		    HASH_DIGEST(closure->mac,
 			   closure->computed_mac);
 		  }
 		closure->state = WAIT_MAC;
