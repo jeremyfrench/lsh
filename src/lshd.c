@@ -308,10 +308,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       state->child_inputs[1] = &self->super;
       state->child_inputs[2] = NULL;
       break;
+#if 0
     case ARGP_KEY_ARG:
       argp_error(state, "Spurious arguments.");
       break;
-      
+#endif  
     case ARGP_KEY_END:
       if (self->port)
 	self->local = make_address_info_c(arg, self->port, 0);
