@@ -1,3 +1,19 @@
+2003-11-11  Niels Möller  <nisse@harpo.hack.org>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Deleted unpad.c.
+
+	* src/xalloc.c (lsh_object_free): Changed to take a const argument.
+
+	* src/read_packet.c (do_read_packet): Moved code for stripping
+	padding and inflating read packets to this function.
+	* src/handshake.c (do_line): Deleted calls to make_packet_unpad
+	and make_packet_inflate. 
+	* src/unpad.c, src/unpad.h: Deleted files.
+	* src/compress.c (class packet_compressor): Deleted class.
+	(make_packet_codec): Deleted function.
+	* src/compress.h (make_packet_deflate, make_packet_inflate):
+	Deleted macros.
+
 2003-11-10  Niels Möller  <nisse@harpo.hack.org>
 
 	* src/connection.c (connection_send_kex): New function, replacing
