@@ -37,7 +37,7 @@
      (name rijndael_instance)
      (super crypto_instance)
      (vars
-       (ctx . "RIJNDAEL_context")))
+       (ctx . "struct aes_ctx")))
 */
 
 static void
@@ -46,8 +46,7 @@ do_rijndael_encrypt(struct crypto_instance *s,
 {
   CAST(rijndael_instance, self, s);
 
-  FOR_BLOCKS(length, src, dst, RIJNDAEL_BLOCKSIZE)
-    rijndael_encrypt(&self->ctx, src, dst);
+  aes_encrypt(&self->ctx, length, dst, src);
 }
 
 static void
@@ -56,8 +55,7 @@ do_rijndael_decrypt(struct crypto_instance *s,
 {
   CAST(rijndael_instance, self, s);
 
-  FOR_BLOCKS(length, src, dst, RIJNDAEL_BLOCKSIZE)
-    rijndael_decrypt(&self->ctx, src, dst);
+  aes_decrypt(&self->ctx, length, dst, src);
 }
 
 static struct crypto_instance *
@@ -71,7 +69,7 @@ make_rijndael_instance(struct crypto_algorithm *algorithm, int mode,
 			? do_rijndael_encrypt
 			: do_rijndael_decrypt);
 
-  rijndael_setup(&self->ctx, algorithm->key_size, key);
+  aes_set_key(&self->ctx, algorithm->key_size, key);
 
   return(&self->super);
 }
@@ -81,10 +79,10 @@ make_rijndael_algorithm(UINT32 key_size)
 {
   NEW(crypto_algorithm, algorithm);
 
-  assert(key_size <= RIJNDAEL_MAX_KEYSIZE);
-  assert(key_size >= RIJNDAEL_MIN_KEYSIZE);
+  assert(key_size <= AES_MAX_KEY_SIZE);
+  assert(key_size >= AES_MIN_KEY_SIZE);
 
-  algorithm->block_size = RIJNDAEL_BLOCKSIZE;
+  algorithm->block_size = AES_BLOCKSIZE;
   algorithm->key_size = key_size;
   algorithm->iv_size = 0;
   algorithm->make_crypt = make_rijndael_instance;
@@ -93,10 +91,10 @@ make_rijndael_algorithm(UINT32 key_size)
 }
 
 struct crypto_algorithm rijndael128_algorithm =
-{ STATIC_HEADER, RIJNDAEL_BLOCKSIZE, 16, 0, make_rijndael_instance};
+{ STATIC_HEADER, AES_BLOCKSIZE, 16, 0, make_rijndael_instance};
 
 struct crypto_algorithm rijndael192_algorithm =
-{ STATIC_HEADER, RIJNDAEL_BLOCKSIZE, 24, 0, make_rijndael_instance};
+{ STATIC_HEADER, AES_BLOCKSIZE, 24, 0, make_rijndael_instance};
 
 struct crypto_algorithm rijndael256_algorithm =
-{ STATIC_HEADER, RIJNDAEL_BLOCKSIZE, 32, 0, make_rijndael_instance};
+{ STATIC_HEADER, AES_BLOCKSIZE, 32, 0, make_rijndael_instance};

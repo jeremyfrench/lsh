@@ -29,11 +29,12 @@
 #include "format.h"
 #include "parse.h"
 #include "sexp.h"
-#include "sha.h"
 #include "spki.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include "nettle/sha1.h"
 
 #include <assert.h>
 
@@ -45,7 +46,7 @@
 
 #define DSA_MAX_SIZE 300
 
-#define DSA_MAX_QSIZE SHA_DIGESTSIZE
+#define DSA_MAX_QSIZE SHA1_DIGEST_SIZE
 
 #define SA(x) sexp_a(ATOM_##x)
 
@@ -87,16 +88,16 @@ static void
 dsa_hash(mpz_t h, UINT32 length, const UINT8 *msg)
 {
   /* Compute hash */
-  struct hash_instance *hash = MAKE_HASH(&sha1_algorithm);
-  UINT8 *digest = alloca(hash->hash_size);
-  HASH_UPDATE(hash, length, msg);
-  HASH_DIGEST(hash, digest);
+  UINT8 digest[SHA1_DIGEST_SIZE];
+  struct sha1_ctx ctx;
+  sha1_init(&ctx);
+  sha1_update(&ctx, length, msg);
+  sha1_final(&ctx);
+  sha1_digest(&ctx, SHA1_DIGEST_SIZE, digest);
 
-  bignum_parse_u(h, hash->hash_size, digest);
+  bignum_parse_u(h, SHA1_DIGEST_SIZE, digest);
 
   debug("DSA hash: %xn\n", h);
-  
-  KILL(hash);
 }
 
 static struct sexp *

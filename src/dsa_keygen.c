@@ -28,11 +28,12 @@
 
 #include "randomness.h"
 #include "sexp.h"
-#include "sha.h"
 #include "werror.h"
 
+#include "nettle/sha1.h"
+
 #if !HAVE_MEMXOR
-#include "memxor.h"
+#include "nettle/memxor.h"
 #endif
 
 #include <assert.h>
@@ -42,7 +43,7 @@
 /* The (slow) NIST method of generating DSA primes. Algorithm 4.56 of
  * Handbook of Applied Cryptography. */
 
-#define SEED_LENGTH SHA_DIGESTSIZE
+#define SEED_LENGTH SHA1_DIGEST_SIZE
 #define SEED_BITS (SEED_LENGTH * 8)
 
 static void
@@ -50,7 +51,7 @@ hash(mpz_t x, UINT8 *digest)
 {
   mpz_t t;
   UINT8 data[SEED_LENGTH];
-  struct sha_ctx ctx;
+  struct sha1_ctx ctx;
   
   mpz_init_set(t, x);
   mpz_fdiv_r_2exp(t, t, SEED_BITS);
@@ -58,10 +59,10 @@ hash(mpz_t x, UINT8 *digest)
   bignum_write(t, SEED_LENGTH, data);
   mpz_clear(t);
 
-  sha_init(&ctx);
-  sha_update(&ctx, data, SEED_LENGTH);
-  sha_final(&ctx);
-  sha_digest(&ctx, digest);
+  sha1_init(&ctx);
+  sha1_update(&ctx, data, SEED_LENGTH);
+  sha1_final(&ctx);
+  sha1_digest(&ctx, SHA1_DIGEST_SIZE, digest);
 }
 
 void
@@ -83,8 +84,8 @@ dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
   for (;;)
     {
       { /* Generate q */
-	UINT8 h1[SHA_DIGESTSIZE];
-	UINT8 h2[SHA_DIGESTSIZE];
+	UINT8 h1[SHA1_DIGEST_SIZE];
+	UINT8 h2[SHA1_DIGEST_SIZE];
 	
 	bignum_random_size(s, r, SEED_BITS);
 	
