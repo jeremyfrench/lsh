@@ -81,7 +81,15 @@ do_handle_dh_reply(struct packet_handler *c,
       return;
     }
     
-  v = LOOKUP_VERIFIER(closure->verifier, NULL, closure->dh.server_key);
+  v = LOOKUP_VERIFIER(closure->verifier, closure->hostkey_algorithm,
+		      NULL, closure->dh.server_key);
+
+  if (!v)
+    /* FIXME: Use a more appropriate error code? */
+    {
+      disconnect_kex_failed(connection, "Bad server host key\r\n");
+      return;
+    }
 
 #if DATAFELLOWS_WORKAROUNDS
   if (closure->hostkey_algorithm == ATOM_SSH_DSS && 
@@ -91,12 +99,6 @@ do_handle_dh_reply(struct packet_handler *c,
     }
 #endif
 
-  if (!v)
-    /* FIXME: Use a more appropriate error code? */
-    {
-      disconnect_kex_failed(connection, "Bad server host key\r\n");
-      return;
-    }
   
   if (!dh_verify_server_msg(&closure->dh, v))
     {
