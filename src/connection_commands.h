@@ -73,4 +73,14 @@ struct close_callback *make_connection_close_handler(struct ssh_connection *c);
 struct command_simple connection_remember;
 #define CONNECTION_REMEMBER (&connection_remember.super.super)
 
+struct command *
+make_connection_if_srp(struct command *then_f,
+		       struct command *else_f);
+
+extern struct collect_info_1 connection_if_srp_command;
+#define CONNECTION_IF_SRP (&connection_if_srp_command.super.super.super)
+
+extern struct command connection_require_userauth;
+#define CONNECTION_REQUIRE_USERAUTH (&connection_require_userauth.super)
+
 #endif /* LSH_CONNECTION_COMMANDS_H_INCLUDED */

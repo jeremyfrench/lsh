@@ -484,4 +484,75 @@ COMMAND_SIMPLE(connection_remember)
   return &self->super.super;
 }
 
+/* (connection_if_srp then_f else_f connection)
+ *
+ * Invokes either (then_f connection) or (else_f connection)
+ * depending on whether or not the CONNECTION_SRP flag is set.
+ */
 
+/* GABA:
+   (class
+     (name connection_if_srp)
+     (super command)
+     (vars
+       (then_f object command)
+       (else_f object command)))
+*/
+
+static void
+do_connection_if_srp(struct command *s,
+		     struct lsh_object *a,
+		     struct command_continuation *c,
+		     struct exception_handler *e)
+{
+  CAST(connection_if_srp, self, s);
+  CAST(ssh_connection, connection, a);
+
+  COMMAND_CALL(( (connection->flags & CONNECTION_SRP)
+		 ? self->then_f : self->else_f),
+	       connection, c, e);
+}
+
+struct command *
+make_connection_if_srp(struct command *then_f,
+		       struct command *else_f)
+{
+  NEW(connection_if_srp, self);
+  self->super.call = do_connection_if_srp;
+  self->then_f = then_f;
+  self->else_f = else_f;
+
+  return &self->super;
+}
+
+static struct lsh_object *
+collect_if_srp_2(struct collect_info_2 *info,
+		 struct lsh_object *t,
+		 struct lsh_object *e)
+{     
+  CAST_SUBTYPE(command, then_f, t);
+  CAST_SUBTYPE(command, else_f, e);
+  
+  assert(!info->next);
+  return &make_connection_if_srp(then_f, else_f)->super;
+}
+
+static struct collect_info_2 collect_info_if_srp_2 =
+STATIC_COLLECT_2_FINAL(collect_if_srp_2);
+
+struct collect_info_1 connection_if_srp_command =
+STATIC_COLLECT_1(&collect_info_if_srp_2);
+
+COMMAND_STATIC(connection_require_userauth)
+{
+  CAST(ssh_connection, connection, a);
+
+  (void) e; /* Make gcc happy. We don't use the e argument. */
+  
+  if (connection->user)
+    COMMAND_RETURN(c, connection);
+  else
+    EXCEPTION_RAISE(connection->e,
+		    make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+					    "Access denied."));
+}
