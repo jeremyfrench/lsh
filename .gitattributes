@@ -1,2 +1,4 @@
 [attr]binary -text -crlf -diff -ident
 * text ident
+sftp-server binary
+sftp-test-client binary
