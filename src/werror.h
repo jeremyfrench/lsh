@@ -26,7 +26,6 @@
 
 #include <stdarg.h>
 
-#include "bignum.h"
 #include "lsh_argp.h"
 
 /* Global variables */
