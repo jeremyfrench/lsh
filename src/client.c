@@ -238,6 +238,8 @@ static int do_accept_service(struct packet_handler *c,
 
   MDEBUG(closure);
 
+  simple_buffer_init(&buffer, packet->length, packet->data);
+  
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_SERVICE_ACCEPT)
       && parse_atom(&buffer, &name)
@@ -280,7 +282,7 @@ static int do_request_service(struct ssh_service *c,
 {
   struct service_request *closure = (struct service_request *) c;
   
-  MDEBUG(c);
+  MDEBUG(closure);
 
   connection->dispatch[SSH_MSG_SERVICE_ACCEPT]
     = make_accept_service_handler(closure->service_name,
@@ -313,8 +315,8 @@ struct client_session
   
   /* To access stdio */
   struct io_fd *in;
-  struct abstract_write *out;
-  struct abstract_write *err;
+  struct io_fd *out;
+  struct io_fd *err;
 };
 
 static int client_session_die(struct ssh_channel *c)
@@ -342,9 +344,9 @@ static int do_recieve(struct ssh_channel *c,
   switch(type)
     {
     case CHANNEL_DATA:
-      return A_WRITE(closure->out, data);
+      return A_WRITE(&closure->out->buffer->super, data);
     case CHANNEL_STDERR_DATA:
-      return A_WRITE(closure->err, data);
+      return A_WRITE(&closure->err->buffer->super, data);
     default:
       fatal("Internal error!\n");
     }
@@ -363,17 +365,19 @@ static int do_send(struct ssh_channel *c)
 }
 
 /* We have a remote shell */
-static int do_io(struct ssh_channel *c)
+static int do_io(struct ssh_channel *channel)
 {
-  struct client_session *closure = (struct client_session *) c;
-
-  MDEBUG(closure);
+  struct client_session *closure = (struct client_session *) channel;
   
-  closure->super.recieve = do_recieve;
-  /* FIXME: Should install close callbacks on stdout and stderr,
-   * to detect write errors (and close the channel). */
+  MDEBUG(closure);
+
+  channel->recieve = do_recieve;
+  
+  closure->out->close_callback
+    = closure->err->close_callback = make_channel_close(channel);
+  
   closure->in->handler = make_channel_read_data(&closure->super);
-  closure->super.send = do_send;
+  channel->send = do_send;
   
   return LSH_OK | LSH_GOON;
 }
@@ -401,8 +405,8 @@ static int do_open_confirm(struct ssh_channel *c)
 }
 
 static struct ssh_channel *make_client_session(struct io_fd *in,
-					       struct abstract_write *out,
-					       struct abstract_write *err,
+					       struct io_fd *out,
+					       struct io_fd *err,
 					       UINT32 max_window,
 					       int final_request,
 					       struct lsh_string *args)
@@ -442,8 +446,8 @@ struct client_startup
   
   /* To access stdio */
   struct io_fd *in;
-  struct abstract_write *out;
-  struct abstract_write *err;
+  struct io_fd *out;
+  struct io_fd *err;
 #endif
 };
 
@@ -473,8 +477,8 @@ static int do_client_startup(struct connection_startup *c,
 
 /* Request opening a session. */
 struct connection_startup *make_client_startup(struct io_fd *in,
-					       struct abstract_write *out,
-					       struct abstract_write *err,
+					       struct io_fd *out,
+					       struct io_fd *err,
 					       int final_request,
 					       struct lsh_string *args)
 {
