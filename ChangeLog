@@ -1,5 +1,10 @@
 2004-06-09  Niels Möller  <niels@s3.kth.se>
 
+	* src/testsuite/functions.sh: Removed -q from LSHD_FLAGS.
+
+	* src/server_pty.c (SYSTEM_GROUP): New macro.
+	(pty_check_permissions): If there's no "tty" group, try "system".
+
 	* src/testsuite/Makefile.am (TS_SH): Removed ssh1-fallback-test.
 	(EXTRA_DIST): Removed fake-sshd1.
 
