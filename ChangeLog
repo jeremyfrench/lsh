@@ -1,3 +1,69 @@
+2000-09-19  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/server_publickey.c (do_authenticate): Pass algorithm
+	name to VERIFY() method. make_dsa_verifier_kludge() no longer
+	needed. 
+
+	* src/server_keyexchange.c (dh_server): New attribute
+	hostkey_algorithm. 
+	(do_handle_dh_init): Pass algorithm name dto dh_make_server_msg(). 
+	(do_init_server_dh): Initialize hostkey_algorithm.
+	make_dsa_signer_kludge() no longer needed.
+
+	* src/rsa.c (encode_rsa_sig_val): New function.
+	(decode_rsa_sig_val): New function.
+	(do_rsa_sign): New algorithm argument.
+	(do_rsa_sign_spki): Deleted hash and principal arguments. Return a
+	<sig-val>. 
+	(do_rsa_verify): Added algorithm argument.
+	(do_rsa_verify_spki): Take an sexp rather than an sexp_itterator
+	as argument. Expect a <sig-val>.
+
+	* src/publickey_crypto.h (dh_make_server_msg): Added argument
+	hostkey_algorithm. 
+
+	* src/dsa.c (dsa_signer_variant, dsa_verifier_variant): Commented
+	out.  
+	(encode_dsa_sig_val): New function.
+	(decode_dsa_sig_val): New function.
+	(do_dsa_sign): New argument algorithm. Handle plain ssh-dss,
+	ssh-dss-kludge and spki. 
+	(do_dsa_sign_spki): Deleted hash and principal arguments. Return a
+	<sig-val>. 
+	(do_dsa_verify): New argument algorithm. Handle plain ssh-dss,
+	ssh-dss-kludge and spki. 
+	(do_dsa_verify_spki): Take an sexp rather than an sexp_itterator
+	as argument. Expect a <sig-val>.
+	(do_dsa_sign_kludge): #if:ed out.
+	(make_dsa_signer_kludge): Likewise.
+	(do_dsa_verify_kludge): Likewise.
+	(make_dsa_verifier_kludge): Likewise.
+
+	* src/dh_exchange.c (dh_make_server_msg): New argument
+	hostkey_algorithm, which is passed on to SIGN().
+
+	* src/client_keyexchange.c (do_handle_dh_reply): Pass algorithm
+	name to VERIFY() method. make_dsa_verifier_kludge() no longer
+	needed. 
+
+	* src/client_userauth.c (do_userauth_pk_ok): Pass algorithm name
+	to the SIGN() method.
+
+	* src/atoms.in: New algorithm name "ssh-dss-kludge@lysator.liu.se"
+	for internal use.
+
+	* src/abstract_crypto.h (verifier): Added algorithm argument to
+	the verify() method. Removed hash and principal arguments from the
+	verify_spki() method.
+	* src/abstract_crypto.h (signer): Similar changes.
+
+	* configure.in: Bumped version to 1.0.5.
+
+2000-09-18  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/spki.c (spki_hash_data): New function.
+	(do_spki_hash): Use spki_hash_data(). 
+
 2000-09-15  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/parse.c (parse_next_atom): Updated comment. Return error for
