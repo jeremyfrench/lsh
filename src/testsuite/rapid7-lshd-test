@@ -1,47 +1,25 @@
 #! /bin/sh
 
-: ${LSHD:=lshd}
-
-werror () {
-    echo 1>&2 "$1"
-}
-
-die () {
-    werror "$1"
-    exit 1
-}
-
-if [ -s hostkey ] ; then : ; else
-    werror "Generating key"
-    lsh-keygen -a rsa -l 1000 | lsh-writekey -o hostkey
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
 fi
 
-LSH_YARROW_SEED_FILE=yarrow-seed-file
+. $srcdir/functions.sh
 
-if [ -s "$LSH_YARROW_SEED_FILE" ] ; then : ; else
-    werror "Generating seed"
-    lsh-make-seed -o "$LSH_YARROW_SEED_FILE" --sloppy
-fi
+PORT=5555
 
-export LSH_YARROW_SEED_FILE
+werror "Testing lshd"
 
-werror "Testing $LSHD"
-
-"$LSHD" -h hostkey --interface=127.0.0.1 -p 5555 --pid-file=lshd-pid \
-      --daemon --no-syslog \
-    || die "Starting lshd failed"
-
-sleep 2
-trap "kill -HUP `cat lshd-pid`" 0
+spawn_lshd
 
 for f in rapid7-ssh-pdu/*.pdu ; do
     werror "Testing $f"
-    tcpconnect 127.0.0.1 5555 < "$f" > /dev/null \
+    tcpconnect $INTERFACE $PORT < "$f" > /dev/null \
 	|| die "Connect failed"
 
-    kill -0 `cat lshd-pid` || die "Server died"
+    kill -0 `cat $PIDFILE` || die "Server died"
 done
 
 werror "Test done"
 
-exit 0
+test_success

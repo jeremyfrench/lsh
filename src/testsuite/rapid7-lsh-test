@@ -1,38 +1,28 @@
 #! /bin/sh
 
-: ${LSH:=lsh}
-
-werror () {
-    echo 1>&2 "$1"
-}
-
-die () {
-    werror "$1"
-    exit 1
-}
-
-LSH_YARROW_SEED_FILE=yarrow-seed-file
-
-if [ -s "$LSH_YARROW_SEED_FILE" ] ; then : ; else
-    werror "Generating seed"
-    lsh-make-seed -o "$LSH_YARROW_SEED_FILE" --sloppy
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
 fi
 
-export LSH_YARROW_SEED_FILE
+. $srcdir/functions.sh
 
-mini-inetd -- 5556 /bin/sh /bin/sh -c 'cat current' & 
-pid=$?
+PORT=5556
 
-trap "kill $pid; rm -f current" 0
+mini-inetd -- $PORT /bin/sh /bin/sh -c 'cat current' & 
+pid=$!
 
-werror "Testing $LSH"
+at_exit "kill $pid; rm -f current" 0
+
+werror "Testing lsh"
 
 for f in rapid7-ssh-pdu/*.pdu ; do
     echo 1>&2 "Testing $f"
     ln -sf $f current || die "Creating symlink current -> $f failed"
 
-    "$LSH" -q --sloppy --capture-to=/dev/null -p 5556 localhost exit 0
+    set +e
+    ../lsh -q --sloppy --capture-to=/dev/null -p $PORT localhost exit 0
     status="$?"
+    set -e
     # Should be either 1 or 17 (not sure exactly when
     # which of these are returned)
     case "$status" in
@@ -47,4 +37,4 @@ done
 
 werror "Test done"
 
-exit 0
+test_success

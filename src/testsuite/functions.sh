@@ -51,6 +51,15 @@ test_skip () {
     exit
 }
 
+werror () {
+    echo 1>&2 "$1"
+}
+
+die () {
+    werror "$1"
+    test_fail
+}
+
 check_x11_support () {
     ../lsh --help | grep 'x11-forward' >/dev/null || test_skip
 }
