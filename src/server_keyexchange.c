@@ -198,6 +198,9 @@ do_srp_server_proof_handler(struct packet_handler *s,
       hash = self->srp->dh.exchange_hash;
       self->srp->dh.exchange_hash = NULL; /* For gc */
 
+      /* Remember that a user was authenticated. */
+      connection->user = self->srp->user;
+      
       keyexchange_finish(connection, self->srp->algorithms,
 			 self->srp->dh.method->H,
 			 hash,
@@ -225,6 +228,8 @@ static void
 do_exc_srp(struct exception_handler *e,
 	   const struct exception *x)
 {
+  /* FIXME: Filter the error messages. E.g. "No more sexps" doesn't
+   * make much sense to the client. */
   EXCEPTION_RAISE(e->parent,
 		  make_protocol_exception(SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
 					  x->msg));
