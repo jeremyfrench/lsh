@@ -449,6 +449,30 @@ read_spki_key_file(const char *name,
 }
 
 
+/* 5-tuples */
+
+struct spki_5_tuple *
+make_spki_5_tuple(struct spki_subject *issuer,
+		  struct spki_subject *subject,
+		  int propagate,
+		  struct spki_tag *authorization,
+		  int before_limit, time_t not_before,
+		  int after_limit, time_t not_after)
+{
+  NEW(spki_5_tuple, self);
+  self->issuer = issuer;
+  self->subject = subject;
+  self->propagate = propagate;
+  self->authorization = authorization;
+  self->validity.before_limit = before_limit;
+  self->validity.not_before = not_before;
+  self->validity.after_limit = after_limit;
+  self->validity.not_after = not_after;
+
+  return self;
+}
+
+
 /* Sets of authorizations, representing the (tag ...) expressions in
  * acl:s and certificates. */
 
@@ -638,12 +662,6 @@ struct spki_tag spki_tag_any =
 { STATIC_HEADER, SPKI_TAG_ANY, do_spki_tag_any_match };
 
 
-/* Forward declaration */
-struct spki_tag *
-spki_sexp_to_tag(struct sexp *e,
-		 /* Some limit on the recursion */
-		 unsigned limit);
-
 static struct object_list *
 spki_sexp_to_tag_list(struct sexp_iterator *i, unsigned limit)
 {
@@ -736,38 +754,147 @@ spki_sexp_to_tag(struct sexp *e,
 
 #define SPKI_NESTING_LIMIT 17
 
-#if 0
+/* The iterator should point at the element after the tag of an expression
+ *
+ *   (entry (public-key|hash|name ...) (propagate)? (tag ...) (valid ...)? )
+ */
+
 struct spki_5_tuple *
-spki_sexp_to_5_tuple(struct sexp *e)
+spki_acl_entry_to_5_tuple(struct spki_context *ctx,
+			  struct sexp_iterator *i)
 {
-  if (sexp_atomp(e))
+  struct spki_subject *subject;
+  struct sexp_iterator *j;
+  struct spki_tag *authorization;
+  
+  int propagate = 0;
+  
+  struct sexp *e = SEXP_GET(i);
+  
+  if (!e)
+    {
+      werror("spki_acl_entry_to_5_tuple: Invalid entry.\n");
+      return NULL;
+    }
+
+  subject = SPKI_LOOKUP(ctx, e);
+  if (!subject)
     return NULL;
+
+  SEXP_NEXT(i);
+  e = SEXP_GET(i);
+  if (!e)
+    return NULL;
+
+  if (spki_check_type(e, ATOM_PROPAGATE, &j))
+    {
+      if (SEXP_GET(j))
+	{
+	  werror("spki_acl_entry_to_5_tuple: Invalid propagate-expression.\n");
+	  return NULL;
+	}
+      propagate = 1;
+      SEXP_NEXT(i);
+      e = SEXP_GET(i);
+    }
+
+  if (spki_check_type(e, ATOM_TAG, &j))
+    {
+      struct sexp *tag = SEXP_GET(j);
+      SEXP_NEXT(j);
+      if (SEXP_GET(j))
+	{
+	  werror("spki_acl_entry_to_5_tuple: Invalid tag-expression.\n");
+	  return NULL;
+	}
+      
+      authorization = spki_sexp_to_tag(tag, SPKI_NESTING_LIMIT);
+      if (!authorization)
+	return NULL;
+    }
   else
     {
-      struct sexp_iterator *i = SEXP_ITER(e);
-      struct sexp *type = SEXP_GET(i);
+      werror("spki_acl_entry_to_5_tuple: Invalid entry.\n");
+      return NULL;
+    }
+    
+  SEXP_NEXT(i);
+  if (SEXP_GET(i))
+    {
+      werror("spki_acl_entry_to_5_tuple: Garbage at end of entry.\n");
+      return NULL;
+    }
 
-      if (!type)
-	return NULL;
+  /* Create a 5-tuple with a NULL (i.e. self) issuer */
+  return make_spki_5_tuple(NULL, subject, propagate,
+			   authorization, 0, 0, 0, 0);
+}
 
-      SEXP_NEXT(i);
-      
-      switch (sexp2atom(type))
-	{
-	case ATOM_CERTIFICATE:
-	  werror("spki_sexp_to_5_tuple: Certificates not yet supported.\n");
-	  return NULL;
-	case ATOM_ACL:
-	  /* HERE!!! */  
-#endif 
+/* A command that takes an spki_context and an s-expression, and returns a list of
+ * 5-tuples. The ctx object is updated as well. */
+
+struct object_list *
+spki_read_acls(struct spki_context *ctx,
+	       struct sexp *e)
+{
+  struct sexp_iterator *i;
+  struct object_queue q;
   
+  if (!spki_check_type(e, ATOM_ACL, &i))
+    {
+      werror("spki_read_acls: Invalid acl\n");
+      return NULL;
+    }
 
+  /* FIXME: Accept at least (version "0") */
+  if (spki_check_type(SEXP_GET(i), ATOM_VERSION, NULL))
+    {
+      werror("spki_read_acls: Unsupported acl version\n");
+      return NULL;
+    }
 
+  object_queue_init(&q);
 
+  for (; (e = SEXP_GET(i)); SEXP_NEXT(i))
+    {
+      struct sexp_iterator *j;
+      if (spki_check_type(e, ATOM_ENTRY, &j))
+	{
+	  struct spki_5_tuple *acl = spki_acl_entry_to_5_tuple(ctx, j);
+	  if (acl)
+	    object_queue_add_tail(&q, &acl->super);
+	}
+      else
+	werror("spki_read_acls: Invalid entry, ignoring\n");
+    }
 
+  return queue_to_list_and_kill(&q);
+}
 
+/* GABA:
+   (class
+     (name spki_command)
+     (super command)
+     (vars
+       (ctx object spki_context)))
+*/
 
+static void
+do_read_acls(struct command *s, 
+	     struct lsh_object *a,
+	     struct command_continuation *c,
+	     struct exception_handler *e)
+{
+  CAST(spki_command, self, s);
+  CAST_SUBTYPE(sexp, acl, a);
 
+  struct object_list *l = spki_read_acls(self->ctx, acl);
+
+  if (l)
+    COMMAND_RETURN(c, l);
+  else
+    SPKI_ERROR(e, "Invalid ACL list", acl);
+}
 
 #if 0
 
