@@ -52,6 +52,7 @@
 #include "proxy.h"
 #include "proxy_userauth.h"
 #include "proxy_session.h"
+#include "proxy_channel.h"
 #include "sexp.h"
 #include "sexp_commands.h"
 #include "spki_commands.h"
@@ -114,8 +115,8 @@ struct command_simple options2signature_algorithms;
        (port . "char *")
        (hostkey . "char *")
        (local object address_info)
+       (destination object address_info)
        (with_tcpip_forward . int)
-       (sshd1 object ssh1_fallback)
        (daemonic . int)
        (corefile . int)
        (pid_file . "const char *")
@@ -145,7 +146,6 @@ make_lsh_proxy_options(struct io_backend *backend,
 
   self->with_tcpip_forward = 1;
   
-  self->sshd1 = NULL;
   self->daemonic = 0;
 
   /* FIXME: Make the default a configure time option? */
@@ -206,11 +206,6 @@ main_options[] =
   { "host-key", 'h', "Key file", 0, "Location of the server's private key.", 0},
   { "destination", 'D', "destination:port", 0, "Destination ssh server address (transparent if not given)", 0 },
 
-#if WITH_SSH1_FALLBACK
-  { "ssh1-fallback", OPT_SSH1_FALLBACK, "File name", OPTION_ARG_OPTIONAL,
-    "Location of the sshd1 program, for falling back to version 1 of the Secure Shell protocol.", 0 },
-#endif /* WITH_SSH1_FALLBACK */
-
 #if WITH_TCP_FORWARD
   { "tcp-forward", OPT_TCPIP_FORWARD, NULL, 0, "Enable tcpip forwarding (default).", 0 },
   { "no-tcp-forward", OPT_NO_TCPIP_FORWARD, NULL, 0, "Disable tcpip forwarding.", 0 },
@@ -235,6 +230,26 @@ main_argp_children[] =
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
+
+static int 
+parse_dest_arg(char *arg,
+	       struct address_info **target)
+{
+  char *sep, *end;
+  int port;
+  
+  sep = strchr(arg, ':');
+  if (!sep)
+    return 0;
+    
+  port = strtol(sep + 1, &end, 0);
+  if ( (end == sep + 1) || (*end != '\0')
+       || (port < 0) || (port > 0xffff) )
+    return 0;
+
+  *target = make_address_info(ssh_format("%ls", sep - arg, arg), port);
+  return 1;
+}
 
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
@@ -272,17 +287,19 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case 'h':
       self->hostkey = arg;
       break;
+      
+    case 'D':
+      if (!parse_dest_arg(arg, &self->destination))
+        {
+          argp_error(state, "Invalid destination specification '%s'.", arg);
+        }
+      
+      break;
 
     case OPT_INTERFACE:
       self->interface = arg;
       break;
  
-#if WITH_SSH1_FALLBACK
-    case OPT_SSH1_FALLBACK:
-      self->sshd1 = make_ssh1_fallback(arg ? arg : SSHD1);
-      break;
-#endif
-
     case OPT_TCPIP_FORWARD:
       self->with_tcpip_forward = 1;
       break;
@@ -362,19 +379,20 @@ make_fake_host_db(void)
        (handshake object handshake_info)
        (services object command)
        (connect_server object command)
-       (chain_connections object command))
+       (server_addr object address_info))
      (expr 
        (lambda (options)
          (services 
-	   (let ((peer (listen(options2local options))))
+	   (let ((client_addr (listen(options2local options))))
 	     (chain_connections 
-	       connect_server 
-	       peer
-	       (connection_handshake
+	       connect_server 		; callback to connect to server
+	       client_addr		; address of accepted connection
+	       server_addr
+	       (connection_handshake    ; handshake on the client side
 	         handshake 
 		 (spki_read_hostkeys (options2signature_algorithms options)
 		                     (options2keyfile options)) 
-		 (log_peer peer))))))))
+		 (log_peer client_addr))))))))
 */
 
 /* GABA:
@@ -532,13 +550,26 @@ int main(int argc, char **argv)
   {
     /* Commands to be invoked on the connection */
     struct object_list *connection_hooks;
-
-    connection_hooks = make_object_list(0, -1);
+    
+#ifdef WITH_TCP_FORWARD
+    if (options->with_tcpip_forward)
+      connection_hooks = make_object_list
+        (2,
+         make_install_fix_global_request_handler
+         (ATOM_TCPIP_FORWARD, &proxy_global_request),
+         make_install_fix_global_request_handler
+         (ATOM_CANCEL_TCPIP_FORWARD, &proxy_global_request),
+         -1);
+    else
+#endif
+      connection_hooks = make_object_list(0, -1);
+      
     {
       struct lsh_object *o = lsh_proxy_listen
 	(make_simple_listen(backend, NULL),
 	 make_handshake_info(CONNECTION_SERVER,
 			     "lsh_proxy_server - a free ssh",
+			     "proxy server",
 			     SSH_MAX_PACKET,
 			     r,
 			     algorithms_server,
@@ -556,7 +587,13 @@ int main(int argc, char **argv)
 			ATOM_SSH_CONNECTION,
 			lsh_proxy_connection_service
 			(make_proxy_connection_service
-			 (make_alist(0, -1),
+			 (make_alist
+			  (4, 
+			   ATOM_SHELL, &proxy_channel_request, 
+			   ATOM_PTY_REQ, &proxy_channel_request,
+			   ATOM_EXIT_STATUS, &proxy_channel_request,
+			   ATOM_EXIT_SIGNAL, &proxy_channel_request,
+			   -1),
 			  make_alist(0, -1)),
 			 connection_hooks),
 			-1))),
@@ -566,14 +603,15 @@ int main(int argc, char **argv)
 	 (struct command *)lsh_proxy_connect_server(make_simple_connect(backend, NULL),
 						    make_fake_host_db(),
 			      make_handshake_info(CONNECTION_CLIENT,
-						     "lsh_proxy_client - a free ssh",
-						     SSH_MAX_PACKET,
-						     r,
-						     algorithms_client,
-						     make_kexinit,
-						     NULL)
+						  "lsh_proxy_client - a free ssh",
+						  "proxy client",
+						  SSH_MAX_PACKET,
+						  r,
+						  algorithms_client,
+						  make_kexinit,
+						  NULL)
 			      ),
-	 &chain_connections.super.super);
+	 options->destination);
 
 
     
