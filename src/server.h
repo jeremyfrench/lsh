@@ -26,10 +26,9 @@
 #ifndef LSH_SERVER_H_INCLUDED
 #define LSH_SERVER_H_INCLUDED
 
-#include "server.h"
-
 #include "io.h"
 #include "keyexchange.h"
+#include "password.h"
 
 struct fd_callback *
 make_server_callback(struct io_backend *b,
@@ -41,5 +40,17 @@ make_server_callback(struct io_backend *b,
 
 struct read_handler *make_server_read_line(struct ssh_connection *c);
 struct close_callback *make_server_close_handler(void);
+
+struct ssh_channel *make_server_session(struct unix_user *user,
+					UINT32 max_window,
+					struct alist *request_types);
+
+struct unix_service *make_server_session_service(struct alist *global_requests,
+						 struct alist *session_requests);
+
+struct channel_open *make_open_session(struct unix_user *user,
+				       struct alist *session_requests);
+
+struct channel_request *make_shell_handler(struct io_backend *backend);
 
 #endif /* LSH_SERVER_H_INCLUDED */
