@@ -99,7 +99,12 @@ lsh_get_cstring(const struct lsh_string *s);
 unsigned format_size_in_decimal(UINT32 n);
 void format_decimal(unsigned length, UINT8 *buffer, UINT32 n);
 
-/* FIXME: This function doesn't really belong here */
+/* FIXME: These functions don't really belong here */
+
+/* NOTE: Destructive, returns the string only for convenience. */
+struct lsh_string *
+lsh_string_trunc(struct lsh_string *s, UINT32 length);
+
 int lsh_string_eq(const struct lsh_string *a, const struct lsh_string *b);
 int lsh_string_eq_l(const struct lsh_string *a, UINT32 length, const UINT8 *b);
 

@@ -609,6 +609,17 @@ lsh_get_cstring(const struct lsh_string *s)
   return (s && !memchr(s->data, '\0', s->length) ? s->data : NULL);
 }
 
+struct lsh_string *
+lsh_string_trunc(struct lsh_string *s, UINT32 length)
+{
+  assert(length <= s->length);
+  s->length = length;
+  /* NUL-terminate */
+  s->data[length] = 0;
+
+  return s;
+}
+
 int
 lsh_string_eq(const struct lsh_string *a, const struct lsh_string *b)
 {
