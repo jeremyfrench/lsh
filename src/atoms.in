@@ -39,6 +39,7 @@ hmac-md5-96       OPTIONAL         first 96 bits of HMAC-MD5 (length = 12)
 # Key exchange methods
 
 diffie-hellman-group1-sha1       REQUIRED
+diffie-hellman-group14-sha1      (to be REQUIRED?)
 
 # Key and certificate types
 
