@@ -1,3 +1,12 @@
+2005-02-15  Niels Möller  <niels@s3.kth.se>
+
+	* src/Makefile.am (sbin_PROGRAMS): Added lshd-userauth.
+
+	* src/lshd-userauth.c: New file.
+
+	* src/lshd.c (lshd_service_handler): Don't free the packet.
+	(lshd_service_request_handler): Send a SERVICE_ACCEPT reply. 
+
 2005-02-14  Niels Möller  <niels@s3.kth.se>
 
 	* src/Makefile.am (lshd_SOURCES): Added ssh_write.c.
