@@ -1,2 +1,14 @@
-Makefile
 *.d
+Makefile
+atoms_defines.h
+atoms_gperf.c
+atoms_table.c
+config.cache
+config.h
+config.h.in
+config.log
+config.status
+configure
+configure.scan
+stamp-h
+stamp-h.in
