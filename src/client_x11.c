@@ -114,6 +114,16 @@
  * setup packet is  517 bytes.
  */
 
+/* FIXME: Observed data:
+ *
+ *  $10 = {0x42, 0x0, 0x0, 0xb, 0x0, 0x0, 0x0, 0x12, 0x0, 0x10, 0x0, 0xa4, 0x4d, 
+ *  0x49, 0x54, 0x2d, 0x4d, 0x41, 0x47, 0x49, 0x43, 0x2d, 0x43, 0x4f, 0x4f, 
+ *  0x4b, 0x49, 0x45, 0x2d, 0x31, 0xff, 0xf7, 0x8b, 0x1e, 0x2c, 0xa0, 0x98, 
+ *  0x11, 0x27, 0x82, 0xa9, 0x0, 0x2d, 0xc4, 0x68, 0x7f, 0x66, 0x2b}
+ *
+ * I.e. no minor version, and name length at index 7.
+ */
+
 #define MIT_COOKIE_NAME "MIT-MAGIC-COOKIE-1"
 #define MIT_COOKIE_NAME_LENGTH 18
 #define MIT_COOKIE_LENGTH 16
@@ -180,6 +190,10 @@ do_client_channel_x11_receive(struct ssh_channel *s,
               if (self->i < length)
                 break;
 
+	      verbose("Received cookie: `%ps':`%xs'\n",
+		      name_length, self->buffer->data + 6,
+		      auth_length, self->buffer->data + 7 + name_length);
+	      
               /* Ok, now we have the connection setup message. Check if it's ok. */
               if ( (name_length == MIT_COOKIE_NAME_LENGTH)
                    && !memcpy(self->buffer->data + 6, MIT_COOKIE_NAME, MIT_COOKIE_NAME_LENGTH)
@@ -336,9 +350,9 @@ do_channel_open_x11(struct channel_open *s,
       && parse_uint32(args, &originator_port) 
       && parse_eod(args))
     {
-      struct client_x11_display *display= connection->table->x11_display;
+      struct client_x11_display *display = connection->table->x11_display;
       
-      verbose("x11 connection attempt, originator: %s:%d\n",
+      verbose("x11 connection attempt, originator: %s:%i\n",
 	      originator_length, originator, originator_port);
 
       
@@ -467,9 +481,11 @@ parse_display(const char *display, socklen_t *sl, UINT16 *screen)
   else
     {
       /* Local transport */
-      struct lsh_string *name = ssh_format("/tmp/.X11-unix/X%di", display);
+      struct lsh_string *name = ssh_format("/tmp/.X11-unix/X%di", display_num);
       struct sockaddr_un *sa;
 
+      verbose("Using local X11 transport `%pS'\n", name);
+      
       *sl = offsetof(struct sockaddr_un, sun_path) + name->length;
       sa = lsh_space_alloc(*sl);
       sa->sun_family = AF_UNIX;
@@ -583,6 +599,8 @@ do_request_x11_continuation(struct command_continuation *s,
   CAST(request_x11_continuation, self, s);
   CAST_SUBTYPE(ssh_channel, channel, a);
 
+  verbose("X11 request succeeded\n");
+
   if (self->connection->table->x11_display)
     werror("client_x11.c: Replacing old x11 forwarding.\n");
 
@@ -626,12 +644,16 @@ do_format_request_x11_forward(struct channel_request_command *s,
 {
   CAST(request_x11_forward_command, self, s);
 
-  /* FIXME: We get the connection accessible from the channel */
+  verbose("Requesting X11 forwarding.\n");
   
-  *c = make_request_x11_continuation(NULL /* Connection */,
+  *c = make_request_x11_continuation(channel->connection,
 				     self->display, *c);
 
-  return format_channel_request(ATOM_X11_REQ, channel, 1, "%c%s%S%i",
+  /* NOTE: The cookie is hex encoded, appearantly so that it can be
+   * passed directly to the xauth command line. That's really ugly,
+   * but it's how the other ssh implementations do it. */
+  
+  return format_channel_request(ATOM_X11_REQ, channel, 1, "%c%s%xS%i",
 				0, /* Single connection not supported */
 				MIT_COOKIE_NAME_LENGTH, MIT_COOKIE_NAME,
 				self->display->auth_info->fake,
@@ -648,6 +670,8 @@ make_forward_x11(const char *display_string,
 
   RANDOM(random, fake->length, fake->data);
 
+  verbose("X11 fake cookie: `%xS'\n", fake);
+  
   /* This deallocates fake if it fails. */
   display = make_client_x11_display(display_string, fake);
 
