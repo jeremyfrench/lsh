@@ -1,5 +1,8 @@
 2002-03-26  Pontus Sköld  <pont@soua.net>
 
+	* configure.in: If with_scheme is absolute, don't AC_PATH_PROG for
+	it but just use it directly.
+
 	* src/client.c (client_options): Added implication of no-pty in
 	subsystem help text if PTY-support is enabled.
 	(client_argp_parser): Turn of pty-request if there is a subsystem
