@@ -1,4 +1,4 @@
-/* Hierarchial argument parsing, layered over getopt.
+/* Hierarchial argument parsing.
    Copyright (C) 1995, 1996, 1997, 1998, 1999 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Written by Miles Bader <miles@gnu.ai.mit.edu>.
@@ -23,7 +23,6 @@
 
 #include <stdio.h>
 #include <ctype.h>
-#include <getopt.h>
 
 #define __need_error_t
 #include <errno.h>
