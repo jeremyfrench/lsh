@@ -39,8 +39,6 @@
 
 #include "dsa.c.x"
 
-#define WITH_DSA_CLASSIC 1
-
 /* DSA signatures */
 
 /* GABA:
