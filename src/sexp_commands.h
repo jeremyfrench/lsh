@@ -36,25 +36,34 @@
 
 /* GABA:
    (class
-     (name print_sexp_command)
+     (name sexp_print_command)
      (super command_simple)
      (vars
        (format . int)))
 */
 
 struct lsh_object *
-do_print_sexp_simple(struct command_simple *s,
+do_sexp_print_simple(struct command_simple *s,
 		     struct lsh_object *a);
 
 #define STATIC_PRINT_SEXP(format) \
-{ STATIC_COMMAND_SIMPLE(do_print_sexp_simple), format }
+{ STATIC_COMMAND_SIMPLE(do_sexp_print_simple), format }
 
 struct command_simple *
-make_print_sexp_command(int format);
+make_sexp_print_command(int format);
 
 struct command *
-make_print_sexp_to(int format, struct abstract_write *dest);
+make_sexp_print_to(int format, struct abstract_write *dest);
 
+extern struct collect_info_1 sexp_print_raw_hash;
+#define SEXP_PRINT_RAW_HASH (&sexp_print_raw_hash.super.super)
+
+struct command *
+make_sexp_print_raw_hash(struct hash_algorithm *algorithm);
+
+struct command *
+make_sexp_print_raw_hash_to(struct hash_algorithm *algorithm,
+			    struct abstract_write *dest);
 
 /* GABA:
    (class

@@ -28,6 +28,8 @@
 #include "format.h"
 #include "xalloc.h"
 
+#include <assert.h>
+
 #define GABA_DEFINE
 #include "sexp_commands.h.x"
 #undef GABA_DEFINE
@@ -40,7 +42,7 @@
 
 /* GABA:
    (class
-     (name print_sexp_to)
+     (name sexp_print_to)
      (super command)
      (vars
        (format . int)
@@ -48,12 +50,12 @@
 */
 
 static void
-do_print_sexp(struct command *s,
+do_sexp_print(struct command *s,
 	      struct lsh_object *a,
 	      struct command_continuation *c,
 	      struct exception_handler *e UNUSED)
 {
-  CAST(print_sexp_to, self, s);
+  CAST(sexp_print_to, self, s);
   CAST_SUBTYPE(sexp, o, a);
 
   A_WRITE(self->dest, sexp_format(o, self->format, 0));
@@ -64,10 +66,10 @@ do_print_sexp(struct command *s,
 }
 
 struct command *
-make_print_sexp_to(int format, struct abstract_write *dest)
+make_sexp_print_to(int format, struct abstract_write *dest)
 {
-  NEW(print_sexp_to, self);
-  self->super.call = do_print_sexp;
+  NEW(sexp_print_to, self);
+  self->super.call = do_sexp_print;
   self->format = format;
   self->dest = dest;
 
@@ -75,25 +77,112 @@ make_print_sexp_to(int format, struct abstract_write *dest)
 }
 
 struct lsh_object *
-do_print_sexp_simple(struct command_simple *s,
+do_sexp_print_simple(struct command_simple *s,
 		     struct lsh_object *a)
 {
-  CAST(print_sexp_command, self, s);
+  CAST(sexp_print_command, self, s);
   CAST_SUBTYPE(abstract_write, dest, a);
 
-  return &make_print_sexp_to(self->format, dest)->super;
+  return &make_sexp_print_to(self->format, dest)->super;
 }
 
 struct command_simple *
-make_print_sexp_command(int format)
+make_sexp_print_command(int format)
 {
-  NEW(print_sexp_command, self);
+  NEW(sexp_print_command, self);
   self->super.super.call = do_call_simple_command;
-  self->super.call_simple = do_print_sexp_simple;
+  self->super.call_simple = do_sexp_print_simple;
   self->format = format;
 
   return &self->super;
 }
+
+/* GABA:
+   (class
+     (name sexp_print_raw_hash_to)
+     (super command)
+     (vars
+       (algorithm object hash_algorithm)
+       (dest object abstract_write)))
+*/
+
+static void
+do_print_raw_hash_to(struct command *s,
+		     struct lsh_object *a,
+		     struct command_continuation *c,
+		     struct exception_handler *e UNUSED)
+{
+  CAST(sexp_print_raw_hash_to, self, s);
+  CAST_SUBTYPE(sexp, o, a);
+
+  struct lsh_string *canonical = SEXP_FORMAT(o, SEXP_CANONICAL, 0);
+  struct hash_instance *hash = MAKE_HASH(self->algorithm);
+  struct lsh_string *digest = lsh_string_alloc(hash->hash_size);
+
+  HASH_UPDATE(hash, canonical->length, canonical->data);
+  HASH_DIGEST(hash, digest->data);
+  
+  lsh_string_free(canonical);
+  KILL(hash);
+
+  A_WRITE(self->dest, ssh_format("%lxfS", digest));
+
+  COMMAND_RETURN(c, a);
+}
+
+struct command *
+make_sexp_print_raw_hash_to(struct hash_algorithm *algorithm,
+			    struct abstract_write *dest)
+{
+  NEW(sexp_print_raw_hash_to, self);
+  self->super.call = do_print_raw_hash_to;
+  self->algorithm = algorithm;
+  self->dest = dest;
+
+  return &self->super;
+}
+
+static struct lsh_object *
+collect_print_raw_hash_2(struct collect_info_2 *info,
+			 struct lsh_object *a,
+			 struct lsh_object *d)
+{
+  CAST_SUBTYPE(hash_algorithm, algorithm, a);
+  CAST_SUBTYPE(abstract_write, dest, d);
+
+  assert(!info->next);
+  
+  return &make_sexp_print_raw_hash_to(algorithm, dest)->super;
+}
+
+struct collect_info_2 collect_info_print_raw_2 =
+STATIC_COLLECT_2_FINAL(collect_print_raw_hash_2);
+
+struct collect_info_1 sexp_print_raw_hash =
+STATIC_COLLECT_1(&collect_info_print_raw_2);
+
+struct command *
+make_sexp_print_raw_hash(struct hash_algorithm *algorithm)
+{
+  CAST_SUBTYPE(command, print,
+	       make_collect_state_1(&sexp_print_raw_hash, &algorithm->super));
+  
+  return print;
+}
+
+#if 0 
+static struct lsh_object *
+do_print_raw_hash_simple(struct command_simple *s UNUSED,
+			 struct lsh_object *a)
+{
+  CAST_SUBTYPE(abstract_write, dest, a);
+
+  return &make_print_raw_hash_to(dest)->super;
+}
+
+struct command_simple sexp_print_raw_hash =
+STATIC_COMMAND_SIMPLE(do_print_raw_hash_simple);
+#endif
 
 /* Make sure that the fd is closed properly. */
 /* GABA:
