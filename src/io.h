@@ -27,6 +27,7 @@
 #define LSH_IO_H_INCLUDED
 
 #include "abstract_io.h"
+#include "command.h"
 #include "resource.h"
 #include "write_buffer.h"
 
@@ -41,9 +42,9 @@
 #include "io.h.x"
 #undef GABA_DECLARE
 
-
+#if 0
 /* A closed function with a file descriptor as argument */
-/* GABA:
+/* ;; GABA:
    (class
      (name fd_callback)
      (vars
@@ -51,6 +52,7 @@
 */
 
 #define FD_CALLBACK(c, fd) ((c)->f(&(c), (fd)))
+#endif
 
 /* Close callbacks are called with a reason as argument. */
 
@@ -78,17 +80,32 @@
 
 #define CLOSE_CALLBACK(c, r) ((c)->f((c), (r)))
 
-/* The fd read callback is a closure, in order to support different
- * reading styles (buffered and consuming). */
+/* The fd io callback is a closure, in order to support different
+ * reading styles (buffered and consuming). Also used for writing. */
 
 /* GABA:
    (class
-     (name io_read_callback)
+     (name io_callback)
      (vars
-       (read method void "struct lsh_fd *fd")))
+       (f method void "struct lsh_fd *fd")))
 */
 
-#define IO_READ_CALLBACK(c, fd) ((c)->read((c), (fd)))
+#define IO_CALLBACK(c, fd) ((c)->f((c), (fd)))
+#if 0
+/* ;; GABA:
+   (class
+     (name io_write_state)
+     (super io_callback)
+     (vars
+       ; Called before poll
+       (prepare method void "struct lsh_fd *fd")
+       ; Called when fd is closed for writing.
+       (close method void)))
+*/
+
+#define IO_WRITE_PREPARE(s, f) (((s)->prepare)((s), (f)))
+#define IO_WRITE_CLOSE(s) (((s)->close)((s)))
+#endif
 
 /* GABA:
    (class
@@ -110,27 +127,30 @@
 
        ; Called before poll
        (prepare method void)
-       
+
        (want_read simple int)
        ; Called if poll indicates that data can be read. 
-       ;;(read method void)
-			    
-       (read object io_read_callback)
+       (read object io_callback)
 
        (want_write simple int)
        ; Called if poll indicates that data can be written.
-       (write method void)
+       (write object io_callback)
 
-       ; FIXME: really_close is an improper name. It is used to
-       ; mark the fd's write_buffer as closed.
-       (really_close method void))) */
+       ; FIXME: We could put write_buffer inside the write callback,
+       ; but it seems simpler to keep it here, as it is needed by the
+       ; prepare and write_close methods.
+       (write_buffer object write_buffer)
+       
+       ; Called to when fd is closed for writing.
+       (write_close method void)))
+*/
 
-#define PREPARE_FD(fd) ((fd)->prepare((fd)))
-#define READ_FD(fd) IO_READ_CALLBACK((fd)->read, (fd))
-#define WRITE_FD(fd) ((fd)->write((fd)))
-#define REALLY_CLOSE_FD(fd) ((fd)->really_close((fd)))
+#define FD_PREPARE(fd) ((fd)->prepare(fd))
+#define FD_READ(fd) IO_CALLBACK((fd)->read, (fd))
+#define FD_WRITE(fd) IO_CALLBACK((fd)->write, (fd))
+#define FD_WRITE_CLOSE(fd) ((fd)->write_close(fd))
 
-/* GABA:
+/* ;; GABA:
    (class
      (name io_fd)
      (super lsh_fd)
@@ -149,13 +169,13 @@
 /* GABA:
    (class
      (name io_buffered_read)
-     (super io_read_callback)
+     (super io_callback)
      (vars
        (buffer_size . UINT32)
        (handler object read_handler)))
 */
 
-struct io_read_callback *
+struct io_callback *
 make_buffered_read(UINT32 buffer_size,
 		   struct read_handler *handler);
 
@@ -165,7 +185,7 @@ make_buffered_read(UINT32 buffer_size,
 /* GABA:
    (class
      (name io_consuming_read)
-     (super io_read_callback)
+     (super io_callback)
      (vars
        (query method UINT32)
        ; Returns the maximum number of octets that
@@ -190,7 +210,21 @@ void init_consuming_read(struct io_consuming_read *self,
        ; The port number here is always in host byte order
        (port . UINT32))) */
 
+/* Returned by listen */
 /* GABA:
+   (class
+     (name listen_value)
+     (vars
+       (fd object lsh_fd)
+       (peer object address_info)))
+*/
+
+struct listen_value *
+make_listen_value(struct lsh_fd *fd,
+		  struct address_info *peer);
+
+#if 0
+/* ;; GABA:
    (class
      (name fd_listen_callback)
      (vars
@@ -201,7 +235,7 @@ void init_consuming_read(struct io_consuming_read *self,
 /* FIXME: Get rid of this class, and store the user callback inside
  * the io_read_callback. */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name listen_fd)
      (super lsh_fd)
@@ -209,7 +243,7 @@ void init_consuming_read(struct io_consuming_read *self,
        (callback object fd_listen_callback)))
 */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name connect_fd)
      (super lsh_fd)
@@ -217,7 +251,7 @@ void init_consuming_read(struct io_consuming_read *self,
        (callback object fd_callback)))
 */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name callback)
      (vars
@@ -225,8 +259,9 @@ void init_consuming_read(struct io_consuming_read *self,
 */
 
 #define CALLBACK(c) ((c)->f(c))
+#endif
 
-/* GABA:
+/* ;; GABA:
    (class
      (name callout)
      (vars
@@ -234,17 +269,6 @@ void init_consuming_read(struct io_consuming_read *self,
        (action object callback)
        (when . time_t)))
 */
-
-#if 0
-struct callout
-{
-  struct lsh_object header;
-  
-  struct callout *next;
-  struct callback *callout;
-  time_t when;
-};
-#endif
 
 /* GABA:
    (class
@@ -320,38 +344,43 @@ void io_set_nonblocking(int fd);
 void io_set_close_on_exec(int fd);
 void io_init_fd(int fd);
 
-struct io_fd *make_io_fd(struct io_backend *b,
-			 int fd,
-			 struct exception_handler *e);
+struct lsh_fd *make_lsh_fd(struct io_backend *b,
+			   int fd,
+			   struct exception_handler *e);
 
 struct exception_handler *
 make_exc_finish_read_handler(struct lsh_fd *fd,
 			     struct exception_handler *parent,
 			     const char *context);
 
-struct connect_fd *
+struct lsh_fd *
 io_connect(struct io_backend *b,
 	   struct sockaddr_in *remote,
 	   struct sockaddr_in *local,
-	   struct fd_callback *f,
+	   struct command_continuation *c,
 	   struct exception_handler *e);
 
-struct listen_fd *
+struct lsh_fd *
 io_listen(struct io_backend *b,
 	  struct sockaddr_in *local,
-	  struct fd_listen_callback *callback,
+	  struct io_callback *callback,
 	  struct exception_handler *e);
 
-struct io_fd *io_read_write(struct io_fd *fd,
-			    struct io_read_callback *read,
-			    UINT32 block_size,
-			    struct close_callback *close_callback);
+struct io_callback *
+make_listen_callback(struct io_backend *backend,
+		     struct command_continuation *c,
+		     struct exception_handler *e);
 
-struct io_fd *io_read(struct io_fd *fd,
-		      struct io_read_callback *read,
-		      struct close_callback *close_callback);
+struct lsh_fd *io_read_write(struct lsh_fd *fd,
+			     struct io_callback *read,
+			     UINT32 block_size,
+			     struct close_callback *close_callback);
 
-struct io_fd *io_write(struct io_fd *fd,
+struct lsh_fd *io_read(struct lsh_fd *fd,
+		       struct io_callback *read,
+		       struct close_callback *close_callback);
+
+struct lsh_fd *io_write(struct lsh_fd *fd,
 		       UINT32 block_size,
 		       struct close_callback *close_callback);
 
@@ -364,14 +393,14 @@ void close_fd(struct lsh_fd *fd, int reason);
  * is completely written. */
 void close_fd_nicely(struct lsh_fd *fd, int reason);
 
-struct io_fd *io_write_file(struct io_backend *backend,
+struct lsh_fd *io_write_file(struct io_backend *backend,
 			    const char *fname, int flags,
 			    int mode,
 			    UINT32 block_size,
 			    struct close_callback *c,
 			    struct exception_handler *e);
 
-struct io_fd *
+struct lsh_fd *
 io_read_file(struct io_backend *backend,
 	     const char *fname, 
 	     struct exception_handler *e);
