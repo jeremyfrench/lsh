@@ -1,3 +1,10 @@
+2003-06-03  Pontus Sköld  <pont@soua.net>
+
+	* src/testsuite/Makefile.am (TS_SH): Added lsh-encrypted-key-test.
+
+	* src/testsuite/lsh-encrypted-key-test: Test for encrypted
+	(password protected) key functionality in lsh.
+
 2003-06-01  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (do_listen_callback): To get enough space, PEER must be
