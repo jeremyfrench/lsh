@@ -59,7 +59,7 @@ make_srp_entry(struct lsh_string *name, struct sexp *e)
       && sexp_atom_eq(SEXP_GET(i), ATOM_SSH_RING1) )
     {
       NEW(srp_entry, res);
-      struct lsh_string *salt;
+      const struct lsh_string *salt;
 
       mpz_init(res->verifier);
       
