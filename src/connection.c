@@ -171,11 +171,11 @@ struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
   
   connection->kex_state = KEX_STATE_INIT;
 
-  connection->kexinits[0]
-    = connection->kexinits[1] = NULL;
+  connection->kexinits[CONNECTION_CLIENT]
+    = connection->kexinits[CONNECTION_SERVER] = NULL;
 
-  connection->literal_kexinits[0]
-    = connection->literal_kexinits[1] = NULL;
+  connection->literal_kexinits[CONNECTION_CLIENT]
+    = connection->literal_kexinits[CONNECTION_SERVER] = NULL;
 
   connection->newkeys = NULL;
   
