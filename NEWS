@@ -1,3 +1,8 @@
+News for the 000.2 release
+
+	Bugfixes. New --pty-support and --no-pty-support options for
+	lshd.
+
 News for the lsh-0.1.20 release
 
 	Bugfixes. New test script for lsh_writekey.

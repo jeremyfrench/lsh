@@ -1,3 +1,30 @@
+1999-12-31  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/daemon.c: Include sys/time.h.
+
+	* src/command.c (progn_command): Let (progn ()), i.e. an empty
+	list of commands, result in the identity command.
+
+	* configure.in: Deleted old versions of the utmp tests.
+	Added test for socklen_t.
+	List the individual argp object files in LIBOBJS.
+
+	* src/lsh.c (do_lsh_default_handler): Fail on EXC_CHANNEL_REQUEST
+	exceptions. 
+	(main_argp_parser): Ignore EXC_CHANNEL_REQUEST exceptions when
+	requesting a pty. 
+
+	* src/command.c (do_catch_handler): Let !handler mean that the
+	exception is to be ignored.
+
+	* src/lshd.c: Added options --pty-support and --no-pty-support. 
+
+	* configure.in: Bumped version to 000.2, for the obvious reason. 
+
+1999-12-29  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/spki.h: #include <time.h>, for definition of time_t.
+
 Sat Dec 25 18:18:45 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.in: Quote fallback definition of M4.

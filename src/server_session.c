@@ -1000,7 +1000,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
       KILL(pty);
     }
 
-  verbose(" failed.\n");
+  verbose("Pty allocation failed.\n");
   lsh_string_free(term);
 
   if (want_reply)
