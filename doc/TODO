@@ -18,16 +18,26 @@ KEYS
 Code is needed to generate, store and read dss keys. Preferably in a
 SPKI/s-expression form.
 
+
 USERS
 
 Functions to lookup users, their passwords and .lsh/authorized_keys.
+
 
 CHARSETS
 
 Usernames and passwords must be translated from the systems charset
 (default iso-8859-1) to UTF8.
 
+
 CONFIGURATION
 
 Read configuration files. Better command line options.
+
+
+LEAKS
+
+Not all packet consumers free processed packets properly.
+
+Implement a mark&sweep gc.
 
