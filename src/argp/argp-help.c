@@ -104,6 +104,10 @@ void *mempcpy (void *to, const void *from, size_t size);
 char *strchrnul(const char *s, int c);
 # endif /* !HAVE_STRCHRNUL */
 
+# if !HAVE_STRCASECMP
+int strcasecmp(const char *s1, const char *s2);
+#endif
+
 #endif /* !_LIBC */
 
 
