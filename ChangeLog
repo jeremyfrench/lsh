@@ -1,3 +1,19 @@
+2001-08-28  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/sftp/testsuite/run-tests: Use srcdir when starting scripts.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added channel_forward.c.
+
+	* src/channel_forward.h: Renamed the tcpip_channel to
+	channel_forward, and moved it to a separate file. It's not really
+	tcpip-forwarding specific, and can be reused for x11-forwarding.
+
+	* src/lsh_types.h (READ_UINT16): Fixed shift count. XXX: Fix in
+	1.2 branch.
+
+	* src/parse.c (parse_uint16): New function.
+	(parse_string16): New function.
+
 2001-08-27  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/sftp/testsuite/Makefile.am (EXTRA_DIST): Use EXTRA_DIST, not

@@ -1164,8 +1164,8 @@ address_info2sockaddr(socklen_t *length,
   else
     host = NULL;
 
-/* Some systems have getaddrinfo, but still doesn't implement all of
- * RFC 2553 */
+  /* Some systems have getaddrinfo, but still doesn't implement all of
+   * RFC 2553 */
 #if defined(HAVE_GETADDRINFO) && \
     defined(HAVE_GAI_STRERROR) && defined(HAVE_AI_NUMERICHOST)
   {
