@@ -128,7 +128,7 @@ dh_process_client_msg(struct dh_instance *self,
 
   if (! (parse_uint8(&buffer, &msg_number)
 	 && (msg_number == SSH_MSG_KEXDH_INIT)
-	 && parse_bignum(&buffer, self->e)
+	 && parse_bignum(&buffer, self->e, 0)
 	 && (mpz_cmp_ui(self->e, 1) > 0)
 	 && GROUP_RANGE(self->method->G, self->e)
 	 && parse_eod(&buffer) ))
@@ -205,14 +205,15 @@ dh_process_server_msg(struct dh_instance *self,
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
-  if (!(parse_uint8(&buffer, &msg_number)
-	&& (msg_number == SSH_MSG_KEXDH_REPLY)
-	&& (key = parse_string_copy(&buffer))
-	&& (parse_bignum(&buffer, self->f))
-	&& (mpz_cmp_ui(self->f, 1) > 0)
-	&& GROUP_RANGE(self->method->G, self->f)
-	&& (s = parse_string_copy(&buffer))
-	&& parse_eod(&buffer)))
+  if (! (parse_uint8(&buffer, &msg_number)
+	 && (msg_number == SSH_MSG_KEXDH_REPLY)
+	 && (key = parse_string_copy(&buffer))
+	 /* FIXME: Pass a more restrictive limit to parse_bignum. */
+	 && (parse_bignum(&buffer, self->f, 0))
+	 && (mpz_cmp_ui(self->f, 1) > 0)
+	 && GROUP_RANGE(self->method->G, self->f)
+	 && (s = parse_string_copy(&buffer))
+	 && parse_eod(&buffer)))
     {
       lsh_string_free(key);
       lsh_string_free(s);

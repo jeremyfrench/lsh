@@ -156,7 +156,7 @@ struct lsh_string *sexp2string(struct sexp *e);
 int sexp2atom(struct sexp *e);
 
 int
-sexp2bignum_u(struct sexp *e, mpz_t n);
+sexp2bignum_u(struct sexp *e, mpz_t n, UINT32 limit);
 
 /* int sexp_null_cdr(struct sexp *e); */
 
@@ -188,7 +188,7 @@ int
 sexp_check_type(struct sexp *e, int type, struct sexp_iterator **res);
 
 
-int sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n);
+int sexp_get_un(struct sexp_iterator *i, int atom, mpz_t n, UINT32 limit);
 
 extern int sexp_char_classes[];
 
