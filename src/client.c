@@ -732,26 +732,25 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
 */
 
 static int do_client_startup(struct connection_startup *c,
-			     struct channel_table *table,
-			     struct abstract_write *write)
+			     struct ssh_connection *connection)
 {
   CAST(client_startup, closure, c);
   struct lsh_string *s;
   
-  closure->session->write = write;
+  closure->session->write = connection->write;
   
   closure->session->open_confirm = do_open_confirm;
   closure->session->open_failure = client_session_die;
 
-  s = prepare_channel_open(table, ATOM_SESSION,
+  s = prepare_channel_open(connection->channels, ATOM_SESSION,
 			   closure->session, "");
   if (!s)
     fatal("Couldn't allocate a channel number!\n");
 
   /* Close connetion when the last channel is closed. */
-  table->pending_close = 1;
+  connection->channels->pending_close = 1;
   
-  return A_WRITE(write, s);
+  return A_WRITE(connection->write, s);
 }
 
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
@@ -805,6 +804,7 @@ static struct lsh_string *do_pty_format(struct request_info *r,
 				req->modes);
 }
 
+#if WITH_PTY_SUPPORT
 static int do_pty_result(struct request_info *r,
 			 struct ssh_channel *ignored UNUSED,
 			 int res)
@@ -841,11 +841,11 @@ struct request_info *make_pty_request(int fd, int essential, int raw,
       && tty_getwinsize(fd, &req->width, &req->height,
 			&req->width_p, &req->height_p))
     {
-      if (raw)
-	cfmakeraw(&req->ios);
-  
       req->modes = tty_encode_term_mode(&req->ios);
-      
+
+      if (raw)
+	CFMAKERAW(&req->ios);
+        
       req->super.result = do_pty_result;
     }
   else
@@ -853,6 +853,7 @@ struct request_info *make_pty_request(int fd, int essential, int raw,
 
   return &req->super;
 }
+#endif / !WITH_PTY_SUPPORT */
 
 static struct lsh_string *do_shell_format(struct request_info *req,
 					 struct ssh_channel *channel)
@@ -883,21 +884,3 @@ struct request_info *make_shell_request(struct request_info *next)
   return req;
 }
 
-#if 0
-/* xxCLASS:
-    (class
-      (name channel_request_descriptor)
-      (vars
-        (request simple int)
-        (args string)));
-*/
-
-struct lsh_object *make_channel_request(int request, struct lsh_string *args)
-{
-  NEW(channel_request_descriptor, self);
-  
-  self->request = request;
-  self->args = args;
-  return &self->super;
-}
-#endif

@@ -48,13 +48,6 @@
        (send_window_size simple UINT32)
        (send_max_packet simple UINT32)
 
-       ; pty. This is needed by the server only. FIXME: Does it really
-       ; belong here?
-       (pty object pty_info)
-
-       ; Value of the TERM environment variable.
-       (term string)
-       
        ; FIXME: Perhaps this should be moved to the channel_table, and
        ; a pointer to that table be stored here instead?
        (write object abstract_write)
@@ -211,11 +204,10 @@
      (name connection_startup)
      (vars
        (start method int
-	      "struct channel_table *table"
-	      "struct abstract_write *write")))
+	      "struct ssh_connection *connection")))
 */
 
-#define CONNECTION_START(c, s, w) ((c)->start((c), (s), (w)))
+#define CONNECTION_START(c, s) ((c)->start((c), (s)))
 
 void init_channel(struct ssh_channel *channel);
 

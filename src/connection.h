@@ -97,6 +97,9 @@ struct ssh_connection;
   
        ; Table of all known message types 
        (dispatch array (object packet_handler) "0x100");
+       
+       ; Table of all opened channels
+       (channels object channel_table)
 
        ; Shared handlers 
        (ignore object packet_handler)
