@@ -1,5 +1,7 @@
 News for the 0.9.14 release
 
+	Added --stdin, --stdout and --stderr options to lsh.
+	
 	Implemented pretty-printing of s-expressions when using the
 	advanced syntax.
 
@@ -8,7 +10,8 @@ News for the 0.9.14 release
 	Fixed bug preventing forwarded connections from being closed
 	properly. Reported by [FIXME!!!] and Joseph Galbraith.
 
-	Documentation update.
+	New Getting Started chapter in the manual, and other
+	documentation updates.
 	
 News for the 0.9.13 release
 
