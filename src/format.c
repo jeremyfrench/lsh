@@ -148,16 +148,20 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 	    case 'A':
 	      {
 		int *atom = va_arg(args, int *);
-		int i;
+		int n;
 
-		if (atom[0])
-		  { /* Non empty */
-		    for(i = 0; atom[i] > 0; i++)
-		      length += get_atom_length(atom[i]) + 1;
-
-		    /* One ','-character less than the number of atoms */
-		    length--;
+		for(n = 0; *atom >= 0; atom++)
+		  {
+		    if (*atom)
+		      {
+			n++;
+			length += get_atom_length(*atom);
+		      }
 		  }
+		if (n)
+		  /* One ','-character less than the number of atoms */
+		  length += (n-1);
+		    
 		if (!literal)
 		  length += 4;
 		f++;
@@ -333,26 +337,28 @@ UINT32 ssh_vformat(char *f, UINT8 *buffer, va_list args)
 	      {
 		int *atom = va_arg(args, int *);
 		UINT8 *start = buffer; /* Where to store the length */
-		int i;
+		int n;
 		
 		if (!literal)
 		  buffer += 4;
-
-		if (atom[0] > 0)
+		
+		for(n = 0; *atom >= 0; atom++)
 		  {
-		    UINT32 length = get_atom_length(atom[0]);
-		    memcpy(buffer, get_atom_name(atom[0]), length);
-		    buffer += length;
-		    
-		    for (i = 1; atom[i] > 0; i++)
+		    if (*atom)
 		      {
-			*buffer++ = ',';
-			length = get_atom_length(atom[i]);
-			memcpy(buffer, get_atom_name(atom[i]), length);
+			UINT32 length = get_atom_length(*atom);
+			
+			if (n)
+			  /* Not the first atom */
+			  *buffer++ = ',';
+
+			memcpy(buffer, get_atom_name(atom[0]), length);
 			buffer += length;
+
+			n++;
 		      }
 		  }
-				
+
 		if (!literal)
 		  {
 		    UINT32 total = buffer - start - 4;
