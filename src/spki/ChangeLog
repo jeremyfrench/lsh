@@ -1,3 +1,7 @@
+2004-02-15  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.ac: No spaces after -I and -L flags.
+
 2004-01-31  Niels Möller  <nisse@lysator.liu.se>
 
 	* tag.c: Comment fixes.
