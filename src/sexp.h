@@ -121,9 +121,12 @@ struct sexp *sexp_a(const int a);
 /* cstring->sexp */
 struct sexp *sexp_z(const char *s);
 
-/* mpz->atom */
+/* mpz->sexp */
 struct sexp *sexp_un(const mpz_t n);
 struct sexp *sexp_sn(const mpz_t n);
+
+/* Small unsigned int -> sexp */
+struct sexp *sexp_uint32(UINT32 n);
 
 /* cons */
 struct sexp *sexp_c(struct sexp *car, struct sexp_cons *cdr);
@@ -158,6 +161,9 @@ int sexp2atom(struct sexp *e);
 
 int
 sexp2bignum_u(struct sexp *e, mpz_t n, UINT32 limit);
+
+int
+sexp2uint32(struct sexp *e, UINT32 *n);
 
 /* int sexp_null_cdr(struct sexp *e); */
 

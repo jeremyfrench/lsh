@@ -711,7 +711,7 @@ sexp_z(const char *s)
   return sexp_s(NULL, ssh_format("%lz", s));
 }
 
-/* mpz->atom */
+/* mpz->sexp */
 struct sexp *
 sexp_un(const mpz_t n)
 {
@@ -739,7 +739,16 @@ sexp_sn(const mpz_t n)
   
   return sexp_s(NULL, s);
 }
-    
+
+/* Small unsigned int -> sexp */
+struct sexp *sexp_uint32(UINT32 n)
+{
+  /* FIXME: Eliminate redundant leading zeroes. */
+  struct lsh_string *digits = lsh_string_alloc(4);
+  WRITE_UINT32(digits->data, n);
+  return sexp_s(NULL, digits);
+}
+
 struct lsh_string *
 sexp_format(struct sexp *e, int style, unsigned indent)
 {
@@ -897,6 +906,47 @@ sexp2bignum_u(struct sexp *e, mpz_t n, UINT32 limit)
     }
   else
     return 0;
+}
+
+int
+sexp2uint32(struct sexp *e, UINT32 *n)
+{
+  struct lsh_string *digits = sexp2string(e);
+  
+  if (!digits)
+    return 0;
+
+  switch(digits->length)
+    {
+    case 0:
+      return 0;
+    case 1:
+      *n = digits->data[0];
+      return 1;
+    case 2:
+      *n = READ_UINT16(digits->data);
+      return 1;
+    case 3:
+      *n = READ_UINT24(digits->data);
+      return 1;
+    case 4:
+      *n = READ_UINT32(digits->data);
+      return 1;
+    default:
+      {
+	UINT32 i;
+	UINT32 left;
+
+	for (i = 0, left = digits->length;
+	     left > 4;
+	     i++, left--)
+	  if (digits->data[i])
+	    return 0;
+
+	*n = READ_UINT32(digits->data + i);
+	return 1;
+      }
+    }
 }
 
 int
