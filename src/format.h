@@ -29,7 +29,6 @@
 #include <stdarg.h>
 
 #include "atoms.h"
-#include "bignum.h"
 
 /* Format strings can contain the following %-specifications:
  *
