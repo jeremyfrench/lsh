@@ -6,6 +6,7 @@
 #include "algorithms.h"
 #include "crypto.h"
 #include "format.h"
+#include "io.h"
 #include "werror.h"
 
 #include <inttypes.h>
@@ -57,6 +58,7 @@ test_spki_deny(const char *name,
 
 #define H(x) decode_hex(x)
 #define S(x) make_string(x)
+/* #define LDATA(x) (sizeof(x) - 1), x */
 
 #define FAIL() abort()
 #define SKIP() exit(77)
