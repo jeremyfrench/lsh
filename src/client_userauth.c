@@ -316,7 +316,7 @@ make_failure_handler(struct client_userauth_state *state)
 }
 
 static void
-do_userauth_banner(struct packet_handler *self,
+do_userauth_banner(struct packet_handler *self UNUSED,
 		   struct ssh_connection *connection UNUSED,
 		   struct lsh_string *packet)
 {
@@ -348,7 +348,9 @@ do_userauth_banner(struct packet_handler *self,
   lsh_string_free(packet);
 }
 
-static struct packet_handler *make_banner_handler(void)
+/* FIXME: Could use a static object instead. */
+static struct packet_handler *
+make_banner_handler(void)
 {
   NEW(packet_handler, self);
 

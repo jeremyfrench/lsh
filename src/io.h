@@ -242,29 +242,36 @@ void io_run(struct io_backend *b);
 
 int blocking_read(int fd, struct read_handler *r);
 
+#if 0
 int get_inaddr(struct sockaddr_in	* addr,
 	       const char		* host,
 	       const char		* service,
 	       const char		* protocol);
 
-int get_portno(const char *s, const char *protocol);
-
 int tcp_addr(struct sockaddr_in *sin,
 	     UINT32 length,
 	     UINT8 *addr,
 	     UINT32 port);
+#endif
+int get_portno(const char *service, const char *protocol);
 
-struct address_info *make_address_info_c(const char *host,
-					 const char *port);
+struct address_info *
+make_address_info_c(const char *host,
+		    const char *port,
+		    int def);
 
-struct address_info *make_address_info(struct lsh_string *host, 
-				       UINT32 port);
+struct address_info *
+make_address_info(struct lsh_string *host, 
+		  UINT32 port);
 
-struct address_info *sockaddr2info(size_t addr_len UNUSED,
-				   struct sockaddr *addr);
+struct address_info *
+sockaddr2info(size_t addr_len,
+	      struct sockaddr *addr);
 
-int address_info2sockaddr_in(struct sockaddr_in *sin,
-			     struct address_info *a);
+struct sockaddr *
+address_info2sockaddr(socklen_t *length,
+		      struct address_info *a,
+		      int lookup);
 
 /* Returns an exception, if anything went wrong */
 const struct exception *
@@ -287,8 +294,8 @@ make_exc_finish_read_handler(struct lsh_fd *fd,
 
 struct lsh_fd *
 io_connect(struct io_backend *b,
-	   struct sockaddr_in *remote,
-	   struct sockaddr_in *local,
+	   struct sockaddr *remote,
+	   socklen_t remote_length,
 	   struct command_continuation *c,
 	   struct exception_handler *e);
 

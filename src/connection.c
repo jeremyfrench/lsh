@@ -132,7 +132,7 @@ handle_connection(struct abstract_write *w,
 }
 
 static void
-do_fail(struct packet_handler *closure,
+do_fail(struct packet_handler *closure UNUSED,
 	struct ssh_connection *connection,
 	struct lsh_string *packet)
 {
@@ -143,6 +143,7 @@ do_fail(struct packet_handler *closure,
   PROTOCOL_ERROR(connection->e, NULL);
 }
 
+/* FIXME: Could use a static object instead. */
 struct packet_handler *make_fail_handler(void)
 {
   NEW(packet_handler, res);
@@ -152,7 +153,7 @@ struct packet_handler *make_fail_handler(void)
 }
 
 static void
-do_unimplemented(struct packet_handler *closure,
+do_unimplemented(struct packet_handler *closure UNUSED,
 		 struct ssh_connection *connection,
 		 struct lsh_string *packet)
 {
@@ -169,6 +170,7 @@ do_unimplemented(struct packet_handler *closure,
   lsh_string_free(packet);
 }
 
+/* FIXME: Could use a static object instead. */
 struct packet_handler *make_unimplemented_handler(void)
 {
   NEW(packet_handler, res);
@@ -242,6 +244,10 @@ make_ssh_connection(const char *debug_comment,
   int i;
 
   NEW(ssh_connection, connection);
+
+  /* FIXME: Should install an address_info here */
+  connection->peer = NULL;
+  
   connection->debug_comment = debug_comment;
   connection->super.write = handle_connection;
 
