@@ -1,5 +1,7 @@
 2002-05-05  Niels Möller  <nisse@lysator.liu.se>
 
+	* acconfig.h: Deleted file.
+
 	* configure.ac: Pass no arguments to AM_INIT_AUTOMAKE. Use the
 	three-argument form of AC_DEFINE.
 

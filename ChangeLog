@@ -1,5 +1,7 @@
 2002-05-05  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/argp/acconfig.h: Deleted file.
+
 	* src/argp/configure.ac: Pass no arguments to AM_INIT_AUTOMAKE.
 	Don't substitute LIBOBJS.
 
