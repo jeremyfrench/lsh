@@ -155,6 +155,47 @@ make_lshd_options(struct io_backend *backend,
   return self;
 }
 
+/* Port to listen on */
+COMMAND_SIMPLE(options2local)
+{
+  CAST(lshd_options, options, a);
+  return &options->local->super;
+}
+
+/* alist of signature algorithms */
+COMMAND_SIMPLE(options2signature_algorithms)
+{
+  CAST(lshd_options, options, a);
+  return &options->signature_algorithms->super;
+}
+
+/* Read server's private key */
+static void
+do_options2keyfile(struct command *ignored UNUSED,
+		   struct lsh_object *a,
+		   struct command_continuation *c,
+		   struct exception_handler *e)
+{
+  CAST(lshd_options, options, a);
+  
+  struct io_fd *f;
+
+  f = io_read_file(options->backend, options->hostkey, e);
+
+  if (f)
+    COMMAND_RETURN(c, f);
+  else
+    {
+      werror("Failed to open '%z' (errno = %i): %z.\n",
+	     options->hostkey, errno, STRERROR(errno));
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
+    }
+}
+
+static struct command options2keyfile =
+STATIC_COMMAND(do_options2keyfile);
+
+
 static const struct argp_option
 main_options[] =
 {
@@ -282,42 +323,6 @@ main_argp =
   NULL, NULL
 };
 
-COMMAND_SIMPLE(options2local)
-{
-  CAST(lshd_options, options, a);
-  return &options->local->super;
-}
-
-COMMAND_SIMPLE(options2signature_algorithms)
-{
-  CAST(lshd_options, options, a);
-  return &options->signature_algorithms->super;
-}
-
-static void
-do_options2keyfile(struct command *ignored UNUSED,
-		   struct lsh_object *a,
-		   struct command_continuation *c,
-		   struct exception_handler *e)
-{
-  CAST(lshd_options, options, a);
-  
-  struct io_fd *f;
-
-  f = io_read_file(options->backend, options->hostkey, e);
-
-  if (f)
-    COMMAND_RETURN(c, f);
-  else
-    {
-      werror("Failed to open '%z' (errno = %i): %z.\n",
-	     options->hostkey, errno, STRERROR(errno));
-      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
-    }
-}
-
-static struct command options2keyfile =
-STATIC_COMMAND(do_options2keyfile);
 
 /* GABA:
    (expr
@@ -360,14 +365,6 @@ STATIC_COMMAND(do_options2keyfile);
 	                       (init_connection_service connection))))))
 */
 
-/* ;; GABA:
-   (class
-     (name lshd_default_handler)
-     (super exception_handler)
-     (vars
-       (status . "int *")))
-*/
-
 static void
 do_lshd_default_handler(struct exception_handler *s,
 			const struct exception *e)
@@ -383,7 +380,7 @@ do_lshd_default_handler(struct exception_handler *s,
     }
 }
 
-struct exception_handler *
+static struct exception_handler *
 make_lshd_exception_handler(struct exception_handler *parent,
 			    const char *context)
 {
@@ -398,14 +395,7 @@ int main(int argc, char **argv)
   
   struct randomness *r;
   struct alist *algorithms;
-  struct make_kexinit *make_kexinit;
   struct alist *authorization_lookup;
-#if 0
-  struct keypair *hostkey;
-  struct keyexchange_algorithm *kex;
-  struct diffie_hellman_method *dh;
-  struct alist *keys;
-#endif
   
   /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
@@ -464,19 +454,6 @@ int main(int argc, char **argv)
       werror("lshd seems to be running already.\n");
       return EXIT_FAILURE;
     }
-
-#if 0
-  /* Read the hostkey */
-  keys = make_alist(0, -1);
-  if (!(hostkey = read_spki_key_file(options->hostkey,
-				     make_alist(1, ATOM_DSA, make_dsa_algorithm(r), -1),
-				     &ignore_exception_handler)))
-    {
-      werror("lshd: Could not read hostkey.\n");
-      return EXIT_FAILURE;
-    }
-  ALIST_SET(keys, hostkey->type, hostkey);
-#endif
   
   /* FIXME: We should check that we have at least one host key.
    * We should also extract the host-key algorithms for which we have keys,
@@ -484,10 +461,7 @@ int main(int argc, char **argv)
  
   reaper = make_reaper();
 
-#if 0
-  kex = make_dh_server(dh, keys);
-#endif
-  
+  /* Doesn't use spki */
   authorization_lookup
     = make_alist(1,
 		 ATOM_SSH_DSS, make_authorization_db(ssh_format("authorized_keys_sha1"),
@@ -500,16 +474,6 @@ int main(int argc, char **argv)
 #if 0
   ALIST_SET(algorithms, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex);
 #endif
-  
-  make_kexinit
-    = make_simple_kexinit(r,
-			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-					-1),
-			  make_int_list(1, ATOM_SSH_DSS, -1),
-			  options->super.crypto_algorithms,
-			  options->super.mac_algorithms,
-			  options->super.compression_algorithms,
-			  make_int_list(0, -1));
   
   {
     /* Commands to be invoked on the connection */
@@ -535,7 +499,15 @@ int main(int argc, char **argv)
 			     SSH_MAX_PACKET,
 			     r,
 			     algorithms,
-			     make_kexinit,
+			     make_simple_kexinit(
+			       r,
+			       make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+					     -1),
+			       make_int_list(1, ATOM_SSH_DSS, -1),
+			       options->super.crypto_algorithms,
+			       options->super.mac_algorithms,
+			       options->super.compression_algorithms,
+			       make_int_list(0, -1)),
 			     options->sshd1),
 	 make_offer_service
 	 (make_alist
