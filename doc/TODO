@@ -123,6 +123,11 @@ Implement RSA public-key operations according to
 draft-ietf-secsh-transport-08.txt.
 
 
+USER INTERTFACE ISSUES
+
+Hack do_spki_decrypt() in spki_commands.c to ask again if the provided
+password is incorrect.
+
 MISC
 
 Try to find out why read() sometimes returns -1 and sets errno==EPIPE,
