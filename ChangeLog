@@ -5,6 +5,9 @@
 
 2002-03-20  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/client_session.c (make_client_session_channel): Clear the
+	CHANNEL_CLOSE_AT_EOF flag.
+
 	* src/testsuite/run-tests (test_program): Test the exit status of
 	the right process.
 
