@@ -36,7 +36,7 @@
      (name sha_instance)
      (super hash_instance)
      (vars
-       (ctx simple "struct sha_ctx")))
+       (ctx . "struct sha_ctx")))
 */
 
 static void

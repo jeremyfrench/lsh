@@ -1,3 +1,36 @@
+2000-08-04  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/command.h: Made declaration of command_die_on_null extern.
+
+	* src/client_userauth.c: Added trace output.
+
+	* src/channel_commands.c, src/channel_commands.h: Use ints to represent atoms.
+	* src/gateway_channel.c (make_gateway_channel_open_command): Likewise.
+	* src/lsh_writekey.c: Likewise.
+	* src/proxy.c: Likewise.
+	* src/server_publickey.c: Likewise.
+	* src/spki.c (spki_get_type): 
+	* src/spki_commands.c (make_pkcs5_encrypt): 
+
+	* configure.in: Put -L flags in LDFLAGS, not LIBS.
+
+	* acinclude.m4: Put all -R flags in LDFLAGS, not LIBS.
+
+2000-08-03  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Bumped version to 1.0.3.
+
+	* src/spki.c (spki_get_type): Use int to represent an atom.
+
+	* src/atoms.h: Added a comment saying that atoms are represented
+	as ints.
+
+	* src/atoms.c (lookup_atom): Return int.
+
+	* src/parse.c (parse_next_atom): Made static. Use int to represent
+	atoms. 
+	(parse_atom): Use int to represent atoms.
+
 2000-07-31  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/server_publickey.c (do_authenticate): Fail nicely if key is

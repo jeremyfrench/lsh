@@ -57,9 +57,9 @@ struct buffer_node
      (name write_buffer)
      (super abstract_write)
      (vars
-       (block_size simple UINT32)
+       (block_size . UINT32)
        (buffer space UINT8)        ; Size is twice the blocksize 
-       (empty simple int)
+       (empty . int)
 
        ; Total amount of data currently in the buffer
        (length . UINT32)
@@ -68,18 +68,18 @@ struct buffer_node
        
        ; If non-zero, don't accept any more data. The i/o-channel
        ; should be closed once the current buffers are flushed. 
-       (closed simple int)
+       (closed . int)
 
-       ;; (try_write simple int)
+       ;; (try_write . int)
 
        (q indirect-special "struct lsh_queue"
                            #f do_free_buffer)
 
-       (pos simple UINT32)        ; Partial packet
+       (pos . UINT32)        ; Partial packet
        (partial string)
 
-       (start simple UINT32)
-       (end simple UINT32)))
+       (start . UINT32)
+       (end . UINT32)))
 */
 
 struct write_buffer *write_buffer_alloc(UINT32 size);

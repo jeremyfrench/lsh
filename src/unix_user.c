@@ -221,7 +221,7 @@ make_process_resource(pid_t pid, int signal)
      (name unix_user)
      (super lsh_user)
      (vars
-       (gid simple gid_t)
+       (gid . gid_t)
        ; Needed for the USER_READ_FILE method
        (backend object io_backend)
        

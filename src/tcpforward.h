@@ -42,7 +42,7 @@
        ; this could store the type of this forward
        ; tcp, udp etc. Or we could invent relevant methods
        ; and subclasses.
-       ; (type simple UINT32)
+       ; (type . int)
        
        (listen object address_info)))
 */

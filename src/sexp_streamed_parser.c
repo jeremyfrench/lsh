@@ -708,7 +708,7 @@ make_expect_eof(struct exception_handler *e)
      (name parse_base64)
      (super parser)
      (vars
-       (state simple "struct base64_state")
+       (state . "struct base64_state")
        (inner object read_handler)))
 */
 
