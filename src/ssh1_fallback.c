@@ -30,6 +30,7 @@
 
 #include <errno.h>
 #include <string.h>
+
 #include <unistd.h>
 
 #define GABA_DEFINE
@@ -60,8 +61,7 @@ fall_back_to_ssh1(struct ssh1_fallback *c,
   pid = fork();
   if (pid < 0)
     {
-      werror("Forking to start fallback sshd1 failed with %z\n",
-	     STRERROR(errno));
+      werror("Forking to start fallback sshd1 failed %e\n", errno);
 
       EXCEPTION_RAISE(e, make_protocol_exception(SSH_DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED,
 						 "Falling back to ssh1 failed."));
@@ -101,8 +101,7 @@ fall_back_to_ssh1(struct ssh1_fallback *c,
 	    "-i",			/* inetd mode */
 	    "-V" ,version,	 	/* Compatibility mode */
 	    NULL);
-      werror("lshd: fall_back_to_ssh1: execl failed (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("lshd: fall_back_to_ssh1: execl failed %e\n", errno);
       _exit(EXIT_FAILURE);
     }
   else

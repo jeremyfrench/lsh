@@ -88,8 +88,8 @@ int daemon_pidfile(const char *name)
     {
       if (errno != EEXIST)
 	{
-	  werror("Failed to open pid file '%z' (errno = %i): %z\n",
-		 name, errno, STRERROR(errno));
+	  werror("Failed to open pid file '%z' %e\n",
+		 name, errno);
 	  return 0;
 	}
 
@@ -118,8 +118,8 @@ int daemon_pidfile(const char *name)
       fd = open(name, O_RDONLY);
       if (fd < 0)
 	{
-	  werror("Pid file '%z' already exists, and is unreadable (errno = %i): %z\n",
-		 name, errno, STRERROR(errno));
+	  werror("Pid file '%z' already exists, and is unreadable %e\n",
+		 name, errno);
 	  return 0;
 	}
       {
@@ -132,14 +132,14 @@ int daemon_pidfile(const char *name)
 	
 	if (length < 0)
 	  {
-	    werror("Pid file '%z' already exists, but read failed (errno = %i): %z\n",
-		   name, errno, STRERROR(errno));
+	    werror("Pid file '%z' already exists, but read failed %e\n",
+		   name, errno);
 	    return 0;
 	  }
 	if ( !length|| !buffer[0] || (length == BUF_SIZE) )
 	  {
-	    werror("Pid file '%z' already exists, but contents is garbled (errno = %i): %z\n",
-		   name, errno, STRERROR(errno));
+	    werror("Pid file '%z' already exists, but contents is garbled.\n",
+		   name);
 	    return 0;
 	  }
 
@@ -157,8 +157,8 @@ int daemon_pidfile(const char *name)
 	  if ( (errno == ERANGE) || (end != buffer + length)
 	       || (other <= 0) || (other != (pid_t) other))
 	    {
-	      werror("Pid file '%z' already exists, but contents is garbled (errno = %i): %z\n",
-		     name, errno, STRERROR(errno));
+	      werror("Pid file '%z' already exists, but contents is garbled.\n",
+		     name);
 	      return 0;
 	    }
 
@@ -191,13 +191,12 @@ int daemon_pidfile(const char *name)
 	  lsh_string_free(pid);
 	  return 1;
 	}
-      werror("Writing pid file '%z' failed (errno = %i): %z",
-	     name, errno, STRERROR(errno));
+      werror("Writing pid file '%z' failed %e\n", name, errno);
 
       /* Attempt unlinking file */
       if (unlink(name) < 0)
-	werror("Unlinking pid file '%z' failed (errno = %i): %z",
-	       name, errno, STRERROR(errno));
+	werror("Unlinking pid file '%z' failed %e\n",
+	       name, errno);
       
       lsh_string_free(pid);
 	  
@@ -475,8 +474,8 @@ int daemon_close(const char *name)
 {
   if (unlink(name) < 0)
     {
-      werror("daemon_close: Unlink of pid file '%z' failed (errno = %i): %z\n",
-	     name, errno, STRERROR(errno));
+      werror("daemon_close: Unlink of pid file '%z' failed %e\n",
+	     name, errno);
       return 0;
     }
   return 1;

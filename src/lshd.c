@@ -80,7 +80,7 @@ struct command_2 close_on_sighup;
 #include <errno.h>
 #include <locale.h>
 #include <stdio.h>
-#include <string.h>
+/* #include <string.h> */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -344,8 +344,7 @@ do_kill_pid_file(struct resource *s)
     {
       self->super.alive = 0;
       if (unlink(self->file) < 0)
-	werror("Unlinking pidfile failed (errno = %i): %z\n",
-	       errno, STRERROR(errno));
+	werror("Unlinking pidfile failed %e\n", errno);
     }
 }
 
@@ -975,8 +974,7 @@ main(int argc, char **argv)
               
             case -1:
               /* Error */
-              werror("background_process: fork failed (errno = %i): %z\n",
-                     errno, STRERROR(errno));
+              werror("background_process: fork failed %e\n", errno);
               break;
               
             default:

@@ -41,7 +41,7 @@
 
 /* For debug */
 
-#include <string.h>
+/* #include <string.h> */
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -377,8 +377,7 @@ make_pty(struct pty_info *pty, int *in, int *out, int *err)
       
       if ((out[0] = dup(pty->master)) < 0)
         {
-          werror("make_pty: duping master pty to stdout failed (errno = %i): %z\n",
-                 errno, STRERROR(errno));
+          werror("make_pty: duping master pty to stdout failed %e\n", errno);
 
           return 0;
         }

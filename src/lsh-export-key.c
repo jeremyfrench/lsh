@@ -60,7 +60,7 @@ B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
 
 #include <assert.h>
 #include <fcntl.h>
-#include <string.h>
+/* #include <string.h> */
 #include <unistd.h>
 
 #include "lsh-export-key.c.x"
@@ -241,8 +241,8 @@ int main(int argc, char **argv)
       in = open(options->infile, O_RDONLY);
       if (in < 0)
 	{
-	  werror("Failed to open '%z' for reading: %z\n",
-		 options->infile, STRERROR(errno));
+	  werror("Failed to open '%z' for reading %e\n",
+		 options->infile, errno);
 	  return EXIT_FAILURE;
 	}
     }
@@ -253,8 +253,8 @@ int main(int argc, char **argv)
                  O_WRONLY | O_CREAT, 0666);
       if (out < 0)
         {
-	  werror("Failed to open '%z' for writing: %z\n",
-		 options->outfile, STRERROR(errno));
+	  werror("Failed to open '%z' for writing %e\n",
+		 options->outfile, errno);
           return EXIT_FAILURE;
         }
     }
@@ -264,8 +264,8 @@ int main(int argc, char **argv)
   
   if (!input)
     {
-      werror("Failed to read '%z': %z\n",
-             options->infile, STRERROR(errno));
+      werror("Failed to read '%z' %e\n",
+             options->infile, errno);
       return EXIT_FAILURE;
     }
 

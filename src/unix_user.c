@@ -156,8 +156,8 @@ kerberos_check_pw(struct unix_user *user, struct lsh_string *pw,
   if (access(user->ctx->pw_helper, X_OK) < 0)
     {
       /* No help available */
-      werror("Password helper program '%z' not available (errno = %d): %z\n",
-	     user->ctx->pw_helper, errno, STRERROR(errno));
+      werror("Password helper program '%z' not available %e\n",
+	     user->ctx->pw_helper, errno);
       return 0;
     }
   
@@ -172,7 +172,7 @@ kerberos_check_pw(struct unix_user *user, struct lsh_string *pw,
   switch (child)
     {
     case -1:
-      werror("kerberos_check_pw: fork failed: %z\n", STRERROR(errno));
+      werror("kerberos_check_pw: fork failed %e\n", errno);
       return 0;
 
     case 0:
@@ -449,8 +449,7 @@ do_read_file(struct lsh_user *u,
   if (stat(lsh_get_cstring(f), &sbuf) < 0)
     {
       if (errno != ENOENT)
-	werror("io_read_user_file: Failed to stat %S (errno = %i): %z\n",
-	       f, errno, STRERROR(errno));
+	werror("io_read_user_file: Failed to stat %S %e\n", f, errno);
  
       lsh_string_free(f);
 
@@ -511,8 +510,7 @@ do_read_file(struct lsh_user *u,
 
 	if ( (me != user->super.uid) && (seteuid(user->super.uid) < 0) )
 	  {
-	    werror("unix_user.c: do_read_file: setuid failed (errno = %i): %z\n",
-		   errno, STRERROR(errno));
+	    werror("unix_user.c: do_read_file: setuid failed %e\n", errno);
 	    _exit(EXIT_FAILURE);
 	  }
 	assert(user->super.uid == geteuid());
@@ -524,8 +522,7 @@ do_read_file(struct lsh_user *u,
 
 	if (fstat(fd, &sbuf) < 0)
 	  {
-	    werror("unix_user.c: do_read_file: fstat failed (errno = %i): %z\n",
-		   errno, STRERROR(errno));
+	    werror("unix_user.c: do_read_file: fstat failed %e\n", errno);
 	    _exit(EXIT_FAILURE);
 	  }
 
@@ -567,15 +564,13 @@ chdir_home(struct unix_user *user)
   if (user->home)
     {
       if (chdir(lsh_get_cstring(user->home)) < 0)
-	werror("chdir to home directory `%S' failed (errno = %i): %z\n",
-	       user->home, errno, STRERROR(errno));
+	werror("chdir to home directory `%S' failed %e\n", user->home, errno);
       else
 	return 1;
     }
   if (chdir("/") < 0)
     {
-      werror("chdir to `/' failed (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("chdir to `/' failed %e\n", errno);
       return 0;
     }
   else
@@ -712,8 +707,7 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
   else
     execve(PREFIX "/sbin/lsh-execuv", (char **) argv, (char **) envp);
 
-  werror("unix_user: exec failed (errno = %i): %z\n",
-	 errno, STRERROR(errno));
+  werror("unix_user: exec failed %e\n", errno);
   _exit(EXIT_FAILURE);
 }
 
@@ -721,8 +715,7 @@ static void
 safe_close(int fd)
 {
   if (fd != -1 && close(fd) < 0)
-    werror("close failed (errno = %i): %z\n",
-	   errno, STRERROR(errno));
+    werror("close failed %e\n", errno);
 }
 
 static struct lsh_process *
@@ -744,7 +737,7 @@ do_spawn(struct lsh_user *u,
   child = fork();
   if (child < 0)
     {
-      werror("fork failed: %z\n", STRERROR(errno));
+      werror("unix_user: do_spawn: fork failed %e\n", errno);
       safe_close(sync[0]); safe_close(sync[1]);
 
       safe_close(info->in[0]);  safe_close(info->in[1]);

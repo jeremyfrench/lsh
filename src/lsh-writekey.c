@@ -38,7 +38,7 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <string.h>
+/* #include <string.h> */
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -340,8 +340,7 @@ open_file(const struct lsh_string *file)
                 0600);
 
   if (fd < 0)
-    werror("Failed to open `%S'for writing: %z\n",
-           file, STRERROR(errno));
+    werror("Failed to open `%S'for writing %e\n", file, errno);
 
   return fd;
 }
@@ -416,8 +415,7 @@ main(int argc, char **argv)
 
   if (!input)
     {
-      werror("Failed to read key from stdin: %z\n",
-             STRERROR(errno));
+      werror("Failed to read key from stdin %e\n", errno);
       return EXIT_FAILURE;
     }
   

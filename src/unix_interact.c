@@ -35,7 +35,7 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <string.h>
+/* #include <string.h> */
 
 #include <signal.h>
 
@@ -69,8 +69,7 @@ read_line(int fd, UINT32 size, UINT8 *buffer)
 	    break;
 	  default:
 	    /* I/O error */
-	    werror("unix_interact.c: read_line: %z (errno = %i)\n",
-		   errno, STRERROR(errno));
+	    werror("unix_interact.c: read_line, %e\n", errno);
 	    return 0;
 	  }
       else
@@ -98,8 +97,7 @@ read_line(int fd, UINT32 size, UINT8 *buffer)
 	    break;
 	  default:
 	    /* I/O error */
-	    werror("tty_read_line: %z (errno = %i)\n",
-		   errno, strerror(errno));
+	    werror("tty_read_line %e\n", errno);
 	    return 0;
 	  }
       else

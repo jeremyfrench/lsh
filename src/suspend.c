@@ -95,8 +95,7 @@ suspend_install_handler(void)
   stop.sa_flags = 0;
 
   if (sigaction(SIGTSTP, &stop, NULL) < 0)
-    werror("Failed to install SIGTSTP handler (errno = %i): %z\n",
-	   errno, STRERROR(errno));
+    werror("Failed to install SIGTSTP handler %e\n", errno);
 }
 
 void
@@ -105,8 +104,7 @@ suspend_handle_tty(int fd)
   tty_fd = fd;
 
   if (!tty_getattr(fd, &original_mode))
-    werror("install_suspend_handler: tty_getattr failed (errno = %i): %z\n",
-	   errno, STRERROR(errno));
+    werror("install_suspend_handler: tty_getattr failed %e\n", errno);
 }
 
 
@@ -115,8 +113,7 @@ static void
 do_suspend(struct lsh_callback *self UNUSED)
 {
   if (kill(getpid(), SIGTSTP) < 0)
-    werror("do_suspend: kill failed (errno = %i): %z\n",
-	   errno, STRERROR(errno));
+    werror("do_suspend: kill failed %e\n", errno);
 }
 
 /* FIXME: Use const? */

@@ -297,8 +297,8 @@ get_dev_random(struct yarrow256_ctx *ctx, enum source_type source)
   while ( (res < 0) && (errno == EINTR));
   
   if (res < 0)
-    werror("Reading from %z failed (errno = %i): %z\n",
-	   names[i], errno, STRERROR(errno));
+    werror("Reading from %z failed %e\n",
+	   names[i], errno);
 
   else if (res > 0)
     {
@@ -374,8 +374,7 @@ get_dev_mem(struct yarrow256_ctx *ctx, enum source_type source)
   if (fd < 0)
     {
       if (!getuid() || (errno != EACCES))
-        werror("Couldn't open /dev/mem (errno = %i): %z\n",
-               errno, STRERROR(errno));
+        werror("Couldn't open /dev/mem %e\n", errno);
     }
   else
     {
@@ -410,8 +409,7 @@ get_dev_mem(struct yarrow256_ctx *ctx, enum source_type source)
             break;
           if (res < 0)
             {
-              werror("Reading /dev/mem failed (errno = %i): %z\n",
-                     errno, STRERROR(errno));
+              werror("Reading /dev/mem failed %e\n", errno);
               break;
             }
 
@@ -652,8 +650,8 @@ spawn_source_process(unsigned *index,
     {
       if (access(system_sources[i].path, X_OK) < 0)
 	{
-	  debug("unix_random.c: spawn_source_process: Skipping '%z'; not executable: %z\n",
-		system_sources[i].path, STRERROR(errno));
+	  debug("unix_random.c: spawn_source_process: Skipping '%z'; not executable %e\n",
+		system_sources[i].path, errno);
 	  i++;
 	}
       else
@@ -668,8 +666,7 @@ spawn_source_process(unsigned *index,
   
   if (!lsh_make_pipe(output))
     {
-      werror("spawn_source_process: Can't create pipe (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("spawn_source_process: Can't create pipe %e\n", errno);
       return 0;
     }
   
@@ -717,38 +714,32 @@ spawn_source_process(unsigned *index,
 	{
 	  if (setgroups(0, NULL) < 0)
 	    {
-	      werror("Failed to clear supplimentary groups list "
-		     "(errno = %i): %z\n",
-		     errno, STRERROR(errno));
+	      werror("Failed to clear supplimentary groups list %e\n", errno);
 	      _exit(EXIT_FAILURE);
 	    }
 	      
 	  if (setgid(gid) < 0)
 	    {
-	      werror("Failed to change gid (errno = %i): %z\n",
-		     errno, STRERROR(errno));
+	      werror("Failed to change gid %e\n", errno);
 	      _exit(EXIT_FAILURE);
 	    }
 	  if (setuid(uid) < 0)
 	    {
-	      werror("Failed to change uid (errno = %i): %z\n",
-		     errno, STRERROR(errno));
+	      werror("Failed to change uid %e\n", errno);
 	      _exit(EXIT_FAILURE);
 	    }
 	}
 	  
       if (dup2(output[1], STDOUT_FILENO) < 0)
 	{
-	  werror("spawn_source_process: dup2 for stdout failed (errno = %i): %z\n",
-		 errno, STRERROR(errno));
+	  werror("spawn_source_process: dup2 for stdout failed %e\n", errno);
 	  _exit(EXIT_FAILURE);
 	}
 
       /* Ignore stderr. */
       if (dup2(dev_null, STDERR_FILENO) < 0)
 	{
-	  werror("spawn_source_process: dup2 for stderr failed (errno = %i): %z\n",
-		 errno, STRERROR(errno));
+	  werror("spawn_source_process: dup2 for stderr failed %e\n", errno);
 	  _exit(EXIT_FAILURE);
 	}
 	
@@ -759,8 +750,8 @@ spawn_source_process(unsigned *index,
       execl(state->source->path, state->source->path,
 	    state->source->arg, NULL);
       
-      werror("spawn_source_process: execl '%z' failed (errno = %i): %z\n",
-	     state->source->path, errno, STRERROR(errno));
+      werror("spawn_source_process: execl '%z' failed %e\n",
+	     state->source->path, errno);
       
       _exit(EXIT_FAILURE);
     }
@@ -860,8 +851,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 
   if (dev_null < 0)
     {
-      werror("Failed to open /dev/null (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("Failed to open /dev/null %e\n", errno);
       return;
     }
 
@@ -869,8 +859,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
   unique.pid = getpid();
   if (gettimeofday(&unique.now, NULL) < 0)
     {
-      werror("getimeofday failed (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("getimeofday failed %e\n", errno);
       return;
     }
 
@@ -907,8 +896,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
       trace("get_system: calling poll, nfds = %i\n", nfds);
       if (poll(fds, nfds, -1) < 0)
 	{
-	  werror("get_system: poll failed (errno = %i): %z\n",
-		 errno, STRERROR(errno));
+	  werror("get_system: poll failed %e\n", errno);
 	  break;
 	}
 
@@ -946,9 +934,8 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 		{
 		  if (errno != EINTR)
 		    {
-		      werror("get_system: background_poll read failed "
-			     "(errno = %i): %z\n",
-			     errno, STRERROR(errno));
+		      werror("get_system: background_poll read failed %e\n",
+			     errno);
 		      return;
 		    }
 		}
@@ -995,8 +982,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 		  
 		  if (waitpid(state[j].pid, &status, 0) < 0)
 		    {
-		      werror("waitpid failed (errno = %i): %z\n",
-			     errno, STRERROR(errno));
+		      werror("waitpid failed %e\n", errno);
 		      return;
 		    }
 		  if (WIFEXITED(status))
@@ -1038,8 +1024,8 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 	  while ( (res < 0) && (errno = EINTR) );
 
 	  if (res < 0)
-	    werror("Reading %z failed (errno = %i): %z\n",
-		   linux_proc_sources[i].name, errno, STRERROR(errno));
+	    werror("Reading %z failed %e\n",
+		   linux_proc_sources[i].name, errno);
 	  else
 	    {
 	      unsigned entropy = 0;
@@ -1076,16 +1062,14 @@ get_time_accuracy(void)
   
   if (gettimeofday(&start, NULL))
     {
-      werror("gettimeofday failed (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("gettimeofday failed %e\n", errno);
       return 0;
     }
 
   do
     if (gettimeofday(&next, NULL))
       {
-	werror("gettimeofday failed (errno = %i): %z\n",
-	       errno, STRERROR(errno));
+	werror("gettimeofday failed %e\n", errno);
 	return 0;
       }
   
@@ -1163,8 +1147,7 @@ get_interact(struct yarrow256_ctx *ctx, enum source_type source)
       event.c = getchar();
       if (gettimeofday(&event.now, NULL) < 0)
 	{
-	  werror("gettimeofday failed (errno = %i): %z\n",
-		 errno, STRERROR(errno));
+	  werror("gettimeofday failed %e\n", errno);
 	  return;
 	}
 
@@ -1244,8 +1227,8 @@ main(int argc, char **argv)
       && (mkdir(lsh_get_cstring(options->directory), 0755) < 0)
       && (errno != EEXIST) )
     {
-      werror("Creating `%S' failed (errno = %i): %z.\n",
-	     options->directory, errno, STRERROR(errno));
+      werror("Creating `%S' failed %e.\n",
+	     options->directory, errno);
       return EXIT_FAILURE;
     }
 
@@ -1325,8 +1308,8 @@ main(int argc, char **argv)
   
   if (fd < 0)
     {
-      werror("Failed to open file `%S' (errno = %i): %z\n",
-	     options->filename, errno, STRERROR(errno));
+      werror("Failed to open file `%S' %e\n",
+	     options->filename, errno);
 
       KILL_RESOURCE(lock);
       return EXIT_FAILURE;
@@ -1340,8 +1323,8 @@ main(int argc, char **argv)
       struct stat sbuf;
       if (fstat(fd, &sbuf) < 0)
 	{
-	  werror("Failed to stat file `%S' (errno = %i): %z\n",
-		 options->filename, errno, STRERROR(errno));
+	  werror("Failed to stat file `%S' %e\n",
+		 options->filename, errno);
 
 	  close(fd);
 	  KILL_RESOURCE(lock);
@@ -1363,8 +1346,7 @@ main(int argc, char **argv)
 		 options->filename);
 	  if (fchmod(fd, sbuf.st_mode & ~(S_IRWXG | S_IRWXO)) < 0)
 	    {
-	      werror("Failed to change permissions (errno = %i): %z\n",
-		     errno, STRERROR(errno));
+	      werror("Failed to change permissions %e\n", errno);
 	      close(fd);
 	      KILL_RESOURCE(lock);
 	      return EXIT_FAILURE;
@@ -1373,8 +1355,8 @@ main(int argc, char **argv)
       
       if (ftruncate(fd, 0) < 0)
 	{
-	  werror("Failed to truncate file `%S' (errno = %i): %z\n",
-		 options->filename, errno, STRERROR(errno));
+	  werror("Failed to truncate file `%S' %e\n",
+		 options->filename, errno);
 
 	  close(fd);
 	  KILL_RESOURCE(lock);

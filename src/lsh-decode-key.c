@@ -18,7 +18,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <string.h>
+/* #include <string.h> */
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -187,8 +187,8 @@ int main(int argc, char **argv)
                  O_WRONLY | O_CREAT, 0666);
       if (out < 0)
         {
-          werror("Failed to open file `%S' for writing: %z\n",
-                 options->file, STRERROR(errno));
+          werror("Failed to open file `%S' for writing %e\n",
+                 options->file, errno);
           return EXIT_FAILURE;
         }
     }
@@ -196,8 +196,7 @@ int main(int argc, char **argv)
   input = io_read_file_raw(STDIN_FILENO, 3000);
   if (!input)
     {
-      werror("Failed to read stdin: %z\n",
-             STRERROR(errno));
+      werror("Failed to read stdin %e\n", errno);
       return EXIT_FAILURE;
     }
 

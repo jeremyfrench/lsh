@@ -80,8 +80,7 @@ write_seed_file(struct yarrow256_ctx *ctx,
   
   if (lseek(fd, 0, SEEK_SET) < 0)
     {
-      werror("Seeking to beginning of seed file failed!? (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("Seeking to beginning of seed file failed!? %e\n", errno);
       return 0;
     }
 
@@ -104,15 +103,13 @@ read_seed_file(int fd)
   
   if (lseek(fd, 0, SEEK_SET) < 0)
     {
-      werror("Seeking to beginning of seed file failed!? (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("Seeking to beginning of seed file failed!? %e\n", errno);
       return NULL;
     }
 
   seed = io_read_file_raw(fd, YARROW256_SEED_FILE_SIZE + 1);
   if (!seed)
-    werror("Couldn't read seed file (errno = %i): %z\n",
-	   errno, STRERROR(errno));
+    werror("Couldn't read seed file %e\n", errno);
   return seed;
 }
 
@@ -125,8 +122,7 @@ read_initial_seed_file(struct yarrow256_ctx *ctx,
 
   if (fstat(fd, &sbuf) < 0)
     {
-      werror("Couldn't stat seed file (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("Couldn't stat seed file %e\n", errno);
       return 0;
     }
 
@@ -161,8 +157,7 @@ read_initial_seed_file(struct yarrow256_ctx *ctx,
 
   if (lseek(fd, 0, SEEK_SET) < 0)
     {
-      werror("Seeking to beginning of seed file failed!? (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("Seeking to beginning of seed file failed!? %e\n", errno);
       return 0;
     }
 
@@ -211,12 +206,10 @@ do_trivia_source(struct unix_random *self, int init)
   unsigned entropy = 0;
 
   if (gettimeofday(&event.now, NULL) < 0)
-    fatal("gettimeofday failed (errno = %i): %z\n",
-	  errno, STRERROR(errno));
+    fatal("gettimeofday failed %e\n", errno);
 
   if (getrusage(RUSAGE_SELF, &event.rusage) < 0)
-    fatal("getrusage failed: (errno = %i) %z\n",
-	  errno, STRERROR(errno));
+    fatal("getrusage failed %e\n", errno);
   
   event.count = 0;
   if (init)
@@ -271,8 +264,7 @@ do_device_source(struct unix_random *self, int init)
 
       if (e)
 	{
-	  werror("Failed to read /dev/urandom (errno = %i): %z\n",
-		 errno, STRERROR(errno));
+	  werror("Failed to read /dev/urandom %e\n", errno);
 	  return 0;
 	}
 

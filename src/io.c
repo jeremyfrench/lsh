@@ -333,8 +333,7 @@ io_run(void)
   /* We need liboop-0.8, OOP_ERROR is not defined in liboop-0.7. */
 
   if (res == OOP_ERROR)
-    werror("oop_sys_run (errno = %i):  %z\n",
-	   errno, STRERROR(errno));
+    werror("oop_sys_run %e\n", errno);
 
   trace("io_run: Exiting\n");
 }
@@ -660,7 +659,7 @@ do_write_callback(struct io_callback *s UNUSED,
 		 && (fd->write_buffer->length == 1) )
 	      debug("io.c: ignoring write error, on the final ^D character\n");
 #endif
-	    werror("io.c: write failed, %z\n", STRERROR(errno));
+	    werror("io.c: write failed %e\n", errno);
 	    EXCEPTION_RAISE(fd->e,
 			    make_io_exception(EXC_IO_WRITE,
 					      fd, errno, NULL));
@@ -722,7 +721,7 @@ do_listen_callback(struct io_callback *s,
 		(struct sockaddr *) &peer, &addr_len);
   if (conn < 0)
     {
-      werror("io.c: accept failed, %z", STRERROR(errno));
+      werror("io.c: accept failed %e", errno);
       return;
     }
 
@@ -1104,11 +1103,10 @@ fd2info(struct lsh_fd *fd, int side)
     get = getsockname( fd->fd, (struct sockaddr *)  &sock, &s_len );
   else
     get = getpeername( fd->fd, (struct sockaddr *)  &sock, &s_len );
-
-        
+  
   if (get < 0)  
     {               
-      werror("io.c: getXXXXname failed, %z", STRERROR(errno));
+      werror("io.c: getXXXXname failed %e", errno);
       return NULL;
     }
 
@@ -1280,10 +1278,10 @@ void io_set_nonblocking(int fd)
   int old = fcntl(fd, F_GETFL);
 
   if (old < 0)
-    fatal("io_set_nonblocking: fcntl(F_GETFL) failed, %z", STRERROR(errno));
+    fatal("io_set_nonblocking: fcntl(F_GETFL) failed %e", errno);
   
   if (fcntl(fd, F_SETFL, old | O_NONBLOCK) < 0)
-    fatal("io_set_nonblocking: fcntl(F_SETFL) failed, %z", STRERROR(errno));
+    fatal("io_set_nonblocking: fcntl(F_SETFL) failed %e", errno);
 }
 
 void io_set_blocking(int fd)
@@ -1291,10 +1289,10 @@ void io_set_blocking(int fd)
   int old = fcntl(fd, F_GETFL);
 
   if (old < 0)
-    fatal("io_set_blocking: fcntl(F_GETFL) failed, %z", STRERROR(errno));
+    fatal("io_set_blocking: fcntl(F_GETFL) failed %e", errno);
   
   if (fcntl(fd, F_SETFL, old & ~O_NONBLOCK) < 0)
-    fatal("io_set_blocking: fcntl(F_SETFL) failed, %z", STRERROR(errno));
+    fatal("io_set_blocking: fcntl(F_SETFL) failed %e", errno);
 }
 
 void io_set_close_on_exec(int fd)
@@ -1305,11 +1303,10 @@ void io_set_close_on_exec(int fd)
   int old = fcntl(fd, F_GETFD);
 
   if (old < 0)
-    fatal("io_set_nonblocking: fcntl(F_GETFD) failed, %z", STRERROR(errno));
+    fatal("io_set_nonblocking: fcntl(F_GETFD) failed %e", errno);
   
   if (fcntl(fd, F_SETFD, old | 1) < 0)
-    fatal("Can't set close-on-exec flag for fd %i: %z\n",
-	  fd, STRERROR(errno));
+    fatal("Can't set close-on-exec flag for fd %i %e\n", fd, errno);
 }
 
 
@@ -1429,8 +1426,7 @@ io_bind_sockaddr(struct sockaddr *local,
 
   if (bind(s, (struct sockaddr *)local, length) < 0)
     {
-      trace("io.c: bind failed: (errno = %d) %z\n",
-	    errno, STRERROR(errno));
+      trace("io.c: bind failed %e\n", errno);
       close(s);
       return NULL;
     }
@@ -1490,8 +1486,8 @@ lsh_popd(int old_cd, const char *directory)
 {
   while (fchdir(old_cd) < 0)
     if (errno != EINTR)
-      fatal("io.c: Failed to cd back from %z (errno = %i): %z\n",
-	    directory, errno, STRERROR(errno));
+      fatal("io.c: Failed to cd back from %z %e\n",
+	    directory, errno);
       
   close(old_cd);
 }
@@ -1514,8 +1510,7 @@ lsh_pushd_fd(int dir)
   while (fchdir(old_cd) < 0)
     if (errno != EINTR)
       {
-	werror("io.c: fchdir(`.') failed (errno = %i): %z\n",
-	       errno, strerror(errno));
+	werror("io.c: fchdir(`.') failed %e\n", errno);
 	close(old_cd);
 	return -1;
       }
@@ -1555,7 +1550,7 @@ lsh_pushd(const char *directory,
 	   && (errno != EEXIST) )
 	{
 	  werror("io.c: Creating directory %z failed "
-		 "(errno = %i): %z\n", directory, errno, STRERROR(errno));
+		 "%e\n", directory, errno);
 	}
     }
 
@@ -1566,7 +1561,7 @@ lsh_pushd(const char *directory,
   if (fstat(fd, &sbuf) < 0)
     {
       werror("io.c: Failed to stat `%z'.\n"
-	     "  (errno = %i): %z\n", directory, errno, STRERROR(errno));
+	     "  %e\n", directory, errno);
       return -1;
     }
   
@@ -1610,8 +1605,7 @@ lsh_pushd(const char *directory,
   /* Test if we are allowed to cd to our current working directory. */
   while (fchdir(old_cd) < 0)
     {
-      werror("io.c: fchdir(\".\") failed (errno = %i): %z\n",
-	     errno, strerror(errno));
+      werror("io.c: fchdir(\".\") failed %e\n", errno);
       close(fd);
       close(old_cd);
       return -1;
@@ -1679,8 +1673,8 @@ io_bind_local(struct local_info *info,
   if ( (unlink(cname) < 0)
        && (errno != ENOENT))
     {
-      werror("io.c: unlink '%S'/'%S' failed (errno = %i): %z\n",
-	     info->directory, info->name, errno, STRERROR(errno));
+      werror("io.c: unlink '%S'/'%S' failed %e\n",
+	     info->directory, info->name, errno);
       lsh_popd(old_cd, cdir);
       return NULL;
     }
@@ -1855,8 +1849,7 @@ close_fd(struct lsh_fd *fd)
       
       if (close(fd->fd) < 0)
 	{
-	  werror("io.c: close failed, (errno = %i): %z\n",
-		 errno, STRERROR(errno));
+	  werror("io.c: close failed %e\n", errno);
 	  EXCEPTION_RAISE(fd->e,
 			  make_io_exception(EXC_IO_CLOSE, fd,
 					    errno, NULL));
@@ -1938,8 +1931,7 @@ close_fd_write(struct lsh_fd *fd)
               /* Try calling shutdown */
               if ( (shutdown (fd->fd, SHUT_WR) < 0)
                    && errno != ENOTSOCK)
-                werror("close_fd_write, shutdown failed, (errno = %i): %z\n",
-                       errno, STRERROR(errno));
+                werror("close_fd_write, shutdown failed, %e\n", errno);
             }
         }
     }
@@ -2032,19 +2024,19 @@ lsh_make_pipe(int *fds)
 {
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
     {
-      werror("socketpair failed: %z\n", STRERROR(errno));
+      werror("socketpair failed %e\n", errno);
       return 0;
     }
   trace("Created socket pair. Using fd:s %i <-- %i\n", fds[0], fds[1]);
 
   if (SHUTDOWN_UNIX(fds[0], SHUT_WR_UNIX) < 0)
     {
-      werror("shutdown(%i, SHUT_WR) failed: %z\n", fds[0], STRERROR(errno));
+      werror("shutdown(%i, SHUT_WR) failed %e\n", fds[0], errno);
       goto fail;
     }
   if (SHUTDOWN_UNIX(fds[1], SHUT_RD_UNIX) < 0)
     {
-      werror("shutdown(%i, SHUT_RD_UNIX) failed: %z\n", fds[0], STRERROR(errno));
+      werror("shutdown(%i, SHUT_RD_UNIX) failed %e\n", fds[0], errno);
     fail:
       {
 	int saved_errno = errno;

@@ -31,9 +31,9 @@
 #include "xalloc.h"
 
 #include <assert.h>
-#include <string.h>
-
 #include <errno.h>
+/* #include <string.h> */
+
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -127,8 +127,7 @@ do_reaper_callback(struct lsh_callback *s)
 	  /* No more child processes */
 	  return;
 	default:
-	  fatal("reaper.c: waitpid failed (errno = %i), %z\n",
-		errno, STRERROR(errno));
+	  fatal("reaper.c: waitpid failed %e\n", errno);
 	}
     }
 }

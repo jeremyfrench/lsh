@@ -556,6 +556,18 @@ werror_vformat(const char *f, va_list args)
     }
 }
 
+/* Unconditionally display message. */
+static void
+werror_format(const char *format, ...) 
+{
+  va_list args;
+
+  va_start(args, format);
+  werror_vformat(format, args);
+  va_end(args);
+  werror_flush();
+}
+
 void
 werror(const char *format, ...) 
 {
@@ -624,6 +636,11 @@ verbose(const char *format, ...)
     }
 }
 
+#define FATAL_SLEEP 0
+#ifndef FATAL_SLEEP
+# define FATAL_SLEEP 0
+#endif
+
 void
 fatal(const char *format, ...) 
 {
@@ -634,6 +651,11 @@ fatal(const char *format, ...)
   va_end(args);
   werror_flush();
 
+#if FATAL_SLEEP
+  werror_format("attach gdb to process %i. Going to sleep...\n", getpid());
+  for (;;)
+    sleep(4711);
+#endif
 #if WITH_GCOV
   exit(255);
 #else

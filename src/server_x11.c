@@ -166,8 +166,8 @@ static void
 delete_x11_socket(struct server_x11_socket *self)
 {
   if (unlink(lsh_get_cstring(self->name)) < 0)
-    werror("Failed to delete x11 socket %S for user %i (errno = %i): %z\n",
-	   self->name, self->uid, errno, STRERROR(errno));
+    werror("Failed to delete x11 socket %S for user %i %e\n",
+	   self->name, self->uid, errno);
 }
 
 static void
@@ -236,8 +236,7 @@ open_x11_socket(struct ssh_channel *channel)
   s = socket(AF_UNIX, SOCK_STREAM, 0);
   if (s < 0)
     {
-      werror("server_x11_socket: socket(AF_UNIX, ...) failed (errno = %i): %z",
-	     errno, STRERROR(errno));
+      werror("server_x11_socket: socket(AF_UNIX, ...) failed %e\n", errno);
       return NULL;
     }
 #endif
@@ -250,8 +249,7 @@ open_x11_socket(struct ssh_channel *channel)
   old_cd = lsh_pushd(X11_SOCKET_DIR, &dir, 0, 0);
   if (old_cd < 0)
     {
-      werror("Failed to cd to `%z' (errno = %i): %z\n",
-	     X11_SOCKET_DIR, errno, STRERROR(errno));
+      werror("Failed to cd to `%z' %e\n", X11_SOCKET_DIR, errno);
 
       umask(old_umask);
       return NULL;

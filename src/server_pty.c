@@ -38,7 +38,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
-#include <string.h>
+/* #include <string.h> */
 #include <stdio.h>  /* FIXME: for snprintf, maybe use a custom snprintf? Bazsi */
 
 #if HAVE_STROPTS_H
@@ -63,8 +63,7 @@ do_kill_pty_info(struct resource *r)
     {
       pty->super.alive = 0;
       if ( (pty->master >= 0) && (close(pty->master) < 0) )
-	werror("do_kill_pty_info: closing master failed (errno = %i): %z\n",
-	       errno, STRERROR(errno));
+	werror("do_kill_pty_info: closing master failed %e\n", errno);
     }
 }
 
@@ -176,8 +175,7 @@ pty_open_master(struct pty_info *pty,
   struct lsh_string *name = NULL;
   if ((pty->master = open("/dev/ptmx", O_RDWR | O_NOCTTY)) < 0)
     {
-      werror("pty_open_master: Opening /dev/ptmx failed (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("pty_open_master: Opening /dev/ptmx failed %e\n", errno);
       return 0;
     }
   
@@ -260,7 +258,7 @@ pty_open_slave(struct pty_info *pty)
   if (setsid() < 0)
     {
       werror("tty_setctty: setsid failed, already process group leader?\n"
-	     "   (errno = %i): %z\n", errno, STRERROR(errno));
+	     "   %e\n", errno);
       return -1;
     }
 
@@ -270,8 +268,8 @@ pty_open_slave(struct pty_info *pty)
   if (fd < 0)
     {
       werror("pty_open_slave: open(\"%S\") failed,\n"
-	       "   (errno = %i): %z\n",
-	     pty->tty_name, errno, STRERROR(errno));
+	     "   %e\n",
+	     pty->tty_name, errno);
       return -1;
     }
 
@@ -294,7 +292,7 @@ pty_open_slave(struct pty_info *pty)
   if (ioctl(fd, TIOCSCTTY, NULL) < 0)
     {
       werror("pty_open_slave: Failed to set the controlling tty.\n"
-	     "   (errno = %i): %z\n", errno, STRERROR(errno));
+	     "   %e\n", errno);
       close(fd);
       return -1;
     }

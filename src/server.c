@@ -41,7 +41,7 @@
 #include "xalloc.h"
 
 #include <assert.h>
-#include <string.h>
+/* #include <string.h> */
 #include <errno.h>
 
 #include <unistd.h>
@@ -198,16 +198,14 @@ read_host_key(const char *file,
 
     if (fd < 0)
     {
-      werror("Failed to open `%z' for reading: %z\n",
-             file, STRERROR(errno));
+      werror("Failed to open `%z' for reading %e\n", file, errno);
       return 0;
     }
 
   contents = io_read_file_raw(fd, 5000);
   if (!contents)
     {
-      werror("Failed to read host key file `%z': %z\n",
-             file, STRERROR(errno));
+      werror("Failed to read host key file `%z': %e\n", file, errno);
       close(fd);
       return 0;
     }

@@ -59,7 +59,7 @@
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+/* #include <string.h> */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -203,8 +203,7 @@ read_known_hosts(struct lsh_options *options)
   if (fd < 0)
     {
       lsh_string_free(tmp);
-      werror("Failed to open `%z' for reading: %z\n",
-             s, STRERROR(errno));
+      werror("Failed to open `%z' for reading %e\n", s, errno);
       return context;
     }
 
@@ -214,8 +213,7 @@ read_known_hosts(struct lsh_options *options)
   
   if (!contents)
   {
-    werror("Failed to read known_hosts file: %z\n",
-           STRERROR(errno));
+    werror("Failed to read known_hosts file %e\n", errno);
     close(fd);
     return context;
   }
@@ -273,8 +271,7 @@ read_user_keys(struct lsh_options *options)
   fd = open(name, O_RDONLY);
   if (fd < 0)
     {
-      werror("Failed to open `%z' for reading: %z\n",
-             name, STRERROR(errno));
+      werror("Failed to open `%z' for reading %e\n", name, errno);
       lsh_string_free(tmp);
 
       return make_object_list(0, -1);
@@ -286,8 +283,7 @@ read_user_keys(struct lsh_options *options)
 
   if (!contents)
     {
-      werror("Failed to read private key file: %z\n",
-             STRERROR(errno));
+      werror("Failed to read private key file %e\n", errno);
       close(fd);
 
       return make_object_list(0, -1);
@@ -903,8 +899,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      self->capture_file = &f->write_buffer->super;
 	    else
 	      {
-		werror("Failed to open '%z' (errno = %i): %z.\n",
-		       s, errno, STRERROR(errno));
+		werror("Failed to open '%z' %e.\n", s, errno);
 	      }
 	  }
 	lsh_string_free(tmp);

@@ -39,8 +39,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <string.h>
 #include <assert.h>
+#include <string.h>
 
 #include <signal.h>
 
@@ -865,8 +865,7 @@ DEFINE_COMMAND(background_process)
       break;
     case -1:
       /* Error */
-      werror("background_process: fork failed (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+      werror("background_process: fork failed %e\n", errno);
       COMMAND_RETURN(c, a);
       break;
     default:
@@ -909,8 +908,7 @@ make_client_session(struct client_options *options)
 
   if (in < 0)
     {
-      werror("lsh: Can't dup/open stdin (errno = %i): %z!\n",
-	     errno, strerror(errno));
+      werror("lsh: Can't dup/open stdin %e\n", errno);
       return NULL;
     }
 
@@ -952,8 +950,7 @@ make_client_session(struct client_options *options)
 
   if (out < 0)
     {
-      werror("lsh: Can't dup/open stdout (errno = %i): %z!\n",
-	     errno, strerror(errno));
+      werror("lsh: Can't dup/open stdout %e\n", errno);
       close(in);
       return NULL;
     }

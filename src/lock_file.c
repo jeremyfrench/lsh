@@ -32,7 +32,7 @@
 #include "xalloc.h"
 
 #include <errno.h>
-#include <string.h>
+/* #include <string.h> */
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -94,8 +94,8 @@ do_lsh_file_lock(struct lsh_file_lock_info *self, unsigned retries)
   if (fd < 0)
     {
       if (errno != EEXIST)
-	werror("Could not create lock file `%S' (errno = %i): %z\n",
-	       self->lockname, errno, STRERROR(errno));
+	werror("Could not create lock file `%S' %e\n",
+	       self->lockname, errno);
       return NULL;
     }
   else

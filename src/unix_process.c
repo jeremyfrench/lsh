@@ -136,8 +136,7 @@ do_kill_process(struct resource *r)
 
       if (kill(self->pid, self->signal) < 0)
 	{
-	  werror("do_kill_process: kill failed (errno = %i): %z\n",
-		 errno, STRERROR(errno));
+	  werror("do_kill_process: kill failed %e\n", errno);
 	}
     }
 }
@@ -286,8 +285,7 @@ do_utmp_cleanup(struct exit_callback *s,
 #endif /* HAVE_LOGWTMP */
       
   if (!PUTUTXLINE(&entry))
-    werror("Updating utmpx for logout failed (errno = %i): %z\n",
-	   errno, STRERROR(errno));
+    werror("Updating utmpx for logout failed %e\n", errno);
 
 #ifndef HAVE_LOGWTMP
 
@@ -423,8 +421,7 @@ utmp_book_keeping(struct lsh_string *name,
   trace("unix_process.c: utmp_book_keeping, after host (HAVE_UTMPX_H)\n");
 
   if (!PUTUTXLINE(&entry))
-    werror("Updating utmp for login failed (errno = %i): %z\n",
-	   errno, STRERROR(errno));
+    werror("Updating utmp for login failed %e\n", errno);
 
   trace("unix_process.c: utmp_book_keeping, after pututline (HAVE_UTMPX_H)\n");
 
