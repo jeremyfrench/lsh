@@ -56,9 +56,9 @@ static void do_cbc_encrypt(struct crypto_instance *s,
     {
       memxor(self->iv, src, self->super.block_size);
 
-      CRYPT(self->inner, self->super.block_size, src, self->iv);
+      CRYPT(self->inner, self->super.block_size, self->iv, dst);
 
-      memcpy(dst, self->iv, self->super.block_size);
+      memcpy(self->iv, dst, self->super.block_size);
     }
 }
 
@@ -73,6 +73,14 @@ static void do_cbc_decrypt(struct crypto_instance *s,
   if (!length)
     return;
 
+  if (src == dst)
+    {
+      /* Keep a copy of the ciphertext. */
+      UINT8 *tmp = alloca(length);
+      memcpy(tmp, src, length);
+      src = tmp;
+    }
+  
   /* Decrypt in ECB mode */
   CRYPT(self->inner, length, src, dst);
 
