@@ -7,8 +7,7 @@
 
 	* configure.ac: Check for snprintf, vsnprintf and stdarg.h.
 
-	* Makefile.am (EXTRA_DIST): Added vsnprintf.c. Renabled building
-	of argp-test.
+	* Makefile.am (EXTRA_DIST): Added vsnprintf.c.
 
 	* vsnprintf.c: New replacement vsnprintf, by Patrick Powell,
 	Brandom Long and others.
