@@ -114,6 +114,15 @@ Remaking Makefile.am from subdirectories probably cd:s to the wrong
 place, when building outside of the source tree.
 
 
+PROTOCOL ISSUES
+
+Update the signal-related messages to conform to
+draft-ietf-secsh-connect-08.txt.
+
+Implement RSA public-key operations according to
+draft-ietf-secsh-transport-08.txt.
+
+
 MISC
 
 Try to find out why read() sometimes returns -1 and sets errno==EPIPE,
