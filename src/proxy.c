@@ -324,7 +324,7 @@ do_proxy_accept_service(struct packet_handler *c,
     {
       struct lsh_string *new_packet;
 
-      connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = connection->fail;
+      connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = &connection_fail_handler;
 #if DATAFELLOWS_WORKAROUNDS
       if ((connection->chain->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE) ==
 	  (connection->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE))
@@ -403,7 +403,7 @@ do_proxy_service_request(struct packet_handler *c,
 	    {
 	      /* Don't accept any further service requests */
 	      connection->dispatch[SSH_MSG_SERVICE_REQUEST]
-		= connection->fail;
+		= &connection_fail_handler;
 
 	      connection->chain->dispatch[SSH_MSG_SERVICE_ACCEPT]
 		= make_proxy_accept_service_handler(name, service, self->c, self->e);

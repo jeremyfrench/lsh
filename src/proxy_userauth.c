@@ -291,7 +291,7 @@ do_proxy_userauth_continuation(struct command_continuation *c,
 
   /* Ignore any further userauth messages. */
   for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
-    self->connection->dispatch[i] = self->connection->ignore;
+    self->connection->dispatch[i] = &connection_ignore_handler;
   
   FORCE_APPLY(action, self->super.up, self->super.e);
 
