@@ -896,7 +896,7 @@ int main(int argc, char **argv)
 					options->super.algorithms,
 					options->sshd1),
 		    make_simple_kexinit
-		    (&options->random->super,
+		    (options->random,
 		     options->kex_algorithms,
 		     options->super.hostkey_algorithms,
 		     options->super.crypto_algorithms,
