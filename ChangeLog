@@ -1,3 +1,12 @@
+Wed Dec 30 01:14:28 1998    <nisse@puck>
+
+	* lib/desTest.c (now): Disable use of rusage.
+
+	* sexp.c: Started on parser. Not at all working yet.
+	* sexp.h (sexp_iterator): Added iterator abstraction.
+
+	* lsh_types.h (MAX): Bug fix (by ceder).
+
 Mon Dec 28 14:14:57 1998    <nisse@puck>
 
 	* keyexchange.c (kex_make_key): Expand keys, when the required key
