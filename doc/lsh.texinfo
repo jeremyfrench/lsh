@@ -1296,19 +1296,6 @@ Location of the server's private key file. By default,
 Variant of the s-expression syntax to use when reading the host key.
 Default is to use transport format. Not a terribly useful option.
 
-@item --ssh1-fallback
-This options enables fallback to @command{ssh1}. @command{lshd} doesn't
-implement version 1 of the Secure Shell Protocol. But it can fork an
-@command{ssh1} server when an old client connects. Falling back to
-@command{ssh1} is inefficient, and requires some special features of the
-server fallen back to. It should work with the @command{sshd} daemon
-supplied with reasonably new versions of F-Secure's @command{sshd1},
-and with OpenSSH.
-
-The optional argument provides the filename of the ssh1 daemon to use.
-The default name is @file{/usr/local/sbin/sshd1}, unless something else
-was configured at compile time.
-
 @item --daemonic
 Enables daemonic mode. @command{lshd} forks into the background,
 redirects its stdio file descriptors to @file{/dev/null}, changes its
