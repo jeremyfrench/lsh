@@ -78,4 +78,8 @@ extern struct command connect_local_command;
 extern struct command io_log_peer_command;
 #define LOG_PEER (&io_log_peer_command.super)
 
+
+struct command *
+make_tcp_wrapper(struct lsh_string *name, struct lsh_string *msg);
+
 #endif /* LSH_IO_COMMANDS_H_INCLUDED */
