@@ -1,3 +1,50 @@
+2002-11-03  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/testutils.c (test_sign): Use SIGN and VERIFY, not
+	the obsolete methods SIGN_SPKI and VERIFY_SPKI.
+
+	* src/testsuite/Makefile.am (AM_CFLAGS): Use AM_CFLAGS to disable
+	optimization. Don't set CFLAGS explicitly.
+
+	* misc/ctags.mk: Deleted file. Not needed anymore, since automake
+	supports ctags it out of the box.
+	* Makefile.am.in: Don't include ctags.mk.
+	* src/Makefile.am.in: Likewise.
+
+	* src/rsa_keygen.c (get_random): Deleted function. Replaced by ... 
+	* src/randomness.c (lsh_random): New function.
+
+	* src/rsa.c (do_rsa_verify): Recognize algorithm "spki".
+	(do_rsa_sign): Likewise.
+	(do_rsa_verify_spki): Deleted function.
+	(do_rsa_sign_spki): Likewise.
+
+	* src/dsa_keygen.c (dsa_generate_key): Rewrote to use nettle's
+	dsa_generate_keypair function.
+
+2002-11-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/dsa.c (dsa_hash): Deleted function.
+	(generic_dsa_verify): Rewrote to use nettle's dsa_verify.
+	(do_dsa_verify_spki, do_dsa_sign_spki): Deleted method.
+	(generic_dsa_sign): Rewrote to use nettle's dsa_sign.
+	(dsa_blob_length): Use struct dsa_signature for the argument.
+	(dsa_blob_write): Likewise.
+	(encode_dsa_sig_val): Likewise.
+	(decode_dsa_sig_val): Likewise.
+	(make_dsa_signer): Use dsa_private_key_init.
+	(class dsa_verifier): Use nettle's struct dsa_public_key.
+	(class dsa_signer): Use nettle's struct dsa_private_key.
+	(do_dsa_verify): Recognize algorithm "spki".
+	(do_dsa_sign): Likewise.
+
+	* src/bignum.c (bignum_write): Use const.
+
+	* src/atoms.in: New atom "spki", for generic spki operations.
+
+	* src/abstract_crypto.h (SIGN_SPKI, VERIFY_SPKI): Deleted methods
+	used only by the testsuite.
+
 2002-11-01  Pontus Sköld  <pont@soua.net>
 
 	* src/testsuite/Makefile.am (TS_SH): New test lsh-9-test.
