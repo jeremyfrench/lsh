@@ -1,3 +1,22 @@
+Wed Apr  7 21:30:35 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel.c, src/server.c: Started adapting the functions to
+ 	the command framework.
+
+	* src/service.c, src/service.h: These files are almost obsolete
+	now. #if:ed out most of them. 
+
+	* src/userauth.h, src/server_userauth.c, src/server_password.c:
+ 	Reorganized user authentication. An authentication method takes
+ 	the data from a USERAUTH_REQUEST message, and returns some
+ 	userinfo-object if authentication was successful. The general
+	(server-side) userauth-code invokes the right service with the
+ 	user-info as argument, and the result (typically a command taking
+ 	a connection as argument) is passed to the continuation of the
+ 	userauth command.
+
+	* src/queue.h (FOR_QUEUE): Bugfix (Bazsi).
+
 Tue Apr  6 21:17:15 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/compiler.scm: Added support for let and let*.

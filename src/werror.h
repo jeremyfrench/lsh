@@ -42,7 +42,7 @@ void set_error_syslog(void);
 
 /* Format specifiers:
  *
- * %%  %-charqacter
+ * %%  %-character
  * %i  UINT32
  * %c  int, interpreted as a single character to output
  * %n  mpz_t
