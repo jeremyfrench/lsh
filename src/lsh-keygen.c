@@ -129,7 +129,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    argp_error(state, "RSA keys should be at least 512 bits.");
 	  break;
 	default:
-	  abort();
+	  fatal("Internal error!\n");
 	}
       break;
 	  
@@ -235,7 +235,7 @@ int main(int argc, char **argv)
       }
       break;
     default:
-      abort();
+      fatal("Internal error!\n");
     }
 
   /* Now, output a private key spki structure. */
