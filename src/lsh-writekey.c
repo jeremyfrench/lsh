@@ -340,7 +340,7 @@ process_private(struct sexp *key,
                                 10, /* Salt length */
                                 options->passphrase,
                                 options->iterations,
-                                sexp_format(SEXP_CANONICAL, key, 0));
+                                sexp_format(key, SEXP_CANONICAL, 0));
     }
   return sexp_format(expr,
                      (options->style > 0) ? options->style : SEXP_CANONICAL,
