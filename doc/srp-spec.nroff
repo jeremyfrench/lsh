@@ -9,14 +9,14 @@
 .ds RF FORMFEED[Page %]
 .ds CF
 .ds LH INTERNET-DRAFT
-.ds RH 3 August 2000
+.ds RH 27 March 2001
 .ds CH SRP key exchange with Secure Shell.
 .hy 0
 .ad l
 .in 0
 INTERNET-DRAFT                                              Niels Möller
-draft-nisse-secsh-srp-00.txt                               3 August 2000
-Expires in March 2001
+draft-nisse-secsh-srp-01.txt                               27 March 2001
+Expires in September 2001
 
 
 .ce
@@ -49,7 +49,7 @@ http://www.ietf.org/shadow.html.
 .ti 0
 Copyright Notice
 
-Copyright (C) The Internet Society (2000). See the Full Copyright
+Copyright (C) The Internet Society (2001). See the Full Copyright
 Notice below for details.
 
 .ti 0
@@ -63,8 +63,9 @@ authentication based on a small secret (typically a password). It is
 useful in situations where no authentic host key is known. For
 Secure Shell, it can be used as a bootstrapping procedure to get the
 host key of a server in a safe way. SRP also provides authentication
-of the user, which means that it might make sense to skip the secsh
-"ssh-userauth"-service [SSH-USERAUTH] when using SRP.
+of the user, which means that it might make sense to either skip the secsh
+"ssh-userauth"-service [SSH-USERAUTH] when using SRP, or allow login
+with the "none" or "external-keyx" method.
 
 .ti 0
 Conventions and notations
@@ -326,14 +327,24 @@ active network attacks, and implementations can use the securely
 exchanged keys to protect the session against hijacking and provide
 confidentiality.
 
+The SRP keyexchange was originally designed primarily a user
+authentication method, but it also provides a peculiar form of host
+authentication. If SRP succeeds, using a particular user name and
+password, the client can be confident that the remote server knows
+some verifier corresponding to that password. But if the same
+password is used with several servers, the client can't distinguish
+them from eachother, even if the actual verifiers are not shared
+between servers.
+
 As some of the best know algorithms for computing discrete
 logarithms use extensive precomputations, it is desirable not to
 depend on a single fixed group like the multiplicative group used
 with "srp-ring1-sha1". However, care must be taken whenever the a
-client starts to use a new ring. An attacker that knows how to
-compute discrete logarithms in the multiplicative group of a
-particular ring, and can convince the client to use that group, can
-impersonate *any* server that client connects to.
+client starts to use a new ring. Consider an attacker that knows how
+to compute discrete logarithms in the multiplicative group of a
+particular ring, and can convince the client to use that group.
+According to Tom Wu, the worst the attacker can do is getting
+information that enables him to verify guessed passwords.
 
 In "diffie-hellman-group-exchange-sha1" [PROVOS] the client knows the
 server's hostkey a priori, and uses that to authenticate the groups
@@ -364,6 +375,36 @@ while a more conservative authentication mechanism is used for
 further access.
 
 .ti 0
+Further questions
+
+This document should give a list of rings that can be used, which
+should include the rings used by libsrp (is there any specification,
+besides the source code, that lists these rings)? In general, to
+what extent should the protocol be compatible with libsrp?
+
+Rings can be transmitted either by sending modulo and generator
+explicitly, like above, or by identifyng rings with names or
+numbers.
+
+It may be a good idea to optionally include the server's host key in
+the SSH_MSG_KEXSRP_REPLY above, and in the exchange hash. It is not
+needed for the SRP exchange, but it is a convenient way to transmit
+an authentic host key, and it is useful for key re-exchanges later
+on.
+
+To strengthen host authentication, in the case that a user has the
+same password on several servers, it may be a good idea to include
+the hostname somewhere in the computation of x, either in the user
+name or in the salt.
+
+One can also consider adding the description of the group as another
+element in the computation of x, to add robustness in the
+"middle-man-sends-booby-trapped-group" scenario. More analysis is
+needed to say if adding the group description would really help,
+though.
+
+
+.ti 0
 Author's Address
 
 .nf
@@ -380,19 +421,19 @@ References
 
 [PROVOS] Niels Provos, et al, "Diffie-Hellman Group Exchange for the
 SSH Transport Layer Protocol", Internet Draft,
-draft-provos-secsh-dh-group-exchange-00.txt
+draft-ietf-secsh-dh-group-exchange-00.txt
 
-[SRP]  T. Wu, "The SRP Authentication and Key Exchange System",
-Internet Draft, draft-wu-srp-auth-03.txt
+[SRP] T. Wu, "The SRP Authentication and Key Exchange System",
+RFC 2945
 
 [SSH-ARCH] Ylonen, T., et al, "SSH Protocol Architecture", Internet
-Draft, draft-ietf-secsh-architecture-05.txt
+Draft, draft-ietf-secsh-architecture-07.txt
 
 [SSH-TRANS] Ylonen, T., et al, "SSH Transport Layer Protocol", Internet
-Draft, draft-ietf-secsh-transport-07.txt
+Draft, draft-ietf-secsh-transport-09.txt
 
 [SSH-USERAUTH] Ylonen, T., et al, "SSH Authentication Protocol",
-Internet Draft, draft-ietf-secsh-userauth-07.txt
+Internet Draft, draft-ietf-secsh-userauth-09.txt
 
 
 .ti 0
