@@ -44,10 +44,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if 0
 #if HAVE_UNISTD_H
 #include <unistd.h>
-#endif
 #endif
 
 #include "lsh-keygen.c.x"

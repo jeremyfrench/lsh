@@ -1,5 +1,13 @@
 2001-01-15  Niels Möller  <nisse@ehand.com>
 
+	* misc/bootstrap.sh: Fixed comment.
+
+	* src/argp/argp.h: #define PRINTF_STYLE, and use it instead of
+	using __attribute__ directly.
+
+	* src/lsh-keygen.c (main_argp_parser): Don't use optarg (reported
+	by jps).
+
 	* Added Markus Friedl's sftp-server.c to contrib, for some random
 	hacking. 
 
