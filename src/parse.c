@@ -4,6 +4,7 @@
 
 #include "parse.h"
 #include "xalloc.h"
+#include "format.h"
 
 void simple_buffer_init(struct simple_buffer *buffer,
 			UINT32 capacity, UINT8 *data)
@@ -44,6 +45,27 @@ int parse_string(struct simple_buffer *buffer,
   return 1;
 }
 
+int parse_octets(struct simple_buffer *buffer,
+		 UINT32 length, UINT8 *start)
+{
+  if (LEFT < length)
+    return 0;
+  memcpy(start, HERE, length);
+  ADVANCE(length);
+  return 1;
+}
+
+struct lsh_string *parse_string_copy(struct simple_buffer *buffer)
+{
+  UINT32 length;
+  UINT8 *start;
+  
+  if (!parse_string(buffer, &length, &data))
+    return NULL;
+
+  return ssh_format("%ls", length, start);
+}
+
 /* Initializes subbuffer to parse a string from buffer */
 int parse_sub_buffer(struct simple_buffer *buffer,
 		     struct simple_buffer *subbuffer)
@@ -77,7 +99,7 @@ int parse_boolean(struct simple_buffer *buffer, int *result)
   return 1;
 }
 
-int parse_bignum(struct simple_buffer *buffer, bignum result)
+int parse_bignum(struct simple_buffer *buffer, mpz_t result)
 {
   UINT32 length;
   UINT8 *digits;
