@@ -6,7 +6,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998, 1999, 2000, Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -27,6 +27,7 @@
 
 #include "werror.h"
 
+#include "arcfour.h"
 #include "crypto.h"
 #include "xalloc.h"
 
@@ -59,7 +60,8 @@
        (buffer space UINT8)))
 */
 
-static void do_poor_random(struct randomness *r, UINT32 length, UINT8 *dst)
+static void
+do_poor_random(struct randomness *r, UINT32 length, UINT8 *dst)
 {
   CAST(poor_random, self, r);
 
@@ -88,8 +90,9 @@ static void do_poor_random(struct randomness *r, UINT32 length, UINT8 *dst)
     }
 }
 
-struct randomness *make_poor_random(struct hash_algorithm *hash,
-				    struct lsh_string *init)
+struct randomness *
+make_poor_random(struct hash_algorithm *hash,
+		 struct lsh_string *init)
 {
   NEW(poor_random, self);
   time_t now = time(NULL); 
@@ -124,7 +127,8 @@ struct randomness *make_poor_random(struct hash_algorithm *hash,
        (fd . int)))
 */
 
-static void do_device_random(struct randomness *r, UINT32 length, UINT8 *dst)
+static void
+do_device_random(struct randomness *r, UINT32 length, UINT8 *dst)
 {
   CAST(device_random, self, r);
 
@@ -160,7 +164,8 @@ static void do_device_random(struct randomness *r, UINT32 length, UINT8 *dst)
  * more security, as /dev/urandom should degenerate to a fairly strong
  * pseudorandom generator when it runs out of entropy. */
 
-struct randomness *make_device_random(const char *device)
+struct randomness *
+make_device_random(const char *device)
 {
   int fd = open(device, O_RDONLY);
 
@@ -184,7 +189,89 @@ struct randomness *make_device_random(const char *device)
     }
 }
 
-struct randomness *make_reasonably_random(void)
+/* GABA:
+   (class
+     (name arcfour_random)
+     (super randomness)
+     (vars
+       ; The pool that is used to create the output bytes
+       (pool . "struct arcfour_ctx")
+
+       ; Object that gets randomness from the environment
+       (poller object random_poll)
+
+       ; Accumulate randomness here before it is added to the main
+       ; pool
+       (staging_area object hash_instance)
+       (staging_count . unsigned)))
+*/
+
+#define STAGE_THRESHOLD 100
+
+static void
+do_arcfour_random(struct randomness *r, UINT32 length, UINT8 *dst)
+{
+  CAST(arcfour_random, self, r);
+  
+  self->staging_count += RANDOM_POLL_FAST(self->poller, self->staging_area);
+
+  if (self->staging_count > STAGE_THRESHOLD)
+    {
+      /* Pour the collected randomness into the pool */
+      UINT8 *buf = alloca(self->staging_area->hash_size);
+
+      verbose("do_arcfour_random: Pouring staging area into pool.\n");
+      HASH_DIGEST(self->staging_area, buf);
+      arcfour_update_key(&self->pool, self->staging_area->hash_size, buf);
+
+      self->staging_count = 0;
+    }
+
+  arcfour_stream(&self->pool, length, dst);
+}
+
+static void
+do_arcfour_random_slow(struct randomness *r, UINT32 length, UINT8 *dst)
+{
+  CAST(arcfour_random, self, r);
+
+  unsigned count = RANDOM_POLL_SLOW(self->poller, self->staging_area);
+
+  if (count < STAGE_THRESHOLD)
+    werror("Could not get enough entropy from the environment.\n");
+
+  {
+    /* Initialize the pool. */
+    UINT8 *buf = alloca(self->staging_area->hash_size);
+    
+    verbose("do_arcfour_random_slow: Initalizing randomness pool.\n");
+    HASH_DIGEST(self->staging_area, buf);
+    arcfour_set_key(&self->pool, self->staging_area->hash_size, buf);
+
+    self->staging_count = 0;
+  }
+  
+  self->super.random = do_arcfour_random;
+
+  arcfour_stream(&self->pool, length, dst);
+}
+
+struct randomness *
+make_arcfour_random(struct random_poll *poller,
+		    struct hash_algorithm *hash)
+{
+  NEW(arcfour_random, self);
+  self->super.random = do_arcfour_random_slow;
+
+  self->poller = poller;
+  self->staging_area = MAKE_HASH(hash);
+  self->staging_count = 0;
+  
+  return &self->super;
+}
+		    
+struct randomness *
+make_reasonably_random(void)
 {
   struct randomness *r = make_device_random("/dev/urandom");
 
@@ -198,3 +285,4 @@ struct randomness *make_reasonably_random(void)
 
   return r;
 }
+
