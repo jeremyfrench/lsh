@@ -160,12 +160,6 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
        (stdout_file . "const char *")
        (stderr_file . "const char *")
 
-       ; fork() extra processes for handling stdio file-descriptors,
-       ; to avoid setting them in non-blocking mode.
-       (stdin_fork . int)
-       (stdout_fork . int)
-       (stderr_fork . int)
-
        ; True if the process's stdin or pty (respectively) has been used. 
        (used_stdin . int)
        (used_pty . int)
