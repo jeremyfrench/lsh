@@ -361,7 +361,7 @@ struct command *make_parallell_progn(struct object_list *body)
   }
 }
 
-COMMAND_SIMPLE(progn_command)
+DEFINE_COMMAND_SIMPLE(progn_command, a)
 {
   CAST(object_list, body, a);
   return LIST_LENGTH(body) ? &make_parallell_progn(body)->super
