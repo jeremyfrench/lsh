@@ -20,7 +20,7 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 	lsh-cat-test lshg-1-test lshg-cat-test lshg-cat-2-test \
 	tcpip-local-test tcpip-local-in-use-test tcpip-remote-test \
 	socks5-test socks4-test \
-	lshg-tcpip-local-test ssh1-fallback-test \
+	lshg-tcpip-local-test \
 	rapid7-lsh-test rapid7-lshd-test login-auth-test lshd-no-auth-test \
 	lshd-random-input-test
 
@@ -38,7 +38,7 @@ include .dist_rapid7
 
 EXTRA_DIST = testutils.h $(TS_SH) \
 	functions.sh run-tests setup-env key-1.private key-2.private \
-	fake-sshd1 $(dist_rapid7)
+	$(dist_rapid7)
 
 # FIXME: Move into some tmp directory.
 CLEANFILES = foo foo.pub test-seed-1 test-seed-2 test.out1 test.out2
