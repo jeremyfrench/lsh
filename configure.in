@@ -92,6 +92,14 @@ if test x$enable_idea = xyes ; then
   AC_DEFINE(WITH_IDEA)
 fi
 
+AC_ARG_ENABLE(srp,
+  [--disable-srp    Disable the (experimental) support for SRP],,
+  [enable_srp=yes])
+
+if test x$enable_srp = xyes ; then
+  AC_DEFINE(WITH_SRP)
+fi
+
 AC_ARG_ENABLE(datafellows_workarounds,
   [--disable-datafellows-workarounds    Disable bug-compatibility with SSH Inc's clients and servers],,
   [enable_datafellows_workarounds=yes])
@@ -234,11 +242,16 @@ AC_CHECK_HEADERS(argp.h)
 AC_CHECK_HEADERS(utmp.h, [have_utmp_h=yes], [have_utmp_h=no])
 
 if test x$have_utmp_h = xyes; then
-  AC_CHECK_MEMBER([#include <utmp.h>], [utmp], [ut_host])
-  AC_CHECK_MEMBER([#include <utmp.h>], [utmp], [ut_name])
-  AC_CHECK_MEMBER([#include <utmp.h>], [utmp], [ut_user])
-  AC_CHECK_MEMBER([#include <utmp.h>], [utmp], [ut_addr])
-  AC_CHECK_MEMBER([#include <utmp.h>], [utmp], [ut_addr_v6])
+  AC_CHECK_MEMBER([#include <sys/types.h>
+#include <utmp.h>], [utmp], [ut_host])
+  AC_CHECK_MEMBER([#include <sys/types.h>
+#include <utmp.h>], [utmp], [ut_name])
+  AC_CHECK_MEMBER([#include <sys/types.h>
+#include <utmp.h>], [utmp], [ut_user])
+  AC_CHECK_MEMBER([#include <sys/types.h>
+#include <utmp.h>], [utmp], [ut_addr])
+  AC_CHECK_MEMBER([#include <sys/types.h>
+#include <utmp.h>], [utmp], [ut_addr_v6])
 fi
 
 AC_CHECK_HEADERS(utmpx.h)
