@@ -1,3 +1,14 @@
+2001-10-30  Niels Möller  <nisse@ehand.com>
+
+	* src/channel_forward.c (do_channel_forward_eof): Don't call
+	shutdown(), use close_fd_write instead.
+
+	* src/io.c (do_write_callback): Use close_fd_write if buffer is
+	closed and becomes empty.
+	(close_fd_write): New function.
+
+	* src/rsa.c: Comment fixes.
+
 2001-10-29  Niels Möller  <nisse@ehand.com>
 
 	* src/testsuite/Makefile.am (TS_MORE_SH): Added lshg-1-test.
