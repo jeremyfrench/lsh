@@ -548,7 +548,7 @@ spki_sexp_to_tag(struct sexp *e,
 	  return NULL;
 	}
       
-      if (sexp_check_type(e, ATOM_STAR, &i))
+      if ((i = sexp_check_type(e, ATOM_STAR)))
 	{
 	  struct sexp *magic = SEXP_GET(i);
 	  
@@ -621,7 +621,7 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
   if (!e)
     return NULL;
 
-  if (sexp_check_type(e, ATOM_PROPAGATE, &j))
+  if ((j = sexp_check_type(e, ATOM_PROPAGATE)))
     {
       if (SEXP_GET(j))
 	{
@@ -633,7 +633,7 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
       e = SEXP_GET(i);
     }
 
-  if (sexp_check_type(e, ATOM_TAG, &j))
+  if ((j = sexp_check_type(e, ATOM_TAG)))
     {
       struct sexp *tag = SEXP_GET(j);
       SEXP_NEXT(j);
@@ -677,23 +677,25 @@ spki_add_acl(struct spki_context *ctx,
   struct sexp_iterator *i;
   int res = 1;
   
-  if (!sexp_check_type(e, ATOM_ACL, &i))
+  if (!(i = sexp_check_type(e, ATOM_ACL)))
     {
       werror("spki_read_acls: Invalid acl\n");
       return 0;
     }
 
   /* FIXME: Accept at least (version "0") */
+#if 0
   if (sexp_check_type(SEXP_GET(i), ATOM_VERSION, NULL))
     {
       werror("spki_read_acls: Unsupported acl version\n");
       return 0;
     }
+#endif
   
   for (; (e = SEXP_GET(i)); SEXP_NEXT(i))
     {
       struct sexp_iterator *j;
-      if (sexp_check_type(e, ATOM_ENTRY, &j))
+      if ((j = sexp_check_type(e, ATOM_ENTRY)))
 	{
 	  struct spki_5_tuple *acl = spki_acl_entry_to_5_tuple(ctx, j);
 	  if (acl)
