@@ -28,8 +28,11 @@
 #include "dsa.h"
 #include "format.h"
 #include "io_commands.h"
+#include "interact.h"
+#if 0
 /* For read_password() */
 #include "password.h"
+#endif
 #include "rsa.h"
 #include "sexp_commands.h"
 #include "spki_commands.h"
@@ -93,6 +96,8 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        ; Base filename
        (file string)
 
+       (tty object interact)
+       
        (label string)
        (style . sexp_argp_state)
        (passphrase string)
@@ -111,7 +116,10 @@ make_lsh_writekey_options(void)
 {
   NEW(lsh_writekey_options, self);
   self->file = NULL;
-  
+
+  /* We don't need window change tracking. */
+  self->tty = make_unix_interact(NULL);
+    
   self->label = NULL;
   self->style = -1;
 
@@ -221,11 +229,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      struct lsh_string *pw;
 	      struct lsh_string *again;
 
-	      pw = read_password(500, ssh_format("Enter new passphrase: "), 1);
+	      pw = INTERACT_READ_PASSWORD(self->tty, 500,
+					  ssh_format("Enter new passphrase: "), 1);
 	      if (!pw)
 		argp_failure(state, EXIT_FAILURE, 0, "Aborted.");
 
-	      again = read_password(500, ssh_format("Again: "), 1);
+	      again = INTERACT_READ_PASSWORD(self->tty, 500,
+					     ssh_format("Again: "), 1);
 	      if (!again)
 		argp_failure(state, EXIT_FAILURE, 0, "Aborted.");
 
@@ -233,7 +243,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		self->passphrase = pw;
 	      else
 		lsh_string_free(pw);
-
+		  
 	      lsh_string_free(again);
 	    }
 	}
