@@ -34,6 +34,7 @@
 #include "publickey_crypto.h"
 #include "randomness.h"
 #include "sexp.h"
+#include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -49,6 +50,11 @@
 #include "lsh_keygen.c.x"
 
 /* Option parsing */
+
+const char *argp_program_version
+= "lsh_keygen-" VERSION;
+
+const char *argp_program_bug_address = BUG_ADDRESS;
 
 /* GABA:
    (class
