@@ -1,3 +1,10 @@
+2001-02-04  Niels Möller  <nisse@lysator.liu.se>
+
+	* Released lsh-1.1.6.
+
+	* src/ssh-conv (SSH_CONV): Got rid of the bash:isms "if !" and
+	"&>".
+
 2001-02-04  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* doc/lsh.texinfo (Action options): Edited the description of the
