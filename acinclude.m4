@@ -383,6 +383,11 @@ AH_BOTTOM(
 # else
 #  if HAVE_DECL__SYS_SIGLIST
 #   define STRSIGNAL(x) (_sys_siglist[x])
+#  else
+#   define STRSIGNAL(x) "Unknown signal"
+#   if __GNUC__
+#    warning Using dummy STRSIGNAL
+#   endif
 #  endif
 # endif
 #endif /* !HAVE_STRSIGNAL */
