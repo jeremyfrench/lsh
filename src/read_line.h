@@ -14,8 +14,8 @@
 struct line_handler;
 
 typedef (struct read_handler *line_handler_f)(struct line_handler *closure,
-					    UINT32 length,
-					    UINT8 *line);
+					      UINT32 length,
+					      UINT8 *line);
 struct line_handler
 {
   line_handler_f handler;
