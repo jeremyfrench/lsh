@@ -83,6 +83,9 @@
 static int debug_flag = 0;
 
 static void
+debug(const char *format, ...) PRINTF_STYLE(1,2);
+
+static void
 debug(const char *format, ...)
 {
   if (debug_flag)
@@ -340,7 +343,7 @@ sftp_get_handle(struct sftp_ctx *ctx, handle_t *handle)
   UINT32 length;
   UINT32 value;
   
-  if ((sftp_get_uint32(ctx->i, &length))
+  if (sftp_get_uint32(ctx->i, &length)
       && (length == 4)
       && sftp_get_uint32(ctx->i, &value)
       && sftp_handle_used(ctx, value))
@@ -852,6 +855,8 @@ sftp_process_open(struct sftp_ctx *ctx)
       if (!sftp_new_handle(ctx, HANDLE_FILE, &handle))
 	return sftp_send_status(ctx, SSH_FX_FAILURE);
 
+      DEBUG (("sftp_process_open: handle = %d, fd = %d\n", handle, fd));
+      
       HANDLE_FD(ctx, handle) = fd;
       sftp_send_handle(ctx, handle);
       return 1;
@@ -939,7 +944,7 @@ sftp_process_read(struct sftp_ctx *ctx)
       int res;
       UINT32 index;
 
-      DEBUG (("sftp_process_read: fd = %d\n"));
+      DEBUG (("sftp_process_read: fd = %d\n", fd));
       
       /* FIXME: Should we really sanity check the length? */
       if (length > SFTP_MAX_SIZE)
@@ -951,7 +956,7 @@ sftp_process_read(struct sftp_ctx *ctx)
 	{
 	  UINT8 buf[BUFFER_SIZE];
 	  do
-	    res = pread(fd, buf, length, offset);
+	    res = pread(fd, buf, sizeof(buf), offset);
 	  while ( (res < 0) && (errno == EINTR) );
 
 	  DEBUG (("sftp_process_read: read => %d\n", res));
