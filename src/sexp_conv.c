@@ -86,6 +86,7 @@ static int lookup_sexp_format(const char *name)
          (write (read in)))))
 */
 
+#if 0
 static void
 do_exc_sexp_conv_io_handler(struct exception_handler *self,
 			    const struct exception *x)
@@ -118,8 +119,9 @@ do_exc_sexp_conv_io_handler(struct exception_handler *self,
 
 static struct exception_handler exc_io_handler
 = STATIC_EXCEPTION_HANDLER(do_exc_sexp_conv_io_handler, &default_exception_handler);
+#endif
 
-/* GABA:
+/* ;; GABA:
    (class
      (name exc_sexp_conv_handler)
      (super exception_handler)
@@ -128,28 +130,37 @@ static struct exception_handler exc_io_handler
 */
 
 static void
-do_exc_sexp_conv_handler(struct exception_handler *s,
+do_exc_sexp_conv_handler(struct exception_handler *self,
 			 const struct exception *x)
 {
-  CAST(exc_sexp_conv_handler, self, s);
+  /* CAST(exc_sexp_conv_handler, self, s); */
   
   switch (x->type)
     {
     case EXC_SEXP_SYNTAX:
       werror("Invalid SEXP input.\n");
       exit_code = EXIT_FAILURE;
-      break;
+      /* Fall through */
     case EXC_SEXP_EOF:
       /* Normal termination */
+      EXCEPTION_RAISE(self->parent, &finish_read_exception);
       break;
+    case EXC_IO_WRITE:
+    case EXC_IO_READ:
+      {
+	CAST(io_exception, e, x);
+	exit_code = EXIT_FAILURE;
+	werror("sexp_conv: %z, (errno = %i)\n", x->msg, e->error);
+	break;
+      }
     default:
       exit_code = EXIT_FAILURE;
-      EXCEPTION_RAISE(self->super.parent, x);
+      EXCEPTION_RAISE(self->parent, x);
       return;
     }
-  close_fd(&self->in->super, 0);
 }
 
+#if 0
 static struct exception_handler *
 make_exc_sexp_conv_handler(struct io_fd *in)
 {
@@ -160,6 +171,7 @@ make_exc_sexp_conv_handler(struct io_fd *in)
 
   return &self->super;
 }
+#endif
 
 #define SEXP_BUFFER_SIZE 1024
 
@@ -169,6 +181,8 @@ int main(int argc, char **argv)
   int input_format = SEXP_ADVANCED; 
   int output_format = SEXP_ADVANCED;
 
+  struct exception_handler *e;
+  
   NEW(io_backend, backend);
 
   for (;;)
@@ -225,23 +239,28 @@ int main(int argc, char **argv)
   
   init_backend(backend);
 
+  /* Patch the parent pointer later */
+  e = make_exception_handler(do_exc_sexp_conv_handler, NULL);
+  
   {
     CAST_SUBTYPE(command, work,
 		 make_sexp_conv(
 		   make_read_sexp_command(input_format, 1),
-		   make_write_sexp_to(output_format,
+		   make_print_sexp_to(output_format,
 				      &(io_write(make_io_fd(backend,
 							    STDOUT_FILENO,
-							    &exc_io_handler),
+							    e),
 						 SEXP_BUFFER_SIZE,
 						 NULL)
 					->write_buffer->super))));
 
-    struct io_fd *in = make_io_fd(backend, STDIN_FILENO, &exc_io_handler);
-      
+    struct io_fd *in = make_io_fd(backend, STDIN_FILENO, e);
+
+    /* Fixing the exception handler creates a circularity */
+    e->parent = make_exc_finish_read_handler(&in->super, &default_exception_handler);
+    
     COMMAND_CALL(work, in,
-		 &discard_continuation,
-		 make_exc_sexp_conv_handler(in));
+		 &discard_continuation, e);
   }
   io_run(backend);
 
