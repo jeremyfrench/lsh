@@ -853,42 +853,6 @@ make_listen_callback(struct io_backend *backend,
   return &self->super;
 }
 
-#if 0
-
-static void
-do_listen_callback_no_peer(struct io_callback *s,
-			   struct lsh_fd *fd)
-{
-  CAST(io_listen_callback, self, s);
-
-  int conn;
-
-  conn = accept(fd->fd,
-		(struct sockaddr *) &peer, &addr_len);
-  if (conn < 0)
-    {
-      werror("io.c: accept failed, %z", STRERROR(errno));
-      return;
-    }
-  trace("io.c: accept on fd %i\n", conn);
-  COMMAND_RETURN(self->c, make_lsh_fd(self->backend,
-				      conn, "accepted socket",
-				      self->e));
-}
-
-struct io_callback *
-make_listen_callback_no_peer(struct io_backend *backend,
-			     struct command_continuation *c)
-{
-  NEW(io_listen_callback, self);
-  self->super.f = do_listen_callback_no_peer;
-  self->backend = backend;
-  self->c = c;
-  
-  return &self->super;
-}
-#endif
-
 /* Connect callback */
 
 /* GABA:
