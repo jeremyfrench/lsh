@@ -146,6 +146,84 @@ parse_select(const char *arg)
   return NULL;
 }
 
+static struct sexp *
+process_replace(struct sexp *expr,
+		const struct lsh_string *before,
+		const struct lsh_string *after)
+{
+#if 0
+  trace("sexp-conv: %fS\n", sexp_format(expr, SEXP_ADVANCED, 0));
+#endif
+  
+  if (sexp_nullp(expr))
+    return expr;
+
+  else if (sexp_atomp(expr))
+    {
+      if (sexp_eq(expr, before->length, before->data))
+	return sexp_s(NULL, lsh_string_dup(after));
+      else
+	return expr;
+    }
+  else
+    {
+      struct sexp_iterator *iter = SEXP_ITER(expr);
+      unsigned length = SEXP_LEFT(iter);
+      struct object_list *n = alloc_object_list(length);
+      unsigned i;
+
+      for (i = 0; i<length; i++, SEXP_NEXT(iter))
+	LIST(n)[i] = &process_replace(SEXP_GET(iter), before, after)->super;
+
+      return sexp_v(n);
+    }
+}
+
+static int
+parse_replace(const char *expr,
+	      struct lsh_string **before,
+	      struct lsh_string **after)
+{
+  unsigned int separator = expr[0];
+  const char *s1;
+  const char *s2;
+  unsigned l1;
+  unsigned l2;
+
+  debug("parse_replace: %z\n", expr);
+  
+  if (!separator)
+    return 0;
+  
+  s1 = strchr(expr + 1, separator);
+  if (!s1)
+    return 0;
+
+  debug("parse_replace: %z\n", s1);
+  
+  l1 = s1 - expr - 1;
+  if (!l1)
+    return 0;
+  
+  s2 = strchr(s1 + 1, separator);
+  if (!s2 || s2[1])
+    return 0;
+
+  debug("parse_replace: %z\n", s2);
+  
+  l2 = s2 - (s1 + 1);
+  if (!l2)
+    return 0;
+
+  debug("parse_replace: l1 = %i, l2 = %i\n", l1, l2);
+  
+  *before = ssh_format("%ls", l1, expr + 1);
+  *after = ssh_format("%ls", l2, s1 + 1);
+
+  return 1;
+}
+
+
 /* Option parsing */
 
 const char *argp_program_version
@@ -158,6 +236,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_RAW_HASH 0x202
 #define OPT_ONCE 0x203
 #define OPT_SELECT 0x204
+#define OPT_REPLACE 0x205
 
 static const struct argp_option
 main_options[] =
@@ -168,7 +247,11 @@ main_options[] =
     "representation of the object, in hexadecimal.", 0 },
   { "hash", OPT_HASH, "Algorithm", 0, "Hash algorithm (default sha1).", 0 },
   { "select", OPT_SELECT, "Operator", 0, "Select a subexpression "
-    "(e.g \"caddr\") for processing.", 0 },
+    "(e.g `caddr') for processing.", 0 },
+  { "replace", OPT_REPLACE, "Substitution", 0,
+    "An expression `/before/after/' replaces all occurances of the atom "
+    "`before' with `after'. The delimiter `/' can be any single character.",
+    0 },
   { "once", OPT_ONCE, NULL, 0, "Process at most one s-expression.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
@@ -188,7 +271,10 @@ main_options[] =
     (algorithms object alist)
     (hash object hash_algorithm)
     (hash_name . int)
-    (select object int_list)))
+    (select object int_list)
+    ; For --replace
+    (before string)
+    (after string)))
 */
 
 static struct sexp_conv_options *
@@ -200,6 +286,7 @@ make_options(void)
   self->once = 0;
   self->mode = MODE_VANILLA;
   self->select = NULL;
+  self->before = self->after = NULL;
   
   self->algorithms = make_alist(2,
 				ATOM_MD5, &crypto_md5_algorithm,
@@ -265,6 +352,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		   "ones are ca[ad]*r).", arg);
       break;
 
+    case OPT_REPLACE:
+      if (!parse_replace(arg, &self->before, &self->after))
+	argp_error(state, "Invalid substitution expression '%s'.", arg);
+      break;
+      
     case OPT_ONCE:
       self->once = 1;
       break;
@@ -296,6 +388,11 @@ int main(int argc, char **argv)
   struct lsh_string *input;
   struct lsh_string *output;
   struct simple_buffer buffer;
+
+  /* This is needed to get the callback installed by the gc to work.
+   * Perhaps it's better to make io_callback be a noop if i/o has not
+   * been initialized? */
+  io_init();
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
@@ -325,7 +422,9 @@ int main(int argc, char **argv)
 	    return EXIT_FAILURE;
 	}
 
-      /* FIXME: Perhaps move the addition of \n to sexp_format? */
+      if (options->before)
+	expr = process_replace(expr, options->before, options->after);
+      
       switch (options->mode)
 	{
 	case MODE_VANILLA:
@@ -339,9 +438,6 @@ int main(int argc, char **argv)
 					      expr),
 			       options->output,
 			       0);
-
-	  if (options->output != SEXP_CANONICAL)
-	    output = ssh_format("%lfS\n", output);
 	  
 	  break;
 	case MODE_RAW_HASH:
@@ -372,7 +468,7 @@ int main(int argc, char **argv)
 
   lsh_string_free(input);
   
-  gc_final();
+  io_final();
   
   return EXIT_SUCCESS;
 }
