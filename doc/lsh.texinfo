@@ -535,6 +535,27 @@ arcfour.
 @comment  node-name,  next,  previous,  up
 @section Host authentication options
 
+As described earlier @pxref{Threats}, proper authentication of the
+remote host is crucial to protect the connection against
+Man-in-the-middle attacks. By default, @code{lsh} verifies the server's
+claimed host key against the @dfn{Acess Control Lists} in
+@file{~/.lsh/known_hosts}. If the remote host cannot be authenticated,
+the connection is dropped.
+
+The options that change this behaviour are
+
+@table @option
+@item --host-db
+Specifies the location of the @acronym{ACL} file.
+
+@item --sloppy-host-authentication
+@item --strict-host-authentication
+@item --capture-to
+
+@end table
+
+
+
 @node Userauth options, Action options, Hostauth options, Invoking lsh
 @comment  node-name,  next,  previous,  up
 @section User authentication options

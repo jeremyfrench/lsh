@@ -301,10 +301,6 @@ See if we can do without the "reason" argument to close callbacks.
 
 Current bugs (Bazsi):
 
-I've encountered a bug in remote (-R) forwarding in lshd. My proxy didn't
-handle forwarded-tcpip channels, and refused to open such a channel. lshd
-crashes if this channel cannot be opened with an unhandled exception.
-
 * 0.2.6 doesn't remember the listening socket of an -L option as a resource,
 so when the connection is closed (logout from the shell), lsh hangs on the
 listening socket, and connecting to it results in a segfault (most
@@ -315,15 +311,12 @@ probably because the connection struct had been freed by the gc)
 proxy patches I made this possible adding a struct exception_handler **e to
 channel_request_command's format method.
 
-/* FIXME: The new fd object should be added to the same resource list
- * as the old one. Perhaps the conenction code in io.c should reuse
- * the fd object in some way? */
-static void
-do_connect_continue(struct fd_callback **s, int fd)
-
 static void do_free_zstream(z_stream *z)
 {
   /* FIXME: Let opaque be a pointer to a struct, as it is not portable
    * to cast between void * and a function pointer. */
   /* Call deflateEnd() or inflateEnd(). But which? We use the opague
    * pointer, as we don't use that for anything else. */
+
+Try to unify the handling of queued channel requests and global
+requests. 
