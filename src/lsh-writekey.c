@@ -303,7 +303,7 @@ main_argp =
   NULL, NULL
 };
 
-COMMAND_SIMPLE(lsh_writekey_print_public)
+DEFINE_COMMAND_SIMPLE(lsh_writekey_print_public, a)
 {
   CAST(lsh_writekey_options, options, a);
 
@@ -311,7 +311,7 @@ COMMAND_SIMPLE(lsh_writekey_print_public)
     ((options->style > 0) ? options->style : SEXP_TRANSPORT)->super.super;
 }
 
-COMMAND_SIMPLE(lsh_writekey_print_private)
+DEFINE_COMMAND_SIMPLE(lsh_writekey_print_private, a)
 {
   CAST(lsh_writekey_options, options, a);
 
@@ -319,13 +319,13 @@ COMMAND_SIMPLE(lsh_writekey_print_private)
     ((options->style > 0) ? options->style : SEXP_CANONICAL)->super.super;
 }
 
-COMMAND_SIMPLE(lsh_writekey_options2algorithms)
+DEFINE_COMMAND_SIMPLE(lsh_writekey_options2algorithms, a)
 {
   CAST(lsh_writekey_options, options, a);
   return &options->signature_algorithms->super;
 }
 
-COMMAND_SIMPLE(lsh_writekey_options2transform)
+DEFINE_COMMAND_SIMPLE(lsh_writekey_options2transform, a)
 {
   CAST(lsh_writekey_options, options, a);
   if (!options->crypto)
@@ -349,7 +349,7 @@ COMMAND_SIMPLE(lsh_writekey_options2transform)
     }
 }
 
-COMMAND_SIMPLE(lsh_writekey_options2public_file)
+DEFINE_COMMAND_SIMPLE(lsh_writekey_options2public_file, a)
 {
   CAST(lsh_writekey_options, options, a);
   struct lsh_string *public = ssh_cformat("%lS.pub", options->file);
@@ -361,7 +361,7 @@ COMMAND_SIMPLE(lsh_writekey_options2public_file)
 			     BLOCK_SIZE)->super;
 }
 
-COMMAND_SIMPLE(lsh_writekey_options2private_file)
+DEFINE_COMMAND_SIMPLE(lsh_writekey_options2private_file, a)
 {
   CAST(lsh_writekey_options, options, a);
   return
