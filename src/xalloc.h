@@ -29,8 +29,9 @@
 #include <stdlib.h>
 #include "lsh_types.h"
 
+#if 0
 void *xalloc(size_t size);
-#define NEW(x) ((x) = xalloc(sizeof(*(x))))
+#endif
 
 /* Allocation */
 
@@ -50,21 +51,36 @@ void *xalloc(size_t size);
 struct lsh_string *lsh_string_alloc(UINT32 size);
 void lsh_string_free(struct lsh_string *packet);
 
+void *lsh_object_alloc(size_t size);
+void lsh_object_free(void *p);
+
+void *lsh_space_alloc(size_t size);
+void lsh_space_free(void *p);
+
+
 #ifdef DEBUG_ALLOC
 
 void *debug_malloc(size_t size);
 void debug_free(void *m);
-void debug_check_object(void *m, UINT32 size);
+void lsh_object_check(void *m, size_t size);
+void lsh_object_check_subtype(void *m, size_t size);
 
 #define lsh_free debug_free
 #define lsh_malloc debug_malloc
-#define MDEBUG(x) debug_check_object(x, sizeof(*(x)))
+#define MDEBUG(x) lsh_object_check((x), sizeof(*(x)))
+#define MDEBUG_SUBTYPE(x) lsh_object_check_subtype((x), sizeof(*(x)))
 
 #else   /* !DEBUG_ALLOC */
 
 #define lsh_free free
 #define lsh_malloc malloc
 #define MDEBUG(x)
+#define MDEBUG_SUBTYPE(x)
+
 #endif  /* !DEBUG_ALLOC */
+
+#define NEW(x) ((x) = lsh_object_alloc(sizeof(*(x))))
+#define NEW_SPACE(x) ((x) = lsh_space_alloc(sizeof(*(x))))
+
 
 #endif /* LSH_XALLOC_H_INCLUDED */
