@@ -66,34 +66,19 @@ spki_principal_add_key(struct spki_acl_db *db,
     }
 
   principal->key_length = key_length;
-
-  if (!(principal->md5 = MALLOC(db, MD5_DIGEST_SIZE)))
-    {
-      FREE(db, principal->key);
-      FREE(db, principal);
-      return NULL;
-    }
   
-  if (!(principal->sha1 = MALLOC(db, SHA1_DIGEST_SIZE)))
-    {
-      FREE(db, principal->md5);
-      FREE(db, principal->key);
-      FREE(db, principal);
-      return NULL;
-    }
-
   {
     struct sha1_ctx ctx;
     sha1_init(&ctx);
     sha1_update(&ctx, key_length, key);
-    sha1_digest(&ctx, SHA1_DIGEST_SIZE, principal->sha1);
+    sha1_digest(&ctx, sizeof(principal->sha1), principal->sha1);
   }
 
   {
     struct md5_ctx ctx;
     md5_init(&ctx);
     md5_update(&ctx, key_length, key);
-    md5_digest(&ctx, MD5_DIGEST_SIZE, principal->md5);
+    md5_digest(&ctx, sizeof(principal->md5), principal->md5);
   }
 
   principal->next = db->first_principal;
@@ -117,6 +102,29 @@ spki_principal_by_key(struct spki_acl_db *db,
   return NULL;
 }
 
+struct spki_principal *
+spki_principal_by_md5(struct spki_acl_db *db, const uint8_t *digest)
+{
+  struct spki_principal *s;
+
+  for (s = db->first_principal; s; s = s->next)
+    if (!memcmp(s->md5, digest, sizeof(s->md5)))
+      return s;
+  
+  return NULL;
+}
+
+struct spki_principal *
+spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest)
+{
+  struct spki_principal *s;
+
+  for (s = db->first_principal; s; s = s->next)
+    if (!memcmp(s->sha1, digest, sizeof(s->sha1)))
+      return s;
+  
+  return NULL;
+}
 
 
 enum spki_type
@@ -167,8 +175,65 @@ spki_check_type(struct sexp_iterator *i, enum spki_type type)
 static struct spki_principal *
 parse_principal(struct spki_acl_db *db, struct sexp_iterator *i)
 {
-  /* Not implemented */
-  abort();
+  struct sexp_iterator before = *i;
+  struct spki_principal *principal;
+
+  switch (spki_get_type(i))
+    {
+    default:
+      return NULL;
+
+    case SPKI_TYPE_PUBLIC_KEY:
+      {
+	const uint8_t *key;
+	unsigned key_length;
+	
+	*i = before;
+	key = sexp_iterator_subexpr(i, &key_length);
+
+	if (!key || i->type != SEXP_END)
+	  return NULL;
+
+	principal = spki_principal_by_key(db, key_length, key);
+	if (!principal)
+	  principal = spki_principal_add_key(db, key_length, key);
+
+	return principal;
+      }
+    case SPKI_TYPE_HASH:
+      /* The key must be known already. */
+      switch (spki_get_type(i))
+	{
+	default:
+	  return NULL;
+	  
+	case SPKI_TYPE_MD5:
+	  if (i->type == SEXP_ATOM
+	      && !i->display
+	      && i->atom_length == MD5_DIGEST_SIZE)
+	    {
+	      principal = spki_principal_by_md5(db, i->atom);
+	    hash_done:
+	      if (principal
+		  && sexp_iterator_next(i)
+		  && i->type == SEXP_END
+		  && sexp_iterator_exit_list(i))
+		return principal;
+	    }
+	  break;
+
+	case SPKI_TYPE_SHA1:
+	  if (i->type == SEXP_ATOM
+	      && !i->display
+	      && i->atom_length == SHA1_DIGEST_SIZE)
+	    {
+	      principal = spki_principal_by_sha1(db, i->atom);
+	      goto hash_done;
+	    }
+	  break;
+	}
+      return NULL;
+    }
 }
 
 static struct spki_5_tuple *
