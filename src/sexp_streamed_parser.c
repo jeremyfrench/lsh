@@ -892,7 +892,7 @@ MAKE_PARSE_VALUE(advanced_sexp)
       return i + 1;
 
     case ';':  /* Comment */
-      *s = make_parse_comment(self->super.e, &self->super);
+      *s = make_parse_comment(self->super.e, &self->super.super);
       return i+1;
       
     default:

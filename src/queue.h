@@ -28,7 +28,6 @@
 
 #include "lsh.h"
 
-
 /* Layout taken from AmigaOS lists... The first node uses a prev
  * pointer that points to the queue's HEAD. The last node uses a next
  * pointer that points to the queue's TAIL field. The TAIL field is

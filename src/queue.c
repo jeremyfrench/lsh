@@ -25,6 +25,7 @@
 
 #include "queue.h"
 
+#include "list.h"
 #include "werror.h"
 #include "xalloc.h"
 

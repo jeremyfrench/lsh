@@ -286,3 +286,6 @@ file.
 
 Consider moving SPKI tuple-related functions to a separate file.
 
+With SPKI, consider whether or not we should require any specific
+order of subexpressions. The most central function for this is
+sexp_get_un. 

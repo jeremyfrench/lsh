@@ -1,3 +1,38 @@
+1999-11-28  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/server_authorization.c (do_key_lookup): Some
+	simplifications. Use make_ssh_dss_verifier().
+
+	* src/lshd.c (main): Don't pass any signature algorithm to
+	make_authorization_db().
+
+	* src/lsh.c (client_host_db): Use SPKI ACL:s for authentication.
+
+	* src/io.h: Removed forward declaration of lsh_fd.
+
+	* src/dsa.c (do_dsa_sign_spki): New function.
+	(do_dsa_verify_spki): New function.
+	(make_dsa_signer): Use s-expressions for keys.
+	(make_dsa_verifier): Use s-expressions for keys.
+	(make_ssh_dss_verifier): New function.
+	(ssh_dss_public_key): New function.
+
+	* src/connection.h: Removed forward declaration of ssh_connection;
+	it's now in the lsh.h.
+
+	* src/bignum.c, src/bignum.h: Fewer includes in the header file. 
+
+	* src/atoms.in: Added r and s (for spki-style dsa signatures). 
+
+	* src/atoms.c: Use const tables.
+
+	* src/abstract_crypto.h (signer, verifier, signature_algorithm):
+	Use s-expressions for keys and signatures.
+
+	* src/abstract_crypto.c (hash_string): New function.
+
+	* src/publickey_crypto.h: Include fewer files.
+
 1999-11-25  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/spki.h (spki_context): Added verifier argument to

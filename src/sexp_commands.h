@@ -26,6 +26,7 @@
 #ifndef SEXP_COMMANDS_H_INCLUDED
 #define SEXP_COMMANDS_H_INCLUDED
 
+#include "abstract_crypto.h"
 #include "abstract_io.h"
 #include "command.h"
 #include "sexp.h"

@@ -34,8 +34,6 @@
 
 #include "sexp_table.h"
 
-/* Forward declaration */
-struct sexp_iterator;
 
 #define GABA_DECLARE
 #include "sexp.h.x"
@@ -113,6 +111,7 @@ struct lsh_string *encode_base64(struct lsh_string *s,
 
 /* Creating sexps */
 
+/* FIXME: Rename this to sexp_s(d, c)? */
 /* Consumes its args (display may be NULL) */
 struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c);
 
