@@ -207,7 +207,7 @@ EXTRA_DIST = testutils.c testutils.h $(TS_SH) \
 	cdsa-cases/90.out   \
 	cdsa-cases/91.out
 
-CLEANFILES =
+DISTCLEANFILES = test.in
 
 all:
 	@echo make check to build testprograms.
