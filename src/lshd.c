@@ -659,8 +659,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	else if (self->with_loginauthmode)
 	  {
 	    const char *name;
-	    
-	    name = getenv(ENV_LOGNAME);
+
+	    USER_NAME_FROM_ENV(name);
 	    if (!name)
 	      argp_failure(state, EXIT_FAILURE, 0,
 			   "$LOGNAME not set in the environment.\n");

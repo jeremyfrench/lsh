@@ -199,7 +199,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	{
 	  if (!self->label)
 	    {
-	      const char *name = getenv(ENV_LOGNAME);
+	      const char *name;
+	      USER_NAME_FROM_ENV(name);
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 300
 #endif

@@ -540,7 +540,8 @@ init_client_options(struct client_options *self,
   self->port = NULL;
   self->target = NULL;
 
-  self->local_user = self->user = getenv(ENV_LOGNAME);
+  USER_NAME_FROM_ENV(self->user);
+  self->local_user = self->user;
 
   self->with_remote_peers = 0; 
   self->with_pty = -1;

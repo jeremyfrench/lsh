@@ -97,7 +97,7 @@ make_srp_gen_options(struct exception_handler *e)
   self->file = NULL;
   self->dest = NULL;
 
-  self->name = getenv(ENV_LOGNAME);
+  USER_NAME_FROM_ENV(self->name);
   self->passwd = NULL;
 
   /* We use this only for generating the salt. */
