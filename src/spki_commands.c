@@ -208,7 +208,7 @@ COMMAND_SIMPLE(spki_return_hostkeys)
 	   		;; Delay return until we actually get an exception
 			(return_hostkeys (prog1 add e)))
 	             (lambda (key)
-		       (add (spki_parse_private_key
+		       (add (sexp2keypair
 		               algorithms key)))
 		     file)))))
 */
@@ -283,7 +283,7 @@ COMMAND_SIMPLE(spki_return_userkeys)
 	   		;; Delay return until we actually get an exception
 			(return_userkeys (prog1 ctx e)))
 	             (lambda (key)
-		       (ctx (spki_parse_private_key
+		       (ctx (sexp2keypair
 		               algorithms key)))
 		     file)))))
 */
@@ -303,70 +303,3 @@ COMMAND_SIMPLE(spki_read_userkeys_command)
   
   return &make_spki_read_userkeys(algorithms)->super;
 }
-
-#if 0
-/* This class keeps track of the keypairs we have read, and it also
- * works as the exception handler for catching sexp-exceptions. */
-
-/* ;;GABA:
-   (class
-     (name user_key_context)
-     (super command)
-     (vars
-       (algorithms object alist)
-       (keys struct object_queue)))
-*/
-
-static void do_user_key_context(struct command *s,
-				struct lsh_object *a,
-				struct command_continuation *c,
-				struct exception_handler *e)
-{
-  CAST(user_key_context, self, s);
-  CAST_SUBTYPE(exception, exc, a);
-
-  switch(exc->type)
-    {
-    case SEXP_EOF:
-      COMMAND_RETURN(c, queue_to_list(&self->keys));
-      break;
-    default:
-      EXCEPTION_RAISE(e, exc);
-      break;
-    }
-}
-
-static void user_key_context_add(struct user_key_context *ctx, struct keypair *key)
-{
-  object_queue_add_tail(&ctx->keys, &key->super);
-  
-COMMAND_SIMPLE(make_user_key_context)
-{
-  CAST_SUBTYPE(alist, algorithms, a);
-
-  NEW(user_key_context, self);
-  self->super.call = do_user_key_context;
-  self->algorithms = algorithms;
-  object_queue_init(&self->keys);
-
-  return &self->super.super;
-}
- 
-/* ;; GABA:
-   (expr
-     (name spki_read_private_keys)
-     (params
-       (algorithms object alist)
-       (add_key))
-     (expr
-       (lambda (file)
-         (catch_sexp ctx (add_key ctx (spki_parse_private_key (read_sexp file)))))))
-*/
-
- 
-/* ;; GABA:
-   (class
-     (name add_user_key)
-     (command 
-*/
-#endif
