@@ -83,7 +83,6 @@ enum io_type {
      (name lsh_fd)
      (super resource)
      (vars
-       (next object lsh_fd)
        (fd . int)
        ; PTY:s need special treatment, as shutdown doesn't work.
        (type . "enum io_type")
