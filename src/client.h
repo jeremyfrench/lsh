@@ -101,9 +101,7 @@ make_exec_request(struct lsh_string *command);
 struct command *
 make_pty_request(struct interact *tty);
 
-
-struct channel_open *
-make_channel_open_x11(void);
+extern struct channel_open channel_open_x11;
 
 struct command *
 make_forward_x11(const char *display_string,

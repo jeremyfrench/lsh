@@ -423,17 +423,14 @@ make_exc_x11_connect_handler(struct exception_handler *parent,
   return make_exception_handler(do_exc_x11_connect_handler, parent, context);
 }
 
-/* FIXME: Use a static object? */
-static void
-do_channel_open_x11(struct channel_open *s,
-		    struct ssh_connection *connection,
-		    struct channel_open_info *info UNUSED,
-		    struct simple_buffer *args,
-		    struct command_continuation *c,
-		    struct exception_handler *e)
+DEFINE_CHANNEL_OPEN(channel_open_x11)
+     (struct channel_open *s UNUSED,
+      struct ssh_connection *connection,
+      struct channel_open_info *info UNUSED,
+      struct simple_buffer *args,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  CAST(channel_open_x11, self, s);
-
   UINT32 originator_length;
   const UINT8 *originator;
   UINT32 originator_port;
@@ -477,16 +474,6 @@ do_channel_open_x11(struct channel_open *s,
       werror("do_channel_open_x11: Invalid message!\n");
       PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_OPEN x11 message.");
     }
-}
-
-struct channel_open *
-make_channel_open_x11(void)
-{
-  NEW(channel_open_x11, self);
-
-  self->super.handler = do_channel_open_x11;
-
-  return &self->super;
 }
 
 

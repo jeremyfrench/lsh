@@ -1058,7 +1058,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	client_add_action(options,
 			  make_install_fix_channel_open_handler
 			  (ATOM_X11,
-			   make_channel_open_x11()));
+			   &channel_open_x11));
       
       /* Install suspend-handler */
       suspend_install_handler();
