@@ -25,9 +25,14 @@
 #define CHANNEL_ACTION_OPEN_FAILURE 3
 #endif
 
+#define CHANNEL_SENT_CLOSE 1
+#define CHANNEL_RECIEVED_CLOSE 2
+#define CHANNEL_SENT_EOF 4
+#define CHANNEL_RECIEVED_EOF 8
+
 struct ssh_channel
 {
-  struct read_handler super;
+  /* struct read_handler super; */
   
   UINT32 channel_number;  /* Remote channel number */
 
@@ -43,6 +48,7 @@ struct ssh_channel
   
   struct alist *request_types;
 
+  int flags;
 #if 0
   int recieved_close;
   int sent_close;
@@ -173,11 +179,20 @@ struct connection_startup
 
 #define CONNECTION_START(c, s, w) ((c)->start((c), (s), (w)))
 
+void init_channel(struct ssh_channel *channel);
+
 struct channel_table *make_channel_table(void);
 int alloc_channel(struct channel_table *table);
 void dealloc_channel(struct channel_table *table, int i);
 int register_channel(struct channel_table *table, struct ssh_channel *channel);
 struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i);
+
+struct abstract_write *make_channel_write(struct ssh_channel *channel);
+struct abstract_write *make_channel_write_extended(struct ssh_channel *channel,
+						   UINT32 type);
+
+struct read_handler *make_channel_read_data(struct ssh_channel *channel);
+struct read_handler *make_channel_read_stderr(struct ssh_channel *channel);
 
 struct lsh_string *format_global_failure(void);
 struct lsh_string *format_open_failure(UINT32 channel, UINT32 reason,
@@ -194,22 +209,22 @@ struct lsh_string *prepare_channel_open(struct channel_table *table,
 struct lsh_string *format_channel_request(int type, struct ssh_channel *channel,
 					  int want_reply, char *format, ...);
 
-int channel_transmit_header(struct ssh_channel *channel,
-			    struct abstract_write *write,
-			    struct lsh_string *header,
-			    struct lsh_string *data);
+struct lsh_string *format_channel_close(struct ssh_channel *channel);
+struct lsh_string *format_channel_eof(struct ssh_channel *channel);
 
-int channel_transmit(struct ssh_channel *channel,
-		     struct abstract_write *write,
-		     struct lsh_string *data);
+int channel_close(struct ssh_channel *channel);
+int channel_eof(struct ssh_channel *channel);
 
-int channel_transmit_extended(struct ssh_channel *channel,
-			      struct abstract_write *write,
-			      UINT32 type,
-			      struct lsh_string *data);
+struct lsh_string *channel_transmit_data(struct ssh_channel *channel,
+					 struct lsh_string *data);
 
+struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
+					     UINT32 type,
+					     struct lsh_string *data);
 
 struct ssh_service *make_connection_service(struct alist *global_requests,
-					    struct alist *channel_types);
+					    struct alist *channel_types,
+					    struct connection_startup *start);
+
 
 #endif /* LSH_CHANNEL_H_INCLUDED */
