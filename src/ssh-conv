@@ -11,7 +11,8 @@ awk 'BEGIN { state = 0; }
      state == 0 && /^---- BEGIN SSH2 PUBLIC KEY/ { state = 1; next; }
      state == 1 && $0 ~ /^---- END SSH2 PUBLIC KEY/ { state = 2 }
      state == 1 && $0 !~ /:/ { print }
-     state == 2 { next }' \
+     state == 2 { next } 
+     /^ssh-dss/ { print $2; }' \
   | $SSH_CONV -b
 
      
