@@ -1,3 +1,15 @@
+2004-06-08  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/dsa.c (do_dsa_verify, do_dsa_sign): Deleted handling of
+	ATOM_SSH_DSS_KLUDGE_LOCAL. 
+
+	* src/client_keyexchange.c (do_handle_dh_reply): Deleted handling
+	of PEER_SSH_DSS_KLUDGE.
+	* src/server_keyexchange.c (do_init_server_dh): Likewise.
+	* src/server_publickey.c (do_authenticate): Likewise.
+
+	* src/atoms.in: Deleted ssh-dss-kludge@lysator.liu.se.
+
 2004-06-08  Niels Möller  <niels@s3.kth.se>
 
 	* src/client.c (client_options): Deleted --cvs-workaround option.
