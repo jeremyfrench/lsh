@@ -24,37 +24,12 @@
 #ifndef LSH_USERAUTH_H_INCLUDED
 #define LSH_USERAUTH_H_INCLUDED
 
-#include "alist.h"
-#include "command.h"
-#include "connection.h"
-#include "list.h"
-#include "parse.h"
+#include "lsh.h"
+#include "exception.h"
 
 #define GABA_DECLARE
 #include "userauth.h.x"
 #undef GABA_DECLARE
-
-/* If authentication is successful, sets value non-NULL. If
- * authentication failed, returns LSH_AUTH_FAILED. */
-
-/* FIXME: Perhaps something more general is needed for authentication
- * methods which send additional messages. */
-
-/* GABA:
-   (class
-     (name userauth)
-     (vars
-       (authenticate method void
-                     "struct ssh_connection *connection"
-		     ; The name is consumed by this function
-		     "struct lsh_string *username"
-		     "struct simple_buffer *args"
-		     "struct command_continuation *c"
-		     "struct exception_handler *e")))
-*/
-
-#define AUTHENTICATE(s, n, u, a, c, e) \
-((s)->authenticate((s), (n), (u), (a), (c), (e)))
 
 /* GABA:
    (class
@@ -66,25 +41,6 @@
 
 struct exception *make_userauth_special_exception(struct lsh_string *reply,
 						  const char *msg);
-
-struct lsh_string *format_userauth_failure(struct int_list *methods,
-					   int partial);
-struct lsh_string *format_userauth_success(void);
-
-/* Server functions */     
-struct command *make_userauth_service(struct int_list *advertised_methods,
-				      struct alist *methods,
-				      struct alist *services);
-
-/* Client functions */
-struct command *make_client_userauth(struct lsh_string *username,
-				     int service_name,
-				     struct object_list *methods);
-
-struct client_userauth_method *make_client_password_auth(void);
-
-struct client_userauth_method *
-make_client_publickey_auth(struct object_list *);
 
 
 #endif /* LSH_USERAUTH_H_INCLUDED */
