@@ -23,7 +23,7 @@ running
   bash configure
 
 If you want to hack lsh, you need some more tools: autoconf (at least
-version 2.50), automake (at least version 1.6), bash, gcc, gperf (at
+version 2.52), automake (at least version 1.6.1), bash, gcc, gperf (at
 least version 2.7) and a scheme implementation. The currently
 supported schemes are guile and scsh (at least version 0.5.2). All but
 scsh can be found at your local GNU mirror site. scsh, Olin Shiver's
