@@ -78,11 +78,11 @@ do_handle_dh_init(struct packet_handler *c,
     }
   
   /* Send server's message, to complete key exchange */
-  C_WRITE(connection,
-	  dh_make_server_msg(&closure->dh,
-			     closure->server_key,
-			     closure->hostkey_algorithm,
-			     closure->signer));
+  C_WRITE_NOW(connection,
+	      dh_make_server_msg(&closure->dh,
+				 closure->server_key,
+				 closure->hostkey_algorithm,
+				 closure->signer));
 
   connection->dispatch[SSH_MSG_KEXDH_INIT] = &connection_fail_handler;
 
@@ -195,7 +195,7 @@ do_srp_server_proof_handler(struct packet_handler *s,
   
   if (response)
     {
-      C_WRITE(connection, response);
+      C_WRITE_NOW(connection, response);
 
       /* Remember that a user was authenticated. */
       connection->user = self->srp->user;
@@ -276,8 +276,9 @@ do_server_srp_read_verifier(struct abstract_write *s,
 	    {
 	      /* Success */
 
-	      C_WRITE(self->connection,
-		      srp_make_reply_msg(&self->srp->dh, self->srp->entry));
+	      C_WRITE_NOW(self->connection,
+			  srp_make_reply_msg(&self->srp->dh,
+					     self->srp->entry));
 	      self->connection->dispatch[SSH_MSG_KEXSRP_PROOF]
 		= make_srp_server_proof_handler(self->srp);
 	    }

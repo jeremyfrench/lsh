@@ -154,7 +154,7 @@ do_init_client_dh(struct keyexchange_algorithm *c,
   dh->algorithms = algorithms;
   
   /* Send client's message */
-  C_WRITE(connection, dh_make_client_msg(&dh->dh));
+  C_WRITE_NOW(connection, dh_make_client_msg(&dh->dh));
 
   /* Install handler */
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = &dh->super;
@@ -285,7 +285,7 @@ do_handle_srp_reply(struct packet_handler *s,
     PROTOCOL_ERROR(connection->e,
 		   "SRP failure: Invalid public value from server.");
   
-  C_WRITE(connection, response);
+  C_WRITE_NOW(connection, response);
   
   connection->dispatch[SSH_MSG_KEXSRP_PROOF]
     = make_srp_client_proof_handler(self->srp);
@@ -331,7 +331,7 @@ do_init_client_srp(struct keyexchange_algorithm *s,
   srp->m2 = NULL;
   
   /* Send client's message */
-  C_WRITE(connection, srp_make_init_msg(&srp->dh, self->name));
+  C_WRITE_NOW(connection, srp_make_init_msg(&srp->dh, self->name));
 
   /* Install handler */
   connection->dispatch[SSH_MSG_KEXSRP_REPLY] = make_srp_reply_handler(srp);
