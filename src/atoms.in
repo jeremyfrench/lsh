@@ -142,3 +142,8 @@ tag
 prefix
 set
 *
+
+# SRP related
+srp-group1-sha1
+srp-verifier
+ssh-group1
