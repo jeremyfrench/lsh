@@ -1,3 +1,19 @@
+2002-06-27  Niels Möller  <niels@s3.kth.se>
+
+	* src/server_x11.c (server_x11_setup): Bugfixes. Send cookie on
+	xauth stdin. 
+
+	* src/tcpforward_commands.c (open_tcpip_report): Declare const.: 
+
+	* src/server_session.c (do_x11_req): Use server_x11_setup.
+
+	* src/channel.c (channel_request_handler): Use a const
+	report_exception_info. 
+	(global_request_handler): Likewise.
+
+	* src/exception.c (make_report_exception_handler): Use a const
+	report_exception_info object.
+
 2002-06-27  Pontus Sköld  <pont@soua.net>
 
 	* src/testsuite/string-test.c (test_main): Added extra bubble
