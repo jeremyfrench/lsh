@@ -852,18 +852,20 @@ do_spki_authorize(struct spki_context *s,
 
   if (!sexp_iterator_first(&start, access->length, access->data))
     return 0;
-  
-  FOR_OBJECT_QUEUE(&self->db, n)
-    {
-      CAST(spki_5_tuple, tuple, n);
-      struct sexp_iterator i = start;
+
+  {
+    FOR_OBJECT_QUEUE(&self->db, n)
+      {
+	CAST(spki_5_tuple, tuple, n);
+	struct sexp_iterator i = start;
       
-      /* FIXME: Handles ACL:s only. I.e. issuer == NULL. */
-      if ( (user == tuple->subject)
-	   && !tuple->issuer
-	   && SPKI_TAG_MATCH(tuple->authorization, &i))
-	return 1;
-    }
+	/* FIXME: Handles ACL:s only. I.e. issuer == NULL. */
+	if ( (user == tuple->subject)
+	     && !tuple->issuer
+	     && SPKI_TAG_MATCH(tuple->authorization, &i))
+	  return 1;
+      }
+  }
   return 0;
 }
 
