@@ -68,15 +68,15 @@
        ; Algorithms is an array indexed by the KEX_* values above
        (init method int
 	     "struct ssh_connection *connection"
-	     "struct ssh_service *finished"
+	     ;; "struct ssh_service *finished"
 	     "int hostkey_algorithm_atom"
 	     ;; FIXME: The algorithm object seems unnecessary.
 	     "struct signature_algorithm *hostkey_algorithm"
 	     "struct object_list *algorithms")))
 */
 
-#define KEYEXCHANGE_INIT(kex, connection, f, ha, h, a) \
-((kex)->init((kex), (connection), (f), (ha), (h), (a)))
+#define KEYEXCHANGE_INIT(kex, connection, ha, h, a) \
+((kex)->init((kex), (connection), (ha), (h), (a)))
 
 /* GABA:
    (class
@@ -102,10 +102,10 @@
    (class
      (name make_kexinit)
      (vars
-       (make method (object kexinit) )))
+       (make method (object kexinit)) ))
 */
 
-#define MAKE_KEXINIT(s, c, m) ((s)->make((s), (c), (m)))
+#define MAKE_KEXINIT(s) ((s)->make((s)))
 
 /* Installs keys for use. */
 /* GABA:
@@ -170,14 +170,11 @@ struct make_kexinit *make_simple_kexinit(struct randomness *r,
 struct make_kexinit *make_test_kexinit(struct randomness *r);
 
 int initiate_keyexchange(struct ssh_connection *connection,
-			 int type,
-			 struct kexinit *kex,
-			 struct lsh_string *first_packet);
+			 int type);
 
 struct packet_handler *make_kexinit_handler(int type,
 					    struct make_kexinit *init,
-					    struct alist *algorithms,
-					    struct ssh_service *finished);
+					    struct alist *algorithms);
 
 struct packet_handler *
 make_newkeys_handler(struct crypto_instance *crypto,
