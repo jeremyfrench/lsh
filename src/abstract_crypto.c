@@ -84,6 +84,9 @@ crypt_string(struct crypto_instance *c,
 {
   struct lsh_string *out;
 
+  if (c->block_size && (in->length % c->block_size))
+    return NULL;
+  
   if (free)
     {
       /* Do the encryption in place. The type cast is permissible
@@ -132,11 +135,18 @@ crypt_string_unpad(struct crypto_instance *c,
   assert(in->length);
   
   out = crypt_string(c, in, free);
+  if (!out)
+    return NULL;
+  
   pad = out->data[out->length - 1];
 
   if ( (pad > 0) && (pad <= c->block_size) )
     {
-      out->length -= pad;
+      /* This should not happen, as crypt string
+       * must return a multiple of the block size. */
+      assert(pad <= out->length);
+
+      lsh_string_trunc(out, out->length - pad);
       return out;
     }
   else
