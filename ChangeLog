@@ -1,3 +1,8 @@
+2001-09-19  Niels Möller  <nisse@ehand.com>
+
+	* src/server_keyexchange.c (do_init_server_dh): Fixed bug in the
+	PEER_SSH_DSS_KLUDGE workaround. FIX copied from 1.2 branch.
+
 2001-09-18  Niels Möller  <nisse@ehand.com>
 
 	* src/io.c (lsh_oop_cancel_signal): New function.
