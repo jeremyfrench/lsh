@@ -1,3 +1,10 @@
+News for the lsh-0.1.19 release
+
+	Lots of bugfixes. Reading of ~/.lsh/known_hosts and
+	~/.lsh/identity seems to work.
+
+	New contrib sub-directory.
+	
 News for the lsh-0.1.18 release
 
 	lsh now reads ACL:s from the ~/.lsh/known_hosts file.
