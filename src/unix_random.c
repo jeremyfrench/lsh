@@ -839,7 +839,8 @@ static void do_unix_random_background(struct random_poll *s)
 {
   CAST(unix_random, self, s);
 
-  start_background_poll(self);
+  if (self->status == POLL_NO_POLL)
+    start_background_poll(self);
 }
 
 /* Using a NULL reaper argument is ok. It must be supplied only if the
