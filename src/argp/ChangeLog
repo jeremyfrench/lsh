@@ -1,3 +1,13 @@
+2004-02-23  Niels Möller  <niels@s3.kth.se>
+
+	Portability to Mac OS X (fixes by Akim Demaille)
+
+        * argp/Makefile.am (libargp_a_SOURCES): Remove the duplicate
+        inclusion of argp-eexst.c.
+        * argp/argp-ba.c, argp/argp-pv.c, argp/argp-pvh.c: Initialize the
+        variables, otherwise on Darwin linking fails if the user does not
+        define these variables.
+
 2003-04-28  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* argp-parse.c: Use standard alloca blurb from the autoconf
