@@ -33,6 +33,8 @@
 
 struct ssh_service
 {
+  struct lsh_object header;
+  
   int (*init)(struct ssh_service *self, struct ssh_connection *c);
 };
 
