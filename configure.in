@@ -115,6 +115,12 @@ if test x$with_scheme != x ; then
 else  
   AC_PATH_PROG(SCHEME_PROGRAM, scsh guile,, $PATH)
 fi
+
+if test x$SCHEME_PROGRAM = x ; then
+  AC_MSG_WARN([No scheme implementation found.])
+  SCHEME_PROGRAM=false
+fi
+
 SCHEME_NAME=`basename $SCHEME_PROGRAM`
 AC_SUBST(SCHEME_NAME)
 
