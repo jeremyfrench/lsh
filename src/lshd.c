@@ -116,6 +116,8 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_PIDFILE 0x205
 #define OPT_NO_PIDFILE (OPT_PIDFILE | OPT_NO)
 #define OPT_CORE 0x207
+#define OPT_SYSLOG 0x208
+#define OPT_NO_SYSLOG (OPT_SYSLOG | OPT_NO)
 
 #define OPT_SRP 0x210
 #define OPT_NO_SRP (OPT_SRP | OPT_NO)
@@ -175,6 +177,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        
        (sshd1 object ssh1_fallback)
        (daemonic . int)
+       (no_syslog . int)
        (corefile . int)
        (pid_file . "const char *")
        ; -1 means use pid file iff we're in daemonic mode
@@ -248,7 +251,8 @@ make_lshd_options(struct io_backend *backend)
   
   self->sshd1 = NULL;
   self->daemonic = 0;
-
+  self->no_syslog = 0;
+  
   /* FIXME: Make the default a configure time option? */
   self->pid_file = "/var/run/lshd.pid";
   self->use_pid_file = -1;
@@ -365,7 +369,8 @@ main_options[] =
     "the default is /var/run/lshd.pid.", 0 },
   { "no-pid-file", OPT_NO_PIDFILE, NULL, 0, "Don't use any pid file. Default in non-daemonic mode.", 0 },
   { "enable-core", OPT_CORE, NULL, 0, "Dump core on fatal errors (disabled by default).", 0 },
-    
+  { "no-syslog", OPT_NO_SYSLOG, NULL, 0, "Don't use syslog (by default, syslog is used "
+    "when running in daemonic mode).", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -575,11 +580,15 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case OPT_DAEMONIC:
       self->daemonic = 1;
       break;
-
+      
     case OPT_NO_DAEMONIC:
       self->daemonic = 0;
       break;
 
+    case OPT_NO_SYSLOG:
+      self->no_syslog = 1;
+      break;
+      
     case OPT_PIDFILE:
       self->pid_file = arg;
       self->use_pid_file = 1;
@@ -720,11 +729,7 @@ int main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
-  /* Don't use syslog if there was an explicit logfile option.
-   *
-   * FIXME: This could be done in a cleaner way without the global
-   * variable. */
-  if (options->daemonic && !logfile_flag)
+  if (options->daemonic && !options->no_syslog)
     {
 #if HAVE_SYSLOG
       set_error_syslog("lshd");
