@@ -313,6 +313,7 @@ if test x$have_utmp_h = xyes; then
 		    struct utmp.ut_session,
 		    struct utmp.ut_pid,
 		    struct utmp.ut_exit,
+		    struct utmp.ut_exit.e_termination,
 		    struct utmp.ut_addr,
 		    struct utmp.ut_addr_v6],,,
 [# if HAVE_UTMP_H
@@ -333,6 +334,7 @@ if test x$have_utmpx_h = xyes; then
 		    struct utmpx.ut_session,
 		    struct utmpx.ut_pid,
 		    struct utmpx.ut_exit,
+		    struct utmpx.ut_exit.e_termination,
 		    struct utmpx.ut_addr,
 		    struct utmpx.ut_addr_v6],,,
 [# if HAVE_UTMPX_H
