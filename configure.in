@@ -676,6 +676,6 @@ fi
 AC_CONFIG_FILES([Makefile doc/Makefile misc/Makefile
 	  src/Makefile src/scm/Makefile
 	  src/testsuite/Makefile src/rsync/Makefile
-	  src/nettle/Makefile src/symmetric/include/Makefile
+	  src/nettle/Makefile
 	  contrib/Makefile contrib/lsh.spec])
 AC_OUTPUT
