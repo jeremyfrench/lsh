@@ -1077,6 +1077,8 @@ int main(int argc, char **argv)
   
   /* FIXME: Perhaps we have to reset the stdio file descriptors to
    * blocking mode? */
+
+  gc_final();
   
   return lsh_exit_code;
 }
