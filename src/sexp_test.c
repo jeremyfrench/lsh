@@ -86,7 +86,6 @@ int main(int argc UNUSED, char **argv UNUSED)
   int status = 17;
   
   init_backend(backend);
-  set_error_stream(STDERR_FILENO, 1);
 
   write = io_write(backend, STDOUT_FILENO, BLOCK_SIZE, NULL)->buffer;
 
