@@ -173,7 +173,7 @@ int do_read_packet(struct read_handler **h,
 		break;
 	    }
 	  /* MAC was ok, send packet on */
-	  if (!A_WRITE(closure->handler, closure->buffer))
+	  if (A_WRITE(closure->handler, closure->buffer) != WRITE_OK)
 	    /* FIXME: What now? */
 	    return 0;
 	  

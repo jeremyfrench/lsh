@@ -126,7 +126,7 @@ int initiate_keyexchange(struct ssh_connection *connection,
    
   res = A_WRITE(connection->write, format_kex(kex));
 
-  if (res && first_packet)
+  if ( (res == WRITE_OK) && first_packet)
     return A_WRITE(connection->write, first_packet);
   else
     return res;

@@ -35,7 +35,19 @@ struct read_handler
 
 #define READ_HANDLER(h, read) ((h)->handler(&(h), (read)))
 
-/* FIXME: What should writers return? */
+/* Return values for write callbacks
+ *
+ * FIXME: Perhaps some more values are needed? What if we want to
+ * close a file, but not until all data has bee flushed? Perhaps it is
+ * best not to put too much meaning into the return value, and use it
+ * as a succes/fail indication only. */
+
+/* Everything is ok */
+#define WRITE_OK 1
+
+/* Write failed, and the packet could not be processed or delivered.
+ * Most likely because of a protocol error */
+#define WRITE_CLOSED 0
 
 /* May store a new handler into *w. */
 struct abstract_write

@@ -25,12 +25,17 @@ static int do_read_data(struct read_handler **h,
 	  /* Fall through */
 	case A_EOF:
 	  CALLBACK(closure->close_callback);
-	  return 0;
+	  return WRITE_CLOSED;
 	default:
-	  packet->length = n;
-	  /* FIXME: Use returned value */
-	  A_WRITE(closure->handler, packet);
-	  break;
+	  {
+	    int res;
+	    packet->length = n;
+	    /* FIXME: Use returned value */
+	    res = A_WRITE(closure->handler, packet);
+	    if (res != WRITE_OK)
+	      return res;
+	    break;
+	  }
 	}
     }
 }
