@@ -1,5 +1,8 @@
 2003-10-22  Niels Möller  <niels@s3.kth.se>
 
+	* src/client_x11.c (client_x11_auth_info): Deleted commented out
+	class.
+
 	* src/server_session.c (do_alloc_pty): Return channel in question.
 	(do_window_change_request): Likewise.
 	(do_spawn_subsystem): Likewise.
