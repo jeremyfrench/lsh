@@ -197,18 +197,24 @@ do_dsa_sign_spki(struct signer *c,
   return signature;
 }
 
+struct sexp *
+make_dsa_public_key(struct dsa_public *dsa)
+{
+  return sexp_l(2, sexp_a(ATOM_PUBLIC_KEY),
+		sexp_l(5, sexp_a(ATOM_DSA),
+		       sexp_l(2, sexp_a(ATOM_P), sexp_un(dsa->p), -1),
+		       sexp_l(2, sexp_a(ATOM_Q), sexp_un(dsa->q), -1),
+		       sexp_l(2, sexp_a(ATOM_G), sexp_un(dsa->g), -1),
+		       sexp_l(2, sexp_a(ATOM_Y), sexp_un(dsa->y), -1),
+		       -1), -1);
+}
+  
 static struct sexp *
 do_dsa_public_key(struct signer *s)
 {
   CAST(dsa_signer, self, s);
 
-  return sexp_l(2, sexp_a(ATOM_PUBLIC_KEY),
-		sexp_l(5, sexp_a(ATOM_DSA),
-		       sexp_l(2, sexp_a(ATOM_P), sexp_un(self->public.p), -1),
-		       sexp_l(2, sexp_a(ATOM_Q), sexp_un(self->public.q), -1),
-		       sexp_l(2, sexp_a(ATOM_G), sexp_un(self->public.g), -1),
-		       sexp_l(2, sexp_a(ATOM_Y), sexp_un(self->public.y), -1),
-		       -1), -1);
+  return make_dsa_public_key(&self->public);
 }
 
 #if DATAFELLOWS_WORKAROUNDS
@@ -528,7 +534,8 @@ make_dsa_verifier(struct signature_algorithm *self UNUSED,
     }
 }
   
-struct signature_algorithm *make_dsa_algorithm(struct randomness *random)
+struct signature_algorithm *
+make_dsa_algorithm(struct randomness *random)
 {
   NEW(dsa_algorithm, dsa);
 

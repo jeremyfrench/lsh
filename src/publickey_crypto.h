@@ -89,6 +89,9 @@ void init_dsa_public(struct dsa_public *public);
 int parse_dsa_public(struct simple_buffer *buffer,
 		     struct dsa_public *public);
 
+struct sexp *
+make_dsa_public_key(struct dsa_public *dsa);
+
 struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
 
 /* Non spki keys */
