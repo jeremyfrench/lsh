@@ -792,7 +792,7 @@ do_userauth_pk_ok(struct packet_handler *s,
 	  signed_data = ssh_format("%S%lS", connection->session_id, request);
 	  request = ssh_format("%flS%fS", 
 			       request, 
-			       SIGN(key->private, signed_data->length, signed_data->data));
+			       SIGN(key->private, key->type, signed_data->length, signed_data->data));
 	  lsh_string_free(signed_data);
 	  C_WRITE(connection, request);
 	  self->state->pending++;
