@@ -346,7 +346,7 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
 				       struct lsh_string *session_id)
 {
   /* Indexed by the KEX_* values */
-  static /* const */ char *tags = "CDEFAB";
+  static /* const */ UINT8 tags[] = "CDEFAB";
   
   struct lsh_string *key;
   struct hash_instance *hash;
