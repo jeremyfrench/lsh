@@ -97,6 +97,7 @@ struct resource_node
   struct resource *resource;
 };
 
+/* Works as a weak list of resources. */
 /* GABA:
    (class
      (name concrete_resource_list)

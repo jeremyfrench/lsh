@@ -1,3 +1,31 @@
+2001-09-21  Niels Möller  <nisse@ehand.com>
+
+	* configure.in: Check for liboop.
+
+	* src/io.c (make_io_backend): Call new function io_init().
+	(lsh_oop_register_read_fd): Updated the want_read flag. Changed
+	most functions to call this function instead of updating the flag
+	directly. 
+	(lsh_oop_cancel_read_fd): Likewise.
+	(lsh_oop_register_write_fd): Analogous changes for the want_write flag.
+	(lsh_oop_cancel_write_fd): Likewise.
+	(do_exc_finish_read_handler): Use lsh_oop_register_read_fd and
+	lsh_oop_cancel_read_fd.  
+
+	* src/write_buffer.c (make_write_buffer): Added fd argument.
+	(do_write): Call lsh_oop_register_write_fd when buffer gets
+	non-empty. 
+
+	* src/reaper.c (make_reaper): Adapted to new io_signal_handler
+	behaviour. 
+	* src/unix_interact.c (make_unix_interact): Likewise.
+
+	* src/channel_forward.c (do_channel_forward_send_adjust): Use
+	lsh_oop_register_read_fd. 
+	* src/client_session.c (do_send_adjust): Likewise.
+	(do_client_io): Likewise.
+	* src/server_session.c (do_send_adjust): Likewise.
+
 2001-09-19  Niels Möller  <nisse@ehand.com>
 
 	* src/server_keyexchange.c (do_init_server_dh): Fixed bug in the
