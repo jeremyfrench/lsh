@@ -28,6 +28,19 @@ CPPFLAGS="$CPPFLAGS -I$srcdir/include -DLSH"
 
 CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
 
+dnl Check options
+AC_ARG_WITH(debug_alloc,
+  [--with-debug-alloc    sanity check memory allocation and casts],
+  [], [with_debug_alloc=yes])
+
+dnl Can't use if, as it's difficult to quote the square brackets.
+case "$with_debug_alloc" in
+    no)
+    ;;
+    *) AC_DEFINE(DEBUG_ALLOC)
+    ;;
+esac
+
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
