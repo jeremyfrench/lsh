@@ -198,8 +198,14 @@ fi
 
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then
-    CFLAGS="$CFLAGS -Wall -Wmissing-prototypes -Wmissing-declarations \
-      -Wstrict-prototypes -Waggregate-return"
+    CFLAGS="$CFLAGS -Wall -W \
+      -Wmissing-prototypes -Wmissing-declarations -Wstrict-prototypes \
+      -Waggregate-return \
+      -Wpointer-arith -Wbad-function-cast -Wnested-externs"
+
+# Don't enable -Wcast-align results in tons of warnings in the DES
+# code. And when using stdio.
+
 fi
 
 AC_OUTPUT(Makefile lib/Makefile include/Makefile)
