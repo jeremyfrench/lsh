@@ -90,7 +90,7 @@ struct lsh_object *gaba_apply(struct lsh_object *f,
 			      struct lsh_object *x)
 {
   CAST_SUBTYPE(command_simple, cf, f);
-  return COMMAND_SIMPLE(cf, x);
+  return COMMAND_SIMPLE_CALL(cf, x);
 }
 
 void
@@ -100,7 +100,7 @@ do_call_simple_command(struct command *s,
 		       struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(command_simple, self, s);
-  COMMAND_RETURN(c, COMMAND_SIMPLE(self, arg));
+  COMMAND_RETURN(c, COMMAND_SIMPLE_CALL(self, arg));
 }
 
 
@@ -315,6 +315,13 @@ struct command *make_parallell_progn(struct object_list *body)
   }
 }
 
+COMMAND_SIMPLE(progn_command)
+{
+  CAST(object_list, body, a);
+  return &make_parallell_progn(body)->super;
+}
+     
+#if 0
 static struct lsh_object *do_progn(struct command_simple *s UNUSED,
 				   struct lsh_object *x)
 {
@@ -324,6 +331,7 @@ static struct lsh_object *do_progn(struct command_simple *s UNUSED,
 
 struct command_simple progn_command =
 STATIC_COMMAND_SIMPLE(do_progn);
+#endif
 
 
 /* A continuation that passes on its value only the first time it is
@@ -423,6 +431,7 @@ make_delay_continuation(struct command *f,
      (vars
        (mask . UINT32)
        (value . UINT32)
+       (ignore_value . int)
        (handler object command)))
 */
 
@@ -493,7 +502,11 @@ do_catch_apply(struct command *s,
 	       struct exception_handler *e)
 {
   CAST(catch_apply, self, s);
-  COMMAND_CALL(self->body, a, c,
+  if (self->info->ignore_value)
+    c = &discard_continuation;
+  COMMAND_CALL(self->body, a, (self->info->ignore_value
+			       ? &discard_continuation
+			       : c),
 	       make_catch_handler(self->info, c, e,
 				  HANDLER_CONTEXT));
 }

@@ -70,8 +70,20 @@
 
 #define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v)))
 
-#define COMMAND_SIMPLE(f, a) \
+#define COMMAND_SIMPLE_CALL(f, a) \
   ((f)->call_simple((f), (struct lsh_object *)(a)))
+
+#define COMMAND_SIMPLE(cname)				\
+static struct lsh_object *				\
+do_simple_##cname(struct command_simple *s UNUSED,	\
+		  struct lsh_object *a);		\
+							\
+struct command_simple cname =				\
+STATIC_COMMAND_SIMPLE(do_simple_##cname);		\
+							\
+static struct lsh_object *				\
+do_simple_##cname(struct command_simple *s UNUSED,	\
+		  struct lsh_object *a)
 
 void do_call_simple_command(struct command *s,
 			    struct lsh_object *arg,
@@ -127,15 +139,19 @@ make_command_context(struct command_continuation *c,
      (super command_simple)
      (vars
        (mask . UINT32)
-       (value . UINT32)))
-*/
+       (value . UINT32)
+
+       ; Ignore return values from body. This means that the catch
+       ; will return *only* if some exception is raised. Useful for
+       ; reading until some EOF exception ir raised.
+       (ignore_value . int))) */
 
 struct lsh_object *
 do_catch_simple(struct command_simple *s,
 		struct lsh_object *a);
 
-#define STATIC_CATCH_COMMAND(m, v) \
-{ STATIC_COMMAND_SIMPLE(do_catch_simple), (m), (v) }
+#define STATIC_CATCH_COMMAND(m, v, i) \
+{ STATIC_COMMAND_SIMPLE(do_catch_simple), (m), (v), (i) }
 
 
 /* Commands that need to collect some arguments before actually doing
@@ -272,7 +288,7 @@ make_delay_continuation(struct command *f,
 
 /* Useful clobal commands */
 #define PROG1 (&command_K.super.super)
-
+#define PROGN (&progn_command.super.super)
 
 /* The GABA_* macros are used by automatically generated evaluation code */
 
@@ -321,7 +337,7 @@ struct lsh_object *collect_Sp_3(struct collect_info_3 *info,
 				struct lsh_object *f,
 				struct lsh_object *g);
 
-#define GABA_VALUE_Sp (&command_Sp.super.super)
+#define GABA_VALUE_Sp (&command_Sp.super.super.super)
 #define GABA_APPLY_Sp_1(c) (make_collect_state_1(&command_Sp, (c)))
 #define GABA_APPLY_Sp_2(c, f) \
   (make_collect_state_2(&collect_info_Sp_2, (c), (f)))
@@ -336,7 +352,7 @@ struct lsh_object *collect_B_2(struct collect_info_2 *info,
 			       struct lsh_object *f,
 			       struct lsh_object *g);
 
-#define GABA_VALUE_B (&command_B.super.super)
+#define GABA_VALUE_B (&command_B.super.super.super)
 #define GABA_APPLY_B_1(f) (make_collect_state_1(&command_B, (f)))
 #define GABA_APPLY_B_2(f, g) (collect_B_2(&collect_info_B_2, (f), (g)))
 
@@ -352,7 +368,7 @@ struct lsh_object *collect_Bp_3(struct collect_info_3 *info,
 				struct lsh_object *f,
 				struct lsh_object *g);
 
-#define GABA_VALUE_Bp (&command_Bp.super.super)
+#define GABA_VALUE_Bp (&command_Bp.super.super.super)
 #define GABA_APPLY_Bp_1(c) (make_collect_state_1(&command_Bp, (c)))
 #define GABA_APPLY_Bp_2(c, f) \
   (make_collect_state_2(&collect_info_Bp_2, (c), (f)))
@@ -387,7 +403,7 @@ collect_Cp_3(struct collect_info_3 *info,
 	     struct lsh_object *f,
 	     struct lsh_object *y);
 
-#define GABA_VALUE_Cp (&command_Cp.super.super)
+#define GABA_VALUE_Cp (&command_Cp.super.super.super)
 #define GABA_APPLY_Cp_1(c) (make_collect_state_1(&command_Cp, (c)))
 #define GABA_APPLY_Cp_2(c, f) \
   (make_collect_state_2(&collect_info_Cp_2, (c), (f)))
