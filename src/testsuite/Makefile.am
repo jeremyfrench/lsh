@@ -1,6 +1,6 @@
 # Testsuite
 
-TESTS = des-test
+TESTS = des-test spki-tag-test
 # SUFFIXES = .c .o
 noinst_PROGRAMS = $(TESTS)
 
@@ -11,6 +11,7 @@ EXTRA_DIST = macros.m4 $(SOURCES:.c=.m4)
 all:
 	@echo make check to build testprograms.
 
+M4FLAGS = -P #-s
 %.c: macros.m4 %.m4
-	$(M4) -s -P $^ > $@
+	$(M4) $(M4FLAGS) $^ > $@
 

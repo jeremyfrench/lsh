@@ -11,7 +11,14 @@ TS_DEFINE(»TS_MESSAGE«, »TS_WRITE($1... )«)
 TS_DEFINE(»TS_OK«, »TS_WRITE(ok.\n)«)
 TS_DEFINE(»TS_FAIL«, »{ TS_WRITE(failed.\n); exit(1); }«)
 
-TS_DEFINE(»TS_TEST_STRING_EQ«, »
+TS_DEFINE(»TS_STRING«,
+»m4_ifelse(m4_index(»$1«, »"«), 0,
+  »ssh_format("%lz", »$1«)«, »simple_decode_hex("m4_translit(»$1«, »0-9a-zA-Z 	#«, »0-9a-zA-Z«)")«) «)
+
+TS_DEFINE(»TS_SEXP«, »string_to_sexp(TS_STRING(»$1«), 1)«)
+
+TS_DEFINE(»TS_TEST_STRING_EQ«,
+»
   {
     struct lsh_string *a, *b;
     TS_MESSAGE($1)
@@ -24,10 +31,6 @@ TS_DEFINE(»TS_TEST_STRING_EQ«, »
     lsh_string_free(b);
   }
 «)
-
-TS_DEFINE(»TS_STRING«,
-»m4_ifelse(m4_index(»$1«, »"«), 0,
-  »ssh_format("%lz", $1)«, »simple_decode_hex("m4_translit(»$1«, »0-9a-zA-Z 	#«, »0-9a-zA-Z«)")«) «)
 
 m4_dnl TS_TEST_HASH(name, algorithm, data, digest)
 TS_DEFINE(»TS_TEST_HASH«,
@@ -61,6 +64,45 @@ TS_DEFINE(»TS_TEST_CRYPTO«, »
   }
 «)    
 
+
+m4_dnl TS_TAG_GRANT(msg, tag-set, access)
+TS_DEFINE(»TS_TAG_GRANT«,
+»
+{
+  struct spki_tag *tag = spki_sexp_to_tag(TS_SEXP(»$2«), 17);
+  struct sexp *access = TS_SEXP(»$3«);
+  TS_MESSAGE(»Granting access $1«)
+  assert(tag);
+  assert(access);
+  
+  if (SPKI_TAG_MATCH(tag, access))
+    TS_OK
+  else
+    TS_FAIL
+  KILL(tag);
+  KILL(access);
+}«)
+
+m4_dnl TS_TAG_DENY(msg, tag-set, access)
+TS_DEFINE(»TS_TAG_DENY«,
+»
+{
+  struct spki_tag *tag = spki_sexp_to_tag(TS_SEXP(»$2«), 17);
+  struct sexp *access = TS_SEXP(»$3«);
+  TS_MESSAGE(»Denying access $1«)
+  assert(tag);
+  assert(access);
+  
+  if (!SPKI_TAG_MATCH(tag, access))
+    TS_OK
+  else
+    TS_FAIL
+  KILL(tag);
+  KILL(access);
+}«)
+
+
+
 m4_divert(1)
   return 0;
 } m4_divert
@@ -71,6 +113,8 @@ m4_dnl C code
 #include "crypto.h"
 #include "digits.h"
 #include "format.h"
+#include "sexp.h"
+#include "spki.h"
 #include "xalloc.h"
 
 #include <assert.h>
