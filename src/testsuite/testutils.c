@@ -180,7 +180,7 @@ test_sign(const char *name,
 {
   struct alist *algorithms;
   struct sexp *key;
-  struct sexp *sign;
+  struct lsh_string *sign;
   struct signer *s;
   struct verifier *v;
 
@@ -207,10 +207,10 @@ test_sign(const char *name,
   if (!s)
     FAIL();
 
-  sign = SIGN_SPKI(s, msg->length, msg->data);
+  sign = SIGN(s, ATOM_SPKI, msg->length, msg->data);
 
-  if (signature
-      && !lsh_string_eq(signature, sexp_format(sign, SEXP_CANONICAL, 0)))
+  /* If caller passed signature == NULL, skip this check. */
+  if (signature && !lsh_string_eq(signature, sign))
     FAIL();
 
   v = SIGNER_GET_VERIFIER(s);
@@ -218,7 +218,8 @@ test_sign(const char *name,
     /* Can't create verifier */
     FAIL();
 
-  if (!VERIFY_SPKI(v, msg->length, msg->data, sign))
+  if (!VERIFY(v, ATOM_SPKI, msg->length, msg->data,
+	      sign->length, sign->data))
     /* Unexpected verification failure. */
     FAIL();
   
@@ -228,10 +229,13 @@ test_sign(const char *name,
 
   msg->data[5] ^= 0x40;
 
-  if (VERIFY_SPKI(v, msg->length, msg->data, sign))
+  if (VERIFY(v, ATOM_SPKI, msg->length, msg->data,
+	     sign->length, sign->data))
     /* Unexpected verification success. */
     FAIL();
 
+  lsh_string_free(sign);
+  
   KILL(v);
   KILL(s);
   KILL(key);
