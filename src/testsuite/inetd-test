@@ -9,5 +9,5 @@ fi
 
 . $srcdir/functions.sh
 
-at_connect "$PORT" 1 "../lshd -h $HOSTKEY $LSHD_FLAGS" \
+at_connect "$PORT" 1 "../lshd -h $HOSTKEY --daemon --no-syslog $LSHD_FLAGS" \
     && run_lsh "exit 0" && test_success
