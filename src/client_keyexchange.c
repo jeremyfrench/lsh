@@ -271,6 +271,7 @@ do_handle_srp_reply(struct packet_handler *s,
     {
       lsh_string_free(salt);
       disconnect_kex_failed(connection, "Bye");
+      return;
     }
   
   mpz_init(x);
@@ -285,9 +286,11 @@ do_handle_srp_reply(struct packet_handler *s,
   mpz_clear(x);
 
   if (!response)
-    PROTOCOL_ERROR(connection->e,
-		   "SRP failure: Invalid public value from server.");
-  
+    {
+      PROTOCOL_ERROR(connection->e,
+		     "SRP failure: Invalid public value from server.");
+      return;
+    }
   C_WRITE_NOW(connection, response);
   
   connection->dispatch[SSH_MSG_KEXSRP_PROOF]
