@@ -1,3 +1,8 @@
+2003-01-21  Niels Möller  <niels@s3.kth.se>
+
+	* misc/xenofarm.sh: Don't run make distcheck, as it leaves some
+	write-protected directories in the tree. 
+
 2003-01-20  Niels Möller  <niels@s3.kth.se>
 
 	* misc/xenofarm.sh: Dont cd into src before running make check and
