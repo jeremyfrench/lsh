@@ -183,3 +183,19 @@ make_resource_list(void)
 
   return self;
 }
+
+/* Are there any live resources on the list? */
+int
+resource_list_is_empty(struct resource_list *self)
+{
+  struct resource_node *n;
+
+  assert(self->super.alive);
+  for (n = self->q; n; )
+    {
+      CAST_SUBTYPE(resource, r, n->resource);
+      if (r->alive)
+	return 0;
+    }
+  return 1;
+}
