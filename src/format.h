@@ -57,7 +57,7 @@
  *
  * %n  Insert a string containing a bignum.
  *
- * There are three valid modifiers:
+ * There are also some valid modifiers:
  *
  * "l" (as in literal). It is applicable to the s, a, A, n and r
  * specifiers, and outputs strings *without* a length field.
