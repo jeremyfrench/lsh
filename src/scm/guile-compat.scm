@@ -96,3 +96,5 @@
         ((= n 0) (car l))
         (else (nth (cdr l) (-1+ n)))))
 
+(define (string-upcase s)
+  (list->string (map char-upcase (string->list s))))

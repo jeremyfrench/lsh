@@ -26,9 +26,6 @@
     (and (<= l (string-length s))
 	 (string=? prefix (substring s 0 l)))))
 
-(define (string-upcase s)
-  (list->string (map char-upcase (string->list s))))
-
 (define (read-expression p)
   (let ((line (read-line)))
     ; (werror "read line: '~s'\n" (if (eof-object? line) "<EOF>" line))
@@ -519,6 +516,8 @@
     (werror "Processing expression ~S\n" name)
     (let ((translated (translate expr)))
       (werror "Compiled to ~S\n" translated)
+      ;; (werror "Globals: ~S\n" globals)
+      ;; (werror "Params: ~S\n" params)
       (list "static struct lsh_object *\n" name "("
 	    (if params (declare-params params) "void")
 	    ")\n{\n"
