@@ -28,7 +28,7 @@
 
 void lsftp_welcome()
 {
-  printf( "Welcome to %s %s by Pontus Sköld and various.\n", PACKAGE, VERSION );
+  printf( "Welcome to %s %s by Pontus Sköld, Niels Möller and various.\n", PACKAGE, VERSION );
   printf( "This program is free software, for more information\n" );
   printf( "please see the file COPYING or type about, you may\n" );
   printf( "also use help or ? to get help.\n\n");
@@ -38,14 +38,14 @@ void lsftp_welcome()
 
 void help_option()
 {
-  printf("Usage:");
+  printf("Usage:\n");
   exit(0); /* Exit successfully */
 }
 
 void version_option()
 {
   printf("%s %s\n", PACKAGE, VERSION);
-  printf("Copyright (C) 2001, Pontus Sköld and various contributors\n\n");
+  printf("Copyright (C) Pontus Sköld, Niels Möller and various contributors\n\n");
 
   printf("This program is free software, you may distribute it under the\n");
   printf("terms of the GNU Genereal Public License. \n\n");
@@ -56,6 +56,22 @@ void version_option()
   printf("General Public License for more details.\n");
 
   exit(0); /* Exit successfully */
+}
+
+void do_gnu_stuff( const char** argv )
+{
+  const char** current = argv;
+
+  while( *current ) /* More arguments? */
+    {
+      if( !strcmp( *current, "--version" ) )
+	version_option();
+
+      if( !strcmp( *current, "--help" ) )
+	help_option();
+
+      current++;
+    }
 }
 
 

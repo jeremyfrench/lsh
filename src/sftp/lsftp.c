@@ -170,6 +170,8 @@ int main(int argc, char** argv, char** envp)
 {
   int i;
 
+  do_gnu_stuff( argv ); /* Check for GNU thingies and act accordingly */
+
   lsftp_rl_init(); /* Safe even if built for noninteractive use only */
   mgetenv_init( envp ); /* Tell mgetenv about environment parameters */
 

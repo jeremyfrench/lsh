@@ -36,4 +36,5 @@ void help_option(void);
 void version_option(void);
 void lsftp_welcome(void); 
 
+void do_gnu_stuff( const char** argv );
 #endif

@@ -1,5 +1,12 @@
 2002-02-25  Pontus  <pont@it.uu.se>
 
+	* lsftp.c (main): Readded support for GNU-thingies (was lost
+	somehow some time ago).
+
+	* gnu_stuff.c (lsftp_welcome): Included Niels in welcome message.
+	(version_option): dito.
+	(do_gnu_stuff): New function to check for GNU-thingies.
+	
 	* configure.ac: Added ugly fix to detect if we're part of the main
 	lsh distribution. If we are, assume $bindir/lshg works
 	satisfactionary.
