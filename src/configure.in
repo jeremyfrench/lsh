@@ -23,6 +23,8 @@ AC_PROG_MAKE_SET
 
 dnl Checks for libraries.
 AC_CHECK_LIB(gmp, mpz_set_d)
+dnl Some debian systems have both gmp1 and gmp2.
+AC_CHECK_LIB(gmp2, mpz_set_d)
 AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
 AC_CHECK_LIB(nsl, hostbyname)
