@@ -27,7 +27,8 @@
 #include "parse.h"
 #include "nettle/sexp.h"
 
-#include "string.h"
+#include <assert.h>
+#include <string.h>
 
 /* Automatically generated files */
 
@@ -39,62 +40,138 @@ spki_gperf (const char *str, unsigned int len);
 #include "spki-gperf.h"
 
 enum spki_type
-spki_intern(struct sexp_iterator *i)
+spki_intern(struct spki_iterator *i)
 {  
-  if (i->type == SEXP_ATOM
-      && !i->display)
+  if (i->sexp.type == SEXP_ATOM
+      && !i->sexp.display)
     {
-      const struct spki_assoc *assoc = spki_gperf(i->atom, i->atom_length);
+      const struct spki_assoc *assoc
+	= spki_gperf(i->sexp.atom, i->sexp.atom_length);
 
-      if (assoc && sexp_iterator_next(i))
+      if (assoc && sexp_iterator_next(&i->sexp))
 	return assoc->id;
     }
   
   return 0;
 }
 
-/* NOTE: Uses SPKI_TYPE_UNKNOWN (= 0) for both unknown types and
+/* NOTE: Uses SPKI_TYPE_SYNTAX_ERROR (= 0) for both unknown types and
  * syntax errors. */
 enum spki_type
-spki_parse_type(struct sexp_iterator *i)
+spki_parse_type(struct spki_iterator *i)
 {
-  if (i->type == SEXP_END)
-    return SPKI_TYPE_END_OF_EXPR;
+  i->start = i->sexp.start;
+  switch(i->sexp.type)
+    {
+    case SEXP_END:
+      i->type = SPKI_TYPE_END_OF_EXPR;
+      break;
 
-  return sexp_iterator_enter_list(i) ? spki_intern(i) : 0;
+    case SEXP_LIST:
+      i->type = (sexp_iterator_enter_list(&i->sexp))
+	? spki_intern(i) : 0;
+      
+      break;
+
+    case SEXP_ATOM:
+      i->type = 0;
+      break;
+    }
+  return i->type;
 }
 
+#if 0
+/* FIXME: Get rid of this function. */
 
-/* These parsing functions should be called with an iterator pointing
- * into the body of the expression being parsed, just after the
- * type.
- *
- * On success, the parsing function should exit the current
- * expression, and return the type of the next expression in the
- * containing list.
- */
+/* Automatically generated table. */
+#include "spki-type-names.h"
+
+int
+spki_check_type(struct spki_iterator *i, enum spki_type type)
+{
+  struct sexp_iterator before = i->sexp;
+  unsigned start = i->sexp.start;
+
+  if (sexp_iterator_enter_list(&i->sexp)
+      && i->sexp.type == SEXP_ATOM
+      && !i->sexp.display
+      && i->sexp.atom_length == spki_type_names[type].length
+      && !memcmp(i->sexp.atom,
+		 spki_type_names[type].name,
+		 spki_type_names[type].length)
+      && sexp_iterator_next(&i->sexp))
+    {
+      i->type = type;
+      i->start = start;
+
+      return 1;
+    }
+  i->sexp = before;
+  return 0;
+}
+#endif
 
 enum spki_type
-spki_parse_end(struct sexp_iterator *i)
+spki_iterator_first(struct spki_iterator *i,
+		    unsigned length, const uint8_t *expr)
 {
-  return (i->type == SEXP_END
-	  && sexp_iterator_exit_list(i)) ? spki_parse_type(i) : 0;
+  i->start = 0;
+  if (sexp_iterator_first(&i->sexp, length, expr))
+    return spki_parse_type(i);
+
+  i->type = 0;
+  return 0;
 }
 
 enum spki_type
-spki_parse_skip(struct sexp_iterator *i)
+spki_parse_end(struct spki_iterator *i)
 {
-  return sexp_iterator_exit_list(i) ? spki_parse_type(i) : 0;
+  return (i->type && i->sexp.type == SEXP_END
+	  && sexp_iterator_exit_list(&i->sexp)) ? spki_parse_type(i) : 0;
 }
 
-/* Unlike the other parser functions, this should be called with the
- * iterator pointing at the start of the expression. */
 enum spki_type
-spki_parse_principal(struct spki_acl_db *db, struct sexp_iterator *i,
+spki_parse_skip(struct spki_iterator *i)
+{
+  return sexp_iterator_exit_list(&i->sexp) ? spki_parse_type(i) : 0;
+}
+
+static const uint8_t *
+spki_last_expression(struct spki_iterator *i,
+		     unsigned start, unsigned *length)
+{
+  assert(start < i->start);
+  *length = i->start - start;
+  return i->sexp.buffer + start;
+}
+
+static const uint8_t *
+spki_next_subexpr(struct spki_iterator *i,
+		  unsigned *length)
+{
+  return sexp_iterator_subexpr(&i->sexp, length);
+}
+
+static const uint8_t *
+spki_parse_string(struct spki_iterator *i,
+		  unsigned *length)
+{
+  if (i->sexp.type == SEXP_ATOM
+      && ! i->sexp.display)
+    {
+      const uint8_t *contents = i->sexp.atom;
+      *length = i->sexp.atom_length;
+      
+      if (sexp_iterator_next(&i->sexp))
+	return contents;
+    }
+  return NULL;
+}
+
+enum spki_type
+spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 		     struct spki_principal **principal)
 {
-  struct sexp_iterator before = *i;
-
   switch (spki_parse_type(i))
     {
     default:
@@ -102,19 +179,19 @@ spki_parse_principal(struct spki_acl_db *db, struct sexp_iterator *i,
 
     case SPKI_TYPE_PUBLIC_KEY:
       {
+	unsigned start = i->start;
+
 	const uint8_t *key;
 	unsigned key_length;
 	enum spki_type next;
 	
-	*i = before;
-	key = sexp_iterator_subexpr(i, &key_length);
-	
-	if (!key)
-	  return 0;
-
-	next = spki_parse_type(i);
+	next = spki_parse_skip(i);
 	if (!next)
 	  return 0;
+
+	key = spki_last_expression(i, start, &key_length);
+
+	assert(key);
 
 	return (*principal = spki_principal_by_key(db, key_length, key))
 	  ? next : 0;
@@ -123,29 +200,25 @@ spki_parse_principal(struct spki_acl_db *db, struct sexp_iterator *i,
     case SPKI_TYPE_HASH:
       {
 	enum spki_type type = spki_intern(i);
-
+	unsigned digest_length;
+	const uint8_t *digest;
+	enum spki_type next;
+	
 	if (type
-	    && i->type == SEXP_ATOM
-	    && !i->display)
+	    && (digest = spki_parse_string(i, &digest_length))
+	    && (next = spki_parse_end(i)))
 	  {
-	    enum spki_type next;
-	    unsigned digest_length = i->atom_length;
-	    const uint8_t *digest = i->atom;
-	    
-	    if (sexp_iterator_next(i) && (next = spki_parse_end(i)))
-	      {
-		if (type == SPKI_TYPE_MD5
-		    && digest_length == MD5_DIGEST_SIZE)
-		  *principal = spki_principal_by_md5(db, digest);
+	    if (type == SPKI_TYPE_MD5
+		&& digest_length == MD5_DIGEST_SIZE)
+	      *principal = spki_principal_by_md5(db, digest);
 
-		else if (type == SPKI_TYPE_SHA1
-			 && digest_length == SHA1_DIGEST_SIZE)
-		  *principal = spki_principal_by_sha1(db, digest);
-		else
-		  return 0;
+	    else if (type == SPKI_TYPE_SHA1
+		     && digest_length == SHA1_DIGEST_SIZE)
+	      *principal = spki_principal_by_sha1(db, digest);
+	    else
+	      return 0;
 
-		return next;
-	      }
+	    return next;
 	  }
 	return 0;
       }
@@ -153,113 +226,120 @@ spki_parse_principal(struct spki_acl_db *db, struct sexp_iterator *i,
 }
 
 enum spki_type
-spki_parse_tag(struct spki_acl_db *db, struct sexp_iterator *i,
+spki_parse_tag(struct spki_acl_db *db, struct spki_iterator *i,
 	       struct spki_5_tuple *tuple)
 {
   const uint8_t *tag;
   enum spki_type next;
+
+  assert(i->type == SPKI_TYPE_TAG);
   
-  return ((tag = sexp_iterator_subexpr(i, &tuple->tag_length))
+  return ((tag = spki_next_subexpr(i, &tuple->tag_length))
 	  && (next = spki_parse_end(i))
 	  && (tuple->tag = spki_dup(db, tuple->tag_length, tag)))
     ? next : 0;
 }
 
 enum spki_type
-spki_parse_date(struct sexp_iterator *i,
+spki_parse_date(struct spki_iterator *i,
 		struct spki_date *d)
 {
-  if (i->type == SEXP_ATOM
-      && i->atom_length == SPKI_DATE_SIZE
-      && !i->display
-      && i->atom[4] == '-'
-      && i->atom[7] == '-'
-      && i->atom[10] == '_'
-      && i->atom[13] == ':'
-      && i->atom[16] == ':')
+  unsigned date_length;
+  const uint8_t *date_string;
+  enum spki_type next;
+  
+  if ((date_string = spki_parse_string(i, &date_length))
+      && date_length == SPKI_DATE_SIZE
+      && date_string[4] == '-'
+      && date_string[7] == '-'
+      && date_string[10] == '_'
+      && date_string[13] == ':'
+      && date_string[16] == ':'
+      && (next = spki_parse_end(i))) 
     {
-      memcpy(d->date, i->atom, SPKI_DATE_SIZE);
-      if (sexp_iterator_next(i))
-	return spki_parse_end(i);
+      memcpy(d->date, date_string, SPKI_DATE_SIZE);
+      return next;
     }
   return 0;
 }
 
 enum spki_type
-spki_parse_valid(struct sexp_iterator *i,
+spki_parse_valid(struct spki_iterator *i,
 		 struct spki_5_tuple *tuple)
 {
-  enum spki_type type = spki_parse_type(i);
+  assert(i->type == SPKI_TYPE_VALID);
+  
+  spki_parse_type(i);
 
-  if (type == SPKI_TYPE_NOT_BEFORE)
+  if (i->type == SPKI_TYPE_NOT_BEFORE)
     {
-      type = spki_parse_date(i, &tuple->not_before);
-      if (type)
+      if (spki_parse_date(i, &tuple->not_before))
 	tuple->flags |= SPKI_NOT_BEFORE;
     }
 
-  if (type == SPKI_TYPE_NOT_AFTER)
+  if (i->type == SPKI_TYPE_NOT_AFTER)
     {
-      type = spki_parse_date(i, &tuple->not_after);
-      if (type)
+      if (spki_parse_date(i, &tuple->not_after))
 	tuple->flags |= SPKI_NOT_AFTER;
     }
 
   /* Online tests not supported. */
-  if (type != SPKI_TYPE_END_OF_EXPR)
-    return 0;
-  
   return spki_parse_end(i);  
+}
+
+static int
+spki_parse_uint32(struct spki_iterator *i, uint32_t *x)
+{
+  return sexp_iterator_get_uint32(&i->sexp, x);
 }
 
 /* Requires that the version number be zero. */
 enum spki_type
-spki_parse_version(struct sexp_iterator *i)
+spki_parse_version(struct spki_iterator *i)
 {
   uint32_t version;
+  assert(i->type == SPKI_TYPE_VERSION);
   
-  return (sexp_iterator_get_uint32(i, &version)
+  return (spki_parse_uint32(i, &version)
 	  && version == 0)
     ? spki_parse_end(i) : 0;
 }
 		   
 enum spki_type
-spki_parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i,
+spki_parse_acl_entry(struct spki_acl_db *db, struct spki_iterator *i,
 		     struct spki_5_tuple *acl)
 {
   /* Syntax:
    *
    * ("entry" <principal> <delegate>? <tag> <valid>? <comment>?) */
 
-  enum spki_type type;
-      
+  assert(i->type == SPKI_TYPE_ENTRY);
+  
   acl->issuer = NULL;
   acl->flags = 0;
   acl->tag = NULL;
 
-  type = spki_parse_principal(db, i, &acl->subject);
+  spki_parse_principal(db, i, &acl->subject);
 
-  if (type == SPKI_TYPE_PROPAGATE)
+  if (i->type == SPKI_TYPE_PROPAGATE)
     {
       acl->flags |= SPKI_PROPAGATE;
-      type = spki_parse_end(i);
+      spki_parse_end(i);
     }
 
-  if (type != SPKI_TYPE_TAG)
+  if (i->type != SPKI_TYPE_TAG)
     return 0;
 
-  type = spki_parse_tag(db, i, acl);
+  spki_parse_tag(db, i, acl);
 
-  if (type == SPKI_TYPE_COMMENT)
-    type = spki_parse_skip(i);
+  if (i->type == SPKI_TYPE_COMMENT)
+    spki_parse_skip(i);
       
-  if (type == SPKI_TYPE_VALID)
-    type = spki_parse_valid(i, acl);
+  if (i->type == SPKI_TYPE_VALID)
+    spki_parse_valid(i, acl);
 
-  type = spki_parse_end(i);
-
-  if (type)
-    return type;
+  if (spki_parse_end(i))
+    return i->type;
 
   else if (acl->tag)
     {
@@ -271,59 +351,54 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i,
 }
 
 enum spki_type
-spki_parse_cert(struct spki_acl_db *db, struct sexp_iterator *i,
+spki_parse_cert(struct spki_acl_db *db, struct spki_iterator *i,
 		struct spki_5_tuple *cert)
 {
-  enum spki_type type = spki_parse_type(i);
-
+  assert(i->type == SPKI_TYPE_CERT);
+  
   cert->flags = 0;
+
+  spki_parse_type(i);
   
-  if (type == SPKI_TYPE_VERSION)
-    type = spki_parse_version(i);
+  if (i->type == SPKI_TYPE_VERSION)
+    spki_parse_version(i);
 
-  if (type == SPKI_TYPE_DISPLAY)
-    type = spki_parse_skip(i);
+  if (i->type == SPKI_TYPE_DISPLAY)
+    spki_parse_skip(i);
 
-  if (type != SPKI_TYPE_ISSUER)
+  if (i->type != SPKI_TYPE_ISSUER)
     return 0;
 
-  type = spki_parse_principal(db, i, &cert->issuer);
-  if (!type || !(type = spki_parse_end(i)))
+  if (! (spki_parse_principal(db, i, &cert->issuer)
+	 && spki_parse_end(i)))
     return 0;
 
-  if (type == SPKI_TYPE_ISSUER_INFO)
-    type = spki_parse_skip(i);    
+  if (i->type == SPKI_TYPE_ISSUER_INFO)
+    spki_parse_skip(i);    
 
-  type = spki_parse_principal(db, i, &cert->subject);
-  if (!type || !(type = spki_parse_end(i)))
+  if (! (spki_parse_principal(db, i, &cert->subject)
+	 && spki_parse_end(i)))
     return 0;
   
-  if (type == SPKI_TYPE_SUBJECT_INFO)
-    type = spki_parse_skip(i);    
+  if (i->type == SPKI_TYPE_SUBJECT_INFO)
+    spki_parse_skip(i);    
 
-  if (type == SPKI_TYPE_PROPAGATE)
+  if (i->type == SPKI_TYPE_PROPAGATE)
     {
-      if (!sexp_iterator_exit_list(i))
-	return 0;
-
       cert->flags |= SPKI_PROPAGATE;
+      spki_parse_end(i);
     }
 
-  if (type != SPKI_TYPE_TAG)
+  if (i->type != SPKI_TYPE_TAG)
     return 0;
   
-  type = spki_parse_tag(db, i, cert);
-  if (!type)
-    return 0;
+  spki_parse_tag(db, i, cert);
+    
+  if (i->type == SPKI_TYPE_VALID)
+    spki_parse_valid(i, cert);
 
-  if (type == SPKI_TYPE_VALID)
-    type = spki_parse_valid(i, cert);
-
-  if (type == SPKI_TYPE_COMMENT)
-    type = spki_parse_skip(i);    
-
-  if (type != SPKI_TYPE_END_OF_EXPR)
-    return 0;
+  if (i->type == SPKI_TYPE_COMMENT)
+    spki_parse_skip(i);    
 
   return spki_parse_end(i);
 }
