@@ -584,27 +584,13 @@ format_env_pair_c(const char *name, const char *value)
   return lsh_get_cstring(ssh_format("%lz=%lz", name, value));
 }
 
-static int
-chdir_home(struct unix_user *user)
-{
-  if (user->home)
-    {
-      if (chdir(lsh_get_cstring(user->home)) < 0)
-	werror("chdir to home directory `%S' failed %e\n", user->home, errno);
-      else
-	return 1;
-    }
-  if (chdir("/") < 0)
-    {
-      werror("chdir to `/' failed %e\n", errno);
-      return 0;
-    }
-  else
-    return 1;
-}
-
 static void
-exec_shell(struct unix_user *user, struct spawn_info *info)
+exec_shell(struct spawn_info *info,
+	   const char *shell,
+	   const char *home,
+	   const char *name,
+	   /* gid is used only if uid != getuid() */
+	   uid_t uid, gid_t gid)
 {
   const char **envp;
   const char **argv;
@@ -615,7 +601,7 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
   unsigned i, j;
 
   trace("unix_user: exec_shell\n");
-  assert(user->shell);
+  assert(shell);
 
   /* Make up an initial environment */
   debug("exec_shell: Setting up environment.\n");
@@ -631,15 +617,15 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
   envp = alloca(sizeof(char *) * (info->env_length + MAX_ENV + 1));
 
   i = 0;
-  envp[i++] = format_env_pair(ENV_SHELL, user->shell);
+  envp[i++] = format_env_pair_c(ENV_SHELL, shell);
 
-  if (user->home)
-    envp[i++] = format_env_pair(ENV_HOME, user->home);
+  if (home)
+    envp[i++] = format_env_pair_c(ENV_HOME, home);
 
   /* FIXME: The value of $PATH should not be hard-coded */
   envp[i++] = ENV_PATH "=/bin:/usr/bin";
-  envp[i++] = format_env_pair(ENV_USER, user->super.name);
-  envp[i++] = format_env_pair(ENV_LOGNAME, user->super.name);
+  envp[i++] = format_env_pair_c(ENV_USER, name);
+  envp[i++] = format_env_pair_c(ENV_LOGNAME, name);
 
   if (tz)
     envp[i++] = format_env_pair_c(ENV_TZ, tz);
@@ -662,11 +648,18 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
       /* Fixup argv[0], so that it starts with a dash */
       const char *p;
       char *s;
-      const char *shell = lsh_get_cstring(user->shell);
-        
+      size_t length = strlen(shell);
+
+      /* We can't alloca unlimited storage */
+      if (length > 1000)
+	{
+	  werror("exec_shell: shell name far too long.\n");
+	  _exit(EXIT_FAILURE);
+	}
+      
       debug("do_exec_shell: fixing up name of shell...\n");
       
-      s = alloca(user->shell->length + 2);
+      s = alloca(length + 2);
 
       /* Make sure that the shell's name begins with a -. */
       p = strrchr (shell, '/');
@@ -676,19 +669,19 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
 	p ++;
 
       s[0] = '-';
-      strncpy (s + 1, p, user->shell->length);
+      strncpy (s + 1, p, length+1);
       argv0 = s;
     }
   else
 #endif /* USE_LOGIN_DASH_CONVENTION */
-    argv0 = lsh_get_cstring(user->shell);
+    argv0 = shell;
 
   debug("exec_shell: argv0 = '%z'.\n", argv0);
 
   i = 0;
 
   /* Use lsh-execuv only if we need to change our uid. */
-  if (user->super.uid != getuid())
+  if (uid != getuid())
     {
       /* Build argument list for lsh-execuv. We need place for
        *
@@ -703,23 +696,23 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
       argv[i++] = "lsh-execuv";
       argv[i++] = "-u";
       trace("exec_shell: After -u\n");
-      argv[i++] = NUMBER(user->super.uid);
+      argv[i++] = NUMBER(uid);
       argv[i++] = "-g";
       trace("exec_shell: After -g\n");
-      argv[i++] = NUMBER(user->gid);
+      argv[i++] = NUMBER(gid);
       argv[i++] = "-n";
-      argv[i++] = lsh_get_cstring(user->super.name);
+      argv[i++] = name;
       argv[i++] = "-i";
       trace("exec_shell: After -i\n");
       argv[i++] = "--";
-      argv[i++] = lsh_get_cstring(user->shell);
+      argv[i++] = shell;
       assert(i <= MAX_ARG);
 #undef MAX_ARG
 #undef NUMBER
     }
   else
     {
-      program = lsh_get_cstring(user->shell);
+      program = shell;
       argv = alloca(sizeof(char *) * (info->argc + 2));
     }
   argv[i++] = argv0;
@@ -774,6 +767,173 @@ safe_close(int fd)
  * sent before the reply to a shell request.
  */
 
+/* Helper functions for the process spawning. */
+
+static void
+spawn_error(struct spawn_info *info,
+	    const int *sync)
+{
+  safe_close(sync[0]); safe_close(sync[1]);
+  
+  safe_close(info->in[0]);  safe_close(info->in[1]);
+  safe_close(info->out[0]); safe_close(info->out[1]);
+  safe_close(info->err[0]);
+  /* Allow the client's stdout and stderr to be the same fd, e.g.
+   * both /dev/null. */
+  if (info->err[1] != info->out[1])
+    safe_close(info->err[1]);
+}
+
+/* Parent processing */
+static struct lsh_process *
+spawn_parent(struct lsh_user *user,
+	     struct spawn_info *info,
+	     struct exit_callback *c,
+	     struct reaper *reaper, pid_t child,
+	     const int *sync)
+{
+  /* Parent */
+  struct lsh_process *process;
+  char dummy;
+  int res;
+      
+  /* Close the child's fd:s, except ones that are -1 */
+  safe_close(info->in[0]);
+  safe_close(info->out[1]);
+
+  /* Allow the client's stdout and stderr to be the same fd, e.g.
+   * both /dev/null. */
+  if (info->err[1] != info->out[1])
+    safe_close(info->err[1]);
+
+  safe_close(sync[1]);
+
+  /* On Solaris, reading the master side of the pty before the
+   * child has opened the slave side of it results in EINVAL. We
+   * can't have that, so we'll wait until the child has opened the
+   * tty, after which it should close its end of the
+   * syncronization pipe, and our read will return 0.
+   *
+   * We need the syncronization only if we're actually using a
+   * pty, but for simplicity, we do it every time. */
+      
+  do
+    res = read(sync[0], &dummy, 1);
+  while (res < 0 && errno == EINTR);
+
+  safe_close(sync[0]);
+
+  trace("do_spawn: parent after sync\n");
+      
+  process = unix_process_setup(child, user, &c,
+			       info->peer,
+			       info->pty ? info->pty->tty_name : NULL);
+
+  trace("do_spawn: parent after process setup\n");
+
+  REAP(reaper, child, c);
+  return process;
+}
+
+static void
+spawn_child(struct spawn_info *info,
+	    const char *home,
+	    const int *sync)
+{
+  int tty = -1;
+
+  if (!home)
+    goto cd_root;
+
+  if (chdir(home) < 0)
+    {
+      werror("chdir to home directory `%z' failed %e\n", home, errno);
+
+    cd_root:
+      if (chdir("/") < 0)
+	{
+	  werror("chdir to `/' failed %e\n", errno);
+	  _exit(EXIT_FAILURE);
+	}
+    }
+
+  trace("spawn_child: child after chdir\n");
+
+  /* We want to be a process group leader */
+  if (setsid() < 0)
+    {
+      werror("unix_user: setsid failed, already process group leader?\n"
+	     "   %e\n", errno);
+      _exit(EXIT_FAILURE);
+    }
+      
+#if WITH_PTY_SUPPORT
+  if (info->pty)
+    {
+      debug("lshd: unix_user.c: Opening slave tty...\n");
+      if ( (tty = pty_open_slave(info->pty)) < 0)
+	{
+	  debug("lshd: unix_user.c: "
+		"Opening slave tty... Failed!\n");
+	  werror("lshd: Can't open controlling tty for child!\n");
+	  _exit(EXIT_FAILURE);
+	}
+      else
+	debug("lshd: unix_user.c: Opening slave tty... Ok.\n");
+    }
+#endif /* WITH_PTY_SUPPORT */
+
+  trace("spawn_child: after pty\n");
+      
+  /* Now any tty processing is done, so notify our parent by
+   * closing the syncronization pipe. */
+      
+  safe_close(sync[0]); safe_close(sync[1]);
+
+#define DUP_FD_OR_TTY(src, dst) dup2((src) >= 0 ? (src) : tty, dst)
+
+  if (DUP_FD_OR_TTY(info->in[0], STDIN_FILENO) < 0)
+    {
+      werror("Can't dup stdin!\n");
+      _exit(EXIT_FAILURE);
+    }
+
+  if (DUP_FD_OR_TTY(info->out[1], STDOUT_FILENO) < 0)
+    {
+      werror("Can't dup stdout!\n");
+      _exit(EXIT_FAILURE);
+    }
+
+  trace("spawn_child: child before stderr dup\n");
+  if (!dup_error_stream())
+    {
+      werror("unix_user.c: Failed to dup old stderr. Bye.\n");
+      set_error_ignore();
+    }
+
+  if (DUP_FD_OR_TTY(info->err[1], STDERR_FILENO) < 0)
+    {
+      werror("Can't dup stderr!\n");
+      _exit(EXIT_FAILURE);
+    }
+#undef DUP_FD_OR_TTY
+      
+  trace("spawn_child: after stderr dup\n");
+
+  /* Close all the fd:s, except ones that are -1 */
+  safe_close(info->in[0]);
+  safe_close(info->in[1]);
+  safe_close(info->out[0]);
+  safe_close(info->out[1]);
+  safe_close(info->err[0]);
+  /* Allow the client's stdout and stderr to be the same fd, e.g.
+   * both /dev/null. */
+  if (info->err[1] != info->out[1])
+    safe_close(info->err[1]);
+
+  safe_close(tty);  
+}
+
 static struct lsh_process *
 do_spawn(struct lsh_user *u,
 	 struct spawn_info *info,
@@ -783,7 +943,7 @@ do_spawn(struct lsh_user *u,
   /* Pipe used for syncronization. */
   int sync[2];
   pid_t child;
-
+  
   if (!lsh_make_pipe(sync))
     {
       werror("do_spawn: Failed to create syncronization pipe.\n");
@@ -794,149 +954,36 @@ do_spawn(struct lsh_user *u,
   if (child < 0)
     {
       werror("unix_user: do_spawn: fork failed %e\n", errno);
-      safe_close(sync[0]); safe_close(sync[1]);
-
-      safe_close(info->in[0]);  safe_close(info->in[1]);
-      safe_close(info->out[0]); safe_close(info->out[1]);
-      safe_close(info->err[0]);
-      /* Allow the client's stdout and stderr to be the same fd, e.g.
-       * both /dev/null. */
-      if (info->err[1] != info->out[1])
-	safe_close(info->err[1]);
+      spawn_error(info, sync);
 
       return NULL;
     }
   else if (child)
     {
       /* Parent */
-      struct lsh_process *process;
-      char dummy;
-      int res;
-      
       trace("do_spawn: parent process\n");
 
-      /* Close the child's fd:s, except ones that are -1 */
-      safe_close(info->in[0]);
-      safe_close(info->out[1]);
-
-      /* Allow the client's stdout and stderr to be the same fd, e.g.
-       * both /dev/null. */
-      if (info->err[1] != info->out[1])
-	safe_close(info->err[1]);
-
-      safe_close(sync[1]);
-
-      /* On Solaris, reading the master side of the pty before the
-       * child has opened the slave side of it results in EINVAL. We
-       * can't have that, so we'll wait until the child has opened the
-       * tty, after which it should close its end of the
-       * syncronization pipe, and our read will return 0.
-       *
-       * We need the syncronization only if we're actually using a
-       * pty, but for simplicity, we do it every time. */
-      
-      do
-	res = read(sync[0], &dummy, 1);
-      while (res < 0 && errno == EINTR);
-
-      safe_close(sync[0]);
-
-      trace("do_spawn: parent after sync\n");
-      
-      process = unix_process_setup(child, &user->super, &c,
-				   info->peer,
-				   info->pty ? info->pty->tty_name : NULL);
-
-      trace("do_spawn: parent after process setup\n");
-
-      REAP(user->ctx->reaper, child, c);
-      return process;
+      return spawn_parent(u, info, c,
+			  user->ctx->reaper, child,
+			  sync);
     }
   else
     { /* Child */
-      int tty = -1;
-
+      const char *home;
+      
       trace("do_spawn: child process\n");
-      if (!chdir_home(user))
-	_exit(EXIT_FAILURE);
-      
-      trace("do_spawn: child after chdir\n");
-
-      /* We want to be a process group leader */
-      if (setsid() < 0)
+      if (user->home)
 	{
-	  werror("unix_user: setsid failed, already process group leader?\n"
-		 "   %e\n", errno);
-	  _exit(EXIT_FAILURE);
+	  home = lsh_get_cstring(user->home);
+	  assert(home);
 	}
+      else
+	home= "/";
       
-#if WITH_PTY_SUPPORT
-      if (info->pty)
-	{
-	  debug("lshd: unix_user.c: Opening slave tty...\n");
-	  if ( (tty = pty_open_slave(info->pty)) < 0)
-	    {
-	      debug("lshd: unix_user.c: "
-		    "Opening slave tty... Failed!\n");
-	      werror("lshd: Can't open controlling tty for child!\n");
-	      _exit(EXIT_FAILURE);
-	    }
-	  else
-	    debug("lshd: unix_user.c: Opening slave tty... Ok.\n");
-	}
-#endif /* WITH_PTY_SUPPORT */
-
-      trace("do_spawn: child after pty\n");
+      spawn_child(info, home, sync);
       
-      /* Now any tty processing is done, so notify our parent by
-       * closing the syncronization pipe. */
-      
-      safe_close(sync[0]); safe_close(sync[1]);
-
-#define DUP_FD_OR_TTY(src, dst) dup2((src) >= 0 ? (src) : tty, dst)
-
-      if (DUP_FD_OR_TTY(info->in[0], STDIN_FILENO) < 0)
-	{
-	  werror("Can't dup stdin!\n");
-	  _exit(EXIT_FAILURE);
-	}
-
-      if (DUP_FD_OR_TTY(info->out[1], STDOUT_FILENO) < 0)
-	{
-	  werror("Can't dup stdout!\n");
-	  _exit(EXIT_FAILURE);
-	}
-
-      trace("do_spawn: child before stderr dup\n");
-      if (!dup_error_stream())
-	{
-	  werror("unix_user.c: Failed to dup old stderr. Bye.\n");
-	  set_error_ignore();
-	}
-
-      if (DUP_FD_OR_TTY(info->err[1], STDERR_FILENO) < 0)
-	{
-	  werror("Can't dup stderr!\n");
-	  _exit(EXIT_FAILURE);
-	}
-#undef DUP_FD_OR_TTY
-      
-      trace("do_spawn: child after stderr dup\n");
-
-      /* Close all the fd:s, except ones that are -1 */
-      safe_close(info->in[0]);
-      safe_close(info->in[1]);
-      safe_close(info->out[0]);
-      safe_close(info->out[1]);
-      safe_close(info->err[0]);
-      /* Allow the client's stdout and stderr to be the same fd, e.g.
-       * both /dev/null. */
-      if (info->err[1] != info->out[1])
-	safe_close(info->err[1]);
-
-      safe_close(tty);
-      
-      exec_shell(user, info);
+      exec_shell(info, lsh_get_cstring(user->shell), home,
+		 lsh_get_cstring(user->super.name), user->super.uid, user->gid);
       _exit(EXIT_FAILURE);
     }
 }
@@ -1183,12 +1230,114 @@ make_unix_user_db(struct reaper *reaper,
   return &self->super;
 }
 
-struct lsh_string * unix_current_user(void)
-{
-  struct passwd *p = getpwuid(getuid());
 
-  if (p)                                   
-    return make_string(p->pw_name);
+/* Class representing the user the server is executing as. Used with
+   the login/telnet mode. */
+/* GABA:
+   (class
+     (name unix_user_self)
+     (super lsh_user)
+     (vars
+       (reaper object reaper)
+       ; login shell to use
+       (shell . "const char *")
+       (home . "const char *")))
+*/
+
+/* FIXME: Do we need these methods, or is it better to just use NULL
+   pointers? */
+static void
+do_verify_password_fail(struct lsh_user *s UNUSED,
+			struct lsh_string *password UNUSED,
+			struct command_continuation *c UNUSED,
+			struct exception_handler *e)
+{
+  static const struct exception invalid_passwd
+    = STATIC_EXCEPTION(EXC_USERAUTH, "Incorrect password.");
+
+  EXCEPTION_RAISE(e, &invalid_passwd);
+}
+
+static int
+do_file_exists_fail(struct lsh_user *u UNUSED,
+		    struct lsh_string *name,
+		    int free)
+{
+  if (free)
+    lsh_string_free(name);
   
-  return NULL;
+  return 0;
+}
+
+static const struct exception *
+do_read_file_fail(struct lsh_user *u UNUSED, 
+		  const char *name UNUSED, int secret UNUSED,
+		  uint32_t limit UNUSED,
+		  struct abstract_write *c UNUSED)
+{
+  make_io_exception(EXC_IO_OPEN_READ, NULL, 0, "Access denied.");  
+}
+
+static struct lsh_process *
+do_spawn_self(struct lsh_user *u,
+	      struct spawn_info *info,
+	      struct exit_callback *c)
+{
+  CAST(unix_user_self, self, u);
+  /* Pipe used for syncronization. */
+  int sync[2];
+  pid_t child;
+  
+  if (!lsh_make_pipe(sync))
+    {
+      werror("do_spawn: Failed to create syncronization pipe.\n");
+      return NULL;
+    }
+  
+  child = fork();
+  if (child < 0)
+    {
+      werror("unix_user: do_spawn_self: fork failed %e\n", errno);
+      spawn_error(info, sync);
+
+      return NULL;
+    }
+  else if (child)
+    {
+      /* Parent */
+      trace("do_spawn_self: parent process\n");
+
+      return spawn_parent(u, info, c,
+			  self->reaper, child,
+			  sync);
+    }
+  else
+    { /* Child */
+      trace("do_spawn_self: child process\n");
+      spawn_child(info, self->home, sync);
+      
+      exec_shell(info, self->shell, self->home,
+		 lsh_get_cstring(self->super.name), getuid(), -1);
+      _exit(EXIT_FAILURE);
+    }
+}
+
+struct lsh_user *
+make_unix_user_self(struct lsh_string *name,
+		    struct reaper *reaper,
+		    const char *home, const char *shell)
+{
+  NEW(unix_user_self, self);
+  self->super.name = name;
+  self->super.uid = getuid();
+  self->super.verify_password = do_verify_password_fail;
+  self->super.file_exists = do_file_exists_fail;
+  self->super.read_file = do_read_file_fail;
+  self->super.spawn = do_spawn_self;
+
+  self->reaper = reaper;
+  self->shell = shell;
+  self->home = home;
+
+  return &self->super;
 }
