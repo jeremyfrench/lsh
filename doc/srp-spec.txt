@@ -32,33 +32,41 @@ Furthermore, HASH is a hash function (currently SHA1), n is the user's
 name (used for looking up salt and verifier in the server's database),
 p is a password, and s is a random salt string.
 
-x is constructed from the strings n, p and s as as HASH(s || HASH(n ||
+x is constructed from the strings n, p and s as HASH(s || HASH(n ||
 p)), and the verifier is computed as g^x mod p. S keeps a database
 containing triples <n, s, v>, indexed by n.
 
-1. C renerates a random number x (lg(p) < x < q) and computes e = g^x mod
+Knowledge of the verifier enables an attacker to mount an offline
+search (also known as a "dictionary attack") on the user's password.
+So it should be kept secret. The <name, salt, verifier> entry can be
+created on the user's machine and transferred to the server, just like
+a user's public key, or it could be created on the server. The former
+approach has the advantage that the cleartext password is not even
+temporarily known by the server.
+
+1. C renerates a random number a (lg(p) < a < q) and computes e = g^a mod
    p. C sends e and n to S.
 
 2. S uses n to find v and s in its database. S generates a random
-   number y, (lg(p) < y < q) and computes f = v + g^b mod p. S selects
+   number b, (lg(p) < b < q) and computes f = v + g^b mod p. S selects
    u as the integer corresponding to the first 32 bits of HASH(f). If
-   f or u happens to be zero, S must try another y. S computes K = (e *
+   f or u happens to be zero, S must try another b. S computes K = (e *
    v^u)^b mod p. S sends s and f to C.
 
-3. C gets the password p and computes x = HASH(s || H(n || p)). C also
-   computes u in the same way as the server. Finally, C computes K =
-   (f - g^x) ^ (a + u * x) mod p.
+3. C gets the password p and computes x = HASH(s || H(n || p)) and v =
+   g^x mod p. C also computes u in the same way as S. Finally, C
+   computes K = (f - v) ^ (a + u * x) mod p.
 
 Each party must check that e and f are in the range [1, p-1]. If not,
 the key exchange fails.
 
-Note that the addition in v + g^b mod p in step 2 is not the a group
+Note that the addition in v + g^b mod p in step 2 is not a group
 operation, and the result could be zero, or, if g doesn't generate the
 entire multiplicative group of Z/p, some other element not in the
 group. In principle, we could use any invertible binary operation, say
 XOR, instead of addition modulo p. In step 3, v is subtracted again,
 and f - v is used for further computations. Perhaps C should check
-here that f - v belongs to the group? 
+here that f - v belongs to the group?
 
 At this point C and S have a shared secret K. They must now prove that
 they know the same value. Even if we're primarily interested in
@@ -69,7 +77,7 @@ authenticating the server, the user must prove knowledge of the key
 MESSAGES
 
 Group and hash function is negotiated with the KEXINIT messages. No
-host key algorithm is not used, and it MAY be "none".
+host key algorithm is used, and it MAY be specified as "none".
 
 First, the client sends:
 
