@@ -1,3 +1,43 @@
+2000-04-20  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/client_userauth.c (make_banner_handler): Replaced with
+	a static object.
+
+	* src/channel.c (do_channel_open): Use SSH_CHANNEL_MAX_PACKET_FUZZ
+	* src/server_session.c (make_server_session): Likewise.
+	* src/client.c (make_client_session): Likewise.
+	* src/tcpforward.c (make_tcpip_channel): Likewise
+
+	* src/command.h (command_context): Updated comment.
+
+	* src/connection.c (make_fail_handler): Replaced with static object.
+	(make_unimplemented_handler): Likewise.
+
+	* src/disconnect.c (make_disconnect_handler): Replaced with a
+	static object.
+
+	* src/io.c (choose_address): Choose one address fron an
+	addrinfo-list, using a list of preferred address families.
+	(address_info2sockaddr): Added preference argument. Updated all
+	calls. 
+
+	* src/lookup_verifier.h (lookup_verifier): Updated comments. 
+
+	* src/zlib.c (struct zlib_type): New type.
+	(do_free_zstream): Don't rely on casting the void * opaque to a
+	function pointer. 
+	(do_zlib): Improved messages.
+
+	* src/read_data.c (make_read_data): Deleted the overhead argument. 
+
+	* src/ssh.h (SSH_CHANNEL_MAX_PACKET_FUZZ): New constant.
+
+	* src/algorithms.c (prefer_compression_algorithms): New function. 
+	(algorithms_argp_parser): Changed behaviour of -z with no argument.
+
+	* doc/lsh.texinfo (Algorithm options): Documented change of -z
+	behaviour. 
+
 2000-04-19  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/xalloc.h [DEBUG_ALLOC] (CHECK_TYPE, CHECK_SUBTYPE): Return
