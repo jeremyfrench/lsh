@@ -101,6 +101,8 @@ static struct command options2identities;
      (vars
        (backend object io_backend)
 
+       (random object randomness)
+
        (signature_algorithms object alist)
        (home . "const char *")
        
@@ -115,8 +117,14 @@ static struct command options2identities;
 
        (user . "char *")
        (identity . "char *")
-       (publickey . int)
+       (with_publickey . int)
 
+       (with_srp_keyexchange . int)
+       (with_dh_keyexchange . int)
+
+       ;; (kexinit object make_kexinit)
+       (kex_algorithms object int_list)
+       
        (sloppy . int)
        (capture . "const char *")
        (capture_file object abstract_write)
@@ -143,23 +151,22 @@ static struct command options2identities;
 
 
 static struct lsh_options *
-make_options(struct alist *algorithms,
-	     struct io_backend *backend,
-	     struct randomness *random,
+make_options(struct io_backend *backend,
 	     struct exception_handler *handler,
 	     int *exit_code)
 {
   NEW(lsh_options, self);
 
-  init_algorithms_options(&self->super, algorithms);
+  init_algorithms_options(&self->super, many_algorithms(0, -1));
   
   self->backend = backend;
-
+  self->random = make_reasonably_random();
+  
   self->home = getenv("HOME");
   
   self->signature_algorithms
     = make_alist(1,
-		 ATOM_DSA, make_dsa_algorithm(random), -1);
+		 ATOM_DSA, make_dsa_algorithm(self->random), -1);
   
   self->handler = handler;
   self->exit_code = exit_code;
@@ -189,7 +196,11 @@ make_options(struct alist *algorithms,
   self->with_remote_peers = 0;
   object_queue_init(&self->actions);
 
-  self->publickey = 1;
+  self->with_publickey = 1;
+
+  self->with_srp_keyexchange = 0;
+  self->with_dh_keyexchange = 1;
+  self->kex_algorithms = NULL;
   
   return self;
 }
@@ -259,7 +270,7 @@ do_options2identities(struct command *ignored UNUSED,
 
   trace("do_options2identities\n");
   
-  if (!options->publickey)
+  if (!options->with_publickey)
     {
       COMMAND_RETURN(c, make_object_list(0, -1));
       return;
@@ -656,6 +667,9 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define OPT_HOST_DB 0x205
 
+#define OPT_DH 0x206
+#define OPT_SRP 0x207
+
 static const struct argp_option
 main_options[] =
 {
@@ -673,6 +687,14 @@ main_options[] =
   { "capture-to", OPT_CAPTURE, "File", 0,
     "When a new hostkey is received, append an ACL expressing trust in the key. "
     "In sloppy mode, the default is ~/.lsh/captured_keys.", 0 },
+#if WITH_SRP
+  { "srp-keyexchange", OPT_SRP, NULL, 0, "Enable experimental SRP support.", 0 },
+  { "no-srp-keyexchange", OPT_SRP | ARG_NOT, NULL, 0, "Disable experimental SRP support (default).", 0 },
+#endif /* WITH_SRP */
+
+  { "dh-keyexchange", OPT_DH, NULL, 0, "Enable DH support (default).", 0 },
+  { "no-dh-keyexchange", OPT_DH | ARG_NOT, NULL, 0, "Disable DH support.", 0 },
+
   { NULL, 0, NULL, 0, "Actions:", 0 },
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
@@ -951,6 +973,33 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    break;
 	  }
 
+	if (self->with_dh_keyexchange || self->with_srp_keyexchange)
+	  {
+	    struct dh_method *dh = make_dh1(self->random);
+	    int i = 0;
+	    self->kex_algorithms 
+	      = alloc_int_list(self->with_dh_keyexchange + self->with_srp_keyexchange);
+	    
+#if WITH_SRP	    
+	    if (self->with_srp_keyexchange)
+	      {
+		LIST(self->kex_algorithms)[i++] = ATOM_SRP_GROUP1_SHA1;
+		ALIST_SET(self->super.algorithms,
+			  ATOM_SRP_GROUP1_SHA1,
+			  make_srp_client(dh, ssh_format("%lz", self->user)));
+	      }
+#endif /* WITH_SRP */
+	    if (self->with_dh_keyexchange)
+	      {
+		LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
+		ALIST_SET(self->super.algorithms,
+			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+			  make_dh_client(dh));
+	      }
+	  }
+	else
+	  argp_error(state, "All keyexchange algorithms disabled.");
+
 	{
 	  struct lsh_string *tmp = NULL;
 	  const char *s = NULL;
@@ -1017,7 +1066,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_NO_PUBLICKEY:
-      self->publickey = 0;
+      self->with_publickey = 0;
       break;
 
     case OPT_HOST_DB:
@@ -1036,6 +1085,32 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->capture = arg;
       break;
 
+    case OPT_DH:
+      if (self->not)
+	{
+	  self->not = 0;
+
+	case OPT_DH | ARG_NOT:
+	  self->with_dh_keyexchange = 0;
+	  break;
+	}
+      
+      self->with_dh_keyexchange = 1;
+      break;
+      
+    case OPT_SRP:
+      if (self->not)
+	{
+	  self->not = 0;
+
+	case OPT_SRP | ARG_NOT:
+	  self->with_srp_keyexchange = 0;
+	  break;
+	}
+      
+      self->with_srp_keyexchange = 1;
+      break;
+      
     case 'E':
       lsh_add_action(self, lsh_command_session(self, ssh_format("%lz", arg)));
       break;
@@ -1198,9 +1273,6 @@ int main(int argc, char **argv)
   /* Default exit code if something goes wrong. */
   int lsh_exit_code = 17;
 
-  struct randomness *r;
-  struct alist *algorithms;
-  
   struct exception_handler *handler
     = make_lsh_default_handler(&lsh_exit_code, &default_exception_handler,
 			       HANDLER_CONTEXT);
@@ -1218,14 +1290,7 @@ int main(int argc, char **argv)
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
-  r = make_reasonably_random();
-
-  algorithms = many_algorithms(1,
-			       ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			       make_dh_client(make_dh1(r)),
-			       -1);
-
-  options = make_options(algorithms, backend, r, handler, &lsh_exit_code);
+  options = make_options(backend, handler, &lsh_exit_code);
 
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
   
@@ -1236,12 +1301,11 @@ int main(int argc, char **argv)
 	make_handshake_info(CONNECTION_CLIENT,
 			    "lsh - a free ssh", NULL,
 			    SSH_MAX_PACKET,
-			    r,
-			    algorithms,
+			    options->random,
+			    options->super.algorithms,
 			    make_simple_kexinit(
-			      r,
-			      make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-					    -1),
+			      options->random,
+			      options->kex_algorithms,
 			      make_int_list(1, ATOM_SSH_DSS, -1),
 			      options->super.crypto_algorithms,
 			      options->super.mac_algorithms,
