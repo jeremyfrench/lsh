@@ -1,3 +1,21 @@
+2000-02-20  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/io_commands.c (do_listen_connection): Raise EXC_IO_LISTEN. 
+
+	* src/tcpforward.c (make_tcpip_forward_request_exc): New function. 
+	(do_tcpip_forward_request): Use a better exception handler.
+
+	* src/read_data.c (make_read_data): Deleted assert checking
+	send_max_packet.
+
+	* src/zlib.c (do_free_zstream): Changed message from verbose() to
+	debug():
+
+	* src/testsuite/Makefile.am (TS_MORE_SH): Added tcpip-remote-test. 
+
+	* src/testsuite/functions.sh: Pass --enable-core to lshd.
+	Use set -e and set +e.
+
 2000-02-17  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* README: Updated disclaimer to be a little less pessimistic.  
