@@ -1,3 +1,45 @@
+1999-12-12  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/spki.h: Removed old code.
+	* src/sexp.h: Removed old code.
+	* src/server_session.c: Removed old code.
+	* src/server_keyexchange.c: Removed old code.
+	* src/resource.h: Removed old code.
+	* src/publickey_crypto.h: Removed old code.
+	* src/lsh.h: Removed old code.
+	* src/lsh.c: Removed old code.
+	* src/keyexchange.h: Removed old code.
+	* src/keyexchange.c: Removed old code.
+	* src/io_commands.c: Removed old code.
+	* src/io.c: Removed old code.
+	* src/format.h: Removed old code.
+	* src/exception.c: Removed old code.
+	* src/dsa.c: Removed old code.
+	* src/digit_table.c: Removed old code.
+	* src/daemon.h: Removed old code.
+	* src/daemon.c: Removed old code.
+	* src/connection_commands.c: Removed old code.
+	* src/command.c: Removed old code.
+	* src/channels.c: Removed old code.
+	* src/combinators.c: Removed old code.
+	* src/client_userauth.c: Removed old code.
+	* src/client_keyexchange.c (do_init_client_dh): Removed old code. 
+	* src/client.c: Removed old code.
+	* src/channel.c: Removed old code.
+	* src/alist.c: Removed old code.
+
+	* configure.in (AC_OUTPUT): Generate contrib/Makefile and
+	contrib/lsh.spec. 
+
+	* Makefile.am.in (SUBDIRS): Added contrbi directory.
+
+	* contrib/Makefile.am (EXTRA_DIST): Added files.
+
+	* Added rpm spec file and redhat init script from Thayne Harbaugh
+	<thayne@northsky.com>
+
+	* configure.in: Bumped version to 0.1.19.
+
 1999-12-09  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/macros.m4: Various bug fixes.
