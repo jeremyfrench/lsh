@@ -9,8 +9,8 @@ fi
 . $srcdir/functions.sh
 
 
-fname="test-decrypt-helper"
-keyname="test-decrypt-key"
+fname="$TEST_HOME/test-decrypt-helper"
+keyname="$TEST_HOME/test-decrypt-key"
 
 rm -f "$fname" "$keyname" "$keyname.decrypted" \
  "$keyname.origkey" "$keyname.pub" "$keyname.nevercrypted" \
