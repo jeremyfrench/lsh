@@ -1,3 +1,24 @@
+Fri Mar  5 03:23:06 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/symmetric/twofish.c, src/symmetric/twofish.h
+ 	(twofish_selftest): Made non static.
+	(twofish_setup): Removed memory allocation. Instead, a
+ 	TWOFISH_pointer is given as an argument.
+	(twofish_encrypt, twofish_decrypt): Use correct pointer types. No
+ 	void * or casts.
+
+	* src/symmetric/Makefile.am.in (noinst_PROGRAMS): Added
+	twofish_test and generate_q.
+	(Makefile.am): Updated the rule for this target.
+
+	* src/twofish.c (twofish_instance): Include the context struct
+	directly in the instance, without extra indirection.
+
+	* src/crypto.c: Marked this file as obsolete.
+
+	* src/algorithms.c (default_crypto_algorithms): Added
+	ATOM_TWOFISH_CBC and ATOM_IDEA_CBC.
+
 Mon Mar  1 01:36:54 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/publickey_crypto.c (init_diffie_hellman_instance): Include
