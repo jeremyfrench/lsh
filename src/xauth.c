@@ -2,7 +2,7 @@
  *
  * Xauth parsing.
  *
- * $id:$ */
+ * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +23,86 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include "format.h"
+#include "xauth.h"
+
+#if HAVE_X11_XAUTH_H
+#include <X11/Xauth.h>
+#endif
+
+#include <unistd.h>
+
+#if HAVE_LIBXAU
+int
+xauth_lookup(socklen_t address_length,
+             struct sockaddr *address,
+             unsigned display_length,
+             const char *display,
+             struct lsh_string **name,
+             struct lsh_string **data)
+{
+  Xauth *xa = NULL;
+  int res = 0;
+  
+  const char *filename = XauFileName();
+  
+  if (!filename)
+    return 0;
+
+  /* 5 retries, 1 second each */
+  if (XauLockAuth(filename, 5, 1, 0) != LOCK_SUCCESS)
+    return 0;
+
+  switch (address->sa_family)
+    {
+    case AF_UNIX:
+      {
+        /* FIXME: Use xgethostbyname */
+#define HOST_MAX 200
+        const char *host[HOST_MAX];
+        if (gethostname(host, sizeof(host) - 1) == 0)
+          {
+            xa = XauGetAuthByAddr(FamilyLocal,
+                                  strlen(host), host,
+                                  display_length, display);
+          }
+        
+        break;
+      }
+    default:
+      xa = XauGetAuthByAddr(0,
+                            address_length, address,
+                            display_length, display);
+      break;
+    }
+
+  if (xa)
+    {
+      res = 1;
+      *name = ssh_format("%ls", xa->name_length, xa->name);
+      *data = ssh_format("%ls", xa->data_length, xa->data);
+      XauDisposeAuth(xa);
+    }
+
+  XauUnlockAuth(filename);
+
+  return res;
+}
+#else /* !HAVE_LIBXAU */
+
+int
+xauth_lookup(socklen_t address_length UNUSED,
+             struct sockaddr *address UNUSED,
+             unsigned display_length UNUSED,
+             const char *display UNUSED,
+             struct lsh_string **name UNUSED,
+             struct lsh_string **auth UNUSED)
+{
+  return 0;
+}
+#endif /* !HAVE_LIBXAU */
+
+#if 0
 #include "channel.h"
 
 #include "format.h"
@@ -92,7 +172,7 @@ read_file(int fd, UINT32 limit)
  */
 
 /* xauth-style file locking */
-/* GABA:
+/* ;;GABA:
    (class
      (name xauth_lock)
      (super resource)
@@ -159,8 +239,10 @@ xauth_lock(const char *name)
 
 #define XAUTH_MAX_SIZE 10000
 
-static int
-read_xauth(struct x11_forward *self)
+int
+xauth_lookup(struct sockaddr *address,
+             struct lsh_string **name,
+             struct lsh_string **auth)
 {
   struct lsh_string *s = NULL;
   struct resource *lock;
@@ -238,28 +320,4 @@ read_xauth(struct x11_forward *self)
   KILL_RESOURCE(lock);
   return 1;
 }
-
-struct channel_open *
-make_forward_x11(const char *display)
-{
-  NEW(x11_forward, self);
-  if (!parse_display(self, display))
-    {
-      KILL(self);
-      return NULL;
-    }
-
-  if (!read_xauth(self))
-    {
-      KILL(self);
-      return NULL;
-    }
-  return &self->super;
-}
-
-int
-main(int argc, char **argv)
-{
-  make_forward_x11(getenv("DISPLAY"));
-  return 0;
-}
+#endif
