@@ -35,6 +35,9 @@
 
 /* For flow control, we use this callback to report that data
  * has been flushed from a write_buffer. */
+/* FIXME: Perhaps move this class somewhere else? It is used only by
+ * channel.h, so perhaps we don't need class for it. */
+   
 /* GABA:
    (class
      (name flow_controlled)

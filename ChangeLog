@@ -1,3 +1,12 @@
+2001-09-30  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io.c (do_write_prepare): Deleted function.
+	(do_consuming_read): Deleted old code to deal with fd->hanged_up. 
+	(do_write_callback): Call write_buffer_pre_write instead of
+	FD_PREPARE.
+
+	* src/io.h (FD_PREPARE): Deleted method.
+
 2001-09-28  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/server_session.c (do_eof): Use close_fd_nicely instead of
