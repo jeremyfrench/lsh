@@ -29,17 +29,19 @@ struct handle_kexinit
   int (*f)(struct handle_kexinit *closure,
 	   struct kexinit *msg);
 }
-  
+
+#define HANDLE_KEXINIT(handler, msg) ((handler)->f((handler), (msg)))
 
 struct handle_kexinit_packet
 {
   struct abstract_write super;
+  struct handle_kexinit *handler;
 };
 
-struct server_keyexchange
-{
-  struct abstract_write p;
-};
+struct abstract_write *make_packet_kexinit(struct handle_kexinit *handler);
 
+#if 0
+struct lsh_string *make_keyexinit_packet(struct keyexinit *msg);
+#endif
 
 #endif /* LSH_KEYEXCHANGE_H_INCLUDED */

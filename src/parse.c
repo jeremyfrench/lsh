@@ -77,7 +77,7 @@ int parse_boolean(struct simple_buffer *buffer, int *result)
   return 1;
 }
 
-int parse_bignum(struct simple_buffer *buffer, bignum *result)
+int parse_bignum(struct simple_buffer *buffer, bignum result)
 {
   UINT32 length;
   UINT8 *digits;
@@ -86,6 +86,20 @@ int parse_bignum(struct simple_buffer *buffer, bignum *result)
     return 0;
 
   bignum_parse(result, length, digits);
+
+  return 1;
+}
+
+int parse_atom(struct simple_buffer *buffer, int *result)
+{
+  UINT32 length;
+  UINT8 *start;
+
+  if ( (!parse_string(buffer, &length, &start))
+       || length > 64)
+    return 0;
+
+  *result = lookup_atom(data, start);
 
   return 1;
 }

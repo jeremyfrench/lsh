@@ -30,7 +30,9 @@ int parse_sub_buffer(struct simple_buffer *buffer,
 int parse_uint8(struct simple_buffer *buffer, UINT8 *result);
 int parse_boolean(struct simple_buffer *buffer, int *result);
 
-int parse_bignum(struct simple_buffer *buffer, bignum *result);
+int parse_bignum(struct simple_buffer *buffer, bignum result);
+
+int parse_atom(struct simple_buffer *buffer, int *result);
 
 /* Returns 1 on success, 0 on failure, and -1 at end of buffer.
  * Unknown atoms sets result to zero. */

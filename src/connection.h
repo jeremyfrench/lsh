@@ -17,7 +17,7 @@ struct ssh_connection
   struct lsh_string *session_id;
   struct abstract_write *raw;   /* Socket connected to the other end */
 
-  struct abstract_write *write; /* Where to send packets throw the
+  struct abstract_write *write; /* Where to send packets through the
 				 * pipeline */
 
   /* Table of all known message types */

@@ -5,26 +5,10 @@
 #include "keyexchange.h"
 #include "parse.h"
 
-static int do_handle_kexinit(struct abstract_write **w,
-			     struct lsh_string *packet)
-{
-  struct kexinit *msg = parse_kexinit(packet);
-
-  if (!msg)
-    return 0;
-
-  lsh_free(packet);
-
-  
-  {
-    
-  
-  }
-}
 
 #define NLISTS 10
 
-struct kexinit * parse_kexinit(struct lsh_string *packet)
+struct kexinit *parse_kexinit(struct lsh_string *packet)
 {
   struct kexinit *res;
   struct simple_buffer buffer;
@@ -82,3 +66,29 @@ struct kexinit * parse_kexinit(struct lsh_string *packet)
 
   return res;
 }
+
+static int do_handle_kexinit(struct abstract_write **w,
+			     struct lsh_string *packet)
+{
+  struct handle_kexinit_packet *closure = (struct handle_kexinit_packet *) *w;
+  struct kexinit *msg = parse_kexinit(packet);
+
+  if (!msg)
+    return 0;
+
+  lsh_free(packet);
+
+  return HANDLE_KEXINIT(closure->handler, msg);
+}
+
+struct abstract_write *make_packet_kexinit(struct handle_kexinit *handler)
+{
+  struct handle_kexinit_packet *closure
+    = xalloc(sizeof(struct handle_kexinit_packet));
+
+  closure->super.write = do_handle_kexinit;
+  closure->handler = handler;
+
+  return &closure->super;
+}
+
