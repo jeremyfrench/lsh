@@ -1,3 +1,8 @@
+2003-09-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* README: Updated the instructions for building from CVS. List
+	tcputils as a program needed for the testsuite.
+
 2003-09-20  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* misc/mkdiff: Copied mkdiff script from the old lsh_1_2_BRANCH.
