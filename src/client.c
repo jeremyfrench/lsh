@@ -501,7 +501,7 @@ client_options[] =
   { "background", 'B', NULL, 0, "Put process into the background. Implies -N.", 0 },
   { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },
   { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
-  { "subsystem", 'OPT_SUBSYSTEM', "subsystem-name", 0,
+  { "subsystem", OPT_SUBSYSTEM, "subsystem-name", 0,
 #if WITH_PTY_SUPPORT 
     "Connect to given subsystem. Implies --no-pty.",
 #else
