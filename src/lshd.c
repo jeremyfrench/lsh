@@ -31,202 +31,67 @@
 #include <string.h>
 
 #include <unistd.h>
-
 #include <netinet/in.h>
 
 #include <oop.h>
 
 #include "nettle/macros.h"
 
+#include "lshd.h"
+
+#include "algorithms.h"
 #include "crypto.h"
-#include "exception.h"
+#include "format.h"
 #include "io.h"
+#include "keyexchange.h"
 #include "lsh_string.h"
+#include "randomness.h"
+#include "server.h"
 #include "ssh.h"
-#include "ssh_read.h"
 #include "werror.h"
 #include "xalloc.h"
 
-enum read_state { READ_UNDEF, READ_LINE, READ_HEADER, READ_PACKET };
-struct ssh_read_state;
+#define GABA_DEFINE
+# include "lshd.h.x"
+#undef GABA_DEFINE
 
 #include "lshd.c.x"
 
-
 static oop_source *global_oop_source;
 
-/* GABA:
-   (class
-     (name lshd_read_state)
-     (super ssh_read_state)
-     (vars
-       (sequence_number . uint32_t);
-       (padding . uint8_t)))
-*/
+/* FIXME: Duplicated in connection.c */
+static const char *packet_types[0x100] =
+#include "packet_types.h"
+;
 
-static struct lshd_read_state *
-make_lshd_read_state(struct header_callback *process,
-		     struct exception_handler *e)
-{
-  NEW(lshd_read_state, self);
-  init_ssh_read_state(&self->super, SSH_MAX_BLOCK_SIZE, 8, process, e);
-  self->sequence_number = 0;
-
-  return self;
-}
 
 
 /* GABA:
    (class
-     (name ssh_process_header)
-     (super header_callback)
+     (name lshd_read_error)
+     (super error_callback)
      (vars
-       (sequence_number . uint32_t);
        (connection object lshd_connection)))
 */
 
-static struct lsh_string *
-ssh_process_header(struct header_callback *s, struct ssh_read_state *rs,
-		   uint32_t *done)
+static void
+lshd_read_error(struct error_callback *s, int error)
 {
-  CAST(ssh_process_header, self, s);
-  CAST(lshd_read_state, state, rs);
-  
-  const uint8_t *header;
-  uint32_t length;
-  uint32_t padding;
-  uint32_t block_size;
-  uint32_t mac_size;
-  struct lsh_string *packet;
-  
-  block_size = self->connection->rec_crypto
-    ? self->connection->rec_crypto->block_size : 8;
-
-  if (self->connection->rec_crypto)
-    {
-      assert(state->super.header_length == block_size);
-      CRYPT(self->connection->rec_crypto,
-	    block_size,
-	    state->super.header, 0,
-	    state->super.header, 0);
-    }
-  header = lsh_string_data(state->super.header);
-  length = READ_UINT32(header);
-
-  /* NOTE: We don't implement a limit at _exactly_
-   * rec_max_packet, as we don't include the length field
-   * and MAC in the comparison below. */
-  if (length > (self->connection->rec_max_packet + SSH_MAX_PACKET_FUZZ))
-    {
-      werror("read_packet: Receiving too large packet.\n"
-	     "  %i octets, limit is %i\n",
-	     length, self->connection->rec_max_packet);
-		  
-      PROTOCOL_ERROR(self->connection->e, "Packet too large");
-      return NULL;
-    }
-
-  if ( (length < 12)
-       || (length < (block_size - 4))
-       || ( (length + 4) % block_size))
-    {
-      werror("read_packet: Bad packet length %i\n",
-	     length);
-      PROTOCOL_ERROR(self->connection->e, "Invalid packet length");
-      return NULL;
-    }
-  
-  if (self->connection->rec_mac)
-    {
-      uint8_t s[4];
-      WRITE_UINT32(s, self->sequence_number);
-      MAC_UPDATE(self->connection->rec_mac, 4, s);
-      MAC_UPDATE(self->connection->rec_mac,
-		 block_size, header);
-    }
-
-  padding = header[4];
-  
-  if ( (padding < 4)
-       || (padding >= length) )
-    {
-      PROTOCOL_ERROR(self->connection->e,
-		     "Bogus padding length.");
-      return NULL;
-    }
-  mac_size = self->connection->rec_mac
-    ? self->connection->rec_mac->mac_size : 0;
-  
-  packet = lsh_string_alloc(length - 1 + mac_size);
-  lsh_string_write(packet, 0, block_size - 5, header + 5);
-  lsh_string_set_sequence_number(packet, self->sequence_number++);
-  
-  if (block_size - 5 == length + mac_size)
-    {
-      werror("Entire paccket fit in first block.\n");
-      abort();
-#if 0
-      /* This can happen only if we're using a cipher with a large
-	 block size, and no mac. */
-      assert(!self->connection->rec_mac);
-      assert(self->connection->rec_crypto);
-      lsh_string_trunc(packet, length);
-      lshd_handle_ssh_packet(connection, packet);
-
-      return NULL;
-#endif
-    }
-
-  *done = block_size - 5;
-  return packet;
+  CAST(lshd_read_error, self, s);
+  werror("Read failed: %e\n", error);
+  KILL(&self->connection->super);
 }
 
-static struct header_callback *
-make_ssh_process_header(struct lshd_connection *connection)
+static struct error_callback *
+make_lshd_read_error(struct lshd_connection *connection)
 {
-  NEW(ssh_process_header, self);
-  self->super.process = ssh_process_header;
+  NEW(lshd_read_error, self);
+  self->super.error = lshd_read_error;
   self->connection = connection;
 
   return &self->super;
 }
 
-/* GABA:
-   (class
-     (name lshd_connection)
-     (super resource)
-     (vars
-       (e object exception_handler)
-
-       ; Sent and received version strings.
-       ; Client is index 0, server is index 1.
-       (versions array (string) 2)
-       
-       ; Receiving encrypted packets
-       ; Input fd for the ssh connection
-       (ssh_input . int)
-       (reader object lshd_read_state)
-       (rec_max_packet . uint32_t)
-       (rec_mac object mac_instance)
-       (rec_crypto object crypto_instance)
-       (rec_compress object compress_instance)
-
-       ; Sending encrypted packets
-       ; Output fd for the ssh connection, ; may equal ssh_input
-       (ssh_output . int)
-       ; (writer object ...)
-
-       (send_mac object mac_instance)
-       (send_crypto object crypto_instance)
-       (send_compress object compress_instance)
-
-       ; Communication with service on top of the transport layer.
-       ; This is a bidirectional pipe
-       (service_fd . int)
-       (service_reader object ssh_read_state)
-       ; (service_writer ...)
-       ))
-*/
 
 static void
 kill_lshd_connection(struct resource *s)
@@ -258,23 +123,25 @@ kill_lshd_connection(struct resource *s)
 }
 
 static struct lshd_connection *
-make_lshd_connection(int input, int output)
+make_lshd_connection(struct configuration *config, int input, int output)
 {
   NEW(lshd_connection, self);
   init_resource(&self->super, kill_lshd_connection);
+  self->config = config;
   self->ssh_input = input;
   self->ssh_output = output;
 
-  /* FIXME: Exceptions. All it needs to do is to close the connection.
-     We probably don't need any exceptions at all, as the right action
-     for any errors is to close the corresponding connection. We
-     probably don't even need to kill the child process, as it should
-     get EOF. */
-  self->e = &default_exception_handler;
-  self->version[0] = self->version[1] = NULL;
+  init_kexinit_state(&self->kex);
+  self->session_id = NULL;
   
-  self->reader = make_lshd_read_state(make_ssh_process_header(self),
-				      self->e);
+  self->kexinit_handler = &lshd_kexinit_handler;
+  self->newkeys_handler = NULL;
+  self->kex_handler = NULL;
+  self->service_handler = NULL;
+  
+  self->reader = make_lshd_read_state(make_lshd_process_ssh_header(self),
+				      make_lshd_read_error(self));
+
   self->rec_max_packet = SSH_MAX_PACKET;
   self->rec_mac = NULL;
   self->rec_crypto = NULL;
@@ -283,31 +150,47 @@ make_lshd_connection(int input, int output)
   self->send_mac = NULL;
   self->send_crypto = NULL;
   self->send_compress = NULL;
+  self->send_seqno = 0;
   
   self->service_fd = -1;
 
   return self;
 };
 
-/* GABA:
-   (class
-     (name lshd_read_handler)
-     (super abstract_write)
-     (vars
-       (connection object lshd_connection)))
-*/
-
 static void
-lshd_handle_packet(struct abstract_write *s, struct lsh_string *packet)
+connection_write_data(struct lshd_connection *connection,
+		      struct lsh_string *data)
 {
-  CAST(lshd_read_handler, self, s);
-  werror("Received packet: %xS\n", packet);
-  lsh_string_free(packet);
+  /* FIXME: Handle errors, including EWOULDBLOCK */
+  if (write_raw(connection->ssh_output,
+		STRING_LD(data)))
+    fatal("Write failed.\n");
 
-  ssh_read_header(&self->connection->reader->super,
-		  global_oop_source, self->connection->ssh_input,
-		  &self->super);
+  lsh_string_free(data);
 }
+
+void
+connection_write_packet(struct lshd_connection *connection,
+			struct lsh_string *packet)
+{
+  connection_write_data(connection,
+			encrypt_packet(packet,
+				       connection->send_compress,
+				       connection->send_crypto,
+				       connection->send_mac,
+				       connection->config->random,
+				       connection->send_seqno++));
+}
+
+void
+connection_disconnect(struct lshd_connection *connection,
+		      int reason, const uint8_t *msg)
+{
+  if (reason)
+    connection_write_packet(connection, format_disconnect(reason, msg, ""));
+  
+  KILL_RESOURCE(&connection->super);
+};
 
 #if 0
 static struct abstract_write *
@@ -335,11 +218,11 @@ lshd_handle_line(struct abstract_write *s, struct lsh_string *line)
   /* Line must start with "SSH-2.0-" (we may need to allow "SSH-1.99" as well). */
   if (length < 8 || 0 != memcmp(version, "SSH-2.0-", 4))
     {
-      PROTOCOL_ERROR_DISCONNECT(self->connection->e, 0, "Invalid version line");
+      connection_disconnect(self->connection, 0, NULL);
       return;
     }
 
-  self->connection->version[0] = line;
+  self->connection->kex.version[0] = line;
   
   self->super.write = lshd_handle_packet;
   
@@ -357,18 +240,110 @@ make_lshd_handle_line(struct lshd_connection *connection)
   return &self->super;
 }
 
+/* Handles decrypted packets. */ 
+void
+lshd_handle_ssh_packet(struct lshd_connection *connection, struct lsh_string *packet)
+{
+  uint32_t length = lsh_string_length(packet);
+  uint8_t msg;
+  
+  werror("Received packet: %xS\n", packet);
+  if (!length)
+    {
+      werror("Received empty packet!\n");
+      lsh_string_free(packet);
+      connection_error(connection, "Empty packet");
+      return;
+    }
+
+  if (length > connection->rec_max_packet)
+    {
+      werror("Packet too large!\n");
+      connection_error(connection, "Packet too large");
+      lsh_string_free(packet);
+      return;
+    }
+  
+  msg = lsh_string_data(packet)[0];
+
+  werror("handle_connection: Received packet of type %i (%z)\n",
+	 msg, packet_types[msg]);
+
+  /* Messages of type IGNORE, DISCONNECT and DEBUG are always
+     acceptable. */
+  if (msg == SSH_MSG_IGNORE)
+    {
+      /* Ignore it */
+    }
+
+  else if (msg == SSH_MSG_DISCONNECT)
+    connection_disconnect(connection, 0, NULL);
+
+  else if (msg == SSH_MSG_DEBUG)
+    {
+      /* FIXME: In verbose mode, display message */
+    }
+
+  /* Otherwise, behaviour depends on te kex state */
+  else switch (connection->kex.state)
+    {
+    case KEX_STATE_IGNORE:
+      connection->kex.state = KEX_STATE_IN_PROGRESS;
+      break;
+      
+    case KEX_STATE_IN_PROGRESS:
+      if (msg < SSH_FIRST_KEYEXCHANGE_SPECIFIC
+	  || msg >= SSH_FIRST_USERAUTH_GENERIC)
+	connection_error(connection, "Unexpected message during key exchange");
+      else
+	HANDLE_PACKET(connection->kex_handler, connection, packet);
+
+      break;
+
+    case KEX_STATE_NEWKEYS:
+      if (msg != SSH_MSG_NEWKEYS)
+	connection_error(connection, "NEWKEYS expected");
+      else
+	HANDLE_PACKET(connection->newkeys_handler, connection, packet);
+      break;
+
+    case KEX_STATE_INIT:
+      if (msg == SSH_MSG_KEXINIT)
+	HANDLE_PACKET(connection->kexinit_handler, connection, packet);
+
+      else if (msg == SSH_MSG_SERVICE_REQUEST)
+	/* FIXME: Check that keyexchange is completed. */
+	connection_disconnect(connection,
+			      SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+			      "Not implemented");
+
+      else if (msg >= SSH_FIRST_USERAUTH_GENERIC
+	       && connection->service_handler)
+	HANDLE_PACKET(connection->service_handler, connection, packet);
+
+      else
+	connection_write_packet(
+	  connection,
+	  format_unimplemented(lsh_string_sequence_number(packet)));
+
+      break;
+    }
+
+  lsh_string_free(packet);
+}
+
 static void
 lshd_handshake(struct lshd_connection *connection)
 {
-  connection->version[1] = make_string("SSH-2.0-lshd-ng");
-  
-  if (write_raw(connection->ssh_output,
-		16, "SSH-2.0-lshd-ng\n"))
-    fatal("Writing greeting failed.\n");
+  connection->kex.version[1] = make_string("SSH-2.0-lshd-ng");
 
   ssh_read_line(&connection->reader->super, 256,
 		global_oop_source, connection->ssh_input,
 		make_lshd_handle_line(connection));  
+
+  connection_write_data(connection,
+			ssh_format("%lS\r\n", connection->kex.version[1]));
+  lshd_send_kexinit(connection);
 }
 
 /* GABA:
@@ -376,9 +351,8 @@ lshd_handshake(struct lshd_connection *connection)
      (name lshd_port)
      (super resource)
      (vars
-       (fd . int)
-       ; To we need any options?
-       ))
+       (config object configuration)
+       (fd . int)))
 */
 
 static void
@@ -395,10 +369,11 @@ kill_port(struct resource *s)
 };
 
 static struct lshd_port *
-make_lshd_port(int fd)
+make_lshd_port(struct configuration *config, int fd)
 {
   NEW(lshd_port, self);
   init_resource(&self->super, kill_port);
+  self->config = config;
   self->fd = fd;
   
   return self;
@@ -424,7 +399,7 @@ lshd_port_accept(oop_source *source UNUSED,
       return OOP_CONTINUE;
     }
 
-  connection = make_lshd_connection(s, s); 
+  connection = make_lshd_connection(self->config, s, s); 
   gc_global(&connection->super);
 
   lshd_handshake(connection);
@@ -433,7 +408,7 @@ lshd_port_accept(oop_source *source UNUSED,
 }
 		 
 static struct resource_list *
-open_ports(int port_number)
+open_ports(struct configuration *config, int port_number)
 {
   struct resource_list *ports = make_resource_list();
   struct sockaddr_in sin;
@@ -462,7 +437,7 @@ open_ports(int port_number)
   if (listen(s, 256) < 0)
     fatal("listen failed: %e\n", errno);
 
-  port = make_lshd_port(s);
+  port = make_lshd_port(config, s);
   remember_resource(ports, &port->super);
 
   global_oop_source->on_fd(global_oop_source, s, OOP_READ,
@@ -474,12 +449,39 @@ open_ports(int port_number)
 
 static oop_source *global_oop_source;
 
+static struct configuration *
+make_configuration(const char *hostkey)
+{
+  NEW(configuration, self);
+  
+  self->random = make_system_random();
+  
+  self->algorithms = all_symmetric_algorithms();
+  ALIST_SET(self->algorithms, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
+	    &make_lshd_dh_handler(make_dh14(self->random))->super);
+
+  self->keys = make_alist(0, -1);
+  if (!read_host_key(hostkey, all_signature_algorithms(self->random), self->keys))
+    werror("No host key.\n");
+  
+  self->kexinit = make_simple_kexinit(self->random,
+				      make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP14_SHA1, -1),
+				      filter_algorithms(self->keys, default_hostkey_algorithms()),
+				      default_crypto_algorithms(self->algorithms),
+				      default_mac_algorithms(self->algorithms),
+				      default_compression_algorithms(self->algorithms),
+				      make_int_list(0, -1));
+
+  return self;  
+}
+
 int
 main(int argc UNUSED, char **argv UNUSED)
 {
   global_oop_source = io_init();
 
-  open_ports(4711);
+  open_ports(make_configuration("testsuite/key-1.private"),
+	     4711);
   
   io_run();
 
