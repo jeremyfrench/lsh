@@ -6,7 +6,7 @@ alist.h done
 atoms.h done
 bignum.h done
 
-blocking_write.h
+blocking_write.h (done)
 
   Used only by lsh-keygen.c. Should be deleted.
 
@@ -26,11 +26,11 @@ channel_commands.h done
 charset.h done
 client.h done
 client_keyexchange.h done
-client_pty.h
+client_pty.h (done)
 
   Move the declaration of make_pty_request to client.h.
   
-client_session.h
+client_session.h (done)
 
   Move the declaration of make_client_session to client.h
   
@@ -178,7 +178,7 @@ server_pty.h done
 server_session.h done
 server_userauth.h done
 
-sexp.h
+sexp.h (done)
 
   Remove traces of cons.
   Remove SEXP_SET

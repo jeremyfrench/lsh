@@ -1,5 +1,21 @@
 2001-03-20  Niels Möller  <nisse@ehand.com>
 
+	* src/lshg.c: Include client.h (used to include client.c. Argh!).
+
+	* src/lsh.h: Forward-declare struct interact.
+
+	* src/lsh.c: Don't include client_pty.h.
+
+	* src/client_session.c: Include client.h, not client_session.h. 
+
+	* src/client_pty.c: Include client.h, not client_pty.h.
+
+	* src/client.h (make_pty_request): Moved declaration here. 
+
+	* src/client.c: Don't include client_pty.h.
+
+	* src/client_session.h, src/client_pty.h: Deleted.
+
 	* src/Makefile.am.in (class-map): Let the shell find the awk
 	program. 
 
