@@ -43,23 +43,9 @@
 
 #include "dsa.c.x" 
 
+#define SA(x) sexp_a(ATOM_##x)
+
 /* DSA signatures */
-
-/* ;; GABA:
-   (class
-     (name dsa_signer_variant)
-     (super signer)
-     (vars
-       (dsa object dsa_signer)))
-*/
-
-/* ;; GABA:
-   (class
-     (name dsa_verifier_variant)
-     (super verifier)
-     (vars
-       (dsa object dsa_verifier)))
-*/
 
 /* GABA:
    (class
@@ -89,8 +75,8 @@ static void dsa_hash(mpz_t h, UINT32 length, const UINT8 *msg)
 static struct sexp *
 encode_dsa_sig_val(mpz_t r, mpz_t s)
 {
-  return sexp_l(2, sexp_l(2, ATOM_R, sexp_un(r), -1),
-		sexp_l(2, ATOM_S, sexp_un(s), -1), -1);
+  return sexp_l(2, sexp_l(2, SA(R), sexp_un(r), -1),
+		sexp_l(2, SA(S), sexp_un(s), -1), -1);
 }
 
 static int
@@ -253,12 +239,12 @@ do_dsa_sign_spki(struct signer *c,
 struct sexp *
 make_dsa_public_key(struct dsa_public *dsa)
 {
-  return sexp_l(2, sexp_a(ATOM_PUBLIC_KEY),
-		sexp_l(5, sexp_a(ATOM_DSA),
-		       sexp_l(2, sexp_a(ATOM_P), sexp_un(dsa->p), -1),
-		       sexp_l(2, sexp_a(ATOM_Q), sexp_un(dsa->q), -1),
-		       sexp_l(2, sexp_a(ATOM_G), sexp_un(dsa->g), -1),
-		       sexp_l(2, sexp_a(ATOM_Y), sexp_un(dsa->y), -1),
+  return sexp_l(2, SA(PUBLIC_KEY),
+		sexp_l(5, SA(DSA),
+		       sexp_l(2, SA(P), sexp_un(dsa->p), -1),
+		       sexp_l(2, SA(Q), sexp_un(dsa->q), -1),
+		       sexp_l(2, SA(G), sexp_un(dsa->g), -1),
+		       sexp_l(2, SA(Y), sexp_un(dsa->y), -1),
 		       -1), -1);
 }
   
