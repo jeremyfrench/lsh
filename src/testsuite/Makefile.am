@@ -22,6 +22,7 @@ TS_SH = conv-1-test conv-2-test conv-3-test \
 	tcpip-local-test tcpip-local-in-use-test tcpip-remote-test \
 	socks5-test socks4-test \
 	lshg-tcpip-local-test \
+	lcp-test \
 	rapid7-lsh-test rapid7-lshd-test login-auth-test lshd-no-auth-test \
 	lshd-random-input-test
 
@@ -42,7 +43,7 @@ EXTRA_DIST = testutils.h $(TS_SH) \
 	$(dist_rapid7) UTF-8-test.txt
 
 # FIXME: Move into some tmp directory.
-CLEANFILES = foo foo.pub test-seed-1 test-seed-2 test.out1 test.out2
+CLEANFILES = foo foo.pub test-seed-1 test-seed-2 test.out1 test.out2 lcp-file-*.txt
 
 # Files and directories used by the test cases.
 distclean-local:

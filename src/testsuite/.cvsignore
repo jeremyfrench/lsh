@@ -15,6 +15,7 @@ dsa-test
 foo
 foo.pub
 large-dir
+lcp-file-*.txt
 md5-test
 parse-config-test
 rijndael-test
