@@ -40,7 +40,7 @@
 #include "randomness.h"
 #include "service.h"
 #include "ssh.h"
-#include "tcpforward.h"
+#include "tcpforward_commands.h"
 #include "tty.h"
 #include "userauth.h"
 #include "werror.h"
@@ -292,7 +292,7 @@ int main(int argc, char **argv)
 	{ "forward-local-port", required_argument, NULL, 'L'},
 	{ "forward-remote-port", required_argument, NULL, 'R'},
 #endif /* WITH_TCP_FORWARD */
-	{ "nop", no_argument, &shell_flag, 0 },
+	{ "nop", no_argument, NULL, 'N' },
 	{ NULL }
       };
       
@@ -361,7 +361,7 @@ int main(int argc, char **argv)
 	      usage();
 
 	    object_queue_add_tail(&actions,
-				  &forward_local_port
+				  &make_forward_local_port
 				  (backend,
 				   make_address_info((forward_gateway
 						      ? NULL
@@ -379,7 +379,7 @@ int main(int argc, char **argv)
 	      usage();
 
 	    object_queue_add_tail(&actions,
-				  &forward_remote_port
+				  &make_forward_remote_port
 				  (backend,
 				   make_address_info((forward_gateway
 						      /* FIXME: Is NULL an ok value? */
@@ -389,6 +389,9 @@ int main(int argc, char **argv)
 				   target)->super);
 	    remote_forward = 1;
 	  }
+	  break;
+	case 'N':
+	  shell_flag = 0;
 	  break;
 	case '?':
 	  usage();
