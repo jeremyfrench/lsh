@@ -57,7 +57,7 @@
  * until after setuid? */
 
 #if HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 #include <assert.h>
@@ -75,8 +75,6 @@
 #endif
 #include <pwd.h>
 #include <grp.h>
-
-#include "lsh_types.h"
 
 static void
 usage(void)
