@@ -1,5 +1,7 @@
 News for the 1.3.4 release:
 
+	Updated the manual.
+	
 	Added X11 forwarding to lsh. Try lsh -x some.where. -x is a
 	modifier flag for the -E, -S and default actions. 
 
