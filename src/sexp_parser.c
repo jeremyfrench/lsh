@@ -176,8 +176,10 @@ sexp_parse_list_canonical(struct simple_buffer *buffer)
       struct sexp *e;
       
       if (*HERE == ')')
-	sexp_v(queue_to_list_and_kill(&p));
-
+	{
+	  ADVANCE(1);
+	  return sexp_v(queue_to_list_and_kill(&p));
+	}
       e = sexp_parse_canonical(buffer);
       if (!e)
 	{
@@ -201,11 +203,13 @@ sexp_parse_canonical(struct simple_buffer *buffer)
       return NULL;
     }
   
-  switch(GET())
+  switch(*HERE)
     {
     case '(':
+      ADVANCE(1);
       return sexp_parse_list_canonical(buffer);
     case '[':
+      ADVANCE(1);
       return sexp_parse_display_canonical(buffer);
     default:
       {
