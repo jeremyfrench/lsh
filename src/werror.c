@@ -116,19 +116,18 @@ static const struct exception *
 static const struct exception *
 write_syslog(int fd UNUSED, UINT32 length, const UINT8 *data)
 {
-  struct lsh_string *s = make_cstring_l(length, data);
+  struct lsh_string *s;
 
-  /* NOTE: make_cstring fails if the data contains any NUL characters. */
-  assert(s);
+  /* Data must not contain any NUL:s */
+  assert(!memchr(data, '\0', length));
+  
+  /* NUL-terminate the string. */
+  s = ssh_format("%ls", length, data);
 
-#if 0
-  /* Make sure the message is properly terminated with \0. */
-  snprintf(string_buffer, MIN(BUF_SIZE, length), "%s", data);
-#endif
   /* FIXME: Should we use different log levels for werror, verbose and
    * debug? */
   
-  syslog(LOG_NOTICE, "%s", s->data);
+  syslog(LOG_NOTICE, "%s", lsh_get_cstring(s));
   lsh_string_free(s);
   
   return NULL;
