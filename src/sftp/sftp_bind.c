@@ -459,8 +459,8 @@ static int
 lsftp_handle_packet(void)
 {
   int i, j;
-  UINT8 msg = 0 ;
-  UINT32 id = 0;
+  uint8_t msg = 0 ;
+  uint32_t id = 0;
 
   /* Hrrm, peek at id somehow */
 
@@ -959,7 +959,6 @@ void lsftp_nullcb(  struct lsftp_callback* nullcb )
   nullcb->local = 0;
   nullcb->remote = 0;
   nullcb->command = 0;
-  nullcb->st = 0;
   nullcb->a = 0;
   nullcb->memory = 0;
   nullcb->opt1 = 0;
@@ -1147,7 +1146,7 @@ lsftp_install_sftp_cb(struct sftp_callback *s)
 #if 0
 /* Not used??? */
 static int
-lsftp_remove_sftp_cb(UINT32 id)
+lsftp_remove_sftp_cb(uint32_t id)
 {
   int j, flag=0;
 
@@ -1635,16 +1634,16 @@ lsftp_handle_ls(struct sftp_callback *s,
 
   while( 1 )
     {
-      UINT32 slen = 1;
-      UINT32 *p;
+      uint32_t slen = 1;
+      uint32_t *p;
       
       void* lenptr;
-      UINT8* fname;
-      UINT32 fnamelen;
-      UINT8* longname;
-      UINT32 longnamelen;
+      uint8_t* fname;
+      uint32_t fnamelen;
+      uint8_t* longname;
+      uint32_t longnamelen;
       void* attrib;
-      UINT32 attriblen;
+      uint32_t attriblen;
       struct sftp_attrib* a;
       char* prefixed_fname;
 
@@ -1654,7 +1653,7 @@ lsftp_handle_ls(struct sftp_callback *s,
 	break;
       
       p = lenptr;         /* Explicit cast to lessen warnings */
-      slen = *p;          /* Read as UINT32 (no conversion needed) */
+      slen = *p;          /* Read as uint32_t (no conversion needed) */
       sftp_free_string( lenptr );
       fname = sftp_retrieve( &s->mem, slen, &fnamelen); /* Get string */
       
@@ -1665,7 +1664,7 @@ lsftp_handle_ls(struct sftp_callback *s,
 	break;
 
       p = lenptr;       /* Explicit cast to lessen warnings */
-      slen = *p;     /* Read as UINT32 (no conversion needed) */
+      slen = *p;     /* Read as uint32_t (no conversion needed) */
       sftp_free_string( lenptr );
       longname = sftp_retrieve( &s->mem, slen, &longnamelen); /* Get string */
       
@@ -1675,7 +1674,7 @@ lsftp_handle_ls(struct sftp_callback *s,
 	break;
 
       p = lenptr;                /* Explicit cast to lessen warnings */
-      slen = *p;                                    /* Read as UINT32 (no conversion needed) */
+      slen = *p;                                    /* Read as uint32_t (no conversion needed) */
       sftp_free_string( lenptr );
       
       /* Get attrib */
@@ -1978,16 +1977,16 @@ lsftp_handle_internal_ls(struct sftp_callback *s,
   
   while( 1 )
     {
-      UINT32 slen = 1;
-      UINT32 *p;
+      uint32_t slen = 1;
+      uint32_t *p;
       
       void* lenptr;
-      UINT8* fname = 0;
-      UINT32 fnamelen = 0;
-      UINT8* longname = 0;
-      UINT32 longnamelen = 0;
+      uint8_t* fname = 0;
+      uint32_t fnamelen = 0;
+      uint8_t* longname = 0;
+      uint32_t longnamelen = 0;
       void* attrib = 0;
-      UINT32 attriblen = 0;
+      uint32_t attriblen = 0;
       struct sftp_attrib *a;
       char* prefixed_fname;
       
@@ -1997,7 +1996,7 @@ lsftp_handle_internal_ls(struct sftp_callback *s,
 	break;
       
       p = lenptr; 
-      slen = *p;               /* Read as UINT32 (no conversion needed) */
+      slen = *p;               /* Read as uint32_t (no conversion needed) */
       sftp_free_string( lenptr );
       fname = sftp_retrieve( &s->mem, slen, &fnamelen); /* Get string */
       
@@ -2006,7 +2005,7 @@ lsftp_handle_internal_ls(struct sftp_callback *s,
 	break;
   
       p = lenptr; 
-      slen = *p;             /* Read as UINT32 (no conversion needed) */
+      slen = *p;             /* Read as uint32_t (no conversion needed) */
       sftp_free_string( lenptr );
       longname = sftp_retrieve( &s->mem, slen, &longnamelen); /* Get string */
       
@@ -2016,7 +2015,7 @@ lsftp_handle_internal_ls(struct sftp_callback *s,
 	break;
        
       p = lenptr; 
-      slen = *p;            /* Read as UINT32 (no conversion needed) */
+      slen = *p;            /* Read as uint32_t (no conversion needed) */
       sftp_free_string( lenptr );
       attrib = sftp_retrieve( &s->mem, slen, &attriblen); /* Get attrib */
       a = attrib;
@@ -2082,7 +2081,7 @@ lsftp_handle_internal_ls(struct sftp_callback *s,
 }
 
 int
-lsftp_do_stat(const char *file, struct stat *st )
+lsftp_do_stat(const char *file, struct sftp_attrib *a)
 {
   int id = -1;
   
@@ -2105,7 +2104,7 @@ lsftp_do_stat(const char *file, struct stat *st )
 	  tmp = file;
 	}
       
-      l->st = st; /* Fixup attrib */
+      l->a = a; /* Fixup attrib */
 
       lsftp_safe_to_write();   /* Wait for any unsent packet to go away */
 
@@ -2195,16 +2194,16 @@ lsftp_handle_realpath(struct sftp_callback *s,
   
   while( 1 ) /* */
     {
-      UINT32 slen = 1;
-      UINT32 *p;
+      uint32_t slen = 1;
+      uint32_t *p;
       
       void* lenptr;
-      UINT8* fname;
-      UINT32 fnamelen;
-      UINT8* longname;
-      UINT32 longnamelen;
+      uint8_t* fname;
+      uint32_t fnamelen;
+      uint8_t* longname;
+      uint32_t longnamelen;
       void* attrib;
-      UINT32 attriblen;
+      uint32_t attriblen;
       char** destptr;
 
       lenptr = sftp_retrieve( &s->mem, 4, &slen); /* Get string length */ 
@@ -2213,21 +2212,21 @@ lsftp_handle_realpath(struct sftp_callback *s,
 	break;
       
       p = lenptr; 
-      slen = *p;          /* Read as UINT32 (no conversion needed) */
+      slen = *p;          /* Read as uint32_t (no conversion needed) */
       sftp_free_string( lenptr );
       fname = sftp_retrieve( &s->mem, slen, &fnamelen); /* Get string */
       
       /* Get filename string */ 
       lenptr = sftp_retrieve( &s->mem, 4, &slen);
       p = lenptr; 
-      slen = *p;     /* Read as UINT32 (no conversion needed) */
+      slen = *p;     /* Read as uint32_t (no conversion needed) */
       sftp_free_string( lenptr );
       longname = sftp_retrieve( &s->mem, slen, &longnamelen); /* Get string */
       
       
       lenptr = sftp_retrieve( &s->mem, 4, &slen); 
       p = lenptr; 
-      slen = *p;            /* Read as UINT32 (no conversion needed) */
+      slen = *p;            /* Read as uint32_t (no conversion needed) */
       sftp_free_string( lenptr );
       
       /* Get attrib */
@@ -2247,8 +2246,9 @@ lsftp_handle_realpath(struct sftp_callback *s,
   return s->retval;
 } 
 
+/* FIXME: We could use a general change_attrib function. */
 int
-lsftp_do_chown(const char *file, UINT32 uid, UINT32 gid, const char *command)
+lsftp_do_chown(const char *file, uint32_t uid, uint32_t gid, const char *command)
 {
   int id = -1;
       
@@ -2377,46 +2377,16 @@ lsftp_do_chmod(const char *file, mode_t mode, const char *command)
 int
 lsftp_handle_stat(struct sftp_callback *s,
 		  const struct lsftp_callback *l)
-{
-  l->st->st_mode = -1;
-  l->st->st_ino = -1;
-  l->st->st_dev = -1;
-  l->st->st_rdev = -1;
-  l->st->st_nlink = -1;
-  l->st->st_uid = -1;
-  l->st->st_gid = -1;
-  l->st->st_size = -1;
-  l->st->st_atime = -1;
-  l->st->st_mtime = -1;
-  l->st->st_ctime = -1;
-  
+{  
   if( s->localerr )
     lsftp_perror( l->local, s->localerrno );
 
   if( s->retval == SSH_FX_OK )  /* We should have an OK status */
     {
-      if( s->attrib.flags & SSH_FILEXFER_ATTR_SIZE )
-	l->st->st_size = s->attrib.size;
-      
-      if( s->attrib.flags & SSH_FILEXFER_ATTR_UIDGID )
-	{
-	  l->st->st_uid = s->attrib.uid;
-	  l->st->st_gid = s->attrib.gid;
-	}
-      
-      if( s->attrib.flags & SSH_FILEXFER_ATTR_ACMODTIME )
-	{
-	  l->st->st_atime = s->attrib.atime;
-	  l->st->st_ctime = s->attrib.mtime;
-	}
-      
-      if( s->attrib.flags & SSH_FILEXFER_ATTR_PERMISSIONS )
-	l->st->st_mode = s->attrib.permissions;
+      *l->a = s->attrib;
     }
-  
   return s->retval;
 }
-
 
 int
 lsftp_handle_chall(struct sftp_callback *s,

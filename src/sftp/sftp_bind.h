@@ -80,7 +80,7 @@ struct lsftp_callback
   int op_id;
   lsftp_callback_func nextfun;
   struct sftp_attrib *a;
-  struct stat *st;
+  
   const char *local;
   const char *remote;
   const char *command;
@@ -131,12 +131,12 @@ int lsftp_handle_put(struct sftp_callback *s,
 int lsftp_do_cd(const char *dir);
 
 int lsftp_do_chmod(const char *file, mode_t mode, const char *command);
-int lsftp_do_chown(const char *file, UINT32 uid, UINT32 gid,
+int lsftp_do_chown(const char *file, uint32_t uid, uint32_t gid,
 		   const char *command);
 int lsftp_handle_chall(struct sftp_callback *s,
 		       const struct lsftp_callback *l);
 
-int lsftp_do_stat(const char* file, struct stat* st);
+int lsftp_do_stat(const char* file, struct sftp_attrib *a);
 int lsftp_handle_stat(struct sftp_callback *s,
 		      const struct lsftp_callback *l);
 
