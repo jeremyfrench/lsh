@@ -267,11 +267,14 @@ make_zlib_instance(struct compress_algorithm *c, int mode)
 	
         deflateInit(&res->z, closure->level);
         break;
-      case COMPRESS_INFLATE:
+
+    case COMPRESS_INFLATE:
 	res->z.opaque = inflateEnd;
 	res->f = inflate;
         res->super.codec = do_zlib;
 
+	/* FIXME: Perhaps we ought to use the connection's
+	 * rec_max_packet size? */
 	res->max = SSH_MAX_PACKET;
 	res->rate = 2 * RATE_UNIT;
 	

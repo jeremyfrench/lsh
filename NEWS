@@ -1,3 +1,7 @@
+News for the 0.2.9 release
+
+	Fixed bugs in the length checking of incoming packets.
+
 News for the 0.2.8 release
 
 	Reworked i/o and the CHANNEL_OPEN mechanism. Seems to fix the
