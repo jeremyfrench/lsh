@@ -1,3 +1,19 @@
+2002-05-15  Pontus Sköld  <pont@soua.net>
+
+	* configure.ac: Added things neccessarry for tcp wrappers to work.
+
+	* src/lshd.c (OPTIONS2TCP_WRAPPER): New command.
+	New options: --tcpwrappers, --no-tcpwrappers, --tcpwrappers-msg.
+	
+	* src/io_commands.c: Include <tcpd.h> if building with tcp
+	wrappers. Also include <syslog.h>.
+	(tcp_wrapper): New class.
+	(do_tcp_wrapper): New function.
+	(do_tcp_wrapper): New function.
+
+	* src/io_commands.h (make_tcp_wrapper): Definition of new
+	function.
+
 2002-05-14  Pontus Sköld  <pont@soua.net>
 
 	* src/algorithms.c (list_algorithms): Added missing newline after
