@@ -135,11 +135,7 @@ static void do_sha_digest(struct hash_instance *s,
 
 static struct hash_instance *do_sha_copy(struct hash_instance *s)
 {
-  CAST(sha_instance, self, s);
-  NEW(sha_instance, new);
-
-  memcpy(new, self, sizeof(*self));
-  return &new->super;
+  return &CLONE(sha_instance, s)->super;
 }
 
 static struct hash_instance *make_sha_instance(struct hash_algorithm *ignored)
@@ -230,13 +226,8 @@ static void do_hmac_digest(struct mac_instance *s,
 static struct mac_instance *do_hmac_copy(struct mac_instance *s)
 {
   CAST(hmac_instance, self, s);
-  NEW(hmac_instance, new);
+  CLONED(hmac_instance, new, self);
 
-  memcpy(&new->super, &self->super, sizeof(self->super));
-
-  /* FIXME: Sharing hinner and houter objects makes gc more difficult */
-  new->hinner = self->hinner;
-  new->houter = self->houter;
   new->state = HASH_COPY(self->state);
 
   return &new->super;
