@@ -1,5 +1,15 @@
 2001-09-25  Niels Möller  <nisse@ehand.com>
 
+	* src/gc.c (gc_register): Set gc_scheduled flag before creating
+	the gc callout.
+
+	* src/io.c (lsh_oop_time_callback): New function.
+	(lsh_oop_register_callout): New function.
+	(lsh_oop_cancel_callout): New function.
+	(do_kill_callout): New function.
+	(io_callout): Deleted delay argument, as delays are not currently
+	implemented. 
+
 	* src/lsh-writekey.c (lsh_writekey_options2private_file): Dup
 	string before passing it to make_io_write_file_info.
 	(lsh_writekey_options2public_file): Updated call to
