@@ -50,13 +50,14 @@ bootstrap: $(generated_sources)
 	@rm -f $(addsuffix T,$(POTENTIAL_X_FILES))
 
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
-	algorithms.c alist.c arcfour.c atoms.c \
+	algorithms.c alist.c atoms.c \
 	bignum.c blowfish.c \
 	cascade.c cast.c cbc.c channel.c channel_commands.c channel_forward.c \
 	charset.c \
 	client.c client_escape.c client_keyexchange.c \
 	client_pty.c client_session.c client_userauth.c client_x11.c \
 	combinators.c command.c compress.c connection.c connection_commands.c \
+	crypto.c \
 	daemon.c \
 	debug.c des.c digits.c disconnect.c dh_exchange.c \
 	dsa.c dsa_keygen.c encrypt.c \
@@ -75,7 +76,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	randomness.c \
 	read_base64.c read_data.c read_file.c read_line.c read_packet.c \
 	reaper.c resource.c \
-	rijndael.c rsa.c rsa_keygen.c serpent.c \
+	rsa.c rsa_keygen.c serpent.c \
 	server.c server_authorization.c server_keyexchange.c \
 	server_password.c server_publickey.c \
 	server_pty.c server_session.c server_userauth.c \
