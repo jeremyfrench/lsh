@@ -3,6 +3,9 @@ dnl $Id$
 
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT([lsh], [1.3.1], [bug-lshbug-lsh@gnu.org]) 
+
+AC_PREREQ(2.50)
+
 AC_CONFIG_SRCDIR([src/lsh_types.h])
 
 # FIXME: requirements
@@ -13,7 +16,7 @@ AM_CONFIG_HEADER(config.h)
 # FIXME: Move this to the Makefile, as recommended by the autoconf manual.
 AC_DEFINE_UNQUOTED(PREFIX, "`echo $prefix | sed "s@^NONE@$ac_default_prefix@"`")
 
-dnl NOTE: The definition below is broken.
+# NOTE: The definition below is broken.
 AC_DEFINE_UNQUOTED(SBINDIR, "`echo $sbindir | sed "s@^NONE@$prefix/sbin@" | sed "s@^NONE@$ac_default_prefix@"`")
 
 # We want an absolute path to the source-dir.
@@ -37,9 +40,9 @@ CPPFLAGS="$CPPFLAGS -I$srcdir -I$srcdir/src -I$srcdir/src/symmetric/include -DLS
 # enables these extensions.
 # Enable it on all systems; no problems have been reported with it so far.
 
-# FIXME: Use AH_something
+# We can't use AH_VERBATIM for this, as we want _GNU_SOURCE to be defined
+# when running configure's test programs.
 CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
-
 
 # Check options
 AC_ARG_ENABLE(debug_alloc,
@@ -109,7 +112,10 @@ AC_ARG_ENABLE(kerberos,
   
 if test x$enable_srp = xyes ; then
   AC_DEFINE(WITH_SRP)
+  SRP_PROGRAM=srp-gen
 fi
+
+AC_SUBST(SRP_PROGRAM)
 
 AC_ARG_ENABLE(datafellows_workarounds,
   AC_HELP_STRING([--disable-datafellows-workarounds], [Disable bug-compatibility with SSH Inc's clients and servers]),,
@@ -238,9 +244,9 @@ fi
 # Checks for header files.
 AC_HEADER_STDC
 
-dnl Some debian systems have both gmp and gmp2.
-dnl This will probably not work right if both gmp.h and gmp2/gmp.h exists,
-dnl and gmp.h is too old (i.e GMP-1.x).
+# Some debian systems have both gmp and gmp2.
+# This will probably not work right if both gmp.h and gmp2/gmp.h exists,
+# and gmp.h is too old (i.e GMP-1.x).
 gmp_header_found=no
 AC_CHECK_HEADERS(gmp.h gmp2/gmp.h, [gmp_header_found=yes; break])
 if test "$gmp_header_found" = no; then
@@ -262,18 +268,20 @@ AC_CHECK_HEADERS(argp.h)
 
 AC_CHECK_HEADERS(utmp.h, [have_utmp_h=yes], [have_utmp_h=no])
 
-# FIXME: Use new macros
 if test x$have_utmp_h = xyes; then
-  AC_CHECK_MEMBER([#include <sys/types.h>
-#include <utmp.h>], [utmp], [ut_host])
-  AC_CHECK_MEMBER([#include <sys/types.h>
-#include <utmp.h>], [utmp], [ut_name])
-  AC_CHECK_MEMBER([#include <sys/types.h>
-#include <utmp.h>], [utmp], [ut_user])
-  AC_CHECK_MEMBER([#include <sys/types.h>
-#include <utmp.h>], [utmp], [ut_addr])
-  AC_CHECK_MEMBER([#include <sys/types.h>
-#include <utmp.h>], [utmp], [ut_addr_v6])
+  AC_CHECK_MEMBERS([struct utmp.ut_host,
+		    struct utmp.ut_name,
+		    struct utmp.ut_user,
+		    struct utmp.ut_addr,
+		    struct utmp.ut_addr_v6],,,
+[# if HAVE_UTMP_H
+#  include <utmp.h>
+# endif
+
+# if HAVE_UTMPX_H
+#  include <utmpx.h>
+# endif
+])
 fi
 
 AC_CHECK_HEADERS(utmpx.h)
@@ -341,22 +349,23 @@ if test "x$enable_gcov" = "xyes"; then
   AC_DEFINE(WITH_GCOV)
 fi
 
-dnl Checks for typedefs, structures, and compiler characteristics.
+# Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_C_INLINE
 AC_TYPE_UID_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
 
-dnl Needed by the supplied memcmp.c
+# Needed by the supplied memcmp.c
 AC_C_BIGENDIAN
 
 AC_CHECK_SIZEOF(short, 2)
 AC_CHECK_SIZEOF(int, 4)
 AC_CHECK_SIZEOF(long, 4)
-dnl FIXME: We should check that a pid_t fits in an int
+
+# FIXME: We should check that a pid_t fits in an int
 	
-dnl Checks for library functions.
+# Checks for library functions.
 AC_FUNC_ALLOCA
 AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
@@ -390,7 +399,6 @@ AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
 
 # Test if the libc includes a good enough argp.
 if test x$with_system_argp = xyes ; then
-dnl  AC_CHECK_FUNCS(argp_parse,, with_system_argp=no)
   AC_LIB_ARGP(,with_system_argp=no)
 fi
 
