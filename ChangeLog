@@ -1,3 +1,7 @@
+2004-11-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io.c (io_bind_local): NUL-terminate AF_UNIX socket name.
+
 2004-11-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh: Don't insist on using GNU make. If we're not
