@@ -173,6 +173,7 @@ class-map: $(srcdir)/make-class-map $(dist_x_files)
 
 EXTRA_DIST = lsh-authorize ssh-conv lcp \
 	atoms.in process_atoms \
+	environ.h.in \
 	invert-defs \
 	$(generated_sources) \
 	sexp_chars.in \
