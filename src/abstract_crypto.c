@@ -77,15 +77,6 @@ struct crypto_algorithm *crypto_invert(struct crypto_algorithm *inner)
 
 /* FIXME: These functions don't really belong here. */
 
-/* XOR:s src onto dst */
-/* NOTE: Perhaps it would make sense to optimize this function. */
-void memxor(UINT8 *dst, const UINT8 *src, size_t n)
-{
-  size_t i;
-  for (i = 0; i<n; i++)
-    dst[i] ^= src[i];
-}
-
 UINT32 gcd(UINT32 x, UINT32 y)
 {
   UINT32 res = 1;

@@ -175,7 +175,6 @@ struct crypto_algorithm *crypto_cascadel(struct object_list *cascade);
 struct crypto_algorithm *crypto_cascade(unsigned n, ...);
 
 /* Utility functions */
-void memxor(UINT8 *dst, const UINT8 *src, size_t n);
 UINT32 gcd(UINT32 x, UINT32 y);
 UINT32 lcm(UINT32 x, UINT32 y);
 
