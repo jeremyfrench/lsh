@@ -53,8 +53,8 @@
      (vars
        (dh struct diffie_hellman_instance)
        (verifier object lookup_verifier)
-       (install object install_keys)
-       (finished object ssh_service)))
+       (install object install_keys)))
+       ;;; (finished object ssh_service)))
 */
     
 static int do_handle_dh_reply(struct packet_handler *c,
@@ -123,15 +123,14 @@ static int do_handle_dh_reply(struct packet_handler *c,
   connection->kex_state = KEX_STATE_NEWKEYS;
   
   res |= send_verbose(connection->write, "Key exchange successful!", 0);
-  if (LSH_CLOSEDP(res))
+  if (LSH_CLOSEDP(res) || !connection->established)
     return res;
-  
-  return res | SERVICE_INIT(closure->finished, connection);
+
+  return res | COMMAND_RETURN(connection->established, connection);
 }
 
 static int do_init_client_dh(struct keyexchange_algorithm *c,
 		             struct ssh_connection *connection,
-		             struct ssh_service *finished,
 		             int hostkey_algorithm_atom,
 		             struct signature_algorithm *ignored,
 		             struct object_list *algorithms)
@@ -154,7 +153,6 @@ static int do_init_client_dh(struct keyexchange_algorithm *c,
 
   dh->verifier = closure->verifier;
   dh->install = make_install_new_keys(0, algorithms);
-  dh->finished = finished;
   
   /* Send client's message */
   res = A_WRITE(connection->write, dh_make_client_msg(&dh->dh));
