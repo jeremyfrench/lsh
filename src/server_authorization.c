@@ -27,6 +27,7 @@
 
 #include "dsa.h"
 #include "format.h"
+#include "rsa.h"
 #include "server_userauth.h"
 #include "sexp.h"
 #include "spki.h"
@@ -58,17 +59,28 @@ do_key_lookup(struct lookup_verifier *c,
   CAST(authorization_db, closure, c);
   struct lsh_string *filename;
 
-  struct verifier *v;
+  struct verifier *v = NULL;
 
   assert(keyholder);
-  
-  if (method != ATOM_SSH_DSS)
-    return NULL;
 
-  /* FIXME: Perhaps this is the right place to choose to apply the
-   * PEER_SSH_DSS_KLUDGE? */
-  
-  v = make_ssh_dss_verifier(key->length, key->data);
+  switch (method)
+    {
+    default:
+      return NULL;
+
+      /* FIXME: SPKI support. */
+      
+    case ATOM_SSH_DSS:
+      /* FIXME: Perhaps this is the right place to choose to apply the
+       * PEER_SSH_DSS_KLUDGE? */
+      
+      v = make_ssh_dss_verifier(key->length, key->data);
+      break;
+
+    case ATOM_SSH_RSA:
+      v = make_ssh_rsa_verifier(key->length, key->data);
+      break;
+    }
 
   if (!v)
     return NULL;
