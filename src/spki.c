@@ -227,6 +227,23 @@ spki_hash_data(struct hash_algorithm *algorithm,
 		sexp_s(NULL, out), -1);
 }  
 
+/* Create an SPKI hash from an s-expression. */
+
+struct sexp *
+spki_hash_sexp(struct hash_algorithm *algorithm,
+	       int name,
+	       struct sexp *expr)
+{
+  struct lsh_string *s = hash_string(algorithm,
+				     sexp_format(expr, SEXP_CANONICAL, 0),
+				     1);
+  struct sexp *hash = spki_hash_data(algorithm, name, 
+				     s->length, s->data);
+  lsh_string_free(s);
+
+  return hash;
+}
+
 
 /* 5-tuples */
 

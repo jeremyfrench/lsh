@@ -82,6 +82,11 @@ spki_hash_data(struct hash_algorithm *algorithm,
 	       int algorithm_name,
 	       UINT32 length, UINT8 *data);
 
+struct sexp *
+spki_hash_sexp(struct hash_algorithm *algorithm,
+	       int name,
+	       struct sexp *expr);
+
 /* At a point in time, not all fields are known; fields may be added
  * later, or computed as needed. This information is not automatically
  * trusted in any way, except that any non-NULL attributes must be
