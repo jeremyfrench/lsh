@@ -1,3 +1,42 @@
+2002-12-04  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* tag.c (atom_prefix): Fixed assertion.
+	(spki_tag_intersect): The ordering of a and b (with a having the
+	"widest" type) was wrong.
+
+	* reduce.c (spki_5_tuple_by_subject): Use spki_principal_normalize
+	for comparisons. 
+
+	* parse.c (spki_parse_fail): New function. Changed all parser
+	functons to use it when they fail.
+	(spki_parse_principal): Changed to parse a complete subject or
+	issuer subexpression.
+	(spki_parse_acl_entry): Use new spki_parse_principal.
+	(spki_parse_cert): Likewise.
+	(spki_parse_tag): Don't assert that expression is of the right
+	type, simply call spki_parse_fail.
+
+	* certificate.c (spki_principal_normalize): New function, to be
+	used when comparing principals.
+	(spki_5_tuple_fix_aliases): #if:ed out this function, as it didn't
+	seem robust enough. Also #if:ed out all uses.
+
+	* testsuite/Makefile.am (TS_PROGS): Added cdsa-reduce-test.
+
+	* testsuite/cdsa-reduce-test.c (filter_by_tag, filter_by_subject)
+	(filter_by_date): New functions.
+	(test_main): Process the red-test filter expressions. Omit some
+	tests that seem broken, or use features that we haven't
+	implemented yet. Don't ASSERT that the resulting 5-tuple list is
+	non-empty, some test cases result in empty lists.
+
+2002-12-03  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* testsuite/cdsa-reduce-test.c: New test program, using cdsa tests.
+
+	* testsuite/cdsa-cases: New directory with test cases snarfed from
+	cdsa. 
+
 2002-11-27  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* testsuite/lookup-acl-test.c (test_main): Updated for new acl

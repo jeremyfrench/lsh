@@ -65,7 +65,8 @@ struct spki_principal
   /* If the lookup code sees hashes and keys in an unfortunate order,
    * it may create several principal structs that represent the same
    * key. In this case, we install an alias pointer when the mistake
-   * is discovered. */
+   * is discovered. This means that one should call
+   * spki_principal_normalize before comparing two principals. */
   
   struct spki_principal *alias;
   
@@ -164,6 +165,9 @@ spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest);
 void
 spki_principal_free_chain(struct spki_acl_db *db,
 			  struct spki_principal *chain);
+
+const struct spki_principal *
+spki_principal_normalize(const struct spki_principal *principal);
 
 /* Handling the acl database */
 int
