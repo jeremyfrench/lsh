@@ -162,7 +162,7 @@ struct argp_option options[] =
   {"foonly", 'f', "ZOT", OPTION_ARG_OPTIONAL, "Glork a foonly", 0},
   {"zaza", 'z', 0, 0, "Snit a zar", 0},
 
-  {0, 0, 0, 0, 0, 0, 0}
+  {0, 0, 0, 0, 0, 0}
 };
 
 static const char args_doc[] = "STRING";
@@ -242,9 +242,12 @@ help_filter (int key, const char *text, void *input)
   return new_text;
 }
 
-static struct argp_child argp_children[] = { { &sub_argp }, { 0 } };
+static struct argp_child argp_children[] = {
+  { &sub_argp, 0, 0, 0 }, { 0, 0, 0, 0 }
+};
+
 static struct argp argp = {
-  options, parse_opt, args_doc, doc, argp_children, help_filter
+  options, parse_opt, args_doc, doc, argp_children, help_filter, 0
 };
 
 int
