@@ -1,3 +1,13 @@
+2004-11-20  Pontus Freyhult  <pont@soua.net>
+
+	* doc/lsh-export-key.1: New manpage.
+
+	* doc/lsh-decrypt-key.1: New manpage.
+
+	* doc/lsh-decode-key.1: New manpage.
+
+	* doc/lsh-writekey.1: New manpage.
+
 2004-11-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/io.c (io_final): Assert that nfiles == 0.
