@@ -1,3 +1,18 @@
+1999-06-12    <nisse@cuckoo.localdomain>
+
+	* src/lsh_keygen.c (main): Use %xn rather than %hn for debug().
+	* src/lshd.c (do_read_key): -"-
+	* src/publickey_crypto.c (dsa_hash): -"-
+	(generic_dsa_sign): -"-
+	(do_dsa_verify): -"-
+
+	* src/channel.c (make_channel_table): Initialize
+	active_global_requests and pending_global_requests.
+	* src/channel.c, src/channel.h: object_queues should be declared
+	as structs.
+	* src/connection.c, src/connection.h: -"-
+	* src/tcpforward.c: -"-
+	
 1999-06-11    <nisse@cuckoo.localdomain>
 
 	* src/tcpforward.c (direct_tcp_server_start_io): Renamed class,

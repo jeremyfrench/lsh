@@ -365,7 +365,7 @@ void werror_vformat(const char *f, va_list args)
 	      break;
 
 	    default:
-	      fatal("werror_vformat: bad format string");
+	      fatal("werror_vformat: bad format string!\n");
 	      break;
 	    }
 	}
