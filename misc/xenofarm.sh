@@ -115,7 +115,7 @@ dotask() {
 
 cfgwarn () {
     egrep -i 'warning|\(w\)' r/cfglog.txt \
-    | sed -e '%configure: WARNING:  Converted \. to /%d' \
+    | sed -e '/configure: WARNING:  Converted \. to /d' \
     > r/cfgwarn.txt
     warnings=`wc -l < r/cfgwarn.txt`
     if test $warnings -gt 0
@@ -202,13 +202,13 @@ timeecho Collecting results
 
 mv $BASE/config.cache r/configcache.txt
 mv $BASE/config.log r/configlog.txt
-mv $BASE/src/argp/config.log r/argpconfig.log
+mv $BASE/src/argp/config.log r/argpconfiglog.txt
 mv $BASE/src/argp/config.h r/argpconfig-h.txt
-mv $BASE/src/nettle/config.log r/nettleconfig.log
+mv $BASE/src/nettle/config.log r/nettleconfiglog.txt
 mv $BASE/src/nettle/config.h r/nettleconfig-h.txt
-mv $BASE/src/sftp/config.log r/sftpconfig.log
+mv $BASE/src/sftp/config.log r/sftpconfiglog.txt
 mv $BASE/src/sftp/config.h r/sftpconfig-h.txt
-mv $BASE/src/spki/config.log r/spkiconfig.log
+mv $BASE/src/spki/config.log r/spkiconfiglog.txt
 mv $BASE/src/spki/config.h r/spkiconfig-h.txt
 mv $BASE/config.h r/config-h.txt
 
@@ -223,6 +223,9 @@ env > r/environ.txt
 echo $PATH > r/path.txt
 makeinfo --version > r/makeinfo.txt
 type makeinfo >> r/makeinfo.txt 2>&1
+
+make --version > r/makeversion.txt
+type make >> r/makeversion.txt
 
 mv buildid.txt r/buildid.txt
 
