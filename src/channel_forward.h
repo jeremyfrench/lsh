@@ -40,11 +40,15 @@
        (socket object lsh_fd)))
 */
 
-struct ssh_channel *
+void
+init_channel_forward(struct channel_forward *self,
+		     struct lsh_fd *socket, UINT32 initial_window);
+
+struct channel_forward *
 make_channel_forward(struct lsh_fd *socket, UINT32 initial_window);
 
 void
-channel_forward_start_io(struct ssh_channel *c);
+channel_forward_start_io(struct channel_forward *channel_forward);
 
 
 #endif /* LSH_CHANNEL_FORWARD_H_INCLUDED */

@@ -39,10 +39,10 @@
 #undef GABA_DEFINE
 
 /* NOTE: Adds the socket to the channel's resource list */
-struct ssh_channel *
-make_channel_forward(struct lsh_fd *socket, UINT32 initial_window)
+void
+init_channel_forward(struct channel_forward *self,
+		     struct lsh_fd *socket, UINT32 initial_window)
 {
-  NEW(channel_forward, self);
   assert(socket);
   
   init_channel(&self->super);
@@ -60,13 +60,20 @@ make_channel_forward(struct lsh_fd *socket, UINT32 initial_window)
   self->socket = socket;
 
   REMEMBER_RESOURCE(self->super.resources, &socket->super);
+}
+
+struct channel_forward *
+make_channel_forward(struct lsh_fd *socket, UINT32 initial_window)
+{
+  NEW(channel_forward, self);
+  init_channel_forward(self, socket, initial_window);
   
-  return &self->super;
+  return self;
 }
 
 static void
 do_channel_forward_receive(struct ssh_channel *c,
-		 int type, struct lsh_string *data)
+			   int type, struct lsh_string *data)
 {
   CAST(channel_forward, closure, c);
   
@@ -110,10 +117,8 @@ do_channel_forward_eof(struct ssh_channel *s)
  * (channel_open_continuation has not yet done its work), and we can't
  * send any packets. */
 void
-channel_forward_start_io(struct ssh_channel *c)
+channel_forward_start_io(struct channel_forward *channel)
 {
-  CAST(channel_forward, channel, c);
-
   channel->super.receive = do_channel_forward_receive;
   channel->super.send_adjust = do_channel_forward_send_adjust;
   channel->super.eof = do_channel_forward_eof;
