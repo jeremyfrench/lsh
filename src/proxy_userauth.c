@@ -231,10 +231,14 @@ do_handle_userauth(struct packet_handler *c,
 	{
 	  connection->chain->dispatch[SSH_MSG_USERAUTH_FAILURE] = 
 	    make_forward_failure(closure->e);
-	  
+
+#if 0
 	  connection->chain->dispatch[SSH_MSG_USERAUTH_SUCCESS] =
 	    make_forward_success(user, make_delay_continuation(service, closure->c));
-
+#endif
+	  connection->chain->dispatch[SSH_MSG_USERAUTH_SUCCESS] =
+	    make_forward_success(user, closure->c);
+	  
 	  PROXY_AUTH(auth, connection, user, requested_service, &buffer);
 	}
       else
