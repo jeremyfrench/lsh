@@ -86,9 +86,6 @@ struct command_2 lsh_login_command;
 struct command options2service;
 #define OPTIONS2SERVICE (&options2service.super)
 
-static struct command options2identities;
-#define OPTIONS2IDENTITIES (&options2identities.super)
-
 static struct request_service request_userauth_service =
 STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
 #define REQUEST_USERAUTH_SERVICE (&request_userauth_service.super.super)
@@ -123,7 +120,6 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
        ; Command to invoke to start ssh-connection service)
        (service object command)
        
-       ;; (kexinit object make_kexinit)
        (kex_algorithms object int_list)
        
        (sloppy . int)
@@ -395,23 +391,6 @@ read_user_keys(struct lsh_options *options)
     }
 }
 
-/* FIXME: Call read_user_key directly from main instead. */
-
-/* Read user's private keys. By default, "~/.lsh/identity". */
-static void
-do_options2identities(struct command *ignored UNUSED,
-		      struct lsh_object *a,
-		      struct command_continuation *c,
-		      struct exception_handler *e UNUSED)
-{
-  CAST(lsh_options, options, a);
-
-  COMMAND_RETURN(c, read_user_keys(options));
-}
-
-static struct command options2identities =
-STATIC_COMMAND(do_options2identities);
-
 
 /* Maps a host key to a (trusted) verifier object. */
 
@@ -423,7 +402,7 @@ STATIC_COMMAND(do_options2identities);
        (db object spki_context)
        (tty object interact)
        (access string)
-       (host object address_info)
+       (host . "const char *")
        ; Allow unauthorized keys
        (sloppy . int)
        ; If non-null, append an ACL for the received key to this file.
@@ -577,13 +556,13 @@ do_lsh_lookup(struct lookup_verifier *c,
 	  
 	  if (!INTERACT_YES_OR_NO
 	      (self->tty,
-	       ssh_format("Received unauthenticated key for host %lS\n"
+	       ssh_format("Received unauthenticated key for host %lz\n"
 			  "Key details:\n"
 			  "Bubble Babble: %lfS\n"
 			  "Fingerprint:   %lfS\n"
 			  /* "SPKI SHA1:     %lfxS\n" */
 			  "Do you trust this key? (y/n) ",
-			  self->host->ip, babble, fingerprint /* , spki_fingerprint */), 0, 1))
+			  self->host, babble, fingerprint /* , spki_fingerprint */), 0, 1))
 	    return NULL;
 	}
 
@@ -601,7 +580,7 @@ do_lsh_lookup(struct lookup_verifier *c,
       /* Write an ACL to disk. */
       if (self->file)
 	{
-	  A_WRITE(self->file, ssh_format("\n; ACL for host %lS\n", self->host->ip));
+	  A_WRITE(self->file, ssh_format("\n; ACL for host %lz\n", self->host));
 	  A_WRITE(self->file,
 		  lsh_sexp_format(1, "%l", acl->length, acl->data));
 	  lsh_string_free(acl);
@@ -616,7 +595,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 static struct lookup_verifier *
 make_lsh_host_db(struct spki_context *db,
 		 struct interact *tty,
-		 struct address_info *host,
+		 const char *host,
 		 int sloppy,
 		 struct abstract_write *file)
 {
@@ -648,7 +627,7 @@ DEFINE_COMMAND2(lsh_verifier_command)
   CAST_SUBTYPE(spki_context, db, a2);
   COMMAND_RETURN(c, make_lsh_host_db(db,
 				     options->super.tty,
-				     options->super.remote,
+				     options->super.target,
 				     options->sloppy,
 				     options->capture_file));
 }
@@ -687,24 +666,18 @@ DEFINE_COMMAND2(lsh_login_command)
 }
 
 
-/* NOTE: options2identities can block for reading, so it must not be
- * invoked directly. */
-
 /* Requests the ssh-userauth service, log in, and request connection
  * service. */
 /* GABA:
    (expr
      (name make_lsh_userauth)
      (params
-       (options object lsh_options))
+       (options object lsh_options)
+       (keys object object_list))
      (expr
        (lambda (connection)
          (lsh_login options
-	   
-	   ; The prog1 delay is needed because options2identities
-	   ; may not return immediately.
-	   (options2identities (prog1 options connection))
-
+	   keys
 	   ; Request the userauth service
 	   (request_userauth_service connection))))) */
 
@@ -714,8 +687,9 @@ DEFINE_COMMAND2(lsh_login_command)
      (params
        (handshake object handshake_info)
        (init object make_kexinit)
-       (db object lookup_verifier))
-     (expr (lambda (options)
+       (db object lookup_verifier)
+       (options object lsh_options))
+     (expr (lambda (remote)
                ; What to do with the service
 	       ((progn (options2actions options))
 	         ; Initialize service
@@ -728,7 +702,7 @@ DEFINE_COMMAND2(lsh_login_command)
 		       handshake init
 		       db
  		       ; Connect using tcp
-		       (connect_simple (options2remote options)))))))))
+		       (connect_list remote))))))))
 */
 
 
@@ -901,11 +875,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	}
       else
 	argp_error(state, "All keyexchange algorithms disabled.");
-
-      {
-        CAST_SUBTYPE(command, o, make_lsh_userauth(self));
-        self->service = o;
-      }
 	
       {
 	struct lsh_string *tmp = NULL;
@@ -956,7 +925,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    }
 	  gateway = make_gateway_address(self->super.local_user,
 					 self->super.user,
-					 self->super.remote);
+					 self->super.target);
 
 	  if (!gateway)
 	    {
@@ -1102,6 +1071,8 @@ int main(int argc, char **argv, const char** envp)
 {
   struct lsh_options *options;
   struct spki_context *spki;
+  struct object_list *keys;
+  struct sockaddr_list *remote = NULL;
   
   /* Default exit code if something goes wrong. */
   int lsh_exit_code = 17;
@@ -1133,8 +1104,21 @@ int main(int argc, char **argv, const char** envp)
       return EXIT_FAILURE;
     }
 
+  if (!io_resolv_address(options->super.target,
+			 options->super.port, 22,
+			 &remote))
+    {
+      werror("Could not resolv address `%z'\n", options->super.target);
+      return EXIT_FAILURE;
+    }
   spki = read_known_hosts(options);
-  
+  keys = read_user_keys(options);
+
+  {
+    CAST_SUBTYPE(command, o, make_lsh_userauth(options, keys));
+    options->service = o;
+  }
+
   {
     struct lsh_object *o =
       make_lsh_connect(
@@ -1153,15 +1137,15 @@ int main(int argc, char **argv, const char** envp)
 			    make_int_list(0, -1)),
         make_lsh_host_db(spki,
                          options->super.tty,
-                         options->super.remote,
+                         options->super.target,
                          options->sloppy,
-                         options->capture_file));
+                         options->capture_file),
+	options);
     
     CAST_SUBTYPE(command, lsh_connect, o);
 
-    COMMAND_CALL(lsh_connect, options, &discard_continuation,
+    COMMAND_CALL(lsh_connect, remote, &discard_continuation,
 		 handler);
-	
   } 
 
 #if 0
