@@ -53,9 +53,6 @@
 
 #include "server_session.c.x"
 
-/* Disabled in the 1.4 series. */
-#undef WITH_X11_FORWARD
-#define WITH_X11_FORWARD 0
 
 /* Session */
 /* GABA:
@@ -925,8 +922,7 @@ do_x11_req(struct channel_request *s UNUSED,
 	  EXCEPTION_RAISE(e, &x11_request_failed);
 	}
       else
-	{
-	  
+	{	  
 	  return;
 	}
     }
