@@ -82,8 +82,8 @@
        (resources object resource_list)
        
        ; We try to keep the rec_window_size between max_window / 2
-       ; and max_window.
-       (max_window simple UINT32)       
+       ; and max_window. 
+       ;; (max_window simple UINT32) 
 
        ; FIXME: Does the maximum packet sizes apply to complete ssh
        ; packets, or the data payload?
@@ -260,14 +260,15 @@ make_channel_open_exception(UINT32 error_code, const char *msg);
        (handler method void
                 "struct ssh_connection *connection"
 		"UINT32 type"
+		"UINT32 send_window_size"
 		"UINT32 send_max_packet"
                 "struct simple_buffer *data"
                 "struct command_continuation *c"
 		"struct exception_handler *e")))
 */
 
-#define CHANNEL_OPEN(o, c, t, m, d, r, e) \
-((o)->handler((o), (c), (t), (m), (d), (r), (e)))
+#define CHANNEL_OPEN(o, c, t, w, m, d, r, e) \
+((o)->handler((o), (c), (t), (w), (m), (d), (r), (e)))
 
 /* SSH_MSG_CHANNEL_REQUEST */
 /* GABA:
@@ -331,7 +332,9 @@ struct lsh_string *format_channel_failure(UINT32 channel);
 struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 					 UINT32 add);
 
-void channel_start_receive(struct ssh_channel *channel);
+void
+channel_start_receive(struct ssh_channel *channel,
+		      UINT32 initial_window_size);
 
 #if 0
 struct lsh_string *prepare_channel_open(struct ssh_connection *connection,
@@ -348,6 +351,10 @@ struct lsh_string *format_channel_request(int type,
 					  struct ssh_channel *channel,
 					  int want_reply,
 					  const char *format, ...);
+
+struct lsh_string *
+format_global_request(int type, int want_reply,
+		      const char *format, ...);
 
 struct lsh_string *format_channel_close(struct ssh_channel *channel);
 struct lsh_string *format_channel_eof(struct ssh_channel *channel);
