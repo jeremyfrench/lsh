@@ -51,7 +51,7 @@ if test -f $srcdir/../lsh.c; then
   # (But then again, that could be the case with bindir too.
   
   transport_prog="$bindir/lshg"
-  before_opts="--subsystem=sftp"
+  before_opts="--subsystem=sftp --no-pty"
   after_opts=""
 
   # Now, make sure these are included properly when compiling.
@@ -73,7 +73,7 @@ else
       if test -z "$before_opts" -a -z "$after_opts"; then
         if "$found_lshg" --help | grep subsystem >/dev/null; then
           # Takes the subsystems flag?
-          before_opts="--subsystem=sftp"
+          before_opts="--subsystem=sftp --no-pty"
           transport_prog="lshg"
         else
           AC_MSG_WARN([Your lshg doesn't support subsystems])
