@@ -18,9 +18,11 @@
 struct read_handler *make_server_read_line();
 struct callback *make_server_close_handler();
 
-static int server_initiate(struct server_callback *closure,
+static int server_initiate(struct fd_callback **c,
 			   int fd)
 {
+  struct server_callback *closure = (struct server_callback *) *c;
+  
   struct ssh_connection *connection = ssh_connection_alloc();
   struct abstract_write *write =
     io_read_write(closure->backend, fd,
@@ -29,12 +31,12 @@ static int server_initiate(struct server_callback *closure,
 		  make_server_close_handler());
   
   connection->server_version
-    = ssh_format("SSH-%z-%z %z\r\n",
+    = ssh_format("SSH-%lz-%lz %lz",
 		 PROTOCOL_VERSION,
 		 SOFTWARE_SERVER_VERSION,
 		 closure->id_comment);
-  /* Copies the version string, so that it is isn't freed */
-  return A_WRITE(write, ssh_format("%lS", connection->server_version));
+
+  return A_WRITE(write, ssh_format("%lS\r\n", connection->server_version));
 }
 
 struct server_line_handler
@@ -43,25 +45,32 @@ struct server_line_handler
   struct ssh_connection *connection;
 };
 
-static struct read_handler *do_line(struct server_line_handler *closure,
+static struct read_handler *do_line(struct line_handler **h,
 				    UINT32 length,
 				    UINT8 *line)
 {
+  struct server_line_handler *closure = (struct server_line_handler *) *h;
+  
   if ( (length >= 4) && !memcmp(line, "SSH-", 4))
     {
       /* Parse and remember format string */
       if ((length >= 8) && !memcmp(line + 4, "2.0-", 4))
 	{
 	  struct read_handler *new
-	    = make_read_packet(make_debug_processor(make_packet_void(),
-						    stderr),
+	    = make_read_packet(make_packet_debug(make_packet_void(),
+						 stderr),
 			       closure->connection->max_packet);
 	  
 	  closure->connection->client_version
-	    = ssh_format("%s", length, line);
+	    = ssh_format("%ls", length, line);
 
+	  verbose("Client version: ");
+	  verbose_safe(closure->connection->client_version->length,
+		       closure->connection->client_version->data);
+	  verbose("\n");
+	  
 	  /* FIXME: Cleanup properly. */
-	  free(closure);
+	  lsh_free(closure);
 
 	  return new;
 	}
@@ -71,8 +80,10 @@ static struct read_handler *do_line(struct server_line_handler *closure,
 	  werror_safe(length, line);
 	  werror("\n");
 
-	  fatal("server.c: do_line: Unsupported version.\n"); 
-	  /* FIXME: What could be returned here? */
+	  /* FIXME: Clean up properly */
+	  lsh_free(closure);
+	  *h = 0;
+		  
 	  return 0;
 	}
     }
@@ -85,3 +96,46 @@ static struct read_handler *do_line(struct server_line_handler *closure,
       return 0;
     }
 }
+
+struct read_handler *make_server_read_line(struct ssh_connection *s)
+{
+  struct server_line_handler *closure
+    = xalloc(sizeof(struct server_line_handler));
+  
+  closure->super.handler = do_line;
+  closure->connection = s;
+  
+  return make_read_line(&closure->super);
+}
+
+struct fd_callback *make_server_callback(struct io_backend *b,
+					 char *comment,
+					 UINT32 block_size)
+					 
+{
+  struct server_callback *connected = xalloc(sizeof(struct server_callback));
+
+  connected->super.f = server_initiate;
+  connected->backend = b;
+  connected->block_size = block_size;
+  connected->id_comment = comment;
+  
+  return &connected->super;
+}
+
+static int server_die(struct callback *closure)
+{
+  werror("Connection died.\n");
+  /* FIXME: Cleanup properly. */
+  return 0;  /* Ignored */
+}
+
+struct callback *make_server_close_handler()
+{
+  struct callback *c = xalloc(sizeof(struct callback));
+
+  c->f = server_die;
+
+  return c;
+}
+

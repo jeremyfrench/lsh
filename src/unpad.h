@@ -6,12 +6,12 @@
 #ifndef LSH_UNPAD_H_INCLUDED
 #define LSH_UNPAD_H_INCLUDED
 
-#include "transport.h"
+#include "abstract_io.h"
 
 /* Input to the processor is a padded payload. */
 struct packet_unpad
 {
-  struct abstract_write_pipe c;
+  struct abstract_write_pipe super;
 };
 
 struct abstract_write *

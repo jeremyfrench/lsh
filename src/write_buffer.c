@@ -112,7 +112,7 @@ int write_buffer_pre_write(struct write_buffer *buffer)
 		buffer->head->prev = 0;
 	      else
 		buffer->tail = 0;
-	      free(n);
+	      lsh_free(n);
 	    }
 	  else
 	    break;

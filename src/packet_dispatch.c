@@ -6,11 +6,10 @@
 #include "xalloc.h"
 #include "werror.h"
 
-static int do_dispatch(struct abstract_write **c,,
+static int do_dispatch(struct abstract_write **w,
 		       struct lsh_string *packet)
 {
-  struct dispatch_processor *closure
-    = (struct dispatch_processor *) *c;
+  struct packet_dispatch *closure = (struct packet_dispatch *) *w;
   
   unsigned start;
   unsigned end;
@@ -34,8 +33,8 @@ static int do_dispatch(struct abstract_write **c,,
       if (middle_msg == msg)
 	{
 	  /* Found right method */
-	  return apply_processor(closure->dispatch_table[middle].f,
-				 packet);
+	  return A_WRITE(closure->dispatch_table[middle].f,
+			 packet);
 	}
       if (middle == start)
 	/* Not found */
@@ -48,7 +47,7 @@ static int do_dispatch(struct abstract_write **c,,
     }
 
   if (closure->other)
-    return apply_processor(closure->other, packet);
+    return A_WRITE(closure->other, packet);
   else
     return 0;
 }
@@ -58,8 +57,8 @@ make_dispatch_processor(unsigned size,
 			struct dispatch_assoc *table,
 			struct abstract_write *other)
 {
-  struct dispatch_processor *closure
-    = xalloc(sizeof(struct dispatch_processor));
+  struct packet_dispatch *closure
+    = xalloc(sizeof(struct packet_dispatch));
   unsigned i;
 
   /* Check that message numbers are increasing */
@@ -67,7 +66,7 @@ make_dispatch_processor(unsigned size,
     if (table[i].msg >= table[i+1].msg)
       fatal("make_dispatch_processor: Table out of order");
   
-  closure->p.f = (abstract_write_f) do_dispatch;
+  closure->super.write = do_dispatch;
   closure->other = other;
   closure->table_size = size;
   closure->dispatch_table = table;

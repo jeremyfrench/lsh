@@ -63,7 +63,17 @@ static int do_read_line(struct read_handler **h,
       length = end - closure->buffer;
       
       next = PROCESS_LINE(closure->handler, length, closure->buffer);
-      
+
+      {
+	/* Remove line from buffer */
+	/* Number of characters that have been processed */
+	UINT32 done = eol - closure->buffer + 1;
+	UINT32 left = closure->pos - done;
+	
+	memcpy(closure->buffer, closure->buffer + done, left);
+	closure->pos = left;
+      }
+
       if (next)
 	{
 	  /* Read no more lines. Instead, pass remaining data to next,
@@ -79,30 +89,18 @@ static int do_read_line(struct read_handler **h,
 		  return 0;
 	    }
 	  /* No data left */
-	  free(closure);
+	  lsh_free(closure);
 	  *h = next;
 	  return 1;
 	}
       else
-	{
-	  if (closure->handler)
-	    {
-	      /* Read another line */
-	      /* Number of characters that have been processed */
-	      UINT32 done = eol - closure->buffer + 1;
-	      UINT32 left = closure->pos - done;
-	      
-	      memcpy(closure->buffer, closure->buffer + done, left);
-	      closure->pos = left;
-	    }
-	  else
-	    {
-	      /* Fail */
-	      return 0;
-	    }
-	}
+	if (!closure->handler)
+	  {
+	    /* Fail */
+	    return 0;
+	  }
     }     
-
+  
   /* Partial line */
   if (closure->pos == MAX_LINE)
     {

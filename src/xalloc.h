@@ -28,4 +28,15 @@ void *xalloc(size_t size);
 struct lsh_string *lsh_string_alloc(UINT32 size);
 void lsh_string_free(struct lsh_string *packet);
 
+#ifdef DEBUG_ALLOC
+void *debug_malloc(size_t size);
+void debug_free(void *m);
+  
+#define lsh_free debug_free
+#define lsh_malloc debug_malloc
+#else
+#define lsh_free free
+#define lsh_malloc malloc
+#endif
+
 #endif /* LSH_XALLOC_H_INCLUDED */

@@ -6,7 +6,7 @@
 #ifndef LSH_PAD_H_INCLUDED
 #define LSH_PAD_H_INCLUDED
 
-#include "transport.h"
+#include "abstract_io.h"
 
 typedef void (*random_function)(void *state, UINT32 length, UINT8 *dst);
 
@@ -15,7 +15,7 @@ typedef void (*random_function)(void *state, UINT32 length, UINT8 *dst);
  * etc). */
 struct packet_pad
 {
-  struct abstract_write_pipe c;
+  struct abstract_write_pipe super;
 
   unsigned block_size; /* At least 8, even for stream ciphers */
 

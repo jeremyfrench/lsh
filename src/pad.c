@@ -6,11 +6,11 @@
 #include "xalloc.h"
 #include <assert.h>
 
-static int do_pad(struct abstract_write **c,
+static int do_pad(struct abstract_write **w,
 		  struct lsh_string *packet)
 {
-  struct pad_processor *closure
-    = (struct pad_processor *) *c;
+  struct packet_pad *closure
+    = (struct packet_pad *) *w;
   
   UINT32 new_size;
   UINT8 padding;
@@ -38,20 +38,19 @@ static int do_pad(struct abstract_write **c,
 
   lsh_string_free(packet);
 
-  return apply_processor(closure->c.next, new);
+  return A_WRITE(closure->super.next, new);
 }
   
-
 struct abstract_write *
-make_pad_processor(struct abstract_write *continuation,
-		   unsigned block_size,
-		   random_function random,
-		   void *state)
+make_packet_pad(struct abstract_write *continuation,
+		unsigned block_size,
+		random_function random,
+		void *state)
 {
-  struct pad_processor *closure = xalloc(sizeof(struct pad_processor));
+  struct packet_pad *closure = xalloc(sizeof(struct packet_pad));
 
-  closure->super.super = do_pad;
-  closure->c.next = continuation;
+  closure->super.super.write = do_pad;
+  closure->super.next = continuation;
   closure->block_size = block_size;
   closure->random = random;
   closure->state = state;

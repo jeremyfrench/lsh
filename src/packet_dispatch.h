@@ -6,7 +6,7 @@
 #ifndef LSH_PACKET_DISPATH_H_INCLUDED
 #define LSH_PACKET_DISPATH_H_INCLUDED
 
-#include "transport.h"
+#include "abstract_io.h"
 
 struct dispatch_assoc
 {
@@ -16,7 +16,7 @@ struct dispatch_assoc
 
 struct packet_dispatch
 {
-  struct abstract_write p;
+  struct abstract_write super;
   struct abstract_write *other;
   unsigned table_size;
   /* Should be sorted by message number */
