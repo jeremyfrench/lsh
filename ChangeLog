@@ -1,3 +1,8 @@
+2003-01-13  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/.dist_headers, src/.dist_classes: Check into cvs, to make it
+	easier for xenofarm to build a distribution directly from cvs.
+
 2003-01-13  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/scm/compiler.scm (let-and): Fixed syntax error in
