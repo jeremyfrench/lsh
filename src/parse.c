@@ -30,6 +30,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <string.h>
+
 void simple_buffer_init(struct simple_buffer *buffer,
 			UINT32 capacity, UINT8 *data)
 {
@@ -241,16 +243,22 @@ int parse_next_atom(struct simple_buffer *buffer, int *result)
   return 1;
 }
 
-struct int_list *parse_atom_list(struct simple_buffer *buffer)
+struct int_list *parse_atom_list(struct simple_buffer *buffer, unsigned limit)
 {
-  int count;
-  int i;
+  unsigned count;
+  unsigned i;
   struct int_list *res;
+
+  assert(limit);
   
   /* Count commas (no commas means one atom) */
   for (i = buffer->pos, count = 1; i < buffer->capacity; i++)
     if (buffer->data[i] == ',')
-      count++;
+      {
+	if (count >= limit)
+	  return NULL;
+	count++;
+      }
 
   res = alloc_int_list(count);
 
