@@ -115,13 +115,13 @@ static int do_tcpip_connected(struct fd_callback **c,
                               int fd)
 {
   CAST(tcpip_connected, self, *c);
-  
+
   self->channel->super.receive = do_tcpip_receive;
   self->channel->super.send = do_tcpip_send;
   self->channel->super.eof = do_tcpip_eof;
   
   self->channel->socket = 
-     io_read_write(self->backend, fd, 
+     io_read_write(make_io_fd(self->backend, fd), 
 		   make_channel_read_data(&self->channel->super), 
 		   self->block_size,
 		   make_channel_close(&self->channel->super));
