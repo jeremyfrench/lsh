@@ -201,11 +201,10 @@ static const struct uparam_name uparam_names[] =
 static void
 fill_in_uparams (const struct argp_state *state)
 {
-  /* FIXME: Can we define var as a pointer to _unsigned_ char,
-   * or will that clash with the getenv() prototype? */
-  const char *var = getenv ("ARGP_HELP_FMT");
+  /* FIXME: Can we get away without an explicit cast? */
+  const unsigned char *var = (unsigned char *) getenv ("ARGP_HELP_FMT");
 
-#define SKIPWS(p) do { while (isspace ( (unsigned) *p)) p++; } while (0);
+#define SKIPWS(p) do { while (isspace (*p)) p++; } while (0);
 
   if (var)
     /* Parse var. */
@@ -213,14 +212,14 @@ fill_in_uparams (const struct argp_state *state)
       {
 	SKIPWS (var);
 
-	if (isalpha ( (unsigned) *var))
+	if (isalpha (*var))
 	  {
 	    size_t var_len;
 	    const struct uparam_name *un;
 	    int unspec = 0, val = 0;
-	    const char *arg = var;
+	    const unsigned char *arg = var;
 
-	    while (isalnum ( (unsigned) *arg) || *arg == '-' || *arg == '_')
+	    while (isalnum (*arg) || *arg == '-' || *arg == '_')
 	      arg++;
 	    var_len = arg - var;
 
@@ -245,10 +244,10 @@ fill_in_uparams (const struct argp_state *state)
 		else
 		  val = 1;
 	      }
-	    else if (isdigit ( (unsigned) *arg))
+	    else if (isdigit (*arg))
 	      {
 		val = atoi (arg);
-		while (isdigit ( (unsigned) *arg))
+		while (isdigit (*arg))
 		  arg++;
 		SKIPWS (arg);
 	      }
@@ -737,17 +736,19 @@ hol_cluster_is_child (const struct hol_cluster *cl1,
 /* Given the name of a OPTION_DOC option, modifies NAME to start at the tail
    that should be used for comparisons, and returns true iff it should be
    treated as a non-option.  */
+
+/* FIXME: Can we use unsigned char * for the argument? */
 static int
 canon_doc_option (const char **name)
 {
   int non_opt;
   /* Skip initial whitespace.  */
-  while (isspace ( (unsigned) **name))
+  while (isspace ( (unsigned char) **name))
     (*name)++;
   /* Decide whether this looks like an option (leading `-') or not.  */
   non_opt = (**name != '-');
   /* Skip until part of name used for sorting.  */
-  while (**name && !isalnum ( (unsigned) **name))
+  while (**name && !isalnum ( (unsigned char) **name))
     (*name)++;
   return non_opt;
 }
@@ -787,6 +788,7 @@ hol_entry_cmp (const struct hol_entry *entry1,
       int short2 = hol_entry_first_short (entry2);
       int doc1 = odoc (entry1->opt);
       int doc2 = odoc (entry2->opt);
+      /* FIXME: Can we use unsigned char * instead? */
       const char *long1 = hol_entry_first_long (entry1);
       const char *long2 = hol_entry_first_long (entry2);
 
@@ -812,9 +814,9 @@ hol_entry_cmp (const struct hol_entry *entry1,
 	  char first1 = short1 ? short1 : long1 ? *long1 : 0;
 	  char first2 = short2 ? short2 : long2 ? *long2 : 0;
 #ifdef _tolower
-	  int lower_cmp = _tolower ( (unsigned) first1) - _tolower ( (unsigned) first2);
+	  int lower_cmp = _tolower ( (unsigned char) first1) - _tolower ( (unsigned char) first2);
 #else
-	  int lower_cmp = tolower ( (unsigned) first1) - tolower ( (unsigned) first2);
+	  int lower_cmp = tolower ( (unsigned char) first1) - tolower ( (unsigned char) first2);
 #endif
 	  /* Compare ignoring case, except when the options are both the
 	     same letter, in which case lower-case always comes first.  */
