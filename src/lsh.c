@@ -236,9 +236,11 @@ do_options2identities(struct command *ignored UNUSED,
   
   struct lsh_string *tmp = NULL;
   const char *s = NULL;
-  struct io_fd *f = 0;
+  struct io_fd *f = NULL;
 
-  if (options->publickey)
+  trace("do_options2identities\n");
+  
+  if (!options->publickey)
     {
       COMMAND_RETURN(c, make_object_list(0, -1));
       return;
@@ -260,7 +262,8 @@ do_options2identities(struct command *ignored UNUSED,
       COMMAND_RETURN(c, make_object_list(0, -1));
     }
   else
-    COMMAND_CALL(&spki_read_userkeys_command.super, f, c, e);
+    COMMAND_CALL(make_spki_read_userkeys(options->signature_algorithms),
+		 f, c, e);
   
   lsh_string_free(tmp);
 }
@@ -370,7 +373,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 
   if (SPKI_AUTHORIZE(self->db, subject, self->access))
     {
-      verbose("SPKI authorization successful!");
+      verbose("SPKI host authorization successful!\n");
     }
   else
     {
