@@ -410,8 +410,8 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
 
 void init_connection_service(struct ssh_connection *connection);
 
-extern struct command_simple connection_service_command;
-#define INIT_CONNECTION_SERVICE (&connection_service_command.super.super)
+extern struct command connection_service_command;
+#define INIT_CONNECTION_SERVICE (&connection_service_command.super)
 
 
 #endif /* LSH_CHANNEL_H_INCLUDED */

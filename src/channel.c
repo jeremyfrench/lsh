@@ -1639,13 +1639,17 @@ void init_connection_service(struct ssh_connection *connection)
     = &global_failure_handler;
 }
  
-DEFINE_COMMAND_SIMPLE(connection_service_command, a)
+DEFINE_COMMAND(connection_service_command)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(ssh_connection, connection, a);
 
   init_connection_service(connection);
 
-  return a;
+  COMMAND_RETURN(c, connection);
 }
 
 struct lsh_string *
