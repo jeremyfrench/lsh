@@ -35,17 +35,21 @@
 /* This limit follows the ssh specification */
 #define MAX_LINE 255
 
+/* FIXME: The handler should be able to return an error code. So
+ * we should use a pointer argument instead of the return value to
+ * install a new read handler. */
+
 /* May store a new handler into *h. */
 /* CLASS:
    (class
      (name line_handler)
      (vars
-       (handler indirect-method "struct read_handler *"
+       (handler indirect-method int "struct read_handler **r"
 		"UINT32 length" "UINT8 *line")))
 */
 
-#define PROCESS_LINE(h, length, line) \
-((h)->handler(&(h), (length), (line)))
+#define PROCESS_LINE(h, r, length, line) \
+((h)->handler(&(h), (r), (length), (line)))
 
 struct read_handler *make_read_line(struct line_handler *handler);
 

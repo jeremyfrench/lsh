@@ -109,9 +109,10 @@ static int client_initiate(struct fd_callback **c,
        (connection object ssh_connection)))
 */
 
-static struct read_handler *do_line(struct line_handler **h,
-				    UINT32 length,
-				    UINT8 *line)
+static int do_line(struct line_handler **h,
+		   struct read_handler **r,
+		   UINT32 length,
+		   UINT8 *line)
 {
   CAST(client_line_handler, closure, *h);
 
@@ -146,7 +147,8 @@ static struct read_handler *do_line(struct line_handler **h,
 	  /* FIXME: Cleanup properly. */
 	  KILL(closure);
 
-	  return new;
+	  *r = new;
+	  return LSH_OK | LSH_GOON;
 	}
       else
 	{
@@ -158,7 +160,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  KILL(closure);
 	  *h = NULL;
 		  
-	  return 0;
+	  return LSH_FAIL | LSH_DIE;
 	}
     }
   else
@@ -167,7 +169,7 @@ static struct read_handler *do_line(struct line_handler **h,
       werror_safe(length, line);
 
       /* Read next line */
-      return 0;
+      return LSH_OK | LSH_GOON;
     }
 }
 

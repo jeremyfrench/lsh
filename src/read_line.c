@@ -78,7 +78,7 @@ static int do_read_line(struct read_handler **h,
   
   UINT8 *eol;
   UINT32 length;
-  struct read_handler *next;
+  struct read_handler *next = NULL;
   int n;
 
   n = A_READ(read, MAX_LINE - closure->pos, closure->buffer);
@@ -104,15 +104,15 @@ static int do_read_line(struct read_handler **h,
        * character terminating the line, which may be a carriage
        * return preceeding the newline. */
       UINT8 *end = eol;
-
+      int res;
+      
       if ( (eol > closure->buffer)
 	   && (eol[-1] == '\r'))
 	end--;
       
       length = end - closure->buffer;
       
-      next = PROCESS_LINE(closure->handler, length, closure->buffer);
-
+      res = PROCESS_LINE(closure->handler, &next, length, closure->buffer);
       {
 	/* Remove line from buffer */
 	/* Number of characters that have been processed */
@@ -123,6 +123,9 @@ static int do_read_line(struct read_handler **h,
 	closure->pos = left;
       }
 
+      if (LSH_CLOSEDP(res))
+	return res;
+      
       if (next)
 	{
 	  /* Read no more lines. Instead, pass remaining data to next,
