@@ -72,7 +72,7 @@ do_handle_dh_reply(struct packet_handler *c,
   struct verifier *v;
   struct hash_instance *hash;
   
-  verbose("handle_dh_reply()\n");
+  trace("handle_dh_reply()\n");
   
   if (!dh_process_server_msg(&closure->dh, packet))
     {
