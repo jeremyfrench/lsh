@@ -171,7 +171,7 @@ struct lsh_string *low_utf8_to_local(UINT32 length, UINT8 *s, int strict)
 	case -1:
 	  assert(i<=res->length);
 	  
-	  res->length = i;
+	  lsh_string_trunc(res, i);
 
 	  return res;
 
