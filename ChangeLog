@@ -1,3 +1,14 @@
+Mon Apr 12 22:20:01 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_session.c (do_alloc_pty): Pass uid on to
+	pty_allocate(). 
+
+	* src/server_pty.c (pty_grantpt_uid): New function to set up the
+	permissions properly, when the current uid is different from the
+	user that should own the pty.
+	(pty_allocate): Added uid-argument, to take avantage of
+	pty_grantpt_uid. 
+
 Sun Apr 11 22:56:02 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server.c, src/server.h, src/server_session.c,
