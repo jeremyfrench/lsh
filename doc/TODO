@@ -150,8 +150,11 @@ Building outside of the source tree creates machine independent
 automatically generated files in the wrong directory (they should be
 in the source tree).
 
-The definition of SBINDIR is proken, in gets the value
+The definition of SBINDIR is broken, in gets the value
 "${exec_prefix}/sbin".
+
+Use separate version.h.in and version.h files, to avoid rebuilding
+everything when the version number is increased.
 
 
 PROTOCOL ISSUES
