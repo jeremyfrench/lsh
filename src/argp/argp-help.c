@@ -84,6 +84,9 @@ char *alloca ();
 # ifndef __strchrnul
 #  define __strchrnul strchrnul
 # endif
+# ifndef __mempcpy
+#  define __mempcpy mempcpy
+# endif
 /* FIXME: __strndup is a macro expanding to a call of the function
  * __strndup which is not declared properly. */
 # ifndef __strndup
@@ -225,9 +228,11 @@ static const struct uparam_name uparam_names[] =
 static void
 fill_in_uparams (const struct argp_state *state)
 {
+  /* FIXME: Can we define var as a pointer to _unsigned_ char,
+   * or will that clash with the getenv() prototype? */
   const char *var = getenv ("ARGP_HELP_FMT");
 
-#define SKIPWS(p) do { while (isspace (*p)) p++; } while (0);
+#define SKIPWS(p) do { while (isspace ( (unsigned) *p)) p++; } while (0);
 
   if (var)
     /* Parse var. */
@@ -235,14 +240,14 @@ fill_in_uparams (const struct argp_state *state)
       {
 	SKIPWS (var);
 
-	if (isalpha (*var))
+	if (isalpha ( (unsigned) *var))
 	  {
 	    size_t var_len;
 	    const struct uparam_name *un;
 	    int unspec = 0, val = 0;
 	    const char *arg = var;
 
-	    while (isalnum (*arg) || *arg == '-' || *arg == '_')
+	    while (isalnum ( (unsigned) *arg) || *arg == '-' || *arg == '_')
 	      arg++;
 	    var_len = arg - var;
 
@@ -267,10 +272,10 @@ fill_in_uparams (const struct argp_state *state)
 		else
 		  val = 1;
 	      }
-	    else if (isdigit (*arg))
+	    else if (isdigit ( (unsigned) *arg))
 	      {
 		val = atoi (arg);
-		while (isdigit (*arg))
+		while (isdigit ( (unsigned) *arg))
 		  arg++;
 		SKIPWS (arg);
 	      }
@@ -764,12 +769,12 @@ canon_doc_option (const char **name)
 {
   int non_opt;
   /* Skip initial whitespace.  */
-  while (isspace (**name))
+  while (isspace ( (unsigned) **name))
     (*name)++;
   /* Decide whether this looks like an option (leading `-') or not.  */
   non_opt = (**name != '-');
   /* Skip until part of name used for sorting.  */
-  while (**name && !isalnum (**name))
+  while (**name && !isalnum ( (unsigned) **name))
     (*name)++;
   return non_opt;
 }
@@ -834,9 +839,9 @@ hol_entry_cmp (const struct hol_entry *entry1,
 	  char first1 = short1 ? short1 : long1 ? *long1 : 0;
 	  char first2 = short2 ? short2 : long2 ? *long2 : 0;
 #ifdef _tolower
-	  int lower_cmp = _tolower (first1) - _tolower (first2);
+	  int lower_cmp = _tolower ( (unsigned) first1) - _tolower ( (unsigned) first2);
 #else
-	  int lower_cmp = tolower (first1) - tolower (first2);
+	  int lower_cmp = tolower ( (unsigned) first1) - tolower ( (unsigned) first2);
 #endif
 	  /* Compare ignoring case, except when the options are both the
 	     same letter, in which case lower-case always comes first.  */
@@ -1735,6 +1740,24 @@ void __argp_help (const struct argp *argp, FILE *stream,
 weak_alias (__argp_help, argp_help)
 #endif
 
+static const char *
+short_program_name(const struct argp_state *state)
+{
+  if (state)
+    return state->name;
+#if HAVE_PROGRAM_INVOCATION_SHORT_NAME
+  return program_invocation_short_name;
+#elif HAVE_PROGRAM_INVOCATION_NAME
+  {
+    const char *short_name = strrchr(program_invocation_name, '/');
+    return short_name ? short_name + 1 : program_invocation_name;
+  }
+#else
+  /* FIXME: What now? */
+  return "";
+#endif
+}
+
 /* Output, if appropriate, a usage message for STATE to STREAM.  FLAGS are
    from the set ARGP_HELP_*.  */
 void
@@ -1746,7 +1769,7 @@ __argp_state_help (const struct argp_state *state, FILE *stream, unsigned flags)
 	flags |= ARGP_HELP_LONG_ONLY;
 
       _help (state ? state->root_argp : 0, state, stream, flags,
-	     state ? state->name : program_invocation_short_name);
+	     short_program_name(state));
 
       if (!state || ! (state->flags & ARGP_NO_EXIT))
 	{
@@ -1777,7 +1800,7 @@ __argp_error (const struct argp_state *state, const char *fmt, ...)
 
 	  __flockfile (stream);
 
-	  fputs_unlocked (state ? state->name : program_invocation_short_name,
+	  fputs_unlocked (short_program_name(state),
 			  stream);
 	  putc_unlocked (':', stream);
 	  putc_unlocked (' ', stream);
@@ -1818,7 +1841,7 @@ __argp_failure (const struct argp_state *state, int status, int errnum,
 	{
 	  __flockfile (stream);
 
-	  fputs_unlocked (state ? state->name : program_invocation_short_name,
+	  fputs_unlocked (short_program_name(state),
 			  stream);
 
 	  if (fmt)
