@@ -96,60 +96,6 @@ make_connection_if_srp(struct command *then_f,
 				 &else_f->super);
 }
 
-#if 0
-/* ;;GABA:
-   (class
-     (name connection_if_srp)
-     (super command)
-     (vars
-       (then_f object command)
-       (else_f object command)))
-*/
-
-static void
-do_connection_if_srp(struct command *s,
-		     struct lsh_object *a,
-		     struct command_continuation *c,
-		     struct exception_handler *e)
-{
-  CAST(connection_if_srp, self, s);
-  CAST(ssh_connection, connection, a);
-
-  struct command *f = ( (connection->flags & CONNECTION_SRP)
-			? self->then_f : self->else_f);
-  COMMAND_CALL(f, connection, c, e);
-}
-
-struct command *
-make_connection_if_srp(struct command *then_f,
-		       struct command *else_f)
-{
-  NEW(connection_if_srp, self);
-  self->super.call = do_connection_if_srp;
-  self->then_f = then_f;
-  self->else_f = else_f;
-
-  return &self->super;
-}
-
-static struct lsh_object *
-collect_if_srp_2(struct collect_info_2 *info,
-		 struct lsh_object *t,
-		 struct lsh_object *e)
-{     
-  CAST_SUBTYPE(command, then_f, t);
-  CAST_SUBTYPE(command, else_f, e);
-  
-  assert(!info->next);
-  return &make_connection_if_srp(then_f, else_f)->super;
-}
-
-static struct collect_info_2 collect_info_if_srp_2 =
-STATIC_COLLECT_2_FINAL(collect_if_srp_2);
-
-struct collect_info_1 connection_if_srp_command =
-STATIC_COLLECT_1(&collect_info_if_srp_2);
-#endif
 
 DEFINE_COMMAND(connection_require_userauth)
      (struct command *s UNUSED, struct lsh_object *a,
