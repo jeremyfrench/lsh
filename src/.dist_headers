@@ -37,8 +37,6 @@ dist_headers = \
     lookup_verifier.h \
     lsh.h \
     lsh_argp.h \
-    lsh_types.h \
-    memxor.h \
     pad.h \
     parse.h \
     parse_config.h \
