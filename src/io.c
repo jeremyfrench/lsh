@@ -137,6 +137,12 @@ static int io_iter(struct io_backend *b)
       /* pre_write returns 0 if the buffer is empty */
       if (write_buffer_pre_write(fd->buffer))
 	fds[i].events |= POLLOUT;
+      else
+	/* Buffer is empty. Should we close? */
+	if (fd->buffer->closed)
+	  {
+	    fd->close_now = 1;
+	  }
     }
   END_FOR_FDS;
 
@@ -201,14 +207,12 @@ static int io_iter(struct io_backend *b)
 		    break;
 		  default:
 		    werror("io.c: write failed, %s\n", strerror(errno));
-		    CALLBACK(fd->close_callback);
 
-		    fd->please_close = 1;
+		    fd->close_reason = CLOSE_WRITE_FAILED;
+		    fd->close_now = 1;
 
 		    break;
 		  }
-	      // else if (!res)
-	      // fatal("What now?");
 	      else
 		fd->buffer->start += res;
 	    }
@@ -219,31 +223,49 @@ static int io_iter(struct io_backend *b)
       i = 0; /* Start over */
       FOR_FDS(struct io_fd, fd, b->io, i++)
 	{
-	  if (!fd->please_close
+	  if (!fd->close_now
 	      && (fds[i].revents & POLLIN))
 	    {
+	      int res;
+	      
 	      struct fd_read r =
 	      { { STATIC_HEADER do_read }, fd->fd };
 
 	      /* The handler function may install a new handler */
-	      if (!READ_HANDLER(fd->handler,
-				&r.super))
+	      res = READ_HANDLER(fd->handler,
+				 &r.super);
+	      switch(LSH_GET_ACTION(res))
 		{
-		  /* FIXME: Perhaps we should not close yet, but
-		   * stop reading and close as soon as the write
-		   * buffer is flushed? But in that case, we
-		   * probably also want to set some flag on the
-		   * write buffer so that no more data can be
-		   * written into it. */
-		  fd->please_close = 1;
+		case LSH_GOON:
+		  if (LSH_FAILUREP(res))
+		    fatal("Internal error\n");
+		  break;
+		case LSH_CLOSE:
+		  if (fd->buffer)
+		    write_buffer_close(fd->buffer);
+		  fd->close_reason
+		    = LSH_FAILUREP(res) ? CLOSE_PROTOCOL_FAILURE : CLOSE_EOF;
+		  break;
+		case LSH_DIE:
+		  fd->close_reason = CLOSE_PROTOCOL_FAILURE;
+		  fd->close_now = 1;
+		  break;
+		default:
+		  fatal("Internal error!\n");
 		}
 	    }
-	  if (fd->please_close)
+	  if (fd->close_now)
 	    {
 	      /* FIXME: Cleanup properly...
 	       *
 	       * After a write error, read state must be freed,
 	       * and vice versa. */
+
+	      /* FIXME: The value returned from the close callback could be used
+	       * to choose an exit code. */
+	      if (fd->close_callback)
+		CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
+
 	      UNLINK_FD;
 	      b->nio--;
 	      if (fd->handler)
@@ -262,7 +284,8 @@ static int io_iter(struct io_backend *b)
 	      /* FIXME: Do something with the peer address? */
 	      struct sockaddr_in peer;
 	      size_t addr_len = sizeof(peer);
-		  
+	      int res;
+	      
 	      int conn = accept(fd->fd,
 				(struct sockaddr *) &peer, &addr_len);
 	      if (conn < 0)
@@ -270,9 +293,12 @@ static int io_iter(struct io_backend *b)
 		  werror("io.c: accept() failed, %s", strerror(errno));
 		  continue;
 		}
-	      if (!FD_CALLBACK(fd->callback, conn))
+	      res = FD_CALLBACK(fd->callback, conn);
+	      if (LSH_PROBLEMP(res))
 		{
-		  /* FIXME: Should fd be closed here? */
+		  werror("Strange: Accepted a connection, "
+			 "but failed before writing anything.\n");
+		  close(fd->fd);
 		  UNLINK_FD;
 		  lsh_free(fd);
 		  continue;
@@ -285,8 +311,11 @@ static int io_iter(struct io_backend *b)
 	{
 	  if (fds[i].revents & POLLOUT)
 	    {
-	      if (!FD_CALLBACK(fd->callback, fd->fd))
-		fatal("What now?");
+	      int res = FD_CALLBACK(fd->callback, fd->fd);
+
+	      if (LSH_PROBLEMP(res))
+		werror("Strange: Connected, "
+		       "but failed before writing anything.\n");
 	      b->nconnect--;
 	      UNLINK_FD;
 	      lsh_free(fd);
@@ -298,6 +327,7 @@ static int io_iter(struct io_backend *b)
   return 1;
 }
 
+/* FIXME: Prehaps this function should return a suitable exit code? */
 void io_run(struct io_backend *b)
 {
   while(io_iter(b))
@@ -469,13 +499,15 @@ struct abstract_write *io_read_write(struct io_backend *b,
 				     int fd,
 				     struct read_handler *read_callback,
 				     UINT32 block_size,
-				     struct callback *close_callback)
+				     struct close_callback *close_callback)
 {
   struct io_fd *f= xalloc(sizeof(struct io_fd));
   struct write_buffer *buffer = write_buffer_alloc(block_size);
   
   f->fd = fd;
-  f->please_close = 0;
+  
+  f->close_reason = -1; /* Invalid reason */
+  f->close_now = 0;
 
   /* Reading */
   f->handler = read_callback;

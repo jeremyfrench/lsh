@@ -40,9 +40,15 @@ static int do_write(struct abstract_write **w,
   if (!packet->length)
     {
       lsh_string_free(packet);
-      return 1;
+      return LSH_OK | LSH_GOON;
     }
 
+  if (closure->closed)
+    {
+      lsh_string_free(packet);
+      return LSH_FAIL | LSH_CLOSE;
+    }
+  
   /* Enqueue packet */
   new = xalloc(sizeof(struct node));
   new->packet = packet;
@@ -70,7 +76,7 @@ static int do_write(struct abstract_write **w,
 
   closure->empty = 0;
 
-  return 1;
+  return LSH_OK | LSH_GOON;
 }
 
 /* Copy data as necessary, before writing.
@@ -150,6 +156,11 @@ int write_buffer_pre_write(struct write_buffer *buffer)
   return !buffer->empty;
 }
 
+void write_buffer_close(struct write_buffer *buffer)
+{
+  buffer->closed = 1;
+}
+
 struct write_buffer *write_buffer_alloc(UINT32 size)
 {
   struct write_buffer *res = xalloc(sizeof(struct write_buffer) - 1 + size*2);
@@ -159,7 +170,8 @@ struct write_buffer *write_buffer_alloc(UINT32 size)
   res->block_size = size;
 
   res->empty = 1;
-
+  res->closed = 0;
+  
 #if 0
   res->try_write = try; 
 #endif

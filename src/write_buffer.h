@@ -45,7 +45,10 @@ struct write_buffer
   UINT32 block_size;
 
   int empty;
-  
+
+  /* If non-zero, don't accept any more data. The i/o-channel shoudl be closed
+   * once the current buffers are flushed. */
+  int closed; 
 #if 0
   int try_write;
 #endif
@@ -63,5 +66,6 @@ struct write_buffer
 
 struct write_buffer *write_buffer_alloc(UINT32 size);
 int write_buffer_pre_write(struct write_buffer *buffer);
+void write_buffer_close(struct write_buffer *buffer);
 
 #endif /* LSH_WRITE_BUFFER_H_INCLUDED */
