@@ -563,6 +563,16 @@ werror(const char *format, ...)
 }
 
 void
+werror_progress(const char *string)
+{
+  if (verbose_flag && !quiet_flag)
+    {
+      werror_write(strlen(string), string);
+      werror_flush();
+    }
+}
+
+void
 trace(const char *format, ...) 
 {
   va_list args;

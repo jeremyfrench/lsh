@@ -80,6 +80,10 @@ void trace(const char *format, ...);
 void debug(const char *format, ...);
 void verbose(const char *format, ...);
 
+/* Displays the string with no prefix or new-line or buffering.
+ * Suitable for progress indication. */
+void werror_progress(const char *string);
+
 void fatal(const char *format, ...) NORETURN;
 
 #endif /* LSH_ERROR_H_INCLUDED */
