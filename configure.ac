@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([lsh], [1.5.3], [bug-lsh@gnu.org]) 
+AC_INIT([lsh], [1.5.4], [bug-lsh@gnu.org]) 
 AC_PREREQ(2.52)
 AC_CONFIG_SRCDIR([src/lsh.c])
 AM_INIT_AUTOMAKE

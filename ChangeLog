@@ -1,5 +1,7 @@
 2003-10-22  Niels Möller  <niels@s3.kth.se>
 
+	* configure.ac: Bumped version to 1.5.4.
+
 	* src/interact.h (INTERACT_READ_PASSWORD): Deleted the forth
 	argument FREE. Now the prompt string is always consumed. Updated
 	all callers.
