@@ -1,3 +1,8 @@
+2005-02-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lshd.c (lshd_service_request_handler): New handler. Almost
+	implemented handling of service requests.
+
 2005-02-12  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/ssh_read.c (oop_ssh_read_packet): When a packet is finished,
