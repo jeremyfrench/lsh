@@ -25,6 +25,7 @@
 
 #include "read_data.h"
 
+#include "io.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -63,8 +64,8 @@ static UINT32 do_read_data_query(struct io_consuming_read *s)
 }
 
 
-struct io_read_callback *make_read_data(struct ssh_channel *channel,
-					struct abstract_write *write)
+struct io_callback *make_read_data(struct ssh_channel *channel,
+				   struct abstract_write *write)
 {
   NEW(read_data, self);
 
