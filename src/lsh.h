@@ -104,7 +104,8 @@ struct lsh_string
 
 /* Forward declarations of various structures */
 
-/* abstract_crypto.h */
+/* abstract_io.h */
+struct abstract_write;
 
 /* client_x11.c */
 struct client_x11_display;
