@@ -88,16 +88,21 @@ static struct lsh_string *make_debug_packet(const char *msg, int always_display)
 }
 
 /* Send a debug message to the other end. */
-void send_debug(struct ssh_connection *connection, const char *msg, int always_display)
+void send_debug_message(struct abstract_write *write, const char *msg, int always_display)
 {
-  if (debug_flag)
-    C_WRITE(connection, make_debug_packet(msg, always_display));
+  A_WRITE(write, make_debug_packet(msg, always_display));
 }
 
-void send_verbose(struct ssh_connection *connection, const char *msg, int always_display)
+void send_debug(struct abstract_write *write, const char *msg, int always_display)
+{
+  if (debug_flag)
+    send_debug_message(write, msg, always_display);
+}
+
+void send_verbose(struct abstract_write *write, const char *msg, int always_display)
 {
   if (verbose_flag)
-    C_WRITE(connection, make_debug_packet(msg, always_display));
+    send_debug_message(write, msg, always_display);
 }
 
 static void
