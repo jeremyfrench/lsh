@@ -8,7 +8,7 @@ AC_PREREQ(2.50)
 
 AC_CONFIG_SRCDIR([src/lsh_types.h])
 
-AM_INIT_AUTOMAKE(lsh, 1.3.2)
+AM_INIT_AUTOMAKE(lsh, 1.3.3)
 
 AM_CONFIG_HEADER(config.h)
 # AC_CONFIG_HEADERS(config.h)
