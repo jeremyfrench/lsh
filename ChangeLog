@@ -1,5 +1,11 @@
 2003-10-22  Niels Möller  <niels@s3.kth.se>
 
+	* src/interact.h (INTERACT_READ_PASSWORD): Deleted the forth
+	argument FREE. Now the prompt string is always consumed. Updated
+	all callers.
+	* src/unix_interact.c (unix_read_password): Deleted fourth
+	argument FREE.
+
 	* src/lsh.h: Forward declaration of catch_report_collect.
 	* src/channel_forward.h: ... and deleted corresponding declaration
 	here. 
