@@ -195,7 +195,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case 'o':
-      self->file = format_cstring(arg);
+      self->file = make_string(arg);
       break;
 
     case 'p':
