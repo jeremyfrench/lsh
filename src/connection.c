@@ -228,12 +228,14 @@ make_exc_protocol_handler(struct ssh_connection *connection,
 }
 
 struct ssh_connection *
-make_ssh_connection(struct command_continuation *c,
+make_ssh_connection(const char *debug_comment,
+		    struct command_continuation *c,
 		    struct exception_handler *e)
 {
   int i;
 
   NEW(ssh_connection, connection);
+  connection->debug_comment = debug_comment;
   connection->super.write = handle_connection;
 
   /* Exception handler that sends a proper disconnect message on protocol errors */
@@ -332,7 +334,9 @@ void connection_init_io(struct ssh_connection *connection,
 	  connection,
 	  r),
 	connection),
-      "Sent");
+      (connection->debug_comment
+       ? ssh_format("%lz sent", connection->debug_comment)
+       : ssh_format("Sent")));
 
   /* Initial encryption state */
   connection->send_crypto = connection->rec_crypto = NULL;

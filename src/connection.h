@@ -71,6 +71,9 @@
        ; Sent and received version strings
        (versions array (string) 2)
        (session_id string)
+       
+       ; Connection description, used for debug messages.
+       (debug_comment simple "const char *")
 
        ; Features or bugs peculiar to the peer
        (peer_flags simple UINT32)
@@ -135,7 +138,8 @@
 #define C_WRITE(c, s) A_WRITE((c)->write, (s) )
 
 struct ssh_connection *
-make_ssh_connection(struct command_continuation *c,
+make_ssh_connection(const char *id_comment,
+		    struct command_continuation *c,
 		    struct exception_handler *e);
 
 struct exception_handler *
