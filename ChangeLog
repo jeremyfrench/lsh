@@ -1,3 +1,34 @@
+1999-12-07  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/scm/gaba.scm (process-class): Fixed output of meta classes;
+	mode #define to the declaration part of the output file.
+
+	* src/lsh_writekey.c: Adapted to new functions for reading and
+	converting keys. 
+
+	* src/lsh.c: Adapted to new functions for reading keys and acls.
+	Not working yet.
+
+	* src/io_commands.c: Use COMMAND_SIMPLE where possible.
+
+	* src/io.c (io_read_file): New function.
+
+	* src/digits.c (simple_decode_hex): New function.
+
+	* src/command.h (COMMAND_SIMPLE): New macro (and renamed the old
+	one to COMMAND_SIMPLE_CALL).
+
+	* src/command.c (do_catch_apply): New ignore_Value option. 
+	Use COMMAND_SIMPLE where possible.
+
+	* src/combinators.c: Use COMMAND_SIMPLE where possible.
+
+	* src/channel.c (connection_service_command): Use COMMAND_SIMPLE.
+
+	* src/abstract_crypto.c (crypt_string): New function.
+
+	* src/spki_commands.c, src/spki_commands.h: New files.
+
 1999-11-29  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/client_userauth.h (format_userauth_password,
