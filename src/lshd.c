@@ -121,6 +121,8 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_CORE 0x207
 #define OPT_SYSLOG 0x208
 #define OPT_NO_SYSLOG (OPT_SYSLOG | OPT_NO)
+#define OPT_X11_FORWARD 0x209
+#define OPT_NO_X11_FORWARD (OPT_X11_FORWARD |OPT_NO)
 
 #define OPT_SRP 0x210
 #define OPT_NO_SRP (OPT_SRP | OPT_NO)
@@ -179,6 +181,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (login_shell . "const char *")
        
        (with_tcpip_forward . int)
+       (with_x11_forward . int)
        (with_pty . int)
        (subsystems . "const char **")
        
@@ -254,6 +257,8 @@ make_lshd_options(void)
   self->with_publickey = 1;
   self->with_password = 1;
   self->with_tcpip_forward = 1;
+  /* Experimental, so disabled by default. */
+  self->with_x11_forward = 0;
   self->with_pty = 1;
   self->subsystems = NULL;
   
@@ -495,7 +500,19 @@ main_options[] =
   { "pty-support", OPT_PTY, NULL, 0, "Enable pty allocation (default).", 0 },
   { "no-pty-support", OPT_NO_PTY, NULL, 0, "Disable pty allocation.", 0 },
 #endif /* WITH_PTY_SUPPORT */
-
+#if WITH_TCP_FORWARD
+  { "tcpip-forward", OPT_TCPIP_FORWARD, NULL, 0,
+    "Enable tcpip forwarding (default).", 0 },
+  { "no-tcpip-forward", OPT_NO_TCPIP_FORWARD, NULL, 0,
+    "Disable tcpip forwarding.", 0 },
+#endif /* WITH_TCP_FORWARD */
+#if WITH_X11_FORWARD
+  { "x11-forward", OPT_X11_FORWARD, NULL, 0,
+    "Enable x11 forwarding.", 0 },
+  { "no-x11-forward", OPT_NO_X11_FORWARD, NULL, 0,
+    "Disable x11 forwarding (default).", 0 },
+#endif /* WITH_X11_FORWARD */
+  
   { "subsystems", OPT_SUBSYSTEMS, "List of subsystem names and programs", 0,
     "For example `sftp=/usr/sbin/sftp-server,foosystem=/usr/bin/foo' "
     "(experimental).", 0},
@@ -762,6 +779,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->with_tcpip_forward = 0;
       break;
 #endif /* WITH_TCP_FORWARD */
+#if WITH_X11_FORWARD
+    case OPT_X11_FORWARD:
+      self->with_x11_forward = 1;
+      break;
+    case OPT_NO_X11_FORWARD:
+      self->with_x11_forward = 0;
+      break;
+#endif /* WITH_X11_FORWARD */
       
 #if WITH_PTY_SUPPORT
     case OPT_PTY:
@@ -996,6 +1021,7 @@ main(int argc, char **argv)
     }
   {
     /* Commands to be invoked on the connection */
+    /* FIXME: Use a queue instead. */
     struct object_list *connection_hooks;
     struct command *session_setup;
     
@@ -1015,6 +1041,12 @@ main(int argc, char **argv)
                   ATOM_WINDOW_CHANGE, &window_change_request_handler.super);
       }
 #endif /* WITH_PTY_SUPPORT */
+
+#if WITH_X11_FORWARD
+      if (options->with_x11_forward)
+        ALIST_SET(supported_channel_requests,
+		  ATOM_X11_REQ, &x11_req_handler.super);
+#endif /* WITH_X11_FORWARD */
 
     if (options->subsystems)
       ALIST_SET(supported_channel_requests,
