@@ -985,9 +985,9 @@ sftp_process_read(struct sftp_ctx *ctx)
   /* Check so we are to read at all */
   if (length)
     {
-      size_t done = 0;
-      int res;
+      UINT32 done = 0;
       UINT32 index;
+      int res;
 
       DEBUG (("sftp_process_read: fd = %d\n", f->fd));
       
