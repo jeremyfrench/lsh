@@ -33,8 +33,9 @@ Makefile.am: Makefile.am.in
 
 EXTRA_DIST = argp-fmtstream.h argp-namefrob.h Makefile.am.in
 
-libargp_a_SOURCES = argp-ba.c argp-fmtstream.c argp-fs-xinl.c \
+# Leaves out argp-fs-xinl.c and argp-xinl.c 
+libargp_a_SOURCES = argp-ba.c argp-fmtstream.c \
 		    argp-help.c argp-parse.c argp-pv.c \
-		    argp-pvh.c argp-xinl.c argp-eexst.c
+		    argp-pvh.c  argp-eexst.c
 
 
