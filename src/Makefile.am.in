@@ -31,7 +31,7 @@ bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey \
 	       @SRP_PROGRAM@
 
 sbin_PROGRAMS = lshd lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
-bin_SCRIPTS = lsh-authorize ssh-conv
+bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade
 noinst_PROGRAMS = pkcs5-test
 noinst_SCRIPTS = lcp
 noinst_LIBRARIES = liblsh.a
@@ -198,7 +198,7 @@ class-map: $(srcdir)/make-class-map $(dist_x_files)
 # Is this rule needed?
 # all-recursive check-recursive: config.h
 
-EXTRA_DIST = lsh-authorize ssh-conv lcp \
+EXTRA_DIST = lsh-authorize ssh-conv lsh-upgrade lcp \
 	atoms.in process_atoms \
 	environ.h.in \
 	invert-defs \
