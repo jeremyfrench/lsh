@@ -1,3 +1,18 @@
+2001-02-13  Niels Möller  <nisse@ehand.com>
+
+	* src/channel.c (do_exc_finish_channel_handler): Check
+	channel_count to determine if there are channels left. The code
+	used to just check next_channel, which was broken.
+	(alloc_channel): Update channel_count.
+	(dealloc_channel): Likewise.
+	(do_exc_finish_channel_handler): The handler for
+	EXC_FINISH_PENDING shouldn't raise EXC_FINISH_READ.
+
+	* src/channel.h (channel_table): New attribute channel_count.
+
+	* src/bignum.c (bignum_random): Added a comment about biased
+	numbers.
+
 2001-02-11  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/sftp/sftp-server.c: Updated copyright notice to mention
