@@ -46,6 +46,7 @@ case $1 in
 	while getatom; do
 	    echo "  `atom2enum $atom`,"
 	done
+	echo '  SPKI_TYPE_END_OF_EXPR'
 	echo '};'
 	;;
     gperf)
