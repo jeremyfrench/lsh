@@ -81,7 +81,6 @@ void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
 	UINT8 h1[SHA_DIGESTSIZE];
 	UINT8 h2[SHA_DIGESTSIZE];
 	
-	mpz_init(s);
 	bignum_random_size(s, r, SEED_BITS);
 	
 	hash(s, h1);
