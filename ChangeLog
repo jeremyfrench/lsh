@@ -1,5 +1,43 @@
 2000-11-15  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/tty.c (tty_makeraw): #if:ed out this function.
+
+	* src/server.c (format_service_accept): Moved function here, from
+	service.c. 
+
+	* src/lshg.c: Preparations for supporting more actions. 
+
+	* src/lsh.c: Use the new interact class.
+
+	* src/interact.h (terminal_attributes): New class.
+	(interact): Renamed the class abstract_interact. Added methods
+	get_attributes and set_attributes.
+
+	* src/client_pty.c: Adapted to the new interact class.
+	(client_winch_handler): New class implementing sending of
+	window-change messages.
+	(client_tty_resource): New class.
+	(do_pty_continuation): Hook in window-change handler, and a
+	resource for resetting the tty attributes when the channel is
+	closed.
+	(make_pty_request): Take a struct interact argument, rather than a
+	tty file desciptor.
+
+	* src/client.c (format_service_request): Moved function here, from
+	service.c. 
+	(client_session): Moved this class to client_session.c.
+
+	* src/service.c, src/service.h: Marked as obsolete. Moved its two
+	functions, format_service_request() and format_service_accept() to
+	the files that use them.
+
+	* src/client_session.c: Moved channel related code here, from
+	client.c. 
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added client_session.c.
+
+	* src/unix_interact.c: New file.
+
 	* src/unix_user.c (make_process_resource): Use resource_init().
 
 	* src/server_session.c (make_pty): assert that the pty is alive.
@@ -83,6 +121,8 @@
 
 2000-11-14  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* Released lsh-1.1.1.
+	
 	* src/testsuite/macros.m4(TS_TEST_VERIFY): Use make_bad_random(). 
 	Use SIGNER_GET_PUBLIC().
 
@@ -111,8 +151,6 @@
 	* src/randomness.c: Reintroduced make_poor_random, for programs
 	that only need salt, iv:s etc.
 
-	* Released lsh-1.1.1.
-	
 	* src/symmetric/arcfour.c (arcfour_update_key): #if:ed out this
 	nostandard function.
 	(arcfour_set_key): Use arcfour_init(). Made keyset loop less

@@ -37,7 +37,6 @@
 #include "bignum.h"
 #include "list.h"
 #include "connection.h"
-#include "service.h"
 
 #define KEX_ENCRYPTION_CLIENT_TO_SERVER 0
 #define KEX_ENCRYPTION_SERVER_TO_CLIENT 1
