@@ -660,7 +660,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  {
 	    const char *name;
 	    
-	    name = getenv("LOGNAME");
+	    name = getenv(ENV_LOGNAME);
 	    if (!name)
 	      argp_failure(state, EXIT_FAILURE, 0,
 			   "$LOGNAME not set in the environment.\n");
