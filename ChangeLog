@@ -1,3 +1,31 @@
+Sat Feb 27 04:43:25 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/werror.c, src/werror.h (set_error_ignore): New function.
+
+	* src/string_buffer.c (string_buffer_clear): Bug fix.
+
+	* src/server_pty.h (pty_info): Use string type for the tty_name
+	field. 
+
+	* src/server_pty.c (pty_allocate): Save the file name  of te slave
+	tty. Corrected the returned values.
+	(tty_setctty): Ugly "fix" in the SysV-version of this function.
+	Better error messages.
+
+	* src/server.c (do_spawn_shell): Do child's pty handling before
+ 	closing fd:s. Pass struct pty_info to tty_setctty(). More debug.
+
+	* AUTHORS, src/reaper.c: Fixed typos. (Ray)
+	
+	* configure.in, acconfig.h: Check for ut_addr_v6 in struct utmp; check
+	for utmpx.h . Fixed openpty check. Check for syslog(). 
+
+Mon Feb 22 22:49:09 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/werror.c (werror_hex): Was completely broken. Fixed.
+
+	* configure.in: Fixed uses of AC_TRY_COMPILE.
+
 Thu Feb 18 03:35:45 1999    <nisse@idonex.se>
 
 	* src/zlib.c: Reorganized. Now uses string_buffer for allocation.
