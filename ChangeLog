@@ -1,3 +1,7 @@
+2003-06-12  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* Released lsh-1.5.2
+
 2003-06-10  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh.c (read_known_hosts): Fixed error message when host-acls
