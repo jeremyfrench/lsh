@@ -29,6 +29,7 @@
 #include "randomness.h"
 #include "sexp.h"
 #include "werror.h"
+#include "xalloc.h"
 
 #include "nettle/rsa.h"
 
@@ -36,101 +37,52 @@
 
 #define SA(x) sexp_a(ATOM_##x)
 
-/* Takes the public exponent e as argument. */
-struct sexp *
-rsa_generate_key(mpz_t e, struct randomness *r, UINT32 bits)
+static void
+get_random(void *x, unsigned length, uint8_t *data)
 {
+  CAST_SUBTYPE(randomness, r, x);
+  RANDOM(r, length, data);
+}
+
+static void
+progress(void *ctx UNUSED, int c)
+{
+  char buf[2];
+  buf[0] = c; buf[1] = '\0';
+  if (c != 'e')
+    werror_progress(buf);
+}
+
+/* Uses a 30-bit e. */
+#define E_SIZE 30
+struct sexp *
+rsa_generate_key(struct randomness *r, UINT32 bits)
+{
+  struct rsa_public_key public;
+  struct rsa_private_key private;
   struct sexp *key = NULL;
 
-  mpz_t n;
-  mpz_t d;
-  mpz_t p; mpz_t q;
-  mpz_t a; mpz_t b; mpz_t c;
-  mpz_t phi;
-  mpz_t tmp;
+  rsa_init_public_key(&public);
+  rsa_init_private_key(&private);
   
-  assert(r->quality == RANDOM_GOOD);
-  
-  mpz_init(n); mpz_init(d); mpz_init(p), mpz_init(q);
-  mpz_init(a); mpz_init(b); mpz_init(c);
-
-  mpz_init(phi); mpz_init(tmp);
-  
-  /* Generate primes */
-  bignum_random_prime(p, r, bits/2);
-  bignum_random_prime(q, r, (bits+1)/2);
-
-  debug("p = %xn\nq = %xn\n", p, q);
-  
-  /* Compute modulo */
-  mpz_mul(n, p, q);
-
-  debug("n = %xn\n", n);
-  
-  /* Compute phi */
-  mpz_sub_ui(phi, p, 1);
-  mpz_sub_ui(tmp, q, 1);
-  mpz_mul(phi, phi, tmp);
-
-  debug("phi = %xn\ne = %xn\n", phi, e);
-  
-  /* Compute d such that e d = 1 (mod phi) */
-  /* NOTE: In gmp-2, mpz_invert sometimes generates negative inverses. */
-  if (!mpz_invert(d, e, phi))
+  if (rsa_generate_keypair(&public, &private,
+			   r, get_random,
+			    NULL, progress,
+			   bits, E_SIZE))
     {
-      debug("rsa_generate_key: e not invertible.\n");
-      goto done;
+      key = sexp_l(2, SA(PRIVATE_KEY),
+		   sexp_l(9, SA(RSA_PKCS1),
+			  sexp_l(2, SA(N), sexp_un(public.n), -1),
+			  sexp_l(2, SA(E), sexp_un(public.e), -1),
+			  sexp_l(2, SA(D), sexp_un(private.d), -1),
+			  sexp_l(2, SA(P), sexp_un(private.p), -1),
+			  sexp_l(2, SA(Q), sexp_un(private.q), -1),
+			  sexp_l(2, SA(A), sexp_un(private.a), -1),
+			  sexp_l(2, SA(B), sexp_un(private.b), -1),
+			  sexp_l(2, SA(C), sexp_un(private.c), -1), -1), -1);
     }
-
-  if (mpz_sgn(d) < 0)
-    mpz_fdiv_r(d, d, phi);
-
-  debug("d = %xn\n", d);
-  
-  /* Compute extra values that are needed for the CRT optimization */
-
-  /* a = d % (p-1) */
-  mpz_sub_ui(tmp, p, 1);
-  mpz_fdiv_r(a, d, tmp);
-
-  debug("a = %xn\n", a);
-  
-  mpz_sub_ui(tmp, q, 1);
-  mpz_fdiv_r(b, d, tmp);
-
-  debug("b = %xn\n", b);
-  
-  /* NOTE: In gmp-2, mpz_invert sometimes generates negative inverses. */
-  if (!mpz_invert(c, q, p))
-    {
-      werror("rsa_generate_key: q not invertible.");
-      goto done;
-    }
-
-  if (mpz_sgn(c) < 0)
-    mpz_fdiv_r(c, c, p);
-
-  debug("c = %xn\n", c);
-
-  /* FIXME: Add sanity checking */
-  
-  key = sexp_l(2, SA(PRIVATE_KEY),
-	       sexp_l(9, SA(RSA_PKCS1),
-		      sexp_l(2, SA(N), sexp_un(n), -1),
-		      sexp_l(2, SA(E), sexp_un(e), -1),
-		      sexp_l(2, SA(D), sexp_un(d), -1),
-		      sexp_l(2, SA(P), sexp_un(p), -1),
-		      sexp_l(2, SA(Q), sexp_un(q), -1),
-		      sexp_l(2, SA(A), sexp_un(a), -1),
-		      sexp_l(2, SA(B), sexp_un(b), -1),
-		      sexp_l(2, SA(C), sexp_un(c), -1), -1), -1);
-
- done:
-  mpz_clear(n); mpz_clear(d); mpz_clear(p), mpz_clear(q);
-  mpz_clear(a); mpz_clear(b); mpz_clear(c);
-
-  mpz_clear(phi); mpz_clear(tmp);
-
+  rsa_clear_public_key(&public);
+  rsa_clear_private_key(&private);
   return key;
 }
 
