@@ -67,6 +67,7 @@
 
 #include "lsh_argp.h"
 
+/* Forward declarations */
 struct command_simple options2remote;
 #define OPTIONS2REMOTE (&options2remote.super.super)
 
@@ -77,15 +78,16 @@ struct command_simple lsh_login_command;
 #define LSH_LOGIN (&lsh_login_command.super.super)
 
 static struct command options2known_hosts;
-#define OPTIONS2KNOWN_HOSTS (&options2known_hosts)
+#define OPTIONS2KNOWN_HOSTS (&options2known_hosts.super)
 
 static struct command options2identities;
 #define OPTIONS2IDENTITIES (&options2identities.super)
 
+#if 0
 static struct catch_command catch_open_exceptions =
 STATIC_CATCH_COMMAND(EXC_IO_OPEN_READ, EXC_IO_OPEN_READ, 0);
 #define CATCH_OPEN (&catch_open_exceptions.super.super.super)
-
+#endif
 		    
 #include "lsh.c.x"
 
@@ -153,8 +155,9 @@ make_options(struct alist *algorithms, struct io_backend *backend,
   /* FIXME: Really needed? */
   self->random = random;
   
-  self->signature_algorithms = make_alist(1,
-					  ATOM_DSA, make_dsa_algorithm(random));
+  self->signature_algorithms
+    = make_alist(1,
+		 ATOM_DSA, make_dsa_algorithm(random), -1);
   
   self->handler = handler;
   self->exit_code = exit_code;
@@ -287,7 +290,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 			  sexp_format(subject->key, SEXP_CANONICAL, 0),
 			  1);
 			  
-	  if (!yes_or_no(ssh_format("Received unauthenticated key for host %S\n"
+	  if (!yes_or_no(ssh_format("Received unauthenticated key for host %lS\n"
 				    "Fingerprint: %lfxS\n"
 				    "Do you trust this key? (y/n) ",
 				    self->host->ip, fingerprint), 0, 1))
@@ -426,7 +429,7 @@ COMMAND_SIMPLE(lsh_login_command)
        (requests object object_list))
      (expr (lambda (options)
              ((progn requests) (init_connection_service
-	         (lsh_login (options2identities options)
+	         (lsh_login options (options2identities options)
 		   (userauth_service
 	             (connection_handshake
 		       handshake
@@ -934,6 +937,8 @@ do_lsh_default_handler(struct exception_handler *s,
       case EXC_RESOLVE:
       case EXC_AUTH:
       case EXC_SERVICE:
+      case EXC_SEXP_SYNTAX:
+      case EXC_SPKI_TYPE:
 	werror("lsh: %z\n", e->msg);
 	*self->status = EXIT_FAILURE;
 	break;
@@ -1053,9 +1058,9 @@ do_options2verifier(struct command *s UNUSED,
   if (!f)
     COMMAND_RETURN(c,
 		   make_lsh_host_db(make_spki_context(options->algorithms),
-				       options->remote,
-				       options->sloppy,
-				       options->capture_file));
+				    options->remote,
+				    options->sloppy,
+				    options->capture_file));
   else
     {
       struct command *read = make_spki_read_acls(options->algorithms);
@@ -1076,15 +1081,10 @@ int main(int argc, char **argv)
   int lsh_exit_code = 0;
 
   struct randomness *r;
-  struct diffie_hellman_method *dh;
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
   struct lookup_verifier *lookup;
   
-  struct alist *lookup_table; /* Alist of signature-algorithm -> lookup_verifier */
-  
-  /* int in, out, err; */
-
   /* FIXME: A single exception handler everywhere seems a little to
    * crude. */
   struct exception_handler *handler
@@ -1169,7 +1169,7 @@ int main(int argc, char **argv)
     
     CAST_SUBTYPE(command, lsh_connect, o);
 
-    COMMAND_CALL(lsh_connect, options->remote, &discard_continuation,
+    COMMAND_CALL(lsh_connect, options, &discard_continuation,
 		 handler);
 	
   } 
