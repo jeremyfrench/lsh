@@ -119,11 +119,18 @@ make_aes_cbc_instance(struct crypto_algorithm *algorithm, int mode,
   NEW(aes_instance, self);
 
   self->super.block_size = AES_BLOCK_SIZE;
-  self->super.crypt = ( (mode == CRYPTO_ENCRYPT)
-			? do_aes_encrypt
-			: do_aes_decrypt);
 
-  aes_set_key(&self->ctx.ctx, algorithm->key_size, key);
+  if (mode == CRYPTO_ENCRYPT)
+    {
+      self->super.crypt = do_aes_encrypt;
+      aes_set_encrypt_key(&self->ctx.ctx, algorithm->key_size, key);
+    }
+  else
+    {
+      self->super.crypt = do_aes_decrypt;
+      aes_set_decrypt_key(&self->ctx.ctx, algorithm->key_size, key);
+    }
+
   CBC_SET_IV(&self->ctx, iv);
   
   return(&self->super);
