@@ -24,7 +24,7 @@ TS_ALL = $(TS_PROGS) $(TS_SH)
 noinst_PROGRAMS = $(TS_PROGS)
 
 LDADD = testutils.o ../liblsh.a ../spki/libspki.a ../nettle/libnettle.a \
-	$(addprefix ../,@LIBARGP@)
+	$(DOTDOT_LIBARGP)
 
 include .dist_rapid7
 
