@@ -25,9 +25,12 @@
 
 #include "compress.h"
 #include "format.h"
+#include "ssh.h"
 #include "string_buffer.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#if WITH_ZLIB
 
 #if HAVE_ZLIB_H
 #include <zlib.h>
@@ -62,8 +65,6 @@ static void do_free_zstream(z_stream *z);
        (level . int)))
 */
 
-
-#if WITH_ZLIB
 
 /* zlib memory functions */
 static void *zlib_alloc(void *opaque UNUSED, unsigned int items, unsigned int size)
@@ -173,7 +174,7 @@ static struct lsh_string *do_zlib(struct compress_instance *c,
 	    lsh_string_free(packet);
 	  
 	  packet =
-	    string_buffer_final(&buffer, buffer.left - self->z.avail_out);
+	    string_buffer_final(&buffer, self->z.avail_out);
 
 	  self->rate = estimate_update(self->rate, input, packet->length);
 
@@ -207,16 +208,33 @@ make_zlib_instance(struct compress_algorithm *c, int mode)
 
   res->z.zalloc = zlib_alloc;
   res->z.zfree = zlib_free;
+
   switch (mode)
     {
       case COMPRESS_DEFLATE:
 	res->z.opaque = deflateEnd;
+	res->f = deflate;
         res->super.codec = do_zlib;
+
+	/* Maximum expansion is 0.1% + 12 bytes. We use 1% + 12, to be conservative.
+	 *
+	 * FIXME: These figures are documented for the entire stream,
+	 * does they really apply to all segments, separated by
+	 * Z_SYNC_FLUSH ? */
+
+	res->max = SSH_MAX_PACKET + SSH_MAX_PACKET / 100 + 12;
+	res->rate = RATE_UNIT;
+	
         deflateInit(&res->z, closure->level);
         break;
       case COMPRESS_INFLATE:
 	res->z.opaque = inflateEnd;
+	res->f = inflate;
         res->super.codec = do_zlib;
+
+	res->max = SSH_MAX_PACKET;
+	res->rate = 2 * RATE_UNIT;
+	
         inflateInit(&res->z);
         break;
     }
