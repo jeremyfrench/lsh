@@ -1,3 +1,8 @@
+2003-11-18  Niels Möller  <niels@s3.kth.se>
+
+	* src/unix_process.c (utmp_book_keeping) [UTMPX_UT_SYSLEN]: Use
+	lsh_string_length. 
+
 2003-11-17  Niels Möller  <nisse@harpo.hack.org>
 
 	* src/read_packet.c (class read_packet): New attribute
