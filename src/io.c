@@ -1687,6 +1687,7 @@ do_connect_list_callback(struct io_callback *s,
       /* Remove the successful fd, and kill the rest */
       self->state->fds[self->index] = NULL;
       KILL_RESOURCE(&self->state->super);
+      fd->label = "connected socket";
       COMMAND_RETURN(self->state->c, fd);
     }
 }
