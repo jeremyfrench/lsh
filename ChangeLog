@@ -1,3 +1,15 @@
+2002-06-28  Niels Möller  <niels@s3.kth.se>
+
+	* src/lshd.c (main_options): New options, --tcpip-forward,
+	--no-tcpip-forward (earlier there was no option for disabling
+	tcpip forward), --x11-forward and --no-x11-forward.
+	(main_argp_parser): Handle x11 options.
+	(main): Install handler for x11-req, if appropriate.
+
+	* src/server_session.h (x11_req_handler): Declare handler.
+
+	* src/server_session.c (do_x11_req): Fixed error message.
+
 2002-06-27  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh_proxy.c (main) [WITH_X11_FORWARD]: Fixed type warning.
