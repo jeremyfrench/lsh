@@ -480,8 +480,37 @@ do_file_exists(struct lsh_user *u,
   return 0;
 }
 
-/* NOTE: No arbitrary file names are passed to this function, so we don't have
- * to check for things like "../../some/secret/file" */
+static const struct exception *
+check_user_permissions(struct stat *sbuf, const char *fname,
+		       uid_t uid, int secret)
+{
+  mode_t bad = secret ? (S_IRWXG | S_IRWXO) : (S_IWGRP | S_IWOTH);
+
+  if (!S_ISREG(sbuf->st_mode))
+    {
+      werror("io.c: %z is not a regular file.\n",
+	     fname);
+      return make_io_exception(EXC_IO_OPEN_READ, NULL, 0, "Not a regular file");
+    }
+  if (sbuf->st_uid != uid)
+    {
+      werror("io.c: %z not owned by the right user (%i)\n",
+	     fname, uid);
+      return make_io_exception(EXC_IO_OPEN_READ, NULL, 0, "Bad owner");
+    }
+
+  if (sbuf->st_mode & bad)
+    {
+      werror("io.c: Permissions on %z too loose.\n",
+	     fname);
+      return make_io_exception(EXC_IO_OPEN_READ, NULL, 0, "Bad permissions");
+    }
+
+  return NULL;
+}
+
+/* NOTE: No arbitrary file names are passed to this method, so we
+ * don't have to check for things like "../../some/secret/file" */
 
 static void 
 do_read_file(struct lsh_user *u, 
@@ -491,25 +520,165 @@ do_read_file(struct lsh_user *u,
 {
   CAST(unix_user, user, u);
   struct lsh_string *f;
-  struct lsh_fd *fd;
+  struct stat sbuf;
   const struct exception *x;
-  
+
+  pid_t child;
+  /* out[0] for reading, out[1] for writing */
+  int out[2];
+
+  uid_t me = getuid();
+
+  /* There's no point trying to read other user's files unless we're
+   * root. */
+
+  if (me && (me != user->super.uid) )
+    {
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, 0, "Access denied."));
+      return;
+    }
+    
   if (!user->home)
     {
       EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL,
 					   ENOENT, "No home directory"));
       return;
     }
-  
+
   f = ssh_cformat("%lS/.lsh/%lz", user->home, name);
+  
+  if (stat(f->data, &sbuf) < 0)
+    {
+      if (errno != ENOENT)
+	werror("io_read_user_file: Failed to stat %S (errno = %i): %z\n",
+	       f, errno, STRERROR(errno));
 
-  fd = io_read_user_file(user->ctx->backend, f->data, user->super.uid, secret, &x, e);
-  lsh_string_free(f);
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
 
-  if (fd)
-    COMMAND_RETURN(c, fd);
-  else
-    EXCEPTION_RAISE(e, x);
+      lsh_string_free(f);
+      return;
+    }
+
+  /* Perform a preliminary permissions check before forking, as errors
+   * detected by the child process are not reported as accurately. */
+
+  x = check_user_permissions(&sbuf, f->data, user->super.uid, secret);
+  if (x)
+    {
+      EXCEPTION_RAISE(e, x);
+      lsh_string_free(f);
+      return;
+    }
+  
+  if (!lsh_make_pipe(out))
+    {
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
+      lsh_string_free(f);
+      return;
+    }
+  
+  child = fork();
+
+  switch (child)
+    {
+    case -1:
+      /* Error */
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL));
+
+      close(out[0]); close(out[1]);
+      lsh_string_free(f);
+      return;
+      
+    default:
+      /* Parent */
+      close(out[1]);
+
+      /* NOTE: We could install an exit handler for tre child process,
+       * but there's nothing useful for that to do. */
+      COMMAND_RETURN(c, make_lsh_fd(user->ctx->backend, out[0], e));
+
+      lsh_string_free(f);
+      return;
+
+    case 0:
+      /* Child */
+      {
+#define BUF_SIZE 1024
+	int fd;
+	char buf[BUF_SIZE];
+
+	close(out[0]);
+	
+	if ( (me != user->super.uid) && (setuid(user->super.uid) < 0) )
+	  {
+	    werror("unix_user.c: do_read_file(): setuid failed (errno = %i): %z\n",
+		   errno, STRERROR(errno));
+	    _exit(EXIT_FAILURE);
+	  }
+	assert(user->super.uid == getuid());
+	
+	fd = open(f->data, O_RDONLY);
+
+	/* Check permissions again, in case the file or some symlinks
+	 * changed under our feet. */
+
+	if (fstat(fd, &sbuf) < 0)
+	  {
+	    werror("unix_user.c: do_read_file(): fstat failed (errno = %i): %z\n",
+		   errno, STRERROR(errno));
+	    _exit(EXIT_FAILURE);
+	  }
+
+	x = check_user_permissions(&sbuf, f->data, user->super.uid, secret);
+
+	if (x)
+	  {
+	    werror("unix_user.c: do_read_file(): %z\n", x->msg);
+	    _exit(EXIT_FAILURE);
+	  }
+	
+	/* Copying loop */
+	for (;;)
+	  {
+	    int res = read(fd, buf, BUF_SIZE);
+	    switch (res)
+	      {
+	      case -1:
+		if (errno != EINTR)
+		  {
+		    werror("unix_user.c: do_read_file(): read failed (errno = %i): %z\n",
+			   errno, STRERROR(errno));
+		    _exit(EXIT_FAILURE);
+		  }
+		break;
+	      case 0:
+		/* EOF */
+		_exit(EXIT_SUCCESS);
+	      default:
+		{
+		  unsigned length = res;
+		  unsigned i;
+		  for (i = 0; i<length; )
+		    {
+		      res = write(out[1], buf + i, length - i);
+		      if (res < 0)
+			{
+			  if (errno != EINTR)
+			    {
+			      werror("unix_user.c: do_read_file(): write failed (errno = %i): %z\n",
+				     errno, STRERROR(errno));
+			      _exit(EXIT_FAILURE);
+			    }
+			}
+		      else
+			i += res;
+		    }
+		}
+	      }
+	  }
+#undef BUF_SIZE
+      }
+    }
 }
 
 /* Change to user's home directory. */
