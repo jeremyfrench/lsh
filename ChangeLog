@@ -1,5 +1,7 @@
 2000-11-27  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/argp/argp-test.c (asprintf): Bug fix.
+
 	* src/argp/argp.h: Dummy definition of __THROW.
 
 	* src/argp/argp-test.c: Fixed asprintf implementation.
