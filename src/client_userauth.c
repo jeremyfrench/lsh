@@ -429,20 +429,51 @@ make_client_userauth(struct lsh_string *username,
 
 #define MAX_PASSWD 100
 
+/* GABA:
+   (class
+     (name client_password_state)
+     (super client_userauth_failure)
+     (vars
+       (userauth object client_userauth)
+       ; Have we tried the empty password already?
+       (tried_empty_passwd . int)
+       (connection object ssh_connection)
+       (e object exception_handler)))
+*/
+
 static void
-send_password(struct client_userauth *userauth,
-	      struct ssh_connection *connection,
-	      struct exception_handler *e)
+send_password(struct client_password_state *state)
 {
   struct lsh_string *passwd
     = read_password(MAX_PASSWD,
                     ssh_format("Password for %lS: ",
-                               userauth->username), 1);
+                               state->userauth->username), 1);
 
   if (passwd)
-    C_WRITE(connection,
-	    format_userauth_password(local_to_utf8(userauth->username, 0),
-				     userauth->service_name,
+    {
+      /* Password empty? */
+      if (!passwd->length)
+	{
+	  /* NOTE: At least on some systems, the getpass() function
+	   * sets the tty to raw mode, disabling ^C, ^D and the like.
+	   *
+	   * To be a little friendlier, we stop asking if the users
+	   * gives us the empty password twice.
+	   */
+	  if (state->tried_empty_passwd)
+	    {
+	      /* Stop trying. */
+	      lsh_string_free(passwd);
+	      passwd = NULL;
+	    }
+	  else
+	    state->tried_empty_passwd = 1;
+	}
+    }
+  if (passwd)
+    C_WRITE(state->connection,
+	    format_userauth_password(local_to_utf8(state->userauth->username, 0),
+				     state->userauth->service_name,
 				     local_to_utf8(passwd, 1),
 				     1));
   
@@ -451,19 +482,9 @@ send_password(struct client_userauth *userauth,
       static const struct exception no_passwd =
 	STATIC_EXCEPTION(EXC_USERAUTH, "No password supplied.");
 
-      EXCEPTION_RAISE(e, &no_passwd);
+      EXCEPTION_RAISE(state->e, &no_passwd);
     }
 }
-
-/* GABA:
-   (class
-     (name client_password_state)
-     (super client_userauth_failure)
-     (vars
-       (userauth object client_userauth)
-       (connection object ssh_connection)
-       (e object exception_handler)))
-*/
 
 
 static void
@@ -471,10 +492,10 @@ do_password_failure(struct client_userauth_failure *s)
 {
   CAST(client_password_state, self, s);
 
-  send_password(self->userauth, self->connection, self->e);
+  send_password(self);
 }
 
-static struct client_userauth_failure *
+static struct client_password_state *
 make_client_password_state(struct client_userauth *userauth,
 			   struct ssh_connection *connection,
 			   struct exception_handler *e)
@@ -482,10 +503,11 @@ make_client_password_state(struct client_userauth *userauth,
   NEW(client_password_state, self);
   self->super.failure = do_password_failure;
   self->userauth = userauth;
+  self->tried_empty_passwd = 0;
   self->connection = connection;
   self->e = e;
 
-  return &self->super;
+  return self;
 }
 
 static struct client_userauth_failure *
@@ -494,8 +516,11 @@ do_password_login(struct client_userauth_method *s UNUSED,
 		  struct ssh_connection *connection,
 		  struct exception_handler *e)
 {
-  send_password(userauth, connection, e);
-  return make_client_password_state(userauth, connection, e);
+  struct client_password_state *state
+    = make_client_password_state(userauth, connection, e);
+  send_password(state);
+  
+  return &state->super;
 }
 
 struct client_userauth_method *
