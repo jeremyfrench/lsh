@@ -1,6 +1,6 @@
 /* From draft NIST spec on AES modes. */
 
-TS_TEST_CRYPTO(»aes-256 cbc 1«, »&aes256_cbc_algorithm«, 
+TS_TEST_CRYPTO(»aes-256 cbc 1«, »&crypto_aes256_cbc_algorithm«, 
 	       »603deb1015ca71be2b73aef0857d7781
 		1f352c073b6108d72d9810a30914dff4«,
 	       »6bc1bee22e409f96e93d7e117393172a

@@ -1,3 +1,15 @@
+2001-10-14  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/crypto.c (crypto_aes256_cbc_algorithm): Renamed, was
+	aes256_cbc_algorithm. 
+	(crypto_des3_cbc_algorithm): New algorithm, to replace the code in
+	des.c. Doesn't quite work yet.
+
+	* src/algorithms.c (all_symmetric_algorithms): Use
+	crypto_des3_cbc_algorithm. 
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Deleted des.c.
+
 2001-10-05  Niels Möller  <nisse@ehand.com>
 
 	* src/arcfour.c, src/rijndael.c: Deleted files. Code moved to
