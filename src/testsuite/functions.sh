@@ -75,9 +75,9 @@ spawn_lshd () {
 }
 
 run_lsh () {
-    cmd=$1
+    cmd="$1"
     shift
-    echo $cmd | ../lsh $CLIENTFLAGS -nt --sloppy-host-authentication \
+    echo "$cmd" | ../lsh $CLIENTFLAGS -nt --sloppy-host-authentication \
 	--capture-to /dev/null -z -p $PORT "$@" localhost
 
 }
