@@ -47,8 +47,12 @@ extern struct crypto_algorithm crypto_des3_cbc_algorithm;
 struct crypto_algorithm *make_cast_algorithm(UINT32 key_size);
 extern struct crypto_algorithm cast128_algorithm;
 
+#if 0
 struct crypto_algorithm *make_blowfish_algorithm(UINT32 key_size);
 extern struct crypto_algorithm blowfish_algorithm;
+#endif
+extern struct crypto_algorithm crypto_blowfish_cbc_algorithm;
+
 
 #if 0
 struct crypto_algorithm *make_twofish_algorithm(UINT32 key_size);

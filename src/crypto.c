@@ -30,6 +30,7 @@
 
 #include "nettle/arcfour.h"
 #include "nettle/aes.h"
+#include "nettle/blowfish.h"
 #include "nettle/des.h"
 #include "nettle/twofish.h"
 
@@ -241,4 +242,60 @@ make_twofish_cbc_instance(struct crypto_algorithm *algorithm, int mode,
 struct crypto_algorithm crypto_twofish256_cbc_algorithm =
 { STATIC_HEADER,
   TWOFISH_BLOCK_SIZE, 32, TWOFISH_BLOCK_SIZE, make_twofish_cbc_instance};
+
+
+/* Blowfish */
+/* GABA:
+   (class
+     (name blowfish_instance)
+     (super crypto_instance)
+     (vars
+       (ctx . "struct CBC_CTX(struct blowfish_ctx, BLOWFISH_BLOCK_SIZE)")))
+*/
+
+static void
+do_blowfish_encrypt(struct crypto_instance *s,
+                    UINT32 length, const UINT8 *src, UINT8 *dst)
+{
+  CAST(blowfish_instance, self, s);
+
+  CBC_ENCRYPT(&self->ctx, blowfish_encrypt, length, dst, src);
+}
+
+static void
+do_blowfish_decrypt(struct crypto_instance *s,
+	       UINT32 length, const UINT8 *src, UINT8 *dst)
+{
+  CAST(blowfish_instance, self, s);
+
+  CBC_DECRYPT(&self->ctx, blowfish_decrypt, length, dst, src);
+}
+
+static struct crypto_instance *
+make_blowfish_cbc_instance(struct crypto_algorithm *algorithm, int mode,
+                           const UINT8 *key, const UINT8 *iv UNUSED)
+{
+  NEW(blowfish_instance, self);
+
+  self->super.block_size = BLOWFISH_BLOCK_SIZE;
+  self->super.crypt = ( (mode == CRYPTO_ENCRYPT)
+			? do_blowfish_encrypt
+			: do_blowfish_decrypt);
+
+  CBC_SET_IV(&self->ctx, iv);
+
+  if (blowfish_set_key(&self->ctx.ctx, algorithm->key_size, key))
+    return(&self->super);
+  else
+    {
+      werror("Detected a weak blowfish key!\n");
+      KILL(self);
+      return NULL;
+    }
+}
+
+struct crypto_algorithm crypto_blowfish_cbc_algorithm =
+{ STATIC_HEADER,
+  BLOWFISH_BLOCK_SIZE, BLOWFISH_KEY_SIZE, BLOWFISH_BLOCK_SIZE,
+  make_blowfish_cbc_instance};
 
