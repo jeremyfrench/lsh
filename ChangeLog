@@ -1,3 +1,14 @@
+2003-02-09  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/Makefile.am (TS_PROGS): Added sockaddr2info-test.
+
+	* src/testsuite/testutils.h: Include io.h.
+
+	* src/testsuite/sockaddr2info-test.c: New test case.
+
+	* src/io.c (sockaddr2info): Use inet_ntop for formatting AF_INET6
+	addresses.
+
 2003-02-07  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (do_lsh_lookup): The public key should be wrapped in a
