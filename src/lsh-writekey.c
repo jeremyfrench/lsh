@@ -83,7 +83,8 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (signature_algorithms object alist)
        ; We use this only for salt and iv generation.
        (r object randomness)
-       
+
+       ; Zero means default, which depends on the --server flag.
        (crypto_name . int)
        (crypto object crypto_algorithm)
        (iterations . uint32_t)))
@@ -113,8 +114,8 @@ make_lsh_writekey_options(void)
 
   self->r = NULL;
   
-  self->crypto_name = ATOM_AES256_CBC;
-  self->crypto = &crypto_aes256_cbc_algorithm;
+  self->crypto_name = 0;
+  self->crypto = NULL;
   
   return self;
 }
@@ -186,6 +187,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    }
 	}
       self->public_file = ssh_format("%lS.pub", self->private_file);
+
+      /* Default behaviour is to encrypt the key unless running in
+	 server mode. */
+      if (!self->crypto_name && !self->server)
+	{
+	  self->crypto_name = ATOM_AES256_CBC;
+	  self->crypto = &crypto_aes256_cbc_algorithm;	 
+	}
       if (self->crypto)
 	{
 	  if (!self->label)
@@ -224,7 +233,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_SERVER:
-      self->server = 1;
+      self->server = 1;      
       break;
       
     case 'i':
