@@ -3,10 +3,10 @@
 	* src/Makefile.am (gcov-list): Don't include files with full code
 	coverage in the list.
 
-2003-04-22  Niels Möller  <niels@s3.kth.se>
-
 	* src/testsuite/Makefile.am (TS_SH): Added
 	tcpip-local-in-use-test. 
+	
+2003-04-22  Niels Möller  <niels@s3.kth.se>
 
 	* src/tcpforward_commands.c (forward_local_port): Use prog1 to
 	delay bind call until the connection is established.
