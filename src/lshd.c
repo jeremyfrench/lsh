@@ -648,6 +648,7 @@ main_argp =
 	      (connection_require_userauth connection)))))))
 */
 
+#if WITH_GCOV
 /* FIXME: Perhaps move to daemon.c? */
 /* Catch SIGTERM and call exit(). That way, profiling info is written
  * properly when the process is terminated. */
@@ -664,10 +665,11 @@ static void terminate_handler(int signum)
 static void
 do_terminate_callback(struct lsh_callback *s UNUSED)
 {
+  gc_final();
   exit(0);
 }
 
-static const struct lsh_callback
+static struct lsh_callback
 terminate_callback =
 { STATIC_HEADER, do_terminate_callback };
 
@@ -689,6 +691,7 @@ install_terminate_handler(struct io_backend *backend)
     }
   io_signal_handler(backend, &terminate, &terminate_callback);
 }
+#endif /* WITH_GCOV */
 
 int main(int argc, char **argv)
 {
@@ -696,7 +699,9 @@ int main(int argc, char **argv)
 
   struct io_backend *backend = make_io_backend();
 
+#if WITH_GCOV
   install_terminate_handler(backend);
+#endif
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -827,7 +832,7 @@ int main(int argc, char **argv)
   
   io_run(backend);
 
-  /* gc(NULL); */
+  gc_final();
   
   return 0;
 }
