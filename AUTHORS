@@ -3,6 +3,9 @@ conditions of the GNU General Public License (see the file COPYING for
 details). But many other people have written free code which is used
 in lsh.
 
+BLOWFISH implementetion from Werner Koch's and FSF's GNU Privacy
+Guard. Released under the GPL.
+
 CAST implementation by Steve Reid. Released into the public domain.
 
 DES implementation by Dana L. How. Released under the LGPL.
@@ -24,5 +27,5 @@ Kuchling. Released into the public domain.
 TCPUTILS networking code by Thomas Bellman. Released into the public
 domain.
 
-POLL emulation code (for systems that have slect(), but not poll())
+POLL emulation code (for systems that have select(), but not poll())
 written by Sean Reifschneider, released for unlimited use.
