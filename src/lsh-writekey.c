@@ -386,7 +386,7 @@ DEFINE_COMMAND(lsh_writekey_options2public_file)
   struct lsh_string *public = ssh_format("%lS.pub", options->file);
 
   COMMAND_RETURN(c,
-		 make_io_write_file_info(lsh_get_cstring(public),
+		 make_io_write_file_info(public,
 					 O_CREAT | O_EXCL | O_WRONLY,
 					 0644,
 					 BLOCK_SIZE));
@@ -401,7 +401,7 @@ DEFINE_COMMAND(lsh_writekey_options2private_file)
   CAST(lsh_writekey_options, options, a);
 
   COMMAND_RETURN(c,
-		 make_io_write_file_info(lsh_get_cstring(options->file),
+		 make_io_write_file_info(lsh_string_dup(options->file),
 					 O_CREAT | O_EXCL | O_WRONLY,
 					 0600,
 					 BLOCK_SIZE));
@@ -486,7 +486,6 @@ int main(int argc, char **argv)
   io_run();
 
   io_final();
-  gc_final();
   
   return EXIT_SUCCESS;
 }
