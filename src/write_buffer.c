@@ -25,6 +25,7 @@
 
 #include "write_buffer.h"
 
+#include "io.h"
 #include "xalloc.h"
 #include "werror.h"
 
