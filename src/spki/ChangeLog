@@ -1,3 +1,11 @@
+2002-12-04  Niels Möller  <niels@s3.kth.se>
+
+	* testsuite/cdsa-reduce-test.c (read_file): Check return value of
+	fopen. 
+
+	* tag.c (list_intersect): Must call spki_tag_dup on the tags, when
+	copying the tail fo the list.
+
 2002-12-04  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* tag.c (atom_prefix): Fixed assertion.
