@@ -1,3 +1,41 @@
+2004-11-30  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/functions.sh (test_done): New function, used when
+	exiting the testscripts. This is instead of using trap, which
+	seemed to be unreliable on SunOS-5.4.
+	(spawn_lshd): On failure, return exit code 1 from the function,
+	instead of invoking test_fail.
+
+	* src/testsuite/lsh-6-test: Fixed handling of return value from
+	spawn_lshd. 
+
+	* src/testsuite/lcp-test: Use die instead of test_fail.
+	* src/testsuite/lsh-decrypt-key-test: Likewise.
+
+	* src/testsuite/inetd-test: Use test_done.
+	* src/testsuite/keygen-1-test: Likewise.
+	* src/testsuite/keygen-2-test: Likewise.
+	* src/testsuite/lsh-1-test: Likewise.
+	* src/testsuite/lsh-2-test: Likewise.
+	* src/testsuite/lsh-3-test: Likewise.
+	* src/testsuite/lsh-5-test: Likewise.
+	* src/testsuite/lsh-7-test: Likewise.
+	* src/testsuite/lsh-8-test: Likewise.
+	* src/testsuite/lsh-9-test: Likewise.
+	* src/testsuite/lsh-encrypted-key-test: Likewise.
+	* src/testsuite/lshd-no-auth-test: Likewise.
+	* src/testsuite/lshg-1-test: Likewise.
+	* src/testsuite/lshg-tcpip-local-test: Likewise.
+	* src/testsuite/seed-test: Likewise.
+	* src/testsuite/socks4-test: Likewise.
+	* src/testsuite/socks5-test: Likewise.
+	* src/testsuite/tcpip-local-in-use-test: Likewise.
+	* src/testsuite/tcpip-local-test: Likewise.
+	* src/testsuite/tcpip-remote-test: Likewise.
+	* src/testsuite/write-key-1-test: Likewise.
+	* src/testsuite/write-key-2-test: Likewise.
+	* src/testsuite/x11-1-test: Likewise.
+
 2004-11-26  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/io.c (io_bind_local): NUL-terminate AF_UNIX socket name.
