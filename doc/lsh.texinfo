@@ -82,6 +82,8 @@ programs. In turn, @code{ssh} was intended as a secure replacement for
 the @code{rsh} and @code{rlogin} programs for remote login over the
 internet.
 
+@code{lsh} is a component of the @acronym{GNU} system.
+
 This manual explains how to use and hack @code{lsh}.
 
 @menu
