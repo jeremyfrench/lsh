@@ -184,6 +184,9 @@ do_exit_status(struct channel_request *c,
       && parse_uint32(args, &status)
       && parse_eod(args))
     {
+      verbose("client.c: Receiving exit-status %i on channel %i\n",
+	      status, channel->channel_number);
+      
       *closure->exit_status = status;
 
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
@@ -243,7 +246,7 @@ do_exit_signal(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
-      /* Sent EOF, if we haven't done that already. */
+      /* Send EOF, if we haven't done that already. */
       /* FIXME: Make this behaviour configurable, there may be some
        * child process alive that we could talk to. */
 
