@@ -5,8 +5,8 @@
 #ifndef LSH_CONNECTION_H_INCLUDED
 #define LSH_CONNECTION_H_INCLUDED
 
-#include "lsh_types.h"
 #include "abstract_io.h"
+#include "randomness.h"
 
 /* Forward declaration */
 struct ssh_connection;
@@ -29,9 +29,9 @@ struct packet_handler
      
 struct ssh_connection
 {
-#if 0
   struct abstract_write super;
   
+#if 0
   struct read_packet *reader; /* Needed for changing the decryption
 			       * algorithms. Is there a better way?
 			       * Perhaps one can keep this pointer
@@ -57,6 +57,9 @@ struct ssh_connection
   struct abstract_write *write; /* Where to send packets through the
 				 * pipeline */
 
+  struct mac_instance *send_mac;
+  struct crypto_instance *send_crypto;
+
   /* Table of all known message types */
   struct packet_handler *dispatch[0x100];
 
@@ -81,6 +84,9 @@ struct ssh_connection
 };
 
 struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler);
+void connection_init_io(struct ssh_connection *connection,
+			struct abstract_write *raw,
+			struct randomness *r);
 
 #if 0
 struct abstract_write *make_unimplemented(struct connection *c);  

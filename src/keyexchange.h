@@ -26,9 +26,10 @@
 #ifndef LSH_KEYEXCHANGE_H_INCLUDED
 #define LSH_KEYEXCHANGE_H_INCLUDED
 
-#include "lsh_types.h"
+#include "abstract_crypto.h"
 #include "abstract_io.h"
 #include "alist.h"
+#include "connection.h"
 
 #define KEX_ENCRYPTION_CLIENT_TO_SERVER 0
 #define KEX_ENCRYPTION_SERVER_TO_CLIENT 1
@@ -39,23 +40,25 @@
 
 #define KEX_PARAMETERS 6
 
+/* algorithms is an array indexed by the KEX_* values above */
 struct keyexchange_algorithm
 {
   int (*init)(struct keyexchange_algorithm *closure,
 	      struct ssh_connection *connection,
+	      int hostkey_algorithm_atom,
 	      struct signature_algorithm *hostkey_algorithm,
 	      void **algorithms);
 };
 
-#define KEYEXCHANGE_INIT(kex, connection, ) \
-((kex)->init((kex), (connection)))
+#define KEYEXCHANGE_INIT(kex, connection, ha, h, a) \
+((kex)->init((kex), (connection), (ha), (h), (a)))
 
 struct kexinit
 {
   UINT8 cookie[16];
   /* Zero terminated list of atoms */
   int *kex_algorithms; 
-  int *server_host_key_algorithms;
+  int *server_hostkey_algorithms;
   int *parameters[KEX_PARAMETERS];
   int *languages_client_to_server;
   int *languages_server_to_client;
@@ -68,17 +71,17 @@ struct kexinit
  * the message, record it in the connection structure, and possibly
  * send a first guessed message. */
 
-struct generate_kexinit
+struct make_kexinit
 {
-  struct kexinit * (*generate)(struct generate_kexinit *closure);
+  struct kexinit * (*make)(struct make_kexinit *closure);
 };
 
-#define GENERATE_KEXINIT(g) ((g)->generate((g)))
+#define MAKE_KEXINIT(m) ((m)->make((m)))
 
-struct handle_keyexinit
+struct handle_kexinit
 {
   struct packet_handler super;
-  struct choose_kexinit *init;
+  struct make_kexinit *init;
 
   /* Maps names to algorithms. It's dangerous to lookup random atoms
    * in this table, as not all objects have the same type. This
@@ -88,6 +91,16 @@ struct handle_keyexinit
 
   struct alist *algorithms;
 };
+
+/* Installs keys for use. */
+struct install_keys
+{
+  int (*install)(struct install_keys *closure,
+		 struct ssh_connection *connection,
+		 struct hash_instance *secret);
+};
+
+#define INSTALL_KEYS(i, c, s) ((i)->install((i), (c), (s)))
 
 struct newkeys_info
 {
@@ -106,5 +119,22 @@ struct packet_handler *make_kexinit_handler();
 struct packet_handler *make_newkeys_handler();
 
 struct lsh_string *format_kex(struct kexinit *kex);
+int disconnect_kex_failed(struct ssh_connection *connection, char *msg);
+
+struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
+					 void **algorithms,
+					 int type,
+					 struct ssh_connection *connection);
+
+struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
+					 void **algorithms,
+					 int type,
+					 struct ssh_connection *connection);
+
+struct mac_instance *kex_make_mac(struct hash_instance *secret,
+				  void **algorithms,
+				  int type,
+				  struct ssh_connection *connection);
+
 
 #endif /* LSH_KEYEXCHANGE_H_INCLUDED */

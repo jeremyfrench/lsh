@@ -27,6 +27,7 @@
 #define LSH_PUBLICKEY_CRYPTO_H_INCLUDED
 
 #include "abstract_crypto.h"
+#include "bignum.h"
 #include "connection.h"
 
 struct signature_algorithm *make_dss_algorithm(struct randomness *random);
@@ -69,7 +70,7 @@ struct diffie_hellman_instance
   struct lsh_string *server_key;
   struct lsh_string *signature;
   mpz_t secret; 		/* This side's secret exponent */
-  mpz_t lsh_string *K;
+  mpz_t K;
   struct hash_instance *hash;
   struct lsh_string *exchange_hash;
 };
@@ -105,6 +106,10 @@ make_diffie_hellman_method(struct group *group,
 #endif
 
 struct diffie_hellman_method *make_dh1(struct randomness *r);
+
+void init_diffie_hellman_instance(struct diffie_hellman_method *m,
+				  struct diffie_hellman_instance *self,
+				  struct ssh_connection *c);
 
 struct diffie_hellman_instance *
 make_diffie_hellman_instance(struct diffie_hellman_method *m,
