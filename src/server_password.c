@@ -34,6 +34,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include <crypt.h>
 #include <pwd.h>
 #include <grp.h>
 
