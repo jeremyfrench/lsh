@@ -64,9 +64,9 @@ do_encrypt(struct abstract_write *w,
     UINT8 s[4];
     WRITE_UINT32(s, closure->sequence_number);
 
-    HASH_UPDATE(connection->send_mac, 4, s);
-    HASH_UPDATE(connection->send_mac, packet->length, packet->data);
-    HASH_DIGEST(connection->send_mac, mac);
+    MAC_UPDATE(connection->send_mac, 4, s);
+    MAC_UPDATE(connection->send_mac, packet->length, packet->data);
+    MAC_DIGEST(connection->send_mac, mac);
   }
   lsh_string_free(packet);
 

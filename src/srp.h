@@ -48,14 +48,14 @@ make_srp_entry(struct lsh_string *name, struct sexp *e);
 /* Consumes the salt */
 struct sexp *
 srp_make_verifier(struct abstract_group *G,
-		  struct hash_algorithm *H,
+		  const struct hash_algorithm *H,
 		  struct lsh_string *salt,
 		  struct lsh_string *name,
 		  struct lsh_string *passwd);
 
 void
 srp_hash_password(mpz_t x,
-		  struct hash_algorithm *H,
+		  const struct hash_algorithm *H,
 		  struct lsh_string *salt,
 		  struct lsh_string *name,
 		  struct lsh_string *passwd);

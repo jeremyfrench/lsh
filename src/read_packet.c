@@ -139,7 +139,7 @@ do_read_packet(struct read_handler **h,
 	  if (closure->connection->rec_mac)
 	    closure->mac_buffer = lsh_string_realloc
 	      (closure->mac_buffer,
-	       closure->connection->rec_mac->hash_size);
+	       closure->connection->rec_mac->mac_size);
 
 	  /* FALL THROUGH */
 	}
@@ -217,8 +217,8 @@ do_read_packet(struct read_handler **h,
 		  UINT8 s[4];
 		  WRITE_UINT32(s, closure->sequence_number);
 		    
-		  HASH_UPDATE(closure->connection->rec_mac, 4, s);
-		  HASH_UPDATE(closure->connection->rec_mac,
+		  MAC_UPDATE(closure->connection->rec_mac, 4, s);
+		  MAC_UPDATE(closure->connection->rec_mac,
 			      block_size,
 			      closure->block_buffer->data);
 		}
@@ -289,9 +289,9 @@ do_read_packet(struct read_handler **h,
 		      closure->crypt_pos);		      
 
 	      if (closure->connection->rec_mac)
-		HASH_UPDATE(closure->connection->rec_mac,
-			    left,
-			    closure->crypt_pos);
+		MAC_UPDATE(closure->connection->rec_mac,
+			   left,
+			   closure->crypt_pos);
 
 	      goto do_mac;
 	    }
@@ -326,7 +326,7 @@ do_read_packet(struct read_handler **h,
 		READ(left, closure->mac_buffer);
 
 		mac = alloca(closure->connection->rec_mac->mac_size);
-		HASH_DIGEST(closure->connection->rec_mac, mac);
+		MAC_DIGEST(closure->connection->rec_mac, mac);
 	    
 		if (memcmp(mac,
 			   closure->mac_buffer->data,

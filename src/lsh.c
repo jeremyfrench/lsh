@@ -414,7 +414,7 @@ STATIC_COMMAND(do_options2identities);
        ; If non-null, append an ACL for the received key to this file.
        (file object abstract_write)
        ; For fingerprinting
-       (hash object hash_algorithm)))
+       (hash const object hash_algorithm)))
 */
 
 static struct verifier *
@@ -585,7 +585,7 @@ make_lsh_host_db(struct spki_context *db,
   res->host = host;
   res->sloppy = sloppy;
   res->file = file;
-  res->hash = &sha1_algorithm;
+  res->hash = &crypto_sha1_algorithm;
 
   return &res->super;
 }

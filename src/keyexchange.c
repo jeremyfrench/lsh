@@ -397,15 +397,15 @@ kex_make_key(struct hash_instance *secret,
   if (!key_length)
     return key;
   
-  hash = HASH_COPY(secret);
-  digest = alloca(hash->hash_size);
+  hash = hash_copy(secret);
+  digest = alloca(HASH_SIZE(hash));
 
-  HASH_UPDATE(hash, 1, tags + type); 
-  HASH_UPDATE(hash, session_id->length, session_id->data);
-  HASH_DIGEST(hash, digest);
+  hash_update(hash, 1, tags + type); 
+  hash_update(hash, session_id->length, session_id->data);
+  hash_digest(hash, digest);
 
   /* Is one digest large anough? */
-  if (key_length <= hash->hash_size)
+  if (key_length <= HASH_SIZE(hash))
     memcpy(key->data, digest, key_length);
 
   else
@@ -414,7 +414,7 @@ kex_make_key(struct hash_instance *secret,
       UINT8 *dst = key->data;
       
       KILL(hash);
-      hash = HASH_COPY(secret);
+      hash = hash_copy(secret);
       
       for (;;)
 	{
@@ -428,27 +428,27 @@ kex_make_key(struct hash_instance *secret,
 	  struct hash_instance *tmp;
 	  
 	  /* Append digest to the key data. */
-	  memcpy(dst, digest, hash->hash_size);
-	  dst += hash->hash_size;
-	  left -= hash->hash_size;
+	  memcpy(dst, digest, HASH_SIZE(hash));
+	  dst += HASH_SIZE(hash);
+	  left -= HASH_SIZE(hash);
 
 	  /* And to the hash state */
-	  HASH_UPDATE(hash, hash->hash_size, digest);
+	  hash_update(hash, HASH_SIZE(hash), digest);
 
-	  if (left <= hash->hash_size)
+	  if (left <= HASH_SIZE(hash))
 	    break;
 	  
 	  /* Get a new digest, without disturbing the hash object (as
 	   * we'll need it again). We use another temporary hash for
 	   * extracting the digest. */
 
-	  tmp = HASH_COPY(hash);
-	  HASH_DIGEST(tmp, digest);
+	  tmp = hash_copy(hash);
+	  hash_digest(tmp, digest);
 	  KILL(tmp);
 	}
 
       /* Get the final digest, and use some of it for the key. */
-      HASH_DIGEST(hash, digest);
+      hash_digest(hash, digest);
       memcpy(dst, digest, left);
     }
   KILL(hash);
@@ -791,17 +791,17 @@ install_keys(struct object_list *algorithms,
  * This mechanism changed in the transport-05 draft. Before this, the
  * exchange hash was not included at this point. */
 static struct hash_instance *
-kex_build_secret(struct hash_algorithm *H,
+kex_build_secret(const struct hash_algorithm *H,
 		 struct lsh_string *exchange_hash,
 		 struct lsh_string *K)
 {
   /* We include a length field for the key, but not for the exchange
    * hash. */
   
-  struct hash_instance *hash = MAKE_HASH(H);
+  struct hash_instance *hash = make_hash(H);
   struct lsh_string *s = ssh_format("%S%lS", K, exchange_hash);
 
-  HASH_UPDATE(hash, s->length, s->data);
+  hash_update(hash, s->length, s->data);
   lsh_string_free(s);
   
   return hash;
@@ -811,7 +811,7 @@ kex_build_secret(struct hash_algorithm *H,
 void
 keyexchange_finish(struct ssh_connection *connection,
 		   struct object_list *algorithms,
-		   struct hash_algorithm *H,
+		   const struct hash_algorithm *H,
 		   struct lsh_string *exchange_hash,
 		   struct lsh_string *K)
 {

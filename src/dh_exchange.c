@@ -50,7 +50,7 @@ init_dh_instance(struct dh_method *m,
   self->K = NULL;
   
   self->method = m;
-  self->hash = MAKE_HASH(m->H);
+  self->hash = make_hash(m->H);
   self->exchange_hash = NULL;
 
   debug("init_dh_instance\n"
@@ -64,13 +64,14 @@ init_dh_instance(struct dh_method *m,
 		 c->versions[CONNECTION_SERVER],
 		 c->literal_kexinits[CONNECTION_CLIENT],
 		 c->literal_kexinits[CONNECTION_SERVER]);
-  HASH_UPDATE(self->hash, s->length, s->data);
+  hash_update(self->hash, s->length, s->data);
 
   lsh_string_free(s);  
 }
 
 struct dh_method *
-make_dh(struct abstract_group *G, struct hash_algorithm *H,
+make_dh(struct abstract_group *G,
+	const struct hash_algorithm *H,
 	struct randomness *r)
 {
   NEW(dh_method, res);
@@ -88,7 +89,7 @@ make_dh(struct abstract_group *G, struct hash_algorithm *H,
 struct dh_method *
 make_dh1(struct randomness *r)
 {
-  return make_dh(make_ssh_group1(), &sha1_algorithm, r);
+  return make_dh(make_ssh_group1(), &crypto_sha1_algorithm, r);
 }
 
 /* R is set to a random, secret, exponent, and V set to is g^r */
@@ -149,7 +150,7 @@ dh_hash_update(struct dh_instance *self,
 {
   debug("dh_hash_update: %xS\n", s);
   
-  HASH_UPDATE(self->hash, s->length, s->data);
+  hash_update(self->hash, s->length, s->data);
   if (free)
     lsh_string_free(s);
 }
@@ -161,8 +162,8 @@ dh_hash_digest(struct dh_instance *self)
   dh_hash_update(self, ssh_format("%n%n%S",
 				  self->e, self->f,
 				  self->K), 1);
-  self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
-  HASH_DIGEST(self->hash, self->exchange_hash->data);
+  self->exchange_hash = lsh_string_alloc(HASH_SIZE(self->hash));
+  hash_digest(self->hash, self->exchange_hash->data);
 
   debug("dh_hash_digest: %xS\n", self->exchange_hash);  
 }

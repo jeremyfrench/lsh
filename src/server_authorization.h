@@ -32,6 +32,6 @@
 struct lookup_verifier *
 make_authorization_db(struct lsh_string *index_name, 
 		      /* struct signature_algorithm *s, */
-		      struct hash_algorithm *h);
+		      const struct hash_algorithm *h);
 
 #endif /* LSH_SERVER_AUTHORIZATION_H_INCLUDED */

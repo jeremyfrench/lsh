@@ -202,8 +202,8 @@ make_options(void)
   self->select = NULL;
   
   self->algorithms = make_alist(2,
-				ATOM_MD5, &md5_algorithm,
-				ATOM_SHA1, &sha1_algorithm,
+				ATOM_MD5, &crypto_md5_algorithm,
+				ATOM_SHA1, &crypto_sha1_algorithm,
 				-1);
   self->hash = NULL;
   self->hash_name = ATOM_SHA1;

@@ -37,15 +37,15 @@
 
 
 struct lsh_string *
-hash_string(struct hash_algorithm *a,
+hash_string(const struct hash_algorithm *a,
 	    struct lsh_string *in,
 	    int free)
 {
-  struct hash_instance *hash = MAKE_HASH(a);
-  struct lsh_string *out = lsh_string_alloc(hash->hash_size);
+  struct hash_instance *hash = make_hash(a);
+  struct lsh_string *out = lsh_string_alloc(HASH_SIZE(hash));
 
-  HASH_UPDATE(hash, in->length, in->data);
-  HASH_DIGEST(hash, out->data);
+  hash_update(hash, in->length, in->data);
+  hash_digest(hash, out->data);
 
   KILL(hash);
   if (free)
@@ -64,8 +64,8 @@ mac_string(struct mac_algorithm *a,
   struct mac_instance *mac = MAKE_MAC(a, key->length, key->data);
   struct lsh_string *out = lsh_string_alloc(mac->mac_size);
 
-  HASH_UPDATE(mac, in->length, in->data);
-  HASH_DIGEST(mac, out->data);
+  MAC_UPDATE(mac, in->length, in->data);
+  MAC_DIGEST(mac, out->data);
 
   KILL(mac);
   

@@ -47,7 +47,7 @@
      (vars
        (index_name string)
        ;; (signalgo object signature_algorithm)
-       (hashalgo object hash_algorithm)))
+       (hashalgo const object hash_algorithm)))
 */
 
 static struct verifier *
@@ -103,7 +103,7 @@ do_key_lookup(struct lookup_verifier *c,
 struct lookup_verifier *
 make_authorization_db(struct lsh_string *index_name, 
 		      /* struct signature_algorithm *s, */
-		      struct hash_algorithm *h)
+		      const struct hash_algorithm *h)
 {
   NEW(authorization_db, res);
 

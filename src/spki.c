@@ -247,15 +247,15 @@ spki_get_type(struct sexp *e, struct sexp_iterator **res)
 }
 
 struct sexp *
-spki_hash_data(struct hash_algorithm *algorithm,
+spki_hash_data(const struct hash_algorithm *algorithm,
 	       int algorithm_name,
 	       UINT32 length, UINT8 *data)
 {
-  struct hash_instance *hash = MAKE_HASH(algorithm);
-  struct lsh_string *out = lsh_string_alloc(hash->hash_size);
+  struct hash_instance *hash = make_hash(algorithm);
+  struct lsh_string *out = lsh_string_alloc(HASH_SIZE(hash));
 
-  HASH_UPDATE(hash, length, data);
-  HASH_DIGEST(hash, out->data);
+  hash_update(hash, length, data);
+  hash_digest(hash, out->data);
 
   return sexp_l(3,
 		SA(HASH),
@@ -265,7 +265,7 @@ spki_hash_data(struct hash_algorithm *algorithm,
 
 /* Create an SPKI hash from an s-expression. */
 struct sexp *
-spki_hash_sexp(struct hash_algorithm *algorithm,
+spki_hash_sexp(const struct hash_algorithm *algorithm,
 	       int name,
 	       struct sexp *expr)
 {
@@ -869,8 +869,8 @@ do_spki_lookup(struct spki_context *s,
 	/* We first se if we can find the key by hash */
 	{
 	  struct lsh_string *canonical = sexp_format(e, SEXP_CANONICAL, 0);
-	  sha1 = hash_string(&sha1_algorithm, canonical, 0);
-	  md5 = hash_string(&md5_algorithm, canonical, 1);
+	  sha1 = hash_string(&crypto_sha1_algorithm, canonical, 0);
+	  md5 = hash_string(&crypto_md5_algorithm, canonical, 1);
 	}
 
 	if ( ((subject = spki_subject_by_hash(self, ATOM_SHA1, sha1)))

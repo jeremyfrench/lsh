@@ -160,7 +160,7 @@ make_newkeys_handler(struct crypto_instance *crypto,
 void
 keyexchange_finish(struct ssh_connection *connection,
 		   struct object_list *algorithms,
-		   struct hash_algorithm *H,
+		   const struct hash_algorithm *H,
 		   struct lsh_string *exchange_hash,
 		   struct lsh_string *K);
 

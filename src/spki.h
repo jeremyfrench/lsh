@@ -83,12 +83,12 @@ struct sexp *
 spki_make_public_key(struct verifier *verifier);
 
 struct sexp *
-spki_hash_data(struct hash_algorithm *algorithm,
+spki_hash_data(const struct hash_algorithm *algorithm,
 	       int algorithm_name,
 	       UINT32 length, UINT8 *data);
 
 struct sexp *
-spki_hash_sexp(struct hash_algorithm *algorithm,
+spki_hash_sexp(const struct hash_algorithm *algorithm,
 	       int name,
 	       struct sexp *expr);
 

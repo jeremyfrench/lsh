@@ -124,7 +124,7 @@ make_ssh_ring_srp_1(void);
      (name dh_method)
      (vars
        (G object abstract_group)
-       (H object hash_algorithm)
+       (H const object hash_algorithm)
        (random object randomness)))
 */
 
@@ -191,7 +191,8 @@ void
 dh_hash_digest(struct dh_instance *self);
 
 struct dh_method *
-make_dh(struct abstract_group *G, struct hash_algorithm *H,
+make_dh(struct abstract_group *G,
+	const struct hash_algorithm *H,
 	struct randomness *r);
 
 struct dh_method *

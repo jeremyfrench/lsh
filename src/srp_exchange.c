@@ -93,7 +93,7 @@ make_srp_entry(struct lsh_string *name, struct sexp *e)
 /* Consumes the salt */
 struct sexp *
 srp_make_verifier(struct abstract_group *G,
-		  struct hash_algorithm *H,
+		  const struct hash_algorithm *H,
 		  struct lsh_string *salt,
 		  struct lsh_string *name,
 		  struct lsh_string *passwd)
@@ -121,7 +121,7 @@ srp_make_verifier(struct abstract_group *G,
 
 void
 srp_hash_password(mpz_t x,
-		  struct hash_algorithm *H,
+		  const struct hash_algorithm *H,
 		  struct lsh_string *salt,
 		  struct lsh_string *name,
 		  struct lsh_string *passwd)
@@ -147,17 +147,17 @@ srp_format_proofs(struct dh_instance *dh,
 	       dh->K->length, dh->K->data);
   struct lsh_string *s;
   
-  *m1 = lsh_string_alloc(hmac->hash_size);
-  *m2 = lsh_string_alloc(hmac->hash_size);
+  *m1 = lsh_string_alloc(hmac->mac_size);
+  *m2 = lsh_string_alloc(hmac->mac_size);
   
-  HASH_UPDATE(hmac,
+  MAC_UPDATE(hmac,
 	      dh->exchange_hash->length, dh->exchange_hash->data);
-  HASH_DIGEST(hmac, (*m1)->data);
+  MAC_DIGEST(hmac, (*m1)->data);
 
   s = ssh_format("%n%S%S", dh->e, *m1, dh->exchange_hash);
 
-  HASH_UPDATE(hmac, s->length, s->data);
-  HASH_DIGEST(hmac, (*m2)->data);
+  MAC_UPDATE(hmac, s->length, s->data);
+  MAC_DIGEST(hmac, (*m2)->data);
 
   lsh_string_free(s);
   KILL(hmac);
@@ -420,7 +420,8 @@ srp_process_server_proof(struct lsh_string *m2,
 struct dh_method *
 make_srp1(struct randomness *r)
 {
-  return make_dh(make_ssh_ring_srp_1(), &sha1_algorithm, r);
+  return make_dh(make_ssh_ring_srp_1(),
+		 &crypto_sha1_algorithm, r);
 }
 
 #endif /* WITH_SRP */

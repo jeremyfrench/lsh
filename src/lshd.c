@@ -530,7 +530,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		/* FIXME: Doesn't use spki */
 		struct lookup_verifier *key_db
 		  = make_authorization_db(ssh_format("authorized_keys_sha1"),
-					  &sha1_algorithm);
+					  &crypto_sha1_algorithm);
 		
 		LIST(self->userauth_methods)[i++] = ATOM_PUBLICKEY;
 		ALIST_SET(self->userauth_algorithms,

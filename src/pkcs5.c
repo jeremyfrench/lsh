@@ -82,11 +82,11 @@ pkcs5_derive_key(struct mac_algorithm *prf,
 
   UINT8 block_count[4] = { 0, 0, 0, 1 }; 
 
-  UINT8 *digest = alloca(prf->hash_size);
-  UINT8 *buffer = alloca(prf->hash_size);
+  UINT8 *digest = alloca(prf->mac_size);
+  UINT8 *buffer = alloca(prf->mac_size);
 
   assert(iterations);
-  assert(key_length <= 255 * prf->hash_size);
+  assert(key_length <= 255 * prf->mac_size);
   
   for (;; block_count[3]++)
     {
@@ -94,27 +94,27 @@ pkcs5_derive_key(struct mac_algorithm *prf,
       assert(block_count[3]);
       
       /* First iterate */
-      HASH_UPDATE(m, salt_length, salt);
-      HASH_UPDATE(m, 4, block_count);
-      HASH_DIGEST(m, buffer);
+      MAC_UPDATE(m, salt_length, salt);
+      MAC_UPDATE(m, 4, block_count);
+      MAC_DIGEST(m, buffer);
 
       for (i = 1; i < iterations; i++)
 	{
-	  HASH_UPDATE(m, prf->hash_size, buffer);
-	  HASH_DIGEST(m, digest);
-	  memxor(buffer, digest, prf->hash_size);
+	  MAC_UPDATE(m, prf->mac_size, buffer);
+	  MAC_DIGEST(m, digest);
+	  memxor(buffer, digest, prf->mac_size);
 	}
 
-      if (left <= prf->hash_size)
+      if (left <= prf->mac_size)
 	{
 	  memcpy(key, buffer, left);
 	  break;
 	}
       else
 	{
-	  memcpy(key, buffer, prf->hash_size);
-	  key += prf->hash_size;
-	  left -= prf->hash_size;
+	  memcpy(key, buffer, prf->mac_size);
+	  key += prf->mac_size;
+	  left -= prf->mac_size;
 	}
     }
   KILL(m);
