@@ -72,15 +72,6 @@ extern struct io_read_fd io_read_stdin;
 #define IO_READ_STDIN (&io_read_stdin.super.super)
 
 
-/* Returned by listen */
-/* GABA:
-   (class
-     (name listen_value)
-     (vars
-       (fd object io_fd)
-       (peer object address_info)))
-*/
-
 struct command *make_listen_command(struct command *callback,
 				    struct io_backend *backend);
 

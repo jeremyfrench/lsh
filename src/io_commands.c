@@ -66,13 +66,13 @@ do_io_write_file(struct command *s,
   CAST(backend_command, self, s);
   CAST(io_write_file_info, info, a);
 
-  struct io_fd *fd = io_write_file(self->backend,
-				   info->name,
-				   info->flags,
-				   info->mode,
-				   info->block_size,
-				   NULL,
-				   e);
+  struct lsh_fd *fd = io_write_file(self->backend,
+				    info->name,
+				    info->flags,
+				    info->mode,
+				    info->block_size,
+				    NULL,
+				    e);
   if (fd)
     COMMAND_RETURN(c, fd->write_buffer);
   else
@@ -110,13 +110,14 @@ void do_io_read_fd(struct command *s,
   CAST(io_read_fd, self, s);
   CAST(io_backend, backend, a);
 
-  COMMAND_RETURN(c, make_io_fd(backend, self->fd, e));
+  COMMAND_RETURN(c, make_lsh_fd(backend, self->fd, e));
 }
 
 struct io_read_fd io_read_stdin
 = STATIC_IO_READ_FD(STDIN_FILENO);
 
-/* GABA:
+#if 0
+/* ;; GABA:
    (class
      (name listen_command_callback)
      (super fd_listen_callback)
@@ -133,7 +134,7 @@ do_listen_continue(struct fd_listen_callback *s, int fd,
   CAST(listen_command_callback, self, s);
   NEW(listen_value, res);
 
-  res->fd = make_io_fd(self->backend, fd, self->e);
+  res->fd = make_lsh_fd(self->backend, fd, self->e);
   res->peer = peer;
 
   COMMAND_RETURN(self->c, res);
@@ -152,6 +153,7 @@ make_listen_command_callback(struct io_backend *backend,
   
   return &closure->super;
 }
+#endif
 
 static struct exception resolve_exception =
 STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
@@ -165,7 +167,7 @@ do_listen(struct io_backend *backend,
 {
   /* FIXME: Add ipv6 support somewhere */
   struct sockaddr_in sin;
-  struct listen_fd *fd;
+  struct lsh_fd *fd;
   
   if (!address_info2sockaddr_in(&sin, a))
     {
@@ -174,7 +176,7 @@ do_listen(struct io_backend *backend,
     }
   
   fd = io_listen(backend, &sin,
-		 make_listen_command_callback(backend, c, e),
+		 make_listen_callback(backend, c, e),
 		 e);
 
   if (!fd)
@@ -186,7 +188,7 @@ do_listen(struct io_backend *backend,
     }
   
   if (resources)
-    REMEMBER_RESOURCE(resources, &fd->super.super);
+    REMEMBER_RESOURCE(resources, &fd->super);
 }
 
 /* A listen function taking three arguments:
@@ -225,7 +227,7 @@ do_listen_connection(struct command *s,
   /* FIXME: Asyncronous dns lookups should go here */
   COMMAND_RETURN(c, io_listen
 		 (self->backend, &sin,
-		  make_listen_command_callback
+		  make_listen_callback
 		  (self->backend,
 		   make_apply(self->callback,
 			      &discard_continuation, e), e), e));
@@ -261,9 +263,9 @@ STATIC_COLLECT_2_FINAL(collect_listen);
 struct collect_info_1 listen_command =
 STATIC_COLLECT_1(&collect_info_listen_2);
 
-
+#if 0
 /* FIXME: This could perhaps be merged with io_connect in io.c? */ 
-/* GABA:
+/* ;; GABA:
    (class
      (name connect_command_callback)
      (super fd_callback)
@@ -274,7 +276,7 @@ STATIC_COLLECT_1(&collect_info_listen_2);
 */
 
 /* FIXME: The new fd object should be added to the same resource list
- * as the old one. Perhaps the conenction code in io.c should reuse
+ * as the old one. Perhaps the connection code in io.c should reuse
  * the fd object in some way? */
 static void
 do_connect_continue(struct fd_callback **s, int fd)
@@ -283,7 +285,7 @@ do_connect_continue(struct fd_callback **s, int fd)
 
   assert(fd >= 0);
 
-  COMMAND_RETURN(self->c, make_io_fd(self->backend, fd, self->e));
+  COMMAND_RETURN(self->c, make_lsh_fd(self->backend, fd, self->e));
 }
 
 static struct fd_callback *
@@ -299,6 +301,7 @@ make_connect_command_callback(struct io_backend *backend,
   
   return &closure->super;
 }
+#endif
 
 static void
 do_connect(struct io_backend *backend,
@@ -309,7 +312,7 @@ do_connect(struct io_backend *backend,
 {
   /* FIXME: Add ipv6 support somewhere */
   struct sockaddr_in sin;
-  struct connect_fd *fd;
+  struct lsh_fd *fd;
 
   /* Address must specify a host */
   assert(a->ip);
@@ -321,8 +324,7 @@ do_connect(struct io_backend *backend,
     }
 
   fd = io_connect(backend, &sin, NULL,
-		  make_connect_command_callback(backend, c, e),
-		  e);
+		  c, e);
 
   if (!fd)
     {
@@ -332,7 +334,7 @@ do_connect(struct io_backend *backend,
 
   if (resources)
     REMEMBER_RESOURCE(resources,
-		      &fd->super.super);
+		      &fd->super);
 }
 
 
@@ -503,7 +505,7 @@ COMMAND_SIMPLE(io_log_peer_command)
   verbose("Accepting connection from %S, port %i\n",
 	  lv->peer->ip, lv->peer->port);
 
-  return &lv->fd->super.super.super;
+  return &lv->fd->super.super;
 }
 
 
