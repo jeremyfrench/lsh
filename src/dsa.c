@@ -130,24 +130,6 @@ do_dsa_verify(struct verifier *c, int algorithm,
 	break;
       }
 
-#if DATAFELLOWS_WORKAROUNDS
-    case ATOM_SSH_DSS_KLUDGE_LOCAL:
-      {
-	uint32_t buf_length;
-
-	/* NOTE: This doesn't include any length field. Is that right? */
-
-	if ( (signature_length % 2)
-	     || (signature_length > (2 * DSA_Q_OCTETS)) )
-	  goto fail;
-
-	buf_length = signature_length / 2;
-
-	nettle_mpz_set_str_256_u(sv.r, buf_length, signature_data);
-	nettle_mpz_set_str_256_u(sv.s, buf_length, signature_data + buf_length);
-	break;
-      }
-#endif
       /* It doesn't matter here which flavour of SPKI is used. */
     case ATOM_SPKI_SIGN_RSA:
     case ATOM_SPKI_SIGN_DSS:
@@ -281,8 +263,6 @@ do_dsa_sign(struct signer *c,
   struct dsa_signature sv;
   struct sha1_ctx hash;
   struct lsh_string *signature;
-  uint32_t buf_length;
-  uint32_t blob_pos;
 
   trace("do_dsa_sign: Signing according to %a\n", algorithm);
 
@@ -295,28 +275,21 @@ do_dsa_sign(struct signer *c,
   debug("do_dsa_sign: r = %xn, s = %xn\n", sv.r, sv.s);
   
   /* Build signature */
-  buf_length = dsa_blob_length(&sv);
 
   switch (algorithm)
     {
     case ATOM_SSH_DSS:
-      /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
-       * length field, which should be removed in the next version. */
-      signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &blob_pos);
-      dsa_blob_write(signature, blob_pos, &sv, buf_length);
+      {
+	uint32_t blob_pos;
+	uint32_t buf_length = dsa_blob_length(&sv);
+	
+	/* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
+	 * length field, which should be removed in the next version. */
+	signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &blob_pos);
+	dsa_blob_write(signature, blob_pos, &sv, buf_length);
 
-      break;
-      
-#if DATAFELLOWS_WORKAROUNDS
-    case ATOM_SSH_DSS_KLUDGE_LOCAL:
-      
-      /* NOTE: This doesn't include any length field. Is that right? */
-      signature = ssh_format("%lr", buf_length * 2, &blob_pos);
-      dsa_blob_write(signature, blob_pos, &sv, buf_length);
-
-      break;
-
-#endif
+	break;
+      }
       /* It doesn't matter here which flavour of SPKI is used. */
     case ATOM_SPKI_SIGN_RSA:
     case ATOM_SPKI_SIGN_DSS:
