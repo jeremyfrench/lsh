@@ -53,7 +53,7 @@
      (vars
        (dh struct dh_instance)
        (signer object signer)
-       (install object install_keys)))
+       (algorithms object object_list)))
 */
 
 static void
@@ -86,7 +86,7 @@ do_handle_dh_init(struct packet_handler *c,
   hash = closure->dh.exchange_hash;
   closure->dh.exchange_hash = NULL; /* For gc */
 
-  keyexchange_finish(connection, closure->install,
+  keyexchange_finish(connection, closure->algorithms,
 		     closure->dh.method->H,
 		     hash,
 		     ssh_format("%n", closure->dh.K));
@@ -132,7 +132,7 @@ do_init_server_dh(struct keyexchange_algorithm *c,
 #endif
     dh->signer = key->private;
 
-  dh->install = make_install_new_keys(1, algorithms);
+  dh->algorithms = algorithms;
   
   /* Generate server's secret exponent */
   dh_make_server_secret(&dh->dh);
@@ -164,7 +164,7 @@ make_dh_server(struct dh_method *dh)
      (name srp_server_instance)
      (vars
        (dh struct dh_instance)
-       (install object install_keys)
+       (algorithms object object_list)
        (db object user_db)
        (user object lsh_user)
        (entry object srp_entry)))
@@ -198,7 +198,7 @@ do_srp_server_proof_handler(struct packet_handler *s,
       hash = self->srp->dh.exchange_hash;
       self->srp->dh.exchange_hash = NULL; /* For gc */
 
-      keyexchange_finish(connection, self->srp->install,
+      keyexchange_finish(connection, self->srp->algorithms,
 			 self->srp->dh.method->H,
 			 hash,
 			 ssh_format("%n", self->srp->dh.K));
@@ -343,7 +343,7 @@ do_init_server_srp(struct keyexchange_algorithm *s,
   srp->dh.server_key = NULL;
   srp->dh.signature = NULL;
 
-  srp->install = make_install_new_keys(1, algorithms);
+  srp->algorithms = algorithms;
   srp->db = self->db;
   srp->user = NULL;
   srp->entry = NULL;
@@ -360,6 +360,9 @@ make_srp_server(struct dh_method *dh,
 {
   NEW(srp_server_exchange, self);
 
+  assert(dh->G->add);
+  assert(dh->G->subtract);
+  
   self->super.init = do_init_server_srp;
   self->dh = dh;
   self->db = db;

@@ -55,7 +55,7 @@
        (dh struct dh_instance)
        (hostkey_algorithm . UINT32)
        (verifier object lookup_verifier)
-       (install object install_keys)))
+       (algorithms object object_list)))
 */
     
 static void
@@ -110,7 +110,7 @@ do_handle_dh_reply(struct packet_handler *c,
   hash = closure->dh.exchange_hash;
   closure->dh.exchange_hash = NULL; /* For gc */
 
-  keyexchange_finish(connection, closure->install,
+  keyexchange_finish(connection, closure->algorithms,
 		     closure->dh.method->H,
 		     hash,
 		     ssh_format("%n", closure->dh.K));
@@ -137,7 +137,7 @@ do_init_client_dh(struct keyexchange_algorithm *c,
   dh->verifier = verifier;
   dh->hostkey_algorithm = hostkey_algorithm_atom;
 
-  dh->install = make_install_new_keys(0, algorithms);
+  dh->algorithms = algorithms;
   
   /* Send client's message */
   C_WRITE(connection, dh_make_client_msg(&dh->dh));
@@ -171,7 +171,7 @@ make_dh_client(struct dh_method *dh)
        (dh struct dh_instance)
        (name string)
        ;; (salt string)
-       (install object install_keys)))
+       (algorithms object object_list)))
 */
 
 /* GABA:
@@ -201,7 +201,7 @@ do_srp_client_proof_handler(struct packet_handler *s,
       hash = self->srp->dh.exchange_hash;
       self->srp->dh.exchange_hash = NULL; /* For gc */
 
-      keyexchange_finish(connection, self->srp->install,
+      keyexchange_finish(connection, self->srp->algorithms,
 			 self->srp->dh.method->H,
 			 hash,
 			 ssh_format("%n", self->srp->dh.K));
@@ -301,7 +301,7 @@ do_init_client_srp(struct keyexchange_algorithm *s,
   /* Initialize */
   init_dh_instance(self->dh, &srp->dh, connection);
 
-  srp->install = make_install_new_keys(0, algorithms);
+  srp->algorithms = algorithms;
   srp->name = self->name;
   
   /* Send client's message */
@@ -317,6 +317,9 @@ struct keyexchange_algorithm *
 make_srp_client(struct dh_method *dh, struct lsh_string *name)
 {
   NEW(srp_client_exchange, self);
+
+  assert(dh->G->add);
+  assert(dh->G->subtract);
 
   self->super.init = do_init_client_srp;
   self->dh = dh;
