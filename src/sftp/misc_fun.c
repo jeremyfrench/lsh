@@ -143,10 +143,3 @@ int lsftp_get_opts( char* options, char* string )
   return set;
 
 }
-
-int FATAL( char* msg )
-{
-  fprintf( stderr, "Fatal error: %s\n", msg );
-  exit( 1 );
-  return 0;
-}
