@@ -30,8 +30,6 @@
 #include "resource.h"
 #include "randomness.h"
 
-/* Forward declaration */
-struct ssh_connection;
 
 #define GABA_DECLARE
 #include "connection.h.x"
