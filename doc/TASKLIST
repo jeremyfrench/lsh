@@ -25,7 +25,7 @@ More user authentication methods; in particular the public-key method.
 Key storage, generation and management.
 
 SPKI support. Using SPKI certificates to grant access for groups and
-individuals seems seems like a good thing to me (even if I suspect
+individuals seems like a good thing to me (even if I suspect
 that its usefulness is greater for more specialized services than
 login). I also find it appealing to send SPKI hashed key id:s rather
 than the public keys themselves in the publickey authentication
