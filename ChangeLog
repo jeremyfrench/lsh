@@ -1,8 +1,8 @@
 2004-10-08  Niels Möller  <niels@s3.kth.se>
 
 	* src/client_userauth.c (do_userauth_info_request): Enforce limits
-	on the length of name and instruction. Prepend the name and a
-	newline to the instruction.
+	on the length of name and instruction. Prepend the name and an
+	empty line to the instruction.
 
 	* src/unix_interact.c (unix_dialog): Deleted instruction argument,
 	display dialog->instruction instead.
