@@ -750,7 +750,7 @@ make_client_session(struct client_options *options)
   else
     {
       err = dup(STDERR_FILENO);
-      set_error_stream(STDERR_FILENO, 1);
+      set_error_nonblocking(STDERR_FILENO);
     }
 
   if (err < 0) 
