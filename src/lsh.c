@@ -23,16 +23,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <errno.h>
-#include <locale.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <unistd.h>
-
-#include "getopt.h"
-
+#include "algorithms.h"
 #include "alist.h"
 #include "atoms.h"
 #include "channel.h"
@@ -44,12 +35,21 @@
 #include "io.h"
 #include "randomness.h"
 #include "service.h"
-/* #include "session.h" */
 #include "ssh.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 #include "compress.h"
+
+#include <errno.h>
+#include <locale.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <unistd.h>
+
+#include "getopt.h"
 
 #include "lsh.c.x"
 
@@ -60,7 +60,15 @@ void usage(void) NORETURN;
 
 void usage(void)
 {
-  fprintf(stderr, "lsh [-p port] [-l username] [-q] [-d] [-v] host\n");
+  wwrite("lsh [options] host\n"
+	 " -p,  --port=PORT\n"
+	 " -l,  --user=NAME\n"
+	 " -c,  --crypto=ALGORITHM\n"
+	 " -z,  --compression=ALGORITHM\n"
+	 "      --mac=ALGORITHM\n"
+	 " -q,  --quiet\n"
+	 " -v,  --verbose\n"
+	 "      --debug\n");
   exit(1);
 }
 
@@ -95,13 +103,17 @@ int main(int argc, char **argv)
   char *host = NULL;
   char *user = NULL;
   char *port = "ssh";
+  int preferred_crypto = 0;
+  int preferred_compression = 0;
+  int preferred_mac = 0;
+  
+  int not;
+  
   int option;
 
   int lsh_exit_code;
   
   struct sockaddr_in remote;
-
-  NEW(io_backend, backend);
 
   struct randomness *r;
   struct diffie_hellman_method *dh;
@@ -113,103 +125,147 @@ int main(int argc, char **argv)
   struct ssh_service *service;
 
   int in, out, err;
-  
+
+  NEW(io_backend, backend);
+  gc_register_global(&backend->super);
+
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
   setlocale(LC_CTYPE, "");
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
-  
-  while((option = getopt(argc, argv, "dl:p:qv")) != -1)
-    switch(option)
-      {
-      case 'p':
-	port = optarg;
-	break;
-      case 'l':
-	user = optarg;
-	break;
-      case 'q':
-	quiet_flag = 1;
-	break;
-      case 'd':
-	debug_flag = 1;
-	break;
-      case 'v':
-	verbose_flag = 1;
-	break;
-      default:
-	usage();
-      }
 
+  r = make_reasonably_random();
+  dh = make_dh1(r);
+
+  /* No randomness is needed for verifying signatures */
+  lookup = make_fake_host_db(make_dss_algorithm(NULL)); 
+
+  kex = make_dh_client(dh, lookup);
+  algorithms = many_algorithms(2, 
+			       ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
+			       ATOM_SSH_DSS, make_dss_algorithm(r),
+			       -1);
+
+  not = 0;
+  
+  while(1)
+    {
+      static struct option options[] =
+      {
+	{ "verbose", no_argument, NULL, 'v' },
+	{ "quiet", no_argument, NULL, 'q' },
+	{ "debug", no_argument, &debug_flag, 1},
+	{ "port", required_argument, NULL, 'p' },
+	{ "user", required_argument, NULL, 'l' },
+	{ "crypto", required_argument, NULL, 'c' },
+	{ "compression", optional_argument, NULL, 'z'},
+	{ "mac", required_argument, NULL, 'm' },
+	{ NULL }
+      };
+      
+      option = getopt_long(argc, argv, "+c:l:np:qvz::", options, NULL);
+      switch(option)
+	{
+	case -1:
+	  goto options_done;
+	case 0:
+	case 'n':
+	  break;
+	case 'p':
+	  port = optarg;
+	  break;
+	case 'l':
+	  user = optarg;
+	  break;
+	case 'q':
+	  quiet_flag = 1;
+	  break;
+	case 'v':
+	  verbose_flag = 1;
+	  break;
+	case 'c':
+	  preferred_crypto = lookup_crypto(algorithms, optarg);
+	  if (!preferred_crypto)
+	    {
+	      werror("lsh: Unknown crypto algorithm '%s'.\n", optarg);
+	      exit(1);
+	    }
+	  break;
+	case 'z':
+	  if (!optarg)
+	    optarg = "zlib";
+	
+	  preferred_compression = lookup_compression(algorithms, optarg);
+	  if (!preferred_compression)
+	    {
+	      werror("lsh: Unknown compression algorithm '%s'.\n", optarg);
+	      exit(1);
+	    }
+	  break;
+	case 'm':
+	  preferred_mac = lookup_mac(algorithms, optarg);
+	  if (!preferred_mac)
+	    {
+	      werror("lsh: Unknown message authentication algorithm '%s'.\n",
+		      optarg);
+	      exit(1);
+	    }
+	    
+	case '?':
+	  usage();
+	}
+      not = (option == 'n');
+    }
+ options_done:
+  
   if ( (argc - optind) < 1)
     usage();
 
   host = argv[optind];
   if (!user)
-      user = getenv("LOGNAME");
+    user = getenv("LOGNAME");
 
   if (!user)
     {
-      werror("lsh: No user name.\n"
+      wwrite("lsh: No user name.\n"
 	     "Please use the -l option, or set LOGNAME in the environment\n");
       exit(EXIT_FAILURE);
     }
 
   if (!get_inaddr(&remote, host, port, "tcp"))
     {
-      fprintf(stderr, "No such host or service\n");
+      wwrite("No such host or service\n");
       exit(1);
     }
 
-  init_backend(backend);
+  in = STDIN_FILENO;
+  out = STDOUT_FILENO;
   
-  r = make_reasonably_random();
-  dh = make_dh1(r);
-  /* No randomness is needed for verifying signatures */
-  lookup = make_fake_host_db(make_dss_algorithm(NULL)); 
-  kex = make_dh_client(dh, lookup);
-  algorithms = make_alist(7,
-			  ATOM_ARCFOUR, &crypto_arcfour_algorithm,
-			  ATOM_BLOWFISH_CBC, crypto_cbc(make_blowfish()),
-			  ATOM_3DES_CBC, crypto_cbc(make_des3()),
-			  ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
-			  ATOM_HMAC_MD5, make_hmac_algorithm(&md5_algorithm),
-			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
-			  ATOM_SSH_DSS, make_dss_algorithm(r),
-			  -1);
-
-#if WITH_ZLIB
-  ALIST_SET(algorithms, ATOM_ZLIB, make_zlib());
-#endif
-
-#if WITH_IDEA
-  ALIST_SET(algorithms, ATOM_IDEA_CBC, crypto_cbc(&idea_algorithm));
-#endif
-  
-  make_kexinit = make_test_kexinit(r);
-
-  /* Dup stdio file descriptors, so that they can be closed without
-   * confusing the c library. */
-
-  /* FIXME: This doesn't really help. (libc is confused by having a
-   * non-blocking stderr). It's better to avoid the stdio functions
-   * completely. */
-  if ( (in = dup(STDIN_FILENO)) < 0)
-    {
-      werror("Can't dup stdin: %s\n", strerror(errno));
-      return EXIT_FAILURE;
-    }
-  if ( (out = dup(STDOUT_FILENO)) < 0)
-    {
-      werror("Can't dup stdout: %s\n", strerror(errno));
-      return EXIT_FAILURE;
-    }
   if ( (err = dup(STDERR_FILENO)) < 0)
     {
       werror("Can't dup stderr: %s\n", strerror(errno));
       return EXIT_FAILURE;
     }
+
+  init_backend(backend);
+  
+  set_error_stream(STDERR_FILENO, 1);
+  
+  make_kexinit
+    = make_simple_kexinit(r,
+			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1),
+			  make_int_list(1, ATOM_SSH_DSS, -1),
+			  (preferred_crypto
+			   ? make_int_list(1, preferred_crypto, -1)
+			   : default_crypto_algorithms()),
+			  (preferred_mac
+			   ? make_int_list(1, preferred_mac, -1)
+			   : default_mac_algorithms()),
+			  (preferred_compression
+			   ? make_int_list(1, preferred_compression, -1)
+			   : default_compression_algorithms()),
+			  make_int_list(0, -1));
   
   service = make_connection_service
     (make_alist(0, -1),

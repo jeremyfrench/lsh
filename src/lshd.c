@@ -30,6 +30,7 @@
 
 #include "getopt.h"
 
+#include "algorithms.h"
 #include "alist.h"
 #include "atoms.h"
 #include "channel.h"
@@ -126,9 +127,11 @@ int main(int argc, char **argv)
   char *port = "ssh";
   int option;
 
-  struct sockaddr_in local;
+  int preferred_crypto = 0;
+  int preferred_compression = 0;
+  int preferred_mac = 0;
 
-  NEW(io_backend, backend);
+  struct sockaddr_in local;
 
   struct reap *reaper;
   
@@ -138,34 +141,86 @@ int main(int argc, char **argv)
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
   struct packet_handler *kexinit_handler;
-  
+
+  NEW(io_backend, backend);
+  gc_register_global(&backend->super);
+
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
   setlocale(LC_CTYPE, "");
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
+
+  r = make_reasonably_random();
+  dh = make_dh1(r);
   
-  while((option = getopt(argc, argv, "dp:qi:v")) != -1)
-    switch(option)
+  algorithms = many_algorithms(1,
+			       ATOM_SSH_DSS, make_dss_algorithm(r),
+			       -1);
+
+  while(1)
+    {
+      static struct option options[] =
       {
-      case 'p':
-	port = optarg;
-	break;
-      case 'q':
-	quiet_flag = 1;
-	break;
-      case 'd':
-	debug_flag = 1;
-	break;
-      case 'i':
-	host = optarg;
-	break;
-      case 'v':
-	verbose_flag = 1;
-	break;
-      default:
-	usage();
-      }
+	{ "verbose", no_argument, NULL, 'v' },
+	{ "quiet", no_argument, NULL, 'q' },
+	{ "debug", no_argument, &debug_flag, 1},
+	{ "port", required_argument, NULL, 'p' },
+	{ "crypto", required_argument, NULL, 'c' },
+	{ "compression", optional_argument, NULL, 'z'},
+	{ "mac", required_argument, NULL, 'm' },
+	{ NULL }
+      };
+      
+      option = getopt_long(argc, argv, "c:p:qvz::", options, NULL);
+      switch(option)
+	{
+	case -1:
+	  goto options_done;
+	case 0:
+	  break;
+	case 'p':
+	  port = optarg;
+	  break;
+	case 'q':
+	  quiet_flag = 1;
+	  break;
+	case 'v':
+	  verbose_flag = 1;
+	  break;
+	case 'c':
+	  preferred_crypto = lookup_crypto(algorithms, optarg);
+	  if (!preferred_crypto)
+	    {
+	      werror("lsh: Unknown crypto algorithm '%s'.\n", optarg);
+	      exit(1);
+	    }
+	  break;
+	case 'z':
+	  if (!optarg)
+	    optarg = "zlib";
+	
+	  preferred_compression = lookup_compression(algorithms, optarg);
+	  if (!preferred_compression)
+	    {
+	      werror("lsh: Unknown compression algorithm '%s'.\n", optarg);
+	      exit(1);
+	    }
+	  break;
+	case 'm':
+	  preferred_mac = lookup_mac(algorithms, optarg);
+	  if (!preferred_mac)
+	    {
+	      werror("lsh: Unknown message authentication algorithm '%s'.\n",
+		      optarg);
+	      exit(1);
+	    }
+	    
+	case '?':
+	  usage();
+	}
+    }
+ options_done:
 
   if ( (argc - optind) != 0)
     usage();
@@ -179,30 +234,25 @@ int main(int argc, char **argv)
   init_backend(backend);
   reaper = make_reaper();
 
-  r = make_reasonably_random();
-  dh = make_dh1(r);
   init_host_key(r); /* Initializes public_key and secret_key */
   kex = make_dh_server(dh, public_key, secret_key);
 
-  algorithms = make_alist(7,
-			  ATOM_ARCFOUR, &crypto_arcfour_algorithm,
-			  ATOM_BLOWFISH_CBC, crypto_cbc(make_blowfish()),
-			  ATOM_3DES_CBC, crypto_cbc(make_des3()),
-			  ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
-			  ATOM_HMAC_MD5, make_hmac_algorithm(&md5_algorithm),
-			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
-			  ATOM_SSH_DSS, make_dss_algorithm(r),
-			  -1);
+  ALIST_SET(algorithms, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex);
 
-#if WITH_ZLIB
-  ALIST_SET(algorithms, ATOM_ZLIB, make_zlib());
-#endif
-
-#if WITH_IDEA
-  ALIST_SET(algorithms, ATOM_IDEA_CBC, crypto_cbc(&idea_algorithm));
-#endif
-
-  make_kexinit = make_test_kexinit(r);
+  make_kexinit
+    = make_simple_kexinit(r,
+			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, -1),
+			  make_int_list(1, ATOM_SSH_DSS, -1),
+			  (preferred_crypto
+			   ? make_int_list(1, preferred_crypto, -1)
+			   : default_crypto_algorithms()),
+			  (preferred_mac
+			   ? make_int_list(1, preferred_mac, -1)
+			   : default_mac_algorithms()),
+			  (preferred_compression
+			   ? make_int_list(1, preferred_compression, -1)
+			   : default_compression_algorithms()),
+			  make_int_list(0, -1));
 
   kexinit_handler = make_kexinit_handler
     (CONNECTION_SERVER,
