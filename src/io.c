@@ -619,24 +619,27 @@ do_consuming_read(struct io_callback *c,
       int res = read(fd->fd, s->data, wanted);
 
       if (res < 0)
-	switch(errno)
-	  {
-	  case EINTR:
-	    break;
-	  case EWOULDBLOCK:
-	    werror("io.c: read_consume: Unexpected EWOULDBLOCK\n");
-	    break;
-	  case EPIPE:
-	    /* FIXME: I don't understand why reading should return
-	     * EPIPE, but it happens occasionally under linux. Perhaps
-	     * we should treat it as EOF instead? */
-	    werror("io.c: read_consume: Unexpected EPIPE.\n");
-	  default:
-	    EXCEPTION_RAISE(fd->e, 
-			    make_io_exception(EXC_IO_READ,
-					      fd, errno, NULL));
-	    break;
-	  }
+	{
+	  switch(errno)
+	    {
+	    case EINTR:
+	      break;
+	    case EWOULDBLOCK:
+	      werror("io.c: read_consume: Unexpected EWOULDBLOCK\n");
+	      break;
+	    case EPIPE:
+	      /* FIXME: I don't understand why reading should return
+	       * EPIPE, but it happens occasionally under linux. Perhaps
+	       * we should treat it as EOF instead? */
+	      werror("io.c: read_consume: Unexpected EPIPE.\n");
+	    default:
+	      EXCEPTION_RAISE(fd->e, 
+			      make_io_exception(EXC_IO_READ,
+						fd, errno, NULL));
+	      break;
+	    }
+	  lsh_string_free(s);
+	}
       else if (res > 0)
 	{
 	  s->length = res;
@@ -644,6 +647,7 @@ do_consuming_read(struct io_callback *c,
 	}
       else
 	{
+	  lsh_string_free(s);
 	eof:
 	  /* Close the fd, unless it has a write callback. */
 	  close_fd_read(fd);
