@@ -59,6 +59,13 @@ make_apply(struct command *f, struct command_continuation *c)
   return &res->super.super;
 }
 
+struct lsh_object gaba_apply(struct lsh_object *f,
+			     struct lsh_object *x)
+{
+  CAST_SUBTYPE(command_simple, cf, f);
+  return COMMAND_SIMPLE(cf, x);
+}
+
 int do_call_simple_command(struct command *s,
 			   struct lsh_object *arg,
 			   struct command_continuation *c)
@@ -146,8 +153,8 @@ do_simple_command_S_2(struct command_simple *s,
   return COMMAND_SIMPLE(op, COMMAND_SIMPLE(gs, x));
 }
 
-static struct command *make_command_S_2(struct command *f,
-					    struct command *g)
+struct command *make_command_S_2(struct command *f,
+				 struct command *g)
 {
   NEW(command_S_2, res);
   res->f = f;
@@ -158,6 +165,7 @@ static struct command *make_command_S_2(struct command *f,
   return &res->super.super;
 }
 
+struct lsh_object *
 /* Represents (S f) */
 /* CLASS:
    (class
@@ -177,7 +185,7 @@ do_simple_command_S_1(struct command_simple *s,
   return &make_command_S_2(self->f, arg)->super;
 }
 
-static struct command *make_command_S_1(struct command *f)
+struct command *make_command_S_1(struct command *f)
 {
   NEW(command_S_1, res);
   res->f = f;
@@ -197,7 +205,51 @@ do_simple_command_S(struct command_simple *ignored UNUSED,
 
 struct command_simple command_S = STATIC_COMMAND_SIMPLE(do_simple_command_S);
 
-/* ((B x) y) z == (x (y z)) */
+struct lsh_object *gaba_apply_S_1(struct lsh_object *f)
+{
+  CAST_SUBTYPE(command, cf, f);
+  return &make_command_S_1(cf)->super;
+}
+  
+struct lsh_object *gaba_apply_S_2(struct lsh_object *f,
+				  struct lsh_object *g)
+{
+  CAST_SUBTYPE(command, cf, f);
+  CAST_SUBTYPE(command, cg, g);
+  return &make_command_S_2(cf, cg)->super;
+}
+
+/* ((K x) y) == x */
+
+/* Represents (K x) */
+/* CLASS:
+   (class
+     (name command_K_1)
+     (super command_simple)
+     (vars
+       (x object lsh_object)))
+*/
+
+static struct lsh_object *
+do_simple_command_K_1(struct command_simple *s,
+		      struct lsh_object *ignored UNUSED)
+{
+  CAST(command_K_1, self, s);
+  return self->x;
+}
+
+struct command *make_command_K_1(struct lsh_object *x)
+{
+  NEW(command_S_1, res);
+  res->x = x;
+  res->super.super.call = do_call_simple_command;
+  res->super.call_simple = do_simple_command_K_1;
+
+  return &res->super.super;
+}
+
+struct command_simple command_K = STATIC_COMMAND_SIMPLE(do_simple_command_K);
+
 /* ((B f) g) x == (f (g x)) */
 
 /* Represents ((B f) g) */
