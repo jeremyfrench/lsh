@@ -110,8 +110,16 @@ do_read_packet(struct read_handler **h,
   if (!available)
     {
       debug("read_packet: EOF in state %i\n", closure->state);
-      EXCEPTION_RAISE(closure->connection->e,
-		      make_protocol_exception(0, "Unexpected EOF"));
+
+      if (closure->state != WAIT_START)
+        EXCEPTION_RAISE(closure->connection->e,
+                        make_protocol_exception(0, "Unexpected EOF"));
+      else
+        /* FIXME: This may still be "unexpected".
+         *
+         * We should check that there's no open channels. */
+        EXCEPTION_RAISE(closure->connection->e, &finish_read_exception);
+      
       *h = NULL;
       return 0;
     }
