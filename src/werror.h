@@ -27,11 +27,15 @@
 #define LSH_ERROR_H_INCLUDED
 
 #include "bignum.h"
+#include "lsh_argp.h"
 
 /* Global variables */
+extern int trace_flag;
 extern int debug_flag;
 extern int quiet_flag;
 extern int verbose_flag;
+
+extern const struct argp werror_argp;
 
 void set_error_stream(int fd, int with_poll);
 void set_error_ignore(void);
@@ -62,11 +66,10 @@ void set_error_syslog(void);
 void werror_vformat(const char *f, va_list args);
 
 void werror(const char *format, ...);
+void trace(const char *format, ...);
 void debug(const char *format, ...);
 void verbose(const char *format, ...);
 
-/* FIXME: Use a separate flag to enable tracing */
-#define trace debug
 
 void fatal(const char *format, ...) NORETURN;
 

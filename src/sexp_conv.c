@@ -1,4 +1,4 @@
-/* sexpconv.c
+/* sexp_conv.c
  *
  * Reads a sexp in given form from, and writes it in given form.
  *
@@ -25,11 +25,10 @@
 
 #include "io.h"
 #include "lsh.h"
+#include "lsh_argp.h"
 #include "sexp_commands.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include "getopt.h"
 
 #include <string.h>
 #include <unistd.h>
@@ -38,41 +37,6 @@
 
 /* Global, for simplicity */
 int exit_code = EXIT_SUCCESS;
-
-struct sexp_format
-{
-  char *name;
-  int id;
-};
-
-static const struct sexp_format sexp_formats[] = {
-  { "transport", SEXP_TRANSPORT },
-  { "canonical", SEXP_CANONICAL },
-  { "advanced", SEXP_ADVANCED },
-  { "international", SEXP_INTERNATIONAL },
-  { NULL, 0 }
-};
-
-static void list_formats(void)
-{
-  int i;
-
-  werror("Available formats are:\n");
-  for (i = 0; sexp_formats[i].name; i++)
-    werror("  %z\n", sexp_formats[i].name);
-}
-
-static int lookup_sexp_format(const char *name)
-{
-  int i;
-
-  for (i = 0; sexp_formats[i].name; i++)
-    {
-      if (strcasecmp(sexp_formats[i].name, name) == 0)
-	return sexp_formats[i].id;
-    }
-  return -1;
-}
 
 /* GABA:
    (expr
@@ -118,75 +82,59 @@ do_exc_sexp_conv_handler(struct exception_handler *self,
     }
 }
 
+/* Option parsing */
+
+static const struct argp_child
+sub_parsers[] =
+{
+  { &sexp_argp, 0, NULL, 0 },
+  { &werror_argp, 0, "", 0 },
+  { NULL, 0, NULL, 0}
+};
+
+static error_t
+main_argp_parser(int key, char *arg UNUSED, struct argp_state *state UNUSED)
+{
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_INIT:
+      state->child_inputs[0] = state->input;
+      state->child_inputs[1] = NULL;
+      break;
+    }
+  return 0;
+}
+
+static const struct argp
+main_argp =
+{ NULL, main_argp_parser, NULL,
+  "Reads an s-expression on stdin, and outputs the same "
+  "s-expression on stdout, possibly using a different "
+  "encoding. By default, output uses the advanced encoding. ",
+  sub_parsers,
+  NULL
+};
+  
 
 #define SEXP_BUFFER_SIZE 1024
 
 int main(int argc, char **argv)
 {
-  int option;
-  int input_format = SEXP_ADVANCED; 
-  int output_format = SEXP_ADVANCED;
+  int input_format = SEXP_TRANSPORT;
+  sexp_argp_input output_format = SEXP_ADVANCED;
 
   struct exception_handler *e;
-  
   NEW(io_backend, backend);
 
-  for (;;)
-    {
-      static const struct option options[] =
-      {
-	{ "verbose", no_argument, NULL, 'v' },
-	{ "quiet", no_argument, NULL, 'q' },
-	{ "debug", no_argument, &debug_flag, 1},
-	{ "input", required_argument, NULL, 'i'},
-	{ "output", required_argument, NULL, 'o'},
-	{ NULL, 0, NULL, 0 }
-      };
-      
-      option = getopt_long(argc, argv, "qvi:o:", options, NULL);
-      switch(option)
-	{
-	case -1:
-	  goto options_done;
-	  
-	case 'q':
-	  quiet_flag = 1;
-	  break;
+  argp_parse(&main_argp, argc, argv, 0, NULL, &output_format);
 
-	case 'v':
-	  verbose_flag = 1;
-	  break;
-	  
-	case 'i':
-	  /* specify input format */
-	  input_format = lookup_sexp_format(optarg);
-	  if (input_format < 0)
-	    {
-	      werror("Invalid input format.\n");
-	      list_formats();
-	      return EXIT_FAILURE;
-	    }
-	  break;
-
-	case 'o':
-	  /* specify output format */
-	  output_format = lookup_sexp_format(optarg);
-	  if (output_format < 0)
-	    {
-	      werror("Invalid output format.\n");
-	      list_formats();
-	      return EXIT_FAILURE;
-	    }
-	  break;
-	}
-    }
-
- options_done:
-  
   init_backend(backend);
 
   /* Patch the parent pointer later */
-  e = make_exception_handler(do_exc_sexp_conv_handler, NULL);
+  e = make_exception_handler(do_exc_sexp_conv_handler,
+			     NULL, HANDLER_CONTEXT);
   
   {
     CAST_SUBTYPE(command, work,

@@ -716,5 +716,82 @@ int sexp_get_un(struct sexp_iterator *i, const char *name, mpz_t n)
   return 1;
 }
 
-  
-  
+
+/* Command line options */
+struct sexp_format
+{
+  char *name;
+  int id;
+};
+
+static const struct sexp_format sexp_formats[] = {
+  { "transport", SEXP_TRANSPORT },
+  { "canonical", SEXP_CANONICAL },
+  { "advanced", SEXP_ADVANCED },
+  { "international", SEXP_INTERNATIONAL },
+  { NULL, 0 }
+};
+
+#if 0
+static void list_formats(void)
+{
+  int i;
+
+  werror("Available formats are:\n");
+  for (i = 0; sexp_formats[i].name; i++)
+    werror("  %z\n", sexp_formats[i].name);
+}
+#endif
+
+static int lookup_sexp_format(const char *name)
+{
+  int i;
+
+  for (i = 0; sexp_formats[i].name; i++)
+    {
+      if (strcasecmp(sexp_formats[i].name, name) == 0)
+	return sexp_formats[i].id;
+    }
+  return -1;
+}
+
+static const struct argp_option
+sexp_options[] =
+{
+#if 0
+  { "input-format", 'i', "format", 0,
+    "Variant of the s-expression syntax to accept", 0},
+#endif
+  { "output-format", 'o', "format", 0,
+    "Variant of the s-expression syntax to generate", 0},
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+static error_t
+sexp_argp_parser(int key, char *arg, struct argp_state *state)
+{
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case 'o':
+      {
+	int format = lookup_sexp_format(arg);
+	if (format < 0)
+	  argp_error(state, "Unknown s-expression format '%s'", arg);
+	else
+	  (sexp_argp_input *) (state->input) = format;
+	break;
+      }
+    }
+  return 0;
+}
+
+const struct argp sexp_argp =
+{
+  sexp_options,
+  sexp_argp_parser,
+  "\vValid sexp-formats are transport, canonical, "
+  "advanced and international.",
+  NULL, NULL, NULL
+};

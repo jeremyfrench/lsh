@@ -29,6 +29,7 @@
 #include "bignum.h"
 #include "command.h"
 #include "list.h"
+#include "lsh_argp.h"
 
 #include "sexp_table.h"
 
@@ -180,6 +181,9 @@ struct read_handler *
 make_read_sexp(int style, int goon,
 	       struct command_continuation *c,
 	       struct exception_handler *e);
+
+extern const struct argp sexp_argp;
+#define sexp_argp_input int
 
 #endif /* LSH_SEXP_H_INCLUDED */
 

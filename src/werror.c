@@ -45,10 +45,56 @@
 #include <syslog.h>
 #endif
 
+/* Global flags */
+int trace_flag = 0;
 int debug_flag = 0;
 int quiet_flag = 0;
 int verbose_flag = 0;
 int syslog_flag = 0;
+
+#define WERROR_TRACE -1
+#define WERROR_DEBUG -2
+
+static const struct argp_option
+werror_options[] =
+{
+  { "quiet", 'q', NULL, 0, "Supress all warnings and diagnostic messages", 0 },
+  { "verbose", 'v', NULL, 0, "Verbose diagnostic messages", 0},
+  { "trace", WERROR_TRACE, NULL, 0, "Detailed trace", 0 },
+  { "debug", WERROR_DEBUG, NULL, 0, "Print huge amounts of debug information", 0 },
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+static error_t
+werror_argp_parser(int key, char *arg UNUSED,
+		   struct argp_state *state UNUSED)
+{
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case 'q':
+      quiet_flag = 1;
+      break;
+    case 'v':
+      verbose_flag = 1;
+      break;
+    case WERROR_TRACE:
+      trace_flag = 1;
+      break;
+    case WERROR_DEBUG:
+      debug_flag = 1;
+      break;
+    }
+  return 0;
+}
+
+const struct argp werror_argp =
+{
+  werror_options,
+  werror_argp_parser,
+  NULL, NULL, NULL, NULL
+};
 
 int error_fd = STDERR_FILENO;
 
@@ -374,6 +420,19 @@ void werror(const char *format, ...)
   va_list args;
 
   if (!quiet_flag)
+    {
+      va_start(args, format);
+      werror_vformat(format, args);
+      va_end(args);
+      werror_flush();
+    }
+}
+
+void trace(const char *format, ...) 
+{
+  va_list args;
+
+  if (trace_flag)
     {
       va_start(args, format);
       werror_vformat(format, args);
