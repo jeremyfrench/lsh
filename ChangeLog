@@ -1,5 +1,8 @@
 2003-11-16  Niels Möller  <nisse@harpo.hack.org>
 
+	* src/lsh-writekey.c (main_argp_parser): Move declaration to
+	support C90.
+
 	* src/Makefile.am (liblsh_a_SOURCES): Added lsh_string.c.
 
 	* src/lsh_string.c, src/lsh_string.h: New files, with a private

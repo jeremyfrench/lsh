@@ -164,7 +164,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  else
 	    {
 	      char *home = getenv(ENV_HOME);
-	      struct lsh_string *s;
 	  
 	      if (!home)
 		{
@@ -173,7 +172,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		}
 	      else
 		{
-		  s = ssh_format("%lz/.lsh", home);
+		  struct lsh_string *s = ssh_format("%lz/.lsh", home);
 		  const char *cs = lsh_get_cstring(s);
 		  if (mkdir(cs, 0755) < 0)
 		    {
