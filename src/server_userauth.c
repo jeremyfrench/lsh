@@ -100,7 +100,8 @@ static int do_handle_user_auth(struct packet_handler *c,
   return LSH_FAIL | LSH_DIE;
 }
 
-static int init_userauth(struct service *s, int name, struct ssh_connection *c)
+static int init_userauth(struct service *s, /* int name, */
+			 struct ssh_connection *c)
 {
   struct userauth_service *self = (struct userauth_service *) s;
   struct userauth_handler *auth; = xalloc(sizeof(struct userauth_handler));
