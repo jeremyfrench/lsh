@@ -81,18 +81,14 @@ char *alloca ();
 # endif
 /* We need to use a different name, as __strndup is likely a macro. */
 # define STRNDUP strndup
-# ifndef __flockfile
-#  define __flockfile flockfile
-# endif
-# ifndef __funlockfile
-#  define __funlockfile funlockfile
-# endif
 # if HAVE_STRERROR
 #  define STRERROR strerror
 # else
 #  define STRERROR(x) (sys_errlist[x])
 # endif
 #else /* _LIBC */
+# define FLOCKFILE __flockfile
+# define FUNLOCKFILE __funlockfile
 # define STRNDUP __strndup
 # define STRERROR strerror
 #endif
@@ -1583,7 +1579,7 @@ _help (const struct argp *argp, const struct argp_state *state, FILE *stream,
   if (! stream)
     return;
 
-  __flockfile (stream);
+  FLOCKFILE (stream);
 
   if (! uparams.valid)
     fill_in_uparams (state);
@@ -1591,7 +1587,7 @@ _help (const struct argp *argp, const struct argp_state *state, FILE *stream,
   fs = __argp_make_fmtstream (stream, 0, uparams.rmargin, 0);
   if (! fs)
     {
-      __funlockfile (stream);
+      FUNLOCKFILE (stream);
       return;
     }
 
@@ -1699,7 +1695,7 @@ Try `%s --help' or `%s --usage' for more information.\n"),
       anything = 1;
     }
 
-  __funlockfile (stream);
+  FUNLOCKFILE (stream);
 
   if (hol)
     hol_free (hol);
@@ -1784,22 +1780,22 @@ __argp_error (const struct argp_state *state, const char *fmt, ...)
 	{
 	  va_list ap;
 
-	  __flockfile (stream);
+	  FLOCKFILE (stream);
 
-	  fputs_unlocked (__argp_short_program_name(state),
+	  FPUTS_UNLOCKED (__argp_short_program_name(state),
 			  stream);
-	  putc_unlocked (':', stream);
-	  putc_unlocked (' ', stream);
+	  PUTC_UNLOCKED (':', stream);
+	  PUTC_UNLOCKED (' ', stream);
 
 	  va_start (ap, fmt);
 	  vfprintf (stream, fmt, ap);
 	  va_end (ap);
 
-	  putc_unlocked ('\n', stream);
+	  PUTC_UNLOCKED ('\n', stream);
 
 	  __argp_state_help (state, stream, ARGP_HELP_STD_ERR);
 
-	  __funlockfile (stream);
+	  FUNLOCKFILE (stream);
 	}
     }
 }
@@ -1825,17 +1821,17 @@ __argp_failure (const struct argp_state *state, int status, int errnum,
 
       if (stream)
 	{
-	  __flockfile (stream);
+	  FLOCKFILE (stream);
 
-	  fputs_unlocked (__argp_short_program_name(state),
+	  FPUTS_UNLOCKED (__argp_short_program_name(state),
 			  stream);
 
 	  if (fmt)
 	    {
 	      va_list ap;
 
-	      putc_unlocked (':', stream);
-	      putc_unlocked (' ', stream);
+	      PUTC_UNLOCKED (':', stream);
+	      PUTC_UNLOCKED (' ', stream);
 
 	      va_start (ap, fmt);
 	      vfprintf (stream, fmt, ap);
@@ -1844,14 +1840,14 @@ __argp_failure (const struct argp_state *state, int status, int errnum,
 
 	  if (errnum)
 	    {
-	      putc_unlocked (':', stream);
-	      putc_unlocked (' ', stream);
+	      PUTC_UNLOCKED (':', stream);
+	      PUTC_UNLOCKED (' ', stream);
 	      fputs (STRERROR (errnum), stream);
 	    }
 
-	  putc_unlocked ('\n', stream);
+	  PUTC_UNLOCKED ('\n', stream);
 
-	  __funlockfile (stream);
+	  FUNLOCKFILE (stream);
 
 	  if (status && (!state || !(state->flags & ARGP_NO_EXIT)))
 	    exit (status);
