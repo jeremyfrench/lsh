@@ -1,3 +1,25 @@
+2002-11-17  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* Makefile.am (libspki_a_SOURCES): Added parse.c.
+
+	* configure.ac: Check for gcc's __attribute__, and use AH_BOTTOM
+	to define UNUSED, NORETURN and PRINTF_STYLE.
+
+	* process-types: Renamed SPKI_TYPE_UNKNOWN to
+	SPKI_TYPE_SYNTAX_ERROR. 
+
+	* parse.h: New file.
+
+	* parse.c: New file.
+	(spki_intern): Moved function here, from certificate.c.
+	(spki_parse_type): Likewise, and renamed from spki_get_type.
+	(spki_parse_end): New function.
+	(spki_parse_principal): New function, replacing...
+	* certificate.c (parse_principal): ... deleted function.
+	(parse_tag): Deleted function.
+	(parse_tag, parse_acl_entry): Rewrite to use spki_parse_principal.
+	(spki_cert_parse_body): Likewise.
+	
 2002-11-16  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* testsuite/principal-test.c: Use testutils.h

@@ -6,7 +6,7 @@ AM_CPPFLAGS = -I$(srcdir)/..
 noinst_LIBRARIES = libspki.a
 # libspkiincludedir = $(includedir)/nettle
 
-libspki_a_SOURCES = certificate.c
+libspki_a_SOURCES = certificate.c parse.c
 
 # Does this get $(srcdir) right? Uses GNU make features
 spki-types.h: spki-types.in process-types
