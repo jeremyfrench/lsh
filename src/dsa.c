@@ -36,6 +36,7 @@
 
 #include "atoms.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "parse.h"
 #include "randomness.h"
 #include "sexp.h"
@@ -197,13 +198,13 @@ do_dsa_public_spki_key(struct verifier *s, int transport)
 {
   CAST(dsa_verifier, self, s);
 
-  return lsh_sexp_format(transport,
-			 "(%0s(%0s(%0s%b)(%0s%b)(%0s%b)(%0s%b)))",
-			 "public-key",  "dsa",
-			 "p", self->key.p,
-			 "q", self->key.q,
-			 "g", self->key.g,
-			 "y", self->key.y);
+  return lsh_string_format_sexp(transport,
+				"(%0s(%0s(%0s%b)(%0s%b)(%0s%b)(%0s%b)))",
+				"public-key",  "dsa",
+				"p", self->key.p,
+				"q", self->key.q,
+				"g", self->key.g,
+				"y", self->key.y);
 }
 
 static void
@@ -262,11 +263,12 @@ dsa_blob_length(const struct dsa_signature *signature)
 }
 
 static void
-dsa_blob_write(const struct dsa_signature *signature,
-	       uint32_t length, uint8_t *buf)
+dsa_blob_write(struct lsh_string *buf, uint32_t pos,
+	       const struct dsa_signature *signature,
+	       uint32_t length)
 {
-  nettle_mpz_get_str_256(length, buf, signature->r);
-  nettle_mpz_get_str_256(length, buf + length, signature->s);
+  lsh_string_write_bignum(buf, pos, length, signature->r);
+  lsh_string_write_bignum(buf, pos + length, length, signature->s);
 }
 
 static struct lsh_string *
@@ -280,7 +282,7 @@ do_dsa_sign(struct signer *c,
   struct sha1_ctx hash;
   struct lsh_string *signature;
   uint32_t buf_length;
-  uint8_t *p;
+  uint32_t blob_pos;
 
   trace("do_dsa_sign: Signing according to %a\n", algorithm);
 
@@ -300,8 +302,8 @@ do_dsa_sign(struct signer *c,
     case ATOM_SSH_DSS:
       /* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
        * length field, which should be removed in the next version. */
-      signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &p);
-      dsa_blob_write(&sv, buf_length, p);
+      signature = ssh_format("%a%r", ATOM_SSH_DSS, buf_length * 2, &blob_pos);
+      dsa_blob_write(signature, blob_pos, &sv, buf_length);
 
       break;
       
@@ -309,8 +311,8 @@ do_dsa_sign(struct signer *c,
     case ATOM_SSH_DSS_KLUDGE_LOCAL:
       
       /* NOTE: This doesn't include any length field. Is that right? */
-      signature = ssh_format("%lr", buf_length * 2, &p);
-      dsa_blob_write(&sv, buf_length, p);
+      signature = ssh_format("%lr", buf_length * 2, &blob_pos);
+      dsa_blob_write(signature, blob_pos, &sv, buf_length);
 
       break;
 
@@ -320,8 +322,8 @@ do_dsa_sign(struct signer *c,
     case ATOM_SPKI_SIGN_DSS:
     case ATOM_SPKI:
       /* Format: "((1:r20:<r>)(1:s20:<s>))". */
-      signature = lsh_sexp_format(0, "((r%b)(s%b))",
-				  sv.r, sv.s);
+      signature = lsh_string_format_sexp(0, "((r%b)(s%b))",
+					 sv.r, sv.s);
 	
       break;
     default:
@@ -396,13 +398,12 @@ make_dsa_algorithm(struct randomness *random)
 
 
 struct verifier *
-make_ssh_dss_verifier(uint32_t public_length,
-		      const uint8_t *public)
+make_ssh_dss_verifier(const struct lsh_string *public)
 {
   struct simple_buffer buffer;
   int atom;
   
-  simple_buffer_init(&buffer, public_length, public);
+  simple_buffer_init(&buffer, STRING_LD(public));
 
   return ( (parse_atom(&buffer, &atom)
 	    && (atom == ATOM_SSH_DSS))
