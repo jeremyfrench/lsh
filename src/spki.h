@@ -30,6 +30,16 @@
 #include "sexp.h"
 #include "alist.h"
 
+/* Needed by spki.h.x */
+/* SPKI validity. No validity tests supported. */
+struct spki_validity
+{
+  char before_limit; /* Nonzero if not_before was supplied */
+  char after_limit;  /* Nonzero if not_after was supplied */
+  time_t not_before;
+  time_t not_after;
+};
+
 #define GABA_DECLARE
 #include "spki.h.x"
 #undef GABA_DECLARE
@@ -45,9 +55,9 @@
 struct exception *
 make_spki_exception(UINT32 type, const char *msg, struct sexp *expr);
 
-UINT32 spki_get_type(struct sexp *e, struct sexp_iterator **res);
+int spki_get_type(struct sexp *e, struct sexp_iterator **res);
 
-int spki_check_type(struct sexp *e, UINT32 type, struct sexp_iterator **res);
+int spki_check_type(struct sexp *e, int type, struct sexp_iterator **res);
 
 /* FIXME: should support keyblobs other than ssh-dss */
 struct sexp *keyblob2spki(struct lsh_string *keyblob);
@@ -73,5 +83,48 @@ read_spki_key_file(const char *name,
 		   struct randomness *r,
 		   struct exception_handler *e);
 
+
+/* Signature algorithms in spki */
+
+/* GABA:
+   (class
+     (name spki_algorithm)
+     (vars
+       ;; Called with i pointing to the expression after the algorithm name
+       (make_signer method (object signer)
+                    "struct sexp_iterator *i")
+       (make_verifier method (object verifier)
+                      "struct sexp_iterator *i")))
+*/
+
+#define SPKI_SIGNER(a, i) ((a)->make_signer((a), (i)))
+#define SPKI_VERIFIER(a, i) ((a)->make_verifier((a), (i)))
+
+struct signer *
+spki_signer(struct sexp *e, struct alist *algorithms, int *type);
+
+/* FIXME: Currently doesn't handle (hash ...) expressions. */
+
+struct verifier *
+spki_verifier(struct sexp *e, struct alist *algorithms, int *type);
+
+/* 5-tuples */
+
+/* GABA:
+   (class
+     (name spki_5_tuple)
+     (vars
+       ; Key or hash, or NULL for self.
+       (issuer object sexp)
+       ; Key, hash or name (n-to-k not yet supported)
+       (subject object sexp)
+       ; Non-zero to allow delegation
+       (propagate . int)
+       ; Authorization, (tag ...) expression
+       (authorization object sexp)
+       ; Validity period
+       (validity . "struct spki_validity")))
+       
+*/
 
 #endif /* LSH_SPKI_H_INCLUDED */
