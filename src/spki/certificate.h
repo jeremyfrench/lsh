@@ -70,10 +70,9 @@ struct spki_principal
   
   struct spki_principal *alias;
   
-#if 0
-  /* Information needed to verify signatures for this key. */
+  /* Information needed to verify signatures for this key. For now,
+   * details are up to the application. */
   void *verifier;
-#endif
 };
   
 enum spki_5_tuple_flags
@@ -131,6 +130,10 @@ struct spki_5_tuple
 void
 spki_5_tuple_init(struct spki_5_tuple *tuple);
 
+const struct spki_5_tuple *
+spki_5_tuple_by_subject(const struct spki_5_tuple *list,
+			const struct spki_principal *subject);
+
 struct spki_acl_db
 {
   /* For custom memory allocation. */
@@ -174,15 +177,13 @@ int
 spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i);
 
 const struct spki_5_tuple *
-spki_acl_by_principal_first(struct spki_acl_db *,
-			    unsigned principal_length,
-			    uint8_t *principal);
+spki_acl_by_subject_first(struct spki_acl_db *,
+			  const struct spki_principal *principal);
 
 const struct spki_5_tuple *
-spki_acl_by_principal_next(struct spki_acl_db *db,
-			   const struct spki_5_tuple *acl,
-			   unsigned principal_length,
-			   uint8_t *principal);
+spki_acl_by_subject_next(struct spki_acl_db *db,
+			 const struct spki_5_tuple *acl,
+			 const struct spki_principal *principal);
 
 const struct spki_5_tuple *
 spki_acl_by_authorization_first(struct spki_acl_db *db,

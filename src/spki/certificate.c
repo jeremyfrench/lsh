@@ -93,6 +93,7 @@ spki_principal_add_key(struct spki_acl_db *db,
     return NULL;
 
   principal->alias = NULL;
+  principal->verifier = NULL;
   
   if (!(principal->key = spki_dup(db, key_length, key)))
     {
@@ -125,6 +126,7 @@ spki_principal_add_md5(struct spki_acl_db *db,
 
   principal->key = NULL;
   principal->alias = NULL;
+  principal->verifier = NULL;
 
   memcpy(principal->hashes.md5, md5, sizeof(principal->hashes.md5));
   principal->flags = SPKI_PRINCIPAL_MD5;
@@ -145,6 +147,7 @@ spki_principal_add_sha1(struct spki_acl_db *db,
 
   principal->key = NULL;
   principal->alias = NULL;
+  principal->verifier = NULL;
 
   memcpy(principal->hashes.sha1, sha1, sizeof(principal->hashes.sha1));
   principal->flags = SPKI_PRINCIPAL_SHA1;
@@ -298,6 +301,24 @@ spki_5_tuple_fix_aliases(struct spki_5_tuple *tuple)
 }
 #endif
 
+const struct spki_5_tuple *
+spki_5_tuple_by_subject(const struct spki_5_tuple *list,
+			const struct spki_principal *subject)
+{
+  subject = spki_principal_normalize(subject);
+
+  assert(!subject->alias);
+  
+  for ( ; list; list = list->next)
+    {
+      assert(list->subject);
+      
+      if (spki_principal_normalize(list->subject) == subject)
+	return list;
+    }
+  return NULL;
+}
+
 /* ACL database */
 
 int
@@ -342,6 +363,21 @@ spki_acl_parse(struct spki_acl_db *db, struct spki_iterator *i)
   return spki_parse_end(i);
 }
 
+
+const struct spki_5_tuple *
+spki_acl_by_subject_first(struct spki_acl_db *db,
+			  const struct spki_principal *subject)
+{
+  return spki_5_tuple_by_subject(db->first_acl, subject);
+}
+
+const struct spki_5_tuple *
+spki_acl_by_subject_next(struct spki_acl_db *db UNUSED,
+			 const struct spki_5_tuple *acl,
+			 const struct spki_principal *subject)
+{
+  return spki_5_tuple_by_subject(acl->next, subject);
+}
 
 /* Iterating through the acls that delegate the requested authorization. */
 static const struct spki_5_tuple *
