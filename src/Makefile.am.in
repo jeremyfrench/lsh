@@ -55,7 +55,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	cascade.c cast.c cbc.c channel.c channel_commands.c channel_forward.c \
 	charset.c \
 	client.c client_escape.c client_keyexchange.c \
-	client_pty.c client_session.c client_userauth.c \
+	client_pty.c client_session.c client_userauth.c client_x11.c \
 	combinators.c command.c compress.c connection.c connection_commands.c \
 	daemon.c \
 	debug.c des.c digits.c disconnect.c dh_exchange.c \
