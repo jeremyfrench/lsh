@@ -519,6 +519,8 @@ make_client_session(struct client_options *options);
 
 #define OPT_ASKPASS 0x216
 
+#define OPT_WRITE_PID 0x217
+
 void
 init_client_options(struct client_options *self,
 		    struct randomness *random,
@@ -553,6 +555,8 @@ init_client_options(struct client_options *self,
   self->used_x11 = 0;
   
   self->detach_end = 0;
+  self->write_pid = 0;
+  
   self->start_shell = 1;
   self->remote_forward = 0;
 
@@ -614,8 +618,11 @@ client_options[] =
   { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
   { "no-pty", 't' | ARG_NOT, NULL, 0, "Don't request a remote pty.", 0 },
 #endif /* WITH_PTY_SUPPORT */
+  { NULL, 0, NULL, 0, "Miscellaneous options:", 0 },
   { "escape-char", 'e', "Character", 0, "Escape char. `none' means disable. "
     "Default is to use `~' if we have a tty, otherwise none.", 0 },
+  { "write-pid", OPT_WRITE_PID, NULL, 0, "Make -B write the pid of the backgrounded "
+    "process to stdout.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -863,13 +870,25 @@ DEFINE_ESCAPE(quiet_callback, "Toggle warning messages.")
     werror("Enabling warning messages\n");
 }
 
-DEFINE_COMMAND(background_process)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
+/* GABA:
+   (class
+     (name background_process_command)
+     (super command)
+     (vars
+       (write_pid . int)))
+*/
+
+static void
+do_background_process(struct command *s,
+		      struct lsh_object *a,
+		      struct command_continuation *c,
+		      struct exception_handler *e UNUSED)
 {
-  switch (fork())
+  CAST(background_process_command, self, s);
+
+  pid_t pid = fork();
+  
+  switch (pid)
     {
     case 0:
       /* Child */
@@ -884,8 +903,27 @@ DEFINE_COMMAND(background_process)
       break;
     default:
       /* Parent */
+      if (self->write_pid)
+	{
+	  struct lsh_string *msg = ssh_format("%di\n", pid);
+	  const struct exception *e = write_raw (STDOUT_FILENO, STRING_LD(msg));
+
+	  if (e)
+	    werror ("Write to stdout failed!?: %z\n", e->msg);
+	}
       _exit(EXIT_SUCCESS);
     }
+}
+
+static struct command *
+make_background_process(int write_pid)
+{
+  NEW(background_process_command, self);
+
+  self->super.call = do_background_process;
+  self->write_pid = write_pid;
+
+  return &self->super;
 }
 
 /* Create a session object. stdout and stderr are shared (although
@@ -1299,7 +1337,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 
     case 'B':
       options->start_shell = 0;
-      client_add_action(options, &background_process);
+      client_add_action(options, make_background_process(options->write_pid));
       break;
       
     CASE_FLAG('g', with_remote_peers);
@@ -1309,7 +1347,8 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 #endif /* WITH_PTY_SUPPORT */
 
     CASE_FLAG(OPT_DETACH, detach_end);
-
+    CASE_FLAG(OPT_WRITE_PID, write_pid);
+    
     CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
     CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
     CASE_ARG(OPT_STDERR, stderr_file, "/dev/null");

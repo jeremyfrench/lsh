@@ -164,6 +164,9 @@ make_client_x11_display(const char *display, struct lsh_string *fake);
        (used_stdin . int)
        (used_pty . int)
        (used_x11 . int)
+
+       ; Should -B write the pid to stdout?
+       (write_pid . int)
        
        ; True if the client should detach when a session closes (useful for gateways)
        (detach_end . int)
