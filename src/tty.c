@@ -60,7 +60,7 @@ int tty_makeraw(int fd)
   return 0;
 }
 
-int tty_getwinsize(int fd, int *w, int *h, int *wp, int *hp)
+int tty_getwinsize(int fd, UINT32 *w, UINT32 *h, UINT32 *wp, UINT32 *hp)
 {
   struct winsize ws;
   int rc;
@@ -77,7 +77,7 @@ int tty_getwinsize(int fd, int *w, int *h, int *wp, int *hp)
   return 0;
 }
 
-int tty_setwinsize(int fd, int w, int h, int wp, int hp)
+int tty_setwinsize(int fd, UINT32 w, UINT32 h, UINT32 wp, UINT32 hp)
 {
   struct winsize ws;
   

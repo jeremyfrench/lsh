@@ -32,8 +32,8 @@ int tty_getattr(int fd, struct termios *ios);
 int tty_setattr(int fd, struct termios *ios);
 
 int tty_makeraw(int fd);
-int tty_getwinsize(int fd, int *w, int *h, int *wp, int *hp);
-int tty_setwinsize(int fd, int w, int h, int wp, int hp);
+int tty_getwinsize(int fd, UINT32 *w, UINT32 *h, UINT32 *wp, UINT32 *hp);
+int tty_setwinsize(int fd, UINT32 w, UINT32 h, UINT32 wp, UINT32 hp);
 
 struct lsh_string *tty_encode_term_mode(struct termios *ios);
 int tty_decode_term_mode(struct termios *ios, UINT32 t_len, UINT8 *t_modes);
