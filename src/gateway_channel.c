@@ -136,7 +136,7 @@ make_gateway_channel(struct alist *request_types)
      (super channel_open_command)
      (vars
        ; channel type
-       (type . UINT32)
+       (type . int)
        (rec_window_size . UINT32)
        (rec_max_packet . UINT32)
        (requests object alist)
@@ -169,7 +169,7 @@ do_gateway_channel_open(struct channel_open_command *c,
 }
 
 struct command *
-make_gateway_channel_open_command(UINT32 type,
+make_gateway_channel_open_command(int type,
 				  UINT32 rec_window_size,
 				  UINT32 rec_max_packet,
 				  struct lsh_string *args,

@@ -44,7 +44,7 @@ struct gateway_channel *
 make_gateway_channel(struct alist *request_types);
 
 struct command *
-make_gateway_channel_open_command(UINT32 type,
+make_gateway_channel_open_command(int type,
 				  UINT32 rec_window_size,
 				  UINT32 rec_max_packet,
 				  struct lsh_string *args,
