@@ -79,7 +79,7 @@ parse_options(struct delegate_options *o,
 	  { "subject", required_argument, NULL, 's' },
 	  { "tag", required_argument, NULL, 't' },
 	  { "chain", required_argument, NULL, 'c' },
-	  { "key", required_argument, NULL, 'k' },
+	  { "key-file", required_argument, NULL, 'k' },
 
 	  { "propagate", no_argument, NULL, 'p' },
 	  { "no-sign", no_argument, NULL, 'n' },
@@ -107,9 +107,6 @@ parse_options(struct delegate_options *o,
 
 	  if (!o->tag)
 	    die("spki-delegate: --tag is mandatory.\n");
-
-	  if (!(o->issuer || o->chain))
-	    die("spki-delegate: You must use --issuer or --chain.\n");
 
 	  return;
 	  
@@ -150,7 +147,7 @@ parse_options(struct delegate_options *o,
     }
 }
 
-static struct spki_principal *
+static const struct spki_principal *
 process_principal(struct spki_acl_db *db, char *expr)
 {
   struct spki_iterator i;
@@ -162,6 +159,42 @@ process_principal(struct spki_acl_db *db, char *expr)
     return principal;
   else
     return NULL;
+}
+
+static struct spki_5_tuple_list *
+process_sequence(struct spki_acl_db *db,
+		 const struct spki_principal **subject,
+		 struct nettle_buffer *buffer,
+		 const char *file)
+{
+  struct spki_iterator i;
+  struct spki_5_tuple_list *res = NULL;
+  
+  char *data = NULL;
+  unsigned length = read_file_by_name(file, 0, &data);
+
+  if (length
+      && spki_transport_iterator_first(&i, length, data))
+    {
+      unsigned start = i.start;
+      res = spki_parse_sequence(db, &i, subject, NULL, spki_verify);
+      
+      if (res)
+	{
+	  unsigned length;
+	  const uint8_t *expr = spki_parse_prevexpr(&i, start, &length);
+	  assert(expr);
+	  assert(length);
+
+	  /* Copy the expression, except for the final closing
+	   * parenthesis. */
+
+	  sexp_format(buffer, "%l", length - 1, expr);
+	}
+    }
+  free(data);
+
+  return res;
 }
 
 static int
@@ -191,30 +224,49 @@ main(int argc, char **argv)
   struct spki_acl_db db;
   
   struct nettle_buffer cert_buffer;
-  struct nettle_buffer sequence_buffer;
+  struct nettle_buffer buffer;
 
-  struct spki_principal *issuer;
-  struct spki_principal *subject;
+  const struct spki_principal *issuer;
+  const struct spki_principal *subject;
   
   parse_options(&o, argc, argv);
 
-  if (o.chain)
-    die("spki-delegate: --chain not yet implemented.\n");
-
   spki_acl_init(&db);
   nettle_buffer_init_realloc(&cert_buffer, NULL, nettle_xrealloc);
+  nettle_buffer_init_realloc(&buffer, NULL, nettle_xrealloc);
+
+  if (o.chain)
+    {
+      if (!process_sequence(&db, &issuer, &buffer, o.chain))
+	die("Invalid input certificate.\n");
+      assert(issuer);
+    }
+  else if (o.issuer)
+    {
+      if (! (issuer = process_principal(&db, o.issuer)))
+	die("spki-delegate: Invalid issuer.\n");
+
+      /* Start a new sequence */
+      sexp_format(&buffer, "%(sequence%l",
+		  cert_buffer.size, cert_buffer.contents);
+    }
+  else
+    {
+      /* We create an acl. */
+      issuer = NULL;
+      sexp_format(&buffer, "%(acl");
+    }
   
-  assert(o.issuer);
-  
-  if (! (issuer = process_principal(&db, o.issuer)))
-    die("spki-delegate: Invalid issuer.\n");
-      
   if (! (subject = process_principal(&db, o.subject)))
     die("spki-delegate: Invalid subject.\n");
 
-  sexp_format(&cert_buffer, "%(cert(subject%l)(issuer%l)",
-	      subject->key_length, subject->key,
-	      issuer->key_length, issuer->key);
+  if (issuer)
+    sexp_format(&cert_buffer, "%(cert(subject%l)(issuer%l)",
+		subject->key_length, subject->key,
+		issuer->key_length, issuer->key);
+  else
+    sexp_format(&cert_buffer, "%(entry(subject%l)",
+		subject->key_length, subject->key);
   
   if (!process_tag(&cert_buffer, o.tag))
     die("spki-delegate: Invalid tag.\n");
@@ -223,12 +275,10 @@ main(int argc, char **argv)
     sexp_format(&cert_buffer, "(propagate)");
 
   sexp_format(&cert_buffer, "%)");
-  
-  nettle_buffer_init_realloc(&sequence_buffer, NULL, nettle_xrealloc);
-  sexp_format(&sequence_buffer, "%(sequence%l",
+  sexp_format(&buffer, "%l",
 	      cert_buffer.size, cert_buffer.contents);
-
-  if (o.sign)
+  
+  if (issuer && o.sign)
     {
       struct spki_iterator i;
       struct sign_ctx ctx;
@@ -248,21 +298,21 @@ main(int argc, char **argv)
       hash_ctx = alloca(ctx.hash_algorithm->context_size);
       ctx.hash_algorithm->init(hash_ctx);
       ctx.hash_algorithm->update(hash_ctx, 
-				  cert_buffer.size, cert_buffer.contents);
+				 cert_buffer.size, cert_buffer.contents);
 
-      spki_sign(&ctx, &sequence_buffer, hash_ctx);
+      spki_sign(&ctx, &buffer, hash_ctx);
       spki_sign_clear(&ctx);
     }
 
   nettle_buffer_clear(&cert_buffer);
   
-  sexp_format(&sequence_buffer, "%)");
+  sexp_format(&buffer, "%)");
 
   if (!write_file(stdout,
-		  sequence_buffer.size, sequence_buffer.contents))
+		  buffer.size, buffer.contents))
     die("Writing signature failed.\n");
   
-  nettle_buffer_clear(&sequence_buffer);
+  nettle_buffer_clear(&buffer);
 
   return EXIT_SUCCESS;
 }
