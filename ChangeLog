@@ -1,3 +1,24 @@
+2005-02-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_session.c (shell_request_handler): Added trace output.
+
+	* src/lshd-userauth.c (main): Use argp for options parsing.
+	* src/lshd.c (main): Likewise.
+
+	* src/lshd-connection.c (write_packet): New function.
+	(disconnect): New function.
+	(read_handler): Implemented. Ignores userauth messages, and uses
+	channel_packet_handler. 
+	(write_handler): Use write_packet.
+	(make_connection): Make "session" a recognized channel type, and
+	"shell" a recognized channel request type.
+
+2005-02-18  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel.c (make_channel_table): Initialize self->resources.
+	(handle_channel_open): More debug output.
+	(channel_packet_handler): New function.
+
 2005-02-17  Niels Möller  <niels@s3.kth.se>
 
 	* src/lshd-connection.c: Implemented reading and writing of
