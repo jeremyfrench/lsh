@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+
 #include "getopt.h"
 
 #include "alist.h"
@@ -43,14 +45,15 @@
 #include "randomness.h"
 #include "service.h"
 /* #include "session.h" */
+#include "ssh.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 
+/* Block size for stdout and stderr buffers */
 #define BLOCK_SIZE 32768
 
-/* Global variable */
-struct io_backend backend;
+struct io_backend backend = { STATIC_HEADER };
 
 void usage(void) NORETURN;
 
@@ -97,6 +100,9 @@ int main(int argc, char **argv)
   
   struct sockaddr_in remote;
 
+  /* STATIC, because the object exists at gc time */
+  struct io_backend backend = { STATIC_HEADER };
+
   struct lsh_string *random_seed;
   struct randomness *r;
   struct diffie_hellman_method *dh;
@@ -106,6 +112,8 @@ int main(int argc, char **argv)
   struct packet_handler *kexinit_handler;
   struct lookup_verifier *lookup;
   struct ssh_service *service;
+
+  int in, out, err;
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -155,6 +163,8 @@ int main(int argc, char **argv)
       exit(1);
     }
 
+  init_backend(&backend);
+  
   random_seed = ssh_format("%z", "gazonk");
   r = make_poor_random(&sha_algorithm, random_seed);
   dh = make_dh1(r);
@@ -168,10 +178,32 @@ int main(int argc, char **argv)
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
   make_kexinit = make_test_kexinit(r);
 
+  /* Dup stdio file descriptors, so that they can be closed without
+   * confusing the c library. */
+  
+  if ( (in = dup(STDIN_FILENO) < 0))
+    {
+      werror("Can't dup stdin: %s\n", strerror(errno));
+      return EXIT_FAILURE;
+    }
+  if ( (out = dup(STDOUT_FILENO) < 0))
+    {
+      werror("Can't dup stdout: %s\n", strerror(errno));
+      return EXIT_FAILURE;
+    }
+  if ( (err = dup(STDERR_FILENO) < 0))
+    {
+      werror("Can't dup stderr: %s\n", strerror(errno));
+      return EXIT_FAILURE;
+    }
+  
   service = make_connection_service
     (make_alist(0, -1),
      make_alist(0, -1),
-     make_client_startup(1));
+     make_client_startup(io_read(&backend, in, NULL, NULL),
+			 io_write(&backend, out, BLOCK_SIZE, NULL),
+			 io_write(&backend, err, BLOCK_SIZE, NULL),
+			 ATOM_SHELL, ssh_format("")));
   
   kexinit_handler = make_kexinit_handler
     (CONNECTION_CLIENT,
@@ -184,7 +216,7 @@ int main(int argc, char **argv)
   if (!io_connect(&backend, &remote, NULL,
 		  make_client_callback(&backend,
 				       "lsh - a free ssh",
-				       BLOCK_SIZE,
+				       SSH_MAX_PACKET,
 				       r, make_kexinit,
 				       kexinit_handler)))
     {
