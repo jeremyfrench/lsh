@@ -1449,6 +1449,10 @@ lsftp_do_ls(const char* dir, const char* command, int longlist, int all)
     fnameg = strdup( dir );        /* Only local glob */
   
   glob = lsftp_dc_r_startglob( dglob, 0, 1 ); /* Not sloppy, leave incorrect ones */
+
+  if( 1glob ) /* Failed? */
+    return -1; /* Bail out */
+
   orgglob = glob;
 
   if( !strlen( fnameg ) ) /* Empty filename glob? */
