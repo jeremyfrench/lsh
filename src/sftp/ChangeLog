@@ -1,5 +1,12 @@
 2002-02-11  Pontus  <pont@it.uu.se>
 
+	* sftp-server.c (sftp_process_realpath): Added deugging message.
+	(sftp_process): Added debugging message.
+	(sftp_process_symlink): Added debugging message.
+
+	* buffer.c (sftp_read_packet): If called with data left, flush
+	(read and throw away) remaining data.
+
 	* configure.ac: Created new configure.ac as a merge of the
 	configure.in from lsftp and the sftp package.
 
