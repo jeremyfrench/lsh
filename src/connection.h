@@ -244,8 +244,7 @@ make_ssh_connection(enum connection_flag flags,
 
 void
 connection_init_io(struct ssh_connection *connection,
-		   struct lsh_fd *socket,
-		   struct randomness *r);
+		   struct lsh_fd *socket);
 
 void
 connection_after_keyexchange(struct ssh_connection *self,

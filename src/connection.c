@@ -460,17 +460,10 @@ make_ssh_connection(enum connection_flag flags,
 
 void
 connection_init_io(struct ssh_connection *connection,
-		   struct lsh_fd *socket,
-		   struct randomness *r)
+		   struct lsh_fd *socket)
 {
   /* Initialize i/o hooks */
   connection->socket = socket;
-  connection->write_packet =
-    make_packet_debug(make_write_packet(connection, r, &socket->write_buffer->super),
-		      (connection->debug_comment
-		       ? ssh_format("%lz sent", connection->debug_comment)
-		       : ssh_format("Sent")));
-
   connection->socket->write_buffer->report = make_connection_flow_controlled(connection);
 }
 
