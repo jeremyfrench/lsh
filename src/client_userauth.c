@@ -258,6 +258,14 @@ userauth_method_is_useful(struct client_userauth *userauth,
 
   unsigned i;
 
+#if 0
+  debug("userauth_method_is_useful, advertised:\n");
+  for(i = 0; i < LIST_LENGTH(advertised); i++)
+    debug("  %a\n", LIST(advertised)[i]);
+
+  debug("  method: type = %a, class = %t\n", method->type, method);
+#endif
+  
   for(i = 0; i < LIST_LENGTH(advertised); i++)
     if (LIST(advertised)[i] == method->type)
       return 1;
@@ -708,6 +716,7 @@ struct client_userauth_method *
 make_client_password_auth(struct interact *tty)
 {
   NEW(client_password_method, self);
+
   self->super.type = ATOM_PASSWORD;
   self->super.login = do_password_login;
   self->tty = tty;
@@ -937,6 +946,7 @@ make_client_publickey_auth(struct object_list *keys)
 {
   NEW(client_publickey_method, self);
 
+  self->super.type = ATOM_PUBLICKEY;
   self->super.login = do_publickey_login;
   self->keys = keys;
   
