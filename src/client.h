@@ -68,5 +68,7 @@ struct ssh_channel *make_client_session(struct lsh_fd *in,
 					UINT32 max_window,
 					int *exit_status);
 
+struct command *
+make_exec_request(struct lsh_string *command);
      
 #endif /* LSH_CLIENT_H_INCLUDED */

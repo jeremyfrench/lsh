@@ -521,3 +521,36 @@ do_format_shell_request(struct channel_request_command *s UNUSED,
 struct channel_request_command request_shell =
 { { STATIC_HEADER, do_channel_request_command }, do_format_shell_request };
 
+
+/* GABA:
+   (class
+     (name exec_request)
+     (super channel_request_command)
+     (vars
+       (command string)))
+*/
+
+static struct lsh_string *
+do_format_exec_request(struct channel_request_command *s,
+		       struct ssh_channel *channel,
+		       struct command_continuation **c)
+{
+  CAST(exec_request, self, s);
+
+  verbose("lsh: Requesting remote exec.\n");
+
+  return format_channel_request(ATOM_EXEC, channel,
+				!!*c, "%S", self->command);
+}
+
+struct command *
+make_exec_request(struct lsh_string *command)
+{
+  NEW(exec_request, req);
+
+  req->super.format_request = do_format_exec_request;
+  req->super.super.call = do_channel_request_command;
+  req->command = command;
+
+  return &req->super.super;
+}
