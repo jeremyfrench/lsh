@@ -1,3 +1,64 @@
+1999-11-07  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/server_userauth.h (user_db): New class (not used for
+	anything yet).
+
+	* src/server_userauth.c (do_userauth_continuation): Ignore all
+	userauth messages, when we have sent USERAUTH_SUCCESS.
+
+	* src/publickey_crypto.h (keypair): Use int, not UINT32, for key
+	type.
+
+	* src/lsh.c: Publickey related bugfixes.
+
+	* src/client_userauth.c (format_userauth_publickey_query): New
+	function. (Bazsi)
+	(format_userauth_publickey): New function. (Bazsi)
+	Incorporated Bazsi's patch, with some reorganization.
+
+	* src/ssh.h (SSH_FIRST_USERAUTH_GENERIC): New constant.
+	(SSH_FIRST_USERAUTH_SPECIFIC): -"-
+	(SSH_FIRST_CONNECTION_GENERIC): -"-
+	(SSH_FIRST_CONNECTION_CHANNELS): -"-
+	(SSH_FIRST_RESERVED): -"-
+	(SSH_FIRST_LOCAL): -"-
+
+	* src/version.h (SOFTWARE_SERVER_VERSION,
+	SOFTWARE_CLIENT_VERSION): Use correct version numbers.
+
+1999-11-06  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh.c (main_argp_parser): Move reading of ~/.lsh/identity
+	here, and check for getenv("HOME") being NULL.
+
+1999-11-03  Balazs Scheidler  <bazsi@balabit.hu>
+
+	* src/atoms.in: removed ssh-dss-kludge atom, 
+
+	* src/spki.c: spki_parse_key command added, read_spki_key_file() added
+
+	* src/client.c: fixed flow control bug, ssh2 uses an initial
+	window size != 0, and this caused problems in lsh client
+
+	* src/client_userauth.c: reorganized, publickey auth added
+
+	* src/connection_commands.c: changed a bug in buggy ssh peer detection
+
+	* src/daemon.c: fixed a memory leak
+
+	* src/lsh.c: added argument parsing for -i (identity)
+
+	* src/lshd.c: lshd uses the new read_spki_key_file() function to read
+	the hostkey
+
+	* src/publickey_crypto.h: type field added to keypair
+
+	* src/dsa.c: removed dsa_algorithm_kludge
+
+	* src/server_authorization.c: fixed a few bugs
+
+	* src/server_publickey.c: fixed a few bugs
+
 1999-11-03  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* doc/NOTES: Added some thought about the client side of user

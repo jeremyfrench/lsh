@@ -397,8 +397,8 @@ int main(int argc, char **argv)
   kex = make_dh_server(dh, keys);
 
   authorization_lookup
-    = make_alist(1
-		 ,ATOM_SSH_DSS, make_authorization_db(ssh_format("keys_md5"),
+    = make_alist(1,
+		 ATOM_SSH_DSS, make_authorization_db(ssh_format("authorized_keys_md5"),
 						      make_dsa_algorithm(NULL),
 						      &md5_algorithm),
 		 
