@@ -48,12 +48,7 @@ do_proxy_open_x11(struct channel_open *s UNUSED,
   uint32_t port = 0;
 
   if ((host = parse_string_copy(args)) &&
-#if DATAFELLOWS_WORKAROUNDS
-      ((connection->peer_flags & PEER_X11_OPEN_KLUDGE) ||
-       parse_uint32(args, &port)) &&
-#else
       parse_uint32(args, &port) &&
-#endif
       parse_eod(args))
     {
       struct gateway_channel *server
@@ -61,19 +56,13 @@ do_proxy_open_x11(struct channel_open *s UNUSED,
 
       struct command *o;
  
-      /* NOTE: The origin's rec_window_size and rec_max_packet becomes the target's
-       * send_window_size and send_max_packet. */
-      if (connection->chain->peer_flags & PEER_X11_OPEN_KLUDGE)
-	o = make_gateway_channel_open_command(info,
-					      ssh_format("%S",
-							 host), 
-					      NULL);
-      else
-	/* FIXME: maybe parse the sent string to get the port value */
-	o = make_gateway_channel_open_command(info,
-					      ssh_format("%S%i",
-							 host, port), 
-					      NULL);
+      /* NOTE: The origin's rec_window_size and rec_max_packet becomes
+       * the target's send_window_size and send_max_packet. */
+      /* FIXME: maybe parse the sent string to get the port value */
+      o = make_gateway_channel_open_command(info,
+					    ssh_format("%S%i",
+						       host, port), 
+					    NULL);
       if (port)
 	werror("x11 open request: host=%S:%i\n", host, port);
       else
