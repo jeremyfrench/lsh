@@ -228,5 +228,9 @@ void gc_maybe(struct lsh_object *root, int busy)
 void gc_final(void)
 {
   gc_sweep();
+  assert(!number_of_objects);
+  
+  if (number_of_strings)
+    werror("gc_final: %i strings leaked!\n");
 }
 #endif /* DEBUG_ALLOC */
