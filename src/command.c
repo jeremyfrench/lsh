@@ -157,7 +157,7 @@ do_command_2(struct command *s,
 	     struct command_continuation *c,
 	     struct exception_handler *e UNUSED)
 {
-  CAST(command_2, self, s);
+  CAST_SUBTYPE(command_2, self, s);
   COMMAND_RETURN(c, make_command_2_invoke(self, a1));
 }
 
@@ -235,7 +235,7 @@ do_command_3(struct command *s,
 	     struct command_continuation *c,
 	     struct exception_handler *e UNUSED)
 {
-  CAST(command_3, self, s);
+  CAST_SUBTYPE(command_3, self, s);
   COMMAND_RETURN(c, make_command_3_invoke(self, a1));
 }
 
@@ -353,7 +353,7 @@ do_command_4(struct command *s,
 	     struct command_continuation *c,
 	     struct exception_handler *e UNUSED)
 {
-  CAST(command_4, self, s);
+  CAST_SUBTYPE(command_4, self, s);
   COMMAND_RETURN(c, make_command_4_invoke(self, a1));
 }
 
