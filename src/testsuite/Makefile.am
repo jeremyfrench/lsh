@@ -11,19 +11,14 @@ TS_PROGS = arcfour-test aes-test blowfish-test cast128-test \
 
 TS_SH = conv-1-test conv-2-test conv-3-test \
 	export-1-test keygen-1-test keygen-2-test \
-	write-key-1-test write-key-2-test seed-test
-
-TS_SOME = $(TS_PROGS) $(TS_SH)
-
-# Tests that require that lsh is set up for password-less login.
-TS_MORE_SH = lsh-1-test lsh-2-test lsh-3-test lsh-4-test \
+	write-key-1-test write-key-2-test seed-test \
+	lsh-1-test lsh-2-test lsh-3-test lsh-4-test \
 	lsh-5-test lsh-6-test lsh-7-test \
 	lsh-cat-test lshg-1-test lshg-cat-test lshg-cat-2-test \
 	tcpip-local-test tcpip-remote-test \
 	lshg-tcpip-local-test ssh1-fallback-test
-TS_MORE_PROGS =
 
-TS_ALL = $(TS_PROGS) $(TS_SH) $(TS_MORE_PROGS) $(TS_MORE_SH) 
+TS_ALL = $(TS_PROGS) $(TS_SH)
 
 # Don't use automakes testsuite support
 # TESTS = $(TS_PROGS) $(TS_SH)
@@ -34,8 +29,8 @@ noinst_PROGRAMS = $(TS_PROGS)
 LDADD = testutils.o ../liblsh.a ../nettle/libnettle.a \
 	$(addprefix ../,@LIBARGP@)
 
-EXTRA_DIST = testutils.c testutils.h $(TS_SH) $(TS_MORE_SH) \
-	functions.sh run-tests key-1.private
+EXTRA_DIST = testutils.c testutils.h $(TS_SH) \
+	functions.sh run-tests setup-env key-1.private
 
 # FIXME: Get a rm -rf temphome somewhere?
 CLEANFILES = foo foo.pub test-seed-1 test-seed-2 test.out1 test.out2 \
@@ -55,11 +50,6 @@ all:
 
 .PHONY: check-some check-more
 
-check: check-some
-
-check-some: $(TS_SOME)
-	srcdir=$(srcdir) $(srcdir)/run-tests $(TS_SOME)
-
-check-more: $(TS_ALL)
+check: $(TS_ALL)
 	srcdir=$(srcdir) $(srcdir)/run-tests $(TS_ALL)
 
