@@ -1,3 +1,8 @@
+2002-04-03  Pontus Sköld  <pont@soua.net>
+
+	* src/client.c (client_options): Bugfix: OPT_SUBSYSTEM shouldn't
+	be inside char quotes.
+
 2002-03-27  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (lsh_oop_stop_callback): Use the OOP_HALT constant.
