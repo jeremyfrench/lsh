@@ -239,7 +239,7 @@ make_ssh_ring_srp_1(void)
   mpz_t g;
 
   /* Same prime as in draft-ietf-secsh-transport-07.txt, but a
-   * different generator */
+   * different generator. */
   mpz_init_set_str(p,
 		   "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
 		   "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
@@ -248,8 +248,8 @@ make_ssh_ring_srp_1(void)
 		   "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381"
 		   "FFFFFFFFFFFFFFFF", 16);
 
-  /* 7 is a primitive root */
-  mpz_init_set_ui(g, 7);
+  /* 5 is a primitive root */
+  mpz_init_set_ui(g, 5);
 
   G = make_ring_zn(p, g);
 
