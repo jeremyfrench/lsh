@@ -14,4 +14,3 @@ cat ../lshd > test.out1
 spawn_lshd && exec_lsh <test.out1 >test.out2
 
 compare_output "lsh-login-test"
-
