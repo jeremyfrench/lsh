@@ -55,6 +55,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	list.c lookup_verifier.c \
 	lock_file.c \
 	lsh_string.c parse.c \
+	oop-line-file.c \
 	pkcs5.c \
 	publickey_crypto.c queue.c \
 	randomness.c \
