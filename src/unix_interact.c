@@ -218,8 +218,16 @@ unix_read_password(struct interact *s,
       /* NOTE: Ignores max_length; instead getpass's limit applies. */
   
       char *password;
-      const char *cprompt = lsh_get_cstring(prompt);
-  
+      const char *cprompt;
+
+      if (!IS_TTY(self) || quiet_flag)
+	{
+	  if (free)
+	    lsh_string_free(prompt);
+	  return NULL;
+	}
+
+      cprompt = lsh_get_cstring(prompt);
       if (!cprompt)
 	{
 	  if (free)
