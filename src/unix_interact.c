@@ -53,8 +53,9 @@
 
 #include "unix_interact.c.x"
 
-/* Depends on the tty being line buffered */
-static int
+/* Depends on the tty being line buffered. FIXME: Doesn't distinguish
+   between errors, empty input, and EOF. */
+static uint32_t
 read_line(int fd, uint32_t size, uint8_t *buffer)
 {
   uint32_t i = 0;
@@ -109,7 +110,7 @@ read_line(int fd, uint32_t size, uint8_t *buffer)
 	  uint32_t j;
 	  for (j = 0; j < (unsigned) res; j++)
 	    if (b[j] == '\n')
-	      return res;
+	      return size;
 	}
     }
 #undef BUFSIZE
@@ -176,24 +177,18 @@ unix_is_tty(struct interact *s)
 
 /* FIXME: Rewrite to operate on tty_fd. */
 static struct lsh_string *
-unix_read_password(struct interact *s,
-		   uint32_t max_length UNUSED,
-		   const struct lsh_string *prompt)
+read_password(struct unix_interact *self,
+	      const struct lsh_string *prompt)
 {
-  CAST(unix_interact, self, s);
-  trace("unix_interact.c:unix_read_password\n");
-  
   if (self->askpass)
     {
       const char *argv[3];
-      struct lsh_string *password;
       
       int null = open("/dev/null", O_RDONLY);
       
       if (null < 0)
 	{
 	  werror("Failed to open /dev/null!\n");
-	  lsh_string_free(prompt);
 	  
 	  return NULL;
 	}
@@ -203,7 +198,6 @@ unix_read_password(struct interact *s,
       if (!argv[1])
 	{
 	  close(null);
-	  lsh_string_free(prompt);
 
 	  return NULL;
 	}
@@ -212,11 +206,7 @@ unix_read_password(struct interact *s,
       trace("unix_interact.c: spawning askpass program `%z'\n",
 	    self->askpass);
 
-      password = lsh_popen_read(self->askpass, argv, null, 100);
-
-      lsh_string_free(prompt);
-      
-      return password;
+      return lsh_popen_read(self->askpass, argv, null, 100);
     }
   else
     {
@@ -226,27 +216,36 @@ unix_read_password(struct interact *s,
       const char *cprompt;
 
       if (!IS_TTY(self) || quiet_flag)
-	{
-	  lsh_string_free(prompt);
-	  return NULL;
-	}
+	return NULL;
 
       cprompt = lsh_get_cstring(prompt);
       if (!cprompt)
-	{
-	  lsh_string_free(prompt);
-	  return NULL;
-	}
+	return NULL;
+
       /* NOTE: This function uses a static buffer. */
       password = getpass(cprompt);
-  
-      lsh_string_free(prompt);
   
       if (!password)
 	return NULL;
   
       return make_string(password);
     }
+}
+
+static struct lsh_string *
+unix_read_password(struct interact *s,
+		   uint32_t max_length UNUSED,
+		   const struct lsh_string *prompt)
+{
+  CAST(unix_interact, self, s);
+  struct lsh_string *password;
+  
+  trace("unix_interact.c:unix_read_password\n");
+
+  password = read_password(self, prompt);
+  lsh_string_free(prompt);
+  
+  return password;
 }
 
 static void
@@ -301,6 +300,51 @@ unix_yes_or_no(struct interact *s,
 #undef TTY_BUFSIZE
     }
 }
+
+/* The prompts are typically not trusted, but it's the callers
+   responsibility to sanity check them. */
+static int
+unix_dialog(struct interact *s,
+	    const struct lsh_string *instruction,
+	    const struct interact_dialog *dialog)
+{
+#define DIALOG_BUFSIZE 150
+  CAST(unix_interact, self, s);
+  const struct exception *e;
+  unsigned i;
+  
+  e = write_raw(self->tty_fd, STRING_LD(instruction));
+  lsh_string_free(instruction);
+
+  if (e)
+    return 0;
+
+  for (i = 0; i < dialog->nprompt; i++)
+    {
+      struct lsh_string *prompt = dialog->prompt[i];
+      if (dialog->echo[i])
+	{
+	  uint8_t buffer[DIALOG_BUFSIZE];
+	  uint32_t length;
+	  
+	  e = write_raw(self->tty_fd, STRING_LD(prompt));
+	  if (e)
+	    return 0;
+	  length = read_line(self->tty_fd, DIALOG_BUFSIZE, buffer);
+	  if (!length)
+	    return 0;
+	  
+	  dialog->response[i] = ssh_format("%ls", length, buffer);
+	}
+      else
+	{
+	  if (!(dialog->response[i] = read_password(self, prompt)))
+	    return 0;
+	}
+    }
+  return 1;
+}
+
 
 /* GABA:
    (class
@@ -463,6 +507,7 @@ make_unix_interact(void)
   self->super.read_password = unix_read_password;
   self->super.set_askpass = unix_set_askpass;
   self->super.yes_or_no = unix_yes_or_no;
+  self->super.dialog = unix_dialog;
   self->super.get_attributes = unix_get_attributes;
   self->super.set_attributes = unix_set_attributes;
   self->super.window_size = unix_window_size;
