@@ -256,14 +256,14 @@ make_lshd_options(struct io_backend *backend)
 }
 
 /* Port to listen on */
-COMMAND_SIMPLE(options2local)
+DEFINE_COMMAND_SIMPLE(options2local, a)
 {
   CAST(lshd_options, options, a);
   return &options->local->super;
 }
 
 /* alist of signature algorithms */
-COMMAND_SIMPLE(options2signature_algorithms)
+DEFINE_COMMAND_SIMPLE(options2signature_algorithms, a)
 {
   CAST(lshd_options, options, a);
   return &options->signature_algorithms->super;

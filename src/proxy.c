@@ -244,7 +244,7 @@ STATIC_COLLECT_1(&chain_connections_2);
        (client_hooks object object_list)))
 */
 
-COMMAND_SIMPLE(chained_connection)
+DEFINE_COMMAND_SIMPLE(chained_connection, a)
 {
   CAST(ssh_connection, connection, a);
   return &connection->chain->super.super;

@@ -63,13 +63,13 @@ EXCEPTION_RAISE((e), make_spki_exception(EXC_SPKI_TYPE, (msg), (expr)))
 
 /* Various conversion functions */
 
-COMMAND_SIMPLE(spki_signer2verifier)
+DEFINE_COMMAND_SIMPLE(spki_signer2verifier, a)
 {
   CAST_SUBTYPE(signer, private, a);
   return &SIGNER_GET_VERIFIER(private)->super;
 }
 
-COMMAND_SIMPLE(spki_verifier2public)
+DEFINE_COMMAND_SIMPLE(spki_verifier2public, a)
 {
   CAST_SUBTYPE(verifier, v, a);
   return &spki_make_public_key(v)->super;
@@ -167,7 +167,7 @@ do_spki_sexp2signer(struct command *s,
 }
 
 /* (parse algorithms sexp) -> signer */
-COMMAND_SIMPLE(spki_sexp2signer_command)
+DEFINE_COMMAND_SIMPLE(spki_sexp2signer_command, a)
 {
   CAST_SUBTYPE(alist, algorithms, a);
   NEW(spki_parse_key, self);
@@ -248,7 +248,7 @@ do_spki_sexp2keypair(struct command *s,
 
 
 /* (parse algorithms sexp) -> one or more keypairs */
-COMMAND_SIMPLE(spki_sexp2keypair_command)
+DEFINE_COMMAND_SIMPLE(spki_sexp2keypair_command, a)
 {
   CAST_SUBTYPE(alist, algorithms, a);
   NEW(spki_parse_key, self);
@@ -286,7 +286,7 @@ do_spki_add_acl(struct command *s,
   COMMAND_RETURN(c, self->ctx);
 }
 
-COMMAND_SIMPLE(spki_add_acl_command)
+DEFINE_COMMAND_SIMPLE(spki_add_acl_command, a)
 {
   CAST_SUBTYPE(spki_context, ctx, a);
 
@@ -299,7 +299,7 @@ COMMAND_SIMPLE(spki_add_acl_command)
   return &self->super.super;
 }
 
-COMMAND_SIMPLE(spki_make_context_command)
+DEFINE_COMMAND_SIMPLE(spki_make_context_command, a)
 {
   CAST_SUBTYPE(alist, algorithms, a);
   trace("spki_make_context_command\n");
@@ -338,7 +338,7 @@ make_spki_read_acls(struct alist *algorithms)
   return res;
 }
 
-COMMAND_SIMPLE(spki_read_acls_command)
+DEFINE_COMMAND_SIMPLE(spki_read_acls_command, a)
 {
   CAST_SUBTYPE(alist, algorithms, a);
   CAST_SUBTYPE(command, res, spki_read_acl(algorithms));
@@ -377,7 +377,7 @@ do_spki_add_hostkey(struct command *s,
 }
 
 /* Ignores its argument */
-COMMAND_SIMPLE(spki_add_hostkey_command)
+DEFINE_COMMAND_SIMPLE(spki_add_hostkey_command, a)
 {
   NEW(spki_read_hostkey_context, self);
 
@@ -391,7 +391,7 @@ COMMAND_SIMPLE(spki_add_hostkey_command)
   return &self->super.super;
 }     
 
-COMMAND_SIMPLE(spki_return_hostkeys)
+DEFINE_COMMAND_SIMPLE(spki_return_hostkeys, a)
 {
   CAST(spki_read_hostkey_context, self, a);
   trace("spki_return_hostkeys\n");
@@ -415,7 +415,7 @@ COMMAND_SIMPLE(spki_return_hostkeys)
 		     file)))))
 */
 
-COMMAND_SIMPLE(spki_read_hostkeys_command)
+DEFINE_COMMAND_SIMPLE(spki_read_hostkeys_command, a)
 {
   CAST_SUBTYPE(alist, algorithms, a);
   CAST_SUBTYPE(command, res, spki_read_hostkeys(algorithms));
@@ -453,7 +453,7 @@ do_spki_add_userkey(struct command *s,
 }
 
 /* Ignores its argument */
-COMMAND_SIMPLE(spki_add_userkey_command)
+DEFINE_COMMAND_SIMPLE(spki_add_userkey_command, a)
 {
   NEW(spki_read_userkey_context, self);
   (void) a;
@@ -465,7 +465,7 @@ COMMAND_SIMPLE(spki_add_userkey_command)
   return &self->super.super;
 }     
 
-COMMAND_SIMPLE(spki_return_userkeys)
+DEFINE_COMMAND_SIMPLE(spki_return_userkeys, a)
 {
   CAST(spki_read_userkey_context, self, a);
   trace("spki_return_userkeys\n");
@@ -499,7 +499,7 @@ make_spki_read_userkeys(struct alist *algorithms)
   return res;
 }
 
-COMMAND_SIMPLE(spki_read_userkeys_command)
+DEFINE_COMMAND_SIMPLE(spki_read_userkeys_command, a)
 {
   CAST_SUBTYPE(alist, algorithms, a);
   

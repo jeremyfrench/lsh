@@ -324,7 +324,7 @@ static struct read_sexp_command read_sexp
 		       (proc (read_sexp file)))))))
 */
 
-COMMAND_SIMPLE(for_sexp_command)
+DEFINE_COMMAND_SIMPLE(for_sexp_command, a)
 {
   CAST_SUBTYPE(command, handler, a);
   return for_sexp(handler);
