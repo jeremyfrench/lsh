@@ -85,31 +85,11 @@ struct lsh_class
 
 #define CLASS(c) (c##_class)
 
-#if DEBUG_ALLOC
+/* string.h */
+struct lsh_string;
 
-struct lsh_string_header
-{
-  int magic; /* For a sentinel value */
-  /* Where/how the string was allocated */
-  const char *clue;
-  struct lsh_string *prev;
-  struct lsh_string *next;
-};
-
-#endif  /* DEBUG_ALLOC */
-
-struct lsh_string
-{
-#if DEBUG_ALLOC
-  struct lsh_string_header header;
-#endif
-  /* Attached to read packets. Used only for generating proper
-     SSH_MSG_UNIMPLEMENTED replies. */
-  uint32_t sequence_number;
-  /* NOTE: The allocated size may be larger than the string length. */
-  uint32_t length; 
-  uint8_t data[1];
-};
+void
+lsh_string_free(const struct lsh_string *packet);
 
 /* Forward declarations of various structures */
 
