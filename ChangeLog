@@ -1,3 +1,15 @@
+2003-11-17  Niels Möller  <nisse@harpo.hack.org>
+
+	* src/read_packet.c (class read_packet): New attribute
+	mac_computed.
+	(lsh_string_realloc): Deleted function.
+	(do_read_packet, make_read_packet): Allocate block_buffer,
+	mac_buffer and mac_computed at creation time, using
+	SSH_MAX_BLOCK_SIZE and SSH_MAX_MAC_SIZE.
+
+	* src/ssh.h (SSH_MAX_BLOCK_SIZE, SSH_MAX_MAC_SIZE): New constants,
+	with the implementations's maximum block size and mac size.
+
 2003-11-16  Niels Möller  <nisse@harpo.hack.org>
 
 	* src/lsh-writekey.c (main_argp_parser): Move declaration to
