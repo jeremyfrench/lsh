@@ -36,9 +36,7 @@ struct ssh_connection
 			       * algorithms. Is there a better way?
 			       * Perhaps one can keep this pointer
 			       * inside the newkeys-handler? */
-#endif
 
-#if 0
   int type; /* CONNECTION_SERVER or CONNECTION_CLIENT */
 #endif
   
@@ -62,6 +60,18 @@ struct ssh_connection
   struct mac_instance *send_mac;
   struct crypto_instance *send_crypto;
 
+  /* Key exchange */
+  int kex_state;
+  
+#if 0
+  struct make_kexinit *make_kexinit;
+#endif
+
+  /* First element is the kexinit sent by the server */
+  struct kexinit *kexinits[2];
+  struct lsh_string *literal_kexinits[2];
+  struct newkeys_info *newkeys; /* Negotiated algorithms */ 
+  
   /* Table of all known message types */
   struct packet_handler *dispatch[0x100];
 
@@ -70,18 +80,6 @@ struct ssh_connection
   struct packet_handler *unimplemented;
   struct packet_handler *fail;
   
-  /* Key exchange */
-
-#if 0
-  int kex_state; 
-  struct make_kexinit *make_kexinit;
-#endif
-  /* First element is the kexinit sent by the server */
-  struct kexinit *kexinits[2];
-  struct lsh_string *literal_kexinits[2];
-  struct newkeys_info *newkeys; /* Negotiated algorithms */ 
-  
-  int ignore_one_packet;
 #if 0  
   int provides_privacy;
   int provides_integrity;
