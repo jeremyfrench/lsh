@@ -106,11 +106,9 @@ struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
   channel_number, channel->rec_window_size, channel->rec_max_packet
     
   debug("format_open_confirmation: rec_window_size = %i,\n"
-	"                          rec_max_packet = %i,\n"
-	"                          max_window = %i\n",
+	"                          rec_max_packet = %i,\n",
        channel->rec_window_size,
-       channel->rec_max_packet,
-       channel->max_window);
+       channel->rec_max_packet);
   l1 = ssh_format_length(CONFIRM_FORMAT, CONFIRM_ARGS);
 
   va_start(args, format);
@@ -427,11 +425,14 @@ static void adjust_rec_window(struct flow_controlled *f, UINT32 written)
 	  prepare_window_adjust(channel, written));
 }
 
-void channel_start_receive(struct ssh_channel *channel)
+void
+channel_start_receive(struct ssh_channel *channel,
+		      UINT32 initial_window_size)
 {
-  A_WRITE(channel->write,
-	  prepare_window_adjust
-	  (channel, channel->max_window - channel->rec_window_size));
+  if (channel->rec_window_size < initial_window_size)
+    A_WRITE(channel->write,
+	    prepare_window_adjust
+	    (channel, initial_window_size - channel->rec_window_size));
 }
 
 
@@ -1021,8 +1022,6 @@ static void do_channel_open(struct packet_handler *c UNUSED,
 			    struct ssh_connection *connection,
 			    struct lsh_string *packet)
 {
-  /* CAST(channel_open_handler, closure, c); */
-
   struct simple_buffer buffer;
   unsigned msg_number;
   int type;
@@ -1075,6 +1074,7 @@ static void do_channel_open(struct packet_handler *c UNUSED,
 	  
 	  CHANNEL_OPEN(open, connection,
 		       type,
+		       window_size,
 		       /* We don't support larger packets than the
 			* default, SSH_MAX_PACKET */
 		       MIN(max_packet, SSH_MAX_PACKET),
@@ -2046,11 +2046,9 @@ format_channel_open(int type, UINT32 local_channel_number,
   channel->rec_window_size, channel->rec_max_packet  
 
   debug("format_channel_open: rec_window_size = %i,\n"
-	"                     rec_max_packet = %i,\n"
-	"                     max_window = %i\n",
+	"                     rec_max_packet = %i,\n",
 	channel->rec_window_size,
-	channel->rec_max_packet,
-	channel->max_window);
+	channel->rec_max_packet);
   
   l1 = ssh_format_length(OPEN_FORMAT, OPEN_ARGS);
   
@@ -2102,4 +2100,33 @@ format_channel_request(int type, struct ssh_channel *channel,
 #undef REQUEST_FORMAT
 #undef REQUEST_ARGS
 }
+
+struct lsh_string *
+format_global_request(int type, int want_reply,
+		      const char *format, ...)
+{
+  va_list args;
+  UINT32 l1, l2;
+  struct lsh_string *packet;
+
+#define REQUEST_FORMAT "%c%a%c"
+#define REQUEST_ARGS SSH_MSG_GLOBAL_REQUEST, type, want_reply
+    
+  l1 = ssh_format_length(REQUEST_FORMAT, REQUEST_ARGS);
   
+  va_start(args, format);
+  l2 = ssh_vformat_length(format, args);
+  va_end(args);
+
+  packet = lsh_string_alloc(l1 + l2);
+
+  ssh_format_write(REQUEST_FORMAT, l1, packet->data, REQUEST_ARGS);
+
+  va_start(args, format);
+  ssh_vformat_write(format, l2, packet->data+l1, args);
+  va_end(args);
+
+  return packet;
+#undef REQUEST_FORMAT
+#undef REQUEST_ARGS
+}
