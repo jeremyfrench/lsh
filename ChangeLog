@@ -1,3 +1,8 @@
+2002-03-20  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/lsh-7-test: Rewrote !command-expressions as an if
+	expression, to work with /bin/sh.
+
 2002-03-20  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (address_info2sockaddr): Zero-terminate the
