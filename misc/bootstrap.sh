@@ -18,9 +18,8 @@ autoconf
 
 (cd src/nettle && ./.bootstrap)
 (cd src/sftp && ./.bootstrap)
+(cd src/spki && ./.bootstrap)
 
 automake -a
 
 (cd src/argp && automake -a)
-(cd src/nettle && automake -a)
-(cd src/sftp && automake -a)
