@@ -171,6 +171,7 @@ dh_make_server_secret(struct dh_instance *self)
 struct lsh_string *
 dh_make_server_msg(struct dh_instance *self,
 		   struct lsh_string *server_key,
+		   int hostkey_algorithm,
 		   struct signer *s)
 {
   dh_hash_update(self, ssh_format("%S", server_key), 1);
@@ -179,7 +180,7 @@ dh_make_server_msg(struct dh_instance *self,
   return ssh_format("%c%S%n%fS",
 		    SSH_MSG_KEXDH_REPLY,
 		    server_key,
-		    self->f, SIGN(s,
+		    self->f, SIGN(s, hostkey_algorithm,
 				  self->exchange_hash->length,
 				  self->exchange_hash->data));
 }
