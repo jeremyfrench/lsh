@@ -99,6 +99,8 @@ fi
 AC_CHECK_HEADERS(fcntl.h strings.h sys/time.h unistd.h)
 AC_CHECK_HEADERS(shadow.h)
 AC_CHECK_HEADERS(zlib.h,, [with_zlib=no])
+AC_CHECK_HEADERS(poll.h sys/poll.h)
+AC_CHECK_HEADERS(crypt.h)
 
 dnl Should we use zlib?
 
