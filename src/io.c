@@ -80,8 +80,13 @@
 
 /* Glue to liboop */
 
+#define WITH_LIBOOP_SIGNAL_ADAPTER 1
+
 /* Because of signal handlers, there can be only one oop object. */
 static oop_source_sys *global_oop_sys = NULL;
+#if WITH_LIBOOP_SIGNAL_ADAPTER
+static oop_adapter_signal *global_oop_signal = NULL;
+#endif
 static oop_source *source = NULL;
 static unsigned nfiles = 0;
 
@@ -289,6 +294,23 @@ lsh_oop_cancel_stop(void)
   source->cancel_time(source, OOP_TIME_NOW, lsh_oop_stop_callback, NULL);
 }
 
+/* For debugging */
+#if 0
+static void
+list_files(void)
+{
+  struct lsh_object *o;
+
+  for (o = gc_iterate_objects(&lsh_fd_class, NULL); o; o = gc_iterate_objects(&lsh_fd_class, o))
+    {
+      CAST(lsh_fd, fd, o);
+
+      werror("%z fd %i: %z, %xi\n", fd->super.alive ? "live" : "dead",
+	     fd->fd, fd->label, (uint32_t) o);
+    }
+}
+#endif
+
 void
 io_init(void)
 {
@@ -305,9 +327,16 @@ io_init(void)
   assert(!global_oop_sys);
   global_oop_sys = oop_sys_new();
   if (!global_oop_sys)
-    fatal("Failed to initialize liboop.\n");
+    fatal("Failed to initialize liboop oop_sys.\n");
 
-  source = oop_sys_source(global_oop_sys);
+#if WITH_LIBOOP_SIGNAL_ADAPTER
+  global_oop_signal = oop_signal_new(oop_sys_source(global_oop_sys));
+  if (!global_oop_signal)
+    fatal("Failed to initialize liboop oop_signal.\n");
+  source = oop_signal_source(global_oop_signal);
+#else
+   source = oop_sys_source(global_oop_sys);
+#endif
 }
 
 void
@@ -323,6 +352,10 @@ io_final(void)
   /* There mustn't be any outstanding callbacks left. */
   assert(nfiles == 0);
   
+#if WITH_LIBOOP_SIGNAL_ADAPTER
+  oop_signal_delete(global_oop_signal);
+  global_oop_signal = NULL;
+#endif
   oop_sys_delete(global_oop_sys);
   global_oop_sys = NULL;
   source = NULL;
@@ -1403,14 +1436,14 @@ make_lsh_fd(int fd, enum io_type type, const char *label,
   NEW(lsh_fd, self);
 
   nfiles++;
-  io_init_fd(fd, type == IO_STDIO);
+  /* NOTE: Relies on order of the enum constants. */
+  io_init_fd(fd, type >= IO_STDIO);
 
   init_resource(&self->super, do_kill_fd);
 
   self->fd = fd;
   self->type = type;
   self->label = label;
-  self->type = 0;
   
   self->e = make_exception_handler(do_exc_io_handler, e, HANDLER_CONTEXT);
   
@@ -2074,25 +2107,59 @@ io_write(struct lsh_fd *fd,
   return fd;
 }
 
-struct lsh_fd *
+/* Used e.g. for the key capture-file. Never closed. */
+/* GABA:
+   (class
+     (name write_only_file)
+     (super abstract_write)
+     (vars
+       (fd . int)
+       (e object exception_handler)))
+*/
+
+static void
+do_write_only_file(struct abstract_write *s, struct lsh_string *data)
+{
+  CAST(write_only_file, self, s);
+  const struct exception *e;
+
+  e = write_raw(self->fd, STRING_LD(data));
+
+  if (e)
+    EXCEPTION_RAISE(self->e, e);
+
+  lsh_string_free(data);
+}
+
+struct abstract_write *
+make_io_write_file(int fd, struct exception_handler *e)
+{
+    NEW(write_only_file, self);
+    self->super.write = do_write_only_file;
+    self->fd = fd;
+    self->e = e;
+
+    return &self->super;  
+}
+
+struct abstract_write *
 io_write_file(const char *fname, int flags, int mode,
-	      uint32_t block_size,
-	      struct lsh_callback *c,
 	      struct exception_handler *e)
 {
   int fd = open(fname, flags, mode);
   if (fd < 0)
     return NULL;
 
-  return io_write(make_lsh_fd(fd, IO_NORMAL, "write-only file", e),
-		  block_size, c);
+  io_set_close_on_exec(fd);
+
+  return make_io_write_file(fd, e);
 }
 
 void
 close_fd(struct lsh_fd *fd)
 {
-  trace("io.c: Closing fd %i: %z.\n",
-	fd->fd, fd->label);
+  trace("io.c: Closing fd %i: %z, type %i.\n",
+	fd->fd, fd->label, fd->type);
 
   if (fd->super.alive)
     {
@@ -2113,7 +2180,7 @@ close_fd(struct lsh_fd *fd)
       if (fd->close_callback)
 	LSH_CALLBACK(fd->close_callback);
 
-      if (fd->type != IO_STDIO)
+      if (fd->type != IO_STDERR)
 	{
 	  if (close(fd->fd) < 0)
 	    {
@@ -2121,6 +2188,14 @@ close_fd(struct lsh_fd *fd)
 	      EXCEPTION_RAISE(fd->e,
 			      make_io_exception(EXC_IO_CLOSE, fd,
 						errno, NULL));
+	    }
+	  if (fd->type == IO_STDIO)
+	    {
+	      int null = open("/dev/null", O_RDWR);
+	      if (null < 0)
+		fatal("Failed to open /dev/null!\n");
+	      if (null != fd->fd)
+		fatal("Failed to map stdio fd %i to /dev/null.\n", fd->fd);
 	    }
 	}
       assert(nfiles);

@@ -45,8 +45,12 @@ enum io_type {
   IO_PTY = 1,
 
   /* Stdio file desciptors are special, because they're in blocking
-     mode, and they are never closed. */
+     mode, and when closed, we must open /dev/null to avoid accidental
+     reuse of the special fd:s. */
   IO_STDIO = 2,
+  
+  /* Blocking mode, and never closed. */
+  IO_STDERR = 3,
 };
 
 /* Max number of simultaneous connection attempts */
@@ -380,11 +384,12 @@ close_fd_read(struct lsh_fd *fd);
 void
 close_fd_write(struct lsh_fd *fd);
 
-struct lsh_fd *
+struct abstract_write *
+make_io_write_file(int fd, struct exception_handler *e);
+
+struct abstract_write *
 io_write_file(const char *fname, int flags,
 	      int mode,
-	      uint32_t block_size,
-	      struct lsh_callback *c,
 	      struct exception_handler *e);
 
 int
