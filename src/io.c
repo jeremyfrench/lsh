@@ -78,10 +78,10 @@ int io_iter(struct io_backend *b)
     
     for(fd_p = &b->files; (fd = *fd_p); )
       {
-	if (!fd->close_now && fd->prepare)
+	if (fd->super.alive && fd->prepare)
 	  PREPARE_FD(fd);
 	
-	if (fd->close_now)
+	if (!fd->super.alive)
 	  {
 	    if (fd->fd < 0)
 	      /* Unlink the file object, but don't close any underlying file. */
@@ -176,7 +176,7 @@ int io_iter(struct io_backend *b)
   
   {
     /* Do io. Note that the callback functions may add new fds to the
-     * head of the list, or set the close_now flag on any fd. */
+     * head of the list, or clear the alive flag on any fd. */
 
     struct lsh_fd *fd;
     unsigned long i;
@@ -185,13 +185,13 @@ int io_iter(struct io_backend *b)
       {
 	assert(i<nfds);
 	
-	if (fd->close_now)
+	if (!fd->super.alive)
 	  continue;
 
 	if (fds[i].revents & POLLOUT)
 	  WRITE_FD(fd);
 
-	if (fd->close_now)
+	if (!fd->super.alive)
 	  continue;
 
 	if (fds[i].revents & POLLIN)
@@ -280,10 +280,9 @@ static void read_callback(struct lsh_fd *fd)
     {
       if (self->buffer)
 	write_buffer_close(self->buffer);
-		  
-      fd->close_reason = LSH_FAILUREP(res)
-	? CLOSE_PROTOCOL_FAILURE : 0;
-      fd->close_now = 1;
+
+      close_fd(fd,
+	       LSH_FAILUREP(res) ? CLOSE_PROTOCOL_FAILURE : 0);
     }
   else if (res & LSH_CLOSE)
     {
@@ -296,7 +295,7 @@ static void read_callback(struct lsh_fd *fd)
 	  self->handler = NULL;
 	}
       else
-	fd->close_now = 1;
+	kill_fd(fd);
 		  
       fd->close_reason
 	= LSH_FAILUREP(res) ? CLOSE_PROTOCOL_FAILURE : CLOSE_EOF;
@@ -326,14 +325,12 @@ static void write_callback(struct lsh_fd *fd)
 	break;
       case EPIPE:
 	werror("Broken pipe\n");
-	fd->close_reason = CLOSE_WRITE_FAILED;
-	fd->close_now = 1;
+	close_fd(fd, CLOSE_WRITE_FAILED);
 	break;
       default:
 	werror("io.c: write failed, %s\n", strerror(errno));
 
-	fd->close_reason = CLOSE_WRITE_FAILED;
-	fd->close_now = 1;
+	close_fd(fd, CLOSE_WRITE_FAILED);
 	
 	break;
       }
@@ -363,9 +360,9 @@ static void listen_callback(struct lsh_fd *fd)
     {
       werror("Strange: Accepted a connection, "
 	     "but failed before writing anything.\n");
-      fd->close_now = 1;
-      fd->close_reason = LSH_FAILUREP(res) ? CLOSE_PROTOCOL_FAILURE
-	: CLOSE_EOF;
+      close_fd(fd, (LSH_FAILUREP(res)
+		    ? CLOSE_PROTOCOL_FAILURE
+		    : CLOSE_EOF));
     }
 }
 
@@ -386,7 +383,7 @@ static void connect_callback(struct lsh_fd *fd)
       /* To avoid actually closing the fd */
       fd->fd = -1;
     }
-  fd->close_now = 1;
+  kill_fd(fd);
 }
 
 /* FIXME: Prehaps this function should return a suitable exit code? */
@@ -414,6 +411,22 @@ void init_backend(struct io_backend *b)
 #endif
 }
 
+/* This function is called if a connection this file somehow dependent
+ * on disappears. For instance, the connection may have spawned a
+ * child process, and this file may be the stdin of that process. */
+
+/* To kill a file, mark it for closing and the backend will do the work. */
+static void do_kill_fd(struct resource *r)
+{
+  CAST_SUBTYPE(lsh_fd, fd, r);
+
+  /* FIXME: It could make sense to you a separate close reason for
+   * killed files. For now, using the zero reason will supress calling
+   * of any close callbacks. */
+  if (r->alive)
+    close_fd(fd, 0);
+}
+
 /* Initializes a file structure, and adds it to the backend's list. */
 static void init_file(struct io_backend *b, struct lsh_fd *f, int fd)
 {
@@ -430,7 +443,8 @@ static void init_file(struct io_backend *b, struct lsh_fd *f, int fd)
   f->want_write = 0;
   f->write = NULL;
 
-  f->close_now = 0;
+  f->super.alive = 1;
+  f->super.kill = do_kill_fd;
   f->really_close = NULL;
 
   f->next = b->files;
@@ -635,7 +649,7 @@ static void prepare_write(struct lsh_fd *fd)
 
   if (! (fd->want_write = write_buffer_pre_write(self->buffer))
       && self->buffer->closed)
-    fd->close_now = 1;
+    kill_fd(fd);
 }
   
 struct abstract_write *io_read_write(struct io_backend *b,
@@ -717,12 +731,14 @@ struct io_fd *io_write(struct io_backend *b,
   return f;
 }
 
-/* Marks a file for closing, at the end of the current iteration.
- * FIXME: Could be generalized for other fd:s than read-write fds. */
+void kill_fd(struct lsh_fd *fd)
+{
+  fd->super.alive = 0;
+}
 
 void close_fd(struct lsh_fd *fd, int reason)
 {
   debug("Marking fd %d for closing.\n", fd->fd);
   fd->close_reason = reason;
-  fd->close_now = 1;
+  kill_fd(fd);
 }

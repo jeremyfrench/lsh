@@ -27,6 +27,7 @@
 #define LSH_IO_H_INCLUDED
 
 #include "abstract_io.h"
+#include "resource.h"
 #include "write_buffer.h"
 
 #include <time.h>
@@ -73,6 +74,7 @@
 /* CLASS:
    (class
      (name lsh_fd)
+     (super resource)
      (vars
        (next object lsh_fd)
        (fd simple int)
@@ -92,7 +94,7 @@
        ; Called if poll indicates that data can be written.
        (write method void)
 
-       (close_now simple int)
+       ; (close_now simple int)
        (really_close method void)))
 */
 
@@ -183,6 +185,9 @@ struct io_fd *io_write(struct io_backend *b,
 		       int fd,
 		       UINT32 block_size,
 		       struct close_callback *close_callback);
+
+/* Marks a file for close, without touching the close_Reason field. */
+void kill_fd(struct lsh_fd *fd);
 
 void close_fd(struct lsh_fd *fd, int reason);
 
