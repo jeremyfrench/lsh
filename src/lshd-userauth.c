@@ -51,8 +51,11 @@
 #include "parse.h"
 #include "publickey_crypto.h"
 #include "ssh.h"
+#include "version.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include "lsh_argp.h"
 
 #define HEADER_SIZE 8
 
@@ -541,7 +544,16 @@ start_service(struct lshd_user *user, char **argv)
     }
   assert(user->uid == getuid());
 
-  /* FIXME: We should use the user's login shell */
+  /* FIXME: We should use the user's login shell.
+
+       $SHELL -c 'argv[0] "$@"' argv[0] argv[1] ...
+       
+     should work. Or perhaps even
+
+       $SHELL -c '"$0" "$@"' argv[0] argv[1] ...
+
+     Can we require that the login-shell is posix-style?
+  */
   execve(argv[0], (char **) argv, (char **) env);
 
   werror("start_service: exec failed: %e", errno);
@@ -581,24 +593,86 @@ decode_hex(const char *hex)
   return s;      
 }
 
+/* Option parsing */
+
+#define OPT_SESSION_ID 0x200
+const char *argp_program_version
+= "lshd-userauth (lsh-" VERSION "), secsh protocol version " SERVER_PROTOCOL_VERSION;
+
+const char *argp_program_bug_address = BUG_ADDRESS;
+
+static const struct argp_child
+main_argp_children[] =
+{
+  { &werror_argp, 0, "", 0 },
+  { NULL, 0, NULL, 0}
+};
+
+static const struct argp_option
+main_options[] =
+{
+  /* Name, key, arg-name, flags, doc, group */
+  { "session-id", OPT_SESSION_ID, "Session id", 0,
+    "Session id from the transport layer.", 0 },
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+struct lshd_userauth_options
+{
+  struct lsh_string *session_id;
+};  
+
+static error_t
+main_argp_parser(int key, char *arg, struct argp_state *state)
+{
+  struct lshd_userauth_options *options
+    = (struct lshd_userauth_options *) state->input;
+
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_INIT:
+      options->session_id = NULL;
+      state->child_inputs[0] = NULL;
+      break;
+
+    case ARGP_KEY_END:
+      if (!options->session_id)
+	argp_error(state, "Mandatory option --session-id is missing.");
+      break;
+
+    case OPT_SESSION_ID:
+      options->session_id = decode_hex(arg);
+      if (!options->session_id)
+	argp_error(state, "Invalid argument for --session-id.");
+    }
+  return 0;
+}
+
+static const struct argp
+main_argp =
+{ main_options, main_argp_parser, 
+  NULL,
+  "Handles the ssh-connection service.\v"
+  "Intended to be invoked by lshd and lshd-userauth.",
+  main_argp_children,
+  NULL, NULL
+};
+
 int
 main(int argc, char **argv)
 {
   struct lshd_user user;
-  struct lsh_string *session_id;
-  
-  if (argc < 3 || strcmp(argv[1], "--session-id"))
-    service_error("Bad arguments to lshd-userauth");
+  struct lshd_userauth_options options;
 
-  session_id = decode_hex(argv[2]);
-  if (!session_id)
-    service_error("Bad session-id to lshd-userauth");
-    
+  argp_parse(&main_argp, argc, argv, 0, NULL, &options);
+  
   werror("Started userauth service.\n");
 
   lshd_user_init(&user);
 
-  if (!handle_userauth(&user, session_id))
+  if (!handle_userauth(&user, options.session_id))
     {
       write_packet(format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
 				     "Access denied", ""));
@@ -606,7 +680,7 @@ main(int argc, char **argv)
     }
 
   {
-    char *args[3] = { "lshd-connection", "lshd-connection", NULL };
+    char *args[] = { "lshd-connection", "-v", "--trace", NULL };
     start_service(&user, args);
     
     service_error("Failed to start service process");
