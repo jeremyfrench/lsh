@@ -21,6 +21,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning sexp_streamed_parser.c is obsolete.
+
 #include "abstract_io.h"
 #include "command.h"
 #include "digits.h"
