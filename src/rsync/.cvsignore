@@ -1,3 +1,7 @@
+*.bb
+*.bbg
+*.da
+*.gcov
 .deps
 Makefile
 Makefile.in

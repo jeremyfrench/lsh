@@ -1,6 +1,10 @@
 *-old
 *.d
 *.x
+*.bb
+*.bbg
+*.da
+*.gcov
 .deps
 .dist_classes
 .dist_headers
