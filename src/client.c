@@ -464,6 +464,7 @@ client_options[] =
 #endif
   { "nop", 'N', NULL, 0, "No operation (suppresses the default action, "
     "which is to spawn a remote shell)", 0 },
+  { "background", 'B', NULL, 0, "Put process into the background. Implies -N.", 0 },
   { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },
   { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
   /* { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 }, */
@@ -706,6 +707,42 @@ fork_output(int out)
     }
 }
 
+/* A callback that exits the process immediately. */
+static void
+do_exit(struct lsh_callback *self UNUSED)
+{
+  exit(EXIT_SUCCESS);
+}
+
+/* FIXME: Use const? */
+static struct lsh_callback
+exit_callback = { STATIC_HEADER, do_exit };
+
+DEFINE_COMMAND(background_process)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+  switch (fork())
+    {
+    case 0:
+      /* Child */
+      /* FIXME: Should we create a new process group, close our tty
+       * and stdio, etc? */
+      COMMAND_RETURN(c, a);
+      break;
+    case -1:
+      /* Error */
+      werror("background_process: fork failed (errno = %i): %z\n",
+	     errno, STRERROR(errno));
+      COMMAND_RETURN(c, a);
+      break;
+    default:
+      /* Parent */
+      _exit(EXIT_SUCCESS);
+    }
+}
 
 /* Create a session object. stdout and stderr are shared (although
  * with independent lsh_fd objects). stdin can be used by only one
@@ -761,7 +798,11 @@ make_client_session(struct client_options *options)
 
   /* Bind ^Z to suspend. */
   if (escape)
-    escape->dispatch[26] = &suspend_callback;
+    {
+      /* Bind ^Z to suspend. */
+      escape->dispatch[26] = &suspend_callback;
+      escape->dispatch['.'] = &exit_callback;
+    }
   
   debug("lsh.c: Setting up stdout\n");
 
@@ -1015,6 +1056,11 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       options->start_shell = 0;
       break;
 
+    case 'B':
+      options->start_shell = 0;
+      client_add_action(options, &background_process);
+      break;
+      
     CASE_FLAG('g', with_remote_peers);
 
 #if WITH_PTY_SUPPORT
