@@ -1,5 +1,7 @@
 2002-11-04  Pontus Sköld  <pont@soua.net>
 
+	* src/testsuite/functions.sh: Unset LSHGFLAGS and LSHFLAGS.
+
 	* src/client.c (envp_parse): Certain versions of argp needs to be
 	fed with ARGP_NO_ERRS for this to work.
 

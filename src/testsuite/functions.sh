@@ -20,6 +20,11 @@ export LSH_YARROW_SEED_FILE SEXP_CONV
 : ${PIDFILE:="`pwd`/lshd.$$.pid"}
 : ${INTERFACE:=127.0.0.1}
 
+# Ignore any options the tester might have put in the environment.
+
+unset LSHGFLAGS
+unset LSHFLAGS
+
 PORT=11147
 ATEXIT='set +e'
 
