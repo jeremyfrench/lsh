@@ -50,6 +50,13 @@ struct spki_iterator
   unsigned start;
 };
 
+struct spki_hash_value
+{
+  enum spki_type type;
+  unsigned length;
+  const uint8_t *digest;
+};
+
 enum spki_type
 spki_iterator_first(struct spki_iterator *i,
 		    unsigned length, const uint8_t *expr);
@@ -81,6 +88,12 @@ spki_parse_end(struct spki_iterator *i);
 enum spki_type
 spki_parse_skip(struct spki_iterator *i);
 
+/* The hash struct is initialized pointing into the input string. No
+ * copying or allocation here. */
+enum spki_type
+spki_parse_hash(struct spki_iterator *i,
+		struct spki_hash_value *hash);
+     
 enum spki_type
 spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 		     struct spki_principal **principal);

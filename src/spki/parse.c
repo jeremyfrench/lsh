@@ -168,6 +168,17 @@ spki_parse_string(struct spki_iterator *i,
 }
 
 enum spki_type
+spki_parse_hash(struct spki_iterator *i,
+		struct spki_hash_value *hash)
+{
+  if ( (hash->type = spki_intern(i))
+       && (hash->digest = spki_parse_string(i, &hash->length)))
+    return spki_parse_end(i);
+  else
+    return spki_parse_fail(i);
+}
+
+enum spki_type
 spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 		     struct spki_principal **principal)
 {  
@@ -198,21 +209,17 @@ spki_parse_principal(struct spki_acl_db *db, struct spki_iterator *i,
 
     case SPKI_TYPE_HASH:
       {
-	enum spki_type type = spki_intern(i);
-	unsigned digest_length;
-	const uint8_t *digest;
-	
-	if (type
-	    && (digest = spki_parse_string(i, &digest_length))
-	    && spki_parse_end(i))
-	  {
-	    if (type == SPKI_TYPE_MD5
-		&& digest_length == MD5_DIGEST_SIZE)
-	      *principal = spki_principal_by_md5(db, digest);
+	struct spki_hash_value hash;
 
-	    else if (type == SPKI_TYPE_SHA1
-		     && digest_length == SHA1_DIGEST_SIZE)
-	      *principal = spki_principal_by_sha1(db, digest);
+	if (spki_parse_hash(i, &hash))
+	  {
+	    if (hash.type == SPKI_TYPE_MD5
+		&& hash.length == MD5_DIGEST_SIZE)
+	      *principal = spki_principal_by_md5(db, hash.digest);
+
+	    else if (hash.type == SPKI_TYPE_SHA1
+		     && hash.length == SHA1_DIGEST_SIZE)
+	      *principal = spki_principal_by_sha1(db, hash.digest);
 	    else
 	      return spki_parse_fail(i);
 
