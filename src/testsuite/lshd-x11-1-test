@@ -1,0 +1,11 @@
+#! /bin/sh
+
+echo lshd X11, test 1
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+spawn_lshd --x11-forward && run_lsh --x11 'test -n "$DISPLAY"' && test_success
