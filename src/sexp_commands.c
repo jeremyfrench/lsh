@@ -179,20 +179,6 @@ make_sexp_print_raw_hash(struct hash_algorithm *algorithm)
   return print;
 }
 
-#if 0 
-static struct lsh_object *
-do_print_raw_hash_simple(struct command_simple *s UNUSED,
-			 struct lsh_object *a)
-{
-  CAST_SUBTYPE(abstract_write, dest, a);
-
-  return &make_print_raw_hash_to(dest)->super;
-}
-
-struct command_simple sexp_print_raw_hash =
-STATIC_COMMAND_SIMPLE(do_print_raw_hash_simple);
-#endif
-
 /* Make sure that the fd is closed properly. */
 /* GABA:
    (class

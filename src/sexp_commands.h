@@ -56,9 +56,6 @@ make_sexp_print_command(int format);
 struct command *
 make_sexp_print_to(int format, struct abstract_write *dest);
 
-extern struct collect_info_1 sexp_print_raw_hash;
-#define SEXP_PRINT_RAW_HASH (&sexp_print_raw_hash.super.super)
-
 struct command *
 make_sexp_print_raw_hash(struct hash_algorithm *algorithm);
 
