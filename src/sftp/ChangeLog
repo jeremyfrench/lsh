@@ -1,3 +1,11 @@
+2004-11-19  Pontus Freyhult  <pont@soua.net>
+
+	* Makefile.am: Added new manpages to man_MANS and EXTRA_DIST.
+
+	* sftp-server.8: New manpage.
+
+	* lsftp.1: New manpage.
+
 2004-11-17  Niels Möller  <nisse@lysator.liu.se>
 
 	* commands.c (com_chown): Always us unsigned char with isdigit.
