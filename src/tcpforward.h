@@ -74,7 +74,7 @@ struct remote_port *
 make_remote_port(struct address_info *listen,
 		 struct command *callback);
 
-struct ssh_channel *make_tcpip_channel(struct io_fd *socket);
+struct ssh_channel *make_tcpip_channel(struct io_fd *socket, UINT32 max_window);
 void tcpip_channel_start_io(struct ssh_channel *c);
 
 struct channel_open *
@@ -89,13 +89,5 @@ struct global_request *make_cancel_tcpip_forward_request(void);
 #endif
 
 extern struct global_request tcpip_cancel_forward;
-
-struct command *forward_local_port(struct io_backend *backend,
-				   struct address_info *local,
-				   struct address_info *target);
-
-struct command *forward_remote_port(struct io_backend *backend,
-				    struct address_info *local,
-				    struct address_info *target);
 
 #endif /* LSH_TCPFORWARD_H_INCLUDED */

@@ -248,3 +248,12 @@ write on a connection. When the limit is exceeded, the connection
 should be dropped. The problem: if a client connects and sends a lot
 of packets, without ever reading anything from its socket, the server
 will eventually run out of memory.
+
+Consider removing the write-attribute from ssh_channel.
+
+Try to get rid of some of the LSH_*-status codes, in particular
+LSH_CHANNEL_READY_REC. Use functions instead. The reason is that the
+function that wants to start receiving is not necessaily called from
+the functions in channel.c, and therefore the status code doesn't pass
+through channel_process_status().
+

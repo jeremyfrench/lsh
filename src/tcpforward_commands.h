@@ -54,11 +54,20 @@ make_remote_listen_value(struct channel_open_callback *c,
 }
 #endif
 
-/* FIXME: The naming is inconsistent */
+struct command *
+make_forward_local_port(struct io_backend *backend,
+			struct address_info *local,
+			struct address_info *target);
+
+struct command *
+make_forward_remote_port(struct io_backend *backend,
+			 struct address_info *local,
+			 struct address_info *target);
+
 struct command *
 make_direct_tcpip_hook(struct io_backend *backend);
 
 struct command *
-tcpip_forward_hook(struct io_backend *backend);
+make_tcpip_forward_hook(struct io_backend *backend);
 
 #endif /* LSH_TCPFORWARD_COMMANDS_H_INCLUDED */
