@@ -1,3 +1,12 @@
+Mon Apr  5 11:43:12 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/client_userauth.c: Bent the user authentication mechanism
+ 	into a command.
+
+	* src/client.c (request_service): Rewrote as a command. Also
+	removed some other old code. 
+	(make_request_service): Renamed function (was request_service()). 
+
 Sun Apr  4 22:18:54 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server.c (do_spawn_shell): Use the make_io_fd function.
