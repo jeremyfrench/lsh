@@ -50,20 +50,12 @@ const char *packet_types[0x100] =
 ;
 
 static void
-handle_connection(struct abstract_write *w,
-		  struct lsh_string *packet)
+connection_handle_packet(struct ssh_connection *closure,
+			 struct lsh_string *packet)
 {
-  CAST(ssh_connection, closure, w);
   UINT8 msg;
 
-  if (closure->busy)
-    {
-      werror("connection.c: Internal error: connection busy. Disconnecting!\n");
-      EXCEPTION_RAISE(closure->e,
-		      make_protocol_exception(SSH_DISCONNECT_BY_APPLICATION,
-					      "Internal error."));
-      return;
-    }
+  assert(!closure->paused);
   
   if (!packet->length)
     {
@@ -132,6 +124,33 @@ handle_connection(struct abstract_write *w,
 }
 
 static void
+connection_handle_pending(struct ssh_connection *self)
+{
+  while (!self->paused && !string_queue_is_empty(&self->pending))
+    connection_handle_packet(self, string_queue_remove_head(&self->pending));
+}
+
+/* Deal with pausing of the connection. */
+static void
+do_handle_connection(struct abstract_write *w,
+		     struct lsh_string *packet)
+{
+  CAST(ssh_connection, self, w);
+
+  if (self->paused)
+    string_queue_add_tail(&self->pending, packet);
+
+  else if (string_queue_is_empty(&self->pending))
+    connection_handle_packet(self, packet);
+
+  else
+    {
+      string_queue_add_tail(&self->pending, packet);
+      connection_handle_pending(self);
+    }
+}
+
+static void
 do_fail(struct packet_handler *closure UNUSED,
 	struct ssh_connection *connection,
 	struct lsh_string *packet)
@@ -166,17 +185,18 @@ static struct packet_handler unimplemented_handler =
 
 /* GABA:
    (class
-     (name exc_protocol_handler)
+     (name exc_connection_handler)
      (super exception_handler)
      (vars
+       (backend object io_backend)
        (connection object ssh_connection)))
 */
 
 static void
-do_exc_protocol_handler(struct exception_handler *s,
-			const struct exception *e)
+do_exc_connection_handler(struct exception_handler *s,
+			  const struct exception *e)
 {
-  CAST(exc_protocol_handler, self, s);
+  CAST(exc_connection_handler, self, s);
 
   switch (e->type)
     {
@@ -190,20 +210,45 @@ do_exc_protocol_handler(struct exception_handler *s,
       }
       break;
 
+    case EXC_PAUSE_CONNECTION:
+      assert(!self->connection->paused);
+      self->connection->paused = 1;
+      EXCEPTION_RAISE(self->super.parent,
+		      make_simple_exception(EXC_PAUSE_READ, "locking connection."));
+      break;
+
+    case EXC_PAUSE_START_CONNECTION:
+      /* NOTE: Raising EXC_PAUSE_START_READ will not by itself make
+       * the connection start processing pending packets. Not until
+       * the peer sends us more data.
+       *
+       * So any code that raises EXC_PAUSE_START_CONNECTION should
+       * also call connection_handle_pending() at a safe place. We
+       * can't call it here, as we may be in the middle of the
+       * handling of a packet. Installing a callout would be best. */
+      
+      assert(self->connection->paused);
+      EXCEPTION_RAISE(self->super.parent,
+		      make_simple_exception(EXC_PAUSE_START_READ, "unlocking connection."));
+      
+      self->connection->paused = 0;
+
+      break;
+      
     default:
       EXCEPTION_RAISE(self->super.parent, e);
     }
 }
 
-struct exception_handler *
-make_exc_protocol_handler(struct ssh_connection *connection,
+static struct exception_handler *
+make_exc_connection_handler(struct ssh_connection *connection,
 			  struct exception_handler *parent,
 			  const char *context)
 {
-  NEW(exc_protocol_handler, self);
+  NEW(exc_connection_handler, self);
 
   self->super.parent = parent;
-  self->super.raise = do_exc_protocol_handler;
+  self->super.raise = do_exc_connection_handler;
   self->super.context = context;
   
   self->connection = connection;
@@ -226,10 +271,10 @@ make_ssh_connection(UINT32 flags,
   connection->peer = peer;
   
   connection->debug_comment = debug_comment;
-  connection->super.write = handle_connection;
+  connection->super.write = do_handle_connection;
 
   /* Exception handler that sends a proper disconnect message on protocol errors */
-  connection->e = make_exc_protocol_handler(connection, e, HANDLER_CONTEXT);
+  connection->e = make_exc_connection_handler(connection, e, HANDLER_CONTEXT);
 
   connection->established = c;
   
@@ -251,7 +296,8 @@ make_ssh_connection(UINT32 flags,
   connection->send_mac = NULL;
   connection->send_crypto = NULL;
 
-  connection->busy = 0;
+  connection->paused = 0;
+  string_queue_init(&connection->pending);
   
   connection->kex_state = KEX_STATE_INIT;
 
@@ -336,23 +382,20 @@ void connection_init_io(struct ssh_connection *connection,
   connection->send_compress = connection->rec_compress = NULL;
 }
 
-/* Serialization. Breaks if we ever return to the main loop with the
- * connection locked.
- *
- * A better implementation should communicate with the packet source
- * to stop reading packets while the connection is locked. Perhaps by
- * raising appropriate exceptions, if we are to keep the connection
- * code free from i/o.*/
+/* Serialization. */
 
 void connection_lock(struct ssh_connection *self)
 {
-  assert(!self->busy);
-  self->busy = 1;
+  const struct exception pause
+    = STATIC_EXCEPTION(EXC_PAUSE_CONNECTION, "locking connection.");
+    
+  EXCEPTION_RAISE(self->e, &pause);
 }
 
 void connection_unlock(struct ssh_connection *self)
 {
-  assert(self->busy);
-  self->busy = 0;
+  const struct exception unpause
+    = STATIC_EXCEPTION(EXC_PAUSE_START_CONNECTION, "unlocking connection.");
+    
+  EXCEPTION_RAISE(self->e, &unpause);
 }
-

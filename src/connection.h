@@ -126,15 +126,10 @@
        (send_compress object compress_instance)
 
        ; For operations that require serialization. In particular
-       ; the server side of user authentication.
+       ; the server side of user authentication. 
        
-       ; To handle this intelligently, we should stop reading from the
-       ; socket, and/or put received packets on a wait queue.
-
-       ; Currently, we don't do anything like that, we use this flag
-       ; for sanity checks, and relies on the functions setting the flag
-       ; to clear it before returning to the main loop.
-       (busy . int)
+       (paused . int)
+       (pending struct string_queue)
        
        ; Key exchange 
        (kex_state . int)
@@ -172,10 +167,12 @@ make_ssh_connection(UINT32 flags,
 		    struct command_continuation *c,
 		    struct exception_handler *e);
 
+#if 0
 struct exception_handler *
 make_exc_protocol_handler(struct ssh_connection *connection,
 			  struct exception_handler *parent,
 			  const char *context);
+#endif
 
 void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,
