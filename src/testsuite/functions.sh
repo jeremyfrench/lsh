@@ -70,6 +70,12 @@ need_tcputils () {
     fi
 }
 
+need_tsocks () {
+    if type tsocks >/dev/null 2>&1 ; then : ; else
+	test_skip
+    fi
+}
+
 trap 'eval "$ATEXIT ; exit \$test_result"' 0
 
 at_exit () {
