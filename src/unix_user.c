@@ -601,10 +601,7 @@ do_read_file(struct lsh_user *u,
     case 0:
       /* Child */
       {
-#define BUF_SIZE 1024
 	int fd;
-	char buf[BUF_SIZE];
-
 	close(out[0]);
 	
 	if ( (me != user->super.uid) && (setuid(user->super.uid) < 0) )
@@ -634,47 +631,11 @@ do_read_file(struct lsh_user *u,
 	    werror("unix_user.c: do_read_file(): %z\n", x->msg);
 	    _exit(EXIT_FAILURE);
 	  }
-	
-	/* Copying loop */
-	for (;;)
-	  {
-	    int res = read(fd, buf, BUF_SIZE);
-	    switch (res)
-	      {
-	      case -1:
-		if (errno != EINTR)
-		  {
-		    werror("unix_user.c: do_read_file(): read failed (errno = %i): %z\n",
-			   errno, STRERROR(errno));
-		    _exit(EXIT_FAILURE);
-		  }
-		break;
-	      case 0:
-		/* EOF */
-		_exit(EXIT_SUCCESS);
-	      default:
-		{
-		  unsigned length = res;
-		  unsigned i;
-		  for (i = 0; i<length; )
-		    {
-		      res = write(out[1], buf + i, length - i);
-		      if (res < 0)
-			{
-			  if (errno != EINTR)
-			    {
-			      werror("unix_user.c: do_read_file(): write failed (errno = %i): %z\n",
-				     errno, STRERROR(errno));
-			      _exit(EXIT_FAILURE);
-			    }
-			}
-		      else
-			i += res;
-		    }
-		}
-	      }
-	  }
-#undef BUF_SIZE
+
+	if (lsh_copy_file(fd, out[1]))
+	  _exit(EXIT_SUCCESS);
+	else
+	  _exit(EXIT_FAILURE);
       }
     }
 }
