@@ -26,20 +26,36 @@
 #ifndef LSH_TYPES_H_INCLUDED
 #define LSH_TYPES_H_INCLUDED
 
+#if 0
+/* FIXME: This should probably be set in config.h by autoconf */
+
+/* The crypt function requires _XOPEN_SOURCE, while the initgroups
+ * function requires _BSD_SOURCE. strsignal() is a GNU extension. */
+#ifndef _GNU_SOURCE
+#  define _GNU_SOURCE
+#endif
+/* This needs to be defined before any system header (which may include
+ * <features.h>) is included. */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-#include "include/crypto_types.h"
+#endif
+
+/* This will include config.h for us. */
+#include "crypto_types.h"
 
 #include <stdlib.h>
 
 #ifdef __GNUC__
 #define NORETURN __attribute__ ((noreturn))
 #define PRINTF_STYLE(f, a) __attribute__ ((format(printf, f, a)))
+#define UNUSED __attribute__ ((unused))
 #else
 #define NORETURN
 #define PRINTF_STYLE(f, a)
+#define UNUSED
 #endif
 
 /* Some macros */
@@ -113,7 +129,7 @@ struct lsh_class
 
 struct lsh_string_header
 {
-  int magic;
+  int magic; /* For a sentinel value */
 };
 
 #else   /* !DEBUG_ALLOC */
@@ -146,7 +162,7 @@ struct callback
 
 /* Return values.
  *
- * Every handler should return one or more of these values, ored together.
+ * Every handler should return one or more of these values, or-ed together.
  * Zero means everything is ok.
  */
 
