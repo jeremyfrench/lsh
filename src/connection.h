@@ -125,7 +125,9 @@ struct ssh_connection;
 
 #define C_WRITE(c, s) A_WRITE((c)->write, (s) )
 
-struct ssh_connection *make_ssh_connection(struct command_continuation *c);
+struct ssh_connection *
+make_ssh_connection(struct command_continuation *c,
+		    struct exception_handler *e);
 
 struct exception_handler *
 make_exc_protocol_handler(struct ssh_connection *connection,
@@ -134,8 +136,7 @@ make_exc_protocol_handler(struct ssh_connection *connection,
 
 void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,
-			struct randomness *r,
-			struct exception_handler *e);
+			struct randomness *r);
 
 struct packet_handler *make_fail_handler(void);
 struct packet_handler *make_unimplemented_handler(void);  

@@ -205,12 +205,17 @@ make_exc_protocol_handler(struct ssh_connection *connection,
   return &self->super;
 }
 
-struct ssh_connection *make_ssh_connection(struct command_continuation *c)
+struct ssh_connection *
+make_ssh_connection(struct command_continuation *c,
+		    struct exception_handler *e)
 {
   int i;
 
   NEW(ssh_connection, connection);
   connection->super.write = handle_connection;
+
+  /* Exception handler that sends a proper disconnect message on protocol errors */
+  connection->e = make_exc_protocol_handler(connection, e, HANDLER_CONTEXT);
 
   connection->established = c;
   
@@ -291,8 +296,7 @@ struct ssh_connection *make_ssh_connection(struct command_continuation *c)
 
 void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,
-			struct randomness *r,
-			struct exception_handler *e)
+			struct randomness *r)
 {
   /* Initialize i/o hooks */
   connection->raw = raw;
@@ -305,9 +309,6 @@ void connection_init_io(struct ssh_connection *connection,
 	  r),
 	connection),
       "Sent");
-
-  /* Exception handler that sends a proper disconnect message on protocol errors */
-  connection->e = make_exc_protocol_handler(connection, e, HANDLER_CONTEXT);
 
   /* Initial encryption state */
   connection->send_crypto = connection->rec_crypto = NULL;
