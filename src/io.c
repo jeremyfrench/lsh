@@ -565,8 +565,10 @@ do_listen_callback(struct io_callback *s,
 		   struct lsh_fd *fd)
 {
   CAST(io_listen_callback, self, s);
+  /* FIXME: ip6 support? */
   struct sockaddr_in peer;
-  size_t addr_len = sizeof(peer);
+
+  socklen_t addr_len = sizeof(peer);
   int conn;
 
   conn = accept(fd->fd,
@@ -615,7 +617,7 @@ do_connect_callback(struct io_callback *s,
 {
   CAST(io_connect_callback, self, s);
   int socket_error;
-  size_t len = sizeof(socket_error);
+  socklen_t len = sizeof(socket_error);
   
   /* Check if the connection was successful */
   if ((getsockopt(fd->fd, SOL_SOCKET, SO_ERROR,
