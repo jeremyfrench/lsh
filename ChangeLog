@@ -1,5 +1,13 @@
 2002-06-27  Niels Möller  <niels@s3.kth.se>
 
+	* src/lsh_proxy.c (main) [WITH_X11_FORWARD]: Fixed type warning.
+
+	* src/lsh.c (main_argp_parser): Use STATIC_REPORT_EXCEPTION_INFO,
+	and const.
+	* src/lshd.c (main): Likewise.
+
+	* configure.ac: Fixed type, enable_x11_forward should work now.
+
 	* src/server_x11.c (server_x11_setup): Bugfixes. Send cookie on
 	xauth stdin. 
 
@@ -13,6 +21,8 @@
 
 	* src/exception.c (make_report_exception_handler): Use a const
 	report_exception_info object.
+	* src/command.c (make_catch_report_apply): Likewise.
+
 
 2002-06-27  Pontus Sköld  <pont@soua.net>
 
