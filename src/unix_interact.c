@@ -156,7 +156,7 @@ do_kill_window_subscriber(struct resource *s)
      (super interact)
      (vars
        (tty_fd . int)
-       (password_fd . int)
+       (askpass . "const char *")
        ; Signal handler
        (winch_handler object resource)
        (nsubscribers . unsigned)
@@ -176,46 +176,42 @@ unix_is_tty(struct interact *s)
 /* FIXME: Rewrite to operate on tty_fd. */
 static struct lsh_string *
 unix_read_password(struct interact *s,
-		   uint32_t max_length,
+		   uint32_t max_length UNUSED,
 		   const struct lsh_string *prompt, int free)
 {
   CAST(unix_interact, self, s);
-  
-  if (self->password_fd >= 0)
+
+  if (self->askpass)
     {
-      /* No prompts */
-      struct lsh_string *password;
-      int length;
-
-      if (free)
-	lsh_string_free(prompt);
-
-      password = lsh_string_alloc(max_length);
-
-      /* NOTE: It's not entirely clear that this will work right if
-       * password_fd is a pipe, and more than one password is written
-       * to it. There's no buffering saving leftover data between
-       * reads. */
-      length = read_line(self->password_fd, max_length, password->data);
+      const char *argv[4];
+      int null = open("/dev/null", O_RDONLY);
       
-      if (length)
+      if (null < 0)
 	{
-	  lsh_string_trunc(password, length);
-	  return password;
-	}
-      else
-	{
-	  lsh_string_free(password);
+	  if (free)
+	    lsh_string_free(prompt);
+	  
 	  return NULL;
 	}
+      
+      argv[0] = argv[1] = self->askpass;
+      argv[2] = lsh_get_cstring(prompt);
+      if (!argv[2])
+	{
+	  close(null);
+	  if (free)
+	    lsh_string_free(prompt);
+	}
+      argv[3] = NULL;
+      return lsh_popen_read(self->askpass, argv, null, 100);
     }
   else
     {
       /* NOTE: Ignores max_length; instead getpass's limit applies. */
-      
+  
       char *password;
       const char *cprompt = lsh_get_cstring(prompt);
-      
+  
       if (!cprompt)
 	{
 	  if (free)
@@ -224,7 +220,7 @@ unix_read_password(struct interact *s,
 	}
       /* NOTE: This function uses a static buffer. */
       password = getpass(cprompt);
-
+  
       if (free)
 	lsh_string_free(prompt);
   
@@ -235,6 +231,13 @@ unix_read_password(struct interact *s,
     }
 }
 
+static void
+unix_set_askpass(struct interact *s,
+		 const char *askpass)
+{
+  CAST(unix_interact, self, s);
+  self->askpass = askpass;
+}
 
 static int
 unix_yes_or_no(struct interact *s,
@@ -437,6 +440,7 @@ make_unix_interact(void)
   
   self->super.is_tty = unix_is_tty;
   self->super.read_password = unix_read_password;
+  self->super.set_askpass = unix_set_askpass;
   self->super.yes_or_no = unix_yes_or_no;
   self->super.get_attributes = unix_get_attributes;
   self->super.set_attributes = unix_set_attributes;
@@ -444,7 +448,7 @@ make_unix_interact(void)
   self->super.window_change_subscribe = unix_window_change_subscribe;
 
   self->tty_fd = -1;
-  self->password_fd = -1;
+  self->askpass = NULL;
   
 #if HAVE_STDTTY_FILENO
   if (isatty(STDTTY_FILENO))
