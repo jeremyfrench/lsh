@@ -25,9 +25,9 @@
 
 #include "blocking_write.h"
 #include "format.h"
-#include "io.h"
-#include "read_scan.h"
-#include "sexp.h"
+#include "io_commands.h"
+#include "sexp_commands.h"
+#include "spki.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -42,7 +42,42 @@
 #include <unistd.h>
 #endif
 
+static struct read_sexp_command read_sexp
+= STATIC_READ_SEXP(SEXP_CANONICAL, 0);
+
+#define READ_SEXP (&read_sexp.super.super)
+
+static struct print_sexp_command write_canonical
+= STATIC_PRINT_SEXP(SEXP_CANONICAL);
+#define CANONICAL (&write_canonical.super.super.super)
+
+static struct print_sexp_command write_transport
+= STATIC_PRINT_SEXP(SEXP_TRANSPORT);
+#define TRANSPORT (&write_transport.super.super.super)
+
 #include "lsh_writekey.c.x"
+
+/* GABA:
+   (expr
+     (name make_writekey)
+     (globals
+       (prog1 PROG1)
+       (private2public PRIVATE2PUBLIC)
+       (open IO_WRITE_FILE)
+       (stdin IO_READ_STDIN)
+       (read READ_SEXP)
+       (transport TRANSPORT)
+       (canonical CANONICAL))
+     (params
+       (private object io_write_file_info)
+       (public object io_write_file_info))
+     (expr
+       (lambda (backend)
+         (let ((key (read (stdin backend))))
+           (prog1 (transport (open backend public) (private2public key))
+	          ; FIXME: Add encryption here
+	          (canonical (open backend private) key))))))
+*/
 
 static void
 do_lsh_writekey_handler(struct exception_handler *s UNUSED,
@@ -57,50 +92,11 @@ do_lsh_writekey_handler(struct exception_handler *s UNUSED,
 static struct exception_handler exc_handler =
 STATIC_EXCEPTION_HANDLER(do_lsh_writekey_handler, NULL);
 
+#if 0
 /* FIXME: Should support encryption of the private key. */
 
-static struct sexp *dsa_private2public(struct sexp_iterator *i)
-{
-  struct sexp *p;
-  struct sexp *q;
-  struct sexp *g;
-  struct sexp *y;
-  struct sexp *x;
-  
-  p = SEXP_GET(i);
-  
-  if (!(p && sexp_check_type(p, "p", NULL)))
-    return NULL;
 
-  SEXP_NEXT(i); q = SEXP_GET(i);
-  
-  if (!(q && sexp_check_type(q, "q", NULL)))
-    return NULL;
-
-  SEXP_NEXT(i); g = SEXP_GET(i);
-  
-  if (!(g && sexp_check_type(g, "g", NULL)))
-    return NULL;
-
-  SEXP_NEXT(i); y = SEXP_GET(i);
-  
-  if (!(y && sexp_check_type(y, "y", NULL)))
-    return NULL;
-
-  SEXP_NEXT(i); x = SEXP_GET(i);
-  
-  if (!(x && sexp_check_type(x, "x", NULL)))
-    return NULL;
-
-  SEXP_NEXT(i);
-  if (SEXP_GET(i))
-    return NULL;
-
-  return sexp_l(2, sexp_z("public-key"),
-		sexp_l(5, sexp_z("dsa"), p, q, g, y, -1), -1);
-}
-
-/* GABA:
+/* ;; GABA:
    (class
      (name write_key)
      (super sexp_handler)
@@ -109,6 +105,7 @@ static struct sexp *dsa_private2public(struct sexp_iterator *i)
        (public_file . "char *")
        (private_file . "char *")))
 */
+
 
 static int
 do_write_key(struct sexp_handler *h, struct sexp *private)
@@ -167,6 +164,8 @@ do_write_key(struct sexp_handler *h, struct sexp *private)
   return LSH_OK | LSH_CLOSE;
 }
 
+#endif
+
 #define BLOCK_SIZE 2000
 
 static void usage(void)
@@ -177,9 +176,8 @@ static void usage(void)
 int main(int argc UNUSED, char **argv UNUSED)
 {
   NEW(io_backend, backend);
-  NEW(write_key, handler);
 
-  int status = 1;
+  /* int status = 1; */
   char *public;
   char *private;
   
@@ -193,7 +191,7 @@ int main(int argc UNUSED, char **argv UNUSED)
 	if (!home)
 	  {
 	    werror("lsh_keygen: $HOME not set.\n");
-	    return 1;
+	    return EXIT_FAILURE;
 	  }
 	buf = alloca(strlen(home) + 20);
 	sprintf(buf, "%s/.lsh", home);
@@ -231,17 +229,21 @@ int main(int argc UNUSED, char **argv UNUSED)
   
   init_backend(backend);
 
-  handler->super.handler = do_write_key;
-  handler->status = &status;
-  handler->public_file = public;
-  handler->private_file = private;
-  
-  io_read(make_io_fd(backend, STDIN_FILENO, &exc_handler),
-	  make_buffered_read(BLOCK_SIZE,
-			     make_read_sexp(&handler->super, SEXP_TRANSPORT, 0)),
-	  NULL);
-
+  {
+    CAST_SUBTYPE
+      (command, work,
+       make_writekey(make_io_write_file_info(private,
+					     O_CREAT | O_EXCL | O_WRONLY,
+					     0600,
+					     BLOCK_SIZE),
+		     make_io_write_file_info(public,
+					     O_CREAT | O_EXCL | O_WRONLY,
+					     0644,
+					     BLOCK_SIZE)));
+    
+    COMMAND_CALL(work, backend, &discard_continuation, &exc_handler);
+  }
   io_run(backend);
 
-  return status;
+  return EXIT_SUCCESS;
 }
