@@ -1,3 +1,21 @@
+2002-03-16  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/server_session.c (format_exit_signal): Removed "Process
+	killed by" from the message.
+	(spawn_process): Rewrote function, using USER_SPAWN and struct
+	spawn_info. Updated the shell_request, exec_request and
+	subsystem_request handlers.
+	(init_spawn_info): New function.
+	(do_spawn_subsystem): Fixed argument list, should be -c <program>. 
+
+	* src/unix_user.c (exec_shell): Added the real login shell to the
+	lsh-execuv argument list.
+	(do_spawn): Bug fix, don't reference info->pty->tty_name if
+	info->pty is NULL.
+	(make_unix_user): Initialize the spawn pointer.
+
+	* src/unix_process.c: Added some trace calls.
+
 2002-03-15  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/userauth.h (struct spawn_info): Struct with information for

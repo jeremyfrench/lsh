@@ -1,27 +1,35 @@
 News for the 1.3.7 release
 
-	Reorganized server pty handling. Now it works also on Solaris.
-
-	Improved key reexchange handling. Should now follow the spec,
-	and request key reexchange once per hour (reexchange requests
-	after 1GB data not yet implemented).
+	Improved key reexchange handling. Should now request key
+	reexchange about once per hour (reexchange requests after 1GB
+	data not yet implemented).
 
 	Use the aes256-cbc cipher by default. Includes sparc assembler
 	code, and the C implementation has been optimized as well.
-
-	In interactive mode, the client modifyes the terminal's VMIN
-	and VTIME values to get more than one character per packet.
 
 	Implemented handshake timeout, both server and client
 	disconnects if handshake and userauthentication is not
 	completed in about ten minutes.
 
+	Reorganized server pty handling. Now it works also on Solaris.
+
+	Added utmp logging.
+
+	Rewrote the code for executing user processes. Now it avoids
+	the sequence fork(), setuid(), exec(), which may leave server
+	memory readable by users between setuid and exec. Instead, the
+	server exec:s a helper program lsh-execuv that changes the uid
+	before exec:ing the shell.
+	
+	Helper program to let the server use PAM passwords.
+	Contributed by Pontus Sköld.
+
+	In interactive mode, the client modifyes the terminal's VMIN
+	and VTIME values to get more than one character per packet.
+
 	Fixed the default port handling on systems that don't include
 	ssh in /etc/services.
 
-	Helper program to let the server use PAM passwords.
-	Contributed by Pontus Sköld.
-	
 	New client option --subsystem for starting a subsystem such as
 	sftp on the server. Appeared already in 1.3.6, but wasn't
 	mentioned in NEWS.
