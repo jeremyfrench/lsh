@@ -53,12 +53,15 @@ void do_free_resources(struct resource_node **q);
 
 
 /* Sanity check */
+
+/* NOTE: This happens normally during gc_final. Under all other
+ * circumstances, it's a serious error. */
 void
 dont_free_live_resource(int alive)
 {
   if (alive)
-    fatal("dont_free_live_resource: "
-	  "About to garbage collect a live resource!\n");
+    werror("dont_free_live_resource: "
+	   "garbage collecting a live resource!\n");
 }
 
 /* For resources that are only marked as dead, and taken care of
