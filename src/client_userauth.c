@@ -378,15 +378,15 @@ do_exc_client_userauth(struct exception_handler *s,
   if ( (e->type == EXC_USERAUTH)
        && (self->state->next < LIST_LENGTH(self->state->userauth->methods)))
     {
-      CAST_SUBTYPE(client_userauth_method, method,
-		   LIST(self->state->userauth->methods)[self->state->current]);
-      
-      self->state->current = self->state->next;
-      self->state->next++;
-      
-      self->state->failure
-	= CLIENT_USERAUTH_LOGIN(method, self->state->userauth,
-				self->state->connection, s);
+      self->state->current = self->state->next++;
+      {      
+	CAST_SUBTYPE(client_userauth_method, method,
+		     LIST(self->state->userauth->methods)[self->state->current]);
+	
+	self->state->failure
+	  = CLIENT_USERAUTH_LOGIN(method, self->state->userauth,
+				  self->state->connection, s);
+      }
     }
   else
     EXCEPTION_RAISE(s->parent, e);
