@@ -24,7 +24,7 @@ Makefile.am: Makefile.am.in
 
 SCHEME = $(SCHEME_PROGRAM) -l $(srcdir)/scm/$(SCHEME_NAME)-compat.scm
 
-bin_PROGRAMS = lsh lsh_keygen lsh_writekey lsh-decode-key sexp_conv srp-gen
+bin_PROGRAMS = lsh lsh_keygen lsh_writekey lsh-decode-key sexp-conv srp-gen
 sbin_PROGRAMS = lshd lsh_proxy
 bin_SCRIPTS = lsh-authorize ssh-conv
 noinst_PROGRAMS = prime_table digit_table pkcs5-test

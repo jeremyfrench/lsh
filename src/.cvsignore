@@ -28,7 +28,7 @@ packet_types.h
 pkcs5-test
 prime_table
 prime_table.h
-sexp_conv
+sexp-conv
 sexp_table.h
 sexp_test
 srp-gen

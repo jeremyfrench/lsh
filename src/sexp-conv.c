@@ -1,4 +1,4 @@
-/* sexp_conv.c
+/* sexp-conv.c
  *
  * Reads a sexp in given form from, and writes it in given form.
  *
@@ -39,7 +39,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "sexp_conv.c.x"
+#include "sexp-conv.c.x"
 
 /* Global, for simplicity */
 int exit_code = EXIT_SUCCESS;
@@ -79,7 +79,7 @@ do_exc_sexp_conv_handler(struct exception_handler *self,
       {
 	CAST(io_exception, e, x);
 	exit_code = EXIT_FAILURE;
-	werror("sexp_conv: %z, (errno = %i)\n", x->msg, e->error);
+	werror("sexp-conv: %z, (errno = %i)\n", x->msg, e->error);
 	break;
       }
     default:
@@ -92,7 +92,7 @@ do_exc_sexp_conv_handler(struct exception_handler *self,
 /* Option parsing */
 
 const char *argp_program_version
-= "sexp_conv-" VERSION;
+= "sexp-conv-" VERSION;
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
