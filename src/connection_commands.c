@@ -477,7 +477,7 @@ do_connection_remember(struct command *s,
   COMMAND_RETURN(c, resource);
 }
 
-COMMAND_SIMPLE(connection_remember)
+DEFINE_COMMAND_SIMPLE(connection_remember, a)
 {
   CAST(ssh_connection, connection, a);
   NEW(connection_remember_command, self);
@@ -547,12 +547,10 @@ STATIC_COLLECT_2_FINAL(collect_if_srp_2);
 struct collect_info_1 connection_if_srp_command =
 STATIC_COLLECT_1(&collect_info_if_srp_2);
 
-COMMAND_STATIC(connection_require_userauth)
+DEFINE_COMMAND(connection_require_userauth, a, c, e UNUSED)
 {
   CAST(ssh_connection, connection, a);
 
-  (void) e; /* Make gcc happy. We don't use the e argument. */
-  
   if (connection->user)
     COMMAND_RETURN(c, connection);
   else
