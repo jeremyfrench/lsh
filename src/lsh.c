@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <locale.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "getopt.h"
@@ -86,7 +87,8 @@ int main(int argc, char **argv)
   char *host = NULL;
   char *port = "ssh";
   int option;
-
+  char *user;
+  
   struct sockaddr_in remote;
 
   struct lsh_string *random_seed;
@@ -97,18 +99,22 @@ int main(int argc, char **argv)
   struct make_kexinit *make_kexinit;
   struct packet_handler *kexinit_handler;
   struct lookup_verifier *lookup;
-
+  struct ssh_service *service;
+  
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
   setlocale(LC_CTYPE, "");
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
   
-  while((option = getopt(argc, argv, "dp:qv")) != -1)
+  while((option = getopt(argc, argv, "dl:p:qv")) != -1)
     switch(option)
       {
       case 'p':
 	port = optarg;
+	break;
+      case 'l':
+	user = optarg;
 	break;
       case 'q':
 	quiet_flag = 1;
@@ -127,6 +133,21 @@ int main(int argc, char **argv)
     usage();
 
   host = argv[optind];
+  if (!user)
+      user = getenv("LOGNAME");
+
+  if (!user)
+    {
+      werror("lsh: No user name.\n"
+	     "Please use the -l option, or set LOGNAME in the environment\n");
+      exit(EXIT_FAILURE);
+    }
+
+  if (!get_inaddr(&remote, host, port, "tcp"))
+    {
+      fprintf(stderr, "No such host or service\n");
+      exit(1);
+    }
 
   random_seed = ssh_format("%z", "gazonk");
   r = make_poor_random(&sha_algorithm, random_seed);
@@ -140,17 +161,20 @@ int main(int argc, char **argv)
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
   make_kexinit = make_test_kexinit(r);
-  kexinit_handler = make_kexinit_handler(CONNECTION_CLIENT,
-					 make_kexinit, algorithms
-					 /* FIXME: Initialize some service */
-					 );
 
-  if (!get_inaddr(&remote, host, port, "tcp"))
-    {
-      fprintf(stderr, "No such host or service\n");
-      exit(1);
-    }
-
+  service = make_session_service
+    (make_alist(0, -1),
+     make_alist(0, -1));
+  
+  kexinit_handler = make_kexinit_handler
+    (CONNECTION_CLIENT,
+     make_kexinit, algorithms,
+     make_service_handler(make_alist
+			  (1, ATOM_SSH_USERAUTH, 
+			   make_client_userauth(ssh_format("%lz", user),
+						ATOM_SSH_CONNECTION,
+						service))));
+  
   if (!io_connect(&backend, &remote, NULL,
 		  make_client_callback(&backend,
 				       "lsh - a free ssh",
