@@ -13,6 +13,9 @@ struct session
 
   struct lsh_string *session_id;
   struct abstract_write write;   /* Socket connected to the other end */
+
+  int provides_privacy;
+  int provides_integrity;
 };
 
 #endif /* LSH_SESSION_H_INCLUDED */
