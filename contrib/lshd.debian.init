@@ -16,7 +16,7 @@ DESC="secure shell service"
 PIDFILE=/var/run/$NAME.pid
 
 # Use this port
-# The default for lshd is whatever is lisetn in /etc/services.
+# The default for lshd is whatever is listed in /etc/services.
 # When using both lsh and some ssh1 implementation, it might make
 # sense to use a different port.
 PORT=22
