@@ -875,10 +875,11 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
   const char **argv;
   const char **shell_argv;
   const char *argv0;
-  
+
   char *tz = getenv("TZ");
   unsigned i, j;
-  
+
+  trace("unix_user: exec_shell\n");
   assert(user->shell);
 
   /* Make up an initial environment */
@@ -951,22 +952,26 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
 
   /* Build argument list for lsh-execuv. We need place for
    *
-   * lsh-execuv -u uid -g gid -n name -i -- argv0 <user args> NULL
+   * lsh-execuv -u uid -g gid -n name -i -- $SHELL argv0 <user args> NULL
    */
-#define MAX_ARG 10
-#define NUMBER(x) lsh_get_cstring(ssh_format("%ldi", (x)))
+#define MAX_ARG 11
+#define NUMBER(x) lsh_get_cstring(ssh_format("%di", (x)))
   
   argv = alloca(sizeof(char *) * (MAX_ARG + info->argc + 1));
   i = 0;
   argv[i++] = "lsh-execuv";
   argv[i++] = "-u";
+  trace("exec_shell: After -u\n");
   argv[i++] = NUMBER(user->super.uid);
   argv[i++] = "-g";
+  trace("exec_shell: After -g\n");
   argv[i++] = NUMBER(user->gid);
   argv[i++] = "-n";
   argv[i++] = lsh_get_cstring(user->super.name);
   argv[i++] = "-i";
+  trace("exec_shell: After -i\n");
   argv[i++] = "--";
+  argv[i++] = lsh_get_cstring(user->shell);
   shell_argv = argv + i;
   
   argv[i++] = argv0;
@@ -985,6 +990,8 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
   /* NOTE: The execve prototype uses char * const argv, and similarly
    * for envp, which seems broken. */
   
+  trace("exec_shell: before exec\n");
+
   /* Use lsh-execuv only if we need to change our uid. */
   if (user->super.uid == getuid())
     execve(lsh_get_cstring(user->shell), (char **) shell_argv, (char **) envp);
@@ -1017,11 +1024,11 @@ do_spawn(struct lsh_user *u,
     {
       werror("fork failed: %z\n", STRERROR(errno));
       close(sync[0]); close(sync[1]);
-#if 0
+
       close(info->in[0]);  close(info->in[1]);
       close(info->out[0]); close(info->out[1]);
       close(info->err[0]); close(info->err[1]);
-#endif
+
       return NULL;
     }
   else if (child)
@@ -1031,10 +1038,12 @@ do_spawn(struct lsh_user *u,
       char dummy;
       int res;
       
+      trace("do_spawn: parent process\n");
+
       /* Close the child's fd:s (and don't care about close(-1) ) */
       close(info->in[0]);
       close(info->out[1]);
-      close(info->err[2]);
+      close(info->err[1]);
 
       close(sync[1]);
 
@@ -1052,18 +1061,27 @@ do_spawn(struct lsh_user *u,
       while (res < 0 && errno == EINTR);
 
       close(sync[0]);
+
+      trace("do_spawn: parent after sync\n");
       
       process = unix_process_setup(child, info->login, &user->super, &c,
-				   info->peer, info->pty->tty_name);
+				   info->peer,
+				   info->pty ? info->pty->tty_name : NULL);
+
+      trace("do_spawn: parent after process setup\n");
+
       REAP(user->ctx->reaper, child, c);
       return process;
     }
   else
     { /* Child */
       int tty = -1;
-      
+
+      trace("do_spawn: child process\n");
       if (!chdir_home(user))
 	_exit(EXIT_FAILURE);
+
+      trace("do_spawn: child after chdir\n");
       
 #if WITH_PTY_SUPPORT
       if (info->pty)
@@ -1080,6 +1098,9 @@ do_spawn(struct lsh_user *u,
 	    debug("lshd: unix_user.c: Opening slave tty... Ok.\n");
 	}
 #endif /* WITH_PTY_SUPPORT */
+
+      trace("do_spawn: child after pty\n");
+      
       /* Now any tty processing is done, so notify our parent by
        * closing the syncronization pipe. */
       
@@ -1099,6 +1120,7 @@ do_spawn(struct lsh_user *u,
 	  _exit(EXIT_FAILURE);
 	}
 
+      trace("do_spawn: child before stderr dup\n");
       if (!dup_error_stream())
 	{
 	  werror("unix_user.c: Failed to dup old stderr. Bye.\n");
@@ -1112,6 +1134,8 @@ do_spawn(struct lsh_user *u,
 	}
 #undef DUP_FD_OR_TTY
       
+      trace("do_spawn: child after stderr dup\n");
+
       /* Unconditionally close all the fd:s, no matter if some
        * of them are -1. */
       close(info->in[0]);
@@ -1233,6 +1257,7 @@ make_unix_user(struct lsh_string *name,
   user->super.chdir_home = do_chdir_home;
   user->super.fork_process = do_fork_process;
   user->super.exec_shell = do_exec_shell;
+  user->super.spawn = do_spawn;
   
   user->super.uid = uid;
   user->gid = gid;
