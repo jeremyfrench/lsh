@@ -20,8 +20,11 @@ int do_read_packet(struct read_handler **h,
 		   struct abstract_read *read)
 {
   struct read_packet *closure = (struct read_packet *) *h;
+
+#if 0
   while(1)
     {
+#endif
       switch(closure->state)
 	{
 	case WAIT_HEADER:
@@ -184,7 +187,9 @@ int do_read_packet(struct read_handler **h,
 	default:
 	  fatal("Internal error\n");
 	}
+#if 0
     }
+#endif
 }
 
 struct read_handler *make_read_packet(struct abstract_write *handler,
