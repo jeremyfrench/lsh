@@ -24,6 +24,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#error read_scan.h is obsolete
+
 #ifndef LSH_READ_SCAN_H_INCLUDED
 #define LSH_READ_SCAN_H_INCLUDED
 
