@@ -32,6 +32,7 @@
 
 #include "format.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "read_data.h"
 #include "ssh.h"
 #include "werror.h"
@@ -132,10 +133,10 @@ format_open_confirmation(struct ssh_channel *channel,
 
   packet = lsh_string_alloc(l1 + l2);
 
-  ssh_format_write(CONFIRM_FORMAT, l1, packet->data, CONFIRM_ARGS);
+  ssh_format_write(CONFIRM_FORMAT, packet, 0, CONFIRM_ARGS);
 
   va_start(args, format);
-  ssh_vformat_write(format, l2, packet->data+l1, args);
+  ssh_vformat_write(format, packet, l1, args);
   va_end(args);
 
   return packet;
@@ -605,7 +606,7 @@ DEFINE_PACKET_HANDLER(static, global_request_handler, connection, packet)
   int name;
   int want_reply;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_GLOBAL_REQUEST)
@@ -660,13 +661,13 @@ DEFINE_PACKET_HANDLER(static, global_request_handler, connection, packet)
 DEFINE_PACKET_HANDLER(static, global_success_handler,
 		      connection, packet)
 {
-  if (packet->length != 1)
+  if (lsh_string_length(packet) != 1)
     {
       PROTOCOL_ERROR(connection->e, "Invalid GLOBAL_REQUEST_SUCCESS message.");
       return;
     }
 
-  assert(packet->data[0] == SSH_MSG_REQUEST_SUCCESS);
+  assert(lsh_string_data(packet)[0] == SSH_MSG_REQUEST_SUCCESS);
 
   if (object_queue_is_empty(&connection->table->pending_global_requests))
     {
@@ -686,13 +687,13 @@ STATIC_EXCEPTION(EXC_GLOBAL_REQUEST, "Global request failed");
 DEFINE_PACKET_HANDLER(static, global_failure_handler,
 		      connection, packet)
 {
-  if (packet->length != 1)
+  if (lsh_string_length(packet) != 1)
     {
       PROTOCOL_ERROR(connection->e, "Invalid GLOBAL_REQUEST_FAILURE message.");
       return;
     }
 
-  assert(packet->data[0] == SSH_MSG_REQUEST_FAILURE);
+  assert(lsh_string_data(packet)[0] == SSH_MSG_REQUEST_FAILURE);
 
   if (object_queue_is_empty(&connection->table->pending_global_requests))
     {
@@ -846,7 +847,7 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
   struct channel_request_info info;
   uint32_t channel_number;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_channel_request(&buffer, &channel_number, &info))
     {
@@ -1070,7 +1071,7 @@ DEFINE_PACKET_HANDLER(static, channel_open_handler,
   struct simple_buffer buffer;
   struct channel_open_info info;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_channel_open(&buffer, &info))
     {
@@ -1153,7 +1154,7 @@ DEFINE_PACKET_HANDLER(static, window_adjust_handler,
   uint32_t channel_number;
   uint32_t size;
 
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_WINDOW_ADJUST)
@@ -1196,7 +1197,7 @@ DEFINE_PACKET_HANDLER(static, channel_data_handler,
   uint32_t channel_number;
   struct lsh_string *data;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_DATA)
@@ -1219,29 +1220,30 @@ DEFINE_PACKET_HANDLER(static, channel_data_handler,
 	    }
 	  else
 	    {
-              if (data->length > channel->rec_max_packet)
+	      uint32_t length = lsh_string_length(data);
+              if (length > channel->rec_max_packet)
                 {
                   werror("Channel data larger than rec_max_packet. Extra data ignored.\n");
 		  lsh_string_trunc(data, channel->rec_max_packet);
                 }
 
-	      if (data->length > channel->rec_window_size)
+	      if (length > channel->rec_window_size)
 		{
 		  /* Truncate data to fit window */
 		  werror("Channel data overflow. Extra data ignored.\n");
 		  debug("   (data->length=%i, rec_window_size=%i).\n", 
-			data->length, channel->rec_window_size);
+			length, channel->rec_window_size);
 
 		  lsh_string_trunc(data, channel->rec_window_size);
 		}
 
-	      if (!data->length)
+	      if (!length)
 		{
 		  /* Ignore data packet */
 		  lsh_string_free(data);
 		  return;
 		}
-	      channel->rec_window_size -= data->length;
+	      channel->rec_window_size -= length;
 
 	      CHANNEL_RECEIVE(channel, CHANNEL_DATA, data);
 	    }
@@ -1266,7 +1268,7 @@ DEFINE_PACKET_HANDLER(static, channel_extended_data_handler,
   uint32_t type;
   struct lsh_string *data;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_EXTENDED_DATA)
@@ -1290,31 +1292,32 @@ DEFINE_PACKET_HANDLER(static, channel_extended_data_handler,
 	    }
 	  else
 	    {
-              if (data->length > channel->rec_max_packet)
+	      uint32_t length = lsh_string_length(data);
+              if (length > channel->rec_max_packet)
                 {
                   werror("Channel data larger than rec_max_packet. Extra data ignored.\n");
 		  lsh_string_trunc(data, channel->rec_max_packet);
                 }
 
-	      if (data->length > channel->rec_window_size)
+	      if (length > channel->rec_window_size)
 		{
 		  /* Truncate data to fit window */
 		  werror("Channel extended data overflow. "
 			 "Extra data ignored.\n");
 		  debug("   (data->length=%i, rec_window_size=%i).\n", 
-			data->length, channel->rec_window_size);
+			length, channel->rec_window_size);
 
 		  lsh_string_trunc(data, channel->rec_window_size);
 		}
 	      
-	      if (!data->length)
+	      if (!length)
 		{
 		  /* Ignore data packet */
 		  lsh_string_free(data);
 		  return;
 		}
 
-	      channel->rec_window_size -= data->length;
+	      channel->rec_window_size -= length;
 
 	      switch(type)
 		{
@@ -1346,7 +1349,7 @@ DEFINE_PACKET_HANDLER(static, channel_eof_handler,
   unsigned msg_number;
   uint32_t channel_number;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_EOF)
@@ -1407,7 +1410,7 @@ DEFINE_PACKET_HANDLER(static, channel_close_handler,
   unsigned msg_number;
   uint32_t channel_number;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_CLOSE)
@@ -1470,7 +1473,7 @@ DEFINE_PACKET_HANDLER(static, channel_open_confirm_handler,
   uint32_t window_size;
   uint32_t max_packet;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_OPEN_CONFIRMATION)
@@ -1524,7 +1527,7 @@ DEFINE_PACKET_HANDLER(static, channel_open_failure_handler,
   const uint8_t *language;
   uint32_t language_length;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_OPEN_FAILURE)
@@ -1566,7 +1569,7 @@ DEFINE_PACKET_HANDLER(static, channel_success_handler,
   uint32_t channel_number;
   struct ssh_channel *channel;
       
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_SUCCESS)
@@ -1598,7 +1601,7 @@ DEFINE_PACKET_HANDLER(static, channel_failure_handler,
   uint32_t channel_number;
   struct ssh_channel *channel;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_FAILURE)
@@ -1806,9 +1809,10 @@ struct lsh_string *
 channel_transmit_data(struct ssh_channel *channel,
 		      struct lsh_string *data)
 {
-  assert(data->length <= channel->send_window_size);
-  assert(data->length <= channel->send_max_packet);
-  channel->send_window_size -= data->length;
+  uint32_t length = lsh_string_length(data);
+  assert(length <= channel->send_window_size);
+  assert(length <= channel->send_max_packet);
+  channel->send_window_size -= length;
   
   return ssh_format("%c%i%fS",
 		    SSH_MSG_CHANNEL_DATA,
@@ -1821,9 +1825,10 @@ channel_transmit_extended(struct ssh_channel *channel,
 			  uint32_t type,
 			  struct lsh_string *data)
 {
-  assert(data->length <= channel->send_window_size);
-  assert(data->length <= channel->send_max_packet);
-  channel->send_window_size -= data->length;
+  uint32_t length = lsh_string_length(data);
+  assert(length <= channel->send_window_size);
+  assert(length <= channel->send_max_packet);
+  channel->send_window_size -= length;
 
   return ssh_format("%c%i%i%fS",
 		    SSH_MSG_CHANNEL_EXTENDED_DATA,
@@ -2103,10 +2108,10 @@ format_channel_open(int type, uint32_t local_channel_number,
 
   packet = lsh_string_alloc(l1 + l2);
 
-  ssh_format_write(OPEN_FORMAT, l1, packet->data, OPEN_ARGS);
+  ssh_format_write(OPEN_FORMAT, packet, 0, OPEN_ARGS);
 
   va_start(args, format);
-  ssh_vformat_write(format, l2, packet->data+l1, args);
+  ssh_vformat_write(format, packet, l1, args);
   va_end(args);
 
   return packet;
@@ -2147,10 +2152,10 @@ format_channel_request(int type, struct ssh_channel *channel,
 
   packet = lsh_string_alloc(l1 + l2);
 
-  ssh_format_write(REQUEST_FORMAT, l1, packet->data, REQUEST_ARGS);
+  ssh_format_write(REQUEST_FORMAT, packet, 0, REQUEST_ARGS);
 
   va_start(args, format);
-  ssh_vformat_write(format, l2, packet->data+l1, args);
+  ssh_vformat_write(format, packet, l1, args);
   va_end(args);
 
   return packet;
@@ -2177,10 +2182,10 @@ format_global_request(int type, int want_reply,
 
   packet = lsh_string_alloc(l1 + l2);
 
-  ssh_format_write(REQUEST_FORMAT, l1, packet->data, REQUEST_ARGS);
+  ssh_format_write(REQUEST_FORMAT, packet, 0, REQUEST_ARGS);
 
   va_start(args, format);
-  ssh_vformat_write(format, l2, packet->data+l1, args);
+  ssh_vformat_write(format, packet, l1, args);
   va_end(args);
 
   return packet;
