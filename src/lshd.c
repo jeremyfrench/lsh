@@ -89,9 +89,6 @@ struct command_2 close_on_sighup;
 #include <unistd.h>
 #endif
 
-/* Disabled in the 1.4 series. */
-#undef WITH_X11_FORWARD
-#define WITH_X11_FORWARD 0
 
 /* Option parsing */
 
