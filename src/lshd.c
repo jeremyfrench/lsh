@@ -126,8 +126,7 @@ int main(int argc, char **argv)
 
   struct sockaddr_in local;
 
-  /* STATIC, because the object exists at gc time */
-  struct io_backend backend = { STATIC_HEADER };
+  NEW(io_backend, backend);
 
   struct reap *reaper;
   
@@ -176,7 +175,7 @@ int main(int argc, char **argv)
       exit(1);
     }
 
-  init_backend(&backend);
+  init_backend(backend);
   reaper = make_reaper();
   random_seed = ssh_format("%z", "foobar");
 
@@ -206,15 +205,15 @@ int main(int argc, char **argv)
 			       make_server_session_service
 			       (make_alist(0, -1),
 				make_alist(1, ATOM_SHELL,
-					   make_shell_handler(&backend,
+					   make_shell_handler(backend,
 							      reaper),
 					   -1)),
 			       -1)),
 		   -1)),
        -1)));
      
-  if (!io_listen(&backend, &local, 
-	    make_server_callback(&backend,
+  if (!io_listen(backend, &local, 
+	    make_server_callback(backend,
 				 "lsh - a free ssh",
 				 SSH_MAX_PACKET,
 				 r, make_kexinit,
@@ -224,7 +223,7 @@ int main(int argc, char **argv)
       return 1;
     }
   
-  reaper_run(reaper, &backend);
+  reaper_run(reaper, backend);
 
   return 0;
 }

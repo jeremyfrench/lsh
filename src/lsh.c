@@ -108,8 +108,7 @@ int main(int argc, char **argv)
   
   struct sockaddr_in remote;
 
-  /* STATIC, because the object exists at gc time */
-  struct io_backend backend = { STATIC_HEADER };
+  NEW(io_backend, backend);
 
   struct lsh_string *random_seed;
   struct randomness *r;
@@ -171,7 +170,7 @@ int main(int argc, char **argv)
       exit(1);
     }
 
-  init_backend(&backend);
+  init_backend(backend);
   
   random_seed = ssh_format("%z", "gazonk");
   r = make_poor_random(&sha_algorithm, random_seed);
@@ -208,9 +207,9 @@ int main(int argc, char **argv)
   service = make_connection_service
     (make_alist(0, -1),
      make_alist(0, -1),
-     make_client_startup(io_read(&backend, in, NULL, NULL),
-			 io_write(&backend, out, BLOCK_SIZE, NULL),
-			 io_write(&backend, err, BLOCK_SIZE, NULL),
+     make_client_startup(io_read(backend, in, NULL, NULL),
+			 io_write(backend, out, BLOCK_SIZE, NULL),
+			 io_write(backend, err, BLOCK_SIZE, NULL),
 			 ATOM_SHELL, ssh_format(""), &lsh_exit_code));
   
   kexinit_handler = make_kexinit_handler
@@ -221,8 +220,8 @@ int main(int argc, char **argv)
 					  ATOM_SSH_CONNECTION,
 					  service)));
   
-  if (!io_connect(&backend, &remote, NULL,
-		  make_client_callback(&backend,
+  if (!io_connect(backend, &remote, NULL,
+		  make_client_callback(backend,
 				       "lsh - a free ssh",
 				       SSH_MAX_PACKET,
 				       r, make_kexinit,
@@ -237,7 +236,7 @@ int main(int argc, char **argv)
   /* Exit code if no session is established */
   lsh_exit_code = 17;
   
-  io_run(&backend);
+  io_run(backend);
 
   return lsh_exit_code;
 }
