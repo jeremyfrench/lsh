@@ -30,6 +30,8 @@
 #include "exception.h"
 #include "alist.h"
 
+#include <time.h>
+
 /* Needed by spki.h.x */
 /* SPKI validity. No online validity tests supported. */
 struct spki_validity
