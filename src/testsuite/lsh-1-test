@@ -14,4 +14,4 @@ fi
 
 . $srcdir/functions.sh
 
-spawn_lshd && run_lsh "exit" && test_success
+spawn_lshd && run_lsh "exit 0" && test_success

@@ -16,4 +16,4 @@ fi
 
 HOSTKEY=$srcdir/key-2.private
 
-spawn_lshd && run_lsh "exit" && test_success
+spawn_lshd && run_lsh "exit 0" && test_success

@@ -24,7 +24,7 @@ LSHD_FLAGS="$LSHD_FLAGS -c all"
 
 spawn_lshd && for c in $ALGORITHMS ; do 
     echo Trying encryption flag $c
-    if LSH_FLAGS="$OLD_FLAGS -c $c" exec_lsh "exit"; then
+    if LSH_FLAGS="$OLD_FLAGS -c $c" exec_lsh "exit 0"; then
 	echo "   Ok"
     else
 	echo "   Fail"; test_fail
