@@ -1369,11 +1369,11 @@ io_listen(struct io_backend *b,
 /* AF_LOCAL sockets */
 
 static void
-safe_popd(int old_cd, struct lsh_string *directory)
+safe_popd(int old_cd, const char *directory)
 {
   while (fchdir(old_cd) < 0)
     if (errno != EINTR)
-      fatal("io.c: Failed to cd back from %S (errno = %i): %z\n",
+      fatal("io.c: Failed to cd back from %z (errno = %i): %z\n",
 	    directory, errno, STRERROR(errno));
       
   close(old_cd);
@@ -1382,21 +1382,19 @@ safe_popd(int old_cd, struct lsh_string *directory)
 /* Changes the cwd, making sure that it it has reasonable permissions,
  * and that we can change back later. */
 static int
-safe_pushd(struct lsh_string *directory,
+safe_pushd(const char *directory,
 	   int create)
 {
   int old_cd;
   struct stat sbuf;
 
-  assert(directory && NUL_TERMINATED(directory));
-
   if (create)
     {  
       /* First create the directory, in case it doesn't yet exist. */
-      if ( (mkdir(directory->data, 0700) < 0)
+      if ( (mkdir(directory, 0700) < 0)
 	   && (errno != EEXIST) )
 	{
-	  werror("io.c: Creating directory %S failed "
+	  werror("io.c: Creating directory %z failed "
 		 "(errno = %i): %z\n", directory, errno, STRERROR(errno));
 	}
     }
@@ -1425,7 +1423,7 @@ safe_pushd(struct lsh_string *directory,
    * Even if the directory is chmod:et to zero, or unlinked, we can
    * probably fchdir to it later. */
 
-  while (chdir(directory->data) < 0)
+  while (chdir(directory) < 0)
     if (errno != EINTR)
       {
 	close(old_cd);
@@ -1435,7 +1433,7 @@ safe_pushd(struct lsh_string *directory,
   /* Check that it has reasonable permissions */
   if (stat(".", &sbuf) < 0)
     {
-      werror("io.c: Failed to stat() \".\" (supposed to be %S).\n"
+      werror("io.c: Failed to stat() \".\" (supposed to be %z).\n"
 	     "  (errno = %i): %z\n", directory, errno, STRERROR(errno));
 
       safe_popd(old_cd, directory);
@@ -1444,7 +1442,7 @@ safe_pushd(struct lsh_string *directory,
 
   if (sbuf.st_uid != getuid())
     {
-      werror("io.c: Socket directory %S not owned by user.\n", directory);
+      werror("io.c: Socket directory %z not owned by user.\n", directory);
 
       safe_popd(old_cd, directory);
       return -1;
@@ -1452,7 +1450,7 @@ safe_pushd(struct lsh_string *directory,
     
   if (sbuf.st_mode & (S_IRWXG | S_IRWXO))
     {
-      werror("io.c: Permission bits on %S are too loose.\n", directory);
+      werror("io.c: Permission bits on %z are too loose.\n", directory);
 
             safe_popd(old_cd, directory);
       return -1;
@@ -1493,7 +1491,7 @@ io_listen_local(struct io_backend *b,
 
   /* cd to it, but first save old cwd */
 
-  old_cd = safe_pushd(directory, 1);
+  old_cd = safe_pushd(directory->data, 1);
   if (old_cd < 0)
     return NULL;
 
@@ -1506,7 +1504,7 @@ io_listen_local(struct io_backend *b,
     {
       werror("io.c: unlink '%S'/'%S' failed (errno = %i): %z\n",
 	     directory, name, errno, STRERROR(errno));
-      safe_popd(old_cd, directory);
+      safe_popd(old_cd, directory->data);
       return NULL;
     }
 
@@ -1521,7 +1519,7 @@ io_listen_local(struct io_backend *b,
   /* Ok, now we restore umask and cwd */
   umask(old_umask);
 
-  safe_popd(old_cd, directory);
+  safe_popd(old_cd, directory->data);
 
   return fd;
 }
@@ -1556,13 +1554,13 @@ io_connect_local(struct io_backend *b,
 
   /* cd to it, but first save old cwd */
 
-  old_cd = safe_pushd(directory, 0);
+  old_cd = safe_pushd(directory->data, 0);
   if (old_cd < 0)
     return NULL;
   
   fd = io_connect(b, (struct sockaddr *) addr, addr_length, c, e);
 
-  safe_popd(old_cd, directory);
+  safe_popd(old_cd, directory->data);
 
   return fd;
 }
