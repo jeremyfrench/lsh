@@ -241,8 +241,8 @@ static int do_connect(struct io_backend *backend,
 */
 
 static int do_connect_port(struct command *s,
-				 struct lsh_object *x,
-				 struct command_continuation *c)
+			   struct lsh_object *x,
+			   struct command_continuation *c)
 {
   CAST(connect_port, self, s);
   CAST(ssh_connection, connection, x);
@@ -264,8 +264,8 @@ struct command *make_connect_port(struct io_backend *backend,
 
 static struct lsh_object *
 collect_connect_port(struct collect_info_2 *info,
-			   struct lsh_object *a,
-			   struct lsh_object *b)
+		     struct lsh_object *a,
+		     struct lsh_object *b)
 {
   CAST(io_backend, backend, a);
   CAST(address_info, target, b);
@@ -276,11 +276,11 @@ collect_connect_port(struct collect_info_2 *info,
   return &make_connect_port(backend, target)->super;
 }
 
-static struct collect_info_2 collect_info_connect_2 =
+static struct collect_info_2 collect_info_connect_port_2 =
 STATIC_COLLECT_2_FINAL(collect_connect_port);
 
-struct collect_info_1 connect_with_connection =
-STATIC_COLLECT_1(&collect_info_connect_2);
+struct collect_info_1 connect_with_port =
+STATIC_COLLECT_1(&collect_info_connect_port_2);
 
 
 /* GABA:
@@ -321,6 +321,7 @@ make_simple_connect(struct io_backend *backend,
 }
 
 
+/* (connect port connection) */
 /* GABA:
    (class
      (name connect_connection)
@@ -349,6 +350,7 @@ struct command *make_connect_connection(struct io_backend *backend)
 
   return &self->super;
 }
+
 
 static int do_simple_listen(struct command *s,
 			    struct lsh_object *a,
