@@ -1,3 +1,8 @@
+Sun Feb 28 20:01:32 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/cvs_headers, src/used_headers: Fixes for compatibility with
+	non-GNU sed. 
+
 Sat Feb 27 04:43:25 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/werror.c, src/werror.h (set_error_ignore): New function.
