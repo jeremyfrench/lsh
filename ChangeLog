@@ -1,3 +1,8 @@
+2004-02-18  Niels Möller  <niels@s3.kth.se>
+
+	* src/Makefile.am (prime_table.h, sexp_table.h, digit_table.h):
+	Deleted rules for building obsolete files.
+
 2004-02-18  Pontus Sköld  <pont@soua.net>
 
 	* src/process_atoms: Fixed bashims. 
