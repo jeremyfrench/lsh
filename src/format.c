@@ -543,7 +543,8 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
   assert(buffer == start + size);
 }
 
-unsigned format_size_in_decimal(UINT32 n)
+unsigned
+format_size_in_decimal(UINT32 n)
 {
   int i;
   int e;
@@ -582,7 +583,8 @@ format_hex_string(UINT8 *buffer, UINT32 length, const UINT8 *data)
     }
 }
 
-void format_decimal(unsigned length, UINT8 *buffer, UINT32 n)
+void
+format_decimal(unsigned length, UINT8 *buffer, UINT32 n)
 {
   unsigned i;
   
@@ -593,7 +595,8 @@ void format_decimal(unsigned length, UINT8 *buffer, UINT32 n)
     }
 }
 
-static int write_decimal_length(UINT8 *buffer, UINT32 n)
+static int
+write_decimal_length(UINT8 *buffer, UINT32 n)
 {
   int length = format_size_in_decimal(n);
 
@@ -643,7 +646,7 @@ lsh_string_prefixp(const struct lsh_string *prefix,
 	   && !memcmp(prefix->data, s->data, prefix->length));
 }
 
-struct lsh_string*
+struct lsh_string *
 lsh_string_colonize(struct lsh_string *s, int every, int freeflag)
 {
   UINT32 i = 0;
@@ -702,7 +705,7 @@ lsh_string_bubblebabble_c( struct lsh_string *s, UINT32 i )
   return (5*c + (s->data[j]*7+s->data[k])) % 36;
 }
 
-struct lsh_string*
+struct lsh_string *
 lsh_string_bubblebabble(struct lsh_string *s, int freeflag)
 {
   /* Implements the Bubble Babble Binary Data Encoding by Huima as
