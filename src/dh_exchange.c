@@ -27,6 +27,8 @@
 
 #include <assert.h>
 
+#include "nettle/bignum.h"
+
 #include "publickey_crypto.h"
 
 #include "connection.h"
@@ -104,7 +106,7 @@ dh_generate_secret(struct dh_method *self,
   /* Generate a random number, 1 < x <= p-1 = O(G) */
   mpz_init_set(tmp, self->G->order);  
   mpz_sub_ui(tmp, tmp, 1);
-  bignum_random(r, self->random, tmp);
+  nettle_mpz_random(r, self->random, lsh_random, tmp);
   mpz_add_ui(r, r, 1);
   mpz_clear(tmp);
 
