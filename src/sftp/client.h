@@ -34,21 +34,21 @@ struct client_ctx
   struct sftp_output *o;
 
   /* Status from latest message. */
-  UINT32 status;
+  uint32_t status;
 };
 
 /* Handles are strings, choosen by the server. */
 struct client_handle
 {
-  UINT32 length;
-  UINT8 *data;
+  uint32_t length;
+  uint8_t *data;
 };
 
 /* Creates a file handle */
 struct client_handle *
 sftp_open(struct client_ctx *ctx,
 	  const char *name,
-	  UINT32 flags,
+	  uint32_t flags,
 	  const struct sftp_attrib *a);
 
 /* Destroys a file or directory handle */

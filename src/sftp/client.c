@@ -34,15 +34,15 @@
 #include <string.h>
 
 /* We never have several pending calls at once. */
-static UINT32 
+static uint32_t 
 sftp_client_new_id(void)
 { return 17; }
 
 static struct client_handle *
 client_get_handle(struct sftp_input *i)
 {
-  UINT32 length;
-  UINT8 *data;
+  uint32_t length;
+  uint8_t *data;
   struct client_handle *handle;
   
   data = sftp_get_string(i, &length);
@@ -56,11 +56,11 @@ client_get_handle(struct sftp_input *i)
   return handle;
 }
 
-static UINT8
-client_get_msg(struct client_ctx *ctx, UINT32 expected)
+static uint8_t
+client_get_msg(struct client_ctx *ctx, uint32_t expected)
 {
-  UINT8 msg;
-  UINT32 id;
+  uint8_t msg;
+  uint32_t id;
   
   if (sftp_get_uint8(ctx->i, &msg)
       && sftp_get_uint32(ctx->i, &id)
@@ -71,10 +71,10 @@ client_get_msg(struct client_ctx *ctx, UINT32 expected)
     fatal("Protocol error, client_get_msg");
 }
 
-static UINT32
-client_get_status(struct client_ctx *ctx, UINT32 id)
+static uint32_t
+client_get_status(struct client_ctx *ctx, uint32_t id)
 {
-  UINT32 status;
+  uint32_t status;
   
   if ( (client_get_msg(ctx, id) == SSH_FXP_STATUS)
        && sftp_get_uint32(ctx->i, &status))
@@ -94,11 +94,11 @@ client_put_handle(struct client_ctx *ctx, struct client_handle *handle)
   struct client_handle *
 sftp_open(struct client_ctx *ctx,
 	  const char *name,
-	  UINT32 flags,
+	  uint32_t flags,
 	  const struct sftp_attrib *a)
 {
-  UINT8 msg;
-  UINT32 id = sftp_client_new_id();
+  uint8_t msg;
+  uint32_t id = sftp_client_new_id();
   
   /* Send a OPEN message */
   sftp_set_msg(ctx->o, SSH_FXP_OPEN);
@@ -133,7 +133,7 @@ int
 sftp_close(struct client_ctx *ctx,
 	   struct client_handle *handle)
 {
-  UINT32 id = sftp_client_new_id();
+  uint32_t id = sftp_client_new_id();
 
   sftp_set_msg(ctx->o, SSH_FXP_CLOSE); /* Send a close message */
   sftp_set_id(ctx->o, id);

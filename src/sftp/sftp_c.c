@@ -29,7 +29,8 @@
 
 #include "sftp_c.h"
 
-void sftp_attrib_from_stat( struct stat *st, struct sftp_attrib* a )
+void
+sftp_attrib_from_stat(const struct stat *st, struct sftp_attrib* a)
 {
   a->permissions = st->st_mode;
   a->uid = st->st_uid;
@@ -45,12 +46,17 @@ void sftp_attrib_from_stat( struct stat *st, struct sftp_attrib* a )
 	      );
 }
 
-mode_t sftp_attrib_perms( struct sftp_attrib* a )
+int
+sftp_attrib_perms(const struct sftp_attrib *a,
+		  mode_t *mode)
 {
-  if( a->flags & SSH_FILEXFER_ATTR_PERMISSIONS )
-    return a->permissions;
+  if (a->flags & SSH_FILEXFER_ATTR_PERMISSIONS)
+    {
+      *mode = a->permissions;
+      return 1;
+    }
   
-  return -1;
+  return 0;
 }
 
 void
@@ -147,7 +153,7 @@ int sftp_toggle_mem( struct sftp_mem* mem )
 }
 
 int
-sftp_store( struct sftp_mem* mem, void* data, UINT32 datalen )
+sftp_store( struct sftp_mem* mem, void* data, uint32_t datalen )
 {
   if( ( mem->size - mem->used ) < datalen ) /* Won't fit? */
     if ( 
@@ -163,9 +169,9 @@ sftp_store( struct sftp_mem* mem, void* data, UINT32 datalen )
   return 0;
 }
 
-void* sftp_retrieve( struct sftp_mem* mem, UINT32 desired, UINT32* realsize )
+void* sftp_retrieve( struct sftp_mem* mem, uint32_t desired, uint32_t* realsize )
 {
-  UINT8* s;
+  uint8_t* s;
 
   if( ( mem->size - mem->used ) < desired ) /* Requests more than available? */
     *realsize =  mem->size - mem->used;
@@ -182,19 +188,19 @@ void* sftp_retrieve( struct sftp_mem* mem, UINT32 desired, UINT32* realsize )
 
 
 
-UINT32 sftp_rumask( UINT32 new )
+uint32_t sftp_rumask( uint32_t new )
 {
-  static UINT32 old = 0;
-  UINT32 ret = old;
+  static uint32_t old = 0;
+  uint32_t ret = old;
 
   old = new;
   return ret;
 }
 
 
-UINT32 sftp_unique_id()
+uint32_t sftp_unique_id()
 {
-  static UINT32 id = 0;
+  static uint32_t id = 0;
 
   id++;
   return id;
@@ -206,8 +212,8 @@ int sftp_handshake(
 		   struct sftp_output *out
 		   )
 {
-  UINT8 msg = -1 ;
-  UINT32 use_version = -1;
+  uint8_t msg = -1 ;
+  uint32_t use_version = -1;
   int ok;
 
   sftp_set_msg( out, SSH_FXP_INIT );
@@ -265,12 +271,12 @@ sftp_rename_init(struct sftp_callback *state,
 		 int op_id,
 		 struct sftp_input *in UNUSED, 
 		 struct sftp_output *out,
-		 const UINT8 *srcname,
-		 UINT32 srclen,
-		 const UINT8 *dstname,
-		 UINT32 dstlen)
+		 const uint8_t *srcname,
+		 uint32_t srclen,
+		 const uint8_t *dstname,
+		 uint32_t dstlen)
 {
-  UINT32 id;
+  uint32_t id;
 
   sftp_null_state(state);
 
@@ -294,12 +300,12 @@ sftp_symlink_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in UNUSED, 
 		  struct sftp_output *out, 
-		  const UINT8 *linkname,
-		  UINT32 linklen,
-		  const UINT8 *targetname,
-		  UINT32 targetlen)
+		  const uint8_t *linkname,
+		  uint32_t linklen,
+		  const uint8_t *targetname,
+		  uint32_t targetlen)
 {
-  UINT32 id;
+  uint32_t id;
   sftp_null_state(state);
   
   id = sftp_unique_id();
@@ -321,10 +327,10 @@ sftp_remove_init(struct sftp_callback *state,
 		 int op_id,
 		 struct sftp_input *in UNUSED, 
 		 struct sftp_output *out,
-		 const UINT8 *name,
-		 UINT32 namelen)
+		 const uint8_t *name,
+		 uint32_t namelen)
 {
-  UINT32 id;
+  uint32_t id;
   sftp_null_state(state);
 
   id = sftp_unique_id();
@@ -346,12 +352,12 @@ sftp_mkdir_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in UNUSED, 
 		struct sftp_output *out,
-		const UINT8 *name,
-		UINT32 namelen,
+		const uint8_t *name,
+		uint32_t namelen,
 		struct sftp_attrib *a)
 {
-  UINT32 id;
-  UINT32 mask;
+  uint32_t id;
+  uint32_t mask;
   struct sftp_attrib locala = *a;
 
   sftp_null_state(state);
@@ -379,10 +385,10 @@ sftp_realpath_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in UNUSED, 
 		   struct sftp_output *out,
-		   const UINT8 *name,
-		   UINT32 namelen)
+		   const uint8_t *name,
+		   uint32_t namelen)
 {
-  UINT32 id;
+  uint32_t id;
 
   sftp_null_state(state);
 
@@ -404,10 +410,10 @@ sftp_readlink_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in UNUSED, 
 		   struct sftp_output *out,
-		   const UINT8 *name,
-		   UINT32 namelen)
+		   const uint8_t *name,
+		   uint32_t namelen)
 {
-  UINT32 id;
+  uint32_t id;
   sftp_null_state(state);
 
   id = sftp_unique_id();
@@ -429,10 +435,10 @@ sftp_rmdir_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in UNUSED, 
 		struct sftp_output *out,
-		const UINT8 *name,
-		UINT32 namelen)
+		const uint8_t *name,
+		uint32_t namelen)
 {
-  UINT32 id;
+  uint32_t id;
   sftp_null_state(state);
 
   id = sftp_unique_id();
@@ -454,10 +460,10 @@ sftp_stat_init(struct sftp_callback *state,
 	       int op_id,
 	       struct sftp_input *in UNUSED,
 	       struct sftp_output *out,
-	       const UINT8 *name,
-	       UINT32 namelen)
+	       const uint8_t *name,
+	       uint32_t namelen)
 {
-  UINT32 id;
+  uint32_t id;
   sftp_null_state(state);
 
   id = sftp_unique_id();
@@ -481,10 +487,10 @@ sftp_lstat_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in UNUSED,
 		struct sftp_output *out,
-		const UINT8 *name,
-		UINT32 namelen)
+		const uint8_t *name,
+		uint32_t namelen)
 {
-  UINT32 id;
+  uint32_t id;
   sftp_null_state(state);
 
   id = sftp_unique_id();
@@ -506,10 +512,10 @@ sftp_fstat_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in UNUSED,
 		struct sftp_output *out,
-		const UINT8 *handle,
-		UINT32 handlelen)
+		const uint8_t *handle,
+		uint32_t handlelen)
 {
-  UINT32 id;
+  uint32_t id;
   sftp_null_state(state);
 
   id = sftp_unique_id();
@@ -530,11 +536,11 @@ sftp_setstat_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in UNUSED,
 		  struct sftp_output *out,
-		  const UINT8 *name,
-		  UINT32 namelen,
+		  const uint8_t *name,
+		  uint32_t namelen,
 		  struct sftp_attrib* attrib)
 {
-  UINT32 id;
+  uint32_t id;
   sftp_null_state(state);
 
   id=sftp_unique_id();
@@ -556,11 +562,11 @@ sftp_fsetstat_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input* in UNUSED,
 		   struct sftp_output* out,
-		   const UINT8 *handle,
-		   UINT32 handlelen,
+		   const uint8_t *handle,
+		   uint32_t handlelen,
 		   struct sftp_attrib* attrib)
 {
-  UINT32 id;
+  uint32_t id;
   sftp_null_state(state);
 
   id=sftp_unique_id();
@@ -585,12 +591,12 @@ sftp_get_mem_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in UNUSED,
 		  struct sftp_output *out,
-		  const UINT8 *name, 
-		  UINT32 namelen,
+		  const uint8_t *name, 
+		  uint32_t namelen,
 		  struct sftp_mem *mem,
 		  off_t startat)
 {
-  UINT32 id;
+  uint32_t id;
   struct sftp_attrib a;
 
   sftp_null_state( state );   /* Make sure these structures are "clean" */
@@ -614,8 +620,8 @@ sftp_get_mem_init(struct sftp_callback *state,
 
 void
 sftp_get_mem_step_one(struct sftp_callback *next,
-		      UINT8 msg,
-		      UINT32 id,
+		      uint8_t msg,
+		      uint32_t id,
 		      struct sftp_input *in,
 		      struct sftp_output *out,
 		      const struct sftp_callback *state)
@@ -656,17 +662,17 @@ sftp_get_mem_step_one(struct sftp_callback *next,
 
 void
 sftp_get_mem_main(struct sftp_callback *next,
-		  UINT8 msg,
-		  UINT32 id,
+		  uint8_t msg,
+		  uint32_t id,
 		  struct sftp_input *in,
 		  struct sftp_output *out,
 		  const struct sftp_callback *state)
 {
  
-  UINT32 datalen;
+  uint32_t datalen;
   int done = 0;
 
-  UINT8* tmp;  
+  uint8_t* tmp;  
 
   *next = *state;
 
@@ -736,15 +742,15 @@ sftp_put_mem_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in UNUSED,
 		  struct sftp_output *out,
-		  const UINT8 *name, 
-		  UINT32 namelen,
+		  const uint8_t *name, 
+		  uint32_t namelen,
 		  struct sftp_mem *mem,
 		  off_t startat,
 		  struct sftp_attrib a)
 {
-  UINT32 id;
-  UINT32 flags;
-  UINT32 mask;
+  uint32_t id;
+  uint32_t flags;
+  uint32_t mask;
 
   sftp_null_state(state);
 
@@ -776,14 +782,14 @@ sftp_put_mem_init(struct sftp_callback *state,
 
 void
 sftp_put_mem_step_one(struct sftp_callback *next,
-		      UINT8 msg,
-		      UINT32 id,
+		      uint8_t msg,
+		      uint32_t id,
 		      struct sftp_input *in,
 		      struct sftp_output *out,
 		      const struct sftp_callback *state)
 {
-  UINT32 datalen;
-  UINT8* tmp;
+  uint32_t datalen;
+  uint8_t* tmp;
   *next = *state;
 
   if( msg == SSH_FXP_STATUS ) /* Status? */
@@ -818,16 +824,16 @@ sftp_put_mem_step_one(struct sftp_callback *next,
 
 void
 sftp_put_mem_main(struct sftp_callback *next,
-		  UINT8 msg,
-		  UINT32 id,
+		  uint8_t msg,
+		  uint32_t id,
 		  struct sftp_input *in,
 		  struct sftp_output *out,
 		  const struct sftp_callback *state)
 {
   int done = 0;
 
-  UINT32 datalen;
-  UINT8* tmp;  
+  uint32_t datalen;
+  uint8_t* tmp;  
   *next = *state;
  
   assert( msg == SSH_FXP_STATUS && id == state->id); 
@@ -921,11 +927,11 @@ sftp_get_file_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in,
 		   struct sftp_output *out,
-		   const UINT8 *name, 
-		   UINT32 namelen,
-		   const UINT8 *fname,
+		   const uint8_t *name, 
+		   uint32_t namelen,
+		   const uint8_t *fname,
 		   /* FIXME: fnamelen not used??? */
-		   UINT32 fnamelen,
+		   uint32_t fnamelen,
 		   int cont)
 {
   int openmode;
@@ -996,8 +1002,8 @@ sftp_get_file_init(struct sftp_callback *state,
 
 void
 sftp_get_file_step_one(struct sftp_callback *next,
-		       UINT8 msg,
-		       UINT32 id,
+		       uint8_t msg,
+		       uint32_t id,
 		       struct sftp_input *in,
 		       struct sftp_output *out,
 		       const struct sftp_callback *state)
@@ -1033,8 +1039,8 @@ sftp_get_file_step_one(struct sftp_callback *next,
 
 void
 sftp_get_file_step_two(struct sftp_callback *next,
-		       UINT8 msg,
-		       UINT32 id,
+		       uint8_t msg,
+		       uint32_t id,
 		       struct sftp_input *in,
 		       struct sftp_output *out,
 		       const struct sftp_callback *state)
@@ -1087,15 +1093,15 @@ sftp_get_file_step_two(struct sftp_callback *next,
 
 void
 sftp_get_file_main(struct sftp_callback *next,
-		   UINT8 msg,
-		   UINT32 id,
+		   uint8_t msg,
+		   uint32_t id,
 		   struct sftp_input *in,
 		   struct sftp_output *out,
 		   const struct sftp_callback *state)
 {
   int ret;
   int write_needed = 0;
-  UINT32 i;
+  uint32_t i;
 
   /* FIXME: This is ugly. The me object needs to be moved a pointer
   * away, or redsigned so that we don't need to modify it here. (Or
@@ -1222,11 +1228,11 @@ sftp_put_file_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in,
 		   struct sftp_output *out,
-		   const UINT8 *name,
-		   UINT32 namelen,
-		   const UINT8 *fname,
+		   const uint8_t *name,
+		   uint32_t namelen,
+		   const uint8_t *fname,
 		   /* FIXME: fnamelen not used??? */
-		   UINT32 fnamelen,
+		   uint32_t fnamelen,
 		   int cont)
 {
 /*
@@ -1294,14 +1300,14 @@ sftp_put_file_init(struct sftp_callback *state,
 
 void
 sftp_put_file_do_fstat(struct sftp_callback *next,
-		       UINT8 msg,
-		       UINT32 id,
+		       uint8_t msg,
+		       uint32_t id,
 		       struct sftp_input *in,
 		       struct sftp_output *out,
 		       const struct sftp_callback *state)
 {
-  UINT8* handle;
-  UINT32 handlelen;
+  uint8_t* handle;
+  uint32_t handlelen;
     
   *next = *state;
 
@@ -1328,13 +1334,13 @@ sftp_put_file_do_fstat(struct sftp_callback *next,
 
 void
 sftp_put_file_handle_stat(struct sftp_callback *next,
-			  UINT8 msg,
-			  UINT32 id,
+			  uint8_t msg,
+			  uint32_t id,
 			  struct sftp_input *in,
 			  struct sftp_output *out,
 			  const struct sftp_callback *state)
 {
-  UINT8 tmp[ SFTP_BLOCKSIZE ];
+  uint8_t tmp[ SFTP_BLOCKSIZE ];
   int ret;
 
   sftp_handle_attrs(next, msg, id, in, out, state );
@@ -1388,14 +1394,14 @@ sftp_put_file_handle_stat(struct sftp_callback *next,
 
 void
 sftp_put_file_step_one(struct sftp_callback *next,
-		       UINT8 msg,
-		       UINT32 id,
+		       uint8_t msg,
+		       uint32_t id,
 		       struct sftp_input *in,
 		       struct sftp_output *out,
 		       const struct sftp_callback *state)
 {
   int ret;
-  UINT8 tmp[ SFTP_BLOCKSIZE ];
+  uint8_t tmp[ SFTP_BLOCKSIZE ];
 
   *next = *state;
 
@@ -1440,13 +1446,13 @@ sftp_put_file_step_one(struct sftp_callback *next,
 
 void
 sftp_put_file_main(struct sftp_callback *next,
-		   UINT8 msg,
-		   UINT32 id,
+		   uint8_t msg,
+		   uint32_t id,
 		   struct sftp_input *in,
 		   struct sftp_output *out,
 		   const struct sftp_callback *state)
 {
-  UINT8 tmp[ SFTP_BLOCKSIZE ];
+  uint8_t tmp[ SFTP_BLOCKSIZE ];
   int ret;
   *next = *state;
 
@@ -1521,8 +1527,8 @@ sftp_ls_init(struct sftp_callback *state,
 	     int op_id,
 	     struct sftp_input *in UNUSED,
 	     struct sftp_output *out,
-	     const UINT8 *dir,
-	     UINT32 dirlen)
+	     const uint8_t *dir,
+	     uint32_t dirlen)
 {
   sftp_null_state(state);
 
@@ -1539,8 +1545,8 @@ sftp_ls_init(struct sftp_callback *state,
 
 void
 sftp_ls_step_one(struct sftp_callback *next,
-		 UINT8 msg,
-		 UINT32 id,
+		 uint8_t msg,
+		 uint32_t id,
 		 struct sftp_input *in,
 		 struct sftp_output *out,
 		 const struct sftp_callback *state)
@@ -1572,20 +1578,20 @@ sftp_ls_step_one(struct sftp_callback *next,
 
 void
 sftp_ls_main(struct sftp_callback *next,
-	     UINT8 msg,
-	     UINT32 id,
+	     uint8_t msg,
+	     uint32_t id,
 	     struct sftp_input *in,
 	     struct sftp_output *out,
 	     const struct sftp_callback *state)
 {
-  UINT32 count;
+  uint32_t count;
  
-  UINT32 i;
-   UINT8 *fname;
-   UINT8 *longname;
+  uint32_t i;
+   uint8_t *fname;
+   uint8_t *longname;
    
-   UINT32 fnamelen;
-   UINT32 longnamelen;
+   uint32_t fnamelen;
+   uint32_t longnamelen;
   
   struct sftp_attrib a;
 
@@ -1604,7 +1610,7 @@ sftp_ls_main(struct sftp_callback *next,
 
   for( i=0; i < count; i++ ) /* Do count times */
     {
-      UINT32 attriblen = sizeof( struct sftp_attrib );
+      uint32_t attriblen = sizeof( struct sftp_attrib );
 
       /* Read filename, longname and attrib */
 
@@ -1619,13 +1625,13 @@ sftp_ls_main(struct sftp_callback *next,
 
       if( fname ) /* sftp_get_string succedeed */
 	{
-	  sftp_store( &next->mem, &fnamelen, sizeof( UINT32 ) );
+	  sftp_store( &next->mem, &fnamelen, sizeof( uint32_t ) );
 	  sftp_store( &next->mem, fname, fnamelen );
 	}
       else
 	{
-	  UINT32 zero = 0;
-	  sftp_store( &next->mem, &zero, sizeof( UINT32 ) );
+	  uint32_t zero = 0;
+	  sftp_store( &next->mem, &zero, sizeof( uint32_t ) );
 	  sftp_store( &next->mem, &zero, 0 );
 	}
 
@@ -1633,19 +1639,19 @@ sftp_ls_main(struct sftp_callback *next,
       if( longname ) /* sftp_get_string succedeed */
 	{
 	  /* Write string length before */
-	  sftp_store( &next->mem, &longnamelen, sizeof( UINT32 ) );
+	  sftp_store( &next->mem, &longnamelen, sizeof( uint32_t ) );
 	  sftp_store( &next->mem, longname, longnamelen );
 	}
       else
 	{
-	  UINT32 zero = 0;
-	  sftp_store( &next->mem, &zero, sizeof( UINT32 ) );
+	  uint32_t zero = 0;
+	  sftp_store( &next->mem, &zero, sizeof( uint32_t ) );
 	  sftp_store( &next->mem, &zero, 0 );
 	}
 
 
       /* Write length before */
-      sftp_store( &next->mem, &attriblen, sizeof( UINT32 ) );
+      sftp_store( &next->mem, &attriblen, sizeof( uint32_t ) );
       sftp_store( &next->mem, &a, attriblen );
 
       sftp_free_string( fname );
@@ -1672,8 +1678,8 @@ sftp_ls_main(struct sftp_callback *next,
 
 void
 sftp_handle_status(struct sftp_callback *next,
-		   UINT8 msg,
-		   UINT32 id,
+		   uint8_t msg,
+		   uint32_t id,
 		   struct sftp_input *in, 
 		   struct sftp_output *out,
 		   const struct sftp_callback *state)
@@ -1707,8 +1713,8 @@ sftp_handle_status(struct sftp_callback *next,
 
 void
 sftp_handle_attrs(struct sftp_callback *next,
-		  UINT8 msg,
-		  UINT32 id,
+		  uint8_t msg,
+		  uint32_t id,
 		  struct sftp_input *in, 
 		  struct sftp_output *out,
 		  const struct sftp_callback *state)
@@ -1722,7 +1728,7 @@ sftp_handle_attrs(struct sftp_callback *next,
       sftp_handle_status(next, msg, id, in, out, state );
       return;
     }
-/* Otherwise we shouldn't be here FIXME: Fail gracefully?*/
+  /* Otherwise we shouldn't be here FIXME: Fail gracefully?*/
 
   assert( msg == SSH_FXP_ATTRS && id == state->id );
 
@@ -1739,14 +1745,14 @@ sftp_handle_attrs(struct sftp_callback *next,
 
 void
 sftp_handle_name(struct sftp_callback *next,
-		 UINT8 msg,
-		 UINT32 id,
+		 uint8_t msg,
+		 uint32_t id,
 		 struct sftp_input *in, 
 		 struct sftp_output *out,
 		 const struct sftp_callback *state)
 {
-  UINT32 count;
-  UINT32 i;
+  uint32_t count;
+  uint32_t i;
 
   *next = *state;
 
@@ -1763,30 +1769,30 @@ sftp_handle_name(struct sftp_callback *next,
 
   for( i=0; i<count; i++ ) /* Do count times */
     {
-      UINT8* fname;
-      UINT8* longname;
+      uint8_t* fname;
+      uint8_t* longname;
       struct sftp_attrib a;
-      UINT32 fnamelen;
-      UINT32 longnamelen;
+      uint32_t fnamelen;
+      uint32_t longnamelen;
 
-      UINT32 attriblen = sizeof( struct sftp_attrib );
+      uint32_t attriblen = sizeof( struct sftp_attrib );
 
       fname = sftp_get_string( in, &fnamelen ); /* Read filename, longname and attrib */
       longname = sftp_get_string( in, &longnamelen );
 
       assert( sftp_get_attrib( in, &a ) > 0 );
       /* Write string length before */
-      sftp_store( &next->mem, &fnamelen, sizeof( UINT32 ) );
+      sftp_store( &next->mem, &fnamelen, sizeof( uint32_t ) );
       sftp_store( &next->mem, fname, fnamelen );
 
       /* Write length before */
 
-      sftp_store( &next->mem, &longnamelen, sizeof( UINT32 ) );
+      sftp_store( &next->mem, &longnamelen, sizeof( uint32_t ) );
       sftp_store( &next->mem, longname, longnamelen );
 
       /* Write length before */
 
-      sftp_store( &next->mem, &attriblen, sizeof( UINT32 ) );
+      sftp_store( &next->mem, &attriblen, sizeof( uint32_t ) );
       sftp_store( &next->mem, &a, attriblen );
 
       sftp_free_string( fname );

@@ -220,7 +220,7 @@ static void
 sftp_put_longname_mode(struct sftp_output *o, struct stat *st)
 {
   /* A 10 character modestring and a space */
-  UINT8 modes[MODE_STRING_LENGTH];
+  uint8_t modes[MODE_STRING_LENGTH];
 
   filemodestring(st, modes);
 
@@ -229,12 +229,12 @@ sftp_put_longname_mode(struct sftp_output *o, struct stat *st)
 
 static void
 sftp_put_longname(struct sftp_ctx *ctx,
-		  struct stat *st, const UINT8 *fname)
+		  struct stat *st, const uint8_t *fname)
 {
   /* NOTE: The current spec doesn't mandate utf8. */
 
   /* Where to store the length. */
-  UINT32 length_index = sftp_put_reserve_length(ctx->o);
+  uint32_t length_index = sftp_put_reserve_length(ctx->o);
   const char *user_name;
   const char *group_name;
   time_t now, when;
@@ -298,11 +298,11 @@ sftp_put_filename(struct sftp_ctx *ctx,
 
 /* FIXME: We need to distinguish invalid messages from invalid file
    names. */
-static const UINT8 *
+static const uint8_t *
 sftp_get_name(struct sftp_input *i)
 {
-  UINT8 *name;
-  UINT32 length;
+  uint8_t *name;
+  uint32_t length;
   
   name = sftp_get_string_auto(i, &length);
   if (!length)
@@ -317,7 +317,7 @@ sftp_get_name(struct sftp_input *i)
 }
 
 static int 
-sftp_handle_used(struct sftp_ctx *ctx, UINT32 handle)
+sftp_handle_used(struct sftp_ctx *ctx, uint32_t handle)
 {
   return (handle < SFTP_MAX_HANDLES)
     && (ctx->handles[handle].type != HANDLE_UNUSED);
@@ -326,9 +326,9 @@ sftp_handle_used(struct sftp_ctx *ctx, UINT32 handle)
 static int
 sftp_new_handle(struct sftp_ctx *ctx,
 		enum sftp_handle_type type,
-		UINT32 *handle)
+		uint32_t *handle)
 {
-  UINT32 i;
+  uint32_t i;
 
   assert(type != HANDLE_UNUSED);
 
@@ -349,10 +349,10 @@ sftp_new_handle(struct sftp_ctx *ctx,
 }
 
 static int
-sftp_get_handle(struct sftp_ctx *ctx, UINT32 *handle)
+sftp_get_handle(struct sftp_ctx *ctx, uint32_t *handle)
 {
-  UINT32 length;
-  UINT32 value;
+  uint32_t length;
+  uint32_t value;
   
   if (sftp_get_uint32(ctx->i, &length)
       && (length == 4)
@@ -368,7 +368,7 @@ sftp_get_handle(struct sftp_ctx *ctx, UINT32 *handle)
 static int
 sftp_get_handle_dir(struct sftp_ctx *ctx, struct sftp_dir **value)
 {
-  UINT32 handle;
+  uint32_t handle;
 
   if (sftp_get_handle(ctx, &handle)
       && (HANDLE_TYPE(ctx, handle) == HANDLE_TYPE_DIRECTORY))
@@ -383,7 +383,7 @@ sftp_get_handle_dir(struct sftp_ctx *ctx, struct sftp_dir **value)
 static int
 sftp_get_handle_file(struct sftp_ctx *ctx, struct sftp_file **f)
 {
-  UINT32 handle;
+  uint32_t handle;
 
   if (sftp_get_handle(ctx, &handle)
       && (HANDLE_TYPE(ctx, handle) == HANDLE_TYPE_FILE))
@@ -410,14 +410,14 @@ sftp_get_handle_fd(struct sftp_ctx *ctx, int *fd)
 }
 
 static void
-sftp_put_handle(struct sftp_ctx *ctx, UINT32 handle)
+sftp_put_handle(struct sftp_ctx *ctx, uint32_t handle)
 {
   sftp_put_uint32(ctx->o, 4);
   sftp_put_uint32(ctx->o, handle);
 }
 
 static int
-sftp_send_handle(struct sftp_ctx *ctx, UINT32 handle)
+sftp_send_handle(struct sftp_ctx *ctx, uint32_t handle)
 {
   sftp_set_msg(ctx->o, SSH_FXP_HANDLE);
   sftp_put_handle(ctx, handle);
@@ -426,7 +426,7 @@ sftp_send_handle(struct sftp_ctx *ctx, UINT32 handle)
 
 /* FIXME: Add an argument for the the human-readable message. */
 static int
-sftp_send_status(struct sftp_ctx *ctx, UINT32 status)
+sftp_send_status(struct sftp_ctx *ctx, uint32_t status)
 {
   DEBUG (("sftp_send_status: %d\n", status));
   
@@ -477,7 +477,7 @@ sftp_send_status(struct sftp_ctx *ctx, UINT32 status)
 static int
 sftp_send_errno(struct sftp_ctx *ctx, int e)
 {
-  UINT32 status;
+  uint32_t status;
   
   DEBUG (("sftp_send_errno: %d, %s\n", e, strerror(e)));
   switch(e)
@@ -513,9 +513,9 @@ sftp_process_unsupported(struct sftp_ctx *ctx)
 static int
 sftp_process_opendir(struct sftp_ctx *ctx)
 {
-  const UINT8 *name;
+  const uint8_t *name;
   DIR* dir;
-  UINT32 handle;
+  uint32_t handle;
 
   DEBUG (("sftp_process_opendir\n"));
   
@@ -638,7 +638,7 @@ sftp_process_stat(struct sftp_ctx *ctx)
   struct stat st;
   struct sftp_attrib a;
 
-  const UINT8 *name;
+  const uint8_t *name;
 
   if ( ! (name = sftp_get_name(ctx->i)))
     return sftp_bad_message(ctx);
@@ -660,7 +660,7 @@ sftp_process_lstat(struct sftp_ctx *ctx)
   struct stat st;
   struct sftp_attrib a;
 
-  const UINT8 *name;
+  const uint8_t *name;
 
   if ( !(name = sftp_get_name(ctx->i)))
     return sftp_bad_message(ctx);
@@ -736,7 +736,7 @@ sftp_process_setstat(struct sftp_ctx *ctx)
 {
   struct sftp_attrib a;
 
-  const UINT8 *name;
+  const uint8_t *name;
 
   if ( !((name = sftp_get_name(ctx->i))
 	 && sftp_get_attrib(ctx->i, &a) ))
@@ -766,7 +766,7 @@ sftp_process_setstat(struct sftp_ctx *ctx)
 static int
 sftp_process_remove(struct sftp_ctx *ctx)
 {
-  const UINT8 *name;
+  const uint8_t *name;
 
   if ( ! (name = sftp_get_name(ctx->i)))
     return sftp_bad_message(ctx);
@@ -781,7 +781,7 @@ sftp_process_remove(struct sftp_ctx *ctx)
 static int
 sftp_process_mkdir(struct sftp_ctx *ctx)
 {
-  const UINT8 *name;
+  const uint8_t *name;
   struct sftp_attrib a;
   int fail;
 
@@ -808,7 +808,7 @@ sftp_process_mkdir(struct sftp_ctx *ctx)
 static int
 sftp_process_rmdir(struct sftp_ctx *ctx)
 {
-  const UINT8 *name;
+  const uint8_t *name;
   
   if (! (name = sftp_get_name(ctx->i)))
     return sftp_bad_message(ctx);
@@ -822,8 +822,8 @@ sftp_process_rmdir(struct sftp_ctx *ctx)
 static int
 sftp_process_realpath(struct sftp_ctx *ctx)
 {
-  const UINT8 *name;
-  UINT8 *resolved;
+  const uint8_t *name;
+  uint8_t *resolved;
   struct stat st;
   int path_max;
 
@@ -874,8 +874,8 @@ sftp_process_realpath(struct sftp_ctx *ctx)
 static int
 sftp_process_rename(struct sftp_ctx *ctx)
 {
-  const UINT8 *src;
-  const UINT8 *dst;
+  const uint8_t *src;
+  const uint8_t *dst;
 
   if (! ( (src = sftp_get_name(ctx->i))
 	  && (dst = sftp_get_name(ctx->i))) )
@@ -891,8 +891,8 @@ sftp_process_rename(struct sftp_ctx *ctx)
 static int
 sftp_process_open(struct sftp_ctx *ctx)
 {
-  const UINT8 *name;
-  UINT32 pflags;
+  const uint8_t *name;
+  uint32_t pflags;
   struct sftp_attrib a;
 
   if (!((name = sftp_get_name(ctx->i))
@@ -904,7 +904,7 @@ sftp_process_open(struct sftp_ctx *ctx)
       int fd;
       int mode;
       struct stat sb;
-      UINT32 handle;
+      uint32_t handle;
       
       switch (pflags & (SSH_FXF_READ | SSH_FXF_WRITE))
 	{
@@ -988,7 +988,7 @@ sftp_process_open(struct sftp_ctx *ctx)
 static int
 sftp_process_close(struct sftp_ctx *ctx)
 {
-  UINT32 handle;
+  uint32_t handle;
 
   if (sftp_get_handle(ctx, &handle) )
     {
@@ -1066,7 +1066,7 @@ sftp_process_read(struct sftp_ctx *ctx)
 {
   struct sftp_file *f;
   off_t offset;
-  UINT32 length;
+  uint32_t length;
 
   if ( !(sftp_get_handle_file(ctx, &f) && 
 	 sftp_get_uint64(ctx->i, &offset) &&
@@ -1081,8 +1081,8 @@ sftp_process_read(struct sftp_ctx *ctx)
   /* Check so we are to read at all */
   if (length)
     {
-      UINT32 done = 0;
-      UINT32 index;
+      uint32_t done = 0;
+      uint32_t index;
       int res;
 
       DEBUG (("sftp_process_read: fd = %d\n", f->fd));
@@ -1095,7 +1095,7 @@ sftp_process_read(struct sftp_ctx *ctx)
 
       while (length)
 	{
-	  UINT8 buf[BUFFER_SIZE];
+	  uint8_t buf[BUFFER_SIZE];
 
 	  res = sftp_read(f, buf, sizeof(buf), offset);
 
@@ -1175,8 +1175,8 @@ sftp_process_write(struct sftp_ctx *ctx)
   off_t offset;
   size_t done;
   
-  UINT8 *data;
-  UINT32 length;
+  uint8_t *data;
+  uint32_t length;
   
   if ( !(sftp_get_handle_file(ctx, &f)
 	 && sftp_get_uint64(ctx->i, &offset)
@@ -1212,8 +1212,8 @@ sftp_process_write(struct sftp_ctx *ctx)
 static int
 sftp_process_readlink(struct sftp_ctx *ctx)
 {
-  const UINT8 *name;
-  UINT8 *linktarget;
+  const uint8_t *name;
+  uint8_t *linktarget;
   struct stat st;
   int path_max;
   int link_len;
@@ -1267,8 +1267,8 @@ sftp_process_readlink(struct sftp_ctx *ctx)
 static int
 sftp_process_symlink(struct sftp_ctx *ctx)
 {
-  const UINT8 *linkpath;
-  const UINT8 *targetpath;
+  const uint8_t *linkpath;
+  const uint8_t *targetpath;
 
   if (! ( (linkpath = sftp_get_name(ctx->i))
 	  && (targetpath = sftp_get_name(ctx->i))) )
@@ -1286,8 +1286,8 @@ static void
 sftp_process(sftp_process_func **dispatch,
 	     struct sftp_ctx *ctx)
 {
-  UINT8 msg;
-  UINT32 id;
+  uint8_t msg;
+  uint32_t id;
   
   int ok;
 
@@ -1329,8 +1329,8 @@ sftp_process(sftp_process_func **dispatch,
 static int
 sftp_handshake(struct sftp_ctx *ctx)
 {
-  UINT8 msg;
-  UINT32 version;
+  uint8_t msg;
+  uint32_t version;
 
   DEBUG (("sftp_handshake\n"));
   

@@ -35,36 +35,6 @@
 /* For off_t */
 #include <sys/types.h>
 
-#if SIZEOF_SHORT >= 4
-# define UINT32 unsigned short
-#elif SIZEOF_INT >= 4
-# define UINT32 unsigned int
-#elif SIZEOF_LONG >= 4
-# define UINT32 unsigned long
-#else
-# error No suitable type found to use for UINT32
-#endif /* UINT32 */
- 
-#if SIZEOF_SHORT >= 2
-# define UINT16 unsigned short
-#elif SIZEOF_INT >= 2
-# define UINT16 unsigned int
-#else
-# error No suitable type found to use for UINT16
-#endif  /* UINT16 */
- 
-#define UINT8 unsigned char
-
-#if __GNUC__ && HAVE_GCC_ATTRIBUTE
-# define NORETURN __attribute__ ((__noreturn__))
-# define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
-# define UNUSED __attribute__ ((__unused__))
-#else
-# define NORETURN
-# define PRINTF_STYLE(f, a)
-# define UNUSED
-#endif
-
 
 /* Abstract input and output functions */
 #include <time.h>
@@ -79,32 +49,32 @@ int
 sftp_read_packet(struct sftp_input *i);
 
 int
-sftp_check_input(const struct sftp_input *i, UINT32 length);
+sftp_check_input(const struct sftp_input *i, uint32_t length);
 
 int
-sftp_get_data(struct sftp_input *i, UINT32 length, UINT8 *data);
+sftp_get_data(struct sftp_input *i, uint32_t length, uint8_t *data);
 
 int
-sftp_get_uint8(struct sftp_input *i, UINT8 *value);
+sftp_get_uint8(struct sftp_input *i, uint8_t *value);
 
 int
-sftp_get_uint32(struct sftp_input *i, UINT32 *value);
+sftp_get_uint32(struct sftp_input *i, uint32_t *value);
 
 int
 sftp_get_uint64(struct sftp_input *i, off_t *value);
 
 /* Allocates storage. Caller must deallocate using
  * sftp_free_string. */
-UINT8 *
-sftp_get_string(struct sftp_input *i, UINT32 *length);
+uint8_t *
+sftp_get_string(struct sftp_input *i, uint32_t *length);
 
 void
-sftp_free_string(UINT8 *s);
+sftp_free_string(uint8_t *s);
 
 /* Like sftp_get_string, but the data is deallocated automatically by
  * sftp_read_packet and sftp_input_clear_strings. */
-UINT8 *
-sftp_get_string_auto(struct sftp_input *i, UINT32 *length);
+uint8_t *
+sftp_get_string_auto(struct sftp_input *i, uint32_t *length);
 
 void
 sftp_input_clear_strings(struct sftp_input *i);
@@ -118,28 +88,28 @@ sftp_get_eod(struct sftp_input *i);
 /* Output */
 
 void
-sftp_set_msg(struct sftp_output *o, UINT8 msg);
+sftp_set_msg(struct sftp_output *o, uint8_t msg);
 
 void
-sftp_set_id(struct sftp_output *o, UINT32 id);
+sftp_set_id(struct sftp_output *o, uint32_t id);
 
 int
 sftp_write_packet(struct sftp_output *o);
 
 void
-sftp_put_data(struct sftp_output *o, UINT32 length, const UINT8 *data);
+sftp_put_data(struct sftp_output *o, uint32_t length, const uint8_t *data);
 
 void
-sftp_put_uint8(struct sftp_output *o, UINT8 value);
+sftp_put_uint8(struct sftp_output *o, uint8_t value);
 
 void
-sftp_put_uint32(struct sftp_output *o, UINT32 value);
+sftp_put_uint32(struct sftp_output *o, uint32_t value);
 
 void
 sftp_put_uint64(struct sftp_output *o, off_t value);
 
 void
-sftp_put_string(struct sftp_output *o, UINT32 length, const UINT8 *data);
+sftp_put_string(struct sftp_output *o, uint32_t length, const uint8_t *data);
 
 /* Low-level functions, used by sftp_put_printf and sftp_put_strftime */
 uint8_t *
@@ -149,28 +119,28 @@ void
 sftp_put_end(struct sftp_output *o, uint32_t length);
 
 /* Returns index. */
-UINT32
+uint32_t
 sftp_put_reserve_length(struct sftp_output *o);
 
 void
 sftp_put_final_length(struct sftp_output *o,
-		      UINT32 index);
+		      uint32_t index);
 
 void
 sftp_put_length(struct sftp_output *o,
-		UINT32 index,
-		UINT32 length);
+		uint32_t index,
+		uint32_t length);
 
 void
 sftp_put_reset(struct sftp_output *o,
-	       UINT32 index);
+	       uint32_t index);
 
-UINT32
+uint32_t
 sftp_put_printf(struct sftp_output *o, const char *format, ...)
      PRINTF_STYLE(2,3);
      
-UINT32
-sftp_put_strftime(struct sftp_output *o, UINT32 size,
+uint32_t
+sftp_put_strftime(struct sftp_output *o, uint32_t size,
 		  const char *format,
 		  const struct tm *tm);
 
@@ -181,15 +151,15 @@ sftp_packet_size(struct sftp_output* out);
 
 struct sftp_attrib
 {
-  UINT32 flags;
+  uint32_t flags;
   off_t size;
-  UINT32 uid;
-  UINT32 gid;
-  UINT32 permissions;
+  uint32_t uid;
+  uint32_t gid;
+  uint32_t permissions;
 
   /* NOTE: The representations of times is about to change. */
-  UINT32 atime;
-  UINT32 mtime;
+  uint32_t atime;
+  uint32_t mtime;
 };
 
 void
@@ -209,10 +179,10 @@ sftp_skip_extension(struct sftp_input *i);
 /* Macros */
 /* Reads a 32-bit integer, in network byte order */
 #define READ_UINT32(p)				\
-(  (((UINT32) (p)[0]) << 24)			\
- | (((UINT32) (p)[1]) << 16)			\
- | (((UINT32) (p)[2]) << 8)			\
- |  ((UINT32) (p)[3]))
+(  (((uint32_t) (p)[0]) << 24)			\
+ | (((uint32_t) (p)[1]) << 16)			\
+ | (((uint32_t) (p)[2]) << 8)			\
+ |  ((uint32_t) (p)[3]))
 
 #define WRITE_UINT32(p, i)			\
 do {						\
@@ -221,6 +191,5 @@ do {						\
   (p)[2] = ((i) >> 8) & 0xff;			\
   (p)[3] = (i) & 0xff;				\
 } while(0)
-
 
 #endif /* SFTP_BUFFER_H_INCLUDED */

@@ -59,8 +59,8 @@
 
 struct sftp_mem {
   char* at;
-  UINT32 size;
-  UINT32 used;
+  uint32_t size;
+  uint32_t used;
 };
 
 
@@ -68,8 +68,8 @@ struct sftp_callback;
 
 typedef void
 (*sftp_callback_func)(struct sftp_callback *next,
-		      UINT8 msg, 
-		      UINT32 id,
+		      uint8_t msg, 
+		      uint32_t id,
 		      struct sftp_input *in,
 		      struct sftp_output *out,
 		      const struct sftp_callback *state);
@@ -78,7 +78,7 @@ struct sftp_callback
 {
   sftp_callback_func nextfun;
   
-  UINT32 id; /* Id - for which id is this callback valid? */
+  uint32_t id; /* Id - for which id is this callback valid? */
   
   off_t filepos; 
   off_t filesize;  /* Only used for informational purposes */
@@ -86,11 +86,11 @@ struct sftp_callback
   int op_id; /* Operation ID - identifier for caller */
   
   int fd;
-  UINT32 retval; /* Return value (if id & nextfun == NULL ) of LAST call */
+  uint32_t retval; /* Return value (if id & nextfun == NULL ) of LAST call */
   int last; /* What was the last callback? */
   
-  UINT32 bad_status; /* Return value of FAILED operation */
-  UINT32 last_bad;   /* Who got FAILED status */
+  uint32_t bad_status; /* Return value of FAILED operation */
+  uint32_t last_bad;   /* Who got FAILED status */
   
   int localerr; /* Return value when we had an local error */
   int localerrno; /* errno */
@@ -98,8 +98,8 @@ struct sftp_callback
   struct sftp_attrib attrib;
   struct sftp_mem mem;  /* Memory buffer */
   
-  UINT8 *handle;      /* Handle string from open and opendir calls */
-  UINT32 handlelen; 
+  uint8_t *handle;      /* Handle string from open and opendir calls */
+  uint32_t handlelen; 
 };
 
 
@@ -116,25 +116,30 @@ void sftp_null_mem(struct sftp_mem *s);
 int sftp_toggle_mem( struct sftp_mem *mem );
 
 
-int sftp_store( struct sftp_mem* mem, void* data, UINT32 datalen );
-void* sftp_retrieve( struct sftp_mem *mem, UINT32 desired, UINT32* realsize );
+int sftp_store( struct sftp_mem* mem, void* data, uint32_t datalen );
+void* sftp_retrieve( struct sftp_mem *mem, uint32_t desired, uint32_t* realsize );
 
-UINT32 sftp_rumask( UINT32 new );
+uint32_t sftp_rumask( uint32_t new );
 
-void sftp_attrib_from_stat( struct stat *st, struct sftp_attrib* a );
-mode_t sftp_attrib_perms( struct sftp_attrib* a);
+void
+sftp_attrib_from_stat(const struct stat *st, struct sftp_attrib* a);
 
-UINT32 sftp_unique_id(void);
+/* Returns zero if there were no permission information. */
+int
+sftp_attrib_perms(const struct sftp_attrib* a,
+		  mode_t *mode);
+
+uint32_t sftp_unique_id(void);
 
 void
 sftp_symlink_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in, 
 		  struct sftp_output *out,
-		  const UINT8 *linkname, 
-		  UINT32 linklen,
-		  const UINT8 *targetname,
-		  UINT32 targetlen);
+		  const uint8_t *linkname, 
+		  uint32_t linklen,
+		  const uint8_t *targetname,
+		  uint32_t targetlen);
 
 
 
@@ -143,10 +148,10 @@ sftp_rename_init(struct sftp_callback *state,
 		 int op_id,
 		 struct sftp_input *in, 
 		 struct sftp_output *out,
-		 const UINT8 *srcname, 
-		 UINT32 srclen,
-		 const UINT8 *dstname, 
-		 UINT32 dstlen);
+		 const uint8_t *srcname, 
+		 uint32_t srclen,
+		 const uint8_t *dstname, 
+		 uint32_t dstlen);
 
 
 
@@ -155,16 +160,16 @@ sftp_remove_init(struct sftp_callback *state,
 		 int op_id,
 		 struct sftp_input *in, 
 		 struct sftp_output *out,
-		 const UINT8 *name,
-		 UINT32 namelen);
+		 const uint8_t *name,
+		 uint32_t namelen);
 
 void
 sftp_mkdir_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in, 
 		struct sftp_output *out,
-		const UINT8 *name,
-		UINT32 namelen,
+		const uint8_t *name,
+		uint32_t namelen,
 		struct sftp_attrib* a);
 
 void
@@ -172,8 +177,8 @@ sftp_rmdir_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in, 
 		struct sftp_output *out,
-		const UINT8 *name,
-		UINT32 namelen);
+		const uint8_t *name,
+		uint32_t namelen);
 
 
 void
@@ -181,16 +186,16 @@ sftp_realpath_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in, 
 		   struct sftp_output *out,
-		   const UINT8 *name,
-		   UINT32 namelen);
+		   const uint8_t *name,
+		   uint32_t namelen);
 
 void
 sftp_readlink_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in, 
 		   struct sftp_output *out,
-		   const UINT8 *name,
-		   UINT32 namelen);
+		   const uint8_t *name,
+		   uint32_t namelen);
 
 
 void
@@ -198,8 +203,8 @@ sftp_stat_init(struct sftp_callback *state,
 	       int op_id,
 	       struct sftp_input *in, 
 	       struct sftp_output *out,
-	       const UINT8 *name,
-	       UINT32 namelen);
+	       const uint8_t *name,
+	       uint32_t namelen);
 
 
 void
@@ -207,16 +212,16 @@ sftp_lstat_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in, 
 		struct sftp_output *out,
-		const UINT8 *name,
-		UINT32 namelen);
+		const uint8_t *name,
+		uint32_t namelen);
 
 void
 sftp_fstat_init(struct sftp_callback *state,
 		int op_id,
 		struct sftp_input *in, 
 		struct sftp_output *out,
-		const UINT8 *handle,
-		UINT32 handlelen);
+		const uint8_t *handle,
+		uint32_t handlelen);
 
 
 void
@@ -224,8 +229,8 @@ sftp_setstat_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in, 
 		  struct sftp_output *out,
-		  const UINT8 *name,
-		  UINT32 namelen,
+		  const uint8_t *name,
+		  uint32_t namelen,
 		  struct sftp_attrib* attrib);
 
 
@@ -234,8 +239,8 @@ sftp_fsetstat_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input* in, 
 		   struct sftp_output* out,
-		   const UINT8 *handle,
-		   UINT32 handlelen,
+		   const uint8_t *handle,
+		   uint32_t handlelen,
 		   struct sftp_attrib* attrib);
 
 
@@ -247,15 +252,15 @@ sftp_get_mem_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in,
 		  struct sftp_output *out,
-		  const UINT8 *name, 
-		  UINT32 namelen,
+		  const uint8_t *name, 
+		  uint32_t namelen,
 		  struct sftp_mem *mem,
 		  off_t startat);
 
 void
 sftp_get_mem_step_one(struct sftp_callback *next,
-		      UINT8 msg,
-		      UINT32 id,
+		      uint8_t msg,
+		      uint32_t id,
 		      struct sftp_input *in,
 		      struct sftp_output *out,
 		      const struct sftp_callback *state);
@@ -263,8 +268,8 @@ sftp_get_mem_step_one(struct sftp_callback *next,
 
 void
 sftp_get_mem_main(struct sftp_callback *next,
-		  UINT8 msg,
-		  UINT32 id,
+		  uint8_t msg,
+		  uint32_t id,
 		  struct sftp_input *in,
 		  struct sftp_output *out,
 		  const struct sftp_callback *state);
@@ -278,24 +283,24 @@ sftp_get_file_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in,
 		   struct sftp_output *out,
-		   const UINT8 *name, 
-		   UINT32 namelen,
-		   const UINT8 *fname, 
-		   UINT32 fnamelen,
+		   const uint8_t *name, 
+		   uint32_t namelen,
+		   const uint8_t *fname, 
+		   uint32_t fnamelen,
 		   int cont);
 
 void
 sftp_get_file_step_one(struct sftp_callback *next,
-		       UINT8 msg,
-		       UINT32 id,
+		       uint8_t msg,
+		       uint32_t id,
 		       struct sftp_input *in,
 		       struct sftp_output *out,
 		       const struct sftp_callback *state);
 
 void
 sftp_get_file_step_two(struct sftp_callback *next,
-		       UINT8 msg,
-		       UINT32 id,
+		       uint8_t msg,
+		       uint32_t id,
 		       struct sftp_input *in,
 		       struct sftp_output *out,
 		       const struct sftp_callback *state);
@@ -303,8 +308,8 @@ sftp_get_file_step_two(struct sftp_callback *next,
 
 void
 sftp_get_file_main(struct sftp_callback *next,
-		   UINT8 msg,
-		   UINT32 id,
+		   uint8_t msg,
+		   uint32_t id,
 		   struct sftp_input *in,
 		   struct sftp_output *out,
 		   const struct sftp_callback *state);
@@ -318,16 +323,16 @@ sftp_put_file_init(struct sftp_callback *state,
 		   int op_id,
 		   struct sftp_input *in,
 		   struct sftp_output *out,
-		   const UINT8 *name,
-		   UINT32 namelen,
-		   const UINT8 *fname,
-		   UINT32 fnamelen,
+		   const uint8_t *name,
+		   uint32_t namelen,
+		   const uint8_t *fname,
+		   uint32_t fnamelen,
 		   int cont);
 
 void
 sftp_put_file_step_one(struct sftp_callback *next,
-		       UINT8 msg,
-		       UINT32 id,
+		       uint8_t msg,
+		       uint32_t id,
 		       struct sftp_input *in,
 		       struct sftp_output *out,
 		       const struct sftp_callback *state);
@@ -335,8 +340,8 @@ sftp_put_file_step_one(struct sftp_callback *next,
 
 void
 sftp_put_file_main(struct sftp_callback *next,
-		   UINT8 msg,
-		   UINT32 id,
+		   uint8_t msg,
+		   uint32_t id,
 		   struct sftp_input *in,
 		   struct sftp_output *out,
 		   const struct sftp_callback *state);
@@ -344,8 +349,8 @@ sftp_put_file_main(struct sftp_callback *next,
 
 void
 sftp_put_file_do_fstat(struct sftp_callback *next,
-		       UINT8 msg,
-		       UINT32 id,
+		       uint8_t msg,
+		       uint32_t id,
 		       struct sftp_input *in,
 		       struct sftp_output *out,
 		       const struct sftp_callback *state);
@@ -353,8 +358,8 @@ sftp_put_file_do_fstat(struct sftp_callback *next,
 
 void
 sftp_put_file_handle_stat(struct sftp_callback *next,
-			  UINT8 msg,
-			  UINT32 id,
+			  uint8_t msg,
+			  uint32_t id,
 			  struct sftp_input *in,
 			  struct sftp_output *out,
 			  const struct sftp_callback *state);
@@ -370,16 +375,16 @@ sftp_put_mem_init(struct sftp_callback *state,
 		  int op_id,
 		  struct sftp_input *in,
 		  struct sftp_output *out,
-		  const UINT8 *name, 
-		  UINT32 namelen,
+		  const uint8_t *name, 
+		  uint32_t namelen,
 		  struct sftp_mem *mem,
 		  off_t startat,
 		  struct sftp_attrib a);
 
 void
 sftp_put_mem_step_one(struct sftp_callback *next,
-		      UINT8 msg,
-		      UINT32 id,
+		      uint8_t msg,
+		      uint32_t id,
 		      struct sftp_input *in,
 		      struct sftp_output *out,
 		      const struct sftp_callback *state);
@@ -387,8 +392,8 @@ sftp_put_mem_step_one(struct sftp_callback *next,
 
 void
 sftp_put_mem_main(struct sftp_callback *next,
-		  UINT8 msg,
-		  UINT32 id,
+		  uint8_t msg,
+		  uint32_t id,
 		  struct sftp_input *in,
 		  struct sftp_output *out,
 		  const struct sftp_callback *state);
@@ -401,13 +406,13 @@ sftp_ls_init(struct sftp_callback *state,
 	     int op_id,
 	     struct sftp_input *in,
 	     struct sftp_output *out,
-	     const UINT8 *dir,
-	     UINT32 dirlen);
+	     const uint8_t *dir,
+	     uint32_t dirlen);
 
 void
 sftp_ls_step_one(struct sftp_callback *next,
-		 UINT8 msg,
-		 UINT32 id,
+		 uint8_t msg,
+		 uint32_t id,
 		 struct sftp_input *in,
 		 struct sftp_output *out,
 		 const struct sftp_callback *state);
@@ -416,24 +421,24 @@ sftp_ls_step_one(struct sftp_callback *next,
 
 void
 sftp_ls_main(struct sftp_callback *next,
-	     UINT8 msg,
-	     UINT32 id,
+	     uint8_t msg,
+	     uint32_t id,
 	     struct sftp_input *in,
 	     struct sftp_output *out,
 	     const struct sftp_callback *state);
 
 void
 sftp_handle_status(struct sftp_callback *next,
-		   UINT8 msg,
-		   UINT32 id,
+		   uint8_t msg,
+		   uint32_t id,
 		   struct sftp_input *in, 
 		   struct sftp_output *out,
 		   const struct sftp_callback *state);
 
 void
 sftp_handle_attrs(struct sftp_callback *next,
-		  UINT8 msg,
-		  UINT32 id,
+		  uint8_t msg,
+		  uint32_t id,
 		  struct sftp_input *in, 
 		  struct sftp_output *out,
 		  const struct sftp_callback *state);
@@ -441,8 +446,8 @@ sftp_handle_attrs(struct sftp_callback *next,
 
 void
 sftp_handle_name(struct sftp_callback *next,
-		 UINT8 msg,
-		 UINT32 id,
+		 uint8_t msg,
+		 uint32_t id,
 		 struct sftp_input *in, 
 		 struct sftp_output *out,
 		 const struct sftp_callback *state);

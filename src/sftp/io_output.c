@@ -34,15 +34,15 @@ struct sftp_output
 
   /* The message type is the first byte of a message, after the
    * length. */
-  UINT8 msg;
+  uint8_t msg;
 
   /* The next word is either the id, or the version. */
-  UINT32 first;
+  uint32_t first;
 
   /* The rest of the packet is variable length. */
-  UINT8 *data;
-  UINT32 size;
-  UINT32 i;
+  uint8_t *data;
+  uint32_t size;
+  uint32_t i;
 };
 
 
@@ -67,24 +67,24 @@ sftp_make_output(int fd)
 }
 
 void
-sftp_set_msg(struct sftp_output *o, UINT8 msg)
+sftp_set_msg(struct sftp_output *o, uint8_t msg)
 {
   o->msg = msg;
 }
 
 void
-sftp_set_id(struct sftp_output *o, UINT32 id)
+sftp_set_id(struct sftp_output *o, uint32_t id)
 {
   o->first = id;
 }
 
 static void
-sftp_check_output(struct sftp_output *o, UINT32 length)
+sftp_check_output(struct sftp_output *o, uint32_t length)
 {
-  UINT32 needed = o->i + length;
+  uint32_t needed = o->i + length;
   if (!o->data || (needed > o->size))
   {
-    UINT32 size = 2 * needed + 40;
+    uint32_t size = 2 * needed + 40;
     o->data = xrealloc(o->data, size);
 
     o->size = size;
@@ -92,7 +92,7 @@ sftp_check_output(struct sftp_output *o, UINT32 length)
 }
 
 void
-sftp_put_data(struct sftp_output *o, UINT32 length, const UINT8 *data)
+sftp_put_data(struct sftp_output *o, uint32_t length, const uint8_t *data)
 {
   sftp_check_output(o, length);
 
@@ -101,7 +101,7 @@ sftp_put_data(struct sftp_output *o, UINT32 length, const UINT8 *data)
 }
 
 void
-sftp_put_uint8(struct sftp_output *o, UINT8 value)
+sftp_put_uint8(struct sftp_output *o, uint8_t value)
 {
   sftp_check_output(o, 1);
 
@@ -125,7 +125,7 @@ sftp_put_end(struct sftp_output *o, uint32_t length)
 uint32_t
 sftp_put_reserve_length(struct sftp_output *o)
 {
-  UINT32 index;
+  uint32_t index;
   sftp_check_output(o, 4);
 
   index = o->i;
@@ -136,8 +136,8 @@ sftp_put_reserve_length(struct sftp_output *o)
 
 void
 sftp_put_length(struct sftp_output *o,
-		UINT32 index,
-		UINT32 length)
+		uint32_t index,
+		uint32_t length)
 {
   assert( (index + 4) < o->i);
   WRITE_UINT32(o->data + index, length);
@@ -145,14 +145,14 @@ sftp_put_length(struct sftp_output *o,
 
 void
 sftp_put_final_length(struct sftp_output *o,
-		      UINT32 index)
+		      uint32_t index)
 {
   sftp_put_length(o, index, o->i - index - 4);
 }
 
 void
 sftp_put_reset(struct sftp_output *o,
-	       UINT32 index)
+	       uint32_t index)
 {
   assert(index < o->i);
   o->i = index;
@@ -163,8 +163,8 @@ sftp_write_packet(struct sftp_output *o)
 {
   int j;
   int written = 0;
-  UINT32 length = o->i + 5;
-  UINT8 buf[9];
+  uint32_t length = o->i + 5;
+  uint8_t buf[9];
 
   WRITE_UINT32(buf, length);
   buf[4] = o->msg;

@@ -41,30 +41,30 @@
 #define SFTP_VERSION 3
 
 
-static UINT32 
+static uint32_t 
 sftp_client_new_id(void)
 {
   /* Return a new (monotonically increasing) every time */
-  static UINT32 curid=0;
+  static uint32_t curid=0;
   return curid++;
 }
 
 static int
-sftp_client_get_id(struct sftp_input *i, UINT32 expected)
+sftp_client_get_id(struct sftp_input *i, uint32_t expected)
 {
-  UINT32 id;
+  uint32_t id;
   return (sftp_get_uint32(i, &id)
 	  && (id == expected));
 }
 
 static int
-sftp_client_get_status(struct sftp_input *i, UINT32 *status)
+sftp_client_get_status(struct sftp_input *i, uint32_t *status)
 {
   int res;
 
-  UINT8 *msg = NULL;
-  UINT8 *language = NULL;
-  UINT32 length;
+  uint8_t *msg = NULL;
+  uint8_t *language = NULL;
+  uint32_t length;
   
   res = (sftp_get_uint32(i, status)
 	 && (msg = sftp_get_string(i, &length))
@@ -125,8 +125,8 @@ fork_server(char *name,
 static int
 client_handshake(struct client_ctx *ctx)
 {
-  UINT8 msg;
-  UINT32 version;
+  uint8_t msg;
+  uint32_t version;
 
   sftp_set_msg(ctx->o, SSH_FXP_INIT);
   sftp_set_id(ctx->o, SFTP_VERSION);
@@ -147,12 +147,12 @@ client_handshake(struct client_ctx *ctx)
 static int
 do_ls(struct client_ctx *ctx, const char *name)
 {
-  UINT32 id;
-  UINT32 status;
-  UINT8* handle;
-  UINT32 hlength;
+  uint32_t id;
+  uint32_t status;
+  uint8_t* handle;
+  uint32_t hlength;
 
-  UINT8 msg;
+  uint8_t msg;
   int lsloop=1;
   int failure=0;
 
@@ -197,18 +197,18 @@ do_ls(struct client_ctx *ctx, const char *name)
       
       if ( msg == SSH_FXP_NAME )
 	{
-	  UINT32 count;
+	  uint32_t count;
 	  struct sftp_attrib a;
 	  
 	  sftp_get_uint32(ctx->i, &count );
 
 	  while ( count-- )
 	    {
-	      UINT8* fname;
-	      UINT32 fnamel;
+	      uint8_t* fname;
+	      uint32_t fnamel;
 	      
-	      UINT8* lname;
-	      UINT32 lnamel;
+	      uint8_t* lname;
+	      uint32_t lnamel;
 
 	      sftp_input_clear_strings(ctx->i);
 
@@ -257,15 +257,15 @@ do_ls(struct client_ctx *ctx, const char *name)
 	  && !failure);
 }
 
-static UINT8 *
+static uint8_t *
 do_open(struct client_ctx *ctx, 
 	const char *name,
-	UINT32 flags,
+	uint32_t flags,
 	const struct sftp_attrib *a,
-	UINT32 *handle_length)
+	uint32_t *handle_length)
 {
-  UINT8 msg;
-  UINT32 id = sftp_client_new_id();
+  uint8_t msg;
+  uint32_t id = sftp_client_new_id();
   
   /* Send a OPEN message */
   sftp_set_msg(ctx->o, SSH_FXP_OPEN);
@@ -290,13 +290,13 @@ do_open(struct client_ctx *ctx,
 
 static int
 do_close(struct client_ctx *ctx, 
-	 UINT32 handle_length,
-	 const UINT8 *handle)
+	 uint32_t handle_length,
+	 const uint8_t *handle)
 {
-  UINT8 msg;
-  UINT32 status;
+  uint8_t msg;
+  uint32_t status;
 
-  UINT32 id = sftp_client_new_id();
+  uint32_t id = sftp_client_new_id();
 
   sftp_set_msg(ctx->o, SSH_FXP_CLOSE); /* Send a close message */
   sftp_set_id(ctx->o, id);
@@ -321,16 +321,16 @@ do_get(struct client_ctx *ctx,
        const char *name,
        int dst)
 {
-  UINT32 id;
-  UINT8* handle;
-  UINT32 handle_length;
-  UINT32 status;
+  uint32_t id;
+  uint8_t* handle;
+  uint32_t handle_length;
+  uint32_t status;
 
   off_t curpos=0;
 
   struct sftp_attrib a;
   
-  UINT8 msg;
+  uint8_t msg;
   int getloop=1;
   int ok = 1;
 
@@ -367,8 +367,8 @@ do_get(struct client_ctx *ctx,
 	{
 	case SSH_FXP_DATA:
 	  {
-	    UINT8 *data;
-	    UINT32 length;
+	    uint8_t *data;
+	    uint32_t length;
 	  
 	    data = sftp_get_string_auto(ctx->i, &length);
 	    curpos += length;
@@ -422,15 +422,15 @@ do_put(struct client_ctx *ctx,
        const char *name, 
        int fd)
 {
-  UINT32 id;
-  UINT32 status;
-  UINT8* handle;
-  UINT32 handle_length;
+  uint32_t id;
+  uint32_t status;
+  uint8_t* handle;
+  uint32_t handle_length;
   off_t curpos=0;
 
   struct sftp_attrib a;
   
-  UINT8 msg;
+  uint8_t msg;
   int putloop=1;
   int ok = 1;
   
@@ -446,7 +446,7 @@ do_put(struct client_ctx *ctx,
   
   while ( putloop )
     {
-      UINT8 buf[SFTP_XFER_BLOCKSIZE];
+      uint8_t buf[SFTP_XFER_BLOCKSIZE];
       int res;
       
       do
@@ -510,8 +510,8 @@ do_put(struct client_ctx *ctx,
 static int
 do_stat(struct client_ctx *ctx, const char *name)
 {
-  UINT32 id;
-  UINT8 msg;
+  uint32_t id;
+  uint8_t msg;
   struct sftp_attrib a;
 
   id=sftp_client_new_id();

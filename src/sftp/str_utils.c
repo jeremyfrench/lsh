@@ -143,7 +143,7 @@ lsftp_s_strtok(const char* s, const char* sep,
 {
   /* TODO: should we do this different to support char-types with more than eight bits? */
 
-  char* tend;
+  const char* tend;
   char* scopy;
 
   *store = NULL;

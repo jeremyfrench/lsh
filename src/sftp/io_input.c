@@ -32,26 +32,26 @@
 struct sftp_input
 {
   int fd;
-  UINT32 left;
+  uint32_t left;
 
   /* Strings that we own */
-  UINT8 *strings[SFTP_MAX_STRINGS];
+  uint8_t *strings[SFTP_MAX_STRINGS];
   unsigned used_strings;
 };
 
 
 int
-sftp_check_input(const struct sftp_input *i, UINT32 length)
+sftp_check_input(const struct sftp_input *i, uint32_t length)
 {
   return (i->left >= length);
 }
 
 int
-sftp_get_data(struct sftp_input *i, UINT32 length, UINT8 *data)
+sftp_get_data(struct sftp_input *i, uint32_t length, uint8_t *data)
 {
   if (sftp_check_input(i, length))
     {
-      UINT8* buf = data;
+      uint8_t* buf = data;
       int j;
 
       while (length) 
@@ -115,12 +115,12 @@ sftp_get_eod(struct sftp_input *i)
 int
 sftp_read_packet(struct sftp_input *i)
 {
-  UINT8 buf[4];
+  uint8_t buf[4];
   int bytesread = 0;
 
   if (i->left) /* Unread data? */
     {
-      UINT8 d;
+      uint8_t d;
 
       while (i->left &&                         /* Data remaining? */
 	     0<sftp_get_data(i, 1, &d)         /* Read OK? */

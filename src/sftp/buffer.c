@@ -46,15 +46,15 @@
 (sftp_get_data((i), sizeof((buf)), (buf)))
 
 int
-sftp_get_uint8(struct sftp_input *i, UINT8 *value)
+sftp_get_uint8(struct sftp_input *i, uint8_t *value)
 {
   return sftp_get_data(i, 1, value);    
 }
 
 int
-sftp_get_uint32(struct sftp_input *i, UINT32 *value)
+sftp_get_uint32(struct sftp_input *i, uint32_t *value)
 {
-  UINT8 buf[4];
+  uint8_t buf[4];
   if (!GET_DATA(i, buf))
     return 0;
 
@@ -62,10 +62,10 @@ sftp_get_uint32(struct sftp_input *i, UINT32 *value)
   return 1;
 }
 
-UINT8 *
-sftp_get_string(struct sftp_input *i, UINT32 *length)
+uint8_t *
+sftp_get_string(struct sftp_input *i, uint32_t *length)
 {
-  UINT8 *data;
+  uint8_t *data;
 
   if (!(sftp_get_uint32(i, length) && sftp_check_input(i, *length)))
     return NULL;
@@ -85,15 +85,15 @@ sftp_get_string(struct sftp_input *i, UINT32 *length)
 }
 
 void
-sftp_free_string(UINT8 *s)
+sftp_free_string(uint8_t *s)
 {
   free(s);
 }
 
-UINT8 *
-sftp_get_string_auto(struct sftp_input *i, UINT32 *length)
+uint8_t *
+sftp_get_string_auto(struct sftp_input *i, uint32_t *length)
 {
-  UINT8 *data;
+  uint8_t *data;
 
   data = sftp_get_string(i, length);
 
@@ -114,23 +114,23 @@ sftp_get_string_auto(struct sftp_input *i, UINT32 *length)
 (sftp_put_data((o), sizeof((buf)), (buf)))
 
 void
-sftp_put_uint32(struct sftp_output *o, UINT32 value)
+sftp_put_uint32(struct sftp_output *o, uint32_t value)
 {
-  UINT8 buf[4];
+  uint8_t buf[4];
 
   WRITE_UINT32(buf, value);
   PUT_DATA(o, buf);
 }
 
 void
-sftp_put_string(struct sftp_output *o, UINT32 length, const UINT8 *data)
+sftp_put_string(struct sftp_output *o, uint32_t length, const uint8_t *data)
 {
   sftp_put_uint32(o, length);
   sftp_put_data(o, length, data);
 }
 
 
-UINT32
+uint32_t
 sftp_put_printf(struct sftp_output *o, const char *format, ...)
 {
   /* Initial buffer space */
@@ -159,8 +159,8 @@ sftp_put_printf(struct sftp_output *o, const char *format, ...)
 
 /* If SIZE > 0 it is the desired field length, and
  * smaller output is padded with blanks. */
-UINT32
-sftp_put_strftime(struct sftp_output *o, UINT32 size, const char *format,
+uint32_t
+sftp_put_strftime(struct sftp_output *o, uint32_t size, const char *format,
 		  const struct tm *tm)
 {
   /* Initial buffer space */
@@ -202,7 +202,7 @@ sftp_put_strftime(struct sftp_output *o, UINT32 size, const char *format,
 int
 sftp_get_uint64(struct sftp_input *i, off_t *value)
 {
-  UINT8 buf[8];
+  uint8_t buf[8];
   if (!GET_DATA(i, buf))
     return 0;
 
@@ -225,9 +225,9 @@ do {						\
 void
 sftp_put_uint64(struct sftp_output *o, off_t value)
 {
-  UINT8 buf[8];
+  uint8_t buf[8];
 
-  WRITE_UINT64(buf, value);
+  WRITE_uint64_t(buf, value);
   PUT_DATA(o, buf);
 }
 
@@ -237,8 +237,8 @@ sftp_put_uint64(struct sftp_output *o, off_t value)
 int
 sftp_get_uint64(struct sftp_input *i, off_t *value)
 {
-  UINT32 high;
-  UINT32 low;
+  uint32_t high;
+  uint32_t low;
 
   if (sftp_get_uint32(i, &high)
       && !high
@@ -279,8 +279,8 @@ sftp_clear_attrib(struct sftp_attrib *a)
 int
 sftp_skip_extension(struct sftp_input *i)
 {
-  UINT32 length;
-  UINT8 *data;
+  uint32_t length;
+  uint8_t *data;
   unsigned j;
   
   /* Skip name and value*/
@@ -334,8 +334,8 @@ sftp_get_attrib(struct sftp_input *i, struct sftp_attrib *a)
 
   if (a->flags & SSH_FILEXFER_ATTR_EXTENDED)
     {
-      UINT32 count;
-      UINT32 n;
+      uint32_t count;
+      uint32_t n;
 
       if (!sftp_get_uint32(i, &count))
 	return 0;
