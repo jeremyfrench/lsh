@@ -101,19 +101,16 @@
        ; Called if poll indicates that data can be written.
        (write object io_callback)
 
-       ; NOTE: We could put write_buffer inside the write callback,
-       ; but it seems simpler to keep it here, as it is needed by the
-       ; prepare and write_close methods.
-       (write_buffer object write_buffer)
+       ; NOTE: We could put write_buffer inside the write callback, 
+       ; but it seems simpler to keep it here, as it must be taken into
+       ; account for proper closing of fd:s.
        
-       ; Called to when fd is closed for writing.
-       (write_close method void)))
+       (write_buffer object write_buffer)))
 */
 
 #define FD_PREPARE(fd) ((fd)->prepare(fd))
 #define FD_READ(fd) IO_CALLBACK((fd)->read, (fd))
 #define FD_WRITE(fd) IO_CALLBACK((fd)->write, (fd))
-#define FD_WRITE_CLOSE(fd) ((fd)->write_close(fd))
 
 
 /* Used for read handlers like read_line and read_packet that
