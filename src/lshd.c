@@ -385,11 +385,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
     case ARGP_KEY_END:
       {
-	struct user_db *db = NULL;
+	struct user_db *user_db = NULL;
 	
 	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
-	  db = make_unix_user_db(self->backend, self->reaper,
-				 self->pw_helper, self->allow_root);
+	  user_db = make_unix_user_db(self->backend, self->reaper,
+				      self->pw_helper, self->allow_root);
 	  
 	if (self->with_dh_keyexchange || self->with_srp_keyexchange)
 	  {
@@ -408,11 +408,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 #if WITH_SRP	    
 	    if (self->with_srp_keyexchange)
 	      {
-		assert(db);
+		assert(user_db);
 		LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
 		ALIST_SET(self->super.algorithms,
 			  ATOM_SRP_RING1_SHA1_LOCAL,
-			  &make_srp_server(make_srp1(&self->random->super), db)
+			  &make_srp_server(make_srp1(&self->random->super),
+					   user_db)
 			  ->super);
 	      }
 #endif /* WITH_SRP */
@@ -446,20 +447,23 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 		LIST(self->userauth_methods)[i++] = ATOM_PASSWORD;
 		ALIST_SET(self->userauth_algorithms,
 			  ATOM_PASSWORD,
-			  &make_userauth_password(db)->super);
+			  &make_userauth_password(user_db)->super);
 	      }
 	    if (self->with_publickey)
 	      {
-		/* Doesn't use spki */
+		/* FIXME: Doesn't use spki */
+		struct lookup_verifier *key_db
+		  = make_authorization_db(ssh_format("authorized_keys_sha1"),
+					  &sha1_algorithm);
+		
 		LIST(self->userauth_methods)[i++] = ATOM_PUBLICKEY;
 		ALIST_SET(self->userauth_algorithms,
 			  ATOM_PUBLICKEY,
 			  &make_userauth_publickey
-			  (db,
-			   make_alist(1,
-				      ATOM_SSH_DSS,
-				      make_authorization_db(ssh_format("authorized_keys_sha1"),
-							    &sha1_algorithm),
+			  (user_db,
+			   make_alist(2,
+				      ATOM_SSH_DSS, key_db,
+				      ATOM_SSH_RSA, key_db,
 				      -1))
 			  ->super);
 	      }
