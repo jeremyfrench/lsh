@@ -1,8 +1,8 @@
-News for the 1.5.0 release
+News for the 1.5 release
 
 	Implemented the server side of X11 forwarding. Try lshd
 	--x11-forward. There's one known bug: The server may start
-	sending data on the sessioc channel (typically your first
+	sending data on the session channel (typically your first
 	shell prompt) before it has sent the reply to the client's
 	"shell" or "exec" request. lsh will complain about, and ignore
 	that data.
