@@ -274,7 +274,13 @@ static int io_iter(struct io_backend *b)
 		  /* FIXME: Perhaps we should always set LSH_FAIL in
 		   * this case? */
 		}
-#endif      
+#endif
+	      if (res & LSH_HOLD)
+		{
+		  /* This flag should not be combined with anything else */
+		  assert(res == LSH_HOLD);
+		  fd->on_hold = 1;
+		}
 	      if (res & LSH_DIE)
 		{
 		  if (fd->buffer)
@@ -436,6 +442,17 @@ void io_run(struct io_backend *b)
 {
   while(io_iter(b))
     ;
+}
+
+void init_backend(struct io_backend *b)
+{
+  b->nio = 0;
+  b->io = NULL;
+  b->nlisten = 0;
+  b->listen = NULL;
+  b->nconnect = 0;
+  b->connect = NULL;
+  b->callouts = NULL;
 }
 
 /*
@@ -658,10 +675,10 @@ struct io_fd *io_read(struct io_backend *b,
   return f;
 }
 
-struct io_fd *io_write(struct io_backend *b,
-		       int fd,
-		       UINT32 block_size,
-		       struct close_callback *close_callback)
+struct abstract_write *io_write(struct io_backend *b,
+				int fd,
+				UINT32 block_size,
+				struct close_callback *close_callback)
 {
   struct io_fd *f;
   struct write_buffer *buffer = write_buffer_alloc(block_size);
@@ -683,6 +700,6 @@ struct io_fd *io_write(struct io_backend *b,
   b->io = f;
   b->nio++;
 
-  return f;
+  return &buffer->super;
 }
      
