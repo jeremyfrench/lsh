@@ -25,6 +25,7 @@
 #include "channel.h"
 
 #include "format.h"
+#include "io.h"
 #include "read_data.h"
 #include "service.h"
 #include "ssh.h"
@@ -104,7 +105,7 @@ struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
   ssh_format_write(CONFIRM_FORMAT, l1, packet->data, CONFIRM_ARGS);
 
   va_start(args, format);
-  ssh_format_write(format, l2, packet->data+l1, args);
+  ssh_vformat_write(format, l2, packet->data+l1, args);
   va_end(args);
 
   return packet;
@@ -403,6 +404,7 @@ static int do_window_adjust(struct packet_handler *c,
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_WINDOW_ADJUST)
+      && parse_uint32(&buffer, &channel_number)
       && parse_uint32(&buffer, &size)
       && parse_eod(&buffer))
     {
@@ -450,6 +452,7 @@ static int do_channel_data(struct packet_handler *c,
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_DATA)
+      && parse_uint32(&buffer, &channel_number)
       && ( (data = parse_string_copy(&buffer)) )
       && parse_eod(&buffer))
     {
@@ -521,6 +524,7 @@ static int do_channel_extended_data(struct packet_handler *c,
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_EXTENDED_DATA)
+      && parse_uint32(&buffer, &channel_number)
       && parse_uint32(&buffer, &type)
       && ( (data = parse_string_copy(&buffer)) )
       && parse_eod(&buffer))
@@ -585,8 +589,8 @@ static int do_channel_extended_data(struct packet_handler *c,
 }
 
 static int do_channel_eof(struct packet_handler *c,
-				    struct ssh_connection *connection,
-				    struct lsh_string *packet)
+			  struct ssh_connection *connection,
+			  struct lsh_string *packet)
 {
   struct channel_handler *closure = (struct channel_handler *) c;
 
@@ -600,6 +604,7 @@ static int do_channel_eof(struct packet_handler *c,
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_EOF)
+      && parse_uint32(&buffer, &channel_number)
       && parse_eod(&buffer))
     {
       struct ssh_channel *channel = lookup_channel(closure->table,
@@ -630,6 +635,7 @@ static int do_channel_eof(struct packet_handler *c,
 		? LSH_OK | LSH_GOON
 		: channel_close(channel);
 	    }
+	  return LSH_OK | LSH_GOON;
 	}
       werror("EOF on non-existant channel %d\n",
 	     channel_number);
@@ -656,6 +662,7 @@ static int do_channel_close(struct packet_handler *c,
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_CLOSE)
+      && parse_uint32(&buffer, &channel_number)
       && parse_eod(&buffer))
     {
       struct ssh_channel *channel = lookup_channel(closure->table,
@@ -806,6 +813,7 @@ static int do_channel_success(struct packet_handler *c,
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_SUCCESS)
+      && parse_uint32(&buffer, &channel_number)
       && parse_eod(&buffer))
     {
       struct ssh_channel *channel = lookup_channel(closure->table,
@@ -837,6 +845,7 @@ static int do_channel_failure(struct packet_handler *c,
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_CHANNEL_FAILURE)
+      && parse_uint32(&buffer, &channel_number)
       && parse_eod(&buffer))
     {
       struct ssh_channel *channel = lookup_channel(closure->table,
@@ -989,7 +998,7 @@ int channel_eof(struct ssh_channel *channel)
 {
   int res ;
   
-  channel->flags |= CHANNEL_SENT_CLOSE;
+  channel->flags |= CHANNEL_SENT_EOF;
   res =  A_WRITE(channel->write, format_channel_eof(channel));
 
   if (LSH_CLOSEDP(res))
@@ -1063,19 +1072,19 @@ struct channel_write_extended
   UINT32 type;
 };
 
-static int do_channel_write(struct abstract_write **c,
+static int do_channel_write(struct abstract_write *w,
 			    struct lsh_string *packet)
 {
-  struct channel_write *closure = (struct channel_write *) *c;
+  struct channel_write *closure = (struct channel_write *) w;
 
   return A_WRITE(closure->channel->write,
 		 channel_transmit_data(closure->channel, packet));
 }
 
-static int do_channel_write_extended(struct abstract_write **c,
-				struct lsh_string *packet)
+static int do_channel_write_extended(struct abstract_write *w,
+				     struct lsh_string *packet)
 {
-  struct channel_write_extended *closure = (struct channel_write_extended *) *c;
+  struct channel_write_extended *closure = (struct channel_write_extended *) w;
 
   return A_WRITE(closure->super.channel->write,
 		 channel_transmit_extended(closure->super.channel,
@@ -1121,6 +1130,35 @@ struct read_handler *make_channel_read_stderr(struct ssh_channel *channel)
 						    SSH_EXTENDED_DATA_STDERR));
 }    
 
+struct channel_close_callback
+{
+  struct close_callback super;
+  struct ssh_channel *channel;
+};
+
+static int channel_close_callback(struct close_callback *c, int reason)
+{
+  struct channel_close_callback *closure = (struct channel_close_callback *)c;
+
+  MDEBUG(closure);
+
+  channel_close(closure->channel);
+
+  /* FIXME: So far, the returned value is ignored. */
+  return 17;
+}
+  
+struct close_callback *make_channel_close(struct ssh_channel *channel)
+{
+  struct channel_close_callback *closure;
+
+  NEW(closure);
+  closure->super.f = channel_close_callback;
+  closure->channel = channel;
+
+  return &closure->super;
+}
+
 struct lsh_string *prepare_channel_open(struct channel_table *table,
 					int type, struct ssh_channel *channel,
 					char *format, ...)
@@ -1150,7 +1188,7 @@ struct lsh_string *prepare_channel_open(struct channel_table *table,
   ssh_format_write(OPEN_FORMAT, l1, packet->data, OPEN_ARGS);
 
   va_start(args, format);
-  ssh_format_write(format, l2, packet->data+l1, args);
+  ssh_vformat_write(format, l2, packet->data+l1, args);
   va_end(args);
 
   return packet;
@@ -1180,7 +1218,7 @@ struct lsh_string *format_channel_request(int type, struct ssh_channel *channel,
   ssh_format_write(REQUEST_FORMAT, l1, packet->data, REQUEST_ARGS);
 
   va_start(args, format);
-  ssh_format_write(format, l2, packet->data+l1, args);
+  ssh_vformat_write(format, l2, packet->data+l1, args);
   va_end(args);
 
   return packet;
