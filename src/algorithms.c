@@ -37,10 +37,7 @@ struct alist *many_algorithms(unsigned n, ...)
   va_list args;
   
   struct alist *a
-    = make_alist(6
-#if WITH_CAST
-		 +1
-#endif
+    = make_alist(7
 #if WITH_IDEA
 		 +1
 #endif
@@ -52,9 +49,7 @@ struct alist *many_algorithms(unsigned n, ...)
 		 ATOM_BLOWFISH_CBC, crypto_cbc(make_blowfish()),
 		 ATOM_TWOFISH_CBC, crypto_cbc(make_twofish()),
 		 ATOM_3DES_CBC, crypto_cbc(make_des3()),
-#if WITH_CAST
 		 ATOM_CAST128_CBC, crypto_cbc(make_cast()),
-#endif
 #if WITH_IDEA
 		 ATOM_IDEA_CBC, crypto_cbc(&idea_algorithm),
 #endif
@@ -109,7 +104,8 @@ int lookup_crypto(struct alist *algorithms, char *name)
     atom = ATOM_3DES_CBC;
   else if (strcmp_list(name, "idea-cbc", "idea", NULL))
     atom = ATOM_IDEA_CBC;
-  else if (strcmp_list(name, "cast128-cbc", "cast", "cast-cbc", "cast128", NULL))
+  else if (strcmp_list(name, "cast128-cbc", "cast",
+		       "cast-cbc", "cast128", NULL))
     atom = ATOM_CAST128_CBC;
   else
     return 0;
@@ -164,21 +160,16 @@ int lookup_compression(struct alist *algorithms, char *name)
 
 struct int_list *default_crypto_algorithms(void)
 {
-  return make_int_list(4
+  return make_int_list(5
 #if WITH_IDEA
 		       + 1
-#endif
-#if WITH_CAST
-		       +1
 #endif
 		       , ATOM_3DES_CBC,
 #if WITH_IDEA
 		       ATOM_IDEA_CBC,
 #endif
 		       ATOM_BLOWFISH_CBC,
-#if WITH_CAST
 		       ATOM_CAST128_CBC,
-#endif
 		       ATOM_TWOFISH_CBC, ATOM_ARCFOUR, -1);
 }
 
