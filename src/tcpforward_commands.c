@@ -74,7 +74,7 @@ static struct catch_report_collect catch_channel_open
  * the party receiving a open-tcp request, when a channel to the
  * target has been opened. */
 
-#define TCPIP_WINDOW_SIZE (SSH_MAX_PACKET << 3)
+#define TCPIP_WINDOW_SIZE 10000
 
 /* NOTE: This command does not do any remembering. */
 static void

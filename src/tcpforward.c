@@ -133,8 +133,8 @@ do_tcpip_receive(struct ssh_channel *c,
 }
 
 static void
-do_tcpip_send(struct ssh_channel *s,
-	      struct ssh_connection *c UNUSED)
+do_tcpip_send_adjust(struct ssh_channel *s,
+		     UINT32 i UNUSED)
 {
   CAST(tcpip_channel, self, s);
   
@@ -192,7 +192,7 @@ void tcpip_channel_start_io(struct ssh_channel *c)
   CAST(tcpip_channel, channel, c);
 
   channel->super.receive = do_tcpip_receive;
-  channel->super.send = do_tcpip_send;
+  channel->super.send_adjust = do_tcpip_send_adjust;
   channel->super.eof = do_tcpip_eof;
   
   /* Install callbacks on the local socket */
@@ -287,6 +287,7 @@ static void
 do_channel_open_direct_tcpip(struct channel_open *s,
 			     struct ssh_connection *connection,
 			     UINT32 channel_type UNUSED,
+			     UINT32 max_packet UNUSED,
 			     struct simple_buffer *args,
 			     struct command_continuation *c,
 			     struct exception_handler *e)
@@ -567,6 +568,7 @@ static void
 do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
 				struct ssh_connection *connection,
 				UINT32 channel_type UNUSED,
+				UINT32 max_packet UNUSED,
 				struct simple_buffer *args,
 				struct command_continuation *c,
 				struct exception_handler *e)

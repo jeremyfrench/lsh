@@ -1,3 +1,8 @@
+News for the 0.9.1 release
+
+	Support for remote commands directly on the lsh command line.
+	New options -S and -E. More features in the proxy.
+
 News for the 0.2.9 release
 
 	Fixed bugs in the length checking of incoming packets.

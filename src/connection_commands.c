@@ -183,7 +183,8 @@ do_line(struct line_handler **h,
 	      {
 		connection->peer_flags
 		  |= (PEER_SSH_DSS_KLUDGE | PEER_SERVICE_ACCEPT_KLUDGE
-		      | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG);
+		      | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG 
+		      | PEER_X11_OPEN_KLUDGE);
 	      }
 	    else if ( (swver_len >= 5) && !memcmp(swver, "2.1.0", 5) )
 	      {

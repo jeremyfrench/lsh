@@ -57,6 +57,7 @@
 #define PEER_SERVICE_ACCEPT_KLUDGE    0x00000002
 #define PEER_USERAUTH_REQUEST_KLUDGE  0x00000004
 #define PEER_SEND_NO_DEBUG            0x00000008
+#define PEER_X11_OPEN_KLUDGE          0x00000010
 
 /* GABA:
    (class
@@ -77,6 +78,8 @@
 
        ; Features or bugs peculiar to the peer
        (peer_flags simple UINT32)
+       
+       ; the chained connection in the proxy
        (chain object ssh_connection)
 
        ; Cleanup

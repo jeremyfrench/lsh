@@ -356,8 +356,8 @@ do_receive(struct ssh_channel *c,
 
 /* We may send more data */
 static void
-do_send(struct ssh_channel *s,
-	struct ssh_connection *c UNUSED)
+do_send_adjust(struct ssh_channel *s,
+	       UINT32 i UNUSED)
 {
   CAST(client_session, self, s);
 
@@ -399,12 +399,12 @@ do_client_io(struct command *s UNUSED,
 					HANDLER_CONTEXT);
 
   /* Set up the fd we read from. */
-  channel->send = do_send;
+  channel->send_adjust = do_send_adjust;
 
   session->in->read = make_channel_read_data(channel);
 
   /* FIXME: Perhaps there is some way to arrange that channel.c calls
-   * the CHANNEL_SEND method instead? */
+   * the CHANNEL_SEND_ADJUST method instead? */
   if (session->super.send_window_size)
     session->in->want_read = 1;
   
