@@ -113,7 +113,9 @@ atoms_table.c: atoms.in process_atoms
 
 PRIME_LIMIT = 1024
 
-prime_table.h: prime_table
+# We don't want an explicit dependency on the executable program
+prime_table.h: prime_table.c
+	$(MAKE) prime_table
 	./prime_table $(PRIME_LIMIT) >$@T
 	test -s $@T && mv -f $@T $@
 
@@ -125,7 +127,9 @@ sexp_table.h: sexp_chars.in $(srcdir)/scm/make-char-classes.scm
 
 digit_table_LDADD =
 
-digit_table.h: digit_table
+# We don't want an explicit dependency on the executable program
+digit_table.h: digit_table.c
+	$(MAKE) digit_table
 	./digit_table >$@T
 	test -s $@T && mv -f $@T $@
 
