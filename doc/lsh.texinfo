@@ -72,9 +72,9 @@ translation approved by the Free Software Foundation.
 
 @end titlepage
 
-@node     Top,, (dir), (dir)
-@top
+@node     Top, Introduction, (dir), (dir)
 @comment  node-name,  next,  previous,  up
+@top
 This document describes @code{lsh} and related programs. @code{lsh} suit
 of programs is intended as a free replacement for the @code{ssh} suit of
 programs. In turn, @code{ssh} was intended as a secure replacement for
@@ -83,7 +83,31 @@ internet.
 
 This manual explains how to use and hack @code{lsh}.
 
-@node Introduction
+@menu
+* Introduction::                
+* Terminology::                 
+* Concept Index::               
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Introduction
+
+* Threats::                     
+* Features::                    
+* Related techniques::          
+
+Related programs and techniques
+
+* ssh1::                        SSH version 1
+* ssh2::                        SSH version 2
+* Kerberos::                    Kerberos
+* ipsec::                       IP Sec
+
+@end detailmenu
+@end menu
+
+@node Introduction, Terminology, Top, Top
 @comment  node-name,  next,  previous,  up
 @chapter Introduction
 
@@ -111,7 +135,13 @@ Remember that just because your paranoid that doesn't mean that nobody
 is trying to get you @dots{}
 
 
-@node Threats
+@menu
+* Threats::                     
+* Features::                    
+* Related techniques::          
+@end menu
+
+@node Threats, Features, Introduction, Introduction
 @comment  node-name,  next,  previous,  up
 @section Threats
 
@@ -210,7 +240,7 @@ adjust the security measures so that your enemies will not find it worth
 the effort to break them.
 
 
-@node Features
+@node Features, Related techniques, Threats, Introduction
 @comment  node-name,  next,  previous,  up
 @section Other convenient features
 
@@ -242,7 +272,7 @@ of tunneling that may turn out to be useful include authentication (i.e.
 general ip-tunneling.
 
 
-@node Related techniques
+@node Related techniques,  , Features, Introduction
 @comment  node-name,  next,  previous,  up
 @section Related programs and techniques
 
@@ -252,7 +282,14 @@ security as @code{lsh}. Kerberos and @acronym{IPSEC} operate quite
 differently, in particular when it comes to protection against
 Man-in-the-middle attacks.
 
-@node ssh1
+@menu
+* ssh1::                        SSH version 1
+* ssh2::                        SSH version 2
+* Kerberos::                    Kerberos
+* ipsec::                       IP Sec
+@end menu
+
+@node ssh1, ssh2, Related techniques, Related techniques
 @comment  node-name,  next,  previous,  up
 @subsection ssh-1.x
 
@@ -273,7 +310,7 @@ Windows.
 Until @code{lsh} becomes stable and well tested, I would recommend using
 some implementation of the ssh-1 protocol.
 
-@node ssh2
+@node ssh2, Kerberos, ssh1, Related techniques
 @comment  node-name,  next,  previous,  up
 @subsection ssh-2.x
 
@@ -296,7 +333,7 @@ The license for Datafellow's @code{ssh-2} programs is similar to that
 for recent versions of @code{ssh-1}, but with a narrower definition of
 ``non-commercial use''.
 
-@node Kerberos
+@node Kerberos, ipsec, ssh2, Related techniques
 @comment  node-name,  next,  previous,  up
 @subsection Kerberos
 
@@ -333,7 +370,7 @@ forwarding with authentication based on Kerberos. Such an arrangement
 may provide the best of two worlds for those who happen to have an
 account at a suitable ticket-granting server.
 
-@node ipsec
+@node ipsec,  , Kerberos, Related techniques
 @comment  node-name,  next,  previous,  up
 @subsection @acronym{IPSEC}
 
@@ -363,11 +400,11 @@ protocol to tunnel arbitrary ip traffic accross an ssh connection. This
 arrangement provides some of the functionality of @acronym{IPSEC}, and
 is some times referred to as ``a poor man's Virtual Private Network''.
 
-@node Terminology
+@node Terminology, Concept Index, Introduction, Top
 @comment  node-name,  next,  previous,  up
-Chapter Terminology
+@chapter Terminology
 
-@node    Concept Index,    ,  Overview, Top
+@node    Concept Index,  , Terminology, Top
 @comment  node-name,  next,  previous,  up
 @unnumbered Concept Index
 
