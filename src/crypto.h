@@ -46,6 +46,10 @@ struct crypto_algorithm *make_des3(void);
 struct crypto_algorithm *make_cast_algorithm(UINT32 key_size);
 struct crypto_algorithm *make_cast(void);
 
+#ifdef WITH_IDEA
+extern struct crypto_algorithm idea_algorithm;
+#endif
+
 extern struct hash_algorithm sha_algorithm;
 extern struct hash_algorithm md5_algorithm;
 
