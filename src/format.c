@@ -102,7 +102,7 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 	      break;
 
 	    case 'c':
-	      (void) va_arg(args, UINT8);
+	      (void) va_arg(args, int);
 	      /* Fall through */
 	    case '%':
 	      f++;
