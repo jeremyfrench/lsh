@@ -35,6 +35,7 @@
 #include "connection_commands.h"
 #include "crypto.h"
 #include "format.h"
+#include "interact.h"
 #include "io.h"
 #include "io_commands.h"
 #include "lookup_verifier.h"
@@ -72,23 +73,65 @@
 /* Window size for the session channel */
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
 
+/* NOTE: Handles only ssh-dss keys */
 
 /* GABA:
    (class
      (name sloppy_host_db)
      (super lookup_verifier)
      (vars
+       (hash object hash_algorithm) ; For fingerprinting
        (algorithm object signature_algorithm)))
 */
 
 static struct verifier *
 do_sloppy_lookup(struct lookup_verifier *c,
-		 struct lsh_string *keyholder UNUSED,	       
+		 int method,
+		 struct lsh_string *keyholder UNUSED,
 		 struct lsh_string *key)
 {
-  CAST(sloppy_host_db, closure, c);
+  CAST(sloppy_host_db, self, c);
 
-  return MAKE_VERIFIER(closure->algorithm, key->length, key->data);
+  if (method != ATOM_SSH_DSS)
+    return NULL;
+  
+  if (!quiet_flag)
+    {
+      /* Display fingerprint */
+      struct sexp *e;
+      struct lsh_string *canonical;
+      struct hash_instance *hash;
+      struct lsh_string *digest;
+      
+      e = keyblob2spki(key);
+
+      if (!e)
+	{
+	  werror("Invalid host key.\n");
+	  return NULL;
+	}
+      
+      canonical = SEXP_FORMAT(e, SEXP_CANONICAL, 0);
+      hash = MAKE_HASH(self->hash);
+      digest = lsh_string_alloc(hash->hash_size);
+      
+      HASH_UPDATE(hash, canonical->length, canonical->data);
+      HASH_DIGEST(hash, digest->data);
+      KILL(hash);
+
+      if (!yes_or_no(ssh_format("Received unauthenticated key for host FOO\n"
+				"Fingerprint: %lxS\n"
+				"Do you trust this key? (y/n) ",
+				/* keyholder, */ digest), 0, 1))
+	{
+	  lsh_string_free(canonical);
+	  lsh_string_free(digest);
+	  return NULL;
+	}
+      /* Save key */
+    }
+  
+  return MAKE_VERIFIER(self->algorithm, key->length, key->data);
 }
 
 static struct lookup_verifier *
@@ -98,6 +141,7 @@ make_sloppy_host_db(struct signature_algorithm *a)
 
   res->super.lookup = do_sloppy_lookup;
   res->algorithm = a;
+  res->hash = &sha1_algorithm;
 
   return &res->super;
 }
@@ -368,7 +412,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  int in;
 	  int out;
 	  int err;
-	  int tty;
 
 	  struct command *get_pty = NULL;
 	  
@@ -377,22 +420,16 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 #if WITH_PTY_SUPPORT
 	  if (self->with_pty)
 	    {
-	      tty = open("/dev/tty", O_RDWR);
-      
-	      if (tty < 0)
+	      if (tty_fd < 0)
 		{
-		  werror("lsh: Failed to open tty (errno = %i): %z\n",
-			 errno, STRERROR(errno));
+		  werror("lsh: No tty available.\n");
 		}
 	      else
 		{
-		  /* FIXME: If we are successful, the tty is probably never closed. */
-		  if (! (remember_tty(tty)
-			 && (get_pty = make_pty_request(tty))))
+		  if (! (remember_tty(tty_fd)
+			 && (get_pty = make_pty_request(tty_fd))))
 		    {
-		      werror("lsh: Can't use tty (probably getettr or atexit() failed.\n");
-		      close(tty);
-		      tty = -1;
+		      werror("lsh: Can't use tty (probably getattr or atexit() failed.\n");
 		    }
 		}
 	    }
@@ -655,6 +692,9 @@ int main(int argc, char **argv)
   /* FIXME: Why not allocate backend statically? */
   NEW(io_backend, backend);
   init_backend(backend);
+
+  /* Attempt to open a tty */
+  lsh_open_tty();
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
