@@ -30,12 +30,15 @@ LDADD = testutils.o ../liblsh.a ../nettle/libnettle.a \
 	$(addprefix ../,@LIBARGP@)
 
 EXTRA_DIST = testutils.c testutils.h $(TS_SH) \
-	functions.sh run-tests setup-env key-1.private
+	functions.sh run-tests setup-env key-1.private key-2.private \
+	fake-sshd1
 
-# FIXME: Get a rm -rf temphome somewhere?
-CLEANFILES = foo foo.pub test-seed-1 test-seed-2 test.out1 test.out2 \
-	     temphome/.lsh/identity \
-	     temphome/.lsh/identity.pub
+# FIXME: Move into some tmp directory.
+CLEANFILES = foo foo.pub test-seed-1 test-seed-2 test.out1 test.out2
+
+# Files and directories used by the test cases.
+distclean-local:
+	rm -rf temphome home *.pid
 
 DISTCLEANFILES = yarrow-seed-file
 
