@@ -151,7 +151,7 @@ spki_parse_prevexpr(struct spki_iterator *i,
   return i->sexp.buffer + start;
 }
 
-static const uint8_t *
+const uint8_t *
 spki_parse_string(struct spki_iterator *i,
 		  unsigned *length)
 {

@@ -66,6 +66,10 @@ const uint8_t *
 spki_parse_prevexpr(struct spki_iterator *i,
 		    unsigned start, unsigned *length);
 
+const uint8_t *
+spki_parse_string(struct spki_iterator *i,
+		  unsigned *length);
+
 enum spki_type
 spki_parse_type(struct spki_iterator *i);
 
