@@ -1,5 +1,27 @@
 2001-04-08  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/lsh.c (main): Call io_final.
+
+	* src/io.h (lsh_fd): Added label attribute. 
+
+	* src/io.c (kill_fd): Deleted.
+	(io_backend): Inherit resource. 
+	(do_kill_io_backend): New function.
+	(make_io_backend): Call resource_init.
+	(io_final): New function.
+	(init_file): New argument LABEL.
+	(make_lsh_fd): New rgument LABEL. Updated callers.
+	(close_fd): Display label.
+	(io_iter): Display label.
+
+	* src/lsh-writekey.c (make_writekey): Deleted unneeded global
+	definitions. 
+
+	* src/resource.c (dont_free_live_resource): Changed again, to
+	issue a fatal error.
+
+	* src/sexp_parser.h: Deleted unused file.
+
 	* src/testsuite/Makefile.am (TS_PROGS): Added string-test.
 
 	* src/testsuite/macros.m4 (TS_CHECK): New macro.
