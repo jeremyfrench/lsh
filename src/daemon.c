@@ -38,6 +38,7 @@
 #include <unistd.h>
 
 /* For setrlimit */
+#include <sys/time.h>    /* Needed on BSD */
 #include <sys/resource.h>
 
 #include <errno.h>
