@@ -1,3 +1,14 @@
+2001-10-02  Niels Möller  <nisse@ehand.com>
+
+	* src/lsh-export-key.c (main): Rewrote to use io_read_file_raw and
+	write_raw, without using any commands or io_run.
+
+	* src/io.c (io_read_file_raw): New function, for reading an entire
+	file into a string. Uses string_buffer.
+
+	* src/gc.c (gc_final): Chekc that root_set is non-null before
+	calling KILL_RESOURCE_LIST.
+
 2001-09-30  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (do_write_prepare): Deleted function.
