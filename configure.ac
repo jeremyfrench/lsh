@@ -536,7 +536,6 @@ AC_CHECK_FUNCS(getaddrinfo getnameinfo gai_strerror)
 AC_CHECK_FUNCS(setrlimit)
 AC_FUNC_GETPGRP
 AC_CHECK_FUNCS(syslog)
-AC_REPLACE_FUNCS(memxor)
 
 # FIXME: Is there a better way in autoconf 2.50?
 AC_CACHE_CHECK([if netdb.h defines AI_NUMERICHOST],
