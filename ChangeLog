@@ -1,3 +1,9 @@
+2003-06-06  Pontus Sköld  <pont@soua.net>
+
+	* src/lsh-upgrade-key: New script to upgrade keys.
+
+	* src/Makefile.am (bin_SCRIPTS): Added lsh-upgrade-key.
+
 2003-06-05  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-encrypted-key-test: The lsh-authorize script
