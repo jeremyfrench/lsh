@@ -114,7 +114,7 @@
 
 /* FIXME: We don't need this class. */
 /* Installs keys for use. */
-/* GABA:
+/* ;; GABA:
    (class
      (name install_keys)
      (vars
@@ -123,9 +123,11 @@
 		"struct hash_instance *secret")))
 */
 
+#if 0
 #define INSTALL_KEYS(i, c, s) ((i)->install((i), (c), (s)))
+#endif
 
-/* GABA:
+/* ;; GABA:
    (class
      (name newkeys_info)
      (vars
@@ -166,12 +168,10 @@ struct make_kexinit *make_simple_kexinit(struct randomness *r,
 
 struct make_kexinit *make_test_kexinit(struct randomness *r);
 
-void initiate_keyexchange(struct ssh_connection *connection,
-			 int type);
+void initiate_keyexchange(struct ssh_connection *connection);
 
 struct packet_handler *
-make_kexinit_handler(int type,
-		     struct make_kexinit *init,
+make_kexinit_handler(struct make_kexinit *init,
 		     struct lsh_object *extra,
 		     struct alist *algorithms);
 
@@ -193,7 +193,7 @@ kex_build_secret(struct hash_algorithm *H,
 
 void
 keyexchange_finish(struct ssh_connection *connection,
-		   struct install_keys *install,
+		   struct object_list *algorithms,
 		   struct hash_algorithm *H,
 		   struct lsh_string *exchange_hash,
 		   struct lsh_string *K);

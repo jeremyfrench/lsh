@@ -50,7 +50,6 @@
      (name kexinit_handler)
      (super packet_handler)
      (vars
-       (type simple int)
        (init object make_kexinit)
 
        ; Extra rgument for the KEYEXCHANGE_INIT call.
@@ -62,8 +61,6 @@
        ; client's and the server's list of algorithms (of a certain
        ; type), and therefore the remote side can't screw things up.
        (algorithms object alist)))
-
-       ;;; (finished object ssh_service)))
 */
 
 #define NLISTS 10
@@ -148,10 +145,11 @@ format_kex(struct kexinit *kex)
 }
   
 void
-initiate_keyexchange(struct ssh_connection *connection,
-		     int mode)
+initiate_keyexchange(struct ssh_connection *connection)
 {
   struct lsh_string *s;
+  int mode = connection->flags & CONNECTION_MODE;
+  
   struct kexinit *kex = connection->kexinits[mode];
 
   assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);
@@ -211,13 +209,15 @@ do_handle_kexinit(struct packet_handler *c,
 {
   CAST(kexinit_handler, closure, c);
   struct kexinit *msg = parse_kexinit(packet);
-
+  
   int kex_algorithm_atom;
   int hostkey_algorithm_atom;
 
   int parameters[KEX_PARAMETERS];
   struct object_list *algorithms;
 
+  int mode = connection->flags & CONNECTION_MODE;
+  
   int i;
 
   if (!msg)
@@ -227,18 +227,18 @@ do_handle_kexinit(struct packet_handler *c,
     }
 
   /* Save value for later signing */
-  connection->literal_kexinits[!closure->type] = packet;
+  connection->literal_kexinits[!mode] = packet;
   
-  connection->kexinits[!closure->type] = msg;
+  connection->kexinits[!mode] = msg;
   
   /* Have we sent a kexinit message? */
-  if (!connection->kexinits[closure->type])
+  if (!connection->kexinits[mode])
     {
       struct lsh_string *packet;
       struct kexinit *sent = MAKE_KEXINIT(closure->init);
-      connection->kexinits[closure->type] = sent;
+      connection->kexinits[mode] = sent;
       packet = format_kex(sent);
-      connection->literal_kexinits[closure->type] = lsh_string_dup(packet); 
+      connection->literal_kexinits[mode] = lsh_string_dup(packet); 
       
       C_WRITE(connection, packet);
     }
@@ -327,8 +327,7 @@ do_handle_kexinit(struct packet_handler *c,
 }
 
 struct packet_handler *
-make_kexinit_handler(int type,
-		     struct make_kexinit *init,
+make_kexinit_handler(struct make_kexinit *init,
 		     struct lsh_object *extra,
 		     struct alist *algorithms)
 {
@@ -336,7 +335,6 @@ make_kexinit_handler(int type,
 
   self->super.handler = do_handle_kexinit;
 
-  self->type = type;
   self->init = init;
   self->extra = extra;
   self->algorithms = algorithms;
@@ -660,7 +658,7 @@ make_simple_kexinit(struct randomness *r,
 
 
 
-/* GABA:
+/* ;; GABA:
    (class
      (name install_new_keys)
      (super install_keys)
@@ -670,23 +668,25 @@ make_simple_kexinit(struct randomness *r,
 */
 
 static int
-do_install(struct install_keys *c,
-	   struct ssh_connection *connection,
-	   struct hash_instance *secret)
+install_keys(struct object_list *algorithms,
+	     struct ssh_connection *connection,
+	     struct hash_instance *secret)
 {
-  CAST(install_new_keys, closure, c);
   struct crypto_instance *rec;
   struct crypto_instance *send;
+  int is_server = connection->flags & CONNECTION_SERVER;
 
-  rec = kex_make_decrypt(secret, closure->algorithms,
-			 KEX_ENCRYPTION_SERVER_TO_CLIENT ^ closure->is_server,
+  assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
+  
+  rec = kex_make_decrypt(secret, algorithms,
+			 KEX_ENCRYPTION_SERVER_TO_CLIENT ^ is_server,
 			 connection->session_id);
   if (!rec)
     /* Weak or invalid key */
     return 0;
 
-  send = kex_make_encrypt(secret, closure->algorithms,
-			  KEX_ENCRYPTION_CLIENT_TO_SERVER ^ closure->is_server,
+  send = kex_make_encrypt(secret, algorithms,
+			  KEX_ENCRYPTION_CLIENT_TO_SERVER ^ is_server,
 			  connection->session_id);
   if (!send)
     {
@@ -697,11 +697,11 @@ do_install(struct install_keys *c,
   /* Keys for receiving */
   connection->dispatch[SSH_MSG_NEWKEYS] = make_newkeys_handler
     (rec,
-     kex_make_mac(secret, closure->algorithms,
-		  KEX_MAC_SERVER_TO_CLIENT ^ closure->is_server,
+     kex_make_mac(secret, algorithms,
+		  KEX_MAC_SERVER_TO_CLIENT ^ is_server,
 		  connection->session_id),
-     kex_make_inflate(closure->algorithms,
-		      KEX_COMPRESSION_SERVER_TO_CLIENT ^ closure->is_server));
+     kex_make_inflate(algorithms,
+		      KEX_COMPRESSION_SERVER_TO_CLIENT ^ is_server));
 
   /* Keys for sending */
   /* NOTE: The NEWKEYS-message should have been sent before this
@@ -709,17 +709,18 @@ do_install(struct install_keys *c,
   connection->send_crypto = send;
   
   connection->send_mac 
-    = kex_make_mac(secret, closure->algorithms,
-		   KEX_MAC_CLIENT_TO_SERVER ^ closure->is_server,
+    = kex_make_mac(secret, algorithms,
+		   KEX_MAC_CLIENT_TO_SERVER ^ is_server,
 		   connection->session_id);
 
   connection->send_compress
-    = kex_make_deflate(closure->algorithms,
-		       KEX_COMPRESSION_CLIENT_TO_SERVER ^ closure->is_server);
+    = kex_make_deflate(algorithms,
+		       KEX_COMPRESSION_CLIENT_TO_SERVER ^ is_server);
   
   return 1;
 }
 
+#if 0
 struct install_keys *
 make_install_new_keys(int is_server,
 		      struct object_list *algorithms)
@@ -732,6 +733,7 @@ make_install_new_keys(int is_server,
 
   return &self->super;
 }
+#endif
 
 /* Returns a hash instance for generating various session keys. NOTE:
  * This mechanism changed in the transport-05 draft. Before this, the
@@ -752,7 +754,7 @@ kex_build_secret(struct hash_algorithm *H,
 
 void
 keyexchange_finish(struct ssh_connection *connection,
-		   struct install_keys *install,
+		   struct object_list *algorithms,
 		   struct hash_algorithm *H,
 		   struct lsh_string *exchange_hash,
 		   struct lsh_string *K)
@@ -775,7 +777,7 @@ keyexchange_finish(struct ssh_connection *connection,
   else
     lsh_string_free(exchange_hash);
   
-  if (!INSTALL_KEYS(install, connection, hash))
+  if (!install_keys(algorithms, connection, hash))
     {
       werror("Installing new keys failed. Hanging up.\n");
       KILL(hash);
