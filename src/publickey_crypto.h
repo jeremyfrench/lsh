@@ -35,6 +35,9 @@
 #undef CLASS_DECLARE
 
 struct signature_algorithm *make_dsa_algorithm(struct randomness *random);
+#if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
+struct signer *make_dsa_signer_kludge(struct signer *dsa);
+#endif
 
 /* FIXME: Groups could use "non-virtual" methods */
 

@@ -36,13 +36,15 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
+
 #define CLASS_DEFINE
 #include "publickey_crypto.h.x"
 #undef CLASS_DEFINE
 
 #include "publickey_crypto.c.x"
 
-/* DSS signatures */
+/* DSA signatures */
 /* CLASS:
    (class
      (name dsa_signer)
@@ -51,6 +53,14 @@
        (random object randomness)
        (public struct dsa_public)
        (a bignum)))
+*/
+
+/* CLASS:
+   (class
+     (name dsa_signer_kludge)
+     (super signer)
+     (vars
+       (dsa object dsa_signer)))
 */
 
 /* CLASS:
@@ -79,19 +89,19 @@ static void dsa_hash(mpz_t h, UINT32 length, UINT8 *msg)
 
   bignum_parse_u(h, hash->hash_size, digest);
 
-  debug("DSS hash: %hn\n", h);
+  debug("DSA hash: %hn\n", h);
   
   KILL(hash);
 }
 
-static struct lsh_string *do_dsa_sign(struct signer *c,
-				      UINT32 length,
-				      UINT8 *msg)
+static void generic_dsa_sign(struct dsa_signer *closure,
+			     UINT32 length, UINT8 *msg,
+			     mpz_t r, mpz_t s)
 {
-  CAST(dsa_signer, closure, c);
-  mpz_t k, r, s, tmp;
-  struct lsh_string *signature;
+  mpz_t k, tmp;
 
+  assert(r && s);
+  
   /* Select k, 0<k<q, randomly */
   mpz_init_set(tmp, closure->public.q);
   mpz_sub_ui(tmp, tmp, 1);
@@ -100,10 +110,9 @@ static struct lsh_string *do_dsa_sign(struct signer *c,
   bignum_random(k, closure->random, tmp);
   mpz_add_ui(k, k, 1);
 
-  debug("do_dsa_sign, k: %hn\n", k);
+  debug("generic_dsa_sign, k: %hn\n", k);
   
   /* Compute r = (g^k (mod p)) (mod q) */
-  mpz_init(r);
   mpz_powm(r, closure->public.g, k, closure->public.p);
 
   debug("do_dsa_sign, group element: %hn\n", r);
@@ -118,33 +127,65 @@ static struct lsh_string *do_dsa_sign(struct signer *c,
   /* Compute k^-1 (mod q) */
   if (!mpz_invert(k, k, closure->public.q))
     {
-      werror("do_dsa_sign: k non-invertible\n");
-      mpz_clear(tmp);
-      mpz_clear(k);
-      mpz_clear(r);
-      return NULL;
+      fatal("do_dsa_sign: k non-invertible\n");
     }
 
   /* Compute signature s = k^-1(h + ar) (mod q) */
-  mpz_init(s);
   mpz_mul(s, r, closure->a);
   mpz_fdiv_r(s, s, closure->public.q);
   mpz_add(s, s, tmp);
   mpz_mul(s, s, k);
   mpz_fdiv_r(s, s, closure->public.q);
 
-  debug("do_dsa_sign, s: %hn\n", s);
+  debug("generic_dsa_sign, s: %hn\n", s);
   
-  /* Build signature */
-  signature = ssh_format("%a%n%n", ATOM_SSH_DSS, r, s);
-
   mpz_clear(k);
+  mpz_clear(tmp);
+}
+
+static struct lsh_string *do_dsa_sign(struct signer *c,
+				      UINT32 length,
+				      UINT8 *msg)
+{
+  CAST(dsa_signer, closure, c);
+  mpz_t r, s;
+  struct lsh_string *signature;
+
+  mpz_init(r); mpz_init(s);
+  generic_dsa_sign(closure, length, msg, r, s);
+      
+  /* Build signature */
+  /* FIXME: Uses the (better) format from an obsoleted draft */
+  signature = ssh_format("%a%n%n", ATOM_SSH_DSS, r, s);
   mpz_clear(r);
   mpz_clear(s);
-  mpz_clear(tmp);
 
   return signature;
 }
+
+#if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
+static struct lsh_string *do_dsa_sign_kludge(struct signer *c,
+					     UINT32 length,
+					     UINT8 *msg)
+{
+  CAST(dsa_signer_kludge, self, c);
+  mpz_t r, s;
+  struct lsh_string *signature;
+
+  mpz_init(r); mpz_init(s);
+  generic_dsa_sign(self->dsa, length, msg, r, s);
+
+  /* Build signature */
+  /* FIXME: This generates length fields, and it also doesn't
+   * guarantee that r and s occupy half of the signature each. */
+  signature = ssh_format("%un%un", r, s);
+  mpz_clear(r);
+  mpz_clear(s);
+
+  return signature;
+}
+#endif /* DATAFELLOWS_SSH2_SSH_DSA_KLUDGE */
+
 
 #if 0
 static struct lsh_string *dsa_public_key(struct signer *dsa)
@@ -316,6 +357,19 @@ static struct signer *make_dsa_signer(struct signature_algorithm *c,
   return &res->super;
 }
 
+#if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
+struct signer *make_dsa_signer_kludge(struct signer *s)
+{
+  NEW(dsa_signer_kludge, self);
+  CAST(dsa_signer, dsa, s);
+	
+  self->super.sign = do_dsa_sign_kludge;
+  
+  self->dsa = dsa;
+  return &self->super;
+}
+#endif /* DATAFELLOWS_SSH2_SSH_DSA_KLUDGE */
+
 static struct verifier *
 make_dsa_verifier(struct signature_algorithm *closure UNUSED,
 		  UINT32 public_length,
@@ -425,6 +479,7 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
 				  struct diffie_hellman_instance *self,
 				  struct ssh_connection *c)
 {
+  struct lsh_string *s;
   /* FIXME: The allocator could do this kind of initialization
    * automatically. */
   mpz_init(self->e);
@@ -436,34 +491,26 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
   self->hash = MAKE_HASH(m->H);
   self->exchange_hash = NULL;
 
-  /* FIXME: Length field should be included when hashing. */
-  
   debug("init_diffie_hellman_instance()\n"
-	" V_C: %pS\n", c->client_version);
-  HASH_UPDATE(self->hash,
-	      c->client_version->length,
-	      c->client_version->data);
-  
-  debug(" V_S: %pS\n", c->server_version);
-  HASH_UPDATE(self->hash,
-	      c->server_version->length,
-	      c->server_version->data);
-
+	" V_C: %pS\n", c->versions[CONNECTION_CLIENT]);
+  debug(" V_S: %pS\n", c->versions[CONNECTION_SERVER]);
   debug(" I_C: %pS\n", c->literal_kexinits[CONNECTION_CLIENT]);
-  HASH_UPDATE(self->hash,
-	      c->literal_kexinits[CONNECTION_CLIENT]->length,
-	      c->literal_kexinits[CONNECTION_CLIENT]->data);
-  
   debug(" I_C: %pS\n", c->literal_kexinits[CONNECTION_SERVER]);
-  HASH_UPDATE(self->hash,
-	      c->literal_kexinits[CONNECTION_SERVER]->length,
-	      c->literal_kexinits[CONNECTION_SERVER]->data);
-  
+
+  s = ssh_format("%S%S%S%S",
+		 c->versions[CONNECTION_CLIENT],
+		 c->versions[CONNECTION_SERVER],
+		 c->literal_kexinits[CONNECTION_CLIENT],
+		 c->literal_kexinits[CONNECTION_SERVER]);
+  HASH_UPDATE(self->hash, s->length, s->data);
+
+  lsh_string_free(s);  
+
+  /* We don't need the kexinit strings anymore. */
   lsh_string_free(c->literal_kexinits[CONNECTION_CLIENT]);
   lsh_string_free(c->literal_kexinits[CONNECTION_SERVER]);
-
-  c->literal_kexinits[CONNECTION_SERVER] = NULL;
   c->literal_kexinits[CONNECTION_CLIENT] = NULL;
+  c->literal_kexinits[CONNECTION_SERVER] = NULL;
 }
 
 struct diffie_hellman_method *make_dh1(struct randomness *r)
