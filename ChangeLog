@@ -1,3 +1,14 @@
+2000-04-12  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/testsuite/Makefile.am (TS_MORE_SH): Added lsh-cat-test.
+
+	* src/testsuite/functions.sh (exec_lsh): New function. 
+
+	* src/server_session.c (do_spawn_exec): Don't spawn a login-mode
+	shell.
+	(do_send_adjust): Check that files are alive before operating on
+	them. 
+
 2000-04-11  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/io.c (io_listen_local): Started on AF_LOCAL support.
