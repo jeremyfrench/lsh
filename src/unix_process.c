@@ -106,6 +106,9 @@ static struct lsh_process *
 make_unix_process(pid_t pid, int signal)
 {
   NEW(unix_process, self);
+
+  trace("unix_process.c: make_unix_process\n");
+  
   init_resource(&self->super.super, do_kill_process);
   self->super.signal = do_signal_process;
   
@@ -129,6 +132,8 @@ do_logout_notice(struct exit_callback *s,
 		 int signaled, int core, int value)
 {
   CAST(logout_notice, self, s);
+
+  trace("unix_process: do_logout_notice\n");
 
   /* No need to signal the process. */
   self->process->alive = 0;
@@ -165,6 +170,8 @@ do_utmp_cleanup(struct exit_callback *s,
 {
   CAST(utmp_cleanup, self, s);
 
+  trace("unix_process: do_utmp_cleanup\n");
+
 #if HAVE_UTMP_H
   self->utmp.ut_type = DEAD_PROCESS;
   
@@ -174,7 +181,7 @@ do_utmp_cleanup(struct exit_callback *s,
 #endif
 #if HAVE_PUTUTLINE
   if (!pututline(&self->utmp))
-    werror("Updating utmp failed (errno = %i): %z\n",
+    werror("Updating utmp for logout failed (errno = %i): %z\n",
 	   errno, STRERROR(errno));
 #endif
 #endif /* HAVE_UTMP_H */
@@ -221,14 +228,20 @@ utmp_book_keeping(struct lsh_string *name,
 		  struct exit_callback *c)
 {
   NEW(utmp_cleanup, cleanup);
+
+  trace("unix_process.c: utmp_book_keeping\n");
   
   cleanup->super.exit = do_utmp_cleanup;
   cleanup->c = c;
 
   memset(&cleanup->utmp, 0, sizeof(cleanup->utmp));
 
+  trace("unix_process.c: utmp_book_keeping, before tty\n");
+
   /* utmp->ut_line exists even in our dummy utmp struct */
   CP_TTY(cleanup->utmp.ut_line, tty);
+
+  trace("unix_process.c: utmp_book_keeping, after tty\n");
   
 #if HAVE_UTMP_H
   cleanup->utmp.ut_type = login ? LOGIN_PROCESS : USER_PROCESS;
@@ -242,17 +255,22 @@ utmp_book_keeping(struct lsh_string *name,
   CP(cleanup->utmp.ut_name, name);
 #endif
 
+  trace("unix_process.c: utmp_book_keeping, after name\n");
+  
   /* FIXME: Perform a reverse lookup.
    * Also use ut_addr and ut_addr_v6 */
 #if HAVE_STRUCT_UTMP_UT_HOST
   CP(cleanup->utmp.ut_host, peer->ip);
 #endif
+  trace("unix_process.c: utmp_book_keeping, after host\n");
 
 #if HAVE_PUTUTLINE
   if (!pututline(&cleanup->utmp))
-    werror("pututline failed (errno = %i): %z\n",
+    werror("Updating utmp for login failed (errno = %i): %z\n",
 	   errno, STRERROR(errno));
 #endif
+
+  trace("unix_process.c: utmp_book_keeping, after pututline\n");
 
 #endif /* HAVE_UTMP_H */
   
@@ -261,6 +279,8 @@ utmp_book_keeping(struct lsh_string *name,
 	  lsh_get_cstring(name),
 	  lsh_get_cstring(peer->ip));
 #endif /* HAVE_LOGWTMP */
+
+  trace("unix_process.c: utmp_book_keeping, after logwtmp\n");
   
   return &cleanup->super;
 }
@@ -275,11 +295,15 @@ unix_process_setup(pid_t pid, int login,
 {
   struct lsh_process *process = make_unix_process(pid, SIGHUP);
 
+  trace("unix_process.c: unix_process_setup\n");
+  
 #if WITH_UTMP
   if (tty)
     *c = utmp_book_keeping(user->name, pid, login, peer, tty, *c);
 #endif
 
+  trace("unix_process.c: unix_process_setup, after utmp\n");
+  
   *c = make_logout_notice(&process->super, *c);
 
   return process;
