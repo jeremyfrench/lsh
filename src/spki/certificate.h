@@ -14,9 +14,8 @@ struct spki_principal
   /* NULL if only hash is known */
   uint8_t *key;
 
-  /* NULL if not known. */
-  uint8_t *md5;
-  uint8_t *sha1;
+  uint8_t md5[MD5_DIGEST_SIZE];
+  uint8_t sha[SHA1_DIGEST_SIZE];
 
   /* Information needed to verify signatures for this key. */
   void *verifier;
@@ -92,12 +91,10 @@ spki_principal_by_key(struct spki_acl_db *db,
 		      unsigned key_length, const uint8_t *key);
 
 struct spki_principal *
-spki_principal_by_md5(struct spki_acl_db *db,
-		      unsigned key_length, const uint8_t *key);
+spki_principal_by_md5(struct spki_acl_db *db, const uint8_t *digest);
 
 struct spki_principal *
-spki_principal_by_sha1(struct spki_acl_db *db,
-		       unsigned key_length, const uint8_t *key);
+spki_principal_by_sha1(struct spki_acl_db *db, const uint8_t *digest);
 
 
 /* Handling the acl database */
