@@ -448,7 +448,7 @@ configuration is done with command line switches @xref{Invoking lshd}.
 To run @code{lshd}, you must first create a hostkey, usually stored in
 @file{/etc/lsh_host_key}. To do this, run
 
-@samp{lsh_keygen | lsh_writekey /etc/lsh_host_key}
+@samp{lsh_keygen | lsh_writekey -o /etc/lsh_host_key}
 
 This will also create a file @file{/etc/lsh_host_key.pub},
 containing the corresponding public key.
