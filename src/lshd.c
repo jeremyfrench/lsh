@@ -561,7 +561,9 @@ main_argp =
          ((progn hooks)
 	    ; We have to initialize the connection
 	    ; before adding handlers.
-	    (init_connection_service connection))))))
+	    (init_connection_service
+	      ; Disconnect if connection->user is NULL
+	      (connection_require_userauth connection)))))))
 */
 
 static void
@@ -684,36 +686,36 @@ int main(int argc, char **argv)
       /* FIXME: We should check that we have at least one host key. We
        * should also extract the host-key algorithms for which we have
        * keys, instead of hardcoding ssh-dss below. */
- 
-      struct lsh_object *o = lshd_listen
-	(make_simple_listen(backend, NULL),
-	 make_handshake_info(CONNECTION_SERVER,
-			     "lsh - a free ssh",
-			     NULL,
-			     SSH_MAX_PACKET,
-			     options->random,
-			     options->super.algorithms,
-			     make_simple_kexinit
-			     (options->random,
-			      options->kex_algorithms,
-			      make_int_list(1, ATOM_SSH_DSS, -1),
-			      options->super.crypto_algorithms,
-			      options->super.mac_algorithms,
-			      options->super.compression_algorithms,
-			      make_int_list(0, -1)),
-			     options->sshd1),
-	 make_offer_service
-	 (make_alist
-	  (1, ATOM_SSH_USERAUTH,
-	   make_userauth_service(options->userauth_methods,
-				  options->userauth_algorithms,
-				  make_alist(1, ATOM_SSH_CONNECTION,
-					     lshd_connection_service(connection_hooks),
-					     -1)),
-	   -1)));
-    
-      CAST_SUBTYPE(command, server_listen, o);
-    
+
+      CAST_SUBTYPE(command, connection_service, lshd_connection_service(connection_hooks));
+      CAST_SUBTYPE(command, server_listen, 		   
+		   lshd_listen
+		   (make_simple_listen(backend, NULL),
+		    make_handshake_info(CONNECTION_SERVER,
+					"lsh - a free ssh",
+					NULL,
+					SSH_MAX_PACKET,
+					options->random,
+					options->super.algorithms,
+					make_simple_kexinit
+					(options->random,
+					 options->kex_algorithms,
+					 make_int_list(1, ATOM_SSH_DSS, -1),
+					 options->super.crypto_algorithms,
+					 options->super.mac_algorithms,
+					 options->super.compression_algorithms,
+					 make_int_list(0, -1)),
+					options->sshd1),
+		    make_offer_service
+		    (make_alist
+		     (2, ATOM_SSH_CONNECTION, connection_service,
+		      ATOM_SSH_USERAUTH,
+		      make_userauth_service(options->userauth_methods,
+					    options->userauth_algorithms,
+					    make_alist(1, ATOM_SSH_CONNECTION,
+						       connection_service,-1)),
+		      -1))));
+      
       COMMAND_CALL(server_listen, options,
 		   &discard_continuation,
 		   make_report_exception_handler
