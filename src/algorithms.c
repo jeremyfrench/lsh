@@ -168,11 +168,17 @@ struct int_list *default_crypto_algorithms(void)
 #if WITH_IDEA
 		       + 1
 #endif
+#if WITH_CAST
+		       +1
+#endif
 		       , ATOM_3DES_CBC,
 #if WITH_IDEA
 		       ATOM_IDEA_CBC,
 #endif
 		       ATOM_BLOWFISH_CBC,
+#if WITH_CAST
+		       ATOM_CAST128_CBC,
+#endif
 		       ATOM_TWOFISH_CBC, ATOM_ARCFOUR, -1);
 }
 
