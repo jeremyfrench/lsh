@@ -24,26 +24,8 @@
 #ifndef LSH_SERVER_H_INCLUDED
 #define LSH_SERVER_H_INCLUDED
 
-#include "io.h"
-#include "keyexchange.h"
-#include "ssh1_fallback.h"
-
-#if 0
-struct fd_listen_callback *
-make_server_callback(struct io_backend *b,
-		     const char *comment,
-		     /* NULL if no falling back should be attempted. */
-		     struct ssh1_fallback *fallback,
-		     UINT32 block_size,
-		     struct randomness *random,		     
-		     struct make_kexinit *init,
-		     struct packet_handler *kexinit_handler);
-
-struct read_handler *make_server_read_line(struct ssh_connection *c,
-					   int fd,
-					   struct ssh1_fallback *fallback);
-struct close_callback *make_server_close_handler(struct ssh_connection *c);
-#endif
+#include "command.h"
+#include "alist.h"
 
 struct command *make_offer_service(struct alist *services);
 

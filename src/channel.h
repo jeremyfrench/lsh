@@ -135,13 +135,6 @@
 #define CHANNEL_OPEN_FAILURE(s) \
 ((s)->open_failure((s)))
 
-#if 0
-#define CHANNEL_SUCCESS(s) \
-((s)->channel_success((s)))
-
-#define CHANNEL_FAILURE(s) \
-((s)->channel_failure((s)))
-#endif
      
 /* FIXME: Perhaps, this information is better kept in the connection
  * object? */

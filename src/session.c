@@ -26,20 +26,6 @@
 
 #include "session.h"
 
-#if 0
-struct ssh_service *make_session_service(struct alist *global_requests,
-					 struct alist *channel_requests)
-{
-  struct connection_service *self;
-
-  NEW(self);
-  self->super.init = init_session_service;
-  self->global_requests = global_requests;
-  self->channel_types = channel_types;
-
-  return &self->super;
-}
-#endif
 
 struct lsh_string *format_session_open(UINT32 channel,
 				       UINT32 window_size, UINT32 max_packet)

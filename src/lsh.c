@@ -357,39 +357,6 @@ int main(int argc, char **argv)
 			   ? make_int_list(1, preferred_compression, -1)
 			   : default_compression_algorithms()),
 			  make_int_list(0, -1));
-
-#if 0
-  service = make_connection_service
-    (make_alist(0, -1),
-     make_alist(0, -1),
-     make_client_startup(io_read(backend, in, NULL, NULL),
-			 io_write(backend, out, BLOCK_SIZE, NULL),
-			 io_write(backend, err, BLOCK_SIZE, NULL),
-			 requests,
-			 &lsh_exit_code));
-  
-  kexinit_handler = make_kexinit_handler
-    (CONNECTION_CLIENT,
-     make_kexinit, algorithms,
-     /* FIXME: Make request_service a command */
-     request_service(ATOM_SSH_USERAUTH, 
-		     make_client_userauth(ssh_format("%lz", user),
-					  ATOM_SSH_CONNECTION,
-					  service)));
-#endif
-
-#if 0 
-  if (!io_connect(backend, &remote, NULL,
-		  make_client_callback(backend,
-				       "lsh - a free ssh",
-				       SSH_MAX_PACKET,
-				       r, make_kexinit,
-				       kexinit_handler)))
-    {
-      werror("lsh: Connection failed: %z\n", strerror(errno));
-      return EXIT_FAILURE;
-    }
-#endif
   
   /* Exit code if no session is established */
 

@@ -132,17 +132,6 @@ int verify_password(struct unix_user *user,
   return 1;
 }
 
-#if 0
-/* ;; GABA:
-   (class
-     (name unix_authentication)
-     (super userauth)
-     (vars
-       ;; (login object login_method)
-       ; Services allowed. Maps names to struct unix_service.
-       (services object alist)))
-*/
-#endif
 
 static int do_authenticate(struct userauth *ignored UNUSED,
 			   struct lsh_string *username,
@@ -219,20 +208,6 @@ static int do_authenticate(struct userauth *ignored UNUSED,
 struct userauth unix_userauth =
 { STATIC_HEADER, do_authenticate };
 
-#if 0
-struct userauth *make_unix_userauth(struct alist *services)
-{
-  NEW(unix_authentication, closure);
-
-  closure->super.authenticate = do_authenticate;
-#if 0
-  closure->login = login;
-#endif
-  closure->services = services;
-
-  return &closure->super;
-}
-#endif
 
 int change_uid(struct unix_user *user)
 {

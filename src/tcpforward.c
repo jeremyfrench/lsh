@@ -236,6 +236,7 @@ struct channel_open *make_open_direct_tcpip(struct io_backend *backend)
               (start-io (listen port connection)
 	                (open-direct-tcpip connection)))))
 */
+
 #if 0
 /* FIXME: This code requires some mechanism for the server to send a
  * request (in this case, a CHANNEL_OPEN for a forwarded-tcp channel,
@@ -245,7 +246,7 @@ struct channel_open *make_open_direct_tcpip(struct io_backend *backend)
  * the design phase. */
 
 /* Accept callback */
-/* xxCLASS:
+/* ;; GABA:
    (class
      (name tcpip_accepted)
      (super fd_callback)
@@ -298,7 +299,7 @@ make_forwarded_tcpip(struct lsh_string *bind_host,
   return self;
 }
 
-/* xxCLASS:
+/* ;; CLASS:
    (class
      (name tcpip_forward_request)
      (super global_request)

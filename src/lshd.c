@@ -400,14 +400,6 @@ int main(int argc, char **argv)
       werror("lshd: Invalid port or service\n");
       exit (EXIT_FAILURE);
     }
-
-#if 0
-  if (!get_inaddr(&local, host, port, "tcp"))
-    {
-      werror("lshd: No such host or service.\n");
-      return EXIT_FAILURE;
-    }
-#endif
   
 #if 0
 #if HAVE_SYSLOG
@@ -445,32 +437,6 @@ int main(int argc, char **argv)
 			   ? make_int_list(1, preferred_compression, -1)
 			   : default_compression_algorithms()),
 			  make_int_list(0, -1));
-#if 0
-  kexinit_handler = make_kexinit_handler
-    (CONNECTION_SERVER,
-     make_kexinit, algorithms,
-     make_meta_service
-     (make_alist
-      (1, ATOM_SSH_USERAUTH,
-       make_userauth_service
-       (make_int_list(1, ATOM_PASSWORD, -1),
-	make_alist(1, ATOM_PASSWORD,
-		   make_unix_userauth
-		   (make_alist(1,
-			       ATOM_SSH_CONNECTION,
-			       make_server_connection_service
-			       (make_alist(0, -1),
-				make_alist(1
-#if WITH_PTY_SUPPORT
-					   +1, ATOM_PTY_REQ, make_pty_handler()
-#endif /* WITH_PTY_SUPPORT */
-					   , ATOM_SHELL, make_shell_handler(backend, reaper),
-					   -1),
-				backend),
-			       -1)),
-		   -1)),
-       -1)));
-#endif
   
   {
     struct lsh_object *o = lshd_listen
@@ -521,23 +487,6 @@ int main(int argc, char **argv)
 	return EXIT_FAILURE;
       }
   }
-#if 0
-  if (!io_listen(backend, &local, 
-		 make_server_callback(backend,
-				      "lsh - a free ssh",
-#if WITH_SSH1_FALLBACK
-				      sshd1 ? make_ssh1_fallback (sshd1) :
-#endif /* WITH_SSH1_FALLBACK */
-				      NULL,
-				      SSH_MAX_PACKET,
-				      r, make_kexinit,
-				      kexinit_handler)))
-    {
-      werror("lshd: listen() failed: (errno = %i): %z\n",
-	     errno, strerror(errno));
-      return 1;
-    }
-#endif
   
   reaper_run(reaper, backend);
 

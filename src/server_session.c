@@ -256,9 +256,6 @@ struct ssh_channel *make_server_session(struct unix_user *user,
   
   self->user = user;
 
-#if 0
-  self->running = 0;
-#endif
   self->process = NULL;
   
   self->in = NULL;
@@ -430,23 +427,8 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
    * really wants to talk to any live children processes. */
 #if 0
   close_fd(&session->in->super, 0);
-#endif
-#if 0
   close_fd(session->out);
   close_fd(session->err);
-#endif
-
-#if 0
-  if (!(channel->flags & CHANNEL_SENT_EOF)
-      /* Don't send eof if the process died violently. */
-      && !signaled)
-    {
-      int res = channel_eof(channel);
-      if (LSH_CLOSEDP(res))
-	/* FIXME: Can we do anything better with the return code than
-	 * ignore it? */
-	return;
-    }
 #endif
 
   /* We close when we have both sent and received eof. */
@@ -869,9 +851,6 @@ static int do_spawn_shell(struct channel_request *c,
 	channel->send = do_send;
 	channel->eof = do_eof;
 	  
-#if 0
-	session->running = 1;
-#endif
 	session->process
 	  = make_process_resource(child, SIGHUP);
 

@@ -72,21 +72,6 @@ static int do_write(struct abstract_write *w,
   new->packet = packet;
 
   lsh_queue_add_tail(&closure->q, &new->header);
-#if 0
-  new->next = 0;
-  
-  if (closure->tail)
-    {
-      new->prev = closure->tail;
-      closure->tail->next = new;
-    }
-  else
-    {
-      new->prev = NULL;
-      closure->head = new;
-    }
-  closure->tail = new;
-#endif
   
 #if 0
   if (closure->try_write)

@@ -24,27 +24,8 @@
 
 #include "service.h"
 
-#include "disconnect.h"
 #include "format.h"
-#include "parse.h"
 #include "ssh.h"
-#include "xalloc.h"
-
-#if 0
-#define GABA_DEFINE
-#include "service.h.x"
-#undef GABA_DEFINE
-
-#include "service.c.x" 
-#endif
-
-/* ;;GABA:
-   (class
-     (name service_handler)
-     (super packet_handler)
-     (vars
-       (services object alist)))
-*/
 
 struct lsh_string *format_service_request(int name)
 {
@@ -55,32 +36,3 @@ struct lsh_string *format_service_accept(int name)
 {
   return ssh_format("%c%a", SSH_MSG_SERVICE_ACCEPT, name);
 }
-
-/* ;;GABA:
-   (class
-     (name meta_service)
-     (super ssh_service)
-     (vars
-       (service_handler object packet_handler)))
-*/
-#if 0
-static int init_meta_service(struct ssh_service *c,
-			     struct ssh_connection *connection)
-{
-  CAST(meta_service, closure, c);
-
-  connection->dispatch[SSH_MSG_SERVICE_REQUEST] = closure->service_handler;
-
-  return LSH_OK | LSH_GOON;
-}
-  
-struct ssh_service *make_meta_service(struct alist *services)
-{
-  NEW(meta_service, self);
-
-  self->super.init = init_meta_service;
-  self->service_handler = make_service_handler(services);
-
-  return &self->super;
-}
-#endif

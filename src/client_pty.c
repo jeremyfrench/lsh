@@ -129,21 +129,3 @@ struct command *make_pty_request(int tty)
 
   return &req->super.super;
 }
-
-      
-#if 0
-struct lsh_string *
-format_pty_req(struct ssh_channel *channel, int want_reply, 
-	       UINT8 *term, UINT32 width, UINT32 height, UINT32 width_p, 
-	       UINT32 height_p, struct lsh_string *term_modes)
-{
-  return format_channel_request(ATOM_PTY_REQ, channel, want_reply, 
-				"%s%i%i%i%i%S",
-				strlen(term),
-				term,
-				width, height,
-				width_p, height_p,
-				term_modes);
-}
-#endif
-

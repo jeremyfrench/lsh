@@ -345,7 +345,6 @@ static int do_global_request(struct packet_handler *c,
   END (packet);
 }
 
-#if 1
 /* Callback given to the CHANNEL_OPEN method */
 static int do_channel_open_response(struct channel_open_callback *c,
                                     struct ssh_channel *channel,
@@ -412,7 +411,7 @@ make_channel_open_response(struct ssh_connection* connection,
 
   return closure;
 }
-#endif
+
 
 #if 0
 /* ;;GABA:
@@ -1183,11 +1182,6 @@ void init_channel(struct ssh_channel *channel)
   channel->open_continuation = NULL;
 
   object_queue_init(&channel->pending_requests);
-  
-#if 0
-  channel->channel_success = NULL;
-  channel->channel_failure = NULL;
-#endif
 }
 
 struct lsh_string *channel_transmit_data(struct ssh_channel *channel,

@@ -52,21 +52,8 @@ struct command *make_request_service(int service);
 struct channel_request *make_handle_exit_status(int *exit_code);
 struct channel_request *make_handle_exit_signal(int *exit_code);
 
-#if 0
-struct connection_startup *make_client_startup(struct io_fd *in,
-					       struct io_fd *out,
-					       struct io_fd *err,
-					       struct request_info *requests,
-					       int *exit_status);
-#endif
-
 struct command *make_open_session_command(struct ssh_channel *session);
 
-#if 0
-struct request_info *make_shell_request(struct request_info *next);
-struct request_info *make_pty_request(int fd, int essential, int raw,
-				      struct request_info *next);
-#endif
 
 extern struct channel_request_command request_shell;
 extern struct command client_io;
@@ -77,13 +64,5 @@ struct ssh_channel *make_client_session(struct io_fd *in,
 					UINT32 max_window,
 					int *exit_status);
 
-#if 0
-struct lsh_object *make_channel_request(int request, struct lsh_string *args);
-
-
-#define request_shell() make_channel_request(ATOM_SHELL, ssh_format(""))
-#define request_pty(term, w, h, wp, hp, modes) \
-make_channel_request(ATOM_PTY_REQ, ssh_format("%z%i%i%i%i%fS", term, w, h, wp, hp, modes))
-#endif
      
 #endif /* LSH_CLIENT_H_INCLUDED */

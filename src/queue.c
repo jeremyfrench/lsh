@@ -155,12 +155,6 @@ struct object_queue_node
   struct lsh_object *o;
 };
 
-#if 0
-void object_queue_init(struct object_queue *q)
-{
-  lsh_queue_init(&q->q);
-}
-#endif
 
 static struct object_queue_node *
 make_object_queue_node(struct lsh_object *o)

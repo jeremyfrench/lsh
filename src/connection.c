@@ -201,9 +201,6 @@ struct ssh_connection *make_ssh_connection(struct command_continuation *c)
 
   connection->dispatch[SSH_MSG_DEBUG] = make_rec_debug_handler();
 
-#if 0
-  connection->dispatch[SSH_MSG_KEXINIT] = kex_handler;
-#endif
   
   /* Make all other known message types terminate the connection */
 
