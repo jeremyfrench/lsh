@@ -132,8 +132,8 @@ int
 parse_utf8(struct simple_buffer *buffer, uint32_t *result)
 {
   uint32_t first;
-  int length;
-  int i;
+  unsigned length;
+  unsigned i;
   
   if (!LEFT)
     return -1;
