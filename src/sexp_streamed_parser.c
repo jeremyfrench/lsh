@@ -768,6 +768,7 @@ make_parse_transport(struct read_handler * (*make)(struct command_continuation *
 MAKE_PARSE_VALUE(transport_sexp)
 {
   CAST(parse_value, self, *s);
+  unsigned i;
 
   if (!available)
     {
@@ -775,33 +776,39 @@ MAKE_PARSE_VALUE(transport_sexp)
       *s = NULL;
       return 0;
     }
-
-  switch(data[0])
+  
+  for (i = 0;  (i < available) && (sexp_char_classes[data[i]] & CHAR_space); i++)
+    ;
+  
+  if (i == available)
+    return i;
+  
+  switch(data[i])
     {
     case '[':
       *s = make_parse_display(make_parse_literal, self->c,
 			      self->super.e, self->super.next);
-      return 1;
+      return i + 1;
 
     case '(':
       *s = make_parse_list(0, make_parse_canonical_sexp,
 			   self->c, self->super.e, self->super.next);
-      return 1;
+      return i + 1;
 
     case '0': case '1': case '2': case '3': case '4':
     case '5': case '6': case '7': case '8': case '9':
-      *s = make_parse_length(data[0], make_return_string(self->c),
+      *s = make_parse_length(data[i], make_return_string(self->c),
 			     self->super.e, self->super.next);
-      return 1;
+      return i + 1;
 
     case '{':
       *s = make_parse_transport(make_parse_canonical_sexp,
 				self->c, self->super.e, self->super.next);
-      return 1;
+      return i + 1;
     default:
       SEXP_ERROR(self->super.e, "Invalid transport-style expression");
       *s = NULL;
-      return 0;
+      return i;
     }
 }
 
