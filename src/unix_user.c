@@ -41,6 +41,7 @@
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
 #include <signal.h>
 
 #if HAVE_CRYPT_H
@@ -63,6 +64,10 @@
 # endif
 #else /* !WITH_UTMP */
 # struct utmp;
+#endif
+
+#if HAVE_LIBUTIL_H
+# include <libutil.h>
 #endif
 
 #include "unix_user.c.x"
@@ -146,7 +151,12 @@ lsh_make_utmp(struct lsh_user *user,
   struct utmp *log;
   NEW_SPACE(log);
 
+#if HAVE_UT_NAME
   CP(log->ut_name, user->name);
+#elif HAVE_UT_USER
+  CP(log->ut_user, user->name);
+#endif
+  
   CP_TTY(log->ut_line, ttyname);
 
 #if HAVE_UT_HOST
