@@ -1,6 +1,8 @@
 /*.d
 /.deps
 /Makefile
+/Makefile.am
+/Makefile.in
 /atoms_defines.h
 /atoms_gperf.c
 /atoms_table.c
