@@ -67,6 +67,9 @@ struct command options2local;
 struct command options2keys;
 #define OPTIONS2KEYS (&options2keys.super)
 
+struct command options2tcp_wrapper;
+#define OPTIONS2TCP_WRAPPER (&options2tcp_wrapper.super)
+
 struct command_2 close_on_sighup;
 #define CLOSE_ON_SIGHUP (&close_on_sighup.super.super)
 
@@ -139,6 +142,11 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define OPT_LOGIN_SHELL 0x225
 
+#define OPT_TCPWRAPPERS 0x226
+#define OPT_NO_TCPWRAPPERS 0x227
+
+#define OPT_TCPWRAP_GOAWAY_MSG 0x228
+
 /* GABA:
    (class
      (name lshd_options)
@@ -155,6 +163,8 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (port . "char *")
        (hostkey . "char *")
        (local object address_info)
+       (tcp_wrapper_name . "char *")
+       (tcp_wrapper_message . "char *")
 
        (with_srp_keyexchange . int)
        (with_dh_keyexchange . int)
@@ -224,7 +234,7 @@ make_lshd_options(void)
   self->random = make_system_random();
 
   self->signature_algorithms = all_signature_algorithms(self->random); /* OK to initialize with NULL */
-   
+
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
 
@@ -247,6 +257,9 @@ make_lshd_options(void)
   self->with_pty = 1;
   self->subsystems = NULL;
   
+  self->tcp_wrapper_name = "lshd";
+  self->tcp_wrapper_message = NULL;
+
   self->allow_root = 0;
   self->pw_helper = NULL;
   self->login_shell = NULL;
@@ -389,6 +402,32 @@ DEFINE_COMMAND2(close_on_sighup)
   COMMAND_RETURN(c, a2);
 }
 
+
+DEFINE_COMMAND(options2tcp_wrapper)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+#if WITH_TCPWRAPPERS
+  CAST(lshd_options, options, a);
+
+
+  if (options->tcp_wrapper_name) 
+    COMMAND_RETURN(c, 
+		   make_tcp_wrapper(
+				    make_string(options->tcp_wrapper_name),
+				    options->tcp_wrapper_message ? 
+				    ssh_format("%lz\n", options->tcp_wrapper_message ) :
+				    ssh_format("")
+				    )
+		   ); 
+  else
+#endif /* WITH_TCPWRAPPERS */
+    COMMAND_RETURN(c, &io_log_peer_command);
+}
+
+
 static const struct argp_option
 main_options[] =
 {
@@ -401,6 +440,14 @@ main_options[] =
   { "ssh1-fallback", OPT_SSH1_FALLBACK, "File name", OPTION_ARG_OPTIONAL,
     "Location of the sshd1 program, for falling back to version 1 of the Secure Shell protocol.", 0 },
 #endif /* WITH_SSH1_FALLBACK */
+
+#if WITH_TCPWRAPPERS
+  { NULL, 0, NULL, 0, "Connection filtering:", 0 },
+  { "tcpwrappers", OPT_TCPWRAPPERS, "name", 0, "Set service name for tcp wrappers (default lshd)", 0 },
+  { "no-tcpwrappers", OPT_NO_TCPWRAPPERS, NULL, 0, "Disable wrappers", 0 },
+  { "tcpwrappers-msg", OPT_TCPWRAP_GOAWAY_MSG, "'Message'", 0, "Message sent to clients " 
+    "who aren't allowed to connect. A newline will be added.", 0 },
+#endif /* WITH_TCPWRAPPERS */
 
   { NULL, 0, NULL, 0, "Keyexchange options:", 0 },
 #if WITH_SRP
@@ -543,9 +590,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	
 	if (!self->random)
 	  argp_failure( state, EXIT_FAILURE, 0,  "No randomness generator available.");
-
-
-	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
+	
+       	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
 	  user_db = make_unix_user_db(self->reaper,
 				      self->pw_helper, self->login_shell,
 				      self->allow_root);
@@ -726,6 +772,20 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 #endif /* WITH_PTY_SUPPORT */
 
+#if WITH_TCPWRAPPERS
+    case OPT_TCPWRAPPERS:
+      self->tcp_wrapper_name = arg; /* Name given */
+      break;
+    case OPT_NO_TCPWRAPPERS:
+      self->tcp_wrapper_name = NULL; /* Disable by giving name NULL */
+      break;
+      
+    case OPT_TCPWRAP_GOAWAY_MSG:
+      self->tcp_wrapper_message = arg;
+      break;
+
+#endif /* WITH_TCPWRAPPERS */
+
     case OPT_SUBSYSTEMS:
       self->subsystems = parse_subsystem_list(arg);
       if (!self->subsystems)
@@ -790,7 +850,7 @@ main_argp =
     	           		  handshake
     	           		  (kexinit_filter init keys)
     	           		  keys 
-    	           		  (log_peer lv))))
+				  (options2tcp_wrapper options lv))))
 	           (options2local options) ))))))
 */
 
