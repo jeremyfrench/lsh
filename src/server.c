@@ -52,6 +52,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+/* For debug */
+#include <signal.h>
+#include <unistd.h>
+
 struct server_callback
 {
   struct fd_callback super;
@@ -265,8 +269,13 @@ static int do_send(struct ssh_channel *c)
 
   MDEBUG(closure);
 
-  closure->out->on_hold = 0;
-  closure->err->on_hold = 0;
+  assert(closure->out->super.read);
+  assert(closure->out->handler);
+  assert(closure->err->super.read);
+  assert(closure->err->handler);
+  
+  closure->out->super.want_read = 1;
+  closure->err->super.want_read = 1;
   
   return LSH_OK | LSH_GOON;
 }
@@ -430,12 +439,13 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
 
   /* FIXME: Should we explicitly mark these files for closing?
    * The io-backend should notice EOF anyway. */
+  close_fd(&session->in->super);
 #if 0
-  close_fd(session->in);
   close_fd(session->out);
   close_fd(session->err);
 #endif
-  
+
+#if 0
   if (!(channel->flags & CHANNEL_SENT_EOF)
       /* Don't send eof if the process died violently. */
       && !signaled)
@@ -446,17 +456,24 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
 	 * ignore it? */
 	return;
     }
+#endif
 
+  channel->flags |= CHANNEL_CLOSE_AT_END_OF_FILE;
+  
   if (!(channel->flags & CHANNEL_SENT_CLOSE))
     {
       int res = A_WRITE(channel->write,
 			signaled
 			? format_exit_signal(channel, core, value)
 			: format_exit(channel, value));
-      res = channel_close(channel);
+#if 0
+      if (!LSH_CLOSEDP(res))
+	res |= channel_close(channel);
+#endif
       /* FIXME: Can we do anything better with the return code than
        * ignore it? */
-      
+
+      (void) res;
       return;
     }
 }
@@ -497,6 +514,7 @@ static int make_pipe(int *fds)
     }
   debug("Created socket pair. Using fd:s %d <-- %d\n", fds[0], fds[1]);
 
+#if 0
   if(shutdown(fds[0], SEND) < 0)
     {
       werror("shutdown(%d, SEND) failed: %s\n", fds[0], strerror(errno));
@@ -507,6 +525,8 @@ static int make_pipe(int *fds)
       werror("shutdown(%d, REC) failed: %s\n", fds[0], strerror(errno));
       return 0;
     }
+#endif
+  
   return 1;
 #undef REC
 #undef SEND
@@ -620,9 +640,6 @@ static int do_spawn_shell(struct channel_request *c,
 		     * close-on-exec flag for all fd:s handled by the
 		     * backend. */
 		    
-#if 0
-		    close(STDIN_FILENO);
-#endif
 		    if (dup2(in[0], STDIN_FILENO) < 0)
 		      {
 			werror("Can't dup stdin!\n");
@@ -631,9 +648,6 @@ static int do_spawn_shell(struct channel_request *c,
 		    close(in[0]);
 		    close(in[1]);
 		    
-#if 0
-		    close(STDOUT_FILENO);
-#endif
 		    if (dup2(out[1], STDOUT_FILENO) < 0)
 		      {
 			werror("Can't dup stdout!\n");
@@ -648,9 +662,6 @@ static int do_spawn_shell(struct channel_request *c,
 
 		    debug("Child: Duping stderr (bye).\n");
 		    
-#if 0
-		    close(STDERR_FILENO);
-#endif
 		    if (dup2(err[1], STDERR_FILENO) < 0)
 		      {
 			/* Can't write any message to stderr. */ 
@@ -658,9 +669,19 @@ static int do_spawn_shell(struct channel_request *c,
 		      }
 		    close(err[0]);
 		    close(err[1]);
-		    
-		    execle(shell, shell, NULL, env);
 
+#if 0
+		    execle(shell, shell, NULL, env);
+#else
+#define GREETING "Hello world!\n"
+		    if (write(STDOUT_FILENO, GREETING, strlen(GREETING)) < 0)
+		      _exit(errno);
+		    kill(getuid(), SIGSTOP);
+		    if (write(STDOUT_FILENO, shell, strlen(shell)) < 0)
+		      _exit(125);
+		    _exit(126);
+#undef GREETING
+#endif
 		    /* exec failed! */
 		    {
 		      int exec_errno = errno;
@@ -676,7 +697,7 @@ static int do_spawn_shell(struct channel_request *c,
 			debug("Child: execle() failed (errno = %d): %s\n",
 			      exec_errno, strerror(exec_errno));
 
-		      exit(EXIT_FAILURE);
+		      _exit(EXIT_FAILURE);
 		    }
 #undef MAX_ENV
 		  }
