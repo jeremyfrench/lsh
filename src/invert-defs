@@ -8,13 +8,16 @@ echo " * Do not edit. */"
 echo
 echo "{"
 
-sed -e 's/^#define \(SSH_MSG_[A-Z_0-9][A-Z_0-9]*\)[ \t][ \t]*\([1-9][0-9]*\)[ \t]*$/\2 \1/' -e t -e d \
-   | sort -nu \
-   | awk 'BEGIN{i=0;}
-          { for(j=$1;i<j;i++) print "\"Unknown\"," ;
-		print "\"" $2 "\","; i++;}
-	  END{for(;i<256;i++) print "\"Unknown\",";}'
-
+sed -e 's/^#define SSH_MSG_\([A-Z_0-9][A-Z_0-9]*\)[ \t][ \t]*\([1-9][0-9]*\)[ \t]*$/\2 \1/' -e t -e d \
+    | awk '    {  kwds[$1] = kwds[$1] "|" $2; }
+	   END {  for (i = 0; i < 256; i++) {
+		    x = kwds[i];
+		    if (x == "")
+			print "\"Unknown\",";
+		    else
+			print "\"" substr(x, 2) "\",";
+		  }
+		}'
 echo "}"
 echo
 
