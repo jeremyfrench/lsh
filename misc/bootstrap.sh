@@ -5,7 +5,7 @@
 
 # This script is for use in the source directory, before you run
 # configure. To get started from a fresh CVS checkout, you also need
-# to run configure and bootstrap-build from your build directory.
+# to run configure and make bootstrap from your build directory.
 
 set -e
 bash make_am
