@@ -67,7 +67,7 @@ int main(int argc UNUSED, char **argv UNUSED)
   for (i = 0; i <= 9; i++)
     table['0' + i] = i;
 
-  for (i = 0; i <= 6; i++)
+  for (i = 0; i < 6; i++)
     table['a' + i] = table['A' + i] = 10 + i;
   
   table['#'] = -2;
