@@ -31,28 +31,16 @@
 #include <assert.h>
 #include <string.h>
 
-/* Prototype */
-static void do_free_buffer(struct lsh_queue *q);
-
 #define GABA_DEFINE
 #include "write_buffer.h.x"
 #undef GABA_DEFINE
 
-static void do_free_buffer(struct lsh_queue *q)
-{
-  FOR_QUEUE(q, struct buffer_node *, n)
-    {
-      lsh_string_free(n->packet);
-      lsh_space_free(n);
-    }
-}
 
 static void
 do_write(struct abstract_write *w,
 	 struct lsh_string *packet)
 {
   CAST(write_buffer, closure, w);
-  struct buffer_node *new;
 
   debug("write_buffer: do_write length = %i\n",
 	packet->length);
@@ -70,10 +58,8 @@ do_write(struct abstract_write *w,
     }
   
   /* Enqueue packet */
-  NEW_SPACE(new);
-  new->packet = packet;
 
-  lsh_queue_add_tail(&closure->q, &new->header);
+  string_queue_add_tail(&closure->q, packet);
   
 #if 0
   if (closure->try_write)
@@ -146,15 +132,10 @@ int write_buffer_pre_write(struct write_buffer *buffer)
       else
 	{
 	  /* Dequeue a packet, if possible */
-	  if (!lsh_queue_is_empty(&buffer->q))
-	    {	    
-	      struct buffer_node *n =
-		(struct buffer_node *) lsh_queue_remove_head(&buffer->q);
-	      
-	      buffer->partial = n->packet;
+	  if (!string_queue_is_empty(&buffer->q))
+	    {
+	      buffer->partial = string_queue_remove_head(&buffer->q);
 	      buffer->pos = 0;
-
-	      lsh_space_free(n);
 	    }
 	  else
 	    break;
@@ -198,7 +179,7 @@ struct write_buffer *write_buffer_alloc(UINT32 size)
   res->try_write = try; 
 #endif
   
-  lsh_queue_init(&res->q);
+  string_queue_init(&res->q);
 
   res->pos = 0;
   res->partial = NULL;

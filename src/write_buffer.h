@@ -44,14 +44,6 @@
 
 #define FLOW_CONTROL_REPORT(o, written) ((o)->report((o), written))
 
-/* For the packet queue */
-/* NOTE: No object header */
-struct buffer_node
-{
-  struct lsh_queue_node header;
-  struct lsh_string *packet;
-};
-
 /* GABA:
    (class
      (name write_buffer)
@@ -72,8 +64,7 @@ struct buffer_node
 
        ;; (try_write . int)
 
-       (q indirect-special "struct lsh_queue"
-                           #f do_free_buffer)
+       (q struct string_queue)
 
        (pos . UINT32)        ; Partial packet
        (partial string)
