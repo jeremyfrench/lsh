@@ -78,13 +78,9 @@
 
 /* Forward declarations */
 
-struct command_2 lsh_login_command;
-#define LSH_LOGIN (&lsh_login_command.super.super)
-
 static struct request_service request_userauth_service =
 STATIC_REQUEST_SERVICE(ATOM_SSH_USERAUTH);
 #define REQUEST_USERAUTH_SERVICE (&request_userauth_service.super.super)
-
 
 #include "lsh.c.x"
 
@@ -593,73 +589,31 @@ make_lsh_host_db(struct spki_context *db,
   return &res->super;
 }
 
-/* Takes options and an spki_context as argument and returns a
- * lookup_verifier */
-
-DEFINE_COMMAND2(lsh_verifier_command)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
+static struct command *
+make_lsh_login(struct lsh_options *options,
+	       struct object_list *keys)
 {
-  CAST(lsh_options, options, a1);
-  CAST_SUBTYPE(spki_context, db, a2);
-  COMMAND_RETURN(c, make_lsh_host_db(db,
-				     options->super.tty,
-				     options->super.target,
-				     options->sloppy,
-				     options->capture_file));
-}
-
-
-/* (login options public-keys connection) */
-DEFINE_COMMAND2(lsh_login_command)
-     (struct command_2 *s UNUSED,
-      struct lsh_object *a1,
-      struct lsh_object *a2,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(lsh_options, options, a1);
-  CAST_SUBTYPE(object_list, keys, a2);
-
   struct client_userauth_method *password
     = make_client_password_auth(options->super.tty);
 
   /* FIXME: Perhaps we should try "none" only when using SRP. */
   struct client_userauth_method *none
     = make_client_none_auth();
+
+  struct object_list *methods;
+  if (LIST_LENGTH(keys))
+    methods = make_object_list(3,
+			       none,
+			       make_client_publickey_auth(keys),
+			       password,
+			       -1);
+  else
+    methods = make_object_list(2, none, password, -1);
   
-  COMMAND_RETURN(c,
-		 make_client_userauth
-		 (ssh_format("%lz", options->super.user),
-		  ATOM_SSH_CONNECTION,
-		  (LIST_LENGTH(keys)
-		   ? make_object_list
-		   (3,
-                    none,
-		    make_client_publickey_auth(keys),
-		    password,
-		    -1)
-		   : make_object_list(2, none, password, -1))));
+  return make_client_userauth
+    (ssh_format("%lz", options->super.user),
+     ATOM_SSH_CONNECTION, methods);
 }
-
-
-/* Requests the ssh-userauth service, log in, and request connection
- * service. */
-/* ;; GABA:
-   (expr
-     (name make_lsh_userauth)
-     (params
-       (options object lsh_options)
-       (keys object object_list))
-     (expr
-       (lambda (connection)
-         (lsh_login options
-	   keys
-	   ; Request the userauth service
-	   (request_userauth_service connection))))) */
 
 /* GABA:
    (expr
@@ -669,14 +623,12 @@ DEFINE_COMMAND2(lsh_login_command)
        (init object make_kexinit)
        (db object lookup_verifier)
        (actions object object_list)
-       (keys object object_list)
-       (options object lsh_options))
+       (login object command))
      (expr (lambda (remote)
                ; What to do with the service
 	       ((progn actions)
 		 (init_connection_service
-		   (lsh_login options
-		     keys
+		   (login
 		     (request_userauth_service
 		       ; Start the ssh transport protocol
 		       (connection_handshake
@@ -1118,8 +1070,7 @@ int main(int argc, char **argv, const char** envp)
                          options->sloppy,
                          options->capture_file),
 	queue_to_list(&options->super.actions),
-	keys,
-	options);
+	make_lsh_login(options, keys));
     
     CAST_SUBTYPE(command, lsh_connect, o);
 
