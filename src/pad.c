@@ -11,8 +11,11 @@ static int do_pad(struct pad_processor *closure,
   UINT8 padding;
 
   struct simple_packet *new;
-  struct ssh_packet *ssh;
 
+#if 0
+  struct ssh_packet *ssh;
+#endif
+  
   new_size = 1 + closure->block_size
     * ( (8 + packet->length) / closure->block_size);
 
@@ -20,13 +23,18 @@ static int do_pad(struct pad_processor *closure,
   assert(ssh->padding_length >= 4);
   
   new = simple_packet_alloc(new_size);
-  ssh = (struct ssh_packet *) new->data;
 
+#if 0
+  ssh = (struct ssh_packet *) new->data; 
   ssh->length = htonl(new_size);
   ssh->padding_length = padding;
+#endif
 
-  memcpy(ssh->data, packet->data, packet->length);
-  closure->random(closure->state, padding, ssh->data + packet->length);
+  WRITE_INT32(new->data, new_size - 4);
+  new->data[4] = padding;
+  
+  memcpy(new->data + 5, packet->data, packet->length);
+  closure->random(closure->state, padding, new->data + 5 + packet->length);
 
   simple_packet_free(packet);
 

@@ -10,6 +10,21 @@
 #include "config.h"
 #endif
 
+/* Reads a 32-bit integer, in network byte order */
+#define READ_UINT32(p)				\
+((((UINT32) (p)[0]) << 24)			\
+ | (((UINT32) (p)[0]) << 16)			\
+ | (((UINT32) (p)[0]) << 8)			\
+ | ((UINT32) (p)[0]))
+
+#define WRITE_UINT32(p, i)			\
+do {						\
+  (p)[0] = ((i) >> 24) & 0xff;			\
+  (p)[0] = ((i) >> 16) & 0xff;			\
+  (p)[0] = ((i) >> 8) & 0xff;			\
+  (p)[0] = (i) & 0xff;				\
+} while(0)
+
 /* Generic packet */
 struct simple_packet
 {
@@ -17,18 +32,20 @@ struct simple_packet
   UINT8 data[1];
 }
 
+#if 0
 struct ssh_packet
 {
   UINT32 packet_length;  /* In network byteorder */
   UINT8 padding_length;
   UINT8 data[1];  /* Includes payload and padding */
 };
+#endif
 
 /* Allocation */
 
 /* The memory allocation model is as follows:
  *
- * Packets are allocated when the are needed. They may be passed
+ * Packets are allocated when the are needed. A packet may be passed
  * through a chain of processing functions, until it is finally
  * discarded or transmitted, at which time it is deallocated.
  * Processing functions may deallocate their input packets and
@@ -44,24 +61,6 @@ struct ssh_packet
 
 struct simple_packet *simple_packet_alloc(UINT32 size);
 void simple_packet_free(struct simple_packet *packet);
-
-/* Simple buffer */
-struct simple_buffer
-{
-  UNIT32 capacity;
-  UINT32 pos;
-  UINT8 *data;
-};
-
-void simple_buffer_init(struct simple_buffer *buffer,
-			UINT32 capacity, UINT8 *data);
-
-/* Returns the number of octets that were actually written into the buffer */
-
-UINT32 simple_buffer_write(struct simple_buffer *buffer,
-			   UINT32 length, UINT32 *data);
-
-UINT32 simple_buffer_avail(struct simple_buffer *buffer);
 
 /* A packet processing function.
  *

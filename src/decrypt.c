@@ -39,7 +39,7 @@ static int do_decrypt(struct encrypt_processor *closure,
 					block_size, closure->block_buffer,
 					closure->block_buffer);
 
-	      length = ntohl( * (UINT32 *) header);
+	      length = READ_INT32(closure->block_buffer);
 
 	      if (length > closure->max_packet)
 		return 0;
