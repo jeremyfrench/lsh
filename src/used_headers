@@ -14,7 +14,7 @@ shift
 
 (for d in "$@"; do
     if [ -d $d/.deps ]; then
-	cat $d/.deps/*.P
+	cat $d/.deps/*.Po
     fi
 done) | tr ' ' '\n' \
       | grep `echo "$extension"'$' |sed 's/\./\\./'` \
