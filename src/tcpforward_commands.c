@@ -394,7 +394,7 @@ make_forward_local_port(struct io_backend *backend,
   CAST_SUBTYPE(command, res,
 	       forward_local_port(backend, local, target));
 
-  debug("tcpforward_commands.c: forward_local_port()\n");
+  trace("tcpforward_commands.c: forward_local_port()\n");
 
   return res;
 }
