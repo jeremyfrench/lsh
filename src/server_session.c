@@ -53,6 +53,9 @@
 
 #include "server_session.c.x"
 
+/* Disabled in the 1.4 series. */
+#undef WITH_X11_FORWARD
+#define WITH_X11_FORWARD 0
 
 /* Session */
 /* GABA:

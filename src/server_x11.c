@@ -43,6 +43,10 @@
 
 #include "server_x11.c.x"
 
+/* Disabled in the 1.4 series. */
+#undef WITH_X11_FORWARD
+#define WITH_X11_FORWARD 0
+
 #if WITH_X11_FORWARD
 
 #define XAUTH_DEBUG_TO_STDERR 0
