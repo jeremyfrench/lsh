@@ -40,13 +40,13 @@ create_dir () {
 create_dir ~/.lsh 0700
 create_dir ~/.lsh/authorized_keys_sha1 0700
 
-if type sexp-conv ; then
+if type sexp-conv &>/dev/null ; then
     SEXP_CONV=sexp-conv
 else
     SEXP_CONV=./sexp-conv
 fi
 
-if ! type $SEXP_CONV ; then
+if ! type $SEXP_CONV &>/dev/null; then
     echo "Can't find the sexp-conv program"
     exit 1
 fi
