@@ -76,8 +76,8 @@ struct pty_info *make_pty_info(void)
 
   pty->super.alive = 0;
   pty->super.kill = do_kill_pty_info;
+  pty->tty_name = NULL; /* Perhaps not needed; Cleared by NEW() */
 
-  /* pty->tty_name = NULL; */ /* Cleared by NEW() */
   return pty;
 }
 
@@ -140,7 +140,8 @@ static int pty_check_permissions(const char *name, uid_t user)
 /* Returns the name of the slave tty, as a string with an extra
  * terminating NUL. */
 
-static struct lsh_string *pty_grantpt_uid(int master, uid_t user)
+static struct lsh_string *
+pty_grantpt_uid(int master, uid_t user)
 {
   uid_t me = getuid();
   if (me == user)

@@ -1,4 +1,53 @@
+2000-04-19  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/xalloc.h [DEBUG_ALLOC] (CHECK_TYPE, CHECK_SUBTYPE): Return
+	the object pointer. Needed by CLONE()
+
+	* src/userauth.h (lsh_user): Added tty-argument to the fork
+	method. 
+
+	* src/unix_user.c (do_fork_process): Call logwtmp. For now, the
+	host-name is bogus.
+
+	* src/server_session.c (do_kill_process): Call logout(), to update
+	wtmp. 
+	(spawn_process): Construct tty name for utmp/wtmp logging.
+	(lsh_basename): New function.
+
+	* src/lsh.c, src/lshd.c, src/lsh_proxy.c: Improved default
+	behaviour if no --port argument is given.
+
+	* src/io_commands.c (do_listen, do_listen_connection, do_connect):
+	IPv6 support. 
+
+	* src/io.c (get_inaddr): Removed.
+	(tcp_addr): Likewise.
+	(make_address_info_c): Added an extra argument used as fallback if
+	service lookup fails.
+	(sockaddr2info): IPv6 support.
+	(address_info2sockaddr): Rewrote, to handle IPv6 and to allocate
+	the returned sockaddr structure dynamically.
+
+	* src/connection.h (ssh_connection): Added peer attribute,
+	currently unused.
+
+	* src/atoms.in: Added rsa-related atoms.
+
+	* configure.in: Replaced many calls to AC_ARG_WITH with
+	AC_ARG_ENABLE. Added --disable-ipv6 and --disable-utmp flags.
+
+	* acconfig.h: Added WITH_IPV6 and WITH_UTMP.
+
+2000-04-18  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/io_commands.c (do_listen_continue): Use make_listen_value().
+
 2000-04-17  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/publickey_crypto.h (make_rsa_algorithm): Added prototype. 
+
+	* src/io.c (io_iter): Use #ifdef:s around tests for POLLNVAL,
+	POLLPRI and POLLHUP.
 
 	* configure.in: Bumped version to 0.9.6.
 

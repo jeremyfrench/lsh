@@ -59,7 +59,7 @@ struct lsh_string *
 format_exit(struct ssh_channel *channel, int value);
 
 struct resource *
-make_process_resource(pid_t pid, int signal);
+make_process_resource(pid_t pid, struct lsh_string *tty, int signal);
 
 struct channel_request *
 make_pty_handler(void);

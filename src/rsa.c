@@ -53,10 +53,6 @@
        (prefix . "const UINT8 *")))
 */
 
-#define STATIC_RSA_ALGORITHM(a, l, id) \
-{ { STATIC_HEADER, make_rsa_signer, make_rsa_verifier }, \
-  a, l, id }
-
 static void
 pkcs_1_encode(mpz_t m,
 	      struct rsa_algorithm *params,
@@ -66,7 +62,6 @@ pkcs_1_encode(mpz_t m,
 {
   UINT8 *em = alloca(length);
   unsigned i = length;
-  unsigned pad;
   
   struct hash_instance *h = MAKE_HASH(params->hash);
   HASH_UPDATE(h, msg_length, msg);
@@ -174,20 +169,20 @@ do_rsa_sign(struct signer *s,
 	    UINT8 *msg)
 {
   CAST(rsa_signer, self, s);
-  struct lsh_string *s;
+  struct lsh_string *res;
   mpz_t m;
 
   mpz_init(m);
-  pkcs_1_encode(m, self->params, self->public->size - 1,
+  pkcs_1_encode(m, self->public.params, self->public.size - 1,
 		msg_length, msg);
 
   /* FIXME: Optimize using CRT */
-  mpz_powm(m, m, self->d, self->public->m);
+  mpz_powm(m, m, self->d, self->public.n);
   
-  s = ssh_format("%lun", m);
+  res = ssh_format("%lun", m);
 
   mpz_clear(m);
-  return s;
+  return res;
 }
 
 static struct sexp *
@@ -213,13 +208,13 @@ do_rsa_public_key(struct signer *s)
 }
 
 static int
-do_rsa_verify(struct verifier *s,
+do_rsa_verify(struct verifier *v,
 	      UINT32 length,
 	      UINT8 *msg,
 	      UINT32 signature_length,
 	      UINT8 * signature_data)
 {
-  CAST(rsa_verifier, self, s);
+  CAST(rsa_verifier, self, v);
   mpz_t m;
   mpz_t s;
   int res;
@@ -230,7 +225,7 @@ do_rsa_verify(struct verifier *s,
   mpz_init(s);
   bignum_parse_u(s, signature_length, signature_data);
 
-  if (mpz_cmp_u(s, self->public.n) >= 0)
+  if (mpz_cmp(s, self->public.n) >= 0)
     {
       mpz_clear(s);
       return 0;
@@ -239,7 +234,7 @@ do_rsa_verify(struct verifier *s,
   mpz_powm(s, s, self->public.e, self->public.n);
 
   mpz_init(m);
-  pkcs_1_encode(m, self->public->params, self->public->size,
+  pkcs_1_encode(m, self->public.params, self->public.size - 1,
 		length, msg);
   
   res = !mpz_cmp(m, s);
@@ -262,12 +257,12 @@ make_rsa_signer(struct signature_algorithm *s,
 		struct sexp_iterator *i)
 {
   CAST(rsa_algorithm, params, s);
-  NEW(rsa_verifier, res);
+  NEW(rsa_signer, res);
   init_rsa_public(&res->public, params);
 
   if ( (SEXP_LEFT(i) >= 3)
        && spki_init_rsa_public(&res->public, i)
-       && sexp_get_un(i, ATOM_d, res->d) )
+       && sexp_get_un(i, ATOM_D, res->d) )
     {
       res->super.sign = do_rsa_sign;
       res->super.sign_spki = do_rsa_sign_spki;
@@ -313,10 +308,16 @@ make_rsa_algorithm(struct hash_algorithm *hash,
   self->super.make_signer = make_rsa_signer;
   self->super.make_verifier = make_rsa_verifier;
   self->hash = hash;
-  self->hashid = hashid;
+  
+  self->prefix_length = prefix_length;
+  self->prefix = prefix;
 
   return &self->super;
 }
+
+#define STATIC_RSA_ALGORITHM(a, l, id) \
+{ { STATIC_HEADER, make_rsa_signer, make_rsa_verifier }, \
+  (a), (l), (id) }
 
 /* From pkcs-1v2
  *
@@ -341,7 +342,7 @@ static const UINT8 md5_prefix[] =
 };
 
 struct rsa_algorithm rsa_md5_algorithm =
-STATIC_RSA_ALGORITHM(&md5_algorithm, md5_prefix, 18);
+STATIC_RSA_ALGORITHM(&md5_algorithm, 18, md5_prefix);
 
 /* From pkcs-1v2
  *
@@ -365,6 +366,6 @@ static const UINT8 sha1_prefix[] =
       /* Here comes the raw hash value */
 };
 
-strust rsa_algorithm rsa_sha1_algorithm =
-STATIC_RSA_ALGORITHM(&sha1_algorithm, sha1_prefix, 15);
+struct rsa_algorithm rsa_sha1_algorithm =
+STATIC_RSA_ALGORITHM(&sha1_algorithm, 15, sha1_prefix);
 
