@@ -38,9 +38,8 @@ void gc_maybe(int busy);
 
 #if DEBUG_ALLOC
 extern int gc_final_p;
-void gc_final(void);
-#else
-#define gc_final()
 #endif
+
+void gc_final(void);
 
 #endif /* LSH_GC_H_INCLUDED */

@@ -242,16 +242,18 @@ void gc_maybe(int busy)
     }
 }
 
-#if DEBUG_ALLOC
 /* Deallocate all objects. */
 
+#if DEBUG_ALLOC
 int gc_final_p = 0;
+#endif
 
 void gc_final(void)
 {
   KILL_RESOURCE_LIST(root_set);
   root_set = NULL;
-  
+
+#if DEBUG_ALLOC
   gc_final_p = 1;
 
   gc_sweep();
@@ -265,5 +267,5 @@ void gc_final(void)
 	werror("  clue: %z\n", s->header.clue);
       fatal("gc_final: Internal error!\n");
     }
-}
 #endif /* DEBUG_ALLOC */
+}
