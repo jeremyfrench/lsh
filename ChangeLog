@@ -17,6 +17,10 @@
 	direct-tcpip request.
 	(do_tcpip_forward_request): Log forward-tcpip request.
 
+2004-01-08  Niels Möller  <nisse@harpo.hack.org>
+
+	* configure.ac: No space between "-L" and library directories.
+
 2004-01-07  Niels Möller  <nisse@harpo.hack.org>
 
 	* acinclude.m4 (AX_CREATE_STDINT_H): Copied macro definition from
