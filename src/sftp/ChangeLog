@@ -1,3 +1,7 @@
+2004-11-10  Niels Möller  <nisse@lysator.liu.se>
+
+	* dc.h: Added workaround for broken fnmatch.h installed by apache.
+
 2004-03-20  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Use AC_CONFIG_AUX_DIR([.]).
