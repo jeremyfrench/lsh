@@ -140,7 +140,7 @@ struct spawn_info
 
 /* This prototype doesn't really belong here. */
 struct lsh_process *
-unix_process_setup(pid_t pid, int login,
+unix_process_setup(pid_t pid,
 		   struct lsh_user *user,
 		   struct exit_callback **c,
 		   struct address_info *peer,
