@@ -67,7 +67,7 @@ atoms_defines.h: atoms.in process_atoms
 
 atoms_gperf.c: atoms.in process_atoms
 	bash process_atoms gperf <atoms.in \
-             | gperf -t -c -k1,7,$$ -N gperf_atom >atoms_gperf.c
+             | gperf -t -c -l -k1,7,$$ -N gperf_atom >atoms_gperf.c
 
 atoms_table.c: atoms.in process_atoms
 	bash process_atoms table <atoms.in >atoms_table.c
