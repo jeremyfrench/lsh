@@ -45,11 +45,12 @@ tries to do all this.
 
 NEEDED LIBRARIES
 
-GMP (version 2.0.2 or better) can be found at ftp.gnu.org, or some of
+GMP (version 3.1 or better) can be found at ftp.gnu.org, or some of
 its mirrors.
 
-ZLIB can be found at ftp://ftp.cdrom.com/pub/infozip/zlib/zlib.html or
-http://www.cdrom.com/pub/infozip/zlib/. Latest version is zlib-1.1.3.
+ZLIB can be found at http://www.zlib.org. Latest version is
+zlib-1.1.4, earlier versions of zlib have a known security problem, so
+make sure you get version 1.1.4 or later.
 
 liboop (version 0.8 or better) can be found at www.liboop.org.
 
