@@ -57,8 +57,6 @@ extern struct crypto_algorithm rijndael192_algorithm;
 extern struct crypto_algorithm rijndael256_algorithm;
 #endif
 
-extern struct crypto_algorithm aes128_cbc_algorithm;
-extern struct crypto_algorithm aes192_cbc_algorithm;
 extern struct crypto_algorithm aes256_cbc_algorithm;
 
 struct crypto_algorithm *make_serpent_algorithm(UINT32 key_size);

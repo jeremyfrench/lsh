@@ -121,19 +121,13 @@ make_aes_instance(struct crypto_algorithm *algorithm, int mode,
   return(&self->super);
 }
 
-struct crypto_algorithm aes128_cbc_algorithm =
-{ STATIC_HEADER, AES_BLOCK_SIZE, 16, AES_BLOCK_SIZE, make_aes_instance};
-
-struct crypto_algorithm aes192_cbc_algorithm =
-{ STATIC_HEADER, AES_BLOCK_SIZE, 24, AES_BLOCK_SIZE, make_aes_instance};
-
 struct crypto_algorithm aes256_cbc_algorithm =
 { STATIC_HEADER, AES_BLOCK_SIZE, 32, AES_BLOCK_SIZE, make_aes_instance};
 
 #if 0
 
 
-/* Tripple DES */
+/* Triple DES */
 /* ;;GABA:
    (class
      (name des3_instance)
