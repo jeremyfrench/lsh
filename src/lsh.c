@@ -388,7 +388,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
       break;
     case ARGP_KEY_ARGS:
-      argp_error(state, "Providing a remote command on the command is not supported yet.");
+      argp_error(state, "Providing a remote command on the command line is not supported yet.");
       break;
 
     case ARGP_KEY_END:
