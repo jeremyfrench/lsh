@@ -624,6 +624,22 @@ int sexp_atomp(const struct sexp *e)
   return !e->iter;
 }
 
+/* Checks that the sexp is a simple string (i.e. no display part) */
+struct lsh_string *
+sexp2string(struct sexp *e)
+{
+  return (e && (sexp_atomp(e) && !sexp_display(e))
+	   ? sexp_contents(e) : NULL);
+}
+  
+
+UINT32
+sexp2atom(struct sexp *e)
+{
+  struct lsh_string *s = sexp2string(e);
+  return s ? lookup_atom(s->length, s->data) : 0;
+}
+
 int sexp_eqz(const struct sexp *e, const char *s)
 {
   struct lsh_string *c;
@@ -677,7 +693,7 @@ struct sexp *sexp_assz(struct sexp_iterator *i, const char *name)
       SEXP_NEXT(inner);
       if (SEXP_GET(inner))
 	/* Too many elements */
-	e =NULL;
+	e = NULL;
       else 
 	SEXP_NEXT(i);
     }

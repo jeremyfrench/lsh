@@ -136,6 +136,14 @@ struct sexp *sexp_cdr(const struct sexp *e);
 int sexp_nullp(const struct sexp *e);
 int sexp_atomp(const struct sexp *e);
 
+/* Checks that the sexp is a simple string (i.e. no display part).
+ * e == NULL is allowed. */
+struct lsh_string *sexp2string(struct sexp *e);
+
+/* Returns an ATOM_FOO constant if e is a simple sexp string
+ * corresponding to an atom. Or zero if that is not the case. */
+UINT32 sexp2atom(struct sexp *e);
+
 /* int sexp_null_cdr(struct sexp *e); */
 
 struct lsh_string *sexp_contents(const struct sexp *e);
@@ -145,6 +153,9 @@ int sexp_bignum_u(const struct sexp *e, mpz_t n);
 int sexp_bignum_s(const struct sexp *e, mpz_t n);
 
 /* Utility functions for parsing spki objects. */
+
+/* FIXME: These function might get obsoleted by spki.c */
+
 int sexp_eqz(const struct sexp *e, const char *s);
 int sexp_check_type(struct sexp *e, const char *type,
 		    struct sexp_iterator **res);
