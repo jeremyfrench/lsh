@@ -53,10 +53,11 @@
 */
 
 void exception_raise(struct exception_handler *e,
-		     const struct exception *h);
+		     const struct exception *h,
+		     const char *context);
 
 #if DEBUG_TRACE
-#  define EXCEPTION_RAISE exception_raise
+#  define EXCEPTION_RAISE(h, e) exception_raise((h), (e), HANDLER_CONTEXT)
 #else /* !DEBUG_TRACE */
 #  define EXCEPTION_RAISE(h, e)  ((h)->raise((h), (e)))
 #endif /* !DEBUG_TRACE */

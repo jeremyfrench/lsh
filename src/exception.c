@@ -162,10 +162,13 @@ make_protocol_exception(UINT32 reason, const char *msg)
   return &self->super;
 }
 
+#if DEBUG_TRACE
 void exception_raise(struct exception_handler *h,
-		     const struct exception *e)
+		     const struct exception *e,
+		     const char *context)
 {
-  trace ("Raising exception %z (type %i), using handler installed by %z\n",
-	 e->msg, e->type, h->context);
+  trace ("%z: Raising exception %z (type %i), using handler installed by %z\n",
+	 context, e->msg, e->type, h->context);
   h->raise(h, e);
 }
+#endif /* DEBUG_TRACE */
