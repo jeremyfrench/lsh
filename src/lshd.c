@@ -1021,9 +1021,6 @@ main(int argc, char **argv)
 
   options = make_lshd_options();
 
-  if (!options)
-    return EXIT_FAILURE;
-  
   trace("Parsing options...\n");
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
   trace("Parsing options... done\n");  
