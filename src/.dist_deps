@@ -1,0 +1,13 @@
+client.o : environ.h
+client_pty.o : environ.h
+gateway.o : environ.h
+lsh-keygen.o : environ.h
+lsh-make-seed.o : environ.h
+lsh-writekey.o : environ.h
+lsh.o : environ.h
+lshd.o : environ.h
+server_session.o : environ.h
+server_x11.o : environ.h
+srp-gen.o : environ.h
+unix_random.o : environ.h
+unix_user.o : environ.h

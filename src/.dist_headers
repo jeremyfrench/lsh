@@ -1,84 +1,85 @@
-abstract_compress.h
-abstract_crypto.h
-abstract_io.h
-algorithms.h
-alist.h
-atoms.h
-bignum.h
-channel.h
-channel_commands.h
-channel_forward.h
-charset.h
-client.h
-client_keyexchange.h
-client_userauth.h
-command.h
-compress.h
-connection.h
-connection_commands.h
-crypto.h
-daemon.h
-debug.h
-encrypt.h
-exception.h
-format.h
-gateway.h
-gateway_channel.h
-gateway_commands.h
-gc.h
-handshake.h
-interact.h
-io.h
-io_commands.h
-keyexchange.h
-list.h
-lock_file.h
-lookup_verifier.h
-lsh.h
-lsh_argp.h
-lsh_types.h
-memxor.h
-pad.h
-parse.h
-parse_config.h
-parse_macros.h
-proxy.h
-proxy_agentforward.h
-proxy_session.h
-proxy_tcpforward.h
-proxy_userauth.h
-proxy_x11forward.h
-publickey_crypto.h
-queue.h
-randomness.h
-read_data.h
-read_file.h
-read_line.h
-read_packet.h
-reaper.h
-resource.h
-server.h
-server_authorization.h
-server_keyexchange.h
-server_pty.h
-server_session.h
-server_userauth.h
-server_x11.h
-sexp.h
-spki.h
-srp.h
-ssh.h
-ssh1_fallback.h
-string_buffer.h
-suspend.h
-tcpforward.h
-tcpforward_commands.h
-translate_signal.h
-tty.h
-unpad.h
-userauth.h
-version.h
-werror.h
-write_buffer.h
-xalloc.h
-xauth.h
+dist_headers = \
+    abstract_compress.h \
+    abstract_crypto.h \
+    abstract_io.h \
+    algorithms.h \
+    alist.h \
+    atoms.h \
+    bignum.h \
+    channel.h \
+    channel_commands.h \
+    channel_forward.h \
+    charset.h \
+    client.h \
+    client_keyexchange.h \
+    client_userauth.h \
+    command.h \
+    compress.h \
+    connection.h \
+    connection_commands.h \
+    crypto.h \
+    daemon.h \
+    debug.h \
+    encrypt.h \
+    exception.h \
+    format.h \
+    gateway.h \
+    gateway_channel.h \
+    gateway_commands.h \
+    gc.h \
+    handshake.h \
+    interact.h \
+    io.h \
+    io_commands.h \
+    keyexchange.h \
+    list.h \
+    lock_file.h \
+    lookup_verifier.h \
+    lsh.h \
+    lsh_argp.h \
+    lsh_types.h \
+    memxor.h \
+    pad.h \
+    parse.h \
+    parse_config.h \
+    parse_macros.h \
+    proxy.h \
+    proxy_agentforward.h \
+    proxy_session.h \
+    proxy_tcpforward.h \
+    proxy_userauth.h \
+    proxy_x11forward.h \
+    publickey_crypto.h \
+    queue.h \
+    randomness.h \
+    read_data.h \
+    read_file.h \
+    read_line.h \
+    read_packet.h \
+    reaper.h \
+    resource.h \
+    server.h \
+    server_authorization.h \
+    server_keyexchange.h \
+    server_pty.h \
+    server_session.h \
+    server_userauth.h \
+    server_x11.h \
+    sexp.h \
+    spki.h \
+    srp.h \
+    ssh.h \
+    ssh1_fallback.h \
+    string_buffer.h \
+    suspend.h \
+    tcpforward.h \
+    tcpforward_commands.h \
+    translate_signal.h \
+    tty.h \
+    unpad.h \
+    userauth.h \
+    version.h \
+    werror.h \
+    write_buffer.h \
+    xalloc.h \
+    xauth.h
