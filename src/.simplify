@@ -1,0 +1,209 @@
+abstract_compress.h done
+abstract_crypto.h done
+abstract_io.h done
+algorithms.h done
+alist.h done
+atoms.h done
+bignum.h done
+
+blocking_write.h
+
+  Used only by lsh-keygen.c. Should be deleted.
+
+channel.h
+
+  struct channel_open_info should perhaps be used more, or deleted.
+
+  should the write attribute be removed from ssh_channel?
+
+  Perhaps introduce an channel_global_request_info analogous to
+  channel_request_info. 
+
+  Change the fallbacks (used by the gateway), to pass the entire
+  packets.
+  
+channel_commands.h done
+charset.h done
+client.h done
+client_keyexchange.h done
+client_pty.h
+
+  Move the declaration of make_pty_request to client.h.
+  
+client_session.h
+
+  Move the declaration of make_client_session to client.h
+  
+client_userauth.h done
+
+command.h
+
+  Do we need both catch_command and catch_report?
+
+  Delete make_delay_continuation.
+  
+compress.h done
+connection.h
+
+  Delete the CONNECTION_SRP flag and all related code.
+  
+connection_commands.h
+
+  Delete make_connection_if_srp.
+  
+crypto.h done
+daemon.h
+
+  daemon_close is not used.
+  
+debug.h done
+
+digits.h
+
+  simple_decode_base64 is not used.
+  
+disconnect.h
+
+  Perhaps move somewhere else.
+
+dsa.h done
+
+encrypt.h
+
+  Perhaps move?
+
+exception.h
+
+  Why the name EXC_SERVICE?
+
+  We don't need both EXC_PAUSE_READ/EXC_PAUSE_CONNECTION and
+  EXC_PAUSE_START_READ/EXC_PAUSE_START_CONNECTION.
+  
+format.h
+
+  NUL-terminate all strings.
+  
+gateway.h done
+
+gateway_channel.h
+
+  Use channel_open_info
+
+  Keep less state, try forwarding requests and replies by just
+  patching the channel-numbers.
+  
+gateway_commands.h done
+gc.h done
+handshake.h
+
+  Perhaps remove ssh1_fallback?
+  
+interact.h done
+
+io.h
+
+  kill_fd() and close_fd() does the same thing. Delete kill_fd.
+  
+io_commands.h
+
+  IO_READ_STDIN and IO_WRITE_FILE is used only by lsh-writekey.
+  CONNECT_PORT unused.
+  make_simple_listen used only by lsh_proxy.c.
+  
+jpoll.h done
+keyexchange.h
+
+  Ignore weak-keys issues.
+  
+list.h done
+lookup_verifier.h done
+lsh.h
+
+  Delete LSH_ALLOC_STACK and STACK_HEADER. Delete NUL_TERMINATED, we
+  need some other function for checking for valid C strings (i.e check
+  that there are no NUL:s inside the string).
+  
+lsh_argp.h done
+lsh_types.h done
+memxor.h done
+pad.h
+
+  Move declaration of make_packet_pad somewhere else.
+
+parse.h done
+parse_macros.h done
+proxy.h done
+proxy_agentforward.h done
+proxy_session.h done
+proxy_tcpforward.h done
+proxy_userauth.h done
+proxy_x11forward.h done
+publickey_crypto.h done
+queue.h done
+
+randomness.h
+
+  Clean up the number of different generators.
+
+read_data.h
+
+  Move declaration of make_read_data somewhere else.
+
+read_file.h
+
+  Move declarations somewhere else?
+  
+read_line.h done
+
+read_packet.h
+
+  Move declaration somewhere else?
+
+reaper.h done
+resource.h done
+rsa.h done 
+
+server.h
+
+  Move declaration?
+  
+server_authorization.h
+
+  Move declaration?
+  
+server_keyexchange.h done
+server_pty.h done
+server_session.h done
+server_userauth.h done
+
+sexp.h
+
+  Remove traces of cons.
+  
+sexp_commands.h
+
+  Change read_sexp to not use the complex streamed parser.
+  
+sexp_parser.h done
+spki.h done
+
+spki_commands.h
+
+  SEXP2KEYPAIR is not used.
+  SPKI_MAKE_CONTEXT is not used.
+  SPKI_READ_ACLS is not used.
+  
+srp.h
+ssh.h
+ssh1_fallback.h
+string_buffer.h
+tcpforward.h
+tcpforward_commands.h
+translate_signal.h
+tty.h
+unpad.h
+userauth.h
+version.h
+werror.h
+write_buffer.h
+xalloc.h
