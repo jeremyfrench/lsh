@@ -1,15 +1,33 @@
 # Helper functions for the test scripts.
 
+# Any error count as failure.
+set -e
+
 # echo srcdir = $srcdir
 
-# Make sure we have a randomness genereetor
-LSH_YARROW_SEED_FILE="`pwd`/yarrow-seed-file"
-export LSH_YARROW_SEED_FILE
-
-if [ -s "$LSH_YARROW_SEED_FILE" ] ; then : ; else
-    echo "Creating seed file $LSH_YARROW_SEED_FILE"
-    ../lsh-make-seed --sloppy -q -o "$LSH_YARROW_SEED_FILE"
+if [ -z "$TEST_HOME" ] ; then
+  TEST_HOME="`pwd`/home"
 fi
+
+if [ -z "$LSH_YARROW_SEED_FILE" ] ; then
+  LSH_YARROW_SEED_FILE="$TEST_HOME/.lsh/yarrow-seed-file"
+fi
+
+# For lsh-authorize
+if [ -z "SEXP_CONV" ] ; then
+  SEXP_CONV="`pwd`/../sexp-conv"
+fi
+
+export LSH_YARROW_SEED_FILE SEXP_CONV
+
+## # Make sure we have a randomness genereetor
+## LSH_YARROW_SEED_FILE="`pwd`/yarrow-seed-file"
+## export LSH_YARROW_SEED_FILE
+## 
+## if [ -s "$LSH_YARROW_SEED_FILE" ] ; then : ; else
+##     echo "Creating seed file $LSH_YARROW_SEED_FILE"
+##     ../lsh-make-seed --sloppy -q -o "$LSH_YARROW_SEED_FILE"
+## fi
 
 if [ -z "$LSHD_FLAGS" ] ; then
     LSHD_FLAGS='-q --enable-core'
@@ -36,9 +54,6 @@ INTERFACE=127.0.0.1
 # if [ -z "$USERKEY" ] ; then
 #     USERKEY=$srcdir/key-1.private
 # fi
-
-# Any error count as failure.
-set -e
 
 PORT=11147
 ATEXIT='set +e'
@@ -72,7 +87,8 @@ spawn_lshd () {
     # Note that --daemon not only forks into the background, it also changes
     # the cwd, uses syslog, etc.
     
-    ../lshd -h $HOSTKEY --interface=$INTERFACE -p $PORT $LSHD_FLAGS \
+    HOME="$TEST_HOME" ../lshd -h $HOSTKEY --interface=$INTERFACE \
+	-p $PORT $LSHD_FLAGS \
 	--pid-file $PIDFILE --daemon --no-syslog "$@"
 
     # lshd may catch the ordinary TERM signal, leading to timing
@@ -97,20 +113,21 @@ spawn_lshd () {
 run_lsh () {
     cmd="$1"
     shift
-    echo "$cmd" | ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
+    echo "$cmd" | HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt \
+	--sloppy-host-authentication \
 	--capture-to /dev/null -z -p $PORT "$@" localhost
 
 }
 
 exec_lsh () {
-    ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
+    HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
 	--capture-to /dev/null -z -p $PORT localhost "$@"
 }
 
 # FIXME: Use -B
 spawn_lsh () {
     # echo spawn_lsh "$@"
-    ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
+    HOME="$TEST_HOME" ../lsh $LSH_FLAGS -nt --sloppy-host-authentication \
 	--capture-to /dev/null -z -p $PORT "$@" -N localhost &
     at_exit "kill $!"
 }
