@@ -11,6 +11,16 @@
 struct abstract_read;
 typedef int (*abstract_read_f)(struct abstract_read *closure,
 			       UINT8 *buffer, UINT32 length);
+/* A read-function returning n means:
+ *
+ * n > 0: n bytes were read successfully.
+ * n = 0: No more data available, without blocking.
+ * n = -1: Read failed.
+ * n = -2: EOF.
+ */
+#define A_FAIL -1
+#define A_EOF -2
+
 struct abstract_read
 {
   abstract_read_f read;
@@ -25,6 +35,9 @@ struct read_handler
 };
 
 #define READ_HANDLER(handler, read) ((handler)->handler((handler), (read)))
+
+/* FIXME: What should writers return? Perhaps a new writer,
+ * analogous to read-handlers? */
 
 struct abstract_write;
 typedef int (*abstract_write_f)(struct abstract_write *closure,
