@@ -64,6 +64,9 @@ int parse_sub_buffer(struct simple_buffer *buffer,
 
 int parse_uint8(struct simple_buffer *buffer, int *result);
 
+/* Returns 1 on success, 0 on error, and -1 at end of buffer */
+int parse_utf8(struct simple_buffer *buffer, UINT32 *result);
+
 int parse_boolean(struct simple_buffer *buffer, int *result);
 
 int parse_bignum(struct simple_buffer *buffer, mpz_t result);

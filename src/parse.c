@@ -112,6 +112,67 @@ int parse_uint8(struct simple_buffer *buffer, int *result)
   return 1;
 }
 
+int parse_utf8(struct simple_buffer *buffer, UINT32 *result)
+{
+  UINT32 first;
+  int length;
+  int i;
+  
+  if (!LEFT)
+    return -1;
+
+  first = HERE[0];
+
+  if (first < 0x80)
+    {
+      *result = first;
+      return 1;
+    }
+
+  switch(first & 0xF0)
+    {
+    default:
+      return 0;
+    case 0xC0:
+    case 0xD0:
+      length = 2;
+      *result = first & 0x1F;
+      break;
+    case 0xE0:
+      length = 3;
+      *result = first & 0x0F;
+      break;
+    case 0xF0:
+      switch(first & 0x0E)
+	{
+	case 0: case 2: case 4: case 6:
+	  length = 4;
+	  *result = first & 0x07;
+	  break;
+	case 8: case 0xA;
+	  length = 5;
+	  *result = first & 0x03;
+	  break;
+	case 0xC:
+	  length = 6;
+	  *result = first & 0x01;
+	  break;
+	default:
+	  fatal("Internal error!\n");
+	}
+      break;
+    }
+  for(i = 1; i<length; i++)
+    {
+      UINT32 c = HERE[i];
+      if ( (c & 0xC0) != 0x80)
+	return 0;
+      *result = (*result << 6) | (c & 0x3f);
+    }
+  ADVANCE(length);
+  return 1;
+}  
+      
 int parse_boolean(struct simple_buffer *buffer, int *result)
 {
   if (!LEFT)
