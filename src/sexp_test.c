@@ -81,7 +81,7 @@ do_close(struct lsh_callback *c)
 {
   CAST(input_closed, closure, c);
 
-  write_buffer_close(closure->output);  
+  close_fd_nicely(closure->output);
 }
 
 #define BLOCK_SIZE 2000
@@ -91,7 +91,7 @@ int main(int argc UNUSED, char **argv UNUSED)
   NEW(io_backend, backend);
   NEW(output_sexp, out);
   NEW(input_closed, close);
-  struct write_buffer *write;
+  struct lsh_fd *write;
 
   int status = 17;
   
@@ -99,10 +99,10 @@ int main(int argc UNUSED, char **argv UNUSED)
 
   write = io_write(make_lsh_fd(backend, STDOUT_FILENO, "stdout",
 			       &handler),
-		   BLOCK_SIZE, NULL)->write_buffer;
+		   BLOCK_SIZE, NULL);
 
   out->super.handler = do_output_sexp;
-  out->write = &write->super;
+  out->write = &write->write_buffer.super;
   out->style = SEXP_ADVANCED;
   
   close->super.f = do_close;
