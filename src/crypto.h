@@ -43,6 +43,8 @@ struct crypto_algorithm *make_twofish(void);
 struct crypto_algorithm *make_blowfish_algorithm(UINT32 key_size);
 struct crypto_algorithm *make_blowfish(void);
 struct crypto_algorithm *make_des3(void);
+struct crypto_algorithm *make_cast_algorithm(UINT32 key_size);
+struct crypto_algorithm *make_cast(void);
 
 extern struct hash_algorithm sha_algorithm;
 extern struct hash_algorithm md5_algorithm;
