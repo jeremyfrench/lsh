@@ -24,12 +24,6 @@
 
 #include "tcpforward_commands.h"
 
-#if 0
-#define GABA_DEFINE
-#include "tcpforward_commands.h.x"
-#undef GABA_DEFINE
-#endif
-
 #include "atoms.h"
 #include "channel_commands.h"
 #include "format.h"
@@ -52,11 +46,6 @@ struct collect_info_1 install_direct_tcpip_handler;
 struct collect_info_1 install_forwared_tcpip_handler;
 
 static struct command make_direct_tcpip_handler;
-
-#if 0
-struct collect_info_1 install_forwarded_tcpip_handler;
-static struct command make_forwarded_tcpip_handler;
-#endif
 
 struct collect_info_1 install_tcpip_forward_handler;
 static struct command make_tcpip_forward_handler;
@@ -528,22 +517,6 @@ make_direct_tcpip_hook(struct io_backend *backend)
   return res;
 }
 
-/* Almost identical to the direct_tcpip-hook, but we have to
- * examine the list of remotely-forwarded ports to find out
- * where to forward the connection (if at all). */
-/* ;; GABA:
-   (expr
-     (name forwarded_tcpip_hook)
-     (globals
-       (install "&install_forwarded_tcpip_handler.super.super.super")
-       (handler "&make_open_tcpip_handler.super")
-       (start_io TCPIP_START_IO))
-     (expr
-       (lambda (connection)
-         (install connection
-	   (handler (lambda (port)
-	     (start_io (connect connection port))))))))
-*/
 
 struct install_info install_tcpip_forward_info_2 =
 STATIC_INSTALL_GLOBAL_HANDLER(ATOM_TCPIP_FORWARD);
@@ -585,16 +558,3 @@ make_tcpip_forward_hook(struct io_backend *backend)
   
   return res;
 }
-	 
-/* Invoked when a direct-tcp request is received */
-/* ;; GABA:
-   (expr
-     (name forward_connect)
-     (globals
-       (start_io TCPIP_START_IO))
-     (params
-       (connect object command))
-     (expr
-       (lambda (connection port)
-         (start_io (connect connection port)))))
-*/

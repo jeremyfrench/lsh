@@ -30,21 +30,10 @@
 #include "ssh.h"
 #include "werror.h"
 
-#if 0
-#include "parse.h"
-#include "read_data.h"
-#endif
-
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
 
-#if 0
-/* Forward declarations */
-extern struct collect_info_1 start_forwarded_client_io;
-
-#define START_FORWARDED_CLIENT_IO (&start_forwarded_client_io.super.super.super)
-#endif
 
 #define GABA_DEFINE
 #include "tcpforward.h.x"
@@ -207,79 +196,6 @@ void tcpip_channel_start_io(struct ssh_channel *c)
   channel->socket->buffer->report = &channel->super.super;
 }
 
-#if 0
-/* ;;GABA:
-   (class
-     (name direct_tcp_server_start_io)
-     (super command)
-     (vars
-       (block_size . UINT32)
-       (response object channel_open_callback)
-       (channel object tcpip_channel)))
-*/
-  
-static int do_direct_tcp_server_start_io(struct command *s, 
-					 struct lsh_object *x, 
-					 struct command_continuation *c)
-{
-  CAST(direct_tcp_server_start_io, self, s);
-  CAST_SUBTYPE(io_fd, fd, x);
-  int res;
-
-  if (!fd)
-    {
-      verbose("Forward-request, error establishing connection.\n");
-      return CHANNEL_OPEN_CALLBACK(self->response, &self->channel->super,
-  				   SSH_OPEN_CONNECT_FAILED, STRERROR(errno), NULL);
-    }
-
-  self->channel->super.receive = do_tcpip_receive;
-  self->channel->super.send = do_tcpip_send;
-  self->channel->super.eof = do_tcpip_eof;
-  
-  self->channel->socket = 
-     io_read_write(fd, 
-		   make_channel_read_data(&self->channel->super), 
-		   self->block_size,
-		   make_channel_close(&self->channel->super));
-  /* Flow control */
-  fd->buffer->report = &self->channel->super.super;
-  
-  res = COMMAND_RETURN(c, (struct lsh_object *) self->channel);
-  
-  return res | (LSH_CLOSEDP(res)
-		? CHANNEL_OPEN_CALLBACK(self->response, &self->channel->super,
-					SSH_OPEN_RESOURCE_SHORTAGE, "Error creating channel.", NULL)
-		: CHANNEL_OPEN_CALLBACK(self->response, &self->channel->super,
-					0, NULL, NULL));
-}
-
-static struct command *
-make_direct_tcp_server_start_io(struct channel_open_callback *response, 
-			     struct tcpip_channel *channel,
-			     UINT32 block_size)
-{
-  NEW(direct_tcp_server_start_io, self);
-
-  self->super.call = do_direct_tcp_server_start_io;
-
-  self->response = response;
-  self->block_size = block_size;
-  self->channel = channel;
-  return &self->super;
-}
-
-/* FIXME: Replaced by forward_connect in tcpforward_commands.c */
-/* ;; GABA:
-   (expr
-     (name make_direct_tcp_connect)
-     (params
-       (connect object command)
-       (start_io object command))
-     (expr
-       (lambda (port) (start_io (connect port)))))
-*/
-#endif
 
 /* Handle channel open requests */
 
@@ -355,42 +271,6 @@ do_channel_open_direct_tcpip(struct channel_open *c,
 			  make_address_info(dest_host, dest_port),
 			  make_open_forwarded_tcpip_continuation
 			  (response));
-#if 0
-      /* FIXME: It might be more elegant to create this object only
-       * once. I.e. have some command that is invoked when the
-       * ssh-connection service is created, which installs a handler
-       * for direct-tcp, and also creates a function which can be
-       * invoked with a port to connect to appropriate. I'm not sure
-       * how to get this right though; perhaps the start_io command
-       * should be made a continuation instead. I.e. a connection should be created with
-       *
-       * COMMAND_CALL(closure->connect_command, port, make_start_io(make_tcpip_channel()))
-       */
-
-      struct lsh_object *o = 
-	make_direct_tcp_connect(make_simple_connect(closure->backend, 
-						    connection->resources),
-				make_direct_tcp_server_start_io
-				(response,
-				 /* FIXME: Is it ok to pass NULL
-				  * to make_tcpip_channel() ? */
-				 make_tcpip_channel(NULL),
-				 SSH_MAX_PACKET));
-      /* FIXME: implement filtering on original host? */
-      
-      a = make_address_info(dest_host, dest_port);
-
-      {
-	CAST_SUBTYPE(command, forward_connect, o);      
-	res = COMMAND_CALL(forward_connect, a, NULL);
-	if (LSH_CLOSEDP(res))
-	  return CHANNEL_OPEN_CALLBACK(response, NULL, 
-				       SSH_OPEN_CONNECT_FAILED, 
-				       "Error connecting to host", 
- 				       NULL);
-	return res;
-      }
-#endif
     }
   else
     {
@@ -411,52 +291,6 @@ make_channel_open_direct_tcpip(struct command *callback)
   return &self->super;
 }
 
-#if 0
-/* Start i/o on a forwarded channel. Used by clients requesting
- * direct-tcp, and servers requesting tcp_forward. I.e. by the party
- * that accepted a connection for forwarding. */
-static struct lsh_object *do_forward_start_io(struct command_simple *c UNUSED, 
-					      struct lsh_object *x)
-{
-  CAST_SUBTYPE(tcpip_channel, channel, x);
-  if (!channel)
-    {
-      verbose("Error opening channel.\n");
-      return NULL;
-    }
-
-  channel->super.receive = do_tcpip_receive;
-  channel->super.send = do_tcpip_send;
-  channel->super.eof = do_tcpip_eof;
-
-  /* Install callbacks on the local socket */
-  io_read_write(channel->socket,
-		make_channel_read_data(&channel->super),
-		SSH_MAX_PACKET,
-		make_channel_close(&channel->super));
-
-  return x;
-}
-
-static struct command_simple forward_start_io = 
-STATIC_COMMAND_SIMPLE(do_forward_start_io);
-
-/* ;; GABA:
-   (expr
-     (name make_forward_listen)
-     (globals
-       (start_io FORWARD_START_IO)
-       (open_forwarded_tcp OPEN_FORWARDED_TCP)
-       (listen LISTEN_COMMAND))
-     (params
-       (backend object io_backend)
-       (connection object ssh_connection))
-     (expr (lambda (port)
-       (listen (lambda (peer)
-                 (start_io (open_forwarded_tcp port peer connection)))
-	       backend port))))
-*/
-#endif
 
 /* GABA:
    (class
@@ -633,106 +467,13 @@ struct global_request tcpip_cancel_forward =
 { STATIC_HEADER, do_tcpip_cancel_forward }; 
 
 
-/* The client side of direct-tcp.
- *
- * FIXME: It's very similar to open_forwarded_tcp_command, perhaps
- * they could be unified? */
-
-#if 0
-/* ;; GABA:
-   (class
-     (name open_direct_tcpip_command)
-     (super channel_open_command)
-     (vars
-       (target object address_info)
-       (peer object listen_value)))
-*/
-
-static struct ssh_channel *
-new_direct_tcpip_channel(struct channel_open_command *c,
-			 struct ssh_connection *connection,
-			 struct lsh_string **request)
-{
-  CAST(open_direct_tcpip_command, self, c);
-  struct tcpip_channel *channel;
-
-  /* NOTE: All accepted fd:s must end up in this function, so it
-   * should be ok to delay the REMEMBER() call until here. */
-  
-  REMEMBER_RESOURCE(connection->resources, &self->peer->fd->super.super);
-  
-  channel = make_tcpip_channel(self->peer->fd);
-  channel->super.write = connection->write;
-
-  *request = prepare_channel_open(connection->channels, ATOM_DIRECT_TCPIP, 
-  				  &channel->super, 
-  				  "%S%i%S%i",
-				  self->target->ip, self->target->port,
-				  self->peer->peer->ip, self->peer->peer->port);
-  
-  return &channel->super;
-}
-
-static struct command *
-make_open_direct_tcpip_command(struct address_info *target,
-			       struct listen_value *peer)
-{
-  NEW(open_direct_tcpip_command, self);
-  
-  self->super.super.call = do_channel_open_command;
-  self->super.new_channel = new_direct_tcpip_channel;
-
-  self->target = target;
-  self->peer = peer;
-  
-  return &self->super.super;
-}
-
-static struct lsh_object *
-collect_open_direct_tcp(struct collect_info_2 *info,
-			struct lsh_object *a,
-			struct lsh_object *b)
-{
-  CAST(address_info, target, a);
-  CAST(listen_value, peer, b);
-
-  assert(!info->next);
-
-  return &make_open_direct_tcpip_command(target, peer)->super;
-}
-
-static struct collect_info_2 collect_open_direct_tcp_2 =
-STATIC_COLLECT_2_FINAL(collect_open_direct_tcp);
-
-static struct collect_info_1 open_direct_tcp =
-STATIC_COLLECT_1(&collect_open_direct_tcp_2);
-
-#endif
-
-
 /* Remote forwarding */
-
-#if 0
-static int do_remote_listen_value_peer(struct command_simple *ignored UNUSED,
-				       struct lsh_object *x)
-{
-  CAST(remote_listen_value, value, x);
-  return &value->peer->super;
-}
-
-struct command_simple remote_listen_value_peer =
-STATIC_COMMAND_SIMPLE(do_remote_listen_value_peer);
-#endif
-
 
 static int do_channel_open_forwarded_tcpip(struct channel_open *c UNUSED,
 					   struct ssh_connection *connection,
 					   struct simple_buffer *args,
 					   struct channel_open_callback *response)
 {
-#if 0
-  CAST(channel_open_forwarded_tcpip, closure, c); 
-#endif  
   UINT32 listen_ip_length;
   UINT8 *listen_ip;
   UINT32 listen_port;
@@ -776,74 +517,3 @@ static int do_channel_open_forwarded_tcpip(struct channel_open *c UNUSED,
 
 struct channel_open channel_open_forwarded_tcpip =
 { STATIC_HEADER, do_channel_open_forwarded_tcpip};
-
-#if 0
-/* ;; GABA:
-   (class
-     (name start_forwarded_client_io)
-     (super command)
-     (vars
-       (c object channel_open_callback)))
-*/
-
-/* Copies some code from do_forward_start_io */
-static int do_start_forwarded_client_io(struct command *s,
-					struct lsh_object *x,
-					struct command_continuation *c)
-{
-  CAST(start_forwarded_client_io, self, s);
-  CAST(io_fd, socket, x);
-  int res;
-  
-  struct tcpip_channel *channel;
-  
-  if (!socket)
-    return CHANNEL_OPEN_CALLBACK(self->c, NULL, SSH_OPEN_CONNECT_FAILED,
-				 "Connection failed", NULL);
-
-  REMEMBER_RESOURCE(self->c->connection->resources,
-		    &socket->super.super);
-  
-  channel = make_tcpip_channel(socket);
-
-  /* FIXME: Move this stuff to the continuation, and just return the tcpip-channel instead.
-   * Where should we do the rememembering of the socket? */
-  /* Install callbacks on the local socket */
-  io_read_write(socket,
-		make_channel_read_data(&channel->super),
-		SSH_MAX_PACKET,
-		make_channel_close(&channel->super));
-
-  res = CHANNEL_OPEN_CALLBACK(self->c, &channel->super, 0, NULL, NULL);
-
-  if (LSH_CLOSEDP(res))
-    return res;
-
-  return res | COMMAND_RETURN(c, channel);
-}
-
-static struct command *
-make_start_forwarded_client_io(struct channel_open_callback *c)
-{
-  NEW(start_forwarded_client_io, self);
-
-  self->super.call = do_start_forwarded_client_io;
-  self->c = c;
-
-  return &self->super;
-}
-
-static struct lsh_object *
-collect_start_forwarded_client_io(struct collect_info_1 *info,
-				  struct lsh_object *x)
-{
-  CAST(remote_listen_value, peer, x);
-  assert(!info->next);
-
-  return &make_start_forwarded_client_io(peer->c)->super;
-}
-
-static struct collect_info_1 start_forwarded_client_io =
-STATIC_COLLECT_1_FINAL(collect_start_forwarded_client_io);
-
-#endif
