@@ -41,7 +41,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	client.c client_keyexchange.c client_password.c client_pty.c \
 	client_userauth.c \
 	combinators.c command.c compress.c connection.c connection_commands.c \
-	debug.c des.c disconnect.c  dsa_keygen.c encrypt.c \
+	debug.c des.c disconnect.c dsa.c dsa_keygen.c encrypt.c \
 	format.c gc.c hmac.c idea.c io.c io_commands.c keyexchange.c \
 	list.c md5.c \
 	packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
