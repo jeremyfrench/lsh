@@ -94,7 +94,7 @@ lshd_process_ssh_header(struct header_callback *s, struct ssh_read_state *rs,
    * and MAC in the comparison below. */
   if (length > (connection->rec_max_packet + SSH_MAX_PACKET_FUZZ))
     {
-      werror("read_packet: Receiving too large packet.\n"
+      werror("lshd_process_ssh_header: Receiving too large packet.\n"
 	     "  %i octets, limit is %i\n",
 	     length, connection->rec_max_packet);
 		  
@@ -106,7 +106,7 @@ lshd_process_ssh_header(struct header_callback *s, struct ssh_read_state *rs,
        || (length < (block_size - 4))
        || ( (length + 4) % block_size))
     {
-      werror("read_packet: Bad packet length %i\n",
+      werror("lshd_process_ssh_header: Bad packet length %i\n",
 	     length);
       connection_error(connection, "Invalid packet length");
       return NULL;
