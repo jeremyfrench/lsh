@@ -1,3 +1,11 @@
+NEWS for the 1999-01-28 snapshot
+
+	Some PTY support
+
+	Integrated support for sshd1 fallback (not tested)
+
+	Bug fixes.
+
 NEWS for the 1999-01-14 snapshot
 
 	Fixed off-by-one bug in dss_keygen.
