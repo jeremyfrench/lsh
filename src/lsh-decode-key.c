@@ -207,15 +207,13 @@ STATIC_EXCEPTION_HANDLER(do_exc_lsh_decode_key, NULL);
 
 int main(int argc, char **argv)
 {
-  NEW(io_backend, backend);
+  struct io_backend *backend = make_io_backend();
 
   struct lsh_decode_key_options *options = make_lsh_decode_key_options();
   struct exception_handler *e;
   struct lsh_fd *in;
   struct lsh_fd *out;
 
-  init_backend(backend);
-  
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
   in = make_lsh_fd(backend, STDIN_FILENO, &exc_handler);

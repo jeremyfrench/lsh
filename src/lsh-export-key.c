@@ -361,11 +361,9 @@ int main(int argc, char **argv)
   struct lsh_fd *in;
   struct lsh_fd *out;
 
-  NEW(io_backend, backend);
+  struct io_backend *backend = make_io_backend();
 
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
-
-  init_backend(backend);
 
   /* Patch the parent pointer later */
   e = make_exception_handler(do_exc_export_key_handler,

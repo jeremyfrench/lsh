@@ -432,12 +432,10 @@ STATIC_EXCEPTION_HANDLER(do_lsh_writekey_handler, NULL);
 
 int main(int argc, char **argv)
 {
-  NEW(io_backend, backend);
+  struct io_backend *backend = make_io_backend();
   struct lsh_writekey_options *options = make_lsh_writekey_options();
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
-
-  init_backend(backend);
 
   {
     CAST_SUBTYPE

@@ -42,6 +42,7 @@
 #include "io_commands.h"
 #include "gateway.h"
 #include "gateway_commands.h"
+#include "handshake.h"
 #include "lookup_verifier.h"
 #include "randomness.h"
 #include "service.h"
@@ -1437,8 +1438,7 @@ int main(int argc, char **argv)
     = make_lsh_default_handler(&lsh_exit_code, &default_exception_handler,
 			       HANDLER_CONTEXT);
 
-  NEW(io_backend, backend);
-  init_backend(backend);
+  struct io_backend *backend = make_io_backend();
 
   /* Attempt to open a tty */
   lsh_open_tty();
