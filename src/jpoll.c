@@ -55,7 +55,7 @@ int poll(struct pollfd *fdlist, nfds_t count, int timeoutInMS)
   /*  clear all events  */
   for (i = 0; i < count; i++) fdlist[i].revents = 0;
 
-  if ((ret = select(tsize, &readfdset, &writefdset, NULL, &timeout)) == -1)
+  if ((ret = select(tsize, &readfdset, &writefdset, NULL, to)) == -1)
     return(-1);
 
   for (i = 0; i < count; i++) {
