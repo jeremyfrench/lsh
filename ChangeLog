@@ -1,5 +1,8 @@
 2002-11-04  Pontus Sköld  <pont@soua.net>
 
+	* src/client.c (envp_parse): Certain versions of argp needs to be
+	fed with ARGP_NO_ERRS for this to work.
+
 	* misc/Makefile.am.in: Removed obsolete reference to (and include
 	of) ctags.mk.
 
