@@ -55,6 +55,9 @@
 #define SSH_MSG_USERAUTH_PK_OK 60
 #define SSH_MSG_USERAUTH_PASSWD_CHANGEREQ 60
 
+#define SSH_MSG_USERAUTH_INFO_REQUEST 60
+#define SSH_MSG_USERAUTH_INFO_RESPONSE 61
+
 /* The following message numbers have been defined for use with the
  * 'gssapi' user authentication method: */
 
