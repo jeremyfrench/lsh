@@ -1,3 +1,13 @@
+2004-02-20  Niels Möller  <niels@s3.kth.se>
+
+	* src/scm/Makefile.am (EXTRA_DIST): Deleted make-char-classes.
+
+	* configure.ac: Deleted tests for bash.
+
+	* src/Makefile.am (atoms_gperf.c, atoms_table.c): Don't use
+	bash to run process_atoms script.
+	(packet_types.h): Don't use bash to run the invert-defs script.
+
 2004-02-19  Niels Möller  <niels@s3.kth.se>
 
 	* src/scm/guile-compat.scm: Deleted most of the contents.
