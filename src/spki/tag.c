@@ -98,9 +98,9 @@ struct spki_tag_range
   struct spki_tag super;
   enum spki_range_type flags;
   
-  const struct spki_string *display;
-  const struct spki_string *lower;
-  const struct spki_string *upper;
+  struct spki_string *display;
+  struct spki_string *lower;
+  struct spki_string *upper;
 };
 
 #define MALLOC(ctx, realloc, size) realloc((ctx), NULL, (size))
@@ -427,9 +427,9 @@ spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
       /* Fall through */
     case SPKI_TAG_LIST:
       {
-	const struct spki_tag *tag;
+	struct spki_tag *tag;
 	
-	const struct spki_cons *children
+	struct spki_cons *children
 	  = spki_tag_compile_list(ctx, realloc, i);
 
 	if (!children)
@@ -446,7 +446,9 @@ spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
       }
       
     case SPKI_TAG_ANY:
-      return &spki_tag_any;
+      /* Cast to non-const, anybody that tries to modify it should
+       * crash. */
+      return (struct spki_tag *) &spki_tag_any;
       
     case SPKI_TAG_PREFIX:
       {
