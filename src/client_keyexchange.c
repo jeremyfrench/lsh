@@ -26,7 +26,6 @@
 #include "atoms.h"
 #include "command.h"
 #include "debug.h"
-#include "dsa.h"
 #include "format.h"
 #include "lookup_verifier.h"
 

@@ -28,7 +28,6 @@
 #include "atoms.h"
 #include "compress.h"
 #include "crypto.h"
-#include "dsa.h"
 #include "publickey_crypto.h"
 #include "xalloc.h"
 
