@@ -1,3 +1,52 @@
+2002-11-16  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/key-1.private, src/testsuite/key-2.private:
+	Updated keys. 
+
+	* src/testsuite/conv-1-test, src/testsuite/conv-2-test,
+	src/testsuite/dsa-test.c, src/testsuite/export-1-test,
+	src/testsuite/rsa-test.c: Updated key s-expressions to match new
+	format. Positive numbers must start with an octed with the most
+	significant bit zero.
+
+	* src/srp_exchange.c (srp_hash_password): Use
+	nettle_mpz_set_str_256_u. 
+	(make_srp_entry): Check sign of verifier.
+
+	* src/spki.c (spki_pkcs5_decrypt): Use sexp_iterator_get_uint32.
+
+	* src/sexp.c (lsh_sexp_to_uint32): Deleted function (similar
+	function added to nettle, sexp_iterator_get_uint32).
+
+	* src/rsa.c (do_rsa_verify): Use nettle_mpz_set_str_256_u.
+
+	* src/parse.c (parse_bignum): Use nettle_mpz_set_str_256_s.
+
+	* src/format.c (ssh_vformat_length): Use nettle's bignum
+	functions. 
+	(ssh_vformat_write): Likewise.
+
+	* src/dsa.c (do_dsa_verify): Use nettle_mpz_set_str_256_u.
+	(dsa_blob_length): Use nettle_mpz_sizeinbase_256_u.
+	(dsa_blob_write): Use nettle_mpz_get_str_256.
+
+	* src/bignum.c (limbs_to_octets): Deleted function.
+	(bignum_parse_s): Deleted function.
+	(mpz_size_of_complement): Deleted function.
+	(bignum_format_s_length): Deleted function.
+	(bignum_format_s): Deleted function.
+	(bignum_parse_u): Deleted function.
+	(bignum_format_u_length): Deleted function.
+	(bignum_write): Deleted function.
+	(bignum_format_u): Deleted function.
+	(bignum_random_size): Made static.
+	(bignum_random_size): Use nettle_mpz_set_str_256_u.
+
+	* src/Makefile.am.in (lshg_LDADD): lshg needs to be linked with
+	nettle now, that the bignum functions used by ssh_format have
+	moved there. It should be possible to get lshg to work without
+	either nettle or gmp, currently it won't.
+
 2002-11-13  Niels Möller  <niels@s3.kth.se>
 
 	* src/spki.c (do_spki_authorize): Need braces around
