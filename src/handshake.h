@@ -45,6 +45,7 @@
 
        (random object randomness)
        (algorithms object alist)
+       (kexinit object make_kexinit)
 
        (banner_text string)))
 */
@@ -56,6 +57,7 @@ make_handshake_info(enum connection_flag flags,
 		    uint32_t block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,
+		    struct make_kexinit *kexinit,
 		    struct lsh_string *banner_text);
 
 extern struct command_4 handshake_command;

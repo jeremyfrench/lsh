@@ -262,6 +262,7 @@ make_handshake_info(enum connection_flag flags,
 		    uint32_t block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,
+		    struct make_kexinit *kexinit,
 		    struct lsh_string *banner_text)
 {
   NEW(handshake_info, self);
@@ -271,6 +272,7 @@ make_handshake_info(enum connection_flag flags,
   self->block_size = block_size;
   self->random = r;
   self->algorithms = algorithms;
+  self->kexinit = kexinit;
   self->banner_text = banner_text;
 
   return self;
@@ -296,8 +298,8 @@ DEFINE_COMMAND4(handshake_command)
       struct command_continuation *c,
       struct exception_handler *e)
 {
-  CAST(handshake_info, info, a1);
-  CAST_SUBTYPE(make_kexinit, init, a2);
+  CAST_SUBTYPE(resource, resource, a1);
+  CAST(handshake_info, info, a2);
   /* NOTE: For lsh, the lv from connect is mostly bogus, lv->peer is
    * NULL */
   CAST(listen_value, lv, a4);
@@ -341,6 +343,10 @@ DEFINE_COMMAND4(handshake_command)
      lv->peer, lv->local, info->debug_comment, 
      make_exc_finish_read_handler(lv->fd, e, HANDLER_CONTEXT));
 
+  /* Adopt resources associated with the connection. */
+  if (resource)
+    remember_resource(connection->resources, resource);
+  
   connection_after_keyexchange(connection, c);
   
   connection_init_io
@@ -365,7 +371,7 @@ DEFINE_COMMAND4(handshake_command)
 			 "Handshake timed out");
   
   connection->versions[mode] = version;
-  connection->kexinit = init; 
+  connection->kexinit = info->kexinit; 
   connection->dispatch[SSH_MSG_KEXINIT]
     = make_kexinit_handler(extra, info->algorithms);
 
