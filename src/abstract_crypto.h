@@ -83,8 +83,11 @@
      (vars
        (hash_size simple UINT32)
        (update method void 
-	       "UINT32 length" "UINT8 *data")
+	       "UINT32 length" "const UINT8 *data")
        (digest method void "UINT8 *result")
+
+       ;; FIXME: Perhaps add an argument which
+       ;; is a hash instance to copy to.
        (copy method (object hash_instance))))
 */
 
@@ -112,11 +115,13 @@
      (name mac_algorithm)
      (vars
        (hash_size simple UINT32)
+       ; Recommended key size
        (key_size simple UINT32)
-       (make_mac method (object mac_instance) "const UINT8 *key")))
+       (make_mac method (object mac_instance)
+                 "UINT32 length" "const UINT8 *key")))
 */
 
-#define MAKE_MAC(m, key) ((m)->make_mac((m), (key)))
+#define MAKE_MAC(m, l, key) ((m)->make_mac((m), (l), (key)))
 
 
 /* GABA:
@@ -125,11 +130,11 @@
      (vars
        ; Returns a non-spki signature
        (sign method (string)
-             "UINT32 length" "UINT8 *data")
+             "UINT32 length" "const UINT8 *data")
        ; Returns a signature sexp
        (sign_spki method (object sexp)
                   "struct sexp *hash" "struct sexp *principal"
-                  "UINT32 length" "UINT8 *data")
+                  "UINT32 length" "const UINT8 *data")
        ;; FIXME: Perhaps this should be a method of the algorithm object instead?
        (public_key method (object sexp) )))
 */
@@ -143,11 +148,11 @@
      (name verifier)
      (vars
        (verify method int
-       	       "UINT32 length" "UINT8 *data"
-	       "UINT32 signature_length" "UINT8 * signature_data")
+       	       "UINT32 length" "const UINT8 *data"
+	       "UINT32 signature_length" "const UINT8 *signature_data")
        ; Iterator points past the signature-tag
        (verify_spki method int
-       	       "UINT32 length" "UINT8 *data"
+       	       "UINT32 length" "const UINT8 *data"
 	       "struct sexp_iterator *i")))
 */
 
