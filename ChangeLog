@@ -1,3 +1,40 @@
+2002-01-14  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/spki.c (spki_hash_sexp): Bugfix, don't hash the data once.
+	Bug reported by Werner Koch.
+
+	* src/sexp_parser.c (sexp_parse): Added advanced-hex syntax, as an
+	alias for the ordinary (but not implemented) advanced syntax.
+
+	* src/sexp.c: Added new format "advanced-hex" that uses hex
+	instead of base64.
+	(encode_hex): New function.
+
+	* src/rsa_keygen.c (rsa_generate_key): Renamed key type to
+	"rsa-pkcs1". 
+
+	* src/rsa.c: Use nettle's rsa implementation. Deleted support for
+	rsa-md5. Needs some more cleanup.
+
+	* src/publickey_crypto.h: Moved rsa-related declarations here.
+
+	* src/rsa.h: rsa.h is now obsolete.
+
+	* src/lsh.c (read_user_keys): Added ATOM_RSA_PKCS1.
+	* src/server.c (read_host_key): Likewise.
+
+	* src/format.c (format_hex_string): Export this function.
+
+	* src/atoms.in: Added "rsa-pkcs1".
+
+	* src/algorithms.c (all_signature_algorithms): Deleted support for
+	rsa-md5. 
+
+2002-01-13  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* configure.in (lsh_cv_c_attribute): Consider __FUNCTION__ broken
+	in gcc-3.
+
 2002-01-09  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/dsa.c (dsa_hash): Don't call sha1_final.

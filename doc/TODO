@@ -120,16 +120,16 @@ inconsistent.
 
 RANDOMNESS
 
-Get a decent source of random (the current version will fall back to a
-really poorly seeded generator if /dev/urandom is not available). Two
-main alternatives are Werner Koch's code in GnuPG, and Peter Gutmann's
-libcrypt. Even on systems with /dev/random, it might be suboptimal to
-use it directly.
-
 Look at prngd,
 http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/prngd.html
 (recommended by Oystein Viggen <oysteivi@tihlde.org>), and perhaps
 also at egd.
+
+
+SPKI ISSUES
+
+Use the name "rsa-pkcs1" consistently for all keys, and perhaps
+include the name of the hash function in the signature objects.
 
 
 DENIAL OF SERVICE
@@ -453,3 +453,15 @@ RANDOM_POLL_BACKGROUND.
 :   3. it tries to waitpid the process created in 1, but it's no longer
 :      the parent of that process, so waiting fails.
 
+When a forwarding created with lshg -L ... goes down (at the local
+end, I think), the channel is not taken down properly, and there are a
+lot of "lsh: write_buffer: Attempt to write data to closed buffer."
+warnings by lsh:
+
+: bash-2.03$ lshg: Exiting: Connection reset by peer
+: lsh: write_buffer: Attempt to write data to closed buffer.
+: lsh: write_buffer: Attempt to write data to closed buffer.
+
+To fix this, we must put some resources on the lsh's
+gateway-connection's resource list, that closes the chained
+connections. 
