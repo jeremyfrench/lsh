@@ -25,6 +25,8 @@
 
 #include "gnu_stuff.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 void lsftp_welcome()
 {
