@@ -241,6 +241,12 @@ struct parser
   const struct argp *argp;
 
   const char *posixly_correct;
+  
+  /* True if there are only no-option arguments left, which are are
+     just passed verbatim with ARGP_KEY_ARG. This is set if we
+     encounter a quote, or the end of options, but may be cleared
+     again if the user moves the next argument pointer backwards. */
+  int args_only;
 
   /* Describe how to deal with options that follow non-option ARGV-elements.
 
@@ -268,6 +274,18 @@ struct parser
 
   */
   enum { REQUIRE_ORDER, PERMUTE, RETURN_IN_ORDER } ordering;
+
+  /* A segment of non-option arguments that have been skipped for
+     later processing, after all options. `first_nonopt' is the index
+     in ARGV of the first of them; `last_nonopt' is the index after
+     the last of them.
+
+     If quoted or args_only is non-zero, this segment should be empty. */
+
+  /* FIXME: I'd prefer to use unsigned, but it's more consistent to
+     use the same type as for state.next. */
+  int first_nonopt;
+  int last_nonopt;
   
   /* String of all recognized short options. Needed for ARGP_LONG_ONLY. */
   char *short_opts;
@@ -320,24 +338,24 @@ enum match_result { MATCH_EXACT, MATCH_PARTIAL, MATCH_NO };
  * For partial matches, *QUALITY is set to the length of the common
  * prefix. */
 static enum match_result
-match_option(const char *arg, const char *name,
-	     unsigned *quality)
+match_option(const char *arg, const char *name)
 {
-  unsigned i;
-  for (i = 0;; i++)
+  unsigned i, j;
+  for (i = j = 0;; i++, j++)
     {
-      if ( !arg[i] || (arg[i] == '='))
+      switch(arg[i])
 	{
-	  if (!name[i])
-	    return MATCH_EXACT;
-	}
-      else if (!name[i])
-	/* The argument is longer than the option name */
-	return MATCH_NO;
-      else if (arg[i] != name[i])
-	{
-	  *quality = i;
-	  return MATCH_PARTIAL;
+	case '\0':
+	case '=':
+	  return name[j] ? MATCH_PARTIAL : MATCH_EXACT;
+	case '-':
+	  while (name[j] != '-')
+	    if (!name[j++])
+	      return MATCH_NO;
+	  break;
+	default:
+	  if (arg[i] != name[j])
+	    return MATCH_NO;
 	}
     }
 }
@@ -349,14 +367,12 @@ find_long_option(struct parser *parser,
 {
   struct group *group;
 
-  /* Best match found so far. */
-  unsigned best_match = 0;    /* Match length */
-  struct group *best_group = NULL;
-  const struct argp_option *best_option = NULL;
+  /* Partial match found so far. */
+  struct group *matched_group = NULL;
+  const struct argp_option *matched_option = NULL;
 
-  /* True if we get several "best" matches. (A best_match of zero is
-     always ambigous). */
-  int ambiguous = 1;
+  /* Number of partial matches. */
+  int num_partial = 0;
 
   for (group = parser->groups; group < parser->egroup; group++)
     {
@@ -364,24 +380,17 @@ find_long_option(struct parser *parser,
 
       for (opts = group->argp->options; !__option_is_end(opts); opts++)
 	{
-	  unsigned prefix;
-	  
 	  if (!opts->name)
 	    continue;
-	  switch (match_option(arg, opts->name, &prefix))
+	  switch (match_option(arg, opts->name))
 	    {
 	    case MATCH_NO:
 	      break;
 	    case MATCH_PARTIAL:
-	      if (prefix > best_match)
-		{
-		  ambiguous = 0;
-		  best_match = prefix;
-		  best_group = group;
-		  best_option = opts;
-		}
-	      else if (prefix == best_match)
-		ambiguous = 1;
+	      num_partial++;
+
+	      matched_group = group;
+	      matched_option = opts;
 
 	      break;
 	    case MATCH_EXACT:
@@ -391,10 +400,10 @@ find_long_option(struct parser *parser,
 	    }
 	}
     }
-  if (!ambiguous)
+  if (num_partial == 1)
     {
-      *p = best_group;
-      return best_option;
+      *p = matched_group;
+      return matched_option;
     }
 
   return NULL;
@@ -588,11 +597,12 @@ parser_init (struct parser *parser, const struct argp *argp,
   parser->state.flags = flags;
   parser->state.err_stream = stderr;
   parser->state.out_stream = stdout;
-  parser->state.next = 0;	/* Tell getopt to initialize.  */
   parser->state.pstate = parser;
 
+  parser->args_only = 0;
   parser->nextchar = NULL;
-
+  parser->first_nonopt = parser->last_nonopt = 0;
+    
   /* Call each parser for the first time, giving it a chance to propagate
      values to child parsers.  */
   if (parser->groups < parser->egroup)
@@ -641,6 +651,7 @@ parser_init (struct parser *parser, const struct argp *argp,
     parser->state.name = "";
 #endif
   }
+  
   return 0;
 }
 
@@ -736,17 +747,16 @@ parser_finalize (struct parser *parser,
   return err;
 }
 
-/* Call the user parsers to parse the non-option argument VAL, at the current
-   position, returning any error.  The state NEXT pointer is assumed to have
-   been adjusted (by getopt) to point after this argument; this function will
-   adjust it correctly to reflect however many args actually end up being
-   consumed.  */
+/* Call the user parsers to parse the non-option argument VAL, at the
+   current position, returning any error. The state NEXT pointer
+   should point to the argument; this function will adjust it
+   correctly to reflect however many args actually end up being
+   consumed. */
 static error_t
 parser_parse_arg (struct parser *parser, char *val)
 {
-  /* Save the starting value of NEXT, first adjusting it so that the arg
-     we're parsing is again the front of the arg vector.  */
-  int index = --parser->state.next;
+  /* Save the starting value of NEXT */
+  int index = parser->state.next;
   error_t err = EBADKEY;
   struct group *group;
   int key = 0;			/* Which of ARGP_KEY_ARG[S] we used.  */
@@ -782,74 +792,81 @@ parser_parse_arg (struct parser *parser, char *val)
 	   argument -- but only if the user hasn't gotten tricky and set
 	   the clock back.  */
 	(--group)->args_processed += (parser->state.next - index);
-#if 0
       else
-	/* The user wants to reparse some args, give getopt another try.  */
-	parser->try_getopt = 1;
-#endif
+	/* The user wants to reparse some args, so try looking for options again.  */
+	parser->args_only = 0;
     }
 
   return err;
 }
 
-#if 0
-/* Call the user parsers to parse the option OPT, with argument VAL, at the
-   current position, returning any error.  */
-static error_t
-parser_parse_opt (struct parser *parser, int opt, char *val UNUSED)
+/* Exchange two adjacent subsequences of ARGV.
+   One subsequence is elements [first_nonopt,last_nonopt)
+   which contains all the non-options that have been skipped so far.
+   The other is elements [last_nonopt,next), which contains all
+   the options processed since those non-options were skipped.
+
+   `first_nonopt' and `last_nonopt' are relocated so that they describe
+   the new indices of the non-options in ARGV after they are moved.  */
+
+static void
+exchange (struct parser *parser)
 {
-  /* The group key encoded in the high bits; 0 for short opts or
-     group_number + 1 for long opts.  */
-  int group_key = opt >> USER_BITS;
-  error_t err = EBADKEY;
+  int bottom = parser->first_nonopt;
+  int middle = parser->last_nonopt;
+  int top = parser->state.next;
+  char **argv = parser->state.argv;
+  
+  char *tem;
 
-  if (group_key == 0)
-    /* A short option.  By comparing OPT's position in SHORT_OPTS to the
-       various starting positions in each group's SHORT_END field, we can
-       determine which group OPT came from.  */
+  /* Exchange the shorter segment with the far end of the longer segment.
+     That puts the shorter segment into the right place.
+     It leaves the longer segment in the right place overall,
+     but it consists of two parts that need to be swapped next.  */
+
+  while (top > middle && middle > bottom)
     {
-      struct group *group;
-      char *short_index = strchr (parser->short_opts, opt);
+      if (top - middle > middle - bottom)
+	{
+	  /* Bottom segment is the short one.  */
+	  int len = middle - bottom;
+	  register int i;
 
-      if (short_index)
-	for (group = parser->groups; group < parser->egroup; group++)
-	  if (group->short_end > short_index)
+	  /* Swap it with the top part of the top segment.  */
+	  for (i = 0; i < len; i++)
 	    {
-	      err = group_parse (group, &parser->state, opt, optarg);
-	      break;
+	      tem = argv[bottom + i];
+	      argv[bottom + i] = argv[top - (middle - bottom) + i];
+	      argv[top - (middle - bottom) + i] = tem;
 	    }
-    }
-  else
-    /* A long option.  We use shifts instead of masking for extracting
-       the user value in order to preserve the sign.  */
-    err =
-      group_parse (&parser->groups[group_key - 1], &parser->state,
-		   (opt << GROUP_BITS) >> GROUP_BITS, optarg);
-
-  if (err == EBADKEY)
-    /* At least currently, an option not recognized is an error in the
-       parser, because we pre-compute which parser is supposed to deal
-       with each option.  */
-    {
-      static const char bad_key_err[] =
-	N_("(PROGRAM ERROR) Option should have been recognized!?");
-      if (group_key == 0)
-	__argp_error (&parser->state, "-%c: %s", opt,
-		      dgettext (parser->argp->argp_domain, bad_key_err));
+	  /* Exclude the moved bottom segment from further swapping.  */
+	  top -= len;
+	}
       else
 	{
-	  struct option *long_opt = parser->long_opts;
-	  while (long_opt->val != opt && long_opt->name)
-	    long_opt++;
-	  __argp_error (&parser->state, "--%s: %s",
-			long_opt->name ? long_opt->name : "???",
-			dgettext (parser->argp->argp_domain, bad_key_err));
+	  /* Top segment is the short one.  */
+	  int len = top - middle;
+	  register int i;
+
+	  /* Swap it with the bottom part of the bottom segment.  */
+	  for (i = 0; i < len; i++)
+	    {
+	      tem = argv[bottom + i];
+	      argv[bottom + i] = argv[middle + i];
+	      argv[middle + i] = tem;
+	    }
+	  /* Exclude the moved top segment from further swapping.  */
+	  bottom += len;
 	}
     }
 
-  return err;
+  /* Update records for the slots the non-options now occupy.  */
+
+  parser->first_nonopt += (parser->state.next - parser->last_nonopt);
+  parser->last_nonopt = parser->state.next;
 }
-#endif
+
+
 
 enum arg_type { ARG_ARG, ARG_SHORT_OPTION,
 		ARG_LONG_OPTION, ARG_LONG_ONLY_OPTION,
@@ -871,13 +888,16 @@ classify_arg(struct parser *parser, char *arg, char **opt)
 	  return ARG_QUOTE;
 	  
 	/* A long option. */
-	*opt = arg + 2;
+	if (opt)
+	  *opt = arg + 2;
 	return ARG_LONG_OPTION;
 
       default:
 	/* Short option. But if ARGP_LONG_ONLY, it can also be a long option. */
 
-	*opt = arg + 1;
+	if (opt)
+	  *opt = arg + 1;
+
 	if (parser->state.flags & ARGP_LONG_ONLY)
 	  {
 	    /* Rules from getopt.c:
@@ -917,10 +937,16 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
 {
   if (parser->state.quoted && parser->state.next < parser->state.quoted)
     /* The next argument pointer has been moved to before the quoted
-       region, so pretend we never saw the quoting `--', and give getopt
-       another chance.  If the user hasn't removed it, getopt will just
-       process it again.  */
-    parser->state.quoted = 0;
+       region, so pretend we never saw the quoting `--', and start looking for options again.  If the `--' is still there
+       we'lljust process it one more time. */
+    parser->state.quoted = parser->args_only = 0;
+
+  /* Give FIRST_NONOPT & LAST_NONOPT rational values if NEXT has been
+     moved back by the user (who may also have changed the arguments).  */
+  if (parser->last_nonopt > parser->state.next)
+    parser->last_nonopt = parser->state.next;
+  if (parser->first_nonopt > parser->state.next)
+    parser->first_nonopt = parser->state.next;
 
   if (parser->nextchar)
     /* Deal with short options. */
@@ -930,7 +956,7 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
       const struct argp_option *option;
       char *value = NULL;;
 
-      assert(!parser->state.quoted);
+      assert(!parser->args_only);
 
       c = *parser->nextchar++;
       
@@ -984,26 +1010,67 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
 			 option->key, value);
     }
   else
+    /* Advance to the next ARGV-element.  */
     {
-      char *arg;
-      
-      if (parser->state.next >= parser->state.argc)
-	/* Indicate that we're done.  */
+      if (parser->args_only)
 	{
 	  *arg_ebadkey = 1;
-	  return EBADKEY;
+	  if (parser->state.next >= parser->state.argc)
+	    /* We're done. */
+	    return EBADKEY;
+	  else
+	    return parser_parse_arg(parser,
+				    parser->state.argv[parser->state.next]);
 	}
       
-      arg = parser->state.argv[parser->state.next++];
+#if 0
+      /* FIXME: This doesn't seem right. It would be cleaner not to exhange any
+       * arguments until we get a new non-option argument in the input. */
+      if (parser->ordering == PERMUTE)
+	{
+	  if ( (parser->first_nonopt != parser->last_nonopt)
+	       && (parser->last_nonopt != parser->state.next) )
+	    exchange(parser);
+	  
+	  else if (parser->last_nonopt != parser->state.next)
+	    parser->first_nonopt = parser->state.next;
 
-      if (parser->state.quoted)
+	  /* Skip any additional non-options
+	     and extend the range of non-options previously skipped.  */
+
+	  while ( (parser->state.next < parser->state.argc)
+		  && (classify_arg(parser,
+				   parser->state.argv[parser->state.next],
+				   NULL) == ARG_ARG))
+	    parser->state.next++;
+
+	  parser->last_nonopt = parser->state.next;
+	}
+#endif
+      if (parser->state.next >= parser->state.argc)
+	/* Almost done. If there are non-options that we skipped
+	   previously, we should process them now. */
 	{
 	  *arg_ebadkey = 1;
-	  return parser_parse_arg(parser, arg);
+	  if (parser->first_nonopt != parser->last_nonopt)
+	    {
+	      /* Start processing the arguments we skipped previously. */
+	      parser->state.next = parser->first_nonopt;
+	      
+	      parser->first_nonopt = parser->last_nonopt = 0;
+
+	      parser->args_only = 1;
+	      return 0;
+	    }
+	  else
+	    /* Indicate that we're really done. */
+	    return EBADKEY;
 	}
       else
 	/* Look for options. */
 	{
+	  char *arg = parser->state.argv[parser->state.next];
+
 	  char *optstart;
 	  enum arg_type token = classify_arg(parser, arg, &optstart);
 	  
@@ -1013,27 +1080,57 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
 	      switch (parser->ordering)
 		{
 		case PERMUTE:
-		  /* FIXME: Permute arguments, unless ARGP_IN_ORDER is
-		   * used. */
-		  *arg_ebadkey = 1;
-		  return parser_parse_arg(parser, arg);
-		case REQUIRE_ORDER:
-		  /* Implicit quote before the first argument.
-		   *
-		   * It would make more sense to set quoted = next - 1
-		   * (i.e. say that this is the first quoted argument),
-		   * but that may cause quoted = 0, which would be wrong. */
-		  parser->state.quoted = parser->state.next;
+		  if (parser->first_nonopt == parser->last_nonopt)
+		    /* Skipped sequence is empty; start a new one. */
+		    parser->first_nonopt = parser->last_nonopt = parser->state.next;
 
-		  /* Fall through */
+		  else if (parser->last_nonopt != parser->state.next)
+		    /* We have a non-empty skipped sequence, and
+		       we're not at the end-point, so move it. */
+		    exchange(parser);
+
+		  assert(parser->last_nonopt == parser->state.next);
+		  
+		  /* Skip this argument for now. */
+		  parser->state.next++;
+		  parser->last_nonopt = parser->state.next; 
+		  
+		  return 0;
+
+		case REQUIRE_ORDER:
+		  /* Implicit quote before the first argument. */
+		   parser->args_only = 1;
+		   return 0;
+		   
 		case RETURN_IN_ORDER:
 		  *arg_ebadkey = 1;
 		  return parser_parse_arg(parser, arg);
+
 		default:
 		  abort();
 		}
 	    case ARG_QUOTE:
-	      parser->state.quoted = parser->state.next;
+	      /* Skip it, then exchange with any previous non-options. */
+	      parser->state.next++;
+	      assert (parser->last_nonopt != parser->state.next);
+
+	      if (parser->first_nonopt != parser->last_nonopt)
+		{
+		  exchange(parser);
+		  
+		  /* Start processing the skipped and the quoted
+		     arguments. */
+
+		  parser->state.quoted = parser->state.next = parser->first_nonopt;
+
+		  /* Also empty the skipped-list, to avoid confusion
+		     if the user resets the next pointer. */
+		  parser->first_nonopt = parser->last_nonopt = 0;
+		}
+	      else
+		parser->state.quoted = parser->state.next;
+
+	      parser->args_only = 1;	      
 	      return 0;
 
 	    case ARG_LONG_ONLY_OPTION:
@@ -1042,7 +1139,8 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
 		struct group *group;
 		const struct argp_option *option;
 		char *value;
-		      
+
+		parser->state.next++;
 		option = find_long_option(parser, optstart, &group);
 		
 		if (!option)
@@ -1111,6 +1209,7 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
 				   option->key, value);
 	      }
 	    case ARG_SHORT_OPTION:
+	      parser->state.next++;
 	      parser->nextchar = optstart;
 	      return 0;
 
