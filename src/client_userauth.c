@@ -36,7 +36,7 @@
  * would be to first send a set of publickey authentication requests
  * for the available keys (for some configurable value of
  * "available"). This is analogous to unlocking a door by first
- * examining the keys on one's keyring to see if any of them kan be
+ * examining the keys on one's keyring to see if any of them can be
  * inserted into the lock. Preferably, at this point one should use
  * spki hashed public keys rather than the public keys themselves.
  *
@@ -48,6 +48,8 @@
  * If none of the keys were recognized, or if no keys were available
  * from the start, we ask the user for a password and attempts to log
  * in using that. */
+
+static struct packet_handler *make_banner_handler(void);
 
 #include "client_userauth.c.x"
 
@@ -164,7 +166,7 @@ static int do_userauth_failure(struct packet_handler *c,
       && parse_boolean(&buffer, &partial_success)
       && parse_eod(&buffer))
     {
-      int i;
+      unsigned i;
       
       lsh_string_free(packet);
 
@@ -249,7 +251,7 @@ make_failure_handler(struct client_userauth *userauth)
   return &self->super;
 }
 
-static struct packet_handler *make_banner_handler()
+static struct packet_handler *make_banner_handler(void)
 {
   NEW(packet_handler, self);
 
