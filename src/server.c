@@ -45,7 +45,6 @@
 #include "sexp.h"
 #include "spki.h"
 #include "ssh.h"
-#include "unpad.h"
 #include "werror.h"
 #include "xalloc.h"
 

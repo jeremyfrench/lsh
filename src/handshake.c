@@ -39,7 +39,6 @@
 #include "read_line.h"
 #include "read_packet.h"
 #include "ssh.h"
-#include "unpad.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
