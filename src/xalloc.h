@@ -100,7 +100,6 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
 #define CLONED(class, var, i) \
   struct class *(var) = CLONE(class, i)
      
-#include "gc.h"
 #define KILL(x) gc_kill((struct lsh_object *) (x))
 
 #endif /* LSH_XALLOC_H_INCLUDED */

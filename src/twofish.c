@@ -77,7 +77,8 @@ make_twofish_instance(struct crypto_algorithm *algorithm, int mode,
   return &self->super;
 }
 
-struct crypto_algorithm *make_twofish_algorithm(UINT32 key_size)
+struct crypto_algorithm *
+make_twofish_algorithm(UINT32 key_size)
 {
   NEW(crypto_algorithm, algorithm);
 
