@@ -6,6 +6,8 @@ fi
 
 . $srcdir/functions.sh
 
+need_tcputils
+
 PORT=5555
 
 werror "Testing lshd"
