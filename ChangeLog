@@ -1,6 +1,15 @@
 2003-04-21  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/lsh.c (make_lsh_connect): Take actions as a parameter.
+	(options2service): Deleted command.
+	(lsh_options): Deleted service attribute. Always ask for the
+	userauth service.
+	(make_lsh_userauth): Deleted expression.
+	(make_lsh_connect): Take keys as parameter. Always ask for
+	userauth service.
+	(main): Deleted call of make_lsh_userauth. Pass keys to
+	make_lsh_connect instead.
+
 	* src/lshg.c (make_lshg_connect): Likewise.
 
 	* src/gateway.c: Include string.h.
@@ -11,7 +20,7 @@
 
 2003-04-20  Niels Möller  <niels@s3.kth.se>
 
-	* src/spki.c (make_ssh_hostkey_tag): USe a plain NUL-terminated
+	* src/spki.c (make_ssh_hostkey_tag): Use a plain NUL-terminated
 	string to identify the host.
 	(spki_pkcs5_decrypt): Fixed string leak. The label string wasn't
 	freed properly on failure.
