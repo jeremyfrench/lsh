@@ -3,7 +3,7 @@ AC_INIT(keyexchange.h)
 
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, snapshot-`date +%Y-%m-%d`)
-AM_INIT_AUTOMAKE(lsh, 17)
+AM_INIT_AUTOMAKE(lsh, snapshot-esyscmd([date +%Y-%m-%d]))
 
 AM_CONFIG_HEADER(config.h)
 
