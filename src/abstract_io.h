@@ -40,6 +40,7 @@
 
 struct abstract_read
 {
+  struct lsh_object header;
   int (*read)(struct abstract_read **r,
 	      UINT32 length, UINT8 *buffer);
 };
@@ -49,6 +50,7 @@ struct abstract_read
 /* May store a new handler into *h. */
 struct read_handler
 {
+  struct lsh_object header;
   int (*handler)(struct read_handler **h,
 		 struct abstract_read *read);
 };
@@ -72,6 +74,7 @@ struct read_handler
 /* May store a new handler into *w. */
 struct abstract_write
 {
+  struct lsh_object header;
   int (*write)(struct abstract_write **w,
 	       struct lsh_string *packet);
 };

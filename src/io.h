@@ -35,6 +35,8 @@
 
 struct io_fd
 {
+  struct lsh_object header;
+  
   struct io_fd *next;
   int fd;
 
@@ -53,6 +55,8 @@ struct io_fd
 
 struct fd_callback
 {
+  struct lsh_object header;
+  
   int (*f)(struct fd_callback **closure, int fd);
 };
 
@@ -60,6 +64,8 @@ struct fd_callback
 
 struct listen_fd
 {
+  struct lsh_object header;
+  
   struct listen_fd *next;
   int fd;
   struct fd_callback *callback;
@@ -67,6 +73,8 @@ struct listen_fd
 
 struct connect_fd
 {
+  struct lsh_object header;
+  
   struct connect_fd *next;
   int fd;
   struct fd_callback *callback;
@@ -75,6 +83,8 @@ struct connect_fd
   
 struct callout
 {
+  struct lsh_object header;
+  
   struct callout *next;
   struct callback *callout;
   time_t when;
@@ -83,6 +93,8 @@ struct callout
 
 struct io_backend
 {
+  struct lsh_object header;
+  
   unsigned nio;
   struct io_fd *io;
   unsigned nlisten;

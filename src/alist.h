@@ -26,10 +26,13 @@
 #ifndef LSH_ALIST_H_INCLUDED
 #define LSH_ALIST_H_INCLUDED
 
+#include "lsh_types.h"
+
 /* Abstract interface allows for multiple implementations ("real"
  * alists, linear tables, hash tables */
 struct alist
 {
+  struct lsh_object header;
   void * (*get)(struct alist *self, int atom);
   void (*set)(struct alist *self, int atom, void *value);
 };

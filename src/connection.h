@@ -16,6 +16,7 @@ struct ssh_connection;
 
 struct packet_handler
 {
+  struct lsh_object header;
   int (*handler)(struct packet_handler *closure,
 		 struct ssh_connection *connection,
 		 struct lsh_string *packet);
@@ -91,8 +92,7 @@ void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,
 			struct randomness *r);
 
-#if 0
-struct abstract_write *make_unimplemented(struct connection *c);  
-#endif
+struct packet_handler *make_fail_handler(void);
+struct packet_handler *make_unimplemented_handler(void);  
 
 #endif /* LSH_CONNECTION_H_INCLUDED */

@@ -36,6 +36,7 @@
 /* FIXME: This function needs the hostname we are connecting to. */
 struct lookup_verifier
 {
+  struct lsh_object header;
   struct verifier * (*lookup)(struct lookup_verifier *closure,
 			      struct lsh_string *key);
 };

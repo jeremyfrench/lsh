@@ -30,6 +30,7 @@
 
 struct crypto_instance
 {
+  struct lsh_object header;
   UINT32 block_size;
   /* Length must be a multiple of the block size */
   void (*crypt)(struct crypto_instance *self,
@@ -44,6 +45,7 @@ struct crypto_instance
 
 struct crypto_algorithm
 {
+  struct lsh_object header;
   UINT32 block_size;
   UINT32 key_size;
 
@@ -60,6 +62,7 @@ struct crypto_algorithm
 
 struct hash_instance
 {
+  struct lsh_object header;
   UINT32 hash_size;
   void (*update)(struct hash_instance *self,
 		 UINT32 length, UINT8 *data);
@@ -82,6 +85,7 @@ struct hash_instance
   
 struct hash_algorithm
 {
+  struct lsh_object header;
   UINT32 block_size;
   UINT32 hash_size;
   struct hash_instance * (*make_hash)(struct hash_algorithm *self);
@@ -91,6 +95,7 @@ struct hash_algorithm
 
 struct mac_algorithm
 {
+  struct lsh_object header;
   UINT32 hash_size;
   UINT32 key_size;
   struct mac_instance * (*make_mac)(struct mac_algorithm *self,
@@ -101,6 +106,7 @@ struct mac_algorithm
 
 struct signer
 {
+  struct lsh_object header;
   /* Returns a signature string, *without* the length field */
   struct lsh_string * (*sign)(struct signer *closure,
 			      UINT32 length,
@@ -111,6 +117,7 @@ struct signer
 
 struct verifier
 {
+  struct lsh_object header;
   int (*verify)(struct verifier *closure,
 		UINT32 length,
 		UINT8 *data,
@@ -123,6 +130,7 @@ struct verifier
   
 struct signature_algorithm
 {
+  struct lsh_object header;
   struct signer * (*make_signer)(struct signature_algorithm *closure,
 				 UINT32 public_length,
 				 UINT8 *public,
