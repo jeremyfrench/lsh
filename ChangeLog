@@ -1,3 +1,9 @@
+Wed Dec 23 23:06:45 1998    <nisse@puck>
+
+	* format.c (ssh_vformat_length): Added 'd' modifier, for
+	sexp-style length prefixes.
+	(ssh_vformat_write): -"-
+
 Sun Dec 20 20:11:02 1998    <nisse@puck>
 
 	* arcfour.c, blowfish.c, cascade.c, cbc.c, des.c, hmac.c, md5.c,
