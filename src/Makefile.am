@@ -19,8 +19,7 @@ bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey lsh-decrypt-key \
 	       @SRP_PROGRAM@
 
 sbin_PROGRAMS = lshd lsh-execuv @KRB_PROGRAM@ @PAM_PROGRAM@
-bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key
-noinst_SCRIPTS = lcp
+bin_SCRIPTS = lsh-authorize ssh-conv lsh-upgrade lsh-upgrade-key lcp
 noinst_LIBRARIES = liblsh.a
 
 # Don't use BUILT_SOURCES, as all these files are #included, and can't be
