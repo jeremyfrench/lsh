@@ -5,19 +5,6 @@
 #include "transport.h"
 #include "xalloc.h"
 
-struct lsh_string *lsh_string_alloc(UINT32 length)
-{
-  struct lsh_string *packet
-    = xalloc(sizeof(struct lsh_string) - 1 + length);
-  packet->length = length;
-  return packet;
-}
-
-void lsh_string_free(struct lsh_string *packet)
-{
-  free(packet);
-}
-
 #if 0
 void simple_buffer_init(struct simple_buffer *buffer,
 			UINT32 capacity, UINT8 *data)
