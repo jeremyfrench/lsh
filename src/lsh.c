@@ -28,7 +28,6 @@ int main(int argc, char **argv)
 {
   char *host = NULL;
   char *port = "ssh";
-  /* int verbose; */
   int option;
 
   struct sockaddr_in remote;
@@ -37,7 +36,7 @@ int main(int argc, char **argv)
    * strings to and from UTF8. */
   setlocale(LC_CTYPE, "");
   
-  while((option = getopt(argc, argv, "dp:q")) != -1)
+  while((option = getopt(argc, argv, "dp:qv")) != -1)
     switch(option)
       {
       case 'p':
@@ -48,6 +47,9 @@ int main(int argc, char **argv)
 	break;
       case 'd':
 	debug_flag = 1;
+	break;
+      case 'v':
+	verbose_flag = 1;
 	break;
       default:
 	usage();

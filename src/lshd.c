@@ -3,11 +3,16 @@
  * main server program.
  */
 
-#include <getopt.h>
+#include <stdio.h>
+#include <locale.h>
+
+#include "getopt.h"
 
 #include "io.h"
 #include "werror.h"
 #include "server.h"
+
+#define BLOCK_SIZE 32768
 
 /* Global variable */
 struct io_backend backend;
@@ -23,7 +28,6 @@ int main(int argc, char **argv)
 {
   char *host = NULL;  /* Interface to bind */
   char *port = "ssh";
-  int verbose;
   int option;
 
   struct sockaddr_in local;
@@ -32,7 +36,7 @@ int main(int argc, char **argv)
    * strings to and from UTF8. */
   setlocale(LC_CTYPE, "");
   
-  while((option = getopt(argc, argv, "dp:qi:")) != -1)
+  while((option = getopt(argc, argv, "dp:qi:v")) != -1)
     switch(option)
       {
       case 'p':
@@ -47,6 +51,9 @@ int main(int argc, char **argv)
       case 'i':
 	host = optarg;
 	break;
+      case 'v':
+	verbose_flag = 1;
+	break;
       default:
 	usage();
       }
@@ -60,18 +67,12 @@ int main(int argc, char **argv)
       exit(1);
     }
 
-  {
-    struct server_callback connected = {
-      { (fd_callback_f) server_initiate },
-      &backend,
-      BLOCK_SIZE;
-    };
-
-    io_listen(&backend, &local, 
-	      make_server_callback(backend, BLOCK_SIZE));
-  }
+  io_listen(&backend, &local, 
+	    make_server_callback(&backend,
+				 "lsh - a free ssh",
+				 BLOCK_SIZE));
   
-  io_run();
+  io_run(&backend);
 
   return 0;
 }
