@@ -64,11 +64,14 @@
  * "l" (as in literal). It is applicable to the s, a, A, n and r
  * specifiers, and outputs strings *without* a length field.
  *
- * "f" (as in free). Frees the input sting after it has been copied.
+ * "f" (as in free). Frees the input string after it has been copied.
  * Applicable to %S only. */
 
 UINT32 ssh_vformat_length(char *format, va_list args);
 void ssh_vformat(char *format, UINT8 *buffer, va_list args);
 struct lsh_string *ssh_format(char *format, ...);
+
+/* Short cut */
+#define lsh_string_dup(s) (ssh_format("%lS", (s)))
 
 #endif /* LSH_FORMAT_H_INCLUDED */
