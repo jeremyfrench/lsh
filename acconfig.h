@@ -6,6 +6,9 @@
 /* Define to enable sanity checking on memory allocation and casting */
 #undef DEBUG_ALLOC
 
+/* Define to enable tracing */
+#undef DEBUG_TRACE
+
 /* Define if zlib should be used */
 #undef WITH_ZLIB
 

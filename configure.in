@@ -46,6 +46,14 @@ if test x$with_debug_alloc = xyes ; then
   AC_DEFINE(DEBUG_ALLOC)
 fi
 
+AC_ARG_WITH(debug_trace,
+  [--with-debug-trace    support for tracing],,
+  [with_debug_trace=yes])
+
+if test x$with_debug_trace = xyes ; then
+  AC_DEFINE(DEBUG_TRACE)
+fi
+
 AC_ARG_WITH(zlib,
   [--with-zlib    use zlib compression],,
   [with_zlib=yes])
