@@ -28,12 +28,16 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <unistd.h>
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
 #include <sysexits.h>
 #include <security/pam_appl.h>
 
 #define PWD_MAXLEN 1024
 #define SERVICE_NAME "other"
+#define TIMEOUT 600 
 
 static int
 conv(int num_msg,
@@ -97,6 +101,10 @@ main(int argc, char** argv)
   char* username;
 
   int retval;
+
+#ifdef HAVE_ALARM
+  alarm( TIMEOUT ); /* Exit after TIMEOUT seconds */
+#endif
 
   if( argc < 2 )
     {
