@@ -247,13 +247,14 @@ struct exception *make_channel_open_exception(UINT32 error_code, char *msg);
      (vars
        (handler method void
                 "struct ssh_connection *connection"
+		"UINT32 type"
                 "struct simple_buffer *data"
                 "struct command_continuation *c"
 		"struct exception_handler *e")))
 */
 
-#define CHANNEL_OPEN(o, c, d, r, e) \
-((o)->handler((o), (c), (d), (r), (e)))
+#define CHANNEL_OPEN(o, c, t, d, r, e) \
+((o)->handler((o), (c), (t), (d), (r), (e)))
 
 /* SSH_MSG_CHANNEL_REQUEST */
 /* GABA:
