@@ -170,9 +170,10 @@ int main(int argc, char **argv)
   /* No randomness is needed for verifying signatures */
   lookup = make_fake_host_db(make_dss_algorithm(NULL)); 
   kex = make_dh_client(dh, lookup);
-  algorithms = make_alist(5,
+  algorithms = make_alist(6,
 			  ATOM_ARCFOUR, &crypto_rc4_algorithm,
-			  ATOM_BLOWFISH_CBC, &crypto_blowfish_algorithm,
+			  ATOM_BLOWFISH_CBC, crypto_cbc(make_blowfish()),
+			  ATOM_3DES_CBC, crypto_cbc(make_des3()),
 			  ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
