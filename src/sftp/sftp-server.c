@@ -205,11 +205,10 @@ sftp_attrib_from_stat(struct stat *st, struct sftp_attrib* a)
   a->atime=st->st_atime;
   a->mtime=st->st_mtime;
   a->size=st->st_size;
-  a->flags= ( SSH_FILEXFER_ATTR_SIZE ||
-	      SSH_FILEXFER_ATTR_UIDGID ||
-	      SSH_FILEXFER_ATTR_PERMISSIONS || 
-	      SSH_FILEXFER_ATTR_ACMODTIME
-	      );
+  a->flags= ( SSH_FILEXFER_ATTR_SIZE
+              | SSH_FILEXFER_ATTR_UIDGID
+              | SSH_FILEXFER_ATTR_PERMISSIONS
+              | SSH_FILEXFER_ATTR_ACMODTIME);
 }
 
 static void
