@@ -71,7 +71,8 @@
        ; Called when we are allowed to send data on the channel. 
        (send method int)
 
-       ; Called when the channel is closed 
+       ; Called when the channel is closed
+       ; FIXME: Is this needed for anything?
        (close method void)
 
        ; Called when eof is recieved on the channel (or when it is

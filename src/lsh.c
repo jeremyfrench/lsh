@@ -178,7 +178,10 @@ int main(int argc, char **argv)
 
   /* Dup stdio file descriptors, so that they can be closed without
    * confusing the c library. */
-  
+
+  /* FIXME: This doesn't really help. (libc is confused by having a
+   * non-blocking stderr). It's better to avoid the stdio functions
+   * completely. */
   if ( (in = dup(STDIN_FILENO)) < 0)
     {
       werror("Can't dup stdin: %s\n", strerror(errno));

@@ -115,3 +115,9 @@ Fix shadow passwd support.
 
 Don't use stdio for werror and similar functions. The non-blocking
 stderr sometime causes the C library to lose data.
+
+Fix flow control.
+
+The server's close message should somehow be delayed until the dead
+process has been reaped. Alternatively, the client could delay sending
+close until it has recieved the status.
