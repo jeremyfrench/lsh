@@ -1,3 +1,13 @@
+2003-04-14  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io.c (io_resolv_address): Changed interface, to avoid local
+	conversion of service names to port numbers. This way, all that's
+	needed for SRV-records is proper support in getaddrinfo.
+
+	* src/lshd.c (parse_interface): Changed interface to use plain
+	NUL-terminated strings.
+	(main_argp_parser): Updated for new io_resolv_address interface.
+
 2003-04-14  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/functions.sh: Use INTERFACE=localhost, as we now
