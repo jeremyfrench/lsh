@@ -1,3 +1,8 @@
+Tue Apr 13 21:24:08 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_pty.c (pty_grantpt_uid): Fixed pid/uid typo (Noted by
+	Bazsi).
+
 Mon Apr 12 22:20:01 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_session.c (do_alloc_pty): Pass uid on to
