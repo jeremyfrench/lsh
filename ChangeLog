@@ -1,5 +1,9 @@
 1999-09-05  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/exception.h: Added SPKI-related exceptions.
+
+	* src/atoms.in: Added spki-related names.
+
 	* src/sexp_streamed_parser.c: Rewrote parser to use continuations
 	and exceptions. For now, support for any encoding but
 	SEXP_CANONICAL is dropped.
