@@ -29,28 +29,30 @@
 #include "channel.h"
 #include "channel_commands.h"
 #include "charset.h"
+#include "compress.h"
 #include "connection_commands.h"
 #include "crypto.h"
 #include "format.h"
 #include "io.h"
 #include "io_commands.h"
-#include "server_password.h"
-#include "server_session.h"
+#include "lookup_verifier.h"
 #include "randomness.h"
-#include "read_scan.h"
 #include "reaper.h"
 #include "server.h"
+#include "server_authorization.h"
 #include "server_keyexchange.h"
+#include "server_password.h"
+#include "server_pty.h"
+#include "server_publickey.h"
+#include "server_session.h"
 #include "sexp.h"
 #include "ssh.h"
+#include "tcpforward.h"
+#include "tcpforward_commands.h"
 #include "tcpforward_commands.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
-#include "compress.h"
-#include "server_pty.h"
-#include "tcpforward.h"
-#include "tcpforward_commands.h"
 
 #include "getopt.h"
 
@@ -104,32 +106,34 @@ void usage(void)
 /* GABA:
    (class
      (name read_key)
-     (super sexp_handler)
+     (super command_continuation)
      (vars
        (random object randomness)
        ;; Maps hostkey algorithm to a keyinfo structure
        (keys object alist)))
 */
 
-static int do_read_key(struct sexp_handler *h, struct sexp *private)
+static void do_read_key(struct command_continuation *s,
+			struct lsh_object *a)
 {
-  CAST(read_key, closure, h);
+  CAST(read_key, closure, s);
+  CAST_SUBTYPE(sexp, private, a);
+  
   struct sexp_iterator *i;
   struct sexp *e;
   mpz_t p, q, g, y, x;
-  int res;
   
   if (!sexp_check_type(private, "private-key", &i))
     {
       werror("lshd: Host key file does not contain a private key.");
-      return LSH_FAIL | LSH_DIE;
+      return;
     }
 
   e = SEXP_GET(i);
   if (! (e && sexp_check_type(e, "dsa", &i)))
     {
       werror("lshd: Unknown key type (only dsa is supported)\n");
-      return LSH_FAIL | LSH_DIE;
+      return;
     }
 
   mpz_init(p);
@@ -155,8 +159,6 @@ static int do_read_key(struct sexp_handler *h, struct sexp *private)
 	{
 	  werror("lshd: Host key doesn't work.\n");
 	  mpz_clear(tmp);
-
-	  res = LSH_FAIL | LSH_DIE;
 	}
       else
 	{
@@ -177,11 +179,11 @@ static int do_read_key(struct sexp_handler *h, struct sexp *private)
 	  ALIST_SET(closure->keys, ATOM_SSH_DSS,
 		    make_keypair_info(public, private));
 
-#if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
+#if DATAFELLOWS_WORKAROUNDS
 	  ALIST_SET(closure->keys, ATOM_SSH_DSS_KLUDGE,
 		    make_keypair_info(public,
 				      make_dsa_signer_kludge(private)));
-#endif
+#endif /* DATAFELLOWS_WORKAROUNDS */
 	  
 	  verbose("lshd: Using (public) hostkey:\n"
 		  "  p=%xn\n"
@@ -189,12 +191,8 @@ static int do_read_key(struct sexp_handler *h, struct sexp *private)
 		  "  g=%xn\n"
 		  "  y=%xn\n",
 		  p, q, g, y);
-		  
-	  res = LSH_OK | LSH_CLOSE;
 	}
     }
-  else
-    res = LSH_FAIL | LSH_DIE;
 
   /* Cleanup */
   mpz_clear(p);
@@ -202,8 +200,6 @@ static int do_read_key(struct sexp_handler *h, struct sexp *private)
   mpz_clear(g);
   mpz_clear(y);
   mpz_clear(x);
-
-  return res;
 }
 
 static int read_host_key(const char *name,
@@ -222,13 +218,14 @@ static int read_host_key(const char *name,
       int res;
       
       NEW(read_key, handler);
-      handler->super.handler = do_read_key;
+      handler->super.c = do_read_key;
 
       handler->random = r;
       handler->keys = keys;
       
-      res = blocking_read(fd, make_read_sexp(&handler->super,
-					     SEXP_TRANSPORT, 0));
+      res = blocking_read(fd,
+			  make_read_sexp(SEXP_TRANSPORT, 1,
+					 &handler->super, &ignore_exception_handler));
       close(fd);
 
       KILL(handler);
@@ -310,7 +307,8 @@ int main(int argc, char **argv)
   struct keyexchange_algorithm *kex;
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
-
+  struct alist *authorization_lookup;
+  
   NEW(io_backend, backend);
 
   /* For filtering messages. Could perhaps also be used when converting
@@ -445,6 +443,20 @@ int main(int argc, char **argv)
 
   kex = make_dh_server(dh, keys);
 
+  authorization_lookup
+    = make_alist(1
+#if DATAFELLOWS_WORKAROUNDS
+		 +1,
+		 ATOM_SSH_DSS_KLUDGE, make_authorization_db(make_dsa_kludge_algorithm(NULL),
+							    &md5_algorithm)
+#endif
+				    
+		 ,ATOM_SSH_DSS, make_authorization_db(make_dsa_algorithm(NULL),
+						      &md5_algorithm),
+		 
+		 -1);
+
+  
   ALIST_SET(algorithms, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex);
 
   make_kexinit
@@ -496,9 +508,13 @@ int main(int argc, char **argv)
 	 (make_alist
 	  (1, ATOM_SSH_USERAUTH,
 	   lshd_services(make_userauth_service
-			 (make_int_list(1, ATOM_PASSWORD, -1),
-			  make_alist(1, ATOM_PASSWORD,
-				     &unix_userauth.super, -1),
+			 (make_int_list(2,
+					ATOM_PASSWORD,
+					ATOM_PUBLICKEY, -1),
+			  make_alist(2,
+				     ATOM_PASSWORD, &unix_userauth.super,
+				     ATOM_PUBLICKEY, make_userauth_publickey(authorization_lookup),
+				     -1),
 			  make_alist(1, ATOM_SSH_CONNECTION,
 				     lshd_connection_service
 				     (make_server_connection_service
