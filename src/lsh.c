@@ -222,26 +222,42 @@ do_lsh_default_handler(struct exception_handler *s,
 {
   CAST(lsh_default_handler, self, s);
 
-  switch(e->type)
+  if (e->type & EXC_IO)
     {
-    case EXC_CONNECT:
-    case EXC_RESOLVE:
-      werror("lsh: Connection failed: %z\n", e->msg);
-      break;
-    case EXC_IO_READ:
-    case EXC_IO_WRITE:
-      werror("lsh: Connection broken: %z\n", e->msg);
-      break;
-    case EXC_AUTH:
-      werror("lsh: Host authentication failed: %z\n", e->msg);
-      break;
-    case EXC_SERVICE:
-      werror("lsh: Service denied: %z\n", e->msg);
-      break;
-    default:
-      EXCEPTION_RAISE(self->super.parent, e);
+      CAST_SUBTYPE(io_exception, exc, e);
+
+      switch(e->type)
+	{
+	case EXC_IO_EOF:
+	  close_fd_nicely(exc->fd, 0);
+	  break;
+	case EXC_IO_CONNECT:
+	case EXC_IO_READ:
+	case EXC_IO_WRITE:
+	  if (exc->fd)
+	    close_fd(exc->fd, 0);
+	  *self->status = EXIT_FAILURE;
+	  break;
+	default:
+	  *self->status = EXIT_FAILURE;
+	  EXCEPTION_RAISE(self->super.parent, e);
+	  return;
+	}
+      werror("lsh: %z, (errno = %i)\n", e->msg, exc->error);
     }
-  *self->status = EXIT_FAILURE;
+  else
+    switch(e->type)
+      {
+      case EXC_RESOLVE:
+      case EXC_AUTH:
+      case EXC_SERVICE:
+	werror("lsh: %z\n", e->msg);
+	*self->status = EXIT_FAILURE;
+	break;
+      default:
+	*self->status = EXIT_FAILURE;
+	EXCEPTION_RAISE(self->super.parent, e);
+      }
 }
 
 static struct exception_handler *
