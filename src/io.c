@@ -139,7 +139,7 @@ void io_run(struct io_backend *b)
 	   if (!CALLBACK(f->callout))
 	     fatal("What now?");
 	   b->callouts = f->next;
-	   free(f);
+	   lsh_free(f);
 	 }
       if (res<0)
 	 {
@@ -217,9 +217,9 @@ void io_run(struct io_backend *b)
 		  UNLINK_FD;
 		  b->nio--;
 		  if (fd->handler)
-		    free(fd->handler);
-		  free(fd->buffer);
-		  free(fd);
+		    lsh_free(fd->handler);
+		  lsh_free(fd->buffer);
+		  lsh_free(fd);
 		  continue;
 		}
 	    }
@@ -244,7 +244,7 @@ void io_run(struct io_backend *b)
 		    {
 		      /* FIXME: Should fd be closed here? */
 		      UNLINK_FD;
-		      free(fd);
+		      lsh_free(fd);
 		      continue;
 		    }
 		}
@@ -259,7 +259,7 @@ void io_run(struct io_backend *b)
 		    fatal("What now?");
 		  b->nconnect--;
 		  UNLINK_FD;
-		  free(fd);
+		  lsh_free(fd);
 		  continue;
 		}
 	    }
