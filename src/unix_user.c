@@ -660,7 +660,8 @@ do_read_file(struct lsh_user *u,
       {
 	int fd;
 	close(out[0]);
-	
+
+	/* FIXME: Use seteuid instead? */
 	if ( (me != user->super.uid) && (setuid(user->super.uid) < 0) )
 	  {
 	    werror("unix_user.c: do_read_file: setuid failed (errno = %i): %z\n",
@@ -754,6 +755,16 @@ change_uid(struct unix_user *user)
     }
   return 1;
 }
+
+/* FIXME: In child processes, between do_fork_process and do_exec_shell,
+ * we're running with the user's uid, which seems dangerous.
+ * It seems better to move uid handling to exec-time, and perhaps
+ * to a separate program.
+ *
+ * The potential problem is that a user can read the process memory
+ * before exec, and learn the host key or other secrets. The safest
+ * way seems to be to be to exec a separate program, which changes
+ * persona and then exec's the real login shell. */
 
 static int
 do_fork_process(struct lsh_user *u,
