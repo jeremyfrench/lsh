@@ -27,6 +27,9 @@
 /* Define if IDEA should be used */
 #undef WITH_IDEA
 
+/* Define if SRP should be supported */
+#undef WITH_SRP
+
 /* Define to enable tcp forwarding */
 #undef WITH_TCP_FORWARD
 
