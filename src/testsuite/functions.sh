@@ -12,6 +12,14 @@ if [ -z "$CLIENTFLAGS" ] ; then
     CLIENTFLAGS=-q
 fi
 
+if [ -z "$HOSTKEY" ] ; then
+    HOSTKEY=$srcdir/key-1.private
+fi
+
+# if [ -z "$USERKEY" ] ; then
+#     USERKEY=$srcdir/key-1.private
+# fi
+
 # Any error count as failure.
 set -e
 
@@ -44,7 +52,7 @@ spawn_lshd () {
     # local is not available in /bin/sh
     # local delay
     
-    ../lshd -h $srcdir/key-1.private --interface=localhost \
+    ../lshd -h $HOSTKEY --interface=localhost \
 	-p $PORT $SERVERFLAGS --pid-file lshd.$$.pid &
 
     at_exit 'kill `cat lshd.$$.pid`; rm -f lshd.$$.pid'
