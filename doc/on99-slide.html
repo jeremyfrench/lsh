@@ -1,0 +1,46 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title> Some ideas about an lsh shell mode </title>
+</head>
+
+<body>
+<p align=right>Niels Möller 1999-05-01<p>
+
+<h3>Piping with ssh</h3>
+
+It's possible to use ssh in pipes, but its a little tricky and inefficient:
+<blockquote>
+
+<pre>
+$ ssh host du \| tee /tmp/foo | grep -f x | ssh host sort 
+</pre>
+</blockquote>
+<h3>Piping in an lsh "shell-mode"</h3>
+
+Let's imagine a shell mode for running local and remote processes.
+Assume that square brackets [] denote remote process grouping on some
+host, similar to parenthesis () used to group local processes.
+
+<font size=+1>
+<blockquote>
+<pre>
+$ [ du | tee /tmp/foo ] | grep -f x | [ sort ]
+</pre>
+</blockquote>
+</font>
+
+<h3>Remote job control</h3>
+<font size=+1>
+<blockquote>
+<pre>
+$ [ job_a ]& [job_b]& local_job &
+$ jobs
+[1 remote] job_a
+[2 remote] job_b
+[3]        local_job
+$ fg %2
+...
+</pre>
+</blockquote>
+</font>
+</body> </html>

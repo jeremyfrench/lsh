@@ -203,9 +203,6 @@ publickey_crypto.c:init_diffie_hellman_instance() (Done now). Perhaps
 some of this code should be moved to keyexchange.c? Similar
 considerations apply also to other hashes.
 
-Apply Joseph Galbraith's patch for key generation complying with the
-latest transport draft.
-
 Fix so that lsh compiles in the absense of zlib.
 
 Make separate object files for most generated files, instead if
