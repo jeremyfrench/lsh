@@ -1,3 +1,13 @@
+2003-01-30  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* testsuite/Makefile.am (TS_SH): Added check-signature-test.
+
+	* testsuite/check-signature-test: Commented out the first rsa
+	signature test. Appearantly, the sample signature in the spki
+	draft doesn't get the pkcs#1 padding right. For the tests with
+	truncated hashes, fixed the base64 code to be valid, with no
+	leftover bits.
+
 2003-01-29  Niels Möller  <niels@s3.kth.se>
 
 	* verify.c (spki_verify): Don't call spki_parse_type for the
