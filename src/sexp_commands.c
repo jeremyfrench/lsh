@@ -242,6 +242,8 @@ make_read_sexp_command(int format, int goon, UINT32 max_size)
 static struct catch_command catch_sexp_exceptions
 = STATIC_CATCH_COMMAND(EXC_ALL, EXC_SEXP_EOF, 1);
 
+/* FIXME: Delete this limit, and all the complex read_handler stuff
+ * involved in readin sexps. */
 /* Arbitrary limit on file size. */
 #define MAX_SEXP_SIZE 10000
 
