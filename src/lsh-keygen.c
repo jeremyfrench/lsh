@@ -213,7 +213,7 @@ int main(int argc, char **argv)
 	mpz_t e;
 	mpz_init(e);
 
-	do
+	for (;;)
 	  {
 	    /* Use a reasonably small random e, and make sure that at
 	     * it is odd and has at most one more one bit. */
@@ -222,8 +222,11 @@ int main(int argc, char **argv)
 	    mpz_setbit(e, 17);
 	    
 	    key = rsa_generate_key(e, &r->super, options->level);
+	    if (key)
+	      break;
+
+	    verbose("Bad choice of public exponent. Trying another...\n");
 	  }
-	while (!key);
 
 	mpz_clear(e);
       }
