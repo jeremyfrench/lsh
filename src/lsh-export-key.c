@@ -102,7 +102,7 @@ do_ssh2_print_command(struct command_2 *s,
   struct sexp_iterator *i;
   struct verifier *v;
   
-  if (!sexp_check_type(expr, ATOM_PUBLIC_KEY, &i))
+  if (!(i = sexp_check_type(expr, ATOM_PUBLIC_KEY)))
     {
       EXCEPTION_RAISE
 	(e, make_simple_exception
