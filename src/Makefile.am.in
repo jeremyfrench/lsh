@@ -1,5 +1,5 @@
 ## Process this file with make_am to produce Makefile.am -*-makefile-*-
-SUBDIRS: symmetric scm
+SUBDIRS: argp symmetric scm
 CVS_HEADERS: cvs_headers
 CLASS_FILES: dist_x_files
 BODY:
@@ -154,8 +154,8 @@ MAINTAINERCLEANFILES += $(DEP_FILES)
 
 # This is GNU make specific
 
-%.x: % $(srcdir)/scm/gaba.scm $(srcdir)/compiler.scm
-	$(SCHEME) -e main -l $(srcdir)/compiler.scm \
+%.x: % $(srcdir)/scm/gaba.scm $(srcdir)/scm/compiler.scm
+	$(SCHEME) -e main -l $(srcdir)/scm/compiler.scm \
 		  -s $(srcdir)/scm/gaba.scm <$< >$@T
 	test -s $@T && mv -f $@T $@
 
