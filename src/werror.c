@@ -430,10 +430,10 @@ werror_vformat(const char *f, va_list args)
 	      {
 		int atom = va_arg(args, int);
 
-                if (atom)
-                  werror_write(get_atom_length(atom), get_atom_name(atom));
+		if (atom)
+		  werror_write(get_atom_length(atom), get_atom_name(atom));
 		else
-                  werror_write(9, "<unknown>");
+		  werror_write(9, "<unknown>");
 		break;
 	      }
 	    case 's':
