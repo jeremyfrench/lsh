@@ -275,6 +275,7 @@ const struct exception *
 read_raw(int fd, UINT32 length, UINT8 *data);
 
 void io_set_nonblocking(int fd);
+void io_set_blocking(int fd);
 void io_set_close_on_exec(int fd);
 void io_init_fd(int fd);
 

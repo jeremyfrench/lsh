@@ -1351,6 +1351,17 @@ void io_set_nonblocking(int fd)
     fatal("io_set_nonblocking: fcntl(F_SETFL) failed, %z", STRERROR(errno));
 }
 
+void io_set_blocking(int fd)
+{
+  int old = fcntl(fd, F_GETFL);
+
+  if (old < 0)
+    fatal("io_set_blocking: fcntl(F_GETFL) failed, %z", STRERROR(errno));
+  
+  if (fcntl(fd, F_SETFL, old & ~O_NONBLOCK) < 0)
+    fatal("io_set_blocking: fcntl(F_SETFL) failed, %z", STRERROR(errno));
+}
+
 void io_set_close_on_exec(int fd)
 {
   /* NOTE: There's only one documented flag bit, so reading the old
@@ -1847,6 +1858,7 @@ do_exc_finish_read_handler(struct exception_handler *s,
       close_fd_nicely(self->fd);
       break;
     case EXC_FINISH_IO:
+      close_fd(self->fd);
       break;
     case EXC_PAUSE_READ:
       self->fd->want_read = 0;
