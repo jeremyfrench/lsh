@@ -54,6 +54,11 @@
 
 	* src/format.c (make_cstring_l): New function.
 
+2000-03-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh.c (lsh_options): Renamed stdin attribute to stdin_file,
+	and similarly for stdout and stderr.
+
 2000-03-08  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/server_session.c (do_login): Fixed message.
