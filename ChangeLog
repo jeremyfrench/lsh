@@ -1,3 +1,73 @@
+Tue Jan 19 16:12:16 1999    <nisse@puck>
+
+	* src/read_line.h: Changed prototype for line handlers.
+	* src/read_line.c (do_read_line): Changed prototype for line handlers.
+	* src/client.c (do_line): Changed prototype for line handlers.
+
+	* src/server.c (server_initiate): Pass fd and fallback object to
+	make_server_read_line.
+	(server_initiate): If ssh1 fallback is enabled,delay
+	initiate_keyexchange until after that the clients version string
+	has been received.
+	(do_line): Do the delayed initiate_keyexchange now.
+	(do_line): Invoke the fallback method.
+
+	* src/ssh1_fallback.h, src/ssh1_fallback.c: New files.
+
+Thu Jan 14 13:48:04 1999    <ray@zensunni>
+
+	* doc/lsh.1, doc/lsh_keygen.1, doc/lsh_writekey.1 doc/DSA.5, doc/SHA.5,
+	doc/secsh.5, doc/lshd.8: new.
+
+Thu Jan 14 09:09:06 1999    <ray@zensunni>
+
+	* lsh_keygen.c (usage, main): The algorithm employed is called DSA, not
+	DSS. DSS is the name of the standard that describes DSA.
+
+Sat Jan  9 16:12:16 1999    <ray@zensunni>
+
+	* server.c (do_line) Rearranged SSH1 fallback skeleton code.
+
+	* io.c (read_callback), reaper.c: Fixed typos.
+
+	* lib/Makefile.am.in, include/Makefile.am.in: added rule for making
+	.dist_headers (via the toplevel Makefile).
+
+Fri Jan  8 22:26:44 1999    <ray@zensunni>
+
+	* Makefile.am.in (depend): Run "make depend" in lib too.
+	  "make dist" now works out of the box.
+	
+	* server.c (do_line): Started SSH1 fallback code.
+
+Thu Jan  7 20:16:10 1999    <ray@zensunni>
+
+	* Makefile.am.in: remove .dist_classes and the various .dist_headers
+	and Makefile.am's as part of maintainer-clean.
+	Added rule to remake the various Makefile.am's from the toplevel dir. 
+
+	* Makefile.am.in, lib/Makefile.am.in, include/Makefile.am.in (ctags):
+	Improved the ctags generation.
+
+Wed Jan  6 22:03:16 1999    <ray@zensunni>
+
+	* Makefile.am.in: Added rules to generate .dist_classes and the various
+	.dist_headers . Added dist-hook target which depends on these to get
+	"make dist" closer to being sane.
+
+	* make_am: Don't output the double backslash for continuation when
+	./cvs_headers or ./used_headers output is empty, so no broken
+	Makefile.am's are generated (due to the definition of cvs_headers
+	and/or dist_x_files assimilating the text following them/it).
+
+Tue Jan  5 19:12:36 1999    <ray@zensunni>
+
+	* Makefile.am.in: New try at building dependency files.
+
+Tue Jan  5 18:26:01 1999    <ray@zensunni>
+
+	* NEWS, connection.c, keyexchange.c, zlib.c: Fixed typos.
+
 Tue Jan 19 03:20:29 1999    <nisse@puck>
 
 	* make_am: Recurse to find all subdirectories *before* invoking
