@@ -169,7 +169,6 @@ make_request_service(int service)
 static void
 do_exit_status(struct channel_request *c,
 	       struct ssh_channel *channel,
-	       struct ssh_connection *connection UNUSED,
 	       struct channel_request_info *info,
 	       struct simple_buffer *args,
 	       struct command_continuation *s,
@@ -200,7 +199,6 @@ do_exit_status(struct channel_request *c,
 static void
 do_exit_signal(struct channel_request *c,
 	       struct ssh_channel *channel,
-	       struct ssh_connection *connection UNUSED,
 	       struct channel_request_info *info,
 	       struct simple_buffer *args,
 	       struct command_continuation *s,
@@ -286,7 +284,7 @@ new_session(struct channel_open_command *s,
   CAST(session_open_command, self, s);
   struct ssh_channel *res;
 
-  self->session->write = connection->write;
+  self->session->connection = connection;
   
   *request = format_channel_open(ATOM_SESSION,
 				 local_channel_number,
@@ -498,11 +496,7 @@ client_options[] =
   /* FIXME: Perhaps this should be moved from client.c to lsh.c? It
    * doesn't work with lshg. Or perhaps that can be fixed?
    * About the same problem applies to -R. */
-#if 1
-  { "x11-forward", 'x', NULL, 0, "Enable X11 forwarding.", 0 },
-  { "no-x11-forward", 'x' | ARG_NOT, NULL, 0,
-    "Disable X11 forwarding (default).", 0 },
-#endif
+
 #if WITH_PTY_SUPPORT
   { "pty", 't', NULL, 0, "Request a remote pty (default).", 0 },
   { "no-pty", 't' | ARG_NOT, NULL, 0, "Don't request a remote pty.", 0 },
@@ -1128,7 +1122,6 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 #if WITH_PTY_SUPPORT
     CASE_FLAG('t', with_pty);
 #endif /* WITH_PTY_SUPPORT */
-    CASE_FLAG('x', with_x11);
     
     CASE_ARG(OPT_STDIN, stdin_file, "/dev/null");
     CASE_ARG(OPT_STDOUT, stdout_file, "/dev/null"); 
