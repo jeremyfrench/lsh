@@ -26,7 +26,6 @@
 #include "atoms.h"
 #include "command.h"
 #include "debug.h"
-#include "dsa.h"
 #include "format.h"
 #include "sexp.h"
 #include "srp.h"
@@ -261,27 +260,19 @@ do_server_srp_read_verifier(struct abstract_write *s,
   
   else
     {
-      struct sexp *expr = string_to_sexp(SEXP_CANONICAL, file, 1);
-
-      if (!expr)
-	disconnect_kex_failed(self->connection,
-				"S-expression Syntax error in verifier file");
+      self->srp->entry = make_srp_entry(self->srp->user->name, file);
+	  
+      if (!self->srp->entry)
+	disconnect_kex_failed(self->connection, "Invalid SRP verifier");
       else
 	{
-	  self->srp->entry = make_srp_entry(self->srp->user->name, expr);
-	  
-	  if (!self->srp->entry)
-	    disconnect_kex_failed(self->connection, "Invalid SRP verifier");
-	  else
-	    {
-	      /* Success */
+	  /* Success */
 
-	      C_WRITE_NOW(self->connection,
-			  srp_make_reply_msg(&self->srp->dh,
-					     self->srp->entry));
-	      self->connection->dispatch[SSH_MSG_KEXSRP_PROOF]
-		= make_srp_server_proof_handler(self->srp);
-	    }
+	  C_WRITE_NOW(self->connection,
+		      srp_make_reply_msg(&self->srp->dh,
+					 self->srp->entry));
+	  self->connection->dispatch[SSH_MSG_KEXSRP_PROOF]
+	    = make_srp_server_proof_handler(self->srp);
 	}
     }
 }
