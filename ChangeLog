@@ -1,3 +1,9 @@
+2001-06-15  Niels Möller  <nisse@ehand.com>
+
+	* configure.in: Configure in the src/nettle sub directory.
+
+	* misc/bootstrap.sh: Invoke the nettle .bootstrap script.
+
 2001-06-13  Niels Möller  <nisse@ehand.com>
 
 	* misc/bootstrap.sh: Bootstrap the nettle subdirectory. 
