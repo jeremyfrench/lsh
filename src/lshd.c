@@ -272,13 +272,17 @@ static int read_host_key(const char *name,
    (expr
      (name lshd_connection_service)
      (globals
-       (progn "&progn_command.super.super"))
+       (progn "&progn_command.super.super")
+       (init "&connection_service.super"))
      (params
        (login object command)     
        (hooks object object_list))
      (expr
        (lambda (user connection)
-         ((progn hooks) (login user connection)))))
+         ((progn hooks) (login user
+	                       ; We have to initialize the connection
+			       ; before logging in.
+	                       (init connection))))))
 */
 
 int main(int argc, char **argv)
