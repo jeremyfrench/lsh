@@ -1,9 +1,34 @@
 /* sftp-server.c
  *
- */
+ * $Id$
+ *
+ * The server side of the sftp subsystem. */
+
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 2001 Niels Möller, Pontus Sköld
+ *
+ * Also includes parts from GNU fileutils, Copyright by Free Software
+ * Foundation, Inc.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
 #include "buffer.h"
 #include "sftp.h"
+
+#include "filemode.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -15,145 +40,147 @@
 
 #include <sys/stat.h>
 
+#include <dirent.h>
+#include <pwd.h>
+#include <grp.h>
+#include <time.h>
+
 #define SFTP_VERSION 3
 
 #define FATAL(x) do { fputs("sftp-server: " x "\n", stderr); exit(EXIT_FAILURE); } while (0)
 
-struct sftp_attrib
+void sftp_attrib_from_stat( struct stat *st, struct sftp_attrib* a)
 {
-  UINT32 flags;
-  UINT64 size;
-  UINT32 uid;
-  UINT32 gid;
-  UINT32 permissions;
-
-  /* NOTE: The representations of times is about to change. */
-  UINT32 atime;
-  UINT32 mtime;
-};
+  a->permissions=st->st_mode;
+  a->uid=st->st_uid;
+  a->gid=st->st_gid;
+  a->atime=st->st_atime;
+  a->mtime=st->st_mtime;
+  a->size=st->st_size;
+  a->flags= ( SSH_FILEXFER_ATTR_SIZE ||
+	      SSH_FILEXFER_ATTR_UIDGID ||
+	      SSH_FILEXFER_ATTR_PERMISSIONS || 
+	      SSH_FILEXFER_ATTR_ACMODTIME
+	      );
+}
 
 static void
-sftp_clear_attrib(struct sftp_attrib *a)
+sftp_put_longname_mode(struct sftp_output *o, struct stat *st)
 {
-  a->flags = 0;
-  a->size = 0;
-  a->uid = 0;
-  a->gid = 0;
-  a->permissions = 0;
-  a->atime = 0;
-  a->mtime = 0;
+  /* A 10 character modestring and a space */
+  UINT8 modes[MODE_STRING_LENGTH];
+
+  filemodestring(st, modes);
+
+  sftp_put_data(o, sizeof(modes), modes);
+}
+
+/* FIXME: Replace these dummy functions with the functions from
+ * fileutil's lib/idcache.c. */
+static const char *
+getuser(uid_t uid)
+{ return NULL; }
+
+static const char *
+getgroup(gid_t gid)
+{ return NULL; }
+
+static void
+sftp_put_longname(struct sftp_output *o,
+		  struct stat *st, UINT8* fname)
+{
+  /* NOTE: The current spec doesn't mandate utf8. */
+
+  /* Where to store the length. */
+  UINT32 length_index = sftp_put_reserve_length(o);
+  const char *user_name;
+  const char *group_name;
+  time_t now, when;
+  struct tm *when_local;
+  const char *time_format;
+  
+  sftp_put_longname_mode(o, st);
+  sftp_put_printf(o, " %3u ", (unsigned) st->st_nlink);
+
+  user_name = getuser(st->st_uid);
+  if (user_name)
+    sftp_put_printf(o, "%-8.8s ", user_name);
+  else
+    sftp_put_printf(o, "%-8u ", (unsigned int) st->st_uid);
+
+  group_name = getgroup(st->st_gid);
+  if (group_name)
+    sftp_put_printf(o, "%-8.8s ", group_name);
+  else
+    sftp_put_printf(o, "%-8u ", (unsigned) st->st_gid);
+
+  /* FIXME: How to deal with long long sizes? */
+  sftp_put_printf(o, "%8lu ", (unsigned long) st->st_size);
+
+  now = time(NULL);
+  when = st->st_mtime;
+
+  when_local = localtime( &st->st_mtime );
+
+  if ( (now > when + 6L * 30L * 24L * 60L * 60L)	/* Old. */
+       || (now < when - 60L * 60L) )		/* In the future. */
+    /* The file is fairly old or in the future.
+       POSIX says the cutoff is 6 months old;
+       approximate this by 6*30 days.
+       Allow a 1 hour slop factor for what is considered "the future",
+       to allow for NFS server/client clock disagreement.
+       Show the year instead of the time of day.  */
+    time_format = "%b %e  %Y";
+  else
+    time_format = "%b %e %H:%M";
+      
+  sftp_put_strftime(o, 12, time_format, when_local);
+
+  sftp_put_printf(o, " %s", fname);
+
+  sftp_put_final_length(o, length_index);
+}
+
+static void
+sftp_put_filename(struct sftp_output *o,
+		  struct stat *st,
+		  const char *name)
+{
+  struct sftp_attrib a;
+  
+  sftp_attrib_from_stat( st, &a);
+  sftp_put_string(o, strlen(name), name);
+  sftp_put_longname(o, st, name);
+  sftp_put_attrib(o, &a);
+}
+
+#define SFTP_MAX_HANDLES 200
+
+struct sftp_handle
+{
+  enum sftp_handle_type
+  { HANDLE_UNUSED = 0, HANDLE_FILE, HANDLE_DIR } type;
+
+  union
+  {
+    int fd;
+    DIR *dir;
+  } u;
 };
 
-int
-sftp_skip_extension(struct sftp_input *i)
-{
-  UINT32 length;
-  UINT8 *data;
-  unsigned j;
-  
-  /* Skip name and value*/
-  for (j = 0; j<2; j++)
-    {
-      if (!(data = sftp_get_string(i, &length)))
-	return 0;
-      
-      sftp_free_string(data);
-    }
-  return 1;
-}
-
-int
-sftp_get_attrib(struct sftp_input *i, struct sftp_attrib *a)
-{
-  sftp_clear_attrib(a);
-  
-  if (!sftp_get_uint32(i, &a->flags))
-    return 0;
-
-  if (a->flags & SSH_FILEXFER_ATTR_SIZE)
-    {
-      if (!sftp_get_uint64(i, &a->size))
-	return 0;
-    }
-
-  if (a->flags & SSH_FILEXFER_ATTR_UIDGID)
-    {
-      if (!sftp_get_uint32(i, &a->uid))
-	return 0;
-
-      if (!sftp_get_uint32(i, &a->gid))
-	return 0;
-    }
-
-  if (a->flags & SSH_FILEXFER_ATTR_PERMISSIONS)
-    {
-      if (!sftp_get_uint32(i, &a->permissions))
-	return 0;
-    }
-
-  if (a->flags & SSH_FILEXFER_ATTR_ACMODTIME)
-    {
-      if (!sftp_get_uint32(i, &a->atime))
-	return 0;
-
-      if (!sftp_get_uint32(i, &a->mtime))
-	return 0;
-    }
-
-  if (a->flags & SSH_FILEXFER_ATTR_EXTENDED)
-    {
-      UINT32 count;
-      UINT32 n;
-
-      if (!sftp_get_uint32(i, &count))
-	return 0;
-
-      /* Just skip the extensions */
-      for (n = 0; n < count; n++)
-	if (!sftp_skip_extension(i))
-	  return 0;
-    }
-  return 1;
-}
-
-void
-sftp_put_attrib(struct sftp_output *o, const struct sftp_attrib *a)
-{
-  assert(!a->flags & SSH_FILEXFER_ATTR_EXTENDED);
-  
-  sftp_put_uint32(o, a->flags);
-
-  if (a->flags & SSH_FILEXFER_ATTR_SIZE)
-    sftp_put_uint64(o, a->size);
-
-  if (a->flags & SSH_FILEXFER_ATTR_UIDGID)
-    {
-      sftp_put_uint32(o, a->uid);
-      sftp_put_uint32(o, a->gid);
-    }
-
-  if (a->flags & SSH_FILEXFER_ATTR_PERMISSIONS)
-    sftp_put_uint32(o, a->permissions);
-
-  if (a->flags & SSH_FILEXFER_ATTR_ACMODTIME)
-    {
-      sftp_put_uint32(o, a->atime);
-      sftp_put_uint32(o, a->mtime);
-    }
-}
-
-#define SFTP_MAX_FDS 200
-
+#if 0
 /* A handle is simply an fd */
 #define handle_t UINT32
+#else
+#define handle_t struct sftp_handle *
+#endif
 
 struct sftp_ctx
 {
   struct sftp_input *i;
   struct sftp_output *o;
   
-  enum sftp_handle_type
-  { HANDLE_UNUSED = 0, HANDLE_FILE, HANDLE_DIR } handles[SFTP_MAX_FDS];
+  struct sftp_handle handles[SFTP_MAX_HANDLES];
 };
 
 void
@@ -172,15 +199,15 @@ sftp_init(struct sftp_ctx *ctx, FILE *in, FILE *out)
   ctx->i = input;
   ctx->o = output;
 
-  for (i = 0; i < SFTP_MAX_FDS; i++)
-    ctx->handles[i] = HANDLE_UNUSED;
+  for (i = 0; i < SFTP_MAX_HANDLES; i++)
+    ctx->handles[i].type = HANDLE_UNUSED;
 }
 
 int 
 sftp_handle_used(struct sftp_ctx *ctx, handle_t handle)
 {
-  return (handle < SFTP_MAX_FDS)
-    && (ctx->handles[handle] != HANDLE_UNUSED);
+  return (handle < SFTP_MAX_HANDLES)
+    && (ctx->handles[handle].type != HANDLE_UNUSED);
 }
 
 void
@@ -188,8 +215,8 @@ sftp_register_handle(struct sftp_ctx *ctx,
 		     UINT32 handle,
 		     enum sftp_handle_type type)
 {
-  assert(handle < SFTP_MAX_FDS);
-  assert(ctx->handles[handle] == HANDLE_UNUSED);
+  assert(handle < SFTP_MAX_HANDLES);
+  assert(ctx->handles[handle].type == HANDLE_UNUSED);
   assert(type != HANDLE_UNUSED);
 
   ctx->handles[handle] = type;
@@ -272,6 +299,397 @@ sftp_check_filename(UINT32 length, const UINT8 *data)
 }
 
 static int
+sftp_process_opendir(struct sftp_ctx *ctx)
+{
+  UINT32 length;
+  UINT8 *name;
+  DIR* dirhandle;
+
+  if ( ! (name = sftp_get_string(ctx->i, &length))
+      )
+    return sftp_bad_message(ctx);
+
+  if( (! sftp_check_filename(length, name)))
+    {
+      sftp_free_string(name);
+      return sftp_send_status(ctx, SSH_FX_FAILURE);
+    }
+    
+  /* Fixme; Perhaps we should have a sftp_mangle_fname? If not, we
+     have to handle an empty filename here */
+
+  dirhandle=opendir(length ? name : ".");
+
+  sftp_free_string(name);
+  
+  if ( !dirhandle )
+    return sftp_send_errno(ctx);
+
+  /* Open successful */
+
+  /* Fixme; we need to redo how handles work, perhaps a struct
+     consisting of the type, an int (for an fd) and a DIR* (for a
+     directory). I will look into this later (or we could skip using
+     opendir/readdir/closedir, but I think that's not better */
+
+  sftp_register_handle(ctx, dirhandle, HANDLE_DIR);
+  sftp_put_handle(ctx, dirhandle);
+}
+
+static int
+sftp_process_readdir(struct sftp_ctx *ctx)
+{
+  handle_t handle;
+  struct dirent* direntry; 
+  struct stat st;
+
+  if ( !sftp_get_handle(ctx->i, &handle) ||
+       ctx->handles[handle] != HANDLE_DIR
+       )
+    return sftp_bad_message(ctx);
+
+  direntry=readdir(handle);
+
+  /* Fixme; we need to redo how handles work, perhaps a struct
+     consisting of the type, an int (for an fd) and a DIR* (for a
+     directory). I will look into this later (or we could skip using
+     opendir/readdir/closedir, but I think that's not better */
+
+  if ( !direntry )
+    return (errno ? sftp_send_errno(ctx)
+	    : sftp_send_status(ctx, SSH_FX_EOF)); 
+
+  /* Fixme; concat name */
+
+  if( lstat(direntry->d_name, &st ) )
+    return sftp_send_errno(ctx);
+
+  /* Fixme; we don't have to, but maybe we should be nice and pass
+     several at once? It might improve performance quite a lot (or it
+     might not) 
+     */
+
+  /* Use count == 1 for now. */
+  sftp_put_uint32(ctx->o, 1);
+
+  sftp_put_filename(ctx->o, &st, direntry->d_name);
+
+  sftp_set_msg(ctx->o, SSH_FXP_NAME );
+  return 1;
+}
+
+
+static int
+sftp_process_stat(struct sftp_ctx *ctx)
+{
+  struct stat st;
+  struct sftp_attrib a;
+  UINT32 length;
+  UINT8 *name;
+
+  if ( ! (name = sftp_get_string(ctx->i, &length))
+      )
+    return sftp_bad_message(ctx);
+
+  if( (! sftp_check_filename(length, name))
+      )
+    return sftp_send_status(ctx, SSH_FX_FAILURE);   
+    
+  /* Fixme; Perhaps we should have a sftp_mangle_fname ? */
+
+
+  /* Fixme; concat name */
+
+  if ( stat(name, &st ) )
+    return sftp_send_errno(ctx);
+
+  sftp_attrib_from_stat( &st, &a);
+
+  sftp_set_msg( ctx->o, SSH_FXP_ATTRS );
+  sftp_put_attrib( ctx->o, &a);  
+
+  return 1;
+}
+
+static int
+sftp_process_lstat(struct sftp_ctx *ctx)
+{
+  struct stat st;
+  struct sftp_attrib a;
+
+  UINT32 length;
+  UINT8 *name;
+
+  if ( ! (name = sftp_get_string(ctx->i, &length))
+      )
+    return sftp_bad_message(ctx);
+
+  if( (! sftp_check_filename(length, name))
+      )
+    return sftp_send_status(ctx, SSH_FX_FAILURE);   
+    
+  /* Fixme; Perhaps we should have a sftp_mangle_fname ? */
+
+
+  /* Fixme; concat name */
+
+  if ( lstat(name, &st ) )
+    return sftp_send_errno(ctx);
+
+  sftp_attrib_from_stat( &st, &a );
+  sftp_set_msg( ctx->o, SSH_FXP_ATTRS );
+
+  sftp_put_attrib( ctx->o, &a); 
+
+  return 1;
+}
+
+static int
+sftp_process_fstat(struct sftp_ctx *ctx)
+{
+  struct stat st;
+  struct sftp_attrib a;
+  handle_t handle;
+
+  if ( sftp_get_handle(ctx->i, &handle) )
+    if ( ctx->handles[handle] == HANDLE_FILE )
+	{
+	  if ( fstat(handle, &st ) )
+	    return sftp_send_errno(ctx);
+	  
+	  sftp_attrib_from_stat(&st,&a);
+	  sftp_set_msg( ctx->o, SSH_FXP_ATTRS );
+	  
+	  sftp_put_attrib( ctx->o, &a);
+	  return 1;
+	}
+
+  return sftp_bad_message(ctx);
+}
+
+
+static int
+sftp_process_fsetstat(struct sftp_ctx *ctx)
+{
+  struct sftp_attrib a;
+  handle_t handle;
+
+  if ( sftp_get_handle(ctx->i, &handle) &&
+       sftp_get_attrib(ctx->i, &a)
+       )
+    if ( ! (ctx->handles[handle] == HANDLE_FILE ))
+      return sftp_bad_message(ctx);
+
+  /* Fixme; set stat */
+	  
+  if ( a.flags & SSH_FILEXFER_ATTR_UIDGID )
+    if ( fchown( handle, a.uid, a.gid ) )
+      return sftp_send_errno(ctx);
+  
+  if ( a.flags & SSH_FILEXFER_ATTR_SIZE )
+    if( ftruncate( handle, a.size ) )
+      return sftp_send_errno(ctx);
+  
+  if ( a.flags & SSH_FILEXFER_ATTR_PERMISSIONS )
+    if( fchmod( handle, a.permissions ) ) 
+                               /* Fixme; Perhaps we should mask it */
+      return sftp_send_errno(ctx);
+  
+  if ( a.flags & SSH_FILEXFER_ATTR_EXTENDED ||
+       a.flags & SSH_FILEXFER_ATTR_ACMODTIME ) /* Fixme; how do we? */
+    return sftp_send_status(ctx, SSH_FX_OP_UNSUPPORTED );
+  
+  return sftp_send_status(ctx, SSH_FX_OK);        
+}
+
+
+static int
+sftp_process_setstat(struct sftp_ctx *ctx)
+{
+  struct sftp_attrib a;
+
+  UINT32 length;
+  UINT8 *name;
+
+  if ( (! (name = sftp_get_string(ctx->i, &length))) ||
+       (!sftp_get_attrib(ctx->i, &a))
+       )
+    return sftp_bad_message(ctx);
+
+  if( (! sftp_check_filename(length, name))
+      )
+    return sftp_send_status(ctx, SSH_FX_FAILURE);   
+    
+  /* Fixme; Perhaps we should have a sftp_mangle_fname ? */
+
+  if ( a.flags & SSH_FILEXFER_ATTR_UIDGID )
+    if ( chown( name, a.uid, a.gid ) )
+      return sftp_send_errno(ctx);
+
+  if ( a.flags & SSH_FILEXFER_ATTR_SIZE )
+    if( truncate( name, a.size ) )
+      return sftp_send_errno(ctx);
+
+  if ( a.flags & SSH_FILEXFER_ATTR_PERMISSIONS )
+    if( chmod( name, a.permissions ) ) /* Fixme; Perhaps we should mask it */
+      return sftp_send_errno(ctx);
+
+  if ( a.flags & SSH_FILEXFER_ATTR_EXTENDED ||
+       a.flags & SSH_FILEXFER_ATTR_ACMODTIME ) /* Fixme; how do we? */
+    return sftp_send_status(ctx, SSH_FX_OP_UNSUPPORTED );
+
+  return sftp_send_status(ctx, SSH_FX_OK);  
+}
+
+static int
+sftp_process_remove(struct sftp_ctx *ctx)
+{
+  UINT32 length;
+  UINT8 *name;
+
+  if ( ! (name = sftp_get_string(ctx->i, &length))
+      )
+    return sftp_bad_message(ctx);
+
+  if( (! sftp_check_filename(length, name))
+      )
+    return sftp_send_status(ctx, SSH_FX_FAILURE);   
+    
+  /* Fixme; Perhaps we should have a sftp_mangle_fname ? */
+  
+  if( ! unlink(name) )
+    return sftp_send_errno(ctx);
+  else
+    return sftp_send_status(ctx, SSH_FX_OK);   
+}
+
+static int
+sftp_process_mkdir(struct sftp_ctx *ctx)
+{
+  UINT32 length;
+  UINT8 *name;
+
+  if ( ! (name = sftp_get_string(ctx->i, &length))
+      )
+    return sftp_bad_message(ctx);
+
+  if( (! sftp_check_filename(length, name))
+      )
+    return sftp_send_status(ctx, SSH_FX_FAILURE);   
+    
+  /* Fixme; Perhaps we should have a sftp_mangle_fname? If not, we
+     have to handle an empty filename here */
+  
+  if( ! mkdir(name, 0755) ) /* Fixme; default permissions ? */ 
+    return sftp_send_errno(ctx);
+  else
+    return sftp_send_status(ctx, SSH_FX_OK);   
+}
+
+static int
+sftp_process_rmdir(struct sftp_ctx *ctx)
+{
+  UINT32 length;
+  UINT8 *name;
+
+  if ( ! (name = sftp_get_string(ctx->i, &length))
+      )
+    return sftp_bad_message(ctx);
+
+  if( (! sftp_check_filename(length, name))
+      )
+    return sftp_send_status(ctx, SSH_FX_FAILURE);   
+    
+  /* Fixme; Perhaps we should have a sftp_mangle_fname? If not, we
+     need to handle an empty filename here */
+  
+  if( ! rmdir(name) )
+    return sftp_send_errno(ctx);
+  else
+    return sftp_send_status(ctx, SSH_FX_OK);   
+}
+
+static int
+sftp_process_realpath(struct sftp_ctx *ctx)
+{
+  UINT32 length;
+  UINT8 *name;
+  UINT8 *resolved;
+  struct stat st;
+  int path_max;
+
+  if ( ! (name = sftp_get_string(ctx->i, &length))
+      )
+    return sftp_bad_message(ctx);
+
+  if( (! sftp_check_filename(length, name))
+      )
+    return sftp_send_status(ctx, SSH_FX_FAILURE);   
+    
+  /* Fixme; Perhaps we should have a sftp_mangle_fname? If not, we
+     need to handle an empty filename here */
+  
+  /* Code below from the manpage for realpath on my debian system */
+
+#ifdef PATH_MAX
+  path_max = PATH_MAX;
+#else
+  path_max = pathconf (path, _PC_PATH_MAX);
+  if (path_max <= 0)
+    path_max = 4096;
+#endif
+
+  resolved=alloca(path_max);
+  
+  if( ! realpath( name, resolved ) )
+    return sftp_send_errno(ctx);
+  
+  if( lstat(resolved, &st ) )
+    return sftp_send_errno(ctx);
+
+  /* Fixme; Should it be supported to call realpath for non-existing
+     files?  This code will break (as it tries to stat and will get
+     ENOENT). The draft says we should return "just one name and dummy
+     attributes", but I figure we might as well pass the real attribs
+     */
+
+  sftp_put_uint32(ctx->o, 1); /* Count */  
+  sftp_put_filename(ctx->o, &st, resolved);
+  sftp_set_msg( ctx->o, SSH_FXP_NAME );
+  return 1;
+}
+
+static int
+sftp_process_rename(struct sftp_ctx *ctx)
+{
+  UINT32 src_length;
+  UINT8 *src_name;
+
+  UINT32 dst_length;
+  UINT8 *dst_name;
+
+  if (! ( (src_name = sftp_get_string(ctx->i, &src_length)) &&
+	  (dst_name = sftp_get_string(ctx->i, &dst_length)))
+      )
+    return sftp_bad_message(ctx);
+    
+  /* Fixme; Perhaps we should have a sftp_mangle_fname ? Otherwise,
+     we must handle the case of an empty filename here
+     */
+  
+  if( (! sftp_check_filename(src_length, src_name)) ||
+      (! sftp_check_filename(dst_length, dst_name)) 
+      )
+    return sftp_send_status(ctx, SSH_FX_FAILURE);   
+   
+  if( ! rename(src_name, dst_name) )
+    return sftp_send_errno(ctx);
+  else
+    return sftp_send_status(ctx, SSH_FX_OK);   
+}
+
+
+static int
 sftp_process_open(struct sftp_ctx *ctx)
 {
   UINT32 length;
@@ -337,7 +755,13 @@ sftp_process_open(struct sftp_ctx *ctx)
 	  if (fd < 0)
 	    return sftp_send_errno(ctx);
 
-	  if (fd > SFTP_MAX_FDS)
+#if 0
+	  if (a.flags & SSH_FILEXFER_ATTR_UIDGID)
+	    if ( fchown(fd, a.uid, a.gid) )
+	      return sftp_send_errno(ctx);
+#endif    
+
+	  if (fd > SFTP_MAX_HANDLES)
 	    {
 	      close(fd);
 	      return sftp_send_status(ctx, SSH_FX_FAILURE);
@@ -366,6 +790,151 @@ sftp_process_open(struct sftp_ctx *ctx)
   else
     return sftp_bad_message(ctx);
 }
+
+
+static int
+sftp_process_close(struct sftp_ctx *ctx)
+{
+  handle_t handle;
+
+  if ( sftp_get_handle(ctx, &handle) )
+    {
+      if ( ctx->handles[handle] == HANDLE_FILE )
+	{
+	  if ( !close(handle) )
+	    {
+	      ctx->handles[handle] = HANDLE_UNUSED;
+	      return sftp_send_status(ctx, SSH_FX_OK);
+	    }
+	  else	
+	    return sftp_send_status(ctx, SSH_FX_FAILURE); 
+	  /* Fixme: Should we do something on error ?
+	   */
+	}
+
+      else if ( ctx->handles[handle] == HANDLE_DIR)
+	{
+	  if ( !closedir(handle) )
+	    {
+	      ctx->handles[handle] = HANDLE_UNUSED;
+	      return sftp_send_status(ctx, SSH_FX_OK);
+	    }
+	  else	
+	    return sftp_send_status(ctx, SSH_FX_FAILURE);
+	}
+    }
+  else
+    return sftp_bad_message(ctx); 
+/* Fixme; Should we separate cases bad message 
+   and illegal handle and return failure for 
+   one and bad_message for the other?
+   */
+}
+
+static int
+sftp_process_read(struct sftp_ctx *ctx)
+{
+  handle_t handle;
+  UINT64 offset;
+  UINT32 len;
+  int readbytes=0;
+  static UINT8* readbuf=0; 
+  static UINT32 curbuflen=0;
+
+  if ( !sftp_get_handle(ctx, &handle) && 
+       ctx->handles[handle] == HANDLE_FILE && 
+       sftp_get_uint64(ctx->i, &offset) &&
+       sftp_get_uint32(ctx->i, &len)  
+       )
+    return sftp_bad_message(ctx);
+
+/* Fixme; Should we separate cases bad message
+   and illegal handle and return failure 
+   for one and bad_message for the other?
+   */
+
+  if ( lseek( handle, offset, SEEK_SET) == (off_t) -1 )
+    return sftp_send_status(ctx, SSH_FX_FAILURE); 
+
+  /* Fixme; 64-bit support works differently on solaris at least */
+
+  if ( len )                              /* Check so we are to read at all */
+    {
+      if ( len > curbuflen )             /* Current buffer to small ? */
+	{
+	  if ( readbuf )                  
+	    free( readbuf );             /* Free the existing buffer 
+					    (Fixme; Perhaps explicitly set
+					    readbuf to NULL, although the 
+					    malloc means we shouldn't have to)
+					    */
+
+
+	  readbuf=malloc( len );           /* Allocate the new one */
+	  
+	  if ( !readbuf )
+	    {
+	      curbuflen=0;                   /* Failed malloc - we have no 
+						buffer 
+						*/
+
+	      return sftp_send_status(ctx, SSH_FX_FAILURE); 
+
+	    }
+	  else
+	    curbuflen=len;
+	}
+
+      readbytes=read( handle, readbuf, len );
+      
+      if ( readbytes == 0 )
+	return sftp_send_status( ctx, SSH_FX_EOF ); 
+      else if ( readbytes == -1 )
+	return sftp_send_status( ctx, SSH_FX_FAILURE ); 
+      
+    }
+ 
+  sftp_set_msg( ctx->o, SSH_FXP_DATA );
+  sftp_put_string( ctx->o, readbytes, readbuf );
+  return 1;
+}
+
+static int
+sftp_process_write(struct sftp_ctx *ctx)
+{
+  handle_t handle;
+  UINT64 offset;
+
+  int writtenbytes=0;
+  UINT8 *writebuf; 
+  UINT32 length;
+
+
+  if ( !sftp_get_handle(ctx, &handle) && 
+       ctx->handles[handle] == HANDLE_FILE && 
+       sftp_get_uint64(ctx->i, &offset) &&
+       writebuf=sftp_get_string(ctx->i, &length)  
+       )
+    return sftp_bad_message(ctx);
+
+/* Fixme; Should we separate cases bad message
+   and illegal handle and return failure 
+   for one and bad_message for the other?
+   */
+
+  if ( lseek( handle, offset, SEEK_SET) == (off_t) -1 )
+    return sftp_send_status(ctx, SSH_FX_FAILURE); 
+
+  /* Fixme; 64-bit support works differently on solaris at least */
+
+  /* Nothing happens if length is 0 - hence we need no special test */
+    
+  if ( write( handle, writebuf, length ) != -1 )
+    return sftp_send_status(ctx, SSH_FX_OK); 
+  else
+    return sftp_send_errno(ctx);
+}
+
 
 static void
 sftp_process(sftp_process_func **dispatch,
@@ -457,7 +1026,22 @@ main(int argc, char **argv)
     dispatch[i] = sftp_process_unsupported;
   
   dispatch[SSH_FXP_OPEN] = sftp_process_open;
-  
+  dispatch[SSH_FXP_CLOSE] = sftp_process_close;
+  dispatch[SSH_FXP_READ] = sftp_process_read;
+  dispatch[SSH_FXP_WRITE] = sftp_process_write;
+  dispatch[SSH_FXP_LSTAT] = sftp_process_lstat;
+  dispatch[SSH_FXP_STAT] = sftp_process_stat;
+  dispatch[SSH_FXP_FSTAT] = sftp_process_fstat;
+  dispatch[SSH_FXP_SETSTAT] = sftp_process_setstat;
+  dispatch[SSH_FXP_FSETSTAT] = sftp_process_fsetstat;  
+  dispatch[SSH_FXP_MKDIR] = sftp_process_mkdir;
+  dispatch[SSH_FXP_RMDIR] = sftp_process_rmdir;
+  dispatch[SSH_FXP_REMOVE] = sftp_process_remove;
+  dispatch[SSH_FXP_RENAME] = sftp_process_rename;
+  dispatch[SSH_FXP_OPENDIR] = sftp_process_opendir;
+  dispatch[SSH_FXP_READDIR] = sftp_process_readdir;
+  dispatch[SSH_FXP_REALPATH] = sftp_process_realpath;
+
   for(;;)
     sftp_process(dispatch, &ctx);
 }
