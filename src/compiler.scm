@@ -1,3 +1,5 @@
+;; FIXME: Turn this into a scheme48 module
+
 (define (atom? o) (not (list? o)))
 (define (lambda? o) (and (pair? o) (eq? 'lambda (car o))))
 
@@ -8,6 +10,7 @@
 (define make-appliction list)
 (define application-op car)
 (define application-arg cadr)
+(define application-args cdr)
 
 (define (normalize-application op args)
   (if (null? args) op
@@ -39,16 +42,16 @@
 (define (make-combine op . args)
   (normalize-application op args))
 
-(define (translate-normal v expr)
+(define (translate-lambda v expr)
   (if (not (free-variable? v expr))
-      (make-combine 'K expr)
+      (make-combine 'K (translate-expression expr))
       (cond ((atom? expr)
 	     (if (eq? v expr) 'I
 		 (error "translate normal: unexpected bound variable")))
 	    ((lambda? expr)
 	     ;; Depth first
-	     (translate-normal v
-			       (translate-normal (lambda-formal expr)
+	     (translate-lambda v
+			       (translate-lambda (lambda-formal expr)
 						 (lambda-body expr))))
 	    ;; Must be an application
 	    (else
@@ -56,14 +59,34 @@
 		   (arg (application-arg expr)))
 	       (if (and (eq? v arg)
 			(not (free-variable? v op)))
-		   op
+		   (translate-expression op)
 		   (make-combine 'S
-				 (translate-normal v op)
-				 (translate-normal v arg))))))))
+				 (translate-lambda v op)
+				 (translate-lambda v arg))))))))
+
+(define (translate-expression expr)
+  (cond ((atom? expr) expr)
+	((lambda? expr)
+	 (translate-lambda (lambda-formal expr)
+			   (lambda-body expr)))
+	(else
+	 (make-appliction (translate-expression (application-op expr))
+			  (translate-expression (application-arg expr))))))
+
+(define (make-flat-application op arg)
+  (if (atom? op) `(,op ,arg)
+      `(,@op ,arg)))
+      
+(define (flatten-application expr)
+  (if (or (atom? expr) (lambda? expr)) expr
+      (make-flat-application (flatten-application (application-op expr))
+			     (flatten-application (application-arg expr)))))
+
+;; Could do some rewriting
+(define (optimize expr) expr)
 
 (define (translate expr)
-  (let ((input (preprocess expr)))
-    (if (lambda? input)
-	(translate-normal (lambda-formal input)
-			  (lambda-body input))
-	(error "translate:Not a lambda expression"))))
+  (optimize (flatten-application (translate-expression (preprocess expr)))))
+
+		   
+	
