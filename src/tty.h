@@ -24,9 +24,9 @@
 #ifndef LSH_TTY_H_INCLUDED
 #define LSH_TTY_H_INCLUDED
 
-#include <inttypes.h>
-
 #include <termios.h>
+
+#include "lsh.h"
 
 struct terminal_dimensions
 {
