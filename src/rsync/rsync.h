@@ -43,20 +43,13 @@
 
 #define RSYNC_SUM_LENGTH MD5_DIGESTSIZE
 
-/* Constant used in checksum calculation */
-#define RSYNC_CHAR_OFFSET 0
+/* Size of block count, block size, tail */
+#define RSYNC_HEADER_SIZE 12
 
-struct rsync_sum_buf
-{
-  OFF_T offset;			/* offset in file of this chunk */
-  unsigned len;			/* length of chunk of file */
-  unsigned i;			/* index of this chunk */
-  UINT32 sum1;	        	/* simple checksum */
-  char sum2[RSYNC_SUM_LENGTH];  /* checksum */
-};
+/* Size of weak sum, md5 sume */
+#define RSYNC_ENTRY_SIZE 20
 
 /* Initial checksum calculations (by the receiver) */
-#define RSYNC_INTERNAL_BUF_SIZE 20
 
 /* NOTE: Unlike zlib, we want to know the file size before we start.
  * This could be relxed, but requires some modifications to the
@@ -80,7 +73,7 @@ struct rsync_generate_state
   struct md5_ctx block_sum;
 
   /* Internal state */
-  UINT8 buf[RSYNC_INTERNAL_BUF_SIZE];
+  UINT8 buf[RSYNC_ENTRY_SIZE];
   UINT8 buf_length; /* Zero means no buffered data. */
   UINT8 buf_pos;
 
@@ -96,6 +89,8 @@ struct rsync_generate_state
 #define RSYNC_BUF_ERROR   2
 /* Invalid input */
 #define RSYNC_INPUT_ERROR 3
+/* Out of memory (can happen only for rsync_read_table and rsync_send_init) */
+#define RSYNC_MEMORY 4
 
 int rsync_generate(struct rsync_generate_state *state);
 int rsync_generate_init(struct rsync_generate_state *state,
@@ -125,8 +120,6 @@ typedef int (*rsync_lookup_read_t)(void *opaque,
 				   UINT8 *dst, UINT32 length,
 				   UINT32 index, UINT32 offset, UINT32 *done);
 
-enum rsync_receive_mode;
-
 struct rsync_receive_state
 {
   /* Public fields */
@@ -155,5 +148,70 @@ struct rsync_receive_state
 
 int rsync_receive(struct rsync_receive_state *state);
 void rsync_receive_init(struct rsync_receive_state *state);
+
+/* Sending files */
+
+struct rsync_table;
+struct rsync_node;
+
+struct rsync_read_table_state
+{
+  /* Public fields */
+  struct rsync_table *table;
+
+  UINT32 count; /* Block count */
+  UINT32 block_size;
+  UINT32 remainder;
+
+  /* Private state */
+  UINT8 buf[RSYNC_ENTRY_SIZE];
+  unsigned pos;
+};
+
+int
+rsync_read_table(struct rsync_read_table_state *state,
+		 UINT32 length, UINT8 *input);
+
+/* For reading the list of checksums. */
+struct rsync_send_state
+{
+  /* Public fields */
+  UINT8 *next_in;
+  UINT32 avail_in;
+  UINT8 *next_out;
+  UINT32 avail_out;
+
+  /* Limits */
+  UINT32 max_count;
+  UINT32 max_block_size;
+  
+  struct rsync_table *table;
+
+  /* Internal state */
+  int state;
+  
+  UINT32 buf_size;
+  UINT8 *buf;
+  UINT32 pos;
+  
+  unsigned sum_a;
+  unsigned sum_b;
+};
+
+int rsync_send_init(struct rsync_send_state *state,
+		    struct rsync_table *table);
+		     
+int rsync_send(struct rsync_send_state *state, int flush);
+
+void rsync_send_free(struct rsync_send_state *state); 
+
+void
+rsync_update_1(unsigned *ap, unsigned *cp,
+	       UINT32 length, UINT8 *data);
+
+struct rsync_node *
+rsync_search(unsigned *ap, unsigned *bp, unsigned block_size,
+	     UINT32 length, UINT8 *start, UINT8 *end,
+	     UINT32 *found, struct rsync_node **hash);
 
 #endif /* RSYNC_H_INCLUDED */
