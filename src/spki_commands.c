@@ -233,7 +233,7 @@ parse_private_key(struct alist *algorithms,
       break;
       
     default:
-      abort();
+      fatal("Internal error!\n");
 #if 0      
       /* Get a corresponding public key. */
       COMMAND_RETURN(c, make_keypair
