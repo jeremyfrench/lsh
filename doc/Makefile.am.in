@@ -10,10 +10,13 @@ MANPAGES = $(wildcard *.[1-9])
 info_TEXINFOS = lsh.texinfo
 
 EXTRA_DIST = HACKING NOTES PORTS TASKLIST configuration.txt \
-	Makefile.am.in $(MANPAGES) # srp-spec.nroff srp-spec.txt
+	Makefile.am.in $(MANPAGES) \
+	srp-spec.nroff srp-spec.txt fixff.sh fixff.pl
 
 DVIS = $(addsuffix .dvi, $(MANPAGES))
 PSS =  $(addsuffix  .ps, $(MANPAGES))
+
+all: srp-spec.txt
 
 # all:	dvi ps
 
@@ -27,9 +30,10 @@ ps:	$(PSS)
 %.ps: %
 	$(GROFF) -Tps -mandoc $< > $@
 
+
 %.txt : %.nroff
-	  $(GROFF) -ms $< | $(srcdir)/fixff.sh >$@T
-	  test -s $@T && mv -f $@T $@
+	$(GROFF) -ms -Tlatin1 $< | perl $(srcdir)/fixff.pl >$@T
+	test -s $@T && mv -f $@T $@
 
 DISTCLEANFILES = $(DVIS) $(PSS)
 
