@@ -129,7 +129,7 @@ static int do_write_key(struct sexp_handler *h, struct sexp *private)
 			O_CREAT | O_EXCL | O_WRONLY, 0644)) < 0)
     {
       werror("lsh_writekey: Failed to open %z (errno = %i): %z\n",
-	     closure->public_file, errno, strerror(errno));
+	     closure->public_file, errno, STRERROR(errno));
       return LSH_FAIL | LSH_DIE;
     }
 
@@ -137,7 +137,7 @@ static int do_write_key(struct sexp_handler *h, struct sexp *private)
 			 O_CREAT | O_EXCL | O_WRONLY, 0600)) < 0)
     {
       werror("lsh_writekey: Failed to open %z (errno = %i): %z\n",
-	     closure->private_file, errno, strerror(errno));
+	     closure->private_file, errno, STRERROR(errno));
       return LSH_FAIL | LSH_DIE;
     }
 
@@ -145,7 +145,7 @@ static int do_write_key(struct sexp_handler *h, struct sexp *private)
 			   sexp_format(public, SEXP_TRANSPORT, 0))))
     {
       werror("lsh_writekey: Writing to %z failed (errno = %i): %z\n",
-	     closure->public_file, errno, strerror(errno));
+	     closure->public_file, errno, STRERROR(errno));
       return LSH_FAIL | LSH_DIE;
     }
   
@@ -153,7 +153,7 @@ static int do_write_key(struct sexp_handler *h, struct sexp *private)
 			   sexp_format(private, SEXP_CANONICAL, 0))))
     {
       werror("lsh_writekey: Writing to %z failed (errno = %i): %z\n",
-	     closure->private_file, errno, strerror(errno));
+	     closure->private_file, errno, STRERROR(errno));
       return LSH_FAIL | LSH_DIE;
     }
 
@@ -196,7 +196,7 @@ int main(int argc UNUSED, char **argv UNUSED)
 	    if (errno != EEXIST)
 	      {
 		werror("lsh_writekey: Creating directory %z failed "
-		       "(errno = %i): %z\n", buf, errno, strerror(errno));
+		       "(errno = %i): %z\n", buf, errno, STRERROR(errno));
 		return EXIT_FAILURE;
 	      }
 	  }

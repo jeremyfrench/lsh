@@ -58,6 +58,18 @@
 #define UNUSED
 #endif
 
+#if HAVE_STRERROR
+#define STRERROR strerror
+#else
+#define STRERROR(x) (sys_errlist[x])
+#endif
+
+#if HAVE_STRSIGNAL
+#define STRSIGNAL strsignal
+#else
+#define STRSIGNAL(x) (sys_siglist[x])
+#endif
+
 /* Some macros */
 
 /* Reads a 32-bit integer, in network byte order */

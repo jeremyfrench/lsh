@@ -217,17 +217,17 @@ int change_uid(struct unix_user *user)
    * still running as root. */
   if (initgroups(user->name->data, user->gid) < 0)
     {
-      werror("initgroups failed: %z\n", strerror(errno));
+      werror("initgroups failed: %z\n", STRERROR(errno));
       return 0;
     }
   if (setgid(user->gid) < 0)
     {
-      werror("setgid failed: %z\n", strerror(errno));
+      werror("setgid failed: %z\n", STRERROR(errno));
       return 0;
     }
   if (setuid(user->uid) < 0)
     {
-      werror("setuid failed: %z\n", strerror(errno));
+      werror("setuid failed: %z\n", STRERROR(errno));
       return 0;
     }
   return 1;
@@ -242,7 +242,7 @@ int change_dir(struct unix_user *user)
       if (chdir("/") < 0)
 	{
 	  werror("Strange: home directory was NULL, and chdir(\"/\") failed: %z\n",
-		 strerror(errno));
+		 STRERROR(errno));
 	  return 0;
 	}
     }
@@ -250,10 +250,10 @@ int change_dir(struct unix_user *user)
     {
       werror("chdir to %z failed (using / instead): %z\n",
 	     user->home ? (char *) user->home->data : "none",
-	     strerror(errno));
+	     STRERROR(errno));
       if (chdir("/") < 0)
 	{
-	  werror("chdir(\"/\") failed: %z\n", strerror(errno));
+	  werror("chdir(\"/\") failed: %z\n", STRERROR(errno));
 	  return 0;
 	}
     }
@@ -290,7 +290,7 @@ static int do_setuid(struct ssh_service *c,
 	{
 	case -1:
 	  /* Error */
-	  werror("fork failed: %z\n", strerror(errno));
+	  werror("fork failed: %z\n", STRERROR(errno));
 	  return LSH_FAIL | LSH_DIE;
 	case 0:
 	  /* Child */

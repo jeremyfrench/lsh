@@ -130,7 +130,7 @@ static void do_kill_process(struct resource *r)
       if (kill(self->pid, self->signal) < 0)
 	{
 	  werror("do_kill_process: kill() failed (errno = %i): %z\n",
-		 errno, strerror(errno));
+		 errno, STRERROR(errno));
 	}
     }
 }
@@ -380,7 +380,7 @@ struct lsh_string *format_exit_signal(struct ssh_channel *channel,
 				      int core, int signal)
 {
   struct lsh_string *msg = ssh_format("Process killed by %lz.\n",
-				      strsignal(signal));
+				      STRSIGNAL(signal));
   
   return format_channel_request(ATOM_EXIT_SIGNAL,
 				channel,
@@ -489,19 +489,19 @@ static int make_pipe(int *fds)
 {
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
     {
-      werror("socketpair() failed: %z\n", strerror(errno));
+      werror("socketpair() failed: %z\n", STRERROR(errno));
       return 0;
     }
   debug("Created socket pair. Using fd:s %i <-- %i\n", fds[0], fds[1]);
 
   if (SHUTDOWN(fds[0], SHUT_WR) < 0)
     {
-      werror("shutdown(%i, SEND) failed: %z\n", fds[0], strerror(errno));
+      werror("shutdown(%i, SEND) failed: %z\n", fds[0], STRERROR(errno));
       goto fail;
     }
   if (SHUTDOWN(fds[1], SHUT_RD) < 0)
     {
-      werror("shutdown(%i, REC) failed: %z\n", fds[0], strerror(errno));
+      werror("shutdown(%i, REC) failed: %z\n", fds[0], STRERROR(errno));
     fail:
       {
 	int saved_errno = errno;
@@ -615,7 +615,7 @@ static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
       close(in[1]);
 
       werror("make_pty: duping pty filedescriptors failed (errno = %i): %z\n",
-	     errno, strerror(errno));
+	     errno, STRERROR(errno));
     }
   errno = saved_errno;
   return 0;
@@ -666,7 +666,7 @@ static int do_spawn_shell(struct channel_request *c,
     switch(child = fork())
       {
       case -1:
-	werror("fork() failed: %z\n", strerror(errno));
+	werror("fork() failed: %z\n", STRERROR(errno));
 	/* Close and return channel_failure */
 	break; 
       case 0:
@@ -836,7 +836,7 @@ static int do_spawn_shell(struct channel_request *c,
 	      }
 	    else
 	      debug("Child: execle() failed (errno = %i): %z\n",
-		    exec_errno, strerror(exec_errno));
+		    exec_errno, STRERROR(exec_errno));
 	    _exit(EXIT_FAILURE);
 	  }
 #undef MAX_ENV

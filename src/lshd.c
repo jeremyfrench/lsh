@@ -207,7 +207,7 @@ static int read_host_key(const char *name,
   if (fd < 0)
     {
       werror("lshd: Could not open %z (errno = %i): %z\n",
-	     name, errno, strerror(errno));
+	     name, errno, STRERROR(errno));
       return 0;
     }
   else
@@ -481,7 +481,7 @@ int main(int argc, char **argv)
       {
 	if (res & LSH_COMMAND_FAILED)
 	    werror("lshd: Failed to bind port. (errno = %d) %z\n",
-		   errno, strerror(errno));
+		   errno, STRERROR(errno));
 	else
 	  werror("lshd: Unexpected failure from listen: %d\n", res);
 	return EXIT_FAILURE;

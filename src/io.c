@@ -179,7 +179,7 @@ int io_iter(struct io_backend *b)
       case EINTR:
 	return 1;
       default:
-	fatal("io_iter: poll failed: %z", strerror(errno));
+	fatal("io_iter: poll failed: %z", STRERROR(errno));
       }
   
   {
@@ -252,7 +252,7 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 	  return A_EOF;
 	default:
 	  werror("io.c: do_read: read() failed (errno %i), %z\n",
-		 errno, strerror(errno));
+		 errno, STRERROR(errno));
 	  debug("  fd = %i, buffer = %xi, length = %i\n",
 		closure->fd, buffer, length);
 	  return A_FAIL;
@@ -342,7 +342,7 @@ static void write_callback(struct lsh_fd *fd)
 	close_fd(fd, CLOSE_BROKEN_PIPE);
 	break;
       default:
-	werror("io.c: write failed, %z\n", strerror(errno));
+	werror("io.c: write failed, %z\n", STRERROR(errno));
 
 	close_fd(fd, CLOSE_WRITE_FAILED);
 	
@@ -364,7 +364,7 @@ static void listen_callback(struct lsh_fd *fd)
 		(struct sockaddr *) &peer, &addr_len);
   if (conn < 0)
     {
-      werror("io.c: accept() failed, %z", strerror(errno));
+      werror("io.c: accept() failed, %z", STRERROR(errno));
       return;
     }
   res = FD_LISTEN_CALLBACK(self->callback, conn, 
@@ -772,14 +772,14 @@ int write_raw_with_poll(int fd, UINT32 length, UINT8 *data)
 void io_set_nonblocking(int fd)
 {
   if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
-    fatal("io_set_nonblocking: fcntl() failed, %z", strerror(errno));
+    fatal("io_set_nonblocking: fcntl() failed, %z", STRERROR(errno));
 }
 
 void io_set_close_on_exec(int fd)
 {
   if (fcntl(fd, F_SETFD, 1) < 0)
     fatal("Can't set close-on-exec flag for fd %i: %z\n",
-	  fd, strerror(errno));
+	  fd, STRERROR(errno));
 }
 
 /* ALL file descripters handled by the backend should use non-blocking mode,

@@ -193,7 +193,7 @@ static int do_open_direct_tcpip(struct channel_open *c,
 	      KILL(direct_tcpip);
 	      return CHANNEL_OPEN_CALLBACK(response, NULL,
 					   SSH_OPEN_CONNECT_FAILED,
-					   strerror(errno),
+					   STRERROR(errno),
 					   NULL);
             }
 	  REMEMBER_RESOURCE(connection->resources,

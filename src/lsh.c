@@ -321,7 +321,7 @@ int main(int argc, char **argv)
       if (tty < 0)
 	{
 	  werror("lsh: Failed to open tty (errno = %i): %z\n",
-		 errno, strerror(errno));
+		 errno, STRERROR(errno));
 	  use_pty = 0;
 	}
       else
@@ -334,7 +334,7 @@ int main(int argc, char **argv)
   
   if ( (err = dup(STDERR_FILENO)) < 0)
     {
-      werror("Can't dup stderr: %z\n", strerror(errno));
+      werror("Can't dup stderr: %z\n", STRERROR(errno));
       return EXIT_FAILURE;
     }
 

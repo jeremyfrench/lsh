@@ -136,7 +136,7 @@ static void reap(struct reaper *r)
 	  return;
 	default:
 	  fatal("reaper.c: waitpid failed (errno = %i), %z\n",
-		errno, strerror(errno));
+		errno, STRERROR(errno));
 	}
     }
 }

@@ -57,7 +57,7 @@ static int fall_back_to_ssh1(struct ssh1_fallback *c,
   if (pid < 0)
     {
       werror("Forking to start fallback sshd1 failed with %z\n",
-	     strerror(errno));
+	     STRERROR(errno));
       return LSH_FAIL | LSH_DIE;
     }
   else if (pid == 0)
@@ -94,7 +94,7 @@ static int fall_back_to_ssh1(struct ssh1_fallback *c,
 	    "-V" ,version,	 	/* Compatibility mode */
 	    NULL);
       werror("lshd: fall_back_to_ssh1: execl failed (errno = %i): %z\n",
-	     errno, strerror(errno));
+	     errno, STRERROR(errno));
       _exit(EXIT_FAILURE);
       /* To make gcc happy, if _exit is not declared as NORETURN */
       return 0; 

@@ -269,7 +269,7 @@ static int do_exit_signal(struct channel_request *c,
 
       werror("%us", length, msg);
       werror("Remote process was killed by %z.%z\n",
-	     signal ? strsignal(signal) : "an unknown signal",
+	     signal ? STRSIGNAL(signal) : "an unknown signal",
 	     core ? "(core dumped remotely)\n": "");
 
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);

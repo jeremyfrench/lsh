@@ -63,10 +63,10 @@ static void do_kill_pty_info(struct resource *r)
       closure->super.alive = 0;
       if (close(closure->master) < 0)
 	werror("do_kill_pty_info: closing master failed (errno = %i): %z\n",
-	       errno, strerror(errno));
+	       errno, STRERROR(errno));
       if (close(closure->slave) < 0)
 	werror("do_kill_pty_info: closing slave failed (errno = %i): %z\n",
-	       errno, strerror(errno));
+	       errno, STRERROR(errno));
     }
 }
 
@@ -176,7 +176,7 @@ int pty_allocate(struct pty_info *pty,
   if ((pty->master = open("/dev/ptmx", O_RDWR | O_NOCTTY)) < 0)
     {
       werror("pty_allocate: Opening /dev/ptmx failed (errno = %i): %z\n",
-	     errno, strerror(errno));
+	     errno, STRERROR(errno));
       return 0;
     }
   
@@ -285,7 +285,7 @@ int tty_setctty(struct pty_info *pty)
   if (setsid() < 0)
     {
       werror("tty_setctty: setsid() failed, already process group leader?\n"
-	     "   (errno = %i): %z\n", errno, strerror(errno));
+	     "   (errno = %i): %z\n", errno, STRERROR(errno));
       return 0;
     }
 #if HAVE_UNIX98_PTYS
@@ -301,7 +301,7 @@ int tty_setctty(struct pty_info *pty)
       {
 	werror("tty_setctty: open(\"%z\") failed,\n"
 	       "   (errno = %i): %z\n",
-	       pty->tty_name->data, errno, strerror(errno));
+	       pty->tty_name->data, errno, STRERROR(errno));
 	return 0;
       }
     close(fd);
@@ -333,7 +333,7 @@ int tty_setctty(struct pty_info *pty)
     if (ioctl(pty->slave, TIOCSCTTY, NULL) == -1)
       {
 	werror("tty_setctty: Failed to set the controlling tty.\n"
-	       "   (errno = %i): %z\n", errno, strerror(errno));
+	       "   (errno = %i): %z\n", errno, STRERROR(errno));
 	return 0;
       }
     
