@@ -1,0 +1,144 @@
+This document specifies the use of the Secure Remote Password as a key
+exchange method in LSH.
+
+/Niels Möller, 2000-05-23 
+
+
+INTRODUCTION
+
+The main virtue of the SRP protocol [SRP] is that it provides authentication
+based on a small secret (typically a password). It is useful in
+situations where no authentic host key is known. For SSH/LSH, it can
+be used as a bootstrapping procedure to get the host key of a server
+in a safe way. SRP also provides authentication of the user, which
+means that it might make sense to skip the secsh
+"ssh-userauth"-service [SSH-USERAUTH] when using SRP. 
+
+
+KEY EXCHANGE
+
+The name of the method is "srp-group1-sha1". Below, the same
+conventions are used as in the description of the
+"diffie-hellman-group1-sha1" method:
+
+C is the client, S is the server; p is a large safe prime, g is a
+generator for a subgroup of GF(p), and q is the order of the subgroup;
+V_S is S's version string; V_C is C's version string; K_S is S's
+public host key; I_C is C's KEXINIT message and I_S S's KEXINIT
+message which have been exchanged before this part begins. (See
+[SSH-TRANS] for more information).
+
+Furthermore, HASH is a hash function (currently SHA1), n is the user's
+name (used for looking up salt and verifier in the server's database),
+p is a password, and s is a random salt string.
+
+x is constructed from the strings n, p and s as as HASH(s || HASH(n ||
+p)), and the verifier is computed as g^x mod p. S keeps a database
+containing triples <n, s, v>, indexed by n.
+
+1. C renerates a random number x (lg(p) < x < q) and computes e = g^x mod
+   p. C sends e and n to S.
+
+2. S uses u to find v and s in its database. S generates a random
+   number y, (lg(p) < y < q) and computes f = v + g^b mod p. S selects
+   u as 1 + the integer corresponding to the first 32 bits of HASH(f). S
+   computes K = (e * v^u)^b mod p. S sends s and f to C.
+
+3. C gets the password p and computes x = HASH(s || H(n || p)). C also
+   computes u in the same way as the server. Finally, C computes K =
+   (f - g^x) ^ (a + u * x) mod p.
+
+Each party must check that e and f are in the range [1, p-1]. If not,
+the key exchange fails.
+
+At this point C and S have a shared secret K. They must now prove that
+they know the same value. Even if we're primarily interested in
+authenticating the server, the user must prove knowledge of the key
+*first*. (Otherwise, the server leaks information about the verifier).
+
+
+MESSAGES
+
+Group and hash function is negotiated with the KEXINIT messages. No
+host key algorithm is not used, and it MAY be "none".
+
+First, the client sends:
+
+  byte      SSH_MSG_KEXSRP_INIT
+  string    n
+  mpint     e
+
+The server responds with
+
+  byte      SSH_MSG_KEXSRP_REPLY
+  string    s
+  mpint     f
+
+The server MUST NOT send this message until it has received the
+SSH_MSG_KEXSRP_INIT message. At this point, both sides can compute the
+exchange hash H, as the HASH of the concatenation of the following:
+
+  string    V_C, the client's version string (CR and NL excluded)
+  string    V_S, the server's version string (CR and NL excluded)
+  string    I_C, the payload of the client's SSH_MSG_KEXINIT
+  string    I_S, the payload of the server's SSH_MSG_KEXINIT
+  string    n, the user name
+  string    s, the salt
+  mpint     e, exchange value sent by the client
+  mpint     f, exchange value sent by the server
+  mpint     K, the shared secret
+
+The client computes m1 = HASH(H), and sends it to the server, to prove
+that it knows the shared key. It sends
+
+  byte SSH_MSG_KEXSRP_PROOF
+  string m1
+
+(FIXME: Would it be better to send the exchange hash in the clear,
+i.e. use m1 = H?)
+
+The server verifies that m is correct using its own K. If they don't
+match, the keyexchange fails, and the server MUST NOT send any proof
+back to the client.
+
+Finally, the server computes m2 as the HASH of the concatenation of
+
+  mpint e
+  string m1
+  mpint K
+
+and sends
+
+  byte SSH_MSG_KEXSRP_PROOF
+  string m2
+
+to the client. The client verifies that m2 is correct, and if so, the
+key exchange is successful and its output is H and K.
+
+
+MESSAGE NUMBERS
+
+The following message numbers have been defined in this protocol
+
+  /* Numbers 30-49 used for kex packets.
+     Different kex methods may reuse message numbers in
+     this range. */
+  #define SSH_MSG_KEXSRP_INIT            30
+  #define SSH_MSG_KEXSRP_REPLY           31
+  #define SSH_MSG_KEXSRP_PROOF           32
+
+
+REFERENCES
+
+[SRP]  T. Wu, "The SRP Authentication and Key Exchange System",
+Internet Draft, draft-wu-srp-auth-03.txt
+
+[SSH-ARCH] Ylonen, T., et al, "SSH Protocol Architecture", Internet
+Draft, draft-ietf-secsh-architecture-05.txt
+
+[SSH-TRANS] Ylonen, T., et al, "SSH Transport Layer Protocol", Internet
+Draft, draft-ietf-secsh-transport-07.txt
+
+[SSH-USERAUTH] Ylonen, T., et al, "SSH Authentication Protocol",
+Internet Draft, draft-ietf-secsh-userauth-07.txt
+
