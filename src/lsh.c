@@ -117,6 +117,8 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
      (name make_client_connect)
      (globals
        (progn "&progn_command.super.super")
+       ;; FIXME: Use some function that also displays an error message
+       ;; if connect() fails.
        (die_on_null "&command_die_on_null.super"))
      (params
        (connect object command)
@@ -171,6 +173,9 @@ int main(int argc, char **argv)
   int not;
 #if WITH_PTY_SUPPORT
   int tty;
+  int reset_tty;
+  struct termios tty_mode;
+  
   int use_pty = -1; /* Means default */
 #endif /* WITH_PTY_SUPPORT */
   
@@ -325,7 +330,10 @@ int main(int argc, char **argv)
 	  use_pty = 0;
 	}
       else
-	get_pty = make_pty_request(tty);
+	{
+	  reset_tty = tty_getattr(tty, &tty_mode);
+	  get_pty = make_pty_request(tty);
+	}
     }
 #endif /* WITH_PTY_SUPPORT */
 
@@ -409,5 +417,10 @@ int main(int argc, char **argv)
   /* FIXME: Perhaps we have to reset the stdio file descriptors to
    * blocking mode? */
 
+#if WITH_PTY_SUPPORT
+  if (reset_tty)
+    tty_setattr(tty, &tty_mode);
+#endif
+  
   return lsh_exit_code;
 }
