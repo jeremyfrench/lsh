@@ -331,8 +331,6 @@ int main(int argc, char **argv)
 	case MODE_VANILLA:
 	  output = sexp_format(expr, options->output, 0);
 
-	  if (options->output != SEXP_CANONICAL)
-	    output = ssh_format("%lfS\n", output);
 	  break;
 	  
 	case MODE_SPKI_HASH:
