@@ -32,30 +32,31 @@ AC_TYPE_SIZE_T
 dnl Checks for library functions.
 AC_FUNC_ALLOCA
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS(strdup strerror)
+AC_CHECK_FUNCS(strerror)
 
-AC_CHECK_FUNCS(mempcpy strndup strchrnul)
+AC_REPLACE_FUNCS(mempcpy strndup strchrnul)
 AC_CHECK_FUNCS(flockfile putc_unlocked)
 AC_CHECK_FUNCS(fputs_unlocked fwrite_unlocked)
 
-AC_CHECK_FUNCS(asprintf)
+dnl Used only by argp-test.c, so don't use AC_REPLACE_FUNCS.
+AC_CHECK_FUNCS(strdup asprintf)
 
 AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
 
-dnl AC_CHECK_VAR(VAR, INCLUDES)
+dnl AC_CHECK_VAR(VAR, TYPE)
 AC_DEFUN(AC_CHECK_VAR,
 [ AC_CACHE_CHECK(
     [for $1],
     lsh_cv_var_$1,
-    AC_TRY_LINK([$2], [void *p = (void *) &$1;],
+    AC_TRY_LINK(, [extern $2 $1; void *p = (void *) &$1;],
 		[lsh_cv_var_$1=yes],
 		[lsh_cv_var_$1=no]))
   if eval "test \"`echo '$lsh_cv_var_'$1`\" = yes"; then
     AC_DEFINE_UNQUOTED(HAVE_`echo $1 | tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'`)
   fi
 ])
-AC_CHECK_VAR(program_invocation_name, [#include <errno.h>])
-AC_CHECK_VAR(program_invocation_short_name, [#include <errno.h>])
+AC_CHECK_VAR(program_invocation_name, [char *])
+AC_CHECK_VAR(program_invocation_short_name, [char *])
 
 # Set these flags *last*, or else the test programs won't compile
 if test x$GCC = xyes ; then
