@@ -85,13 +85,12 @@ struct ssh_connection;
 
        ; Key exchange 
        (kex_state simple int)
-  
-       ; (simple make_kexinit make_kexinit)
 
+       ; What to do once the connection is established
+       (established object command_continuation)
+       
        (kexinits array (object kexinit) 2)
-       ;;;  struct kexinit *kexinits[2];
        (literal_kexinits array (string) 2)
-       ;;; struct lsh_string *literal_kexinits[2];
 
        ; Negotiated algorithms
        (newkeys object newkeys_info)
