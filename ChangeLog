@@ -1,3 +1,7 @@
+2001-01-10  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/pkcs5-test.c: Include stdlib.h instead of getopt.h. 
+
 2001-01-10  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* Released lsh-1.1.5.

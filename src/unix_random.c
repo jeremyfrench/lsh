@@ -269,7 +269,7 @@ static const struct unix_random_source random_sources[] =
   { "/usr/local/bin/wget", "-O - http://lavarand.sgi.com/block.html", 0, WLARGE(9) },
   { "/bin/cat", "/usr/spool/mqueue/syslog", 	0, WLARGE(9) },
 #endif /* 0 */
-  { NULL, NULL, 0, 0 }
+  { NULL, NULL, 0, 0, 0 }
 };
 
 #undef WSMALL

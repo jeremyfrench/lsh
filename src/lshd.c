@@ -331,7 +331,7 @@ main_options[] =
     "Recognize kerberos passwords, using the helper program "
     "\"" KERBEROS_HELPER "\". This option is experimental.", 0 },
   { "no-kerberos-passwords", OPT_NO_KERBEROS_PASSWD, NULL, 0,
-    "Don't recognize kerberos passwords (default behaviour)." },
+    "Don't recognize kerberos passwords (default behaviour).", 0 },
 
   { "password-helper", OPT_PASSWORD_HELPER, "Program", 0,
     "Use the named helper program for password verification. "
