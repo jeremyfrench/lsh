@@ -112,12 +112,15 @@ const char *argp_program_version
 
 const char *argp_program_bug_address = BUG_ADDRESS;
 
+#define OPT_SLOPPY 0x200
+
 /* GABA:
    (class
      (name lsh_make_seed_options)
      (vars
        (filename string)
-       (force . int)))
+       (force . int)
+       (sloppy . int)))
 */
 
 static struct lsh_make_seed_options *
@@ -137,6 +140,8 @@ main_options[] =
   /* Name, key, arg-name, flags, doc, group */
   { "output-file", 'o', "Filename", 0, "Default is ~/.lsh/seed-file", 0 },
   { "force", 'f', NULL, 0, "Overwrite any existing seed file.", 0 },
+  { "sloppy", OPT_SLOPPY, NULL, 0, "Generate seed file even if we can't "
+    collect a good amount of randomness from the environment.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
   
@@ -190,8 +195,13 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->filename = make_string(arg);
       break;
 
+    case OPT_SLOPPY:
+      self->sloppy = 1;
+      break;
+      
     case 'f':
       self->force = 1;
+      break;
     }
   
   return 0;
@@ -208,7 +218,8 @@ main_argp =
 };
 
 
-/* For cleanup */
+/* For cleanup. FIXME: Arrange so that we clean up even if killed by
+ * SIGINT or SIGTERM. */
 static struct resource *lock = NULL;
 int tty_needs_reset = 0;
 struct termios tty_original_mode;
@@ -241,10 +252,15 @@ enum source_type
 
 #define DEVRANDOM_SIZE 40
 
+/* FIXME: Add a similar function for egd, cryptlib tries to read
+ * "/var/run/egd-pool", "/dev/egd-pool", "/etc/egd-pool". */
+
 static void
 get_dev_random(struct yarrow256_ctx *ctx, enum source_type source)
 {
-  static const char *names[] = { "/dev/random", "/dev/urandom", NULL };
+  static const char *names[] =
+    { "/dev/random", "/dev/urandom",
+      NULL };
 
   int fd = -1;
   unsigned i;
@@ -1242,7 +1258,7 @@ main(int argc, char **argv)
     {
       /* Get the number of additional sources that need to get above
        * the reseed threshold before a reseed happens. */
-      if (yarrow256_needed_sources(&yarrow) > 1)
+      if (!options->sloppy && (yarrow256_needed_sources(&yarrow) > 1))
         {
           werror("Couldn't get enough randomness from the environment.\n");
 
@@ -1251,7 +1267,7 @@ main(int argc, char **argv)
       get_interact(&yarrow, SOURCE_USER);
     }
 
-  if (!yarrow256_is_seeded(&yarrow))
+  if (!options->sloppy && !yarrow256_is_seeded(&yarrow))
     {
       werror("Couldn't get enough randomness from the environment.\n");
 
