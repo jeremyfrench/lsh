@@ -112,6 +112,8 @@ int io_iter(struct io_backend *b)
 	    *fd_p = fd->next;
 	    continue;
 	  }
+	/* FIXME: nfds should probably include only fd:s that we are
+	 * interested in reading or writing. */
 	nfds++;
 	fd_p = &fd->next;
       }
@@ -206,7 +208,10 @@ int io_iter(struct io_backend *b)
 	    else if (fd->want_write)
 	      WRITE_FD(fd);
 	    else
-	      werror("io.c: poll said POLLHUP on an inactive fd.\n");
+	      {
+		werror("io.c: poll said POLLHUP on an inactive fd.\n");
+		close_fd(fd, CLOSE_EOF);
+	      }
 	    continue;
 	  }
 
@@ -487,7 +492,7 @@ static void init_file(struct io_backend *b, struct lsh_fd *f, int fd)
   f->close_callback = NULL;
 
   f->prepare = NULL;
-
+  
   f->want_read = 0;
   f->read = NULL;
 
