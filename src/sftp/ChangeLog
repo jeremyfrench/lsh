@@ -1,5 +1,9 @@
 2002-02-25  Pontus  <pont@it.uu.se>
 
+	* configure.ac: Added ugly fix to detect if we're part of the main
+	lsh distribution. If we are, assume $bindir/lshg works
+	satisfactionary.
+	
 	* sftp_bind.c (lsftp_install_lsftp_cb): Return a pointer to the
 	callback instead.
 	(lsftp_do_rm): Adopted for new use of lsftp_install_lsftp_cb.

@@ -11,6 +11,8 @@ AM_CONFIG_HEADER(config.h)
 
 CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
 
+echo "srcdir:$srcdir: top:$top_srcdir:"
+
 dnl We take options
 
 AC_ARG_WITH(secsh, 
@@ -41,68 +43,87 @@ fi
 
 dnl Choose the correct secsh client
 
-dnl FIXME: If compiled together with lsh, won't find lshg?
+dnl FIXME: Ugly check to see if we're a part of lsh, how to do this better?
 
-if test -z "$transport_prog"; then
-  # No sech-client given, try to find an lshg
-  AC_CHECK_PROG(found_lshg, lshg, [lshg])
+if test -f $srcdir/../lsh.c; then
+  # We're a part of lsh
+  # FIXME: We should probably do something smart with program_transform_name 
+  # here, but what if we're configured with another 
+  # --program-{prefix,suffix,transform-name} when the main lsh system?
+  # (But then again, that could be the case with bindir too.
+  
+  transport_prog="$bindir/lshg"
+  before_opts="--subsystem=sftp"
+  after_opts="-G"
 
-  if test "$found_lshg" = lshg; then 
-
-    # Found lshg? Check if it takes the subsystem flag (skip if options are given).
+  # Now, make sure these are included properly when compiling.
  
-    if test -z "$before_opts" -a -z "$after_opts"; then
-      if "$found_lshg" --help | grep subsystem >/dev/null; then
-        # Takes the subsystems flag?
-        before_opts="--subsystem=sftp"
-        transport_prog="lshg"
-      else
-        AC_MSG_WARN([Your lshg doesn't support subsystems])
-      fi
-    else
-      # Options given, assume the user knows what she's doing.
-      transport_prog="lshg"
-    fi
-  fi
+  CPPFLAGS="$CPPFLAGS -DTRANSPORT_PROG='\"$transport_prog\"'"
+  CPPFLAGS="$CPPFLAGS -DTRANSPORT_BEFORE_OPTS='\"$before_opts\"'"
+  CPPFLAGS="$CPPFLAGS -DTRANSPORT_AFTER_OPTS='\"$after_opts\"'"
+else
+  # Stand alone
 
-  # No or bad (old) lshg found, try ssh
   if test -z "$transport_prog"; then
-    AC_CHECK_PROG(found_ssh, ssh, [ssh])
+    # No sech-client given, try to find an lshg
+    AC_CHECK_PROG(found_lshg, lshg, [lshg])
 
-    if test "$found_ssh" = ssh; then
-      # FIXME: Should try to run with -s
+    if test "$found_lshg" = lshg; then 
+
+      # Found lshg? Check if it takes the subsystem flag (skip if options are given).
+   
       if test -z "$before_opts" -a -z "$after_opts"; then
-        before_opts="-s"
-	after_opts="sftp"
-        transport_prog="ssh"
+        if "$found_lshg" --help | grep subsystem >/dev/null; then
+          # Takes the subsystems flag?
+          before_opts="--subsystem=sftp"
+          transport_prog="lshg"
+        else
+          AC_MSG_WARN([Your lshg doesn't support subsystems])
+        fi
       else
-        # The user gave before or after?
-        transport_prog="ssh"
+        # Options given, assume the user knows what she's doing.
+        transport_prog="lshg"
+      fi
+    fi
+
+    # No or bad (old) lshg found, try ssh
+    if test -z "$transport_prog"; then
+      AC_CHECK_PROG(found_ssh, ssh, [ssh])
+
+      if test "$found_ssh" = ssh; then
+        # FIXME: Should try to run with -s
+        if test -z "$before_opts" -a -z "$after_opts"; then
+          before_opts="-s"
+  	after_opts="sftp"
+          transport_prog="ssh"
+        else
+          # The user gave before or after?
+          transport_prog="ssh"
+        fi
       fi
     fi
   fi
-fi
 
-dnl If we still haven't defined either of before_opts and after_opts, try to decide from transport_prog
-dnl (happens if the user told us what to use, but not how).
+  dnl If we still haven't defined either of before_opts and after_opts, try to decide from transport_prog
+  dnl (happens if the user told us what to use, but not how).
 
-if test -z "$before_opts" -a -z "$after_opts"; then
-  if test "$transport_prog" = "ssh"; then 
-    before_opts="-s"
-    after_opts="sftp"
+  if test -z "$before_opts" -a -z "$after_opts"; then
+    if test "$transport_prog" = "ssh"; then 
+      before_opts="-s"
+      after_opts="sftp"
+    fi
+    if test "$transport_prog" = "lshg"; then 
+      before_opts="--subsystem=sftp"
+    fi
   fi
-  if test "$transport_prog" = "lshg"; then 
-    before_opts="--subsystem=sftp"
-  fi
-fi
-   
-AC_DEFINE_UNQUOTED(TRANSPORT_PROG, "$transport_prog", Program used for connecting)
-AC_DEFINE_UNQUOTED(TRANSPORT_BEFORE_OPTS, "$before_opts", Options sent before argv)
-AC_DEFINE_UNQUOTED(TRANSPORT_AFTER_OPTS, "$after_opts", Options sent after argv)
+       
+  AC_DEFINE_UNQUOTED(TRANSPORT_PROG, "$transport_prog", Program used for connecting)
+  AC_DEFINE_UNQUOTED(TRANSPORT_BEFORE_OPTS, "$before_opts", Options sent before argv)
+  AC_DEFINE_UNQUOTED(TRANSPORT_AFTER_OPTS, "$after_opts", Options sent after argv)
 
+fi
+    
 AC_MSG_NOTICE([Using $transport_prog as secsh-client, adding $before_opts in front of arguments and $after_opts after them.])
-
-
 
 
 
