@@ -848,8 +848,8 @@ static int do_channel_close(struct packet_handler *closure UNUSED,
 }
 
 static int do_channel_open_confirm(struct packet_handler *closure UNUSED,
-			      struct ssh_connection *connection,
-			      struct lsh_string *packet)
+				   struct ssh_connection *connection,
+				   struct lsh_string *packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;

@@ -152,15 +152,16 @@ struct packet_handler *make_unimplemented_handler(void)
 }
 
 
-struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
+struct ssh_connection *make_ssh_connection(void)
 {
   int i;
 
   NEW(ssh_connection, connection);
-  
   connection->super.write = handle_connection;
 
   /* Initialize instance variables */
+  /* connection->mode = mode; */
+
   connection->versions[CONNECTION_SERVER]
     = connection->versions[CONNECTION_CLIENT]
     = connection->session_id = NULL;
@@ -197,11 +198,12 @@ struct ssh_connection *make_ssh_connection(struct packet_handler *kex_handler)
   connection->dispatch[SSH_MSG_IGNORE] = connection->ignore;
   connection->dispatch[SSH_MSG_UNIMPLEMENTED] = connection->ignore;
 
-  /* FIXME: Write a debug handler */
   connection->dispatch[SSH_MSG_DEBUG] = make_rec_debug_handler();
 
+#if 0
   connection->dispatch[SSH_MSG_KEXINIT] = kex_handler;
-
+#endif
+  
   /* Make all other known message types terminate the connection */
 
   connection->dispatch[SSH_MSG_SERVICE_REQUEST] = connection->fail;
@@ -251,3 +253,12 @@ void connection_init_io(struct ssh_connection *connection,
   connection->send_mac = connection->rec_mac = NULL;
   connection->send_compress = connection->rec_compress = NULL;
 }
+
+/* ;; GABA:
+   (class
+     (name handshake_command)
+     (super command)
+     (vars
+       ; CONNECTION_SERVER or CONNECTION_CLIENT
+       (mode . int)))
+       */

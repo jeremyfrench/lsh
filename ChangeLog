@@ -1,3 +1,33 @@
+Wed Mar 24 02:56:41 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/channel_commands.c, src/channel_commands.h: New files.
+
+	* src/client.c (session_open_command): New class.
+
+	* src/channel.h (ssh_channel): Replaced the open_confirm and
+	open_failure methods with a command_continuation.
+
+	* src/connection_commands.c: New file. The connection_command
+	unifies some of the logic from in client.c and server.c.
+
+	* src/io.h (address_info): New class.
+	(fd_listen_callback): Use address_info rather than struct
+ 	sockaddr.
+
+	* src/io.c (make_io_fd): New function.
+	(io_read_write, io_read, io_write): Now takes a io_fd as argument,
+ 	rather than a numerical fd.
+
+	* src/keyexchange.h (make_kexinit): New definition of the
+ 	MAKE_KEXINIT method. Should create and register a kexinit message,
+	and return a string consisting of this message and any extra
+	speculative message. Should not actually write anything.
+
+Tue Mar 23 03:12:15 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/io_commands.c, src/io_commands.h: New files, for listen and
+	connect commands.
+
 Fri Mar 19 18:15:38 1999    <nisse@idonex.se>
 
 	* src/make_class (process-expr): Generate code using more
