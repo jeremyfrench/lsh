@@ -32,6 +32,7 @@
 
 #include <time.h>
 #include <netdb.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 
 #define CLASS_DECLARE
