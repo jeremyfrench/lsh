@@ -86,6 +86,10 @@
                      (integer->char 1)
                      (integer->char 0)))))
 
+(define char-set= string=?)
+
+(define char-set:empty (chars->char-set '()))
+
 (define (nth l n)
   (cond ((< n 0) (error "nth: negative index not allowed" n))
         ((null? l) (error "nth: index too big" n))
