@@ -1,4 +1,4 @@
-dnl -*-shell-script-*-
+dnl -*- mode: shell-script; sh-indentation: 2; -*-
 dnl $Id$
 
 dnl Process this file with autoconf to produce a configure script.
@@ -6,7 +6,7 @@ AC_INIT(src/lsh_types.h)
 
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, snapshot-`date +%Y-%m-%d`)
-AM_INIT_AUTOMAKE(lsh, snapshot-esyscmd([date +%Y-%m-%d]))
+AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
 AM_CONFIG_HEADER(config.h)
 
@@ -48,8 +48,16 @@ AC_ARG_WITH(zlib,
 dnl Checking this variable is delayed until we have checked if zlib is
 dnl actually available.
 
+AC_ARG_WITH(pty,
+  [--without-pty   disable pty support],,
+  [with_pty=yes])
+
+if test x$with_pty = xyes ; then
+  AC_DEFINE(WITH_PTY_SUPPORT)
+fi
+
 AC_ARG_WITH(sshd1,
-  [--with-sshd1[=PROGRAM]    support fallback to SSH1 daemon.],,
+  [--with-sshd1[=PROGRAM]    support fallback to SSH1 daemon],,
   [with_sshd1=yes])
 
 # Default sshd1 path
@@ -76,9 +84,9 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AM_PROG_CC_STDC
 
-AC_PATH_PROG(SCHEME, scsh,, /usr/local/bin/scsh)
-AC_PATH_PROG(BASH, bash,, /bin/bash)
-AC_PATH_PROG(GROFF, groff,, /usr/bin/groff)
+AC_PATH_PROG(SCHEME, scsh, true, $PATH)
+AC_PATH_PROG(BASH, bash, [], $PATH)
+AC_PATH_PROG(GROFF, groff, [], $PATH)
 
 if test x$am_cv_prog_cc_stdc = xno ; then
   AC_ERROR([the C compiler doesn't handle ANSI-C])
@@ -95,6 +103,7 @@ AC_CHECK_LIB(crypt, crypt)
 AC_CHECK_LIB(xnet, inet_addr)
 AC_CHECK_LIB(nsl, gethostbyname)
 AC_CHECK_LIB(socket, setsockopt)
+AC_CHECK_LIB(openpty, util)
 
 dnl Checks for header files.
 AC_HEADER_STDC
@@ -110,7 +119,8 @@ fi
   
 AC_CHECK_HEADERS(fcntl.h strings.h sys/time.h unistd.h)
 AC_CHECK_HEADERS(shadow.h)
-AC_CHECK_HEADERS(zlib.h,, [with_zlib=no])
+dnl AC_CHECK_HEADER(zlib.h,, [with_zlib=no])
+AC_CHECK_HEADERS(zlib.h)
 AC_CHECK_HEADERS(poll.h sys/poll.h)
 AC_CHECK_HEADERS(crypt.h)
 
@@ -180,6 +190,8 @@ AC_CHECK_FUNCS(select socket strerror strtol)
 AC_CHECK_FUNCS(getspnam)
 AC_CHECK_FUNCS(vsnprintf inet_aton)
 AC_CHECK_FUNCS(openpty)
+AC_CHECK_FUNCS(cfmakeraw)
+
 AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
 
 dnl This macro is mentioned in the automake manual, but where is it
@@ -218,7 +230,7 @@ static int make_pipe(int *fds)
 #define SHUT_RDWR 2
 #endif
 
-  if (socketpair(AF_LOCAL, SOCK_STREAM, 0, fds) < 0)
+  if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
     {
       fprintf(stderr, "socketpair() failed: %s\n", strerror(errno));
       return 0;
@@ -308,5 +320,5 @@ if test x$GCC = xyes ; then
 
 fi
 
-AC_OUTPUT(Makefile doc/Makefile
+AC_OUTPUT(Makefile doc/Makefile misc/Makefile
 	  src/Makefile src/symmetric/Makefile src/symmetric/include/Makefile)
