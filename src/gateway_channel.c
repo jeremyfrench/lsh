@@ -123,6 +123,10 @@ make_gateway_channel(struct alist *request_types)
   
   self->super.request_types = request_types;
   
+  /* Never initiate close; let each end point decide when it is time
+   * to send SSH_MSG_CHANNEL_CLOSE. */
+  self->super.flags &= ~CHANNEL_CLOSE_AT_EOF;
+
   return self;
 }
 
