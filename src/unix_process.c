@@ -249,7 +249,7 @@ utmp_book_keeping(struct lsh_string *name,
 #endif
 
 #if HAVE_PUTUTLINE
-  if (!pututline(&entry))
+  if (!pututline(&cleanup->utmp))
     werror("pututline failed (errno = %i): %z\n",
 	   errno, STRERROR(errno));
 #endif
