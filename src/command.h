@@ -114,9 +114,8 @@ extern struct command_continuation discard_continuation;
 
 /* Used when the execution context must be saved for later use.
  *
- * FIXME: Perhaps use a struct instead? This pair is needed in many
- * places.
- * */
+ * Primarily used in channel_commands.c.
+ */
 /* GABA:
    (class
      (name command_context)
