@@ -1,3 +1,21 @@
+2002-11-14  Niels Möller  <niels@s3.kth.se>
+
+	* spki-types.in: Added types public-key, md5 and sha1.
+
+	* certificate.c (spki_principal_add_key): Deleted code for
+	dynamic allocation of hash digests.
+	(spki_principal_by_md5): New function.
+	(spki_principal_by_sha1): New function.
+	(parse_principal): Implemented handling of public key and hash
+	expressions.
+
+	* certificate.h (struct spki_principal): Store hashes directly in
+	the struct, without pointers.
+
+	* Makefile.am (bootstrap): New target.
+	(spki-types.h, spki-type-names.h, spki-gperf.h): Create files in
+	the source tree. 
+
 2002-11-14  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* certificate.h (struct spki_5_tuple): Renamed (was spki_acl), and
