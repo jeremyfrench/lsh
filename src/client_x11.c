@@ -2,7 +2,7 @@
  *
  * Client side of X11 forwaarding.
  *
- * $id:$ */
+ * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -30,6 +30,7 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
+#include "xauth.h"
 
 #include "client_x11.c.x"
 
@@ -50,7 +51,7 @@
 
 #define X11_COOKIE_LENGTH 16
 
-/* GABA:
+/* ;; GABA:
    (class
      (name client_x11_auth_info)
      (vars
@@ -72,7 +73,13 @@
 
        ; Default screen
        (screen . UINT16)
-       (auth_info object client_x11_auth_info)))
+
+       ; Fake MIT-COOKIE-1
+       (fake string)
+
+       ; Real authentication info
+       (auth_name string)
+       (auth_data string)))
 */
      
 /* GABA:
@@ -88,7 +95,7 @@
      (name client_x11_channel)
      (super channel_forward)
      (vars
-       (auth_info object client_x11_auth_info)
+       (display object client_x11_display)
        (state . int)
        (little_endian . int)
        (name_length . unsigned)
@@ -272,7 +279,7 @@ do_client_channel_x11_receive(struct ssh_channel *s,
               if ( (self->name_length == MIT_COOKIE_NAME_LENGTH)
                    && !memcmp(self->buffer->data + X11_SETUP_HEADER_LENGTH,
                               MIT_COOKIE_NAME, MIT_COOKIE_NAME_LENGTH)
-                   && lsh_string_eq_l(self->auth_info->fake,
+                   && lsh_string_eq_l(self->display->fake,
                                       self->auth_length,
                                       self->buffer->data + auth_offset))
                 {
@@ -285,13 +292,13 @@ do_client_channel_x11_receive(struct ssh_channel *s,
                   
                   if (self->little_endian)
                     {
-                      LE_WRITE_UINT16(lengths, self->auth_info->name->length);
-                      LE_WRITE_UINT16(lengths + 2, self->auth_info->auth->length);
+                      LE_WRITE_UINT16(lengths, self->display->auth_name->length);
+                      LE_WRITE_UINT16(lengths + 2, self->display->auth_data->length);
                     }
                   else
                     {
-                      WRITE_UINT16(lengths, self->auth_info->name->length);
-                      WRITE_UINT16(lengths + 2, self->auth_info->auth->length);
+                      WRITE_UINT16(lengths, self->display->auth_name->length);
+                      WRITE_UINT16(lengths + 2, self->display->auth_data->length);
                     }
 
                   /* FIXME: Perhaps it would be easier to build the message by hand than
@@ -301,11 +308,11 @@ do_client_channel_x11_receive(struct ssh_channel *s,
                                    X11_SETUP_VERSION_LENGTH, self->buffer->data,
                                    4, lengths,
                                    0, 0,
-                                   self->auth_info->name->length,
-                                   self->auth_info->name->data,
-                                   PAD(self->auth_info->name->length), pad,
-                                   self->auth_info->auth->length,
-                                   self->auth_info->auth->data,
+                                   self->display->auth_name->length,
+                                   self->display->auth_name->data,
+                                   PAD(self->display->auth_name->length), pad,
+                                   self->display->auth_data->length,
+                                   self->display->auth_data->data,
                                    self->i - length,
                                    self->buffer + self->i);
 
@@ -342,13 +349,13 @@ do_client_channel_x11_receive(struct ssh_channel *s,
 
 static struct client_x11_channel *
 make_client_x11_channel(struct lsh_fd *fd,
-			struct client_x11_auth_info *auth_info)
+			struct client_x11_display *display)
 {
   NEW(client_x11_channel, self);
 
   /* Use a limited window size for the setup */
   init_channel_forward(&self->super, fd, X11_SETUP_MAX_LENGTH);
-  self->auth_info = auth_info;
+  self->display = display;
   self->state = 0;
   self->buffer = lsh_string_alloc(X11_SETUP_MAX_LENGTH);
 
@@ -360,7 +367,7 @@ make_client_x11_channel(struct lsh_fd *fd,
      (name channel_open_x11_continuation)
      (super command_continuation)
      (vars
-       (auth_info object client_x11_auth_info)
+       (display object client_x11_display)
        (up object command_continuation)))
 */
 
@@ -371,7 +378,7 @@ do_channel_open_x11_continuation(struct command_continuation *s,
   CAST(channel_open_x11_continuation, self, s);
   CAST(lsh_fd, fd, a);
   
-  struct client_x11_channel *channel = make_client_x11_channel(fd, self->auth_info);
+  struct client_x11_channel *channel = make_client_x11_channel(fd, self->display);
   channel_forward_start_io(&channel->super);
   channel->super.super.receive = do_client_channel_x11_receive;
 
@@ -379,12 +386,12 @@ do_channel_open_x11_continuation(struct command_continuation *s,
 }
 				     
 static struct command_continuation *
-make_channel_open_x11_continuation(struct client_x11_auth_info *auth_info,
+make_channel_open_x11_continuation(struct client_x11_display *display,
 				   struct command_continuation *up)
 {
   NEW(channel_open_x11_continuation, self);
   self->super.c = do_channel_open_x11_continuation;
-  self->auth_info = auth_info;
+  self->display = display;
   self->up = up;
 
   return &self->super;
@@ -446,7 +453,7 @@ do_channel_open_x11(struct channel_open *s,
 	    = io_connect(self->backend,
 			 display->address,
 			 display->address_length,
-			 make_channel_open_x11_continuation(display->auth_info,
+			 make_channel_open_x11_continuation(display,
 							    c),
 			 make_exc_x11_connect_handler(e, HANDLER_CONTEXT));
 
@@ -485,10 +492,13 @@ make_channel_open_x11(struct io_backend *backend)
 
 
 /* Format is host:display.screen, where display and screen are numbers */
-static struct sockaddr *
-parse_display(const char *display, socklen_t *sl, UINT16 *screen)
+static int
+parse_display(struct client_x11_display *self, const char *display)
 {
   struct lsh_string *host;
+
+  const char *num;
+  unsigned num_length;
   unsigned display_num;
   
   /* Get host name */
@@ -504,7 +514,7 @@ parse_display(const char *display, socklen_t *sl, UINT16 *screen)
       size_t length;
 
       if (!separator)
-	return NULL;
+	return 0;
 
       length = separator - display;
       host = ssh_format("%ls", length, display);
@@ -514,53 +524,53 @@ parse_display(const char *display, socklen_t *sl, UINT16 *screen)
   
   /* Get display number */
   {
+    num = display;
+    
     char *end;
     display_num = strtol(display, &end, 0);
 
-    if (end == display)
+    num_length = end - num;
+
+    if (!num_length)
       {
 	lsh_string_free(host);
-	return NULL;
+	return 0;
       }
+    
     if (!*end)
       /* Default screen number */
-      *screen = 0;
+      self->screen = 0;
     else if (*end != '.')
       {
 	lsh_string_free(host);
-	return NULL;
+	return 0;
       }
-    display = end + 1;
-    *screen = strtol(display, &end, 0);
-
-    if (*end)
+    else
       {
-	lsh_string_free(host);
-	return NULL;
+        display = end + 1;
+        self->screen = strtol(display, &end, 0);
+
+        if (*end)
+          {
+            lsh_string_free(host);
+            return 0;
+          }
       }
   }
-
+  
   if (host)
     {
-      /* NOTE: We don't support with IPv6 displays. I have no idea how
+      /* NOTE: How do we support IPv6 displays? I have no idea how
        * that would work with xauth. Actually, xauth ought to use DNS
        * names rather than IP addresses. */
       struct address_info *a = make_address_info(host, X11_BASE_PORT + display_num);
-      struct sockaddr *sa;
-      socklen_t length;
-      const int prefs[] = { AF_INET, 0 };
       
-      sa = address_info2sockaddr(&length, a, prefs, 1);
+      self->address = address_info2sockaddr(&self->address_length, a, NULL, 1);
 
       KILL(a);
 
-      if (!sa)
-	return NULL;
-
-      assert(sa->sa_family == AF_INET);
-      *sl = sizeof(*sa);
-      
-      return sa;
+      if (!self->address)
+	return 0;
     }
   else
     {
@@ -570,60 +580,43 @@ parse_display(const char *display, socklen_t *sl, UINT16 *screen)
 
       verbose("Using local X11 transport `%pS'\n", name);
       
-      *sl = offsetof(struct sockaddr_un, sun_path) + name->length;
-      sa = lsh_space_alloc(*sl);
+      self->address_length = offsetof(struct sockaddr_un, sun_path) + name->length;
+      sa = lsh_space_alloc(self->address_length);
       sa->sun_family = AF_UNIX;
       memcpy(sa->sun_path, name->data, name->length);
 
       lsh_string_free(name);
-      return (struct sockaddr *) sa;
+      self->address = (struct sockaddr *) sa;
     }
-}
 
-
-static struct client_x11_auth_info *
-get_client_x11_auth_info(struct lsh_string *fake,
-			 struct sockaddr *address)
-{
-  NEW(client_x11_auth_info, self);
-  self->fake = fake;
-
-  if
-#if 0
-    (!xauth_lookup(address, &self->name,
-		    &self->auth))
-#else
-    (1)
-#endif
+  if (!xauth_lookup(self->address_length, self->address,
+                    num_length, num,
+                    &self->auth_name,
+                    &self->auth_data))
     {
       /* Fallback: Don't use xauth, and hope that the X server uses
        * xhost to let us in anyway. */
       werror("Can't find any xauth information for X11 display.\n");
 
-      self->name = ssh_format("");
-      self->auth = ssh_format("");
+      self->auth_name = ssh_format("");
+      self->auth_data = ssh_format("");
     }
-  return self;
+  
+  return 1;
 }
 
 struct client_x11_display *
 make_client_x11_display(const char *display, struct lsh_string *fake)
 {
   NEW(client_x11_display, self);
-  
-  self->address = parse_display(display, &self->address_length, &self->screen);
 
-  if (!self->address)
+  if (!parse_display(self, display))
     {
       werror("Can't parse X11 display: `%s'\n", display);
       lsh_string_free(fake);
       KILL(self);
       return NULL;
     }
-
-  self->auth_info = get_client_x11_auth_info(fake, self->address);
-
-  assert(self->auth_info);
 
   return self;
 }
@@ -740,7 +733,7 @@ do_format_request_x11_forward(struct channel_request_command *s,
   return format_channel_request(ATOM_X11_REQ, channel, 1, "%c%s%xS%i",
 				0, /* Single connection not supported */
 				MIT_COOKIE_NAME_LENGTH, MIT_COOKIE_NAME,
-				self->display->auth_info->fake,
+				self->display->fake,
 				self->display->screen);
 }
 
