@@ -195,7 +195,7 @@ static int do_handle_kexinit(struct packet_hander *c,
     return 0;
 
   /* Save value for later signing */
-  connection->literal_kexinits[connection->type] = packet;
+  connection->literal_kexinits[!connection->type] = packet;
   
   connection->kexinits[!connection->type] = msg;
   
@@ -203,9 +203,13 @@ static int do_handle_kexinit(struct packet_hander *c,
   if (!connection->kexinits[connection->type])
     {
       int res;
+      struct lsh_string *packet;
       struct kexinit *sent =  GENERATE_KEXINIT(closure->init);
       connection->kexinits[connection->type] = sent;
-      res = A_WRITE(connection->write, format_kex(sent));
+      packet = format_kex(sent);
+      connection->kexinits[connection->type] = lsh_string_dup(packet); 
+      
+      res = A_WRITE(connection->write, packet);
       if (res != WRITE_OK)
 	return res;
     }
@@ -242,6 +246,7 @@ static int do_handle_kexinit(struct packet_hander *c,
       hostkey_algorithm
 	= select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
 			   connection->kexinits[1]->server_hostkey_algorithms);
+
       for(i = 0; i<KEX_PARAMETERS; i++)
 	{
 	  parameters[i]
@@ -251,7 +256,7 @@ static int do_handle_kexinit(struct packet_hander *c,
 	  if (!parameters[i])
 	    {
 	      send_disconnect(connection, "");
-	      return wRITE_CLOSED;
+	      return WRITE_CLOSED;
 	    }
 	}
 

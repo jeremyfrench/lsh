@@ -42,12 +42,14 @@
 struct keyexchange_algorithm
 {
   int (*init)(struct keyexchange_algorithm *closure,
-	      struct ssh_connection *connection);
+	      struct ssh_connection *connection,
+	      struct signature_algorithm *hostkey_algorithm,
+	      void **algorithms);
 };
 
-#define KEYEXCHANGE_INIT(kex, connection) \
+#define KEYEXCHANGE_INIT(kex, connection, ) \
 ((kex)->init((kex), (connection)))
-     
+
 struct kexinit
 {
   UINT8 cookie[16];

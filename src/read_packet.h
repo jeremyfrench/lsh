@@ -28,7 +28,6 @@
 
 #include "abstract_io.h"
 #include "abstract_crypto.h"
-#include "newkeys.h"
 
 struct read_packet
 {
