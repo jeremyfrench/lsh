@@ -165,4 +165,7 @@
  * padding, MAC etc */
 #define SSH_MAX_PACKET_FUZZ (35000 - SSH_MAX_PACKET)
 
+/* Subtract this to get a reasonable max_packet value for a channel. */
+#define SSH_CHANNEL_MAX_PACKET_FUZZ 100
+
 #endif /* LSH_SSH_H_INCLUDED */
