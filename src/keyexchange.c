@@ -31,6 +31,7 @@
 #include "connection.h"
 #include "debug.h"
 #include "format.h"
+#include "io.h"
 #include "parse.h"
 #include "publickey_crypto.h"
 #include "ssh.h"
@@ -51,9 +52,7 @@
      (name kexinit_handler)
      (super packet_handler)
      (vars
-       (init object make_kexinit)
-
-       ; Extra rgument for the KEYEXCHANGE_INIT call.
+       ; Extra argument for the KEYEXCHANGE_INIT call.
        (extra object lsh_object)
        
        ; Maps names to algorithms. It's dangerous to lookup random atoms
@@ -151,14 +150,19 @@ send_kexinit(struct ssh_connection *connection)
   struct lsh_string *s;
   int mode = connection->flags & CONNECTION_MODE;
 
-  struct kexinit *kex = connection->kexinits[mode];
+  struct kexinit *kex
+    = connection->kexinits[mode]
+    = MAKE_KEXINIT(connection->kexinit);
   
   assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);
   assert(connection->read_kex_state == KEX_STATE_INIT);
 
   /* First, disable any key reexchange timer */
   if (connection->key_expire)
-    KILL_RESOURCE(connection->key_expire);
+    {
+      KILL_RESOURCE(connection->key_expire);
+      connection->key_expire = NULL;
+    }
   
   s = format_kex(kex);
 
@@ -264,23 +268,7 @@ do_handle_kexinit(struct packet_handler *c,
   
   /* Have we sent a kexinit message already? */
   if (!connection->kexinits[mode])
-    {
-      connection->kexinits[mode] = MAKE_KEXINIT(closure->init);
-      send_kexinit(connection);
-#if 0
-      struct lsh_string *packet;
-      struct kexinit *sent = MAKE_KEXINIT(closure->init);
-      connection->kexinits[mode] = sent;
-      packet = format_kex(sent);
-#if 0
-      debug("do_handle_kexinit: Storing literal_kexinits[%i]\n", mode);
-#endif
-      connection->literal_kexinits[mode] = lsh_string_dup(packet); 
-      
-      connection_send_kex_start(connection);
-      C_WRITE_NOW(connection, packet);
-#endif
-    }
+    send_kexinit(connection);
 
   /* Select key exchange algorithms */
 
@@ -371,15 +359,13 @@ do_handle_kexinit(struct packet_handler *c,
 }
 
 struct packet_handler *
-make_kexinit_handler(struct make_kexinit *init,
-		     struct lsh_object *extra,
+make_kexinit_handler(struct lsh_object *extra,
 		     struct alist *algorithms)
 {
   NEW(kexinit_handler, self);
 
   self->super.handler = do_handle_kexinit;
 
-  self->init = init;
   self->extra = extra;
   self->algorithms = algorithms;
   
@@ -580,6 +566,42 @@ kex_make_inflate(struct object_list *algorithms,
 
 /* GABA:
    (class
+     (name reexchange_timeout)
+     (super lsh_callback)
+     (vars
+       (connection object ssh_connection)))
+*/
+
+static void
+do_reexchange_timeout(struct lsh_callback *s)
+{
+  CAST(reexchange_timeout, self, s);
+  assert(!self->connection->send_kex_only);
+
+  verbose("Session key expired. Initiating key re-exchange.\n");
+  send_kexinit(self->connection);
+}
+
+static void
+set_reexchange_timeout(struct ssh_connection *connection,
+		       unsigned seconds)
+{
+  NEW(reexchange_timeout, timeout);
+
+  verbose("Setting session key lifetime to %i seconds\n",
+	  seconds);
+  timeout->super.f = do_reexchange_timeout;
+  timeout->connection = connection;
+
+  assert(!connection->key_expire);
+  connection->key_expire = io_callout(&timeout->super,
+				      seconds);
+  
+  REMEMBER_RESOURCE(connection->resources, connection->key_expire); 
+}
+
+/* GABA:
+   (class
      (name newkeys_handler)
      (super packet_handler)
      (vars
@@ -587,6 +609,14 @@ kex_make_inflate(struct object_list *algorithms,
        (mac object mac_instance)
        (compression object compress_instance)))
 */
+
+/* Maximum lifetime for the session keys. Use longer timeout on
+ * the server side. */
+
+/* 40 minutes */
+#define SESSION_KEY_LIFETIME_CLIENT 2400
+/* 90 minutes */
+#define SESSION_KEY_LIFETIME_SERVER 5400
 
 static void
 do_handle_newkeys(struct packet_handler *c,
@@ -627,6 +657,13 @@ do_handle_newkeys(struct packet_handler *c,
       
       connection->dispatch[SSH_MSG_NEWKEYS] = &connection_fail_handler;
 
+      /* Set maximum lifetime for the session keys. Use longer timeout on
+       * the server side. */
+      
+      set_reexchange_timeout
+	(connection,
+	 ((connection->flags & CONNECTION_MODE) == CONNECTION_SERVER)
+	 ? SESSION_KEY_LIFETIME_SERVER : SESSION_KEY_LIFETIME_CLIENT);
       KILL(closure);
     }
   else
@@ -823,6 +860,7 @@ kex_build_secret(const struct hash_algorithm *H,
   return hash;
 }
 
+
 /* NOTE: Consumes both the exchange_hash and K */
 void
 keyexchange_finish(struct ssh_connection *connection,
@@ -876,8 +914,6 @@ keyexchange_finish(struct ssh_connection *connection,
 #endif
     send_verbose(connection->write, "Key exchange successful!", 0);
 #endif
-
-  /* FIXME: This is the time for installing the key_expire timer. */
   
   /* FIXME: If we have stopped readin channel sources during the key
    * exchange, we must get them started again, perhaps by calling

@@ -138,8 +138,7 @@ extern struct command_2 kexinit_filter;
 void send_kexinit(struct ssh_connection *connection);
 
 struct packet_handler *
-make_kexinit_handler(struct make_kexinit *init,
-		     struct lsh_object *extra,
+make_kexinit_handler(struct lsh_object *extra,
 		     struct alist *algorithms);
 
 struct packet_handler *
