@@ -107,7 +107,41 @@ make_sexp_print_command(int format)
   return &self->super;
 }
 
-/* GABA:
+DEFINE_COMMAND3(sexp_print_raw_hash)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct lsh_object *a3,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+  CAST_SUBTYPE(hash_algorithm, algorithm, a1);
+  CAST_SUBTYPE(abstract_write, dest, a2);
+  CAST_SUBTYPE(sexp, o, a3);
+
+  struct lsh_string *canonical = sexp_format(o, SEXP_CANONICAL, 0);
+  struct hash_instance *hash = MAKE_HASH(algorithm);
+  struct lsh_string *digest = lsh_string_alloc(hash->hash_size);
+
+  HASH_UPDATE(hash, canonical->length, canonical->data);
+  HASH_DIGEST(hash, digest->data);
+  
+  lsh_string_free(canonical);
+  KILL(hash);
+
+  A_WRITE(dest, ssh_format("%lxfS\n", digest));
+
+  COMMAND_RETURN(c, o);
+}
+
+struct command *
+make_sexp_print_raw_hash(struct hash_algorithm *algorithm)
+{
+  return make_command_3_invoke(&sexp_print_raw_hash,
+			       &algorithm->super);
+}
+
+#if 0
+/* ;; GABA:
    (class
      (name sexp_print_raw_hash_to)
      (super command)
@@ -179,6 +213,7 @@ make_sexp_print_raw_hash(struct hash_algorithm *algorithm)
   
   return print;
 }
+#endif
 
 /* GABA:
    (class
