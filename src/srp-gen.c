@@ -99,7 +99,7 @@ make_srp_gen_options(struct io_backend *backend,
   self->passwd = NULL;
 
   /* We use this only for generating the salt. */
-  self->r = make_reasonably_random();
+  self->r = make_bad_random();
 
   return self;
 }
