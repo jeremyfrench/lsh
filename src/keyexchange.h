@@ -27,17 +27,9 @@
 #include "abstract_crypto.h"
 #include "alist.h"
 #include "compress.h"
+#include "kexinit.h"
 #include "list.h"
-#include "connection.h"
 
-#define KEX_ENCRYPTION_CLIENT_TO_SERVER 0
-#define KEX_ENCRYPTION_SERVER_TO_CLIENT 1
-#define KEX_MAC_CLIENT_TO_SERVER 2
-#define KEX_MAC_SERVER_TO_CLIENT 3
-#define KEX_COMPRESSION_CLIENT_TO_SERVER 4
-#define KEX_COMPRESSION_SERVER_TO_CLIENT 5
-
-#define KEX_PARAMETERS 6
 
 
 #define GABA_DECLARE
@@ -62,57 +54,9 @@
 #define KEYEXCHANGE_INIT(kex, connection, ha, e, a) \
 ((kex)->init((kex), (connection), (ha), (e), (a)))
 
-/* GABA:
-   (class
-     (name kexinit)
-     (vars
-       (cookie array uint8_t 16);
-       ; Lists of atoms
-       (kex_algorithms object int_list)
-       (server_hostkey_algorithms object int_list)
-       (parameters array (object int_list) KEX_PARAMETERS)
-       (languages_client_to_server object int_list)
-       (languages_server_to_client object int_list)
-       (first_kex_packet_follows . int)
-       ; May be NULL. Used only for sending.
-       (first_kex_packet string)))
-*/
      
-/* This function generates a new kexinit message.
- *
- * If a speculative packet follows, it is stored in the last field. */
-
-/* GABA:
-   (class
-     (name make_kexinit)
-     (vars
-       (make method (object kexinit)) ))
-*/
-
-#define MAKE_KEXINIT(s) ((s)->make((s)))
-     
-struct lsh_string *format_kex(struct kexinit *kex);
 void disconnect_kex_failed(struct ssh_connection *connection, const char *msg);
 
-int
-kex_make_encrypt(struct crypto_instance **c,
-		 struct hash_instance *secret,
-		 struct object_list *algorithms,
-		 int type,
-		 struct lsh_string *session_id);
-
-int
-kex_make_decrypt(struct crypto_instance **c,
-		 struct hash_instance *secret,
-		 struct object_list *algorithms,
-		 int type,
-		 struct lsh_string *session_id);
-
-struct mac_instance *
-kex_make_mac(struct hash_instance *secret,
-	     struct object_list *algorithms,
-	     int type,
-	     struct lsh_string *session_id);
 
 struct make_kexinit *
 make_simple_kexinit(struct randomness *r,

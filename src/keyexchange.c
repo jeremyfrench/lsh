@@ -72,86 +72,7 @@
        (algorithms object alist)))
 */
 
-#define NLISTS 10
 
-/* Arbitrary limit on list length */
-/* An SSH-2.0-Sun_SSH_1.0 server has been reported to list 250
- * different algorithms, or in fact a list of installed locales. */
-#define KEXINIT_MAX_ALGORITMS 500
-
-static struct kexinit *
-parse_kexinit(struct lsh_string *packet)
-{
-  NEW(kexinit, res);
-  struct simple_buffer buffer;
-  unsigned msg_number;
-  uint32_t reserved;
-  
-  struct int_list *lists[NLISTS];
-  int i;
-  
-  simple_buffer_init(&buffer, STRING_LD(packet));
-
-  if (!parse_uint8(&buffer, &msg_number)
-      || (msg_number != SSH_MSG_KEXINIT) )
-    {
-      KILL(res);
-      return NULL;
-    }
-
-  if (!parse_octets(&buffer, 16, res->cookie))
-    {
-      KILL(res);
-      return NULL;
-    }
-
-  for (i = 0; i<NLISTS; i++)
-    if ( !(lists[i] = parse_atom_list(&buffer, KEXINIT_MAX_ALGORITMS)))
-      break;
-
-  if ( (i<NLISTS)
-       || !parse_boolean(&buffer, &res->first_kex_packet_follows)
-       || !parse_uint32(&buffer, &reserved)
-       || reserved || !parse_eod(&buffer) )
-    {
-      /* Bad format */
-      int j;
-      for (j = 0; j<i; j++)
-	KILL(lists[i]);
-      KILL(res);
-      return NULL;
-    }
-  
-  res->kex_algorithms = lists[0];
-  res->server_hostkey_algorithms = lists[1];
-
-  for (i=0; i<KEX_PARAMETERS; i++)
-    res->parameters[i] = lists[2 + i];
-
-  res->languages_client_to_server = lists[8];
-  res->languages_server_to_client = lists[9];
-
-  return res;
-}
-
-struct lsh_string *
-format_kex(struct kexinit *kex)
-{
-  return ssh_format("%c%ls%A%A%A%A%A%A%A%A%A%A%c%i",
-		    SSH_MSG_KEXINIT,
-		    16, kex->cookie,
-		    kex->kex_algorithms,
-		    kex->server_hostkey_algorithms,
-		    kex->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER],
-		    kex->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT],
-		    kex->parameters[KEX_MAC_CLIENT_TO_SERVER],
-		    kex->parameters[KEX_MAC_SERVER_TO_CLIENT],
-		    kex->parameters[KEX_COMPRESSION_CLIENT_TO_SERVER],
-		    kex->parameters[KEX_COMPRESSION_SERVER_TO_CLIENT],
-		    kex->languages_client_to_server,
-		    kex->languages_server_to_client,
-		    kex->first_kex_packet_follows, 0);
-}
   
 void
 send_kexinit(struct ssh_connection *connection)
@@ -160,11 +81,11 @@ send_kexinit(struct ssh_connection *connection)
   int mode = connection->flags & CONNECTION_MODE;
 
   struct kexinit *kex
-    = connection->kexinits[mode]
+    = connection->kex.kexinit[mode]
     = MAKE_KEXINIT(connection->kexinit);
   
   assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);
-  assert(connection->read_kex_state == KEX_STATE_INIT);
+  assert(connection->kex.state == KEX_STATE_INIT);
 
   /* First, disable any key reexchange timer */
   if (connection->key_expire)
@@ -173,14 +94,14 @@ send_kexinit(struct ssh_connection *connection)
       connection->key_expire = NULL;
     }
   
-  s = format_kex(kex);
+  s = format_kexinit(kex);
 
   /* Save value for later signing */
 #if 0
   debug("send_kexinit: Storing literal_kexinits[%i]\n", mode);
 #endif
   
-  connection->literal_kexinits[mode] = s; 
+  connection->kex.literal_kexinit[mode] = s; 
   connection_send_kex_start(connection);  
 
   connection_send_kex(connection, lsh_string_dup(s));
@@ -196,28 +117,6 @@ send_kexinit(struct ssh_connection *connection)
     }
 }
 
-static int
-select_algorithm(struct int_list *client_list,
-		 struct int_list *server_list)
-{
-  /* FIXME: This quadratic complexity algorithm should do as long as
-   * the lists are short. To avoid DOS-attacks, there should probably
-   * be some limit on the list lengths. */
-  unsigned i, j;
-
-  for(i = 0; i < LIST_LENGTH(client_list); i++)
-    {
-      int a = LIST(client_list)[i];
-      if (!a)
-	/* Unknown algorithm */
-	continue;
-      for(j = 0; j < LIST_LENGTH(server_list); j++)
-	if (a == LIST(server_list)[j])
-	  return a;
-    }
-
-  return 0;
-}
 
 void
 disconnect_kex_failed(struct ssh_connection *connection, const char *msg)
@@ -234,136 +133,30 @@ do_handle_kexinit(struct packet_handler *c,
 		  struct lsh_string *packet)
 {
   CAST(kexinit_handler, closure, c);
-  
-  int kex_algorithm_atom;
-  int hostkey_algorithm_atom;
-
-  int parameters[KEX_PARAMETERS];
-  struct object_list *algorithms;
-
   int mode = connection->flags & CONNECTION_MODE;
-  struct kexinit *msg = parse_kexinit(packet);
+  const char *error;
 
-  int i;
-
-  verbose("Received KEXINIT message. Key exchange initated.\n");
-  
-  if (connection->read_kex_state != KEX_STATE_INIT)
-    {
-      PROTOCOL_ERROR(connection->e, "Unexpected KEXINIT message.");
-      return;
-    }      
-  
-  if (!msg)
-    {
-      disconnect_kex_failed(connection, "Invalid KEXINIT message.");
-      return;
-    }
-
-  if (!LIST_LENGTH(msg->kex_algorithms))
-    {
-      disconnect_kex_failed(connection, "No keyexchange method.");
-      return;
-    }
-    
-    
-  /* Save value for later signing */
-#if 0
-  debug("do_handle_kexinit: Storing literal_kexinits[%i]\n", !mode);
-#endif
-  connection->literal_kexinits[!mode] = lsh_string_dup(packet);
-  
-  connection->kexinits[!mode] = msg;
-  
   /* Have we sent a kexinit message already? */
-  if (!connection->kexinits[mode])
+  if (!connection->kex.kexinit[mode])
     send_kexinit(connection);
-
-  /* Select key exchange algorithms */
-
-  /* FIXME: Look at the hostkey algorithm as well. */
-  if (LIST(connection->kexinits[CONNECTION_CLIENT]->kex_algorithms)[0]
-      == LIST(connection->kexinits[CONNECTION_SERVER]->kex_algorithms)[0])
-    {
-      /* Use this algorithm */
-      kex_algorithm_atom
-	= LIST(connection->kexinits[CONNECTION_CLIENT]->kex_algorithms)[0];
-
-      connection->read_kex_state = KEX_STATE_IN_PROGRESS;
-    }
-  else
-    {
-      if (msg->first_kex_packet_follows)
-	{
-	  /* Wrong guess */
-	  connection->read_kex_state = KEX_STATE_IGNORE;
-	}
-
-      /* FIXME: Ignores that some keyexchange algorithms require
-       * certain features of the host key algorithms. */
-      
-      kex_algorithm_atom
-	= select_algorithm(connection->kexinits[CONNECTION_CLIENT]->kex_algorithms,
-			   connection->kexinits[CONNECTION_SERVER]->kex_algorithms);
-
-      /* FIXME: This is actually ok for SRP. */
-      if  (!kex_algorithm_atom)
-	{
-	  disconnect_kex_failed(connection,
-				"No common key exchange method.\r\n");
-	  return;
-	}
-    }
   
-  hostkey_algorithm_atom
-    = select_algorithm(connection->kexinits[CONNECTION_CLIENT]->server_hostkey_algorithms,
-		       connection->kexinits[CONNECTION_SERVER]->server_hostkey_algorithms);
+  error = handle_kexinit(&connection->kex, packet, closure->algorithms,
+			 mode);
 
-  if (!hostkey_algorithm_atom)
+  if (error)
     {
-      disconnect_kex_failed(connection, "No common hostkey algorithm.\r\n");
+      disconnect_kex_failed(connection, error);
       return;
     }
-
-  verbose("Selected keyexchange algorithm: %a\n"
-	  "  with hostkey algorithm:       %a\n",
-	  kex_algorithm_atom, hostkey_algorithm_atom);
-    
-  for(i = 0; i<KEX_PARAMETERS; i++)
-    {
-      parameters[i]
-	= select_algorithm(connection->kexinits[CONNECTION_CLIENT]->parameters[i],
-			   connection->kexinits[CONNECTION_SERVER]->parameters[i]);
-      
-      if (!parameters[i])
-	{
-	  disconnect_kex_failed(connection, "Algorithm negotiation failed.");
-	  return;
-	}
-    }
-
-  verbose("Selected bulk algorithms: (client to server, server to client)\n"
-	  "  Encryption:             (%a, %a)\n"
-	  "  Message authentication: (%a, %a)\n"
-	  "  Compression:            (%a, %a)\n",
-	  parameters[0], parameters[1],
-	  parameters[2], parameters[3], 
-	  parameters[4], parameters[5]);
-  
-  algorithms = alloc_object_list(KEX_PARAMETERS);
-  
-  for (i = 0; i<KEX_PARAMETERS; i++)
-    LIST(algorithms)[i] = ALIST_GET(closure->algorithms, parameters[i]);
-
   {
     CAST_SUBTYPE(keyexchange_algorithm, kex_algorithm,
-		 ALIST_GET(closure->algorithms, kex_algorithm_atom));
+		 LIST(connection->kex.algorithm_list)[KEX_KEY_EXCHANGE]);
 
     KEYEXCHANGE_INIT( kex_algorithm,
 		      connection,
-		      hostkey_algorithm_atom,
-		      closure->extra, /* hostkey_algorithm, */
-		      algorithms);
+		      connection->kex.hostkey_algorithm,
+		      closure->extra,
+		      connection->kex.algorithm_list);
   }
 }
 
@@ -379,206 +172,6 @@ make_kexinit_handler(struct lsh_object *extra,
   self->algorithms = algorithms;
   
   return &self->super;
-}
-
-#define IV_TYPE(t) ((t) + 4)
-
-static struct lsh_string *
-kex_make_key(struct hash_instance *secret,
-	     uint32_t key_length,
-	     int type,
-	     struct lsh_string *session_id)
-{
-  /* Indexed by the KEX_* values */
-  static const uint8_t tags[] = "CDEFAB";
-  
-  struct lsh_string *key;
-  struct hash_instance *hash;
-  struct lsh_string *digest;
-  
-  key = lsh_string_alloc(key_length);
-
-  debug("\nConstructing session key of type %i\n", type);
-  
-  if (!key_length)
-    return key;
-  
-  hash = hash_copy(secret);
-
-  hash_update(hash, 1, tags + type); 
-  hash_update(hash, STRING_LD(session_id));
-  digest = hash_digest_string(hash);
-
-  /* Is one digest large anough? */
-  if (key_length <= HASH_SIZE(hash))
-    lsh_string_write(key, 0, key_length, lsh_string_data(digest));
-
-  else
-    {
-      unsigned left = key_length;
-      uint32_t pos = 0;
-      
-      KILL(hash);
-      hash = hash_copy(secret);
-      
-      for (;;)
-	{
-	  /* The n:th time we enter this loop, digest holds K_n (using
-	   * the notation of section 5.2 of the ssh "transport"
-	   * specification), and hash contains the hash state
-	   * corresponding to
-	   *
-	   * H(secret | K_1 | ... | K_{n-1}) */
-
-	  struct hash_instance *tmp;
-
-	  assert(pos + left == key_length);
-	  
-	  /* Append digest to the key data. */
-	  lsh_string_write_string(key, pos, digest);
-	  pos += HASH_SIZE(hash);
-	  left -= HASH_SIZE(hash);
-
-	  /* And to the hash state */
-	  hash_update(hash, HASH_SIZE(hash), lsh_string_data(digest));
-	  lsh_string_free(digest);
-	  
-	  if (left <= HASH_SIZE(hash))
-	    break;
-	  
-	  /* Get a new digest, without disturbing the hash object (as
-	   * we'll need it again). We use another temporary hash for
-	   * extracting the digest. */
-	  
-	  tmp = hash_copy(hash);
-	  digest = hash_digest_string(tmp);
-	  KILL(tmp);
-	}
-
-      /* Get the final digest, and use some of it for the key. */
-      digest = hash_digest_string(hash);
-      lsh_string_write(key, pos, left, lsh_string_data(digest));
-    }
-
-  lsh_string_free(digest);
-  KILL(hash);
-
-  debug("Expanded key: %xS", key);
-
-  return key;
-}
-  
-int
-kex_make_encrypt(struct crypto_instance **c,
-		 struct hash_instance *secret,
-		 struct object_list *algorithms,
-		 int type,
-		 struct lsh_string *session_id)
-{
-  CAST_SUBTYPE(crypto_algorithm, algorithm, LIST(algorithms)[type]);
-  
-  struct lsh_string *key;
-  struct lsh_string *iv = NULL;
-  
-  assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
-  
-  *c = NULL;
-
-  if (!algorithm)
-    return 1;
-
-  key = kex_make_key(secret, algorithm->key_size,
-		     type, session_id);
-  
-  if (algorithm->iv_size)
-    iv = kex_make_key(secret, algorithm->iv_size,
-		      IV_TYPE(type), session_id);
-  
-  *c = MAKE_ENCRYPT(algorithm, lsh_string_data(key),
-		    iv ? lsh_string_data(iv) : NULL);
-
-  lsh_string_free(key);
-  lsh_string_free(iv);
-  
-  return *c != NULL;
-}
-
-int
-kex_make_decrypt(struct crypto_instance **c,
-		 struct hash_instance *secret,
-		 struct object_list *algorithms,
-		 int type,
-		 struct lsh_string *session_id)
-{
-  CAST_SUBTYPE(crypto_algorithm, algorithm, LIST(algorithms)[type]);
-
-  struct lsh_string *key;
-  struct lsh_string *iv = NULL;
-
-  assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
-
-  *c = NULL;
-
-  if (!algorithm)
-    return 1;
-
-  key = kex_make_key(secret, algorithm->key_size,
-		     type, session_id);
-    
-  if (algorithm->iv_size)
-    iv = kex_make_key(secret, algorithm->iv_size,
-		      IV_TYPE(type), session_id);
-  
-  *c = MAKE_DECRYPT(algorithm, lsh_string_data(key),
-		    iv ? lsh_string_data(iv) : NULL);
-
-  lsh_string_free(key);
-  lsh_string_free(iv);
-    
-  return *c != NULL;
-}
-
-struct mac_instance *
-kex_make_mac(struct hash_instance *secret,
-	     struct object_list *algorithms,
-	     int type,
-	     struct lsh_string *session_id)
-{
-  CAST_SUBTYPE(mac_algorithm, algorithm, LIST(algorithms)[type]);
-
-  struct mac_instance *mac;
-  struct lsh_string *key;
-
-  assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
-  
-  if (!algorithm)
-    return NULL;
-
-  key = kex_make_key(secret, algorithm->key_size,
-		     type, session_id);
-
-  mac = MAKE_MAC(algorithm, algorithm->key_size, lsh_string_data(key));
-
-  lsh_string_free(key);
-  return mac;
-}
-
-static struct compress_instance *
-kex_make_deflate(struct object_list *algorithms,
-		 int type)
-{
-  CAST_SUBTYPE(compress_algorithm, algorithm, LIST(algorithms)[type]);
-  
-  return algorithm ? MAKE_DEFLATE(algorithm) : NULL;
-}
-
-static struct compress_instance *
-kex_make_inflate(struct object_list *algorithms,
-		 int type)
-{
-  CAST_SUBTYPE(compress_algorithm, algorithm, LIST(algorithms)[type]);
-
-  return algorithm ? MAKE_INFLATE(algorithm) : NULL;
 }
 
 /* GABA:
@@ -661,16 +254,7 @@ do_handle_newkeys(struct packet_handler *c,
       connection->rec_mac = closure->mac;
       connection->rec_compress = closure->compression;
 
-      connection->read_kex_state = KEX_STATE_INIT;
-
-      connection->kexinits[CONNECTION_CLIENT]
-	= connection->kexinits[CONNECTION_SERVER] = NULL;
-
-      lsh_string_free(connection->literal_kexinits[CONNECTION_CLIENT]);
-      lsh_string_free(connection->literal_kexinits[CONNECTION_SERVER]);
-      
-      connection->literal_kexinits[CONNECTION_CLIENT]
-	= connection->literal_kexinits[CONNECTION_SERVER] = NULL;
+      reset_kexinit_state(&connection->kex);
 
       /* Normally, packet entries in the dispatch table must never be
        * NULL, but SSH_MSG_NEWKEYS is handled specially by
@@ -785,10 +369,10 @@ install_keys(struct object_list *algorithms,
   struct crypto_instance *send;
   int is_server = connection->flags & CONNECTION_SERVER;
 
-  assert(LIST_LENGTH(algorithms) == KEX_PARAMETERS);
+  assert(LIST_LENGTH(algorithms) == KEX_LIST_LENGTH);
 
   if (!kex_make_decrypt(&rec, secret, algorithms,
-			 KEX_ENCRYPTION_SERVER_TO_CLIENT ^ is_server,
+			KEX_ENCRYPTION_SERVER_TO_CLIENT ^ is_server,
 			connection->session_id))
     /* Weak or invalid key */
     return 0;
@@ -828,27 +412,6 @@ install_keys(struct object_list *algorithms,
 }
 
 
-/* Returns a hash instance for generating various session keys. NOTE:
- * This mechanism changed in the transport-05 draft. Before this, the
- * exchange hash was not included at this point. */
-static struct hash_instance *
-kex_build_secret(const struct hash_algorithm *H,
-		 struct lsh_string *exchange_hash,
-		 struct lsh_string *K)
-{
-  /* We include a length field for the key, but not for the exchange
-   * hash. */
-  
-  struct hash_instance *hash = make_hash(H);
-  struct lsh_string *s = ssh_format("%S%lS", K, exchange_hash);
-
-  hash_update(hash, STRING_LD(s));
-  lsh_string_free(s);
-  
-  return hash;
-}
-
-
 /* NOTE: Consumes both the exchange_hash and K */
 void
 keyexchange_finish(struct ssh_connection *connection,
@@ -863,12 +426,11 @@ keyexchange_finish(struct ssh_connection *connection,
    * newkeys message. */
 
   assert(connection->send_kex_only);
-  connection_send_kex(connection, ssh_format("%c", SSH_MSG_NEWKEYS));
+  connection_send_kex(connection, format_newkeys());
   
   /* A hash instance initialized with the key, to be used for key
    * generation */
   hash = kex_build_secret(H, exchange_hash, K);
-  lsh_string_free(K);
   
   /* Record session id */
   if (!connection->session_id)
@@ -892,5 +454,5 @@ keyexchange_finish(struct ssh_connection *connection,
    * now. */
   connection_send_kex_end(connection);
   
-  connection->read_kex_state = KEX_STATE_NEWKEYS;
+  connection->kex.state = KEX_STATE_NEWKEYS;
 }
