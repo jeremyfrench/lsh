@@ -377,8 +377,9 @@ DEFINE_COMMAND4(handshake_command)
   connection = make_ssh_connection
     (info->flags,
      lv->peer, info->debug_comment, 
-     c,
      make_exc_finish_read_handler(lv->fd, e, HANDLER_CONTEXT));
+
+  connection_after_keyexchange(connection, c);
   
   connection_init_io
     (connection, 
