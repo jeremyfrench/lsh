@@ -181,14 +181,14 @@ spki_make_signer(struct alist *algorithms,
 }
 
 struct sexp *
-spki_make_public_key(struct signer *signer)
+spki_make_public_key(struct verifier *verifier)
 {
   return sexp_l(2, SA(PUBLIC_KEY),
-		SIGNER_PUBLIC(signer), -1);
+		PUBLIC_SPKI_KEY(verifier), -1);
 }
 
 /* FIXME: Replace this by something more general. */
-#if 1
+#if 0
 struct sexp *
 dsa_to_spki_public_key(struct dsa_public *dsa)
 {
@@ -229,7 +229,7 @@ int spki_get_type(struct sexp *e, struct sexp_iterator **res)
 COMMAND_SIMPLE(spki_signer2public)
 {
   CAST_SUBTYPE(signer, private, a);
-  return &spki_make_public_key(private)->super;
+  return &SIGNER_GET_VERIFIER(private)->super;
 }
 
 struct sexp *
@@ -382,14 +382,16 @@ parse_private_key(struct alist *algorithms,
     {	  
     case ATOM_DSA:
       COMMAND_RETURN(c, make_keypair(ATOM_SSH_DSS,
-				     ssh_dss_public_key(s),
+				     PUBLIC_KEY(SIGNER_GET_VERIFIER(s)),
 				     s));
       /* Fall through */
     default:
       /* Get a corresponding public key. */
-      COMMAND_RETURN(c, make_keypair(ATOM_SPKI,
-				     sexp_format(spki_make_public_key(s), SEXP_CANONICAL, 0),
-				     s));
+      COMMAND_RETURN(c, make_keypair
+		     (ATOM_SPKI,
+		      sexp_format(spki_make_public_key(SIGNER_GET_VERIFIER(s)),
+				  SEXP_CANONICAL, 0),
+		      s));
 
       break;
     }

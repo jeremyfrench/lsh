@@ -77,10 +77,12 @@ spki_make_signer(struct alist *algorithms,
 		 int *type);
 
 struct sexp *
-spki_make_public_key(struct signer *signer);
+spki_make_public_key(struct verifier *verifier);
 
+#if 0
 struct sexp *
 dsa_to_spki_public_key(struct dsa_public *p);
+#endif
 
 extern struct command_simple spki_signer2public;
 #define SIGNER2PUBLIC (&spki_signer2public.super.super)
