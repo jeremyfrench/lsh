@@ -56,4 +56,7 @@ base64_init(struct base64_state *state, UINT8 terminator);
 int
 base64_decode(struct base64_state *state, UINT8 c);
 
+/* Only used by the testsuite */
+struct lsh_string *simple_decode_hex(const unsigned char *in);
+
 #endif /* LSH_DIGITS_H_INCLUDED */

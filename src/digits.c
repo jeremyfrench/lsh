@@ -25,6 +25,7 @@
 
 #include "digit_table.h"
 #include "werror.h"
+#include "xalloc.h"
 
 #include <assert.h>
 
@@ -73,4 +74,29 @@ base64_decode(struct base64_state *state, UINT8 c)
   state->bits -= 8;
   
   return res;
+}
+
+struct lsh_string *
+simple_decode_hex(const unsigned char *in)
+{
+  unsigned length = strlen(in);
+  unsigned i, j;
+  
+  struct lsh_string *out;
+  
+  assert(!(length % 2));
+  out = lsh_string_alloc(length/2);
+
+  for (i = j = 0; i<length; )
+  {
+    int d1 = hex_digits[in[i++]];
+    int d2 = hex_digits[in[i++]];
+
+    assert(d1 >= 0);
+    assert(d2 >= 0);
+
+    out->data[j++] = (d1 << 4) | d2;
+  }
+
+  return out;
 }
