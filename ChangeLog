@@ -1,3 +1,8 @@
+2004-11-07  Niels Möller  <nisse@lysator.liu.se>
+
+	* misc/xenofarm.sh: If a liboop dist is included in the build
+	package, install it in $pfx before trying to build lsh.
+
 2004-10-26  Niels Möller  <nisse@lysator.liu.se>
 
 	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): Need extra quoting in

@@ -35,7 +35,8 @@ done
 
 pfx=`pwd`/pfx
 
-cfgargs="-C --with-include-path=/usr/local/include --with-lib-path=/usr/local/lib --prefix=$pfx $cfgargs"
+oopcfgargs="-C --prefix=$pfx $cfgargs"
+cfgargs="-C --with-include-path=/usr/local/include:$pfx/include --with-lib-path=/usr/local/lib:$pfx/lib --prefix=$pfx $cfgargs"
 
 # Fix PATH for system where the default environment is broken
 
@@ -63,6 +64,8 @@ exec > r/shlog.txt 2>&1
 
 BASE=`echo lsh-*.tar.gz | sed 's/.tar.gz$//'`
 VERS=`echo "$BASE" | sed 's/^lsh-//'`
+
+LIBOOPDIST=`echo liboop-*.tar.gz`
 
 timeecho () {
     # FIXME: Don't depend on GNU date
@@ -184,6 +187,21 @@ status=good
 
 echo 'FORMAT 2' > r/mainlog.txt
 
+if [ -f $LIBOOPDIST ] ; then
+  # Install liboop in $pfx, before trying lsh
+  LIBOOPBASE=`echo $LIBOOPDIST | sed 's/.tar.gz$//'`
+  liboopstatus=good
+else
+  liboopstatus=skip
+fi
+
+dotask 1 "oopunzip" "" "gzip -d $LIBOOPBASE.tar.gz" liboopstatus
+dotask 1 "oopunpack" "" "tar xf $LIBOOPBASE.tar.gz" liboopstatus
+dotask 1 "oopcfg" "cfgwarn" "cd $LIBOOPBASE && ./configure $oopcfgargs" liboopstatus
+dotask 1 "oopmake "makewarn" "cd $LIBOOPBASE && make" liboopstatus
+dotask 0 "oopcheck "makewarn" "cd $LIBOOPBASE && make check" liboopstatus
+dotask 1 "oopinstall "makewarn" "cd $LIBOOPBASE && make install" liboopstatus
+
 dotask 1 "unzip" "" "gzip -d $BASE.tar.gz"
 dotask 1 "unpack" "" "tar xf $BASE.tar"
 dotask 1 "cfg" "cfgwarn" \
@@ -242,12 +260,15 @@ cp $BASE/src/spki/config.log r/spkiconfiglog.txt
 cp $BASE/src/spki/config.h r/spkiconfig-h.txt
 cp $BASE/config.h r/config-h.txt
 
+cp $LIBOOPBASE/config.cache r/oopconfigcache.txt
+cp $LIBOOPBASE/config.h r/oopconfig-h.txt
+cp $LIBOOPBASE/config.log r/oopconfiglog.txt
+
 find $BASE -name core -print > r/corefiles.txt
 if test `wc -l < r/corefiles.txt` -eq 0
 then
     rm r/corefiles.txt
 fi
-
 
 env > r/environ.txt
 echo $PATH > r/path.txt
