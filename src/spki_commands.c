@@ -330,7 +330,6 @@ DEFINE_COMMAND_SIMPLE(spki_make_context_command, a)
   return &make_spki_context(algorithms)->super;
 }
 
-
 /* Reads a file of ACL:s, and returns an spki_context. */
 
 /* GABA:
@@ -361,14 +360,7 @@ make_spki_read_acls(struct alist *algorithms)
   return res;
 }
 
-DEFINE_COMMAND_SIMPLE(spki_read_acls_command, a)
-{
-  CAST_SUBTYPE(alist, algorithms, a);
-  CAST_SUBTYPE(command, res, spki_read_acl(algorithms));
 
-  return &res->super;
-}
-  
 /* Reading of host-keys
  * ********************/
 
