@@ -117,3 +117,11 @@ password-encrypted
 pkcs5v2
 salt
 label
+
+# Certificates and ACL:s
+certificate
+acl
+tag
+prefix
+set
+*
