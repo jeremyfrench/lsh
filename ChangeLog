@@ -1,3 +1,38 @@
+Fri Mar 12 17:03:47 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* configure.in: Added AM_MAINTAINER_MODE (Ray). Added changequote
+ 	calls when testing for specific utmp fields (Ray).
+
+Tue Mar  9 06:25:11 1999    <ray@zensunni>
+
+	* doc/TODO: Fixed typo.
+
+Sun Mar  7 20:32:52 1999    <ray@zensunni>
+
+	* src/cast.c: New.
+	* src/Makefile.am.in, src/crypto.c, src/crypto.h, src/algorithms.c:
+	Adapted for CAST-128.
+
+	* src/symmetric/include/cast.h, src/symmetric/cast.c: Added consts.
+	Added cast_selftest().
+
+	* src/symmetric/twofish.c (twofish_selftest): Fixed.
+	
+	* src/io.c, src/read_line.c, src/read_packet.c, src/read_scan.c: Added
+	asserts to ensure read() is called with a length > 0.
+
+	* doc/TODO: Removed the entry about CAST's patent status. RFC 2144
+	doesn't mention patents, and the abstract suggests CAST-128 is
+	unencumbered.
+
+	* doc/TODO, src/userauth.h: Fixed typos.
+
+Fri Mar  5 20:09:09 1999    <ray@zensunni>
+
+	* src/symmetric/twofish.c: Buglet fix by Ruud.
+
+	* make_am: Inserted space required for latest bash. (Noted by Ruud)
+
 Fri Mar 12 02:00:53 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/tcpforward.c (tcpforward-foo): Added a first test expression
@@ -122,6 +157,14 @@ Fri Mar  5 03:23:06 1999  Niels Möller  <nisse@lysator.liu.se>
 	* src/algorithms.c (default_crypto_algorithms): Added
 	ATOM_TWOFISH_CBC and ATOM_IDEA_CBC.
 
+Wed Mar  3 13:26:02 1999    <ray@zensunni>
+
+	* src/symmetric/twofish.c, src/symmetric/include/twofish.h: New.
+	LGPL-ed Twofish implementation by Ruud de Rooij <ruud@debian.org>.
+	* src/twofish.c: New. Based on src/blowfish.c .
+	* src/atoms.in, src/Makefile.am.in, src/algorithms.c, src/crypto.c,
+	src/crypto.h: Updated for Twofish.
+
 Mon Mar  1 01:36:54 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/publickey_crypto.c (init_diffie_hellman_instance): Include
@@ -160,6 +203,19 @@ Mon Mar  1 01:36:54 1999  Niels Möller  <nisse@lysator.liu.se>
 	* configure.in: Test for syslog.h.
 	New --with-ssh2-dsa-kludge option.
 
+Sun Feb 28 19:29:36 1999    <ray@zensunni>
+
+	* configure.in: Fixed struct utmp member tests.
+
+	* misc/Makefile.am.in: Include ctags.mk.
+
+	* src/symmetric/twofish.c, src/symmetric/include/twofish.h: New.
+	Placeholders.
+	* src/symmetric/Makefile.am.in: Updated for twofish.
+
+	* src/atoms.in: With the updated draft, 256-bit TwoFish is now
+	recommended.
+
 Sun Feb 28 20:01:32 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/cvs_headers, src/used_headers: Fixes for compatibility with
@@ -174,7 +230,7 @@ Sat Feb 27 04:43:25 1999  Niels Möller  <nisse@lysator.liu.se>
 	* src/server_pty.h (pty_info): Use string type for the tty_name
 	field. 
 
-	* src/server_pty.c (pty_allocate): Save the file name  of te slave
+	* src/server_pty.c (pty_allocate): Save the file name of te slave
 	tty. Corrected the returned values.
 	(tty_setctty): Ugly "fix" in the SysV-version of this function.
 	Better error messages.
@@ -185,7 +241,7 @@ Sat Feb 27 04:43:25 1999  Niels Möller  <nisse@lysator.liu.se>
 	* AUTHORS, src/reaper.c: Fixed typos. (Ray)
 	
 	* configure.in, acconfig.h: Check for ut_addr_v6 in struct utmp; check
-	for utmpx.h . Fixed openpty check. Check for syslog(). 
+	for utmpx.h . Fixed openpty check. Check for syslog(). (Ray)
 
 Mon Feb 22 22:49:09 1999  Niels Möller  <nisse@lysator.liu.se>
 
@@ -193,6 +249,24 @@ Mon Feb 22 22:49:09 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.in: Fixed uses of AC_TRY_COMPILE.
 
+Thu Feb 18 21:48:54 1999    <ray@zensunni>
+
+	* (many files): Updated FSF address.
+
+	* AUTHORS: added getopt origin.
+	
+	* configure.in, acconfig.h: Check for ut_addr_v6 in struct utmp; check
+	for utmpx.h . Fixed openpty check. Check for syslog(). Fixed utmp
+	variations detection.
+
+	* doc/DSA.5, doc/SHA.5, doc/SPKI.5, doc/lsh.1, doc/lsh_keygen.1,
+	doc/lsh_writekey.1, doc/lshd.8, doc/secsh.5: New.
+
+	* src/server.c: Include strings.h if available (for bzero()); utmp
+	support; uptmx support.
+
+	* AUTHORS, src/reaper.c: Fixed typos.
+	
 Thu Feb 18 03:35:45 1999    <nisse@idonex.se>
 
 	* src/zlib.c: Reorganized. Now uses string_buffer for allocation.
