@@ -5,7 +5,7 @@ dnl Process this file with autoconf to produce a configure script.
 
 AC_INIT([lsh-sftp], [1.0-pre])
 AC_CONFIG_SRCDIR([sftp-server.c])
-AM_INIT_AUTOMAKE([dist-gzip])
+AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
 
 CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
@@ -174,7 +174,8 @@ lsh_cv_c_attribute=yes,
 lsh_cv_c_attribute=no)])
 
 if test "x$lsh_cv_c_attribute" = "xyes"; then
-  AC_DEFINE(HAVE_GCC_ATTRIBUTE)
+  AC_DEFINE([HAVE_GCC_ATTRIBUTE], 1,
+	    [Define if the compiler understands __attribute__.])
 fi
 
 dnl Checks for library functions.
