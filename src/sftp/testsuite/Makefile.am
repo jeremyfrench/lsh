@@ -4,5 +4,6 @@ EXTRA_DIST = common.sh run-tests \
 	    setup-env teardown-env \
 	    $(TS_SH)
 
+# I thought srcdir was exported automatically?
 check:
-	$(srcdir)/run-tests $(TS_SH)
+	srcdir="$(srcdir)" $(srcdir)/run-tests $(TS_SH)

@@ -1,6 +1,10 @@
 #! /bin/sh
 
-. ./common.sh
+if [ -z "$srcdir" ] ; then
+    srcdir=.
+fi
+
+. $srcdir/common.sh
 
 # Clean up first.
 rm -rf $TESTHOME

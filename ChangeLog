@@ -1,5 +1,7 @@
 2001-08-29  Niels Möller  <nisse@ehand.com>
 
+	* src/sftp/testsuite: Fixed scripts to work outside of $srcdir.
+
 	* src/sftp/buffer.c, src/sftp/client.c: Include string.h.
 
 	* src/algorithms.c (all_symmetric_algorithms): Use aes256-cbc as
