@@ -110,9 +110,10 @@ struct lsh_string
 struct ssh_connection;
 
 /* io.h */
-struct lsh_fd;
 struct address_info;
+struct io_backend;
 struct listen_value;
+struct lsh_fd;
 
 /* list.h */
 struct int_list;
