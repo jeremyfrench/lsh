@@ -91,8 +91,7 @@ make_ssh_hostkey_tag(struct address_info *host)
 	}
     }
 
-  tag = lsh_sexp_format(0, "(%0s(%0s%s))",
-			"tag", "ssh-hostkey",
+  tag = lsh_sexp_format(0, "(tag(ssh-hostkey%s))",
 			reversed->length, reversed->data);
   lsh_string_free(reversed);
 
@@ -198,7 +197,7 @@ spki_hash_data(const struct hash_algorithm *algorithm,
   hash_update(hash, length, data);
   hash_digest(hash, out);
 
-  return lsh_sexp_format(0, "(%0s%0s%s)",
+  return lsh_sexp_format(0, "(hash%0s%s)",
 			 "hash", get_atom_name(algorithm_name),
 			 HASH_SIZE(hash), out);
 }  
@@ -370,14 +369,16 @@ spki_pkcs5_encrypt(struct randomness *r,
 			       data, 0);
   
   /* FIXME: Handle iv == NULL. */
-  value = lsh_sexp_format(0, "(%0s%s(%0s%0s(%0s%i)(%0s%s))(%0s(%0s%s)(%0s%s)))",
-			  "password-encrypted", label->length, label->data,
-			  "xpkcs5v2", get_atom_name(prf_name),
-			  "iterations", iterations,
-			  "salt", salt->length, salt->data,
+  value = lsh_sexp_format(0, "(password-encrypted%s(xpkcs5v2%0s"
+			  "(iterations%i)(salt%s))"
+			  "(%0s(iv%s)(data%s)))",
+			  label->length, label->data,
+			  get_atom_name(prf_name),
+			  iterations,
+			  salt->length, salt->data,
 			  get_atom_name(crypto_name),
-			  "iv", iv->length, iv->data,
-			  "data", encrypted->length, encrypted->data);
+			  iv->length, iv->data,
+			  encrypted->length, encrypted->data);
 
   lsh_string_free(key);
   lsh_string_free(salt);
