@@ -2,13 +2,13 @@ dnl -*- mode: shell-script; sh-indentation: 2; -*-
 dnl $Id$
 
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT([lsh], [1.3.7], [bug-lsh@gnu.org]) 
+AC_INIT([lsh], [1.4], [bug-lsh@gnu.org]) 
 
 AC_PREREQ(2.50)
 
 AC_CONFIG_SRCDIR([src/lsh_types.h])
 
-AM_INIT_AUTOMAKE(lsh, 1.3.7)
+AM_INIT_AUTOMAKE(lsh, 1.4)
 
 AM_CONFIG_HEADER(config.h)
 # AC_CONFIG_HEADERS(config.h)
