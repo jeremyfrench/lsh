@@ -74,8 +74,8 @@ do_accept_service(struct packet_handler *c,
   CAST(accept_service_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
-  int name;
+  unsigned msg_number;
+  UINT32 name;
 
   simple_buffer_init(&buffer, packet->length, packet->data);
   
@@ -232,7 +232,7 @@ do_exit_status(struct channel_request *c,
 	       struct simple_buffer *args)
 {
   CAST(exit_handler, closure, c);
-  int status;
+  UINT32 status;
 
   if (!want_reply
       && parse_uint32(args, &status)
@@ -263,7 +263,7 @@ do_exit_signal(struct channel_request *c,
 {
   CAST(exit_handler, closure, c);
 
-  int signal;
+  UINT32 signal;
   int core;
 
   UINT8 *msg;
