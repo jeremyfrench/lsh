@@ -21,7 +21,16 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "sexp_parser.h"
+
+#include "read_scan.h"
 #include "sexp.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#include "sexp_table.h"
+
+#include <assert.h>
 
 /* Forward declarations */
 struct parse_node;
@@ -29,25 +38,7 @@ static void do_mark_parse_node(struct parse_node *n,
 			       void (*mark)(struct lsh_object *o));
 static void do_free_parse_node(struct parse_node *n);
 
-#if 0
-/* The first level decoder. Handles base-64 and hex codes,
- * and passes octets on to the scanner. */
-
-#define SCAN_OCTET 1
-#define SCAN_HEX 2
-#define SCAN_BASE64 3
-#define SCAN_TRANSPORT 4
-
-/* CLASS:
-   (class
-     (name sexp_decode)
-     (super read_handler)
-     (vars
-       ;; Scanning mode
-       (mode . int)
-       (next object scanner)))
-*/
-#endif
+#include "sexp_parser.c.x"
 
 /* CLASS:
    (class 
@@ -69,7 +60,7 @@ static void do_free_parse_node(struct parse_node *n);
 
 /* CLASS:
    (class
-     (name parse_s)
+     (name parse_string)
      (super parse)
      (vars
        (handler object string_handler)))
@@ -78,7 +69,7 @@ static void do_free_parse_node(struct parse_node *n);
 /* CLASS:
    (class
      (name parse_sexp)
-     (super scanner)
+     (super parse)
      (vars
        ; What to do with this expression
        (handler object sexp_handler)))
@@ -87,7 +78,7 @@ static void do_free_parse_node(struct parse_node *n);
 /* CLASS:
    (class
      (name parse_literal_data)
-     (super parse_s)
+     (super parse_string)
      (vars
        (i . UINT32)
        (data string)))
@@ -100,29 +91,32 @@ static int do_parse_literal_data(struct scanner **s, int token)
   if (token < 0)
     return LSH_FAIL | LSH_SYNTAX;
   
-  closure->data->string[closure->i++] = token;
+  closure->data->data[closure->i++] = token;
 
   if (closure->data->length == closure->i)
     {
       struct lsh_string *res = closure->data;
-      res->data = NULL;
-      *s = closure->next;
-      return HANDLE_STRING(closure->super.c, s, res);
+      closure->data = NULL;
+      *s = closure->super.super.next;
+      return HANDLE_STRING(closure->super.handler, res);
     }
   return LSH_OK;
 }
 
-static struct scanner *make_parse_literal_data(UINT32 length,
-					  struct string_handler *c)
+static struct scanner *
+make_parse_literal_data(UINT32 length,
+			struct string_handler *handler,
+			struct scanner *next)
 {
   NEW(parse_literal_data, closure);
 
-  closure->super.super->scan = do_parse_literal_data;
-  closure->super.c = c;
+  closure->super.super.super.scan = do_parse_literal_data;
+  closure->super.super.next = next;
+  closure->super.handler = handler;
   closure->i = 0;
   closure->data = lsh_string_alloc(length);
 
-  return &closure->super.super;
+  return &closure->super.super.super;
 }
 
 /* FIXME: Arbitrary limit. */
@@ -131,8 +125,9 @@ static struct scanner *make_parse_literal_data(UINT32 length,
 /* CLASS:
    (class
      (name parse_literal)
-     (super parse_s)
+     (super parse_string)
      (vars
+       (got_length . int)
        (length . UINT32)))
 */
 
@@ -141,18 +136,21 @@ static int do_parse_literal(struct scanner **s, int token)
   CAST(parse_literal, closure, *s);
   
   if (token < 0) goto fail;
-  
-  if (char_classes[token] & CHAR_digit)
+
+  if (sexp_char_classes[token] & CHAR_digit)
     {
       closure->length = closure->length * 10 + (token - '0');
       if (closure->length > SEXP_MAX_STRING)
 	goto fail;
 
+      closure->got_length = 1;
       return LSH_OK;
     }
-  else if (token == ':')
+  else if (closure->got_length && (token == ':'))
     {
-      *s = make_parse_literal_data(closure->length, closure->super.c);
+      *s = make_parse_literal_data(closure->length,
+				   closure->super.handler,
+				   closure->super.super.next);
       return LSH_OK;
     }
 
@@ -161,16 +159,18 @@ static int do_parse_literal(struct scanner **s, int token)
   return LSH_FAIL | LSH_SYNTAX;
 }
 
-static struct scanner *make_parse_literal(UINT32 start,
-					  struct string_handler *c)
+static struct scanner *make_parse_literal(struct string_handler *handler,
+					  struct scanner *next)
 {
   NEW(parse_literal, closure);
 
-  closure->super.super.scan = do_parse_literal;
-  closure->super.c = c;
-  closure->length = start;
+  closure->super.super.super.scan = do_parse_literal;
+  closure->super.super.next = next;
+  closure->super.handler = handler;
+  closure->got_length = 0;
+  closure->length = 0;
 
-  return &closure->super.super;
+  return &closure->super.super.super;
 }
 
 /* CLASS:
@@ -185,8 +185,7 @@ static int do_return_string(struct string_handler *h,
 			    struct lsh_string *data)
 {
   CAST(return_string, closure, h);
-  return LSH_PARSED_OBJECT |
-    HANDLE_SEXP(closure->c, make_sexp_string(NULL, data));
+  return HANDLE_SEXP(closure->c, make_sexp_string(NULL, data));
 }
 
 static struct string_handler *make_return_string(struct sexp_handler *c)
@@ -200,26 +199,26 @@ static struct string_handler *make_return_string(struct sexp_handler *c)
 }
 
 #define MAKE_PARSE(name)						\
-static int do_parse##name(struct scanner **s, int token);		\
+static int do_parse_##name(struct scanner **s, int token);		\
 									\
 static struct scanner *make_parse_##name(struct sexp_handler *h,	\
 					 struct scanner *next)		\
 {									\
-  NEW(parse_c, closure);						\
+  NEW(parse_sexp, closure);						\
 									\
-  closure->super.scan = do_parse##name;					\
+  closure->super.super.scan = do_parse_##name;				\
+  closure->super.next = next;						\
   closure->handler = h;							\
-  closure->next = next;							\
 									\
-  return &closure->super;						\
+  return &closure->super.super;						\
 }									\
 									\
-static int do_parse##name(struct scanner **s, int token)
+static int do_parse_##name(struct scanner **s, int token)
      
 /* CLASS:
    (class
      (name parse_skip)
-     (super parse_c)
+     (super parse_sexp)
      (vars
        (expect . int)
        (value object sexp)))
@@ -232,13 +231,18 @@ static int do_parse_skip(struct scanner **s, int token)
   /* FIXME: If the token doesn't match, perhaps we should install NULL
    * instead? */
   
-  *s = closure->super.next;
-
   if (token == closure->expect)
-    return (closure->super.handler
-	    ? HANDLE_SEXP(closure->super.handler, closure->value)
-	    : LSH_OK);
+    {
+      *s = closure->super.super.next;
+      return (closure->super.handler
+	      ? HANDLE_SEXP(closure->super.handler, closure->value)
+	      : LSH_OK);
+    }
 
+  /* FIXME: More readable error message */
+  werror("Expected token %d, got %d\n", closure->expect, token);
+  
+  *s = NULL;
   return LSH_FAIL | LSH_SYNTAX;  
 }
 
@@ -249,18 +253,19 @@ static struct scanner *make_parse_skip(int token,
 {
   NEW(parse_skip, closure);
 
-  closure->super.super.scan = do_parse_skip;
+  closure->super.super.super.scan = do_parse_skip;
+  closure->super.super.next = next;
   closure->super.handler = handler;
-  closure->super.next = next;
   closure->expect = token;
   closure->value = value;
 
-  return &closure->super.super;
+  return &closure->super.super.super;
 }
 
+#if 0
 MAKE_PARSE(simple_string)
 {
-  CAST(parse_c, closure, *s);
+  CAST(parse_sexp, closure, *s);
 
   switch(token)
     {
@@ -270,14 +275,16 @@ MAKE_PARSE(simple_string)
     case '0':
       /* This should be a single zero digit, as there mustn't be unneccessary
        * leading zeros. */
-      *s = make_parse_skip(':', sexp_z(""), closure->handler, closure->next);
+      *s = make_parse_skip(':', sexp_z(""),
+			   closure->handler, closure->super.next);
       return LSH_OK:
 
     case '1': case '2': case '3':
     case '4': case '5': case '6':
     case '7': case '8': case '9':
       *s = make_parse_literal(token - '0',
-			      make_return_string(closure->c), closure->next);
+			      make_return_string(closure->handler),
+			      closure->super.next);
       return LSH_OK;
 
     default:
@@ -285,28 +292,37 @@ MAKE_PARSE(simple_string)
       return LSH_FAIL | LSH_SYNTAX;
     }
 }
+#endif
 
-MAKE_PARSE(advanced_string)
+#if 0
+static int do_parse_advanced_string(struct scanner **s,
+				    int token)
 {
-  CAST(parse_c, closure, *s);
+  CAST(parse_string, closure, *s);
 
+  if (token < 0)
+    return LSH_FAIL | LSH_SYNTEX;
+
+  if (sexp_char_classes[token] & CHAR_digit)
+    {
+      *s = make_parse_length;
+    }
   switch(token)
     {
-    case TOKEN_EOS:
-      fatal("Internal error!\n");      
-
     case '0':
       /* This should be a single zero digit, as there mustn't be unneccessary
        * leading zeros. */
-      *s = make_parse_skip(':', closure->next, sexp_z(""), closure->c);
+      *s = make_parse_skip(':', sexp_z(""),
+			   closure->handler, closure->super.next);
       return LSH_OK:
 
     case '1': case '2': case '3':
     case '4': case '5': case '6':
     case '7': case '8': case '9':
-      *s = make_parse_literal(token - '0',
-				     make_return_string(closure->c));
-      return LSH_OK;
+      /* FIXME: Not only literals can have a length prefix */
+      *s = make_parse_literal(make_return_string(closure->handler),
+			      closure->super.next);
+      return SCAN(*s, token);
     case '"':
       fatal("Quoted strings not implemented!\n");
     case '|':
@@ -320,7 +336,22 @@ MAKE_PARSE(advanced_string)
     }
 }
 
-/* CLASS:
+#endif
+
+static struct scanner *make_parse_advanced_string(struct string_handler *h,
+						  struct scanner *next)
+{
+  NEW(parse_string, closure);
+
+  closure->handler = h;
+  closure->super.next = next;
+
+  return &closure->super.super;
+}
+
+
+#if 0
+/* xxCLASS:
    (class
      (name return_string_display)
      (super string_handler)
@@ -330,7 +361,6 @@ MAKE_PARSE(advanced_string)
 */
 
 static int do_return_string_display(struct string_handler *h,
-				    struct scanner **s,
 				    struct lsh_string *data)
 {
   CAST(return_string_display, closure, h);
@@ -355,62 +385,86 @@ make_return_string_display(struct lsh_string *display,
 
   return &closure->super;
 }
+#endif
 
 /* CLASS:
    (class
-     (name end_display)
+     (name handle_display)
      (super string_handler)
      (vars
+       (display string)
        (c object sexp_handler)))
 */
 
-static int do_end_display(struct string_handler *h, struct scanner **s,
-			  struct lsh_string *data)
+static int do_handle_display(struct string_handler *h,
+			     struct lsh_string *data)
 {
-  CAST(end_display, closure, h);
+  CAST(handle_display, closure, h);
 
-  *s = make_parse_skip
-    (']',
-     make_parse_literal(0,
-			       make_return_string_display(data, closure->c)),
-     NULL, NULL);
+  if (!closure->display)
+    {
+      closure->display = data;
+      return LSH_OK;
+    }
+  else
+    {
+      struct lsh_string *display = closure->display;
+      closure->display = NULL;
 
-  return LSH_OK;
+      return HANDLE_SEXP(closure->c,
+			 make_sexp_string(display, data));
+    }
 }
 
-static struct make_end_display(struct sexp_handler *c)
+static struct string_handler *make_handle_display(struct sexp_handler *c)
 {
-  NEW(end_display, closure);
+  NEW(handle_display, closure);
 
-  closure->super.handler = do_end_display;
+  closure->super.handler = do_handle_display;
+  closure->display = NULL;
   closure->c = c;
 
   return &closure->super;
 }
 
+static struct scanner *
+make_parse_display(struct scanner * (*make)(struct string_handler *h,
+					    struct scanner *next),
+		   struct sexp_handler *c,
+		   struct scanner *next)
+{
+  struct string_handler *h = make_handle_display(c);
+
+  return make(h,
+	      make_parse_skip(']', NULL, NULL,
+			      make(h, next)));
+}
+
+#if 0
 /* Parse and construct a list (with hooks for both advanced and
  * canonical formats) */
 
-/* CLASS:
+/* xxCLASS:
    (class
      (name parse_list)
-     (super parse_c)
-     (vars ))
-            ;; Construct a parser
+     (super parse_sexp)
+     (vars 
+       ;; Construct a parser
        (element_parser pointer (function "struct scanner *"
-                                         "struct sexp_handler *c"))
+                                         "struct sexp_handler *c"))))
 */
 
 /* Inter-element parser. Used to recognize the end of list ')' character,
  * and could also be used to skip optional whitespace. */
 
-/* CLASS:
+/* xxCLASS:
    (class
      (name parse_inter_list)
      (super scanner)
      (vars
        (list object parse_list)))
 */
+#endif
 
 struct parse_node
 {
@@ -423,7 +477,7 @@ static void do_mark_parse_node(struct parse_node *n,
 {
   while(n)
     {
-      mark(&n->item.super);
+      mark(&n->item->super);
       n = n->next;
     }
 }
@@ -448,7 +502,7 @@ static void do_free_parse_node(struct parse_node *n)
        ;; (restore object scanner)
        ; Number of elements collected so far
        (count . unsigned)
-       (head special "struct parse_node *"
+       (tail special "struct parse_node *"
              do_mark_parse_node do_free_parse_node)))
 */
 
@@ -456,14 +510,19 @@ static int do_handle_element(struct sexp_handler *h,
 			     struct sexp *e)
 {
   CAST(handle_element, closure, h);
-  NEW_SPACE(parse_node, n);
+  struct parse_node *n;
+  
+  NEW_SPACE(n);
 
   n->item = e;
-  n->next = closure->head;
+  n->next = closure->tail;
 
-  h->head = n;
-  h->count++;
+  closure->tail = n;
+  closure->count++;
 
+  return LSH_OK;
+  
+  #if 0
   /* FIXME: It would be nice if we could simply restore an older
    * scanner here, but we can perhaps not do that becase the location
    * pointer is not gc-friendly.
@@ -475,6 +534,7 @@ static int do_handle_element(struct sexp_handler *h,
    * So instead, we return a special status code. */
 
   return LSH_PARSED_OBJECT;
+  #endif
 }
 
 static struct handle_element *make_handle_element(void)
@@ -482,7 +542,7 @@ static struct handle_element *make_handle_element(void)
   NEW(handle_element, closure);
 
   closure->count = 0;
-  closure->head = NULL;
+  closure->tail = NULL;
 
   closure->super.handler = do_handle_element;
 
@@ -496,7 +556,7 @@ static struct sexp *build_parsed_vector(struct handle_element *h)
   unsigned i;
   struct parse_node *n;
   
-  for (n = h->head, i = h->count; n; n = n->next)
+  for (n = h->tail, i = h->count; n; n = n->next)
     {
       assert(i);
       LIST(l)[--i] = &n->item->super;
@@ -509,129 +569,157 @@ static struct sexp *build_parsed_vector(struct handle_element *h)
 /* CLASS:
    (class
      (name parse_list)
-     (super parse_c)
+     (super parse_sexp)
      (vars
        (elements object handle_element)
        ; Allow space between elements?
        (advanced . int)
        ; Used to parse each element
-       (start object scanner)
+       (start object scanner)))
+
        ; Current scanner
-       (state object scanner))) */
+       (state object scanner)))
+*/
 
 static int do_parse_list(struct scanner **s, int token)
 {
   CAST(parse_list, closure, *s);
-  int res;
   
   if (token < 0)
     return LSH_FAIL | LSH_SYNTAX;
 
-  if (!closure->state)
+  if (token == ')')
     {
-      if (token == ')')
-	{
-	  *s = NULL;
-	  return LSH_PARSED_OBJECT
-	    | HANDLE_SEXP(closure->super.handler,
-			  build_parsed_vector(closure->elements));
-	}
-      
-      if (closure->advanced && (char_classes[token] & CHAR_space))
-	return LSH_OK;
-
-      closure->state = closure->start;
+      *s = closure->super.super.next;
+      return HANDLE_SEXP(closure->super.handler,
+			 build_parsed_vector(closure->elements));
     }
+      
+  if (closure->advanced && (sexp_char_classes[token] & CHAR_space))
+    return LSH_OK;
 
-  res = SCAN(closure->state, token);
-
-  if (res == LSH_PARSED_OBJECT)
-    /* Restart on next token */
-    closure->state = NULL;
-  
-  return res & ~LSH_PARSED_OBJECT;
+  *s = closure->start;
+  return SCAN(*s, token);
 }
 
 static struct scanner *
 make_parse_list(int advanced,
-		struct scanner (*make)(struct sexp_handler *c),
-		struct sexp_handler *c)
+		struct scanner * (*make)(struct sexp_handler *c,
+					 struct scanner *next),
+		struct sexp_handler *handler,
+		struct scanner *next)
 {
   NEW(parse_list, closure);
 
+  closure->super.super.super.scan = do_parse_list;
+  closure->super.super.next = next;
+  closure->super.handler = handler;
+
+  closure->advanced = advanced;
   closure->elements = make_handle_element();
-  closure->start = make(&closure->elements.super);
-  closure->state = NULL;
+  closure->start = make(&closure->elements->super,
+			&closure->super.super.super);
 
-  closure->super.c = c;
-  closure->super.super.scan = do_parse_list;
-
-  return &closure->super.super;
+  return &closure->super.super.super;
 }
 					  
 /* Parser for the canonical format. */
 MAKE_PARSE(canonical_sexp)
 {
-  CAST(parse_c, closure, *s);
+  CAST(parse_sexp, closure, *s);
   
   switch (token)
     {
     case TOKEN_EOS:
       fatal("Internal error!\n");      
     case '[':
-      *s = make_parse_literal(0, make_end_display(closure->c));
-      return LSH_OK:
+      *s = make_parse_display(make_parse_literal, closure->handler,
+			      closure->super.next);
+      return LSH_OK;
     case '(':
-      *s = make_parse_list(0, make_parse_canonical_sexp, closure->c);
+      *s = make_parse_list(0, make_parse_canonical_sexp, closure->handler,
+			      closure->super.next);
       return LSH_OK;
     default:
       /* Should be a string */
-      *s = make_parse_literal(0, make_return_string(closure->c));
+      *s = make_parse_literal(make_return_string(closure->handler),
+			      closure->super.next);
       return SCAN(*s, token);
     }
 }
 
 /* CLASS:
    (class
-     (name parse_base64)
+     (name decode_base64)
      (super scanner)
      (vars
        (next object scanner);
        (end_marker . UINT8)))
 */
 
-static do_parse_base64(struct scanner **s, int token)
+static int do_decode_base64(struct scanner **s, int token)
 {
-  CAST(parse_base64, closure, *s);
+  CAST(decode_base64, closure, *s);
 
+  fatal("do_decode_base64: Not implemented!\n");
+
+#if 0
   if (token < 0)
        return LSH_FAIL;
   
   if (token == closure->end_marker)
     {
       int res = SCAN(closure->next, TOKEN_EOF);
-      if (
+      if ()}
+#endif
+}
+
+static struct scanner *make_decode_base64(int end,
+					  struct scanner *s,
+					  struct scanner *next)
+{
+  fatal("Not implemented!\n");
+}
+
+static struct scanner *
+make_parse_transport(struct scanner * (*make)(struct sexp_handler *c,
+					      struct scanner *next),
+		     struct sexp_handler *handler,
+		     struct scanner *next)
+{
+  return
+    make_decode_base64('{',
+		       make(handler,
+			    make_parse_skip(TOKEN_EOS,
+					    NULL, NULL, NULL)),
+		       next);
+}
+
 /* Parser for the canonical or transport format. */
 MAKE_PARSE(transport_sexp)
 {
-  CAST(parse_c, closure, *s);
+  CAST(parse_sexp, closure, *s);
   
   switch (token)
     {
     case TOKEN_EOS:
       fatal("Internal error!\n");      
     case '[':
-      *s = make_parse_literal(0, make_end_display(closure->c));
-      return LSH_OK:
+      *s = make_parse_display(make_parse_literal, closure->handler,
+			      closure->super.next);
+      return LSH_OK;
     case '(':
-      *s = make_parse_list(0, make_parse_canonical_sexp, closure->c);
+      *s = make_parse_list(0, make_parse_canonical_sexp, closure->handler,
+			      closure->super.next);
       return LSH_OK;
     case '{':
-      *s = make_parse_base64('}', make_parse_canonical_sexp,
-			     make_parse_skip(TOKEN_EOS), closure->c);
+      *s = make_parse_transport(make_parse_canonical_sexp,
+				closure->handler, closure->super.next);
+      return LSH_OK;
     default:
       /* Should be a string */
-      *s = make_parse_literal(0, make_return_string(closure->c));
+      *s = make_parse_literal(make_return_string(closure->handler),
+			      closure->super.next);
       return SCAN(*s, token);
     }
 }
@@ -639,24 +727,28 @@ MAKE_PARSE(transport_sexp)
 /* Parser for any format. */
 MAKE_PARSE(advanced_sexp)
 {
-  CAST(parse_c, closure, *s);
+  CAST(parse_sexp, closure, *s);
   
   switch (token)
     {
     case TOKEN_EOS:
       fatal("Internal error!\n");      
     case '[':
-      *s = make_parse_advanced_string(0, make_end_display(closure->c));
-      return LSH_OK:
+      *s = make_parse_display(make_parse_advanced_string, closure->handler,
+			      closure->super.next);
+      return LSH_OK;
     case '(':
-      *s = make_parse_list(1, make_parse_advanced_sexp, closure->c);
+      *s = make_parse_list(1, make_parse_advanced_sexp, closure->handler,
+			   closure->super.next);
       return LSH_OK;
     case '{':
-      *s = make_parse_base64('}', make_parse_advanced_sexp, closure->c);
+      *s = make_parse_transport(make_parse_canonical_sexp,
+				closure->handler, closure->super.next);
+      return LSH_OK;
     default:
       /* Should be a string */
-      *s = make_parse_advanced_string(0, make_return_string(closure->c));
+      *s = make_parse_advanced_string(make_return_string(closure->handler),
+				      closure->super.next);
       return SCAN(*s, token);
     }
 }
-
