@@ -36,7 +36,7 @@
 
 struct int_list *make_int_list(unsigned n, ...)
 {
-  int i;
+  unsigned i;
   va_list args;
   
   struct int_list *l = alloc_int_list(n);
@@ -57,7 +57,7 @@ struct int_list *make_int_list(unsigned n, ...)
 
 struct object_list *make_object_list(unsigned n, ...)
 {
-  int i;
+  unsigned i;
   va_list args;
   
   struct object_list *l = alloc_object_list(n);
