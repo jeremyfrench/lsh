@@ -13,6 +13,12 @@ key as well. This way, the private key can be decrypted on-demand.
 This seems cleaner than having the client read both identity and
 identity.pub.
 
+After retiring the complex "streamed" parser, sexp-conv can no longer
+handle arbitrarily large files. That should be fixed some time.
+Perhaps sexp-conv could use a parser of it's own, as that is the only
+program for which it would make sense to understand all features of
+the "advanced" syntax.
+
 
 USERS
 
@@ -43,11 +49,12 @@ Use tcpwrapper's libwrap to log connections and perform access control.
 
 ALLOCATION
 
-Not all packet consumers free processed packets properly.
-
 Have the allocator initialize all objects automatically.
 
 Consider adding reference counts to strings.
+
+Unify the debug malloc system to add a magic number to every block
+header, with distinct values for space, strings, objects and lists.
 
 
 OBJECT SYSTEM
