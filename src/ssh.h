@@ -25,6 +25,18 @@
 #define SSH_MSG_KEXDH_INIT             30
 #define SSH_MSG_KEXDH_REPLY            31
 
+/* SRP based key exchange (experimental) */
+
+#define SSH_MSG_KEXSRP_INIT            30
+#define SSH_MSG_KEXSRP_REPLY           31
+#define SSH_MSG_KEXSRP_PROOF           32
+
+/* Diffie-hellman with group negotiation (experimental) */
+
+#define SSH_MSG_KEX_DH_MOD_GROUPS      30
+#define SSH_MSG_KEX_DH_MOD_INIT        31
+#define SSH_MSG_KEX_DH_MOD_REPLY       32
+
 /* 50-59 User authentication generic */
 
 #define SSH_FIRST_USERAUTH_GENERIC 50
