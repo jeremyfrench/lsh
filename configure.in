@@ -92,6 +92,14 @@ if test x$with_ssh2_dsa_kludge = xyes ; then
   AC_DEFINE(DATAFELLOWS_SSH2_SSH_DSA_KLUDGE)
 fi
 
+AC_ARG_WITH(tcp_forward,
+  [--with-tcp-forward        Support tcp forwarding],,
+  [with_tcp_forward=yes])
+
+if test x$with_tcp_forward = xyes ; then
+  AC_DEFINE(WITH_TCP_FORWARD)
+fi
+  
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET

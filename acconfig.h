@@ -24,6 +24,9 @@
 /* Define if IDEA should be used */
 #undef WITH_IDEA
 
+/* Define to enable tcp forwarding */
+#undef WITH_TCP_FORWARD
+
 /* Define to indicate that shutdown seems to work properly */
 #undef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
 
