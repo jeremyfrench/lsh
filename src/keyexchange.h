@@ -138,7 +138,7 @@
 
 #if 0
 /* FIXME: I'm considering renaming this type to simply "keypair" */ 
-/* GABA:
+/* ;; GABA:
    (class
      (name keypair_info)
      (vars

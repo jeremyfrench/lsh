@@ -1,3 +1,61 @@
+Wed Sep 22 00:30:47 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_publickey.c (do_authenticate): Initialize
+	signature_start. 
+
+	* src/server.c (format_service_accept_kludge): Made function static.
+
+	* src/spki.c (keyblob2spki): Reorganized a little, and initialize
+ 	and free the dsa_public struct properly.
+
+	* src/lshd.c (do_read_key): Replaced keypair_info with keypair. 
+
+	* src/server_keyexchange.c (do_init_server_dh): -"-
+
+	* src/lsh.c (main): Added trailing zeros in the getopt
+ 	initializer.
+
+	*src/sexp_conv.c (main): -"-
+	
+	* src/dsa.c (init_dsa_public): New function.
+	(make_dsa_signer): Use init_dsa_public.
+
+	* src/exception.c: Use STATIC_EXCEPTION_HANDLER and
+	STATIC_EXCEPTION.
+
+Tue Sep 21 22:41:47 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/keyexchange.h: removed keypair_info class.
+
+	* src/keyexchange.c: removed make_keypair_info function..
+	
+	* src/publickey_crypto.h: renamed keypair_info to keypair, and
+ 	moved here.
+
+	* src/publickey_crypto.c: renamed make_keypair_info
+ 	renamed to make_keypair, and moved here.
+
+	* src/sexp_streamed_parser.c (make_parse_transport_sexp): Fixed
+	error message.
+
+1999-09-09  Balazs Scheidler  <bazsi@balabit.hu>
+
+	* src/lsh.c, src/lshd.c, src/sexp_conv.c: added some uninitialized
+ 	fields to structure inits to avoid warning
+
+	* src/command.c: fixed typo, make_once_continution ->
+	make_once_continuation
+
+	* src/server_password.h: removed, contents moved to server_userauth.h
+
+	* src/server_publickey.h: removed, contents moved to server_userauth.h
+
+	* src/server_userauth.h: merged with former server_password.h &
+	server_publickey.h
+
+	* src/server_userauth.c: unix account handling funtions moved
+	here, userauth_handler class.
+
 1999-09-07  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* abstract_io.h channel.c channel.h channel_commands.c client.c
