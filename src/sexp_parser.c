@@ -304,6 +304,7 @@ sexp_parse(int style, struct simple_buffer *buffer)
     case SEXP_CANONICAL:
       return sexp_parse_canonical(buffer);
     case SEXP_ADVANCED:
+    case SEXP_ADVANCED_HEX:
     case SEXP_INTERNATIONAL:
       werror("sexp syntax %i not supported in parser. "
 	     "Using transport syntax instead.\n", style);
