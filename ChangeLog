@@ -1,3 +1,11 @@
+2003-02-26  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/rapid7-lsh-test: Bugfixes, and some adaption to
+	the lsh testsuite framework.
+	* src/testsuite/rapid7-lshd-test: Likewise.
+
+	* src/testsuite/functions.sh (werror, die): New functions.
+
 2003-02-26  Pontus Sköld  <pont@soua.net>
 
 	* src/lsh-krb-checkpw.c: Include config.h if available.
