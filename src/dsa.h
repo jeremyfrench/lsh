@@ -48,6 +48,8 @@
    (struct
      (name dsa_public)
      (vars
+       ;; ; Original sexp or a hash thereof.
+       ;; (principal object sexp)
        (p bignum)
        (q bignum)
        (g bignum)
