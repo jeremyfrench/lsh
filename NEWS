@@ -1,3 +1,12 @@
+News for the 1.5.3 release
+
+	Fixed heap buffer overrun with potential remote root
+	compromise. Initial bug report by Bennett Todd.
+
+	Fixed a similar bug in the check for channel number allocation
+	failure in the handling of channel_open, and in the
+	experimental client SRP code.
+
 News for the 1.5.2 release
 
 	Encrypted private keys works again.

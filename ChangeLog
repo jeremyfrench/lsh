@@ -1,5 +1,7 @@
 2003-09-19  Niels Möller  <niels@s3.kth.se>
 
+	* configure.ac: Bumped version to 1.5.3.
+
 	* src/client_keyexchange.c (do_handle_srp_reply): Fixed missing
 	returns after disconnect_kex_failed and PROTOCOL_ERROR.
 
