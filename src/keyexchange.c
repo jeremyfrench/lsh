@@ -30,7 +30,6 @@
 #include "command.h"
 #include "connection.h"
 #include "debug.h"
-#include "disconnect.h"
 #include "format.h"
 #include "parse.h"
 #include "publickey_crypto.h"
@@ -155,8 +154,8 @@ initiate_keyexchange(struct ssh_connection *connection)
   struct kexinit *kex = connection->kexinits[mode];
 
   assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);
-  assert(connection->kex_state == KEX_STATE_INIT);
-	 
+  assert(connection->read_kex_state == KEX_STATE_INIT);
+  
   s = format_kex(kex);
 
   /* Save value for later signing */
@@ -165,15 +164,16 @@ initiate_keyexchange(struct ssh_connection *connection)
 #endif
   
   connection->literal_kexinits[mode] = s; 
+  connection_send_kex_start(connection);  
 
-  C_WRITE(connection, lsh_string_dup(s));
+  C_WRITE_NOW(connection, lsh_string_dup(s));
 
   if (kex->first_kex_packet_follows)
     {
       s = kex->first_kex_packet;
       kex->first_kex_packet = NULL;
 
-      C_WRITE(connection, s);
+      C_WRITE_NOW(connection, s);
     }
 }
 
@@ -229,7 +229,7 @@ do_handle_kexinit(struct packet_handler *c,
 
   verbose("Received KEXINIT message. Key exchange initated.\n");
   
-  if (connection->kex_state != KEX_STATE_INIT)
+  if (connection->read_kex_state != KEX_STATE_INIT)
     {
       PROTOCOL_ERROR(connection->e, "Unexpected KEXINIT message.");
       return;
@@ -268,7 +268,8 @@ do_handle_kexinit(struct packet_handler *c,
 #endif
       connection->literal_kexinits[mode] = lsh_string_dup(packet); 
       
-      C_WRITE(connection, packet);
+      connection_send_kex_start(connection);
+      C_WRITE_NOW(connection, packet);
     }
 
   /* Select key exchange algorithms */
@@ -281,14 +282,14 @@ do_handle_kexinit(struct packet_handler *c,
       kex_algorithm_atom
 	= LIST(connection->kexinits[CONNECTION_CLIENT]->kex_algorithms)[0];
 
-      connection->kex_state = KEX_STATE_IN_PROGRESS;
+      connection->read_kex_state = KEX_STATE_IN_PROGRESS;
     }
   else
     {
       if (msg->first_kex_packet_follows)
 	{
 	  /* Wrong guess */
-	  connection->kex_state = KEX_STATE_IGNORE;
+	  connection->read_kex_state = KEX_STATE_IGNORE;
 	}
 
       /* FIXME: Ignores that some keyexchange algorithms require
@@ -598,7 +599,7 @@ do_handle_newkeys(struct packet_handler *c,
       connection->rec_mac = closure->mac;
       connection->rec_compress = closure->compression;
 
-      connection->kex_state = KEX_STATE_INIT;
+      connection->read_kex_state = KEX_STATE_INIT;
 
       connection->kexinits[CONNECTION_CLIENT]
 	= connection->kexinits[CONNECTION_SERVER] = NULL;
@@ -609,7 +610,12 @@ do_handle_newkeys(struct packet_handler *c,
       connection->literal_kexinits[CONNECTION_CLIENT]
 	= connection->literal_kexinits[CONNECTION_SERVER] = NULL;
 
-      connection->dispatch[SSH_MSG_NEWKEYS] = NULL;
+      /* Normally, packet entries in the dispatch table must never be
+       * NULL, but SSH_MSG_NEWKEYS is handled specially by
+       * connection.c:connection_handle_packet. So we could use NULL
+       * here, but for uniformity we don't do that. */
+      
+      connection->dispatch[SSH_MSG_NEWKEYS] = &connection_fail_handler;
 
       KILL(closure);
     }
@@ -820,8 +826,9 @@ keyexchange_finish(struct ssh_connection *connection,
   /* Send a newkeys message, and install a handler for receiving the
    * newkeys message. */
 
-  C_WRITE(connection, ssh_format("%c", SSH_MSG_NEWKEYS));
-
+  assert(connection->send_kex_only);
+  C_WRITE_NOW(connection, ssh_format("%c", SSH_MSG_NEWKEYS));
+  
   /* A hash instance initialized with the key, to be used for key
    * generation */
   hash = kex_build_secret(H, exchange_hash, K);
@@ -845,13 +852,26 @@ keyexchange_finish(struct ssh_connection *connection,
 
   KILL(hash);
 
-  connection->kex_state = KEX_STATE_NEWKEYS;
+  /* If any messages were queued during the key exchange, send them
+   * now. */
+  connection_send_kex_end(connection);
+  
+  connection->read_kex_state = KEX_STATE_NEWKEYS;
 
+#if 0
+  /* This message is rather pointless, and some implementations don't
+   * handle it properly. */
 #if DATAFELLOWS_WORKAROUNDS
   if (! (connection->peer_flags & PEER_SEND_NO_DEBUG))
 #endif
     send_verbose(connection->write, "Key exchange successful!", 0);
+#endif
 
+  /* FIXME: If we have stopped readin channel sources during the key
+   * exchange, we must get them started again, perhaps by calling
+   * CHANNEL_ADJUST(channel, 0) for all channels. Can we reuse the
+   * connection->established hook for that? */
+  
   if (connection->established)
     {
       struct command_continuation *c = connection->established;
