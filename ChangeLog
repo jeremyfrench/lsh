@@ -1,3 +1,18 @@
+1999-11-08  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh.c (sloppy_host_db): Renamed from fake_host_db. 
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added sexp_parser again. 
+
+	* src/sexp_parser.c: Cleaned up, updated, and stripped down to
+	handle canonical syntax only.
+
+	* src/sexp_parser.h: Obsolete now.
+
+	* src/sexp.h: Removed sexp_handler.
+	(sexp_parse_canonical, string_to_sexp): Added prototypes for
+	non-streamed parser.
+
 1999-11-07  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/exception.h (EXCEPTION_RAISE): Better tracing.
