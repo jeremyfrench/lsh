@@ -1,3 +1,38 @@
+News for the lsh-0.1.9 release
+
+	Lot's of bug fixes. This version actually seems to work.
+
+	Bazsi's public key patches is in, although I haven't been able
+	to test them.
+
+	The SEXP parser is rewritten to use the new exception
+	framework. The program that makes the most of of this rigth
+	now is lsh_writekey. Its core reads like
+
+     (params
+       (private object io_write_file_info)
+       (public object io_write_file_info))
+     
+     (lambda (backend)
+       (let ((key (read (stdin backend))))
+         (prog1 (transport (open backend public) (private2public key))
+                ; FIXME: Add encryption here
+                (canonical (open backend private) key))))))
+	
+	The sexptest program has been renamed to sexp_conv. It reads
+	an sexp (for now, only canonical and transport syntax are
+	supported) on stdin, and prints it using advanced, transport
+	or canonical syntax. More features could be added.
+
+	The --debug option now dumps both sent and received packets,
+	and it includes a human readable name of the packet type.
+	Packets of type SSH_MSG_USERAUTH_REQUEST are suppressed,
+	however, because they typically contains user passwords.
+
+	There is one known bug: Running without pty allocation (lsh
+	-nt) doesn't work, at least not for me.
+
+	
 News for the lsh-0.1.8 release
 
 	Reworked all the error handling to use exceptions. No new

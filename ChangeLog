@@ -1,5 +1,14 @@
 1999-09-07  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* abstract_io.h channel.c channel.h channel_commands.c client.c
+	command.c gc.c gc.h io.c lsh.c lsh.h lsh_writekey.c lshd.c
+	read_data.c read_packet.c server_password.c service.h sexp_conv.c
+	sexp_parser.c sexp_streamed_parser.c tcpforward_commands.c
+	tcpforward_commands.h werror.c: Cleaned up and deleted old dead
+	code.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Removed sexp_parser.c 
+
 	* configure.in: Bumbed version to 0.1.9.
 
 	* src/server_session.c (do_spawn_shell): Use better exception

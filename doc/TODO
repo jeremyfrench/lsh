@@ -1,35 +1,3 @@
-ERROR HANDLING
-
-Consider return values from handlers. A return value has several
-components:
-
- x Success/failure indication
- 
- x Next action (continue, close immediately, flush buffers then close,
-   exit...)
- 
- x Process return value in case the proper action is to exit.
-
-It should be possible to encode all this information into a simple
-integer. And some actions are orthogonal. For instance, a handler may
-fork, and send a few messages. Now, both the fork action and any error
-codes from writing must be taken care of.
-
-Perhaps errors when processing data on one socket should propagate to
-another one?
-
-Can one safely assume that the only error that can occur when sending
-a packet (typically by A_WRITE(connection->write, packet)) is LSH_FAIL
-| LSH_CLOSE?
-
-What about returning errors from commands? We can either do
-COMMAND_RETURN(c, NULL) to invoke the commands continuation with an
-error value, or we could decide that the continuation should be
-invoked only if the command was successful. Or we could use a separate
-continuation for errors; that would be similar to a primitive
-exception system.
-
-
 EXCEPTIONS
 
 When using exceptions in commands like do_request_service, when should
@@ -208,12 +176,9 @@ Description: Baby Shell for Novices with DOS compatible commands). Perhaps
 we need to change our name?
 
 Get a decent source of random (the current version will fall back to a
-really poorly seeded generator if /dev/urandom is not available); most
-likely, reusing the rand* from GPG's g10 is the best option. Werner
-Koch is now working on making a libgcrypt out of GPG's random and
-crypto code.
-
-Use UNUSED where parameters are unused intentionally.
+really poorly seeded generator if /dev/urandom is not available). Two
+main alternatives are Werner Koch's code in GnuPG, and Peter Gutmann's
+libcrypt. 
 
 Make it cleaner wrt. more gcc warnings.
 
@@ -275,7 +240,6 @@ Bazsi. Hmm, this is probably not a bug. I have to find out what the
 right way is to handle the poll conditions POLLERR, POLLHUP and
 POLLERR.
 
-
 Implement some limit on the amount of data that may be buffered for
 write on a connection. When the limit is exceeded, the connection
 should be dropped. The problem: if a client connects and sends a lot
@@ -283,12 +247,6 @@ of packets, without ever reading anything from its socket, the server
 will eventually run out of memory.
 
 Consider removing the write-attribute from ssh_channel.
-
-Try to get rid of some of the LSH_*-status codes, in particular
-LSH_CHANNEL_READY_REC. Use functions instead. The reason is that the
-function that wants to start receiving is not necessaily called from
-the functions in channel.c, and therefore the status code doesn't pass
-through channel_process_status().
 
 Let init_channel take enough arguments to initialize the window- and
 packet-size fields properly. It's too easy to forget them.
