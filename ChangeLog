@@ -1,3 +1,20 @@
+2001-03-26  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* Released lsh-1.1.9.
+
+	* misc/Makefile.am.in (EXTRA_DIST): Added more files to the dist:
+	libgcc2.c-patch, bootstrap.sh and make-dist.
+
+	* configure.in: By default, disable debug-alloc and debug-trace.
+
+	* src/testsuite/keygen-2-test: Use a smaller key size, 777 bits,
+	for speed.
+
+	* src/testsuite/keygen-1-test: Use NIST security level 2 (640
+	bits), for speed.
+
+	* src/argp/configure.in: Bumped argp version to standalone-1.1. 
+
 2001-03-26  Niels Möller  <nisse@ehand.com>
 
 	* src/argp/configure.in (CPPFLAGS): Added -D_GNU_SOURCE.
