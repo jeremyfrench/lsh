@@ -41,8 +41,6 @@
      (name sshd1)
      (super ssh1_fallback)
      (vars
-       ;; Why is the portnumber needed? 
-       (port . "char *")
        ;; Full path to sshd1
        (sshd1 . "char *")))
 */
@@ -55,8 +53,6 @@ static int fall_back_to_ssh1(struct ssh1_fallback *c,
   /* We fork a SSH1 server to handle this connection. */
 
   pid_t pid;
-  werror("lshd: Attempting falling back to ssh1 (experimental).\n");
-
   pid = fork();
   if (pid < 0)
     {
@@ -94,10 +90,8 @@ static int fall_back_to_ssh1(struct ssh1_fallback *c,
        * non-blocking mode, but we haven't). */
 
       execl(closure->sshd1, closure->sshd1,
-	    "-V" ,version,	 	/* Compatibility mode */
-	    "-d", 			/* Debug mode */
-	    "-p", closure->port,	/* Port number */
 	    "-i",			/* inetd mode */
+	    "-V" ,version,	 	/* Compatibility mode */
 	    NULL);
       werror("lshd: fall_back_to_ssh1: execl failed (errno = %d): %s\n",
 	     errno, strerror(errno));
@@ -111,12 +105,11 @@ static int fall_back_to_ssh1(struct ssh1_fallback *c,
     }
 }
 
-struct ssh1_fallback *make_ssh1_fallback(char *port, char *sshd1)
+struct ssh1_fallback *make_ssh1_fallback(char *sshd1)
 {
   NEW(sshd1, closure);
 
   closure->super.fallback = fall_back_to_ssh1;
-  closure->port = port;
   closure->sshd1 = sshd1;
 
   return &closure->super;
