@@ -7,7 +7,7 @@ TS_SH = keygen-test
 TS_SOME = $(TS_PROGS) $(TS_SH)
 
 # Tests that require that lsh is set up for password-less login.
-TS_MORE_SH = lsh-1-test lsh-2-test lsh-3-test
+TS_MORE_SH = lsh-1-test lsh-2-test lsh-3-test tcpip-local-test
 TS_MORE_PROGS =
 
 TS_ALL = $(TS_PROGS) $(TS_SH) $(TS_MORE_PROGS) $(TS_MORE_SH) 
@@ -20,7 +20,8 @@ noinst_PROGRAMS = $(TS_PROGS)
 
 LDADD = ../liblsh.a ../symmetric/libsymmetric.a
 
-EXTRA_DIST = macros.m4 $(SOURCES:.c=.m4) $(TS_SH) key-1.private
+EXTRA_DIST = macros.m4 $(SOURCES:.c=.m4) $(TS_SH) $(TS_MORE_SH) \
+	functions.sh runtests key-1.private
 
 all:
 	@echo make check to build testprograms.
