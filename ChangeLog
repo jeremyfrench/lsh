@@ -1,3 +1,19 @@
+2003-11-08  Niels Möller  <nisse@harpo.hack.org>
+
+	* src/Makefile.am (liblsh_a_SOURCES): Removed pad.c, encrypt.c.
+	Added write_packet.c. 
+
+	* src/compress.c (do_packet_inflate): Keep sequence number.
+
+	* src/pad.c, src/pad.h, src/encrypt.c, src/encrypt.h: Deleted
+	files.
+	* src/write_packet.c: New file and function, to replace pad.c and
+	encrypt.c. 	
+	* src/client.c, src/connection.c: Don't include pad.h and encrypt.h.
+	* src/connection.h: Prototype for make_write_packet.
+
+	* src/connection.c (connection_init_io): Use make_write_packet.
+
 2003-10-30  Niels Möller  <nisse@harpo.hack.org>
 
 	* src/connection.h (C_WRITE): Deleted macro. Updated all callers
