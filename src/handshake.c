@@ -47,6 +47,51 @@
 
 #include "handshake.c.x"
 
+#if DATAFELLOWS_WORKAROUNDS
+/* Bug compatibility information. */
+struct compat_info
+{
+  const char *prefix;
+  UINT32 flags;
+};
+
+static const struct compat_info
+compat[] =
+  {
+    /* FIXME: Is there any 2.0.x without these bugs? */
+    { "2.0.", (PEER_SSH_DSS_KLUDGE | PEER_SERVICE_ACCEPT_KLUDGE
+	       | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG 
+	       | PEER_X11_OPEN_KLUDGE) },
+    { "2.1.0", (PEER_SSH_DSS_KLUDGE
+		| PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG) },
+    { NULL, 0 }
+  };
+    
+static UINT32
+compat_peer_flags(UINT32 length, UINT8 *software)
+{
+  unsigned i;
+  for (i = 0; compat[i].prefix; i++)
+    {
+      unsigned j;
+      for (j = 0; ; j++)
+	{
+	  if (!compat[i].prefix[j])
+	    /* Prefix matched */
+	    return compat[i].flags;
+
+	  else if (j == length || compat[i].prefix[j] != software[j])
+	    /* No match */
+	    break;
+	}
+    }
+  /* Default flags are 0 */
+  return 0;
+}
+#else /* !DATAFELLOWS_WORKAROUNDS */
+#define compat_peer_flags(a,b) 0
+#endif /* !DATAFELLOWS_WORKAROUNDS */
+
 /* GABA:
    (class
      (name connection_line_handler)
@@ -146,25 +191,8 @@ do_line(struct line_handler **h,
 	      }
 #endif /* WITH_SSH1_FALLBACK */
 
-#if DATAFELLOWS_WORKAROUNDS
-	    if ( (swver_len >= 6) && !memcmp(swver, "2.0.", 4)
-		 /* FIXME: Perhaps do a numerical comparison here? */
-		 && (memcmp(swver + 4, "13", 2) <= 0) )
-	      {
-		connection->peer_flags
-		  |= (PEER_SSH_DSS_KLUDGE | PEER_SERVICE_ACCEPT_KLUDGE
-		      | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG 
-		      | PEER_X11_OPEN_KLUDGE);
-	      }
-	    else if ( (swver_len >= 5) && !memcmp(swver, "2.1.0", 5) )
-	      {
-		connection->peer_flags
-		  |= (PEER_SSH_DSS_KLUDGE
-		      | PEER_USERAUTH_REQUEST_KLUDGE | PEER_SEND_NO_DEBUG);
-		verbose("ssh.com 2.1.0\n");
-	      }
-#endif /* DATAFELLOWS_WORKAROUNDS */ 
-	    
+	    connection->peer_flags = compat_peer_flags(swver_len, swver);
+
 	    new = 
 	      make_read_packet(
 		make_packet_unpad(
