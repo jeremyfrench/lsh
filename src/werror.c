@@ -149,13 +149,9 @@ static void werror_decimal(UINT32 n)
 {
   unsigned length = format_size_in_decimal(n);
   char *buffer = alloca(length);
-  unsigned i;
-  
-  for (i = 0; i<length; i++)
-    {
-      buffer[length - i - 1] = '0' + n % 10;
-      n /= 10;
-    }
+
+  format_decimal(length, buffer, n);
+
   werror_write(length, buffer);
 }
 

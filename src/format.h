@@ -39,8 +39,6 @@
  *
  * %i  Insert a 32-bit integer, in network byte order
  *
- * %d  Insert a 32-bit integer, in decimal
- *
  * %s  Insert a string, given by a length and a pointer.
  *
  * %S  Insert a string, given as a struct lsh_string pointer.
@@ -65,15 +63,15 @@
  * "l" (as in literal). It is applicable to the s, a, A, n and r
  * specifiers, and outputs strings *without* a length field.
  *
- * "e" (as in expression). Formats the input string using sexp syntax;
+ * "d" (as in decimal). For integers, convert the integer to decimal
+ * digits. For strings, format the input string using sexp syntax;
  * i.e. prefixed with the length in decimal.
  *
  * "f" (as in free). Frees the input string after it has been copied.
  * Applicable to %S only.
  *
  * "u" (as in unsigned). Used with bignums, to use unsigned-only
- * number format.
- */
+ * number format. */
 
 struct lsh_string *ssh_format(const char *format, ...);
 UINT32 ssh_format_length(const char *format, ...);
@@ -89,5 +87,6 @@ struct lsh_string *format_cstring(const char *s);
 struct lsh_string *make_cstring(struct lsh_string *s, int free);
 
 unsigned format_size_in_decimal(UINT32 n);
+void format_decimal(unsigned length, UINT8 *buffer, UINT32 n);
 
 #endif /* LSH_FORMAT_H_INCLUDED */

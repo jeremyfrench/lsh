@@ -121,14 +121,15 @@ end_options:
 	      break;
 
 	    case 'i':
-	      (void) va_arg(args, UINT32);
-	      length += 4;
-	      break;
-#if 0
-	    case 'd':
-	      length += format_size_in_decimal(va_arg(args, UINT32));
-	      break;
-#endif
+	      {
+		UINT32 i = va_arg(args, UINT32);
+		if (decimal)
+		  length += format_size_in_decimal(i);
+		else
+		  length += 4;
+		break;
+	      }
+
 	    case 's':
 	      {
 		UINT32 l = va_arg(args, UINT32); /* String length */ 
@@ -319,9 +320,17 @@ end_options:
 	    case 'i':
 	      {
 		UINT32 i = va_arg(args, UINT32);
-		WRITE_UINT32(buffer, i);
-		buffer += 4;
-
+		if (decimal)
+		  {
+		    unsigned length = format_size_in_decimal(i);
+		    format_decimal(length, buffer, i);
+		    buffer += length;
+		  }
+		else
+		  {
+		    WRITE_UINT32(buffer, i);
+		    buffer += 4;
+		  }
 		break;
 	      }
 
@@ -529,17 +538,22 @@ unsigned format_size_in_decimal(UINT32 n)
   return e+1;
 }
 
-static int write_decimal_length(UINT8 *buffer, UINT32 n)
+void format_decimal(unsigned length, UINT8 *buffer, UINT32 n)
 {
-  int length = format_size_in_decimal(n);
-  int i;
+  unsigned i;
   
   for (i = 0; i<length; i++)
     {
       buffer[length - i - 1] = '0' + n % 10;
       n /= 10;
     }
+}
 
+static int write_decimal_length(UINT8 *buffer, UINT32 n)
+{
+  int length = format_size_in_decimal(n);
+
+  format_decimal(length, buffer, n);
   buffer[length] = ':';
 
   return length + 1;
