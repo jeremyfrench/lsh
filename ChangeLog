@@ -1,3 +1,8 @@
+2000-09-14  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/keyexchange.c (do_handle_newkeys): Clear
+	connection->kexinits.
+
 2000-09-11  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/symmetric/rijndael.c: Use static const for all lookup
