@@ -1,3 +1,59 @@
+2001-04-17  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/Makefile.am (TS_MORE_SH): Added tests
+	lshg-cat-test, lshg-cat-2-test and ssh1-fallback-test.
+
+	* src/testsuite/functions.sh: Renamed SERVERFLAGS to LSHD_FLAGS,
+	CLIENTFLAGS to LSH_FLAGS, and added LSHG_FLAGS.
+
+	* src/testsuite/lshg-cat-2-test: New test.
+
+	* src/testsuite/lshg-cat-test: Sleep some, waiting for lsh to
+	connect.
+
+	* src/sftp/.bootstrap: Don't run ./configure.
+
+	* src/werror.c (werror_argp_parser): Initialize program_name at
+	ARGP_KEY_INIT time.
+
+	* src/resource.c (dont_free_live_resource): Be more quiet during
+	gc_final.
+
+	* src/lshg.c (do_exc_lshg_handler): Fixed werror format string.
+	Fixed in 1.2 branch.
+
+	* src/lsh.c (do_lsh_lookup): If the user decides to trust the key,
+	add it to the spki_context.
+
+	* src/lcp: Replaced the bashism "==" with "=".
+
+	* src/gc.c (gc_final_p): New variable, non-zero during gc_final().
+
+	* src/client_session.c (make_client_session_channel): Register
+	stdio files as resources.
+
+2001-04-12  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lshd.c (main_argp_parser): Bugfix: Use the supplied
+	interface! Fixed in 1.2 branch.
+
+	* src/testsuite/ssh1-fallback-test: New test.
+
+	* src/testsuite/lshg-cat-test: New test.
+
+	* src/testsuite/fake-sshd1: New file.
+
+	* src/testsuite/functions.sh (spawn_lshd): Pass arguments to lshd.
+	Fixed in 1.2 branch.
+	(exec_lshg): New function.
+
+	* src/ssh1_fallback.c (fall_back_to_ssh1): Reset the fd to
+	blocking mode. Fixed in 1.2 branch.
+
+	* src/io.c (io_set_blocking): New function. Added in 1.2 branch.
+	(do_exc_finish_read_handler): Close fd immediately on
+	EXC_FINISH_IO. Fixed in 1.2 branch.
+
 2001-04-11  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/userauth.h (lsh_process): New class.
@@ -43,8 +99,8 @@
 	(werror_options): Aded option --log-file.
 	(werror_argp_parser): Process --log-file option.
 
-	* ANNOUNCE: Changed "COPYRIGHT" to "LICENSE", by rms' request. XXX
-	Fix in 1.2 branch.
+	* ANNOUNCE: Changed "COPYRIGHT" to "LICENSE", by rms' request. 
+	Fixed in 1.2 branch.
 
 2001-04-08  Niels Möller  <nisse@cuckoo.hack.org>
 
