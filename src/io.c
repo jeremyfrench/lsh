@@ -55,6 +55,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <arpa/inet.h>
 #include <signal.h>
 
@@ -1142,10 +1143,59 @@ io_connect(struct io_backend *b,
 
 struct lsh_fd *
 io_listen(struct io_backend *b,
+	  struct sockaddr *local,
+	  socklen_t length,
+	  struct io_callback *callback,
+	  struct exception_handler *e)
+{
+  int s = socket(local->sa_family, SOCK_STREAM, 0);
+  struct lsh_fd *fd;
+  
+  if (s<0)
+    return NULL;
+
+  trace("io.c: Listening on fd %i\n", s);
+  
+  io_init_fd(s);
+
+  {
+    int yes = 1;
+    setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char*)&yes, sizeof yes);
+  }
+
+  if (bind(s, (struct sockaddr *)local, length) < 0)
+    {
+      close(s);
+      return NULL;
+    }
+
+  if (listen(s, 256) < 0) 
+    {
+      close(s);
+      return NULL;
+    }
+
+  /* FIXME: What handler to use? */
+  fd = make_lsh_fd(b, s, e);
+
+  fd->want_read = 1;
+  fd->read = callback;
+
+  return fd;
+}
+
+#if 0
+struct lsh_fd *
+io_listen(struct io_backend *b,
 	  struct sockaddr_in *local,
 	  struct io_callback *callback,
 	  struct exception_handler *e)
 {
+  assert(local->sin_family == AF_INET);
+  return io_listen_sockaddr(b, (struct sockaddr *) local, sizeof(*local), callback, e);
+  
+#if 0
+  
   int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   struct lsh_fd *fd;
   
@@ -1180,12 +1230,36 @@ io_listen(struct io_backend *b,
   fd->read = callback;
 
   return fd;
+#endif
 }
-
+#endif
 
 #if 0
 /* AF_LOCAL sockets */
 
+#define HAVE_GNU_GETCWD 1
+
+/* We have to set and reset the cwd */
+#if HAVE_GNU_GETCWD
+#define gnu_getcwd() getcwd(NULL, 0)
+#else /* !HAVE_GNU_GETCWD */
+char *
+gnu_getcwd ()
+{
+  for (size = 100; size *= 2;)
+    {
+      char *buffer = lsh_space_alloc (size);
+      char *value = getcwd (buffer, size);
+
+      if (value)
+	return buffer;
+
+      lsh_space_free (buffer);
+    }
+}
+#endif /* !HAVE_GNU_GETCWD */
+
+/* Requires DIRECTORY and NAME to be NUL-terminated */
 struct lsh_fd *
 io_listen_local(struct io_backend *b,
 		struct lsh_string *directory,
@@ -1193,8 +1267,103 @@ io_listen_local(struct io_backend *b,
 		struct io_callback *callback,
 		struct exception_handler *e)
 {
-  char *old_cd = NULL;
-  mode_t old_umask = umask(); HERE!!!
+  char *old_cd;
+  mode_t old_umask;
+  struct stat sbuf;
+  struct sockaddr_un *local;
+  socklen_t local_length;
+
+  struct lsh_fd *fd;
+  
+  assert(directory && NUL_TERMINATED(directory));
+  assert(name && NUL_TERMINATED(name));
+
+  /* NAME should not be a plain filename, with no directory separators.
+   * In particular, it should not be an absolute filename. */
+  assert(!memchr(name->data, '/', name->length));
+
+  local_length = OFFSETOF(struct sockaddr_un, sun_path) + name->length;
+  local = alloca(local_length);
+
+  local->sun_family = AF_LOCAL;
+  memcpy(local->sun_path, name->data, name->length);
+  
+  /* First create the directory, in case it doesn't yet exist. */
+  if ( (mkdir(directory->data, 0700) < 0)
+       && (errno != EEXIST) )
+    {
+      werror("io.c: Creating directory %S failed "
+	     "(errno = %i): %z\n", directory, errno, STRERROR(errno));
+
+    }
+
+  /* cd to it */
+  old_cd = gnu_getcwd();
+  assert(old_cd);
+
+  if (chdir(directory->data) < 0)
+    {
+      lsh_space_free(old_cd);
+      return NULL;
+    }
+
+  /* Check that it has reasonable permissions */
+  if (stat(".", &sbuf) < 0)
+    {
+      werror("io.c: Failed to stat() \".\" (supposed to be %S).\n"
+	     "  (errno = %i): %z\n", directory, errno, STRERROR(errno));
+
+    fail:
+      if (chdir(old_cd) < 0)
+	fatal("io.c: Failed to cd back to %z (errno = %i): %z\n",
+	      old_cd, errno, STRERROR(errno));
+
+      lsh_space_free(old_cd);
+      return NULL;
+    }
+
+  if (sbuf.st_uid != getuid())
+    {
+      werror("io.c: Socket directory %S not owned by user.\n", directory);
+      goto fail;
+    }
+
+  if (sbuf.st_mode & (S_IRWXG | S_IRWXO))
+    {
+      werror("io.c: Permission bits on %S are too loose.\n", directory);
+      goto fail;
+    }
+
+  /* Ok, now the current directory seems to be a decent place for
+   * creating a socket. */
+
+  /* Try unlinking any existing file. */
+  if ( (unlink(name->data) < 0)
+       && (errno != ENOENT))
+    {
+      werror("io.c: unlink '%S'/'%S' failed (errno = %i): %z\n",
+	     directory, name, errno, STRERROR(errno));
+      goto fail;
+    }
+
+  /* We have to change the umask, as that's the only way to control
+   * the permissions that bind() uses. */
+
+  old_umask = umask(0770);
+
+  /* Bind and listen */
+  fd = io_listen(b, (struct sockaddr *) local, local_length, callback, e);
+  
+  /* Ok, now we restore umask and cwd */
+  umask(old_umask);
+
+  if (chdir(old_cd) < 0)
+    fatal("io.c: Failed to cd back to %z (errno = %i): %z\n",
+	  old_cd, errno, STRERROR(errno));
+  
+  lsh_space_free(old_cd);
+
+  return fd;
 }
 #endif
 
