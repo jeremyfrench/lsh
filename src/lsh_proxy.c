@@ -29,6 +29,7 @@
 #include "channel.h"
 #include "channel_commands.h"
 #include "charset.h"
+#include "client_keyexchange.h"
 #include "compress.h"
 #include "connection_commands.h"
 #include "crypto.h"
@@ -37,25 +38,25 @@
 #include "io.h"
 #include "io_commands.h"
 #include "lookup_verifier.h"
+#include "proxy.h"
+#include "proxy_channel.h"
+#include "proxy_session.h"
+#include "proxy_userauth.h"
 #include "randomness.h"
-#include "spki.h"
-#include "ssh.h"
-#include "werror.h"
-#include "xalloc.h"
 #include "reaper.h"
 #include "server.h"
 #include "server_authorization.h"
 #include "server_keyexchange.h"
-#include "client_keyexchange.h"
-#include "server_userauth.h"
 #include "server_session.h"
-#include "proxy.h"
-#include "proxy_userauth.h"
-#include "proxy_session.h"
-#include "proxy_channel.h"
+#include "server_userauth.h"
 #include "sexp.h"
 #include "sexp_commands.h"
+#include "spki.h"
 #include "spki_commands.h"
+#include "ssh.h"
+#include "version.h"
+#include "werror.h"
+#include "xalloc.h"
 
 #include "lsh_argp.h"
 
@@ -91,6 +92,11 @@ struct command_simple options2signature_algorithms;
 
 
 /* Option parsing */
+
+const char *argp_program_version
+= "lsh_proxy-" VERSION;
+
+const char *argp_program_bug_address = BUG_ADDRESS;
 
 #define OPT_NO 0x400
 #define OPT_SSH1_FALLBACK 0x200
@@ -353,7 +359,7 @@ main_argp =
 static struct verifier *
 do_host_lookup(struct lookup_verifier *c UNUSED,
 	       int method UNUSED,
-               struct lsh_string *keyholder UNUSED,
+               struct user *user UNUSED,
                struct lsh_string *key)
 {
   assert(method == ATOM_SSH_DSS);
