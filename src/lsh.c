@@ -934,8 +934,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    }
 	      
 	  client_add_action(&self->super,
-			    make_gateway_setup
-			    (make_listen_local(gateway)));
+			    make_gateway_setup(gateway));
 	}
 
       if (object_queue_is_empty(&self->super.actions))
