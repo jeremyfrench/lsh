@@ -335,7 +335,6 @@ do_proxy_accept_service(struct packet_handler *c,
 	    new_packet = ssh_format("%c", SSH_MSG_SERVICE_ACCEPT);
 	  else
 	    new_packet = ssh_format("%c%a", SSH_MSG_SERVICE_ACCEPT, closure->name);
-	  lsh_string_free(packet);
 	}
 #else
       new_packet = packet;
@@ -347,10 +346,7 @@ do_proxy_accept_service(struct packet_handler *c,
 		   closure->c, closure->e);
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(closure->e, "Invalid SSH_MSG_SERVICE_ACCEPT message");
-    }
+    PROTOCOL_ERROR(closure->e, "Invalid SSH_MSG_SERVICE_ACCEPT message");
 }
 
 static struct packet_handler *
@@ -418,11 +414,7 @@ do_proxy_service_request(struct packet_handler *c,
 		      make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE, NULL));
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid SERVICE_REQUEST message");
-    }
-
+    PROTOCOL_ERROR(connection->e, "Invalid SERVICE_REQUEST message");
 }
 
 static struct packet_handler *

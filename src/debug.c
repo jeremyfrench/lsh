@@ -127,9 +127,7 @@ DEFINE_PACKET_HANDLER(, connection_debug_handler, connection UNUSED, packet)
 	&& parse_atom(&buffer, &language)
 	&& parse_eod(&buffer)))
     {
-      lsh_string_free(packet);
       PROTOCOL_ERROR(connection->e, "Invalid DEBUG message.");
-				 
     }
   else
     {
@@ -138,7 +136,5 @@ DEFINE_PACKET_HANDLER(, connection_debug_handler, connection UNUSED, packet)
 
       else
 	verbose("Received debug: %ups\n", length, msg);
-      
-      lsh_string_free(packet);
     }
 }

@@ -81,10 +81,7 @@ do_proxy_open_x11(struct channel_open *s UNUSED,
 
     }
   else
-    {
-      PROTOCOL_ERROR(e, "Trailing garbage in open message");
-    }
-  lsh_string_free(host);
+    PROTOCOL_ERROR(e, "Trailing garbage in open message");
 }
 
 struct channel_open *

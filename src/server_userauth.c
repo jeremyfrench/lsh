@@ -217,8 +217,6 @@ do_handle_userauth(struct packet_handler *s,
     }
   else
     PROTOCOL_ERROR(connection->e, "Invalid USERAUTH message.");
-
-  lsh_string_free(packet);
 }
 
 static struct packet_handler *

@@ -104,16 +104,12 @@ do_accept_service(struct packet_handler *c,
 	      && (name == closure->service)))
       && parse_eod(&buffer))
     {
-      lsh_string_free(packet);
       connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = &connection_fail_handler;
       
       COMMAND_RETURN(closure->c, connection);
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(closure->e, "Invalid SSH_MSG_SERVICE_ACCEPT message");
-    }
+    PROTOCOL_ERROR(closure->e, "Invalid SSH_MSG_SERVICE_ACCEPT message");
 }
 
 struct packet_handler *

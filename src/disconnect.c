@@ -71,8 +71,6 @@ do_disconnect(struct packet_handler *closure UNUSED,
     }
   else
     werror("Invalid disconnect message!\n");
-
-  lsh_string_free(packet);
   
   EXCEPTION_RAISE(connection->e, &disconnect_exception);
 }

@@ -70,7 +70,6 @@ do_handle_dh_init(struct packet_handler *c,
   trace("handle_dh_init\n");
 
   res = dh_process_client_msg(&closure->dh, packet);
-  lsh_string_free(packet);
   
   if (!res)
     {
@@ -192,7 +191,6 @@ do_srp_server_proof_handler(struct packet_handler *s,
   CAST(srp_server_handler, self, s);
 
   struct lsh_string *response = srp_process_client_proof(&self->srp->dh, packet);
-  lsh_string_free(packet);
 
   connection->dispatch[SSH_MSG_KEXSRP_PROOF] = &connection_fail_handler;
   

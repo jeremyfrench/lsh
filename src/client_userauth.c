@@ -200,8 +200,6 @@ do_userauth_success(struct packet_handler *c,
     {
       unsigned i;
       
-      lsh_string_free(packet);
-
       verbose("User authentication successful.\n");
 
       for (i = SSH_FIRST_USERAUTH_GENERIC; i < SSH_FIRST_CONNECTION_GENERIC; i++) 
@@ -210,10 +208,7 @@ do_userauth_success(struct packet_handler *c,
       COMMAND_RETURN(self->c, connection);
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid USERAUTH_SUCCESS message");
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid USERAUTH_SUCCESS message");
 }
 
 static struct packet_handler *
@@ -280,8 +275,6 @@ do_userauth_failure(struct packet_handler *c,
       && parse_boolean(&buffer, &partial_success)
       && parse_eod(&buffer))
     {
-      lsh_string_free(packet);
-      
       if (partial_success)
 	/* Doesn't help us */
 	werror("Received SSH_MSH_USERAUTH_FAILURE "
@@ -297,10 +290,7 @@ do_userauth_failure(struct packet_handler *c,
 							methods, self->state->current));
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(connection->e, "Invalid USERAUTH_FAILURE message.");
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid USERAUTH_FAILURE message.");
   
   KILL(methods);	
 }
@@ -345,8 +335,6 @@ do_userauth_banner(struct packet_handler *self UNUSED,
     }
   else
     PROTOCOL_ERROR(connection->e, "Invalid USERAUTH_SUCCESS message");
-
-  lsh_string_free(packet);
 }
 
 static struct packet_handler userauth_banner_handler =
@@ -813,14 +801,10 @@ do_userauth_pk_ok(struct packet_handler *s,
       else
 	werror("client_userauth.c: Unexpected key in USERAUTH_PK_OK message.\n");
 
-      lsh_string_free(packet);
       client_publickey_next(self->state);
     }
   else
-    {
-      lsh_string_free(packet);
-      PROTOCOL_ERROR(self->state->e, "Invalid USERAUTH_PK_OK message");
-    }
+    PROTOCOL_ERROR(self->state->e, "Invalid USERAUTH_PK_OK message");
 }
 
 static struct packet_handler *
