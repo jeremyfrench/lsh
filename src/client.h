@@ -125,7 +125,7 @@ make_exec_request(struct lsh_string *command);
        (used_pty . int)
 
        (start_shell . int)
-       ;; (remote_forward . int)
+       (remote_forward . int)
        (actions struct object_queue)))
 */
 
