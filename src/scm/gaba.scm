@@ -51,6 +51,12 @@
 
 (define (atom? o) (not (list? o)))
 
+(define (nth n l)
+  (cond ((< n 0) (error "nth: negative index not allowed" n))
+        ((null? l) (error "nth: index too big" n))
+        ((= n 0) (car l))
+        (else (nth (- n 1) (cdr l)))))
+
 (define-syntax when
   (syntax-rules ()
     ((when <cond> . <body>)
@@ -517,7 +523,7 @@
 	(apply-generic (car info) args)
 	(let ((n (min (length calls) (length args))))
 	  ;; (werror "n: ~S\n" n)
-	  (apply-generic (c-call (nth info n)
+	  (apply-generic (c-call (nth n info)
 				 (list-prefix args n))
 			 (list-tail args n))))))
   (define (lookup-global v)
