@@ -138,6 +138,8 @@ argp_default_parser (int key, char *arg, struct argp_state *state)
 
     case OPT_HANG:
       _argp_hang = atoi (arg ? arg : "3600");
+      fprintf(state->err_stream, "%s: pid = %ld\n",
+	      state->name, (long) getpid());
       while (_argp_hang-- > 0)
 	__sleep (1);
       break;
