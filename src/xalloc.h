@@ -60,14 +60,25 @@ struct lsh_string *lsh_string_alloc(UINT32 size);
 void
 lsh_string_free(const struct lsh_string *packet);
 
-struct lsh_object *lsh_object_alloc(struct lsh_class *class);
+struct lsh_object *
+lsh_var_alloc(struct lsh_class *class,
+	      size_t extra);
+
+struct lsh_object *
+lsh_object_alloc(struct lsh_class *class);
+
 
 /* FIXME: Should take a const struct lsh_object. */
 void lsh_object_free(struct lsh_object *o);
 
 /* NOTE: This won't work for if there are strings or other instance
  * variables that can't be shared. */
-struct lsh_object *lsh_object_clone(struct lsh_object *o);
+
+struct lsh_object *
+lsh_var_clone(struct lsh_object *o, size_t size);
+
+struct lsh_object *
+lsh_object_clone(struct lsh_object *o);
 
 void *lsh_space_alloc(size_t size);
 void lsh_space_free(const void *p);
@@ -107,14 +118,25 @@ extern unsigned number_of_strings;
 
 #define NEW(class, var) \
   struct class *(var) = (struct class *) lsh_object_alloc(&CLASS(class))
+
+#define NEW_VAR_OBJECT(class, var, size) \
+  struct class *(var) = \
+  (struct class *) lsh_var_alloc(&CLASS(class), size)
+
 #define NEW_SPACE(x) ((x) = lsh_space_alloc(sizeof(*(x))))
 
 #define CLONE(class, i) \
   ((struct class *) lsh_object_clone(CHECK_TYPE(class, (i))))
 
+#define CLONE_VAR_OBJECT(class, i, size) \
+  ((struct class *) lsh_var_clone(CHECK_TYPE(class, (i)), (size)))
+
 #define CLONED(class, var, i) \
   struct class *(var) = CLONE(class, i)
-     
+
+#define CLONED_VAR_OBJECT(class, var, i, size) \
+  struct class *(var) = CLONE_VAR_OBJECT(class, i, size)
+
 #define KILL(x) gc_kill((struct lsh_object *) (x))
 
 #endif /* LSH_XALLOC_H_INCLUDED */
