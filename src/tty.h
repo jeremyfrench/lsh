@@ -24,6 +24,8 @@
 #ifndef LSH_TTY_H_INCLUDED
 #define LSH_TTY_H_INCLUDED
 
+#include "lsh_types.h"
+
 #include <termios.h>
 
 int tty_getattr(int fd, struct termios *ios);
@@ -36,5 +38,8 @@ int tty_setctty(int fd);
 int tty_makeraw(int fd);
 int tty_getwinsize(int fd, int *w, int *h, int *wp, int *hp);
 int tty_setwinsize(int fd, int w, int h, int wp, int hp);
+
+struct lsh_string *tty_encode_term_mode(struct termios *ios);
+int tty_decode_term_mode(struct termios *ios, UINT32 t_len, UINT8 *t_modes);
 
 #endif

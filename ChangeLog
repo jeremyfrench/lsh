@@ -1,3 +1,90 @@
+Thu Jan 28 08:51:18 1999    <nisse@puck>
+
+	* src/tty.c (tty_encode_term_mode): New function (dummy).
+	(tty_decode_term_mode): New function (moved from server_pty.c).
+
+	* src/server.c (do_spawn_shell): pty support. Support for the
+	argv0 = "-*sh" convention.
+	(make_pty_handler): New function.
+
+	* src/parse.c (parse_uint8): Use unsigned for the result.
+
+	* src/lshd.c (main): Integrated sshd1 and pty support.
+
+	* src/lsh.h (LSH_CHANNEL_CLOSE): New status value.
+
+	* src/lsh.c (main): pty support.
+
+	* src/hmac.c (make_hmac_instance): Bug fix (Joseph Galbraith
+ 	<galb@rt66.com>)
+
+	* src/encrypt.c (do_encrypt): Update sequence number even if no
+	mac is in use. (Reported by Joseph Galbraith <galb@rt66.com>).
+
+	* src/client.c (make_shell_request): New function.
+	(make_pty_request): New function.
+	(do_open_confirm): Handle the new linked list of channel requests.
+	(request_info): New class.
+
+	* src/channel.c (channel_process_status): Handle
+ 	LSH_CHANNEL_CLOSE.
+	(do_channel_success, do_channel_failure): Ignore messages that
+ 	there is no handler for
+	(most likely, becase we have decided to give up and close the
+ 	channel).
+
+	* src/Makefile.am.in: Removed most program_SOURCES definitions.
+
+	* configure.in: Commented out the sshd1 related tests.
+	
+	* configure.in: Check for openpty(). Test for BSD style pty names.
+
+1999-01-19  Gordon Matzigkeit  <gord@trick.fig.org>
+
+	* server.c (do_spawn_shell): Make sure session->user->shell is not
+	null before we dereference it.
+	Set argv[0] to be the shell name wth a prepended hyphen.
+
+1999-01-19  Gordon Matzigkeit  <gord@trick.fig.org>
+
+	* src/Makefile.am: Don't clobber files unless the new one was
+	correctly regenerated.
+	
+Tue Jan 26 06:11:47 1999    <nisse@puck>
+
+	* client_pty.c client_pty.h server_pty.c server_pty.h tty.c tty.h:
+	Added new files.
+
+1999-01-21  Gordon Matzigkeit  <gord@trick.fig.org>
+
+	* src/server.h: Always include ssh1_fallback.h, and fix typo.
+
+	* src/server.c (server_initiate): If we need to delay the key
+	exchange, initialize a kexinit here and save it in
+	CONNECTION->KEXINITS[CONNECTION_SERVER] until DO_LINE has a chance
+	to use it.
+
+	* src/connection.c (make_ssh_connection): Use macros rather than
+	magic numbers to index KEXINITS and LITERAL_KEXINITS.
+
+	* src/server.c (do_line): Fix transposed arguments and missing
+	comma in SSH1_FALLBACK call.
+
+	* acconfig.h: Remove references to SSHD1.
+
+	* configure.in: Get rid of all the checks for SSHD1.  The user
+	should supply it at runtime.
+
+	* src/lshd.c (main): Implement the `--ssh1-fallback' flag to allow
+	people to specify an sshd1 at runtime.
+
+	* src/version.h (SSH1_SERVER_PROTOCOL_VERSION): Only use version
+	1.99 if we were told to fallback to ssh1.
+
+	* src/ssh1_fallback.h: SSHD1 does not need the port number because
+	we invoke it as if we were inetd.
+	src/ssh1_fallback.c: Likewise.
+	
 Tue Jan 19 16:12:16 1999    <nisse@puck>
 
 	* src/read_line.h: Changed prototype for line handlers.

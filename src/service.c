@@ -61,7 +61,7 @@ static int do_service(struct packet_handler *c,
   CAST(service_handler, closure, c);
 
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   int name;
   
   simple_buffer_init(&buffer, packet->length, packet->data);

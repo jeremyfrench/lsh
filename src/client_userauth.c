@@ -124,7 +124,7 @@ static int do_userauth_success(struct packet_handler *c,
   CAST(success_handler, closure, c);
   struct simple_buffer buffer;
 
-  int msg_number;
+  unsigned msg_number;
     
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -157,7 +157,7 @@ static int do_userauth_failure(struct packet_handler *c,
   CAST(failure_handler, closure, c);
   struct simple_buffer buffer;
 
-  int msg_number;
+  unsigned msg_number;
   struct int_list *methods = NULL;
   int partial_success;
     
@@ -206,7 +206,7 @@ static int do_userauth_banner(struct packet_handler *closure,
 {
   struct simple_buffer buffer;
 
-  int msg_number;
+  unsigned msg_number;
   UINT32 length;
   UINT8 *msg;
 

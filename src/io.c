@@ -221,7 +221,7 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 {
   CAST(fd_read, closure, *r);
 
-  while(1)
+  for (;;)
     {
       int res = read(closure->fd, buffer, length);
       if (!res)
@@ -465,7 +465,7 @@ int blocking_read(int fd, struct read_handler *handler)
   struct fd_read r =
   { { STACK_HEADER, do_read }, fd };
 
-  while (1)
+  for (;;)
     {
       int res = READ_HANDLER(handler,
 			     &r.super);

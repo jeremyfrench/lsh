@@ -44,7 +44,7 @@ static int do_disconnect(struct packet_handler *closure UNUSED,
 			 struct lsh_string *packet)
 {
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 length;
   UINT32 reason;
   UINT8 *msg;

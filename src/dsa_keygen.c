@@ -71,7 +71,7 @@ void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l)
   mpz_init(t);
   mpz_init(c);
   
-  while (1)
+  for (;;)
     {
       { /* Generate q */
 	UINT8 h1[SHA_DIGESTSIZE];
@@ -159,7 +159,7 @@ void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q)
   mpz_init_set(n, p);
   mpz_sub_ui(n, n, 2);
 
-  while(1)
+  for (;;)
     {
       bignum_random(g, r, n);
       mpz_add_ui(g, g, 2);

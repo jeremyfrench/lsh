@@ -545,7 +545,7 @@ int dh_process_client_msg(struct diffie_hellman_instance *self,
 			  struct lsh_string *packet)
 {
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -615,7 +615,7 @@ int dh_process_server_msg(struct diffie_hellman_instance *self,
 			  struct lsh_string *packet)
 {
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 

@@ -108,7 +108,7 @@ UINT32 gcd(UINT32 x, UINT32 y)
       y = tmp;
     }
   
-  while (1)
+  for (;;)
     {
       /* During this loop, x is always odd */
       assert(x % 2);

@@ -70,7 +70,7 @@ static int do_handle_userauth(struct packet_handler *c,
   CAST(userauth_handler,  closure, c);
   struct simple_buffer buffer;
 
-  int msg_number;
+  unsigned msg_number;
   struct lsh_string *user;
   int requested_service;
   int method;

@@ -37,16 +37,16 @@
 
 
 /* CLASS:
-    (class 
-      (name pty_info)
-      (super resource)
-      (vars
-        (master simple int)
-        (slave simple int)
-	; FIXME: Is this used for anything?
-        ;; (tty_name array (simple char) MAX_TTY_NAME)
-        ;; (saved_ios simple "struct termios")
-	));
+   (class 
+     (name pty_info)
+     (super resource)
+       (vars
+         (master simple int)
+	 (slave simple int)
+	 ; FIXME: Is this used for anything?
+	 ;; (tty_name array (simple char) MAX_TTY_NAME)
+	 ;; (saved_ios simple "struct termios")
+	 ));
 */
 
 struct pty_info *make_pty_info(void);

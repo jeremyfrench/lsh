@@ -246,7 +246,7 @@ static void write_utf8(UINT32 length, UINT8 *msg)
   
   simple_buffer_init(&buffer, length, msg);
   
-  while(1)
+  for (;;)
     {
       UINT32 ucs4;
       

@@ -71,7 +71,7 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
   NEW(kexinit, res);
   struct simple_buffer buffer;
   struct simple_buffer sub_buffer;
-  int msg_number;
+  unsigned msg_number;
   UINT32 reserved;
   
   struct int_list *lists[NLISTS];
@@ -354,7 +354,7 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
       KILL(hash);
       hash = HASH_COPY(secret);
       
-      while (1)
+      for (;;)
 	{
 	  /* The n:th time we enter this loop, digest holds K_n (using
 	   * the notation of section 5.2 of the ssh "transport"
@@ -515,7 +515,7 @@ static int do_handle_newkeys(struct packet_handler *c,
 {
   CAST(newkeys_handler, closure, c);
   struct simple_buffer buffer;
-  int msg_number;
+  unsigned msg_number;
 
   simple_buffer_init(&buffer, packet->length, packet->data);
 
