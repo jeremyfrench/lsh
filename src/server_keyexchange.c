@@ -39,6 +39,8 @@ static int do_handle_dh_init(struct packet_handler *c,
   struct hash_instance *hash;
   struct lsh_string *s;
   int res;
+
+  verbose("handle_dh_init()\n");
   
   if (!dh_process_client_msg(&closure->dh, packet))
     {
@@ -117,6 +119,7 @@ static int do_init_dh(struct keyexchange_algorithm *c,
   dh->super.handler = do_handle_dh_init;
   init_diffie_hellman_instance(closure->dh, &dh->dh, connection);
 
+  dh->server_key = closure->server_key;
   dh->signer = closure->signer;
 
   dh->install = make_server_install_keys(algorithms);
@@ -143,12 +146,14 @@ static int do_init_dh(struct keyexchange_algorithm *c,
 
 struct keyexchange_algorithm *
 make_dh_server(struct diffie_hellman_method *dh,
+	       struct lsh_string *server_key,
 	       struct signer *signer)
 {
   struct dh_server_exchange *self = xalloc(sizeof(struct dh_server_exchange));
 
   self->super.init = do_init_dh;
   self->dh = dh;
+  self->server_key = server_key;
   self->signer = signer;
 
   return &self->super;
