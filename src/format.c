@@ -73,7 +73,6 @@ void ssh_format_write(const char *format, UINT32 length, UINT8 *buffer, ...)
 }
      
 static int write_decimal_length(UINT8 *buffer, UINT32 n);
-static void format_hex_string(UINT8 *buffer, UINT32 length, const UINT8 *data);
 
 UINT32 ssh_vformat_length(const char *f, va_list args)
 {
@@ -566,7 +565,8 @@ unsigned format_size_in_decimal(UINT32 n)
 }
 
 
-static void format_hex_string(UINT8 *buffer, UINT32 length, const UINT8 *data)
+void
+format_hex_string(UINT8 *buffer, UINT32 length, const UINT8 *data)
 {
   static const UINT8 hexchars[16] = "0123456789abcdef";
   UINT32 i;

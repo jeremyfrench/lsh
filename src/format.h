@@ -83,6 +83,7 @@ void ssh_format_write(const char *format, UINT32 length, UINT8 *buffer, ...);
 
 UINT32 ssh_vformat_length(const char *format, va_list args);
 void ssh_vformat_write(const char *format, UINT32 length, UINT8 *buffer, va_list args);
+void format_hex_string(UINT8 *dst, UINT32 length, const UINT8 *data);
 
 /* FIXME: Do we need a variant that handles non-const strings? */
 /* Returns an ordinary NUL-terminated string, or NULL if the string
