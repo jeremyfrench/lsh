@@ -73,7 +73,9 @@ int lsftp_dc_numglob(const char** globdata);
 struct lsftp_dc_s { 
   char* name;
   int hash;
-  mode_t posixperms;
+  /* Set if we know the permissions */
+  int has_permissions;
+  mode_t permissions;
 };
 
 
