@@ -59,6 +59,7 @@ void usage(void) NORETURN;
 
 void usage(void)
 {
+  fprintf(stderr, "lsh [-p port] [-l username] [-q] [-d] [-v] host\n");
   exit(1);
 }
 
@@ -169,8 +170,9 @@ int main(int argc, char **argv)
   /* No randomness is needed for verifying signatures */
   lookup = make_fake_host_db(make_dss_algorithm(NULL)); 
   kex = make_dh_client(dh, lookup);
-  algorithms = make_alist(4,
+  algorithms = make_alist(5,
 			  ATOM_ARCFOUR, &crypto_rc4_algorithm,
+			  ATOM_BLOWFISH_CBC, &crypto_blowfish_algorithm,
 			  ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);

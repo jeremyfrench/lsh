@@ -54,6 +54,7 @@ void usage(void) NORETURN;
 
 void usage(void)
 {
+  fprintf(stderr, "lshd [-p port] [-q] [-d] [-i] [-v]\n");
   exit(1);
 }
 
@@ -183,8 +184,9 @@ int main(int argc, char **argv)
   dh = make_dh1(r);
   init_host_key(r); /* Initializes public_key and secret_key */
   kex = make_dh_server(dh, public_key, secret_key);
-  algorithms = make_alist(4,
+  algorithms = make_alist(5,
 			  ATOM_ARCFOUR, &crypto_rc4_algorithm,
+			  ATOM_BLOWFISH_CBC, &crypto_blowfish_algorithm,
 			  ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
