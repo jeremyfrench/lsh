@@ -145,7 +145,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        
        (signature_algorithms object alist)
        ;; Addresses to bind
-       (local object sockaddr_list)
+       (local struct addr_queue)
        (port . "char *")
        (hostkey . "char *")
        (tcp_wrapper_name . "char *")
@@ -194,7 +194,7 @@ make_lshd_options(void)
   /* OK to initialize with NULL */
   self->signature_algorithms = all_signature_algorithms(self->random);
 
-  self->local = NULL;
+  addr_queue_init(&self->local);
   
   /* Default behaviour is to lookup the "ssh" service, and fall back
    * to port 22 if that fails. */
@@ -554,7 +554,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	else
 	  argp_error(state, "All keyexchange algorithms disabled.");
 
-	if (!self->local)
+	if (addr_queue_is_empty(&self->local))
 	  {
 	    /* Default interface */
 
@@ -565,7 +565,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      argp_failure(state, EXIT_FAILURE, 0,
 			   "Strange. Could not resolve the ANY address.");
 	  }
-	assert(self->local);
+	assert(!addr_queue_is_empty(&self->local));
 	
 	if (self->use_pid_file < 0)
 	  self->use_pid_file = self->daemonic;
@@ -1065,7 +1065,7 @@ main(int argc, char **argv)
   if (!read_host_key(options->hostkey, options->signature_algorithms, keys))
     return EXIT_FAILURE;
 
-  fds = io_listen_list(options->local,
+  fds = io_listen_list(&options->local,
 		       make_lshd_listen_callback
 		       (options, keys,
 			make_lshd_connection_service(options)),

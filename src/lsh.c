@@ -986,7 +986,7 @@ int main(int argc, char **argv, const char** envp)
   struct lsh_options *options;
   struct spki_context *spki;
   struct object_list *keys;
-  struct sockaddr_list *remote = NULL;
+  struct connect_list_state *remote;
   
   /* Default exit code if something goes wrong. */
   int lsh_exit_code = 17;
@@ -1018,9 +1018,11 @@ int main(int argc, char **argv, const char** envp)
       return EXIT_FAILURE;
     }
 
+  remote = make_connect_list_state();;
+  
   if (!io_resolv_address(options->super.target,
 			 options->super.port, 22,
-			 &remote))
+			 &remote->q))
     {
       werror("Could not resolv address `%z'\n", options->super.target);
       return EXIT_FAILURE;
