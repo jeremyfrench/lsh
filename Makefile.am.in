@@ -13,12 +13,12 @@ DOTDISTS = src/.dist_classes src/.dist_headers \
 	src/symmetric/.dist_headers src/symmetric/include/.dist_headers
 
 MAKEFILESAM = Makefile.am doc/Makefile.am src/Makefile.am \
-	src/symmetric/Makefile.am src/symmetric/include/MAkefile.am
+	src/symmetric/Makefile.am src/symmetric/include/Makefile.am
 
 # FIXME: Use the BASH variable to execute the script. The problem is
 # that the script attempts to start itselt with "$0 args".
 $(MAKEFILESAM): $(addsuffix .in,$(MAKEFILESAM))
-	./make_am --rethink
+	./make_am
 
 $(DOTDISTS): depend
 	./make_am --rethink
