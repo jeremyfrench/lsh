@@ -1,0 +1,528 @@
+/* lsh_proxy.c
+ *
+ * main proxy program.
+ *
+ * $Id$ */
+
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 1998, 1999 Niels Möller, Balázs Scheidler
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+#include "algorithms.h"
+#include "alist.h"
+#include "atoms.h"
+#include "channel.h"
+#include "channel_commands.h"
+#include "charset.h"
+#include "compress.h"
+#include "connection_commands.h"
+#include "crypto.h"
+#include "daemon.h"
+#include "format.h"
+#include "io.h"
+#include "io_commands.h"
+#include "lookup_verifier.h"
+#include "randomness.h"
+#include "spki.h"
+#include "ssh.h"
+#include "werror.h"
+#include "xalloc.h"
+#include "reaper.h"
+#include "server.h"
+#include "server_authorization.h"
+#include "server_keyexchange.h"
+#include "client_keyexchange.h"
+#include "server_userauth.h"
+#include "server_session.h"
+#include "proxy.h"
+#include "proxy_userauth.h"
+#include "proxy_session.h"
+#include "sexp.h"
+#include "sexp_commands.h"
+
+#include "lsh_argp.h"
+
+#include "lsh_proxy.c.x"
+
+#include <assert.h>
+
+#include <errno.h>
+#include <locale.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+/* Block size for stdout and stderr buffers */
+#define BLOCK_SIZE 32768
+
+
+/* Option parsing */
+
+#define OPT_NO 0x400
+#define OPT_SSH1_FALLBACK 0x200
+#define OPT_INTERFACE 0x201
+#define OPT_TCPIP_FORWARD 0x202
+#define OPT_NO_TCPIP_FORWARD (OPT_TCPIP_FORWARD | OPT_NO)
+#define OPT_DAEMONIC 0x203
+#define OPT_NO_DAEMONIC (OPT_DAEMONIC | OPT_NO)
+#define OPT_PIDFILE 0x204
+#define OPT_NO_PIDFILE (OPT_PIDFILE | OPT_NO)
+#define OPT_CORE 0x207
+
+/* GABA:
+   (class
+     (name lsh_proxy_options)
+     (super algorithms_options)
+     (vars
+       (style . sexp_argp_state)
+       (interface . "char *")
+       (port . "char *")
+       (hostkey . "char *")
+       (local object address_info)
+       (with_tcpip_forward . int)
+       (sshd1 object ssh1_fallback)
+       (daemonic . int)
+       (corefile . int)
+       (pid_file . "const char *")
+       ; -1 means use pid file iff we're in daemonic mode
+       (use_pid_file . int)))
+*/
+
+static struct lsh_proxy_options *
+make_lsh_proxy_options(struct alist *algorithms)
+{
+  NEW(lsh_proxy_options, self);
+
+  init_algorithms_options(&self->super, algorithms);
+  
+  self->style = SEXP_TRANSPORT;
+  self->interface = NULL;
+  self->port = "ssh";
+  /* FIXME: this should perhaps use sysconfdir */  
+  self->hostkey = "/etc/lsh_host_key";
+  self->local = NULL;
+
+  self->with_tcpip_forward = 1;
+  
+  self->sshd1 = NULL;
+  self->daemonic = 0;
+
+  /* FIXME: Make the default a configure time option? */
+  self->pid_file = "/var/run/lsh_proxy.pid";
+  self->use_pid_file = -1;
+  self->corefile = 0;
+  
+  return self;
+}
+
+static const struct argp_option
+main_options[] =
+{
+  /* Name, key, arg-name, flags, doc, group */
+  { "interface", OPT_INTERFACE, "interface", 0,
+    "Listen on this network interface", 0 }, 
+  { "port", 'p', "Port", 0, "Listen on this port.", 0 },
+  { "host-key", 'h', "Key file", 0, "Location of the server's private key.", 0},
+  { "destination", 'D', "destination:port", 0, "Destination ssh server address (transparent if not given)", 0 },
+
+#if WITH_SSH1_FALLBACK
+  { "ssh1-fallback", OPT_SSH1_FALLBACK, "File name", OPTION_ARG_OPTIONAL,
+    "Location of the sshd1 program, for falling back to version 1 of the Secure Shell protocol.", 0 },
+#endif /* WITH_SSH1_FALLBACK */
+
+#if WITH_TCP_FORWARD
+  { "tcp-forward", OPT_TCPIP_FORWARD, NULL, 0, "Enable tcpip forwarding (default).", 0 },
+  { "no-tcp-forward", OPT_NO_TCPIP_FORWARD, NULL, 0, "Disable tcpip forwarding.", 0 },
+#endif /* WITH_TCP_FORWARD */
+
+  { NULL, 0, NULL, 0, "Daemonic behaviour", 0 },
+  { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, redirect stdio to /dev/null, and chdir to /.", 0 },
+  { "no-daemonic", OPT_NO_DAEMONIC, NULL, 0, "Run in the foreground, with messages to stderr (default).", 0 },
+  { "pid-file", OPT_PIDFILE, "file name", 0, "Create a pid file. When running in daemonic mode, "
+    "the default is /var/run/lsh_proxy.pid.", 0 },
+  { "no-pid-file", OPT_NO_PIDFILE, NULL, 0, "Don't use any pid file. Default in non-daemonic mode.", 0 },
+  { "enable-core", OPT_CORE, NULL, 0, "Dump core on fatal errors (disabled by default).", 0 },
+    
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+static const struct argp_child
+main_argp_children[] =
+{
+  { &sexp_input_argp, 0, "", 0 },
+  { &algorithms_argp, 0, "", 0 },
+  { &werror_argp, 0, "", 0 },
+  { NULL, 0, NULL, 0}
+};
+
+static error_t
+main_argp_parser(int key, char *arg, struct argp_state *state)
+{
+  CAST(lsh_proxy_options, self, state->input);
+  
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_INIT:
+      state->child_inputs[0] = &self->style;
+      state->child_inputs[1] = &self->super;
+      state->child_inputs[2] = NULL;
+      break;
+    case ARGP_KEY_ARG:
+      argp_error(state, "Spurious arguments.");
+      break;
+      
+    case ARGP_KEY_END:
+      self->local = make_address_info_c(self->interface, self->port);
+      if (!self->local)
+	argp_error(state, "Invalid interface, port or service, %s:%s'.",
+		   self->interface ? self->interface : "ANY",
+		   self->port);
+      if (self->use_pid_file < 0)
+	self->use_pid_file = self->daemonic;
+      
+      break;
+      
+    case 'p':
+      self->port = arg;
+      break;
+
+    case 'h':
+      self->hostkey = arg;
+      break;
+
+    case OPT_INTERFACE:
+      self->interface = arg;
+      break;
+ 
+#if WITH_SSH1_FALLBACK
+    case OPT_SSH1_FALLBACK:
+      self->sshd1 = make_ssh1_fallback(arg ? arg : SSHD1);
+      break;
+#endif
+
+    case OPT_TCPIP_FORWARD:
+      self->with_tcpip_forward = 1;
+      break;
+
+    case OPT_NO_TCPIP_FORWARD:
+      self->with_tcpip_forward = 0;
+      break;
+
+    case OPT_DAEMONIC:
+      self->daemonic = 1;
+      break;
+
+    case OPT_NO_DAEMONIC:
+      self->daemonic = 0;
+      break;
+
+    case OPT_PIDFILE:
+      self->pid_file = arg;
+      self->use_pid_file = 1;
+      break;
+
+    case OPT_NO_PIDFILE:
+      self->use_pid_file = 0;
+      break;
+
+    case OPT_CORE:
+      self->corefile = 1;
+      break;
+    }
+  return 0;
+}
+
+static const struct argp
+main_argp =
+{ main_options, main_argp_parser, 
+  NULL,
+  "Server for the ssh-2 protocol.",
+  main_argp_children,
+  NULL, NULL
+};
+
+/* GABA:
+   (class
+     (name fake_host_db)
+     (super lookup_verifier)
+     (vars
+       ;; (algorithm object signature_algorithm)
+       ))
+*/
+
+static struct verifier *
+do_host_lookup(struct lookup_verifier *c UNUSED,
+	       int method UNUSED,
+               struct lsh_string *keyholder UNUSED,
+               struct lsh_string *key)
+{
+  assert(method == ATOM_SSH_DSS);
+
+  return &make_ssh_dss_verifier(key->length, key->data)->super;
+}
+
+static struct lookup_verifier *
+make_fake_host_db(void)
+{
+  NEW(fake_host_db, res);
+
+  res->super.lookup = do_host_lookup;
+
+  return &res->super;
+}
+
+
+/* GABA:
+   (expr
+     (name lsh_proxy_listen)
+     (globals
+       (log "&io_log_peer_command.super.super"))
+     (params
+       (listen object command)
+       (handshake object command)
+       (services object command)
+       (connect_server object command)
+       (chain_connections object command))
+     (expr 
+       (lambda (port)
+         (services 
+	   (let ((peer (listen port)))
+	     (chain_connections 
+	       connect_server 
+	       peer
+	       (handshake (log peer))))))))
+*/
+
+/* GABA:
+   (expr
+     (name lsh_proxy_connect_server)
+     (params
+       (connect object command)
+       (handshake object command))
+     (expr 
+       (lambda (port)
+         (handshake (connect port)))))
+*/
+
+/* Invoked when the client requests the userauth service. */
+/* GABA:
+   (expr
+     (name lsh_proxy_services)
+     (params 
+       (userauth object command))
+     (expr
+       (lambda (connection)
+         ((userauth connection) connection))))
+*/
+
+/* Invoked when starting the ssh-connection service */
+/* GABA:
+   (expr
+     (name lsh_proxy_connection_service)
+     (globals
+       (progn "&progn_command.super.super")
+       (init "&connection_service.super"))
+     (params
+       (login object command)     
+       (hooks object object_list))
+     (expr
+       (lambda (user connection)
+         ((progn hooks) (login user
+	                       ; We have to initialize the connection
+			       ; before logging in.
+	                       (init connection))))))
+*/
+
+int main(int argc, char **argv)
+{
+  struct lsh_proxy_options *options;
+  
+  struct alist *keys;
+  
+  struct reap *reaper;
+  
+  struct randomness *r;
+  struct alist *algorithms_server, *algorithms_client;
+  struct alist *lookup_keys;
+  struct make_kexinit *make_kexinit;
+  struct keypair *hostkey;
+  
+  /* FIXME: Why not allocate backend statically? */
+  NEW(io_backend, backend);
+  init_backend(backend);
+
+  /* For filtering messages. Could perhaps also be used when converting
+   * strings to and from UTF8. */
+  setlocale(LC_CTYPE, "");
+  /* FIXME: Choose character set depending on the locale */
+  set_local_charset(CHARSET_LATIN1);
+
+  r = make_reasonably_random();
+  
+  algorithms_server = many_algorithms(1,
+				      ATOM_SSH_DSS, make_dsa_algorithm(r),
+				      -1);
+  /* FIXME: copy algorithms_server */
+  algorithms_client = many_algorithms(1,
+				      ATOM_SSH_DSS, make_dsa_algorithm(r),
+				      -1);
+
+  options = make_lsh_proxy_options(algorithms_server);
+  
+  argp_parse(&main_argp, argc, argv, 0, NULL, options);
+
+  if (!options->corefile && !daemon_disable_core())
+    {
+      werror("Disabling of core dumps failed.\n");
+      return EXIT_FAILURE;
+    }
+  
+  if (options->daemonic)
+    {
+#if HAVE_SYSLOG
+      set_error_syslog("lsh_proxy");
+#else /* !HAVE_SYSLOG */
+      werror("lsh_proxy: No syslog. Further messages will be directed to /dev/null.\n");
+#endif /* !HAVE_SYSLOG */
+    }
+
+  if (options->daemonic)
+    switch (daemon_init())
+      {
+      case 0:
+	werror("lsh_proxy: Spawning into background failed.\n");
+	return EXIT_FAILURE;
+      case DAEMON_INETD:
+	werror("lsh_proxy: spawning from inetd not yet supported.\n");
+	return EXIT_FAILURE;
+      case DAEMON_INIT:
+      case DAEMON_NORMAL:
+	break;
+      default:
+	fatal("Internal error\n");
+      }
+  
+  if (options->use_pid_file && !daemon_pidfile(options->pid_file))
+    {
+      werror("lsh_proxy seems to be running already.\n");
+      return EXIT_FAILURE;
+    }
+      
+  /* Read the hostkey */
+  keys = make_alist(0, -1);
+  if (!(hostkey = read_spki_key_file(options->hostkey,
+				     make_alist(1, ATOM_DSA, make_dsa_algorithm(r), -1),
+				     &ignore_exception_handler)))
+    {
+      werror("lsh_proxy: Could not read hostkey.\n");
+      return EXIT_FAILURE;
+    }
+  ALIST_SET(keys, hostkey->type, hostkey);
+
+  /* FIXME: We should check that we have at least one host key.
+   * We should also extract the host-key algorithms for which we have keys,
+   * instead of hardcoding ssh-dss below. */
+ 
+  reaper = make_reaper();
+
+  lookup_keys = make_alist(1, 
+			   ATOM_SSH_DSS, make_fake_host_db(),
+			   -1);
+
+  ALIST_SET(algorithms_server, 
+	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, make_dh_server(make_dh1(r), keys));
+  ALIST_SET(algorithms_client, 
+	    ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, make_dh_client(make_dh1(r), lookup_keys));
+
+  make_kexinit
+    = make_simple_kexinit(r,
+			  make_int_list(1, ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
+					-1),
+			  make_int_list(1, ATOM_SSH_DSS, -1),
+			  options->super.crypto_algorithms,
+			  options->super.mac_algorithms,
+			  options->super.compression_algorithms,
+			  make_int_list(0, -1));
+  
+  {
+    /* Commands to be invoked on the connection */
+    struct object_list *connection_hooks;
+
+    connection_hooks = make_object_list(0, -1);
+    {
+      struct lsh_object *o = lsh_proxy_listen
+	(make_simple_listen(backend, NULL),
+	 make_handshake_command(CONNECTION_SERVER,
+				"lsh_proxy_server - a free ssh",
+				SSH_MAX_PACKET,
+				r,
+				algorithms_server,
+				make_kexinit,
+				NULL),
+	 make_offer_service(make_alist(1, 
+				       ATOM_SSH_USERAUTH, 
+				       lsh_proxy_services
+				       (make_userauth_proxy
+					(make_int_list(1, ATOM_PASSWORD, -1), 
+					 make_alist(1, ATOM_PASSWORD, &proxy_password_auth, -1),
+					 make_alist
+					 (1, 
+					  ATOM_SSH_CONNECTION,
+					  lsh_proxy_connection_service
+					  (make_proxy_connection_service
+					   (make_alist(0, -1)),
+					   connection_hooks),
+					  -1))),
+				       -1)),
+
+	 /* callback to call when client<->proxy handshake finished */
+	 (struct command *)lsh_proxy_connect_server(make_simple_connect(backend, NULL),
+			      make_handshake_command(CONNECTION_CLIENT,
+						     "lsh_proxy_client - a free ssh",
+						     SSH_MAX_PACKET,
+						     r,
+						     algorithms_client,
+						     make_kexinit,
+						     NULL)
+			      ),
+	 &chain_connections.super.super);
+
+
+    
+      CAST_SUBTYPE(command, server_listen, o);
+    
+      COMMAND_CALL(server_listen, options->local,
+		   &discard_continuation,
+		   make_report_exception_handler(EXC_IO, EXC_IO, "lsh_proxy: ",
+						 &default_exception_handler,
+						 HANDLER_CONTEXT));
+    }
+  }
+  
+  reaper_run(reaper, backend);
+
+  return 0;
+}
