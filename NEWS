@@ -1,0 +1,13 @@
+NEWS since the 1998-12-11 snapshot:
+
+A resource mechanism (resource.[ch]) used by the server to cleanup
+properly when a connection dies unexpectedly. Can be used to kill
+child processes, close files and ports, etc.
+
+Generic code for chaining ciphers (crypto_cbc()) and piping them
+together (crypto_cascade()).
+
+Some untested support for blowfish and 3DES. A -c command line option
+is needed.
+
+A few bugfixes. Thanks to J.H.M. Dassen (Ray) and Balazs Scheidler.

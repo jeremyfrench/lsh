@@ -1,10 +1,31 @@
+Thu Dec 17 16:27:22 1998    <nisse@puck>
+
+	* server.c (make_process_resource): New function.
+	(server_die): Kill resources associated with the connection.
+	(do_close): New callback function till kill the process if the
+	channel is closed unexpectedly.
+
+	server.c (do_exit_shell): Don't close the process's stdin, or the
+ 	channel, until the client asks for it.
+
+	* server.c (make_server_close_handler): Take connection as
+	argument.
+
 Wed Dec 16 01:33:25 1998    <nisse@puck>
+
+	* resource.h, resource.c: New files.
+	
+	* channel.h (CHANNEL_CLOSE_AT_EOF): This flag now means that
+	the channel should be closed when EOF have been both sent and
+	received. 
+	* channel.c (channel_eof): New meaning of CHANNEL_CLOSE_AT_EOF
+	flag. 
 
 	* client.c (do_exit_status): Send eof, if we haven't done that
 	already. 
 
 	* channel.c (do_channel_eof): Don't initiate close automatically
-	when eof has been both sent and recieved.
+	when eof has been both sent and received.
 
 	* list.c (make_int_listv): New function
 	(make_object_listv): New function
