@@ -25,6 +25,7 @@
 
 #include "certificate.h"
 
+
 enum spki_type
 spki_intern(struct sexp_iterator *i);
 
@@ -59,5 +60,9 @@ spki_parse_version(struct sexp_iterator *i);
 enum spki_type
 spki_parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i,
 		     struct spki_5_tuple *acl);
+
+enum spki_type
+spki_parse_cert(struct spki_acl_db *db, struct sexp_iterator *i,
+		struct spki_5_tuple *cert);
 
 #endif /* LIBSPKI_PARSE_H_INCLUDED */

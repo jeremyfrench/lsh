@@ -206,6 +206,9 @@ spki_parse_valid(struct sexp_iterator *i,
     }
 
   /* Online tests not supported. */
+  if (type != SPKI_TYPE_END_OF_EXPR)
+    return 0;
+  
   return spki_parse_end(i);  
 }
 
@@ -265,4 +268,62 @@ spki_parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i,
     }
   
   return 0;
+}
+
+enum spki_type
+spki_parse_cert(struct spki_acl_db *db, struct sexp_iterator *i,
+		struct spki_5_tuple *cert)
+{
+  enum spki_type type = spki_parse_type(i);
+
+  cert->flags = 0;
+  
+  if (type == SPKI_TYPE_VERSION)
+    type = spki_parse_version(i);
+
+  if (type == SPKI_TYPE_DISPLAY)
+    type = spki_parse_skip(i);
+
+  if (type != SPKI_TYPE_ISSUER)
+    return 0;
+
+  type = spki_parse_principal(db, i, &cert->issuer);
+  if (!type || !(type = spki_parse_end(i)))
+    return 0;
+
+  if (type == SPKI_TYPE_ISSUER_INFO)
+    type = spki_parse_skip(i);    
+
+  type = spki_parse_principal(db, i, &cert->subject);
+  if (!type || !(type = spki_parse_end(i)))
+    return 0;
+  
+  if (type == SPKI_TYPE_SUBJECT_INFO)
+    type = spki_parse_skip(i);    
+
+  if (type == SPKI_TYPE_PROPAGATE)
+    {
+      if (!sexp_iterator_exit_list(i))
+	return 0;
+
+      cert->flags |= SPKI_PROPAGATE;
+    }
+
+  if (type != SPKI_TYPE_TAG)
+    return 0;
+  
+  type = spki_parse_tag(db, i, cert);
+  if (!type)
+    return 0;
+
+  if (type == SPKI_TYPE_VALID)
+    type = spki_parse_valid(i, cert);
+
+  if (type == SPKI_TYPE_COMMENT)
+    type = spki_parse_skip(i);    
+
+  if (type != SPKI_TYPE_END_OF_EXPR)
+    return 0;
+
+  return spki_parse_end(i);
 }
