@@ -96,6 +96,8 @@ make_parse_##name(struct command_continuation *c,	\
 {							\
   NEW(parse_value, self);				\
 							\
+  trace(FUNCTION_NAME "\n"); 				\
+							\
   self->super.super.handler = do_parse_##name;		\
   self->super.e = e;					\
   self->super.next = next;				\
@@ -119,6 +121,8 @@ make_parse_##name(struct string_handler *handler,	\
 		  struct read_handler *next)		\
 {							\
   NEW(parse_string, self);				\
+							\
+  trace(FUNCTION_NAME "\n"); 				\
 							\
   self->super.super.handler = do_parse_##name;		\
   self->super.e = e;					\
@@ -159,6 +163,9 @@ do_parse_literal_data(struct read_handler **s,
 
   left = self->data->length - self->i;
 
+  trace("do_parse_literal_data: Needed %i characters, %i available.\n",
+	left, available);
+  
   if (available < left)
     {
       memcpy(self->data->data + self->i, data, available);
@@ -191,6 +198,8 @@ make_parse_literal_data(UINT32 length,
 {
   NEW(parse_literal_data, self);
 
+  trace("make_parse_literal_data: length = %i.\n", length);
+  
   self->super.super.super.handler = do_parse_literal_data;
   self->super.super.next = next;
   self->super.super.e = e;
@@ -286,6 +295,8 @@ make_parse_length(UINT8 first,
 		  struct exception_handler *e,
 		  struct read_handler *next)
 {
+  trace("make_parse_length: first = %xi.\n", first);
+  
   switch (first)
     {
     case '1': case '2': case '3':
@@ -321,6 +332,8 @@ MAKE_PARSE_STRING(literal)
 {
   CAST(parse_string, self, *s);
 
+  trace("do_parse_literal\n");
+  
   if (!available)
     {
       SEXP_ERROR(self->super.e, "Unexpected EOF");
@@ -394,8 +407,10 @@ do_parse_skip(struct read_handler **s,
   
   if (data[0] == self->expect)
     {
-	*s = self->super.next;
-	return 1;
+      trace("do_parse_skip: Got expected character %xi.\n",
+	    self->expect);
+      *s = self->super.next;
+      return 1;
     }
 
   /* FIXME: More readable error message */
@@ -412,6 +427,8 @@ make_parse_skip(UINT8 token,
 {
   NEW(parse_skip, self);
 
+  trace("make_parse_skip: token = %xi.\n", token);
+  
   self->super.super.handler = do_parse_skip;
   self->super.next = next;
   self->super.e = e;
@@ -437,12 +454,15 @@ do_handle_display(struct string_handler *s,
 
   if (!self->display)
     {
+      trace("do_handle_display: Got display hint.\n");
       self->display = data;
     }
   else
     {
       struct lsh_string *display = self->display;
       self->display = NULL;
+
+      trace("do_handle_display: Got data.\n");
       
       COMMAND_RETURN(self->c,
 		     make_sexp_string(display, data));
@@ -453,6 +473,8 @@ static struct string_handler *make_handle_display(struct command_continuation *c
 {
   NEW(handle_display, self);
 
+  trace("make_handle_display\n");
+  
   self->super.handler = do_handle_display;
   self->display = NULL;
   self->c = c;
@@ -470,6 +492,8 @@ make_parse_display(struct read_handler * (*make)(struct string_handler *h,
 {
   struct string_handler *h = make_handle_display(c);
 
+  trace("make_parse_display\n");
+  
   return make(h, e,
 	      make_parse_skip(']', e,
 			      make(h, e, next)));
@@ -499,6 +523,8 @@ do_handle_element(struct command_continuation *c,
   CAST(handle_element, self, c);
   CHECK_SUBTYPE(sexp, o);
 
+  trace("do_handle_element\n");
+  
   self->count++;
   object_queue_add_tail(&self->l, o);
 }
@@ -508,6 +534,8 @@ make_handle_element(void)
 {
   NEW(handle_element, self);
 
+  trace("make_handle_element\n");
+  
   self->count = 0;
   object_queue_init(&self->l);
 
@@ -516,12 +544,14 @@ make_handle_element(void)
   return self;
 }
 
-static struct sexp *build_parsed_vector(struct handle_element *self)
+static struct sexp *
+build_parsed_vector(struct handle_element *self)
 {
   struct object_list *l = alloc_object_list(self->count);
-
   unsigned i;
 
+  trace("build_parsed_vector: count = %i.\n", self->count);
+  
   for (i = 0; i < self->count; i++)
     LIST(l)[i] = object_queue_remove_head(&self->l);
   
@@ -571,6 +601,8 @@ do_parse_list(struct read_handler **s,
   
   if (data[i] == ')')
     {
+      trace("do_parse_list: Encountered end of list.\n");
+      
       *s = self->super.super.next;
       COMMAND_RETURN(self->super.c,
 		     build_parsed_vector(self->elements));
@@ -593,6 +625,8 @@ make_parse_list(int advanced,
 {
   NEW(parse_list, self);
 
+  trace("make_parse_list\n");
+  
   self->super.super.super.handler = do_parse_list;
   self->super.super.e = e;
   self->super.super.next = next;
@@ -612,6 +646,7 @@ MAKE_PARSE_VALUE(canonical_sexp)
 {
   CAST(parse_value, self, *s);
 
+  trace("do_parse_canonical_sexp\n");
   if (!available)
     {
       SEXP_EOF(self->super.e, "No more sexps.");
@@ -653,6 +688,8 @@ static UINT32 do_expect_eof(struct read_handler **s,
     {
       SEXP_ERROR(self->e, "Expected EOF");
     }
+  trace("do_expect_eof: Hit EOF.\n");
+  
   *s = NULL;
   return 0;
 }
@@ -661,6 +698,9 @@ static struct read_handler *
 make_expect_eof(struct exception_handler *e)
 {
   NEW(parser, self);
+
+  trace("make_expect_eof\n");
+  
   self->super.handler = do_expect_eof;
   self->e = e;
   self->next = NULL;
@@ -698,6 +738,8 @@ do_parse_base64(struct read_handler **s,
       return 0;
     }
 
+  trace("do_parse_base64\n");
+  
   for (done = 0; done < available; )
     {
       int digit;
@@ -739,6 +781,9 @@ make_parse_base64(UINT8 terminator,
 		  struct read_handler *next)
 {
   NEW(parse_base64, self);
+
+  trace("make_parse_base64\n");
+  
   self->super.super.handler = do_parse_base64;
   self->super.e = e;
   self->super.next = next;
@@ -757,6 +802,8 @@ make_parse_transport(struct read_handler * (*make)(struct command_continuation *
 		     struct exception_handler *e,
 		     struct read_handler *next)
 {
+  trace("make_parse_transport\n");
+  
   return
     make_parse_base64('}',
 		      make(c, e, 
@@ -776,6 +823,8 @@ MAKE_PARSE_VALUE(transport_sexp)
       *s = NULL;
       return 0;
     }
+
+  trace("do_parse_transport_sexp\n");
   
   for (i = 0;  (i < available) && (sexp_char_classes[data[i]] & CHAR_space); i++)
     ;
@@ -826,12 +875,14 @@ do_skip_comment(struct read_handler **s,
       return 0;
     }
   
-  for (i = 0;  (i < available) && (data[i] != 0xa); i++)
-    ;
-  
-  if (i == available)
-    *s = self->next;
-  
+  for (i = 0; i < available; i++)
+    if (data[i] == 0xa)
+      {
+	trace("do_skip_comment: Encountered EOL.\n");
+	*s=self->next;
+	break;
+      }
+
   return i;
 }
 
@@ -840,6 +891,9 @@ make_parse_comment(struct exception_handler *e,
 		   struct read_handler *next)
 {
   NEW(parser, self);
+
+  trace("make_parse_comment\n");
+  
   self->e = e;
   self->next = next;
   self->super.handler = do_skip_comment;
@@ -861,6 +915,8 @@ MAKE_PARSE_VALUE(advanced_sexp)
       *s = NULL;
       return 0;
     }
+
+  trace("do_parse_advanced_sexp\n");
   
   for (i = 0;  (i < available) && (sexp_char_classes[data[i]] & CHAR_space); i++)
     ;
@@ -908,7 +964,9 @@ do_parse_loop(struct read_handler **s,
 	      UINT8 *data)
 {
   CAST(parser, self, *s);
-    
+
+  trace("do_parse_loop\n");
+  
   *s = self->next;
   return READ_HANDLER(*s, available, data);
 }
@@ -918,6 +976,9 @@ make_parse_loop(struct exception_handler *e,
 		struct read_handler *next)
 {
   NEW(parser, self);
+
+  trace("make_parse_loop\n");
+  
   self->super.handler = do_parse_loop;
   self->e = e;
   self->next = next;
