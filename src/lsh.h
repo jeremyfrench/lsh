@@ -127,7 +127,7 @@ struct randomness;
 
 /* reaper.h */
 struct exit_callback;
-struct reap;
+struct reaper;
 
 /* resource.h */
 struct resource;

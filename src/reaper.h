@@ -44,14 +44,17 @@
 
 /* GABA:
    (class
-     (name reap)
+     (name reaper)
      (vars
        ; Use callback == NULL to cancel a previous callback.
-       (reap method void "pid_t pid" "struct exit_callback *callback")))
+       (reap method void "pid_t pid" "struct exit_callback *callback")
+       ; Mapping of from pids to exit-callbacks. 
+       ; NOTE: This assumes that a pid_t fits in an int. 
+       (children object alist)))
 */
 
 #define REAP(r, p, c) ((r)->reap((r), (p), (c)))
 
-struct reap *make_reaper(void);
+struct reaper *make_reaper(void);
 
 #endif /* LSH_REAPER_H_INCLUDED */

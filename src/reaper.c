@@ -44,19 +44,9 @@
 
 #include "reaper.c.x"
 
-/* GABA:
-   (class
-     (name reaper)
-     (super reap)
-     (vars
-       ; Mapping of from pids to exit-callbacks. 
-       ; NOTE: This assumes that a pid_t fits in an int. 
-       (children object alist)))
-*/
-
 static void
-do_reap(struct reap *c,
-		    pid_t pid, struct exit_callback *callback)
+do_reap(struct reaper *c,
+	pid_t pid, struct exit_callback *callback)
 {
   CAST(reaper, closure, c);
 
@@ -153,15 +143,15 @@ make_reaper_callback(struct reaper *reaper)
   return &self->super;
 }
 
-struct reap *
+struct reaper *
 make_reaper(void)
 {
   NEW(reaper, self);
 
-  self->super.reap = do_reap;
+  self->reap = do_reap;
   self->children = make_linked_alist(0, -1);
 
   io_signal_handler(SIGCHLD, make_reaper_callback(self));
 
-  return &self->super;
+  return self;
 }

@@ -550,7 +550,7 @@ int main(int argc, char **argv)
   
   struct alist *keys;
   
-  struct reap *reaper;
+  struct reaper *reaper;
   
   struct randomness *r;
   struct alist *algorithms_server, *algorithms_client;

@@ -149,7 +149,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (vars
        (e object exception_handler)
        
-       (reaper object reap)
+       (reaper object reaper)
        (random object randomness)
        
        (signature_algorithms object alist)
