@@ -1,3 +1,102 @@
+2002-11-10  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/srp_exchange.c (srp_make_verifier): Adapted to new sexp code.
+	(make_srp_entry): Likewise.
+	* src/srp-gen.c: Adapted to new sexp code.
+	* src/server_keyexchange.c (do_server_srp_read_verifier): Adapted
+	to new sexp code.
+	* src/server_authorization.c (do_key_lookup): Adapted to new sexp code.
+	* src/server.c (read_host_key): Adapted to new sexp code.
+	* src/rsa_keygen.c (rsa_generate_key): Adapted to new sexp code. 
+	* src/lshd.c: Adapted to new sexp code.
+	* src/lsh.c (read_known_hosts): Adapted to new sexp code.
+	(read_user_keys): Likewise.
+	(do_lsh_lookup): Likewise.
+	* src/lsh-keygen.c: Adapted to new sexp code.
+	* src/lsh-writekey.c: Likewise.
+	* src/lsh-decode-key.c: Adapted to new sexp code.
+	* src/testsuite/testutils.c (test_sign): Adapted to new sexp code.
+	(test_spki_match): Likewise.
+
+	* src/spki.h (spki_exception): Deleted class.
+
+	* src/spki.c: Adapted to new sexp code.
+	(make_spki_exception): Deleted function.
+	(spki_make_public_key): Deleted function, the PUBLIC_SPKI_KEY
+	method can be used directly.directly.
+	(spki_hash_sexp): Deleted function.
+	(subject_match_hash): #if:ed out function for now.
+	(spki_subject_by_hash): Likewise.
+	(do_spki_lookup): #if:ed out lookup by hash.
+	(spki_algorithm_lookup): New function.
+	(spki_get_type): Deleted, moved similar code to sexp.c.
+
+	* src/exception.h (EXC_SEXP, EXC_SPKI): Deleted SEXP and
+	SPKI-related exceptions.
+
+	* src/sexp.c: Rewrote using nettle's sexp functions.
+	* src/sexp.h: Matching rewrite of declarations.
+	
+	* src/rsa.c (encode_rsa_sig_val): Deleted function.
+	(decode_rsa_sig_val): Deleted function.
+	(spki_init_rsa_verifier): Deleted function.
+	(make_rsa_verifier_internal): Deleted function.
+	(do_rsa_verify): Adapted to new sexp code.
+	(do_rsa_public_spki_key): Likewise.
+	(do_rsa_sign): Likewise.
+	(make_rsa_verifier): Use rsa_keypair_from_sexp_alist.
+	(make_rsa_signer): Likewise.
+
+	* src/publickey_crypto.h: Added dsa declarations (used to be in
+	dsa.h). 
+
+	* src/lsh.h: Removed forward declaration of sexp structs.
+
+	* src/lsh-export-key.c (encode_base64): New function (was in
+	sexp.c earlier).
+	(sexp_to_ssh2_key): Adapted to new sexp code.
+
+	* src/lsh-authorize: Use new sexp-conv program. Check exit status
+	of sexp-conv.
+
+	* src/dsa_keygen.c (dsa_generate_key): Adapted to new sexp code.
+
+	* src/dsa.h: Deleted file.
+
+	* src/dsa.c (make_dsa_verifier_internal): Deleted function.
+	(encode_dsa_sig_val): Deleted function.
+	(decode_dsa_sig_val): Deleted function.
+	(do_dsa_verify): Adapted to new sexp code.
+	(do_dsa_public_spki_key): Return a string, in canonical or
+	transport syntax. 
+	(make_dsa_verifier): Use nettle's dsa_keypair_from_sexp_alist.
+	(make_dsa_signer): Likewise.
+
+	* src/abstract_crypto.h (PUBLIC_SPKI_KEY): Changed method, now
+	returns a string and takes an extra argument to say if it should
+	use transport syntax.
+
+	* src/Makefile.am.in (bin_PROGRAMS): Don't build sexp-conv.
+	(sbin_PROGRAMS): Don't build lsh_proxy.
+
+	* src/testsuite/lsh-6-test (LSHD_FLAGS): Bugfix, test_success was
+	used improperly, making the testcase always succeed.
+
+	* src/testsuite/keygen-1-test: Use $SEXP_CONV.
+	* src/testsuite/keygen-2-test: Likewise.
+
+	* src/testsuite/functions.sh (SEXP_CONV): Use nettle's sexp-conv
+	program. 
+
+	* src/testsuite/conv-1-test: Use $SEXP_CONV, with explicit line
+	width. 
+	* src/testsuite/conv-2-test: Use $SEXP_CONV.
+	* src/testsuite/conv-3-test: Skip test for now, new sexp-conv
+	doesn't support hex output.
+
+	* src/testsuite/Makefile.am (check): Set LD_LIBRARY_PATH when
+	running tests.
+
 2002-11-07  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Don't use quotes with AM_CONFIG_HEADER, it seems
@@ -19,6 +118,8 @@
 	* doc/Makefile.am.in: Removed inclusion of ctags.mk.
 	
 2002-11-03  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* misc/Makefile.am.in: Don't include ctags.mk.
 
 	* src/testsuite/testutils.c (test_sign): Use SIGN and VERIFY, not
 	the obsolete methods SIGN_SPKI and VERIFY_SPKI.
