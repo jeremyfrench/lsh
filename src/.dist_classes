@@ -28,7 +28,6 @@ dist_classes = \
     crypto.c.x \
     debug.c.x \
     dsa.c.x \
-    encrypt.c.x \
     exception.c.x \
     exception.h.x \
     gateway_channel.c.x \
@@ -55,7 +54,6 @@ dist_classes = \
     lsh.c.x \
     lshd.c.x \
     lshg.c.x \
-    pad.c.x \
     parse_config.c.x \
     publickey_crypto.c.x \
     publickey_crypto.h.x \
@@ -96,4 +94,5 @@ dist_classes = \
     unpad.c.x \
     userauth.h.x \
     write_buffer.h.x \
+    write_packet.c.x \
     zlib.c.x
