@@ -34,6 +34,8 @@
 #include <unistd.h>
 #endif
 
+#include "sys/stat.h"
+
 #ifdef HAVE_POLL
 # if HAVE_POLL_H
 #  include <poll.h>
@@ -1418,7 +1420,7 @@ io_listen_local(struct io_backend *b,
   local_length = OFFSETOF(struct sockaddr_un, sun_path) + name->length;
   local = alloca(local_length);
 
-  local->sun_family = AF_LOCAL;
+  local->sun_family = AF_UNIX;
   memcpy(local->sun_path, name->data, name->length);
   
   /* First create the directory, in case it doesn't yet exist. */
@@ -1531,7 +1533,7 @@ io_connect_local(struct io_backend *b,
   addr_length = OFFSETOF(struct sockaddr_un, sun_path) + name->length;
   addr = alloca(addr_length);
 
-  addr->sun_family = AF_LOCAL;
+  addr->sun_family = AF_UNIX;
   memcpy(addr->sun_path, name->data, name->length);
 
   /* cd to it, but first save old cwd */
