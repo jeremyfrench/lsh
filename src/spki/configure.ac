@@ -13,7 +13,7 @@ AC_ARG_WITH(include-path,
   [with_include_path=''])
 
 if test x$with_include_path != x ; then
-  CPPFLAGS="$CPPFLAGS -I `echo $with_include_path | sed 's/:/ -I /g'`"
+  CPPFLAGS="$CPPFLAGS -I`echo $with_include_path | sed 's/:/ -I/g'`"
 fi
 
 AC_ARG_WITH(lib-path,
@@ -21,7 +21,7 @@ AC_ARG_WITH(lib-path,
   [with_lib_path=''])
 
 if test x$with_lib_path != x ; then
-  LDFLAGS="$LDFLAGS -L `echo $with_lib_path | sed 's/:/ -L /g'`"
+  LDFLAGS="$LDFLAGS -L`echo $with_lib_path | sed 's/:/ -L/g'`"
 fi
 
 LSH_RPATH_INIT([`echo $with_lib_path | sed 's/:/ /g'` \
