@@ -7,6 +7,7 @@
 
 #include <time.h>
 #include <netdb.h>
+#include <netinet/in.h>
 
 #include "abstract_io.h"
 #include "write_buffer.h"
