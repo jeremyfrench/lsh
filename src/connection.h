@@ -31,6 +31,67 @@
 #include "randomness.h"
 
 
+/* NOTE: CONNECTION_CLIENT and CONNECTION_SERVER are used both for
+ * indexing the two-element arrays in the connection object, and in
+ * the flags field, to indicate our role in the protocol. For
+ * instance,
+ *
+ *   connection->versions[connection->flags & CONNECTION_MODE]
+ *
+ * is the version string we sent. Furthermore, install_keys() depends
+ * on the numerical values of CONNECTION_SERVER and CONNECTION_CLIENT. */
+
+enum connection_flag
+  {
+    CONNECTION_MODE = 1, 
+    CONNECTION_CLIENT = 0,
+    CONNECTION_SERVER = 1,
+    CONNECTION_SRP = 2
+  };
+
+enum peer_flag
+  {
+    /* Use a different encoding of ssh-dss signatures, for
+     * compatibility with SSH Inc's ssh version 2.0.x and 2.1.0 */
+    PEER_SSH_DSS_KLUDGE          = 0x00000001,
+
+    /* Support SSH_MSG_SERVICE_ACCEPT with omitted service name, for
+     * compatibility with SSH Inc's ssh version 2.0.x */
+    PEER_SERVICE_ACCEPT_KLUDGE   = 0x00000002,
+
+    /* Replace the service name with the string "ssh-userauth" in
+     * publickey userauth requests, for compatibility with SSH Inc's
+     * ssh version 2.0.x and 2.1.0 */
+    PEER_USERAUTH_REQUEST_KLUDGE = 0x00000004,
+
+    /* Never send a debug message after successful keyexchange, as SSH
+     * Inc's ssh version 2.0.x and 2.1 can't handle that. */
+    PEER_SEND_NO_DEBUG           = 0x00000008,
+
+    /* Don't include the originator port in X11 channel open messages,
+     * for compatibility with SSH Inc's ssh version 2.0.x */
+    PEER_X11_OPEN_KLUDGE         = 0x00000010
+  };
+
+/* State affecting incoming keyexchange packets */
+enum kex_state
+  {
+    /* A KEX_INIT msg can be accepted. This is true, most of the
+     * time. */
+    KEX_STATE_INIT,
+
+    /* Ignore next packet, whatever it is. */
+    KEX_STATE_IGNORE,
+
+    /* Key exchange is in progress. Neither KEX_INIT or NEWKEYS
+     * messages, nor upper-level messages can be received. */
+    KEX_STATE_IN_PROGRESS,
+
+    /* Key exchange is finished. A NEWKEYS message should be received,
+     * and nothing else. */
+    KEX_STATE_NEWKEYS
+  };
+
 #define GABA_DECLARE
 #include "connection.h.x"
 #undef GABA_DECLARE
@@ -65,44 +126,6 @@ do_##NAME(struct packet_handler *s UNUSED,		\
 	  struct lsh_string *PARG)
 
 
-/* NOTE: These are used both for indexing the two-element arrays in
- * the connection object. But they are also used in the flags field,
- * to indicate our role in the protocol.
- * For instance,
- *
- *   connection->versions[connection->flags & CONNECTION_MODE]
- *
- * is the version string we sent. Furthermore, install_keys() depends
- * on the numerical values of CONNECTION_SERVER and CONNECTION_CLIENT. */
-
-#define CONNECTION_MODE 1
-
-#define CONNECTION_CLIENT 0
-#define CONNECTION_SERVER 1
-
-/* Set if SRP keyexchange was used. */
-#define CONNECTION_SRP 2
-
-/* Use a different encoding of ssh-dss signatures, for compatibility with
- * SSH Inc's ssh version 2.0.x and 2.1.0 */
-#define PEER_SSH_DSS_KLUDGE           0x00000001
-
-/* Support SSH_MSG_SERVICE_ACCEPT with omitted service name, for
- * compatibility with SSH Inc's ssh version 2.0.x */
-#define PEER_SERVICE_ACCEPT_KLUDGE    0x00000002
-
-/* Replace the service name with the string "ssh-userauth" in
- * publickey userauth requests, for compatibility with SSH Inc's ssh
- * version 2.0.x and 2.1.0 */
-#define PEER_USERAUTH_REQUEST_KLUDGE  0x00000004
-
-/* Never send a debug message after successful keyexchange, as SSH
- * Inc's ssh version 2.0.x and 2.1 can't handle that. */
-#define PEER_SEND_NO_DEBUG            0x00000008
-
-/* Don't include the originator port in X11 channel open messages, for
- * compatibility with SSH Inc's ssh version 2.0.x */
-#define PEER_X11_OPEN_KLUDGE          0x00000010
 
 /* GABA:
    (class
@@ -113,7 +136,7 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        (e object exception_handler)
 
        ; Connection flags
-       (flags . UINT32)
+       (flags . "enum connection_flag")
 
        ; Sent and received version strings
        (versions array (string) 2)
@@ -123,9 +146,9 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        (debug_comment . "const char *")
 
        ; Features or bugs peculiar to the peer
-       (peer_flags . UINT32)
+       (peer_flags . "enum peer_flag")
 
-       ; Timer, used both for timeouts and for key reexchange
+       ; Timer, used both for initial handshake timeout
        (timer object resource)
        
        ; Information about a logged in user. NULL unless some kind of
@@ -151,8 +174,8 @@ do_##NAME(struct packet_handler *s UNUSED,		\
 
        ; Sending 
        (raw   object abstract_write)  ; Socket connected to the other end 
-       (write object abstract_write)  ; Where to send packets through the
-                                      ; pipeline.
+       (write_packet object abstract_write)  ; Where to send packets
+       					     ; through the pipeline
 
        (send_mac object mac_instance)
        (send_crypto object crypto_instance)
@@ -165,8 +188,17 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        (pending struct string_queue)
        
        ; Key exchange 
-       (kex_state . int)
+       (read_kex_state . "enum kex_state")
 
+       ; While in the middle of a key exchange, messages of most types
+       ; must be queued up waiting for the key exchange to complete.
+       (send_kex_only . int)
+       (send_queue struct string_queue)
+       
+       ; For the key re-exchange logic
+       (key_expire object resource)
+       (sent_data . UINT32)
+       
        ; What to do once the connection is established
        (established object command_continuation)
        
@@ -184,10 +216,17 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        ))
 */
 
-#define C_WRITE(c, s) A_WRITE((c)->write, (s) )
+/* Processes the packet at once, passing it on to the write buffer. */
+/* FIXME: Could be replaced by a single function doing the
+ * compress, encrypt, mac. */
+#define C_WRITE_NOW(c, s) A_WRITE((c)->write_packet, (s) )
+
+/* Same as C_WRITE_NOW, except that it queues packets while key
+ * exchange is in progress. */
+#define C_WRITE(c, s) connection_send((c), (s))
 
 struct ssh_connection *
-make_ssh_connection(UINT32 flags,
+make_ssh_connection(enum connection_flag flags,
 		    struct address_info *peer,
 		    const char *id_comment,
 		    struct command_continuation *c,
@@ -199,6 +238,17 @@ void connection_init_io(struct ssh_connection *connection,
 
 struct lsh_callback *
 make_connection_close_handler(struct ssh_connection *c);
+
+/* Sending ordinary (non keyexchange) packets */
+void
+connection_send(struct ssh_connection *self,
+		struct lsh_string *message);
+
+void
+connection_send_kex_start(struct ssh_connection *self);
+
+void
+connection_send_kex_end(struct ssh_connection *self);
 
 /* Serialization */
 void connection_lock(struct ssh_connection *self);
@@ -221,5 +271,6 @@ extern struct packet_handler connection_ignore_handler;
 extern struct packet_handler connection_unimplemented_handler;
 extern struct packet_handler connection_fail_handler;
 extern struct packet_handler connection_forward_handler;
+extern struct packet_handler connection_disconnect_handler;
 
 #endif /* LSH_CONNECTION_H_INCLUDED */
