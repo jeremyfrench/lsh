@@ -1,3 +1,8 @@
+2004-11-19  Niels Möller  <niels@s3.kth.se>
+
+	* argp.h (__argp_usage, __option_is_short, __option_is_end): Don't
+	use __THROW on definitions, only on declarations.
+
 2004-11-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* vsnprintf.c: Moved in the CVS tree. It's now a link to
