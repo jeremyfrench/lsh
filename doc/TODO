@@ -142,17 +142,10 @@ as possible, or switch to a free Scheme implementation, like Guile. This is
 not urgent however.
 
 
-CONTROL
+CONTROL LANGUAGE
 
-Continue on the command evaluation mechanism in command.h and
-command.c. Write commands for opening connections, channels and
-sending global requests and chanel requests. In short, for doing
-everything that the client and server need to do.
-
-To do this, we need a few queues for outstanding requests, which would
-be in the channel (channel requests) and the channel_table objects
-(global requests). Perhaps, this is also the right time to fix callout
-support.
+Implement some kind of tracing in the command language (the current
+attempt is broken). Implement and use exceptions.
 
 
 FORWARDING
