@@ -1,3 +1,31 @@
+2003-01-10  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-upgrade: New shell script.
+
+	* src/testsuite/testutils.c (test_spki_match): Rewrote to use the
+	new spki functions. Always fail on parse errors.
+
+	* src/testsuite/spki-tag-test.c (test_main): Include the leading
+	"(tag ..." in the tested expressions.
+
+	* src/testsuite/Makefile.am (LDADD): Added libspki.a.
+
+	* src/spki.c (make_ssh_hostkey_tag): Include the outer "(tag ...)"
+	expression.
+	(spki_add_acl): New function.
+	(spki_lookup): Fixed some compile time errors.
+	(spki_authorize): Likewise.
+
+	* src/lsh.c (read_known_hosts): Don't read known_hosts any more,
+	just display a warning message saying that it needs conversion.
+	(read_known_hosts): spki_add_acl now takes an spki_iterator.
+	(do_lsh_lookup): The access expression includes the complete tag
+	expression, not just the body of it.
+
+	* src/lsh-pam-checkpw.c: Include config.h.
+
+	* src/Makefile.am.in (LDADD): Add libspki.a.
+
 2003-01-09  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/spki.c: Deleted old spki implementation.
