@@ -1,9 +1,5 @@
 # Testsuite
 
-# Don't optimize; gcc takes ages compiling large files like serpent-test.c
-
-CFLAGS = @CFLAGS@ -O0
-
 # Tests that can be used without any special setup.
 TS_PROGS = arcfour-test des-test rijndael-test twofish-test \
            md5-test sha1-test rsa-test dsa-test spki-tag-test
