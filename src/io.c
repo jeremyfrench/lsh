@@ -67,6 +67,45 @@
 
 #include "io.c.x"
 
+/* Calls trigged by a signal handler. */
+/* GABA:
+   (class
+     (name lsh_signal_handler)
+     (super resource)
+     (vars
+       (next object lsh_signal_handler)
+       (flag . "sig_atomic_t *")
+       (action object lsh_callback)))
+*/
+
+/* Scheduled calls. FIXME: For now, no scheduling in time. */
+/* GABA:
+   (class
+     (name lsh_callout)
+     (super resource)
+     (vars
+       (next object lsh_callout)
+       (action object lsh_callback)))
+       ;; (when . time_t)
+*/
+
+/* GABA:
+   (class
+     (name io_backend)
+     (vars
+       ; Linked list of fds. 
+       (files object lsh_fd)
+
+       ; Stack of closed files
+       ;; (closed object lsh_fd)
+
+       ; Flags
+       (signals object lsh_signal_handler)
+       
+       ; Callouts
+       (callouts object lsh_callout)))
+*/
+
 
 /* Backend loop */
 
@@ -85,19 +124,41 @@ int io_iter(struct io_backend *b)
   /* int timeout; */
   int res;
 
+  /* Check all flags */
+  if (b->signals)
+    {
+      struct lsh_signal_handler *f;
+      struct lsh_signal_handler **f_p;
+      for (f_p = &b->signals; (f = *f_p); )
+	{
+	  if (!f->super.alive)
+	    *f_p = f->next;
+	  else
+	    {
+	      if (*f->flag)
+		{
+		  *f->flag = 0;
+		  LSH_CALLBACK(f->action);
+		}
+	      f_p = &f->next;
+	    }
+	}
+    }
+  
   /* Invoke all callouts. Clear the list first; if any callout
    * installs another one, that will not be invoked until the next
    * iteration. */
   if (b->callouts)
     {
-      struct callout *p = b->callouts;
-      b->callouts = NULL;
+      struct lsh_callout *p;
       
-      while (p)
-	{
-	  LSH_CALLBACK(p->action);
-	  p = p->next;
-	}
+      for (p = b->callouts, b->callouts = NULL;
+	   p; p = p->next)
+	if (p->super.alive)
+	  {
+	    LSH_CALLBACK(p->action);
+	    p->super.alive = 0;
+	  }
     }
       
   {
@@ -324,7 +385,8 @@ int io_iter(struct io_backend *b)
 }
 
   
-void io_run(struct io_backend *b)
+void
+io_run(struct io_backend *b)
 {
   struct sigaction pipe;
   memset(&pipe, 0, sizeof(pipe));
@@ -340,12 +402,50 @@ void io_run(struct io_backend *b)
     ;
 }
 
-void init_backend(struct io_backend *b)
+struct io_backend *
+make_io_backend(void)
 {
+  NEW(io_backend, b);
+
   b->files = NULL;
+  b->signals = NULL;
   b->callouts = NULL;
+
+  return b;
 }
 
+struct resource *
+io_signal_handler(struct io_backend *b,
+		  sig_atomic_t *flag,
+		  struct lsh_callback *action)
+{
+  NEW(lsh_signal_handler, handler);
+  resource_init(&handler->super, NULL);
+
+  handler->next = b->signals;
+  handler->flag = flag;
+  handler->action = action;
+
+  b->signals = handler;
+  
+  return &handler->super;
+}
+
+/* Delays not implemented. */
+struct resource *
+io_callout(struct io_backend *b,
+	   UINT32 delay UNUSED,
+	   struct lsh_callback *action)
+{
+  NEW(lsh_callout, callout);
+  resource_init(&callout->super, NULL);
+
+  callout->next = b->callouts;
+  callout->action = action;
+  b->callouts = callout;
+
+  return &callout->super;
+}
 
 /* Read-related callbacks */
 
@@ -767,6 +867,8 @@ static void
 init_file(struct io_backend *b, struct lsh_fd *f, int fd,
 	  struct exception_handler *e)
 {
+  resource_init(&f->super, do_kill_fd);
+
   f->fd = fd;
 
   f->e = make_exception_handler(do_exc_io_handler, e, HANDLER_CONTEXT);
@@ -781,9 +883,6 @@ init_file(struct io_backend *b, struct lsh_fd *f, int fd,
   f->want_write = 0;
   f->write = NULL;
   f->write_close = NULL;
-  
-  f->super.alive = 1;
-  f->super.kill = do_kill_fd;
 
   f->next = b->files;
   b->files = f;
