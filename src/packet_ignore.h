@@ -23,6 +23,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning packet_ignore.h is obsolete
+
 #ifndef LSH_PACKET_IGNORE_H_INCLUDED
 #define LSH_PACKET_IGNORE_H_INCLUDED
 

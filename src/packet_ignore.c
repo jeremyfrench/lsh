@@ -23,6 +23,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#warning packet_ignore.c is obsolete
+
 #include "packet_ignore.h"
 
 #include "xalloc.h"
