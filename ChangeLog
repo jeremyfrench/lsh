@@ -1,5 +1,8 @@
 2004-11-16  Niels Möller  <nisse@lysator.liu.se>
 
+	* misc/getopt.h: Deleted __ from argument names in prototypes,
+	i.e. "argc", not "__argc". Needed for mingw compilation.
+
 	* .bootstrap: Typo fix.
 
 	* misc/getopt.c, misc/getopt1.c, misc/getopt.h: Moved files here.
