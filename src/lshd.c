@@ -32,6 +32,7 @@
 #include "compress.h"
 #include "connection_commands.h"
 #include "crypto.h"
+#include "daemon.h"
 #include "format.h"
 #include "io.h"
 #include "io_commands.h"
@@ -77,10 +78,16 @@
 
 /* Option parsing */
 
+#define OPT_NO 0x400
 #define OPT_SSH1_FALLBACK 0x200
 #define OPT_INTERFACE 0x201
 #define OPT_TCPIP_FORWARD 0x202
-#define OPT_NO_TCPIP_FORWARD 0x203
+#define OPT_NO_TCPIP_FORWARD (OPT_TCPIP_FORWARD | OPT_NO)
+#define OPT_DAEMONIC 0x203
+#define OPT_NO_DAEMONIC (OPT_DAEMONIC | OPT_NO)
+#define OPT_PIDFILE 0x204
+#define OPT_NO_PIDFILE (OPT_PIDFILE | OPT_NO)
+#define OPT_CORE 0x207
 
 /* GABA:
    (class
@@ -93,7 +100,12 @@
        (hostkey . "char *")
        (local object address_info)
        (with_tcpip_forward . int)
-       (sshd1 object ssh1_fallback)))
+       (sshd1 object ssh1_fallback)
+       (daemonic . int)
+       (corefile . int)
+       (pid_file . "const char *")
+       ; -1 means use pid file iff we're in daemonic mode
+       (use_pid_file . int)))
 */
 
 static struct lshd_options *
@@ -113,6 +125,12 @@ make_lshd_options(struct alist *algorithms)
   self->with_tcpip_forward = 1;
   
   self->sshd1 = NULL;
+  self->daemonic = 0;
+
+  /* FIXME: Make the default a configure time option? */
+  self->pid_file = "/var/run/lshd.pid";
+  self->use_pid_file = -1;
+  self->corefile = 0;
   
   return self;
 }
@@ -136,6 +154,14 @@ main_options[] =
   { "no-tcp-forward", OPT_NO_TCPIP_FORWARD, NULL, 0, "Disable tcpip forwarding.", 0 },
 #endif /* WITH_TCP_FORWARD */
 
+  { NULL, 0, NULL, 0, "Daemonic behaviour", 0 },
+  { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, redirect stdio to /dev/null, and chdir to /.", 0 },
+  { "no-deamonic", OPT_NO_DAEMONIC, NULL, 0, "Run in the foreground, with messages to stderr (default).", 0 },
+  { "pid-file", OPT_PIDFILE, "file name", 0, "Create a pid file. When running in daemonic mode, "
+    "the default is /var/run/lshd.pid.", 0 },
+  { "no-pid-file", OPT_NO_PIDFILE, NULL, 0, "Don't use any pid file. Default in non-demonic mode.", 0 },
+  { "enable-core", OPT_CORE, NULL, 0, "Dump core on fatal errors (disabled by default).", 0 },
+    
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -172,6 +198,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	argp_error(state, "Invalid interface, port or service, %s:%s'.",
 		   self->interface ? self->interface : "ANY",
 		   self->port);
+      if (self->use_pid_file < 0)
+	self->use_pid_file = self->daemonic;
+      
       break;
       
     case 'p':
@@ -198,6 +227,27 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case OPT_NO_TCPIP_FORWARD:
       self->with_tcpip_forward = 0;
+      break;
+
+    case OPT_DAEMONIC:
+      self->daemonic = 1;
+      break;
+
+    case OPT_NO_DAEMONIC:
+      self->daemonic = 0;
+      break;
+
+    case OPT_PIDFILE:
+      self->pid_file = arg;
+      self->use_pid_file = 1;
+      break;
+
+    case OPT_NO_PIDFILE:
+      self->use_pid_file = 0;
+      break;
+
+    case OPT_CORE:
+      self->corefile = 1;
       break;
     }
   return 0;
@@ -423,6 +473,43 @@ int main(int argc, char **argv)
   
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
 
+  if (!options->corefile && !daemon_disable_core())
+    {
+      werror("Disabling of core dumps failed.\n");
+      return EXIT_FAILURE;
+    }
+  
+  if (options->daemonic)
+    {
+#if HAVE_SYSLOG
+      set_error_syslog("lshd");
+#else /* !HAVE_SYSLOG */
+      werror("lshd: No syslog. Further messages will be directed to /dev/null.\n");
+#endif /* !HAVE_SYSLOG */
+    }
+
+  if (options->use_pid_file && !daemon_pidfile(options->pid_file))
+    {
+      werror("lshd seems to be running already.\n");
+      return EXIT_FAILURE;
+    }
+
+  if (options->daemonic)
+    switch (daemon_init())
+      {
+      case 0:
+	werror("lshd: Spawning into background failed.\n");
+	return EXIT_FAILURE;
+      case DAEMON_INETD:
+	werror("lshd: spawning from inetd not yet supported.\n");
+	return EXIT_FAILURE;
+      case DAEMON_INIT:
+      case DAEMON_NORMAL:
+	break;
+      default:
+	fatal("Internal error\n");
+      }
+      
   /* Read the hostkey */
   keys = make_alist(0, -1);
   if (!read_host_key(options->hostkey, keys, r))
@@ -430,23 +517,10 @@ int main(int argc, char **argv)
       werror("lshd: Could not read hostkey.\n");
       return EXIT_FAILURE;
     }
-  /* FIXME: We should check that we have at aleast one host key.
+
+  /* FIXME: We should check that we have at least one host key.
    * We should also extract the host-key algorithms for which we have keys,
    * instead of hardcoding ssh-dss below. */
-  
-#if 0
-#if HAVE_SYSLOG
-  {
-    int option = LOG_PID | LOG_CONS;
-    if (foreground_flag)
-      {
-	option |= LOG_PERROR;
-      }
-    openlog("lshd", option, LOG_DAEMON);
-    syslog_flag = 1;
-  }
-#endif /* HAVE_SYSLOG */
-#endif
  
   reaper = make_reaper();
 
