@@ -1,3 +1,21 @@
+2004-02-26  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/lsh_string.c (lsh_string_ntop): Use const void * for the
+	input. 
+
+	* src/tcpforward_commands.h (open_direct_tcpip,
+	OPEN_DIRECT_TCPIP): Moved declarations here...
+	* src/tcpforward_commands.c: ... from here.
+
+	* src/socks.c: New file.
+	* src/Makefile.am (liblsh_a_SOURCES): Added socks.c.
+
+	* src/scm/gaba.scm (process-expr): Let the generated code return a
+	struct command *, not a struct lsh_object *.
+
+	* src/dummy.c (cbc_encrypt, cbc_decrypt): Use nettle_crypt_func
+	for typing. 
+
 2004-02-25  Niels Möller  <nisse@lysator.liu.se>
 
 	* misc/xenofarm.sh (cfgwarn, makewarn, ckprgwarn): Renamed
