@@ -56,27 +56,26 @@ void lsh_space_free(void *p);
 
 #ifdef DEBUG_ALLOC
 
-struct lsh_object *lsh_object_check(struct lsh_object *instance,
-				    struct lsh_class *class);
-struct lsh_object *lsh_object_check_subtype(struct lsh_object *instance,
-					    struct lsh_class *class);
+struct lsh_object *lsh_object_check(struct lsh_class *class,
+				    struct lsh_object *instance);
+struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
+					    struct lsh_object *instance);
 
 #if 0
 #define MDEBUG(x) lsh_object_check((x), sizeof(*(x)))
 #define MDEBUG_SUBTYPE(x) lsh_object_check_subtype((x), sizeof(*(x)))
-
-#define CHECK_TYPE(c, i) lsh_object_check((c), (struct lsh_object *) (i))
-#define CHECK_SUBTYPE(c, i) \
-  lsh_object_check_subtype((c), (struct lsh_object *) (i))
 #endif
 
+#define CHECK_TYPE(c, i) \
+  lsh_object_check(&CLASS(c), (struct lsh_object *) (i))
+#define CHECK_SUBTYPE(c, i) \
+  lsh_object_check_subtype(&CLASS(c), (struct lsh_object *) (i))
+
 #define CAST(class, var, o) \
-     struct class *(var) = (struct class *) \
-  (lsh_check_object(class##_class, (struct lsh_object *) (o))
+  struct class *(var) = (struct class *) CHECK_TYPE(class, o)
 
 #define CAST_SUBTYPE(class, var, o) \
-     struct class *(var) = (struct class *) \
-  (lsh_check_object_subtype(class##_class, (struct lsh_object *) (o))
+  struct class *(var) = (struct class *) CHECK_SUBTYPE(class, o)
    
 
 #else   /* !DEBUG_ALLOC */
@@ -86,14 +85,19 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_object *instance,
 #define MDEBUG_SUBTYPE(x)
 #endif
 
+#define CHECK_TYPE(c, o)
+#define CHECK_SUBTYPE(c, o)
+     
 #define CAST(class, var, o) \
    struct class *(var) = (struct class *) (o)
 
 #define CAST_SUBTYPE(class, var, o) CAST(class, var, o)
-   
+
+     
 #endif  /* !DEBUG_ALLOC */
 
-#define NEW(class, var) struct (class) * (var) = lsh_object_alloc(class##_class)
+#define NEW(class, var) \
+  struct class *(var) = (struct class *) lsh_object_alloc(&CLASS(class))
 #define NEW_SPACE(x) ((x) = lsh_space_alloc(sizeof(*(x))))
 
 #include "gc.h"

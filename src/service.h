@@ -48,8 +48,7 @@ struct ssh_service
    (class
      (name ssh_service)
      (vars
-        (method
-          int (function "struct ssh_service *self, struct ssh_connection *c"))))
+       (init method int "struct ssh_connection *c")))
 */
 
 #define SERVICE_INIT(s, c) ((s)->init((s), (c)))

@@ -160,8 +160,8 @@ void lsh_object_free(void *p)
 #endif
 
 #ifdef DEBUG_ALLOC
-struct lsh_object *lsh_object_check(struct lsh_object *instance,
-				    struct lsh_class *class)
+struct lsh_object *lsh_object_check(struct lsh_class *class,
+				    struct lsh_object *instance)
 {
   if (instance->marked)
     fatal("lsh_object_check: Unexpected marked object!\n");
@@ -175,8 +175,8 @@ struct lsh_object *lsh_object_check(struct lsh_object *instance,
   return instance;
 }
 
-struct lsh_object *lsh_object_check_subtype(struct lsh_object *instance,
-					    struct lsh_class *class)
+struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
+					    struct lsh_object *instance)
 {
   struct lsh_class *type;
   

@@ -115,10 +115,10 @@
       (type->mark `(simple ,type) expr)
       (case (car type)
 	((string simple function space bignum) #f)
-	((object) (list "mark(" expr ");\n"))
+	((object) (list "mark((struct lsh_object *) " expr ");\n"))
 	((pointer) (type->mark (cadr type) (list "*(" expr ")")))
 	((special) (let ((mark-fn (caddr type)))
-		     (and mark-fn (list mark-fn "(" expr ");\n"))))
+		     (and mark-fn (list mark-fn "(" expr ", mark);\n"))))
 
 	;; FIXME: Doesn't handle nested arrays
 	((array)
@@ -142,7 +142,7 @@
 	((string) (free/f "lsh_string_free"))
 	((bignum) (free/f "mpz_clear"))
 	((space) (free/f "lsh_space_free"))
-	((special (free/f (cadddr type))))
+	((special) (free/f (cadddr type)))
     
 	((array)
 	 (let ((free-k (type->free (cadr type) (list "(" expr ")[k]"))))
@@ -224,11 +224,12 @@
   (werror "do-mark-function\n")
   (let ((markers (filter identity
 			 (map (lambda (var)
-				(type->mark (var-type var) (var-name var)))
+				(type->mark (var-type var)
+					    (list "i->" (var-name var))))
 			      vars))))
     (werror "gazonk\n")
     (and (not (null? markers))
-	 (list "static struct lsh_object *do_"
+	 (list "static void do_"
 	       name "_mark(struct lsh_object *o, \n"
 	       "void (*mark)(struct lsh_object *o))\n"
 	       "{\n"
@@ -241,7 +242,9 @@
   (werror "do-free-function\n")
   (let ((freers (filter identity
 			(map (lambda (var)
-			       (type->free (var-type var) (var-name var)))
+			       (type->free (var-type var) 
+					   (list "i->" (var-name var))))
+			     
 			     vars))))
     (werror "gazonk\n")
 

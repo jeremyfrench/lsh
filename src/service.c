@@ -41,7 +41,7 @@
      (name service_handler)
      (super packet_handler)
      (vars
-       (object alist services)))
+       (services object alist)))
 */
 
 #if 0
@@ -104,9 +104,7 @@ static int do_service(struct packet_handler *c,
       
 struct packet_handler *make_service_handler(struct alist *services)
 {
-  struct service_handler *self;
-
-  NEW(self);
+  NEW(service_handler, self);
 
   self->super.handler = do_service;
   self->services = services;
@@ -119,7 +117,7 @@ struct packet_handler *make_service_handler(struct alist *services)
      (name meta_service)
      (super ssh_service)
      (vars
-       (object packet_handler service_handler)))
+       (service_handler object packet_handler)))
 */
 
 #if 0
@@ -136,8 +134,6 @@ static int init_meta_service(struct ssh_service *c,
 {
   CAST(meta_service, closure, c);
 
-  MDEBUG(closure);
-  
   connection->dispatch[SSH_MSG_SERVICE_REQUEST] = closure->service_handler;
 
   return LSH_OK | LSH_GOON;
@@ -145,9 +141,7 @@ static int init_meta_service(struct ssh_service *c,
   
 struct ssh_service *make_meta_service(struct alist *services)
 {
-  struct meta_service *self;
-
-  NEW(self);
+  NEW(meta_service, self);
 
   self->super.init = init_meta_service;
   self->service_handler = make_service_handler(services);
