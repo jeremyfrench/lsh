@@ -564,7 +564,7 @@
       (werror "Compiled to ~S\n" translated)
       ;; (werror "Globals: ~S\n" globals)
       ;; (werror "Params: ~S\n" params)
-      (c-append (c-prototype "static struct lsh_object *" name
+      (c-append (c-prototype "static struct command *" name
 			     (map c-declare params))
 		indent
 		(format #f "  /* ~S */\n" translated)
@@ -596,7 +596,7 @@
 		;; "  trace(\"Entering " name "\\n\");\n"
 		(c-block*
 		 (c-append
-		  "return "
+		  "CAST_SUBTYPE(command, res,\n"
 		  (c-call* "MAKE_TRACE"
 			  (c-string name)
 			  (make-output (append '( (I I)
@@ -611,7 +611,9 @@
 						(if params
 						    (params->alist params)
 						    '()))
-				       translated))))
+				       translated))
+		  ");\n"
+		  "return res;\n"))
 		indent
 		"#undef A\n"
 		"#undef I\n" 
