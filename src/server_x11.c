@@ -32,10 +32,17 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
 #include <string.h>
 
 #include <unistd.h>
 #include <fcntl.h>
+
+#include <sys/types.h>
+
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
 
 #define GABA_DEFINE
 #include "server_x11.h.x"
@@ -43,15 +50,217 @@
 
 #include "server_x11.c.x"
 
-/* Disabled in the 1.4 series. */
-#undef WITH_X11_FORWARD
-#define WITH_X11_FORWARD 0
 
 #if WITH_X11_FORWARD
 
 #define XAUTH_DEBUG_TO_STDERR 0
-
 #define X11_MIN_COOKIE_LENGTH 10
+#define X11_SOCKET_DIR "/tmp/.X11-unix"
+
+/* The interval of display numbers that we use. */
+#define X11_MIN_DISPLAY 10
+#define X11_MAX_DISPLAY 1000
+
+/* FIXME: Figure out if and how we should use /tmp/.X17-lock.
+ * Consider using display "unix:17" instead of just ":17".
+ */
+
+/* GABA:
+   (class
+     (name server_x11_socket)
+     (super resource)
+     (vars
+       ; fd to the directory where the socket lives
+       (dir . int)
+       ; Name of the local socket
+       (name string)
+       ; The user that should own the socket
+       (uid . uid_t)
+       ; The corresponding listening fd
+       (fd object lsh_fd)))
+*/
+
+/* This code is quite paranoid in order to avoid symlink attacks when
+ * creating and deleting the socket. Similar paranoia in xlib would be
+ * desirable, but not realistic. However, most of this is not needed
+ * if the sticky bit is set properly on the /tmp and /tmp/.X11-unix
+ * directories. */
+
+static void
+delete_x11_socket(struct server_x11_socket *self)
+{
+  if (unlink(lsh_get_cstring(self->name)) < 0)
+    werror("Failed to delete x11 socket %S for user %i (errno = %i): %z\n",
+	   self->name, self->uid, errno, STRERROR(errno));
+}
+
+static void
+do_kill_x11_socket(struct resource *s)
+{
+  CAST(server_x11_socket, self, s);
+  uid_t me = geteuid();
+  int old_cd;
+
+  if (self->super.alive)
+    {
+      self->super.alive = 0;
+
+      assert(self->fd);
+      close_fd(self->fd);
+
+      assert(self->dir >= 0);
+
+      /* Temporarily change to the right directory. */
+      old_cd = lsh_pushd_fd(self->dir);
+      if (old_cd < 0)
+	return;
+
+      close(self->dir);
+      self->dir = -1;
+      
+      if (me == self->uid)
+	delete_x11_socket(self);
+      else
+	{
+	  if (seteuid(self->uid) < 0)
+	    {
+	      werror("Couldn't change euid (to %i) for deleting x11 socket.\n",
+		     self->uid);
+	      goto done;
+	    }
+	  assert(geteuid() == self->uid);
+
+	  delete_x11_socket(self);
+	  
+	  if (seteuid(me) < 0)
+	    /* Shouldn't happen, abort if it ever does. */
+	    fatal("Failed to restore euid after deleting x11 socket.\n");
+
+	  assert(geteuid() == me);
+	}
+
+    done:
+      lsh_popd(old_cd, X11_SOCKET_DIR);
+    }
+}
+
+/* The processing except the uid change stuff. */
+static struct server_x11_socket *
+open_x11_socket(struct ssh_channel *channel)
+{
+  int old_cd;
+  int dir;
+  mode_t old_umask;
+  
+  int number;
+  int s;
+  struct lsh_string *name = NULL;
+  
+  s = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (s < 0)
+    {
+      werror("server_x11_socket: socket(AF_UNIX, ...) failed (errno = %i): %z",
+	     errno, STRERROR(errno));
+      return NULL;
+    }
+
+  /* We have to change the umask, as that's the only way to control
+   * the permissions that bind uses. */
+
+  old_umask = umask(0077);
+  
+  old_cd = lsh_pushd(X11_SOCKET_DIR, &dir, 0, 0);
+  if (old_cd < 0)
+    {
+      werror("Failed to cd to `%z' (errno = %i): %z\n",
+	     X11_SOCKET_DIR, errno, STRERROR(errno));
+
+      umask(old_umask);
+      close(s);
+      return NULL;
+    }
+  
+  for (number = X11_MIN_DISPLAY; number <= X11_MAX_DISPLAY; number++)
+    {
+      /* The default size if sockaddr_un should always be enough to format
+       * the filename "X<display num>". */
+      struct sockaddr_un sa;
+  
+      sa.sun_family = AF_UNIX;
+      sa.sun_path[sizeof(sa.sun_path) - 1] = '\0';
+      snprintf(sa.sun_path, sizeof(sa.sun_path), "X%d", number);
+
+      if (bind(s, (struct sockaddr *) &sa, SUN_LEN(&sa)) < 0)
+	{
+	  /* Store name */
+	  name = ssh_format("%lz", sa.sun_path);
+	  break;
+	}
+    }
+
+  umask(old_umask);
+  
+  lsh_popd(old_cd, X11_SOCKET_DIR);
+
+  if (!name)
+    {
+      /* Couldn't find any display */
+      close(s);
+      close(dir);
+      
+      return NULL;
+    }
+  else
+    {
+      NEW(server_x11_socket, self);
+      init_resource(&self->super, do_kill_x11_socket);
+
+      self->dir = dir;
+      self->name = name;
+#if 0
+      self->fd = io_listen_fd(s,
+			      make_server_x11_callback(connection),
+			      );
+#endif
+      return self;
+    }
+}
+
+/* Creates a socket in tmp, accessible only by the right user. */
+
+
+static struct server_x11_socket *
+server_x11_listen(struct ssh_channel *channel)
+{
+  struct server_x11_socket *s;
+  
+  uid_t me = geteuid();
+  uid_t user = channel->connection->user->uid;
+  
+  if (me == channel->connection->user->uid)
+    s = open_x11_socket(channel);
+  else
+    {      
+      if (seteuid(user) < 0)
+	{
+	  /* FIXME: We could display the user name here. */
+	  werror("Couldn't change euid (to %i) for creating x11 socket.\n",
+		 user);
+	  return NULL;
+	}
+
+      assert(geteuid() == user);
+      
+      s = open_x11_socket(channel);
+      
+      if (seteuid(me) < 0)
+	/* Shouldn't happen, abort if it ever does. */
+	fatal("Failed to restore euid after deleting x11 socket.\n");
+      
+      assert(geteuid() == me);
+    }
+  return s;
+}
 
 /* GABA:
    (class
@@ -127,7 +336,7 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
   const char *tmp;
 
   /* FIXME: Bind socket, set up forwarding */
-  struct lsh_fd *socket = NULL;
+  struct server_x11_socket *socket = NULL;
 
   if (bad_string(protocol_length, protocol))
     {
@@ -166,7 +375,7 @@ server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
 
     memset(&spawn, 0, sizeof(spawn));
     /* FIXME: Arrange that stderr data (and perhaps stdout data as
-     * well) is sent as extrended data on the channel. To do that, we
+     * well) is sent as extended data on the channel. To do that, we
      * need another channel flag to determine whether or not EOF
      * should be sent when the number of sources gets down to 0. */
 #if XAUTH_DEBUG_TO_STDERR
