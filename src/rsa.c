@@ -209,6 +209,7 @@ do_rsa_verify(struct verifier *v,
   
   switch(algorithm)
     {
+#if 0
     case ATOM_RSA_PKCS1_SHA1:
     case ATOM_RSA_PKCS1_SHA1_LOCAL:
 
@@ -217,8 +218,33 @@ do_rsa_verify(struct verifier *v,
   
       bignum_parse_u(s, signature_length, signature_data);
       break;
-      
+
     case ATOM_SPKI:
+#endif
+    case ATOM_SSH_RSA:
+      {
+	struct simple_buffer buffer;
+	UINT32 length;
+	const UINT8 *digits;
+	int atom;
+	
+	simple_buffer_init(&buffer, signature_length, signature_data);
+
+	if (!(parse_atom(&buffer, &atom)
+	      && (atom == ATOM_SSH_RSA)
+	      && parse_string(&buffer, &length, &digits)
+	      && (length <= self->size)
+	      && parse_eod(&buffer) ))
+	  goto fail;
+
+	bignum_parse_u(s, length, digits);
+
+	break;
+      }
+      
+      /* It doesn't matter here which flavour of SPKI is used. */
+    case ATOM_SPKI_SIGN_RSA:
+    case ATOM_SPKI_SIGN_DSS:
       {
 	struct simple_buffer buffer;
 	struct sexp *e;
@@ -232,6 +258,7 @@ do_rsa_verify(struct verifier *v,
 
 	break;
       }
+      
     default:
       fatal("do_rsa_verify: Internal error!\n");
     }
@@ -269,8 +296,8 @@ do_rsa_public_key(struct verifier *s)
 {
   CAST(rsa_verifier, self, s);
 
-  return ssh_format("%a%n%n", ATOM_SSH_RSA_PKCS1_LOCAL,
-		     self->n, self->e);
+  return ssh_format("%a%n%n", ATOM_SSH_RSA,
+		     self->e, self->n);
 }
 
 static struct sexp *
@@ -320,6 +347,28 @@ make_rsa_verifier_internal(struct rsa_algorithm *params,
     }
 }
   
+/* Alternative constructor using a key of type ssh-rsa, when the atom
+ * "ssh-rsa" is already read from the buffer. */
+struct verifier *
+parse_ssh_rsa_public(struct simple_buffer *buffer)
+{
+  NEW(rsa_verifier, res);
+  init_rsa_verifier(res, &rsa_sha1_algorithm);
+
+  if (parse_bignum(buffer, res->e, RSA_MAX_SIZE)
+      && (mpz_sgn(res->e) == 1)
+      && parse_bignum(buffer, res->n, RSA_MAX_SIZE)
+      && (mpz_sgn(res->n) == 1)
+      && (mpz_cmp(res->e, res->n) < 0)
+      && parse_eod(buffer))
+    return &res->super;
+
+  else
+    {
+      KILL(res);
+      return NULL;
+    }
+}
 
 /* Signature creation */
 
@@ -437,6 +486,16 @@ do_rsa_sign(struct signer *s,
 
   switch (algorithm)
     {
+    case ATOM_SSH_RSA:
+      /* Uses the encoding:
+       *
+       * string ssh-rsa
+       * string signature-blob
+       */
+  
+      res = ssh_format("%a%un", ATOM_SSH_RSA, m);
+      break;
+#if 0
     case ATOM_RSA_PKCS1_SHA1:
     case ATOM_RSA_PKCS1_SHA1_LOCAL:
       /* Uses the encoding:
@@ -447,8 +506,11 @@ do_rsa_sign(struct signer *s,
   
       res = ssh_format("%a%un", ATOM_RSA_PKCS1_SHA1, m);
       break;
+#endif
+      /* It doesn't matter here which flavour of SPKI is used. */
+    case ATOM_SPKI_SIGN_RSA:
+    case ATOM_SPKI_SIGN_DSS:
 
-    case ATOM_SPKI:
       res = sexp_format(encode_rsa_sig_val(m), SEXP_CANONICAL, 0);
       break;
     default:
@@ -602,3 +664,17 @@ static const UINT8 sha1_prefix[] =
 struct rsa_algorithm rsa_sha1_algorithm =
 STATIC_RSA_ALGORITHM(&sha1_algorithm, ATOM_RSA_PKCS1_SHA1, 15, sha1_prefix);
 
+struct verifier *
+make_ssh_rsa_verifier(UINT32 public_length,
+		      const UINT8 *public)
+{
+  struct simple_buffer buffer;
+  int atom;
+  
+  simple_buffer_init(&buffer, public_length, public);
+
+  return ( (parse_atom(&buffer, &atom)
+	    && (atom == ATOM_SSH_RSA))
+	   ? parse_ssh_rsa_public(&buffer)
+	   : NULL);
+}
