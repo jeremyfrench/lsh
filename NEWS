@@ -1,5 +1,14 @@
 News for the 1.5.6 release
 
+	Several programs have new default behaviour:
+
+	* lshd enables X11 forwarding by default (lsh still does not).
+
+	* lsh-keygen generates RSA rather than DSA keys by default.
+
+	* lsh-writekey encrypts the private key by default, using
+	  aes256-cbc.
+
 	Implemented the client side of "keyboard-interactive" user
 	authentication.
 	

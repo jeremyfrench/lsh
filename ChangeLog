@@ -1,3 +1,21 @@
+2004-10-07  Niels Möller  <niels@s3.kth.se>
+
+	* src/lshd.c (make_lshd_options): New default: Enable X11
+	forwarding.
+
+	* src/lsh-writekey.c (make_lsh_writekey_options): New default:
+	Encrypt private key using aes256-cbc.
+
+	* src/lsh-keygen.c (make_lsh_keygen_options): New default:
+	Generate RSA keys.
+
+	* src/testsuite/keygen-1-test: Pass -c none to lsh-writekey.
+	* src/testsuite/keygen-2-test: Likewise.
+	* src/testsuite/lsh-decrypt-key-test: Likewise.
+	* src/testsuite/setup-env: Likewise.
+	* src/testsuite/write-key-1-test: Likewise.
+	* src/testsuite/write-key-2-test: Likewise.
+	
 2004-10-06  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/Makefile.am (EXTRA_DIST): Added UTF-8-test.txt.
