@@ -23,732 +23,868 @@
 
 #include "sexp_parser.h"
 
-#include "read_scan.h"
-#include "sexp.h"
+#include "format.h"
+#include "parse_macros.h"
 #include "werror.h"
 #include "xalloc.h"
 
-#include "sexp_table.h"
-
 #include <assert.h>
+#include <string.h>
 
-/* Forward declarations */
-struct parse_node;
-static void do_mark_parse_node(struct parse_node *n,
-			       void (*mark)(struct lsh_object *o));
-static void do_free_parse_node(struct parse_node *n);
+/* Automatically generated files. */
+#include "sexp_table.h"
+#include "digit_table.h"
 
-#include "sexp_parser.c.x"
-
-/* CLASS:
-   (class 
-     (name string_handler)
-     (vars
-       (handler method int "struct lsh_string *s")))
-*/
-
-#define HANDLE_STRING(h,s) ((h)->handler((h), (s)))
-
-/* CLASS:
-   (class
-     (name parse)
-     (super scanner)
-     (vars
-       ; How to parse the rest of the input stream
-       (next object scanner)))
-*/
-
-/* CLASS:
-   (class
-     (name parse_string)
-     (super parse)
-     (vars
-       (handler object string_handler)))
-*/
-
-/* CLASS:
-   (class
-     (name parse_sexp)
-     (super parse)
-     (vars
-       ; What to do with this expression
-       (handler object sexp_handler)))
-*/
-
-/* CLASS:
-   (class
-     (name parse_literal_data)
-     (super parse_string)
-     (vars
-       (i . UINT32)
-       (data string)))
-*/
-
-static int do_parse_literal_data(struct scanner **s, int token)
+/* Returns the length of the segmant of characters of a class */
+static UINT32 sexp_scan_class(struct simple_buffer *buffer, int class)
 {
-  CAST(parse_literal_data, closure, *s);
+  UINT32 i;
 
-  if (token < 0)
-    return LSH_FAIL | LSH_SYNTAX;
+  for (i=0; i<LEFT; i++)
+    if (!(sexp_char_classes[HERE[i]] & class))
+      break;
+
+  return i;
+}
+
+static void sexp_skip_space(struct simple_buffer *buffer)
+{
+  ADVANCE(sexp_scan_class(buffer, CHAR_space));
+}
+
+/* Skip the following input character on input stream struct
+ * simple_buffer *buffer, if it is equal to a given character. Return 1
+ * on success, 0 on error. */
+static int sexp_skip_char(struct simple_buffer *buffer, UINT8 expect)
+{
+  UINT8 c;
   
-  closure->data->data[closure->i++] = token;
-
-  if (closure->data->length == closure->i)
+  if (!LEFT)
     {
-      struct lsh_string *res = closure->data;
-      closure->data = NULL;
-      *s = closure->super.super.next;
-      return HANDLE_STRING(closure->super.handler, res);
+      werror("sexp: Unexpected EOF when expecting character %x.\n",
+	     expect);
+      return 0;
     }
-  return LSH_OK;
+  c = GET();
+  if (c != expect)
+    {
+      werror("sexp: Expected char %x, got %x.\n", expect, c);
+      return 0;
+    }
+
+  return 1;
 }
 
-static struct scanner *
-make_parse_literal_data(UINT32 length,
-			struct string_handler *handler,
-			struct scanner *next)
+/* Parse one or more characters into a simple string as a token. */
+static struct lsh_string *sexp_parse_token(struct simple_buffer *buffer)
 {
-  NEW(parse_literal_data, closure);
-
-  closure->super.super.super.scan = do_parse_literal_data;
-  closure->super.super.next = next;
-  closure->super.handler = handler;
-  closure->i = 0;
-  closure->data = lsh_string_alloc(length);
-
-  return &closure->super.super.super;
-}
-
-/* FIXME: Arbitrary limit. */
-#define SEXP_MAX_STRING 100000
-
-/* CLASS:
-   (class
-     (name parse_literal)
-     (super parse_string)
-     (vars
-       (got_length . int)
-       (length . UINT32)))
-*/
-
-static int do_parse_literal(struct scanner **s, int token)
-{
-  CAST(parse_literal, closure, *s);
+  UINT32 length;
+  struct lsh_string *token;
   
-  if (token < 0) goto fail;
-
-  if (sexp_char_classes[token] & CHAR_digit)
-    {
-      closure->length = closure->length * 10 + (token - '0');
-      if (closure->length > SEXP_MAX_STRING)
-	goto fail;
-
-      closure->got_length = 1;
-      return LSH_OK;
-    }
-  else if (closure->got_length && (token == ':'))
-    {
-      *s = make_parse_literal_data(closure->length,
-				   closure->super.handler,
-				   closure->super.super.next);
-      return LSH_OK;
-    }
-
- fail:
-  *s = NULL;
-  return LSH_FAIL | LSH_SYNTAX;
-}
-
-static struct scanner *make_parse_literal(struct string_handler *handler,
-					  struct scanner *next)
-{
-  NEW(parse_literal, closure);
-
-  closure->super.super.super.scan = do_parse_literal;
-  closure->super.super.next = next;
-  closure->super.handler = handler;
-  closure->got_length = 0;
-  closure->length = 0;
-
-  return &closure->super.super.super;
-}
-
-/* CLASS:
-   (class
-     (name return_string)
-     (super string_handler)
-     (vars
-       (c object sexp_handler)))
-*/
-
-static int do_return_string(struct string_handler *h,
-			    struct lsh_string *data)
-{
-  CAST(return_string, closure, h);
-  return HANDLE_SEXP(closure->c, make_sexp_string(NULL, data));
-}
-
-static struct string_handler *make_return_string(struct sexp_handler *c)
-{
-  NEW(return_string, closure);
-
-  closure->super.handler = do_return_string;
-  closure->c = c;
-
-  return &closure->super;
-}
-
-#define MAKE_PARSE(name)						\
-static int do_parse_##name(struct scanner **s, int token);		\
-									\
-static struct scanner *make_parse_##name(struct sexp_handler *h,	\
-					 struct scanner *next)		\
-{									\
-  NEW(parse_sexp, closure);						\
-									\
-  closure->super.super.scan = do_parse_##name;				\
-  closure->super.next = next;						\
-  closure->handler = h;							\
-									\
-  return &closure->super.super;						\
-}									\
-									\
-static int do_parse_##name(struct scanner **s, int token)
-     
-/* CLASS:
-   (class
-     (name parse_skip)
-     (super parse_sexp)
-     (vars
-       (expect . int)
-       (value object sexp)))
-*/
-
-static int do_parse_skip(struct scanner **s, int token)
-{
-  CAST(parse_skip, closure, *s);
-
-  /* FIXME: If the token doesn't match, perhaps we should install NULL
-   * instead? */
+  assert(LEFT);
+  assert(sexp_char_classes[*HERE] & CHAR_token_start);
   
-  if (token == closure->expect)
+  length = sexp_scan_class(buffer, CHAR_token);
+
+  if (!length)
     {
-      *s = closure->super.super.next;
-      return (closure->super.handler
-	      ? HANDLE_SEXP(closure->super.handler, closure->value)
-	      : LSH_OK);
+      werror("sexp: Invalid token.\n");
+      return NULL;
     }
 
-  /* FIXME: More readable error message */
-  werror("Expected token %d, got %d\n", closure->expect, token);
+  token = ssh_format("%ls", length, HERE);
+  ADVANCE(length);
+
+  return token;
+}
+
+/* Parse a decimal number */
+static int sexp_parse_decimal(struct simple_buffer *buffer, UINT32 *value)
+{
+  unsigned length = sexp_scan_class(buffer, CHAR_digit);
+  unsigned i;
   
-  *s = NULL;
-  return LSH_FAIL | LSH_SYNTAX;  
-}
-
-static struct scanner *make_parse_skip(int token,
-				       struct sexp *value,
-				       struct sexp_handler *handler,
-				       struct scanner *next)
-{
-  NEW(parse_skip, closure);
-
-  closure->super.super.super.scan = do_parse_skip;
-  closure->super.super.next = next;
-  closure->super.handler = handler;
-  closure->expect = token;
-  closure->value = value;
-
-  return &closure->super.super.super;
-}
-
-#if 0
-MAKE_PARSE(simple_string)
-{
-  CAST(parse_sexp, closure, *s);
-
-  switch(token)
+  assert(length);
+  
+  if ((*HERE == '0') && (length != 1))
     {
-    case TOKEN_EOS:
-      fatal("Internal error!\n");      
-
-    case '0':
-      /* This should be a single zero digit, as there mustn't be unneccessary
-       * leading zeros. */
-      *s = make_parse_skip(':', sexp_z(""),
-			   closure->handler, closure->super.next);
-      return LSH_OK:
-
-    case '1': case '2': case '3':
-    case '4': case '5': case '6':
-    case '7': case '8': case '9':
-      *s = make_parse_literal(token - '0',
-			      make_return_string(closure->handler),
-			      closure->super.next);
-      return LSH_OK;
-
-    default:
-      /* Syntax error */
-      return LSH_FAIL | LSH_SYNTAX;
+      /* No leading zeros allowed */
+      werror("sexp: Unexpected leading zeroes\n");
+      return 0;
     }
-}
-#endif
-
-#if 0
-static int do_parse_advanced_string(struct scanner **s,
-				    int token)
-{
-  CAST(parse_string, closure, *s);
-
-  if (token < 0)
-    return LSH_FAIL | LSH_SYNTEX;
-
-  if (sexp_char_classes[token] & CHAR_digit)
+  if (length > 8)
     {
-      *s = make_parse_length;
+      werror("sexp: Decimal number too long (%d digits, max is 8).\n",
+	     length);
+      return 0;
     }
-  switch(token)
-    {
-    case '0':
-      /* This should be a single zero digit, as there mustn't be unneccessary
-       * leading zeros. */
-      *s = make_parse_skip(':', sexp_z(""),
-			   closure->handler, closure->super.next);
-      return LSH_OK:
+  for (i = 0, *value = 0; i<length; i++)
+    *value = *value * 10 + HERE[i] - '0';
 
-    case '1': case '2': case '3':
-    case '4': case '5': case '6':
-    case '7': case '8': case '9':
-      /* FIXME: Not only literals can have a length prefix */
-      *s = make_parse_literal(make_return_string(closure->handler),
-			      closure->super.next);
-      return SCAN(*s, token);
-    case '"':
-      fatal("Quoted strings not implemented!\n");
-    case '|':
-      fatal("base-64 strings not implemented!\n");
-    case '#':
-      fatal("Hex strings not implemented!\n");
+  ADVANCE(length);
+  return 1;
+}
+
+/* Reads a literal string of given length. */
+static struct lsh_string *
+sexp_parse_literal(struct simple_buffer *buffer, UINT32 length)
+{
+  struct lsh_string *res;
+  
+  if (LEFT < length)
+    {
+      werror("sexp: Unexpected EOF in literal.\n");
+      return NULL;
+    }
+
+  res = ssh_format("%ls", length, HERE);
+  ADVANCE(length);
+
+  return res;
+}
+
+#define QUOTE_END -1
+#define QUOTE_INVALID -2
+
+static int sexp_dequote(struct simple_buffer *buffer)
+{
+  int c;
+
+  if (!LEFT)
+    return QUOTE_INVALID;
+  
+  c = GET();
+
+ loop:
+  switch (c)
+	{
+	default:
+	  return c;
+	case '"':
+	  return QUOTE_END;
+	case '\\':
+	  if (!LEFT)
+	    return QUOTE_INVALID;
+
+	  switch( (c = GET()) )
+	    {
+	    case '\\':
+	    case '"':
+	    case '\'':
+	      return c;
+	    case 'b':
+	      return 0x8;
+	    case 't':
+	      return 0x9;
+	    case 'n':
+	      return 0xa;
+	    case 'v':
+	      return 0xb;
+	    case 'f':
+	      return 0xc;
+	    case 'r':
+	      return 0xd;
+	    case '\r':
+	      /* Ignore */
+	      if (!LEFT)
+		return QUOTE_INVALID;
+	      c = GET();
+	      if (c == '\n')
+		{ /* Ignore this too */
+		  if (!LEFT)
+		    return QUOTE_INVALID;
+		  c = GET();
+		}
+	      goto loop;
+	    case '\n':
+	      /* Ignore */
+	      if (!LEFT)
+		return QUOTE_INVALID;
+	      c = GET();
+	      if (c == '\r')
+		{ /* Ignore this too */
+		  if (!LEFT)
+		    return QUOTE_INVALID;
+		  c = GET();
+		}
+	      goto loop;
+	      
+	    default:
+	      /* Octal escape sequence */
+	      {
+		int value;
+		unsigned i;
+	    
+		if (!(sexp_char_classes[c] & CHAR_octal))
+		  {
+		    werror("sexp: Invalid escape character in"
+			   " quoted string: %x.\n", c);
+		    return QUOTE_INVALID;
+		  }
+
+		if (LEFT < 2)
+		  {
+		    werror("sexp: Unexpected eof in octal escape sequence.\n");
+		    return QUOTE_INVALID;
+		  }
+	    	      
+		value = c - '0';
+		for (i = 1; i<3; i++)
+		  {
+		    c = GET();
+		    if (!(sexp_char_classes[c] & CHAR_octal))
+		      {
+			werror("sexp: Invalid character %x in"
+			       " octal escape sequence.\n", c);
+			return QUOTE_INVALID;
+		      }
+		    value = (value << 3) + (c - '0');
+		  }
+		return value;
+	      }
+	    }
+	}
+}
+	
+/* Reads a quoted string of given length. Handles ordinary C escapes.
+ * Assumes that the starting '"' have been skipped already. */
+static struct lsh_string *
+sexp_parse_quoted_length(struct simple_buffer *buffer, UINT32 length)
+{
+  struct lsh_string *res;
+  UINT32 i;
+  
+  res = lsh_string_alloc(length);
+  
+  for (i = 0; i < length; i++)
+    {
+      int c = sexp_dequote(buffer);
+
+      if (c < 0)
+	{
+	  if (c == QUOTE_END)
+	    werror("sexp: Quoted string is too short.\n");
+	  lsh_string_free(res);
+	  return NULL;
+	}
+      res->data[i] = (unsigned) c;
+    }
+  return res;
+}
+
+/* Reads a quoted string of indefinite length */
+static struct lsh_string *
+sexp_parse_quoted(struct simple_buffer *buffer)
+{
+  struct lsh_string *res;
+  UINT32 length;
+  UINT32 i;
+  UINT8 *p;
+  
+  if (*HERE == '"')
+    return lsh_string_alloc(0);
+
+  /* We want a reasonable upper bound on the string to allocate.
+   * Search for a double quote, not preceded by a backslash. */
+  
+  for (p = HERE; p < HERE + LEFT; )
+    {
+      p = memchr(p, '"', (HERE + LEFT) - p);
+      if (!p)
+	{
+	  werror("sexp: Unexpected EOF in quoted string.\n");
+	  return NULL;
+	}
+      if (p[-1] != '\\')
+	break;
+
+      p++;
+    }
+
+  length = p - HERE;
+  res = lsh_string_alloc(length);
+
+  for (i = 0; i<length; i++)
+    {
+      int c = sexp_dequote(buffer);
+
+      switch (c)
+	{
+	case QUOTE_INVALID:
+	  lsh_string_free(res);
+	  return NULL;
+	case QUOTE_END:
+	  res->length = i;
+	  return res;
+	default:
+	  res->data[i] = (unsigned) c;
+	}
+    }
+
+  /* We haven't seen the ending double quote yet. We must be looking at it now. */
+  if (!sexp_skip_char(buffer, '"'))
+    fatal("Internal error!\n");
+  
+  return res;
+}
+
+static int sexp_dehex(struct simple_buffer *buffer)
+{
+  unsigned i;
+  int value = 0;
+
+  for (i = 0; i<2; i++)
+    {
+      int c;
       
+      sexp_skip_space(buffer);
+
+      if (!LEFT)
+	{
+	  werror("sexp: Unexpected EOF in hex string.\n");
+	  return HEX_INVALID;
+	}
+
+      c = hex_digits[GET()];
+      
+      switch (c)
+	{
+	case HEX_END:
+	  if (!i)
+	    return HEX_END;
+	  /* Fall through */
+	case  HEX_INVALID:
+	  return HEX_INVALID;
+	default:
+	  value = (value << 4) | c;
+	}
+    }
+  return value;
+}
+
+/* Reads a hex string of given length. Handles ordinary C escapes.
+ * Assumes that the starting '#' have been skipped already. */
+static struct lsh_string *
+sexp_parse_hex_length(struct simple_buffer *buffer, UINT32 length)
+{
+  struct lsh_string *res;
+  UINT32 i;
+  
+  res = lsh_string_alloc(length);
+  
+  for (i = 0; i < length; i++)
+    {
+      int c =  sexp_dehex(buffer);
+
+      if (c < 0)
+	{
+	  if (c == HEX_END)
+	    werror("sexp: Hex string is too short.\n");
+	  lsh_string_free(res);
+	  return NULL;
+	}
+      res->data[i] = (unsigned) c;
+    }
+  return res;
+}
+
+/* Reads a hex string of indefinite length */
+static struct lsh_string *
+sexp_parse_hex(struct simple_buffer *buffer)
+{
+  struct lsh_string *res;
+  
+  UINT32 length = sexp_scan_class(buffer, CHAR_hex | CHAR_space);
+  UINT32 terminator = buffer->pos + length;
+
+  UINT32 i;
+  
+  if ( (length == LEFT)
+       || (HERE[terminator] != '#'))
+    {
+      werror("sexp: Unexpected EOF in hex string.\n");
+      return NULL;
+    }
+
+  /* The number of digits, divided by two, rounded upwards,
+   * is an upper limit on the length. */
+
+  length = (length + 1) / 2;
+
+  res = lsh_string_alloc(length);
+
+  for (i = 0; i < length; i++)
+    {
+      int c = sexp_dehex(buffer);
+
+      switch (c)
+	{
+	case HEX_INVALID:
+	  lsh_string_free(res);
+	  return NULL;
+	case HEX_END:
+	  res->length = i;
+	  return res;
+	default:
+	  res->data[i] = (unsigned) c;
+	}
+    }
+
+  assert(sexp_scan_class(buffer, CHAR_space) == (terminator - buffer->pos));
+  buffer->pos = terminator + 1;
+
+  return res;
+}
+
+struct base64_state
+{
+  /* Bits are shifted into the buffer from the right, 6 at a time */
+  unsigned buffer;
+  /* Bits currently in the buffer */
+  unsigned bits;
+
+  UINT8 terminator;
+};
+
+#define BASE64_INIT(t) {0, 0, (t)}
+
+/* Extracts one octet from the base64 encoded input. */
+static int sexp_decode_base64(struct simple_buffer *buffer,
+			      struct base64_state *state)
+{
+  int res;
+
+  assert(state->bits <= 8);
+
+  while (state->bits < 8)
+    {
+      UINT8 c;
+      int digit;
+      
+      if (!LEFT)
+	return BASE64_INVALID;
+      
+      c = GET();
+      if (c == state->terminator)
+	{
+	  /* Check for unused bits */
+	  if (state->bits && ((1<<state->bits) & state->buffer))
+	    {
+	      werror("sexp: Base64 terminated with %d leftover bits.\n",
+		     state->bits);
+	      return BASE64_INVALID;
+	    }
+	  return BASE64_END;
+	}
+
+      digit = base64_digits[c];
+
+      switch (digit)
+	{
+	case BASE64_SPACE:
+	  continue;
+	case BASE64_INVALID:
+	  return BASE64_INVALID;
+	default:
+	  state->buffer = (state->buffer << 6) | digit;
+	  state->bits += 6;
+	}
+    }
+  res = (state->buffer >> (state->bits - 8)) & 0xff;
+  state->bits -= 8;
+
+  return res;
+}
+
+/* Reads a base64-encoded string of given length. */
+static struct lsh_string *
+sexp_parse_base64_length(struct simple_buffer *buffer,
+			UINT32 length,
+			UINT8 terminator)
+{
+  struct base64_state state = BASE64_INIT(terminator);
+
+  struct lsh_string *res;
+  UINT32 i;
+  
+  res = lsh_string_alloc(length);
+  
+  for (i = 0; i < length; i++)
+    {
+      int c = sexp_decode_base64(buffer, &state);
+
+      if (c < 0)
+	{
+	  if (c == BASE64_END)
+	    werror("sexp: Base string is too short.\n");
+	  lsh_string_free(res);
+	  return NULL;
+	}
+      res->data[i] = (unsigned) c;
+    }
+  return res;
+}
+
+/* Reads a base64-encoded string of indefinite length. */
+static struct lsh_string *
+sexp_parse_base64(struct simple_buffer *buffer, UINT8 delimiter)
+{
+  struct base64_state state = BASE64_INIT(delimiter);
+  struct lsh_string *res;
+
+  UINT32 length = sexp_scan_class(buffer, CHAR_base64 | CHAR_space);
+  UINT32 terminator = buffer->pos + length;
+
+  UINT32 i;
+  
+  if ( (length == LEFT)
+       || (HERE[terminator] != delimiter))
+    {
+      werror("sexp: Unexpected EOF in base64 string.\n");
+      return NULL;
+    }
+
+  /* The number of digits, multiplied by 3/4, rounded upwards,
+   * is an upper limit on the length. */
+
+  length = ( (length + 1) * 3) / 4;
+
+  res = lsh_string_alloc(length);
+
+  for (i = 0; i < length; i++)
+    {
+      int c = sexp_decode_base64(buffer, &state);
+
+      switch (c)
+	{
+	case BASE64_INVALID:
+	  lsh_string_free(res);
+	  return NULL;
+	case BASE64_END:
+	  res->length = i;
+	  return res;
+	default:
+	  res->data[i] = (unsigned) c;
+	}
+    }
+
+  assert(sexp_scan_class(buffer, CHAR_base64_space) == (terminator - buffer->pos));
+  buffer->pos = terminator + 1;
+
+  return res;
+}
+  
+/* Reads and returns a simple string from the input stream, using the
+ * canonical encoding. */
+static struct lsh_string *
+sexp_parse_string_canonical(struct simple_buffer *buffer)
+{
+  UINT32 length;
+      
+  if (sexp_parse_decimal(buffer, &length)
+      && sexp_skip_char(buffer, ':'))
+    return sexp_parse_literal(buffer, length);
+
+  return NULL;
+}
+
+static struct lsh_string *
+sexp_parse_string_advanced(struct simple_buffer *buffer)
+{
+  int class;
+  
+  if (!LEFT)
+    return NULL;
+
+  class = sexp_char_classes[*HERE];
+
+  if (class & CHAR_token_start)
+    return sexp_parse_token(buffer);
+
+  if (class & CHAR_digit)
+    {
+      UINT32 length;
+      if (!sexp_parse_decimal(buffer, &length))
+	return NULL;
+
+      switch(GET())
+	{
+	case '|':
+	  return sexp_parse_base64_length(buffer, length, '|');
+	case '#':
+	  return sexp_parse_hex_length(buffer, length);
+	case '"':
+	  return sexp_parse_quoted_length(buffer, length);
+	case ':':
+	  return sexp_parse_literal(buffer, length);
+	default:
+	  werror("sexp: Invalid prefixed string.\n");
+	  return NULL;
+	}
+    }
+      
+  switch(GET())
+    {
+    case '|':
+      return sexp_parse_base64(buffer, '|');
+    case '#':
+      return sexp_parse_hex(buffer);
+    case '"':
+      return sexp_parse_quoted(buffer);
     default:
-      /* Syntax error */
-      return LSH_FAIL | LSH_SYNTAX;
+      return NULL;
     }
 }
 
-#endif
-
-static struct scanner *make_parse_advanced_string(struct string_handler *h,
-						  struct scanner *next)
+static struct sexp *
+sexp_parse_display_canonical(struct simple_buffer *buffer)
 {
-  NEW(parse_string, closure);
+  struct lsh_string *display;
 
-  closure->handler = h;
-  closure->super.next = next;
+  sexp_skip_space(buffer);
+  
+  display = sexp_parse_string_canonical(buffer);
 
-  return &closure->super.super;
-}
-
-
-#if 0
-/* xxCLASS:
-   (class
-     (name return_string_display)
-     (super string_handler)
-     (vars
-       (display string)
-       (c object sexp_handler)))
-*/
-
-static int do_return_string_display(struct string_handler *h,
-				    struct lsh_string *data)
-{
-  CAST(return_string_display, closure, h);
-
-  struct lsh_string *display = closure->display;
-
-  closure->display = NULL;
-  *s = NULL;
-
-  return HANDLE_SEXP(closure->c, make_sexp_string(display, data));
-}
-
-static struct string_handler *
-make_return_string_display(struct lsh_string *display,
-			   struct sexp_handler *c)
-{
-  NEW(return_string_display, closure);
-
-  closure->super.handler = do_return_string_display;
-  closure->display = display;
-  closure->c = c;
-
-  return &closure->super;
-}
-#endif
-
-/* CLASS:
-   (class
-     (name handle_display)
-     (super string_handler)
-     (vars
-       (display string)
-       (c object sexp_handler)))
-*/
-
-static int do_handle_display(struct string_handler *h,
-			     struct lsh_string *data)
-{
-  CAST(handle_display, closure, h);
-
-  if (!closure->display)
+  if (display)
     {
-      closure->display = data;
-      return LSH_OK;
+      sexp_skip_space(buffer);
+      if (sexp_skip_char(buffer, ']'))
+	{
+	  struct lsh_string *contents;
+	  
+	  sexp_skip_space(buffer);
+	  contents = sexp_parse_string_canonical(buffer);
+
+	  if (contents)
+	    return make_sexp_string(display, contents);
+	}
+      lsh_string_free(display);
     }
-  else
+
+  return NULL;
+}
+
+static struct sexp *
+sexp_parse_display_advanced(struct simple_buffer *buffer)
+{
+  struct lsh_string *display = sexp_parse_string_advanced(buffer);
+
+  if (display)
     {
-      struct lsh_string *display = closure->display;
-      closure->display = NULL;
+      struct lsh_string *contents;
 
-      return HANDLE_SEXP(closure->c,
-			 make_sexp_string(display, data));
+      if (sexp_skip_char(buffer, ']')
+     	  && ((contents = sexp_parse_string_advanced(buffer))))
+	return make_sexp_string(display, contents);
+
+      lsh_string_free(display);
     }
+  
+  return NULL;
 }
-
-static struct string_handler *make_handle_display(struct sexp_handler *c)
-{
-  NEW(handle_display, closure);
-
-  closure->super.handler = do_handle_display;
-  closure->display = NULL;
-  closure->c = c;
-
-  return &closure->super;
-}
-
-static struct scanner *
-make_parse_display(struct scanner * (*make)(struct string_handler *h,
-					    struct scanner *next),
-		   struct sexp_handler *c,
-		   struct scanner *next)
-{
-  struct string_handler *h = make_handle_display(c);
-
-  return make(h,
-	      make_parse_skip(']', NULL, NULL,
-			      make(h, next)));
-}
-
-#if 0
-/* Parse and construct a list (with hooks for both advanced and
- * canonical formats) */
-
-/* xxCLASS:
-   (class
-     (name parse_list)
-     (super parse_sexp)
-     (vars 
-       ;; Construct a parser
-       (element_parser pointer (function "struct scanner *"
-                                         "struct sexp_handler *c"))))
-*/
-
-/* Inter-element parser. Used to recognize the end of list ')' character,
- * and could also be used to skip optional whitespace. */
-
-/* xxCLASS:
-   (class
-     (name parse_inter_list)
-     (super scanner)
-     (vars
-       (list object parse_list)))
-*/
-#endif
 
 struct parse_node
 {
-  struct parse_node *next;
+  struct parse_node *prev;
   struct sexp *item;
 };
 
-static void do_mark_parse_node(struct parse_node *n,
-			       void (*mark)(struct lsh_object *o))
+struct parse_list
 {
-  while(n)
-    {
-      mark(&n->item->super);
-      n = n->next;
-    }
-}
+  struct parse_node *tail;
+  unsigned count;
+};
 
-static void do_free_parse_node(struct parse_node *n)
+#define PARSE_LIST_INIT { NULL, 0 }
+
+static struct sexp *build_parse_vector(struct parse_list *p)
 {
-  while(n)
+  struct object_list *l = alloc_object_list(p->count);
+ 
+  unsigned i = p->count;
+  struct parse_node *n = p->tail;
+   
+  while (n)
     {
       struct parse_node *old = n;
-      n = n->next;
-      lsh_space_free(old);
-    }
-}
-
-/* CLASS:
-   (class
-     (name handle_element)
-     (super sexp_handler)
-     (vars
-       ; Scanner to restore at the end of each element
-       ;; (location . "struct scanner **")
-       ;; (restore object scanner)
-       ; Number of elements collected so far
-       (count . unsigned)
-       (tail special "struct parse_node *"
-             do_mark_parse_node do_free_parse_node)))
-*/
-
-static int do_handle_element(struct sexp_handler *h,
-			     struct sexp *e)
-{
-  CAST(handle_element, closure, h);
-  struct parse_node *n;
-  
-  NEW_SPACE(n);
-
-  n->item = e;
-  n->next = closure->tail;
-
-  closure->tail = n;
-  closure->count++;
-
-  return LSH_OK;
-  
-  #if 0
-  /* FIXME: It would be nice if we could simply restore an older
-   * scanner here, but we can perhaps not do that becase the location
-   * pointer is not gc-friendly.
-   *
-   * The problem is that we must be sure that the object (or stack
-   * frame) location points into is still alive. I think that will
-   * always be the case here, but I'm not sure.
-   *
-   * So instead, we return a special status code. */
-
-  return LSH_PARSED_OBJECT;
-  #endif
-}
-
-static struct handle_element *make_handle_element(void)
-{
-  NEW(handle_element, closure);
-
-  closure->count = 0;
-  closure->tail = NULL;
-
-  closure->super.handler = do_handle_element;
-
-  return closure;
-}
-
-static struct sexp *build_parsed_vector(struct handle_element *h)
-{
-  struct object_list *l = alloc_object_list(h->count);
-
-  unsigned i;
-  struct parse_node *n;
-  
-  for (n = h->tail, i = h->count; n; n = n->next)
-    {
+      
       assert(i);
       LIST(l)[--i] = &n->item->super;
+      old = n;
+      n = n->prev;
+      
+      lsh_space_free(old);
     }
   assert(!i);
   
   return sexp_v(l);
 }
 
-/* CLASS:
-   (class
-     (name parse_list)
-     (super parse_sexp)
-     (vars
-       (elements object handle_element)
-       ; Allow space between elements?
-       (advanced . int)
-       ; Used to parse each element
-       (start object scanner)))
-
-       ; Current scanner
-       (state object scanner)))
-*/
-
-static int do_parse_list(struct scanner **s, int token)
+static void parse_list_free(struct parse_list *p)
 {
-  CAST(parse_list, closure, *s);
+  struct parse_node *n = p->tail;
   
-  if (token < 0)
-    return LSH_FAIL | LSH_SYNTAX;
-
-  if (token == ')')
+  while (n)
     {
-      *s = closure->super.super.next;
-      return HANDLE_SEXP(closure->super.handler,
-			 build_parsed_vector(closure->elements));
+      struct parse_node *old = n;
+
+      /* FIXME: Could we do KILL(n->item); here? */
+      n = n->prev;
+      lsh_space_free(old);
     }
+}
+
+static void parse_list_add(struct parse_list *p, struct sexp *e)
+{
+  struct parse_node *n;
+
+  NEW_SPACE(n);
+  n->prev = p->tail;
+  n->item = e;
+  p->tail = n;
+
+  p->count++;
+}
+
+static struct sexp *sexp_parse_list_canonical(struct simple_buffer *buffer)
+{
+  struct parse_list p = PARSE_LIST_INIT;
+
+  while (LEFT)
+    {
+      struct sexp *e;
       
-  if (closure->advanced && (sexp_char_classes[token] & CHAR_space))
-    return LSH_OK;
+      if (*HERE == ')')
+	return build_parse_vector(&p);
 
-  *s = closure->start;
-  return SCAN(*s, token);
-}
-
-static struct scanner *
-make_parse_list(int advanced,
-		struct scanner * (*make)(struct sexp_handler *c,
-					 struct scanner *next),
-		struct sexp_handler *handler,
-		struct scanner *next)
-{
-  NEW(parse_list, closure);
-
-  closure->super.super.super.scan = do_parse_list;
-  closure->super.super.next = next;
-  closure->super.handler = handler;
-
-  closure->advanced = advanced;
-  closure->elements = make_handle_element();
-  closure->start = make(&closure->elements->super,
-			&closure->super.super.super);
-
-  return &closure->super.super.super;
-}
-					  
-/* Parser for the canonical format. */
-MAKE_PARSE(canonical_sexp)
-{
-  CAST(parse_sexp, closure, *s);
+      e = sexp_parse_canonical(buffer);
+      if (!e)
+	{
+	  parse_list_free(&p);
+	  return NULL;
+	}
+      parse_list_add(&p, e);
+    }
+  werror("sexp: Unexpected EOF (missing ')')\n");
   
-  switch (token)
+  parse_list_free(&p);
+  return NULL;
+}
+
+static struct sexp *sexp_parse_list_advanced(struct simple_buffer *buffer)
+{
+  struct parse_list p = PARSE_LIST_INIT;
+
+  while (LEFT)
     {
-    case TOKEN_EOS:
-      fatal("Internal error!\n");      
-    case '[':
-      *s = make_parse_display(make_parse_literal, closure->handler,
-			      closure->super.next);
-      return LSH_OK;
+      struct sexp *e;
+      
+      if (*HERE == ')')
+	return build_parse_vector(&p);
+
+      e = sexp_parse_advanced(buffer);
+      if (!e)
+	{
+	  parse_list_free(&p);
+	  return NULL;
+	}
+      parse_list_add(&p, e);
+
+      sexp_skip_space(buffer);
+    }
+  werror("sexp: Unexpected EOF (missing ')')\n");
+  
+  parse_list_free(&p);
+  return NULL;
+}
+
+struct sexp *sexp_parse_canonical(struct simple_buffer *buffer)
+{
+  if (!LEFT)
+    {
+      werror("sexp: Unexpected EOF.\n");
+      return NULL;
+    }
+
+  if (sexp_char_classes[*HERE] & CHAR_digit)
+    {
+      struct lsh_string *s = sexp_parse_string_canonical(buffer);
+      return s ? make_sexp_string(NULL, s) : NULL;
+    }
+  
+  switch(GET())
+    {
     case '(':
-      *s = make_parse_list(0, make_parse_canonical_sexp, closure->handler,
-			      closure->super.next);
-      return LSH_OK;
+      return sexp_parse_list_canonical(buffer);
+    case '[':
+      return sexp_parse_display_canonical(buffer);
     default:
-      /* Should be a string */
-      *s = make_parse_literal(make_return_string(closure->handler),
-			      closure->super.next);
-      return SCAN(*s, token);
+      werror("sexp: Syntax error.\n");
+      return NULL;
     }
 }
 
-/* CLASS:
-   (class
-     (name decode_base64)
-     (super scanner)
-     (vars
-       (next object scanner);
-       (end_marker . UINT8)))
-*/
-
-static int do_decode_base64(struct scanner **s, int token)
+static struct sexp *sexp_decode_transport(struct simple_buffer *buffer)
 {
-  CAST(decode_base64, closure, *s);
-
-  fatal("do_decode_base64: Not implemented!\n");
-
-#if 0
-  if (token < 0)
-       return LSH_FAIL;
+  struct lsh_string *s = sexp_parse_base64(buffer, '}');
+  struct simple_buffer inner;
+  struct sexp *e;
   
-  if (token == closure->end_marker)
-    {
-      int res = SCAN(closure->next, TOKEN_EOF);
-      if ()}
-#endif
-}
+  if (!s)
+    return NULL;
 
-static struct scanner *make_decode_base64(int end,
-					  struct scanner *s,
-					  struct scanner *next)
-{
-  fatal("Not implemented!\n");
-}
+  simple_buffer_init(&inner, s->length, s->data);
 
-static struct scanner *
-make_parse_transport(struct scanner * (*make)(struct sexp_handler *c,
-					      struct scanner *next),
-		     struct sexp_handler *handler,
-		     struct scanner *next)
-{
-  return
-    make_decode_base64('{',
-		       make(handler,
-			    make_parse_skip(TOKEN_EOS,
-					    NULL, NULL, NULL)),
-		       next);
-}
+  e = sexp_parse_canonical(&inner);
 
-/* Parser for the canonical or transport format. */
-MAKE_PARSE(transport_sexp)
-{
-  CAST(parse_sexp, closure, *s);
+  if (!parse_eod(&inner))
+    e = NULL;
   
-  switch (token)
+  lsh_string_free(s);
+  return e;
+}
+
+struct sexp *sexp_parse_transport(struct simple_buffer *buffer)
+{
+  if (!LEFT)
     {
-    case TOKEN_EOS:
-      fatal("Internal error!\n");      
-    case '[':
-      *s = make_parse_display(make_parse_literal, closure->handler,
-			      closure->super.next);
-      return LSH_OK;
+      werror("sexp: Unexpected EOF.\n");
+      return NULL;
+    }
+
+  if (*HERE == '{')
+    {
+      ADVANCE(1);
+      return sexp_decode_transport(buffer);
+    }
+
+  return sexp_parse_canonical(buffer);
+}
+
+struct sexp *sexp_parse_advanced(struct simple_buffer *buffer)
+{
+  if (!LEFT)
+    {
+      werror("sexp: Unexpected EOF.\n");
+      return NULL;
+    }
+
+  switch (*HERE)
+    {
     case '(':
-      *s = make_parse_list(0, make_parse_canonical_sexp, closure->handler,
-			      closure->super.next);
-      return LSH_OK;
+      ADVANCE(1);
+      return sexp_parse_list_advanced(buffer);
     case '{':
-      *s = make_parse_transport(make_parse_canonical_sexp,
-				closure->handler, closure->super.next);
-      return LSH_OK;
+      ADVANCE(1);
+      return sexp_decode_transport(buffer);
+    case '[':
+      ADVANCE(1);
+      return sexp_parse_display_advanced(buffer);
     default:
-      /* Should be a string */
-      *s = make_parse_literal(make_return_string(closure->handler),
-			      closure->super.next);
-      return SCAN(*s, token);
+      {
+	struct lsh_string *s = sexp_parse_string_advanced(buffer);
+	return s ? make_sexp_string(NULL, s) : NULL;
+      }
     }
 }
 
-/* Parser for any format. */
-MAKE_PARSE(advanced_sexp)
-{
-  CAST(parse_sexp, closure, *s);
-  
-  switch (token)
-    {
-    case TOKEN_EOS:
-      fatal("Internal error!\n");      
-    case '[':
-      *s = make_parse_display(make_parse_advanced_string, closure->handler,
-			      closure->super.next);
-      return LSH_OK;
-    case '(':
-      *s = make_parse_list(1, make_parse_advanced_sexp, closure->handler,
-			   closure->super.next);
-      return LSH_OK;
-    case '{':
-      *s = make_parse_transport(make_parse_canonical_sexp,
-				closure->handler, closure->super.next);
-      return LSH_OK;
-    default:
-      /* Should be a string */
-      *s = make_parse_advanced_string(make_return_string(closure->handler),
-				      closure->super.next);
-      return SCAN(*s, token);
-    }
-}

@@ -24,4 +24,11 @@
 #ifndef LSH_SEXP_PARSER_H_INCLUDED
 #define LSH_SEXP_PARSER_H_INCLUDED
 
+#include "parse.h"
+#include "sexp.h"
+
+struct sexp *sexp_parse_canonical(struct simple_buffer *buffer);
+struct sexp *sexp_parse_transport(struct simple_buffer *buffer);
+struct sexp *sexp_parse_advanced(struct simple_buffer *buffer);
+
 #endif */ LSH_SEXP_PARSER_H_INCLUDED */
