@@ -132,7 +132,10 @@ struct read_handler *make_server_read_line(struct ssh_connection *s)
 
 struct fd_callback *make_server_callback(struct io_backend *b,
 					 char *comment,
-					 UINT32 block_size)
+					 UINT32 block_size,
+					 struct signer *secret,
+					 struct lsh_string *host_key,
+					 struct randomness *r)
 					 
 {
   struct server_callback *connected = xalloc(sizeof(struct server_callback));
@@ -141,6 +144,9 @@ struct fd_callback *make_server_callback(struct io_backend *b,
   connected->backend = b;
   connected->block_size = block_size;
   connected->id_comment = comment;
+  connected->secret = secret;
+  connected->host_key = host_key;
+  connected->random = r;
   
   return &connected->super;
 }

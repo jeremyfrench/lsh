@@ -130,6 +130,12 @@ static struct lsh_string *do_dss_sign(struct signer *c,
   return signature;
 }
 
+static struct lsh_string *dss_public_key(struct signer *dss)
+{
+  struct 
+  return ssh_format("%a%n%n%n%n", ATOM_SSH_DSS, dss->p, dss->q, dss->g, dss->y);
+}
+
 int do_dss_verify(struct verifier *c,
 		  UINT32 length,
 		  UINT8 *msg,
@@ -571,3 +577,4 @@ int dh_verify_server_msg(struct diffie_hellman_instance *self,
   return VERIFY(v, self->hash->hash_size, digest,
 		self->signature->length, self->signature->data);
 }
+

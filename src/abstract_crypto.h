@@ -133,4 +133,10 @@ struct signature_algorithm
 				     UINT8 *public);
 };
 
+#define MAKE_SIGNER(a, pl, p, sl, s) \
+((a)->make_signer((a), (pl), (p), (sl), (s)))
+
+#define MAKE_VERIFIER(a, pl, p) \
+((a)->make_verifier((a), (pl), (p)))
+
 #endif /* LSH_ABSTRACT_CRYPTO_H_INCLUDED */

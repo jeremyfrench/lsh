@@ -32,6 +32,10 @@ struct server_callback
 {
   struct fd_callback super;
   struct io_backend *backend;
+
+  struct signer *secret;        /* secret key */
+  struct lsh_string *host_key;  /* public key */
+  struct randomness *random;
   UINT32 block_size;
   char *id_comment;
 };
