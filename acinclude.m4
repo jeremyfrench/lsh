@@ -20,6 +20,57 @@ AC_DEFINE(socklen_t, int)
 fi
 ])
 
+dnl Choose cc flags for compiling position independent code
+AC_DEFUN([LSH_CCPIC],
+[AC_MSG_CHECKING(CCPIC)
+AC_CACHE_VAL(lsh_cv_sys_ccpic,[
+  if test -z "$CCPIC" ; then
+    if test "$GCC" = yes ; then
+      case `uname -sr` in
+	BSD/OS*)
+         case `uname -r` in
+           4.*) CCPIC="-fPIC";;
+           *) CCPIC="";;
+         esac
+	;;
+	Darwin*)
+	  CCPIC="-fPIC"
+	;;
+	SunOS\ 5.*)
+	  # Could also use -fPIC, if there are a large number of symbol reference
+	  CCPIC="-fPIC"
+	;;
+	*)
+	  CCPIC="-fpic"
+	;;
+      esac
+    else
+      case `uname -sr` in
+	Darwin*)
+	  CCPIC="-fPIC"
+	;;
+        IRIX*)
+          CCPIC="-share"
+        ;;
+	hp*|HP*) CCPIC="+z"; ;;
+	FreeBSD*) CCPIC="-fpic";;
+	SCO_SV*) CCPIC="-KPIC -dy -Bdynamic";;
+        UnixWare*|OpenUNIX*) CCPIC="-KPIC -dy -Bdynamic";;
+	Solaris*) CCPIC="-KPIC -Bdynamic";;
+	Windows_NT*) CCPIC="-shared" ;;
+      esac
+    fi
+  fi
+  OLD_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS $CCPIC"
+  AC_TRY_COMPILE([], [exit(0);],
+    lsh_cv_sys_ccpic="$CCPIC", lsh_cv_sys_ccpic='')
+  CFLAGS="$OLD_CFLAGS"
+])
+CCPIC="$lsh_cv_sys_ccpic"
+AC_MSG_RESULT($CCPIC)
+AC_SUBST([CCPIC])])
+
 dnl LSH_PATH_ADD(path-id, directory)
 AC_DEFUN([LSH_PATH_ADD],
 [AC_MSG_CHECKING($2)
