@@ -13,7 +13,7 @@ set -e
 
 export LSH_YARROW_SEED_FILE SEXP_CONV
 
-: ${LSHD_FLAGS:=-q --enable-core}
+: ${LSHD_FLAGS:='-q --enable-core'}
 : ${LSH_FLAGS:=-q}
 : ${LSHG_FLAGS:=-q}
 : ${HOSTKEY:="$srcdir/key-1.private"}
