@@ -71,24 +71,19 @@ make_serpent_instance(struct crypto_algorithm *algorithm, int mode,
 			? do_serpent_encrypt
 			: do_serpent_decrypt);
 
-  /* We don't have to deal with weak keys - as a second round AES
-   * candidate, Serpent doesn't have any, but it can only use 256 bit
-   * keys so we do an assertion check. */
-  assert(algorithm->key_size == SERPENT_KEYSIZE);
-  serpent_setup(&self->ctx, key);
+  serpent_setup(&self->ctx, algorithm->key_size, key);
 
   return(&self->super);
 }
 
-/* FIXME: This function seems a little redundant, when we don't
- * support variable key size for serpent. */
 struct crypto_algorithm *
 make_serpent_algorithm(UINT32 key_size)
 {
   NEW(crypto_algorithm, algorithm);
 
-  assert(key_size == SERPENT_KEYSIZE);
-
+  assert(key_size >= SERPENT_MIN_KEYSIZE);
+  assert(key_size <= SERPENT_MAX_KEYSIZE);
+  
   algorithm->block_size = SERPENT_BLOCKSIZE;
   algorithm->key_size = key_size;
   algorithm->iv_size = 0;
@@ -97,8 +92,11 @@ make_serpent_algorithm(UINT32 key_size)
   return algorithm;
 }
 
-struct crypto_algorithm *
-make_serpent(void)
-{
-  return(make_serpent_algorithm(SERPENT_KEYSIZE));
-}
+struct crypto_algorithm serpent128_algorithm =
+{ STATIC_HEADER, SERPENT_BLOCKSIZE, 16, 0, make_serpent_instance};
+
+struct crypto_algorithm serpent192_algorithm =
+{ STATIC_HEADER, SERPENT_BLOCKSIZE, 24, 0, make_serpent_instance};
+
+struct crypto_algorithm serpent256_algorithm =
+{ STATIC_HEADER, SERPENT_BLOCKSIZE, 32, 0, make_serpent_instance};
