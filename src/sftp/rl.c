@@ -314,7 +314,7 @@ char* lsftp_rl_remotefile_generator( char* text, int state )
 {
   static int list_index;
   char* name;
-  static char** glob;
+  static const char** glob;
   static int unqualify = 0;
 
   /* If this is a new word to complete, initialize now. */
@@ -390,7 +390,7 @@ char* lsftp_rl_remotefile_generator( char* text, int state )
       char* tmp;
       char* tmp2;
       char* nfree = strdup( glob[list_index++] );
-      char* name = nfree; 
+      const char* name = nfree; 
 
       if( unqualify )
 	name = lsftp_unqualify_path( nfree );
