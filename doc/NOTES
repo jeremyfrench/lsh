@@ -97,3 +97,43 @@ the code of tnlited
 http://viks.mvrop.org/networking/sock_advanced_tut.html
 Text-Terminal-HOWTO
 http://www.developer.ibm.com/library/ref/about4.1/df4commo.html
+
+
+3605942 idag 07:59 /32 rader/ assar
+Kommentar till text 3578895 av Niels Möller ()
+Mottagare: C - (den) portabla(?) assemblern <7482>
+Ärende: const
+------------------------------------------------------------
+tyvärr räcker inte det där eftersom det finns kompilatorer som är
+(eller har varit i ett tidigare liv) gcc men inte förstår
+__attribute__ för det.
+
+så dår får man göra:
+
+dnl
+dnl Test for __attribute__
+dnl
+
+AC_DEFUN(AC_C___ATTRIBUTE__, [
+AC_MSG_CHECKING(for __attribute__)
+AC_CACHE_VAL(ac_cv___attribute__, [
+AC_TRY_COMPILE([
+#include <stdlib.h>
+],
+[
+static void foo(void) __attribute__ ((noreturn));
+
+static void __attribute__ ((noreturn))
+foo(void)
+{
+  exit(1);
+}
+],
+ac_cv___attribute__=yes,
+ac_cv___attribute__=no)])
+if test "$ac_cv___attribute__" = "yes"; then
+  AC_DEFINE(HAVE___ATTRIBUTE__)
+fi
+AC_MSG_RESULT($ac_cv___attribute__)
+])
+(3605942) ------------------------------------------
