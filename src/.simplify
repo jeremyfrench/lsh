@@ -41,6 +41,8 @@ command.h
   Do we need both catch_command and catch_report?
 
   Delete make_delay_continuation.
+
+  Review the collect_info_n abstraction.
   
 compress.h done
 connection.h
@@ -179,6 +181,7 @@ server_userauth.h done
 sexp.h
 
   Remove traces of cons.
+  Remove SEXP_SET
   
 sexp_commands.h
 
@@ -189,21 +192,36 @@ spki.h done
 
 spki_commands.h
 
-  SEXP2KEYPAIR is not used.
-  SPKI_MAKE_CONTEXT is not used.
   SPKI_READ_ACLS is not used.
   
-srp.h
-ssh.h
-ssh1_fallback.h
-string_buffer.h
-tcpforward.h
-tcpforward_commands.h
+srp.h done
+ssh1_fallback.h done
+string_buffer.h done
+tcpforward.h done
+tcpforward_commands.h done
+
 translate_signal.h
+
+  Obsoleted by later draft. Now signals should be sent as strings, not
+  numbers.
+  
 tty.h
+
+  Use terminal_dimensions from interact.h.
+  
 unpad.h
-userauth.h
-version.h
-werror.h
+
+  Move declaration?
+  
+userauth.h done
+version.h done
+werror.h done
 write_buffer.h
+
+  Rename write_buffer_alloc to make_write_buffer.
+
+  Change the conventions for write_buffer_pre_write?
+
 xalloc.h
+
+  Make lsh_object_alloc and lsh_object_free static.
