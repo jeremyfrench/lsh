@@ -74,6 +74,12 @@ make_des_instance(struct crypto_algorithm *algorithm UNUSED, int mode,
       p ^= (p >> 2);
       p ^= (p >> 1);
       pkey[i] = key[i] ^ (p & 1) ^ 1;
+#if 0
+      debug("make_des_instance: computing parity: key[%i] = %xi,\n"
+	    "                                    pkey[%i] = %xi,\n"
+	    "                   parity = %xi\n",
+	    i, key[i], i, pkey[i], p);
+#endif
     }
 
   self->super.block_size = DES_BLOCKSIZE;

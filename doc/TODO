@@ -212,3 +212,6 @@ used in several places.
 
 Fix configure script to add appropriate -R options when linking.
 Currently, using a shared libz.so doesn't work.
+
+Fix the src/symmetric/desTest program. It doesn't complain if the
+desCode is compiled with empty keymap.h, parity.h and rotors.h files.
