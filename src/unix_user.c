@@ -1134,15 +1134,19 @@ do_lookup_user(struct user_db *s,
       /* Check for root login */
       if (!passwd->pw_uid && !self->allow_root)
 	goto fail;
-      
+
 #if HAVE_GETSPNAM
+      {
+      struct spwd *shadowpwd;
+
       /* FIXME: What's the most portable way to test for shadow
        * passwords? For now, we look up shadow database if and only if
-       * the passwd field equals "x". */
-      if (!strcmp(crypted, "x"))
+       * the passwd field equals "x". If there's no shadow record, we
+       * just keep the value from the passwd-database, the user may be
+       * able to login using a publickey, or the password helper. */
+      if (strcmp(crypted, "x") == 0
+	  && (shadowpwd = getspnam(cname)))
 	{
-	  struct spwd *shadowpwd;
-
 	  /* Current day number since January 1, 1970.
 	   *
 	   * FIXME: Which timezone is used in the /etc/shadow file? */
@@ -1190,6 +1194,7 @@ do_lookup_user(struct user_db *s,
 
 	  crypted = shadowpwd->sp_pwdp;
 	}
+      }
 #endif /* HAVE_GETSPNAM */
       /* Check again for empty passwd field (as it may have been
        * replaced by the shadow one). */
