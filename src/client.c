@@ -41,10 +41,17 @@
 #include "read_packet.h"
 #include "service.h"
 #include "ssh.h"
+#include "translate_signal.h"
 #include "unpad.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
+
+/* For strsignal */
+#ifndef _GNU_SOURCE
+#warning _GNU_SOURCE undefined
+#endif
+#include <string.h>
 
 /* Handle connection and initial handshaking. */
 struct client_callback
@@ -317,7 +324,23 @@ struct client_session
   struct io_fd *in;
   struct io_fd *out;
   struct io_fd *err;
+
+  /* Where to save the exit code. */
+  int *exit_status;
 };
+
+static int close_client_session(struct ssh_channel *c)
+{
+  struct client_session *session = (struct client_session *) c;
+  
+  MDEBUG(session);
+
+  close_fd(session->in);
+  close_fd(session->out);
+  close_fd(session->err);
+  
+  return LSH_OK | LSH_CHANNEL_PENDING_CLOSE;
+}  
 
 static int client_session_die(struct ssh_channel *c)
 {
@@ -331,6 +354,111 @@ static int client_session_die(struct ssh_channel *c)
     exit(EXIT_SUCCESS);
 
   exit(EXIT_FAILURE);
+}
+
+struct exit_handler
+{
+  struct channel_request super;
+
+  int *exit_status;
+};
+
+static int do_exit_status(struct channel_request *c,
+			  struct ssh_channel *channel,
+			  int want_reply,
+			  struct simple_buffer *args)
+{
+  struct exit_handler *closure = (struct exit_handler *) c;
+  int status;
+
+  MDEBUG(closure);
+  
+  if (!want_reply
+      && parse_uint32(args, &status)
+      && parse_eod(args))
+    {
+      *closure->exit_status = status;
+
+      ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);;
+      ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);;
+
+      return close_client_session(channel);
+    }
+  
+  /* Invalid request */
+  return LSH_FAIL | LSH_DIE;
+}
+
+static int do_exit_signal(struct channel_request *c,
+			  struct ssh_channel *channel,
+			  int want_reply,
+			  struct simple_buffer *args)
+{
+  int signal;
+  int core;
+
+  UINT8 *msg;
+  UINT32 length;
+
+  UINT8 *language;
+  UINT32 language_length;
+  
+  struct exit_handler *closure = (struct exit_handler *) c;
+
+  MDEBUG(closure);
+  
+  if (!want_reply
+      && parse_uint32(args, &signal)
+      && parse_boolean(args, &core)
+      && parse_string(args, &length, &msg)
+      && parse_string(args, &language_length, &language)
+      && parse_eod(args))
+    {
+      /* FIXME: What exit status should be returned when the remote
+       * process dies violently? */
+
+      *closure->exit_status = 7;
+
+      signal = signal_network_to_local(signal);
+
+      werror_utf8(length, msg);
+      werror("Remote process was killed by %s.\n",
+	     signal ? strsignal(signal) : "an unknown signal");
+      if (core)
+	werror("(core dumped remotely)\n");
+
+      ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);;
+      ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);;
+
+      return close_client_session(channel);
+    }
+  
+  /* Invalid request */
+  return LSH_FAIL | LSH_DIE;
+}
+
+struct channel_request *make_handle_exit_status(int *exit_status)
+{
+  struct exit_handler *self;
+
+  NEW(self);
+  self->super.handler = do_exit_status;
+
+  self->exit_status = exit_status;
+
+  return &self->super;
+}
+
+struct channel_request *make_handle_exit_signal(int *exit_status)
+{
+  struct exit_handler *self;
+
+  NEW(self);
+  self->super.handler = do_exit_signal;
+
+  self->exit_status = exit_status;
+
+  return &self->super;
 }
 
 /* Recieve channel data */
@@ -378,6 +506,11 @@ static int do_io(struct ssh_channel *channel)
   
   closure->in->handler = make_channel_read_data(&closure->super);
   channel->send = do_send;
+
+  ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,
+	    make_handle_exit_status(closure->exit_status));
+  ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL,
+	    make_handle_exit_signal(closure->exit_status));
   
   return LSH_OK | LSH_GOON;
 }
@@ -409,7 +542,8 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
 					       struct io_fd *err,
 					       UINT32 max_window,
 					       int final_request,
-					       struct lsh_string *args)
+					       struct lsh_string *args,
+					       int *exit_status)
 {
   struct client_session *self;
 
@@ -422,6 +556,8 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
 
   /* FIXME: Make maximum packet size configurable */
   self->super.rec_max_packet = SSH_MAX_PACKET;
+
+  self->super.request_types = make_alist(0, -1);
   
   /* self->expect_close = 0; */
   self->in = in;
@@ -430,6 +566,8 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
 
   self->final_request = final_request;
   self->args = args;
+
+  self->exit_status = exit_status;
   
   return &self->super;
 }
@@ -480,7 +618,8 @@ struct connection_startup *make_client_startup(struct io_fd *in,
 					       struct io_fd *out,
 					       struct io_fd *err,
 					       int final_request,
-					       struct lsh_string *args)
+					       struct lsh_string *args,
+					       int *exit_status)
 {
   struct client_startup *closure;
   
@@ -488,7 +627,8 @@ struct connection_startup *make_client_startup(struct io_fd *in,
   closure->super.start = do_client_startup;
   closure->session = make_client_session(in, out, err,
 					 WINDOW_SIZE,
-					 final_request, args);
+					 final_request, args,
+					 exit_status);
 
   return &closure->super;
 }

@@ -33,11 +33,17 @@
 #include "keyexchange.h"
 #include "read_line.h"
 #include "read_packet.h"
+#include "reaper.h"
 #include "ssh.h"
+#include "translate_signal.h"
 #include "unpad.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#ifndef _GNU_SOURCE
+#warning _GNU_SOURCE undefined
+#endif
 
 #include <assert.h>
 #include <string.h>
@@ -226,7 +232,7 @@ struct server_session
   int running;
 
   /* Child process's stdio */
-  struct abstract_write *in;
+  struct io_fd *in;
   struct io_fd *out;
   struct io_fd *err;
 };
@@ -242,7 +248,7 @@ static int do_recieve(struct ssh_channel *c,
   switch(type)
     {
     case CHANNEL_DATA:
-      return A_WRITE(closure->in, data);
+      return A_WRITE(&closure->in->buffer->super, data);
     case CHANNEL_STDERR_DATA:
       werror("Ignoring unexpected stderr data.\n");
       lsh_string_free(data);
@@ -318,7 +324,8 @@ static struct ssh_channel *do_open_session(struct channel_open *c,
   if (!parse_eod(args))
     return 0;
   
-  return make_server_session(closure->user, WINDOW_SIZE, closure->session_requests);
+  return make_server_session(closure->user, WINDOW_SIZE,
+			     closure->session_requests);
 }
 
 struct channel_open *make_open_session(struct unix_user *user,
@@ -382,11 +389,92 @@ struct unix_service *make_server_session_service(struct alist *global_requests,
   return &closure->super;
 }
 
+struct lsh_string *format_exit_signal(struct ssh_channel *channel,
+				      int core, int signal)
+{
+  struct lsh_string *msg = ssh_format("Process killed by %z.", strsignal(signal));
+  
+  return format_channel_request(ATOM_EXIT_SIGNAL,
+				channel,
+				0,
+				"%i%c%fS%z",
+				signal_local_to_network(signal),
+				core,
+				msg, "");
+}
+
+struct lsh_string *format_exit(struct ssh_channel *channel, int value)
+{
+  return format_channel_request(ATOM_EXIT_STATUS,
+				channel,
+				0,
+				"%i", value);
+}
+      
+struct exit_shell
+{
+  struct exit_callback super;
+
+  struct server_session *session;
+};
+
+static void do_exit_shell(struct exit_callback *c, int signaled,
+			  int core, int value)
+{
+  struct exit_shell *closure = (struct exit_shell *) c;
+  struct server_session *session = closure->session;
+  struct ssh_channel *channel = &session->super;
+  
+  MDEBUG(closure);
+  MDEBUG(session);
+  
+  close_fd(session->in);
+  close_fd(session->out);
+  close_fd(session->err);
+  
+  if (!(channel->flags & CHANNEL_SENT_EOF)
+      /* Don't send eof if the process died violently. */
+      && !signaled)
+    {
+      int res = channel_eof(channel);
+      if (LSH_CLOSEDP(res))
+	/* FIXME: Can we do anything better with the return code than
+	 * ignore it? */
+	return;
+    }
+
+  if (!(channel->flags & CHANNEL_SENT_CLOSE))
+    {
+      int res = A_WRITE(channel->write,
+			signaled
+			? format_exit_signal(channel, core, value)
+			: format_exit(channel, value));
+      res = channel_close(channel);
+      /* FIXME: Can we do anything better with the return code than
+       * ignore it? */
+      
+      return;
+    }
+}
+
+static struct exit_callback *make_exit_shell(struct server_session *session)
+{
+  struct exit_shell *self;
+
+  NEW(self);
+
+  self->super.exit = do_exit_shell;
+  self->session = session;
+
+  return &self->super;
+}
+
 struct shell_request
 {
   struct channel_request super;
 
   struct io_backend *backend;
+  struct reap *reap;
 };
 
 /* Creates a one-way socket connection. Returns 1 on successm 0 on
@@ -469,6 +557,8 @@ static int do_spawn_shell(struct channel_request *c,
 		  break; 
 		case 0:
 		  /* Child */
+		  debug("do_spawn_shell: Child process\n");
+		  
 		  if (!session->user->shell)
 		    {
 		      werror("No login shell!\n");
@@ -549,20 +639,21 @@ static int do_spawn_shell(struct channel_request *c,
 		  }
 		default:
 		  /* Parent */
-		  /* FIXME: Install a callback to catch dying children */
-		    
+
+		  debug("Parent process\n");
+
+		  REAP(closure->reap, child, make_exit_shell(session));
+		  
 		  /* Close the child's fd:s */
 		  close(in[0]);
 		  close(out[1]);
 		  close(err[1]);
 
-		  
 		  session->in
-		    = &io_write(closure->backend, in[1],
+		    = io_write(closure->backend, in[1],
 				SSH_MAX_PACKET,
 				/* FIXME: Use a proper close callback */
-				make_channel_close(channel))
-		    ->buffer->super;
+				make_channel_close(channel));
 		  session->out
 		    = io_read(closure->backend, out[0],
 			      make_channel_read_data(channel),
@@ -597,13 +688,15 @@ static int do_spawn_shell(struct channel_request *c,
     : LSH_OK | LSH_GOON;
 }
 
-struct channel_request *make_shell_handler(struct io_backend *backend)
+struct channel_request *make_shell_handler(struct io_backend *backend,
+					   struct reap *reap)
 {
   struct shell_request *closure;
 
   NEW(closure);
   closure->super.handler = do_spawn_shell;
   closure->backend = backend;
+  closure->reap = reap;
   
   return &closure->super;
 }

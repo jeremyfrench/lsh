@@ -71,6 +71,9 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 		      * instead of in the select loop? */
 	case EWOULDBLOCK:  /* aka EAGAIN */
 	  return 0;
+	case EPIPE:
+	  werror("io.c: read() returned EPIPE! Treating it as EOF.\n");
+	  return A_EOF;
 	default:
 	  werror("io.c: do_read: read() failed (errno %d), %s\n",
 		 errno, strerror(errno));
@@ -93,7 +96,7 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 /* UNLINK_FD must be followed by a continue, to avoid updating _fd */
 #define UNLINK_FD (*_fd = (*_fd)->next)
 
-static void close_fd(struct io_fd *fd)
+static void really_close_fd(struct io_fd *fd)
 {
   /* FIXME: The value returned from the close callback could be used
    * to choose an exit code. */
@@ -121,7 +124,7 @@ static void close_fd(struct io_fd *fd)
 #endif
 }
 
-static int io_iter(struct io_backend *b)
+int io_iter(struct io_backend *b)
 {
   struct pollfd *fds;
   int i;
@@ -213,7 +216,7 @@ static int io_iter(struct io_backend *b)
 	case EINTR:
 	  return 1;
 	default:
-	  fatal("io_run:poll failed: %s", strerror(errno));
+	  fatal("io_iter:poll failed: %s", strerror(errno));
 	}
     }
   else
@@ -290,6 +293,9 @@ static int io_iter(struct io_backend *b)
 		   * this case? */
 		}
 #endif
+	      /* This condition must be taken care of earlier. */
+	      assert(!(res & LSH_CHANNEL_FINISHED));
+	      
 	      if (res & LSH_HOLD)
 		{
 		  /* This flag should not be combined with anything else */
@@ -333,13 +339,13 @@ static int io_iter(struct io_backend *b)
 			    /* In this case, it should be safe to
 			     * deallocate the buffer immediately */
 			    lsh_object_free(p->buffer);
-			    close_fd(p);
+			    really_close_fd(p);
 			  }
 		      }
 		    if (fd->close_now)
 		      {
 			/* Some error occured. So close this fd too! */
-			close_fd(fd);
+			really_close_fd(fd);
 			b->io = NULL;
 			b->nio = 0;
 		      }
@@ -384,10 +390,11 @@ static int io_iter(struct io_backend *b)
 		      }
 		    b->callouts = NULL;
 		  }
-		  /* Skip the rest od this iteration */
+		  /* Skip the rest of this iteration */
 		  return 1;
 		}
 	    }
+#if 0
 	  if (fd->close_now)
 	    {
 	      /* FIXME: Cleanup properly...
@@ -395,16 +402,36 @@ static int io_iter(struct io_backend *b)
 	       * After a write error, read state must be freed,
 	       * and vice versa. */
 
-	      close_fd(fd);
+	      really_close_fd(fd);
 
 	      UNLINK_FD;
 
 	      b->nio--;
 	      continue;
 	    }
+#endif
 	}
       END_FOR_FDS;
 
+      /* Close files */
+      i = 0; /* Start over */
+      FOR_FDS(struct io_fd, fd, b->io, i++)
+	if (fd->close_now)
+	  {
+	    /* FIXME: Cleanup properly...
+	     *
+	     * After a write error, read state must be freed,
+	     * and vice versa. */
+	    
+	    really_close_fd(fd);
+	    
+	    UNLINK_FD;
+	    
+	    b->nio--;
+	    continue;
+	  }
+      END_FOR_FDS;
+	
       FOR_FDS(struct listen_fd, fd, b->listen, i++)
 	{
 	  if (fds[i].revents & POLLIN)
@@ -458,7 +485,15 @@ static int io_iter(struct io_backend *b)
 /* FIXME: Prehaps this function should return a suitable exit code? */
 void io_run(struct io_backend *b)
 {
-  signal(SIGPIPE, SIG_IGN);
+  struct sigaction pipe;
+
+  pipe.sa_handler = SIG_IGN;
+  sigemptyset(&pipe.sa_mask);
+  pipe.sa_flags = 0;
+  pipe.sa_restorer = NULL;
+  
+  if (sigaction(SIGPIPE, &pipe, NULL) < 0)
+    fatal("Failed to ignore SIGPIPE.\n");
   
   while(io_iter(b))
     ;
@@ -753,4 +788,12 @@ struct io_fd *io_write(struct io_backend *b,
   b->nio++;
 
   return f;
+}
+
+/* Marks a file for closing, at the end of the current iteration.
+ * FIXME: Could be generalized for other fd:s than read-write fds. */
+
+void close_fd(struct io_fd *fd)
+{
+  fd->close_now = 1;
 }
