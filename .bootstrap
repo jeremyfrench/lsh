@@ -28,7 +28,8 @@ relative_symlink() {
 
 relative_symlink misc/run-tests \
     src/testsuite src/argp/testsuite  \
-    src/nettle/testsuite src/nettle/examples src/spki/testsuite
+    src/nettle/testsuite src/nettle/examples \
+    src/sftp/testsuite src/spki/testsuite
 
 # relative_symlink misc/acinclude.m4 \
 #     . src/nettle src/spki

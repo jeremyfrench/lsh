@@ -3,7 +3,8 @@
 	* doc/Makefile.am (EXTRA_DIST): Don't distribute Makefile.am.in.
 	* src/Makefile.am (EXTRA_DIST): Likewise.
 
-	* .bootstrap: Make link from src/nettle/examples to run-tests.
+	* .bootstrap: New link from src/nettle/examples and
+	src/sftp/testsuite to run-tests.
 
 2003-02-18  Niels Möller  <nisse@cuckoo.hack.org>
 
