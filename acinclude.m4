@@ -247,3 +247,113 @@ AC_DEFUN(AC_CHECK_KRB_LIB,
 , [$5 $KRB_LIBS])
 ])
 
+dnl AC_LIB_ARGP(ACTION-IF-OK, ACTION-IF-BAD)
+AC_DEFUN(AC_LIB_ARGP,
+[ AC_CACHE_CHECK([for working argp],
+    lsh_cv_lib_argp_works,
+    [ lsh_cv_lib_argp_works=no
+      AC_CHECK_FUNCS(argp_parse,
+      [ AC_TRY_RUN(
+[#include <argp.h>
+#include <stdlib.h>
+
+static const struct argp_option
+options[] =
+{
+  { NULL, 0, NULL, 0, NULL, 0 }
+};
+
+struct child_state
+{
+  int n;
+};
+
+static error_t
+child_parser(int key, char *arg, struct argp_state *state)
+{
+  struct child_state *input = (struct child_state *) state->input;
+  
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_END:
+      if (!input->n)
+	input->n = 1;
+      break;
+    }
+  return 0;
+}
+
+const struct argp child_argp =
+{
+  options,
+  child_parser,
+  NULL, NULL, NULL, NULL, NULL
+};
+
+struct main_state
+{
+  struct child_state child;
+  int m;
+};
+
+static error_t
+main_parser(int key, char *arg, struct argp_state *state)
+{
+  struct main_state *input = (struct main_state *) state->input;
+
+  switch(key)
+    {
+    default:
+      return ARGP_ERR_UNKNOWN;
+    case ARGP_KEY_INIT:
+      state->child_inputs[0] = &input->child;
+      break;
+    case ARGP_KEY_END:
+      if (!input->m)
+	input->m = input->child.n;
+      
+      break;
+    }
+  return 0;
+}
+
+static const struct argp_child
+main_children[] =
+{
+  { &child_argp, 0, "", 0 },
+  { NULL, 0, NULL, 0}
+};
+
+static const struct argp
+main_argp =
+{ options, main_parser, 
+  NULL,
+  NULL,
+  main_children,
+  NULL, NULL
+};
+
+int main(int argc, char **argv)
+{
+  struct main_state input = { { 0 }, 0 };
+  char *v[2] = { "foo", NULL };
+
+  argp_parse(&main_argp, 1, v, 0, NULL, &input);
+
+  if ( (input.m == 1) && (input.child.n == 1) )
+    return 0;
+  else
+    return 1;
+}
+], lsh_cv_lib_argp_works=yes,
+   lsh_cv_lib_argp_works=no,
+   lsh_cv_lib_argp_works=no)])])
+
+  if test x$lsh_cv_lib_argp_works = xyes ; then
+    ifelse([$1],, true, [$1])
+  else
+    ifelse([$2],, true, [$2])
+  fi   
+])
