@@ -383,19 +383,30 @@ static void listen_callback(struct lsh_fd *fd)
 static void connect_callback(struct lsh_fd *fd)
 {
   CAST(connect_fd, self, fd);
-  int res;
-  
-  res = FD_CALLBACK(self->callback, fd->fd);
+  int socket_error;
 
-  if (LSH_ACTIONP(res))
+  /* Check if the connection was successful */
+  if ((getsockopt(fd, SOL_SOCKET, SO_ERROR,
+		  &socket_error, sizeof(socket_error)) < 0)
+      || socket_error)
     {
-      werror("Strange: Connected, "
-	     "but failed before writing anything.\n");
+      debug("io.c: connect_callback: Connect failed.\n");
+      (void) FD_CALLBACK(self->callback, -1);
     }
   else
     {
-      /* To avoid actually closing the fd */
-      fd->fd = -1;
+      int res = FD_CALLBACK(self->callback, fd->fd);
+      
+      if (LSH_ACTIONP(res))
+	{
+	  werror("Strange: Connected, "
+		 "but failed before writing anything.\n");
+	}
+      else
+	{ /* Everything seems fine. */
+	  /* To avoid actually closing the fd */
+	  fd->fd = -1;
+	}
     }
   kill_fd(fd);
 }

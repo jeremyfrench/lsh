@@ -157,7 +157,10 @@ static int do_connect_continue(struct fd_callback **s, int fd)
 {
   CAST(connect_command_callback, self, *s);
 
-  return COMMAND_RETURN(self->c, make_io_fd(self->backend, fd));
+  return COMMAND_RETURN(self->c,
+			((fd < 0)
+			 ? NULL
+			 : make_io_fd(self->backend, fd)));
 }
 
 static struct fd_callback *
