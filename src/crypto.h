@@ -26,13 +26,6 @@
 
 #include "abstract_crypto.h"
 
-/* Macro to make it easier to loop over several blocks. */
-#define FOR_BLOCKS(length, src, dst, blocksize)	\
-  assert( !((length) % (blocksize)));           \
-  for (; (length); ((length) -= (blocksize),	\
-		  (src) += (blocksize),		\
-		  (dst) += (blocksize)) )
-
 extern struct crypto_algorithm crypto_aes256_cbc_algorithm;
 extern struct crypto_algorithm crypto_arcfour_algorithm;
 extern struct crypto_algorithm crypto_blowfish_cbc_algorithm;
