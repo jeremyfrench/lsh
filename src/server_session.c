@@ -328,18 +328,20 @@ make_pipes(int *in, int *out, int *err)
 #define BASH_WORKAROUND 1
 
 #if WITH_PTY_SUPPORT
-static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
-{
-  int saved_errno = 0;
 
+static int
+make_pty(struct pty_info *pty, int *in, int *out, int *err)
+{
   debug("make_pty... ");
-  if (pty)
-    debug("exists: \n"
-	  "  alive = %i\n"
-	  "  master = %i\n"
-	  "  slave = %i\n"
-	  "... ",
-	  pty->super.alive, pty->master, pty->slave);
+
+  assert(pty);
+  
+  debug("exists: \n"
+        "  alive = %i\n"
+        "  master = %i\n"
+        "  slave = %i\n"
+        "... ",
+        pty->super.alive, pty->master, pty->slave);
   debug("\n");
   
   if (pty) 
@@ -347,54 +349,77 @@ static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
       assert(pty->super.alive);
       
       debug("make_pty: Using allocated pty.\n");
+
+      /* Ownership of the master fd:s is passed on to some file
+       * objects. We need an fd for window_change_request, but we have
+       * to use one of our regular fd:s to the master side, or we're
+       * disrupt EOF handling on either side. */
+
+      pty->super.alive = 0;
+      
+      /* FIXME: It seems unnecessary to dup all the fd:s here. We
+       * could use a single lsh_fd object for the master side of the
+       * pty. */
+
       in[0] = pty->slave;
       in[1] = pty->master;
-
-      /* Ownership of the fd:s passes on to some file objects. */
-      /* FIXME: This doesn't quite work, we need the slave fd around
-       * for window_change_request. */
-      pty->super.alive = 0;
-
-      /* FIXME: It seems unnecessary to dup the fd:s here. But perhaps
-       * having equal in and out fds may confuse the cleanup code, so
-       * we leave it for now. */
-      if ((out[0] = dup(pty->master)) != -1)
+          
+      if ((out[0] = dup(pty->master)) < 0)
         {
-          if ((out[1] = dup(pty->slave)) != -1) 
-            {
-#if BASH_WORKAROUND
-	      /* Don't use a separate stderr channel; just dup the
-	       * stdout pty to stderr. */
-	      if ((err[1] = dup(pty->slave)) != -1)
-                {
-                  err[0] = -1;
-                  return 1;
-                } 
-#else /* !BASH_WORKAROUND */
-	      if (lsh_make_pipe(err))
-		{
-		  /* Success! */
-		  return 1;
-		}
-#endif /* !BASH_WORKAROUND */
-              saved_errno = errno;
-	      
-            }
-	  else
-	    saved_errno = errno;
-	  close(out[0]);
-	}
-      else 
-	saved_errno = errno;
-      close(in[0]);
-      close(in[1]);
+          werror("make_pty: duping master pty to stdout failed (errno = %i): %z\n",
+                 errno, STRERROR(errno));
 
-      werror("make_pty: duping pty filedescriptors failed (errno = %i): %z\n",
-	     errno, STRERROR(errno));
+          close(in[0]);
+          close(in[1]);
+
+          return 0;
+        }
+
+      if ((out[1] = dup(pty->slave)) < 0)
+        {
+          werror("make_pty: duping slave pty to stdout failed (errno = %i): %z\n",
+                 errno, STRERROR(errno));
+
+          close(in[0]);
+          close(in[1]);
+          close(out[0]);
+
+          return 0;
+        }
+#if BASH_WORKAROUND
+      /* Don't use a separate stderr channel; just dup the
+       * stdout pty to stderr. */
+      if ((err[1] = dup(pty->slave)) < 0)
+        {
+          werror("make_pty: duping slave pty to stdout failed (errno = %i): %z\n",
+                 errno, STRERROR(errno));
+
+          close(in[0]);
+          close(in[1]);
+          close(out[0]);
+          close(out[1]);
+
+          return 0;
+        }
+      
+      err[0] = -1;
+      
+#else /* !BASH_WORKAROUND */
+      if (!lsh_make_pipe(err))
+        {
+          close(in[0]);
+          close(in[1]);
+          close(out[0]);
+          close(out[1]);
+
+          return 0;
+        }
+#endif /* !BASH_WORKAROUND */
+      return 1;
     }
-  errno = saved_errno;
   return 0;
 }
+
 #else /* !WITH_PTY_SUPPORT */
 static int make_pty(struct pty_info *pty UNUSED,
 		    int *in UNUSED, int *out UNUSED, int *err UNUSED)
@@ -411,8 +436,6 @@ spawn_process(struct server_session *session,
   int out[2];
   int err[2];
 
-  int using_pty = 0;
-  
   if (session->process)
     /* Already spawned a shell or command */
     return -1;
@@ -420,10 +443,13 @@ spawn_process(struct server_session *session,
   /* {in|out|err}[0] is for reading,
    * {in|out|err}[1] for writing. */
 
-  if (make_pty(session->pty, in, out, err))
-    using_pty = 1;
+  if (session->pty && !make_pty(session->pty, in, out, err))
+    {
+      KILL(session->pty);
+      session->pty = NULL;
+    }
 
-  else if (!make_pipes(in, out, err))
+  if (!session->pty && !make_pipes(in, out, err))
     return -1;
 
   {
@@ -431,7 +457,7 @@ spawn_process(struct server_session *session,
     
     if (USER_FORK(user, &child,
 		  make_exit_shell(session),
-		  peer, using_pty ? session->pty->tty_name : NULL))
+		  peer, session->pty ? session->pty->tty_name : NULL))
       {
 	if (child)
 	  { /* Parent */
@@ -527,7 +553,7 @@ spawn_process(struct server_session *session,
 	      }
 	    
 #if WITH_PTY_SUPPORT
-	    if (using_pty)
+	    if (session->pty)
 	      {
 		debug("lshd: server.c: Setting controlling tty...\n");
 		if (!tty_setctty(session->pty))
@@ -917,8 +943,9 @@ do_alloc_pty(struct channel_request *c UNUSED,
       && parse_string(args, &mode_length, &mode)
       && parse_eod(args))
     {
-      /* The client may only request a tty once. */
-      if (session->pty)
+      /* The client may only request one tty, and only before
+       * starting a process. */
+      if (session->pty || session->process)
 	{
 	  lsh_string_free(term);
 	  EXCEPTION_RAISE(e, &pty_request_failed);
@@ -1002,22 +1029,15 @@ do_window_change_request(struct channel_request *c UNUSED,
       static const struct exception winch_request_failed =
 	STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "window-change request failed: No pty");
 
-      if (!(session->pty && session->pty->super.alive))
-	EXCEPTION_RAISE(e, &winch_request_failed);
-      
-      else if (!tty_setwinsize(session->pty->slave, &dims))
-	EXCEPTION_RAISE(e, &winch_request_failed);
-
+      if (session->pty && session->in && session->in->super.alive
+          && tty_setwinsize(session->in->fd, &dims))
+        /* Success. Rely on the terminal driver sending SIGWINCH */
+        COMMAND_RETURN(s, NULL);
       else
-	{
-	  if (!SIGNAL_PROCESS(session->process, SIGWINCH))
-	    werror("Sending SIGWINCH signal failed.\n");
-
-	  COMMAND_RETURN(s, NULL);
-	}
+        EXCEPTION_RAISE(e, &winch_request_failed);
     }
   else
-    PROTOCOL_ERROR(e, "Invalid window-change request.");
+    PROTOCOL_ERROR(channel->connection->e, "Invalid window-change request.");
 }
 
 struct channel_request
