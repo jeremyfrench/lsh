@@ -19,7 +19,6 @@ connection_commands.h
 crypto.h
 daemon.h
 debug.h
-digits.h
 encrypt.h
 exception.h
 format.h
