@@ -41,23 +41,28 @@
 #include "server_userauth.h.x"
 #undef GABA_DECLARE
 
-/* FIXME: Could abstract some of this information into methods, for example
+/* FIXME: We should abstract out more of the "user"-like features and
+ * add them to the generic user class in userauth.h. Things like
  *
  * o  verifying a password
  * o  reading files in ~/.lsh
  * o  cd:ing to the home directory
+ *
+ * When this is done, the lookup method in user_db should return a
+ * struct user *, not struct unix_user *.
  */
 
 /* GABA:
    (class
      (name unix_user)
+     (super user)
      (vars
        (uid simple uid_t)
        (gid simple gid_t)
        
        ; These strings include a terminating NUL-character, for
        ; compatibility with library and system calls.
-       (name string)
+       ;; (name string)
        (passwd string)  ; Crypted passwd
        (home string)
        (shell string)))
@@ -71,7 +76,15 @@
                       "struct lsh_string *name" "int free")))
 */
 
+#define USER_LOOKUP(db, n, f) ((db)->lookup((db), (n), (f)))
+
+#if 0
 struct unix_user *lookup_user(struct lsh_string *name, int free);
+#endif
+
+struct user_db *
+make_unix_user_db(int allow_root);
+
 int verify_password(struct unix_user *user,
 		    struct lsh_string *password, int free);
 
@@ -121,12 +134,21 @@ make_userauth_handler(struct alist *methods,
 
 
 /* authentication methods */
+#if 0
 extern struct userauth unix_userauth;
-struct userauth *make_userauth_publickey(struct alist *verifiers);
+#endif
 
-struct command *make_userauth_service(struct int_list *advertised_methods,
-				      struct alist *methods,
-				      struct alist *services);
+struct userauth *
+make_userauth_password(struct user_db *db);
+
+struct userauth *
+make_userauth_publickey(struct user_db *db,
+			struct alist *verifiers);
+
+struct command *
+make_userauth_service(struct int_list *advertised_methods,
+		      struct alist *methods,
+		      struct alist *services);
 
 struct exception_handler *
 make_exc_userauth_handler(struct ssh_connection *connection,

@@ -73,7 +73,6 @@ void trace(const char *format, ...);
 void debug(const char *format, ...);
 void verbose(const char *format, ...);
 
-
 void fatal(const char *format, ...) NORETURN;
 
 #endif /* LSH_ERROR_H_INCLUDED */
