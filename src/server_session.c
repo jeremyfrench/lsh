@@ -204,12 +204,16 @@ static int do_send(struct ssh_channel *c)
 
   assert(session->out->super.read);
   assert(session->out->handler);
-  assert(session->err->super.read);
-  assert(session->err->handler);
-  
+
   session->out->super.want_read = 1;
-  session->err->super.want_read = 1;
+
+  if (session->err)
+    {
+      assert(session->err->super.read);
+      assert(session->err->handler);
   
+      session->err->super.want_read = 1;
+    }
   return LSH_OK | LSH_GOON;
 }
 
@@ -858,7 +862,7 @@ static int do_spawn_shell(struct channel_request *c,
 		    make_channel_read_data(channel),
 		    NULL);
 	session->err 
-	  = ( (err[0] == -1)
+	  = ( (err[0] != -1)
 	      ? io_read(make_io_fd(closure->backend, err[0]),
 			make_channel_read_stderr(channel),
 			NULL)
