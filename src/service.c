@@ -68,7 +68,11 @@ static int do_service(struct packet_handler *c,
 		  ? LSH_FAIL | LSH_DIE
 		  : LSH_FAIL | LSH_CLOSE);
 	}
-      return A_WRITE(c->write(service_accept(name)));
+      /* Don't accept any further service requests */
+      connection->dispatch[SSH_SERVICE_REQUEST]
+	= connection->fail;
+      
+      return A_WRITE(c->write(format_service_accept(name)));
     }
   return LSH_FAIL | LSH_DIE;
 }
