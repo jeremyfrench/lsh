@@ -1038,7 +1038,6 @@ int main(int argc, char **argv)
 
   r = make_reasonably_random();
 
-  /* FIXME: Is this really used? */
   algorithms = many_algorithms(1,
 			       ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
 			       make_dh_client(make_dh1(r)),
