@@ -199,7 +199,10 @@ struct sexp *
 sexp_parse_canonical(struct simple_buffer *buffer);
 
 struct sexp *
-string_to_sexp(struct lsh_string *src, int free);
+sexp_parse_transport(struct simple_buffer *buffer);
+
+struct sexp *
+string_to_sexp(int style, struct lsh_string *src, int free);
 
 
 /* Streamed parser */

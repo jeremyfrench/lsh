@@ -221,15 +221,70 @@ sexp_parse_canonical(struct simple_buffer *buffer)
 }
 
 struct sexp *
-string_to_sexp(struct lsh_string *src, int free)
+sexp_parse_transport(struct simple_buffer *buffer)
+{
+  while (LEFT && (sexp_char_classes[*HERE] & CHAR_space))
+    ADVANCE(1);
+  
+  if (!LEFT)
+    {
+      werror("sexp: Unexpected EOF.\n");
+      return NULL;
+    }
+  
+  if (*HERE != '{')
+    return sexp_parse_canonical(buffer);
+  else
+    {
+      UINT32 length;
+
+      ADVANCE(1); /* Skip '{', and search for '}'. */
+
+      for (length = 0; length < LEFT; length++)
+	if (HERE[length] == '}')
+	  {
+	    struct lsh_string *canonical = decode_base64(length, HERE);
+	    struct simple_buffer inner;
+	    struct sexp *expr;
+	    
+	    if (!canonical)
+	      {
+		werror("sexp: Invalid transport encoding.\n");
+		return NULL;
+	      }
+	    simple_buffer_init(&inner, canonical->length, canonical->data);
+	    expr = sexp_parse_canonical(&inner);
+	    
+	    lsh_string_free(canonical);
+	    ADVANCE(length + 1);
+	    
+	    return expr;
+	  }
+      werror("sexp: Missing } in transport encoding.\n");
+      return NULL;
+    }
+}
+
+struct sexp *
+string_to_sexp(int style, struct lsh_string *src, int free)
 {
   struct simple_buffer buffer;
   struct sexp *e = NULL;;
   
   simple_buffer_init(&buffer, src->length, src->data);
 
-  if ( (e = sexp_parse_canonical(&buffer))
-       && parse_eod(&buffer))
+  switch (style)
+    {
+    case SEXP_CANONICAL:
+      e = sexp_parse_canonical(&buffer);
+      break;
+    case SEXP_TRANSPORT:
+      e = sexp_parse_transport(&buffer);
+      break;
+    default:
+      fatal("string_to_sexp: Unsupported style.");
+    }
+  if (e && parse_eod(&buffer))
     {
       if (free)
 	lsh_string_free(src);

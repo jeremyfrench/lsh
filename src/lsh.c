@@ -403,7 +403,7 @@ do_lsh_lookup(struct lookup_verifier *c,
       }
     case ATOM_SPKI:
       {
-	struct sexp *e = string_to_sexp(key, 0);
+	struct sexp *e = string_to_sexp(SEXP_CANONICAL, key, 0);
 	if (!e)
 	  {
 	    werror("do_lsh_lookup: Invalid spki s-expression.\n");
