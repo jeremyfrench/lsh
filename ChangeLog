@@ -1,5 +1,16 @@
 2003-10-23  Niels Möller  <niels@s3.kth.se>
 
+	* src/server_userauth.c: Rewrote comment about userauth
+	serialization. 
+
+	* src/io.c (close_fd): Deleted fd = -1 special case. 
+
+	* src/connection.c (connection_lock, connection_unlock): Simplified.
+	(do_exc_connection_handler): Deleted handling of
+	EXC_PAUSE_CONNECTION and EXC_PAUSE_START_CONNECTION.
+	* src/exception.h (EXC_PAUSE_CONNECTION) 
+	(EXC_PAUSE_START_CONNECTION): Deleted exception types.
+
 	* src/dsa_keygen.c, src/rsa_keygen.c: Deleted files. Moved the
 	dsa_generate_key and rsa_generate_key functions to ...
 	* src/lsh-keygen.c: ... here.
