@@ -1,3 +1,15 @@
+2000-03-19  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/unix_user.c (do_lookup_user): Honor shadow-style password
+	aging and account expiration.
+
+	* configure.in: Bumped version to 0.9.2.
+
+	* src/unix_user.c (do_file_exists): Deallocate the name properly.
+
+	* src/server_authorization.c (do_key_lookup): Don't free the
+	filename twice.
+
 2000-03-16  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/proxy.c, src/proxy.h: Merged changes (Bazsi).
