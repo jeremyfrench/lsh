@@ -1,5 +1,7 @@
 2004-06-08  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/client.c (client_prepend_action): New function.
+
 	* src/client.c (client_options): New option --write-pid, to be
 	used together with -B.
 	(do_background_process): Optionally write the child pid to stdout.
@@ -7,6 +9,26 @@
 	(client_argp_parser): When processing -B, pass the value of
 	write_pid to make_background_process.
 	(client_argp_parser): Handle --write-pid.
+
+	Testsuite tweaks.
+	* src/testsuite/lshg-1-test, src/testsuite/lshg-cat-2-test,
+	src/testsuite/lshg-cat-test, src/testsuite/lshg-tcpip-local-test,
+	src/testsuite/socks4-test, src/testsuite/socks5-test,
+	src/testsuite/tcpip-local-in-use-test,
+	src/testsuite/tcpip-local-test: Deleted unnessary sleep calls.
+
+	* src/testsuite/functions.sh (at_connect): For the
+	tcpip-local-in-use-test to work, we must record the mini-inetd
+	pid, and kill it before exiting.
+
+	* src/testsuite/functions.sh (spawn_lsh, spawn_lshg): Use new
+	--write-pd option and -B to start processes in the background.
+
+	* src/lsh.c (main_argp_parser): Use client_prepend_action to make
+	sure that the gateway is started first.
+
+	Removal of old bug-compatibility code.
+	* src/handshake.c: Deleted most of the bug-compatibility flags. 
 
 	* src/client_userauth.c (do_userauth_pk_ok): Deleted handling of
 	PEER_USERAUTH_REQUEST_KLUDGE. 
