@@ -46,7 +46,9 @@ static int do_read_data(struct read_handler **h,
 
   MDEBUG(closure);
   
+#if 0
   while(1)
+#endif
     {
       struct lsh_string *packet = lsh_string_alloc(closure->block_size);
       int n = A_READ(read, packet->length, packet->data);
@@ -63,16 +65,13 @@ static int do_read_data(struct read_handler **h,
 	  return LSH_OK | LSH_CLOSE;
 	default:
 	  {
-	    int res;
 	    packet->length = n;
-	    /* FIXME: Use returned value */
-	    res = A_WRITE(closure->handler, packet);
-	    if (LSH_PROBLEMP(res))
-	      return res;
-	    break;
+
+	    return A_WRITE(closure->handler, packet);
 	  }
 	}
     }
+  return LSH_OK | LSH_GOON;
 }
 
 struct read_handler *make_read_data(struct abstract_write *handler,
