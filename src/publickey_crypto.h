@@ -169,6 +169,7 @@ dh_make_server_secret(struct dh_instance *self);
 struct lsh_string *
 dh_make_server_msg(struct dh_instance *self,
 		   struct lsh_string *server_key,
+		   int hostkey_algorithm,
 		   struct signer *s);
 
 /* Decodes server message, but does not verify its signature. */
