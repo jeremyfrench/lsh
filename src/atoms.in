@@ -69,6 +69,9 @@ spki                 OPTIONAL     sign      SPKI certificates
 # spki-rsa@lysator.liu.se             OPTIONAL     sign      SPKI certificates
 pgp                  OPTIONAL     sign      OpenPGP certificates
 
+# Bug compatibility with old SSH2 versions
+ssh-dss-kludge@lysator.liu.se
+
 # Services
 
 ssh-userauth
