@@ -477,12 +477,14 @@
   (define (declare-params params)
     (implode (map (lambda (var)
 		    (type->declaration (var-type var)
-				       (var-name var))))
+				       (var-name var)))
+		  params)
 	     ", "))
-  (define (params->alist)
+  (define (params->alist params)
     (map (lambda (var)
-	   (let ((name (var-name name)))
-	     (list name name)))))
+	   (let ((name (var-name var)))
+	     (list name (list "((struct lsh_object *) " name ")" ))))
+	 params))
   
   ;; (werror "foo\n")
   (let ((name (get 'name attributes cadr))
@@ -492,7 +494,7 @@
     (werror "Processing expression ~S\n" name)
     (let ((translated (translate expr)))
       (werror "Compiled to ~S\n" translated)
-      (list "struct lsh_object *" name "("
+      (list "static struct lsh_object *\n" name "("
 	    (if params (declare-params params) "void")
 	    ")\n{\n"
 	    "#define A GABA_APPLY\n"
