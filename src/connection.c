@@ -72,6 +72,13 @@ handle_connection(struct abstract_write *w,
       return;
     }
 
+  if (packet->length > closure->rec_max_packet)
+    {
+      werror("connection.c: Packet too large!\n");
+      PROTOCOL_ERROR(closure->e, "Packet too large");
+      return;
+    }
+    
   msg = packet->data[0];
 
   debug("handle_connection: Received packet of type %i (%z)\n",
