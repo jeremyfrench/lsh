@@ -1,3 +1,56 @@
+2000-02-22  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* doc/lsh.texinfo (Invoking lshd): Adding doc for --root-login. 
+
+	* src/version.h (BUG_ADDRESS): New constant.
+
+	* src/userauth.h (user): New class.
+
+	* src/sexp_conv.c (argp_program_version,
+	argp_program_bug_address): New constants.
+
+	* src/server_userauth.c (make_unix_user_db): New function.
+	(do_lookup_user): Check allow_root flag.
+
+	* src/server_session.c (do_login): Write log message.
+
+	* src/server_publickey.c (make_userauth_publickey): Take user_db
+	argument.
+	
+	* src/server_password.c (make_userauth_password): New function. 
+
+	* src/server_authorization.c (do_key_lookup): Take user as
+	argument. 
+
+	* src/lshd.c (argp_program_version, argp_program_bug_address): New
+	constants.
+	(main_options): New options --root-login and --no-root-login.
+	(main_argp_parser): Use make_unix_user_db().
+
+	* src/lsh_proxy.c (argp_program_version,
+	argp_program_bug_address): New constants.
+
+	* src/lsh_keygen.c (argp_program_version,
+	argp_program_bug_address): New constants.
+
+	* src/lsh.c (argp_program_version): New constant. 
+	(argp_program_bug_address): New constant.
+
+	* src/lookup_verifier.h (lookup_verifier): Changed third argument
+	to authenticate method to struct user. 
+
+	* src/lsh.h: Added forward declaration of struct user.
+
+2000-02-21  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/algorithms.c (vlist_algorithms): New function.
+	(list_algorithms): New function.
+	(list_crypto_algorithms): New function.
+	(list_mac_algorithms): New function.
+	(list_compression_algorithms): New function.
+	(algorithms_options): New option --list-algorithms.
+	(algorithms_argp_parser): List supported algorithms on errors. 
+
 2000-02-20  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/io_commands.c (do_listen_connection): Raise EXC_IO_LISTEN. 
