@@ -1,3 +1,13 @@
+2003-06-04  Niels Möller  <niels@s3.kth.se>
+
+	* src/lsh-krb-checkpw.c: Include <string.h>.
+
+	* src/unix_interact.c (unix_read_password): The askpass code
+	leaked the prompt string. Fixed.
+
+	* src/spki.c (spki_pkcs5_decrypt): The label string was leaked.
+	Fixed. 
+
 2003-06-04  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/spki.c (spki_pkcs5_encrypt): The method identifier is
