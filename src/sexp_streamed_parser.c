@@ -64,21 +64,15 @@ EXCEPTION_RAISE(e, make_simple_exception(EXC_SEXP_EOF, msg))
        (c object command_continuation)))
 */
 
-/* GABA:
-   (class
-     (name string_handler)
-     (vars
-       (handler method void "struct lsh_string *s")))
-*/
-
-#define HANDLE_STRING(h ,s) ((h)->handler((h), (s)))
+/* NOTE: There used to be a class string_handler, but it turned out
+ * that it was equivalent to abstract_write. */
 
 /* GABA:
    (class
      (name parse_string)
      (super parser)
      (vars
-       (handler object string_handler)))
+       (handler object abstract_write)))
 */
 
 #define MAKE_PARSE_VALUE(name)				\
@@ -113,7 +107,7 @@ do_parse_##name(struct read_handler **s,		\
                 UINT32 available, UINT8 *data);		\
 							\
 static struct read_handler *				\
-make_parse_##name(struct string_handler *handler,	\
+make_parse_##name(struct abstract_write *handler,	\
                   struct exception_handler *e,		\
 		  struct read_handler *next)		\
 {							\
@@ -183,7 +177,7 @@ do_parse_literal_data(struct read_handler **s,
       self->data = NULL;
 
       *s = self->super.super.next;
-      HANDLE_STRING(self->super.handler, res);
+      A_WRITE(self->super.handler, res);
 
       return left;
     }
@@ -191,7 +185,7 @@ do_parse_literal_data(struct read_handler **s,
 
 static struct read_handler *
 make_parse_literal_data(UINT32 length,
-			struct string_handler *handler,
+			struct abstract_write *handler,
 			struct exception_handler *e,
 			struct read_handler *next)
 {
@@ -276,7 +270,7 @@ do_parse_empty_literal(struct read_handler **s,
 
   if (data[0] == ':')
     {
-      HANDLE_STRING(self->handler, ssh_format(""));
+      A_WRITE(self->handler, ssh_format(""));
       *s = self->super.next;
       return 1;
     }
@@ -290,7 +284,7 @@ do_parse_empty_literal(struct read_handler **s,
       
 static struct read_handler *
 make_parse_length(UINT8 first,
-		  struct string_handler *handler,
+		  struct abstract_write *handler,
 		  struct exception_handler *e,
 		  struct read_handler *next)
 {
@@ -357,25 +351,25 @@ MAKE_PARSE_STRING(literal)
 /* GABA:
    (class
      (name return_string)
-     (super string_handler)
+     (super abstract_write)
      (vars
 	 (c object command_continuation)))
 */
 
 static void
-do_return_string(struct string_handler *s,
+do_return_string(struct abstract_write *s,
 		 struct lsh_string *data)
 {
   CAST(return_string, self, s);
   COMMAND_RETURN(self->c, sexp_s(NULL, data));
 }
 
-static struct string_handler *
+static struct abstract_write *
 make_return_string(struct command_continuation *c)
 {
   NEW(return_string, self);
 
-  self->super.handler = do_return_string;
+  self->super.write = do_return_string;
   self->c = c;
 
   return &self->super;
@@ -439,14 +433,14 @@ make_parse_skip(UINT8 token,
 /* GABA:
    (class
      (name handle_display)
-     (super string_handler)
+     (super abstract_write)
      (vars
 	 (display string)
 	 (c object command_continuation)))
 */
 
 static void
-do_handle_display(struct string_handler *s,
+do_handle_display(struct abstract_write *s,
 		  struct lsh_string *data)
 {
   CAST(handle_display, self, s);
@@ -468,13 +462,13 @@ do_handle_display(struct string_handler *s,
     }
 }
 
-static struct string_handler *make_handle_display(struct command_continuation *c)
+static struct abstract_write *make_handle_display(struct command_continuation *c)
 {
   NEW(handle_display, self);
 
   trace("make_handle_display\n");
   
-  self->super.handler = do_handle_display;
+  self->super.write = do_handle_display;
   self->display = NULL;
   self->c = c;
 
@@ -482,14 +476,14 @@ static struct string_handler *make_handle_display(struct command_continuation *c
 }
 
 static struct read_handler *
-make_parse_display(struct read_handler * (*make)(struct string_handler *h,
+make_parse_display(struct read_handler * (*make)(struct abstract_write *h,
 						 struct exception_handler *e,
 						 struct read_handler *next),
 		   struct command_continuation *c,
 		   struct exception_handler *e,
 		   struct read_handler *next)
 {
-  struct string_handler *h = make_handle_display(c);
+  struct abstract_write *h = make_handle_display(c);
 
   trace("make_parse_display\n");
   
@@ -1070,7 +1064,7 @@ static int do_parse_advanced_string(struct scanner **s,
 }
 
 
-static struct scanner *make_parse_advanced_string(struct string_handler *h,
+static struct scanner *make_parse_advanced_string(struct abstract_write *h,
 						    struct scanner *next)
 {
   NEW(parse_string, closure);
