@@ -140,7 +140,10 @@ gateway_make_connection(struct listen_value *lv,
   return connection;
 }
 
-DEFINE_COMMAND(gateway_init, a, c, e)
+DEFINE_COMMAND(gateway_init)
+     (struct command *s UNUSED, struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
   CAST(listen_value, lv, a);
 

@@ -123,7 +123,10 @@ STATIC_COLLECT_2_FINAL(collect_if_srp_2);
 struct collect_info_1 connection_if_srp_command =
 STATIC_COLLECT_1(&collect_info_if_srp_2);
 
-DEFINE_COMMAND(connection_require_userauth, a, c, e UNUSED)
+DEFINE_COMMAND(connection_require_userauth)
+     (struct command *s UNUSED, struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
 {
   CAST(ssh_connection, connection, a);
 
