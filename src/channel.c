@@ -56,7 +56,7 @@
        ; (start object connection_startup)))
 */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name global_request_handler)
      (super packet_handler)
@@ -64,7 +64,7 @@
        (global_requests object alist)))
 */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name channel_open_handler)
      (super packet_handler)
@@ -170,6 +170,9 @@ struct channel_table *make_channel_table(void)
 
   table->pending_close = 0;
 
+  table->global_requests = make_alist(0, -1);
+  table->channel_types = make_alist(0, -1);
+  
   object_queue_init(&table->local_ports);
   object_queue_init(&table->remote_ports);
   
@@ -403,11 +406,11 @@ make_global_request_response(struct ssh_connection *connection,
   return &self->super;
 }
      
-static int do_global_request(struct packet_handler *c,
+static int do_global_request(struct packet_handler *s UNUSED,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
 {
-  CAST(global_request_handler, closure, c);
+  /* CAST(global_request_handler, closure, c); */
 
   struct simple_buffer buffer;
   unsigned msg_number;
@@ -425,7 +428,8 @@ static int do_global_request(struct packet_handler *c,
       struct global_request *req;
       struct global_request_callback *c = NULL;
       
-      if (!name || !(req = ALIST_GET(closure->global_requests, name)))
+      if (!name || !(req = ALIST_GET(connection->channels->global_requests,
+				     name)))
 	RETURN (A_WRITE(connection->write,
 		       format_global_failure()));
 
@@ -533,11 +537,11 @@ static int do_channel_open_continue(struct command_continuation *c,
 }
 #endif
 				    
-static int do_channel_open(struct packet_handler *c,
+static int do_channel_open(struct packet_handler *c UNUSED,
 			   struct ssh_connection *connection,
 			   struct lsh_string *packet)
 {
-  CAST(channel_open_handler, closure, c);
+  /* CAST(channel_open_handler, closure, c); */
 
   struct simple_buffer buffer;
   unsigned msg_number;
@@ -568,7 +572,8 @@ static int do_channel_open(struct packet_handler *c,
 				       SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
 				       "Waiting for channels to close.", "")));
       
-      if (!type || !(open = ALIST_GET(closure->channel_types, type)))
+      if (!type || !(open = ALIST_GET(connection->channels->channel_types,
+				      type)))
 	RETURN (A_WRITE(connection->write,
 			format_open_failure(remote_channel_number,
 					    SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
@@ -1129,17 +1134,17 @@ static int do_channel_failure(struct packet_handler *closure UNUSED,
   return LSH_FAIL | LSH_DIE;
 }
 
-static int do_connection_service(struct command *s,
+static int do_connection_service(struct command *s UNUSED,
 				 struct lsh_object *x,
 				 struct command_continuation *c)
 {
-  CAST(connection_service, self, s);
+  /* CAST(connection_service, self, s); */
   CAST(ssh_connection, connection, x);
 
   struct channel_table *table;
   
-  NEW(global_request_handler, globals);
-  NEW(channel_open_handler, open);
+  NEW(packet_handler, globals);
+  NEW(packet_handler, open);
   NEW(packet_handler, request);
 
   NEW(packet_handler, adjust);
@@ -1159,14 +1164,14 @@ static int do_connection_service(struct command *s,
   
   connection->channels = table;
   
-  globals->super.handler = do_global_request;
-  globals->global_requests = self->global_requests;
-  connection->dispatch[SSH_MSG_GLOBAL_REQUEST] = &globals->super;
+  globals->handler = do_global_request;
+  /* globals->global_requests = self->global_requests; */
+  connection->dispatch[SSH_MSG_GLOBAL_REQUEST] = globals;
     
-  open->super.handler = do_channel_open;
-  open->channel_types = self->channel_types;
-  connection->dispatch[SSH_MSG_CHANNEL_OPEN] = &open->super;
-
+  open->handler = do_channel_open;
+  /* open->channel_types = self->channel_types; */
+  connection->dispatch[SSH_MSG_CHANNEL_OPEN] = open;
+  
   request->handler = do_channel_request;
   connection->dispatch[SSH_MSG_CHANNEL_REQUEST] = request;
   
@@ -1197,9 +1202,16 @@ static int do_connection_service(struct command *s,
   channel_failure->handler = do_channel_failure;
   connection->dispatch[SSH_MSG_CHANNEL_FAILURE] = channel_failure;
 
-  return COMMAND_RETURN(c, connection);
+  return
+#if 0
+    self->hook
+    ? COMMAND_CALL(hook, connection, c)
+    :
+#endif
+    COMMAND_RETURN(c, connection);
 }
 
+#if 0
 struct command *make_connection_service(struct alist *global_requests,
 					struct alist *channel_types)
 {
@@ -1211,6 +1223,10 @@ struct command *make_connection_service(struct alist *global_requests,
   
   return &self->super;
 }
+#endif
+
+struct command
+connection_service = STATIC_COMMAND(do_connection_service);
 
 struct lsh_string *format_channel_close(struct ssh_channel *channel)
 {

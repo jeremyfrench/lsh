@@ -152,6 +152,11 @@
        ; Channels are indexed by local number
        (channels pointer (object ssh_channel) used_channels)
 
+       ; Global requests that we support
+       (global_requests object alist)
+       ; Channel types that we can open
+       (channel_types object alist)
+       
        ; Allocation of local channel numbers is managed using the same
        ; method as is traditionally used for allocation of unix file 
        ; descriptors.
@@ -319,8 +324,11 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
 					     UINT32 type,
 					     struct lsh_string *data);
 
+extern struct command connection_service;
+
+#if 0
 struct command *make_connection_service(struct alist *global_requests,
 					struct alist *channel_types);
-
+#endif
 
 #endif /* LSH_CHANNEL_H_INCLUDED */
