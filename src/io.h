@@ -108,6 +108,9 @@
 #define FD_READ(fd) IO_CALLBACK((fd)->read, (fd))
 #define FD_WRITE(fd) IO_CALLBACK((fd)->write, (fd))
 
+/* Returns the number of open files. */
+unsigned
+io_nfiles(void);
 
 /* Used for read handlers like read_line and read_packet that
  * processes a little data at a time, possibly replacing the handler

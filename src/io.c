@@ -75,55 +75,7 @@
 /* Because of signal handlers, there can be only one oop object. */
 static oop_source_sys *global_oop_sys = NULL;
 static oop_source *source = NULL;
-
-void
-io_init(void)
-{
-  struct sigaction pipe;
-  memset(&pipe, 0, sizeof(pipe));
-
-  pipe.sa_handler = SIG_IGN;
-  sigemptyset(&pipe.sa_mask);
-  pipe.sa_flags = 0;
-  
-  if (sigaction(SIGPIPE, &pipe, NULL) < 0)
-    fatal("Failed to ignore SIGPIPE.\n");
-
-  assert(!global_oop_sys);
-  global_oop_sys = oop_sys_new();
-  if (!global_oop_sys)
-    fatal("Failed to initialize liboop.\n");
-
-  source = oop_sys_source(global_oop_sys);
-}
-
-void
-io_final(void)
-{
-  assert(source);
-  gc_final();
-
-  /* There mustn't be any outstanding callbacks left. */
-  oop_sys_delete(global_oop_sys);
-  global_oop_sys = NULL;
-  source = NULL;
-}
-
-void
-io_run(void)
-{
-  void *res = oop_sys_run(global_oop_sys);
-
-  /* FIXME: OOP_ERROR is not defined in liboop-0.7. Upgrade, and then
-   * enable this check. */
-#if 0
-  if (res == OOP_ERROR)
-    werror("oop_sys_run (errno = %i):  %z\n",
-	   errno, STRERROR(errno));
-#endif
-  trace("io_run: Exiting\n");
-}
-
+static unsigned nfiles = 0;
 
 /* OOP Callbacks */
 static void *
@@ -149,7 +101,8 @@ lsh_oop_register_signal(struct lsh_signal_handler *handler)
   
   assert(source);
   if (handler->super.alive)
-    source->on_signal(source, handler->signum, lsh_oop_signal_callback, handler);
+    source->on_signal(source, handler->signum,
+		      lsh_oop_signal_callback, handler);
 }
 
 static void
@@ -160,11 +113,13 @@ lsh_oop_cancel_signal(struct lsh_signal_handler *handler)
 
   assert(source);
   if (handler->super.alive)
-    source->cancel_signal(source, handler->signum, lsh_oop_signal_callback, handler);
+    source->cancel_signal(source, handler->signum,
+			  lsh_oop_signal_callback, handler);
 }
 
 static void *
-lsh_oop_fd_read_callback(oop_source *s UNUSED, int fileno, oop_event event, void *data)
+lsh_oop_fd_read_callback(oop_source *s UNUSED, int fileno,
+			 oop_event event, void *data)
 {
   CAST(lsh_fd, fd, (struct lsh_object *) data);
 
@@ -211,7 +166,8 @@ lsh_oop_cancel_read_fd(struct lsh_fd *fd)
 }
 
 static void *
-lsh_oop_fd_write_callback(oop_source *s UNUSED, int fileno, oop_event event, void *data)
+lsh_oop_fd_write_callback(oop_source *s UNUSED, int fileno,
+			  oop_event event, void *data)
 {
   CAST(lsh_fd, fd, (struct lsh_object *) data);
 
@@ -296,6 +252,86 @@ lsh_oop_cancel_callout(struct lsh_callout *callout)
     source->cancel_time(source, callout->when, lsh_oop_time_callback, callout);
 }
 
+static void *
+lsh_oop_stop_callback(oop_source *source UNUSED,
+                      struct timeval time UNUSED, void *data UNUSED)
+{
+  trace("lsh_oop_stop_callback\n");
+  
+  if (!nfiles)
+    /* An arbitrary non-NULL value stops oop_sys_run. */
+    return &nfiles;
+  else
+    return OOP_CONTINUE;
+}
+
+static void
+lsh_oop_stop(void)
+{
+  assert(source);
+  trace("lsh_oop_stop\n");
+  source->on_time(source, OOP_TIME_NOW, lsh_oop_stop_callback, NULL);
+}
+
+static void
+lsh_oop_cancel_stop(void)
+{
+  assert(source);
+  trace("lsh_oop_cancel_stop\n");
+  source->cancel_time(source, OOP_TIME_NOW, lsh_oop_stop_callback, NULL);
+}
+
+void
+io_init(void)
+{
+  struct sigaction pipe;
+  memset(&pipe, 0, sizeof(pipe));
+
+  pipe.sa_handler = SIG_IGN;
+  sigemptyset(&pipe.sa_mask);
+  pipe.sa_flags = 0;
+  
+  if (sigaction(SIGPIPE, &pipe, NULL) < 0)
+    fatal("Failed to ignore SIGPIPE.\n");
+
+  assert(!global_oop_sys);
+  global_oop_sys = oop_sys_new();
+  if (!global_oop_sys)
+    fatal("Failed to initialize liboop.\n");
+
+  source = oop_sys_source(global_oop_sys);
+}
+
+void
+io_final(void)
+{
+  assert(source);
+  gc_final();
+
+  /* The final gc may have closed some files, and called lsh_oop_stop.
+   * So we must unregister that before deleting the oop source. */
+  lsh_oop_cancel_stop();
+  
+  /* There mustn't be any outstanding callbacks left. */
+  oop_sys_delete(global_oop_sys);
+  global_oop_sys = NULL;
+  source = NULL;
+}
+
+void
+io_run(void)
+{
+  void *res = oop_sys_run(global_oop_sys);
+
+  /* We need liboop-0.8, OOP_ERROR is not defined in liboop-0.7. */
+
+  if (res == OOP_ERROR)
+    werror("oop_sys_run (errno = %i):  %z\n",
+	   errno, STRERROR(errno));
+
+  trace("io_run: Exiting\n");
+}
+
 
 /* Calls trigged by a signal handler. */
 /* GABA:
@@ -307,7 +343,6 @@ lsh_oop_cancel_callout(struct lsh_callout *callout)
        (action object lsh_callback)))
 */
 
-/* Scheduled calls. FIXME: For now, no scheduling in time. */
 /* GABA:
    (class
      (name lsh_callout)
@@ -1241,6 +1276,7 @@ make_lsh_fd(int fd, const char *label,
 {
   NEW(lsh_fd, self);
 
+  nfiles++;
   io_init_fd(fd);
 
   init_resource(&self->super, do_kill_fd);
@@ -1260,6 +1296,12 @@ make_lsh_fd(int fd, const char *label,
 
   gc_global(&self->super);
   return self;
+}
+
+unsigned
+io_nfiles(void)
+{
+  return nfiles;
 }
 
 /* Some code is taken from Thomas Bellman's tcputils. */
@@ -1685,6 +1727,9 @@ close_fd(struct lsh_fd *fd)
 			  make_io_exception(EXC_IO_CLOSE, fd,
 					    errno, NULL));
 	}
+      assert(nfiles);
+      if (!--nfiles)
+	lsh_oop_stop();
     }
   else
     werror("Closed already.\n");
