@@ -1,3 +1,16 @@
+2001-09-28  Niels Möller  <nisse@ehand.com>
+
+	* src/tty.c (tty_setwinsize): Rows and columns were mixed up.
+	Fixed.
+
+	* src/server_session.c (make_pty): Reorganized to be more
+	readable.
+	(spawn_process): DEleted local variable uses_pty. Instead NULL
+	session->pty if no pty is in use.
+	(do_window_change_request): Use the fd connected to the process'
+	stdin for manipulating the pty.
+	(do_alloc_pty): Check that we haven't started a process already.
+
 2001-09-27  Niels Möller  <nisse@ehand.com>
 
 	* src/server_session.h (window_change_request_handler): Declare
