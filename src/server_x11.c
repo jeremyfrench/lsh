@@ -43,6 +43,7 @@
 #include "channel_forward.h"
 #include "environ.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "reaper.h"
 #include "resource.h"
 #include "userauth.h"

@@ -42,6 +42,7 @@
 #include "lock_file.h"
 
 #include "format.h"
+#include "lsh_string.h"
 #include "resource.h"
 #include "werror.h"
 #include "xalloc.h"

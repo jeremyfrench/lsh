@@ -41,6 +41,7 @@
 #include "channel_commands.h"
 #include "environ.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "read_data.h"
 #include "reaper.h"
 #include "server_pty.h"

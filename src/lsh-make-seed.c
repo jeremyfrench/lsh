@@ -85,6 +85,7 @@
 #include "format.h"
 #include "io.h"
 #include "lock_file.h"
+#include "lsh_string.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
