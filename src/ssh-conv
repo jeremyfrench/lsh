@@ -4,7 +4,7 @@ if type lsh-decode-key ; then
   SSH_CONV=lsh-decode-key
 else
   SSH_CONV=./lsh-decode-key
-if
+fi
 
 if ! type $SSH_CONV ; then
     echo "Can't find the lsh-decode-key program"
