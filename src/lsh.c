@@ -204,8 +204,8 @@ do_options2known_hosts(struct command *ignored UNUSED,
     s = options->known_hosts;
   else 
     {
-      tmp = ssh_cformat("%lz/.lsh/known_hosts", options->home);
-      s = tmp->data;
+      tmp = ssh_format("%lz/.lsh/known_hosts", options->home);
+      s = lsh_get_cstring(tmp);
     }
   
   f = io_read_file(options->super.backend, s, e);
@@ -252,8 +252,8 @@ do_options2identities(struct command *ignored UNUSED,
     s = options->identity;
   else 
     {
-      tmp = ssh_cformat("%lz/.lsh/identity", options->home);
-      s = tmp->data;
+      tmp = ssh_format("%lz/.lsh/identity", options->home);
+      s = lsh_get_cstring(tmp);
     }
   
   f = io_read_file(options->super.backend, s, e);
@@ -808,8 +808,8 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  s = self->capture;
 	else if (self->sloppy)
 	  {
-	    tmp = ssh_cformat("%lz/.lsh/captured_keys", self->home);
-	    s = tmp->data;
+	    tmp = ssh_format("%lz/.lsh/captured_keys", self->home);
+	    s = lsh_get_cstring(tmp);
 	  }
 	if (s)
 	  {

@@ -186,14 +186,14 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	    }
 	  else
 	    {
-	      s = ssh_cformat("%lz/.lsh", home);
-	      if (mkdir(s->data, 0755) < 0)
+	      s = ssh_format("%lz/.lsh", home);
+	      if (mkdir(lsh_get_cstring(s), 0755) < 0)
 		{
 		  if (errno != EEXIST)
 		    argp_failure(state, EXIT_FAILURE, errno, "Creating directory %s failed.", s->data);
 		}
 	      lsh_string_free(s);
-	      self->file = ssh_cformat("%lz/.lsh/identity", home);
+	      self->file = ssh_format("%lz/.lsh/identity", home);
 	    }
 	}
       if (self->crypto)
@@ -246,7 +246,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case 'o':
-      self->file = format_cstring(arg);
+      self->file = make_string(arg);
       break;
 
     case 'i':
@@ -358,10 +358,10 @@ DEFINE_COMMAND_SIMPLE(lsh_writekey_options2transform, a)
 DEFINE_COMMAND_SIMPLE(lsh_writekey_options2public_file, a)
 {
   CAST(lsh_writekey_options, options, a);
-  struct lsh_string *public = ssh_cformat("%lS.pub", options->file);
+  struct lsh_string *public = ssh_format("%lS.pub", options->file);
 
   return
-    &make_io_write_file_info(public->data,
+    &make_io_write_file_info(lsh_get_cstring(public),
 			     O_CREAT | O_EXCL | O_WRONLY,
 			     0644,
 			     BLOCK_SIZE)->super;
@@ -371,7 +371,7 @@ DEFINE_COMMAND_SIMPLE(lsh_writekey_options2private_file, a)
 {
   CAST(lsh_writekey_options, options, a);
   return
-    &make_io_write_file_info(options->file->data,
+    &make_io_write_file_info(lsh_get_cstring(options->file),
 			     O_CREAT | O_EXCL | O_WRONLY,
 			     0600,
 			     BLOCK_SIZE)->super;
