@@ -34,7 +34,6 @@
 #include "compress.h"
 #include "connection_commands.h"
 #include "crypto.h"
-#include "dsa.h"
 #include "format.h"
 #include "interact.h"
 #include "io.h"
@@ -53,6 +52,8 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include "nettle/sexp.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -186,7 +187,7 @@ read_known_hosts(struct lsh_options *options)
   struct lsh_string *contents;
   const char *s = NULL;
   int fd;
-  struct simple_buffer buffer;
+  struct sexp_iterator i;
   struct spki_context *context;
 
   context = make_spki_context(options->signature_algorithms);
@@ -220,22 +221,19 @@ read_known_hosts(struct lsh_options *options)
 
   close(fd);
 
-  simple_buffer_init(&buffer, contents->length, contents->data);
-  while (!parse_eod(&buffer))
-    {
-      struct sexp *expr = sexp_parse(SEXP_TRANSPORT, &buffer);
-
-      if (!expr)
-        {
-          werror("read_known_hosts: S-expression syntax error.\n");
-          break;
-        }
-      if (!spki_add_acl(context, expr))
-        {
-          werror("read_known_hosts: Invalid ACL.\n");
-          break;
-        }
-    }
+  /* NOTE: Modifies contents in place */
+  if (!sexp_transport_iterator_first(&i, contents->length, contents->data))
+    werror("read_known_hosts: S-expression syntax error.\n");
+    
+  else
+    while (i.type != SEXP_END)
+      {
+	if (!spki_add_acl(context, &i))
+	  {
+	    werror("read_known_hosts: Invalid ACL.\n");
+	    break;
+	  }
+      }
   lsh_string_free(contents);
   return context;
 }
@@ -247,7 +245,6 @@ read_user_keys(struct lsh_options *options)
   struct lsh_string *tmp = NULL;
   struct lsh_string *contents;
   const char *name = NULL;
-  struct sexp *expr;
   int fd;
   int algorithm_name;
   
@@ -291,14 +288,6 @@ read_user_keys(struct lsh_options *options)
 
   close(fd);
 
-  expr = string_to_sexp(SEXP_TRANSPORT, contents, 1);
-
-  if (!expr)
-    {
-      werror("S-expression syntax error in private key.\n");
-      return make_object_list(0, -1);
-    }
-
   if (options->super.tty)
     {
       struct alist *mac = make_alist(0, -1);
@@ -310,18 +299,21 @@ read_user_keys(struct lsh_options *options)
 		     4, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
 		     ATOM_TWOFISH_CBC, ATOM_AES256_CBC, -1);
       
-      expr = spki_pkcs5_decrypt(mac, crypto,
-                                options->super.tty,
-                                expr);
-      if (!expr)
+      contents = spki_pkcs5_decrypt(mac, crypto,
+				    options->super.tty,
+				    contents);
+      if (!contents)
         {
           werror("Decrypting private key failed.\n");
           return make_object_list(0, -1);
         }
     }
   
-  s = spki_sexp_to_signer(options->signature_algorithms, expr,
-                          &algorithm_name);
+  s = spki_make_signer(options->signature_algorithms, contents,
+		       &algorithm_name);
+
+  lsh_string_free(contents);
+  
   if (!s)
     {
       werror("Invalid private key.\n");
@@ -331,8 +323,7 @@ read_user_keys(struct lsh_options *options)
   v = SIGNER_GET_VERIFIER(s);
   assert(v);
   
-  spki_public = sexp_format(spki_make_public_key(v),
-			    SEXP_CANONICAL, 0);
+  spki_public = PUBLIC_SPKI_KEY(v, 0);
 
   /* Test key here? */  
   switch (algorithm_name)
@@ -395,7 +386,7 @@ STATIC_COMMAND(do_options2identities);
      (vars
        (db object spki_context)
        (tty object interact)
-       (access object sexp)
+       (access string)
        (host object address_info)
        ; Allow unauthorized keys
        (sloppy . int)
@@ -417,33 +408,51 @@ do_lsh_lookup(struct lookup_verifier *c,
   switch (method)
     {
     case ATOM_SSH_DSS:
-      {
+      {	
+	struct lsh_string *spki_key;
+	struct sexp_iterator i;
 	struct verifier *v = make_ssh_dss_verifier(key->length, key->data);
+
 	if (!v)
 	  {
 	    werror("do_lsh_lookup: Invalid ssh-dss key.\n");
 	    return NULL;
 	  }
-	subject = SPKI_LOOKUP(self->db,
-			      spki_make_public_key(v),
-			      v);
+
+	/* FIXME: It seems like a waste to pick apart the sexp again */
+	spki_key = PUBLIC_SPKI_KEY(v, 0);
+	if (!sexp_iterator_first(&i, spki_key->length, spki_key->data))
+	  fatal("Internal error.\n");
+	
+	subject = SPKI_LOOKUP(self->db, &i, v);
 	assert(subject);
 	assert(subject->verifier);
+
+	lsh_string_free(spki_key);
 	break;
       }
     case ATOM_SSH_RSA:
       {
+	struct lsh_string *spki_key;
+	struct sexp_iterator i;
 	struct verifier *v = make_ssh_rsa_verifier(key->length, key->data);
+
 	if (!v)
 	  {
 	    werror("do_lsh_lookup: Invalid ssh-rsa key.\n");
 	    return NULL;
 	  }
-	subject = SPKI_LOOKUP(self->db,
-			      spki_make_public_key(v),
-			      v);
+
+	/* FIXME: It seems like a waste to pick apart the sexp again */
+	spki_key = PUBLIC_SPKI_KEY(v, 0);
+	if (!sexp_iterator_first(&i, spki_key->length, spki_key->data))
+	  fatal("Internal error.\n");
+
+	subject = SPKI_LOOKUP(self->db, &i, v);
 	assert(subject);
 	assert(subject->verifier);
+
+	lsh_string_free(spki_key);
 	break;
       }
       
@@ -470,14 +479,15 @@ do_lsh_lookup(struct lookup_verifier *c,
     case ATOM_SPKI_SIGN_RSA:
     case ATOM_SPKI_SIGN_DSS:
       {
-	struct sexp *e = string_to_sexp(SEXP_CANONICAL, key, 0);
-	if (!e)
+	struct sexp_iterator i;
+
+	if (!sexp_iterator_first(&i, key->length, key->data))
 	  {
 	    werror("do_lsh_lookup: Invalid spki s-expression.\n");
 	    return NULL;
 	  }
 	  
-	subject = SPKI_LOOKUP(self->db, e, NULL);
+	subject = SPKI_LOOKUP(self->db, &i, NULL);
 	if (!subject)
 	  {
 	    werror("do_lsh_lookup: Invalid spki key.\n");
@@ -505,7 +515,8 @@ do_lsh_lookup(struct lookup_verifier *c,
     }
   else
     {
-      struct sexp *acl;
+      struct lsh_string *acl;
+      struct sexp_iterator i;
       
       verbose("SPKI authorization failed.\n");
       if (!self->sloppy)
@@ -520,10 +531,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 	  /* Display fingerprint */
 
 	  struct lsh_string *spki_fingerprint = 
-	    hash_string(self->hash,
-			sexp_format(subject->key, SEXP_CANONICAL, 0),
-			1);
-
+	    hash_string(self->hash, subject->key, 0);
 
 	  struct lsh_string *fingerprint = 
 	    lsh_string_colonize( 
@@ -556,24 +564,26 @@ do_lsh_lookup(struct lookup_verifier *c,
 	    return NULL;
 	}
 
-      acl = sexp_l(2, sexp_a(ATOM_ACL),
-		   sexp_l(3, sexp_a(ATOM_ENTRY),
-			  subject->key,
-			  sexp_l(2, sexp_a(ATOM_TAG),
-				 self->access,
-				 -1),
-			  -1),
-		   -1);
-
-      /* Remember this key. We don't want to ask again for key re-exchange */
-      spki_add_acl(self->db, acl);
+      acl = lsh_sexp_format(0, "(%z(%z%l(%z%s)))",
+			    "acl", "entry",
+			    subject->key->length, subject->key->data,
+			    "tag", self->access->length, self->access->data);
       
+      /* FIXME: Seems awkward to pick the acl apart again. */
+      if (!sexp_iterator_first(&i, acl->length, acl->data))
+	fatal("Internal error.\n");
+      
+      /* Remember this key. We don't want to ask again for key re-exchange */
+      spki_add_acl(self->db, &i);
+
       /* Write an ACL to disk. */
       if (self->file)
 	{
 	  A_WRITE(self->file, ssh_format("\n; ACL for host %lS\n", self->host->ip));
 	  A_WRITE(self->file,
-		  sexp_format(acl, SEXP_TRANSPORT, 0));
+		  lsh_sexp_format(1, "%l", acl->length, acl->data));
+	  lsh_string_free(acl);
+	  
 	  A_WRITE(self->file, ssh_format("\n"));
 	}
     }
