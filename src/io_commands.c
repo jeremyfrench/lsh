@@ -97,6 +97,23 @@ make_io_write_file_info(struct lsh_string *name,
   return self;
 }
 
+/* (listen callback fd) */
+DEFINE_COMMAND2(listen_command)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(command, callback, a1);
+  CAST(lsh_fd, fd, a2);
+
+  if (io_listen(fd, make_listen_callback(callback, e)))
+    COMMAND_RETURN(c, fd);
+  else
+    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
+					 NULL, errno, NULL));
+}
 
 static struct exception resolve_exception =
 STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
@@ -107,10 +124,9 @@ STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
  * doesn't perform any dns lookups. */
 static void
 do_listen(struct address_info *a,
-	  /* Continuation if listen succeeds. */
-	  struct command_continuation *listen_c,
-	  /* Continuation if accept succeeds. */
-	  struct command_continuation *accept_c,
+	  /* Callback when connections are accepted. */
+	  struct command *callback,
+	  struct command_continuation *c,
 	  struct exception_handler *e)
 {
   struct sockaddr *addr;
@@ -126,14 +142,14 @@ do_listen(struct address_info *a,
     }
 
   fd = io_listen(io_bind_sockaddr(addr, addr_length, e),
-		 make_listen_callback(accept_c, e));
+		 make_listen_callback(callback, e));
   lsh_space_free(addr);
   
   if (!fd)
     EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
 					 NULL, errno, NULL));
   else
-    COMMAND_RETURN(listen_c, fd);
+    COMMAND_RETURN(c, fd);
 }
 
 /* A listen function taking two arguments:
@@ -141,7 +157,7 @@ do_listen(struct address_info *a,
  *
  * Suitable for handling forwarding requests. NOTE: The calling
  * function has to do all remembering of the fd:s. */
-
+/* FIXME: We should not need this function. */
 DEFINE_COMMAND2(listen_with_callback)
      (struct command_2 *s UNUSED,
       struct lsh_object *a1,
@@ -154,9 +170,7 @@ DEFINE_COMMAND2(listen_with_callback)
 
   /* No dns lookups */
   do_listen(address,
-	    c,
-	    make_apply(callback,
-		       &discard_continuation, e), e);
+	    callback, c, e);
 }
 
 
@@ -313,9 +327,7 @@ do_listen_local(struct command *s,
   
   struct lsh_fd *fd
     = io_listen(io_bind_local(self->info, e),
-		make_listen_callback(make_apply(callback,
-						&discard_continuation, e),
-				     e));
+		make_listen_callback(callback, e));
   if (!fd)
     EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
 					 NULL, errno, NULL));
