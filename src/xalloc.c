@@ -28,6 +28,7 @@
 #include "list.h"
 #include "werror.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -164,7 +165,12 @@ struct list_header *lsh_list_alloc(struct lsh_class *class,
 				   unsigned length, size_t element_size)
 {
   struct list_header *list = xalloc(class->size
-				    + element_size * (length - 1));
+				    + element_size * length
+				    - element_size);
+
+  assert(element_size < 1024);
+  /* assert(length < 65536); */
+  
   list->super.isa = class;
   list->super.alloc_method = LSH_ALLOC_HEAP;
 
