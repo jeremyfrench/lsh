@@ -963,9 +963,12 @@ seems to be the algorithm of choice among conservative cryptographers.
 
 As a special case, @option{-z} with no argument changes the compression
 algorithm list to @code{zlib}, @code{none}, which means that you want to
-use @code{zlib} if the other end supports it. This is different from @option{-z
-zlib} which causes the negotiation to fail if the other end doesn't
-support @code{zlib}.
+use @code{zlib} if the other end supports it. This is different from
+@option{-zzlib} which causes the negotiation to fail if the other end
+doesn't support @code{zlib}. A somewhat unobvious consequence of
+@option{-z} having an @em{optional} argument is that if you provide an
+argument, it must follow directly after the option letter, no spaces
+allowed. 
 
 
 @node Hostauth options, Userauth options, Algorithm options, Invoking lsh
