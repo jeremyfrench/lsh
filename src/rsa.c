@@ -31,7 +31,9 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include "nettle/bignum.h"
 #include "nettle/rsa.h"
+#include "nettle/sexp.h"
 #include "nettle/sha.h"
 
 #include <assert.h>
@@ -39,13 +41,12 @@
 
 #include "rsa.c.x"
 
-#define SA(x) sexp_a(ATOM_##x)
-
 /* We don't allow keys larger than 5000 bits (i.e. 625 octets). Note
  * that allowing really large keys opens for Denial-of-service
  * attacks. */
 
-#define RSA_MAX_SIZE 625
+#define RSA_MAX_OCTETS 625
+#define RSA_MAX_BITS (8 * RSA_MAX_OCTETS)
 
 /* GABA:
    (class
@@ -65,30 +66,6 @@
        (key indirect-special "struct rsa_private_key"
             #f rsa_clear_private_key)))
 */
-
-
-/* FIXME: Add hash algorithm to signature value? */
-static struct sexp *
-encode_rsa_sig_val(mpz_t s)
-{
-  return sexp_un(s);
-}
-
-static int
-decode_rsa_sig_val(struct sexp *e, mpz_t s, unsigned limit)
-{
-  return sexp2bignum_u(e, s, limit);
-}
-
-static int
-spki_init_rsa_verifier(struct rsa_public_key *key,
-		       struct sexp_iterator *i)
-{
-  return (sexp_get_un(i, ATOM_N, key->n, RSA_MAX_SIZE)
-	  && sexp_get_un(i, ATOM_E, key->e, RSA_MAX_SIZE)
-	  && rsa_prepare_public_key(key));
-}
-
 
 /* NOTE: For now, always use sha1. */
 static int
@@ -137,14 +114,10 @@ do_rsa_verify(struct verifier *v,
     case ATOM_SPKI_SIGN_DSS:
     case ATOM_SPKI:
       {
-	struct simple_buffer buffer;
-	struct sexp *e;
-	
-	simple_buffer_init(&buffer, signature_length, signature_data);
+	struct sexp_iterator i;
 
-	if (! ( (e = sexp_parse_canonical(&buffer))
-		&& parse_eod(&buffer)
-		&& decode_rsa_sig_val(e, s, self->key.size)) )
+	if (! (sexp_iterator_first(&i, signature_length, signature_data)
+	       && nettle_mpz_set_sexp(s, 8 * self->key.size, &i)))
 	  goto fail;
 
 	break;
@@ -173,16 +146,11 @@ do_rsa_public_key(struct verifier *s)
 		     self->key.e, self->key.n);
 }
 
-static struct sexp *
-do_rsa_public_spki_key(struct verifier *s)
+static struct lsh_string *
+do_rsa_public_spki_key(struct verifier *s, int transport)
 {
   CAST(rsa_verifier, self, s);
-#if 0
-  return sexp_l(3, sexp_a(self->params->name),
-		sexp_l(2, SA(N), sexp_un(self->n), -1),
-		sexp_l(2, SA(E), sexp_un(self->e), -1),
-		-1);
-#endif
+
   /* NOTE: The algorithm name "rsa-pkcs1-sha1" is the SPKI standard,
    * and what lsh-1.2 used. "rsa-pkcs1" makes more sense, and is what
    * gnupg uses internally (I think), and was used by some late
@@ -190,10 +158,11 @@ do_rsa_public_spki_key(struct verifier *s)
    *
    * However, since it doesn't matter much, for now we follow the SPKI
    * standard and stay compatible with lsh-1.2. */
-  return sexp_l(3, sexp_a(ATOM_RSA_PKCS1_SHA1),
-		sexp_l(2, SA(N), sexp_un(self->key.n), -1),
-		sexp_l(2, SA(E), sexp_un(self->key.e), -1),
-		-1);
+  /* FIXME: Use nettle's rsa_keypair_to_sexp. */
+  return lsh_sexp_format(transport, "(%z(%z(%z%b)(%z%b)))",
+			 "public-key", "rsa-pkcs1-sha1",
+			 "n", self->key.n,
+			 "e", self->key.e);
 }
 
 
@@ -215,25 +184,6 @@ init_rsa_verifier(struct rsa_verifier *self)
   self->super.public_spki_key = do_rsa_public_spki_key;
 }
 
-static struct rsa_verifier *
-make_rsa_verifier_internal(struct sexp_iterator *i)
-{
-  NEW(rsa_verifier, res);
-  init_rsa_verifier(res);
-
-  assert(SEXP_LEFT(i) >= 2);
-  
-  if (spki_init_rsa_verifier(&res->key, i))
-    {
-      return res;
-    }
-  else
-    {
-      KILL(res);
-      return NULL;
-    }
-}
-  
 /* Alternative constructor using a key of type ssh-rsa, when the atom
  * "ssh-rsa" is already read from the buffer. */
 struct verifier *
@@ -242,9 +192,9 @@ parse_ssh_rsa_public(struct simple_buffer *buffer)
   NEW(rsa_verifier, res);
   init_rsa_verifier(res);
 
-  if (parse_bignum(buffer, res->key.e, RSA_MAX_SIZE)
+  if (parse_bignum(buffer, res->key.e, RSA_MAX_OCTETS)
       && (mpz_sgn(res->key.e) == 1)
-      && parse_bignum(buffer, res->key.n, RSA_MAX_SIZE)
+      && parse_bignum(buffer, res->key.n, RSA_MAX_OCTETS)
       && (mpz_sgn(res->key.n) == 1)
       && (mpz_cmp(res->key.e, res->key.n) < 0)
       && parse_eod(buffer)
@@ -295,7 +245,8 @@ do_rsa_sign(struct signer *s,
     case ATOM_SPKI_SIGN_RSA:
     case ATOM_SPKI_SIGN_DSS:
     case ATOM_SPKI:
-      res = sexp_format(encode_rsa_sig_val(signature), SEXP_CANONICAL, 0);
+      /* FIXME: Add hash algorithm to signature value? */
+      res = lsh_sexp_format(0, "%b", signature);
       break;
     default:
       fatal("do_rsa_sign: Internal error!\n");
@@ -316,9 +267,15 @@ static struct verifier *
 make_rsa_verifier(struct signature_algorithm *s UNUSED,
 		  struct sexp_iterator *i)
 {
-  return ( (SEXP_LEFT(i) == 2)
-	   ? &make_rsa_verifier_internal(i)->super
-	   : NULL);
+  NEW(rsa_verifier, res);
+  init_rsa_verifier(res);
+
+  if (rsa_keypair_from_sexp_alist(&res->key, NULL, RSA_MAX_BITS, i)
+      && rsa_prepare_public_key(&res->key))
+    return &res->super;
+
+  KILL(res);
+  return NULL;
 }
 
 
@@ -326,39 +283,27 @@ static struct signer *
 make_rsa_signer(struct signature_algorithm *s UNUSED,
 		struct sexp_iterator *i)
 {
+  NEW(rsa_verifier, verifier);
   NEW(rsa_signer, res);
 
+  init_rsa_verifier(verifier);
+  
   rsa_init_private_key(&res->key);
-
-  /* The secret d is optional, it's not needed. */
-  if ( (SEXP_LEFT(i) >= 7)
-       && ( (res->verifier = make_rsa_verifier_internal(i)) )
-       && sexp_get_un(i, ATOM_P, res->key.p, RSA_MAX_SIZE)
-       && sexp_get_un(i, ATOM_Q, res->key.q, RSA_MAX_SIZE)
-       && sexp_get_un(i, ATOM_A, res->key.a, RSA_MAX_SIZE)
-       && sexp_get_un(i, ATOM_B, res->key.b, RSA_MAX_SIZE)
-       && sexp_get_un(i, ATOM_C, res->key.c, RSA_MAX_SIZE) )
+  if (rsa_keypair_from_sexp_alist(&verifier->key, &res->key, RSA_MAX_BITS, i)
+      && rsa_prepare_public_key(&verifier->key)
+      && rsa_prepare_private_key(&res->key)
+      && res->key.size == verifier->key.size)
     {
-      if (!rsa_prepare_private_key(&res->key)
-	  || (res->key.size != res->verifier->key.size))
-	{
-	  KILL(res->verifier);
-	  res->verifier = NULL;
-	  KILL(res);
-
-	  return NULL;
-	}
+      res->verifier = verifier;
 
       res->super.sign = do_rsa_sign;
       res->super.get_verifier = do_rsa_get_verifier;
       
       return &res->super;
     }
-  else
-    {
-      KILL(res);
-      return NULL;
-    }
+  KILL(res);
+  KILL(res->verifier);
+  return NULL;
 }
 
 struct signature_algorithm rsa_sha1_algorithm =
