@@ -925,8 +925,10 @@ list_format(struct spki_cons *c, struct nettle_buffer *buffer)
       done += length;
     }
   
-  return sexp_format(buffer, "%l", 1, ")") ? done + 1 : 0;
+  return sexp_format(buffer, "%)") ? done + 1 : 0;
 }
+
+#define L(x) (sizeof(x "") - 1), x
 
 unsigned
 spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
@@ -937,7 +939,7 @@ spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
       abort();
       
     case SPKI_TAG_ANY:
-      return sexp_format(buffer, "(%0s)", "*");
+      return sexp_format(buffer, "%l", L("(1:*)"));
 
     case SPKI_TAG_SET:
       {
@@ -945,7 +947,7 @@ spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
 	unsigned length;
 	unsigned prefix;
 
-	prefix = sexp_format(buffer, "%0l", "(3:set");
+	prefix = sexp_format(buffer, "%l", L("(1:*3:set"));
 	if (!prefix)
 	  return 0;
 
@@ -959,7 +961,7 @@ spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
 	struct spki_tag_list *self = tag_list(tag);
 	unsigned length;
 
-	if (!sexp_format(buffer, "%l", 1, "1"))
+	if (!sexp_format(buffer, "%("))
 	  return 0;
 
 	assert(self->children);
@@ -972,8 +974,9 @@ spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
     case SPKI_TAG_PREFIX:
       {
 	struct spki_tag_atom *self = tag_atom(tag);
-	return sexp_format(buffer, "(%0s%t%s)", "prefix",
-			   self->display->length, self->display->data,
+	return sexp_format(buffer, "(%l%t%s)", L("1:*6:prefix"),
+			   self->display ? self->display->length : 0,
+			   self->display ? self->display->data : NULL,
 			   self->atom->length, self->atom->data);
       }
       
@@ -985,7 +988,8 @@ spki_tag_format(struct spki_tag *tag, struct nettle_buffer *buffer)
       {
 	struct spki_tag_atom *self = tag_atom(tag);
 	return sexp_format(buffer, "%t%s",
-			   self->display->length, self->display->data,
+			   self->display ? self->display->length : 0,
+			   self->display ? self->display->data : NULL,
 			   self->atom->length, self->atom->data);
       }
     }
