@@ -1,6 +1,8 @@
 2000-06-21  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/lsh.c (do_lsh_default_handler): Handle EXC_GLOBAL_REQUEST. 
+	Added --stdin, --stdout and --stderr options.
+	(CASE_ARG): New macro.
 
 	* doc/Makefile.am.in (man_MANS): Use automake's man_MANS.
 	(EXTRA_DIST): Added gateway-mode.txt and lsh.html to the

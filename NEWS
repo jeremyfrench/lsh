@@ -8,7 +8,7 @@ News for the 0.9.14 release
 	Renamed sexp_conv to sexp-conv.
 	
 	Fixed bug preventing forwarded connections from being closed
-	properly. Reported by [FIXME!!!] and Joseph Galbraith.
+	properly. Reported by Daniel Prevett and Joseph Galbraith.
 
 	New Getting Started chapter in the manual, and other
 	documentation updates.
