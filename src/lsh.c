@@ -40,6 +40,9 @@
 #include "format.h"
 #include "io.h"
 #include "randomness.h"
+#include "service.h"
+#include "session.h"
+#include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -169,6 +172,8 @@ int main(int argc, char **argv)
   kexinit_handler = make_kexinit_handler
     (CONNECTION_CLIENT,
      make_kexinit, algorithms,
+     /* FIXME: make_service_handler is wrong function: It's for
+      * the server side. */
      make_service_handler(make_alist
 			  (1, ATOM_SSH_USERAUTH, 
 			   make_client_userauth(ssh_format("%lz", user),
