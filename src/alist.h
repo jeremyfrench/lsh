@@ -28,21 +28,36 @@
 
 #include "lsh_types.h"
 
+#define ALIST_USE_SIZE 0
 /* Abstract interface allows for multiple implementations ("real"
  * alists, linear tables, hash tables */
 struct alist
 {
   struct lsh_object header;
+
+#if ALIST_USE_SIZE
+  int size; /* Number of associations with non-zero values */
+  int * (*keys)(struct alist *self);
+#endif
+  
   void * (*get)(struct alist *self, int atom);
   void (*set)(struct alist *self, int atom, void *value);
+
 };
 
 #define ALIST_GET(alist, atom) ((alist)->get((alist), (atom)))
 #define ALIST_SET(alist, atom, value) ((alist)->set((alist), (atom), (value)))
 
+#if ALIST_USE_SIZE
+#define ALIST_KEYS(alist) ((alist)->keys((alist)))
+#endif
+
 /* n is the number of pairs. The argument list should be terminated
  * with -1, for sanity checks. */
 
-struct alist *make_alist(int n, ...);
+struct alist *make_linear_alist(int n, ...);
+struct alist *make_linked_alist(int n, ...);
+
+#define make_alist make_linear_alist
 
 #endif /* LSH_ALIST_H_INCLUDED */
