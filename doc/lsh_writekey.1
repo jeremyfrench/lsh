@@ -30,15 +30,20 @@ LSH IS WORK IN PROGRESS. DON'T EXPECT THE CURRENT VERSION TO WORK, AND
 .B "*DON'T*"
 EXPECT IT TO PROVIDE ANY SECURITY WHATSOEVER.
 .SH SYNOPSIS
-.BI "lsh_write_key"
+.BI "lsh_write_key [" name "]"
 .SH DESCRIPTION
 lsh_writekey takes a public, private key pair
 in
 .BR SPKI (5)
-format on stdin and stores the public and private key separately under the
-user's home directory.
+format on stdin and the keys separately.
 .SH OPTIONS
-lsh_writekey takes no options.
+.IP name
+The public key is stored as
+.IR name.pub ;
+the private key as 
+.IR name .
+The default is
+.BR $HOME/.lsh/identity .
 .SH ENVIRONMENT
 .TP 
 HOME
@@ -46,10 +51,10 @@ The user's home directory.
 .SH FILES
 .TP
 ~/.lsh/identity
-Where the private key is stored.
+Default location where the private key is stored.
 .TP
 ~/.lsh/identity.pub
-Where the public key is stored.
+Default location where the public key is stored.
 .SH EXAMPLE
 A typical usage of lsh_writekey is:
 
