@@ -12,13 +12,19 @@ ancestors. OpenSSH uses the OpenSSL library for low-level
 cryptographic operations. LSH uses its own library for symmetric
 cryptographic operations, and GMP for its bignum calculations.
 
-OpenSSH supports version 1 of the protocols, and it supports RSA keys.
-LSH don't (RSA support will be added as the patents expire).
+OpenSSH supports both version 1 and version 2 of the protocols, and
+supports RSA and DSA keys. LSH only supports version 2 of the protocol
+with DSA keys because of the RSA patent.
 
-LSH and OpenSSH seems to interoperate fine over the wire with
-eachother and with other implementations of ssh version 2. The file
-formats and conventions for storing keys on disk are not compatible,
-but conversion tools are on the LSH todo-list.
+It is illegal in the United States to use RSA without paying for a
+license. The RSA patents expire [EXACT DATE SHOULD GO HERE] September,
+2000. As these expire, LSH will add RSA support.
+
+LSH and OpenSSH have been tested together with positive results. LSH
+and OpenSSH use different file formats for storing DSA keys, and a
+conversion tool is on the LSH todo-list.
+
+[Faq entry heavily modified: Jeff Bailey <jbailey@gnu.org>]
 
 
 × Why use a gc?
