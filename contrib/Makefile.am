@@ -1,3 +1,4 @@
 # Process this file with automake to create Makefile.in
 
-EXTRA_DIST = 
+EXTRA_DIST = README lsh.spec.in lsh.spec lshd.rhlinux.init
+
