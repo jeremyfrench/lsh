@@ -1,3 +1,5 @@
+AH_TEMPLATE([socklen_t], [Length type used by getsockopt])
+
 # Try to detect the type of the third arg to getsockname() et al
 AC_DEFUN([AC_TYPE_SOCKLEN_T],
 [AC_CACHE_CHECK([for socklen_t in sys/socket.h], ac_cv_type_socklen_t,
