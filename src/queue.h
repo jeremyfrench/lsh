@@ -113,6 +113,7 @@ void object_queue_kill(struct object_queue *q);
 #define KILL_OBJECT_QUEUE(q) object_queue_kill((q))
 
 struct object_list *queue_to_list(struct object_queue *q);
+struct object_list *queue_to_list_and_kill(struct object_queue *q);
 
 #define FOR_OBJECT_QUEUE(oq, n)				\
   struct lsh_queue_node *n##_this, *n##_next;			\

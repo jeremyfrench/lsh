@@ -274,6 +274,14 @@ struct object_list *queue_to_list(struct object_queue *q)
   return l;
 }
 
+struct object_list *queue_to_list_and_kill(struct object_queue *q)
+{
+  struct object_list *l = queue_to_list(q);
+  object_queue_kill(q);
+
+  return l;
+}
+
 /* For gc */
 static void do_object_queue_mark(struct lsh_queue *q,
 				 void (*mark)(struct lsh_object *o))
