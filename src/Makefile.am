@@ -55,7 +55,6 @@ bootstrap: $(generated_sources) $(dist_classes)
 
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	algorithms.c alist.c atoms.c \
-	bignum.c \
 	channel.c channel_commands.c channel_forward.c \
 	charset.c \
 	client.c client_escape.c client_keyexchange.c \
