@@ -1,3 +1,20 @@
+2001-06-24  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/xalloc.h (CHECK_TYPE) [DEBUG_ALLOC]: Added parentheses.
+	* src/xalloc.h (CHECK_SUBTYPE) [DEBUG_ALLOC]: Likewise.
+
+	* src/werror.c (werror_vformat): Implemented the 'p' (paranoia)
+	modifier for %c.
+
+	* src/client_escape.c (escape_dispatch): Use %pc with werror.
+
+	* src/client.c (make_client_session): Check if stdin is a tty,
+	when deciding on the default for escape char handling. 
+
+2001-06-20  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/client_escape.c (do_escape_handler): Fixed the EOF case.
+
 2001-06-19  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/client_session.c (client_read_stdin): New function, for
