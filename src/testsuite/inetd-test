@@ -1,0 +1,13 @@
+#! /bin/sh
+
+# Doesn't yet work
+echo starting lshd via inetd
+
+if [ -z "$srcdir" ] ; then
+  srcdir=`pwd`
+fi
+
+. $srcdir/functions.sh
+
+at_connect "$PORT" 1 "../lshd -h $HOSTKEY $LSHD_FLAGS" \
+    && run_lsh "exit 0" && test_success
