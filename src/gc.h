@@ -37,4 +37,7 @@ void gc(void);
 
 void gc_final(void);
 
+struct lsh_object *
+gc_iterate_objects(const struct lsh_class *class, struct lsh_object *o);
+
 #endif /* LSH_GC_H_INCLUDED */

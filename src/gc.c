@@ -282,3 +282,22 @@ void gc_final(void)
   lsh_string_final_check();
 #endif /* DEBUG_ALLOC */
 }
+
+/* For debugging */
+#if 0
+struct lsh_object *
+gc_iterate_objects(const struct lsh_class *class, struct lsh_object *o)
+{
+  if (!o)
+    o = all_objects;
+  else
+    o = o->next;
+    
+  for (; o; o = o->next)
+    {
+      if (o->isa == class)
+	return o;
+    }
+  return NULL;
+}
+#endif
