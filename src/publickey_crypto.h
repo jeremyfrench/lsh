@@ -64,7 +64,7 @@ struct signer *make_dsa_signer_kludge(struct signer *dsa);
 #define GROUP_POWER(group, res, g, e) \
 ((group)->power((group), (res), (g), (e)))
 
-struct group *make_zn(mpz_t p);
+struct group *make_zn(mpz_t p, mpz_t order);
 
 /* CLASS:
    (struct

@@ -468,8 +468,8 @@ struct group *make_zn(mpz_t p, mpz_t order)
   res->super.power = zn_power;     /* Pretty Mutation! Magical Recall! */
   
   mpz_init_set(res->modulo, p);
-  mpz_init_set(res->super.order, p);
-  mpz_sub_ui(res->super.order, res->super.order, 1);
+  mpz_init_set(res->super.order, order);
+
   return &res->super;
 }
 
@@ -517,6 +517,7 @@ struct diffie_hellman_method *make_dh1(struct randomness *r)
 {
   NEW(diffie_hellman_method, res);
   mpz_t p;
+  mpz_t order;
   
   mpz_init_set_str(p,
 		   "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
@@ -526,10 +527,14 @@ struct diffie_hellman_method *make_dh1(struct randomness *r)
 		   "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381"
 		   "FFFFFFFFFFFFFFFF", 16);
 
-  /* FIXME: The order of the subgroup we use is (p-1)/2 */
-  res->G = make_zn(p);
-  mpz_clear(p);
+  mpz_init_set(order, p);
+  mpz_sub_ui(order, order, 1);
+  mpz_fdiv_q_2exp(order, order, 1);
 
+  res->G = make_zn(p, order);
+  mpz_clear(p);
+  mpz_clear(order);
+  
   mpz_init_set_ui(res->generator, 2);
 
   res->H = &sha_algorithm;
