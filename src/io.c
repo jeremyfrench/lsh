@@ -1077,7 +1077,7 @@ sockaddr2info(size_t addr_len,
 	 * should perhaps lowercase the result explicitly. */
 	if (!inet_ntop(addr->sa_family, &in->sin6_addr,
 		       info->ip->data, info->ip->length))
-	  fatal("inet_ntop failed for IPv4 address.\n");
+	  fatal("inet_ntop failed for IPv6 address.\n");
 
 	lsh_string_trunc(info->ip, strlen(info->ip->data));
       }
