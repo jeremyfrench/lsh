@@ -151,7 +151,7 @@ static const struct uparam_name uparam_names[] =
 static void
 fill_in_uparams (const struct argp_state *state)
 {
-  const char *var = getenv ("ARGP_HELP_FMT");
+  const unsigned char *var = getenv ("ARGP_HELP_FMT");
 
 #define SKIPWS(p) do { while (isspace (*p)) p++; } while (0);
 
@@ -166,7 +166,7 @@ fill_in_uparams (const struct argp_state *state)
 	    size_t var_len;
 	    const struct uparam_name *un;
 	    int unspec = 0, val = 0;
-	    const char *arg = var;
+	    const unsigned char *arg = var;
 
 	    while (isalnum (*arg) || *arg == '-' || *arg == '_')
 	      arg++;
@@ -690,12 +690,12 @@ canon_doc_option (const char **name)
 {
   int non_opt;
   /* Skip initial whitespace.  */
-  while (isspace (**name))
+  while (isspace ( (unsigned char) **name))
     (*name)++;
   /* Decide whether this looks like an option (leading `-') or not.  */
   non_opt = (**name != '-');
   /* Skip until part of name used for sorting.  */
-  while (**name && !isalnum (**name))
+  while (**name && !isalnum ( (unsigned char) **name))
     (*name)++;
   return non_opt;
 }
@@ -757,8 +757,8 @@ hol_entry_cmp (const struct hol_entry *entry1,
 	   first, but as they're not displayed, it doesn't matter where
 	   they are.  */
 	{
-	  char first1 = short1 ? short1 : long1 ? *long1 : 0;
-	  char first2 = short2 ? short2 : long2 ? *long2 : 0;
+	  unsigned char first1 = short1 ? short1 : long1 ? *long1 : 0;
+	  unsigned char first2 = short2 ? short2 : long2 ? *long2 : 0;
 #ifdef _tolower
 	  int lower_cmp = _tolower (first1) - _tolower (first2);
 #else
