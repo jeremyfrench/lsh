@@ -1,5 +1,28 @@
 2002-08-27  Niels Möller  <niels@s3.kth.se>
 
+	* src/server_pty.c (pty_open_slave): Removed call to setsid(),
+	moved to...
+	* src/unix_user.c (do_spawn): Call setsid(). Was previously done by
+	the pty code, and only in the pty case.
+
+	* src/server_session.c (init_spawn_info): Save the SSH_CLIENT
+	value in the session struct, so that it can be gc:ed properly.
+
+	* src/charset.c (low_utf8_to_local): Use lsh_string_trunc.
+	* src/digits.c (decode_base64): Likewise.
+	* src/io.c (do_consuming_read): Likewise.
+	* src/read_base64.c (do_read_base64): Likewise.
+	* src/read_file.c (do_read_file): Likewise.
+	* src/string_buffer.c (string_buffer_final_write): Likewise.
+	(string_buffer_final): Likewise.
+	* src/channel.c (channel_data_handler): Likewise.
+	(channel_extended_data_handler): Likewise.
+	* src/tty.c (tty_encode_term_mode): Likewise.
+
+	* src/abstract_crypto.c (crypt_string): Check that input is a
+	multiple of the block size.
+	(crypt_string_unpad): Use lsh_string_trunc.
+
 	* src/format.c (lsh_string_trunc): New function, needed to get
 	proper NUL-termination when strings are truncated.
 

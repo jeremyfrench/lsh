@@ -548,6 +548,7 @@ init_spawn_info(struct spawn_info *info, struct server_session *session,
       /* Save string in the session object, so that it can be garbage
        * collected properly. */
       assert(!session->client);
+      
       if (session->super.connection->local)
 	session->client = ssh_format("%lS %di %di", 
 				      info->peer->ip,
