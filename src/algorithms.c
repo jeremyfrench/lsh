@@ -29,7 +29,7 @@
 #include "compress.h"
 #include "crypto.h"
 #include "dsa.h"
-#include "rsa.h"
+#include "publickey_crypto.h"
 #include "xalloc.h"
 
 #include "lsh_argp.h"
@@ -66,14 +66,15 @@ all_symmetric_algorithms()
 		    -1);
 }
 
-/* This is used for spki operations, and should therefore use spki names. */
+/* This is used for spki operations, and should therefore use spki names.
+ * Note that md5 signatures are not currently supported. */
 struct alist *
 all_signature_algorithms(struct randomness *r)
 {
   return make_alist(3,
 		    ATOM_DSA, make_dsa_algorithm(r),
+		    ATOM_RSA_PKCS1, &rsa_sha1_algorithm.super,
 		    ATOM_RSA_PKCS1_SHA1, &rsa_sha1_algorithm.super,
-		    ATOM_RSA_PKCS1_MD5, &rsa_md5_algorithm.super,
 		    -1);
 }
 
