@@ -11,6 +11,7 @@
 #include "publickey_crypto.h"
 #include "read_file.h"
 #include "sexp_commands.h"
+#include "spki.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -153,12 +154,11 @@ do_decode_key(struct abstract_write *s,
 	  {
 	  case ATOM_SSH_DSS:
 	    {
-	      struct dsa_public dsa;
+	      struct verifier *v;
 	    
 	      werror("Reading key of type ssh-dss...\n");
-	      init_dsa_public(&dsa);
 
-	      if (!parse_dsa_public(&buffer, &dsa))
+	      if (! ( (v = parse_ssh_dss_public(&buffer)) ))
 		{
 		  EXCEPTION_RAISE(self->e,
 				  make_simple_exception(EXC_APP_BAD_KEY,
@@ -166,9 +166,7 @@ do_decode_key(struct abstract_write *s,
 		  return;
 		}
 
-	      COMMAND_RETURN(self->c, sexp_l(2, sexp_a(ATOM_PUBLIC_KEY),
-					     make_dsa_public_key(&dsa), -1));
-	      dsa_public_free(&dsa);
+	      COMMAND_RETURN(self->c, spki_make_public_key(v));
 	      break;
 	    }
 	  default:
