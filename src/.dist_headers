@@ -56,7 +56,6 @@ dist_headers = \
     spki.h \
     srp.h \
     ssh.h \
-    ssh1_fallback.h \
     string_buffer.h \
     suspend.h \
     tcpforward.h \

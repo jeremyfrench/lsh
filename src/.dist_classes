@@ -82,8 +82,6 @@ dist_classes = \
     spki.h.x \
     srp-gen.c.x \
     srp.h.x \
-    ssh1_fallback.c.x \
-    ssh1_fallback.h.x \
     tcpforward.c.x \
     tcpforward.h.x \
     tcpforward_commands.c.x \
