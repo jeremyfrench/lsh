@@ -1510,6 +1510,13 @@ struct lsh_string *prepare_channel_open(struct channel_table *table,
 #define OPEN_ARGS SSH_MSG_CHANNEL_OPEN, type, (UINT32) index, \
   channel->rec_window_size, channel->rec_max_packet  
 
+  debug("prepare_channel_open: rec_window_size = %i,\n"
+	"                      rec_max_packet = %i,\n"
+	"                      max_packet = %i\n",
+	channel->rec_window_size,
+	channel->rec_max_packet,
+	channel->max_window);
+  
   index = register_channel(table, channel);
   if (index < 0)
     return NULL;
