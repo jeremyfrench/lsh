@@ -50,8 +50,9 @@ static void do_crypt_arcfour(struct crypto_instance *s,
 }
 
 static struct crypto_instance *
-make_arcfour_instance(struct crypto_algorithm *ignored UNUSED, int mode,
-		  const UINT8 *key, const UINT8 *iv UNUSED)
+make_arcfour_instance(struct crypto_algorithm *ignored UNUSED,
+		      int mode UNUSED,
+		      const UINT8 *key, const UINT8 *iv UNUSED)
 {
   NEW(arcfour_instance, self);
 
