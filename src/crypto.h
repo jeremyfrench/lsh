@@ -17,4 +17,21 @@ struct mac_algorithm *make_hmac_algorithm(struct hash_algorithm *h);
 struct randomness *make_poor_random(struct hash_algorithm *hash,
 				    struct lsh_string *init);
 
+/* Combining block cryptos */
+
+/* Example: To create a tripple DES cbc encryptor:
+ *
+ * struct crypto_instance des3_cbc
+ *  = make_cbc(make_crypto_cascade(3, MAKE_ENCRYPT(&des_algoritm, k1),
+ *                                    MAKE_DECRYPT(&des_algoritm, k2),
+ *                                    MAKE_ENCRYPT(&des_algoritm, k3)),
+ *             CRYPTO_ENCRYPT, iv);
+ */
+
+struct crypto_instance *
+make_cbc(struct crypto_instance *c, int mode, UINT32 iv);
+
+struct crypto_instance *
+make_crypto_cascade(unsigned n, ...);
+
 #endif
