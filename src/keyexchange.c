@@ -382,7 +382,7 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
   }
   KILL(hash);
 
-  debug("Expanded key: ", type);
+  debug("Expanded key: ");
   debug_hex(key->length, key->data);
   return key;
 }
