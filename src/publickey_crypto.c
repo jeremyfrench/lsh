@@ -130,14 +130,11 @@ make_ssh_group(const char *prime, unsigned g, int primitive)
   return G;
 }
 
-/* The group diffie-hellman-group1-sha1, also "Well known group 2" in
-   RFC 2412. */
+/* The group for diffie-hellman-group1-sha1, also "Well known group 2"
+   in RFC 2412. */
 const struct zn_group *
 make_ssh_group1(void)
 {
-  /* Prime and generator as defined in
-   * draft-ietf-secsh-transport-07.txt. */
-
   /* 2^1024 - 2^960 - 1 + 2^64 * { [2^894 pi] + 129093 } */
   return make_ssh_group("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
 			"29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
@@ -147,8 +144,8 @@ make_ssh_group1(void)
 			"FFFFFFFFFFFFFFFF", 2, 0);
 }
 
-/* The group diffie-hellman-group14-sha1, also "Well known group 14" in
-   RFC 3526. */
+/* The group for diffie-hellman-group14-sha1, also "Well known group
+   14" in RFC 3526. */
 const struct zn_group *
 make_ssh_group14(void)
 {
