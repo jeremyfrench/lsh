@@ -70,6 +70,13 @@ struct lsh_queue_node *lsh_queue_remove_tail(struct lsh_queue *q);
 #include "queue.h.x"
 #undef GABA_DECLARE
 
+/* Object queue */
+struct object_queue_node
+{
+  struct lsh_queue_node header;
+  struct lsh_object *o;
+};
+
 /* GABA:
    (struct
      (name object_queue)
@@ -85,5 +92,18 @@ void object_queue_add_head(struct object_queue *q, struct lsh_object *o);
 void object_queue_add_tail(struct object_queue *q, struct lsh_object *o);
 struct lsh_object *object_queue_remove_head(struct object_queue *q);
 struct lsh_object *object_queue_remove_tail(struct object_queue *q);
+
+#define FOR_OBJECT_QUEUE(oq, n)				\
+  struct lsh_queue_node *n##_this, *n##_next;			\
+  struct lsh_object *n;						\
+  for ( n##_this = (oq)->q.ht_links[LSH_QUEUE_HEAD];		\
+	( n = ((struct object_queue_node *) n##_this)->o,	\
+	  (n##_next = n##_this->np_links[LSH_QUEUE_NEXT]));	\
+	n##_this = n##_next)
+
+/* NOTE: You should probably use break or perhaps continue after removing the current node. */
+/* FIXME: This name is rather ugly. */
+
+#define FOR_OBJECT_QUEUE_REMOVE(n) (lsh_queue_remove(n##_this))
 
 #endif /* LSH_QUEUE_H_INCLUDED */

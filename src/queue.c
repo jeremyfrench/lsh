@@ -148,14 +148,6 @@ struct lsh_queue_node *lsh_queue_remove_tail(struct lsh_queue *q)
   return n;
 }
 
-/* Object queue */
-struct object_queue_node
-{
-  struct lsh_queue_node header;
-  struct lsh_object *o;
-};
-
-
 static struct object_queue_node *
 make_object_queue_node(struct lsh_object *o)
 {
