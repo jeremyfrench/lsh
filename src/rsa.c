@@ -159,10 +159,8 @@ do_rsa_public_spki_key(struct verifier *s, int transport)
    * However, since it doesn't matter much, for now we follow the SPKI
    * standard and stay compatible with lsh-1.2. */
   /* FIXME: Use nettle's rsa_keypair_to_sexp. */
-  return lsh_sexp_format(transport, "(%0s(%0s(%0s%b)(%0s%b)))",
-			 "public-key", "rsa-pkcs1-sha1",
-			 "n", self->key.n,
-			 "e", self->key.e);
+  return lsh_sexp_format(transport, "(public-key(rsa-pkcs1-sha1(n%b)(e%b)))",
+			 self->key.n, self->key.e);
 }
 
 

@@ -69,17 +69,14 @@ rsa_generate_key(struct randomness *r, UINT32 bits)
 			   NULL, progress,
 			   bits, E_SIZE))
     {
-      key = lsh_sexp_format(0, "(%0s(%0s(%0s%b)(%0s%b)"
-			    "(%0s%b)(%0s%b)(%0s%b)(%0s%b)(%0s%b)(%0s%b)))",
-			    "private-key", "rsa-pkcs1",
-			    "n", public.n,
-			    "e", public.e,
-			    "d", private.d,
-			    "p", private.p,
-			    "q", private.q,
-			    "a", private.a,
-			    "b", private.b,
-			    "c", private.c);
+      /* FIXME: Use rsa-pkcs1 or rsa-pkcs1-sha1? */
+      /* FIXME: Some code duplication with
+	 rsa.c:do_rsa_public_spki_key */
+      key = lsh_sexp_format(0, "(private-key(rsa-pkcs1(n%b)(e%b)"
+			    "(d%b)(p%b)(q%b)(a%b)(b%b)(c%b)))",
+			    public.n, public.e,
+			    private.d, private.p, private.q,
+			    private.a, private.b, private.c);
     }
   rsa_public_key_clear(&public);
   rsa_private_key_clear(&private);
