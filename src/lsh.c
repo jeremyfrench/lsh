@@ -758,6 +758,7 @@ main_options[] =
     0, "", CLIENT_ARGP_ACTION_GROUP },
   { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 },
 
+#if WITH_X11_FORWARD
   /* FIXME: Perhaps this should be moved from lsh.c to client.c? It
    * doesn't work with lshg. Or perhaps that can be fixed?
    * About the same problem applies to -R. */
@@ -765,6 +766,7 @@ main_options[] =
   { "x11-forward", 'x', NULL, 0, "Enable X11 forwarding.", CLIENT_ARGP_MODIFIER_GROUP },
   { "no-x11-forward", 'x' | ARG_NOT, NULL, 0,
     "Disable X11 forwarding (default).", 0 },
+#endif
   
   { NULL, 0, NULL, 0, NULL, 0 }
 };
@@ -985,7 +987,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       }      
       
     CASE_FLAG('G', start_gateway);
+#if WITH_X11_FORWARD
     CASE_FLAG('x', super.with_x11);
+#endif
     }
 
   return 0;
