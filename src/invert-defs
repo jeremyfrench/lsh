@@ -15,5 +15,6 @@ sed -e 's/^#define \(SSH_MSG_[A-Z_0-9][A-Z_0-9]*\)[ \t][ \t]*\([1-9][0-9]*\)[ \t
 		print "\"" $2 "\","; i++;}
 	  END{for(;i<256;i++) print "\"Unknown\",";}'
 
-echo "}\n"
+echo "}"
+echo
 
