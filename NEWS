@@ -1,3 +1,15 @@
+News for the 1.5.6 release
+
+	Implemented the client side of "keyboard-interactive" user
+	authentication.
+	
+	Support keyexchange with
+	diffie-hellman-group14-sha1/diffie-hellman-group2-sha1 (the
+	standardized name is at the moment not decided).
+
+	Fixes to the utf8 encoder, and in particular interactions
+	between utf8 and control character filtering.
+
 News for the 1.5.5 release
 
 	Added SOCKS-style proxying to lsh and lshg. See the new -D
