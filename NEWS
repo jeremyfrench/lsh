@@ -1,6 +1,6 @@
 News for the 1.5.5 release
 
-	Added SOCKS-style proxying to lsh and lshd. See the new -D
+	Added SOCKS-style proxying to lsh and lshg. See the new -D
 	command line option. Supports both SOCKS-4 and SOCKS-5.
 
 	The lsh client no longer sets its stdio file descriptors into
