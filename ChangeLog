@@ -1,3 +1,30 @@
+2001-08-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/sftp/testsuite/Makefile.am: New file.
+
+	* src/sftp/sftp-server.c (struct sftp_file): New struct with fd
+	and position.
+	(enum struct sftp_handle_type): Renamed constants to
+	HANDLE_TYPE_FILE and HANDLE_TYPE_DIRECTORY.
+	(handle_t): Deleted typedef.
+	(HANDLE_FILE): New macro replacing HANDLE_FD.
+	(sftp_read): New function. Keep track of position, and use
+	seek/pread only when appropriate.
+	(sftp_write): Likewise.
+
+	* src/sftp/configure.in (AC_OUTPUT): Generate testsuite/Makefile. 
+
+	* src/sftp/client.c: Minor fixes; deleted unused variables, static
+	declared functions. 
+
+	* src/sftp/Makefile.am (SUBDIRS): Added testsuite.
+
+	* src/Makefile.am.in (SUBDIRS): Added sftp.
+
+	* misc/bootstrap.sh: Bootstrap the src/sftp subdirectory.
+
+	* configure.in: Configure the src/sftp subdirectory. 
+
 2001-08-26  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/export-1-test: Don't use $srcdir for finding
