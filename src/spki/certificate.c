@@ -844,10 +844,14 @@ write_decimal(unsigned length, uint8_t *buffer, unsigned x)
 void
 spki_date_from_time_t(struct spki_date *d, time_t t)
 {
+  struct tm *tm;
+#if HAVE_GMTIME_R
   struct tm tm_storage;
-  /* FIXME: Configure check for gmtime_r. */
-  struct tm *tm = gmtime_r(&t, &tm_storage);
-
+  tm = gmtime_r(&t, &tm_storage);
+#else
+  tm = gmtime(&t);
+#endif
+  
   if (!tm)
     /* When can gmtime_r fail??? */
     abort();

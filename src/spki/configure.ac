@@ -48,6 +48,8 @@ AC_HEADER_TIME
 
 LSH_FUNC_ALLOCA
 
+AC_CHECK_FUNCS([gmtime_r])
+
 # Needed by the supplied memcmp.c
 AC_C_BIGENDIAN
 
