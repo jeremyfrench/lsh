@@ -124,7 +124,7 @@ dsa_to_spki_public_key(struct dsa_public *dsa)
 int spki_get_type(struct sexp *e, struct sexp_iterator **res)
 {
   struct sexp_iterator *i;
-  UINT32 type;
+  int type;
   
   if (sexp_atomp(e) || sexp_nullp(e))
     return 0;

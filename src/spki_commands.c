@@ -323,7 +323,7 @@ COMMAND_SIMPLE(spki_read_userkeys_command)
      (vars
        (label string)
        (method object sexp)
-       (algorithm_name . UINT32)
+       (algorithm_name . int)
        (algorithm object crypto_algorithm)
        (r object randomness)
        (key string)))
@@ -371,7 +371,7 @@ make_pkcs5_encrypt(struct randomness *r,
 		   struct lsh_string *label,
 		   UINT32 prf_name,
 		   struct mac_algorithm *prf,
-		   UINT32 crypto_name,
+		   int crypto_name,
 		   struct crypto_algorithm *crypto,
 		   UINT32 salt_length,
 		   struct lsh_string *password,
