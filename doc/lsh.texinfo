@@ -75,6 +75,7 @@ translation approved by the Free Software Foundation.
 @node     Top, Introduction, (dir), (dir)
 @comment  node-name,  next,  previous,  up
 @top
+
 This document describes @code{lsh} and related programs. @code{lsh} suit
 of programs is intended as a free replacement for the @code{ssh} suit of
 programs. In turn, @code{ssh} was intended as a secure replacement for
@@ -85,6 +86,10 @@ This manual explains how to use and hack @code{lsh}.
 
 @menu
 * Introduction::                
+* Installation::                
+* Getting started::             
+* Invoking lsh::                
+* Invoking lshd::               
 * Terminology::                 
 * Concept Index::               
 
@@ -104,10 +109,13 @@ Related programs and techniques
 * Kerberos::                    Kerberos
 * ipsec::                       IP Sec
 
+Invoking @code{lsh}
+
+
 @end detailmenu
 @end menu
 
-@node Introduction, Terminology, Top, Top
+@node Introduction, Installation, Top, Top
 @comment  node-name,  next,  previous,  up
 @chapter Introduction
 
@@ -400,7 +408,151 @@ protocol to tunnel arbitrary ip traffic accross an ssh connection. This
 arrangement provides some of the functionality of @acronym{IPSEC}, and
 is some times referred to as ``a poor man's Virtual Private Network''.
 
-@node Terminology, Concept Index, Introduction, Top
+@node Installation, Getting started, Introduction, Top
+@comment  node-name,  next,  previous,  up
+@chapter Installation
+
+You install @code{lsh} with the usual @samp{./configure && make &&
+make install}. For a full listing of the options you can give to
+@code{configure}, use @samp{./configure --help}. For example, use
+@option{--without-pty} to disable pty-support.
+
+The most commonly used option is @option{--prefix}, which tells
+configure where lsh should be installed. Default prefix is
+@file{/usr/local}. The @code{lshd} server is installed in
+@file{$prefix/sbin}, all other programs and scripts are installed in
+@file{$prefix/bin}. 
+
+The configure script is not very smart about dynamically linked
+libraries in non-standard places. If, for example, you have a
+@file{zlib.so} installed in @file{/somewhere/lib}, you may need to run
+
+@samp{LDFLAGS="-R/somwhere/lib" ./configure}
+
+to get linking right. Or use @env{LD_LIBRARY_PATH} at runtime.
+
+@node Getting started, Invoking lsh, Installation, Top
+@comment  node-name,  next,  previous,  up
+@chapter Configuring @code{lshd}
+
+There are no global configuration files for @code{lshd}; all
+configuration is done with command line switches @xref{Invoking lshd}.
+
+To run @code{lshd}, you must first create a hostkey, usually stored in
+@file{/etc/lsh_host_key}. To do this, run
+
+@samp{lsh_keygen | lsh_writekey /etc/lsh_host_key}
+
+This will also create a file @file{/etc/lsh_host_key.pub},
+containing the corresponding public key.
+
+A typical command line for starting lshd in daemon mode is simply
+
+@samp{lshd --daemonic}
+
+It is also possible to let @code{init} start lshd, by adding in in
+@file{/etc/inittab}.
+
+@node Invoking lsh, Invoking lshd, Getting started, Top
+@comment  node-name,  next,  previous,  up
+@chapter Invoking @code{lsh}
+
+You use lsh to login to a remote machine. Basic usage is
+
+@samp{lsh [-p @var{port number}] sara.lysator.liu.se}
+
+which attempts to connect, login, and start an interactive shell on the
+remote machine. Default @var{port number} is whatever your systems
+@file{/etc/services} lists for @code{ssh}. Usually, that is port 22.
+
+There is a plethora of options to @code{lsh}, to let you configure where
+and how to connect, how to authenticate, and what you want to do once
+properly logged in to the remote host. For a full listing of supported
+options, use @samp{lsh --help}.
+
+@menu
+* Algorithms: Algorithm options.           Selecting algorithms.
+* Host authentication: Hostauth options.   
+* User authentication: Userauth options.   Selecting login methods.
+* Actions: Action options.                 What to do after login.
+* Messages: Verbosity options.             Tuning the amount of messages.
+@end menu
+
+@node Algorithm options, Hostauth options, Invoking lsh, Invoking lsh
+@comment  node-name,  next,  previous,  up
+@section Algorithm options
+
+Before a packet is send, each packet can be compressed, encrypted
+and authenticated, in that order. When the packet is received, it is
+first decrypted, next it is checked that it is authenticated properly,
+and finally it is decompressed. The algorithms used for this are
+negotiated with the peer at the other end of the connection, as a part
+of the initial handshake and key exchange.
+
+Each party provides a list of supported algorithms, and the first
+algorithm listed by the client, which is also found on the server's
+list, is selected. Algorithms of different types, e.g. data compression
+and message authentication, are negotiated independently. Further more,
+algorithms used for transmission from the client to the server are
+independent of the algorithms used for transmission from the server to
+the client. There are therefore no less than six different lists that
+could be configured at each end.
+
+The command line options for lsh and lshd don't let you specify
+arbitrary lists. For instance, you can't specify different preferences
+for sending and receiving.
+
+There are a set of default algorithm preferences. When you use a command
+line option to say that you want to use @var{algorithm} for one of the
+algorithms, the default list is replaced with a list containing the
+single element @var{algorithm}. For example, if you use @option{-c
+arcfour} to say that you want to use @code{arcfour} as the encryption
+algorithm, the connection will either end up using @code{arcfour}, or
+algorithm negotiation will fail because the peer doesn't support
+arcfour.
+
+@multitable @columnfractions 0.1 0.15 0.15 0.6
+@item Option
+  @tab Algorithm type @tab Default @tab
+@item @option{-z} @tab Data compression
+  @tab @code{none}, @code{zlib}
+  @tab The default preference list supports zlib
+       compression, but don't insist. To enable compression, use
+       @option{-z}, which is a shorthand for @option{-z zlib}.
+@item @option{-c} @tab Encryption
+  @tab @code{3dec-cbc}, @code{blowfish-cbc}, @code{cast128-cbc},
+       @code{twofish-cbc}, @code{arcfour}
+  @tab The default encryption algorithm is tripple-DES in CBC mode. This
+       seems to be the algorithm of coice among conservative
+       cryptographers.
+@item @option{-m} @tab Message Authentication
+  @tab @code{hmac-sha1}, @code{hmac-md5}
+  @tab Both supported message authentication algorithms are of the
+       @acronym{HMAC} family.
+@end multitable
+
+@node Hostauth options, Userauth options, Algorithm options, Invoking lsh
+@comment  node-name,  next,  previous,  up
+@section Host authentication options
+
+@node Userauth options, Action options, Hostauth options, Invoking lsh
+@comment  node-name,  next,  previous,  up
+@section User authentication options
+
+@node Action options, Verbosity options, Userauth options, Invoking lsh
+@comment  node-name,  next,  previous,  up
+@section Action options
+
+@node Verbosity options,  , Action options, Invoking lsh
+@comment  node-name,  next,  previous,  up
+@section Verbosity options
+
+@node Invoking lshd, Terminology, Invoking lsh, Top
+@comment  node-name,  next,  previous,  up
+@chapter Invoking @code{lshd}
+
+
+@node Terminology, Concept Index, Invoking lshd, Top
 @comment  node-name,  next,  previous,  up
 @chapter Terminology
 
