@@ -481,7 +481,7 @@ get_inaddr(struct sockaddr_in	* addr,
       /* First check for numerical ip-number */
 #if 1
       /* FIXME: How portable is inet_aton? */
-      if (!inet_aton(host, addr))
+      if (!inet_aton(host, &addr->sin_addr))
 #else
 	/* TODO: It is wrong to work with ((unsigned long int) -1)
 	 * directly, as this breaks Linux/Alpha systems. But
