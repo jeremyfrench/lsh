@@ -30,6 +30,7 @@
 #include "crypto.h"
 #include "sha.h"
 #include "rc4.h"
+#include "blowfish.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -55,7 +56,7 @@ static void do_crypt_rc4(struct crypto_instance *s,
 }
 
 static struct crypto_instance *
-make_rc4_instance(struct crypto_algorithm *ignored, int mode, UINT8 *key)
+make_rc4_instance(UNUSED struct crypto_algorithm *ignored, int mode, UINT8 *key)
 {
   NEW(rc4_instance, self);
 
@@ -70,6 +71,83 @@ make_rc4_instance(struct crypto_algorithm *ignored, int mode, UINT8 *key)
 struct crypto_algorithm crypto_rc4_algorithm =
 { STATIC_HEADER,
   8, 16, make_rc4_instance };
+  
+  
+/* Blowfish */
+/* CLASS:
+   (class
+     (name blowfish_instance)
+     (super crypto_instance)
+     (vars
+       (ctx simple "BLOWFISH_context")))
+*/
+   
+static int  (*bf_setkey)( void *c, const byte *key, unsigned keylen ) = NULL;
+static void (*bf_encrypt)( void *c, byte *outbuf, const byte *inbuf ) = NULL;
+static void (*bf_decrypt)( void *c, byte *outbuf, const byte *inbuf ) = NULL;
+
+static void bf_init(void) {
+	size_t keylen, blocksize, contextsize;
+	if (!bf_setkey) {
+		blowfish_get_info(
+					CIPHER_ALGO_BLOWFISH,
+					&keylen,
+					&blocksize,
+					&contextsize,
+					&bf_setkey,
+					&bf_encrypt,
+					&bf_decrypt
+				);
+	}
+}
+
+static void blowfish_set_key(BLOWFISH_context *ctx, const UINT8 *key, 
+			UINT32 len) {
+	bf_setkey((void *) ctx, key, len );
+}
+
+
+static void blowfish_crypt(BLOWFISH_context *ctx, UINT8 *dest,
+	       		const UINT8 *src, UINT32 len) {
+	bf_encrypt((void *) ctx, dest, src);
+}
+
+static void do_crypt_blowfish(struct crypto_instance *s,
+			UINT32 length, UINT8 *src, UINT8 *dst)
+{
+/*  struct blowfish_instance *self = (struct blowfish_instance *) s; */
+
+  CAST(blowfish_instance, self, s);
+
+  if (length % 8)
+    fatal("Internal error\n");
+
+  blowfish_crypt(&self->ctx, dst, src, length);
+}
+
+static struct crypto_instance *
+make_blowfish_instance(UNUSED struct crypto_algorithm *ignored, int mode, 
+                       UINT8 *key)
+{
+/*  struct blowfish_instance *self; */
+
+  NEW(blowfish_instance, self);
+
+  bf_init();
+
+  self->super.block_size = 8;
+  self->super.crypt = do_crypt_blowfish;
+
+  blowfish_set_key(&self->ctx, key, 16);
+
+  return &self->super;
+}
+  
+struct crypto_algorithm crypto_blowfish_algorithm =
+{ STATIC_HEADER,
+  8, 16, make_blowfish_instance };
+
+
 
 /* SHA1 hash */
 /* CLASS:
@@ -103,7 +181,8 @@ static struct hash_instance *do_sha_copy(struct hash_instance *s)
   return &CLONE(sha_instance, s)->super;
 }
 
-static struct hash_instance *make_sha_instance(struct hash_algorithm *ignored)
+static struct hash_instance *make_sha_instance(
+		UNUSED struct hash_algorithm *ignored)
 {
   NEW(sha_instance, res);
 
@@ -186,7 +265,7 @@ static struct mac_instance *make_hmac_instance(struct mac_algorithm *s,
   CAST(hmac_algorithm, self, s);
   NEW(hmac_instance, instance);
   UINT8 *pad = alloca(self->hash->block_size);
-  int i;
+  UINT32 i;
 
   instance->super.hash_size = self->super.hash_size;
   instance->super.update = do_hmac_update;

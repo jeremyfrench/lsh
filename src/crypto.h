@@ -29,6 +29,7 @@
 #include "abstract_crypto.h"
 
 extern struct crypto_algorithm crypto_rc4_algorithm;
+extern struct crypto_algorithm crypto_blowfish_algorithm;
 
 extern struct hash_algorithm sha_algorithm;
 
