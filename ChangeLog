@@ -1,5 +1,8 @@
 2001-06-15  Niels Möller  <nisse@ehand.com>
 
+	* src/blowfish.c: nettle updates.
+	* src/serpent.c: Likewise.
+
 	* configure.in: Configure in the src/nettle sub directory.
 
 	* misc/bootstrap.sh: Invoke the nettle .bootstrap script.
