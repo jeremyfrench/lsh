@@ -1531,7 +1531,15 @@ argp_doc (const struct argp *argp, const struct argp_state *state,
     {
       if (inp_text_limit)
 	/* Copy INP_TEXT so that it's nul-terminated.  */
-	inp_text = __strndup (inp_text, inp_text_limit);
+	/* FIXME: The glibc version of argp uses the name __strndup.
+	 * However, that causes link errors because there's no such
+	 * function in the public namespace, and __strndup is already
+	 * defined as a macro so that the
+	 *
+	 *   #define __strndup strndup
+	 *
+	 * above is never used. */
+	inp_text = strndup (inp_text, inp_text_limit);
       input = __argp_input (argp, state);
       text =
 	(*argp->help_filter) (post
@@ -1594,6 +1602,8 @@ argp_doc (const struct argp *argp, const struct argp_state *state,
    argp_state_help, STATE is the relevent parsing state.  FLAGS are from the
    set ARGP_HELP_*.  NAME is what to use wherever a `program name' is
    needed. */
+
+/* FIXME: NAME ought to be a const char * */
 static void
 _help (const struct argp *argp, const struct argp_state *state, FILE *stream,
        unsigned flags, char *name)
