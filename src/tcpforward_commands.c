@@ -342,7 +342,10 @@ DEFINE_COMMAND2(remote_listen_command)
 	       (start_io
 	         (catch_channel_open 
 		   (open_direct_tcpip target peer) connection)))
-	     (bind local))))))
+	     ; NOTE: The use of prog1 is needed to delay the bind call
+	     ; until the (otherwise ignored) connection argument is
+	     ; available.
+	     (bind (prog1 local connection)))))))
 */
 
 struct command *
