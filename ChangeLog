@@ -1,3 +1,13 @@
+2001-03-28  Niels Möller  <nisse@ehand.com>
+
+	* src/lcp (split spec): New function for splitting arguments. 
+	Checked in first working version.
+
+2001-03-27  Niels Möller  <nisse@ehand.com>
+
+	* doc/srp-spec.nroff: Bumped version number, updated dates, and
+	added a section Further questions.
+
 2001-03-26  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* Released lsh-1.1.9.
