@@ -1,5 +1,8 @@
 2003-06-10  Niels Möller  <niels@s3.kth.se>
 
+	* src/lsh.c (read_known_hosts): Fixed error message when host-acls
+	doesn't exist.
+
 	* src/testsuite/lsh-decrypt-key-test (fname, keyname): Store files
 	in $TEST_HOME.
 
