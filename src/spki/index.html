@@ -1,0 +1,66 @@
+<html>
+<head><title>libspki</title></head>
+<body bgcolor="white" text="black" link="darkblue" alink="red" vlink="darkblue">
+<h1>libspki</h1>
+<h2>A library implementing the Simple Public Key Infrastructure</h2>
+
+libspki a library for operations on SPKI certificates, ACL:s, and
+access and authorization decisions. The library is work in progress,
+it's not terribly useful yet. Some of the design:
+
+<ul>
+<li> Keep things simple. Do one thing, well.
+
+<li> Start with the most crucial parts, certificates with only
+     "principal" subjects. Names and thresholds are secondary.
+
+<li> Make it a nice friendly C library, without global state, with
+     configurable memory allocation, etc.
+</ul>
+
+<h1>About SPKI</h1>
+
+SPKI is a way to think about certificates that makes a lot more sense
+then the popular X.500 and X.509 standards. The emphasis is on
+authorization, delegation and capabilities, rather than on names. See
+<a href="ftp://ftp.isi.edu/in-notes/rfc2693.txt">RFC 2693</a> and <a
+href="http://world.std.com/~cme/html/spki.html#1-SPKI/SDSI"Carl
+Ellison's SPKI page</a> for more informaton.
+
+<h1>Related projects</h1>
+
+There are two other SPKI implementations I'm aware of: Intel's <a
+href="http://www.intel.com/ial/security/">CDSA</a>, which is a pretty
+big and does a lot more than just SPKI, and <a
+href="http://www.pmg.lcs.mit.edu/~ajmani/sdsi/">JSDSI</a>, a Java
+library by Sameer Ajmani.
+
+<p>
+
+The first application that will use libspki is <a
+href="http://www.lysator.liu.se/~nisse/lsh">LSH</a>, my ssh-2
+implementation. I've planned adding real spki support for years, as a
+good way both for delegating restricted access, and for certifying
+hostkeys (which is usually the weakest link in all use of ssh).
+
+<p>
+
+libspki uses <a href="http://www.lysator.liu.se/~nisse/nettle">the
+Nettle cryptographic library</a> for the few cryptographic operations
+that are needed. Nettle, in turn, uses <a
+href="http://www.swox.se/gmp">GMP</a>, the GNU bignum library, for
+calculations.
+
+<h1>Source code</h1>
+
+The CVS repository is located at <a
+href="http://cvs.lysator.liu.se/viewcvs/viewcvs.cgi/lsh/src/spki/?cvsroot=lsh">cvs.lysator.liu.se</a>.
+Beware that the build system is not perfect, in particular it expects
+to find Nettle as "../nettle" from both source and build trees, the
+same way things are arranged if you check out all the complete lsh
+source code.
+
+</body>
+</html>
+
+
