@@ -1,6 +1,6 @@
 /* compress.h
  *
- * header for compression algorithms
+ * Interface to compression algorithms...
  * 
  */
 
@@ -26,11 +26,39 @@
 #ifndef LSH_COMPRESS_H_INCLUDED
 #define LSH_COMPRESS_H_INCLUDED
 
-/* FIXME: Do we really need this file? */
-#include "abstract_io.h"
-#include "abstract_compress.h"
+#include "lsh.h"
 
-#include "connection.h"
+#define GABA_DECLARE
+#include "compress.h.x"
+#undef GABA_DECLARE
+
+/* GABA:
+    (class 
+       (name compress_instance)
+       (vars
+         (codec method (string)
+         		"struct lsh_string *data" "int free")))
+*/
+
+#define CODEC(instance, packet, free) \
+((instance)->codec((instance), (packet), (free)))
+
+#define COMPRESS_DEFLATE 0
+#define COMPRESS_INFLATE 1
+
+/* GABA:
+   (class
+     (name compress_algorithm)
+     (vars
+        (make_compress method (object compress_instance)
+        		"int mode")))
+*/
+
+#define MAKE_CODEC(algo, mode) \
+((algo)->make_compress((algo), (mode)))
+
+#define MAKE_DEFLATE(algo) MAKE_CODEC((algo), COMPRESS_DEFLATE)
+#define MAKE_INFLATE(algo) MAKE_CODEC((algo), COMPRESS_INFLATE)
 
 struct compress_algorithm *make_zlib_algorithm(int level);
 struct compress_algorithm *make_zlib(void);
@@ -45,4 +73,3 @@ struct abstract_write *make_packet_codec(struct abstract_write *next,
  make_packet_codec(next, connection, COMPRESS_INFLATE)
 
 #endif /* LSH_COMPRESS_H_INCLUDED */
-

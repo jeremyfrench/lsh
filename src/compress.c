@@ -1,6 +1,6 @@
 /* compress.c
  *
- * packet compressor
+ * interface to compression algorithms...
  * 
  */
 
@@ -31,9 +31,14 @@
 
 #include "compress.h"
 
-#include "exception.h"
+#include "abstract_io.h"
+#include "connection.h"
 #include "ssh.h"
 #include "xalloc.h"
+
+#define GABA_DEFINE
+#include "compress.h.x"
+#undef GABA_DEFINE
 
 #include "compress.c.x"
 
