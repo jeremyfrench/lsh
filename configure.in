@@ -135,7 +135,7 @@ if test x$have_utmp_h = xyes; then
   AC_CACHE_CHECK(
     [if struct utmp has a ut_host member],
     lsh_cv_decl_utmp_have_ut_host,
-    AC_TRY_COMPILE(utmp.h,
+    AC_TRY_COMPILE([#include <utmp.h>],
       [ int foo() { struct utmp u; u.ut_host[0] = 'X'; return 0; } ],
       lsh_cv_decl_utmp_have_ut_host=yes,
       lsh_cv_decl_utmp_have_ut_host=no))
@@ -146,7 +146,7 @@ if test x$have_utmp_h = xyes; then
   AC_CACHE_CHECK(
     [if struct utmp has a ut_addr member],
     lsh_cv_decl_utmp_have_ut_addr,
-    AC_TRY_COMPILE(utmp.h,
+    AC_TRY_COMPILE([#include <utmp.h>],
       [ int foo() { struct utmp u; u.ut_addr[0] = 'X'; return 0; } ],
       lsh_cv_decl_utmp_have_ut_addr=yes,
       lsh_cv_decl_utmp_have_ut_addr=no))
