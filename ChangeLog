@@ -1,5 +1,45 @@
 2001-04-04  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/client.c, src/client_keyexchange.c, src/client_userauth.c,
+	src/debug.c, src/disconnect.c, src/proxy.c,
+	src/proxy_x11forward.c, src/server.c, src/server_keyexchange.c,
+	src/server_userauth.c: Packet handlers should no longer free
+	packets.
+
+
+	* src/xalloc.c (number_of_strings): Define only if DEBUG_ALLOC. 
+	(lsh_string_alloc): NUL-terminate strings, for simplicity.
+	(lsh_string_free): Check that string is still NUL-terminated.
+
+	* src/werror.c (program_name): New variable.
+	(werror_argp_parser): Initialize program_name.
+	(werror_vformat): Prefix messages with program_name.
+	(werror_vformat): Simplified code in 'z' case.
+
+	* src/proxy_userauth.c (do_forward_success): dup packet before
+	forwarding it.
+	Packet handlers should no longer free packets.
+
+	* src/channel.c (RETURN, END): Deleted macros.
+	Packet handlers should no longer free packets.
+
+	* src/keyexchange.c (do_handle_kexinit): dup packet when storing
+	it in the connection struct.
+	(do_handle_newkeys): Packet handlers should no longer free packets.
+
+	* src/write_buffer.c (make_write_buffer): Renamed
+	write_buffer_alloc to make_write_buffer. Updated callers.
+
+	* src/gc.c (gc_final): Check number_of_objects and
+	number_of_strings. 
+
+	* src/connection.c (connection_handle_packet): Always free the
+	packet here. Packet handlers no longer needs to do that.
+	(connection_handle_packet): Accept SSH_MSG_IGNORE and
+	SSH_MSG_DEBUG in the KEX_STATE_NEWKEYS state.
+
+	* configure.in: Bumped version to 1.3.
+
 	* lsh-1.2 released.
 
 	* distribution-key.gpg: Updated key, more signatures and later
