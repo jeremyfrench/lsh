@@ -275,7 +275,7 @@ do_read_sexp(struct command *s,
 	     struct exception_handler *e)
 {
   CAST(read_sexp_command, self, s);
-  CAST_SUBTYPE(lsh_fd, fd, a);
+  CAST(lsh_fd, fd, a);
 
   trace("do_read_sexp\n");
   
