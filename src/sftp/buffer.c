@@ -202,7 +202,25 @@ sftp_read_packet(struct sftp_input *i)
   int done;
 
   if (i->left)
-    return 0;
+    {
+      UINT8 d;
+
+      while (i->left &&                         /* Data remaining? */
+	     sftp_get_data(i, 1, &d)            /* Read OK? */
+	     )
+	;
+
+      /* Now, there shouldn't be any more data remaining. Next time
+       * we're called, the next packet should be read (or we had an
+       * error and all data is not read, if that's the case, return
+       * error).
+       */
+
+      if (i->left)    /* i->left non-zero => sftp_get_data returned zero => error  */
+	return -1; 
+
+      return 0;
+    }
 
   /* First, deallocate the strings. */
   sftp_input_clear_strings(i);
