@@ -2,6 +2,8 @@
  *
  * $Id$ */
 
+#warning proxy_channel.c is obsolete; replaced by gateway_channel.c
+
 /* lsh, an implementation of the ssh protocol
  *
  * Copyright (C) 1999 Balázs Scheidler
@@ -36,35 +38,6 @@
 #include "proxy_channel.c.x"
 
 #define WINDOW_SIZE 10000
-
-#if 0
-/* ;;GABA:
-   (class
-     (name proxy_flow_control)
-     (super flow_controlled)
-     (vars
-       (channel object proxy_channel)))
-*/
-
-static void
-do_proxy_flow_control(struct flow_controlled *c,
-		      UINT32 res UNUSED)
-{
-  CAST(proxy_flow_control, closure, c);
-
-  CHANNEL_SEND(&closure->channel->super, NULL);
-}
-
-static struct flow_controlled *
-make_proxy_flow_control(struct proxy_channel *channel)
-{
-  NEW(proxy_flow_control, self);
-  
-  self->super.report = do_proxy_flow_control;
-  self->channel = channel;
-  return &self->super;
-}
-#endif
 
 static void
 do_receive(struct ssh_channel *c,
@@ -136,6 +109,8 @@ make_proxy_channel(UINT32 window_size,
   self->super.request_types = request_types;
   self->init_io = do_init_io;
 
+  /* FIXME: Why this? I would think it is up to each end point when
+   * they want to close the channel. /nisse */
   if (client_side)
     self->super.flags |= CHANNEL_CLOSE_AT_EOF;
 
@@ -241,8 +216,8 @@ do_proxy_global_request(struct global_request *s UNUSED,
 			struct exception_handler *e)
 {
   struct lsh_string *request =
-    ssh_format("%c%a%c%ls", SSH_MSG_GLOBAL_REQUEST, type,
-	       want_reply, args->capacity - args->pos, &args->data[args->pos]);
+    format_global_request(type, want_reply, "%ls", 
+			  args->capacity - args->pos, &args->data[args->pos]);
 
   struct command *send;
 

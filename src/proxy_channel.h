@@ -2,6 +2,8 @@
  *
  * $Id$ */
 
+#warning proxy_channel.h is obsolete; replaced by gateway_channel.h
+
 /* lsh, an implementation of the ssh protocol
  *
  * Copyright (C) 1999, 2000 Balázs Scheidler
