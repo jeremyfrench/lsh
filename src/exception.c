@@ -99,7 +99,7 @@ do_report_exception_handler(struct exception_handler *s,
   CAST(report_exception_handler, self, s);
 
   if ( (x->type & self->mask) == self->value)
-    werror("%z exception: %z", self->prefix, x->msg);
+    werror("%z exception: %z\n", self->prefix, x->msg);
   else
     EXCEPTION_RAISE(self->super.parent, x);
 }
@@ -165,7 +165,7 @@ make_protocol_exception(UINT32 reason, const char *msg)
 void exception_raise(struct exception_handler *h,
 		     const struct exception *e)
 {
-  trace ("Raising exception %z (type %d), using handler installed by %z\n",
+  trace ("Raising exception %z (type %i), using handler installed by %z\n",
 	 e->msg, e->type, h->context);
   h->raise(h, e);
 }
