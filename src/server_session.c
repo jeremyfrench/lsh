@@ -713,8 +713,6 @@ do_spawn_exec(struct channel_request *c,
   UINT32 command_len;
   const UINT8 *command;
 
-  struct lsh_string *command_line;
-  
   if (!(parse_string(args, &command_len, &command)
 	&& parse_eod(args)))
     {
@@ -722,73 +720,74 @@ do_spawn_exec(struct channel_request *c,
       return;
     }
     
-  if (session->process)
-    /* Already spawned a shell or command */
-    goto fail;
-
-  command_line = ssh_cformat("%ls", command_len, command);
-  
-  if (!command_line)
+  if (/* Already spawned a shell or command */
+      session->process
+      /* Command can't contain NUL characters. */
+      || memchr(command, '\0', command_len))
+    
     EXCEPTION_RAISE(e, &exec_request_failed);
   else
-    switch (spawn_process(session, connection->user,
-			  connection->peer,
-			  closure->backend))
     {
-    case 1: /* Parent */
-      lsh_string_free(command_line);
-
-      /* NOTE: The return value is not used. */
-      COMMAND_RETURN(s, channel);
-      channel_start_receive(channel, session->initial_window);
-      return;
-    case 0:
-      { /* Child */
+      struct lsh_string *command_line = ssh_format("%ls", command_len, command);
+      
+      switch (spawn_process(session, connection->user,
+			    connection->peer,
+			    closure->backend))
+	{
+	case 1: /* Parent */
+	  lsh_string_free(command_line);
+	  
+	  /* NOTE: The return value is not used. */
+	  COMMAND_RETURN(s, channel);
+	  channel_start_receive(channel, session->initial_window);
+	  return;
+	case 0:
+	  { /* Child */
 #define MAX_ENV 1
-	struct env_value env[MAX_ENV];
-	int env_length = 0;
+	    struct env_value env[MAX_ENV];
+	    int env_length = 0;
+	    
+	    /* No args, and the USER_EXEC method fills in argv[0]. */
 
-	/* No args, and the USER_EXEC method fills in argv[0]. */
-#if 0
-	/* NOTE: HPUX compiler can't handle array initialization. */
-	char *argv[] = { NULL, "-c", command_line->data, NULL };
-#else
-	char *argv[4];
-	argv[0] = NULL;
-	argv[1] = "-c";
-	argv[2] = command_line->data;
-	argv[3] = NULL;
-#endif
+	    /* NOTE: I'd like to use an array initializer, but that's
+	     * not ANSI-C, and at least HPUX' compiler can't handle
+	     * it. */
+	    
+	    char *argv[4];
+	    argv[0] = NULL;
+	    argv[1] = "-c";
+	    argv[2] = lsh_get_cstring(command_line);
+	    argv[3] = NULL;
 	
-	debug("do_spawn_shell: Child process\n");
-	assert(getuid() == connection->user->uid);
+	    debug("do_spawn_shell: Child process\n");
+	    assert(getuid() == connection->user->uid);
 	    	    
-	if (session->term)
-	  {
-	    env[env_length].name ="TERM";
-	    env[env_length].value = session->term;
-	    env_length++;
-	  }
-	assert(env_length <= MAX_ENV);
+	    if (session->term)
+	      {
+		env[env_length].name ="TERM";
+		env[env_length].value = session->term;
+		env_length++;
+	      }
+	    assert(env_length <= MAX_ENV);
 #undef MAX_ENV
 
-	USER_EXEC(connection->user, 0, argv, env_length, env);
+	    USER_EXEC(connection->user, 0, argv, env_length, env);
 	
-	/* exec failed! */
-	verbose("server_session: exec failed (errno = %i): %z\n",
-		errno, STRERROR(errno));
-	_exit(EXIT_FAILURE);
-      }
-    case -1:
-      /* fork failed */
-      lsh_string_free(command_line);
+	    /* exec failed! */
+	    verbose("server_session: exec failed (errno = %i): %z\n",
+		    errno, STRERROR(errno));
+	    _exit(EXIT_FAILURE);
+	  }
+	case -1:
+	  /* fork failed */
+	  lsh_string_free(command_line);
+	  EXCEPTION_RAISE(e, &exec_request_failed);
 
-      break;
-    default:
-      fatal("Internal error!");
-  }
- fail:
-  EXCEPTION_RAISE(e, &shell_request_failed);
+	  break;
+	default:
+	  fatal("Internal error!");
+	}
+    }
 }
 
 struct channel_request *
