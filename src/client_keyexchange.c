@@ -64,7 +64,6 @@ static int do_handle_dh_reply(struct packet_handler *c,
   CAST(dh_client, closure, c);
   struct verifier *v;
   struct hash_instance *hash;
-  struct lsh_string *s;
   struct command_continuation *continuation;
   int res;
   
@@ -96,19 +95,22 @@ static int do_handle_dh_reply(struct packet_handler *c,
   if (LSH_CLOSEDP(res))
     return res;
 
+  /* FIXME: Perhaps more this key handling could be abstracted away,
+   * instead of duplicating it in client_keyexchange.c and
+   * server_keyexchange.c. */
+
+  /* A hash instance initialized with the key, to be used for key
+   * generation */
+  hash = kex_build_secret(closure->dh.method->H,
+			  closure->dh.exchange_hash,
+			  closure->dh.K);
+  
   /* Record session id */
   if (!connection->session_id)
     {
       connection->session_id = closure->dh.exchange_hash;
       closure->dh.exchange_hash = NULL; /* For gc */
     }
-  
-  /* A hash instance initialized with the key, to be used for key generation */
-  
-  hash = MAKE_HASH(closure->dh.method->H);
-  s = ssh_format("%n", closure->dh.K);
-  HASH_UPDATE(hash, s->length, s->data);
-  lsh_string_free(s);
   
   if (!INSTALL_KEYS(closure->install, connection, hash))
     {
