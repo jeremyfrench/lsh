@@ -1,3 +1,16 @@
+2003-11-10  Niels Möller  <nisse@harpo.hack.org>
+
+	* src/connection.c (connection_send_kex): New function, replacing
+	macro C_WRITE_NOW. Updated all callers.
+
+	* src/read_file.h: Deleted file. Moved declarations to...
+	* src/abstract_io.h: ... here. Deleted all inclusions of read_file.h.
+
+2003-11-09  Niels Möller  <nisse@harpo.hack.org>
+
+	* src/debug.h: Deleted file. Moved declarations to...
+	* src/connection.h: ... here. Deleted all inclusions of debug.h.
+
 2003-11-08  Niels Möller  <nisse@harpo.hack.org>
 
 	* src/Makefile.am (liblsh_a_SOURCES): Removed pad.c, encrypt.c.
