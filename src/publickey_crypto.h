@@ -34,6 +34,19 @@ struct signature_algorithm *make_dss_algorithm(struct randomness *random);
 
 /* Groups. For now, assume that all group elements are represented by
  * bignums. */
+/* CLASS:
+   (class
+     (name group)
+     (vars
+       (order bignum)
+       (member method int "mpz_t x")
+       (invert method void "mpz_t res" "mpz_t x")
+       (combine method void "mpz_t res" "mpz_t a" "mpz_t b")
+       ; FIXME: Doesn't handle negative exponents
+       (power method void "mpz_t res" "mpz_t g" "mpz_t e")))
+*/
+
+#if 0
 struct group
 {
   struct lsh_object header;
@@ -47,6 +60,7 @@ struct group
   void (*power)(struct group *closure, mpz_t res, mpz_t g, mpz_t e);
   mpz_t order;
 };
+#endif
 
 #define GROUP_MEMBER(group, x) ((group)->member((group), (x)))
 #define GROUP_INVERT(group, res, x) ((group)->invert((group), (res), (x)))
@@ -57,6 +71,18 @@ struct group
 
 struct group *make_zn(mpz_t p);
 
+/* CLASS:
+   (struct
+     (name dss_public)
+     (vars
+       (p bignum)
+       (q bignum)
+       (g bignum)
+       (y bignum)))
+*/
+
+/* FIXME: Where are these used? */
+#if 0
 /* DSS signatures */
 struct dss_public
 {
@@ -65,8 +91,20 @@ struct dss_public
   mpz_t g;
   mpz_t y;
 };
+#endif
 
 /* DH key exchange, with authentication */
+/* CLASS:
+   (class
+     (name diffie_hellman_method)
+     (vars
+       (G object group)
+       (generator bignum)
+       (H object hash_algorithm)
+       (random object randomness)))
+*/
+
+#if 0
 struct diffie_hellman_method
 {
   struct lsh_object header;
@@ -76,9 +114,28 @@ struct diffie_hellman_method
   struct hash_algorithm *H;
   struct randomness *random;
 };
+#endif
 
-/* NOTE: Instances are never allocated on the heap by themselves. They are always
- * embedded in other objects. Therefore there's no object header. */
+/* NOTE: Instances are never allocated on the heap by themselves. They
+ * are always embedded in other objects. Therefore there's no object
+ * header. */
+
+/* CLASS:
+   (struct
+     (name diffie_hellman_instance)
+     (vars
+       (method object diffie_hellman_method)
+       (e bignum)       ; Client value
+       (f bignum)       ; Server value 
+       (server_key string)
+       (signature string)
+       (secret bignum)  ; This side's secret exponent
+       (K bignum)
+       (hash object hash_instance)
+       (exchange_hash string)))
+*/
+
+#if 0
 struct diffie_hellman_instance
 {
   struct diffie_hellman_method *method;
@@ -91,6 +148,7 @@ struct diffie_hellman_instance
   struct hash_instance *hash;
   struct lsh_string *exchange_hash;
 };
+#endif
 
 /* Creates client message */
 struct lsh_string *dh_make_client_msg(struct diffie_hellman_instance *self);

@@ -34,12 +34,22 @@
  * Returns NULL If the key is invalid or not trusted. */
 
 /* FIXME: This function needs the hostname we are connecting to. */
+
+/* CLASS:
+   (class
+     (name lookup_verifier)
+     (vars
+       (lookup method (object verifier) "struct lsh_string *key")))
+*/
+
+#if 0
 struct lookup_verifier
 {
   struct lsh_object header;
   struct verifier * (*lookup)(struct lookup_verifier *closure,
 			      struct lsh_string *key);
 };
+#endif
 
 #define LOOKUP_VERIFIER(l, key) ((l)->lookup((l), (key)))
 

@@ -68,7 +68,19 @@ struct keyexchange_finished
 #define KEYEXCHANGE_FINISHED(f, c) ((f)->finished((f), (c)))
 #endif
 
-/* algorithms is an array indexed by the KEX_* values above */
+/* CLASS:
+   (class
+     (name keyexchange_algorithm)
+     (vars
+       ; Algorithms is an array indexed by the KEX_* values above
+       (init method void
+	     "struct ssh_connection *connection"
+	     "struct ssh_service *finished"
+	     "int hostkey_algorithm_atom"
+	     "struct signature_algorithm *hostkey_algorithm"
+	     "void **algorithms")))
+*/
+#if 0
 struct keyexchange_algorithm
 {
   struct lsh_object header;
@@ -80,10 +92,26 @@ struct keyexchange_algorithm
 	      struct signature_algorithm *hostkey_algorithm,
 	      void **algorithms);
 };
+#endif
 
 #define KEYEXCHANGE_INIT(kex, connection, f, ha, h, a) \
 ((kex)->init((kex), (connection), (f), (ha), (h), (a)))
 
+/* CLASS:
+   (class
+     (name kexinit)
+     (vars
+       (cookie array UINT8 16);
+       ; Lists of atoms
+       (kex_algorithms object lsh_list)
+       (server_hostkey_algorithms object lsh_list)
+       (parameters array (object lsh_list) KEX_PARAMETERS)
+       (languages_client_to_server object lsh_list)
+       (languages_server_to_client object lsh_list)
+       (first_kex_packet_follows simple int)))
+*/
+     
+#if 0     
 struct kexinit
 {
   struct lsh_object header;
@@ -97,6 +125,7 @@ struct kexinit
   int *languages_server_to_client;
   int first_kex_packet_follows;
 };
+#endif
 
 /* This function generates a new kexinit message.
  *
@@ -104,16 +133,35 @@ struct kexinit
  * the message, record it in the connection structure, and possibly
  * send a first guessed message. */
 
+/* CLASS:
+   (class
+     (name make_kexinit)
+     (vars
+       (make method (object kexinit))))
+*/
+
+#if 0
 struct make_kexinit
 {
   struct lsh_object header;
   
   struct kexinit * (*make)(struct make_kexinit *closure);
 };
+#endif
 
 #define MAKE_KEXINIT(m) ((m)->make((m)))
 
 /* Installs keys for use. */
+/* CLASS:
+   (class
+     (name install_keys)
+     (vars
+       (install method int
+		"struct ssh_connection *connection"
+		"struct hash_instance *secret")))
+*/
+
+#if 0
 struct install_keys
 {
   struct lsh_object header;
@@ -122,9 +170,24 @@ struct install_keys
 		 struct ssh_connection *connection,
 		 struct hash_instance *secret);
 };
+#endif
 
 #define INSTALL_KEYS(i, c, s) ((i)->install((i), (c), (s)))
 
+/* CLASS:
+   (class
+     (name newkeys_info)
+     (vars
+       (encryption_client_to_server  object crypto_algorithm)
+       (encryption_server_to_client  object crypto_algorithm)
+       (mac_client_to_server         object mac_algorithm)
+       (mac_server_to_client         object mac_algorithm)
+       ;; (compression_client_to_server object compression_algorithm)
+       ;; (compression_server_to_client object compression_algorithm)
+       ))
+*/
+
+#if 0
 struct newkeys_info
 {
   struct lsh_object header;
@@ -138,7 +201,7 @@ struct newkeys_info
   struct compression_algorithm *compression_server_to_client;
 #endif
 };
-
+#endif
 
 struct lsh_string *format_kex(struct kexinit *kex);
 int disconnect_kex_failed(struct ssh_connection *connection, char *msg);

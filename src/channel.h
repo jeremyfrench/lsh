@@ -10,6 +10,10 @@
 #include "connection.h"
 #include "parse.h"
 
+#define CLASS_DECLARE
+#include "channel.h.x"
+#undef CLASS_DECLARE
+
 /* Channels are indexed by local channel number in some array. This
  * index is not stored in the channel struct. When sending messages on
  * the channel, it is identified by the *remote* sides index number,
@@ -33,6 +37,64 @@
 /* Means that we should send close immediately after sending eof. */
 #define CHANNEL_CLOSE_AT_EOF 0x10
 
+/* CLASS:
+   (class
+     (name ssh_channel)
+     (vars
+       ; Remote channel number 
+       (channel_number simple UINT32)
+
+       ; We try to keep the rec_window_size ; between max_window / 2
+       ; and max_window.
+       (max_window simple UINT32)       
+
+       (rec_window_size simple UINT32)
+       (rec_max_packet simple UINT32)
+
+       (send_window_size simple UINT32)
+       (send_max_packet simple UINT32)
+
+       ; FIXME: Perhaps this should be moved to the channel_table, and
+       ; a pointer to that table be stored here instead?
+       (write object abstract_write)
+  
+       (request_types object alist)
+
+       (flags simple int)
+
+       ; Number of files connected to this channel. For instance,
+       ; stdout and stderr can be multiplexed on the same channel. We
+       ; should not close the channel until we have got an EOF on both
+       ; sources.
+       (sources simple int)
+
+       ; FIXME: What about return values from these functions? A
+       ; channel may fail to process it's data. Is there some way to
+       ; propagate a channel broken message to the other end? 
+
+       ; Type is CHANNEL_DATA or CHANNEL_STDERR_DATA
+       (recieve method int "int type" "struct lsh_string *data")
+
+       ; Called when we are allowed to send data on the channel. 
+       (send method int)
+
+       ; Called when the channel is closed 
+       (close method void)
+
+       ; Called when eof is recieved on the channel (or when it is
+       ; closed, whatever happens first).
+ 
+       (eof method int)
+  
+       ; Reply from SSH_MSG_CHANNEL_OPEN_REQUEST
+       (open_confirm method int)
+       (open_failure method int)
+
+       ; Reply from SSH_MSG_CHANNEL_REQUEST 
+       (channel_success method int)
+       (channel_failure method int)))
+
+#if 0
 struct ssh_channel
 {
   struct lsh_object header;
@@ -86,6 +148,7 @@ struct ssh_channel
   int (*channel_success)(struct ssh_channel *self);
   int (*channel_failure)(struct ssh_channel *self);
 };
+#endif
 
 #define CHANNEL_RECIEVE(s, t, d) \
 ((s)->recieve((s), (t), (d)))
@@ -112,6 +175,38 @@ struct ssh_channel
      
 /* FIXME: Perhaps, this information is better kept in the connection
  * object? */
+
+/* CLASS:
+   (class
+     (name channel_table)
+     (vars
+       ; FIXME: This is relevant only for the server side. It's
+       ; probably better to store this in the connection struct.
+
+       ;; uid_t user;  ; Authenticated user 
+
+       ; Channels are indexed by local number
+       (channels pointer (object ssh_channel) used_channels)
+
+       ; Allocation of local channel numbers is managed using the same
+       ; method as is traditionally used for allocation of unix file 
+       ; descriptors.
+
+       (allocated_channels simple UINT32)
+       (next_channel simple UINT32)
+     
+       (used_channels simple UINT32)
+       (max_channels simple UINT32) ; Max number of channels allowed 
+
+       ; If non-zero, close connection after all active channels have
+       ; died.
+       (pending_close simple int)
+
+       ; FIXME: Perhaps we should use an flag to indicate whether or
+       ; not new channels can be opened?
+       ))
+*/
+#if 0
 struct channel_table
 {
   struct lsh_object header;
@@ -139,8 +234,17 @@ struct channel_table
   /* FIXME: Perhaps we should use an flag to indicate whether or not
    * new channels can be opened? */
 };
+#endif
 
 /* SSH_MSG_GLOBAL_REQUEST */
+/* CLASS:
+   (class
+     (name global_request)
+     (vars
+       (handler method int "int want_reply" "struct simple_buffer *args")))
+*/
+
+#if 0
 struct global_request
 {
   struct lsh_object header;
@@ -149,10 +253,22 @@ struct global_request
 		 int want_reply,
 		 struct simple_buffer *args);
 };
+#endif
 
 #define GLOBAL_REQUEST(c, w, a) ((c)->handler((c), (w), (a)))
 
 /* SSH_MSG_CHANNEL_OPEN */
+/* CLASS:
+   (class
+     (name channel_open)
+     (vars
+       (handler method (object ssh_channel)
+               "struct simple_buffer *args"
+	       "UINT32 *error" "char **error_msg"
+	       "struct lsh_string **data")))
+*/
+
+#if 0
 struct channel_open
 {
   struct lsh_object header;
@@ -163,11 +279,23 @@ struct channel_open
 				  char **error_msg,
 				  struct lsh_string **data);
 };
+#endif
 
 #define CHANNEL_OPEN(c, a, e, m, d) \
 ((c)->handler((c), (a), (e), (m), (d)))
 
 /* SSH_MSH_CHANNEL_REQUEST */
+/* CLASS:
+   (class
+     (name channel_request)
+     (vars
+       (handler method int
+		"struct ssh_channel *channel"
+		"int want_reply"
+		"struct simple_buffer *args")))
+*/
+
+#if 0
 struct channel_request
 {
   struct lsh_object header;
@@ -177,9 +305,21 @@ struct channel_request
 		 int want_reply,
 		 struct simple_buffer *args);
 };
+#endif
 
 #define CHANNEL_REQUEST(s, c, w, a) \
 ((s)->handler((s), (c), (w), (a)))
+
+/* CLASS:
+   (class
+     (name connection_startup)
+     (vars
+       (start method int
+	      "struct channel_table *table"
+	      "struct abstract_write *write")))
+*/
+
+#if 0
 
 struct connection_startup
 {
@@ -189,6 +329,7 @@ struct connection_startup
 	       struct channel_table *table,
 	       struct abstract_write *write);
 };
+#endif
 
 #define CONNECTION_START(c, s, w) ((c)->start((c), (s), (w)))
 

@@ -34,12 +34,21 @@
 #include <netinet/in.h>
 
 /* A closed function with a file descriptor as argument */
+/* CLASS:
+   (class
+     (name fd_callback)
+     (vars
+       (f method int "int fd")))
+*/
+
+#if 0
 struct fd_callback
 {
   struct lsh_object header;
   
   int (*f)(struct fd_callback **closure, int fd);
 };
+#endif
 
 #define FD_CALLBACK(c, fd) ((c)->f(&(c), (fd)))
 
@@ -57,11 +66,20 @@ struct fd_callback
 
 #define CLOSE_PROTOCOL_FAILURE 5
 
+/* CLASS:
+   (class
+     (name close_callback)
+     (vars
+       (f method int "int reason")))
+*/
+
+#if 0
 struct close_callback
 {
   struct lsh_object header;
   int (*f)(struct close_callback *closure, int reason);
 };
+#endif
 
 #define CLOSE_CALLBACK(c, r) ((c)->f((c), (r)))
 
@@ -72,6 +90,33 @@ struct close_callback
 #define FD_CONNECT 3
 #endif
 
+/* CLASS:
+   (class
+     (name lsh_fd)
+     (vars
+       (next object lsh_fd)
+       (fd int)
+
+       ; User's close callback
+       (close_reason int)
+       (close_callback object close_callback)
+
+       ; Called before poll
+       (prepare method void)
+
+       (want_read int)
+       ; Called if poll indicates that data can be read. 
+       (read method void)
+
+       (want_write int)
+       ; Called if poll indicates that data can be written.
+       (write method void)
+
+       (close_now int)
+       (really_close method void)))
+*/
+
+#if 0
 struct lsh_fd
 {
   struct lsh_object header;
@@ -97,12 +142,25 @@ struct lsh_fd
   int close_now;
   void (*really_close)(struct lsh_fd *self);
 };
+#endif
 
 #define PREPARE_FD(fd) ((fd)->prepare((fd)))
 #define READ_FD(fd) ((fd)->read((fd)))
 #define WRITE_FD(fd) ((fd)->write((fd)))
 #define REALLY_CLOSE_FD(fd) ((fd)->really_close((fd)))
 
+/* CLASS:
+   (class
+     (name io_fd)
+     (super lsh_fd)
+     (vars
+       ; Reading 
+       (handler object read_handler)
+       ; Writing 
+       (buffer object write_buffer)))
+*/
+
+#if 0
 struct io_fd
 {
   struct lsh_fd super;
@@ -113,13 +171,24 @@ struct io_fd
   /* Writing */
   struct write_buffer *buffer;
 };
+#endif
 
+/* CLASS:
+   (class
+     (name io_fd)
+     (super lsh_fd)
+     (vars
+       (callback object fd_callback)))
+*/
+
+#if 0
 struct listen_fd
 {
   struct lsh_fd super;
   
   struct fd_callback *callback;
 };
+#endif
 
 #define connect_fd listen_fd
 
@@ -134,6 +203,17 @@ struct callout
 };
 #endif
 
+/* CLASS:
+   (class
+     (name io_backend)
+     (vars
+       ; Linked list of fds. 
+       (files object lsh_fd)
+       ; Callouts
+       ;; (callouts object callout)))
+*/
+
+#if 0
 struct io_backend
 {
   struct lsh_object header;
@@ -146,6 +226,7 @@ struct io_backend
   struct callout *callouts;
 #endif
 };
+#endif
 
 void init_backend(struct io_backend *b);
 

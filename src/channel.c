@@ -34,6 +34,10 @@
 
 #include <assert.h>
 
+#define CLASS_DEFINE
+#include "channel.h.x"
+#undef CLASS_DEFINE
+
 struct connection_service
 {
   struct ssh_service super;
