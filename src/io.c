@@ -1285,10 +1285,10 @@ void io_set_nonblocking(int fd)
   int old = fcntl(fd, F_GETFL);
 
   if (old < 0)
-    fatal("io_set_nonblocking: fcntl(F_GETFL) failed %e", errno);
+    fatal("io_set_nonblocking: fcntl(F_GETFL) failed %e\n", errno);
   
   if (fcntl(fd, F_SETFL, old | O_NONBLOCK) < 0)
-    fatal("io_set_nonblocking: fcntl(F_SETFL) failed %e", errno);
+    fatal("io_set_nonblocking: fcntl(F_SETFL) failed %e\n", errno);
 }
 
 void io_set_blocking(int fd)
@@ -1296,10 +1296,10 @@ void io_set_blocking(int fd)
   int old = fcntl(fd, F_GETFL);
 
   if (old < 0)
-    fatal("io_set_blocking: fcntl(F_GETFL) failed %e", errno);
+    fatal("io_set_blocking: fcntl(F_GETFL) failed %e\n", errno);
   
   if (fcntl(fd, F_SETFL, old & ~O_NONBLOCK) < 0)
-    fatal("io_set_blocking: fcntl(F_SETFL) failed %e", errno);
+    fatal("io_set_blocking: fcntl(F_SETFL) failed %e\n", errno);
 }
 
 void io_set_close_on_exec(int fd)
@@ -1310,7 +1310,7 @@ void io_set_close_on_exec(int fd)
   int old = fcntl(fd, F_GETFD);
 
   if (old < 0)
-    fatal("io_set_nonblocking: fcntl(F_GETFD) failed %e", errno);
+    fatal("io_set_close_on_exec: fcntl(F_GETFD) failed %e\n", errno);
   
   if (fcntl(fd, F_SETFD, old | 1) < 0)
     fatal("Can't set close-on-exec flag for fd %i %e\n", fd, errno);
