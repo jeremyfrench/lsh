@@ -22,8 +22,11 @@ export LSH_YARROW_SEED_FILE SEXP_CONV
 
 # Ignore any options the tester might have put in the environment.
 
-unset LSHGFLAGS
-unset LSHFLAGS
+# With bash, unset returns a non-zero exit status for non-existing
+# variables. We have to ignore that error.
+
+unset LSHGFLAGS || :
+unset LSHFLAGS || :
 
 PORT=11147
 ATEXIT='set +e'
