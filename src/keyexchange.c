@@ -36,7 +36,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
-struct handle_kexinit
+struct kexinit_handler
 {
   struct packet_handler super;
   int type;
@@ -184,7 +184,7 @@ static int do_handle_kexinit(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
 {
-  struct handle_kexinit *closure = (struct handle_kexinit *) c;
+  struct kexinit_handler *closure = (struct kexinit_handler *) c;
   struct kexinit *msg = parse_kexinit(packet);
 
   int kex_algorithm;
@@ -285,7 +285,7 @@ struct packet_handler *make_kexinit_handler(int type,
 					    struct make_kexinit *init,
 					    struct alist *algorithms)
 {
-  struct handle_kexinit *self = xalloc(sizeof(struct handle_kexinit));
+  struct kexinit_handler *self = xalloc(sizeof(struct kexinit_handler));
 
   self->super.handler = do_handle_kexinit;
 
@@ -400,7 +400,7 @@ struct mac_instance *kex_make_mac(struct hash_instance *secret,
   return mac;
 }
 
-struct handle_newkeys
+struct newkeys_handler
 {
   struct packet_handler super;
   struct crypto_instance *crypto;
@@ -411,7 +411,7 @@ static int do_handle_newkeys(struct packet_handler *c,
 			     struct ssh_connection *connection,
 			     struct lsh_string *packet)
 {
-  struct handle_newkeys *closure = (struct handle_newkeys *) c;
+  struct newkeys_handler *closure = (struct newkeys_handler *) c;
   struct simple_buffer buffer;
   int msg_number;
 
@@ -441,7 +441,7 @@ struct packet_handler *
 make_newkeys_handler(struct crypto_instance *crypto,
 		     struct mac_instance *mac)
 {
-  struct handle_newkeys *self = xalloc(sizeof(struct handle_newkeys));
+  struct newkeys_handler *self = xalloc(sizeof(struct newkeys_handler));
 
   self->super.handler = do_handle_newkeys;
   self->crypto = crypto;
