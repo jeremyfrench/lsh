@@ -14,8 +14,9 @@ noinst_PROGRAMS = $(TS_PROGS)
 LDADD = testutils.o ../libspki.a -lnettle
 
 EXTRA_DIST = testutils.c testutils.h $(TS_SH) \
-	functions.sh run-tests setup-env key-1.private key-2.private \
-	fake-sshd1
+	$(wildcard $(srcdir)/cdsa-cases/*.in) \
+	$(wildcard $(srcdir)/cdsa-cases/*.out) \
+	run-tests
 
 CLEANFILES =
 
