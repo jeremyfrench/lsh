@@ -71,3 +71,40 @@ diff -u /usr/local/src/tsocks-1.8/tsocks.c tsocks/tsocks.c
           show_msg(MSGERR, "SOCKS server %s (%s) is not on a local subnet!\n",
                    path->address, inet_ntoa(server_address.sin_addr));
        } else
+diff -u /usr/local/src/tsocks-1.8/tsocks tsocks/tsocks
+--- /usr/local/src/tsocks-1.8/tsocks	Sat Mar 16 11:27:18 2002
++++ tsocks/tsocks	Wed Mar 17 21:06:51 2004
+@@ -42,14 +42,16 @@
+    exit
+ fi
+ 
++libdir="/usr/local/lib"
++
+ case "$1" in
+ 	on)
+ 		if [ -z "$LD_PRELOAD" ]
+ 			then
+-				export LD_PRELOAD="/usr/lib/libtsocks.so"
++				export LD_PRELOAD="$libdir/libtsocks.so"
+ 			else
+-				echo $LD_PRELOAD | grep -q "/usr/lib/libtsocks\.so" || \
+-				export LD_PRELOAD="/usr/lib/libtsocks.so $LD_PRELOAD"
++				echo $LD_PRELOAD | grep -q "$libdir/libtsocks\.so" || \
++				export LD_PRELOAD="$libdir/libtsocks.so $LD_PRELOAD"
+ 		fi
+ 	;;
+ 	off)
+@@ -68,10 +70,10 @@
+ 	*)
+ 		if [ -z "$LD_PRELOAD" ]
+ 		then
+-			export LD_PRELOAD="/usr/lib/libtsocks.so"
++			export LD_PRELOAD="$libdir/libtsocks.so"
+ 		else
+-			echo $LD_PRELOAD | grep -q "/usr/lib/libtsocks\.so" || \
+-			export LD_PRELOAD="/usr/lib/libtsocks.so $LD_PRELOAD"
++			echo $LD_PRELOAD | grep -q "$libdir/libtsocks\.so" || \
++			export LD_PRELOAD="$libdir/libtsocks.so $LD_PRELOAD"
+ 		fi
+ 
+ 		if [ $# = 0 ]
