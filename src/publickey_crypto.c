@@ -105,7 +105,7 @@ static struct lsh_string *do_dss_sign(struct signer *c,
   debug_mpz(r);
   debug("\n");
   
-  mpz_tdiv_r(r, r, closure->public.q);
+  mpz_fdiv_r(r, r, closure->public.q);
 
   debug("do_dss_sign, r: ");
   debug_mpz(r);
@@ -127,10 +127,10 @@ static struct lsh_string *do_dss_sign(struct signer *c,
   /* Compute signature s = k^-1(h + ar) (mod q) */
   mpz_init(s);
   mpz_mul(s, r, closure->a);
-  mpz_tdiv_r(s, s, closure->public.q);
+  mpz_fdiv_r(s, s, closure->public.q);
   mpz_add(s, s, tmp);
   mpz_mul(s, s, k);
-  mpz_tdiv_r(s, s, closure->public.q);
+  mpz_fdiv_r(s, s, closure->public.q);
 
   debug("do_dss_sign, s: ");
   debug_mpz(s);
@@ -227,24 +227,33 @@ static int do_dss_verify(struct verifier *c,
   mpz_init(v);
 
   mpz_mul(tmp, tmp, w);
-  mpz_tdiv_r(tmp, tmp, closure->public.q);
+  mpz_fdiv_r(tmp, tmp, closure->public.q);
 
+  debug("u1: ");
+  debug_mpz(tmp);
+  debug("\n");
+  
   mpz_powm(v, closure->public.g, tmp, closure->public.p);
 
   /* y^{w * r (mod q) } (mod p) */
   mpz_mul(tmp, r, w);
-  mpz_tdiv_r(tmp, tmp, closure->public.q);
-  mpz_powm(tmp, closure->public.y, tmp, closure->public.p);
+  mpz_fdiv_r(tmp, tmp, closure->public.q);
 
+  debug("u2: ");
+  debug_mpz(tmp);
+  debug("\n");
+
+  mpz_powm(tmp, closure->public.y, tmp, closure->public.p);
+  
   /* (g^{w * h} * y^{w * r} (mod p) ) (mod q) */
   mpz_mul(v, v, tmp);
-  mpz_tdiv_r(v, v, closure->public.p);
+  mpz_fdiv_r(v, v, closure->public.p);
 
   debug("do_dss_verify, group element: ");
   debug_mpz(v);
   debug("\n");
   
-  mpz_tdiv_r(v, v, closure->public.q);
+  mpz_fdiv_r(v, v, closure->public.q);
 
   debug("do_dss_verify, v: ");
   debug_mpz(v);
@@ -397,7 +406,7 @@ static void zn_invert(struct group *c, mpz_t res, mpz_t x)
   if (!mpz_invert(res, x, closure->modulo))
     fatal("zn_invert: element is non-invertible\n");
 
-  mpz_tdiv_r(res, res, closure->modulo);
+  mpz_fdiv_r(res, res, closure->modulo);
 }
 
 static void zn_combine(struct group *c, mpz_t res, mpz_t a, mpz_t b)
@@ -405,7 +414,7 @@ static void zn_combine(struct group *c, mpz_t res, mpz_t a, mpz_t b)
   struct group_zn *closure = (struct group_zn *) c;
 
   mpz_mul(res, a, b);
-  mpz_tdiv_r(res, res, closure->modulo);
+  mpz_fdiv_r(res, res, closure->modulo);
 }
 
 static void zn_power(struct group *c, mpz_t res, mpz_t g, mpz_t e)
@@ -566,10 +575,10 @@ void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
 				    self->server_key,
 				    self->e, self->f,
 				    self->K);
-  debug("dh_hash_digest()\n ");
+  debug("dh_hash_digest()\n '");
   debug_safe(s->length,
 	     s->data);
-  debug("\n");
+  debug("'\n");
   
   HASH_UPDATE(self->hash, s->length, s->data);
   lsh_string_free(s);
@@ -622,12 +631,12 @@ int dh_process_server_msg(struct diffie_hellman_instance *self,
 int dh_verify_server_msg(struct diffie_hellman_instance *self,
 			 struct verifier *v)
 {
-  UINT8 *digest;
+  self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
   
-  digest = alloca(self->hash->hash_size);
-  dh_hash_digest(self, digest);
+  dh_hash_digest(self, self->exchange_hash->data);
 
-  return VERIFY(v, self->hash->hash_size, digest,
+  return VERIFY(v,
+		self->hash->hash_size, self->exchange_hash->data,
 		self->signature->length, self->signature->data);
 }
 
