@@ -38,7 +38,7 @@
 
 #define NLISTS 10
 
-struct kexinit *parse_kexinit(struct lsh_string *packet)
+static struct kexinit *parse_kexinit(struct lsh_string *packet)
 {
   struct kexinit *res;
   struct simple_buffer buffer;
@@ -138,7 +138,7 @@ int initiate_keyexchange(struct ssh_connection *connection,
     return res;
 }
 
-int select_algorithm(int *server_list, int *client_list)
+static int select_algorithm(int *server_list, int *client_list)
 {
   /* FIXME: This quadratic complexity algorithm should do as long as
    * the lists are short. */
@@ -178,6 +178,9 @@ static int do_handle_kexinit(struct packet_handler *c,
   void **algorithms;
 
   int i;
+
+  MDEBUG(closure);
+  MDEBUG(msg);
   
   if (!msg)
     return 0;
@@ -280,10 +283,10 @@ struct packet_handler *make_kexinit_handler(int type,
 }
 
 /* FIXME: THis function can't handle IV:s at all */
-struct lsh_string *kex_make_key(struct hash_instance *secret,
-				UINT32 key_length,
-				int type,
-				struct lsh_string *session_id)
+static struct lsh_string *kex_make_key(struct hash_instance *secret,
+				       UINT32 key_length,
+				       int type,
+				       struct lsh_string *session_id)
 {
   /* Indexed by the KEX_* values */
   static /* const */ char *tags = "CDEF";
@@ -304,7 +307,7 @@ struct lsh_string *kex_make_key(struct hash_instance *secret,
   HASH_UPDATE(hash, session_id->length, session_id->data);
   HASH_DIGEST(hash, digest);
 
-  if (key_length < hash->hash_size)
+  if (key_length > hash->hash_size)
     fatal("Not implemented\n");
 
   memcpy(key->data, digest, key_length);
@@ -394,6 +397,8 @@ static int do_handle_newkeys(struct packet_handler *c,
   struct simple_buffer buffer;
   UINT8 msg_number;
 
+  MDEBUG(closure);
+  
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
@@ -444,6 +449,8 @@ static struct kexinit *do_make_kexinit(struct make_kexinit *c)
   static int mac_algorithms[] = { ATOM_HMAC_SHA1, 0 };
   static int compression_algorithms[] = { ATOM_NONE, 0 };
   static int languages[] = { 0 };
+
+  MDEBUG(closure);
   
   RANDOM(closure->r, 16, res->cookie);
   res->kex_algorithms = kex_algorithms;
