@@ -29,13 +29,15 @@ noinst_LIBRARIES = liblsh.a
 
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c prime_table.h
 
-liblsh_a_SOURCES = abstract_io.c abstract_crypto.c alist.c atoms.c \
-	bignum.c channel.c charset.c connection.c crypto.c \
-	debug.c disconnect.c  dss_keygen.c encrypt.c \
-	format.c gc.c getopt.c io.c keyexchange.c \
-	list.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
+liblsh_a_SOURCES = abstract_io.c abstract_crypto.c alist.c arcfour.c atoms.c \
+	bignum.c blowfish.c \
+	cascade.c cbc.c channel.c charset.c connection.c crypto.c \
+	debug.c des.c disconnect.c  dss_keygen.c encrypt.c \
+	format.c gc.c getopt.c hmac.c io.c keyexchange.c \
+	list.c md5.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
 	randomness.c \
-	read_data.c read_line.c read_packet.c resource.c service.c \
+	read_data.c read_line.c read_packet.c resource.c \
+	sha.c service.c \
 	translate_signal.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c 
 
