@@ -180,7 +180,8 @@ unix_read_password(struct interact *s,
 		   const struct lsh_string *prompt, int free)
 {
   CAST(unix_interact, self, s);
-
+  trace("unix_interact.c:unix_read_password\n");
+  
   if (self->askpass)
     {
       const char *argv[3];
@@ -190,6 +191,7 @@ unix_read_password(struct interact *s,
       
       if (null < 0)
 	{
+	  werror("Failed to open /dev/null!\n");
 	  if (free)
 	    lsh_string_free(prompt);
 	  
@@ -206,6 +208,10 @@ unix_read_password(struct interact *s,
 	  return NULL;
 	}
       argv[2] = NULL;
+
+      trace("unix_interact.c: spawning askpass program `%z'\n",
+	    self->askpass);
+
       password = lsh_popen_read(self->askpass, argv, null, 100);
 
       if (free)
@@ -252,6 +258,9 @@ unix_set_askpass(struct interact *s,
 		 const char *askpass)
 {
   CAST(unix_interact, self, s);
+  trace("unix_interact.c:unix_set_askpass\n");
+  assert(askpass);
+  
   self->askpass = askpass;
 }
 
