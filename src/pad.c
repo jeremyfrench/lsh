@@ -44,8 +44,7 @@ static int do_pad(struct abstract_write **w,
 struct abstract_write *
 make_packet_pad(struct abstract_write *continuation,
 		unsigned block_size,
-		random_function random,
-		void *state)
+		random_function random)
 {
   struct packet_pad *closure = xalloc(sizeof(struct packet_pad));
 
@@ -53,7 +52,6 @@ make_packet_pad(struct abstract_write *continuation,
   closure->super.next = continuation;
   closure->block_size = block_size;
   closure->random = random;
-  closure->state = state;
 
   return &closure->super.super;
 }
