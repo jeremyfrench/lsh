@@ -329,7 +329,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       if (self->with_password || self->with_publickey)
 	{
 	  int i = 0;
-	  struct user_db *db = make_unix_user_db(self->allow_root);
+	  struct user_db *db = make_unix_user_db(self->backend, self->allow_root);
 	  
 	  self->userauth_methods
 	    = alloc_int_list(self->with_password + self->with_publickey);
