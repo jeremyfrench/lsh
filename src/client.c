@@ -758,7 +758,7 @@ fork_output(int out)
 static void do_##name(struct lsh_callback *self); \
 static struct lsh_callback \
 name = { STATIC_HEADER, do_##name }; \
-static void do_##name(struct lsh_callback *self)
+static void do_##name(struct lsh_callback *self UNUSED)
 
 /* A callback that exits the process immediately. */
 DEFINE_CALLBACK(exit_callback)
