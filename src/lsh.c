@@ -23,8 +23,10 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <stdio.h>
+#include <errno.h>
 #include <locale.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "getopt.h"
 
@@ -93,13 +95,17 @@ int main(int argc, char **argv)
 
   random_seed = ssh_format("%z", "gazonk");
   
-  io_connect(&backend, &remote, NULL,
-	     make_client_callback(&backend,
-				  "lsh - a free ssh",
-				  BLOCK_SIZE,
-				  make_poor_random(&sha_algorithm,
-						   random_seed)));
-
+  if (!io_connect(&backend, &remote, NULL,
+		  make_client_callback(&backend,
+				       "lsh - a free ssh",
+				       BLOCK_SIZE,
+				       make_poor_random(&sha_algorithm,
+							random_seed))))
+    {
+      werror("lsh: Connection failed: %s\n", strerror(errno));
+      return 1;
+    }
+  
   lsh_string_free(random_seed);
   
   io_run(&backend);

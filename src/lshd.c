@@ -22,9 +22,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
-<
-#include <stdio.h>
+
+#include <errno.h>
 #include <locale.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "getopt.h"
 
@@ -87,10 +89,14 @@ int main(int argc, char **argv)
       exit(1);
     }
 
-  io_listen(&backend, &local, 
+  if (!io_listen(&backend, &local, 
 	    make_server_callback(&backend,
 				 "lsh - a free ssh",
-				 BLOCK_SIZE));
+				 BLOCK_SIZE)))
+    {
+      werror("lsh: Connection failed: %s\n", strerror(errno));
+      return 1;
+    }
   
   io_run(&backend);
 
