@@ -25,7 +25,7 @@
 #ifndef LSH_USERAUTH_H_INCLUDED
 #define LSH_USERAUTH_H_INCLUDED
 
-#include "lsh.h"
+#include "command.h"
 #include "exception.h"
 #include "resource.h"
 
@@ -76,9 +76,9 @@ make_userauth_special_exception(struct lsh_string *reply,
        ; Open a file in the user's "~/.lsh" directory. File must be
        ; owned by the user and not writable for other users. If SECRET is 1,
        ; it must also not be readable by other users.
-       (read_file method "struct lsh_fd *"
+       (read_file method void
                   "const char *name" "int secret"
-                  "const struct exception **x" "struct exception_handler *e")
+                  "struct command_continuation *c" "struct exception_handler *e")
 		  
        ; chdir to the user's home directory
        (chdir_home method int)

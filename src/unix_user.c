@@ -305,25 +305,33 @@ do_file_exists(struct lsh_user *u,
 /* NOTE: No arbitrary file names are passed to this function, so we don't have
  * to check for things like "../../some/secret/file" */
 
-static struct lsh_fd *
+static void 
 do_read_file(struct lsh_user *u, 
 	     const char *name, int secret,
-	     const struct exception **x,
+	     struct command_continuation *c,
 	     struct exception_handler *e)
 {
   CAST(unix_user, user, u);
   struct lsh_string *f;
   struct lsh_fd *fd;
+  const struct exception *x;
   
   if (!user->home)
-    return NULL;
-
+    {
+      EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_READ, NULL,
+					   ENOENT, "No home directory"));
+      return;
+    }
+  
   f = ssh_format("%ls/.lsh/%lz%c", user->home, name, 0);
 
-  fd = io_read_user_file(user->backend, f->data, user->super.uid, secret, x, e);
+  fd = io_read_user_file(user->backend, f->data, user->super.uid, secret, &x, e);
   lsh_string_free(f);
 
-  return fd;
+  if (fd)
+    COMMAND_RETURN(c, fd);
+  else
+    EXCEPTION_RAISE(e, x);
 }
 
 /* Change to user's home directory. FIXME: If the server is running
