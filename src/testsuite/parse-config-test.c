@@ -39,22 +39,22 @@ static void
 display_settings(struct config_setting *setting)
 {
   if (!setting)
-    werror("  {}\n");
+    werror("    {}\n");
   else
     {
-      werror("  {\n");
+      werror("    {\n");
       for (; setting; setting = setting->next)
 	{
 	  static const char *keys[CONFIG_TYPES]
 	    = { "address", "user" };
 	  if (setting->type >= CONFIG_TYPES)
-	    werror("    Invalid config type: %i\n", setting->type);
+	    werror("      Invalid config type: %i\n", setting->type);
 	  else if (!setting->value)
-	    werror("    %z = <NULL>\n", keys[setting->type]);
+	    werror("      %z = <NULL>\n", keys[setting->type]);
 	  else
-	    werror("    %z = %S\n", keys[setting->type], setting->value);
+	    werror("      %z = %S\n", keys[setting->type], setting->value);
 	}
-      werror("  }\n");
+      werror("    }\n");
     }
 }
 
@@ -70,9 +70,9 @@ display_hosts(struct config_host *host)
       for (; host; host = host->next)
 	{
 	  if (host->name)
-	    werror("  %S\n", host->name);
+	    werror("    %S\n", host->name);
 	  else
-	    werror("  <unnamed>\n");
+	    werror("    <unnamed>\n");
 	  display_settings(host->settings);
 	}
       werror("  }\n");
