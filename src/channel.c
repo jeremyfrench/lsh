@@ -1059,8 +1059,7 @@ do_channel_eof(struct packet_handler *closure UNUSED,
 	      else
 		/* FIXME: What is a reasonable default behaviour?
 		 * Closing the channel may be the right thing to do. */
-		if (! (channel->flags & CHANNEL_SENT_CLOSE))
-		  channel_close(channel);
+		channel_close(channel);
 	    }
 	}
       else
@@ -1540,8 +1539,7 @@ do_channel_write(struct abstract_write *w,
     {
       /* EOF */
       assert(closure->channel->sources);
-      if ( (closure->channel->sources == 1)
-	   && !(closure->channel->flags & CHANNEL_SENT_EOF))
+      if (closure->channel->sources == 1)
 	channel_eof(closure->channel);
     }
   else
@@ -1559,8 +1557,7 @@ do_channel_write_extended(struct abstract_write *w,
     {
       /* EOF */
       assert(closure->super.channel->sources);
-      if ( (closure->super.channel->sources == 1)
-	   && !(closure->super.channel->flags & CHANNEL_SENT_EOF))
+      if (closure->super.channel->sources == 1)
 	channel_eof(closure->super.channel);
     }
   else
