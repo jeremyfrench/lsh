@@ -1,5 +1,6 @@
 [attr]binary -text -crlf -diff -ident
 * text ident
 *.pdu binary
+/src/testsuite/UTF-8-test.txt binary
 LICENSE eol=crlf
 /src/testsuite/rapid7-ssh-pdu/README eol=crlf
