@@ -78,6 +78,7 @@ parse_string(struct simple_buffer *buffer,
   return 1;
 }
 
+/* FIXME: Get rid of this memcpy? */
 int
 parse_octets(struct simple_buffer *buffer,
 	     uint32_t length, uint8_t *start)
