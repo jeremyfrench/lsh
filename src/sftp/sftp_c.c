@@ -591,10 +591,11 @@ sftp_get_mem_init(struct sftp_callback *state,
 		  off_t startat)
 {
   UINT32 id;
-  sftp_null_state(state);
   struct sftp_attrib a;
 
+  sftp_null_state( state );   /* Make sure these structures are "clean" */
   sftp_clear_attrib( &a );
+
   id = sftp_unique_id();
 
   sftp_set_msg( out, SSH_FXP_OPEN );
@@ -930,10 +931,11 @@ sftp_get_file_init(struct sftp_callback *state,
   int openmode;
 
   off_t startat = 0;
-  sftp_null_state(state);
   struct sftp_mem mem;
   int ret, fd;
   int mask;
+
+  sftp_null_state( state ); /* Make sure state is "clean" */
 
   /* FIXME: Should probably try to retain permissions from the other side */
 
@@ -1234,12 +1236,13 @@ sftp_put_file_init(struct sftp_callback *state,
   off_t startat = cont; 
   off_t filesize = 0;
 
-  sftp_null_state(state);
   struct sftp_mem mem;
   struct stat st;
   struct sftp_attrib a;
   int ret;
   int fd;
+
+  sftp_null_state( state ); /* Make sure state is "clean" */
 
   state->last = SFTP_PUT_FILE_INIT;
 
