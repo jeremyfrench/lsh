@@ -48,7 +48,7 @@ struct string_buffer
   struct lsh_string *partial; /* Partial block. */
 
   uint32_t left;
-  uint8_t *current;
+  uint32_t pos;
 
   /* List of blocks beyond the first one */
   struct string_node *tail;
