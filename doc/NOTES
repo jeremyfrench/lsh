@@ -57,10 +57,32 @@ faster:
 > pn + 1).
 
 
+EOF ON CHANNELS
+
+A typical channel (i.e. all channels created in the current
+implementation) are, at each end, connected to one or more fd:s for
+reading and writing. When the source fd(:s), i.e. the fd:s that we are
+reading, have no more data available, a CHANNEL_EOF message should be
+sent. As there may be several such fd:s, we use a counter SOURCES in
+the channel struct to keep track of the number of active source fd:s.
+When an fd is closed, the counter is decremented, and when it reaches
+zero, the CHANNEL_EOF message is sent.
+
+The decrementing of the counter is done by the close-callback for the
+fd, not by the read handler, as this is the easiest way to
+ensure that it is called exactly once whenever a fd dies. However, the
+sending of the CHANNEL_EOF massage is done by the read handlers
+do_channel_write() and do_channel_write_extended(). This is because
+otherwise, eof on bidirectional fd:s migth be delayed until it is
+closed also for writing. There are more unsolved issues with
+bidirectional fd:s though, in particular tcp connections where one
+direction is closed (with shutdown()) long before the other.
+
+
 CLOSING CHANNELS
 
 The right conditions for closing a channel, and in particular a
-session, are somewhat subtle. There are three events that may happen
+session, are even more subtle. There are three events that may happen
 in arbitrary order:
 
 (i) The client sends EOF on the channel.
@@ -89,6 +111,7 @@ with remaining child processes even after that the first process has
 died (i.e. after that it has received exit-status or exit-signal from
 the server). In this case, the client should be considered not to send
 EOF until it detects EOF on stdin.
+
 
 
 PARSING USING STRUCT SIMPLE_BUFFER
