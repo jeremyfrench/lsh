@@ -1,5 +1,9 @@
 2000-10-10  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/unix_user.c (kerberos_check_pw): Fixed call to execl(). 
+
+	* Released lsh-1.0.6.
+
 	* src/symmetric/serpent.c (serpent_setup): Reworked key padding.
 
 	* src/unix_user.c (make_unix_user_db): Added pw_helper argument.
