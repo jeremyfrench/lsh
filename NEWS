@@ -8,6 +8,9 @@ News for the 1.5.2 release
 	As a side effect, The -p option must now be given before
 	--interface to have any effect.
 
+	Fixed a file descriptor leak in the server tcpip forwarding
+	code.
+	
 News for the 1.5.1 release
 
 	Incompatible change to key format, to comply with the current

@@ -1,3 +1,34 @@
+2003-04-16  Niels Möller  <niels@s3.kth.se>
+
+	* src/testsuite/functions.sh (spawn_lshd): Check exit code from
+	lshd. Print out the lshd pid.
+	(spawn_lsh): Print out the lsh pid.
+
+	* src/Makefile.am (gcov-list): New target for running gcov.
+
+	* src/io_commands.c (listen_list_command): Deleted command.
+	REplaced by the io_listen_list function.
+
+	* src/lshd.c (options2local, options2keys, options2tcp_wrapper),
+	(close_on_sighup): Deleted commands.
+
+	* src/keyexchange.c (kexinit_filter): Deleted command.
+
+	* src/lshd.c (main): Reorganization, do more work before the work,
+	including reading host keys and binding sockets directly in main.
+	Moved the daemonization later, so that the forground process
+	doesn't exit until after the ports are bound.
+
+	Fixed an fd leak in the server tcpip-forwarding code.
+	* src/tcpforward.c (do_tcpip_forward_request_continuation): Use
+	remember_resource to associate the bound fd to the connection.
+	(make_tcpip_forward_request_continuation): New argument,
+	connection. 
+	(do_tcpip_forward_request): Pass the connection to
+	make_tcpip_forward_request_continuation.
+
+	* src/io.c (io_listen_list): New function.
+
 2003-04-15  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/functions.sh (spawn_lshd): Use -HUP, not -9, for
