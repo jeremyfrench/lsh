@@ -526,7 +526,8 @@ do_dsa_sign(struct signer *c,
       
       break;
     default:
-      fatal("do_dsa_sign: Internal error.");
+      fatal("do_dsa_sign: Internal error, unexpected algorithm %a.\n",
+	    algorithm);
     }
   mpz_clear(r);
   mpz_clear(s);
