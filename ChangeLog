@@ -1,5 +1,7 @@
 2003-01-16  Niels Möller  <niels@s3.kth.se>
 
+	* src/Makefile.am.in (EXTRA_DIST): Added environ.h.in.
+
 	* misc/xenofarm.sh: Fixed invocation of dotask, which should take
 	four arguments. 
 	(dotask): Don't create $task.pass, they're not used anymore.
