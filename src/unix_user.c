@@ -545,64 +545,6 @@ do_read_file(struct lsh_user *u,
     }
 }
 
-/* Change to user's home directory. */
-
-static int
-do_chdir_home(struct lsh_user *u)
-{
-  CAST(unix_user, user, u);
-
-  if (!user->home)
-    {
-      if (chdir("/") < 0)
-	{
-	  werror("Strange: home directory was NULL, and chdir(\"/\") failed: %z\n",
-		 STRERROR(errno));
-	  return 0;
-	}
-    }
-  else if (chdir(lsh_get_cstring(user->home)) < 0)
-    {
-      werror("chdir to %S failed (using / instead): %z\n",
-	     user->home, 
-	     STRERROR(errno));
-      if (chdir("/") < 0)
-	{
-	  werror("chdir(\"/\") failed: %z\n", STRERROR(errno));
-	  return 0;
-	}
-    }
-  return 1;  
-}
-
-/* FIXME: initgroups in glibc (and possibly on other systems as well)
- * is broken, and can't handle more than 32 groups. We need a
- * workaround for that. */
-static int
-change_uid(struct unix_user *user)
-{
-  /* NOTE: Error handling is crucial here. If we do something
-   * wrong, the server will think that the user is logged in
-   * under his or her user id, while in fact the process is
-   * still running as root. */
-  if (initgroups(lsh_get_cstring(user->super.name), user->gid) < 0)
-    {
-      werror("initgroups failed: %z\n", STRERROR(errno));
-      return 0;
-    }
-  if (setgid(user->gid) < 0)
-    {
-      werror("setgid failed: %z\n", STRERROR(errno));
-      return 0;
-    }
-  if (setuid(user->super.uid) < 0)
-    {
-      werror("setuid failed: %z\n", STRERROR(errno));
-      return 0;
-    }
-  return 1;
-}
-
 #define USE_LOGIN_DASH_CONVENTION 1
 
 static const char *
@@ -693,7 +635,7 @@ exec_shell(struct unix_user *user, struct spawn_info *info)
     debug("    '%z'\n", envp[i]);
 
 #if USE_LOGIN_DASH_CONVENTION
-  if (login)
+  if (info->login)
     {
       /* Fixup argv[0], so that it starts with a dash */
       const char *p;
@@ -835,7 +777,7 @@ do_spawn(struct lsh_user *u,
 
       trace("do_spawn: parent after sync\n");
       
-      process = unix_process_setup(child, info->login, &user->super, &c,
+      process = unix_process_setup(child, &user->super, &c,
 				   info->peer,
 				   info->pty ? info->pty->tty_name : NULL);
 
