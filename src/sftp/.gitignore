@@ -2,6 +2,7 @@
 /Makefile
 /Makefile.in
 /aclocal.m4
+/autom4te.cache
 /config.cache
 /config.h
 /config.h.in
@@ -14,3 +15,4 @@
 /sftp-test-client
 /stamp-h
 /stamp-h.in
+/stamp-h1

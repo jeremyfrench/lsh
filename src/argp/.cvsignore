@@ -4,6 +4,7 @@ Makefile
 Makefile.in
 aclocal.m4
 argp-test
+autom4te.cache
 config.cache
 config.h
 config.h.in
@@ -12,3 +13,4 @@ config.status
 configure
 stamp-h
 stamp-h.in
+stamp-h1
