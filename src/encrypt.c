@@ -5,47 +5,40 @@
 #include "encrypt.h"
 #include "xalloc.h"
 
-static int do_encrypt(struct encrypt_processor **c,
-		      struct simple_packet *packet)
+static int do_encrypt(struct abstract_write **w,
+		      struct lsh_string *packet)
 {
-  struct encrypt_processor *closure
-    = (struct encrypt_processor *) *c;
+  struct packet_encrypt *closure
+    = (struct packet_encrypt *) *w;
   
   /* FIXME: Use ssh_format() */
-  struct simple_packet *new
-    = lsh_string_alloc(packet->length + closure->mac_size);
+  struct lsh_string *new
+    = lsh_string_alloc(packet->length + closure->mac->mac_size);
 
-  closure->encrypt_function(closure->encrypt_state,
-			    packet->length,
-			    packet->data, new->data);
+  CRYPT(closure->crypto, packet->length, packet->data, new->data);
 
-  if (closure->mac_size)
-    closure->mac_function(closure->mac_state,
-			  packet->length,
-			  packet->data, new->data + packet->length);
-  
+  if (closure->mac->mac_size)
+  {
+    /* FIXME: Sequence number */
+    UPDATE(closure->mac, packet->length, packet->data);
+    DIGEST(closure->mac, new->data + packet->length);
+  }
   lsh_string_free(packet);
 
-  return apply_processor(closure->c.next, new);
+  return A_WRITE(closure->super.next, new);
 }
 
 struct abstract_write *
 make_packet_encrypt(struct abstract_write *continuation,
-		       unsigned mac_size,
-		       transform_function mac_function,
-		       void *mac_state,
-		       transform_function encrypt_function,
-		       void *encrypt_state)
+		    struct mac_instance *mac,
+		    struct crypto_instance *crypto)
 {
-  struct encrypt_processor *closure = xalloc(sizeof(struct encrypt_processor));
+  struct packet_encrypt *closure = xalloc(sizeof(struct packet_encrypt));
 
   closure->super.super.write = do_encrypt;
-  closure->c.next = continuation;
-  closure->mac_size = mac_size;
-  closure->mac_function = mac_function;
-  closure->mac_state = mac_state;
-  closure->encrypt_function = encrypt_function;
-  closure->encrypt_state = encrypt_state;
+  closure->super.next = continuation;
+  closure->mac = mac;
+  closure->crypto = crypto;
 
   return &closure->super.super;
 }

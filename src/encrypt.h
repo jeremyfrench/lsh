@@ -6,24 +6,21 @@
 #ifndef LSH_ENCRYPT_H_INCLUDED
 #define LSH_ENCRYPT_H_INCLUDED
 
-#include "transport.h"
+#include "abstract_io.h"
 #include "abstract_crypto.h"
 
-struct encrypt_processor
+struct packet_encrypt
 {
-  struct abstract_write_pipe c;
+  struct abstract_write_pipe super;
 
   struct mac_instance *mac;
-  stryct crypto_instance *crypto;
+  struct crypto_instance *crypto;
 };
 
 struct abstract_write *
-make_encrypt_processor(struct abstract_write *continue,
-		       unsigned mac_size,
-		       transform_function mac_function,
-		       void *mac_state,
-		       transform_function encrypt_function,
-		       void *encrypt_state);
+make_packet_encrypt(struct abstract_write *continuation,
+		    struct mac_instance *mac,
+		    struct crypto_instance *crypto);
 		       
 		    
 #endif /* LSH_ENCRYPT_H_INCLUDED */
