@@ -27,6 +27,9 @@
 #include "werror.h"
 
 #include <stdlib.h>
+#include <limits.h>
+
+#include "prime_table.h"
 
 static void limbs_to_octets(mpz_t n, UINT32 length,
 			    UINT8 pad, UINT8 *data)
@@ -183,6 +186,11 @@ UINT32 bignum_format_u_length(mpz_t n)
     }
 }
 
+void bignum_write(mpz_t n, unsigned length, UINT8 *data)
+{
+  limbs_to_octets(n, length, 0, data);
+}
+
 UINT32 bignum_format_u(mpz_t n, UINT8 *data)
 {
   switch(mpz_sgn(n))
@@ -201,15 +209,120 @@ UINT32 bignum_format_u(mpz_t n, UINT8 *data)
     }
 }
 
-void bignum_random(mpz_t x, struct randomness *random, mpz_t n)
+/* Returns a random number, 0 <= x < 2^bits. */
+void bignum_random_size(mpz_t x, struct randomness *random, unsigned bits)
 {
-  /* Add a few bits extra */
-  size_t length = (mpz_sizeinbase(n, 2) + 17) / 8;
+  unsigned length = (bits + 7) / 8;
   UINT8 *data = alloca(length);
 
   RANDOM(random, length, data);
 
   bignum_parse_u(x, length, data);
+}
 
-  mpz_tdiv_r(x, x, n);
+/* Returns a random number, 0 <= x < n. */
+void bignum_random(mpz_t x, struct randomness *random, mpz_t n)
+{
+  /* Add a few bits extra, to decrease the bias from the final modulo
+   * operation. */
+  bignum_random_size(x, random, mpz_sizeinbase(n, 2) + 10);
+
+  mpz_fdiv_r(x, x, n);
+}
+
+/* Returns a small factor of n, or 0 if none is found.*/
+unsigned long
+bignum_small_factor(mpz_t n, int limit)
+{
+  int i;
+  unsigned long stop;
+  
+  if (limit > NUMBER_OF_PRIMES)
+    limit = NUMBER_OF_PRIMES;
+
+  stop = mpz_get_ui(n);
+  if (mpz_cmp_ui(n, stop) != 0)
+    stop = ULONG_MAX;
+
+  for (i = 0;
+       (i < limit)
+	 /* These squares could be tabulated as well, but I don't
+	  * think it's worth the effort to get rid of this extra
+	  * multiplication. */
+	 && (SQR(primes[i]) <= stop); 
+       i++)
+    if (mpz_fdiv_ui(n, primes[i]) == 0)
+      return primes[i];
+  return 0;
+}
+
+void
+bignum_next_prime(mpz_t p, mpz_t n, int count, int prime_limit)
+{
+  mpz_t tmp;
+  unsigned long *moduli = 0;
+  unsigned long difference;
+  int i;
+  int composite;
+  
+  /* First handle tiny numbers */
+  if (mpz_cmp_ui(n, 2) <= 0)
+    {
+      mpz_set_ui(p, 2);
+      return;
+    }
+  mpz_set(p, n);
+  mpz_setbit(p, 0);
+
+  if (mpz_cmp_ui(n, 8) < 0)
+    return;
+
+  mpz_init(tmp);
+
+  if (prime_limit > (NUMBER_OF_PRIMES -1))
+    prime_limit = NUMBER_OF_PRIMES - 1;
+  if (prime_limit && (mpz_cmp_ui(p, primes[prime_limit]) <= 0) )
+    /* Don't use table for small numbers */
+    prime_limit = 0;
+  if (prime_limit)
+    {
+      /* Compute residues modulo small odd primes */
+      moduli = (unsigned long*) alloca((prime_limit -1) * sizeof(*moduli));
+      for (i = 0; i < prime_limit; i++)
+	moduli[i] = mpz_fdiv_ui(p, primes[i + 1]);
+    }
+ for (difference = 0; ; difference += 2)
+    {
+      if (difference >= ULONG_MAX - 10)
+	{ /* Should not happen, at least not very often... */
+	  mpz_add_ui(p, p, difference);
+	  difference = 0;
+	}
+      composite = 0;
+
+      /* First check residues */
+      if (prime_limit)
+	for (i = 0; i < prime_limit; i++)
+	  {
+	    if (moduli[i] == 0)
+	      composite = 1;
+	    moduli[i] = (moduli[i] + 2) % primes[i + 1];
+	  }
+      if (composite)
+	continue;
+      
+      mpz_add_ui(p, p, difference);
+      difference = 0;
+
+      /* Fermat test, with respect to 2 */
+      mpz_set_ui(tmp, 2);
+      mpz_powm(tmp, tmp, p, p);
+      if (mpz_cmp_ui(tmp, 2) != 0)
+	continue;
+
+      /* Miller-Rabin test */
+      if (mpz_probab_prime_p(p, count))
+	break;
+    }
+  mpz_clear(tmp);
 }

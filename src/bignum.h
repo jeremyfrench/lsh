@@ -43,7 +43,13 @@ UINT32 bignum_format_s_length(mpz_t n);
 UINT32 bignum_format_u(mpz_t n, UINT8 *data);
 UINT32 bignum_format_u_length(mpz_t n);
 
+void bignum_write(mpz_t n, unsigned length, UINT8 *data);
+
 /* Generates a random number in the interval 0 <= x < n */
 void bignum_random(mpz_t x, struct randomness *random, mpz_t n);
+void bignum_random_size(mpz_t x, struct randomness *random, unsigned bits);
+
+unsigned long bignum_small_factor(mpz_t n, int limit);
+void bignum_next_prime(mpz_t p, mpz_t n, int count, int prime_limit);
 
 #endif /* LSH_BIGNUM_H_INCLUDED */
