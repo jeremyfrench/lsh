@@ -2,16 +2,27 @@
  *
  */
 
+#include "blocking_write.h"
+
+#include "xalloc.h"
+#include "werror.h"
+
+#include <string.h>
+
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
-#warning blocking_write.c is obsolete
+#include <errno.h>
 
-static int do_write(struct abstract_write *w,
-		    struct lsh_string *packet)
+#define CLASS_DEFINE
+#include "blocking_write.h.x"
+#undef CLASS_DEFINE
+
+static int do_blocking_write(struct abstract_write *w,
+			     struct lsh_string *packet)
 {
-  CAST(packet_blocking_write, closure, w);
+  CAST(blocking_write, closure, w);
   
   UINT32 left = packet->length;
   UINT8 *p = packet->data;
@@ -25,26 +36,29 @@ static int do_write(struct abstract_write *w,
 	continue;
 
       if (written <= 0)
-	return 0;
+	{
+	  werror("blocking_write: writ failed (errno = %d): %s\n",
+		 errno, strerror(errno));
+	  return LSH_FAIL;
+	}
 
       left -= written;
       p += written;
     }
 
   lsh_string_free(packet);
-  return 1;
+  return LSH_OK;
 }
 
-struct abstract_write *make_blocking_write_procesor(int fd)
+struct abstract_write *make_blocking_write(int fd)
 {
-  struct blocking_write_processor *closure;
+  NEW(blocking_write, closure);
 
-  NEW(closure);
-
-  closure->p->f = do_write;
+  closure->super.write = do_blocking_write;
   closure->fd = fd;
 
   return &closure->super;
 }
+
 
       

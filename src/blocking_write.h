@@ -5,14 +5,20 @@
 #ifndef LSH_BLOCKING_WRITE_H_INCLUDED
 #define LSH_BLOCKING_WRITE_H_INCLUDED
 
-#warning blocking_write is not used
+#include "abstract_io.h"
 
-struct packet_blocking_write
-{
-  struct abstract_write super;
-  int fd;
-};
+#define CLASS_DECLARE
+#include "blocking_write.h.x"
+#undef CLASS_DECLARE
 
-struct abstract_write *make_blocking_write_procesor(int fd);
+/* CLASS:
+   (class
+     (name blocking_write)
+     (super abstract_write)
+     (vars
+       (fd . int)))
+*/
+
+struct abstract_write *make_blocking_write(int fd);
 
 #endif /* LSH_BLOCKING_WRITE_H_INCLUDED */
