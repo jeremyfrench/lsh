@@ -1920,8 +1920,9 @@ uidstring( int uid )
   if( p ) /* Negative result */
     return p->pw_name;
 
-  snprintf( uids, 9, "%d", uid );
-
+  snprintf( uids, sizeof(uids), "%d", uid );
+  uids[sizeof(uids)-1] = 0;
+  
   return uids;
 }
 
@@ -1934,7 +1935,9 @@ gidstring( int gid )
   if( g )
     return g->gr_name;
 
-  snprintf( gids, 9, "%d", gid );
+  snprintf( gids, sizeof(gids), "%d", gid );
+  gids[sizeof(gids)-1] = 0;
+
   return gids;
 }
 
