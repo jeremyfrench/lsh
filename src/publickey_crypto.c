@@ -42,11 +42,12 @@
 #include "publickey_crypto.h.x"
 #undef GABA_DEFINE
 
-#include "publickey_crypto.c.x"
+/* #include "publickey_crypto.c.x" */
 
-struct keypair *make_keypair(UINT32 type,
-			     struct lsh_string *public,
-			     struct signer *private)
+struct keypair *
+make_keypair(UINT32 type,
+	     struct lsh_string *public,
+	     struct signer *private)
 {
   NEW(keypair, self);
   
@@ -55,17 +56,9 @@ struct keypair *make_keypair(UINT32 type,
   self->private = private;
   return self;
 }
-    
-/* Groups */
-/* GABA:
-   (class
-     (name group_zn)
-     (super group)
-     (vars
-       (modulo bignum)))
-*/
 
-static int zn_member(struct group *c, mpz_t x)
+static int
+zn_range(struct abstract_group *c, mpz_t x)
 {
   CAST(group_zn, closure, c);
 
@@ -76,7 +69,31 @@ static int zn_member(struct group *c, mpz_t x)
   return ( (mpz_sgn(x) == 1) && (mpz_cmp(x, closure->modulo) < 0) );
 }
 
-static void zn_invert(struct group *c, mpz_t res, mpz_t x)
+#if 0
+static int
+zn_member(struct abstract_group *c, mpz_t x)
+{
+  if (zn_range(c, x))
+    {
+      CAST(group_zn, closure, c);
+      mpz_t t;
+      int res;
+      
+      mpz_init(t);
+
+      mpz_powm(t, x, closure->order, closure->modulo);
+      res = !mpz_cmp_ui(t, 1);
+
+      mpz_clear(t);
+
+      return res;
+    }
+  return 0;
+}
+#endif
+
+static void
+zn_invert(struct abstract_group *c, mpz_t res, mpz_t x)
 {
   CAST(group_zn, closure, c);
 
@@ -86,7 +103,8 @@ static void zn_invert(struct group *c, mpz_t res, mpz_t x)
   mpz_fdiv_r(res, res, closure->modulo);
 }
 
-static void zn_combine(struct group *c, mpz_t res, mpz_t a, mpz_t b)
+static void
+zn_combine(struct abstract_group *c, mpz_t res, mpz_t a, mpz_t b)
 {
   CAST(group_zn, closure, c);
 
@@ -94,34 +112,48 @@ static void zn_combine(struct group *c, mpz_t res, mpz_t a, mpz_t b)
   mpz_fdiv_r(res, res, closure->modulo);
 }
 
-static void zn_power(struct group *c, mpz_t res, mpz_t g, mpz_t e)
+static void
+zn_power(struct abstract_group *c, mpz_t res, mpz_t g, mpz_t e)
 {
   CAST(group_zn, closure, c);
 
   mpz_powm(res, g, e, closure->modulo);
 }
 
+static void
+zn_small_power(struct abstract_group *c, mpz_t res, mpz_t g, UINT32 e)
+{
+  CAST(group_zn, closure, c);
+
+  mpz_powm_ui(res, g, e, closure->modulo);
+}
+
 /* Assumes p is a prime number */
-struct group *make_zn(mpz_t p, mpz_t order)
+struct group_zn *
+make_zn(mpz_t p, mpz_t g, mpz_t order)
 {
   NEW(group_zn, res);
 
-  res->super.member = zn_member;
+  res->super.range = zn_range;
   res->super.invert = zn_invert;
   res->super.combine = zn_combine;
   res->super.power = zn_power;     /* Pretty Mutation! Magical Recall! */
+  res->super.small_power = zn_small_power;
   
   mpz_init_set(res->modulo, p);
+  mpz_init_set(res->super.generator, g);
   mpz_init_set(res->super.order, order);
 
-  return &res->super;
+  return res;
 }
 
+#if 0
 /* diffie-hellman */
 
-void init_diffie_hellman_instance(struct diffie_hellman_method *m,
-				  struct diffie_hellman_instance *self,
-				  struct ssh_connection *c)
+void
+init_diffie_hellman_instance(struct diffie_hellman_method *m,
+			     struct diffie_hellman_instance *self,
+			     struct ssh_connection *c)
 {
   struct lsh_string *s;
   /* FIXME: The allocator could do this kind of initialization
@@ -157,7 +189,8 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
   c->literal_kexinits[CONNECTION_SERVER] = NULL;
 }
 
-struct diffie_hellman_method *make_dh1(struct randomness *r)
+struct diffie_hellman_method *
+make_dh1(struct randomness *r)
 {
   NEW(diffie_hellman_method, res);
   mpz_t p;
@@ -187,8 +220,9 @@ struct diffie_hellman_method *make_dh1(struct randomness *r)
   return res;
 }
 
-void dh_generate_secret(struct diffie_hellman_instance *self,
-			mpz_t r)
+void
+dh_generate_secret(struct diffie_hellman_instance *self,
+		   mpz_t r)
 {
   mpz_t tmp;
 
@@ -202,14 +236,16 @@ void dh_generate_secret(struct diffie_hellman_instance *self,
   GROUP_POWER(self->method->G, r, self->method->generator, self->secret);
 }
 
-struct lsh_string *dh_make_client_msg(struct diffie_hellman_instance *self)
+struct lsh_string *
+dh_make_client_msg(struct diffie_hellman_instance *self)
 {
   dh_generate_secret(self, self->e);
   return ssh_format("%c%n", SSH_MSG_KEXDH_INIT, self->e);
 }
 
-int dh_process_client_msg(struct diffie_hellman_instance *self,
-			  struct lsh_string *packet)
+int
+dh_process_client_msg(struct diffie_hellman_instance *self,
+		      struct lsh_string *packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;
@@ -241,7 +277,8 @@ void dh_hash_update(struct diffie_hellman_instance *self,
 #endif
 
 /* Hashes server key, e and f */
-void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
+void
+dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
 {
   struct lsh_string *s = ssh_format("%S%n%n%n",
 				    self->server_key,
@@ -255,13 +292,15 @@ void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
   HASH_DIGEST(self->hash, digest);
 }
 
-void dh_make_server_secret(struct diffie_hellman_instance *self)
+void
+dh_make_server_secret(struct diffie_hellman_instance *self)
 {
   dh_generate_secret(self, self->f);
 }
 
-struct lsh_string *dh_make_server_msg(struct diffie_hellman_instance *self,
-				      struct signer *s)
+struct lsh_string *
+dh_make_server_msg(struct diffie_hellman_instance *self,
+		   struct signer *s)
 {
   self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
   
@@ -275,8 +314,9 @@ struct lsh_string *dh_make_server_msg(struct diffie_hellman_instance *self,
 				  self->exchange_hash->data));
 }
 
-int dh_process_server_msg(struct diffie_hellman_instance *self,
-			  struct lsh_string *packet)
+int
+dh_process_server_msg(struct diffie_hellman_instance *self,
+		      struct lsh_string *packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;
@@ -297,8 +337,9 @@ int dh_process_server_msg(struct diffie_hellman_instance *self,
   return 1;
 }
 	  
-int dh_verify_server_msg(struct diffie_hellman_instance *self,
-			 struct verifier *v)
+int
+dh_verify_server_msg(struct diffie_hellman_instance *self,
+		     struct verifier *v)
 {
   self->exchange_hash = lsh_string_alloc(self->hash->hash_size);
   
@@ -309,3 +350,4 @@ int dh_verify_server_msg(struct diffie_hellman_instance *self,
 		self->signature->length, self->signature->data);
 }
 
+#endif
