@@ -67,7 +67,7 @@
 #define COMMAND_RETURN(r, v) ((r)->c((r), (struct lsh_object *) (v))) 
 #define COMMAND_SIMPLE(f, a) ((f)->call_simple((f), (a)))
 
-int do_call_simple_command(struct command *c,
+int do_call_simple_command(struct command *s,
 			   struct lsh_object *arg,
 			   struct command_continuation *c);
 
@@ -85,9 +85,11 @@ int do_call_simple_command(struct command *c,
 struct command_continuation *
 make_apply(struct command *f, struct command_continuation *c);  
 
+#if 0
 extern struct command command_I;
 extern struct command command_S;
 extern struct command command_B;
+#endif
 
 struct command *make_listen_command(struct io_backend *backend,
 				    struct lsh_string *interface,

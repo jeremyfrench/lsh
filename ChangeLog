@@ -1,3 +1,11 @@
+Thu Mar 11 03:01:00 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/server_pty.c (tty_setctty): Fixed error message.
+
+	* src/command.c: Made the builtin commands instances of
+ 	command_simple, which means that they can return results directly,
+ 	without any continuation function.
+
 Wed Mar 10 17:26:59 1999    <nisse@idonex.se>
 
 	* src/command.h (command_simple): New class. Like command, but can
