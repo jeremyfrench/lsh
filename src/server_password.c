@@ -37,6 +37,10 @@
 #include <pwd.h>
 #include <grp.h>
 
+#ifdef HAVE_SHADOW_H
+#include <shadow.h>
+#endif
+
 #include "server_password.c.x"
 
 /* NOTE: Calls functions using the *disgusting* convention of returning
@@ -44,6 +48,11 @@
 struct unix_user *lookup_user(struct lsh_string *name, int free)
 {
   struct passwd *passwd;
+
+#ifdef HAVE_GETSPNAM
+  struct spwd *shadowpwd=NULL;
+#endif
+
   NEW(unix_user, res);
 
   name = make_cstring(name, free);
@@ -64,7 +73,21 @@ struct unix_user *lookup_user(struct lsh_string *name, int free)
   res->uid = passwd->pw_uid;
   res->gid = passwd->pw_gid;
   res->name = name;
-  res->passwd = format_cstring(passwd->pw_passwd);
+  
+#ifdef HAVE_GETSPNAM
+  if (passwd->pw_passwd && !strcmp(passwd->pw_passwd, "x"))
+  {
+    if (!(shadowpwd = getspnam(name->data)))
+    {
+      KILL(res);
+      return 0;
+    }
+    res->passwd = format_cstring(shadowpwd->sp_pwdp);
+  }
+  else
+#endif /* HAVE_GETSPNAM */
+    res->passwd = format_cstring(passwd->pw_passwd);
+
   res->home = format_cstring(passwd->pw_dir);
   res->shell = format_cstring(passwd->pw_shell);
   
