@@ -1,3 +1,30 @@
+2002-02-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/unix_interact.c (do_make_raw): Modify the terminal's VMIN
+	and VTIME values.
+
+	* src/io.c (io_callout): Added an argument, the number of seconds
+	until the callout should be invoked.
+
+	* src/handshake.c (handshake_command): Make the connection timeout
+	if handshake is not completed within 10 minutes.
+
+	* src/gc.c (gc_register): Updated call of io_callout.
+
+	* src/connection.c (connection_set_timeout): New function.
+	(connection_clear_timeout): New function.
+
+	* src/channel.c (init_connection_service): Cancel the connection's
+	timeout timer. 
+
+2002-02-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/client.c (init_client_options): Initialize port to NULL, in
+	order to get the fallback from "ssh" -> 22 to work. FIXED in 1.2
+	branch.
+	(client_argp_parser): Fixed port error message not to try printing
+	NULL. FIXED in 1.2 branch.
+
 2002-02-21  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/server_session.c (make_pty): Simple bugfix, pty->master was

@@ -1,3 +1,7 @@
+2002-02-27  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* gnu_stuff.c: Include stdlib.h and string.h.
+
 2002-02-25  Pontus  <pont@it.uu.se>
 
 	* lsftp.c (main): Readded support for GNU-thingies (was lost
