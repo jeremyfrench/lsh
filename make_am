@@ -138,7 +138,9 @@ while true; do
 	    subdirs=$args
 	    echo 1>&4 "SUBDIRS = $args"
 	    for d in $args; do
-		$SELF $options $dir/$d || exit 1
+		if [ x$d != x. ] ; then
+		  $SELF $options $dir/$d || exit 1
+		fi
 	    done
 	    ;;
 	BODY)
