@@ -149,6 +149,7 @@ make_lshd_connection(struct configuration *config, int input, int output)
   self->rec_crypto = NULL;
   self->rec_compress = NULL;
 
+  self->writer = make_ssh_write_state();
   self->send_mac = NULL;
   self->send_crypto = NULL;
   self->send_compress = NULL;
@@ -163,12 +164,10 @@ static void
 connection_write_data(struct lshd_connection *connection,
 		      struct lsh_string *data)
 {
-  /* FIXME: Handle errors, including EWOULDBLOCK */
-  if (write_raw(connection->ssh_output,
-		STRING_LD(data)))
+  /* FIXME: Proper error handling */  
+  if (ssh_write_data(connection->writer,
+		     global_oop_source, connection->ssh_output, data) < 0)
     fatal("Write failed.\n");
-
-  lsh_string_free(data);
 }
 
 void
@@ -228,7 +227,7 @@ lshd_handle_line(struct abstract_write *s, struct lsh_string *line)
   
   self->super.write = lshd_handle_packet;
   
-  ssh_read_header(&self->connection->reader->super,
+  ssh_read_packet(&self->connection->reader->super,
 		  global_oop_source, self->connection->ssh_input,
 		  &self->super);
 }
@@ -245,7 +244,99 @@ make_lshd_handle_line(struct lshd_connection *connection)
 /* Handles all packets to be sent to the service layer. */
 DEFINE_PACKET_HANDLER(lshd_service_handler, connection, packet)
 {
-  werror("lshd_service_handler: Throwing away packet.\n");
+  if (ssh_write_data(connection->service_writer,
+		     global_oop_source, connection->service_fd,
+		     ssh_format("%i%fS", lsh_string_sequence_number(packet), packet)) < 0)
+    fatal("lshd_service_handler: Write failed.\n");
+}
+
+/* GABA:
+   (class
+     (name lshd_process_service_header)
+     (super header_callback)
+     (vars
+       (connection object lshd_connection)))
+*/
+
+static struct lsh_string *
+lshd_process_service_header(struct header_callback *s, struct ssh_read_state *state,
+			    uint32_t *done)
+{
+  CAST(lshd_process_service_header, self, s);
+  struct lshd_connection *connection = self->connection;
+  
+  uint32_t seqno;
+  uint32_t length;
+  struct lsh_string *packet;
+  const uint8_t *header;
+  
+  header = lsh_string_data(state->header);
+
+  seqno = READ_UINT32(header);
+  length = READ_UINT32(header + 4);
+
+  if (length > (connection->rec_max_packet + SSH_MAX_PACKET_FUZZ))
+    {
+      werror("lshd_process_service_header: Receiving too large packet.\n"
+	     "  %i octets, limit is %i\n",
+	     length, connection->rec_max_packet);
+		  
+      connection_disconnect(connection, SSH_DISCONNECT_BY_APPLICATION,
+			    "Received too large packet from service layer.");
+      return NULL;
+    }
+
+  packet = lsh_string_alloc(length);
+
+  /* The sequence number is unused */
+  lsh_string_set_sequence_number(packet, seqno);
+  *done = 0;
+  return packet;
+}
+
+static struct header_callback *
+make_lshd_process_service_header(struct lshd_connection *connection)
+{
+  NEW(lshd_process_service_header, self);
+  self->super.process = lshd_process_service_header;
+  self->connection = connection;
+
+  return &self->super;
+}
+
+static void
+lshd_service_read_handler(struct abstract_write *s, struct lsh_string *packet)
+{
+  CAST(lshd_read_handler, self, s);
+  struct lshd_connection *connection = self->connection;
+
+  if (!packet)
+    {
+      /* EOF */
+      connection_disconnect(connection, SSH_DISCONNECT_BY_APPLICATION,
+			    "Service layer died");      
+    }
+  else if (!lsh_string_length(packet))
+    connection_disconnect(connection, SSH_DISCONNECT_BY_APPLICATION,
+			  "Received empty packet from service layer.");
+
+  else
+    {
+      uint8_t msg = lsh_string_data(packet)[0];
+      connection_write_packet(connection, packet);
+      if (msg == SSH_MSG_DISCONNECT)
+	connection_disconnect(connection, 0, NULL);
+    }
+}
+
+static struct abstract_write *
+make_lshd_service_read_handler(struct lshd_connection *connection)
+{
+  NEW(lshd_read_handler, self);
+  self->super.write = lshd_service_read_handler;
+  self->connection = connection;
+
+  return &self->super;
 }
 
 /* FIXME: Duplicates server_session.c: lookup_subsystem. */
@@ -316,6 +407,18 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 	      connection->service_fd = pipe[0];
 	      connection->service_handler = &lshd_service_handler;
 	      connection->service_state = SERVICE_STARTED;
+
+	      connection->service_reader
+		= make_ssh_read_state(8, 8,
+				      make_lshd_process_service_header(connection),
+				      connection->reader->super.error);
+	      ssh_read_packet(connection->service_reader,
+			      global_oop_source, connection->service_fd,
+			      make_lshd_service_read_handler(connection));
+	      ssh_read_start(connection->service_reader,
+			     global_oop_source, connection->service_fd);
+
+	      connection->service_writer = make_ssh_write_state();	      
 	    }
 	  else
 	    {
@@ -443,7 +546,9 @@ lshd_handshake(struct lshd_connection *connection)
   ssh_read_line(&connection->reader->super, 256,
 		global_oop_source, connection->ssh_input,
 		make_lshd_handle_line(connection));  
-
+  ssh_read_start(&connection->reader->super,
+		 global_oop_source, connection->ssh_input);
+		 
   connection_write_data(connection,
 			ssh_format("%lS\r\n", connection->kex.version[1]));
   lshd_send_kexinit(connection);
