@@ -1,3 +1,8 @@
+2001-09-09  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/des.c (make_des_instance): Use the des_fix_parity function
+	in nettle.
+
 2001-09-05  Niels Möller  <nisse@ehand.com>
 
 	* src/crypto.h: Deleted last traces of idea support.
