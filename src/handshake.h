@@ -46,7 +46,8 @@
 
        (random object randomness)
        (algorithms object alist)
-       
+
+       (banner_text string)
        ; Used only on the server
        (fallback object ssh1_fallback)))
 */
@@ -58,7 +59,8 @@ make_handshake_info(enum connection_flag flags,
 		    uint32_t block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,
-		    struct ssh1_fallback *fallback);
+		    struct ssh1_fallback *fallback,
+		    struct lsh_string *banner_text);
 
 extern struct command_4 handshake_command;
 #define CONNECTION_HANDSHAKE (&handshake_command.super.super)
