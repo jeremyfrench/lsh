@@ -1073,6 +1073,8 @@ struct lsh_string *format_channel_eof(struct ssh_channel *channel)
 int channel_eof(struct ssh_channel *channel)
 {
   int res ;
+
+  assert(! (channel->flags & CHANNEL_SENT_EOF));
   
   channel->flags |= CHANNEL_SENT_EOF;
   res = A_WRITE(channel->write, format_channel_eof(channel));
@@ -1216,12 +1218,25 @@ struct read_handler *make_channel_read_stderr(struct ssh_channel *channel)
        (channel object ssh_channel)))
 */
 
+/* Close callback for files we are writing to. */
 static int channel_close_callback(struct close_callback *c, int reason)
 {
   CAST(channel_close_callback, closure, c);
 
-  channel_close(closure->channel);
-
+  switch (reason)
+    {
+    case CLOSE_EOF:
+      /* Expected close: Do nothing */
+      debug("channel_close_callback: Closing after EOF.\n");
+      break;
+    case CLOSE_WRITE_FAILED:
+    case CLOSE_BROKEN_PIPE:
+      channel_close(closure->channel);
+      break;
+    default:
+      fatal("channel_close_callback: Unexpected close reason %d!\n",
+	    reason);
+    }
   /* FIXME: So far, the returned value is ignored. */
   return 17;
 }
