@@ -2,11 +2,10 @@ dnl Process this file with autoconf to produce a configure script.
 
 dnl This configure.in is only for building a standalone argp library.
 
-AC_INIT(argp-ba.c)
-
-AM_INIT_AUTOMAKE(argp, standalone-1.1)
-
-AM_CONFIG_HEADER(config.h)
+AC_INIT([argp], [standalone-1.1])
+AC_CONFIG_SRCDIR([argp-ba.c])
+AM_INIT_AUTOMAKE([dist-gzip])
+AM_CONFIG_HEADER([config.h])
 
 # GNU libc defaults to supplying the ISO C library functions only. The
 # _GNU_SOURCE define enables these extensions, in particular we want
