@@ -69,7 +69,9 @@
 
        ; Holds the packet payload
        (packet_buffer string)
-
+       ; Amount of padding
+       (padding_length . uint8_t)
+       
        ; Position in the buffer after the first,
        ; already decrypted, block.
        (crypt_pos . "uint8_t *")
@@ -229,19 +231,33 @@ do_read_packet(struct read_handler **h,
 			      closure->block_buffer->data);
 		}
 
+	      /* Extract padding length */
+	      closure->padding_length = closure->block_buffer->data[4];
+	      length--;
+
+	      if ( (closure->padding_length < 4)
+		   || (closure->padding_length >= length) )
+		{
+		  PROTOCOL_ERROR(closure->connection->e,
+				 "Bogus padding length.");
+		  return total;
+		}
+	      
 	      /* Allocate full packet */
 	      {
-		unsigned done = block_size - 4;
+		unsigned done = block_size - 5;
 
 		assert(!closure->packet_buffer);
 		
 		closure->packet_buffer
 		  = ssh_format("%ls%lr",
 			       done,
-			       closure->block_buffer->data + 4,
+			       closure->block_buffer->data + 5,
 			       length - done,
 			       &closure->crypt_pos);
 
+		assert(closure->packet_buffer->length == length);
+		
 		/* The sequence number is needed by the handler for
 		 * unimplemented message types. */
 		closure->packet_buffer->sequence_number = closure->sequence_number ++;
@@ -364,8 +380,29 @@ do_read_packet(struct read_handler **h,
 	  closure->packet_buffer = NULL;
 	  closure->state = WAIT_START;
 
-	  A_WRITE(closure->handler, packet);
+	  /* Strip padding */
+	  lsh_string_trunc(packet, packet->length - closure->padding_length);
+	  
+	  if (closure->connection->rec_compress)
+	    {
+	      uint32_t sequence_number = packet->sequence_number;
+	      packet = CODEC(closure->connection->rec_compress, packet, 1);
 
+	      if (!packet)
+		{
+		  /* FIXME: It would be nice to pass the error message from zlib on
+		   * to the exception handler. */
+		  EXCEPTION_RAISE
+		    (closure->connection->e,
+		     make_protocol_exception(SSH_DISCONNECT_COMPRESSION_ERROR,
+					     "Inflating compressed data failed."));
+		  return total;
+		}
+	      /* Keep sequence number */
+	      packet->sequence_number = sequence_number;
+	    }
+	      
+	  A_WRITE(closure->handler, packet);
 	  return total;
 	}
       default:
