@@ -34,11 +34,11 @@ extern struct command spki_signer2verifier;
 extern struct command spki_verifier2public;
 #define VERIFIER2PUBLIC (&spki_verifier2public.super)
 
-extern struct command spki_sexp2signer_command;
-#define SEXP2SIGNER (&spki_sexp2signer_command.super)
+extern struct command_2 spki_sexp2signer_command;
+#define SEXP2SIGNER (&spki_sexp2signer_command.super.super)
 
-extern struct command spki_sexp2keypair_command;
-#define SEXP2KEYPAIR (&spki_sexp2keypair_command.super)
+extern struct command_2 spki_sexp2keypair_command;
+#define SEXP2KEYPAIR (&spki_sexp2keypair_command.super.super)
 
 extern struct command spki_make_context_command;
 #define SPKI_MAKE_CONTEXT (&spki_make_context_command.super)

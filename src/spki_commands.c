@@ -131,30 +131,22 @@ const struct spki_hash spki_hash_sha1 =
 
 
 /* Reading keys */
-  
-/* Used for both sexp2keypair and sexp2signer. */
-/* FIXME: Use DEFINE_COMMAND2 instead? */
-/* GABA:
-   (class
-     (name spki_parse_key)
-     (super command)
-     (vars
-       (algorithms object alist)))
-*/
 
 
-static void
-do_spki_sexp2signer(struct command *s, 
-		    struct lsh_object *a,
-		    struct command_continuation *c,
-		    struct exception_handler *e)
+/* (sexp2signed algorithms sexp) -> signer */
+DEFINE_COMMAND2(spki_sexp2signer_command)
+     (struct command_2 *s UNUSED, 
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  CAST(spki_parse_key, self, s);
-  CAST_SUBTYPE(sexp, key, a);
+  CAST_SUBTYPE(alist, algorithms, a1);
+  CAST_SUBTYPE(sexp, key, a2);
   
   struct sexp_iterator *i;
   
-  if (sexp_check_type(key, ATOM_PRIVATE_KEY, &i)) 
+  if ((i = sexp_check_type(key, ATOM_PRIVATE_KEY)))
     {
       struct sexp *expr = SEXP_GET(i);
       struct signer *s;
@@ -162,7 +154,7 @@ do_spki_sexp2signer(struct command *s,
       if (!expr)
 	SPKI_ERROR(e, "spki.c: Invalid key.", key); 
 
-      s = spki_make_signer(self->algorithms, expr, NULL);
+      s = spki_make_signer(algorithms, expr, NULL);
       
       if (s)
 	/* Test key here? */
@@ -174,22 +166,7 @@ do_spki_sexp2signer(struct command *s,
     SPKI_ERROR(e, "spki.c: Expected private-key expression.", key);
 }
 
-/* (parse algorithms sexp) -> signer */
-DEFINE_COMMAND(spki_sexp2signer_command)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST_SUBTYPE(alist, algorithms, a);
-  NEW(spki_parse_key, self);
-  
-  self->super.call = do_spki_sexp2signer;
-  self->algorithms = algorithms;
-  COMMAND_RETURN(c, self);
-}
-
-
+/* FIXME: Ued only by sexp2keypair, move code there? */
 static void 
 parse_private_key(struct alist *algorithms,
                   struct sexp_iterator *i,
@@ -215,7 +192,6 @@ parse_private_key(struct alist *algorithms,
     {
       SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
       return;
-
     }
 
   v = SIGNER_GET_VERIFIER(s);
@@ -259,14 +235,17 @@ parse_private_key(struct alist *algorithms,
     }
 }
 
-static void
-do_spki_sexp2keypair(struct command *s, 
-		     struct lsh_object *a,
-		     struct command_continuation *c,
-		     struct exception_handler *e)
+
+/* (sexp2keypair algorithms sexp) -> one or more keypairs */
+DEFINE_COMMAND2(spki_sexp2keypair_command)
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  CAST(spki_parse_key, self, s);
-  CAST_SUBTYPE(sexp, key, a);
+  CAST_SUBTYPE(alist, algorithms, a1);
+  CAST_SUBTYPE(sexp, key, a2);
   
   struct sexp_iterator *i;
   
@@ -276,25 +255,9 @@ do_spki_sexp2keypair(struct command *s,
         SPKI_ERROR(e, "spki.c: Expected private-key expression.", key);
         return;
       case ATOM_PRIVATE_KEY:
-	parse_private_key(self->algorithms, i, c, e);
+	parse_private_key(algorithms, i, c, e);
 	break;
     } 
-}
-
-
-/* (parse algorithms sexp) -> one or more keypairs */
-DEFINE_COMMAND(spki_sexp2keypair_command)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST_SUBTYPE(alist, algorithms, a);
-  NEW(spki_parse_key, self);
-  
-  self->super.call = do_spki_sexp2keypair;
-  self->algorithms = algorithms;
-  COMMAND_RETURN(c, self);
 }
 
 /* GABA:
@@ -706,7 +669,7 @@ do_spki_decrypt(struct command *s,
 
   struct sexp_iterator *i;
   
-  if (!sexp_check_type(expr, ATOM_PASSWORD_ENCRYPTED, &i))
+  if (!(i = sexp_check_type(expr, ATOM_PASSWORD_ENCRYPTED)))
     COMMAND_RETURN(c, expr);
 
   else
