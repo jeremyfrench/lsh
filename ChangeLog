@@ -1,3 +1,9 @@
+2001-05-11  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/testsuite/functions.sh (PIDFILE): New variable, with
+	absolute path to the pid-file. FIXED in 1.2 branch.
+	(spawn_lshd): $PIDFILE. FIXED in 1.2 branch.
+
 2001-05-03  Niels Möller  <nisse@ehand.com>
 
 	* src/lshd.c (main): Start the background randomness poll *after*
