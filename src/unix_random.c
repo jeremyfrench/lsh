@@ -36,9 +36,9 @@
 #endif
 
 #include <sys/types.h>
+#include <sys/time.h> /* Must be included before sys/resource.h */
 #include <sys/resource.h>
 #include <sys/stat.h>
-#include <sys/time.h>
 
 #include "randomness.h"
 
