@@ -47,11 +47,11 @@ static struct read_sexp_command read_sexp
 
 #define READ_SEXP (&read_sexp.super.super)
 
-static struct print_sexp_command write_canonical
+static struct sexp_print_command write_canonical
 = STATIC_PRINT_SEXP(SEXP_CANONICAL);
 #define CANONICAL (&write_canonical.super.super.super)
 
-static struct print_sexp_command write_transport
+static struct sexp_print_command write_transport
 = STATIC_PRINT_SEXP(SEXP_TRANSPORT);
 #define TRANSPORT (&write_transport.super.super.super)
 

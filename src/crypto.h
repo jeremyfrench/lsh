@@ -50,7 +50,7 @@ struct crypto_algorithm *make_cast(void);
 extern struct crypto_algorithm idea_algorithm;
 #endif
 
-extern struct hash_algorithm sha_algorithm;
+extern struct hash_algorithm sha1_algorithm;
 extern struct hash_algorithm md5_algorithm;
 
 struct mac_algorithm *make_hmac_algorithm(struct hash_algorithm *h);

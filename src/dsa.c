@@ -87,7 +87,7 @@
 static void dsa_hash(mpz_t h, UINT32 length, UINT8 *msg)
 {
   /* Compute hash */
-  struct hash_instance *hash = MAKE_HASH(&sha_algorithm);
+  struct hash_instance *hash = MAKE_HASH(&sha1_algorithm);
   UINT8 *digest = alloca(hash->hash_size);
   HASH_UPDATE(hash, length, msg);
   HASH_DIGEST(hash, digest);

@@ -193,7 +193,7 @@ struct randomness *make_reasonably_random(void)
   else
     {
       werror("Warning: Falling back to an insecure pseudorandom generator.\n");
-      r = make_poor_random(&sha_algorithm, NULL);
+      r = make_poor_random(&sha1_algorithm, NULL);
     }
 
   return r;

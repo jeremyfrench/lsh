@@ -1,5 +1,39 @@
 1999-11-07  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/exception.h (EXCEPTION_RAISE): Better tracing.
+
+	* src/atoms.in: Added "md5" and "hash".
+
+	* src/algorithms.c (lookup_hash): New function.
+
+	* src/Makefile.am.in (bin_PROGRAMS): Install sexp_conv.
+	(bin_SCRIPTS): Added lsh-authorize.
+
+	* src/spki.c (make_spki_hash): New function.
+
+	* src/sha.c (sha1_algorithm): Renamed from sha_algorithm.
+
+	* src/sexp_streamed_parser.c (do_parse_transport_sexp): Ignore
+	white space.
+
+	* src/sexp_conv.c (main_options): Added options --spki-hash,
+	--raw-hash, --hash and --once. Used by the lsh-authorize script.
+
+	* src/sexp_commands.c: Renamed print_sexp to sexp_print.
+	(sexp_print_raw_hash): New command. 
+
+	* src/lsh-authorize: New script.
+
+	* src/lsh.c: New option --no-publickey to disable publickey user
+	authentication. 
+
+	* configure.in: Bumped version to 0.1.15.
+
+	* src/lsh.c (do_lsh_default_handler): Report i/o exceptions, but
+	don't pass them on.
+
+	* src/lshd.c (main): Use sha1 for authorized keys.
+
 	* src/server_userauth.h (user_db): New class (not used for
 	anything yet).
 

@@ -180,7 +180,7 @@ struct diffie_hellman_method *make_dh1(struct randomness *r)
   
   mpz_init_set_ui(res->generator, 2);
 
-  res->H = &sha_algorithm;
+  res->H = &sha1_algorithm;
   res->random = r;
   
   return res;

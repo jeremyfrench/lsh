@@ -121,6 +121,12 @@ reasonable place? Then we only have to figure out when to install that
 information.
 
 
+USER AUTHENTICATION
+
+On the server side, make userauthentication more robust by serializing
+handling of USERAUTH_REQUESTs. Use some user_db abstraction.
+ 
+
 PROCESSES
 
 Dying children must be handled. For example like this: Use a signal

@@ -179,7 +179,7 @@ int main(int argc, char **argv)
   
   mpz_init(t);
 
-  r = make_poor_random(&sha_algorithm, NULL);
+  r = make_poor_random(&sha1_algorithm, NULL);
   dsa_nist_gen(public.p, public.q, r, options->level);
 
   debug("%xn\n"
