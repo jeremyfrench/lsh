@@ -34,21 +34,16 @@
 #include "server.h"
 
 #include "abstract_io.h"
-#include "channel.h"
-#include "compress.h"
-#include "connection.h"
 #include "format.h"
-#include "keyexchange.h"
+#include "io.h"
 #include "lsh_string.h"
-#include "read_line.h"
-#include "read_packet.h"
-#include "reaper.h"
 #include "sexp.h"
 #include "spki.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
 
+#if 0
 #include "server.c.x"
 
 
@@ -158,9 +153,9 @@ struct command *make_offer_service(struct alist *services)
 
   return &self->super;
 }
+#endif
 
 /* Read server's private key */
-/* Used by both lshd.c and lsh_proxy.c */
 
 static void
 add_key(struct alist *keys,
@@ -180,7 +175,6 @@ read_host_key(const char *file,
   struct lsh_string *contents;
   struct signer *s;
   struct verifier *v;
-  struct lsh_string *spki_public;
   
   int algorithm_name;
 
@@ -213,31 +207,21 @@ read_host_key(const char *file,
   v = SIGNER_GET_VERIFIER(s);
   assert(v);
 
-  spki_public = PUBLIC_SPKI_KEY(v, 0);
-  
   switch (algorithm_name)
     {
     case ATOM_DSA:
       add_key(keys,
               make_keypair(ATOM_SSH_DSS, PUBLIC_KEY(v), s));
-      add_key(keys,
-              make_keypair(ATOM_SPKI_SIGN_DSS, spki_public, s));
       break;
 
     case ATOM_RSA_PKCS1:
     case ATOM_RSA_PKCS1_SHA1:
       add_key(keys,
               make_keypair(ATOM_SSH_RSA, PUBLIC_KEY(v), s));
-      /* Fall through */
-
-    case ATOM_RSA_PKCS1_MD5:
-      add_key(keys,
-              make_keypair(ATOM_SPKI_SIGN_RSA, spki_public, s));
       break;
 
     default:
       werror("read_host_key: Unexpected algorithm %a.\n", algorithm_name);
-      lsh_string_free(spki_public);
     }
   return 1;
 }

@@ -26,7 +26,9 @@
 
 #include "alist.h"
 
+#if 0
 struct command *make_offer_service(struct alist *services);
+#endif
 
 int
 read_host_key(const char *file,
