@@ -24,6 +24,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if 0
 #include "password.h"
 
 #include "xalloc.h"
@@ -32,4 +33,4 @@
 #include "password.h.x"
 #undef GABA_DEFINE
 
-
+#endif

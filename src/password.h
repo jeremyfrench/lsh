@@ -36,66 +36,7 @@
 #include <unistd.h>
 #endif
 
-#define GABA_DECLARE
-#include "password.h.x"
-#undef GABA_DECLARE
-
 struct lsh_string *
 read_password(int max_length, struct lsh_string *prompt, int free);
-
-/* GABA:
-   (class
-     (name unix_user)
-     (vars
-       (uid simple uid_t)
-       (gid simple gid_t)
-       
-       ; These strings include a terminating NUL-character, for
-       ; compatibility with library and system calls.
-       (name string)
-       (passwd string)  ; Crypted passwd
-       (home string)
-       (shell string)))
-       
-*/
-
-struct unix_user *lookup_user(struct lsh_string *name, int free);
-int verify_password(struct unix_user *user,
-		    struct lsh_string *password, int free);
-
-#if 0
-struct userauth *make_password_userauth(void);
-#endif
-
-/* ;; GABA:
-   (class
-     (name unix_service)
-     (vars
-       (login method (object ssh_service) "struct unix_user *user")))
-*/
-
-#define LOGIN(s, u) ((s)->login((s), (u)))
-
-extern struct userauth unix_userauth;
-
-int change_uid(struct unix_user *user);
-int change_dir(struct unix_user *user);
-
-#if 0
-struct login_method
-{
-  struct lsh_object header;
-
-  struct ssh_service * (*login)(struct login_method *closure,
-				struct unix_user *user,
-				struct ssh_service *service);
-};
-
-#define LOGIN(m, u, s) ((m)->login((m), (u), (s)))
-
-struct userauth *make_unix_userauth(struct login_method *login,
-				    struct alist *services);
-struct login_method *make_unix_login(void);
-#endif
 
 #endif /* LSH_PASSWORD_H_INCLUDED */
