@@ -110,10 +110,12 @@ const char *argp_program_bug_address = BUG_ADDRESS;
 #define OPT_NO_TCPIP_FORWARD (OPT_TCPIP_FORWARD | OPT_NO)
 #define OPT_PTY 0x203
 #define OPT_NO_PTY (OPT_PTY | OPT_NO)
+#define OPT_SUBSYSTEMS 0x204
+#define OPT_NO_SUBSYSTEMS (OPT_SUBSYSTEMS | OPT_NO)
 
-#define OPT_DAEMONIC 0x204
+#define OPT_DAEMONIC 0x205
 #define OPT_NO_DAEMONIC (OPT_DAEMONIC | OPT_NO)
-#define OPT_PIDFILE 0x205
+#define OPT_PIDFILE 0x206
 #define OPT_NO_PIDFILE (OPT_PIDFILE | OPT_NO)
 #define OPT_CORE 0x207
 #define OPT_SYSLOG 0x208
@@ -171,6 +173,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        
        (with_tcpip_forward . int)
        (with_pty . int)
+       (subsystems . "const char **")
        
        (userauth_methods object int_list)
        (userauth_algorithms object alist)
@@ -242,6 +245,8 @@ make_lshd_options(struct io_backend *backend)
   self->with_password = 1;
   self->with_tcpip_forward = 1;
   self->with_pty = 1;
+  self->subsystems = NULL;
+  
   self->allow_root = 0;
   self->pw_helper = NULL;
   self->login_shell = NULL;
@@ -367,6 +372,10 @@ main_options[] =
   { "pty-support", OPT_PTY, NULL, 0, "Enable pty allocation (default).", 0 },
   { "no-pty-support", OPT_NO_PTY, NULL, 0, "Disable pty allocation.", 0 },
 #endif /* WITH_PTY_SUPPORT */
+
+  { "subsystems", OPT_SUBSYSTEMS, "List of subsystem names and programs", 0,
+    "For example `sftp=/usr/sbin/sftp-server,foosystem=/usr/bin/foo' "
+    "(experimental).", 0},
   
   { NULL, 0, NULL, 0, "Daemonic behaviour", 0 },
   { "daemonic", OPT_DAEMONIC, NULL, 0, "Run in the background, redirect stdio to /dev/null, and chdir to /.", 0 },
@@ -388,6 +397,55 @@ main_argp_children[] =
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
+
+/* NOTE: Modifies the argument string. */
+static const char **
+parse_subsystem_list(char *arg)
+{
+  const char **subsystems;
+  char *separator;
+  unsigned length;
+  unsigned i;
+  
+  /* First count the number of elements. */
+  for (length = 1, i = 0; arg[i]; i++)
+    if (arg[i] == ',')
+      length++;
+
+  subsystems = lsh_space_alloc((length * 2 + 1) * sizeof(*subsystems));
+
+  for (i = 0; ; i++)
+    {
+      subsystems[2*i] = arg;
+
+      separator = strchr(arg, '=');
+
+      if (!separator)
+	goto fail;
+
+      *separator = '\0';
+
+      subsystems[2*i+1] = arg = separator + 1;
+      
+      separator = strchr(arg, ',');
+
+      if (i == (length - 1))
+	break;
+      
+      if (!separator)
+	goto fail;
+
+      *separator = '\0';
+      arg = separator + 1;
+    }
+  if (separator)
+    {
+    fail:
+      lsh_space_free(subsystems);
+      return NULL;
+    }
+  return subsystems;
+}
 
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
@@ -587,7 +645,17 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->with_pty = 0;
       break;
 #endif /* WITH_PTY_SUPPORT */
-	  
+
+    case OPT_SUBSYSTEMS:
+      self->subsystems = parse_subsystem_list(arg);
+      if (!self->subsystems)
+	argp_error(state, "Invalid subsystem list.");
+      break;
+
+    case OPT_NO_SUBSYSTEMS:
+      self->subsystems = NULL;
+      break;
+      
     case OPT_DAEMONIC:
       self->daemonic = 1;
       break;
@@ -796,6 +864,12 @@ int main(int argc, char **argv)
 		ATOM_PTY_REQ, &pty_request_handler.super);
 #endif /* WITH_PTY_SUPPORT */
 
+    if (options->subsystems)
+      ALIST_SET(supported_channel_requests,
+		ATOM_SUBSYSTEM,
+		&make_subsystem_handler(backend,
+					options->subsystems)->super);
+		
     session_setup = make_install_fix_channel_open_handler
       (ATOM_SESSION, make_open_session(supported_channel_requests));
     
