@@ -892,6 +892,9 @@ properly logged in to the remote host. Many options have both long and
 short forms. This manual does not list all variants; for a full listing
 of supported options, use @samp{lsh --help}.
 
+Note that for many of the options to @command{lsh}, the ordering of the
+options on the command line is important.
+
 @menu
 * Algorithms: Algorithm options.  Selecting algorithms.
 * Hostauth options::            
@@ -1053,7 +1056,7 @@ are two types of options that control this: @dfn{actions} and
 and modifiers use lowercase.
 
 For each modifier @option{--foo} there's also a negated form
-@option{--no-foo}. Options can also be negated be preceding it with the
+@option{--no-foo}. Options can also be negated by preceding it with the
 special option @option{-n}. This is mainly useful for negating short
 options. For instance, use @option{-nt} to tell @command{lsh} not to
 request a remote pseudo terminal. Each modifier and its negation can be
