@@ -352,14 +352,10 @@ main_options[] =
 
   { "login-auth-mode", OPT_LOGIN_AUTH_MODE, NULL, 0, 
     "Enable a telnet like mode (accept none-authentication and launch the" 
-    "login-program, making it responsible for authenticating the user).", 0 },
+    "login-shell, making it responsible for authenticating the user).", 0 },
 
   { "no-login-auth-mode", OPT_NO_LOGIN_AUTH_MODE, NULL, 0, 
     "Disable login-auth-mode (default).", 0 },
-
-  { "login-program", OPT_LOGIN_SHELL, "Program", 0,
-    "Use this as the login program for login-auth-mode, must " 
-    "authenticate users. ", 0 },
 
 #if 0
   { "login-auth-mode-user", OPT_LOGIN_AUTH_USER, "username", 0,
