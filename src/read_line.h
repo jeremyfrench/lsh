@@ -41,7 +41,7 @@
      (name line_handler)
      (vars
        (handler indirect-method void "struct read_handler **r"
-		"uint32_t length" "uint8_t *line"
+		"uint32_t length" "const uint8_t *line"
 		"struct exception_handler *e")))
 */
 
