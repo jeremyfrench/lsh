@@ -2,7 +2,6 @@
  *
  * Calculate rsync specific checksums.
  *
- * $Id$
  */
 
 #include "rsync.h"
@@ -29,11 +28,11 @@
 
 void
 rsync_update_1(unsigned *ap, unsigned *cp,
-	       UINT32 length, UINT8 *data)
+	       uint32_t length, uint8_t *data)
 {
   unsigned a = *ap;
   unsigned c = *cp;
-  UINT32 i;
+  uint32_t i;
   
   for (i = 0; i<length; i++)
   {
@@ -59,12 +58,12 @@ rsync_update_1(unsigned *ap, unsigned *cp,
 
 struct rsync_node *
 rsync_search(unsigned *ap, unsigned *bp, unsigned block_size,
-	     UINT32 length, UINT8 *start, UINT8 *end,
-	     UINT32 *done, struct rsync_node **hash)
+	     uint32_t length, uint8_t *start, uint8_t *end,
+	     uint32_t *done, struct rsync_node **hash)
 {
   unsigned a = *ap;
   unsigned b = *bp;
-  UINT32 i;
+  uint32_t i;
   struct rsync_node *n;
 
 #if 0

@@ -2,17 +2,21 @@
  *
  * The receive end of the rsync algorithm. 
  *
- * $Id$ */
 
-#include "rsync.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <assert.h>
 #include <string.h>
 
+#include "rsync.h"
+#include "macros.h"
+
 /* Hash the data after it is copied to the output buffer. */
 static void
 rsync_update(struct rsync_receive_state *s,
-	     UINT32 length)
+	     uint32_t length)
 {
   md5_update(&s->sum_md5, length, s->next_out);
   s->next_out += length;
@@ -68,7 +72,7 @@ rsync_receive(struct rsync_receive_state *s)
 	s->state = RSYNC_READ_LITERAL;
       case RSYNC_READ_LITERAL:
 	{
-	  UINT32 avail = MIN(s->avail_in, s->avail_out);
+	  uint32_t avail = MIN(s->avail_in, s->avail_out);
 	  if (!avail)
 	    return progress ? RSYNC_PROGRESS : RSYNC_BUF_ERROR;
 
@@ -96,7 +100,7 @@ rsync_receive(struct rsync_receive_state *s)
 	s->i = 0;
       case RSYNC_READ_LOOKUP:
 	{
-	  UINT32 done;
+	  uint32_t done;
 
 	  if (!s->avail_out)
 	    return progress ? RSYNC_PROGRESS : RSYNC_BUF_ERROR;

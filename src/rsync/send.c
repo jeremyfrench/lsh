@@ -2,12 +2,19 @@
  *
  * The sending end of the rsync algorithm. 
  *
- * $Id$ */
+ */
 
-#include "rsync.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <assert.h>
 #include <string.h>
+
+#include <nettle/macros.h>
+
+#include "rsync.h"
+#include "macros.h"
 
 #define HASH_SIZE 0x10000
 #define HASH_SUM(a, b) (((a) ^ (b)) & 0xffff)

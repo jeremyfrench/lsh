@@ -1,6 +1,5 @@
 /* rsync.h
  *
- * $Id$
  */
 
 /* 
@@ -25,14 +24,6 @@
 /* Hacked by Niels Möller */
 #ifndef RSYNC_H_INCLUDED
 #define RSYNC_H_INCLUDED
-
-#if LSH
-# include "lsh_types.h"
-#else
-# if HAVE_CONFIG_H
-#  include "config.h"
-# endif
-#endif
 
 #include <inttypes.h>
 

@@ -2,13 +2,18 @@
  *
  * Generate the list of checksums.
  *
- * $Id$
  */
 
-#include "rsync.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <assert.h>
 #include <string.h>
+
+#include <nettle/macros.h>
+
+#include "rsync.h"
 
 static void
 rsync_init_block(struct rsync_generate_state *s)
