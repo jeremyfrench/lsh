@@ -1,5 +1,8 @@
 2004-11-18  Niels Möller  <nisse@lysator.liu.se>
 
+	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): Use [!...] instead of
+	[^...] for inverted character classes in case.
+
 	* src/Makefile.am (bin_SCRIPTS): Install the lcp script.
 
 	* src/lsh-export-key.c (enum output_mode): New enum.
