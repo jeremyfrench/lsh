@@ -25,6 +25,7 @@
 
 #include "read_file.h"
 
+#include "format.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -60,7 +61,7 @@ do_read_file(struct read_handler **h,
   if (!available)
     {
       /* EOF reached */
-      self->buffer->length = self->pos;
+      lsh_string_trunc(self->buffer, self->pos);
 	  
       A_WRITE(self->c, self->buffer);
       self->buffer = NULL;
