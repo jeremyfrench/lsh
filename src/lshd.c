@@ -211,8 +211,6 @@ do_exc_lshd_handler(struct exception_handler *s,
   switch(e->type)
     {
     case EXC_RESOLVE:
-    case EXC_SEXP_SYNTAX:
-    case EXC_SPKI_TYPE:
     case EXC_RANDOMNESS_LOW_ENTROPY:
       werror("lshd: %z\n", e->msg);
       exit(EXIT_FAILURE);

@@ -1048,8 +1048,6 @@ do_lsh_default_handler(struct exception_handler *s,
       {
       case EXC_RESOLVE:
       case EXC_USERAUTH:
-      case EXC_SEXP_SYNTAX:
-      case EXC_SPKI_TYPE:
       case EXC_GLOBAL_REQUEST:
       case EXC_CHANNEL_REQUEST:
       case EXC_CHANNEL_OPEN:
