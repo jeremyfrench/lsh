@@ -31,14 +31,21 @@
  * %a  Insert a string containing one atom.
  *
  * %A  Insert a string containing a list of atoms. The corresponding
- *     argument sublist should be terminated with a zero.
+ *     argument sublist should be a int* pointing to a list of atoms,
+ *     terminated with -1.
+ *
+ * %X  Insert a string containing a list of atoms. The corresponding
+ *     argument sublist should be terminated with a zero. (Not used)
  *
  * %n  Insert a string containing a bignum.
  *
- * There is one valid modifier:
+ * There are two valid modifiers:
  *
  * "l" (as in literal). It is applicable to the s, a, A, n and r
- * specifiers, and outputs strings *without* a length field. */
+ * specifiers, and outputs strings *without* a length field.
+ *
+ * "f" (as in free). Frees the input sting after it has been copied.
+ * Applicable to %S only. */
 
 UINT32 ssh_vformat_length(char *format, va_list args);
 void ssh_vformat(char *format, UINT8 *buffer, va_list args);

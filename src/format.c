@@ -43,6 +43,9 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 	      literal = 1;
 	      f++;
 	    }
+	  if (*f == 'f')
+	    f++;
+	  
 	  switch(*f)
 	    {
 	    default:
@@ -110,8 +113,24 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 		if (!literal)
 		  length += 4;
 		f++;
+		break;
 	      }
-	    break;
+	    case 'A':
+	      {
+		int *atom = va_arg(args, int *);
+		
+		while (*atom > 0)
+		  length += get_atom_length(atom++) + 1;
+
+		/* One ','-character less than the number of atoms */
+		length--;
+		
+		if (!literal)
+		  length += 4;
+		f++;
+		break;
+	      }
+#if 0
 	    case 'A':
 	      {
 		int atom;
@@ -125,8 +144,9 @@ UINT32 ssh_vformat_length(char *f, va_list args)
 		if (!literal)
 		  length += 4;
 		f++;
+		break;
 	      }
-	    break;
+#endif
 	    case 'n':
 	      {
 		bignum *n = va_arg(args, bignum *);
@@ -157,10 +177,16 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
       if (*f == '%')
 	{
 	  int literal = 0;
+	  int do_free = 0;
 	  f++;
 	  if (*f == 'l')
 	    {
 	      literal = 1;
+	      f++;
+	    }
+	  if (*f == 'f')
+	    {
+	      do_free = 1;
 	      f++;
 	    }
 	  switch(*f)
@@ -214,6 +240,9 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 
 		memcpy(buffer, s->data, s->length);
 		buffer += s->length;
+
+		if (do_free)
+		  lsh_string_free(s);
 		f++;
 		break;
 	      }
@@ -299,8 +328,43 @@ void ssh_vformat(char *f, UINT8 *buffer, va_list args)
 		    WRITE_UINT32(start, total);
 		  }
 		f++;
+		break;
 	      }
-	    break;
+#if 0
+	    case 'A':
+	      {
+		int *atom = va_arg(args, int *);
+		UINT8 *start = buffer; /* Where to store the length */
+		
+		if (!literal)
+		  buffer += 4;
+
+		if (*atom > 0)
+		  {
+		    UINT32 length = get_atom_length(*atom);
+		    memcpy(buffer, get_atom_name(*atom), length);
+		    buffer += length;
+		    atom ++;
+		    
+		    while (*atom > 0)
+		      {
+			*buffer++ = ',';
+			length = get_atom_length(atom);
+			memcpy(buffer, get_atom_name(atom), length);
+			buffer += length;
+			atom++;
+		      }
+		  }
+				
+		if (!literal)
+		  {
+		    UINT32 total = buffer - start - 4;
+		    WRITE_UINT32(start, total);
+		  }
+		f++;
+		break;
+	      }
+#endif
 	    case 'n':
 	      {
 		bignum *n = va_arg(args, bignum *);
