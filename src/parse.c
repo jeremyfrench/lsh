@@ -102,7 +102,7 @@ int parse_sub_buffer(struct simple_buffer *buffer,
   return 1;
 }
 
-int parse_uint8(struct simple_buffer *buffer, UINT8 *result)
+int parse_uint8(struct simple_buffer *buffer, int *result)
 {
   if (!LEFT)
     return 0;

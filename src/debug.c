@@ -96,8 +96,8 @@ static int do_rec_debug(struct packet_handler *self,
 			struct lsh_string *packet)
 {
   struct simple_buffer buffer;
-  UINT8 msg_number;
-  UINT8 always_display;
+  int msg_number;
+  int always_display;
   UINT32 length;
   UINT8 *msg;
   int language;

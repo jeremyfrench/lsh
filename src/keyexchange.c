@@ -59,7 +59,7 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
   struct kexinit *res;
   struct simple_buffer buffer;
   struct simple_buffer sub_buffer;
-  UINT8 msg_number;
+  int msg_number;
   UINT32 reserved;
   
   int *lists[NLISTS];
@@ -413,7 +413,7 @@ static int do_handle_newkeys(struct packet_handler *c,
 {
   struct handle_newkeys *closure = (struct handle_newkeys *) c;
   struct simple_buffer buffer;
-  UINT8 msg_number;
+  int msg_number;
 
   MDEBUG(closure);
   

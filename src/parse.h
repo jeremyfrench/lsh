@@ -62,7 +62,7 @@ struct lsh_string *parse_string_copy(struct simple_buffer *buffer);
 int parse_sub_buffer(struct simple_buffer *buffer,
 		     struct simple_buffer *subbuffer);
 
-int parse_uint8(struct simple_buffer *buffer, UINT8 *result);
+int parse_uint8(struct simple_buffer *buffer, int *result);
 
 int parse_boolean(struct simple_buffer *buffer, int *result);
 
