@@ -72,8 +72,11 @@
 
 #define COMMAND_CALL(f, a, c) \
   ((f)->call((f), (struct lsh_object *) (a), (c)))
+
+/* NOTE: If R == NULL, don't call the continuation, _but_ the argument
+ * V must still be evaluated. */
 #define COMMAND_RETURN(r, v) \
-  ((r) ? ((r)->c((r), (struct lsh_object *) (v))) : LSH_OK | LSH_GOON)
+  ((r) ? ((r)->c((r), (struct lsh_object *) (v))) : ((void)(v), LSH_OK | LSH_GOON))
 #define COMMAND_SIMPLE(f, a) \
   ((f)->call_simple((f), (struct lsh_object *)(a)))
 
@@ -88,6 +91,8 @@ int do_call_simple_command(struct command *s,
 
 struct command *make_parallell_progn(struct object_list *body);
 extern struct command_simple progn_command;
+
+extern struct command_continuation discard_continuation;
 
 /* GABA:
    (class

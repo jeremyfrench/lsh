@@ -36,6 +36,16 @@
 
 #include "command.c.x"
 
+int do_discard_continuation(struct command_continuation *ignored UNUSED,
+			    struct lsh_object *x UNUSED)
+{
+  return LSH_OK | LSH_GOON;
+}
+
+struct command_continuation discard_continuation =
+{ STATIC_HEADER, do_discard_continuation};
+
+
 /* GABA:
    (class
      (name command_apply)
@@ -55,6 +65,7 @@ struct command_continuation *
 make_apply(struct command *f, struct command_continuation *c)
 {
   NEW(command_apply, res);
+
   res->f = f;
   res->super.up = c;
   res->super.super.c = do_command_apply;
