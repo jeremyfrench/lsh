@@ -194,7 +194,7 @@ make_client_callback(struct io_backend *b,
   return &connected->super;
 }
 
-static int client_die(struct close_callback *closure, int reason)
+static int client_close_die(struct close_callback *closure, int reason)
 {
   verbose("Connection died, for reason %d.\n", reason);
   if (reason != CLOSE_EOF)
@@ -208,7 +208,7 @@ struct close_callback *make_client_close_handler(void)
 
   NEW(c);
 
-  c->f = client_die;
+  c->f = client_close_die;
 
   return c;
 }
@@ -297,6 +297,88 @@ struct ssh_service *request_service(int service_name,
   return &closure->super;
 }
 
+struct session
+{
+  struct channel super;
+
+  int expect_close;
+
+  UINT32 min_window;
+  UINT32 max_window;
+  
+  /* To access stdio */
+  struct io_fd *stdin;
+  struct write_buffer *stdout;
+  struct write_buffer *stderr;
+};
+
+static int client_session_die(struct ssh_channel *c, struct abstract_write *write)
+{
+  struct session *closure = (struct session *) c;
+  
+  MDEBUG(closure);
+
+  /* FIXME: Don't die this hard. Should send proper close messages,
+   * wait for buffers to be flushed, etc. */
+  if (closure->expect_close)
+    exit(EXIT_SUCCESS);
+
+  exit(EXIT_FAILURE);
+}
+
+static int do_recieve(struct ssh_channel *self, struct abstract_write *write,
+		      int type, struct lsh_string *data)
+{
+  struct session *closure = (struct session *) c;
+  int res = 0;
+  
+  MDEBUG(closure);
+
+  if (closure->super.rec_window_size < closure->min_window)
+    {
+      res = A_WRITE(write, prepare_window_adjust
+		    (channel, closure->max_window - closure->super.rec_window_size));
+      if (LSH_CLOSEDP(res))
+	return res;
+    }
+  
+  switch(type)
+    {
+    case CHANNEL_DATA:
+      return A_WRITE(closure->stdout, data);
+    case CHANNEL_STDERR_DATA:
+      return A_WRITE(closure->stderr, data);
+    default:
+      fatal("Internal error!\n");
+    }
+}
+		     
+/* We have a remote shell */
+static int do_start_session(struct ssh_channel *c, struct abstract_write *write)
+{
+  struct session *closure = (struct session *) c;
+
+  MDEBUG(closure);
+
+  closure->recieve = do_recieve;
+}
+
+/* We have opened a channel of type "session" */
+static int do_open_confirm(struct ssh_channel *c, struct abstract_write *write)
+{
+  struct session *closure = (struct session *) c;
+
+  MDEBUG(closure);
+
+  closure->super.open_confirm = NULL;
+  closure->super.open_failure = NULL;
+
+  closure->super.channel_success = do_shell;
+  closure->super.channel_failure = client_session_die;
+
+  return A_WRITE(write, format_channel_request(ATOM_SHELL, c, 1, ""));
+}
+
 struct client_startup
 {
   struct connection_startup super;
@@ -312,6 +394,7 @@ void int do_client_startup(struct connection_startup *c,
   struct client_startup *closure = (struct client_startup *) c;
 
   MDEBUG(closure);
+
   
 }
 
