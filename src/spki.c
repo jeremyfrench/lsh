@@ -25,11 +25,19 @@
 
 #include "spki.h"
 
+#include "atoms.h"
+#include "format.h"
 #include "parse.h"
 #include "publickey_crypto.h"
 #include "sexp.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include <assert.h>
+
+#define GABA_DEFINE
+#include "spki.h.x"
+#undef GABA_DEFINE
 
 #define SA(x) sexp_a(ATOM_##x)
 
@@ -43,11 +51,11 @@ make_spki_exception(UINT32 type, const char *msg, struct sexp *expr)
   self->super.msg = msg;
   self->expr = expr;
 
-  return &super->self;
+  return &self->super;
 }
 
 #define SPKI_ERROR(e, msg, expr) \
-EXCEPTION_RAISE((e), make_simple_exception(EXC_SPKI_TYPE, (msg), (expr)))
+EXCEPTION_RAISE((e), make_spki_exception(EXC_SPKI_TYPE, (msg), (expr)))
 
 struct sexp *keyblob2spki(struct lsh_string *keyblob)
 {
@@ -89,7 +97,10 @@ UINT32 spki_get_type(struct sexp *e, struct sexp_iterator **res)
 
   type = sexp2atom(SEXP_GET(i));
   if (type && res)
-    *res = i;
+    {
+      SEXP_NEXT(i);
+      *res = i;
+    }
   else
     KILL(i);
 
@@ -111,6 +122,7 @@ int spki_check_type(struct sexp *e, UINT32 type, struct sexp_iterator **res)
 
   if (tag && (!lsh_string_cmp_l(tag, get_atom_length(type), get_atom_name(type))))
     {
+      SEXP_NEXT(i);
       *res = i;
       return 1;
     }
@@ -161,7 +173,7 @@ static struct sexp *dsa_private2public(struct sexp_iterator *i)
   if (SEXP_GET(i))
     return NULL;
 
-  return sexp_l(2, SA(PUBLIC-KEY),
+  return sexp_l(2, SA(PUBLIC_KEY),
 		sexp_l(5, SA(DSA), p, q, g, y, -1), -1);
 }
 
@@ -174,7 +186,7 @@ do_spki_private2public(struct command *s UNUSED,
 {
   CAST_SUBTYPE(sexp, key, a);
   struct sexp_iterator *i;
-  struct sexp *e;
+  struct sexp *expr;
   struct sexp *pub;
 
   if (!spki_check_type(key, ATOM_PRIVATE_KEY, &i))
@@ -183,9 +195,9 @@ do_spki_private2public(struct command *s UNUSED,
       return;
     }
 
-  e = SEXP_GET(i);
+  expr = SEXP_GET(i);
   KILL(i);
-  switch (spki_get_type(e, &i))
+  switch (spki_get_type(expr, &i))
     {
     default:
       SPKI_ERROR(e, "spki.c: Unknown key type (only dsa is supported).", key);
@@ -206,19 +218,23 @@ do_spki_private2public(struct command *s UNUSED,
 struct command spki_public2private
 = STATIC_COMMAND(do_spki_private2public);
 
+#if 0
 /* Encryption of private data.
  * Uses the format
  *
  * (password-encrypted LABEL sha1 ("3des-cbc" (iv #...#) (data #...#)))
  */
-/* GABA:
+/* ;; GABA:
    (class
      (name spki_password_encrypt)
      (super command)
      (vars
        (label string)
        (hash . UINT32)
-       (algorithm object crypto_algorithm)))
+       (algorithm . UINT32)
+       (iv string)
+       (random object randomness)
+       (crypto object crypto_instance)))
 */
 
 static void
@@ -229,6 +245,31 @@ do_spki_encrypt(struct command *s,
 {
   CAST(spki_password_encrypt, self, s);
   CAST_SUBTYPE(sexp, key, a);
-
+  UINT32 pad;
   
+  string lsh_string *s = SEXP_FORMAT(key, SEXP_CANONICAL, 0);
+  pad = self->crypto->block_size - (s->length % self->crypto->block_size);
 
+  if (pad)
+    {
+      UINT8 *p;
+      s = ssh_format("%lfS%lr", s, pad, &p);
+      RANDOM(self->random, pad, p);
+    }
+
+  CRYPT(self->crypto, s->length, s->data, s->data);
+
+  COMMAND_RETURN(c,
+		 sexp_l(4,
+			SA(PASSWORD_ENCRYPTED),
+			make_sexp_string(lsh_string_dup(self->label), NULL),
+			sexp_a(self->hash),
+			sexp_l(3,
+			       sexp_a(self->algorithm),
+			       make_sexp_string(lsh_string_dup(self->iv), NULL),
+			       make_sexp_string(s, NULL),
+			       -1),
+			-1));
+}
+
+#endif

@@ -30,7 +30,7 @@
 #include "sexp.h"
 
 #define GABA_DECLARE
-#include "sexp.h.x"
+#include "spki.h.x"
 #undef GABA_DECLARE
 
 /* GABA:
@@ -44,9 +44,14 @@
 struct exception *
 make_spki_exception(UINT32 type, const char *msg, struct sexp *expr);
 
+UINT32 spki_get_type(struct sexp *e, struct sexp_iterator **res);
+
+int spki_check_type(struct sexp *e, UINT32 type, struct sexp_iterator **res);
+
 /* FIXME: should support keyblobs other than ssh-dss */
 struct sexp *keyblob2spki(struct lsh_string *keyblob);
 
 extern struct command spki_public2private;
+#define PRIVATE2PUBLIC (&spki_public2private.super)
 
 #endif /* LSH_SPKI_H_INCLUDED */
