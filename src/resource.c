@@ -30,6 +30,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
+
 /* Prototypes */
 
 void dont_free_live_resource(int alive);
@@ -38,7 +40,19 @@ void dont_free_live_resource(int alive);
 #include "resource.h.x"
 #undef GABA_DEFINE
 
+/* Forward declarations */
 
+struct resource_node;
+
+void do_mark_resources(struct resource_node **q,
+		       void (*mark)(struct lsh_object *o));
+
+void do_free_resources(struct resource_node **q);
+
+#include "resource.c.x"
+
+
+/* Sanity check */
 void dont_free_live_resource(int alive)
 {
   if (alive)
@@ -46,29 +60,103 @@ void dont_free_live_resource(int alive)
 	  "About to garbage collect a live resource!\n");
 }
 
-static void do_remember_resource(struct resource_list *self,
-						  struct resource *r)
+/* The behaviour of a resource list is somewhat similar to
+ * a weak list. Nodes that are dead are unlinked automatically,
+ * so that they can be garbage collected. */
+
+struct resource_node
 {
-  object_queue_add_head(&self->q, &r->super);
+  struct resource_node *next;
+  struct resource *resource;
+};
+
+/* GABA:
+   (class
+     (name concrete_resource_list)
+     (super resource_list)
+     (vars
+       (q indirect-special "struct resource_node *"
+                           do_mark_resources do_free_resources)))
+*/
+
+/* Loop over the resources, mark the living and unlink the dead. */
+void do_mark_resources(struct resource_node **q,
+		       void (*mark)(struct lsh_object *o))
+{
+  struct resource_node *n;
+  
+  while ( (n = *q) )
+    {
+      if (n->resource->alive)
+	{
+	  mark(&n->resource->super);
+	  q = &n->next;
+	}
+      else
+	{
+	  *q = n->next;
+	  lsh_space_free(n);
+	}
+    }
 }
 
-static void do_kill_all(struct resource_list *self)
+/* Free the list. */
+void do_free_resources(struct resource_node **q)
 {
-  while (!object_queue_is_empty(&self->q))
+  struct resource_node *n;
+
+  for (n = *q; n; )
     {
-      CAST_SUBTYPE(resource, r, object_queue_remove_head(&self->q));
-      KILL_RESOURCE(r);
+      struct resource_node *old = n;
+      n = n->next;
+      lsh_space_free(old);
     }
+}
+
+
+static void
+do_remember_resource(struct resource_list *s,
+		     struct resource *resource)
+{
+  CAST(concrete_resource_list, self, s);
+  struct resource_node *n;
+
+  assert(self->super.super.alive);
+  NEW_SPACE(n);
+
+  n->resource = resource;
+  n->next = self->q;
+  self->q = n;
+}
+
+static void do_kill_all(struct resource *s)
+{
+  CAST(concrete_resource_list, self, s);
+  struct resource_node *n;
+
+  for (n = self->q; n; )
+    {
+      CAST_SUBTYPE(resource, r, n->resource);
+       struct resource_node *old = n;
+
+      KILL_RESOURCE(r);
+      n = n->next;
+
+      lsh_space_free(old);
+    }
+  self->q = NULL;
+  self->super.super.alive = 0;
 }
   
 struct resource_list *empty_resource_list(void)
 {
-  NEW(resource_list, self);
-  object_queue_init(&self->q);
+  NEW(concrete_resource_list, self);
+  self->super.super.kill = do_kill_all;
+  self->super.super.alive = 1;
 
-  self->remember = do_remember_resource;
-  self->kill_all = do_kill_all;
-  /* self->kill = do_kill_resource; */
+  self->super.remember = do_remember_resource;
+  
+  self->q = NULL;
 
-  return self;
+  return &self->super;
 }
