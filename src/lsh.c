@@ -74,9 +74,6 @@ struct command_2 lsh_verifier_command;
 struct command_2 lsh_login_command;
 #define LSH_LOGIN (&lsh_login_command.super.super)
 
-static struct command options2known_hosts;
-#define OPTIONS2KNOWN_HOSTS (&options2known_hosts.super)
-
 struct command options2service;
 #define OPTIONS2SERVICE (&options2service.super)
 
@@ -181,45 +178,69 @@ DEFINE_COMMAND(options2service)
 
 /* Open hostkey database. By default, "~/.lsh/known_hosts". */
 
-static void
-do_options2known_hosts(struct command *ignored UNUSED,
-		       struct lsh_object *a,
-		       struct command_continuation *c,
-		       struct exception_handler *e)
+static struct spki_context *
+read_known_hosts(struct lsh_options *options)
 {
-  CAST(lsh_options, options, a);
-  
   struct lsh_string *tmp = NULL;
+  struct lsh_string *contents;
   const char *s = NULL;
-  struct lsh_fd *f;
+  int fd;
+  struct simple_buffer buffer;
+  struct spki_context *context;
+
+  context = make_spki_context(options->signature_algorithms);
   
   if (options->known_hosts)
     s = options->known_hosts;
-  else 
+  else
     {
       tmp = ssh_format("%lz/.lsh/known_hosts", options->home);
       s = lsh_get_cstring(tmp);
     }
-  
-  f = io_read_file(s, e);
 
-  if (!f)
+  fd = open(s, O_RDONLY);
+  if (fd < 0)
     {
-      werror("Failed to open '%z' (errno = %i): %z.\n",
-	     s, errno, STRERROR(errno));
-      COMMAND_RETURN(c, make_spki_context(options->signature_algorithms));
+      lsh_string_free(tmp);
+      werror("Failed to open `%z' for reading: %z\n",
+             s, STRERROR(errno));
+      return context;
     }
-  else
-    {
-      CAST_SUBTYPE(command, read,
-		   make_spki_read_acls(options->signature_algorithms));
-      COMMAND_CALL(read, f, c, e);
-    }
+
   lsh_string_free(tmp);
+
+  contents = io_read_file_raw(fd, 5000);
+  
+  if (!contents)
+  {
+    werror("Failed to read known_hosts file: %z\n",
+           STRERROR(errno));
+    close(fd);
+    return context;
+  }
+
+  close(fd);
+
+  simple_buffer_init(&buffer, contents->length, contents->data);
+  while (!parse_eod(&buffer))
+    {
+      struct sexp *expr = sexp_parse(SEXP_TRANSPORT, &buffer);
+
+      if (!expr)
+        {
+          werror("read_known_hosts: S-expression syntax error.\n");
+          break;
+        }
+      if (!spki_add_acl(context, expr))
+        {
+          werror("read_known_hosts: Invalid ACL.\n");
+          break;
+        }
+    }
+  lsh_string_free(contents);
+  return context;
 }
 
-static struct command options2known_hosts =
-STATIC_COMMAND(do_options2known_hosts);
 
 /* Read user's private keys. By default, "~/.lsh/identity". */
 static void
@@ -543,7 +564,8 @@ DEFINE_COMMAND2(lsh_login_command)
      (name make_lsh_connect)
      (params
        (handshake object handshake_info)
-       (init object make_kexinit))
+       (init object make_kexinit)
+       (db object lookup_verifier))
      (expr (lambda (options)
                ; What to do with the service
 	       ((progn (options2actions options))
@@ -555,8 +577,7 @@ DEFINE_COMMAND2(lsh_login_command)
 		     ; Start the ssh transport protocol
 	             (connection_handshake
 		       handshake init
-		       (options2verifier options
-				         (options2known_hosts options))
+		       db
  		       ; Connect using tcp
 		       (connect_simple (options2remote options)))))))))
 */
@@ -925,7 +946,8 @@ make_lsh_default_handler(int *status, struct exception_handler *parent,
 int main(int argc, char **argv)
 {
   struct lsh_options *options;
-
+  struct spki_context *spki;
+  
   /* Default exit code if something goes wrong. */
   int lsh_exit_code = 17;
 
@@ -945,6 +967,8 @@ int main(int argc, char **argv)
   options = make_options(handler, &lsh_exit_code);
 
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
+
+  spki = read_known_hosts(options);
   
   {
     struct lsh_object *o =
@@ -961,7 +985,12 @@ int main(int argc, char **argv)
 			    options->algorithms->crypto_algorithms,
 			    options->algorithms->mac_algorithms,
 			    options->algorithms->compression_algorithms,
-			    make_int_list(0, -1)));
+			    make_int_list(0, -1)),
+        make_lsh_host_db(spki,
+                         options->super.tty,
+                         options->super.remote,
+                         options->sloppy,
+                         options->capture_file));
     
     CAST_SUBTYPE(command, lsh_connect, o);
 
