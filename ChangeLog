@@ -1,7 +1,11 @@
+2001-04-10  Niels Möller  <nisse@ehand.com>
+
+	* src/client.c (make_client_session): Use set_error_nonblocking.
+
 2001-04-09  Niels Möller  <nisse@ehand.com>
 
 	* src/werror.c (set_error_nonblocking): New function.
-	(set_error_stream): DEleted WITH_POLL argument.
+	(set_error_stream): Deleted WITH_POLL argument.
 	(werror_options): Aded option --log-file.
 	(werror_argp_parser): Process --log-file option.
 
