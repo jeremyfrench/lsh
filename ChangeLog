@@ -1,3 +1,37 @@
+2001-04-11  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/userauth.h (lsh_process): New class.
+	(lsh_user): The fork_method now returns the child as an
+	lsh_process.
+
+	* src/unix_user.c (process_resource): Inherit lsh_process.
+	(do_signal_process): New function.
+
+	* src/unix_interact.c (install_suspend_handler): New function.
+	(stop_handler): New signal handler for TSTP, that sets and resets
+	the tty modes.
+
+	* src/tty.c (tty_getwinsize): Take a struct terminal_dimensions *
+	as argument. 
+	(tty_setwinsize): Likewise.
+
+	* src/server_session.c (server_session): Changed type of process
+	attribute to lsh_process. Updated uses.
+	(do_alloc_pty): Check request syntax in all cases, even if there's
+	no pty. 
+	(do_window_change_request): New function.
+
+	* src/interact.h (struct terminal_dimensions): Moved definition...
+	* src/tty.h (struct terminal_dimensions): ...to here.
+
+	* src/client_pty.c: Include tty.h.
+
+	* src/client.h (escape_info): New class.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added client_escape.c.
+
+	* src/client_escape.c: New file.
+
 2001-04-10  Niels Möller  <nisse@ehand.com>
 
 	* src/client.c (make_client_session): Use set_error_nonblocking.
