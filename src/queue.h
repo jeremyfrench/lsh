@@ -28,6 +28,8 @@
 
 #include "lsh.h"
 
+#include "list.h"
+
 /* Layout taken from AmigaOS lists... The first node uses a prev
  * pointer that points to the queue's HEAD. The last node uses a next
  * pointer that points to the queue's TAIL field. The TAIL field is
@@ -84,12 +86,18 @@ struct object_queue_node
    (struct
      (name object_queue)
      (vars
+       (length . UINT32)
        (q special-struct "struct lsh_queue"
           do_object_queue_mark do_object_queue_free)))
 */
 
+#if 0
 #define object_queue_is_empty(x) (lsh_queue_is_empty(&(x)->q))
 #define object_queue_init(x) (lsh_queue_init(&(x)->q))
+#endif
+
+void object_queue_init(struct object_queue *q);
+int object_queue_is_empty(struct object_queue *q);
 
 void object_queue_add_head(struct object_queue *q, struct lsh_object *o);
 void object_queue_add_tail(struct object_queue *q, struct lsh_object *o);
@@ -98,6 +106,14 @@ struct lsh_object *object_queue_remove_tail(struct object_queue *q);
 
 struct lsh_object *object_queue_peek_head(struct object_queue *q);
 struct lsh_object *object_queue_peek_tail(struct object_queue *q);
+
+/* For explicitly allocated object queues, which are not included in a
+ * garbage collected object. */
+void object_queue_kill(struct object_queue *q);
+
+#define KILL_OBJECT_QUEUE(q) object_queue_kill((q))
+
+struct object_list *queue_to_list(struct object_queue *q);
 
 #define FOR_OBJECT_QUEUE(oq, n)				\
   struct lsh_queue_node *n##_this, *n##_next;			\
@@ -110,6 +126,7 @@ struct lsh_object *object_queue_peek_tail(struct object_queue *q);
 /* NOTE: You should probably use break or perhaps continue after removing the current node. */
 /* FIXME: This name is rather ugly. */
 
-#define FOR_OBJECT_QUEUE_REMOVE(n) (lsh_queue_remove(n##_this))
+#define FOR_OBJECT_QUEUE_REMOVE(q, n) \
+do { (q)->length--; lsh_queue_remove(n##_this); } while(0)
 
 #endif /* LSH_QUEUE_H_INCLUDED */

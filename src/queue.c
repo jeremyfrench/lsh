@@ -32,7 +32,7 @@
 
 /* Prototypes */
 static void do_object_queue_mark(struct lsh_queue *q,
-			  void (*mark)(struct lsh_object *o));
+				 void (*mark)(struct lsh_object *o));
 static void do_object_queue_free(struct lsh_queue *q);
 
 #define GABA_DEFINE
@@ -47,7 +47,9 @@ static void do_object_queue_free(struct lsh_queue *q);
 #define tail ht_links[LSH_QUEUE_TAIL]
 #define tailprev ht_links[LSH_QUEUE_TAILPREV]
 
-#define EMPTYP(q) ((q)->tailprev == (struct lsh_queue_node *) (q))
+#define EMPTYP(q) ((q)->tailprev == (struct lsh_queue_node *) &(q)->head)
+
+/* #define EMPTYP(q) (!(q)->length) */
 
 #if DEBUG_ALLOC
 static void sanity_check_queue(struct lsh_queue *q)
@@ -55,15 +57,27 @@ static void sanity_check_queue(struct lsh_queue *q)
   struct lsh_queue_node *n;
 
 #if 0
+  UINT32 count;
+#endif
+  
+#if 0
   debug("sanity_check_queue: q = %xi\n", (UINT32) q);
 #endif
+
+#if 0
+  if (EMPTYP(q) != EMPTYP_1(q))
+    fatal("inconsistent emptyness!\n");
+
+  count = 0;
+#endif
+  
   if (q->tail)
     fatal("sanity_check_queue: q->tail not NULL!\n");
 
   n = q->head;
 
-  if (n->prev != (struct lsh_queue_node *) q)
-    fatal("sanity_check_queue: head->next != &q->head !\n");
+  if (n->prev != (struct lsh_queue_node *) &q->head)
+    fatal("sanity_check_queue: head->prev != &q->head !\n");
 
   while (n->next)
     {
@@ -74,9 +88,18 @@ static void sanity_check_queue(struct lsh_queue *q)
 	fatal("n->prev->next != n !\n");
 
       n = n->next;
+#if 0
+      count++;
+#endif
     }
   if (n != (struct lsh_queue_node *) &(q->tail))
     fatal("n != n &t->tail!\n");
+
+#if 0
+  if (count != (q->length + 1))
+    fatal("incorrect length!\n");
+#endif
+  
 }
 #else
 #define sanity_check_queue(x)
@@ -103,6 +126,7 @@ void lsh_queue_add_head(struct lsh_queue *q, struct lsh_queue_node *n)
   n->prev = (struct lsh_queue_node *) &(q->head);
   n->prev->next = n;
   n->next->prev = n;
+
   sanity_check_queue(q);
 }
 
@@ -113,6 +137,7 @@ void lsh_queue_add_tail(struct lsh_queue *q, struct lsh_queue_node *n)
   n->prev = q->tailprev;
   n->prev->next = n;
   n->next->prev = n;
+
   sanity_check_queue(q);
 }
 
@@ -158,6 +183,8 @@ struct lsh_queue_node *lsh_queue_peek_tail(struct lsh_queue *q)
   return EMPTYP(q) ? NULL : q->tailprev;
 }
 
+
+/* object_queue */
 static struct object_queue_node *
 make_object_queue_node(struct lsh_object *o)
 {
@@ -169,14 +196,29 @@ make_object_queue_node(struct lsh_object *o)
   return n;
 }
 
+void object_queue_init(struct object_queue *q)
+{
+  lsh_queue_init(&q->q);
+  q->length = 0;
+}
+
+int object_queue_is_empty(struct object_queue *q)
+{
+  assert(EMPTYP(&q->q) == !q->length);
+
+  return !q->length;
+}
+
 void object_queue_add_head(struct object_queue *q, struct lsh_object *o)
 {
   lsh_queue_add_head(&q->q, &make_object_queue_node(o)->header);
+  q->length++;
 }
 
 void object_queue_add_tail(struct object_queue *q, struct lsh_object *o)
 {
   lsh_queue_add_tail(&q->q, &make_object_queue_node(o)->header);
+  q->length++;
 }
 
 static struct lsh_object *
@@ -198,11 +240,13 @@ object_queue_peek(struct lsh_queue_node *n)
 
 struct lsh_object *object_queue_remove_head(struct object_queue *q)
 {
+  q->length--;
   return object_queue_get_contents(lsh_queue_remove_head(&q->q));
 }
 
 struct lsh_object *object_queue_remove_tail(struct object_queue *q)
 {
+  q->length--;
   return object_queue_get_contents(lsh_queue_remove_tail(&q->q));
 }
 
@@ -214,6 +258,20 @@ struct lsh_object *object_queue_peek_head(struct object_queue *q)
 struct lsh_object *object_queue_peek_tail(struct object_queue *q)
 {
   return EMPTYP(&q->q) ? NULL : object_queue_peek(q->q.tailprev);
+}
+
+struct object_list *queue_to_list(struct object_queue *q)
+{
+  struct object_list *l = alloc_object_list(q->length);
+  UINT32 i = 0;
+
+  FOR_OBJECT_QUEUE(q, n)
+    {
+      LIST(l)[i++] = n;
+    }
+  assert(i == q->length);
+
+  return l;
 }
 
 /* For gc */
@@ -228,6 +286,11 @@ static void do_object_queue_free(struct lsh_queue *q)
 {
   FOR_QUEUE(q, struct object_queue_node *, n)
     lsh_space_free(n);
+}
+
+void object_queue_kill(struct object_queue *q)
+{
+  do_object_queue_free(&q->q);
 }
 
   
