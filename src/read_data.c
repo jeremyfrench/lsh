@@ -26,7 +26,6 @@
 #include "read_data.h"
 
 #include "io.h"
-#include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -69,22 +68,22 @@ do_read_data_query(struct io_consuming_read *s)
 	("read_data: Data arrived during key exchange. Won't read it now.\n");
       return 0;
     }
-  
-  /* The fuzz factor is because the max size refers to the complete
-   * packet including some overhead (9 octets for SSH_MSG_CHANNEL_DATA
-   * and 13 octets for SSH_MSG_CHANNEL_EXTENDED_DATA). */
 
-  if ( (self->channel->send_window_size + SSH_MAX_PACKET_FUZZ)
-       < self->channel->send_max_packet)
-    return self->channel->send_window_size;
+  /* There are three numbers that limit the amount of data we can read:
+   *
+   *   1 The current send_window_size.
+   *   2 The send_max_packet size for the channel.
+   *   3 (The maximum size for a complete packet SSH_MAX_PACKET)
+   *
+   * We don't enforce (3) here, but assume that if the remote end has
+   * given us a huge send_max_packet, it will also handle huge ssh
+   * packets.
+   *
+   * For channels that are forwarded via a gateway, we do need to care
+   * about (3), but that is done by the gatewaying code adjusting the
+   * send_max_packet. */
 
-  else if (self->channel->send_max_packet > SSH_MAX_PACKET_FUZZ)
-    return self->channel->send_max_packet - SSH_MAX_PACKET_FUZZ;
-
-  else
-    /* Ridiculously small max packet size. Send some 50 characters at
-     * a time and hope the receiver can cope. */
-    return SSH_MAX_PACKET_FUZZ / 2;
+  return MIN(self->channel->send_window_size, self->channel->send_max_packet);
 }
 
 
