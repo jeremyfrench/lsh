@@ -37,7 +37,7 @@ done
 
 # We may need /usr/local/bin to get GNU make
 if make --version 2>/dev/null | grep GNU >/dev/null ; then : ; else
-    if /usr/local/bin/make | grep GNU >/dev/null ; then
+    if /usr/local/bin/make --version 2>/dev/null | grep GNU >/dev/null ; then
 	PATH="/usr/local/bin:$PATH"
     fi
 fi
