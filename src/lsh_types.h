@@ -30,31 +30,7 @@
 #include "config.h"
 #endif
 
-/* FIXME: This should probably be set in config.h by autoconf */
-
-/* The crypt function requires _XOPEN_SOURCE, while the initgroups
- * function requires _BSD_SOURCE. Appearantly also needed for strsignal() */
-#define _GNU_SOURCE
-
-#if SIZEOF_SHORT >= 4
-#define UINT32 unsigned short
-#elif SIZEOF_INT >= 4
-#define UINT32 unsigned int
-#elif SIZEOF_LONG >= 4
-#define UINT32 unsigned long
-#else
-#error Ledsen error
-#endif
-
-#if SIZEOF_SHORT >= 2
-#define UINT16 unsigned short
-#elif SIZEOF_INT >= 2
-#define UINT16 unsigned int
-#else
-#error Ledsen error
-#endif
-
-#define UINT8 unsigned char
+#include "include/crypto_types.h"
 
 #ifdef __GNUC__
 #define NORETURN __attribute__ ((noreturn))
