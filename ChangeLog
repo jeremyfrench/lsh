@@ -1,3 +1,44 @@
+2001-10-15  Niels Möller  <nisse@ehand.com>
+
+	* src/testsuite/cast128-test.m4: New cast-128 cbc testcase.
+
+	* src/crypto.c (crypto_cast128_cbc_algorithm): New algorithm,
+	replacing the code in cast.c.
+	(crypto_serpent256_cbc_algorithm): New algorithm, replacing the
+	code in serpent.c
+
+	* src/serpent.c, src/cast.c, src/blowfish.c, src/cbc.c,
+	src/cascade.c: Deleted files.
+
+	* src/abstract_crypto.c (crypto_invert): Deleted function.
+	(gcd): Deleted function.
+	(lcm): Deleted function.
+
+	* src/crypto.c (crypto_serpent256_cbc_algorithm): New algorithm,
+	replacing code in serpent.c.
+
+	* src/testsuite/blowfish-test.m4: New testcase for blowfish-128
+	cbc. 
+
+	* src/crypto.c (crypto_blowfish_cbc_algorithm): New algorithm,
+	replacing the code in blowfish.c.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Deleted blowfish.c.
+
+	* src/testsuite/twofish-test.m4: Updated test case to test
+	twofish_cbc. 
+
+	* src/testsuite/des-test.m4: Updated test case to test des3_cbc.
+
+	* src/idea.c: Deleted file.
+
+	* src/des.c, src/twofish.c: Deleted files, replaced by code in
+	crypto.c. 
+
+	* src/crypto.c (crypto_twofish256_cbc_algorithm): New algorithm,
+	replacing the code in twofish.c.
+	(make_des3_cbc_instance): Initialize the iv properly.
+
 2001-10-14  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/crypto.c (crypto_aes256_cbc_algorithm): Renamed, was

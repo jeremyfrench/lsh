@@ -3,6 +3,8 @@ News for the 1.3.5 release:
 	Fixed window change handling in lshd.
 
 	Replaced the io-backend code. Now uses liboop.
+
+	Uses nettle's implementations of cbc and des3 chaining.
 	
 News for the 1.3.4 release:
 
