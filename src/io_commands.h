@@ -33,6 +33,45 @@
 #include "io_commands.h.x"
 #undef GABA_DECLARE
 
+/* GABA:
+   (class
+     (name io_write_file_info)
+     (vars
+       (name . "const char *")
+       (flags . int)
+       (mode . int)
+       (block_size . UINT32)))
+*/
+
+struct io_write_file_info *
+make_io_write_file_info(const char *name, int flags, int mode, UINT32 block_size);
+
+extern struct command_simple io_write_file_command;
+
+#define IO_WRITE_FILE (&io_write_file_command.super.super)
+
+/* Read a certain fd */
+
+/* GABA:
+   (class
+     (name io_read_fd)
+     (super command)
+     (vars
+       (fd . int)))
+*/
+
+void do_io_read_fd(struct command *s,
+		   struct lsh_object *a,
+		   struct command_continuation *c,
+		   struct exception_handler *e);
+
+#define STATIC_IO_READ_FD(fd) \
+{ STATIC_COMMAND(do_io_read_fd), fd }
+
+extern struct io_read_fd io_read_stdin;
+#define IO_READ_STDIN (&io_read_stdin.super.super)
+
+
 /* Returned by listen */
 /* GABA:
    (class
@@ -48,8 +87,11 @@ struct command *make_listen_command(struct command *callback,
 extern struct collect_info_1 listen_command;
 #define LISTEN_COMMAND (&listen_command.super.super.super)
 
+extern struct collect_info_1 connect_with_port;
+#define CONNECT_COMMAND (&connect_with_port.super.super.super)
+
 struct command *make_connect_port(struct io_backend *backend,
-					struct address_info *target);
+				  struct address_info *target);
 struct command *make_connect_connection(struct io_backend *backend);
 
 extern struct collect_info_1 connect_with_connection;

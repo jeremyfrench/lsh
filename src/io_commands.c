@@ -35,11 +35,91 @@
 /* Needed only to get the error code from failed calls to io_connect() */
 #include <errno.h>
 
+/* For STDIN_FILENO */
+#include <unistd.h>
+
 #define GABA_DEFINE
 #include "io_commands.h.x"
 #undef GABA_DEFINE
 
 #include "io_commands.c.x"
+
+/* GABA:
+   (class
+     (name backend_command)
+     (super command)
+     (vars
+       (backend object io_backend)))
+*/
+
+/* (write file_info backend)
+ *
+ * Opens a file for write, and returns the corresponding write_buffer.
+ * */
+   
+static void
+do_io_write_file(struct command *s,
+		 struct lsh_object *a,
+		 struct command_continuation *c,
+		 struct exception_handler *e)
+{
+  CAST(backend_command, self, s);
+  CAST(io_write_file_info, info, a);
+
+  struct io_fd *fd = io_write_file(self->backend,
+				   info->name,
+				   info->flags,
+				   info->mode,
+				   info->block_size,
+				   NULL,
+				   e);
+  if (fd)
+    COMMAND_RETURN(c, fd->write_buffer);
+  else
+    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_WRITE, NULL, errno, NULL));
+}
+
+static struct lsh_object *
+do_io_write_file_collect(struct command_simple *s UNUSED,
+			 struct lsh_object *a)
+{
+  CAST(io_backend, backend, a);
+
+  NEW(backend_command, self);
+  self->super.call = do_io_write_file;
+  self->backend = backend;
+
+  return &self->super.super;
+}
+
+struct command_simple io_write_file_command
+= STATIC_COMMAND_SIMPLE(do_io_write_file_collect);
+
+struct io_write_file_info *
+make_io_write_file_info(const char *name, int flags, int mode, UINT32 block_size)
+{
+  NEW(io_write_file_info, self);
+  self->name = name;
+  self->flags = flags;
+  self->mode = mode;
+  self->block_size = block_size;
+
+  return self;
+}
+
+void do_io_read_fd(struct command *s,
+		   struct lsh_object *a,
+		   struct command_continuation *c,
+		   struct exception_handler *e)
+{
+  CAST(io_read_fd, self, s);
+  CAST(io_backend, backend, a);
+
+  COMMAND_RETURN(c, make_io_fd(backend, self->fd, e));
+}
+
+struct io_read_fd io_read_stdin
+= STATIC_IO_READ_FD(STDIN_FILENO);
 
 /* GABA:
    (class
