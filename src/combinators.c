@@ -209,9 +209,31 @@ struct collect_info_1 command_S =
 STATIC_COLLECT_1(&collect_info_S_2);
 #endif
 
-/* S' c f g x == c (f x) (g x) */
+/* S' k f g x == k (f x) (g x) */
 
-/* Represents S' c f g */
+DEFINE_COMMAND4(command_Sp)
+     (struct lsh_object *k,
+      struct lsh_object *f,
+      struct lsh_object *g,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(command, ck, k);
+  CAST_SUBTYPE(command, cf, f);
+  CAST_SUBTYPE(command, cg, g);
+
+  COMMAND_CALL(cf, x,
+	       make_apply(ck,
+			  make_command_S_continuation(cg,
+						      x, c, e),
+			  e),
+	       e);
+  
+}
+
+#if 0
+/* Represents S' k f g */
 /* GABA:
    (class
      (name command_Sp_3)
@@ -283,10 +305,24 @@ STATIC_COLLECT_2(&collect_info_Sp_3);
 
 struct collect_info_1 command_Sp =
 STATIC_COLLECT_1(&collect_info_Sp_2);
-
+#endif
 
 /* B f g x == f (g x) */
+DEFINE_COMMAND3(command_B)
+     (struct lsh_object *f,
+      struct lsh_object *g,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(command, cf, f);
+  CAST_SUBTYPE(command, cg, g);
 
+  COMMAND_CALL(cg, x,
+	       make_apply(cf, c, e), e);
+}
+
+#if 0
 /* Represents (B f g) */
 /* GABA:
    (class
@@ -347,10 +383,28 @@ STATIC_COLLECT_2_FINAL(collect_B_2);
 
 struct collect_info_1 command_B =
 STATIC_COLLECT_1(&collect_info_B_2);
+#endif
 
+/* B' k f g x == k (f (g x)) */
+DEFINE_COMMAND4(command_Bp)
+     (struct lsh_object *k,
+      struct lsh_object *f,
+      struct lsh_object *g,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(command, ck, k);
+  CAST_SUBTYPE(command, cf, f);
+  CAST_SUBTYPE(command, cg, g);
 
-/* B' c f g x == c (f (g x)) */
+  COMMAND_CALL(cg, x,
+	       make_apply(cf,
+			  make_apply(ck, c, e), e),
+	       e);
+}
 
+#if 0
 /* Represents (B' c f g) */
 /* GABA:
    (class
@@ -421,7 +475,7 @@ STATIC_COLLECT_2(&collect_info_Bp_3);
 
 struct collect_info_1 command_Bp =
 STATIC_COLLECT_1(&collect_info_Bp_2);
-
+#endif
 
 /* ((C f) y) x == (f x) y  */
 
