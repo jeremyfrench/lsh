@@ -592,9 +592,9 @@ client_shell_session(struct client_options *options)
   if (session)
     {
       struct object_queue session_requests;
-    
+
       object_queue_init(&session_requests);
-  
+
       client_maybe_pty(options, &session_requests);
       client_maybe_x11(options, &session_requests);
   
@@ -816,6 +816,7 @@ make_client_session(struct client_options *options)
   int out;
   int err;
   int is_tty = 0;
+  struct ssh_channel *session;
   
   struct escape_info *escape = NULL;
   
@@ -909,8 +910,8 @@ make_client_session(struct client_options *options)
 
   /* Clear options */
   options->stdin_file = options->stdout_file = options->stderr_file = NULL;
-  
-  return make_client_session_channel
+
+  session = make_client_session_channel
     (io_read(make_lsh_fd(in, "client stdin", options->handler),
 	     NULL, NULL),
      io_write(make_lsh_fd(out, "client stdout", options->handler),
@@ -920,6 +921,13 @@ make_client_session(struct client_options *options)
      escape,
      WINDOW_SIZE,
      options->exit_code);
+
+  /* The channel won't get registered in any other resource_list
+   * until later, so we must register it here to avoid a "garbage
+   * collecting a live resource!" crashes if the connection fails
+   * early. */
+  gc_global(&session->resources->super);
+  return session;
 }
 
 
