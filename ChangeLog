@@ -1,3 +1,46 @@
+2000-02-05  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/io.c, src/io.h: Reorganized, and deleted all subclasses of
+	lsh_fd.  
+	(io_connect): Take a continuation as argument.
+	(io_listen): Take an io_callback (typically of type
+	io_listen_callback) as argument.
+	(make_listen_callback): New function.
+
+	* src/io_commands.c: Replaced io_fd with lsh_fd.
+
+	* src/io_commands.h: Moved listen_value to io.h
+
+	* src/tcpforward_commands.c (forward_local_port,
+	tcpip_forward_hook): Catch EXC_CHANNEL_OPEN. 
+
+	* src/proxy.c, src/server_session.c: Replaced io_fd with lsh_fd. 
+
+	* src/read_data.c (make_read_data): Changed return type to
+	io_callback. 
+
+	* src/lshd.c: Replaced io_fd with lsh_fd.
+	(main): Use make_report_exception_info().
+
+	* src/lsh_types.h (STRSIGNAL): Use _sys_siglist on SGI.
+
+	* src/lsh.h: Added forward declaration of listen_value.
+
+	* src/exception.c (make_report_exception_info): New function. 
+
+	* src/connection_commands.c: Replaced io_fd with lsh_fd.
+
+	* src/command.h (STATIC_CATCH_REPORT): New macro.
+
+	* src/command.c: New command catch_report.
+
+	* src/client.c: Replaced io_fd with lsh_fd.
+
+	* src/channel.c (do_channel_open_failure): Improved exception
+	message. 
+	(make_channel_read_data, make_channel_read_stderr): Changed return
+	type to io_callback. 
+
 2000-02-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.in: Added check for inline.
