@@ -1,6 +1,6 @@
 ## Process this file with make_am to produce Makefile.am
 
-SUBDIRS: src doc misc
+SUBDIRS: src doc misc contrib
 BODY:
 
 AUTOMAKE_OPTIONS = foreign
