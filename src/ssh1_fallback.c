@@ -23,6 +23,7 @@
 
 #include "ssh1_fallback.h"
 
+#include "io.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
