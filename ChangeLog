@@ -1,3 +1,39 @@
+2003-09-26  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/channel.c (login_service_command): Deleted redundant command.
+
+	* src/lshd.c (main_options): #if:ed out login-auth-mode-user.
+	(main_argp_parser): For login-auth-mode, we don't need a user
+	database. Instead use make_unix_user_self and
+	make_userauth_none_permit. 
+	(install_session_handler): New command.
+	(lshd_login_service): Take the "session" channel open handler as
+	argument. We don't need a general list of connection hooks. Use
+	init_connection_service, not the reduntant init_login_service.
+	(make_lshd_login_service): Simplified a little.
+
+	* src/server_userauth.c (do_none_preauth,
+	server_userauth_none_preauth):  Userauth "none" handler which
+	succeeds only if the user was authenticated during key exchange.	
+	(userauth_none_permit): New class.
+	(do_none_permit): Userauth "none" handler which always succeeds.
+	(make_userauth_none_permit): New function.
+	(userauth_none): Deleted class.
+	(do_none_authenticate, make_userauth_none): Deleted functions.
+
+	* src/unix_user.c (chdir_home): Deleted function.
+	(exec_shell): Take separate arguments for shell, home, name, uid
+	and gid, not a struct unix_user.
+	(spawn_error, spawn_parent, spawn_child): New helper functions,
+	broken out of do_spawn.
+	(do_spawn): Use helper functions.
+	(unix_user_self): New class.
+	(do_verify_password_fail, do_file_exists_fail, do_read_file_fail):
+	Dummy methods. 
+	(do_spawn_self): Spawn method for unix_user_self class. 
+	(make_unix_user_self): New function.
+	(unix_current_user): Deleted function.
+
 2003-09-25  Niels Möller  <niels@s3.kth.se>
 
 	* src/io.c (do_connect_list_callback): Fixed error message. errno
