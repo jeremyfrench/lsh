@@ -31,7 +31,8 @@
 
 /* FIXME: There are no timeouts for authentications. The callouts in
  * io.c could be used for timeouts, but it's not clear how the timeout
- * handler can close the right connection. */
+ * handler can close the right connection. Using the right exception
+ * handler could work. */
 
 /* NOTE: Here we assume that services and authentication methods are
  * orthogonal. I.e. every supported authentication method is accepted
@@ -59,17 +60,6 @@
        ; Maps services to commands
        (services object alist)))
 */
-
-struct lsh_string *format_userauth_failure(struct int_list *methods,
-					   int partial)
-{
-  return ssh_format("%c%A%c", SSH_MSG_USERAUTH_FAILURE, methods, partial);
-}
-
-struct lsh_string *format_userauth_success(void)
-{
-  return ssh_format("%c", SSH_MSG_USERAUTH_SUCCESS);
-}
 
 /* FIXME: Perhaps this should use a two-dimensional lookup, and call
  * an authentication object depending on both service and method? */
@@ -112,7 +102,7 @@ do_handle_userauth(struct packet_handler *c,
 	  return;
 	}
 
-      AUTHENTICATE(auth, user, &buffer,
+      AUTHENTICATE(auth, connection, user, &buffer,
 		   make_delay_continuation(service, closure->c),
 		   closure->e);
     }
@@ -200,14 +190,14 @@ make_userauth_continuation(struct ssh_connection *connection,
 
 static void
 do_exc_userauth_handler(struct exception_handler *s,
-			const struct exception *e)
+			const struct exception *x)
 {
   CAST(exc_userauth_handler, self, s);
 
-  switch(e->type)
+  switch(x->type)
     {
     default:
-      EXCEPTION_RAISE(self->super.parent, e);
+      EXCEPTION_RAISE(self->super.parent, x);
       break;
     case EXC_USERAUTH:
       if (self->attempts)
@@ -222,6 +212,16 @@ do_exc_userauth_handler(struct exception_handler *s,
 			  make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
 						  "Access denied"));
 	}
+      break;
+    case EXC_USERAUTH_SPECIAL:
+      {
+	CAST_SUBTYPE(userauth_special_exception, e, x);
+	/* NOTE: We can't NULL e->reply, since the exception it is supposed to be constant.
+	 * So we have to dup it, to make the gc happy. */
+	C_WRITE(self->connection, lsh_string_dup(e->reply));
+
+	break;
+      }
     }
 }
 
