@@ -79,25 +79,12 @@ extern struct command_simple spki_sexp2signer_command;
 extern struct command_simple spki_sexp2keypair_command;
 #define SEXP2KEYPAIR (&spki_sexp2keypair_command.super.super)
 
-#if 0
-extern struct spki_hash spki_hash_md5;
-#define SPKI_HASH_MD5 (&spki_hash_md5.super.super)
-extern struct spki_hash spki_hash_sha1;
-#define SPKI_HASH_SHA1 (&spki_hash_sha1.super.super)
-#endif
-
 struct command *
 make_spki_hash(int name, struct hash_algorithm *algorithm);
 
 struct command *
 make_spki_parse_key(struct alist *algorithms);
 
-#if 0
-struct keypair *
-read_spki_key_file(const char *name,
-		   struct alist *algorithms,
-		   struct exception_handler *e);
-#endif
 
 /* At a point in time, not all fields are known; fields may be added
  * later, or computed as needed. This information is not automatically
@@ -225,11 +212,5 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
 int
 spki_add_acl(struct spki_context *ctx,
 	     struct sexp *e);
-
-#if 0
-struct object_list *
-spki_read_acls(struct spki_context *ctx,
-	       struct sexp *e);
-#endif
 
 #endif /* LSH_SPKI_H_INCLUDED */
