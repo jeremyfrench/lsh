@@ -387,15 +387,15 @@ do_lsh_lookup(struct lookup_verifier *c,
     {
     case ATOM_SSH_DSS:
       {
-	struct dsa_verifier *v = make_ssh_dss_verifier(key->length, key->data);
+	struct verifier *v = make_ssh_dss_verifier(key->length, key->data);
 	if (!v)
 	  {
 	    werror("do_lsh_lookup: Invalid ssh-dss key.\n");
 	    return NULL;
 	  }
 	subject = SPKI_LOOKUP(self->db,
-			      dsa_to_spki_public_key(&v->public),
-			      &v->super);
+			      spki_make_public_key(v),
+			      v);
 	assert(subject);
 	assert(subject->verifier);
 	break;
