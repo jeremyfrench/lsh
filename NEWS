@@ -1,8 +1,9 @@
 News for the 1.4 release
  
 	In 1.3.6, there was an incompatible change to the rsa key
-	format, you probably want to pass your keys through
-	`sexp-conv --replace=%rsa-pkcs1-sha1%rsa-pkcs1% -f transport' 
+	format. This change has been reverted for 1.4. You may want to
+	pass your keys through `sexp-conv
+	--replace=%rsa-pkcs1%rsa-pkcs1-sha1% -f transport'
 
 	lshd now sets SSH_CLIENT and SSH_TTY (if appropiate).
 	

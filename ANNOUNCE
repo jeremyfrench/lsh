@@ -17,9 +17,8 @@ o  Random numbers are generated using the Yarrow pseudorandomness
 o  Both lsh and lshd now expire session keys and performs
    key-reexchange regularly. 
 
-o  AES is now the default cipher. A faster assembler version for sparc
-   is included. x86 code is included as well, but it needs some more
-   work before it can be enabled.
+o  AES is now the default cipher. Faster assembler versions are
+   included for x86 and sparc.
 
 o  Client and server support for subsystems.
 
@@ -86,7 +85,7 @@ LSH is provided AS IS, ABSOLUTELY no GUARANTEES, etc. Please report
 any bugs you find.
 
 
-LICENSE
+COPYRIGHT
 
 LSH is distributed under the terms and conditions of the GNU General
 Public License. Unlike some other secsh implementations, you can use
