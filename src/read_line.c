@@ -30,6 +30,7 @@
 
 #include "read_line.h"
 
+#include "lsh_string.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -49,7 +50,7 @@
        
        ; Line buffer       
        (pos . uint32_t)
-       (buffer array uint8_t MAX_LINE)))
+       (buffer string)))
 */
 
 static uint32_t
@@ -86,7 +87,7 @@ do_read_line(struct read_handler **h,
 	}
       else
 	{
-	  memcpy(self->buffer + self->pos, data, available);
+	  lsh_string_write(self->buffer, self->pos, available, data);
 	  self->pos += available;
 	}
       return available;
@@ -104,7 +105,7 @@ do_read_line(struct read_handler **h,
     }
 
   /* Ok, now we have a line. Copy it into the buffer. */
-  memcpy(self->buffer + self->pos, data, tail);
+  lsh_string_write(self->buffer, self->pos, tail, data);
   length = self->pos + tail;
   
   /* Exclude carriage return character, if any */
@@ -112,7 +113,8 @@ do_read_line(struct read_handler **h,
     length--;
 
   /* NOTE: This call can modify both self->handler and *h. */
-  PROCESS_LINE(self->handler, h, length, self->buffer, self->e);
+  PROCESS_LINE(self->handler, h,
+	       length, lsh_string_data(self->buffer), self->e);
 		    
   /* Reset */
   self->pos = 0;
@@ -129,6 +131,7 @@ struct read_handler *make_read_line(struct line_handler *handler,
   closure->super.handler = do_read_line;
   closure->pos = 0;
 
+  closure->buffer = lsh_string_alloc(MAX_LINE);
   closure->handler = handler;
   closure->e = e;
   
