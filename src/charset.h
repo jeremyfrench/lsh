@@ -26,7 +26,7 @@
 #ifndef LSH_CHARSET_H_INCLUDED
 #define LSH_CHARSET_H_INCLUDED
 
-#include <inttypes.h>
+#include "lsh.h"
 
 /* FIXME: Use charsets real objects, instead of using fixed constants */
 
