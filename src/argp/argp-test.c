@@ -65,7 +65,7 @@ asprintf (char **result, const char *format, ...)
     p[size] = '\0';
     
     va_start(args, format);
-    written = vsnprintf(p, format, size, args);
+    written = vsnprintf(p, size, format, args);
     va_end(args);
 
     if (written >= 0)
