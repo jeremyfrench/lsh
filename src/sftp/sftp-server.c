@@ -525,6 +525,10 @@ sftp_process_readdir(struct sftp_ctx *ctx)
   if (!sftp_get_handle_dir(ctx, &dir))
     return sftp_bad_message(ctx);
 
+  /* readdir doesn't modify errno on EOF, so we need to clear it
+   * first. */
+  errno = 0;
+  
   entry=readdir(dir->dir);
 
   if (!entry)
