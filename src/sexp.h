@@ -48,6 +48,7 @@ struct sexp_iterator;
 */
 
 #define SEXP_FORMAT(e, s, i) ((e)->format((e), (s), (i)))
+#define SEXP_ITER(e) ((e)->iter((e)))
 
 /* CLASS:
    (class
@@ -77,7 +78,8 @@ struct sexp_iterator;
        (next method void)))
 */
 
-#define SEXP_CURRENT(i) ((i)->current((i)))
+#define SEXP_GET(i) ((i)->get((i)))
+#define SEXP_SET(i, v) ((i)->set((i), (v)))
 #define SEXP_NEXT(i) ((i)->next((i)))
 
 /* Output styles */
@@ -140,6 +142,11 @@ struct lsh_string *sexp_display(const struct sexp *e);
 int sexp_atom(const struct sexp *e);
 int sexp_bignum_u(const struct sexp *e, mpz_t n);
 int sexp_bignum_s(const struct sexp *e, mpz_t n);
+
+/* Utility functions for parsing spki objects. */
+int sexp_eqz(const struct sexp *e, const char *s);
+int sexp_check_type(struct sexp *e, const char *type,
+		    struct sexp_iterator **res);
 
 extern int sexp_char_classes[];
 

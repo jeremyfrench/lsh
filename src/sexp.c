@@ -31,6 +31,7 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <string.h>
 
 #define CLASS_DEFINE
 #include "sexp.h.x"
@@ -186,6 +187,17 @@ struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c)
   return &s->super;
 }
 
+struct lsh_string *sexp_contents(const struct sexp *e)
+{
+  CAST(sexp_string, self, e);
+  return self->contents;
+}
+
+struct lsh_string *sexp_display(const struct sexp *e)
+{
+  CAST(sexp_string, self, e);
+  return self->display;
+}
 
 static struct lsh_string *
 do_format_sexp_nil(struct sexp *ignored UNUSED, int style UNUSED,
@@ -346,7 +358,7 @@ static struct sexp *do_vector_get(struct sexp_iterator *c)
   CAST(sexp_iter_vector, i, c);
   if (i->i < LIST_LENGTH(i->l))
     {
-      CAST(sexp, res, LIST(i->l)[i->i]);
+      CAST_SUBTYPE(sexp, res, LIST(i->l)[i->i]);
       return res;
     }
   return NULL;
@@ -597,5 +609,38 @@ int sexp_atomp(const struct sexp *e)
   return !e->iter;
 }
 
+int sexp_eqz(const struct sexp *e, const char *s)
+{
+  struct lsh_string *c;
 
+  if (!sexp_atomp(e) || sexp_display(e))
+    return 0;
 
+  c = sexp_contents(e);
+
+  return !strncmp(s, c->data, c->length);
+}
+
+int sexp_check_type(struct sexp *e, const char *type,
+		    struct sexp_iterator **res)
+{
+  struct sexp_iterator *i;
+  
+  if (sexp_atomp(e) || sexp_nullp(e))
+    return 0;
+
+  i = SEXP_ITER(e);
+
+  if (sexp_eqz(SEXP_GET(i), type))
+    {
+      if (res)
+	{
+	  SEXP_NEXT(i);
+	  *res = i;
+	}
+      return 1;
+    }
+
+  KILL(i);
+  return 0;
+}
