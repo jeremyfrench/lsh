@@ -1,3 +1,7 @@
+2000-05-24  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* contrib/lsh.spec.in: Use -o flag for lsh_writekey (Thayne).
+
 2000-05-22  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/io.c (do_kill_fd): Call close_fd_nicely(). This fixes a
