@@ -326,7 +326,8 @@ struct io_fd *make_io_fd(struct io_backend *b,
 
 struct exception_handler *
 make_exc_finish_read_handler(struct lsh_fd *fd,
-			     struct exception_handler *parent);
+			     struct exception_handler *parent,
+			     const char *context);
 
 struct connect_fd *
 io_connect(struct io_backend *b,

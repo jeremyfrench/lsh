@@ -67,7 +67,8 @@ int io_iter(struct io_backend *b)
 {
   unsigned long nfds; /* FIXME: Should be nfds_t if that type is defined */
   struct pollfd *fds;
-
+  struct lsh_fd **active_fds;
+  
   /* FIXME: Callouts not implemented */
   /* int timeout; */
   int res;
@@ -117,7 +118,7 @@ int io_iter(struct io_backend *b)
 	 * interested in reading or writing. However, that makes the
 	 * mapping from struct pollfd to struct lsh_fd a little more
 	 * difficult. */
-#if 0
+#if 1
 	if (fd->want_read || fd->want_write)
 #endif
 	  nfds++;
@@ -132,38 +133,40 @@ int io_iter(struct io_backend *b)
      *
      * NOTE: There might be some callouts left, but we won't wait for them. */
     return 0;
-  
-  fds = alloca(sizeof(struct pollfd) * nfds);
 
+  fds = alloca(sizeof(struct pollfd) * nfds);
+  active_fds = alloca(sizeof(struct lsh_fd *) *nfds);
+  
   /* Fill out fds-array */
   {
     struct lsh_fd *fd;
     unsigned long i;
     int all_events = 0;
     
-    for (fd = b->files, i = 0; fd; fd = fd->next, i++)
+    for (fd = b->files, i = 0; fd; fd = fd->next)
       {
 	assert(i < nfds);
 
-#if 0
-	if (! (fd->want_read || fd->want_write))
-	  continue;
-#endif
-	fds[i].fd = fd->fd;
-	fds[i].events = 0;
+	if (fd->want_read || fd->want_write)
+	  {
+	    active_fds[i] = fd;
 
-	if (fd->want_read)
-	  fds[i].events |= POLLIN;
+	    fds[i].fd = fd->fd;
+	    fds[i].events = 0;
+	    
+	    if (fd->want_read)
+	      fds[i].events |= POLLIN;
 
-	if (fd->want_write)
-	  fds[i].events |= POLLOUT;
+	    if (fd->want_write)
+	      fds[i].events |= POLLOUT;
 
-	all_events |= fds[i].events;
+	    all_events |= fds[i].events;
+	    i++;
+	  }
       }
     assert(i == nfds);
-#if 0
     assert(all_events);
-#else
+#if 0
     if (!all_events)
       {
 	/* Nothing happens */
@@ -200,13 +203,15 @@ int io_iter(struct io_backend *b)
   
   {
     /* Do io. Note that the callback functions may add new fds to the
-     * head of the list, or clear the alive flag on any fd. */
+     * head of the list, or clear the alive flag on any fd. But this
+     * is less of a problem now, as we use the active_fd array.*/
 
-    struct lsh_fd *fd;
+    /* struct lsh_fd *fd; */
     unsigned long i;
     
-    for(fd = b->files, i=0; fd; fd = fd->next, i++)
+    for(i=0; i<nfds; i++)
       {
+	struct lsh_fd *fd = active_fds[i];
 	assert(i<nfds);
 
 	debug("io.c: poll for fd %i: events = 0x%xi, revents = 0x%xi.\n",
@@ -241,8 +246,8 @@ int io_iter(struct io_backend *b)
 	if (fds[i].revents & POLLPRI)
 	  {
 	    werror("io.c: Peer is trying to send Out of Band data. Hanging up.\n");
-	    /* FIXME: We have to add some callback to invoke on this
-	     * kind of i/o errors? */
+
+	    /* FIXME: Should we raise any exception here? */
 
 	    close_fd(fd, CLOSE_PROTOCOL_FAILURE); 
 
@@ -569,7 +574,7 @@ static void init_file(struct io_backend *b, struct lsh_fd *f, int fd,
 {
   f->fd = fd;
 
-  f->e = make_exception_handler(do_exc_io_handler, e);
+  f->e = make_exception_handler(do_exc_io_handler, e, HANDLER_CONTEXT);
   
   f->close_reason = -1; /* Invalid reason */
   f->close_callback = NULL;
@@ -1194,12 +1199,16 @@ do_exc_finish_read_handler(struct exception_handler *s,
 
 struct exception_handler *
 make_exc_finish_read_handler(struct lsh_fd *fd,
-			     struct exception_handler *parent)
+			     struct exception_handler *parent,
+			     const char *context)
 {
   NEW(exc_finish_read_handler, self);
-  self->fd = fd;
+
   self->super.parent = parent;
   self->super.raise = do_exc_finish_read_handler;
+  self->super.context = context;
+  
+  self->fd = fd;
 
   return &self->super;
 }
