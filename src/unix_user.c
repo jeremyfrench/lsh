@@ -92,7 +92,7 @@ do_logout_cleanup(struct exit_callback *s,
   /* No need to signal the process. */
   self->process->alive = 0;
 
-#if WITH_UTMP && HAVE_LOGWTMP
+#if defined(WITH_UTMP) && defined(HAVE_LOGWTMP)
   if (self->log)
     logwtmp(self->log->ut_line,
 	    "",
@@ -419,7 +419,7 @@ do_fork_process(struct lsh_user *u,
 
     case 0: /* Child */
       /* FIXME: Create utmp entry as well. */
-#if WITH_UTMP && HAVE_LOGWTMP
+#if defined(WITH_UTMP) && defined(HAVE_LOGWTMP)
       if (log)
 	  /* FIXME: It should be safe to perform a blocking reverse dns lookup here,
 	   * as we have forked. */
