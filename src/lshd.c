@@ -477,7 +477,7 @@ int main(int argc, char **argv)
     if (forward_flag)
       connection_hooks = make_object_list
 	(3,
-	 tcpip_forward_hook(backend),
+	 make_tcpip_forward_hook(backend),
 	 make_install_fix_global_request_handler
 	 (ATOM_CANCEL_TCPIP_FORWARD, &tcpip_cancel_forward),
 	 make_direct_tcpip_hook(backend),

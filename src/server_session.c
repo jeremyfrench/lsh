@@ -183,8 +183,6 @@ static int do_receive(struct ssh_channel *c,
 {
   CAST(server_session, closure, c);
 
-  /* FIXME: Examine the size of the write buffer, to decide if the
-   * receive window should be adjusted. */
   switch(type)
     {
     case CHANNEL_DATA:
