@@ -41,10 +41,11 @@
 #define ENV_XAUTHORITY	"XAUTHORITY"
 
 /* To get the name of the logged in user, we need to check both
-   $LOGNAME (Sys V convention) and $USER (BSD convention). */
+   $LOGNAME (Sys V convention) and $USER (BSD convention). Consult
+   them in the same order as emacs and rcs. */
 
 #define USER_NAME_FROM_ENV(s) do {		\
-  (s) = getenv(ENV_USER);			\
+  (s) = getenv(ENV_LOGNAME);			\
   if (!(s))					\
-    (s) = getenv(ENV_LOGNAME);			\
+    (s) = getenv(ENV_USER);			\
 } while (0)
