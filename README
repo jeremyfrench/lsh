@@ -1,0 +1,36 @@
+LSH - a free implementetion of the Secure Shell protocols.
+
+
+LSH IS WORK IN PROGRESS. DON'T EXPECT THE CURRENT VERSION TO WORK, AND
+*DON'T* EXPECT IT TO PROVIDE ANY SECURITY WHATSOEVER.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation. See the file COPYING for details.
+
+If you have downloaded a snapshot, you should be able to compile it
+with
+
+   ./configure
+   make
+
+If you have checked out lsh from cvs, things are more complicated. You
+need at least autoconf, automake, GNU-make, gcc, make, gperf and scsh
+to get going. The Makefile.am file is created by running ./make_am. If
+the compiler complains that it can't find a file foo.h.x,
+try creating it with make foo.h.x or ./make_class <foo.h >foo.h.x, and
+similarly for missing foo.c.x files.
+
+For an introduction to the workings of LSH, see the file HACKING.
+
+Several people have contributed to LSH, see the AUTHORS file for
+details.
+
+If you are interested in lsh, you may want to subscribe to the
+psst-list. Subscription address is psst-request@net.lut.ac.uk.
+
+Current snapshots of lsh can be found at
+<URL: http://www.lysator.liu.se/~nisse/archive/>.
+
+
+
