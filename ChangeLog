@@ -1,5 +1,8 @@
 2000-06-30  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* doc/lsh.texinfo: Added @anchor markup for lsh-usage and
+	lshd-usage. 
+
 	* src/symmetric/sha.c: Made the compression function sha_transform
 	non-static. Use the READ_UINT32 and WRITE_UINT32 macros from
 	lsh_types.h. 
