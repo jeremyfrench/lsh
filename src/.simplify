@@ -1,8 +1,15 @@
-abstract_compress.h done
+abstract_compress.h
+
+  Move somewhere else?
+  
 abstract_crypto.h done
 abstract_io.h done
 algorithms.h done
-alist.h done
+
+alist.h 
+
+  alist_add is not used.
+  
 atoms.h done
 bignum.h done
 
