@@ -1584,7 +1584,7 @@
 	* src/server_pty.c (pty_open_slave): Removed call to setsid(),
 	moved to...
 	* src/unix_user.c (do_spawn): Call setsid(). Was previously done by
-	the pty code, and only in the pty case. XXX: Fix in 1.4 branch.
+	the pty code, and only in the pty case. Fixed also in 1.4 branch.
 
 	* src/server_session.c (init_spawn_info): Save the SSH_CLIENT
 	value in the session struct, so that it can be gc:ed properly.
