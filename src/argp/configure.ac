@@ -1,8 +1,8 @@
 dnl Process this file with autoconf to produce a configure script.
 
-dnl This configure.in is only for building a standalone argp library.
+dnl This configure.ac is only for building a standalone argp library.
 
-AC_INIT([argp], [standalone-1.1])
+AC_INIT([argp], [standalone-1.2])
 AC_CONFIG_SRCDIR([argp-ba.c])
 AM_INIT_AUTOMAKE
 AM_CONFIG_HEADER([config.h])
