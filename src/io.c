@@ -648,6 +648,40 @@ make_listen_callback(struct io_backend *backend,
   return &self->super;
 }
 
+#if 0
+
+static void
+do_listen_callback_no_peer(struct io_callback *s,
+			   struct lsh_fd *fd)
+{
+  CAST(io_listen_callback, self, s);
+
+  int conn;
+
+  conn = accept(fd->fd,
+		(struct sockaddr *) &peer, &addr_len);
+  if (conn < 0)
+    {
+      werror("io.c: accept() failed, %z", STRERROR(errno));
+      return;
+    }
+  trace("io.c: accept() on fd %i\n", conn);
+  COMMAND_RETURN(self->c, make_lsh_fd(self->backend,
+				      conn, self->e));
+}
+
+struct io_callback *
+make_listen_callback_no_peer(struct io_backend *backend,
+			     struct command_continuation *c)
+{
+  NEW(io_listen_callback, self);
+  self->super.f = do_listen_callback_no_peer;
+  self->backend = backend;
+  self->c = c;
+  
+  return &self->super;
+}
+#endif
 
 /* Connect callback */
 
@@ -965,7 +999,8 @@ sockaddr2info(size_t addr_len UNUSED,
       }
 #endif
     default:
-      fatal("io.c: format_addr(): Unsupported address family.\n");
+      werror("io.c: sockaddr2info(): Unsupported address family.\n");
+      return NULL;
     }
 }
 
@@ -1265,6 +1300,26 @@ io_listen(struct io_backend *b,
 
 /* AF_LOCAL sockets */
 
+/* Requires DIRECTORY and NAME to be NUL-terminated */
+
+struct local_info *
+make_local_info(struct lsh_string *directory,
+		struct lsh_string *name)
+{
+  if (!directory || !name || memchr(name->data, '/', name->length))
+    return NULL;
+
+  assert(NUL_TERMINATED(directory));
+  assert(NUL_TERMINATED(name));
+  
+  {
+    NEW(local_info, self);
+    self->directory = directory;
+    self->name = name;
+    return self;
+  }
+}
+
 static void
 safe_popd(int old_cd, const char *directory)
 {
@@ -1318,7 +1373,7 @@ safe_pushd(const char *directory,
   /* As far as I have been able to determine, all checks for
    * fchdir:ability is performed at the time the directory was opened.
    * Even if the directory is chmod:et to zero, or unlinked, we can
-   * probably fchdir to it later. */
+   * probably fchdir back to old_cd later. */
 
   while (chdir(directory) < 0)
     if (errno != EINTR)
@@ -1357,11 +1412,9 @@ safe_pushd(const char *directory,
 }
 
 
-/* Requires DIRECTORY and NAME to be NUL-terminated */
 struct lsh_fd *
 io_listen_local(struct io_backend *b,
-		struct lsh_string *directory,
-		struct lsh_string *name,
+		struct local_info *info,
 		struct io_callback *callback,
 		struct exception_handler *e)
 {
@@ -1373,22 +1426,22 @@ io_listen_local(struct io_backend *b,
 
   struct lsh_fd *fd;
   
-  assert(directory && NUL_TERMINATED(directory));
-  assert(name && NUL_TERMINATED(name));
+  assert(info->directory && NUL_TERMINATED(info->directory));
+  assert(info->name && NUL_TERMINATED(info->name));
 
   /* NAME should not be a plain filename, with no directory separators.
    * In particular, it should not be an absolute filename. */
-  assert(!memchr(name->data, '/', name->length));
+  assert(!memchr(info->name->data, '/', info->name->length));
 
-  local_length = OFFSETOF(struct sockaddr_un, sun_path) + name->length;
+  local_length = OFFSETOF(struct sockaddr_un, sun_path) + info->name->length;
   local = alloca(local_length);
 
   local->sun_family = AF_UNIX;
-  memcpy(local->sun_path, name->data, name->length);
+  memcpy(local->sun_path, info->name->data, info->name->length);
 
   /* cd to it, but first save old cwd */
 
-  old_cd = safe_pushd(directory->data, 1);
+  old_cd = safe_pushd(info->directory->data, 1);
   if (old_cd < 0)
     return NULL;
 
@@ -1396,19 +1449,19 @@ io_listen_local(struct io_backend *b,
    * creating a socket. */
 
   /* Try unlinking any existing file. */
-  if ( (unlink(name->data) < 0)
+  if ( (unlink(info->name->data) < 0)
        && (errno != ENOENT))
     {
       werror("io.c: unlink '%S'/'%S' failed (errno = %i): %z\n",
-	     directory, name, errno, STRERROR(errno));
-      safe_popd(old_cd, directory->data);
+	     info->directory, info->name, errno, STRERROR(errno));
+      safe_popd(old_cd, info->directory->data);
       return NULL;
     }
 
   /* We have to change the umask, as that's the only way to control
    * the permissions that bind() uses. */
 
-  old_umask = umask(0770);
+  old_umask = umask(0077);
 
   /* Bind and listen */
   fd = io_listen(b, (struct sockaddr *) local, local_length, callback, e);
@@ -1416,7 +1469,7 @@ io_listen_local(struct io_backend *b,
   /* Ok, now we restore umask and cwd */
   umask(old_umask);
 
-  safe_popd(old_cd, directory->data);
+  safe_popd(old_cd, info->directory->data);
 
   return fd;
 }
@@ -1424,8 +1477,7 @@ io_listen_local(struct io_backend *b,
 /* Requires DIRECTORY and NAME to be NUL-terminated */
 struct lsh_fd *
 io_connect_local(struct io_backend *b,
-		 struct lsh_string *directory,
-		 struct lsh_string *name,
+		 struct local_info *info,
 		 struct command_continuation *c,
 		 struct exception_handler *e)
 {
@@ -1436,28 +1488,28 @@ io_connect_local(struct io_backend *b,
 
   struct lsh_fd *fd;
   
-  assert(directory && NUL_TERMINATED(directory));
-  assert(name && NUL_TERMINATED(name));
+  assert(info->directory && NUL_TERMINATED(info->directory));
+  assert(info->name && NUL_TERMINATED(info->name));
 
   /* NAME should not be a plain filename, with no directory separators.
    * In particular, it should not be an absolute filename. */
-  assert(!memchr(name->data, '/', name->length));
+  assert(!memchr(info->name->data, '/', info->name->length));
 
-  addr_length = OFFSETOF(struct sockaddr_un, sun_path) + name->length;
+  addr_length = OFFSETOF(struct sockaddr_un, sun_path) + info->name->length;
   addr = alloca(addr_length);
 
   addr->sun_family = AF_UNIX;
-  memcpy(addr->sun_path, name->data, name->length);
+  memcpy(addr->sun_path, info->name->data, info->name->length);
 
   /* cd to it, but first save old cwd */
 
-  old_cd = safe_pushd(directory->data, 0);
+  old_cd = safe_pushd(info->directory->data, 0);
   if (old_cd < 0)
     return NULL;
   
   fd = io_connect(b, (struct sockaddr *) addr, addr_length, c, e);
 
-  safe_popd(old_cd, directory->data);
+  safe_popd(old_cd, info->directory->data);
 
   return fd;
 }
@@ -1551,6 +1603,7 @@ io_read_file(struct io_backend *backend,
   return make_lsh_fd(backend, fd, e);
 }
 
+#if 0
 static const struct exception *
 check_user_permissions(struct stat *sbuf, const char *fname,
 		       uid_t uid, int secret)
@@ -1609,63 +1662,6 @@ io_read_user_file(struct io_backend *backend,
   if (*x)
     return NULL;
 
-  fd = open(fname, O_RDONLY);
-  if (fd < 0)
-    {
-      *x = make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL);
-      return NULL;
-    }
-
-  if (fstat(fd, &sbuf) < 0)
-    {
-      werror("io_read_user_file: Failed to stat %z (errno = %i): %z\n",
-	     fname, errno, STRERROR(errno));
-      close(fd);
-      
-      *x = make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL);
-      return NULL;
-    }
-  
-  *x = check_user_permissions(&sbuf, fname, uid, secret);
-
-  if (*x)
-    {
-      close(fd);
-      return NULL;
-    }
-  
-  return make_lsh_fd(backend, fd, e);
-}
-
-#if 0
-/* Open a file, but first check that it is owned by the right user and
- * has proper permissions. Doesn't check permissions on parent
- * directory. Also, doesn't try to forbid symlinks. */
-struct lsh_fd *
-io_read_user_file(struct io_backend *backend,
-		  const char *fname,
-		  uid_t uid, int secret,
-		  const struct exception **x,
-		  struct exception_handler *e)
-{
-  int fd;
-  struct stat sbuf;
-  
-  if (stat(fname, &sbuf) < 0)
-    {
-      if (errno != ENOENT)
-	werror("io_read_user_file: Failed to stat %z (errno = %i): %z\n",
-	       fname, errno, STRERROR(errno));
-
-      *x = make_io_exception(EXC_IO_OPEN_READ, NULL, errno, NULL);
-      return NULL;
-    }
-
-  *x = check_user_permissions(&sbuf, fname, uid, secret);
-
-  if (*x)
-    return NULL;
-  
   fd = open(fname, O_RDONLY);
   if (fd < 0)
     {
