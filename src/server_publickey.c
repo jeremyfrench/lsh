@@ -23,7 +23,6 @@
  */
 
 #include "server_userauth.h"
-#include "userauth.h"
 #include "xalloc.h"
 #include "connection.h"
 #include "parse.h"
@@ -54,6 +53,7 @@ static void
 do_authenticate(struct userauth *s,
 		struct ssh_connection *connection,
 		struct lsh_string *username,
+		UINT32 service UNUSED, 
 		struct simple_buffer *args,
 		struct command_continuation *c,
 		struct exception_handler *e)
