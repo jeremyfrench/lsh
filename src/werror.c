@@ -152,8 +152,10 @@ static void werror_decimal(UINT32 n)
   unsigned i;
   
   for (i = 0; i<length; i++)
-    buffer[length - i - 1] = '0' + n % 10;
-  
+    {
+      buffer[length - i - 1] = '0' + n % 10;
+      n /= 10;
+    }
   werror_write(length, buffer);
 }
 
