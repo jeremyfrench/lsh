@@ -1,5 +1,14 @@
 2005-02-15  Niels Möller  <niels@s3.kth.se>
 
+	* src/lshd-userauth.c (start_service): New function.
+	(service_error): New function.
+	(get_verifier): Implemented, except for the actual signature
+	verification.
+
+	* src/dsa.c (make_ssh_dss_verifier): Take length and pointer as
+	arguments, not a struct lsh_string *. Updated callers.
+	* src/rsa.c (make_ssh_rsa_verifier): Likewise.
+
 	* src/lshd-userauth.c: Implemented user lookup, and part of
 	publickey authentication.
 
