@@ -1,5 +1,7 @@
 2003-03-11  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* index.html: Updated JSDSI link.
+
 	* testsuite/Makefile.am (EXTRA_DIST): Added the setup-env script.
 
 2003-03-10  Niels Möller  <nisse@cuckoo.hack.org>
