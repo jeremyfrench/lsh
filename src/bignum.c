@@ -1,12 +1,10 @@
 /* bignum.c
  *
- *
- *
  * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998, 2002 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -30,8 +28,6 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
-
-#include "prime_table.h"
 
 static void
 limbs_to_octets(const mpz_t n, UINT32 length,
@@ -234,6 +230,7 @@ bignum_random_size(mpz_t x, struct randomness *random, unsigned bits)
     mpz_fdiv_r_2exp(x, x, bits);
 }
 
+/* FIXME: Replace with some function in nettle? */
 /* Returns a random number, 0 <= x < n. */
 void
 bignum_random(mpz_t x, struct randomness *random, mpz_t n)
@@ -262,126 +259,4 @@ bignum_random(mpz_t x, struct randomness *random, mpz_t n)
   bignum_random_size(x, random, mpz_sizeinbase(n, 2) + 10);
 
   mpz_fdiv_r(x, x, n);
-}
-
-/* Returns a small factor of n, or 0 if none is found.*/
-unsigned long
-bignum_small_factor(mpz_t n, int limit)
-{
-  int i;
-  unsigned long stop;
-  
-  if (limit > NUMBER_OF_PRIMES)
-    limit = NUMBER_OF_PRIMES;
-
-  stop = mpz_get_ui(n);
-  if (mpz_cmp_ui(n, stop) != 0)
-    stop = ULONG_MAX;
-
-  for (i = 0;
-       (i < limit)
-	 /* These squares could be tabulated as well, but I don't
-	  * think it's worth the effort to get rid of this extra
-	  * multiplication. */
-	 && (SQR(primes[i]) <= stop); 
-       i++)
-    if (mpz_fdiv_ui(n, primes[i]) == 0)
-      return primes[i];
-  return 0;
-}
-
-void
-bignum_next_prime(mpz_t p, mpz_t n, int count, int prime_limit)
-{
-  mpz_t tmp;
-  unsigned long *moduli = NULL;
-  unsigned long difference;
-  
-  /* First handle tiny numbers */
-  if (mpz_cmp_ui(n, 2) <= 0)
-    {
-      mpz_set_ui(p, 2);
-      return;
-    }
-  mpz_set(p, n);
-  mpz_setbit(p, 0);
-
-  if (mpz_cmp_ui(p, 8) < 0)
-    return;
-
-  mpz_init(tmp);
-
-  if (prime_limit > (NUMBER_OF_PRIMES -1))
-    prime_limit = NUMBER_OF_PRIMES - 1;
-
-  if (prime_limit && (mpz_cmp_ui(p, primes[prime_limit]) <= 0) )
-    /* Don't use table for small numbers */
-    prime_limit = 0;
-
-  if (prime_limit)
-    {
-      /* Compute residues modulo small odd primes */
-      int i;
-
-      moduli = alloca(prime_limit * sizeof(*moduli));
-      for (i = 0; i < prime_limit; i++)
-	moduli[i] = mpz_fdiv_ui(p, primes[i + 1]);
-    }
-
-  for (difference = 0; ; difference += 2)
-    {
-      if (difference >= ULONG_MAX - 10)
-	{ /* Should not happen, at least not very often... */
-	  mpz_add_ui(p, p, difference);
-	  difference = 0;
-	}
-
-      /* First check residues */
-      if (prime_limit)
-	{
-	  int composite = 0;
-      	  int i;
-
-	  for (i = 0; i < prime_limit; i++)
-	    {
-	      if (moduli[i] == 0)
-		composite = 1;
-	      moduli[i] = (moduli[i] + 2) % primes[i + 1];
-	    }
-	  if (composite)
-	    continue;
-	}
-      
-      mpz_add_ui(p, p, difference);
-      difference = 0;
-
-      /* Fermat test, with respect to 2 */
-      mpz_set_ui(tmp, 2);
-      mpz_powm(tmp, tmp, p, p);
-      if (mpz_cmp_ui(tmp, 2) != 0)
-	continue;
-
-      /* Miller-Rabin test */
-      if (mpz_probab_prime_p(p, count))
-	break;
-    }
-  mpz_clear(tmp);
-}
-
-void
-bignum_random_prime(mpz_t x, struct randomness *random, unsigned bits)
-{
-  assert(bits);
-  
-  do
-    {
-      bignum_random_size(x, random, bits);
-      mpz_setbit(x, bits - 1);
-
-      /* Miller-rabin count of 25, and use primes in the table. */
-      bignum_next_prime(x, x, 25, 5000);
-    }
-  while (mpz_sizeinbase(x, 2) > bits);
-
-  assert(mpz_sizeinbase(x, 2) == bits);
 }
