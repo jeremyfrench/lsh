@@ -263,6 +263,22 @@ spki_acl_format(const struct spki_5_tuple_list *list,
 		struct nettle_buffer *buffer);
 
 
+/* Signature verification */
+
+int
+spki_hash_verify(const struct spki_hash_value *hash,
+		 unsigned length,
+		 const uint8_t *data);
+
+typedef int
+spki_verify_func(void *ctx,
+		 const struct spki_hash_value *hash,
+		 struct spki_principal *principal,
+		 struct spki_iterator *signature);
+
+spki_verify_func spki_verify;
+
+
 /* Certificates */
 
 void
@@ -276,20 +292,20 @@ spki_5_tuple_list_release(struct spki_acl_db *db,
 struct spki_5_tuple_list *
 spki_parse_sequence_no_signatures(struct spki_acl_db *db,
 				  struct spki_iterator *i,
-				  struct spki_principal **subject);
+				  const struct spki_principal **subject);
+
+struct spki_5_tuple_list *
+spki_parse_sequence(struct spki_acl_db *db,
+		    struct spki_iterator *i,
+		    const struct spki_principal **subject,
+		    void *verify_ctx,
+		    spki_verify_func *verify);
 
 struct spki_5_tuple_list *
 spki_5_tuple_reduce(struct spki_acl_db *db,
 		    struct spki_5_tuple_list *sequence);
 
 
-
-/* Signature verification */
-int
-spki_verify(void *ctx,
-	    const struct spki_hash_value *hash,
-	    struct spki_principal *principal,
-	    struct spki_iterator *signature);
 
 /* Other more or less internal functions. */
 

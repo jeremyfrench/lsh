@@ -71,7 +71,7 @@ do {								\
   struct method##_ctx ctx;					\
   method##_init(&ctx);						\
   method##_update(&ctx, length, data);				\
-  method##_digest(&ctx, sizeof(result->method), result->method);	\
+  method##_digest(&ctx, sizeof(result->method), result->method);\
 } while (0)
   
 static void
@@ -606,7 +606,7 @@ spki_acl_format(const struct spki_5_tuple_list *list,
 struct spki_5_tuple_list *
 spki_parse_sequence_no_signatures(struct spki_acl_db *db,
 				  struct spki_iterator *i,
-				  struct spki_principal **subject)
+				  const struct spki_principal **subject)
 {
   struct spki_5_tuple_list *list = NULL;
   
@@ -621,7 +621,10 @@ spki_parse_sequence_no_signatures(struct spki_acl_db *db,
 	{
 	case SPKI_TYPE_END_OF_EXPR:
 	  if (spki_parse_end(i) && *subject)
-	    return list;
+	    {
+	      *subject = spki_principal_normalize(*subject);
+	      return list;
+	    }
 	  
 	  /* Fall through */
 	default:
@@ -641,6 +644,7 @@ spki_parse_sequence_no_signatures(struct spki_acl_db *db,
 	      goto fail;
 
 	    assert(cert->subject);
+	    assert(cert->issuer);
 	    *subject = cert->subject;
 	    
 	    break;
@@ -672,16 +676,41 @@ spki_parse_sequence_no_signatures(struct spki_acl_db *db,
     }
 }
 
-#if 0
-typedef int
-spki_verify_function(void *ctx,
-		     struct spki_principal *issuer,
-		     /* Points at signature */
-		     struct spki_iterator *i,
-		     unsigned length,
-		     const uint8_t *data);
+#define HASH_CHECK(hash, method, digest_length, data_length, data) 	\
+do {									\
+  struct method##_ctx ctx;						\
+  uint8_t digest[digest_length];					\
+  if ((hash)->length != digest_length)					\
+    return 0;								\
+  method##_init(&ctx);							\
+  method##_update(&ctx, length, data);					\
+  method##_digest(&ctx, sizeof(digest), digest);			\
+									\
+  if (memcmp(digest, (hash)->digest, digest_length))			\
+    return 0;								\
+} while (0)
 
-/* Each certificate should be followed by a signature, of the form
+int
+spki_hash_verify(const struct spki_hash_value *hash,
+		 unsigned length,
+		 const uint8_t *data)
+{
+  switch(hash->type)
+    {
+    default:
+      return 0;
+    case SPKI_TYPE_MD5:
+      HASH_CHECK(hash, md5, MD5_DIGEST_SIZE, length, data);
+      break;
+    case SPKI_TYPE_SHA1:
+      HASH_CHECK(hash, sha1, SHA1_DIGEST_SIZE, length, data);
+      break;
+    }
+  return 1;
+}
+#undef HASH_CHECK
+
+/* Each certificate must be followed by a signature, of the form
  *
  * (signature <hash> <principal> <sig-val>)
  *
@@ -698,8 +727,9 @@ spki_verify_function(void *ctx,
 struct spki_5_tuple_list *
 spki_parse_sequence(struct spki_acl_db *db,
 		    struct spki_iterator *i,
-		    struct spki_principal **subject,
-		    spki_verify_function *verify)
+		    const struct spki_principal **subject,
+		    void *verify_ctx,
+		    spki_verify_func *verify)
 {
   struct spki_5_tuple_list *list = NULL;
 
@@ -721,7 +751,14 @@ spki_parse_sequence(struct spki_acl_db *db,
 	{
 	case SPKI_TYPE_END_OF_EXPR:
 	  if (spki_parse_end(i) && *subject && !cert_to_verify)
-	    return list;
+	    {
+	      /* FIXME: What's reasonable constness for
+	       * spki_principal_normalize? Should we dodge by making
+	       * it a makro? */
+		 
+	      *subject = spki_principal_normalize(*subject);
+	      return list;
+	    }
 	  
 	  /* Fall through */
 	default:
@@ -735,6 +772,7 @@ spki_parse_sequence(struct spki_acl_db *db,
 	    /* Previous cert not yet verified. */
 	    goto fail;
 	  {
+	    unsigned start = i->start;
 	    struct spki_5_tuple *cert = spki_5_tuple_cons_new(db, &list);
 	    
 	    if (!cert)
@@ -744,8 +782,12 @@ spki_parse_sequence(struct spki_acl_db *db,
 	      goto fail;
 
 	    assert(cert->subject);
-	    *subject = cert->subject;
+	    assert(cert->issuer);
+
+	    cert_to_verify = spki_parse_prevexpr(i, start, &cert_length);
+	    assert(cert_to_verify);
 	    
+	    *subject = cert->subject;
 	    break;
 	  }
 	case SPKI_TYPE_PUBLIC_KEY:
@@ -767,6 +809,26 @@ spki_parse_sequence(struct spki_acl_db *db,
 	    break;
 	  }
 	case SPKI_TYPE_SIGNATURE:
+	  /* FIXME: Allow spurious extra signatures? */
+	  if (!cert_to_verify)
+	    goto fail;
+	  {
+	    struct spki_hash_value hash;
+	    struct spki_principal *principal;
+	    
+	    if (spki_parse_hash(i, &hash)
+		&& spki_hash_verify(&hash, cert_length, cert_to_verify)
+		&& spki_parse_principal(db, i, &principal)
+		&& principal == spki_principal_normalize(issuer)
+		&& verify(verify_ctx, &hash, issuer, i))
+	      {
+		/* Valid signature */
+		cert_to_verify = NULL;
+		break;
+	      }
+	    else
+	      goto fail;
+	  }
 	case SPKI_TYPE_DO:
 	  /* Ignore */
 	  spki_parse_skip(i);
@@ -774,7 +836,6 @@ spki_parse_sequence(struct spki_acl_db *db,
 	}
     }
 }
-#endif
 
 
 
