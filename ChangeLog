@@ -1,5 +1,9 @@
 2004-11-20  Pontus Freyhult  <pont@soua.net>
 
+	* doc/Makefile.am (man_MANS): Added new manpages so they'll
+	be installed.
+	(EXTRA_DIST): Added man_MANS.
+
 	* doc/lsh.texinfo (Files and environment variables): Added
 	documentation for LSHFLAGS, LSHGFLAGS, SSH_CLIENT and SSH_TTY.
 	(Converting keys): Added lsh-export-key example. Rewrote part

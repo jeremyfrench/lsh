@@ -1,7 +1,12 @@
 # Process this file with automake to produce Makefile.in
 
-# man_MANS=DSA.5 SHA.5 SPKI.5 secsh.5 \
-# 	lsh.1 lsh_keygen.1 lsh_writekey.1 lshd.8
+man_MANS=DSA.5 SHA.5 SPKI.5 secsh.5 \
+	 lsh.1 lsh-authorize.1 lsh-decode-key.1 \
+	lsh-decrypt-key.1 lsh-export-key.1 lshg.1 \
+	lsh-keygen.1 lsh-make-seed.1 lsh-upgrade.1 \
+	lsh-upgrade-key.1 lsh-writekey.1 ssh-conv.1 \
+	lshd.8
+
 
 # MANPAGES = $(wildcard *.[1-9])
 info_TEXINFOS = lsh.texinfo
