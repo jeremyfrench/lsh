@@ -6,7 +6,7 @@ Infrastructure certificates and other objects.
 
 OVERVIEW
 
-This section gives an overview of thw SPKI model of authorization.
+This section gives an overview of the SPKI model of authorization.
 
 
 Owners and ACLSs
@@ -75,7 +75,7 @@ directory, for users it would be located in files ad directories under
   ~/.spki/certificates
 
      A big file containing all the user's certificate chains. To find
-     a relevant certificate, one have to read the file and filter out
+     a relevant certificate, one has to read the file and filter out
      interesting certificates, usually by looking at the SPKI tags.
 
   ~/.spki/log/delegations
