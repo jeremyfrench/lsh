@@ -342,7 +342,7 @@ do_login(struct command *s,
   CAST(server_connection_service, closure, s);
   CAST(unix_user, user, x);
   
-  debug("server.c: do_login()\n");
+  werror("User %pS authenticated for ssh-connection service.\n");
 
   /* FIXME: It would be better to take one more alists as arguments,
    * and cons the ATOM_SESSION service at the head of it. But that
@@ -705,8 +705,8 @@ do_spawn_shell(struct channel_request *c,
 
 	  debug("Child: Setting up environment.\n");
 	    
-	  env[i++] = make_env_pair("LOGNAME", session->user->name);
-	  env[i++] = make_env_pair("USER", session->user->name);
+	  env[i++] = make_env_pair("LOGNAME", session->user->super.name);
+	  env[i++] = make_env_pair("USER", session->user->super.name);
 	  env[i++] = make_env_pair("SHELL", session->user->shell);
 	  if (session->term)
 	    env[i++] = make_env_pair("TERM", session->term);
