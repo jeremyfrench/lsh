@@ -109,23 +109,6 @@ make_io_write_file_info(struct lsh_string *name, int flags, int mode, UINT32 blo
   return self;
 }
 
-#if 0
-/* FIXME: Used only by lsh-writekey. Delete? */
-void do_io_read_fd(struct command *s,
-		   struct lsh_object *a,
-		   struct command_continuation *c,
-		   struct exception_handler *e)
-{
-  CAST(io_read_fd, self, s);
-  CAST(io_backend, backend, a);
-
-  COMMAND_RETURN(c, make_lsh_fd(backend,
-				self->fd, "io_read_stdin", e));
-}
-
-struct io_read_fd io_read_stdin
-= STATIC_IO_READ_FD(STDIN_FILENO);
-#endif
 
 static struct exception resolve_exception =
 STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
