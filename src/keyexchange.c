@@ -69,7 +69,8 @@
 /* Arbitrary limit on list length */
 #define KEXINIT_MAX_ALGORITMS 47
 
-static struct kexinit *parse_kexinit(struct lsh_string *packet)
+static struct kexinit *
+parse_kexinit(struct lsh_string *packet)
 {
   NEW(kexinit, res);
   struct simple_buffer buffer;
@@ -125,7 +126,8 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
   return res;
 }
 
-struct lsh_string *format_kex(struct kexinit *kex)
+struct lsh_string *
+format_kex(struct kexinit *kex)
 {
   return ssh_format("%c%ls%A%A%A%A%A%A%A%A%A%A%c%i",
 		    SSH_MSG_KEXINIT,
@@ -342,13 +344,14 @@ make_kexinit_handler(int type,
 
 #define IV_TYPE(t) ((t) + 4)
 
-static struct lsh_string *kex_make_key(struct hash_instance *secret,
-				       UINT32 key_length,
-				       int type,
-				       struct lsh_string *session_id)
+static struct lsh_string *
+kex_make_key(struct hash_instance *secret,
+	     UINT32 key_length,
+	     int type,
+	     struct lsh_string *session_id)
 {
   /* Indexed by the KEX_* values */
-  static /* const */ UINT8 tags[] = "CDEFAB";
+  static const UINT8 tags[] = "CDEFAB";
   
   struct lsh_string *key;
   struct hash_instance *hash;
@@ -423,10 +426,11 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
   return key;
 }
   
-struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
-					 struct object_list *algorithms,
-					 int type,
-					 struct lsh_string *session_id)
+struct crypto_instance *
+kex_make_encrypt(struct hash_instance *secret,
+		 struct object_list *algorithms,
+		 int type,
+		 struct lsh_string *session_id)
 {
   CAST_SUBTYPE(crypto_algorithm, algorithm, LIST(algorithms)[type]);
     
@@ -455,10 +459,11 @@ struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
   return crypto;
 }
 
-struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
-					 struct object_list *algorithms,
-					 int type,
-					 struct lsh_string *session_id)
+struct crypto_instance *
+kex_make_decrypt(struct hash_instance *secret,
+		 struct object_list *algorithms,
+		 int type,
+		 struct lsh_string *session_id)
 {
   CAST_SUBTYPE(crypto_algorithm, algorithm, LIST(algorithms)[type]);
 
@@ -486,10 +491,11 @@ struct crypto_instance *kex_make_decrypt(struct hash_instance *secret,
   return crypto;
 }
 
-struct mac_instance *kex_make_mac(struct hash_instance *secret,
-				  struct object_list *algorithms,
-				  int type,
-				  struct lsh_string *session_id)
+struct mac_instance *
+kex_make_mac(struct hash_instance *secret,
+	     struct object_list *algorithms,
+	     int type,
+	     struct lsh_string *session_id)
 {
   CAST_SUBTYPE(mac_algorithm, algorithm, LIST(algorithms)[type]);
 
@@ -510,16 +516,18 @@ struct mac_instance *kex_make_mac(struct hash_instance *secret,
   return mac;
 }
 
-static struct compress_instance *kex_make_deflate(struct object_list *algorithms,
-						   int type)
+static struct compress_instance *
+kex_make_deflate(struct object_list *algorithms,
+		 int type)
 {
   CAST_SUBTYPE(compress_algorithm, algorithm, LIST(algorithms)[type]);
   
   return algorithm ? MAKE_DEFLATE(algorithm) : NULL;
 }
 
-static struct compress_instance *kex_make_inflate(struct object_list *algorithms,
-						  int type)
+static struct compress_instance *
+kex_make_inflate(struct object_list *algorithms,
+		 int type)
 {
   CAST_SUBTYPE(compress_algorithm, algorithm, LIST(algorithms)[type]);
 
@@ -625,13 +633,14 @@ do_make_simple_kexinit(struct make_kexinit *c)
   return kex;
 }
 
-struct make_kexinit *make_simple_kexinit(struct randomness *r,
-					 struct int_list *kex_algorithms,
-					 struct int_list *hostkey_algorithms,
-					 struct int_list *crypto_algorithms,
-					 struct int_list *mac_algorithms,
-					 struct int_list *compression_algorithms,
-					 struct int_list *languages)
+struct make_kexinit *
+make_simple_kexinit(struct randomness *r,
+		    struct int_list *kex_algorithms,
+		    struct int_list *hostkey_algorithms,
+		    struct int_list *crypto_algorithms,
+		    struct int_list *mac_algorithms,
+		    struct int_list *compression_algorithms,
+		    struct int_list *languages)
 {
   NEW(simple_kexinit, res);
 
@@ -658,9 +667,10 @@ struct make_kexinit *make_simple_kexinit(struct randomness *r,
        (algorithms object object_list)))
 */
 
-static int do_install(struct install_keys *c,
-		      struct ssh_connection *connection,
-		      struct hash_instance *secret)
+static int
+do_install(struct install_keys *c,
+	   struct ssh_connection *connection,
+	   struct hash_instance *secret)
 {
   CAST(install_new_keys, closure, c);
   struct crypto_instance *rec;
@@ -708,8 +718,9 @@ static int do_install(struct install_keys *c,
   return 1;
 }
 
-struct install_keys *make_install_new_keys(int is_server,
-					   struct object_list *algorithms)
+struct install_keys *
+make_install_new_keys(int is_server,
+		      struct object_list *algorithms)
 {
   NEW(install_new_keys, self);
 
