@@ -51,7 +51,8 @@ make_interact_dialog(unsigned nprompt)
 {
   NEW(interact_dialog, self);
   unsigned i;
-  
+
+  self->instruction = NULL;
   self->nprompt = nprompt;
   self->prompt = lsh_space_alloc(nprompt * sizeof(struct lsh_string *));
   self->response = lsh_space_alloc(nprompt * sizeof(struct lsh_string *));

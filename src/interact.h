@@ -63,6 +63,7 @@ struct terminal_dimensions;
    (class
      (name interact_dialog)
      (vars
+       (instruction string)
        (nprompt . unsigned)
        (prompt space (string) nprompt)
        (response space (string) nprompt)
@@ -85,9 +86,7 @@ make_interact_dialog(unsigned nprompt);
        (yes_or_no method int
                   "const struct lsh_string *prompt"
 		  "int def" "int free")
-       ; Consumes instruction
        (dialog method int
-                  "const struct lsh_string *instruction"
 		  "const struct interact_dialog *dialog")
 
        (get_attributes method (object terminal_attributes) )
@@ -106,8 +105,8 @@ make_interact_dialog(unsigned nprompt);
   ((i)->set_askpass((i), (a)))
 #define INTERACT_YES_OR_NO(i, p, d, f) \
   ((i)->yes_or_no((i), (p), (d), (f)))
-#define INTERACT_DIALOG(i, s, d) \
-  ((i)->dialog((i), (s), (d)))
+#define INTERACT_DIALOG(i, d) \
+  ((i)->dialog((i), (d)))
 #define INTERACT_GET_ATTRIBUTES(i) \
   ((i)->get_attributes((i)))
 #define INTERACT_SET_ATTRIBUTES(i, t) \
