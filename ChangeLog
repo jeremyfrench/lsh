@@ -1,3 +1,17 @@
+2000-12-23  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/getopt.c, src/getopt1.c, src/getopt.h: Removed.
+
+2000-12-22  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/testsuite/Makefile.am (LDADD): Link with libargp.
+	($(srcdir)/%.c): Fix $(srcdir)-handling.
+
+	* src/Makefile.am.in (bootstrap): New target, replaces the
+	post-configure work previously done by misc/bootstrap.sh
+
+	* Makefile.am.in (bootstrap): New target.
+
 2000-12-11  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* Removed getopt.c, getopt.h and getopt1.c from the src/argp

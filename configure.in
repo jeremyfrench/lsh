@@ -442,6 +442,7 @@ fi
 # liblsh.a, and we can't add an archive to an archive.
 LIBARGP=""
 if test x$with_system_argp = xno ; then
+  # FIXME: Perhaps it's better to use an absolute path?
   LIBARGP="argp/libargp.a"
 fi
 

@@ -39,6 +39,15 @@ noinst_LIBRARIES = liblsh.a
 generated_sources = atoms_defines.h atoms_gperf.c atoms_table.c \
 	prime_table.h sexp_table.h digit_table.h packet_types.h
 
+POTENTIAL_X_FILES = $(addsuffix .x,$(wildcard $(srcdir)/*.[ch]))
+
+.PHONY: bootstrap
+
+bootstrap: $(generated_sources)
+	# Not all potential .x files can be generated
+	-$(MAKE) -k $(POTENTIAL_X_FILES)
+	@rm -f $(addsuffix T,$(POTENTIAL_X_FILES))
+
 liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	algorithms.c alist.c arcfour.c atoms.c \
 	bignum.c blocking_write.c blowfish.c \
@@ -78,42 +87,42 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 
 liblsh_a_LIBADD = @LIBOBJS@
 
-atoms_defines.h: atoms.in process_atoms
-	$(BASH) $(srcdir)/process_atoms header <$(srcdir)/atoms.in >$@T
+$(srcdir)/atoms_defines.h: atoms.in process_atoms
+	$(BASH) $(srcdir)/process_atoms header <$< >$@T
 	test -s $@T && mv -f $@T $@
 
 # With the next version of gperf, add -F ", 0"
 GPERF_FLAGS = -LANSI-C -t -c -C -l -k1,3,7,$$ -N gperf_atom 
-atoms_gperf.c: atoms.in process_atoms
-	$(BASH) $(srcdir)/process_atoms gperf <$(srcdir)/atoms.in \
+$(srcdir)/atoms_gperf.c: atoms.in process_atoms
+	$(BASH) $(srcdir)/process_atoms gperf <$< \
              | gperf >$@T $(GPERF_FLAGS)
 	test -s $@T && mv -f $@T $@
 
-atoms_table.c: atoms.in process_atoms
-	$(BASH) $(srcdir)/process_atoms table <$(srcdir)/atoms.in >$@T
+$(srcdir)/atoms_table.c: atoms.in process_atoms
+	$(BASH) $(srcdir)/process_atoms table <$< >$@T
 	test -s $@T && mv -f $@T $@
 
 PRIME_LIMIT = 1024
 
-prime_table.h: prime_table
+$(srcdir)/prime_table.h: prime_table
 	./prime_table $(PRIME_LIMIT) >$@T
-	test -s $@T && mv -f $@T $(srcdir)/$@
+	test -s $@T && mv -f $@T $@
 
 prime_table_LDADD =
 
-sexp_table.h: sexp_chars.in $(srcdir)/scm/make-char-classes.scm
+$(srcdir)/sexp_table.h: sexp_chars.in $(srcdir)/scm/make-char-classes.scm
 	$(SCHEME) -e main -s $(srcdir)/scm/make-char-classes.scm <$< >$@T
 	test -s $@T && mv -f $@T $@
 
 digit_table_LDADD =
 
-digit_table.h: digit_table
+$(srcdir)/digit_table.h: digit_table
 	./digit_table >$@T
-	test -s $@T && mv -f $@T $(srcdir)/$@
+	test -s $@T && mv -f $@T $@
 
-packet_types.h: ssh.h invert-defs
+$(srcdir)/packet_types.h: ssh.h invert-defs
 	$(srcdir)/invert-defs <ssh.h >$@T
-	test -s $@T && mv -f $@T $(srcdir)/$@
+	test -s $@T && mv -f $@T $@
 
 lsh_krb_checkpw_LDADD=@KRB_LIBS@
 
@@ -156,7 +165,7 @@ MAINTAINERCLEANFILES += $(DEP_FILES)
 
 # This is GNU make specific
 
-%.x: % $(srcdir)/scm/gaba.scm $(srcdir)/scm/compiler.scm
+$(srcdir)/%.x: % $(srcdir)/scm/gaba.scm $(srcdir)/scm/compiler.scm
 	$(SCHEME) -e main -l $(srcdir)/scm/compiler.scm \
 		  -s $(srcdir)/scm/gaba.scm <$< >$@T
 	test -s $@T && mv -f $@T $@

@@ -29,6 +29,10 @@ $(DOTDISTS): depend
 .PHONY: dotdists
 dotdists: $(DOTDISTS)
 
+.PHONY: bootstrap
+bootstrap:
+	(cd src && $(MAKE) bootstrap)
+
 # FIXME: Have to figure out how to create dependency files recursively.
 # dist-hook: $(DOTDISTS)
 

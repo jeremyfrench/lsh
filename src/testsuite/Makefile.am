@@ -23,7 +23,7 @@ TS_ALL = $(TS_PROGS) $(TS_SH) $(TS_MORE_PROGS) $(TS_MORE_SH)
 # SUFFIXES = .c .o
 noinst_PROGRAMS = $(TS_PROGS)
 
-LDADD = ../liblsh.a ../symmetric/libsymmetric.a
+LDADD = ../liblsh.a ../symmetric/libsymmetric.a $(addprefix ../,@LIBARGP@)
 
 EXTRA_DIST = macros.m4 $(SOURCES:.c=.m4) $(TS_SH) $(TS_MORE_SH) \
 	functions.sh runtests key-1.private
@@ -32,9 +32,9 @@ all:
 	@echo make check to build testprograms.
 
 M4FLAGS = -P #-s
-%.c: macros.m4 %.m4
+$(srcdir)/%.c: macros.m4 %.m4
 	$(M4) $(M4FLAGS) $^ > $@T
-	test -s $@T && mv -f $@T $(srcdir)/$@
+	test -s $@T && mv -f $@T $@
 
 
 .PHONY: check-some check-more
