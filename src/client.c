@@ -576,18 +576,19 @@ client_maybe_x11(struct client_options *options,
   if (options->with_x11)
     {
       char *display = getenv("DISPLAY");
-
+      struct command *request = NULL;
+      
       assert(options->random);
       if (display)
-	{
-	  struct command *request = make_forward_x11(display, &options->random->super);
+	request = make_forward_x11(display, &options->random->super);
 	  
-	  if (request)
-	    {
-	      object_queue_add_tail(q, &request->super);
-	      options->used_x11 = 1;
-	    }
+      if (request)
+	{
+	  object_queue_add_tail(q, &request->super);
+	  options->used_x11 = 1;
 	}
+      else
+	werror("Can't find any local X11 display to forward.\n");
     }
 }
 
@@ -751,16 +752,40 @@ fork_output(int out)
     }
 }
 
+/* FIXME: Use const? */
+
+#define DEFINE_CALLBACK(name) \
+static void do_##name(struct lsh_callback *self); \
+static struct lsh_callback \
+name = { STATIC_HEADER, do_##name }; \
+static void do_##name(struct lsh_callback *self)
+
 /* A callback that exits the process immediately. */
-static void
-do_exit(struct lsh_callback *self UNUSED)
+DEFINE_CALLBACK(exit_callback)
 {
   exit(EXIT_SUCCESS);
 }
 
-/* FIXME: Use const? */
-static struct lsh_callback
-exit_callback = { STATIC_HEADER, do_exit };
+DEFINE_CALLBACK(verbose_callback)
+{
+  verbose_flag = !verbose_flag;
+  if (verbose_flag)
+    verbose("Enabling verbose messages\n");
+}
+
+DEFINE_CALLBACK(debug_callback)
+{
+  debug_flag = !debug_flag;
+  if (debug_flag)
+    debug("Enabling debug messages\n");
+}
+
+DEFINE_CALLBACK(quiet_callback)
+{
+  quiet_flag = !quiet_flag;
+  if (!quiet_flag)
+    werror("Enabling warning messages\n");
+}
 
 DEFINE_COMMAND(background_process)
      (struct command *s UNUSED,
@@ -846,6 +871,11 @@ make_client_session(struct client_options *options)
       /* Bind ^Z to suspend. */
       escape->dispatch[26] = &suspend_callback;
       escape->dispatch['.'] = &exit_callback;
+
+      /* Toggle the verbosity flags */
+      escape->dispatch['d'] = &debug_callback;
+      escape->dispatch['v'] = &verbose_callback;
+      escape->dispatch['q'] = &quiet_callback;      
     }
   
   debug("lsh.c: Setting up stdout\n");
@@ -1024,16 +1054,16 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 			  (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip));
 #endif /* WITH_TCP_FORWARD */
 
+      /* Add shell action */
+      if (options->start_shell)
+	client_add_action(options, client_shell_session(options));
+
       if (options->used_x11)
 	client_add_action(options,
 			  make_install_fix_channel_open_handler
 			  (ATOM_X11,
 			   make_channel_open_x11(options->backend)));
       
-      /* Add shell action */
-      if (options->start_shell)
-	client_add_action(options, client_shell_session(options));
-
       /* Install suspend-handler */
       suspend_install_handler();
       break;
