@@ -144,7 +144,8 @@ MAINTAINERCLEANFILES += $(DEP_FILES)
 # This is GNU make specific
 
 %.x: % $(srcdir)/make_class $(srcdir)/compiler.scm
-	$(SCHEME) -e main -s $(srcdir)/make_class <$< >$@T
+	$(SCHEME) -e main -l $(srcdir)/compiler.scm \
+		  -s $(srcdir)/make_class <$< >$@T
 	test -s $@T && mv -f $@T $@
 
 include $(top_srcdir)/misc/ctags.mk
