@@ -152,7 +152,7 @@ do_ssh2_print(struct command *s,
   struct verifier *v;
   struct lsh_string *packet;
   
-  if (!spki_check_type(o, ATOM_PUBLICKEY, &i))
+  if (!sexp_check_type(o, ATOM_PUBLICKEY, &i))
     {
       EXCEPTION_RAISE
 	(e, make_simple_exception
@@ -160,7 +160,8 @@ do_ssh2_print(struct command *s,
 	  "Only conversion of public keys implemented."));
       return;
     }
-  
+
+#if 0
   v = spki_make_verifier(self->algorithms, e);
   if (!v)
     {
@@ -171,6 +172,7 @@ do_ssh2_print(struct command *s,
     }
 
   packet = PUBLIC_KEY(v);
+#endif
 #if 0  
   struct lsh_string *packet = sexp_format(o, self->format, 0);
   unsigned i, state, found, key, len;
