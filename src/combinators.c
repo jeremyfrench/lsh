@@ -33,12 +33,31 @@
 /* Combinators */
 
 /* Ix == x */
+DEFINE_COMMAND(command_I)
+     (struct command *s UNUSED,
+      struct lsh_object *a,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+  COMMAND_RETURN(c, a);
+}
 
+#if 0
 DEFINE_COMMAND_SIMPLE(command_I, a) { return a; }
+#endif
 
 
 /* ((K x) y) == x */
-
+DEFINE_COMMAND2(command_K)
+     (struct lsh_object *x,
+      struct lsh_object *y UNUSED,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+  COMMAND_RETURN(c, x);
+}
+      
+#if 0
 /* Represents (K x) */
 /* GABA:
    (class
@@ -68,7 +87,7 @@ struct command *make_command_K_1(struct lsh_object *x)
 
 DEFINE_COMMAND_SIMPLE(command_K, a)
 { return &make_command_K_1(a)->super; }
-
+#endif
 
 /* ((S f) g)x == (f x)(g x) */
 
@@ -118,6 +137,22 @@ make_command_S_continuation(struct command *g,
 
   return &c->super.super;
 }
+
+DEFINE_COMMAND3(command_S)
+     (struct lsh_object *f,
+      struct lsh_object *g,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST_SUBTYPE(command, cf, f);
+  CAST_SUBTYPE(command, cg, g);
+
+  COMMAND_CALL(cf, x,
+	       make_command_S_continuation(cg, x, c, e),
+	       e);
+}
+#if 0
 
 static void
 do_command_S_2(struct command *s,
@@ -172,6 +207,7 @@ STATIC_COLLECT_2_FINAL(collect_S_2);
 
 struct collect_info_1 command_S =
 STATIC_COLLECT_1(&collect_info_S_2);
+#endif
 
 /* S' c f g x == c (f x) (g x) */
 
