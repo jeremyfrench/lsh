@@ -351,7 +351,7 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
     /* FIXME: This code could probably be simplified a little, but
      * it should do for now. */
     
-    int key_ofs, max;
+    unsigned key_ofs, max;
     
     max = MIN(key_length, hash->hash_size);
     
