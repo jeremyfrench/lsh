@@ -81,8 +81,10 @@ struct make_kexinit
 struct handle_kexinit
 {
   struct packet_handler super;
+  int type;
+  
   struct make_kexinit *init;
-
+  
   /* Maps names to algorithms. It's dangerous to lookup random atoms
    * in this table, as not all objects have the same type. This
    * mapping is used only on atoms that have appeared in *both* the
@@ -136,5 +138,11 @@ struct mac_instance *kex_make_mac(struct hash_instance *secret,
 				  int type,
 				  struct ssh_connection *connection);
 
+struct make_kexinit *make_test_kexinit(struct randomness *r);
+
+int initiate_keyexchange(struct ssh_connection *connection,
+			 int type,
+			 struct kexinit *kex,
+			 struct lsh_string *first_packet);
 
 #endif /* LSH_KEYEXCHANGE_H_INCLUDED */

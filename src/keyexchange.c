@@ -128,6 +128,7 @@ struct lsh_string *format_kex(struct kexinit *kex)
   
 
 int initiate_keyexchange(struct ssh_connection *connection,
+			 int type,
 			 struct kexinit *kex,
 			 struct lsh_string *first_packet)
 {
@@ -135,12 +136,12 @@ int initiate_keyexchange(struct ssh_connection *connection,
   struct lsh_string *s;
   
   kex->first_kex_packet_follows = !!first_packet;
-  connection->kexinits[connection->type] = kex;
+  connection->kexinits[type] = kex;
 
   s = format_kex(kex);
 
   /* Save value for later signing */
-  connection->literal_kexinits[connection->type] = s; 
+  connection->literal_kexinits[type] = s; 
 
   res = A_WRITE(connection->write, lsh_string_dup(s));
   
@@ -195,19 +196,19 @@ static int do_handle_kexinit(struct packet_handler *c,
     return 0;
 
   /* Save value for later signing */
-  connection->literal_kexinits[!connection->type] = packet;
+  connection->literal_kexinits[!closure->type] = packet;
   
-  connection->kexinits[!connection->type] = msg;
+  connection->kexinits[!closure->type] = msg;
   
   /* Have we sent a kexinit message? */
-  if (!connection->kexinits[connection->type])
+  if (!connection->kexinits[closure->type])
     {
       int res;
       struct lsh_string *packet;
       struct kexinit *sent = MAKE_KEXINIT(closure->init);
-      connection->kexinits[connection->type] = sent;
+      connection->kexinits[closure->type] = sent;
       packet = format_kex(sent);
-      connection->literal_kexinits[connection->type] = lsh_string_dup(packet); 
+      connection->literal_kexinits[closure->type] = lsh_string_dup(packet); 
       
       res = A_WRITE(connection->write, packet);
       if (res != WRITE_OK)
@@ -232,12 +233,14 @@ static int do_handle_kexinit(struct packet_handler *c,
       /* FIXME: Ignores that some keyechange algorithms require
        * certain features of the host key algorithms. */
       
-      kex_algorithm = select_algorithm(connection->kexinits[0]->kex_algorithms,
-				       connection->kexinits[1]->kex_algorithms);
+      kex_algorithm
+	= select_algorithm(connection->kexinits[0]->kex_algorithms,
+			   connection->kexinits[1]->kex_algorithms);
 
       if  (!kex_algorithm)
 	{
-	  disconnect_kex_failed(connection, "No common key exchange method.\r\n");
+	  disconnect_kex_failed(connection,
+				"No common key exchange method.\r\n");
 	  
 	  /* FIXME: We want the disconnect message to be sent
 	   * before the socket is closed. How? */
@@ -252,7 +255,7 @@ static int do_handle_kexinit(struct packet_handler *c,
     {
       parameters[i]
 	= select_algorithm(connection->kexinits[0]->parameters[i],
-			       connection->kexinits[1]->parameters[i]);
+			   connection->kexinits[1]->parameters[i]);
       
       if (!parameters[i])
 	{
@@ -274,12 +277,15 @@ static int do_handle_kexinit(struct packet_handler *c,
 			   algorithms);
 }
 
-struct packet_handler *make_kexinit_handler(struct make_kexinit *init,
+struct packet_handler *make_kexinit_handler(int type,
+					    struct make_kexinit *init,
 					    struct alist *algorithms)
 {
   struct handle_kexinit *self = xalloc(sizeof(struct handle_kexinit));
 
   self->super.handler = do_handle_kexinit;
+
+  self->type = type;
   self->init = init;
   self->algorithms = algorithms;
 
@@ -431,4 +437,47 @@ make_newkeys_handler(struct crypto_instance *crypto,
 
   return &self->super;
 }
+
+struct test_kexinit
+{
+  struct make_kexinit super;
+  struct randomness *r;
+};
+
+static struct kexinit *do_make_kexinit(struct make_kexinit *c)
+{
+  struct test_kexinit *closure = (struct test_kexinit *) c;
+  struct kexinit *res = xalloc(sizeof(struct kexinit));
+
+  static int kex_algorithms[] = { ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, 0 };
+  static int server_hostkey_algorithms[] = { ATOM_SSH_DSS, 0 };
+  static int crypto_algorithms[] = { ATOM_ARCFOUR, ATOM_NONE, 0 };
+  static int mac_algorithms[] = { ATOM_HMAC_SHA1, 0 };
+  static int compression_algorithms[] = { ATOM_NONE, 0 };
+  static int languages[] = { 0 };
   
+  RANDOM(closure->r, 16, res->cookie);
+  res->kex_algorithms = kex_algorithms;
+  res->server_hostkey_algorithms = server_hostkey_algorithms;
+  res->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER] = crypto_algorithms;
+  res->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT] = crypto_algorithms;
+  res->parameters[KEX_MAC_CLIENT_TO_SERVER] = mac_algorithms;
+  res->parameters[KEX_MAC_SERVER_TO_CLIENT] = mac_algorithms;
+  res->parameters[KEX_COMPRESSION_CLIENT_TO_SERVER] = compression_algorithms;
+  res->parameters[KEX_COMPRESSION_SERVER_TO_CLIENT] = compression_algorithms;
+  res->languages_client_to_server = languages;
+  res->languages_server_to_client = languages;
+  res->first_kex_packet_follows = 0;
+
+  return res;
+}
+
+struct make_kexinit *make_test_kexinit(struct randomness *r)
+{
+  struct test_kexinit *res = xalloc(sizeof(struct test_kexinit));
+
+  res->super.make = do_make_kexinit;
+  res->r = r;
+
+  return &res->super;
+}
