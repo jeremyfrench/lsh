@@ -593,3 +593,23 @@ struct lsh_string *make_cstring(struct lsh_string *s, int free)
   return res;
 }
 
+/* FIXME: These functions don't really belong here */
+int lsh_string_cmp(const struct lsh_string *a, const struct lsh_string *b)
+{
+  if (a->length < b->length)
+    return -1;
+  else if (a->length > b->length)
+    return 1;
+  else
+    return memcmp(a->data, b->data, a->length);
+}
+
+int lsh_string_cmp_l(const struct lsh_string *a, UINT32 length, const UINT8 *b)
+{
+  if (a->length < length)
+    return -1;
+  else if (a->length > length)
+    return 1;
+  else
+    return memcmp(a->data, b, length);
+}
