@@ -1,3 +1,7 @@
+2003-02-17  Niels Möller  <niels@s3.kth.se>
+
+	* configure.ac: Deleted initial newline in readline warning.
+
 2003-02-11  Niels Möller  <niels@s3.kth.se>
 
 	* sftp_c.c (sftp_get_file_main): Added an explicit cast to kludge

@@ -198,12 +198,11 @@ AC_CHECK_LIB( termcap, tgetent )
 
 if test x"$ac_cv_header_readline_readline_h" = xno -a\
         x"$ac_cv_header_readline_h" = xno ; then
-		AC_MSG_WARN([
-You don't appear to have the readline library
+		AC_MSG_WARN(
+[You don't appear to have the readline library
 (or there seems to be a problem with it). lsftp 
 will still work, but it will be built in 
-non interactive mode ONLY.
-])
+non interactive mode ONLY.])
 else 
 # Check for libraries only if we found the includes
  AC_CHECK_LIB(readline, rl_callback_handler_remove,
