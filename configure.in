@@ -270,12 +270,17 @@ AC_CHECK_HEADERS(argp.h)
 AC_CHECK_HEADERS(utmp.h, [have_utmp_h=yes], [have_utmp_h=no])
 AC_CHECK_HEADERS(utmpx.h, [have_utmpx_h=yes], [have_utmpx_h=no])
 
+dnl With current autoconfs we can't check for struct ut_tv with
+dnl AC_CHECK_MEMBERS, but we can check for sub members. Leave the
+dnl ut_tv check for clarity.
+
 if test x$have_utmp_h = xyes; then
   AC_CHECK_MEMBERS([struct utmp.ut_host,
 		    struct utmp.ut_name,
 		    struct utmp.ut_user,
 		    struct utmp.ut_time,
 		    struct utmp.ut_tv,
+		    struct utmp.ut_tv.tv_sec,
 		    struct utmp.ut_id,
 		    struct utmp.ut_syslen,
 		    struct utmp.ut_session,
@@ -296,6 +301,7 @@ if test x$have_utmpx_h = xyes; then
 		    struct utmpx.ut_time,
 		    struct utmpx.ut_id,
 		    struct utmpx.ut_tv,
+		    struct utmpx.ut_tv.tv_sec,
 		    struct utmpx.ut_syslen,
 		    struct utmpx.ut_session,
 		    struct utmpx.ut_pid,
