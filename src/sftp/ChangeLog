@@ -1,0 +1,7 @@
+2002-02-11  Pontus  <pont@it.uu.se>
+
+	* configure.ac: Created new configure.ac as a merge of the
+	configure.in from lsftp and the sftp package.
+
+	* Started new Changelog in sftp. 
+
