@@ -66,6 +66,7 @@ do_handle_dh_reply(struct packet_handler *c,
 {
   CAST(dh_client, closure, c);
   struct lsh_string *server_key;
+  int algorithm;
   struct lsh_string *signature;
   struct verifier *v;
   int res;
@@ -96,11 +97,13 @@ do_handle_dh_reply(struct packet_handler *c,
   if (closure->hostkey_algorithm == ATOM_SSH_DSS && 
       (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
     {
-      v = make_dsa_verifier_kludge(v);
+      algorithm = ATOM_SSH_DSS_KLUDGE_LOCAL;
     }
+  else
 #endif
-
-  res = VERIFY(v,
+    algorithm = closure->hostkey_algorithm;
+  
+  res = VERIFY(v, algorithm,
 	       closure->dh.exchange_hash->length, closure->dh.exchange_hash->data,
 	       signature->length, signature->data);
   lsh_string_free(signature);
