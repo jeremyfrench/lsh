@@ -94,10 +94,7 @@ compat_peer_flags(uint32_t length, const uint8_t *software)
      (name connection_line_handler)
      (super line_handler)
      (vars
-       (connection object ssh_connection)
-       ; Needed for fallback.
-       (fd . int)
-       (fallback object ssh1_fallback)))
+       (connection object ssh_connection)))
 */
 
 /* Returns -1 if the line is not the start of a SSH handshake, 0 if
@@ -152,7 +149,8 @@ do_line(struct line_handler **h,
 	struct read_handler **r,
 	uint32_t length,
 	const uint8_t *line,
-	struct exception_handler *e)
+	/* FIXME: Do we need this argument at all? */
+	struct exception_handler *e UNUSED)
 {
   CAST(connection_line_handler, closure, *h);
   uint32_t protover_len, swver_len, comment_len;
@@ -178,15 +176,6 @@ do_line(struct line_handler **h,
 	     || ((protover_len == 4) && !memcmp(protover, "1.99", 4)) )
 	  {
 	    struct read_handler *new; 
-#if WITH_SSH1_FALLBACK
-	    if (closure->fallback)
-	      {
-		assert(mode == CONNECTION_SERVER);
-	      
-		/* Sending keyexchange packet was delayed. Do it now */
-		send_kexinit(connection);
-	      }
-#endif /* WITH_SSH1_FALLBACK */
 
 	    connection->peer_flags = compat_peer_flags(swver_len, swver);
 
@@ -208,20 +197,6 @@ do_line(struct line_handler **h,
 	    *r = new;
 	    return;
 	  }
-#if WITH_SSH1_FALLBACK      
-      else if (closure->fallback
-	       && (protover_len >= 2)
-	       && !memcmp(protover, "1.", 2))
-	{
-	  *h = NULL;
-	  SSH1_FALLBACK(closure->fallback,
-			closure->fd,
-			length, line,
-			e);
-
-	  return;
-	}
-#endif /* WITH_SSH1_FALLBACK */
       else
 	{
 	  werror("Unsupported protocol version: %ps\n",
@@ -243,31 +218,39 @@ do_line(struct line_handler **h,
       *h = NULL;
       
       PROTOCOL_ERROR(connection->e,
-		     "Incorrectly version string.");
+		     "Incorrectly formatted version string.");
       
       return;
     case -1:
-      /* Display line */
-      werror("%ps\n", length, line);
+      /* If we are a client, display line */
+      if ( (connection->flags & CONNECTION_MODE) == CONNECTION_CLIENT)
+	{
+	  werror("%ps\n", length, line);
+	  
+	  /* Read next line */
+	  break;
+	}
+      else
+	{
+	  werror("Client tries to send a banner string. Disconnecting.\n");
+	  KILL(closure);
+	  *h = NULL;
 
-      /* Read next line */
-      break;
+	  PROTOCOL_ERROR(connection->e, "Invalid handshake line.");
+	  return;
+	}
     default:
       fatal("Internal error!\n");
     }
 }
 
 static struct read_handler *
-make_connection_read_line(struct ssh_connection *connection, 
-			  int fd,
-			  struct ssh1_fallback *fallback)
+make_connection_read_line(struct ssh_connection *connection)
 {
   NEW(connection_line_handler, closure);
 
   closure->super.handler = do_line;
   closure->connection = connection;
-  closure->fd = fd;
-  closure->fallback = fallback;
   return make_read_line(&closure->super, connection->e);
 }
 
@@ -279,7 +262,6 @@ make_handshake_info(enum connection_flag flags,
 		    uint32_t block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,
-		    struct ssh1_fallback *fallback,
 		    struct lsh_string *banner_text)
 {
   NEW(handshake_info, self);
@@ -289,7 +271,6 @@ make_handshake_info(enum connection_flag flags,
   self->block_size = block_size;
   self->random = r;
   self->algorithms = algorithms;
-  self->fallback = fallback;
   self->banner_text = banner_text;
 
   return self;
@@ -337,22 +318,10 @@ DEFINE_COMMAND4(handshake_command)
 			   info->id_comment);
       break;
     case CONNECTION_SERVER:
-#if WITH_SSH1_FALLBACK
-      if (info->fallback)
-	{
-	  version =
-	    ssh_format("SSH-%lz-%lz %lz",
-		       SSH1_SERVER_PROTOCOL_VERSION,
-		       SOFTWARE_SERVER_VERSION,
-		       info->id_comment);
-	}
-      else
-#endif
-	version =
-	  ssh_format("SSH-%lz-%lz %lz",
-		     SERVER_PROTOCOL_VERSION,
-		     SOFTWARE_SERVER_VERSION,
-		     info->id_comment);
+      version = ssh_format("SSH-%lz-%lz %lz",
+			   SERVER_PROTOCOL_VERSION,
+			   SOFTWARE_SERVER_VERSION,
+			   info->id_comment);
       break;
     default:
       fatal("do_handshake: Internal error\n");
@@ -379,8 +348,7 @@ DEFINE_COMMAND4(handshake_command)
      io_read_write(lv->fd,
 		   make_buffered_read
 		   (BUF_SIZE,
-		    make_connection_read_line(connection, 
-					      lv->fd->fd, info->fallback)),
+		    make_connection_read_line(connection)),
 		   info->block_size,
 		   make_connection_close_handler(connection)));
 
@@ -400,20 +368,6 @@ DEFINE_COMMAND4(handshake_command)
   connection->kexinit = init; 
   connection->dispatch[SSH_MSG_KEXINIT]
     = make_kexinit_handler(extra, info->algorithms);
-
-#if WITH_SSH1_FALLBACK
-  /* In this mode the server SHOULD NOT send carriage return character (ascii
-   * 13) after the version identification string.
-   *
-   * Furthermore, it should not send any data after the identification string,
-   * until the client's identification string is received. */
-  if (info->fallback)
-    {
-      A_WRITE(&connection->socket->write_buffer->super,
-	      ssh_format("%lS\n", version));
-      return;
-    }
-#endif /* WITH_SSH1_FALLBACK */
 
   if (info->banner_text)
     {
