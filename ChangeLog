@@ -1,3 +1,15 @@
+2003-03-14  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io.c (handle_nonblock_error): New function, ignoring ENODEV
+	errors. Needed for freebsd, where setting the non-block flag on
+	/dev/null fails. 
+	(io_set_nonblocking, io_set_blocking): Use handle_nonblock_error.
+
+2003-03-13  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/io.c (io_set_nonblocking, io_set_blocking) 
+	(io_set_close_on_exec): Fixed error messages.
+
 2003-03-05  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Bumped version to 1.5.2.
