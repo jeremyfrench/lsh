@@ -1,3 +1,11 @@
+2001-06-12  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/dsa.c, src/dsa_keygen.c, src/md5.c, src/rijndael.c,
+	src/sha.c: Adapted to the nettle API.
+
+	* configure.in: Use src/nettle instead of src/symmetric.
+	* src/Makefile.am.in: Likewise.
+
 2001-06-09  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/io.c (do_consuming_read): In the EOF case, call
