@@ -1,3 +1,75 @@
+2001-10-03  Niels Möller  <nisse@ehand.com>
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Deleted sexp_commands.c
+	and spki_commands.c.
+
+	* src/sexp_commands.c, src/sexp_commands.h, src/spki_commands.c,
+	src/spki_commands.h: Deleted obsolete files.
+
+	* src/lshd.c (options2keys): New command, that uses read_host_key,
+	and replaces options2keyfile.
+	* src/lsh_proxy.c: Likewise.
+
+	* src/server.c (read_host_key): New function replacing
+	spki_read_hostkey. 
+
+	* src/spki_commands.c (make_pkcs5_decrypt): Deleted function.
+	(do_spki_decrypt): Deleted function.
+	(spki_password_decrypt): Deleted class.
+	(make_spki_read_userkeys): Deleted function.
+	(spki_read_userkeys): Deleted expression.
+	(spki_return_userkeys): Deleted command.
+	(spki_add_userkey_command): Deleted command.
+	(do_spki_add_userkey): Deleted function.
+	(spki_read_userkey_context): Deleted class.
+
+	* src/spki.c (spki_sexp_to_signer): Added argument algorithm_name. 
+	(spki_pkcs5_decrypt): New function, replacing make_pkcs5_decrypt.
+
+	* src/lsh.c (read_user_keys): New function, replacing
+	do_options2identities and make_spki_read_userkeys.
+
+	* src/spki_commands.c (make_spki_read_acls): Deleted function. 
+	(spki_read_acl): Deleted expression.
+	(do_spki_add_acl): Deleted function.
+	(spki_add_acl_command): Deleted command.
+	(spki_command): Deleted class.
+	(spki_signer2verifier): Deleted command.
+	(spki_verifier2public): Deleted command.
+
+	* src/resource.c (do_kill_all): Added trace message.
+
+	* src/lsh.c (read_known_hosts): New function, replacing
+	make_spki_read_acls. 
+	(do_options2known_hosts): Deleted function.
+
+	* src/client.c (make_client_session): Register the channel's
+	resource list with the gc.
+
+	* src/testsuite/lsh-7-test: New test, verifying that connecting,
+	without a proper entry in known_hosts, fails.
+
+	* src/testsuite/Makefile.am (TS_MORE_PROGS): Added lsh-7-test.
+
+	* src/sexp_commands.c (make_sexp_print_raw_hash): Deleted
+	function. 
+	(sexp_print_raw_hash): Deleted command.
+	(do_sexp_print): Deleted function.
+	(make_sexp_print_command): Deleted function.
+	(make_sexp_print_to): Deleted function.
+
+	* src/spki.c (spki_sexp_to_signer): New function.
+	(spki_pkcs5_encrypt): New function.
+
+	* src/spki_commands.c (spki_sexp2signer_command): Deleted command,
+	replaced with function spki_sexp_to_signer.
+	(make_pkcs5_encrypt): Deleted, replaced with spki_pkcs5_encrypt
+	function. 
+
+	* src/lsh-writekey.c: Rewrote to use io_read_file_raw and
+	write_raw, without using any commands or io_run.
+	* src/lsh-decode-key.c: Likewise.
+
 2001-10-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/spki.c (spki_hash_sexp): New function.

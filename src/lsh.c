@@ -46,7 +46,7 @@
 #include "randomness.h"
 #include "rsa.h"
 #include "sexp.h"
-#include "spki_commands.h"
+#include "spki.h"
 #include "srp.h" 
 #include "ssh.h"
 #include "tcpforward_commands.h"
