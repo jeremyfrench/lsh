@@ -92,7 +92,7 @@ spawn_lshd () {
     # problems when the next lshd process tries to bind the port.
     # So we kill it harder.
 
-    at_exit 'kill -9 `cat $PIDFILE`; rm -f $PIDFILE'
+    at_exit 'kill -HUP `cat $PIDFILE`'
 
     # Wait a little for lshd to start
     for delay in 1 1 1 1 1 5 5 5 20 20 60 60; do
