@@ -115,6 +115,7 @@ dotask() {
 
 cfgwarn () {
     egrep -i 'warning|\(w\)' r/cfglog.txt \
+    | sed -e '%configure: WARNING:  Converted \. to /%d' \
     > r/cfgwarn.txt
     warnings=`wc -l < r/cfgwarn.txt`
     if test $warnings -gt 0

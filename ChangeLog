@@ -1,3 +1,8 @@
+2003-02-12  Niels Möller  <niels@s3.kth.se>
+
+	* misc/xenofarm.sh (cfgwarn): Delete warning about using an
+	absolute path for srcdir.
+
 2003-02-11  Niels Möller  <niels@s3.kth.se>
 
 	* misc/xenofarm.sh: Compile with make -k.
