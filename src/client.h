@@ -100,6 +100,9 @@ make_exec_request(struct lsh_string *command);
 struct command *
 make_pty_request(struct interact *tty);
 
+struct command *
+make_subsystem_request(struct lsh_string *subsystem);
+
 extern struct channel_open channel_open_x11;
 
 struct command *

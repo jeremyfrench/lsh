@@ -353,8 +353,42 @@ make_exec_request(struct lsh_string *command)
 }
 
 
+/* GABA:
+   (class
+     (name subsystem_request)
+     (super channel_request_command)
+     (vars
+       (subsystem string)))
+*/
+
+static struct lsh_string *
+do_format_subsystem_request(struct channel_request_command *s,
+			    struct ssh_channel *channel,
+			    struct command_continuation **c)
+{
+  CAST(subsystem_request, self, s);
+
+  verbose("lsh: Requesting remote subsystem.\n");
+
+  return format_channel_request(ATOM_SUBSYSTEM, channel,
+				!!*c, "%S", self->subsystem);
+}
+
+struct command *
+make_subsystem_request(struct lsh_string *subsystem)
+{
+  NEW(subsystem_request, req);
+
+  req->super.format_request = do_format_subsystem_request;
+  req->super.super.call = do_channel_request_command;
+  req->subsystem = subsystem;
+
+  return &req->super.super;
+}
+
+
 /* Handling of options and operations shared by the plain lsh client
-   and lshg. */
+ * and lshg. */
 
 /* Forward declaration */
 
@@ -465,6 +499,8 @@ client_options[] =
   { "background", 'B', NULL, 0, "Put process into the background. Implies -N.", 0 },
   { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },
   { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
+  { "subsystem", 'C', "subsystem-name", 0, "Connect to given subsystem", 0 },
+
   /* { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 }, */
   { NULL, 0, NULL, 0, "Universal not:", 0 },
   { "no", 'n', NULL, 0, "Inverts the effect of the next modifier", 0 },
@@ -533,10 +569,15 @@ make_client_start_session(struct command *request)
 
 static void
 client_maybe_pty(struct client_options *options,
+		 int default_pty,
 		 struct object_queue *q)
 {
 #if WITH_PTY_SUPPORT
-  if (options->with_pty && !options->used_pty)
+  int with_pty = options->with_pty;
+  if (with_pty < 0)
+    with_pty = default_pty;
+  
+  if (with_pty && !options->used_pty)
     {
       options->used_pty = 1;
       
@@ -595,7 +636,7 @@ client_shell_session(struct client_options *options)
 
       object_queue_init(&session_requests);
 
-      client_maybe_pty(options, &session_requests);
+      client_maybe_pty(options, 1, &session_requests);
       client_maybe_x11(options, &session_requests);
   
       object_queue_add_tail(&session_requests,
@@ -613,6 +654,28 @@ client_shell_session(struct client_options *options)
     return NULL;
 }
 
+/* Create a session for a subsystem */
+static struct command *
+client_subsystem_session(struct client_options *options,
+		       struct lsh_string *subsystem)
+{
+  struct ssh_channel *session = make_client_session(options);
+  
+  if (session)
+    {
+      CAST_SUBTYPE(command, r,
+		   make_start_session
+		   (make_open_session_command(session),
+		    make_object_list(1,
+				     make_client_start_session
+				     (make_subsystem_request(subsystem)),
+				     -1)));
+      return r;
+    }
+  
+  return NULL;
+}
+
 /* Create a session executing a command line */
 static struct command *
 client_command_session(struct client_options *options,
@@ -626,10 +689,10 @@ client_command_session(struct client_options *options,
     
       object_queue_init(&session_requests);
   
-      /* NOTE: Doesn't ask for a pty. That's traditional behaviour,
-       * although perhaps not the Right Thing. */
+      /* NOTE: Doesn't ask for a pty by default. That's traditional
+       * behaviour, although perhaps not the Right Thing. */
       
-      client_maybe_pty(options, &session_requests);
+      client_maybe_pty(options, 0, &session_requests);
       client_maybe_x11(options, &session_requests);
 
       object_queue_add_tail(&session_requests,
@@ -1084,11 +1147,19 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 		   "You must use a single character or `none'.", arg);
       break;
     case 'E':
-      client_add_action(options, client_command_session(options, ssh_format("%lz", arg)));
+      client_add_action(options,
+			client_command_session(options,
+					       ssh_format("%lz", arg)));
       break;
 
     case 'S':
       client_add_action(options, client_shell_session(options));
+      break;
+
+    case 'C':
+      client_add_action(options,
+			client_subsystem_session(options,
+						 ssh_format("%lz", arg)));
       break;
 
     case 'L':
