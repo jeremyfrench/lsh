@@ -1,3 +1,31 @@
+2000-03-08  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/server_session.c (do_login): Fixed message.
+	(do_spawn_shell): Adapted to improved user class.
+
+	* src/server_userauth.h: Removed unix_user_db class (moved to
+	unix_user.c). 
+
+	* src/server_publickey.c (do_authenticate): Use the user
+	superclass rather than unix_user.
+
+	* src/server_password.c (do_authenticate): Use the new
+	USER_VERIFY_PASSWORD method.
+
+	* src/server_authorization.c (do_key_lookup): Use the new
+	USER_FILE_EXISTS method.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added unix_user.c.
+
+	* src/werror.c (error_fd): Made  static.
+	(dup_error_stream): New function.
+	(set_error_ignore, set_error_syslog): Set error_fd to -1.
+
+	* src/userauth.h (user): Added uid attribute, and a bunch of
+	methods. 
+
+	* src/unix_user.c: New file, implementing the unix_user class. 
+
 2000-03-07  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/lsh.c: Implemented rsh-style operation, and the -S and -E
