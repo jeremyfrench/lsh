@@ -1201,7 +1201,7 @@ static int
 client_arg_unsigned(const char *arg, unsigned long *n)
 {
   char *end;
-  if (*arg)
+  if (*arg == 0)
     return 0;
 
   *n = strtoul(arg, &end, 0);
