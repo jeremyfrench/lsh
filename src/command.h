@@ -202,18 +202,18 @@ struct command *make_command_K_1(struct lsh_object *x);
 #define GABA_APPLY_K_1(x) ((struct lsh_object *) make_command_K_1(x))
 
 extern struct collect_info_1 command_S;
-/* extern struct collect_info_2 collect_info_S_2; */
+extern struct collect_info_2 collect_info_S_2; 
 
 struct command *make_command_S_2(struct command *f,
 				 struct command *g);
 
 #define GABA_VALUE_S (&command_S.super.super.super)
 #define GABA_APPLY_S_1(f) (make_collect_state_1(&command_S, (f)))
-#define GABA_APPLY_S_2(f, g) (collect_S_2(NULL, (f), (g)))
+#define GABA_APPLY_S_2(f, g) (collect_S_2(&collect_info_S_2, (f), (g)))
 
 extern struct collect_info_1 command_Sp;
 extern struct collect_info_2 collect_info_Sp_2;
-/* extern struct collect_info_3 collect_info_Sp_3; */
+extern struct collect_info_3 collect_info_Sp_3;
 
 struct command *make_command_Sp_3(struct command *c,
 				  struct command *f,
@@ -231,10 +231,10 @@ struct lsh_object *collect_Sp_3(struct collect_info_3 *info,
 #define GABA_APPLY_Sp_1(c) (make_collect_state_1(&command_Sp, (c)))
 #define GABA_APPLY_Sp_2(c, f) \
   (make_collect_state_2(&collect_info_Sp_2, (c), (f)))
-#define GABA_APPLY_Sp_3(c, f, g) (collect_Sp_3(NULL, (c), (f), (g)))
+#define GABA_APPLY_Sp_3(c, f, g) (collect_Sp_3(&collect_info_Sp_3, (c), (f), (g)))
 
 extern struct collect_info_1 command_B;
-/* extern struct collect_info_2 collect_info_B_2; */
+extern struct collect_info_2 collect_info_B_2; 
 
 struct command *make_command_B_2(struct command *f,
 				 struct command *g);
@@ -244,7 +244,7 @@ struct lsh_object *collect_B_2(struct collect_info_2 *info,
 
 #define GABA_VALUE_B (&command_B.super.super)
 #define GABA_APPLY_B_1(f) (make_collect_state_1(&command_B, (f)))
-#define GABA_APPLY_B_2(f, g) (collect_B_2(NULL, (f), (g)))
+#define GABA_APPLY_B_2(f, g) (collect_B_2(&collect_info_B_2, (f), (g)))
 
 extern struct collect_info_1 command_Bp;
 extern struct collect_info_2 collect_info_Bp_2;
@@ -262,10 +262,10 @@ struct lsh_object *collect_Bp_3(struct collect_info_3 *info,
 #define GABA_APPLY_Bp_1(c) (make_collect_state_1(&command_Bp, (c)))
 #define GABA_APPLY_Bp_2(c, f) \
   (make_collect_state_2(&collect_info_Bp_2, (c), (f)))
-#define GABA_APPLY_Bp_3(c, f, g) (collect_Bp_3(NULL, (c), (f), (g)))
+#define GABA_APPLY_Bp_3(c, f, g) (collect_Bp_3(&collect_info_Bp_3, (c), (f), (g)))
 
 extern struct collect_info_1 command_C;
-/* extern struct collect_info_2 collect_info_C_2; */
+extern struct collect_info_2 collect_info_C_2; 
 
 struct command *
 make_command_C_2(struct command *f,
@@ -277,11 +277,11 @@ collect_C_2(struct collect_info_2 *info,
 
 #define GABA_VALUE_C (&command_C.super.super.super)
 #define GABA_APPLY_C_1(f) (make_collect_state_1(&command_C, (f)))
-#define GABA_APPLY_C_2(f, y) (collect_C_2(NULL, (f), (y)))
+#define GABA_APPLY_C_2(f, y) (collect_C_2(&collect_info_C_2, (f), (y)))
 
 extern struct collect_info_1 command_Cp;
 extern struct collect_info_2 collect_info_Cp_2;
-/* extern struct collect_info_3 collect_info_Cp_3; */
+extern struct collect_info_3 collect_info_Cp_3;
 
 struct command *
 make_command_Cp_3(struct command *c,
@@ -297,7 +297,7 @@ collect_Cp_3(struct collect_info_3 *info,
 #define GABA_APPLY_Cp_1(c) (make_collect_state_1(&command_Cp, (c)))
 #define GABA_APPLY_Cp_2(c, f) \
   (make_collect_state_2(&collect_info_Cp_2, (c), (f)))
-#define GABA_APPLY_Cp_3(c, f, y) (collect_Cp_3(NULL, (c), (f), (y)))
+#define GABA_APPLY_Cp_3(c, f, y) (collect_Cp_3(&collect_info_Cp_3, (c), (f), (y)))
      
 
 #endif /* LSH_COMMAND_H_INCLUDED */ 
