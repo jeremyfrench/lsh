@@ -30,6 +30,7 @@
 #include "alist.h"
 
 #include "atoms.h"
+#include "werror.h"
 #include "xalloc.h"
 
 struct alist_linear
@@ -72,7 +73,9 @@ struct alist *make_linear_alist(int n, ...)
   int i;
   va_list args;
   
-  struct alist_linear *res = xalloc(sizeof(struct alist_linear));
+  struct alist_linear *res;
+
+  NEW(res);
 
 #if ALIST_USE_SIZE
   res->size = 0;
@@ -103,9 +106,9 @@ struct alist *make_linear_alist(int n, ...)
   return &res->super;
 }
 
-struct node
+struct alist_node
 {
-  struct node *next;
+  struct alist_node *next;
   int atom;
   void *value;
 };
@@ -114,13 +117,13 @@ struct alist_linked
 {
   struct alist super;
 
-  struct node *head;
+  struct alist_node *head;
 };
 
 static void *do_linked_get(struct alist *c, int atom)
 {
   struct alist_linked *self = (struct alist_linked *) c;
-  struct node *p;
+  struct alist_node *p;
   
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
@@ -145,7 +148,7 @@ static void do_linked_set(struct alist *c, int atom, void *value)
 
   if (value)
     {
-      struct node *p;
+      struct alist_node *p;
 
       for (p = self->head; p; p = p->next)
 	if (p->atom == atom)
@@ -153,8 +156,8 @@ static void do_linked_set(struct alist *c, int atom, void *value)
 	    p->value = value;
 	    return;
 	  }
-      
-      p = xalloc(sizeof(struct node));
+
+      NEW_SPACE(p);
       p->next = self->head;
       p->atom = atom;
       p->value = value;
@@ -166,11 +169,11 @@ static void do_linked_set(struct alist *c, int atom, void *value)
     }
   else
     { /* Remove atom */
-      struct node **p;
+      struct alist_node **p;
 
       for(p = &self->head; *p; )
 	{
-	  struct node *o = *p;
+	  struct alist_node *o = *p;
 	  if (o->atom == atom)
 	    {
 	      *p = o->next;
@@ -192,11 +195,12 @@ struct alist *make_linked_alist(int n, ...)
   int i;
   va_list args;
   
-  struct alist_linked *self = xalloc(sizeof(struct alist_linked));
-  struct alist *res = &self->super;
-
-  struct node *p;
+  struct alist_linked *self;
+  struct alist *res;
   
+  NEW(self);
+  res = &self->super;
+
 #if ALIST_USE_SIZE
   self->size = 0;
 #endif
@@ -205,11 +209,13 @@ struct alist *make_linked_alist(int n, ...)
 
   va_start(args, n);
 
-  for (i=0, p = NULL; i<n; i++)
+  for (i=0; i<n; i++)
     {
       int atom = va_arg(args, int);
       void *value = va_arg(args, void *);
 
+      if (atom < 0)
+	fatal("Internal error!\n");
       do_linked_set(res, atom, value);
     }
 
