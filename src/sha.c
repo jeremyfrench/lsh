@@ -77,7 +77,7 @@ make_sha_instance(struct hash_algorithm *ignored UNUSED)
   return &res->super;
 }
 
-struct hash_algorithm sha_algorithm =
+struct hash_algorithm sha1_algorithm =
 { STATIC_HEADER,
   SHA_DATASIZE, SHA_DIGESTSIZE, make_sha_instance };
 
