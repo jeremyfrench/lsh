@@ -1,3 +1,22 @@
+2004-06-15  Niels Möller  <niels@s3.kth.se>
+
+	* src/publickey_crypto.c (zn_member): Deleted unused method.
+	(zn_range, zn_invert, zn_mul, zn_exp, zn_exp_ui, zn_add, zn_sub):
+	Non-static functions replaces the GROUP_COMBINE etc methods.
+	(make_group_zn, make_ring_zn): Deleted functions...
+	(make_ssh_group): ... replaced by new funtion.
+	(make_ssh_group1, make_ssh_ring_srp_1): Use make_ssh_group.
+	(make_ssh_group14): New function.
+
+	* src/publickey_crypto.h (abstract_group): Deleted class and
+	methods.
+	(zn_group): Declare class here, and plain functions for using it.
+	Replaced all uses of struct abstract_group with const struct
+	zn_group.
+	(dh_instance): Use const for the dh_method pointer.
+	
+	* src/atoms.in: Added diffie-hellman-group14-sha1.
+
 2004-06-12  Niels Möller  <nisse@lysator.liu.se>
 
 	* configure.ac: Bumped version to 1.5.6.
