@@ -33,6 +33,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+/* NOTE: For a linear alist, all keys must be non-negative and less
+ * than NUMBER_OF_ATOMS. */
 struct alist_linear
 {
   struct alist super;
@@ -112,7 +114,8 @@ struct alist_node
   int atom;
   void *value;
 };
-  
+
+/* NOTE: A linked alist does not have any limit on the size of its keys. */
 struct alist_linked
 {
   struct alist super;
@@ -126,7 +129,6 @@ static void *do_linked_get(struct alist *c, int atom)
   struct alist_node *p;
   
   assert(atom >= 0);
-  assert(atom < NUMBER_OF_ATOMS);
   
   MDEBUG(self); 
 
@@ -140,10 +142,12 @@ static void *do_linked_get(struct alist *c, int atom)
 static void do_linked_set(struct alist *c, int atom, void *value)
 {
   struct alist_linked *self = (struct alist_linked *) c;
-  
+
+#if 0
   assert(atom >= 0);
   assert(atom < NUMBER_OF_ATOMS);
-
+#endif
+  
   MDEBUG(self);
 
   if (value)
