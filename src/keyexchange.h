@@ -28,6 +28,7 @@
 
 #include "abstract_crypto.h"
 #include "abstract_io.h"
+#include "abstract_compress.h"
 #include "alist.h"
 #include "list.h"
 #include "connection.h"
@@ -170,7 +171,8 @@ struct packet_handler *make_kexinit_handler(int type,
 
 struct packet_handler *
 make_newkeys_handler(struct crypto_instance *crypto,
-		     struct mac_instance *mac);
+		     struct mac_instance *mac,
+		     struct compress_instance *compression);
 
 struct install_keys *
 make_install_new_keys(int is_server,

@@ -1,7 +1,5 @@
 /* keyexchange.c
  *
- *
- *
  * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
@@ -441,13 +439,30 @@ struct mac_instance *kex_make_mac(struct hash_instance *secret,
   return mac;
 }
 
+static struct compress_instance *kex_make_deflate(struct object_list *algorithms,
+						   int type)
+{
+  CAST_SUBTYPE(compress_algorithm, algorithm, LIST(algorithms)[type]);
+  
+  return algorithm ? MAKE_DEFLATE(algorithm) : NULL;
+}
+
+static struct compress_instance *kex_make_inflate(struct object_list *algorithms,
+						  int type)
+{
+  CAST_SUBTYPE(compress_algorithm, algorithm, LIST(algorithms)[type]);
+
+  return algorithm ? MAKE_INFLATE(algorithm) : NULL;
+}
+
 /* CLASS:
    (class
      (name newkeys_handler)
      (super packet_handler)
      (vars
        (crypto object crypto_instance)
-       (mac object mac_instance)))
+       (mac object mac_instance)
+       (compression object compress_instance)))
 */
 
 static int do_handle_newkeys(struct packet_handler *c,
@@ -466,6 +481,7 @@ static int do_handle_newkeys(struct packet_handler *c,
     {
       connection->rec_crypto = closure->crypto;
       connection->rec_mac = closure->mac;
+      connection->rec_compress = closure->compression;
 
       connection->kex_state = KEX_STATE_INIT;
 
@@ -480,13 +496,15 @@ static int do_handle_newkeys(struct packet_handler *c,
 
 struct packet_handler *
 make_newkeys_handler(struct crypto_instance *crypto,
-		     struct mac_instance *mac)
+		     struct mac_instance *mac,
+		     struct compress_instance *compression)
 {
   NEW(newkeys_handler,self);
 
   self->super.handler = do_handle_newkeys;
   self->crypto = crypto;
   self->mac = mac;
+  self->compression = compression;
 
   return &self->super;
 }
@@ -552,6 +570,10 @@ struct make_kexinit *make_simple_kexinit(struct randomness *r,
   return &res->super;
 }
 
+/* FIXME: This function should be replaced by something more
+ * configurable. Perhaps greating the algorithm alist should be
+ * handled by the same function. */
+ 
 struct make_kexinit *make_test_kexinit(struct randomness *r)
 {
   return make_simple_kexinit
@@ -560,7 +582,13 @@ struct make_kexinit *make_test_kexinit(struct randomness *r)
      make_int_list(1, ATOM_SSH_DSS, -1),
      make_int_list(2, ATOM_ARCFOUR, ATOM_NONE, -1),
      make_int_list(2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1),
+
+#if WITH_ZLIB
+     make_int_list(2, ATOM_ZLIB, ATOM_NONE, -1),
+#else /* !WITH_ZLIB */
      make_int_list(1, ATOM_NONE, -1),
+#endif/* !WITH_ZLIB */
+     
      make_int_list(0, -1));
 }
 
@@ -602,7 +630,9 @@ static int do_install(struct install_keys *c,
     (rec,
      kex_make_mac(secret, closure->algorithms,
 		  KEX_MAC_SERVER_TO_CLIENT ^ closure->is_server,
-		  connection->session_id));
+		  connection->session_id),
+     kex_make_inflate(closure->algorithms,
+		      KEX_COMPRESSION_SERVER_TO_CLIENT ^ closure->is_server));
 
   /* Keys for sending */
   /* NOTE: The NEWKEYS-message should have been sent before this
@@ -614,6 +644,10 @@ static int do_install(struct install_keys *c,
 		   KEX_MAC_CLIENT_TO_SERVER ^ closure->is_server,
 		   connection->session_id);
 
+  connection->send_compress
+    = kex_make_deflate(closure->algorithms,
+		       KEX_COMPRESSION_CLIENT_TO_SERVER ^ closure->is_server);
+  
   return 1;
 }
 
