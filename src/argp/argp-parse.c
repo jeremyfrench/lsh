@@ -18,6 +18,10 @@
    write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
    Boston, MA 02111-1307, USA.  */
 
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE	1
+#endif
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -26,7 +30,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
-#include <getopt.h>
+#include <assert.h>
 
 #ifndef UNUSED
 # if __GNUC__ >= 2
@@ -62,36 +66,17 @@
 #endif
 #endif /* _LIBC */
 
-/* FIXME: Where are these defined??? /nisse */
-#if HAVE_PROGRAM_INVOCATION_NAME 
-extern const char *program_invocation_name;
-#endif 
-
-#if HAVE_PROGRAM_INVOCATION_SHORT_NAME
-extern const char *program_short_name;
-#endif
-
 #include "argp.h"
 #include "argp-namefrob.h"
 
-/* Getopt return values.  */
-#define KEY_END (-1)		/* The end of the options.  */
-#define KEY_ARG 1		/* A non-option argument.  */
-#define KEY_ERR '?'		/* An error parsing the options.  */
 
 /* The meta-argument used to prevent any further arguments being interpreted
    as options.  */
 #define QUOTE "--"
 
-/* The number of bits we steal in a long-option value for our own use.  */
-#define GROUP_BITS CHAR_BIT
-
-/* The number of bits available for the user value.  */
-#define USER_BITS ((sizeof ((struct option *)0)->val * CHAR_BIT) - GROUP_BITS)
-#define USER_MASK ((1 << USER_BITS) - 1)
-
 /* EZ alias for ARGP_ERR_UNKNOWN.  */
 #define EBADKEY ARGP_ERR_UNKNOWN
+
 
 /* Default options.  */
 
@@ -201,59 +186,7 @@ argp_version_parser (int key, char *arg UNUSED, struct argp_state *state)
 static const struct argp argp_version_argp =
   {argp_version_options, &argp_version_parser, NULL, NULL, NULL, NULL, "libc"};
 
-/* Returns the offset into the getopt long options array LONG_OPTIONS of a
-   long option with called NAME, or -1 if none is found.  Passing NULL as
-   NAME will return the number of options.  */
-static int
-find_long_option (struct option *long_options, const char *name)
-{
-  struct option *l = long_options;
-  while (l->name != NULL)
-    if (name != NULL && strcmp (l->name, name) == 0)
-      return l - long_options;
-    else
-      l++;
-  if (name == NULL)
-    return l - long_options;
-  else
-    return -1;
-}
-
-/* If we can, we regulate access to getopt, which is non-reentrant, with a
-   mutex.  Since the case we're trying to guard against is two different
-   threads interfering, and it's possible that someone might want to call
-   argp_parse recursively (they're careful), we use a recursive lock if
-   possible.  */
 
-#if _LIBC - 0
-
-__libc_lock_define_initialized_recursive (static, getopt_lock)
-#define LOCK_GETOPT   __libc_lock_lock_recursive (getopt_lock)
-#define UNLOCK_GETOPT __libc_lock_unlock_recursive (getopt_lock)
-
-#else /* !_LIBC */
-#ifdef HAVE_CTHREADS_H
-
-static struct mutex getopt_lock = MUTEX_INITIALIZER;
-#define LOCK_GETOPT   mutex_lock (&getopt_lock)
-#define UNLOCK_GETOPT mutex_unlock (&getopt_lock)
-
-#else /* !HAVE_CTHREADS_H */
-
-#define LOCK_GETOPT    (void)0
-#define UNLOCK_GETOPT  (void)0
-
-#endif /* HAVE_CTHREADS_H */
-#endif /* _LIBC */
-
-/* This hack to allow programs that know what's going on to call argp
-   recursively.  If someday argp is changed not to use the non-reentrant
-   getopt interface, we can get rid of this shit.  XXX */
-void
-_argp_unlock_xxx (void)
-{
-  UNLOCK_GETOPT;
-}
 
 /* The state of a `group' during parsing.  Each group corresponds to a
    particular argp structure from the tree of such descending from the top
@@ -266,11 +199,12 @@ struct group
   /* Which argp this group is from.  */
   const struct argp *argp;
 
+#if 0
   /* Points to the point in SHORT_OPTS corresponding to the end of the short
      options for this group.  We use it to determine from which group a
      particular short options is from.  */
   char *short_end;
-
+#endif
   /* The number of non-option args sucessfully handled by this parser.  */
   unsigned args_processed;
 
@@ -309,26 +243,19 @@ struct parser
 {
   const struct argp *argp;
 
-  /* SHORT_OPTS is the getopt short options string for the union of all the
-     groups of options.  */
+  /* String of all recognized short options. Needed for ARGP_LONG_ONLY. */
   char *short_opts;
-  /* LONG_OPTS is the array of getop long option structures for the union of
-     all the groups of options.  */
-  struct option *long_opts;
 
+  /* For parsing combined short options. */
+  char *nextchar;
+  
   /* States of the various parsing groups.  */
   struct group *groups;
   /* The end of the GROUPS array.  */
   struct group *egroup;
   /* An vector containing storage for the CHILD_INPUTS field in all groups.  */
   void **child_inputs;
-
-  /* True if we think using getopt is still useful; if false, then
-     remaining arguments are just passed verbatim with ARGP_KEY_ARG.  This is
-     cleared whenever getopt returns KEY_END, but may be set again if the user
-     moves the next argument pointer backwards.  */
-  int try_getopt;
-
+  
   /* State block supplied to parsing routines.  */
   struct argp_state state;
 
@@ -336,97 +263,162 @@ struct parser
   void *storage;
 };
 
+/* Search for a group defining a short option. */
+static const struct argp_option *
+find_short_option(struct parser *parser, int key, struct group **p)
+{
+  struct group *group;
+  
+  assert(key >= 0);
+  assert(isascii(key));
+
+  for (group = parser->groups; group < parser->egroup; group++)
+    {
+      const struct argp_option *opts;
+
+      for (opts = group->argp->options; !__option_is_end(opts); opts++)
+	if (opts->key == key)
+	  {
+	    *p = group;
+	    return opts;
+	  }
+    }
+  return NULL;
+}
+
+enum match_result { MATCH_EXACT, MATCH_PARTIAL, MATCH_NO };
+
+/* Matches an encountern long-option argument ARG against an option NAME.
+ * ARG is terminated by NUL or '='.
+ *
+ * For partial matches, *QUALITY is set to the length of the common
+ * prefix. */
+static enum match_result
+match_option(const char *arg, const char *name,
+	     unsigned *quality)
+{
+  unsigned i;
+  for (i = 0;; i++)
+    {
+      if ( !arg[i] || (arg[i] == '='))
+	{
+	  if (!name[i])
+	    return MATCH_EXACT;
+	}
+      else if (!name[i])
+	/* The argument is longer than the option name */
+	return MATCH_NO;
+      else if (!arg[i] != name[i])
+	{
+	  *quality = i;
+	  return MATCH_PARTIAL;
+	}
+    }
+}
+
+static const struct argp_option *
+find_long_option(struct parser *parser,
+		 const char *arg,
+		 struct group **p)
+{
+  struct group *group;
+
+  /* Best match found so far. */
+  unsigned best_match = 0;    /* Match length */
+  struct group *best_group = NULL;
+  const struct argp_option *best_option = NULL;
+
+  /* True if we get several "best" matches. (A best_match of zero is
+     always ambigous). */
+  int ambiguous = 1;
+
+  for (group = parser->groups; group < parser->egroup; group++)
+    {
+      const struct argp_option *opts;
+
+      for (opts = group->argp->options; !__option_is_end(opts); opts++)
+	{
+	  unsigned prefix;
+	  
+	  if (!opts->name)
+	    continue;
+	  switch (match_option(arg, opts->name, &prefix))
+	    {
+	    case MATCH_NO:
+	      break;
+	    case MATCH_PARTIAL:
+	      if (prefix > best_match)
+		{
+		  ambiguous = 0;
+		  best_match = prefix;
+		  best_group = group;
+		  best_option = opts;
+		}
+	      else if (prefix == best_match)
+		ambiguous = 1;
+
+	      break;
+	    case MATCH_EXACT:
+	      /* Exact match. */
+	      *p = group;
+	      return opts;
+	    }
+	}
+    }
+  if (!ambiguous)
+    {
+      *p = best_group;
+      return best_option;
+    }
+
+  return NULL;
+}
+
+
 /* The next usable entries in the various parser tables being filled in by
    convert_options.  */
 struct parser_convert_state
 {
   struct parser *parser;
   char *short_end;
-  struct option *long_end;
   void **child_inputs_end;
 };
 
-/* Converts all options in ARGP (which is put in GROUP) and ancestors
-   into getopt options stored in SHORT_OPTS and LONG_OPTS; SHORT_END and
-   CVT->LONG_END are the points at which new options are added.  Returns the
-   next unused group entry.  CVT holds state used during the conversion.  */
+/* Initialize GROUP from ARGP. If CVT->SHORT_END is non-NULL, short
+   options are recorded in the short options string. Returns the next
+   unused group entry. CVT holds state used during the conversion. */
 static struct group *
 convert_options (const struct argp *argp,
 		 struct group *parent, unsigned parent_index,
 		 struct group *group, struct parser_convert_state *cvt)
 {
-  /* REAL is the most recent non-alias value of OPT.  */
-  const struct argp_option *real = argp->options;
+  const struct argp_option *opt = argp->options;
   const struct argp_child *children = argp->children;
 
-  if (real || argp->parser)
+  if (opt || argp->parser)
     {
-      const struct argp_option *opt;
-
-      if (real)
-	for (opt = real; !__option_is_end (opt); opt++)
-	  {
-	    if (! (opt->flags & OPTION_ALIAS))
-	      /* OPT isn't an alias, so we can use values from it.  */
-	      real = opt;
-
-	    if (! (real->flags & OPTION_DOC))
-	      /* A real option (not just documentation).  */
-	      {
-		if (__option_is_short (opt))
-		  /* OPT can be used as a short option.  */
-		  {
-		    *cvt->short_end++ = opt->key;
-		    if (real->arg)
-		      {
-			*cvt->short_end++ = ':';
-			if (real->flags & OPTION_ARG_OPTIONAL)
-			  *cvt->short_end++ = ':';
-		      }
-		    *cvt->short_end = '\0'; /* keep 0 terminated */
-		  }
-
-		if (opt->name
-		    && find_long_option (cvt->parser->long_opts, opt->name) < 0)
-		  /* OPT can be used as a long option.  */
-		  {
-		    cvt->long_end->name = opt->name;
-		    cvt->long_end->has_arg =
-		      (real->arg
-		       ? (real->flags & OPTION_ARG_OPTIONAL
-			  ? optional_argument
-			  : required_argument)
-		       : no_argument);
-		    cvt->long_end->flag = 0;
-		    /* we add a disambiguating code to all the user's
-		       values (which is removed before we actually call
-		       the function to parse the value); this means that
-		       the user loses use of the high 8 bits in all his
-		       values (the sign of the lower bits is preserved
-		       however)...  */
-		    cvt->long_end->val =
-		      ((opt->key | real->key) & USER_MASK)
-		      + (((group - cvt->parser->groups) + 1) << USER_BITS);
-
-		    /* Keep the LONG_OPTS list terminated.  */
-		    (++cvt->long_end)->name = NULL;
-		  }
-	      }
-	    }
-
+      /* This parser needs a group. FIXME: Do we really need a group
+	 if argp->parser if NULL? */
+      if (cvt->short_end)
+	{
+	  /* Record any short options. */
+	  for ( ; !__option_is_end (opt); opt++)
+	    if (__option_is_short(opt))
+	      *cvt->short_end++ = opt->key;
+	}
+      
       group->parser = argp->parser;
       group->argp = argp;
-      group->short_end = cvt->short_end;
       group->args_processed = 0;
       group->parent = parent;
       group->parent_index = parent_index;
       group->input = 0;
       group->hook = 0;
       group->child_inputs = 0;
-
+      
       if (children)
 	/* Assign GROUP's CHILD_INPUTS field some space from
-           CVT->child_inputs_end.*/
+	   CVT->child_inputs_end.*/
 	{
 	  unsigned num_children = 0;
 	  while (children[num_children].argp)
@@ -434,7 +426,6 @@ convert_options (const struct argp *argp,
 	  group->child_inputs = cvt->child_inputs_end;
 	  cvt->child_inputs_end += num_children;
 	}
-
       parent = group++;
     }
   else
@@ -450,25 +441,17 @@ convert_options (const struct argp *argp,
 
   return group;
 }
-
-/* Find the merged set of getopt options, with keys appropiately prefixed. */
+/* Allocate and initialize the group structures, so that they are
+   ordered as if by traversing the corresponding argp parser tree in
+   pre-order. Also build the list of short options, if that is needed. */
 static void
-parser_convert (struct parser *parser, const struct argp *argp, int flags)
+parser_convert (struct parser *parser, const struct argp *argp)
 {
   struct parser_convert_state cvt;
 
   cvt.parser = parser;
   cvt.short_end = parser->short_opts;
-  cvt.long_end = parser->long_opts;
   cvt.child_inputs_end = parser->child_inputs;
-
-  if (flags & ARGP_IN_ORDER)
-    *cvt.short_end++ = '-';
-  else if (flags & ARGP_NO_ARGS)
-    *cvt.short_end++ = '+';
-  *cvt.short_end = '\0';
-
-  cvt.long_end->name = NULL;
 
   parser->argp = argp;
 
@@ -476,13 +459,17 @@ parser_convert (struct parser *parser, const struct argp *argp, int flags)
     parser->egroup = convert_options (argp, 0, 0, parser->groups, &cvt);
   else
     parser->egroup = parser->groups; /* No parsers at all! */
+
+  if (parser->short_opts)
+    *cvt.short_end ='\0';
 }
 
 /* Lengths of various parser fields which we will allocated.  */
 struct parser_sizes
 {
-  size_t short_len;		/* Getopt short options string.  */
-  size_t long_len;		/* Getopt long options vector.  */
+  /* Needed only ARGP_LONG_ONLY */
+  size_t short_len;		/* Number of short options.  */
+
   size_t num_groups;		/* Group structures we allocate.  */
   size_t num_child_inputs;	/* Child input slots.  */
 };
@@ -499,14 +486,12 @@ calc_sizes (const struct argp *argp,  struct parser_sizes *szs)
 
   if (opt || argp->parser)
     {
+      /* FIXME: Do we really need a group if argp->parser if NULL? */
       szs->num_groups++;
       if (opt)
 	{
-	  int num_opts = 0;
-	  while (!__option_is_end (opt++))
-	    num_opts++;
-	  szs->short_len += num_opts * 3; /* opt + up to 2 `:'s */
-	  szs->long_len += num_opts;
+	  while (__option_is_short (opt++))
+	    szs->short_len++;
 	}
     }
 
@@ -527,34 +512,41 @@ parser_init (struct parser *parser, const struct argp *argp,
   struct group *group;
   struct parser_sizes szs;
 
-  szs.short_len = (flags & ARGP_NO_ARGS) ? 0 : 1;
-  szs.long_len = 0;
+  szs.short_len = 0;
   szs.num_groups = 0;
   szs.num_child_inputs = 0;
 
   if (argp)
     calc_sizes (argp, &szs);
 
+  if (!(flags & ARGP_LONG_ONLY))
+    /* We have no use for the short option array. */
+    szs.short_len = 0;
+  
   /* Lengths of the various bits of storage used by PARSER.  */
 #define GLEN (szs.num_groups + 1) * sizeof (struct group)
 #define CLEN (szs.num_child_inputs * sizeof (void *))
-#define LLEN ((szs.long_len + 1) * sizeof (struct option))
 #define SLEN (szs.short_len + 1)
 #define STORAGE(offset) ((void *) (((char *) parser->storage) + (offset)))
 
-  parser->storage = malloc (GLEN + CLEN + LLEN + SLEN);
+  parser->storage = malloc (GLEN + CLEN + SLEN);
   if (! parser->storage)
     return ENOMEM;
 
   parser->groups = parser->storage;
-  parser->child_inputs = STORAGE(GLEN);
-  parser->long_opts = STORAGE(GLEN + CLEN);
-  parser->short_opts = STORAGE(GLEN + CLEN + LLEN);
 
+  parser->child_inputs = STORAGE(GLEN);
   memset (parser->child_inputs, 0, szs.num_child_inputs * sizeof (void *));
-  parser_convert (parser, argp, flags);
+
+  if (flags & ARGP_LONG_ONLY)
+    parser->short_opts = STORAGE(GLEN + CLEN);
+  else
+    parser->short_opts = NULL;
+
+  parser_convert (parser, argp);
 
   memset (&parser->state, 0, sizeof (struct argp_state));
+  
   parser->state.root_argp = parser->argp;
   parser->state.argc = argc;
   parser->state.argv = argv;
@@ -564,7 +556,10 @@ parser_init (struct parser *parser, const struct argp *argp,
   parser->state.next = 0;	/* Tell getopt to initialize.  */
   parser->state.pstate = parser;
 
+  parser->nextchar = NULL;
+#if 0
   parser->try_getopt = 1;
+#endif
 
   /* Call each parser for the first time, giving it a chance to propagate
      values to child parsers.  */
@@ -593,25 +588,14 @@ parser_init (struct parser *parser, const struct argp *argp,
   if (err)
     return err;
 
-  /* Getopt is (currently) non-reentrant.  */
-  LOCK_GETOPT;
-
-  if (parser->state.flags & ARGP_NO_ERRS)
-    {
-      opterr = 0;
-      if (parser->state.flags & ARGP_PARSE_ARGV0)
-	/* getopt always skips ARGV[0], so we have to fake it out.  As long
-	   as OPTERR is 0, then it shouldn't actually try to access it.  */
-	parser->state.argv--, parser->state.argc++;
-    }
-  else
-    opterr = 1;		/* Print error messages.  */
-
-  if (parser->state.argv == argv && argv[0])
+  if (argv[0] && !(parser->state.flags & ARGP_PARSE_ARGV0))
     /* There's an argv[0]; use it for messages.  */
     {
       char *short_name = strrchr (argv[0], '/');
       parser->state.name = short_name ? short_name + 1 : argv[0];
+
+      /* Don't parse it as an argument. */
+      parser->state.next = 1;
     }
   else
   {
@@ -634,8 +618,6 @@ parser_finalize (struct parser *parser,
 		 error_t err, int arg_ebadkey, int *end_index)
 {
   struct group *group;
-
-  UNLOCK_GETOPT;
 
   if (err == EBADKEY && arg_ebadkey)
     /* Suppress errors generated by unparsed arguments.  */
@@ -768,14 +750,17 @@ parser_parse_arg (struct parser *parser, char *val)
 	   argument -- but only if the user hasn't gotten tricky and set
 	   the clock back.  */
 	(--group)->args_processed += (parser->state.next - index);
+#if 0
       else
 	/* The user wants to reparse some args, give getopt another try.  */
 	parser->try_getopt = 1;
+#endif
     }
 
   return err;
 }
 
+#if 0
 /* Call the user parsers to parse the option OPT, with argument VAL, at the
    current position, returning any error.  */
 static error_t
@@ -832,7 +817,63 @@ parser_parse_opt (struct parser *parser, int opt, char *val UNUSED)
 
   return err;
 }
+#endif
 
+enum arg_type { ARG_ARG, ARG_SHORT_OPTION, ARG_LONG_OPTION, ARG_QUOTE };
+
+static enum arg_type
+classify_arg(struct parser *parser, char *arg, char **opt)
+{
+  if (arg[0] == '-')
+    /* Looks like an option... */
+    switch (arg[1])
+      {
+      case '\0':
+	/* "-" is not an option. */
+	return ARG_ARG;
+      case '-':
+	/* Long option, or quote. */
+	if (!arg[2])
+	  return ARG_QUOTE;
+	  
+	/* A long option. */
+	*opt = arg + 2;
+	return ARG_LONG_OPTION;
+
+      default:
+	/* Short option. But if ARGP_LONG_ONLY, it can also be a long option. */
+
+	*opt = arg + 1;
+	if (parser->state.flags & ARGP_LONG_ONLY)
+	  {
+	    /* Rules from getopt.c:
+
+	       If long_only and the ARGV-element has the form "-f",
+	       where f is a valid short option, don't consider it an
+	       abbreviated form of a long option that starts with f.
+	       Otherwise there would be no way to give the -f short
+	       option.
+
+	       On the other hand, if there's a long option "fubar" and
+	       the ARGV-element is "-fu", do consider that an
+	       abbreviation of the long option, just like "--fu", and
+	       not "-f" with arg "u".
+
+	       This distinction seems to be the most useful approach. */
+
+	    assert(parser->short_opts);
+	    
+	    if (arg[2] || !strchr(parser->short_opts, arg[1]))
+	      return ARG_LONG_OPTION;
+	  }
+
+	return ARG_SHORT_OPTION;
+      }
+  
+  else
+    return ARG_ARG;
+}
+
 /* Parse the next argument in PARSER (as indicated by PARSER->state.next).
    Any error from the parsers is returned, and *ARGP_EBADKEY indicates
    whether a value of EBADKEY is due to an unrecognized argument (which is
@@ -840,9 +881,6 @@ parser_parse_opt (struct parser *parser, int opt, char *val UNUSED)
 static error_t
 parser_parse_next (struct parser *parser, int *arg_ebadkey)
 {
-  int opt;
-  error_t err = 0;
-
   if (parser->state.quoted && parser->state.next < parser->state.quoted)
     /* The next argument pointer has been moved to before the quoted
        region, so pretend we never saw the quoting `--', and give getopt
@@ -850,73 +888,123 @@ parser_parse_next (struct parser *parser, int *arg_ebadkey)
        process it again.  */
     parser->state.quoted = 0;
 
-  if (parser->try_getopt && !parser->state.quoted)
-    /* Give getopt a chance to parse this.  */
+  if (parser->nextchar)
+    /* Deal with short options. */
     {
-      optind = parser->state.next; /* Put it back in OPTIND for getopt.  */
-      optopt = KEY_END;	/* Distinguish KEY_ERR from a real option.  */
-      if (parser->state.flags & ARGP_LONG_ONLY)
-	opt = getopt_long_only (parser->state.argc, parser->state.argv,
-				parser->short_opts, parser->long_opts, 0);
-      else
-	opt = getopt_long (parser->state.argc, parser->state.argv,
-			   parser->short_opts, parser->long_opts, 0);
-      parser->state.next = optind; /* And see what getopt did.  */
+      struct group *group;
+      const struct argp_option *option;
+      char *value = NULL;;
 
-      if (opt == KEY_END)
-	/* Getopt says there are no more options, so stop using
-	   getopt; we'll continue if necessary on our own.  */
+      assert(!parser->state.quoted);
+	  
+      option = find_short_option(parser, *parser->nextchar++, &group);
+      if (!option)
+	/* FIXME: What now? */
+	abort();
+
+      if (!*parser->nextchar)
+	parser->nextchar = NULL;
+
+      if (option->arg)
 	{
-	  parser->try_getopt = 0;
-	  if (parser->state.next > 1
-	      && strcmp (parser->state.argv[parser->state.next - 1], QUOTE)
-	           == 0)
-	    /* Not only is this the end of the options, but it's a
-	       `quoted' region, which may have args that *look* like
-	       options, so we definitely shouldn't try to use getopt past
-	       here, whatever happens.  */
-	    parser->state.quoted = parser->state.next;
+	  value = parser->nextchar;
+	  parser->nextchar = NULL;
+	      
+	  if (!value
+	      && !(option->flags & OPTION_ARG_OPTIONAL))
+	    /* We need an mandatory argument. */
+	    {
+	      if (parser->state.next == parser->state.argc)
+		/* Missing argument */
+		/* FIXME: What now? */
+		abort();
+			
+	      value = parser->state.argv[parser->state.next++];
+	    }
 	}
-      else if (opt == KEY_ERR && optopt != KEY_END)
-	/* KEY_ERR can have the same value as a valid user short
-	   option, but in the case of a real error, getopt sets OPTOPT
-	   to the offending character, which can never be KEY_END.  */
-	{
-	  *arg_ebadkey = 0;
-	  return EBADKEY;
-	}
+      return group_parse(group, &parser->state,
+			 option->key, value);
     }
   else
-    opt = KEY_END;
-
-  if (opt == KEY_END)
     {
-      /* We're past what getopt considers the options.  */
-      if (parser->state.next >= parser->state.argc
-	  || (parser->state.flags & ARGP_NO_ARGS))
+      char *arg;
+      
+      if (parser->state.next >= parser->state.argc)
 	/* Indicate that we're done.  */
 	{
 	  *arg_ebadkey = 1;
 	  return EBADKEY;
 	}
-      else
-	/* A non-option arg; simulate what getopt might have done.  */
+      
+      arg = parser->state.argv[parser->state.next++];
+
+      if (parser->state.quoted)
 	{
-	  opt = KEY_ARG;
-	  optarg = parser->state.argv[parser->state.next++];
+	  *arg_ebadkey = 1;
+	  return parser_parse_arg(parser, arg);
+	}
+      else
+	/* Look for options. */
+	{
+	  char *optstart;
+
+	  switch (classify_arg(parser, arg, &optstart))
+	    {
+	    case ARG_ARG:
+	      /* FIXME: Permute arguments, unless ARGP_IN_ORDER is
+	       * used. */
+	      *arg_ebadkey = 1;
+	      return parser_parse_arg(parser, arg);
+
+	    case ARG_QUOTE:
+	      parser->state.quoted = parser->state.next;
+	      return 0;
+
+	    case ARG_LONG_OPTION:
+	      {
+		struct group *group;
+		const struct argp_option *option;
+		char *value;
+		      
+		option = find_long_option(parser, arg, &group);
+		
+		if (!option)
+		  /* FIXME: What now? */
+		  abort();
+
+		value = strchr(optstart, '=');
+		if (value)
+		  value++;
+		
+		if (value && !option->arg)
+		  /* Unexpected argument. */
+		  /* FIXME: What now? */
+		  abort();
+			  
+		if (option->arg && !value
+		    && !(option->flags & OPTION_ARG_OPTIONAL))
+		  /* We need an mandatory argument. */
+		  {
+		    if (parser->state.next == parser->state.argc)
+		      /* Missing argument */
+		      /* FIXME: What now? */
+		      abort();
+
+		    value = parser->state.argv[parser->state.next++];
+		  }
+		*arg_ebadkey = 0;
+		return group_parse(group, &parser->state,
+				   option->key, value);
+	      }
+	    case ARG_SHORT_OPTION:
+	      parser->nextchar = optstart;
+	      return 0;
+
+	    default:
+	      abort();
+	    }
 	}
     }
-
-  if (opt == KEY_ARG)
-    /* A non-option argument; try each parser in turn.  */
-    err = parser_parse_arg (parser, optarg);
-  else
-    err = parser_parse_opt (parser, opt, optarg);
-
-  if (err == EBADKEY)
-    *arg_ebadkey = (opt == KEY_END || opt == KEY_ARG);
-
-  return err;
 }
 
 /* Parse the options strings in ARGC & ARGV according to the argp in ARGP.
@@ -1012,6 +1100,10 @@ __option_is_short (__const struct argp_option *__opt) __THROW
   else
     {
       int __key = __opt->key;
+      /* FIXME: The docs say that isascii() is the right name.
+       * In any case, whether or not a particular key
+       * implies a short option ought not to be
+       * locale dependent. */
       return __key > 0 && isprint (__key);
     }
 }
