@@ -62,7 +62,6 @@ dist_headers = \
     tcpforward_commands.h \
     translate_signal.h \
     tty.h \
-    unpad.h \
     userauth.h \
     version.h \
     werror.h \
