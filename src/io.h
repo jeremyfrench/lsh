@@ -279,9 +279,9 @@ address_info2sockaddr(socklen_t *length,
 		      const int *preference,
 		      int lookup);
 
-struct sockaddr_list *
+unsigned
 io_resolv_address(struct address_info *a,
-		  struct sockaddr_list *tail);
+		  struct sockaddr_list **tail);
 
 /* Returns an exception, if anything went wrong */
 const struct exception *

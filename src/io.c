@@ -1047,7 +1047,7 @@ make_address_info(struct lsh_string *host, uint32_t port)
 {
   NEW(address_info, info);
 
-  info->port = port; /* htons(port); */
+  info->port = port;
   info->ip = host;
   return info;
 }
@@ -1150,11 +1150,12 @@ choose_address(struct addrinfo *list,
 }
 #endif /* HAVE_GETADDRINFO */
 
-struct sockaddr_list *
+unsigned
 io_resolv_address(struct address_info *a,
-		  struct sockaddr_list *tail)
+		  struct sockaddr_list **tail)
 {
   const char *host;
+  unsigned naddresses = 0;
   
   if (a->ip)
     {
@@ -1162,7 +1163,7 @@ io_resolv_address(struct address_info *a,
       if (!host)
 	{
 	  werror("io_resolv_address: hostname contains NUL characters.\n");
-	  return tail;
+	  return 0;
 	}
     }
   else
@@ -1194,13 +1195,16 @@ io_resolv_address(struct address_info *a,
       {
 	debug("io_listen_address: getaddrinfo failed (err = %i): %z\n",
 	      err, gai_strerror(err));
-	return tail;
+	return 0;
       }
 
     for (p = list; p; p = p->ai_next)
-      /* FIXME: Do we need to filter out some address families? */
-      tail = sockaddr_cons(p->ai_addrlen, p->ai_addr, tail);
-
+      {
+	/* FIXME: Do we need to filter out some address families? */
+	*tail = sockaddr_cons(p->ai_addrlen, p->ai_addr, *tail);
+	naddresses++;
+      }
+    
     freeaddrinfo(list);
   }
 #else
@@ -1214,7 +1218,7 @@ io_resolv_address(struct address_info *a,
   if (a->ip && memchr(a->ip->data, ':', a->ip->length))
     {
       debug("io_resolv_address: Literal IPv6 used. Failing.\n");
-      return tail;
+      return 0;
     }
   else
     {
@@ -1259,13 +1263,14 @@ io_resolv_address(struct address_info *a,
 	      for (i = 0; hp->h_addr_list[i]; i++)
 		{
 		  memcpy(&addr.sin_addr, hp->h_addr_list[i], hp->h_length);
-		  tail = sockaddr_cons(sizeof(addr), &addr, tail);
+		  *tail = sockaddr_cons(sizeof(addr), &addr, *tail);
+		  naddresses++;
 		}
 	    }
 	}
     }
 #endif /* !HAVE_GETADDRINFO */
-  return tail;
+  return naddresses;
 }
 
 
