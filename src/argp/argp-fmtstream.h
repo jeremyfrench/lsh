@@ -34,6 +34,20 @@
 #include <string.h>
 #include <unistd.h>
 
+#if !_LIBC
+# if ! (defined (HAVE_FLOCKFILE) && defined(HAVE_PUTC_UNLOCKED) \
+     && defined (HAVE_FPUTS_UNLOCKED) && defined (HAVE_FWRITE_UNLOCKED) )
+
+/* Don't use stdio locking */
+
+#  define flockfile(f)
+#  define funlockfile(f)
+#  define putc_unlocked(c, f) putc((c), (f))
+#  define fputs_unlocked(s, f) fputs((s), (f))
+#  define fwrite_unlocked(b, s, n, f) fwrite((b), (s), (n), (f))
+# endif /* No thread safe i/o */
+#endif /* !_LIBC */
+
 #if    (_LIBC - 0 && !defined (USE_IN_LIBIO)) \
     || (defined (__GNU_LIBRARY__) && defined (HAVE_LINEWRAP_H))
 /* line_wrap_stream is available, so use that.  */

@@ -1,5 +1,7 @@
 2000-11-27  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* Updated argp from glibc-2.2.
+
 	* Released lsh-1.1.3.
 
 	* src/client.c (client_argp_parser): Handle remote_forward
