@@ -1,3 +1,46 @@
+1999-11-03  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* doc/NOTES: Added some thought about the client side of user
+	authentication.  
+
+	* src/lshd.c (do_read_key): Moved key reading to spki.c. (Bazsi)
+
+	* src/spki.c (parse_dsa_private_key): Moved from lshd.c. (Bazsi)
+	(parse_private_key): New function (Bazsi).
+	(do_spki_parse_key): New function (Bazsi).
+	(make_spki_parse_key): New function (Bazsi).
+	(read_spki_key_file): New function (Bazsi).
+
+
+	* src/server_publickey.c (do_authenticate): Changed the handling
+	of PEER_SSH_DSS_KLUDGE. (Bazsi)
+
+	* src/server_keyexchange.c (do_init_server_dh): Handle
+	PEER_SSH_DSS_KLUDGE. (Bazsi)
+
+	* src/publickey_crypto.c (make_keypair): Added type argument. (Bazsi)
+
+	* src/publickey_crypto.h (keypair): Added type attribute. (Bazsi) 
+
+	* src/lsh.c (main_options): Added identity argument. (Bazsi)
+
+	* src/keyexchange.c (do_handle_kexinit): Don't use
+	ATOM_SSH_DSS_KLUDGE. (Bazsi)
+
+	* src/exception.h (EXC_IO_OPEN_READ): New exception type. (Bazsi) 
+
+	* src/connection_commands.c (do_line): Fixed detection of ssh2.
+
+	* src/client_keyexchange.c (dh_client): Added hostkey_algorithm
+	attribute. (Bazsi)
+	(do_handle_dh_reply): Handle the dss kludge here. (Bazsi)
+	(do_init_client_dh): Don't use ATOM_SSH_DSS_KLUDGE. (Bazsi)
+
+	* src/atoms.in: Removed ssh-dss-kludge. (Bazsi)
+
+	* src/lshd.c (main): Deal with pid files after forking and
+	daemonization, to get the right pid.
+
 1999-10-25  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/werror.c (set_error_syslog): Call openlog(). Added id
