@@ -1,7 +1,5 @@
 /* client.c
  *
- *
- *
  * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
@@ -42,6 +40,7 @@
 #include "service.h"
 #include "ssh.h"
 #include "translate_signal.h"
+#include "tty.h"
 #include "unpad.h"
 #include "version.h"
 #include "werror.h"
@@ -309,6 +308,24 @@ struct ssh_service *request_service(int service_name,
   return &closure->super;
 }
 
+/* CLASS:
+   (class
+     (name request_info)
+     (vars
+       ; Next request
+       (next object request_info)
+       (want_reply . int)
+       ; If true, close the channel if the request fails
+       (essential . int)
+
+       (format method "struct lsh_string *" "struct ssh_channel *c")
+       ; Called with a success/fail indication
+       (result method int "struct ssh_channel *c" int)))
+*/
+
+#define REQUEST_FORMAT(r, c) ((r)->format((r), (c)))
+#define REQUEST_RESULT(r, c, i) ((r)->result((r), (c), (i)))
+
 /* Initiate and manage a session */
 /* CLASS:
    (class
@@ -316,8 +333,11 @@ struct ssh_service *request_service(int service_name,
      (super ssh_channel)
      (vars
        ; Exec or shell request. 
-       (final_request simple int)
-       (args string)
+       ;(final_request simple int)
+       ;(args string)
+
+       ; List of requests
+       (requests object request_info)
   
        ; To access stdio
        (in object io_fd)
@@ -338,8 +358,10 @@ static int close_client_session(struct ssh_channel *c)
   close_fd(&session->out->super, 0);
   close_fd(&session->err->super, 0);
 #endif
-  
-  return LSH_OK | LSH_CHANNEL_PENDING_CLOSE;
+
+  /* The LSH_CHANNEL_PENDING_CLOSE should action should be invoked
+   * immediately when the channel is opened. */
+  return LSH_OK /* | LSH_CHANNEL_PENDING_CLOSE */;
 }  
 
 static int client_session_die(struct ssh_channel *c)
@@ -525,32 +547,149 @@ static int do_io(struct ssh_channel *channel)
   return LSH_OK | LSH_CHANNEL_READY_SEND;
 }
 
+#if 0
+static int do_next_request(struct ssh_channel *c)
+{
+  CAST(client_session, closure, c);
+  struct channel_request_descriptor *req;
+  
+  req = (struct channel_request_descriptor *) LIST(closure->requests)[closure->current_request];
+  if (closure->current_request >= ((int) LIST_LENGTH(closure->requests)) - 1)
+    {
+      closure->super.channel_success = do_io;
+      closure->requests = NULL; /* for gc */
+    }
+    
+  closure->current_request++;
+  
+  return A_WRITE(closure->super.write,
+                   format_channel_request(req->request, c, 1,
+		   "%lS", req->args));
+  
+}
+#endif
+
+static struct request_info *skip_silent_requests(struct request_info *req)
+{
+  while (req && !req->want_reply)
+    req = req->next;
+
+  return req;
+}
+
+static int do_channel_success(struct ssh_channel *c);
+static int do_channel_failure(struct ssh_channel *c);
+
+static void install_request_handler(struct client_session *session,
+				   struct request_info *req)
+{
+  session->requests = skip_silent_requests(req);
+
+  if (session->requests)
+    {
+      session->super.channel_success = do_channel_success;
+      session->super.channel_failure = do_channel_failure;
+    }
+  else
+    session->super.channel_success = session->super.channel_failure = NULL;
+}
+  
+static int do_channel_success(struct ssh_channel *c)
+{
+  CAST(client_session, closure, c);
+  int res = LSH_OK | LSH_GOON;
+  
+  assert(closure->requests);
+  assert(closure->requests->want_reply);
+
+  if (closure->requests->result)
+    res = REQUEST_RESULT(closure->requests, c, 1);
+
+  if (!LSH_FAILUREP(res))
+    install_request_handler(closure, closure->requests->next);    
+
+  return res;
+}
+
+static int do_channel_failure(struct ssh_channel *c)
+{
+  CAST(client_session, closure, c);
+  int res = 0;
+  struct request_info *req = closure->requests;
+  
+  assert(req);
+  assert(req->want_reply);
+
+  if (req->result)
+    res = REQUEST_RESULT(req, c, 0);
+
+  if (!LSH_FAILUREP(res))
+    install_request_handler(closure, req->next);
+  
+  if (req->essential)
+    res |= LSH_CHANNEL_CLOSE;
+
+  return res;
+}
+  
 /* We have opened a channel of type "session" */
 static int do_open_confirm(struct ssh_channel *c)
 {
   CAST(client_session, closure, c);
-  struct lsh_string *args;
+  struct request_info *req;
+  int res = 0;
   
   closure->super.open_confirm = NULL;
   closure->super.open_failure = NULL;
+  
+  /* tty_makeraw(0); */
 
-  closure->super.channel_success = do_io;
-  closure->super.channel_failure = client_session_die;
+  for (req = closure->requests; req; req = req->next)
+    {
+      assert(req->want_reply == (req->essential || req->result));
+      
+      res |= A_WRITE(closure->super.write,
+		     REQUEST_FORMAT(req, c));
+      if (LSH_CLOSEDP(res))
+	return res;
+    }
 
-  args = closure->args;
-  closure->args = NULL; /* for gc */
+  install_request_handler(closure, closure->requests);
 
-  return A_WRITE(closure->super.write,
-		 format_channel_request(closure->final_request, c, 1,
-					"%lfS", args));
+  return res;
 }
+  
+
+#if 0
+  if (LIST_LENGTH(closure->requests))
+    {
+      struct channel_request_descriptor *req;
+      
+      req = (struct channel_request_descriptor *) LIST(closure->requests)[0];
+      if (LIST_LENGTH(closure->requests) == 1)
+        closure->super.channel_success = do_io;
+      else
+        closure->super.channel_success = do_next_request;
+      closure->super.channel_failure = client_session_die;
+      closure->current_request = 1;
+      return A_WRITE(closure->super.write,
+		 format_channel_request(req->request, c, 1,
+					"%lS", req->args));
+    }
+  
+  else
+    {
+      closure->super.channel_success = closure->super.channel_failure = NULL;
+      return LSH_OK | LSH_CHANNEL_READY_SEND;
+    }
+}
+#endif
 
 static struct ssh_channel *make_client_session(struct io_fd *in,
 					       struct io_fd *out,
 					       struct io_fd *err,
 					       UINT32 max_window,
-					       int final_request,
-					       struct lsh_string *args,
+					       struct request_info *requests,
 					       int *exit_status)
 {
   NEW(client_session, self);
@@ -570,8 +709,7 @@ static struct ssh_channel *make_client_session(struct io_fd *in,
   self->out = out;
   self->err = err;
 
-  self->final_request = final_request;
-  self->args = args;
+  self->requests = requests;
 
   self->exit_status = exit_status;
   
@@ -613,6 +751,9 @@ static int do_client_startup(struct connection_startup *c,
   if (!s)
     fatal("Couldn't allocate a channel number!\n");
 
+  /* Close connetion when the last channel is closed. */
+  table->pending_close = 1;
+  
   return A_WRITE(write, s);
 }
 
@@ -622,8 +763,7 @@ static int do_client_startup(struct connection_startup *c,
 struct connection_startup *make_client_startup(struct io_fd *in,
 					       struct io_fd *out,
 					       struct io_fd *err,
-					       int final_request,
-					       struct lsh_string *args,
+					       struct request_info *requests,
 					       int *exit_status)
 {
   NEW(client_startup, closure);
@@ -631,9 +771,136 @@ struct connection_startup *make_client_startup(struct io_fd *in,
   closure->super.start = do_client_startup;
   closure->session = make_client_session(in, out, err,
 					 WINDOW_SIZE,
-					 final_request, args,
+					 requests,
 					 exit_status);
 
   return &closure->super;
 }
 
+/* FIXME: This should probably move to client_pty */
+/* CLASS:
+   (class
+     (name pty_request)
+     (super request_info)
+     (vars
+       ; An open fd connected to a tty (most likely, /dev/tty opened by main).
+       (tty . int)
+       (ios simple "struct termios")
+       (term string)
+       (width . UINT32)
+       (height . UINT32)
+       (width_p . UINT32)
+       (height_p . UINT32)
+       (modes string)))
+*/
+
+static struct lsh_string *do_pty_format(struct request_info *r,
+					struct ssh_channel *channel)
+{
+  CAST(pty_request, req, r);
+
+  verbose("lsh: Requesting a remote pty.\n");
+  return format_channel_request(ATOM_PTY_REQ, channel, req->super.want_reply, 
+				"%S%i%i%i%i%S",
+				req->term,
+				req->width, req->height,
+				req->width_p, req->height_p,
+				req->modes);
+}
+
+static int do_pty_result(struct request_info *r,
+			 struct ssh_channel *ignored UNUSED,
+			 int res)
+{
+  CAST(pty_request, req, r);
+
+  verbose("lsh: pty request %s.\n", res ? "successful" : "failed");
+  
+  if (res)
+    {
+      if (!tty_setattr(req->tty, &req->ios))
+	werror("do_pty_result: "
+	       "Setting the attributes of the local terminal failed.\n");
+    }
+  return LSH_OK | LSH_GOON;
+}
+
+struct request_info *make_pty_request(int fd, int essential, int raw,
+				      struct request_info *next)
+{
+  NEW(pty_request, req);
+
+  char *term = getenv("TERM");
+
+  req->super.next = next;
+  req->super.want_reply = 1;
+  req->super.essential = essential;
+  req->super.format = do_pty_format;
+  
+  req->tty = fd;
+  req->term = term ? format_cstring(term) : ssh_format("");
+  
+  if (tty_getattr(fd, &req->ios)
+      && tty_getwinsize(fd, &req->width, &req->height,
+			&req->width_p, &req->height_p))
+    {
+      if (raw)
+	cfmakeraw(&req->ios);
+  
+      req->modes = tty_encode_term_mode(&req->ios);
+      
+      req->super.result = do_pty_result;
+    }
+  else
+    req->super.result = NULL;
+
+  return &req->super;
+}
+
+static struct lsh_string *do_shell_format(struct request_info *req,
+					 struct ssh_channel *channel)
+{
+  return format_channel_request(ATOM_SHELL, channel, req->want_reply, "");
+}
+
+static int do_shell_result(struct request_info *ignored UNUSED,
+			   struct ssh_channel *channel,
+			   int res)
+{
+  if (res)
+    return do_io(channel);
+  
+  werror("do_shell_result: Starting shell failed.\n");
+  return LSH_OK | LSH_GOON;
+}
+
+struct request_info *make_shell_request(struct request_info *next)
+{
+  NEW(request_info, req);
+  req->next = next;
+  req->essential = 1;
+  req->want_reply = 1;
+  req->format = do_shell_format;
+  req->result = do_shell_result;
+
+  return req;
+}
+
+#if 0
+/* xxCLASS:
+    (class
+      (name channel_request_descriptor)
+      (vars
+        (request simple int)
+        (args string)));
+*/
+
+struct lsh_object *make_channel_request(int request, struct lsh_string *args)
+{
+  NEW(channel_request_descriptor, self);
+  
+  self->request = request;
+  self->args = args;
+  return &self->super;
+}
+#endif
