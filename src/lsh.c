@@ -167,7 +167,10 @@ make_options(struct alist *algorithms,
   self->not = 0;
   self->remote = NULL;
   self->user = getenv("LOGNAME");
-  self->port = "ssh";
+
+  /* Default behaviour is to lookup the "ssh" service, and fall back
+   * to port 22 if that fails. */
+  self->port = NULL; 
 
   self->sloppy = 0;
   self->capture = NULL;
@@ -912,7 +915,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_ARG:
       if (!state->arg_num)
 	{
-	  self->remote = make_address_info_c(arg, self->port);
+	  if (self->port)
+	    self->remote = make_address_info_c(arg, self->port, 0);
+	  else
+	    self->remote = make_address_info_c(arg, "ssh", 22);
 	  
 	  if (!self->remote)
 	    argp_error(state, "Invalid port or service '%s'.", self->port);

@@ -165,7 +165,11 @@ make_lshd_options(struct io_backend *backend,
 		 ATOM_DSA, make_dsa_algorithm(random), -1);
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
-  self->port = "ssh";
+
+  /* Default behaviour is to lookup the "ssh" service, and fall back
+   * to port 22 if that fails. */
+  self->port = NULL;
+  
   /* FIXME: this should perhaps use sysconfdir */  
   self->hostkey = "/etc/lsh_host_key";
   self->local = NULL;
@@ -309,8 +313,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
       
     case ARGP_KEY_END:
-      self->local = make_address_info_c(self->interface, self->port);
-
+      if (self->port)
+	self->local = make_address_info_c(arg, self->port, 0);
+      else
+	self->local = make_address_info_c(arg, "ssh", 22);
+      
       if (!self->local)
 	argp_error(state, "Invalid interface, port or service, %s:%s'.",
 		   self->interface ? self->interface : "ANY",
