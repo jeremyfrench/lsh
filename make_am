@@ -124,7 +124,10 @@ while true; do
 	BODY)
 	    if [ $top = yes ]; then
 		if [ $rethink = yes ]; then
-		    src/used_headers .h . $subdirs | run_commands 
+		    # Determining the list of used headers is a global
+		    # operation, so use find to recurse in all the
+		    # subdirs.
+		    src/used_headers .h . `find $subdirs -type d` | run_commands 
 		else
 		    run_commands </dev/null
 		fi
