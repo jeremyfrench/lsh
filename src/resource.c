@@ -56,7 +56,6 @@ void do_free_resources(struct resource_node *n)
     {
       struct resource_node *old = n;
 
-      lsh_object_free(n->resource);
       n = n->next;
       lsh_space_free(old);
     }
