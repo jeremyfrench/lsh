@@ -208,7 +208,6 @@ do_dsa_verify(struct verifier *c, int algorithm,
 
   int res = 0;
   
-  int atom;
   mpz_t r, s;
 
   trace("do_dsa_verify: Verifying %a signature\n", algorithm);
@@ -225,13 +224,15 @@ do_dsa_verify(struct verifier *c, int algorithm,
 	
 	UINT32 buf_length;
 	const UINT8 *buf;
+	int atom;
       
 	simple_buffer_init(&buffer, signature_length, signature_data);
 	if (!(parse_atom(&buffer, &atom)
 	      && (atom == ATOM_SSH_DSS)
 	      && parse_string(&buffer, &buf_length, &buf)
 	      && !(buf_length % 2)
-	      && (buf_length <= (2 * DSA_MAX_QSIZE)) ))
+	      && (buf_length <= (2 * DSA_MAX_QSIZE))
+	      && parse_eod(&buffer)))
 	  goto fail;
 
 	buf_length /= 2;
@@ -260,7 +261,9 @@ do_dsa_verify(struct verifier *c, int algorithm,
 	break;
       }
 #endif
-    case ATOM_SPKI:
+      /* It doesn't matter here which flavour of SPKI is used. */
+    case ATOM_SPKI_SIGN_RSA:
+    case ATOM_SPKI_SIGN_DSS:
       {
 	struct simple_buffer buffer;
 	struct sexp *e;
@@ -509,7 +512,10 @@ do_dsa_sign(struct signer *c,
       break;
 
 #endif
-    case ATOM_SPKI:
+      /* It doesn't matter here which flavour of SPKI is used. */
+    case ATOM_SPKI_SIGN_RSA:
+    case ATOM_SPKI_SIGN_DSS:
+
       /* NOTE: Generates the <sig-val> only. */
       signature
 	= sexp_format(encode_dsa_sig_val(r, s),
