@@ -33,6 +33,7 @@
 #include "charset.h"
 #include "connection.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -170,7 +171,7 @@ do_handle_userauth(struct packet_handler *s,
   int requested_service;
   int method;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_REQUEST)
