@@ -387,15 +387,9 @@ do_trace_continuation(struct command_continuation *s,
 		      struct lsh_object *x)
 {
   CAST(trace_continuation, self, s);
-  const char *type;
 
-  if (x)
-    type = (x->isa) ? x->isa->name : "<STATIC>";
-  else
-    type = "<NULL>";
-  
-  trace("Leaving %z, value of type %z.\n",
-	self->name, type);
+  trace("Leaving %z, value of type %t.\n",
+	self->name, x);
   COMMAND_RETURN(self->real, x);
 }
 
