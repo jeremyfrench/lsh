@@ -336,9 +336,11 @@ io_connect(struct io_backend *b,
 	   struct fd_callback *f,
 	   struct exception_handler *e);
 
-struct listen_fd *io_listen(struct io_backend *b,
-			    struct sockaddr_in *local,
-			    struct fd_listen_callback *callback);
+struct listen_fd *
+io_listen(struct io_backend *b,
+	  struct sockaddr_in *local,
+	  struct fd_listen_callback *callback,
+	  struct exception_handler *e);
 
 struct io_fd *io_read_write(struct io_fd *fd,
 			    struct io_read_callback *read,

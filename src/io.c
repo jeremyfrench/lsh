@@ -145,10 +145,10 @@ int io_iter(struct io_backend *b)
     
     for (fd = b->files, i = 0; fd; fd = fd->next)
       {
-	assert(i < nfds);
-
 	if (fd->want_read || fd->want_write)
 	  {
+	    assert(i < nfds);
+
 	    active_fds[i] = fd;
 
 	    fds[i].fd = fd->fd;
@@ -286,7 +286,9 @@ static void do_buffered_read(struct io_read_callback *s,
 	werror("io.c: read_callback: Unexpected EWOULDBLOCK\n");
 	break;
       case EPIPE:
-	fatal("Unexpected EPIPE.\n");
+	/* Getting EPIPE from read() seems strange, but appearantly
+	 * it happens sometimes. */
+	werror("Unexpected EPIPE.\n");
       default:
 	EXCEPTION_RAISE(fd->e, 
 			make_io_exception(EXC_IO_READ, fd,
@@ -996,9 +998,11 @@ io_connect(struct io_backend *b,
   }
 }
 
-struct listen_fd *io_listen(struct io_backend *b,
-			    struct sockaddr_in *local,
-			    struct fd_listen_callback *callback)
+struct listen_fd *
+io_listen(struct io_backend *b,
+	  struct sockaddr_in *local,
+	  struct fd_listen_callback *callback,
+	  struct exception_handler *e)
 {
   int s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   
@@ -1030,7 +1034,7 @@ struct listen_fd *io_listen(struct io_backend *b,
     NEW(listen_fd, fd);
 
     /* FIXME: What handler to use? */
-    init_file(b, &fd->super, s, &default_exception_handler);
+    init_file(b, &fd->super, s, e);
     
     fd->super.want_read = 1;
     fd->super.read = &listen_callback;
