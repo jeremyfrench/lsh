@@ -50,9 +50,6 @@
 # if HAVE_UTMPX_H
 #  include <utmpx.h>
 # endif
-#else /* !WITH_UTMP */
-  /* Dummy definition, with enough information for logwtmp */
-  struct utmp { char ut_line[17]; };
 #endif
 
 #if HAVE_LIBUTIL_H
@@ -159,113 +156,190 @@ make_logout_notice(struct resource *process,
      (name utmp_cleanup)
      (super exit_callback)
      (vars
-       (utmp . "struct utmp")
+       (id string)
+       (line string)
        (c object exit_callback)))
 */
 
 #if WITH_UTMP
+
+/* Helper macros for assigning utmp fields */
+#define CLEAR(dst) (memset(&(dst), 0, sizeof(dst)))
+
+static void
+lsh_strncpy(char *dst, unsigned n, struct lsh_string *s)
+{
+  unsigned length = MIN(n, s->length);
+  memcpy(dst, s->data, length);
+  if (length < n)
+    dst[length] = '\0';
+}
+#define CP(dst, src) lsh_strncpy(dst, sizeof(dst), src)
+
 static void
 do_utmp_cleanup(struct exit_callback *s,
 		int signaled, int core, int value)
 {
   CAST(utmp_cleanup, self, s);
 
-  trace("unix_process: do_utmp_cleanup\n");
-
 #if HAVE_UTMP_H
-  self->utmp.ut_type = DEAD_PROCESS;
+  struct utmp pattern;
+  struct utmp *utmp;
+
+  memset(&pattern, 0, sizeof(pattern));
+  CP(pattern.ut_line, self->line);
+  CP(pattern.ut_id, self->id);
+
+  /* Rewind database */
+  setutent();
+  utmp = getutid(&pattern);
+  if (!utmp)
+    /* Entry destroyed? Do nothing. */
+    ;
+  else
+    {
+      utmp->ut_type = DEAD_PROCESS;
   
 #if HAVE_STRUCT_UTMP_UT_EXIT
-  self->utmp.ut_exit.e_exit = signaled ? 0 : value;
-  self->utmp.ut_exit.e_termination = signaled ? value : 0;
+      utmp->ut_exit.e_exit = signaled ? 0 : value;
+      utmp->ut_exit.e_termination = signaled ? value : 0;
 #endif
+      /* Clear ut_line, ut_host, ut_user and ut_tv */
+      CLEAR(utmp->ut_line);
+#if HAVE_STRUCT_UTMP_UT_HOST
+      CLEAR(utmp->ut_host);
+#endif
+#if HAVE_STRUCT_UTMP_UT_USER
+      CLEAR(utmp->ut_user);
+#endif
+#if HAVE_STRUCT_UTMP_UT_ADDR
+      CLEAR(utmp->ut_addr);
+#endif
+#if HAVE_STRUCT_UTMP_UT_TV
+      CLEAR(utmp->ut_tv);
+#else
+# if HAVE_STRUCT_UTMP_UT_TIME
+      CLEAR(utmp->ut_time);
+# endif
+#endif
+      
 #if HAVE_PUTUTLINE
-  if (!pututline(&self->utmp))
-    werror("Updating utmp for logout failed (errno = %i): %z\n",
-	   errno, STRERROR(errno));
+      if (!pututline(utmp))
+	werror("Updating utmp for logout failed (errno = %i): %z\n",
+	       errno, STRERROR(errno));
 #endif
+    }
 #endif /* HAVE_UTMP_H */
 #if HAVE_LOGWTMP
-  logwtmp(self->utmp.ut_line, "", "");
+  logwtmp(lsh_get_cstring(self->line), "", "");
 #endif
   EXIT_CALLBACK(self->c, signaled, core, value);
 }
 
-static void
-lsh_strncpy(char *dst, unsigned n, struct lsh_string *s)
+static struct utmp_cleanup *
+make_utmp_cleanup(struct lsh_string *tty,
+		  struct exit_callback *c)
 {
-  unsigned length = MIN(n - 1, s->length);
-  memcpy(dst, s->data, length);
-  dst[length] = '\0';
-}
-#define CP(dst, src) lsh_strncpy(dst, sizeof(dst), src);
+  NEW(utmp_cleanup, self);
+  UINT32 length = tty->length;
+  UINT8 *data = tty->data;
 
-static void
-strip_tty_name(size_t size, char *dst, struct lsh_string *tty)
-{
-  size_t length = tty->length;
-  char *src = tty->data;
-  if (length >= 5 && !memcmp(src, "/dev/", 5))
+  self->super.exit = do_utmp_cleanup;
+  self->c = c;
+
+  if (length > 5 && !memcmp(data, "/dev/", 5))
     {
-      length -= 5;
-      src += 5;
+      data +=5; length -= 5;
     }
-  if (length > size - 1)
-    length = size - 1;
+  self->line = ssh_format("%ls", length, data);
 
-  memcpy(dst, src, length);
-  dst[length] = 0;
+  /* Construct ut_id following the linux utmp(5) man page:
+   *
+   *   line = "pts/17" => id = "p17",
+   *   line = "ttyxy"  => id = "xy" (usually, x = 'p')
+   *
+   * NOTE: This is different from what rxvt does on my system, it sets
+   * id = "vt11" if line = "pts/17".
+   */
+  if (length > 4 && !memcmp(data, "pts/", 4))
+    { data += 4; length -= 4; }
+  else if (length > 3 && !memcmp(data, "tty", 3))
+    { data += 3; length -= 3; }
+  else
+    {/* If the patterns above don't match, we set ut_id empty */
+      length = 0;
+    }
+  self->id = ssh_format("%ls", length, data);
+
+  return self;
 }
-
-#define CP_TTY(dst, src) strip_tty_name(sizeof(dst), dst, src)
 
 static struct exit_callback *
 utmp_book_keeping(struct lsh_string *name,
-		  int login,
 		  pid_t pid,
 		  struct address_info *peer,
 		  struct lsh_string *tty,
 		  struct exit_callback *c)
 {
-  NEW(utmp_cleanup, cleanup);
+  struct utmp_cleanup *cleanup = make_utmp_cleanup(tty, c);
 
-  trace("unix_process.c: utmp_book_keeping\n");
-  
-  cleanup->super.exit = do_utmp_cleanup;
-  cleanup->c = c;
-
-  memset(&cleanup->utmp, 0, sizeof(cleanup->utmp));
-
-  trace("unix_process.c: utmp_book_keeping, before tty\n");
-
-  /* utmp->ut_line exists even in our dummy utmp struct */
-  CP_TTY(cleanup->utmp.ut_line, tty);
-
-  trace("unix_process.c: utmp_book_keeping, after tty\n");
-  
 #if HAVE_UTMP_H
-  cleanup->utmp.ut_type = login ? LOGIN_PROCESS : USER_PROCESS;
-  CP(cleanup->utmp.ut_line, tty);
+  struct utmp pattern;
+  struct utmp *utmp;
+  
+  trace("unix_process.c: utmp_book_keeping\n");
+
+  memset(&pattern, 0, sizeof(pattern));
+  CP(pattern.ut_line, cleanup->line);
+  CP(pattern.ut_id, cleanup->id);
+  
+  /* Rewind database */
+  setutent();
+  
+  utmp = getutid(&pattern);
+  if (utmp)
+    /* Overwrite the line field, in case it was id that matched. */
+    CP(utmp->ut_line, cleanup->line);
+  else
+    /* No existing entry, we need to create a new one. */
+    utmp = &pattern;
+  
+  utmp->ut_type = USER_PROCESS;
   
 #if HAVE_STRUCT_UTMP_UT_PID
-  cleanup->utmp.ut_pid = pid;
+  utmp->ut_pid = pid;
 #endif
 
-#if HAVE_STRUCT_UTMP_UT_NAME
-  CP(cleanup->utmp.ut_name, name);
+#if HAVE_STRUCT_UTMP_UT_USER
+  CP(utmp->ut_user, name);
 #endif
 
-  trace("unix_process.c: utmp_book_keeping, after name\n");
+#if HAVE_STRUCT_UTMP_UT_TV
+  gettimeofday(&utmp->ut_tv);
+#else
+# if HAVE_STRUCT_UTMP_UT_TIME
+  time(&utmp->ut_time);
+# endif
+#endif
   
-  /* FIXME: Perform a reverse lookup.
-   * Also use ut_addr and ut_addr_v6 */
+  trace("unix_process.c: utmp_book_keeping, after name\n");
+
+  /* FIXME: We should store real values here. */
+#if HAVE_STRUCT_UTMP_UT_ADDR
+  CLEAR(utmp->ut_addr);
+#endif
+#if HAVE_STRUCT_UTMP_UT_ADDR_V6
+  CLEAR(utmp->ut_addr_v6);
+#endif
+  
+  /* FIXME: Perform a reverse lookup. */
 #if HAVE_STRUCT_UTMP_UT_HOST
-  CP(cleanup->utmp.ut_host, peer->ip);
+  CP(utmp->ut_host, peer->ip);
 #endif
   trace("unix_process.c: utmp_book_keeping, after host\n");
 
 #if HAVE_PUTUTLINE
-  if (!pututline(&cleanup->utmp))
+  if (!pututline(utmp))
     werror("Updating utmp for login failed (errno = %i): %z\n",
 	   errno, STRERROR(errno));
 #endif
@@ -275,7 +349,7 @@ utmp_book_keeping(struct lsh_string *name,
 #endif /* HAVE_UTMP_H */
   
 #if HAVE_LOGWTMP
-  logwtmp(cleanup->utmp.ut_line,
+  logwtmp(lsh_get_cstring(cleanup->line),
 	  lsh_get_cstring(name),
 	  lsh_get_cstring(peer->ip));
 #endif /* HAVE_LOGWTMP */
@@ -287,7 +361,7 @@ utmp_book_keeping(struct lsh_string *name,
 #endif /* WITH_UTMP */
 
 struct lsh_process *
-unix_process_setup(pid_t pid, int login, 
+unix_process_setup(pid_t pid,
 		   struct lsh_user *user,
 		   struct exit_callback **c,
 		   struct address_info *peer,
@@ -299,7 +373,7 @@ unix_process_setup(pid_t pid, int login,
   
 #if WITH_UTMP
   if (tty)
-    *c = utmp_book_keeping(user->name, pid, login, peer, tty, *c);
+    *c = utmp_book_keeping(user->name, pid, peer, tty, *c);
 #endif
 
   trace("unix_process.c: unix_process_setup, after utmp\n");
