@@ -16,7 +16,10 @@ TS_DEFINE(»TS_STRING«,
   »ssh_format("%lz", »$1«)«, »simple_decode_hex("m4_translit(»$1«, »0-9a-zA-Z
 # 	«, »0-9a-zA-Z«)")«) «)
 
-TS_DEFINE(»TS_SEXP«, »string_to_sexp(TS_STRING(»$1«), 1)«)
+TS_DEFINE(»TS_SEXP«, »string_to_sexp(SEXP_TRANSPORT, TS_STRING(»$1«), 1)«)
+
+m4_dnl TS_DEFINE(»TS_SEXP_L«, »sexp_l($#, $@, -1)«)
+m4_dnl TS_DEFINE(»TS_SEXP_A«, »sexp_a(TS_STRING($1))«)
 
 TS_DEFINE(»TS_TEST_STRING_EQ«,
 »
@@ -77,6 +80,7 @@ TS_DEFINE(»TS_TEST_CRYPTO«, »
   }
 «)    
 
+m4_dnl TS_TEST_SIGN(name, algorithm, key, msg, signature)
 
 m4_dnl TS_TAG_GRANT(msg, tag-set, access)
 TS_DEFINE(»TS_TAG_GRANT«,
