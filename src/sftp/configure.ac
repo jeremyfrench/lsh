@@ -281,7 +281,6 @@ AC_CHECK_MEMBERS([struct stat.st_rdev])
 
 # Checks for library functions.
 LSH_FUNC_ALLOCA
-AC_FUNC_ERROR_AT_LINE
 
 AC_PROG_GCC_TRADITIONAL
 AC_HEADER_MAJOR
@@ -293,7 +292,9 @@ AC_HEADER_TIME
 
 
 
-AC_CHECK_FUNCS([getcwd getwd strcoll strdup  getenv fnmatch dup2 canonicalize_file_name])
+AC_CHECK_FUNCS([getcwd getwd strcoll strdup getenv fnmatch dup2 canonicalize_file_name])
+AC_CHECK_FUNCS([snprintf])
+AC_REPLACE_FUNCS([vsnprintf])
 
 
 
