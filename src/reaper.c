@@ -94,7 +94,11 @@ do_reaper_callback(struct lsh_callback *s)
 	      verbose("Child %i killed by signal %i.\n",
 		      pid, WTERMSIG(status));
 	      signaled = 1;
+#ifdef WCOREDUMP
 	      core = !!WCOREDUMP(status);
+#else
+	      core = 0;
+#endif
 	      value = WTERMSIG(status);
 	    }
 	  else
