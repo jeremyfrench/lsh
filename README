@@ -14,12 +14,20 @@ with
    ./configure
    make
 
+If you want to hack lsh, you need some more tools: autoconf, automake,
+GNU-make, gcc, gperf (at least version 2.7) and scsh. All but scsh can
+be found at your local GNU mirror site. scsh, Olin Shiver's Scheme
+Shell, can be downloaded from <URL:
+ftp://ftp-swiss.ai.mit.edu/pub/su/scsh/scsh.tar.gz>.
+
 If you have checked out lsh from cvs, things are more complicated. You
-need at least autoconf, automake, GNU-make, gcc, make, gperf and scsh
-to get going. The Makefile.am file is created by running ./make_am. If
-the compiler complains that it can't find a file foo.h.x,
-try creating it with make foo.h.x or ./make_class <foo.h >foo.h.x, and
-similarly for missing foo.c.x files.
+must first generate Makefile.am files from the corresponding
+Makefile.am.in files. Do this by running ./make_am in the top level
+directory. Next, you need to run autoconf, autoheader and automake.
+This creates the configure script and a Makefile.in. Now you can try
+./configure ; make. If the compiler complains that it can't find a
+file foo.h.x, try creating it with make foo.h.x or ./make_class <foo.h
+>foo.h.x, and similarly for missing foo.c.x files.
 
 For an introduction to the workings of LSH, see the file HACKING.
 
