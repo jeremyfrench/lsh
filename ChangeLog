@@ -1,3 +1,9 @@
+2001-01-29  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/ssh-conv: Support ssh-rsa keys.
+
+	* src/lsh-decode-key.c (do_decode_key): Support ssh-rsa keys.
+
 2001-01-24  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/spki_commands.c (parse_private_key): Generate keypairs with
