@@ -1,3 +1,22 @@
+2001-04-04  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/sftp/Makefile.am (sftp_test_client_SOURCES): Added werror.c
+	and client.c 
+
+	* src/sftp/sftp-test-client.c (struct client_ctx): Moved to
+	client.h 
+	(werror_program_name): Defined here.
+
+	* src/sftp/client.c, src/sftp/client.h, src/sftp/werror.c,
+	src/sftp/werror.h:  New files.
+
+2001-04-03  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/sftp/testsuite/put-1-test: Check that the new file exists.
+	Use $TESTHOME for referring to the local file.
+
+	* src/sftp/sftp-test-client.c (do_put): Fixes and simplifications. 
+
 2001-04-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* lsh-1.2 released.
