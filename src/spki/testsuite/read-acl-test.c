@@ -1,16 +1,10 @@
-#include "certificate.h"
+#include "testutils.h"
 
+#include "certificate.h"
 #include "nettle/sexp.h"
 
-#include <stdlib.h>
-
-#define ASSERT(x) do { if (!(x)) abort(); } while(0)
-
-#define LLENGTH(x) (sizeof(x) - 1)
-#define LDATA(x) (sizeof(x) - 1), x
-
-int
-main(int argc, char **argv)
+void
+test_main(void)
 {
   struct spki_acl_db db;
   struct sexp_iterator i;
@@ -29,8 +23,6 @@ main(int argc, char **argv)
 
   ASSERT(spki_principal_by_key(&db, LDATA("k1")));
   ASSERT(spki_principal_by_md5(&db, "xxxxxxxxxxxxxxxx"));
-
-  return 0;
 }
 		    
 			       
