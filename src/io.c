@@ -324,8 +324,8 @@ static void write_callback(struct lsh_fd *fd)
       case EAGAIN:
 	break;
       case EPIPE:
-	werror("Broken pipe\n");
-	close_fd(fd, CLOSE_WRITE_FAILED);
+	debug("io.c: Broken pipe.\n");
+	close_fd(fd, CLOSE_BROKEN_PIPE);
 	break;
       default:
 	werror("io.c: write failed, %s\n", strerror(errno));
@@ -649,7 +649,7 @@ static void prepare_write(struct lsh_fd *fd)
 
   if (! (fd->want_write = write_buffer_pre_write(self->buffer))
       && self->buffer->closed)
-    kill_fd(fd);
+    close_fd(fd, CLOSE_EOF);
 }
   
 struct abstract_write *io_read_write(struct io_backend *b,

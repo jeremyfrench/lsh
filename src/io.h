@@ -50,7 +50,9 @@
 
 /* Close callbacks are called with a reason as argument. */
 
-/* End of file while reading */
+/* End of file while reading.
+ * Or when a closed write_buffer has been flushed successfully. */
+/* FIXME: Should we use separate codes for these two events? */
 #define CLOSE_EOF 1
 
 /* EPIPE when writing */
