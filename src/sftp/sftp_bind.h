@@ -30,11 +30,6 @@
 #ifndef LSFTP_SFTP_BIND_H
 #define LSFTP_SFTP_BIND_H
 
-
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #define LSH_CLIENT "lsh"
 #define LSH_GATEWAY "lshg"
 #define LSH_PROGENV "LSFTP_RSH"

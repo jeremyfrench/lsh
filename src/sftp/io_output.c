@@ -18,15 +18,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
-#include "io.h"
-
-#include "xmalloc.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
 
 #include <unistd.h>
+
+#include "io.h"
+
+#include "xmalloc.h"
 
 struct sftp_output
 {

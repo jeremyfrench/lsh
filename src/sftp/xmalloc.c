@@ -1,10 +1,14 @@
 /* xmalloc.c
  */
 
-#include "xmalloc.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <stdio.h>
 #include <string.h>
+
+#include "xmalloc.h"
 
 void *
 xmalloc(size_t size)

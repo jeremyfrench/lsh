@@ -1,3 +1,14 @@
+2003-05-16  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* Changed include file ordering, to follow the same conventions as
+	lsh and nettle: .c-files include config.h first, then system
+	files, and finally sftp files. .h-files never include config.h,
+	and they include system files before sftp files. 
+
+	* dump-hex.c: Include config.h, to get alloca defined properly.
+
+	* configure.ac: Use LSH_FUNC_ALLOCA.
+
 2003-03-02  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* buffer.c (sftp_put_uint64): Fixed WRITE_UINT32 search&replace

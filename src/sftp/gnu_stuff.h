@@ -26,10 +26,6 @@
 #ifndef LSFTP_GNU_STUFF_H
 #define LSFTP_GNU_STUFF_H
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <stdio.h>
 
 void help_option(void);

@@ -26,10 +26,6 @@
 #ifndef LSFTP_MISC_FUN_H
 #define LSFTP_MISC_FUN_H
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>

@@ -27,10 +27,6 @@
 #ifndef LSFTP_DC_H
 #define LSFTP_DC_H
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
 #include <stdio.h>
 
 #include <sys/time.h>

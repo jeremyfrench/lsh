@@ -20,11 +20,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA */
 
-#include "io.h"
-#include "sftp.h"
-#include "xmalloc.h"
-#include "client.h"
-#include "werror.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <assert.h>
 #include <stdlib.h>
@@ -36,6 +34,13 @@
 #include <unistd.h>
 
 #include <sys/stat.h>
+
+#include "io.h"
+#include "sftp.h"
+#include "xmalloc.h"
+#include "client.h"
+#include "werror.h"
+
 
 #define SFTP_XFER_BLOCKSIZE 16384
 #define SFTP_VERSION 3

@@ -50,13 +50,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
    
-#include "io.h"
-#include "sftp.h"
-
-#include "filemode.h"
-#include "idcache.h"
-#include "xmalloc.h"
-#include "werror.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
 
 #include <assert.h>
 #include <stdarg.h>
@@ -74,6 +70,14 @@
 #include <pwd.h>
 #include <grp.h>
 #include <time.h>
+
+#include "io.h"
+#include "sftp.h"
+
+#include "filemode.h"
+#include "idcache.h"
+#include "xmalloc.h"
+#include "werror.h"
 
 const char *werror_program_name = "sftp-server";
 

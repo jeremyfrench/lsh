@@ -26,19 +26,16 @@
 #ifndef LSFTP_LSFTP_H
 #define LSFTP_LSFTP_H
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
-
-#include "rl.h"
-#include "str_utils.h"
-#include "gnu_stuff.h"
 #include <stdio.h>
 #include "sftp_bind.h"
 
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include "rl.h"
+#include "str_utils.h"
+#include "gnu_stuff.h"
 
 extern int lsftp_rl_line_done;
 extern char* lsftp_rl_line;

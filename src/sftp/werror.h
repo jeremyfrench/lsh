@@ -8,8 +8,10 @@
 #ifndef SFTP_WERROR_H_INCLUDED
 #define SFTP_WERROR_H_INCLUDED
 
+#if 0
 /* For types and config stuff */
 #include "buffer.h"
+#endif
 
 extern const char *werror_program_name;
 

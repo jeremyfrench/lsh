@@ -24,12 +24,6 @@
 #ifndef SFTP_BUFFER_H_INCLUDED
 #define SFTP_BUFFER_H_INCLUDED
 
-/* Basic configuration */
-
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* For off_t */
 #include <sys/types.h>
 

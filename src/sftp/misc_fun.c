@@ -23,8 +23,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "misc_fun.h"
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdlib.h>
+
+#include "misc_fun.h"
 
 #ifndef HAVE_GETENV
 char** environ;
