@@ -197,5 +197,8 @@ sftp_make_input(FILE *f);
 struct sftp_output *
 sftp_make_output(FILE *f);
 
+int
+sftp_packet_size(struct sftp_output* out);
+
 
 #endif /* SFTP_BUFFER_H_INCLUDED */

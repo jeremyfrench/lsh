@@ -212,7 +212,12 @@ sftp_read_packet(struct sftp_input *i)
   switch (done)
     {
     case 0:
-      return feof(i->f) ? -1 : 0;
+      {
+	int err =  feof(i->f) ? -1 : 0;
+	clearerr( i->f );
+	return err;
+      }
+
     case 4:
       i->left = READ_UINT32(buf);
       return 1;
@@ -602,4 +607,10 @@ sftp_put_attrib(struct sftp_output *o, const struct sftp_attrib *a)
       sftp_put_uint32(o, a->atime);
       sftp_put_uint32(o, a->mtime);
     }
+}
+
+int
+sftp_packet_size(struct sftp_output* out)
+{
+  return out->i;
 }
