@@ -28,7 +28,7 @@
 #ifndef LSH_RESOURCE_H_INCLUDED
 #define LSH_RESOURCE_H_INCLUDED
 
-#include "queue.h"
+#include "lsh.h"
 
 #define GABA_DECLARE
 #include "resource.h.x"
@@ -47,26 +47,31 @@
 
 #define KILL_RESOURCE(r) ((r)->kill((r)))
 
-/* For the resource list. It is doubly linked to make removing
- * elements easy. */
+/* For the resource list. */
 
-struct resource_node
-{
-  struct lsh_queue_node header;
-  struct resource *resource;
-};
-
-/* FIXME: Non-virtual methods would make sense for this class. Or
- * perhaps we should use a struct rather than a class? */
 /* GABA:
    (class
      (name resource_list)
+     (super resource)
      (vars
-       (q struct object_queue)
+       (remember method void "struct resource *r")))
+*/
+
+#define REMEMBER_RESOURCE(l, r) ((l)->remember((l), (r)))
+#define KILL_RESOURCE_LIST(l) KILL_RESOURCE(&(l)->super)
+
+
+#if 0
+/* ;;GABA:
+   (class
+     (name resource_list)
+     (vars
+       ;; (q struct object_queue)
        ;;(q special-struct "struct lsh_queue"
        ;;                  do_mark_resources do_free_resources)
 
-       ; NOTE: No longer returns the node.
+       (q special "struct resource_node *"
+                  do_mark_resources do_free_resources)       
        (remember method void "struct resource *r")
 
        ; Kills the resource and unlinks and deallocates the node.
@@ -74,12 +79,10 @@ struct resource_node
        
        (kill_all method void)))
 */
-
-/* For now, don't use the value returned from remember. */
-#define REMEMBER_RESOURCE(l, r) ((l)->remember((l), (r)))
+#endif
 
 /* #define KILL_RESOURCE_NODE(l, n) ((l)->kill_resource((l), (n))) */
-#define KILL_RESOURCE_LIST(l) ((l)->kill_all((l)))
+
 
 /* Allocates an empty list. */
 struct resource_list *empty_resource_list(void);
