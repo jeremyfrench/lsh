@@ -49,8 +49,7 @@ static const char *packet_types[0x100] =
 
 static void
 handle_connection(struct abstract_write *w,
-		  struct lsh_string *packet,
-		  struct exception_handler *ignored UNUSED)
+		  struct lsh_string *packet)
 {
   CAST(ssh_connection, closure, w);
   UINT8 msg;
@@ -58,9 +57,7 @@ handle_connection(struct abstract_write *w,
   if (!packet->length)
     {
       werror("connection.c: Received empty packet!\n");
-      EXCEPTION_RAISE(closure->e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Received empty packet."));
+      PROTOCOL_ERROR(closure->e, "Received empty packet.");
       return;
     }
 
@@ -75,9 +72,7 @@ handle_connection(struct abstract_write *w,
       if (msg == SSH_MSG_NEWKEYS)
 	{
 	  werror("Unexpected NEWKEYS message!\n");
-	  EXCEPTION_RAISE(closure->e,
-			  make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-						  "Unexpected NEWKEYS message!"));
+	  PROTOCOL_ERROR(closure->e, "Unexpected NEWKEYS message!");
 	  return;
 	}
       break;
@@ -97,9 +92,7 @@ handle_connection(struct abstract_write *w,
 	   || (msg == SSH_MSG_KEXINIT))
 	{
 	  werror("Unexpected KEXINIT or NEWKEYS message!\n");
-	  EXCEPTION_RAISE(closure->e,
-			  make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-						  "Unexpected KEXINIT or NEWKEYS message!"));
+	  PROTOCOL_ERROR(closure->e, "Unexpected KEXINIT or NEWKEYS message!");
 	  return;
 	}
       break;
@@ -109,9 +102,7 @@ handle_connection(struct abstract_write *w,
 	{
 	  werror("Expected NEWKEYS message, but received message %i!\n",
 		 msg);
-	  EXCEPTION_RAISE(closure->e,
-			  make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-						  "Expected NEWKEYS message"));
+	  PROTOCOL_ERROR(closure->e, "Expected NEWKEYS message");
 	  return;
 	}
       break;
@@ -131,9 +122,7 @@ do_fail(struct packet_handler *closure,
 
   lsh_string_free(packet);
 
-  EXCEPTION_RAISE
-    (connection->e,
-     make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR, NULL));
+  PROTOCOL_ERROR(connection->e, NULL);
 }
 
 struct packet_handler *make_fail_handler(void)

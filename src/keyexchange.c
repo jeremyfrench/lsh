@@ -222,9 +222,7 @@ do_handle_kexinit(struct packet_handler *c,
 
   if (!msg)
     {
-      EXCEPTION_RAISE(connection->e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Invalid KEXINIT message."));
+      PROTOCOL_ERROR(connection->e, "Invalid KEXINIT message.");
       return;
     }
 
@@ -557,9 +555,7 @@ do_handle_newkeys(struct packet_handler *c,
       KILL(closure);
     }
   else
-    EXCEPTION_RAISE(connection->e,
-		    make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					    "Invalid NEWKEYS message"));
+    PROTOCOL_ERROR(connection->e, "Invalid NEWKEYS message");
   lsh_string_free(packet);
 }
 

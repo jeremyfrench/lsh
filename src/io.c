@@ -395,7 +395,7 @@ static void do_consuming_read(struct io_read_callback *c,
       else if (res > 0)
 	{
 	  s->length = res;
-	  A_WRITE(self->consumer, s, fd->e);
+	  A_WRITE(self->consumer, s);
 	}
       else
 	EXCEPTION_RAISE(fd->e, make_io_exception(EXC_IO_EOF, fd, 0, "EOF")) ;
@@ -965,8 +965,9 @@ void write_raw(int fd, UINT32 length, UINT8 *data,
 	  case EAGAIN:
 	    continue;
 	  default:
-	    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_BLOCKING_WRITE,
-						 NULL, errno, NULL));
+	    EXCEPTION_RAISE(e,
+			    make_io_exception(EXC_IO_BLOCKING_WRITE,
+					      NULL, errno, NULL));
 	    return;
 	  }
       

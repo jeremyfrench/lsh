@@ -183,7 +183,7 @@ int main(int argc, char **argv)
   
   {
     /* Now, output a private key spki structure. */
-    struct abstract_write *output = make_blocking_write(STDOUT_FILENO, 0);
+    struct abstract_write *output = make_blocking_write(STDOUT_FILENO, 0, &handler);
     
     struct lsh_string *key = sexp_format
       (sexp_l(2, sexp_z("private-key"),
@@ -195,7 +195,7 @@ int main(int argc, char **argv)
 		     sexp_l(2, sexp_z("x"), sexp_un(x), -1), -1), -1),
        style, 0);
 
-    A_WRITE(output, key, &handler);
+    A_WRITE(output, key);
 
     return EXIT_SUCCESS;
   }

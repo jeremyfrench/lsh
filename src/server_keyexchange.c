@@ -104,9 +104,7 @@ do_handle_dh_init(struct packet_handler *c,
       werror("Installing new keys failed. Hanging up.\n");
       KILL(hash);
 
-      EXCEPTION_RAISE(connection->e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Refusing to use weak key."));
+      PROTOCOL_ERROR(connection->e, "Refusing to use weak key.");
 
       return;
     }

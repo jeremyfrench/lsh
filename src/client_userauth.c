@@ -150,10 +150,7 @@ do_userauth_success(struct packet_handler *c,
   else
     {
       lsh_string_free(packet);
-      EXCEPTION_RAISE
-	(connection->e,
-	 make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-				 "Invalid USERAUTH_SUCCESS message"));
+      PROTOCOL_ERROR(connection->e, "Invalid USERAUTH_SUCCESS message");
     }
 }
 
@@ -209,10 +206,7 @@ do_userauth_failure(struct packet_handler *c,
     {
       KILL(methods);
       lsh_string_free(packet);
-      EXCEPTION_RAISE
-	(connection->e,
-	 make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-				 "Invalud USERAUTH_FAILURE message."));
+      PROTOCOL_ERROR(connection->e, "Invalid USERAUTH_FAILURE message.");
     }
 }
 
@@ -244,10 +238,7 @@ do_userauth_banner(struct packet_handler *closure,
       werror("%ups", length, msg);
     }
   else
-    EXCEPTION_RAISE
-      (connection->e,
-       make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-			       "Invalid USERAUTH_SUCCESS message"));
+    PROTOCOL_ERROR(connection->e, "Invalid USERAUTH_SUCCESS message");
 
   lsh_string_free(packet);
 }

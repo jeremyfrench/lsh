@@ -117,7 +117,7 @@ struct ssh_connection;
        ))
 */
 
-#define C_WRITE(c, s) A_WRITE((c)->write, (s), (c)->e)
+#define C_WRITE(c, s) A_WRITE((c)->write, (s) )
 
 struct ssh_connection *make_ssh_connection(struct command_continuation *c);
 

@@ -117,9 +117,7 @@ do_handle_userauth(struct packet_handler *c,
 		   closure->e);
     }
   else
-    EXCEPTION_RAISE(connection->e,
-		    make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					    "Invalid USERAUTH message."));
+    PROTOCOL_ERROR(connection->e, "Invalid USERAUTH message.");
 
   lsh_string_free(packet);
 }

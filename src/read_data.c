@@ -97,7 +97,7 @@ static UINT32 do_read_data_query(struct io_consuming_read *s)
     default:
       packet->length = n;
 
-      A_WRITE(closure->write, packet, e);
+      A_WRITE(closure->write, packet);
     }
 }
 #endif

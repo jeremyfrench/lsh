@@ -44,23 +44,23 @@
 
 static void
 do_debug(struct abstract_write *w,
-	 struct lsh_string *packet,
-	 struct exception_handler *e)
+	 struct lsh_string *packet)
 {
   CAST(packet_debug, closure, w);
   
   debug("DEBUG: received packet %xS\n", packet);
   
-  A_WRITE(closure->super.next, packet, e);
+  A_WRITE(closure->super.next, packet);
 }
 
 struct abstract_write *
-make_packet_debug(struct abstract_write *continuation, const char *prefix)
+make_packet_debug(struct abstract_write *next,
+		  const char *prefix)
 {
   NEW(packet_debug, closure);
 
   closure->super.super.write = do_debug;
-  closure->super.next = continuation;
+  closure->super.next = next;
   closure->prefix = prefix;
 
   return &closure->super.super;
@@ -110,10 +110,7 @@ do_rec_debug(struct packet_handler *self UNUSED,
 	&& parse_eod(&buffer)))
     {
       lsh_string_free(packet);
-      EXCEPTION_RAISE
-	(connection->e,
-	 make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-				 "Invalid DEBUG message."));
+      PROTOCOL_ERROR(connection->e, "Invalid DEBUG message.");
 				 
     }
   else

@@ -44,8 +44,7 @@
 
 static void
 do_packet_deflate(struct abstract_write *closure,
-		  struct lsh_string *packet,
-		  struct exception_handler *e)
+		  struct lsh_string *packet)
 {
   CAST(packet_compressor, self, closure);
 
@@ -55,13 +54,12 @@ do_packet_deflate(struct abstract_write *closure,
       assert(packet);
     }
   
-  A_WRITE(self->super.next, packet, e);
+  A_WRITE(self->super.next, packet);
 }
 
 static void
 do_packet_inflate(struct abstract_write *closure,
-		  struct lsh_string *packet,
-		  struct exception_handler *e)
+		  struct lsh_string *packet)
 {
   CAST(packet_compressor, self, closure);
 
@@ -73,17 +71,19 @@ do_packet_inflate(struct abstract_write *closure,
 	  /* FIXME: It would be nice to pass the error message from zlib on
 	   * to the exception handler. */
 	  EXCEPTION_RAISE
-	    (e, make_protocol_exception(SSH_DISCONNECT_COMPRESSION_ERROR,
-					"Inflating compressed data failed."));
+	    (self->connection->e,
+	     make_protocol_exception(SSH_DISCONNECT_COMPRESSION_ERROR,
+				     "Inflating compressed data failed."));
 	  return;
 	}
     }
-  A_WRITE(self->super.next, packet, e);
+  A_WRITE(self->super.next, packet);
 }
 
-struct abstract_write *make_packet_codec(struct abstract_write *next,
-					 struct ssh_connection *connection,
-					 int mode)
+struct abstract_write *
+make_packet_codec(struct abstract_write *next,
+		  struct ssh_connection *connection,
+		  int mode)
 {
   NEW(packet_compressor, res);
 	

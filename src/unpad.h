@@ -27,8 +27,10 @@
 #define LSH_UNPAD_H_INCLUDED
 
 #include "abstract_io.h"
+#include "connection.h"
 
 struct abstract_write *
-make_packet_unpad(struct abstract_write *continuation);
+make_packet_unpad(struct ssh_connection *connection,
+		  struct abstract_write *next);
 
 #endif /* LSH_UNPAD_H_INCLUDED */

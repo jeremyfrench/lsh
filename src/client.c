@@ -93,9 +93,7 @@ do_accept_service(struct packet_handler *c,
   else
     {
       lsh_string_free(packet);
-      EXCEPTION_RAISE(closure->e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Invalid SSH_MSG_SERVICE_ACCEPT message"));
+      PROTOCOL_ERROR(closure->e, "Invalid SSH_MSG_SERVICE_ACCEPT message");
     }
 }
 
@@ -248,10 +246,7 @@ do_exit_status(struct channel_request *c,
     }
   else
     /* Invalid request */
-    EXCEPTION_RAISE
-      (channel->e,
-       make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-			       "Invalid exit-status message"));
+    PROTOCOL_ERROR(channel->e, "Invalid exit-status message");
 }
 
 static void
@@ -303,10 +298,7 @@ do_exit_signal(struct channel_request *c,
     }
   else
     /* Invalid request */
-    EXCEPTION_RAISE
-      (channel->e,
-       make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-			       "Invalid exit-signal message"));
+    PROTOCOL_ERROR(channel->e, "Invalid exit-signal message");
 }
 
 struct channel_request *make_handle_exit_status(int *exit_status)
@@ -341,10 +333,10 @@ do_receive(struct ssh_channel *c,
   switch(type)
     {
     case CHANNEL_DATA:
-      A_WRITE(&closure->out->write_buffer->super, data, c->e);
+      A_WRITE(&closure->out->write_buffer->super, data);
       break;
     case CHANNEL_STDERR_DATA:
-      A_WRITE(&closure->err->write_buffer->super, data, c->e);
+      A_WRITE(&closure->err->write_buffer->super, data);
       break;
     default:
       fatal("Internal error!\n");

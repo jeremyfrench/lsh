@@ -76,7 +76,7 @@ void do_channel_request_command(struct command *s,
     object_queue_add_tail(&channel->pending_requests,
 			  &make_command_context(c, e)->super);
   
-  A_WRITE(channel->write, request, e);
+  A_WRITE(channel->write, request);
 }
 
 void do_channel_global_command(struct command *s,

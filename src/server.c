@@ -102,9 +102,7 @@ do_service_request(struct packet_handler *c,
   else
     {
       lsh_string_free(packet);
-      EXCEPTION_RAISE(connection->e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Invalid SERVICE_REQUEST message"));
+      PROTOCOL_ERROR(connection->e, "Invalid SERVICE_REQUEST message");
     }
 }
 

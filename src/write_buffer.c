@@ -49,8 +49,7 @@ static void do_free_buffer(struct lsh_queue *q)
 
 static void
 do_write(struct abstract_write *w,
-	 struct lsh_string *packet,
-	 struct exception_handler *e UNUSED)
+	 struct lsh_string *packet)
 {
   CAST(write_buffer, closure, w);
   struct buffer_node *new;

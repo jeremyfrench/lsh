@@ -32,34 +32,32 @@
      (super abstract_write)
      (vars
        (fd . int)
+       (e object exception_handler)
        (write . (pointer (function void
                           int UINT32 "UINT8 *" "struct exception_handler *e")))))
 */
 
 #include "blocking_write.c.x"
 
-#if 0
-static struct io_exception blocking_io_exception =
-STATIC_IO_EXCEPTION(EXC_IO_BLOCKING_WRITE, "Blocking write failed");
-#endif
-
 static void do_blocking_write(struct abstract_write *w,
-			      struct lsh_string *packet,
-			      struct exception_handler *e)
+			      struct lsh_string *packet)
 {
   CAST(blocking_write, closure, w);
 
-  closure->write(closure->fd, packet->length, packet->data, e);
-
+  closure->write(closure->fd, packet->length, packet->data, closure->e);
+  
   lsh_string_free(packet);
 }
 
-struct abstract_write *make_blocking_write(int fd, int with_nonblocking)
+struct abstract_write *
+make_blocking_write(int fd, int with_nonblocking,
+		    struct exception_handler *e)
 {
   NEW(blocking_write, closure);
 
   closure->super.write = do_blocking_write;
   closure->write = (with_nonblocking ? write_raw_with_poll : write_raw);
+  closure->e = e;
   closure->fd = fd;
 
   return &closure->super;

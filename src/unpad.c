@@ -29,12 +29,22 @@
 #include "ssh.h"
 #include "xalloc.h"
 
+#include "unpad.c.x"
+
+/* GABA:
+   (class
+     (name packet_unpad)
+     (super abstract_write_pipe)
+     (vars
+       ; Needed only for its exception_handler
+       (connection object ssh_connection)))
+*/
+
 static void
 do_unpad(struct abstract_write *w,
-	 struct lsh_string *packet,
-	 struct exception_handler *e)
+	 struct lsh_string *packet)
 {
-  CAST(abstract_write_pipe, closure, w);
+  CAST(packet_unpad, closure, w);
   
   UINT8 padding_length;
   UINT32 payload_length;
@@ -43,9 +53,9 @@ do_unpad(struct abstract_write *w,
   if (packet->length < 1)
     {
       lsh_string_free(packet);
-      EXCEPTION_RAISE(e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Empty packet received."));
+
+      PROTOCOL_ERROR(closure->connection->e,
+		     "Empty packet received.");
       return;
     }
   
@@ -55,9 +65,8 @@ do_unpad(struct abstract_write *w,
        || (padding_length >= packet->length) )
     {
       lsh_string_free(packet);
-      EXCEPTION_RAISE(e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Bogus padding length."));
+      PROTOCOL_ERROR(closure->connection->e,
+		     "Bogus padding length.");
       return;
     }
 
@@ -70,16 +79,18 @@ do_unpad(struct abstract_write *w,
 
   lsh_string_free(packet);
 
-  A_WRITE(closure->next, new, e);
+  A_WRITE(closure->super.next, new);
 }
 
 struct abstract_write *
-make_packet_unpad(struct abstract_write *continuation)
+make_packet_unpad(struct ssh_connection *connection,
+		  struct abstract_write *next)
 {
-  NEW(abstract_write_pipe, closure);
+  NEW(packet_unpad, closure);
 
-  closure->super.write = do_unpad;
-  closure->next = continuation;
+  closure->super.super.write = do_unpad;
+  closure->super.next = next;
+  closure->connection = connection;
 
-  return &closure->super;
+  return &closure->super.super;
 }

@@ -156,9 +156,7 @@ do_authenticate(struct userauth *ignored UNUSED,
   username = utf8_to_local(username, 1, 1);
   if (!username)
     {
-      EXCEPTION_RAISE(e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Invalid utf8 in password."));
+      PROTOCOL_ERROR(e, "Invalid utf8 in password.");
       return;
     }
 
@@ -185,9 +183,7 @@ do_authenticate(struct userauth *ignored UNUSED,
 	  if (!password)
 	    {
 	      lsh_string_free(username);
-	      EXCEPTION_RAISE(e,
-			      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-						      "Invalid utf8 in password."));
+	      PROTOCOL_ERROR(e, "Invalid utf8 in password.");
 	      return;
 	    }
        
@@ -226,8 +222,7 @@ do_authenticate(struct userauth *ignored UNUSED,
   if (password)
     lsh_string_free(password);
 
-  EXCEPTION_RAISE(e, make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					     "Invalid password USERAUTH message."));
+  PROTOCOL_ERROR(e, "Invalid password USERAUTH message.");
 }
 
 struct userauth unix_userauth =

@@ -365,7 +365,7 @@ do_read_packet(struct read_handler **h,
 	  closure->packet_buffer = NULL;
 	  closure->state = WAIT_START;
 
-	  A_WRITE(closure->handler, packet, closure->connection->e);
+	  A_WRITE(closure->handler, packet);
 
 	  return total;
 	}
@@ -375,8 +375,9 @@ do_read_packet(struct read_handler **h,
   return total;
 }
 
-struct read_handler *make_read_packet(struct abstract_write *handler,
-				      struct ssh_connection *connection)
+struct read_handler *
+make_read_packet(struct abstract_write *handler,
+		 struct ssh_connection *connection)
 {
   NEW(read_packet, closure);
 

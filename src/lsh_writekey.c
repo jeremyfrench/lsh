@@ -156,13 +156,11 @@ do_write_key(struct sexp_handler *h, struct sexp *private)
       return LSH_FAIL | LSH_DIE;
     }
 
-  A_WRITE(make_blocking_write(public_fd, 0),
-	  sexp_format(public, SEXP_TRANSPORT, 0),
-	  &exc_handler);
+  A_WRITE(make_blocking_write(public_fd, 0, &exc_handler),
+	  sexp_format(public, SEXP_TRANSPORT, 0) );
 
-  A_WRITE(make_blocking_write(private_fd, 0),
-	  sexp_format(private, SEXP_CANONICAL, 0),
-	  &exc_handler);
+  A_WRITE(make_blocking_write(private_fd, 0, &exc_handler),
+	  sexp_format(private, SEXP_CANONICAL, 0) );
   
   *closure->status = EXIT_SUCCESS;
 

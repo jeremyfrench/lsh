@@ -61,10 +61,9 @@ STATIC_EXCEPTION_HANDLER(do_sexp_test_handler, NULL);
 static int do_output_sexp(struct sexp_handler *h, struct sexp *e)
 {
   CAST(output_sexp, closure, h);
-  A_WRITE(closure->write, sexp_format(e, closure->style, 0),
-	  &handler);
+  A_WRITE(closure->write, sexp_format(e, closure->style, 0) );
 
-  A_WRITE(closure->write, ssh_format("\n"), &handler);
+  A_WRITE(closure->write, ssh_format("\n"));
   
   return 0;
 }

@@ -127,14 +127,15 @@ do_line(struct line_handler **h,
 	  new = 
 	    make_read_packet(
 	      make_packet_unpad(
-	        make_packet_inflate(
-	          make_packet_debug(&closure->connection->super, "received"),
-	          closure->connection
-	        )
-	      ),
+		closure->connection,
+		make_packet_inflate(
+		  make_packet_debug(&closure->connection->super, "received"),
+		  closure->connection
+		  )
+		),
 	      closure->connection
-	    );
-
+	      );
+	  
 	  closure->connection->versions[!closure->mode]
 	    = ssh_format("%ls", length, line);
 
@@ -301,15 +302,13 @@ do_connection(struct command *s,
   if (self->fallback)
     {
       A_WRITE(connection->raw,
-	      ssh_format("%lS\n", version),
-	      connection->e);
+	      ssh_format("%lS\n", version));
       return;
     }
 #endif /* WITH_SSH1_FALLBACK */
 
   A_WRITE(connection->raw,
-	  ssh_format("%lS\r\n", version),
-	  connection->e);
+	  ssh_format("%lS\r\n", version));
   
   initiate_keyexchange(connection, self->mode);
 }

@@ -44,8 +44,7 @@
 
 static void
 do_pad(struct abstract_write *w,
-       struct lsh_string *packet,
-       struct exception_handler *e)
+       struct lsh_string *packet)
 {
   CAST(packet_pad, closure, w);
   struct ssh_connection *connection = closure->connection;
@@ -79,18 +78,18 @@ do_pad(struct abstract_write *w,
   
   lsh_string_free(packet);
 
-  A_WRITE(closure->super.next, new, e);
+  A_WRITE(closure->super.next, new);
 }
   
 struct abstract_write *
-make_packet_pad(struct abstract_write *continuation,
+make_packet_pad(struct abstract_write *next,
 		struct ssh_connection *connection,
 		struct randomness *random)
 {
   NEW(packet_pad, closure);
 
   closure->super.super.write = do_pad;
-  closure->super.next = continuation;
+  closure->super.next = next;
   closure->connection = connection;
   closure->random = random;
 

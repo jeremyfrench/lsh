@@ -41,8 +41,7 @@
 
 static void
 do_encrypt(struct abstract_write *w,
-	   struct lsh_string *packet,
-	   struct exception_handler *e)
+	   struct lsh_string *packet)
 {
   CAST(packet_encrypt, closure, w);
   struct ssh_connection *connection = closure->connection;
@@ -71,17 +70,17 @@ do_encrypt(struct abstract_write *w,
 
   closure->sequence_number++;
   
-  A_WRITE(closure->super.next, new, e);
+  A_WRITE(closure->super.next, new);
 }
 
 struct abstract_write *
-make_packet_encrypt(struct abstract_write *continuation,
+make_packet_encrypt(struct abstract_write *next,
 		    struct ssh_connection *connection)
 {
   NEW(packet_encrypt, closure);
 
   closure->super.super.write = do_encrypt;
-  closure->super.next = continuation;
+  closure->super.next = next;
   closure->sequence_number = 0;
   closure->connection = connection;
 

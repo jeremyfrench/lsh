@@ -76,6 +76,9 @@ struct exception *make_simple_exception(UINT32 type, const char *msg)
   return e;
 }
 
+/* Reason == 0 means disconnect without sending any disconnect
+ * message. */
+
 struct exception *
 make_protocol_exception(UINT32 reason, const char *msg)
 {
@@ -84,7 +87,7 @@ make_protocol_exception(UINT32 reason, const char *msg)
 #define MAX_REASON 11
   const char *messages[MAX_REASON+1] =
   {
-    "", "Host not allowed to connect",
+    NULL, "Host not allowed to connect",
     "Protocol error", "Key exchange failed",
     "Host authentication failed", "MAC error",
     "Compression error", "Service not available",
@@ -92,7 +95,6 @@ make_protocol_exception(UINT32 reason, const char *msg)
     "Connection lost", "By application"
   };
     
-  assert(reason > 0);
   assert(reason <= MAX_REASON);
 
 #undef MAX_REASON

@@ -187,7 +187,7 @@ do_receive(struct ssh_channel *c,
   switch(type)
     {
     case CHANNEL_DATA:
-      A_WRITE(&closure->in->write_buffer->super, data, c->e);
+      A_WRITE(&closure->in->write_buffer->super, data);
       break;
     case CHANNEL_STDERR_DATA:
       werror("Ignoring unexpected stderr data.\n");
@@ -301,9 +301,7 @@ do_open_session(struct channel_open *s,
     }
   else
     {
-      EXCEPTION_RAISE(e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "trailing garbage in open message"));
+      PROTOCOL_ERROR(e, "trailing garbage in open message");
     }
 }
 
@@ -450,8 +448,7 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
       A_WRITE(channel->write,
 	      (signaled
 	       ? format_exit_signal(channel, core, value)
-	       : format_exit(channel, value)),
-	      channel->e);
+	       : format_exit(channel, value)) );
 
       if ( (channel->flags & CHANNEL_SENT_EOF)
 	   && (channel->flags & CHANNEL_RECEIVED_EOF))
@@ -647,9 +644,7 @@ do_spawn_shell(struct channel_request *c,
 
   if (!parse_eod(args))
     {
-      EXCEPTION_RAISE(connection->e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Invalid shell CHANNEL_REQUEST message."));
+      PROTOCOL_ERROR(connection->e, "Invalid shell CHANNEL_REQUEST message.");
       return;
     }
     
@@ -901,9 +896,7 @@ do_spawn_shell(struct channel_request *c,
 
 	if (want_reply)
 	  A_WRITE(channel->write,
-		  format_channel_success(channel
-					 ->channel_number),
-		  channel->e);
+		  format_channel_success(channel->channel_number) );
 
 	channel_start_receive(channel);
 	return;
@@ -917,8 +910,8 @@ do_spawn_shell(struct channel_request *c,
   }
  fail:
   if (want_reply)
-    A_WRITE(channel->write, format_channel_failure(channel->channel_number),
-	    channel->e);
+    A_WRITE(channel->write,
+	    format_channel_failure(channel->channel_number));
 }
 
 struct channel_request *make_shell_handler(struct io_backend *backend,
@@ -992,8 +985,7 @@ do_alloc_pty(struct channel_request *c UNUSED,
 		  verbose(" granted.\n");
 		  if (want_reply)
 		    A_WRITE(channel->write,
-			    format_channel_success(channel->channel_number),
-			    channel->e);
+			    format_channel_success(channel->channel_number) );
 		  return;
 		}
 	      else
@@ -1008,8 +1000,8 @@ do_alloc_pty(struct channel_request *c UNUSED,
   lsh_string_free(term);
 
   if (want_reply)
-    A_WRITE(channel->write, format_channel_failure(channel->channel_number),
-	    channel->e);
+    A_WRITE(channel->write,
+	    format_channel_failure(channel->channel_number) );
 }
 
 struct channel_request *make_pty_handler(void)

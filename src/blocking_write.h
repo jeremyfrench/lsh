@@ -7,6 +7,8 @@
 
 #include "abstract_io.h"
 
-struct abstract_write *make_blocking_write(int fd, int with_nonblocking);
+struct abstract_write *
+make_blocking_write(int fd, int with_nonblocking,
+		    struct exception_handler *e);
 
 #endif /* LSH_BLOCKING_WRITE_H_INCLUDED */

@@ -122,7 +122,7 @@ do_tcpip_receive(struct ssh_channel *c,
     {
     case CHANNEL_DATA:
       /* FIXME: What exception handler should we use? */
-      A_WRITE(&closure->socket->write_buffer->super, data, &default_exception_handler);
+      A_WRITE(&closure->socket->write_buffer->super, data);
       break;
     case CHANNEL_STDERR_DATA:
       werror("Ignoring unexpected stderr data.\n");
@@ -288,9 +288,7 @@ do_channel_open_direct_tcpip(struct channel_open *s,
       lsh_string_free(dest_host);
       
       werror("do_channel_open_direct_tcpip: Invalid message!\n");
-      EXCEPTION_RAISE(connection->e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Invalid CHANNEL_OPEN direct-tcp message."));
+      PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_OPEN direct-tcp message.");
     }
 }
 
@@ -425,9 +423,7 @@ do_tcpip_forward_request(struct global_request *s,
   else
     {
       werror("Incorrectly formatted tcpip-forward request\n");
-      EXCEPTION_RAISE(connection->e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Invalid tcpip-forward message."));
+      PROTOCOL_ERROR(connection->e, "Invalid tcpip-forward message.");
     }
 }
 
@@ -485,9 +481,7 @@ do_tcpip_cancel_forward(struct global_request *s UNUSED,
   else
     {
       werror("Incorrectly formatted cancel-tcpip-forward request\n");
-      EXCEPTION_RAISE(connection->e,
-		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					      "Invalid cancel-tcpip-forward message."));
+      PROTOCOL_ERROR(connection->e, "Invalid cancel-tcpip-forward message.");
     }
 }
 
@@ -544,8 +538,7 @@ do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
       werror("do_channel_open_forwarded_tcpip: Invalid message!\n");
 
       lsh_string_free(peer_host);
-      EXCEPTION_RAISE(e, make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-						 "Invalid tcpip-forward message"));
+      PROTOCOL_ERROR(e, "Invalid tcpip-forward message");
     }
 }
 

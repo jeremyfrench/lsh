@@ -32,6 +32,24 @@
 #include "abstract_io.h.x"
 #undef GABA_DECLARE
 
+/* GABA:
+   (class
+     (name abstract_write)
+     (vars
+       (write method void "struct lsh_string *packet")))
+*/
+
+#define A_WRITE(f, packet) ((f)->write((f), (packet) ))
+
+/* A handler that passes packets on to another handler */
+/* GABA:
+   (class
+     (name abstract_write_pipe)
+     (super abstract_write)
+     (vars
+       (next object abstract_write)))
+*/
+
 #if 0
 /* A read-function returning n means:
  *
@@ -113,22 +131,5 @@
 #define READ_DIE 3
 #endif
 
-/* GABA:
-   (class
-     (name abstract_write)
-     (vars
-       (write method void "struct lsh_string *packet" "struct exception_handler *e")))
-*/
-
-#define A_WRITE(f, packet, e) ((f)->write((f), (packet), (e)))
-
-/* A handler that passes packets on to another handler */
-/* GABA:
-   (class
-     (name abstract_write_pipe)
-     (super abstract_write)
-     (vars
-       (next object abstract_write)))
-*/
 
 #endif /*LSH_ABSTRACT_IO_H_INCLUDED */
