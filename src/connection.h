@@ -129,7 +129,8 @@ struct ssh_connection *make_ssh_connection(struct command_continuation *c);
 
 struct exception_handler *
 make_exc_protocol_handler(struct ssh_connection *connection,
-			  struct exception_handler *parent);
+			  struct exception_handler *parent,
+			  const char *context);
 
 void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,

@@ -355,7 +355,7 @@ do_connection(struct command *s,
 		    make_connection_close_handler(connection))
      ->write_buffer->super,
      self->random,
-     make_exc_finish_read_handler(&fd->super, e));
+     make_exc_finish_read_handler(&fd->super, e, HANDLER_CONTEXT));
 
   connection->versions[self->mode] = version;
   connection->kexinits[self->mode] = MAKE_KEXINIT(self->init); 

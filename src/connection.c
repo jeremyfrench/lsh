@@ -191,12 +191,16 @@ do_exc_protocol_handler(struct exception_handler *s,
 
 struct exception_handler *
 make_exc_protocol_handler(struct ssh_connection *connection,
-			  struct exception_handler *parent)
+			  struct exception_handler *parent,
+			  const char *context)
 {
   NEW(exc_protocol_handler, self);
-  self->connection = connection;
+
   self->super.parent = parent;
   self->super.raise = do_exc_protocol_handler;
+  self->super.context = context;
+  
+  self->connection = connection;
 
   return &self->super;
 }
@@ -303,7 +307,7 @@ void connection_init_io(struct ssh_connection *connection,
       "Sent");
 
   /* Exception handler that sends a proper disconnect message on protocol errors */
-  connection->e = make_exc_protocol_handler(connection, e);
+  connection->e = make_exc_protocol_handler(connection, e, HANDLER_CONTEXT);
 
   /* Initial encryption state */
   connection->send_crypto = connection->rec_crypto = NULL;
