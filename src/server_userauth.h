@@ -54,7 +54,8 @@
 
 struct user_db *
 make_unix_user_db(struct io_backend *backend, struct reap *reaper,
-		  const char *pw_helper, int allow_root);
+		  const char *pw_helper, const char *login_shell,
+		  int allow_root);
 
 /* GABA:
    (class

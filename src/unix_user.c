@@ -893,7 +893,13 @@ make_unix_user(struct lsh_string *name,
      (vars
        (backend object io_backend)
        (reaper object reap)
+
+       ; A program to use for verifying passwords.
        (pw_helper . "const char *")
+
+       ; Override the login shell for all users.
+       (login_shell . "const char *")
+       
        (allow_root . int)))
 */
 
@@ -916,6 +922,7 @@ do_lookup_user(struct user_db *s,
   
   struct passwd *passwd;
   const char *home;
+  const char *shell;
   
   name = make_cstring(name, free);
   
@@ -994,12 +1001,18 @@ do_lookup_user(struct user_db *s,
 	     && (passwd->pw_uid == getuid())
 	     && (home = getenv("HOME"))))
 	home = passwd->pw_dir;
+
+      if (self->login_shell)
+	/* Override the passwd database */
+	shell = self->login_shell;
+      else
+	shell = passwd->pw_shell;
       
       return make_unix_user(name, 
 			    passwd->pw_uid, passwd->pw_gid,
 			    self,
 			    crypted,
-			    home, passwd->pw_shell);
+			    home, shell);
     }
   else
     {
@@ -1011,7 +1024,7 @@ do_lookup_user(struct user_db *s,
 
 struct user_db *
 make_unix_user_db(struct io_backend *backend, struct reap *reaper,
-		  const char *pw_helper,
+		  const char *pw_helper, const char *login_shell,
 		  int allow_root)
 {
   NEW(unix_user_db, self);
@@ -1020,6 +1033,7 @@ make_unix_user_db(struct io_backend *backend, struct reap *reaper,
   self->backend = backend;
   self->reaper = reaper;
   self->pw_helper = pw_helper;
+  self->login_shell = login_shell;
   self->allow_root = allow_root;
 
   return &self->super;
