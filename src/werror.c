@@ -261,9 +261,11 @@ void werror_vformat(const char *f, va_list args)
 	      case 'u':
 		do_utf8 = 1;
 		break;
+#if 0
 	      case 'h':
 		do_hex = 1;
 		break;
+#endif
 	      default:
 		goto end_options;
 	      }
