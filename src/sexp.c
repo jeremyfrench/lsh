@@ -174,12 +174,14 @@ static struct sexp *make_sexp_string(struct lsh_string *d, struct lsh_string *c)
   NEW(sexp_string, s);
 
   s->super.format = do_format_sexp_string;
+  s->super.iter = NULL;
   
   s->display = d;
   s->contents = c;
   
   return &s->super;
 }
+
 
 static struct lsh_string *
 do_format_sexp_nil(struct sexp *ignored UNUSED, int style)
@@ -192,9 +194,45 @@ struct sexp_cons sexp_nil =
 
 #define SEXP_NIL (&sexp_nil.super)
 
-int sexp_nullp(struct sexp *e)
+/* CLASS:
+   (class
+     (name sexp_iter_cons)
+     (super sexp_iter)
+     (vars
+       (p object sexp_cons)))
+*/
+
+static struct sexp *do_cons_get(struct sexp_iter *c)
 {
-  return (e == SEXP_NIL);
+  CAST(sexp_iter_cons, i, c);
+  return (i->p != &sexp_nil) ? NULL : i->p->car;
+}
+
+static struct sexp *do_cons_set(struct sexp_iter *c, struct sexp *e)
+{
+  CAST(sexp_iter_cons, i, c);
+  assert (i->p != &sexp_nil);
+
+  i->p->car = e;
+}
+
+static void do_cons_advance(struct sexp_iter *c)
+{
+  CAST(sexp_iter_cons, i, c);
+  i->p = i->p->cdr;
+}
+
+static make_iter_cons(struct sexp *s)
+{
+  CAST(sexp_cons, c, s);
+  NEW(sexp_iter_cons, iter);
+
+  iter->super.get = do_cons_get;
+  iter->super.set = do_cons_set;
+  iter->super.advance = do_cons_advance;
+  iter->p = s;
+  
+  return &iter->super;
 }
 
 static struct lsh_string *do_format_sexp_tail(struct sexp_cons *c, int style)
@@ -243,6 +281,7 @@ struct sexp *sexp_c(struct sexp *car, struct sexp_cons *cdr)
   NEW(sexp_cons, c);
 
   c->super.format = do_format_sexp_cons;
+  c->super.iter = make_iter_cons;
   
   c->car = car;
   c->cdr = cdr;
@@ -259,6 +298,54 @@ struct sexp *sexp_c(struct sexp *car, struct sexp_cons *cdr)
        ; could use an embedded var-array instead.
        (elements object object_list)))
 */
+
+/* CLASS:
+   (class
+     (name sexp_iter_vector)
+     (super sexp_iter)
+     (vars
+       (l object sexp_list)
+       (i . unsigned)))
+*/
+
+static struct sexp *do_vector_get(struct sexp_iter *c)
+{
+  CAST(sexp_iter_vector, i, c);
+  if (i->i < LIST_LENGTH(i->l))
+    {
+      CAST(sexp, res, LIST(i->l)[i->i]);
+      return res;
+    }
+  return NULL;
+}
+
+static void do_vector_set(struct sexp_iter *c, struct sexp *e)
+{
+  CAST(sexp_iter_vector, i, c);
+  assert(i->i < LIST_LENGTH(i->l));
+
+  LIST(i->l)[i->i] = &e->super;
+}
+
+static void do_vector_advance(struct sexp_iter *c)
+{
+  CAST(sexp_iter_vector, i, c);
+  if (i->i < LIST_LENGTH(i->l))
+    i->i++;
+}
+
+static void make_iter_vector(struct sexp *s)
+{
+  CAST(sexp_vector, v, s);
+  NEW(sexp_iter_vector, iter);
+
+  iter->super.get = do_vector_get;
+  iter->super.set = do_vector_set;  
+  iter->super.advance = do_vector_advance;
+
+  iter->l = v->l;
+  iter->i = 0;
+}
 
 static struct lsh_string *do_format_sexp_vector(struct sexp *e, int style)
 {
@@ -338,6 +425,8 @@ struct sexp *sexp_l(unsigned n, ...)
       NEW(sexp_vector, v);
 
       v->super.format = do_format_sexp_vector;
+      v->super.iter = make_iter_vector;
+      
       v->elements = make_object_listv(n, args);
 
       va_end(args);
@@ -452,3 +541,324 @@ struct lsh_string *encode_base64(struct lsh_string *s,
   
   return res;
 }
+
+int sexp_nullp(struct sexp *e)
+{
+  return (e == SEXP_NIL);
+}
+
+int sexp_atomp(struct sexp *e)
+{
+  return !e->iter;
+}
+
+
+/* PARSER */
+
+
+/* lsh, an implementation of the ssh protocol
+ *
+ * Copyright (C) 1998 Ron Rivest, Niels Möller
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ */
+
+#if 0
+/* The first level decoder. Handles base-64 and hex codes,
+ * and passes octets on to the scanner. */
+
+#define SCAN_OCTET 1
+#define SCAN_HEX 2
+#define SCAN_BASE64 3
+#define SCAN_TRANSPORT 4
+
+/* CLASS:
+   (class
+     (name sexp_decode)
+     (super read_handler)
+     (vars
+       ;; Scanning mode
+       (mode . int)
+       (next object scanner)))
+*/
+#endif
+
+/* CLASS:
+   (class 
+     (name string_handler)
+     (vars
+       (handler method "struct scanner *" "struct lsh_string *s")))
+*/
+
+#define HANDLE_STRING(h,s) ((h)->handler((h), (s)))
+
+/* CLASS:
+   (class
+     (name parse_s)
+     (super scanner)
+     (vars
+       (c object string_handler)))
+   
+/* CLASS:
+   (class
+     (name parse_literal)
+     (super parse_s)
+     (vars
+       (i . UINT32)
+       (data string)))
+*/
+
+static int do_parse_literal(struct scanner **s, int token)
+{
+  CAST(parse_literal, closure, *s);
+
+  if (token < 0)
+    return HANDLE_STRING(closure->super.c, NULL);
+  
+  closure->data->string[closure->i++] = token;
+  if (closure->data->length == closure->i)
+    {
+      struct lsh_string *res = closure->data;
+      res->data = NULL;
+      *s = NULL;
+
+      return HANDLE_STRING(closure->super.c, res);
+    }
+  return LSH_OK;
+}
+
+static struct scanner *make_parse_literal(UINT32 length,
+					  struct string_handler *c)
+{
+  NEW(parse_literal, closure);
+
+  closure->super.super->scan = do_parse_literal;
+  closure->super.c = c;
+  closure->i = 0;
+  closure->data = lsh_String_alloc(length);
+
+  return &closure->super.super;
+}
+
+/* FIXME: Arbitrary limit. */
+#define SEXP_MAX_STRING 100000
+
+/* CLASS:
+   (class
+     (name parse_literal_length)
+     (super parse_s)
+     (vars
+       (length . UINT32)))
+*/
+
+static int do_parse_literal_length(struct scanner **s, int token)
+{
+  CAST(parse_literal_length, closure, *s);
+  
+  if (token < 0) goto fail;
+  
+  if (char_classes[token] & CHAR_DIGIT)
+    {
+      closure->length = closure->length * 10 + (token - '0');
+      if (closure->length > SEXP_MAX_STRING)
+	goto fail;
+
+      return LSH_OK;
+    }
+  else if (token == ':')
+    {
+      *s = make_parse_literal(closure->length, closure->super.c);
+      return LSH_OK;
+    }
+
+ fail:
+  *s = NULL;
+  return HANDLE_STRING(closure->super.c, NULL);
+}
+
+static struct scanner *make_parse_literal_length(UINT32 start,
+						 struct string_handler *c)
+{
+  NEW(parse_literal_length, closure);
+
+  assert(start);
+
+  closure->super.super.scan = do_parse_literal_length;
+  closure->super.c = c;
+  closure->length = start;
+
+  return &closure->super.super;
+}
+
+/* CLASS:
+   (class
+     (name return_string)
+     (super string_handler)
+     (vars
+       (c object sexp_handler)))
+*/
+
+static int do_return_string(struct string_handler *h, struct lsh_string *s)
+{
+  CAST(return_string, closure, h);
+
+  return HANDLE_SEXP(closure->c, make_sexp_string(NULL, s));
+}
+
+static struct string_handler *make_return_string(struct sexp_handler *c)
+{
+  NEW(return_string, closure);
+
+  closure->super.handler = do_return_string;
+  closure->c = c;
+
+  return &closure->super;
+}
+
+/* For stateless parsing */
+
+/* CLASS:
+   (class
+     (name parse_c)
+     (super scanner)
+     (vars
+       (c object sexp_handler)))
+*/
+
+#define MAKE_PARSE(name)						\
+static int do_parse##name(struct scanner **s, int token);		\
+									\
+static struct scanner *make_parse_##name(struct sexp_handler *c)	\
+{									\
+  NEW(parse_c, closure);						\
+									\
+  closure->super.scan = do_parse##name;					\
+  closure->c = c;							\
+									\
+  return &closure->super;						\
+}									\
+									\
+static int do_parse##name(struct scanner **s, int token)
+     
+/* CLASS:
+   (class
+     (name parse_skip)
+     (super parse_c)
+     (vars
+       (expect . int)
+       (value object sexp)
+       (next object scanner))
+*/
+
+static int do_parse_skip(struct scanner **s, int token)
+{
+  CAST(parse_skip, closure, *s);
+
+  /* FIXME: If the token doesn't match, perhaps we should install NULL
+   * instead? */
+  
+  *s = closure->next;
+
+  return HANDLE_SEXP(closure->super.c,
+		     ( (token == closure->expect)
+		       ? closure->value
+		       : NULL));
+}
+
+static struct scanner *make_parse_skip(int token,
+				       struct scanner *next,
+				       struct sexp *value,
+				       struct sexp_handler *c)
+{
+  NEW(parse_skip, closure);
+
+  closure->super.super.scan = do_parse_skip;
+  closure->super.c = c;
+  closure->next = next;
+  closure->expect = token;
+  closure->value = value;
+
+  return &closure->super.super;
+}
+
+/* CLASS:
+   (class
+     (name end_display)
+     (super string_handler)
+     (vars )))
+*/
+
+static int do_end_display(
+
+MAKE_PARSE(simple_string)
+{
+  CAST(parse_c, closure, *s);
+
+  switch(token)
+    {
+    case TOKEN_EOS:
+      fatal("Internal error!\n");      
+
+    case '0':
+      /* This should be a single zero digit, as there mustn't be unneccessary
+       * leading zeros. */
+      *s = make_parse_skip(':', closure->next, sexp_z(""), closure->c);
+      return LSH_OK:
+
+    case '1': case '2': case '3':
+    case '4': case '5': case '6':
+    case '7': case '8': case '9':
+      *s = make_parse_literal_length(token - '0',
+				     make_return_string(closure->c));
+      return LSH_OK;
+
+    default:
+      /* Syntax error */
+      return HANDLE_SEXP(closure->c, NULL);
+    }
+}
+
+
+/* Parser for the canonical and transport formats. */
+MAKE_PARSE(sexp)
+{
+  CAST(parse_c, closure, *s);
+  
+  switch (token)
+    {
+    case TOKEN_EOS:
+      fatal("Internal error!\n");      
+    case '[':
+      *s = make_parse_simple_string(make_end_display(closure->c));
+      return LSH_OK:
+    case '(':
+      *s = make_parse_list(closure->c);
+      return LSH_OK;
+    default:
+      /* Should be a string */
+      *s = make_parse_string(closure->c);
+      return SCAN(*s, token);
+    }
+}
+
+
+/* CLASS:
+   (class
+     (parse_skip
+static int do_
+	
+  switch (char_classes[token])
+    {
+      case CHAR_DIGIT
