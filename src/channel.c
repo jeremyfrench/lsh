@@ -1666,7 +1666,7 @@ static void
 do_channel_write(struct abstract_write *w,
 		 struct lsh_string *packet)
 {
-  struct channel_write *closure = (struct channel_write *) w;
+  CAST(channel_write, closure, w);
   
   A_WRITE(closure->channel->write,
 	  channel_transmit_data(closure->channel, packet) );
