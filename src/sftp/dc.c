@@ -49,7 +49,8 @@ int lsftp_dc_init( int new_dc_entries )
     {
       lsftp_dircache[i].name = 0;
       lsftp_dircache[i].hash = 0;
-      lsftp_dircache[i].posixperms = 0;
+      lsftp_dircache[i].has_permissions = 0;
+      lsftp_dircache[i].permissions = 0;
     }
 
   return 1;
@@ -126,7 +127,8 @@ lsftp_dc_make_index(void)
 
   lsftp_dircache[i].name = 0;
   lsftp_dircache[i].hash = 0;
-  lsftp_dircache[i].posixperms = 0;
+  lsftp_dircache[i].has_permissions = 0;
+  lsftp_dircache[i].permissions = 0;
 
   return i;
 }
@@ -157,7 +159,8 @@ int lsftp_dc_notice( char* name, struct sftp_attrib* a )
 
   lsftp_dircache[i].name = s;
   lsftp_dircache[i].hash = lsftp_dc_hash( s );
-  lsftp_dircache[i].posixperms = sftp_attrib_perms( a );
+  lsftp_dircache[i].has_permissions
+    = sftp_attrib_perms(a, &lsftp_dircache[i].permissions);
     
   return 0;
 }
@@ -178,7 +181,8 @@ int lsftp_dc_remove( char* name )
 
   lsftp_dircache[i].name = 0;
   lsftp_dircache[i].hash = 0;
-  lsftp_dircache[i].posixperms = 0;
+  lsftp_dircache[i].has_permissions = 0;
+  lsftp_dircache[i].permissions = 0;
   
   return 1;
 }
@@ -224,7 +228,7 @@ lsftp_dc_r_isdir(const char* name)
 
   int i;
   int id;
-  struct stat st;
+  struct sftp_attrib attrib;
 
 /*    printf( "Checking directory status of %s: ", name ); */
 
@@ -233,32 +237,29 @@ lsftp_dc_r_isdir(const char* name)
       i = lsftp_dc_index( name );
       
       if( -1 != i &&                            /* Found it? */
-	  /* FIXME: posixperms is a mode_t, and can't be compared to -1 */
-	  -1 != lsftp_dircache[i].posixperms && /* Has permissions? */
-	  !(lsftp_dircache[i].posixperms & S_IFLNK)
+	  lsftp_dircache[i].has_permissions &&
+	  !(lsftp_dircache[i].permissions & S_IFLNK)
 	  )
 	/*      { */
 	/*        printf( "%d (from cache), posixperms are %d\n",  S_ISDIR( lsftp_dircache[i].posixperms ),  */
 	/*  	      lsftp_dircache[i].posixperms ); */
-	return S_ISDIR( lsftp_dircache[i].posixperms );
+	return S_ISDIR(lsftp_dircache[i].permissions);
       /*      } */
       
     }
   
   /* Not found in cache (or link), we need to stat */
   
-  id = lsftp_do_stat( name, &st );
+  id = lsftp_do_stat( name, &attrib );
   
   if( id > 0) /* Not a failure? */
     {
       lsftp_await_command( id );
 
       /* FIXME: A mode_t can't be compared to -1. */
-      if( -1 != st.st_mode )           /* We've got permissions? */
-/*  	{ */
-/*  	  printf( "%d\n",  S_ISDIR( st.st_mode ) ); */
-	  return S_ISDIR( st.st_mode );
-/*  	} */
+      if(attrib.flags & SSH_FILEXFER_ATTR_PERMISSIONS)
+	/* We've got permissions? */
+	return S_ISDIR(attrib.permissions);
     }
   
 /*    printf( "%d (failed) \n",  -1 ); */
