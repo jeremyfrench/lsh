@@ -1,3 +1,41 @@
+Mon Mar  1 01:36:54 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/publickey_crypto.c (init_diffie_hellman_instance): Include
+ 	length fields when hashing.
+
+	* src/publickey_crypto.c: Some support for broken ssh2 signatures
+	(Bazsi).
+ 	(generic_dsa_sign): New function.
+	(do_dsa_sign_kludge): New function.
+	(make_dsa_signer_kludge): New function.
+
+	* src/client_keyexchange.c (do_init_client_dh): Renamed the
+	do_init_dh function.
+
+	* src/keyexchange.h (keypair_info): New type. 
+
+	* src/keyexchange.c (do_handle_kexinit): Added ssh2-dss kludge
+	(Bazsi). 
+	(make_keypair_info): New function.
+
+	* src/lshd.c: Deleted old code. Use a keypair_info alist for the
+ 	host key(s).
+
+	* src/server_keyexchange.h, src/server_keyexchange.c: Use a
+	keypair_info alist.
+	
+	* src/format.c (ssh_format): Added 'u' modifier, for unsigned
+	bignums. 
+
+	* src/connection.h (connection): Replaced the client_version and
+	server_version fields with an array. 
+
+	* src/atoms.in: Added ssh-dss-kludge atom (used for supporting
+ 	buggy ssh2 versions).
+
+	* configure.in: Test for syslog.h.
+	New --with-ssh2-dsa-kludge option.
+
 Sun Feb 28 20:01:32 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/cvs_headers, src/used_headers: Fixes for compatibility with

@@ -41,7 +41,7 @@
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_SYSLOG
+#if HAVE_SYSLOG_H
 #include <syslog.h>
 #endif
 
@@ -58,7 +58,7 @@ static UINT32 error_pos = 0;
 
 static int (*error_write)(int fd, UINT32 length, UINT8 *data) = write_raw;
 
-#ifdef HAVE_SYSLOG
+#if HAVE_SYSLOG
 static int write_syslog(int fd UNUSED, UINT32 length, UINT8 *data)
 {
   UINT8 string_buffer[BUF_SIZE];

@@ -24,12 +24,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef LSH_DSS_KEYGEN_H_INCLUDED
-#define LSH_DSS_KEYGEN_H_INCLUDED
+#ifndef LSH_DSA_KEYGEN_H_INCLUDED
+#define LSH_DSA_KEYGEN_H_INCLUDED
 
 #include "bignum.h"
 
 void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l);
 void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q);
 
-#endif /* LSH_DSS_KEYGEN_H_INCLUDED */
+#endif /* LSH_DSA_KEYGEN_H_INCLUDED */
