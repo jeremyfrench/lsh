@@ -29,11 +29,11 @@ ftp://ftp-swiss.ai.mit.edu/pub/su/scsh/scsh.tar.gz>.
 If you have checked out lsh from CVS, things are more complicated. You
 must first generate Makefile.am files from the corresponding
 Makefile.am.in files. Do this by running ./make_am in the top level
-directory. Next, you need to run autoconf, autoheader and automake.
-This creates the configure script and a Makefile.in. Now you can try
-./configure ; make. If the compiler complains that it can't find a
-file foo.h.x, try creating it with make foo.h.x or ./make_class <foo.h
->foo.h.x, and similarly for missing foo.c.x files.
+directory. Next, you need to run aclocal, autoconf, autoheader and
+automake -a. This creates the configure script and a Makefile.in. Now you
+can try ./configure ; make. If the compiler complains that it can't
+find a file foo.h.x, try creating it with make foo.h.x or ./make_class
+<foo.h >foo.h.x, and similarly for missing foo.c.x files.
 
 
 NEEDED LIBRARIES
