@@ -1,5 +1,6 @@
 #include "certificate.h"
 #include "parse.h"
+#include "tag.h"
 
 #include "nettle/sexp.h"
 
