@@ -24,8 +24,11 @@
  */
 
 #include "command.h"
+#include "xalloc.h"
 
 #include <assert.h>
+
+#include "combinators.c.x"
 
 /* Combinators */
 
@@ -232,21 +235,21 @@ STATIC_COLLECT_1(&collect_info_B_2);
      (super command_simple)
      (vars
        (f object command)
-       (y object command)))
+       (y object lsh_object)))
 */
 
 /* GABA:
    (class
-     (name command_S_continuation)
+     (name command_C_continuation)
      (super command_frame)
      (vars
        (y object lsh_object)))
 */
 
-static int do_command_B_continuation(struct command_continuation *c,
+static int do_command_C_continuation(struct command_continuation *c,
 				     struct lsh_object *value)
 {
-  CAST(command_B_continuation, self, c);
+  CAST(command_C_continuation, self, c);
   CAST_SUBTYPE(command, op, value);
   return COMMAND_CALL(op, self->y, self->super.up);
 }
@@ -259,7 +262,9 @@ static int do_command_C_2(struct command *s,
   NEW(command_C_continuation, c);
   c->y = self->y;
   c->super.up = up;
-  return COMMAND_CALL(self->f, x, c);
+  c->super.super.c = do_command_C_continuation;
+  
+  return COMMAND_CALL(self->f, x, &c->super.super);
 }
 
 static struct lsh_object *do_simple_command_C_2(struct command_simple *s,
@@ -291,7 +296,7 @@ static struct lsh_object *collect_C_2(struct collect_info_2 *info,
   CAST_SUBTYPE(command, cf, f);
   assert(!info);
   
-  return &make_command_B_2(cf, y)->super;
+  return &make_command_C_2(cf, y)->super;
 }
 
 struct collect_info_2 collect_info_C_2 =
