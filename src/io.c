@@ -394,7 +394,10 @@ static void do_consuming_read(struct io_read_callback *c,
 	    werror("io.c: read_consume: Unexpected EWOULDBLOCK\n");
 	    break;
 	  case EPIPE:
-	    fatal("io.c: read_consume: Unexpected EPIPE.\n");
+	    /* FIXME: I don't understand why reading should return
+	     * EPIPE, but it happens occasionally under linux. Perhaps
+	     * we should treat it as EOF instead? */
+	    werror("io.c: read_consume: Unexpected EPIPE.\n");
 	  default:
 	    EXCEPTION_RAISE(fd->e, 
 			    make_io_exception(EXC_IO_READ,
