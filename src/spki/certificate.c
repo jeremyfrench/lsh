@@ -43,11 +43,6 @@ spki_realloc(struct spki_acl_db *db UNUSED, void *p, unsigned size)
   return realloc(p, size);
 }
 
-#define MALLOC(db, size) ((db)->realloc((db), NULL, (size)))
-#define FREE(db, p) ((db)->realloc((db), (p), 0))
-
-#define NEW(db, type, var) type *var = MALLOC((db), sizeof(type))
-
 void
 spki_acl_init(struct spki_acl_db *db)
 {
@@ -60,7 +55,7 @@ uint8_t *
 spki_dup(struct spki_acl_db *db,
 	 unsigned length, const uint8_t *data)
 {
-  uint8_t *n = MALLOC(db, length);
+  uint8_t *n = SPKI_MALLOC(db, length);
 
   if (n)
     memcpy(n, data, length);
@@ -90,13 +85,13 @@ spki_principal_add_key(struct spki_acl_db *db,
 		       unsigned key_length,  const uint8_t *key,
 		       const struct spki_hashes *hashes)
 {
-  NEW (db, struct spki_principal, principal);
+  SPKI_NEW(db, struct spki_principal, principal);
   if (!principal)
     return NULL;
 
   if (!(principal->key = spki_dup(db, key_length, key)))
     {
-      FREE(db, principal);
+      SPKI_FREE(db, principal);
       return NULL;
     }
 
@@ -119,7 +114,7 @@ static struct spki_principal *
 spki_principal_add_md5(struct spki_acl_db *db,
 		       const uint8_t *md5)
 {
-  NEW (db, struct spki_principal, principal);
+  SPKI_NEW(db, struct spki_principal, principal);
   if (!principal)
     return NULL;
 
@@ -138,7 +133,7 @@ static struct spki_principal *
 spki_principal_add_sha1(struct spki_acl_db *db,
 			const uint8_t *sha1)
 {
-  NEW (db, struct spki_principal, principal);
+  SPKI_NEW(db, struct spki_principal, principal);
   if (!principal)
     return NULL;
 
@@ -246,63 +241,6 @@ spki_check_type(struct sexp_iterator *i, enum spki_type type)
 
 /* ACL database */
 
-static enum spki_type
-parse_acl_entry(struct spki_acl_db *db, struct sexp_iterator *i,
-		struct spki_5_tuple **result)
-{
-  /* Syntax:
-   *
-   * ("entry" <principal> <delegate>? <tag> <valid>? <comment>?) */
-    {
-      NEW(db, struct spki_5_tuple, acl);
-      enum spki_type type;
-      
-      if (!acl)
-	return 0;
-
-      acl->issuer = NULL;
-      acl->flags = 0;
-      acl->tag = NULL;
-
-      type = spki_parse_principal(db, i, &acl->subject);
-      if (!type)
-	goto fail;
-
-      if (type == SPKI_TYPE_PROPAGATE)
-	{
-	  type = spki_parse_end(i);
-	  if (!type)
-	    goto fail;
-
-	  acl->flags |= SPKI_PROPAGATE;
-	}
-
-      if (type != SPKI_TYPE_TAG)
-	goto fail;
-
-      type = spki_parse_tag(db, i, acl);
-
-      if (type == SPKI_TYPE_COMMENT)
-	type = spki_parse_skip(i);
-      
-      if (type == SPKI_TYPE_VALID)
-	type = spki_parse_valid(i, acl);
-
-      type = spki_parse_end(i);
-      if (type)
-	{
-	  *result = acl;
-	  return type;
-	}
-
-    fail:
-      if (acl->tag)
-	FREE(db, acl->tag);
-      FREE(db, acl);
-      return 0;
-    }
-}
-
 int
 spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
 {
@@ -320,21 +258,24 @@ spki_acl_parse(struct spki_acl_db *db, struct sexp_iterator *i)
   if (type == SPKI_TYPE_VERSION)
     type = spki_parse_version(i);
   
-  while (type != SPKI_TYPE_END_OF_EXPR)
+  while (type == SPKI_TYPE_ENTRY)
     {
-      struct spki_5_tuple *acl;
-      if (type != SPKI_TYPE_ENTRY)
+      SPKI_NEW(db, struct spki_5_tuple, acl);
+      if (!acl)
 	return 0;
       
-      type = parse_acl_entry(db, i, &acl);
+      type = spki_parse_acl_entry(db, i, acl);
       if (!type)
-	return 0;
+	{
+	  SPKI_FREE(db, acl);
+	  return 0;
+	}
       
       acl->next = db->first_acl;
       db->first_acl = acl;
     }
 
-  return 1;
+  return type == SPKI_TYPE_END_OF_EXPR && spki_parse_end(i);
 }
 
 #define SKIP(t) do				\
@@ -354,7 +295,7 @@ spki_cert_parse_body(struct spki_acl_db *db, struct sexp_iterator *i,
   cert->flags = 0;
   
   if (type == SPKI_TYPE_VERSION)
-    type == spki_parse_version(i);
+    type = spki_parse_version(i);
 
   SKIP(SPKI_TYPE_DISPLAY);
 
