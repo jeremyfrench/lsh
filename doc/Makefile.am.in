@@ -45,5 +45,3 @@ all-local: srp-spec.txt lsh.html
 	 ; test -s $@T && mv -f $@T $@)
 
 DISTCLEANFILES = $(DVIS) $(PSS)
-
-include $(top_srcdir)/misc/ctags.mk

@@ -1,3 +1,10 @@
+2002-11-04  Pontus Sköld  <pont@soua.net>
+
+	* misc/Makefile.am.in: Removed obsolete reference to (and include
+	of) ctags.mk.
+
+	* doc/Makefile.am.in: Removed inclusion of ctags.mk.
+	
 2002-11-03  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/testsuite/testutils.c (test_sign): Use SIGN and VERIFY, not
