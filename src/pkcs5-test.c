@@ -76,7 +76,7 @@ int main(int argc, char **argv)
   
   key = alloca(length);
   
-  pkcs5_derive_key(make_hmac_algorithm(&sha1_algorithm),
+  pkcs5_derive_key(&crypto_hmac_sha1_algorithm,
 		   strlen(password), password,
 		   strlen(salt), salt,
 		   iterations,
