@@ -229,7 +229,12 @@ make_client_session_channel(struct lsh_fd *in,
   self->out = out;
   self->err = err;
   self->escape = escape;
-  
+
+#if 0
+  /* Implement send break */
+  if (self->escape)
+    self->escape->dispatch['b'] = make_send_break(self->super);
+#endif
   remember_resource(self->super.resources, &in->super);
   remember_resource(self->super.resources, &out->super);
   remember_resource(self->super.resources, &err->super);
