@@ -89,6 +89,9 @@ make_pty_info(void)
 #ifndef TTY_GROUP
 #define TTY_GROUP "tty"
 #endif
+#ifndef SYSTEM_GROUP
+#define SYSTEM_GROUP "system"
+#endif
 
 #ifndef ACCESSPERMS
 #define ACCESSPERMS 07777
@@ -116,6 +119,10 @@ pty_check_permissions(const char *name, uid_t user)
   /* Points to static area */
   grp = getgrnam(TTY_GROUP);
 
+  if (!grp)
+    /* On AIX, tty:s have group "system", not "tty" */
+    grp = getgrnam(SYSTEM_GROUP);
+    
   if (grp)
     tty_gid = grp->gr_gid;
   else
