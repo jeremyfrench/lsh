@@ -76,7 +76,6 @@ dotask() {
         timeecho Begin $task
         if sh -c "$cmd" > r/${task}log.txt 2>&1
         then
-	    touch r/$task.pass
 	    if [ -z "$warnfunc" ]
 	    then
 	        logpass
