@@ -57,7 +57,7 @@ static int client_initiate(struct fd_callback **c,
 
   connection_init_io(connection,
 		     io_read_write(closure->backend, fd,
-				   make_client_read_line(c),
+				   make_client_read_line(connection),
 				   closure->block_size,
 				   make_client_close_handler()),
 		     closure->random);
@@ -136,13 +136,13 @@ static struct read_handler *do_line(struct line_handler **h,
     }
 }
 
-struct read_handler *make_client_read_line(struct ssh_connection *s)
+struct read_handler *make_client_read_line(struct ssh_connection *c)
 {
   struct client_line_handler *closure
     = xalloc(sizeof(struct client_line_handler));
   
   closure->super.handler = do_line;
-  closure->connection = s;
+  closure->connection = c;
   
   return make_read_line(&closure->super);
 }
