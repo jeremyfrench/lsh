@@ -61,6 +61,8 @@ do_kill_client_tty_resource(struct resource *s)
   CAST(client_tty_resource, self, s);
   self->super.alive = 0;
   INTERACT_SET_ATTRIBUTES(self->tty, self->attr);
+  /* Tell the werror functions that terminal mode is restored. */
+  set_error_raw(0);
 }
 
 static struct resource *
@@ -147,6 +149,9 @@ do_pty_continuation(struct command_continuation *s,
 	     "Setting the attributes of the local terminal failed.\n");
     }
 
+  /* Tell the werror functions that terminal mode is restored. */
+  set_error_raw(1);
+  
   remember_resource(channel->resources,
 		    make_client_tty_resource(self->req->tty,
 					     self->req->attr));
