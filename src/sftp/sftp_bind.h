@@ -155,7 +155,7 @@ int lsftp_handle_alldir(struct sftp_callback *s,
 			const struct lsftp_callback *l);
 
 
-int lsftp_install_lsftp_cb(lsftp_callback_func nextfun);
+struct lsftp_callback* lsftp_install_lsftp_cb( lsftp_callback_func nextfun );
 int lsftp_install_sftp_cb(struct sftp_callback *s);
 
 void lsftp_nullcb(  struct lsftp_callback* nullcb );
