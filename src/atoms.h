@@ -25,7 +25,7 @@
 #define LSH_ATOMS_H_INCLUDED
 
 /* FIXME: Need this be a separate file? */
-#include <inttypes.h>
+#include "lsh.h"
 
 #include "atoms_defines.h"
 
