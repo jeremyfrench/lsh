@@ -830,10 +830,18 @@ do_spawn_exec(struct channel_request *c,
     case 0:
       { /* Child */
 #define MAX_ENV 1
-	/* FIXME: HPUX compiler can't handle array initialization. */
 	/* No args, end the USER_EXEC method fills in argv[0]. */
+
+#if 0
+	/* NOTE: HPUX compiler can't handle array initialization. */
 	char *argv[] = { NULL, "-c", command_line->data, NULL };
-	
+#else
+	char *argv[4];
+	argv[0] = NULL;
+	argv[1] = "-c";
+	argv[2] = command_line->data;
+	argv[3] = NULL;
+#endif
 	struct env_value env[MAX_ENV];
 	int env_length = 0;
 	
