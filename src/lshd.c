@@ -456,11 +456,13 @@ int main(int argc, char **argv)
     = make_alist(1
 #if DATAFELLOWS_WORKAROUNDS
 		 +1,
-		 ATOM_SSH_DSS_KLUDGE, make_authorization_db(make_dsa_kludge_algorithm(NULL),
+		 ATOM_SSH_DSS_KLUDGE, make_authorization_db(ssh_format("keys_md5"), 
+							    make_dsa_kludge_algorithm(NULL),
 							    &md5_algorithm)
 #endif
 				    
-		 ,ATOM_SSH_DSS, make_authorization_db(make_dsa_algorithm(NULL),
+		 ,ATOM_SSH_DSS, make_authorization_db(ssh_format("keys_md5"),
+						      make_dsa_algorithm(NULL),
 						      &md5_algorithm),
 		 
 		 -1);
