@@ -223,13 +223,8 @@ make_lshd_options(void)
   self->reaper = make_reaper();
   self->random = make_system_random();
 
-  if (!self->random)
-    {
-      werror("Failed to initialize randomness generator.\n");
-      return NULL;
-    }
-  
-  self->signature_algorithms = all_signature_algorithms(self->random);
+  self->signature_algorithms = all_signature_algorithms(self->random); /* OK to initialize with NULL */
+   
   self->style = SEXP_TRANSPORT;
   self->interface = NULL;
 
@@ -310,7 +305,6 @@ DEFINE_COMMAND(options2keys)
 
   struct alist *keys = make_alist(0, -1);
   read_host_key(options->hostkey, options->signature_algorithms, keys);
-
   COMMAND_RETURN(c, keys);
 }
 
@@ -547,6 +541,10 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       {
 	struct user_db *user_db = NULL;
 	
+	if (!self->random)
+	  argp_failure( state, EXIT_FAILURE, 0,  "No randomness generator available.");
+
+
 	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
 	  user_db = make_unix_user_db(self->reaper,
 				      self->pw_helper, self->login_shell,
@@ -868,6 +866,12 @@ main(int argc, char **argv)
       return EXIT_FAILURE;
     }
 
+  if (!options->random) 
+    {
+      werror("Failed to initialize randomness generator.\n");
+      return EXIT_FAILURE;
+    }
+  
   if (options->daemonic)
     {
       if (options->no_syslog)
