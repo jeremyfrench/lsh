@@ -40,7 +40,7 @@ COMMON_SRCS = alist.c atoms.c bignum.c channel.c \
 	packet_ignore.c pad.c parse.c publickey_crypto.c \
 	randomness.c \
 	read_data.c read_line.c read_packet.c service.c \
-	unpad.c \
+	translate_signal.c unpad.c \
 	werror.c write_buffer.c xalloc.c
 
 CLIENT_SRCS = lsh.c client.c client_keyexchange.c \
