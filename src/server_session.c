@@ -48,6 +48,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <signal.h>
 
 /* Socket workround */
 #ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
