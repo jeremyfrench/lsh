@@ -220,8 +220,13 @@ int io_iter(struct io_backend *b)
 static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 {
   CAST(fd_read, closure, *r);
-  assert(length > 0);
 
+  if (!length)
+    {
+      werror("io.c: do_read(): Zero length read was requested.\n");
+      return 0;
+    }
+    
   for (;;)
     {
       int res = read(closure->fd, buffer, length);
