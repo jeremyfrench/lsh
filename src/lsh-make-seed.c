@@ -27,6 +27,10 @@
 #include "config.h"
 #endif
 
+/* The zlib using code isn't used now */
+#undef WITH_ZLIB
+#define WITH_ZLIB 0
+
 #include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -70,10 +74,10 @@
 
 
 #if WITH_ZLIB
-
-#if HAVE_ZLIB_H
-#include <zlib.h>
-#endif
+# if HAVE_ZLIB_H
+#  include <zlib.h>
+# endif
+#endif /* WITH_ZLIB */
 
 #include "nettle/yarrow.h"
 
@@ -85,7 +89,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
-
+#if WITH_ZLIB
 /* FIXME: Duplicated in zlib.c */
 
 /* zlib memory functions */
@@ -100,7 +104,6 @@ zlib_free(void *opaque UNUSED, void *address)
 {
   lsh_space_free(address);
 }
-
 #endif /* WITH_ZLIB */
 
 #include "lsh-make-seed.c.x"
@@ -443,7 +446,7 @@ get_dev_mem(struct yarrow256_ctx *ctx, enum source_type source)
 
       close(fd);
     }
-  #endif
+#endif
 }
 
 /* List of commands based on Peter Gutmann's cryptlib,
