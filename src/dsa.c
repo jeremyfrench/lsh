@@ -170,11 +170,35 @@ do_dsa_sign(struct signer *c,
   return signature;
 }
 
+static struct sexp *
+do_dsa_sign_spki(struct signer *c,
+		 struct sexp *hash, struct sexp *principal,
+		 UINT32 msg_length,
+		 UINT8 *msg)
+{
+  CAST(dsa_signer, closure, c);
+  mpz_t r, s;
+  struct sexp *signature;
+    
+  mpz_init(r); mpz_init(s);
+  generic_dsa_sign(closure, msg_length, msg, r, s);
+      
+  /* Build signature */
+  signature = sexp_l(5, sexp_a(ATOM_SIGNATURE), hash, principal,
+		     sexp_l(2, ATOM_R, sexp_un(r), -1),
+		     sexp_l(2, ATOM_S, sexp_un(s), -1), -1);
+  
+  mpz_clear(r);
+  mpz_clear(s);
+
+  return signature;
+}
+
 #if DATAFELLOWS_WORKAROUNDS
 #if 0
 struct lsh_string *dsa_sign_kludge(struct signer *c,
-					  UINT32 msg_length,
-					  UINT8 *msg)
+				   UINT32 msg_length,
+				   UINT8 *msg)
 {
   CAST(dsa_signer, self, c);
   mpz_t r, s;
@@ -232,6 +256,7 @@ struct signer *make_dsa_signer_kludge(struct signer *s)
   CAST(dsa_signer, dsa, s);
 	
   self->super.sign = do_dsa_sign_kludge;
+  self->super.sign_spki = NULL;
   
   self->dsa = dsa;
   return &self->super;
@@ -354,6 +379,32 @@ static int do_dsa_verify(struct verifier *c,
   return res;
 }
 
+static int do_dsa_verify_spki(struct verifier *c,
+			      UINT32 length,
+			      UINT8 *msg,
+			      struct sexp_iterator *i)
+{
+  CAST(dsa_verifier, closure, c);
+
+  int res;
+  mpz_t r, s;
+
+  mpz_init(r);
+  mpz_init(s);
+
+  /* NOTE: With the current definition of sexp_get_un, there are no
+   * requirements on the order in which r and s occur. */
+  res = (SEXP_LEFT(i) == 2)
+    && sexp_get_un(i, ATOM_R, r)
+    && sexp_get_un(i, ATOM_S, s)
+    && generic_dsa_verify(&closure->public, length, msg, r, s);
+
+  mpz_clear(r);
+  mpz_clear(s);
+
+  return res;
+}
+
 #if DATAFELLOWS_WORKAROUNDS
 
 #if 0
@@ -452,6 +503,77 @@ void init_dsa_public(struct dsa_public *public)
   mpz_init(public->y);
 }
 
+static int
+spki_init_dsa_public(struct dsa_public *key,
+		     struct sexp_iterator *i)
+{
+  return (sexp_get_un(i, ATOM_P, key->p)
+	  && sexp_get_un(i, ATOM_Q, key->q)
+	  && sexp_get_un(i, ATOM_G, key->g)
+	  && sexp_get_un(i, ATOM_Y, key->y) );
+}
+
+static struct signer *
+make_dsa_signer(struct signature_algorithm *c,
+		struct sexp_iterator *i)
+{
+  CAST(dsa_algorithm, closure, c);
+  NEW(dsa_signer, res);
+  init_dsa_public(&res->public);
+  mpz_init(res->a);
+
+  if ( (SEXP_LEFT(i) == 5)
+       && spki_init_dsa_public(&res->public, i)
+       && sexp_get_un(i, ATOM_X, res->a) )
+    {
+      res->random = closure->random;
+      res->super.sign = do_dsa_sign;
+      res->super.sign_spki = do_dsa_sign_spki;
+
+      return &res->super;
+    }
+  else
+    {
+      KILL(res);
+      return NULL;
+    }
+}
+
+/* Create a usual ssh-dss verifier from an spki key */
+static struct verifier *
+make_dsa_verifier(struct signature_algorithm *self UNUSED,
+		  struct sexp_iterator *i)
+{
+  NEW(dsa_verifier, res);
+  init_dsa_public(&res->public);
+
+  if ( (SEXP_LEFT(i) == 4)
+       && spki_init_dsa_public(&res->public, i))
+    {
+      res->super.verify = do_dsa_verify;
+      res->super.verify_spki = do_dsa_verify_spki;
+      return &res->super;
+    }
+  else
+    {
+      KILL(res);
+      return NULL;
+    }
+}
+
+struct signature_algorithm *make_dsa_algorithm(struct randomness *random)
+{
+  NEW(dsa_algorithm, dsa);
+
+  dsa->super.make_signer = make_dsa_signer;
+  dsa->super.make_verifier = make_dsa_verifier;
+  dsa->random = random;
+
+  return &dsa->super;
+}
+
+
+/* Constructor using a key of type ssh-dss */
 int parse_dsa_public(struct simple_buffer *buffer,
 		     struct dsa_public *public)
 {
@@ -468,54 +590,9 @@ int parse_dsa_public(struct simple_buffer *buffer,
 	  && (mpz_cmp(public->y, public->p) < 0) /* y < p */  );
 }
 
-/* FIXME: Outside of the protocol transactions, keys should be stored
- * in SPKI-style S-expressions. */
-static struct signer *
-make_dsa_signer(struct signature_algorithm *c,
-		UINT32 public_length,
-		UINT8 *public,
-		UINT32 private_length,
-		UINT8 *private)
-{
-  CAST(dsa_algorithm, closure, c);
-  NEW(dsa_signer, res);
-  
-  struct simple_buffer public_buffer;
-  struct simple_buffer private_buffer;  
-  int atom;
-
-  init_dsa_public(&res->public);
-  mpz_init(res->a);
-  
-  simple_buffer_init(&public_buffer, public_length, public);
-  if (!parse_atom(&public_buffer, &atom)
-      || (atom != ATOM_SSH_DSS) )
-    {
-      KILL(res);
-      return 0;
-    }
-  simple_buffer_init(&private_buffer, private_length, private);
-
-  if (! (parse_dsa_public(&public_buffer, &res->public)
-  	 && parse_bignum(&private_buffer, res->a)
-	 /* FIXME: Perhaps do some more sanity checks? */
-	 && (mpz_sgn(res->a) == 1)
-	 && parse_eod(&private_buffer) ))
-    {
-      KILL(res);
-      return NULL;
-    }
-  
-  res->super.sign = do_dsa_sign;
-  res->random = closure->random;
-
-  return &res->super;
-}
-
-static struct verifier *
-make_dsa_verifier(struct signature_algorithm *closure UNUSED,
-		  UINT32 public_length,
-		  UINT8 *public)
+struct dsa_verifier *
+make_ssh_dss_verifier(UINT32 public_length,
+		      UINT8 *public)
 {
   NEW(dsa_verifier, res);
   struct simple_buffer buffer;
@@ -541,75 +618,11 @@ make_dsa_verifier(struct signature_algorithm *closure UNUSED,
     }
 
   res->super.verify = do_dsa_verify;
-  return &res->super;
-}
-
-struct signature_algorithm *make_dsa_algorithm(struct randomness *random)
-{
-  NEW(dsa_algorithm, dsa);
-
-  dsa->super.make_signer = make_dsa_signer;
-  dsa->super.make_verifier = make_dsa_verifier;
-  dsa->random = random;
-
-  return &dsa->super;
-}
-
-int
-spki_init_dsa_public(struct dsa_public *key,
-		     struct sexp_iterator *i)
-{
-  return (sexp_get_un(i, ATOM_P, key->p)
-	  && sexp_get_un(i, ATOM_Q, key->q)
-	  && sexp_get_un(i, ATOM_G, key->g)
-	  && sexp_get_un(i, ATOM_Y, key->y) );
-}
-
-/* Create a usual ssh-dss verifier from an spki key */
-struct dsa_verifier *
-make_dsa_spki_verifier(struct sexp_iterator *i)
-{
-  NEW(dsa_verifier, res);
-  init_dsa_public(&res->public);
-
-  /* FIXME: Should we check the length? */
+  res->super.verify_spki = do_dsa_verify_spki;
   
-  if (spki_init_dsa_public(&res->public, i))
-    {
-      res->super.verify = do_dsa_verify;
-      return res;
-    }
-  else
-    {
-      KILL(res);
-      return NULL;
-    }
+  return res;
 }
 
-/* Create a usual ssh-dss signer from an spki key */
-struct dsa_signer *
-make_dsa_spki_signer(struct sexp_iterator *i,
-		     struct randomness *random)
-{
-  NEW(dsa_signer, res);
-  init_dsa_public(&res->public);
-  mpz_init(res->a);
-
-  /* FIXME: Should we check the length? */
-  
-  if (spki_init_dsa_public(&res->public, i)
-      && sexp_get_un(i, ATOM_X, res->a) )
-    {
-      res->random = random;
-      res->super.sign = do_dsa_sign;
-      return res;
-    }
-  else
-    {
-      KILL(res);
-      return NULL;
-    }
-}
 
 #if 0
 #if DATAFELLOWS_WORKAROUNDS
@@ -639,10 +652,12 @@ struct signature_algorithm *make_dsa_kludge_algorithm(struct randomness *random)
 #endif /* DATAFELLOWS_WORKAROUNDS */
 #endif
 
-#if 0
-static struct lsh_string *dsa_public_key(struct signer *dsa)
+struct lsh_string *
+ssh_dss_public_key(struct signer *s)
 {
+  CAST(dsa_signer, dsa, s);
   return ssh_format("%a%n%n%n%n",
-		    ATOM_SSH_DSS, dsa->p, dsa->q, dsa->g, dsa->y);
+		    ATOM_SSH_DSS,
+		    dsa->public.p, dsa->public.q,
+		    dsa->public.g, dsa->public.y);
 }
-#endif
