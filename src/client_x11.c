@@ -156,7 +156,7 @@
 
 /* The size of a connection setup message with a 16 octet
  * MIT-MAGIC-COOKIE-1. Using such a low value leaks the information
- * that we expect a 16-octet cookie, but I don't think that's areal
+ * that we expect a 16-octet cookie, but I don't think that's a real
  * problem. */
 #define X11_SETUP_MAX_LENGTH 48
 
