@@ -34,7 +34,6 @@
 
 #include <assert.h>
 /* #include <stdio.h> */
-#include <stdarg.h>
 #include <ctype.h>
 
 #if HAVE_UNISTD_H

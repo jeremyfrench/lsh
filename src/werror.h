@@ -29,6 +29,8 @@
 #include "bignum.h"
 #include "lsh_argp.h"
 
+#include <stdarg.h>
+
 /* Global variables */
 extern int trace_flag;
 extern int debug_flag;
