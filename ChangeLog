@@ -1,3 +1,7 @@
+2003-02-11  Niels Möller  <niels@s3.kth.se>
+
+	* misc/xenofarm.sh: Compile with make -k.
+
 2003-02-10  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/.dist_classes: Deleted lsh_proxy.c.x and sexp-conv.c.x.
