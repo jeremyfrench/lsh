@@ -124,6 +124,9 @@ do_##NAME(struct packet_handler *s UNUSED,		\
 
        ; Features or bugs peculiar to the peer
        (peer_flags . UINT32)
+
+       ; Timer, used both for timeouts and for key reexchange
+       (timer object resource)
        
        ; Information about a logged in user. NULL unless some kind of
        ; user authentication has been performed.
@@ -200,6 +203,15 @@ make_connection_close_handler(struct ssh_connection *c);
 /* Serialization */
 void connection_lock(struct ssh_connection *self);
 void connection_unlock(struct ssh_connection *self);
+
+/* Timeouts */
+void
+connection_set_timeout(struct ssh_connection *connection,
+		       unsigned seconds,
+		       const char *msg);
+
+void
+connection_clear_timeout(struct ssh_connection *connection);
 
 /* Table of packet types */
 extern const char *packet_types[0x100];

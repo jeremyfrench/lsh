@@ -295,6 +295,8 @@ make_ssh_connection(UINT32 flags,
     = connection->session_id = NULL;
 
   connection->peer_flags = 0;
+
+  connection->timer = NULL;
   connection->user = NULL;
   
   connection->resources = make_resource_list();
@@ -427,4 +429,49 @@ void connection_unlock(struct ssh_connection *self)
     = STATIC_EXCEPTION(EXC_PAUSE_START_CONNECTION, "unlocking connection.");
     
   EXCEPTION_RAISE(self->e, &unpause);
+}
+
+
+/* Timeouts */
+/* GABA:
+   (class
+     (name connection_timeout)
+     (super lsh_callback)
+     (vars
+       (connection object ssh_connection)
+       (e const object exception)))
+*/
+
+static void
+do_connection_timeout(struct lsh_callback *s)
+{
+  CAST(connection_timeout, self, s);
+  EXCEPTION_RAISE(self->connection->e, self->e);
+}
+
+void
+connection_clear_timeout(struct ssh_connection *connection)
+{
+  if (connection->timer)
+    {
+      KILL_RESOURCE(connection->timer);
+      connection->timer = NULL;
+    }
+}
+
+void
+connection_set_timeout(struct ssh_connection *connection,
+		       unsigned seconds,
+		       const char *msg)
+{
+  NEW(connection_timeout, timeout);
+  timeout->super.f = do_connection_timeout;
+  timeout->connection = connection;
+  timeout->e = make_protocol_exception(0, msg);
+
+  connection_clear_timeout(connection);
+  
+  connection->timer = io_callout(&timeout->super,
+				 seconds);
+  REMEMBER_RESOURCE(connection->resources, connection->timer);
 }
