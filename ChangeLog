@@ -1,3 +1,7 @@
+2003-02-26  Pontus Sköld  <pont@soua.net>
+
+	* src/lsh-krb-checkpw.c: Include config.h if available.
+
 2003-02-25  Niels Möller  <niels@s3.kth.se>
 
 	* src/testsuite/Makefile.am (AM_CPPFLAGS): Use $(srcdir)/..

@@ -25,6 +25,10 @@
 
 #include "lsh_types.h"
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
