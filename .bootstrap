@@ -15,12 +15,13 @@ relative_symlink() {
 	shift
 	while [ $# -ge 1 ] ; do
 	    dir="$1"
-	    if [ "$dir" = "." ] ;
+	    if [ "$dir" = "." ] ; then
 		ln -s "$target" "$dir"
 	    else
 		dotdots="`echo "$dir" | sed 's%[^/][^/]*%..%g'`"
-		(cd "$dir" && ln -s "$dotdots/$target" .)
+		(cd "$dir" && ln -s "$dotdots/$target" . || true)
 	    fi
+	    shift
 	done
     )
 }
@@ -28,17 +29,17 @@ relative_symlink() {
 relative_symlink misc/run-tests \
     src/testsuite src/argp/testsuite src/nettle/testsuite src/spki/testsuite
 
-relative_symlink misc/acinclude.m4 \
-    . src/nettle src/spki
+# relative_symlink misc/acinclude.m4 \
+#     . src/nettle src/spki
+# 
+# relative_symlink misc/memxor.c \
+#     src src/nettle
+# 
+# relative_symlink misc/memxor.h \
+#     src src/nettle
 
-relative_symlink misc/memxor.c \
-    src src/nettle
-
-relative_symlink misc/memxor.h \
-    src src/nettle
-    
 for subdir in src/argp src/nettle src/sftp src/spki ; do
-    (cd subdir && ./.bootstrap)
+    (cd $subdir && ./.bootstrap)
 done
 
 aclocal && autoconf && autoheader && automake -a
