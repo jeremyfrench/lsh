@@ -25,13 +25,26 @@
 #include "config.h"
 #endif
 
+#include <assert.h>
+#include <errno.h>
+
+#include "ssh_write.h"
+
+#include "lsh_string.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#define GABA_DEFINE
+# include "ssh_write.h.x"
+#undef GABA_DEFINE
+
 /* Sending 5 packets at a time should be sufficient. */
 #define N_IOVEC 5
 
 void
 init_ssh_write_state(struct ssh_write_state *self)
 {
-  string_queue_init(self->q);
+  string_queue_init(&self->q);
   self->done = 0;
 }
 
@@ -46,14 +59,16 @@ make_ssh_write_state(void)
 static void *
 oop_ssh_write(oop_source *source, int fd, oop_event event, void *state)
 {
+  CAST(ssh_write_state, self, (struct lsh_object *) state);
   struct iovec iv[N_IOVEC];
-  struct lsh_string *first;
   unsigned n = 0;
   int res;
+
+  assert(event == OOP_WRITE);
   
   FOR_STRING_QUEUE(&self->q, s)
     {
-      iv[n].iov_base = lsh_string_data(s);
+      iv[n].iov_base = (char *) lsh_string_data(s);
       iv[n].iov_len = lsh_string_length(s);
 
       if (++n == N_IOVEC)
@@ -62,8 +77,8 @@ oop_ssh_write(oop_source *source, int fd, oop_event event, void *state)
   assert(n > 0);
   assert(iv[0].iov_len > self->done);
 
-  iv[0].iov_base += done;
-  iv[0].iov_len -= done;
+  iv[0].iov_base = (char *) iv[0].iov_base + self->done;
+  iv[0].iov_len -= self->done;
 
   do
     res = writev(fd, iv, n);
@@ -76,12 +91,16 @@ oop_ssh_write(oop_source *source, int fd, oop_event event, void *state)
     }
   else
     {
+      uint32_t written;
       unsigned i;
+      
       assert(res > 0);
-      for (i = 0; i < n && res >= iv[i].iov_len; i++)
+      written = res;
+      
+      for (i = 0; i < n && written >= iv[i].iov_len; i++)
 	{
 	  string_queue_remove_head(&self->q);
-	  res -= iv[i].iov_len;
+	  written -= iv[i].iov_len;
 	}
       if (string_queue_is_empty(&self->q))
 	{
@@ -89,12 +108,12 @@ oop_ssh_write(oop_source *source, int fd, oop_event event, void *state)
 	  source->cancel_fd(source, fd, OOP_WRITE);
 	}
       else
-	self->done = res;
+	self->done = written;
     }
   return OOP_CONTINUE;
 }
 
-static int
+int
 ssh_write_data(struct ssh_write_state *self,
 	       oop_source *source, int fd,
 	       struct lsh_string *data)
@@ -117,7 +136,7 @@ ssh_write_data(struct ssh_write_state *self,
 	  if (errno != EWOULDBLOCK)
 	    return -1;
 
-	  done = 0;
+	  self->done = 0;
 	start_queue:
 	  string_queue_add_tail(&self->q, data);
 	  source->on_fd(source, fd, OOP_WRITE, oop_ssh_write, self);
@@ -131,7 +150,7 @@ ssh_write_data(struct ssh_write_state *self,
       else
 	{
 	  /* Partial write */
-	  done = res;
+	  self->done = res;
 	  goto start_queue;
 	}
     }

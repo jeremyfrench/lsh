@@ -21,6 +21,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <oop.h>
+
+#include "queue.h"
+
+#define GABA_DECLARE
+# include "ssh_write.h.x"
+#undef GABA_DECLARE
+
 /* GABA:
    (class
      (name ssh_write_state)
