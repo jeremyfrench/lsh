@@ -1863,13 +1863,25 @@ make_channel_write_extended(struct ssh_channel *channel,
 struct io_callback *
 make_channel_read_data(struct ssh_channel *channel)
 {
-  return make_read_data(channel, make_channel_write(channel));
-}
+  /* byte      SSH_MSG_CHANNEL_DATA
+   * uint32    recipient channel
+   * string    data
+   *
+   * gives 9 bytes of overhead, including the length field. */
+    
+  return make_read_data(channel, 9, make_channel_write(channel)); }
 
 struct io_callback *
 make_channel_read_stderr(struct ssh_channel *channel)
 {
-  return make_read_data(channel,
+  /* byte      SSH_MSG_CHANNEL_EXTENDED_DATA
+   * uint32    recipient_channel
+   * uint32    data_type_code
+   * string    data
+   *
+   * gives 13 bytes of overhead, including the length field for the string. */
+
+  return make_read_data(channel, 13,
 			make_channel_write_extended(channel,
 						    SSH_EXTENDED_DATA_STDERR));
 }    
@@ -1879,8 +1891,7 @@ make_channel_read_stderr(struct ssh_channel *channel)
      (name channel_close_callback)
      (super close_callback)
      (vars
-       (channel object ssh_channel)))
-*/
+       (channel object ssh_channel))) */
 
 /* Close callback for files we are reading from.
  *
