@@ -1,7 +1,50 @@
+2001-02-11  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/sftp/filemode.c, src/sftp/filemode.h, src/sftp/idcache.c:
+	New files, copied from GNU Fileutils-4.0. 
+
+	* src/sftp/sftp-test-client.c: Added dummy functions do_ls,
+	do_get, do_put and do_stat, and call them from main.
+
+	* src/sftp/sftp-server.c: Merged code from Pontus Sköld.
+	(sftp_put_longname_mode): New function.
+	(sftp_put_longname): New function.
+	(sftp_put_filename): New function.
+	(getuser): New dummy function.
+	(getgroup): New dummy function.
+
+	* src/sftp/buffer.c: Let most output-related functions call exit()
+	directly on failure.
+	(sftp_put_reserve_length): New function, replacing sftp_put_reserve.
+	(sftp_put_length): New function.
+	(sftp_put_final_length): New function.
+	(sftp_put_printf): New function.
+	(sftp_put_strftime): New function.
+	(sftp_clear_attrib): Moved here from sftp-server.c.
+	(sftp_skip_extension): Likewise.
+	(sftp_get_attrib): Likewise.
+	(sftp_put_attrib): Likewise.
+
+2001-02-11  Pavel Roskin  <proski@gnu.org>
+
+	* acinclude.m4: Always quote first argument to AC_DEFUN
+	to allow redefining existing macros.
+	* configure.in: Quote the second argument to AC_SEARCH_LIBGMP.
+
+2001-02-08  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/keyexchange.c (do_kexinit_filter): Don't crash if there are
+	no appropriate hostkeys. 
+
 2001-02-08  Niels Möller  <nisse@ehand.com>
 
 	* src/dsa.c (generic_dsa_sign): Commented out debug statement that
 	leaks information about the secret key. 
+
+2001-02-07  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/algorithms.c (filter_algorithms): Document that the
+	functions may return NULL, and never returns an empty list.
 
 2001-02-04  Niels Möller  <nisse@lysator.liu.se>
 
