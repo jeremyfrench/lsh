@@ -604,6 +604,8 @@ lsftp_dc_r_startglob(const char *glob, int sloppy, int nocheck )
   int deeper = 0;
   int size;
 
+  /* FIXME: Do we allow for both qualified and unqualified paths to be globbed? */
+
   if( sloppy )
     return lsftp_dc_r_sloppy_glob( glob, nocheck );
 
@@ -673,7 +675,7 @@ lsftp_dc_r_startglob(const char *glob, int sloppy, int nocheck )
   while( mem[i] )
     if( 
        lsftp_dc_glob_matches( 
-			     lsftp_unqualify_path( mem[i] ), 
+			     mem[i], 
 			     mglob,
 			     0
 			     ) 
@@ -683,7 +685,7 @@ lsftp_dc_r_startglob(const char *glob, int sloppy, int nocheck )
 	{
 	  const char *tmp;
 
-	  tmp = strdup( lsftp_unqualify_path( mem[i] ) );
+	  tmp = strdup( mem[i] );
 
 	  if( tmp )
 	    {
