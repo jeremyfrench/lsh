@@ -50,10 +50,14 @@ extern struct crypto_algorithm cast128_algorithm;
 struct crypto_algorithm *make_blowfish_algorithm(UINT32 key_size);
 extern struct crypto_algorithm blowfish_algorithm;
 
+#if 0
 struct crypto_algorithm *make_twofish_algorithm(UINT32 key_size);
 extern struct crypto_algorithm twofish128_algorithm;
 extern struct crypto_algorithm twofish192_algorithm;
 extern struct crypto_algorithm twofish256_algorithm;
+#endif
+
+extern struct crypto_algorithm crypto_twofish256_cbc_algorithm;
 
 #if 0
 struct crypto_algorithm *make_rijndael_algorithm(UINT32 key_size);

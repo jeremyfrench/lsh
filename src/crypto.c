@@ -31,6 +31,7 @@
 #include "nettle/arcfour.h"
 #include "nettle/aes.h"
 #include "nettle/des.h"
+#include "nettle/twofish.h"
 
 #include "nettle/cbc.h"
 
@@ -107,8 +108,8 @@ do_aes_decrypt(struct crypto_instance *s,
 }
 
 static struct crypto_instance *
-make_aes_instance(struct crypto_algorithm *algorithm, int mode,
-		  const UINT8 *key, const UINT8 *iv)
+make_aes_cbc_instance(struct crypto_algorithm *algorithm, int mode,
+                      const UINT8 *key, const UINT8 *iv)
 {
   NEW(aes_instance, self);
 
@@ -124,7 +125,7 @@ make_aes_instance(struct crypto_algorithm *algorithm, int mode,
 }
 
 struct crypto_algorithm crypto_aes256_cbc_algorithm =
-{ STATIC_HEADER, AES_BLOCK_SIZE, 32, AES_BLOCK_SIZE, make_aes_instance};
+{ STATIC_HEADER, AES_BLOCK_SIZE, 32, AES_BLOCK_SIZE, make_aes_cbc_instance};
 
 
 /* Triple DES */
@@ -155,9 +156,9 @@ do_des3_decrypt(struct crypto_instance *s,
 }
 
 static struct crypto_instance *
-make_des3_instance(struct crypto_algorithm *algorithm UNUSED,
-		   int mode,
-		   const UINT8 *key, const UINT8 *iv UNUSED)
+make_des3_cbc_instance(struct crypto_algorithm *algorithm UNUSED,
+                       int mode,
+                       const UINT8 *key, const UINT8 *iv)
 {
   NEW(des3_instance, self);
   UINT8 pkey[DES3_KEY_SIZE];
@@ -170,7 +171,9 @@ make_des3_instance(struct crypto_algorithm *algorithm UNUSED,
 			? do_des3_encrypt
 			: do_des3_decrypt);
 
-  if (des3_set_key(&self->ctx.ctx, key))
+  CBC_SET_IV(&self->ctx, iv);
+  
+  if (des3_set_key(&self->ctx.ctx, pkey))
     return(&self->super);
 
   switch(self->ctx.ctx.status)
@@ -188,12 +191,11 @@ make_des3_instance(struct crypto_algorithm *algorithm UNUSED,
 
 struct crypto_algorithm crypto_des3_cbc_algorithm =
 { STATIC_HEADER,
-  DES3_BLOCK_SIZE, DES3_KEY_SIZE, DES3_BLOCK_SIZE, make_des3_instance };
+  DES3_BLOCK_SIZE, DES3_KEY_SIZE, DES3_BLOCK_SIZE, make_des3_cbc_instance };
 
-#if 0
 
 /* Twofish */
-/* ;;GABA:
+/* GABA:
    (class
      (name twofish_instance)
      (super crypto_instance)
@@ -220,7 +222,7 @@ do_twofish_decrypt(struct crypto_instance *s,
 }
 
 static struct crypto_instance *
-make_twofish_instance(struct crypto_algorithm *algorithm, int mode,
+make_twofish_cbc_instance(struct crypto_algorithm *algorithm, int mode,
 		      const UINT8 *key, const UINT8 *iv UNUSED)
 {
   NEW(twofish_instance, self);
@@ -231,16 +233,12 @@ make_twofish_instance(struct crypto_algorithm *algorithm, int mode,
 			: do_twofish_decrypt);
 
   twofish_set_key(&self->ctx.ctx, algorithm->key_size, key);
+  CBC_SET_IV(&self->ctx, iv);
 
   return(&self->super);
 }
 
-struct crypto_algorithm twofish128_algorithm =
-{ STATIC_HEADER, TWOFISH_BLOCK_SIZE, 16, 0, make_twofish_instance};
+struct crypto_algorithm crypto_twofish256_cbc_algorithm =
+{ STATIC_HEADER,
+  TWOFISH_BLOCK_SIZE, 32, TWOFISH_BLOCK_SIZE, make_twofish_cbc_instance};
 
-struct crypto_algorithm twofish192_algorithm =
-{ STATIC_HEADER, TWOFISH_BLOCK_SIZE, 24, 0, make_twofish_instance};
-
-struct crypto_algorithm twofish256_algorithm =
-{ STATIC_HEADER, TWOFISH_BLOCK_SIZE, 32, 0, make_twofish_instance};
-#endif

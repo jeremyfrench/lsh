@@ -52,7 +52,7 @@ all_symmetric_algorithms()
 		    ,
 		    ATOM_ARCFOUR, &crypto_arcfour_algorithm,
 		    ATOM_BLOWFISH_CBC, crypto_cbc(&blowfish_algorithm),
-		    ATOM_TWOFISH_CBC, crypto_cbc(&twofish256_algorithm),
+		    ATOM_TWOFISH_CBC, &crypto_twofish256_cbc_algorithm,
                     ATOM_AES256_CBC, &crypto_aes256_cbc_algorithm,
 		    ATOM_RIJNDAEL_CBC_LOCAL, &crypto_aes256_cbc_algorithm,
 		    ATOM_SERPENT_CBC_LOCAL, crypto_cbc(&serpent256_algorithm),
