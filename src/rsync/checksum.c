@@ -49,15 +49,18 @@ rsync_update_1(unsigned *ap, unsigned *cp,
  * END points to new data to be added. HASH points to a hash table.
  *
  * The function returns the hash node at a hash-tag hit, in which case
- * FOUND is the number of octets that the hashed region was advanced
- * (0 < *found <= length).
+ * DONE is the number of octets that the hashed region was advanced (0
+ * < *found <= length).
+ *
+ * If no tag hit occurs, return NULL and set DONE = LENGTH. This way,
+ * *DONE will always reflect how far the region was advanced.
  *
  * Note that the region is always advanced at least one octet. */
 
 struct rsync_node *
 rsync_search(unsigned *ap, unsigned *bp, unsigned block_size,
 	     UINT32 length, UINT8 *start, UINT8 *end,
-	     UINT32 *found, struct rsync_node **hash)
+	     UINT32 *done, struct rsync_node **hash)
 {
   unsigned a = *ap;
   unsigned b = *bp;
@@ -85,11 +88,12 @@ rsync_search(unsigned *ap, unsigned *bp, unsigned block_size,
 
       if (n)
 	{
-	  *found = i;
+	  *done = i;
 	  *ap = a & 0xffff;
 	  *bp = a & 0xffff;
 	  return n;
 	}
     }
+  *done = length;
   return NULL;
 }
