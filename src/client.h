@@ -39,5 +39,13 @@ make_client_callback(struct io_backend *b,
 
 struct read_handler *make_client_read_line(struct ssh_connection *c);
 struct close_callback *make_client_close_handler(void);
-  
+
+struct ssh_service *make_accept_service_handler(int service_name,
+						struct ssh_service *service);
+
+struct ssh_service *request_service(int service_name,
+				    struct ssh_service *service);
+
+struct connection_startup *make_client_startup(int want_shell);
+
 #endif /* LSH_CLIENT_H_INCLUDED */

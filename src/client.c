@@ -23,20 +23,24 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+/* FIXME: Why include stdio? */
 #include <stdio.h>
 
 #include "client.h"
 
 #include "abstract_io.h"
+#include "channel.h"
 #include "connection.h"
 #include "crypto.h"
 #include "debug.h"
 #include "encrypt.h"
 #include "format.h"
 #include "pad.h"
+#include "parse.h"
 #include "read_line.h"
 #include "read_packet.h"
 #include "service.h"
+#include "ssh.h"
 #include "unpad.h"
 #include "version.h"
 #include "werror.h"
@@ -250,6 +254,15 @@ static int do_accept_service(struct packet_handler *c,
   return LSH_FAIL | LSH_DIE;
 }
 
+struct service_request
+{
+  struct ssh_service super;
+
+  int service_name;
+  struct ssh_service *service;
+};
+
+/* FIXME: This should be a packet handler */
 struct ssh_service *make_accept_service_handler(int service_name,
 						struct ssh_service *service)
 {
@@ -263,25 +276,16 @@ struct ssh_service *make_accept_service_handler(int service_name,
   return &closure->super;
 }
 
-struct service_request
-{
-  struct ssh_service super;
-
-  int service_name;
-  struct ssh_service *service;
-};
-
 static int do_request_service(struct ssh_service *c,
 			      struct ssh_connection *connection)
 {
   struct service_request *closure = (struct service_request *) c;
-  int res;
   
   MDEBUG(c);
 
-  connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = make_accept_service(...);
+  connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = make_accept_service_handler(...);
 
-  return A_WRITE(connection->write, format_service_request(closure->name));
+  return A_WRITE(connection->write, format_service_request(closure->service_name));
 }
 
 struct ssh_service *request_service(int service_name,
@@ -299,7 +303,7 @@ struct ssh_service *request_service(int service_name,
 
 struct session
 {
-  struct channel super;
+  struct ssh_channel super;
 
   int expect_close;
 
@@ -307,9 +311,9 @@ struct session
   UINT32 max_window;
   
   /* To access stdio */
-  struct io_fd *stdin;
-  struct write_buffer *stdout;
-  struct write_buffer *stderr;
+  struct io_fd *in;
+  struct abstract_write *out;
+  struct abstract_write *err;
 };
 
 static int client_session_die(struct ssh_channel *c, struct abstract_write *write)
@@ -326,7 +330,7 @@ static int client_session_die(struct ssh_channel *c, struct abstract_write *writ
   exit(EXIT_FAILURE);
 }
 
-static int do_recieve(struct ssh_channel *self, struct abstract_write *write,
+static int do_recieve(struct ssh_channel *c, struct abstract_write *write,
 		      int type, struct lsh_string *data)
 {
   struct session *closure = (struct session *) c;
@@ -337,7 +341,8 @@ static int do_recieve(struct ssh_channel *self, struct abstract_write *write,
   if (closure->super.rec_window_size < closure->min_window)
     {
       res = A_WRITE(write, prepare_window_adjust
-		    (channel, closure->max_window - closure->super.rec_window_size));
+		    (&closure->super,
+		     closure->max_window - closure->super.rec_window_size));
       if (LSH_CLOSEDP(res))
 	return res;
     }
@@ -345,9 +350,9 @@ static int do_recieve(struct ssh_channel *self, struct abstract_write *write,
   switch(type)
     {
     case CHANNEL_DATA:
-      return A_WRITE(closure->stdout, data);
+      return A_WRITE(closure->out, data);
     case CHANNEL_STDERR_DATA:
-      return A_WRITE(closure->stderr, data);
+      return A_WRITE(closure->err, data);
     default:
       fatal("Internal error!\n");
     }
@@ -360,7 +365,7 @@ static int do_start_session(struct ssh_channel *c, struct abstract_write *write)
 
   MDEBUG(closure);
 
-  closure->recieve = do_recieve;
+  closure->super.recieve = do_recieve;
 }
 
 /* We have opened a channel of type "session" */
@@ -387,7 +392,7 @@ struct client_startup
   int shell;
 };
 
-void int do_client_startup(struct connection_startup *c,
+static int do_client_startup(struct connection_startup *c,
 			   struct channel_table *table,
 			   struct abstract_write *write)
 {
@@ -401,11 +406,12 @@ void int do_client_startup(struct connection_startup *c,
 /* Request opening a session. */
 struct connection_startup *make_client_startup(int want_shell)
 {
-  struct ssh_service *closure;
+  struct client_startup *closure;
 
   NEW(closure);
   closure->super.start = do_client_startup;
   closure->shell = want_shell;
+
   return &closure->super;
 }
 
