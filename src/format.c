@@ -32,8 +32,6 @@
 #include <assert.h>
 #include <string.h>
 
-struct lsh_string *ssh_format(const char *format, ...);
-
 struct lsh_string *ssh_format(const char *format, ...)
 {
   va_list args;
@@ -86,6 +84,7 @@ UINT32 ssh_vformat_length(const char *f, va_list args)
 	{
 	  int literal = 0;
 	  int decimal = 0;
+	  int unsigned_form = 0;
 	  
 	  while(*++f)
 	    {
@@ -99,6 +98,9 @@ UINT32 ssh_vformat_length(const char *f, va_list args)
 		  break;
 		case 'f':
 		  /* Do nothing */
+		  break;
+		case 'u':
+		  unsigned_form = 1;
 		  break;
 		default:
 		  goto end_options;
@@ -226,18 +228,27 @@ end_options:
 		MP_INT *n = va_arg(args, MP_INT*);
 
 		/* Calculate length of written number */
-		unsigned l = bignum_format_s_length(n);
+		unsigned l;
+		if (unsigned_form)
+		  {
+		    assert(mpz_sgn(n) >= 0);
+		    l = bignum_format_u_length(n);
+		  }
+		else
+		  l = bignum_format_s_length(n);
 
 		length += l;
 
+		/* Decimal not supported. */
+		assert(!decimal);
+#if 0
 		if (decimal)
 		  {
-		    fatal("ssh_format: Decimal lengths not supported for %%n\n");
-#if 0
 		    length += format_size_in_decimal(l) + 1;
-#endif
 		  }
-		else if (!literal)
+		else
+#endif
+		if (!literal)
 		  length += 4;
 
 		break;
@@ -267,6 +278,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	  int literal = 0;
 	  int do_free = 0;
 	  int decimal = 0;
+	  int unsigned_form = 0;
 	  
 	  while(*++f)
 	    {
@@ -280,6 +292,9 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 		  break;
 		case 'f':
 		  do_free = 1;
+		  break;
+		case 'u':
+		  unsigned_form = 1;
 		  break;
 		default:
 		  goto end_options;
@@ -452,18 +467,22 @@ end_options:
 		MP_INT *n = va_arg(args, MP_INT *);
 		UINT32 length;
 		UINT8 *start = buffer; /* Where to store the length */
+
+		/* Decimal not supported */
+		assert(!decimal);
 		
-		if (decimal)
-		  {
-		  fatal("ssh_format: Decimal lengths not supported for %%n\n");
-#if 0
-		    buffer += write_decimal_length(buffer, length);
-#endif
-		  }
-		else if (!literal)
+		if (!literal)
 		  buffer += 4;
 
-		length = bignum_format_s(n, buffer);
+		if (unsigned_form)
+		  {
+		    assert(mpz_sgn(n) >= 0);
+		
+		    length = bignum_format_u(n, buffer);
+		  }
+		else
+		  length = bignum_format_s(n, buffer);
+		
 		buffer += length;
 
 		if (!literal)
@@ -474,7 +493,6 @@ end_options:
 	    default:
 	      fatal("ssh_vformat_write: bad format string");
 	      break;
-	      
 	    }
 	}
       else

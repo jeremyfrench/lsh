@@ -70,6 +70,9 @@
  *
  * "f" (as in free). Frees the input string after it has been copied.
  * Applicable to %S only.
+ *
+ * "u" (as in unsigned). Used with bignums, to use unsigned-only
+ * number format.
  */
 
 struct lsh_string *ssh_format(const char *format, ...);
