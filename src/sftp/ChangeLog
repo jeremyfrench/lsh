@@ -1,3 +1,8 @@
+2002-02-22  Pontus  <pont@it.uu.se>
+
+	* configure.ac (lsh_cv_c_attribute): Removed obsolete checks for
+	behaviour of stat and lstat.
+
 2002-02-12  Pontus  <pont@it.uu.se>
 
 	* commands.c (com_mv): Didn't properly check for error in return value of
