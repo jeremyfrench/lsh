@@ -157,17 +157,21 @@ struct callback
  * channels are closed. */
 #define LSH_CHANNEL_PENDING_CLOSE 0x80
 
+/* Returned by channel related functions if the channel should be
+ * closed immediately */
+#define LSH_CHANNEL_CLOSE 0x100
+
 /* Indicates that a channel is ready to receive remote data */
-#define LSH_CHANNEL_READY_REC 0x100
+#define LSH_CHANNEL_READY_REC 0x200
 
 /* Indicates that a channel is ready to send data to the remote end. */
-#define LSH_CHANNEL_READY_SEND 0x200
+#define LSH_CHANNEL_READY_SEND 0x400
 
 /* Syntax error (used in the sexp parser) */
-#define LSH_SYNTAX 0x400
+#define LSH_SYNTAX 0x1000
 
 /* Used to indicate that an sexp have been parsed successfully */
-#define LSH_PARSED_OBJECT 0x800
+#define LSH_PARSED_OBJECT 0x2000
 
 /* Non-zero if no messages can be sent over the connection. Used when
  * processing error codes from in the middle of the processing a
