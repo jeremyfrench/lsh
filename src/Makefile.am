@@ -46,12 +46,13 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c \
 	daemon.c \
 	debug.c dh_exchange.c \
 	dsa.c \
+	encrypt.c \
 	exception.c \
 	format.c gc.c \
 	gateway.c gateway_channel.c gateway_commands.c \
 	handshake.c \
 	interact.c io.c io_commands.c \
-	keyexchange.c \
+	kexinit.c kexinit_state.c keyexchange.c \
 	list.c lookup_verifier.c \
 	lock_file.c \
 	lsh_string.c parse.c \
@@ -127,7 +128,7 @@ LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 lshg_SOURCES = lshg.c dummy.c
 lshg_LDADD = liblsh.a @LIBARGP@
 
-lshd_SOURCES = lshd.c ssh_read.c
+lshd_SOURCES = lshd.c ssh_read.c lshd_read.c lshd_keyexchange.c
 
 class-map: $(srcdir)/make-class-map $(dist_classes)
 	cat $(dist_classes) | grep '^CLASS:' \
