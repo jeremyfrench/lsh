@@ -217,6 +217,7 @@ spki_check_type(struct sexp *e, int type, struct sexp_iterator **res)
   return 0;
 }
 
+#if 0
 /* NOTE: This function requires a particular order. */
 static struct sexp *dsa_private2public(struct sexp_iterator *i)
 {
@@ -277,9 +278,15 @@ do_spki_private2public(struct command *s UNUSED,
     }
 }
 
-struct command spki_public2private
+struct command spki_private2public
 = STATIC_COMMAND(do_spki_private2public);
+#endif
 
+COMMAND_SIMPLE(spki_signer2public)
+{
+  CAST_SUBTYPE(signer, private, a);
+  return &SIGNER_PUBLIC(private)->super;
+}
 
 /* Create an SPKI hash from an s-expression. */
 /* GABA:
@@ -382,14 +389,16 @@ parse_dsa_private_key(struct sexp_iterator *i
 }
 #endif
 
-/* FIXME: Use exceptions here? */
-static struct keypair *
+static void 
 parse_private_key(struct alist *algorithms,
-                  struct sexp_iterator *i
-		  /* , struct exception_handler *e */)
+                  struct sexp_iterator *i,
+		  struct command_continuation *c,
+		  struct exception_handler *e)
 {
+  struct sexp *expr = SEXP_GET(i);
   struct sexp_iterator *inner;
-  int type = spki_get_type(SEXP_GET(i), &inner);
+  int type = spki_get_type(expr, &inner);
+
   CAST_SUBTYPE(signature_algorithm, algorithm,
 	       ALIST_GET(algorithms, type));
 
@@ -399,26 +408,31 @@ parse_private_key(struct alist *algorithms,
       if (!s)
 	{
 	  werror("parse_private_key: Invalid key.\n");
-	  return NULL;
+	  SPKI_ERROR(e, "spki.c: Invalid key.", expr); 
+	  return;
 	}
       /* Test key here? */
       switch (type)
 	{
 	case ATOM_DSA:
-	  /* FIXME: Return two key pairs? */
-	  return make_keypair(ATOM_SSH_DSS,
-			      ssh_dss_public_key(s),
-			      s);
+	  COMMAND_RETURN(c, make_keypair(ATOM_SSH_DSS,
+					 ssh_dss_public_key(s),
+					 s));
+	  /* Fall through */
 	default:
-	  /* FIXME: Get a corresponding public key. */
-	  /* Fall through to error case */
+	  /* Get a corresponding public key. */
+	  COMMAND_RETURN(c, make_keypair(ATOM_SPKI,
+					 sexp_format(SIGNER_PUBLIC(s), SEXP_CANONICAL, 0),
+					 s));
+
 	  break;
 	}
     }
-
-  /* SPKI_ERROR(e, "spki.c: Unknown key type (only dsa is supported).", expr); */
-  werror("spki.c: Unknown key type (only dsa is supported).");
-  return NULL;
+  else
+    {
+      werror("spki.c: Unknown key type (only dsa is supported).");
+      SPKI_ERROR(e, "spki.c: Unknown key type (only dsa is supported).", expr);
+    }
 }
 
 #if 0
@@ -429,10 +443,11 @@ publickey2keypair(struct sexp_iterator *i,
 }
 #endif
 
-static void do_spki_parse_key(struct command *s, 
-	                      struct lsh_object *a,
-			      struct command_continuation *c,
-			      struct exception_handler *e)
+static void
+do_spki_parse_key(struct command *s, 
+		  struct lsh_object *a,
+		  struct command_continuation *c,
+		  struct exception_handler *e)
 {
   CAST(spki_parse_key, self, s);
   CAST_SUBTYPE(sexp, key, a);
@@ -442,17 +457,11 @@ static void do_spki_parse_key(struct command *s,
   switch (spki_get_type(key, &i)) 
     {
       default:
-        SPKI_ERROR(e, "Keyfile is not a private nor a public key.", key);
+        SPKI_ERROR(e, "spki.c: Expected private-key expression.", key);
         return;
       case ATOM_PRIVATE_KEY:
 	{
-	  struct keypair *key = parse_private_key(self->algorithms, i /* , e */);
-
-	  if (key)
-	    COMMAND_RETURN(c, key);
-	  else
-	    SPKI_ERROR(e, "Invalid key.", NULL);
-	  
+	  parse_private_key(self->algorithms, i, c, e);
 	  break;
 	}
 #if 0
@@ -462,6 +471,7 @@ static void do_spki_parse_key(struct command *s,
     } 
 }
 
+#if 0
 struct command *
 make_spki_parse_key(struct alist *algorithms)
 {
@@ -471,8 +481,20 @@ make_spki_parse_key(struct alist *algorithms)
   self->algorithms = algorithms;
   return &self->super;
 }
+#endif
 
-/* GABA:
+COMMAND_SIMPLE(spki_parse_private_key_command)
+{
+  CAST_SUBTYPE(alist, algorithms, a);
+  NEW(spki_parse_key, self);
+  
+  self->super.call = do_spki_parse_key;
+  self->algorithms = algorithms;
+  return &self->super.super;
+}
+  
+#if 0
+/* ;; GABA:
    (class
      (name handle_key)
      (super command_continuation)
@@ -526,7 +548,7 @@ read_spki_key_file(const char *name,
     }
   return NULL;
 }
-
+#endif
 
 /* 5-tuples */
 
@@ -965,31 +987,37 @@ spki_acl_entry_to_5_tuple(struct spki_context *ctx,
 			   authorization, 0, 0, 0, 0);
 }
 
-/* A command that takes an spki_context and an s-expression, and returns a list of
- * 5-tuples. The ctx object is updated as well. */
+/* A command that takes an spki_context and an ACL s-expression, and
+ * adds corresponding 5-tuples to the context. Returns 1 if all
+ * entries were correct, 0 on any error. However, it tries to gon on
+ * if some sub-expression is invalid. */
 
-struct object_list *
-spki_read_acls(struct spki_context *ctx,
-	       struct sexp *e)
+int
+spki_add_acl(struct spki_context *ctx,
+	     struct sexp *e)
 {
   struct sexp_iterator *i;
-  struct object_queue q;
+  int res = 1;
   
+#if 0
+  struct object_queue q;
+#endif
   if (!spki_check_type(e, ATOM_ACL, &i))
     {
       werror("spki_read_acls: Invalid acl\n");
-      return NULL;
+      return 0;
     }
 
   /* FIXME: Accept at least (version "0") */
   if (spki_check_type(SEXP_GET(i), ATOM_VERSION, NULL))
     {
       werror("spki_read_acls: Unsupported acl version\n");
-      return NULL;
+      return 0;
     }
-
+#if 0
   object_queue_init(&q);
-
+#endif
+  
   for (; (e = SEXP_GET(i)); SEXP_NEXT(i))
     {
       struct sexp_iterator *j;
@@ -997,13 +1025,17 @@ spki_read_acls(struct spki_context *ctx,
 	{
 	  struct spki_5_tuple *acl = spki_acl_entry_to_5_tuple(ctx, j);
 	  if (acl)
-	    object_queue_add_tail(&q, &acl->super);
+	    SPKI_ADD_TUPLE(ctx, acl);
+	  else res = 0;
 	}
       else
-	werror("spki_read_acls: Invalid entry, ignoring\n");
+	{
+	  werror("spki_read_acls: Invalid entry, ignoring\n");
+	  res = 0;
+	}
     }
 
-  return queue_to_list_and_kill(&q);
+  return res;
 }
 
 
@@ -1177,6 +1209,15 @@ do_spki_lookup(struct spki_context *s,
     }
 }
 
+static void
+do_spki_add_tuple(struct spki_context *s,
+		  struct spki_5_tuple *tuple)
+{
+  CAST(spki_state, self, s);
+
+  object_queue_add_tail(&self->db, &tuple->super);
+}
+
 static int
 do_spki_authorize(struct spki_context *s,
 		  struct spki_subject *user,
@@ -1202,6 +1243,7 @@ make_spki_context(struct alist *algorithms)
 {
   NEW(spki_state, self);
   self->super.lookup = do_spki_lookup;
+  self->super.add_tuple = do_spki_add_tuple;
   self->super.authorize = do_spki_authorize;
   
   self->algorithms = algorithms;
@@ -1211,14 +1253,7 @@ make_spki_context(struct alist *algorithms)
   return &self->super;
 }
 
-/* GABA:
-   (class
-     (name spki_command)
-     (super command)
-     (vars
-       (ctx object spki_context)))
-*/
-
+#if 0
 static void
 do_read_acls(struct command *s, 
 	     struct lsh_object *a,
@@ -1235,6 +1270,7 @@ do_read_acls(struct command *s,
   else
     SPKI_ERROR(e, "Invalid ACL list", acl);
 }
+#endif
 
 #if 0
 

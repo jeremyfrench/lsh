@@ -40,6 +40,8 @@ struct spki_validity
   time_t not_after;
 };
 
+struct spki_5_tuple;
+
 #define GABA_DECLARE
 #include "spki.h.x"
 #undef GABA_DECLARE
@@ -67,11 +69,15 @@ struct sexp *keyblob2spki(struct lsh_string *keyblob);
 struct sexp *
 make_ssh_hostkey_tag(struct address_info *host);
 
+
 struct sexp *
 dsa_to_spki_public_key(struct dsa_public *p);
 
-extern struct command spki_public2private;
-#define PRIVATE2PUBLIC (&spki_public2private.super)
+extern struct command_simple spki_signer2public;
+#define SIGNER2PUBLIC (&spki_signer2public.super.super)
+
+extern struct command_simple spki_parse_private_key_command;
+#define SPKI_PARSE_PRIVATE_KEY (&spki_parse_private_key_command.super.super)
 
 #if 0
 extern struct spki_hash spki_hash_md5;
@@ -163,6 +169,8 @@ make_spki_subject(struct sexp *key,
 		      ; If non-NULL, use this verifier for
 		      ; the subject. Useful for non-SPKI keys.
 		      "struct verifier *v")
+       (add_tuple method void
+                  "struct spki_5_tuple *tuple")
        (authorize method int
                          "struct spki_subject *subject"
 			 "struct sexp *access")))
@@ -170,6 +178,7 @@ make_spki_subject(struct sexp *key,
 */
 
 #define SPKI_LOOKUP(c, e, v) ((c)->lookup((c), (e), (v)))
+#define SPKI_ADD_TUPLE(c, t) ((c)->add_tuple((c), ((t))))
 #define SPKI_AUTHORIZE(c, s, a) ((c)->authorize((c), (s), (a)))
 #define SPKI_CLONE(c) ((c)->clone((c)))
 
@@ -239,8 +248,14 @@ struct spki_5_tuple *
 spki_acl_entry_to_5_tuple(struct spki_context *ctx,
 			  struct sexp_iterator *i);
 
+int
+spki_add_acl(struct spki_context *ctx,
+	     struct sexp *e);
+
+#if 0
 struct object_list *
 spki_read_acls(struct spki_context *ctx,
 	       struct sexp *e);
+#endif
 
 #endif /* LSH_SPKI_H_INCLUDED */
