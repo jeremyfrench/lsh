@@ -1,3 +1,10 @@
+2003-04-28  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* argp-parse.c: Use standard alloca blurb from the autoconf
+	manual. 
+	* argp-help.c: Updated alloca blurb to use the same as
+	argp-parse.c. 
+
 2003-04-24  Niels Möller  <niels@s3.kth.se>
 
 	* argp.h: Added workaround for __restrict.
