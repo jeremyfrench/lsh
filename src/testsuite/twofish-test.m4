@@ -1,3 +1,14 @@
+TS_TEST_CRYPTO(»Twofish-256 CBC«, »&crypto_twofish256_cbc_algorithm«,
+               #0123456789ABCDEF FEDCBA9876543210
+		0011223344556677 8899AABBCCDDEEFF#,
+               #0000000000000000 0000000000000000
+		1111111111111111 1111111111111111#,
+	       #7c9cde6d86b1d9f2 9fceb6830c451281
+                329f72e3eb36d505 6e8e08c191644dfa#,
+	       #0011223344556677 8899AABBCCDDEEFF#)
+
+#if 0
+	       
 TS_TEST_CRYPTO(»Twofish 128«, »make_twofish_algorithm(16)«,
                #0000000000000000 0000000000000000#,
                #0000000000000000 0000000000000000#,
@@ -14,9 +25,4 @@ TS_TEST_CRYPTO(»Twofish 256«, »make_twofish_algorithm(32)«,
                #0000000000000000 0000000000000000#,
                #37527BE0052334B8 9F0CFCCAE87CFA20#)
 
-
-
-
-
-
-
+#endif

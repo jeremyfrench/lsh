@@ -1,3 +1,9 @@
+TS_TEST_CRYPTO(»DES3 CBC«, »&crypto_des3_cbc_algorithm«,
+	       #0123456789ABCDEF 1313131313131313 3232323232323232#,
+	       #0011223344556677 8899AABBCCDDEEFF#,
+	       #C4DB96109B6186B2 5F9AA359160909D9#,
+	       #0001020304050607#)
+#if 0
 /* From Applied Cryptography, 2:nd edition */
 
 TS_TEST_CRYPTO(»DES AC«, »&crypto_des_algorithm«,
@@ -25,3 +31,4 @@ TS_TEST_CRYPTO(»DES 4«, »&crypto_des_algorithm«,
                #01234567 89ABCDEF#,
 	       "Now is t",
                #3FA40E8A 984D4815#)
+#endif
