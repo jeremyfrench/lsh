@@ -531,6 +531,8 @@ make_client_session(struct client_options *options);
 #define OPT_SUBSYSTEM 0x214
 #define OPT_DETACH 0x215
 
+#define OPT_ASKPASS 0x216
+
 void
 init_client_options(struct client_options *self,
 		    struct randomness *random,
@@ -577,29 +579,15 @@ init_client_options(struct client_options *self,
   object_queue_init(&self->actions);  
 }
 
-#if 0
-DEFINE_COMMAND(client_options2actions)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST_SUBTYPE(client_options, options, a);
-
-  trace("client.c: client_options2actions, %i actions\n",
-	options->actions.length);
-  
-  COMMAND_RETURN(c, queue_to_list(&options->actions));
-}
-#endif
-
 static const struct argp_option
 client_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
   { "port", 'p', "Port", 0, "Connect to this port.", 0 },
   { "user", 'l', "User name", 0, "Login as this user.", 0 },
-
+  { "askpass", OPT_ASKPASS, "Program", 0,
+    "Program to use for reading passwords. "
+    "Should be an absolute filename.", 0 },
   { NULL, 0, NULL, 0, "Actions:", CLIENT_ARGP_ACTION_GROUP },
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
 #if 0
@@ -1304,6 +1292,10 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       options->user = arg;
       break;
 
+    case OPT_ASKPASS:
+      INTERACT_SET_ASKPASS(options->tty, optarg);
+      break;
+      
     case 'e':
       if (arg[0] && !arg[1])
 	/* A single char argument */
