@@ -182,68 +182,65 @@ do_utmp_cleanup(struct exit_callback *s,
 {
   CAST(utmp_cleanup, self, s);
 
-#if HAVE_UTMP_H
-  struct utmp pattern;
-  struct utmp *utmp;
+#if HAVE_UTMPX_H && HAVE_PUTUTXLINE
+  struct utmpx entry;
+  trace("unix_process.c: do_utmp_cleanup (HAVE_UTMPX_H) \n");
 
-  trace("unix_process.c: do_utmp_cleanup\n");
+  setutxent(); /* Rewind the database */
 
-  memset(&pattern, 0, sizeof(pattern));
-  CP(pattern.ut_line, self->line);
-  CP(pattern.ut_id, self->id);
+  /* Start by clearing the whole entry */
 
-  /* For Linux/glibc (and possibly others), we need to set 
-   * ut_type to find our entry */
+  memset(&entry, 0, sizeof(entry));
 
-  pattern.ut_type = USER_PROCESS;
+  /* FIXME: For systems without ut_id, we probably shouldn't be here (?)*/
 
-  /* Rewind database */
-  setutent();
-  utmp = getutid(&pattern);
-  if (!utmp)
-    /* Entry destroyed? Do nothing. */
-    debug("unix_process.c: do_utmp_cleanup found no match\n");
-  else
-    {
-      /* Make a working copy of this entry that we can modify */
-      /* FIXME: Is this really needed??? /nisse */
-      struct utmp wc = *utmp;
-      utmp = &wc;
+  CP(entry.ut_id, self->id);
+  entry.ut_type = DEAD_PROCESS;  
 
-      utmp->ut_type = DEAD_PROCESS;
+  /* The memset has cleared all fields so we need only set those
+   * entries that shouldn't be 0 */
 
-      debug("unix_process.c: do_utmp_cleanup getutid found match\n");
-
-#if HAVE_STRUCT_UTMP_UT_EXIT
-      utmp->ut_exit.e_exit = signaled ? 0 : value;
-      utmp->ut_exit.e_termination = signaled ? value : 0;
-#endif
-      /* Clear ut_line, ut_host, ut_user and ut_tv */
-      CLEAR(utmp->ut_line);
-#if HAVE_STRUCT_UTMP_UT_HOST
-      CLEAR(utmp->ut_host);
-#endif
-#if HAVE_STRUCT_UTMP_UT_USER
-      CLEAR(utmp->ut_user);
-#endif
-#if HAVE_STRUCT_UTMP_UT_ADDR
-      CLEAR(utmp->ut_addr);
-#endif
-#if HAVE_STRUCT_UTMP_UT_TV
-      CLEAR(utmp->ut_tv);
-#else
-# if HAVE_STRUCT_UTMP_UT_TIME
-      CLEAR(utmp->ut_time);
-# endif
+#if HAVE_STRUCT_UTMPX_UT_EXIT
+      entry.ut_exit.e_exit = signaled ? 0 : value;
+      entry.ut_exit.e_termination = signaled ? value : 0;
 #endif
       
-#if HAVE_PUTUTLINE
-      if (!pututline(utmp))
+      if (!pututxline(&entry))
+	werror("Updating utmpx for logout failed (errno = %i): %z\n",
+	       errno, STRERROR(errno));
+
+#else /* HAVE UTMPX_H && HAVE_PUTUTXLINE */
+
+#if HAVE_UTMP_H && HAVE_PUTUTLINE
+  struct utmp entry;
+  trace("unix_process.c: do_utmp_cleanup (HAVE_UTMP_H)\n");
+
+  setutent(); /* Rewind the database */
+
+  /* Start by clearing the whole entry */
+
+  memset(&entry, 0, sizeof(entry));
+
+  /* FIXME:For systems without ut_id, we probably shouldn't be here (?) */
+
+  CP(entry.ut_id, self->id);
+  entry.ut_type = DEAD_PROCESS;
+
+  /* The memset has cleared all fields so we need only set those
+   * entries that shouldn't be 0 */
+
+#if HAVE_STRUCT_UTMP_UT_EXIT
+      entry.ut_exit.e_exit = signaled ? 0 : value;
+      entry.ut_exit.e_termination = signaled ? value : 0;
+#endif
+
+      if (!pututline(&entry))
 	werror("Updating utmp for logout failed (errno = %i): %z\n",
 	       errno, STRERROR(errno));
-#endif
-    }
-#endif /* HAVE_UTMP_H */
+
+#endif /* HAVE_UTMP_H && HAVE_PUTUTLINE */
+#endif /* HAVE_UTMPX_H */
+
 #if HAVE_LOGWTMP
   logwtmp(lsh_get_cstring(self->line), "", "");
 #endif
@@ -297,73 +294,140 @@ utmp_book_keeping(struct lsh_string *name,
 {
   struct utmp_cleanup *cleanup = make_utmp_cleanup(tty, c);
 
-#if HAVE_UTMP_H
-  struct utmp pattern;
-  struct utmp *utmp;
-  
-  trace("unix_process.c: utmp_book_keeping\n");
+#if HAVE_UTMPX_H && HAVE_PUTUTXLINE
+  struct utmpx entry;
+  memset(&entry, 0, sizeof(entry));
 
-  memset(&pattern, 0, sizeof(pattern));
-  CP(pattern.ut_line, cleanup->line);
-  CP(pattern.ut_id, cleanup->id);
+  setutxent(); /* Rewind the database */
 
-  /* FIXME: Initialize pattern.ut_type? */
-  
-  /* Rewind database */
-  setutent();
-  
-  utmp = getutid(&pattern);
-  if (utmp)
-    /* Overwrite the line field, in case it was id that matched. */
-    CP(utmp->ut_line, cleanup->line);
-  else
-    /* No existing entry, we need to create a new one. */
-    utmp = &pattern;
-  
-  utmp->ut_type = USER_PROCESS;
-  
-#if HAVE_STRUCT_UTMP_UT_PID
-  utmp->ut_pid = pid;
+  trace("unix_process.c: utmp_book_keeping (HAVE_UTMPX_H)\n");
+
+  /* Do not look for an existing entry, but trust putut{,x}line to
+   * reuse old entries if appropiate */
+
+  entry.ut_type = USER_PROCESS;
+
+  CP(entry.ut_line, cleanup->line);
+  CP(entry.ut_id, cleanup->id);
+
+#if HAVE_STRUCT_UTMPX_UT_PID
+  entry.ut_pid = pid;
 #endif
 
-#if HAVE_STRUCT_UTMP_UT_USER
-  CP(utmp->ut_user, name);
+#if HAVE_STRUCT_UTMPX_UT_USER
+  CP(entry.ut_user, name);
 #endif
 
-#if HAVE_STRUCT_UTMP_UT_TV
-  gettimeofday(&utmp->ut_tv);
+#if HAVE_STRUCT_UTMPX_UT_TV || HAVE_STRUCT_UTMPX_UT_TV_TV_SEC
+  gettimeofday(&entry.ut_tv, 0); /* Ignore the timezone */
 #else
-# if HAVE_STRUCT_UTMP_UT_TIME
-  time(&utmp->ut_time);
+# if HAVE_STRUCT_UTMPX_UT_TIME
+  time(&entry.ut_time);
 # endif
 #endif
   
-  trace("unix_process.c: utmp_book_keeping, after name\n");
+  trace("unix_process.c: utmp_book_keeping, after name (HAVE_UTMPX_H)\n");
+
+  /* FIXME: We should store real values here. */
+#if HAVE_STRUCT_UTMPX_UT_ADDR
+  CLEAR(entry.ut_addr);
+#endif
+#if HAVE_STRUCT_UTMPX_UT_ADDR_V6
+  CLEAR(entry.ut_addr_v6);
+#endif
+  
+  /* FIXME: Perform a reverse lookup. */
+#if HAVE_STRUCT_UTMPX_UT_HOST
+  CP(entry.ut_host, peer->ip);
+#if HAVE_STRUCT_UTMPX_UT_SYSLEN
+
+  /* ut_syslen is the significant length of ut_host (including NUL),
+   * i.e. the lesser of the length of peer->ip+1 and available storage 
+   */
+
+  entry.ut_syslen = sizeof(entry.ut_host) > (peer->ip->length + 1) ?
+    (peer->ip->length + 1) : sizeof(entry.ut_host);
+ 
+#endif /* HAVE_STRUCT_UTMPX_UT_SYSLEN */
+#endif /* HAVE_STRUCT_UTMPX_UT_HOST */
+
+  trace("unix_process.c: utmp_book_keeping, after host (HAVE_UTMPX_H)\n");
+
+  if (!pututxline(&entry))
+    werror("Updating utmp for login failed (errno = %i): %z\n",
+	   errno, STRERROR(errno));
+
+  trace("unix_process.c: utmp_book_keeping, after pututline (HAVE_UTMPX_H)\n");
+
+#else /* HAVE_UTMPX_H && HAVE_PUTUTXLINE*/
+#if HAVE_UTMP_H && HAVE_PUTUTLINE
+
+  struct utmp entry;
+  memset(&entry, 0, sizeof(entry));
+
+  setutent(); /* Rewind the database */
+  trace("unix_process.c: utmp_book_keeping (HAVE_UTMP_H)\n");
+  
+  /* Do not look for an existing entry, but trust putut{,x}line to
+   * reuse old entries if appropiate */
+                  
+  entry.ut_type = USER_PROCESS;
+              
+  CP(entry.ut_line, cleanup->line);
+  CP(entry.ut_id, cleanup->id);
+
+#if HAVE_STRUCT_UTMP_UT_PID
+  entry.ut_pid = pid;
+#endif
+
+#if HAVE_STRUCT_UTMP_UT_USER
+  CP(entry.ut_user, name);
+#endif
+
+#if HAVE_STRUCT_UTMP_UT_TV || HAVE_STRUCT_UTMP_UT_TV_TV_SEC
+  gettimeofday(&entry.ut_tv, 0); /* Ignore the timezone */
+#else
+# if HAVE_STRUCT_UTMP_UT_TIME
+  time(&entry.ut_time);
+# endif
+#endif
+  
+  trace("unix_process.c: utmp_book_keeping, after name (HAVE_UTMP_H)\n");
 
   /* FIXME: We should store real values here. */
 #if HAVE_STRUCT_UTMP_UT_ADDR
-  CLEAR(utmp->ut_addr);
+  CLEAR(entry.ut_addr);
 #endif
 #if HAVE_STRUCT_UTMP_UT_ADDR_V6
-  CLEAR(utmp->ut_addr_v6);
+  CLEAR(entry.ut_addr_v6);
 #endif
   
   /* FIXME: Perform a reverse lookup. */
 #if HAVE_STRUCT_UTMP_UT_HOST
-  CP(utmp->ut_host, peer->ip);
-#endif
-  trace("unix_process.c: utmp_book_keeping, after host\n");
+  CP(entry.ut_host, peer->ip);
+#if HAVE_STRUCT_UTMP_UT_SYSLEN
 
-#if HAVE_PUTUTLINE
-  if (!pututline(utmp))
+  /* ut_syslen is the significant length of ut_host (including NUL),
+   * i.e. the lesser of the length of peer->ip+1 and available storage 
+   */
+
+  entry.ut_syslen = sizeof(entry.ut_host) > (peer->ip->length + 1) ?
+    (peer->ip->length + 1) : sizeof(entry.ut_host);
+ 
+#endif /* HAVE_STRUCT_UTMP_UT_SYSLEN */
+#endif /* HAVE_STRUCT_UTMP_UT_HOST */
+
+  trace("unix_process.c: utmp_book_keeping, after host (HAVE_UTMP_H)\n");
+
+  if (!pututline(&entry))
     werror("Updating utmp for login failed (errno = %i): %z\n",
 	   errno, STRERROR(errno));
-#endif
 
-  trace("unix_process.c: utmp_book_keeping, after pututline\n");
+  trace("unix_process.c: utmp_book_keeping, after pututline (HAVE_UTMP_H)\n");
 
-#endif /* HAVE_UTMP_H */
-  
+#endif /* HAVE_UTMP_H && HAVE_PUTUTLINE*/
+#endif /* HAVE_UTMPX_H && HAVE_PUTUTXLINE */
+
 #if HAVE_LOGWTMP
   logwtmp(lsh_get_cstring(cleanup->line),
 	  lsh_get_cstring(name),
