@@ -11,17 +11,13 @@ SUBDIRS = lib include
 #
 # 	./make_am
 #
-# You should run this after recompiling, but before making a dist, as
-# it uses dependency information to figure out which header files
-# should be included in th dist. How to tell this to make?
+# You should run ./make_am --rethink after recompiling, but before
+# making a dist, as it uses dependency information to figure out which
+# header files should be included in th dist. How to tell this to
+# make? FIXME: These rules won't remake Makefile.am files in
+# subdrectries.
 
 Makefile.am: Makefile.am.in
-	./make_am
-
-lib/Makefile.am: lib/Makefile.am.in
-	./make_am
-
-include/Makefile.am: include/Makefile.am.in
 	./make_am
 
 bin_PROGRAMS = lsh lshd
@@ -66,7 +62,7 @@ symmetric:
 	(cd lib && $(MAKE) libsymmetric.a)
 
 EXTRA_DIST = atoms.in process_atoms make_class $(generated_sources) HACKING \
-	$(cvs_headers) $(dist_x_files) Makefile.am.in
+	$(cvs_headers) $(dist_x_files) Makefile.am.in make_am
 
 # Class files
 # SUFFIXES = .xh .xc
