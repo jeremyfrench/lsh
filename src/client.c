@@ -91,10 +91,12 @@ do_accept_service(struct packet_handler *c,
       COMMAND_RETURN(closure->c, connection);
     }
   else
-    EXCEPTION_RAISE(closure->e,
-		    make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
-					    "Invalid SSH_MSG_SERVICE_ACCEPT message"));
-  lsh_string_free(packet);
+    {
+      lsh_string_free(packet);
+      EXCEPTION_RAISE(closure->e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Invalid SSH_MSG_SERVICE_ACCEPT message"));
+    }
 }
 
 struct packet_handler *
