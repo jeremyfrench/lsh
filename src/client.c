@@ -75,7 +75,8 @@ format_service_request(int name)
      (vars
        (service . int)
        (c object command_continuation)
-       ;; Do we really need the exception handler here?
+
+       ;; FIXME: Do we really need the exception handler here?
        (e object exception_handler)))
 */
 
@@ -387,20 +388,6 @@ make_client_session(struct client_options *options);
 
 #define ARG_NOT 0x400
 
-#if 0
-#define OPT_PUBLICKEY 0x201
-
-#define OPT_SLOPPY 0x202
-#define OPT_STRICT 0x203
-#define OPT_CAPTURE 0x204
-
-#define OPT_HOST_DB 0x205
-
-#define OPT_DH 0x206
-#define OPT_SRP 0x207
-#define OPT_USERAUTH 0x208
-#endif
-
 #define OPT_STDIN 0x210
 #define OPT_STDOUT 0x211
 #define OPT_STDERR 0x212
@@ -440,7 +427,7 @@ init_client_options(struct client_options *self,
   self->used_pty = 0;
 
   self->start_shell = 1;
-  /* self->remote_forward = 0; */
+  self->remote_forward = 0;
 
   object_queue_init(&self->actions);  
 }
@@ -484,8 +471,8 @@ client_options[] =
   { "user", 'l', "User name", 0, "Login as this user.", 0 },
 
   { NULL, 0, NULL, 0, "Actions:", CLIENT_ARGP_ACTION_GROUP },
-#if 0
   { "forward-local-port", 'L', "local-port:target-host:target-port", 0, "", 0 },
+#if 0
   { "forward-remote-port", 'R', "remote-port:target-host:target-port", 0, "", 0 },
 #endif
   { "nop", 'N', NULL, 0, "No operation (suppresses the default action, "
@@ -922,10 +909,18 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	  argp_error(state, "No user name given. Use the -l option, or set LOGNAME in the environment.");
 	  break;
 	}
-	    
+
+#if WITH_TCP_FORWARD
+      if (options->remote_forward)
+	client_add_action(options,
+			  make_install_fix_channel_open_handler
+			  (ATOM_FORWARDED_TCPIP, &channel_open_forwarded_tcpip));
+#endif /* WITH_TCP_FORWARD */
+      
       /* Add shell action */
       if (options->start_shell)
 	client_add_action(options, client_shell_session(options));
+
       if (object_queue_is_empty(&options->actions))
 	{
 	  argp_error(state, "No actions given.");
@@ -950,13 +945,12 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       client_add_action(options, client_shell_session(options));
       break;
 
-#if 0
     case 'L':
       {
 	UINT32 listen_port;
 	struct address_info *target;
 
-	if (!parse_forward_arg(arg, &listen_port, &target))
+	if (!client_parse_forward_arg(arg, &listen_port, &target))
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
 	client_add_action(options, make_forward_local_port
@@ -969,12 +963,13 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	break;
       }      
 
+#if 0
     case 'R':
       {
 	UINT32 listen_port;
 	struct address_info *target;
 
-	if (!parse_forward_arg(arg, &listen_port, &target))
+	if (!client_parse_forward_arg(arg, &listen_port, &target))
 	  argp_error(state, "Invalid forward specification '%s'.", arg);
 
 	client_add_action(options, make_forward_remote_port
