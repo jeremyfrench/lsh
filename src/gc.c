@@ -114,12 +114,13 @@ static void gc_sweep(void)
     {
       if (o->marked)
 	{
-	  /* Keep object */
+	  /* Paralyze the living... */
 	  live_objects++;
 	  o->marked = 0;
 	}
       else
 	{
+	  /* ... and resurrect the dead. */
 	  struct lsh_class *class;
 
 #if 0
@@ -130,7 +131,6 @@ static void gc_sweep(void)
 	    if (class->free_instance)
 	      FREE_INSTANCE(class, o);
 
-	  /* Unlink object */
 	  *o_p = o->next;
 	  number_of_objects--;
 	  
