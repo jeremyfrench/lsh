@@ -45,13 +45,11 @@
 #include "handshake.h"
 #include "lookup_verifier.h"
 #include "randomness.h"
-#include "service.h"
 #include "sexp.h"
 #include "spki_commands.h"
 #include "srp.h" 
 #include "ssh.h"
 #include "tcpforward_commands.h"
-#include "tty.h"
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -119,6 +117,8 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_CONNECTION);
 
        (random object randomness_with_poll)
 
+       (tty object interact)
+       
        (signature_algorithms object alist)
        (home . "const char *")
        
@@ -185,6 +185,8 @@ make_options(struct io_backend *backend,
   
   self->backend = backend;
   self->random = make_default_random(NULL, handler);
+
+  self->tty = make_unix_interact(backend);
   
   self->home = getenv("HOME");
   
@@ -370,6 +372,7 @@ make_options_command(struct lsh_options *options,
      (super lookup_verifier)
      (vars
        (db object spki_context)
+       (tty object interact)
        (access object sexp)
        (host object address_info)
        ; Allow unauthorized keys
@@ -477,10 +480,12 @@ do_lsh_lookup(struct lookup_verifier *c,
 			  sexp_format(subject->key, SEXP_CANONICAL, 0),
 			  1);
 			  
-	  if (!yes_or_no(ssh_format("Received unauthenticated key for host %lS\n"
-				    "Fingerprint: %lfxS\n"
-				    "Do you trust this key? (y/n) ",
-				    self->host->ip, fingerprint), 0, 1))
+	  if (!INTERACT_YES_OR_NO
+	      (self->tty,
+	       ssh_format("Received unauthenticated key for host %lS\n"
+			  "Fingerprint: %lfxS\n"
+			  "Do you trust this key? (y/n) ",
+			  self->host->ip, fingerprint), 0, 1))
 	    return NULL;
 	}
       
@@ -507,6 +512,7 @@ do_lsh_lookup(struct lookup_verifier *c,
 
 static struct lookup_verifier *
 make_lsh_host_db(struct spki_context *db,
+		 struct interact *tty,
 		 struct address_info *host,
 		 int sloppy,
 		 struct abstract_write *file)
@@ -515,6 +521,7 @@ make_lsh_host_db(struct spki_context *db,
 
   res->super.lookup = do_lsh_lookup;
   res->db = db;
+  res->tty = tty;
   res->access = make_ssh_hostkey_tag(host);
   res->host = host;
   res->sloppy = sloppy;
@@ -534,6 +541,7 @@ do_lsh_verifier(struct command *s,
   CAST(options_command, self, s);
   CAST_SUBTYPE(spki_context, db, a);
   COMMAND_RETURN(c, make_lsh_host_db(db,
+				     self->options->tty,
 				     self->options->remote,
 				     self->options->sloppy,
 				     self->options->capture_file));
@@ -698,7 +706,7 @@ parse_forward_arg(char *arg,
   return 1;
 }
 
-
+#if 0
 /* FIXME: Resetting the tty should really be done by the corresponding
  * channel. */
 
@@ -722,6 +730,7 @@ static int remember_tty(int fd)
 	  && !atexit(reset_tty));
 }
 #endif /* WITH_PTY_SUPPORT */
+#endif
 
 
 /* Option parsing */
@@ -822,6 +831,7 @@ main_argp_children[] =
   { NULL, 0, NULL, 0}
 };
 
+/* FIXME: Moves to client.c */
 /* Create a session object. stdout and stderr are shared (although
  * with independent lsh_fd objects). stdin can be used by only one
  * session (until something "session-control"/"job-control" is added).
@@ -894,6 +904,7 @@ make_lsh_session(struct lsh_options *self)
      self->exit_code);
 }
 
+/* FIXME: Moves to client.c */
 /* Create an interactive session */
 static struct command *
 lsh_shell_session(struct lsh_options *self)
@@ -912,17 +923,17 @@ lsh_shell_session(struct lsh_options *self)
     {
       self->used_pty = 1;
       
-      if (tty_fd < 0)
+      if (self->tty && INTERACT_IS_TTY(self->tty))
 	{
-	  werror("lsh: No tty available.\n");
-	}
-      else
-	{
-	  if (! (remember_tty(tty_fd)
-		 && (get_pty = make_pty_request(tty_fd))))
+	  get_pty = make_pty_request(self->tty);
+	  if (!get_pty)
 	    {
 	      werror("lsh: Can't use tty (probably getattr or atexit() failed.\n");
 	    }
+	}
+      else
+	{
+	  werror("lsh: No tty available.\n");
 	}
     }
 
@@ -1439,9 +1450,6 @@ int main(int argc, char **argv)
 			       HANDLER_CONTEXT);
 
   struct io_backend *backend = make_io_backend();
-
-  /* Attempt to open a tty */
-  lsh_open_tty();
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
