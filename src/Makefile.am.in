@@ -30,6 +30,7 @@ bin_PROGRAMS = lsh lshg lsh-keygen lsh-writekey lsh-decode-key lsh-export-key se
 sbin_PROGRAMS = lshd lsh_proxy
 bin_SCRIPTS = lsh-authorize ssh-conv
 noinst_PROGRAMS = prime_table digit_table pkcs5-test
+noinst_SCRIPTS = lcp
 noinst_LIBRARIES = liblsh.a
 # noinst_HEADERS = $(dist_x_files) $(cvs_headers)
 
@@ -145,7 +146,7 @@ class-map: $(srcdir)/make-class-map $(dist_x_files)
 # symmetric:
 # 	  (cd lib && $(MAKE) libsymmetric.a)
 
-EXTRA_DIST = lsh-authorize ssh-conv \
+EXTRA_DIST = lsh-authorize ssh-conv lcp \
 	atoms.in process_atoms \
 	invert-defs \
 	$(generated_sources) \
