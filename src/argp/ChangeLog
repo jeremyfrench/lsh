@@ -1,3 +1,36 @@
+2003-02-05  Niels Möller  <niels@s3.kth.se>
+
+	* Makefile.am (all): Deleted the explicit all target.
+	(LIBOBJS): Added explicit substitution.
+
+	* testsuite/ex3.c, testsuite/ex4.c: Complete initializers, to
+	avoid warnings from gcc.
+
+	* configure.ac: Updated for current autoconf and automake.
+	Fixed AC_CONFIG_HEADER call.
+	Use AC_GNU_SOURCE.
+	Use AC_CHECK_DECLS to check for program_invocation_name and
+	program_invocation_short_name.
+	
+	* argp-test.c (sub_options): Complete initializer, to avoid
+	warnings from gcc.
+	(sub_argp): Likewise.
+	(options): Likewise.
+
+	* argp-parse.c (argp_default_parser):
+	HAVE_PROGRAM_INVOCATION_SHORT_NAME renamed to
+	HAVE_DECL_PROGRAM_INVOCATION_SHORT_NAME. 
+	(argp_default_options): Complete initializer, to avoid
+	warnings from gcc. 
+
+	* argp-help.c (uparam_names): Complete initializer, to avoid
+	warnings from gcc. 
+	(__argp_short_program_name): HAVE_PROGRAM_INVOCATION_NAME renamed
+	to HAVE_DECL_PROGRAM_INVOCATION_NAME. Similarly for
+	HAVE_PROGRAM_INVOCATION_SHORT_NAME. 
+
+	* acinclude.m4: Deleted file.
+
 2003-02-04  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* configure.ac: Bumped version to standalone-1.2.
