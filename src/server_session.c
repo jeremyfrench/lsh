@@ -200,8 +200,8 @@ do_receive(struct ssh_channel *c,
 
 /* We may send more data */
 static void
-do_send(struct ssh_channel *s,
-	struct ssh_connection *c UNUSED)
+do_send_adjust(struct ssh_channel *s,
+	       UINT32 i UNUSED)
 {
   CAST(server_session, session, s);
 
@@ -282,12 +282,13 @@ make_server_session(struct user *user,
        (session_requests object alist)))
 */
 
-#define WINDOW_SIZE (SSH_MAX_PACKET << 3)
+#define WINDOW_SIZE 10000
 
 static void
 do_open_session(struct channel_open *s,
 		struct ssh_connection *connection UNUSED,
 		UINT32 type UNUSED,
+		UINT32 max_packet UNUSED,
 		struct simple_buffer *args,
 		struct command_continuation *c,
 		struct exception_handler *e)
@@ -686,7 +687,7 @@ spawn_process(struct server_session *session,
 	    }
 	
 	    channel->receive = do_receive;
-	    channel->send = do_send;
+	    channel->send_adjust = do_send_adjust;
 	    channel->eof = do_eof;
 	  
 	    session->process
