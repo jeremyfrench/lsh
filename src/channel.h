@@ -204,9 +204,9 @@ struct channel_request_info
        ; method as is traditionally used for allocation of unix file 
        ; descriptors.
 
-       ; Channel numbers can be reserved before there is any actual channel
-       ; assigned to them. So the channels table is not enough for keeping track of which
-       ; numbers are in use.
+       ; Channel numbers can be reserved before there is any actual
+       ; channel assigned to them. So the channels table is not enough
+       ; for keeping track of which numbers are in use.
        (in_use space UINT8)
 
        ; Allocated size of the arrays.

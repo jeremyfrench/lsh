@@ -1589,8 +1589,40 @@ DEFINE_PACKET_HANDLER(static, channel_failure_handler,
     PROTOCOL_ERROR(connection->e, "Invalid CHANNEL_FAILURE message.");
 }
 
+static void
+do_channels_after_keyexchange(struct command_continuation *s UNUSED,
+			      struct lsh_object *x);
 
-void init_connection_service(struct ssh_connection *connection)
+static struct command_continuation
+channels_after_keyexchange =
+  { STATIC_HEADER, do_channels_after_keyexchange };
+    
+static void
+do_channels_after_keyexchange(struct command_continuation *s UNUSED,
+			      struct lsh_object *x)
+{
+  CAST(ssh_connection, connection, x);
+  struct channel_table *table = connection->table;
+  UINT32 i;
+  
+  /* Iterate over all channels, and call CHANNEL_SEND_ADJUST to get
+   * them started again. */
+
+  for (i = 0; i<table->used_channels; i++)
+    {
+      struct ssh_channel *channel = lookup_channel(table, i);
+      if (channel
+	  && !(channel->flags & (CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
+	  && channel->send_adjust)
+	CHANNEL_SEND_ADJUST(channel, 0);
+    }
+
+  /* Reinstall hook */
+  connection_after_keyexchange(connection, &channels_after_keyexchange);
+}
+
+void
+init_connection_service(struct ssh_connection *connection)
 {
   struct channel_table *table = make_channel_table();
   
@@ -1600,6 +1632,9 @@ void init_connection_service(struct ssh_connection *connection)
 
   /* Cancel handshake timeout */
   connection_clear_timeout(connection);
+
+  /* Unfreeze channels after key exchange */
+  connection_after_keyexchange(connection, &channels_after_keyexchange);
   
   connection->dispatch[SSH_MSG_GLOBAL_REQUEST]
     = &global_request_handler;
