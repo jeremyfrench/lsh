@@ -76,8 +76,22 @@
 
 #define READ_HANDLER(h, l, d) ((h)->handler(&(h), (l), (d)))
 
+/* ;;GABA:
+   (class
+     (name read_consumer)
+     (vars
+       ; Returns the maximum number of octets that
+       ; can be consumed immediately.
+       (query method UINT32)
+       (consume object abstract_write)))
+*/
 #if 0
-/* GABA:
+#define READ_QUERY(c) ((c)->query((c)))
+#define READ_CONSUME(c, s) A_WRITE(c->consume, s)
+#endif
+
+#if 0
+/* ;; GABA:
    (class
      (name read_handler)
      (vars
@@ -93,7 +107,7 @@
 #define READ_OK 0
 /* Can't process any more data right now; please hold */
 #define READ_HOLD 1
-/* Close nicely, after fluching the write buffer */
+/* Close nicely, after flushing the write buffer */
 #define READ_CLOSE 2
 /* Close immediately */
 #define READ_DIE 3

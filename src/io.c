@@ -296,8 +296,120 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
     }
 }
 #endif
-  
-#if 1
+
+static void do_buffered_read(struct io_read_callback *s,
+			     struct struct lsh_fd *fd)
+{
+  CAST(io_buffered_read, self, s);
+  UINT8 *buffer = alloca(self->buffer_size);
+  int res = read(fd->fd, buffer, self->buffer_size);
+
+  if (res < 0)
+    switch(errno)
+      {
+      case EINTR:
+	break;
+      case EWOULDBLOCK:
+	werror("io.c: read_callback: Unexpected EWOULDBLOCK\n");
+	break;
+      case EPIPE:
+	fatal("Unexpected EPIPE.\n");
+      default:
+	EXCEPTION_RAISE(fd->e, fd,
+			make_io_exception(EXC_IO_READ),
+			errno, NULL);
+	break;
+      }
+  else if (res > 0)
+    {
+      UINT32 left = res;
+    
+      while (fd->super.alive && left)
+	{
+	  UINT32 done;
+	  
+	  assert(fd->want_read);
+	  assert(self->handler);
+
+	  /* NOTE: This call may replace self->handler */
+	  done = READ_HANDLER(self->handler, buffer, left);
+
+	  buffer += done;
+	  left -= done;
+	}
+
+      if (left)
+	verbose("read_buffered(): fd died, %i buffered bytes discarded\n",
+		left);
+    }
+  else
+    EXCEPTION_RAISE(fd->e, fd, make_io_exception(EXC_IO_READ_EOF)) ;
+}
+
+struct io_read_callback *
+make_buffered_read(UINT32 buffer_size,
+		   struct read_handler *handler)
+{
+  NEW(io_buffered_read, self);
+
+  self->super.read = do_buffered_read;
+  self->buffer_size = buffer_size;
+  self->handler = handler;
+
+  return &self->super;
+}
+
+static void do_consuming_read(struct io_read_callback *c,
+			      struct struct lsh_fd *fd)
+{
+  CAST(io_consuming_read, self, c);
+  UINT32 wanted = READ_QUERY(self);
+
+  if (!wanted)
+    {
+      fd->want_read = 0;
+    }
+  else
+    {
+      struct lsh_string *s = lsh_string_alloc(wanted);
+      int res = read(fd->fd, s->data, wanted);
+
+      if (res < 0)
+	switch(errno)
+	  {
+	  case EINTR:
+	    break;
+	  case EWOULDBLOCK:
+	    werror("io.c: read_consume: Unexpected EWOULDBLOCK\n");
+	    break;
+	  case EPIPE:
+	    fatal("io.c: read_consume: Unexpected EPIPE.\n");
+	  default:
+	    EXCEPTION_RAISE(fd->e, fd,
+			    make_io_exception(EXC_IO_READ),
+			    errno, NULL);
+	    break;
+	  }
+      else if (res > 0)
+	{
+	  s->length = res;
+	  a_WRITE(self->consumer, s);
+	}
+      else
+	EXCEPTION_RAISE(fd->e, fd, make_io_exception(EXC_IO_READ_EOF)) ;
+    }
+}
+
+/* NOTE: Doesn't initialize the query field. That should be done in
+ * the subclass's constructor. */
+void init_consuming_read(struct io_consuming_read *self,
+			 struct abstract_write *consumer)
+{
+  self->read = do_consuming_read;
+  self->consumer = consumer;
+}
+			 
+#if 0
 static void read_callback(struct lsh_fd *fd)
 {
   CAST(io_fd, self, fd);
@@ -338,7 +450,6 @@ static void read_callback(struct lsh_fd *fd)
 	   && fd->super.alive && fd->want_read));
 }
 
-#else
 static void read_callback(struct lsh_fd *fd)
 {
   CAST(io_fd, self, fd);
@@ -517,7 +628,7 @@ void init_backend(struct io_backend *b)
 #endif
 }
 
-/* This function is called if a connection this file somehow dependent
+/* This function is called if a connection this file somehow depends
  * on disappears. For instance, the connection may have spawned a
  * child process, and this file may be the stdin of that process. */
 
@@ -526,9 +637,9 @@ static void do_kill_fd(struct resource *r)
 {
   CAST_SUBTYPE(lsh_fd, fd, r);
 
-  /* FIXME: It could make sense to you a separate close reason for
-   * killed files. For now, using the zero reason will supress calling
-   * of any close callbacks. */
+  /* NOTE: We use the zero close reason for files killed this way.
+   * Close callbacks are still called, but they should probably not do
+   * anything if reason == 0. */
   if (r->alive)
     close_fd(fd, 0);
 }
@@ -536,7 +647,6 @@ static void do_kill_fd(struct resource *r)
 /* Initializes a file structure, and adds it to the backend's list. */
 static void init_file(struct io_backend *b, struct lsh_fd *f, int fd)
 {
-  /* assert(fd); */
   f->fd = fd;
   f->close_reason = -1; /* Invalid reason */
   f->close_callback = NULL;
@@ -557,6 +667,8 @@ static void init_file(struct io_backend *b, struct lsh_fd *f, int fd)
   b->files = f;
 }
 
+/* FIXME: How to do this when mocing from return codes to exceptions? */
+#if 0
 /* Blocking read from a file descriptor (i.e. don't use the backend).
  * The fd should *not* be in non-blocking mode. */
 
@@ -581,6 +693,7 @@ int blocking_read(int fd, struct read_handler *handler)
 	werror("blocking_read: Ignoring error %i\n", res);
     }
 }
+#endif
 
 /* Converts a string port number or service name to a port number.
  * Returns the port number in _host_ byte order, or -1 of the port
@@ -794,6 +907,8 @@ int address_info2sockaddr_in(struct sockaddr_in *sin,
     return tcp_addr(sin, 0, NULL, a->port);
 }
 
+/* These functions are used by werror() and friends */
+
 /* For fd:s in blocking mode. */
 int write_raw(int fd, UINT32 length, UINT8 *data)
 {
@@ -880,7 +995,7 @@ void io_init_fd(int fd)
   io_set_close_on_exec(fd);
 }
 
-/* Some code is taken from bellman's tcputils. */
+/* Some code is taken from Thomas Bellman's tcputils. */
 struct connect_fd *io_connect(struct io_backend *b,
 			      struct sockaddr_in *remote,
 			      struct sockaddr_in *local,
@@ -988,6 +1103,9 @@ static void prepare_write(struct lsh_fd *fd)
     close_fd(fd, CLOSE_EOF);
 }
 
+
+/* Constructors */
+
 struct io_fd *make_io_fd(struct io_backend *b,
 			 int fd)
 {
@@ -1000,7 +1118,7 @@ struct io_fd *make_io_fd(struct io_backend *b,
 }
 
 struct io_fd *io_read_write(struct io_fd *fd,
-			    struct read_handler *handler,
+			    struct io_read_callback *read,
 			    UINT32 block_size,
 			    struct close_callback *close_callback)
 {
@@ -1010,10 +1128,12 @@ struct io_fd *io_read_write(struct io_fd *fd,
 	fd->super.fd);
   
   /* Reading */
-  fd->super.read = read_callback;
+  fd->super.read = read;
   fd->super.want_read = !!handler;
-  fd->handler = handler;
-  fd->read_buffer = make_fd_read_buffer(READ_BUFFER_SIZE);
+#if 0
+  fd->handler = handler; 
+  fd->read_buffer = make_fd_read_buffer(READ_BUFFER_SIZE); 
+#endif
   
   /* Writing */
   fd->super.prepare = prepare_write;
@@ -1028,17 +1148,19 @@ struct io_fd *io_read_write(struct io_fd *fd,
 }
 
 struct io_fd *io_read(struct io_fd *fd,
-		      struct read_handler *handler,
+		      struct io_read_callback *read,
 		      struct close_callback *close_callback)
 {
   debug("io.c: Preparing fd %i for reading\n", fd->super.fd);
   
   /* Reading */
   fd->super.want_read = !!handler;
-  fd->super.read = read_callback;
+  fd->super.read = read;
+#if 0
   fd->handler = handler;
   fd->read_buffer = make_fd_read_buffer(READ_BUFFER_SIZE);
-
+#endif
+  
   fd->super.close_callback = close_callback;
 
   return fd;

@@ -36,6 +36,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+/* Forward declarations */
+
+struct lsh_fd;
+
 #define GABA_DECLARE
 #include "io.h.x"
 #undef GABA_DECLARE
@@ -77,6 +81,18 @@
 
 #define CLOSE_CALLBACK(c, r) ((c)->f((c), (r)))
 
+/* The fd read callback is a closure, in order to support different
+ * reading styles (buffered and consuming). */
+
+/* GABA:
+   (class
+     (name io_read_callback)
+     (vars
+       (read method void "struct lsh_fd *fd")))
+*/
+
+#define IO_READ_CALLBACK(c, fd) ((c)->do_read((c), (fd)))
+
 /* GABA:
    (class
      (name lsh_fd)
@@ -95,7 +111,7 @@
        
        (want_read simple int)
        ; Called if poll indicates that data can be read. 
-       (read method void)
+       (read object io_read_callback)
 
        (want_write simple int)
        ; Called if poll indicates that data can be written.
@@ -106,7 +122,7 @@
 */
 
 #define PREPARE_FD(fd) ((fd)->prepare((fd)))
-#define READ_FD(fd) ((fd)->read((fd)))
+#define READ_FD(fd) IO_READ_CALLBACK((fd)->read, (fd))
 #define WRITE_FD(fd) ((fd)->write((fd)))
 #define REALLY_CLOSE_FD(fd) ((fd)->really_close((fd)))
 
@@ -116,11 +132,38 @@
      (super lsh_fd)
      (vars
        ; Reading 
-       (handler object read_handler)
+       ;; (handler object read_handler)
        ; Writing 
        (buffer object write_buffer)))
 */
 
+/* Used for read handlers like read_line and read_packet that
+ * processes a little data at a time, possibly replacing the handler
+ * and leaving some data for the new one. */
+
+/* GABA:
+   (class
+     (name io_buffered_read)
+     (super io_read_callback)
+     (vars
+       (buffer_size . UINT32)
+       (handler object read_handler)))
+*/
+
+/* Used for read handlers like read_data, that know how much data they
+ * can consume. */
+
+/* GABA:
+   (class
+     (name io_consuming_read)
+     (super io_read_callback)
+     (vars
+       (query method UINT32)
+       ; Returns the maximum number of octets that
+       ; can be consumed immediately.
+       (consumer object abstract_write)))
+*/
+   
 /* Passed to the listen callback, and to other functions and commands
  * dealing with addresses. */
 /* GABA:
@@ -269,7 +312,7 @@ void close_fd(struct lsh_fd *fd, int reason);
 
 /* Stop reading from the fd, and close it as soon as the buffer
  * is completely written. */
-void close_fd_nicely(struct lsh_fd *fd, int reason)
+void close_fd_nicely(struct lsh_fd *fd, int reason);
 
 
 #endif /* LSH_IO_H_INCLUDED */
