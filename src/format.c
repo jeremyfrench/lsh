@@ -42,8 +42,12 @@ struct lsh_string *ssh_format(const char *format, ...)
   length = ssh_vformat_length(format, args);
   va_end(args);
 
+#if DEBUG_ALLOC
+  packet = lsh_string_alloc_clue(length, format);
+#else
   packet = lsh_string_alloc(length);
-
+#endif
+  
   va_start(args, format);
   ssh_vformat_write(format, length, packet->data, args);
   va_end(args);
