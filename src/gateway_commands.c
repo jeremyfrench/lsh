@@ -118,9 +118,9 @@ gateway_make_connection(struct listen_value *lv,
 		     BUF_SIZE,
 		     make_read_packet(
 		       make_packet_unpad(
+			 connection,
 			 make_packet_debug(&connection->super,
-				 	  ssh_format("%lz received", connection->debug_comment)),
-			 connection),
+				 	  ssh_format("%lz received", connection->debug_comment))),
 		       connection)),
 		   BLOCK_SIZE,
 		   make_connection_close_handler(connection))->write_buffer->super;
