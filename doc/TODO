@@ -30,6 +30,11 @@ http://www.msu.ru/pniam/pniam.html.
 Log a message if user authentication fails because root is not allowed
 to log in.
 
+Create an --telnet-mode/--auth-by-login option to lshd, which will
+accept a none-authentication, but instead of forking a login shell for
+the user, it should fork a /bin/login running as root with options to
+make it display a password prompt.
+
 
 CHARSETS
 
