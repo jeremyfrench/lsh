@@ -1,5 +1,7 @@
 2003-02-24  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* configure.ac: Bumped version to 1.5.1.
+
 	* src/rsync/Makefile.am: Use AM_CPPFLAGS = -I.. to get include
 	files in the main src directory.
 	* src/testsuite/Makefile.am: Likewise.
