@@ -116,7 +116,7 @@ STATIC_REQUEST_SERVICE(ATOM_SSH_CONNECTION);
      (vars
        (backend object io_backend)
 
-       (random object randomness)
+       (random object randomness_with_poll)
 
        (signature_algorithms object alist)
        (home . "const char *")
@@ -183,11 +183,11 @@ make_options(struct io_backend *backend,
   init_algorithms_options(&self->super, all_symmetric_algorithms());
   
   self->backend = backend;
-  self->random = make_device_random("/dev/urandom");
+  self->random = make_default_random(NULL, handler);
   
   self->home = getenv("HOME");
   
-  self->signature_algorithms = all_signature_algorithms(self->random);
+  self->signature_algorithms = all_signature_algorithms(&self->random->super);
   
   self->handler = handler;
   self->exit_code = exit_code;
@@ -1112,7 +1112,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      LIST(self->kex_algorithms)[i++] = ATOM_SRP_RING1_SHA1_LOCAL;
 	      ALIST_SET(self->super.algorithms,
 			ATOM_SRP_RING1_SHA1_LOCAL,
-			make_srp_client(make_srp1(self->random),
+			make_srp_client(make_srp1(&self->random->super),
 					ssh_format("%lz", self->user)));
 	    }
 #endif /* WITH_SRP */
@@ -1121,7 +1121,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
 	      ALIST_SET(self->super.algorithms,
 			ATOM_DIFFIE_HELLMAN_GROUP1_SHA1,
-			make_dh_client(make_dh1(self->random)));
+			make_dh_client(make_dh1(&self->random->super)));
 	    }
 	}
       else
@@ -1247,6 +1247,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  break;
 	}
 
+      /* Start background poll */
+      RANDOM_POLL_BACKGROUND(self->random->poller);
+      
       break;
 
     case 'p':
@@ -1458,10 +1461,10 @@ int main(int argc, char **argv)
 	make_handshake_info(CONNECTION_CLIENT,
 			    "lsh - a free ssh", NULL,
 			    SSH_MAX_PACKET,
-			    options->random,
+			    &options->random->super,
 			    options->super.algorithms,
 			    NULL),
-	make_simple_kexinit(options->random,
+	make_simple_kexinit(&options->random->super,
 			    options->kex_algorithms,
 			    options->super.hostkey_algorithms,
 			    options->super.crypto_algorithms,
