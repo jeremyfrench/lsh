@@ -142,6 +142,12 @@ lsh_oop_register_signal(oop_source *source, struct lsh_signal_handler *handler)
 }
 
 static void
+lsh_oop_cancel_signal(oop_source *source, struct lsh_signal_handler *handler)
+{
+  source->cancel_signal(source, handler->signum, lsh_oop_signal_callback, handler);
+}
+
+static void
 lsh_oop_register_fd(oop_source *source, oop_event event, struct lsh_fd *fd);
 
 static void *
@@ -194,6 +200,13 @@ lsh_oop_register_fd(oop_source *source, oop_event event, struct lsh_fd *fd)
 {
   source->on_fd(source, fd->fd, event, lsh_oop_fd_callback, fd);  
 }
+
+static void
+lsh_oop_cancel_fd(oop_source *source, oop_event event, struct lsh_fd *fd)
+{
+  source->cancel_fd(source, event, lsh_oop_fd_callback, fd);
+}
+
 
 #if 0
 static void
@@ -609,15 +622,13 @@ make_io_backend(void)
 {
   NEW(io_backend, b);
 
-  assert(!the_backend);
+  assert(!the_oop);
 
+  the_oop = b->oop = make_lsh_oop_glue();
+
+  
   init_resource(&b->super, do_kill_io_backend);
-  
-  b->source_sys = oop_sys_new();
-  assert(b->source_sys);
-  b->oop_signal = oop_signal_new(oop_sys_source(source_sys));
-  assert(b->oop_signal);
-  
+    
   b->files = NULL;
   b->signals = NULL;
   b->callouts = NULL;
@@ -640,9 +651,7 @@ do_kill_signal_handler(struct resource *s)
 
   if (self->super.alive)
     {
-      oop_source *source = oop_signal_source(the_backend->source_signal);
-
-      source->cancel_signal(source, self->signum, oop_signal_callback, self);
+      lsh_oop_cancel_signal(the_backend->oop->source, self);
       self->super.alive = 0;
     }
 }
@@ -663,7 +672,7 @@ io_signal_handler(struct io_backend *b,
 
   b->signals = handler;
 
-  source->on_signal(source, signum, oop_signal_callback, handler);
+  lsh_oop_register_signal(b->oop->source, handler);
   
   return &handler->super;
 }
@@ -696,9 +705,13 @@ do_buffered_read(struct io_callback *s,
 
   assert(fd->want_read);   
 
+#if 0
   /* If hanged_up is set, pretend that read returned 0 */
   res = fd->hanged_up ? 0 : read(fd->fd, buffer, self->buffer_size);
+#endif
 
+  read(fd->fd, buffer, self->buffer_size);
+  
   if (res < 0)
     switch(errno)
       {
@@ -879,6 +892,14 @@ do_write_callback(struct io_callback *s UNUSED,
   /* CAST(io_write_callback, self, s); */
   UINT32 size;
   int res;
+
+  FD_PREPARE(fd);
+
+  if (! (fd->super.alive && fd->want_write))
+    {
+      lsh_oop_cancel_fd(the_oop->source, OOP_WRITE, fd);
+      return;
+    }
   
   size = MIN(fd->write_buffer->end - fd->write_buffer->start,
 	     fd->write_buffer->block_size);
@@ -1970,7 +1991,10 @@ void close_fd(struct lsh_fd *fd)
   
       if (fd->close_callback)
 	LSH_CALLBACK(fd->close_callback);
-  
+
+      lsh_oop_cancel_fd(the_backend->oop->source, OOP_READ, fd);
+      lsh_oop_cancel_fd(the_backend->oop->source, OOP_WRITE, fd);
+      
       if (close(fd->fd) < 0)
 	{
 	  werror("io.c: close failed, (errno = %i): %z\n",
@@ -1993,6 +2017,8 @@ void close_fd_nicely(struct lsh_fd *fd)
   
   fd->want_read = 0;
   fd->read = NULL;
+
+  lsh_oop_cancel_fd(the_oop->source, OOP_READ, fd);
   
   if (fd->write_close)
     /* Mark the write_buffer as closed */
@@ -2007,6 +2033,8 @@ void close_fd_read(struct lsh_fd *fd)
 {
   fd->want_read = 0;
   fd->read = NULL;
+
+  lsh_oop_cancel_fd(the_oop->source, OOP_READ, fd);
   
   if (!fd->write)
     /* We won't be writing anything on this fd, so close it. */
