@@ -34,6 +34,7 @@ int lookup_hash(struct alist *algorithms, const char *name, int none_is_valid);
 struct int_list *default_crypto_algorithms(void);
 struct int_list *default_mac_algorithms(void);
 struct int_list *default_compression_algorithms(void);
+struct int_list *prefer_compression_algorithms(void);
 
 void init_algorithms_options(struct algorithms_options *self,
 			     struct alist *algorithms);

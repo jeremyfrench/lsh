@@ -215,6 +215,15 @@ struct int_list *default_compression_algorithms(void)
 #endif
 }
 
+struct int_list *prefer_compression_algorithms(void)
+{
+#if WITH_ZLIB
+  return make_int_list(2, ATOM_ZLIB, ATOM_NONE, -1);
+#else /* !WITH_ZLIB */
+  return make_int_list(1, ATOM_NONE, -1);
+#endif
+}
+  
 static void
 vlist_algorithms(const struct argp_state *state,
 		 struct alist *algorithms,
@@ -364,16 +373,18 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
       {
 	int compression;
 	if (!arg)
-	  arg = "zlib";
-	
-	compression = lookup_compression(self->algorithms, arg);
-	if (compression)
-	  self->compression_algorithms = make_int_list(1, compression, -1);
+	  self->compression_algorithms = prefer_compression_algorithms();
 	else
-	{
-	  list_compression_algorithms(state, self->algorithms);
-	  argp_error(state, "Unknown compression algorithm '%s'.", arg);
-	}
+	  {
+	    compression = lookup_compression(self->algorithms, arg);
+	    if (compression)
+	      self->compression_algorithms = make_int_list(1, compression, -1);
+	    else
+	      {
+		list_compression_algorithms(state, self->algorithms);
+		argp_error(state, "Unknown compression algorithm '%s'.", arg);
+	      }
+	  }
 	break;
       }
     case OPT_LIST_ALGORITHMS:
