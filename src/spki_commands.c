@@ -493,6 +493,7 @@ DEFINE_COMMAND_SIMPLE(spki_return_userkeys, a)
 
 struct command *
 make_spki_read_userkeys(struct alist *algorithms,
+			struct alist *signature_algorithms,
 			struct interact *tty)
 {
   struct command *decrypt;
@@ -515,7 +516,7 @@ make_spki_read_userkeys(struct alist *algorithms,
 
   {
     CAST_SUBTYPE(command, res,
-		 spki_read_userkeys(algorithms,
+		 spki_read_userkeys(signature_algorithms,
 				    decrypt));
 
     return res;
