@@ -72,6 +72,16 @@ AC_ARG_WITH(zlib,
   AC_HELP_STRING([--without-zlib], [Don't use zlib compression]),,
   [with_zlib=yes])
 
+AC_ARG_WITH(tcpwrappers,
+  AC_HELP_STRING([--with-tcpwrappers], 
+                [Use tcp-wrappers for filtering connections]),
+  [if test -z "$withval"; then 
+    with_tcpwrappers=yes; 
+  else 
+    with_tcpwrappers="$withval";
+  fi],
+  [with_tcpwrappers=no])
+
 # Checking this variable is delayed until we have checked if zlib is
 # actually available.
 
@@ -355,6 +365,30 @@ fi
 if test x$with_zlib = xyes; then
   LSH_RPATH_FIX
 fi
+
+# FIXME: Should we let people use --with-tcpwrappers=/here/they/are?
+
+if test x$with_tcpwrappers = xyes; then
+  AC_CHECK_LIB(wrap, request_init,, 
+  [
+      AC_MSG_WARN([Failed to link libwrap, you might try adding socket to youd LDFLAGS])
+      with_tcpwrappers=no
+  ])
+
+  AC_CHECK_HEADER(tcpd.h,, [with_tcpwrappers=no])
+
+  if test x$with_tcpwrappers = xno; then
+    AC_MSG_WARN([Failed to find a working tcpwrappers setup, disabling wrappers])
+  fi
+fi
+
+if test x$with_tcpwrappers = xyes; then
+  LSH_RPATH_FIX
+  AC_DEFINE(WITH_TCPWRAPPERS,1,[Whatever to use tcpwrappers])
+else
+  AC_DEFINE(WITH_TCPWRAPPERS,0,[Whatever to use tcpwrappers])
+fi
+
 
 # X11 stuff. We only need libXau.
 AC_PATH_X
