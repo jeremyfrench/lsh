@@ -158,6 +158,10 @@ dup_error_stream(void)
   else
     {
       int fd = dup(error_fd);
+
+      /* This function is used to get stderr away from the stdio fd
+       * range. In the unlikely event that dup returns an fd <=
+       * STDERR_FILENO, we treat that as an error. */
       if (fd > STDERR_FILENO)
 	{
 	  io_set_close_on_exec(fd);
