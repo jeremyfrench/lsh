@@ -24,9 +24,30 @@
 #ifndef LSH_CLIENT_USERAUTH_H_INCLUDED
 #define LSH_CLIENT_USERAUTH_H_INCLUDED
 
-#warning client_userauth.h is obsolete
-
+#include "alist.h"
+#include "command.h"
+#include "connection.h"
+#include "list.h"
+#include "parse.h"
 #include "userauth.h"
+
+/* Client functions */
+struct lsh_string *
+format_userauth_password(struct lsh_string *name,
+			 int service,
+			 struct lsh_string *passwd,
+			 int free);
+
+
+struct command *make_client_userauth(struct lsh_string *username,
+				     int service_name,
+				     struct object_list *methods);
+
+struct client_userauth_method *
+make_client_password_auth(void);
+
+struct client_userauth_method *
+make_client_publickey_auth(struct object_list *);
 
 #endif /* LSH_CLIENT_USERAUTH_H_INCLUDED */
 
