@@ -1,5 +1,8 @@
 1999-10-11  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/argp/Makefile.am.in (libargp_a_SOURCES): Fixed typo (forgot
+	the .c suffix).
+
 	* src/sexp_conv.c (main): Pass HANDLER_CONTEXT.
 
 	* src/sexp_commands.c (make_read_sexp_exception_handler): Added
