@@ -712,8 +712,8 @@ lsh_string_bubblebabble(struct lsh_string *s, int freeflag)
 
   char vowels[6] = { 'a', 'e', 'i', 'o', 'u', 'y' };
 
-  char cons[18] = { 'b', 'c', 'd', 'f', 'g', 'h', 'k',  'l', 'm',
-		    'n', 'p', 'r', 's', 't', 'v', 'w', 'x' }; 
+  char cons[17] = { 'b', 'c', 'd', 'f', 'g', 'h', 'k',  'l', 'm',
+		    'n', 'p', 'r', 's', 't', 'v', 'z', 'x' }; 
   
   *r++ = 'x';
   

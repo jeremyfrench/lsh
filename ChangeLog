@@ -1,3 +1,9 @@
+2002-06-26  Pontus Sköld  <pont@soua.net>
+
+	* src/format.c (lsh_string_bubblebabble): Fixed stupid typo making
+	w occur in bubble babble fingerprint where it should be z. Also
+	fixed the size of the cons array.
+
 2002-06-26  Niels Möller  <niels@s3.kth.se>
 
 	* src/unix_user.c (do_lookup_user): Don't treat accounts with a
