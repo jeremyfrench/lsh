@@ -370,6 +370,13 @@ static int do_exit_status(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);;
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);;
 
+      /* Sent EOF, if we haven't done that already. */
+      /* FIXME: Make this behaviour configurable, there may be some
+       * child process alive that we could talk to. */
+
+      if (!(channel->flags && CHANNEL_SENT_EOF))
+	return channel_eof(channel);
+      
       return LSH_OK | LSH_GOON;
     }
   

@@ -167,10 +167,13 @@ struct channel_table *make_channel_table(void)
 };
 
 /* Returns -1 if allocation fails */
+/* NOTE: This function returns locally chosen channel numbers, which
+ * are always small integers. So there's no problem fitting them in
+ * a signed int. */
 int alloc_channel(struct channel_table *table)
 {
-  /* FIXME: Use int  here? */
   UINT32 i;
+  
   for(i = table->next_channel; i < table->used_channels; i++)
     {
       if (!table->channels[i])
@@ -181,6 +184,7 @@ int alloc_channel(struct channel_table *table)
     }
   if (i == table->max_channels)
     return -1;
+
   if (i == table->allocated_channels) 
     {
       int new_size = table->allocated_channels * 2;
@@ -210,6 +214,8 @@ void dealloc_channel(struct channel_table *table, int i)
     table->next_channel = i;
 }
 
+/* Returns -1 if no channel number can be allocated. See also the note
+ * for alloc_channel(). */
 int register_channel(struct channel_table *table, struct ssh_channel *channel)
 {
   int n = alloc_channel(table);
@@ -703,6 +709,9 @@ static int do_channel_eof(struct packet_handler *c,
 	  else
 	    /* FIXME: What is a reasonable default behaviour?
 	     * Closing the channel may be the right thing to do. */
+	    if (! (channel->flags & CHANNEL_SENT_CLOSE))
+	      res |= channel_close(channel);
+#if 0
 	  if (!LSH_CLOSEDP(res)
 	      && ! (channel->flags & CHANNEL_SENT_CLOSE)
 	      && (channel->flags & CHANNEL_SENT_EOF))
@@ -712,7 +721,7 @@ static int do_channel_eof(struct packet_handler *c,
 	      
 	      res |= channel_close(channel);
 	    }
-	      
+#endif      
 	  return channel_process_status(closure->table, channel_number,
 					res);
 

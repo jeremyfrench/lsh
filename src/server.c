@@ -252,6 +252,7 @@ make_server_callback(struct io_backend *b,
 
 static int server_die(struct close_callback *closure, int reason)
 {
+  /* FIXME: If any processes are running, they should be killed now. */
   verbose("Connection died, for reason %d.\n", reason);
   if (reason != CLOSE_EOF)
     werror("Connection died.\n");
@@ -279,7 +280,8 @@ struct close_callback *make_server_close_handler(void)
 
        ; Non-zero if a shell or command has been started. 
        (running simple int)
-
+       ; FIXME: We need the pid as well, to be able to kill
+       ; the process if the channel or connection is closed.
        ; Child process's stdio 
        (in object io_fd)
        (out object io_fd)
@@ -505,6 +507,7 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
     }
 #endif
 
+  /* FIXME: We shouldn't close until we have both sent and recieved eof. */
   channel->flags |= CHANNEL_CLOSE_AT_EOF;
   
   if (!(channel->flags & CHANNEL_SENT_CLOSE))
