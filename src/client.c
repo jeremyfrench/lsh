@@ -1293,7 +1293,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 
     case OPT_ASKPASS:
-      INTERACT_SET_ASKPASS(options->tty, optarg);
+      INTERACT_SET_ASKPASS(options->tty, arg);
       break;
       
     case 'e':
