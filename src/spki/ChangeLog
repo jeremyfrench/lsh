@@ -1,3 +1,11 @@
+2003-02-24  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* testsuite/Makefile.am (EXTRA_DIST): Use dist_cdsa, and include
+	.dist_cdsa. 
+
+	* testsuite/.dist_cdsa (dist_cdsa): New file, listing distribution
+	files. 
+
 2003-02-23  Niels Moller  <nisse@carduelis>
 
 	* configure.ac: Use LSH_GCC_ATTRIBUTES.

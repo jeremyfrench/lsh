@@ -1,5 +1,14 @@
 2003-02-24  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/testsuite/Makefile.am (TS_SH): Added rapid-7-lsh-test and
+	rapid-7-lshd-test.
+	(EXTRA_DIST): Use $(dist_rapid7), and include .dist_rapid7 which
+	defines it. 
+
+	* src/testsuite/.dist_rapid7: New file, listing rapid7 files.
+
+	* rapid7-ssh-pdu: New directory, containing rapid7's testsuite.
+
 	* configure.ac: Bumped version to 1.5.1.
 
 	* src/rsync/Makefile.am: Use AM_CPPFLAGS = -I.. to get include
