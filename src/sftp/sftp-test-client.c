@@ -46,8 +46,8 @@ struct client_ctx
 };
 
 
-UINT32 
-sftp_client_new_id()
+static UINT32 
+sftp_client_new_id(void)
 {
   /* Return a new (monotonically increasing) every time */
   static UINT32 curid=0;
@@ -112,7 +112,7 @@ fork_server(char *name,
 
 /* The handshake packets are special, because they don't include any
  * request id. */
-int
+static int
 client_handshake(struct client_ctx *ctx)
 {
   UINT8 msg;
@@ -211,8 +211,8 @@ do_ls(struct client_ctx *ctx, const char *name)
 	      fname=sftp_get_string(ctx->i, &fnamel);
 	      lname=sftp_get_string(ctx->i, &lnamel);
 	      sftp_get_attrib(ctx->i, &a);
-	      
-	      /* Fixme; display this somehow */
+
+	      printf("%s\n", lname);
 	    }
 	} 
       else
@@ -259,15 +259,14 @@ do_get(struct client_ctx *ctx,
        const char *lname, 
        const char *rname, 
        int cont,
-       UINT64 contat
-       )
+       off_t contat)
 {
   UINT32 sentid, recvid;
   UINT32 status;
   UINT8* handle;
   UINT32 hlength;
 
-  UINT64 curpos=0;
+  off_t curpos=0;
   UINT32 rdatal;
   UINT8* rdata;
 
@@ -455,13 +454,13 @@ do_put(struct client_ctx *ctx,
        const char *lname, 
        const char *rname, 
        int cont,
-       UINT64 contat)
+       off_t contat)
 {
   UINT32 sentid, recvid;
   UINT32 status;
   UINT8* handle;
   UINT32 hlength;
-  UINT64 curpos=0;
+  off_t curpos=0;
   UINT8* wdata;
   ssize_t rbytes;
 
@@ -633,7 +632,7 @@ do_put(struct client_ctx *ctx,
 	 status == SSH_FX_OK &&
 	 !failure
 	 ))
-  return 0;
+    return 0;
   
   return 1;
   
@@ -648,7 +647,7 @@ do_stat(struct client_ctx *ctx, const char *name)
 
   sentid=sftp_client_new_id();
   
-  sftp_set_msg(ctx->o, SSH_FXP_STAT); /* Send a OPENDIR message */
+  sftp_set_msg(ctx->o, SSH_FXP_STAT);
   sftp_set_id(ctx->o, sentid);
   sftp_put_string(ctx->o, strlen(name), name);
 
@@ -668,6 +667,9 @@ do_stat(struct client_ctx *ctx, const char *name)
     return 0;
 
   /* Fixme; return this somehow */
+  printf("Stat succeeded\n");
+  
+  return 1;
 }
 
 int
