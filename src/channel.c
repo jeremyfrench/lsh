@@ -169,6 +169,9 @@ struct channel_table *make_channel_table(void)
   table->max_channels = MAX_CHANNELS;
 
   table->pending_close = 0;
+
+  object_queue_init(&table->active_global_requests);
+  object_queue_init(&table->pending_global_requests);
   
   return table;
 };
@@ -342,7 +345,7 @@ do_global_request_response(struct global_request_callback *c,
 			   int success)
 {
   CAST(global_request_response, self, c);
-  struct object_queue *q = self->super.connection->channels->active_global_requests;
+  struct object_queue *q = &self->super.connection->channels->active_global_requests;
 
   int res = 0;
   
@@ -414,7 +417,7 @@ static int do_global_request(struct packet_handler *c,
 	{
 	  struct global_request_status *a = make_global_request_status();
 
-	  object_queue_add_tail(connection->channels->active_global_requests,
+	  object_queue_add_tail(&connection->channels->active_global_requests,
 				&a->super);
 	  
 	  c = make_global_request_response(connection, a);

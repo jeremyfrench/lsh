@@ -163,10 +163,10 @@
 
        ; Global requests that we have received, and should reply to
        ; in the right order
-       (active_global_requests object object_queue)
+       (active_global_requests struct object_queue)
 
        ; Queue of global requests that we expect replies on.
-       (pending_global_requests object object_queue)
+       (pending_global_requests struct object_queue)
        
        ; If non-zero, close connection after all active channels have
        ; died.
