@@ -27,8 +27,8 @@
 #include "lsh.h"
 
 #include "resource.h"
+#include "tty.h"
 
-#include <termios.h>
 #include <sys/types.h>
 
 #define MAX_TTY_NAME	32
@@ -44,22 +44,29 @@
      (super resource)
        (vars
          (master . int)
-	 (slave . int)
+	 ; (slave . int)
+
+	 ; Information for setting up the slave side
 
 	 ; Name of slave tty.
 	 ; Needed for SysV pty-handling (where opening the tty
 	 ; makes it the controlling terminal). Perhaps handy also for
 	 ; writing accurate utmp-entries.
 	 ; This string should be NUL-terminated
-	 (tty_name string)))
+	 (tty_name string)
+
+	 (dims . "struct terminal_dimensions")
+	 ; SSH mode string
+	 (mode string)))
 */
 
-struct pty_info *make_pty_info(void);
-int pty_allocate(struct pty_info *pty, uid_t user);
+struct pty_info *
+make_pty_info(void);
 
-/* NOTE: This function also makes the current process a process group
- * leader. */
-int tty_setctty(struct pty_info *pty);
+int
+pty_open_master(struct pty_info *pty, uid_t user);
 
+int
+pty_open_slave(struct pty_info *pty);
 
 #endif /* LSH_SERVER_PTY_H_INCLUDED */
