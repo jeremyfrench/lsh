@@ -1,3 +1,50 @@
+2003-01-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* testsuite/testutils.c (read_acl): Use spki_acl_process.
+
+	* testsuite/lookup-acl-test.c (test_main): Updated to use
+	spki_5_tuple_list. 
+
+	* testsuite/cdsa-reduce-test.c (filter_by_tag): Rewritten to be
+	used with spki_5_tuple_list_filter.
+	(filter_by_subject): Likewise.
+	(filter_by_date): Likewise.
+	(test_main): Updated to use spki_5_tuple_list.
+
+	* reduce.c (reduce_with_list): Now results in zero or more
+	certificates, that are consed onto the "known" list.
+	(spki_5_tuple_reduce): Adapted to use spki_5_tuple_list.
+
+	* parse.c (spki_parse_acl): Moved function. Was
+	certificate.c:spki_acl_parse. 
+
+	* certificate.c (spki_5_tuple_init): Initialize refs to zero.
+	(spki_5_tuple_cons_new): New function.
+	(spki_5_tuple_list_release): New function. Replaces
+	spki_5_tuple_free_chain. 
+	(spki_5_tuple_list_nappend): New function.
+	(spki_5_tuple_list_nreverse): New function.
+	(spki_5_tuple_list_filter): New function.
+	(spki_5_tuple_by_subject_next): Renamed function. Was
+	spki_5_tuple_by_subject. Added spki_5_tuple_list ** argument, used
+	as an iterator.
+	(spki_acl_by_subject_first): Added iterator argument.
+	(spki_5_tuple_by_authorization_next): Renamed, was acl_by_auth.
+	Made non-static.
+	(spki_acl_by_authorization_first): Added iterator argument.
+	(spki_acl_process): New function, replacing spki_acl_parse.
+	(format_valid): Use const argument.
+	(spki_acl_format): Use a spki_5_tuple_list argument.
+	(spki_parse_sequence_no_signatures): Renamed function, was
+	spki_process_sequence_no_signatures. Now returns a
+	spki_5_tuple_list. 
+
+	* certificate.h (struct spki_5_tuple): Deleted attribute next.
+	Added a reference counter.
+	(struct spki_5_tuple_list): New struct.
+	(struct spki_acl_db): Renamed attribute first_acl to acl. Now
+	points at a spki_5_tuple_list.
+
 2003-01-20  Niels Möller  <niels@s3.kth.se>
 
 	* Makefile.am (EXTRA_DIST): Distribute process-types.

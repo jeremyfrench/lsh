@@ -1,3 +1,9 @@
+2003-01-22  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/spki.c (spki_add_acl): Use spki_acl_process.
+	(spki_authorize): Adapted to changed spki_acl_by_subject_first and
+	spki_acl_by_subject_next. 
+
 2003-01-21  Niels Möller  <niels@s3.kth.se>
 
 	* misc/xenofarm.sh: Don't run make distcheck, as it leaves some
