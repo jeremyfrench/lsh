@@ -1,7 +1,7 @@
 ;; FIXME: Turn this into a scheme48 module
 
 (define-syntax let-and
-  (syntax-rules '()
+  (syntax-rules ()
 		((let-and (expr) clause clauses ...)
 		 (and expr (let-and clause clauses ...)))
 		((let-and (name expr) clause clauses ...)
