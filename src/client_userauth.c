@@ -21,7 +21,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "userauth.h"
+#include "client_userauth.h"
 
 #include "charset.h"
 #include "command.h"
@@ -58,12 +58,15 @@ struct client_userauth;
 
 #include "client_userauth.c.x"
 
+#if 0
 static struct packet_handler *make_banner_handler(void);
+#endif
 
-static struct lsh_string *format_userauth_password(struct lsh_string *name,
-						   int service,
-						   struct lsh_string *passwd,
-						   int free)
+struct lsh_string *
+format_userauth_password(struct lsh_string *name,
+			 int service,
+			 struct lsh_string *passwd,
+			 int free)
 {
   return ssh_format(free ? "%c%S%a%a%c%fS" : "%c%S%a%a%c%S",
 		    SSH_MSG_USERAUTH_REQUEST,
@@ -106,29 +109,6 @@ format_userauth_publickey(struct lsh_string *name,
 		    public);
 }
 
-/* ;; GABA:
-   (class
-     (name client_userauth_method)
-     (vars
-       ; set up message handlers
-       (setup method int "struct client_userauth *userauth"
-                         "struct ssh_connection *connection")
-       ; send authentication request
-       (send method void "struct client_userauth *userauth" 
-                         "struct ssh_connection *connection")
-       ; clean up message handlers
-       (cleanup method void "struct client_userauth *userauth"
-                            "struct ssh_connection *connection")))
-*/
-#if 0
-#define CLIENT_USERAUTH_SETUP(m, u, c) \
-  ((m->setup) ? ((m)->setup(m, u, c)) : 1)
-#define CLIENT_USERAUTH_SEND(m, u, c) \
-  ((m->send) ? ((m)->send(m, u, c)) : (void) 0)
-#define CLIENT_USERAUTH_CLEANUP(m, u, c) \
-  ((m->cleanup) ? ((m)->cleanup(m, u, c)) : (void) 0)
-#endif
-
 /* Called when we receive a USERAUTH_FAILURE message. It will
  * typically either try again, or raise EXC_USERAUTH. */
 
@@ -155,23 +135,6 @@ format_userauth_publickey(struct lsh_string *name,
 
 #define CLIENT_USERAUTH_LOGIN(m, u, c, e) \
   ((m)->login((m), (u), (c), (e)))
-
-
-#if 0
-/* ;; GABA:
-   (class
-     (name client_userauth)
-     (super command)
-     (vars
-       (username string)            ; Remote user name to authenticate as.
-       (service_name simple int)    ; Service we want to access .
-       (current_method simple int)
-       (methods object alist)       ; authentication methods
-            
-       ; FIXME: Keys to try
-       ))
-*/
-#endif
 
 /* Takes a connection as argument, and attempts to login. It does this
  * by trying each METHOD in turn. As soon as one succeeds, the
