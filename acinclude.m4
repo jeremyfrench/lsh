@@ -473,7 +473,9 @@ dnl LSH_DEPENDENCY_TRACKING
 dnl Defines compiler flags DEP_FLAGS to generate dependency
 dnl information, and DEP_PROCESS that is any shell commands needed for
 dnl massaging the dependency information further. Dependencies are
-dnl generated as a side effect of compilation.
+dnl generated as a side effect of compilation. Dependency files
+dnl themselves are not treated as targets.
+
 AC_DEFUN([LSH_DEPENDENCY_TRACKING],
 [DEP_FLAGS=''
 DEP_PROCESS='true'
@@ -484,7 +486,7 @@ if test x$GCC = xyes; then
       AC_MSG_WARN([Dependency tracking disabled, gcc-3.x is needed])
     ;;
     *)
-      DEP_FLAGS='-MT $[]@ -MT $[]@.d -MD -MP -MF $[]@.d'
+      DEP_FLAGS='-MT $[]@ -MD -MP -MF $[]@.d'
       DEP_PROCESS='true'
     ;;
   esac

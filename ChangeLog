@@ -1,5 +1,8 @@
 2004-11-13  Niels Möller  <nisse@lysator.liu.se>
 
+	* acinclude.m4 (LSH_DEPENDENCY_TRACKING): Don't add dependency
+	files themselves as targets.
+
 	* misc/xenofarm.sh (status): There's no config.h in the liboop
 	directory, so don't try to copy it.
 
