@@ -57,6 +57,8 @@
 /* algorithms is an array indexed by the KEX_* values above */
 struct keyexchange_algorithm
 {
+  struct lsh_object header;
+  
   int (*init)(struct keyexchange_algorithm *closure,
 	      struct ssh_connection *connection,
 	      int hostkey_algorithm_atom,
@@ -69,6 +71,8 @@ struct keyexchange_algorithm
 
 struct kexinit
 {
+  struct lsh_object header;
+  
   UINT8 cookie[16];
   /* Zero terminated list of atoms */
   int *kex_algorithms; 
@@ -111,6 +115,8 @@ struct handle_kexinit
 /* Installs keys for use. */
 struct install_keys
 {
+  struct lsh_object header;
+  
   int (*install)(struct install_keys *closure,
 		 struct ssh_connection *connection,
 		 struct hash_instance *secret);
@@ -120,6 +126,8 @@ struct install_keys
 
 struct newkeys_info
 {
+  struct lsh_object header;
+  
   struct crypto_algorithm *encryption_client_to_server;
   struct crypto_algorithm *encryption_server_to_client;
   struct mac_algorithm *mac_client_to_server;
@@ -158,5 +166,17 @@ int initiate_keyexchange(struct ssh_connection *connection,
 			 int type,
 			 struct kexinit *kex,
 			 struct lsh_string *first_packet);
+
+struct packet_handler *make_kexinit_handler(int type,
+					    struct make_kexinit *init,
+					    struct alist *algorithms);
+
+struct packet_handler *
+make_newkeys_handler(struct crypto_instance *crypto,
+		     struct mac_instance *mac);
+
+#if 0
+struct kexinit *parse_kexinit(struct lsh_string *packet);
+#endif
 
 #endif /* LSH_KEYEXCHANGE_H_INCLUDED */

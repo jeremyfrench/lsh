@@ -36,6 +36,8 @@ struct signature_algorithm *make_dss_algorithm(struct randomness *random);
  * bignums. */
 struct group
 {
+  struct lsh_object header;
+  
   /* Returns 1 if x is an element of the group, and is in the
    * canonical representation */
   int (*member)(struct group *closure, mpz_t x);
@@ -53,15 +55,45 @@ struct group
 #define GROUP_POWER(group, res, g, e) \
 ((group)->power((group), (res), (g), (e)))
 
+struct group *make_zn(mpz_t p);
+
+/* DSS signatures */
+struct dss_public
+{
+  mpz_t p;
+  mpz_t q;
+  mpz_t g;
+  mpz_t y;
+};
+
+#if 0
+struct signer *make_dss_signer(struct signature_algorithm *closure,
+			       UINT32 public_length,
+			       UINT8 *public,
+			       UINT32 private_length,
+			       UINT8 *private);
+
+struct verifier *make_dss_verifier(struct signature_algorithm *closure,
+				   UINT32 public_length,
+				   UINT8 *public);
+
+
+int parse_dss_public(struct simple_buffer *buffer, struct dss_public *public);
+#endif
+
 /* DH key exchange, with authentication */
 struct diffie_hellman_method
 {
+  struct lsh_object header;
+  
   struct group *G;
   mpz_t generator;
   struct hash_algorithm *H;
   struct randomness *random;
 };
 
+/* NOTE: Instances are never allocated on the heap by themselves. They are always
+ * embedded in other objects. Therefore there's no object header. */
 struct diffie_hellman_instance
 {
   struct diffie_hellman_method *method;
@@ -97,7 +129,12 @@ int dh_process_server_msg(struct diffie_hellman_instance *self,
 /* Verifies server's signature */
 int dh_verify_server_msg(struct diffie_hellman_instance *self,
 			 struct verifier *v);
-					
+
+void dh_generate_secret(struct diffie_hellman_instance *self,
+			mpz_t r);
+
+void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest);
+
 #if 0
 struct diffie_hellman_method *
 make_diffie_hellman_method(struct group *group,
@@ -111,8 +148,10 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
 				  struct diffie_hellman_instance *self,
 				  struct ssh_connection *c);
 
+#if 0
 struct diffie_hellman_instance *
 make_diffie_hellman_instance(struct diffie_hellman_method *m,
 			     struct ssh_connection *c);
+#endif
 
 #endif /* LSH_PUBLICKEY_CRYPTO_H_INCLUDED */
