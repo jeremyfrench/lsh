@@ -445,7 +445,7 @@ do_tcp_forward_continuation(struct command_continuation *c,
   if (!fd)
     {
       struct forwarded_port *port
-	= remove_forward(self->connection->forwarded_ports,
+	= remove_forward(&self->connection->forwarded_ports,
 			 1,
 			 self->forward->local->ip->length,
 			 self->forward->local->ip->data,
@@ -509,7 +509,7 @@ static int do_tcpip_forward_request(struct global_request *s,
 	  return GLOBAL_REQUEST_CALLBACK(c, 0);
 	}
 
-      if (lookup_forward(connection->forwarded_ports,
+      if (lookup_forward(&connection->forwarded_ports,
 			 bind_host->length, bind_host->data, bind_port))
 	{
 	  verbose("An already requested tcp-forward requested again\n");
@@ -518,7 +518,7 @@ static int do_tcpip_forward_request(struct global_request *s,
       
       verbose("Adding forward-tcpip\n");
       forward = make_forwarded_port(a, NULL);
-      object_queue_add_head(connection->forwarded_ports, &forward->super.super);
+      object_queue_add_head(&connection->forwarded_ports, &forward->super.super);
 
       {
 	struct lsh_object *o = make_forward_listen(self->backend, connection);
@@ -561,7 +561,7 @@ static int do_cancel_tcpip_forward(struct global_request *s UNUSED,
       parse_eod(args))
     {
       struct forwarded_port *port
-	= remove_forward(connection->forwarded_ports, 0,
+	= remove_forward(&connection->forwarded_ports, 0,
 			 bind_host_length,
 			 bind_host,
 			 bind_port);
