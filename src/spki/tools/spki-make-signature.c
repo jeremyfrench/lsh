@@ -24,6 +24,7 @@
 #include "parse.h"
 
 #include "misc.h"
+#include "sign.h"
 
 #include <nettle/rsa.h>
 
@@ -112,17 +113,13 @@ main(int argc, char **argv)
 {
   struct sign_options o;
   struct spki_iterator i;
-  struct rsa_public_key pub;
-  struct rsa_private_key priv;
-  const struct nettle_hash *hash_algorithm = NULL;
+  struct sign_ctx ctx;
   
   char *key;
   unsigned key_length;
-  enum spki_type type;
   
   char *digest;
 
-  mpz_t s;
   struct nettle_buffer buffer;
   
   parse_options(&o, argc, argv);
@@ -133,67 +130,30 @@ main(int argc, char **argv)
     die("Failed to read key-file `%s'\n", o.key_file);
 
   if (! (spki_transport_iterator_first(&i, key_length, key)
-	 && spki_check_type(&i, SPKI_TYPE_PRIVATE_KEY)))
-    die("Invalid private key.\n");
-
-  switch ( (type = i.type) )
-    {
-    case SPKI_TYPE_RSA_PKCS1_MD5:
-      hash_algorithm = &nettle_md5;
-      break;
-
-    case SPKI_TYPE_RSA_PKCS1_SHA1:
-      hash_algorithm = &nettle_sha1;
-      break;
-
-    default:
-      die("Unsupported key type.\n");
-    }
-
-  rsa_public_key_init(&pub);
-  rsa_private_key_init(&priv);
-
-  if (!rsa_keypair_from_sexp_alist(&pub, &priv, 0, &i.sexp))
-    die("Invalid RSA key.\n");
-
+	 && spki_sign_init(&ctx, NULL, &i)))
+    die("Invalid private key\n");
+  
   if (o.digest_mode)
     {
       unsigned digest_length = read_file(stdin,
-					 hash_algorithm->digest_size + 1,
+					 ctx.hash_algorithm->digest_size + 1,
 					 &digest);
-       if (digest_length != hash_algorithm->digest_size)
+       if (digest_length != ctx.hash_algorithm->digest_size)
 	 die("Unexpected size of input digest.\n");
      }
    else
      {
-       digest = hash_file(hash_algorithm, stdin);
+       digest = hash_file(ctx.hash_algorithm, stdin);
 
        if (!digest)
 	 die("Reading stdin failed.\n");
      }
 
-   mpz_init(s);
+  nettle_buffer_init_realloc(&buffer, NULL, nettle_xrealloc);
+  spki_sign_digest(&ctx, &buffer, digest);
 
-   if (hash_algorithm == &nettle_md5)
-     rsa_md5_sign_digest(&priv, digest, s);
-   else if (hash_algorithm == &nettle_sha1)
-     rsa_sha1_sign_digest(&priv, digest, s);
-   else
-     die("Internal error.\n");
+  spki_sign_clear(&ctx);
 
-   nettle_buffer_init_realloc(&buffer, NULL, nettle_xrealloc);
-   sexp_format(&buffer,
-	       "(signature(hash %0s%s)(public-key(%s (n%b)(e%b)))(%s%b))",
-	       hash_algorithm->name, hash_algorithm->digest_size, digest,
-	       spki_type_names[type].length, spki_type_names[type].name,
-	       pub.n, pub.e,
-	       spki_type_names[type].length, spki_type_names[type].name,
-	       s);
-
-  mpz_clear(s);
-  rsa_public_key_clear(&pub);
-  rsa_private_key_clear(&priv);
-  
   if (!write_file(stdout, buffer.size, buffer.contents))
     die("Writing signature failed.\n");
 
