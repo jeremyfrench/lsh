@@ -1407,13 +1407,33 @@ io_connect(struct sockaddr *remote,
 }
 
 struct lsh_fd *
+io_listen_fd(int s,
+	     struct io_callback *callback,
+	     struct exception_handler *e)
+{
+  struct lsh_fd *fd;
+  
+  if (listen(s, 256) < 0) 
+    {
+      close(s);
+      return NULL;
+    }
+
+  fd = make_lsh_fd(s, "listening socket", e);
+
+  fd->read = callback;
+  lsh_oop_register_read_fd(fd);
+
+  return fd;
+}
+
+struct lsh_fd *
 io_listen(struct sockaddr *local,
 	  socklen_t length,
 	  struct io_callback *callback,
 	  struct exception_handler *e)
 {
   int s = socket(local->sa_family, SOCK_STREAM, 0);
-  struct lsh_fd *fd;
   
   if (s<0)
     return NULL;
@@ -1433,18 +1453,7 @@ io_listen(struct sockaddr *local,
       return NULL;
     }
 
-  if (listen(s, 256) < 0) 
-    {
-      close(s);
-      return NULL;
-    }
-
-  fd = make_lsh_fd(s, "listening socket", e);
-
-  fd->read = callback;
-  lsh_oop_register_read_fd(fd);
-
-  return fd;
+  return io_listen_fd(s, callback, e);
 }
 
 
@@ -1470,8 +1479,8 @@ make_local_info(struct lsh_string *directory,
   }
 }
 
-static void
-safe_popd(int old_cd, const char *directory)
+void
+lsh_popd(int old_cd, const char *directory)
 {
   while (fchdir(old_cd) < 0)
     if (errno != EINTR)
@@ -1481,13 +1490,56 @@ safe_popd(int old_cd, const char *directory)
   close(old_cd);
 }
 
-/* Changes the cwd, making sure that it it has reasonable permissions,
- * and that we can change back later. */
-static int
-safe_pushd(const char *directory,
-	   int create)
+int
+lsh_pushd_fd(int dir)
 {
   int old_cd;
+
+  /* cd to it, but first save old cwd */
+
+  old_cd = open(".", O_RDONLY);
+  if (old_cd < 0)
+    {
+      werror("io.c: open(`.') failed.\n");
+      return -1;
+    }
+
+  /* Test if we are allowed to cd to our current working directory. */
+  while (fchdir(old_cd) < 0)
+    if (errno != EINTR)
+      {
+	werror("io.c: fchdir(`.') failed (errno = %i): %z\n",
+	       errno, strerror(errno));
+	close(old_cd);
+	return -1;
+      }
+
+  /* As far as I have been able to determine, all checks for
+   * fchdir:ability is performed at the time the directory was opened.
+   * Even if the directory is chmod:et to zero, or unlinked, we can
+   * probably fchdir back to old_cd later. */
+
+  while (fchdir(dir) < 0)
+    if (errno != EINTR)
+      {
+	close(old_cd);
+	return -1;
+      }
+
+  return old_cd;
+}
+
+/* Changes the cwd, making sure that it it has reasonable permissions,
+ * and that we can change back later. */
+int
+lsh_pushd(const char *directory,
+	  /* The fd to the directory is stored in *FD, unless fd is
+	   * NULL */
+	  int *result,
+	  int create, int secret)
+{
+  int old_cd;
+  int fd;
   struct stat sbuf;
 
   if (create)
@@ -1500,24 +1552,63 @@ safe_pushd(const char *directory,
 		 "(errno = %i): %z\n", directory, errno, STRERROR(errno));
 	}
     }
+
+  fd = open(directory, O_RDONLY);
+  if (fd < 0)
+    return -1;
+
+  if (fstat(fd, &sbuf) < 0)
+    {
+      werror("io.c: Failed to stat `%z'.\n"
+	     "  (errno = %i): %z\n", directory, errno, STRERROR(errno));
+      return -1;
+    }
+  
+  if (!S_ISDIR(sbuf.st_mode))
+    {
+      close(fd);
+      return -1;
+    }
+
+  if (secret)
+    {
+      /* Check that it has reasonable permissions */
+      if (sbuf.st_uid != getuid())
+	{
+	  werror("io.c: Socket directory %z not owned by user.\n", directory);
+
+	  close(fd);
+	  return -1;
+	}
     
+      if (sbuf.st_mode & (S_IRWXG | S_IRWXO))
+	{
+	  werror("io.c: Permission bits on %z are too loose.\n", directory);
+
+	  close(fd);
+	  return -1;
+	}
+    }
+  
   /* cd to it, but first save old cwd */
 
   old_cd = open(".", O_RDONLY);
   if (old_cd < 0)
     {
-      werror("io.c: open(\".\") failed.\n");
+      werror("io.c: open('.') failed.\n");
+
+      close(fd);
       return -1;
     }
 
   /* Test if we are allowed to cd to our current working directory. */
   while (fchdir(old_cd) < 0)
-    if (errno != EINTR)
-      {
-	werror("io.c: fchdir(\".\") failed (errno = %i): %z\n",
-	       errno, strerror(errno));
-	close(old_cd);
-	return -1;
+    {
+      werror("io.c: fchdir(\".\") failed (errno = %i): %z\n",
+	     errno, strerror(errno));
+      close(fd);
+      close(old_cd);
+      return -1;
       }
 
   /* As far as I have been able to determine, all checks for
@@ -1525,39 +1616,18 @@ safe_pushd(const char *directory,
    * Even if the directory is chmod:et to zero, or unlinked, we can
    * probably fchdir back to old_cd later. */
 
-  while (chdir(directory) < 0)
-    if (errno != EINTR)
-      {
-	close(old_cd);
-	return -1;
-      }
-
-  /* Check that it has reasonable permissions */
-  if (stat(".", &sbuf) < 0)
+  while (fchdir(fd) < 0)
     {
-      werror("io.c: Failed to stat \".\" (supposed to be %z).\n"
-	     "  (errno = %i): %z\n", directory, errno, STRERROR(errno));
-
-      safe_popd(old_cd, directory);
+      close(fd);
+      close(old_cd);
       return -1;
     }
 
-  if (sbuf.st_uid != getuid())
-    {
-      werror("io.c: Socket directory %z not owned by user.\n", directory);
-
-      safe_popd(old_cd, directory);
-      return -1;
-    }
-    
-  if (sbuf.st_mode & (S_IRWXG | S_IRWXO))
-    {
-      werror("io.c: Permission bits on %z are too loose.\n", directory);
-
-            safe_popd(old_cd, directory);
-      return -1;
-    }
-
+  if (result)
+    *result = fd;
+  else
+    close(fd);
+  
   return old_cd;
 }
 
@@ -1593,7 +1663,7 @@ io_listen_local(struct local_info *info,
 
   /* cd to it, but first save old cwd */
 
-  old_cd = safe_pushd(cdir, 1);
+  old_cd = lsh_pushd(cdir, NULL, 1, 1);
   if (old_cd < 0)
     return NULL;
 
@@ -1606,7 +1676,7 @@ io_listen_local(struct local_info *info,
     {
       werror("io.c: unlink '%S'/'%S' failed (errno = %i): %z\n",
 	     info->directory, info->name, errno, STRERROR(errno));
-      safe_popd(old_cd, cdir);
+      lsh_popd(old_cd, cdir);
       return NULL;
     }
 
@@ -1621,7 +1691,7 @@ io_listen_local(struct local_info *info,
   /* Ok, now we restore umask and cwd */
   umask(old_umask);
 
-  safe_popd(old_cd, info->directory->data);
+  lsh_popd(old_cd, info->directory->data);
 
   return fd;
 }
@@ -1656,13 +1726,13 @@ io_connect_local(struct local_info *info,
 
   /* cd to it, but first save old cwd */
 
-  old_cd = safe_pushd(cdir, 0);
+  old_cd = lsh_pushd(cdir, NULL, 0, 1);
   if (old_cd < 0)
     return NULL;
   
   fd = io_connect( (struct sockaddr *) addr, addr_length, c, e);
 
-  safe_popd(old_cd, cdir);
+  lsh_popd(old_cd, cdir);
 
   return fd;
 }

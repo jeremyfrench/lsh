@@ -305,6 +305,11 @@ io_connect(struct sockaddr *remote,
 	   struct exception_handler *e);
 
 struct lsh_fd *
+io_listen_fd(int s,
+	     struct io_callback *callback,
+	     struct exception_handler *e);
+
+struct lsh_fd *
 io_listen(struct sockaddr *local,
 	  socklen_t length,
 	  struct io_callback *callback,
@@ -337,6 +342,7 @@ struct lsh_fd *io_write(struct lsh_fd *fd,
 			UINT32 block_size,
 			struct lsh_callback *close_callback);
 
+/* Close the fd right away. */
 void close_fd(struct lsh_fd *fd);
 
 /* Stop reading from the fd, and close it as soon as the buffer
@@ -366,6 +372,19 @@ lsh_make_pipe(int *fds);
 
 int
 lsh_copy_file(int src, int dst);
+
+/* Temporarily changing the current directory. */
+
+int
+lsh_pushd_fd(int dir);
+
+int
+lsh_pushd(const char *directory,
+	  int *fd,
+	  int create, int secret);
+void
+lsh_popd(int old_cd, const char *directory);
+
 
 /* Socket workaround */
 #ifndef SHUTDOWN_WORKS_WITH_UNIX_SOCKETS
