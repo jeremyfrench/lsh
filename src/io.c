@@ -29,12 +29,18 @@
 #include <assert.h>
 #include <string.h>
 
+#if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #ifdef HAVE_POLL
-#include <poll.h>
+# if HAVE_POLL_H
+#  include <poll.h>
+# elif HAVE_SYS_POLL_H
+#  include <sys/poll.h>
+# endif
 #else
-#include "jpoll.h"
+# include "jpoll.h"
 #endif
 
 #include <errno.h>

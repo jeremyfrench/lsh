@@ -32,7 +32,9 @@
 #include "alist.h"
 
 #include <sys/types.h>
+#if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #define CLASS_DECLARE
 #include "password.h.x"

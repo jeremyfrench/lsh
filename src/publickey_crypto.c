@@ -463,6 +463,7 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
 
   debug("init_diffie_hellman_instance()\n V_C: ");
 
+  /* FIXME: Length field should be included when hashing. */
   debug_safe(c->client_version->length,
 	     c->client_version->data);
   HASH_UPDATE(self->hash,

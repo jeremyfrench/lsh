@@ -33,7 +33,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
+#if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 int debug_flag = 0;
 int quiet_flag = 0;

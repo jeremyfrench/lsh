@@ -34,7 +34,12 @@
 #include <string.h>
 #include <errno.h>
 
-#include <crypt.h>
+#if HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+#if HAVE_CRYPT_H
+# include <crypt.h>
+#endif
 #include <pwd.h>
 #include <grp.h>
 

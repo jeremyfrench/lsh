@@ -36,7 +36,10 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 #include "lsh_writekey.c.x"
 

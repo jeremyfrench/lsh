@@ -40,7 +40,9 @@
 
 #include <stdio.h>
 
+#if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 static void usage(void) NORETURN;
 

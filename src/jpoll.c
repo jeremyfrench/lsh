@@ -18,7 +18,10 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <sys/types.h>
+
+#if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 
 int poll(struct pollfd *fdlist, nfds_t count, int timeoutInMS)
 {
