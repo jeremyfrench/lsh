@@ -149,7 +149,7 @@ do_authenticate(struct userauth *s,
 #if DATAFELLOWS_WORKAROUNDS
 	  if ( (algorithm == ATOM_SSH_DSS)
 	       && (connection->peer_flags & PEER_SSH_DSS_KLUDGE))
-	    v = make_dsa_verifier_kludge(v);
+	    algorithm = ATOM_SSH_DSS_KLUDGE_LOCAL;
 	  
 	  if (connection->peer_flags & PEER_USERAUTH_REQUEST_KLUDGE)
 	    {
@@ -172,7 +172,9 @@ do_authenticate(struct userauth *s,
 				     signature_start, args->data);
 
 	  lsh_string_free(keyblob); 
-	  if (VERIFY(v, signed_data->length, signed_data->data, signature_length, signature_blob))
+	  if (VERIFY(v, algorithm,
+		     signed_data->length, signed_data->data,
+		     signature_length, signature_blob))
 	    {
 	      werror("publickey authentication for user %S succeeded.\n", username);
 	      COMMAND_RETURN(c, user);
