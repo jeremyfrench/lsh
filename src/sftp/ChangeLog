@@ -23,7 +23,7 @@
 
 	* dc.h: Reverted apache workaround. It turned out it was not
 	sufficient to solve the problem, there remained undefined
-	references to the function ap_symbol.
+	references to the function ap_signal.
 
 2004-11-10  Niels Möller  <nisse@lysator.liu.se>
 
