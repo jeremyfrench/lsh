@@ -49,6 +49,7 @@
 #include "channel.h"
 #include "connection.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "parse.h"
 #include "ssh.h"
 #include "werror.h"
@@ -300,7 +301,7 @@ pty_open_slave(struct pty_info *pty)
   /* Set terminal modes */
   if (tty_getattr(fd, &ios))
     {
-      tty_decode_term_mode(&ios, pty->mode->length, pty->mode->data); 
+      tty_decode_term_mode(&ios, STRING_LD(pty->mode));
 
       if (tty_setattr(fd, &ios)
 	  && tty_setwinsize(fd, &pty->dims))
