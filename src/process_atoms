@@ -68,10 +68,10 @@ case $1 in
 	;;
     table)
 	header
-	echo -n '{ "UNKNOWN"'
+	echo -n '{ { "UNKNOWN", 0 }'
 	while getatom; do
 	    echo ','
-	    echo -n '  "'$atom'"'
+	    echo -n '  {' \"$atom\", ${#atom} '}'
 	done
 	echo ' }'
 	;;
