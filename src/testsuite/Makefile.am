@@ -58,8 +58,8 @@ all:
 check: check-some
 
 check-some: $(TS_SOME)
-	srcdir=$(srcdir) $(srcdir)/runtests $(TS_SOME)
+	srcdir=$(srcdir) $(srcdir)/run-tests $(TS_SOME)
 
 check-more: $(TS_ALL)
-	srcdir=$(srcdir) $(srcdir)/runtests $(TS_ALL)
+	srcdir=$(srcdir) $(srcdir)/run-tests $(TS_ALL)
 
