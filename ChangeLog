@@ -1,4 +1,64 @@
+2002-03-14  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* configure.in: Removed check for 8-bit clean m4.
+
+	* src/channel.c (do_channels_after_keyexchange): New function.
+	(init_connection_service): Call connection_after_keyexchange, to
+	start reading again after a key exchange.
+
+	* src/gateway_channel.c (do_send_adjust): Call FLOW_CONTROL_REPORT
+	only if i > 0.
+
+	* src/handshake.c (handshake_command): Call
+	connection_after_keyexchange.
+
+	* src/connection.h (ssh_connection): Renamed established attribute
+	to keyexchange_done.
+
+	* src/connection.c (make_ssh_connection): Deleted the continuation
+	argument. 
+	(connection_after_keyexchange): New function.
+
+	* src/read_data.c (do_read_data_query): Check the connection's
+	send_kex_only flag.
+
+	* src/keyexchange.c (keyexchange_finish): Moved invocation of
+	connection->established... 
+	* src/connection.c (connection_send_kex_end): ...to here.
+
+	* src/resource.c (do_remember_resource): Assert that resource is
+	non-NULL.
+
+	* src/keyexchange.c (send_kexinit): Create a new kexinit struct.
+	Disable key-expire timer during the key exchange.
+	(make_kexinit_handler): Deleted init argument, it's now stored
+	with the connection.
+	(SESSION_KEY_LIFETIME_CLIENT, SESSION_KEY_LIFETIME_SERVER): New
+	constants. 
+	(do_handle_newkeys): Install key expire timeout.
+	(set_reexchange_timeout): New function.
+
+	* src/io.c (lsh_oop_register_callout, lsh_oop_cancel_callout):
+	Added trace call.
+
+	* src/handshake.c (handshake_command): Store the make_kexinit
+	object in the connection's kexinit attribute.
+
+	* src/connection.h (ssh_connection): New attribute kexinit, needed
+	for initiating keyexchange. 
+
+	* src/algorithms.c (all_crypto_algorithms): Prefer aes256.
+	(default_crypto_algorithms): Likewise.
+
+	* src/Makefile.am.in (EXTRA_PROGRAMS): Added lsh-pam-checkpw.
+
 2002-03-13  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/keyexchange.c (send_kexinit): Renamed from
+	initiate_keyexchange. Updated callers. Disable the key re-exchange
+	timer.
+	(do_handle_kexinit): Call send_kexinit, instead of duplicating
+	it. 
 
 	* src/testsuite/Makefile.am (TS_PROGS): Added parse-config-test.
 

@@ -110,7 +110,6 @@ gateway_make_connection(struct listen_value *lv,
   struct ssh_connection *connection
     = make_ssh_connection(0, /* flags */
 			  lv->peer, "gateway",
-			  NULL, /* established_continuation */
 			  make_exc_finish_read_handler(lv->fd, e, HANDLER_CONTEXT));
 
   /* Instead of calling connection_init_io. */
