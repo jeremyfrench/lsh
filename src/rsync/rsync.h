@@ -25,8 +25,6 @@
 #ifndef RSYNC_H_INCLUDED
 #define RSYNC_H_INCLUDED
 
-#include <inttypes.h>
-
 #include <nettle/md5.h>
 
 #include <stdlib.h>
