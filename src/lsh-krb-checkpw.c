@@ -30,8 +30,11 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <krb5.h>
+
+#define TIMEOUT 600
 
 static void usage(void) NORETURN;
 static void die(char *msg) NORETURN;
@@ -89,6 +92,10 @@ main(int argc, char **argv)
   
   if (argc != 2)
     usage();
+
+#ifdef HAVE_ALARM
+  alarm( TIMEOUT );
+#endif
 
   name = argv[1];
   pw = read_pw(stdin);
