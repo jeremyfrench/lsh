@@ -24,7 +24,6 @@
 #define LIBSPKI_PARSE_H_INCLUDED
 
 #include "certificate.h"
-#include "spki-types.h"
 
 #include "nettle/sexp.h"
 

@@ -23,6 +23,10 @@
 #ifndef LIBSPKI_CERTIFICATE_H_INCLUDED
 #define LIBSPKI_CERTIFICATE_H_INCLUDED
 
+/* This should be the only file ever including spki-types.h
+ * directly. */
+#include "spki-types.h"
+
 #include "nettle/md5.h"
 #include "nettle/sha.h"
 #include "nettle/realloc.h"
@@ -266,6 +270,15 @@ spki_5_tuple_reduce(struct spki_acl_db *db,
 		    struct spki_5_tuple_list *sequence);
 
 
+
+/* Signature verification */
+int
+spki_verify(void *ctx,
+	    enum spki_type digest_type,
+	    const uint8_t *digest,
+	    struct spki_principal *principal,
+	    struct spki_iterator *signature);
+
 /* Other more or less internal functions. */
 
 #define SPKI_MALLOC(db, size) ((db)->realloc((db)->realloc_ctx, NULL, (size)))
