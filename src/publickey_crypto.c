@@ -31,7 +31,6 @@
 #include "crypto.h"
 #include "format.h"
 #include "parse.h"
-#include "sha.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"

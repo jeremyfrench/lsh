@@ -26,7 +26,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include "twofish.h"
+#include "nettle/twofish.h"
 
 #include <assert.h>
 

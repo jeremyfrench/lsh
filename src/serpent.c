@@ -23,9 +23,10 @@
 
 #include "crypto.h"
 
-#include "serpent.h"
 #include "werror.h"
 #include "xalloc.h"
+
+#include "nettle/serpent.h"
 
 #include <assert.h>
 

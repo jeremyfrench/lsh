@@ -27,7 +27,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include "cast.h"
+#include "nettle/cast.h"
 
 #include <assert.h>
 
