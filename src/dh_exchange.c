@@ -65,12 +65,6 @@ init_dh_instance(struct dh_method *m,
   HASH_UPDATE(self->hash, s->length, s->data);
 
   lsh_string_free(s);  
-
-  /* We don't need the kexinit strings anymore. */
-  lsh_string_free(c->literal_kexinits[CONNECTION_CLIENT]);
-  lsh_string_free(c->literal_kexinits[CONNECTION_SERVER]);
-  c->literal_kexinits[CONNECTION_CLIENT] = NULL;
-  c->literal_kexinits[CONNECTION_SERVER] = NULL;
 }
 
 struct dh_method *
