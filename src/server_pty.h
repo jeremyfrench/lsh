@@ -27,7 +27,9 @@
 #include "lsh.h"
 
 #include "resource.h"
+
 #include <termios.h>
+#include <sys/types.h>
 
 #define MAX_TTY_NAME	32
 
@@ -55,7 +57,7 @@
 */
 
 struct pty_info *make_pty_info(void);
-int pty_allocate(struct pty_info *pty);
+int pty_allocate(struct pty_info *pty, uid_t user);
 
 /* NOTE: This function also makes the current process a process group
  * leader. */

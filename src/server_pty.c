@@ -33,7 +33,9 @@
 #include "xalloc.h"
 
 #include <fcntl.h>
+#include <grp.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
@@ -79,25 +81,105 @@ struct pty_info *make_pty_info(void)
   return pty;
 }
 
-int pty_allocate(struct pty_info *pty)
+#if HAVE_UNIX98_PTYS
+
+/* FIXME: Maybe this name should be configurable? */
+#ifndef TTY_GROUP
+#define TTY_GROUP "tty"
+#endif
+
+#ifndef ACCESSPERMS
+#define ACCESSPERMS 07777
+#endif
+
+/* Sets the permissions on the slave pty suitably for use by USER.
+ * This function is derived from the grantpt function in
+ * sysdeps/unix/grantpt.c in glibc-2.1. */
+
+/* Returns the name of the slave tty, as a string with an extra
+ * terminating NUL. */
+
+static struct lsh_string *pty_grantpt_uid(int master, uid_t user)
 {
-#if UNIX98_PTYS
-  char *name;
+  uid_t me = getpid();
+  if (me == user)
+    {
+      /* Use standard grantpt call */
+      if (grantpt(master) < 0)
+	return NULL;
+
+      return format_cstring(ptsname(master));
+    }
+  else
+    { /* Set up permissions for user */
+
+      /* Pointer to static area */
+      char *name = ptsname(master);
+      struct stat st;
+      struct group *grp;
+      gid_t tty_gid;
+      
+      if (!name)
+	return NULL;
+
+      if (stat(name, &st) < 0)
+	return NULL;
+
+      /* Make sure that the user owns the device. */
+      if ( (st.st_uid != user)
+	   && (chown(name, user, st.st_gid) < 0) )
+	return NULL;
+
+      /* Points to static area */
+      grp = getgrnam(TTY_GROUP);
+
+      if (grp)
+	tty_gid = grp->gr_gid;
+      else
+	{
+	  /* If no tty group is found, use the server's gid */
+	  werror("lshd: server_pty.c: No tty group found.\n");
+	  tty_gid = getgid();
+	}
+
+      if ( (st.st_gid != tty_gid)
+	   && (chown(name, user, tty_gid) < 0))
+	return NULL;
+
+      /* Make sure the permission mode is set to readable and writable
+       * by the owner, and writable by the group. */
+
+      if ( ((st.st_mode & ACCESSPERMS) != (S_IRUSR | S_IWUSR | S_IWGRP))
+	  && (chmod(name, S_IRUSR | S_IWUSR | S_IWGRP) < 0) )
+	return NULL;
+
+      /* Everything is fine */
+      return format_cstring(name);
+    }
+}
+#endif HAVE_UNIX98_PTYS
+
+int pty_allocate(struct pty_info *pty,
+		 uid_t user
+#if !HAVE_UNIX98_PTYS
+		 UNUSED
+#endif
+		 )
+{
+#if HAVE_UNIX98_PTYS
+  struct lsh_string *name = NULL;
   if ((pty->master = open("/dev/ptmx", O_RDWR | O_NOCTTY)) < 0)
     {
       return 0;
     }
-
-  /* FIXME: Calling grantpt now will set wrong permissions on the tty,
-   * as this function is called before the server forks and changes
-   * uid. */
-  if (grantpt(pty->master) < 0 || unlockpt(pty->master) < 0)
+  
+  if (! (name = pty_grantpt_uid(pty->master, user)))
     goto close_master;
-  name = ptsname(pty->master);
-  if (name == NULL)
+  
+  if (unlockpt(pty->master) < 0)
     goto close_master;
 
-  pty->slave = open(name, O_RDWR | O_NOCTTY);
+  pty->slave = open(name->data, O_RDWR | O_NOCTTY);
   if (pty->slave == -1)
     goto close_master;
 
@@ -110,7 +192,7 @@ int pty_allocate(struct pty_info *pty)
     }
 #  endif /* HAVE_STROPTS_H */
 
-  pty->tty_name = format_cstring(name);
+  pty->tty_name = name;
   return 1;
 
 close_slave:
@@ -118,10 +200,13 @@ close_slave:
 
 close_master:
   close (pty->master);
+  if (name)
+    lsh_string_free(name);
   return 0;
-
+  
 #elif HAVE_OPENPTY
-
+  /* FIXME: openpty() may not work properly, when called with the
+   * wrong uid. */
   return openpty(&pty->master, &pty->slave, NULL, NULL, NULL) == 0 ?
          1 : 0;
 
@@ -184,24 +269,6 @@ int tty_setctty(struct pty_info *pty)
 #if HAVE_UNIX98_PTYS
   {
     int fd;
-
-    /* FIXME: For some reason, it doesn't work to call grantpt() again
-     * here. Hopefully, there is some other way to do things right. */
-#if 0
-    /* Set up permissions with our new uid. */
-    if (grantpt(pty->master) < 0)
-      {
-	werror("tty_setctty: grantpt() failed,\n"
-	       "   (errno = %i): %z\n", errno, strerror(errno));
-	return 0;
-      }
-    if (unlockpt(pty->master) < 0)
-      {
-	werror("tty_setctty: unlockpt() failed,\n"
-	       "   (errno = %i): %z\n", errno, strerror(errno));
-	return 0;
-      }
-#endif
     
     /* Open the slave, to make it our controlling tty */
     /* FIXME: According to carson@tla.org, there's a cleaner POSIX way
