@@ -52,6 +52,20 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+/* Socket woraround */
+#ifdef linux
+#ifndef SHUT_RD
+
+/* From src/linux/include/net/sock.h */
+#define RCV_SHUTDOWN	1
+#define SEND_SHUTDOWN	2
+
+#define SHUT_RD RCV_SHUTDOWN
+#define SHUT_WR SEND_SHUTDOWN
+#define SHUT_RD_WR (RCV_SHUTDOWN | SEND_SHUTDOWN)
+#endif /* !SHUT_RD */
+#endif /* linux */
+
 /* For debug */
 #include <signal.h>
 #include <unistd.h>
@@ -439,7 +453,7 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
 
   /* FIXME: Should we explicitly mark these files for closing?
    * The io-backend should notice EOF anyway. */
-  close_fd(&session->in->super);
+  close_fd(&session->in->super, 0);
 #if 0
   close_fd(session->out);
   close_fd(session->err);
@@ -458,7 +472,7 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
     }
 #endif
 
-  channel->flags |= CHANNEL_CLOSE_AT_END_OF_FILE;
+  channel->flags |= CHANNEL_CLOSE_AT_EOF;
   
   if (!(channel->flags & CHANNEL_SENT_CLOSE))
     {
@@ -503,10 +517,6 @@ struct shell_request
  * pipe() system call). */
 static int make_pipe(int *fds)
 {
-  /* From the shutdown(2) man page */
-#define REC 0
-#define SEND 1
-
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
     {
       werror("socketpair() failed: %s\n", strerror(errno));
@@ -514,22 +524,18 @@ static int make_pipe(int *fds)
     }
   debug("Created socket pair. Using fd:s %d <-- %d\n", fds[0], fds[1]);
 
-#if 0
-  if(shutdown(fds[0], SEND) < 0)
+  if(shutdown(fds[0], SHUT_WR) < 0)
     {
       werror("shutdown(%d, SEND) failed: %s\n", fds[0], strerror(errno));
       return 0;
     }
-  if (shutdown(fds[1], REC) < 0)
+  if (shutdown(fds[1], SHUT_RD) < 0)
     {
       werror("shutdown(%d, REC) failed: %s\n", fds[0], strerror(errno));
       return 0;
     }
-#endif
   
   return 1;
-#undef REC
-#undef SEND
 }
 
 static char *make_env_pair(char *name, struct lsh_string *value)
@@ -670,7 +676,7 @@ static int do_spawn_shell(struct channel_request *c,
 		    close(err[0]);
 		    close(err[1]);
 
-#if 0
+#if 1
 		    execle(shell, shell, NULL, env);
 #else
 #define GREETING "Hello world!\n"
