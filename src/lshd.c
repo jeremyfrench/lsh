@@ -32,6 +32,7 @@
 
 #include "alist.h"
 #include "atoms.h"
+#include "channel.h"
 #include "charset.h"
 #include "crypto.h"
 #include "format.h"
@@ -130,6 +131,7 @@ int main(int argc, char **argv)
   struct alist *algorithms;
   struct make_kexinit *make_kexinit;
   struct packet_handler *kexinit_handler;
+  struct ssh_service *service;
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -162,6 +164,12 @@ int main(int argc, char **argv)
   if ( (argc - optind) != 0)
     usage();
 
+  if (!get_inaddr(&local, host, port, "tcp"))
+    {
+      fprintf(stderr, "No such host or service");
+      exit(1);
+    }
+
   random_seed = ssh_format("%z", "foobar");
 
   r = make_poor_random(&sha_algorithm, random_seed);
@@ -174,17 +182,26 @@ int main(int argc, char **argv)
 			  ATOM_DIFFIE_HELLMAN_GROUP1_SHA1, kex,
 			  ATOM_SSH_DSS, make_dss_algorithm(r), -1);
   make_kexinit = make_test_kexinit(r);
-  kexinit_handler = make_kexinit_handler(CONNECTION_SERVER,
-					 make_kexinit, algorithms
-					 /* FIXME: Initialize some service */
+
+  service = make_connection_service
+    (make_alist(0, -1),
+     /* make_alist(1, ATOM_SESSION, make_session_service(...)) */
+     make_alist(0, -1));
+  
+  kexinit_handler = make_kexinit_handler
+    (CONNECTION_SERVER,
+     make_kexinit, algorithms,
+     make_meta_service(make_alist
+		       (1, ATOM_SSH_USERAUTH,
+			make_userauth_service
+			(make_alist(1, ATOM_PASSWORD,
+				    make_unix_userauth
+				    (make_alist(1,
+						ATOM_SSH_CONNECTION,
+						service)))
+		       /* FIXME: Initialize some service */
 					 );
     
-  if (!get_inaddr(&local, host, port, "tcp"))
-    {
-      fprintf(stderr, "No such host or service");
-      exit(1);
-    }
-
   if (!io_listen(&backend, &local, 
 	    make_server_callback(&backend,
 				 "lsh - a free ssh",
