@@ -82,23 +82,6 @@
             #f dsa_private_key_clear)))
 */
 
-/* FIXME: Delete function. */
-/* Verifying DSA signatures */
-/* The caller should make sure that r and s are non-negative, and not
- * extremely large. That they are less than q is checked here. */
-static int
-generic_dsa_verify(struct dsa_verifier *key,
-		   uint32_t length,
-		   const uint8_t *msg,
-		   const struct dsa_signature *signature)
-{
-  struct sha1_ctx hash;
-  sha1_init(&hash);
-  sha1_update(&hash, length, msg);
-
-  return dsa_verify(&key->key, &hash, signature);
-}
-
 static int
 do_dsa_verify(struct verifier *c, int algorithm,
 	      uint32_t length,
@@ -107,6 +90,8 @@ do_dsa_verify(struct verifier *c, int algorithm,
 	      const uint8_t *signature_data)
 {
   CAST(dsa_verifier, self, c);
+  struct sha1_ctx hash;
+
   struct simple_buffer buffer;
 
   int res = 0;
@@ -184,7 +169,11 @@ do_dsa_verify(struct verifier *c, int algorithm,
     default:
       fatal("do_dsa_verify: Internal error!\n");
     }
-  res = generic_dsa_verify(self, length, msg, &sv);
+
+  sha1_init(&hash);
+  sha1_update(&hash, length, msg);
+  
+  res = dsa_verify(&self->key, &hash, &sv);
  fail:
 
   dsa_signature_clear(&sv);
@@ -262,20 +251,6 @@ parse_ssh_dss_public(struct simple_buffer *buffer)
 
   
 /* Creating signatures */
-/* FIXME: Delete function. */
-static void
-generic_dsa_sign(struct dsa_signer *self,
-		 uint32_t length, const uint8_t *msg,
-		 struct dsa_signature *signature)
-{
-  struct sha1_ctx hash;
-  sha1_init(&hash);
-  sha1_update(&hash, length, msg);
-
-  dsa_sign(&self->verifier->key, &self->key,
-	   self->random, lsh_random,
-	   &hash, signature);
-}
 
 static uint32_t
 dsa_blob_length(const struct dsa_signature *signature)
@@ -302,6 +277,7 @@ do_dsa_sign(struct signer *c,
 {
   CAST(dsa_signer, self, c);
   struct dsa_signature sv;
+  struct sha1_ctx hash;
   struct lsh_string *signature;
   uint32_t buf_length;
   uint8_t *p;
@@ -309,8 +285,11 @@ do_dsa_sign(struct signer *c,
   trace("do_dsa_sign: Signing according to %a\n", algorithm);
 
   dsa_signature_init(&sv);
-  generic_dsa_sign(self, msg_length, msg, &sv);
-
+  sha1_init(&hash);
+  sha1_update(&hash, msg_length, msg);
+  dsa_sign(&self->verifier->key, &self->key,
+	   self->random, lsh_random, &hash, &sv);
+  
   debug("do_dsa_sign: r = %xn, s = %xn\n", sv.r, sv.s);
   
   /* Build signature */
