@@ -36,6 +36,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <string.h>
 #include <assert.h>
 
 #define CLASS_DEFINE
@@ -169,10 +170,11 @@ static int select_algorithm(struct int_list *server_list,
 			    struct int_list *client_list)
 {
   /* FIXME: This quadratic complexity algorithm should do as long as
-   * the lists are short. */
-  int i, j;
+   * the lists are short. To avoid DOS-attacks, ther should probably
+   * be some limit on the list lengths. */
+  unsigned i, j;
 
-  for(i = 0; i < LIST_LENGTH(client_list) >= 0; i++)
+  for(i = 0; i < LIST_LENGTH(client_list); i++)
     {
       int a = LIST(client_list)[i];
       if (!a)
@@ -186,7 +188,7 @@ static int select_algorithm(struct int_list *server_list,
   return 0;
 }
 
-int disconnect_kex_failed(struct ssh_connection *connection, char *msg)
+int disconnect_kex_failed(struct ssh_connection *connection, const char *msg)
 {
   return A_WRITE(connection->write,
 		 format_disconnect(SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
