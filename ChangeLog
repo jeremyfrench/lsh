@@ -1,5 +1,10 @@
 2000-06-28  Niels Möller  <nisse@lysator.liu.se>
 
+	* Makefile.am.in (MAKEFILESAM): cd to $(srcdir) before running
+	./make_am. 
+
+	* doc/Makefile.am.in: Commented out dvi and ps rules.
+
 	* src/xalloc.c (UNIT): Use unsigned long.
 	(debug_malloc): Address memory using UNIT *.
 	(debug_free): Likewise.

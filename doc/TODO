@@ -113,6 +113,9 @@ Have autoconf automatically add -I $prefix/include and -L $prefix/lib ?
 Change configure.in and acinclude.m4 to use LDFLAGS for all -L and -R
 options, not LIBS.
 
+Remaking Makefile.am from subdirectories probably cd:s to the wrong
+place, when building outside of the source tree.
+
 
 MISC
 
