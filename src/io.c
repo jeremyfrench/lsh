@@ -98,6 +98,9 @@ lsh_oop_signal_callback(oop_source *source UNUSED, int sig, void *data)
 {
   CAST(lsh_signal_handler, self, (struct lsh_object *) data);
 
+  trace("lsh_oop_signal_callback: Signal %i, handler: %t\n",
+	sig, self);
+  
   assert(sig == self->signum);
   
   LSH_CALLBACK(self->action);
@@ -108,6 +111,9 @@ lsh_oop_signal_callback(oop_source *source UNUSED, int sig, void *data)
 static void
 lsh_oop_register_signal(struct lsh_signal_handler *handler)
 {
+  trace("lsh_oop_register_signal: signal: %i, handler: %t\n",
+	handler->signum, handler);
+  
   if (handler->super.alive)
     {
       oop_source *source = oop_sys_source(the_oop);
@@ -119,6 +125,8 @@ lsh_oop_register_signal(struct lsh_signal_handler *handler)
 static void
 lsh_oop_cancel_signal(struct lsh_signal_handler *handler)
 {
+  trace("lsh_oop_cancel_signal: signal: %i, handler: %t\n",
+	handler->signum, handler);
   if (handler->super.alive)
     {
       oop_source *source = oop_sys_source(the_oop);
@@ -136,7 +144,7 @@ lsh_oop_fd_read_callback(oop_source *source UNUSED, int fileno, oop_event event,
   assert(event == OOP_READ);
   assert(fd->super.alive);
 
-  debug("lsh_oop_fd_read_callback: fd %i: %z\n",
+  trace("lsh_oop_fd_read_callback: fd %i: %z\n",
 	fd->fd, fd->label);
 
   FD_READ(fd);
@@ -147,6 +155,9 @@ lsh_oop_fd_read_callback(oop_source *source UNUSED, int fileno, oop_event event,
 void
 lsh_oop_register_read_fd(struct lsh_fd *fd)
 {
+  trace("lsh_oop_register_read_fd: fd: %i, %z\n",
+	fd->fd, fd->label);
+  
   if (fd->super.alive)
     {
       oop_source *source = oop_sys_source(the_oop);
@@ -161,6 +172,9 @@ lsh_oop_register_read_fd(struct lsh_fd *fd)
 void
 lsh_oop_cancel_read_fd(struct lsh_fd *fd)
 {
+  trace("lsh_oop_cancel_read_fd: fd: %i, %z\n",
+	fd->fd, fd->label);
+  
   if (fd->super.alive)
     {
       oop_source *source = oop_sys_source(the_oop);
@@ -179,7 +193,7 @@ lsh_oop_fd_write_callback(oop_source *source UNUSED, int fileno, oop_event event
   assert(event == OOP_READ);
   assert(fd->super.alive);
   
-  debug("lsh_oop_fd_callback: fd %i: %z\n",
+  trace("lsh_oop_fd_write_callback: fd %i: %z\n",
 	fd->fd, fd->label);
 
   FD_WRITE(fd);
@@ -190,6 +204,9 @@ lsh_oop_fd_write_callback(oop_source *source UNUSED, int fileno, oop_event event
 void
 lsh_oop_register_write_fd(struct lsh_fd *fd)
 {
+  trace("lsh_oop_register_write_fd: fd: %i, %z\n",
+	fd->fd, fd->label);
+  
   if (fd->super.alive)
     {
       oop_source *source = oop_sys_source(the_oop);
@@ -204,6 +221,9 @@ lsh_oop_register_write_fd(struct lsh_fd *fd)
 void
 lsh_oop_cancel_write_fd(struct lsh_fd *fd)
 {
+  trace("lsh_oop_cancel_write_fd: fd: %i, %z\n",
+	fd->fd, fd->label);
+
   if (fd->super.alive)
     {
       oop_source *source = oop_sys_source(the_oop);
@@ -2082,7 +2102,7 @@ lsh_make_pipe(int *fds)
       werror("socketpair failed: %z\n", STRERROR(errno));
       return 0;
     }
-  debug("Created socket pair. Using fd:s %i <-- %i\n", fds[0], fds[1]);
+  trace("Created socket pair. Using fd:s %i <-- %i\n", fds[0], fds[1]);
 
   if (SHUTDOWN_UNIX(fds[0], SHUT_WR_UNIX) < 0)
     {
