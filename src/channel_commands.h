@@ -49,3 +49,23 @@
 int do_channel_open_command(struct command *s,
 			    struct lsh_object *x,
 			    struct command_continuation *c);
+
+/* Takes a channel as argument, and returns the same channel or NULL. */
+/* GABA:
+   (class
+     (name channel_request_command)
+     (super command)
+     (vars
+       ;; This method should return a formatted request
+       (format_request method "struct lsh_string *"
+                       "struct ssh_channel *channel"
+		       "int want_reply")))
+*/
+
+#define FORMAT_CHANNEL_REQUEST(r, c, w) \
+((r)->format_request((r), (c), (w)))
+
+int do_channel_request_command(struct command *s,
+			       struct lsh_object *x,
+			       struct command_continuation *c);
+     

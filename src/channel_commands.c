@@ -36,7 +36,7 @@ int do_channel_open_command(struct command *s,
 			    struct command_continuation *c)
 {
   CAST_SUBTYPE(channel_open_command, self, s);
-  CAST_SUBTYPE(ssh_connection, connection, x);
+  CAST(ssh_connection, connection, x);
   struct lsh_string *request;
   struct ssh_channel *channel = NEW_CHANNEL(self, connection, &request);
 
@@ -51,3 +51,21 @@ int do_channel_open_command(struct command *s,
   
   return A_WRITE(connection->write, request);
 }
+
+int do_channel_request_command(struct command *s,
+			       struct lsh_object *x,
+			       struct command_continuation *c)
+{
+  CAST_SUBTYPE(channel_request_command, self, s);
+  CAST_SUBTYPE(ssh_channel, channel, x);
+
+  struct lsh_string *request
+    = FORMAT_CHANNEL_REQUEST(self, channel, !!c);
+
+  if (c)
+    object_queue_add_tail(&channel->pending_requests, &c->super);
+
+  return A_WRITE(channel->write, request);
+}
+
+  
