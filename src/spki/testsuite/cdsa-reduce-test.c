@@ -151,11 +151,12 @@ test_main(void)
 
 	if (iterator.type == SPKI_TYPE_SEQUENCE)
 	  {
+	    struct spki_5_tuple_list *sequence;
 	    const struct spki_principal *subject;
-	    struct spki_5_tuple_list *sequence
-	      = spki_parse_sequence_no_signatures(&db, &iterator, &subject);
 
-	    ASSERT(sequence);
+	    ASSERT(spki_parse_sequence_no_signatures(&db, &iterator,
+						     &sequence, &subject));
+
 	    ASSERT(subject);
 	    result = spki_5_tuple_reduce(&db, sequence);
 
