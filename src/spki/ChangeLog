@@ -1,3 +1,10 @@
+2002-11-16  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* testsuite/Makefile.am (check): Set LD_LIBRARY_PATH when running
+	tests. 
+
+	* configure.ac: Check for GMP, and fail if it's not present.
+
 2002-11-15  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/Makefile.am (AM_LDFLAGS): Need -L../../nettle.

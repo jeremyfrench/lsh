@@ -1,4 +1,5 @@
 .deps
 Makefile
 Makefile.in
-subject-test
+principal-test
+read-acl-test
