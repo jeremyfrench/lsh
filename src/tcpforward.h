@@ -40,9 +40,6 @@
 /* GABA:
    (class
    (name forwarded_port)
-     ;; FIXME: Should this really be a resource?
-     ;; Isn't it good enough that the socket is a resource?
-     ; (super resource)
      (vars
        ; this could store the type of this forward
        ; tcp, udp etc. Or we could invent relevant methods
@@ -51,17 +48,22 @@
 
        ; socket == NULL means that we are setting up a forward for this port,
        ; but are not done yet.
-       (socket object lsh_fd)
-       (local object address_info)))
+       (listen object address_info)))
 */
 
 struct channel_open *make_channel_open_direct_tcpip(struct io_backend *backend);
+struct channel_open channel_open_forwarded_tcpip;
 
 struct global_request *make_tcpip_forward_request(struct io_backend *backend);
 
 struct global_request *make_cancel_tcpip_forward_request(void);
 
-struct command *forward_local_port(struct address_info *local,
+struct command *forward_local_port(struct io_backend *backend,
+				   struct address_info *local,
 				   struct address_info *target);
+
+struct command *forward_remote_port(struct io_backend *backend,
+				    struct address_info *local,
+				    struct address_info *target);
 
 #endif /* LSH_TCPFORWARD_H_INCLUDED */
