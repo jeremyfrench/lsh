@@ -462,7 +462,7 @@ rsa_compute_root(struct rsa_signer *self, mpz_t x, mpz_t m)
      *
      * We also get 0 <= xq + q xp' < p q, because
      *
-     *   0 <= xq < q and 0 <= * xp' < p.
+     *   0 <= xq < q and 0 <= xp' < p.
      */
     mpz_mul(x, self->q, xp);
     mpz_add(x, x, xq);
