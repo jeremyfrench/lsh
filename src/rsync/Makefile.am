@@ -3,7 +3,9 @@
 noinst_LIBRARIES = librsync.a
 noinst_HEADERS = rsync.h
 
-AM_CPPFLAGS = -I$(srcdir)/..
+# Needed for finding the nettle include files in the source tree
+# and nettle-types.h in the build tree.
+AM_CPPFLAGS = -I$(srcdir)/.. -I../nettle
 
 librsync_a_SOURCES = generate.c receive.c checksum.c send.c
 
