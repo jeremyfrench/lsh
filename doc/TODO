@@ -228,3 +228,8 @@ Should lsh fail if some port forwardings fails? In particular,
 
 is pretty useless if the server doesn't let us bind the remote port.
 
+Move all dsa-related declarations from publickey_crypto.h and
+dsa_keygen.h to dsa.h.
+
+Add reasonable limits to all calls to parse_bignum(), sexp2bignum_u()
+and sexp_get_un().

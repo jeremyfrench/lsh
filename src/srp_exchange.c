@@ -75,7 +75,8 @@ make_srp_entry(struct lsh_string *name, struct sexp *e)
 
       SEXP_NEXT(i);
 
-      if (!sexp2bignum_u(SEXP_GET(i), res->verifier))
+      /* FIXME: Pass a more restrictive limit to sexp2bignum_u. */
+      if (!sexp2bignum_u(SEXP_GET(i), res->verifier, 0))
 	{
 	  KILL(res);
 	  return NULL;
@@ -185,7 +186,8 @@ srp_process_init_msg(struct dh_instance *self, struct lsh_string *packet)
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_KEXSRP_INIT)
       && ( (name = parse_string_copy(&buffer) ))
-      && parse_bignum(&buffer, self->e)
+      /* FIXME: Pass a more restrictive limit to parse_bignum. */
+      && parse_bignum(&buffer, self->e, 0)
       && (mpz_cmp_ui(self->e, 1) > 0)
       && GROUP_RANGE(self->method->G, self->e)
       && parse_eod(&buffer) )
@@ -279,7 +281,8 @@ srp_process_reply_msg(struct dh_instance *dh, struct lsh_string *packet)
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_KEXSRP_REPLY)
       && ( (salt = parse_string_copy(&buffer) ))
-      && parse_bignum(&buffer, dh->f)
+      /* FIXME: Pass a more restrictive limit to parse_bignum. */
+      && parse_bignum(&buffer, dh->f, 0)
       && (mpz_cmp_ui(dh->f, 1) > 0)
       && GROUP_RANGE(dh->method->G, dh->f)
       && parse_eod(&buffer))
