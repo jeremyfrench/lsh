@@ -47,26 +47,26 @@ static int handle_connection(struct abstract_write *w,
 
   if (!packet->length)
     {
-      wwrite("connection.c: Received empty packet!\n");
+      werror("connection.c: Received empty packet!\n");
       return LSH_FAIL | LSH_DIE;
     }
 
   msg = packet->data[0];
 
-  debug("handle_connection: Received packet of type %d\n", msg);
+  debug("handle_connection: Received packet of type %i\n", msg);
 
   switch(closure->kex_state)
     {
     case KEX_STATE_INIT:
       if (msg == SSH_MSG_NEWKEYS)
 	{
-	  wwrite("Unexpected NEWKEYS message!\n");
+	  werror("Unexpected NEWKEYS message!\n");
 	  lsh_string_free(packet);
 	  return LSH_FAIL | LSH_DIE;
 	}
       break;
     case KEX_STATE_IGNORE:
-      debug("handle_connection: Ignoring packet %d\n", msg);
+      debug("handle_connection: Ignoring packet %i\n", msg);
 
       /* It's concievable with key exchange methods for which one
        * wants to switch to the NEWKEYS state immediately. But for
@@ -80,7 +80,7 @@ static int handle_connection(struct abstract_write *w,
       if ( (msg == SSH_MSG_NEWKEYS)
 	   || (msg == SSH_MSG_KEXINIT))
 	{
-	  wwrite("Unexpected KEXINIT or NEWKEYS message!\n");
+	  werror("Unexpected KEXINIT or NEWKEYS message!\n");
 	  lsh_string_free(packet);
 	  return LSH_FAIL | LSH_DIE;
 	}
@@ -89,7 +89,7 @@ static int handle_connection(struct abstract_write *w,
       if ( (msg != SSH_MSG_NEWKEYS)
 	   && (msg != SSH_MSG_DISCONNECT) )
 	{
-	  werror("Expected NEWKEYS message, but received message %d!\n",
+	  werror("Expected NEWKEYS message, but received message %i!\n",
 		 msg);
 	  lsh_string_free(packet);
 	  return LSH_FAIL | LSH_DIE;
@@ -131,7 +131,7 @@ static int do_unimplemented(struct packet_handler *closure,
 		 ssh_format("%c%i",
 			    SSH_MSG_UNIMPLEMENTED,
 			    packet->sequence_number));
-  verbose("Received packet of unimplemented type %d.\n",
+  verbose("Received packet of unimplemented type %i.\n",
 	  packet->data[0]);
   
   lsh_string_free(packet);

@@ -154,7 +154,7 @@ static int do_read_packet(struct read_handler **h,
 	      if (length > closure->connection->rec_max_packet)
 		{
 		  werror("read_packet: Receiving too large packet.\n"
-			 "  %d octets, limit is %d\n",
+			 "  %i octets, limit is %i\n",
 			 length, closure->connection->rec_max_packet);
 		  return LSH_FAIL | LSH_DIE;
 		}
@@ -163,7 +163,7 @@ static int do_read_packet(struct read_handler **h,
 		   || (length < (block_size - 4))
 		   || ( (length + 4) % block_size))
 		{
-		  werror("read_packet: Bad packet length %d\n",
+		  werror("read_packet: Bad packet length %i\n",
 			 length);
 		  return LSH_FAIL | LSH_DIE;
 		}

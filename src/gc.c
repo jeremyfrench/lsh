@@ -48,14 +48,14 @@ static void sanity_check_object_list(void)
 #if 0
   wwrite("sanity_check_object_list: Objects on list:\n");
   for(o = all_objects; o; o = o->next)
-    werror("  %p, class: %s\n", (void *) o, o->isa ? o->isa->name : "UNKNOWN");
+    werror("  %xi, class: %z\n", (UINT32) o, o->isa ? o->isa->name : "UNKNOWN");
 #endif
   
   for(o = all_objects; o; o = o->next)
     i++;
 
   if (i != number_of_objects)
-    fatal("sanity_check_object_list: Found %d objects, expected %d.\n",
+    fatal("sanity_check_object_list: Found %i objects, expected %i.\n",
 	  i, number_of_objects);
 }
 #endif
@@ -87,7 +87,7 @@ static void gc_mark(struct lsh_object *o)
 	struct lsh_class *class;
 
 #if 0
-	debug("gc_mark: Marking object of class '%s'\n",
+	debug("gc_mark: Marking object of class '%z'\n",
 	      o->isa ? o->isa->name : "UNKNOWN");
 #endif
 	
@@ -123,7 +123,7 @@ static void gc_sweep(void)
 	  struct lsh_class *class;
 
 #if 0
-	  debug("gc_sweep: Freeing object of class '%s'\n",
+	  debug("gc_sweep: Freeing object of class '%z'\n",
 		o->isa->name);
 #endif  
 	  for (class = o->isa; class; class = class->super_class)
@@ -204,7 +204,7 @@ void gc(struct lsh_object *root)
   gc_mark(root);  
   gc_sweep();
   
-  verbose("Objects alive: %d, garbage collected: %d\n", live_objects,
+  verbose("Objects alive: %i, garbage collected: %i\n", live_objects,
 	  before - live_objects);
 }
 
@@ -216,7 +216,7 @@ void gc_maybe(struct lsh_object *root, int busy)
 
   if (number_of_objects > (100 + live_objects*(2+busy)))
     {
-      verbose("Garbage collecting while %s...\n", busy ? "busy" : "idle");
+      verbose("Garbage collecting while %z...\n", busy ? "busy" : "idle");
       gc(root);
     }
 }

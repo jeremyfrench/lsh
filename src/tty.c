@@ -66,12 +66,12 @@ int tty_setctty(int newtty)
   }
   if (setsid() < 0)
     werror("tty_setctty: setsid() failed, already process group leader?\n"
-	   "   (errno = %d): %s\n", errno, strerror(errno));
+	   "   (errno = %i): %z\n", errno, strerror(errno));
   
   if (ioctl(newtty, TIOCSCTTY, NULL) == -1)
     {
       werror("tty_setctty: Failed to set the controlling tty.\n"
-	     "   (errno = %d): %s\n", errno, strerror(errno));
+	     "   (errno = %i): %z\n", errno, strerror(errno));
       return 0;
     }
   
@@ -490,7 +490,7 @@ int tty_decode_term_mode(struct termios *ios, UINT32 t_len, UINT8 *t_modes)
 		   * considered fast... */
 		  break;
 		default:
-		  werror("Unsupported terminal mode: %d\n", opcode);
+		  werror("Unsupported terminal mode: %i\n", opcode);
 		}
 	    }
 	}

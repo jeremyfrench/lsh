@@ -141,7 +141,7 @@ static void do_device_random(struct randomness *r, UINT32 length, UINT8 *dst)
 	  case EINTR:
 	    break;
 	  default:
-	    fatal("Read from random device failed (errno = %d): %s\n",
+	    fatal("Read from random device failed (errno = %i): %z\n",
 		  errno, strerror(errno));
 	  }
       else
@@ -166,7 +166,7 @@ struct randomness *make_device_random(const char *device)
 
   if (fd < 0)
     {
-      werror("make_device_random: Failed to open '%s' (errno = %d): %s\n",
+      werror("make_device_random: Failed to open '%z' (errno = %i): %z\n",
 	     device, errno, strerror(errno));
       return NULL;
     }

@@ -71,7 +71,7 @@ void usage(void) NORETURN;
 
 void usage(void)
 {
-  wwrite("lshd [options]\n"
+  werror("lshd [options]\n"
 	 " -p,  --port=PORT\n"
 	 " -h,  --hostkey=KEYFILE\n"
 	 " -c,  --crypto=ALGORITHM\n"
@@ -226,15 +226,12 @@ static int do_read_key(struct sexp_handler *h, struct sexp *private)
 	  *closure->public = public;
 	  *closure->secret = secret;
 
-	  verbose("lshd: Using (public) hostkey:\n  p=");
-	  verbose_mpz(p);
-	  verbose("\n  q=");
-	  verbose_mpz(q);
-	  verbose("\n  g=");
-	  verbose_mpz(g);
-	  verbose("\n  y=");
-	  verbose_mpz(y);
-	  verbose("\n");
+	  verbose("lshd: Using (public) hostkey:\n"
+		  "  p=%hn\n"
+		  "  q=%hn\n"
+		  "  g=%hn\n"
+		  "  y=%hn\n",
+		  p, q, g, y);
 		  
 	  res = LSH_OK | LSH_CLOSE;
 	}
@@ -260,7 +257,7 @@ static int read_host_key(const char *name,
   int fd = open(name, O_RDONLY);
   if (fd < 0)
     {
-      werror("lshd: Could not open %s (errno = %d): %s\n",
+      werror("lshd: Could not open %z (errno = %i): %z\n",
 	     name, errno, strerror(errno));
       return 0;
     }
@@ -382,7 +379,7 @@ int main(int argc, char **argv)
 	  preferred_crypto = lookup_crypto(algorithms, optarg);
 	  if (!preferred_crypto)
 	    {
-	      werror("lsh: Unknown crypto algorithm '%s'.\n", optarg);
+	      werror("lsh: Unknown crypto algorithm '%z'.\n", optarg);
 	      exit(1);
 	    }
 	  break;
@@ -393,7 +390,7 @@ int main(int argc, char **argv)
 	  preferred_compression = lookup_compression(algorithms, optarg);
 	  if (!preferred_compression)
 	    {
-	      werror("lsh: Unknown compression algorithm '%s'.\n", optarg);
+	      werror("lsh: Unknown compression algorithm '%z'.\n", optarg);
 	      exit(1);
 	    }
 	  break;
@@ -401,7 +398,7 @@ int main(int argc, char **argv)
 	  preferred_mac = lookup_mac(algorithms, optarg);
 	  if (!preferred_mac)
 	    {
-	      werror("lsh: Unknown message authentication algorithm '%s'.\n",
+	      werror("lsh: Unknown message authentication algorithm '%z'.\n",
 		      optarg);
 	      exit(1);
 	    }
@@ -482,7 +479,7 @@ int main(int argc, char **argv)
 				 r, make_kexinit,
 				 kexinit_handler)))
     {
-      werror("lsh: Connection failed: %s\n", strerror(errno));
+      werror("lsh: Connection failed: %z\n", strerror(errno));
       return 1;
     }
   

@@ -102,7 +102,7 @@ int io_iter(struct io_backend *b)
 		if (fd->close_callback && fd->close_reason)
 		  (void) CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
 		
-		debug("Closing fd %d.\n", fd->fd);
+		debug("Closing fd %i.\n", fd->fd);
 		
 		close(fd->fd);
 	      }
@@ -177,7 +177,7 @@ int io_iter(struct io_backend *b)
       case EINTR:
 	return 1;
       default:
-	fatal("io_iter: poll failed: %s", strerror(errno));
+	fatal("io_iter: poll failed: %z", strerror(errno));
       }
   
   {
@@ -226,7 +226,7 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
       int res = read(closure->fd, buffer, length);
       if (!res)
 	{
-	  debug("Read EOF on fd %d.\n", closure->fd);
+	  debug("Read EOF on fd %i.\n", closure->fd);
 	  return A_EOF;
 	}
       if (res > 0)
@@ -240,12 +240,12 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 	case EWOULDBLOCK:  /* aka EAGAIN */
 	  return 0;
 	case EPIPE:
-	  wwrite("io.c: read() returned EPIPE! Treating it as EOF.\n");
+	  werror("io.c: read() returned EPIPE! Treating it as EOF.\n");
 	  return A_EOF;
 	default:
-	  werror("io.c: do_read: read() failed (errno %d), %s\n",
+	  werror("io.c: do_read: read() failed (errno %i), %z\n",
 		 errno, strerror(errno));
-	  debug("  fd = %d, buffer = %p, length = %ud\n",
+	  debug("  fd = %i, buffer = %xi, length = %i\n",
 		closure->fd, buffer, length);
 	  return A_FAIL;
 	}
@@ -334,7 +334,7 @@ static void write_callback(struct lsh_fd *fd)
 	close_fd(fd, CLOSE_BROKEN_PIPE);
 	break;
       default:
-	werror("io.c: write failed, %s\n", strerror(errno));
+	werror("io.c: write failed, %z\n", strerror(errno));
 
 	close_fd(fd, CLOSE_WRITE_FAILED);
 	
@@ -358,13 +358,13 @@ static void listen_callback(struct lsh_fd *fd)
 		(struct sockaddr *) &peer, &addr_len);
   if (conn < 0)
     {
-      werror("io.c: accept() failed, %s", strerror(errno));
+      werror("io.c: accept() failed, %z", strerror(errno));
       return;
     }
   res = FD_CALLBACK(self->callback, conn);
   if (LSH_ACTIONP(res))
     {
-      wwrite("Strange: Accepted a connection, "
+      werror("Strange: Accepted a connection, "
 	     "but failed before writing anything.\n");
       close_fd(fd, (LSH_FAILUREP(res)
 		    ? CLOSE_PROTOCOL_FAILURE
@@ -381,7 +381,7 @@ static void connect_callback(struct lsh_fd *fd)
 
   if (LSH_ACTIONP(res))
     {
-      wwrite("Strange: Connected, "
+      werror("Strange: Connected, "
 	     "but failed before writing anything.\n");
     }
   else
@@ -478,7 +478,7 @@ int blocking_read(int fd, struct read_handler *handler)
 	  return res;
 	}
       if (res & LSH_FAIL)
-	werror("blocking_read: Ignoring error %d\n", res);
+	werror("blocking_read: Ignoring error %i\n", res);
     }
 }
 /*
@@ -631,13 +631,13 @@ int write_raw_with_poll(int fd, UINT32 length, UINT8 *data)
 void io_set_nonblocking(int fd)
 {
   if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
-    fatal("io_set_nonblocking: fcntl() failed, %s", strerror(errno));
+    fatal("io_set_nonblocking: fcntl() failed, %z", strerror(errno));
 }
 
 void io_set_close_on_exec(int fd)
 {
   if (fcntl(fd, F_SETFD, 1) < 0)
-    fatal("Can't set close-on-exec flag for fd %d: %s\n",
+    fatal("Can't set close-on-exec flag for fd %i: %z\n",
 	  fd, strerror(errno));
 }
 
@@ -661,7 +661,7 @@ struct connect_fd *io_connect(struct io_backend *b,
   if (s<0)
     return NULL;
 
-  debug("io.c: connecting using fd %d\n", s);
+  debug("io.c: connecting using fd %i\n", s);
   
   io_init_fd(s);
 
@@ -704,7 +704,7 @@ struct listen_fd *io_listen(struct io_backend *b,
   if (s<0)
     return NULL;
 
-  debug("io.c: listening on fd %d\n", s);
+  debug("io.c: listening on fd %i\n", s);
   
   io_init_fd(s);
 
@@ -767,7 +767,7 @@ struct abstract_write *io_read_write(struct io_backend *b,
   NEW(io_fd, f);
   struct write_buffer *buffer = write_buffer_alloc(block_size);
 
-  debug("io.c: Preparing fd %d for reading and writing\n", fd);
+  debug("io.c: Preparing fd %i for reading and writing\n", fd);
   
   io_init_fd(fd);
   
@@ -797,7 +797,7 @@ struct io_fd *io_read(struct io_backend *b,
 {
   NEW(io_fd, f);
 
-  debug("io.c: Preparing fd %d for reading\n", fd);
+  debug("io.c: Preparing fd %i for reading\n", fd);
   
   io_init_fd(fd);
 
@@ -821,7 +821,7 @@ struct io_fd *io_write(struct io_backend *b,
   NEW(io_fd, f);
   struct write_buffer *buffer = write_buffer_alloc(block_size);
 
-  debug("io.c: Preparing fd %d for writing\n", fd);
+  debug("io.c: Preparing fd %i for writing\n", fd);
   
   io_init_fd(fd);
   
@@ -844,7 +844,7 @@ void kill_fd(struct lsh_fd *fd)
 
 void close_fd(struct lsh_fd *fd, int reason)
 {
-  debug("Marking fd %d for closing.\n", fd->fd);
+  debug("Marking fd %i for closing.\n", fd->fd);
   fd->close_reason = reason;
   kill_fd(fd);
 }

@@ -126,7 +126,9 @@ void lsh_string_free(struct lsh_string *s)
   if (!s)
     return;
 
-  debug("lsh_string_free: freeing %p,\n", (void *) s);
+#if 0
+  debug("lsh_string_free: freeing %xi,\n", (UINT32) s);
+#endif
   
 #ifdef DEBUG_ALLOC
   if (s->header.magic != -1717)

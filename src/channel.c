@@ -393,7 +393,7 @@ static int do_channel_open(struct packet_handler *c,
       if ( (local_channel_number
 	    = register_channel(closure->super.table, channel)) < 0)
 	{
-	  wwrite("Could not allocate a channel number for pened channel!\n");
+	  werror("Could not allocate a channel number for pened channel!\n");
 	  return A_WRITE(connection->write,
 			 format_open_failure(remote_channel_number,
 					     SSH_OPEN_RESOURCE_SHORTAGE,
@@ -460,7 +460,7 @@ static int do_channel_request(struct packet_handler *c,
 	      : LSH_OK | LSH_GOON;
 	  
 	}
-      werror("SSH_MSG_CHANNEL_REQUEST on nonexistant channel %d\n",
+      werror("SSH_MSG_CHANNEL_REQUEST on nonexistant channel %i\n",
 	     channel_number);
       return LSH_FAIL | LSH_DIE;
     }
@@ -509,7 +509,7 @@ static int do_window_adjust(struct packet_handler *c,
 	}
       /* FIXME: What to do now? Should unknown channel numbers be
        * ignored silently? */
-      werror("SSH_MSG_CHANNEL_WINDOW_ADJUST on nonexistant or closed channel %d\n",
+      werror("SSH_MSG_CHANNEL_WINDOW_ADJUST on nonexistant or closed channel %i\n",
 	     channel_number);
       return LSH_FAIL | LSH_DIE;
     }
@@ -547,7 +547,7 @@ static int do_channel_data(struct packet_handler *c,
 	{
 	  if (channel->flags & CHANNEL_SENT_CLOSE)
 	    {
-	      wwrite("Ignoring data on channel which is closing\n");
+	      werror("Ignoring data on channel which is closing\n");
 	      return LSH_OK | LSH_GOON;
 	    }
 	  else
@@ -557,7 +557,7 @@ static int do_channel_data(struct packet_handler *c,
 	      if (data->length > channel->rec_window_size)
 		{
 		  /* Truncate data to fit window */
-		  wwrite("Channel data overflow. Extra data ignored.\n"); 
+		  werror("Channel data overflow. Extra data ignored.\n"); 
 		  data->length = channel->rec_window_size;
 		}
 
@@ -589,7 +589,7 @@ static int do_channel_data(struct packet_handler *c,
 	  return LSH_OK | LSH_GOON;
 	}
 	  
-      werror("Data on closed or non-existant channel %d\n",
+      werror("Data on closed or non-existant channel %i\n",
 	     channel_number);
       lsh_string_free(data);
       return LSH_FAIL | LSH_DIE;
@@ -630,7 +630,7 @@ static int do_channel_extended_data(struct packet_handler *c,
 	{
 	  if (channel->flags & CHANNEL_SENT_CLOSE)
 	    {
-	      wwrite("Ignoring extended data on channel which is closing\n");
+	      werror("Ignoring extended data on channel which is closing\n");
 	      return LSH_OK | LSH_GOON;
 	    }
 	  else
@@ -640,7 +640,7 @@ static int do_channel_extended_data(struct packet_handler *c,
 	      if (data->length > channel->rec_window_size)
 		{
 		  /* Truncate data to fit window */
-		  wwrite("Channel extended data overflow. "
+		  werror("Channel extended data overflow. "
 			 "Extra data ignored.\n");
 		  data->length = channel->rec_window_size;
 		}
@@ -664,14 +664,14 @@ static int do_channel_extended_data(struct packet_handler *c,
 		    res | CHANNEL_RECEIVE(channel, 
 					  CHANNEL_STDERR_DATA, data));
 		default:
-		  werror("Unknown type %d of extended data.\n",
+		  werror("Unknown type %i of extended data.\n",
 			 type);
 		  lsh_string_free(data);
 		  return LSH_FAIL | LSH_DIE;
 		}
 	    }
 	}
-      werror("Extended data on closed or non-existant channel %d\n",
+      werror("Extended data on closed or non-existant channel %i\n",
 	     channel_number);
       lsh_string_free(data);
       return LSH_FAIL | LSH_DIE;
@@ -709,7 +709,7 @@ static int do_channel_eof(struct packet_handler *c,
 	  
 	  if (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_RECEIVED_CLOSE))
 	    {
-	      wwrite("Receiving EOF on channel on closed channel.\n");
+	      werror("Receiving EOF on channel on closed channel.\n");
 	      return LSH_FAIL | LSH_DIE;
 	    }
 
@@ -737,7 +737,7 @@ static int do_channel_eof(struct packet_handler *c,
 					res);
 
 	}
-      werror("EOF on non-existant channel %d\n",
+      werror("EOF on non-existant channel %i\n",
 	     channel_number);
       return LSH_FAIL | LSH_DIE;
     }
@@ -774,7 +774,7 @@ static int do_channel_close(struct packet_handler *c,
 	  
 	  if (channel->flags & CHANNEL_RECEIVED_CLOSE)
 	    {
-	      wwrite("Receiving multiple CLOSE on channel.\n");
+	      werror("Receiving multiple CLOSE on channel.\n");
 	      return LSH_FAIL | LSH_DIE;
 	    }
 
@@ -782,7 +782,7 @@ static int do_channel_close(struct packet_handler *c,
 	  
 	  if (! (channel->flags & (CHANNEL_RECEIVED_EOF | CHANNEL_SENT_EOF)))
 	    {
-	      wwrite("Unexpected channel CLOSE.\n");
+	      werror("Unexpected channel CLOSE.\n");
 	    }
 
 	  if (! (channel->flags & (CHANNEL_RECEIVED_EOF))
@@ -796,7 +796,7 @@ static int do_channel_close(struct packet_handler *c,
 		: channel_close(channel))
 	      | res));
 	}
-      werror("CLOSE on non-existant channel %d\n",
+      werror("CLOSE on non-existant channel %i\n",
 	     channel_number);
       return LSH_FAIL | LSH_DIE;
       
@@ -842,7 +842,7 @@ static int do_channel_open_confirm(struct packet_handler *c,
 	  return channel_process_status(closure->table, local_channel_number,
 					CHANNEL_OPEN_CONFIRM(channel));
 	}
-      werror("Unexpected SSH_MSG_CHANNEL_OPEN_CONFIRMATION on channel %d\n",
+      werror("Unexpected SSH_MSG_CHANNEL_OPEN_CONFIRMATION on channel %i\n",
 	     local_channel_number);
       return LSH_FAIL | LSH_DIE;
     }
@@ -891,7 +891,7 @@ static int do_channel_open_failure(struct packet_handler *c,
 	  return channel_process_status(closure->table, channel_number,
 					res | LSH_CHANNEL_FINISHED);
 	}
-      werror("Unexpected SSH_MSG_CHANNEL_OPEN_FAILURE on channel %d\n",
+      werror("Unexpected SSH_MSG_CHANNEL_OPEN_FAILURE on channel %i\n",
 	     channel_number);
       lsh_string_free(packet);
       
@@ -1254,7 +1254,7 @@ static int channel_close_callback(struct close_callback *c, int reason)
       channel_close(closure->channel);
       break;
     default:
-      fatal("channel_close_callback: Unexpected close reason %d!\n",
+      fatal("channel_close_callback: Unexpected close reason %i!\n",
 	    reason);
     }
   /* FIXME: So far, the returned value is ignored. */

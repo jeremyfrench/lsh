@@ -56,7 +56,7 @@ static int fall_back_to_ssh1(struct ssh1_fallback *c,
   pid = fork();
   if (pid < 0)
     {
-      werror("Forking to start fallback sshd1 failed with %s\n",
+      werror("Forking to start fallback sshd1 failed with %z\n",
 	     strerror(errno));
       return LSH_FAIL | LSH_DIE;
     }
@@ -93,7 +93,7 @@ static int fall_back_to_ssh1(struct ssh1_fallback *c,
 	    "-i",			/* inetd mode */
 	    "-V" ,version,	 	/* Compatibility mode */
 	    NULL);
-      werror("lshd: fall_back_to_ssh1: execl failed (errno = %d): %s\n",
+      werror("lshd: fall_back_to_ssh1: execl failed (errno = %i): %z\n",
 	     errno, strerror(errno));
       _exit(EXIT_FAILURE);
     }

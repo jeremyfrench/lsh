@@ -58,11 +58,11 @@ static int do_disconnect(struct packet_handler *closure UNUSED,
       /* FIXME: Language tag is ignored */ )
     {
       /* FIXME: Display a better message */
-      werror("Disconnect for reason %d\n", reason);
-      werror_utf8(length, msg);
+      werror("Disconnect for reason %i\n%ups\n", reason, length, msg);
     }
   else
-    wwrite("Invalid disconnect message!\n");
+    werror("Invalid disconnect message!\n");
+
   lsh_string_free(packet);
   
   /* FIXME: Mark the file as closed, somehow (probably a variable in

@@ -48,7 +48,7 @@ static void usage(void) NORETURN;
 
 static void usage(void)
 {
-  wwrite("Usage: lsh_keygen [-o style] [-l nist-level] [-a dsa] [-q] [-d] [-v]\n");
+  werror("Usage: lsh_keygen [-o style] [-l nist-level] [-a dsa] [-q] [-d] [-v]\n");
   exit(1);
 }
 
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
 
 	  if ( (l<0) || (l > 8))
 	    {
-	      wwrite("lsh_keygen: nist-level should be in the range 0-8.\n");
+	      werror("lsh_keygen: nist-level should be in the range 0-8.\n");
 	      usage();
 	    }
 	  break;
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
       case 'a':
 	if (strcmp(optarg, "dsa"))
 	  {
-	    wwrite("lsh_keygen: Sorry, doesn't support any algorithm but dsa.\n");
+	    werror("lsh_keygen: Sorry, doesn't support any algorithm but dsa.\n");
 	    usage();
 	  }
 	break;
@@ -101,7 +101,7 @@ int main(int argc, char **argv)
 	  style = SEXP_INTERNATIONAL;
 	else
 	  {
-	    wwrite("lsh_keygen: Style must be one of\n"
+	    werror("lsh_keygen: Style must be one of\n"
 		   "  'transport', 'canonical', 'advanced' or 'international'\n");
 	    usage();
 	  }
@@ -134,28 +134,26 @@ int main(int argc, char **argv)
   r = make_poor_random(&sha_algorithm, NULL);
   dsa_nist_gen(public.p, public.q, r, l);
 
-  debug_mpz(public.p);
-  debug("\n");
-  debug_mpz(public.q);
-  debug("\n");
+  debug("%hn\n"
+	"%hn\n", public.p, public.q);
 
   /* Sanity check. */
   if (!mpz_probab_prime_p(public.p, 10))
     {
-      wwrite("p not a prime!\n");
+      werror("p not a prime!\n");
       return 1;
     }
 
   if (!mpz_probab_prime_p(public.q, 10))
     {
-      wwrite("q not a prime!\n");
+      werror("q not a prime!\n");
       return 1;
     }
 
   mpz_fdiv_r(t, public.p, public.q);
   if (mpz_cmp_ui(t, 1))
     {
-      wwrite("q doesn't divide p-1 !\n");
+      werror("q doesn't divide p-1 !\n");
       return 1;
     }
 

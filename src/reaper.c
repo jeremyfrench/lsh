@@ -92,7 +92,7 @@ static void reap(struct reaper *r)
 	  
 	  if (WIFEXITED(status))
 	    {
-	      verbose("Child %d died with exit code %d.\n",
+	      verbose("Child %i died with exit code %i.\n",
 		      pid, WEXITSTATUS(status));
 	      signaled = 0;
 	      core = 0;
@@ -100,7 +100,7 @@ static void reap(struct reaper *r)
 	    }
 	  else if (WIFSIGNALED(status))
 	    {
-	      verbose("Child %d killed by signal %d.\n",
+	      verbose("Child %i killed by signal %i.\n",
 		      pid, WTERMSIG(status));
 	      signaled = 1;
 	      core = !!WCOREDUMP(status);
@@ -119,23 +119,23 @@ static void reap(struct reaper *r)
 	  else
 	    {
 	      if (WIFSIGNALED(status))
-		werror("Unregistered child %d killed by signal %d.\n",
+		werror("Unregistered child %i killed by signal %i.\n",
 		       pid, value);
 	      else
-		werror("Unregistered child %d died with exit status %d.\n",
+		werror("Unregistered child %i died with exit status %i.\n",
 		       pid, value);
 	    }
 	}
       else switch(errno)
 	{
 	case EINTR:
-	  wwrite("reaper.c: waitpid() returned EINTR.\n");
+	  werror("reaper.c: waitpid() returned EINTR.\n");
 	  break;
 	case ECHILD:
 	  /* No more child processes */
 	  return;
 	default:
-	  fatal("reaper.c: waitpid failed (errno = %d), %s\n",
+	  fatal("reaper.c: waitpid failed (errno = %i), %z\n",
 		errno, strerror(errno));
 	}
     }

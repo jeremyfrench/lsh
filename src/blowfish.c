@@ -75,7 +75,7 @@ make_blowfish_instance(struct crypto_algorithm *algorithm, int mode,
     case 0:
       return &self->super;
     default:
-      wwrite("Detected a weak blowfish key!\n");
+      werror("Detected a weak blowfish key!\n");
       KILL(self);
       return NULL;
     }

@@ -26,6 +26,7 @@
 
 #include "charset.h"
 
+#include "format.h"  /* For lsh_string_dup() */
 #include "parse.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -144,21 +145,21 @@ struct lsh_string *local_to_utf8(struct lsh_string *s, int free)
       }
     }
 }
-  
-  
-struct lsh_string *utf8_to_local(struct lsh_string *s, int free)
+
+int local_is_utf8(void) { return (local_charset == CHARSET_UTF8); }
+
+struct lsh_string *low_utf8_to_local(UINT32 length, UINT8 *s, int strict)
 {
   UINT32 i;
   struct lsh_string *res;
   struct simple_buffer buffer;
   
-  if (local_charset == CHARSET_UTF8)
-    return s;
+  assert(!local_is_utf8());
 
   /* The string can't grow when converted to local charset */
-  res = lsh_string_alloc(s->length);
+  res = lsh_string_alloc(length);
 
-  simple_buffer_init(&buffer, s->length, s->data);
+  simple_buffer_init(&buffer, length, s);
 
   for (i = 0; 1; i++)
     {
@@ -170,8 +171,6 @@ struct lsh_string *utf8_to_local(struct lsh_string *s, int free)
 	  assert(i<=res->length);
 	  
 	  res->length = i;
-	  if (free)
-	    lsh_string_free(s);
 
 	  return res;
 
@@ -184,16 +183,37 @@ struct lsh_string *utf8_to_local(struct lsh_string *s, int free)
 		res->data[i] = local;
 		break;
 	      }
+	    else if (!strict)
+	      {
+		/* Replace unkonwn characters. */
+		res->data[i] = '?';
+		break;
+	      }
 	    /* Fall through */
 	  }
 	case 0: /* Error */
 	  lsh_string_free(res);
-	  if (free)
-	    lsh_string_free(s);
-	  return 0;
+
+	  return NULL;
 
 	default:
+
 	  fatal("Internal error!\n");
 	}
     }
+}
+
+struct lsh_string *utf8_to_local(struct lsh_string *s, int strict, int free)
+{
+  struct lsh_string *res;
+  
+  if (local_is_utf8())
+    return free ? s : lsh_string_dup(s);
+
+  res = low_utf8_to_local(s->length, s->data, strict);
+
+  if (free)
+    lsh_string_free(s);
+
+  return res;
 }

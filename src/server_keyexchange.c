@@ -102,7 +102,7 @@ static int do_handle_dh_init(struct packet_handler *c,
 
   if (!INSTALL_KEYS(closure->install, connection, hash))
     {
-      wwrite("Installing new keys failed. Hanging up.\n");
+      werror("Installing new keys failed. Hanging up.\n");
       KILL(hash);
       /* FIXME: Send a disconnect message */
       return LSH_FAIL | LSH_DIE;

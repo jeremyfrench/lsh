@@ -41,6 +41,13 @@ UINT32 local_to_ucs4(int c);
 int ucs4_to_local(UINT32 c);
 
 struct lsh_string *local_to_utf8(struct lsh_string *s, int free);
-struct lsh_string *utf8_to_local(struct lsh_string *s, int free);
+
+/* Returns NULL if the UTF-8 encoding is invalid. If STRICT, it
+ * returns NULL also if the UTF-8 is valid but not representable in
+ * the local charset. If not STRICT, non-representably charecters are
+ * replaced with '?'. */
+struct lsh_string *utf8_to_local(struct lsh_string *s, int strict, int free);
+struct lsh_string *low_utf8_to_local(UINT32 length, UINT8 *s, int strict);
+int local_is_utf8(void);
 
 #endif /* LSH_CHARSET_H_INCLUDED */

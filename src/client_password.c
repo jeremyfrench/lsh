@@ -69,7 +69,7 @@ static int echo_on(int fd)
 
   if (tcgetattr(fd, &t) < 0)
     {
-      werror("Can't get terminal attributes: %s\n", strerror(errno));
+      werror("Can't get terminal attributes: %z\n", strerror(errno));
       return 0;
     }
 
@@ -77,7 +77,7 @@ static int echo_on(int fd)
 
   if (tcsetattr(fd, TCSANOW, &t) < 0)
     {
-      werror("Can't set terminal attributes: %s\n", strerror(errno));
+      werror("Can't set terminal attributes: %z\n", strerror(errno));
       return 0;
     }
 
@@ -90,7 +90,7 @@ static int echo_off(int fd)
 
   if (tcgetattr(fd, &t) < 0)
     {
-      werror("Can't get terminal attributes: %s\n", strerror(errno));
+      werror("Can't get terminal attributes: %z\n", strerror(errno));
       return 0;
     }
 
@@ -98,7 +98,7 @@ static int echo_off(int fd)
 
   if (tcsetattr(fd, TCSAFLUSH, &t) < 0)
     {
-      werror("Can't set terminal attributes: %s\n", strerror(errno));
+      werror("Can't set terminal attributes: %z\n", strerror(errno));
       return 0;
     }
 
@@ -117,14 +117,14 @@ struct lsh_string *read_password(int max_length, struct lsh_string *prompt)
 
   if (fd < 0)
     {
-      werror("Can't open /dev/tty: %s\n", strerror(errno));
+      werror("Can't open /dev/tty: %z\n", strerror(errno));
       return 0;
     }
   tty = fdopen(fd, "rw");
   if (!tty)
     {
       close(fd);
-      werror("Can't fdopen /dev/tty: %s\n", strerror(errno));
+      werror("Can't fdopen /dev/tty: %z\n", strerror(errno));
       return 0;
     }
 

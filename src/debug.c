@@ -47,9 +47,7 @@ static int do_debug(struct abstract_write *w,
 {
   CAST(packet_debug, closure, w);
   
-  debug("DEBUG: received packet");
-  debug_hex(packet->length, packet->data);
-  debug("\n");
+  debug("DEBUG: received packet %xS\n", packet);
   
   return A_WRITE(closure->super.next, packet);
 }
@@ -116,17 +114,10 @@ static int do_rec_debug(struct packet_handler *self UNUSED,
     }
 
   if (always_display)
-    {
-      wwrite("Received debug: ");
-      werror_utf8(length, msg);
-      wwrite("\n");
-    }
+    werror("Received debug: %ups\n", length, msg);
+
   else
-    {
-      verbose("Received debug: ");
-      verbose_utf8(length, msg);
-      verbose("\n");
-    }
+    verbose("Received debug: %ups\n", length, msg);
 
   lsh_string_free(packet);
   return LSH_OK | LSH_GOON;

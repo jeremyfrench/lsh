@@ -260,7 +260,7 @@ static int do_parse_skip(struct scanner **s, int token)
     }
 
   /* FIXME: More readable error message */
-  werror("Expected token %d, got %d\n", closure->expect, token);
+  werror("Expected token %i, got %i\n", closure->expect, token);
   
   *s = NULL;
   return LSH_FAIL | LSH_SYNTAX;  
@@ -684,7 +684,7 @@ static int base64_decode(struct base64_state *state, int token)
       /* Check for unused bits */
       if (state->bits && ( ( (1<<state->bits) - 1) & state->buffer))
 	{
-	  werror("sexp: Base64 terminated with %d leftover bits.\n",
+	  werror("sexp: Base64 terminated with %i leftover bits.\n",
 		 state->bits);
 	  return TOKEN_ERROR;
 	}

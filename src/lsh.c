@@ -67,7 +67,7 @@ void usage(void) NORETURN;
 
 void usage(void)
 {
-  wwrite("lsh [options] host\n"
+  werror("lsh [options] host\n"
 	 " -p,  --port=PORT\n"
 	 " -l,  --user=NAME\n"
 	 " -c,  --crypto=ALGORITHM\n"
@@ -203,7 +203,7 @@ int main(int argc, char **argv)
 	  preferred_crypto = lookup_crypto(algorithms, optarg);
 	  if (!preferred_crypto)
 	    {
-	      werror("lsh: Unknown crypto algorithm '%s'.\n", optarg);
+	      werror("lsh: Unknown crypto algorithm '%z'.\n", optarg);
 	      exit(1);
 	    }
 	  break;
@@ -214,7 +214,7 @@ int main(int argc, char **argv)
 	  preferred_compression = lookup_compression(algorithms, optarg);
 	  if (!preferred_compression)
 	    {
-	      werror("lsh: Unknown compression algorithm '%s'.\n", optarg);
+	      werror("lsh: Unknown compression algorithm '%z'.\n", optarg);
 	      exit(1);
 	    }
 	  break;
@@ -222,7 +222,7 @@ int main(int argc, char **argv)
 	  preferred_mac = lookup_mac(algorithms, optarg);
 	  if (!preferred_mac)
 	    {
-	      werror("lsh: Unknown message authentication algorithm '%s'.\n",
+	      werror("lsh: Unknown message authentication algorithm '%z'.\n",
 		      optarg);
 	      exit(1);
 	    }
@@ -243,14 +243,14 @@ int main(int argc, char **argv)
 
   if (!user)
     {
-      wwrite("lsh: No user name.\n"
+      werror("lsh: No user name.\n"
 	     "Please use the -l option, or set LOGNAME in the environment\n");
       exit(EXIT_FAILURE);
     }
 
   if (!get_inaddr(&remote, host, port, "tcp"))
     {
-      wwrite("No such host or service\n");
+      werror("No such host or service\n");
       exit(1);
     }
 
@@ -266,7 +266,7 @@ int main(int argc, char **argv)
       
       if (tty < 0)
 	{
-	  werror("lsh: Failed to open tty (errno = %d): %s\n",
+	  werror("lsh: Failed to open tty (errno = %i): %z\n",
 		 errno, strerror(errno));
 	  use_pty = 0;
 	}
@@ -278,7 +278,7 @@ int main(int argc, char **argv)
   
   if ( (err = dup(STDERR_FILENO)) < 0)
     {
-      werror("Can't dup stderr: %s\n", strerror(errno));
+      werror("Can't dup stderr: %z\n", strerror(errno));
       return EXIT_FAILURE;
     }
 
@@ -325,7 +325,7 @@ int main(int argc, char **argv)
 				       r, make_kexinit,
 				       kexinit_handler)))
     {
-      werror("lsh: Connection failed: %s\n", strerror(errno));
+      werror("lsh: Connection failed: %z\n", strerror(errno));
       return 1;
     }
 

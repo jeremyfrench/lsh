@@ -330,7 +330,7 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
   
   key = lsh_string_alloc(key_length);
 
-  debug("\nConstructing session key of type %d\n", type);
+  debug("\nConstructing session key of type %i\n", type);
   
   if (!key_length)
     return key;
@@ -391,8 +391,9 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
     }
   KILL(hash);
 
-  debug("Expanded key: ");
-  debug_hex(key->length, key->data);
+  debug("Expanded key: %xs",
+	key->length, key->data);
+
   return key;
 }
   

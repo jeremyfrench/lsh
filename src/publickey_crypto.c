@@ -79,9 +79,7 @@ static void dsa_hash(mpz_t h, UINT32 length, UINT8 *msg)
 
   bignum_parse_u(h, hash->hash_size, digest);
 
-  debug("DSS hash: ");
-  debug_mpz(h);
-  debug("\n");
+  debug("DSS hash: %hn\n", h);
   
   KILL(hash);
 }
@@ -102,23 +100,17 @@ static struct lsh_string *do_dsa_sign(struct signer *c,
   bignum_random(k, closure->random, tmp);
   mpz_add_ui(k, k, 1);
 
-  debug("do_dsa_sign, k: ");
-  debug_mpz(k);
-  debug("\n");
+  debug("do_dsa_sign, k: %hn\n", k);
   
   /* Compute r = (g^k (mod p)) (mod q) */
   mpz_init(r);
   mpz_powm(r, closure->public.g, k, closure->public.p);
 
-  debug("do_dsa_sign, group element: ");
-  debug_mpz(r);
-  debug("\n");
+  debug("do_dsa_sign, group element: %hn\n", r);
   
   mpz_fdiv_r(r, r, closure->public.q);
 
-  debug("do_dsa_sign, r: ");
-  debug_mpz(r);
-  debug("\n");
+  debug("do_dsa_sign, r: %hn\n", r);
 
   /* Compute hash */
   dsa_hash(tmp, length, msg);
@@ -141,9 +133,7 @@ static struct lsh_string *do_dsa_sign(struct signer *c,
   mpz_mul(s, s, k);
   mpz_fdiv_r(s, s, closure->public.q);
 
-  debug("do_dsa_sign, s: ");
-  debug_mpz(s);
-  debug("\n");
+  debug("do_dsa_sign, s: %hn\n", s);
   
   /* Build signature */
   signature = ssh_format("%a%n%n", ATOM_SSH_DSS, r, s);
@@ -200,14 +190,9 @@ static int do_dsa_verify(struct verifier *c,
       return 0;
     }
   
-  debug("do_dsa_verify, r: ");
-  debug_mpz(r);
-  debug("\n");
+  debug("do_dsa_verify, r: %hn\n"
+	"               s: %hn\n", r, s);
   
-  debug("do_dsa_verify, s: ");
-  debug_mpz(s);
-  debug("\n");
-
   /* Compute w = s^-1 (mod q) */
   mpz_init(w);
 
@@ -221,9 +206,7 @@ static int do_dsa_verify(struct verifier *c,
       return 0;
     }
 
-  debug("do_dsa_verify, w: ");
-  debug_mpz(w);
-  debug("\n");
+  debug("do_dsa_verify, w: %hn\n", w);
 
   /* Compute hash */
   mpz_init(tmp);
@@ -236,9 +219,7 @@ static int do_dsa_verify(struct verifier *c,
   mpz_mul(tmp, tmp, w);
   mpz_fdiv_r(tmp, tmp, closure->public.q);
 
-  debug("u1: ");
-  debug_mpz(tmp);
-  debug("\n");
+  debug("u1: %hn\n", tmp);
   
   mpz_powm(v, closure->public.g, tmp, closure->public.p);
 
@@ -246,9 +227,7 @@ static int do_dsa_verify(struct verifier *c,
   mpz_mul(tmp, r, w);
   mpz_fdiv_r(tmp, tmp, closure->public.q);
 
-  debug("u2: ");
-  debug_mpz(tmp);
-  debug("\n");
+  debug("u2: %hn\n", tmp);
 
   mpz_powm(tmp, closure->public.y, tmp, closure->public.p);
   
@@ -256,15 +235,11 @@ static int do_dsa_verify(struct verifier *c,
   mpz_mul(v, v, tmp);
   mpz_fdiv_r(v, v, closure->public.p);
 
-  debug("do_dsa_verify, group element: ");
-  debug_mpz(v);
-  debug("\n");
+  debug("do_dsa_verify, group element: %hn\n", v);
   
   mpz_fdiv_r(v, v, closure->public.q);
 
-  debug("do_dsa_verify, v: ");
-  debug_mpz(v);
-  debug("\n");
+  debug("do_dsa_verify, v: %hn\n", v);
 
   res = mpz_cmp(v, r);
 
@@ -461,33 +436,28 @@ void init_diffie_hellman_instance(struct diffie_hellman_method *m,
   self->hash = MAKE_HASH(m->H);
   self->exchange_hash = NULL;
 
-  debug("init_diffie_hellman_instance()\n V_C: ");
-
   /* FIXME: Length field should be included when hashing. */
-  debug_safe(c->client_version->length,
-	     c->client_version->data);
+  
+  debug("init_diffie_hellman_instance()\n"
+	" V_C: %pS\n", c->client_version);
   HASH_UPDATE(self->hash,
 	      c->client_version->length,
 	      c->client_version->data);
-  debug("\n V_S: ");
-  debug_safe(c->server_version->length,
-	     c->server_version->data);
+  
+  debug(" V_S: %pS\n", c->server_version);
   HASH_UPDATE(self->hash,
 	      c->server_version->length,
 	      c->server_version->data);
-  debug("\n I_C: ");
-  debug_safe(c->literal_kexinits[CONNECTION_CLIENT]->length,
-	     c->literal_kexinits[CONNECTION_CLIENT]->data);
+
+  debug(" I_C: %pS\n", c->literal_kexinits[CONNECTION_CLIENT]);
   HASH_UPDATE(self->hash,
 	      c->literal_kexinits[CONNECTION_CLIENT]->length,
 	      c->literal_kexinits[CONNECTION_CLIENT]->data);
-  debug("\n I_C: ");
-  debug_safe(c->literal_kexinits[CONNECTION_SERVER]->length,
-	     c->literal_kexinits[CONNECTION_SERVER]->data);
+  
+  debug(" I_C: %pS\n", c->literal_kexinits[CONNECTION_SERVER]);
   HASH_UPDATE(self->hash,
 	      c->literal_kexinits[CONNECTION_SERVER]->length,
 	      c->literal_kexinits[CONNECTION_SERVER]->data);
-  debug("\n");
   
   lsh_string_free(c->literal_kexinits[CONNECTION_CLIENT]);
   lsh_string_free(c->literal_kexinits[CONNECTION_SERVER]);
@@ -565,7 +535,7 @@ int dh_process_client_msg(struct diffie_hellman_instance *self,
 void dh_hash_update(struct diffie_hellman_instance *self,
 		    struct lsh_string *packet)
 {
-  debug("dh_hash_update, length = %d, data:\n", packet->length);
+  debug("dh_hash_update, length = %i, data:\n", packet->length);
   debug_safe(packet->length, packet->data);
   debug("\n");
   
@@ -580,10 +550,7 @@ void dh_hash_digest(struct diffie_hellman_instance *self, UINT8 *digest)
 				    self->server_key,
 				    self->e, self->f,
 				    self->K);
-  debug("dh_hash_digest()\n '");
-  debug_safe(s->length,
-	     s->data);
-  debug("'\n");
+  debug("dh_hash_digest()\n '%pS'\n", s);
   
   HASH_UPDATE(self->hash, s->length, s->data);
   lsh_string_free(s);

@@ -158,7 +158,7 @@ static int do_authenticate(struct userauth *c,
       return LSH_AUTH_FAILED;
     }
 
-  username = utf8_to_local(username, 1);
+  username = utf8_to_local(username, 1, 1);
   if (!username)
     return 0;
 
@@ -176,7 +176,7 @@ static int do_authenticate(struct userauth *c,
 	  struct unix_user *user;
 	  int access;
 
-	  password = utf8_to_local(password, 1);
+	  password = utf8_to_local(password, 1, 1);
 
 	  if (!password)
 	    {
@@ -236,17 +236,17 @@ int change_uid(struct unix_user *user)
    * still running as root. */
   if (initgroups(user->name->data, user->gid) < 0)
     {
-      werror("initgroups failed: %s\n", strerror(errno));
+      werror("initgroups failed: %z\n", strerror(errno));
       return 0;
     }
   if (setgid(user->gid) < 0)
     {
-      werror("setgid failed: %s\n", strerror(errno));
+      werror("setgid failed: %z\n", strerror(errno));
       return 0;
     }
   if (setuid(user->uid) < 0)
     {
-      werror("setuid failed: %s\n", strerror(errno));
+      werror("setuid failed: %z\n", strerror(errno));
       return 0;
     }
   return 1;
@@ -260,19 +260,19 @@ int change_dir(struct unix_user *user)
     {
       if (chdir("/") < 0)
 	{
-	  werror("Strange: home directory was NULL, and chdir(\"/\") failed: %s\n",
+	  werror("Strange: home directory was NULL, and chdir(\"/\") failed: %z\n",
 		 strerror(errno));
 	  return 0;
 	}
     }
   else if (chdir(user->home->data) < 0)
     {
-      werror("chdir to %s failed (using / instead): %s\n",
+      werror("chdir to %z failed (using / instead): %z\n",
 	     user->home ? (char *) user->home->data : "none",
 	     strerror(errno));
       if (chdir("/") < 0)
 	{
-	  werror("chdir(\"/\") failed: %s\n", strerror(errno));
+	  werror("chdir(\"/\") failed: %z\n", strerror(errno));
 	  return 0;
 	}
     }
@@ -309,7 +309,7 @@ static int do_setuid(struct ssh_service *c,
 	{
 	case -1:
 	  /* Error */
-	  werror("fork failed: %s\n", strerror(errno));
+	  werror("fork failed: %z\n", strerror(errno));
 	  return LSH_FAIL | LSH_DIE;
 	case 0:
 	  /* Child */

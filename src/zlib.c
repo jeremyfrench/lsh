@@ -80,7 +80,7 @@ static void do_free_zstream(z_stream *z)
     fatal("Internal error!\n");
 
   if (res != Z_OK)
-    werror("do_free_zstream: Freeing failed: %s\n",
+    werror("do_free_zstream: Freeing failed: %z\n",
 	   z->msg ? z->msg : "No error");
 }
 

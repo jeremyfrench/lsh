@@ -51,10 +51,10 @@ static void do_kill_pty_info(struct resource *r)
     {
       closure->super.alive = 0;
       if (close(closure->master) < 0)
-	werror("do_kill_pty_info: closing master failed (errno = %d): %s\n",
+	werror("do_kill_pty_info: closing master failed (errno = %i): %z\n",
 	       errno, strerror(errno));
       if (close(closure->slave) < 0)
-	werror("do_kill_pty_info: closing slave failed (errno = %d): %s\n",
+	werror("do_kill_pty_info: closing slave failed (errno = %i): %z\n",
 	       errno, strerror(errno));
     }
 }

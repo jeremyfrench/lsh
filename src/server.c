@@ -250,10 +250,8 @@ static int do_line(struct line_handler **h,
 	  closure->connection->client_version
 	    = ssh_format("%ls", length, line);
 
-	  verbose("Client version: ");
-	  verbose_safe(closure->connection->client_version->length,
-		       closure->connection->client_version->data);
-	  verbose("\n");
+	  verbose("Client version: %pS\n",
+		  closure->connection->client_version);
 	  
 	  /* FIXME: Cleanup properly. */
 	  KILL(closure);
@@ -274,9 +272,8 @@ static int do_line(struct line_handler **h,
 #endif /* WITH_SSH1_FALLBACK */
       else
 	{
-	  wwrite("Unsupported protocol version: ");
-	  werror_safe(length, line);
-	  wwrite("\n");
+	  werror("Unsupported protocol version: %ps\n",
+		 length, line);
 
 	  /* FIXME: Clean up properly */
 	  KILL(closure);
@@ -288,7 +285,7 @@ static int do_line(struct line_handler **h,
   else
     {
       /* Display line */
-      werror_safe(length, line);
+      werror("%ps\n", length, line);
 
       /* Read next line */
       return LSH_OK | LSH_GOON;
@@ -346,9 +343,9 @@ static int server_die(struct close_callback *c, int reason)
 {
   CAST(server_cleanup, closure, c);
   
-  verbose("Connection died, for reason %d.\n", reason);
+  verbose("Connection died, for reason %i.\n", reason);
   if (reason != CLOSE_EOF)
-    wwrite("Connection died.\n");
+    werror("Connection died.\n");
 
   KILL_RESOURCE_LIST(closure->connection->resources);
   
@@ -389,7 +386,7 @@ static void do_kill_process(struct resource *r)
       
       if (kill(self->pid, self->signal) < 0)
 	{
-	  werror("do_kill_process: kill() failed (errno = %d): %s\n",
+	  werror("do_kill_process: kill() failed (errno = %i): %z\n",
 		 errno, strerror(errno));
 	}
     }
@@ -447,7 +444,7 @@ static int do_receive(struct ssh_channel *c,
     case CHANNEL_DATA:
       return A_WRITE(&closure->in->buffer->super, data);
     case CHANNEL_STDERR_DATA:
-      wwrite("Ignoring unexpected stderr data.\n");
+      werror("Ignoring unexpected stderr data.\n");
       lsh_string_free(data);
       return LSH_OK | LSH_GOON;
     default:
@@ -740,19 +737,19 @@ static int make_pipe(int *fds)
 {
   if (socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0)
     {
-      werror("socketpair() failed: %s\n", strerror(errno));
+      werror("socketpair() failed: %z\n", strerror(errno));
       return 0;
     }
-  debug("Created socket pair. Using fd:s %d <-- %d\n", fds[0], fds[1]);
+  debug("Created socket pair. Using fd:s %i <-- %i\n", fds[0], fds[1]);
 
   if (SHUTDOWN(fds[0], SHUT_WR) < 0)
     {
-      werror("shutdown(%d, SEND) failed: %s\n", fds[0], strerror(errno));
+      werror("shutdown(%i, SEND) failed: %z\n", fds[0], strerror(errno));
       goto fail;
     }
   if (SHUTDOWN(fds[1], SHUT_RD) < 0)
     {
-      werror("shutdown(%d, REC) failed: %s\n", fds[0], strerror(errno));
+      werror("shutdown(%i, REC) failed: %z\n", fds[0], strerror(errno));
     fail:
       {
 	int saved_errno = errno;
@@ -813,9 +810,9 @@ static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
   debug("make_pty... ");
   if (pty)
     debug("exists: \n"
-	  "  alive = %d\n"
-	  "  master = %d\n"
-	  "  slave = %d\n"
+	  "  alive = %i\n"
+	  "  master = %i\n"
+	  "  slave = %i\n"
 	  "... ",
 	  pty->super.alive, pty->master, pty->slave);
       
@@ -851,7 +848,7 @@ static int make_pty(struct pty_info *pty, int *in, int *out, int *err)
       close(in[0]);
       close(in[1]);
 
-      werror("make_pty: duping pty filedescriptors failed (errno = %d): %s\n",
+      werror("make_pty: duping pty filedescriptors failed (errno = %i): %z\n",
 	     errno, strerror(errno));
     }
   errno = saved_errno;
@@ -898,7 +895,7 @@ static int do_spawn_shell(struct channel_request *c,
     switch(child = fork())
       {
       case -1:
-	werror("fork() failed: %s\n", strerror(errno));
+	werror("fork() failed: %z\n", strerror(errno));
 	/* Close and return channel_failure */
 	break; 
       case 0:
@@ -914,7 +911,7 @@ static int do_spawn_shell(struct channel_request *c,
 	  debug("do_spawn_shell: Child process\n");
 	  if (!session->user->shell)
 	    {
-	      wwrite("No login shell!\n");
+	      werror("No login shell!\n");
 	      exit(EXIT_FAILURE);
 	    }
 
@@ -923,7 +920,7 @@ static int do_spawn_shell(struct channel_request *c,
 	  if (getuid() != session->user->uid)
 	    if (!change_uid(session->user))
 	      {
-		wwrite("Changing uid failed!\n");
+		werror("Changing uid failed!\n");
 		exit(EXIT_FAILURE);
 	      }
 	    
@@ -931,7 +928,7 @@ static int do_spawn_shell(struct channel_request *c,
 	    
 	  if (!change_dir(session->user))
 	    {
-	      wwrite("Could not change to home (or root) directory!\n");
+	      werror("Could not change to home (or root) directory!\n");
 	      exit(EXIT_FAILURE);
 	    }
 
@@ -956,7 +953,7 @@ static int do_spawn_shell(struct channel_request *c,
 
 	  debug("Child: Environment:\n");
 	  for (i=0; env[i]; i++)
-	    debug("Child:   '%s'\n", env[i]);
+	    debug("Child:   '%z'\n", env[i]);
 	    
 	  /* Close all descriptors but those used for
 	   * communicationg with parent. We rely on the
@@ -965,7 +962,7 @@ static int do_spawn_shell(struct channel_request *c,
 	    
 	  if (dup2(in[0], STDIN_FILENO) < 0)
 	    {
-	      wwrite("Can't dup stdin!\n");
+	      werror("Can't dup stdin!\n");
 	      exit(EXIT_FAILURE);
 	    }
 	  close(in[0]);
@@ -973,14 +970,14 @@ static int do_spawn_shell(struct channel_request *c,
 	    
 	  if (dup2(out[1], STDOUT_FILENO) < 0)
 	    {
-	      wwrite("Can't dup stdout!\n");
+	      werror("Can't dup stdout!\n");
 	      exit(EXIT_FAILURE);
 	    }
 	  close(out[0]);
 	  close(out[1]);
 
 	  if ((old_stderr = dup(STDERR_FILENO)) < 0)
-	    wwrite("Couldn't save old file_no.\n");
+	    werror("Couldn't save old file_no.\n");
 	  io_set_close_on_exec(old_stderr);
 	  set_error_stream(old_stderr, 1);
 
@@ -1043,7 +1040,7 @@ static int do_spawn_shell(struct channel_request *c,
 		write(old_stderr, msg, sizeof(msg));
 	      }
 	    else
-	      debug("Child: execle() failed (errno = %d): %s\n",
+	      debug("Child: execle() failed (errno = %i): %z\n",
 		    exec_errno, strerror(exec_errno));
 	    _exit(EXIT_FAILURE);
 	  }

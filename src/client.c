@@ -135,13 +135,12 @@ static int do_line(struct line_handler **h,
 	  closure->connection->server_version
 	    = ssh_format("%ls", length, line);
 
-	  verbose("Client version: ");
-	  verbose_safe(closure->connection->client_version->length,
-		       closure->connection->client_version->data);
-	  verbose("\nServer version: ");
-	  verbose_safe(closure->connection->server_version->length,
-		       closure->connection->server_version->data);
-	  verbose("\n");
+	  verbose("Client version: %ps\n"
+		  "Server version: %ps\n",
+		  closure->connection->client_version->length,
+		  closure->connection->client_version->data,
+		  closure->connection->server_version->length,
+		  closure->connection->server_version->data);
 	  
 	  /* FIXME: Cleanup properly. */
 	  KILL(closure);
@@ -151,9 +150,8 @@ static int do_line(struct line_handler **h,
 	}
       else
 	{
-	  wwrite("Unsupported protocol version: ");
-	  werror_safe(length, line);
-	  wwrite("\n");
+	  werror("Unsupported protocol version: %ps\n",
+		 length, line);
 
 	  /* FIXME: Clean up properly */
 	  KILL(closure);
@@ -165,7 +163,7 @@ static int do_line(struct line_handler **h,
   else
     {
       /* Display line */
-      werror_safe(length, line);
+      werror("%ps\n", length, line);
 
       /* Read next line */
       return LSH_OK | LSH_GOON;
@@ -208,9 +206,9 @@ make_client_callback(struct io_backend *b,
 static int client_close_die(struct close_callback *closure UNUSED,
 			    int reason)
 {
-  verbose("Connection died, for reason %d.\n", reason);
+  verbose("Connection died, for reason %i.\n", reason);
   if (reason != CLOSE_EOF)
-    wwrite("Connection died.\n");
+    werror("Connection died.\n");
 
   /* FIXME: Return value is not used. */
   return 4711;
@@ -447,11 +445,10 @@ static int do_exit_signal(struct channel_request *c,
 
       signal = signal_network_to_local(signal);
 
-      werror_utf8(length, msg);
-      werror("Remote process was killed by %s.\n",
-	     signal ? strsignal(signal) : "an unknown signal");
-      if (core)
-	wwrite("(core dumped remotely)\n");
+      werror("%us", length, msg);
+      werror("Remote process was killed by %z.%z\n",
+	     signal ? strsignal(signal) : "an unknown signal",
+	     core ? "(core dumped remotely)\n": "");
 
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
@@ -814,7 +811,7 @@ static int do_pty_result(struct request_info *r,
 {
   CAST(pty_request, req, r);
 
-  verbose("lsh: pty request %s.\n", res ? "successful" : "failed");
+  verbose("lsh: pty request %z.\n", res ? "successful" : "failed");
   
   if (res)
     {
