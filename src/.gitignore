@@ -35,6 +35,7 @@
 /lsh-writekey
 /lsh_proxy
 /lshd
+/lshd-connection
 /lshd-userauth
 /lshg
 /packet_types.h
