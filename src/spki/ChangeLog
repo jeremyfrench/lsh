@@ -1,3 +1,8 @@
+2003-01-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* tag.c (spki_tag_compile): For the unsupported tag type "range",
+	return NULL instead of abort().
+
 2002-12-04  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/cdsa-reduce-test.c (read_file): Check return value of

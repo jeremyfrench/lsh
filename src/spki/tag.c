@@ -618,7 +618,7 @@ spki_tag_compile(void *ctx, nettle_realloc_func *realloc,
 
     case SPKI_TAG_RANGE:
       /* Not yet implemented. */
-      abort();
+      return NULL;
     }
 
 }
