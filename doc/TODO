@@ -42,9 +42,6 @@ Figure out what configuration files we need.
 LOGGING
 
 Use syslog to log server startup, shutdown, and user authentication.
-Update utmp (users currently logged in), wtmp (record of logins) and lastlog
-(last login time).
-Use tcpwrapper's libwrap to log connections and perform access control.
 
 
 SERVER ISSUES
