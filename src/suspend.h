@@ -34,7 +34,7 @@ suspend_install_handler(void);
 void
 suspend_handle_tty(int fd);
 
-struct lsh_callback
+extern struct lsh_callback
 suspend_callback;
 
 #endif /* LSH_SUSPEND_H_INCLUDED */
