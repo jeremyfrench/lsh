@@ -57,4 +57,7 @@ format_exit(struct ssh_channel *channel, int value);
 extern struct channel_request 
 pty_request_handler;
 
+extern struct channel_request
+window_change_request_handler;
+
 #endif /* LSH_SERVER_SESSION_H_INCLUDED */
