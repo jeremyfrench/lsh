@@ -44,6 +44,7 @@
 #include "format.h"
 #include "io_commands.h"
 #include "interact.h"
+#include "lsh_string.h"
 #include "publickey_crypto.h"
 #include "spki.h"
 #include "version.h"
@@ -209,8 +210,7 @@ main(int argc, char **argv)
       return EXIT_FAILURE;
     }
     
-  
-  e = write_raw(options->out_fd, output->length, output->data);
+  e = write_raw(options->out_fd, STRING_LD(output));
   lsh_string_free(output);
   
   if (e)
