@@ -1,5 +1,28 @@
 2002-03-16  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/unix_user.c (exec_shell): Bugfix, fixed test for login-mode.
+
+	* src/unix_process.c (do_utmp_cleanup): Compute suitable values
+	for ut_line and ut_id.
+	(strip_tty_name): Deleted function.
+	(do_utmp_cleanup): Modify utmp by setutmp, getutid, pututline.
+	(utmp_book_keeping): Likewise.
+
+	* configure.in (SCHEME_NAME): Simple check for gmp.h, don't look
+	for gmp2/gmp.h.
+	Check for ut_time, ut_tv, ut_pid and ut_exit memebers in struct
+	utmp. 
+	Check for __gmpz_getlimbn, introduced in gmp-3.1. Dropped support
+	for gmp2 (as Nettle doesn't support it anyway).
+
+	* src/unix_user.c (do_chdir_home): Deleted function.
+	(change_uid): Deleted function.
+
+	* src/unix_process.c (unix_process_setup): Removed login argument
+	again. 
+	(utmp_book_keeping): Always create utmp entries as USER_PROCESS,
+	not LOGIN_PROCESS.
+
 	* src/unix_user.c (do_fork_process): Deleted function.
 	(do_exec_shell): Deleted function.
 
