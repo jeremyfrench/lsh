@@ -84,7 +84,17 @@ struct command_simple command_K = STATIC_COMMAND_SIMPLE(do_simple_command_K);
 
 /* ((S f) g)x == (f x)(g x) */
 
-/* Continuation called after evaluating (f x) */
+/* Represents ((S f) g) */
+/* GABA:
+   (class
+     (name command_S_2)
+     (super command_simple)
+     (vars
+       (f object command)
+       (g object command)))
+*/
+
+/* Receives the value of (f x) */
 /* GABA:
    (class
      (name command_S_continuation)
@@ -102,28 +112,28 @@ static int do_command_S_continuation(struct command_continuation *c,
   return COMMAND_CALL(self->g, self->x, make_apply(op, self->super.up));
 }
 
-/* Represents ((S f) g) */
-/* GABA:
-   (class
-     (name command_S_2)
-     (super command_simple)
-     (vars
-       (f object command)
-       (g object command)))
-*/
-
-static int do_command_S_2(struct command *s,
-			  struct lsh_object *x,
-			  struct command_continuation *up)
+static struct command_continuation *
+make_command_S_continuation(struct command *g,
+			    struct lsh_object *x,
+			    struct command_continuation *up)
 {
-  CAST(command_S_2, self, s);
   NEW(command_S_continuation, c);
-  c->g = self->g;
+  c->g = g;
   c->x = x;
   c->super.up = up;
   c->super.super.c = do_command_S_continuation;
+
+  return &c->super.super;
+}
+
+static int do_command_S_2(struct command *s,
+			  struct lsh_object *x,
+			  struct command_continuation *c)
+{
+  CAST(command_S_2, self, s);
   
-  return COMMAND_CALL(self->f, x, &c->super.super);
+  return COMMAND_CALL(self->f, x,
+		      make_command_S_continuation(self->g, x, c));
 }
 
 static struct lsh_object *
@@ -167,9 +177,9 @@ STATIC_COLLECT_2_FINAL(collect_S_2);
 struct collect_info_1 command_S =
 STATIC_COLLECT_1(&collect_info_S_2);
 
-/* ((B f) g) x == (f (g x)) */
+/* B f g x == f (g x) */
 
-/* Represents ((B f) g) */
+/* Represents (B f g) */
 /* GABA:
    (class
      (name command_B_2)
@@ -187,8 +197,9 @@ static int do_command_B_2(struct command *s,
   return COMMAND_CALL(self->g, x, make_apply(self->f, c));
 }
 
-static struct lsh_object *do_simple_command_B_2(struct command_simple *s,
-						struct lsh_object *x)
+static struct lsh_object *
+do_simple_command_B_2(struct command_simple *s,
+		      struct lsh_object *x)
 {
   CAST(command_B_2, self, s);
   CAST_SUBTYPE(command_simple, fs, self->f);
@@ -209,9 +220,10 @@ make_command_B_2(struct command *f,
   return &res->super.super;
 }
 
-static struct lsh_object *collect_B_2(struct collect_info_2 *info,
-				      struct lsh_object *f,
-				      struct lsh_object *g)
+static struct lsh_object *
+collect_B_2(struct collect_info_2 *info,
+	    struct lsh_object *f,
+	    struct lsh_object *g)
 {
   CAST_SUBTYPE(command, cf, f);
   CAST_SUBTYPE(command, cg, g);
@@ -254,17 +266,26 @@ static int do_command_C_continuation(struct command_continuation *c,
   return COMMAND_CALL(op, self->y, self->super.up);
 }
 
-static int do_command_C_2(struct command *s,
-			  struct lsh_object *x,
-			  struct command_continuation *up)
+static struct command_continuation *
+make_command_C_continuation(struct lsh_object *y,
+			    struct command_continuation *up)
 {
-  CAST(command_C_2, self, s);
   NEW(command_C_continuation, c);
-  c->y = self->y;
+  c->y = y;
   c->super.up = up;
   c->super.super.c = do_command_C_continuation;
   
-  return COMMAND_CALL(self->f, x, &c->super.super);
+  return &c->super.super;
+}
+
+static int do_command_C_2(struct command *s,
+			  struct lsh_object *x,
+			  struct command_continuation *c)
+{
+  CAST(command_C_2, self, s);
+  
+  return COMMAND_CALL(self->f, x,
+		      make_command_C_continuation(self->y, c));
 }
 
 static struct lsh_object *do_simple_command_C_2(struct command_simple *s,
@@ -304,4 +325,220 @@ STATIC_COLLECT_2_FINAL(collect_C_2);
 
 struct collect_info_1 command_C =
 STATIC_COLLECT_1(&collect_info_C_2);
+
+/* S' c f g x == c (f x) (g x) */
+
+/* Represents S c f g */
+/* GABA:
+   (class
+     (name command_Sp_3)
+     (super command_simple)
+     (vars
+       (c object command)
+       (f object command)
+       (g object command)))
+*/
+
+static int do_command_Sp_3(struct command *s,
+			   struct lsh_object *x,
+			   struct command_continuation *c)
+{
+  CAST(command_Sp_3, self, s);
+  return COMMAND_CALL(self->f, x,
+		      make_apply(self->c,
+				 make_command_S_continuation(self->g,
+							     x, c)));
+}
+
+static struct lsh_object *
+do_simple_command_Sp_3(struct command_simple *s,
+		       struct lsh_object *x)
+{
+  CAST(command_Sp_3, self, s);
+  CAST_SUBTYPE(command_simple, cs, self->c);
+  CAST_SUBTYPE(command_simple, fs, self->f);
+  CAST_SUBTYPE(command_simple, gs, self->g);
+  CAST_SUBTYPE(command_simple, op, COMMAND_SIMPLE(cs, COMMAND_SIMPLE(fs, x)));
+  return COMMAND_SIMPLE(op, COMMAND_SIMPLE(gs, x));
+}
+
+struct command *make_command_Sp_3(struct command *c,
+				  struct command *f,
+				  struct command *g)
+{
+  NEW(command_Sp_3, res);
+  res->c = c;
+  res->f = f;
+  res->g = g;
+  res->super.super.call = do_command_Sp_3;
+  res->super.call_simple = do_simple_command_Sp_3;
+  
+  return &res->super.super;
+}
+
+static struct lsh_object *collect_Sp_3(struct collect_info_3 *info,
+				       struct lsh_object *c,
+				       struct lsh_object *f,
+				       struct lsh_object *g)
+{
+  CAST_SUBTYPE(command, cc, c);
+  CAST_SUBTYPE(command, cf, f);
+  CAST_SUBTYPE(command, cg, g);
+  assert(!info);
+  
+  return &make_command_Sp_3(cc, cf, cg)->super;
+}
+
+struct collect_info_3 collect_info_Sp_3 =
+STATIC_COLLECT_3_FINAL(collect_Sp_3);
+
+struct collect_info_2  collect_info_Sp_2 =
+STATIC_COLLECT_2(&collect_info_Sp_3);
+
+struct collect_info_1 command_Sp =
+STATIC_COLLECT_1(&collect_info_Sp_2);
+
+/* B' c f g x == c (f (g x)) */
+
+/* Represents (B' c f g) */
+/* GABA:
+   (class
+     (name command_Bp_3)
+     (super command_simple)
+     (vars
+       (c object command)
+       (f object command)
+       (g object command)))
+*/
+
+static int do_command_Bp_3(struct command *s,
+			  struct lsh_object *x,
+			  struct command_continuation *c)
+{
+  CAST(command_Bp_3, self, s);
+  return COMMAND_CALL(self->g, x,
+		      make_apply(self->f,
+				 make_apply(self->c, c)));
+}
+
+static struct lsh_object *
+do_simple_command_Bp_3(struct command_simple *s,
+		      struct lsh_object *x)
+{
+  CAST(command_Bp_3, self, s);
+  CAST_SUBTYPE(command_simple, cs, self->c);
+  CAST_SUBTYPE(command_simple, fs, self->f);
+  CAST_SUBTYPE(command_simple, gs, self->g);
+  return COMMAND_SIMPLE(cs, COMMAND_SIMPLE(fs, COMMAND_SIMPLE(gs, x)));
+}
+
+static struct command *
+make_command_Bp_3(struct command *c,
+		  struct command *f,
+		  struct command *g)
+{
+  NEW(command_Bp_3, res);
+  res->c = c;
+  res->f = f;
+  res->g = g;
+  res->super.super.call = do_command_Bp_3;
+  res->super.call_simple = do_simple_command_Bp_3;
+
+  return &res->super.super;
+}
+
+static struct lsh_object *
+collect_Bp_3(struct collect_info_3 *info,
+	     struct lsh_object *c,
+	     struct lsh_object *f,
+	     struct lsh_object *g)
+{
+  CAST_SUBTYPE(command, cc, c);
+  CAST_SUBTYPE(command, cf, f);
+  CAST_SUBTYPE(command, cg, g);
+  assert(!info);
+  
+  return &make_command_Bp_3(cc, cf, cg)->super;
+}
+
+struct collect_info_3 collect_info_Bp_3 =
+STATIC_COLLECT_3_FINAL(collect_Bp_3);
+
+struct collect_info_2  collect_info_Bp_2 =
+STATIC_COLLECT_2(&collect_info_Bp_3);
+
+struct collect_info_1 command_Bp =
+STATIC_COLLECT_1(&collect_info_Bp_2);
+
+/* C' c f y x == c (f x) y */
+
+/* Represents (C' c f y x) */
+/* GABA:
+   (class
+     (name command_Cp_3)
+     (super command_simple)
+     (vars
+       (c object command)
+       (f object command)
+       (y object lsh_object)))
+*/
+
+static int do_command_Cp_3(struct command *s,
+			  struct lsh_object *x,
+			  struct command_continuation *c)
+{
+  CAST(command_Cp_3, self, s);
+  
+  return COMMAND_CALL(self->f, x,
+		      make_apply(self->c,
+				 make_command_C_continuation(self->y, c)));
+}
+
+static struct lsh_object *
+do_simple_command_Cp_3(struct command_simple *s,
+		      struct lsh_object *x)
+{
+  CAST(command_Cp_3, self, s);
+  CAST_SUBTYPE(command_simple, cs, self->c);
+  CAST_SUBTYPE(command_simple, fs, self->f);
+  CAST_SUBTYPE(command_simple, op, COMMAND_SIMPLE(cs, COMMAND_SIMPLE(fs, x)));
+  return COMMAND_SIMPLE(op, self->y);
+}
+
+static struct command *
+make_command_Cp_3(struct command *c,
+		  struct command *f,
+		  struct lsh_object *y)
+{
+  NEW(command_Cp_3, res);
+  res->c = c;
+  res->f = f;
+  res->y = y;
+  res->super.super.call = do_command_Cp_3;
+  res->super.call_simple = do_simple_command_Cp_3;
+
+  return &res->super.super;
+}
+
+static struct lsh_object *
+collect_Cp_3(struct collect_info_3 *info,
+	     struct lsh_object *c,
+	     struct lsh_object *f,
+	     struct lsh_object *y)
+{
+  CAST_SUBTYPE(command, cc, c);
+  CAST_SUBTYPE(command, cf, f);
+  assert(!info);
+  
+  return &make_command_Cp_3(cc, cf, y)->super;
+}
+
+struct collect_info_3 collect_info_Cp_3 =
+STATIC_COLLECT_3_FINAL(collect_Cp_3);
+
+struct collect_info_2  collect_info_Cp_2 =
+STATIC_COLLECT_2(&collect_info_Cp_3);
+
+struct collect_info_1 command_Cp =
+STATIC_COLLECT_1(&collect_info_Cp_2);
 
