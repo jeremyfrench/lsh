@@ -7,7 +7,8 @@ include .dist_headers
 
 BUILT_SOURCES = environ.h
 
-# AUTOMAKE_OPTIONS = foreign
+# Kludge needed for finding the nettle/nettle-types.h file in the build tree
+AM_CPPFLAGS = -I./nettle
 
 # # To remake all Makefile.am-files, run
 # #
@@ -176,7 +177,7 @@ sexp_table.h: sexp_chars.in $(srcdir)/scm/make-char-classes.scm
 # 	test -s $@T && mv -f $@T $@
 
 packet_types.h: ssh.h invert-defs
-	$(srcdir)/invert-defs <ssh.h >$@T
+	$(srcdir)/invert-defs <$< >$@T
 	test -s $@T && mv -f $@T $@
 
 lsh_krb_checkpw_LDADD=@KRB_LIBS@
