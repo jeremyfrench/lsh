@@ -858,29 +858,32 @@ do_spawn_shell(struct channel_request *c,
 
 	{
 	  /* Exception handlers */
-	  struct exception_handler *read_exception_handler
-	    = make_exc_read_eof_channel_handler(channel,
-						&default_exception_handler);
+	  struct exception_handler *io_exception_handler
+	    = make_report_exception_handler(EXC_IO, EXC_IO,
+					    "lshd: Child stdio: ",
+					    &default_exception_handler);
 
+#if 0
+	  /* Close callback for stderr and stdout */
+	  struct close_callback *read_close_callback
+	    = make_channel_read_close_callback(channel);
+#endif  
 	  session->in
 	    = io_write(make_io_fd(closure->backend, in[1],
-				  make_report_exception_handler(
-				    EXC_IO, EXC_IO, "lshd: Child stdin: ",
-				    &default_exception_handler)),
+				  io_exception_handler),
 		       SSH_MAX_PACKET,
-		       /* FIXME: Use a proper close callback */
-		       make_channel_close(channel));
-
+		       make_channel_close_callback(channel));
+	  
 	  /* Flow control */
 	  session->in->write_buffer->report = &session->super.super;
 	  
 	  session->out
-	    = io_read(make_io_fd(closure->backend, out[0], read_exception_handler),
+	    = io_read(make_io_fd(closure->backend, out[0], io_exception_handler),
 		      make_channel_read_data(channel),
 		      NULL);
 	  session->err 
 	    = ( (err[0] != -1)
-		? io_read(make_io_fd(closure->backend, err[0], read_exception_handler),
+		? io_read(make_io_fd(closure->backend, err[0], io_exception_handler),
 			  make_channel_read_stderr(channel),
 			  NULL)
 		: NULL);
