@@ -46,7 +46,8 @@ DEFINE_COMMAND(command_I)
 
 /* ((K x) y) == x */
 DEFINE_COMMAND2(command_K)
-     (struct lsh_object *x,
+     (struct command_2 *s UNUSED,
+      struct lsh_object *x,
       struct lsh_object *y UNUSED,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)

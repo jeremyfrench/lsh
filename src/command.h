@@ -75,6 +75,7 @@
 #define COMMAND_SIMPLE_CALL(f, a) \
   ((f)->call_simple((f), (struct lsh_object *)(a)))
 
+/* FIXME: Delete, use DEFINE_COMMAND instead */
 #define STATIC_COMMAND(f) { STATIC_HEADER, f }
 
 #define STATIC_COMMAND_SIMPLE(f) \
@@ -112,13 +113,15 @@ do_##cname
      (name command_2)
      (super command)
      (vars
-       (invoke pointer
-         (function void
-		   "struct lsh_object *a1"
-		   "struct lsh_object *a2"
-		   "struct command_continuation *c"
-		   "struct exception_handler *e"))))
+       (invoke method void
+	       "struct lsh_object *a1"
+	       "struct lsh_object *a2"
+	       "struct command_continuation *c"
+	       "struct exception_handler *e"))))
 */
+
+#define COMMAND_2_INVOKE(s, a1, a2, c, e) \
+((s)->invoke((s), (a1), (a2), (c), (e)))
 
 void
 do_command_2(struct command *s,
@@ -132,7 +135,8 @@ make_command_2_invoke(struct command_2 *f,
 
 #define DEFINE_COMMAND2(cname)				\
 static void						\
-do_##cname(struct lsh_object *,				\
+do_##cname(struct command_2 *,				\
+	   struct lsh_object *,				\
 	   struct lsh_object *,				\
 	   struct command_continuation *,		\
 	   struct exception_handler *);			\

@@ -135,7 +135,7 @@ do_command_2_invoke(struct command *s, struct lsh_object *a2,
 		    struct exception_handler *e)
 {
   CAST(command_2_invoke, self, s);
-  self->f->invoke(self->a1, a2, c, e);
+  COMMAND_2_INVOKE(self->f, self->a1, a2, c, e);
 }
 
 struct command *

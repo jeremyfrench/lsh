@@ -43,13 +43,13 @@ extern struct command_2 open_forwarded_tcpip;
 extern struct command tcpip_start_io;
 extern struct command tcpip_connect_io;
 
-struct collect_info_1 install_direct_tcpip_handler;
-struct collect_info_1 install_forwared_tcpip_handler;
+struct install_info install_direct_tcpip_handler;
+struct install_info install_forwarded_tcpip_handler;
 
 /* FIXME: Should be static? */
 struct command make_direct_tcpip_handler;
 
-struct collect_info_1 install_tcpip_forward_handler;
+struct install_info install_tcpip_forward_handler;
 
 /* FIXME: Should be static? */
 struct command make_tcpip_forward_handler;
@@ -192,7 +192,8 @@ make_open_tcpip_command(int type, UINT32 initial_window,
 }
 
 DEFINE_COMMAND2(open_forwarded_tcpip)
-     (struct lsh_object *a1,
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)
@@ -207,7 +208,8 @@ DEFINE_COMMAND2(open_forwarded_tcpip)
 }
 
 DEFINE_COMMAND2(open_direct_tcpip)
-     (struct lsh_object *a1,
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)
@@ -320,7 +322,8 @@ do_format_request_tcpip_forward(struct global_request_command *s,
 
 
 DEFINE_COMMAND2(remote_listen_command)
-     (struct lsh_object *a1,
+     (struct command_2 *s UNUSED,
+      struct lsh_object *a1,
       struct lsh_object *a2,
       struct command_continuation *c,
       struct exception_handler *e UNUSED)
@@ -446,25 +449,14 @@ DEFINE_COMMAND(make_tcpip_forward_handler)
 		 &make_tcpip_forward_request(callback)->super);
 }
 
-#if 0
-static struct command
-make_tcpip_forward_handler
-= STATIC_COMMAND(do_make_tcpip_forward_handler);
-#endif
-
 
 /* Commands to install handlers */
-struct install_info install_direct_tcpip_info_2 =
+struct install_info install_direct_tcpip_handler =
 STATIC_INSTALL_OPEN_HANDLER(ATOM_DIRECT_TCPIP);
 
-struct collect_info_1 install_direct_tcpip_handler =
-STATIC_COLLECT_1(&install_direct_tcpip_info_2.super);
-
-struct install_info install_forwarded_tcpip_info_2 =
+struct install_info install_forwarded_tcpip_handler =
 STATIC_INSTALL_OPEN_HANDLER(ATOM_FORWARDED_TCPIP);
 
-struct collect_info_1 install_forwarded_tcpip_handler =
-STATIC_COLLECT_1(&install_forwarded_tcpip_info_2.super);
 
 /* Server side callbacks */
 
@@ -492,12 +484,9 @@ make_direct_tcpip_hook(struct io_backend *backend)
   return res;
 }
 
-
-struct install_info install_tcpip_forward_info_2 =
+struct install_info install_tcpip_forward_handler =
 STATIC_INSTALL_GLOBAL_HANDLER(ATOM_TCPIP_FORWARD);
 
-struct collect_info_1 install_tcpip_forward_handler =
-STATIC_COLLECT_1(&install_tcpip_forward_info_2.super);
 
 /* GABA:
    (expr
