@@ -38,6 +38,7 @@
 #include "atoms.h"
 #include "format.h"
 #include "parse.h"
+#include "lsh_string.h"
 #include "sexp.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -162,8 +163,8 @@ do_rsa_public_spki_key(struct verifier *s, int transport)
    * However, since it doesn't matter much, for now we follow the SPKI
    * standard and stay compatible with lsh-1.2. */
   /* FIXME: Use nettle's rsa_keypair_to_sexp. */
-  return lsh_sexp_format(transport, "(public-key(rsa-pkcs1-sha1(n%b)(e%b)))",
-			 self->key.n, self->key.e);
+  return lsh_string_format_sexp(transport, "(public-key(rsa-pkcs1-sha1(n%b)(e%b)))",
+				self->key.n, self->key.e);
 }
 
 
@@ -247,7 +248,7 @@ do_rsa_sign(struct signer *s,
     case ATOM_SPKI_SIGN_DSS:
     case ATOM_SPKI:
       /* FIXME: Add hash algorithm to signature value? */
-      res = lsh_sexp_format(0, "%b", signature);
+      res = lsh_string_format_sexp(0, "%b", signature);
       break;
     default:
       fatal("do_rsa_sign: Internal error!\n");
@@ -311,13 +312,12 @@ struct signature_algorithm rsa_sha1_algorithm =
   { STATIC_HEADER, make_rsa_signer, make_rsa_verifier };
 
 struct verifier *
-make_ssh_rsa_verifier(uint32_t public_length,
-		      const uint8_t *public)
+make_ssh_rsa_verifier(const struct lsh_string *public)
 {
   struct simple_buffer buffer;
   int atom;
   
-  simple_buffer_init(&buffer, public_length, public);
+  simple_buffer_init(&buffer, STRING_LD(public));
 
   return ( (parse_atom(&buffer, &atom)
 	    && (atom == ATOM_SSH_RSA))
