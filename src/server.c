@@ -126,7 +126,8 @@
 
 #include "server.c.x"
 
-/* GABA:
+#if 0
+/* ;;GABA:
    (class
      (name server_callback)
      (super fd_listen_callback)
@@ -348,6 +349,7 @@ make_server_callback(struct io_backend *b,
   
   return &connected->super;
 }
+#endif
 
 /* GABA:
    (class
@@ -1116,16 +1118,16 @@ static int do_spawn_shell(struct channel_request *c,
 	close(err[1]);
 
 	session->in
-	  = io_write(closure->backend, in[1],
+	  = io_write(make_io_fd(closure->backend, in[1]),
 		     SSH_MAX_PACKET,
 		     /* FIXME: Use a proper close callback */
 		     make_channel_close(channel));
 	session->out
-	  = io_read(closure->backend, out[0],
+	  = io_read(make_io_fd(closure->backend, out[0]),
 		    make_channel_read_data(channel),
 		    NULL);
 	session->err
-	  = io_read(closure->backend, err[0],
+	  = io_read(make_io_fd(closure->backend, err[0]),
 		    make_channel_read_stderr(channel),
 		    NULL);
 
