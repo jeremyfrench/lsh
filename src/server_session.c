@@ -418,7 +418,7 @@ static int make_pty(struct pty_info *pty UNUSED,
 static int
 spawn_process(struct server_session *session,
 	      struct lsh_user *user,
-	      /* All information but the fd:s should be fileld in
+	      /* All information but the fd:s should be filled in
 	       * already */
 	      struct spawn_info *info)
 {

@@ -774,7 +774,7 @@ do_spawn(struct lsh_user *u,
        * tty, after which it should close its end of the
        * syncronization pipe, and our read will return 0.
        *
-       * We need the syncronizatino only if we're actually using a
+       * We need the syncronization only if we're actually using a
        * pty, but for simplicity, we do it every time. */
       
       do
