@@ -41,13 +41,13 @@ create_dir ~/.lsh 0700
 create_dir ~/.lsh/authorized_keys_sha1 0700
 
 if type sexp-conv ; then
-    SEXP_CONV=sexp_conv
+    SEXP_CONV=sexp-conv
 else
-    SEXP_CONV=./sexp_conv
+    SEXP_CONV=./sexp-conv
 fi
 
 if ! type $SEXP_CONV ; then
-    echo "Can't find the sexp_conv program"
+    echo "Can't find the sexp-conv program"
     exit 1
 fi
 
