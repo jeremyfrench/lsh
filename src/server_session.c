@@ -773,7 +773,8 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
 
 	    assert(getuid() == channel->connection->user->uid);
 	    assert(argv[2]);
-	    
+
+	    /* FIXME: Set SSH_TTY, SSH_CLIENT and SSH_ORIGINAL_COMMAND */
 	    if (session->term)
 	      {
 		env[env_length].name ="TERM";
