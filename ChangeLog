@@ -1,3 +1,87 @@
+2000-11-14  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/symmetric/arcfour.c (arcfour_update_key): #if:ed out this
+	nostandard function.
+	(arcfour_set_key): Use arcfour_init(). Made keyset loop less
+	obscure. 
+
+	* src/unix_user.c (check_user_permissions): New function (moved
+	from io.c).
+	(do_read_file): fork() and change uid before opening the file.
+
+	* src/tcpforward_commands.c (make_forward_local_port): Changed
+	debug() to trace().
+
+	* src/lsh_proxy.c: Use the DEFINE_COMMAND_SIMPLE macro. 
+	* src/lshd.c: Likewise.
+	* src/proxy.c: Likewise.
+	* src/sexp_commands.c: Likewise.
+	* src/spki_commands.c: Likewise.
+
+	* src/lsh.c (lsh_options): New attribute local_user.
+	New option -G to enable the gateway feature.
+	Use the DEFINE_COMMAND_SIMPLE macro. 
+
+	* src/lsh-writekey.c: Use the DEFINE_COMMAND_SIMPLE macro. 
+
+	* src/io_commands.c (io_write_file_command): Use
+	the DEFINE_COMMAND_SIMPLE macro.
+	(io_log_peer_command): Likewise.
+	(listen_with_connection): #if:ed out this class.
+	(listen_local): New class.
+	(make_listen_local): New function.
+	(connect_local): New class.
+	(make_connect_local): New function.
+	(connect_local_command): New command.
+
+	* src/io.h (local_info): New class.
+
+	* src/io.c (sockaddr2info): Return NULL for address families other
+	than AF_INET and AF_INET6.
+	(make_local_info): New function.
+	(io_listen_local): Take a local_info as argument. Fixed umask. 
+	(io_connect_local): Take a local_info as argument.
+	(check_user_permissions): #if:ed out (replaced by code in
+	unix_user.c).
+	(io_read_user_file): Likewise.
+
+	* src/gateway_commands.c (do_gateway_pad): New function.
+	(make_gateway_pad): New function.
+	(gateway_make_connection): New function (extracted from
+	do_gateway_accept). Set up connection->write and connection->raw
+	properly, fix padding, anpadding and debug output.
+	(gateway_init): New command.
+	(make_gateway_setup): New function.
+	(gateway_setup_command): New command.
+
+	* src/gateway.c (check_string_l): New function.
+	(check_string): New function.
+	(make_gateway_address): New function.
+
+	* src/disconnect.c (do_disconnect): Print message on a single
+	line. 
+
+	* src/command.h (DEFINE_COMMAND_SIMPLE): New macro, that replaces
+	COMMAND_SIMPLE. 
+	(DEFINE_COMMAND): New macro, that replaces COMMAND_STATIC.
+
+	* src/client.c: Removed obsolete class request_info.
+
+	* src/channel.c (connection_service_command): Use
+	the DEFINE_COMMAND_SIMPLE macro. 
+	* src/combinators.c (command_K): Likewise.
+	(command_I): Likewise.
+	* src/command.c (progn_command): Likewise. 
+	* src/keyexchange.c (kexinit_filter): Likewise.
+	* src/connection_commands.c (connection_remember): Likewise.
+	(connection_require_userauth): Use the DEFINE_COMMAND macro. 
+
+	* src/Makefile.am.in (bin_PROGRAMS): Added lshg program.
+	(ETAGS_ARGS): Added two regexps, to match DEFINE_* and
+	GABA-definitions. 
+
+	* doc/lsh.texinfo (Action options): Added a note on -G option.
+
 2000-10-31  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/sexp_streamed_parser.c: Less trace messages.
