@@ -5,7 +5,7 @@
 
 /* lsh, an implementation of the ssh protocol
  *
- * Copyright (C) 1998 Niels Möller
+ * Copyright (C) 1998, 2002 Niels Möller
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License as
@@ -29,6 +29,7 @@
 #include "read_data.h"
 #include "reaper.h"
 #include "server_pty.h"
+#include "server_x11.h"
 #include "ssh.h"
 #include "tcpforward.h"
 #include "translate_signal.h"
@@ -69,6 +70,9 @@
 
        ; An allocated but not yet used pty
        (pty object pty_info)
+
+       ; X11 forwarding.
+       (x11 object server_x11_info)
        
        ; value of the TERM environment variable
        (term string)
@@ -857,3 +861,62 @@ window_change_request_handler =
 { STATIC_HEADER, do_window_change_request };
 
 #endif /* WITH_PTY_SUPPORT */
+
+#if WITH_X11_FORWARD
+
+static void
+do_x11_req(struct channel_request *s UNUSED,
+	   struct ssh_channel *channel,
+	   struct channel_request_info *info UNUSED,
+	   struct simple_buffer *args,
+	   struct command_continuation *c,
+	   struct exception_handler *e)
+{
+  static struct exception x11_request_failed =
+    STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "x11-req failed");
+
+  const UINT8 *protocol;
+  UINT32 protocol_length;
+  const UINT8 *cookie;
+  UINT32 cookie_length;
+  UINT32 screen;
+  UINT32 single;
+  
+  CAST(server_session, session, channel);
+
+  verbose("Client requesting x11 forwarding...\n");
+
+  if (parse_uint32(args, &single)
+      && parse_string(args, &protocol_length, &protocol)
+      && parse_string(args, &cookie_length, &cookie)
+      && parse_uint32(args, &screen))
+    {
+      /* The client may only request one x11-forwarding, and only
+       * before starting a process. */
+      if (session->x11 || session->process
+	  || !(session->x11 = make_server_x11_info(protocol_length, protocol,
+						   cookie_length, cookie,
+						   channel->connection->user)))
+	{
+	  verbose("X11 request failed.\n");
+	  EXCEPTION_RAISE(e, &x11_request_failed);
+	}
+      else
+	{
+	  server_x11_listen(session->x11, channel->connection,
+			    c, e);
+	  return;
+	}
+    }
+  else
+    {
+      werror("Invalid pty request.\n");
+      PROTOCOL_ERROR(e, "Invalid pty request.");
+    }
+}
+
+struct channel_request
+x11_req_handler =
+{ STATIC_HEADER, do_x11_req };
+
+#endif /* WITH_X11_FORWARD */
