@@ -128,4 +128,11 @@ struct command *make_userauth_service(struct int_list *advertised_methods,
 				      struct alist *methods,
 				      struct alist *services);
 
+struct exception_handler *
+make_exc_userauth_handler(struct ssh_connection *connection,
+			  struct int_list *advertised_methods,
+			  unsigned attempts,
+			  struct exception_handler *parent,
+			  const char *context);
+
 #endif /* LSH_SERVER_USERAUTH_H_INCLUDED */

@@ -263,6 +263,9 @@ do_handle_userauth(struct packet_handler *c,
       CAST_SUBTYPE(userauth, auth, ALIST_GET(closure->methods, method));
       CAST_SUBTYPE(command, service,
 		   ALIST_GET(closure->services, requested_service));
+
+      /* Serialize handling of userauth requests */
+      connection_lock(connection);
       
       if (!(auth && service))
 	{
@@ -317,7 +320,12 @@ make_userauth_handler(struct alist *methods,
  *
  * I think the right thing to do is to serialize userauth requests
  * completely: if a request can't be replied to immediately, put the
- * entire connection on hold until the reply is ready. */
+ * entire connection on hold until the reply is ready.
+ *
+ * This code now uses serialization, using connection_lock() and
+ * connection_unlock(). However, the implementation of serialization
+ * is rather stupid. And will crash if a userauth method returns to
+ * the main loop while the connection is still locked. */
 
 /* GABA:
    (class
@@ -336,10 +344,13 @@ do_userauth_continuation(struct command_continuation *s,
 
   unsigned i;
 
-  assert(action);
-
   /* Access granted. */
 
+  assert(action);
+
+  /* Unlock connection */
+  connection_unlock(self->connection);
+  
   C_WRITE(self->connection, format_userauth_success());
 
   /* Ignore any further userauth messages. */
@@ -390,23 +401,32 @@ do_exc_userauth_handler(struct exception_handler *s,
       EXCEPTION_RAISE(self->super.parent, x);
       break;
     case EXC_USERAUTH:
-      if (self->attempts)
-	{
-	  self->attempts--;
-	  C_WRITE(self->connection,
-		  format_userauth_failure(self->advertised_methods, 0));
-	}
-      else
-	{
-	  EXCEPTION_RAISE(self->connection->e,
-			  make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
-						  "Access denied"));
-	}
-      break;
+      {
+	/* Unlock connection */
+	connection_unlock(self->connection);
+
+	if (self->attempts)
+	  {
+	    self->attempts--;
+	    C_WRITE(self->connection,
+		    format_userauth_failure(self->advertised_methods, 0));
+	  }
+	else
+	  {
+	    EXCEPTION_RAISE(self->connection->e,
+			    make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
+						    "Access denied"));
+	  }
+	break;
+      }
     case EXC_USERAUTH_SPECIAL:
       {
 	CAST_SUBTYPE(userauth_special_exception, e, x);
-	/* NOTE: We can't NULL e->reply, since the exception it is supposed to be constant.
+
+	/* Unlock connection */
+	connection_unlock(self->connection);
+	
+	/* NOTE: We can't NULL e->reply, since the exception is supposed to be constant.
 	 * So we have to dup it, to make the gc happy. */
 	C_WRITE(self->connection, lsh_string_dup(e->reply));
 
@@ -415,7 +435,7 @@ do_exc_userauth_handler(struct exception_handler *s,
     }
 }
 
-static struct exception_handler *
+struct exception_handler *
 make_exc_userauth_handler(struct ssh_connection *connection,
 			  struct int_list *advertised_methods,
 			  unsigned attempts,
@@ -445,8 +465,7 @@ static void do_userauth(struct command *s,
 
   connection->dispatch[SSH_MSG_USERAUTH_REQUEST] =
     make_userauth_handler(self->methods, self->services,
-                          make_once_continuation(NULL,
-						 make_userauth_continuation(connection, c, e)),
+			  make_userauth_continuation(connection, c, e),
                           make_exc_userauth_handler(connection,
                                                     self->advertised_methods,
                                                     AUTH_ATTEMPTS, e,
