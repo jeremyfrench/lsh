@@ -1,3 +1,18 @@
+1999-06-28  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/tcpforward.h: Bugfix: Declare channel_open_forwarded_tcpip
+	extern. 
+
+	* src/channel.c (do_global_request_success): New function. 
+	(do_global_request_failure): New function.
+	(do_connection_service): Install handlers for
+	SSH_MSG_REQUEST_SUCCESS and SSH_MSG_REQUEST_FAILURE.
+
+	* src/lsh.c (main): Install a handler for forwarded-tcpip
+	requests.
+
+	* src/command.c (trace_command): New command.
+
 1999-06-23  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/tcpforward_commands.c (forward_local_port): Use

@@ -326,7 +326,7 @@ do_channel_open_direct_tcpip(struct channel_open *c,
        && parse_uint32(args, &orig_port) 
        && parse_eod(args))
     {
-      verbose("direct-tcp connection attempt\n");
+      verbose("direct-tcpip connection attempt\n");
 
       return COMMAND_CALL(closure->callback,
 			  make_address_info(dest_host, dest_port),
