@@ -136,6 +136,11 @@ channel_forward_start_io(struct channel_forward *channel)
   channel->socket->write_buffer->report = &channel->super.super;
 }
 
+/* Used by the party requesting tcp forwarding, i.e. when a socket is
+ * already open, and we have asked the other end to forward it. Takes
+ * a channel as argument, and connects it to the socket. Returns the
+ * channel. */
+
 DEFINE_COMMAND(start_io_command)
      (struct command *s UNUSED,
       struct lsh_object *x,
