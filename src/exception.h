@@ -133,8 +133,6 @@ void exception_raise(struct exception_handler *e,
 
 #define EXC_PAUSE_READ 0x100001
 #define EXC_PAUSE_START_READ 0x100002
-#define EXC_PAUSE_CONNECTION 0x100003
-#define EXC_PAUSE_START_CONNECTION 0x100004
 
 #define EXC_ALL (~0)
 

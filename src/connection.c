@@ -286,31 +286,6 @@ do_exc_connection_handler(struct exception_handler *s,
       }
       break;
 
-    case EXC_PAUSE_CONNECTION:
-      assert(!self->connection->paused);
-      self->connection->paused = 1;
-      EXCEPTION_RAISE(self->super.parent,
-		      make_simple_exception(EXC_PAUSE_READ, "locking connection."));
-      break;
-
-    case EXC_PAUSE_START_CONNECTION:
-      /* NOTE: Raising EXC_PAUSE_START_READ will not by itself make
-       * the connection start processing pending packets. Not until
-       * the peer sends us more data.
-       *
-       * So any code that raises EXC_PAUSE_START_CONNECTION should
-       * also call connection_handle_pending at a safe place. We
-       * can't call it here, as we may be in the middle of the
-       * handling of a packet. Installing a callout would be best. */
-      
-      assert(self->connection->paused);
-      EXCEPTION_RAISE(self->super.parent,
-		      make_simple_exception(EXC_PAUSE_START_READ, "unlocking connection."));
-      
-      self->connection->paused = 0;
-
-      break;
-
     case EXC_FINISH_READ:
       /* FIXME: We could check if there are any channels still open,
        * and write a warning message if there are. */
@@ -546,20 +521,36 @@ connection_send_kex_end(struct ssh_connection *self)
 
 /* Serialization. */
 
-void connection_lock(struct ssh_connection *self)
+void
+connection_lock(struct ssh_connection *self)
 {
   const struct exception pause
-    = STATIC_EXCEPTION(EXC_PAUSE_CONNECTION, "locking connection.");
-    
+    = STATIC_EXCEPTION(EXC_PAUSE_READ, "locking connection.");
+  
+  assert(!self->paused);
+  self->paused = 1;
   EXCEPTION_RAISE(self->e, &pause);
 }
 
-void connection_unlock(struct ssh_connection *self)
+void
+connection_unlock(struct ssh_connection *self)
 {
   const struct exception unpause
-    = STATIC_EXCEPTION(EXC_PAUSE_START_CONNECTION, "unlocking connection.");
-    
+    = STATIC_EXCEPTION(EXC_PAUSE_START_READ, "unlocking connection.");
+
+  /* NOTE: Raising EXC_PAUSE_START_READ will not by itself make
+   * the connection start processing pending packets. Not until
+   * the peer sends us more data.
+   *
+   * So any code that calls connection_unlock should also call
+   * connection_handle_pending at a safe place. We can't call it here,
+   * as we may be in the middle of the handling of a packet.
+   * Installing a callout would be best. */
+  
+  assert(self->paused);
   EXCEPTION_RAISE(self->e, &unpause);
+      
+  self->paused = 0;
 }
 
 
