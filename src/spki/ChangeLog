@@ -1,3 +1,13 @@
+2002-11-13  Niels Möller  <niels@s3.kth.se>
+
+	* certificate.h, certificate.c: Fixed terminology, refer to keys
+	as "principals", not "subjects". 
+
+	* Makefile.am (AM_CPPFLAGS): Use $(srcdir).
+	* testsuite/Makefile.am (AM_CFLAGS): Use $(top_srcdir).
+
+	* .bootstrap: Run autoheader before autoconf.
+
 2002-11-13  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* testsuite/subject-test.c: First test case.
