@@ -49,35 +49,11 @@ enum connection_flag
     CONNECTION_SRP = 2
   };
 
+/* FIXME: Delete permanently? */
 enum peer_flag
   {
-#if 0
-    /* Use a different encoding of ssh-dss signatures, for
-     * compatibility with SSH Inc's ssh version 2.0.x and 2.1.0 */
-    PEER_SSH_DSS_KLUDGE          = 0x00000001,
-
-    /* Support SSH_MSG_SERVICE_ACCEPT with omitted service name, for
-     * compatibility with SSH Inc's ssh version 2.0.x */
-    PEER_SERVICE_ACCEPT_KLUDGE   = 0x00000002,
-
-    /* Replace the service name with the string "ssh-userauth" in
-     * publickey userauth requests, for compatibility with SSH Inc's
-     * ssh version 2.0.x and 2.1.0 */
-    PEER_USERAUTH_REQUEST_KLUDGE = 0x00000004,
-
-    /* Never send a debug message after successful keyexchange, as SSH
-     * Inc's ssh version 2.0.x and 2.1 can't handle that. */
-    PEER_SEND_NO_DEBUG           = 0x00000008,
-#endif
-
-    /* Don't include the originator port in X11 channel open messages,
-     * for compatibility with SSH Inc's ssh version 2.0.x */
-    PEER_X11_OPEN_KLUDGE         = 0x00000010,
-
-    /* Sun's SSH version 1.0 sends an entire list of locales
-     * in the language field of its KEXINIT message. */
-    PEER_KEXINIT_LANGUAGE_KLUDGE = 0x00000020,    
-  };
+    PEER_NONE = 0;
+  }
 
 /* State affecting incoming keyexchange packets */
 enum kex_state
