@@ -24,6 +24,7 @@
  */
 
 #include "charset.h"
+#include "client.c"
 #include "connection.h"
 #include "debug.h"
 #include "format.h"
@@ -45,36 +46,30 @@
 struct command_simple options2info;
 #define OPTIONS2INFO (&options2info.super.super)
 
+#if 0
 struct command_simple options2actions;
 #define OPTIONS2ACTIONS (&options2actions.super.super)
+#endif
 
 #include "lshg.c.x"
 
 /* GABA:
    (class
      (name lshg_options)
+     (super client_options)
      (vars
-       ;; (not . int)
-       ;; (port . "char *")
-       (tty object interact)
-       (remote object address_info)
-       ; Command to connect to the gateway
-       (gateway object local_info)
-       
-       (local_user . "char *")
-       (user . "char *")
-
-       (actions struct object_queue)))
+       (gateway object local_info)))
 */
 
 static struct lshg_options *
-make_options(void) 
+make_options(struct io_backend *backend,
+	     struct exception_handler *handler,
+	     int *exit_code) 
 {
   NEW(lshg_options, self);
+  init_client_options(&self->super, backend, handler, exit_code);
 
-  self->remote = NULL;
-  self->local_user = self->user = getenv("LOGNAME");
-  object_queue_init(&self->actions);
+  self->gateway = NULL;
 
   return self;
 }
@@ -82,15 +77,18 @@ make_options(void)
 DEFINE_COMMAND_SIMPLE(options2info, a)
 {
   CAST(lshg_options, self, a);
-  return &make_gateway_address(self->local_user, self->user,
-			       self->remote)->super;
+  return &make_gateway_address(self->super.local_user,
+			       self->super.user,
+			       self->super.remote)->super;
 }
 
+#if 0
 DEFINE_COMMAND_SIMPLE(options2actions, a)
 {
   CAST(lshg_options, self, a);
   return &queue_to_list(&self->actions)->super.super;
 }
+#endif
 
 /* GABA:
    (expr
@@ -170,13 +168,15 @@ static const struct argp_option
 main_options[] =
 {
   /* Name, key, arg-name, flags, doc, group */
+#if 0
   { "port", 'p', "Port", 0, "Connect to this port.", 0 },
   { "user", 'l', "User name", 0, "Login as this user.", 0 },
   { NULL, 0, NULL, 0, "Actions:", 0 },
   { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },  
   { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
+#endif
   { "send-debug", 'D', "Message", 0, "Send a debug message "
-    "to the remote machine.", 0 },
+    "to the remote machine.", CLIENT_ARGP_ACTION_GROUP },
   { "send-ignore", 'I', "Message", 0, "Send an ignore message "
     "to the remote machine.", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
@@ -185,10 +185,12 @@ main_options[] =
 static const struct argp_child
 main_argp_children[] =
 {
+  { &client_argp, 0, "", 0 },
   { &werror_argp, 0, "", 0 },
   { NULL, 0, NULL, 0}
 };
 
+#if 0
 static struct command *
 lshg_add_action(struct lshg_options *self,
 		struct command *action)
@@ -198,6 +200,7 @@ lshg_add_action(struct lshg_options *self,
 
   return action;
 }
+#endif
 
 static error_t
 main_argp_parser(int key, char *arg, struct argp_state *state)
@@ -209,11 +212,15 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     default:
       return ARGP_ERR_UNKNOWN;
     case ARGP_KEY_INIT:
-      state->child_inputs[0] = NULL;
+      state->child_inputs[0] = &self->super;
+      state->child_inputs[1] = NULL;
       break;
+#if 0
     case ARGP_KEY_NO_ARGS:
       argp_usage(state);
       break;
+#endif
+#if 0
     case ARGP_KEY_ARG:
       if (!state->arg_num)
 	{
@@ -224,22 +231,25 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       else
 	/* Let the next case parse it.  */
 	return ARGP_ERR_UNKNOWN;
-#if 0
+
     case ARGP_KEY_ARGS:
       /* Handle command line. */
       break;
 #endif
     case ARGP_KEY_END:
-      if (!self->local_user)
+      if (!self->super.local_user)
 	{
 	  argp_error(state, "You have to set LOGNAME in the environment.");
 	  break;
 	}
-      assert(self->user);
-      self->gateway = make_gateway_address(self->local_user, self->user,
-					   self->remote);
+      assert(self->super.user);
+      assert(self->super.remote);
+      
+      self->gateway = make_gateway_address(self->super.local_user,
+					   self->super.user,
+					   self->super.remote);
 
-      if (object_queue_is_empty(&self->actions))
+      if (object_queue_is_empty(&self->super.actions))
 	{
 	  argp_error(state, "No actions given.");
 	    break;
@@ -256,11 +266,11 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       break;
 #endif
     case 'D':
-      lshg_add_action(self, make_lshg_send_debug(arg));
+      client_add_action(&self->super, make_lshg_send_debug(arg));
       break;
 
     case 'I':
-      lshg_add_action(self, make_lshg_send_ignore(arg));
+      client_add_action(&self->super, make_lshg_send_ignore(arg));
       break;
 #if 0
     case 'n':
@@ -302,6 +312,8 @@ main(int argc, char **argv)
 {
   struct lshg_options *options;
   struct io_backend *backend = make_io_backend();
+
+  int exit_code = 17;
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -310,8 +322,12 @@ main(int argc, char **argv)
   /* FIXME: Choose character set depending on the locale */
   set_local_charset(CHARSET_LATIN1);
 
-  options = make_options();
-
+  options = make_options(backend,
+			 make_lshg_exception_handler
+			 (&default_exception_handler,
+			  HANDLER_CONTEXT),
+			 &exit_code);
+  
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
 
   {
@@ -325,5 +341,5 @@ main(int argc, char **argv)
 
   io_run(backend);
   
-  return EXIT_SUCCESS;
+  return exit_code;
 }
