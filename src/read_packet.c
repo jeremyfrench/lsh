@@ -120,7 +120,7 @@ do_read_packet(struct read_handler **h,
       else
         /* FIXME: This may still be "unexpected".
          *
-         * We should check that there's no open channels. */
+         * We should check that there are no open channels. */
         EXCEPTION_RAISE(closure->connection->e, &finish_read_exception);
       
       *h = NULL;
