@@ -208,7 +208,14 @@ do_rsa_public_spki_key(struct verifier *s)
 		sexp_l(2, SA(E), sexp_un(self->e), -1),
 		-1);
 #endif
-  return sexp_l(3, sexp_a(ATOM_RSA_PKCS1),
+  /* NOTE: The algorithm name "rsa-pkcs1-sha1" is the SPKI standard,
+   * and what lsh-1.2 used. "rsa-pkcs1" makes more sense, and is what
+   * gnupg uses internally (I think), and was used by some late
+   * lsh-1.3.x versions.
+   *
+   * However, since it doesn't matter much, for now we follow the SPKI
+   * standard and stay compatible with lsh-1.2. */
+  return sexp_l(3, sexp_a(ATOM_RSA_PKCS1_SHA1),
 		sexp_l(2, SA(N), sexp_un(self->key.n), -1),
 		sexp_l(2, SA(E), sexp_un(self->key.e), -1),
 		-1);

@@ -25,13 +25,13 @@ ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEApUmWhj0f4TD/XcDW88zcKo1ZYBn09jT0RzP1aoPwKuzF
 EOF
 
 cat >test.out2 <<EOF
-(public-key (rsa-pkcs1 (n #a54996863d1fe130 ff5dc0d6f3ccdc2a 8d596019f4f634f4
-                           4733f56a83f02aec c56efba97dbbca8c f077482eabf1c5d3
-                           1f4398eb411d7dc4 2cd589ad78824d30 49d612f57d6473c9
-                           61a9d4e9d55295a8 e76cac0486aac530 b951b92e1428943a
-                           ec0e4d16dd1657d0 e361a2c8cd8e5198 f258722fc2f1ba3e
-                           3dac23f2bfe3d40b#)
-                       (e "#")))
+(public-key (rsa-pkcs1-sha1 (n #a54996863d1fe130 ff5dc0d6f3ccdc2a 8d596019f4f634f4
+                                4733f56a83f02aec c56efba97dbbca8c f077482eabf1c5d3
+                                1f4398eb411d7dc4 2cd589ad78824d30 49d612f57d6473c9
+                                61a9d4e9d55295a8 e76cac0486aac530 b951b92e1428943a
+                                ec0e4d16dd1657d0 e361a2c8cd8e5198 f258722fc2f1ba3e
+                                3dac23f2bfe3d40b#)
+                            (e "#")))
 EOF
 
 compare_output "conv-3-test"
