@@ -1,3 +1,7 @@
+2004-03-03  Niels Möller  <niels@s3.kth.se>
+
+	* Makefile.am (EXTRA_DIST): Typo fix.
+
 2004-03-02  Niels Möller  <nisse@lysator.liu.se>
 
 	* argp-parse.c, argp-help.c: Conditionally include malloc.h.

@@ -27,7 +27,7 @@ noinst_LIBRARIES = libargp.a
 EXTRA_PROGRAMS = argp-test
 noinst_HEADERS = argp.h argp-fmtstream.h argp-namefrob.h
 
-EXTRA_DIST = mempcpy.c strchrnul.c strndup.c strcasecmp Versions
+EXTRA_DIST = mempcpy.c strchrnul.c strndup.c strcasecmp.c Versions
 
 # Leaves out argp-fs-xinl.c and argp-xinl.c 
 libargp_a_SOURCES = argp-ba.c argp-eexst.c argp-fmtstream.c \
