@@ -244,3 +244,6 @@ Use static objects for crypto algorithms with fixed key sizes and
 other parameters.
 
 Replace most defines with enums, for improved type checking.
+
+Debug the optimized rsa-code that uses CRT. Write testcases for rsa.
+ 

@@ -1,5 +1,13 @@
 2000-09-19  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/rsa.c (SA): New macro.
+	Added debug() calls.
+	(RSA_CRT): Disabled the crt optimixation, as that code seems
+	broken. 
+
+	* src/dsa.c (SA): New macro.
+	(encode_dsa_sig_val): Fixed type error.
+
 	* src/server_publickey.c (do_authenticate): Pass algorithm
 	name to VERIFY() method. make_dsa_verifier_kludge() no longer
 	needed. 

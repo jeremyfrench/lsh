@@ -73,8 +73,9 @@ sexp_skip_char(struct simple_buffer *buffer, UINT8 expect)
       return 0;
     }
 
-  trace("sexp_skip_char: Skipped expected character %xi\n.", c);
-
+#if 0
+  trace("sexp_skip_char: Skipped expected character %xi.\n", c);
+#endif
   return 1;
 }
 

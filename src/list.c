@@ -70,6 +70,7 @@ struct object_list *make_object_listv(unsigned n, va_list args)
   
   struct object_list *l = alloc_object_list(n);
 
+  /* FIXME: Add sanity type checking */
   for (i=0; i<n; i++)
     LIST(l)[i] = va_arg(args, struct lsh_object *);
 

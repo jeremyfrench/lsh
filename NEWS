@@ -1,12 +1,23 @@
 News for the 1.0.5 release
 
+	Experimental support for RSA, using spki-style keys and
+	signatures. 
+
 	Some reorganization of signature algorithms, to support
 	spki-style signatures (including rsa) properly.
-	
+
+	Fix for key renegotiation bug reported by jps.
+
 	New algorithms bulk encryption algorithms: serpent and
 	rijndael. Rijndael implementation and lsh glue code
 	contributed by Rafael R. Sevilla. Serpent implementation by
 	Ross Anderson, Eli Biham, and Lars Knudsen.
+
+	New option -call to use any supported bulk encryption
+	algorithm; the default preference list is quite conservative.
+
+	New option --hostkey-algorithm, to tune the hostkey algorithm
+	preference list.
 
 	Renamed lsh_keygen and lsh_writekey to lsh-keygen and
 	lsh-writekey, respectively (actually happened in 1.0.4, but I
