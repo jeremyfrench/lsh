@@ -75,9 +75,11 @@
 #define EXC_IO_OPEN_WRITE 0x2006
 #define EXC_IO_LISTEN 0x2007
 
+#if 0
 /* Not really errors */
 /* EOF was read */
 #define EXC_IO_EOF 0x2010
+#endif
 
 /* Authorization errors */
 #define EXC_AUTH 0x4000
