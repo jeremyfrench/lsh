@@ -1,5 +1,54 @@
 1999-10-11  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/sexp_conv.c (main): Pass HANDLER_CONTEXT.
+
+	* src/sexp_commands.c (make_read_sexp_exception_handler): Added
+	context argument.
+	(do_read_sexp): Pass HANDLER_CONTEXT.
+
+	* src/sexp.c (lookup_sexp_format): Use strcmp rather than
+	strcasecmp. 
+	(sexp_input_argp, sexp_output_argp): Split sexp_argp into two
+	parsers. 
+
+	* src/server_userauth.c (make_exc_userauth_handler): Added context
+	argument. 
+	(do_userauth): Pass HANDLER_CONTEXT.
+
+	* src/server_session.c (do_spawn_shell): Pass HANDLER_CONTEXT.
+
+	* src/io.c (io_iter): Poll only on active fd:s.
+	(init_file): Pass HANDLER_CONTEXT.
+	(make_exc_finish_read_handler): Added context argument.
+
+	* src/exception.h (exception_handler): Added context attribute.
+	(HANDLER_CONTEXT): New macro.
+
+	* src/exception.c (make_exception_handler): Added context argument.
+	(make_report_exception_handler): -"-
+	(exception_raise): New function.
+
+	* src/connection_commands.c (do_connection): Pass HANDLER_CONTEXT.
+
+	* src/connection.c (make_exc_protocol_handler): Added context argument.
+	(connection_init_io): Pass HANDLER_CONTEXT.
+
+	* src/command.h: Use DEBUG_TRACE.
+
+	* src/command.c (make_trace): Define only if DEBUG_TRACE is
+	defined. 
+	(make_catch_handler): Added context argument.
+	(do_catch_apply): Pass HANDLER_CONTEXT.
+
+	* src/client.c (do_client_io): Pass HANDLER_CONTEXT.
+
+	* src/channel.c (make_exc_finish_channel_handler): New context
+	argument. 
+	(make_channel_io_exception_handler): -"-
+	(register_channel): Pass HANDLER_CONTEXT.
+
+	* configure.in: Bumbed version number to 0.1.13.
+
 	* src/sexp_conv.c (main): Make both input and output formats
 	configurable.
 

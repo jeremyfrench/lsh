@@ -155,7 +155,9 @@ int main(int argc, char **argv)
     struct io_fd *in = make_io_fd(backend, STDIN_FILENO, e);
 
     /* Fixing the exception handler creates a circularity */
-    e->parent = make_exc_finish_read_handler(&in->super, &default_exception_handler);
+    e->parent = make_exc_finish_read_handler(&in->super,
+					     &default_exception_handler,
+					     HANDLER_CONTEXT);
     
     COMMAND_CALL(work, in,
 		 &discard_continuation, e);
