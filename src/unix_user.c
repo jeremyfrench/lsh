@@ -159,15 +159,15 @@ lsh_make_utmp(struct lsh_user *user,
   struct utmp *log;
   NEW_SPACE(log);
 
-#if HAVE_UT_NAME
+#if HAVE_STRUCT_UTMP_UT_NAME
   CP(log->ut_name, user->name);
-#elif HAVE_UT_USER
+#elif HAVE_STRUCT_UTMP_UT_USER
   CP(log->ut_user, user->name);
 #endif
   
   CP_TTY(log->ut_line, ttyname);
 
-#if HAVE_UT_HOST
+#if HAVE_STRUCT_UTMP_UT_HOST
   CP(log->ut_host, peer->ip);
 #endif
   
@@ -747,9 +747,9 @@ do_fork_process(struct lsh_user *u,
       if (log)
 	  /* FIXME: It should be safe to perform a blocking reverse dns lookup here,
 	   * as we have forked. */
-#if HAVE_UT_NAME
+#if HAVE_STRUCT_UTMP_UT_NAME
 	  logwtmp(log->ut_line, log->ut_name, log->ut_host);
-#elif HAVE_UT_USER
+#elif HAVE_STRUCT_UTMP_UT_USER
 	  logwtmp(log->ut_line, log->ut_user, log->ut_host);
 #endif
 
