@@ -2001,7 +2001,8 @@ make_channel_read_close_callback(struct ssh_channel *channel)
      (super exception_handler)
      (vars
        (channel object ssh_channel)
-       (prefix . "const char *")))
+       (prefix . "const char *")
+       (silent . int)))
 */
 
 static void
@@ -2011,7 +2012,8 @@ do_channel_io_exception_handler(struct exception_handler *s,
   CAST(channel_io_exception_handler, self, s);
   if (x->type & EXC_IO)
     {
-      werror("channel.c: I/O error on write, %z\n", x->msg);
+      if (!self->silent)
+	werror("channel.c: %zI/O error, %z\n", self->prefix, x->msg);
 #if 0
       send_debug_message(self->channel->write,
 			 ssh_format("%z I/O error: %z\n",
@@ -2027,6 +2029,7 @@ do_channel_io_exception_handler(struct exception_handler *s,
 struct exception_handler *
 make_channel_io_exception_handler(struct ssh_channel *channel,
 				  const char *prefix,
+				  int silent,
 				  struct exception_handler *parent,
 				  const char *context)
 {
@@ -2037,7 +2040,7 @@ make_channel_io_exception_handler(struct ssh_channel *channel,
   
   self->channel = channel;
   self->prefix = prefix;
-
+  self->silent = silent;
   return &self->super;
 }
 

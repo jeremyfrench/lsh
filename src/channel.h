@@ -423,6 +423,7 @@ make_channel_read_close_callback(struct ssh_channel *channel);
 struct exception_handler *
 make_channel_io_exception_handler(struct ssh_channel *channel,
 				  const char *prefix,
+				  int silent,
 				  struct exception_handler *parent,
 				  const char *context);
 
