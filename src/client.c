@@ -751,7 +751,7 @@ make_client_session(struct client_options *options)
       escape = make_escape_info(DEFAULT_ESCAPE_CHAR);
     }
 
-  /* Bind ^Z to suspend */
+  /* Bind ^Z to suspend. */
   if (escape)
     escape->dispatch[26] = &suspend_callback;
   
