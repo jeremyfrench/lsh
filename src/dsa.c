@@ -522,6 +522,12 @@ make_dsa_signer(struct signature_algorithm *c,
   init_dsa_public(&res->public);
   mpz_init(res->a);
 
+#if 0
+  debug("make_dsa_signer: SEXP_LEFT(i) == %i\n");
+  debug("make_dsa_signer: SEXP_GET(i) == %fS\n",
+	sexp_format(SEXP_GET(i), SEXP_ADVANCED, 0));
+#endif
+  
   if ( (SEXP_LEFT(i) == 5)
        && spki_init_dsa_public(&res->public, i)
        && sexp_get_un(i, ATOM_X, res->a) )
