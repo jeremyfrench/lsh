@@ -323,7 +323,7 @@ do_read_file(struct lsh_user *u,
       return;
     }
   
-  f = ssh_format("%ls/.lsh/%lz%c", user->home, name, 0);
+  f = ssh_format("%lS/.lsh/%lz%c", user->home, name, 0);
 
   fd = io_read_user_file(user->backend, f->data, user->super.uid, secret, &x, e);
   lsh_string_free(f);
