@@ -59,7 +59,7 @@ static int do_read_data(struct read_handler **h,
   assert(closure->channel->sources);
   
   if (closure->channel->flags &
-      (CHANNEL_RECIEVED_CLOSE | CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
+      (CHANNEL_RECEIVED_CLOSE | CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
     return LSH_FAIL | LSH_DIE;
 
   to_read = MIN(closure->channel->send_max_packet,

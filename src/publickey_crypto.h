@@ -104,7 +104,7 @@ struct group *make_zn(mpz_t p);
 /* Creates client message */
 struct lsh_string *dh_make_client_msg(struct diffie_hellman_instance *self);
 
-/* Recieves client message */
+/* Receives client message */
 int dh_process_client_msg(struct diffie_hellman_instance *self,
 			  struct lsh_string *packet);
 

@@ -63,7 +63,7 @@ abstract_io.h.x.
 abstract_write is the interface structure common to all write
 handlers, and abstract_write_pipe is a generic subclass used for
 piping write handlers together. One specific kind of write handler is
-the unpad handler, which removes padding from recieved packets, and
+the unpad handler, which removes padding from received packets, and
 sends them on. This object is implemented in unpad.c, and it does not
 have any private data beyond the abstract_write_pipe structure above.
 The write method implementation of this type looks as follows:

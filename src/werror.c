@@ -104,7 +104,7 @@ static void write_washed(UINT32 length, UINT8 *msg)
     wash_char(msg[i]);
 }
 
-/* For outputting data recieved from the other end */
+/* For outputting data received from the other end */
 void werror_safe(UINT32 length, UINT8 *msg)
 {
   if (!quiet_flag)

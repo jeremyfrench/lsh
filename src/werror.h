@@ -39,7 +39,7 @@ void werror(const char *format, ...) PRINTF_STYLE(1,2);
 void debug(const char *format, ...) PRINTF_STYLE(1,2);
 void verbose(const char *format, ...) PRINTF_STYLE(1,2);
 
-/* For outputting data recieved from the other end */
+/* For outputting data received from the other end */
 void werror_safe(UINT32 length, UINT8 *msg);
 void debug_safe(UINT32 length, UINT8 *msg);
 void verbose_safe(UINT32 length, UINT8 *msg);

@@ -61,7 +61,7 @@
        (crypt_pos simple "UINT8 *")
 
        ; Must point to an area large enough to hold a mac 
-       (recieved_mac string) 
+       (received_mac string) 
   
        (handler object abstract_write)
        (connection object ssh_connection)))
@@ -104,8 +104,8 @@ static int do_read_packet(struct read_handler **h,
 	  closure->buffer = lsh_string_realloc(closure->buffer,
 					       block_size);
 	  if (closure->connection->rec_mac)
-	    closure->recieved_mac = lsh_string_realloc
-	      (closure->recieved_mac,
+	    closure->received_mac = lsh_string_realloc
+	      (closure->received_mac,
 	       closure->connection->rec_mac->hash_size);
 
 	  closure->pos = 0;
@@ -150,7 +150,7 @@ static int do_read_packet(struct read_handler **h,
 	      length = READ_UINT32(closure->buffer->data);
 	      if (length > closure->connection->rec_max_packet)
 		{
-		  werror("read_packet: Recieving too large packet.\n"
+		  werror("read_packet: Receiving too large packet.\n"
 			 "  %d octets, limit is %d\n",
 			 length, closure->connection->rec_max_packet);
 		  return LSH_FAIL | LSH_DIE;
@@ -250,7 +250,7 @@ static int do_read_packet(struct read_handler **h,
 	    UINT8 *mac;
 	    
 	    int n = A_READ(read, left,
-			   closure->recieved_mac->data + closure->pos);
+			   closure->received_mac->data + closure->pos);
 
 	    switch(n)
 	      {
@@ -272,7 +272,7 @@ static int do_read_packet(struct read_handler **h,
 		HASH_DIGEST(closure->connection->rec_mac, mac);
 	    
 		if (!memcmp(mac,
-			    closure->recieved_mac,
+			    closure->received_mac,
 			    closure->connection->rec_mac->hash_size))
 		  /* FIXME: Free resources */
 		  return LSH_FAIL | LSH_DIE;
@@ -319,7 +319,7 @@ struct read_handler *make_read_packet(struct abstract_write *handler,
   closure->buffer = NULL;
   /* closure->crypt_pos = 0; */
 
-  closure->recieved_mac = NULL;
+  closure->received_mac = NULL;
   
   return &closure->super;
 }

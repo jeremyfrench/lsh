@@ -84,7 +84,7 @@ instance, a writing to a file associated with a channel may fail. In
 that case, the channel should be closed, but the connection should not
 die. Handle the LSH_CHANNEL_FINISHED code properly.
 
-Fix the flow control (it's broken on the recieving end).
+Fix the flow control (it's broken on the receiving end).
 
 
 CHANNEL CLOSE
@@ -92,7 +92,7 @@ CHANNEL CLOSE
 Channels may need some live-ness status. For instance, a remote
 process may close its stdout and stderr, but still keep on running. In
 this case, the local process should close it's stdout and stderr, but
-not close the channel until it has recieved a close message and
+not close the channel until it has received a close message and
 possibly an exit status.
 
 The server's close message should somehow be delayed until the dead
@@ -102,7 +102,7 @@ initiate CHANNEL_CLOSE when all of the following conditions are true:
 × The process is dead (and its exit status has been send to the
   client).
 x EOF has been detected on both stdout and stderr.
-× An EOF message has been recieved from the client.
+× An EOF message has been received from the client.
 
 The client may want to respond to the exit-status message with an
 CHANNEL_EOF message, unless it wants to talk to any forked children

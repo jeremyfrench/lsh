@@ -175,7 +175,7 @@ static int do_userauth_failure(struct packet_handler *c,
 
       if (partial_success)
 	{ /* Doesn't help us */
-	  werror("Recieved SSH_MSH_USERAUTH_FAILURE "
+	  werror("Received SSH_MSH_USERAUTH_FAILURE "
 		 "indicating partial success.\n");
 	  KILL(methods);
 

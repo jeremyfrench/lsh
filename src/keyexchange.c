@@ -597,7 +597,7 @@ static int do_install(struct install_keys *c,
       return 0;
     }
   
-  /* Keys for recieving */
+  /* Keys for receiving */
   connection->dispatch[SSH_MSG_NEWKEYS] = make_newkeys_handler
     (rec,
      kex_make_mac(secret, closure->algorithms,

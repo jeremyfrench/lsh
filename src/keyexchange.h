@@ -49,10 +49,10 @@
 #define KEX_STATE_IGNORE 1
 
 /* Key exchange is in progress. Neither KEX_INIT or NEWKEYS messages
- * can be recieved */
+ * can be received */
 #define KEX_STATE_IN_PROGRESS 2
 
-/* Key exchange is finished. A NEWKEYS message should be recieved, and
+/* Key exchange is finished. A NEWKEYS message should be received, and
  * nothing else. */
 #define KEX_STATE_NEWKEYS 3
 

@@ -79,7 +79,7 @@ static int do_handle_dh_init(struct packet_handler *c,
   if (LSH_CLOSEDP(res))
     return res;
   
-  /* Send a newkeys message, and install a handler for recieving the
+  /* Send a newkeys message, and install a handler for receiving the
    * newkeys message. */
 
   res |= A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
@@ -201,7 +201,7 @@ static int do_install(struct install_keys *c,
 
   CAST(server_install_keys, closure, c);
   
-  /* Keys for recieving */
+  /* Keys for receiving */
   connection->dispatch[SSH_MSG_NEWKEYS] = make_newkeys_handler
     (kex_make_encrypt(secret, closure->algorithms,
 		      KEX_ENCRYPTION_CLIENT_TO_SERVER, connection),

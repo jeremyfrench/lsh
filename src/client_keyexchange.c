@@ -89,7 +89,7 @@ static int do_handle_dh_reply(struct packet_handler *c,
     return disconnect_kex_failed(connection, "Invalid server signature\r\n");
     
   /* Key exchange successful! Send a newkeys message, and install a
-   * handler for recieving the newkeys message. */
+   * handler for receiving the newkeys message. */
 
   res = A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
   if (LSH_CLOSEDP(res))
