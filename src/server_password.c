@@ -43,7 +43,7 @@
 #include <pwd.h>
 #include <grp.h>
 
-#ifdef HAVE_SHADOW_H
+#if HAVE_SHADOW_H
 #include <shadow.h>
 #endif
 
@@ -76,7 +76,7 @@ struct unix_user *lookup_user(struct lsh_string *name, int free)
   res->gid = passwd->pw_gid;
   res->name = name;
   
-#ifdef HAVE_GETSPNAM
+#if HAVE_GETSPNAM
   if (passwd->pw_passwd && !strcmp(passwd->pw_passwd, "x"))
   {
     struct spwd *shadowpwd;

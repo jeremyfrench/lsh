@@ -38,28 +38,28 @@ struct alist *many_algorithms(unsigned n, ...)
   
   struct alist *a
     = make_alist(5
-#ifdef WITH_CAST
+#if WITH_CAST
 		 +1
 #endif
-#ifdef WITH_IDEA
+#if WITH_IDEA
 		 +1
 #endif
-#ifdef WITH_ZLIB
+#if WITH_ZLIB
 		 +1
 #endif
 		 ,
 		 ATOM_ARCFOUR, &crypto_arcfour_algorithm,
 		 ATOM_BLOWFISH_CBC, crypto_cbc(make_blowfish()),
 		 ATOM_3DES_CBC, crypto_cbc(make_des3()),
-#ifdef WITH_CAST
+#if WITH_CAST
 		 ATOM_CAST128_CBC, crypto_cbc(make_cast()),
 #endif
-#ifdef WITH_IDEA
+#if WITH_IDEA
 		 ATOM_IDEA_CBC, crypto_cbc(&idea_algorithm),
 #endif
 		 ATOM_HMAC_SHA1, make_hmac_algorithm(&sha_algorithm),
 		 ATOM_HMAC_MD5, make_hmac_algorithm(&md5_algorithm),
-#ifdef WITH_ZLIB
+#if WITH_ZLIB
 		 ATOM_ZLIB, make_zlib(),
 #endif
 		 -1);

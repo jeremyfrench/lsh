@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
 
 #define lsh_free debug_free
 #define lsh_malloc debug_malloc
@@ -118,7 +118,7 @@ struct lsh_string *lsh_string_alloc(UINT32 length)
 {
   struct lsh_string *s
     = xalloc(sizeof(struct lsh_string) - 1 + length);
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
   s->header.magic = -1717;
 #endif
   s->length = length;
@@ -135,7 +135,7 @@ void lsh_string_free(struct lsh_string *s)
   debug("lsh_string_free: freeing %xi,\n", (UINT32) s);
 #endif
   
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
   if (s->header.magic != -1717)
     fatal("lsh_string_free: Not string!\n");
 #endif
@@ -205,7 +205,7 @@ void lsh_object_free(struct lsh_object *o)
   lsh_free(o);
 };
 
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
 struct lsh_object *lsh_object_check(struct lsh_class *class,
 				    struct lsh_object *instance)
 {
@@ -259,7 +259,7 @@ struct lsh_object *lsh_object_check_subtype(struct lsh_class *class,
 }
 #endif /* DEBUG_ALLOC */
 
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
 void *lsh_space_alloc(size_t size)
 {
   int * p = xalloc(size + sizeof(int));

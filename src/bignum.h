@@ -32,10 +32,10 @@
 /* Needed for the declaration of mpz_out_str */
 #include <stdio.h>
 
-#ifdef HAVE_GMP2_GMP_H
+#if HAVE_GMP2_GMP_H
 #include <gmp2/gmp.h>
 #else
-#ifdef HAVE_GMP_H
+#if HAVE_GMP_H
 #include <gmp.h>
 #else
 #error No gmp.h!

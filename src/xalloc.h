@@ -58,7 +58,7 @@ struct lsh_object *lsh_object_clone(struct lsh_object *o);
 void *lsh_space_alloc(size_t size);
 void lsh_space_free(void *p);
 
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
 
 struct lsh_object *lsh_object_check(struct lsh_class *class,
 				    struct lsh_object *instance);

@@ -75,7 +75,7 @@ struct lsh_class
 
 #define CLASS(c) (c##_class)
 
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
 
 struct lsh_string_header
 {

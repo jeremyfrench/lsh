@@ -39,7 +39,7 @@ static unsigned live_objects = 0;
 static struct lsh_object *globals = NULL;
 #endif
 
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
 static void sanity_check_object_list(void)
 {
   unsigned i = 0;
@@ -144,7 +144,7 @@ static void gc_sweep(void)
 
 void gc_register(struct lsh_object *o)
 {
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
   sanity_check_object_list();
 #endif
   o->marked = o->dead = 0;
@@ -152,7 +152,7 @@ void gc_register(struct lsh_object *o)
   all_objects = o;
 
   number_of_objects ++;
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
   sanity_check_object_list();
 #endif
 }
@@ -163,14 +163,14 @@ void gc_register(struct lsh_object *o)
  * list before linked into the globals list. */
 void gc_register_global(struct lsh_object *o)
 {
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
   sanity_check_object_list();
 #endif
   o->marked = o->dead = 0;
   o->next = globals;
   globals = o;
 
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
   sanity_check_object_list();
 #endif
 }
@@ -181,7 +181,7 @@ void gc_register_global(struct lsh_object *o)
  * references to killed objects. */
 void gc_kill(struct lsh_object *o)
 {
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
   sanity_check_object_list();
 #endif
 
@@ -192,7 +192,7 @@ void gc_kill(struct lsh_object *o)
 
   o->dead = 1;
 
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
   sanity_check_object_list();
 #endif
 }
@@ -210,7 +210,7 @@ void gc(struct lsh_object *root)
 
 void gc_maybe(struct lsh_object *root, int busy)
 {
-#ifdef DEBUG_ALLOC
+#if DEBUG_ALLOC
   sanity_check_object_list();
 #endif
 

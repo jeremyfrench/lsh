@@ -39,11 +39,11 @@
 #include <string.h>
 #include <stdio.h>  /* FIXME: for snprintf, maybe use a custom snprintf? Bazsi */
 
-#ifdef HAVE_STROPTS_H
+#if HAVE_STROPTS_H
 #  include <stropts.h>  /* isastream() */
 #endif
 
-#ifdef HAVE_PTY_H
+#if HAVE_PTY_H
 #  include <pty.h>  /* openpty() */
 #endif
 
