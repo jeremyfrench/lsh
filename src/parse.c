@@ -68,6 +68,15 @@ int parse_uint8(struct simple_buffer *buffer, UINT8 *result)
   return 1;
 }
 
+int parse_boolean(struct simple_buffer *buffer, int *result)
+{
+  if (!LEFT)
+    return 0;
+  *result = HERE[0];
+  ADVANCE(1);
+  return 1;
+}
+
 int parse_bignum(struct simple_buffer *buffer, bignum *result)
 {
   UINT32 length;
