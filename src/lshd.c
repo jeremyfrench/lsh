@@ -83,6 +83,10 @@
 
 #include "lsh_argp.h"
 
+/* Forward declarations */
+static struct install_info install_session_handler;
+#define INSTALL_SESSION_HANDLER (&install_session_handler.super.super.super)
+
 #include "lshd.c.x"
 
 
@@ -173,7 +177,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (allow_root . int)
        (pw_helper . "const char *")
        (login_shell . "const char *")
-       (loginauthmode_user . "const char *")
+       ;; (loginauthmode_user . "const char *")
 
        (banner_file . "const char *")
        
@@ -230,8 +234,10 @@ make_lshd_options(void)
   self->with_x11_forward = 0;
   self->with_pty = 1;
   self->subsystems = NULL;
-  
+
+#if 0
   self->loginauthmode_user = NULL;
+#endif
   self->banner_file = NULL;
 
   self->tcp_wrapper_name = "lshd";
@@ -365,10 +371,12 @@ main_options[] =
     "Use this as the login program for login-auth-mode, must " 
     "authenticate users. ", 0 },
 
+#if 0
   { "login-auth-mode-user", OPT_LOGIN_AUTH_USER, "username", 0,
     "Run login-program as this user, defaults to the user "
     "who started lshd.", 0 },
-
+#endif
+  
   { "password", OPT_PASSWORD, NULL, 0,
     "Enable password user authentication (default).", 0},
   { "no-password", OPT_NO_PASSWORD, NULL, 0,
@@ -554,7 +562,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	if (!self->random)
 	  argp_failure( state, EXIT_FAILURE, 0,  "No randomness generator available.");
 	
-       	if (self->with_password || self->with_publickey || self->with_srp_keyexchange || self->with_loginauthmode)
+       	if (self->with_password || self->with_publickey || self->with_srp_keyexchange)
 	  user_db = make_unix_user_db(self->reaper,
 				      self->pw_helper, self->login_shell,
 				      self->allow_root);
@@ -645,30 +653,27 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
         if (self->with_srp_keyexchange)
           ALIST_SET(self->userauth_algorithms,
                     ATOM_NONE,
-                    &make_userauth_none(0, NULL)->super); /* do not ignore username */
+		    /* username must match the name from the key
+		       exchange */		    
+                    &server_userauth_none_preauth.super);
 	else if (self->with_loginauthmode)
 	  {
-	    struct lsh_string *runas;
+	    const char *name;
 	    
-	    if (self->loginauthmode_user)
-	      runas = make_string(self->loginauthmode_user);
-	    else
-	      {
-		/* FIXME: Pherhaps have an LSHD_USER or similar */
-		
-		runas = CURRENT_USER();
-		
-		if (!runas) /* FIXME: Is it better to just croak? */
-		  runas = make_string("nobody");
-	      }
+	    name = getenv("LOGNAME");
+	    if (!name)
+	      argp_failure(state, EXIT_FAILURE, 0,
+			   "$LOGNAME not set in the environment.\n");
 
-	      
 	    ALIST_SET(self->userauth_algorithms,
 		      ATOM_NONE,
-		      &make_userauth_none(1, USER_LOOKUP(user_db, runas, 1 ))->super); /* ignore username */
-
+		      &make_userauth_none_permit
+		      (make_unix_user_self(make_string(name),
+					   self->reaper,
+					   /* Make home dir configurable? */
+					   "/",
+					   self->login_shell))->super);
 	  }
-
 
         if (!self->userauth_algorithms->size)
 	  argp_error(state, "All user authentication methods disabled.");
@@ -753,10 +758,12 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       self->with_loginauthmode = 0;
       break;
 
+#if 0
     case OPT_LOGIN_AUTH_USER:
       self->loginauthmode_user = arg;
       break;
-
+#endif
+      
     case OPT_BANNER_FILE:
       self->banner_file = arg;
       break;
@@ -990,54 +997,54 @@ make_lshd_connection_service(struct lshd_options *options)
   }
 }
 
+/* Command to install session handler */
+static struct install_info install_session_handler =
+STATIC_INSTALL_OPEN_HANDLER(ATOM_SESSION);
 
 /* Invoked when starting the ssh-connection service */ 
 /* GABA: 
    (expr 
      (name lshd_login_service) 
      (params
-       (hooks object object_list))
+       (handler object channel_open))
      (expr 
        (lambda (connection) 
-         ((progn hooks)
-          ; We have to initialize the connection 
-	  ; before adding handlers. 
-	  (init_login_service connection)))))
+         (install_session_handler
+            ; We have to initialize the connection 
+	    ; before adding handlers.
+	    (init_connection_service
+	      ; The fix user object is installed by the
+	      ; userauth "none" handler.
+	      (connection_require_userauth connection))
+	    handler))))
 */ 
-
-
+  
 static struct command *
 make_lshd_login_service(struct lshd_options *options)
 {
-  /* Commands to be invoked on the connection */
-  /* FIXME: Use a queue instead. */
-  struct object_list *connection_hooks;
   struct alist *supported_channel_requests;
-
-
-  supported_channel_requests = make_alist(1,
-					    ATOM_SHELL, &shell_request_handler,
-					    -1);    
+  
 #if WITH_PTY_SUPPORT
   if (options->with_pty)
     {
-      ALIST_SET(supported_channel_requests,
-		ATOM_PTY_REQ, &pty_request_handler.super);
-      ALIST_SET(supported_channel_requests,
-		ATOM_WINDOW_CHANGE, &window_change_request_handler.super);
+      supported_channel_requests
+	= make_alist(3,
+		     ATOM_SHELL, &shell_request_handler,
+		     ATOM_PTY_REQ, &pty_request_handler.super,
+		     ATOM_WINDOW_CHANGE, &window_change_request_handler.super,
+		     -1);
     }
+  else
 #endif /* WITH_PTY_SUPPORT */
-
-  connection_hooks
-    = make_object_list(1, 
-		       make_install_fix_channel_open_handler(
-				  ATOM_SESSION, 
-			          make_open_session(supported_channel_requests)),
-		       -1); 
+    supported_channel_requests
+      = make_alist(1,
+		   ATOM_SHELL, &shell_request_handler,
+		   -1);
 
   {
     CAST_SUBTYPE(command, connection_service,
-		 lshd_login_service(connection_hooks));
+		 lshd_login_service(make_open_session
+				    (supported_channel_requests)));
     return connection_service;
   }
 }
@@ -1215,8 +1222,6 @@ main(int argc, char **argv)
   if (!read_host_key(options->hostkey, options->signature_algorithms, keys))
     return EXIT_FAILURE;
 
-
-                                                                                                
   if (options->with_loginauthmode) 
     fds = io_listen_list(&options->local, 
 			 make_lshd_listen_callback 
