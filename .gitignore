@@ -30,6 +30,8 @@ _$*
 *.elc
 *.ln
 core
+/*.tar.gz
+/*.tar.gz.asc
 /Makefile
 /Makefile.am
 /Makefile.in
