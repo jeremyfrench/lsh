@@ -30,6 +30,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include <signal.h>
+
 #include <unistd.h>
 #include <netinet/in.h>
 
@@ -46,6 +48,7 @@
 #include "randomness.h"
 #include "server.h"
 #include "ssh.h"
+#include "version.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -633,14 +636,42 @@ make_configuration(const char *hostkey)
   return self;
 }
 
+/* Option parsing */
+
+const char *argp_program_version
+= "lshd (lsh-" VERSION "), secsh protocol version " SERVER_PROTOCOL_VERSION;
+
+const char *argp_program_bug_address = BUG_ADDRESS;
+
+static const struct argp_child
+main_argp_children[] =
+{
+  { &werror_argp, 0, "", 0 },
+  { NULL, 0, NULL, 0}
+};
+
+static const struct argp
+main_argp =
+{ NULL, NULL,
+  NULL,
+  "Server for the ssh-2 protocol.",
+  main_argp_children,
+  NULL, NULL
+};
+
 int
 main(int argc UNUSED, char **argv UNUSED)
-{
-  global_oop_source = io_init();
+{  
+  argp_parse(&main_argp, argc, argv, 0, NULL, NULL);
 
+  global_oop_source = io_init();
+ 
   open_ports(make_configuration("testsuite/key-1.private"),
 	     4711);
 
+  /* Ignore status from child processes */
+  signal(SIGCHLD, SIG_IGN);
+  
   io_run();
 
   return EXIT_SUCCESS;
