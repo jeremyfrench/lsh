@@ -125,7 +125,7 @@ make_lsh_writekey_options(void)
   self->signature_algorithms = all_signature_algorithms(NULL);
 
   /* We use this only for salt and iv generation. */
-  self->r = make_reasonably_random();
+  self->r = make_bad_random();
 
   /* A better default would be crypto_cbc(make_des3()) */
   self->crypto = NULL;
