@@ -6,8 +6,8 @@
 	(OPT_HANG): Recognize this option only if getpid and sleep are
 	available.	
 
-	* argp-fmtstream.h: Deleted unistd.h inclusion; appearantly it's
-	not needed.
+	* argp-fmtstream.h: Make inclusion of unistd.h conditional. It's
+	needed for ssize_t, at least on freebsd.
 
 2004-03-01  Niels Möller  <niels@s3.kth.se>
 

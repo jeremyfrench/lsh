@@ -29,6 +29,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#if HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
 #if _LIBC || (defined (HAVE_FLOCKFILE) && defined(HAVE_PUTC_UNLOCKED) \
      && defined (HAVE_FPUTS_UNLOCKED) && defined (HAVE_FWRITE_UNLOCKED) )
 /* Use locking funxtions */
