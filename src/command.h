@@ -1,6 +1,6 @@
 /* command.h
  *
- * $id$ */
+ * $Id$ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -18,13 +18,17 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #ifndef LSH_COMMAND_H_INCLUDED
 #define LSH_COMMAND_H_INCLUDED
 
 #include "lsh_object.h"
+
+#include "list.h"
+
+#include <stdarg.h>
 
 #include "command.h.x"
 
@@ -46,7 +50,16 @@
                       "struct lsh_object *arg")))
 */
 
-#define COMMAND_DO(f, c) ((f)->do((f), (c)))
-#define COMMAND_RETURN(c, v) ((c)->c((c), (struct lsh_object *) (v)))
+#define COMMAND_CALL(f, c) ((f)->do((f), (c)))
+#define COMMAND_RETURN(c, v) ((c)->c((c), (struct lsh_object *) (v))) 
+
+/* (lambda (x) (f (g x))) */
+struct command *command_compose(struct command *f, struct command *g);
+
+/* (lambda (x) (and (f1 x) (f2 x) ...)) */
+struct command *command_andl(struct object_list *args);
+
+/* (lambda (x) (or (f1 x) (f2 x) ...)) */
+struct command *command_orl(struct object_list *args);
 
 #endif /* LSH_COMMAND_H_INCLUDED */ 

@@ -1,3 +1,20 @@
+Mon Mar  8 00:29:17 1999  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/command.c: New file.
+
+	* src/io.c (write_callback): Use the write_buffer_consume()
+	function. 
+
+	* src/resource.c, src/resource.h, src/write_buffer.c,
+	src/write_buffer.h: Use struct lsh_queue. 
+
+	* src/write_buffer.h (write_buffer->length): New instance
+ 	variable.
+
+	* src/write_buffer.c (write_buffer_consume): New function.
+
+	* src/queue.c, src/queue.h: New files. Generic doubly linked list.
+
 Sun Mar  7 15:21:43 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/werror.c (werror_decimal): Bug fix.

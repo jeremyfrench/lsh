@@ -1,3 +1,14 @@
+NEWS for the 1999-03-08 snapshot
+
+	No user visible changes. Added a instance variable to keep
+	track of the amount of buffered data in the write_buffer
+	objects (needed to fix the broken flow control).
+
+	Added a generic doubly linked list, currently used by the
+	write_buffer and resource_list classes, but which will be
+	needed for more things (see the CONTROL item on the TODO
+        list). 
+
 NEWS for the 1999-03-07 snapshot
 
 	Improved CFMAKERAW. Ugly fix for the UNIX98-style pty:s

@@ -55,6 +55,7 @@ CONFIGURATION
 
 Read configuration files. Better command line options. 
 
+
 LOGGING
 
 Use syslog to log server startup, shutdown, and user authentication.
@@ -142,6 +143,19 @@ not urgent however.
 
 CAST is probably not patent encumbered (Schneier doesn't mention patents);
 check what RFC 2144 (CAST-128) says on this subject.
+
+
+CONTROL
+
+Continue on the cpmmand evaluation mechanism i command.h and
+command.c. Write commands for opening connections, channels and
+sending global requests and chanel requests. In short, for doing
+everything that the client and server need to do.
+
+To do this, we need a few queues for outstanding requests, which would
+be in the channel (channel requests) and the channel_table objects
+(global requests). Perhaps, this is also the right time to fix callout
+support.
 
 
 MISC
