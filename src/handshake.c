@@ -504,7 +504,8 @@ channels_wakeup =
 void
 init_connection_service(struct ssh_connection *connection)
 {
-  struct channel_table *table = make_channel_table();
+  /* FIXME: XXX */
+  struct channel_table *table = make_channel_table(NULL);
   
   debug("channel.c: do_connection_service\n");
   
