@@ -108,11 +108,11 @@ static void close_fd(struct io_fd *fd)
    * attempt to write to the buffer. So let gc handle it
    * instead of freeing it explicitly */
 #if 0
-  lsh_free(fd->buffer);
+  lsh_object_free(fd->buffer);
 #endif
   /* Handlers are not shared, so it should be ok to free them. */
-  lsh_free(fd->handler);
-  lsh_free(fd);
+  lsh_object_free(fd->handler);
+  lsh_object_free(fd);
 }
 
 static int io_iter(struct io_backend *b)
@@ -197,7 +197,7 @@ static int io_iter(struct io_backend *b)
       if (!CALLBACK(f->callout))
 	fatal("What now?");
       b->callouts = f->next;
-      lsh_free(f);
+      lsh_object_free(f);
     }
   if (res<0)
     {
@@ -321,7 +321,7 @@ static int io_iter(struct io_backend *b)
 			    
 			    /* In this case, it should be safe to
 			     * deallocate the buffer immediately */
-			    lsh_free(p->buffer);
+			    lsh_object_free(p->buffer);
 			    close_fd(p);
 			  }
 		      }
@@ -345,7 +345,7 @@ static int io_iter(struct io_backend *b)
 		      {
 			next = p->next;
 			close(p->fd);
-			lsh_free(p);
+			lsh_space_free(p);
 		      }
 		    b->listen = NULL;
 		    b->nlisten = 0;
@@ -356,7 +356,7 @@ static int io_iter(struct io_backend *b)
 		      {
 			next = p->next;
 			close(p->fd);
-			lsh_free(p);
+			lsh_space_free(p);
 		      }
 		    b->connect = NULL;
 		    b->nconnect = 0;
@@ -366,7 +366,7 @@ static int io_iter(struct io_backend *b)
 		    for (p = b->callouts; (p = next); )
 		      {
 			next = p->next;
-			lsh_free(p);
+			lsh_space_free(p);
 		      }
 		    b->callouts = NULL;
 		  }
@@ -414,7 +414,7 @@ static int io_iter(struct io_backend *b)
 			 "but failed before writing anything.\n");
 		  close(fd->fd);
 		  UNLINK_FD;
-		  lsh_free(fd);
+		  lsh_object_free(fd);
 		  continue;
 		}
 	    }
@@ -432,7 +432,7 @@ static int io_iter(struct io_backend *b)
 		       "but failed before writing anything.\n");
 	      b->nconnect--;
 	      UNLINK_FD;
-	      lsh_free(fd);
+	      lsh_object_free(fd);
 	      continue;
 	    }
 	}

@@ -100,7 +100,7 @@ static int do_handle_dh_init(struct packet_handler *c,
   /* FIXME: Return value is ignored */
   (void) INSTALL_KEYS(closure->install, connection, hash);
 
-  lsh_free(hash);
+  lsh_object_free(hash);
 
   connection->kex_state = KEX_STATE_NEWKEYS;
   connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;

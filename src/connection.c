@@ -37,7 +37,7 @@ static int handle_connection(struct abstract_write **w,
       if (msg == SSH_MSG_NEWKEYS)
 	{
 	  werror("Unexpected NEWKEYS message!\n");
-	  lsh_free(packet);
+	  lsh_string_free(packet);
 	  return LSH_FAIL | LSH_DIE;
 	}
       break;
@@ -49,7 +49,7 @@ static int handle_connection(struct abstract_write **w,
        * now, we always switch to the IN_PROGRESS state, to wait for a
        * KEXDH_INIT or KEXDH_REPLY message. */
       closure->kex_state = KEX_STATE_IN_PROGRESS;
-      lsh_free(packet);
+      lsh_string_free(packet);
       return LSH_OK | LSH_GOON;
 
     case KEX_STATE_IN_PROGRESS:
@@ -57,7 +57,7 @@ static int handle_connection(struct abstract_write **w,
 	   || (msg == SSH_MSG_KEXINIT))
 	{
 	  werror("Unexpected KEXINIT or NEWKEYS message!\n");
-	  lsh_free(packet);
+	  lsh_string_free(packet);
 	  return LSH_FAIL | LSH_DIE;
 	}
       break;
@@ -67,7 +67,7 @@ static int handle_connection(struct abstract_write **w,
 	{
 	  werror("Expected NEWKEYS message, but recieved message %d!\n",
 		 msg);
-	  lsh_free(packet);
+	  lsh_string_free(packet);
 	  return LSH_FAIL | LSH_DIE;
 	}
       break;

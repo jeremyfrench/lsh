@@ -77,7 +77,7 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
 
   if (!parse_octets(&buffer, 16, res->cookie))
     {
-      lsh_free(res);
+      lsh_object_free(res);
       return NULL;
     }
   
@@ -96,8 +96,8 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
       /* Bad format */
       int j;
       for (j = 0; j<i; j++)
-	lsh_free(lists[i]);
-      lsh_free(res);
+	lsh_space_free(lists[i]);
+      lsh_object_free(res);
       return NULL;
     }
   
@@ -335,7 +335,7 @@ static struct lsh_string *kex_make_key(struct hash_instance *secret,
     fatal("Not implemented\n");
 
   memcpy(key->data, digest, key_length);
-  lsh_free(hash);
+  lsh_object_free(hash);
 
   debug_hex(key->length, key->data);
   return key;
@@ -438,7 +438,7 @@ static int do_handle_newkeys(struct packet_handler *c,
 
       connection->dispatch[SSH_MSG_NEWKEYS] = NULL;
 
-      lsh_free(closure);
+      lsh_object_free(closure);
       return LSH_OK | LSH_GOON;
     }
   else

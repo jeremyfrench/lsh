@@ -134,7 +134,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  verbose("\n");
 	  
 	  /* FIXME: Cleanup properly. */
-	  lsh_free(closure);
+	  lsh_object_free(closure);
 
 	  return new;
 	}
@@ -145,7 +145,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  werror("\n");
 
 	  /* FIXME: Clean up properly */
-	  lsh_free(closure);
+	  lsh_object_free(closure);
 	  *h = NULL;
 		  
 	  return 0;

@@ -258,7 +258,7 @@ int *parse_atom_list(struct simple_buffer *buffer)
 	case 1:
 	  continue;
 	case 0:
-	  lsh_free(res);
+	  lsh_space_free(res);
 	  return NULL;
 	default:
 	  fatal("Internal error\n");

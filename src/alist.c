@@ -177,7 +177,7 @@ static void do_linked_set(struct alist *c, int atom, void *value)
 	  if (o->atom == atom)
 	    {
 	      *p = o->next;
-	      lsh_free(o);
+	      lsh_space_free(o);
 
 #if ALIST_USE_SIZE
 	      self->size--;

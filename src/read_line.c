@@ -136,7 +136,7 @@ static int do_read_line(struct read_handler **h,
 		}
 	    }
 	  /* No data left */
-	  lsh_free(closure);
+	  lsh_object_free(closure);
 	  *h = next;
 	  return LSH_OK | LSH_GOON;
 	}

@@ -188,11 +188,11 @@ static void do_hmac_digest(struct mac_instance *s,
   MDEBUG(self);
   
   HASH_DIGEST(h, data);   /* Inner hash */
-  lsh_free(h);
+  lsh_object_free(h);
   h = HASH_COPY(self->houter);
   HASH_UPDATE(h, self->super.mac_size, data);
   HASH_DIGEST(h, data);
-  lsh_free(h);
+  lsh_object_free(h);
 
   self->state = HASH_COPY(self->hinner);
 }

@@ -146,7 +146,7 @@ int write_buffer_pre_write(struct write_buffer *buffer)
 		buffer->head->prev = 0;
 	      else
 		buffer->tail = 0;
-	      lsh_free(n);
+	      lsh_space_free(n);
 	    }
 	  else
 	    break;
@@ -171,6 +171,8 @@ struct write_buffer *write_buffer_alloc(UINT32 size)
   
   res->block_size = size;
 
+  res->buffer = lsh_space_alloc(2 * size);
+  
   res->empty = 1;
   res->closed = 0;
   

@@ -168,7 +168,7 @@ static int do_userauth_failure(struct packet_handler *c,
 	{ /* Doesn't help us */
 	  werror("Recieved SSH_MSH_USERAUTH_FAILURE "
 		 "indicating partial success.\n");
-	  lsh_free(methods);
+	  lsh_space_free(methods);
 
 	  return LSH_FAIL | LSH_DIE;
 	}
@@ -176,16 +176,16 @@ static int do_userauth_failure(struct packet_handler *c,
 	if (methods[i] == ATOM_PASSWORD)
 	  {
 	    /* Try again */
-	    lsh_free(methods);
+	    lsh_space_free(methods);
 	    return send_passwd(closure->userauth, connection);
 	  }
       /* No methods that we can use */
-      lsh_free(methods);
+      lsh_space_free(methods);
       return LSH_FAIL | LSH_DIE;
     }
 
   if (methods)
-    lsh_free(methods);
+    lsh_space_free(methods);
   
   lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
@@ -220,7 +220,7 @@ static int do_userauth_banner(struct packet_handler *closure,
       lsh_string_free(packet);
       return LSH_OK | LSH_GOON;
     }
-  lsh_free(packet);
+  lsh_string_free(packet);
   return LSH_FAIL | LSH_DIE;
 }
 
