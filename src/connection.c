@@ -37,14 +37,14 @@ static int handle_connection(struct abstract_write **w,
 }
 
 static int do_fail(struct packet_handler *closure,
-			 struct ssh_connection *connection,
-			 struct lsh_string *packet)
+		   struct ssh_connection *connection,
+		   struct lsh_string *packet)
 {
   lsh_string_free(packet);
   return WRITE_CLOSED;
 }
 
-struct packet_handler * make_fail_handler()
+struct packet_handler *make_fail_handler()
 {
   struct packet_handler *res =  xalloc(sizeof(struct packet_handler));
 
