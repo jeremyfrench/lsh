@@ -1,5 +1,58 @@
 2000-02-06  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* configure.in: Bumped version to 0.2.8.
+
+	* src/tcpforward.c: Adapted to new CHANNEL_REQUEST conventions.
+
+	* src/server_session.c: Adapted to new CHANNEL_REQUEST
+	conventions.  
+
+	* src/proxy_session.c: Updated to Bazsi's latest version.
+
+	* src/proxy.c: Updated to Bazsi's latest version.
+
+	* src/lsh_proxy.c: Updated to Bazsi's latest version.
+
+	* src/debug.c (packet_debug): Changed prefix atribute to type
+	string.  
+
+	* src/connection_commands.c (make_handshake_info): Added
+	debug_comment argument.
+
+	* src/connection.c (make_ssh_connection): New argument
+	debug_comment. 
+
+	* src/client_pty.c (do_pty_continuation): Removed old code for the
+	(impossible) case x == NULL.
+
+	* src/client.c: Adapted to new CHANNEL_REQUEST conventions. 
+
+	* src/channel.h (ssh_channel): Added active_requests queue
+	(Bazsi). 
+	(global_request_callback): Deleted class (Bazsi).
+	(global_request): Added type, continuation and exception_hnalder
+	arguments do the GLOBAL_REQUEST method (Bazsi).
+	(channel_request): Likewise.
+
+	* src/channel.c (make_request_status): Renamed from
+	make_global_request_status (Bazsi).
+	(global_request_continuation): New class (Bazsi).
+	(send_global_request_responses): New function (Bazsi).
+	(do_global_request_response): Use send_global_request_responses(). 
+	(global_request_exception_handler): New class (Bazsi).
+	(make_global_request_exception_handler): New function (Bazsi).
+	(do_global_request): Pass a continuation and an exception handler
+	to the GLOBAL_REQUEST-method.
+	(send_channel_request_responses): New function (Bazsi).
+	(channel_request_continuation): New class (Bazsi).
+	(channel_request_continuation): New class (Bazsi).
+	(do_channel_request): Pass a continuation and an exception to the
+	CHANNEL_REQUEST-method. 
+	(init_channel): Initialize active_requests.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): AAdded proxy_channel.c
+	and proxy_tcpforward.c.
+
 	* src/tcpforward_commands.c (new_tcpip_channel): Use
 	format_channel_open(). 
 
