@@ -631,44 +631,28 @@ static int write_decimal_length(UINT8 *buffer, UINT32 n)
 /* These functions add an extra NUL-character at the end of the string
  * (not included in the length), to make it possible to pass the
  * string directly to C library functions. */
-#if 0
 struct lsh_string *
 format_cstring(const char *s)
 {
-  if (s)
-    {
-      struct lsh_string *res = ssh_format("%lz%c", s, 0);
-      res->length--;
-      return res;
-    }
-  return NULL; 
+  return s ? ssh_cformat("%lz", s) : NULL;
 }
 
 struct lsh_string *
 make_cstring_l(UINT32 length, const UINT8 *data)
 {
-  struct lsh_string *res;
-  
-  if (memchr(data, '\0', length))
-    return NULL;
-
-  res = ssh_format("%ls%c", length, data, 0);
-  res->length--;
-  
-  return res;
+  return ssh_cformat("%ls", length, data);
 }
 
 struct lsh_string *
 make_cstring(struct lsh_string *s, int free)
 {
-  struct lsh_string *res = make_cstring_l(s->length, s->data);
-    
+  struct lsh_string *res = return ssh_cformat("%lS", s);
+
   if (free)
     lsh_string_free(s);
 
   return res;
 }
-#endif
 
 int
 lsh_string_eq(const struct lsh_string *a, const struct lsh_string *b)

@@ -96,11 +96,13 @@ struct lsh_string *ssh_cformat(const char *format, ...);
 
 /* FIXME: The names of these three functions are not quite intuitive.
  * Perhaps they should be renamed or deleted. */
-#define format_cstring(s) (ssh_cformat("%lz", (s)))
-#define make_cstring_l(l, s) (ssh_cformat("%ls", (l), (s)))
-#define make_cstring(s, f) (ssh_cformat((f) ? "lfS" : "lS", (s)))
 
 #if 0
+#define format_cstring(s) (ssh_cformat("%lz", (s)))
+#define make_cstring_l(l, s) (ssh_cformat("%ls", (l), (s)))
+#define make_cstring(s, f) (ssh_cformat((f) ? "%lfS" : "%lS", (s)))
+#endif
+
 struct lsh_string *
 format_cstring(const char *s);
 
@@ -109,7 +111,6 @@ make_cstring_l(UINT32 length, const UINT8 *data);
 
 struct lsh_string *
 make_cstring(struct lsh_string *s, int free);
-#endif
 
 unsigned format_size_in_decimal(UINT32 n);
 void format_decimal(unsigned length, UINT8 *buffer, UINT32 n);
