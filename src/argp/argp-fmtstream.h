@@ -45,6 +45,7 @@
 #  undef putc_unlocked
 #  define putc_unlocked(c, f) putc((c), (f))
 #  define fputs_unlocked(s, f) fputs((s), (f))
+#  undef fwrite_unlocked
 #  define fwrite_unlocked(b, s, n, f) fwrite((b), (s), (n), (f))
 # endif /* No thread safe i/o */
 #endif /* !_LIBC */
