@@ -66,9 +66,10 @@
        (e object exception_handler)))
 */
 
-static int do_accept_service(struct packet_handler *c,
-			     struct ssh_connection *connection,
-			     struct lsh_string *packet)
+static void
+do_accept_service(struct packet_handler *c,
+		  struct ssh_connection *connection,
+		  struct lsh_string *packet)
 {
   CAST(accept_service_handler, closure, c);
 
@@ -87,12 +88,13 @@ static int do_accept_service(struct packet_handler *c,
       lsh_string_free(packet);
       connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = connection->fail;
       
-      return COMMAND_RETURN(closure->c, connection);
+      COMMAND_RETURN(closure->c, connection);
     }
-
+  else
+    EXCEPTION_RAISE(closure->e,
+		    make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					    "Invalid SSH_MSG_SERVICE_ACCEPT message"));
   lsh_string_free(packet);
-  return EXCEPTION_RAISE(closure->e,
-			 make_protocol_exception("Invalid SSH_MSG_SERVICE_ACCEPT message"));
 }
 
 struct packet_handler *
@@ -119,10 +121,11 @@ make_accept_service_handler(int service,
        ;; (service object ssh_service)))
 */
 
-static int do_request_service(struct command *s,
-			      struct lsh_object *x,
-			      struct command_continuation *c,
-			      struct exception_handler *e)
+static void
+do_request_service(struct command *s,
+		   struct lsh_object *x,
+		   struct command_continuation *c,
+		   struct exception_handler *e)
 {
   CAST(request_service, self, s);
   CAST(ssh_connection, connection, x);
@@ -130,8 +133,8 @@ static int do_request_service(struct command *s,
   connection->dispatch[SSH_MSG_SERVICE_ACCEPT]
     = make_accept_service_handler(self->service, c, e);
   
-  return A_WRITE(connection->write,
-		 format_service_request(self->service));
+  C_WRITE(connection,
+	  format_service_request(self->service));
 }
 
 struct command *make_request_service(int service)
@@ -320,32 +323,33 @@ struct channel_request *make_handle_exit_signal(int *exit_status)
 }
 
 /* Receive channel data */
-static int do_receive(struct ssh_channel *c,
-		      int type, struct lsh_string *data)
+static void
+do_receive(struct ssh_channel *c,
+	   int type, struct lsh_string *data)
 {
   CAST(client_session, closure, c);
   
   switch(type)
     {
     case CHANNEL_DATA:
-      return A_WRITE(&closure->out->buffer->super, data);
+      A_WRITE(&closure->out->buffer->super, data, c->e);
+      break;
     case CHANNEL_STDERR_DATA:
-      return A_WRITE(&closure->err->buffer->super, data);
+      A_WRITE(&closure->err->buffer->super, data, c->e);
+      break;
     default:
       fatal("Internal error!\n");
     }
 }
 
 /* We may send more data */
-static int do_send(struct ssh_channel *c)
+static void do_send(struct ssh_channel *c)
 {
   CAST(client_session, closure, c);
 
   assert(closure->in->super.read);
-  assert(closure->in->handler);
-  closure->in->super.want_read = 1;
 
-  return LSH_OK | LSH_GOON;
+  closure->in->super.want_read = 1;
 }
 
 /* We have a remote shell */
@@ -373,7 +377,7 @@ static int do_client_io(struct command *s UNUSED,
       session->out->super.close_callback
 	= session->err->super.close_callback = make_channel_close(channel);
   
-      session->in->handler = make_channel_read_data(channel);
+      session->in->super.read = make_channel_read_data(channel);
       channel->send = do_send;
 
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS,

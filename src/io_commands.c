@@ -183,17 +183,23 @@ STATIC_COLLECT_1(&collect_info_listen_2);
        (e object exception_handler)))
 */
 
+#if 0
 static struct exception connect_exception =
 STATIC_EXCEPTION(EXC_CONNECT, "connect failed");
+#endif
 
-static int do_connect_continue(struct fd_callback **s, int fd)
+static int do_connect_continue(struct fd_callback **s, struct lsh_fd *fd)
 {
   CAST(connect_command_callback, self, *s);
 
+  assert(fd->fd >= 0);
+
+#if 0
   if (fd < 0)
     return EXCEPTION_RAISE(self->e, &connect_exception);
+#endif
   
-  return COMMAND_RETURN(self->c, make_io_fd(self->backend, fd));
+  return COMMAND_RETURN(self->c, make_io_fd(self->backend, fd->fd));
 }
 
 static struct fd_callback *

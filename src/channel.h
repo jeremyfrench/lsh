@@ -60,8 +60,16 @@
      (super flow_controlled)
      (vars
        ; Remote channel number 
-       (channel_number simple UINT32)
+       (channel_number . UINT32)
 
+       ; Somewhat redundant. Makes it easier to locate
+       ; the channel_table entry for the channel, which
+       ; is needed for deallocating it.
+       ;; (local_number . UINT32)
+       
+       ; Where to pass errors
+       (e object exception_handler)
+       
        ; We try to keep the rec_window_size between max_window / 2
        ; and max_window.
        (max_window simple UINT32)       
@@ -93,14 +101,14 @@
        ; propagate a channel broken message to the other end? 
 
        ; Type is CHANNEL_DATA or CHANNEL_STDERR_DATA
-       (receive method int "int type" "struct lsh_string *data")
+       (receive method void "int type" "struct lsh_string *data")
 
        ; Called when we are allowed to send data on the channel. 
-       (send method int)
+       (send method void)
 
        ; Called when the channel is closed
        ; FIXME: Is this needed for anything?
-       (close method int)
+       (close method void)
 
        ; Called when eof is received on the channel (or when it is
        ; closed, whatever happens first).
@@ -136,13 +144,10 @@
 #define CHANNEL_OPEN_FAILURE(s) \
 ((s)->open_failure((s)))
 
-     
-/* FIXME: Perhaps, this information is better kept in the connection
- * object? */
-
 /* GABA:
    (class
      (name channel_table)
+     ;; (super exception_handler)
      (vars
        ; FIXME: This is relevant only for the server side. It's
        ; probably better to store this in the connection struct.
@@ -150,8 +155,8 @@
        ;; uid_t user;  ; Authenticated user 
 
        ; Channels are indexed by local number
-       (channels pointer (object ssh_channel) used_channels)
-
+       (channels space (object ssh_channel) used_channels)
+       
        ; Global requests that we support
        (global_requests object alist)
        ; Channel types that we can open
@@ -161,6 +166,11 @@
        ; method as is traditionally used for allocation of unix file 
        ; descriptors.
 
+       ; Channel numbers can be reserved before there is any actual channel
+       ; assigned to them. So the channels table is not enough for keeping track of which
+       ; numbers are in use.
+       (in_use space UINT8)
+       
        (allocated_channels simple UINT32)
        (next_channel simple UINT32)
      
@@ -187,6 +197,8 @@
        ))
 */
 
+#define CHANNEL_EXC_HANDLER(c) (&((c)->table.super))
+
 /* SSH_MSG_GLOBAL_REQUEST */
 
 /* GABA:
@@ -212,11 +224,21 @@
 #define GLOBAL_REQUEST(r, c, a, n) ((r)->handler((r), (c), (a), (n)))
 
 /* SSH_MSG_CHANNEL_OPEN */
-  
+
+/* Raised if opening of a channel fails. */
+/* GABA:
+   (class
+     (name channel_open_exception)
+     (super exception)
+     (vars
+       (error_code . UINT32)))
+*/
+
+#if 0
 /* Callback function, used to report success or failure for a
  * requested channel open. */
   
-/* GABA:
+/* ;;GABA:
    (class
      (name channel_open_callback)
      (vars
@@ -230,19 +252,21 @@
 
 #define CHANNEL_OPEN_CALLBACK(c, ch, e, m, a) \
   (c)->response((c), (ch), (e), (m), (a))
+#endif
 
 /* GABA:
    (class
      (name channel_open)
      (vars
-       (handler method int
+       (handler method void
                 "struct ssh_connection *connection"
                 "struct simple_buffer *data"
-                "struct channel_open_callback *response")))
+                "struct command_continuation *c"
+		"struct exception_handler *e")))
 */
 
-#define CHANNEL_OPEN(o, c, d, n) \
-((o)->handler((o), (c), (d), (n)))
+#define CHANNEL_OPEN(o, c, d, r, e) \
+((o)->handler((o), (c), (d), (r), (e)))
 
 /* SSH_MSG_CHANNEL_REQUEST */
 /* GABA:

@@ -332,7 +332,7 @@ static void do_buffered_read(struct io_read_callback *s,
 	  assert(self->handler);
 
 	  /* NOTE: This call may replace self->handler */
-	  done = READ_HANDLER(self->handler, buffer, left);
+	  done = READ_HANDLER(self->handler, left, buffer, fd->e);
 
 	  buffer += done;
 	  left -= done;
@@ -343,7 +343,7 @@ static void do_buffered_read(struct io_read_callback *s,
 		left);
     }
   else
-    EXCEPTION_RAISE(fd->e, fd, make_io_exception(EXC_IO_READ_EOF)) ;
+    EXCEPTION_RAISE(fd->e, fd, make_io_exception(EXC_IO_EOF)) ;
 }
 
 struct io_read_callback *
@@ -385,18 +385,18 @@ static void do_consuming_read(struct io_read_callback *c,
 	  case EPIPE:
 	    fatal("io.c: read_consume: Unexpected EPIPE.\n");
 	  default:
-	    EXCEPTION_RAISE(fd->e, fd,
-			    make_io_exception(EXC_IO_READ),
-			    errno, NULL);
+	    EXCEPTION_RAISE(fd->e, 
+			    make_io_exception(EXC_IO_READ,
+					      fd, errno, NULL));
 	    break;
 	  }
       else if (res > 0)
 	{
 	  s->length = res;
-	  a_WRITE(self->consumer, s);
+	  A_WRITE(self->consumer, s, fd->e);
 	}
       else
-	EXCEPTION_RAISE(fd->e, fd, make_io_exception(EXC_IO_READ_EOF)) ;
+	EXCEPTION_RAISE(fd->e, make_io_exception(EXC_IO_EOF, fd, 0, "EOF")) ;
     }
 }
 
@@ -439,7 +439,7 @@ static void read_callback(struct lsh_fd *fd)
     {
       if (!read_buffer_flush())
 	{
-	  EXCEPTION_RAISE(fd->e, fd, make_io_exception(EXC_IO_READ_EOF)) ;
+	  EXCEPTION_RAISE(fd->e, make_io_exception(EXC_IO_EOF, fd, 0, "EOF"));
 	  break;
 	}
     }
@@ -583,22 +583,15 @@ static void connect_callback(struct lsh_fd *fd)
       || socket_error)
     {
       debug("io.c: connect_callback: Connect failed.\n");
-      (void) FD_CALLBACK(self->callback, -1);
+      EXCEPTION_RAISE(fd->e,
+		      make_io_exception(EXC_CONNECT, fd, 0, "connect() failed."));
     }
   else
     {
-      int res = FD_CALLBACK(self->callback, fd->fd);
-      
-      if (LSH_ACTIONP(res))
-	{
-	  werror("Strange: Connected, "
-		 "but failed before writing anything.\n");
-	}
-      else
-	{ /* Everything seems fine. */
-	  /* To avoid actually closing the fd */
-	  fd->fd = -1;
-	}
+      FD_CALLBACK(self->callback, fd->fd);
+
+      /* To avoid actually closing the fd */
+      fd->fd = -1;
     }
   kill_fd(fd);
 }
@@ -645,9 +638,12 @@ static void do_kill_fd(struct resource *r)
 }
 
 /* Initializes a file structure, and adds it to the backend's list. */
-static void init_file(struct io_backend *b, struct lsh_fd *f, int fd)
+static void init_file(struct io_backend *b, struct lsh_fd *f, int fd,
+		      struct exception_handler *e)
 {
   f->fd = fd;
+
+  f->e = e;
   f->close_reason = -1; /* Invalid reason */
   f->close_callback = NULL;
 
@@ -910,7 +906,7 @@ int address_info2sockaddr_in(struct sockaddr_in *sin,
 /* These functions are used by werror() and friends */
 
 /* For fd:s in blocking mode. */
-int write_raw(int fd, UINT32 length, UINT8 *data)
+void write_raw(int fd, UINT32 length, UINT8 *data, struct exception_handler *e)
 {
   while(length)
     {
@@ -923,16 +919,17 @@ int write_raw(int fd, UINT32 length, UINT8 *data)
 	  case EAGAIN:
 	    continue;
 	  default:
-	    return 0;
+	    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_BLOCKING_WRITE,
+						 NULL, errno));
+	    return;
 	  }
       
       length -= written;
       data += written;
     }
-  return 1;
 }
 
-int write_raw_with_poll(int fd, UINT32 length, UINT8 *data)
+void write_raw_with_poll(int fd, UINT32 length, UINT8 *data, struct exception_handler *e)
 {
   while(length)
     {
@@ -952,7 +949,8 @@ int write_raw_with_poll(int fd, UINT32 length, UINT8 *data)
 	  case EAGAIN:
 	    continue;
 	  default:
-	    return 0;
+	    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_BLOCKING_WRITE,
+						 NULL, errno));
 	  }
       
       written = write(fd, data, length);
@@ -964,13 +962,13 @@ int write_raw_with_poll(int fd, UINT32 length, UINT8 *data)
 	  case EAGAIN:
 	    continue;
 	  default:
-	    return 0;
+	    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_BLOCKING_WRITE,
+						 NULL, errno));
 	  }
       
       length -= written;
       data += written;
     }
-  return 1;
 }
 
 void io_set_nonblocking(int fd)
@@ -1107,12 +1105,13 @@ static void prepare_write(struct lsh_fd *fd)
 /* Constructors */
 
 struct io_fd *make_io_fd(struct io_backend *b,
-			 int fd)
+			 int fd,
+			 struct exception_handler *e)
 {
   NEW(io_fd, f);
 
   io_init_fd(fd);
-  init_file(b, &f->super, fd);
+  init_file(b, &f->super, fd, e);
 
   return f;
 }
@@ -1211,6 +1210,46 @@ void close_fd_nicely(struct lsh_fd *fd, int reason)
 
   fd->close_reason = reason;
 }
+
+/* Responsible for handling the EXC_FINISH_READ exception. It should
+ * be a parent to the connection related exception handlers, as for
+ * instance the protocol error handler will raise the EXC_FINISH_READ
+ * exception. */
+/* GABA:
+   (class
+     (name exc_finish_read_handler)
+     (super exception_handler)
+     (vars
+       (fd object lsh_fd)))
+*/
+
+void do_exc_finish_read_handler(struct exception_handler *s,
+				struct exception *e)
+{
+  CAST(exc_finish_read_handler, self, s);
+  switch(e->type)
+    {
+    case EXC_FINISH_READ:
+      /* FIXME: What to do about the reason argument? */
+      close_fd_nicely(self->fd, 0);
+    default:
+      EXCEPTION_RAISE(self->parent e);
+    }
+}
+
+struct make_exc_finish_read_handler(struct lsh_fd *fd,
+				    struct exception_handler *parent)
+{
+  NEW(exc_finish_read_handler, self);
+  self->fd = fd;
+  self->super.parent = parent;
+  self->super.raise = do_exc_finish_read_handler;
+
+  return &self->super;
+}
+
+struct exception finish_read_exception =
+STATIC_EXCEPTION(EXC_FINISH_READ, "Finish i/o");
 
 struct exception *
 make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)

@@ -35,11 +35,8 @@
 /* GABA:
    (class
      (name read_data)
-     (super read_handler)
+     (super io_consuming_read)
      (vars
-       ; Where to send the data 
-       (write object abstract_write)
-
        ; For flow control. 
    
        ; FIXME: Perhaps the information that is needed for flow
@@ -48,13 +45,10 @@
        (channel object ssh_channel)))
 */
 
-static int do_read_data(struct read_handler **h,
-			struct abstract_read *read)
+static UINT32 do_read_data_query(struct io_read_callback *s,
+				 struct abstract_read *read)
 {
-  CAST(read_data, closure, *h);
-  int to_read;
-  int n;
-  struct lsh_string *packet;
+  CAST(read_data, self, *s);
   
   assert(closure->channel->sources);
   
@@ -62,15 +56,18 @@ static int do_read_data(struct read_handler **h,
       (CHANNEL_RECEIVED_CLOSE | CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
     {
       werror("read_data: Receiving data on closed channel. Ignoring.\n");
-      *h = NULL;
-      return;
+      return 0;
     }
 
-  to_read = MIN(closure->channel->send_max_packet,
-		closure->channel->send_window_size);
+  return MIN(closure->channel->send_max_packet,
+	     closure->channel->send_window_size);
+}
 
+#if 0
+{
   if (!to_read)
     {
+      return 
       /* FIXME: Do this in some other way */
       /* Stop reading */
       return LSH_OK | LSH_HOLD;
@@ -104,17 +101,61 @@ static int do_read_data(struct read_handler **h,
       A_WRITE(closure->write, packet, e);
     }
 }
+#endif
 
-struct read_handler *make_read_data(struct ssh_channel *channel,
-				    struct abstract_write *write)
+struct io_read_callback *make_read_data(struct ssh_channel *channel,
+					struct abstract_write *write)
 {
-  NEW(read_data, closure);
+  NEW(read_data, self);
 
-  closure->super.handler = do_read_data;
-  closure->channel = channel;
-  closure->write = write;
+  init_consuming_read(&self->super, write);
+  
+  self->super.query = do_read_data;
+  self->channel = channel;
+  self->write = write;
 
   channel->sources++;
   
   return &closure->super;
+}
+
+/* GABA:
+   (class
+     (name exc_read_eof_channel_handler)
+     (super exception_handler)
+     (vars
+       (channel object ssh_channel)))
+*/
+
+void do_exc_read_eof_channel_handler(struct exception_handler *s,
+				     struct exception *e)
+{
+  CAST(exc_read_eof_channel_handler, self, s);
+
+  switch(e->type)
+    {
+    case EXC_IO_EOF:
+      {
+	CAST_SUBTYPE(io_exception, exc, e);
+
+	if (!--self->channel->sources)
+	  /* Send eof (but no close). */
+	  channel_eof(self->channel);
+
+	close_fd_nicely(exc->fd, 0);
+      }
+	break;
+    case EXC_IO_READ:
+      {
+	CAST_SUBTYPE(io_exception, exc, e);
+	channel_close(self->channel);
+
+	werror("Read error on fd %d (errno = %d): %z\n",
+	       exc->fd->fd, exc->errno, e->msg);
+	close_fd(exc->fd, 0);
+      }
+	
+    default:
+      EXCEPTION_RAISE(self->super.parent, e);
+    }
 }

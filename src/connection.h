@@ -44,7 +44,7 @@ struct ssh_connection;
    (class
      (name packet_handler)
      (vars
-       (handler method int
+       (handler method void
                "struct ssh_connection *connection"
 	       "struct lsh_string *packet")))
 */
@@ -60,6 +60,11 @@ struct ssh_connection;
      (name ssh_connection)
      (super abstract_write)
      (vars
+       ; Where to pass errors
+       ; FIXME: Is this the right place, or should the exception handler be passed
+       ; to each packet handler?
+       (e object exception_handler)
+
        ; Sent and received version strings
        ;;(client_version string)
        ;;(server_version string)
@@ -112,11 +117,14 @@ struct ssh_connection;
        ))
 */
 
+#define C_WRITE(c, s) A_WRITE((c)->write, (s), (c)->e)
+
 struct ssh_connection *make_ssh_connection(struct command_continuation *c);
 
 void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,
-			struct randomness *r);
+			struct randomness *r,
+			struct exception_handler *e);
 
 struct packet_handler *make_fail_handler(void);
 struct packet_handler *make_unimplemented_handler(void);  

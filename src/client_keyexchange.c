@@ -91,7 +91,8 @@ static int do_handle_dh_reply(struct packet_handler *c,
   /* Key exchange successful! Send a newkeys message, and install a
    * handler for receiving the newkeys message. */
 
-  res = A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
+  res = A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS),
+		connection->e);
   if (LSH_CLOSEDP(res))
     return res;
 

@@ -33,14 +33,15 @@
      (name exception)
      (vars
        (type . UINT32)
-       (name . "const char *")))
+       (msg . "const char *")))
 */
 
 /* GABA:
    (class
      (name exception_handler)
      (vars
-       (raise method void "const struct exception *")))
+       (raise method void "const struct exception *")
+       (parent object exception_handler)))
 */
 
 #define EXCEPTION_RAISE(h, e)  ((h)->raise((h), (e)))
@@ -61,9 +62,11 @@
 #define EXC_IO 0x2000
 #define EXC_CONNECT 0x2001
 #define EXC_RESOLVE 0x2002
+#define EXC_IO_BLOCKING_WRITE 0x2003
 
-/* Not really an error */
-#define EXC_READ_EOF 0x2003
+/* Not really errors */
+/* EOF was read */
+#define EXC_IO_EOF 0x2003
 
 /* Authorization errors */
 #define EXC_AUTH 0x4000
@@ -77,10 +80,18 @@
 /* Use subtypes for the different error codes? */
 #define EXC_CHANNEL_OPEN 0x8003
 
+/* Closing down things */
+#define EXC_FINISH 0x10000
+/* Close a channel */
+#define EXC_FINISH_CHANNEL 0x10001
+/* Stop reading on some fd */
+#define EXC_FINISH_READ 0x10002
+
+
 extern struct exception_handler default_exception_handler;
 extern struct exception dummy_exception;
 
-/* GABA:
+/* ;;GABA:
    (class
      (name exception_frame)
      (super exception_handler)
@@ -109,6 +120,5 @@ make_protocol_exception(UINT32 reason, const char *msg);
 
 #define STATIC_PROTOCOL_EXCEPTION(reason, msg) \
 { { STATIC_HEADER, EXC_PROTOCOL, (msg) }, (reason) }
-
 
 #endif /* LSH_EXCEPTION_H_INCLUDED */

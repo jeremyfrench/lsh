@@ -49,7 +49,7 @@
 
 #define NEW_CHANNEL(s, c,r) ((s)->new_channel((s), (c), (r)))
 
-int do_channel_open_command(struct command *s,
+void do_channel_open_command(struct command *s,
 			    struct lsh_object *x,
 			    struct command_continuation *c,
 			    struct exception_handler *e);
@@ -71,7 +71,7 @@ int do_channel_open_command(struct command *s,
 #define FORMAT_CHANNEL_REQUEST(r, c, w) \
 ((r)->format_request((r), (c), (w)))
 
-int do_channel_request_command(struct command *s,
+void do_channel_request_command(struct command *s,
 			       struct lsh_object *x,
 			       struct command_continuation *c,
 			       struct exception_handler *e);
@@ -89,10 +89,10 @@ int do_channel_request_command(struct command *s,
 #define FORMAT_GLOBAL_REQUEST(r, conn, c) \
 ((r)->format_request((r), (conn), (c)))
 
-int do_channel_global_command(struct command *s,
-			      struct lsh_object *x,
-			      struct command_continuation *c,
-			      struct exception_handler *e);
+void do_channel_global_command(struct command *s,
+			       struct lsh_object *x,
+			       struct command_continuation *c,
+			       struct exception_handler *e);
 
 struct command *
 make_install_global_request_handler(UINT32 name,

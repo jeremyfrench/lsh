@@ -25,6 +25,7 @@
 
 #include "debug.h"
 #include "encrypt.h"
+#include "exception.h"
 #include "format.h"
 #include "disconnect.h"
 #include "keyexchange.h"
@@ -38,6 +39,8 @@
 #define GABA_DEFINE
 #include "connection.h.x"
 #undef GABA_DEFINE
+
+#include "connection.c.x"
 
 static const char *packet_types[0x100] =
 #include "packet_types.h"
@@ -151,6 +154,47 @@ struct packet_handler *make_unimplemented_handler(void)
   return res;
 }
 
+/* GABA:
+   (class
+     (connection_exception_handler)
+     (super exception_frame)
+     (vars
+       (connection object connection)))
+*/
+
+static void
+do_connection_exception(struct exception_handler *s,
+			struct exception *e)
+{
+  CAST(connection_exception_handler, self, s);
+  switch (e->type)
+    {
+    case EXC_PROTOCOL:
+      {
+	CAST_SUBTYPE(protocol_exception, exc, e);
+	if (exc->reason)
+	  C_WRITE(self->connection, format_disconnect(exc->reason, exc->super.msg, ""));
+	
+	EXCEPTION_RAISE(self->super.parent, &exception_finish_read);
+      }
+      break;
+    default:
+      EXCEPTION_RAISE(self->super.parent, e);
+    }
+}
+
+struct exception_handler *
+make_connection_exception_handler(struct connection *connection,
+				  struct exception_handler *parent)
+{
+  NEW(connection_exception_handler, self);
+  self->connection = connection;
+  self->super.parent = parent;
+  self->super.raise = do_connection_exception;
+
+  return &self->super;
+}
+
 struct ssh_connection *make_ssh_connection(struct command_continuation *c)
 {
   int i;
@@ -235,7 +279,8 @@ struct ssh_connection *make_ssh_connection(struct command_continuation *c)
 
 void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,
-			struct randomness *r)
+			struct randomness *r,
+			struct exception_handler *e)
 {
   /* Initialize i/o hooks */
   connection->raw = raw;
@@ -247,6 +292,10 @@ void connection_init_io(struct ssh_connection *connection,
 		        connection
 		      );
 
+  /* Exception handler that sends a proper disconnect message on protocol errors */
+  connection->e = make_connection_exception_handler(connection, e);
+
+  /* Initial encryption state */
   connection->send_crypto = connection->rec_crypto = NULL;
   connection->send_mac = connection->rec_mac = NULL;
   connection->send_compress = connection->rec_compress = NULL;

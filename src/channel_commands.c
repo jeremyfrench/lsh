@@ -35,10 +35,10 @@
 
 #include <assert.h>
 
-int do_channel_open_command(struct command *s,
-			    struct lsh_object *x,
-			    struct command_continuation *c,
-			    struct exception_handler *e)
+void do_channel_open_command(struct command *s,
+			     struct lsh_object *x,
+			     struct command_continuation *c,
+			     struct exception_handler *e)
 {
   CAST_SUBTYPE(channel_open_command, self, s);
   CAST(ssh_connection, connection, x);
@@ -49,18 +49,22 @@ int do_channel_open_command(struct command *s,
     {
       /* Probably, we have run out of channel numbers. */
       werror("do_channel_open_command: NEW_CHANNEL failed\n");
-      return EXCEPTION_RAISE(e, &dummy_exception);
+      EXCEPTION_RAISE(e, &dummy_exception);
     }
-
-  channel->open_continuation = c;
-  
-  return A_WRITE(connection->write, request);
+  else
+    {
+      channel->open_continuation = c;
+      
+      C_WRITE(connection, request);
+    }
 }
 
-int do_channel_request_command(struct command *s,
-			       struct lsh_object *x,
-			       struct command_continuation *c,
-			       struct exception_handler *e)
+/* FIXME: Where should we use the passed in exception handler, and when should we use the one
+ * in the connection struct? */
+void do_channel_request_command(struct command *s,
+				struct lsh_object *x,
+				struct command_continuation *c,
+				struct exception_handler *e)
 {
   CAST_SUBTYPE(channel_request_command, self, s);
   CAST_SUBTYPE(ssh_channel, channel, x);
@@ -72,13 +76,13 @@ int do_channel_request_command(struct command *s,
     object_queue_add_tail(&channel->pending_requests,
 			  &make_command_context(c, e)->super);
   
-  return A_WRITE(channel->write, request);
+  A_WRITE(channel->write, request, e);
 }
 
-int do_channel_global_command(struct command *s,
-			      struct lsh_object *x,
-			      struct command_continuation *c,
-			      struct exception_handler *e)
+void do_channel_global_command(struct command *s,
+			       struct lsh_object *x,
+			       struct command_continuation *c,
+			       struct exception_handler *e)
 {
   CAST_SUBTYPE(global_request_command, self, s);
   CAST_SUBTYPE(ssh_connection, connection, x);
@@ -90,7 +94,7 @@ int do_channel_global_command(struct command *s,
     object_queue_add_tail(&connection->channels->pending_global_requests,
 			  &make_command_context(c, e)->super);
 
-  return A_WRITE(connection->write, request);
+  C_WRITE(connection, request);
 }
 
 struct lsh_object *
@@ -147,7 +151,7 @@ do_install_channel_open_handler(struct collect_info_2 *info,
        (handler object global_request)))
 */
 
-static int
+static void
 do_install_fix_global_request_handler(struct command *s,
 				      struct lsh_object *x,
 				      struct command_continuation *c,
@@ -162,7 +166,7 @@ do_install_fix_global_request_handler(struct command *s,
 	    self->name,
 	    self->handler);
 
-  return COMMAND_RETURN(c, x);
+  COMMAND_RETURN(c, x);
 }
 
 struct command *
@@ -190,7 +194,7 @@ make_install_fix_global_request_handler(UINT32 name,
        (handler object channel_open)))
 */
 
-static int
+static void
 do_install_fix_channel_open_handler(struct command *s,
 				    struct lsh_object *x,
 				    struct command_continuation *c,
@@ -205,7 +209,7 @@ do_install_fix_channel_open_handler(struct command *s,
 	    self->name,
 	    self->handler);
 
-  return COMMAND_RETURN(c, x);
+  COMMAND_RETURN(c, x);
 }
 
 struct command *

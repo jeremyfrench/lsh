@@ -71,7 +71,7 @@
 		;; make sure that handler is not called again.
 
 		UINT32 "UINT32 available" "UINT8 *data")))
-		;; "struct exception_handler *io")))
+		"struct exception_handler *e")))
 */
 
 #define READ_HANDLER(h, l, d) ((h)->handler(&(h), (l), (d)))

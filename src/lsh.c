@@ -133,7 +133,7 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
        ;; FIXME: Use some function that also displays an error message
        ;; if connect() fails.
        (init_connection "&connection_service.super")
-       (die_on_null "&command_die_on_null.super"))
+       ;; (die_on_null "&command_die_on_null.super"))
      (params
        (connect object command)
        (handshake object command)
@@ -144,7 +144,7 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
      (expr (lambda (port)
              ((progn requests) (init_connection
 	         (login (userauth_service
-	           (handshake (die_on_null (connect port))))))))))
+	           (handshake (connect port)))))))))
 */
 
 /* GABA:
@@ -206,6 +206,51 @@ static int parse_forward_arg(char *arg,
   *target = make_address_info(ssh_format("%ls", second - first - 1, first + 1), port);
   
   return 1;
+}
+
+/* GABA:
+   (class
+     (name lsh_default_handler)
+     (super exception_handler)
+     (vars
+       (status . "int *")))
+*/
+
+static void do_lsh_default_handler(struct exception_handler *s,
+				   struct exception_handler *e)
+{
+  CAST(lsh_default_handler, self, s);
+
+  switch(e->type)
+    {
+    case EXC_CONNECT:
+    case EXC_RESOLVE:
+      werror("lsh: Connection failed: %z\n", e->msg);
+      break;
+    case EXC_IO_ERROR:
+      werror("lsh: Connection broken: %z\n", e->msg);
+      break;
+    case EXC_AUTH:
+      werror("lsh: Host authentication failed: %z\n", e->msg);
+      break;
+    case EXC_SERVICE:
+      werror("lsh: Service denied: %z\n", e->msg);
+      break;
+    default:
+      EXCEPTION_RAISE(self->parent, e);
+    }
+  *self->status = EXIT_FAILURE;
+}
+
+static struct exception_handler *
+make_lsh_default_handler(int *status, struct exception_handler *parent)
+{
+  NEW(lsh_default_handler, self);
+  self->super.parent = parent;
+  self->super.raise = do_lsh_exception_handler;
+  self->status = status;
+
+  return &self->super;
 }
 
 /* Window size for the session channel */
@@ -531,16 +576,13 @@ int main(int argc, char **argv)
 			      queue_to_list(&actions));
 
 	CAST_SUBTYPE(command, client_connect, o);
-	int res = COMMAND_CALL(client_connect, remote, &discard_continuation, &default_exception_handler);
 
+	COMMAND_CALL(client_connect, remote, &discard_continuation,
+		     make_lsh_default_handler(&lsh_exit_code));
+	
 	/* We can free the queue nodes now */
 	KILL_OBJECT_QUEUE(&actions);
 
-	if (res)
-	  {
-	    werror("lsh.c: connection failed, res = %i\n", res);
-	    return 17;
-	  }
       }
       io_run(backend);
 

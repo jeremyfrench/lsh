@@ -76,16 +76,22 @@ do_flag_exception(struct exception_handler *s,
        ; Attached to read packets
        (sequence_number simple UINT32)
   
-       ; Buffer partial headers and packets.
+       ; Buffer index, used for all the buffers
        (pos simple UINT32)
 
        ; NOTE: This buffer should hold one block, and must be
        ; reallocated when the crypto algorithms is changed. 
-       (buffer string)
-       (crypt_pos simple "UINT8 *")
+       (block_buffer string)
 
        ; Must point to an area large enough to hold a mac 
-       (received_mac string) 
+       (mac_buffer string) 
+
+       ; Holds the packet payload
+       (packet_buffer string)
+
+       ; Position in the buffer after the first,
+       ; already decrypted, block.
+       (crypt_pos simple "UINT8 *")
   
        (handler object abstract_write)
        (connection object ssh_connection)))
@@ -106,6 +112,8 @@ lsh_string_realloc(struct lsh_string *s, UINT32 length)
     return s;
 }
 
+#if 0
+
 /* For efficiency, allow reading several packets at a time. But in
  * order not to starve other channels, return when this much data has
  * been read. */
@@ -115,15 +123,28 @@ static const struct io_exception read_exception =
 STATIC_IO_EXCEPTION(EXC_IO, "read_packet: i/o error");
 
 static const struct io_exception read_eof =
-STATIC_IO_EXCEPTION(EXC_READ_EOF, "read_packet: Read EOF");
+STATIC_IO_EXCEPTION(EXC_IO_EOF, "read_packet: Read EOF");
+#endif
 
-static void do_read_packet(struct read_handler **h,
-			   struct abstract_read *read)
+#define READ(n, dst) do {			\
+  memcpy((dst) + closure->pos, data, (n))	\
+  closure->pos += (n);				\
+  data += (n);					\
+  total += (n);					\
+  available -= (n);				\
+} while (0)
+
+static UINT32 do_read_packet(struct read_handler **h,
+			     UINT32 available,
+			     UINT8 *data,
+			     struct exception_handler *e)
 {
   CAST(read_packet, closure, *h);
-  int total = 0;
-  
-  while (total < QUANTUM)
+  UINT32 total = 0;
+
+  assert(available);
+
+  for (;;)
     switch(closure->state)
       {
       case WAIT_START:
@@ -131,51 +152,45 @@ static void do_read_packet(struct read_handler **h,
 	  UINT32 block_size = closure->connection->rec_crypto
 	    ? closure->connection->rec_crypto->block_size : 8;
 
-	  closure->buffer = lsh_string_realloc(closure->buffer,
-					       block_size);
+	  closure->block_buffer
+	    = lsh_string_realloc(closure->block_buffer,
+				 block_size);
+
 	  if (closure->connection->rec_mac)
-	    closure->received_mac = lsh_string_realloc
-	      (closure->received_mac,
+	    closure->mac_buffer = lsh_string_realloc
+	      (closure->mac_buffer,
 	       closure->connection->rec_mac->hash_size);
 
-	  closure->pos = 0;
-
-	  closure->state = WAIT_HEADER;
 	  /* FALL THROUGH */
 	}
+      do_header:
+        closure->state = WAIT_HEADER;
+	closure->pos = 0;
+	/* FALL THROUGH */
+	  
       case WAIT_HEADER:
 	{
 	  UINT32 block_size = closure->connection->rec_crypto
 	    ? closure->connection->rec_crypto->block_size : 8;
 	  UINT32 left;
-	  int n;
+	  UINT32 n;
 
 	  left = block_size - closure->pos;
-	  assert(left > 0);
-	    
-	  n = A_READ(read, left, closure->buffer->data + closure->pos);
-	  switch(n)
-	    {
-	    case 0:
-	      return;
-	    case A_FAIL:
-	      EXCEPTION_RAISE(closure->connection->e, &read_exception.super);
-	      return;
-	    case A_EOF:
-	      EXCEPTION_RAISE(closure->connection->e, &read_eof.super);
-	      return;
-	    }
+	  assert(left);
 
-	  assert(n > 0);
-	  
-	  closure->pos += n;
-	  total += n;
-	  
-	  /* Read a complete header? */
-	  if ( (unsigned) n == left)
+	  if (available < left)
 	    {
+	      READ(available, closure->block_buffer);
+
+	      return total;
+	    }
+	  else
+	    {
+	      /* We have read a complete packet */
 	      UINT32 length;
 
+	      READ(left, closure->block_buffer);
+	    
 	      if (closure->connection->rec_crypto)
 		CRYPT(closure->connection->rec_crypto,
 		      block_size,
@@ -194,6 +209,8 @@ static void do_read_packet(struct read_handler **h,
 			 length, closure->connection->rec_max_packet);
 		  
 		  EXCEPTION_RAISE(closure->connection->e, &too_large.super);
+
+		  return total;
 		}
 
 	      if ( (length < 12)
@@ -207,6 +224,8 @@ static void do_read_packet(struct read_handler **h,
 		  werror("read_packet: Bad packet length %i\n",
 			 length);
 		  EXCEPTION_RAISE(closure->connection->e, &invalid.super);
+
+		  return total;
 		}
 
 	      /* Process this block before the length field is lost. */
@@ -217,7 +236,7 @@ static void do_read_packet(struct read_handler **h,
 		    
 		  HASH_UPDATE(closure->connection->rec_mac, 4, s);
 		  HASH_UPDATE(closure->connection->rec_mac,
-			      closure->buffer->length,
+			      block_size,
 			      closure->buffer->data);
 		}
 
@@ -225,7 +244,9 @@ static void do_read_packet(struct read_handler **h,
 	      {
 		unsigned done = block_size - 4;
 
-		closure->buffer
+		assert(!closure->packet_buffer);
+		
+		closure->packet_buffer
 		  = ssh_format("%ls%lr",
 			       done,
 			       closure->buffer->data + 4,
@@ -244,112 +265,82 @@ static void do_read_packet(struct read_handler **h,
 		     * encryption block. */
 		    debug("read_packet.c: "
 			  "Going directly to the WAIT_MAC state\n");
-		    closure->state = WAIT_MAC;
-		    closure->pos = 0;
-		    
-		    /* FIXME: Consider using explicit gotos. We could
-		     * have a label like
-		     *
-		     *   mac_state:
-		     *      closure->pos = 0;
-		     *      closure->state = WAIT_MAC;
-		     *   case WAIT_MAC:
-		     *      ...
-		     *
-		     * and use that when jumping to a new state.
-		     * Having the initialization of the state in one
-		     * place could make the code clearer. */
-		    
-		    break; /* Goto next state */
+
+		    goto do_mac;
 		  }
 		else
-		  closure->state = WAIT_CONTENTS;
+		  goto do_contents;
 	      }
-	      /* Fall through */
 	    }
-	  else
-	    /* Try reading some more */
-	    break;
 	}
+	fatal("read_packet: Supposedly not happening???\n");
+	  
+      do_contents:
+        closure->state = WAIT_CONTENTS;
+	
       case WAIT_CONTENTS:
 	{
 	  UINT32 left = closure->buffer->length - closure->pos;
-	  int n;
 
 	  assert(left);
-	  
-	  n = A_READ(read, left, closure->buffer->data + closure->pos);
-	  switch(n)
+
+	  if (available < left)
 	    {
-	    case 0:
-	      return;
-	    case A_FAIL:
-	      /* Fall through */
-	    case A_EOF:
-	      EXCEPTION_RAISE(closure->e, &read_exception.super);
-	      return;
+	      READ(available, closure->packet_buffer);
+	    
+	      return total;
 	    }
-
-	  assert(n > 0);
-	  
-	  closure->pos += n;
-	  total += n;
-
-	  /* Read a complete packet? */
-	  if ( (unsigned) n == left)
+	  else
 	    {
-	      UINT32 left
-		= ( (closure->buffer->length + closure->buffer->data)
-		    - closure->crypt_pos );
+	      /* Read a complete packet */
+	      READ(left, closure->packet_buffer);
+
+	      left = ( (closure->buffer->length + closure->buffer->data)
+		       - closure->crypt_pos );
+
 	      if (closure->connection->rec_crypto)
 		CRYPT(closure->connection->rec_crypto,
 		      left,
 		      closure->crypt_pos,
 		      closure->crypt_pos);		      
+
 	      if (closure->connection->rec_mac)
 		HASH_UPDATE(closure->connection->rec_mac,
 			    left,
 			    closure->crypt_pos);
-	      closure->state = WAIT_MAC;
-	      closure->pos = 0;
-	      /* Fall through */
+
+	      goto do_mac;
 	    }
-	  else
-	    /* Try reading some more */
-	    break;
 	}
+	fatal("read_packet: Supposedly not happening???\n");
+
+      do_mac:
+        closure->state = WAIT_MAC;
+	closure->pos = 0;
+      
       case WAIT_MAC:
+
 	if (closure->connection->rec_mac)
 	  {
 	    UINT32 left = (closure->connection->rec_mac->mac_size
 			   - closure->pos);
-	    UINT8 *mac;
-	    int n;
 
 	    assert(left);
-	    
-	    n = A_READ(read, left,
-		       closure->received_mac->data + closure->pos);
 
-	    switch(n)
+	    if (available < left)
 	      {
-	      case 0:
-		return;
-	      case A_FAIL:
-		/* Fall through */
-	      case A_EOF:
-		EXCEPTION_RAISE(closure->e, &read_exception.super);
-		return;
+		READ(available, closure->mac_buffer);
+	      
+		return total;
 	      }
-
-	    assert(n > 0);
-	  
-	    closure->pos += n;
-	    total += n;
-	    
-	    /* Read complete mac? */
-	    if ( (unsigned) n == left)
+	    else
 	      {
+		/* Read a complete MAC */
+
+		UINT8 *mac;
+
+		READ_MAC(left, closure->mac_buffer);
+
 		mac = alloca(closure->connection->rec_mac->hash_size);
 		HASH_DIGEST(closure->connection->rec_mac, mac);
 	    
@@ -358,37 +349,29 @@ static void do_read_packet(struct read_handler **h,
 			    closure->connection->rec_mac->hash_size))
 		  {
 		    static const struct protocol_exception mac_error =
-		      STATIC_PROTOCOL_EXCEPTION(SSH_DISCONNECT_PROTOCOL_ERROR,
+		      STATIC_PROTOCOL_EXCEPTION(SSH_DISCONNECT_MAC_ERROR,
 						"MAC error");
 
 		    EXCEPTION_RAISE(closure->connection->e, &mac_error.super);
+		    return;
 		  }
-		closure->pos += n;
 	      }
-	    else
-	      /* Try reading more */
-	      break;
 	  }
+	
 	/* MAC was ok, send packet on */
 	{
 	  struct lsh_string *packet = closure->buffer;
-	  int res;
 	  
-	  closure->buffer = NULL;
+	  closure->packet_buffer = NULL;
 	  closure->state = WAIT_START;
 
-	  /* FIXME: What if an exception occurs during this call? Note
-	   * that if we are called from read_line rather than directly
-	   * from th backend, A_READ() won't indicate that the
-	   * connection is closed. Perhaps we have to install an
-	   * exception handler that will clear *h, but that implies
-	   * extra overhead. */
 	  A_WRITE(closure->handler, packet, closure->connection->e);
-	  break;
+
+	  return total;
 	}
       default:
 	fatal("Internal error\n");
-      }
+    }
   return;
 }
 
@@ -405,11 +388,9 @@ struct read_handler *make_read_packet(struct abstract_write *handler,
   closure->state = WAIT_START;
   closure->sequence_number = 0;
 
-  /* closure->pos = 0; */
-  closure->buffer = NULL;
-  /* closure->crypt_pos = 0; */
-
+  closure->block_buffer = NULL;
   closure->received_mac = NULL;
+  closure->packet_buffer = NULL;
   
   return &closure->super;
 }

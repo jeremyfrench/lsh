@@ -72,7 +72,7 @@
        (channel_types object alist)))
 */
 
-/* GABA:
+/* ;; GABA:
    (class
      (name channel_open_response)
      (super channel_open_callback)
@@ -151,6 +151,81 @@ struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 		    channel->channel_number, add);
 }
 
+/* ;; GABA:
+   (class
+     (name channel_exception)
+     (super exception)
+     (vars
+       (channel object ssh_channel)
+       (pending_close . int)))
+*/
+
+/* GABA:
+   (class
+     (name exc_finish_channel_handler)
+     (super exception_handler)
+     (vars
+       (table object channel_table)
+       ; Local channel number 
+       (channel_number . UINT32)))
+*/
+
+static void do_exc_finish_channel_handler(struct exception_handler *s,
+					  struct exception *e)
+{
+  CAST(exc_finish_channel_handler, self, s);
+
+  switch (e->type)
+    {
+    case EXC_FINISH_CHANNEL:
+      /* NOTE: This type of exception must be handled only once.
+       * Perhaps we must add a liveness flag in the ssh_channel struct
+       * to avoid deallocating dead channels? */
+      {
+#if 0
+	CAST(channel_exception, exc, e);
+	struct ssh_channel *channel = exc->channel;
+
+	assert(self->channels[channel->local_number] == channel);
+	
+	/* Set the pending close flag, to indicate that no new
+	 * channels should be opened, and that the connection should
+	 * be closed once all the channels are closed. */
+	if (exc->pending_close)
+	  self->pending_close = 1;
+#endif
+	struct ssh_channel *channel
+	  = self->table->channels[self->channel_number];
+
+	assert(channel);
+	
+	if (channel->close)
+	  CHANNEL_CLOSE(channel);
+	
+	dealloc_channel(self->table, self->channel_number);
+
+	if (self->table->pending_close && !self->table->next_channel)
+	  EXCEPTION_RAISE(self->super.parent, &finish_read_exception);
+      }
+      break;
+    default:
+      EXCEPTION_RAISE(self->super.parent, e);
+    }
+}
+
+static struct exception_handler *
+make_exc_finish_channel_handler(struct channel_table *table,
+				UINT32 channel_number,
+				struct exception_handler *e)
+{
+  NEW(exc_finish_channel_handler, self);
+  self->table = table;
+  self->channel_number = channel_number;
+  self->super.parent = e;
+  self->super.raise = do_exc_finish_channel_handler;
+}
+				
+
 /* Channel objects */
 
 #define INITIAL_CHANNELS 32
@@ -163,6 +238,8 @@ struct channel_table *make_channel_table(void)
 
   table->channels = lsh_space_alloc(sizeof(struct ssh_channel *)
 				      * INITIAL_CHANNELS);
+  table->in_use = lsh_space_alloc(INITIAL_CHANNELS);
+  
   table->allocated_channels = INITIAL_CHANNELS;
   table->next_channel = 0;
   table->used_channels = 0;
@@ -192,8 +269,10 @@ int alloc_channel(struct channel_table *table)
   
   for(i = table->next_channel; i < table->used_channels; i++)
     {
-      if (!table->channels[i])
+      if (!table->in_use[i])
 	{
+	  assert(!table->channels[i]);
+	  table->in_use[i] = 1;
 	  table->next_channel = i+1;
 	  return i;
 	}
@@ -204,13 +283,21 @@ int alloc_channel(struct channel_table *table)
   if (i == table->allocated_channels) 
     {
       int new_size = table->allocated_channels * 2;
-      struct ssh_channel **new
-	= lsh_space_alloc(sizeof(struct ssh_channel *) * new_size);
+      struct ssh_channel **new_channels;
+      struct UINT8 *new_in_use;
 
-      memcpy(new, table->channels,
+      new_channels = lsh_space_alloc(sizeof(struct ssh_channel *)
+				     * new_size);
+      memcpy(new_channels, table->channels,
 	     sizeof(struct ssh_channel *) * table->used_channels);
-      
-      table->channels = new;
+      lsh_space_free(table->channels);
+      table->channels = new_channels;
+
+      new_in_use = lsh_space_alloc(new_size);
+      memcpy(new_in_use, table->in_use, table->used_channels);
+      lsh_space_free(table->in_use);
+      table->in_use = new_in_use;
+
       table->allocated_channels = new_size;
     }
 
@@ -225,21 +312,23 @@ void dealloc_channel(struct channel_table *table, int i)
   assert( (unsigned) i < table->used_channels);
   
   table->channels[i] = NULL;
-
+  table->in_use[i] = 0;
+  
   if ( (unsigned) i < table->next_channel)
     table->next_channel = i;
 }
 
-/* Returns -1 if no channel number can be allocated. See also the note
- * for alloc_channel(). */
-int register_channel(struct channel_table *table, struct ssh_channel *channel)
+void register_channel(struct ssh_connection *connection,
+		      UINT32 local_channel_number,
+		      struct ssh_channel *channel)
 {
-  int n = alloc_channel(table);
-
-  if (n >= 0)
-    table->channels[n] = channel;
-
-  return n;
+  struct exception_handler *e = channel->e ? channel->e, connection->e;
+  
+  assert(connection->channels->in_use[local_channel_number]);
+  assert(!connection->channels->channels[local_channel_number]);
+  
+  connection->channels->channels[n] = channel;
+  channel->e = make_exc_finish_channel_handler(table, n, e);
 }
 
 struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i)
@@ -261,21 +350,22 @@ static void adjust_rec_window(struct flow_controlled *f, UINT32 written)
 {
   CAST_SUBTYPE(ssh_channel, channel, f);
 
-  int res = A_WRITE(channel->write,
-		    prepare_window_adjust
-		    (channel, written));
-  if (res)
-    werror("adjust_rec_window: Writing window adjust message failed, ignoring\n"
-	   "  (res = %i)\n", res);
+  A_WRITE(channel->write,
+	  prepare_window_adjust
+	  (channel, written),
+	  channel->e);
 }
 
-int channel_start_receive(struct ssh_channel *channel)
+channel_start_receive(struct ssh_channel *channel)
 {
-  return A_WRITE(channel->write,
-		 prepare_window_adjust
-		 (channel, channel->max_window - channel->rec_window_size));
+  A_WRITE(channel->write,
+	  prepare_window_adjust
+	  (channel, channel->max_window - channel->rec_window_size),
+	  channel->e);
+
 }
 
+#if 0
 /* Process channel-related status codes. Used by the packet handlers,
  * before returning. */
 static int channel_process_status(struct channel_table *table,
@@ -328,13 +418,17 @@ static int channel_process_status(struct channel_table *table,
 
   return status;
 }
+#endif
 
+
+#if 0
 /* Ugly macros to make it a little simpler to free the input packet at
  * the right time. */
 
 #define START int foo_res
 #define RETURN(x) do { foo_res = (x); goto foo_finish; } while(0)
 #define END(s) foo_finish: do { lsh_string_free((s)); return foo_res; } while(0)
+#endif
 
 /* Channel related messages */
 
@@ -364,7 +458,7 @@ static struct global_request_status *make_global_request_status(void)
        (active object global_request_status)))
 */
 
-static int
+static void
 do_global_request_response(struct global_request_callback *c,
 			   int success)
 {
@@ -383,17 +477,17 @@ do_global_request_response(struct global_request_callback *c,
     {
       CAST(global_request_status, n, object_queue_peek_head(q));
       if (!n || (n->status < 0))
-	return res;
+	break;
 
       object_queue_remove_head(q);
-      
-      res |= A_WRITE(self->super.connection->write,
-		     (n->status
-		      ? format_global_success()
-		      : format_global_failure()));
-      
-      if (LSH_CLOSEDP(res))
-	return res;
+
+      /* FIXME: Perhaps install some exception handler that cancels
+       * the queue as soon as a write failes. */
+      A_WRITE(self->super.connection->write,
+	      (n->status
+	       ? format_global_success()
+	       : format_global_failure()),
+	      self->super.connection->e);
     }
 }
 
@@ -411,9 +505,9 @@ make_global_request_response(struct ssh_connection *connection,
   return &self->super;
 }
      
-static int do_global_request(struct packet_handler *s UNUSED,
-			     struct ssh_connection *connection,
-			     struct lsh_string *packet)
+static void do_global_request(struct packet_handler *s UNUSED,
+			      struct ssh_connection *connection,
+			      struct lsh_string *packet)
 {
   /* CAST(global_request_handler, closure, c); */
 
@@ -421,7 +515,6 @@ static int do_global_request(struct packet_handler *s UNUSED,
   unsigned msg_number;
   int name;
   int want_reply;
-  START;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -435,23 +528,33 @@ static int do_global_request(struct packet_handler *s UNUSED,
       
       if (!name || !(req = ALIST_GET(connection->channels->global_requests,
 				     name)))
-	RETURN (A_WRITE(connection->write,
-		       format_global_failure()));
-
-      if (want_reply)
 	{
-	  struct global_request_status *a = make_global_request_status();
+	  lsh_string_free(packet);
 
-	  object_queue_add_tail(&connection->channels->active_global_requests,
-				&a->super);
-	  
-	  c = make_global_request_response(connection, a);
+	  C_WRITE(connection->write,
+		  format_global_failure());
 	}
-      RETURN (GLOBAL_REQUEST(req, connection, &buffer, c));
+      else
+	{
+	  if (want_reply)
+	    {
+	      struct global_request_status *a = make_global_request_status();
+	      
+	      object_queue_add_tail(&connection->channels->active_global_requests,
+				    &a->super);
+	      
+	      c = make_global_request_response(connection, a);
+	    }
+	  GLOBAL_REQUEST(req, connection, &buffer, c);
+	}
     }
-  RETURN (LSH_FAIL | LSH_DIE);
-
-  END (packet);
+  else
+    {
+      EXCEPTION_RAISE(connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Invalid SSH_MSG_GLOBAL_REQUEST message."));
+    }
+  lsh_string_free(packet);
 }
 
 static int do_global_request_success(struct packet_handler *s UNUSED,
@@ -499,6 +602,8 @@ static int do_global_request_failure(struct packet_handler *s UNUSED,
   }
 }
 
+#if 0
+/* HERE!!! */
 /* FIXME: Split into a continuation and an exception handler */
 /* Callback given to the CHANNEL_OPEN method */
 static int do_channel_open_response(struct channel_open_callback *c,
@@ -513,15 +618,18 @@ static int do_channel_open_response(struct channel_open_callback *c,
   if (!channel)
     {
       if (error)
-        return A_WRITE(closure->super.connection->write,
-                       format_open_failure(closure->remote_channel_number,
-                                           error, error_msg, ""));
-      /* The request was invalid */
+        C_WRITE(closure->super.connection->write,
+		format_open_failure(closure->remote_channel_number,
+				    error, error_msg, ""));
+      else
+	EXCEPTION_RAISE(closure->super.connection->e,
+			make_protocol_exception())
       return LSH_FAIL | LSH_DIE;
     }
 
-  /* FIXME: It would be better to allocate or at least reservea channel number earlier,
-   * so that we can't fail at this point */
+  /* FIXME: It would be better to allocate or at least reserve a channel number earlier,
+   * so that we can't fail at this point.
+   */
   if ( (local_channel_number
             = register_channel(closure->super.connection->channels,
 			       channel)) < 0)
@@ -568,31 +676,122 @@ make_channel_open_response(struct ssh_connection* connection,
 
   return closure;
 }
+#endif
 
-
-#if 0
-/* ;;GABA:
+/* GABA:
    (class
      (name channel_open_continuation)
      (super command_continuation)
      (vars
        (connection object ssh_connection)
-       (remote_channel_number simple UINT32)
-       (window_size simple UINT32)
-       (max_packet simple UINT32)))
+       (local_channel_number . UINT32)
+       (remote_channel_number . UINT32)
+       (window_size . UINT32)
+       (max_packet . UINT32)))
 */
 
-static int do_channel_open_continue(struct command_continuation *c,
-				    struct lsh_object *result)
+static void
+do_channel_open_continue(struct command_continuation *c,
+			 struct lsh_object *value)
 {
   CAST(channel_open_continuation, self, c);
-  CAST_SUBTYPE(channel);
+  CAST_SUBTYPE(ssh_channel, channel, value);
+
+  assert(channel);
+
+  /* FIXME: This copying could just as well be done by the
+   * CHANNEL_OPEN handler? Then we can remove the corresponding fields
+   * from the closure as well. */
+  channel->send_window_size = self->window_size;
+  channel->send_max_packet = self->max_packet;
+  channel->channel_number = self->remote_channel_number;
+
+  /* FIXME: Is the channel->write field really needed? */
+  channel->write = closure->super.connection->write;
+
+  register_channel(connection, self->local_channel_number, channel);
+
+  /* FIXME: Doesn't support sending extra arguments with the
+   * confirmation message. */
+
+  C_WRITE(self->connection,
+	  format_open_confirmation(channel, local_channel_number, ""))
 }
-#endif
-				    
-static int do_channel_open(struct packet_handler *c UNUSED,
-			   struct ssh_connection *connection,
-			   struct lsh_string *packet)
+
+static struct channel_open_continuation *
+make_channel_open_continuation(struct ssh_connection *connection,
+			       UINT32 local_channel_number,
+			       UINT32 remote_channel_number,
+			       UINT32 window_size,
+			       UINT32 max_packet)
+{
+  NEW(channel_open_continuation, self);
+  self->super.c = do_channel_open_continue;
+  self->connection = connection;
+  self->local_channel_number = local_channel_number;
+  self->remote_channel_number = remote_channel_number;
+  self->window_size = window_size;
+  self->max_packet = max_packet;
+
+  return self;
+}
+			       
+/* GABA:
+   (class
+     (name exc_channel_open_handler)
+     (super exception_handler)
+     (vars
+       (connection object ssh_connection)
+       (local_channel_number . UINT32)
+       (remote_channel_number . UINT32)
+))
+*/
+
+static void do_exc_channel_open_handler(struct exception_handler *s,
+					struct exception *e)
+{
+  CAST(exc_channel_open_handler, self, s);
+
+  switch (e->type)
+    {
+    case EXC_CHANNEL_OPEN:
+      {
+	CAST_SUBTYPE(channel_open_exception, exc, e);
+	struct channel_table *table = self->connection->channels;
+	
+	assert(table->in_use[self->local_channel_number]);
+	assert(!table->channels[self->local_channel_number]);
+
+	dealloc_channel(table, self->local_channel_number);
+	
+        C_WRITE(self->connection,
+		format_open_failure(self->remote_channel_number,
+				    exc->error_code, e->msg, ""));
+	break;
+      }
+    default:
+      EXCEPTION_RAISE(self->super.parent, e);
+    }      
+}
+
+static struct exception_handler *
+make_exc_channel_open_handler(struct ssh_connection *connection,
+			      UINT32 local_channel_number,
+			      UINT32 remote_channel_number,
+			      struct exception_handler *parent)
+{
+  NEW(channel_open_exception_handler, self);
+  self->super.parent = parent;
+  self->super.raise = do_channel_open_exception_handler;
+  self->local_channel_number = local_channel_number;
+  self->remote_channel_number = remote_channel_number;
+
+  return &self->super;
+}
+
+static void do_channel_open(struct packet_handler *c UNUSED,
+			    struct ssh_connection *connection,
+			    struct lsh_string *packet)
 {
   /* CAST(channel_open_handler, closure, c); */
 
@@ -602,7 +801,6 @@ static int do_channel_open(struct packet_handler *c UNUSED,
   UINT32 remote_channel_number;
   UINT32 window_size;
   UINT32 max_packet;
-  START;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -614,48 +812,65 @@ static int do_channel_open(struct packet_handler *c UNUSED,
       && parse_uint32(&buffer, &max_packet))
     {
       struct channel_open *open;
-      struct channel_open_response *response;
-      int res;
-      
+
       if (connection->channels->pending_close)
-	/* We are waiting for channels to close. Don't open any new ones. */
-	RETURN
-	  (A_WRITE(connection->write,
-		   format_open_failure(remote_channel_number,
-				       SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
-				       "Waiting for channels to close.", "")));
-      
-      if (!type || !(open = ALIST_GET(connection->channels->channel_types,
+	{
+	  /* We are waiting for channels to close. Don't open any new ones. */
+
+	  C_WRITE(connection,
+		  format_open_failure(remote_channel_number,
+				      SSH_OPEN_ADMINISTRATIVELY_PROHIBITED,
+				      "Waiting for channels to close.", ""));
+	}
+      else if (!type || !(open = ALIST_GET(connection->channels->channel_types,
 				      type)))
-	RETURN (A_WRITE(connection->write,
-			format_open_failure(remote_channel_number,
-					    SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
-					    "Unknown channel type", "")));
+	{
+	  C_WRITE(connection,
+		  format_open_failure(remote_channel_number,
+				      SSH_OPEN_UNKNOWN_CHANNEL_TYPE,
+				      "Unknown channel type", ""));
+	}
+      else
+	{
+	  struct channel_open_continuation *c;
+      	  int local_number = alloc_channel(connection->channels);
 
-      response = make_channel_open_response(connection,
-					    remote_channel_number,
-					    window_size, max_packet);
-      /* NOTE: If the channel could be opened immediately, this method
-       * will call response right away. */
-      res = CHANNEL_OPEN(open, connection, &buffer, &response->super);
+	  if (local_number < 0)
+	    C_WRITE(connection,
+		    format_open_failure(remote_channel_number,
+					SSH_OPEN_RESOURCE_SHORTAGE,
+					"Unknown channel type", ""));
 
-      RETURN (res);
+	  c = make_channel_open_continuation(connection,
+					     local_number,
+					     remote_channel_number,
+					     window_size,
+					     max_packet);
+	  
+	  CHANNEL_OPEN(open, connection, &buffer, c,
+		       make_exc_channel_open_handler
+		       (connection, local_number, remote_channel_number,
+			make_exc_finish_channel_handler(connection->channels,
+							local_number,
+							connection->e)));
+	}
     }
-  RETURN (LSH_FAIL | LSH_DIE);
-
-  END(packet);
+  else
+    EXCEPTION_RAISE(connection->e,
+		    make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					    "Invalid SSH_MSG_CHANNEL_OPEN message."));
+  lsh_string_free(packet);
 }     
 
-static int do_channel_request(struct packet_handler *closure UNUSED,
-			      struct ssh_connection *connection,
-			      struct lsh_string *packet)
+static void do_channel_request(struct packet_handler *closure UNUSED,
+			       struct ssh_connection *connection,
+			       struct lsh_string *packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;
   UINT32 channel_number;
   int type;
   int want_reply;
-  START;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -678,24 +893,25 @@ static int do_channel_request(struct packet_handler *closure UNUSED,
 
 	  if (type && channel->request_types 
 	      && ( (req = ALIST_GET(channel->request_types, type)) ))
-	    RETURN
-	      (channel_process_status
-	       (connection->channels, channel_number,
-		CHANNEL_REQUEST(req, channel, connection, want_reply, &buffer)));
+	    CHANNEL_REQUEST(req, channel, connection, want_reply, &buffer);
 	  else
-	    RETURN (want_reply
-		    ? A_WRITE(connection->write,
-			      format_channel_failure(channel->channel_number))
-		    : LSH_OK | LSH_GOON);
-	  
+	    {
+	      if (want_reply)
+		C_WRITE(connection->write,
+			format_channel_failure(channel->channel_number));
+	    }
 	}
-      werror("SSH_MSG_CHANNEL_REQUEST on nonexistant channel %i\n",
-	     channel_number);
-
+      else
+	{
+	  werror("SSH_MSG_CHANNEL_REQUEST on nonexistant channel %i\n",
+		 channel_number);
+	}
     }
-  RETURN (LSH_FAIL | LSH_DIE);
-  
-  END(packet);
+  else
+    EXCEPTION_RAISE(connection->e,
+		    make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					    "Invalid SSH_MSG_CHANNEL_REQUEST message."));
+  lsh_string_free(packet);
 }
       
 static int do_window_adjust(struct packet_handler *closure UNUSED,
@@ -1298,15 +1514,17 @@ struct lsh_string *format_channel_close(struct ssh_channel *channel)
 		    channel->channel_number);
 }
 
-int channel_close(struct ssh_channel *channel)
+void channel_close(struct ssh_channel *channel,
+		   struct exception_handler *e)
 {
   assert(! (channel->flags & CHANNEL_SENT_CLOSE));
   
   channel->flags |= CHANNEL_SENT_CLOSE;
 
-  return A_WRITE(channel->write, format_channel_close(channel))
-    | ( (channel->flags & CHANNEL_RECEIVED_CLOSE)
-	? LSH_CHANNEL_FINISHED : 0);
+  C_WRITE(channel->write, format_channel_close(channel));
+
+  if (channel->flags & CHANNEL_RECEIVED_CLOSE)
+    EXCEPTION_RAISE(e, make_channel_finish_exception(channel));
 }
 
 struct lsh_string *format_channel_eof(struct ssh_channel *channel)
@@ -1316,14 +1534,12 @@ struct lsh_string *format_channel_eof(struct ssh_channel *channel)
 		    channel->channel_number);
 }
 
-int channel_eof(struct ssh_channel *channel)
+void channel_eof(struct ssh_channel *channel)
 {
-  int res ;
-
   assert(! (channel->flags & CHANNEL_SENT_EOF));
   
   channel->flags |= CHANNEL_SENT_EOF;
-  res = A_WRITE(channel->write, format_channel_eof(channel));
+  C_WRITE(channel->write, format_channel_eof(channel));
 
   if (LSH_CLOSEDP(res))
     return res;
@@ -1332,10 +1548,8 @@ int channel_eof(struct ssh_channel *channel)
        && (channel->flags & CHANNEL_RECEIVED_EOF))
     {
       /* Initiate close */
-      res |= channel_close(channel);
+      channel_close(channel);
     }
-
-  return res;
 }
 
 void init_channel(struct ssh_channel *channel)
@@ -1402,24 +1616,27 @@ struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
        (type simple UINT32)))
 */
 
-static int do_channel_write(struct abstract_write *w,
-			    struct lsh_string *packet)
+static void do_channel_write(struct abstract_write *w,
+			     struct lsh_string *packet,
+			     struct exception_handler *e)
 {
   struct channel_write *closure = (struct channel_write *) w;
-
-  return A_WRITE(closure->channel->write,
-		 channel_transmit_data(closure->channel, packet));
+  
+  A_WRITE(closure->channel->write,
+	  channel_transmit_data(closure->channel, packet), e);
 }
 
-static int do_channel_write_extended(struct abstract_write *w,
-				     struct lsh_string *packet)
+static void do_channel_write_extended(struct abstract_write *w,
+				     struct lsh_string *packet,
+				     struct exception_handler *e)
 {
   CAST(channel_write_extended, closure, w);
 
-  return A_WRITE(closure->super.channel->write,
-		 channel_transmit_extended(closure->super.channel,
-					   closure->type,
-					   packet));
+  A_WRITE(closure->super.channel->write,
+	  channel_transmit_extended(closure->super.channel,
+				    closure->type,
+				    packet),
+	  e);
 }
 
 struct abstract_write *make_channel_write(struct ssh_channel *channel)

@@ -28,8 +28,8 @@
 
 #include "channel.h"
 
-struct read_handler *make_read_data(struct ssh_channel *channel,
-				    struct abstract_write *write);
+struct io_read_callback *make_read_data(struct ssh_channel *channel,
+					struct abstract_write *write);
 
 #endif /* LSH_READ_DATA_H_INCLUDED */
 

@@ -219,7 +219,7 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
 static int do_connection(struct command *s,
 			 struct lsh_object *x,
 			 struct command_continuation *c,
-			 struct exception_handler *e UNUSED)
+			 struct exception_handler *e)
 {
   CAST(connection_command, self, s);
   CAST(io_fd, fd, x);
@@ -258,6 +258,14 @@ static int do_connection(struct command *s,
       fatal("do_connection: Internal error\n");
     }
 
+  /* Installing the right exception handler is a little tricky. The
+   * passed in handler is typically the top-level handler provided by
+   * lsh.c or lshd.c. On top of this, we add the io_exception_handler
+   * which takes care of EXC_FINISH_READ exceptions and closes the
+   * connection's socket. And on top of this, we have a
+   * connection_exception handler, which takes care of EXC_PROTOCOL
+   * exceptions, sends a disconnect message, and then raises an
+   * EXC_FINISH_READ exception. */
   connection_init_io
     (connection, 
      &io_read_write(fd,
@@ -266,7 +274,8 @@ static int do_connection(struct command *s,
 		    self->block_size,
 		    make_connection_close_handler(connection))
      ->buffer->super,
-     self->random);
+     self->random,
+     make_io_exception_handler(fd, e));
 
   connection->versions[self->mode] = version;
   connection->kexinits[self->mode] = MAKE_KEXINIT(self->init); 

@@ -101,6 +101,8 @@ struct lsh_fd;
        (next object lsh_fd)
        (fd simple int)
 
+       (e object exception_handler)
+       
        ;; FIXME: Can the close handlers be replaced by exceptions?
        ; User's close callback
        (close_reason simple int)
@@ -120,8 +122,7 @@ struct lsh_fd;
        (write method void)
 
        ; (close_now simple int)
-       (really_close method void)))
-*/
+       (really_close method void))) */
 
 #define PREPARE_FD(fd) ((fd)->prepare((fd)))
 #define READ_FD(fd) IO_READ_CALLBACK((fd)->read, (fd))
@@ -245,6 +246,8 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg);
 #define STATIC_IO_EXCEPTION(type, name) \
 { { STATIC_HEADER, (type), (name) }, NULL, 0}
 
+extern struct exception finish_read_exception;
+
 void init_backend(struct io_backend *b);
 
 int io_iter(struct io_backend *b);
@@ -276,15 +279,18 @@ struct address_info *sockaddr2info(size_t addr_len UNUSED,
 int address_info2sockaddr_in(struct sockaddr_in *sin,
 			     struct address_info *a);
 
-int write_raw(int fd, UINT32 length, UINT8 *data);
-int write_raw_with_poll(int fd, UINT32 length, UINT8 *data);
+void write_raw(int fd, UINT32 length, UINT8 *data,
+	       struct exception_handler *e);
+void write_raw_with_poll(int fd, UINT32 length, UINT8 *data,
+			 struct exception_handler *e);
 
 void io_set_nonblocking(int fd);
 void io_set_close_on_exec(int fd);
 void io_init_fd(int fd);
 
 struct io_fd *make_io_fd(struct io_backend *b,
-			 int fd);
+			 int fd,
+			 struct exception_handler *e);
 
 struct connect_fd *io_connect(struct io_backend *b,
 			      struct sockaddr_in *remote,
