@@ -105,7 +105,7 @@ do_forward_success(struct packet_handler *c,
   struct simple_buffer buffer;
   unsigned msg_number;
 
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_SUCCESS)
@@ -154,7 +154,7 @@ do_forward_failure(struct packet_handler *c,
   struct int_list *methods = NULL;
   int partial_success;
 
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_FAILURE)
@@ -214,7 +214,7 @@ do_handle_userauth(struct packet_handler *c,
   int requested_service;
   int method;
   
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_USERAUTH_REQUEST)

@@ -277,7 +277,7 @@ do_proxy_accept_service(struct packet_handler *c,
   uint32_t msg_number;
   int name;
 
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
 
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_SERVICE_ACCEPT)
@@ -355,7 +355,7 @@ do_proxy_service_request(struct packet_handler *c,
   unsigned msg_number;
   int name;
 
-  simple_buffer_init(&buffer, packet->length, packet->data);
+  simple_buffer_init(&buffer, STRING_LD(packet));
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_SERVICE_REQUEST)
       && parse_atom(&buffer, &name)
