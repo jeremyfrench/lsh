@@ -50,4 +50,12 @@ pkcs5_derive_key(struct mac_algorithm *prf,
 		 uint32_t iterations,
 		 uint32_t key_length);
 
+/* Consumes the input packet */
+struct compress_instance;
+
+struct lsh_string *
+encrypt_packet(struct lsh_string *packet, struct compress_instance *compress,
+	       struct crypto_instance *crypt, struct mac_instance *mac,
+	       struct randomness *random, uint32_t seqno);
+
 #endif /* LSH_CRYPTO_H_INCLUDED */
