@@ -146,7 +146,7 @@ void exception_raise(struct exception_handler *e,
 #define EXC_ALL (~0)
 
 extern struct exception_handler default_exception_handler;
-struct exception_handler ignore_exception_handler;
+extern struct exception_handler ignore_exception_handler;
 extern struct exception dummy_exception;
 
 /* GABA:

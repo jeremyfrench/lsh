@@ -65,12 +65,12 @@ make_handshake_info(UINT32 flags,
 		    struct make_kexinit *init,
 		    struct ssh1_fallback *fallback);
 
-struct collect_info_1 handshake_command;
+extern struct collect_info_1 handshake_command;
 #define CONNECTION_HANDSHAKE (&handshake_command.super.super.super)
 
 struct close_callback *make_connection_close_handler(struct ssh_connection *c);
 
-struct command_simple connection_remember;
+extern struct command_simple connection_remember;
 #define CONNECTION_REMEMBER (&connection_remember.super.super)
 
 struct command *
