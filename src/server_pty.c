@@ -101,7 +101,7 @@ struct pty_info *make_pty_info(void)
 
 static struct lsh_string *pty_grantpt_uid(int master, uid_t user)
 {
-  uid_t me = getpid();
+  uid_t me = getuid();
   if (me == user)
     {
       /* Use standard grantpt call */
