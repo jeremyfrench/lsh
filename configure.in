@@ -156,7 +156,7 @@ if test x$lsh_cv_prog_m4_quote_8bit = xno; then
   AC_MSG_WARN(  
 [Upgrade to a better version than GNU m4 1.4,
 or recompile it with CFLAGS=-funsigned-char.])
-  M4=false --
+  M4="false --"
 fi
 
 dnl Checks for libraries.
