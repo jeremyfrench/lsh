@@ -460,9 +460,11 @@ int main(int argc, char **argv)
 			       ATOM_SSH_CONNECTION,
 			       make_server_session_service
 			       (make_alist(0, -1),
-				make_alist(2, 
-					   ATOM_SHELL, make_shell_handler(backend, reaper),
-					   ATOM_PTY_REQ, make_pty_handler(),
+				make_alist(1
+#if WITH_PTY_SUPPORT
+					   +1, ATOM_PTY_REQ, make_pty_handler()
+#endif /* WITH_PTY_SUPPORT */
+					   , ATOM_SHELL, make_shell_handler(backend, reaper),
 					   -1)),
 			       -1)),
 		   -1)),

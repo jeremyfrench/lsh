@@ -73,8 +73,10 @@ void usage(void)
 	 " -c,  --crypto=ALGORITHM\n"
 	 " -z,  --compression=ALGORITHM\n"
 	 "      --mac=ALGORITHM\n"
+#if WITH_PTY_SUPPORT
 	 " -t   Request a remote pty\n"
 	 " -nt  Don't request a remote tty\n"
+#endif /* WITH_PTY_SUPPORT */
 	 " -q,  --quiet\n"
 	 " -v,  --verbose\n"
 	 "      --debug\n");
@@ -117,7 +119,10 @@ int main(int argc, char **argv)
   int preferred_mac = 0;
   /* int term_width, term_height, term_width_pix, term_height_pix; */
   int not;
+#if WITH_PTY_SUPPORT
   int use_pty = -1; /* Means default */
+#endif /* WITH_PTY_SUPPORT */
+  
   int option;
 
   int lsh_exit_code;
@@ -194,7 +199,9 @@ int main(int argc, char **argv)
 	  quiet_flag = 1;
 	  break;
 	case 't':
+#if WITH_PTY_SUPPORT
 	  use_pty = !not;
+#endif /* WITH_PTY_SUPPORT */
 	  break;
 	case 'v':
 	  verbose_flag = 1;
@@ -257,6 +264,7 @@ int main(int argc, char **argv)
   /* This is the final request. */
   requests = make_shell_request(NULL);
 
+#if WITH_PTY_SUPPORT
   if (use_pty < 0)
     use_pty = 1;
 
@@ -273,6 +281,8 @@ int main(int argc, char **argv)
       else
 	requests = make_pty_request(tty, 0, 1, requests);
     }
+#endif /* WITH_PTY_SUPPORT */
+  
   in = STDIN_FILENO;
   out = STDOUT_FILENO;
   
