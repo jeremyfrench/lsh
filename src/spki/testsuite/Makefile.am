@@ -17,7 +17,7 @@ LDADD = testutils.o ../libspki.a -lnettle
 include .dist_cdsa
 
 EXTRA_DIST = testutils.c testutils.h $(TS_SH) \
-	run-tests $(dist_cdsa) 
+	run-tests $(dist_cdsa) key-1
 
 DISTCLEANFILES = test.in
 
