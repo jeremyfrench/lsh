@@ -371,8 +371,8 @@ do_spki_add_hostkey(struct command *s,
   if (ALIST_GET(self->keys, key->type))
     werror("Multiple host keys of type %a.\n", key->type);
   else
-    ALIST_SET(self->keys, key->type, key);
-
+    ALIST_SET(self->keys, key->type, &key->super);
+    
   COMMAND_RETURN(c, self->keys);
 }
 
@@ -477,7 +477,8 @@ DEFINE_COMMAND_SIMPLE(spki_return_userkeys, a)
    (expr
      (name spki_read_userkeys)
      (params
-       (algorithms object alist))
+       (algorithms object alist)
+       (decrypt object command))
      (expr
        (lambda (file)
          (let ((ctx (spki_add_userkey file)))
@@ -486,26 +487,49 @@ DEFINE_COMMAND_SIMPLE(spki_return_userkeys, a)
 			(return_userkeys (prog1 ctx e)))
 	             (lambda (key)
 		       (ctx (sexp2keypair
-		               algorithms key)))
+		               algorithms (decrypt key))))
 		     file)))))
 */
 
 struct command *
-make_spki_read_userkeys(struct alist *algorithms)
+make_spki_read_userkeys(struct alist *algorithms,
+			struct interact *tty)
 {
-  CAST_SUBTYPE(command, res, spki_read_userkeys(algorithms));
+  struct command *decrypt;
   trace("make_spki_read_userkeys\n");
 
-  return res;
+  if (tty)
+    {
+      struct alist *mac = make_alist(0, -1);
+      struct alist *crypto = make_alist(0, -1);
+
+      alist_select_l(mac, algorithms,
+		     2, ATOM_HMAC_SHA1, ATOM_HMAC_MD5, -1);
+      alist_select_l(crypto, algorithms,
+		     3, ATOM_3DES_CBC, ATOM_BLOWFISH_CBC,
+		     ATOM_RIJNDAEL_CBC_LOCAL, -1);
+      decrypt = make_pkcs5_decrypt(mac, crypto, tty);
+    }
+  else
+    decrypt = &command_I.super;
+
+  {
+    CAST_SUBTYPE(command, res,
+		 spki_read_userkeys(algorithms,
+				    decrypt));
+
+    return res;
+  }
 }
 
+#if 0
 DEFINE_COMMAND_SIMPLE(spki_read_userkeys_command, a)
 {
   CAST_SUBTYPE(alist, algorithms, a);
   
   return &make_spki_read_userkeys(algorithms)->super;
 }
-
+#endif
 
 /* Encryption of private data.
  * For PKCS#5 (version 2) key derivation, we use
