@@ -187,6 +187,8 @@ parse_private_key(struct alist *algorithms,
   struct sexp *expr = SEXP_GET(i);
   int algorithm_name;
   struct signer *s;
+  struct verifier *v;
+  struct lsh_string *spki_public;
   
   if (!expr)
     {
@@ -204,22 +206,43 @@ parse_private_key(struct alist *algorithms,
 
     }
 
+  v = SIGNER_GET_VERIFIER(s);
+  spki_public = sexp_format(spki_make_public_key(SIGNER_GET_VERIFIER(s)),
+			    SEXP_CANONICAL, 0);
+  
   /* Test key here? */  
   switch (algorithm_name)
     {	  
     case ATOM_DSA:
       COMMAND_RETURN(c, make_keypair(ATOM_SSH_DSS,
-				     PUBLIC_KEY(SIGNER_GET_VERIFIER(s)),
+				     PUBLIC_KEY(v),
+				     s));
+      COMMAND_RETURN(c, make_keypair(ATOM_SPKI_SIGN_DSS,
+				     spki_public, s));
+      break;
+
+    case ATOM_RSA_PKCS1_SHA1:
+      COMMAND_RETURN(c, make_keypair(ATOM_SSH_RSA,
+				     PUBLIC_KEY(v),
 				     s));
       /* Fall through */
+
+    case ATOM_RSA_PKCS1_MD5:
+      COMMAND_RETURN(c, make_keypair(ATOM_SPKI_SIGN_RSA,
+				     spki_public, s));
+      break;
+      
     default:
+      abort();
+#if 0      
       /* Get a corresponding public key. */
       COMMAND_RETURN(c, make_keypair
 		     (ATOM_SPKI,
 		      sexp_format(spki_make_public_key(SIGNER_GET_VERIFIER(s)),
 				  SEXP_CANONICAL, 0),
 		      s));
-
+#endif
+      
       break;
     }
 }
