@@ -809,6 +809,16 @@ client_add_action(struct client_options *options,
   return action;
 }
 
+struct command *
+client_prepend_action(struct client_options *options,
+		      struct command *action)
+{
+  if (action)
+    object_queue_add_head(&options->actions, &action->super);
+
+  return action;
+}
+
 /* NOTE: Some of the original quoting is lost here. */
 static struct lsh_string *
 rebuild_command_line(unsigned argc, char **argv)
@@ -886,6 +896,8 @@ do_background_process(struct command *s,
 {
   CAST(background_process_command, self, s);
 
+  trace("do_background_process\n");
+  
   pid_t pid = fork();
   
   switch (pid)

@@ -188,6 +188,10 @@ init_client_options(struct client_options *options,
 struct command *
 client_add_action(struct client_options *options,
 		  struct command *action);
+struct command *
+client_prepend_action(struct client_options *options,
+		      struct command *action);
+
 int
 client_parse_forward_arg(char *arg,
 			 uint32_t *listen_port,
