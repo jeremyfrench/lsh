@@ -1,5 +1,11 @@
+2000-04-22  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Bumped version.
+
 2000-04-21  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* Removed lots of old #if:ed out code.
+	
 	* src/testsuite/lsh-cat-test: Use diff to check result.
 
 	* src/userauth.h: Added more arguments to the USER_FORK method. 
