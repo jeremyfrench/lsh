@@ -30,11 +30,49 @@
 #include "command.h"
 #include "sexp.h"
 
+#define GABA_DECLARE
+#include "sexp_commands.h.x"
+#undef GABA_DECLARE
+
+/* GABA:
+   (class
+     (name print_sexp_command)
+     (super command_simple)
+     (vars
+       (format . int)))
+*/
+
+struct lsh_object *
+do_print_sexp_simple(struct command_simple *s,
+		     struct lsh_object *a);
+
+#define STATIC_PRINT_SEXP(format) \
+{ STATIC_COMMAND_SIMPLE(do_print_sexp_simple), format }
+
 struct command_simple *
-make_write_sexp_command(int format);
+make_print_sexp_command(int format);
 
 struct command *
-make_write_sexp_to(int format, struct abstract_write *dest);
+make_print_sexp_to(int format, struct abstract_write *dest);
+
+
+/* GABA:
+   (class
+     (name read_sexp_command)
+     (super command)
+     (vars
+       (format . int)
+       (goon . int)))
+*/
+
+void
+do_read_sexp(struct command *s,
+	     struct lsh_object *a,
+	     struct command_continuation *c,
+	     struct exception_handler *e);
+
+#define STATIC_READ_SEXP(format, goon) \
+{ STATIC_COMMAND(do_read_sexp), format, goon }
 
 struct command *
 make_read_sexp_command(int format, int goon);

@@ -28,15 +28,19 @@
 #include "format.h"
 #include "xalloc.h"
 
+#define GABA_DEFINE
+#include "sexp_commands.h.x"
+#undef GABA_DEFINE
+
 #include "sexp_commands.c.x"
 
 /* (write out sexp)
  *
- * Returns the sexp. */
+ * Prints the sexp to tha abstract_write OUT. Returns the sexp. */
 
 /* GABA:
    (class
-     (name write_sexp_command)
+     (name print_sexp_to)
      (super command)
      (vars
        (format . int)
@@ -44,12 +48,12 @@
 */
 
 static void
-do_write_sexp(struct command *s,
+do_print_sexp(struct command *s,
 	      struct lsh_object *a,
 	      struct command_continuation *c,
 	      struct exception_handler *e UNUSED)
 {
-  CAST(write_sexp_command, self, s);
+  CAST(print_sexp_to, self, s);
   CAST_SUBTYPE(sexp, o, a);
 
   A_WRITE(self->dest, sexp_format(o, self->format, 0));
@@ -60,57 +64,103 @@ do_write_sexp(struct command *s,
 }
 
 struct command *
-make_write_sexp_to(int format, struct abstract_write *dest)
+make_print_sexp_to(int format, struct abstract_write *dest)
 {
-  NEW(write_sexp_command, self);
-  self->super.call = do_write_sexp;
+  NEW(print_sexp_to, self);
+  self->super.call = do_print_sexp;
   self->format = format;
   self->dest = dest;
 
   return &self->super;
 }
 
-/* GABA:
-   (class
-     (name write_sexp_collect)
-     (super command_simple)
-     (vars
-       (format . int)))
-*/
-
-static struct lsh_object *
-do_write_sexp_collect(struct command_simple *s,
-		      struct lsh_object *a)
+struct lsh_object *
+do_print_sexp_simple(struct command_simple *s,
+		     struct lsh_object *a)
 {
-  CAST(write_sexp_collect, self, s);
+  CAST(print_sexp_command, self, s);
   CAST_SUBTYPE(abstract_write, dest, a);
 
-  return &make_write_sexp_to(self->format, dest)->super;
+  return &make_print_sexp_to(self->format, dest)->super;
 }
 
 struct command_simple *
-make_write_sexp_command(int format)
+make_print_sexp_command(int format)
 {
-  NEW(write_sexp_collect, self);
+  NEW(print_sexp_command, self);
   self->super.super.call = do_call_simple_command;
-  self->super.call_simple = do_write_sexp_collect;
+  self->super.call_simple = do_print_sexp_simple;
   self->format = format;
+
+  return &self->super;
+}
+
+/* Make sure that the fd is closed properly. */
+/* GABA:
+   (class
+     (name read_sexp_continuation)
+     (super command_continuation)
+     (vars
+       (fd object lsh_fd)
+       (up object command_continuation)))
+*/
+
+static void
+do_read_sexp_continue(struct command_continuation *s,
+		      struct lsh_object *a)
+{
+  CAST(read_sexp_continuation, self, s);
+  close_fd_nicely(self->fd, 0);
+
+  COMMAND_RETURN(self->up, a);
+}
+
+static struct command_continuation*
+make_read_sexp_continuation(struct io_fd *fd,
+			    struct command_continuation *up)
+{
+  NEW(read_sexp_continuation, self);
+  self->super.c =do_read_sexp_continue;
+  self->fd = &fd->super;
+  self->up = up;
 
   return &self->super;
 }
 
 /* GABA:
    (class
-     (name read_sexp_command)
-     (super command)
+     (name read_sexp_exception_handler)
+     (super exception_handler)
      (vars
-       (format . int)
-       (goon . int)))
+       (fd object lsh_fd)))
 */
+
+static void
+do_read_sexp_exception_handler(struct exception_handler *s,
+			       const struct exception *x)
+{
+  CAST(read_sexp_exception_handler, self, s);
+  if (x->type & EXC_SEXP)
+    close_fd_nicely(self->fd, 0);
+
+  EXCEPTION_RAISE(self->super.parent, x);
+}
+
+static struct exception_handler *
+make_read_sexp_exception_handler(struct io_fd *fd,
+				 struct exception_handler *e)
+{
+  NEW(read_sexp_exception_handler, self);
+  self->super.raise = do_read_sexp_exception_handler;
+  self->super.parent = e;
+  self->fd = &fd->super;
+
+  return &self->super;
+}
 
 #define SEXP_BUFFER_SIZE 1024
 
-static void
+void
 do_read_sexp(struct command *s,
 	     struct lsh_object *a,
 	     struct command_continuation *c,
@@ -119,9 +169,13 @@ do_read_sexp(struct command *s,
   CAST(read_sexp_command, self, s);
   CAST_SUBTYPE(io_fd, fd, a);
 
+  if (!self->goon)
+    c = make_read_sexp_continuation(fd, c);
+  
   io_read(fd,
 	  make_buffered_read(SEXP_BUFFER_SIZE,
-			     make_read_sexp(self->format, self->goon, c, e)),
+			     make_read_sexp(self->format, self->goon, c,
+					    make_read_sexp_exception_handler(fd, e))),
 	  NULL);
 }
 
