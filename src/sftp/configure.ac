@@ -54,11 +54,15 @@ if test -f $srcdir/../lsh.c; then
   before_opts="--subsystem=sftp --no-pty"
   after_opts=""
 
-  # Now, make sure these are included properly when compiling.
- 
+  # Now, make sure these are included properly when compiling (to resolve $bindr).
+  # FIXME: Spaces? Autoconf evals
+
   CPPFLAGS="$CPPFLAGS -DTRANSPORT_PROG='\"$transport_prog\"'"
-  CPPFLAGS="$CPPFLAGS -DTRANSPORT_BEFORE_OPTS='\"$before_opts\"'"
-  CPPFLAGS="$CPPFLAGS -DTRANSPORT_AFTER_OPTS='\"$after_opts\"'"
+
+  # These can go in config.h
+ 
+  AC_DEFINE_UNQUOTED(TRANSPORT_BEFORE_OPTS, "$before_opts", Options sent before argv)
+  AC_DEFINE_UNQUOTED(TRANSPORT_AFTER_OPTS, "$after_opts", Options sent after argv)
 else
   # Stand alone
 
