@@ -1,3 +1,9 @@
+2004-11-09  Niels Möller  <nisse@lysator.liu.se>
+
+	* doc/lsh.texinfo: Set UPDATED-FOR to 2.0.
+
+	* misc/xenofarm.sh: Fixed typos in the oop-related tasks.
+
 2004-11-07  Niels Möller  <nisse@lysator.liu.se>
 
 	* doc/lsh.texinfo (Action options): Documented -D (socks
