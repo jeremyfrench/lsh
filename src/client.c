@@ -540,7 +540,7 @@ init_client_options(struct client_options *self,
 		    int *exit_code)			 
 {
   self->random = random;
-  
+
   self->tty = make_unix_interact();
   self->escape = -1;
   
@@ -764,7 +764,7 @@ client_shell_session(struct client_options *options)
 /* Create a session for a subsystem */
 static struct command *
 client_subsystem_session(struct client_options *options,
-		       struct lsh_string *subsystem)
+			 struct lsh_string *subsystem)
 {
   struct ssh_channel *session = make_client_session(options);
   
