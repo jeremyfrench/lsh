@@ -44,7 +44,6 @@
 #include "server_keyexchange.h"
 #include "server_pty.h"
 #include "server_session.h"
-#include "server_userauth.h"
 #include "sexp.h"
 #include "sexp_commands.h"
 #include "spki.h"
@@ -52,7 +51,7 @@
 #include "tcpforward.h"
 #include "tcpforward_commands.h"
 #include "tcpforward_commands.h"
-#include "userauth.h"
+#include "server_userauth.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -467,8 +466,7 @@ int main(int argc, char **argv)
 					, ATOM_SHELL,
 					make_shell_handler(backend,
 							   reaper),
-					-1),
-				       backend),
+					-1)),
 				      connection_hooks),
 				     -1))),
 	   -1)));
