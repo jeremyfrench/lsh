@@ -10,6 +10,8 @@
 
 struct ssh_connection
 {
+  struct abstract_write super;
+  
   /* Sent and recieved version strings */
   struct lsh_string *client_version;
   struct lsh_string *server_version;
