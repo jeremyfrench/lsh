@@ -36,9 +36,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-/* Forward declarations */
-
-struct lsh_fd;
 
 #define GABA_DECLARE
 #include "io.h.x"
