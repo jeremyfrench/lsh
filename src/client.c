@@ -101,14 +101,8 @@ do_accept_service(struct packet_handler *c,
   
   if (parse_uint8(&buffer, &msg_number)
       && (msg_number == SSH_MSG_SERVICE_ACCEPT)
-      && (
-#if DATAFELLOWS_WORKAROUNDS
-	  (connection->peer_flags & PEER_SERVICE_ACCEPT_KLUDGE)
-#else
-	  0
-#endif
-	  || (parse_atom(&buffer, &name)
-	      && (name == closure->service)))
+      && parse_atom(&buffer, &name)
+      && (name == closure->service)
       && parse_eod(&buffer))
     {
       connection->dispatch[SSH_MSG_SERVICE_ACCEPT] = &connection_fail_handler;
