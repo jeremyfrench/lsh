@@ -305,7 +305,7 @@ int alloc_channel(struct channel_table *table)
 	  table->in_use[i] = 1;
 	  table->next_channel = i+1;
 
-	  verbose("Allocated channel number %i\n", i);
+	  verbose("Allocated local channel number %i\n", i);
 	  return i;
 	}
     }
@@ -336,7 +336,7 @@ int alloc_channel(struct channel_table *table)
   table->next_channel = table->used_channels = i+1;
 
   table->in_use[i] = 1;
-  verbose("Allocated channel number %i\n", i);
+  verbose("Allocated local channel number %i\n", i);
 
   return i;
 }
@@ -346,7 +346,7 @@ void dealloc_channel(struct channel_table *table, int i)
   assert(i >= 0);
   assert( (unsigned) i < table->used_channels);
 
-  verbose("Deallocating channel %i\n");
+  verbose("Deallocating local channel %i\n");
   table->channels[i] = NULL;
   table->in_use[i] = 0;
   
@@ -364,7 +364,8 @@ register_channel(struct ssh_connection *connection,
   assert(table->in_use[local_channel_number]);
   assert(!table->channels[local_channel_number]);
 
-  verbose("Taking channel %i in use.\n", local_channel_number);
+  verbose("Taking channel %i in use, (local %i).\n",
+	  channel->channel_number, local_channel_number);
   table->channels[local_channel_number] = channel;
 
   /* FIXME: Is this the right place to install this exception handler? */
@@ -764,7 +765,7 @@ static void do_channel_open(struct packet_handler *c UNUSED,
 
 	  
 	  
-	  CHANNEL_OPEN(open, connection, &buffer,
+	  CHANNEL_OPEN(open, connection, type, &buffer,
 		       make_channel_open_continuation(connection,
 						      local_number,
 						      remote_channel_number,
@@ -1062,7 +1063,8 @@ do_channel_eof(struct packet_handler *closure UNUSED,
 	    }
 	  else
 	    {
-	      verbose("Receiving EOF on channel %i\n", channel_number);
+	      verbose("Receiving EOF on channel %i (local %i)\n",
+		      channel->channel_number, channel_number);
 	      
 	      channel->flags |= CHANNEL_RECEIVED_EOF;
 	      
@@ -1111,7 +1113,8 @@ do_channel_close(struct packet_handler *closure UNUSED,
       
       if (channel)
 	{
-	  verbose("Receiving CLOSE on channel %i\n", channel_number);
+	  verbose("Receiving CLOSE on channel %i (local %i)\n",
+		  channel->channel_number, channel_number);
 	      
 	  if (channel->flags & CHANNEL_RECEIVED_CLOSE)
 	    {
@@ -1132,7 +1135,7 @@ do_channel_close(struct packet_handler *closure UNUSED,
 		  && channel->eof)
 		CHANNEL_EOF(channel);
 
-	      if (channel->flags & (CHANNEL_SENT_CLOSE))
+	      if (channel->flags & CHANNEL_SENT_CLOSE)
 		{
 		  static const struct exception finish_exception
 		    = STATIC_EXCEPTION(EXC_FINISH_CHANNEL, "Received CLOSE message.");
@@ -1437,7 +1440,7 @@ void channel_close(struct ssh_channel *channel)
 
   if (! (channel->flags & CHANNEL_SENT_CLOSE))
     {
-      verbose("Sending CLOSE on channel %i\n", channel);
+      verbose("Sending CLOSE on channel %i\n", channel->channel_number);
 
       channel->flags |= CHANNEL_SENT_CLOSE;
       
@@ -1460,7 +1463,7 @@ void channel_eof(struct ssh_channel *channel)
   if (! (channel->flags &
 	 (CHANNEL_SENT_EOF | CHANNEL_SENT_CLOSE | CHANNEL_RECEIVED_CLOSE)))
     {
-      verbose("Sending EOF on channel %i\n", channel);
+      verbose("Sending EOF on channel %i\n", channel->channel_number);
 
       channel->flags |= CHANNEL_SENT_EOF;
       A_WRITE(channel->write, format_channel_eof(channel) );
