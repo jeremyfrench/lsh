@@ -1,3 +1,52 @@
+2005-02-12  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/ssh_read.c (oop_ssh_read_packet): When a packet is finished,
+	register a callback for reading the next header. Replaced use of
+	the exception facility with a simpler error_callback.
+
+	* src/server.c (read_host_key): Deleted support for spki keys.
+	Also #if:ed out everything but this function.
+
+	* src/lshd.c (connection_write_data): Primitive function for
+	sending ssh messages over the network.
+	(connection_write_packet, connection_disconnect): New functions.
+	(lshd_handle_ssh_packet): Handle all messages (except
+	SERVICE_REQUEST) needed for the transport protocol.
+	(make_configuration): New function.
+
+	* src/lsh.c (main_argp_parser): Deleted support for the name
+	diffie-hellman-group2-sha1. 
+
+	* src/connection.c, src/connection.h: Use kexinit_state.
+	* src/handshake.c: Likewise.
+
+	* src/dh_exchange.c (init_dh_instance): Take a kexinit_state as
+	argument, instead of an ssh_connection. Updated callers.
+
+	* src/format.c (format_disconnect, format_unimplemented) 
+	(format_newkeys): Moved these trivial functions here, for lack of
+	a better place.
+
+	* src/atoms.in (diffie-hellman-group2-sha1): Deleted obsolete name.
+
+	* src/algorithms.c (algorithms_argp_parser): Use default_hostkey_algorithms.
+	(default_hostkey_algorithms): New function. Disabled spki support.
+	(default_compression_algorithms, default_mac_algorithms) 
+	(default_crypto_algorithms): Made non-static.
+
+	* src/Makefile.am (liblsh_a_SOURCES): Added encrypt.c, kexinit.c
+	and kexinit_state.c.
+	(lshd_SOURCES): Added lshd_read.c lshd_keyexchange.c.
+
+	* src/encrypt.c (encrypt_packet): New file. Function extracted
+	from write_packet.
+	* src/write_packet.c (do_write_packet): Use encrypt_packet.
+
+	* src/kexinit.h, src/kexinit.c, src/kexinit_state.c: New files.
+	Moved code here, that is independent from ssh_connection, from...
+	* src/keyexchange.c.
+	* src/kexinit.h (kexinit_state): New struct.
+
 2005-02-03  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lshd.c (lshd_read_state): New class. Moved definition super
