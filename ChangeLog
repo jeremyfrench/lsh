@@ -1,3 +1,26 @@
+2000-07-09  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in (SCHEME_PROGRAM): Edited warning message displayed
+	if no scheme is found.
+
+	* doc/lsh.texinfo (Algorithm options): Note that aany argument to
+	the -z option must follow directly, with no spaces.
+
+	* src/jpoll.c (poll): Use trace(), not printf, for debug messages.
+
+	* configure.in: Bumped version to 1.0.1.
+
+	* src/client_userauth.c (send_password): Check for empty password,
+	and stop asking if the empty password is entered twice.
+	(client_password_state): New attribute tried_empty_passwd.
+	(send_password): Take a single client_password_state * argument.
+	Updated callers.
+	(make_client_password_state): Changed return type.
+
+	* src/unix_user.c (do_logout_cleanup): Fixed HAVE_LOGWTMP
+	conditional. 
+	(do_fork_process): Likewise.
+
 2000-07-04  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* ANNOUNCE: Updated for 1.0.
