@@ -39,10 +39,11 @@ containing triples <n, s, v>, indexed by n.
 1. C renerates a random number x (lg(p) < x < q) and computes e = g^x mod
    p. C sends e and n to S.
 
-2. S uses u to find v and s in its database. S generates a random
+2. S uses n to find v and s in its database. S generates a random
    number y, (lg(p) < y < q) and computes f = v + g^b mod p. S selects
-   u as 1 + the integer corresponding to the first 32 bits of HASH(f). S
-   computes K = (e * v^u)^b mod p. S sends s and f to C.
+   u as the integer corresponding to the first 32 bits of HASH(f). If
+   f or u happens to be zero, S must try another y. S computes K = (e *
+   v^u)^b mod p. S sends s and f to C.
 
 3. C gets the password p and computes x = HASH(s || H(n || p)). C also
    computes u in the same way as the server. Finally, C computes K =
@@ -50,6 +51,14 @@ containing triples <n, s, v>, indexed by n.
 
 Each party must check that e and f are in the range [1, p-1]. If not,
 the key exchange fails.
+
+Note that the addition in v + g^b mod p in step 2 is not the a group
+operation, and the result could be zero, or, if g doesn't generate the
+entire multiplicative group of Z/p, some other element not in the
+group. In principle, we could use any invertible binary operation, say
+XOR, instead of addition modulo p. In step 3, v is subtracted again,
+and f - v is used for further computations. Perhaps C should check
+here that f - v belongs to the group? 
 
 At this point C and S have a shared secret K. They must now prove that
 they know the same value. Even if we're primarily interested in
