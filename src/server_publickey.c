@@ -24,7 +24,6 @@
 
 #include "charset.h"
 #include "connection.h"
-#include "dsa.h"
 #include "format.h"
 #include "lookup_verifier.h"
 #include "parse.h"
