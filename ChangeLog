@@ -1,3 +1,10 @@
+1999-08-30  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* Lots of files: Removed the exception argument from the
+	A_WRITE-method. 
+
+	* src/exception.h (PROTOCOL_ERROR): New macro.
+
 1999-08-29  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/read_packet.c (do_read_packet): The MAC memcmp test was
