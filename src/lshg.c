@@ -39,6 +39,7 @@
 
 #include <assert.h>
 #include <locale.h>
+#include <unistd.h>
 
 #include "lsh_argp.h"
 
@@ -46,6 +47,11 @@
 struct command options2info;
 #define OPTIONS2INFO (&options2info.super)
 
+/* Until configure finds this */
+
+#ifndef LSH_FILENAME
+#define LSH_FILENAME "lsh"
+#endif
 
 #include "lshg.c.x"
 
@@ -54,7 +60,8 @@ struct command options2info;
      (name lshg_options)
      (super client_options)
      (vars
-       (gateway object local_info)))
+       (gateway object local_info)
+       (fallback_lsh . int )))
 */
 
 static struct lshg_options *
@@ -65,6 +72,7 @@ make_options(struct exception_handler *handler,
   init_client_options(&self->super, NULL, handler, exit_code);
 
   self->gateway = NULL;
+  self->fallback_lsh = 0;
 
   return self;
 }
@@ -162,6 +170,8 @@ main_options[] =
     "to the remote machine.", CLIENT_ARGP_ACTION_GROUP },
   { "send-ignore", 'I', "Message", 0, "Send an ignore message "
     "to the remote machine.", 0 },
+  { NULL, 'G', 0, 0, "If no usable gateway is found, "
+    "launch lsh instead", 0 },
   { NULL, 0, NULL, 0, NULL, 0 }
 };
 
@@ -222,6 +232,9 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case 'I':
       client_add_action(&self->super, make_lshg_send_ignore(arg));
       break;
+    case 'G':
+      self->fallback_lsh = 1;
+      break;
     }
   return 0;
 }
@@ -231,25 +244,54 @@ main_argp =
 { main_options, main_argp_parser, 
   "host\nhost command",
   "Connects to a remote machine, using a gateway\v"
-  "Connects to the remote machine, using a local gateway, previously setup"
+  "Connects to the remote machine, using a local gateway, previously setup "
   "by running lsh -G.",
   main_argp_children,
   NULL, NULL
 };
 
+/* GABA: 
+   (class
+     (name lshg_exception_handler)
+     (super exception_handler)
+     (vars
+       (argv . "char**")
+       (fallback_lsh . int)))
+*/
+
 static void
-do_exc_lshg_handler(struct exception_handler *s UNUSED,
+do_exc_lshg_handler(struct exception_handler *s,
 		    const struct exception *e)
 {
+  CAST(lshg_exception_handler, self, s);
+
+  if(e->type == EXC_IO_CONNECT && 
+     self->fallback_lsh)
+    {
+      verbose("No usable gateway found, launching lsh instead.\n");
+      execvp(LSH_FILENAME, self->argv); /* FIXME: filename */
+      
+      werror("lsh launch failed, giving up.\n");
+      exit(EXIT_FAILURE);
+    }
+
   werror("Exiting: %z\n", e->msg);
   exit(EXIT_FAILURE);
 }
 
 static struct exception_handler *
 make_lshg_exception_handler(struct exception_handler *parent,
-			    const char *context)
+			    const char *context,
+			    char **argv,
+			    int fallback_lsh)
 {
-  return make_exception_handler(do_exc_lshg_handler, parent, context);
+  NEW(lshg_exception_handler, self);
+  self->super.raise = do_exc_lshg_handler;
+  self->super.parent = parent;
+  self->super.context = context;
+  self->argv = argv;
+  self->fallback_lsh = fallback_lsh;
+  return &self->super;
 }
 
 int
@@ -270,7 +312,9 @@ main(int argc, char **argv)
 
   options = make_options(make_lshg_exception_handler
 			 (&default_exception_handler,
-			  HANDLER_CONTEXT),
+			  HANDLER_CONTEXT,
+			  NULL,
+			  0),
 			 &exit_code);
   
   argp_parse(&main_argp, argc, argv, ARGP_IN_ORDER, NULL, options);
@@ -281,7 +325,9 @@ main(int argc, char **argv)
 
     COMMAND_CALL(lshg_connect, options, &discard_continuation,
 		 make_lshg_exception_handler(&default_exception_handler,
-					     HANDLER_CONTEXT));
+					     HANDLER_CONTEXT,
+					     argv,
+					     options->fallback_lsh));
   }
 
   io_run();
