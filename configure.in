@@ -2,7 +2,7 @@ dnl -*-shell-script-*-
 dnl $Id$
 
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT(keyexchange.h)
+AC_INIT(src/lsh_types.h)
 
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, snapshot-`date +%Y-%m-%d`)
@@ -23,7 +23,7 @@ If this does not work, please use an absolute path to the configure script. ])
 esac
 
 # We want to compile the crypto lib for use with lsh
-CPPFLAGS="$CPPFLAGS -I$srcdir/include -I$srcdir -DLSH"
+CPPFLAGS="$CPPFLAGS -I$srcdir -I$srcdir/src -I$srcdir/src/symmetric/include -DLSH"
 
 # GNU libc defaults to supplying the ISO C library functions only. 
 # initgroups() and strsignal() are extensions; the _GNU_SOURCE define
@@ -67,6 +67,8 @@ AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AM_PROG_CC_STDC
+AC_CHECK_PROG(SCHEME, scsh,, scsh)
+AC_CHECK_PROG(BASH, bash,, bash)
 
 if test x$am_cv_prog_cc_stdc = xno ; then
   AC_ERROR([the C compiler doesn't handle ANSI-C])
@@ -168,13 +170,13 @@ AC_CHECK_FUNCS(select socket strerror strtol)
 AC_CHECK_FUNCS(getspnam)
 AC_CHECK_FUNCS(vsnprintf inet_aton)
 
-AC_CHECK_FUNCS(poll,,[LIBOBJS = jpoll.o $LIBOBJS])
+AC_CHECK_FUNCS(poll,,[LIBOBJS="jpoll.o $LIBOBJS"])
 
 dnl This macro is mentioned in the automake manual, but where is it
 dnl supposed to be defined?
 dnl AC_REPLACE_GNU_GETOPT
 
-AC_CHECK_FUNCS(getopt_long,,[LIBOBJS = getopt.o getopt1.o $LIBOBJS])
+AC_CHECK_FUNCS(getopt_long,,[LIBOBJS="getopt.o getopt1.o $LIBOBJS"])
 
 dnl Check for broken shutdown
 AC_CACHE_CHECK(for working shutdown on AF_UNIX sockets,
@@ -290,4 +292,5 @@ if test x$GCC = xyes ; then
 
 fi
 
-AC_OUTPUT(Makefile lib/Makefile include/Makefile doc/Makefile)
+AC_OUTPUT(Makefile doc/Makefile
+	  src/Makefile src/symmetric/Makefile src/symmetric/include/Makefile)

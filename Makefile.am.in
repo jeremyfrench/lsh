@@ -1,0 +1,16 @@
+## Process this file with make_am to produce Makefile.am
+
+SUBDIRS: src doc
+BODY:
+
+AUTOMAKE_OPTIONS = foreign
+
+Makefile.am: Makefile.am.in
+	$(BASH) make_am
+
+# Is this rule needed?
+all-recursive check-recursive: config.h
+
+
+EXTRA_DIST = AUTHORS FAQ README COPYING ChangeLog NEWS
+

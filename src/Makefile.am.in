@@ -1,11 +1,10 @@
 ## Process this file with make_am to produce Makefile.am
-SUBDIRS: lib include doc
+SUBDIRS: symmetric
 CVS_HEADERS: cvs_headers
 CLASS_FILES: dist_x_files
 BODY:
 
 AUTOMAKE_OPTIONS = foreign
-SUBDIRS = lib include
 
 # To remake all Makefile.am-files, run
 #
@@ -18,7 +17,7 @@ SUBDIRS = lib include
 # subdrectries.
 
 Makefile.am: Makefile.am.in
-	./make_am
+	(cd $(top_srcdir); $(BASH) make_am)
 
 bin_PROGRAMS = lsh lshd lsh_keygen lsh_writekey
 noinst_PROGRAMS = prime_table digit_table sexp_test
@@ -34,7 +33,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	algorithms.c alist.c arcfour.c atoms.c \
 	bignum.c blocking_write.c blowfish.c \
 	cascade.c cbc.c channel.c charset.c compress.c connection.c crypto.c \
-	debug.c des.c disconnect.c  dss_keygen.c encrypt.c \
+	debug.c des.c disconnect.c  dsa_keygen.c encrypt.c \
 	format.c gc.c hmac.c io.c keyexchange.c \
 	list.c md5.c packet_ignore.c pad.c parse.c password.c publickey_crypto.c \
 	randomness.c \
@@ -53,14 +52,14 @@ lshd_SOURCES = lshd.c reaper.c server.c server_keyexchange.c \
 lsh_keygen_SOURCES = lsh_keygen.c
 
 atoms_defines.h: atoms.in process_atoms
-	bash $(srcdir)/process_atoms header <$(srcdir)/atoms.in >$@
+	$(BASH) $(srcdir)/process_atoms header <$(srcdir)/atoms.in >$@
 
 atoms_gperf.c: atoms.in process_atoms
-	bash $(srcdir)/process_atoms gperf <$(srcdir)/atoms.in \
+	$(BASH) $(srcdir)/process_atoms gperf <$(srcdir)/atoms.in \
              | gperf >$@ -LANSI-C -t -c -l -k1,7,$$ -N gperf_atom 
 
 atoms_table.c: atoms.in process_atoms
-	bash $(srcdir)/process_atoms table <$(srcdir)/atoms.in >$@
+	$(BASH) $(srcdir)/process_atoms table <$(srcdir)/atoms.in >$@
 
 PRIME_LIMIT = 1024
 
@@ -70,17 +69,17 @@ prime_table.h: prime_table
 prime_table_LDADD =
 
 sexp_table.h: sexp_chars.in $(srcdir)/make_char_classes
-	$(srcdir)/make_char_classes <$< >$@
+	$(SCHEME) $(srcdir)/make_char_classes <$< >$@
 
 digit_table_LDADD =
 
 digit_table.h: digit_table 
 	./digit_table >$@
 
-LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
+LDADD = @LIBOBJS@ liblsh.a symmetric/libsymmetric.a 
 
 # Is this rule needed?
-all-recursive check-recursive: config.h
+# all-recursive check-recursive: config.h
 
 # lsh_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
 # lshd_LDADD = @LIBOBJS@ liblsh.a lib/libsymmetric.a 
@@ -155,5 +154,5 @@ distclean-tags:
 # This is GNU make specific
 
 %.x: % $(srcdir)/make_class
-	$(srcdir)/make_class <$< >$@
+	$(SCHEME) $(srcdir)/make_class <$< >$@
 
