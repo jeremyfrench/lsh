@@ -35,8 +35,6 @@
 
 #include <oop.h>
 
-#include "nettle/macros.h"
-
 #include "lshd.h"
 
 #include "algorithms.h"
@@ -141,8 +139,7 @@ make_lshd_connection(struct configuration *config, int input, int output)
   self->kex_handler = NULL;
   self->service_handler = &lshd_service_request_handler;
 
-  self->reader = make_lshd_read_state(make_lshd_process_ssh_header(self),
-				      make_lshd_read_error(self));
+  self->reader = make_lshd_read_state(self, make_lshd_read_error(self));
 
   self->rec_max_packet = SSH_MAX_PACKET;
   self->rec_mac = NULL;
@@ -193,17 +190,6 @@ connection_disconnect(struct lshd_connection *connection,
   KILL_RESOURCE(&connection->super);
 };
 
-#if 0
-static struct abstract_write *
-make_lshd_handle_packet(struct lshd_connection *connection)
-{
-  NEW(lshd_read_handler, self);
-  self->connection = connection;
-  self->super.write = lshd_handle_packet;
-  return &self->super;
-}
-#endif
-
 static void
 lshd_handle_line(struct abstract_write *s, struct lsh_string *line)
 {
@@ -250,60 +236,6 @@ DEFINE_PACKET_HANDLER(lshd_service_handler, connection, packet)
 				lsh_string_sequence_number(packet),
 				packet)) < 0)
     fatal("lshd_service_handler: Write failed.\n");
-}
-
-/* GABA:
-   (class
-     (name lshd_process_service_header)
-     (super header_callback)
-     (vars
-       (connection object lshd_connection)))
-*/
-
-static struct lsh_string *
-lshd_process_service_header(struct header_callback *s, struct ssh_read_state *state,
-			    uint32_t *done)
-{
-  CAST(lshd_process_service_header, self, s);
-  struct lshd_connection *connection = self->connection;
-
-  uint32_t seqno;
-  uint32_t length;
-  struct lsh_string *packet;
-  const uint8_t *header;
-
-  header = lsh_string_data(state->header);
-
-  seqno = READ_UINT32(header);
-  length = READ_UINT32(header + 4);
-
-  if (length > (connection->rec_max_packet + SSH_MAX_PACKET_FUZZ))
-    {
-      werror("lshd_process_service_header: Receiving too large packet.\n"
-	     "  %i octets, limit is %i\n",
-	     length, connection->rec_max_packet);
-
-      connection_disconnect(connection, SSH_DISCONNECT_BY_APPLICATION,
-			    "Received too large packet from service layer.");
-      return NULL;
-    }
-
-  packet = lsh_string_alloc(length);
-
-  /* The sequence number is unused */
-  lsh_string_set_sequence_number(packet, seqno);
-  *done = 0;
-  return packet;
-}
-
-static struct header_callback *
-make_lshd_process_service_header(struct lshd_connection *connection)
-{
-  NEW(lshd_process_service_header, self);
-  self->super.process = lshd_process_service_header;
-  self->connection = connection;
-
-  return &self->super;
 }
 
 static void
@@ -418,7 +350,7 @@ DEFINE_PACKET_HANDLER(lshd_service_request_handler, connection, packet)
 
 	      connection->service_reader
 		= make_ssh_read_state(8, 8,
-				      make_lshd_process_service_header(connection),
+				      service_process_header,
 				      connection->reader->super.error);
 	      ssh_read_packet(connection->service_reader,
 			      global_oop_source, connection->service_fd,
