@@ -175,11 +175,11 @@ int main(int argc, char **argv)
     struct lsh_string *key = sexp_format
       (sexp_l(2, sexp_z("private-key"),
 	      sexp_l(6, sexp_z("dss"),
-		     sexp_l(2, sexp_z("p"), sexp_n(public.p), -1),
-		     sexp_l(2, sexp_z("q"), sexp_n(public.q), -1),
-		     sexp_l(2, sexp_z("g"), sexp_n(public.g), -1),
-		     sexp_l(2, sexp_z("y"), sexp_n(public.y), -1),
-		     sexp_l(2, sexp_z("x"), sexp_n(x), -1), -1), -1),
+		     sexp_l(2, sexp_z("p"), sexp_un(public.p), -1),
+		     sexp_l(2, sexp_z("q"), sexp_un(public.q), -1),
+		     sexp_l(2, sexp_z("g"), sexp_un(public.g), -1),
+		     sexp_l(2, sexp_z("y"), sexp_un(public.y), -1),
+		     sexp_l(2, sexp_z("x"), sexp_un(x), -1), -1), -1),
        style, 0);
 
     return LSH_FAILUREP(A_WRITE(output, key))
