@@ -54,7 +54,6 @@ dist_classes = \
     lshd.c.x \
     lshg.c.x \
     parse_config.c.x \
-    publickey_crypto.c.x \
     publickey_crypto.h.x \
     queue.h.x \
     randomness.h.x \
