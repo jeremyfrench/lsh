@@ -140,12 +140,29 @@ DEFINE_COMMAND(bind_address_command)
   fd = io_bind_sockaddr(addr, addr_length, e);
   lsh_space_free(addr);
   
-  if (!fd)
+  if (fd)
+    COMMAND_RETURN(c, fd);
+  else
     /* FIXME: Do we need an EXC_IO_BIND ? */
     EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
 					 NULL, errno, NULL));
-  else
+}
+
+DEFINE_COMMAND(bind_local_command)
+     (struct command *self UNUSED,
+      struct lsh_object *x,
+      struct command_continuation *c,
+      struct exception_handler *e)
+{
+  CAST(local_info, info, x);
+  struct lsh_fd *fd = io_bind_local(info, e);
+
+  if (fd)
     COMMAND_RETURN(c, fd);
+  else
+    /* FIXME: Do we need an EXC_IO_BIND ? */
+    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
+					 NULL, errno, NULL));
 }
 
 
@@ -282,78 +299,6 @@ DEFINE_COMMAND2(connect_connection_command)
   do_connect(address, connection->resources, c, e);
 }
 
-
-/* GABA:
-   (class
-     (name listen_local)
-     (super command)
-     (vars
-       (info object local_info)))
-*/
-
-static void
-do_listen_local(struct command *s,
-		struct lsh_object *x,
-		struct command_continuation *c,
-		struct exception_handler *e)
-{
-  CAST(listen_local, self, s);
-  CAST_SUBTYPE(command, callback, x);
-  
-  struct lsh_fd *fd
-    = io_listen(io_bind_local(self->info, e),
-		make_listen_callback(callback, e));
-  if (!fd)
-    EXCEPTION_RAISE(e, make_io_exception(EXC_IO_LISTEN,
-					 NULL, errno, NULL));
-  else
-    COMMAND_RETURN(c, fd);
-}
-
-/* FIXME: Replace with a bind_local command. */
-struct command *
-make_listen_local(struct local_info *info)
-{
-  NEW(listen_local, self);
-  self->info = info;
-
-  self->super.call = do_listen_local;
-
-  return &self->super;
-}
-
-/* ;; GABA:
-   (class
-     (name connect_local)
-     (super command)
-     (vars
-       (backend object io_backend)))
-*/
-
-#if 0
-static void
-do_connect_local(struct command *self,
-                 struct lsh_object *x,
-                 struct command_continuation *c,
-                 struct exception_handler *e)
-{
-  CAST(local_info, info, x);
-
-  io_connect_local(info,
-		   make_connect_continuation(NULL, c),
-		   e);
-}
-
-struct command *
-make_connect_local(void)
-{
-  NEW(connect_local, self);
-
-  self->call = do_connect_local;
-
-  return self;
-}
-#endif
 
 DEFINE_COMMAND(connect_local_command)
      (struct command *s UNUSED,
