@@ -4,7 +4,8 @@ SUBDIRS = argp rsync nettle scm sftp spki . testsuite
 
 include .dist_classes
 include .dist_headers
-include .dist_deps
+
+BUILT_SOURCES = environ.h
 
 # AUTOMAKE_OPTIONS = foreign
 
