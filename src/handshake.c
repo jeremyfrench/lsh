@@ -186,13 +186,13 @@ do_line(struct line_handler **h,
 				       : ssh_format("Received"))),
 		    connection);
 	    
-	    connection->versions[!mode]
+	    connection->kex.version[!mode]
 	      = ssh_format("%ls", length, line);
 
 	    verbose("Client version: %pS\n"
 		    "Server version: %pS\n",
-		    connection->versions[CONNECTION_CLIENT],
-		    connection->versions[CONNECTION_SERVER]);
+		    connection->kex.version[CONNECTION_CLIENT],
+		    connection->kex.version[CONNECTION_SERVER]);
 
 	    *r = new;
 	    return;
@@ -370,7 +370,7 @@ DEFINE_COMMAND4(handshake_command)
 			 HANDSHAKE_TIMEOUT,
 			 "Handshake timed out");
   
-  connection->versions[mode] = version;
+  connection->kex.version[mode] = version;
   connection->kexinit = info->kexinit; 
   connection->dispatch[SSH_MSG_KEXINIT]
     = make_kexinit_handler(extra, info->algorithms);
