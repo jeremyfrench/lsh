@@ -222,6 +222,8 @@ make_process_resource(pid_t pid, int signal)
      (super lsh_user)
      (vars
        (gid simple gid_t)
+       ; Needed for the USER_READ_FILE method
+       (backend object io_backend)
        
        ; These strings include a terminating NUL-character, for 
        ; compatibility with library and system calls. This applies also
@@ -298,6 +300,30 @@ do_file_exists(struct lsh_user *u,
     }
   lsh_string_free(path);
   return 0;
+}
+
+/* NOTE: No arbitrary file names are passed to this function, so we don't have
+ * to check for things like "../../some/secret/file" */
+
+static struct lsh_fd *
+do_read_file(struct lsh_user *u, 
+	     const char *name, int secret,
+	     const struct exception **x,
+	     struct exception_handler *e)
+{
+  CAST(unix_user, user, u);
+  struct lsh_string *f;
+  struct lsh_fd *fd;
+  
+  if (!user->home)
+    return NULL;
+
+  f = ssh_format("%ls/.lsh/%lz%c", user->home, name, 0);
+
+  fd = io_read_user_file(user->backend, f->data, user->super.uid, secret, x, e);
+  lsh_string_free(f);
+
+  return fd;
 }
 
 /* Change to user's home directory. FIXME: If the server is running
@@ -514,6 +540,7 @@ do_exec_shell(struct lsh_user *u, int login,
 static struct lsh_user *
 make_unix_user(struct lsh_string *name,
 	       uid_t uid, gid_t gid,
+	       struct io_backend *backend,
 	       const char *passwd,
 	       const char *home,
 	       const char *shell)
@@ -525,6 +552,7 @@ make_unix_user(struct lsh_string *name,
   user->super.name = name;
   user->super.verify_password = do_verify_password;
   user->super.file_exists = do_file_exists;
+  user->super.read_file = do_read_file;
   user->super.chdir_home = do_chdir_home;
   user->super.fork_process = do_fork_process;
   user->super.exec_shell = do_exec_shell;
@@ -532,6 +560,8 @@ make_unix_user(struct lsh_string *name,
   user->super.uid = uid;
   user->gid = gid;
 
+  user->backend = backend;
+  
   /* Treat empty strings as NULL. */
 
 #define TERMINATE(s) (((s) && *(s)) ? format_cstring((s)) : NULL)
@@ -548,6 +578,7 @@ make_unix_user(struct lsh_string *name,
      (name unix_user_db)
      (super user_db)
      (vars
+       (backend object io_backend)
        (allow_root . int)))
 */
 
@@ -641,6 +672,7 @@ do_lookup_user(struct user_db *s,
   
       return make_unix_user(name,
 			    passwd->pw_uid, passwd->pw_gid,
+			    self->backend,
 			    crypted,
 			    passwd->pw_dir, passwd->pw_shell);
     }
@@ -653,11 +685,12 @@ do_lookup_user(struct user_db *s,
 }
 
 struct user_db *
-make_unix_user_db(int allow_root)
+make_unix_user_db(struct io_backend *backend, int allow_root)
 {
   NEW(unix_user_db, self);
 
   self->super.lookup = do_lookup_user;
+  self->backend = backend;
   self->allow_root = allow_root;
 
   return &self->super;
