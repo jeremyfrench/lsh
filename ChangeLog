@@ -1,3 +1,73 @@
+2001-03-25  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/testsuite/Makefile.am (CFLAGS): -O0 is not needed anymore,
+	since most of the rijndael tests were deleted.
+
+	* src/proxy_userauth.c (do_proxy_userauth_continuation): Don't use
+	FORCE_APPLY. 
+
+	* src/command.h (delayed_apply): Deleted class.
+
+	* configure.in: Bumped version to 1.1.9.
+
+	* src/testsuite/rijndael-test.m4: Deleted most tests, left 4 for
+	each key size.
+
+	* src/werror.c (fatal): If compiling with gcov, use exit(255)
+	instead of abort.
+
+	* src/spki_commands.c (parse_private_key): Use fatal instead of
+	abort. 
+
+	* src/sexp.c (sexp_sn): #if:ed out.
+
+	* src/resource.c (dont_free_live_resource): Call werror, not
+	fatal. Currently, this is normal iff it happens during
+	gc_final.
+
+	* src/proxy_userauth.c (do_handle_userauth): Don't use
+	make_delay_continuation. 
+
+	* src/lshg.c (main): Call gc_final.
+
+	* src/lshd.c (main): Call gc_final. When compiling with gcov,
+	catch the TERM signal and call exit() sometime later.
+
+	* src/lsh.c: Call gc_final().
+
+	* src/lsh-keygen.c: Use fatal(), not abort().
+
+	* src/io_commands.c (remember_continuation): Deleted class.
+	(do_remember_continuation): Deleted function.
+	(make_remember_continuation): Deleted function.
+	(do_listen): Deleted arguments resources and lookup. Updated
+	callers. 
+	(do_simple_listen): Deleted function.
+	(make_simple_listen): Deleted function.
+
+	* src/gc.c (gc_final): New function.
+
+	* src/command.c (make_delayed_apply): Deleted function.
+	(delay_continuation): Deleted class.
+	(do_delay_continuation): Deleted function.
+	(make_delay_continuation): Deleted function.
+
+	* src/channel.c (connection_service): Deleted class.
+
+	* doc/lsh.texinfo (Invoking lsh): Added a note saying that
+	ordering is important. 
+
+	* doc/TODO (TESTING): Added info on missing tests.
+
+	* configure.in: Define WITH_GCOV when compiling for gcov. 
+
+	* acconfig.h (WITH_GCOV): New symbol.
+
+2001-03-24  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/lsh_proxy.c (main): Use listen_callback instead of
+	simple_listen. 
+
 2001-03-20  Niels Möller  <nisse@ehand.com>
 
 	* src/lshg.c: Include client.h (used to include client.c. Argh!).

@@ -21,6 +21,8 @@ channel.h
 
   Change the fallbacks (used by the gateway), to pass the entire
   packets.
+
+  Class connection_service seems unused.
   
 channel_commands.h done
 charset.h done
@@ -178,10 +180,12 @@ server_pty.h done
 server_session.h done
 server_userauth.h done
 
-sexp.h (done)
+sexp.h
 
-  Remove traces of cons.
-  Remove SEXP_SET
+  Remove traces of cons (done)
+  Remove SEXP_SET (done)
+
+  Do we really need nil? In spki, no empty lists are allowed.
   
 sexp_commands.h
 

@@ -72,11 +72,6 @@ extern struct io_read_fd io_read_stdin;
 #define IO_READ_STDIN (&io_read_stdin.super.super)
 
 
-/* This is not quite the right place for this function. */
-struct command_continuation *
-make_remember_continuation(struct resource_list *resources,
-			   struct command_continuation *up);
-
 struct command *
 make_listen_with_callback(struct command *callback,
 			  struct io_backend *backend);
@@ -94,10 +89,6 @@ make_connect_connection(struct io_backend *backend);
 struct command *
 make_simple_connect(struct io_backend *backend,
 		    struct resource_list *resources);
-
-struct command *
-make_simple_listen(struct io_backend *backend,
-		   struct resource_list *resources);
 
 struct command *
 make_listen_local(struct io_backend *backend,

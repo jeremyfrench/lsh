@@ -1,3 +1,9 @@
+News for the 1.1.9 release:
+
+	Some code cleanup. Removed a dozen files, four classes and
+	about 1k lines of code. Useful tools are make class-map and
+	./configure --enable-gcov.
+	
 News for the 1.1.8 release:
 
 	Updated the scsh support for scsh-0.5.2. Note that scsh is now

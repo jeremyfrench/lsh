@@ -2,6 +2,8 @@ I'd like to announce a new version of LSH, the GNU implementation of
 the secure shell protocols. LSH includes a client, a server, and a few
 scripts and utility programs.
 
+The LSH-1.2 release, and any following LSH-1.2.x updates, are intended
+to be stable. New features will be added to LSH-1.3.x.
 
 FEATURES
 
@@ -11,10 +13,10 @@ o  Support for RSA keys, for both host and user authentication.
 
 o  The "gateway" mode of operation, implemented by lsh -G and lshg.
 
-o  Limited Kerberos support, similar to that available for the
+o  Limited Kerberos support, comparable to that available for the
    original sshd.
 
-o  An improved randomness generator that works also on sysmtems that
+o  An improved randomness generator that works also on systems that
    lack /dev/random.
    
 Some of the older (LSH-1.0) features are
