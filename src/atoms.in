@@ -53,9 +53,11 @@ spki-sign-dss        OPTIONAL     sign    SPKI certificates (DSS key)
 pgp-sign-rsa         OPTIONAL     sign    OpenPGP certificates (RSA key)
 pgp-sign-dss         OPTIONAL     sign    OpenPGP certificates (DSS key)
 
+# Generic spki, for now used only by the testsuite
+spki
+ 
 # Old variants
 
-# spki
 # ssh-rsa-pkcs1@lysator.liu.se 
 # x509v3               RECOMMENDED  sign      X.509 certificates
 # spki                 OPTIONAL     sign      SPKI certificates
