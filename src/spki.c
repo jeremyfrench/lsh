@@ -403,7 +403,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
   struct sexp_iterator i;
   
   if (! (sexp_iterator_first(&i, expr->length, expr->data)
-	 && sexp_iterator_check_type(&i, "password_encrypted")))
+	 && sexp_iterator_check_type(&i, "password-encrypted")))
     return expr;
 
   else
