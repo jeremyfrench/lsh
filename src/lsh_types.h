@@ -215,6 +215,9 @@ struct callback
 /* Indicates that a channel is ready to send data to the remote end. */
 #define LSH_CHANNEL_READY_SEND 0x200
 
+/* Syntax error (used in the sexp parser) */
+#define LSH_SYNTAX 0x400
+
 /* Non-zero if no messages can be sent over the connection. Used when
  * processing error codes from in the middle of the processing a
  * messages. If this is true, processing should stop, and most likely
