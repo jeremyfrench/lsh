@@ -1067,11 +1067,16 @@ main(int argc, char **argv)
 					    make_alist(1, ATOM_SSH_CONNECTION,
 						       connection_service,-1)),
 		      -1))));
+
+      static const struct report_exception_info report =
+	STATIC_REPORT_EXCEPTION_INFO(EXC_IO, EXC_IO,
+				     "lshd: ");
+	    
       
       COMMAND_CALL(server_listen, options,
 		   &discard_continuation,
 		   make_report_exception_handler
-		   (make_report_exception_info(EXC_IO, EXC_IO, "lshd: "),
+		   (&report,
 		    options->e,
 		    HANDLER_CONTEXT));
     }

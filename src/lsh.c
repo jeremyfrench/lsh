@@ -887,13 +887,16 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	  }
 	if (s)
 	  {
+	    static const struct report_exception_info report =
+	      STATIC_REPORT_EXCEPTION_INFO(EXC_IO, EXC_IO,
+					   "Writing new ACL: ");
+	    
 	    struct lsh_fd *f
 	      = io_write_file(s,
 			      O_CREAT | O_APPEND | O_WRONLY,
 			      0600, 500, NULL,
 			      make_report_exception_handler
-			      (make_report_exception_info(EXC_IO, EXC_IO,
-							  "Writing new ACL: "),
+			      (&report,
 			       &default_exception_handler,
 			       HANDLER_CONTEXT));
 	    if (f)
