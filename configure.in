@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 1.0.2)
+AM_INIT_AUTOMAKE(lsh, 1.0.3)
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
@@ -167,7 +167,7 @@ AC_ARG_WITH(lib-path,
   [with_lib_path=''])
 
 if test x$with_lib_path != x ; then
-  LIBS="-L `echo $with_lib_path | sed 's/:/ -L /g'`"
+  LDFLAGS="-L `echo $with_lib_path | sed 's/:/ -L /g'`"
 fi
 
 LSH_RPATH_INIT([`echo $with_lib_path | sed 's/:/ /g'` \
