@@ -38,6 +38,8 @@
 extern struct crypto_algorithm crypto_arcfour_algorithm;
 extern struct crypto_algorithm crypto_des_algorithm;
 
+struct crypto_algorithm *make_twofish_algorithm(UINT32 key_size);
+struct crypto_algorithm *make_twofish(void);
 struct crypto_algorithm *make_blowfish_algorithm(UINT32 key_size);
 struct crypto_algorithm *make_blowfish(void);
 struct crypto_algorithm *make_des3(void);

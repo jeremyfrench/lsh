@@ -10,6 +10,7 @@ zlib
 
 3des-cbc         REQUIRED          three-key 3DES in CBC mode
 blowfish-cbc     RECOMMENDED       Blowfish in CBC mode
+twofish-cbc      RECOMMENDED       TwoFish cipher in CBC mode
 arcfour          OPTIONAL          the ARCFOUR stream cipher
 idea-cbc         OPTIONAL          IDEA in CBC mode
 cast128-cbc      OPTIONAL          CAST-128 in CBC mode
@@ -19,7 +20,6 @@ cast128-cbc      OPTIONAL          CAST-128 in CBC mode
 ## some of them will probably be included in an updated secsh draft. 
 ##
 
-#twofish-cbc      OPTIONAL          TwoFish cipher in CBC mode
 #des-cbc          OPTIONAL          DES cipher in CBC mode
 
 ## NOTE: Is there any reason to ever use any chaining mode but cbc in

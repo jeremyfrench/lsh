@@ -3,6 +3,8 @@ conditions of the GNU General Public License (see the file COPYING for
 details). But many other people have written free code which is used
 in lsh.
 
+TWOFISH implementation by Ruud de Rooij. Released under the LGPL.
+
 BLOWFISH implementation from Werner Koch's and FSF's GNU Privacy
 Guard. Released under the GPL.
 

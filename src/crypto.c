@@ -28,6 +28,7 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include "twofish.h"
 #include "blowfish.h"
 #include "des.h"
 #include "sha.h"

@@ -37,7 +37,7 @@ struct alist *many_algorithms(unsigned n, ...)
   va_list args;
   
   struct alist *a
-    = make_alist(5
+    = make_alist(6
 #if WITH_CAST
 		 +1
 #endif
@@ -50,6 +50,7 @@ struct alist *many_algorithms(unsigned n, ...)
 		 ,
 		 ATOM_ARCFOUR, &crypto_arcfour_algorithm,
 		 ATOM_BLOWFISH_CBC, crypto_cbc(make_blowfish()),
+		 ATOM_TWOFISH_CBC, crypto_cbc(make_twofish()),
 		 ATOM_3DES_CBC, crypto_cbc(make_des3()),
 #if WITH_CAST
 		 ATOM_CAST128_CBC, crypto_cbc(make_cast()),
@@ -100,6 +101,8 @@ int lookup_crypto(struct alist *algorithms, char *name)
   
   if (strcmp_list(name, "arcfour", NULL))
     atom = ATOM_ARCFOUR;
+  else if (strcmp_list(name, "twofish-cbc", "twofish", NULL))
+    atom = ATOM_TWOFISH_CBC;
   else if (strcmp_list(name, "blowfish-cbc", "blowfish", NULL))
     atom = ATOM_BLOWFISH_CBC;
   else if (strcmp_list(name, "3des-cbc", "3des", NULL))

@@ -51,7 +51,7 @@ liblsh_a_SOURCES = abstract_io.c abstract_crypto.c abstract_compress.c \
 	sexp.c sexp_parser.c sexp_streamed_parser.c \
 	sha.c service.c ssh1_fallback.c \
 	string_buffer.c \
-	translate_signal.c tty.c unpad.c userauth.c \
+	translate_signal.c tty.c twofish.c unpad.c userauth.c \
 	werror.c write_buffer.c xalloc.c zlib.c
 
 atoms_defines.h: atoms.in process_atoms
