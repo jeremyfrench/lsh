@@ -101,6 +101,24 @@ cancel-tcpip-forward
 forwarded-tcpip
 direct-tcpip
 
+# Standard signals
+ABRT
+ALRM
+FPE
+HUP
+ILL
+INT
+KILL
+PIPE
+QUIT
+SEGV
+TERM
+USR1
+USR2
+
+# For unknown signals
+signal-unknown@lysator.liu.se
+ 
 # Used in spki keys
 private-key
 public-key
