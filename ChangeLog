@@ -1,3 +1,26 @@
+2001-02-21  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/srp_exchange.c (srp_format_proofs): First argument to
+	MAKE_MAC must not have side effects.
+
+	* src/lsh-keygen.c (main): First argument to A_WRITE must not have
+	side effects.
+
+	* src/gateway_channel.c (do_gateway_channel_request): First
+	argument to COMMAND_CALL must not have side effects.
+	(do_channel_open_forward): Likewise.
+	* src/lsh.c (do_options2identities): Likewise.
+
+	* src/connection_commands.c (do_connection_if_srp): Don't use a
+	complex expression as the first argument to COMMAND_CALL.
+
+	* src/command.h (COMMAND_CALL): Generate a compile error if the
+	first argument is not an lvalue.
+
+2001-02-20  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* doc/HACKING: Added section CAVEAT.
+
 2001-02-20  Niels Möller  <nisse@ehand.com>
 
 	* src/io.c, src/io.h, src/reaper.c, src/unix_interact.c: Added
