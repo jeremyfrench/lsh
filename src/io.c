@@ -1324,7 +1324,7 @@ address_info2sockaddr(socklen_t *length,
 #error IPv6 enabled, but getaddrinfo and friends were not found. 
 #endif
 
-  if (a->ip && memchr(a->ip->data, ':', a->ip->length))
+  if (host && strchr(host, ':'))
     {
       debug("address_info2sockaddr: Literal IPv6 used. Failing.\n");
       return NULL;
