@@ -1,3 +1,37 @@
+2000-06-04  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/srp_exchange.c (srp_format_proofs): New function. Replaces
+	srp_format_m2().
+	(srp_make_reply_msg): Convert secret to string.
+	(srp_make_client_proof): Compute m2, and return it through an
+	extra argument..
+	(srp_process_client_proof): Use srp_format_proofs().
+	(srp_process_server_proof): Added argument m2. Deleted argument dh.
+
+	* src/keyexchange.c (kex_build_secret): Add length header for
+	secret key.
+
+	* src/client_keyexchange.c: Adapted to changes in dh_exchange.c
+	and srp_exchange.c.
+	* src/server_keyexchange.c: Likewise.
+
+	* src/dh_exchange.c (dh_process_client_msg): Convert secret to
+	string. 
+	(dh_make_server_msg): Added server_key argument.
+	(dh_process_server_msg): Return server_key and signatur. Call
+	dh_digest(). 
+	(dh_verify_server_msg): #if:ed out function.
+
+	* src/publickey_crypto.h: Changed typeof K attribute to string.
+	Removed the server_key and signature attributes.
+
+	* configure.in: Bumped version to 0.9.12.
+
+	* src/client_userauth.c (do_client_exc_userauth): Use equality
+	comparison when checking for EXC_USERAUTH.
+
+	* src/lsh.c (do_lsh_default_handler): Check for EXC_USERAUTH.
+
 2000-06-02  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/unix_user.c (do_lookup_user): Let $HOME override the
