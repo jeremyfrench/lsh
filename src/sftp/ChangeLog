@@ -1,5 +1,10 @@
 2002-05-15  Pontus Sköld  <pont@soua.net>
 
+	* commands.c (get_file_or_folder): Removed debug message.
+
+	* dc.c (lsftp_dc_r_startglob): Remove lsftp_unqualify_path calls,
+	I wonder why I thought they should be there from the beginning.
+
 	* commands.c (com_longhelp): New function (almost identical to the
 	old help function, just ignore the visible bit). Cosmetic fix at
 	the same time (an empty line inserted before the help for a
