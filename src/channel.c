@@ -565,7 +565,7 @@ make_global_request_response(struct ssh_connection *connection,
 /* NOTE: We handle *only* EXC_GLOBAL_REQUEST */
 static void 
 do_exc_global_request_handler(struct exception_handler *c,
-			  const struct exception *e)
+			      const struct exception *e)
 {
   CAST(global_request_exception_handler, self, c);
   if (e->type == EXC_GLOBAL_REQUEST)
