@@ -81,7 +81,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  struct read_handler *new
 	    = make_read_packet(make_packet_debug(&closure->connection->super,
 						 stderr),
-			       closure->connection->max_packet);
+			       closure->connection);
 	  
 	  closure->connection->client_version
 	    = ssh_format("%ls", length, line);
