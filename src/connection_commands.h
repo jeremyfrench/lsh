@@ -30,8 +30,43 @@
 #include "keyexchange.h"
 #include "ssh1_fallback.h"
 
+#define GABA_DECLARE
+#include "connection_commands.h.x"
+#undef GABA_DECLARE
+
+/* GABA:
+   (class
+     (name handshake_info)
+     (vars
+       ; CONNECTION_SERVER or CONNECTION_CLIENT
+       (mode . int)
+       (block_size simple UINT32)
+       (id_comment simple "const char *")
+
+       (random object randomness)
+       (algorithms object alist)
+       
+       (init object make_kexinit)
+       
+       ;; Used only on the server
+       (fallback object ssh1_fallback)))
+*/
+
+struct handshake_info *
+make_handshake_info(int mode,
+		    const char *id,
+		    UINT32 block_size,
+		    struct randomness *r,
+		    struct alist *algorithms,
+		    struct make_kexinit *init,
+		    struct ssh1_fallback *fallback);
+
+struct collect_info_1 handshake_command;
+#define CONNECTION_HANDSHAKE (&handshake_command.super.super.super)
+
 struct close_callback *make_connection_close_handler(struct ssh_connection *c);
 
+#if 0
 struct command *
 make_handshake_command(int mode,
 		       const char *id,
@@ -44,5 +79,6 @@ make_handshake_command(int mode,
 extern struct command connection_remember_command;
 
 #define CONNECTION_REMEMBER (&connection_remember_command.super)
+#endif
 
 #endif /* LSH_CONNECTION_COMMANDS_H_INCLUDED */

@@ -40,6 +40,10 @@
 #include <assert.h>
 #include <string.h>
 
+#define GABA_DEFINE
+#include "connection_commands.h.x"
+#undef GABA_DEFINE
+
 #include "connection_commands.c.x"
 
 /* GABA:
@@ -270,58 +274,74 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
   return make_read_line(&closure->super, connection->e);
 }
 
-/* Takes a fd as argument, and returns a connection object. Never
- * returns NULL; if the handshaking failes, it won't return at all. */
+
+struct handshake_info *
+make_handshake_info(int mode,
+		    const char *id,
+		    UINT32 block_size,
+		    struct randomness *r,
+		    struct alist *algorithms,
+		    struct make_kexinit *init,
+		    struct ssh1_fallback *fallback)
+{
+  NEW(handshake_info, self);
+  self->mode = mode;
+  self->id_comment = id;
+  self->block_size = block_size;
+  self->random = r;
+  self->algorithms = algorithms;
+  self->init = init;
+  self->fallback = fallback;
+
+  return self;
+}
+
+/* (handshake handshake_info extra file) -> connection 
+ *
+ * extra is passed on to KEYEXCHANGE_INIT, it is typically a set of
+ * private keys (for the server) or a hostkey database (for the
+ * client). */
+
 /* GABA:
    (class
-     (name connection_command)
+     (name handshake_command_2)
      (super command)
      (vars
-       ; CONNECTION_SERVER or CONNECTION_CLIENT
-       (mode . int)
-       (block_size simple UINT32)
-       (id_comment simple "const char *")
-
-       (random object randomness)
-       (algorithms object alist)
-       
-       (init object make_kexinit)
-       
-       ;; Used only on the server
-       (fallback object ssh1_fallback)))
+       (info object handshake_info)
+       (extra object lsh_object)))
 */
 
 /* Buffer size when reading from the socket */
 #define BUF_SIZE (1<<14)
 
 static void
-do_connection(struct command *s,
-	      struct lsh_object *x,
-	      struct command_continuation *c,
-	      struct exception_handler *e)
+do_handshake(struct command *s,
+	     struct lsh_object *x,
+	     struct command_continuation *c,
+	     struct exception_handler *e)
 {
-  CAST(connection_command, self, s);
+  CAST(handshake_command_2, self, s);
   CAST(io_fd, fd, x);
   struct lsh_string *version;
   struct ssh_connection *connection;
     
-  switch (self->mode)
+  switch (self->info->mode)
     {
     case CONNECTION_CLIENT:
       version = ssh_format("SSH-%lz-%lz %lz",
 			   CLIENT_PROTOCOL_VERSION,
 			   SOFTWARE_CLIENT_VERSION,
-			   self->id_comment);
+			   self->info->id_comment);
       break;
     case CONNECTION_SERVER:
 #if WITH_SSH1_FALLBACK
-      if (self->fallback)
+      if (self->info->fallback)
 	{
 	  version =
 	    ssh_format("SSH-%lz-%lz %lz",
 		       SSH1_SERVER_PROTOCOL_VERSION,
 		       SOFTWARE_SERVER_VERSION,
-		       self->id_comment);
+		       self->info->id_comment);
 	}
       else
 #endif
@@ -329,10 +349,10 @@ do_connection(struct command *s,
 	  ssh_format("SSH-%lz-%lz %lz",
 		     SERVER_PROTOCOL_VERSION,
 		     SOFTWARE_SERVER_VERSION,
-		     self->id_comment);
+		     self->info->id_comment);
       break;
     default:
-      fatal("do_connection: Internal error\n");
+      fatal("do_handshake: Internal error\n");
     }
 
   /* Installing the right exception handler is a little tricky. The
@@ -353,17 +373,18 @@ do_connection(struct command *s,
      &io_read_write(fd,
 		    make_buffered_read
 		    (BUF_SIZE,
-		     make_connection_read_line(connection, self->mode,
-					       fd->super.fd, self->fallback)),
-		    self->block_size,
+		     make_connection_read_line(connection, self->info->mode,
+					       fd->super.fd, self->info->fallback)),
+		    self->info->block_size,
 		    make_connection_close_handler(connection))
      ->write_buffer->super,
-     self->random);
+     self->info->random);
 
-  connection->versions[self->mode] = version;
-  connection->kexinits[self->mode] = MAKE_KEXINIT(self->init); 
+  connection->versions[self->info->mode] = version;
+  connection->kexinits[self->info->mode] = MAKE_KEXINIT(self->info->init); 
   connection->dispatch[SSH_MSG_KEXINIT]
-    = make_kexinit_handler(self->mode, self->init, self->algorithms);
+    = make_kexinit_handler(self->info->mode, self->info->init,
+			   self->extra, self->info->algorithms);
 
 #if WITH_SSH1_FALLBACK
   /* In this mode the server SHOULD NOT send carriage return character (ascii
@@ -371,7 +392,7 @@ do_connection(struct command *s,
    *
    * Furthermore, it should not send any data after the identification string,
    * until the client's identification string is received. */
-  if (self->fallback)
+  if (self->info->fallback)
     {
       A_WRITE(connection->raw,
 	      ssh_format("%lS\n", version));
@@ -382,9 +403,34 @@ do_connection(struct command *s,
   A_WRITE(connection->raw,
 	  ssh_format("%lS\r\n", version));
   
-  initiate_keyexchange(connection, self->mode);
+  initiate_keyexchange(connection, self->info->mode);
 }
 
+static struct lsh_object *
+collect_handshake_2(struct collect_info_2 *info,
+		    struct lsh_object *i,
+		    struct lsh_object *extra)
+{
+  CAST(handshake_info, cinfo, i);
+  NEW(handshake_command_2, self);
+
+  assert(!info->next);
+  
+  self->super.call = do_handshake;
+  self->info = cinfo;
+  self->extra = extra;
+
+  return &self->super.super;
+}
+
+static struct collect_info_2 collect_info_handshake_2 =
+STATIC_COLLECT_2_FINAL(collect_handshake_2);
+
+struct collect_info_1 handshake_command =
+STATIC_COLLECT_1(&collect_info_handshake_2);
+
+
+#if 0				       
 struct command *
 make_handshake_command(int mode,
 		       const char *id,
@@ -406,8 +452,9 @@ make_handshake_command(int mode,
   self->super.call = do_connection;
   return &self->super;
 }
+#endif
 
-/* GABA:
+/* ;; GABA:
    (class
      (name connection_remember_command)
      (super command)
