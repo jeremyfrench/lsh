@@ -170,6 +170,9 @@ struct channel_table *make_channel_table(void)
 
   table->pending_close = 0;
 
+  object_queue_init(&table->local_ports);
+  object_queue_init(&table->remote_ports);
+  
   object_queue_init(&table->active_global_requests);
   object_queue_init(&table->pending_global_requests);
   
@@ -458,8 +461,8 @@ static int do_channel_open_response(struct channel_open_callback *c,
         return A_WRITE(closure->super.connection->write,
                        format_open_failure(closure->remote_channel_number,
                                            error, error_msg, ""));
-        /* The request was invalid */
-        return LSH_FAIL | LSH_DIE;
+      /* The request was invalid */
+      return LSH_FAIL | LSH_DIE;
     }
 
   if ( (local_channel_number

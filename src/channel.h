@@ -162,6 +162,10 @@
        (used_channels simple UINT32)
        (max_channels simple UINT32) ; Max number of channels allowed 
 
+       ; Forwarded TCP ports
+       (local_ports struct object_queue)
+       (remote_ports struct object_queue)
+       
        ; Global requests that we have received, and should reply to
        ; in the right order
        (active_global_requests struct object_queue)
@@ -217,22 +221,6 @@
                 "char *error_msg"
                 "struct lsh_string *args")
        (connection object ssh_connection)))
-*/
-
-/* xxCLASS:
-   (class
-     (name channel_open_response)
-     (vars
-       (response method int
-                "struct ssh_channel *channel"
-                "UINT32 error"
-		; FIXME: Use an lsh_string for error messages
-                "char *error_msg"
-                "struct lsh_string *args")
-       (connection object ssh_connection)
-       (remote_channel_number simple UINT32)
-       (window_size simple UINT32)
-       (max_packet simple UINT32)))
 */
 
 #define CHANNEL_OPEN_CALLBACK(c, ch, e, m, a) \
