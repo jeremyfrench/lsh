@@ -1865,7 +1865,8 @@ make_channel_read_data(struct ssh_channel *channel)
    *
    * gives 9 bytes of overhead, including the length field. */
     
-  return make_read_data(channel, make_channel_write(channel)); }
+  return make_read_data(channel, make_channel_write(channel));
+}
 
 struct io_callback *
 make_channel_read_stderr(struct ssh_channel *channel)
