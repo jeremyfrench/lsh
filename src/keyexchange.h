@@ -94,18 +94,19 @@
      
 /* This function generates a new kexinit message.
  *
- * FIXME: It could be replaced with a function that does more: Send
- * the message, record it in the connection structure, and possibly
- * send a first guessed message. */
+ * The message is stored in the appropriate kexinits and
+ * literal_kexinits fields, and a string consisting of the message and
+ * any speculative extra message is also returned. */
 
 /* GABA:
    (class
      (name make_kexinit)
      (vars
-       (make method (object kexinit))))
+       (make method "struct lsh_string *"
+             "struct ssh_connection *" "int")))
 */
 
-#define MAKE_KEXINIT(m) ((m)->make((m)))
+#define MAKE_KEXINIT(s, c, m) ((s)->make((s), (c), (m)))
 
 /* Installs keys for use. */
 /* GABA:
