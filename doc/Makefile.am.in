@@ -1,4 +1,7 @@
 ## Process this file with make_am to produce Makefile.am
 BODY:
 
-EXTRA_DIST = configuration.txt
+EXTRA_DIST = HACKING NOTES TASKLIST configuration.txt
+
+Makefile.am: Makefile.am.in
+	(cd $(top_srcdir); ./make_am)

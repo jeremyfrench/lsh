@@ -5,12 +5,17 @@ BODY:
 
 AUTOMAKE_OPTIONS = foreign
 
+# FIXME: Use the BASH variable to execute the script. The problem is
+# that the script attempts to start itselt with "$0 args".
+
 Makefile.am: Makefile.am.in
-	$(BASH) make_am
+	./make_am
 
 # Is this rule needed?
 all-recursive check-recursive: config.h
 
 
-EXTRA_DIST = AUTHORS FAQ README COPYING ChangeLog NEWS
+EXTRA_DIST = AUTHORS FAQ README COPYING ChangeLog NEWS FAQ \
+	Makefile.am.in make_am 
+
 

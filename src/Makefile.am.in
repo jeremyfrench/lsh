@@ -16,8 +16,11 @@ AUTOMAKE_OPTIONS = foreign
 # make? FIXME: These rules won't remake Makefile.am files in
 # subdrectries.
 
+# FIXME: Use the BASH variable to execute the script. The problem is
+# that the script attempts to start itselt with "$0 args".
+
 Makefile.am: Makefile.am.in
-	(cd $(top_srcdir); $(BASH) make_am)
+	(cd $(top_srcdir); ./make_am)
 
 bin_PROGRAMS = lsh lshd lsh_keygen lsh_writekey
 noinst_PROGRAMS = prime_table digit_table sexp_test
@@ -68,8 +71,9 @@ prime_table.h: prime_table
 
 prime_table_LDADD =
 
+# FIXME: Use the SCHEME-variable
 sexp_table.h: sexp_chars.in $(srcdir)/make_char_classes
-	$(SCHEME) $(srcdir)/make_char_classes <$< >$@
+	$(srcdir)/make_char_classes <$< >$@
 
 digit_table_LDADD =
 
@@ -98,8 +102,7 @@ EXTRA_DIST = atoms.in process_atoms make_class $(generated_sources) \
 	make_char_classes sexp_chars.in \
  	getopt.h getopt.c getopt1.c \
 	jpoll.h jpoll.c \
-	$(cvs_headers) $(dist_x_files) Makefile.am.in make_am \
-	FAQ HACKING NOTES TASKLIST
+	$(cvs_headers) $(dist_x_files) Makefile.am.in 
 
 MAINTAINERCLEANFILES += $(dist_x_files)
 
@@ -153,6 +156,7 @@ distclean-tags:
 
 # This is GNU make specific
 
+# FIXME: Use the SCHEME-variable
 %.x: % $(srcdir)/make_class
-	$(SCHEME) $(srcdir)/make_class <$< >$@
+	$(srcdir)/make_class <$< >$@
 

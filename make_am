@@ -92,10 +92,10 @@ while true; do
 	    # automake expands "foo \\\n\nbar" -> "foo \\\nbar". So
 	    # put all the files on one line, for simplicity.  
 	    
-	    # comm -12 - <(./cvs_headers $dir) | sed 's/\$/ \\\\/';
+	    # comm -12 - <(src/cvs_headers $dir) | sed 's/\$/ \\\\/';
 	    if [ $rethink = yes ]; then
 		add_command "( (echo $args = .dist_headers;
-		comm -12 - <(./cvs_headers $dir) \\
+		comm -12 - <(src/cvs_headers $dir) \\
 		     | tee $dir/.dist_headers ) | tr '\\n' ' ';
 		echo) 1>&4"
 		
@@ -108,7 +108,7 @@ while true; do
 	CLASS_FILES)
 	    (   ( echo $args = .dist_classes;
 		if [ $rethink = yes ]; then
-		    ./used_headers .x $dir | tee $dir/.dist_classes
+		    src/used_headers .x $dir | tee $dir/.dist_classes
 		else
 		    cat $dir/.dist_classes
 		fi) | tr '\n' ' '
@@ -124,7 +124,7 @@ while true; do
 	BODY)
 	    if [ $top = yes ]; then
 		if [ $rethink = yes ]; then
-		    ./used_headers .h . $subdirs | run_commands		    
+		    src/used_headers .h . $subdirs | run_commands 
 		else
 		    run_commands </dev/null
 		fi
