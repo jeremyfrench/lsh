@@ -1,3 +1,12 @@
+Thu Mar 11 18:07:25 1999    <nisse@idonex.se>
+
+	* src/bignum.c (bignum_next_prime): Fixed off-by-one overflow.
+
+Wed Mar 10 17:26:59 1999    <nisse@idonex.se>
+
+	* src/command.c (do_call_simple_command): COMMAND_CALL method for
+	any command_simple instances.
+
 Thu Mar 11 03:01:00 1999  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/server_pty.c (tty_setctty): Fixed error message.
@@ -11,6 +20,7 @@ Wed Mar 10 17:26:59 1999    <nisse@idonex.se>
 	* src/command.h (command_simple): New class. Like command, but can
 	return a value immediately, rather than using a continuation
 	function. 
+	(STATIC_COMMAND_SIMPLE): New macro to define a static command.
 
 Tue Mar  9 22:18:40 1999    <nisse@idonex.se>
 
