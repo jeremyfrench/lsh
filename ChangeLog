@@ -1,3 +1,27 @@
+2000-09-03  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* configure.in: Bumped version to 1.0.4. 
+
+	* src/testsuite/macros.m4 (TS_SEXP): Use transport format.
+
+	* src/publickey_crypto.h (DSA_MAX_SIZE): New constant.
+
+	* src/parse.c (parse_bignum): New argument LIMIT.
+	* src/sexp.c (sexp2bignum_u): Likewise.
+	(sexp_get_un): Likewise.
+
+	* src/dsa_keygen.c (dsa_generate_key): New function (extracted
+	from lsh_keygen.c).
+
+	* src/dsa.c (do_dsa_verify): Check signature size.
+	(do_dsa_verify_spki): Likewise.
+	(do_dsa_verify_kludge): Likewise.
+	(spki_init_dsa_public): Check size of public key.
+
+	* src/bignum.c (bignum_random_size): Strip extra high order bits.
+	(bignum_next_prime): Minor cleanup.
+	(bignum_random_prime): New function.
+
 2000-09-02  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/atoms.in: Added more rsa-related atoms.
