@@ -56,9 +56,9 @@
        ; mapping is used only on atoms that have appeared in *both* the
        ; client's and the server's list of algorithms (of a certain
        ; type), and therefore the remote side can't screw things up.
-       (algorithms object alist)
+       (algorithms object alist)))
 
-       (finished object ssh_service)))
+       ;;; (finished object ssh_service)))
 */
 
 #define NLISTS 10
@@ -95,7 +95,7 @@ static struct kexinit *parse_kexinit(struct lsh_string *packet)
   for (i = 0; i<NLISTS; i++)
     {
       if (!parse_sub_buffer(&buffer, &sub_buffer)
-	  || ! (lists[i] = parse_atom_list(&sub_buffer, KEXINIT_MAX_ALGORITMS)))
+	  || !(lists[i] = parse_atom_list(&sub_buffer, KEXINIT_MAX_ALGORITMS)))
 	break;
     }
 
@@ -142,17 +142,14 @@ struct lsh_string *format_kex(struct kexinit *kex)
 		    kex->first_kex_packet_follows, 0);
 }
   
-
 int initiate_keyexchange(struct ssh_connection *connection,
-			 int type,
-			 struct kexinit *kex,
-			 struct lsh_string *first_packet)
+			 int mode)
 {
   int res;
   struct lsh_string *s;
-  
-  kex->first_kex_packet_follows = !!first_packet;
-  connection->kexinits[type] = kex;
+  struct kexinit *kex = connection->kexinits[mode];
+
+  assert(kex->first_kex_packet_follows == !!kex->first_packet);
 
   s = format_kex(kex);
 
@@ -161,10 +158,13 @@ int initiate_keyexchange(struct ssh_connection *connection,
 
   res = A_WRITE(connection->write, lsh_string_dup(s));
   
-  if (!LSH_CLOSEDP(res) && first_packet)
-    return res | A_WRITE(connection->write, first_packet);
-  else
+  if (LSH_CLOSEDP(res) || !kex->first_kex_packet_follows)
     return res;
+
+  s = kex->first_kex_packet;
+  kex->first_kex_packet = NULL;
+
+  return res | A_WRITE(connection->write, s);
 }
 
 static int select_algorithm(struct int_list *server_list,
@@ -308,7 +308,6 @@ static int do_handle_kexinit(struct packet_handler *c,
     | KEYEXCHANGE_INIT( (struct keyexchange_algorithm *)
 			ALIST_GET(closure->algorithms, kex_algorithm),
 			connection,
-			closure->finished,
 			hostkey_algorithm,
 			ALIST_GET(closure->algorithms, hostkey_algorithm),
 			algorithms);
@@ -586,28 +585,33 @@ make_newkeys_handler(struct crypto_instance *crypto,
        (languages object int_list)))
 */
 
-static struct kexinit *do_make_simple_kexinit(struct make_kexinit *c)
+static struct lsh_string *
+do_make_simple_kexinit(struct make_kexinit *c)
 {
   CAST(simple_kexinit, closure, c);
-  NEW(kexinit, res);
+  NEW(kexinit, kex);
 
-  RANDOM(closure->r, 16, res->cookie);
+  RANDOM(closure->r, 16, kex->cookie);
 
-  res->kex_algorithms = closure->kex_algorithms;
-  res->server_hostkey_algorithms = closure->hostkey_algorithms;
-  res->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER] = closure->crypto_algorithms;
-  res->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT] = closure->crypto_algorithms;
-  res->parameters[KEX_MAC_CLIENT_TO_SERVER] = closure->mac_algorithms;
-  res->parameters[KEX_MAC_SERVER_TO_CLIENT] = closure->mac_algorithms;
-  res->parameters[KEX_COMPRESSION_CLIENT_TO_SERVER]
+  kex->kex_algorithms = closure->kex_algorithms;
+  kex->server_hostkey_algorithms = closure->hostkey_algorithms;
+  kex->parameters[KEX_ENCRYPTION_CLIENT_TO_SERVER]
+    = closure->crypto_algorithms;
+  kex->parameters[KEX_ENCRYPTION_SERVER_TO_CLIENT]
+    = closure->crypto_algorithms;
+  kex->parameters[KEX_MAC_CLIENT_TO_SERVER] = closure->mac_algorithms;
+  kex->parameters[KEX_MAC_SERVER_TO_CLIENT] = closure->mac_algorithms;
+  kex->parameters[KEX_COMPRESSION_CLIENT_TO_SERVER]
     = closure->compression_algorithms;
-  res->parameters[KEX_COMPRESSION_SERVER_TO_CLIENT]
+  kex->parameters[KEX_COMPRESSION_SERVER_TO_CLIENT]
     = closure->compression_algorithms;
-  res->languages_client_to_server = closure->languages;
-  res->languages_server_to_client = closure->languages;
-  res->first_kex_packet_follows = 0;
+  kex->languages_client_to_server = closure->languages;
+  kex->languages_server_to_client = closure->languages;
+  kex->first_kex_packet_follows = 0;
 
-  return res;
+  kex->first_kex_packet = NULL;
+
+  return kex;
 }
 
 struct make_kexinit *make_simple_kexinit(struct randomness *r,
