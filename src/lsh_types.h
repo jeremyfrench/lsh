@@ -20,6 +20,14 @@
 
 #define UINT8 unsigned char
 
+#ifdef __GNUC__
+#define NORETURN __attribute__ ((noreturn))
+#define PRINTF_STYLE(f, a) __attribute__ ((format(printf, f, a)))
+#else
+#define NORETURN
+#define PRINTF_STYLE(f, a)
+#endif
+
 /* Generic packet */
 struct lsh_string
 {
