@@ -62,7 +62,7 @@ Some examples...
 
 Create a new DSS key pair, and save it in NEW_KEY and NEW_KEY.pub:
 
-  ./lsh_keygen  -l 8 | ./lsh_writekey -o NEW_KEY
+  ./lsh-keygen  -l 8 | ./lsh-writekey -o NEW_KEY
 
 Start an lshd server on port 4711, using the key created above as the
 server host key:

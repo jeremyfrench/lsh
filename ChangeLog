@@ -1,3 +1,7 @@
+2000-10-13  Niels Möller  <nisse@lysator.liu.se>
+
+	* README: Fixed references to lsh-writekey and lsh-keygen. 
+
 2000-10-11  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* configure.in: Bumped version to 1.0.7.
