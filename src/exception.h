@@ -189,8 +189,13 @@ make_protocol_exception(uint32_t reason, const char *msg);
 #define STATIC_PROTOCOL_EXCEPTION(reason, msg) \
 { { STATIC_HEADER, EXC_PROTOCOL, (msg) }, (reason) }
 
-#define PROTOCOL_ERROR(e, msg) \
-EXCEPTION_RAISE((e), \
-  make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR, (msg)))
+/* Always a static message */
+#define PROTOCOL_ERROR(e, msg)				\
+{							\
+  static const struct exception protocol_exception	\
+    = { { STATIC_HEADER, EXC_PROTOCOL, (msg) },		\
+        SSH_DISCONNECT_PROTOCOL_ERROR };		\
+  EXCEPTION_RAISE((e), &protocol_exception);		\
+}
 
 #endif /* LSH_EXCEPTION_H_INCLUDED */
