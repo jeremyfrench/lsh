@@ -1,5 +1,24 @@
 2001-07-03  Niels Möller  <nisse@ehand.com>
 
+	* src/testsuite/runtests (srcdir): By default, use `pwd`, not ".". 
+
+	* src/testsuite/functions.sh: Don't set srcdir here.
+	(spawn_lshd): Send messages to lshd.log.
+
+	* src/werror.c (logfile_flag): New global variable.
+	(syslog_flag): Deleted.
+	(werror_argp_parser): Set logfile_flag of a log file option is
+	encountered. 
+
+	* src/lshd.c (main): Don't use syslog if the user provided an
+	explicit log-file option.
+
+	* src/combinators.c (command_C): Redefined using DEFINE_COMMAND3.
+	(command_Cp): Redefined using DEFINE_COMMAND4, but disabled the
+	new version as it doesn't quite work.
+	
+	* src/testsuite/macros.m4: Include string.h.
+
 	* src/combinators.c (command_Sp): Redefined using
 	DEFINE_COMMAND4.
 	(command_B): Redefined using DEFINE_COMMAND3.
