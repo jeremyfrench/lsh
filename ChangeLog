@@ -1,3 +1,108 @@
+2002-02-07  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/sftp/sftp_c.c: Constness fixes.
+
+	* src/sftp/sftp_bind.c (lsftp_open_connection): Bugfix, don't use
+	i and i++ in the same expression.
+	(lsftp_wait_not_eof): #if:ed out, not used anywhere.
+	(lsftp_remove_sftp_cb): Likewise.
+	Constness fixes, changed calling conventions not to pass and
+	return structs.
+	
+	* src/sftp/lsftp.c (lsftp_num_commands): Declared function static. 
+	(lsftp_interactive_mainloop): Likewise.
+	(lsftp_noninteractive_mainloop): Likewise.
+
+	* src/sftp/dc.c (lsftp_dc_free_index): Made function static.
+	(lsftp_dc_make_index): Likewise.
+	(lsftp_dc_r_sloppy_glob): Likewise.
+	(lsftp_dc_path_no_glob): Likewise.
+	(lsftp_dc_path_first_glob): Likewise.
+	General constification.
+
+	* src/sftp/commands.c: Constification. Fixed warnings for mising
+	prototypes and unused arguments. 
+
+	* src/sftp/commands.h (command_func): New typedef.
+
+	* src/sftp/rl.c, src/sftp/rl.h: Fixed prototypes for funtions
+	taking no arguments.
+
+	* src/sftp/misc_fun.c (mgetenv): Fixed "valren" typo.
+	(lsftp_skip_common): Use const char * for arguments and return
+	value. 
+	(filename_part): Likewise.
+
+	* src/sftp/str_utils.c (lsftp_unqoute): #if:ed out, this function
+	isn't used anywhere.
+	Constified, now	uses const char * for most strings.
+
+	* src/sftp/sftp_c.h (struct sftp_mem): Use UINT32, instead of
+	signed int.
+	(sftp_callback_func): New typedef.
+	(struct sftp_callback): Changed prototype for nextfun. Changed
+	UINT64 to off_t.
+	Changed all prototypes to not pass and return structs without
+	using pointers.
+
+	* src/sftp/sftp_c.c: General change of calling conventions. Pass
+	struct * and const struct *, instead of passing and returning
+	structures "by-value".
+
+	* src/sftp/buffer.c (sftp_packet_size): New function.
+	(sftp_read_packet): Call clearerr after checking for error and
+	eof.
+
+2002-02-06  Niels Möller  <nisse@cuckoo.hack.org>
+
+	Checked in Pontus Sköld's lsftp client.
+	* src/sftp/Makefile.am (lsftp_SOURCES): New make variable.
+	* src/sftp/commands.c: New file.
+	* src/sftp/commands.h: New file.
+	* src/sftp/dc.c: New file.
+	* src/sftp/dc.h: New file.
+	* src/sftp/lsftp.c: New file.
+	* src/sftp/lsftp.h: New file.
+	* src/sftp/misc_fun.c: New file.
+	* src/sftp/misc_fun.h: New file.
+	* src/sftp/rl.c: New file.
+	* src/sftp/rl.h: New file.
+	* src/sftp/sftp_bind.c: New file.
+	* src/sftp/sftp_bind.h: New file.
+	* src/sftp/sftp_c.c: New file.
+	* src/sftp/sftp_c.h: New file.
+	* src/sftp/str_utils.c: New file.
+	* src/sftp/str_utils.h: New file.
+	
+2002-02-01  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/sftp/sftp-test-client.c: Deleted old code.
+	(sftp_client_get_status): New function, for parsing -02 draft
+	status messages. Use it everywhere.	
+
+	Applied Pontus Sköld's patch to comply with the -02 draft.
+	* src/sftp/sftp-server.c (sftp_send_status): Added human-readable
+	message and language tag. 
+	(sftp_process_mkdir): Get file attributes from the message, and
+	honor permission bits, if available.
+	(sftp_process_readlink): New function.
+	(sftp_process_symlink): New function.
+	(main): Added sftp_process_readlink and sftp_process_symlink to
+	the dispatch table.
+
+	* src/sftp/sftp.h (SSH_FXP_READLINK, SSH_FXP_SYMLINK): New message
+	types. 
+
+2002-01-31  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lsh-pam-checkpw.c: Cosmetic changes.
+
+	* src/Makefile.am.in (sbin_PROGRAMS): Added @PAM_PROGRAM@.
+
+	* configure.in: PAM configuration. Command line option
+	--disable-pam, check for security/pam_appl.h, substitution of
+	PAM_PROGRAM. 
+
 2002-01-31  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/lsh-writekey.c (open_public_file): Fixed error message.
