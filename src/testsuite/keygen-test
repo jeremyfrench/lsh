@@ -3,10 +3,9 @@
 # Tests the key generation programs
 
 echo Testing lsh_writekey
-echo srcdir = $srcdir
 
 if [ -z "$srcdir" ] ; then
-  srcdir = `pwd`
+  srcdir=`pwd`
 fi
 
 rm -f foo foo.pub

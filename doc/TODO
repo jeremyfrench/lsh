@@ -275,10 +275,6 @@ NULL?
 
 Figure out why -nt doesn't work.
 
-In channel_eof() and channel_close(), don't assert() that close or eof
-have not been sent already, but instead check the appropriate flags
-and do the right thing.
-
 The supplied argp is compiled even if it isn't used.
 
 Move miscellaneous lsh_string-functions from format.c to a separate
@@ -293,3 +289,6 @@ sexp_get_un.
 Extend the GABA: (expr ...) constructions with a single parameter
 could be used directly as a command_simple. Extend gaba.scm to do that
 automatically.
+
+Add -f, to fork and exit when userauthentication is done and any
+tunneling is set up.

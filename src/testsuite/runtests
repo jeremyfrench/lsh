@@ -1,0 +1,38 @@
+#! /bin/sh
+
+# Runs the test programs provided on the command line.
+
+failed=0
+all=0
+
+if [ -z "$srcdir" ] ; then
+  srcdir=.
+fi
+
+for t in "$@"; do
+  if [ -s $t ]; then
+    dir=.
+  else
+    dir=$srcdir
+  fi
+  if $dir/$t; then
+    echo "PASS: $t"
+  else
+    echo "FAIL: $t"
+    failed=`expr $failed + 1`
+  fi
+  all=`expr $all + 1`
+done
+
+if [ $failed -eq 0 ] ; then
+  banner="All $all tests passed"
+else
+  banner="$failed of $all tests failed"
+fi
+dashes=`echo "$banner" | sed s/./=/g`
+echo "$dashes"
+echo "$banner"
+echo "$dashes"
+[ "$failed" -eq 0 ]
+
+  
