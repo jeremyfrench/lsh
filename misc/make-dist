@@ -1,4 +1,4 @@
 #! /bin/sh
 
-make && (cd src/testsuite && make check-more) && \
+make && make check && \
   ./make_am --rethink && ./make_am && make && make distcheck
