@@ -215,7 +215,7 @@ read_password(struct unix_interact *self,
       char *password;
       const char *cprompt;
 
-      if (!IS_TTY(self) || quiet_flag)
+      if (!IS_TTY(self))
 	return NULL;
 
       cprompt = lsh_get_cstring(prompt);
