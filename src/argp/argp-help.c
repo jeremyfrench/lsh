@@ -71,6 +71,37 @@ char *alloca ();
 #include "argp-fmtstream.h"
 #include "argp-namefrob.h"
 
+#if !_LIBC
+# if !HAVE_STRNDUP
+static char *strndup (const char *s, size_t size)
+{
+  char *r;
+  char *end = memchr(s, 0, size);
+  
+  if (end)
+    /* Length + 1 */
+    size = end - s + 1;
+  
+  char *r = malloc(size);
+
+  if (size)
+    {
+      memcpy(r, s, size-1);
+      r[size-1] = '\0';
+    }
+  return r;
+}
+# endif /* !HAVE_STRNDUP */
+# if !HAVE_MEMPCPY
+static void *mempcpy (void *to, const void *from, size_t size)
+{
+  memcpy(to, from, size);
+  return (char *) to + size;
+}
+# define __mempcpy mempcpy
+# endif /* !HAVE_MEMPCPY */
+#endif /* !_LIBC - 0 */
+
 /* User-selectable (using an environment variable) formatting parameters.
 
    These may be specified in an environment variable called `ARGP_HELP_FMT',
