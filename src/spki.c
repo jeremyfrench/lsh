@@ -29,6 +29,7 @@
 #include "crypto.h"
 #include "format.h"
 #include "io.h"
+#include "interact.h"
 #include "list.h"
 #include "parse.h"
 #include "publickey_crypto.h"
@@ -184,7 +185,8 @@ spki_make_signer(struct alist *algorithms,
 
 struct signer *
 spki_sexp_to_signer(struct alist *algorithms,
-                    struct sexp *key)
+                    struct sexp *key,
+                    int *algorithm_name)
 {
   struct sexp_iterator *i;
   
@@ -199,7 +201,7 @@ spki_sexp_to_signer(struct alist *algorithms,
           return NULL;
         }
       
-      s = spki_make_signer(algorithms, expr, NULL);
+      s = spki_make_signer(algorithms, expr, algorithm_name);
       
       if (s)
 	/* Test key here? */
@@ -1031,4 +1033,195 @@ spki_pkcs5_encrypt(struct randomness *r,
                               -1),
                        -1),
                 -1);
+}
+
+struct sexp *
+spki_pkcs5_decrypt(struct alist *mac_algorithms,
+                   struct alist *crypto_algorithms,
+                   struct interact *interact,
+                   struct sexp *expr)
+{
+  struct sexp_iterator *i;
+  
+  if (!(i = sexp_check_type(expr, ATOM_PASSWORD_ENCRYPTED)))
+    return expr;
+
+  else
+    {
+      const struct lsh_string *label;
+      struct sexp *key_info;
+      struct sexp *payload;
+
+      struct crypto_algorithm *crypto;
+      struct mac_algorithm *mac;
+      
+      const struct lsh_string *salt;
+      const struct lsh_string *iv;
+      const struct lsh_string *data;
+      UINT32 iterations;
+      
+      if (SEXP_LEFT(i) != 3)
+	{
+	  werror("Invalid (password-encrypted ...) expression.\n");
+	  return NULL;
+	}
+	
+      /* NOTE: This is a place where it might make sense to use a sexp
+       * display type, but we don't support that for now. */
+      label = sexp2string(SEXP_GET(i));
+
+      if (!label)
+	{
+	  werror("Invalid label in (password-encrypted ...) expression.\n");
+	  return NULL;
+	}
+
+      SEXP_NEXT(i);
+      key_info = SEXP_GET(i);
+      assert(key_info);
+
+      SEXP_NEXT(i);
+      payload = SEXP_GET(i);
+      assert(payload);
+
+      /* Examine the payload expression first, before asking for a
+       * pass phrase. */
+
+      {
+	int algorithm_name = spki_get_type(payload, &i);
+	CAST_SUBTYPE(crypto_algorithm, tmp,
+		     ALIST_GET(crypto_algorithms, algorithm_name));
+	crypto = tmp;
+      }
+
+      if (!crypto)
+	{
+          werror("Unknown encryption algorithm for pkcs5v2.\n");
+	  return NULL;
+	}
+
+      iv = sexp2string(sexp_assq(i, ATOM_IV));
+
+      if (crypto->iv_size)
+	{
+	  if (!iv || (iv->length != crypto->iv_size))
+	    {
+	      werror("Invalid IV for pkcs5v2.\n");
+	      return NULL;
+	    }
+	}
+      else if (iv)
+	{
+	  if (iv->length)
+	    {
+	      werror("Unexpected iv provided for pkcs5v2.\n");
+	      return NULL;
+	    }
+	  iv = NULL;
+	}
+	
+      data = sexp2string(sexp_assq(i, ATOM_DATA));
+
+      if (!data)
+	{
+	  werror("Payload data missing for pkcs5v2.\n");
+	  return NULL;
+	}
+
+      if (crypto->block_size && (data->length & crypto->block_size))
+	{
+	  werror("Payload data doesn't match block size for pkcs5v2.\n");
+	  return NULL;
+	}
+
+      /* Get key */
+      switch (spki_get_type(key_info, &i)) 
+	{
+	default:
+	  werror("Unknown key derivation mechanism.\n");
+	  return NULL;
+
+	case ATOM_XPKCS5V2:
+	  if (SEXP_LEFT(i) != 3)
+	    {
+	      werror("Invalid pkcs5v2 parameters.\n");
+	      return NULL;
+	    }
+	  
+	  {
+	    int algorithm_name = sexp2atom(SEXP_GET(i));
+	    
+	    CAST_SUBTYPE(mac_algorithm, tmp,
+			 ALIST_GET(mac_algorithms,
+				   algorithm_name));
+
+	    mac = tmp;
+	  }
+
+	  if (!mac)
+	    {
+	      werror("Unknown mac for pkcs5v2.\n");
+	      return NULL;
+	    }
+
+	  SEXP_NEXT(i);
+	  if (!sexp2uint32(sexp_assq(i, ATOM_ITERATIONS), &iterations)
+	      || !iterations)
+	    {
+	      werror("Invalid iteration count for pkcs5v2.\n");
+	      return NULL;
+	    }
+	    
+	  salt = sexp2string(sexp_assq(i, ATOM_SALT));
+
+	  if (!salt)
+	    {
+	      werror("Invalid salt for pkcs5v2.\n");
+	      return NULL;
+	    }
+
+	  /* Do the work */
+
+	  {
+	    struct lsh_string *password
+	      = INTERACT_READ_PASSWORD(interact, 500, label, 0);
+	    struct lsh_string *clear;
+	    struct sexp *res;
+	    UINT8 *key;
+	    
+	    if (!password)
+	      {
+		werror("No password provided for pkcs5v2.");
+		return NULL;
+	      }
+
+	    key = alloca(crypto->key_size);
+	    pkcs5_derive_key(mac,
+			     password->length, password->data,
+			     salt->length, salt->data,
+			     iterations,
+			     crypto->key_size, key);
+
+	    lsh_string_free(password);
+
+	    clear = crypt_string_unpad(MAKE_DECRYPT(crypto,
+						    key,
+						    iv ? iv->data : NULL),
+				       data, 0);
+
+	    if (!clear)
+	      {
+		werror("Bad password for pkcs5v2.\n");
+		return NULL;
+	      }
+
+	    res = string_to_sexp(SEXP_CANONICAL, clear, 1);
+
+	    if (!res)
+              werror("Bad password for pkcs5v2.\n");
+
+            return res;
+	  }
+	}
+    }
 }

@@ -76,7 +76,8 @@ spki_make_signer(struct alist *algorithms,
 
 struct signer *
 spki_sexp_to_signer(struct alist *algorithms,
-                    struct sexp *key);
+                    struct sexp *key,
+                    int *algorithm_name);
 
 struct sexp *
 spki_make_public_key(struct verifier *verifier);
@@ -230,5 +231,11 @@ spki_pkcs5_encrypt(struct randomness *r,
 		   struct lsh_string *password,
 		   UINT32 iterations,
                    struct lsh_string *data);
+
+struct sexp *
+spki_pkcs5_decrypt(struct alist *mac_algorithms,
+                   struct alist *crypto_algorithms,
+                   struct interact *interact,
+                   struct sexp *expr);
 
 #endif /* LSH_SPKI_H_INCLUDED */
