@@ -68,19 +68,25 @@ char *alloca ();
 #define UINT8 unsigned char
 
 #if __GNUC__ && HAVE_GCC_ATTRIBUTE
-#define NORETURN __attribute__ ((__noreturn__))
-#define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
-#define UNUSED __attribute__ ((__unused__))
+# define NORETURN __attribute__ ((__noreturn__))
+# define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
+# define UNUSED __attribute__ ((__unused__))
 #else
-#define NORETURN
-#define PRINTF_STYLE(f, a)
-#define UNUSED
+# define NORETURN
+# define PRINTF_STYLE(f, a)
+# define UNUSED
 #endif
 
 #if HAVE_GCC_FUNCTION
-#define FUNCTION_NAME __FUNCTION__
+# define FUNCTION_NAME __FUNCTION__
 #else
-#define FUNCTION_NAME "Unknown"
+# define FUNCTION_NAME "Unknown"
+#endif
+
+#if HAVE_C_OFFSETOF
+# define OFFSETOF offsetof
+#else
+# define OFFSETOF(type, field) ((int) &(((type *) 0)->field))
 #endif
 
 /* Stringizing macros */
