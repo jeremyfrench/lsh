@@ -1,3 +1,75 @@
+Tue Dec 15 00:01:33 1998    <nisse@puck>
+
+	* xalloc.c (lsh_list_alloc): Avoid unsigned under flow when length
+	is zero.
+
+Mon Dec 14 21:58:27 1998    <nisse@puck>
+
+	* parse.c (parse_atom_list): New limit argument; longer lists will
+	return NULL.
+
+Sat Dec 12 11:11:23 1998    <ray@zensunni>
+
+	* configure.in: Clarified comment. Added several warnings.
+
+	* keyexchange.c (select_algorithm): Had a terminiation condition
+ 	"i < LIST_LENGTH(client_list) >= 0" in a for loop, which is
+ 	probably nonsensical. Removed >= 0 part.
+
+	* lsh_types.h: Introduced UNUSED annotation. Enable GNU libc
+	extensions. Note: lsh_types.h must be included before any system header
+	for this to work properly.
+
+	* Makefile.am.in: Make gperf produce ANSI C output, and postprocess it
+	to fully initialise wordlist.
+
+	* lshd.c, lsh.c: Added a short usage string.
+
+	* include/crypto_types.h: Improved error messages.
+
+	* process_atoms: removed `.sh' from generator name in output.
+
+	* include/idea.h, lib/idea.c: Added note about IDEA being patent
+	encumbered.
+
+	* channel.c, keyexchange.c, lib/md5.c, lib/sha.c, pad.c, parse.c,
+	randomness.c, write_buffer.c: #include <string.h> for memcpy().
+
+	* bignum.c: #include <stdlib.h> for alloca().
+
+	* server_password.c: #include <crypt.h>
+
+	* io.c, reaper.c: Removed obsolete use of sa_restorer field of struct
+	sigaction. (This broke compilation on Linux/Alpha with glibc 2.0.high).
+	Initialised struct sigaction in a more portable fashion.
+
+	* bignum.c, charset.c, client_userauth.c, format.c, format.h, io.c,
+	list.c: Signedness/type fixes.
+	
+	* channel.c, client.c, client.h, debug.c, debug.h, disconnect.c,
+	disconnect.h, format.c, format.h, keyexchange.c, keyexchange.h,
+	process_atoms, server.c, server.h, werror.c, werror.h: Constness
+	improvements.
+
+	* client_userauth.c, format.c: Added internal prototypes.
+	
+	* crypto.c: Added UNUSED annotations.
+
+	* lib/util.c, lib/util.h, include/types.h: New. Bridge from GPG style
+	to lsh style, for blowfish.
+
+	* include/blowfish.h, lib/blowfish.c: Added blowfish code from GPG.
+
+	* crypto.c, crypto.c.x, crypto.h, lib/Makefile.am.in, lshd.c, lsh.c:
+	Added blowfish support.
+
+	* lib/Makefile.am.in: added dependency of desUtil.o on the generated
+	DES header files.
+
+	* TODO: Additions.
+
+	* Various spelling fixes.
+
 Tue Dec  8 10:29:50 1998    <nisse@puck>
 
 	* server_password.c (lookup_user): Integrated support for shadow
