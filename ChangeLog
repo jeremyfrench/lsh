@@ -1,3 +1,27 @@
+2001-04-05  Niels Möller  <nisse@ehand.com>
+
+	* src/testsuite/functions.sh (run_lsh): Quote the command better.
+
+	* src/xalloc.c (lsh_string_alloc): Fixes, now compiles both with
+	and without DEBUG_ALLOC.
+
+	* src/werror.c (werror_argp_parser): Added missing break.
+	(werror): Handle the case where both verbose_flag and quiet_flag
+	are set.
+
+	* src/io.c (do_consuming_read): Free the string properly on EOF or
+	error. XXX Fix in 1.2 branch? 
+
+	* src/client_userauth.c (make_client_userauth): Convert username
+	to utf8 once, here. Updated callers. Previously, the converted
+	strings leaked.
+
+	* src/client_session.c (do_client_session_eof): Use
+	close_fd_nicely. Otherwise we lose data. XXX Fix in 1.2 branch? 
+
+	* src/Makefile.am.in (atoms_gperf.c): Massage gperf output to
+	reduce the number of compilation warnings.
+
 2001-04-05  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/gc.c (gc_final): Check for leaked strings, and write any
