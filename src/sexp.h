@@ -26,31 +26,31 @@
 #ifndef LSH_SEXP_H_INCLUDED
 #define LSH_SEXP_H_INCLUDED
 
-#include "lsh_types.h"
+#include "bignum.h"
 
 #define CLASS_DECLARE
-#unclude "sexp.h.x"
+#include "sexp.h.x"
 #undef CLASS_DECLARE
 
 /* CLASS:
    (class
      (name sexp)
      (vars
-       (format method int "int style")))
+       (format method "struct lsh_string *" "int style")))
 */
 
 #define SEXP_FORMAT(e, s) ((e)->format((e), (s)))
 
 /* CLASS:
    (class
-     (name sexp_string)
+     (name sexp_cons)
      (super sexp)
      (vars
-       (display string)
-       (contents string)))
+       (car object sexp)
+       (cdr object sexp_cons)))
 */
 
-/* CLASS:
+/* ;; CLASS:
    (class
      (name sexp_atom)
      (super sexp)
@@ -58,20 +58,15 @@
        (atom . int)))
 */
 
-/* CLASS:
-   (class
-     (name "sexp_cons")
-     (super sexp)
-     (vars
-       (car object sexp)
-       (cdr object sex_cons)))
-*/
-
 /* Output styles */
 
 #define SEXP_CANONICAL 0
 #define SEXP_TRANSPORT 1
-#define SEXP_EXTENDED 2
+#define SEXP_ADVANCED 2
+
+struct lsh_string *sexp_format(struct sexp *e, int style);
+
+struct lsh_string *encode_base64(struct lsh_string *s, int free);
 
 /* Creating sexps */
 /* atom->sexp */
@@ -99,7 +94,7 @@ int *sexp_consp(struct sexp *e);
 struct sexp *sexp_car(struct sexp *e);
 struct sexp *sexp_cdr(struct sexp *e);
 
-int sexp *sexp_null_cdr(struct sexp *e);
+int sexp_null_cdr(struct sexp *e);
 
 struct lsh_string *sexp_contents(struct sexp *e);
 struct lsh_string *sexp_display(struct sexp *e);
@@ -110,15 +105,17 @@ int sexp_bignum_s(struct sexp *e, mpz_t n);
 
 /* Parsing sexp */
 
-/* CLASS:
+/* ;;CLASS:
    (class
      (name sexp_handler)
      (vars
-       (method int "struct sexp *e")))
+       (handler method int "struct sexp *e")))
 */
 
-struct read_handler make_read_sexp(struct sexp_handler *h)
-
+#if 0
+struct read_handler make_read_sexp(struct sexp_handler *h);
+#endif
+     
 #endif /* LSH_SEXP_H_INCLUDED */
 
  
