@@ -1,3 +1,4 @@
+*-old
 *.d
 *.x
 .deps
@@ -20,6 +21,7 @@ digit_table
 digit_table.h
 lsh
 lsh-decode-key
+lsh-export-key
 lsh-keygen
 lsh-krb-checkpw
 lsh-writekey
@@ -35,4 +37,3 @@ sexp_test
 srp-gen
 stamp-h
 stamp-h.in
-*-old

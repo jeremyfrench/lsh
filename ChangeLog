@@ -1,3 +1,12 @@
+2000-10-20  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/sexp.c (encode_base64): Added argument break_lines.
+
+	* src/lsh-export-key.c (do_ssh2_print): Simplified.
+	(make_header): New function.
+
+	* src/connection.h: Added comments for the various PEER_* flags. 
+
 2000-10-19  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/Makefile.am.in: Don't prepend $(srcdir) to $@, as it seems
