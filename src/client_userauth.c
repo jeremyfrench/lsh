@@ -557,8 +557,8 @@ do_none_login(struct client_userauth_method *s UNUSED,
               struct ssh_connection *connection,
               struct exception_handler *e)
 {
-  trace("client_userauth.c: do_none_login\n");
-
+  verbose("Requesting authentication using the `none' method.\n");
+  
   C_WRITE(connection,
           format_userauth_none(userauth->username,
                                userauth->service_name));
@@ -616,6 +616,8 @@ send_password(struct client_password_state *state)
 	  state->tried_empty_passwd++;
 	}
 
+      verbose("Requesting authentication using the `password' method.\n");
+      
       C_WRITE(state->connection,
 	      format_userauth_password(state->userauth->username,
 				       state->userauth->service_name,
@@ -865,6 +867,8 @@ do_userauth_pk_ok(struct packet_handler *s,
 	  struct lsh_string *request;
 	  struct lsh_string *signed_data;
 
+	  verbose("Sending `publickey' signature.\n");
+  
 #if DATAFELLOWS_WORKAROUNDS
 	  if (connection->peer_flags & PEER_USERAUTH_REQUEST_KLUDGE)
 	    request = format_userauth_publickey(self->state->userauth->username,
@@ -929,6 +933,8 @@ do_publickey_login(struct client_userauth_method *s,
       {
 	CAST(keypair, key, LIST(self->keys)[i]);
 
+	verbose("Requesting authentication using the `publickey' method.\n");
+	
 	/* NOTE: The PEER_USERAUTH_REQUEST_KLUDGE only applies to the
 	 * signed data. */
 	C_WRITE(connection, 
