@@ -346,6 +346,14 @@ static void do_buffered_read(struct io_read_callback *s,
 
 	  buffer += done;
 	  left -= done;
+
+	  if (fd->want_read && !self->handler)
+	    {
+	      werror("do_buffered_read: Handler disappeared! Ignoring %i bytes\n",
+		     left);
+	      fd->want_read = 0;
+	      return;
+	    }
 	}
 
       if (left)
@@ -658,13 +666,39 @@ static void do_kill_fd(struct resource *r)
     close_fd(fd, 0);
 }
 
+/* Closes the file on i/o errors, and passes the exception on */
+
+static void
+do_exc_io_handler(struct exception_handler *self,
+		  const struct exception *x)
+{
+  if (x->type & EXC_IO)
+    {
+      CAST_SUBTYPE(io_exception, e, x);
+
+      switch(x->type)
+	{
+	case EXC_IO_EOF:
+	  close_fd_nicely(e->fd, 0);
+	  break;
+	default:
+	  if (e->fd)
+	    close_fd(e->fd, 0);
+	  break;
+	}
+    }
+  EXCEPTION_RAISE(self->parent, x);
+  return;
+}
+
 /* Initializes a file structure, and adds it to the backend's list. */
 static void init_file(struct io_backend *b, struct lsh_fd *f, int fd,
 		      struct exception_handler *e)
 {
   f->fd = fd;
 
-  f->e = e;
+  f->e = make_exception_handler(do_exc_io_handler, e);
+  
   f->close_reason = -1; /* Invalid reason */
   f->close_callback = NULL;
 
@@ -1351,4 +1385,18 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)
   self->fd = fd;
   
   return &self->super;
+}
+
+struct io_fd *
+io_write_file(struct io_backend *backend,
+	      const char *fname, int flags, int mode,
+	      UINT32 block_size,
+	      struct close_callback *c,
+	      struct exception_handler *e)
+{
+  int fd = open(fname, flags, mode);
+  if (fd < 0)
+    return NULL;
+
+  return io_write(make_io_fd(backend, fd, e), block_size, c);
 }
