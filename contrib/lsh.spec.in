@@ -5,7 +5,6 @@ Release:        1
 Copyright:      GPL
 Group:          Application/Internet
 Source0:        ftp://ftp.lysator.liu.se/pub/security/lsh/%{name}-%{version}.tar.gz 
-Source1:        lshd.rhlinux.init
 BuildRoot:      /var/tmp/%{name}-%{version}-root
 Prefix:         /usr
 Packager:       Thayne Harbaugh <thayne@plug.org>
@@ -72,7 +71,7 @@ fi
 
 
 %preun
-if [ "$1" -eq 1 ]
+if [ "$1" -eq 0 ]
 then
         chkconfig --del lshd || exit 0
 fi
@@ -91,6 +90,10 @@ fi
 
 
 %changelog
+
+* Thu Jan 06 1999 Thayne Harbaugh <thayne@northsky.com>
+- lshd.rhlinux.init is now in contrib dir - removed Source1
+- fixed preun $1 comparision - was [ "$1" -eq 1 ]
 
 * Thu Sep 28 1999 Thayne Harbaugh <thayne@northsky.com>
 - first rpm
