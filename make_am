@@ -116,7 +116,7 @@ while true; do
 	    if [ $rethink = yes ]; then
 		( (echo $args = .dist_headers;
 		   all_used_headers \
-		     | comm -12 - <($BASH src/cvs_headers $dir) \
+		     | comm -12 - <( $BASH src/cvs_headers $dir ) \
 		     | tee $dir/.dist_headers) | tr '\n' ' ';
 		 echo) 1>&4
 	    else
