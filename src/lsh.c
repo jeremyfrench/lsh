@@ -767,7 +767,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	{
 	  int i = 0;
 	  self->kex_algorithms 
-	    = alloc_int_list(3 * self->with_dh_keyexchange + self->with_srp_keyexchange);
+	    = alloc_int_list(2 * self->with_dh_keyexchange + self->with_srp_keyexchange);
 	    
 #if WITH_SRP	    
 	  if (self->with_srp_keyexchange)
@@ -789,12 +789,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 	      LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP14_SHA1;
 	      ALIST_SET(self->algorithms->algorithms,
 			ATOM_DIFFIE_HELLMAN_GROUP14_SHA1,
-			&dh2->super);
-	      
-	      /* Alternative name for the same thing */
-	      LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP2_SHA1;
-	      ALIST_SET(self->algorithms->algorithms,
-			ATOM_DIFFIE_HELLMAN_GROUP2_SHA1,
 			&dh2->super);
 
 	      LIST(self->kex_algorithms)[i++] = ATOM_DIFFIE_HELLMAN_GROUP1_SHA1;
