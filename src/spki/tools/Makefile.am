@@ -11,4 +11,4 @@ AM_LDFLAGS = -L.. -L../../nettle/
 LDADD = misc.o getopt.o getopt1.o \
 	-lspki -lnettle ../libspki.a ../../nettle/libnettle.a
 
-EXTRA_DIST = misc.c misc.h getopt.h
+EXTRA_DIST = misc.c misc.h getopt.h getopt.c getopt1.c
