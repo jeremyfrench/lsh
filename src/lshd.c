@@ -160,7 +160,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
     case ARGP_KEY_INIT:
       state->child_inputs[0] = &self->style;
       state->child_inputs[1] = &self->super;
-      state->child_inputs[1] = NULL;
+      state->child_inputs[2] = NULL;
       break;
     case ARGP_KEY_ARG:
       argp_error(state, "Spurious arguments.");
@@ -297,12 +297,12 @@ static void do_read_key(struct command_continuation *s,
 				      make_dsa_signer_kludge(private)));
 #endif /* DATAFELLOWS_WORKAROUNDS */
 	  
-	  verbose("lshd: Using (public) hostkey:\n"
-		  "  p=%xn\n"
-		  "  q=%xn\n"
-		  "  g=%xn\n"
-		  "  y=%xn\n",
-		  p, q, g, y);
+	  debug("lshd: Using (public) hostkey:\n"
+		"  p=%xn\n"
+		"  q=%xn\n"
+		"  g=%xn\n"
+		"  y=%xn\n",
+		p, q, g, y);
 	}
     }
 
@@ -537,7 +537,10 @@ int main(int argc, char **argv)
       CAST_SUBTYPE(command, server_listen, o);
     
       COMMAND_CALL(server_listen, options->local,
-		   &discard_continuation, &default_exception_handler);
+		   &discard_continuation,
+		   make_report_exception_handler(EXC_IO, EXC_IO, "lshd: ",
+						 &default_exception_handler,
+						 HANDLER_CONTEXT));
     }
   }
   
