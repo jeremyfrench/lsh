@@ -994,6 +994,12 @@ do_lsh_default_handler(struct exception_handler *s,
       case EXC_SEXP_SYNTAX:
       case EXC_SPKI_TYPE:
       case EXC_CHANNEL_REQUEST:
+
+	/* FIXME: There's no handler specifically for CHANNEL_OPEN
+	 * failures for locally forwarded ports. That means that if a
+	 * locally forwarded connection failes, lsh will exit (at some
+	 * later time) with a non-zero exit status. */
+      case EXC_CHANNEL_OPEN:
 	werror("lsh: %z\n", e->msg);
 	*self->status = EXIT_FAILURE;
 	break;
