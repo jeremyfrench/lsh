@@ -96,7 +96,7 @@ do_read_base64(struct read_handler **h,
 	      *h = NULL;
 	      return available;
 
-	    case  BASE64_SPACE:
+	    case BASE64_SPACE:
 	    case BASE64_PARTIAL:
 	      break;
 

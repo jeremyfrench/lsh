@@ -1,3 +1,8 @@
+2001-01-31  Niels Möller  <nisse@ehand.com>
+
+	* src/io.c (io_iter): Changed POLLHUP handling some more. Now
+	POLLHUP && !POLLIN is treated as EOF.
+
 2001-01-31  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/testsuite/lsh-cat-test: Use compare_output.

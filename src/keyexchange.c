@@ -720,7 +720,8 @@ do_kexinit_filter(struct command *s,
   CAST(kexinit_filter_command, self, s);
   CAST_SUBTYPE(alist, keys, x);
 
-  self->init->hostkey_algorithms = filter_algorithms(keys, self->init->hostkey_algorithms);
+  self->init->hostkey_algorithms
+    = filter_algorithms(keys, self->init->hostkey_algorithms);
 
   if (!LIST_LENGTH(self->init->hostkey_algorithms))
     {
