@@ -1,3 +1,14 @@
+2002-02-21  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/server_session.c (make_pty): Simple bugfix, pty->master was
+	lost too early.
+	(spawn_process): Use an extra pipe for syncronization. The parent
+	process won't proceed until the child is finished with it's pty
+	processing. This works around a Solaris problem where reading the
+	master side of the pty before the slave has been opened results in
+	EINVAL. 
+	(do_alloc_pty): Bugfix, record the new pty properly.
+
 2002-02-19  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/server_session.c (spawn_process): Let the child process open
