@@ -1,3 +1,13 @@
+2004-02-17  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/unix_process.c (do_logout_notice): Deleted gratious
+	semicolon at end of function definition.
+	(do_utmp_cleanup): Use UTMPX_UT_EXIT___E_TERMINATION and
+	UTMPX_UT_EXIT_UT_TERMINATION. 
+
+	* configure.ac: Check for ut_exit.__e_termination and
+	ut_exit.ut_termination in struct utmp and struct utmpx.
+
 2004-02-16  Niels Möller  <niels@s3.kth.se>
 
 	* configure.ac: Added gss-related configure checks (patch from
