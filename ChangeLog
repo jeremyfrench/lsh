@@ -1,3 +1,62 @@
+2001-01-31  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/testsuite/lsh-cat-test: Use compare_output.
+
+	* src/testsuite/lsh-1-test: Use test_success. 
+	* src/testsuite/lsh-2-test: Likewise. 
+	* src/testsuite/lsh-3-test: Likewise. 
+	* src/testsuite/lsh-4-test: Likewise. 
+	* src/testsuite/tcpip-local-test: Likewise. 
+	* src/testsuite/tcpip-remote-test: Likewise. 
+
+	* src/testsuite/keygen-2-test: Use functions.sh and test_success. 
+	* src/testsuite/keygen-test: Likewise.
+
+	* src/testsuite/functions.sh (at_exit): Fixed the at_exit
+	mechanism. The previous code always exited successfully.
+	(test_result): New variable for keeping the desired exit status. 
+	(test_fail): New function.
+	(test_success): Likewise.
+	(compare_output): Likewise.
+
+	* src/testsuite/Makefile.am (TS_SH): Added conv-test.
+
+	* src/testsuite/conv-test: New test program.
+
+	* src/unix_random.c (background_poll): Changed werror() to debug().
+	(start_background_poll): Changed werror() to verbose().
+
+	* src/tcpforward.c (do_tcpip_eof): Removed channel close logic,
+	now in channel.c, channel_of_handler.
+
+	* src/ssh-conv: Don't look for lsh-decode-key in the current
+	directory. Added command line options --help, --usage,
+	--decode-with. 
+
+	* src/server_session.c (do_eof): Removed channel close logic, now
+	in channel.c, channel_of_handler.
+	(do_exit_shell): Added a verbose() message.
+
+	* src/lsh-decode-key.c: Include rsa.h. Added program name prefix
+	to the diagnostic messages.
+
+	* src/io.c (do_buffered_read, do_consuming_read): Don't call
+	read() if fd->hanged_up is set.
+	(init_file): Initialize hanged_up.
+
+2001-01-30  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* src/io.c (io_iter): Improved handling of POLLHUP. Set the
+	fd->hanged_up flag before calling FD_READ().
+
+	* src/io.h (lsh_fd): New attribute hanged_up.
+
+	* src/client.c (do_exit_status): Added a verbose() message.
+
+	* src/channel.c (channel_read_close_callback): Call channel_eof, not
+	channel_close. 
+	(channel_eof_handler): Moved the channel close decision here.
+
 2001-01-29  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/ssh-conv: Support ssh-rsa keys.
