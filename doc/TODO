@@ -79,10 +79,6 @@ It might be safer to remove patent-encumbered code like IDEA code from the
 regular lsh distribution, and make it available separately (this approach is
 taken with GnuPG).
 
-scsh is not free software. Olin Shivers (one of the scsh copyright owners)
-has indicated he is willing to free it, but currently he has no time to
-handle the paperwork. 
-
 
 CONTROL LANGUAGE
 
