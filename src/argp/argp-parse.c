@@ -499,10 +499,9 @@ struct parser_sizes
   size_t num_child_inputs;	/* Child input slots.  */
 };
 
-/* For ARGP, increments the NUM_GROUPS field in SZS by the total number of
- argp structures descended from it, and the SHORT_LEN & LONG_LEN fields by
- the maximum lengths of the resulting merged getopt short options string and
- long-options array, respectively.  */
+/* For ARGP, increments the NUM_GROUPS field in SZS by the total
+   number of argp structures descended from it, and the SHORT_LEN by
+   the total number of short options. */
 static void
 calc_sizes (const struct argp *argp,  struct parser_sizes *szs)
 {
@@ -593,9 +592,6 @@ parser_init (struct parser *parser, const struct argp *argp,
   parser->state.pstate = parser;
 
   parser->nextchar = NULL;
-#if 0
-  parser->try_getopt = 1;
-#endif
 
   /* Call each parser for the first time, giving it a chance to propagate
      values to child parsers.  */
