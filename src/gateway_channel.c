@@ -160,9 +160,11 @@ do_gateway_channel_open(struct channel_open_command *c,
   target->super.rec_max_packet = closure->rec_max_packet;
   target->super.write = connection->write;
 
-  *request = format_channel_open_s(closure->type->length, closure->type->data,
-				   local_channel_number, &target->super,
+  *request = format_channel_open_s(closure->type,
+				   local_channel_number,
+				   &target->super,
 				   closure->args);
+  
 #if 0
   if (closure->args)
     *request = format_channel_open(closure->type, local_channel_number,
@@ -185,7 +187,7 @@ make_gateway_channel_open_command(struct channel_open_info *info,
   self->super.super.call = do_channel_open_command;
 
   self->type = ssh_format("%ls", info->type_length,
-			  info->type_string);
+			  info->type_data);
 
   self->rec_window_size = info->send_window_size;
   self->rec_max_packet = info->send_max_packet;
@@ -233,22 +235,21 @@ static void
 do_gateway_channel_request(struct channel_request *s UNUSED,
 			   struct ssh_channel *ch,
 			   struct ssh_connection *connection UNUSED,
-			   UINT32 type,
-			   int want_reply,
+			   struct channel_request_info *info,
 			   struct simple_buffer *args,
 			   struct command_continuation *c,
 			   struct exception_handler *e)
 {
   CAST(gateway_channel, channel, ch);
+  UINT32 args_length;
+  const UINT8 *args_data;
 
-  struct lsh_string *request = 
-    format_channel_request(type, &channel->chain->super, want_reply, 
-			   "%ls", 
-			   args->capacity - args->pos, &args->data[args->pos]);
+  parse_rest(args, &args_length, &args_data);
 
-  struct command *send = make_general_channel_request_command(request);
-
-  COMMAND_CALL(send, channel->chain, c, e);
+  COMMAND_CALL(make_general_channel_request_command
+	       (format_channel_request_i(info, &channel->chain->super,
+					 args_length, args_data)),
+	       channel->chain, c, e);
 }
 
 struct channel_request gateway_channel_request =
@@ -319,6 +320,7 @@ struct global_request gateway_global_request =
      (super command_continuation)
      (vars
        (up object command_continuation)
+       (fallback object channel_request fallback)
        (origin object gateway_channel)))
 */
 
@@ -335,22 +337,24 @@ do_gateway_channel_open_continuation(struct command_continuation *c,
   self->origin->super.rec_window_size = target->super.send_window_size;
   self->origin->super.rec_max_packet = target->super.send_max_packet;
 
-  /* FIXME: Perhaps this is a good place to copy the origin's
-   * channel_request_fallback to the targets? */
   gateway_init_io(self->origin);
   gateway_init_io(target);
-    
+
+  target->super.request_fallback = self->fallback;
+  
   COMMAND_RETURN(self->up, self->origin);
 }
 
 struct command_continuation *
 make_gateway_channel_open_continuation(struct command_continuation *up,
+				       struct channel_request *fallback,
 				       struct gateway_channel *origin)
 {
   NEW(gateway_channel_open_continuation, self);
   
   self->super.c = do_gateway_channel_open_continuation;
   self->origin = origin;
+  self->fallback = fallback;
   self->up = up;
 
   return &self->super;
@@ -367,12 +371,13 @@ do_channel_open_forward(struct channel_open *s UNUSED,
   struct gateway_channel *origin
     = make_gateway_channel(NULL);
 
-  /* FIXME: Set up a channel_request_fallback. */
+  origin->super.request_fallback = &gateway_channel_request;
   
   COMMAND_CALL(make_gateway_channel_open_command
-	       (info, parse_rest(args), NULL),
+	         (info, parse_rest_copy(args), NULL),
 	       connection->chain,
-	       make_gateway_channel_open_continuation(c, origin),
+	       make_gateway_channel_open_continuation
+	         (c, &gateway_channel_request, origin),
 	       e);
 }
 
