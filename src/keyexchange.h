@@ -89,21 +89,20 @@
        (parameters array (object int_list) KEX_PARAMETERS)
        (languages_client_to_server object int_list)
        (languages_server_to_client object int_list)
-       (first_kex_packet_follows simple int)))
+       (first_kex_packet_follows . int)
+       ;; Used may be NULL. Used only for sending.
+       (first_kex_packet string)))
 */
      
 /* This function generates a new kexinit message.
  *
- * The message is stored in the appropriate kexinits and
- * literal_kexinits fields, and a string consisting of the message and
- * any speculative extra message is also returned. */
+ * If a speculative packet follows, it is stored in the last field. */
 
 /* GABA:
    (class
      (name make_kexinit)
      (vars
-       (make method "struct lsh_string *"
-             "struct ssh_connection *" "int")))
+       (make method (object kexinit) )))
 */
 
 #define MAKE_KEXINIT(s, c, m) ((s)->make((s), (c), (m)))
