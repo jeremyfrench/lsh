@@ -133,7 +133,7 @@ do_eof(struct ssh_channel *channel)
 
   trace("server_session.c: do_eof\n");
 
-  write_buffer_close(session->in->write_buffer);
+  close_fd_nicely(session->in);
 }
 
 struct ssh_channel *
