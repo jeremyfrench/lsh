@@ -46,6 +46,7 @@
    (class
      (name user_db)
      (vars
+       ;; FIXME: Do we really need the FREE parameter?
        (lookup method "struct lsh_user *"
                       "struct lsh_string *name" "int free")))
 */
