@@ -136,6 +136,7 @@ int verify_password(struct unix_user *user,
 
 static void
 do_authenticate(struct userauth *ignored UNUSED,
+		struct ssh_connection *connection UNUSED,
 		struct lsh_string *username,
 		struct simple_buffer *args,
 		struct command_continuation *c,
