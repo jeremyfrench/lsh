@@ -1,3 +1,12 @@
+2005-02-01  Niels Möller  <nisse@lysator.liu.se>
+
+	* src/exception.h (HANDLER_CONTEXT): Don't use FUNCTION_NAME.
+	* src/lsh_string.h (lsh_string_alloc): Likewise.
+
+	* acinclude.m4 (LSH_GCC_FUNCTION_NAME): The __FUNCTION__ feature
+	of gcc has been obsoleted, so don't bother testing for it. (This
+	makes trace messages less useful). 
+
 2004-12-22  Niels Möller  <niels@s3.kth.se>
 
 	* src/lsh-make-seed.c (get_system): Fixed handling of error from

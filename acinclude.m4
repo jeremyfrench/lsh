@@ -368,33 +368,6 @@ AH_BOTTOM(
 #endif
 ])])
 
-AC_DEFUN([LSH_GCC_FUNCTION_NAME],
-[# Check for gcc's __FUNCTION__ variable
-AH_TEMPLATE([HAVE_GCC_FUNCTION],
-	    [Define if the compiler understands __FUNCTION__])
-AH_BOTTOM(
-[#if HAVE_GCC_FUNCTION
-# define FUNCTION_NAME __FUNCTION__
-#else
-# define FUNCTION_NAME "Unknown"
-#endif
-])
-
-AC_CACHE_CHECK(for __FUNCTION__,
-	       lsh_cv_c_FUNCTION,
-  [ AC_TRY_COMPILE(,
-      [ #if __GNUC__ == 3
-	#  error __FUNCTION__ is broken in gcc-3
-	#endif
-        void foo(void) { char c = __FUNCTION__[0]; } ],
-      lsh_cv_c_FUNCTION=yes,
-      lsh_cv_c_FUNCTION=no)])
-
-if test "x$lsh_cv_c_FUNCTION" = "xyes"; then
-  AC_DEFINE(HAVE_GCC_FUNCTION)
-fi
-])
-
 # Check for alloca, and include the standard blurb in config.h
 AC_DEFUN([LSH_FUNC_ALLOCA],
 [AC_FUNC_ALLOCA
