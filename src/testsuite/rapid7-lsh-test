@@ -19,7 +19,8 @@ werror "Testing lsh"
 
 for f in $srcdir/rapid7-ssh-pdu/*.pdu ; do
     echo 1>&2 "Testing $f"
-    ln -sf $f current || die "Creating symlink current -> $f failed"
+    rm -f current    || die "Deleting symlink current failed"
+    ln -s $f current || die "Creating symlink current -> $f failed"
 
     set +e
     ../lsh -q --sloppy --capture-to=/dev/null -p $PORT localhost exit 0
