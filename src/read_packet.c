@@ -219,7 +219,10 @@ do_read_packet(struct read_handler **h,
 		{
 		  uint8_t s[4];
 		  WRITE_UINT32(s, closure->sequence_number);
-		    
+#if 0
+		  debug("read_packet: MAC input: sequence_number = %i, data = %xs\n",
+			closure->sequence_number, block_size, closure->block_buffer->data);
+#endif	    
 		  MAC_UPDATE(closure->connection->rec_mac, 4, s);
 		  MAC_UPDATE(closure->connection->rec_mac,
 			      block_size,
@@ -241,9 +244,7 @@ do_read_packet(struct read_handler **h,
 
 		/* The sequence number is needed by the handler for
 		 * unimplemented message types. */
-		closure->packet_buffer->sequence_number
-		  = closure->sequence_number++;
-
+		closure->packet_buffer->sequence_number = closure->sequence_number ++;
 		closure->pos = done;
 
 		if (done == length)
@@ -292,10 +293,15 @@ do_read_packet(struct read_handler **h,
 		      closure->crypt_pos);		      
 
 	      if (closure->connection->rec_mac)
-		MAC_UPDATE(closure->connection->rec_mac,
-			   left,
-			   closure->crypt_pos);
-
+		{
+#if 0
+		  debug("read_packet: MAC input: data = %xs\n",
+			left, closure->crypt_pos);
+#endif
+		  MAC_UPDATE(closure->connection->rec_mac,
+			     left,
+			     closure->crypt_pos);
+		}
 	      goto do_mac;
 	    }
 	}
@@ -330,7 +336,13 @@ do_read_packet(struct read_handler **h,
 
 		mac = alloca(closure->connection->rec_mac->mac_size);
 		MAC_DIGEST(closure->connection->rec_mac, mac);
-	    
+#if 0
+		debug("read_packet: Received MAC: %xS\n"
+		      "             Computed MAC: %xs\n",
+		      closure->mac_buffer,
+		      closure->connection->rec_mac->mac_size,
+		      mac);
+#endif	
 		if (memcmp(mac,
 			   closure->mac_buffer->data,
 			   closure->connection->rec_mac->mac_size))
