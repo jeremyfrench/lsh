@@ -18,16 +18,14 @@ If this does not work, please use an absolute path to the configure script. ])
 esac
 
 # src/rsync relies on lsh's definitions of WRITE_UINT32 etc.
-CPPFLAGS="$CPPFLAGS -I$srcdir/src -DLSH"
+# CPPFLAGS="$CPPFLAGS -I$srcdir/src -DLSH"
 
 # GNU libc defaults to supplying the ISO C library functions only. 
 # initgroups() and strsignal() are extensions; the _GNU_SOURCE define
 # enables these extensions.
 # Enable it on all systems; no problems have been reported with it so far.
 
-# We can't use AH_VERBATIM for this, as we want _GNU_SOURCE to be defined
-# when running configure's test programs.
-CPPFLAGS="$CPPFLAGS -D_GNU_SOURCE"
+AC_GNU_SOURCE
 
 # Check options
 AC_ARG_ENABLE(debug_alloc,
