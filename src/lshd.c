@@ -67,11 +67,8 @@ struct command options2local;
 struct command options2keys;
 #define OPTIONS2KEYS (&options2keys.super)
 
-#if 0
-struct command options2signature_algorithms;
-#define OPTIONS2SIGNATURE_ALGORITHMS \
-  (&options2signature_algorithms.super)
-#endif
+struct command_2 close_on_sighup;
+#define CLOSE_ON_SIGHUP (&close_on_sighup.super.super)
 
 #include "lshd.c.x"
 
@@ -184,7 +181,10 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        (corefile . int)
        (pid_file . "const char *")
        ; -1 means use pid file iff we're in daemonic mode
-       (use_pid_file . int)))
+       (use_pid_file . int)
+       ; Resources that should be killed when SIGHUP is received,
+       ; or when the program exits.
+       (resources object resource_list)))
 */
 
 static void
@@ -267,7 +267,12 @@ make_lshd_options(void)
   self->pid_file = "/var/run/lshd.pid";
   self->use_pid_file = -1;
   self->corefile = 0;
-  
+
+  self->resources = make_resource_list();
+  /* Not strictly needed for gc, but makes sure the
+   * resource list is killed properly by gc_final. */
+  gc_global(&self->resources->super);
+
   return self;
 }
 
@@ -309,6 +314,86 @@ DEFINE_COMMAND(options2keys)
   COMMAND_RETURN(c, keys);
 }
 
+/* GABA:
+   (class
+     (name pid_file_resource)
+     (super resource)
+     (vars
+       (file . "const char *")))
+*/
+
+static void
+do_kill_pid_file(struct resource *s)
+{
+  CAST(pid_file_resource, self, s);
+  if (self->super.alive)
+    {
+      self->super.alive = 0;
+      if (unlink(self->file) < 0)
+	werror("Unlinking pidfile failed (errno = %i): %z\n",
+	       errno, STRERROR(errno));
+    }
+}
+
+static struct resource *
+make_pid_file_resource(const char *file)
+{
+  NEW(pid_file_resource, self);
+  init_resource(&self->super, do_kill_pid_file);
+  self->file = file;
+
+  return &self->super;
+}
+
+/* GABA:
+   (class
+     (name sighup_close_callback)
+     (super lsh_callback)
+     (vars
+       (resources object resource_list)))
+*/
+
+static void
+do_sighup_close_callback(struct lsh_callback *s)
+{
+  CAST(sighup_close_callback, self, s);
+  unsigned nfiles;
+  
+  werror("SIGHUP received.\n");
+  KILL_RESOURCE_LIST(self->resources);
+  
+  nfiles = io_nfiles();
+
+  if (nfiles)
+    werror("Waiting for active connections to terminate, "
+	   "%i files still open.\n", nfiles);
+}
+
+static struct lsh_callback *
+make_sighup_close_callback(struct lshd_options *options)
+{
+  NEW(sighup_close_callback, self);
+  self->super.f = do_sighup_close_callback;
+  self->resources = options->resources;
+
+  return &self->super;
+}
+
+/* (close_on_sighup options file) */
+DEFINE_COMMAND2(close_on_sighup)
+     (struct command_2 *ignored UNUSED,
+      struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct command_continuation *c,
+      struct exception_handler *e UNUSED)
+{
+  CAST(lshd_options, options, a1);
+  CAST(lsh_fd, fd, a2);
+
+  remember_resource(options->resources, &fd->super);
+
+  COMMAND_RETURN(c, a2);
+}
 
 static const struct argp_option
 main_options[] =
@@ -700,14 +785,15 @@ main_argp =
        (services object command) )
      (expr (lambda (options)
              (let ((keys (options2keys options)))
-	       (listen_callback
-	         (lambda (lv)
-    		   (services (connection_handshake
-    				  handshake
-    				  (kexinit_filter init keys)
-    				  keys 
-    				  (log_peer lv))))
-		 (options2local options))))))
+	       (close_on_sighup options
+	         (listen_callback
+	           (lambda (lv)
+    	             (services (connection_handshake
+    	           		  handshake
+    	           		  (kexinit_filter init keys)
+    	           		  keys 
+    	           		  (log_peer lv))))
+	           (options2local options) ))))))
 */
 
 
@@ -727,38 +813,36 @@ main_argp =
 	      (connection_require_userauth connection)))))))
 */
 
-#if WITH_GCOV
-/* Catch SIGTERM and call exit(). That way, profiling info is written
- * properly when the process is terminated. */
-
 static void
 do_terminate_callback(struct lsh_callback *s UNUSED)
 {
   io_final();
+
+  /* If we're using GCOV, just call exit(). That way, profiling info
+   * is written properly when the process is terminated. */
+#if !WITH_GCOV
+  kill(getpid(), SIGKILL);
+#endif
   exit(0);
 }
 
 static struct lsh_callback
-terminate_callback =
-{ STATIC_HEADER, do_terminate_callback };
+sigterm_handler = { STATIC_HEADER, do_terminate_callback };
 
 static void
-install_terminate_handler(void)
+install_signal_handlers(struct lshd_options *options)
 {
-  io_signal_handler(SIGTERM, &terminate_callback);
+  io_signal_handler(SIGTERM, &sigterm_handler);
+  io_signal_handler(SIGHUP,
+		    make_sighup_close_callback(options));
 }
 
-#endif /* WITH_GCOV */
-
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
   struct lshd_options *options;
 
   io_init();
-
-#if WITH_GCOV
-  install_terminate_handler();
-#endif
   
   /* For filtering messages. Could perhaps also be used when converting
    * strings to and from UTF8. */
@@ -771,6 +855,8 @@ int main(int argc, char **argv)
 
   if (!options)
     return EXIT_FAILURE;
+
+  install_signal_handlers(options);
   
   trace("Parsing options...\n");
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
@@ -833,12 +919,17 @@ int main(int argc, char **argv)
         }
     }
   
-  if (options->use_pid_file && !daemon_pidfile(options->pid_file))
+  if (options->use_pid_file)
     {
-      werror("lshd seems to be running already.\n");
-      return EXIT_FAILURE;
+      if (daemon_pidfile(options->pid_file))
+	remember_resource(options->resources, 
+			  make_pid_file_resource(options->pid_file));
+      else
+	{
+	  werror("lshd seems to be running already.\n");
+	  return EXIT_FAILURE;
+	}
     }
-
   {
     /* Commands to be invoked on the connection */
     struct object_list *connection_hooks;
