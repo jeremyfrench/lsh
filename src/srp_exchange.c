@@ -88,6 +88,33 @@ make_srp_entry(struct lsh_string *name, struct sexp *e)
     return NULL;
 }
 
+/* Consumes the salt */
+struct sexp *
+srp_make_verifier(struct abstract_group *G,
+		  struct hash_algorithm *H,
+		  struct lsh_string *salt,
+		  struct lsh_string *name,
+		  struct lsh_string *passwd)
+{
+  mpz_t x;
+  struct sexp *e;
+  
+  mpz_init(x);
+
+  srp_hash_password(x, H, salt, name, passwd);  
+  GROUP_POWER(G, x, G->generator, x);
+
+  e = sexp_l(4,
+	     sexp_a(ATOM_SRP_VERIFIER), sexp_a(ATOM_SSH_GROUP1),
+	     sexp_s(NULL, salt),
+	     sexp_un(x),
+	     -1);
+
+  mpz_clear(x);
+
+  return e;
+}
+
 /* Thomas Wu's Secure Remote Password Protocol, with a fixed group. */
 
 /* ;; GABA:
@@ -110,8 +137,8 @@ srp_hash_password(mpz_t x,
 		  struct lsh_string *passwd)
 {
   struct lsh_string *h
-    = hash_string(H, ssh_format("%s%s", salt,
-				hash_string(H, ssh_format("%s%s", name, passwd), 1)),
+    = hash_string(H, ssh_format("%S%fS", salt,
+				hash_string(H, ssh_format("%S%S", name, passwd), 1)),
 		  1);
 
   bignum_parse_u(x, h->length, h->data);
@@ -124,7 +151,7 @@ srp_make_init_msg(struct dh_instance *dh, struct lsh_string *name)
 {
   dh_generate_secret(dh->method, dh->secret, dh->e);
   dh_hash_update(dh, ssh_format("%S", name), 1);
-  return ssh_format("%c%s%n", SSH_MSG_KEXSRP_INIT, name, dh->e);
+  return ssh_format("%c%S%n", SSH_MSG_KEXSRP_INIT, name, dh->e);
 }
 
 /* dh_instance, packet -> name */
@@ -204,7 +231,7 @@ srp_make_reply_msg(struct dh_instance *dh, struct srp_entry *entry)
   dh_hash_update(dh, ssh_format("%S%S", entry->name, entry->salt), 1);
   dh_hash_digest(dh);
   
-  return ssh_format("%c%s%n", SSH_MSG_KEXSRP_REPLY, entry->salt, dh->f);
+  return ssh_format("%c%S%n", SSH_MSG_KEXSRP_REPLY, entry->salt, dh->f);
 }
 
 /* dh_instance, packet -> salt */
