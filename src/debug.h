@@ -39,10 +39,6 @@ make_packet_debug(struct abstract_write *continuation,
 
 void send_debug_message(struct ssh_connection *connection,
 			const char *msg, int always_display);
-#if 0
-void send_debug(struct abstract_write *write, const char *msg, int always_display);
-void send_verbose(struct abstract_write *write, const char *msg, int always_display);
-#endif
 
 extern struct packet_handler connection_debug_handler;
 
