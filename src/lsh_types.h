@@ -33,7 +33,7 @@
 /* FIXME: This should probably be set in config.h by autoconf */
 
 /* The crypt function requires _XOPEN_SOURCE, while the initgroups
- * function requires _BSD_SOURCE */
+ * function requires _BSD_SOURCE. Appearantly also needed for strsignal() */
 #define _GNU_SOURCE
 
 #if SIZEOF_SHORT >= 4
@@ -185,6 +185,10 @@ struct callback
 
 /* Returned by channel callback functions when the channel is closed. */
 #define LSH_CHANNEL_FINISHED 0x40
+
+/* Indicates that the connection should be closed once all active
+ * channels are closed. */
+#define LSH_CHANNEL_PENDING_CLOSE 0x80
 
 /* Non-zero if no messages can be sent over the connection. Used when
  * processing error codes from in the middle of the processing a
