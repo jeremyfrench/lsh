@@ -90,9 +90,13 @@ do_authenticate(struct userauth *s,
        : parse_eod(args))) 
     {
       struct lsh_user *user;
-      
-      lookup = ALIST_GET(self->verifiers, algorithm);
 
+      {
+	CAST_SUBTYPE(lookup_verifier, l,
+		     ALIST_GET(self->verifiers, algorithm));
+	lookup = l;
+      }
+      
       if (!lookup) 
 	{
 	  static const struct exception unsupported_publickey_algorithm

@@ -109,9 +109,13 @@ spki_make_verifier(struct alist *algorithms,
   struct sexp_iterator *i;
 
   algorithm_name = spki_get_type(e, &i);
-  
-  algorithm = ALIST_GET(algorithms, algorithm_name);
 
+  {
+    CAST_SUBTYPE(signature_algorithm, a, 
+		 ALIST_GET(algorithms, algorithm_name));
+    algorithm = a;
+  }
+  
   if (!algorithm)
     {
       werror("spki_make_verifier: Unsupported algorithm %a.\n", algorithm_name);
@@ -148,7 +152,11 @@ spki_make_signer(struct alist *algorithms,
   if (!algorithm_name)
     return NULL;
   
-  algorithm = ALIST_GET(algorithms, algorithm_name);
+  {
+    CAST_SUBTYPE(signature_algorithm, a, 
+		 ALIST_GET(algorithms, algorithm_name));
+    algorithm = a;
+  }
 
   if (!algorithm)
     {
