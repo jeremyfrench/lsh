@@ -82,7 +82,7 @@ static char *strndup (const char *s, size_t size)
     /* Length + 1 */
     size = end - s + 1;
   
-  char *r = malloc(size);
+  *r = malloc(size);
 
   if (size)
     {

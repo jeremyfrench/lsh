@@ -39,9 +39,10 @@
 #if !(_LIBC || \
   (defined (HAVE_FLOCKFILE) && defined(HAVE_PUTC_UNLOCKED) \
     && defined (HAVE_FPUTS_UNLOCKED) && defined (HAVE_FWRITE_UNLOCKED) ))
-# define flockfile(s)
-# define funlockfile(s)
-# define putc_unlocked(c, s) puts((c), (s))
+# define flockfile(f)
+# define funlockfile(f)
+# define putc_unlocked(c, f) putc((c), (f))
+# define fputs_unlocked(s, f) fputs((s), (f))
 # define fwrite_unlocked(b, s, n, f) fwrite((b), (s), (n), (f))
 #endif /* No thread safe i/o */
 
@@ -137,10 +138,10 @@ extern void argp_fmtstream_free (argp_fmtstream_t __fs);
 
 extern ssize_t __argp_fmtstream_printf (argp_fmtstream_t __fs,
 				       __const char *__fmt, ...)
-     PRINTF_STYLE(2.3);
+     PRINTF_STYLE(2, 3);
 extern ssize_t argp_fmtstream_printf (argp_fmtstream_t __fs,
 				      __const char *__fmt, ...)
-     PRINTF_STYLE(2.3);
+     PRINTF_STYLE(2, 3);
 
 extern int __argp_fmtstream_putc (argp_fmtstream_t __fs, int __ch);
 extern int argp_fmtstream_putc (argp_fmtstream_t __fs, int __ch);
