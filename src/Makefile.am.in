@@ -8,11 +8,20 @@ SUBDIRS = lib include
 
 # To remake all Makefile.am-files, run
 #
-# 	./used_headers . $(SUBDIRS) | ./make_am
+# 	./make_am
 #
 # You should run this after recompiling, but before making a dist, as
 # it uses dependency information to figure out which header files
 # should be included in th dist. How to tell this to make?
+
+Makefile.am: Makefile.am.in
+	./make_am
+
+lib/Makefile.am: lib/Makefile.am.in
+	./make_am
+
+include/Makefile.am: include/Makefile.am.in
+	./make_am
 
 bin_PROGRAMS = lsh lshd
 
@@ -37,14 +46,14 @@ lshd_SOURCES = $(common_sources) lshd.c reaper.c server.c server_keyexchange.c \
 	server_password.c server_userauth.c
 
 atoms_defines.h: atoms.in process_atoms
-	bash process_atoms header <atoms.in >atoms_defines.h
+	bash $(srcdir)/process_atoms header <$(srcdir)/atoms.in >$@
 
-atoms_gperf.c: atoms.in process_atoms Makefile
-	bash process_atoms gperf <atoms.in \
-             | gperf -t -c -l -k1,7,$$ -N gperf_atom >atoms_gperf.c
+atoms_gperf.c: atoms.in process_atoms
+	bash $(srcdir)/process_atoms gperf <$(srcdir)/atoms.in \
+             | gperf -t -c -l -k1,7,$$ -N gperf_atom >$@
 
 atoms_table.c: atoms.in process_atoms
-	bash process_atoms table <atoms.in >atoms_table.c
+	bash $(srcdir)/process_atoms table <$(srcdir)/atoms.in >$@
 
 LDADD = @LIBOBJS@ lib/libsymmetric.a
 
@@ -56,5 +65,5 @@ symmetric:
 	(cd lib && $(MAKE) libsymmetric.a)
 
 EXTRA_DIST = atoms.in process_atoms $(generated_sources) HACKING \
-	$(cvs_headers)
+	$(cvs_headers) Makefile.am.in
 

@@ -65,8 +65,13 @@ while true; do
     get_header;
     case $keyword in
 	CVS_HEADERS)
+	    # automake expands "foo \\\n\nbar" -> "foo \\\nbar". So
+	    # put all the files on one line, for simplicity.  
+	    
+	    # comm -12 - <(./cvs_headers $dir) | sed 's/\$/ \\\\/';
+
 	    add_command "(echo $args=\\\\;
-	    comm -12 - <(./cvs_headers $dir) | sed 's/\$/ \\\\/';
+	    comm -12 - <(./cvs_headers $dir) | tr '\\n' ' ';
 	    echo) 1>&4"
 	    ;;
 	SUBDIRS)
@@ -78,9 +83,10 @@ while true; do
 	    ;;
 	BODY)
 	    if [ $top = yes ]; then
-		exec <(./used_headers . $subdirs)
-	    fi
-	    run_commands && cat <&3 >&4
+		./used_headers . $subdirs | run_commands
+	    else
+		run_commands
+	    fi && cat <&3 >&4
 	    exit 0
 	    ;;
 	*)
