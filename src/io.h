@@ -367,6 +367,9 @@ int
 lsh_make_pipe(int *fds);
 
 int
+lsh_popen(const char *program, const char **argv, int in);
+
+int
 lsh_copy_file(int src, int dst);
 
 /* Temporarily changing the current directory. */

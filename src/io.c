@@ -2052,6 +2052,56 @@ lsh_make_pipe(int *fds)
   return 1;
 }
 
+/* Forks a filtering process. */
+int
+lsh_popen(const char *program, const char **argv, int in)
+{
+  /* 0 for read, 1, for write */
+  int out[2];
+
+  if (!lsh_make_pipe(out))
+    {
+      close(in);
+      return -1;
+    }
+  switch (fork())
+    {
+    case -1:
+      close(in);
+      close(out[0]);
+      close(out[1]);
+      return -1;
+
+    case 0: /* Child */
+      if (dup2(in, STDIN_FILENO) < 0)
+	{
+	  werror("lsh_popen: dup2 for stdin failed %e.\n", errno);
+	  _exit(EXIT_FAILURE);
+	}
+      if (dup2(out[1], STDOUT_FILENO) < 0)
+	{
+	  werror("lsh_popen: dup2 for stdout failed %e.\n", errno);
+	  _exit(EXIT_FAILURE);
+	}
+
+      close(in);
+      close(out[0]);
+      close(out[1]);
+
+      /* The execv prototype uses const in the wrong way */
+      execv(program, (char **) argv);
+
+      werror("lsh_popen: execv failed %e.\n", errno);
+
+      _exit(EXIT_FAILURE);
+
+    default: /* Parent process */
+      close(in);
+      close(out[1]);
+      return out[0];
+    }
+}
+
 /* Copies data from one fd to another. Works no matter if the fd:s are
  * in blocking or non-blocking mode. Tries hard not to do premature
  * reads; we don't want to read data into the buffer, and then
