@@ -1,3 +1,9 @@
+News for the 1.1.8 release:
+
+	Updated the scsh support for scsh-0.5.2. Note that scsh is now
+	free software; the "non-commercial use" restrictions were
+	removed in the 0.5.2 release.
+
 News for the 1.1.7 release:
 
 	More bug fixes, most of them related to the EOF handling.

@@ -1,3 +1,20 @@
+2001-03-07  Niels Möller  <nisse@cuckoo.localdomain>
+
+	* doc/TODO: scsh-0.5.2 is truly free software! Removed paragraph
+	describing the scsh situation.
+
+	* README: Say that scsh-0.5.2 is needed.
+
+	* src/scm/guile-compat.scm (char-set=): New function,
+	for compatibility with scsh-0.5.2.
+	(char-set:empty): New variable, likewise.
+
+	* src/scm/make-char-classes.scm (char-set-assoc): A real function
+	now, as I'm not sure that the usual assoc handles char-sets.
+	(char-set-empty?): Use char-set:empty (new in scsh-0.5.2).
+	(char-set=?): Removed function, scsh-0.5.2 provides a similar
+	function named char-set=.
+	
 2001-02-28  Niels Möller  <nisse@cuckoo.localdomain>
 
 	* src/client.c (init_client_options): Initialize stderr_fork = 1.
