@@ -380,15 +380,14 @@ DEFINE_COMMAND_SIMPLE(lsh_writekey_options2private_file, a)
 /* GABA:
    (expr
      (name make_writekey)
-     (globals
-       (open IO_WRITE_FILE)
-       (stdin IO_READ_STDIN))
      (params
        (options object lsh_writekey_options))
      (expr
        (lambda (backend)
-         (let ((key (read_sexp (stdin backend))))
-           (prog1 (print_public options (open backend (options2public_file options))
+         (let ((key (read_sexp (io_read_stdin backend))))
+           (prog1 (print_public options
+	   			(io_write_file backend
+					       (options2public_file options))
 	                        (verifier2public
 				  (signer2verifier
 				    (sexp2signer (options2algorithms options)
