@@ -381,7 +381,9 @@ int main(int argc, char **argv)
       
   /* Read the hostkey */
   keys = make_alist(0, -1);
-  if (!(hostkey = read_spki_key_file(options->hostkey, r, &ignore_exception_handler)))
+  if (!(hostkey = read_spki_key_file(options->hostkey,
+				     make_alist(1, ATOM_DSA, make_dsa_algorithm(r), -1),
+				     &ignore_exception_handler)))
     {
       werror("lshd: Could not read hostkey.\n");
       return EXIT_FAILURE;
