@@ -817,6 +817,22 @@ install_signal_handlers(struct resource *resource)
 		    make_sighup_close_callback(resource));
 }
 
+static void
+do_exc_lshd_handler(struct exception_handler *self,
+		    const struct exception *e)
+{
+  if (e->type & EXC_IO)
+    {
+      CAST_SUBTYPE(io_exception, exc, e);
+      
+      werror("%z, (errno = %i)\n", e->msg, exc->error);
+    }
+  else
+    EXCEPTION_RAISE(self->parent, e);
+}
+
+static struct exception_handler lshd_exception_handler
+= STATIC_EXCEPTION_HANDLER(do_exc_lshd_handler, &default_exception_handler);
 
 /* Invoked when starting the ssh-connection service */
 /* GABA:
@@ -909,7 +925,7 @@ make_lshd_connection_service(struct lshd_options *options)
     	      (services (connection_handshake
 	                   handshake
 			   kexinit
-			   keys 
+			   keys
 			   (logger lv))))))
 */
 
@@ -975,7 +991,7 @@ make_lshd_listen_callback(struct lshd_options *options,
 		    -1))));
 
     /* There should be no exceptions raised on the fd:s we listen on */
-    return make_listen_callback(server_callback, &default_exception_handler);
+    return make_listen_callback(server_callback, &lshd_exception_handler);
   }
 }
 
@@ -1053,7 +1069,7 @@ main(int argc, char **argv)
 		       make_lshd_listen_callback
 		       (options, keys,
 			make_lshd_connection_service(options)),
-		       &default_exception_handler);
+		       &lshd_exception_handler);
   if (!fds)
     {
       werror("Could not bind any address.\n");
