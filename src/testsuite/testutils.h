@@ -11,6 +11,7 @@
 #include "crypto.h"
 #include "format.h"
 #include "io.h"
+#include "lsh_string.h"
 #include "werror.h"
 
 #include <inttypes.h>
@@ -18,7 +19,7 @@
 #include <string.h>
 
 struct lsh_string *
-decode_hex(const char *);
+decode_hex(const unsigned char *);
 
 /* The main program */
 int

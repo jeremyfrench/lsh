@@ -57,14 +57,12 @@ decode_hex_length(const char *h)
 }
 
 struct lsh_string *
-decode_hex(const char *h)
+decode_hex(const unsigned char *hex)
 {  
-  const unsigned char *hex = (const unsigned char *) h;
-  uint32_t length = decode_hex_length(h);
-  uint8_t *dst;
+  uint32_t length = decode_hex_length(hex);
   
   unsigned i = 0;
-  struct lsh_string *s = ssh_format("%lr", length, &dst);
+  struct lsh_string *s = lsh_string_alloc(length);
 
   for (;;)
     {
@@ -74,7 +72,10 @@ decode_hex(const char *h)
 	hex++;
 
       if (!*hex)
-	return s;
+	{
+	  ASSERT(i == length);
+	  return s;
+	}
 
       high = hex_digits[*hex++];
       if (high < 0)
@@ -90,7 +91,7 @@ decode_hex(const char *h)
       if (low < 0)
 	return NULL;
 
-      dst[i++] = (high << 4) | low;
+      lsh_string_putc(s, i++, (high << 4) | low);
     }
 }
 
@@ -115,13 +116,14 @@ test_cipher(const char *name, struct crypto_algorithm *algorithm,
   
   if (iv)
     {
-      if (algorithm->iv_size != iv->length)
+      if (algorithm->iv_size != lsh_string_length(iv))
 	FAIL();
     }
   else if (algorithm->iv_size)
     FAIL();
 
-  c = MAKE_ENCRYPT(algorithm, key->data, iv ? iv->data : NULL);
+  c = MAKE_ENCRYPT(algorithm, lsh_string_data(key),
+		   iv ? lsh_string_data(iv) : NULL);
 
   x = crypt_string(c, plain, 0);
   if (!lsh_string_eq(x, cipher))
@@ -129,7 +131,8 @@ test_cipher(const char *name, struct crypto_algorithm *algorithm,
   
   KILL(c);
   
-  c = MAKE_DECRYPT(algorithm, key->data, iv ? iv->data : NULL);
+  c = MAKE_DECRYPT(algorithm, lsh_string_data(key),
+		   iv ? lsh_string_data(iv) : NULL);
 
   x = crypt_string(c, x, 1);
   if (!lsh_string_eq(x, plain))
@@ -188,7 +191,8 @@ test_sign(const char *name,
   struct verifier *v;
   struct sexp_iterator i;
   uint8_t *decoded;  
-
+  uint32_t key_length;
+  
   struct knuth_lfib_ctx ctx;
   struct bad_random r = { { STACK_HEADER, RANDOM_GOOD /* a lie */,
 			    do_bad_random, NULL },
@@ -199,10 +203,11 @@ test_sign(const char *name,
   algorithms = all_signature_algorithms(&r.super);
   (void) name;
 
-  decoded = alloca(key->length);
-  memcpy(decoded, key->data, key->length);
+  key_length = lsh_string_length(key);
+  decoded = alloca(key_length);
+  memcpy(decoded, lsh_string_data(key), key_length);
   
-  if (!sexp_transport_iterator_first(&i, key->length, decoded))
+  if (!sexp_transport_iterator_first(&i, key_length, decoded))
     FAIL();
 
   /* Can't use spki_make_signer, because private-key tag is missing. */
@@ -210,7 +215,7 @@ test_sign(const char *name,
   if (!s)
     FAIL();
 
-  sign = SIGN(s, ATOM_SPKI, msg->length, msg->data);
+  sign = SIGN(s, ATOM_SPKI, lsh_string_length(msg), lsh_string_data(msg));
 
   /* If caller passed signature == NULL, skip this check. */
   if (signature && !lsh_string_eq(signature, sign))
@@ -221,19 +226,21 @@ test_sign(const char *name,
     /* Can't create verifier */
     FAIL();
 
-  if (!VERIFY(v, ATOM_SPKI, msg->length, msg->data,
-	      sign->length, sign->data))
+  if (!VERIFY(v, ATOM_SPKI,
+	      lsh_string_length(msg), lsh_string_data(msg),
+	      lsh_string_length(sign), lsh_string_data(sign)))
     /* Unexpected verification failure. */
     FAIL();
   
   /* Modify message slightly. */
-  if (msg->length < 10)
+  if (lsh_string_length(msg) < 10)
     FAIL();
 
-  msg->data[5] ^= 0x40;
+  lsh_string_putc(msg, 5, lsh_string_data(msg)[5] ^ 0x40);
 
-  if (VERIFY(v, ATOM_SPKI, msg->length, msg->data,
-	     sign->length, sign->data))
+  if (VERIFY(v, ATOM_SPKI,
+	     lsh_string_length(msg), lsh_string_data(msg),
+	     lsh_string_length(sign), lsh_string_data(sign)))
     /* Unexpected verification success. */
     FAIL();
 
@@ -256,13 +263,13 @@ test_spki_match(const char *name,
   
   spki_acl_init(&db);
   
-  if (!spki_iterator_first(&i, resource->length, resource->data))
+  if (!spki_iterator_first(&i, STRING_LD(resource)))
     FAIL();
   
   if (!spki_parse_tag(&db, &i, &resource_tag))
     FAIL();
 
-  if (!spki_iterator_first(&i, access->length, access->data))
+  if (!spki_iterator_first(&i, STRING_LD(access)))
     FAIL();
 
   if (!spki_parse_tag(&db, &i, &access_tag))
