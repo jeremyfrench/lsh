@@ -71,6 +71,7 @@ need valid isa-pointers in classes (as classes are statically
 allocated). If this is done properly, the meta feature could also be
 cleaned up a little.
 
+Fix gc_kill to deallocate objects immediately.
 
 CHANNELS
 

@@ -1,3 +1,30 @@
+Fri Dec 18 01:53:22 1998    <nisse@puck>
+
+	* server.c (do_eof): Consider closing (if CHANNEL_SENT_EOF and
+	CHANNEL_CLOSE_AT_EOF are both set).
+
+	* keyexchange.c (make_test_kexinit): Added hmac-md5 to the list of
+	acepted mac algorithms.
+
+	* io.h (CLOSE_EOF): Changed the meaning of this constant. Now used
+	also for EOF on writing.
+	* io.c (prepare_write): Use the close_reason CLOSE_EOF when a
+ 	closed write_buffer has been flushed successfully.
+
+	* io.c (write_callback): Report EPIPE and other write failures
+	differently. 
+	
+
+	* crypto.c: Added md5 support by Balazs Scheidler.
+
+	* client.c (do_exit_status): Bugfix: Changed && to &.
+
+	* channel.c (channel_close_callback): Don't close channel when a
+	connected file is closed when we expect it.
+
+	* resource.c (do_free_resources): *Never* call lsh_object_free,
+	except from the gc_sweep function!
+
 Thu Dec 17 16:27:22 1998    <nisse@puck>
 
 	* server.c (make_process_resource): New function.

@@ -1,3 +1,10 @@
+NEWS since the 1998-12-17 snapshot:
+
+Support for md5 (by Balazs Scheidler).
+
+Various bugfixes.
+
+
 NEWS since the 1998-12-11 snapshot:
 
 A resource mechanism (resource.[ch]) used by the server to cleanup
