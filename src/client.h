@@ -29,18 +29,6 @@
 #include "io.h"
 #include "keyexchange.h"
 
-struct client_callback
-{
-  struct fd_callback super;
-  struct io_backend *backend;
-  UINT32 block_size;
-  char *id_comment;
-
-  struct randomness *random;
-  struct make_kexinit *init;
-  struct packet_handler *kexinit_handler;
-};
-
 struct fd_callback *
 make_client_callback(struct io_backend *b,
 		     char *comment,

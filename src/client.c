@@ -41,6 +41,18 @@
 #include "werror.h"
 #include "xalloc.h"
 
+struct client_callback
+{
+  struct fd_callback super;
+  struct io_backend *backend;
+  UINT32 block_size;
+  char *id_comment;
+
+  struct randomness *random;
+  struct make_kexinit *init;
+  struct packet_handler *kexinit_handler;
+};
+
 static int client_initiate(struct fd_callback **c,
 			   int fd)
 {
@@ -88,6 +100,8 @@ static struct read_handler *do_line(struct line_handler **h,
 {
   struct client_line_handler *closure
     = (struct client_line_handler *) *h;
+
+  MDEBUG(closure);
   
   if ( (length >= 4) && !memcmp(line, "SSH-", 4))
     {
@@ -145,7 +159,9 @@ struct read_handler *make_client_read_line(struct ssh_connection *c)
 {
   struct client_line_handler *closure
     = xalloc(sizeof(struct client_line_handler));
-  
+
+  MDEBUG(closure);
+
   closure->super.handler = do_line;
   closure->connection = c;
   
