@@ -80,7 +80,6 @@ struct read_handler
 
 #define READ_HANDLER(h, read) ((h)->handler(&(h), (read)))
 
-
 /* May store a new handler into *w. FIXME: Is this indirection ever
  * used? */
 struct abstract_write
