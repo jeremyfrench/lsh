@@ -38,7 +38,7 @@ MAINTAINERCLEANFILES += aclocal.m4 configure \
 all-recursive check-recursive: config.h
 
 
-EXTRA_DIST = AUTHORS FAQ README COPYING ChangeLog NEWS FAQ \
+EXTRA_DIST = AUTHORS FAQ README COPYING ChangeLog ChangeLog.1 NEWS FAQ \
 	Makefile.am.in make_am 
 
 
