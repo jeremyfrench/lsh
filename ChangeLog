@@ -1,3 +1,55 @@
+2003-09-15  Pontus Sköld  <pont@soua.net>
+
+	* src/testsuite/Makefile.am (TS_SH): Use new test for login-auth
+	mode.
+
+	* src/testsuite/login-auth-test: New test for login-auth mode.
+
+	* src/lshd.c: New defines OPT_LOGIN_AUTH_USER,
+	OPT_OPT_NO_LOGIN_AUTH_MODE, OPT_LOGIN_AUTH_USER and
+	OPT_BANNER_FILE.
+	(lshd_options): New attributes with_loginauthmode,
+	loginauthmode_user and banner_file.
+	(make_lshd_options): Initialize new attributes.
+	(main_options): New options for login-auth-mode and banner-file.
+	(main_argp_parser): Make a userdb if using login-auth-mode too.
+	Bugfix; make sure self->userauth_algorithms is initialized, even
+	if we're using srp. Add a permissive userauth_none to
+	self->userauth_algorithms if using login-auth mode. Handle new
+	options.
+	(lshd_login_service): New class.
+	(make_lshd_login_service): New function.
+	(make_lshd_listen_callback): Read banner-file and pass as a string
+	to make_handshake_info is desired.
+	(main): Use the login service in login-auth mode.
+
+	* src/server_userauth.c (userauth_none): New class.
+	(do_none_authenticate): Added code for login-auth-mode to
+	auto login a specific user.
+	(make_userauth_none): New function.
+
+	* src/server_userauth.h (make_userauth_none): Declaration, removed
+	static userauth_none.
+
+	* src/unix_user.c (unix_current_user): New function, return
+	username of current user.
+
+	* src/lsh.c (main): Pass extra NULL to make_handshake_info.
+
+	* src/handshake.c (make_handshake_info): New parameter
+	banner_text, init attribute.
+
+	* src/handshake.h (handshake_info): New attribute banner_text. 
+	(make_handshake_info): New parameter.
+
+	* src/channel.h: Declarataions for init_login_service,
+	login_service_command annd INIT_LOGIN_SERVICE.
+
+	* src/channel.c (init_login_service): New function to setup a
+	login service.
+	(login_service_command): Command to setup a connection for login
+	service.
+
 2003-08-17  Niels Möller  <nisse@cuckoo.hack.org>
 
 	* src/scm/gaba.scm (out): Ignore #f entries.
