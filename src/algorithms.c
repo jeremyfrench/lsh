@@ -40,7 +40,8 @@
 #include "algorithms.h.x"
 #undef GABA_DEFINE
 
-struct alist *many_algorithms(unsigned n, ...)
+struct alist *
+many_algorithms(unsigned n, ...)
 {
   va_list args;
   
@@ -95,12 +96,19 @@ static int strcmp_list(const char *name, ...)
   return res;
 }
     
-int lookup_crypto(struct alist *algorithms, const char *name)
+int
+lookup_crypto(struct alist *algorithms, const char *name,
+	      struct crypto_algorithm **ap)
 {
   int atom;
 
   if (!strcmp(name, "none"))
-    return ATOM_NONE;
+    {
+      if (ap)
+	*ap = NULL;
+
+      return ATOM_NONE;
+    }
   
   if (strcmp_list(name, "arcfour", NULL))
     atom = ATOM_ARCFOUR;
@@ -119,19 +127,33 @@ int lookup_crypto(struct alist *algorithms, const char *name)
     return 0;
 
   /* Is this crypto supported? */
-  if (ALIST_GET(algorithms, atom))
-    return atom;
-  else
-    return 0;
+  {
+    CAST_SUBTYPE(crypto_algorithm, a, ALIST_GET(algorithms, atom));
+    if (a)
+      {
+	if (ap)
+	  *ap = a;
+	
+	return atom;
+      }
+    else
+      return 0;
+  }
 }
 
-int lookup_mac(struct alist *algorithms, const char *name)
+int
+lookup_mac(struct alist *algorithms, const char *name,
+	   struct mac_algorithm **ap)
 {
   int atom;
 
   if (!strcmp(name, "none"))
-    return ATOM_NONE;
-  
+    {
+      if (ap)
+	*ap = NULL;
+
+      return ATOM_NONE;
+    }
   if (strcmp_list(name, "hmac-sha1", "sha", "hmac-sha", "sha1", NULL))
     atom = ATOM_HMAC_SHA1;
   else if (strcmp_list(name, "hmac-md5", "md5", NULL))
@@ -140,38 +162,64 @@ int lookup_mac(struct alist *algorithms, const char *name)
     return 0;
   
   /* Is this mac supported? */
-  if (ALIST_GET(algorithms, atom))
+  {
+    CAST_SUBTYPE(mac_algorithm, a, ALIST_GET(algorithms, atom));
+    if (a)
+      {
+	if (ap)
+	  *ap = a;
+	
 	return atom;
-  else
-    return 0;
+      }
+    else
+      return 0;
+  }
 }
 
-int lookup_compression(struct alist *algorithms, const char *name)
+int
+lookup_compression(struct alist *algorithms, const char *name,
+		   struct compress_algorithm **ap)
 {
   int atom;
 
   if (!strcmp(name, "none"))
-    return ATOM_NONE;
-  
+    {
+      if (ap)
+	*ap = NULL;
+      return ATOM_NONE;
+    }
   if (strcmp_list(name, "zlib", "z", NULL))
     atom = ATOM_ZLIB;
   else
     return 0;
   
   /* Is this compression algorithm supported? */
-  if (ALIST_GET(algorithms, atom))
-    return atom;
-  else
-    return 0;
+  {
+    CAST_SUBTYPE(compress_algorithm, a, ALIST_GET(algorithms, atom));
+    if (a)
+      {
+	if (ap)
+	  *ap = a;
+	return atom;
+      }
+    else
+      return 0;
+  }
 }
 
-int lookup_hash(struct alist *algorithms, const char *name, int none_is_valid)
+int
+lookup_hash(struct alist *algorithms, const char *name,
+	    struct hash_algorithm **ap, int none_is_valid)
 {
   int atom;
 
   if (none_is_valid && !strcmp(name, "none"))
-    return ATOM_NONE;
-  
+    {
+      if (ap)
+	*ap = NULL;
+      
+      return ATOM_NONE;
+    }
   if (strcmp_list(name, "md5", NULL))
     atom = ATOM_MD5;
   else if (strcmp_list(name, "sha1", NULL))
@@ -180,10 +228,18 @@ int lookup_hash(struct alist *algorithms, const char *name, int none_is_valid)
     return 0;
 
   /* Is this hash algorithm supported? */
-  if (ALIST_GET(algorithms, atom))
-    return atom;
-  else
-    return 0;
+  {
+    CAST_SUBTYPE(hash_algorithm, a, ALIST_GET(algorithms, atom));
+    if (a)
+      {
+	if (ap)
+	  *ap = a;
+	
+	return atom;
+      }
+    else
+      return 0;
+  }
 }
 
 struct int_list *default_crypto_algorithms(void)
@@ -224,7 +280,7 @@ struct int_list *prefer_compression_algorithms(void)
 #endif
 }
   
-static void
+void
 vlist_algorithms(const struct argp_state *state,
 		 struct alist *algorithms,
 		 unsigned n,
@@ -254,7 +310,7 @@ vlist_algorithms(const struct argp_state *state,
   assert(atom == -1);
 }
 
-static void
+void
 list_algorithms(const struct argp_state *state,
 		struct alist *algorithms,
 		char *prefix,
@@ -269,7 +325,7 @@ list_algorithms(const struct argp_state *state,
   va_end(args);
 }
 
-static void
+void
 list_crypto_algorithms(const struct argp_state *state,
 		       struct alist *algorithms)
 {
@@ -281,7 +337,7 @@ list_crypto_algorithms(const struct argp_state *state,
 		  ATOM_NONE, -1);
 }
 
-static void
+void
 list_mac_algorithms(const struct argp_state *state,
 		    struct alist *algorithms)
 {
@@ -292,7 +348,7 @@ list_mac_algorithms(const struct argp_state *state,
 		  ATOM_NONE, -1);
 }
 
-static void
+void
 list_compression_algorithms(const struct argp_state *state,
 			    struct alist *algorithms)
 {
@@ -318,8 +374,9 @@ algorithms_options[] =
   { NULL, 0, NULL, 0, NULL, 0 }  
 };
 
-void init_algorithms_options(struct algorithms_options *self,
-			     struct alist *algorithms)
+void
+init_algorithms_options(struct algorithms_options *self,
+			struct alist *algorithms)
 {
   self->algorithms = algorithms;
 
@@ -347,7 +404,7 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
       break;
     case 'c':
       {
-	int crypto = lookup_crypto(self->algorithms, arg);
+	int crypto = lookup_crypto(self->algorithms, arg, NULL);
 	if (crypto)
 	  self->crypto_algorithms = make_int_list(1, crypto, -1);
 	else
@@ -359,7 +416,7 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
       }
     case 'm':
       {
-	int mac = lookup_mac(self->algorithms, arg);
+	int mac = lookup_mac(self->algorithms, arg, NULL);
 	if (mac)
 	  self->mac_algorithms = make_int_list(1, mac, -1);
 	else
@@ -376,7 +433,7 @@ algorithms_argp_parser(int key, char *arg, struct argp_state *state)
 	  self->compression_algorithms = prefer_compression_algorithms();
 	else
 	  {
-	    compression = lookup_compression(self->algorithms, arg);
+	    compression = lookup_compression(self->algorithms, arg, NULL);
 	    if (compression)
 	      self->compression_algorithms = make_int_list(1, compression, -1);
 	    else
