@@ -1,5 +1,7 @@
 2004-02-08  Niels Möller  <nisse@lysator.liu.se>
 
+	* Released lsh-1.5.4.
+
 	Implemented flow control for the connections write_buffer. The
 	buffer is now of limited size. When it starts to get large, channel
 	i/o is disabled. If it hits the limit, the connection is closed.
