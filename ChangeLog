@@ -5,6 +5,18 @@
 
 2004-02-29  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/testsuite/socks5-config: tsocks configuration file for
+	socks5 test case.
+
+	* src/testsuite/socks5-test: New socks5 test.
+
+	* src/testsuite/tcpip-local-test: Check both directions of
+	forwarded channel.
+
+	* src/io.c (io_connect_list): Avoid resource leakage if the
+	address list is empty, or all connection attempts fail
+	immediately. 
+
 	* src/socks.c (do_read_socks): Bugfix, update self->pos.
 
 	* src/client.c (client_arg_unsigned): Typo fix.
