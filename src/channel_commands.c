@@ -132,7 +132,7 @@ do_install_global_request_handler(struct collect_info_2 *info,
   
   ALIST_SET(connection->table->global_requests,
 	    self->name,
-	    handler);
+	    &handler->super);
 
   return a;
 }
@@ -153,7 +153,7 @@ do_install_channel_open_handler(struct collect_info_2 *info,
 
   ALIST_SET(connection->table->channel_types,
 	    self->name,
-	    handler);
+	    &handler->super);
 
   return a;
 }
@@ -183,7 +183,7 @@ do_install_fix_global_request_handler(struct command *s,
   
   ALIST_SET(connection->table->global_requests,
 	    self->name,
-	    self->handler);
+	    &self->handler->super);
 
   COMMAND_RETURN(c, x);
 }
@@ -227,7 +227,7 @@ do_install_fix_channel_open_handler(struct command *s,
   ALIST_SET(connection->table
 	    ->channel_types,
 	    self->name,
-	    self->handler);
+	    &self->handler->super);
 
   COMMAND_RETURN(c, connection);
 }

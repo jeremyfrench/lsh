@@ -32,8 +32,8 @@
 #undef GABA_DECLARE
 
 /* Command to open a new channel. Takes a connection as argument
- * returns a new channel. Raises an exception on error. FIXME: Which
- * exception??? */
+ * returns a new channel. Raises an EXC_CHANNEL_OPEN exception on
+ * error. */
 
 /* GABA:
    (class
