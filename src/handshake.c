@@ -72,7 +72,7 @@ compat[] =
   };
     
 static enum peer_flag
-compat_peer_flags(uint32_t length, uint8_t *software)
+compat_peer_flags(uint32_t length, const uint8_t *software)
 {
   unsigned i;
   for (i = 0; compat[i].prefix; i++)
@@ -111,10 +111,10 @@ compat_peer_flags(uint32_t length, uint8_t *software)
  * the line appears to be an SSH handshake, but with bogus version
  * fields, or 1 if the line was parsed sucessfully. */
 static int
-split_version_string(uint32_t length, uint8_t *line,
-		     uint32_t *protover_len, uint8_t **protover,
-		     uint32_t *swver_len, uint8_t **swver,
-		     uint32_t *comment_len, uint8_t **comment)
+split_version_string(uint32_t length, const uint8_t *line,
+		     uint32_t *protover_len, const uint8_t **protover,
+		     uint32_t *swver_len, const uint8_t **swver,
+		     uint32_t *comment_len, const uint8_t **comment)
 {
   uint8_t *sep;
 
@@ -158,12 +158,12 @@ static void
 do_line(struct line_handler **h,
 	struct read_handler **r,
 	uint32_t length,
-	uint8_t *line,
+	const uint8_t *line,
 	struct exception_handler *e)
 {
   CAST(connection_line_handler, closure, *h);
   uint32_t protover_len, swver_len, comment_len;
-  uint8_t *protover, *swver, *comment;
+  const uint8_t *protover, *swver, *comment;
 
   struct ssh_connection *connection = closure->connection;
   int mode = connection->flags & CONNECTION_MODE;
