@@ -44,6 +44,7 @@
 
 #include "io_commands.c.x"
 
+/* Used only by lsh-writekey */
 /* GABA:
    (class
      (name backend_command)
