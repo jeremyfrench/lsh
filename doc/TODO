@@ -32,8 +32,6 @@ DSS == Digital Signature Standard; the algorithm in it is DSA (Digital
 Signature Algorithm); the GNU Privacy Guard contains a DSA implementation
 (cipher/dsa.[ch]); is that implementation suitable?
 
-Implement the last paragraph of section 5.2 of the transport layer
-specification.
 
 S-EXPRESSIONS
 
@@ -134,6 +132,21 @@ Kill child processes if its channel or its connection is closed
 unexpectedly. 
 
 
+FREENESS
+
+It might be safer to remove patent-encumbered code like IDEA code from the
+regular lsh distribution, and make it available separately (this approach is
+taken with GnuPG).
+
+scsh is not free software. Ask Olin Shivers and the other scsh
+copright owners to fix that, or rewrite the Scheme scripts so that
+they are as portable between Scheme implementations as possible, or
+switch to a free Scheme implementation, like Guile.
+
+CAST is probably not patent encumbered (Schneier doesn't mention patents);
+check what RFC 2144 (CAST-128) says on this subject.
+
+
 MISC
 
 Try to find out why read() sometimes returns -1 and sets errno==EPIPE,
@@ -142,29 +155,15 @@ Note: Debian's sparc port uses glibc2.1, rather than 2.0; maybe Red Hat does
 too? Quite a lot of things have changed between 2.0 and 2.1; this might well
 be a documented feature of 2.1.
 
-"lsh" is already used as the name of a shell (include in Debian;
+"lsh" is already used as the name of a shell (included in Debian;
 Description: Baby Shell for Novices with DOS compatible commands). Perhaps
 we need to change our name?
 
-Get a decent source of random; most likely, reusing the rand* from GPG's g10
-is the best option. Werner Koch is now working on making a libgcrypt out of
-GPG's random and crypto code.
-
-Clearly isolate patent-encumbered code (e.g. IDEA), and modify the build
-process not to use it by default.
-
-According to Bruce Schneier, "Applied Cryptography", 2nd edition (1996), p.
-398, "The name" (RC4) "is trademarked, so anyone who writes his own
-code has to call it something else.". 
-draft-ietf-secsh-transport-04.txt (and SSH1) calls it ARCFOUR: 
-`The "arcfour" is the Arcfour stream cipher with 128 bit keys.  The
- Arcfour cipher is believed to be compatible with the RC4 cipher
- [Schneier]. RC4 is a registered trademark of RSA Data Security Inc.'
-
-CAST is probably not patent encumbered (Schneier doesn't mention patents);
-check what RFC 2144 (CAST-128) says on this subject.
-
-Adapt GPG's blowfish code to lsh.
+Get a decent source of random (the current version will fall back to a
+really poorly seeded generator if /dev/urandom is not available); most
+likely, reusing the rand* from GPG's g10 is the best option. Werner
+Koch is now working on making a libgcrypt out of GPG's random and
+crypto code.
 
 Use UNUSED where parameters are unused intentionally.
 
@@ -175,6 +174,7 @@ Make it cleaner wrt. more gcc warnings.
 Don't use stdio for werror and similar functions. The non-blocking
 stderr sometime causes the C library to lose data.
 
-Split crypto.c into several files, one for each algorithm.
-
 Handling of user authentication failures seems broken.
+
+Fix desTest.c to use proper declarations of its function pointers, and
+have autoconf check for rusage().
