@@ -47,6 +47,9 @@
        (height_p . UINT32)))
 */
 
+/* FIXME: Add a resource, to make sure that the tty is reset and
+ * closed when the channel dies. */
+
 /* GABA:
    (class
      (name pty_request_continuation)

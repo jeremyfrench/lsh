@@ -85,7 +85,7 @@ do_exc_sexp_conv_handler(struct exception_handler *self,
 /* Option parsing */
 
 static const struct argp_child
-sub_parsers[] =
+main_argp_children[] =
 {
   { &sexp_argp, 0, NULL, 0 },
   { &werror_argp, 0, "", 0 },
@@ -93,7 +93,7 @@ sub_parsers[] =
 };
 
 static error_t
-main_argp_parser(int key, char *arg UNUSED, struct argp_state *state UNUSED)
+main_argp_parser(int key, char *arg UNUSED, struct argp_state *state)
 {
   switch(key)
     {
@@ -113,7 +113,7 @@ main_argp =
   "Reads an s-expression on stdin, and outputs the same "
   "s-expression on stdout, possibly using a different "
   "encoding. By default, output uses the advanced encoding. ",
-  sub_parsers,
+  main_argp_children,
   NULL
 };
   
