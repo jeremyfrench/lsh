@@ -124,9 +124,11 @@ sha1
 
 # spki password encrypted data
 password-encrypted
-pkcs5v2
+# label
+Xpkcs5v2
 salt
-label
+data
+iv
 
 # Certificates and ACL:s
 certificate

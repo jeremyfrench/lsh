@@ -39,8 +39,11 @@
 #include <termios.h>
 #include <pwd.h>
 
-struct lsh_string *read_password(int max_length UNUSED,
-				 struct lsh_string *prompt, int free)
+/* FIXME: Expand the functionality of interact.c, so that we can use
+ * that instead of getpass(). */
+struct lsh_string *
+read_password(int max_length UNUSED,
+	      struct lsh_string *prompt, int free)
 {
   /* NOTE: Ignores max_length; instead getpass()'s limit applies. */
 
