@@ -2162,17 +2162,6 @@ io_write_file(const char *fname, int flags, int mode,
 		  block_size, c);
 }
 
-struct lsh_fd *
-io_read_file(const char *fname, 
-	     struct exception_handler *e)
-{
-  int fd = open(fname, O_RDONLY);
-  if (fd < 0)
-    return NULL;
-
-  return make_lsh_fd(fd, "read-only file", e);
-}
-
 void
 close_fd(struct lsh_fd *fd)
 {

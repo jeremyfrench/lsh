@@ -388,10 +388,6 @@ io_write_file(const char *fname, int flags,
 	      struct lsh_callback *c,
 	      struct exception_handler *e);
 
-struct lsh_fd *
-io_read_file(const char *fname, 
-	     struct exception_handler *e);
-
 int
 lsh_make_pipe(int *fds);
 
