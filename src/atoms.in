@@ -64,9 +64,10 @@ diffie-hellman-group1-sha1       REQUIRED
 # Key and certificate types
 
 ssh-dss              REQUIRED     sign      Simple DSS
+ssh-rsa-pkcs1@lysator.liu.se 
 x509v3               RECOMMENDED  sign      X.509 certificates
 spki                 OPTIONAL     sign      SPKI certificates
-# spki-rsa@lysator.liu.se             OPTIONAL     sign      SPKI certificates
+# spki-rsa@lysator.liu.se 
 pgp                  OPTIONAL     sign      OpenPGP certificates
 
 # Bug compatibility with old SSH2 versions
