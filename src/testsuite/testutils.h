@@ -5,6 +5,9 @@
 #include "config.h"
 #endif
 
+#include <stdlib.h>
+#include <string.h>
+
 #include "lsh.h"
 
 #include "algorithms.h"
@@ -13,10 +16,6 @@
 #include "io.h"
 #include "lsh_string.h"
 #include "werror.h"
-
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
 
 struct lsh_string *
 decode_hex(const unsigned char *);
