@@ -13,7 +13,8 @@ TS_DEFINE(»TS_FAIL«, »{ TS_WRITE(failed.\n); exit(1); }«)
 
 TS_DEFINE(»TS_STRING«,
 »m4_ifelse(m4_index(»$1«, »"«), 0,
-  »ssh_format("%lz", »$1«)«, »simple_decode_hex("m4_translit(»$1«, »0-9a-zA-Z 	#«, »0-9a-zA-Z«)")«) «)
+  »ssh_format("%lz", »$1«)«, »simple_decode_hex("m4_translit(»$1«, »0-9a-zA-Z
+# 	«, »0-9a-zA-Z«)")«) «)
 
 TS_DEFINE(»TS_SEXP«, »string_to_sexp(TS_STRING(»$1«), 1)«)
 
@@ -24,7 +25,7 @@ TS_DEFINE(»TS_TEST_STRING_EQ«,
     TS_MESSAGE($1)
     a = $2;
     b = $3;
-    if (!lsh_string_eq($2, $3))
+    if (!lsh_string_eq(a, b))
       TS_FAIL
     TS_OK
     lsh_string_free(a);
@@ -34,7 +35,19 @@ TS_DEFINE(»TS_TEST_STRING_EQ«,
 
 m4_dnl TS_TEST_HASH(name, algorithm, data, digest)
 TS_DEFINE(»TS_TEST_HASH«,
-  »TS_TEST_STRING_EQ(»$1«, hash_string(»$2«, TS_STRING(»$3«)), TS_STRING(»$4«))«)
+  »TS_TEST_STRING_EQ(»$1«, hash_string(»$2«, TS_STRING(»$3«), 1), TS_STRING(»$4«))«)
+
+m4_dnl TS_TEST_HMAC(name, algorithm, key, data, digest)
+TS_DEFINE(»TS_TEST_HMAC«, »
+  {
+    struct mac_algorithm *hmac = make_hmac_algorithm($2);
+    struct lsh_string *key = TS_STRING(»$3«);
+
+    TS_TEST_STRING_EQ(»$1«, mac_string(hmac, key, 1,
+                                       TS_STRING(»$4«), 1),
+                      TS_STRING(»$5«));
+  }
+«)
 
 m4_dnl TS_TEST_CRYPTO(name, algorithm, key, clear, cipher)
 TS_DEFINE(»TS_TEST_CRYPTO«, »
