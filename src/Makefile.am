@@ -192,8 +192,8 @@ LDADD = liblsh.a spki/libspki.a nettle/libnettle.a @LIBARGP@
 # lshg needs ssh_format, which need bignum functions from nettle.
 # lshg_LDADD = liblsh.a @LIBARGP@
 
-class-map: $(srcdir)/make-class-map $(dist_x_files)
-	cat $(dist_x_files) | grep '^CLASS:' \
+class-map: $(srcdir)/make-class-map $(dist_classes)
+	cat $(dist_classes) | grep '^CLASS:' \
 	| sort | awk -f $(srcdir)/make-class-map > $@
 
 # Is this rule needed?
@@ -210,7 +210,7 @@ EXTRA_DIST = lsh-authorize ssh-conv lsh-upgrade lcp \
 
 CLEANFILES = *.hT *.cT *.xT
 DISTCLEANFILES = environ.h
-MAINTAINERCLEANFILES = $(dist_x_files) $(DEP_FILES)
+MAINTAINERCLEANFILES = $(dist_classes) $(DEP_FILES)
 
 # Class files
 # SUFFIXES = .xh .xc
