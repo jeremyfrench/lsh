@@ -467,6 +467,7 @@ client_options[] =
   { "background", 'B', NULL, 0, "Put process into the background. Implies -N.", 0 },
   { "execute", 'E', "command", 0, "Execute a command on the remote machine", 0 },
   { "shell", 'S', "command", 0, "Spawn a remote shell", 0 },
+  { "x11-forward", 'X', NULL, 0, "Enable X11 forwarding", 0 },
   /* { "gateway", 'G', NULL, 0, "Setup a local gateway", 0 }, */
   { NULL, 0, NULL, 0, "Universal not:", 0 },
   { "no", 'n', NULL, 0, "Inverts the effect of the next modifier", 0 },
@@ -1051,7 +1052,31 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	options->remote_forward = 1;
 	break;
       }      
-#endif 
+#endif
+    case 'X':
+      {
+        char *display = getenv("DISPLAY");
+          
+        if (display)
+          {
+            const char cookie[16] = { 0x24, 0x51, 0x5f, 0x50, 0x69, 0x81, 0x6d, 0xeb,
+                                      0xcc, 0x6e, 0x38, 0xb5, 0x42, 0x95, 0x06, 0x0d };
+            
+            /* FIXME: Get a random cookie. Unfortunataly, this means that
+             * a lot more gets lonked into lshg. */
+            
+            werror("WARNING: Good X11 cookie generation not implemented!\n");
+            
+            client_add_action(options,
+                              make_forward_x11(display,
+                                               ssh_format("%ls", sizeof(cookie), cookie)));
+          }
+        else
+          /* FIXME: Should this be a fatal error? */
+          argp_error(state, "Can't do X11 forwarding; please set DISPLAY in the environment.\n");
+
+        break;
+      }
     case 'N':
       options->start_shell = 0;
       break;
