@@ -19,11 +19,11 @@
 struct read_handler *make_client_read_line();
 struct callback *make_client_close_handler();
 
-static int client_initiate(struct fd_callback *c,
+static int client_initiate(struct fd_callback **c,
 			   int fd)
 {
   struct client_callback *closure
-    = (struct client_callback *) c;
+    = (struct client_callback *) *c;
   
   struct ssh_connection *connection = ssh_connection_alloc();
   struct abstract_write *write =
@@ -33,12 +33,12 @@ static int client_initiate(struct fd_callback *c,
 		  make_client_close_handler());
   
   connection->client_version
-    = ssh_format("SSH-%z-%z %z\r\n",
+    = ssh_format("SSH-%lz-%lz %lz",
 		 PROTOCOL_VERSION,
 		 SOFTWARE_CLIENT_VERSION,
 		 closure->id_comment);
-  /* Copies the version string, so that it is isn't freed */
-  return A_WRITE(write, ssh_format("%lS", connection->client_version));
+
+  return A_WRITE(write, ssh_format("%lS\r\n", connection->client_version));
 }
 
 struct client_line_handler
@@ -66,10 +66,18 @@ static struct read_handler *do_line(struct line_handler **h,
 			       closure->connection->max_packet);
 	  
 	  closure->connection->server_version
-	    = ssh_format("%s", length, line);
+	    = ssh_format("%ls", length, line);
 
+	  verbose("Client version: ");
+	  verbose_safe(closure->connection->client_version->length,
+		       closure->connection->client_version->data);
+	  verbose("\nServer version: ");
+	  verbose_safe(closure->connection->server_version->length,
+		       closure->connection->server_version->data);
+	  verbose("\n");
+	  
 	  /* FIXME: Cleanup properly. */
-	  free(closure);
+	  lsh_free(closure);
 
 	  return new;
 	}
@@ -80,7 +88,7 @@ static struct read_handler *do_line(struct line_handler **h,
 	  werror("\n");
 
 	  /* FIXME: Clean up properly */
-	  free(closure);
+	  lsh_free(closure);
 	  *h = 0;
 		  
 	  return 0;
