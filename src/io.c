@@ -102,7 +102,9 @@ static void really_close_fd(struct io_fd *fd)
    * to choose an exit code. */
   if (fd->close_callback && fd->close_reason)
     (void) CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
-  
+
+  debug("Closing fd %d.\n", fd->fd);
+
   close(fd->fd);
 
   /* Make sure writing to the buffer fails. */
@@ -124,6 +126,8 @@ static void really_close_fd(struct io_fd *fd)
 #endif
 }
 
+/* FIXME: This code breaks horribly if new files are created by a
+ * callback function. */
 int io_iter(struct io_backend *b)
 {
   struct pollfd *fds;
@@ -132,6 +136,31 @@ int io_iter(struct io_backend *b)
   int timeout;
   int res;
 
+  /* We must first look at the write descriptors, to see if any of
+   * them should be closed. */
+
+  i = 0;
+  FOR_FDS(struct io_fd, fd, b->io, i++)
+    {
+      /* pre_write returns 0 if the buffer is empty */
+      if (fd->buffer)
+	{
+	  /* Ignores return value. Look at the empty attribute instead- */
+	  (void) write_buffer_pre_write(fd->buffer);
+
+	  if (fd->buffer->empty && fd->buffer->closed)
+	    {
+	      really_close_fd(fd);
+	    
+	      UNLINK_FD;
+	    
+	      b->nio--;
+	      continue;
+	    }
+	}
+    }
+  END_FOR_FDS;
+  
   nfds = b->nio + b->nlisten + b->nconnect;
 
   if (b->callouts)
@@ -167,18 +196,8 @@ int io_iter(struct io_backend *b)
       if (fd->handler && !fd->on_hold)
 	fds[i].events |= POLLIN;
 
-      /* pre_write returns 0 if the buffer is empty */
-      if (fd->buffer)
-	{
-	  if (write_buffer_pre_write(fd->buffer))
-	    fds[i].events |= POLLOUT;
-	  else
-	    /* Buffer is empty. Should we close? */
-	    if (fd->buffer->closed)
-	      {
-		fd->close_now = 1;
-	      }
-	}
+      if (fd->buffer && !fd->buffer->empty)
+	fds[i].events |= POLLOUT;
     }
   END_FOR_FDS;
 
@@ -314,7 +333,12 @@ int io_iter(struct io_backend *b)
 	      else if (res & LSH_CLOSE)
 		{
 		  if (fd->buffer)
-		    write_buffer_close(fd->buffer);
+		    {
+		      write_buffer_close(fd->buffer);
+		      /* Don't attempt to read any further. */
+		      /* FIXME: Is it safe to free the handler here? */
+		      fd->handler = NULL;
+		    }
 		  else
 		    fd->close_now = 1;
 		  
@@ -795,5 +819,7 @@ struct io_fd *io_write(struct io_backend *b,
 
 void close_fd(struct io_fd *fd)
 {
+  debug("Marking fd %d for closing.\n", fd->fd);
+  
   fd->close_now = 1;
 }
