@@ -1,3 +1,10 @@
+2003-09-16  Pontus Sköld  <pont@soua.net>
+
+	* src/testsuite/lshd-no-auth-test: New test to verify lshd fails
+	gracefully when it may use no authentication method.
+
+	* src/testsuite/Makefile.am (TS_SH): Use new lshd-no-auth-test.
+
 2003-09-15  Pontus Sköld  <pont@soua.net>
 
 	* src/testsuite/Makefile.am (TS_SH): Use new test for login-auth
