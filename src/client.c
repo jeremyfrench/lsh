@@ -204,7 +204,8 @@ make_client_callback(struct io_backend *b,
   return &connected->super;
 }
 
-static int client_close_die(struct close_callback *closure, int reason)
+static int client_close_die(struct close_callback *closure UNUSED,
+			    int reason)
 {
   verbose("Connection died, for reason %d.\n", reason);
   if (reason != CLOSE_EOF)
