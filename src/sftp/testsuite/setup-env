@@ -1,0 +1,14 @@
+#! /bin/sh
+
+. common.sh
+
+# Create a directory to play with
+mkdir $TESTHOME
+cd $TESTHOME
+
+# Create some files
+echo foo >x1
+echo bar >x2
+
+mkdir d
+echo gazonk >d/x3
