@@ -180,57 +180,22 @@ make_chain_connections_client(struct command *client_callback,
   return &self->super.super;
 }
 
-/* GABA:
-   (class
-     (name chain_connections)
-     (super command)
-     (vars
-       (server_callback object command)
-       (client_callback object command)))
-*/
-
-static void
-do_chain_connections(struct command *s,
-		     struct lsh_object *x,
-		     struct command_continuation *c,
-		     struct exception_handler *e)
+DEFINE_COMMAND3(chain_connections)
+     (struct lsh_object *a1,
+      struct lsh_object *a2,
+      struct lsh_object *a3,
+      struct command_continuation *c,
+      struct exception_handler *e)
 {
-  CAST(chain_connections, self, s);
-  CAST(listen_value, client_addr, x);
+  CAST_SUBTYPE(command, server_callback, a1);
+  CAST_SUBTYPE(command, client_callback, a2);
+  CAST(listen_value, client_addr, a3);
 
-  COMMAND_CALL(self->server_callback, &client_addr->super, 
-               make_chain_connections_client(self->client_callback, client_addr, c, e),
+  COMMAND_CALL(server_callback, &client_addr->super, 
+               make_chain_connections_client(client_callback, client_addr, c, e),
                e);
 }
 
-static struct command *
-make_chain_connections(struct command *server_callback,
-		       struct command *client_callback)
-{
-  NEW(chain_connections, self);
-
-  self->super.call = do_chain_connections;
-  self->server_callback = server_callback;
-  self->client_callback = client_callback;
-  return &self->super;
-}
-
-static struct lsh_object *
-do_collect_chain_params(struct collect_info_2 *info UNUSED,
-			struct lsh_object *a,
-			struct lsh_object *b)
-{
-  CAST_SUBTYPE(command, server_callback, a);
-  CAST_SUBTYPE(command, client_callback, b);
-
-  return &make_chain_connections(server_callback, client_callback)->super;
-}
-
-struct collect_info_2 chain_connections_2 =
-STATIC_COLLECT_2_FINAL(do_collect_chain_params);
-
-struct collect_info_1 chain_connections =
-STATIC_COLLECT_1(&chain_connections_2);
 
 /* (proxy_connection_service user connection) -> connection */
 /* GABA:
