@@ -91,6 +91,23 @@ static struct lsh_object *				\
 do_simple_##cname(struct command_simple *s UNUSED,	\
 		  struct lsh_object *a)
 
+#define COMMAND_STATIC(cname)			\
+static void					\
+do_##cname(struct command *s UNUSED,		\
+	   struct lsh_object *a,		\
+           struct command_continuation *c,	\
+           struct exception_handler *e);	\
+						\
+struct command cname =				\
+STATIC_COMMAND(do_##cname);			\
+						\
+static void					\
+do_##cname(struct command *s UNUSED,		\
+	   struct lsh_object *a,		\
+           struct command_continuation *c,	\
+           struct exception_handler *e)
+
+
 void do_call_simple_command(struct command *s,
 			    struct lsh_object *arg,
 			    struct command_continuation *c,
