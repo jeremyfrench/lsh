@@ -121,7 +121,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
      (name lsh_proxy_options)
      (super algorithms_options)
      (vars
-       (random object randomness_with_poll)
+       (random object randomness)
        (signature_algorithms object alist)
        (style . sexp_argp_state)
        (interface . "char *")
