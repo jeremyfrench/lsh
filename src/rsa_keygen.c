@@ -37,12 +37,6 @@
 
 #define SA(x) sexp_a(ATOM_##x)
 
-static void
-get_random(void *x, unsigned length, uint8_t *data)
-{
-  CAST_SUBTYPE(randomness, r, x);
-  RANDOM(r, length, data);
-}
 
 static void
 progress(void *ctx UNUSED, int c)
@@ -64,10 +58,12 @@ rsa_generate_key(struct randomness *r, UINT32 bits)
 
   rsa_init_public_key(&public);
   rsa_init_private_key(&private);
+
+  assert(r->quality == RANDOM_GOOD);
   
   if (rsa_generate_keypair(&public, &private,
-			   r, get_random,
-			    NULL, progress,
+			   r, lsh_random,
+			   NULL, progress,
 			   bits, E_SIZE))
     {
       key = sexp_l(2, SA(PRIVATE_KEY),
