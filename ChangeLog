@@ -36,6 +36,9 @@
 
 2002-06-26  Niels Möller  <nisse@cuckoo.hack.org>
 
+	* src/lsh-make-seed.c (get_dev_random): Bugfix: Actually try both
+	/dev/random and /dev/urandom.
+
 	* doc/lsh.texinfo (lshd basics): Changed invokation of lsh-keygen. 
 
 2002-06-25  Niels Möller  <niels@s3.kth.se>
