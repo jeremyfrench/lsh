@@ -228,8 +228,3 @@ Should lsh fail if some port forwardings fails? In particular,
 
 is pretty useless if the server doesn't let us bind the remote port.
 
-There's a bug in client_userauth.c, related to
-client_userauth_state->current. It is incremented at two places, in
-do_userauth_failure and do_client_exc_userauth, but a single
-SSH_MSG_USERAUTH_FAILURE message should result in incrementing it at
-at most one of those places.

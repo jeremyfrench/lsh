@@ -409,7 +409,10 @@ These are names of packet handlers. There's no common suffix for
 packet handler types; perhaps there should be.
 
 Types that inherit command or command_continuation should have a
-_command or _continuation prefix. Below, TYPE stands for a type name,
+_command or _continuation suffix. Types that inherit exception_handler
+should ahve an exc_ prefix.
+
+Below, TYPE stands for a type name,
 and METHOD for the name one of its methods.
 
 The constructor function for a TYPE should be make_TYPE(). Functions

@@ -1,5 +1,25 @@
 2000-08-04  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/client_userauth.c (client_userauth_failure): Added again
+	argument to the CLIENT_USERAUTH_FAILURE method.
+	(client_userauth_state): Added attribute next.
+	(userauth_method_is_useful): New function.
+	(do_userauth_failure): Don't modify current. Instead, increment
+	next as appropriate, and pass the new again argument to
+	CLIENT_USERAUTH_FAILURE
+	(do_exc_client_userauth): Update current correctly, unsing the new
+	next attribute.
+	(exc_userauth_disconnect): New class.
+	(make_exc_userauth_disconnect): New function.
+	(do_client_userauth): Use make_exc_userauth_disconnect().
+	(send_password): Simplified tried_empty_passwd handling; just
+	increment it.
+	(do_password_failure): Use again and tried_empty_passwd to figure
+	out what to do.
+
+	* src/client_userauth.c (exc_client_userauth): Renamed (was
+	client_exc_userauth). Updated all uses.
+
 	* src/command.h: Made declaration of command_die_on_null extern.
 
 	* src/client_userauth.c: Added trace output.
