@@ -91,7 +91,7 @@ void do_channel_global_command(struct command *s,
     = FORMAT_GLOBAL_REQUEST(self, connection, &c);
 
   if (c)
-    object_queue_add_tail(&connection->channels->pending_global_requests,
+    object_queue_add_tail(&connection->table->pending_global_requests,
 			  &make_command_context(c, e)->super);
 
   C_WRITE(connection, request);
@@ -111,7 +111,7 @@ do_install_global_request_handler(struct collect_info_2 *info,
   
   trace("do_install_global_request_handler(%i)\n", self->name);
   
-  ALIST_SET(connection->channels->global_requests,
+  ALIST_SET(connection->table->global_requests,
 	    self->name,
 	    handler);
 
@@ -132,7 +132,7 @@ do_install_channel_open_handler(struct collect_info_2 *info,
   
   trace("do_install_channel_open_handler(%i)\n", self->name);
 
-  ALIST_SET(connection->channels->channel_types,
+  ALIST_SET(connection->table->channel_types,
 	    self->name,
 	    handler);
 
@@ -162,7 +162,7 @@ do_install_fix_global_request_handler(struct command *s,
 
   trace("do_install_fix_global_request_handler(%i)\n", self->name);
   
-  ALIST_SET(connection->channels->global_requests,
+  ALIST_SET(connection->table->global_requests,
 	    self->name,
 	    self->handler);
 
@@ -205,7 +205,8 @@ do_install_fix_channel_open_handler(struct command *s,
 
   trace("do_install_fix_channel_open_handler(%i)\n", self->name);
   
-  ALIST_SET(connection->channels->channel_types,
+  ALIST_SET(connection->table
+	    ->channel_types,
 	    self->name,
 	    self->handler);
 

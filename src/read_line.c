@@ -50,127 +50,62 @@
        (buffer array UINT8 MAX_LINE)))
 */
 
-/* GABA:
-   (class
-     (name string_read)
-     (super abstract_read)
-     (vars
-       (line object read_line)
-       (index simple UINT32)))
-*/
-
-static int do_string_read(struct abstract_read **r,
-			  UINT32 length, UINT8 *buffer)
+static UINT32
+do_read_line(struct read_handler **h,
+	     UINT32 available,
+	     UINT8 *data /*, struct exception_handler *e */)
 {
-  CAST(string_read, closure, *r);
-  
-  UINT32 left = closure->line->pos - closure->index;
-  UINT32 to_read = MIN(length, left);
+  CAST(read_line, self, *h);
 
-  memcpy(buffer, closure->line->buffer + closure->index, to_read);
-  closure->index += to_read;
-
-  return to_read;
-}
-
-
-static void do_read_line(struct read_handler **h,
-			 struct abstract_read *read)
-{
-  CAST(read_line, closure, *h);
-  
   UINT8 *eol;
+  UINT32 consumed;
+  UINT32 tail;
   UINT32 length;
-  struct read_handler *next = NULL;
-  int n;
-
-  /* FIXME: Is this ok? */
-  assert(MAX_LINE - closure->pos > 0); 
-  n = A_READ(read, MAX_LINE - closure->pos, closure->buffer + closure->pos);
-
-  switch(n)
-    {
-    case 0:
-      return;
-    case A_FAIL:
-      /* Fall through */
-    case A_EOF:
-      EXCEPTION_RAISE(closure->e, &read_exception.super);
-      return;
-    }
-
-  closure->pos += n;
-
-  /* Loop over all received lines */
   
-  while ( (eol = memchr(closure->buffer, '\n', closure->pos) )
-	  && closure->handler)
-    {
-      /* eol points at the newline character. end points at the
-       * character terminating the line, which may be a carriage
-       * return preceeding the newline. */
-      UINT8 *end = eol;
-      
-      if ( (eol > closure->buffer)
-	   && (eol[-1] == '\r'))
-	end--;
-      
-      length = end - closure->buffer;
-      
-      PROCESS_LINE(closure->handler, &next, length, closure->buffer);
-      {
-	/* Remove line from buffer */
-	/* Number of characters that have been processed */
-	UINT32 done = eol - closure->buffer + 1;
-	UINT32 left = closure->pos - done;
-	
-	memcpy(closure->buffer, closure->buffer + done, left);
-	closure->pos = left;
-      }
+  eol = memchr(data, 0x0a, available);
 
-      if (next)
+  if (!eol)
+    {
+      /* No newline character yet */
+      if (available + self->pos >= 255)
 	{
-	  /* Read no more lines. Instead, pass remaining data to next,
-	   * and install the new read-handler. */
-	  if (closure->pos)
-	    {
-	      int res;
-	      
-	      struct string_read read =
-	      { { STACK_HEADER, do_string_read },
-		closure,
-		0 };
-
-	      while(next && (read.index < closure->pos))
-		/* FIXME: What if an exception occurs during this
-		 * call? */
-
-		READ_HANDLER(next, &read.super);
-	    }
-	  /* No data left */
-	  KILL(closure);
-	  *h = next;
-	  return;
+	  /* Too long line */
+	  EXCEPTION_RAISE(self->e,
+			  make_protocol_exception(0, "Line too long."));
 	}
+      else
+	{
+	  memcpy(self->buffer + self->pos, data, available);
+	  self->pos += available;
+	}
+      return available;
     }
 
-  if (!closure->handler)
+  tail = eol - data; /* Excludes the newline character */
+  consumed = tail + 1; /* Includes newline character */
+
+  if ( (self->pos + consumed) > 255)
     {
-      /* FIXME: Should we raise an exception here, or should we assume
-       * that has already been done? */
-      *h = NULL;
-      return;
+      /* Too long line */
+      EXCEPTION_RAISE(self->e,
+		      make_protocol_exception(0, "Line too long."));
     }
+
+  /* Ok, now we have a line. Copy it into the buffer. */
+  memcpy(self->buffer + self->pos, data, tail);
+  length = self->pos + tail;
   
-  /* Partial line */
-  if (closure->pos == MAX_LINE)
-    {
-      static const struct io_exception line_too_long =
-	STATIC_PROTOCOL_EXCEPTION(0, "Line too long");
+  /* Exclude carriage return character, if any */
+  if (length && (data[length-1] == 0xd))
+    length--;
 
-      werror("Received too long a line\n");
-      EXCEPTION_RAISE(closure->e, &line_too_long.super);
-    }
+  /* NOTE: This call can modify both self->handler and *r. */
+  PROCESS_LINE(self->handler, h, length, self->buffer);
+
+  /* Reset */
+  self->pos = 0;
+
+  return consumed;
 }
 
 struct read_handler *make_read_line(struct line_handler *handler,

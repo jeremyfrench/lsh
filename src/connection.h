@@ -105,7 +105,7 @@ struct ssh_connection;
        (dispatch array (object packet_handler) "0x100");
        
        ; Table of all opened channels
-       (channels object channel_table)
+       (table object channel_table)
        
        ; Shared handlers 
        (ignore object packet_handler)
@@ -120,6 +120,10 @@ struct ssh_connection;
 #define C_WRITE(c, s) A_WRITE((c)->write, (s), (c)->e)
 
 struct ssh_connection *make_ssh_connection(struct command_continuation *c);
+
+struct exception_handler *
+make_exc_protocol_handler(struct connection *connection,
+			  struct exception_handler *parent);
 
 void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,

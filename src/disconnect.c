@@ -39,9 +39,10 @@ struct lsh_string *format_disconnect(int code, const char *msg,
 		    msg, language);
 }
 
-static int do_disconnect(struct packet_handler *closure UNUSED,
-			 struct ssh_connection *connection UNUSED,
-			 struct lsh_string *packet)
+static void
+do_disconnect(struct packet_handler *closure UNUSED,
+	      struct ssh_connection *connection,
+	      struct lsh_string *packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;
@@ -49,6 +50,9 @@ static int do_disconnect(struct packet_handler *closure UNUSED,
   UINT32 reason;
   UINT8 *msg;
   
+  static const struct exception disconnect_exception =
+    STATIC_EXCEPTION(EXC_FINISH_IO, "Received disconnect message.");
+    
   simple_buffer_init(&buffer, packet->length, packet->data);
 
   if (parse_uint8(&buffer, &msg_number)
@@ -68,7 +72,7 @@ static int do_disconnect(struct packet_handler *closure UNUSED,
   /* FIXME: Mark the file as closed, somehow (probably a variable in
    * the write buffer) */
 
-  return LSH_CLOSE;
+  EXCEPTION_RAISE(connection->e, &disconnect_exception);
 }
 
 struct packet_handler *make_disconnect_handler(void)

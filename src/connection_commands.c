@@ -84,10 +84,11 @@ struct close_callback *make_connection_close_handler(struct ssh_connection *c)
        (fallback object ssh1_fallback)))
 */
 
-static int do_line(struct line_handler **h,
-		   struct read_handler **r,
-		   UINT32 length,
-		   UINT8 *line)
+static void
+do_line(struct line_handler **h,
+	struct read_handler **r,
+	UINT32 length,
+	UINT8 *line)
 {
   CAST(connection_line_handler, closure, *h);
   
@@ -105,14 +106,13 @@ static int do_line(struct line_handler **h,
 #if WITH_SSH1_FALLBACK
 	  if (closure->fallback)
 	    {
-	      int res;
-	      
 	      assert(closure->mode == CONNECTION_SERVER);
 	      
 	      /* Sending keyexchange packet was delayed. Do it now */
-	      res = initiate_keyexchange(closure->connection,
-					 closure->mode);
+	      initiate_keyexchange(closure->connection,
+				   closure->mode);
 	      
+#if 0
 	      if (LSH_CLOSEDP(res))
 		{
 		  werror("server.c: do_line: "
@@ -120,6 +120,7 @@ static int do_line(struct line_handler **h,
 		  *h = NULL;
 		  return;
 		}
+#endif
 	    }
 #endif /* WITH_SSH1_FALLBACK */
 	  new = 
@@ -142,7 +143,7 @@ static int do_line(struct line_handler **h,
 		  closure->connection->versions[CONNECTION_SERVER]);
 
 	  *r = new;
-	  return LSH_OK | LSH_GOON;
+	  return;
 	}
 #if WITH_SSH1_FALLBACK      
       else if (closure->fallback
@@ -150,9 +151,11 @@ static int do_line(struct line_handler **h,
 	       && !memcmp(line + 4, "1.", 2))
 	{
 	  *h = NULL;
-	  return SSH1_FALLBACK(closure->fallback,
-			       closure->fd,
-			       length, line);
+	  SSH1_FALLBACK(closure->fallback,
+			closure->fd,
+			length, line);
+
+	  return;
 	}
 #endif /* WITH_SSH1_FALLBACK */
       else
@@ -164,7 +167,7 @@ static int do_line(struct line_handler **h,
 	  KILL(closure);
 	  *h = NULL;
 
-	  EXCEPTION_RAISE(connection->e,
+	  EXCEPTION_RAISE(closure->connection->e,
 			  make_protocol_exception
 			  (SSH_DISCONNECT_PROTOCOL_VERSION_NOT_SUPPORTED,
 			   NULL));
@@ -216,15 +219,18 @@ make_connection_read_line(struct ssh_connection *connection, int mode,
        (fallback object ssh1_fallback)))
 */
 
-static int do_connection(struct command *s,
-			 struct lsh_object *x,
-			 struct command_continuation *c,
-			 struct exception_handler *e)
+/* Buffer size when reading from the socket */
+#define BUF_SIZE (1<<14)
+
+static void
+do_connection(struct command *s,
+	      struct lsh_object *x,
+	      struct command_continuation *c,
+	      struct exception_handler *e)
 {
   CAST(connection_command, self, s);
   CAST(io_fd, fd, x);
   struct lsh_string *version;
-  int res;
   
   struct ssh_connection *connection = make_ssh_connection(c);
 
@@ -269,13 +275,15 @@ static int do_connection(struct command *s,
   connection_init_io
     (connection, 
      &io_read_write(fd,
-		    make_connection_read_line(connection, self->mode,
-					      fd->super.fd, self->fallback),
+		    make_buffered_read
+		    (BUF_SIZE,
+		     make_connection_read_line(connection, self->mode,
+					       fd->super.fd, self->fallback)),
 		    self->block_size,
 		    make_connection_close_handler(connection))
-     ->buffer->super,
+     ->write_buffer->super,
      self->random,
-     make_io_exception_handler(fd, e));
+     make_exc_finish_read_handler(&fd->super, e));
 
   connection->versions[self->mode] = version;
   connection->kexinits[self->mode] = MAKE_KEXINIT(self->init); 
@@ -289,16 +297,19 @@ static int do_connection(struct command *s,
    * Furthermore, it should not send any data after the identification string,
    * until the client's identification string is received. */
   if (self->fallback)
-    return A_WRITE(connection->raw,
-		   ssh_format("%lS\n", version));
+    {
+      A_WRITE(connection->raw,
+	      ssh_format("%lS\n", version),
+	      connection->e);
+      return;
+    }
 #endif /* WITH_SSH1_FALLBACK */
 
-  res = A_WRITE(connection->raw,
-		ssh_format("%lS\r\n", version));
-  if (LSH_CLOSEDP(res))
-    return res;
+  A_WRITE(connection->raw,
+	  ssh_format("%lS\r\n", version),
+	  connection->e);
   
-  return res | initiate_keyexchange(connection, self->mode);
+  initiate_keyexchange(connection, self->mode);
 }
 
 struct command *

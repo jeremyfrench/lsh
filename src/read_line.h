@@ -44,13 +44,14 @@
    (class
      (name line_handler)
      (vars
-       (handler indirect-method int "struct read_handler **r"
+       (handler indirect-method void "struct read_handler **r"
 		"UINT32 length" "UINT8 *line")))
 */
 
 #define PROCESS_LINE(h, r, length, line) \
 ((h)->handler(&(h), (r), (length), (line)))
 
-struct read_handler *make_read_line(struct line_handler *handler);
+struct read_handler *make_read_line(struct line_handler *handler,
+				    struct exception_handler *e);
 
 #endif /* LSH_READ_HANDLER_H_INCLUDED */

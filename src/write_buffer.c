@@ -47,8 +47,10 @@ static void do_free_buffer(struct lsh_queue *q)
     }
 }
 
-static int do_write(struct abstract_write *w,
-		    struct lsh_string *packet)
+static void
+do_write(struct abstract_write *w,
+	 struct lsh_string *packet,
+	 struct exception_handler *e UNUSED)
 {
   CAST(write_buffer, closure, w);
   struct buffer_node *new;
@@ -58,13 +60,14 @@ static int do_write(struct abstract_write *w,
   if (!packet->length)
     {
       lsh_string_free(packet);
-      return LSH_OK | LSH_GOON;
+      return;
     }
 
   if (closure->closed)
     {
+      werror("write_buffer: Attempt to write data to closed buffer.\n");
       lsh_string_free(packet);
-      return LSH_FAIL | LSH_CLOSE;
+      return;
     }
   
   /* Enqueue packet */
@@ -85,8 +88,6 @@ static int do_write(struct abstract_write *w,
 
   debug("write_buffer: do_write closure->length = %i\n",
 	closure->length);
-  
-  return LSH_OK | LSH_GOON;
 }
 
 /* Copy data as necessary, before writing.

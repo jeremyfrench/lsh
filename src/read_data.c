@@ -45,22 +45,21 @@
        (channel object ssh_channel)))
 */
 
-static UINT32 do_read_data_query(struct io_read_callback *s,
-				 struct abstract_read *read)
+static UINT32 do_read_data_query(struct io_consuming_read *s)
 {
-  CAST(read_data, self, *s);
+  CAST(read_data, self, s);
   
-  assert(closure->channel->sources);
+  assert(self->channel->sources);
   
-  if (closure->channel->flags &
+  if (self->channel->flags &
       (CHANNEL_RECEIVED_CLOSE | CHANNEL_SENT_CLOSE | CHANNEL_SENT_EOF))
     {
       werror("read_data: Receiving data on closed channel. Ignoring.\n");
       return 0;
     }
 
-  return MIN(closure->channel->send_max_packet,
-	     closure->channel->send_window_size);
+  return MIN(self->channel->send_max_packet,
+	     self->channel->send_window_size);
 }
 
 #if 0
@@ -110,13 +109,13 @@ struct io_read_callback *make_read_data(struct ssh_channel *channel,
 
   init_consuming_read(&self->super, write);
   
-  self->super.query = do_read_data;
+  self->super.query = do_read_data_query;
   self->channel = channel;
-  self->write = write;
+  self->super.consumer = write;
 
   channel->sources++;
   
-  return &closure->super;
+  return &self->super.super;
 }
 
 /* GABA:
@@ -127,8 +126,9 @@ struct io_read_callback *make_read_data(struct ssh_channel *channel,
        (channel object ssh_channel)))
 */
 
-void do_exc_read_eof_channel_handler(struct exception_handler *s,
-				     struct exception *e)
+static void
+do_exc_read_eof_channel_handler(struct exception_handler *s,
+				const struct exception *e)
 {
   CAST(exc_read_eof_channel_handler, self, s);
 
@@ -151,7 +151,12 @@ void do_exc_read_eof_channel_handler(struct exception_handler *s,
 	channel_close(self->channel);
 
 	werror("Read error on fd %d (errno = %d): %z\n",
-	       exc->fd->fd, exc->errno, e->msg);
+	       exc->fd->fd, exc->error, e->msg);
+
+	if (!--self->channel->sources)
+	  /* Close channel */
+	  channel_close(self->channel);
+	
 	close_fd(exc->fd, 0);
       }
 	
@@ -159,3 +164,18 @@ void do_exc_read_eof_channel_handler(struct exception_handler *s,
       EXCEPTION_RAISE(self->super.parent, e);
     }
 }
+
+struct exception_handler *
+make_exc_read_eof_channel_handler(struct ssh_channel *channel,
+				  struct exception_handler *e)
+{
+  NEW(exc_read_eof_channel_handler, self);
+  self->super.raise = do_exc_read_eof_channel_handler;
+  self->super.parent = e;
+  
+  self->channel = channel;
+
+  return &self->super;
+}
+
+				  

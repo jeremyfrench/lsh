@@ -298,7 +298,7 @@ static int do_read(struct abstract_read **r, UINT32 length, UINT8 *buffer)
 #endif
 
 static void do_buffered_read(struct io_read_callback *s,
-			     struct struct lsh_fd *fd)
+			     struct lsh_fd *fd)
 {
   CAST(io_buffered_read, self, s);
   UINT8 *buffer = alloca(self->buffer_size);
@@ -315,9 +315,9 @@ static void do_buffered_read(struct io_read_callback *s,
       case EPIPE:
 	fatal("Unexpected EPIPE.\n");
       default:
-	EXCEPTION_RAISE(fd->e, fd,
-			make_io_exception(EXC_IO_READ),
-			errno, NULL);
+	EXCEPTION_RAISE(fd->e, 
+			make_io_exception(EXC_IO_READ, fd,
+					  errno, NULL));
 	break;
       }
   else if (res > 0)
@@ -327,12 +327,13 @@ static void do_buffered_read(struct io_read_callback *s,
       while (fd->super.alive && left)
 	{
 	  UINT32 done;
-	  
+
+	  /* FIXME: What to do if want_read is false? */
 	  assert(fd->want_read);
 	  assert(self->handler);
 
 	  /* NOTE: This call may replace self->handler */
-	  done = READ_HANDLER(self->handler, left, buffer, fd->e);
+	  done = READ_HANDLER(self->handler, left, buffer);
 
 	  buffer += done;
 	  left -= done;
@@ -343,7 +344,8 @@ static void do_buffered_read(struct io_read_callback *s,
 		left);
     }
   else
-    EXCEPTION_RAISE(fd->e, fd, make_io_exception(EXC_IO_EOF)) ;
+    EXCEPTION_RAISE(fd->e,
+		    make_io_exception(EXC_IO_EOF, fd, 0, "EOF")) ;
 }
 
 struct io_read_callback *
@@ -360,7 +362,7 @@ make_buffered_read(UINT32 buffer_size,
 }
 
 static void do_consuming_read(struct io_read_callback *c,
-			      struct struct lsh_fd *fd)
+			      struct lsh_fd *fd)
 {
   CAST(io_consuming_read, self, c);
   UINT32 wanted = READ_QUERY(self);
@@ -405,7 +407,7 @@ static void do_consuming_read(struct io_read_callback *c,
 void init_consuming_read(struct io_consuming_read *self,
 			 struct abstract_write *consumer)
 {
-  self->read = do_consuming_read;
+  self->super.read = do_consuming_read;
   self->consumer = consumer;
 }
 			 
@@ -513,12 +515,12 @@ static void write_callback(struct lsh_fd *fd)
   UINT32 size;
   int res;
   
-  size = MIN(self->buffer->end - self->buffer->start,
-	     self->buffer->block_size);
+  size = MIN(self->write_buffer->end - self->write_buffer->start,
+	     self->write_buffer->block_size);
   assert(size);
   
   res = write(fd->fd,
-	      self->buffer->buffer + self->buffer->start,
+	      self->write_buffer->buffer + self->write_buffer->start,
 	      size);
   if (!res)
     fatal("Closed?");
@@ -534,21 +536,23 @@ static void write_callback(struct lsh_fd *fd)
 	break;
       default:
 	werror("io.c: write failed, %z\n", STRERROR(errno));
-
+	EXCEPTION_RAISE(fd->e,
+			make_io_exception(EXC_IO_WRITE, fd, errno, NULL));
 	close_fd(fd, CLOSE_WRITE_FAILED);
 	
 	break;
       }
   else
-    write_buffer_consume(self->buffer, res);
+    write_buffer_consume(self->write_buffer, res);
 }  
 
-static void listen_callback(struct lsh_fd *fd)
+static void
+do_listen_callback(struct io_read_callback *s UNUSED,
+		   struct lsh_fd *fd)
 {
   CAST(listen_fd, self, fd);
   struct sockaddr_in peer;
   size_t addr_len = sizeof(peer);
-  int res;
   int conn;
 
   conn = accept(fd->fd,
@@ -558,18 +562,13 @@ static void listen_callback(struct lsh_fd *fd)
       werror("io.c: accept() failed, %z", STRERROR(errno));
       return;
     }
-  res = FD_LISTEN_CALLBACK(self->callback, conn, 
-			   sockaddr2info(addr_len,
-					 (struct sockaddr *) &peer));
-  if (LSH_ACTIONP(res))
-    {
-      werror("Strange: Accepted a connection, "
-	     "but failed before writing anything.\n");
-      close_fd(fd, (LSH_FAILUREP(res)
-		    ? CLOSE_PROTOCOL_FAILURE
-		    : CLOSE_EOF));
-    }
+  FD_LISTEN_CALLBACK(self->callback, conn, 
+		     sockaddr2info(addr_len,
+				   (struct sockaddr *) &peer));
 }
+
+static struct io_read_callback listen_callback =
+{ STATIC_HEADER, do_listen_callback };
 
 static void connect_callback(struct lsh_fd *fd)
 {
@@ -906,7 +905,8 @@ int address_info2sockaddr_in(struct sockaddr_in *sin,
 /* These functions are used by werror() and friends */
 
 /* For fd:s in blocking mode. */
-void write_raw(int fd, UINT32 length, UINT8 *data, struct exception_handler *e)
+void write_raw(int fd, UINT32 length, UINT8 *data,
+	       struct exception_handler *e)
 {
   while(length)
     {
@@ -927,9 +927,11 @@ void write_raw(int fd, UINT32 length, UINT8 *data, struct exception_handler *e)
       length -= written;
       data += written;
     }
+  return 1;
 }
 
-void write_raw_with_poll(int fd, UINT32 length, UINT8 *data, struct exception_handler *e)
+void write_raw_with_poll(int fd, UINT32 length, UINT8 *data,
+			 struct exception_handler *e */)
 {
   while(length)
     {
@@ -969,6 +971,7 @@ void write_raw_with_poll(int fd, UINT32 length, UINT8 *data, struct exception_ha
       length -= written;
       data += written;
     }
+  return 1;
 }
 
 void io_set_nonblocking(int fd)
@@ -1028,7 +1031,8 @@ struct connect_fd *io_connect(struct io_backend *b,
   {
     NEW(connect_fd, fd);
 
-    init_file(b, &fd->super, s);
+    /* FIXME: What handler to use? */
+    init_file(b, &fd->super, s, &default_exception_handler);
 
     fd->super.want_write = 1;
     fd->super.write = connect_callback;
@@ -1071,33 +1075,36 @@ struct listen_fd *io_listen(struct io_backend *b,
   {
     NEW(listen_fd, fd);
 
-    init_file(b, &fd->super, s);
+    /* FIXME: What handler to use? */
+    init_file(b, &fd->super, s, &default_exception_handler);
     
     fd->super.want_read = 1;
-    fd->super.read = listen_callback;
+    fd->super.read = &listen_callback;
     fd->callback = callback;
     
     return fd;
   }
 }
 
+/* FIXME: Closing the write buffer should perhaps be done earlier,
+ * from kill_fd(). */
 static void really_close(struct lsh_fd *fd)
 {
   CAST(io_fd, self, fd);
 
   assert(self->buffer);
 
-  write_buffer_close(self->buffer);
+  write_buffer_close(self->write_buffer);
 }
 
 static void prepare_write(struct lsh_fd *fd)
 {
   CAST(io_fd, self, fd);
 
-  assert(self->buffer);
+  assert(self->write_buffer);
 
-  if (! (fd->want_write = write_buffer_pre_write(self->buffer))
-      && self->buffer->closed)
+  if (! (fd->want_write = write_buffer_pre_write(self->write_buffer))
+      && self->write_buffer->closed)
     close_fd(fd, CLOSE_EOF);
 }
 
@@ -1128,7 +1135,7 @@ struct io_fd *io_read_write(struct io_fd *fd,
   
   /* Reading */
   fd->super.read = read;
-  fd->super.want_read = !!handler;
+  fd->super.want_read = !!read;
 #if 0
   fd->handler = handler; 
   fd->read_buffer = make_fd_read_buffer(READ_BUFFER_SIZE); 
@@ -1137,7 +1144,7 @@ struct io_fd *io_read_write(struct io_fd *fd,
   /* Writing */
   fd->super.prepare = prepare_write;
   fd->super.write = write_callback;
-  fd->buffer = buffer;
+  fd->write_buffer = buffer;
 
   /* Closing */
   fd->super.really_close = really_close;
@@ -1153,7 +1160,7 @@ struct io_fd *io_read(struct io_fd *fd,
   debug("io.c: Preparing fd %i for reading\n", fd->super.fd);
   
   /* Reading */
-  fd->super.want_read = !!handler;
+  fd->super.want_read = !!read;
   fd->super.read = read;
 #if 0
   fd->handler = handler;
@@ -1176,7 +1183,7 @@ struct io_fd *io_write(struct io_fd *fd,
   /* Writing */
   fd->super.prepare = prepare_write;
   fd->super.write = write_callback;
-  fd->buffer = buffer;
+  fd->write_buffer = buffer;
 
   fd->super.close_callback = close_callback;
 
@@ -1197,15 +1204,17 @@ void close_fd(struct lsh_fd *fd, int reason)
 
 void close_fd_nicely(struct lsh_fd *fd, int reason)
 {
-  if (self->buffer)
-    {
-      write_buffer_close(self->buffer);
-      /* Don't attempt to read any further. */
-      /* FIXME: Is it safe to free the handler here? */
-      self->super.want_read = 0;
-      self->handler = NULL;
-    }
+  /* Don't attempt to read any further. */
+  /* FIXME: Is it safe to free the handler here? */
+
+  self->want_read = 0;
+  self->read = NULL;
+  
+  if (fd->really_close)
+    /* Mark the write_buffer as closed */
+    REALLY_CLOSE_FD(fd);
   else
+    /* There's no data buffered for write. */
     kill_fd(fd);
 
   fd->close_reason = reason;
@@ -1223,8 +1232,9 @@ void close_fd_nicely(struct lsh_fd *fd, int reason)
        (fd object lsh_fd)))
 */
 
-void do_exc_finish_read_handler(struct exception_handler *s,
-				struct exception *e)
+static void
+do_exc_finish_read_handler(struct exception_handler *s,
+			   struct exception *e)
 {
   CAST(exc_finish_read_handler, self, s);
   switch(e->type)
@@ -1232,13 +1242,18 @@ void do_exc_finish_read_handler(struct exception_handler *s,
     case EXC_FINISH_READ:
       /* FIXME: What to do about the reason argument? */
       close_fd_nicely(self->fd, 0);
+      break;
+    case EXC_FINISH_IO:
+      close_fd(self->fd, 0);
+      break;
     default:
-      EXCEPTION_RAISE(self->parent e);
+      EXCEPTION_RAISE(self->super.parent, e);
     }
 }
 
-struct make_exc_finish_read_handler(struct lsh_fd *fd,
-				    struct exception_handler *parent)
+struct exception_handler *
+make_exc_finish_read_handler(struct lsh_fd *fd,
+			     struct exception_handler *parent)
 {
   NEW(exc_finish_read_handler, self);
   self->fd = fd;
@@ -1260,11 +1275,12 @@ make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)
   self->super.type = type;
 
   if (msg)
-    self->super.name = msg;
+    self->super.msg = msg;
   else
-    self->super.name = error ? strerror(error) : "Unknown i/o error";
+    self->super.msg = error ? strerror(error) : "Unknown i/o error";
 
   self->error = error;
-
+  self->fd = fd;
+  
   return &self->super;
 }

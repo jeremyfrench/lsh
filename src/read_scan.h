@@ -41,6 +41,12 @@
        (scan indirect-method int int)))
 */
 
+/* Temporary hack to get it to compile */
+#define LSH_OK 0
+#define LSH_FAIL 1
+#define LSH_CLOSE 2
+#define LSH_SYNTAX 4
+
 #define TOKEN_EOF -1
 #define TOKEN_EOS -2
 #define TOKEN_ERROR -3
@@ -48,6 +54,6 @@
 
 #define SCAN(s, t) ((s)->scan(&(s), (t)))
 
-struct read_handler *make_read_scan(size_t buffer_size, struct scanner *scanner);
+struct read_handler *make_read_scan(struct scanner *scanner);
 
 #endif /* LSH_READ_SCAN_H_INCLUDED */

@@ -188,7 +188,8 @@ struct command *make_request_service(int service)
 */
 
 /* Callback used when the server sends us eof */
-static int do_client_session_eof(struct ssh_channel *c)
+static void
+do_client_session_eof(struct ssh_channel *c)
 {
   CAST(client_session, session, c);
   
@@ -197,13 +198,15 @@ static int do_client_session_eof(struct ssh_channel *c)
   close_fd(&session->out->super, 0);
   close_fd(&session->err->super, 0);
 #endif
-
-  return LSH_OK;
 }  
 
-static int do_client_session_close(struct ssh_channel *c UNUSED)
+static void
+do_client_session_close(struct ssh_channel *c)
 {
-  return LSH_CHANNEL_PENDING_CLOSE;
+  static const struct exception finish_exception
+    = STATIC_EXCEPTION(EXC_FINISH_PENDING, "Session closed.");
+
+  EXCEPTION_RAISE(c->e, &finish_exception);
 }
 
 
@@ -215,11 +218,12 @@ static int do_client_session_close(struct ssh_channel *c UNUSED)
        (exit_status simple "int *")))
 */
 
-static int do_exit_status(struct channel_request *c,
-			  struct ssh_channel *channel,
-			  struct ssh_connection *connection UNUSED,
-			  int want_reply,
-			  struct simple_buffer *args)
+static void
+do_exit_status(struct channel_request *c,
+	       struct ssh_channel *channel,
+	       struct ssh_connection *connection UNUSED,
+	       int want_reply,
+	       struct simple_buffer *args)
 {
   CAST(exit_handler, closure, c);
   int status;
@@ -233,25 +237,27 @@ static int do_exit_status(struct channel_request *c,
       ALIST_SET(channel->request_types, ATOM_EXIT_STATUS, NULL);
       ALIST_SET(channel->request_types, ATOM_EXIT_SIGNAL, NULL);
 
-      /* Sent EOF, if we haven't done that already. */
+      /* Send EOF, if we haven't done that already. */
       /* FIXME: Make this behaviour configurable, there may be some
        * child process alive that we could talk to. */
 
       if (!(channel->flags & CHANNEL_SENT_EOF))
-	return channel_eof(channel);
-      
-      return LSH_OK | LSH_GOON;
+	channel_eof(channel);
     }
-  
-  /* Invalid request */
-  return LSH_FAIL | LSH_DIE;
+  else
+    /* Invalid request */
+    EXCEPTION_RAISE
+      (channel->e,
+       make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+			       "Invalid exit-status message"));
 }
 
-static int do_exit_signal(struct channel_request *c,
-			  struct ssh_channel *channel,
-			  struct ssh_connection *connection UNUSED,
-			  int want_reply,
-			  struct simple_buffer *args)
+static void
+do_exit_signal(struct channel_request *c,
+	       struct ssh_channel *channel,
+	       struct ssh_connection *connection UNUSED,
+	       int want_reply,
+	       struct simple_buffer *args)
 {
   CAST(exit_handler, closure, c);
 
@@ -291,13 +297,14 @@ static int do_exit_signal(struct channel_request *c,
        * child process alive that we could talk to. */
 
       if (!(channel->flags & CHANNEL_SENT_EOF))
-	return channel_eof(channel);
-
-      return LSH_OK | LSH_GOON;
+	channel_eof(channel);
     }
-  
-  /* Invalid request */
-  return LSH_FAIL | LSH_DIE;
+  else
+    /* Invalid request */
+    EXCEPTION_RAISE
+      (channel->e,
+       make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+			       "Invalid exit-signal message"));
 }
 
 struct channel_request *make_handle_exit_status(int *exit_status)
@@ -332,10 +339,10 @@ do_receive(struct ssh_channel *c,
   switch(type)
     {
     case CHANNEL_DATA:
-      A_WRITE(&closure->out->buffer->super, data, c->e);
+      A_WRITE(&closure->out->write_buffer->super, data, c->e);
       break;
     case CHANNEL_STDERR_DATA:
-      A_WRITE(&closure->err->buffer->super, data, c->e);
+      A_WRITE(&closure->err->write_buffer->super, data, c->e);
       break;
     default:
       fatal("Internal error!\n");
@@ -353,10 +360,11 @@ static void do_send(struct ssh_channel *c)
 }
 
 /* We have a remote shell */
-static int do_client_io(struct command *s UNUSED,
-			struct lsh_object *x,
-			struct command_continuation *c,
-			struct exception_handler *e UNUSED)
+static void
+do_client_io(struct command *s UNUSED,
+	     struct lsh_object *x,
+	     struct command_continuation *c,
+	     struct exception_handler *e UNUSED)
 
 {
   assert(x);
@@ -387,7 +395,7 @@ static int do_client_io(struct command *s UNUSED,
 
       channel->eof = do_client_session_eof;
       
-      return COMMAND_RETURN(c, channel);
+      COMMAND_RETURN(c, channel);
     }
 }
 
@@ -423,8 +431,8 @@ struct ssh_channel *make_client_session(struct io_fd *in,
   self->err = err;
 
   /* Flow control */
-  out->buffer->report = &self->super.super;
-  err->buffer->report = &self->super.super;
+  out->write_buffer->report = &self->super.super;
+  err->write_buffer->report = &self->super.super;
   
   self->exit_status = exit_status;
   
@@ -451,7 +459,7 @@ new_session(struct channel_open_command *s,
 
   self->session->write = connection->write;
   
-  *request = prepare_channel_open(connection->channels, ATOM_SESSION,
+  *request = prepare_channel_open(connection->table, ATOM_SESSION,
 				  self->session, "");
   if (!*request)
     return NULL;

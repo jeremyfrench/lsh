@@ -79,6 +79,7 @@ static struct packet_handler *make_banner_handler(void);
      (name failure_handler)
      (super packet_handler)
      (vars
+       (e object exception_handler)
        (userauth object client_userauth)))
 */
 
@@ -98,8 +99,9 @@ static struct lsh_string *format_userauth_password(struct lsh_string *name,
 
 #define MAX_PASSWD 100
 
-static int send_passwd(struct client_userauth *userauth,
-		       struct ssh_connection *connection)
+static void
+send_passwd(struct client_userauth *userauth,
+	    struct ssh_connection *connection)
 {
   struct lsh_string *passwd
     = read_password(MAX_PASSWD,
@@ -107,18 +109,22 @@ static int send_passwd(struct client_userauth *userauth,
 			       userauth->username), 1);
   
   if (!passwd)
-    return LSH_FAIL | LSH_DIE;
+    {
+      /* FIXME: What to do now??? */
+      fatal("read_password failed!?\n");
+    }
   
-  return A_WRITE(connection->write,
-		 format_userauth_password(local_to_utf8(userauth->username, 0),
-					  userauth->service_name,
-					  local_to_utf8(passwd, 1),
-					  1));
+  C_WRITE(connection,
+	  format_userauth_password(local_to_utf8(userauth->username, 0),
+				   userauth->service_name,
+				   local_to_utf8(passwd, 1),
+				   1));
 }
 
-static int do_userauth_success(struct packet_handler *c,
-				struct ssh_connection *connection,
-				struct lsh_string *packet)
+static void
+do_userauth_success(struct packet_handler *c,
+		    struct ssh_connection *connection,
+		    struct lsh_string *packet)
 {
   CAST(success_handler, closure, c);
   struct simple_buffer buffer;
@@ -139,19 +145,25 @@ static int do_userauth_success(struct packet_handler *c,
       connection->dispatch[SSH_MSG_USERAUTH_FAILURE] = connection->fail;
       connection->dispatch[SSH_MSG_USERAUTH_BANNER] = connection->fail;
       
-      return COMMAND_RETURN(closure->c, connection);
+      COMMAND_RETURN(closure->c, connection);
     }
-  
-  lsh_string_free(packet);
-  return LSH_FAIL | LSH_DIE;
+  else
+    {
+      lsh_string_free(packet);
+      EXCEPTION_RAISE
+	(connection->e,
+	 make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+				 "Invalid USERAUTH_SUCCESS message"));
+    }
 }
 
 /* Arbitrary limit on list length */
 #define USERAUTH_MAX_METHODS 47
 
-static int do_userauth_failure(struct packet_handler *c,
-			       struct ssh_connection *connection,
-			       struct lsh_string *packet)
+static void
+do_userauth_failure(struct packet_handler *c,
+		    struct ssh_connection *connection,
+		    struct lsh_string *packet)
 {
   CAST(failure_handler, closure, c);
   struct simple_buffer buffer;
@@ -169,39 +181,45 @@ static int do_userauth_failure(struct packet_handler *c,
       && parse_eod(&buffer))
     {
       unsigned i;
+
+      static const struct exception denied
+	= STATIC_EXCEPTION(EXC_FINISH_IO, "Access denied");
       
       lsh_string_free(packet);
 
       if (partial_success)
-	{ /* Doesn't help us */
-	  werror("Received SSH_MSH_USERAUTH_FAILURE "
-		 "indicating partial success.\n");
-	  KILL(methods);
-
-	  return LSH_FAIL | LSH_DIE;
-	}
+	/* Doesn't help us */
+	werror("Received SSH_MSH_USERAUTH_FAILURE "
+	       "indicating partial success.\n");
 
       for(i = 0; i < LIST_LENGTH(methods); i++)
 	if (LIST(methods)[i] == ATOM_PASSWORD)
 	  {
 	    /* Try again */
 	    KILL(methods);
-	    return send_passwd(closure->userauth, connection);
+	    send_passwd(closure->userauth, connection);
+	    return;
 	  }
       /* No methods that we can use */
       KILL(methods);
-      return LSH_FAIL | LSH_DIE;
-    }
 
-  KILL(methods);
-  
-  lsh_string_free(packet);
-  return LSH_FAIL | LSH_DIE;
+      EXCEPTION_RAISE(closure->e, &denied);
+    }
+  else
+    {
+      KILL(methods);
+      lsh_string_free(packet);
+      EXCEPTION_RAISE
+	(connection->e,
+	 make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+				 "Invalud USERAUTH_FAILURE message."));
+    }
 }
 
-static int do_userauth_banner(struct packet_handler *closure,
-			      struct ssh_connection *connection UNUSED,
-			      struct lsh_string *packet)
+static void
+do_userauth_banner(struct packet_handler *closure,
+		   struct ssh_connection *connection UNUSED,
+		   struct lsh_string *packet)
 {
   struct simple_buffer buffer;
 
@@ -223,13 +241,15 @@ static int do_userauth_banner(struct packet_handler *closure,
       && parse_eod(&buffer))
     {
       /* Ignore language tag */
-      werror("%us", length, msg);
-
-      lsh_string_free(packet);
-      return LSH_OK | LSH_GOON;
+      werror("%ups", length, msg);
     }
+  else
+    EXCEPTION_RAISE
+      (connection->e,
+       make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+			       "Invalid USERAUTH_SUCCESS message"));
+
   lsh_string_free(packet);
-  return LSH_FAIL | LSH_DIE;
 }
 
 static struct packet_handler *
@@ -244,11 +264,13 @@ make_success_handler(struct command_continuation *c)
 }
 
 static struct packet_handler *
-make_failure_handler(struct client_userauth *userauth)
+make_failure_handler(struct client_userauth *userauth,
+		     struct exception_handler *e)
 {
   NEW(failure_handler, self);
 
   self->super.handler = do_userauth_failure;
+  self->e = e;
   self->userauth = userauth;
 
   return &self->super;
@@ -263,10 +285,11 @@ static struct packet_handler *make_banner_handler(void)
   return self;
 }
 
-static int do_client_userauth(struct command *s,
-			      struct lsh_object *x,
-			      struct command_continuation *c,
-			      struct exception_handler *e UNUSED)
+static void
+do_client_userauth(struct command *s,
+		   struct lsh_object *x,
+		   struct command_continuation *c,
+		   struct exception_handler *e UNUSED)
 {
   CAST(client_userauth, self, s);
   CAST(ssh_connection, connection, x);
@@ -274,7 +297,7 @@ static int do_client_userauth(struct command *s,
   connection->dispatch[SSH_MSG_USERAUTH_SUCCESS]
     = make_success_handler(c);
   connection->dispatch[SSH_MSG_USERAUTH_FAILURE]
-    = make_failure_handler(self);
+    = make_failure_handler(self, e);
   connection->dispatch[SSH_MSG_USERAUTH_BANNER]
     = make_banner_handler();
 

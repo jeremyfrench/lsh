@@ -56,36 +56,31 @@
        (install object install_keys)))
 */
 
-static int do_handle_dh_init(struct packet_handler *c,
-			     struct ssh_connection *connection,
-			     struct lsh_string *packet)
+static void
+do_handle_dh_init(struct packet_handler *c,
+		  struct ssh_connection *connection,
+		  struct lsh_string *packet)
 {
   CAST(dh_server, closure, c);
   struct hash_instance *hash;
-  struct command_continuation *continuation;
-  int res;
 
   verbose("handle_dh_init()\n");
   
   if (!dh_process_client_msg(&closure->dh, packet))
     {
       disconnect_kex_failed(connection, "Bad dh-init\r\n");
-      return LSH_FAIL | LSH_CLOSE;
+      return;
     }
   
   /* Send server's message, to complete key exchange */
-  res = A_WRITE(connection->write, dh_make_server_msg(&closure->dh,
-						      closure->signer));
+  C_WRITE(connection,
+	  dh_make_server_msg(&closure->dh,
+			     closure->signer));
 
-  if (LSH_CLOSEDP(res))
-    return res;
-  
   /* Send a newkeys message, and install a handler for receiving the
    * newkeys message. */
 
-  res |= A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS));
-  if (LSH_CLOSEDP(res))
-    return res;
+  C_WRITE(connection, ssh_format("%c", SSH_MSG_NEWKEYS));
 
   /* FIXME: Perhaps more this key handling could be abstracted away,
    * instead of duplicating it in client_keyexchange.c and
@@ -108,8 +103,12 @@ static int do_handle_dh_init(struct packet_handler *c,
     {
       werror("Installing new keys failed. Hanging up.\n");
       KILL(hash);
-      /* FIXME: Send a disconnect message */
-      return LSH_FAIL | LSH_DIE;
+
+      EXCEPTION_RAISE(connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Refusing to use weak key."));
+
+      return;
     }
 
   KILL(hash);
@@ -117,21 +116,23 @@ static int do_handle_dh_init(struct packet_handler *c,
   connection->kex_state = KEX_STATE_NEWKEYS;
   connection->dispatch[SSH_MSG_KEXDH_INIT] = connection->fail;
 
-  res |= send_verbose(connection->write, "Key exchange successful!", 0);
-  if (LSH_CLOSEDP(res) || !connection->established)
-    return res;
+  send_verbose(connection, "Key exchange successful!", 0);
 
-  continuation = connection->established;
-  connection->established = NULL;
+  if (connection->established)
+    {
+      struct command_continuation *continuation = connection->established;
+      connection->established = NULL;
   
-  return res | COMMAND_RETURN(continuation, connection);
+      COMMAND_RETURN(continuation, connection);
+    }
 }
 
-static int do_init_server_dh(struct keyexchange_algorithm *c,
-		             struct ssh_connection *connection,
-		             int hostkey_algorithm_atom,
-		             struct signature_algorithm *ignored,
-		             struct object_list *algorithms)
+static void
+do_init_server_dh(struct keyexchange_algorithm *c,
+		  struct ssh_connection *connection,
+		  int hostkey_algorithm_atom,
+		  struct signature_algorithm *ignored,
+		  struct object_list *algorithms)
 {
   CAST(dh_server_exchange, closure, c);
   CAST(keypair_info, keypair, ALIST_GET(closure->keys,
@@ -144,7 +145,10 @@ static int do_init_server_dh(struct keyexchange_algorithm *c,
   if (!keypair)
     {
       werror("Keypair for for selected signature-algorithm not found!\n");
-      return LSH_FAIL | LSH_CLOSE;
+      EXCEPTION_RAISE(connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
+					      "Configuration error"));
+      return;
     }
   
   /* Initialize */
@@ -162,8 +166,6 @@ static int do_init_server_dh(struct keyexchange_algorithm *c,
   connection->dispatch[SSH_MSG_KEXDH_INIT] = &dh->super;
 
   connection->kex_state = KEX_STATE_IN_PROGRESS;
-
-  return LSH_OK  | LSH_GOON;
 }
 
 

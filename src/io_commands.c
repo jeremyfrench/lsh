@@ -47,16 +47,18 @@
        (c object command_continuation)))
 */
 
-static int do_listen_continue(struct fd_listen_callback *s, int fd,
-			      struct address_info *peer)
+static void
+do_listen_continue(struct fd_listen_callback *s, int fd,
+		   struct address_info *peer)
 {
   CAST(listen_command_callback, self, s);
   NEW(listen_value, res);
 
-  res->fd = make_io_fd(self->backend, fd);
+  /* FIXME: What exception handler should be used? */
+  res->fd = make_io_fd(self->backend, fd, &default_exception_handler);
   res->peer = peer;
 
-  return COMMAND_RETURN(self->c, res);
+  COMMAND_RETURN(self->c, res);
 }
 
 static struct fd_listen_callback *
@@ -74,31 +76,36 @@ make_listen_command_callback(struct io_backend *backend,
 static struct exception resolve_exception =
 STATIC_EXCEPTION(EXC_RESOLVE, "address could not be resolved");
 
-static int do_listen(struct io_backend *backend,
-		     struct address_info *a,
-		     struct resource_list *resources,
-		     struct command_continuation *c,
-		     struct exception_handler *e)
+static void
+do_listen(struct io_backend *backend,
+	  struct address_info *a,
+	  struct resource_list *resources,
+	  struct command_continuation *c,
+	  struct exception_handler *e)
 {
   /* FIXME: Add ipv6 support somewhere */
   struct sockaddr_in sin;
   struct listen_fd *fd;
   
   if (!address_info2sockaddr_in(&sin, a))
-    return EXCEPTION_RAISE(e, &resolve_exception);
-
+    {
+      EXCEPTION_RAISE(e, &resolve_exception);
+      return;
+    }
+  
   fd = io_listen(backend, &sin,
 		 make_listen_command_callback(backend, c));
 
   if (!fd)
-    /* FIXME: Raise a real exception. Possibly including errno? */
-    /* NOTE: Will never invoke the continuation. */
-    return EXCEPTION_RAISE(e, &dummy_exception);
-
+    {
+      /* FIXME: Raise a real exception. Possibly including errno? */
+      /* NOTE: Will never invoke the continuation. */
+      EXCEPTION_RAISE(e, &dummy_exception);
+      return;
+    }
+  
   if (resources)
     REMEMBER_RESOURCE(resources, &fd->super.super);
-  
-  return LSH_OK | LSH_GOON;
 }
 
 /* A listen function taking three arguments:
@@ -116,7 +123,7 @@ static int do_listen(struct io_backend *backend,
        ;; (connection object ssh_connection)))
 */
 
-static int
+static void
 do_listen_connection(struct command *s,
 		     struct lsh_object *x,
 		     struct command_continuation *c,
@@ -129,16 +136,18 @@ do_listen_connection(struct command *s,
   struct sockaddr_in sin;
   
   if (!address_info2sockaddr_in(&sin, address))
-    return COMMAND_RETURN(c, NULL);
+    {
+      EXCEPTION_RAISE(e, &resolve_exception);
+      return;
+    }
 
   /* FIXME: Asyncronous dns lookups should go here */
-  return COMMAND_RETURN(c, io_listen
-			(self->backend, &sin,
-			 make_listen_command_callback
-			 (self->backend,
-			  make_apply(self->callback,
-				     &discard_continuation, e))));
-		 
+  COMMAND_RETURN(c, io_listen
+		 (self->backend, &sin,
+		  make_listen_command_callback
+		  (self->backend,
+		   make_apply(self->callback,
+			      &discard_continuation, e))));
 }
 
 struct command *make_listen_command(struct command *callback,
@@ -188,18 +197,21 @@ static struct exception connect_exception =
 STATIC_EXCEPTION(EXC_CONNECT, "connect failed");
 #endif
 
-static int do_connect_continue(struct fd_callback **s, struct lsh_fd *fd)
+static void
+do_connect_continue(struct fd_callback **s, int fd)
 {
   CAST(connect_command_callback, self, *s);
 
-  assert(fd->fd >= 0);
+  assert(fd >= 0);
 
 #if 0
   if (fd < 0)
     return EXCEPTION_RAISE(self->e, &connect_exception);
 #endif
-  
-  return COMMAND_RETURN(self->c, make_io_fd(self->backend, fd->fd));
+
+  /* FIXME: What exception handler to use? */
+  COMMAND_RETURN(self->c, make_io_fd(self->backend, fd,
+				     &default_exception_handler));
 }
 
 static struct fd_callback *
@@ -216,11 +228,12 @@ make_connect_command_callback(struct io_backend *backend,
   return &closure->super;
 }
 
-static int do_connect(struct io_backend *backend,
-		      struct address_info *a,
-		      struct resource_list *resources,
-		      struct command_continuation *c,
-		      struct exception_handler *e)
+static void
+do_connect(struct io_backend *backend,
+	   struct address_info *a,
+	   struct resource_list *resources,
+	   struct command_continuation *c,
+	   struct exception_handler *e)
 {
   /* FIXME: Add ipv6 support somewhere */
   struct sockaddr_in sin;
@@ -230,19 +243,24 @@ static int do_connect(struct io_backend *backend,
   assert(a->ip);
   
   if (!address_info2sockaddr_in(&sin, a))
-    return EXCEPTION_RAISE(e, &resolve_exception);
+    {
+      EXCEPTION_RAISE(e, &resolve_exception);
+      return;
+    }
 
   fd = io_connect(backend, &sin, NULL,
 		  make_connect_command_callback(backend, c, e));
 
+  /* FIXME: Use a proper io-exception */
   if (!fd)
-    return COMMAND_RETURN(c, NULL);
+    {
+      EXCEPTION_RAISE(e, &dummy_exception);
+      return;
+    }
 
   if (resources)
     REMEMBER_RESOURCE(resources,
 		      &fd->super.super);
-  
-  return LSH_OK | LSH_GOON;
 }
 
 
@@ -260,15 +278,16 @@ static int do_connect(struct io_backend *backend,
        (target object address_info)))
 */
 
-static int do_connect_port(struct command *s,
-			   struct lsh_object *x,
-			   struct command_continuation *c,
-			   struct exception_handler *e)
+static void
+do_connect_port(struct command *s,
+		struct lsh_object *x,
+		struct command_continuation *c,
+		struct exception_handler *e)
 {
   CAST(connect_port, self, s);
   CAST(ssh_connection, connection, x);
   
-  return do_connect(self->backend, self->target, connection->resources, c, e);
+  do_connect(self->backend, self->target, connection->resources, c, e);
 }
 
 
@@ -318,15 +337,16 @@ STATIC_COLLECT_1(&collect_info_connect_port_2);
  *
  * (connect address) */
 
-static int do_simple_connect(struct command *s,
-			     struct lsh_object *a,
-			     struct command_continuation *c,
-			     struct exception_handler *e)
+static void
+do_simple_connect(struct command *s,
+		  struct lsh_object *a,
+		  struct command_continuation *c,
+		  struct exception_handler *e)
 {
   CAST(simple_io_command, self, s);
   CAST(address_info, address, a);
 
-  return do_connect(self->backend, address, self->resources, c, e);
+  do_connect(self->backend, address, self->resources, c, e);
 }
 
 struct command *
@@ -352,17 +372,17 @@ make_simple_connect(struct io_backend *backend,
        (backend object io_backend)))
 */
 
-static int do_connect_connection(struct command *s,
-				 struct lsh_object *x,
-				 struct command_continuation *c,
-				 struct exception_handler *e UNUSED)
+static void
+do_connect_connection(struct command *s,
+		      struct lsh_object *x,
+		      struct command_continuation *c,
+		      struct exception_handler *e UNUSED)
 {
   CAST(connect_connection, self, s);
   CAST(ssh_connection, connection, x);
 
-  return
-    COMMAND_RETURN(c,
-		   make_simple_connect(self->backend, connection->resources));
+  COMMAND_RETURN(c,
+		 make_simple_connect(self->backend, connection->resources));
 }
 
 struct command *make_connect_connection(struct io_backend *backend)
@@ -375,15 +395,16 @@ struct command *make_connect_connection(struct io_backend *backend)
 }
 
 
-static int do_simple_listen(struct command *s,
-			    struct lsh_object *a,
-			    struct command_continuation *c,
-			    struct exception_handler *e)
+static void
+do_simple_listen(struct command *s,
+		 struct lsh_object *a,
+		 struct command_continuation *c,
+		 struct exception_handler *e)
 {
   CAST(simple_io_command, self, s);
   CAST(address_info, address, a);
 
-  return do_listen(self->backend, address, self->resources, c, e);
+  do_listen(self->backend, address, self->resources, c, e);
 }
 
 struct command *

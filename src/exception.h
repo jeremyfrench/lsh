@@ -36,6 +36,9 @@
        (msg . "const char *")))
 */
 
+#define STATIC_EXCEPTION(type, name) \
+{ STATIC_HEADER, (type), (name) }
+
 /* GABA:
    (class
      (name exception_handler)
@@ -46,14 +49,17 @@
 
 #define EXCEPTION_RAISE(h, e)  ((h)->raise((h), (e)))
 
-#define STATIC_EXCEPTION(type, name) \
-{ STATIC_HEADER, (type), (name) }
+#define STATIC_EXCEPTION_HANDLER(r, p) \
+{ STATIC_HEADER, (r), (p) }
 
 /* Exception types. */
 
 /* Used in places where no real exception is defined yet.
  * Never handled. */
 #define EXC_DUMMY 0
+
+/* FIXME: This is an inappropriate name, as this exception type is
+ * used for all events that should result in a disconnect message. */
 
 /* Protocol errors */
 #define EXC_PROTOCOL 0x1000
@@ -63,10 +69,12 @@
 #define EXC_CONNECT 0x2001
 #define EXC_RESOLVE 0x2002
 #define EXC_IO_BLOCKING_WRITE 0x2003
+#define EXC_IO_READ 0x2004
+#define EXC_IO_WRITE 0x2005
 
 /* Not really errors */
 /* EOF was read */
-#define EXC_IO_EOF 0x2003
+#define EXC_IO_EOF 0x2010
 
 /* Authorization errors */
 #define EXC_AUTH 0x4000
@@ -82,13 +90,23 @@
 
 /* Closing down things */
 #define EXC_FINISH 0x10000
+
 /* Close a channel */
 #define EXC_FINISH_CHANNEL 0x10001
+
 /* Stop reading on some fd */
 #define EXC_FINISH_READ 0x10002
 
+/* Close the connection immediately */
+#define EXC_FINISH_IO 0x10003
+
+/* Put the connection into pending-close mode,
+ * i.e. don't open any new channels, and close it
+ * as soon as all channels are gone. */
+#define EXC_FINISH_PENDING 0x10004
 
 extern struct exception_handler default_exception_handler;
+struct exception_handler ignore_exception_handler;
 extern struct exception dummy_exception;
 
 /* ;;GABA:

@@ -29,6 +29,8 @@
 #include "werror.h"
 #include "xalloc.h"
 
+#include <assert.h>
+
 #include "client_pty.c.x"
 
 /* GABA:
@@ -53,11 +55,13 @@
        (req object pty_request)))
 */
 
-static int do_pty_continuation(struct command_continuation *s,
-			       struct lsh_object *x)
+static void
+do_pty_continuation(struct command_continuation *s,
+		    struct lsh_object *x)
 {
   CAST(pty_request_continuation, self, s);
 
+  assert(x);
   verbose("lsh: pty request %z.\n", x ? "successful" : "failed");
   
   if (x)
@@ -70,7 +74,6 @@ static int do_pty_continuation(struct command_continuation *s,
 	}
       COMMAND_RETURN(self->super.up, x);
     }
-  return LSH_OK | LSH_GOON;
 }
 
 static struct command_continuation *

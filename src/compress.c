@@ -25,9 +25,13 @@
 
 #include "compress.h"
 
+#include "exception.h"
+#include "ssh.h"
 #include "xalloc.h"
 
 #include "compress.c.x"
+
+#include <assert.h>
 
 /* GABA:
    (class
@@ -38,26 +42,43 @@
        (connection object ssh_connection)))
 */
 
-static int do_packet_deflate(struct abstract_write *closure,
-			     struct lsh_string *packet)
+static void
+do_packet_deflate(struct abstract_write *closure,
+		  struct lsh_string *packet,
+		  struct exception_handler *e)
 {
   CAST(packet_compressor, self, closure);
+
+  if (self->connection->send_compress)
+    {
+      packet = CODEC(self->connection->send_compress, packet, 1);
+      assert(packet);
+    }
   
-  return A_WRITE(self->super.next,
-		 (self->connection->send_compress
-		  ? CODEC(self->connection->send_compress, packet, 1)
-		  : packet));
+  A_WRITE(self->super.next, packet, e);
 }
 
-static int do_packet_inflate(struct abstract_write *closure,
-			     struct lsh_string *packet)
+static void
+do_packet_inflate(struct abstract_write *closure,
+		  struct lsh_string *packet,
+		  struct exception_handler *e)
 {
   CAST(packet_compressor, self, closure);
 
-  return A_WRITE(self->super.next,
-		 (self->connection->rec_compress
-		  ? CODEC(self->connection->rec_compress, packet, 1)
-		  : packet));
+  if (self->connection->rec_compress)
+    {
+      packet = CODEC(self->connection->rec_compress, packet, 1);
+      if (!packet)
+	{
+	  /* FIXME: It would be nice to pass the error message from zlib on
+	   * to the exception handler. */
+	  EXCEPTION_RAISE
+	    (e, make_protocol_exception(SSH_DISCONNECT_COMPRESSION_ERROR,
+					"Inflating compressed data failed."));
+	  return;
+	}
+    }
+  A_WRITE(self->super.next, packet, e);
 }
 
 struct abstract_write *make_packet_codec(struct abstract_write *next,

@@ -46,8 +46,10 @@ static const char *packet_types[0x100] =
 #include "packet_types.h"
 ;
 
-static int handle_connection(struct abstract_write *w,
-			     struct lsh_string *packet)
+static void
+handle_connection(struct abstract_write *w,
+		  struct lsh_string *packet,
+		  struct exception_handler *ignored UNUSED)
 {
   CAST(ssh_connection, closure, w);
   UINT8 msg;
@@ -55,7 +57,10 @@ static int handle_connection(struct abstract_write *w,
   if (!packet->length)
     {
       werror("connection.c: Received empty packet!\n");
-      return LSH_FAIL | LSH_DIE;
+      EXCEPTION_RAISE(closure->e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Received empty packet."));
+      return;
     }
 
   msg = packet->data[0];
@@ -69,8 +74,10 @@ static int handle_connection(struct abstract_write *w,
       if (msg == SSH_MSG_NEWKEYS)
 	{
 	  werror("Unexpected NEWKEYS message!\n");
-	  lsh_string_free(packet);
-	  return LSH_FAIL | LSH_DIE;
+	  EXCEPTION_RAISE(closure->e,
+			  make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+						  "Unexpected NEWKEYS message!"));
+	  return;
 	}
       break;
     case KEX_STATE_IGNORE:
@@ -82,15 +89,17 @@ static int handle_connection(struct abstract_write *w,
        * KEXDH_INIT or KEXDH_REPLY message. */
       closure->kex_state = KEX_STATE_IN_PROGRESS;
       lsh_string_free(packet);
-      return LSH_OK | LSH_GOON;
+      return;
 
     case KEX_STATE_IN_PROGRESS:
       if ( (msg == SSH_MSG_NEWKEYS)
 	   || (msg == SSH_MSG_KEXINIT))
 	{
 	  werror("Unexpected KEXINIT or NEWKEYS message!\n");
-	  lsh_string_free(packet);
-	  return LSH_FAIL | LSH_DIE;
+	  EXCEPTION_RAISE(closure->e,
+			  make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+						  "Unexpected KEXINIT or NEWKEYS message!"));
+	  return;
 	}
       break;
     case KEX_STATE_NEWKEYS:
@@ -99,25 +108,31 @@ static int handle_connection(struct abstract_write *w,
 	{
 	  werror("Expected NEWKEYS message, but received message %i!\n",
 		 msg);
-	  lsh_string_free(packet);
-	  return LSH_FAIL | LSH_DIE;
+	  EXCEPTION_RAISE(closure->e,
+			  make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+						  "Expected NEWKEYS message"));
+	  return;
 	}
       break;
     default:
       fatal("handle_connection: Internal error.\n");
     }
 
-  return HANDLE_PACKET(closure->dispatch[msg], closure, packet);
+  HANDLE_PACKET(closure->dispatch[msg], closure, packet);
 }
 
-static int do_fail(struct packet_handler *closure,
-		   struct ssh_connection *connection UNUSED,
-		   struct lsh_string *packet)
+static void
+do_fail(struct packet_handler *closure,
+	struct ssh_connection *connection,
+	struct lsh_string *packet)
 {
   CHECK_TYPE(packet_handler, closure);
 
   lsh_string_free(packet);
-  return LSH_FAIL | LSH_DIE;
+
+  EXCEPTION_RAISE
+    (connection->e,
+     make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR, NULL));
 }
 
 struct packet_handler *make_fail_handler(void)
@@ -128,22 +143,22 @@ struct packet_handler *make_fail_handler(void)
   return res;
 }
 
-static int do_unimplemented(struct packet_handler *closure,
-			    struct ssh_connection *connection,
-			    struct lsh_string *packet)
+static void
+do_unimplemented(struct packet_handler *closure,
+		 struct ssh_connection *connection,
+		 struct lsh_string *packet)
 {
-  int res;
   CHECK_TYPE(packet_handler, closure);
 
-  res =  A_WRITE(connection->write,
-		 ssh_format("%c%i",
-			    SSH_MSG_UNIMPLEMENTED,
-			    packet->sequence_number));
-  verbose("Received packet of unimplemented type %i.\n",
-	  packet->data[0]);
+  werror("Received packet of unimplemented type %i.\n",
+	 packet->data[0]);
+
+  C_WRITE(connection,
+	  ssh_format("%c%i",
+		     SSH_MSG_UNIMPLEMENTED,
+		     packet->sequence_number));
   
   lsh_string_free(packet);
-  return res;
 }
 
 struct packet_handler *make_unimplemented_handler(void)
@@ -156,17 +171,18 @@ struct packet_handler *make_unimplemented_handler(void)
 
 /* GABA:
    (class
-     (connection_exception_handler)
-     (super exception_frame)
+     (name exc_protocol_handler)
+     (super exception_handler)
      (vars
-       (connection object connection)))
+       (connection object ssh_connection)))
 */
 
 static void
-do_connection_exception(struct exception_handler *s,
+do_exc_protocol_handler(struct exception_handler *s,
 			struct exception *e)
 {
-  CAST(connection_exception_handler, self, s);
+  CAST(exc_protocol_handler, self, s);
+
   switch (e->type)
     {
     case EXC_PROTOCOL:
@@ -184,13 +200,13 @@ do_connection_exception(struct exception_handler *s,
 }
 
 struct exception_handler *
-make_connection_exception_handler(struct connection *connection,
-				  struct exception_handler *parent)
+make_exc_protocol_handler(struct ssh_connection *connection,
+			  struct exception_handler *parent)
 {
-  NEW(connection_exception_handler, self);
+  NEW(exc_protocol_handler, self);
   self->connection = connection;
   self->super.parent = parent;
-  self->super.raise = do_connection_exception;
+  self->super.raise = do_exc_protocol_handler;
 
   return &self->super;
 }
@@ -293,7 +309,7 @@ void connection_init_io(struct ssh_connection *connection,
 		      );
 
   /* Exception handler that sends a proper disconnect message on protocol errors */
-  connection->e = make_connection_exception_handler(connection, e);
+  connection->e = make_exc_protocol_handler(connection, e);
 
   /* Initial encryption state */
   connection->send_crypto = connection->rec_crypto = NULL;

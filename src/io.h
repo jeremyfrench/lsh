@@ -50,7 +50,7 @@ struct lsh_fd;
    (class
      (name fd_callback)
      (vars
-       (f indirect-method int "int fd")))
+       (f indirect-method void "int fd")))
 */
 
 #define FD_CALLBACK(c, fd) ((c)->f(&(c), (fd)))
@@ -91,7 +91,7 @@ struct lsh_fd;
        (read method void "struct lsh_fd *fd")))
 */
 
-#define IO_READ_CALLBACK(c, fd) ((c)->do_read((c), (fd)))
+#define IO_READ_CALLBACK(c, fd) ((c)->read((c), (fd)))
 
 /* GABA:
    (class
@@ -101,6 +101,9 @@ struct lsh_fd;
        (next object lsh_fd)
        (fd simple int)
 
+       ; Used for raising i/o- and eof-exceptions.
+       ; Also passed on to readers of the consuming type,
+       ; which seems kind of bogus.
        (e object exception_handler)
        
        ;; FIXME: Can the close handlers be replaced by exceptions?
@@ -121,7 +124,8 @@ struct lsh_fd;
        ; Called if poll indicates that data can be written.
        (write method void)
 
-       ; (close_now simple int)
+       ; FIXME: really_close is an improper name. It is used to
+       ; mark the fd's write_buffer as closed.
        (really_close method void))) */
 
 #define PREPARE_FD(fd) ((fd)->prepare((fd)))
@@ -154,6 +158,10 @@ struct lsh_fd;
        (handler object read_handler)))
 */
 
+struct io_read_callback *
+make_buffered_read(UINT32 buffer_size,
+		   struct read_handler *handler);
+
 /* Used for read handlers like read_data, that know how much data they
  * can consume. */
 
@@ -167,7 +175,12 @@ struct lsh_fd;
        ; can be consumed immediately.
        (consumer object abstract_write)))
 */
-   
+
+#define READ_QUERY(r) ((r)->query((r)))
+
+void init_consuming_read(struct io_consuming_read *self,
+			 struct abstract_write *consumer);
+
 /* Passed to the listen callback, and to other functions and commands
  * dealing with addresses. */
 /* GABA:
@@ -184,9 +197,12 @@ struct lsh_fd;
    (class
      (name fd_listen_callback)
      (vars
-       (f method int int "struct address_info *")))
+       (f method void int "struct address_info *")))
 */
 #define FD_LISTEN_CALLBACK(c, fd, a) ((c)->f((c), (fd), (a)))
+
+/* FIXME: Get rid of this class, and store the user callback inside
+ * accept from the io_read_callback. */
 
 /* GABA:
    (class
@@ -279,10 +295,8 @@ struct address_info *sockaddr2info(size_t addr_len UNUSED,
 int address_info2sockaddr_in(struct sockaddr_in *sin,
 			     struct address_info *a);
 
-void write_raw(int fd, UINT32 length, UINT8 *data,
-	       struct exception_handler *e);
-void write_raw_with_poll(int fd, UINT32 length, UINT8 *data,
-			 struct exception_handler *e);
+void write_raw(int fd, UINT32 length, UINT8 *data, struct exception_handler *e);
+void write_raw_with_poll(int fd, UINT32 length, UINT8 *data, struct exception_handler *e);
 
 void io_set_nonblocking(int fd);
 void io_set_close_on_exec(int fd);
@@ -291,6 +305,10 @@ void io_init_fd(int fd);
 struct io_fd *make_io_fd(struct io_backend *b,
 			 int fd,
 			 struct exception_handler *e);
+
+struct exception_handler *
+make_exc_finish_read_handler(struct lsh_fd *fd,
+			     struct exception_handler *parent);
 
 struct connect_fd *io_connect(struct io_backend *b,
 			      struct sockaddr_in *remote,
@@ -302,12 +320,12 @@ struct listen_fd *io_listen(struct io_backend *b,
 			    struct fd_listen_callback *callback);
 
 struct io_fd *io_read_write(struct io_fd *fd,
-			    struct read_handler *read_callback,
+			    struct io_read_callback *read,
 			    UINT32 block_size,
 			    struct close_callback *close_callback);
 
 struct io_fd *io_read(struct io_fd *fd,
-		      struct read_handler *read_callback,
+		      struct io_read_callback *read,
 		      struct close_callback *close_callback);
 
 struct io_fd *io_write(struct io_fd *fd,

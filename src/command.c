@@ -36,12 +36,10 @@
 
 #include "command.c.x"
 
-static int
+static void
 do_discard_continuation(struct command_continuation *ignored UNUSED,
 			struct lsh_object *x UNUSED)
-{
-  return LSH_OK | LSH_GOON;
-}
+{}
 
 struct command_continuation discard_continuation =
 { STATIC_HEADER, do_discard_continuation};
@@ -65,12 +63,13 @@ make_command_context(struct command_continuation *c,
        (f object command)))
 */
 
-static int do_command_apply(struct command_continuation *s,
-			    struct lsh_object *value)
+static void
+do_command_apply(struct command_continuation *s,
+		 struct lsh_object *value)
 {
   CAST(command_apply, self, s);
-  return COMMAND_CALL(self->f, value,
-		      self->super.up, self->super.e);
+  COMMAND_CALL(self->f, value,
+	       self->super.up, self->super.e);
 }
 
 struct command_continuation *
@@ -94,18 +93,19 @@ struct lsh_object *gaba_apply(struct lsh_object *f,
   return COMMAND_SIMPLE(cf, x);
 }
 
-int do_call_simple_command(struct command *s,
-			   struct lsh_object *arg,
-			   struct command_continuation *c,
-			   struct exception_handler *e UNUSED)
+void
+do_call_simple_command(struct command *s,
+		       struct lsh_object *arg,
+		       struct command_continuation *c,
+		       struct exception_handler *e UNUSED)
 {
   CAST_SUBTYPE(command_simple, self, s);
-  return COMMAND_RETURN(c, COMMAND_SIMPLE(self, arg));
+  COMMAND_RETURN(c, COMMAND_SIMPLE(self, arg));
 }
 
 
 /* Unimplemented command */
-static int
+static void
 do_command_unimplemented(struct command *s UNUSED,
 			 struct lsh_object *o UNUSED,
 			 struct command_continuation *c UNUSED,
@@ -134,15 +134,16 @@ struct command_simple command_unimplemented =
        (real object command)))
 */
 
-static int do_trace_command(struct command *s,
-			    struct lsh_object *x,
-			    struct command_continuation *c,
-			    struct exception_handler *e)
+static void
+do_trace_command(struct command *s,
+		 struct lsh_object *x,
+		 struct command_continuation *c,
+		 struct exception_handler *e)
 {
   CAST(trace_command, self, s);
 
   trace("Entering %z\n", self->name);
-  return COMMAND_CALL(self->real, x, c, e);
+  COMMAND_CALL(self->real, x, c, e);
 }
 
 struct command *make_trace(const char *name, struct command *real)
@@ -298,26 +299,24 @@ make_collect_state_3(struct collect_info_3 *info,
        (body object object_list)))
 */
 
-static int do_parallell_progn(struct command *s,
-			      struct lsh_object *x,
-			      struct command_continuation *c,
-			      struct exception_handler *e)
+static void
+do_parallell_progn(struct command *s,
+		   struct lsh_object *x,
+		   struct command_continuation *c,
+		   struct exception_handler *e)
 {
   CAST(parallell_progn, self, s);
   unsigned i;
-  int res = 0;
   
   for (i=0; i < LIST_LENGTH(self->body) - 1; i++)
     {
       CAST_SUBTYPE(command, command, LIST(self->body)[i]);
-      res |= COMMAND_CALL(command, x, &discard_continuation, e);
-      if (LSH_CLOSEDP(res))
-	return res;
+      COMMAND_CALL(command, x, &discard_continuation, e);
     }
   {
     CAST_SUBTYPE(command, command, LIST(self->body)[i]);
     
-    return res | COMMAND_CALL(command, x, c, e);
+    COMMAND_CALL(command, x, c, e);
   }
 }
 
@@ -343,3 +342,88 @@ static struct lsh_object *do_progn(struct command_simple *s UNUSED,
 struct command_simple progn_command =
 STATIC_COMMAND_SIMPLE(do_progn);
 
+
+/* A continuation that passes on its value only the first time it is
+ * invoked. */
+/* GABA:
+   (class
+     (name once_continuation)
+     (super command_continuation)
+     (vars
+       (invoked . int)
+       (msg . "const char *")
+       (up object command_continuation)))
+*/
+
+static void
+do_once_continuation(struct command_continuation *s,
+		     struct lsh_object *value)
+{
+  CAST(once_continuation, self, s);
+
+  if (!self->invoked)
+    {
+      self->invoked = 1;
+      COMMAND_RETURN(self->up, value);
+    }
+  else if (self->msg)
+    debug("%z", self->msg);
+}
+
+struct command_continuation *
+make_once_continution(const char *msg,
+		      struct command_continuation *up)
+{
+  NEW(once_continuation, self);
+  self->super.c = do_once_continuation;
+  self->invoked = 0;
+  self->msg = msg;
+  self->up = up;
+
+  return &self->super;
+}
+
+
+/* Delayed application */
+
+struct delayed_apply *
+make_delayed_apply(struct command *f,
+		   struct lsh_object *a)
+{
+  NEW(delayed_apply, self);
+  self->f = f;
+  self->a = a;
+  return self;
+}
+
+/* GABA:
+   (class
+     (name delay_continuation)
+     (super command_continuation)
+     (vars
+       (f object command)
+       (up object command_continuation)))
+*/
+
+static void
+do_delay_continuation(struct command_continuation *c,
+		      struct lsh_object *o)
+{
+  CAST(delay_continuation, self, c);
+
+  COMMAND_RETURN(self->up, make_delayed_apply(self->f, o));
+}
+
+struct command_continuation *
+make_delay_continuation(struct command *f,
+			struct command_continuation *c)
+{
+  NEW(delay_continuation, self);
+  self->super.c = do_delay_continuation;
+  self->up = c;
+  self->f = f;
+
+  return &self->super;
+}
+
+   

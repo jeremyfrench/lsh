@@ -59,9 +59,10 @@
 */
 
      
-static int do_service_request(struct packet_handler *c,
-			      struct ssh_connection *connection,
-			      struct lsh_string *packet)
+static void
+do_service_request(struct packet_handler *c,
+		   struct ssh_connection *connection,
+		   struct lsh_string *packet)
 {
   CAST(service_handler, closure, c);
 
@@ -83,30 +84,29 @@ static int do_service_request(struct packet_handler *c,
 	  CAST_SUBTYPE(command, service, ALIST_GET(closure->services, name));
 	  if (service)
 	    {
-	      int res;
-	      
 	      /* Don't accept any further service requests */
 	      connection->dispatch[SSH_MSG_SERVICE_REQUEST]
 		= connection->fail;
 
 	      /* Start service */
-	      res = A_WRITE(connection->write, format_service_accept(name));
-	      if (LSH_CLOSEDP(res))
-		return res;
-	      return res | COMMAND_CALL(service, connection,
-					closure->c, closure->e);
+	      C_WRITE(connection, format_service_accept(name));
+	      COMMAND_CALL(service, connection,
+			   closure->c, closure->e);
 	    }
 	}
-      return (LSH_FAIL | LSH_CLOSE)
-	| A_WRITE(connection->write,
-		  format_disconnect(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE,
-				    "Service not available.", ""));
-    }
-
-  lsh_string_free(packet);
-  return LSH_FAIL | LSH_DIE;
-}
+      EXCEPTION_RAISE(connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_SERVICE_NOT_AVAILABLE, NULL));
       
+    }
+  else
+    {
+      lsh_string_free(packet);
+      EXCEPTION_RAISE(connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Invalid SERVICE_REQUEST message"));
+    }
+}
+
 static struct packet_handler *
 make_service_request_handler(struct alist *services,
 			     struct command_continuation *c,
@@ -131,18 +131,17 @@ make_service_request_handler(struct alist *services,
        (services object alist)))
 */
 
-static int do_offer_service(struct command *s,
-			    struct lsh_object *x,
-			    struct command_continuation *c,
-			    struct exception_handler *e)
+static void
+do_offer_service(struct command *s,
+		 struct lsh_object *x,
+		 struct command_continuation *c,
+		 struct exception_handler *e)
 {
   CAST(offer_service, self, s);
   CAST(ssh_connection, connection, x);
 
   connection->dispatch[SSH_MSG_SERVICE_REQUEST]
     = make_service_request_handler(self->services, c, e);
-
-  return LSH_OK | LSH_GOON;
 }
 
 struct command *make_offer_service(struct alist *services)

@@ -43,15 +43,16 @@
    (class
      (name userauth)
      (vars
-       (authenticate method int
+       (authenticate method void
 		     ; The name is consumed by this function
 		     "struct lsh_string *username"
 		     "struct simple_buffer *args"
-		     "struct lsh_object **value")))
+		     "struct command_continuation *c"
+		     "struct exception_handler *e")))
 */
 
-#define AUTHENTICATE(s, u, a, v) \
-((s)->authenticate((s), (u), (a), (v)))
+#define AUTHENTICATE(s, u, a, c, e) \
+((s)->authenticate((s), (u), (a), (c), (e)))
 
 struct lsh_string *format_userauth_failure(struct int_list *methods,
 					   int partial);

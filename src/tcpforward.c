@@ -112,50 +112,50 @@ remove_forward(struct object_queue *q, int null_ok,
        (socket object io_fd)))
 */
 
-static int do_tcpip_receive(struct ssh_channel *c,
-			    int type, struct lsh_string *data)
+static void
+do_tcpip_receive(struct ssh_channel *c,
+		 int type, struct lsh_string *data)
 {
   CAST(tcpip_channel, closure, c);
   
   switch (type)
     {
     case CHANNEL_DATA:
-      return A_WRITE(&closure->socket->buffer->super, data);
+      /* FIXME: What exception handler should we use? */
+      A_WRITE(&closure->socket->write_buffer->super, data, &default_exception_handler);
+      break;
     case CHANNEL_STDERR_DATA:
       werror("Ignoring unexpected stderr data.\n");
       lsh_string_free(data);
-      return LSH_OK | LSH_GOON;
+      break;
     default:
       fatal("Internal error. do_tcpip_receive()");
     }
 }
 
-static int do_tcpip_send(struct ssh_channel *c)
+static void
+do_tcpip_send(struct ssh_channel *c)
 {
   CAST(tcpip_channel, closure, c);
   
   closure->socket->super.want_read = 1;
-  
-  return LSH_OK | LSH_GOON;
 }
 
-static int do_tcpip_eof(struct ssh_channel *c)
+static void
+do_tcpip_eof(struct ssh_channel *c)
 {
   if ( (c->flags & CHANNEL_SENT_EOF)
        && (c->flags & CHANNEL_CLOSE_AT_EOF))
-    return channel_close(c);
-  else
-    return LSH_OK | LSH_GOON;
+    channel_close(c);
 }
 
-static int do_tcpip_channel_die(struct ssh_channel *c)
+static void
+do_tcpip_channel_die(struct ssh_channel *c)
 {
   CAST(tcpip_channel, channel, c);
 
   if (channel->socket)
     kill_fd(&channel->socket->super);
-
-  return 17;
 }
 
 struct ssh_channel *make_tcpip_channel(struct io_fd *socket, UINT32 max_window)
@@ -197,7 +197,7 @@ void tcpip_channel_start_io(struct ssh_channel *c)
   channel_start_receive(&channel->super);
   
   /* Flow control */
-  channel->socket->buffer->report = &channel->super.super;
+  channel->socket->write_buffer->report = &channel->super.super;
 }
 
 

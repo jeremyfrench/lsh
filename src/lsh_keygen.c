@@ -39,6 +39,7 @@
 #include "getopt.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -51,6 +52,18 @@ static void usage(void)
   werror("Usage: lsh_keygen [-o style] [-l nist-level] [-a dsa] [-q] [-d] [-v]\n");
   exit(1);
 }
+
+static void
+do_lsh_keygen_handler(struct exception_handler *s UNUSED,
+		      const struct exception *e)
+{
+  werror("lsh_keygen: %z\n", e->msg);
+
+  exit(EXIT_FAILURE);
+}
+
+static struct exception_handler handler =
+STATIC_EXCEPTION_HANDLER(do_lsh_keygen_handler, NULL);
 
 int main(int argc, char **argv)
 {
@@ -182,8 +195,9 @@ int main(int argc, char **argv)
 		     sexp_l(2, sexp_z("x"), sexp_un(x), -1), -1), -1),
        style, 0);
 
-    return LSH_FAILUREP(A_WRITE(output, key))
-      ? 1 : 0;
+    A_WRITE(output, key, &handler);
+
+    return EXIT_SUCCESS;
   }
 }
 

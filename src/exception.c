@@ -49,7 +49,16 @@ struct exception_handler default_exception_handler =
 
 struct exception dummy_exception =
 { STATIC_HEADER, LSH_DUMMY, "dummy" };
-  
+
+static void
+do_ignore_exception_handler(struct exception_handler *self UNUSED,
+			    struct exception *e UNUSED)
+{}
+
+struct exception_handler ignore_exception_handler =
+{ STATIC_HEADER, do_ignore_exception_handler };
+
+
 struct exception *make_simple_exception(UNIT32 type, const char *name)
 {
   NEW(exception, e);

@@ -26,6 +26,7 @@
 #include "blocking_write.h"
 #include "format.h"
 #include "io.h"
+#include "read_scan.h"
 #include "sexp.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -42,6 +43,19 @@
 #endif
 
 #include "lsh_writekey.c.x"
+
+static void
+do_lsh_writekey_handler(struct exception_handler *s UNUSED,
+			const struct exception *e)
+{
+  werror("lsh_writekey: %z\n", e->msg);
+
+  /* FIXME: It would be better to set the exit_success variable. */
+  exit(EXIT_FAILURE);
+}
+
+static struct exception_handler handler =
+STATIC_EXCEPTION_HANDLER(do_lsh_writekey_handler, NULL);
 
 /* FIXME: Should support encryption of the private key. */
 
@@ -96,7 +110,8 @@ static struct sexp *dsa_private2public(struct sexp_iterator *i)
        (private_file . "char *")))
 */
 
-static int do_write_key(struct sexp_handler *h, struct sexp *private)
+static int
+do_write_key(struct sexp_handler *h, struct sexp *private)
 {
   CAST(write_key, closure, h);
   struct sexp_iterator *i;
@@ -141,24 +156,15 @@ static int do_write_key(struct sexp_handler *h, struct sexp *private)
       return LSH_FAIL | LSH_DIE;
     }
 
-  if (LSH_FAILUREP(A_WRITE(make_blocking_write(public_fd, 0),
-			   sexp_format(public, SEXP_TRANSPORT, 0))))
-    {
-      werror("lsh_writekey: Writing to %z failed (errno = %i): %z\n",
-	     closure->public_file, errno, STRERROR(errno));
-      return LSH_FAIL | LSH_DIE;
-    }
-  
-  if (LSH_FAILUREP(A_WRITE(make_blocking_write(private_fd, 0),
-			   sexp_format(private, SEXP_CANONICAL, 0))))
-    {
-      werror("lsh_writekey: Writing to %z failed (errno = %i): %z\n",
-	     closure->private_file, errno, STRERROR(errno));
-      return LSH_FAIL | LSH_DIE;
-    }
+  A_WRITE(make_blocking_write(public_fd, 0),
+	  sexp_format(public, SEXP_TRANSPORT, 0),
+	  &handler);
 
+  A_WRITE(make_blocking_write(private_fd, 0),
+	  sexp_format(private, SEXP_CANONICAL, 0),
+	  &handler);
+  
   *closure->status = EXIT_SUCCESS;
-  return LSH_OK | LSH_DIE;
 }
 
 #define BLOCK_SIZE 2000

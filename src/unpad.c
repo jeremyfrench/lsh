@@ -26,10 +26,13 @@
 #include "unpad.h"
 
 #include "format.h"
+#include "ssh.h"
 #include "xalloc.h"
 
-static int do_unpad(struct abstract_write *w,
-		    struct lsh_string *packet)
+static void
+do_unpad(struct abstract_write *w,
+	 struct lsh_string *packet,
+	 struct exception_handler *e)
 {
   CAST(abstract_write_pipe, closure, w);
   
@@ -40,7 +43,10 @@ static int do_unpad(struct abstract_write *w,
   if (packet->length < 1)
     {
       lsh_string_free(packet);
-      return LSH_FAIL | LSH_DIE;
+      EXCEPTION_RAISE(e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Empty packet received."));
+      return;
     }
   
   padding_length = packet->data[0];
@@ -49,7 +55,10 @@ static int do_unpad(struct abstract_write *w,
        || (padding_length >= packet->length) )
     {
       lsh_string_free(packet);
-      return LSH_FAIL | LSH_DIE;
+      EXCEPTION_RAISE(e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Bogus padding length."));
+      return;
     }
 
   payload_length = packet->length - 1 - padding_length;
@@ -61,7 +70,7 @@ static int do_unpad(struct abstract_write *w,
 
   lsh_string_free(packet);
 
-  return A_WRITE(closure->next, new);
+  A_WRITE(closure->next, new, e);
 }
 
 struct abstract_write *

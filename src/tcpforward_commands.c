@@ -67,10 +67,11 @@ static struct command make_tcpip_forward_handler;
 #define TCPIP_WINDOW_SIZE (SSH_MAX_PACKET << 3)
 
 /* NOTE: This command does not do any remembering. */
-static int do_tcpip_connect_io(struct command *ignored UNUSED,
-			       struct lsh_object *x,
-			       struct command_continuation *c,
-			       struct exception_handler *e UNUSED)
+static void
+do_tcpip_connect_io(struct command *ignored UNUSED,
+		    struct lsh_object *x,
+		    struct command_continuation *c,
+		    struct exception_handler *e UNUSED)
 {
   CAST(io_fd, socket, x);
 
@@ -84,7 +85,7 @@ static int do_tcpip_connect_io(struct command *ignored UNUSED,
     COMMAND_RETURN(c, NULL);
 #endif
   
-  return COMMAND_RETURN(c, make_tcpip_channel(socket, TCPIP_WINDOW_SIZE));
+  COMMAND_RETURN(c, make_tcpip_channel(socket, TCPIP_WINDOW_SIZE));
 }
 
 struct command tcpip_connect_io = STATIC_COMMAND(do_tcpip_connect_io);
@@ -94,7 +95,7 @@ struct command tcpip_connect_io = STATIC_COMMAND(do_tcpip_connect_io);
  * a channel as argument, and connects it to the socket. Returns the
  * channel. */
 
-static int
+static void
 do_tcpip_start_io(struct command *s UNUSED, 
 		  struct lsh_object *x,
 		  struct command_continuation *c,
@@ -111,13 +112,13 @@ do_tcpip_start_io(struct command *s UNUSED,
   if (!channel)
     {
       verbose("Error opening channel.\n");
-      return COMMAND_RETURN(c, NULL);
+      COMMAND_RETURN(c, NULL);
     }
 #endif
   
   tcpip_channel_start_io(channel);
 
-  return COMMAND_RETURN(c, channel);
+  COMMAND_RETURN(c, channel);
 }
 
 struct command tcpip_start_io =
@@ -163,7 +164,7 @@ new_tcpip_channel(struct channel_open_command *c,
   channel = make_tcpip_channel(self->peer->fd, TCPIP_WINDOW_SIZE);
   channel->write = connection->write;
   
-  *request = prepare_channel_open(connection->channels, self->type, 
+  *request = prepare_channel_open(connection->table, self->type, 
   				  channel, 
   				  "%S%i%S%i",
 				  self->port->ip, self->port->port,
@@ -245,8 +246,9 @@ STATIC_COLLECT_1(&collect_open_direct_tcpip_2);
        (callback object command)))
 */
 
-static int do_remote_port_install_continuation(struct command_continuation *s,
-					       struct lsh_object *x)
+static void
+do_remote_port_install_continuation(struct command_continuation *s,
+				    struct lsh_object *x)
 {
   CAST(remote_port_install_continuation, self, s);
   CAST(ssh_connection, connection, x);
@@ -264,7 +266,7 @@ static int do_remote_port_install_continuation(struct command_continuation *s,
       /* FIXME: Cleanup, and delete the port from the remote_ports list. */
       
     }
-  return COMMAND_RETURN(self->super.up, x);
+  COMMAND_RETURN(self->super.up, x);
 }
 
 static struct command_continuation *
@@ -328,7 +330,7 @@ do_format_request_tcpip_forward(struct global_request_command *s,
       want_reply = 0;
     }
   
-  object_queue_add_tail(&connection->channels->remote_ports,
+  object_queue_add_tail(&connection->table->remote_ports,
 			&port->super.super);
   
   return ssh_format("%c%a%c%S%i", SSH_MSG_GLOBAL_REQUEST, ATOM_TCPIP_FORWARD,
@@ -445,7 +447,7 @@ make_forward_remote_port(struct io_backend *backend,
 
 /* Takes a callback function and returns a channel_open
  * handler. */
-static int
+static void
 do_make_direct_tcpip_handler(struct command *s UNUSED,
 			     struct lsh_object *x,
 			     struct command_continuation *c,
@@ -455,16 +457,15 @@ do_make_direct_tcpip_handler(struct command *s UNUSED,
 
   trace("tcpforward_commands.c: do_make_open_tcp_handler()\n");
   
-  return
-    COMMAND_RETURN(c,
-		   &make_channel_open_direct_tcpip(callback)->super);
+  COMMAND_RETURN(c,
+		 &make_channel_open_direct_tcpip(callback)->super);
 }
 
 static struct command
 make_direct_tcpip_handler = STATIC_COMMAND(do_make_direct_tcpip_handler);
 
 /* Takes a callback function and returns a global_request handler. */
-static int
+static void
 do_make_tcpip_forward_handler(struct command *s UNUSED,
 			      struct lsh_object *x,
 			      struct command_continuation *c,
@@ -474,9 +475,8 @@ do_make_tcpip_forward_handler(struct command *s UNUSED,
 
   debug("tcpforward_commands.c: do_make_tcpip_forward_handler()\n");
   
-  return
-    COMMAND_RETURN(c,
-		   &make_tcpip_forward_request(callback)->super);
+  COMMAND_RETURN(c,
+		 &make_tcpip_forward_request(callback)->super);
 }
 
 static struct command

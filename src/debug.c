@@ -42,14 +42,16 @@
        (prefix simple "const char *")))
 */
 
-static int do_debug(struct abstract_write *w,
-		    struct lsh_string *packet)
+static void
+do_debug(struct abstract_write *w,
+	 struct lsh_string *packet,
+	 struct exception_handler *e)
 {
   CAST(packet_debug, closure, w);
   
   debug("DEBUG: received packet %xS\n", packet);
   
-  return A_WRITE(closure->super.next, packet);
+  A_WRITE(closure->super.next, packet, e);
 }
 
 struct abstract_write *
@@ -75,24 +77,22 @@ static struct lsh_string *make_debug_packet(const char *msg, int always_display)
 }
 
 /* Send a debug message to the other end. */
-int send_debug(struct abstract_write *write, const char *msg, int always_display)
+void send_debug(struct ssh_connection *connection, const char *msg, int always_display)
 {
-  return (debug_flag)
-    ? A_WRITE(write, make_debug_packet(msg, always_display))
-    : LSH_OK | LSH_GOON;
-  
+  if (debug_flag)
+    C_WRITE(connection, make_debug_packet(msg, always_display));
 }
 
-int send_verbose(struct abstract_write *write, const char *msg, int always_display)
+void send_verbose(struct ssh_connection *connection, const char *msg, int always_display)
 {
-  return (verbose_flag)
-    ? A_WRITE(write, make_debug_packet(msg, always_display))
-    : LSH_OK | LSH_GOON;
+  if (verbose_flag)
+    C_WRITE(connection, make_debug_packet(msg, always_display));
 }
 
-static int do_rec_debug(struct packet_handler *self UNUSED,
-			struct ssh_connection *connection UNUSED,
-			struct lsh_string *packet)
+static void
+do_rec_debug(struct packet_handler *self UNUSED,
+	     struct ssh_connection *connection UNUSED,
+	     struct lsh_string *packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;
@@ -110,17 +110,22 @@ static int do_rec_debug(struct packet_handler *self UNUSED,
 	&& parse_eod(&buffer)))
     {
       lsh_string_free(packet);
-      return LSH_FAIL | LSH_DIE;
+      EXCEPTION_RAISE
+	(connection->e,
+	 make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+				 "Invalid DEBUG message."));
+				 
     }
-
-  if (always_display)
-    werror("Received debug: %ups\n", length, msg);
-
   else
-    verbose("Received debug: %ups\n", length, msg);
+    {
+      if (always_display)
+	werror("Received debug: %ups\n", length, msg);
 
-  lsh_string_free(packet);
-  return LSH_OK | LSH_GOON;
+      else
+	verbose("Received debug: %ups\n", length, msg);
+      
+      lsh_string_free(packet);
+    }
 }
 
 struct packet_handler *make_rec_debug_handler(void)

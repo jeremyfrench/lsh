@@ -35,22 +35,35 @@
 
 #include "read_scan.c.x"
 
+/* FIXME: This one character at a time reading is inefficient,
+ * and probably unnecessary. It would be a lot better to have scanner
+ * inherit read_handler. */
+
 /* GABA:
    (class
      (name read_scan)
      (super read_handler)
      (vars
-       (buffer_size . size_t)
+       (e object exception_handler)
+       ;; (buffer_size . size_t)
        (scanner object scanner)))
 */
 
 /* FIXME: Keep track of lines and characters processed, do provide
  * decent error messages. */
-static int do_read_scan(struct read_handler **h,
-			struct abstract_read *read)
+static UINT32 do_read_scan(struct read_handler **h,
+			   UINT32 available,
+			   UINT8 *data)
 {
   CAST(read_scan, closure, *h);
 
+  assert(available);
+
+  SCAN(closure->scanner, *data);
+  return 1;
+}
+
+#if 0
   UINT8 *buffer = alloca(closure->buffer_size);
   int n;
   int i;
@@ -86,15 +99,17 @@ static int do_read_scan(struct read_handler **h,
     }
 
   return LSH_OK | LSH_GOON;
-}
+#endif
 
-struct read_handler *make_read_scan(size_t buffer_size, struct scanner *scanner)
+
+struct read_handler *make_read_scan(struct scanner *scanner)
 {
   NEW(read_scan, closure);
 
-  closure->buffer_size = buffer_size;
+  /* FIXME: Better exception handler */
+  closure->e = &default_exception_handler;
   closure->scanner = scanner;
-
+  
   closure->super.handler = do_read_scan;
 
   return &closure->super;

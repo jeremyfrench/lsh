@@ -70,7 +70,7 @@
      (name keyexchange_algorithm)
      (vars
        ; Algorithms is an array indexed by the KEX_* values above
-       (init method int
+       (init method void
 	     "struct ssh_connection *connection"
 	     ;; "struct ssh_service *finished"
 	     "int hostkey_algorithm_atom"
@@ -146,7 +146,7 @@
 */
 
 struct lsh_string *format_kex(struct kexinit *kex);
-int disconnect_kex_failed(struct ssh_connection *connection, const char *msg);
+void disconnect_kex_failed(struct ssh_connection *connection, const char *msg);
 
 struct crypto_instance *kex_make_encrypt(struct hash_instance *secret,
 					 struct object_list *algorithms,
@@ -173,7 +173,7 @@ struct make_kexinit *make_simple_kexinit(struct randomness *r,
 
 struct make_kexinit *make_test_kexinit(struct randomness *r);
 
-int initiate_keyexchange(struct ssh_connection *connection,
+void initiate_keyexchange(struct ssh_connection *connection,
 			 int type);
 
 struct packet_handler *make_kexinit_handler(int type,

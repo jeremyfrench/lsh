@@ -36,6 +36,19 @@
 
 #include "sexp_test.c.x"
 
+static void
+do_sexp_test_handler(struct exception_handler *s UNUSED,
+		     struct exception *e)
+{
+  werror("sexp_test: %z\n", e->msg);
+
+  /* FIXME: It would be better to set the exit_success variable. */
+  exit(EXIT_FAILURE);
+}
+
+static struct exception_handler handler =
+STATIC_EXCEPTION_HANDLER(do_sexp_test_handler, NULL);
+
 /* GABA:
    (class
      (name output_sexp)
@@ -48,12 +61,12 @@
 static int do_output_sexp(struct sexp_handler *h, struct sexp *e)
 {
   CAST(output_sexp, closure, h);
-  int res = A_WRITE(closure->write, sexp_format(e, closure->style, 0));
+  A_WRITE(closure->write, sexp_format(e, closure->style, 0),
+	  &handler);
 
-  if (!LSH_FAILUREP(res))
-    res |= A_WRITE(closure->write, ssh_format("\n"));
+  A_WRITE(closure->write, ssh_format("\n"), &handler);
   
-  return res;
+  return 0;
 }
 
 /* GABA:

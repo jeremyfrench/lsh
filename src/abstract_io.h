@@ -68,7 +68,7 @@
 		;; On errors, it can set self to NULL, but only for
 		;; debugging purposes; it's the responibility of the the
 		;; exception handler to close the corresponding fd and
-		;; make sure that handler is not called again.
+		;; make sure that handler is not called again. '
 
 		UINT32 "UINT32 available" "UINT8 *data")))
 		"struct exception_handler *e")))

@@ -32,6 +32,7 @@
 #include "crypto.h"
 #include "format.h"
 #include "io.h"
+#include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -127,17 +128,17 @@ STATIC_IO_EXCEPTION(EXC_IO_EOF, "read_packet: Read EOF");
 #endif
 
 #define READ(n, dst) do {			\
-  memcpy((dst) + closure->pos, data, (n))	\
+  memcpy((dst) + closure->pos, data, (n));	\
   closure->pos += (n);				\
   data += (n);					\
   total += (n);					\
   available -= (n);				\
 } while (0)
 
-static UINT32 do_read_packet(struct read_handler **h,
-			     UINT32 available,
-			     UINT8 *data,
-			     struct exception_handler *e)
+static UINT32
+do_read_packet(struct read_handler **h,
+	       UINT32 available,
+	       UINT8 *data /*, struct exception_handler *e */)
 {
   CAST(read_packet, closure, *h);
   UINT32 total = 0;
@@ -163,7 +164,7 @@ static UINT32 do_read_packet(struct read_handler **h,
 
 	  /* FALL THROUGH */
 	}
-      do_header:
+	/* do_header: */
         closure->state = WAIT_HEADER;
 	closure->pos = 0;
 	/* FALL THROUGH */
@@ -173,7 +174,6 @@ static UINT32 do_read_packet(struct read_handler **h,
 	  UINT32 block_size = closure->connection->rec_crypto
 	    ? closure->connection->rec_crypto->block_size : 8;
 	  UINT32 left;
-	  UINT32 n;
 
 	  left = block_size - closure->pos;
 	  assert(left);
@@ -194,10 +194,10 @@ static UINT32 do_read_packet(struct read_handler **h,
 	      if (closure->connection->rec_crypto)
 		CRYPT(closure->connection->rec_crypto,
 		      block_size,
-		      closure->buffer->data,
-		      closure->buffer->data);
+		      closure->block_buffer->data,
+		      closure->block_buffer->data);
 		
-	      length = READ_UINT32(closure->buffer->data);
+	      length = READ_UINT32(closure->block_buffer->data);
 	      if (length > closure->connection->rec_max_packet)
 		{
 		  static const struct protocol_exception too_large =
@@ -237,7 +237,7 @@ static UINT32 do_read_packet(struct read_handler **h,
 		  HASH_UPDATE(closure->connection->rec_mac, 4, s);
 		  HASH_UPDATE(closure->connection->rec_mac,
 			      block_size,
-			      closure->buffer->data);
+			      closure->block_buffer->data);
 		}
 
 	      /* Allocate full packet */
@@ -249,12 +249,12 @@ static UINT32 do_read_packet(struct read_handler **h,
 		closure->packet_buffer
 		  = ssh_format("%ls%lr",
 			       done,
-			       closure->buffer->data + 4,
+			       closure->packet_buffer->data + 4,
 			       length - done,
 			       &closure->crypt_pos);
 
 		/* FIXME: Is this needed anywhere? */
-		closure->buffer->sequence_number
+		closure->packet_buffer->sequence_number
 		  = closure->sequence_number++;
 
 		closure->pos = done;
@@ -280,7 +280,7 @@ static UINT32 do_read_packet(struct read_handler **h,
 	
       case WAIT_CONTENTS:
 	{
-	  UINT32 left = closure->buffer->length - closure->pos;
+	  UINT32 left = closure->packet_buffer->length - closure->pos;
 
 	  assert(left);
 
@@ -295,7 +295,7 @@ static UINT32 do_read_packet(struct read_handler **h,
 	      /* Read a complete packet */
 	      READ(left, closure->packet_buffer);
 
-	      left = ( (closure->buffer->length + closure->buffer->data)
+	      left = ( (closure->packet_buffer->length + closure->packet_buffer->data)
 		       - closure->crypt_pos );
 
 	      if (closure->connection->rec_crypto)
@@ -339,13 +339,13 @@ static UINT32 do_read_packet(struct read_handler **h,
 
 		UINT8 *mac;
 
-		READ_MAC(left, closure->mac_buffer);
+		READ(left, closure->mac_buffer);
 
 		mac = alloca(closure->connection->rec_mac->hash_size);
 		HASH_DIGEST(closure->connection->rec_mac, mac);
 	    
 		if (!memcmp(mac,
-			    closure->received_mac,
+			    closure->mac_buffer->data,
 			    closure->connection->rec_mac->hash_size))
 		  {
 		    static const struct protocol_exception mac_error =
@@ -353,14 +353,14 @@ static UINT32 do_read_packet(struct read_handler **h,
 						"MAC error");
 
 		    EXCEPTION_RAISE(closure->connection->e, &mac_error.super);
-		    return;
+		    return total;
 		  }
 	      }
 	  }
 	
 	/* MAC was ok, send packet on */
 	{
-	  struct lsh_string *packet = closure->buffer;
+	  struct lsh_string *packet = closure->packet_buffer;
 	  
 	  closure->packet_buffer = NULL;
 	  closure->state = WAIT_START;
@@ -372,7 +372,7 @@ static UINT32 do_read_packet(struct read_handler **h,
       default:
 	fatal("Internal error\n");
     }
-  return;
+  return total;
 }
 
 struct read_handler *make_read_packet(struct abstract_write *handler,
@@ -389,7 +389,7 @@ struct read_handler *make_read_packet(struct abstract_write *handler,
   closure->sequence_number = 0;
 
   closure->block_buffer = NULL;
-  closure->received_mac = NULL;
+  closure->mac_buffer = NULL;
   closure->packet_buffer = NULL;
   
   return &closure->super;

@@ -27,12 +27,12 @@
 
 #include "xalloc.h"
 
-static int do_ignore(struct packet_handler *closure UNUSED,
-		     struct ssh_connection *connection UNUSED,
-		     struct lsh_string *packet)
+static void
+do_ignore(struct packet_handler *closure UNUSED,
+	  struct ssh_connection *connection UNUSED,
+	  struct lsh_string *packet)
 {
   lsh_string_free(packet);
-  return LSH_OK | LSH_GOON;
 }
 
 struct packet_handler *make_ignore_handler(void)

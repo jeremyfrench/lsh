@@ -57,22 +57,21 @@
        (install object install_keys)))
 */
     
-static int do_handle_dh_reply(struct packet_handler *c,
-			      struct ssh_connection *connection,
-			      struct lsh_string *packet)
+static void
+do_handle_dh_reply(struct packet_handler *c,
+		   struct ssh_connection *connection,
+		   struct lsh_string *packet)
 {
   CAST(dh_client, closure, c);
   struct verifier *v;
   struct hash_instance *hash;
-  struct command_continuation *continuation;
-  int res;
   
   verbose("handle_dh_reply()\n");
   
   if (!dh_process_server_msg(&closure->dh, packet))
     {
       disconnect_kex_failed(connection, "Bad dh-reply\r\n");
-      return LSH_FAIL | LSH_CLOSE;
+      return;
     }
     
   v = LOOKUP_VERIFIER(closure->verifier, closure->dh.server_key);
@@ -81,23 +80,23 @@ static int do_handle_dh_reply(struct packet_handler *c,
     /* FIXME: Use a more appropriate error code? */
     {
       disconnect_kex_failed(connection, "Bad server host key\r\n");
-      return LSH_FAIL | LSH_CLOSE;
+      return;
     }
   
   if (!dh_verify_server_msg(&closure->dh, v))
-    /* FIXME: Same here */
-    return disconnect_kex_failed(connection, "Invalid server signature\r\n");
-    
+    {
+      /* FIXME: Same here */
+      disconnect_kex_failed(connection, "Invalid server signature\r\n");
+      return;
+    }
+  
   /* Key exchange successful! Send a newkeys message, and install a
    * handler for receiving the newkeys message. */
 
-  res = A_WRITE(connection->write, ssh_format("%c", SSH_MSG_NEWKEYS),
-		connection->e);
-  if (LSH_CLOSEDP(res))
-    return res;
+  C_WRITE(connection, ssh_format("%c", SSH_MSG_NEWKEYS));
 
-  /* FIXME: Perhaps more this key handling could be abstracted away,
-   * instead of duplicating it in client_keyexchange.c and
+  /* FIXME: Perhaps more of this key handling could be abstracted
+   * away, instead of duplicating it in client_keyexchange.c and
    * server_keyexchange.c. */
 
   /* A hash instance initialized with the key, to be used for key
@@ -117,8 +116,12 @@ static int do_handle_dh_reply(struct packet_handler *c,
     {
       werror("Installing new keys failed. Hanging up.\n");
       KILL(hash);
-      /* FIXME: Send a disconnect message */
-      return LSH_FAIL | LSH_DIE;
+
+      EXCEPTION_RAISE(connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Refusing to use weak key."));
+
+      return;
     }
 
   KILL(hash);
@@ -126,26 +129,26 @@ static int do_handle_dh_reply(struct packet_handler *c,
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = connection->fail;
   connection->kex_state = KEX_STATE_NEWKEYS;
   
-  res |= send_verbose(connection->write, "Key exchange successful!", 0);
-  if (LSH_CLOSEDP(res) || !connection->established)
-    return res;
+  send_verbose(connection, "Key exchange successful!", 0);
 
-  continuation = connection->established;
-  connection->established = NULL;
+  if (connection->established)
+    {
+      struct command_continuation *c = connection->established;
+      connection->established = NULL;
   
-  return res | COMMAND_RETURN(continuation, connection);
+      COMMAND_RETURN(c, connection);
+    }
 }
 
-static int do_init_client_dh(struct keyexchange_algorithm *c,
-		             struct ssh_connection *connection,
-		             int hostkey_algorithm_atom,
-		             struct signature_algorithm *ignored,
-		             struct object_list *algorithms)
+static void
+do_init_client_dh(struct keyexchange_algorithm *c,
+		  struct ssh_connection *connection,
+		  int hostkey_algorithm_atom,
+		  struct signature_algorithm *ignored,
+		  struct object_list *algorithms)
 {
   CAST(dh_client_exchange, closure, c);
   NEW(dh_client, dh);
-
-  int res;
 
   CHECK_SUBTYPE(ssh_connection, connection);
   CHECK_SUBTYPE(signature_algorithm, ignored);
@@ -162,17 +165,12 @@ static int do_init_client_dh(struct keyexchange_algorithm *c,
   dh->install = make_install_new_keys(0, algorithms);
   
   /* Send client's message */
-  res = A_WRITE(connection->write, dh_make_client_msg(&dh->dh));
+  C_WRITE(connection, dh_make_client_msg(&dh->dh));
 
-  if (LSH_CLOSEDP(res))
-    return res | LSH_FAIL;
-  
   /* Install handler */
   connection->dispatch[SSH_MSG_KEXDH_REPLY] = &dh->super;
   
   connection->kex_state = KEX_STATE_IN_PROGRESS;
-  
-  return res | LSH_OK | LSH_GOON;
 }
 
 

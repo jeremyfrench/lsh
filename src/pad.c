@@ -42,8 +42,10 @@
        (random object randomness)))
 */
 
-static int do_pad(struct abstract_write *w,
-		  struct lsh_string *packet)
+static void
+do_pad(struct abstract_write *w,
+       struct lsh_string *packet,
+       struct exception_handler *e)
 {
   CAST(packet_pad, closure, w);
   struct ssh_connection *connection = closure->connection;
@@ -77,7 +79,7 @@ static int do_pad(struct abstract_write *w,
   
   lsh_string_free(packet);
 
-  return A_WRITE(closure->super.next, new);
+  A_WRITE(closure->super.next, new, e);
 }
   
 struct abstract_write *

@@ -178,65 +178,65 @@ struct resource *make_process_resource(pid_t pid, int signal)
 */
 
 /* Receive channel data */
-static int do_receive(struct ssh_channel *c,
-		      int type, struct lsh_string *data)
+static void
+do_receive(struct ssh_channel *c,
+	   int type, struct lsh_string *data)
 {
   CAST(server_session, closure, c);
 
   switch(type)
     {
     case CHANNEL_DATA:
-      return A_WRITE(&closure->in->buffer->super, data);
+      A_WRITE(&closure->in->write_buffer->super, data, c->e);
+      break;
     case CHANNEL_STDERR_DATA:
       werror("Ignoring unexpected stderr data.\n");
       lsh_string_free(data);
-      return LSH_OK | LSH_GOON;
+      break;
     default:
       fatal("Internal error!\n");
     }
 }
 
 /* We may send more data */
-static int do_send(struct ssh_channel *c)
+static void
+do_send(struct ssh_channel *c)
 {
   CAST(server_session, session, c);
 
   assert(session->out->super.read);
-  assert(session->out->handler);
+  /* assert(session->out->handler); */
 
   session->out->super.want_read = 1;
 
   if (session->err)
     {
       assert(session->err->super.read);
-      assert(session->err->handler);
+      /* assert(session->err->handler); */
   
       session->err->super.want_read = 1;
     }
-  return LSH_OK | LSH_GOON;
 }
 
-static int do_eof(struct ssh_channel *channel)
+static void
+do_eof(struct ssh_channel *channel)
 {
   CAST(server_session, session, channel);
 
-  write_buffer_close(session->in->buffer);
+  write_buffer_close(session->in->write_buffer);
 
   if ( (channel->flags & CHANNEL_SENT_EOF)
        && (channel->flags & CHANNEL_CLOSE_AT_EOF))
-    return channel_close(channel);
-  else
-    return LSH_OK | LSH_GOON;
+    channel_close(channel);
 }
 
-static int do_close(struct ssh_channel *c)
+static void
+do_close(struct ssh_channel *c)
 {
   CAST(server_session, session, c);
 
   if (session->process)
     KILL_RESOURCE(session->process);
-
-  return LSH_OK;
 }
 
 struct ssh_channel *make_server_session(struct unix_user *user,
@@ -282,12 +282,13 @@ struct ssh_channel *make_server_session(struct unix_user *user,
 
 #define WINDOW_SIZE (SSH_MAX_PACKET << 3)
 
-static int do_open_session(struct channel_open *c,
+static int do_open_session(struct channel_open *s,
                            struct ssh_connection *connection UNUSED,
                            struct simple_buffer *args,
-                           struct channel_open_callback *response)
+			   struct command_continuation *c,
+			   struct exception_handler *e)
 {
-  CAST(open_session, closure, c);
+  CAST(open_session, closure, s);
   struct ssh_channel *session = NULL;
   UINT32 error;
   char *error_msg;
@@ -296,17 +297,16 @@ static int do_open_session(struct channel_open *c,
 
   if (parse_eod(args))
     {
-      session = make_server_session(closure->user,
-				    WINDOW_SIZE, closure->session_requests);
-      error = 0;
-      error_msg = NULL;
+      COMMAND_RETURN(c,
+		     make_server_session(closure->user,
+					 WINDOW_SIZE, closure->session_requests));
     }
   else
     {
-      error = SSH_OPEN_UNKNOWN_CHANNEL_TYPE;
-      error_msg = "trailing garbage in open message";
+      EXCEPTION_RAISE(e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "trailing garbage in open message"));
     }
-   return CHANNEL_OPEN_CALLBACK(response, session, error, error_msg, NULL); 
 }
 
 struct channel_open *make_open_session(struct unix_user *user,
@@ -337,10 +337,11 @@ struct channel_open *make_open_session(struct unix_user *user,
        (backend object io_backend) )) */
 
 /* Start an authenticated ssh-connection service */
-static int do_login(struct command *s,
-		    struct lsh_object *x,
-		    struct command_continuation *c,
-		    struct exception_handler *e UNUSED)
+static void
+do_login(struct command *s,
+	 struct lsh_object *x,
+	 struct command_continuation *c,
+	 struct exception_handler *e UNUSED)
 {
   CAST(server_connection_service, closure, s);
   CAST(unix_user, user, x);
@@ -349,13 +350,14 @@ static int do_login(struct command *s,
 
   /* FIXME: It would be better to take one more alists as arguments,
    * and cons the ATOM_SESSION service at the head of it. But that
-   * won't work as long as an alist doesn't consists of independent
+   * won't work as long as an alist doesn't consist of independent
    * cons-objects. */
   
-  return COMMAND_RETURN
+  COMMAND_RETURN
     (c, make_install_fix_channel_open_handler
      (ATOM_SESSION, make_open_session(user,
 				      closure->session_requests)));
+  
 #if 0
   /* FIXME: Move enabling of direct tcp somewhere else */
   (ATOM_DIRECT_TCPIP,
@@ -447,24 +449,18 @@ static void do_exit_shell(struct exit_callback *c, int signaled,
   
   if (!(channel->flags & CHANNEL_SENT_CLOSE))
     {
-      int res = A_WRITE(channel->write,
-		    signaled
-		    ? format_exit_signal(channel, core, value)
-		    : format_exit(channel, value));
+      A_WRITE(channel->write,
+	      (signaled
+	       ? format_exit_signal(channel, core, value)
+	       : format_exit(channel, value)),
+	      channel->e);
 
-      if (!LSH_CLOSEDP(res)
-	  && (channel->flags & CHANNEL_SENT_EOF)
-	  && (channel->flags & CHANNEL_RECEIVED_EOF))
+      if ( (channel->flags & CHANNEL_SENT_EOF)
+	   && (channel->flags & CHANNEL_RECEIVED_EOF))
 	{
 	  /* We have sent EOF already, so initiate close */
-	  res |= channel_close(channel);
+	  channel_close(channel);
 	}
-
-      /* FIXME: Can we do anything better with the return code than
-       * ignore it? */
-
-      (void) res;
-      return;
     }
 }
 
@@ -633,11 +629,12 @@ static int make_pty(struct pty_info *pty UNUSED,
 
 #define USE_LOGIN_DASH_CONVENTION 1
 
-static int do_spawn_shell(struct channel_request *c,
-			  struct ssh_channel *channel,
-			  struct ssh_connection *connection,
-			  int want_reply,
-			  struct simple_buffer *args)
+static void
+do_spawn_shell(struct channel_request *c,
+	       struct ssh_channel *channel,
+	       struct ssh_connection *connection,
+	       int want_reply,
+	       struct simple_buffer *args)
 {
   CAST(shell_request, closure, c);
   struct server_session *session = (struct server_session *) channel;
@@ -651,7 +648,13 @@ static int do_spawn_shell(struct channel_request *c,
   CHECK_TYPE(server_session, session);
 
   if (!parse_eod(args))
-    return LSH_FAIL | LSH_DIE;
+    {
+      EXCEPTION_RAISE(connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Invalid shell CHANNEL_REQUEST message."));
+      return;
+    }
+    
 
   if (session->process)
     /* Already spawned a shell or command */
@@ -857,21 +860,22 @@ static int do_spawn_shell(struct channel_request *c,
 	close(out[1]);
 	close(err[1]);
 
+	/* FIXME: Use proper exception handlers. */
 	session->in
-	  = io_write(make_io_fd(closure->backend, in[1]),
+	  = io_write(make_io_fd(closure->backend, in[1], &default_exception_handler),
 		     SSH_MAX_PACKET,
 		     /* FIXME: Use a proper close callback */
 		     make_channel_close(channel));
 	/* Flow control */
-	session->in->buffer->report = &session->super.super;
+	session->in->write_buffer->report = &session->super.super;
 	
 	session->out
-	  = io_read(make_io_fd(closure->backend, out[0]),
+	  = io_read(make_io_fd(closure->backend, out[0], &default_exception_handler),
 		    make_channel_read_data(channel),
 		    NULL);
 	session->err 
 	  = ( (err[0] != -1)
-	      ? io_read(make_io_fd(closure->backend, err[0]),
+	      ? io_read(make_io_fd(closure->backend, err[0], &default_exception_handler),
 			make_channel_read_stderr(channel),
 			NULL)
 	      : NULL);
@@ -897,11 +901,14 @@ static int do_spawn_shell(struct channel_request *c,
 	  REMEMBER_RESOURCE
 	    (connection->resources, &session->err->super.super);
 
-	return (want_reply
-		? A_WRITE(channel->write,
-			  format_channel_success(channel
-						 ->channel_number))
-		: 0) | LSH_CHANNEL_READY_REC;
+	if (want_reply)
+	  A_WRITE(channel->write,
+		  format_channel_success(channel
+					 ->channel_number),
+		  channel->e);
+
+	channel_start_receive(channel);
+	return;
       }
     close(err[0]);
     close(err[1]);
@@ -911,9 +918,9 @@ static int do_spawn_shell(struct channel_request *c,
     close(in[1]);
   }
  fail:
-  return want_reply
-    ? A_WRITE(channel->write, format_channel_failure(channel->channel_number))
-    : LSH_OK | LSH_GOON;
+  if (want_reply)
+    A_WRITE(channel->write, format_channel_failure(channel->channel_number),
+	    channel->e);
 }
 
 struct channel_request *make_shell_handler(struct io_backend *backend,
@@ -984,10 +991,11 @@ static int do_alloc_pty(struct channel_request *c UNUSED,
 		  REMEMBER_RESOURCE(connection->resources, &pty->super);
 
 		  verbose(" granted.\n");
-		  return want_reply
-		    ? A_WRITE(channel->write,
-			      format_channel_success(channel->channel_number))
-		    : LSH_OK;
+		  if (want_reply)
+		    A_WRITE(channel->write,
+			    format_channel_success(channel->channel_number),
+			    channel->e);
+		  return;
 		}
 	      else
 		/* Close fd:s and mark the pty-struct as dead */
@@ -999,9 +1007,9 @@ static int do_alloc_pty(struct channel_request *c UNUSED,
 
   verbose(" failed.\n");
   lsh_string_free(term);
-  return want_reply
-    ? A_WRITE(channel->write, format_channel_failure(channel->channel_number))
-    : LSH_OK | LSH_GOON;
+  if (want_reply)
+    A_WRITE(channel->write, format_channel_failure(channel->channel_number),
+	    channel->e);
 }
 
 struct channel_request *make_pty_handler(void)

@@ -217,6 +217,37 @@ struct lsh_object *collect_trace(const char *name, struct lsh_object *real);
 #define MAKE_TRACE(name, real) (real)
 #endif
 
+struct command_continuation *
+make_once_continution(const char *msg,
+		      struct command_continuation *up);
+
+/* extern struct command once_command; */
+
+
+/* Delayed application. This is just a convenient way to record how to
+ * apply a function, at some later time. Currently used only by
+ * server_userauth.c. */
+
+/* GABA:
+   (class
+     (name delayed_apply)
+     (super command_context)
+     (vars
+       (f object command)
+       (a object lsh_object)))
+*/
+
+struct delayed_apply *
+make_delayed_apply(struct command *f,
+		   struct lsh_object *a);
+
+#define FORCE_APPLY(d, c, e) COMMAND_CALL((d)->f, (d)->o, (c), (e))
+
+struct command_continuation *
+make_delay_continuation(struct command *f,
+			struct command_continuation *c);
+
+
 /* The GABA_* macros are used by automatically generated evaluation code */
 
 struct command_continuation *

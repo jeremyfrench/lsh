@@ -110,6 +110,7 @@ struct callback
 
 #define CALLBACK(c) ((c)->f(c))
 
+#if 0
 /* Return values.
  *
  * Every handler should return one or more of these values, or-ed together.
@@ -186,5 +187,6 @@ struct callback
 
 /* If non-zero, return to main-loop is preferred */
 #define LSH_ACTIONP(x) ((x) & (LSH_FAIL | LSH_CLOSE | LSH_DIE | LSH_KILL_OTHERS) )
+#endif
 
 #endif /* LSH_H_INCLUDED */

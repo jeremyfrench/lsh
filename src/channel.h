@@ -205,7 +205,7 @@
    (class
      (name global_request_callback)
      (vars
-       (response method int "int success")
+       (response method void "int success")
        (connection object ssh_connection)))
 */
 
@@ -225,7 +225,8 @@
 
 /* SSH_MSG_CHANNEL_OPEN */
 
-/* Raised if opening of a channel fails. */
+/* Raised if opening of a channel fails. Used both on the client and
+ * the server side.*/
 /* GABA:
    (class
      (name channel_open_exception)
@@ -233,6 +234,8 @@
      (vars
        (error_code . UINT32)))
 */
+
+struct exception *make_channel_open_exception(UINT32 error_code, char *msg);
 
 #if 0
 /* Callback function, used to report success or failure for a
@@ -273,7 +276,7 @@
    (class
      (name channel_request)
      (vars
-       (handler method int
+       (handler method void
 		"struct ssh_channel *channel"
 		"struct ssh_connection *connection"
 		"int want_reply"
@@ -298,15 +301,19 @@ void init_channel(struct ssh_channel *channel);
 struct channel_table *make_channel_table(void);
 int alloc_channel(struct channel_table *table);
 void dealloc_channel(struct channel_table *table, int i);
-int register_channel(struct channel_table *table, struct ssh_channel *channel);
+
+void register_channel(struct channel_table *table,
+		      UINT32 local_channel_number,
+		      struct ssh_channel *channel);
+
 struct ssh_channel *lookup_channel(struct channel_table *table, UINT32 i);
 
 struct abstract_write *make_channel_write(struct ssh_channel *channel);
 struct abstract_write *make_channel_write_extended(struct ssh_channel *channel,
 						   UINT32 type);
 
-struct read_handler *make_channel_read_data(struct ssh_channel *channel);
-struct read_handler *make_channel_read_stderr(struct ssh_channel *channel);
+struct io_read_callback *make_channel_read_data(struct ssh_channel *channel);
+struct io_read_callback *make_channel_read_stderr(struct ssh_channel *channel);
 
 struct lsh_string *format_global_failure(void);
 struct lsh_string *format_global_success(void);
@@ -323,7 +330,7 @@ struct lsh_string *format_channel_failure(UINT32 channel);
 struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
 					 UINT32 add);
 
-int channel_start_receive(struct ssh_channel *channel);
+void channel_start_receive(struct ssh_channel *channel);
 
 struct lsh_string *prepare_channel_open(struct channel_table *table,
 					int type,
@@ -338,8 +345,8 @@ struct lsh_string *format_channel_request(int type,
 struct lsh_string *format_channel_close(struct ssh_channel *channel);
 struct lsh_string *format_channel_eof(struct ssh_channel *channel);
 
-int channel_close(struct ssh_channel *channel);
-int channel_eof(struct ssh_channel *channel);
+void channel_close(struct ssh_channel *channel);
+void channel_eof(struct ssh_channel *channel);
 
 struct close_callback *make_channel_close(struct ssh_channel *channel);
 

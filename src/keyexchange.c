@@ -140,10 +140,10 @@ struct lsh_string *format_kex(struct kexinit *kex)
 		    kex->first_kex_packet_follows, 0);
 }
   
-int initiate_keyexchange(struct ssh_connection *connection,
-			 int mode)
+void
+initiate_keyexchange(struct ssh_connection *connection,
+		     int mode)
 {
-  int res;
   struct lsh_string *s;
   struct kexinit *kex = connection->kexinits[mode];
 
@@ -154,15 +154,15 @@ int initiate_keyexchange(struct ssh_connection *connection,
   /* Save value for later signing */
   connection->literal_kexinits[mode] = s; 
 
-  res = A_WRITE(connection->write, lsh_string_dup(s));
-  
-  if (LSH_CLOSEDP(res) || !kex->first_kex_packet_follows)
-    return res;
+  C_WRITE(connection, lsh_string_dup(s));
 
-  s = kex->first_kex_packet;
-  kex->first_kex_packet = NULL;
+  if (kex->first_kex_packet_follows)
+    {
+      s = kex->first_kex_packet;
+      kex->first_kex_packet = NULL;
 
-  return res | A_WRITE(connection->write, s);
+      C_WRITE(connection, s);
+    }
 }
 
 static int select_algorithm(struct int_list *server_list,
@@ -187,11 +187,12 @@ static int select_algorithm(struct int_list *server_list,
   return 0;
 }
 
-int disconnect_kex_failed(struct ssh_connection *connection, const char *msg)
+void disconnect_kex_failed(struct ssh_connection *connection, const char *msg)
 {
-  return A_WRITE(connection->write,
-		 format_disconnect(SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
-				   msg, ""));
+  EXCEPTION_RAISE
+    (connection->e,
+     make_protocol_exception(SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
+			     msg));
 }
 
 #if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
@@ -203,24 +204,29 @@ static int invoke_ssh2_dsa_kludge_p(struct lsh_string *s)
 }
 #endif DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
 
-static int do_handle_kexinit(struct packet_handler *c,
-			     struct ssh_connection *connection,
-			     struct lsh_string *packet)
+static void
+do_handle_kexinit(struct packet_handler *c,
+		  struct ssh_connection *connection,
+		  struct lsh_string *packet)
 {
   CAST(kexinit_handler, closure, c);
   struct kexinit *msg = parse_kexinit(packet);
 
-  int kex_algorithm;
-  int hostkey_algorithm;
+  int kex_algorithm_atom;
+  int hostkey_algorithm_atom;
 
   int parameters[KEX_PARAMETERS];
   struct object_list *algorithms;
 
   int i;
-  int res = 0;
 
   if (!msg)
-    return LSH_FAIL | LSH_DIE;
+    {
+      EXCEPTION_RAISE(connection->e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Invalid KEXINIT message."));
+      return;
+    }
 
   /* Save value for later signing */
   connection->literal_kexinits[!closure->type] = packet;
@@ -236,18 +242,17 @@ static int do_handle_kexinit(struct packet_handler *c,
       packet = format_kex(sent);
       connection->literal_kexinits[closure->type] = lsh_string_dup(packet); 
       
-      res = A_WRITE(connection->write, packet);
-      if (LSH_CLOSEDP(res))
-	return res;
+      C_WRITE(connection, packet);
     }
 
   /* Select key exchange algorithms */
 
+  /* FIXME: Look at the hostkey algorithm as well. */
   if (LIST(connection->kexinits[0]->kex_algorithms)[0]
       == LIST(connection->kexinits[1]->kex_algorithms)[0])
     {
       /* Use this algorithm */
-      kex_algorithm = LIST(connection->kexinits[0]->kex_algorithms)[0];
+      kex_algorithm_atom = LIST(connection->kexinits[0]->kex_algorithms)[0];
     }
   else
     {
@@ -260,27 +265,26 @@ static int do_handle_kexinit(struct packet_handler *c,
       /* FIXME: Ignores that some keyexchange algorithms require
        * certain features of the host key algorithms. */
       
-      kex_algorithm
+      kex_algorithm_atom
 	= select_algorithm(connection->kexinits[0]->kex_algorithms,
 			   connection->kexinits[1]->kex_algorithms);
 
-      if  (!kex_algorithm)
+      if  (!kex_algorithm_atom)
 	{
 	  disconnect_kex_failed(connection,
 				"No common key exchange method.\r\n");
-	  
-	  return res | LSH_FAIL | LSH_CLOSE;
+	  return;
 	}
     }
-  hostkey_algorithm
+  hostkey_algorithm_atom
     = select_algorithm(connection->kexinits[0]->server_hostkey_algorithms,
 		       connection->kexinits[1]->server_hostkey_algorithms);
 
 #if DATAFELLOWS_SSH2_SSH_DSA_KLUDGE
-  if ( (hostkey_algorithm == ATOM_SSH_DSS)
+  if ( (hostkey_algorithm_atom == ATOM_SSH_DSS)
        && invoke_ssh2_dsa_kludge_p(connection->versions[!closure->type]))
     {
-      hostkey_algorithm = ATOM_SSH_DSS_KLUDGE;
+      hostkey_algorithm_atom = ATOM_SSH_DSS_KLUDGE;
     }
 #endif
 
@@ -293,7 +297,7 @@ static int do_handle_kexinit(struct packet_handler *c,
       if (!parameters[i])
 	{
 	  disconnect_kex_failed(connection, "");
-	  return res | LSH_FAIL | LSH_CLOSE;
+	  return;
 	}
     }
   
@@ -301,14 +305,18 @@ static int do_handle_kexinit(struct packet_handler *c,
   
   for (i = 0; i<KEX_PARAMETERS; i++)
     LIST(algorithms)[i] = ALIST_GET(closure->algorithms, parameters[i]);
-      
-  return res
-    | KEYEXCHANGE_INIT( (struct keyexchange_algorithm *)
-			ALIST_GET(closure->algorithms, kex_algorithm),
-			connection,
-			hostkey_algorithm,
-			ALIST_GET(closure->algorithms, hostkey_algorithm),
-			algorithms);
+
+  {
+    CAST_SUBTYPE(keyexchange_algorithm, kex_algorithm,
+		 ALIST_GET(closure->algorithms, kex_algorithm_atom));
+    CAST_SUBTYPE(hostkey_algorithm, ALIST_GET(closure->algorithms,
+					      hostkey_algorithm_atom));
+    KEYEXCHANGE_INIT( kex_algorithm,
+		      connection,
+		      hostkey_algorithm_atom,
+		      hostkey_algorithm,
+		      algorithms);
+  }
 }
 
 struct packet_handler *make_kexinit_handler(int type,
@@ -522,9 +530,10 @@ static struct compress_instance *kex_make_inflate(struct object_list *algorithms
        (compression object compress_instance)))
 */
 
-static int do_handle_newkeys(struct packet_handler *c,
-			     struct ssh_connection *connection,
-			     struct lsh_string *packet)
+static void
+do_handle_newkeys(struct packet_handler *c,
+		  struct ssh_connection *connection,
+		  struct lsh_string *packet)
 {
   CAST(newkeys_handler, closure, c);
   struct simple_buffer buffer;
@@ -545,10 +554,12 @@ static int do_handle_newkeys(struct packet_handler *c,
       connection->dispatch[SSH_MSG_NEWKEYS] = NULL;
 
       KILL(closure);
-      return LSH_OK | LSH_GOON;
     }
   else
-    return LSH_FAIL | LSH_DIE;
+    EXCEPTION_RAISE(connection->e,
+		    make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					    "Invalid NEWKEYS message"));
+  lsh_string_free(packet);
 }
 
 struct packet_handler *

@@ -27,6 +27,7 @@
 #include "charset.h"
 #include "format.h"
 #include "parse.h"
+#include "ssh.h"
 #include "userauth.h"
 #include "werror.h"
 #include "xalloc.h"
@@ -133,10 +134,12 @@ int verify_password(struct unix_user *user,
 }
 
 
-static int do_authenticate(struct userauth *ignored UNUSED,
-			   struct lsh_string *username,
-			   struct simple_buffer *args,
-			   struct lsh_object **result)
+static void
+do_authenticate(struct userauth *ignored UNUSED,
+		struct lsh_string *username,
+		struct simple_buffer *args,
+		struct command_continuation *c,
+		struct exception_handler *e)
 {
   struct lsh_string *password = NULL;
   /* struct unix_service *service; */
@@ -152,15 +155,25 @@ static int do_authenticate(struct userauth *ignored UNUSED,
   
   username = utf8_to_local(username, 1, 1);
   if (!username)
-    return LSH_FAIL | LSH_DIE;
+    {
+      EXCEPTION_RAISE(e,
+		      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					      "Invalid utf8 in password."));
+      return;
+    }
 
   if (parse_boolean(args, &change_passwd))
     {
       if (change_passwd)
 	{
-	  /* Password changeing is not implemented. */
+	  static const struct exception passwd_change_not_implemented
+	    = STATIC_EXCEPTION(EXC_USERAUTH,
+			       "Password change not implemented.");
+	  
 	  lsh_string_free(username);
-	  return LSH_AUTH_FAILED;
+	  EXCEPTION_RAISE(e, &passwd_change_not_implemented);
+			  
+	  return;
 	}
       if ( (password = parse_string_copy(args))
 	   && parse_eod(args))
@@ -172,26 +185,37 @@ static int do_authenticate(struct userauth *ignored UNUSED,
 	  if (!password)
 	    {
 	      lsh_string_free(username);
-	      return LSH_FAIL | LSH_DIE;
+	      EXCEPTION_RAISE(e,
+			      make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+						      "Invalid utf8 in password."));
+	      return;
 	    }
        
 	  user = lookup_user(username, 1);
 
 	  if (!user)
 	    {
+	      static const struct exception no_such_user
+		= STATIC_EXCEPTION(EXC_USERAUTH, "No such user");
+	      
 	      lsh_string_free(password);
-	      return LSH_AUTH_FAILED;
+	      EXCEPTION_RAISE(e, &no_such_user);
+	      return;
 	    }
 
 	  if (verify_password(user, password, 1))
 	    {
-	      *result = &user->super;
-	      return LSH_OK | LSH_GOON;
+	      COMMAND_RETURN(c, user);
+	      return;
 	    }
 	  else
 	    {
+	      static const struct exception bad_passwd
+		= STATIC_EXCEPTION(EXC_USERAUTH, "Wrong password");
+
 	      KILL(user);
-	      return LSH_AUTH_FAILED;
+	      EXCEPTION_RAISE(e, &bad_passwd);
+	      return;
 	    }
 	}
     }
@@ -201,8 +225,9 @@ static int do_authenticate(struct userauth *ignored UNUSED,
 
   if (password)
     lsh_string_free(password);
-  
-  return LSH_FAIL | LSH_DIE;
+
+  EXCEPTION_RAISE(e, make_protocol_exception(SSH_DISCONNECT_PROTOCOL_ERROR,
+					     "Invalid password USERAUTH message."));
 }
 
 struct userauth unix_userauth =

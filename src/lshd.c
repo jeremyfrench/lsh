@@ -117,8 +117,6 @@ static int do_read_key(struct sexp_handler *h, struct sexp *private)
   struct sexp *e;
   mpz_t p, q, g, y, x;
 
-  int res;
-  
   if (!sexp_check_type(private, "private-key", &i))
     {
       werror("lshd: Host key file does not contain a private key.");
@@ -524,8 +522,9 @@ int main(int argc, char **argv)
     
       CAST_SUBTYPE(command, server_listen, o);
     
-      int res = COMMAND_CALL(server_listen, local,
-			     &discard_continuation, &default_exception_handler);
+      COMMAND_CALL(server_listen, local,
+		   &discard_continuation, &default_exception_handler);
+#if 0
       if (res)
 	{
 	  if (res & LSH_COMMAND_FAILED)
@@ -535,6 +534,7 @@ int main(int argc, char **argv)
 	    werror("lshd: Unexpected failure from listen: %i\n", res);
 	  return EXIT_FAILURE;
 	}
+#endif
     }
   }
   

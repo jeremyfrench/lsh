@@ -132,7 +132,7 @@ static struct lookup_verifier *make_fake_host_db(struct signature_algorithm *a)
        (progn "&progn_command.super.super")
        ;; FIXME: Use some function that also displays an error message
        ;; if connect() fails.
-       (init_connection "&connection_service.super")
+       (init_connection "&connection_service.super"))
        ;; (die_on_null "&command_die_on_null.super"))
      (params
        (connect object command)
@@ -216,8 +216,9 @@ static int parse_forward_arg(char *arg,
        (status . "int *")))
 */
 
-static void do_lsh_default_handler(struct exception_handler *s,
-				   struct exception_handler *e)
+static void
+do_lsh_default_handler(struct exception_handler *s,
+		       const struct exception *e)
 {
   CAST(lsh_default_handler, self, s);
 
@@ -227,7 +228,8 @@ static void do_lsh_default_handler(struct exception_handler *s,
     case EXC_RESOLVE:
       werror("lsh: Connection failed: %z\n", e->msg);
       break;
-    case EXC_IO_ERROR:
+    case EXC_IO_READ:
+    case EXC_IO_WRITE:
       werror("lsh: Connection broken: %z\n", e->msg);
       break;
     case EXC_AUTH:
@@ -247,7 +249,7 @@ make_lsh_default_handler(int *status, struct exception_handler *parent)
 {
   NEW(lsh_default_handler, self);
   self->super.parent = parent;
-  self->super.raise = do_lsh_exception_handler;
+  self->super.raise = do_lsh_default_handler;
   self->status = status;
 
   return &self->super;
@@ -296,6 +298,12 @@ int main(int argc, char **argv)
   struct command *get_pty = NULL;
   
   /* int in, out, err; */
+
+  /* FIXME: A single exception handler everywhere seems a little to
+   * crude. */
+  struct exception_handler *handler
+    = make_lsh_default_handler(&lsh_exit_code, &default_exception_handler);
+
 
   NEW(io_backend, backend);
 
@@ -523,10 +531,11 @@ int main(int argc, char **argv)
 	(&actions,
 	 make_start_session
 	 (make_open_session_command(make_client_session
-				    (io_read(make_io_fd(backend, in), NULL, NULL),
-				     io_write(make_io_fd(backend, out),
+				    (io_read(make_io_fd(backend, in, handler),
+					     NULL, NULL),
+				     io_write(make_io_fd(backend, out, handler),
 					      BLOCK_SIZE, NULL),
-				     io_write(make_io_fd(backend, err),
+				     io_write(make_io_fd(backend, err, handler),
 					      BLOCK_SIZE, NULL),
 				     WINDOW_SIZE,
 				     &lsh_exit_code)),
@@ -578,7 +587,7 @@ int main(int argc, char **argv)
 	CAST_SUBTYPE(command, client_connect, o);
 
 	COMMAND_CALL(client_connect, remote, &discard_continuation,
-		     make_lsh_default_handler(&lsh_exit_code));
+		     handler);
 	
 	/* We can free the queue nodes now */
 	KILL_OBJECT_QUEUE(&actions);

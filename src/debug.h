@@ -28,12 +28,13 @@
 
 #include <stdio.h>
 #include "abstract_io.h"
+#include "connection.h"
 
 struct abstract_write *
 make_packet_debug(struct abstract_write *continuation, const char *prefix);
 
-int send_debug(struct abstract_write *write, const char *msg, int always_display);
-int send_verbose(struct abstract_write *write, const char *msg, int always_display);
+void send_debug(struct ssh_connection *connection, const char *msg, int always_display);
+void send_verbose(struct ssh_connection *connection, const char *msg, int always_display);
 
 
 struct packet_handler *make_rec_debug_handler(void);
