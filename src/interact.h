@@ -39,14 +39,6 @@ struct terminal_dimensions;
 /* Abstract class defining methods needed to communicate with the
  * user's terminal. */
 
-struct terminal_dimensions
-{
-  UINT32 char_width;
-  UINT32 char_height;
-  UINT32 pixel_width;
-  UINT32 pixel_height;
-};
-
 /* GABA:
    (class
      (name terminal_attributes)
