@@ -1963,11 +1963,12 @@ io_bind_local(struct local_info *info,
   assert(!memchr(cname, '/', length));
 
   local_length = offsetof(struct sockaddr_un, sun_path) + length;
-  local = alloca(local_length);
+  local = alloca(local_length + 1);
 
   local->sun_family = AF_UNIX;
   memcpy(local->sun_path, cname, length);
-
+  local->sun_path[length] = 0;
+  
   /* cd to it, but first save old cwd */
 
   old_cd = lsh_pushd(cdir, NULL, 1, 1);
