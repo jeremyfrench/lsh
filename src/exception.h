@@ -68,8 +68,7 @@
 
 /* IO related errors */
 #define EXC_IO 0x2000
-#define EXC_CONNECT 0x2001
-#define EXC_RESOLVE 0x2002
+#define EXC_IO_CONNECT 0x2001
 #define EXC_IO_BLOCKING_WRITE 0x2003
 #define EXC_IO_READ 0x2004
 #define EXC_IO_WRITE 0x2005
@@ -106,6 +105,14 @@
  * i.e. don't open any new channels, and close it
  * as soon as all channels are gone. */
 #define EXC_FINISH_PENDING 0x10004
+
+/* DNS errors */
+#define EXC_RESOLVE 0x20001
+
+/* SEXP parse errors */
+#define EXC_SEXP 0x40000
+#define EXC_SEXP_SYNTAX 0x40001
+#define EXC_SEXP_EOF 0x40002
 
 extern struct exception_handler default_exception_handler;
 struct exception_handler ignore_exception_handler;
