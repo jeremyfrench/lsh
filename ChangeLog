@@ -1,3 +1,40 @@
+2001-12-05  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/werror.c (werror_progress): New function.
+
+	* src/ssh-conv: Shortened if-statement.
+
+	* src/lsh-make-seed.c (main_argp_parser): Use the right default
+	file name.
+	(get_dev_mem): #if:ed out this code, it's dangerous on some
+	systems.
+	(get_system): Implemented this, including reading some /proc
+	files. Implemented
+	(get_interact): Implemented.
+	(main): Move locking later, until we want to write the file.
+	Implemented the actual writing of the seed-file data.
+
+	* src/lsh-authorize: Fixed bash-isms, don't use "if !", use "$HOME"
+	rather than "~".
+
+	* src/lock_file.c (do_lsh_file_lock): Initialize info attribute in
+	new object.
+	(do_lsh_file_lock_p): New function, corresponding to a new method
+	for checking if a lock exists, without creating one.
+
+	* src/client_x11.c (make_client_x11_display): Fixed werror format
+	string. 
+
+	* src/channel_forward.c: Use CAST_SUBTYPE in channel_forward's
+	methods. Needed because it is subclassed as client_x11_channel.
+
+	* src/Makefile.am.in (liblsh_a_SOURCES): Added lock_file.c.
+
+2001-12-02  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/lock_file.c, src/lock_file.c: New files. Locking mechanism
+	for the seed file.
+
 2001-11-23  Niels Möller  <nisse@ehand.com>
 
 	* src/sftp/sftp-server.c (sftp_process_readdir): Clear errno
