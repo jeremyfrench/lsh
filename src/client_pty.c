@@ -23,80 +23,110 @@
 
 #include "client_pty.h"
 
+#include "channel_commands.h"
+#include "format.h"
+#include "tty.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#include "client_pty.c.x"
+
 /* GABA:
    (class
      (name pty_request)
      (super channel_request_command)
      (vars
+       (tty . int)
        (term string)
+       (ios . "struct termios")
        (width . UINT32)
        (height . UINT32)
        (width_p . UINT32)
-       (height_p . UINT32)
-       (modes string)))
+       (height_p . UINT32)))
 */
-
-static struct lsh_string *
-do_format_pty_request(struct channel_request_command *s,
-		      struct ssh_channel *channel,
-		      int want_reply)
-{
-  CAST(pty_request, req, s);
-
-  verbose("lsh: Requesting a remote pty.\n");
-  return format_channel_request(ATOM_PTY_REQ, channel, req->super.want_reply, 
-				"%S%i%i%i%i%S",
-				req->term,
-				req->width, req->height,
-				req->width_p, req->height_p,
-				req->modes);
-}
-
-struct command *make_pty_request(int tty)
-{
-  NEW(pty_request, req);
-  struct termios ios;
-  char *term = getenv("TERM");
-
-  if (!tty_getwinsize(fd, &req->width, &req->height,
-		      &req->width_p, &req->height_p))
-    req->width = req->height = req->width_p = req->height_p = 0;
-      
-  if (tty_getattr(fd, &ios))
-    req->modes = tty_encode_term_mode(&req->ios);
-  else
-    {
-      KILL(req);
-      return NULL;
-    }
-  
-  req->super.format = do_format_pty_request;
-  req->super.super.call = do_channel_request_command;
-  
-  req->tty = fd;
-  req->term = term ? format_cstring(term) : ssh_format("");
-
-  return &req->super;
-}
 
 /* GABA:
    (class
-     (name raw_mode_command)
-     (super command)
+     (name pty_request_continuation)
+     (super command_frame)
      (vars
-       (fd . int)))
+       (req object pty_request)))
 */
 
-static int do_raw_mode(struct command *s,
-		       struct lsh_object *x,
-		       struct command_continuation *c)
+static int do_pty_continuation(struct command_continuation *s,
+			       struct lsh_object *x)
 {
-  CAST(raw_mode_command, self, s);
+  CAST(pty_request_continuation, self, s);
 
   verbose("lsh: pty request %z.\n", x ? "successful" : "failed");
   
   if (x)
     {
+      if (!tty_setattr(self->req->tty, &self->req->ios))
+	{
+	  werror("do_pty_continuation: "
+		 "Setting the attributes of the local terminal failed.\n");
+	}
+      COMMAND_RETURN(self->super.up, x);
+    }
+  return LSH_OK | LSH_GOON;
+}
+
+static struct command_continuation *
+make_pty_continuation(struct pty_request *req,
+		      struct command_continuation *c)
+{
+  NEW(pty_request_continuation, self);
+  self->req = req;
+  self->super.up = c;
+  self->super.super.c = do_pty_continuation;
+  
+  return &self->super.super;
+}
+
+static struct lsh_string *
+do_format_pty_request(struct channel_request_command *s,
+		      struct ssh_channel *channel,
+		      struct command_continuation **c)
+{
+  CAST(pty_request, self, s);
+
+  verbose("lsh: Requesting a remote pty.\n");
+
+  *c = make_pty_continuation(self, *c);
+
+  return format_channel_request(ATOM_PTY_REQ, channel, 1,
+				"%S%i%i%i%i%S",
+				self->term,
+				self->width, self->height,
+				self->width_p, self->height_p,
+				tty_encode_term_mode(&self->ios));
+}
+
+struct command *make_pty_request(int tty)
+{
+  NEW(pty_request, req);
+  char *term = getenv("TERM");
+
+  if (!tty_getattr(tty, &req->ios))
+    {
+      KILL(req);
+      return NULL;
+    }
+  
+  if (!tty_getwinsize(tty, &req->width, &req->height,
+		      &req->width_p, &req->height_p))
+    req->width = req->height = req->width_p = req->height_p = 0;
+      
+  req->super.format_request = do_format_pty_request;
+  req->super.super.call = do_channel_request_command;
+  
+  req->tty = tty;
+  req->term = term ? format_cstring(term) : ssh_format("");
+
+  return &req->super.super;
+}
+
       
 #if 0
 struct lsh_string *
