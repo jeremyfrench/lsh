@@ -46,12 +46,18 @@
 #include "write_buffer.h"
 #include "xalloc.h"
 
+/* If there's nothing to do for this amount of time (ms), do
+ * spontaneous gc. */
+
+#define IDLE_TIME 100
+
 int io_iter(struct io_backend *b)
 {
   unsigned long nfds; /* FIXME: Should be nfds_t if that type is defined */
   struct pollfd *fds;
 
-  int timeout;
+  /* FIXME: Callouts not implemented */
+  /* int timeout; */
   int res;
 
   nfds = 0;
@@ -105,9 +111,6 @@ int io_iter(struct io_backend *b)
      *
      * NOTE: There might be some callouts left, but we won't wait for them. */
     return 0;
-
-  /* FIXME: Callouts not implemented */
-  timeout = -1;
   
   fds = alloca(sizeof(struct pollfd) * nfds);
 
@@ -142,8 +145,14 @@ int io_iter(struct io_backend *b)
       }
   }
 
-  res = poll(fds, nfds, timeout);
+  res = poll(fds, nfds, IDLE_TIME);
 
+  if (!res)
+    {
+      gc_maybe(&b->super, 0);
+      res = poll(fds, nfds, -1);
+    }
+  
   if (!res)
     {
       /* Callouts are not implemented */

@@ -29,8 +29,10 @@
 #include "lsh_types.h"
 
 void gc_register(struct lsh_object *o);
-int gc(struct lsh_object *root);
-int gc_maybe(struct lsh_object *root, int busy);
+void gc_kill(struct lsh_object *o);
+
+void gc(struct lsh_object *root);
+void gc_maybe(struct lsh_object *root, int busy);
 
 #if 0
 void gc_mark(struct lsh_object *o);
