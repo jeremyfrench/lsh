@@ -81,11 +81,21 @@ void set_error_syslog(void)
 }
 #endif /* HAVE_SYSLOG */
 
+static int write_ignore(int fd UNUSED,
+			UINT32 length UNUSED, UINT8 *data UNUSED)
+{
+  return 1;
+}
 void set_error_stream(int fd, int with_poll)
 {
   error_fd = fd;
 
   error_write = with_poll ? write_raw_with_poll : write_raw;
+}
+
+void set_error_ignore(void)
+{
+  error_write = write_ignore;
 }
 
 #define WERROR(l, d) (error_write(error_fd, (l), (d)))
