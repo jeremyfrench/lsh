@@ -1,3 +1,21 @@
+News for the 2.0.1 release
+
+	Fixed denial of service bug in lshd.
+
+	Fixed a bug in lsh-make-seed, which could make the program go
+	into an infinite loop on read errors.
+
+	lsh now asks for passwords also in quite (-q) mode, as
+	described in the manual.
+
+	Control character filtering used to sometimes consider newline
+	as a dangerous control character. Now newlines should be
+	displayed normally.
+
+	Removed support for the non-standard alias
+	"diffie-hellman-group2-sha1". The standardized name is for
+	this key exchange method is "diffie-hellman-group14-sha1".
+
 News for the 2.0 release
 
 	Several programs have new default behaviour:

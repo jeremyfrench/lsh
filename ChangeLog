@@ -1,3 +1,12 @@
+2005-03-16  Niels Möller  <nisse@lysator.liu.se>
+
+	* NEWS: Entry for 2.0.1.
+
+	* src/atoms.in: Deleted diffie-hellman-group2-sha1.
+	* src/lsh.c (main_argp_parser): Deleted support for
+	diffie-hellman-group2-sha1.
+	* src/lshd.c (main_argp_parser): Likewise.
+
 2005-03-14  Niels Möller  <nisse@lysator.liu.se>
 
 	* src/testsuite/lsh-7-test: Set $HOME when invoking lsh, to
