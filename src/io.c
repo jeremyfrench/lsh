@@ -450,7 +450,31 @@ static void init_file(struct io_backend *b, struct lsh_fd *f, int fd)
   f->next = b->files;
   b->files = f;
 }
-    
+
+/* Blocking read from a file descriptor (i.e. don't use the backend).
+ * The fd should *not* be in non-blocking mode. */
+
+int blocking_read(int fd, struct read_handler *handler)
+{
+  struct fd_read r =
+  { { STACK_HEADER, do_read }, fd };
+
+  while (1)
+    {
+      int res = READ_HANDLER(handler,
+			     &r.super);
+
+      assert(!(res & (LSH_HOLD | LSH_KILL_OTHERS)));
+
+      if (res & (LSH_CLOSE | LSH_DIE))
+	{
+	  close(fd);
+	  return res;
+	}
+      if (res & LSH_FAIL)
+	werror("blocking_read: Ignoring error %d\n", res);
+    }
+}
 /*
  * Fill in ADDR from HOST, SERVICE and PROTOCOL.
  * Supplying a null pointer for HOST means use INADDR_ANY.

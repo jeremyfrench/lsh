@@ -154,6 +154,8 @@ void init_backend(struct io_backend *b);
 int io_iter(struct io_backend *b);
 void io_run(struct io_backend *b);
 
+int blocking_read(int fd, struct read_handler *r);
+
 int get_inaddr(struct sockaddr_in	* addr,
 	       const char		* host,
 	       const char		* service,
