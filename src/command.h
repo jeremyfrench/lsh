@@ -146,6 +146,15 @@ make_command_context(struct command_continuation *c,
        ; reading until some EOF exception ir raised.
        (ignore_value . int))) */
 
+struct catch_handler_info *
+make_catch_handler_info(UINT32 mask, UINT32 value,
+			int ignore_value,
+			struct command *handler);
+
+struct command *
+make_catch_apply(struct catch_handler_info *info,
+		 struct command *body);
+
 struct lsh_object *
 do_catch_simple(struct command_simple *s,
 		struct lsh_object *a);
