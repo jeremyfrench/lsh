@@ -52,7 +52,7 @@ B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
 #include "io.h"
 #include "lsh.h"
 #include "lsh_argp.h"
-#include "sexp_commands.h"
+#include "sexp.h"
 #include "spki.h"
 #include "version.h"
 #include "werror.h"
