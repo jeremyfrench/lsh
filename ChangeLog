@@ -1,3 +1,48 @@
+2001-07-04  Niels Möller  <nisse@cuckoo.hack.org>
+
+	* src/command.h (command_2): Made invoke a method, not a function
+	pointer. Updated users.
+	(COMMAND_2_INVOKE): New macro.
+
+	* src/channel_commands.h (install_info): Inherit command_2,
+	instead of collect_info_2.
+
+	* src/testsuite/functions.sh (spawn_lshd): Pass --no-syslog to
+	lshd, not --log-file.
+
+	* src/tcpforward_commands.c (open_forwarded_tcpip): Redefined
+	using DEFINE_COMMAND2.
+	(open_direct_tcpip): Likewise.
+	(remote_listen_command): Likewise.
+	(make_request_tcpip_forward_command): Deleted function. Moved code
+	to remote_listen_command.
+	(make_direct_tcpip_handler): Redefined using DEFINE_COMMAND.
+	(make_tcpip_forward_handler): Likewise.
+	
+	* src/sexp_commands.c (sexp_print_raw_hash): Redefined using
+	DEFINE_COMMAND3. 
+
+	* src/proxy.c (chain_connections): Redefined using DEFINE_COMMAND3.
+
+	* src/command.c (do_trace_continuation): Use trace(... %t ...).
+
+	* src/werror.c (logfile_flag): Deleted global variable.
+	(werror_vformat): Added %t, for printing the object type.
+
+	* src/lshd.c: New option --no-syslog.
+
+	* src/io_commands.c (listen_with_callback): Redefined using
+	DEFINE_COMMAND3.
+
+	* src/handshake.c (handshake_command): Redefined using
+	DEFINE_COMMAND4. 
+
+	* src/connection_commands.c (connection_if_srp): Redefined using
+	DEFINE_COMMAND3. 
+	(make_connection_if_srp): Use make_command_3_invoke_2.
+
+	* src/combinators.c (command_Cp): Bugfix, changed argument order.
+
 2001-07-03  Niels Möller  <nisse@ehand.com>
 
 	* src/testsuite/runtests (srcdir): By default, use `pwd`, not ".". 
