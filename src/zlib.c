@@ -29,6 +29,7 @@
 
 #include "compress.h"
 #include "format.h"
+#include "lsh_string.h"
 #include "ssh.h"
 #include "string_buffer.h"
 #include "werror.h"
@@ -168,41 +169,42 @@ do_zlib(struct compress_instance *c,
    * allocate. To detect that a packet grows unexpectedly large, we
    * need a little extra buffer space beyond the maximum size. */
   uint32_t limit = self->max + 1;
-
+  uint32_t input = lsh_string_length(packet);
   uint32_t estimate;
   
   debug("do_zlib (%z): length in: %i\n",
-	ZLIB_TYPE(&self->z)->operation, packet->length);
+	ZLIB_TYPE(&self->z)->operation, input);
   
-  if (!packet->length)
+  if (!input)
     {
       werror("do_zlib (%z): Compressing empty packet.\n",
 	     ZLIB_TYPE(&self->z)->operation);
       return free ? packet : lsh_string_dup(packet);
     }
 
-  estimate = estimate_size(self->rate, packet->length, limit);
+  estimate = estimate_size(self->rate, input, limit);
   debug("do_zlib (%z): estimate:  %i\n",
 	ZLIB_TYPE(&self->z)->operation,
 	estimate);
 
   string_buffer_init(&buffer, estimate);
 
-  limit -= buffer.partial->length;
+  limit -= lsh_string_length(buffer.partial);
 
-  self->z.next_in = packet->data;
-  self->z.avail_in = packet->length;
+  /* The cast is needed because zlib, at least version 1.1.4, doesn't
+     use const */
+  self->z.next_in = (uint8_t *) lsh_string_data(packet);
+  self->z.avail_in = input;
 
   for (;;)
     {
       int rc;
       
-      self->z.next_out = buffer.current;
-      self->z.avail_out = buffer.left;
-
-      assert(self->z.avail_out);
+      assert(buffer.left);
       
-      rc = self->f(&self->z, Z_SYNC_FLUSH);
+      rc = lsh_string_zlib(buffer.partial, buffer.pos,
+			   self->f, &self->z, Z_SYNC_FLUSH,
+			   buffer.left);
 
       switch (rc)
 	{
@@ -238,7 +240,9 @@ do_zlib(struct compress_instance *c,
 	      ZLIB_TYPE(&self->z)->operation);
       
       if (!self->z.avail_out)
-	{ /* All output space consumed */  
+	{ /* All output space consumed */
+	  uint32_t plength = lsh_string_length(buffer.partial);
+	  
 	  if (!limit)
 	    {
 	      werror("do_zlib (%z): Packet grew too large!\n",
@@ -252,31 +256,33 @@ do_zlib(struct compress_instance *c,
 	    }
 
 	  /* Grow to about double size. */
-	  string_buffer_grow(&buffer, MIN(limit, buffer.partial->length + buffer.total + 100));
-	  limit -= buffer.partial->length;
+	  string_buffer_grow(&buffer,
+			     MIN(limit, plength + buffer.total + 100));
+	  limit -= plength;
 	}
       else if (!self->z.avail_in)
 	{ /* Compressed entire packet */
-	  uint32_t input = packet->length;
-
+	  uint32_t output;
+	  
 	  if (free)
 	    lsh_string_free(packet);
 	  
 	  packet =
 	    string_buffer_final(&buffer, self->z.avail_out);
 
-	  assert(packet->length <= self->max);
+	  output = lsh_string_length(packet);
+	  assert(output <= self->max);
 
 	  debug("do_zlib (%z): length out: %i\n",
 		ZLIB_TYPE(&self->z)->operation,
-		packet->length);
+		output);
 
-	  if (packet->length > estimate)
+	  if (output > estimate)
 	    debug("do_zlib (%z): Estimated size exceeded: input = %i, estimate = %i, output = %i\n",
 		  ZLIB_TYPE(&self->z)->operation,
-		  input, estimate, packet->length);
+		  input, estimate, output);
 	  
-	  self->rate = estimate_update(self->rate, input, packet->length);
+	  self->rate = estimate_update(self->rate, input, output);
 
 	  return packet;
 	}
