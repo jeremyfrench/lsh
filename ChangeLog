@@ -1,5 +1,7 @@
 2004-10-02  Niels Möller  <nisse@lysator.liu.se>
 
+	* src/daemon.c (daemon_started_by_inetd): More debug output.
+
 	Implemented client-side "keyboard-interactive".
 	* src/unix_interact.c (unix_read_password): Split off...
 	(read_password): New function, reads password and doesn't free

@@ -241,8 +241,10 @@ daemon_started_by_inetd(void)
 {
   int optval;
   socklen_t optlen = sizeof(optval);
+  int res = getsockopt(STDIN_FILENO, SOL_SOCKET, SO_TYPE, &optval, &optlen);
+  debug("daemon_started_by_inetd: res = %i, val = %i\n", res, optval);
   
-  return (getsockopt(STDIN_FILENO, SOL_SOCKET, SO_TYPE, &optval, &optlen) == 0);
+  return res == 0;
 }
 
 /* Disable core files */
