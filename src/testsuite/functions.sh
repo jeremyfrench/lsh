@@ -53,7 +53,7 @@ spawn_lshd () {
     # local delay
     
     ../lshd -h $HOSTKEY --interface=localhost \
-	-p $PORT $SERVERFLAGS --pid-file lshd.$$.pid &
+	-p $PORT $SERVERFLAGS --pid-file lshd.$$.pid "$@" &
 
     # lshd may catch the ordinary TERM signal, leading to timing
     # problems when the next lshd process tries to bind the port.
@@ -92,6 +92,10 @@ spawn_lsh () {
     ../lsh $CLIENTFLAGS -nt --sloppy-host-authentication \
 	--capture-to /dev/null -z -p $PORT "$@" -N localhost &
     at_exit "kill $!"
+}
+
+exec_lshg () {
+    ../lshg $CLIENTFLAGS -nt -p $PORT localhost "$@"
 }
 
 spawn_lshg () {
