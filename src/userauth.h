@@ -79,10 +79,12 @@ struct command *make_userauth_service(struct int_list *advertised_methods,
 /* Client functions */
 struct command *make_client_userauth(struct lsh_string *username,
 				     int service_name,
-				     int first_method,
-				     struct alist *methods);
+				     struct object_list *methods);
 
 struct client_userauth_method *make_client_password_auth(void);
+
+struct client_userauth_method *
+make_client_publickey_auth(struct object_list *);
 
 
 #endif /* LSH_USERAUTH_H_INCLUDED */
