@@ -57,7 +57,10 @@ struct command *make_open_session_command(struct ssh_channel *session);
 
 
 extern struct channel_request_command request_shell;
+#define REQUEST_SHELL (&request_shell.super.super)
+
 extern struct command client_io;
+#define CLIENT_START_IO (&client_io.super)
 
 struct ssh_channel *make_client_session(struct io_fd *in,
 					struct io_fd *out,
