@@ -1,6 +1,6 @@
 /* lsh_keygen.c
  *
- * Generic key-generation program. Writes a spki-packages private key
+ * Generic key-generation program. Writes a spki-packaged private key
  * on stdout. You would usually pipe this to some other program to
  * extract the public key, encrypt the private key, and save the
  * results in two separate files.
