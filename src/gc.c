@@ -86,8 +86,10 @@ static void gc_mark(struct lsh_object *o)
       {
 	struct lsh_class *class;
 
+#if 0
 	debug("gc_mark: Marking object of class '%s'\n",
 	      o->isa ? o->isa->name : "UNKNOWN");
+#endif
 	
 	for (class = o->isa; class; class = class->super_class)
 	  {
@@ -120,9 +122,10 @@ static void gc_sweep(void)
 	{
 	  struct lsh_class *class;
 
+#if 0
 	  debug("gc_sweep: Freeing object of class '%s'\n",
 		o->isa->name);
-	  
+#endif  
 	  for (class = o->isa; class; class = class->super_class)
 	    if (class->free_instance)
 	      FREE_INSTANCE(class, o);
