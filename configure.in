@@ -4,7 +4,7 @@ dnl $Id$
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(src/lsh_types.h)
 
-AM_INIT_AUTOMAKE(lsh, 0.1.9)
+AM_INIT_AUTOMAKE(lsh, 0.1.11)
 dnl No real versioning yet, use dated snapshots instead.
 dnl AM_INIT_AUTOMAKE(lsh, esyscmd([date +snapshot-%Y-%m-%d]))
 
@@ -98,14 +98,26 @@ AC_ARG_WITH(tcp_forward,
 if test x$with_tcp_forward = xyes ; then
   AC_DEFINE(WITH_TCP_FORWARD)
 fi
-  
+
+AC_ARG_WITH(scheme,
+  [--with-scheme[=PROGRAM]    Use a particular scheme implementation],,
+  [with_scheme=])
+    
 dnl Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AM_PROG_CC_STDC
 
-AC_PATH_PROG(SCHEME, scsh,, $PATH)
+# Use a particular scheme implementation?
+if test x$with_scheme != x ; then
+  AC_PATH_PROG(SCHEME_PROGRAM, $with_scheme,, $PATH)
+else  
+  AC_PATH_PROG(SCHEME_PROGRAM, scsh guile,, $PATH)
+fi
+SCHEME_NAME=`basename $SCHEME_PROGRAM`
+AC_SUBST(SCHEME_NAME)
+
 AC_PATH_PROG(BASH, bash,, $PATH)
 AC_PATH_PROG(GROFF, groff,, $PATH)
 
@@ -488,4 +500,5 @@ if test x$GCC = xyes ; then
 fi
 
 AC_OUTPUT(Makefile doc/Makefile misc/Makefile
-	  src/Makefile src/symmetric/Makefile src/symmetric/include/Makefile)
+	  src/Makefile src/scm/Makefile
+	  src/symmetric/Makefile src/symmetric/include/Makefile)
