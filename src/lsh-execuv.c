@@ -59,6 +59,7 @@
 
 #include "lsh_types.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -112,7 +113,7 @@ die_errno(const char *msg)
 }
 
 /* Convert a string to a number */
-long void
+static long
 atoid(const char *s, int *ok)
 {
   char *end;
@@ -230,7 +231,7 @@ int main(int argc, char **argv)
   
   int ok;
 
-  struct pwd *pwd = NULL;
+  struct passwd *pwd = NULL;
   
   for (;;)
     switch (getopt(argc, argv, "u:n:g:ic"))
