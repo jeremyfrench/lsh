@@ -132,7 +132,10 @@ make_simple_kexinit(struct randomness *r,
 extern struct command_2 kexinit_filter;
 #define KEXINIT_FILTER (&kexinit_filter.super.super)
 
-void initiate_keyexchange(struct ssh_connection *connection);
+/* Sends the keyexchange message, which must already be stored in
+ * connection->kexinits[connection->flags & CONNECTION_MODE]
+ */
+void send_kexinit(struct ssh_connection *connection);
 
 struct packet_handler *
 make_kexinit_handler(struct make_kexinit *init,

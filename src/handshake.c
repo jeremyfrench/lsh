@@ -188,7 +188,7 @@ do_line(struct line_handler **h,
 		assert(mode == CONNECTION_SERVER);
 	      
 		/* Sending keyexchange packet was delayed. Do it now */
-		initiate_keyexchange(connection);
+		send_kexinit(connection);
 	      }
 #endif /* WITH_SSH1_FALLBACK */
 
@@ -430,5 +430,5 @@ DEFINE_COMMAND4(handshake_command)
   A_WRITE(connection->raw,
 	  ssh_format("%lS\r\n", version));
   
-  initiate_keyexchange(connection);
+  send_kexinit(connection);
 }

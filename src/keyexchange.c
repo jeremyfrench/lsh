@@ -146,21 +146,25 @@ format_kex(struct kexinit *kex)
 }
   
 void
-initiate_keyexchange(struct ssh_connection *connection)
+send_kexinit(struct ssh_connection *connection)
 {
   struct lsh_string *s;
   int mode = connection->flags & CONNECTION_MODE;
-  
-  struct kexinit *kex = connection->kexinits[mode];
 
+  struct kexinit *kex = connection->kexinits[mode];
+  
   assert(kex->first_kex_packet_follows == !!kex->first_kex_packet);
   assert(connection->read_kex_state == KEX_STATE_INIT);
+
+  /* First, disable any key reexchange timer */
+  if (connection->key_expire)
+    KILL_RESOURCE(connection->key_expire);
   
   s = format_kex(kex);
 
   /* Save value for later signing */
 #if 0
-  debug("initiate_keyexchange: Storing literal_kexinits[%i]\n", mode);
+  debug("send_kexinit: Storing literal_kexinits[%i]\n", mode);
 #endif
   
   connection->literal_kexinits[mode] = s; 
@@ -168,6 +172,8 @@ initiate_keyexchange(struct ssh_connection *connection)
 
   C_WRITE_NOW(connection, lsh_string_dup(s));
 
+  /* NOTE: This feature isn't fully implemented, as we won't tell
+   * the selected key exchange method if the guess was "right". */
   if (kex->first_kex_packet_follows)
     {
       s = kex->first_kex_packet;
@@ -259,6 +265,9 @@ do_handle_kexinit(struct packet_handler *c,
   /* Have we sent a kexinit message already? */
   if (!connection->kexinits[mode])
     {
+      connection->kexinits[mode] = MAKE_KEXINIT(closure->init);
+      send_kexinit(connection);
+#if 0
       struct lsh_string *packet;
       struct kexinit *sent = MAKE_KEXINIT(closure->init);
       connection->kexinits[mode] = sent;
@@ -270,6 +279,7 @@ do_handle_kexinit(struct packet_handler *c,
       
       connection_send_kex_start(connection);
       C_WRITE_NOW(connection, packet);
+#endif
     }
 
   /* Select key exchange algorithms */
@@ -867,6 +877,8 @@ keyexchange_finish(struct ssh_connection *connection,
     send_verbose(connection->write, "Key exchange successful!", 0);
 #endif
 
+  /* FIXME: This is the time for installing the key_expire timer. */
+  
   /* FIXME: If we have stopped readin channel sources during the key
    * exchange, we must get them started again, perhaps by calling
    * CHANNEL_ADJUST(channel, 0) for all channels. Can we reuse the
