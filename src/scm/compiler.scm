@@ -9,6 +9,12 @@
 		   (and name (let-and clause clauses ...))))
 		((let-and expr) expr)))
 
+(define (split-list-at n list)
+  (let loop ((left n) (collected '()) (tail list))
+    (if (= left 0) (cons (reverse collected) tail)
+	(loop (- left 1) (cons (car tail) collected) (cdr tail)))))
+
+	
 (define (atom? o) (not (list? o)))
 (define (lambda? o) (and (pair? o) (eq? 'lambda (car o))))
 
@@ -16,14 +22,14 @@
 (define lambda-formal cadr)
 (define lambda-body caddr)
 
-(define make-appliction list)
+(define make-application list)
 (define application-op car)
 (define application-arg cadr)
 (define application-args cdr)
 
 (define (normalize-application op args)
   (if (null? args) op
-      (normalize-application (make-appliction op (car args)) (cdr args))))
+      (normalize-application (make-application op (car args)) (cdr args))))
 
 ;; Transform (a b c)-> ((a b) c) and
 ;; (lambda (a b) ...) -> (lambda a (lambda b ...)
@@ -54,7 +60,7 @@
 	     (body (preprocess (cadr args))))
     (if (null? definitions) body
 	(loop (cdr definitions)
-	      (make-appliction
+	      (make-application
 	       (make-lambda (caar definitions)
 			    body)
 	       (preprocess (cadar definitions)))))))
@@ -64,21 +70,21 @@
 	(body (cadr args)))
     (normalize-application 
      (do-lambda (list (map car definitions) body) preprocess)
-     (map cadr definitions))))
+     (map (lambda (d) (preprocess (cadr d))) definitions))))
 
 (define preprocess (make-preprocess
 		    `((lambda . ,do-lambda)
 		      (let . ,do-let)
 		      (let* . ,do-let*))))
   
-(define (free-variable? v expr)
-  (cond ((atom? expr) (eq? v expr))
-	((lambda? expr)
-	 (and (not (eq? v (lambda-formal expr)))
-	      (free-variable? v (lambda-body expr))))
-	(else
-	 (or (free-variable? v (application-op expr))
-	     (free-variable? v (application-arg expr))))))
+;; (define (free-variable? v expr)
+;;   (cond ((atom? expr) (eq? v expr))
+;; 	   ((lambda? expr)
+;; 	    (and (not (eq? v (lambda-formal expr)))
+;; 		 (free-variable? v (lambda-body expr))))
+;; 	   (else
+;; 	    (or (free-variable? v (application-op expr))
+;; 		(free-variable? v (application-arg expr))))))
 
 (define (match pattern expr)
   (if (atom? pattern)
@@ -98,12 +104,12 @@
 
 ;; I x        --> x
 ;; K a b      --> b
-;; S f f x    --> (f x) (g x)
+;; S f g x    --> (f x) (g x)
 ;; B f g x    --> f (g x)
 ;; C f y x    --> (f x) y
 ;; S* c f g x --> c (f x) (g x)
 ;; B* c f g x --> c (f (g x))
-;; C* c f g x --> c (f x) y
+;; C* c f y x --> c (f x) y
 
 (define (make-K e) (make-combine 'K e))
 (define (make-S p q) (make-combine 'S p q))
@@ -113,7 +119,7 @@
 ;; (define (make-B* p q) (make-combine 'B* p q))
 ;; (define (make-C* p q) (make-combine 'C* p q))
 
-;; Some mor patterns that can ba useful for optimization. From "A
+;; Some more patterns that can be useful for optimization. From "A
 ;; combinator-based compiler for a functional language" by Hudak &
 ;; Kranz.
 
@@ -128,7 +134,7 @@
 ;; Y (K x) => x
 
 (define optimizations
-  (list (rule '(S (K *) (K *)) (lambda (p q) (make-K (make-appliction p q))))
+  (list (rule '(S (K *) (K *)) (lambda (p q) (make-K (make-application p q))))
 	(rule '(S (K *) I) (lambda (p) p))
 	;; (rule '(B K I) (lambda () 'K))
 	(rule '(S (K *) (B * *)) (lambda (p q r) (make-combine 'B* p q r)))
@@ -149,7 +155,7 @@
 
 (define (optimize-application op args)
   (if (null? args) op
-      (optimize-application (optimize (make-appliction op (car args)))
+      (optimize-application (optimize (make-application op (car args)))
 			    (cdr args))))
 
 (define (make-combine op . args)
@@ -161,7 +167,7 @@
 	 (translate-lambda (lambda-formal expr)
 			   (translate-expression (lambda-body expr))))
 	(else
-	 (make-appliction (translate-expression (application-op expr))
+	 (make-application (translate-expression (application-op expr))
 			  (translate-expression (application-arg expr))))))
 
 (define (translate-lambda v expr)
@@ -173,14 +179,14 @@
 	 (make-S (translate-lambda v (application-op expr))
 		       (translate-lambda v (application-arg expr))))))
   
-(define (make-flat-application op arg)
-  (if (atom? op) `(,op ,arg)
-      `(,@op ,arg)))
+(define (make-flat-application op args)
+  (if (atom? op) `(,op ,@args)
+      `(,@op ,@args)))
       
 (define (flatten-application expr)
   (if (or (atom? expr) (lambda? expr)) expr
       (make-flat-application (flatten-application (application-op expr))
-			     (flatten-application (application-arg expr)))))
+			     (map flatten-application (application-args expr)))))
 
 (define (translate expr)
   (flatten-application (translate-expression (preprocess expr))))
@@ -197,3 +203,55 @@
 ;; 
 ;; (translate '(lambda (r) (lambda (x) (if (= x 0) 1 (* x (r (- x 1)))))))
 ;; ===> (B* (S (C* if (C = 0) 1)) (S *) (C B (C - 1)))
+;;
+;; (translate '(lambda (file)
+;;    (let ((ctx (spki_make_context (prog1 algorithms file))))
+;;      (for_sexp (lambda (e) ctx) (spki_add_acl ctx) file))))
+;; ===> '(S (C (S (B for_sexp K) spki_add_acl)) (B spki_make_context (prog1 algorithms)))
+
+;;; Reduction machine, mainly for testing. Works on the flattened representation
+
+(define reductions
+  (let ((A (lambda (op . args) (make-flat-application op args))))
+    `( (I 1 ,(lambda (x) x))
+       (K 2 ,(lambda (a b) b))
+       (S 3 ,(lambda (f g x) (A (A f x)
+				(A g x))))
+       (B 3 ,(lambda (f g x) (A f
+				(A g x))))
+       (C 3 ,(lambda (f y x) (A (A f x)
+				y)))
+       (S* 4 ,(lambda (c f g x) (A c
+				   (A f x)
+				   (A g x))))
+       (B* 4 ,(lambda (c f g x) (A c
+				   (A f
+				      (A g x)))))
+       (C* 4 ,(lambda (c f y x) (A c
+				   (A f x)
+				   y))))))
+
+(define (reduce/rule rule args)
+  (let ((needed (cadr rule))
+	(available (length args))
+	(transform (caddr rule)))
+    (cond ((= needed available)
+	   (apply transform args))
+	  ((< needed available)
+	   (let ((pair (split-list-at needed args)))
+	     (make-flat-application (apply transform (car pair))
+				    (cdr pair))))
+	  (else #f))))
+
+;; Reduces the top-level expression; returns #f if no reduction is possible
+(define (reduce-1 e)	    
+  (if (atom? e) #f
+      (let* ((op (application-op e))
+	     (reduction (assq op reductions)))
+	;; (werror "op = ~s, reduction: ~s\n" op reduction)
+	(and reduction (reduce/rule reduction (application-args e))))))
+
+(define (reduce-expr e)
+  (let loop ((e e))
+    (let ((new (reduce-1 e)))
+      (if new (loop new) e))))
