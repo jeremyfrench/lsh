@@ -30,5 +30,6 @@ prime_table.h
 sexp_conv
 sexp_table.h
 sexp_test
+srp-gen
 stamp-h
 stamp-h.in

@@ -1,5 +1,22 @@
 2000-05-28  Niels Möller  <nisse@cuckoo.localdomain>
 
+	* src/srp_exchange.c (srp_make_verifier): New function.
+	(srp_hash_password): Fixed call to ssh_format.
+	(srp_make_init_msg): Likewise.
+	(srp_make_reply_msg): Likewise.
+
+	* src/publickey_crypto.c (make_ssh_group1): New funcction.
+
+	* src/lshd.c: Added SRP support. New options --srp-keyexchange,
+	--no-srp-keyexchange, --dh-keyexchange, --no-dh-keyexchange.
+
+	* src/dh_exchange.c (make_dh): New function.
+	(make_dh1): Use make_dh() and make_ssh_group1().
+
+	* src/command.h (COMMAND_STATIC): New macro.
+
+	* src/Makefile.am.in (bin_PROGRAMS): Added srp-gen.
+
 	* src/unix_user.c (do_read_file): Changed USER_READ_FILE to use
 	exceptions and continuations.
 
