@@ -84,25 +84,16 @@ make_listen_with_callback(struct command *callback,
 extern struct collect_info_1 listen_with_callback;
 #define LISTEN_CALLBACK (&listen_with_callback.super.super.super)
 
-#if 0
-#define LISTEN_CONNECTION (&listen_with_connection.super.super.super)
-#endif
+struct command *
+make_connect_port(struct io_backend *backend,
+		  struct address_info *target);
 
-extern struct collect_info_1 connect_with_port;
-#define CONNECT_PORT (&connect_with_port.super.super.super)
-
-struct command *make_connect_port(struct io_backend *backend,
-				  struct address_info *target);
-struct command *make_connect_connection(struct io_backend *backend);
-
-extern struct collect_info_1 connect_with_connection;
+struct command *
+make_connect_connection(struct io_backend *backend);
 
 struct command *
 make_simple_connect(struct io_backend *backend,
 		    struct resource_list *resources);
-
-struct command *
-make_connect_command(struct io_backend *backend);
 
 struct command *
 make_simple_listen(struct io_backend *backend,

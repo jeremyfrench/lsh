@@ -375,27 +375,6 @@ make_connect_port(struct io_backend *backend,
   return &self->super;
 }
 
-static struct lsh_object *
-collect_connect_port(struct collect_info_2 *info,
-		     struct lsh_object *a,
-		     struct lsh_object *b)
-{
-  CAST(io_backend, backend, a);
-  CAST(address_info, target, b);
-  assert(!info->next);
-  assert(backend);
-  assert(target);
-  
-  return &make_connect_port(backend, target)->super;
-}
-
-static struct collect_info_2 collect_info_connect_port_2 =
-STATIC_COLLECT_2_FINAL(collect_connect_port);
-
-struct collect_info_1 connect_with_port =
-STATIC_COLLECT_1(&collect_info_connect_port_2);
-
-
 
 /* GABA:
    (class
