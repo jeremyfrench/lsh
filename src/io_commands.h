@@ -68,11 +68,13 @@ extern struct command_2 connect_connection_command;
 extern struct command connect_simple_command;
 #define CONNECT_SIMPLE (&connect_simple_command.super)
 
+#if 0
 struct command *
 make_listen_local(struct local_info *info);
 
 struct command *
 make_connect_local(void);
+#endif
 
 extern struct command connect_local_command;
 #define CONNECT_LOCAL (&connect_local_command.super)
