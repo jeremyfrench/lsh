@@ -236,3 +236,38 @@ test_sign(const char *name,
   KILL(s);
   KILL(key);
 }
+
+static int
+test_spki_match(const char *name,
+		const struct lsh_string *resource,
+		const struct lsh_string *access)
+{
+  struct spki_tag *tag = spki_sexp_to_tag
+    (string_to_sexp(SEXP_CANONICAL, resource, 0),
+     17);
+
+  struct sexp *access_expr
+    = string_to_sexp(SEXP_CANONICAL, access, 0);
+
+  (void) name;
+  return SPKI_TAG_MATCH(tag, access_expr);
+}
+
+void
+test_spki_grant(const char *name,
+		const struct lsh_string *resource,
+		const struct lsh_string *access)
+{
+  if (!test_spki_match(name, resource, access))
+    FAIL();
+}
+
+void
+test_spki_deny(const char *name,
+	       const struct lsh_string *resource,
+	       const struct lsh_string *access)
+{
+  if (test_spki_match(name, resource, access))
+    FAIL();
+}
+

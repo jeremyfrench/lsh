@@ -44,6 +44,16 @@ test_sign(const char *name,
 	  struct lsh_string *msg,
 	  const struct lsh_string *signature);
 
+void
+test_spki_grant(const char *name,
+		const struct lsh_string *resource,
+		const struct lsh_string *access);
+
+void
+test_spki_deny(const char *name,
+	       const struct lsh_string *resource,
+	       const struct lsh_string *access);
+
 #define H(x) decode_hex(x)
 #define S(x) make_string(x)
 
