@@ -4,6 +4,12 @@
 
 2004-03-02  Niels Möller  <nisse@lysator.liu.se>
 
+	* Makefile.am (EXTRA_DIST): Added strcasecmp.c.
+
+	* argp-help.c: Declare strcasecmp.
+
+	* strcasecmp.c (strcasecmp): New file.
+
 	* argp-parse.c, argp-help.c: Conditionally include malloc.h.
 
 2004-03-01  Niels Möller  <nisse@lysator.liu.se>
