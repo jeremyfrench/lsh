@@ -1,3 +1,37 @@
+2002-11-15  Niels Möller  <niels@s3.kth.se>
+
+	* testsuite/Makefile.am (AM_LDFLAGS): Need -L../../nettle.
+	(TS_PROGS): Added read-acl-test.
+
+	* testsuite/read-acl-test.c: New test case.
+
+	* testsuite/principal-test.c: Renamed file, was subject-test.c. 
+
+	* certificate.c (hash_data): New function.
+	(spki_principal_add_key): Made static. Use hash_data, and set the
+	flags.
+	(spki_principal_add_md5): New function.
+	(spki_principal_add_sha1): New function.
+	(spki_principal_by_key): Compare hashes. Create new principal if
+	no old one matches.
+	(spki_principal_by_md5): Check flag to see if md5 hash of each
+	principal on the list is known.
+	(spki_principal_by_sha1): Likewise, for sha1.
+	(spki_check_type): Advance iterator past the matched type.
+	(parse_principal): Handle hashes.
+	(parse_tag): New function.
+	(parse_acl_entry): Unlike certificates, subexpressions must come
+	in order, and there's no <subject>-expression.
+	(spki_acl_parse): Fixed version check.
+
+	* certificate.h (struct spki_hashes): New struct.
+	(enum spki_principal_flags): New enum.
+	(struct spki_principal): Use flags to keep track of which hash
+	values are known.
+	(enum spki_5_tuple_flags): Renamed, was spki_flags.
+
+	* spki-types.in: Added "comment" and "valid".
+
 2002-11-14  Niels Möller  <niels@s3.kth.se>
 
 	* spki-types.in: Added types public-key, md5 and sha1.
