@@ -1,3 +1,7 @@
+News for the 0.2.7 release
+
+	Bug fixes for compialtion on Solaris.
+
 News for the 0.2.6 release
 
 	Bugfixes for tcp forwarding functions.
