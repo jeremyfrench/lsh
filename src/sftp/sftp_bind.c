@@ -29,6 +29,9 @@
 
 #include "sftp_bind.h"
 
+#include "io.h"
+#include "werror.h"
+
 static int transport_pid = 0;
 
 static int sftp_callbacks = 0;
@@ -110,10 +113,10 @@ int lsftp_open_connection(char** argv, int argc)
     }
 
   if (pipe(stdin_pipe) < 0)
-    FATAL("Creating stdin_pipe failed.");
+    fatal("Creating stdin_pipe failed.");
   
   if (pipe(stdout_pipe) < 0)
-    FATAL("Creating stdout_pipe failed.");
+    fatal("Creating stdout_pipe failed.");
 
 #ifdef USING_CYGWIN
   setmode( stdin_pipe[0], O_BINARY );
@@ -126,7 +129,7 @@ int lsftp_open_connection(char** argv, int argc)
   switch( ( pid = fork() ) )
     {
     case -1:
-      FATAL("fork failed.");
+      fatal("fork failed.");
     default: /* Parent */
       {
 	void* err;
@@ -148,6 +151,9 @@ int lsftp_open_connection(char** argv, int argc)
       }
     case 0: /* Child */
       {
+	/* FIXME: Do as much as possible of this setup before fork(),
+	 * for better error reporting. */
+	
 	int k = 0;
 	int j = 0;
 	int i;
@@ -212,7 +218,7 @@ int lsftp_open_connection(char** argv, int argc)
 								    NULL. */
 	
 	if ( !new_argv )
-	  FATAL("Malloc failed ");
+	  fatal("Malloc failed ");
 
 
 	cur_string = before_string;
@@ -258,9 +264,9 @@ int lsftp_open_connection(char** argv, int argc)
       
 	
 	if (dup2(stdin_pipe[0], STDIN_FILENO) < 0)
-	  FATAL("dup2 for stdin failed.");
+	  fatal("dup2 for stdin failed.");
 	if (dup2(stdout_pipe[1], STDOUT_FILENO) < 0)
-	  FATAL("dup2 for stdout failed.");
+	  fatal("dup2 for stdout failed.");
 	
 	close(stdin_pipe[0]);
 	close(stdin_pipe[1]);
@@ -324,7 +330,7 @@ int lsftp_open_connection(char** argv, int argc)
 		 ".\n"
 		 );
 	
-	FATAL( "Could not start a suitable secsh client." );
+	fatal( "Could not start a suitable secsh client." );
       }
     }
 
