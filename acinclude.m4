@@ -1,4 +1,4 @@
-# Try to detect the type of the third arg to getsockname() et al
+dnl Try to detect the type of the third arg to getsockname() et al
 AC_DEFUN([LSH_TYPE_SOCKLEN_T],
 [AH_TEMPLATE([socklen_t], [Length type used by getsockopt])
 AC_CACHE_CHECK([for socklen_t in sys/socket.h], ac_cv_type_socklen_t,
@@ -20,7 +20,7 @@ AC_DEFINE(socklen_t, int)
 fi
 ])
 
-# LSH_PATH_ADD(path-id, directory)
+dnl LSH_PATH_ADD(path-id, directory)
 AC_DEFUN([LSH_PATH_ADD],
 [AC_MSG_CHECKING($2)
 ac_exists=no
@@ -50,10 +50,10 @@ if test $ac_exists = no ; then
 fi
 ])
 
-# LSH_RPATH_ADD(dir)
+dnl LSH_RPATH_ADD(dir)
 AC_DEFUN([LSH_RPATH_ADD], [LSH_PATH_ADD(RPATH_CANDIDATE, $1)])
 
-# LSH_RPATH_INIT(candidates)
+dnl LSH_RPATH_INIT(candidates)
 AC_DEFUN([LSH_RPATH_INIT],
 [AC_MSG_CHECKING([for -R flag])
 RPATHFLAG=''
@@ -99,9 +99,9 @@ for d in $1 ; do
 done
 ])    
 
-# Try to execute a main program, and if it fails, try adding some
-# -R flag.
-# LSH_RPATH_FIX
+dnl Try to execute a main program, and if it fails, try adding some
+dnl -R flag.
+dnl LSH_RPATH_FIX
 AC_DEFUN([LSH_RPATH_FIX],
 [if test $cross_compiling = no -a "x$RPATHFLAG" != x ; then
   ac_success=no
@@ -136,9 +136,9 @@ dnl echo LDFLAGS = $LDFLAGS
 fi
 ])
 
-# Like AC_CHECK_LIB, but uses $KRB_LIBS rather than $LIBS.
-# LSH_CHECK_KRB_LIB(LIBRARY, FUNCTION, [, ACTION-IF-FOUND [,
-#                  ACTION-IF-NOT-FOUND [, OTHER-LIBRARIES]]])
+dnl Like AC_CHECK_LIB, but uses $KRB_LIBS rather than $LIBS.
+dnl LSH_CHECK_KRB_LIB(LIBRARY, FUNCTION, [, ACTION-IF-FOUND [,
+dnl                  ACTION-IF-NOT-FOUND [, OTHER-LIBRARIES]]])
 
 AC_DEFUN([LSH_CHECK_KRB_LIB],
 [AC_CHECK_LIB([$1], [$2],
@@ -153,7 +153,7 @@ AC_DEFUN([LSH_CHECK_KRB_LIB],
 , [$5 $KRB_LIBS])
 ])
 
-# LSH_LIB_ARGP(ACTION-IF-OK, ACTION-IF-BAD)
+dnl LSH_LIB_ARGP(ACTION-IF-OK, ACTION-IF-BAD)
 AC_DEFUN([LSH_LIB_ARGP],
 [ ac_argp_save_LIBS="$LIBS"
   ac_argp_save_LDFLAGS="$LDFLAGS"
@@ -275,3 +275,41 @@ int main(int argc, char **argv)
     ifelse([$2],, true, [$2])
   fi   
 ])
+
+dnl LSH_GCC_ATTRIBUTES
+dnl Check for gcc's __attribute__ construction
+
+AC_DEFUN([LSH_GCC_ATTRIBUTES],
+[AC_CACHE_CHECK(for __attribute__,
+	       lsh_cv_c_attribute,
+[ AC_TRY_COMPILE([
+#include <stdlib.h>
+],
+[
+static void foo(void) __attribute__ ((noreturn));
+
+static void __attribute__ ((noreturn))
+foo(void)
+{
+  exit(1);
+}
+],
+lsh_cv_c_attribute=yes,
+lsh_cv_c_attribute=no)])
+
+AH_TEMPLATE([HAVE_GCC_ATTRIBUTE], [Define if the compiler understands __attribute__])
+if test "x$lsh_cv_c_attribute" = "xyes"; then
+  AC_DEFINE(HAVE_GCC_ATTRIBUTE)
+fi
+
+AH_BOTTOM(
+[#if __GNUC__ && HAVE_GCC_ATTRIBUTE
+# define NORETURN __attribute__ ((__noreturn__))
+# define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
+# define UNUSED __attribute__ ((__unused__))
+#else
+# define NORETURN
+# define PRINTF_STYLE(f, a)
+# define UNUSED
+#endif
+])])
