@@ -2,7 +2,7 @@
  *
  * Packet processor dumping packets to a file.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -26,7 +26,10 @@
 #ifndef LSH_DEBUG_H_INCLUDED
 #define LSH_DEBUG_H_INCLUDED
 
+/* FIXME: Need this be a separate file? */
+
 #include <stdio.h>
+
 #include "abstract_io.h"
 #include "connection.h"
 

@@ -1,8 +1,6 @@
 /* crypto.h
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -54,9 +52,9 @@ make_hmac_algorithm(const struct hash_algorithm *h);
 
 void
 pkcs5_derive_key(struct mac_algorithm *prf,
-		 UINT32 password_length, const UINT8 *password,
-		 UINT32 salt_length, const UINT8 *salt,
-		 UINT32 iterations,
-		 UINT32 key_length, UINT8 *key);
+		 uint32_t password_length, const uint8_t *password,
+		 uint32_t salt_length, const uint8_t *salt,
+		 uint32_t iterations,
+		 uint32_t key_length, uint8_t *key);
 
 #endif /* LSH_CRYPTO_H_INCLUDED */

@@ -1,8 +1,6 @@
 /* keyexchange.h
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -74,7 +72,7 @@
    (class
      (name kexinit)
      (vars
-       (cookie array UINT8 16);
+       (cookie array uint8_t 16);
        ; Lists of atoms
        (kex_algorithms object int_list)
        (server_hostkey_algorithms object int_list)

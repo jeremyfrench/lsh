@@ -2,7 +2,6 @@
  *
  * User-related functions on UN*X
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -24,33 +23,26 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "server_userauth.h"
-
-#include "environ.h"
-#include "format.h"
-#include "io.h"
-#include "read_file.h"
-#include "reaper.h"
-#include "server_pty.h"
-#include "werror.h"
-#include "xalloc.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <time.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
-#include <sys/wait.h>
-
 #include <signal.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 
 #if HAVE_CRYPT_H
 # include <crypt.h>
@@ -77,6 +69,18 @@
 #if HAVE_LIBUTIL_H
 # include <libutil.h>
 #endif
+
+#include "server_userauth.h"
+
+#include "environ.h"
+#include "format.h"
+#include "io.h"
+#include "read_file.h"
+#include "reaper.h"
+#include "server_pty.h"
+#include "werror.h"
+#include "xalloc.h"
+
 
 /* Forward declaration */
 struct unix_user_db;
@@ -421,7 +425,7 @@ make_exc_read_user_file_handler(struct abstract_write *c,
 static const struct exception *
 do_read_file(struct lsh_user *u, 
 	     const char *name, int secret,
-	     UINT32 limit,
+	     uint32_t limit,
 	     struct abstract_write *c)
 {
   CAST(unix_user, user, u);

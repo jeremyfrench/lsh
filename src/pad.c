@@ -1,8 +1,6 @@
 /* pad.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -22,6 +20,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <assert.h>
 #include <string.h>
@@ -51,11 +53,11 @@ do_pad(struct abstract_write *w,
 
   struct lsh_string *new;
   
-  UINT32 new_size;
-  UINT8 padding;
+  uint32_t new_size;
+  uint8_t padding;
 
-  UINT8 *data;
-  UINT32 block_size;
+  uint8_t *data;
+  uint32_t block_size;
 
   block_size = connection->send_crypto
     ? connection->send_crypto->block_size : 8;

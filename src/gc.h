@@ -2,7 +2,7 @@
  *
  * Simple mark&sweep garbage collector.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

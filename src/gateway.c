@@ -1,6 +1,5 @@
 /* gateway.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -21,6 +20,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "gateway.h"
 
@@ -43,7 +46,7 @@
  * addresses. And it should be really rare in usernames. */
 
 static int
-check_string_l(unsigned length, const UINT8 *s)
+check_string_l(unsigned length, const uint8_t *s)
 {
   unsigned i;
   for (i = 0; i<length; i++)
@@ -60,7 +63,7 @@ check_string_l(unsigned length, const UINT8 *s)
 }
 
 static int
-check_string(const UINT8 *s)
+check_string(const uint8_t *s)
 {
   for (;;)
     switch(*s++)

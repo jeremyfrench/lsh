@@ -1,6 +1,5 @@
 /* channel_commands.h
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -45,7 +44,7 @@
        ; prepare_channel_open.
        (new_channel method "struct ssh_channel *"
                     "struct ssh_connection *connection"
-                    "UINT32 local_channel_number"
+                    "uint32_t local_channel_number"
                     "struct lsh_string **request")))
 */
 
@@ -99,7 +98,7 @@ void do_channel_global_command(struct command *s,
 			       struct exception_handler *e);
 
 struct command *
-make_install_global_request_handler(UINT32 name,
+make_install_global_request_handler(uint32_t name,
 				    struct global_request *handler);
 
 /* Takes a connection and a handler as arguments, and installs the
@@ -132,11 +131,11 @@ do_install_channel_open_handler(struct command_2 *s,
 { { { STATIC_HEADER, do_command_2 }, do_install_channel_open_handler }, atom }
 
 struct command *
-make_install_fix_global_request_handler(UINT32 name,
+make_install_fix_global_request_handler(uint32_t name,
 					struct global_request *handler);
 
 struct command *
-make_install_fix_channel_open_handler(UINT32 name,
+make_install_fix_channel_open_handler(uint32_t name,
 				      struct channel_open *handler);
 
 #endif /* LSH_CHANNEL_COMMANDS_H_INCLUDED */

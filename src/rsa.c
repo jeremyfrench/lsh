@@ -1,6 +1,5 @@
 /* rsa.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "publickey_crypto.h"
 
 #include "atoms.h"
@@ -35,9 +41,6 @@
 #include "nettle/rsa.h"
 #include "nettle/sexp.h"
 #include "nettle/sha.h"
-
-#include <assert.h>
-#include <string.h>
 
 #include "rsa.c.x"
 
@@ -71,10 +74,10 @@
 static int
 do_rsa_verify(struct verifier *v,
 	      int algorithm,
-	      UINT32 length,
-	      const UINT8 *msg,
-	      UINT32 signature_length,
-	      const UINT8 *signature_data)
+	      uint32_t length,
+	      const uint8_t *msg,
+	      uint32_t signature_length,
+	      const uint8_t *signature_data)
 {
   CAST(rsa_verifier, self, v);
   struct sha1_ctx hash;
@@ -91,8 +94,8 @@ do_rsa_verify(struct verifier *v,
     case ATOM_SSH_RSA:
       {
 	struct simple_buffer buffer;
-	UINT32 length;
-	const UINT8 *digits;
+	uint32_t length;
+	const uint8_t *digits;
 	int atom;
 	
 	simple_buffer_init(&buffer, signature_length, signature_data);
@@ -211,8 +214,8 @@ parse_ssh_rsa_public(struct simple_buffer *buffer)
 static struct lsh_string *
 do_rsa_sign(struct signer *s,
 	    int algorithm,
-	    UINT32 msg_length,
-	    const UINT8 *msg)
+	    uint32_t msg_length,
+	    const uint8_t *msg)
 {
   CAST(rsa_signer, self, s);
   struct lsh_string *res;
@@ -308,8 +311,8 @@ struct signature_algorithm rsa_sha1_algorithm =
   { STATIC_HEADER, make_rsa_signer, make_rsa_verifier };
 
 struct verifier *
-make_ssh_rsa_verifier(UINT32 public_length,
-		      const UINT8 *public)
+make_ssh_rsa_verifier(uint32_t public_length,
+		      const uint8_t *public)
 {
   struct simple_buffer buffer;
   int atom;

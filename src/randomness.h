@@ -1,8 +1,6 @@
 /* randomness.h
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -59,10 +57,10 @@ enum randomness_quality { RANDOM_GOOD, RANDOM_PAD_ONLY };
      (name randomness)
      (vars
        (quality . "enum randomness_quality")
-       (random method void "UINT32 length" "UINT8 *dst")
+       (random method void "uint32_t length" "uint8_t *dst")
        ; To be used only for SOURCE_REMOTE and SOURCE_SECRET
        (add method void "enum random_source_type"
-                        "UINT32 length" "const UINT8 *data")))
+                        "uint32_t length" "const uint8_t *data")))
 */
 
 #define RANDOM(r, length, dst) ((r)->random((r), (length), (dst)))

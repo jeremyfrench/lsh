@@ -2,7 +2,7 @@
  *
  * Xauth parsing.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

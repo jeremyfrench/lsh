@@ -3,7 +3,6 @@
  * Translate local signal numbers to canonical numbers, and vice versa.
  * The value of "canonical" is rather arbitrary.
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol

@@ -1,7 +1,5 @@
 /* lsh-pam-checkpw.c
  *
- * $Id$
- *
  * This is a helper program to verify a name and password using
  * PAM. */
 

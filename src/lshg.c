@@ -1,7 +1,5 @@
 /* lshg.c
  *
- * $Id$
- *
  * Connect to a gateway. */
 
 /* lsh, an implementation of the ssh protocol

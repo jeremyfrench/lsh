@@ -2,7 +2,6 @@
  *
  * Process-related functions on UN*X
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -24,12 +23,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "reaper.h"
-
-#include "format.h"
-#include "userauth.h"
-#include "werror.h"
-#include "xalloc.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <errno.h>
 #include <string.h>
@@ -38,9 +34,11 @@
 #include <unistd.h>
 #endif
 
+#include <signal.h>
+
+#include <sys/types.h>
 #include <sys/wait.h>
 
-#include <signal.h>
 
 /* FIXME: Should this be done in configure instead? Doesn't hurt though */
 
@@ -63,6 +61,13 @@
 #if HAVE_LIBUTIL_H
 # include <libutil.h>
 #endif
+
+#include "reaper.h"
+
+#include "format.h"
+#include "userauth.h"
+#include "werror.h"
+#include "xalloc.h"
 
 #include "unix_process.c.x"
 
@@ -320,8 +325,8 @@ make_utmp_cleanup(struct lsh_string *tty,
 		  struct exit_callback *c)
 {
   NEW(utmp_cleanup, self);
-  UINT32 length = tty->length;
-  UINT8 *data = tty->data;
+  uint32_t length = tty->length;
+  uint8_t *data = tty->data;
 
   self->super.exit = do_utmp_cleanup;
   self->c = c;

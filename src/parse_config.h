@@ -1,7 +1,5 @@
 /* parse_config.h
  *
- * $id$
- *
  * Parsing of configuration files. */
 
 /* lsh, an implementation of the ssh protocol
@@ -35,7 +33,7 @@ struct config_setting;
 struct config_group;
 
 struct config_group *
-config_parse_string(UINT32 length, const UINT8 *data);
+config_parse_string(uint32_t length, const uint8_t *data);
 
 struct config_match
 {

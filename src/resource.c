@@ -4,7 +4,7 @@
  * processes and ports. Used to kill or release the resource in
  * question when the connection dies.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

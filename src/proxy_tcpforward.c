@@ -1,6 +1,6 @@
 /* proxy_tcpforward.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -41,7 +41,7 @@ do_proxy_open_direct_tcpip(struct channel_open *s UNUSED,
 			   struct exception_handler *e)
 {
   struct lsh_string *host = NULL, *orig_host = NULL;
-  UINT32 port, orig_port;
+  uint32_t port, orig_port;
 
   debug("server.c: do_proxy_open_direct_tcpip\n");
 
@@ -97,7 +97,7 @@ do_proxy_open_forwarded_tcpip(struct channel_open *s UNUSED,
 			      struct exception_handler *e)
 {
   struct lsh_string *host = NULL, *orig_host = NULL;
-  UINT32 port, orig_port;
+  uint32_t port, orig_port;
 
   debug("server.c: do_proxy_open_forwarded_tcpip\n");
 

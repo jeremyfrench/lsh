@@ -2,7 +2,7 @@
  *
  * Header file for my poll() SVID3 emulation function.
  *
- * $Id$ */
+ */
 
 /*
  * AUTHOR:     Sean Reifschneider <jafo@tummy.com>

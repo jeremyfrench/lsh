@@ -2,7 +2,7 @@
  *
  * General channel type for forwarding data to an fd
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,16 +23,20 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <errno.h>
+#include <string.h>
+
 #include "channel_forward.h"
 
 #include "io.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <errno.h>
-#include <string.h>
 
 #define GABA_DEFINE
 #include "channel_forward.h.x"
@@ -41,7 +45,7 @@
 /* NOTE: Adds the socket to the channel's resource list */
 void
 init_channel_forward(struct channel_forward *self,
-		     struct lsh_fd *socket, UINT32 initial_window)
+		     struct lsh_fd *socket, uint32_t initial_window)
 {
   assert(socket);
   
@@ -64,7 +68,7 @@ init_channel_forward(struct channel_forward *self,
 }
 
 struct channel_forward *
-make_channel_forward(struct lsh_fd *socket, UINT32 initial_window)
+make_channel_forward(struct lsh_fd *socket, uint32_t initial_window)
 {
   NEW(channel_forward, self);
   init_channel_forward(self, socket, initial_window);
@@ -94,7 +98,7 @@ do_channel_forward_receive(struct ssh_channel *c,
 
 static void
 do_channel_forward_send_adjust(struct ssh_channel *s,
-		     UINT32 i UNUSED)
+		     uint32_t i UNUSED)
 {
   CAST_SUBTYPE(channel_forward, self, s);
   

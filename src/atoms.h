@@ -1,8 +1,6 @@
 /* atoms.h
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -26,14 +24,16 @@
 #ifndef LSH_ATOMS_H_INCLUDED
 #define LSH_ATOMS_H_INCLUDED
 
-#include "lsh_types.h"
+/* FIXME: Need this be a separate file? */
+#include <inttypes.h>
+
 #include "atoms_defines.h"
 
 /* Atoms are represented as plain (small) ints. Zero is used for all
  * atoms we don't know about. */
 
-UINT32 get_atom_length(int atom);
-const UINT8 *get_atom_name(int atom);
-int lookup_atom(UINT32 length, const UINT8 *name);
+uint32_t get_atom_length(int atom);
+const uint8_t *get_atom_name(int atom);
+int lookup_atom(uint32_t length, const uint8_t *name);
 
 #endif /* LSH_ATOMS_H_INCLUDED */

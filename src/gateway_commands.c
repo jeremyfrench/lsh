@@ -1,6 +1,5 @@
 /* gateway_commands.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "gateway_commands.h"
 
 #include "channel.h"
@@ -35,9 +41,6 @@
 #include "unpad.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <string.h>
 
 #include "gateway_commands.c.x"
 
@@ -59,10 +62,10 @@ do_gateway_pad(struct abstract_write *w,
 
   struct lsh_string *new;
   
-  UINT32 new_size;
-  UINT8 padding;
+  uint32_t new_size;
+  uint8_t padding;
 
-  UINT8 *data;
+  uint8_t *data;
 
   /* new_size is (packet->length + 9) rounded up to a multiple of
    * block_size. But the block_size if fixed to 8 octets. */

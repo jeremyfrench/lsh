@@ -1,6 +1,6 @@
 /* proxy_userauth.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -54,7 +54,7 @@ make_proxy_user(struct lsh_string *name)
      (vars
        (proxy_auth method void "struct ssh_connection *"
                                "struct lsh_string *username"
-			       "UINT32 service"
+			       "uint32_t service"
 			       "struct simple_buffer *args")))
 */
 
@@ -64,7 +64,7 @@ static void
 do_forward_password_userauth(struct proxy_userauth *ignored UNUSED,
 			     struct ssh_connection *connection,
 			     struct lsh_string *username,
-			     UINT32 service,
+			     uint32_t service,
 			     struct simple_buffer *args)
 {
   struct lsh_string *password;

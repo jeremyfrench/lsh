@@ -1,6 +1,6 @@
 /* abstract_crypto.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -21,15 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "abstract_crypto.h"
 
 #include "crypto.h"
 #include "format.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <string.h>
 
 #define GABA_DEFINE
 #include "abstract_crypto.h.x"
@@ -111,8 +115,8 @@ crypt_string_pad(struct crypto_instance *c,
 		 int free)
 {
   struct lsh_string *s;
-  UINT8 *p;
-  UINT32 pad = c->block_size - (in->length % c->block_size);
+  uint8_t *p;
+  uint32_t pad = c->block_size - (in->length % c->block_size);
   
   assert(pad);
   
@@ -130,7 +134,7 @@ crypt_string_unpad(struct crypto_instance *c,
 		   int free)
 {
   struct lsh_string *out;
-  UINT32 pad;
+  uint32_t pad;
   
   assert(in->length);
   

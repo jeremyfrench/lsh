@@ -2,7 +2,7 @@
  *
  * This is the layer separating protocol processing from actual io.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

@@ -1,6 +1,6 @@
 /* client_keyexchange.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

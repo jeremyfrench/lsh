@@ -1,6 +1,5 @@
 /* channel.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "channel.h"
 
 #include "format.h"
@@ -31,9 +37,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <assert.h>
-#include <string.h>
-
 #define GABA_DEFINE
 #include "channel.h.x"
 #undef GABA_DEFINE
@@ -41,7 +44,7 @@
 #include "channel.c.x"
 
 struct exception *
-make_channel_open_exception(UINT32 error_code, const char *msg)
+make_channel_open_exception(uint32_t error_code, const char *msg)
 {
   NEW(channel_open_exception, self);
 
@@ -103,11 +106,11 @@ check_rec_max_packet(struct ssh_channel *channel)
 
 struct lsh_string *
 format_open_confirmation(struct ssh_channel *channel,
-			 UINT32 channel_number,
+			 uint32_t channel_number,
 			 const char *format, ...)
 {
   va_list args;
-  UINT32 l1, l2;
+  uint32_t l1, l2;
   struct lsh_string *packet;
   
 #define CONFIRM_FORMAT "%c%i%i%i%i"
@@ -141,7 +144,7 @@ format_open_confirmation(struct ssh_channel *channel,
 }
 
 struct lsh_string *
-format_open_failure(UINT32 channel, UINT32 reason,
+format_open_failure(uint32_t channel, uint32_t reason,
 		    const char *msg, const char *language)
 {
   return ssh_format("%c%i%i%z%z", SSH_MSG_CHANNEL_OPEN_FAILURE,
@@ -149,20 +152,20 @@ format_open_failure(UINT32 channel, UINT32 reason,
 }
 
 struct lsh_string *
-format_channel_success(UINT32 channel)
+format_channel_success(uint32_t channel)
 {
   return ssh_format("%c%i", SSH_MSG_CHANNEL_SUCCESS, channel);
 }
 
 struct lsh_string *
-format_channel_failure(UINT32 channel)
+format_channel_failure(uint32_t channel)
 {
   return ssh_format("%c%i", SSH_MSG_CHANNEL_FAILURE, channel);
 }
 
 struct lsh_string *
 prepare_window_adjust(struct ssh_channel *channel,
-		      UINT32 add)
+		      uint32_t add)
 {
   channel->rec_window_size += add;
   
@@ -180,7 +183,7 @@ prepare_window_adjust(struct ssh_channel *channel,
        ; Non-zero if the channel has already been deallocated.
        (dead . int)
        ; Local channel number 
-       (channel_number . UINT32)))
+       (channel_number . uint32_t)))
 */
 
 static void
@@ -248,7 +251,7 @@ do_exc_finish_channel_handler(struct exception_handler *s,
 
 static struct exception_handler *
 make_exc_finish_channel_handler(struct ssh_connection *connection,
-				UINT32 channel_number,
+				uint32_t channel_number,
 				struct exception_handler *e,
 				const char *context)
 {
@@ -310,7 +313,7 @@ make_channel_table(void)
 int
 alloc_channel(struct channel_table *table)
 {
-  UINT32 i;
+  uint32_t i;
   
   for(i = table->next_channel; i < table->used_channels; i++)
     {
@@ -328,9 +331,9 @@ alloc_channel(struct channel_table *table)
 
   if (i == table->allocated_channels) 
     {
-      UINT32 new_size = table->allocated_channels * 2;
+      uint32_t new_size = table->allocated_channels * 2;
       struct ssh_channel **new_channels;
-      UINT8 *new_in_use;
+      uint8_t *new_in_use;
 
       new_channels = lsh_space_alloc(sizeof(struct ssh_channel *)
 				     * new_size);
@@ -379,7 +382,7 @@ dealloc_channel(struct channel_table *table, int i)
 
 void
 use_channel(struct ssh_connection *connection,
-	    UINT32 local_channel_number)
+	    uint32_t local_channel_number)
 {
   struct channel_table *table = connection->table;
   struct ssh_channel *channel = table->channels[local_channel_number];
@@ -393,7 +396,7 @@ use_channel(struct ssh_connection *connection,
 }
 
 void
-register_channel(UINT32 local_channel_number,
+register_channel(uint32_t local_channel_number,
 		 struct ssh_channel *channel,
 		 int take_into_use)
 {
@@ -423,7 +426,7 @@ register_channel(UINT32 local_channel_number,
 }
 
 struct ssh_channel *
-lookup_channel(struct channel_table *table, UINT32 i)
+lookup_channel(struct channel_table *table, uint32_t i)
 {
   return ( (i < table->used_channels)
 	   && (table->in_use[i] == CHANNEL_IN_USE))
@@ -431,7 +434,7 @@ lookup_channel(struct channel_table *table, UINT32 i)
 }
 
 struct ssh_channel *
-lookup_channel_reserved(struct channel_table *table, UINT32 i)
+lookup_channel_reserved(struct channel_table *table, uint32_t i)
 {
   return ( (i < table->used_channels)
 	   && (table->in_use[i] == CHANNEL_RESERVED))
@@ -449,7 +452,7 @@ lookup_channel_reserved(struct channel_table *table, UINT32 i)
  * half or one third of the maximum window size), we send a
  * window_adjust message to sync them. */
 static void
-adjust_rec_window(struct flow_controlled *f, UINT32 written)
+adjust_rec_window(struct flow_controlled *f, uint32_t written)
 {
   CAST_SUBTYPE(ssh_channel, channel, f);
 
@@ -463,7 +466,7 @@ adjust_rec_window(struct flow_controlled *f, UINT32 written)
 
 void
 channel_start_receive(struct ssh_channel *channel,
-		      UINT32 initial_window_size)
+		      uint32_t initial_window_size)
 {
   if (channel->rec_window_size < initial_window_size)
     C_WRITE(channel->connection,
@@ -813,7 +816,7 @@ make_channel_request_exception_handler(struct ssh_channel *channel,
 
 static int
 parse_channel_request(struct simple_buffer *buffer,
-		      UINT32 *channel_number,
+		      uint32_t *channel_number,
 		      struct channel_request_info *info)
 {
   unsigned msg_number;
@@ -837,7 +840,7 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
 {
   struct simple_buffer buffer;
   struct channel_request_info info;
-  UINT32 channel_number;
+  uint32_t channel_number;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -915,10 +918,10 @@ DEFINE_PACKET_HANDLER(static, channel_request_handler,
      (super command_continuation)
      (vars
        (connection object ssh_connection)
-       (local_channel_number . UINT32)
-       (remote_channel_number . UINT32)
-       (send_window_size . UINT32)
-       (send_max_packet . UINT32)))
+       (local_channel_number . uint32_t)
+       (remote_channel_number . uint32_t)
+       (send_window_size . uint32_t)
+       (send_max_packet . uint32_t)))
 */
 
 static void
@@ -952,10 +955,10 @@ do_channel_open_continue(struct command_continuation *c,
 
 static struct command_continuation *
 make_channel_open_continuation(struct ssh_connection *connection,
-			       UINT32 local_channel_number,
-			       UINT32 remote_channel_number,
-			       UINT32 send_window_size,
-			       UINT32 send_max_packet)
+			       uint32_t local_channel_number,
+			       uint32_t remote_channel_number,
+			       uint32_t send_window_size,
+			       uint32_t send_max_packet)
 {
   NEW(channel_open_continuation, self);
 
@@ -975,8 +978,8 @@ make_channel_open_continuation(struct ssh_connection *connection,
      (super exception_handler)
      (vars
        (connection object ssh_connection)
-       (local_channel_number . UINT32)
-       (remote_channel_number . UINT32)))
+       (local_channel_number . uint32_t)
+       (remote_channel_number . uint32_t)))
 */
 
 static void
@@ -1009,8 +1012,8 @@ do_exc_channel_open_handler(struct exception_handler *s,
 
 static struct exception_handler *
 make_exc_channel_open_handler(struct ssh_connection *connection,
-			      UINT32 local_channel_number,
-			      UINT32 remote_channel_number,
+			      uint32_t local_channel_number,
+			      uint32_t remote_channel_number,
 			      struct exception_handler *parent,
 			      const char *context)
 {
@@ -1136,8 +1139,8 @@ DEFINE_PACKET_HANDLER(static, window_adjust_handler,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 channel_number;
-  UINT32 size;
+  uint32_t channel_number;
+  uint32_t size;
 
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -1179,7 +1182,7 @@ DEFINE_PACKET_HANDLER(static, channel_data_handler,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 channel_number;
+  uint32_t channel_number;
   struct lsh_string *data;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
@@ -1248,8 +1251,8 @@ DEFINE_PACKET_HANDLER(static, channel_extended_data_handler,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 channel_number;
-  UINT32 type;
+  uint32_t channel_number;
+  uint32_t type;
   struct lsh_string *data;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
@@ -1330,7 +1333,7 @@ DEFINE_PACKET_HANDLER(static, channel_eof_handler,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 channel_number;
+  uint32_t channel_number;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -1391,7 +1394,7 @@ DEFINE_PACKET_HANDLER(static, channel_close_handler,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 channel_number;
+  uint32_t channel_number;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -1451,10 +1454,10 @@ DEFINE_PACKET_HANDLER(static, channel_open_confirm_handler,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 local_channel_number;
-  UINT32 remote_channel_number;  
-  UINT32 window_size;
-  UINT32 max_packet;
+  uint32_t local_channel_number;
+  uint32_t remote_channel_number;  
+  uint32_t window_size;
+  uint32_t max_packet;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -1501,14 +1504,14 @@ DEFINE_PACKET_HANDLER(static, channel_open_failure_handler,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 channel_number;
-  UINT32 reason;
+  uint32_t channel_number;
+  uint32_t reason;
 
-  const UINT8 *msg;
-  UINT32 length;
+  const uint8_t *msg;
+  uint32_t length;
 
-  const UINT8 *language;
-  UINT32 language_length;
+  const uint8_t *language;
+  uint32_t language_length;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -1549,7 +1552,7 @@ DEFINE_PACKET_HANDLER(static, channel_success_handler,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 channel_number;
+  uint32_t channel_number;
   struct ssh_channel *channel;
       
   simple_buffer_init(&buffer, packet->length, packet->data);
@@ -1581,7 +1584,7 @@ DEFINE_PACKET_HANDLER(static, channel_failure_handler,
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 channel_number;
+  uint32_t channel_number;
   struct ssh_channel *channel;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
@@ -1625,7 +1628,7 @@ do_channels_after_keyexchange(struct command_continuation *s UNUSED,
 {
   CAST(ssh_connection, connection, x);
   struct channel_table *table = connection->table;
-  UINT32 i;
+  uint32_t i;
   
   /* Iterate over all channels, and call CHANNEL_SEND_ADJUST to get
    * them started again. */
@@ -1804,7 +1807,7 @@ channel_transmit_data(struct ssh_channel *channel,
 
 struct lsh_string *
 channel_transmit_extended(struct ssh_channel *channel,
-			  UINT32 type,
+			  uint32_t type,
 			  struct lsh_string *data)
 {
   assert(data->length <= channel->send_window_size);
@@ -1850,7 +1853,7 @@ channel_transmit_extended(struct ssh_channel *channel,
      (name channel_write_extended)
      (super channel_write)
      (vars
-       (type . UINT32)))
+       (type . uint32_t)))
 */
 
 static void
@@ -1904,7 +1907,7 @@ make_channel_write(struct ssh_channel *channel)
 
 struct abstract_write *
 make_channel_write_extended(struct ssh_channel *channel,
-			    UINT32 type)
+			    uint32_t type)
 {
   NEW(channel_write_extended, closure);
 
@@ -2049,7 +2052,7 @@ make_channel_io_exception_handler(struct ssh_channel *channel,
 /* Used by do_gateway_channel_open */
 struct lsh_string *
 format_channel_open_s(struct lsh_string *type,
-		      UINT32 local_channel_number,
+		      uint32_t local_channel_number,
 		      struct ssh_channel *channel,
 		      struct lsh_string *args)
 {
@@ -2062,12 +2065,12 @@ format_channel_open_s(struct lsh_string *type,
 }
 
 struct lsh_string *
-format_channel_open(int type, UINT32 local_channel_number,
+format_channel_open(int type, uint32_t local_channel_number,
 		    struct ssh_channel *channel,
 		    const char *format, ...)
 {
   va_list args;
-  UINT32 l1, l2;
+  uint32_t l1, l2;
   struct lsh_string *packet;
   
 #define OPEN_FORMAT "%c%a%i%i%i"
@@ -2103,7 +2106,7 @@ format_channel_open(int type, UINT32 local_channel_number,
 struct lsh_string *
 format_channel_request_i(struct channel_request_info *info,
 			 struct ssh_channel *channel,
-			 UINT32 args_length, const UINT8 *args_data)
+			 uint32_t args_length, const uint8_t *args_data)
 {
   return ssh_format("%c%i%s%c%ls", SSH_MSG_CHANNEL_REQUEST,
 		    channel->channel_number,
@@ -2118,7 +2121,7 @@ format_channel_request(int type, struct ssh_channel *channel,
 		       ...)
 {
   va_list args;
-  UINT32 l1, l2;
+  uint32_t l1, l2;
   struct lsh_string *packet;
 
 #define REQUEST_FORMAT "%c%i%a%c"
@@ -2149,7 +2152,7 @@ format_global_request(int type, int want_reply,
 		      const char *format, ...)
 {
   va_list args;
-  UINT32 l1, l2;
+  uint32_t l1, l2;
   struct lsh_string *packet;
 
 #define REQUEST_FORMAT "%c%a%c"

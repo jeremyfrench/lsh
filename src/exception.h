@@ -1,6 +1,6 @@
 /* exception.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -34,7 +34,7 @@
    (class
      (name exception)
      (vars
-       (type . UINT32)
+       (type . uint32_t)
        (msg . "const char *")))
 */
 
@@ -151,13 +151,13 @@ extern struct exception_handler ignore_exception_handler;
    (class
      (name report_exception_info)
      (vars
-       (mask . UINT32)
-       (value . UINT32)
+       (mask . uint32_t)
+       (value . uint32_t)
        (prefix . "const char *")))
 */
 
 struct report_exception_info *
-make_report_exception_info(UINT32 mask, UINT32 value,
+make_report_exception_info(uint32_t mask, uint32_t value,
 			   const char *prefix);
 
 #define STATIC_REPORT_EXCEPTION_INFO(m, v, p) \
@@ -169,7 +169,7 @@ make_report_exception_handler(const struct report_exception_info *info,
 			      const char *context);
 
 struct exception *
-make_simple_exception(UINT32 type, const char *msg);
+make_simple_exception(uint32_t type, const char *msg);
 
 /* Create a simple exception handler, with no internal state */
 struct exception_handler *
@@ -186,13 +186,13 @@ make_exception_handler(void (*raise)(struct exception_handler *s,
      (vars
        ; A reason code that can be passed in a SSH_MSG_DISCONNECT message.
        ; Zero means terminate the connection without sending such a message.
-       (reason . UINT32)))
+       (reason . uint32_t)))
 */
 
 
 /* If msg is NULL, it is derived from the reason value */
 struct exception *
-make_protocol_exception(UINT32 reason, const char *msg);
+make_protocol_exception(uint32_t reason, const char *msg);
 
 #define STATIC_PROTOCOL_EXCEPTION(reason, msg) \
 { { STATIC_HEADER, EXC_PROTOCOL, (msg) }, (reason) }

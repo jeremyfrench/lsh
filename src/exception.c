@@ -1,6 +1,6 @@
 /* exception.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -21,14 +21,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "exception.h"
 
 #include "io.h"
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 #define GABA_DEFINE
 #include "exception.h.x"
@@ -69,7 +73,7 @@ make_exception_handler(void (*raise)(struct exception_handler *s,
 }
 
 struct report_exception_info *
-make_report_exception_info(UINT32 mask, UINT32 value,
+make_report_exception_info(uint32_t mask, uint32_t value,
 			   const char *prefix)
 {
   NEW(report_exception_info, self);
@@ -117,7 +121,7 @@ make_report_exception_handler(const struct report_exception_info *info,
   return &self->super;
 }
 
-struct exception *make_simple_exception(UINT32 type, const char *msg)
+struct exception *make_simple_exception(uint32_t type, const char *msg)
 {
   NEW(exception, e);
   e->type = type;
@@ -130,7 +134,7 @@ struct exception *make_simple_exception(UINT32 type, const char *msg)
  * message. */
 
 struct exception *
-make_protocol_exception(UINT32 reason, const char *msg)
+make_protocol_exception(uint32_t reason, const char *msg)
 {
   NEW(protocol_exception, self);
 

@@ -1,6 +1,5 @@
 /* server_pty.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,29 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <errno.h>
+/* FIXME: for snprintf, maybe use a custom snprintf? Bazsi */
+#include <stdio.h>  
+
+#include <fcntl.h>
+#include <grp.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+
+#if HAVE_PTY_H
+# include <pty.h>  /* openpty() */
+#endif
+
+#if HAVE_STROPTS_H
+# include <stropts.h>  /* isastream() */
+#endif
+
 #include "server_pty.h"
 
 #include "channel.h"
@@ -31,23 +53,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <fcntl.h>
-#include <grp.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <errno.h>
-/* #include <string.h> */
-#include <stdio.h>  /* FIXME: for snprintf, maybe use a custom snprintf? Bazsi */
-
-#if HAVE_STROPTS_H
-#  include <stropts.h>  /* isastream() */
-#endif
-
-#if HAVE_PTY_H
-#  include <pty.h>  /* openpty() */
-#endif
 
 
 #define GABA_DEFINE

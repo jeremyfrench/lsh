@@ -1,8 +1,6 @@
 /* werror.h
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -26,10 +24,10 @@
 #ifndef LSH_ERROR_H_INCLUDED
 #define LSH_ERROR_H_INCLUDED
 
+#include <stdarg.h>
+
 #include "bignum.h"
 #include "lsh_argp.h"
-
-#include <stdarg.h>
 
 /* Global variables */
 extern int trace_flag;
@@ -56,12 +54,12 @@ void set_error_syslog(const char *id);
  *
  * %%  %-character
  * %e  an errno value, formated numerically and with strerror
- * %i  UINT32
+ * %i  uint32_t
  * %c  int, interpreted as a single character to output
  * %n  mpz_t
  * %z  NUL-terminated string
  * %a  Insert a string containing one atom.
- * %s  UINT32 length, UINT8 *data
+ * %s  uint32_t length, uint8_t *data
  * %S  lsh_string *s
  * %t  The type of an struct lsh_object *
  *

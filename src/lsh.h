@@ -1,6 +1,6 @@
 /* lsh.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -24,9 +24,15 @@
 #ifndef LSH_H_INCLUDED
 #define LSH_H_INCLUDED
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <inttypes.h>
+#include <stdlib.h>
+
 #include "lsh_types.h"
 
-#include <stdlib.h>
 
 /* Generic object */
 
@@ -93,10 +99,10 @@ struct lsh_string
 #if DEBUG_ALLOC
   struct lsh_string_header header;
 #endif
-  UINT32 sequence_number;
+  uint32_t sequence_number;
   /* NOTE: The allocated size may be larger than the string length. */
-  UINT32 length; 
-  UINT8 data[1];
+  uint32_t length; 
+  uint8_t data[1];
 };
 
 /* Forward declarations of various structures */

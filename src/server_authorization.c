@@ -1,8 +1,8 @@
 /* server_authorization.c
  *
- * user authorization database
+ * User authorization database.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

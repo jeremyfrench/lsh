@@ -1,8 +1,6 @@
 /* publickey_crypto.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "publickey_crypto.h"
 
 #include "atoms.h"
@@ -35,8 +39,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <assert.h>
-
 #define GABA_DEFINE
 #include "publickey_crypto.h.x"
 #undef GABA_DEFINE
@@ -44,7 +46,7 @@
 #include "publickey_crypto.c.x"
 
 struct keypair *
-make_keypair(UINT32 type,
+make_keypair(uint32_t type,
 	     struct lsh_string *public,
 	     struct signer *private)
 {
@@ -126,7 +128,7 @@ zn_power(struct abstract_group *c, mpz_t res, mpz_t g, mpz_t e)
 }
 
 static void
-zn_small_power(struct abstract_group *c, mpz_t res, mpz_t g, UINT32 e)
+zn_small_power(struct abstract_group *c, mpz_t res, mpz_t g, uint32_t e)
 {
   CAST(group_zn, closure, c);
 

@@ -2,7 +2,7 @@
  *
  * A read handler for reading an entire file as a string.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,14 +23,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "read_file.h"
 
 #include "format.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <string.h>
 
 #include "read_file.c.x"
 
@@ -41,13 +45,13 @@
      (vars
        (c object abstract_write)
        (buffer string)
-       (pos . UINT32)))
+       (pos . uint32_t)))
 */
 
-static UINT32
+static uint32_t
 do_read_file(struct read_handler **h,
-	     UINT32 available,
-	     UINT8 *data)
+	     uint32_t available,
+	     uint8_t *data)
 {
   CAST(read_file, self, *h);
 
@@ -71,7 +75,7 @@ do_read_file(struct read_handler **h,
     }
   else    
     {
-      UINT32 left = self->buffer->length - self->pos;
+      uint32_t left = self->buffer->length - self->pos;
       if (available >= left)
 	{
 	  memcpy(self->buffer->data + self->pos, data, left);
@@ -92,7 +96,7 @@ do_read_file(struct read_handler **h,
 
 struct read_handler *
 make_read_file(struct abstract_write *c,
-	       UINT32 max_size)
+	       uint32_t max_size)
 {
   NEW(read_file, self);
   assert(max_size);

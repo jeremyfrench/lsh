@@ -2,7 +2,7 @@
  *
  * Interact with the user.
  *
- * $Id$*/
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -64,10 +64,10 @@ struct terminal_dimensions;
      (name interact)
      (vars
        (is_tty method int)
-       ; (read_line method int "UINT32 size" "UINT8 *buffer")
+       ; (read_line method int "uint32_t size" "uint8_t *buffer")
        ;; FIXME: Do we really need the FREE parameter?
        (read_password method (string)
-                  "UINT32 max_length"
+                  "uint32_t max_length"
                   "const struct lsh_string *prompt"
 		  "int free")
        (yes_or_no method int

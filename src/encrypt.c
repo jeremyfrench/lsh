@@ -1,8 +1,6 @@
 /* encrypt.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,12 +21,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <string.h>
+
 #include "encrypt.h"
 
 #include "format.h"
 #include "xalloc.h"
-
-#include <string.h>
 
 #include "encrypt.c.x"
 
@@ -37,7 +39,7 @@
      (name packet_encrypt)
      (super abstract_write_pipe)
      (vars
-       (sequence_number . UINT32)
+       (sequence_number . uint32_t)
        (connection object ssh_connection)))
 */
 
@@ -48,7 +50,7 @@ do_encrypt(struct abstract_write *w,
   CAST(packet_encrypt, closure, w);
   struct ssh_connection *connection = closure->connection;
   struct lsh_string *new;
-  UINT8 *mac;
+  uint8_t *mac;
 
   new = ssh_format("%lr%lr", packet->length, NULL,
 		   connection->send_mac ? connection->send_mac->mac_size : 0,
@@ -61,7 +63,7 @@ do_encrypt(struct abstract_write *w,
   
   if (connection->send_mac)
   {
-    UINT8 s[4];
+    uint8_t s[4];
     WRITE_UINT32(s, closure->sequence_number);
 
     MAC_UPDATE(connection->send_mac, 4, s);

@@ -2,7 +2,7 @@
  *
  * Escape char handling.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,14 +23,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "client.h"
 
 #include "format.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <string.h>
 
 /* This must be defined before including the .x file. */
 
@@ -39,7 +43,7 @@ enum escape_state { GOT_NONE, GOT_NEWLINE, GOT_ESCAPE };
 #include "client_escape.c.x"
   
 struct escape_info *
-make_escape_info(UINT8 escape)
+make_escape_info(uint8_t escape)
 {
   NEW(escape_info, self);
   unsigned i;
@@ -64,7 +68,7 @@ make_escape_info(UINT8 escape)
 */
 
 static inline int
-newlinep(UINT8 c)
+newlinep(uint8_t c)
 {
   return (c == '\n') || (c == '\r');
 }
@@ -72,8 +76,8 @@ newlinep(UINT8 c)
 /* Search for NEWLINE ESCAPE, starting at pos. If successful, returns
  * 1 and returns the index of the escape char. Otherwise, returns
  * zero. */
-static UINT32
-scan_escape(struct lsh_string *packet, UINT32 pos, UINT8 escape)
+static uint32_t
+scan_escape(struct lsh_string *packet, uint32_t pos, uint8_t escape)
 {
   for ( ; (pos + 2) <= packet->length; pos++)
     {
@@ -87,7 +91,7 @@ scan_escape(struct lsh_string *packet, UINT32 pos, UINT8 escape)
 /* Returns 1 for the quote action. */ 
 static int
 escape_dispatch(struct escape_info *info,
-		UINT8 c)
+		uint8_t c)
 {
   struct lsh_callback *f;
 
@@ -107,8 +111,8 @@ static void
 do_escape_handler(struct abstract_write *s, struct lsh_string *packet)
 {
   CAST(escape_handler, self, s);
-  UINT32 pos;
-  UINT32 done;
+  uint32_t pos;
+  uint32_t done;
 
 #if 0
   trace("do_escape_handler: state = %i, packet length = %i\n",

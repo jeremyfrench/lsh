@@ -1,6 +1,6 @@
 /* sexp.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -36,7 +36,7 @@ int
 lsh_sexp_to_atom(struct sexp_iterator *i);
 
 int
-lsh_sexp_to_uint32(struct sexp_iterator *i, UINT32 *x);
+lsh_sexp_to_uint32(struct sexp_iterator *i, uint32_t *x);
 
 int
 lsh_sexp_get_type(struct sexp_iterator *i);

@@ -1,8 +1,6 @@
 /* debug.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -22,6 +20,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "debug.h"
 
@@ -52,7 +54,7 @@ do_debug(struct abstract_write *w,
     debug("DEBUG: %S empty packet\n", closure->prefix);
   else
     {
-      UINT8 type = packet->data[0];
+      uint8_t type = packet->data[0];
       if (type == SSH_MSG_USERAUTH_REQUEST)
 	debug("DEBUG: %S %z *****\n",
 	      closure->prefix, packet_types[type]);
@@ -119,8 +121,8 @@ DEFINE_PACKET_HANDLER(, connection_debug_handler, connection UNUSED, packet)
   struct simple_buffer buffer;
   unsigned msg_number;
   unsigned always_display;
-  UINT32 length;
-  const UINT8 *msg;
+  uint32_t length;
+  const uint8_t *msg;
   int language;
   
   simple_buffer_init(&buffer, packet->length, packet->data);

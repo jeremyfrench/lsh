@@ -2,7 +2,7 @@
  *
  * An implementation of SPKI certificate checking
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -26,12 +26,12 @@
 #ifndef LSH_SPKI_H_INCLUDED
 #define LSH_SPKI_H_INCLUDED
 
+#include <time.h>
+
 #include "alist.h"
 #include "publickey_crypto.h"
 
 #include "spki/certificate.h"
-
-#include <time.h>
 
 #define GABA_DECLARE
 # include "spki.h.x"
@@ -58,7 +58,7 @@ spki_make_signer(struct alist *algorithms,
 struct lsh_string *
 spki_hash_data(const struct hash_algorithm *algorithm,
 	       int algorithm_name,
-	       UINT32 length, UINT8 *data);
+	       uint32_t length, uint8_t *data);
 
 
 /* Keeps track of spki_subjects and their keys.
@@ -113,13 +113,13 @@ spki_add_acl(struct spki_context *ctx,
 struct lsh_string *
 spki_pkcs5_encrypt(struct randomness *r,
                    struct lsh_string *label,
-		   UINT32 prf_name,
+		   uint32_t prf_name,
 		   struct mac_algorithm *prf,
 		   int crypto_name,
 		   struct crypto_algorithm *crypto,
-		   UINT32 salt_length,
+		   uint32_t salt_length,
 		   struct lsh_string *password,
-		   UINT32 iterations,
+		   uint32_t iterations,
                    struct lsh_string *data);
 
 struct lsh_string *

@@ -2,7 +2,6 @@
  *
  * System dependant password related functions.
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -23,6 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "charset.h"
 #include "format.h"
@@ -46,7 +49,7 @@ static void
 do_authenticate(struct userauth *s,
 		struct ssh_connection *connection UNUSED,
 		struct lsh_string *username,
-		UINT32 service UNUSED,
+		uint32_t service UNUSED,
 		struct simple_buffer *args,
 		struct command_continuation *c,
 		struct exception_handler *e)

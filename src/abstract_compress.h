@@ -1,8 +1,8 @@
 /* abstract_compress.h
  *
- * interface to compression algorithms...
+ * Interface to compression algorithms...
  * 
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

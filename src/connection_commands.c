@@ -1,6 +1,5 @@
 /* connection_commands.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol

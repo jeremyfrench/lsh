@@ -2,7 +2,7 @@
  *
  * Reads a (private) key on stdin, and saves it a private and a public file.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +23,23 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <errno.h>
+
+#include <fcntl.h>
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
+
 #include "algorithms.h"
 #include "crypto.h"
 #include "environ.h"
@@ -36,18 +53,6 @@
 #include "xalloc.h"
 
 #include "nettle/sexp.h"
-
-#include <assert.h>
-#include <errno.h>
-/* #include <string.h> */
-
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 
 #include "lsh-writekey.c.x"
 
@@ -81,7 +86,7 @@ const char *argp_program_bug_address = BUG_ADDRESS;
        
        (crypto_name . int)
        (crypto object crypto_algorithm)
-       (iterations . UINT32)))
+       (iterations . uint32_t)))
 */
 
 static struct lsh_writekey_options *

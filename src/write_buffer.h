@@ -1,8 +1,6 @@
 /* write_buffer.h
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -42,7 +40,7 @@
    (class
      (name flow_controlled)
      (vars
-       (report method void UINT32)))
+       (report method void uint32_t)))
 */
 
 #define FLOW_CONTROL_REPORT(o, written) ((o)->report((o), written))
@@ -54,12 +52,12 @@
      (vars
        (fd object lsh_fd)
 
-       (block_size . UINT32)
-       (buffer space UINT8)        ; Size is twice the blocksize 
+       (block_size . uint32_t)
+       (buffer space uint8_t)        ; Size is twice the blocksize 
        (empty . int)
 
        ; Total amount of data currently in the buffer
-       (length . UINT32)
+       (length . uint32_t)
 
        (report object flow_controlled)
        
@@ -69,17 +67,17 @@
 
        (q struct string_queue)
 
-       (pos . UINT32)        ; Partial packet
+       (pos . uint32_t)        ; Partial packet
        (partial string)
 
-       (start . UINT32)
-       (end . UINT32)))
+       (start . uint32_t)
+       (end . uint32_t)))
 */
 
 struct write_buffer *
-make_write_buffer(struct lsh_fd *fd, UINT32 size);
+make_write_buffer(struct lsh_fd *fd, uint32_t size);
 
 int write_buffer_pre_write(struct write_buffer *buffer);
-void write_buffer_consume(struct write_buffer *buffer, UINT32 size);
+void write_buffer_consume(struct write_buffer *buffer, uint32_t size);
 
 #endif /* LSH_WRITE_BUFFER_H_INCLUDED */

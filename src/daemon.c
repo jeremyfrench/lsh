@@ -3,7 +3,6 @@
  * Derived from
  * http://www.zip.com.au/~raf2/lib/software/daemon
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol

@@ -2,7 +2,7 @@
  *
  * Handle process suspend for the client programs.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

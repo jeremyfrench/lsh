@@ -21,6 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "client_userauth.h"
 
 #include "charset.h"
@@ -31,8 +37,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 /* Forward declaration */
 struct client_userauth; 
@@ -68,8 +72,8 @@ format_userauth_password(struct lsh_string *name,
 
 static struct lsh_string *
 format_userauth_publickey_query(struct lsh_string *name,
-				UINT32 service,
-				UINT32 keytype,
+				uint32_t service,
+				uint32_t keytype,
 				struct lsh_string *public)
 {
   return ssh_format("%c%S%a%a%c%a%S",
@@ -84,8 +88,8 @@ format_userauth_publickey_query(struct lsh_string *name,
 
 static struct lsh_string *
 format_userauth_publickey(struct lsh_string *name,
-			  UINT32 service,
-			  UINT32 keytype,
+			  uint32_t service,
+			  uint32_t keytype,
 			  struct lsh_string *public)
 {
   return ssh_format("%c%S%a%a%c%a%S",
@@ -337,11 +341,11 @@ do_userauth_banner(struct packet_handler *self UNUSED,
   struct simple_buffer buffer;
 
   unsigned msg_number;
-  UINT32 length;
-  const UINT8 *msg;
+  uint32_t length;
+  const uint8_t *msg;
 
-  UINT32 language_length;
-  const UINT8 *language;
+  uint32_t language_length;
+  const uint8_t *language;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -760,10 +764,10 @@ make_client_password_auth(struct interact *tty)
        (keys object object_list)
        ; Number of keys for which we have received either
        ; a USERAUTH_FAILURE or USERAUTH_PK_OK message.
-       (done . UINT32)
+       (done . uint32_t)
        ; Number of keys for which we have computed and sent a signature,
        ; and not yet received any failure.
-       (pending . UINT32)
+       (pending . uint32_t)
        (e object exception_handler)))
 */
 
@@ -847,8 +851,8 @@ do_userauth_pk_ok(struct packet_handler *s,
 
   unsigned msg_number;
   int algorithm;
-  UINT32 keyblob_length;
-  const UINT8 *keyblob;
+  uint32_t keyblob_length;
+  const uint8_t *keyblob;
 
   simple_buffer_init(&buffer, packet->length, packet->data);
 

@@ -1,6 +1,5 @@
 /* channel_commands.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -192,7 +191,7 @@ do_install_fix_global_request_handler(struct command *s,
 }
 
 struct command *
-make_install_fix_global_request_handler(UINT32 name,
+make_install_fix_global_request_handler(uint32_t name,
 					struct global_request *handler)
 {  
   NEW(install_global_request_handler, self);
@@ -236,7 +235,7 @@ do_install_fix_channel_open_handler(struct command *s,
 }
 
 struct command *
-make_install_fix_channel_open_handler(UINT32 name,
+make_install_fix_channel_open_handler(uint32_t name,
 				      struct channel_open *handler)
 {
   NEW(install_channel_open_handler, self);

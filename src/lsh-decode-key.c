@@ -2,10 +2,18 @@
  *
  * Decode ssh2 keys.
  *
- * $Id$
  */
 
-#include "digits.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <fcntl.h>
+#include <unistd.h>
+
+#include "nettle/base64.h"
+#include "nettle/sexp.h"
+
 #include "format.h"
 #include "io.h"
 #include "lsh_argp.h"
@@ -15,12 +23,6 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include "nettle/base64.h"
-#include "nettle/sexp.h"
-
-#include <unistd.h>
-#include <fcntl.h>
 
 #include "lsh-decode-key.c.x"
 

@@ -2,7 +2,6 @@
  *
  * interface to Ian Jackson's asynchronous resolver.
  * 
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -50,7 +49,7 @@ do_adns_free(adns_state s);
        ; a dns name.
        (host string)
        ; The port number here is always in host byte order
-       (port . UINT32)
+       (port . uint32_t)
        ; Raw address
        (socket space "struct sockaddr")))
 */

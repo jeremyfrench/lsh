@@ -1,7 +1,5 @@
 /* lsh-krb-checkpw.c
  *
- * $Id$
- *
  * This is a helper program to verify a name and password against the
  * local kerberos infrastructure. It is loosely based on Heimdal's
  * implementation of "su". */

@@ -2,7 +2,6 @@
  *
  * Translate local characterset to and from utf8.
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -24,14 +23,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "charset.h"
 
 #include "format.h"  /* For lsh_string_dup() */
 #include "parse.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 static int local_charset;
 
@@ -40,20 +43,20 @@ void set_local_charset(int charset)
   local_charset = charset;
 }
 
-UINT32 local_to_ucs4(int c)
+uint32_t local_to_ucs4(int c)
 {
   switch (local_charset)
     {
     case CHARSET_USASCII:
     case CHARSET_LATIN1:
-      return (UINT32) c;
+      return (uint32_t) c;
     default:
       fatal("Internal error");
     };
 }
 
 /* NOTE: This function does not filter any control characters */
-int ucs4_to_local(UINT32 c)
+int ucs4_to_local(uint32_t c)
 {
   switch (local_charset)
     {
@@ -76,18 +79,18 @@ local_to_utf8(struct lsh_string *s, int free)
       return s;
     default:
       {
-	UINT32 *chars = alloca(s->length * sizeof(UINT32));
+	uint32_t *chars = alloca(s->length * sizeof(uint32_t));
 	unsigned char *lengths = alloca(s->length);
 
-	UINT32 total = 0;
+	uint32_t total = 0;
 	{
-	  UINT32 i;
+	  uint32_t i;
 	
 	  /* First convert to ucs-4, and compute the length of the corresponding
 	   * utf-8 string. */
 	  for (i = 0; i<s->length; i++)
 	    {
-	      UINT32 c = local_to_ucs4(s->data[i]);
+	      uint32_t c = local_to_ucs4(s->data[i]);
 	      unsigned char l = 1;
 
 	      if (c >= (1UL<<7))
@@ -115,14 +118,14 @@ local_to_utf8(struct lsh_string *s, int free)
 	}
 	{
 	  struct lsh_string *res = lsh_string_alloc(total);
-	  UINT32 i, j;
+	  uint32_t i, j;
 
 	  for(i = j = 0; i<s->length; i++)
 	    {
-	      static const UINT8 prefix[]
+	      static const uint8_t prefix[]
 		= {0, 0xC0, 0xE0, 0xF0, 0xF8, 0XFC };
 	      
-	      UINT32 c = chars[i];
+	      uint32_t c = chars[i];
 	      unsigned char l = lengths[i] - 1;
 	      int k;
 	      
@@ -149,9 +152,9 @@ local_to_utf8(struct lsh_string *s, int free)
 
 int local_is_utf8(void) { return (local_charset == CHARSET_UTF8); }
 
-struct lsh_string *low_utf8_to_local(UINT32 length, UINT8 *s, int strict)
+struct lsh_string *low_utf8_to_local(uint32_t length, uint8_t *s, int strict)
 {
-  UINT32 i;
+  uint32_t i;
   struct lsh_string *res;
   struct simple_buffer buffer;
   
@@ -164,7 +167,7 @@ struct lsh_string *low_utf8_to_local(UINT32 length, UINT8 *s, int strict)
 
   for (i = 0; 1; i++)
     {
-      UINT32 ucs4;
+      uint32_t ucs4;
 
       switch(parse_utf8(&buffer, &ucs4))
 	{

@@ -1,6 +1,6 @@
 /* ssh1_fallback.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -21,6 +21,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <errno.h>
+#include <string.h>
+
+#include <unistd.h>
+
 #include "ssh1_fallback.h"
 
 #include "io.h"
@@ -28,10 +37,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <errno.h>
-#include <string.h>
-
-#include <unistd.h>
 
 #define GABA_DEFINE
 #include "ssh1_fallback.h.x"
@@ -50,7 +55,7 @@
 
 static void
 fall_back_to_ssh1(struct ssh1_fallback *c,
-		  int fd, UINT32 length, const UINT8 *line,
+		  int fd, uint32_t length, const uint8_t *line,
 		  struct exception_handler *e)
 {
   CAST(sshd1, closure, c);

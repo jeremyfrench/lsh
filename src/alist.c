@@ -2,7 +2,7 @@
  *
  * Associations are implemented as linear tables.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

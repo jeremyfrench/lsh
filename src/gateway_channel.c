@@ -1,6 +1,5 @@
 /* gateway_channel.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -21,6 +20,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "gateway_channel.h"
 
@@ -70,7 +73,8 @@ do_receive(struct ssh_channel *c,
       break;
     case CHANNEL_STDERR_DATA:
       C_WRITE(channel->chain->super.connection,
-	      channel_transmit_extended(&channel->chain->super, CHANNEL_STDERR_DATA, data));
+	      channel_transmit_extended(&channel->chain->super,
+					CHANNEL_STDERR_DATA, data));
       break;
     default:
       fatal("Internal error!\n");
@@ -80,7 +84,7 @@ do_receive(struct ssh_channel *c,
 /* We may send more data */
 static void
 do_send_adjust(struct ssh_channel *s,
-	       UINT32 i)
+	       uint32_t i)
 {
   CAST(gateway_channel, self, s);
   if (i)
@@ -145,8 +149,8 @@ make_gateway_channel(struct alist *request_types)
        ; we should be able to forward unknown channel
        ; types (i.e. types not listen in atoms.in).
        (type string)
-       (rec_window_size . UINT32)
-       (rec_max_packet . UINT32)
+       (rec_window_size . uint32_t)
+       (rec_max_packet . uint32_t)
        (requests object alist)
        (args string)))
 */
@@ -154,7 +158,7 @@ make_gateway_channel(struct alist *request_types)
 static struct ssh_channel *
 do_gateway_channel_open(struct channel_open_command *c,
 			struct ssh_connection *connection,
-			UINT32 local_channel_number,
+			uint32_t local_channel_number,
 			struct lsh_string **request)
 {
   CAST(gateway_channel_open_command, closure, c);
@@ -239,8 +243,8 @@ do_gateway_channel_request(struct channel_request *s UNUSED,
 			   struct exception_handler *e)
 {
   CAST(gateway_channel, channel, ch);
-  UINT32 args_length;
-  const UINT8 *args_data;
+  uint32_t args_length;
+  const uint8_t *args_data;
   struct command *command;
   
   parse_rest(args, &args_length, &args_data);
@@ -289,7 +293,7 @@ make_general_global_request_command(struct lsh_string *request)
 static void
 do_gateway_global_request(struct global_request *s UNUSED,
 			  struct ssh_connection *connection,
-			  UINT32 type,
+			  uint32_t type,
 			  int want_reply,
 			  struct simple_buffer *args,
 			  struct command_continuation *c,

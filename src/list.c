@@ -2,7 +2,7 @@
  *
  * Variable length lists of atoms (or other integers).
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

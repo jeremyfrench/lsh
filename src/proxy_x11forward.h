@@ -1,6 +1,6 @@
 /* proxy_x11forward.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

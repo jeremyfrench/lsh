@@ -22,6 +22,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "charset.h"
 #include "connection.h"
 #include "format.h"
@@ -32,8 +38,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 #include "server_publickey.c.x"
 
@@ -57,7 +61,7 @@ static void
 do_authenticate(struct userauth *s,
 		struct ssh_connection *connection,
 		struct lsh_string *username,
-		UINT32 service UNUSED, 
+		uint32_t service UNUSED, 
 		struct simple_buffer *args,
 		struct command_continuation *c,
 		struct exception_handler *e)
@@ -67,9 +71,9 @@ do_authenticate(struct userauth *s,
   struct lsh_string *keyblob = NULL;
   struct lookup_verifier *lookup;
   struct verifier *v;
-  const UINT8 *signature_blob;
-  UINT32 signature_length;
-  UINT32 signature_start = 0;
+  const uint8_t *signature_blob;
+  uint32_t signature_length;
+  uint32_t signature_start = 0;
   int algorithm;
   int check_key;
 

@@ -1,8 +1,6 @@
 /* read_line.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -22,6 +20,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <assert.h>
 #include <string.h>
@@ -46,21 +48,21 @@
        (e object exception_handler)
        
        ; Line buffer       
-       (pos . UINT32)
-       (buffer array UINT8 MAX_LINE)))
+       (pos . uint32_t)
+       (buffer array uint8_t MAX_LINE)))
 */
 
-static UINT32
+static uint32_t
 do_read_line(struct read_handler **h,
-	     UINT32 available,
-	     UINT8 *data /*, struct exception_handler *e */)
+	     uint32_t available,
+	     uint8_t *data /*, struct exception_handler *e */)
 {
   CAST(read_line, self, *h);
 
-  UINT8 *eol;
-  UINT32 consumed;
-  UINT32 tail;
-  UINT32 length;
+  uint8_t *eol;
+  uint32_t consumed;
+  uint32_t tail;
+  uint32_t length;
 
   if (!available)
     {

@@ -2,7 +2,7 @@
  *
  * Server specific key exchange handling
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

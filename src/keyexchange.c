@@ -1,6 +1,6 @@
 /* keyexchange.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -21,6 +21,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "keyexchange.h"
 
 #include "abstract_io.h"
@@ -37,9 +44,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <string.h>
-#include <assert.h>
 
 #define GABA_DEFINE
 #include "keyexchange.h.x"
@@ -82,7 +86,7 @@ parse_kexinit(struct lsh_string *packet, enum peer_flag peer_flags)
   NEW(kexinit, res);
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 reserved;
+  uint32_t reserved;
   
   struct int_list *lists[NLISTS];
   int i;
@@ -390,16 +394,16 @@ make_kexinit_handler(struct lsh_object *extra,
 
 static struct lsh_string *
 kex_make_key(struct hash_instance *secret,
-	     UINT32 key_length,
+	     uint32_t key_length,
 	     int type,
 	     struct lsh_string *session_id)
 {
   /* Indexed by the KEX_* values */
-  static const UINT8 tags[] = "CDEFAB";
+  static const uint8_t tags[] = "CDEFAB";
   
   struct lsh_string *key;
   struct hash_instance *hash;
-  UINT8 *digest;
+  uint8_t *digest;
   
   key = lsh_string_alloc(key_length);
 
@@ -422,7 +426,7 @@ kex_make_key(struct hash_instance *secret,
   else
     {
       unsigned left = key_length;
-      UINT8 *dst = key->data;
+      uint8_t *dst = key->data;
       
       KILL(hash);
       hash = hash_copy(secret);

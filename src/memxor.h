@@ -9,6 +9,6 @@
 
 #include <stdlib.h>
 
-UINT8 *memxor(UINT8 *dst, const UINT8 *src, size_t n);
+uint8_t *memxor(uint8_t *dst, const uint8_t *src, size_t n);
 
 #endif /* LSH_MEMXOR_H_INCLUDED */

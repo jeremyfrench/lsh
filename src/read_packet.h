@@ -2,7 +2,7 @@
  *
  * Read-handler to read a packet at a time.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

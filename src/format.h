@@ -2,7 +2,7 @@
  *
  * Create a packet from a format string and arguments.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -46,7 +46,7 @@
  * %z  Insert a string, using a null-terminated argument.
  *
  * %r  Reserves space in the string, and stores a pointer to this space
- *     into the given UINT8 ** argument.
+ *     into the given uint8_t ** argument.
  *
  * %a  Insert a string containing one atom.
  *
@@ -78,12 +78,12 @@
  * number format. */
 
 struct lsh_string *ssh_format(const char *format, ...);
-UINT32 ssh_format_length(const char *format, ...);
-void ssh_format_write(const char *format, UINT32 length, UINT8 *buffer, ...);
+uint32_t ssh_format_length(const char *format, ...);
+void ssh_format_write(const char *format, uint32_t length, uint8_t *buffer, ...);
 
-UINT32 ssh_vformat_length(const char *format, va_list args);
-void ssh_vformat_write(const char *format, UINT32 length, UINT8 *buffer, va_list args);
-void format_hex_string(UINT8 *dst, UINT32 length, const UINT8 *data);
+uint32_t ssh_vformat_length(const char *format, va_list args);
+void ssh_vformat_write(const char *format, uint32_t length, uint8_t *buffer, va_list args);
+void format_hex_string(uint8_t *dst, uint32_t length, const uint8_t *data);
 
 /* FIXME: Do we need a variant that handles non-const strings? */
 /* Returns an ordinary NUL-terminated string, or NULL if the string
@@ -96,17 +96,17 @@ lsh_get_cstring(const struct lsh_string *s);
 
 #define make_string(s) (ssh_format("%lz", (s)))
 
-unsigned format_size_in_decimal(UINT32 n);
-void format_decimal(unsigned length, UINT8 *buffer, UINT32 n);
+unsigned format_size_in_decimal(uint32_t n);
+void format_decimal(unsigned length, uint8_t *buffer, uint32_t n);
 
 /* FIXME: These functions don't really belong here */
 
 /* NOTE: Destructive, returns the string only for convenience. */
 struct lsh_string *
-lsh_string_trunc(struct lsh_string *s, UINT32 length);
+lsh_string_trunc(struct lsh_string *s, uint32_t length);
 
 int lsh_string_eq(const struct lsh_string *a, const struct lsh_string *b);
-int lsh_string_eq_l(const struct lsh_string *a, UINT32 length, const UINT8 *b);
+int lsh_string_eq_l(const struct lsh_string *a, uint32_t length, const uint8_t *b);
 
 int lsh_string_prefixp(const struct lsh_string *prefix,
 		       const struct lsh_string *s);

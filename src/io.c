@@ -1,6 +1,6 @@
 /* io.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -21,15 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "io.h"
-
-#include "command.h"
-#include "format.h"
-#include "string_buffer.h"
-#include "werror.h"
-#include "xalloc.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <assert.h>
+#include <errno.h>
 #include <string.h>
 
 #if HAVE_UNISTD_H
@@ -49,7 +46,24 @@
 # include "jpoll.h"
 #endif
 
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+
+#include <arpa/inet.h>
+
 #include <oop.h>
+
+#include "io.h"
+
+#include "command.h"
+#include "format.h"
+#include "string_buffer.h"
+#include "werror.h"
+#include "xalloc.h"
 
 /* Workaround for some version of FreeBSD. */
 #ifdef POLLRDNORM
@@ -57,15 +71,6 @@
 #else /* !POLLRDNORM */
 # define MY_POLLIN POLLIN
 #endif /* !POLLRDNORM */
-
-#include <errno.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <arpa/inet.h>
-#include <signal.h>
-#include <sys/stat.h>
 
 
 #define GABA_DEFINE
@@ -435,7 +440,7 @@ do_buffered_read(struct io_callback *s,
 		 struct lsh_fd *fd)
 {
   CAST(io_buffered_read, self, s);
-  UINT8 *buffer = alloca(self->buffer_size);
+  uint8_t *buffer = alloca(self->buffer_size);
   int res;
 
   assert(fd->want_read);   
@@ -465,11 +470,11 @@ do_buffered_read(struct io_callback *s,
       }
   else if (res > 0)
     {
-      UINT32 left = res;
+      uint32_t left = res;
     
       while (fd->super.alive && fd->read && left)
 	{
-	  UINT32 done;
+	  uint32_t done;
 
 	  /* NOTE: What to do if want_read is false? To improve the
 	   * connection_lock mechanism, it must be possible to
@@ -530,7 +535,7 @@ do_buffered_read(struct io_callback *s,
 }
 
 struct io_callback *
-make_buffered_read(UINT32 buffer_size,
+make_buffered_read(uint32_t buffer_size,
 		   struct read_handler *handler)
 {
   NEW(io_buffered_read, self);
@@ -547,7 +552,7 @@ do_consuming_read(struct io_callback *c,
 		  struct lsh_fd *fd)
 {
   CAST_SUBTYPE(io_consuming_read, self, c);
-  UINT32 wanted = READ_QUERY(self);
+  uint32_t wanted = READ_QUERY(self);
 
   assert(fd->want_read);
   
@@ -627,7 +632,7 @@ do_write_callback(struct io_callback *s UNUSED,
     }
   else
     {
-      UINT32 size;
+      uint32_t size;
       int res;
 
       size = MIN(fd->write_buffer->end - fd->write_buffer->start,
@@ -832,7 +837,7 @@ do_exc_io_handler(struct exception_handler *self,
 
 /* For fd:s in blocking mode. */
 const struct exception *
-write_raw(int fd, UINT32 length, const UINT8 *data)
+write_raw(int fd, uint32_t length, const uint8_t *data)
 {
   while(length)
     {
@@ -856,7 +861,7 @@ write_raw(int fd, UINT32 length, const UINT8 *data)
 }
 
 const struct exception *
-write_raw_with_poll(int fd, UINT32 length, const UINT8 *data)
+write_raw_with_poll(int fd, uint32_t length, const uint8_t *data)
 {
   while(length)
     {
@@ -901,7 +906,7 @@ write_raw_with_poll(int fd, UINT32 length, const UINT8 *data)
 
 /* For fd:s in blocking mode. */
 const struct exception *
-read_raw(int fd, UINT32 length, UINT8 *data)
+read_raw(int fd, uint32_t length, uint8_t *data)
 {
   while(length)
     {
@@ -932,7 +937,7 @@ read_raw(int fd, UINT32 length, UINT8 *data)
 }
 
 struct lsh_string *
-io_read_file_raw(int fd, UINT32 guess)
+io_read_file_raw(int fd, uint32_t guess)
 {
   struct string_buffer buffer;
   string_buffer_init(&buffer, guess);
@@ -1027,7 +1032,7 @@ make_address_info_c(const char *host,
 }
 
 struct address_info *
-make_address_info(struct lsh_string *host, UINT32 port)
+make_address_info(struct lsh_string *host, uint32_t port)
 {
   NEW(address_info, info);
 
@@ -1048,7 +1053,7 @@ sockaddr2info(size_t addr_len,
       assert(addr_len == sizeof(struct sockaddr_in));
       {
 	struct sockaddr_in *in = (struct sockaddr_in *) addr;
-	UINT32 ip = ntohl(in->sin_addr.s_addr);
+	uint32_t ip = ntohl(in->sin_addr.s_addr);
 	
 	info->port = ntohs(in->sin_port);
 	info->ip = ssh_format("%di.%di.%di.%di",
@@ -1745,7 +1750,7 @@ io_connect_local(struct local_info *info,
 struct lsh_fd *
 io_read_write(struct lsh_fd *fd,
 	      struct io_callback *read,
-	      UINT32 block_size,
+	      uint32_t block_size,
 	      struct lsh_callback *close_callback)
 {
   trace("io.c: Preparing fd %i for reading and writing\n",
@@ -1785,7 +1790,7 @@ io_read(struct lsh_fd *fd,
 
 struct lsh_fd *
 io_write(struct lsh_fd *fd,
-	 UINT32 block_size,
+	 uint32_t block_size,
 	 struct lsh_callback *close_callback)
 {
   trace("io.c: Preparing fd %i for writing\n", fd->fd);
@@ -1801,7 +1806,7 @@ io_write(struct lsh_fd *fd,
 
 struct lsh_fd *
 io_write_file(const char *fname, int flags, int mode,
-	      UINT32 block_size,
+	      uint32_t block_size,
 	      struct lsh_callback *c,
 	      struct exception_handler *e)
 {
@@ -2000,7 +2005,7 @@ const struct exception finish_io_exception =
 STATIC_EXCEPTION(EXC_FINISH_IO, "Stop i/o");
 
 struct exception *
-make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg)
+make_io_exception(uint32_t type, struct lsh_fd *fd, int error, const char *msg)
 {
   NEW(io_exception, self);
   assert(type & EXC_IO);
@@ -2170,7 +2175,7 @@ lsh_copy_file(int src, int dst)
   for (;;)
     {
       int res;
-      UINT32 i, length;
+      uint32_t i, length;
 
       /* First wait until dst is writable; otherwise there's no point
        * in reading the input. */

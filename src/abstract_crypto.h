@@ -2,7 +2,7 @@
  *
  * Interface to block cryptos and hash functions
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -41,11 +41,11 @@ struct sexp_iterator;
    (class
      (name crypto_instance)
      (vars
-       (block_size . UINT32)
+       (block_size . uint32_t)
        ; Length must be a multiple of the block size.
        ; NOTE: src == dst is allowed, but no other overlaps.
        (crypt method void
-              "UINT32 length" "const UINT8 *src" "UINT8 *dst")))
+              "uint32_t length" "const uint8_t *src" "uint8_t *dst")))
 */
 
 #define CRYPT(instance, length, src, dst) \
@@ -58,11 +58,11 @@ struct sexp_iterator;
    (class
      (name crypto_algorithm)
      (vars
-       (block_size . UINT32)
-       (key_size . UINT32)
-       (iv_size . UINT32)
+       (block_size . uint32_t)
+       (key_size . uint32_t)
+       (iv_size . uint32_t)
        (make_crypt method (object crypto_instance)
-                   "int mode" "const UINT8 *key" "const UINT8 *iv")))
+                   "int mode" "const uint8_t *key" "const uint8_t *iv")))
 */
 
 #define MAKE_CRYPT(crypto, mode, key, iv) \
@@ -95,11 +95,11 @@ struct sexp_iterator;
 /* FIXME: Maybe change these back to macros? */
 void
 hash_update(struct hash_instance *self,
-	    UINT32 length, const UINT8 *data);
+	    uint32_t length, const uint8_t *data);
 
 void
 hash_digest(struct hash_instance *self,
-	    UINT8 *result);
+	    uint8_t *result);
 
 struct hash_instance *
 hash_copy(struct hash_instance *self);
@@ -118,10 +118,10 @@ make_hash(const struct hash_algorithm *self);
    (class
      (name mac_instance)
      (vars
-       (mac_size . UINT32)
+       (mac_size . uint32_t)
        (update method void 
-	       "UINT32 length" "const UINT8 *data")
-       (digest method void "UINT8 *result")))
+	       "uint32_t length" "const uint8_t *data")
+       (digest method void "uint8_t *result")))
 */
 
 #define MAC_UPDATE(instance, length, data) \
@@ -134,11 +134,11 @@ make_hash(const struct hash_algorithm *self);
    (class
      (name mac_algorithm)
      (vars
-       (mac_size . UINT32)
+       (mac_size . uint32_t)
        ; Recommended key size
-       (key_size . UINT32)
+       (key_size . uint32_t)
        (make_mac method (object mac_instance)
-                 "UINT32 length" "const UINT8 *key")))
+                 "uint32_t length" "const uint8_t *key")))
 */
 
 #define MAKE_MAC(m, l, key) ((m)->make_mac((m), (l), (key)))
@@ -150,8 +150,8 @@ make_hash(const struct hash_algorithm *self);
      (vars
        (verify method int
                "int algorithm"
-       	       "UINT32 length" "const UINT8 *data"
-	       "UINT32 signature_length" "const UINT8 *signature_data")
+       	       "uint32_t length" "const uint8_t *data"
+	       "uint32_t signature_length" "const uint8_t *signature_data")
 
        (public_key method (string))
        
@@ -172,7 +172,7 @@ make_hash(const struct hash_algorithm *self);
      (vars
        ; Returns a non-spki signature
        (sign method (string)
-             "int algorithm" "UINT32 length" "const UINT8 *data")
+             "int algorithm" "uint32_t length" "const uint8_t *data")
 
        (get_verifier method (object verifier))))
 */

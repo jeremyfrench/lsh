@@ -2,7 +2,7 @@
  *
  * Reads an sexp in given form, and writes it in ssh2 form.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

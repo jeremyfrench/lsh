@@ -175,7 +175,7 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        (kexinit object make_kexinit)
        
        ; Receiving
-       (rec_max_packet . UINT32)
+       (rec_max_packet . uint32_t)
        (rec_mac    object mac_instance)
        (rec_crypto object crypto_instance)
        (rec_compress object compress_instance)
@@ -205,7 +205,7 @@ do_##NAME(struct packet_handler *s UNUSED,		\
        
        ; For the key re-exchange logic
        (key_expire object resource)
-       (sent_data . UINT32)
+       (sent_data . uint32_t)
        
        ; Invoked at the end of keyexchange.
        ; Automatically reset to zero after each invocation.

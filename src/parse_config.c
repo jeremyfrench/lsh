@@ -1,7 +1,5 @@
 /* parse_config.c
  *
- * $id$
- *
  * Parsing of configuration files. */
 
 /* lsh, an implementation of the ssh protocol
@@ -23,15 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "parse_config.h"
 
 #include "format.h"
 #include "parse.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <string.h>
 
 #ifndef DEBUG_PARSE_CONFIG
 #define DEBUG_PARSE_CONFIG 0
@@ -339,7 +341,7 @@ parse_groups(struct tokenizer *self)
 }
 
 struct config_group *
-config_parse_string(UINT32 length, const UINT8 *data)
+config_parse_string(uint32_t length, const uint8_t *data)
 {
   struct tokenizer t;
   tokenizer_init(&t, length, data);

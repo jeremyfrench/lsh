@@ -1,6 +1,6 @@
 /* tty.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -24,16 +24,16 @@
 #ifndef LSH_TTY_H_INCLUDED
 #define LSH_TTY_H_INCLUDED
 
-#include "lsh_types.h"
+#include <inttypes.h>
 
 #include <termios.h>
 
 struct terminal_dimensions
 {
-  UINT32 char_width;
-  UINT32 char_height;
-  UINT32 pixel_width;
-  UINT32 pixel_height;
+  uint32_t char_width;
+  uint32_t char_height;
+  uint32_t pixel_width;
+  uint32_t pixel_height;
 };
 
 int tty_getattr(int fd, struct termios *ios);
@@ -45,7 +45,7 @@ int tty_setwinsize(int fd, const struct terminal_dimensions *dims);
 struct lsh_string *
 tty_encode_term_mode(struct termios *ios);
 int
-tty_decode_term_mode(struct termios *ios, UINT32 t_len, const UINT8 *t_modes);
+tty_decode_term_mode(struct termios *ios, uint32_t t_len, const uint8_t *t_modes);
 
 #if HAVE_CFMAKERAW
 #define CFMAKERAW cfmakeraw

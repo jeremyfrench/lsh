@@ -1,6 +1,6 @@
 /* client.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -21,6 +21,23 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
+#include <fcntl.h>
+#include <signal.h>
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "client.h"
 
 #include "abstract_io.h"
@@ -40,19 +57,6 @@
 #include "werror.h"
 #include "xalloc.h"
 #include "io.h"
-
-#include <assert.h>
-#include <string.h>
-
-#include <signal.h>
-
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #include "lsh_argp.h"
 
@@ -115,7 +119,7 @@ do_accept_service(struct packet_handler *c,
 }
 
 struct packet_handler *
-make_accept_service_handler(UINT32 service,
+make_accept_service_handler(uint32_t service,
 			    struct command_continuation *c)
 {
   NEW(accept_service_handler, closure);
@@ -286,7 +290,7 @@ do_exit_status(struct channel_request *c,
 	       struct exception_handler *e)
 {
   CAST(exit_handler, closure, c);
-  UINT32 status;
+  uint32_t status;
 
   if (!info->want_reply
       && parse_uint32(args, &status)
@@ -316,14 +320,14 @@ do_exit_signal(struct channel_request *c,
 {
   CAST(exit_handler, closure, c);
 
-  UINT32 signal;
+  uint32_t signal;
   int core;
 
-  const UINT8 *msg;
-  UINT32 length;
+  const uint8_t *msg;
+  uint32_t length;
 
-  const UINT8 *language;
-  UINT32 language_length;
+  const uint8_t *language;
+  uint32_t language_length;
   
   if (!info->want_reply
       && parse_atom(args, &signal)
@@ -388,7 +392,7 @@ make_handle_exit_signal(int *exit_status)
 static struct ssh_channel *
 new_session(struct channel_open_command *s,
 	    struct ssh_connection *connection,
-	    UINT32 local_channel_number,
+	    uint32_t local_channel_number,
 	    struct lsh_string **request)
 {
   CAST(session_open_command, self, s);
@@ -1187,7 +1191,7 @@ envp_parse(const struct argp *argp,
 /* Parse the argument for -R and -L */
 int
 client_parse_forward_arg(char *arg,
-			 UINT32 *listen_port,
+			 uint32_t *listen_port,
 			 struct address_info **target)
 {
   char *first;
@@ -1363,7 +1367,7 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 
     case 'L':
       {
-	UINT32 listen_port;
+	uint32_t listen_port;
 	struct address_info *target;
 
 	if (!client_parse_forward_arg(arg, &listen_port, &target))

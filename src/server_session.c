@@ -1,6 +1,5 @@
 /* server_session.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,21 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <errno.h>
+
+#include <signal.h>
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#include <sys/types.h>
+#include <sys/socket.h>
+
 #include "server_session.h"
 
 #include "channel_commands.h"
@@ -38,20 +52,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <errno.h>
-
-/* For debug */
-
-/* #include <string.h> */
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#include <sys/types.h>
-#include <sys/socket.h>
-
-#include <signal.h>
-
 #include "server_session.c.x"
 
 
@@ -64,7 +64,7 @@
        ; User information
        ;; (user object lsh_user)
 
-       (initial_window . UINT32)
+       (initial_window . uint32_t)
 
        ; Resource to kill when the channel is closed. 
        (process object lsh_process)
@@ -114,7 +114,7 @@ do_receive(struct ssh_channel *c,
 /* We may send more data */
 static void
 do_send_adjust(struct ssh_channel *s,
-	       UINT32 i UNUSED)
+	       uint32_t i UNUSED)
 {
   CAST(server_session, session, s);
 
@@ -146,7 +146,7 @@ do_eof(struct ssh_channel *channel)
 }
 
 struct ssh_channel *
-make_server_session(UINT32 initial_window,
+make_server_session(uint32_t initial_window,
 		    struct alist *request_types)
 {
   NEW(server_session, self);
@@ -634,8 +634,8 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
   static const struct exception exec_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Exec request failed");
   
-  UINT32 command_len;
-  const UINT8 *command;
+  uint32_t command_len;
+  const uint8_t *command;
 
   if (!(parse_string(args, &command_len, &command)
 	&& parse_eod(args)))
@@ -696,7 +696,7 @@ DEFINE_CHANNEL_REQUEST(exec_request_handler)
 
 static const char *
 lookup_subsystem(struct subsystem_request *self,
-		 UINT32 length, const UINT8 *name)
+		 uint32_t length, const uint8_t *name)
 {
   unsigned i;
   if (memchr(name, 0, length))
@@ -726,8 +726,8 @@ do_spawn_subsystem(struct channel_request *s,
   static struct exception subsystem_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "Subsystem request failed");
 
-  const UINT8 *name;
-  UINT32 name_length;
+  const uint8_t *name;
+  uint32_t name_length;
 
   const char *program;
       
@@ -901,11 +901,11 @@ do_x11_req(struct channel_request *s UNUSED,
   static struct exception x11_request_failed =
     STATIC_EXCEPTION(EXC_CHANNEL_REQUEST, "x11-req failed");
 
-  const UINT8 *protocol;
-  UINT32 protocol_length;
-  const UINT8 *cookie;
-  UINT32 cookie_length;
-  UINT32 screen;
+  const uint8_t *protocol;
+  uint32_t protocol_length;
+  const uint8_t *cookie;
+  uint32_t cookie_length;
+  uint32_t screen;
   unsigned single;
   
   CAST(server_session, session, channel);

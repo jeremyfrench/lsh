@@ -2,7 +2,6 @@
  *
  * Information about ssh channels.
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -36,23 +35,23 @@
 
 struct channel_open_info
 {
-  UINT32 type_length;
+  uint32_t type_length;
 
   /* NOTE: This is a pointer into the packet, so if it is needed later
    * it must be copied. */
-  const UINT8 *type_data;
+  const uint8_t *type_data;
   
   int type;
 
-  UINT32 remote_channel_number;
-  UINT32 send_window_size;
-  UINT32 send_max_packet;
+  uint32_t remote_channel_number;
+  uint32_t send_window_size;
+  uint32_t send_max_packet;
 };
 
 struct channel_request_info
 {
-  UINT32 type_length;
-  const UINT8 *type_data;
+  uint32_t type_length;
+  const uint8_t *type_data;
   
   int type;
 
@@ -94,7 +93,7 @@ struct channel_request_info
      (super flow_controlled)
      (vars
        ; Remote channel number 
-       (channel_number . UINT32)
+       (channel_number . uint32_t)
 
        ; Where to pass errors. This is used for two different
        ; purposes: If opening the channel fails, EXC_CHANNEL_OPEN is
@@ -113,11 +112,11 @@ struct channel_request_info
        ; payload, i.e. the DATA string in SSH_CHANNEL_DATA and
        ; SSH_MSG_CHANNEL_EXTENDED_DATA.
 
-       (rec_window_size . UINT32)
-       (rec_max_packet . UINT32)
+       (rec_window_size . uint32_t)
+       (rec_max_packet . uint32_t)
 
-       (send_window_size . UINT32)
-       (send_max_packet . UINT32)
+       (send_window_size . uint32_t)
+       (send_max_packet . uint32_t)
 
        (connection object ssh_connection)
        
@@ -139,7 +138,7 @@ struct channel_request_info
 
        ; Called when we are allowed to send more data on the channel.
        ; Implies that the send_window_size is non-zero. 
-       (send_adjust method void "UINT32 increment")
+       (send_adjust method void "uint32_t increment")
 
        ; Called when the channel is closed.
        ; Used by client_session and gateway_channel.
@@ -207,22 +206,22 @@ struct channel_request_info
        ; Channel numbers can be reserved before there is any actual
        ; channel assigned to them. So the channels table is not enough
        ; for keeping track of which numbers are in use.
-       (in_use space UINT8)
+       (in_use space uint8_t)
 
        ; Allocated size of the arrays.
-       (allocated_channels . UINT32)
+       (allocated_channels . uint32_t)
 
        ; Number of entries in the arrays that are in use and
        ; initialized.
-       (used_channels . UINT32)
+       (used_channels . uint32_t)
 
        ; The smallest channel number that is likely to be free
-       (next_channel . UINT32)
+       (next_channel . uint32_t)
 
        ; Number of currently allocated channel numbers.
-       (channel_count . UINT32)
+       (channel_count . uint32_t)
        
-       (max_channels . UINT32) ; Max number of channels allowed 
+       (max_channels . uint32_t) ; Max number of channels allowed 
 
        ; Forwarded TCP ports
        (local_ports struct object_queue)
@@ -253,7 +252,7 @@ struct channel_request_info
      (name global_request)
      (vars
        (handler method void "struct ssh_connection *connection"
-                            "UINT32 type"
+                            "uint32_t type"
 			    ; want-reply is needed only by
 			    ; do_gateway_global_request.
                             "int want_reply"
@@ -274,11 +273,11 @@ struct channel_request_info
      (name channel_open_exception)
      (super exception)
      (vars
-       (error_code . UINT32)))
+       (error_code . uint32_t)))
 */
 
 struct exception *
-make_channel_open_exception(UINT32 error_code, const char *msg);
+make_channel_open_exception(uint32_t error_code, const char *msg);
 
 
 /* GABA:
@@ -347,21 +346,21 @@ void dealloc_channel(struct channel_table *table, int i);
 
 void
 use_channel(struct ssh_connection *connection,
-	    UINT32 local_channel_number);
+	    uint32_t local_channel_number);
 
 void
-register_channel(UINT32 local_channel_number,
+register_channel(uint32_t local_channel_number,
 		 struct ssh_channel *channel,
 		 int take_into_use);
 
 struct ssh_channel *
-lookup_channel(struct channel_table *table, UINT32 i);
+lookup_channel(struct channel_table *table, uint32_t i);
 struct ssh_channel *
-lookup_channel_reserved(struct channel_table *table, UINT32 i);
+lookup_channel_reserved(struct channel_table *table, uint32_t i);
 
 struct abstract_write *make_channel_write(struct ssh_channel *channel);
 struct abstract_write *make_channel_write_extended(struct ssh_channel *channel,
-						   UINT32 type);
+						   uint32_t type);
 
 struct io_callback *make_channel_read_data(struct ssh_channel *channel);
 struct io_callback *make_channel_read_stderr(struct ssh_channel *channel);
@@ -369,37 +368,37 @@ struct io_callback *make_channel_read_stderr(struct ssh_channel *channel);
 struct lsh_string *format_global_failure(void);
 struct lsh_string *format_global_success(void);
 
-struct lsh_string *format_open_failure(UINT32 channel, UINT32 reason,
+struct lsh_string *format_open_failure(uint32_t channel, uint32_t reason,
 				       const char *msg, const char *language);
 struct lsh_string *format_open_confirmation(struct ssh_channel *channel,
-					    UINT32 channel_number,
+					    uint32_t channel_number,
 					    const char *format, ...);
 
-struct lsh_string *format_channel_success(UINT32 channel);
-struct lsh_string *format_channel_failure(UINT32 channel);
+struct lsh_string *format_channel_success(uint32_t channel);
+struct lsh_string *format_channel_failure(uint32_t channel);
 
 struct lsh_string *prepare_window_adjust(struct ssh_channel *channel,
-					 UINT32 add);
+					 uint32_t add);
 
 void
 channel_start_receive(struct ssh_channel *channel,
-		      UINT32 initial_window_size);
+		      uint32_t initial_window_size);
 
 struct lsh_string *
 format_channel_open_s(struct lsh_string *type,
-		      UINT32 local_channel_number,
+		      uint32_t local_channel_number,
 		      struct ssh_channel *channel,
 		      struct lsh_string *args);
 
 struct lsh_string *
-format_channel_open(int type, UINT32 local_channel_number,
+format_channel_open(int type, uint32_t local_channel_number,
 		    struct ssh_channel *channel,
 		    const char *format, ...);
 
 struct lsh_string *
 format_channel_request_i(struct channel_request_info *info,
 			 struct ssh_channel *channel,
-			 UINT32 args_length, const UINT8 *args_data);
+			 uint32_t args_length, const uint8_t *args_data);
 
 struct lsh_string *
 format_channel_request(int type,
@@ -431,7 +430,7 @@ struct lsh_string *channel_transmit_data(struct ssh_channel *channel,
 					 struct lsh_string *data);
 
 struct lsh_string *channel_transmit_extended(struct ssh_channel *channel,
-					     UINT32 type,
+					     uint32_t type,
 					     struct lsh_string *data);
 
 void init_connection_service(struct ssh_connection *connection);

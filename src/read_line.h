@@ -2,7 +2,7 @@
  *
  * Read-handler processing a line at a time.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -41,7 +41,7 @@
      (name line_handler)
      (vars
        (handler indirect-method void "struct read_handler **r"
-		"UINT32 length" "UINT8 *line"
+		"uint32_t length" "uint8_t *line"
 		"struct exception_handler *e")))
 */
 

@@ -1,8 +1,6 @@
 /* xalloc.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,14 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "xalloc.h"
 
 #include "list.h"
 #include "werror.h"
 
-#include <assert.h>
-#include <stdlib.h>
-#include <string.h>
 
 #if DEBUG_ALLOC
 
@@ -123,7 +126,7 @@ static
 #endif
 
 struct lsh_string *
-lsh_string_alloc(UINT32 length)
+lsh_string_alloc(uint32_t length)
 {
   /* NOTE: The definition of the struct contains a char array of
    * length 1, so the below includes space for a terminating NUL. */
@@ -166,7 +169,7 @@ static void sanity_check_string_list(void)
 }
 
 struct lsh_string *
-lsh_string_alloc_clue(UINT32 length, const char *clue)
+lsh_string_alloc_clue(uint32_t length, const char *clue)
 {
   struct lsh_string *s = lsh_string_alloc(length);
 
@@ -220,7 +223,7 @@ lsh_string_free(const struct lsh_string *s)
 #endif
 
 #if 0
-  debug("lsh_string_free: freeing %xi,\n", (UINT32) s);
+  debug("lsh_string_free: freeing %xi,\n", (uint32_t) s);
 #endif
   
   lsh_free(s);

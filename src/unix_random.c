@@ -1,7 +1,5 @@
 /* unix_random.c
  *
- * $Id$
- *
  * Randomness polling on unix, using yarrow and ideas from Peter
  * Gutmann's cryptlib. */
 
@@ -24,6 +22,24 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
+#include <fcntl.h>
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#include <sys/types.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+
 #include "randomness.h"
 
 #include "crypto.h"
@@ -36,19 +52,6 @@
 
 #include "nettle/yarrow.h"
 
-#include <assert.h>
-#include <string.h>
-
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-#include <sys/time.h>
-#include <sys/resource.h>
 
 #include "unix_random.c.x"
 
@@ -237,7 +240,7 @@ do_trivia_source(struct unix_random *self, int init)
   event.pid = getpid();
 
   return yarrow256_update(&self->yarrow, RANDOM_SOURCE_TRIVIA, entropy,
-			  sizeof(event), (const UINT8 *) &event);
+			  sizeof(event), (const uint8_t *) &event);
 }
 
 #define DEVICE_READ_SIZE 10
@@ -259,7 +262,7 @@ do_device_source(struct unix_random *self, int init)
        && (init || ( (now - self->device_last_read) > 60)))
     {
       /* More than a minute since we last read the device */
-      UINT8 buf[DEVICE_READ_SIZE];
+      uint8_t buf[DEVICE_READ_SIZE];
       const struct exception *e
 	= read_raw(self->device_fd, sizeof(buf), buf);
 
@@ -282,8 +285,8 @@ do_device_source(struct unix_random *self, int init)
 
 static void
 do_unix_random(struct randomness *s,
-	       UINT32 length,
-	       UINT8 *dst)
+	       uint32_t length,
+	       uint8_t *dst)
 {
   CAST(unix_random, self, s);
 
@@ -301,8 +304,8 @@ do_unix_random(struct randomness *s,
 static void
 do_unix_random_add(struct randomness *s,
 		   enum random_source_type type,
-		   UINT32 length,
-		   const UINT8 *data)
+		   uint32_t length,
+		   const uint8_t *data)
 {
   CAST(unix_random, self, s);
 

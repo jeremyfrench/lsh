@@ -1,6 +1,6 @@
 /* lsh_types.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -24,9 +24,7 @@
 #ifndef LSH_TYPES_H_INCLUDED
 #define LSH_TYPES_H_INCLUDED
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+/* FIXME: Get rid of this file? */
 
 #include <stddef.h>
 
@@ -47,36 +45,6 @@ char *alloca ();
 #   endif
 #  endif
 # endif
-#endif
-
-#if SIZEOF_SHORT >= 4
-# define UINT32 unsigned short
-#elif SIZEOF_INT >= 4
-# define UINT32 unsigned int
-#elif SIZEOF_LONG >= 4
-# define UINT32 unsigned long
-#else
-# error No suitable type found to use for UINT32
-#endif /* UINT32 */
- 
-#if SIZEOF_SHORT >= 2
-# define UINT16 unsigned short
-#elif SIZEOF_INT >= 2
-# define UINT16 unsigned int
-#else
-# error No suitable type found to use for UINT16
-#endif  /* UINT16 */
- 
-#define UINT8 unsigned char
-
-#if __GNUC__ && HAVE_GCC_ATTRIBUTE
-# define NORETURN __attribute__ ((__noreturn__))
-# define PRINTF_STYLE(f, a) __attribute__ ((__format__ (__printf__, f, a)))
-# define UNUSED __attribute__ ((__unused__))
-#else
-# define NORETURN
-# define PRINTF_STYLE(f, a)
-# define UNUSED
 #endif
 
 #if HAVE_GCC_FUNCTION
@@ -110,10 +78,10 @@ char *alloca ();
 
 /* Reads a 32-bit integer, in network byte order */
 #define READ_UINT32(p)				\
-(  (((UINT32) (p)[0]) << 24)			\
- | (((UINT32) (p)[1]) << 16)			\
- | (((UINT32) (p)[2]) << 8)			\
- |  ((UINT32) (p)[3]))
+(  (((uint32_t) (p)[0]) << 24)			\
+ | (((uint32_t) (p)[1]) << 16)			\
+ | (((uint32_t) (p)[2]) << 8)			\
+ |  ((uint32_t) (p)[3]))
 
 #define WRITE_UINT32(p, i)			\
 do {						\
@@ -125,14 +93,14 @@ do {						\
 
 /* Same, for 24-bit quantities */
 #define READ_UINT24(p)				\
-(  (((UINT32) (p)[0]) << 24)			\
- | (((UINT32) (p)[1]) << 16)			\
- |  ((UINT32) (p)[2]))
+(  (((uint32_t) (p)[0]) << 24)			\
+ | (((uint32_t) (p)[1]) << 16)			\
+ |  ((uint32_t) (p)[2]))
 
 /* Same, for 16-bit quantities */
 #define READ_UINT16(p)				\
-(  (((UINT32) (p)[0]) << 8)			\
- |  ((UINT32) (p)[1]))
+(  (((uint32_t) (p)[0]) << 8)			\
+ |  ((uint32_t) (p)[1]))
 
 #define WRITE_UINT16(p, i)			\
 do {						\

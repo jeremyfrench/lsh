@@ -1,6 +1,5 @@
 /* server_session.h
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -33,7 +32,7 @@
 #include <string.h>
 
 struct ssh_channel *
-make_server_session(UINT32 initial_window,
+make_server_session(uint32_t initial_window,
 		    struct alist *request_types);
 
 struct channel_open *

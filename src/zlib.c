@@ -2,7 +2,7 @@
  *
  * zlib compression algorithm
  * 
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -22,6 +22,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "compress.h"
 #include "format.h"
@@ -48,8 +52,8 @@ static void do_free_zstream(z_stream *z);
      (super compress_instance)
      (vars
        ; Fail before producing larger packets than this
-       (max . UINT32)
-       (rate . UINT32)
+       (max . uint32_t)
+       (rate . uint32_t)
        (f pointer (function int "z_stream *" int))
        (z indirect-special z_stream
           #f do_free_zstream)))
@@ -117,14 +121,14 @@ do_free_zstream(z_stream *z)
 #define MARGIN 200
 #define INSIGNIFICANT 100
 
-static UINT32 estimate_size(UINT32 rate, UINT32 input, UINT32 max)
+static uint32_t estimate_size(uint32_t rate, uint32_t input, uint32_t max)
 {
-  UINT32 guess = rate * input / RATE_UNIT + MARGIN;
+  uint32_t guess = rate * input / RATE_UNIT + MARGIN;
   return MIN(max, guess);
 }
 
 /* Assumes that input is nonzero */
-static UINT32 estimate_update(UINT32 rate, UINT32 input, UINT32 output)
+static uint32_t estimate_update(uint32_t rate, uint32_t input, uint32_t output)
 {
   /* Decay old estimate */
   rate = rate * 15 / 16;
@@ -139,7 +143,7 @@ static UINT32 estimate_update(UINT32 rate, UINT32 input, UINT32 output)
   
   if (input > INSIGNIFICANT)
     {
-      UINT32 estimate = output * RATE_UNIT / input;
+      uint32_t estimate = output * RATE_UNIT / input;
 
       if (estimate > RATE_MAX)
 	return RATE_MAX;
@@ -163,9 +167,9 @@ do_zlib(struct compress_instance *c,
   /* LIMIT keeps track of the amount of storage we may still need to
    * allocate. To detect that a packet grows unexpectedly large, we
    * need a little extra buffer space beyond the maximum size. */
-  UINT32 limit = self->max + 1;
+  uint32_t limit = self->max + 1;
 
-  UINT32 estimate;
+  uint32_t estimate;
   
   debug("do_zlib (%z): length in: %i\n",
 	ZLIB_TYPE(&self->z)->operation, packet->length);
@@ -253,7 +257,7 @@ do_zlib(struct compress_instance *c,
 	}
       else if (!self->z.avail_in)
 	{ /* Compressed entire packet */
-	  UINT32 input = packet->length;
+	  uint32_t input = packet->length;
 
 	  if (free)
 	    lsh_string_free(packet);

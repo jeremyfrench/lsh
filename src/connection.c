@@ -21,6 +21,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "connection.h"
 
 #include "command.h"
@@ -37,8 +43,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <assert.h>
-
 #define GABA_DEFINE
 #include "connection.h.x"
 #undef GABA_DEFINE
@@ -53,7 +57,7 @@ static void
 connection_handle_packet(struct ssh_connection *closure,
 			 struct lsh_string *packet)
 {
-  UINT8 msg;
+  uint8_t msg;
 
   assert(!closure->paused);
   
@@ -212,13 +216,13 @@ DEFINE_PACKET_HANDLER(, connection_disconnect_handler, connection, packet)
 {
   struct simple_buffer buffer;
   unsigned msg_number;
-  UINT32 reason;
+  uint32_t reason;
 
-  UINT32 length;
-  const UINT8 *msg;
+  uint32_t length;
+  const uint8_t *msg;
 
-  const UINT8 *language;
-  UINT32 language_length;
+  const uint8_t *language;
+  uint32_t language_length;
   
   static const struct exception disconnect_exception =
     STATIC_EXCEPTION(EXC_FINISH_IO, "Received disconnect message.");

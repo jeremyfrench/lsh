@@ -2,7 +2,7 @@
  *
  * PKCS#5 "PBKDF2" style key derivation.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,13 +23,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "crypto.h"
 
 #include "memxor.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <string.h>
 
 /* NOTE: The PKCS#5 v2 spec doesn't recommend or specify any
  * particular value of the iteration count.
@@ -68,29 +72,29 @@
 
 void
 pkcs5_derive_key(struct mac_algorithm *prf,
-		 UINT32 password_length, const UINT8 *password,
-		 UINT32 salt_length, const UINT8 *salt,
-		 UINT32 iterations,
-		 UINT32 key_length, UINT8 *key)
+		 uint32_t password_length, const uint8_t *password,
+		 uint32_t salt_length, const uint8_t *salt,
+		 uint32_t iterations,
+		 uint32_t key_length, uint8_t *key)
 {
   struct mac_instance *m = MAKE_MAC(prf, password_length, password);
-  UINT32 left = key_length;
+  uint32_t left = key_length;
 
   /* Set up the block counter buffer. This will never have more than
    * the last few bits set (using sha1, 8 bits = 5100 bytes of key) so
    * we only change the last byte. */
 
-  UINT8 block_count[4] = { 0, 0, 0, 1 }; 
+  uint8_t block_count[4] = { 0, 0, 0, 1 }; 
 
-  UINT8 *digest = alloca(prf->mac_size);
-  UINT8 *buffer = alloca(prf->mac_size);
+  uint8_t *digest = alloca(prf->mac_size);
+  uint8_t *buffer = alloca(prf->mac_size);
 
   assert(iterations);
   assert(key_length <= 255 * prf->mac_size);
   
   for (;; block_count[3]++)
     {
-      UINT32 i;
+      uint32_t i;
       assert(block_count[3]);
       
       /* First iterate */

@@ -1,8 +1,6 @@
 /* atoms.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,14 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "atoms.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <string.h>
 
+#include "atoms.h"
+
+
 struct atom_rassoc
 {
-  const UINT8 *name;
-  UINT32 length;
+  const uint8_t *name;
+  uint32_t length;
 };
 
 const struct atom_assoc *
@@ -42,14 +45,14 @@ struct atom_rassoc atom_table[] =
 #include "atoms_table.c"
 ;
 
-UINT32 get_atom_length(int atom)
+uint32_t get_atom_length(int atom)
 { return atom_table[atom].length; }
 
-const UINT8 *get_atom_name(int atom)
+const uint8_t *get_atom_name(int atom)
 { return atom_table[atom].name; }
   
 int
-lookup_atom(UINT32 length, const UINT8 *name)
+lookup_atom(uint32_t length, const uint8_t *name)
 {
   /* NOTE: The automatically generated code uses const char *, and
    * some compilers signal a fatal error on char * / unsigned char *

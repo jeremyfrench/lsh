@@ -2,7 +2,6 @@
  *
  * Creates an initial yarrow seed file
  *
- * $id:$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -24,25 +23,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "environ.h"
-#include "format.h"
-#include "io.h"
-#include "lock_file.h"
-#include "version.h"
-#include "werror.h"
-#include "xalloc.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#include "nettle/yarrow.h"
-
+#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <assert.h>
-
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/time.h>
 
 #include <fcntl.h>
 
@@ -51,6 +39,17 @@
 #endif
 
 #include <termios.h>
+
+/* getpwnam needed to lookup the user "nobody" */
+#include <pwd.h>
+
+/* It seems setgroups isn't defined in unistd.h */
+#include <grp.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/wait.h>
 
 #ifdef HAVE_POLL
 # if HAVE_POLL_H
@@ -69,23 +68,23 @@
 # define MY_POLLIN POLLIN
 #endif /* !POLLRDNORM */
 
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#include <sys/wait.h>
-
-/* getpwnam needed to lookup the user "nobody" */
-#include <pwd.h>
-
-/* It seems setgroups isn't defined in unistd.h */
-#include <grp.h>
 
 #if WITH_ZLIB
 
 #if HAVE_ZLIB_H
 #include <zlib.h>
 #endif
+
+#include "environ.h"
+#include "format.h"
+#include "io.h"
+#include "lock_file.h"
+#include "version.h"
+#include "werror.h"
+#include "xalloc.h"
+
+#include "nettle/yarrow.h"
+
 
 /* FIXME: Duplicated in zlib.c */
 
@@ -915,7 +914,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
 	  if (fds[i].revents & (MY_POLLIN | POLLHUP))
 	    {
 #define BUFSIZE 1024
-	      UINT8 buffer[BUFSIZE];
+	      uint8_t buffer[BUFSIZE];
 	      int res;
 	      unsigned j;
 	    
@@ -1016,7 +1015,7 @@ get_system(struct yarrow256_ctx *ctx, enum source_type source)
       if (fd > 0)
 	{
 #define BUFSIZE 5000
-	  UINT8 buffer[BUFSIZE];
+	  uint8_t buffer[BUFSIZE];
 #undef BUFSIZE
 	  int res;
 	  

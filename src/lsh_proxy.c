@@ -2,7 +2,7 @@
  *
  * main proxy program.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

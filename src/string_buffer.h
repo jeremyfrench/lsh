@@ -3,7 +3,7 @@
  * Functions for building strings whose lengths are not known from the
  * start.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -39,40 +39,40 @@ struct string_buffer
 #if 0
   /* Fail if the buffer grows larger than this value; zero means that
    * there is no limit. */
-  UINT32 max;
+  uint32_t max;
   
   /* Amount of space to allocate at a time */
-  UINT32 increment;
+  uint32_t increment;
 #endif
 
   struct lsh_string *partial; /* Partial block. */
 
-  UINT32 left;
-  UINT8 *current;
+  uint32_t left;
+  uint8_t *current;
 
   /* List of blocks beyond the first one */
   struct string_node *tail;
 #if 0
   unsigned nlist; /* Number of nodes */
 #endif
-  UINT32 total; /* Total string length, in list (i.e. not including
+  uint32_t total; /* Total string length, in list (i.e. not including
 		 * partial) */
 };
 
-void string_buffer_init(struct string_buffer *buffer, UINT32 guess);
+void string_buffer_init(struct string_buffer *buffer, uint32_t guess);
 
 #if 0
-int string_buffer_putc(struct string_buffer *buffer, UINT8 c);
+int string_buffer_putc(struct string_buffer *buffer, uint8_t c);
 int string_buffer_write(struct string_buffer *buffer,
-			UINT32 length, const UINT8 *s);
+			uint32_t length, const uint8_t *s);
 #endif
 
 void string_buffer_clear(struct string_buffer *buffer);
 
 /* Assumes that the buffer->partial string is full */
-void string_buffer_grow(struct string_buffer *buffer, UINT32 increment);
+void string_buffer_grow(struct string_buffer *buffer, uint32_t increment);
 
 struct lsh_string *string_buffer_final(struct string_buffer *buffer,
-				       UINT32 left);
+				       uint32_t left);
 
 #endif /* LSH_STRING_BUFFER_H_INCLUDED */

@@ -2,7 +2,7 @@
  *
  * S-exp functions specific to lsh.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +23,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "sexp.h"
 
 #include "atoms.h"
@@ -31,8 +37,6 @@
 
 #include "nettle/buffer.h"
 #include "nettle/sexp.h"
-
-#include <assert.h>
 
 
 /* Formatting s-expressions */
@@ -124,7 +128,7 @@ struct lsh_string *
 lsh_sexp_copy(struct sexp_iterator *i)
 {
   unsigned length;
-  const UINT8 *subexpr = sexp_iterator_subexpr(i, &length);
+  const uint8_t *subexpr = sexp_iterator_subexpr(i, &length);
 
   return subexpr ? ssh_format("%ls", length, subexpr) : NULL;
 }

@@ -1,6 +1,5 @@
 /* userauth.h
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -25,11 +24,11 @@
 #ifndef LSH_USERAUTH_H_INCLUDED
 #define LSH_USERAUTH_H_INCLUDED
 
-#include "exception.h"
-#include "resource.h"
-
 /* For uid_t */
 #include <unistd.h>
+
+#include "exception.h"
+#include "resource.h"
 
 /* Forward declaration */
 struct env_value;
@@ -121,7 +120,7 @@ struct spawn_info
        ; it must also not be readable by other users.
        (read_file method "const struct exception *"
                   "const char *name" "int secret"
-		  "UINT32 limit"
+		  "uint32_t limit"
 		  ; Gets the contents of the file
 		  "struct abstract_write *c")
 		  

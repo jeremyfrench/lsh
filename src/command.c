@@ -1,6 +1,6 @@
 /* command.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -21,14 +21,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "command.h"
 
 #include "connection.h"
 #include "io.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 #define GABA_DEFINE
 #include "command.h.x"
@@ -510,15 +514,15 @@ DEFINE_COMMAND(progn_command)
    (class
      (name catch_handler_info)
      (vars
-       (mask . UINT32)
-       (value . UINT32)
+       (mask . uint32_t)
+       (value . uint32_t)
        (ignore_value . int)
        ; NULL handler means ignore all caught exceptions.
        (handler object command)))
 */
 
 struct catch_handler_info *
-make_catch_handler_info(UINT32 mask, UINT32 value,
+make_catch_handler_info(uint32_t mask, uint32_t value,
 			int ignore_value,
 			struct command *handler)
 {

@@ -2,7 +2,7 @@
  *
  * Processor for unpadding packets.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

@@ -2,7 +2,7 @@
  *
  * Encryption classes on top of nettle.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +23,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "crypto.h"
 
 #include "werror.h"
@@ -37,11 +44,7 @@
 #include "nettle/twofish.h"
 
 #include "nettle/cbc.h"
-
 #include "nettle/hmac.h"
-
-#include <assert.h>
-#include <string.h>
 
 #include "crypto.c.x"
 
@@ -57,7 +60,7 @@
    
 static void
 do_crypt_arcfour(struct crypto_instance *s,
-		 UINT32 length, const UINT8 *src, UINT8 *dst)
+		 uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(arcfour_instance, self, s);
 
@@ -69,7 +72,7 @@ do_crypt_arcfour(struct crypto_instance *s,
 static struct crypto_instance *
 make_arcfour_instance(struct crypto_algorithm *ignored UNUSED,
 		      int mode UNUSED,
-		      const UINT8 *key, const UINT8 *iv UNUSED)
+		      const uint8_t *key, const uint8_t *iv UNUSED)
 {
   NEW(arcfour_instance, self);
 
@@ -96,7 +99,7 @@ struct crypto_algorithm crypto_arcfour_algorithm =
 
 static void
 do_aes_encrypt(struct crypto_instance *s,
-	       UINT32 length, const UINT8 *src, UINT8 *dst)
+	       uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(aes_instance, self, s);
 
@@ -105,7 +108,7 @@ do_aes_encrypt(struct crypto_instance *s,
 
 static void
 do_aes_decrypt(struct crypto_instance *s,
-	       UINT32 length, const UINT8 *src, UINT8 *dst)
+	       uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(aes_instance, self, s);
 
@@ -114,7 +117,7 @@ do_aes_decrypt(struct crypto_instance *s,
 
 static struct crypto_instance *
 make_aes_cbc_instance(struct crypto_algorithm *algorithm, int mode,
-                      const UINT8 *key, const UINT8 *iv)
+                      const uint8_t *key, const uint8_t *iv)
 {
   NEW(aes_instance, self);
 
@@ -151,7 +154,7 @@ struct crypto_algorithm crypto_aes256_cbc_algorithm =
 
 static void
 do_des3_encrypt(struct crypto_instance *s,
-		UINT32 length, const UINT8 *src, UINT8 *dst)
+		uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(des3_instance, self, s);
 
@@ -160,7 +163,7 @@ do_des3_encrypt(struct crypto_instance *s,
 
 static void
 do_des3_decrypt(struct crypto_instance *s,
-		UINT32 length, const UINT8 *src, UINT8 *dst)
+		uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(des3_instance, self, s);
 
@@ -170,10 +173,10 @@ do_des3_decrypt(struct crypto_instance *s,
 static struct crypto_instance *
 make_des3_cbc_instance(struct crypto_algorithm *algorithm UNUSED,
                        int mode,
-                       const UINT8 *key, const UINT8 *iv)
+                       const uint8_t *key, const uint8_t *iv)
 {
   NEW(des3_instance, self);
-  UINT8 pkey[DES3_KEY_SIZE];
+  uint8_t pkey[DES3_KEY_SIZE];
 
   /* Fix odd parity */
   des_fix_parity(DES3_KEY_SIZE, pkey, key);
@@ -217,7 +220,7 @@ struct crypto_algorithm crypto_des3_cbc_algorithm =
 
 static void
 do_cast128_encrypt(struct crypto_instance *s,
-                   UINT32 length, const UINT8 *src, UINT8 *dst)
+                   uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(cast128_instance, self, s);
 
@@ -226,7 +229,7 @@ do_cast128_encrypt(struct crypto_instance *s,
 
 static void
 do_cast128_decrypt(struct crypto_instance *s,
-                   UINT32 length, const UINT8 *src, UINT8 *dst)
+                   uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(cast128_instance, self, s);
 
@@ -235,7 +238,7 @@ do_cast128_decrypt(struct crypto_instance *s,
 
 static struct crypto_instance *
 make_cast128_cbc_instance(struct crypto_algorithm *algorithm, int mode,
-                          const UINT8 *key, const UINT8 *iv UNUSED)
+                          const uint8_t *key, const uint8_t *iv UNUSED)
 {
   NEW(cast128_instance, self);
 
@@ -267,7 +270,7 @@ struct crypto_algorithm crypto_cast128_cbc_algorithm =
 
 static void
 do_twofish_encrypt(struct crypto_instance *s,
-	       UINT32 length, const UINT8 *src, UINT8 *dst)
+	       uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(twofish_instance, self, s);
 
@@ -276,7 +279,7 @@ do_twofish_encrypt(struct crypto_instance *s,
 
 static void
 do_twofish_decrypt(struct crypto_instance *s,
-	       UINT32 length, const UINT8 *src, UINT8 *dst)
+	       uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(twofish_instance, self, s);
 
@@ -285,7 +288,7 @@ do_twofish_decrypt(struct crypto_instance *s,
 
 static struct crypto_instance *
 make_twofish_cbc_instance(struct crypto_algorithm *algorithm, int mode,
-		      const UINT8 *key, const UINT8 *iv UNUSED)
+		      const uint8_t *key, const uint8_t *iv UNUSED)
 {
   NEW(twofish_instance, self);
 
@@ -316,7 +319,7 @@ struct crypto_algorithm crypto_twofish256_cbc_algorithm =
 
 static void
 do_blowfish_encrypt(struct crypto_instance *s,
-                    UINT32 length, const UINT8 *src, UINT8 *dst)
+                    uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(blowfish_instance, self, s);
 
@@ -325,7 +328,7 @@ do_blowfish_encrypt(struct crypto_instance *s,
 
 static void
 do_blowfish_decrypt(struct crypto_instance *s,
-	       UINT32 length, const UINT8 *src, UINT8 *dst)
+	       uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(blowfish_instance, self, s);
 
@@ -334,7 +337,7 @@ do_blowfish_decrypt(struct crypto_instance *s,
 
 static struct crypto_instance *
 make_blowfish_cbc_instance(struct crypto_algorithm *algorithm, int mode,
-                           const UINT8 *key, const UINT8 *iv UNUSED)
+                           const uint8_t *key, const uint8_t *iv UNUSED)
 {
   NEW(blowfish_instance, self);
 
@@ -372,7 +375,7 @@ struct crypto_algorithm crypto_blowfish_cbc_algorithm =
 
 static void
 do_serpent_encrypt(struct crypto_instance *s,
-	       UINT32 length, const UINT8 *src, UINT8 *dst)
+	       uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(serpent_instance, self, s);
 
@@ -381,7 +384,7 @@ do_serpent_encrypt(struct crypto_instance *s,
 
 static void
 do_serpent_decrypt(struct crypto_instance *s,
-	       UINT32 length, const UINT8 *src, UINT8 *dst)
+	       uint32_t length, const uint8_t *src, uint8_t *dst)
 {
   CAST(serpent_instance, self, s);
 
@@ -390,7 +393,7 @@ do_serpent_decrypt(struct crypto_instance *s,
 
 static struct crypto_instance *
 make_serpent_cbc_instance(struct crypto_algorithm *algorithm, int mode,
-		      const UINT8 *key, const UINT8 *iv UNUSED)
+		      const uint8_t *key, const uint8_t *iv UNUSED)
 {
   NEW(serpent_instance, self);
 
@@ -415,14 +418,14 @@ struct crypto_algorithm crypto_serpent256_cbc_algorithm =
 
 void
 hash_update(struct hash_instance *self,
-	    UINT32 length, const UINT8 *data)
+	    uint32_t length, const uint8_t *data)
 {
   self->type->update(self->ctx, length, data);
 }
 
 void
 hash_digest(struct hash_instance *self,
-	    UINT8 *result)
+	    uint8_t *result)
 {
   self->type->digest(self->ctx, self->type->digest_size, result);
 }
@@ -479,7 +482,7 @@ crypto_sha1_algorithm =
 
 static void
 do_hmac_update(struct mac_instance *s,
-	       UINT32 length, const UINT8 *data)
+	       uint32_t length, const uint8_t *data)
 {
   CAST(hmac_instance, self, s);
   self->type->update(HMAC_STATE(self), length, data);
@@ -487,7 +490,7 @@ do_hmac_update(struct mac_instance *s,
 
 static void
 do_hmac_digest(struct mac_instance *s,
-	       UINT8 *digest)
+	       uint8_t *digest)
 {
   CAST(hmac_instance, self, s);
   hmac_digest(HMAC_OUTER(self), HMAC_INNER(self), HMAC_STATE(self),
@@ -504,8 +507,8 @@ do_hmac_digest(struct mac_instance *s,
 
 static struct mac_instance *
 make_hmac_instance(struct mac_algorithm *s,
-                   UINT32 key_length,
-                   const UINT8 *key)
+                   uint32_t key_length,
+                   const uint8_t *key)
 {
   CAST(hmac_algorithm, self, s);
   NEW_VAR_OBJECT(hmac_instance, instance,

@@ -1,8 +1,6 @@
 /* read_data.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,13 +21,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "read_data.h"
 
 #include "io.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 #include "read_data.c.x"
 
@@ -46,7 +48,7 @@
        (channel object ssh_channel)))
 */
 
-static UINT32
+static uint32_t
 do_read_data_query(struct io_consuming_read *s)
 {
   CAST(read_data, self, s);

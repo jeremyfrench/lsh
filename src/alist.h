@@ -2,7 +2,7 @@
  *
  * Associate atoms with objects (or functions) .
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -26,9 +26,9 @@
 #ifndef LSH_ALIST_H_INCLUDED
 #define LSH_ALIST_H_INCLUDED
 
-#include "lsh.h"
-
 #include <stdarg.h>
+
+#include "lsh.h"
 
 /* Forward declaration */
 struct alist;

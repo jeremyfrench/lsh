@@ -1,8 +1,6 @@
 /* werror.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +21,26 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <ctype.h>
+#include <string.h>
+
+#include <fcntl.h>
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#if HAVE_SYSLOG_H
+#include <syslog.h>
+#endif
+
 #include "werror.h"
 
 #include "charset.h"
@@ -35,21 +53,6 @@
 #include "parse.h"
 #include "xalloc.h"
 
-#include <assert.h>
-#include <ctype.h>
-#include <string.h>
-
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-#if HAVE_SYSLOG_H
-#include <syslog.h>
-#endif
 
 /* Global flags */
 int trace_flag = 0;
@@ -126,15 +129,15 @@ const struct argp werror_argp =
 static int error_fd = STDERR_FILENO;
 
 #define BUF_SIZE 500
-static UINT8 error_buffer[BUF_SIZE];
-static UINT32 error_pos = 0;
+static uint8_t error_buffer[BUF_SIZE];
+static uint32_t error_pos = 0;
 
 static const struct exception *
-(*error_write)(int fd, UINT32 length, const UINT8 *data) = write_raw;
+(*error_write)(int fd, uint32_t length, const uint8_t *data) = write_raw;
 
 #if HAVE_SYSLOG
 static const struct exception *
-write_syslog(int fd UNUSED, UINT32 length, const UINT8 *data)
+write_syslog(int fd UNUSED, uint32_t length, const uint8_t *data)
 {
   struct lsh_string *s;
 
@@ -165,7 +168,7 @@ set_error_syslog(const char *id)
 
 static const struct exception *
 write_ignore(int fd UNUSED,
-	     UINT32 length UNUSED, const UINT8 *data UNUSED)
+	     uint32_t length UNUSED, const uint8_t *data UNUSED)
 { return NULL; }
 
 void
@@ -231,7 +234,7 @@ werror_flush(void)
 }
 
 static void
-werror_putc(UINT8 c)
+werror_putc(uint8_t c)
 {
   if (error_pos == BUF_SIZE)
     werror_flush();
@@ -240,7 +243,7 @@ werror_putc(UINT8 c)
 }
 
 static void
-werror_write(UINT32 length, const UINT8 *msg)
+werror_write(uint32_t length, const uint8_t *msg)
 {
   if (error_pos + length <= BUF_SIZE)
     {
@@ -267,17 +270,17 @@ werror_bignum(mpz_t n, int base)
 }
 
 static void
-werror_decimal(UINT32 n)
+werror_decimal(uint32_t n)
 {
   unsigned length = format_size_in_decimal(n);
-  UINT8 *buffer = alloca(length);
+  uint8_t *buffer = alloca(length);
 
   format_decimal(length, buffer, n);
 
   werror_write(length, buffer);
 }
 
-static unsigned format_size_in_hex(UINT32 n);
+static unsigned format_size_in_hex(uint32_t n);
 
 static void
 werror_hex_digit(unsigned digit)
@@ -286,14 +289,14 @@ werror_hex_digit(unsigned digit)
 }
 
 static void
-werror_hex_putc(UINT8 c)
+werror_hex_putc(uint8_t c)
 {
   werror_hex_digit(c / 16);
   werror_hex_digit(c % 16);
 }
 
 static void
-werror_hex(UINT32 n)
+werror_hex(uint32_t n)
 {
   unsigned left = 8;
   
@@ -312,9 +315,9 @@ werror_hex(UINT32 n)
 }
 
 static void
-werror_hexdump(UINT32 length, UINT8 *data)
+werror_hexdump(uint32_t length, uint8_t *data)
 {
-  UINT32 i = 0;
+  uint32_t i = 0;
   
   werror("(size %i = 0x%xi)\n", length, length);
 
@@ -340,7 +343,7 @@ werror_hexdump(UINT32 length, UINT8 *data)
 
       for (j = 0; j<r; j++)
 	{
-	  UINT8 c = data[i+j];
+	  uint8_t c = data[i+j];
 	  if ( (c < 32) || (c > 126) )
 	    c = '.';
 	  werror_putc(c);
@@ -351,7 +354,7 @@ werror_hexdump(UINT32 length, UINT8 *data)
 }
 
 static void
-werror_paranoia_putc(UINT8 c)
+werror_paranoia_putc(uint8_t c)
 {
   switch (c)
     {
@@ -418,7 +421,7 @@ werror_vformat(const char *f, va_list args)
 	      werror_putc(*f);
 	      break;
 	    case 'i':
-	      (do_hex ? werror_hex : werror_decimal)(va_arg(args, UINT32));
+	      (do_hex ? werror_hex : werror_decimal)(va_arg(args, uint32_t));
 	      break;
 	    case 'c':
 	      (do_paranoia ? werror_paranoia_putc : werror_putc)(va_arg(args, int));
@@ -438,8 +441,8 @@ werror_vformat(const char *f, va_list args)
 	      }
 	    case 's':
 	      {
-		UINT32 length = va_arg(args, UINT32);
-		UINT8 *s = va_arg(args, UINT8 *);
+		uint32_t length = va_arg(args, uint32_t);
+		uint8_t *s = va_arg(args, uint8_t *);
 
 		struct lsh_string *u = NULL; 
 
@@ -461,7 +464,7 @@ werror_vformat(const char *f, va_list args)
 		  }
 		else if (do_paranoia)
 		  {
-		    UINT32 i;
+		    uint32_t i;
 		    for (i=0; i<length; i++)
 		      werror_paranoia_putc(*s++);
 		  }
@@ -493,7 +496,7 @@ werror_vformat(const char *f, va_list args)
 		  }
 		else if (do_paranoia)
 		  {
-		    UINT32 i;
+		    uint32_t i;
 		    for (i=0; i<s->length; i++)
 		      werror_paranoia_putc(s->data[i]);
 		  }
@@ -664,13 +667,13 @@ fatal(const char *format, ...)
 }
 
 static unsigned
-format_size_in_hex(UINT32 n)
+format_size_in_hex(uint32_t n)
 {
   int i;
   int e;
   
   /* Table of 16^(2^n) */
-  static const UINT32 powers[] = { 0x10UL, 0x100UL, 0x10000UL };
+  static const uint32_t powers[] = { 0x10UL, 0x100UL, 0x10000UL };
 
 #define SIZE (sizeof(powers) / sizeof(powers[0])) 
 

@@ -2,7 +2,6 @@
  *
  * Helper program for securely executing a program as a different user.
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -57,7 +56,9 @@
  * while parsing options, or should changes the environment be delayed
  * until after setuid? */
 
-#include "lsh_types.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <assert.h>
 #include <errno.h>
@@ -74,6 +75,8 @@
 #endif
 #include <pwd.h>
 #include <grp.h>
+
+#include "lsh_types.h"
 
 static void
 usage(void)

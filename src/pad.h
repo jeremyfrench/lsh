@@ -2,7 +2,7 @@
  *
  * Processor for padding and formatting ssh-packets
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -26,6 +26,7 @@
 #ifndef LSH_PAD_H_INCLUDED
 #define LSH_PAD_H_INCLUDED
 
+/* FIXME: Get rid of this file? */
 #include "abstract_crypto.h"
 #include "abstract_io.h"
 #include "connection.h"

@@ -1,6 +1,6 @@
 /* ssh1_fallback.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -35,7 +35,7 @@
      (name ssh1_fallback)
      (vars
        (fallback method void
-                 "int fd" "UINT32 length" "const UINT8 *line"
+                 "int fd" "uint32_t length" "const uint8_t *line"
 		 "struct exception_handler *e")))
 */
 

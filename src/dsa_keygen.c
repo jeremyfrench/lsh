@@ -2,7 +2,6 @@
  *
  * Generate dsa key pairs..
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol

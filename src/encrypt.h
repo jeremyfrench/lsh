@@ -2,7 +2,7 @@
  *
  * Handler to encrypt and authenticate packets.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -25,6 +25,8 @@
 
 #ifndef LSH_ENCRYPT_H_INCLUDED
 #define LSH_ENCRYPT_H_INCLUDED
+
+/* FIXME: Do we really need this file? */
 
 #include "abstract_io.h"
 #include "abstract_crypto.h"

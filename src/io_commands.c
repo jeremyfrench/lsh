@@ -1,6 +1,5 @@
 /* io_commands.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+/* Needed only to get the error code from failed calls to io_connect */
+#include <errno.h>
+/* For STDIN_FILENO */
+#include <unistd.h>
+
 #include "io_commands.h"
 
 #include "command.h"
@@ -32,13 +41,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <assert.h>
-
-/* Needed only to get the error code from failed calls to io_connect */
-#include <errno.h>
-
-/* For STDIN_FILENO */
-#include <unistd.h>
 
 #define GABA_DEFINE
 #include "io_commands.h.x"
@@ -47,7 +49,7 @@
 #if WITH_TCPWRAPPERS
 #include <tcpd.h> 
 
-/* This seems to be neccesary on some systems */
+/* This seems to be necessary on some systems */
 #include <syslog.h>
 
 int allow_severity = LOG_INFO;
@@ -59,6 +61,7 @@ int deny_severity = LOG_INFO;
 
 /* Used only by lsh-writekey */
 
+/* FIXME: Are these still used? */
 /* (write file_info)
  *
  * Opens a file for write, and returns the corresponding write_buffer.
@@ -86,7 +89,7 @@ DEFINE_COMMAND(io_write_file_command)
 
 struct io_write_file_info *
 make_io_write_file_info(struct lsh_string *name,
-			int flags, int mode, UINT32 block_size)
+			int flags, int mode, uint32_t block_size)
 {
   NEW(io_write_file_info, self);
   self->name = name;

@@ -2,7 +2,6 @@
  *
  * Handle child processes.
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol

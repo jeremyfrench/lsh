@@ -1,7 +1,5 @@
 /* queue.c 
  *
- * $Id$
- *
  * Generic doubly linked list. */
 
 /* lsh, an implementation of the ssh protocol
@@ -23,13 +21,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "queue.h"
 
 #include "list.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 /* Prototypes */
 static void do_object_queue_mark(struct lsh_queue *q,
@@ -59,11 +61,11 @@ static void sanity_check_queue(struct lsh_queue *q)
   struct lsh_queue_node *n;
 
 #if 0
-  UINT32 count;
+  uint32_t count;
 #endif
   
 #if 0
-  debug("sanity_check_queue: q = %xi\n", (UINT32) q);
+  debug("sanity_check_queue: q = %xi\n", (uint32_t) q);
 #endif
 
 #if 0
@@ -84,7 +86,7 @@ static void sanity_check_queue(struct lsh_queue *q)
   while (n->next)
     {
 #if 0
-      debug("  n = %xi\n", (UINT32) n);
+      debug("  n = %xi\n", (uint32_t) n);
 #endif 
       if (n->prev->next != n)
 	fatal("n->prev->next != n !\n");
@@ -265,7 +267,7 @@ struct lsh_object *object_queue_peek_tail(struct object_queue *q)
 struct object_list *queue_to_list(struct object_queue *q)
 {
   struct object_list *l = alloc_object_list(q->length);
-  UINT32 i = 0;
+  uint32_t i = 0;
 
   FOR_OBJECT_QUEUE(q, n)
     {

@@ -1,8 +1,6 @@
 /* client.h
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -39,7 +37,7 @@
 #define CLIENT_ARGP_MODIFIER_GROUP 200
 
 struct packet_handler *
-make_accept_service_handler(UINT32 service,
+make_accept_service_handler(uint32_t service,
 			    struct command_continuation *c);
 
 /* GABA:
@@ -65,12 +63,12 @@ struct command *make_request_service(int service);
    (class
      (name escape_info)
      (vars
-       (escape . UINT8)
+       (escape . uint8_t)
        ; Handlers, indexed by character.
        (dispatch array (object lsh_callback) "0x100")))
 */
 
-struct escape_info *make_escape_info(UINT8 escape);
+struct escape_info *make_escape_info(uint8_t escape);
 struct abstract_write *
 make_handle_escape(struct escape_info *info, struct abstract_write *next);
 
@@ -91,7 +89,7 @@ make_client_session_channel(struct lsh_fd *in,
 			    struct lsh_fd *out,
 			    struct lsh_fd *err,
 			    struct escape_info *escape,
-			    UINT32 initial_window,
+			    uint32_t initial_window,
 			    int *exit_status);
 
 struct command *
@@ -181,7 +179,7 @@ client_add_action(struct client_options *options,
 		  struct command *action);
 int
 client_parse_forward_arg(char *arg,
-			 UINT32 *listen_port,
+			 uint32_t *listen_port,
 			 struct address_info **target);
 
 extern struct command client_options2remote;

@@ -2,7 +2,7 @@
  *
  * A read handler for reading an entire file as a string.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -28,12 +28,9 @@
 
 #include "abstract_io.h"
 
+/* FIXME: Get rid of this file. */
 struct read_handler *
 make_read_file(struct abstract_write *c,
-	       UINT32 max_size);
-
-struct read_handler *
-make_read_base64(struct abstract_write *c,
-		 UINT32 max_size);
+	       uint32_t max_size);
 
 #endif /* LSH_READ_FILE_H_INCLUDED */

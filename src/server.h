@@ -1,6 +1,6 @@
 /* server.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

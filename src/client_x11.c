@@ -2,7 +2,7 @@
  *
  * Client side of X11 forwaarding.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +23,21 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <sys/socket.h>
+#include <sys/un.h>
+
+#include <netinet/in.h>
+
 #include "client.h"
 
 #include "channel_forward.h"
@@ -33,16 +48,6 @@
 #include "xauth.h"
 
 #include "client_x11.c.x"
-
-#include <assert.h>
-#include <string.h>
-
-#include <unistd.h>
-#include <fcntl.h>
-
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/un.h>
 
 /* First port number for X, according to RFC 1013 */
 #define X11_BASE_PORT 6000
@@ -72,7 +77,7 @@
        (address space "struct sockaddr")
 
        ; Default screen
-       (screen . UINT16)
+       (screen . uint16_t)
 
        ; Fake MIT-COOKIE-1
        (fake string)
@@ -100,7 +105,7 @@
        (little_endian . int)
        (name_length . unsigned)
        (auth_length . unsigned)
-       (i . UINT32)
+       (i . uint32_t)
        (buffer string)))
 */
 
@@ -211,7 +216,7 @@ do_client_channel_x11_receive(struct ssh_channel *s,
     default:
       {
         /* Copy data to buffer */
-        UINT32 left = self->buffer->length - self->i;
+        uint32_t left = self->buffer->length - self->i;
           
         /* The small initial window size should ensure that we don't get
          * more data. */
@@ -266,10 +271,10 @@ do_client_channel_x11_receive(struct ssh_channel *s,
 
 #define PAD(l) (pad_length[ (l) % 4])
               
-              UINT32 auth_offset = X11_SETUP_HEADER_LENGTH
+              uint32_t auth_offset = X11_SETUP_HEADER_LENGTH
                 + self->name_length + PAD(self->name_length);
 
-              UINT32 length = auth_offset + self->auth_length
+              uint32_t length = auth_offset + self->auth_length
                 + pad_length[self->auth_length % 4]; 
                 
               if (self->i < length)
@@ -288,8 +293,8 @@ do_client_channel_x11_receive(struct ssh_channel *s,
                                       self->buffer->data + auth_offset))
                 {
                   struct lsh_string *msg;
-                  UINT8 lengths[4];
-                  static const UINT8 pad[3] = { 0, 0, 0 };
+                  uint8_t lengths[4];
+                  static const uint8_t pad[3] = { 0, 0, 0 };
                   
                   /* Cookies match! */
                   verbose("client_x11: Allowing X11 connection; cookies match.\n");
@@ -435,9 +440,9 @@ DEFINE_CHANNEL_OPEN(channel_open_x11)
       struct command_continuation *c,
       struct exception_handler *e)
 {
-  UINT32 originator_length;
-  const UINT8 *originator;
-  UINT32 originator_port;
+  uint32_t originator_length;
+  const uint8_t *originator;
+  uint32_t originator_port;
 
   if (parse_string(args, &originator_length, &originator)
       && parse_uint32(args, &originator_port) 

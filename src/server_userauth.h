@@ -1,6 +1,5 @@
 /* server_userauth.h
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -25,18 +24,17 @@
 #ifndef LSH_SERVER_USERAUTH_H_INCLUDED
 #define LSH_SERVER_USERAUTH_H_INCLUDED
 
+/* For uid_t and gid_t */
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #include "alist.h"
 #include "command.h"
 #include "connection.h"
 #include "io.h"
 #include "parse.h"
 #include "userauth.h"
-
-/* For uid_t and gid_t */
-
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 
 #define GABA_DECLARE
 #include "server_userauth.h.x"
@@ -66,7 +64,7 @@ make_unix_user_db(struct reaper *reaper,
                      "struct ssh_connection *connection"
 		     ; The name is consumed by this function
 		     "struct lsh_string *username"
-		     "UINT32 service"
+		     "uint32_t service"
 		     "struct simple_buffer *args"
 		     "struct command_continuation *c"
 		     "struct exception_handler *e")))

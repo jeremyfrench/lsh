@@ -2,7 +2,7 @@
  *
  * Translate algorithm identifiers (or names) to algorithm objects.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

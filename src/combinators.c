@@ -2,7 +2,7 @@
  *
  * Builtin combinator functions (S, K, ...)
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

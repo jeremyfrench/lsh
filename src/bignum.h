@@ -2,7 +2,7 @@
  *
  * Interface and conversion functions for GMP.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

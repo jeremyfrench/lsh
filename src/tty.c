@@ -1,6 +1,6 @@
 /* tty.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -21,6 +21,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <sys/ioctl.h>
+
 #include "tty.h"
 
 #include "format.h"
@@ -28,10 +37,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <fcntl.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
 
 #if WITH_PTY_SUPPORT
 
@@ -369,7 +374,7 @@ static int cc_lflags[] = {
   for (i=0; i<SIZE(cc); i++)					\
     if (cc[i])							\
       {								\
-      	UINT32 r;						\
+      	uint32_t r;						\
       	if ( (new->length - p) < 5)				\
       	  goto fail;						\
 								\
@@ -385,7 +390,7 @@ tty_encode_term_mode(struct termios *ios)
 {
   unsigned int i;
   struct lsh_string *new;
-  UINT32 p = 0;
+  uint32_t p = 0;
   
   new = lsh_string_alloc(650);
 
@@ -442,7 +447,7 @@ do {							\
       
 /* Interpret ssh:s terminal description */
 int
-tty_decode_term_mode(struct termios *ios, UINT32 t_len, const UINT8 *t_modes)
+tty_decode_term_mode(struct termios *ios, uint32_t t_len, const uint8_t *t_modes)
 {
   struct simple_buffer buffer;
   
@@ -456,7 +461,7 @@ tty_decode_term_mode(struct termios *ios, UINT32 t_len, const UINT8 *t_modes)
 	return 0;
 	  
       {
-	UINT32 param;
+	uint32_t param;
 	
 	if ( (opcode == SSH_TTY_OP_END)
 	     || (opcode > SSH_TTY_OP_RESERVED))

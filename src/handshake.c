@@ -1,6 +1,5 @@
 /* handshake.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "handshake.h"
 
 #include "command.h"
@@ -38,9 +44,6 @@
 #include "version.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <string.h>
 
 #define GABA_DEFINE
 #include "handshake.h.x"
@@ -71,7 +74,7 @@ compat[] =
   };
     
 static enum peer_flag
-compat_peer_flags(UINT32 length, UINT8 *software)
+compat_peer_flags(uint32_t length, uint8_t *software)
 {
   unsigned i;
   for (i = 0; compat[i].prefix; i++)
@@ -110,12 +113,12 @@ compat_peer_flags(UINT32 length, UINT8 *software)
  * 0 if the line appears to be an SSH handshake, but with bogus version fields,
  * or 1 if the line was parsed sucessfully. */
 static int
-split_version_string(UINT32 length, UINT8 *line,
-		     UINT32 *protover_len, UINT8 **protover,
-		     UINT32 *swver_len, UINT8 **swver,
-		     UINT32 *comment_len, UINT8 **comment)
+split_version_string(uint32_t length, uint8_t *line,
+		     uint32_t *protover_len, uint8_t **protover,
+		     uint32_t *swver_len, uint8_t **swver,
+		     uint32_t *comment_len, uint8_t **comment)
 {
-  UINT8 *sep;
+  uint8_t *sep;
 
   if (length < 4 || memcmp(line, "SSH-", 4) != 0)
     {
@@ -156,13 +159,13 @@ split_version_string(UINT32 length, UINT8 *line,
 static void
 do_line(struct line_handler **h,
 	struct read_handler **r,
-	UINT32 length,
-	UINT8 *line,
+	uint32_t length,
+	uint8_t *line,
 	struct exception_handler *e)
 {
   CAST(connection_line_handler, closure, *h);
-  UINT32 protover_len, swver_len, comment_len;
-  UINT8 *protover, *swver, *comment;
+  uint32_t protover_len, swver_len, comment_len;
+  uint8_t *protover, *swver, *comment;
 
   struct ssh_connection *connection = closure->connection;
   int mode = connection->flags & CONNECTION_MODE;
@@ -290,7 +293,7 @@ struct handshake_info *
 make_handshake_info(enum connection_flag flags,
 		    const char *id_comment,
 		    const char *debug_comment,
-		    UINT32 block_size,
+		    uint32_t block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,
 		    struct ssh1_fallback *fallback)

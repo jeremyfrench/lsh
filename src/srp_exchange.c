@@ -2,7 +2,7 @@
  *
  * Thomas Wu's Secure Remote Password Protocol
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +23,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "srp.h"
 
 #include "crypto.h"
@@ -34,8 +40,6 @@
 
 #include "nettle/bignum.h"
 #include "nettle/sexp.h"
-
-#include <assert.h>
 
 #define GABA_DEFINE
 #include "srp.h.x"
@@ -202,11 +206,11 @@ srp_process_init_msg(struct dh_instance *self, struct lsh_string *packet)
 }
 
 /* dh_instance -> u */
-static UINT32
+static uint32_t
 srp_select_u(struct dh_instance *dh)
 {
   struct lsh_string *h;
-  UINT32 u;
+  uint32_t u;
   
   h = hash_string(dh->method->H, ssh_format("%ln", dh->f), 1);
 
@@ -221,7 +225,7 @@ srp_select_u(struct dh_instance *dh)
 struct lsh_string *
 srp_make_reply_msg(struct dh_instance *dh, struct srp_entry *entry)
 {
-  UINT32 u;
+  uint32_t u;
   mpz_t tmp;
   
   debug("srp_make_reply_msg: v = %xn\n", entry->verifier);
@@ -314,7 +318,7 @@ srp_make_client_proof(struct dh_instance *dh,
 		      struct lsh_string **m2,
 		      mpz_t x)
 {
-  UINT32 u = srp_select_u(dh);
+  uint32_t u = srp_select_u(dh);
   mpz_t v;
   mpz_t tmp;
   struct lsh_string *m1;
@@ -362,8 +366,8 @@ srp_process_client_proof(struct dh_instance *dh, struct lsh_string *packet)
   struct simple_buffer buffer;
   unsigned msg_number;
 
-  UINT32 length;
-  const UINT8 *client_m1;
+  uint32_t length;
+  const uint8_t *client_m1;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 
@@ -399,8 +403,8 @@ srp_process_server_proof(struct lsh_string *m2,
   struct simple_buffer buffer;
   unsigned msg_number;
 
-  UINT32 length;
-  const UINT8 *server_m2;
+  uint32_t length;
+  const uint8_t *server_m2;
   
   simple_buffer_init(&buffer, packet->length, packet->data);
 

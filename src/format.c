@@ -1,8 +1,6 @@
 /* format.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +21,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "format.h"
 
 #include "list.h"
@@ -31,13 +36,10 @@
 
 #include "nettle/bignum.h"
 
-#include <assert.h>
-#include <string.h>
-
 struct lsh_string *ssh_format(const char *format, ...)
 {
   va_list args;
-  UINT32 length;
+  uint32_t length;
   struct lsh_string *packet;
 
   va_start(args, format);
@@ -57,10 +59,10 @@ struct lsh_string *ssh_format(const char *format, ...)
   return packet;
 }
 
-UINT32 ssh_format_length(const char *format, ...)
+uint32_t ssh_format_length(const char *format, ...)
 {
   va_list args;
-  UINT32 length;
+  uint32_t length;
 
   va_start(args, format);
   length = ssh_vformat_length(format, args);
@@ -69,7 +71,7 @@ UINT32 ssh_format_length(const char *format, ...)
   return length;
 }
 
-void ssh_format_write(const char *format, UINT32 length, UINT8 *buffer, ...)
+void ssh_format_write(const char *format, uint32_t length, uint8_t *buffer, ...)
 {
   va_list args;
   
@@ -78,11 +80,11 @@ void ssh_format_write(const char *format, UINT32 length, UINT8 *buffer, ...)
   va_end(args);
 }
      
-static int write_decimal_length(UINT8 *buffer, UINT32 n);
+static int write_decimal_length(uint8_t *buffer, uint32_t n);
 
-UINT32 ssh_vformat_length(const char *f, va_list args)
+uint32_t ssh_vformat_length(const char *f, va_list args)
 {
-  UINT32 length = 0;
+  uint32_t length = 0;
 
   while(*f)
     {
@@ -132,7 +134,7 @@ end_options:
 
 	    case 'i':
 	      {
-		UINT32 i = va_arg(args, UINT32);
+		uint32_t i = va_arg(args, uint32_t);
 		if (decimal)
 		  length += format_size_in_decimal(i);
 		else
@@ -142,8 +144,8 @@ end_options:
 
 	    case 's':
 	      {
-		UINT32 l = va_arg(args, UINT32); /* String length */ 
-		(void) va_arg(args, const UINT8 *);    /* data */
+		uint32_t l = va_arg(args, uint32_t); /* String length */ 
+		(void) va_arg(args, const uint8_t *);    /* data */
 
 		length += l;
 
@@ -186,9 +188,9 @@ end_options:
 	      }
 	    case 'r':
 	      {
-		UINT32 l = va_arg(args, UINT32); 
+		uint32_t l = va_arg(args, uint32_t); 
 		length += l;
-		(void) va_arg(args, UINT8 **);    /* pointer */
+		(void) va_arg(args, uint8_t **);    /* pointer */
 
 		if (decimal)
 		  length += format_size_in_decimal(l) + 1;
@@ -217,7 +219,7 @@ end_options:
 	    case 'A':
 	      {
 		struct int_list *l = va_arg(args, struct int_list *);
-		UINT32 n, i;
+		uint32_t n, i;
 
 		if (decimal)
 		  fatal("ssh_format: Decimal lengths not supported for %%A\n");
@@ -281,9 +283,9 @@ end_options:
   return length;
 }
 
-void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
+void ssh_vformat_write(const char *f, uint32_t size, uint8_t *buffer, va_list args)
 {
-  UINT8 *start = buffer;
+  uint8_t *start = buffer;
   
   while(*f)
     {
@@ -336,7 +338,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 
 	    case 'i':
 	      {
-		UINT32 i = va_arg(args, UINT32);
+		uint32_t i = va_arg(args, uint32_t);
 		if (decimal)
 		  {
 		    unsigned length = format_size_in_decimal(i);
@@ -353,10 +355,10 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 
 	    case 's':
 	      {
-		UINT32 size = va_arg(args, UINT32);
-		const UINT8 *data = va_arg(args, const UINT8 *);
+		uint32_t size = va_arg(args, uint32_t);
+		const uint8_t *data = va_arg(args, const uint8_t *);
 
-		UINT32 length = hex ? (2*size) : size;
+		uint32_t length = hex ? (2*size) : size;
 
 		if (decimal)
 		  buffer += write_decimal_length(buffer, length);
@@ -378,7 +380,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	    case 'S':
 	      {
 		struct lsh_string *s = va_arg(args, struct lsh_string *);
-		UINT32 length = s->length;
+		uint32_t length = s->length;
 
 		if (hex)
 		  length *= 2;
@@ -407,7 +409,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	    case 'z':
 	      {
 		const char *s = va_arg(args, const char *);
-		UINT32 length = strlen(s);
+		uint32_t length = strlen(s);
 
 		if (decimal)
 		  buffer += write_decimal_length(buffer, length);
@@ -425,8 +427,8 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	      }
 	    case 'r':
 	      {
-		UINT32 length = va_arg(args, UINT32);
-		UINT8 **p = va_arg(args, UINT8 **);
+		uint32_t length = va_arg(args, uint32_t);
+		uint8_t **p = va_arg(args, uint8_t **);
 
 		if (decimal)
 		  buffer += write_decimal_length(buffer, length);
@@ -445,7 +447,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	    
 	    case 'a':
 	      {
-		UINT32 length;
+		uint32_t length;
 		int atom = va_arg(args, int);
 		
 		assert(atom);
@@ -468,8 +470,8 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	    case 'A':
 	      {
 		struct int_list *l = va_arg(args, struct int_list *);
-		UINT8 *start = buffer; /* Where to store the length */
-		UINT32 n, i;
+		uint8_t *start = buffer; /* Where to store the length */
+		uint32_t n, i;
 		
 		if (decimal)
 		  fatal("ssh_format: Decimal lengths not supported for %%A\n");
@@ -481,7 +483,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 		  {
 		    if (LIST(l)[i])
 		      {
-			UINT32 length = get_atom_length(LIST(l)[i]);
+			uint32_t length = get_atom_length(LIST(l)[i]);
 			
 			if (n)
 			  /* Not the first atom */
@@ -496,7 +498,7 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 
 		if (!literal)
 		  {
-		    UINT32 total = buffer - start - 4;
+		    uint32_t total = buffer - start - 4;
 		    WRITE_UINT32(start, total);
 		  }
 		break;
@@ -504,8 +506,8 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 	    case 'n':
 	      {
 		MP_INT *n = va_arg(args, MP_INT *);
-		UINT32 length;
-		UINT8 *start = buffer; /* Where to store the length */
+		uint32_t length;
+		uint8_t *start = buffer; /* Where to store the length */
 
 		/* Decimal not supported */
 		assert(!decimal);
@@ -545,13 +547,13 @@ void ssh_vformat_write(const char *f, UINT32 size, UINT8 *buffer, va_list args)
 }
 
 unsigned
-format_size_in_decimal(UINT32 n)
+format_size_in_decimal(uint32_t n)
 {
   int i;
   int e;
   
   /* Table of 10^(2^n) */
-  static const UINT32 powers[] = { 10UL, 100UL, 10000UL, 100000000UL };
+  static const uint32_t powers[] = { 10UL, 100UL, 10000UL, 100000000UL };
 
 #define SIZE (sizeof(powers) / sizeof(powers[0])) 
 
@@ -572,10 +574,10 @@ format_size_in_decimal(UINT32 n)
 
 
 void
-format_hex_string(UINT8 *buffer, UINT32 length, const UINT8 *data)
+format_hex_string(uint8_t *buffer, uint32_t length, const uint8_t *data)
 {
-  static const UINT8 hexchars[16] = "0123456789abcdef";
-  UINT32 i;
+  static const uint8_t hexchars[16] = "0123456789abcdef";
+  uint32_t i;
 
   for (i = 0; i < length; i++)
     {
@@ -585,7 +587,7 @@ format_hex_string(UINT8 *buffer, UINT32 length, const UINT8 *data)
 }
 
 void
-format_decimal(unsigned length, UINT8 *buffer, UINT32 n)
+format_decimal(unsigned length, uint8_t *buffer, uint32_t n)
 {
   unsigned i;
   
@@ -597,7 +599,7 @@ format_decimal(unsigned length, UINT8 *buffer, UINT32 n)
 }
 
 static int
-write_decimal_length(UINT8 *buffer, UINT32 n)
+write_decimal_length(uint8_t *buffer, uint32_t n)
 {
   int length = format_size_in_decimal(n);
 
@@ -614,7 +616,7 @@ lsh_get_cstring(const struct lsh_string *s)
 }
 
 struct lsh_string *
-lsh_string_trunc(struct lsh_string *s, UINT32 length)
+lsh_string_trunc(struct lsh_string *s, uint32_t length)
 {
   assert(length <= s->length);
   s->length = length;
@@ -633,7 +635,7 @@ lsh_string_eq(const struct lsh_string *a, const struct lsh_string *b)
 
 int
 lsh_string_eq_l(const struct lsh_string *a,
-		UINT32 length, const UINT8 *b)
+		uint32_t length, const uint8_t *b)
 {
   return ( (a->length == length)
 	   && !memcmp(a->data, b, length));
@@ -650,11 +652,11 @@ lsh_string_prefixp(const struct lsh_string *prefix,
 struct lsh_string *
 lsh_string_colonize(struct lsh_string *s, int every, int freeflag)
 {
-  UINT32 i = 0;
-  UINT32 j = 0;
+  uint32_t i = 0;
+  uint32_t j = 0;
 
   struct lsh_string *packet;
-  UINT32 length;
+  uint32_t length;
   int colons;
 
   /* No of colonds depens on length, 0..every => 0, 
@@ -682,14 +684,14 @@ lsh_string_colonize(struct lsh_string *s, int every, int freeflag)
   return packet;
 }
 
-static UINT8 
-lsh_string_bubblebabble_c( struct lsh_string *s, UINT32 i )
+static uint8_t 
+lsh_string_bubblebabble_c( struct lsh_string *s, uint32_t i )
 { 
   /* Recursive, should only be used for small strings */
 
-  UINT8 c;
-  UINT32 j;
-  UINT32 k;
+  uint8_t c;
+  uint32_t j;
+  uint32_t k;
 
   assert( 0 != i);
 
@@ -712,18 +714,18 @@ lsh_string_bubblebabble(struct lsh_string *s, int freeflag)
   /* Implements the Bubble Babble Binary Data Encoding by Huima as
    * posted to the secsh list in August 2001 by Lehtinen.*/
  
-  UINT32 i = 0;
-  UINT32 babblelen = 2 + 6*(s->length/2) + 3;
+  uint32_t i = 0;
+  uint32_t babblelen = 2 + 6*(s->length/2) + 3;
   struct lsh_string *p = lsh_string_alloc( babblelen );
 
-  UINT8 *r = p->data;
-  UINT8 *q = s->data; 
+  uint8_t *r = p->data;
+  uint8_t *q = s->data; 
 
-  UINT8 a;
-  UINT8 b;
-  UINT8 c;
-  UINT8 d;
-  UINT8 e;
+  uint8_t a;
+  uint8_t b;
+  uint8_t c;
+  uint8_t d;
+  uint8_t e;
 
   char vowels[6] = { 'a', 'e', 'i', 'o', 'u', 'y' };
 

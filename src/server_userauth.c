@@ -21,6 +21,13 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <errno.h>
+
 #include "server_userauth.h"
 
 #include "charset.h"
@@ -29,9 +36,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <errno.h>
 
 
 #define GABA_DEFINE
@@ -385,7 +389,7 @@ static void
 do_none_authenticate(struct userauth *s UNUSED,
                      struct ssh_connection *connection UNUSED,
                      struct lsh_string *username,
-                     UINT32 service UNUSED,
+                     uint32_t service UNUSED,
                      struct simple_buffer *args,
                      struct command_continuation *c,
                      struct exception_handler *e)

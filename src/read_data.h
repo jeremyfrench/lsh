@@ -2,7 +2,7 @@
  *
  * A read handler for application data.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

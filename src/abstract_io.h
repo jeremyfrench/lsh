@@ -2,7 +2,7 @@
  *
  * This is the layer separating protocol processing from actual io.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -64,7 +64,7 @@
 		; make sure that handler is not called again. '
 
 		; Available is 0 iff we have got EOF.
-		UINT32 "UINT32 available" "UINT8 *data")))
+		uint32_t "uint32_t available" "uint8_t *data")))
 		"struct exception_handler *e")))
 */
 

@@ -1,6 +1,5 @@
 /* client_session.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "client.h"
 
 #include "channel_commands.h"
@@ -31,8 +36,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 #include "client_session.c.x"
 
@@ -97,7 +100,7 @@ do_receive(struct ssh_channel *c,
 /* We may send more data */
 static void
 do_send_adjust(struct ssh_channel *s,
-	       UINT32 i UNUSED)
+	       uint32_t i UNUSED)
 {
   CAST(client_session_channel, self, s);
 
@@ -191,7 +194,7 @@ make_client_session_channel(struct lsh_fd *in,
 			    struct lsh_fd *out,
 			    struct lsh_fd *err,
 			    struct escape_info *escape,
-			    UINT32 initial_window,
+			    uint32_t initial_window,
 			    int *exit_status)
 {
   NEW(client_session_channel, self);

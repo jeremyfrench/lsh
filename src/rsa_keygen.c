@@ -2,7 +2,6 @@
  *
  * Generate rsa key pairs.
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -24,6 +23,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "publickey_crypto.h"
 
 #include "format.h"
@@ -34,7 +39,6 @@
 
 #include "nettle/rsa.h"
 
-#include <assert.h>
 
 #define SA(x) sexp_a(ATOM_##x)
 
@@ -53,7 +57,7 @@ progress(void *ctx UNUSED, int c)
 
 /* FIXME: Fold directly into the lsh-keygen program. */
 struct lsh_string *
-rsa_generate_key(struct randomness *r, UINT32 bits)
+rsa_generate_key(struct randomness *r, uint32_t bits)
 {
   struct rsa_public_key public;
   struct rsa_private_key private;

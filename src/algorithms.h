@@ -2,7 +2,7 @@
  *
  * Translate algorithm identifiers (or names) to algorithm objects.
  *
- * $Id$ */
+ */
 
 #ifndef LSH_ALGORITHMS_H_INCLUDED
 #define LSH_ALGORITHMS_H_INCLUDED

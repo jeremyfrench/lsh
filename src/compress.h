@@ -2,7 +2,7 @@
  *
  * header for compression algorithms
  * 
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -26,6 +26,7 @@
 #ifndef LSH_COMPRESS_H_INCLUDED
 #define LSH_COMPRESS_H_INCLUDED
 
+/* FIXME: Do we really need this file? */
 #include "abstract_io.h"
 #include "abstract_compress.h"
 

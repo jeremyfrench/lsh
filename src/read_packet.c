@@ -1,8 +1,6 @@
 /* read_packet.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -22,6 +20,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <assert.h>
 #include <string.h>
@@ -51,10 +53,10 @@
        (state . int)
   
        ; Attached to read packets
-       (sequence_number . UINT32)
+       (sequence_number . uint32_t)
   
        ; Buffer index, used for all the buffers
-       (pos . UINT32)
+       (pos . uint32_t)
 
        ; NOTE: This buffer should hold one block, and must be
        ; reallocated when the crypto algorithms is changed. 
@@ -68,14 +70,14 @@
 
        ; Position in the buffer after the first,
        ; already decrypted, block.
-       (crypt_pos . "UINT8 *")
+       (crypt_pos . "uint8_t *")
   
        (handler object abstract_write)
        (connection object ssh_connection)))
 */
 
 static struct lsh_string *
-lsh_string_realloc(struct lsh_string *s, UINT32 length)
+lsh_string_realloc(struct lsh_string *s, uint32_t length)
 {
   if (!s)
     return lsh_string_alloc(length);
@@ -98,13 +100,13 @@ lsh_string_realloc(struct lsh_string *s, UINT32 length)
   available -= (n);					\
 } while (0)
 
-static UINT32
+static uint32_t
 do_read_packet(struct read_handler **h,
-	       UINT32 available,
-	       UINT8 *data /*, struct exception_handler *e */)
+	       uint32_t available,
+	       uint8_t *data /*, struct exception_handler *e */)
 {
   CAST(read_packet, closure, *h);
-  UINT32 total = 0;
+  uint32_t total = 0;
 
   if (!available)
     {
@@ -128,7 +130,7 @@ do_read_packet(struct read_handler **h,
       {
       case WAIT_START:
 	{
-	  UINT32 block_size = closure->connection->rec_crypto
+	  uint32_t block_size = closure->connection->rec_crypto
 	    ? closure->connection->rec_crypto->block_size : 8;
 
 	  closure->block_buffer
@@ -149,9 +151,9 @@ do_read_packet(struct read_handler **h,
 	  
       case WAIT_HEADER:
 	{
-	  UINT32 block_size = closure->connection->rec_crypto
+	  uint32_t block_size = closure->connection->rec_crypto
 	    ? closure->connection->rec_crypto->block_size : 8;
-	  UINT32 left;
+	  uint32_t left;
 
 	  left = block_size - closure->pos;
 	  assert(left);
@@ -165,7 +167,7 @@ do_read_packet(struct read_handler **h,
 	  else
 	    {
 	      /* We have read a complete block */
-	      UINT32 length;
+	      uint32_t length;
 
 	      READ(left, closure->block_buffer);
 	    
@@ -213,7 +215,7 @@ do_read_packet(struct read_handler **h,
 	      /* Process this block before the length field is lost. */
 	      if (closure->connection->rec_mac)
 		{
-		  UINT8 s[4];
+		  uint8_t s[4];
 		  WRITE_UINT32(s, closure->sequence_number);
 		    
 		  MAC_UPDATE(closure->connection->rec_mac, 4, s);
@@ -263,7 +265,7 @@ do_read_packet(struct read_handler **h,
 	
       case WAIT_CONTENTS:
 	{
-	  UINT32 left = closure->packet_buffer->length - closure->pos;
+	  uint32_t left = closure->packet_buffer->length - closure->pos;
 
 	  assert(left);
 
@@ -305,7 +307,7 @@ do_read_packet(struct read_handler **h,
 
 	if (closure->connection->rec_mac)
 	  {
-	    UINT32 left = (closure->connection->rec_mac->mac_size
+	    uint32_t left = (closure->connection->rec_mac->mac_size
 			   - closure->pos);
 
 	    assert(left);
@@ -320,7 +322,7 @@ do_read_packet(struct read_handler **h,
 	      {
 		/* Read a complete MAC */
 
-		UINT8 *mac;
+		uint8_t *mac;
 
 		READ(left, closure->mac_buffer);
 

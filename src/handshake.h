@@ -1,6 +1,5 @@
 /* handshake.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -41,7 +40,7 @@
        ; CONNECTION_SERVER or CONNECTION_CLIENT
        (flags . "enum connection_flag")
        
-       (block_size . UINT32)
+       (block_size . uint32_t)
        (id_comment . "const char *")
        (debug_comment . "const char *")
 
@@ -56,7 +55,7 @@ struct handshake_info *
 make_handshake_info(enum connection_flag flags,
 		    const char *id_comment,
 		    const char *debug_comment,
-		    UINT32 block_size,
+		    uint32_t block_size,
 		    struct randomness *r,
 		    struct alist *algorithms,
 		    struct ssh1_fallback *fallback);

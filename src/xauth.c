@@ -2,7 +2,7 @@
  *
  * Xauth parsing.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,10 +23,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "xauth.h"
-
-#include "format.h"
-#include "werror.h"
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #if HAVE_X11_XAUTH_H
 #include <X11/Xauth.h>
@@ -35,8 +34,12 @@
 #include <unistd.h>
 #include <netinet/in.h>
 
-#if HAVE_LIBXAU
+#include "xauth.h"
 
+#include "format.h"
+#include "werror.h"
+
+#if HAVE_LIBXAU
 static int
 xauth_process(const char *filename,
 	      unsigned family,
@@ -181,10 +184,10 @@ xauth_lookup(struct sockaddr *address UNUSED,
 
 /* FIXME: Should move somewhere else. */
 static struct lsh_string *
-read_file(int fd, UINT32 limit)
+read_file(int fd, uint32_t limit)
 {
   struct lsh_string *s = lsh_string_alloc(limit);
-  UINT32 i = 0;
+  uint32_t i = 0;
 
   while ( i < s->length)
     {
@@ -292,7 +295,7 @@ xauth_lock(const char *name)
      (vars
        ; NULL for local transport
        (host string)
-       (display . UINT16)
+       (display . uint16_t)
        
        (auth_name string)
        (auth_data string)))
@@ -341,15 +344,15 @@ xauth_lookup(struct sockaddr *address,
 
       while (!parse_eod(&buffer))
 	{
-	  UINT32 family;
-	  UINT32 address_length;
-	  const UINT8 *address;
-	  UINT32 display_length;
-	  const UINT8 *display;
-	  UINT32 name_length;
-	  const UINT8 *name;
-	  UINT32 data_length;
-	  const UINT8 *data;
+	  uint32_t family;
+	  uint32_t address_length;
+	  const uint8_t *address;
+	  uint32_t display_length;
+	  const uint8_t *display;
+	  uint32_t name_length;
+	  const uint8_t *name;
+	  uint32_t data_length;
+	  const uint8_t *data;
 
 	  if (parse_uint16(&buffer, &family)
 	      && parse_string16(&buffer, &address_length, &address)

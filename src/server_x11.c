@@ -1,7 +1,5 @@
 /* server_x11.c
  *
- * $id:$
- *
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -23,6 +21,22 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <sys/types.h>
+
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+
 #include "server_x11.h"
 
 #include "channel_commands.h"
@@ -35,17 +49,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <assert.h>
-#include <string.h>
-
-#include <unistd.h>
-#include <fcntl.h>
-
-#include <sys/types.h>
-
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/un.h>
 
 #define GABA_DEFINE
 #include "server_x11.h.x"
@@ -80,7 +83,7 @@ struct command open_forwarded_x11;
 static struct ssh_channel *
 new_x11_channel(struct channel_open_command *c,
 		struct ssh_connection *connection,
-		UINT32 local_channel_number,
+		uint32_t local_channel_number,
 		struct lsh_string **request)
 {
   CAST(channel_open_command_x11, self, c);
@@ -402,7 +405,7 @@ make_xauth_exit_callback(struct command_continuation *c,
  * properly authenticated to call it with arbitrary commands. We still
  * check for NUL characters, though. */
 static int
-bad_string(UINT32 length, const UINT8 *data)
+bad_string(uint32_t length, const uint8_t *data)
 {
   return !!memchr(data, '\0', length);
 }
@@ -416,9 +419,9 @@ bad_string(UINT32 length, const UINT8 *data)
 struct server_x11_info *
 server_x11_setup(struct ssh_channel *channel, struct lsh_user *user,
 		 int single,
-		 UINT32 protocol_length, const UINT8 *protocol,
-		 UINT32 cookie_length, const UINT8 *cookie,
-		 UINT32 screen,
+		 uint32_t protocol_length, const uint8_t *protocol,
+		 uint32_t cookie_length, const uint8_t *cookie,
+		 uint32_t screen,
 		 struct command_continuation *c,
 		 struct exception_handler *e)
 {

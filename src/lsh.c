@@ -1,8 +1,8 @@
 /* lsh.c
  *
- * client main program
+ * Client main program.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -22,6 +22,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <errno.h>
+#include <locale.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <fcntl.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "algorithms.h"
 #include "alist.h"
@@ -58,16 +73,6 @@
 /* For struct spki_iterator */
 #include "spki/parse.h"
 
-#include <assert.h>
-#include <errno.h>
-#include <locale.h>
-#include <stdio.h>
-#include <stdlib.h>
-/* #include <string.h> */
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #include "lsh_argp.h"
 
@@ -997,7 +1002,7 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
 
     case 'R':
       {
-	UINT32 listen_port;
+	uint32_t listen_port;
 	struct address_info *target;
 
 	if (!client_parse_forward_arg(arg, &listen_port, &target))

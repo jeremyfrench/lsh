@@ -1,6 +1,5 @@
 /* tcpforward_commands.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "tcpforward_commands.h"
 
 #include "atoms.h"
@@ -33,8 +38,6 @@
 #include "ssh.h"
 #include "werror.h"
 #include "xalloc.h"
-
-#include <assert.h>
 
 /* Forward declarations */
 
@@ -108,7 +111,7 @@ DEFINE_COMMAND(tcpip_connect_io_command)
        (type . int)
 
        ;; Appearantly not used for anything.
-       ;; (initial_window . UINT32)
+       ;; (initial_window . uint32_t)
 
        ; For forwarded-tcpip, port is the port listened to.
        ; For direct-tcpip, port is the port to connect to.
@@ -120,7 +123,7 @@ DEFINE_COMMAND(tcpip_connect_io_command)
 static struct ssh_channel *
 new_tcpip_channel(struct channel_open_command *c,
 		  struct ssh_connection *connection,
-		  UINT32 local_channel_number,
+		  uint32_t local_channel_number,
 		  struct lsh_string **request)
 {
   CAST(open_tcpip_command, self, c);

@@ -1,6 +1,5 @@
 /* gateway.h
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -24,6 +23,8 @@
 
 #ifndef GATEWAY_H_INCLUDED
 #define GATEWAY_H_INCLUDED
+
+/* FIXME: Do we really need this file? */
 
 #include "lsh.h"
 

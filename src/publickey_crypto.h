@@ -1,8 +1,6 @@
 /* publickey_crypto.h
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -45,7 +43,7 @@
 */
 
 struct keypair *
-make_keypair(UINT32 type,
+make_keypair(uint32_t type,
 	     struct lsh_string *public,
 	     struct signer *private);
 
@@ -80,7 +78,7 @@ make_keypair(UINT32 type,
        
        ; FIXME: Doesn't handle negative exponents
        (power method void "mpz_t res" "mpz_t g" "mpz_t e")
-       (small_power method void "mpz_t res" "mpz_t g" "UINT32 e"))) */
+       (small_power method void "mpz_t res" "mpz_t g" "uint32_t e"))) */
 
 #define GROUP_RANGE(group, x) ((group)->range((group), (x)))
 #define GROUP_INVERT(group, res, x) ((group)->invert((group), (res), (x)))
@@ -211,11 +209,11 @@ struct verifier *
 parse_ssh_rsa_public(struct simple_buffer *buffer);
 
 struct verifier *
-make_ssh_rsa_verifier(UINT32 public_length,
-		      const UINT8 *public);
+make_ssh_rsa_verifier(uint32_t public_length,
+		      const uint8_t *public);
 
 struct lsh_string *
-rsa_generate_key(struct randomness *r, UINT32 bits);
+rsa_generate_key(struct randomness *r, uint32_t bits);
 
 
 /* DSA signatures */
@@ -228,8 +226,8 @@ struct verifier *
 parse_ssh_dss_public(struct simple_buffer *buffer);
 
 struct verifier *
-make_ssh_dss_verifier(UINT32 public_length,
-		      const UINT8 *public);
+make_ssh_dss_verifier(uint32_t public_length,
+		      const uint8_t *public);
 
 void dsa_nist_gen(mpz_t p, mpz_t q, struct randomness *r, unsigned l);
 void dsa_find_generator(mpz_t g, struct randomness *r, mpz_t p, mpz_t q);

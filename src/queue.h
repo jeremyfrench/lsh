@@ -1,7 +1,5 @@
 /* queue.h
  *
- * $Id$
- *
  * Generic doubly linked list. */
 
 /* lsh, an implementation of the ssh protocol
@@ -84,7 +82,7 @@ struct object_queue_node
    (struct
      (name object_queue)
      (vars
-       (length . UINT32)
+       (length . uint32_t)
        (q indirect-special "struct lsh_queue"
           do_object_queue_mark do_object_queue_free)))
 */
@@ -135,7 +133,7 @@ struct string_queue_node
    (struct
      (name string_queue)
      (vars
-       (length . UINT32)
+       (length . uint32_t)
        (q indirect-special "struct lsh_queue"
           #f do_string_queue_free)))
 */

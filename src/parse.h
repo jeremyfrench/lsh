@@ -2,7 +2,7 @@
  *
  * Parses the data formats used in ssh packets.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -36,28 +36,28 @@
 
 struct simple_buffer
 {
-  UINT32 capacity;
-  UINT32 pos;
-  const UINT8 *data;
+  uint32_t capacity;
+  uint32_t pos;
+  const uint8_t *data;
 };
 
 void
 simple_buffer_init(struct simple_buffer *buffer,
-		  UINT32 capacity, const UINT8 *data);
+		  uint32_t capacity, const uint8_t *data);
 
 /* Returns 1 on success, 0 on failure */
 int
-parse_uint32(struct simple_buffer *buffer, UINT32 *result);
+parse_uint32(struct simple_buffer *buffer, uint32_t *result);
 
 /* Only records length and start pointer */
 int
 parse_string(struct simple_buffer *buffer,
-	     UINT32 *length, const UINT8 **start);
+	     uint32_t *length, const uint8_t **start);
 
 /* Copies a given number of octets, without any length header */
 int
 parse_octets(struct simple_buffer *buffer,
-	     UINT32 length, UINT8 *start);
+	     uint32_t length, uint8_t *start);
 
 /* Copies a substring */
 struct lsh_string *
@@ -73,12 +73,12 @@ parse_uint8(struct simple_buffer *buffer, unsigned *result);
 
 /* Returns 1 on success, 0 on error, and -1 at end of buffer */
 int
-parse_utf8(struct simple_buffer *buffer, UINT32 *result);
+parse_utf8(struct simple_buffer *buffer, uint32_t *result);
 
 int parse_boolean(struct simple_buffer *buffer, int *result);
 
 int
-parse_bignum(struct simple_buffer *buffer, mpz_t result, UINT32 limit);
+parse_bignum(struct simple_buffer *buffer, mpz_t result, uint32_t limit);
 
 int
 parse_atom(struct simple_buffer *buffer, int *result);
@@ -95,15 +95,15 @@ struct int_list *
 parse_atom_list(struct simple_buffer *buffer, unsigned limit);
 
 int
-parse_uint16(struct simple_buffer *buffer, UINT32 *result);
+parse_uint16(struct simple_buffer *buffer, uint32_t *result);
 
 int
 parse_string16(struct simple_buffer *buffer,
-	       UINT32 *length, const UINT8 **start);
+	       uint32_t *length, const uint8_t **start);
 
 void
 parse_rest(struct simple_buffer *buffer,
-	   UINT32 *length, const UINT8 **start);
+	   uint32_t *length, const uint8_t **start);
 
 /* Copies the rest of the buffer into a string. */
 struct lsh_string *

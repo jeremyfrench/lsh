@@ -2,7 +2,7 @@
  *
  * Simple mark&sweep garbage collector.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +23,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "gc.h"
 
 #include "io.h"
@@ -30,7 +36,6 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <assert.h>
 
 /* Global variables */
 static struct lsh_object *all_objects = NULL;
@@ -49,7 +54,7 @@ static void sanity_check_object_list(void)
 #if 0
   wwrite("sanity_check_object_list: Objects on list:\n");
   for(o = all_objects; o; o = o->next)
-    werror("  %xi, class: %z\n", (UINT32) o, o->isa ? o->isa->name : "UNKNOWN");
+    werror("  %xi, class: %z\n", (uint32_t) o, o->isa ? o->isa->name : "UNKNOWN");
 #endif
   
   for(o = all_objects; o; o = o->next)

@@ -1,8 +1,6 @@
 /* io.h
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -26,10 +24,6 @@
 #ifndef LSH_IO_H_INCLUDED
 #define LSH_IO_H_INCLUDED
 
-#include "abstract_io.h"
-#include "resource.h"
-#include "write_buffer.h"
-
 #include <time.h>
 #include <netdb.h>
 /* For sig_atomic_t */
@@ -37,6 +31,10 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+
+#include "abstract_io.h"
+#include "resource.h"
+#include "write_buffer.h"
 
 enum io_type { IO_PTY = 1 };
 
@@ -118,12 +116,12 @@ io_nfiles(void);
      (name io_buffered_read)
      (super io_callback)
      (vars
-       (buffer_size . UINT32)
+       (buffer_size . uint32_t)
        (handler object read_handler)))
 */
 
 struct io_callback *
-make_buffered_read(UINT32 buffer_size,
+make_buffered_read(uint32_t buffer_size,
 		   struct read_handler *handler);
 
 /* Used for read handlers like read_data, that know how much data they
@@ -134,7 +132,7 @@ make_buffered_read(UINT32 buffer_size,
      (name io_consuming_read)
      (super io_callback)
      (vars
-       (query method UINT32)
+       (query method uint32_t)
        ; Returns the maximum number of octets that
        ; can be consumed immediately.
        (consumer object abstract_write)))
@@ -155,7 +153,7 @@ void init_consuming_read(struct io_consuming_read *self,
        ; a dns name.
        (ip string)
        ; The port number here is always in host byte order
-       (port . UINT32))) */
+       (port . uint32_t))) */
 
 /* Used for listening and connecting to local sockets.
  * Both strings have to be NUL-terminated. */
@@ -202,7 +200,7 @@ make_listen_value(struct lsh_fd *fd,
 
 /* If msg is NULL, it is derived from errno */
 struct exception *
-make_io_exception(UINT32 type, struct lsh_fd *fd, int error, const char *msg);
+make_io_exception(uint32_t type, struct lsh_fd *fd, int error, const char *msg);
 
 /* Used in cases where the fd and errno are not available */
 #define STATIC_IO_EXCEPTION(type, name) \
@@ -249,7 +247,7 @@ make_address_info_c(const char *host,
 
 struct address_info *
 make_address_info(struct lsh_string *host, 
-		  UINT32 port);
+		  uint32_t port);
 
 struct address_info *
 fd2info(struct lsh_fd *fd, int side);
@@ -266,15 +264,15 @@ address_info2sockaddr(socklen_t *length,
 
 /* Returns an exception, if anything went wrong */
 const struct exception *
-write_raw(int fd, UINT32 length, const UINT8 *data);
+write_raw(int fd, uint32_t length, const uint8_t *data);
 const struct exception *
-write_raw_with_poll(int fd, UINT32 length, const UINT8 *data);
+write_raw_with_poll(int fd, uint32_t length, const uint8_t *data);
 
 const struct exception *
-read_raw(int fd, UINT32 length, UINT8 *data);
+read_raw(int fd, uint32_t length, uint8_t *data);
 
 struct lsh_string *
-io_read_file_raw(int fd, UINT32 guess);
+io_read_file_raw(int fd, uint32_t guess);
 
 void io_set_nonblocking(int fd);
 void io_set_blocking(int fd);
@@ -322,7 +320,7 @@ make_listen_callback(struct command *c,
 
 struct lsh_fd *io_read_write(struct lsh_fd *fd,
 			     struct io_callback *read,
-			     UINT32 block_size,
+			     uint32_t block_size,
 			     struct lsh_callback *close_callback);
 
 struct lsh_fd *io_read(struct lsh_fd *fd,
@@ -330,7 +328,7 @@ struct lsh_fd *io_read(struct lsh_fd *fd,
 		       struct lsh_callback *close_callback);
 
 struct lsh_fd *io_write(struct lsh_fd *fd,
-			UINT32 block_size,
+			uint32_t block_size,
 			struct lsh_callback *close_callback);
 
 /* Close the fd right away. */
@@ -350,7 +348,7 @@ close_fd_write(struct lsh_fd *fd);
 struct lsh_fd *
 io_write_file(const char *fname, int flags,
 	      int mode,
-	      UINT32 block_size,
+	      uint32_t block_size,
 	      struct lsh_callback *c,
 	      struct exception_handler *e);
 

@@ -2,7 +2,7 @@
  *
  * Interact with the user.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +23,23 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <errno.h>
+
+#include <signal.h>
+
+#include <fcntl.h>
+#if HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include "interact.h"
 
 #include "format.h"
@@ -33,27 +50,13 @@
 #include "werror.h"
 #include "xalloc.h"
 
-#include <assert.h>
-#include <errno.h>
-/* #include <string.h> */
-
-#include <signal.h>
-
-#if HAVE_UNISTD_H
-# include <unistd.h>
-#endif
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
 #include "unix_interact.c.x"
 
 /* Depends on the tty being line buffered */
 static int
-read_line(int fd, UINT32 size, UINT8 *buffer)
+read_line(int fd, uint32_t size, uint8_t *buffer)
 {
-  UINT32 i = 0;
+  uint32_t i = 0;
 
   while (i < size)
     {
@@ -74,7 +77,7 @@ read_line(int fd, UINT32 size, UINT8 *buffer)
 	  }
       else
 	{
-	  UINT32 j;
+	  uint32_t j;
 	  for (j = 0; j < (unsigned) res; j++, i++)
 	    if (buffer[i] == '\n')
 	      return i;
@@ -84,7 +87,7 @@ read_line(int fd, UINT32 size, UINT8 *buffer)
 #define BUFSIZE 512
   for (;;)
     {
-      UINT8 b[BUFSIZE];
+      uint8_t b[BUFSIZE];
       int res = read(fd, b, BUFSIZE);
       if (!res)
 	/* EOF */
@@ -102,7 +105,7 @@ read_line(int fd, UINT32 size, UINT8 *buffer)
 	  }
       else
 	{
-	  UINT32 j;
+	  uint32_t j;
 	  for (j = 0; j < (unsigned) res; j++)
 	    if (b[j] == '\n')
 	      return res;
@@ -172,7 +175,7 @@ unix_is_tty(struct interact *s)
 /* FIXME: Rewrite to operate on tty_fd. */
 static struct lsh_string *
 unix_read_password(struct interact *s UNUSED,
-		   UINT32 max_length UNUSED,
+		   uint32_t max_length UNUSED,
 		   const struct lsh_string *prompt, int free)
 {
   /* NOTE: Ignores max_length; instead getpass's limit applies. */
@@ -215,7 +218,7 @@ unix_yes_or_no(struct interact *s,
     }
   else    
     {
-      UINT8 buffer[TTY_BUFSIZE];
+      uint8_t buffer[TTY_BUFSIZE];
       const struct exception *e;
   
       e = write_raw(self->tty_fd, prompt->length, prompt->data);

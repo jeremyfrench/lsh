@@ -1,8 +1,6 @@
 /* parse.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,6 +21,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "parse.h"
 
 #include "format.h"
@@ -34,12 +39,9 @@
 
 #include "nettle/bignum.h"
 
-#include <assert.h>
-#include <string.h>
-
 void
 simple_buffer_init(struct simple_buffer *buffer,
-		   UINT32 capacity, const UINT8 *data)
+		   uint32_t capacity, const uint8_t *data)
 {
   buffer->capacity = capacity;
   buffer->pos = 0;
@@ -47,7 +49,7 @@ simple_buffer_init(struct simple_buffer *buffer,
 }
 
 int
-parse_uint32(struct simple_buffer *buffer, UINT32 *result)
+parse_uint32(struct simple_buffer *buffer, uint32_t *result)
 {
   if (LEFT < 4)
     return 0;
@@ -59,9 +61,9 @@ parse_uint32(struct simple_buffer *buffer, UINT32 *result)
 
 int
 parse_string(struct simple_buffer *buffer,
-	     UINT32 *length, const UINT8 **start)
+	     uint32_t *length, const uint8_t **start)
 {
-  UINT32 l;
+  uint32_t l;
 
   if (!parse_uint32(buffer, &l))
     return 0;
@@ -77,7 +79,7 @@ parse_string(struct simple_buffer *buffer,
 
 int
 parse_octets(struct simple_buffer *buffer,
-	     UINT32 length, UINT8 *start)
+	     uint32_t length, uint8_t *start)
 {
   if (LEFT < length)
     return 0;
@@ -89,8 +91,8 @@ parse_octets(struct simple_buffer *buffer,
 struct lsh_string *
 parse_string_copy(struct simple_buffer *buffer)
 {
-  UINT32 length;
-  const UINT8 *start;
+  uint32_t length;
+  const uint8_t *start;
   
   if (!parse_string(buffer, &length, &start))
     return NULL;
@@ -103,8 +105,8 @@ int
 parse_sub_buffer(struct simple_buffer *buffer,
 		 struct simple_buffer *subbuffer)
 {
-  UINT32 length;
-  const UINT8 *data;
+  uint32_t length;
+  const uint8_t *data;
 
   if (!parse_string(buffer, &length, &data))
     return 0;
@@ -125,9 +127,9 @@ parse_uint8(struct simple_buffer *buffer, unsigned *result)
 }
 
 int
-parse_utf8(struct simple_buffer *buffer, UINT32 *result)
+parse_utf8(struct simple_buffer *buffer, uint32_t *result)
 {
-  UINT32 first;
+  uint32_t first;
   int length;
   int i;
   
@@ -178,7 +180,7 @@ parse_utf8(struct simple_buffer *buffer, UINT32 *result)
     }
   for(i = 1; i<length; i++)
     {
-      UINT32 c = HERE[i];
+      uint32_t c = HERE[i];
       if ( (c & 0xC0) != 0x80)
 	return 0;
       *result = (*result << 6) | (c & 0x3f);
@@ -198,10 +200,10 @@ parse_boolean(struct simple_buffer *buffer, int *result)
 }
 
 int
-parse_bignum(struct simple_buffer *buffer, mpz_t result, UINT32 limit)
+parse_bignum(struct simple_buffer *buffer, mpz_t result, uint32_t limit)
 {
-  UINT32 length;
-  const UINT8 *digits;
+  uint32_t length;
+  const uint8_t *digits;
 
   if (!parse_string(buffer, &length, &digits))
     return 0;
@@ -220,8 +222,8 @@ parse_bignum(struct simple_buffer *buffer, mpz_t result, UINT32 limit)
 int
 parse_atom(struct simple_buffer *buffer, int *result)
 {
-  UINT32 length;
-  const UINT8 *start;
+  uint32_t length;
+  const uint8_t *start;
 
   if ( (!parse_string(buffer, &length, &start))
        || length > 64)
@@ -238,7 +240,7 @@ parse_atom(struct simple_buffer *buffer, int *result)
 static int
 parse_next_atom(struct simple_buffer *buffer, int *result)
 {
-  UINT32 i;
+  uint32_t i;
 
   assert (buffer->pos <=buffer->capacity);
 
@@ -319,7 +321,7 @@ parse_atom_list(struct simple_buffer *buffer, unsigned limit)
 
 /* Used by client_x11.c, for parsing xauth */
 int
-parse_uint16(struct simple_buffer *buffer, UINT32 *result)
+parse_uint16(struct simple_buffer *buffer, uint32_t *result)
 {
   if (LEFT < 2)
     return 0;
@@ -331,9 +333,9 @@ parse_uint16(struct simple_buffer *buffer, UINT32 *result)
 
 int
 parse_string16(struct simple_buffer *buffer,
-	       UINT32 *length, const UINT8 **start)
+	       uint32_t *length, const uint8_t **start)
 {
-  UINT32 l;
+  uint32_t l;
 
   if (!parse_uint16(buffer, &l))
     return 0;
@@ -349,7 +351,7 @@ parse_string16(struct simple_buffer *buffer,
 
 void
 parse_rest(struct simple_buffer *buffer,
-	   UINT32 *length, const UINT8 **start)
+	   uint32_t *length, const uint8_t **start)
 {
   *length = LEFT;
   *start = HERE;
@@ -360,7 +362,7 @@ parse_rest(struct simple_buffer *buffer,
 struct lsh_string *
 parse_rest_copy(struct simple_buffer *buffer)
 {
-  UINT32 length = LEFT;
+  uint32_t length = LEFT;
   struct lsh_string *s = ssh_format("%ls", length, HERE);
 
   ADVANCE(length);

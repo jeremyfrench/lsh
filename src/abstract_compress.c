@@ -2,7 +2,6 @@
  *
  * interface to compression algorithms...
  * 
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol

@@ -1,6 +1,5 @@
 /* tcpforward.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "tcpforward.h"
 
 #include "channel_commands.h"
@@ -30,8 +35,6 @@
 #include "io_commands.h"
 #include "ssh.h"
 #include "werror.h"
-
-#include <assert.h>
 
 
 #define GABA_DEFINE
@@ -66,7 +69,7 @@ make_remote_port(struct address_info *listen,
 
 static struct forwarded_port *
 lookup_forward(struct object_queue *q,
-	       UINT32 length, const UINT8 *ip, UINT32 port)
+	       uint32_t length, const uint8_t *ip, uint32_t port)
 {
   FOR_OBJECT_QUEUE(q, n)
     {
@@ -81,7 +84,7 @@ lookup_forward(struct object_queue *q,
 
 static struct local_port *
 remove_forward(struct object_queue *q, int null_ok,
-	       UINT32 length, const UINT8 *ip, UINT32 port)
+	       uint32_t length, const uint8_t *ip, uint32_t port)
 {
   FOR_OBJECT_QUEUE(q, n)
     {
@@ -189,10 +192,10 @@ do_channel_open_direct_tcpip(struct channel_open *s,
   CAST(channel_open_direct_tcpip, closure, s);
 
   struct lsh_string *dest_host;
-  UINT32 dest_port;
-  const UINT8 *orig_host;
-  UINT32 orig_host_length;
-  UINT32 orig_port;
+  uint32_t dest_port;
+  const uint8_t *orig_host;
+  uint32_t orig_host_length;
+  uint32_t orig_port;
   
   if ( (dest_host = parse_string_copy(args))
        && parse_uint32(args, &dest_port) 
@@ -346,7 +349,7 @@ make_tcpip_forward_request_exc(struct ssh_connection *connection,
 static void
 do_tcpip_forward_request(struct global_request *s, 
 			 struct ssh_connection *connection,
-			 UINT32 type UNUSED,
+			 uint32_t type UNUSED,
 			 int want_reply UNUSED,
 			 struct simple_buffer *args,
 			 struct command_continuation *c,
@@ -354,7 +357,7 @@ do_tcpip_forward_request(struct global_request *s,
 {
   CAST(tcpip_forward_request, self, s);
   struct lsh_string *bind_host;
-  UINT32 bind_port;
+  uint32_t bind_port;
   
   if ((bind_host = parse_string_copy(args)) 
       && parse_uint32(args, &bind_port) 
@@ -416,15 +419,15 @@ struct global_request *make_tcpip_forward_request(struct command *callback)
 static void
 do_tcpip_cancel_forward(struct global_request *s UNUSED, 
 			struct ssh_connection *connection,
-			UINT32 type UNUSED,
+			uint32_t type UNUSED,
 			int want_reply UNUSED,
 			struct simple_buffer *args,
 			struct command_continuation *c,
 			struct exception_handler *e)
 {
-  UINT32 bind_host_length;
-  const UINT8 *bind_host;
-  UINT32 bind_port;
+  uint32_t bind_host_length;
+  const uint8_t *bind_host;
+  uint32_t bind_port;
   
   if (parse_string(args, &bind_host_length, &bind_host) &&
       parse_uint32(args, &bind_port) &&
@@ -484,11 +487,11 @@ do_channel_open_forwarded_tcpip(struct channel_open *s UNUSED,
 				struct command_continuation *c,
 				struct exception_handler *e)
 {
-  UINT32 listen_ip_length;
-  const UINT8 *listen_ip;
-  UINT32 listen_port;
+  uint32_t listen_ip_length;
+  const uint8_t *listen_ip;
+  uint32_t listen_port;
   struct lsh_string *peer_host = NULL;
-  UINT32 peer_port;
+  uint32_t peer_port;
 
   if (parse_string(args, &listen_ip_length, &listen_ip)
       && parse_uint32(args, &listen_port)

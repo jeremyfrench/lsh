@@ -1,6 +1,6 @@
 /* proxy_agentforward.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

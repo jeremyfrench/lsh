@@ -2,7 +2,7 @@
  *
  * Include the right argp header.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

@@ -1,6 +1,5 @@
 /* io_commands.h
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -39,11 +38,11 @@
        (name string)
        (flags . int)
        (mode . int)
-       (block_size . UINT32)))
+       (block_size . uint32_t)))
 */
 
 struct io_write_file_info *
-make_io_write_file_info(struct lsh_string *name, int flags, int mode, UINT32 block_size);
+make_io_write_file_info(struct lsh_string *name, int flags, int mode, uint32_t block_size);
 
 extern struct command io_write_file_command;
 

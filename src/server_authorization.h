@@ -2,7 +2,7 @@
  *
  * user authorization database
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

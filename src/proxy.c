@@ -1,6 +1,6 @@
 /* proxy.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -270,7 +270,7 @@ do_proxy_accept_service(struct packet_handler *c,
   CAST(proxy_accept_service_handler, closure, c);
 
   struct simple_buffer buffer;
-  UINT32 msg_number;
+  uint32_t msg_number;
   int name;
 
   simple_buffer_init(&buffer, packet->length, packet->data);
@@ -315,7 +315,7 @@ do_proxy_accept_service(struct packet_handler *c,
 }
 
 static struct packet_handler *
-make_proxy_accept_service_handler(UINT32 name,
+make_proxy_accept_service_handler(uint32_t name,
 				  struct command *service,
 				  struct command_continuation *c,
 				  struct exception_handler *e)

@@ -1,6 +1,6 @@
 /* proxy_x11forward.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -41,7 +41,7 @@ do_proxy_open_x11(struct channel_open *s UNUSED,
 		  struct exception_handler *e)
 {
   struct lsh_string *host = NULL;
-  UINT32 port = 0;
+  uint32_t port = 0;
 
   if ((host = parse_string_copy(args)) &&
 #if DATAFELLOWS_WORKAROUNDS

@@ -2,7 +2,7 @@
  *
  * Declarations for Thomas Wu's Secure Remote Password Protocol
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

@@ -3,7 +3,7 @@
  * Functions for building strings whose lengths are not known from the
  * start.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -24,13 +24,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "string_buffer.h"
 
 #include "format.h"
 #include "xalloc.h"
-
-#include <assert.h>
-#include <string.h>
 
 struct string_node
 {
@@ -40,7 +44,7 @@ struct string_node
 
 void
 string_buffer_init(struct string_buffer *buffer,
-                   UINT32 guess)
+                   uint32_t guess)
 {
   buffer->partial = lsh_string_alloc(guess);
   buffer->left = guess;
@@ -70,7 +74,7 @@ string_buffer_clear(struct string_buffer *buffer)
 
 /* Assumes that the buffer->partial string is full */
 void
-string_buffer_grow(struct string_buffer *buffer, UINT32 increment)
+string_buffer_grow(struct string_buffer *buffer, uint32_t increment)
 {
   struct string_node *n;
 
@@ -90,7 +94,7 @@ string_buffer_grow(struct string_buffer *buffer, UINT32 increment)
 #if 0
 #define BUFFER_INCREMENT 50
 void
-string_buffer_putc(struct string_buffer *buffer, UINT8 c)
+string_buffer_putc(struct string_buffer *buffer, uint8_t c)
 {
   if (!buffer->left)
     string_buffer_grow(buffer, BUFFER_INCREMENT);
@@ -103,7 +107,7 @@ string_buffer_putc(struct string_buffer *buffer, UINT8 c)
 
 void
 string_buffer_write(struct string_buffer *buffer,
-                    UINT32 length, const UINT8 *s)
+                    uint32_t length, const uint8_t *s)
 {
   if (length > buffer->left)
     {
@@ -122,9 +126,9 @@ string_buffer_write(struct string_buffer *buffer,
 
 struct lsh_string *
 string_buffer_final_write(struct string_buffer *buffer,
-                          UINT32 length, const UINT8 *s)
+                          uint32_t length, const uint8_t *s)
 {
-  UINT32 final = buffer->total + length;
+  uint32_t final = buffer->total + length;
   
   if ( (length < left) && !buffer->tail)
     {
@@ -138,7 +142,7 @@ string_buffer_final_write(struct string_buffer *buffer,
   else
     {
       struct lsh_string *res = lsh_string_alloc(final);
-      UINT8 *p = res->data + final;
+      uint8_t *p = res->data + final;
       struct string_node *n;
       
       if (length)
@@ -173,10 +177,10 @@ string_buffer_final_write(struct string_buffer *buffer,
 
 struct lsh_string *
 string_buffer_final(struct string_buffer *buffer,
-                    UINT32 left_over)
+                    uint32_t left_over)
 {
-  UINT32 length = buffer->partial->length - left_over;
-  UINT32 final = buffer->total + length;
+  uint32_t length = buffer->partial->length - left_over;
+  uint32_t final = buffer->total + length;
   
   if (!buffer->tail)
     {
@@ -188,7 +192,7 @@ string_buffer_final(struct string_buffer *buffer,
   else
     {
       struct lsh_string *res = lsh_string_alloc(final);
-      UINT8 *p = res->data + final;
+      uint8_t *p = res->data + final;
       struct string_node *n;
       
       p -= length;

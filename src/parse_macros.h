@@ -2,7 +2,7 @@
  *
  * Utility macros for managing a struct simple_buffer *buffer.
  *
- * $Id$ */
+ */
 
 #ifndef LSH_PARSE_MACROS_H_INCLUDED
 #define LSH_PARSE_MACROS_H_INCLUDED

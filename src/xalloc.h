@@ -1,8 +1,6 @@
 /* xalloc.h
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -26,9 +24,9 @@
 #ifndef LSH_XALLOC_H_INCLUDED
 #define LSH_XALLOC_H_INCLUDED
 
-#include "gc.h"
-
 #include <stdlib.h>
+
+#include "gc.h"
 
 /* Allocation */
 
@@ -48,13 +46,13 @@
 #if DEBUG_ALLOC
 extern struct lsh_string *all_strings;
 
-struct lsh_string *lsh_string_alloc_clue(UINT32 size, const char *clue);
+struct lsh_string *lsh_string_alloc_clue(uint32_t size, const char *clue);
 
 #define lsh_string_alloc(size) \
   (lsh_string_alloc_clue((size), (__FILE__ ":" STRING_LINE ": " FUNCTION_NAME)))
 
 #else /* !DEBUG_ALLOC */
-struct lsh_string *lsh_string_alloc(UINT32 size);
+struct lsh_string *lsh_string_alloc(uint32_t size);
 #endif /* !DEBUG_ALLOC */
 
 void

@@ -1,6 +1,6 @@
 /* proxy_session.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

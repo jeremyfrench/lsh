@@ -1,8 +1,8 @@
 /* lshd.c
  *
- * main server program.
+ * Main server program.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

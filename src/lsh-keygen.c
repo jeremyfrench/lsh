@@ -5,7 +5,7 @@
  * extract the public key, encrypt the private key, and save the
  * results in two separate files.
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

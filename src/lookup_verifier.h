@@ -2,7 +2,7 @@
  *
  * Lookup signature verifiers of a public key
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

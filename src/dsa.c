@@ -1,6 +1,5 @@
 /* dsa.c
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol
@@ -22,6 +21,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+
 #include "publickey_crypto.h"
 
 #include "atoms.h"
@@ -37,8 +42,6 @@
 #include "nettle/dsa.h"
 #include "nettle/sexp.h"
 #include "nettle/sha.h"
-
-#include <assert.h>
 
 #include "dsa.c.x" 
 
@@ -85,8 +88,8 @@
  * extremely large. That they are less than q is checked here. */
 static int
 generic_dsa_verify(struct dsa_verifier *key,
-		   UINT32 length,
-		   const UINT8 *msg,
+		   uint32_t length,
+		   const uint8_t *msg,
 		   const struct dsa_signature *signature)
 {
   struct sha1_ctx hash;
@@ -98,10 +101,10 @@ generic_dsa_verify(struct dsa_verifier *key,
 
 static int
 do_dsa_verify(struct verifier *c, int algorithm,
-	      UINT32 length,
-	      const UINT8 *msg,
-	      UINT32 signature_length,
-	      const UINT8 *signature_data)
+	      uint32_t length,
+	      const uint8_t *msg,
+	      uint32_t signature_length,
+	      const uint8_t *signature_data)
 {
   CAST(dsa_verifier, self, c);
   struct simple_buffer buffer;
@@ -120,8 +123,8 @@ do_dsa_verify(struct verifier *c, int algorithm,
 	/* NOTE: draft-ietf-secsh-transport-X.txt (x <= 07) uses an extra
 	 * length field, which should be removed in the next version. */
 	
-	UINT32 buf_length;
-	const UINT8 *buf;
+	uint32_t buf_length;
+	const uint8_t *buf;
 	int atom;
       
 	simple_buffer_init(&buffer, signature_length, signature_data);
@@ -144,7 +147,7 @@ do_dsa_verify(struct verifier *c, int algorithm,
 #if DATAFELLOWS_WORKAROUNDS
     case ATOM_SSH_DSS_KLUDGE_LOCAL:
       {
-	UINT32 buf_length;
+	uint32_t buf_length;
 
 	/* NOTE: This doesn't include any length field. Is that right? */
 
@@ -262,7 +265,7 @@ parse_ssh_dss_public(struct simple_buffer *buffer)
 /* FIXME: Delete function. */
 static void
 generic_dsa_sign(struct dsa_signer *self,
-		 UINT32 length, const UINT8 *msg,
+		 uint32_t length, const uint8_t *msg,
 		 struct dsa_signature *signature)
 {
   struct sha1_ctx hash;
@@ -274,18 +277,18 @@ generic_dsa_sign(struct dsa_signer *self,
 	   &hash, signature);
 }
 
-static UINT32
+static uint32_t
 dsa_blob_length(const struct dsa_signature *signature)
 {
-  UINT32 r_length = nettle_mpz_sizeinbase_256_u(signature->r);
-  UINT32 s_length = nettle_mpz_sizeinbase_256_u(signature->s);
+  uint32_t r_length = nettle_mpz_sizeinbase_256_u(signature->r);
+  uint32_t s_length = nettle_mpz_sizeinbase_256_u(signature->s);
 
   return MAX(r_length, s_length);
 }
 
 static void
 dsa_blob_write(const struct dsa_signature *signature,
-	       UINT32 length, UINT8 *buf)
+	       uint32_t length, uint8_t *buf)
 {
   nettle_mpz_get_str_256(length, buf, signature->r);
   nettle_mpz_get_str_256(length, buf + length, signature->s);
@@ -294,14 +297,14 @@ dsa_blob_write(const struct dsa_signature *signature,
 static struct lsh_string *
 do_dsa_sign(struct signer *c,
 	    int algorithm,
-	    UINT32 msg_length,
-	    const UINT8 *msg)
+	    uint32_t msg_length,
+	    const uint8_t *msg)
 {
   CAST(dsa_signer, self, c);
   struct dsa_signature sv;
   struct lsh_string *signature;
-  UINT32 buf_length;
-  UINT8 *p;
+  uint32_t buf_length;
+  uint8_t *p;
 
   trace("do_dsa_sign: Signing according to %a\n", algorithm);
 
@@ -414,8 +417,8 @@ make_dsa_algorithm(struct randomness *random)
 
 
 struct verifier *
-make_ssh_dss_verifier(UINT32 public_length,
-		      const UINT8 *public)
+make_ssh_dss_verifier(uint32_t public_length,
+		      const uint8_t *public)
 {
   struct simple_buffer buffer;
   int atom;

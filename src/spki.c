@@ -2,7 +2,7 @@
  *
  * An implementation of SPKI certificate checking
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -22,6 +22,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
 
 #include "spki.h"
 
@@ -44,8 +51,6 @@
 #include "spki/parse.h"
 #include "spki/tag.h"
 
-#include <assert.h>
-#include <string.h>
 
 /* Forward declarations */
 static void
@@ -66,15 +71,15 @@ do_spki_acl_db_free(struct spki_acl_db *db);
 struct lsh_string *
 make_ssh_hostkey_tag(struct address_info *host)
 {
-  UINT32 left = host->ip->length;
-  UINT8 *s = host->ip->data;
+  uint32_t left = host->ip->length;
+  uint8_t *s = host->ip->data;
   struct lsh_string *tag;
   struct lsh_string *reversed = lsh_string_alloc(left);
 
   /* First, transform "foo.lysator.liu.se" into "se.liu.lysator.foo" */
   while (left)
     {
-      UINT8 *p = memchr(s, '.', left);
+      uint8_t *p = memchr(s, '.', left);
       if (!p)
 	{
 	  memcpy(reversed->data, s, left);
@@ -82,7 +87,7 @@ make_ssh_hostkey_tag(struct address_info *host)
 	}
       else
 	{
-	  UINT32 segment = p - s;
+	  uint32_t segment = p - s;
 	  left -= segment;
 
 	  memcpy(reversed->data + left, s, segment);
@@ -173,7 +178,7 @@ spki_make_signer(struct alist *algorithms,
 		 int *algorithm_name)
 {
   struct sexp_iterator i;
-  UINT8 *decoded;  
+  uint8_t *decoded;  
 
   decoded = alloca(key->length);
   memcpy(decoded, key->data, key->length);
@@ -189,10 +194,10 @@ spki_make_signer(struct alist *algorithms,
 struct lsh_string *
 spki_hash_data(const struct hash_algorithm *algorithm,
 	       int algorithm_name,
-	       UINT32 length, UINT8 *data)
+	       uint32_t length, uint8_t *data)
 {
   struct hash_instance *hash = make_hash(algorithm);
-  UINT8 *out = alloca(HASH_SIZE(hash));
+  uint8_t *out = alloca(HASH_SIZE(hash));
 
   hash_update(hash, length, data);
   hash_digest(hash, out);
@@ -325,13 +330,13 @@ make_spki_context(struct alist *algorithms)
 struct lsh_string *
 spki_pkcs5_encrypt(struct randomness *r,
                    struct lsh_string *label,
-		   UINT32 prf_name,
+		   uint32_t prf_name,
 		   struct mac_algorithm *prf,
 		   int crypto_name,
 		   struct crypto_algorithm *crypto,
-		   UINT32 salt_length,
+		   uint32_t salt_length,
 		   struct lsh_string *password,
-		   UINT32 iterations,
+		   uint32_t iterations,
                    struct lsh_string *data)
 {
   struct lsh_string *key;
@@ -413,7 +418,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
       const struct lsh_string *salt = NULL;
       const struct lsh_string *iv = NULL;
       const struct lsh_string *data = NULL;
-      UINT32 iterations;
+      uint32_t iterations;
       
       /* NOTE: This is a place where it might make sense to use a sexp
        * display type, but we don't support that for now. */
@@ -529,7 +534,7 @@ spki_pkcs5_decrypt(struct alist *mac_algorithms,
 				       ssh_format("Passphrase for key `%lS': ",
 						  label), 1);
 	    struct lsh_string *clear;
-	    UINT8 *key;
+	    uint8_t *key;
 	    
 	    if (!password)
 	      {

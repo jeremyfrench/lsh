@@ -1,8 +1,6 @@
 /* write_buffer.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -23,14 +21,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <assert.h>
+#include <string.h>
+
 #include "write_buffer.h"
 
 #include "io.h"
 #include "xalloc.h"
 #include "werror.h"
 
-#include <assert.h>
-#include <string.h>
 
 #define GABA_DEFINE
 #include "write_buffer.h.x"
@@ -82,7 +85,7 @@ do_write(struct abstract_write *w,
  * Returns 1 if the buffer is non-empty. */
 int write_buffer_pre_write(struct write_buffer *buffer)
 {
-  UINT32 length = buffer->end - buffer->start;
+  uint32_t length = buffer->end - buffer->start;
 
   if (buffer->empty)
     return 0;
@@ -100,8 +103,8 @@ int write_buffer_pre_write(struct write_buffer *buffer)
       /* Copy more data into buffer */
       if (buffer->partial)
 	{
-	  UINT32 partial_left = buffer->partial->length - buffer->pos;
-	  UINT32 buffer_left = 2*buffer->block_size - buffer->end;
+	  uint32_t partial_left = buffer->partial->length - buffer->pos;
+	  uint32_t buffer_left = 2*buffer->block_size - buffer->end;
 	  if (partial_left <= buffer_left)
 	    {
 	      /* The rest of the partial packet fits in the buffer */
@@ -144,7 +147,7 @@ int write_buffer_pre_write(struct write_buffer *buffer)
   return !buffer->empty;
 }
 
-void write_buffer_consume(struct write_buffer *buffer, UINT32 size)
+void write_buffer_consume(struct write_buffer *buffer, uint32_t size)
 {
   buffer->start += size;
   assert(buffer->start <= buffer->end);
@@ -155,7 +158,7 @@ void write_buffer_consume(struct write_buffer *buffer, UINT32 size)
 }
 
 struct write_buffer *
-make_write_buffer(struct lsh_fd *fd, UINT32 size)
+make_write_buffer(struct lsh_fd *fd, uint32_t size)
 {
   NEW(write_buffer, res);
 

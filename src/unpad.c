@@ -1,8 +1,6 @@
 /* unpad.c
  *
- *
- *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -22,6 +20,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include "unpad.h"
 
@@ -46,8 +48,8 @@ do_unpad(struct abstract_write *w,
 {
   CAST(packet_unpad, closure, w);
   
-  UINT8 padding_length;
-  UINT32 payload_length;
+  uint8_t padding_length;
+  uint32_t payload_length;
   struct lsh_string *new;
   
   if (packet->length < 1)

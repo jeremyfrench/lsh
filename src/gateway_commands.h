@@ -1,6 +1,5 @@
 /* gateway_commands.h
  *
- * $Id$
  */
 
 /* lsh, an implementation of the ssh protocol

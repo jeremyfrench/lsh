@@ -2,7 +2,7 @@
  *
  * General channel type for forwarding data to an fd
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -42,10 +42,10 @@
 
 void
 init_channel_forward(struct channel_forward *self,
-		     struct lsh_fd *socket, UINT32 initial_window);
+		     struct lsh_fd *socket, uint32_t initial_window);
 
 struct channel_forward *
-make_channel_forward(struct lsh_fd *socket, UINT32 initial_window);
+make_channel_forward(struct lsh_fd *socket, uint32_t initial_window);
 
 void
 channel_forward_start_io(struct channel_forward *channel_forward);

@@ -1,6 +1,6 @@
 /* command.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -24,13 +24,12 @@
 #ifndef LSH_COMMAND_H_INCLUDED
 #define LSH_COMMAND_H_INCLUDED
 
+#include <stdarg.h>
+
 #include "lsh.h"
 
 #include "exception.h"
 #include "list.h"
-/* #include "io.h" */
-
-#include <stdarg.h>
 
 #define GABA_DECLARE
 #include "command.h.x"
@@ -259,8 +258,8 @@ make_command_context(struct command_continuation *c,
      (name catch_command)
      (super command)
      (vars
-       (mask . UINT32)
-       (value . UINT32)
+       (mask . uint32_t)
+       (value . uint32_t)
 
        ; Ignore return values from body. This means that the catch
        ; will return *only* if some exception is raised. Useful for
@@ -268,7 +267,7 @@ make_command_context(struct command_continuation *c,
        (ignore_value . int))) */
 
 struct catch_handler_info *
-make_catch_handler_info(UINT32 mask, UINT32 value,
+make_catch_handler_info(uint32_t mask, uint32_t value,
 			int ignore_value,
 			struct command *handler);
 

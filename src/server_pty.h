@@ -1,6 +1,6 @@
 /* server_pty.h
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *

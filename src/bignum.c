@@ -1,6 +1,6 @@
 /* bignum.c
  *
- * $Id$ */
+ */
 
 /* lsh, an implementation of the ssh protocol
  *
@@ -37,7 +37,7 @@ static void
 bignum_random_size(mpz_t x, struct randomness *random, unsigned bits)
 {
   unsigned length = (bits + 7) / 8;
-  UINT8 *data = alloca(length);
+  uint8_t *data = alloca(length);
 
   RANDOM(random, length, data);
 
