@@ -230,7 +230,7 @@ int main(int argc UNUSED, char **argv UNUSED)
   handler->public_file = public;
   handler->private_file = private;
   
-  io_read(backend, STDIN_FILENO,
+  io_read(make_io_fd(backend, STDIN_FILENO),
 	  make_read_sexp(&handler->super, BLOCK_SIZE, SEXP_TRANSPORT, 0),
 	  NULL);
 
