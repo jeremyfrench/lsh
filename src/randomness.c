@@ -24,31 +24,17 @@
  */
 
 #include "randomness.h"
-
-#include "werror.h"
-
-#include "crypto.h"
-#include "exception.h"
 #include "xalloc.h"
-
-#include "nettle/arcfour.h"
-
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <time.h>
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
-#include <string.h>
 
 #define GABA_DEFINE
 #include "randomness.h.x"
 #undef GABA_DEFINE
 
-#if 0
-
-#include "randomness.c.x"
-
-#endif
+/* Wrapper for using lsh's randomness generator with nettle
+ * functions. */
+void
+lsh_random(void *x, unsigned length, uint8_t *data)
+{
+  CAST_SUBTYPE(randomness, r, x);
+  RANDOM(r, length, data);
+}
