@@ -226,7 +226,7 @@ int
 spki_add_acl(struct spki_context *ctx,
              struct spki_iterator *i)
 {
-  return spki_acl_parse(&ctx->db, i);
+  return spki_acl_process(&ctx->db, i);
 }
 
 struct spki_principal *
@@ -269,7 +269,8 @@ spki_authorize(struct spki_context *self,
   struct spki_date date;
   struct spki_tag *tag;
   struct spki_iterator i;
-
+  const struct spki_5_tuple_list *p;
+  
   if (!spki_iterator_first(&i, access->length, access->data)
       || !spki_parse_tag(&self->db, &i, &tag))
     {
@@ -279,9 +280,9 @@ spki_authorize(struct spki_context *self,
 
   spki_date_from_time_t(&date, t);
   
-  for (acl = spki_acl_by_subject_first(&self->db, user);
+  for (acl = spki_acl_by_subject_first(&self->db, &p, user);
        acl;
-       acl = spki_acl_by_subject_next(&self->db, acl, user))
+       acl = spki_acl_by_subject_next(&p, user))
     {
       if (spki_tag_includes(acl->tag, tag)
 	  && SPKI_DATE_CMP(acl->not_before, date) <= 0
