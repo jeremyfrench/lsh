@@ -57,8 +57,12 @@ static void
 do_client_session_eof(struct ssh_channel *c)
 {
   CAST(client_session_channel, session, c);
-  
+
+  close_fd(session->out);
+  close_fd(session->err);
+#if 0
   close_fd(session->in);
+#endif
 }  
 
 static void
