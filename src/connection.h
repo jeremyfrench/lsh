@@ -159,8 +159,10 @@ void connection_init_io(struct ssh_connection *connection,
 			struct abstract_write *raw,
 			struct randomness *r);
 
+#if 0
 struct packet_handler *make_fail_handler(void);
 struct packet_handler *make_unimplemented_handler(void);  
+#endif
 
 /* Serialization */
 void connection_lock(struct ssh_connection *self);

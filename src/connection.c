@@ -143,6 +143,7 @@ do_fail(struct packet_handler *closure UNUSED,
   PROTOCOL_ERROR(connection->e, NULL);
 }
 
+#if 0
 /* FIXME: Could use a static object instead. */
 struct packet_handler *make_fail_handler(void)
 {
@@ -151,6 +152,10 @@ struct packet_handler *make_fail_handler(void)
   res->handler = do_fail;
   return res;
 }
+#endif
+
+static struct packet_handler fail_handler =
+{ STATIC_HEADER, do_fail };
 
 static void
 do_unimplemented(struct packet_handler *closure UNUSED,
@@ -170,6 +175,7 @@ do_unimplemented(struct packet_handler *closure UNUSED,
   lsh_string_free(packet);
 }
 
+#if 0
 /* FIXME: Could use a static object instead. */
 struct packet_handler *make_unimplemented_handler(void)
 {
@@ -178,6 +184,11 @@ struct packet_handler *make_unimplemented_handler(void)
   res->handler = do_unimplemented;
   return res;
 }
+#endif
+
+static struct packet_handler unimplemented_handler =
+{ STATIC_HEADER, do_unimplemented };
+
 
 /* GABA:
    (class
@@ -267,7 +278,7 @@ make_ssh_connection(const char *debug_comment,
   
   connection->resources = empty_resource_list();
   
-  connection->rec_max_packet = SSH_MAX_PACKET;
+  connection->rec_max_packet = SSH_MAX_PACKET - SSH_CHANNEL_MAX_PACKET_FUZZ;
   connection->rec_mac = NULL;
   connection->rec_crypto = NULL;
 
@@ -288,14 +299,14 @@ make_ssh_connection(const char *debug_comment,
   
   /* Initialize dispatch */
   connection->ignore = make_ignore_handler();
-  connection->unimplemented = make_unimplemented_handler();
-  connection->fail = make_fail_handler();
+  connection->unimplemented = &unimplemented_handler;
+  connection->fail = &fail_handler;
   
   for (i = 0; i < 0x100; i++)
     connection->dispatch[i] = connection->unimplemented;
 
   connection->dispatch[0] = connection->fail;
-  connection->dispatch[SSH_MSG_DISCONNECT] = make_disconnect_handler();
+  connection->dispatch[SSH_MSG_DISCONNECT] = &disconnect_handler;
   connection->dispatch[SSH_MSG_IGNORE] = connection->ignore;
   connection->dispatch[SSH_MSG_UNIMPLEMENTED] = connection->ignore;
 
