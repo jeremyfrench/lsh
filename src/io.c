@@ -99,7 +99,11 @@ static void close_fd(struct io_fd *fd)
     (void) CLOSE_CALLBACK(fd->close_callback, fd->close_reason);
   
   close(fd->fd);
-	      
+
+  /* Make sure writing to the buffer fails. */
+  if (fd->buffer)
+    write_buffer_close(fd->buffer);
+  
   /* There can be other objects around that may still
    * attempt to write to the buffer. So let gc handle it
    * instead of freeing it explicitly */
@@ -532,6 +536,22 @@ void io_set_nonblocking(int fd)
     fatal("io_set_nonblocking: fcntl() failed, %s", strerror(errno));
 }
 
+void io_set_close_on_exec(int fd)
+{
+  if (fcntl(fd, F_SETFD, 1) < 0)
+    fatal("Can't set close-on-exec flag for fd %d: %s\n",
+	  fd, strerror(errno));
+}
+
+/* ALL file descripters handled by the backend should use non-blocking mode,
+ * and have the close-on-exec flag set. */
+
+void io_init_fd(int fd)
+{
+  io_set_nonblocking(fd);
+  io_set_close_on_exec(fd);
+}
+
 /* Some code is taken from bellman's tcputils. */
 struct connect_fd *io_connect(struct io_backend *b,
 			      struct sockaddr_in *remote,
@@ -544,7 +564,7 @@ struct connect_fd *io_connect(struct io_backend *b,
   if (s<0)
     return NULL;
 
-  io_set_nonblocking(s);
+  io_init_fd(s);
 
   if (local  &&  bind(s, (struct sockaddr *)local, sizeof *local) < 0)
     {
@@ -585,7 +605,7 @@ struct listen_fd *io_listen(struct io_backend *b,
   if (s<0)
     return NULL;
 
-  io_set_nonblocking(s);
+  io_init_fd(s);
 
   {
     int yes = 1;
@@ -625,6 +645,8 @@ struct abstract_write *io_read_write(struct io_backend *b,
   struct io_fd *f;
   struct write_buffer *buffer = write_buffer_alloc(block_size);
 
+  io_init_fd(fd);
+  
   NEW(f);
   f->fd = fd;
   
@@ -653,6 +675,8 @@ struct io_fd *io_read(struct io_backend *b,
 {
   struct io_fd *f;
 
+  io_init_fd(fd);
+
   NEW(f);
   f->fd = fd;
   
@@ -675,14 +699,16 @@ struct io_fd *io_read(struct io_backend *b,
   return f;
 }
 
-struct abstract_write *io_write(struct io_backend *b,
-				int fd,
-				UINT32 block_size,
-				struct close_callback *close_callback)
+struct io_fd *io_write(struct io_backend *b,
+		       int fd,
+		       UINT32 block_size,
+		       struct close_callback *close_callback)
 {
   struct io_fd *f;
   struct write_buffer *buffer = write_buffer_alloc(block_size);
 
+  io_init_fd(fd);
+  
   NEW(f);
   f->fd = fd;
   
@@ -700,6 +726,5 @@ struct abstract_write *io_write(struct io_backend *b,
   b->io = f;
   b->nio++;
 
-  return &buffer->super;
+  return f;
 }
-     

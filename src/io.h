@@ -128,6 +128,8 @@ int get_inaddr(struct sockaddr_in	* addr,
 	       const char		* protocol);
 
 void io_set_nonblocking(int fd);
+void io_set_close_on_exec(int fd);
+void io_init_fd(int fd);
 
 struct connect_fd *io_connect(struct io_backend *b,
 			      struct sockaddr_in *remote,
@@ -150,10 +152,9 @@ struct io_fd *io_read(struct io_backend *b,
 		      struct read_handler *read_callback,
 		      struct close_callback *close_callback);
 
-struct abstract_write *io_write(struct io_backend *b,
-				int fd,
-				UINT32 block_size,
-				struct close_callback *close_callback);
-
+struct io_fd *io_write(struct io_backend *b,
+		       int fd,
+		       UINT32 block_size,
+		       struct close_callback *close_callback);
 
 #endif /* LSH_IO_H_INCLUDED */
