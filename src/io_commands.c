@@ -38,6 +38,7 @@
 /* For lsh_get_cstring */
 #include "format.h"
 #include "io.h"
+#include "queue.h"
 #include "werror.h"
 #include "xalloc.h"
 
@@ -251,7 +252,7 @@ DEFINE_COMMAND(connect_list_command)
       struct command_continuation *c,
       struct exception_handler *e)
 {
-  CAST(sockaddr_list, addresses, a);
+  CAST(connect_list_state, addresses, a);
 
   io_connect_list(addresses,
 		  /* FIXME: Fix handshake_command to take a plain fd
