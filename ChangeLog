@@ -5,6 +5,8 @@
 2002-06-25  Niels Möller  <niels@s3.kth.se>
 
 	* src/server_x11.c, src/server_x11.h: New files.
+	(make_xauth_exit_callback): New function.
+	(server_x11_setup): New function.
 
 	* src/server_session.c (server_session): New attribute x11.
 	(do_x11_req): New function.
