@@ -1,0 +1,8 @@
+#! /bin/sh
+
+. ./common.sh
+
+echo data | client put "d/new" && grep -q data d/new
+
+
+
