@@ -186,7 +186,7 @@ do_read_packet(struct read_handler **h,
 	    }
 	  else
 	    {
-	      /* We have read a complete packet */
+	      /* We have read a complete block */
 	      UINT32 length;
 
 	      READ(left, closure->block_buffer);
@@ -249,7 +249,7 @@ do_read_packet(struct read_handler **h,
 		closure->packet_buffer
 		  = ssh_format("%ls%lr",
 			       done,
-			       closure->packet_buffer->data + 4,
+			       closure->block_buffer->data + 4,
 			       length - done,
 			       &closure->crypt_pos);
 
@@ -341,12 +341,12 @@ do_read_packet(struct read_handler **h,
 
 		READ(left, closure->mac_buffer);
 
-		mac = alloca(closure->connection->rec_mac->hash_size);
+		mac = alloca(closure->connection->rec_mac->mac_size);
 		HASH_DIGEST(closure->connection->rec_mac, mac);
 	    
-		if (!memcmp(mac,
-			    closure->mac_buffer->data,
-			    closure->connection->rec_mac->hash_size))
+		if (memcmp(mac,
+			   closure->mac_buffer->data,
+			   closure->connection->rec_mac->mac_size))
 		  {
 		    static const struct protocol_exception mac_error =
 		      STATIC_PROTOCOL_EXCEPTION(SSH_DISCONNECT_MAC_ERROR,
