@@ -1682,7 +1682,7 @@ io_read_write(struct lsh_fd *fd,
   fd->want_read = !!read;
   
   /* Writing */
-  fd->write_buffer = write_buffer_alloc(block_size);
+  fd->write_buffer = make_write_buffer(block_size);
   fd->write = &io_write_callback;
 
   fd->prepare = do_write_prepare;
@@ -1718,7 +1718,7 @@ io_write(struct lsh_fd *fd,
   trace("io.c: Preparing fd %i for writing\n", fd->fd);
   
   /* Writing */
-  fd->write_buffer = write_buffer_alloc(block_size);
+  fd->write_buffer = make_write_buffer(block_size);
   fd->write = &io_write_callback;
 
   fd->prepare = do_write_prepare;
