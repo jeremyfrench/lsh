@@ -11,5 +11,6 @@
 /configure
 /configure.scan
 /lsh
+/lshd
 /stamp-h
 /stamp-h.in
