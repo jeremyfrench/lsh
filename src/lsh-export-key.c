@@ -65,21 +65,6 @@ B2CTISEmV3KYx5NJpyKC3IBw/ckP6Q==
 
 #include "lsh-export-key.c.x"
 
-
-/* Global, for simplicity */
-int exit_code = EXIT_SUCCESS;
-
-/* (print out sexp) */
-/* GABA:
-   (class
-     (name ssh2_print_command)
-     (super command_2)
-     (vars
-       (algorithms object alist)
-       (subject . "const char *")
-       (comment . "const char *")))
-*/
-
 static struct lsh_string *
 make_header(const char *name, const char *value)
 {
@@ -88,119 +73,42 @@ make_header(const char *name, const char *value)
     : ssh_format("");
 }
 
-static void
-do_ssh2_print_command(struct command_2 *s,
-		      struct lsh_object *a1,
-		      struct lsh_object *x,
-		      struct command_continuation *c,
-		      struct exception_handler *e UNUSED)
+static struct lsh_string *
+sexp_to_ssh2_key(struct sexp *expr,
+                 struct export_key_options *options)
 {
-  CAST(ssh2_print_command, self, s);
-  CAST_SUBTYPE(abstract_write, dest, a1);
-  CAST_SUBTYPE(sexp, expr, x);
-  
   struct sexp_iterator *i;
   struct verifier *v;
   
   if (!(i = sexp_check_type(expr, ATOM_PUBLIC_KEY)))
     {
-      EXCEPTION_RAISE
-	(e, make_simple_exception
-	 (EXC_APP,
-	  "Only conversion of public keys implemented.\n"));
-      return;
+      werror("Only conversion of public keys implemented.\n");
+      return NULL;
     }
 
   expr = SEXP_GET(i);
 
   if (!expr)
     {
-      EXCEPTION_RAISE
-	(e, make_simple_exception
-	 (EXC_APP,
-	  "Invalid (empty) public key expression.\n"));
-      return;
+      werror("Invalid (empty) public key expression.\n");
+      return NULL;
     }
       
-  v = spki_make_verifier(self->algorithms, expr);
+  v = spki_make_verifier(options->algorithms, expr);
   if (!v)
     {
-      EXCEPTION_RAISE
-	(e, make_simple_exception
-	 (EXC_APP,
-	  "Unsupported algorithm."));
+      werror("Unsupported algorithm\n");
+      return NULL;
     }
 
-  A_WRITE(dest, ssh_format("---- BEGIN SSH2 PUBLIC KEY ----\n"
-			   "%lfS"
-			   "%lfS"
-			   "\n%lfS\n"
-				 "---- END SSH2 PUBLIC KEY ----\n",
-			   make_header("Subject", self->subject),
-			   make_header("Comment", self->comment),
-			   encode_base64(PUBLIC_KEY(v), NULL, 1, 0, 1)));
-  COMMAND_RETURN(c, x);
-}
-
-static struct command *
-make_ssh2_print_command(struct alist *algorithms,
-			const char *s, const char *c)
-{
-  NEW(ssh2_print_command, self);
-  self->super.super.call = do_command_2;
-  self->super.invoke = do_ssh2_print_command;
-  self->algorithms = algorithms;
-  self->subject = s;
-  self->comment = c;
-  return &self->super.super;
-}
-
-
-/* GABA:
-   (expr
-     (name make_export_key)
-     (params
-       (read object command)
-       (print object command)
-       (dest object abstract_write))
-     (expr
-       (lambda (in)
-         (print dest (read in)))))
-*/
-
-
-static void
-do_exc_export_key_handler(struct exception_handler *self,
-			 const struct exception *x)
-{
-  /* CAST(exc_export_key_handler, self, s); */
-  
-  switch (x->type)
-    {
-    case EXC_APP:
-      werror("%z", x->msg);
-      break;
-    case EXC_SEXP_SYNTAX:
-      werror("Invalid SEXP input.\n");
-      exit_code = EXIT_FAILURE;
-      /* Fall through */
-    case EXC_SEXP_EOF:
-      /* Normal termination */
-      EXCEPTION_RAISE(self->parent, &finish_read_exception);
-      break;
-    case EXC_IO_WRITE:
-    case EXC_IO_READ:
-      {
-	CAST(io_exception, e, x);
-	exit_code = EXIT_FAILURE;
-	werror("lsh-export-key: %z, (errno = %i)\n", x->msg, e->error);
-	break;
-      }
-    default:
-      exit_code = EXIT_FAILURE;
-      EXCEPTION_RAISE(self->parent, x);
-      return;
-    }
+  return ssh_format("---- BEGIN SSH2 PUBLIC KEY ----\n"
+                    "%lfS"
+                    "%lfS"
+                    "\n%lfS\n"
+                    "---- END SSH2 PUBLIC KEY ----\n",
+                    make_header("Subject", options->subject),
+                    make_header("Comment", options->comment),
+                    encode_base64(PUBLIC_KEY(v), NULL, 1, 0, 1));
 }
 
 /* Option parsing */
@@ -235,12 +143,11 @@ main_options[] =
     (infile . "const char *")
     (outfile . "const char *")
     (subject . "const char *")
-    (comment . "const char *")
-    (print object command)
-))
+    (comment . "const char *")))
 */
 
-static struct export_key_options *make_options(void)
+static struct export_key_options *
+make_options(void)
 {
   NEW(export_key_options, self);
   self->input = SEXP_TRANSPORT;
@@ -275,9 +182,6 @@ main_argp_parser(int key, char *arg, struct argp_state *state)
       state->child_inputs[1] = NULL;
       break;
     case ARGP_KEY_END:
-      self->print = make_ssh2_print_command(self->algorithms,
-					    self->subject,
-					    self->comment);
       break;
     case OPT_INFILE:
       self->infile = arg;
@@ -321,61 +225,73 @@ int appl_main(int argc, char **argv);
 int main(int argc, char **argv)
 {
   struct export_key_options *options = make_options();
-  struct exception_handler *e;
-  struct lsh_fd *in;
-  struct lsh_fd *out;
 
-  io_init();
-
+  const struct exception *e;
+  int in = STDIN_FILENO;
+  int out = STDOUT_FILENO;
+  
+  struct lsh_string *input;
+  struct sexp *expr;
+  struct lsh_string *output;
+    
   argp_parse(&main_argp, argc, argv, 0, NULL, options);
-
-  /* Patch the parent pointer later */
-  e = make_exception_handler(do_exc_export_key_handler,
-			     NULL, HANDLER_CONTEXT);
 
   if (options->infile)
     {
-      in = io_read_file(options->infile, e);
-      if (!in)
+      in = open(options->infile, O_RDONLY);
+      if (in < 0)
 	{
-	  werror("Failed to open '%z': %z\n",
+	  werror("Failed to open '%z' for reading: %z\n",
 		 options->infile, STRERROR(errno));
 	  return EXIT_FAILURE;
 	}
     }
-  else
-    in = make_lsh_fd(STDIN_FILENO, "stdin", e);
-      
+  
   if (options->outfile)
     {
-      out = io_write_file(options->outfile,
-			  O_WRONLY | O_CREAT, 0666,
-			  SEXP_BUFFER_SIZE, NULL, e);
+      out = open(options->outfile,
+                 O_WRONLY | O_CREAT, 0666);
+      if (out < 0)
+        {
+	  werror("Failed to open '%z' for writing: %z\n",
+		 options->outfile, STRERROR(errno));
+          return EXIT_FAILURE;
+        }
     }
-  else
-    out = io_write(make_lsh_fd(STDOUT_FILENO,
-			       "stdout", e),
-		   SEXP_BUFFER_SIZE, NULL);
 
-  {
-    CAST_SUBTYPE(command, work,
-		 make_export_key(
-		   make_read_sexp_command(options->input, 0, MAX_KEY_SIZE),
-		   options->print,
-		   &(out->write_buffer->super)));
-
-    /* Fixing the exception handler creates a circularity */
-    e->parent = make_exc_finish_read_handler(in,
-					     &default_exception_handler,
-					     HANDLER_CONTEXT);
-    
-    COMMAND_CALL(work, in,
-		 &discard_continuation, e);
-  }
-  io_run();
-
-  io_final();
+  /* Guess size 5000 */
+  input = io_read_file_raw(in, 5000);
   
-  return exit_code;
+  if (!input)
+    {
+      werror("Failed to read '%z': %z\n",
+             options->infile, STRERROR(errno));
+      return EXIT_FAILURE;
+    }
+
+  expr = string_to_sexp(options->input, input, 1);
+  if (!expr)
+    {
+      werror("Invalid S-expression\n");
+      return EXIT_FAILURE;
+    }
+
+  output = sexp_to_ssh2_key(expr, options);
+  if (!output)
+    return EXIT_FAILURE;
+
+  e = write_raw(out, output->length, output->data);
+
+  if (e)
+    {
+      werror("%z\n", e->msg);
+      return EXIT_FAILURE;
+    }
+
+  lsh_string_free(output);
+
+  gc_final();
+  
+  return EXIT_SUCCESS;
 }
   
