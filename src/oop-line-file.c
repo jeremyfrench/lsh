@@ -64,12 +64,12 @@ static void *
 line_read(oop_source *source, int fd, oop_event event, void *state)
 {
   oop_line_file *line = verify_line(state);
-  
+
   void *value = OOP_CONTINUE;
 
   size_t to_read;
   int res;
-  
+
   assert(event == OOP_READ);
   assert(line->source == source);
   assert(line->fd == fd);
@@ -88,7 +88,8 @@ line_read(oop_source *source, int fd, oop_event event, void *state)
     }
   else if (res == 0)
     {
-      value = line->call(&line->oop, OOP_LINE_EOF, line->pos, line->buf, line->state);
+      value = line->call(&line->oop, OOP_LINE_EOF,
+			 line->pos, line->buf, line->state);
       line->pos = 0;
     }
   else
@@ -98,7 +99,8 @@ line_read(oop_source *source, int fd, oop_event event, void *state)
 	{
 	  size_t length = eol - line->buf;
 
-	  value = line->call(&line->oop, OOP_LINE_OK, length, line->buf, line->state);
+	  value = line->call(&line->oop, OOP_LINE_OK,
+			     length, line->buf, line->state);
 	  length++;
 	  line->pos = line->pos + res - length;
 
@@ -122,7 +124,8 @@ line_read(oop_source *source, int fd, oop_event event, void *state)
     {
       size_t length = line->pos;
       line->pos = 0;
-      value = line->call(&line->oop, OOP_LINE_REST, length, line->buf, line->state);
+      value = line->call(&line->oop, OOP_LINE_REST,
+			 length, line->buf, line->state);
     }
   return value;
 }
@@ -175,7 +178,7 @@ oop_line_file_new(oop_source *source, int fd, size_t max)
   return line;
 }
 
-void 
+void
 oop_line_file_delete(oop_line_file *line)
 {
   assert(line->call == NULL);

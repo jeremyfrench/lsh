@@ -30,7 +30,7 @@
 /* Special return code from the line callback. */
 extern int _oop_line_done;
 #define OOP_LINE_DONE ((void *)& _oop_line_done)
-  
+
 typedef enum {
   OOP_LINE_OK,       /* A new line */
   OOP_LINE_EOF,      /* A (possibly empty) line terminated by EOF */
@@ -38,9 +38,9 @@ typedef enum {
   OOP_LINE_TOO_LONG, /* Line exceeding the maximum length */
   OOP_LINE_REST,     /* The remaining buffered data. */
 } oop_line_event;
-  
+
 typedef struct oop_line oop_line;
-  
+
 /* LENGTH and DATA is one new line of data, newline character is not
    included. If the callback returns OOP_LINE_DONE, the callback is
    invoked again, with an EVENT == OOP_LINE_REST, and the data that
@@ -49,30 +49,30 @@ typedef struct oop_line oop_line;
    callback, as usual). */
 typedef void *
 oop_call_line(oop_line *line, oop_line_event event,
-  	      size_t length, const uint8_t *data,
-  	      void *state);
-  
+	      size_t length, const uint8_t *data,
+	      void *state);
+
 struct oop_line
 {
   void (*on_line)(oop_line *line, oop_call_line *call, void *state);
   void (*cancel_line)(oop_line *line);
 };
-  
+
 /* Reading lines from a file */
 struct oop_line_file;
 typedef struct oop_line_file oop_line_file;
-  
+
 /* Creates a new oop_line object, bound to the file descriptor FD, and
    with a maximum line length (including the terminating newline
-   character) of MAX. */ 
+   character) of MAX. */
 oop_line_file *
 oop_line_file_new(oop_source *source, int fd, size_t max);
-  
+
 /* Deletes the oop_line object. Any active callback must be cancelled
    first. */
-void 
+void
 oop_line_file_delete(oop_line_file *line);
-  
+
 /* Get the registration interface */
 oop_line *
 oop_file_line(oop_line_file *line);
