@@ -2178,7 +2178,7 @@ lsftp_do_realpath(const char* file, const char **destptr )
 	lsftp_install_sftp_cb( &s );
       else
 	{
-	  /* We should newer have a local error for realpath */
+	  /* We should never have a local error for realpath */
 	  lsftp_perror( file, s.localerrno );
 	  lsftp_remove_lsftp_cb( id );
 	  return -1;
