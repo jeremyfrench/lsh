@@ -8,8 +8,8 @@ m4_define(»TS_DEFINE«, m4_defn(»m4_define«))
 
 TS_DEFINE(»TS_WRITE«, »fputs("$1", stderr);«)
 TS_DEFINE(»TS_MESSAGE«, »TS_WRITE($1... )«)
-TS_DEFINE(»TS_OK«, »TS_MESSAGE(ok.\n)«)
-TS_DEFINE(»TS_FAIL«, »{ TS_MESSAGE(failed.\n); exit(1); }«)
+TS_DEFINE(»TS_OK«, »TS_WRITE(ok.\n)«)
+TS_DEFINE(»TS_FAIL«, »{ TS_WRITE(failed.\n); exit(1); }«)
 
 TS_DEFINE(»TS_TEST_STRING_EQ«, »
   {
@@ -17,7 +17,7 @@ TS_DEFINE(»TS_TEST_STRING_EQ«, »
     TS_MESSAGE($1)
     a = $2;
     b = $3;
-    if (!lsh_string_eq(a, b))
+    if (!lsh_string_eq($2, $3))
       TS_FAIL
     TS_OK
     lsh_string_free(a);
@@ -38,19 +38,26 @@ TS_DEFINE(»TS_TEST_CRYPTO«, »
   {
     struct crypto_algorithm *algorithm = »$2«;
     struct lsh_string *key = TS_STRING(»$3«);
+    struct lsh_string *plain = TS_STRING(»$4«);
+    struct lsh_string *cipher = TS_STRING(»$5«);
+    struct crypto_instance *c;
 
     assert(key->length == algorithm->key_size);
     assert(!algorithm->iv_size);
 
+    c = MAKE_ENCRYPT(algorithm, key->data, NULL);
     TS_TEST_STRING_EQ(»Encrypting with $1«,
-         »crypt_string(MAKE_ENCRYPT(algorithm, key->data, NULL),
-		       TS_STRING(»$4«), 0)«,
-         »TS_STRING(»$5«)«);
+	  	      »crypt_string(c, plain, 0)«,
+		      »lsh_string_dup(cipher)«)
+    KILL(c);
+    c = MAKE_DECRYPT(algorithm, key->data, NULL);
     TS_TEST_STRING_EQ(»Decrypting with $1«,
-         »crypt_string(MAKE_DECRYPT(algorithm, key->data, NULL),
-		       TS_STRING(»$5«), 0)«,
-         »TS_STRING(»$4«)«);
+         	      »crypt_string(c, cipher, 0)«,
+		      »plain«)
+    KILL(c);
+    
     lsh_string_free(key);
+    lsh_string_free(cipher);
   }
 «)    
 
