@@ -20,7 +20,11 @@ include .dist_cdsa
 EXTRA_DIST = testutils.c testutils.h $(TS_SH) \
 	run-tests setup-env $(dist_cdsa) key-1 key-1.pub key-2 key-2.pub
 
-DISTCLEANFILES = test.in
+CLEANFILES = test.in test.out test.acl
+
+# Files and directories used by the test cases.
+distclean-local:
+	rm -rf testhome
 
 all:
 	@echo make check to build testprograms.
