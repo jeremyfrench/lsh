@@ -1,3 +1,11 @@
+2004-03-19  Niels Möller  <nisse@lysator.liu.se>
+
+	* argp.h: Removed leading underscores from the argument names in
+	the argp_parse prototype. These symbols are reserved for the
+	implementation, and the msys compiler environment on windows
+	happens to define __argc and __argv as macros that expand to
+	magic.
+
 2004-03-18  Niels Möller  <niels@s3.kth.se>
 
 	* testsuite/Makefile.am (check_PROGRAMS): Use check_PROGRAMS, not
