@@ -73,6 +73,13 @@ make_userauth_special_exception(struct lsh_string *reply,
        ; Used by the current publickey userauth method.
        (file_exists method int "struct lsh_string *name" "int free")
 
+       ; Open a file in the user's "~/.lsh" directory. File must be
+       ; owned by the user and not writable for other users. If SECRET is 1,
+       ; it must also not be readable by other users.
+       (read_file method "struct lsh_fd *"
+                  "const char *name" "int secret"
+                  "const struct exception **x" "struct exception_handler *e")
+		  
        ; chdir to the user's home directory
        (chdir_home method int)
 
@@ -101,6 +108,7 @@ make_userauth_special_exception(struct lsh_string *reply,
 
 #define USER_VERIFY_PASSWORD(u, p, f) ((u)->verify_password((u), (p), (f)))
 #define USER_FILE_EXISTS(u, n, f) ((u)->file_exists((u), (n), (f)))
+#define USER_READ_FILE(u, n, s, x, e) ((u)->read_file((u), (n), (s), (x), (e)))
 #define USER_CHDIR_HOME(u) ((u)->chdir_home((u)))
 #define USER_FORK(u, c, r, e, p, t) \
   ((u)->fork_process((u), (c), (r), (e), (p), (t)))
