@@ -40,8 +40,9 @@ all-local: srp-spec.txt lsh.html
 	test -s $@T && mv -f $@T $@
 
 %.html : %.texinfo
-	$(MAKEINFO) --html --no-split --output $@T $<
-	test -s $@T && mv -f $@T $@
+	(cd $(srcdir) \
+	 && $(MAKEINFO) --html --no-split --output $@T $(<F) \
+	 ; test -s $@T && mv -f $@T $@)
 
 DISTCLEANFILES = $(DVIS) $(PSS)
 
