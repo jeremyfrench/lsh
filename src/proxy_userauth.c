@@ -22,13 +22,14 @@
  */
 
 #include "proxy_userauth.h"
+
+#include "client_userauth.h"
+#include "format.h"
 #include "proxy.h"
 #include "server_userauth.h"
-#include "client_userauth.h"
-#include "xalloc.h"
 #include "ssh.h"
-#include "lsh.h"
 #include "werror.h"
+#include "xalloc.h"
 
 #include <assert.h>
 
@@ -107,14 +108,11 @@ do_forward_success(struct packet_handler *c,
     {
       struct lsh_string *name = self->name;
       self->name = NULL;
-      C_WRITE(connection->chain, packet);
+      C_WRITE(connection->chain, lsh_string_dup(packet));
       COMMAND_RETURN(self->c, make_proxy_user(name));
     }
   else
-    {
-      PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_USERAUTH_SUCCESS message.");
-      lsh_string_free(packet);
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_USERAUTH_SUCCESS message.");
 }
 
 
@@ -163,17 +161,13 @@ do_forward_failure(struct packet_handler *c,
 	= STATIC_EXCEPTION(EXC_USERAUTH,
 			   "Server authentication error.");
 
-      lsh_string_free(packet);
       verbose("Authentication failure");
       
       EXCEPTION_RAISE(closure->e, &userauth_failed);
 
     }
   else
-    {
-      PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_USERAUTH_FAILURE message.");
-      lsh_string_free(packet);
-    }
+    PROTOCOL_ERROR(connection->e, "Invalid SSH_MSG_USERAUTH_FAILURE message.");
 }
 
 static struct packet_handler *
@@ -254,8 +248,6 @@ do_handle_userauth(struct packet_handler *c,
     }
   else
     PROTOCOL_ERROR(connection->e, "Invalid USERAUTH message.");
-
-  lsh_string_free(packet);
 }
 
 static struct packet_handler *
