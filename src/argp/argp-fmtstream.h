@@ -31,6 +31,11 @@
 
 #if HAVE_UNISTD_H
 # include <unistd.h>
+#else
+/* This is a kludge to make the code compile on windows. Perhaps it
+   would be better to just replace ssize_t with int through out the
+   code. */
+# define ssize_t int
 #endif
 
 #if _LIBC || (defined (HAVE_FLOCKFILE) && defined(HAVE_PUTC_UNLOCKED) \
