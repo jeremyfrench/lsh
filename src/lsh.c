@@ -498,8 +498,7 @@ int main(int argc, char **argv)
 			      make_request_service(ATOM_SSH_USERAUTH),
 			      make_client_userauth(ssh_format("%lz", user),
 						   ATOM_SSH_CONNECTION),
-			      make_connection_service(make_alist(0, -1),
-						      make_alist(0, -1)),
+			      &connection_service,
 			      queue_to_list(&actions));
 
 	CAST_SUBTYPE(command, client_connect, o);
