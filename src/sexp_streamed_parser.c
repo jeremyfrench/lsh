@@ -798,7 +798,7 @@ MAKE_PARSE_VALUE(transport_sexp)
 				self->c, self->super.e, self->super.next);
       return 1;
     default:
-      SEXP_ERROR(self->super.e, "Invalid canonical expression");
+      SEXP_ERROR(self->super.e, "Invalid transport-style expression");
       *s = NULL;
       return 0;
     }
