@@ -34,11 +34,6 @@ void gc_kill(struct lsh_object *o);
 void gc_global(struct resource *o);
 
 void gc(void);
-void gc_maybe(int busy);
-
-#if DEBUG_ALLOC
-extern int gc_final_p;
-#endif
 
 void gc_final(void);
 

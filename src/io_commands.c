@@ -47,13 +47,6 @@
 #include "io_commands.c.x"
 
 /* Used only by lsh-writekey */
-/* ;; GABA:
-   (class
-     (name backend_command)
-     (super command)
-     (vars
-       (backend object io_backend)))
-*/
 
 /* (write file_info)
  *
@@ -79,23 +72,6 @@ DEFINE_COMMAND(io_write_file_command)
   else
     EXCEPTION_RAISE(e, make_io_exception(EXC_IO_OPEN_WRITE, NULL, errno, NULL));
 }
-
-#if 0
-DEFINE_COMMAND(io_write_file_command)
-     (struct command *s UNUSED,
-      struct lsh_object *a,
-      struct command_continuation *c,
-      struct exception_handler *e UNUSED)
-{
-  CAST(io_backend, backend, a);
-
-  NEW(backend_command, self);
-  self->super.call = do_io_write_file;
-  self->backend = backend;
-
-  COMMAND_RETURN(c, self);
-}
-#endif
 
 struct io_write_file_info *
 make_io_write_file_info(struct lsh_string *name, int flags, int mode, UINT32 block_size)

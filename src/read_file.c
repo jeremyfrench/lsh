@@ -77,10 +77,6 @@ do_read_file(struct read_handler **h,
 	  A_WRITE(self->c, self->buffer);
 	  self->buffer = NULL;
 
-#if 0
-	  if (available > left)
-	    A_WRITE(self->c, NULL);
-#endif
 	  *h = NULL;
 	  return available;
 	}

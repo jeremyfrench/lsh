@@ -1100,25 +1100,6 @@ client_argp_parser(int key, char *arg, struct argp_state *state)
 	break;
       }      
 
-#if 0
-    case 'R':
-      {
-	UINT32 listen_port;
-	struct address_info *target;
-
-	if (!client_parse_forward_arg(arg, &listen_port, &target))
-	  argp_error(state, "Invalid forward specification '%s'.", arg);
-
-	client_add_action(options, make_forward_remote_port
-			  (make_address_info((options->with_remote_peers
-					      ? ssh_format("%lz", "0.0.0.0")
-					      : ssh_format("%lz", "127.0.0.1")),
-					     listen_port),
-			   target));
-	options->remote_forward = 1;
-	break;
-      }      
-#endif
     case 'N':
       options->start_shell = 0;
       break;

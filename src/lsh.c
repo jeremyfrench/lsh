@@ -614,13 +614,6 @@ main_options[] =
     "Enable DH support (default, unless SRP is being used).", 0 },
 
   { "no-dh-keyexchange", OPT_DH | ARG_NOT, NULL, 0, "Disable DH support.", 0 },
-
-#if 0
-  { "userauth", OPT_USERAUTH, NULL, 0,
-    "Request the ssh-userauth service (default, unless SRP is being used).", 0 },
-  { "no-userauth", OPT_USERAUTH | ARG_NOT, NULL, 0,
-    "Request the ssh-userauth service (default if SRP is used).", 0 },
-#endif
   
   /* Actions */
   { "forward-remote-port", 'R', "remote-port:target-host:target-port",

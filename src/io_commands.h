@@ -50,28 +50,6 @@ extern struct command io_write_file_command;
 
 #define IO_WRITE_FILE (&io_write_file_command.super)
 
-#if 0
-/* Read a certain fd */
-
-/* ;;GABA:
-   (class
-     (name io_read_fd)
-     (super command)
-     (vars
-       (fd . int)))
-*/
-
-void do_io_read_fd(struct command *s,
-		   struct lsh_object *a,
-		   struct command_continuation *c,
-		   struct exception_handler *e);
-
-#define STATIC_IO_READ_FD(fd) \
-{ STATIC_COMMAND(do_io_read_fd), fd }
-
-extern struct io_read_fd io_read_stdin;
-#define IO_READ_STDIN (&io_read_stdin.super.super)
-#endif
 
 struct command *
 make_listen_with_callback(struct command *callback);

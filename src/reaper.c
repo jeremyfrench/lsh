@@ -44,17 +44,6 @@
 
 #include "reaper.c.x"
 
-#if 0
-static volatile sig_atomic_t halloween;
-
-static void child_handler(int signum)
-{
-  assert(signum == SIGCHLD);
-
-  halloween = 1;
-}
-#endif
-
 /* GABA:
    (class
      (name reaper)
@@ -163,26 +152,6 @@ make_reaper_callback(struct reaper *reaper)
 
   return &self->super;
 }
-
-#if 0
-static void
-reaper_install_handler(struct reaper *reaper,
-		       struct io_backend *b)
-{
-  struct sigaction chld;
-  memset(&chld, 0, sizeof(chld));
-
-  chld.sa_handler = child_handler;
-  sigemptyset(&chld.sa_mask);
-  chld.sa_flags = SA_NOCLDSTOP;
-  
-  halloween = 0;
-
-  if (sigaction(SIGCHLD, &chld, NULL) < 0)
-    fatal("Failed to install handler for SIGCHLD.\n");
-  io_signal_handler(b, &halloween, make_reaper_callback(reaper));
-}
-#endif
 
 struct reap *
 make_reaper(void)

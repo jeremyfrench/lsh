@@ -253,24 +253,8 @@ void gc(void)
 #endif
 }
 
-#if 0
-void gc_maybe(int busy)
-{
-  sanity_check_object_list();
-
-  if (number_of_objects > (100 + live_objects*(2+busy)))
-    {
-      verbose("Garbage collecting while %z...\n", busy ? "busy" : "idle");
-      gc();
-    }
-}
-#endif
 
 /* Deallocate all objects. */
-
-#if DEBUG_ALLOC
-int gc_final_p = 0;
-#endif
 
 void gc_final(void)
 {
@@ -278,7 +262,6 @@ void gc_final(void)
   root_set = NULL;
 
 #if DEBUG_ALLOC
-  gc_final_p = 1;
 
   gc_sweep();
   assert(!number_of_objects);

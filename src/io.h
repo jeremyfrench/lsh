@@ -44,11 +44,6 @@
 #include "io.h.x"
 #undef GABA_DECLARE
 
-#if 0
-/* Declare the class object, so that io_commands.c can refer to it for
- * type-checking. */
-extern struct lsh_class io_backend_class;
-#endif
 
 /* GABA:
    (class
@@ -228,14 +223,6 @@ void
 io_final(void);
 
 void io_run(void);
-
-#if 0
-void
-lsh_oop_register_signal(struct lsh_signal_handler *handler);
-
-void
-lsh_oop_cancel_signal(struct lsh_signal_handler *handler);
-#endif
 
 void
 lsh_oop_register_read_fd(struct lsh_fd *fd);

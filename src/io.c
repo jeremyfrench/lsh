@@ -771,37 +771,6 @@ do_exc_io_handler(struct exception_handler *self,
   return;
 }
 
-#if 0
-/* Initializes a file structure, and adds it to the backend's list. */
-static void
-init_file(struct io_backend *b, struct lsh_fd *f, int fd,
-	  const char *label,
-	  struct exception_handler *e)
-{
-  init_resource(&f->super, do_kill_fd);
-
-  f->fd = fd;
-  f->label = label;
-  
-  f->e = make_exception_handler(do_exc_io_handler, e, HANDLER_CONTEXT);
-  
-  f->close_callback = NULL;
-
-  f->prepare = NULL;
-
-  f->hanged_up = 0;
-  
-  f->want_read = 0;
-  f->read = NULL;
-
-  f->want_write = 0;
-  f->write = NULL;
-  f->write_close = NULL;
-
-  f->next = b->files;
-  b->files = f;
-}
-#endif
 
 /* These functions are used by werror and friends */
 
